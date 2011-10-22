@@ -25,7 +25,7 @@
 
 /**
 *
-* @file   audio_controller_caph.c
+* @file   audio_controller.c
 * @brief  
 *
 ******************************************************************************/
@@ -38,7 +38,6 @@
 #include "resultcode.h"
 
 #include "csl_arm2sp.h"
-
 #include "csl_vpu.h"
 #include "audio_consts.h"
 
@@ -53,7 +52,7 @@
 #include "osheap.h"
 
 #ifdef CONFIG_DIGI_MIC
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO)) 
+#if !defined(NO_PMU)
 #include "pmu.h"
 #include "hal_pmu.h"
 #include "hal_pmu_private.h"
@@ -70,12 +69,6 @@
 #undef HW_ANALOG_LOOPBACK
 
 //=============================================================================
-// Public Variable declarations
-//=============================================================================
-
-extern AUDDRV_SPKR_Enum_t voiceCallSpkr;
-
-//=============================================================================
 // Private Type and Constant declarations
 //=============================================================================
 
@@ -85,9 +78,6 @@ typedef struct node
     struct node*    next;
     struct node*    prev;
 } AUDCTRL_Table_t;
-
-static AUDCTRL_Table_t* tableHead = NULL;
-
 
 typedef struct
 {
@@ -117,9 +107,6 @@ static AUDCTRL_HWID_Mapping_t HWID_Mapping_Table[AUDIO_HW_TOTAL_COUNT] =
 	{AUDIO_HW_NOISE_IN,		CSL_CAPH_DEV_EANC_DIGI_MIC},
 	{AUDIO_HW_VIBRA_OUT,	CSL_CAPH_DEV_VIBRA}
 };
-
-
-
 
 typedef struct
 {
@@ -222,19 +209,26 @@ static AUDCTRL_MIC_Mapping_t MIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 	{AUDCTRL_MIC_EANC_DIGI,		    CSL_CAPH_DEV_EANC_DIGI_MIC}
 };
 
- AUDDRV_PathID_t telephonyPathID;
-//static AudioMode_t stAudioMode = AUDIO_MODE_INVALID;
-
+ //=============================================================================
+ // Private Variables
+ //=============================================================================
+ static AUDDRV_SPKR_Enum_t voiceCallSpkr = AUDDRV_SPKR_NONE;
+ static AUDDRV_PathID_t telephonyPathID;
+ 
+ static AudioMode_t stAudioMode = AUDIO_MODE_INVALID;
+#if defined(USE_NEW_AUDIO_PARAM)
+ static AudioApp_t stAudioApp = AUDIO_APP_VOICE_CALL;
+#endif
 
 static int telephony_digital_gain_dB = 12;  //dB
 static int telephony_ul_gain_mB = 0;  // 0 mB
 
+static AUDCTRL_Table_t* tableHead = NULL;
 
 //=============================================================================
 // Private function prototypes
 //=============================================================================
 
-//on AP:
 static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
 {
 #ifdef BSP_ONLY_BUILD
@@ -248,24 +242,26 @@ static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
 #define AUDIOMODE_PARM_MM_ACCESSOR(mode)	 AUDIO_GetParmMMAccessPtr()[mode]
 
 
-static void AUDCTRL_CreateTable(void);
-static void AUDCTRL_DeleteTable(void);
-static CSL_CAPH_DEVICE_e GetDeviceFromHWID(AUDIO_HW_ID_t hwID);
-static CSL_CAPH_DEVICE_e GetDeviceFromMic(AUDCTRL_MICROPHONE_t mic);
-static CSL_CAPH_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr);
-static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
+static void audctrl_CreateTable(void);
+static void audctrl_DeleteTable(void);
+static CSL_CAPH_DEVICE_e getDeviceFromHWID(AUDIO_HW_ID_t hwID);
+static CSL_CAPH_DEVICE_e getDeviceFromMic(AUDCTRL_MICROPHONE_t mic);
+static CSL_CAPH_DEVICE_e getDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr);
+static CSL_CAPH_PathID audctrl_GetPathIDFromTable(AUDIO_HW_ID_t src,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
                                                 AUDCTRL_MICROPHONE_t mic);
-static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
+static CSL_CAPH_PathID audctrl_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
                                                 AUDCTRL_MICROPHONE_t mic);
-static void AUDCTRL_UpdatePath (CSL_CAPH_PathID pathID,
+static void audctrl_UpdatePath (CSL_CAPH_PathID pathID,
                                                 AUDIO_HW_ID_t src,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
                                                 AUDCTRL_MICROPHONE_t mic);
+
+static void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag, Boolean use );
 
 //=============================================================================
 // Functions
@@ -284,7 +280,7 @@ void AUDCTRL_Init (void)
 
 	AUDDRV_Init ();
 
-    AUDCTRL_CreateTable();
+    audctrl_CreateTable();
 	
 	csl_caph_hwctrl_init();
 
@@ -301,7 +297,7 @@ void AUDCTRL_Init (void)
 void AUDCTRL_Shutdown(void)
 {
     AUDDRV_Shutdown();
-    AUDCTRL_DeleteTable();
+    audctrl_DeleteTable();
 }
 
 //============================================================================
@@ -444,6 +440,209 @@ void AUDCTRL_DisableTelephony(
 
 //============================================================================
 //
+// Function Name: AUDCTRL_RateChangeTelephony
+//
+// Description:   Change Nb / WB according to speech codec type used by mobile network
+//
+//============================================================================
+void AUDCTRL_RateChangeTelephony( UInt32 sampleRate )
+{
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_RateChangeTelephony::	stAudioMode %d \n",stAudioMode);
+
+	AUDCTRL_SetAudioMode ( stAudioMode );
+
+	// This function follows the sequence and enables DSP audio, HW input path and output path.
+	AUDDRV_Telephony_RateChange(sampleRate);
+
+}
+
+//=============================================================================
+// Functions
+//=============================================================================
+UInt32 AUDCTRL_RateGetTelephony()
+{
+	return AUDDRV_Telephone_GetSampleRate();
+}
+
+void AUDCTRL_RateSetTelephony(UInt32 samplerate)
+{
+	AUDDRV_Telephony_SetSampleRate(samplerate);
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_SetTelephonyMicSpkr
+//
+// Description:   Set the micphone and speaker to telephony path, previous micophone
+//	and speaker is disabled
+//
+//============================================================================
+void AUDCTRL_SetTelephonyMicSpkr(
+				AUDIO_HW_ID_t			ulSrc_not_used,
+				AUDIO_HW_ID_t			dlSink_not_used,
+				AUDCTRL_MICROPHONE_t	mic,
+				AUDCTRL_SPEAKER_t		speaker
+				)
+{
+	AUDDRV_MIC_Enum_t	micSel; 
+	AUDDRV_SPKR_Enum_t	spkSel;
+	AUDDRV_PathID_t myTelephonyPathID;
+	AUDCTRL_Config_t data;
+	
+	memcpy(&myTelephonyPathID, &telephonyPathID, sizeof(AUDDRV_PathID_t));
+	memset(&data, 0, sizeof(AUDCTRL_Config_t));
+	micSel = AUDCTRL_GetDrvMic (mic);
+	spkSel = AUDCTRL_GetDrvSpk (speaker);
+
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonyMicSpkr::	spkSel %d, micSel %d \n", spkSel, micSel );
+
+//	AUDCTRL_SaveAudioModeFlag(stAudioMode); 
+
+	//driver needs to know mode!
+	if(stAudioMode == AUDIO_MODE_USB) AUDCTRL_SetAudioMode ( AUDIO_MODE_HANDSET );
+	else AUDCTRL_SetAudioMode ( stAudioMode );
+
+	AUDDRV_Telephony_SelectMicSpkr ( micSel, spkSel, 
+			(void*)(&myTelephonyPathID) );
+	if (telephonyPathID.dlPathID != myTelephonyPathID.dlPathID)
+	{
+		//Remove the old pathID from the table.
+		AUDCTRL_RemoveFromTable(telephonyPathID.dlPathID);
+		telephonyPathID.dlPathID = myTelephonyPathID.dlPathID;
+		if (telephonyPathID.dlPathID != 0)
+		{
+			//Save DL path to the path table.
+			data.pathID = telephonyPathID.dlPathID;
+			data.src = AUDIO_HW_NONE;
+			data.sink = dlSink_not_used;
+			data.mic = AUDCTRL_MIC_UNDEFINED;
+			data.spk = speaker;
+			data.numCh = AUDIO_CHANNEL_NUM_NONE;
+			data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
+			AUDCTRL_AddToTable(&data);
+		}
+	}
+	//If the pathID remains no changed, It may be caused by the CSL
+	//layer assigns the same PathID to this new path.
+	//So we need to compare the speaker of this new path with
+	//the speaker of the old path.
+	else
+	{
+		data = AUDCTRL_GetFromTable(myTelephonyPathID.dlPathID);
+		if (speaker != data.spk)
+		{
+			AUDCTRL_RemoveFromTable(telephonyPathID.dlPathID);
+			telephonyPathID.dlPathID = myTelephonyPathID.dlPathID;
+			if (telephonyPathID.dlPathID != 0)
+			{
+				//Save DL path to the path table.
+				data.pathID = telephonyPathID.dlPathID;
+				data.src = AUDIO_HW_NONE;
+				data.sink = dlSink_not_used;
+				data.mic = AUDCTRL_MIC_UNDEFINED;
+				data.spk = speaker;
+				data.numCh = AUDIO_CHANNEL_NUM_NONE;
+				data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
+				AUDCTRL_AddToTable(&data);
+			}
+		}
+	}
+	if (telephonyPathID.ulPathID != myTelephonyPathID.ulPathID)
+	{
+		//Remove the old pathID from the table.
+		AUDCTRL_RemoveFromTable(telephonyPathID.ulPathID);
+		telephonyPathID.ulPathID = myTelephonyPathID.ulPathID;
+		if (telephonyPathID.ulPathID != 0)
+		{
+			//Save UL path to the path table.
+			data.pathID = telephonyPathID.ulPathID;
+			data.src = ulSrc_not_used;
+			data.sink = AUDIO_HW_NONE;
+			data.mic = mic;
+			data.spk = AUDCTRL_SPK_UNDEFINED;
+			data.numCh = AUDIO_CHANNEL_NUM_NONE;
+			data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
+			AUDCTRL_AddToTable(&data);
+		}
+	}
+	//If the pathID remains no changed, It may be caused by the CSL
+	//layer assigns the same PathID to this new path.
+	//So we need to compare the mic of this new path with
+	//the mic of the old path.
+	else
+	{
+		data = AUDCTRL_GetFromTable(myTelephonyPathID.ulPathID);
+		if (mic != data.mic)
+		{
+			AUDCTRL_RemoveFromTable(telephonyPathID.ulPathID);
+			telephonyPathID.ulPathID = myTelephonyPathID.ulPathID;
+			if (telephonyPathID.ulPathID != 0)
+			{
+				//Save UL path to the path table.
+				data.pathID = telephonyPathID.ulPathID;
+				data.src = ulSrc_not_used;
+				data.sink = AUDIO_HW_NONE;
+				data.mic = mic;
+				data.spk = AUDCTRL_SPK_UNDEFINED;
+				data.numCh = AUDIO_CHANNEL_NUM_NONE;
+				data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
+				AUDCTRL_AddToTable(&data);
+			}
+		}
+	}
+
+	if (telephonyPathID.ul2PathID != myTelephonyPathID.ul2PathID)
+	{
+		//Remove the old pathID from the table.
+		AUDCTRL_RemoveFromTable(telephonyPathID.ul2PathID);
+		telephonyPathID.ul2PathID = myTelephonyPathID.ul2PathID;
+		if (telephonyPathID.ul2PathID != 0)
+		{
+			//Save UL path to the path table.
+			data.pathID = telephonyPathID.ul2PathID;
+			data.src = ulSrc_not_used;
+			data.sink = AUDIO_HW_NONE;
+			data.mic = AUDCTRL_MIC_NOISE_CANCEL;
+			data.spk = AUDCTRL_SPK_UNDEFINED;
+			data.numCh = AUDIO_CHANNEL_NUM_NONE;
+			data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
+			AUDCTRL_AddToTable(&data);
+		}
+	}
+
+	voiceCallSpkr = spkSel;
+	//need to think about better design!!  do mode switch after EC off, mic mute, etc.
+	if((mic == AUDCTRL_MIC_DIGI1) 
+	   || (mic == AUDCTRL_MIC_DIGI2) 
+	   || (mic == AUDCTRL_MIC_DIGI3) 
+	   || (mic == AUDCTRL_MIC_DIGI4) 
+	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
+	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
+	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))
+	{
+		// Enable power to digital microphone
+		powerOnDigitalMic(TRUE);
+	}	
+	else
+	{
+		// Disable power to digital microphone
+		powerOnDigitalMic(FALSE);
+	}	
+		
+	OSTASK_Sleep( 100 );  //depending on switch to headset or off of headset, PMU is first off or last on.
+	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
+
+	//Load the mic gains from sysparm.
+//	  AUDCTRL_LoadMicGain(myTelephonyPathID.ulPathID, mic, TRUE);
+	//Load the speaker gains form sysparm.
+ //   AUDCTRL_LoadSpkrGain(myTelephonyPathID.dlPathID, speaker, TRUE);
+
+
+}
+
+
+//============================================================================
+//
 // Function Name: AUDCTRL_SetTelephonySpkrVolume
 //
 // Description:   Set dl volume of telephony path
@@ -486,7 +685,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 								volume,  //DSP accepts [-3600, 0] mB
 								0, 0, 0, 0);
 			
-			pmuGain = (Int16)AUDDRV_GetPMUGain(GetDeviceFromSpkr(speaker),
+			pmuGain = (Int16)AUDDRV_GetPMUGain(getDeviceFromSpkr(speaker),
 					((Int16)volume)/25);   //mB to quarter dB
 			if (pmuGain != (Int16)GAIN_NA)
 			{
@@ -511,6 +710,27 @@ void AUDCTRL_SetTelephonySpkrVolume(
 UInt32 AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format )
 {
 	return telephony_digital_gain_dB;
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_SetTelephonySpkrMute
+//
+// Description:   mute/unmute the dl of telephony path
+//
+//============================================================================
+void AUDCTRL_SetTelephonySpkrMute(
+				AUDIO_HW_ID_t			dlSink_not_used,
+				AUDCTRL_SPEAKER_t		spk,
+				Boolean 				mute
+				)
+{
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrMute: mute = 0x%x\n",	mute);
+
+	if(mute)
+		AUDDRV_Telephony_MuteSpkr((AUDDRV_SPKR_Enum_t) spk, (void*)NULL);
+	else
+		AUDDRV_Telephony_UnmuteSpkr((AUDDRV_SPKR_Enum_t) spk, (void*)NULL);
 }
 
 //============================================================================
@@ -541,29 +761,6 @@ void AUDCTRL_SetTelephonyMicGain(
 	//should also load this parameter in SetAudioMode() in CP build.
 }
 
-
-//============================================================================
-//
-// Function Name: AUDCTRL_SetTelephonySpkrMute
-//
-// Description:   mute/unmute the dl of telephony path
-//
-//============================================================================
-void AUDCTRL_SetTelephonySpkrMute(
-				AUDIO_HW_ID_t			dlSink_not_used,
-				AUDCTRL_SPEAKER_t		spk,
-				Boolean					mute
-				)
-{
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrMute: mute = 0x%x\n",  mute);
-
-	if(mute)
-        AUDDRV_Telephony_MuteSpkr((AUDDRV_SPKR_Enum_t) spk, (void*)NULL);
-	else
-        AUDDRV_Telephony_UnmuteSpkr((AUDDRV_SPKR_Enum_t) spk, (void*)NULL);
-}
-
-
 //============================================================================
 //
 // Function Name: AUDCTRL_SetTelephonyMicMute
@@ -583,6 +780,182 @@ void AUDCTRL_SetTelephonyMicMute(
         AUDDRV_Telephony_MuteMic ((AUDDRV_MIC_Enum_t)mic, (void*)NULL );
 	else
         AUDDRV_Telephony_UnmuteMic ((AUDDRV_MIC_Enum_t)mic, (void*)NULL );
+}
+
+//*********************************************************************
+//	Function Name: AUDCTRL_InVoiceCall 
+//	@return  TRUE/FALSE (in/out voice call)
+//**********************************************************************/
+Boolean AUDCTRL_InVoiceCall( void )
+{
+	return AUDDRV_InVoiceCall();
+}
+
+//*********************************************************************
+//	Function Name: AUDCTRL_InVoiceCallWB
+//	@return  TRUE/FALSE (in/out WB voice call)
+//**********************************************************************/
+Boolean AUDCTRL_InVoiceCallWB( void )
+{
+	return AUDDRV_IsVoiceCallWB(AUDDRV_GetAudioMode());
+}
+
+//*********************************************************************
+//	Get current (voice call) audio mode 
+//	@return 	mode		(voice call) audio mode 
+//**********************************************************************/
+AudioMode_t AUDCTRL_GetAudioMode( void )
+{
+	return AUDDRV_GetAudioMode( );
+}
+
+#if defined(USE_NEW_AUDIO_PARAM)
+//*********************************************************************
+//	Save audio mode before call AUDCTRL_SaveAudioModeFlag( )
+//	@param		mode		(voice call) audio mode 
+//	@param		app 		(voice call) audio app 
+//	@return 	none
+//**********************************************************************/
+void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode, AudioApp_t app )
+{
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SaveAudioModeFlag: mode = %d, app=%d\n",  mode, app);
+	stAudioMode = mode;
+	stAudioApp = app;
+	AUDDRV_SaveAudioMode( mode, app );
+}
+
+//*********************************************************************
+//	 Set (voice call) audio mode 
+//	@param		mode		(voice call) audio mode 
+//	@param		app 	(voice call) audio app 
+//	@return 	none
+//**********************************************************************/
+void AUDCTRL_SetAudioMode( AudioMode_t mode, AudioApp_t app)
+{
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode: mode = %d, app=%d\n",  mode, app);
+	AUDCTRL_SaveAudioModeFlag( mode, app );
+	AUDDRV_SetAudioMode( mode, app );
+
+//load PMU gain
+}
+#else
+//*********************************************************************
+//	Save audio mode before call AUDCTRL_SaveAudioModeFlag( )
+//	@param		mode		(voice call) audio mode 
+//	@return 	none
+//**********************************************************************/
+void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode )
+{
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SaveAudioModeFlag: mode = %d\n",  mode);
+	stAudioMode = mode;
+	AUDDRV_SaveAudioMode( mode );
+}
+
+//*********************************************************************
+//	 Set (voice call) audio mode 
+//	@param		mode		(voice call) audio mode 
+//	@return 	none
+//**********************************************************************/
+void AUDCTRL_SetAudioMode( AudioMode_t mode )
+{
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode: mode = %d\n",  mode);
+	AUDCTRL_SaveAudioModeFlag( mode );
+	AUDDRV_SetAudioMode( mode, AUDDRV_MIC1|AUDDRV_MIC2|AUDDRV_SPEAKER);
+
+//load PMU gain
+}
+#endif
+
+//*********************************************************************
+//Description:
+//	Get audio mode from sink
+//Parameters
+//	mode -- audio mode
+//	sink -- Sink device coresponding to audio mode
+//Return	none
+//**********************************************************************/
+void AUDCTRL_GetAudioModeBySink(AUDCTRL_SPEAKER_t sink, AudioMode_t *mode)
+{
+	switch(sink)
+	{
+		case AUDCTRL_SPK_HANDSET:
+			*mode = AUDIO_MODE_HANDSET;
+			break;
+		case AUDCTRL_SPK_HEADSET:
+			*mode = AUDIO_MODE_HEADSET;
+			break;
+		case AUDCTRL_SPK_HANDSFREE:
+			*mode = AUDIO_MODE_HANDSFREE;
+			break;
+		case AUDCTRL_SPK_BTM:
+		case AUDCTRL_SPK_BTS:
+			*mode = AUDIO_MODE_BLUETOOTH;
+			break;
+		case AUDCTRL_SPK_LOUDSPK:
+			*mode = AUDIO_MODE_SPEAKERPHONE;
+			break;
+		case AUDCTRL_SPK_TTY:
+			*mode = AUDIO_MODE_TTY;
+			break;
+		case AUDCTRL_SPK_HAC:
+			*mode = AUDIO_MODE_HAC;
+			break;
+		case AUDCTRL_SPK_USB:
+			*mode = AUDIO_MODE_USB;
+			break;
+		case AUDCTRL_SPK_I2S:
+		case AUDCTRL_SPK_VIBRA:
+			*mode = AUDIO_MODE_INVALID;
+			break;
+		
+		default:
+			Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetAudioModeBySink(): sink %d is out of range\n", sink);
+			break;
+	}
+}
+
+//*********************************************************************
+//Description:
+//	Get sink and source device by audio mode
+//Parameters
+//	mode -- audio mode
+//	pMic -- Source device coresponding to audio mode
+//	pSpk -- Sink device coresponding to audio mode
+//Return   none
+//**********************************************************************/
+void AUDCTRL_GetVoiceSrcSinkByMode(AudioMode_t mode, AUDCTRL_MICROPHONE_t *pMic, AUDCTRL_SPEAKER_t *pSpk)
+{
+
+	switch(mode)
+	{
+		case	AUDIO_MODE_HANDSET:
+		case	AUDIO_MODE_HANDSET_WB:
+		case	AUDIO_MODE_HAC:
+		case	AUDIO_MODE_HAC_WB:				  
+			*pMic = AUDCTRL_MIC_MAIN;
+			*pSpk = AUDCTRL_SPK_HANDSET;
+			break;
+		case	AUDIO_MODE_HEADSET:
+		case	AUDIO_MODE_HEADSET_WB:
+		case	AUDIO_MODE_TTY:
+		case	AUDIO_MODE_TTY_WB:
+			*pMic = AUDCTRL_MIC_AUX;
+			*pSpk = AUDCTRL_SPK_HEADSET;
+			break;
+		case	AUDIO_MODE_BLUETOOTH:
+		case	AUDIO_MODE_BLUETOOTH_WB:
+			*pMic = AUDCTRL_MIC_BTM;
+			*pSpk = AUDCTRL_SPK_BTM;
+			break;
+		case	AUDIO_MODE_SPEAKERPHONE:
+		case	AUDIO_MODE_SPEAKERPHONE_WB:
+			*pMic = AUDCTRL_MIC_MAIN;
+			*pSpk = AUDCTRL_SPK_LOUDSPK;
+			break;
+		default:
+			Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetVoiceSrcSinkByMode() mode %d is out of range\n", mode);
+			break;
+	}
 }
 
 
@@ -617,8 +990,8 @@ void AUDCTRL_EnablePlay(
     // Enable the path. And get path ID.
     config.streamID = CSL_CAPH_STREAM_NONE; 
     config.pathID = 0;
-    config.source = GetDeviceFromHWID(src);
-    config.sink =  GetDeviceFromSpkr(spk);
+    config.source = getDeviceFromHWID(src);
+    config.sink =  getDeviceFromSpkr(spk);
     config.dmaCH = CSL_CAPH_DMA_NONE; 
     config.src_sampleRate = sr;
     // For playback, sample rate should be 48KHz.
@@ -638,10 +1011,12 @@ void AUDCTRL_EnablePlay(
 		config.sink = CSL_CAPH_DEV_MEMORY;
 	}
 
+#if defined(ENABLE_DMA_ARM2SP)
 	if ((src == AUDIO_HW_MEM || src == AUDIO_HW_I2S_IN) && sink == AUDIO_HW_DSP_VOICE && spk!=AUDCTRL_SPK_USB)
 	{
 		config.sink = CSL_CAPH_DEV_DSP_throughMEM; //convert from AUDDRV_DEV_EP
 	}
+#endif
 
 	if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
 		;
@@ -692,7 +1067,7 @@ void AUDCTRL_DisablePlay(
     CSL_CAPH_PathID pathID = 0;
 
     memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
-	if(inPathID==0) pathID = AUDCTRL_GetPathIDFromTableWithSrcSink(src, sink, spk, AUDCTRL_MIC_UNDEFINED);
+	if(inPathID==0) pathID = audctrl_GetPathIDFromTableWithSrcSink(src, sink, spk, AUDCTRL_MIC_UNDEFINED);
 	else pathID = inPathID; //do not search for it if pathID is provided, this is to support multi streams to the same destination.
 	Log_DebugPrintf(LOGID_AUDIO,
                     "AUDCTRL_DisablePlay: src = 0x%x, sink = 0x%x, spk = 0x%x, pathID %d:%ld.\r\n", 
@@ -721,7 +1096,7 @@ void AUDCTRL_DisablePlay(
 	AUDCTRL_RemoveFromTable(pathID);
 
     //Disable the PMU for HS/IHF.
-	pathID = AUDCTRL_GetPathIDFromTableWithSrcSink(src, sink, spk, AUDCTRL_MIC_UNDEFINED);
+	pathID = audctrl_GetPathIDFromTableWithSrcSink(src, sink, spk, AUDCTRL_MIC_UNDEFINED);
 	if(pathID)
 	{
 		Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_DisablePlay: pathID %d using the same path still remains, do not turn off PMU.\r\n", pathID);
@@ -758,12 +1133,12 @@ void AUDCTRL_SetPlayVolume(
 		"AUDCTRL_SetPlayVolume: sink = 0x%x, spk = 0x%x, gain_format %d, vol_left = 0x%x(%d) vol_right 0x%x(%d)\n",
 		sink, spk, gain_format, vol_left, vol_left, vol_right, vol_right);
     
-    speaker = GetDeviceFromSpkr(spk);
+    speaker = getDeviceFromSpkr(spk);
 
     if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
 		return;
     
-    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE,
+    pathID = audctrl_GetPathIDFromTable(AUDIO_HW_NONE,
 		    sink, spk, AUDCTRL_MIC_UNDEFINED);
     //if(pathID == 0)
     {
@@ -857,9 +1232,9 @@ void AUDCTRL_SetPlayMute(
 	if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
 		return;
 
-    speaker = GetDeviceFromSpkr(spk);
+    speaker = getDeviceFromSpkr(spk);
 
-    //pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, sink, spk, AUDCTRL_MIC_UNDEFINED);
+    //pathID = audctrl_GetPathIDFromTable(AUDIO_HW_NONE, sink, spk, AUDCTRL_MIC_UNDEFINED);
     //if(pathID == 0)
     //{
 	//audio_xassert(0,pathID);
@@ -902,7 +1277,7 @@ void AUDCTRL_SwitchPlaySpk(
                     src, curSink, curSpk, newSink, newSpk);
 
 
-    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, curSink, curSpk, AUDCTRL_MIC_UNDEFINED);
+    pathID = audctrl_GetPathIDFromTable(AUDIO_HW_NONE, curSink, curSpk, AUDCTRL_MIC_UNDEFINED);
     if(pathID == 0)
     {
 	    audio_xassert(0,pathID);
@@ -912,19 +1287,19 @@ void AUDCTRL_SwitchPlaySpk(
     // add new spk first... 
     if ((curSpk == AUDCTRL_SPK_LOUDSPK)||(curSpk == AUDCTRL_SPK_HEADSET))	
         powerOnExternalAmp( curSpk, AudioUseExtSpkr, FALSE );	    
-    speaker = GetDeviceFromSpkr(newSpk);
+    speaker = getDeviceFromSpkr(newSpk);
     if (speaker != CSL_CAPH_DEV_NONE)
     {
-        config.source = GetDeviceFromHWID(src);
+        config.source = getDeviceFromHWID(src);
         config.sink = speaker;
         (void) csl_caph_hwctrl_AddPath(pathID, config);
     }
    
     // remove current spk
-    speaker = GetDeviceFromSpkr(curSpk);
+    speaker = getDeviceFromSpkr(curSpk);
     if (speaker != CSL_CAPH_DEV_NONE)
     {
-        config.source = GetDeviceFromHWID(src);
+        config.source = getDeviceFromHWID(src);
         config.sink = speaker;
         (void) csl_caph_hwctrl_RemovePath(pathID, config);
     } 
@@ -933,7 +1308,7 @@ void AUDCTRL_SwitchPlaySpk(
     
 
     // update path structure
-    AUDCTRL_UpdatePath(pathID, src, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
+    audctrl_UpdatePath(pathID, src, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
 
     return;
     
@@ -963,7 +1338,7 @@ void AUDCTRL_AddPlaySpk(
                     src, newSink, newSpk);
 
 
-    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, curSink, curSpk, AUDCTRL_MIC_UNDEFINED);
+    pathID = audctrl_GetPathIDFromTable(AUDIO_HW_NONE, curSink, curSpk, AUDCTRL_MIC_UNDEFINED);
     if(pathID == 0)
     {
 	    audio_xassert(0,pathID);
@@ -971,19 +1346,19 @@ void AUDCTRL_AddPlaySpk(
     }
    
 
-    speaker = GetDeviceFromSpkr(newSpk);
+    speaker = getDeviceFromSpkr(newSpk);
     if (speaker != CSL_CAPH_DEV_NONE)
     {
 		//Enable the PMU for HS/IHF.
 		if ((newSink == AUDIO_HW_HEADSET_OUT)||(newSink == AUDIO_HW_IHF_OUT))
 			powerOnExternalAmp( newSpk, AudioUseExtSpkr, TRUE );
 
-        config.source = GetDeviceFromHWID(src);
+        config.source = getDeviceFromHWID(src);
         config.sink = speaker;
         (void) csl_caph_hwctrl_AddPath(pathID, config);
     }
     
-//    AUDCTRL_UpdatePath(pathID, src, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
+//    audctrl_UpdatePath(pathID, src, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
     
     return;
     
@@ -1013,7 +1388,7 @@ void AUDCTRL_RemovePlaySpk(
                     src, secSink, secSpk);
 
 
-    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, priSink, priSpk, AUDCTRL_MIC_UNDEFINED);
+    pathID = audctrl_GetPathIDFromTable(AUDIO_HW_NONE, priSink, priSpk, AUDCTRL_MIC_UNDEFINED);
     if(pathID == 0)
     {
 	    audio_xassert(0,pathID);
@@ -1021,20 +1396,20 @@ void AUDCTRL_RemovePlaySpk(
     }
     
 
-    speaker = GetDeviceFromSpkr(secSpk);
+    speaker = getDeviceFromSpkr(secSpk);
     if (speaker != CSL_CAPH_DEV_NONE)
     {
 		//Disable the PMU for HS/IHF.
 		if ((secSink == AUDIO_HW_HEADSET_OUT)||(secSink == AUDIO_HW_IHF_OUT))
 			powerOnExternalAmp( secSpk, AudioUseExtSpkr, FALSE );
 
-        config.source = GetDeviceFromHWID(src);
+        config.source = getDeviceFromHWID(src);
         config.sink = speaker;
         (void) csl_caph_hwctrl_RemovePath(pathID, config);
     }
     
     // don't know how to update the path now.
-    //AUDCTRL_UpdatePath(pathID, src, sink, spk, AUDCTRL_MIC_UNDEFINED); 
+    //audctrl_UpdatePath(pathID, src, sink, spk, AUDCTRL_MIC_UNDEFINED); 
     
     return;
 }
@@ -1064,8 +1439,8 @@ static void AUDCTRL_EnableRecordMono(
     // Enable the path. And get path ID.
     config.streamID = CSL_CAPH_STREAM_NONE; 
     config.pathID = 0;
-    config.source = GetDeviceFromMic(mic);
-    config.sink =  GetDeviceFromHWID(sink);
+    config.source = getDeviceFromMic(mic);
+    config.sink =  getDeviceFromHWID(sink);
     config.dmaCH = CSL_CAPH_DMA_NONE; 
     config.snk_sampleRate = sr;
     // For playback, sample rate should be 48KHz.
@@ -1189,7 +1564,7 @@ void AUDCTRL_DisableRecord(
 		
 	{
 		memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
-		pathID = AUDCTRL_GetPathIDFromTable(src, sink, AUDCTRL_SPK_UNDEFINED, AUDCTRL_MIC_DIGI1);
+		pathID = audctrl_GetPathIDFromTable(src, sink, AUDCTRL_SPK_UNDEFINED, AUDCTRL_MIC_DIGI1);
 		if(pathID == 0)
 		{
 			audio_xassert(0,pathID);
@@ -1201,7 +1576,7 @@ void AUDCTRL_DisableRecord(
 		(void) csl_caph_hwctrl_DisablePath(config);
 		AUDCTRL_RemoveFromTable(pathID);
 
-		pathID = AUDCTRL_GetPathIDFromTable(src, sink, AUDCTRL_SPK_UNDEFINED, AUDCTRL_MIC_DIGI2);
+		pathID = audctrl_GetPathIDFromTable(src, sink, AUDCTRL_SPK_UNDEFINED, AUDCTRL_MIC_DIGI2);
 		if(pathID == 0)
 		{
 			audio_xassert(0,pathID);
@@ -1214,7 +1589,7 @@ void AUDCTRL_DisableRecord(
 		AUDCTRL_RemoveFromTable(pathID);
 	} else {
 		memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
-		pathID = AUDCTRL_GetPathIDFromTable(src, sink, AUDCTRL_SPK_UNDEFINED, mic);
+		pathID = audctrl_GetPathIDFromTable(src, sink, AUDCTRL_SPK_UNDEFINED, mic);
 		if(pathID == 0)
 		{
 			audio_xassert(0,pathID);
@@ -1255,37 +1630,6 @@ void AUDCTRL_DisableRecord(
 	}	
 }
 
-
-//============================================================================
-//
-// Function Name: AUDCTRL_AddRecordMic
-//
-// Description:   add a microphone to a record path
-//
-//============================================================================
-void AUDCTRL_AddRecordMic(
-				AUDIO_HW_ID_t			src,
-				AUDCTRL_MICROPHONE_t	mic
-				)
-{
-}
-
-//============================================================================
-//
-// Function Name: AUDCTRL_RemoveRecordMic
-//
-// Description:   remove a microphone from a record path
-//
-//============================================================================
-void AUDCTRL_RemoveRecordMic(
-				AUDIO_HW_ID_t			src,
-				AUDCTRL_MICROPHONE_t	mic
-				)
-{
-	// Nothing to do.
-}
-
-
 //============================================================================
 //
 // Function Name: AUDCTRL_SetRecordGainMono
@@ -1311,7 +1655,7 @@ static void AUDCTRL_SetRecordGainMono(
 	if( src == AUDIO_HW_USB_IN)
 		return;
 
-    pathID = AUDCTRL_GetPathIDFromTable(src, AUDIO_HW_NONE, AUDCTRL_SPK_UNDEFINED, mic);
+    pathID = audctrl_GetPathIDFromTable(src, AUDIO_HW_NONE, AUDCTRL_SPK_UNDEFINED, mic);
     if(pathID == 0)
     {
 	    audio_xassert(0,pathID);
@@ -1379,7 +1723,7 @@ static void AUDCTRL_SetRecordMuteMono(
 	if( src == AUDIO_HW_USB_IN)
 		return;
 
-    pathID = AUDCTRL_GetPathIDFromTable(src, AUDIO_HW_NONE, AUDCTRL_SPK_UNDEFINED, mic);
+    pathID = audctrl_GetPathIDFromTable(src, AUDIO_HW_NONE, AUDCTRL_SPK_UNDEFINED, mic);
 
     if(pathID == 0)
     {
@@ -1427,6 +1771,34 @@ void AUDCTRL_SetRecordMute(
     return;    
 }
 
+//============================================================================
+//
+// Function Name: AUDCTRL_AddRecordMic
+//
+// Description:   add a microphone to a record path
+//
+//============================================================================
+void AUDCTRL_AddRecordMic(
+				AUDIO_HW_ID_t			src,
+				AUDCTRL_MICROPHONE_t	mic
+				)
+{
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_RemoveRecordMic
+//
+// Description:   remove a microphone from a record path
+//
+//============================================================================
+void AUDCTRL_RemoveRecordMic(
+				AUDIO_HW_ID_t			src,
+				AUDCTRL_MICROPHONE_t	mic
+				)
+{
+	// Nothing to do.
+}
 
 //============================================================================
 //
@@ -1698,7 +2070,7 @@ void AUDCTRL_SetAudioLoopback(
 		}	
 
         memset(&hwCtrlConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
-        pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
+        pathID = audctrl_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
     	if(pathID == 0)
 	    {
 		    audio_xassert(0,pathID);
@@ -1736,6 +2108,96 @@ if (((source == CSL_CAPH_DEV_ANALOG_MIC)
         //Remove this path to the path table.
         AUDCTRL_RemoveFromTable(pathID);
     }
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_GetFromTable
+//
+// Description:   Get a path information from the table.
+//
+//============================================================================
+AUDCTRL_Config_t AUDCTRL_GetFromTable(CSL_CAPH_PathID pathID)
+{
+	AUDCTRL_Config_t data; 
+	AUDCTRL_Table_t* currentNode = tableHead; 
+	memset(&data, 0, sizeof(AUDCTRL_Config_t));
+
+	while(currentNode != NULL)
+	{
+		if ((currentNode->data).pathID == pathID)
+		{
+			memcpy(&data, &(currentNode->data), sizeof(AUDCTRL_Config_t));
+			return data;
+		}
+		else
+		{
+			currentNode= currentNode->next;
+		}
+	}
+	return data;
+
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_AddToTable
+//
+// Description:   Add a new path into the Table.
+//
+//============================================================================
+void AUDCTRL_AddToTable(AUDCTRL_Config_t* data)
+{
+	AUDCTRL_Table_t* newNode = NULL;
+	//Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_AddToTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n", data->pathID, data->src, data->sink, data->mic, data->spk);
+	newNode = (AUDCTRL_Table_t *)OSHEAP_Alloc(sizeof(AUDCTRL_Table_t));
+	memset(newNode, 0, sizeof(AUDCTRL_Table_t));
+	memcpy(&(newNode->data), data, sizeof(AUDCTRL_Config_t));
+	newNode->next = tableHead;
+	newNode->prev = NULL;
+	if (tableHead != NULL)
+		tableHead->prev = newNode;
+	tableHead = newNode;
+	return;
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_RemoveFromTable
+//
+// Description:   Remove a path from the table.
+//
+//============================================================================
+void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID)
+{
+	AUDCTRL_Table_t* currentNode = tableHead;
+	while(currentNode != NULL)
+	{
+		if ((currentNode->data).pathID == pathID)
+		{
+			//memset(&(current->data), 0, sizeof(AUDCTRL_Config_t));
+			if(currentNode->prev)
+			{
+				currentNode->prev->next = currentNode->next;
+		if (currentNode->next != NULL)
+					currentNode->next->prev = currentNode->prev;
+			}
+			else if(currentNode->next)
+			{
+				tableHead = currentNode->next;
+				tableHead->prev = NULL;
+			}
+			else
+				tableHead = NULL;
+			OSHEAP_Delete(currentNode); 
+			currentNode = NULL;
+		}
+		else
+		{
+			currentNode = currentNode->next;
+		}
+	}
+	return;
 }
 
 //============================================================================
@@ -1789,18 +2251,6 @@ void AUDCTRL_SetSspTdmMode( Boolean status )
 
 //============================================================================
 //
-// Function Name: AUDCTRL_SetBtMode
-//
-// Description:   Set BT mode
-// 
-//============================================================================
-void  AUDCTRL_SetBTMode(Boolean mode)
-{
-	 csl_caph_hwctrl_SetBTMode(mode);
-}
-
-//============================================================================
-//
 // Function Name: AUDCTRL_EnableBypassVibra
 //
 // Description:   Enable the Vibrator bypass
@@ -1844,135 +2294,6 @@ void  AUDCTRL_SetBTMode(Boolean mode)
 
 
 
-//=============================================================================
-// Private function definitions
-//=============================================================================
-
-
-//============================================================================
-//
-// Function Name: AUDCTRL_CreateTable
-//
-// Description:   Create the Table to record the path information.
-//
-//============================================================================
-
-static void AUDCTRL_CreateTable(void)
-{
-    tableHead = NULL;
-    return;
-}
-//============================================================================
-//
-// Function Name: AUDCTRL_AddToTable
-//
-// Description:   Add a new path into the Table.
-//
-//============================================================================
-void AUDCTRL_AddToTable(AUDCTRL_Config_t* data)
-{
-    AUDCTRL_Table_t* newNode = NULL;
-	//Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_AddToTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n", data->pathID, data->src, data->sink, data->mic, data->spk);
-    newNode = (AUDCTRL_Table_t *)OSHEAP_Alloc(sizeof(AUDCTRL_Table_t));
-	memset(newNode, 0, sizeof(AUDCTRL_Table_t));
-    memcpy(&(newNode->data), data, sizeof(AUDCTRL_Config_t));
-    newNode->next = tableHead;
-    newNode->prev = NULL;
-    if (tableHead != NULL)
-	    tableHead->prev = newNode;
-    tableHead = newNode;
-    return;
-}
-//============================================================================
-//
-// Function Name: AUDCTRL_RemoveFromTable
-//
-// Description:   Remove a path from the table.
-//
-//============================================================================
-void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID)
-{
-    AUDCTRL_Table_t* currentNode = tableHead;
-    while(currentNode != NULL)
-    {
-        if ((currentNode->data).pathID == pathID)
-        {
-            //memset(&(current->data), 0, sizeof(AUDCTRL_Config_t));
-			if(currentNode->prev)
-            {
-                currentNode->prev->next = currentNode->next;
-		if (currentNode->next != NULL)
-                    currentNode->next->prev = currentNode->prev;
-            }
-            else if(currentNode->next)
-            {
-                tableHead = currentNode->next;
-                tableHead->prev = NULL;
-            }
-            else
-                tableHead = NULL;
-            OSHEAP_Delete(currentNode); 
-            currentNode = NULL;
-        }
-        else
-        {
-            currentNode = currentNode->next;
-        }
-    }
-    return;
-}
-//============================================================================
-//
-// Function Name: AUDCTRL_DeleteTable
-//
-// Description:   Delete the whole table.
-//
-//============================================================================
-static void AUDCTRL_DeleteTable(void)
-{
-    AUDCTRL_Table_t* currentNode = tableHead;
-    AUDCTRL_Table_t* next = NULL;
-
-    while(currentNode != NULL)
-    {
-        next = currentNode->next;
-        memset(currentNode, 0, sizeof(AUDCTRL_Table_t));
-   	    OSHEAP_Delete(currentNode); 
-        currentNode = next;
-    }
-    tableHead = NULL;
-    return;
-}
-
-//============================================================================
-//
-// Function Name: AUDCTRL_GetFromTable
-//
-// Description:   Get a path information from the table.
-//
-//============================================================================
-AUDCTRL_Config_t AUDCTRL_GetFromTable(CSL_CAPH_PathID pathID)
-{
-    AUDCTRL_Config_t data; 
-    AUDCTRL_Table_t* currentNode = tableHead; 
-    memset(&data, 0, sizeof(AUDCTRL_Config_t));
-
-    while(currentNode != NULL)
-    {
-        if ((currentNode->data).pathID == pathID)
-        {
-            memcpy(&data, &(currentNode->data), sizeof(AUDCTRL_Config_t));
-            return data;
-        }
-        else
-        {
-            currentNode= currentNode->next;
-        }
-    }
-    return data;
-
-}
-
 /********************************************************************
 *  @brief  Set IHF mode
 *
@@ -1988,145 +2309,44 @@ void AUDCTRL_SetIHFmode (Boolean stIHF)
 
 //============================================================================
 //
-// Function Name: AUDCTRL_GetPathIDFromTable
+// Function Name: AUDCTRL_SetBtMode
 //
-// Description:   Get a path ID from the table.
-//
+// Description:   Set BT mode
+// 
 //============================================================================
-static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
-                                                AUDIO_HW_ID_t sink,
-                                                AUDCTRL_SPEAKER_t spk,
-				                                AUDCTRL_MICROPHONE_t mic)
+void  AUDCTRL_SetBTMode(Boolean mode)
 {
-    AUDCTRL_Table_t* currentNode = tableHead;     
-    while(currentNode != NULL)
-    {
-	    //Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
-        //            (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
-		
-	
-        if ((((currentNode->data).src == src)&&((currentNode->data).mic == mic))
-            ||(((currentNode->data).sink == sink)&&((currentNode->data).spk == spk)))
-        {
-            return (currentNode->data).pathID;
-        }
-        else
-        {
-            currentNode = currentNode->next;
-		}
-    }
-    return 0;
-}	
-
-//============================================================================
-//
-// Function Name: AUDCTRL_GetPathIDFromTableWithSrcSink
-//
-// Description:   Get a path ID from the table.
-//
-//============================================================================
-static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
-                                                AUDIO_HW_ID_t sink,
-                                                AUDCTRL_SPEAKER_t spk,
-				                                AUDCTRL_MICROPHONE_t mic)
-{
-
-    AUDCTRL_Table_t* currentNode = tableHead;     
-    while(currentNode != NULL)
-    {
-	    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTableWithSrcSink: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
-                    (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
-    
-        if ((((currentNode->data).src == src)&&((currentNode->data).mic == mic))
-            &&(((currentNode->data).sink == sink)&&((currentNode->data).spk == spk)))
-        {
-            return (currentNode->data).pathID;
-        }
-        else
-        {
-            currentNode = currentNode->next;
-        }
-    }
-    return 0;
-
+	 csl_caph_hwctrl_SetBTMode(mode);
 }
 
 //============================================================================
 //
-// Function Name: AUDCTRL_UpdatePath
+// Function Name: AUDCTRL_ControlHWClock
 //
-// Description:   update a path with new src/sink/spk/mic.
+// Description:   Enable/Disable CAPH clock
 //
 //============================================================================
-static void AUDCTRL_UpdatePath (CSL_CAPH_PathID pathID,
-                                                AUDIO_HW_ID_t src,
-                                                AUDIO_HW_ID_t sink,
-                                                AUDCTRL_SPEAKER_t spk,
-                                                AUDCTRL_MICROPHONE_t mic)
+
+void  AUDCTRL_ControlHWClock(Boolean enable)
 {
-    AUDCTRL_Table_t* currentNode = tableHead; 
-
-    while(currentNode != NULL)
-    {
-        if ((currentNode->data).pathID == pathID)
-        {
-	        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_UpdatePath:  pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
-                    pathID, src, sink, mic, spk);
-            (currentNode->data).src = src;
-            (currentNode->data).sink = sink;
-            (currentNode->data).spk = spk;
-            (currentNode->data).mic = mic;
-            return;
-        }
-        else
-        {
-            currentNode = currentNode->next;
-        }
-    }
-
-    return;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_ControlHWClock enable %d\r\n",enable);
+	csl_caph_ControlHWClock(enable);
 }
 
 //============================================================================
 //
-// Function Name: GetDeviceFromHWID
+// Function Name: AUDCTRL_ControlHWClock
 //
-// Description:   convert audio controller HW ID enum to auddrv device enum
+// Description:  Query if CAPH clock is enabled/disabled
 //
 //============================================================================
-static CSL_CAPH_DEVICE_e GetDeviceFromHWID(AUDIO_HW_ID_t hwID)
+
+Boolean  AUDCTRL_QueryHWClock(void)
 {
-	Log_DebugPrintf(LOGID_AUDIO,"GetDeviceFromHWID: hwID = 0x%x\n", hwID);
-    return HWID_Mapping_Table[hwID].dev;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_QueryHWClock \r\n");
+	return csl_caph_QueryHWClock();
 }
 
-
-//============================================================================
-//
-// Function Name: GetDeviceFromMic
-//
-// Description:   convert audio controller Mic enum to auddrv device enum
-//
-//============================================================================
-static CSL_CAPH_DEVICE_e GetDeviceFromMic(AUDCTRL_MICROPHONE_t mic)
-{
-	Log_DebugPrintf(LOGID_AUDIO,"GetDeviceFromMic: hwID = 0x%x\n", mic);
-    return MIC_Mapping_Table[mic].dev;
-}
-
-
-//============================================================================
-//
-// Function Name: GetDeviceFromSpkr
-//
-// Description:   convert audio controller Spkr enum to auddrv device enum
-//
-//============================================================================
-static CSL_CAPH_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
-{
-	Log_DebugPrintf(LOGID_AUDIO,"GetDeviceFromSpkr: hwID = 0x%x\n", spkr);
-    return SPKR_Mapping_Table[spkr].dev;
-}
 
 //============================================================================
 //
@@ -2135,7 +2355,7 @@ static CSL_CAPH_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
 // Description:   Set gain on external amplifier driver. Gain in Q13.2
 //
 // parameter:
-//  left_right is of this enum
+//	left_right is of this enum
 //enum {
 //		PMU_AUDIO_HS_RIGHT,
 //		PMU_AUDIO_HS_LEFT,
@@ -2145,7 +2365,7 @@ static CSL_CAPH_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
 //============================================================================
 void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int arg_gain, int left_right)
 {
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO)) 
+#if !defined(NO_PMU)
 	int gain=0;
 
 	switch(speaker)
@@ -2173,12 +2393,340 @@ void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int arg_gain, int left_righ
 
 //============================================================================
 //
+// Function Name: powerOnDigitalMic
+//
+// Description:   power on/off the Digital Mic
+//
+//============================================================================
+void powerOnDigitalMic(Boolean powerOn)
+{
+#if !defined(NO_PMU)
+	if (powerOn == TRUE)
+	{
+#ifdef CONFIG_DIGI_MIC
+		// Enable power to digital microphone
+		PMU_SetLDOMode(PMU_HVLDO7CTRL,0);
+#endif		
+	}
+	else //powerOn == FALSE
+	{
+#ifdef CONFIG_DIGI_MIC
+		// Enable power to digital microphone
+		PMU_SetLDOMode(PMU_HVLDO7CTRL,1);
+#endif		
+	}
+#endif
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_GetDrvMic
+//
+// Description:   convert audio controller microphone enum to auddrv microphone enum
+//
+//============================================================================
+AUDDRV_MIC_Enum_t AUDCTRL_GetDrvMic (AUDCTRL_MICROPHONE_t mic)
+{
+	AUDDRV_MIC_Enum_t micSel=AUDDRV_MIC_ANALOG_MAIN;
+
+	// microphone selection. We hardcode microphone for headset,handset and loud right now. 
+	// Later, need to provide a configurable table.
+	switch (mic)
+	{
+		case AUDCTRL_MIC_MAIN:
+			micSel = AUDDRV_MIC_ANALOG_MAIN;
+			break;
+		case AUDCTRL_MIC_AUX:
+			micSel = AUDDRV_MIC_ANALOG_AUX;
+			break;
+
+		case AUDCTRL_MIC_DIGI1:
+			micSel = AUDDRV_MIC_DIGI1;
+			break;
+		case AUDCTRL_MIC_DIGI2:
+			micSel = AUDDRV_MIC_DIGI2;
+			break;
+		case AUDCTRL_DUAL_MIC_DIGI12:
+			micSel = AUDDRV_DUAL_MIC_DIGI12;
+			break;
+		case AUDCTRL_DUAL_MIC_DIGI21:
+			micSel = AUDDRV_DUAL_MIC_DIGI21;
+			break;
+		case AUDCTRL_MIC_SPEECH_DIGI:
+			micSel = AUDDRV_MIC_SPEECH_DIGI;
+			break;			
+		case AUDCTRL_DUAL_MIC_ANALOG_DIGI1:
+			micSel = AUDDRV_DUAL_MIC_ANALOG_DIGI1;
+			break;
+		case AUDCTRL_DUAL_MIC_DIGI1_ANALOG:
+			micSel = AUDDRV_DUAL_MIC_DIGI1_ANALOG;
+			break;
+
+		case AUDCTRL_MIC_BTM:
+			micSel = AUDDRV_MIC_PCM_IF;
+			break;
+		//case AUDCTRL_MIC_BTS:
+			//break;
+		case AUDCTRL_MIC_I2S:
+			break;
+
+		case AUDCTRL_MIC_USB:
+			micSel = AUDDRV_MIC_USB_IF;
+			break;
+
+		case AUDCTRL_MIC_NOISE_CANCEL:
+			micSel = AUDDRV_MIC_NOISE_CANCEL;
+			break;
+
+
+		default:
+			Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetDrvMic: Unsupported microphpne type. mic = 0x%x\n", mic);
+			break;
+	}
+
+	return micSel;
+}
+
+
+//============================================================================
+//
+// Function Name: AUDCTRL_GetDrvSpk
+//
+// Description:   convert audio controller speaker enum to auddrv speaker enum
+//
+//============================================================================
+AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker)
+{
+	AUDDRV_SPKR_Enum_t spkSel = AUDDRV_SPKR_NONE;
+
+	Log_DebugPrintf(LOGID_AUDIO,"GetDrvSpk: spk = 0x%x\n", speaker);
+
+	// speaker selection. We hardcode headset,handset and loud speaker right now. 
+	// Later, need to provide a configurable table.
+	switch (speaker)
+	{
+		case AUDCTRL_SPK_HANDSET:
+			spkSel = AUDDRV_SPKR_EP;
+			break;
+		case AUDCTRL_SPK_HEADSET:
+			spkSel = AUDDRV_SPKR_HS;
+			break;
+		case AUDCTRL_SPK_LOUDSPK:
+			spkSel = AUDDRV_SPKR_IHF;
+			break;
+		case AUDCTRL_SPK_BTM:
+			spkSel = AUDDRV_SPKR_PCM_IF;
+			break;
+		case AUDCTRL_SPK_BTS:
+			break;
+		
+		case AUDCTRL_SPK_I2S:
+			break;
+
+		case AUDCTRL_SPK_USB:
+			spkSel = AUDDRV_SPKR_USB_IF;
+			break;
+		default:
+			Log_DebugPrintf(LOGID_AUDIO,"GetDrvSpk: Unsupported Speaker type. spk = 0x%x\n", speaker);
+			break;
+	}
+
+	return spkSel;
+}
+
+
+//=============================================================================
+// Private functions
+//=============================================================================
+
+//============================================================================
+//
+// Function Name: audctrl_CreateTable
+//
+// Description:   Create the Table to record the path information.
+//
+//============================================================================
+
+static void audctrl_CreateTable(void)
+{
+	tableHead = NULL;
+	return;
+}
+
+//============================================================================
+//
+// Function Name: audctrl_DeleteTable
+//
+// Description:   Delete the whole table.
+//
+//============================================================================
+static void audctrl_DeleteTable(void)
+{
+	AUDCTRL_Table_t* currentNode = tableHead;
+	AUDCTRL_Table_t* next = NULL;
+
+	while(currentNode != NULL)
+	{
+		next = currentNode->next;
+		memset(currentNode, 0, sizeof(AUDCTRL_Table_t));
+		OSHEAP_Delete(currentNode); 
+		currentNode = next;
+	}
+	tableHead = NULL;
+	return;
+}
+
+
+//============================================================================
+//
+// Function Name: getDeviceFromHWID
+//
+// Description:   convert audio controller HW ID enum to auddrv device enum
+//
+//============================================================================
+static CSL_CAPH_DEVICE_e getDeviceFromHWID(AUDIO_HW_ID_t hwID)
+{
+	Log_DebugPrintf(LOGID_AUDIO,"getDeviceFromHWID: hwID = 0x%x\n", hwID);
+	return HWID_Mapping_Table[hwID].dev;
+}
+
+
+//============================================================================
+//
+// Function Name: getDeviceFromMic
+//
+// Description:   convert audio controller Mic enum to auddrv device enum
+//
+//============================================================================
+static CSL_CAPH_DEVICE_e getDeviceFromMic(AUDCTRL_MICROPHONE_t mic)
+{
+	Log_DebugPrintf(LOGID_AUDIO,"getDeviceFromMic: hwID = 0x%x\n", mic);
+	return MIC_Mapping_Table[mic].dev;
+}
+
+
+//============================================================================
+//
+// Function Name: getDeviceFromSpkr
+//
+// Description:   convert audio controller Spkr enum to auddrv device enum
+//
+//============================================================================
+static CSL_CAPH_DEVICE_e getDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
+{
+	Log_DebugPrintf(LOGID_AUDIO,"getDeviceFromSpkr: hwID = 0x%x\n", spkr);
+	return SPKR_Mapping_Table[spkr].dev;
+}
+
+//============================================================================
+//
+// Function Name: audctrl_GetPathIDFromTable
+//
+// Description:   Get a path ID from the table.
+//
+//============================================================================
+static CSL_CAPH_PathID audctrl_GetPathIDFromTable(AUDIO_HW_ID_t src,
+												AUDIO_HW_ID_t sink,
+												AUDCTRL_SPEAKER_t spk,
+												AUDCTRL_MICROPHONE_t mic)
+{
+	AUDCTRL_Table_t* currentNode = tableHead;	  
+	while(currentNode != NULL)
+	{
+		//Log_DebugPrintf(LOGID_AUDIO,"audctrl_GetPathIDFromTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+		//			  (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
+		
+	
+		if ((((currentNode->data).src == src)&&((currentNode->data).mic == mic))
+			||(((currentNode->data).sink == sink)&&((currentNode->data).spk == spk)))
+		{
+			return (currentNode->data).pathID;
+		}
+		else
+		{
+			currentNode = currentNode->next;
+		}
+	}
+	return 0;
+}	
+
+//============================================================================
+//
+// Function Name: audctrl_GetPathIDFromTableWithSrcSink
+//
+// Description:   Get a path ID from the table.
+//
+//============================================================================
+static CSL_CAPH_PathID audctrl_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
+												AUDIO_HW_ID_t sink,
+												AUDCTRL_SPEAKER_t spk,
+												AUDCTRL_MICROPHONE_t mic)
+{
+
+	AUDCTRL_Table_t* currentNode = tableHead;	  
+	while(currentNode != NULL)
+	{
+		Log_DebugPrintf(LOGID_AUDIO,"audctrl_GetPathIDFromTableWithSrcSink: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+					(currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
+	
+		if ((((currentNode->data).src == src)&&((currentNode->data).mic == mic))
+			&&(((currentNode->data).sink == sink)&&((currentNode->data).spk == spk)))
+		{
+			return (currentNode->data).pathID;
+		}
+		else
+		{
+			currentNode = currentNode->next;
+		}
+	}
+	return 0;
+
+}
+
+//============================================================================
+//
+// Function Name: audctrl_UpdatePath
+//
+// Description:   update a path with new src/sink/spk/mic.
+//
+//============================================================================
+static void audctrl_UpdatePath (CSL_CAPH_PathID pathID,
+												AUDIO_HW_ID_t src,
+												AUDIO_HW_ID_t sink,
+												AUDCTRL_SPEAKER_t spk,
+												AUDCTRL_MICROPHONE_t mic)
+{
+	AUDCTRL_Table_t* currentNode = tableHead; 
+
+	while(currentNode != NULL)
+	{
+		if ((currentNode->data).pathID == pathID)
+		{
+	        Log_DebugPrintf(LOGID_AUDIO,"audctrl_UpdatePath:  pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+					pathID, src, sink, mic, spk);
+			(currentNode->data).src = src;
+			(currentNode->data).sink = sink;
+			(currentNode->data).spk = spk;
+			(currentNode->data).mic = mic;
+			return;
+		}
+		else
+		{
+			currentNode = currentNode->next;
+		}
+	}
+
+	return;
+}
+
+//============================================================================
+//
 // Function Name: powerOnExternalAmp
 //
 // Description:   call external amplifier driver
 //
 //============================================================================
-void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag, Boolean use )
+static void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag, Boolean use )
 {
 //check for current baseband_use_speaker: OR of voice_spkr, audio_spkr, poly_speaker, and second_speaker
 //
@@ -2188,7 +2736,7 @@ void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag
 //AUDCTRL_SPEAKER_t should be moved to public and let PMU driver includes it.
 //and rename it AUD_SPEAKER_t
 
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO)) 
+#if !defined(NO_PMU)
 	static Boolean telephonyUseHS = FALSE;
 	static Boolean audioUseHS = FALSE;
 
@@ -2209,7 +2757,7 @@ void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag
 	}
 	
 	if (use == TRUE)
-		AUDIO_PMU_INIT(); 	//enable the audio PLL before power ON
+		AUDIO_PMU_INIT();	//enable the audio PLL before power ON
 
 
 	switch(speaker)
@@ -2283,17 +2831,17 @@ void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu HS amp\n");
 	
-            AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
-            AUDIO_PMU_HS_POWER(FALSE);
-            OSTASK_Sleep(20);
+			AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
+			AUDIO_PMU_HS_POWER(FALSE);
+			OSTASK_Sleep(20);
 		}
 		HS_IsOn = FALSE;
 	}
 	else
 	{
-		int hs_path;	
+		//int hs_path;	
 		int hs_gain = 0;
-#if defined(CONFIG_BCM59055_AUDIO) || defined(CONFIG_BCMPMU_AUDIO) 
+#if defined(PMU_BCM59055) || defined(CONFIG_BCMPMU_AUDIO) 
 		hs_path = PMU_AUDIO_HS_BOTH;
 #endif
 
@@ -2302,12 +2850,12 @@ void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag
 		if ( HS_IsOn != TRUE )
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu HS amp, gain %d\n", hs_gain);
-            //printk("richlu before 59055 hs_set_gain \n");
-            AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
-            //printk("richlu after 59055 hs_set_gain and before hs_power\n");
-            AUDIO_PMU_HS_POWER(TRUE);
-            //printk("richlu  after 59055 hs_power \n");
-            OSTASK_Sleep(75);
+			//printk("richlu before 59055 hs_set_gain \n");
+			AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
+			//printk("richlu after 59055 hs_set_gain and before hs_power\n");
+			AUDIO_PMU_HS_POWER(TRUE);
+			//printk("richlu  after 59055 hs_power \n");
+			OSTASK_Sleep(75);
 
 		}
 		
@@ -2326,8 +2874,8 @@ void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag
 		if ( IHF_IsOn != FALSE )
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu IHF amp\n");
-            AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
-            AUDIO_PMU_IHF_POWER(FALSE);
+			AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
+			AUDIO_PMU_IHF_POWER(FALSE);
 		}
 		IHF_IsOn = FALSE;
 	}
@@ -2340,7 +2888,7 @@ void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag
 		if ( IHF_IsOn != TRUE )
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu IHF amp, gain %d\n", ihf_gain);
-            AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
+			AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
 			AUDIO_PMU_IHF_POWER(TRUE);
 		}
 
@@ -2354,64 +2902,8 @@ void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag
 	if ( IHF_IsOn==FALSE && HS_IsOn==FALSE )
 		AUDIO_PMU_DEINIT();    //disable the audio PLL after power OFF
 
-#endif    
+#endif	  
 	
 }
 
-
-
-//============================================================================
-//
-// Function Name: powerOnDigitalMic
-//
-// Description:   power on/off the Digital Mic
-//
-//============================================================================
-void powerOnDigitalMic(Boolean powerOn)
-{
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO)) 
-	if (powerOn == TRUE)
-	{
-#ifdef CONFIG_DIGI_MIC
-		// Enable power to digital microphone
-		PMU_SetLDOMode(PMU_HVLDO7CTRL,0);
-#endif		
-	}
-	else //powerOn == FALSE
-	{
-#ifdef CONFIG_DIGI_MIC
-		// Enable power to digital microphone
-		PMU_SetLDOMode(PMU_HVLDO7CTRL,1);
-#endif		
-	}
-#endif
-}
-
-//============================================================================
-//
-// Function Name: AUDCTRL_ControlHWClock
-//
-// Description:   Enable/Disable CAPH clock
-//
-//============================================================================
-
-void  AUDCTRL_ControlHWClock(Boolean enable)
-{
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_ControlHWClock enable %d\r\n",enable);
-	csl_caph_ControlHWClock(enable);
-}
-
-//============================================================================
-//
-// Function Name: AUDCTRL_ControlHWClock
-//
-// Description:  Query if CAPH clock is enabled/disabled
-//
-//============================================================================
-
-Boolean  AUDCTRL_QueryHWClock(void)
-{
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_QueryHWClock \r\n");
-	return csl_caph_QueryHWClock();
-}
 

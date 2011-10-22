@@ -60,8 +60,7 @@ snd-brcm-omx-objs += caph_ctl.o
 snd-brcm-omx-objs += at_aud_ctl.o
 snd-brcm-omx-objs += caph_pcm.o
 snd-brcm-omx-objs += audio/audio_caph.o
-snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_caph.o
-snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_common.o
+snd-brcm-omx-objs += audio/audio_controller/src/audio_controller.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_pmu_adapt.o
 snd-brcm-omx-objs += audio/audio_datadriver/src/audio_ddriver.o
 snd-brcm-omx-objs += caph_hwdep.o
@@ -100,8 +99,7 @@ snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_gain.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_aud_queue.o
 
 #audio vdriver Source Files
-snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_caph.o
-snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_common.o
+snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_rpc.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_audlog.o
 

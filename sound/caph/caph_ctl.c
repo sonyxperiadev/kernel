@@ -1066,12 +1066,12 @@ static const DECLARE_TLV_DB_SCALE(caph_db_scale_volume, -5000, 1, 0);
 	                        MiscCtrlInfo, MiscCtrlGet, MiscCtrlPut, 0,private_val)
 
 /*++++++++++++++++++++++++++++++++ Sink device and source devices
-{.strName = "Handset",	.iVolume = {-10,-10},},		//AUDCTRL_SPK_HANDSET
-{.strName = "Headset",		.iVolume = {-10,-10},},	//AUDCTRL_SPK_HEADSET
+{.strName = "Handset",	.iVolume = {0,0},},		//AUDCTRL_SPK_HANDSET
+{.strName = "Headset",		.iVolume = {-400,-400},},	//AUDCTRL_SPK_HEADSET
 x{.strName = "Handsfree",	.iVolume = {-10,-10},},	//AUDCTRL_SPK_HANDSFREE
 {.strName = "BT SCO",	.iVolume = {-10,-10},},		//AUDCTRL_SPK_BTM
-{.strName = "Loud Speaker", .iVolume = {-10,-10},},	//AUDCTRL_SPK_LOUDSPK
-{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_TTY
+{.strName = "Loud Speaker", .iVolume = {400,400},},	//AUDCTRL_SPK_LOUDSPK
+{.strName = "", .iVolume = {-400,-400},}, 			//AUDCTRL_SPK_TTY
 {.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_HAC
 x{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_USB
 x{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_BTS
@@ -1079,7 +1079,7 @@ x{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_BTS
 {.strName = "Speaker Vibra", .iVolume = {-10,-10},},	//AUDCTRL_SPK_VIBRA
 
 
-{.strName = "", .iVolume = {0,0},}, 					//AUDCTRL_MIC_UNDEFINED
+{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_MIC_UNDEFINED
 {.strName = "Main Mic", 	.iVolume = {28,28},},		//AUDCTRL_MIC_MAIN
 {.strName = "AUX Mic",	.iVolume = {28,28},},			//AUDCTRL_MIC_AUX
 {.strName = "Digital MIC 1",	.iVolume = {28,28},},	//AUDCTRL_MIC_DIGI1
@@ -1099,12 +1099,12 @@ x{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_EANC_DIGI
 --------------------------------------------------*/
 
 #define	BCM_CTL_SINK_LINES	{\
-						{.strName = "HNT",	.iVolume = {-10,-10},},		\
-						{.strName = "HST",	.iVolume = {-10,-10},}, 	\
+						{.strName = "HNT",	.iVolume = {0,0},},		\
+						{.strName = "HST",	.iVolume = {-400,-400},}, 	\
 						{.strName = "HNF",	.iVolume = {-10,-10},},	\
 						{.strName = "BTM",	.iVolume = {-10,-10},},		\
-						{.strName = "SPK",	.iVolume = {-10,-10},},	\
-						{.strName = "TTY",	.iVolume = {0,0},}, 				\
+						{.strName = "SPK",	.iVolume = {400,400},},	\
+						{.strName = "TTY",	.iVolume = {-400,-400},}, 				\
 						{.strName = "HAC",	.iVolume = {0,0},}, 				\
 						{.strName = "",	.iVolume = {0,0},},					\
 						{.strName = "", .iVolume = {0,0},}, 				\

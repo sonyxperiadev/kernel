@@ -152,31 +152,6 @@ void AUDCTRL_Init (void);
 void AUDCTRL_Shutdown (void);
 
 /**
-*  @brief  This function controls the power on/off of external
-*          amplifier
-*
-*  @param  speaker	    (in)  speaker selection 
-*  @param  usage_flag	(in)  external speaker usage
-*  @param  use		    (in)  on/off
-*
-*  @return  none
-*
-****************************************************************************/
-void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag, Boolean use );
-
-
-/**
-*  @brief  This function controls the power on/off the power supply for
-*  		digital mics.
-*
-*  @param  powerOn	(in) TRUE: Power on, FALSE: Power off 
-*
-*  @return void
-*
-****************************************************************************/
-void powerOnDigitalMic( Boolean powerOn );
-
-/**
 *  @brief  Enable telephony audio path in HW and DSP
 *
 *  @param  ulSrc	(in)  uplink source 
@@ -188,6 +163,24 @@ void powerOnDigitalMic( Boolean powerOn );
 *
 ****************************************************************************/
 void AUDCTRL_EnableTelephony(
+				AUDIO_HW_ID_t			ulSrc,
+				AUDIO_HW_ID_t			dlSink,
+				AUDCTRL_MICROPHONE_t	mic,
+				AUDCTRL_SPEAKER_t		speaker
+				);
+
+/**
+*  @brief  Disable telephony audio path in HW and DSP
+*
+*  @param  ulSrc	(in)  uplink source 
+*  @param  dlSink	(in)  downlink sink
+*  @param  mic		(in)  microphone selection
+*  @param  speaker	(in)  speaker selection
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_DisableTelephony(
 				AUDIO_HW_ID_t			ulSrc,
 				AUDIO_HW_ID_t			dlSink,
 				AUDCTRL_MICROPHONE_t	mic,
@@ -221,25 +214,6 @@ UInt32 AUDCTRL_RateGetTelephony( void );
 ****************************************************************************/
 void AUDCTRL_RateSetTelephony(UInt32 samplerate);
 	
-
-/**
-*  @brief  Disable telephony audio path in HW and DSP
-*
-*  @param  ulSrc	(in)  uplink source 
-*  @param  dlSink	(in)  downlink sink
-*  @param  mic		(in)  microphone selection
-*  @param  speaker	(in)  speaker selection
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_DisableTelephony(
-				AUDIO_HW_ID_t			ulSrc,
-				AUDIO_HW_ID_t			dlSink,
-				AUDCTRL_MICROPHONE_t	mic,
-				AUDCTRL_SPEAKER_t		speaker
-				);
-
 /**
 *  @brief  Change telephony audio path in HW and DSP
 *
@@ -676,22 +650,6 @@ void AUDCTRL_SetAudioLoopback(
 							);
 
 /********************************************************************
-*  @brief  enable or disable sidetone HW loopback
-*
-*  @param  enable_lpbk (in)  the audio mode
-*  @param  mic         (in)  the input to loopback
-*  @param  speaker     (in)  the output from loopback
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_SetSidetoneLoopback( 
-							Boolean					enable_lpbk,
-							AUDCTRL_MICROPHONE_t	mic,
-							AUDCTRL_SPEAKER_t		speaker
-							);
-
-/********************************************************************
 *  @brief  Get a path configratio from the Table
 *
 *  @param  pathID (in)  the audio path ID 
@@ -700,17 +658,6 @@ void AUDCTRL_SetSidetoneLoopback(
 *
 ****************************************************************************/
 AUDCTRL_Config_t AUDCTRL_GetFromTable(CSL_CAPH_PathID pathID);
-
-
-/********************************************************************
-*  @brief  Remove a path from the Table
-*
-*  @param  pathID (in)  the audio path ID 
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID);
 
 /********************************************************************
 *  @brief  Add a path to the Table
@@ -721,6 +668,16 @@ void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID);
 *
 ****************************************************************************/
 void AUDCTRL_AddToTable(AUDCTRL_Config_t* data);
+
+/********************************************************************
+*  @brief  Remove a path from the Table
+*
+*  @param  pathID (in)  the audio path ID 
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID);
 
 /********************************************************************
 *  @brief  Set Arm2Sp Parameter
@@ -789,27 +746,6 @@ void  AUDCTRL_DisableBypassVibra(void);
 ****************************************************************************/
 void  AUDCTRL_SetBypassVibraStrength(UInt32 Strength, int direction);
 
-
-/********************************************************************
-*  @brief  Convert audio controller microphone enum to auddrv microphone enum
-*
-*  @param  Audio controller microphone enum.
-*
-*  @return AudDrv microphone enum
-*
-****************************************************************************/
-AUDDRV_MIC_Enum_t AUDCTRL_GetDrvMic (AUDCTRL_MICROPHONE_t mic);
-
-/********************************************************************
-*  @brief  Convert audio controller speaker enum to auddrv speaker enum
-*
-*  @param  Audio controller speaker enum.
-*
-*  @return AudDrv speaker enum
-*
-****************************************************************************/
-AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker);
-
 /********************************************************************
 *  @brief  Set IHF mode
 *
@@ -852,5 +788,35 @@ Boolean  AUDCTRL_QueryHWClock(void);
 
 void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int gain, int left_right);
 
+/**
+*  @brief  This function controls the power on/off the power supply for
+*  		digital mics.
+*
+*  @param  powerOn	(in) TRUE: Power on, FALSE: Power off 
+*
+*  @return void
+*
+****************************************************************************/
+void powerOnDigitalMic( Boolean powerOn );
+
+/********************************************************************
+*  @brief  Convert audio controller microphone enum to auddrv microphone enum
+*
+*  @param  Audio controller microphone enum.
+*
+*  @return AudDrv microphone enum
+*
+****************************************************************************/
+AUDDRV_MIC_Enum_t AUDCTRL_GetDrvMic (AUDCTRL_MICROPHONE_t mic);
+
+/********************************************************************
+*  @brief  Convert audio controller speaker enum to auddrv speaker enum
+*
+*  @param  Audio controller speaker enum.
+*
+*  @return AudDrv speaker enum
+*
+****************************************************************************/
+AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker);
 
 #endif //#define __AUDIO_CONTROLLER_H__
