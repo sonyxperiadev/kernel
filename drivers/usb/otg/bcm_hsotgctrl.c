@@ -156,7 +156,6 @@ int bcm_hsotgctrl_phy_init(void)
 	bcm_hsotgctrl_phy_set_non_driving(false);
 	bcm_hsotgctrl_phy_set_vbus_stat(true);
 
-	enable_irq(USB_IRQ); /* Temp fix for BC detection coordination with PMU driver */
 	return (rc);
 
 }
@@ -173,7 +172,6 @@ int bcm_hsotgctrl_phy_deinit(void)
 	bcm_hsotgctrl_set_phy_off(true);
 	bcm_hsotgctrl_phy_set_vbus_stat(false);
 
-	disable_irq(USB_IRQ); /* Temp fix for BC detection coordination with PMU driver */
 	/* Disable the OTG core AHB clock */
 	bcm_hsotgctrl_en_clock(false);
 
