@@ -618,6 +618,12 @@ config USB_DWC_OTG
 	default USB_GADGET
 	select USB_GADGET_SELECTED
 	select USB_GADGET_DUALSPEED
+
+config USB_DWC_OTG_DEVICE
+        boolean "DWC OTG device registration"
+        depends on USB_DWC_OTG && !USB_OTG_UTILS
+	default n
+
 #
 # LAST -- dummy/emulated controller
 #
