@@ -24,9 +24,6 @@ endif
 ifneq ($(CONFIG_DHD_BCM_WIFI_HDMI),)
 DHDCFLAGS += -DDHD_BCM_WIFI_HDMI
 
-# Enable printing firmware dongle debug printfs
-DHDCFLAGS += -DDHD_DEBUG -DSRCBASE=\"$(SRCBASE)\"
-
 # Enable APSTA mode in dhd_preinit_ioctls()
 DHDCFLAGS += -DAP
 endif
