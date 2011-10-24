@@ -1,5 +1,3 @@
-#EXTRA_CFLAGS := -Werror
-
 EXTRA_CFLAGS += -DPMU_BCM59055
 
 include ./drivers/char/broadcom/modem/public/msp_include_paths.gmk
@@ -27,8 +25,5 @@ EXTRA_CFLAGS += -DUNDER_LINUX_MODEM
 EXTRA_CFLAGS += -DUNDER_LINUX
 EXTRA_CFLAGS += -DLINUX_RPC_KERNEL
 
-obj-$(CONFIG_BCM_MODEM) += \
-	sysrpc.o \
-	bcm_kril_sysrpc_handler.o \
-	sysrpc-capi/
+obj-y += sys_gen_rpc.o sys_hal_rpc.o sys_msg.o sys_rpc.o
 

@@ -44,8 +44,8 @@
 CHIP=bcm21553
 
 BRCM_PUBLIC_DIR := $(BRCM_ROOTDIR)/public
-BRCM_INCLUDES += -I $(BRCM_ROOTDIR)/public -I $(BRCM_ROOTDIR)/public/kernel
-BRCM_INCLUDES += -I $(BRCM_PUBLIC_DIR)/soc/public
+BRCM_INCLUDES += -I$(BRCM_ROOTDIR)/public -I$(BRCM_ROOTDIR)/public/kernel
+BRCM_INCLUDES += -I$(BRCM_PUBLIC_DIR)/soc/public
 
 INCLUDE_XSCRIPT := false
 

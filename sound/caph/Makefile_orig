@@ -19,12 +19,12 @@
 #EXTRA_CFLAGS := -Wno-error -D USE_HAL_AUDIO_THREAD -D FUSE_DUAL_PROCESSOR_ARCHITECTURE -D FUSE_APPS_PROCESSOR -U FUSE_COMMS_PROCESSOR -D _BCM21553_ -D CHIP_REVISION=51
 
 #ifeq ($(CONFIG_ARCH_BCM2157), y)
-#EXTRA_CFLAGS += -D BCM2153_FAMILY_BB_CHIP_BOND -I $(src)/hal2157 -I $(src)
+#EXTRA_CFLAGS += -D BCM2153_FAMILY_BB_CHIP_BOND -I$(src)/hal2157 -I$(src)
 #ifeq ($(CONFIG_BOARD_BONDRAY),y)
 #EXTRA_CFLAGS += -D BUILD_BONDRAY
 #endif
 #else
-#EXTRA_CFLAGS += -I $(src)/hal2153 -I $(src)
+#EXTRA_CFLAGS += -I$(src)/hal2153 -I$(src)
 #endif
 
 
@@ -32,53 +32,53 @@
 #EXTRA_CFLAGS += -DRPC_INCLUDED
 #EXTRA_CFLAGS += -DSTACK_wedge
 
-#EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2/inc/
-#EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc/inc/
-#EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ipc/ipc/Implementation/Headers/
-#EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ipc/inc/
+#EXTRA_CFLAGS += -I$(srctree)/../modules/drivers/char/brcm/fuse_ril/CAPI2/inc/
+#EXTRA_CFLAGS += -I$(srctree)/../modules/drivers/char/brcm/fuse_rpc/rpc/inc/
+#EXTRA_CFLAGS += -I$(srctree)/../modules/drivers/char/brcm/fuse_ipc/ipc/Implementation/Headers/
+#EXTRA_CFLAGS += -I$(srctree)/../modules/drivers/char/brcm/fuse_ipc/inc/
 EXTRA_CFLAGS += -DUNDER_LINUX
 EXTRA_CFLAGS += -D _ATHENA_  -D MSP -D FUSE_DUAL_PROCESSOR_ARCHITECTURE -D FUSE_APPS_PROCESSOR -D PMU_MAX8986 -D CHAL_NDEBUG_BUILD -D CHIP_REVISION=20 -D VPU_INCLUDED
 #EXTRA_CFLAGS += -D NO_SYSPARAM -D NO_PMU
 #Audio Controller header files
-EXTRA_CFLAGS += -I $(src)/common -I $(src)/audio/audio_controller -I $(src)/audio/audio_controller/public
-EXTRA_CFLAGS += -I $(src)/audio/audio_vdriver/public/
-EXTRA_CFLAGS += -I $(src)/audio/public/
-EXTRA_CFLAGS += -I $(src)/audio/audio_datadriver/public/
+EXTRA_CFLAGS += -I$(src)/common -I$(src)/audio/audio_controller -I$(src)/audio/audio_controller/public
+EXTRA_CFLAGS += -I$(src)/audio/audio_vdriver/public/
+EXTRA_CFLAGS += -I$(src)/audio/public/
+EXTRA_CFLAGS += -I$(src)/audio/audio_datadriver/public/
 #CSL header files
-EXTRA_CFLAGS += -I $(src)/soc/csl/audio/public/
-EXTRA_CFLAGS += -I $(src)/soc/csl/dsp/public/
-EXTRA_CFLAGS += -I $(src)/soc/csl/bsp/public/
+EXTRA_CFLAGS += -I$(src)/soc/csl/audio/public/
+EXTRA_CFLAGS += -I$(src)/soc/csl/dsp/public/
+EXTRA_CFLAGS += -I$(src)/soc/csl/bsp/public/
 #CHAL header files
-EXTRA_CFLAGS += -I $(src)/soc/chal/modules/audio/inc/
-#EXTRA_CFLAGS += -I $(src)/soc/chal/athena/bsp/inc/
-#EXTRA_CFLAGS += -I $(src)/soc/chal/os_adaptation/linux/inc/
+EXTRA_CFLAGS += -I$(src)/soc/chal/modules/audio/inc/
+#EXTRA_CFLAGS += -I$(src)/soc/chal/athena/bsp/inc/
+#EXTRA_CFLAGS += -I$(src)/soc/chal/os_adaptation/linux/inc/
 #RDB header files
-#EXTRA_CFLAGS += -I $(src)/rdb/athena/A0
-EXTRA_CFLAGS += -I $(src)/rdb/athena/B0
+#EXTRA_CFLAGS += -I$(src)/rdb/athena/A0
+EXTRA_CFLAGS += -I$(src)/rdb/athena/B0
 #DSP header files
-EXTRA_CFLAGS += -I $(src)/dsp/public/
-#EXTRA_CFLAGS += -I $(src)/dsp/athena/A0/include/
-EXTRA_CFLAGS += -I $(src)/dsp/athena/B0/include/
+EXTRA_CFLAGS += -I$(src)/dsp/public/
+#EXTRA_CFLAGS += -I$(src)/dsp/athena/A0/include/
+EXTRA_CFLAGS += -I$(src)/dsp/athena/B0/include/
 #SYSPARM Header files
-#EXTRA_CFLAGS += -I $(src)/sysinterface/sysparms/
+#EXTRA_CFLAGS += -I$(src)/sysinterface/sysparms/
 #RPC Header files
-EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/public/
-EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/arpc/inc/
-EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/srpc/inc/
-EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/xdr/inc/
+EXTRA_CFLAGS += -I$(srctree)/../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/public/
+EXTRA_CFLAGS += -I$(srctree)/../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/arpc/inc/
+EXTRA_CFLAGS += -I$(srctree)/../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/srpc/inc/
+EXTRA_CFLAGS += -I$(srctree)/../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/xdr/inc/
 #LOG Header files
-EXTRA_CFLAGS += -I $(src)/soc/debug/public
+EXTRA_CFLAGS += -I$(src)/soc/debug/public
 #PMU Header files
-#EXTRA_CFLAGS += -I $(src)/peripherals/pmu/public
-#EXTRA_CFLAGS += -I $(src)/sysinterface/hal/pmu/public
+#EXTRA_CFLAGS += -I$(src)/peripherals/pmu/public
+#EXTRA_CFLAGS += -I$(src)/sysinterface/hal/pmu/public
 
 #Platform header files
-EXTRA_CFLAGS += -I ./arch/arm/plat-bcmap/include/
-EXTRA_CFLAGS += -I ./arch/arm/plat-bcmap/include/plat/
-EXTRA_CFLAGS += -I ./drivers/char/broadcom/
-EXTRA_CFLAGS += -I ./arch/arm/mach-bcm215xx/include/
-EXTRA_CFLAGS += -I ./arch/arm/plat-bcmap/include/plat/chal/
-EXTRA_CFLAGS += -I ./arch/arm/plat-bcmap/include/plat/osabstract/
+EXTRA_CFLAGS += -I$(srctree)/arch/arm/plat-bcmap/include/
+EXTRA_CFLAGS += -I$(srctree)/arch/arm/plat-bcmap/include/plat/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/
+EXTRA_CFLAGS += -I$(srctree)/arch/arm/mach-bcm215xx/include/
+EXTRA_CFLAGS += -I$(srctree)/arch/arm/plat-bcmap/include/plat/chal/
+EXTRA_CFLAGS += -I$(srctree)/arch/arm/plat-bcmap/include/plat/osabstract/
 
 obj-$(CONFIG_BRCM_SOUND_ATHENA_ALSA) += snd-brcm-omx.o
 snd-brcm-omx-objs := brcm_alsa_dev.o 
