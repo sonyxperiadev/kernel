@@ -16,8 +16,8 @@ the GPL, without Broadcom's express prior written consent.
 *
 *   @file   rpc_ipc_kernel.c
 *
-*   @brief  This driver is used to route AT commands to CP 
-*           via the RPC interface.
+*   @brief  This driver is as Braodcom Rpc server in which user space clients
+*           can send RPC messages from/to Application processor to Modem processor.
 *
 *
 ****************************************************************************/
@@ -270,6 +270,9 @@ static int rpcipc_open(struct inode *inode, struct file *file)
 		{
 			RPC_TRACE(("rpcipc_open FAIL CP is NOT running file=%x\n", (int)file));
 		    ret = -1;
+		    if( priv )
+			kfree( priv ) ;
+                    file->private_data = NULL;
 		}
 	}
 
@@ -1203,9 +1206,20 @@ int gRpcLogToConsole = 0;
 
 int log_buf_read(char *buf, char **start, off_t offset, int count, int *eof, void *data)
 {
-	int len;
-	len = kRpcReadLogData(buf, count);
-	return len;
+	int len, bytesLeft = count, index = 0;
+        do
+        {
+		len = kRpcReadLogData((buf+index), bytesLeft);
+		bytesLeft -= len;
+                index += len;
+	}while(len > 0 && bytesLeft > 0);
+
+        if( index > 0)
+		buf[index-1] = '\0';
+
+//        printk ( KERN_INFO "read: c=%d b=%d i=%d l=%d\n",count, bytesLeft, index, len);
+
+	return index;
 }
 
 static int log_buf_write(struct file *file, const char *buf, unsigned long count, void *data)

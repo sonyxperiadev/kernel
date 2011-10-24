@@ -29,9 +29,8 @@ EXTRA_CFLAGS += -DLINUX_RPC_KERNEL
 
 obj-$(CONFIG_BCM_MODEM) += \
 	sysrpc.o \
-	bcm_kril_sysrpc_handler.o \
+	bcm_sysrpc_handler.o \
 	sysrpc-capi/src/sys_gen_rpc.o \
-	sysrpc-capi/src/sys_hal_rpc.o \
 	sysrpc-capi/src/sys_msg.o \
 	sysrpc-capi/src/sys_rpc.o \
 

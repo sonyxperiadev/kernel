@@ -248,15 +248,16 @@ ssize_t kRpcReadLogData(char *destBuf, size_t len)
 
 	index = peekNextReadIndex(&gLogBuffer);
 
-	if(index != -1)
+	if(index != -1 && len > 0)
 	{
 		char* logbuf;
 		int logsize;
 		logbuf = gLogData[index].logData;
 		logsize = strlen(logbuf);
-		i = min_t(size_t, len, logsize);
+		i = min_t(size_t, (len-1), logsize);
 		//ret = copy_to_user(destBuf, logbuf, i);
-		strcpy(destBuf, logbuf);
+		strncpy(destBuf, logbuf, i);
+		//destBuf[len-1] = '\0';
 		getNextReadIndex(&gLogBuffer);
 		//printk(KERN_INFO "Read: ret=%d w:%d r:%d slen=%d dest=<%s> src=<%s> mlen=%d slen=%d\n",ret, gLogBuffer.wi,gLogBuffer.ri, logsize, destBuf, logbuf, i, len);
 	}
