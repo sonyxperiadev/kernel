@@ -864,7 +864,6 @@ CONFIG_VC_VMCS_SM=m
 # CONFIG_VC_HNFO is not set
 # CONFIG_VC_DNFO is not set
 CONFIG_VC_MEM=m
-# CONFIG_VC_TEST_WIFI_HDMI is not set
 CONFIG_HAVE_IDE=y
 # CONFIG_IDE is not set
 

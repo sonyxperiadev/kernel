@@ -47,4 +47,8 @@ int32_t vc_vchi_fb_swap( VC_VCHI_FB_HANDLE_T handle,
                          uint32_t res_handle,
                          uint32_t active_frame );
 
+int32_t vc_vchi_fb_cfg( VC_VCHI_FB_HANDLE_T handle,
+                        VC_FB_CFG_T *cfg,
+                        VC_FB_CFG_RESULT_T *cfg_result );
+
 #endif // VC_VCHI_FB_H
