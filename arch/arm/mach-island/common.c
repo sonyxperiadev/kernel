@@ -278,11 +278,21 @@ static struct platform_device pmu_device = {
        .num_resources = 1,
 };
 
-#ifdef CONFIG_USB
+#ifdef CONFIG_USB_DWC_OTG
 static struct resource kona_hsotgctrl_platform_resource[] = {
 	[0] = {
 		.start = HSOTG_CTRL_BASE_ADDR,
 		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = CHIPREGS_BASE_ADDR,
+		.end = CHIPREGS_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[2] = {
+		.start = HUB_CLK_BASE_ADDR,
+		.end = HUB_CLK_BASE_ADDR + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 };
@@ -294,9 +304,7 @@ static struct platform_device board_kona_hsotgctrl_platform_device =
 	.resource = kona_hsotgctrl_platform_resource,
 	.num_resources = ARRAY_SIZE(kona_hsotgctrl_platform_resource),
 };
-#endif
 
-#ifdef CONFIG_USB_DWC_OTG
 static struct resource kona_otg_platform_resource[] = {
 	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to be compatible with legacy code */
 		.start = HSOTG_BASE_ADDR,
@@ -562,10 +570,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&kona_stm_device,
 #endif
 	&pmu_device,
-#ifdef CONFIG_USB
-	&board_kona_hsotgctrl_platform_device,
-#endif
+
 #ifdef CONFIG_USB_DWC_OTG
+	&board_kona_hsotgctrl_platform_device,
 	&board_kona_otg_platform_device,
 #endif
 

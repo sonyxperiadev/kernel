@@ -35,7 +35,7 @@
 
 #include <asm/io.h>
 #include <mach/io_map.h>
-#include "bcm_hsotgctrl.h"
+#include <linux/usb/bcm_hsotgctrl.h>
 #include "bcm_otg_adp.h"
 #include "bcmpmu_otg_xceiv.h"
 
