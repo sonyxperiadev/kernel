@@ -34,7 +34,9 @@
 #include "sys_common_rpc.h"
 #include "sys_gen_rpc.h"
 #include "sys_rpc.h"
-
+#include "mobcom_types.h"
+#include "config.h"
+#include "bcmlog.h"
 
 #ifdef DEVELOPMENT_SYSRPC_WIN_UNIT_TEST 
 #define _D(a) _ ## a 
@@ -144,6 +146,8 @@ void SYS_InitRpc(void)
 
 		first_time = 0;
 
+		BCMLOG_EnableLogId(BCMLOG_RPC_KERNEL_BASIC, 1);
+
 //		SYS_TRACE( "SYS_InitRpc \n");
 	}
 }
@@ -175,5 +179,18 @@ Result_t SYS_SendRsp(UInt32 tid, UInt8 clientId, MsgType_t msgType, void* payloa
 	rsp.dataLen = 0;
 	
 	return RPC_SerializeRsp(&rsp);
+}
+
+Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t* pReqMsg, UInt32 cmd, UInt32 address, UInt32 offset, UInt32 size)
+{
+	Result_t result = RESULT_OK;
+	SYS_ReqRep_t data;
+
+	memset(&data, 0, sizeof(SYS_ReqRep_t));
+	data.req_rep_u.CAPI2_CPPS_Control_Rsp.val = (UInt32)3;//CPPS_CONTROL_NO_FFS_SUPPORT_ON_AP
+
+	data.result = result;
+	Send_SYS_RspForRequest(pReqMsg, MSG_CPPS_CONTROL_RSP, &data);
+	return result;
 }
 

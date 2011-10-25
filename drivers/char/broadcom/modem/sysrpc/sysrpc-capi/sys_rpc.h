@@ -45,6 +45,8 @@ typedef struct tag_SYS_ReqRep_t
 	CAPI2_SYSRPC_PMU_IsSIMReady_Req_t   CAPI2_SYSRPC_PMU_IsSIMReady_Req;
 	CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t   CAPI2_SYSRPC_PMU_IsSIMReady_Rsp;
 	CAPI2_SYSRPC_PMU_ActivateSIM_Req_t   CAPI2_SYSRPC_PMU_ActivateSIM_Req;
+	CAPI2_CPPS_Control_Req_t   CAPI2_CPPS_Control_Req;
+	CAPI2_CPPS_Control_Rsp_t   CAPI2_CPPS_Control_Rsp;
 
 #endif //DEVELOPMENT_SYSRPC_UNION_DECLARE
 /*** _SYSRPC_CODE_GEN_END_ ***/

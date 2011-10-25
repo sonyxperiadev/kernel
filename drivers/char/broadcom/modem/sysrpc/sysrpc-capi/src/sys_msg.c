@@ -79,6 +79,8 @@ static RPC_XdrInfo_t SYS_Prim_dscrm[] = {
 	{ MSG_PMU_IS_SIM_READY_RSP,_T("MSG_PMU_IS_SIM_READY_RSP"), (xdrproc_t)xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t, sizeof( Boolean ), 0 },
 	{ MSG_PMU_ACTIVATE_SIM_REQ,_T("MSG_PMU_ACTIVATE_SIM_REQ"), (xdrproc_t) xdr_CAPI2_SYSRPC_PMU_ActivateSIM_Req_t, 0, 0},
 	{ MSG_PMU_ACTIVATE_SIM_RSP,_T("MSG_PMU_ACTIVATE_SIM_RSP"), (xdrproc_t) xdr_default_proc, 0, 0 },
+	{ MSG_CPPS_CONTROL_REQ,_T("MSG_CPPS_CONTROL_REQ"), (xdrproc_t) xdr_CAPI2_CPPS_Control_Req_t, 0, 0},
+	{ MSG_CPPS_CONTROL_RSP,_T("MSG_CPPS_CONTROL_RSP"), (xdrproc_t)xdr_CAPI2_CPPS_Control_Rsp_t, sizeof( UInt32 ), 0 },
 
 	{ (MsgType_t)__dontcare__, "",NULL_xdrproc_t, 0,0 } 
 };

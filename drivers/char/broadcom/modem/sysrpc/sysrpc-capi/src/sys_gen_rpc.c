@@ -77,6 +77,28 @@ bool_t xdr_CAPI2_SYSRPC_PMU_ActivateSIM_Req_t(void* xdrs, CAPI2_SYSRPC_PMU_Activ
 		return FALSE;
 }
 
+bool_t xdr_CAPI2_CPPS_Control_Req_t(void* xdrs, CAPI2_CPPS_Control_Req_t *rsp)
+{
+	XDR_LOG(xdrs,"CAPI2_CPPS_Control_Req_t")
+
+	if(
+		xdr_UInt32(xdrs, &rsp->cmd) &&
+		xdr_UInt32(xdrs, &rsp->address) &&
+		xdr_UInt32(xdrs, &rsp->offset) &&
+		xdr_UInt32(xdrs, &rsp->size) &&
+	1)
+		return TRUE;
+	else
+		return FALSE;
+}
+
+bool_t xdr_CAPI2_CPPS_Control_Rsp_t(void* xdrs, CAPI2_CPPS_Control_Rsp_t *rsp)
+{
+	XDR_LOG(xdrs,"CAPI2_CPPS_Control_Rsp_t")
+
+	 return xdr_UInt32(xdrs, &rsp->val);
+}
+
 //***************** < 9 > **********************
 
 
@@ -97,6 +119,10 @@ Result_t SYS_GenCommsMsgHnd(RPC_Msg_t* pReqMsg, SYS_ReqRep_t* req)
 	case MSG_PMU_ACTIVATE_SIM_REQ:
 		result = Handle_CAPI2_SYSRPC_PMU_ActivateSIM(pReqMsg,req->req_rep_u.CAPI2_SYSRPC_PMU_ActivateSIM_Req.simldo,req->req_rep_u.CAPI2_SYSRPC_PMU_ActivateSIM_Req.volt);
 		break;
+	case MSG_CPPS_CONTROL_REQ:
+		result = Handle_CAPI2_CPPS_Control(pReqMsg,req->req_rep_u.CAPI2_CPPS_Control_Req.cmd,req->req_rep_u.CAPI2_CPPS_Control_Req.address,req->req_rep_u.CAPI2_CPPS_Control_Req.offset,req->req_rep_u.CAPI2_CPPS_Control_Req.size);
+		break;
+
 #endif
 
 	default:
@@ -112,6 +138,12 @@ void SYS_GenGetPayloadInfo(void* dataBuf, MsgType_t msgType, void** ppBuf, UInt3
 {
 	switch(msgType)
 	{
+	case MSG_CPPS_CONTROL_RSP:
+	{
+		CAPI2_CPPS_Control_Rsp_t* pVal = (CAPI2_CPPS_Control_Rsp_t*)dataBuf;
+		*ppBuf = (void*)&(pVal->val);
+		break;
+	}
 	case MSG_PMU_IS_SIM_READY_RSP:
 	{
 		CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t* pVal = (CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t*)dataBuf;

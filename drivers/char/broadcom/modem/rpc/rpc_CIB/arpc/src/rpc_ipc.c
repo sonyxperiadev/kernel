@@ -475,7 +475,7 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 	UInt8* pCid = (UInt8*)IPC_BufferHeaderPointer(bufHandle);
 	IPC_EndpointId_T destId = IPC_BufferDestinationEndpointId(bufHandle);
 	Int8 type = GetInterfaceType(destId);
-
+	Boolean sysrpcHandled = 0, userSpacehandled = 0;
 
 	if(type != -1)
 	{
@@ -491,17 +491,24 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 			if(ipcInfoList[(int)type].filterPktIndCb != NULL)
 			{
 				result = ipcInfoList[(int)type].filterPktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
+				userSpacehandled = (result == RPC_RESULT_PENDING) ? 1 : 0;
 			}
 			else
 				result = RPC_RESULT_ERROR;
 		}
+		else
+			sysrpcHandled = TRUE;
 
 	}
+       
+	_DBG_(RPC_TRACE("RPC_BufferDelivery h=%d sysrpcHandled=%d userSpacehandled=%d res=%d\r\n",(int)bufHandle,sysrpcHandled,userSpacehandled, result));
 
 	if(result != RPC_RESULT_PENDING)
 	{
+                _DBG_(RPC_TRACE("IPC_FreeBuffer (No Handling) h=%d\r\n",(int)bufHandle));
 		IPC_FreeBuffer(bufHandle);
 	}
+
 }
 
 //******************************************************************************
