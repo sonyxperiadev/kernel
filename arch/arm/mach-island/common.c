@@ -27,7 +27,6 @@
 #include <linux/platform_device.h>
 #include <linux/serial_8250.h>
 #include <linux/clk.h>
-#include <linux/pwm_backlight.h>
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
 #include <mach/kona.h>
@@ -172,26 +171,6 @@ static struct platform_device pwm_device =
    .id            = -1,
    .resource	  = pwm_device_resource,
    .num_resources = ARRAY_SIZE(pwm_device_resource),
-};
-#endif
-
-#if defined(CONFIG_BACKLIGHT_PWM)
-static struct platform_pwm_backlight_data pwm_backlight_data =
-{
-	.pwm_name	= "kona_pwmc:2",
-	.max_brightness	= 255,
-	.dft_brightness	= 255,
-	.pwm_period_ns	= 5000000,
-};
-
-static struct platform_device pwm_backlight_device =
-{
-	.name     = "pwm-backlight",
-	.id       = -1,
-	.dev      =
-		{
-		.platform_data = &pwm_backlight_data,
-	},
 };
 #endif
 
@@ -559,9 +538,6 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_kona_otg_platform_device,
 #endif
 
-#if defined(CONFIG_BACKLIGHT_PWM)
-	&pwm_backlight_device,
-#endif
 #if defined(CONFIG_USB_ANDROID)
         &android_usb_device,
 #if defined(CONFIG_USB_ANDROID_MASS_STORAGE)

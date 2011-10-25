@@ -54,6 +54,11 @@
 #include <halaudio_audioh_settings.h>
 #include <halaudio_pcm_settings.h>
 
+#if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
+#include <linux/pwm_backlight.h>
+#include <pwm_backlight_settings.h>
+#endif
+
 #if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
 #include <linux/broadcom/bcmblt-rfkill.h>
 #include <bcmblt_rfkill_settings.h>
@@ -245,6 +250,31 @@
 #define USBH_CTRL_CORE_REG_SIZE    0x20
 
 #define OTG_CTRL_CORE_REG_SIZE     0x100
+
+#if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
+static struct platform_pwm_backlight_data pwm_backlight_data =
+#ifdef HW_PWM_BACKLIGHT_PARAM
+	HW_PWM_BACKLIGHT_PARAM;
+#else /* use default setting here */
+{
+	.pwm_name	= "kona_pwmc:2",
+	.max_brightness	= 255,
+	.dft_brightness	= 255,
+	.pwm_period_ns	= 5000000,
+	.polarity = 1,
+};
+#endif
+
+static struct platform_device pwm_backlight_device =
+{
+	.name     = "pwm-backlight",
+	.id       = -1,
+	.dev      =
+		{
+		.platform_data = &pwm_backlight_data,
+	},
+};
+#endif
 
 static struct resource sdio0_resource[] = {
 	[0] = {
@@ -1618,6 +1648,10 @@ static void __init board_add_halaudio_device(void)
 
 static void __init add_devices(void)
 {
+#if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
+	platform_device_register(&pwm_backlight_device);
+#endif
+
 #ifdef HW_SDIO_PARAM
 	add_sdio_device();
 #endif
