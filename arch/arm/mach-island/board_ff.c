@@ -83,6 +83,7 @@
 #include "island.h"
 #include "common.h"
 
+
 #include <mach/io_map.h>
 #include <mach/aram_layout.h>
 
@@ -1296,6 +1297,55 @@ static struct platform_device board_bcmbt_lpm_device = {
 #endif
 
 
+#if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
+#include <linux/broadcom/hdmi_cfg.h>
+#include <hdmi_settings.h>
+
+#define ISLAND_BOARD_ID ISLAND_FF
+
+#ifndef ISLAND_BOARD_ID
+#error ISLAND_BOARD_ID needs to be defined in board_xxx.c
+#endif
+
+/*
+ * Since this board template is included by each board_xxx.c. We concatenate
+ * ISLAND_BOARD_ID to help debugging when multiple boards are compiled into
+ * a single image
+ */
+#define concatenate_again(a, b) a ## b
+#define concatenate(a, b) concatenate_again(a, b)
+
+#define board_hdmidet_data concatenate(ISLAND_BOARD_ID, _hdmidet_data)
+static struct hdmi_hw_cfg board_hdmidet_data =
+#ifdef HW_CFG_HDMI
+   HW_CFG_HDMI;
+#else
+{
+   .gpio_hdmi_det = -1,
+};
+#endif
+
+#define board_hdmidet_device concatenate(ISLAND_BOARD_ID, _hdmidet_device)
+static struct platform_device board_hdmidet_device =
+{
+   .name = "hdmi-detect",
+   .id = -1,
+   .dev =
+   {
+      .platform_data = &board_hdmidet_data,
+   },
+};
+
+#define board_add_hdmidet_device concatenate(ISLAND_BOARD_ID, _add_hdmidet_device)
+static void __init board_add_hdmidet_device(void)
+{
+   platform_device_register(&board_hdmidet_device);
+}
+
+#endif
+
+
+
 static struct platform_device *board_devices[] __initdata = {
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
@@ -1377,6 +1427,10 @@ static void __init board_add_devices(void)
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 	platform_add_devices(bcm59055_virtual_consumer_devices, ARRAY_SIZE(bcm59055_virtual_consumer_devices));
 #endif
+
+#if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
+   board_add_hdmidet_device();
+#endif   
 
    platform_add_devices( vchiq_devices, ARRAY_SIZE( vchiq_devices ) );
 
