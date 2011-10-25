@@ -13,7 +13,7 @@ all:
 
 else
 
-#obj-$(CONFIG_BCM_HDMI_DET) += \
-	#hdmi.o
+obj-$(CONFIG_BCM_HDMI_DET) += \
+	hdmi.o
 
 endif
