@@ -966,9 +966,6 @@ int netpoll_setup(struct netpoll *np)
 
 	np->dev = ndev;
 
-	/* fill up the skb queue */
-	reserve_skbs_list();
-
 	rtnl_lock();
 	err = __netpoll_setup(np);
 	rtnl_unlock();
@@ -987,6 +984,8 @@ EXPORT_SYMBOL(netpoll_setup);
 static int __init netpoll_init(void)
 {
 	skb_queue_head_init(&skb_pool);
+	/* preallocate skb buffers */
+	reserve_skbs_list();
 	return 0;
 }
 core_initcall(netpoll_init);
