@@ -19,5 +19,4 @@ obj-$(CONFIG_VC_TEST_WIFI_HDMI) := vcsvc_ktest.o
 
 vcsvc_ktest-objs := \
    main_ktest.o \
-   ../vcsvc/vc_vchi_wifihdmi.o \
    whdmi_stubs.o

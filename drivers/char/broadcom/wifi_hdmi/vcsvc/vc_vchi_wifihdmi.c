@@ -14,6 +14,20 @@
 
 // ---- Include Files --------------------------------------------------------
 
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/types.h>
+#include <linux/errno.h>
+#include <linux/cdev.h>
+#include <linux/mm.h>
+#include <linux/fs.h>
+#include <linux/device.h>
+#include <linux/pagemap.h>
+#include <linux/slab.h>
+#include <linux/ioctl.h>
+#include <linux/semaphore.h>
+#include <linux/proc_fs.h>
+
 #include "vc_vchi_wifihdmi.h"
 #include <vc_sm_defs.h>
 #include <vc_sm_knl.h>
@@ -1488,6 +1502,7 @@ err_null:
    LOG_ERR( "%s: FAILED", __func__ );
    return NULL;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_init);
 
 VCOS_STATUS_T vc_vchi_wifihdmi_end( VC_VCHI_WIFIHDMI_HANDLE_T *handle )
 {
@@ -1572,6 +1587,7 @@ VCOS_STATUS_T vc_vchi_wifihdmi_end( VC_VCHI_WIFIHDMI_HANDLE_T *handle )
 lock:
    return VCOS_EINVAL;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_end);
 
 VCOS_STATUS_T vc_vchi_wifihdmi_set( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                                     VC_WIFIHDMI_SET_T *set,
@@ -2068,6 +2084,7 @@ lock:
    }
    return final;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_start);
 
 VCOS_STATUS_T vc_vchi_wifihdmi_stop( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                                      VC_WIFIHDMI_MODE_T *mode, 
@@ -2192,6 +2209,7 @@ lock:
    }
    return final;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_stop);
 
 VCOS_STATUS_T vc_vchi_wifihdmi_skt_in( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                                        VC_WIFIHDMI_SKT_T *skt,
@@ -2812,6 +2830,7 @@ lock:
    }
    return final;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_stats);
 
 VCOS_STATUS_T vc_vchi_wifihdmi_tx_pool( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                                         uint32_t pool_size, 
@@ -2892,3 +2911,4 @@ VCOS_STATUS_T vc_vchi_wifihdmi_tx_pool( VC_VCHI_WIFIHDMI_HANDLE_T handle,
 
    return VCOS_SUCCESS;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_tx_pool);
