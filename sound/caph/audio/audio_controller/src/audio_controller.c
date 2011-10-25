@@ -52,7 +52,7 @@
 #include "osheap.h"
 
 #ifdef CONFIG_DIGI_MIC
-#if !defined(NO_PMU)
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
 #include "pmu.h"
 #include "hal_pmu.h"
 #include "hal_pmu_private.h"
@@ -2365,7 +2365,7 @@ Boolean  AUDCTRL_QueryHWClock(void)
 //============================================================================
 void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int arg_gain, int left_right)
 {
-#if !defined(NO_PMU)
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
 	int gain=0;
 
 	switch(speaker)
@@ -2400,7 +2400,8 @@ void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int arg_gain, int left_righ
 //============================================================================
 void powerOnDigitalMic(Boolean powerOn)
 {
-#if !defined(NO_PMU)
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+
 	if (powerOn == TRUE)
 	{
 #ifdef CONFIG_DIGI_MIC
@@ -2736,7 +2737,7 @@ static void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usa
 //AUDCTRL_SPEAKER_t should be moved to public and let PMU driver includes it.
 //and rename it AUD_SPEAKER_t
 
-#if !defined(NO_PMU)
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
 	static Boolean telephonyUseHS = FALSE;
 	static Boolean audioUseHS = FALSE;
 
@@ -2839,12 +2840,7 @@ static void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usa
 	}
 	else
 	{
-		//int hs_path;	
 		int hs_gain = 0;
-#if defined(PMU_BCM59055) || defined(CONFIG_BCMPMU_AUDIO) 
-		hs_path = PMU_AUDIO_HS_BOTH;
-#endif
-
 		Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp (HS on), telephonyUseHS = %d, audioUseHS= %d\n", telephonyUseHS, audioUseHS);
 
 		if ( HS_IsOn != TRUE )
