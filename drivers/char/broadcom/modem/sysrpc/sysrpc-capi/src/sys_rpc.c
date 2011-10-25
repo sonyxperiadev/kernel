@@ -38,6 +38,7 @@
 #include "config.h"
 #include "bcmlog.h"
 
+
 #ifdef DEVELOPMENT_SYSRPC_WIN_UNIT_TEST 
 #define _D(a) _ ## a 
 #else 
@@ -144,9 +145,9 @@ void SYS_InitRpc(void)
 		syncParams.copyCb = SysCopyPayload;
 		RPC_SyncRegisterClient(&params,&syncParams);
 
-		first_time = 0;
-
 		BCMLOG_EnableLogId(BCMLOG_RPC_KERNEL_BASIC, 1);
+
+		first_time = 0;
 
 //		SYS_TRACE( "SYS_InitRpc \n");
 	}
@@ -194,3 +195,15 @@ Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t* pReqMsg, UInt32 cmd, UInt32 addres
 	return result;
 }
 
+Result_t Handle_CAPI2_FLASH_SaveImage(RPC_Msg_t* pReqMsg, UInt32 flash_addr, UInt32 length, UInt32 shared_mem_addr)
+{
+	Result_t result = RESULT_OK;
+	SYS_ReqRep_t data;
+
+	memset(&data, 0, sizeof(SYS_ReqRep_t));
+	data.req_rep_u.CAPI2_FLASH_SaveImage_Rsp.val = FALSE;//(Boolean)FlashSaveData(flash_addr,length,(UInt8*)shared_mem_addr);
+
+	data.result = result;
+	Send_SYS_RspForRequest(pReqMsg, MSG_FLASH_SAVEIMAGE_RSP, &data);
+	return result;
+}

@@ -55,6 +55,18 @@ typedef struct
 	PMU_SIMVolt_t  volt;
 }CAPI2_SYSRPC_PMU_ActivateSIM_Req_t;
 
+typedef struct
+{
+	UInt32  flash_addr;
+	UInt32  length;
+	UInt32  shared_mem_addr;
+}CAPI2_FLASH_SaveImage_Req_t;
+
+typedef struct
+{
+	Boolean	val;
+}CAPI2_FLASH_SaveImage_Rsp_t;
+
 //***************** < 2 > **********************
 
 
@@ -66,6 +78,8 @@ bool_t xdr_CAPI2_CPPS_Control_Rsp_t(void* xdrs, CAPI2_CPPS_Control_Rsp_t *rsp);
 bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Req_t(void* xdrs, CAPI2_SYSRPC_PMU_IsSIMReady_Req_t *rsp);
 bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t(void* xdrs, CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t *rsp);
 bool_t xdr_CAPI2_SYSRPC_PMU_ActivateSIM_Req_t(void* xdrs, CAPI2_SYSRPC_PMU_ActivateSIM_Req_t *rsp);
+bool_t xdr_CAPI2_FLASH_SaveImage_Req_t(void* xdrs, CAPI2_FLASH_SaveImage_Req_t *rsp);
+bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void* xdrs, CAPI2_FLASH_SaveImage_Rsp_t *rsp);
 
 //***************** < 3 > **********************
 
@@ -76,6 +90,7 @@ bool_t xdr_CAPI2_SYSRPC_PMU_ActivateSIM_Req_t(void* xdrs, CAPI2_SYSRPC_PMU_Activ
 Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t* pReqMsg, UInt32 cmd, UInt32 address, UInt32 offset, UInt32 size);
 Result_t Handle_CAPI2_SYSRPC_PMU_IsSIMReady(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo);
 Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo, PMU_SIMVolt_t volt);
+Result_t Handle_CAPI2_FLASH_SaveImage(RPC_Msg_t* pReqMsg, UInt32 flash_addr, UInt32 length, UInt32 shared_mem_addr);
 
 //***************** < 12 > **********************
 
