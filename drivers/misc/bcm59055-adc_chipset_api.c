@@ -483,7 +483,7 @@ static struct adc_channels_t *hal_adc_map_channel(struct adc_channels_t *channel
 		pchan->unit.unit = adc_unit_bom;
 		break;
 	}
-	printk(KERN_INFO "%s, Nokia channel %d, pChan 0x%x", __func__, channel, (u32)pchan);
+	pr_debug("%s, Nokia channel %d, pChan 0x%x", __func__, channel, (u32)pchan);
 	return pchan;
 }
 
@@ -506,7 +506,7 @@ static int read_rtm_adc(int physical_channel)
 	int reading;
 	do {
 		reading = bcm59055_saradc_request_rtm(physical_channel);
-		/* printk(KERN_INFO "%s: reading %d", reading); */
+		/* pr_debug(KERN_INFO "%s: reading %d", reading); */
 		if (reading < 0) {
 			mdelay(20);
 		}
@@ -529,7 +529,7 @@ static int update_columb(void)
 	bcm59055_fg_init_read();
 	ret = bcm59055_fg_read_soc(&fg_accm, &fg_cnt, &fg_sleep_cnt);
 
-	printk(KERN_INFO "%s: raw data: %x, %d, %d\n", __func__, fg_accm, fg_cnt, fg_sleep_cnt);
+	pr_debug("%s: raw data: %x, %d, %d\n", __func__, fg_accm, fg_cnt, fg_sleep_cnt);
 
 	if (ret < 0) { /* || !(fg_accm & BCM59055_REG_FGACCM_VALID)) { */
 		return ibat_avg;
@@ -567,7 +567,7 @@ static int update_columb(void)
 	}
 	/* Calculate the average current consumption - right now it is uC/ms = mA*/
 
-	printk(KERN_INFO "%s: fg_accm %d, ibat_avg %d, signbit %d, smpltime %d\n", __func__, fg_accm, ibat_avg, signbit, smpl_time);
+	pr_debug("%s: fg_accm %d, ibat_avg %d, signbit %d, smpltime %d\n", __func__, fg_accm, ibat_avg, signbit, smpl_time);
 
 	/* Return new average current */
 	return ibat_avg;
@@ -651,7 +651,29 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 
 		overflow = (1 << pchan->bits) - 1;
 
-		reading = read_hk_adc(pchan->select);
+		switch (pchan->select) {
+		case ADC_VMBAT_CHANNEL:
+		case ADC_VBBAT_CHANNEL:
+		case ADC_VWALL_CHANNEL:
+		case ADC_VBUS_CHANNEL:
+		case ADC_ID_CHANNEL:
+		case ADC_NTC_CHANNEL:
+		case ADC_BOM_CHANNEL:
+		case ADC_32KTEMP_CHANNEL:
+		case ADC_PATEMP_CHANNEL:
+		case ADC_ALS_CHANNEL:
+			reading = read_hk_adc(pchan->select);
+			break;
+		case ADC_BSI_CHANNEL:
+		case ADC_BSI_CAL_L_CHANNEL:
+		case ADC_NTC_CAL_L_CHANNEL:
+		case ADC_NTC_CAL_H_CHANNEL:
+		case ADC_BSI_CAL_H_CHANNEL:
+		default:
+			reading = read_rtm_adc(pchan->select);
+			break;
+		}
+
 		if (reading == overflow) {
 			status = -ERANGE;
 		} else
@@ -813,7 +835,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 			offset = chan->unit.offset;
 			read1 = 0;
 			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
-				read0 = read_rtm_adc(VENDOR_ADC_BSI_CAL_L_CHANNEL);
+				read0 = read_rtm_adc(VENDOR_ADC_NTC_CAL_L_CHANNEL);
 				if (read0 != 0x3ff) {
 					read1 += read0;
 					i++;
@@ -824,7 +846,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 
 			read2 = 0;
 			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
-				read0 = read_rtm_adc(VENDOR_ADC_BSI_CAL_H_CHANNEL);
+				read0 = read_rtm_adc(VENDOR_ADC_NTC_CAL_H_CHANNEL);
 				if (read0 != 0x3ff) {
 					read2 += read0;
 					i++;
@@ -841,7 +863,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 			vread = raw * gain + offset;
 			GLUE_DBG(("hal_adc_unit_convert: Value %d, read1 %d, read2 %d, gain %d, offset %d, new vread %d, vmax %d",
 					  val, read1, read2, gain, offset, vread, chan->unit.vmax));
-			printk(KERN_INFO "hal_adc_unit_convert: Value %d, read1 %d, read2 %d, gain %d, offset %d, new vread %d, vmax %d",
+			pr_debug(KERN_INFO "hal_adc_unit_convert: Value %d, read1 %d, read2 %d, gain %d, offset %d, new vread %d, vmax %d",
 				   raw, read1, read2, gain, offset, vread, chan->unit.vmax);
 
 		}
@@ -966,7 +988,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 			offset = chan->unit.offset;
 			read1 = 0;
 			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
-				read0 = read_rtm_adc(VENDOR_ADC_BSI_CAL_L_CHANNEL);
+				read0 = read_rtm_adc(VENDOR_ADC_NTC_CAL_L_CHANNEL);
 				if (read0 != 0x3ff) {
 					read1 += read0;
 					i++;
@@ -977,7 +999,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 
 			read2 = 0;
 			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
-				read0 = read_rtm_adc(VENDOR_ADC_BSI_CAL_H_CHANNEL);
+				read0 = read_rtm_adc(VENDOR_ADC_NTC_CAL_H_CHANNEL);
 				if (read0 != 0x3ff) {
 					read2 += read0;
 					i++;
@@ -1096,7 +1118,7 @@ int csapi_cal_unit_convert_lock(struct csapi_cli *cli, u8 cha, int val)
 		GLUE_DBG(("%s returns Not supported for channel %d", __func__, cha));
 		return -ENODEV;
 	}
-	printk(KERN_INFO "%s: pchan 0x%x", __func__, (u32)chan);
+	pr_debug("%s: pchan 0x%x", __func__, (u32)chan);
 
 	chan->locked = true;
 	chan->lockvalue = val;
@@ -1114,7 +1136,7 @@ int csapi_cal_unit_convert_unlock(struct csapi_cli *cli, u8 cha)
 		GLUE_DBG(("%s returns Not supported for channel %d", __func__, cha));
 		return -ENODEV;
 	}
-	printk(KERN_INFO "%s: pchan 0x%x", __func__, (u32)chan);
+	pr_debug(KERN_INFO "%s: pchan 0x%x", __func__, (u32)chan);
 
 	chan->locked = false;
 	chan->lockvalue = 0;
@@ -1134,7 +1156,7 @@ int csapi_cal_data_get(struct csapi_cli *cli,
 		GLUE_DBG(("hal_adc_cal_get returns Not supported for channel %d", cha));
 		return -ENODEV;
 	}
-	printk(KERN_INFO "%s: pchan 0x%x", __func__, (u32)pchan);
+	pr_debug("%s: pchan 0x%x", __func__, (u32)pchan);
 	*p1 = 0;
 	*p2 = 0;
 	*p3 = 0;

@@ -37,13 +37,6 @@ config MFD_BCM_PMU590XX
 	help
 	  Support for the Broadcom PMIC.
 
-config MFD_BCMSAMOA
-	bool "PMU BCMSAMOA Support"
-	depends on MFD_BCMPMU
-	default n
-	help
-	  This enables PMU driver to support 3GULC
-
 config MFD_BCMPMU
 	bool "MFD BCM PMU"
 	depends on MFD_CORE && I2C_BSC

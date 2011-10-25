@@ -24,6 +24,7 @@
 #include <plat/kona_cpufreq_drv.h>
 
 #include <plat/pi_mgr.h>
+#include <asm/cpu.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -47,7 +48,7 @@ struct kona_freq_map
     u32 cpu_freq;
     int opp;         /* Operating point eg: ECONOMY, NORMAL, TURBO */
 };
-/* Per-CPU private data */
+
 struct kona_cpufreq
 {
 	int pi_id;
@@ -56,7 +57,12 @@ struct kona_cpufreq
 	struct kona_freq_map *freq_map;
 	int no_of_opps;
 	struct cpufreq_policy *policy;
-	struct kona_cpufreq_drv_plat *plat;
+	struct kona_cpufreq_drv_pdata *pdata;
+#ifdef CONFIG_SMP
+	unsigned long l_p_j_ref;
+	unsigned int  l_p_j_ref_freq;
+#endif
+
 };
 static struct kona_cpufreq *kona_cpufreq;
 
@@ -72,18 +78,16 @@ static struct kona_cpufreq *kona_cpufreq;
 static int kona_create_cpufreqs_table(struct cpufreq_policy *policy,
 	struct cpufreq_frequency_table *t)
 {
-	struct kona_cpufreq *b = &kona_cpufreq[policy->cpu];
-	struct kona_cpu_info *info = NULL;
+	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
 	int i, num;
 
-	info = &b->plat->info[policy->cpu];
-	num = info->num_freqs;
+	num = pdata->num_freqs;
 	kcf_dbg("%s: num_freqs: %d\n", __func__, num);
 
 	for (i = 0; i < num; i++)
 	{
 		t[i].index = i;
-		t[i].frequency = info->freq_tbl[i].cpu_freq;
+		t[i].frequency = pdata->freq_tbl[i].cpu_freq;
 		kcf_dbg("%s: index: %d, freq: %u\n", __func__, t[i].index, t[i].frequency);
 	}
 	t[num].index = i;
@@ -98,21 +102,21 @@ static int kona_create_cpufreqs_table(struct cpufreq_policy *policy,
 
 static unsigned int kona_cpufreq_get_speed(unsigned int cpu)
 {
-    struct kona_cpufreq *b = &kona_cpufreq[cpu];
     int opp;
     int i;
 
-    opp = pi_get_active_opp(b->pi_id);
+    opp = pi_get_active_opp(kona_cpufreq->pi_id);
 	kcf_dbg("%s: opp = %d\n",__func__,opp);
 
 	if(opp < 0)
 		return 0;
-	for(i=0; i<b->no_of_opps; i++)
+	for(i=0; i<kona_cpufreq->no_of_opps; i++)
 	{
-		if (b->freq_map[i].opp == opp)
+		if (kona_cpufreq->freq_map[i].opp == opp)
 		{
-			kcf_dbg("opp found, return corresponding freq %u\n", b->freq_map[i].cpu_freq);
-			return b->freq_map[i].cpu_freq;
+			kcf_dbg("opp found, return corresponding freq %u\n",
+				kona_cpufreq->freq_map[i].cpu_freq);
+			return kona_cpufreq->freq_map[i].cpu_freq;
 		}
     }
     kcf_dbg("Since the table is setup with all OPP, ctrl shouldnt reach here\n");
@@ -122,17 +126,15 @@ static unsigned int kona_cpufreq_get_speed(unsigned int cpu)
 
 static int kona_cpufreq_verify_speed(struct cpufreq_policy *policy)
 {
-	struct kona_cpufreq *b = &kona_cpufreq[policy->cpu];
 	int ret = -EINVAL;
 
-	if (b->kona_freqs_table)
+	if (kona_cpufreq->kona_freqs_table)
 		ret = cpufreq_frequency_table_verify(policy,
-			b->kona_freqs_table);
+			kona_cpufreq->kona_freqs_table);
+
 	kcf_dbg("%s: after cpufreq verify: min:%d->max:%d kHz\n",
 			__func__, policy->min, policy->max);
 
-
-	return 0;
 	return ret;
 }
 
@@ -141,21 +143,18 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 	unsigned int relation)
 {
 	struct cpufreq_freqs freqs;
-	struct kona_cpufreq *b = &kona_cpufreq[policy->cpu];
-	//struct kona_cpu_info *info = &b->plat->info[policy->cpu];
 	int i, index;
 	int ret = 0;
 	u32 opp = PI_OPP_NORMAL;
 
 	/* Lookup the next frequency */
-	if(cpufreq_frequency_table_target(policy, b->kona_freqs_table,
+	if(cpufreq_frequency_table_target(policy, kona_cpufreq->kona_freqs_table,
 		target_freq, relation, &index))
 	{
 		return -EINVAL;
 	}
-	freqs.cpu = policy->cpu;
 	freqs.old = kona_cpufreq_get_speed(policy->cpu);
-	freqs.new = b->kona_freqs_table[index].frequency;
+	freqs.new = kona_cpufreq->kona_freqs_table[index].frequency;
 
 	if (freqs.old == freqs.new)
 		return 0;
@@ -163,60 +162,68 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 	kcf_dbg("%s: cpu freq change: %u --> %u\n", __func__, freqs.old,
 		freqs.new);
 
-	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
+	for_each_online_cpu(freqs.cpu)
+		cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 	local_irq_disable();
 
-	for(i=0;i<b->no_of_opps;i++)
+	for(i=0;i<kona_cpufreq->no_of_opps;i++)
 	{
-	    if(freqs.new == b->freq_map[i].cpu_freq)
+	    if(freqs.new == kona_cpufreq->freq_map[i].cpu_freq)
 		{
-			opp = b->freq_map[i].opp;
+			opp = kona_cpufreq->freq_map[i].opp;
 			break;
 	    }
 	}
-	ret = pi_mgr_dfs_request_update(b->dfs_node, opp);
-
-	local_irq_enable();
-	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
+	ret = pi_mgr_dfs_request_update(kona_cpufreq->dfs_node, opp);
 
 	if(unlikely(ret))
+	{
 		kcf_dbg("%s: cpu freq change failed : %d\n", __func__, ret);
+	}
+
+	local_irq_enable();
+	for_each_online_cpu(freqs.cpu)
+		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
+
+#ifdef CONFIG_SMP
+	if(pdata->flags & KONA_CPUFREQ_UPDATE_LPJ)
+	{
+		int i;
+		for_each_online_cpu(i)
+		{
+
+			per_cpu(cpu_data, i).loops_per_jiffy = cpufreq_scale(kona_cpufreq->l_p_j_ref,
+							kona_cpufreq->l_p_j_ref_freq,
+								freqs.new);
+		}
+	}
+#endif
 
 	return ret;
 }
 
 static int kona_cpufreq_init(struct cpufreq_policy *policy)
 {
-	struct kona_cpufreq *b = NULL;
-	struct kona_cpu_info *info = NULL;
+	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
 	int ret, i;
 
 	kcf_dbg("%s\n", __func__);
 
 	/* Get handle to cpu private data */
-	b = &kona_cpufreq[policy->cpu];
-	info = &b->plat->info[policy->cpu];
 
-	b->pi_id = info->pi_id;
-	kcf_dbg("%s: pi_id for ARM core :%d\n", __func__, b->pi_id);
-	b->no_of_opps = info->num_freqs;
-
-	for(i=0; i < b->no_of_opps; i++)
-	{
-	    b->freq_map[i].cpu_freq = info->freq_tbl[i].cpu_freq;
-	    b->freq_map[i].opp = info->freq_tbl[i].opp;
-	}
 	/* Set default policy and cpuinfo */
 	policy->cur = kona_cpufreq_get_speed(policy->cpu);
 	pr_info("%s:policy->cur = %d\n",__func__, policy->cur);
-	/* FIXME: Tune this value */
-	policy->cpuinfo.transition_latency = info->kona_latency;
 
-	for(i=0;i<info->num_freqs;i++)
+	policy->cpuinfo.transition_latency = pdata->latency;
+
+	for(i=0;i<pdata->num_freqs;i++)
+	{
 	    kcf_dbg("index: %d, freq: %u opp:%d\n",
-	    		i, info->freq_tbl[i].cpu_freq, info->freq_tbl[i].opp);
+	    		i, pdata->freq_tbl[i].cpu_freq, pdata->freq_tbl[i].opp);
+	}
 
-	ret = kona_create_cpufreqs_table(policy, (b->kona_freqs_table));
+	ret = kona_create_cpufreqs_table(policy, kona_cpufreq->kona_freqs_table);
 	if(ret)
 	{
 		kcf_dbg("%s: setup_cpufreqs_table failed: %d\n",
@@ -224,15 +231,26 @@ static int kona_cpufreq_init(struct cpufreq_policy *policy)
 		goto err_cpufreqs_table;
 	}
 
-	ret = cpufreq_frequency_table_cpuinfo(policy, b->kona_freqs_table);
+	ret = cpufreq_frequency_table_cpuinfo(policy, kona_cpufreq->kona_freqs_table);
 	if(ret)
 	{
 		kcf_dbg("%s: cpufreq_frequency_table_cpuinfo failed\n",
 			__func__);
 		goto err_cpufreqs_table;
 	}
-	cpufreq_frequency_table_get_attr(b->kona_freqs_table, policy->cpu);
-	b->policy = policy;
+	cpufreq_frequency_table_get_attr(kona_cpufreq->kona_freqs_table, policy->cpu);
+	policy->shared_type = CPUFREQ_SHARED_TYPE_ALL;
+	cpumask_copy(policy->related_cpus, cpu_possible_mask);
+
+	kona_cpufreq->policy = policy;
+
+#ifdef CONFIG_SMP
+	if(kona_cpufreq->l_p_j_ref == 0 && (pdata->flags & KONA_CPUFREQ_UPDATE_LPJ))
+	{
+		kona_cpufreq->l_p_j_ref = per_cpu(cpu_data, 0).loops_per_jiffy;
+		kona_cpufreq->l_p_j_ref_freq = policy->cur;
+	}
+#endif
 
 	return 0;
 
@@ -272,50 +290,58 @@ static struct cpufreq_driver kona_cpufreq_driver = {
 
 static int cpufreq_drv_probe(struct platform_device *pdev)
 {
-	struct kona_cpufreq_drv_plat *plat = pdev->dev.platform_data;
+	struct kona_cpufreq_drv_pdata *pdata =  pdev->dev.platform_data;
 	int i;
 
 	kcf_dbg("%s\n", __func__);
-	BUG_ON(plat == NULL);
+	BUG_ON(pdata == NULL);
 	/* allocate memory for per-cpu data for all cpus */
-	kona_cpufreq = kzalloc(plat->nr_cpus * sizeof(struct kona_cpufreq),
+	kona_cpufreq = kzalloc(sizeof(struct kona_cpufreq),
 		GFP_KERNEL);
 	if(!kona_cpufreq)
 	{
 		kcf_dbg("%s: kzalloc failed for kona_cpufreq\n", __func__);
 		return -ENOMEM;
 	}
-	for(i = 0; i < plat->nr_cpus; i++)
-	{
-	   	kona_cpufreq[i].freq_map = kzalloc(plat->info[i].num_freqs *
+	memset(kona_cpufreq,0,sizeof(struct kona_cpufreq));
+	kona_cpufreq->freq_map = kzalloc(pdata->num_freqs *
 						sizeof(struct kona_freq_map), GFP_KERNEL);
-		if(!kona_cpufreq[i].freq_map)
-		{
-		    kcf_dbg("%s: kzalloc failed for freq_map\n", __func__);
-		    return -ENOMEM;
-		}
-		kona_cpufreq[i].kona_freqs_table = kzalloc(
-				(plat->info[i].num_freqs + 1) * sizeof(struct cpufreq_frequency_table), GFP_KERNEL);
-		if (!kona_cpufreq[i].kona_freqs_table)
-		{
-		    kcf_dbg("%s: kzalloc failed for kona_freqs_table\n", __func__);
-		    kfree(kona_cpufreq[i].freq_map);
-		    return -ENOMEM;
-		}
-		kona_cpufreq[i].pi_id = plat->info[i].pi_id;
-		/*Add a DFS client for ARM CCU. this client will be used later
-		 * for changinf ARM freq via cpu-freq.*/
-		kona_cpufreq[i].dfs_node = pi_mgr_dfs_add_request("cpu_freq", kona_cpufreq[i].pi_id,
-				pi_get_active_opp(kona_cpufreq[i].pi_id));
-		if (!kona_cpufreq[i].dfs_node)
-		{
-		    kcf_dbg("Failed add dfs request for CPU\n");
-		    kfree(kona_cpufreq[i].kona_freqs_table);
-		    kfree(kona_cpufreq[i].freq_map);
-		    return  -ENOMEM;
-		}
-		kona_cpufreq[i].plat = plat;
+	if(!kona_cpufreq->freq_map)
+	{
+	    kcf_dbg("%s: kzalloc failed for freq_map\n", __func__);
+		kfree(kona_cpufreq);
+	    return -ENOMEM;
 	}
+	kona_cpufreq->kona_freqs_table = kzalloc(
+				(pdata->num_freqs + 1) * sizeof(struct cpufreq_frequency_table), GFP_KERNEL);
+	if (!kona_cpufreq->kona_freqs_table)
+	{
+	    kcf_dbg("%s: kzalloc failed for kona_freqs_table\n", __func__);
+	    kfree(kona_cpufreq->freq_map);
+		kfree(kona_cpufreq);
+	    return -ENOMEM;
+	}
+	kona_cpufreq->pi_id = pdata->pi_id;
+	kona_cpufreq->no_of_opps = pdata->num_freqs;
+	for(i=0; i < kona_cpufreq->no_of_opps; i++)
+	{
+	    kona_cpufreq->freq_map[i].cpu_freq = pdata->freq_tbl[i].cpu_freq;
+	    kona_cpufreq->freq_map[i].opp = pdata->freq_tbl[i].opp;
+	}
+
+	/*Add a DFS client for ARM CCU. this client will be used later
+	  for changinf ARM freq via cpu-freq.*/
+	kona_cpufreq->dfs_node = pi_mgr_dfs_add_request("cpu_freq", kona_cpufreq->pi_id,
+				pi_get_active_opp(kona_cpufreq->pi_id));
+	if (!kona_cpufreq->dfs_node)
+	{
+	    kcf_dbg("Failed add dfs request for CPU\n");
+	    kfree(kona_cpufreq->kona_freqs_table);
+	    kfree(kona_cpufreq->freq_map);
+		kfree(kona_cpufreq);
+	    return  -ENOMEM;
+	}
+	kona_cpufreq->pdata = pdata;
 	platform_set_drvdata(pdev, kona_cpufreq);
 
 	return cpufreq_register_driver(&kona_cpufreq_driver);
@@ -324,20 +350,17 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 
 static int __devexit cpufreq_drv_remove(struct platform_device *pdev)
 {
-    struct kona_cpufreq_drv_plat *plat = pdev->dev.platform_data;
     int ret = 0;
-    int i;
     if (cpufreq_unregister_driver(&kona_cpufreq_driver) != 0)
-	kcf_dbg("%s: cpufreq unregister failed\n", __func__);
-    for(i = 0; i < plat->nr_cpus; i++) {
-	ret = pi_mgr_dfs_request_remove(kona_cpufreq[i].dfs_node);
+		kcf_dbg("%s: cpufreq unregister failed\n", __func__);
+
+	ret = pi_mgr_dfs_request_remove(kona_cpufreq->dfs_node);
 	if(ret)
 	    kcf_dbg("%s: dfs remove request failed\n", __func__);
 
-	    kfree(kona_cpufreq[i].kona_freqs_table);
-	    kfree(kona_cpufreq[i].freq_map);
-    }
-    kfree(kona_cpufreq);
+	kfree(kona_cpufreq->kona_freqs_table);
+	kfree(kona_cpufreq->freq_map);
+	kfree(kona_cpufreq);
     kona_cpufreq = NULL;
 
     return 0;

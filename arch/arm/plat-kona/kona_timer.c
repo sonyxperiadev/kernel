@@ -37,6 +37,7 @@
 #include <mach/clock.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
 #if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_SAMOA)
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
@@ -229,13 +230,18 @@ int kona_timer_module_set_rate(char* name, unsigned int rate)
 	spin_lock_irqsave (&pktm->lock, flags);
 
 	if (pktm->reg_base == IOMEM(KONA_SYSTMR_VA))
-		ret = __config_slave_timer_clock(rate); 
+		ret = __config_slave_timer_clock(rate);
 	else
 		ret = __config_aon_hub_timer_clock(rate);
 
+#ifdef CONFIG_ARCH_RHEA
+	/* Configure KONA Timer count in 32 bit mode */
+	writel(0x0, KONA_CHIPREG_VA + CHIPREG_HUB_TIMER_WIDTH_OFFSET);
+#endif
+
 	if (ret != -1) {
 		pktm->rate = rate;
-		pktm->cfg_state = CONFIGURED_FREE; 
+		pktm->cfg_state = CONFIGURED_FREE;
 	}
 
 	spin_unlock_irqrestore (&pktm->lock, flags);
@@ -347,10 +353,10 @@ EXPORT_SYMBOL(kona_timer_config);
  *  kt - Kona timer context (returned by kona_timer_request())
  *  load - The load value to be programmed. This function will internally
  *         add this value to the current counter and program the resultant in the
- *         match register. Once the timer is started when the counter 
+ *         match register. Once the timer is started when the counter
  *         reaches this value an interrupt will be raised
  */
-int kona_timer_set_match_start (struct kona_timer* kt, unsigned int load)
+int kona_timer_set_match_start (struct kona_timer* kt, unsigned long load)
 {
 	struct kona_timer_module *ktm;
 	unsigned long flags;
@@ -406,11 +412,11 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned int load)
 
 	/* Check that we didn't miss the timer expiration */
 	__get_counter (ktm->reg_base, &msw, &lsw);
-	reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 
 	if ((msw > msw_exp) || ((msw == msw_exp) && (lsw >= lsw_exp))) {
 
 		/* Expiration time passed, check if interrupt fired */
+		reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 		if (0 == (reg & (1 << kt->ch_num))) {
 
 			reg &= ~KONA_GPTIMER_STCS_TIMER_MATCH_MASK;
@@ -511,33 +517,30 @@ int kona_timer_free (struct kona_timer* kt)
 EXPORT_SYMBOL(kona_timer_free);
 
 /*
- * kona_timer_get_counter - Read the counter register of the timer 
+ * kona_timer_get_counter - Read the counter register of the timer
  *
  * kt - Timer context to be freed.
- * msw - pointer to the Most Significant Word (32 bits) 
- * lsw - pointer to the Leas Significant Word (32 bits) 
  */
-int kona_timer_get_counter(struct kona_timer* kt, unsigned long *msw, 
-	unsigned long *lsw)
+unsigned int kona_timer_get_counter(struct kona_timer* kt)
 {
 	struct kona_timer_module *ktm;
-	unsigned long flags;
+	unsigned int counter;
 
-	if (NULL == kt || NULL == msw || NULL == lsw)
-		return -1;
+	if (NULL == kt) {
+		pr_err("%s timer object cannot be NULL\n", __func__);
+		BUG();
+	}
 
 	ktm = kt->ktm;
-	spin_lock_irqsave (&ktm->lock, flags);
+	counter = readl(ktm->reg_base + KONA_GPTIMER_STCLO_OFFSET);
 
-	__get_counter(ktm->reg_base, msw, lsw);
+	return counter;
 
-	spin_unlock_irqrestore (&ktm->lock, flags);
-	return 0;
 }
 EXPORT_SYMBOL(kona_timer_get_counter);
 
 /*
- * kona_timer_disable_and_clear - Disable the timer and clear the 
+ * kona_timer_disable_and_clear - Disable the timer and clear the
  * interrupt
  *
  * kt - Timer context to be freed.
@@ -648,11 +651,11 @@ local_clk_cfg:
 	val &= 0x80000000;
 	val |= 0xA5A500 | 0x1;
 	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-	
+
 	/* set the value */
 	mask = KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
- 	kona_set_reg_field(slaveClockMgr_regs + KPS_CLK_MGR_REG_TIMERS_DIV_OFFSET, 
-		mask, KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT,
+	kona_set_reg_field(slaveClockMgr_regs + KPS_CLK_MGR_REG_TIMERS_DIV_OFFSET,
+			mask, KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT,
 		rate_val);
 
 
@@ -687,7 +690,7 @@ local_clk_cfg:
 	/* set the value */
 	mask = KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
 	kona_set_reg_field(slaveClockMgr_regs + KPS_CLK_MGR_REG_TIMERS_DIV_OFFSET,
-		mask, KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT, 0);
+			mask, KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT, 0);
 
 	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_KPS_DIV_TRIG_OFFSET);
 	writel(val | (1 << KPS_CLK_MGR_REG_KPS_DIV_TRIG_TIMERS_TRIGGER_SHIFT),
@@ -712,8 +715,8 @@ local_clk_cfg:
 
 	/* set the value */
 	mask = IKPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
-	kona_set_reg_field(slaveClockMgr_regs + IKPS_CLK_MGR_REG_TIMERS_DIV_OFFSET, 
-		mask, IKPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT, 0);
+	kona_set_reg_field(slaveClockMgr_regs + IKPS_CLK_MGR_REG_TIMERS_DIV_OFFSET,
+			mask, IKPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT, 0);
 
 
 	val = readl(slaveClockMgr_regs + IKPS_CLK_MGR_REG_DIV_TRIG_OFFSET);

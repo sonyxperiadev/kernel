@@ -356,13 +356,23 @@ static int kona_tmon_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int kona_tmon_resume(struct platform_device *pdev)
 {
-        /* TODO: add resume support */
+        struct platform_drvdata *pdata = platform_get_drvdata(pdev);
+
+	/* Enable clocks */
+        clk_enable(pdata->tmon_apb_clk);
+        clk_enable(pdata->tmon_1m_clk);
+
         return 0;
 }
 
 static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t mesg)
 {
-        /* TODO: add suspend support */
+        struct platform_drvdata *pdata = platform_get_drvdata(pdev);
+
+	/* Disable clocks */
+        clk_disable(pdata->tmon_1m_clk);
+        clk_disable(pdata->tmon_apb_clk);
+
         return 0;
 }
 #else

@@ -35,6 +35,10 @@
 
 #include <linux/mfd/bcmpmu.h>
 
+extern int bcm_hsotgctrl_en_clock(bool on);
+extern int bcm_hsotgctrl_bc_reset(void);
+extern int bcm_hsotgctrl_bc_vdp_src_off(void);
+
 #define BCMPMU_PRINT_ERROR (1U << 0)
 #define BCMPMU_PRINT_INIT (1U << 1)
 #define BCMPMU_PRINT_FLOW (1U << 2)
@@ -108,11 +112,12 @@ struct bcmpmu_accy {
 	int adp_block_enabled;
 	int adp_prob_comp;
 	int adp_sns_comp;
+	int retry_cnt;
 };
 static struct bcmpmu_accy *bcmpmu_accy;
 
 int bcmpmu_usb_add_notifier(u32 event_id, struct notifier_block *notifier)
-{ 
+{
 	if (!bcmpmu_accy) {
 		pr_accy(ERROR,"%s: BCMPMU Accy driver is not initialized\n", __func__);
 		return -EAGAIN;
@@ -220,7 +225,10 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_USBINS:
+		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_IN, NULL);
+		break;
 	case PMU_IRQ_USBRM:
+		break;
 	case PMU_IRQ_CHGDET_LATCH:
 		schedule_delayed_work(&paccy->det_work, msecs_to_jiffies(0));
 		break;
@@ -471,19 +479,25 @@ static void usb_det_work(struct work_struct *work)
 		container_of(work, struct bcmpmu_accy, det_work.work);
 	struct bcmpmu *bcmpmu = paccy->bcmpmu;
 
-	bc_status = readl(BB_BC_STATUS);
 	ret = bcmpmu_usb_get(bcmpmu,
 		BCMPMU_USB_CTRL_GET_VBUS_STATUS, (void *)&vbus_status);
-	pr_accy(FLOW, "%s, enter state=%d, bc_status=0x%X, vbus=0x%X\n",
-		__func__, paccy->det_state, bc_status, vbus_status);
+	pr_accy(FLOW, "%s, enter state=%d, vbus=0x%X\n",
+		__func__, paccy->det_state, vbus_status);
 
 	switch (paccy->det_state) {
 	case USB_IDLE:
 		paccy->det_state = USB_DETECT;
-		schedule_delayed_work(&paccy->det_work, msecs_to_jiffies(50));
+		bcm_hsotgctrl_en_clock(1);
+		mdelay(1);
+		bcm_hsotgctrl_bc_reset();
+		paccy->retry_cnt = 0;
+		schedule_delayed_work(&paccy->det_work, msecs_to_jiffies(100));
 		break;
 	case USB_DETECT:
 		if (vbus_status != 0) {
+			bc_status = readl(BB_BC_STATUS);
+			pr_accy(FLOW, "%s, bc_status=0x%X, retry=%d\n",
+				__func__, bc_status, paccy->retry_cnt);
 			if (bc_status & BB_BC_STS_BC_DONE_MSK) {
 				if (bc_status & BB_BC_STS_SDP_MSK) {
 					usb_type = PMU_USB_TYPE_SDP;
@@ -498,22 +512,17 @@ static void usb_det_work(struct work_struct *work)
 					chrgr_type = PMU_CHRGR_TYPE_DCP;
 					paccy->det_state = USB_CONNECTED;
 				} else {
-					/* workaround for basic charging */
-					usb_type = PMU_USB_TYPE_NONE;
-					chrgr_type = PMU_CHRGR_TYPE_AC;
-					paccy->det_state = USB_CONNECTED;
+					paccy->det_state = USB_RETRY;
+					schedule_delayed_work(&paccy->det_work,
+						msecs_to_jiffies(0));
 				}
 			} else if ((bc_status & BB_BC_STS_DM_TO_MSK) ||
 				(bc_status & BB_BC_STS_DP_TO_MSK) ||
 				(bc_status & BB_BC_STS_DM_ERR_MSK) ||
 				(bc_status & BB_BC_STS_DP_ERR_MSK)) {
 				paccy->det_state = USB_RETRY;
-				/* try redo detection */
-				ret = bcmpmu->write_dev(bcmpmu, PMU_REG_CHRGR_BCDLDO,
-					0,
-					bcmpmu->regmap[PMU_REG_CHRGR_BCDLDO].mask);
 				schedule_delayed_work(&paccy->det_work,
-					msecs_to_jiffies(100));
+					msecs_to_jiffies(0));
 			} else
 				schedule_delayed_work(&paccy->det_work,
 					msecs_to_jiffies(100));
@@ -521,33 +530,38 @@ static void usb_det_work(struct work_struct *work)
 			usb_type = PMU_USB_TYPE_NONE;
 			chrgr_type = PMU_CHRGR_TYPE_NONE;
 			paccy->det_state = USB_IDLE;
+//			bcm_hsotgctrl_en_clock(0); /* Do this when PM CQ is fixed */
 		}
 		break;
 
 	case USB_RETRY:
-		ret = bcmpmu->write_dev(bcmpmu, PMU_REG_CHRGR_BCDLDO,
-			bcmpmu->regmap[PMU_REG_CHRGR_BCDLDO].mask,
-			bcmpmu->regmap[PMU_REG_CHRGR_BCDLDO].mask);
-		paccy->det_state = USB_DETECT;
-		schedule_delayed_work(&paccy->det_work,
-			msecs_to_jiffies(100));
+		paccy->retry_cnt++;
+		if (paccy->retry_cnt < 10) {
+			paccy->det_state = USB_DETECT;
+			bcm_hsotgctrl_bc_reset();
+			schedule_delayed_work(&paccy->det_work,
+				msecs_to_jiffies(100));
+		} else {
+			pr_accy(ERROR, "%s, failed, retry times=%d\n",
+				__func__, paccy->retry_cnt);
+			usb_type = PMU_USB_TYPE_NONE;
+			chrgr_type = PMU_CHRGR_TYPE_NONE;
+			paccy->det_state = USB_IDLE;
+		}
 		break;
-		
+
 	case USB_CONNECTED:
 		if (vbus_status == 0) {
 			usb_type = PMU_USB_TYPE_NONE;
 			chrgr_type = PMU_CHRGR_TYPE_NONE;
 			paccy->det_state = USB_IDLE;
-		} else {
-			paccy->det_state = USB_DETECT;
-			schedule_delayed_work(&paccy->det_work, 0);
 		}
 		break;
 	default:
 		break;
 	}
 
-	pr_accy(FLOW, "%s, exit state=%d, usb=%d, chrgr=%d",
+	pr_accy(FLOW, "%s, exit state=%d, usb=%d, chrgr=%d\n",
 		__func__, paccy->det_state, usb_type, chrgr_type);
 
 	if (paccy->det_state == USB_IDLE)
@@ -857,9 +871,12 @@ static int bcmpmu_register_usb_callback(struct bcmpmu *pmu,
 		paccy->usb_cb.clientdata = data;
 		ret = 0;
 	}
+
+#if 0 /* Do this only if BC detection is already complete */
 	send_usb_event(paccy->bcmpmu,
 		BCMPMU_USB_EVENT_USB_DETECTION,
-			&paccy->bcmpmu->usb_accy_data.usb_type);
+		&paccy->bcmpmu->usb_accy_data.usb_type);
+#endif
 
 	return ret;
 }
@@ -900,11 +917,11 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	paccy->adp_block_enabled = 0;
 	paccy->adp_prob_comp = 0;
 	paccy->adp_sns_comp = 0;
-	
+
 	INIT_DELAYED_WORK(&paccy->adp_work, usb_adp_work);
 	INIT_DELAYED_WORK(&paccy->det_work, usb_det_work);
 	wake_lock_init(&paccy->wake_lock, WAKE_LOCK_SUSPEND, "usb_accy");
-	for (i = 0; i <= BCMPMU_EVENT_MAX; i++) {
+	for (i = 0; i < BCMPMU_EVENT_MAX; i++) {
 		paccy->event[i].event_id = i;
 		BLOCKING_INIT_NOTIFIER_HEAD(&paccy->event[i].notifiers);
 	}
@@ -941,7 +958,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_accy_attr_group);
 #endif
-	schedule_delayed_work(&paccy->det_work, 0);
+//	schedule_delayed_work(&paccy->det_work, 0); /* Disable this logic for later use */
 	return 0;
 
 err:
@@ -991,7 +1008,7 @@ static int __init bcmpmu_accy_init(void)
 {
 	return platform_driver_register(&bcmpmu_accy_driver);
 }
-module_init(bcmpmu_accy_init);
+subsys_initcall(bcmpmu_accy_init);
 
 static void __exit bcmpmu_accy_exit(void)
 {

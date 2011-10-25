@@ -378,15 +378,8 @@ int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
 		ret = clk_enable(dev->peri_clk);
 		if(ret)
 			return ret;
-		/* sleep clock */
-		ret = clk_enable(dev->sleep_clk);
-		if(ret) {
-			clk_disable(dev->peri_clk);
-			return ret;
-		}
 	} else {
 		clk_disable(dev->peri_clk);
-		clk_disable(dev->sleep_clk);
 	}
 	return ret;
 #endif
@@ -487,6 +480,13 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	dev->sleep_clk = clk_get(&pdev->dev, hw_cfg->sleep_clk_name);
 	if(IS_ERR_OR_NULL (dev->sleep_clk))
 		return -EINVAL;
+
+	ret = clk_enable(dev->sleep_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to enable sleep clock for %s\n", devname);
+		ret = -EFAULT;
+		goto err_unset_pltfm;
+	}
 
 	ret = sdhci_pltfm_clk_enable(host, 1);
 	if (ret) {
@@ -619,6 +619,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 		dead = 1;
 	sdhci_remove_host(host, dead);
 
+	clk_disable(dev->sleep_clk);
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);
 	iounmap(host->ioaddr);

@@ -299,7 +299,11 @@
 #define  irq_to_gpio(irq)		((irq) - IRQ_GPIO_0 )
 
 #ifdef CONFIG_GPIO_PCA953X
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+#define EXPANDED_GPIO_IRQS    32	/*2 expander on RheaRayEDN1x, 32 irqs expanded*/
+#else
 #define EXPANDED_GPIO_IRQS    16
+#endif
 #define NR_IRQS               (IRQ_GPIO_0+NUM_GPIO_IRQS + EXPANDED_GPIO_IRQS)
 #else
 #define NR_IRQS               (IRQ_GPIO_0 + NUM_GPIO_IRQS)
