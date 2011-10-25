@@ -1011,12 +1011,10 @@ void AUDCTRL_EnablePlay(
 		config.sink = CSL_CAPH_DEV_MEMORY;
 	}
 
-#if defined(ENABLE_DMA_ARM2SP)
 	if ((src == AUDIO_HW_MEM || src == AUDIO_HW_I2S_IN) && sink == AUDIO_HW_DSP_VOICE && spk!=AUDCTRL_SPK_USB)
 	{
 		config.sink = CSL_CAPH_DEV_DSP_throughMEM; //convert from AUDDRV_DEV_EP
 	}
-#endif
 
 	if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
 		;
