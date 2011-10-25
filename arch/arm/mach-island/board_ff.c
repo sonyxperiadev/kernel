@@ -40,7 +40,11 @@
 #include <linux/i2c/tango_ts.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
 #include <linux/smb380.h>
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) || \
+    defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
 #include <linux/akm8975.h>
+#include <linux/akm8975_brcm.h>
+#endif
 #if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
 #include <linux/mpu3050.h>
 #endif
@@ -1154,6 +1158,8 @@ static struct i2c_board_info __initdata bma150_info[] =
 	}
 };
 
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) || \
+	defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
 #define AKM8975_IRQ_PIN 155
 
 static struct akm8975_platform_data akm8975_plat_data = {
@@ -1166,11 +1172,12 @@ static struct akm8975_platform_data akm8975_plat_data = {
 static struct i2c_board_info __initdata akm8975_info[] =
 {
 	[0] = {
-		I2C_BOARD_INFO("akm8975", 0x0C ),
+		I2C_BOARD_INFO(AKM8975_DRV_NAME, AKM8975_I2C_ADDR ),
 		.platform_data = &akm8975_plat_data,
 		.irq = gpio_to_irq(AKM8975_IRQ_PIN),
 	},
 };
+#endif
 
 #if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 static struct i2c_board_info __initdata bh1715_info[] = {
@@ -1405,9 +1412,12 @@ static void __init board_add_devices(void)
 		bma150_info,
 		ARRAY_SIZE(bma150_info));
 
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) \
+			|| defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
 	i2c_register_board_info(3,
 		akm8975_info,
 		ARRAY_SIZE(akm8975_info));
+#endif
 	
 #if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 	i2c_register_board_info(3,
