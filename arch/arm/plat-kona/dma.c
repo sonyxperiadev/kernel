@@ -670,8 +670,10 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 
 	/* Get channel descriptor */
 	c = chan_id_to_cdesc(chan);
-	if (!c)
+	if (!c) {
+		spin_unlock_irqrestore(&lock, flags);
 		goto err1;
+	}
 
 	if (c->in_use || c->is_setup) {
 		dev_info(dmac->pi->dev,
