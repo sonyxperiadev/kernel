@@ -514,7 +514,7 @@ static struct platform_device android_usb_device = {
 struct kona_freq_tbl kona_freq_tbl[] =
 {
 #ifndef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+//    FTBL_INIT(156000000, PI_OPP_ECONOMY),     /*island has this issue too, will be remove in capri */
 #endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
     FTBL_INIT(700000, PI_OPP_TURBO),

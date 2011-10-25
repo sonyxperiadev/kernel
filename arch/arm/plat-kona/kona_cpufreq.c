@@ -146,7 +146,9 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 	int i, index;
 	int ret = 0;
 	u32 opp = PI_OPP_NORMAL;
-
+#ifdef CONFIG_SMP
+	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
+#endif
 	/* Lookup the next frequency */
 	if(cpufreq_frequency_table_target(policy, kona_cpufreq->kona_freqs_table,
 		target_freq, relation, &index))

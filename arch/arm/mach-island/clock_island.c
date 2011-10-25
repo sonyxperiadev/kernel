@@ -37,8 +37,11 @@
 
 #include <plat/pi_mgr.h>
 
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+#define UPDATE_LPJ 0                    
+#else
 #define UPDATE_LPJ 1
-
+#endif
 
 unsigned long clock_get_xtal(void)
 {
