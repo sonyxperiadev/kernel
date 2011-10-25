@@ -689,6 +689,7 @@ CONFIG_SERIAL_CORE_CONSOLE=y
 CONFIG_BCM_BSC=y
 # CONFIG_BCM_GPS is not set
 # CONFIG_BCM_HAPTICS is not set
+# CONFIG_BCM_HDMI_DET is not set
 # CONFIG_RAMOOPS is not set
 # CONFIG_I2C is not set
 # CONFIG_SPI is not set
