@@ -1,9 +1,6 @@
 #
 # Makefile for misc devices that really don't fit anywhere else.
 #
-
-bj-$(CONFIG_BCM_VCHIQ_VC04)           += vc04_services/
-obj-$(CONFIG_BRCM_VIDEOCORE_SERVICES)   += vc04_services/
 obj-$(CONFIG_IBM_ASM)		+= ibmasm/
 obj-$(CONFIG_AD525X_DPOT)	+= ad525x_dpot.o
 obj-$(CONFIG_AD525X_DPOT_I2C)	+= ad525x_dpot-i2c.o
@@ -75,3 +72,4 @@ obj-$(CONFIG_BTHID)		+= bthid.o
 obj-$(CONFIG_MACH_RHEA_SELFTEST)	+= bcm_selftest_bb.o
 obj-$(CONFIG_BCM_RFKILL)	+= bcmbt_rfkill.o
 obj-$(CONFIG_BCM_BT_LPM)	+= bcmbt_lpm.o
+obj-y          += vc04_services/
