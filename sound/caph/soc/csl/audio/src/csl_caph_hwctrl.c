@@ -442,10 +442,9 @@ static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 
 	if(pcmRunning && enable)
 	{
-		//pcm code does not work consistently, need further debug with dsp
 		//if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
 		//csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-		//csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+		csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 		//csl_pcm_start(pcmHandleSSP, &pcmCfg);
 	} else {
 		csl_caph_audioh_adcpath_global_enable(enable);
@@ -1582,8 +1581,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 			//dma sequence will divert from non-dma eventually, hence make 2 copies.
 			if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
 			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-			csl_pcm_start(pcmHandleSSP, &pcmCfg);
+			//csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 #else
 			if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
 			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
@@ -1756,7 +1754,7 @@ void csl_caph_ControlHWClock(Boolean enable)
 	    clkID[1] = clk_get(NULL, "ssp3_audio_clk");
 		clk_enable(clkID[1]);
     
-        clkID[2] = clk_get(NULL, "audioh_2p4m_clk");		
+        clkID[2] = clk_get(NULL, "audioh_2p4m_clk");
 		clk_enable(clkID[2]);
 
         clkID[3] = clk_get(NULL,"audioh_26m_clk");
@@ -1765,7 +1763,7 @@ void csl_caph_ControlHWClock(Boolean enable)
         clkID[4] = clk_get(NULL,"audioh_156m_clk");
 		clk_enable(clkID[4]);
 
-#ifdef CONFIG_ARCH_ISLAND
+#if !defined(CONFIG_ARCH_ISLAND)
         clkID[5] = clk_get(NULL, "ssp4_audio_clk");
 		clk_enable(clkID[5]);
 #endif

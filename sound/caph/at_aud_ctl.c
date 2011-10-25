@@ -896,7 +896,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			u32 value, index, phy_addr, size;
 			char *addr;
 
-			if(Params[2]==0) size = 4;
+			if(Params[2]==0) size = 1;
 			else size = Params[2] >> 2;
 
 			phy_addr = Params[1];
