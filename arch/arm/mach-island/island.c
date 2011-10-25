@@ -108,8 +108,7 @@ static int __init island_l2x0_init(void)
 		return 0;
 	}
 
-	l2cache_base = ioremap(L2C_BASE_ADDR, SZ_4K);
-	BUG_ON(!l2cache_base);
+	l2cache_base = (void __iomem *)(KONA_L2C_VA);
 
 	/*
 	 * Zero bits in aux_mask will be cleared
