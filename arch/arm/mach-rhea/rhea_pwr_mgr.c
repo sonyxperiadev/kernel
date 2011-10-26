@@ -209,7 +209,7 @@ static const struct rhea_event_table event_table[] = {
 	// AP stays awake long enough until all CP activities that could trigger MODEMBUS_ACTIVE_EVENT have completed.
 	// For A0 chip, MODEMBUS_ACTIVE_EVENT is enabled to work around the JIRA that VREQ_NONZERO_PI_MODEM_EVENT is not auto-cleared.
 	// JIRA HWRHEA-1253 : Remove MODEMBUS_ACTIVE_EVENT for B0
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_PM_A0_ASIC_WORKAROUND
 	{	MODEMBUS_ACTIVE_EVENT, 			PM_TRIG_POS_EDGE,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
 #endif
 	{	VREQ_NONZERO_PI_MODEM_EVENT,		PM_TRIG_POS_EDGE,		PM_DFS,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_RET,	},
@@ -440,37 +440,9 @@ early_initcall(rhea_pwr_mgr_init);
 
 void pwr_mgr_mach_debug_fs_init(int type)
 {
-	static bool mux_init = false;
 	u32 reg_val;
 
-	if(!mux_init)
-	{
-		mux_init = true;
-		 /*Get pad control write access by rwiting password */
-		writel(0xa5a501, KONA_PAD_CTRL + PADCTRLREG_WR_ACCESS_OFFSET);
-		/* unlock first 32 pad control registers */
-		writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK0_OFFSET);
-
-		/* Configure GPIO_XX to TESTPORT_XX  */
-		/* writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET); */
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO01_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO02_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO03_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO04_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO05_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO06_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO07_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO08_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO09_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO10_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO11_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO12_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO13_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO14_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO15_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO16_OFFSET);
-	}
+	set_gpio_mux_for_debug_bus();
 	reg_val = readl(KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
 	reg_val &= ~CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
 	if(type == 0)

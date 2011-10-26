@@ -54,6 +54,15 @@ struct bsc_adap_cfg
 	 */
 	int dynamic_speed;
 
+	/*
+	 * flag to inform whether the controller is for talking to PMU
+	 * or not. This is needed to acquire the HW semaphore to sync 
+	 * with the Power Manager sequencer.
+	 */
+#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+	bool is_pmu_i2c;
+#endif
+
 	/* BSC clocks */
 	char *bsc_clk;
 	char *bsc_apb_clk;
