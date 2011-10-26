@@ -415,7 +415,7 @@ unlock:
 int32_t vc_vchi_fb_free( VC_VCHI_FB_HANDLE_T handle,
                          uint32_t res_handle )
 {
-   int ret;
+   int32_t ret;
    FB_INSTANCE_T *instance = handle;
    int32_t success;
    uint32_t msg_len;
@@ -668,5 +668,106 @@ unlock:
    vchi_service_release(instance->vchi_handle[0]);
    vcos_mutex_unlock( &instance->vchi_mutex );
 
+   return ret;
+}
+
+int32_t vc_vchi_fb_cfg( VC_VCHI_FB_HANDLE_T handle,
+                        VC_FB_CFG_T *cfg,
+                        VC_FB_CFG_RESULT_T *cfg_result )
+{
+   int32_t ret;
+   FB_INSTANCE_T *instance = handle;
+   int32_t success;
+   uint32_t msg_len;
+   VC_FB_MSG_HDR_T *msg_hdr;
+   VCOS_STATUS_T status;
+
+   if ( !vcos_verify( handle != NULL ))
+   {
+      LOG_ERR( "%s: invalid handle %p", __func__, handle );
+
+      ret = -1;
+      goto out;
+   }
+
+   if ( !vcos_verify( cfg != NULL ))
+   {
+      LOG_ERR( "%s: invalid cfg pointer %p", __func__, cfg );
+
+      ret = -1;
+      goto out;
+   }
+
+   if ( !vcos_verify( cfg_result != NULL ))
+   {
+      LOG_ERR( "%s: invalid cfg_result pointer %p", __func__, cfg_result );
+
+      ret = -1;
+      goto out;
+   }
+
+   vcos_mutex_lock( &instance->vchi_mutex );
+   vchi_service_use( instance->vchi_handle[0] );
+
+   msg_len = sizeof( *msg_hdr ) + sizeof( *cfg );
+   memset( instance->msg_buf, 0, msg_len );
+
+   msg_hdr = (VC_FB_MSG_HDR_T *)instance->msg_buf;
+   msg_hdr->type = VC_FB_MSG_TYPE_CFG;
+
+   // Copy the user buffer into the message buffer
+   memcpy( msg_hdr->body, cfg, sizeof( *cfg ));
+
+   // Send the message to the videocore
+   success = vchi_msg_queue( instance->vchi_handle[0],
+                             instance->msg_buf, msg_len,
+                             VCHI_FLAGS_BLOCK_UNTIL_QUEUED, NULL );
+   if ( success != 0 )
+   {
+      LOG_ERR( "%s: failed to queue message (success=%d)",
+               __func__, success );
+
+      ret = -1;
+      goto unlock;
+   }
+
+   // We are expecting a reply from the videocore
+   status = vcos_event_wait( &instance->msg_avail_event );
+   if ( status != VCOS_SUCCESS )
+   {
+      LOG_ERR( "%s: failed on waiting for event (status=%d)",
+               __func__, status );
+
+      ret = -1;
+      goto unlock;
+   }
+
+   success = vchi_msg_dequeue( instance->vchi_handle[0],
+                               cfg_result, sizeof( *cfg_result ),
+                               &msg_len, VCHI_FLAGS_NONE );
+   if ( success != 0 )
+   {
+      LOG_ERR( "%s: failed to dequeue message (success=%d)",
+               __func__, success );
+
+      ret = -1;
+      goto unlock;
+   }
+   else if ( msg_len != sizeof( *cfg_result ))
+   {
+      LOG_ERR( "%s: incorrect message length %u (expected=%u)",
+               __func__, msg_len, sizeof( *cfg_result ));
+
+      ret = -1;
+      goto unlock;
+   }
+
+   ret = cfg_result->success ? -1 : 0;
+
+unlock:
+   vchi_service_release( instance->vchi_handle[0] );
+   vcos_mutex_unlock( &instance->vchi_mutex );
+
+out:
    return ret;
 }
