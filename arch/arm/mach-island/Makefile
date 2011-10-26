@@ -70,3 +70,5 @@ CFLAGS_board_tablet_28160.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET_28160
 
 obj-$(CONFIG_MACH_ISLAND_CUSTOM_BOARDS_SUPPORT) += custom_boards/
 
+obj-$(CONFIG_MAP_MEMC_STATISTICS) += memc.o
+
