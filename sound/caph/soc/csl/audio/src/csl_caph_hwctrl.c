@@ -2593,6 +2593,12 @@ void csl_caph_hwctrl_init(void)
     fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp3_baseAddr);
     pcmHandleSSP = (CSL_HANDLE)csl_pcm_init(addr.ssp4_baseAddr, (UInt32)caph_intc_handle);
 #else
+    fmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0; 
+	fmRxTrigger = CSL_CAPH_TRIG_SSP4_RX0; 
+	pcmTxTrigger = CSL_CAPH_TRIG_SSP3_TX0;
+	pcmRxTrigger = CSL_CAPH_TRIG_SSP3_RX0;
+	sspidPcmUse = CSL_CAPH_SSP_3;
+
     // Initialize SSP4 port for FM.
     fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp4_baseAddr);
     // Initialize SSP3 port for PCM.
@@ -4020,8 +4026,10 @@ CSL_CAPH_PathID csl_caph_hwctrl_RegisterStream(CSL_CAPH_HWCTRL_STREAM_REGISTER_t
         if (HWConfig_Table[i].streamID == stream->streamID)
         {
             HWConfig_Table[i].streamID = stream->streamID;
-            HWConfig_Table[i].src_sampleRate = stream->src_sampleRate;
-            HWConfig_Table[i].snk_sampleRate = stream->snk_sampleRate;
+            if (HWConfig_Table[i].source ==  CSL_CAPH_DEV_MEMORY)
+                HWConfig_Table[i].src_sampleRate = stream->src_sampleRate;
+            if (HWConfig_Table[i].sink ==  CSL_CAPH_DEV_MEMORY)
+                HWConfig_Table[i].snk_sampleRate = stream->snk_sampleRate;
             HWConfig_Table[i].chnlNum = stream->chnlNum;
             HWConfig_Table[i].bitPerSample = stream->bitPerSample;
             HWConfig_Table[i].pBuf = stream->pBuf;
