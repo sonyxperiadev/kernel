@@ -295,11 +295,8 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
         case AUDIO_DRIVER_PLAY_VOICE:
         case AUDIO_DRIVER_PLAY_AUDIO:
         case AUDIO_DRIVER_PLAY_RINGER:
-            break;
-			
         case AUDIO_DRIVER_CAPT_HQ:
         case AUDIO_DRIVER_CAPT_VOICE:
-            audio_capture_driver = aud_drv;
             break;
 			
 		case AUDIO_DRIVER_VOIP:
@@ -729,6 +726,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                     return result_code;
                 }
                 aud_drv->stream_id = csl_audio_capture_init (AUDDRV_GetCSLDevice(*aud_dev),CSL_CAPH_DEV_MEMORY);
+                audio_capture_driver = aud_drv;
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
 				* Number of blocks = buffer size/block size
 				*
@@ -849,6 +847,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 					*recordMode = VOCAPTURE_RECORD_BOTH; //default capture mode
 
         		aud_drv->voicecapt_config.recordMode = *recordMode;
+                audio_capture_driver = aud_drv;
 		   
       		    result_code = VPU_record_start (*recordMode,
 								aud_drv->sample_rate,
