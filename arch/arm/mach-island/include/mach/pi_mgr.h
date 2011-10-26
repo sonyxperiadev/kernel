@@ -1,6 +1,6 @@
 
-#ifndef __RHEA_PI_MNGR_H__
-#define __RHEA_PI_MNGR_H__
+#ifndef __ISLAND_PI_MNGR_H__
+#define __ISLAND_PI_MNGR_H__
 
 enum
 {
@@ -39,4 +39,4 @@ enum
 void island_pi_mgr_init(void);
 
 
-#endif /*__RHEA_PI_MNGR_H__*/
+#endif /*__ISLAND_PI_MNGR_H__*/

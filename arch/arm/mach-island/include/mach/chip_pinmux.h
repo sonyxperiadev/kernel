@@ -60,6 +60,7 @@ enum PIN_NAME {
 	/* GPIO 146 */ PN_SIM_CLK,
 	/* GPIO 145 */ PN_SIM_DATA,
 	/* GPIO 144 */ PN_SIM_DET,
+	/* GPIO 143 */ PN_SIM2_RESETN,
 
         /* GPIO 139 */ PN_ULPI0_CLOCK,
         /* GPIO 138 */ PN_ULPI0_DATA_0,
@@ -218,6 +219,7 @@ enum PIN_FUNC {
 	PF_SIM_CLK,
 	PF_SIM_DATA,
 	PF_SIM_DET,
+	PF_SIM2_RESETN,
 	
 	PF_PWM_O_0,
         PF_PWM_O_2,
@@ -229,6 +231,7 @@ enum PIN_FUNC {
         PF_VC_GPIO_5,
         PF_VC_GPIO_6,
         PF_VC_GPIO_7,
+	PF_VC_GPIO_8,
 
 	PF_NORFLSH_CE1_N,
         PF_NORFLSH_CE0_N,

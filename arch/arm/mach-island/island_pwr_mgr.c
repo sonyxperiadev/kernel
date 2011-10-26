@@ -567,16 +567,18 @@ int __init island_pwr_mgr_init()
 	v_ptr.set1_val = 2;/*Should be 8 ????Wakeup override*/
 	v_ptr.set1_ptr = 49;
 	v_ptr.zerov_ptr = 45; /*Not used for island*/
-
+#if 0
+	/*disable jtag clock instrusive during debug*/
+	pwr_mgr_ignore_dap_powerup_request(true);
+#endif
 	pwr_mgr_init(&island_pwr_mgr_info);
 	island_pi_mgr_init();
 
 	/*MM override is not set by default*/
 	//pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM,false/*clear*/);
 
-		/*Done in two steps to skip DUMMY_EVENT*/
-	pwr_mgr_event_clear_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT);
-	pwr_mgr_event_clear_events(USBOTG_EVENT,EVENT_ID_ALL);
+		/*clear all the event */
+	pwr_mgr_event_clear_events(LCDTE_EVENT, EVENT_ID_ALL);
 
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
 	pwr_mgr_event_set(SOFTWARE_0_EVENT,1);
@@ -597,25 +599,34 @@ int __init island_pwr_mgr_init()
 	/*Init event table*/
 	for(i = 0; i < ARRAY_SIZE(event_table);i++)
 	{
+		u32 event_id;
+
+		event_id = event_table[i].event_id;
+
+		if (event_id >= GPIO29_A_EVENT && event_id <= SPARE10_A_EVENT)
+			event_id = GPIO29_A_EVENT;
+
+		if (event_id >= GPIO29_B_EVENT && event_id <= SPARE10_B_EVENT)
+			event_id = GPIO29_B_EVENT;
+
+
 		pwr_mgr_event_trg_enable(event_table[i].event_id,event_table[i].trig_type);
 
 		cfg.policy = event_table[i].policy_modem;
-		pwr_mgr_event_set_pi_policy(event_table[i].event_id,PI_MGR_PI_ID_MODEM,&cfg);
+		pwr_mgr_event_set_pi_policy(event_id, PI_MGR_PI_ID_MODEM, &cfg);
 
 		cfg.policy = event_table[i].policy_arm_core;
-		pwr_mgr_event_set_pi_policy(event_table[i].event_id,PI_MGR_PI_ID_ARM_CORE,&cfg);
+		pwr_mgr_event_set_pi_policy(event_id, PI_MGR_PI_ID_ARM_CORE, &cfg);
 
 		cfg.policy = event_table[i].policy_arm_sub;
-		pwr_mgr_event_set_pi_policy(event_table[i].event_id,PI_MGR_PI_ID_ARM_SUB_SYSTEM,&cfg);
+		pwr_mgr_event_set_pi_policy(event_id, PI_MGR_PI_ID_ARM_SUB_SYSTEM, &cfg);
 
 		cfg.policy = event_table[i].policy_hub_aon;
-		pwr_mgr_event_set_pi_policy(event_table[i].event_id,PI_MGR_PI_ID_HUB_AON,&cfg);
+		pwr_mgr_event_set_pi_policy(event_id, PI_MGR_PI_ID_HUB_AON, &cfg);
 
 		cfg.policy = event_table[i].policy_hub_switchable;
-		pwr_mgr_event_set_pi_policy(event_table[i].event_id,PI_MGR_PI_ID_HUB_SWITCHABLE,&cfg);
+		pwr_mgr_event_set_pi_policy(event_id, PI_MGR_PI_ID_HUB_SWITCHABLE, &cfg);
 
-		//cfg.policy = event_table[i].policy_mm;
-		//pwr_mgr_event_set_pi_policy(event_table[i].event_id,PI_MGR_PI_ID_MM,&cfg);
 	}
 	/*Init all PIs*/
 /*Init all PIs*/

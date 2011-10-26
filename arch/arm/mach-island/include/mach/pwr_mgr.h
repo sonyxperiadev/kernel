@@ -1,5 +1,5 @@
-#ifndef __RHEA_PWR_MNGR_H__
-#define __RHEA_PWR_MNGR_H__
+#ifndef __ISLAND_PWR_MNGR_H__
+#define __ISLAND_PWR_MNGR_H__
 
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 
@@ -175,4 +175,4 @@ enum {
 
 
 int island_pwr_mgr_init(void);
-#endif /*__RHEA_PWR_MNGR_H__*/
+#endif /*__ISLAND_PWR_MNGR_H__*/

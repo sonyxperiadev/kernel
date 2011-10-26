@@ -43,4 +43,4 @@ CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
 -Ivc4-dev/src/interface/vceb/host \
 -Ivc4-dev/src/interface/vceb/host/linux 
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += island_pm.o island_wfi.o
-obj-$(CONFIG_ISLAND_DORMANT_MODE) += rhea_dormant.o dm_pwr_policy_top.o
+obj-$(CONFIG_ISLAND_DORMANT_MODE) += island_dormant.o dm_pwr_policy_top.o

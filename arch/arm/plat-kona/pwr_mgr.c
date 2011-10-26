@@ -929,6 +929,8 @@ int pwr_mgr_ignore_power_ok_signal(bool ignore)
 		pwr_dbg("%s:ERROR - pwr mgr not initialized\n",__func__);
 		return -EPERM;
 	}
+	spin_lock(&pwr_mgr_lock);
+
 	reg_val = readl(PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
 
 	if(ignore)
@@ -937,9 +939,39 @@ int pwr_mgr_ignore_power_ok_signal(bool ignore)
 		reg_val &= ~PWRMGR_PI_DEFAULT_POWER_STATE_POWER_OK_MASK_MASK;
 
 	writel(reg_val,PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
+	spin_unlock(&pwr_mgr_lock);
+
 	return 0;
 }
 EXPORT_SYMBOL(pwr_mgr_ignore_power_ok_signal);
+
+int pwr_mgr_ignore_dap_powerup_request(bool ignore)
+{
+	u32 reg_val = 0;
+	pwr_dbg("%s :ignore = %d\n",
+				__func__, ignore);
+
+	if (unlikely(!pwr_mgr.info)) {
+		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		return -EPERM;
+	}
+	spin_lock(&pwr_mgr_lock);
+	reg_val = readl(PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
+
+	if (ignore)
+		reg_val |= \
+	    PWRMGR_PI_DEFAULT_POWER_STATE_IGNORE_DAP_POWERUPREQ_MASK;
+	else
+		reg_val &= \
+	    ~PWRMGR_PI_DEFAULT_POWER_STATE_IGNORE_DAP_POWERUPREQ_MASK;
+
+	writel(reg_val, PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
+
+	spin_unlock(&pwr_mgr_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(pwr_mgr_ignore_dap_powerup_request);
 
 int pwr_mgr_register_event_handler(u32 event_id, void (*pwr_mgr_event_cb)(u32 event_id,void* param),
 											void* param)

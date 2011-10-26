@@ -196,6 +196,7 @@ int pwr_mgr_pm_i2c_var_data_write(const u8* var_data,int count);
 int	pwr_mgr_arm_core_dormant_enable(bool enable);
 int	pwr_mgr_pi_retn_clamp_enable(int pi_id,bool enable);
 int pwr_mgr_ignore_power_ok_signal(bool ignore);
+int pwr_mgr_ignore_dap_powerup_request(bool ignore);
 int pwr_mgr_register_event_handler(u32 event_id, void (*pwr_mgr_event_cb)(u32 event_id,void* param),
 											void* param);
 int pwr_mgr_unregister_event_handler(u32 event_id);
