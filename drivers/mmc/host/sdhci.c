@@ -661,7 +661,6 @@ static u8 sdhci_calc_timeout(struct sdhci_host *host, struct mmc_command *cmd)
 	}
 
 	if (count >= 0xF) {
-<<<<<<< HEAD
 		/*
 		 * On certain Micron eMMC cards this value somehow is alway too large.
 		 * Other than seeing this warning message, read or write to the card works okay.
@@ -670,10 +669,6 @@ static u8 sdhci_calc_timeout(struct sdhci_host *host, struct mmc_command *cmd)
 				printk(KERN_WARNING "%s: Too large timeout requested for CMD%d!\n",
 					   mmc_hostname(host->mmc), cmd->opcode);
 		}
-=======
-		printk(KERN_WARNING "%s: Too large timeout requested for CMD%d!\n",
-		       mmc_hostname(host->mmc), cmd->opcode);
->>>>>>> map_integration
 		count = 0xE;
 	}
 

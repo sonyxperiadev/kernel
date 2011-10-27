@@ -80,7 +80,7 @@
 #
 #	both modified:      arch/arm/configs/bcm11160_tablet_test_defconfig (Sherman)
 #	both modified:      arch/arm/plat-kona/Kconfig (Sherman)
-#	both modified:      drivers/mmc/host/sdhci.c
+#	both modified:      drivers/mmc/host/sdhci.c [Ray Jui]
 #	both modified:      drivers/net/wireless/bcmdhd/Makefile
 #	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_common.c
 #	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_iw.c
