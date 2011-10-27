@@ -32,7 +32,7 @@
 #include <linux/hugetlb.h>
 #include <linux/delay.h>
 
-#include <whdmi.h>
+#include <linux/broadcom/whdmi.h>
 
 // ---- Private Function Prototypes ------------------------------------------
 
@@ -146,11 +146,22 @@ int whdmi_tcp_send( int km_socket_handle,
                     int data_len,
                     uint8_t *data )
 {
+   int ix;
+
    WHDMI_REMOVE_UNUSED_PARAM_WARNING (km_socket_handle);
 
    LOG_INFO( "[%s]: control sending %u bytes",
              __func__,
              data_len );
+
+   LOG_INFO( "[%s]: [start] ====>\n",
+             __func__ );     
+   for ( ix = 0 ; ix < data_len ; ix++ )
+   {
+      LOG_INFO( "%c", *(data+ix) );      
+   }
+   LOG_INFO( "\n[%s]: <=== [end]\n",
+             __func__ );     
 
    return 0;
 }
@@ -248,7 +259,6 @@ int whdmi_data_on_socket( int km_socket_handle, int canned_data )
 
    param->km_socket_handle        = km_socket_handle;
    param->data_len                = strlen( (const char *)canned );
-   param->data_user               = 0;
    param->data                    = (unsigned char *)canned;
    
    if ( whdmi_stubs__callback )

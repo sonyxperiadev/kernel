@@ -44,6 +44,11 @@
 
 #include <asm/uaccess.h>
 
+#include <interface/vcos/vcos.h>
+#include <vc_sm_defs.h>
+#include <vc_sm_knl.h>
+#include <vc_vchi_wifihdmi.h>
+
 /* ---- Private Constants and Types -------------------------------------- */
 
 #define WHDMI_DEVICE_NAME       "wifi-hdmi"
@@ -55,6 +60,8 @@
 
 #define WHDMI_TX_STATS_DELAY_SEC    1
 #define WHDMI_TX_STATS_SMOOTHING    0.9f
+
+#define WHDMI_BUFFER_MAX_SIZE       1600
 
 typedef enum whdmi_socket_type
 {
@@ -154,6 +161,8 @@ static WHDMI_CALLBACK registered_callback = NULL;
 static void *registered_callback_param = NULL;
 
 static struct whdmi_tx_stats    tx_stats;
+
+static VC_VCHI_WIFIHDMI_HANDLE_T whvcsvc_handle;
 
 /* For debugging purposes */
 static int dbg = 0;
@@ -344,6 +353,11 @@ static ssize_t whdmi_read(
         /* Something bad happened while copying the data */
         kmem_cache_free( kmem_cache, buf_element );
         return -EFAULT;
+    }
+    else
+    {
+        /* Copy the data to the user buffer if appropriate as well */
+        // copy_buffer_element_data( buf_element, buffer, count, bytes_to_copy )
     }
 
     /* Free the buffer element */
@@ -625,39 +639,42 @@ static long whdmi_ioctl(
 
             if (dbg)
             {
-                uint8_t     packet_buffer[1600];
+                uint8_t     *packet_buffer = NULL;
                 char        data_buffer[50];
                 int         i;
 
-                /* Copy data from user and print the content */
-                retval = copy_from_user( packet_buffer, (void __user *)ioctl_params.socket_data_avail.data, ioctl_params.socket_data_avail.data_len );
-                if ( retval != 0 )
+                packet_buffer = kzalloc( WHDMI_BUFFER_MAX_SIZE * sizeof(uint8_t), GFP_KERNEL );
+                if ( packet_buffer != NULL )
                 {
-                    /* Failed to copy from user space */
-                    printk( KERN_ERR "WHDMI: Could not copy from user space\n" );
-                    return retval;
+                   /* Copy data from user and print the content */
+                   retval = copy_from_user( packet_buffer, (void __user *)ioctl_params.socket_data_avail.data, ioctl_params.socket_data_avail.data_len );
+                   if ( retval == 0 )
+                   {
+                      printk( KERN_INFO "WHDMI: ioctl WHDMI_CMD_SOCKET_DATA_AVAIL socket handle %d, data_len %d\n",
+                              ioctl_params.socket_data_avail.socket_handle,
+                              ioctl_params.socket_data_avail.data_len );
+
+                      /* Format and print the data in xx:xx:xx:xx format */
+                      /* Can use http://home2.paulschou.net/tools/xlate/ to convert to ASCII */
+                      for ( i = 0; i < ioctl_params.socket_data_avail.data_len; i++ )
+                      {
+                          if ( (i % 16 ) == 0 )
+                          {
+                              if ( i != 0 )
+                              {
+                                  printk( KERN_INFO "%s\n", data_buffer );
+                              }
+                              memset( data_buffer, 0, sizeof( data_buffer ) );
+                          }
+
+                          sprintf( data_buffer, "%s%02x:", data_buffer, packet_buffer[i] );
+                      }
+                      printk( KERN_INFO "%s\n", data_buffer );
+                   }
+
+                   kfree( packet_buffer );
+                   packet_buffer = NULL;
                 }
-
-                printk( KERN_INFO "WHDMI: ioctl WHDMI_CMD_SOCKET_DATA_AVAIL socket handle %d, data_len %d\n",
-                        ioctl_params.socket_data_avail.socket_handle,
-                        ioctl_params.socket_data_avail.data_len );
-
-                /* Format and print the data in xx:xx:xx:xx format */
-                /* Can use http://home2.paulschou.net/tools/xlate/ to convert to ASCII */
-                for ( i = 0; i < ioctl_params.socket_data_avail.data_len; i++ )
-                {
-                    if ( (i % 16 ) == 0 )
-                    {
-                        if ( i != 0 )
-                        {
-                            printk( KERN_INFO "%s\n", data_buffer );
-                        }
-                        memset( data_buffer, 0, sizeof( data_buffer ) );
-                    }
-
-                    sprintf( data_buffer, "%s%02x:", data_buffer, packet_buffer[i] );
-                }
-                printk( KERN_INFO "%s\n", data_buffer );
             }
 
             /* Prepare the callback event */
@@ -1148,7 +1165,7 @@ static int whdmi_proc_write(
 #define CMD_UDP_BULK_SEND_TO                "whdmi_udp_bulk_send_to"
 #define CMD_CLOSE_SOCKET                    "whdmi_close_socket"
 
-    unsigned char local_buffer[1600];
+    unsigned char *local_buffer = NULL;
     int read_count = 0;
     int retval = 0;
 
@@ -1167,13 +1184,20 @@ static int whdmi_proc_write(
     int             bulk_tx;
     int             bulk_send_count;
 
-    if ( count > sizeof(local_buffer) - 1 )
+    local_buffer = kzalloc ( WHDMI_BUFFER_MAX_SIZE * sizeof(uint8_t), GFP_KERNEL );
+    if ( local_buffer == NULL )
+    {
+        printk(KERN_ERR "WHDMI: failed allocating proc buffer\n" );
+        return -ENOMEM;
+    }
+
+    if ( count > WHDMI_BUFFER_MAX_SIZE - 1 )
     {
         printk(KERN_ERR "WHDMI: proc write failed, max length = %d\n", sizeof(local_buffer) );
         return -ENOMEM;
     }
 
-    memset(local_buffer, 0, sizeof(local_buffer));
+    memset(local_buffer, 0, WHDMI_BUFFER_MAX_SIZE);
 
     if ( copy_from_user( local_buffer, buffer, count ) )
     {
@@ -1366,6 +1390,9 @@ static int whdmi_proc_write(
         }
     }
 
+    kfree ( local_buffer );
+    local_buffer = NULL;
+
     return count;
 }
 
@@ -1376,6 +1403,8 @@ static int whdmi_proc_write(
 static int __init whdmi_init( void )
 {
    int err;
+   VCHI_INSTANCE_T vchi_instance;
+   VCHI_CONNECTION_T *vchi_connection;
 
    // printk( KERN_ERR "%s: setting up.\n", __FUNCTION__ );
 
@@ -1474,6 +1503,40 @@ static int __init whdmi_init( void )
    tx_stats.timer.data = (unsigned long)&tx_stats;
    tx_stats.timer.function = whdmi_timer_fn;
 
+   /* Initialize an instance of the wifi hdmi videocore service.
+   */
+   err = vchi_initialise( &vchi_instance );
+   if ( err != 0 )
+   {
+      printk(KERN_ERR "[%s]: failed to initialise VCHI instance (err=%d)",
+             __func__,
+             err );
+
+      err = -EIO;
+      goto err_proc_destroy;
+   }
+
+   err = vchi_connect( NULL, 0, vchi_instance );
+   if ( err != 0 )
+   {
+      printk(KERN_ERR "[%s]: failed to connect VCHI instance (err=%d)",
+             __func__,
+             err );
+
+      err = -EIO;
+      goto err_proc_destroy;
+   }
+
+   whvcsvc_handle = vc_vchi_wifihdmi_init( vchi_instance, &vchi_connection, 1 );
+   if ( whvcsvc_handle == NULL )
+   {
+      printk(KERN_ERR "[%s]: failed to initialize wifi-hdmi videocore service",
+             __func__ );
+
+      err = -EPERM;
+      goto err_proc_destroy;
+   }
+
    /* All is well...
    */
    printk( KERN_INFO "WIFI HDMI Driver loaded\n" );
@@ -1517,6 +1580,12 @@ static void __exit whdmi_exit( void )
    unregister_chrdev_region( whdmi_dev,
                              WHDMI_NUM_DEVICES );
 
+   /* Stop the videocore wifi-hdmi service.
+   */
+   if ( whvcsvc_handle )
+   {
+      vc_vchi_wifihdmi_end( &whvcsvc_handle );
+   }
 
    /* Free all allocated memory */
 
@@ -1547,8 +1616,6 @@ int whdmi_set_callback(
 
     return 0;
 }
-EXPORT_SYMBOL( whdmi_set_callback );
-
 
 /***************************************************************************/
 /**
@@ -1639,8 +1706,6 @@ int whdmi_create_tcp_listening_socket(
 
     return 0;
 }
-EXPORT_SYMBOL( whdmi_create_tcp_listening_socket );
-
  
 /***************************************************************************/
 /**
@@ -1731,8 +1796,6 @@ int whdmi_create_udp_socket(
 
     return 0;
 }
-EXPORT_SYMBOL( whdmi_create_udp_socket );
-
 
 /***************************************************************************/
 /**
@@ -1828,8 +1891,6 @@ int whdmi_create_udp_tx_socket(
     return 0;
 
 }
-EXPORT_SYMBOL( whdmi_create_udp_tx_socket );
-
 
 /***************************************************************************/
 /**
@@ -1914,7 +1975,6 @@ int whdmi_tcp_send(
 
     return 0;
 }
-EXPORT_SYMBOL( whdmi_tcp_send );
 
 /***************************************************************************/
 /**
@@ -2256,7 +2316,6 @@ int whdmi_udp_send_to(
 
     return 0;
 }
-EXPORT_SYMBOL( whdmi_udp_send_to );
 
 /***************************************************************************/
 /**

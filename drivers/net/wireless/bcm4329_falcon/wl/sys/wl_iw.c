@@ -8269,7 +8269,26 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 			if (cmd == SIOCGIWSCAN)
 				wireless_send_event(dev, cmd, &wrqu, NULL);
 			else
+#ifdef DHD_BCM_WIFI_HDMI
+            if (cmd == SIOCGIWAP)
+            {
+                WL_ERROR(("@@@@@@SIOCGIWAP %s down=%u %02x:%02x:%02x:%02x:%02x:%02x\n",
+                dev->name, g_ss_cache_ctrl.m_link_down,
+                wrqu.addr.sa_data[0], wrqu.addr.sa_data[1], wrqu.addr.sa_data[2],
+                wrqu.addr.sa_data[3], wrqu.addr.sa_data[4], wrqu.addr.sa_data[5]));
+            }
+
+            if (strncmp(dev->name, "wl0.2", 5) == 0)
+            {
+                WL_ERROR(("@@@wl_iw_event: not sending wl0.2 event cmd=%u\n", cmd));
+            }
+            else
+            {
 				wireless_send_event(dev, cmd, &wrqu, extra);
+            }
+#else
+				wireless_send_event(dev, cmd, &wrqu, extra);
+#endif
 		}
 #endif
 

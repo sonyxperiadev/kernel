@@ -14,10 +14,25 @@
 
 // ---- Include Files --------------------------------------------------------
 
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/types.h>
+#include <linux/errno.h>
+#include <linux/cdev.h>
+#include <linux/mm.h>
+#include <linux/fs.h>
+#include <linux/device.h>
+#include <linux/pagemap.h>
+#include <linux/slab.h>
+#include <linux/ioctl.h>
+#include <linux/semaphore.h>
+#include <linux/proc_fs.h>
+
 #include "vc_vchi_wifihdmi.h"
 #include <vc_sm_defs.h>
 #include <vc_sm_knl.h>
-#include <whdmi.h>
+#include <linux/broadcom/whdmi.h>
+#include <asm/memory.h>
 
 // ---- Private Constants and Types ------------------------------------------
 
@@ -25,11 +40,14 @@
 #define SERVER_EVENT_MASK   0x2
 #define NOTIFY_EVENT_MASK   0x4
 
+#define SMEM_POOL_SIZE      1600
+#define SMEM_POOL_DEPTH     40
+
 // VCOS logging category for this service
 #define VCOS_LOG_CATEGORY (&wifihdmi_log_category)
 
 // Default VCOS logging level
-#define LOG_LEVEL  VCOS_LOG_TRACE
+#define LOG_LEVEL  VCOS_LOG_INFO
 
 // Logging macros (for remapping to other logging mechanisms, i.e., printf)
 #define LOG_ERR( fmt, arg... )   vcos_log_error( fmt, ##arg )
@@ -122,6 +140,7 @@ typedef struct opaque_vc_vchi_wifihdmi_handle_t
    VCOS_MUTEX_T           ctrl_lock;
 
    uint32_t               data_in_handle;
+   uint32_t               pool_init;
 
 } WIFIHDMI_INSTANCE_T;
 
@@ -557,8 +576,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
 
          ptr->km_socket_handle_returned = 0;
 
-         LOG_DBG( "%s: incoming connection %x from %x:%u",
-                  __func__, skt.handle, skt.address, skt.port );
+         LOG_INFO( "%s: incoming connection %x from %x:%u",
+                   __func__, skt.handle, skt.address, skt.port );
          
          if ( vc_vchi_wifihdmi_skt_in( instance,
                                        &skt,
@@ -569,8 +588,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
             {
                ptr->km_socket_handle_returned = skt_res.handle; 
 
-               LOG_DBG( "%s: accepted socket %x, parent %x",
-                        __func__, skt_res.handle, skt.handle );
+               LOG_INFO( "%s: accepted socket %x, parent %x",
+                         __func__, skt_res.handle, skt.handle );
 
             }
             else
@@ -598,8 +617,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
 
          skt.handle  = (uint32_t) ptr->km_socket_handle;
 
-         LOG_DBG( "%s: disconnected connection %x",
-                  __func__, skt.handle );
+         LOG_INFO( "%s: disconnected connection %x",
+                   __func__, skt.handle );
 
          vc_vchi_wifihdmi_skt_dsc( instance,
                                    &skt,
@@ -631,10 +650,10 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
                              VC_SM_LOCK_NON_CACHED,
                              &data_ptr ) == 0 )
             {
-               if ( ptr->data_user ) /* user-space data. */
+               if ( (int)ptr->data < TASK_SIZE ) /* data from user-space. */
                {
                   if ( copy_from_user( (void *) data_ptr,
-                                       ptr->data,
+                                       (void __user *) ptr->data,
                                        ptr->data_len ) == 0 )
                   {
                      vc_sm_unlock( (int) instance->data_in_handle,
@@ -665,7 +684,7 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
                               __func__, skt_data.data_len, skt_data.handle );
                   }
                }
-               else /* kernel data. */
+               else /* data from within kernel. */
                {
                   memcpy ( (void *) data_ptr,
                            ptr->data,
@@ -716,8 +735,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
 
          skt.handle  = (uint32_t) ptr->km_socket_handle;
 
-         LOG_DBG( "%s: socket closed %x",
-                  __func__, skt.handle );
+         LOG_INFO( "%s: socket closed %x",
+                   __func__, skt.handle );
 
          vc_vchi_wifihdmi_skt_end( instance,
                                    &skt,
@@ -730,6 +749,15 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
       {
          VC_WIFIHDMI_RESULT_T result;
          VC_WIFIHDMI_MODE_T mode;
+
+         if ( !instance->pool_init )
+         {
+            vc_vchi_wifihdmi_tx_pool( instance,
+                                      SMEM_POOL_DEPTH,
+                                      SMEM_POOL_SIZE );
+            
+            instance->pool_init = 1;
+         }
 
          memset ( &mode, 0, sizeof(mode) );
          memset ( &result, 0, sizeof(result) );
@@ -798,8 +826,8 @@ static void *vc_vchi_wifihdmi_videocore_ctrl( void *arg )
                                                 0 );
                }
 
-               LOG_DBG( "%s: open-socket %p, handle %x, port %d - returns %d",
-                        __func__, ctrlblk, ctrlblk->handle, ctrlblk->port, rc );
+               LOG_INFO( "%s: open-socket %p, handle %x, port %d - returns %d",
+                         __func__, ctrlblk, ctrlblk->handle, ctrlblk->port, rc );
 
                if ( rc != 0 )
                {
@@ -813,8 +841,8 @@ static void *vc_vchi_wifihdmi_videocore_ctrl( void *arg )
             {
                rc = whdmi_close_socket ( (int) ctrlblk->handle );
 
-               LOG_DBG( "%s: close-socket %p, handle %x - returns %d",
-                        __func__, ctrlblk, ctrlblk->handle, rc );
+               LOG_INFO( "%s: close-socket %p, handle %x - returns %d",
+                         __func__, ctrlblk, ctrlblk->handle, rc );
             }
             break;
 
@@ -824,8 +852,8 @@ static void *vc_vchi_wifihdmi_videocore_ctrl( void *arg )
                                                         (unsigned short) ctrlblk->port,
                                                         0 );
 
-               LOG_DBG( "%s: listen-socket %p, handle %x, port %d - returns %d",
-                        __func__, ctrlblk, ctrlblk->handle, ctrlblk->port, rc );
+               LOG_INFO( "%s: listen-socket %p, handle %x, port %d - returns %d",
+                         __func__, ctrlblk, ctrlblk->handle, ctrlblk->port, rc );
             }
             break;
 
@@ -1471,9 +1499,10 @@ err_delete_vchi_sema:
 err_free_mem:
    vcos_free( instance );
 err_null:
-   LOG_DBG( "%s: FAILED", __func__ );
+   LOG_ERR( "%s: FAILED", __func__ );
    return NULL;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_init);
 
 VCOS_STATUS_T vc_vchi_wifihdmi_end( VC_VCHI_WIFIHDMI_HANDLE_T *handle )
 {
@@ -1558,6 +1587,7 @@ VCOS_STATUS_T vc_vchi_wifihdmi_end( VC_VCHI_WIFIHDMI_HANDLE_T *handle )
 lock:
    return VCOS_EINVAL;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_end);
 
 VCOS_STATUS_T vc_vchi_wifihdmi_set( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                                     VC_WIFIHDMI_SET_T *set,
@@ -2054,6 +2084,7 @@ lock:
    }
    return final;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_start);
 
 VCOS_STATUS_T vc_vchi_wifihdmi_stop( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                                      VC_WIFIHDMI_MODE_T *mode, 
@@ -2178,6 +2209,7 @@ lock:
    }
    return final;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_stop);
 
 VCOS_STATUS_T vc_vchi_wifihdmi_skt_in( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                                        VC_WIFIHDMI_SKT_T *skt,
@@ -2798,6 +2830,7 @@ lock:
    }
    return final;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_stats);
 
 VCOS_STATUS_T vc_vchi_wifihdmi_tx_pool( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                                         uint32_t pool_size, 
@@ -2878,3 +2911,4 @@ VCOS_STATUS_T vc_vchi_wifihdmi_tx_pool( VC_VCHI_WIFIHDMI_HANDLE_T handle,
 
    return VCOS_SUCCESS;
 }
+EXPORT_SYMBOL_GPL(vc_vchi_wifihdmi_tx_pool);

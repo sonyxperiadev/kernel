@@ -34,6 +34,7 @@
 #else
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
 #endif
+#include <mach/wfi_count.h>
 
 #ifdef CONFIG_BCM_IDLE_PROFILER
 #include <mach/profile_timer.h>
@@ -61,11 +62,36 @@ static void arch_idle(void)
 	idle_enter = timer_get_tick_count();
 #endif
 
+#if defined( CONFIG_KONA_WFI_WORKAROUND )
 	/*
-	 * This should do all the clock switching
-	 * and wait for interrupt tricks
-	 */
-	cpu_do_idle();
+	 * We have an issue (SW-7022) where is both cores do a WFI, then the memory controller 
+	 * slows down, and in BIVCM mode, the videocore DMA's to/from the ARM memory slow down 
+	 * dramatically. So as a workaround, we have the BIVCM code increment wfi_count while 
+	 * it's doing a transfer. The following code will prevent the second core from doing 
+	 * a WFI while the videocore is transferring from the ARM memory. 
+	*/
+
+   if ( wfi_workaround_enabled )
+	{
+		if (atomic_inc_return( &wfi_count ) <= 2)
+		{
+			/*
+			 * This should do all the clock switching
+			 * and wait for interrupt tricks
+			 */
+			cpu_do_idle();
+		}
+		atomic_dec( &wfi_count );
+	}
+	else
+#endif
+	{
+		/*
+		 * This should do all the clock switching
+		 * and wait for interrupt tricks
+		 */
+		cpu_do_idle();
+	}
 
 #ifdef CONFIG_BCM_IDLE_PROFILER
 	idle_leave = timer_get_tick_count();

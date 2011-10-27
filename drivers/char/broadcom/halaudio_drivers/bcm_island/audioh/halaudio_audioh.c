@@ -246,7 +246,6 @@ const static uint32_t sidetoneFirCoeff[] = {
    0xC52FCD37, 0xC4B183BC, 0xC4148C74, 0x44713DB5,
 };
 
-
 /* Audio Hub only supports stereo FIFO channels */
 #define AUDIOH_MAX_FIFO_CHANNELS    2
 #define AUDIOH_MAX_MUX_POSITIONS    3
@@ -1604,6 +1603,7 @@ static void audiohMixerCb_EgressDone(
    {
       audiohDmaEgressPostProcess( ch );
    }
+   AUDIOH_LOG( "ch=%d", ch->ch_no );
 }
 
 /***************************************************************************/
@@ -3710,25 +3710,16 @@ static int audiohSidetoneGainSet( int chno, int db )
    {
 #if AUDIOH_EARPIECE_ENABLE
       case AUDIOH_CHAN_EARPIECE:
-         /* TODO: Default to vin but must allow for selection of vin or nvin */
-         chal_audio_vinpath_select_sidetone( gChalAudioHandle, (lin_gain ? CHAL_AUDIO_ENABLE : CHAL_AUDIO_DISABLE) );
-         chal_audio_nvinpath_select_sidetone( gChalAudioHandle, CHAL_AUDIO_DISABLE);
          chal_audio_earpath_sidetone_in( gChalAudioHandle, (lin_gain ? CHAL_AUDIO_ENABLE : CHAL_AUDIO_DISABLE) );
          break;
 #endif
 #if AUDIOH_HEADSET_ENABLE
       case AUDIOH_CHAN_HEADSET:
-         /* TODO: Default to vin but must allow for selection of vin or nvin */
-         chal_audio_vinpath_select_sidetone( gChalAudioHandle, (lin_gain ? CHAL_AUDIO_ENABLE : CHAL_AUDIO_DISABLE) );
-         chal_audio_nvinpath_select_sidetone( gChalAudioHandle, CHAL_AUDIO_DISABLE);
          chal_audio_hspath_sidetone_in( gChalAudioHandle, (lin_gain ? CHAL_AUDIO_ENABLE : CHAL_AUDIO_DISABLE) );
          break;
 #endif
 #if AUDIOH_HANDSFREE_ENABLE
       case AUDIOH_CHAN_HANDSFREE:
-         /* TODO: Default to vin but must allow for selection of vin or nvin */
-         chal_audio_vinpath_select_sidetone( gChalAudioHandle, (lin_gain ? CHAL_AUDIO_ENABLE : CHAL_AUDIO_DISABLE) );
-         chal_audio_nvinpath_select_sidetone( gChalAudioHandle, CHAL_AUDIO_DISABLE);
          chal_audio_ihfpath_sidetone_in( gChalAudioHandle, (lin_gain ? CHAL_AUDIO_ENABLE : CHAL_AUDIO_DISABLE) );
          break;
 #endif
