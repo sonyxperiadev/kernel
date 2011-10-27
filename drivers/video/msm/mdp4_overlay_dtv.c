@@ -102,12 +102,12 @@ static int mdp4_dtv_start(struct msm_fb_data_type *mfd)
 	var = &fbi->var;
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-	if (is_mdp4_hw_reset()) {
-		mdp4_hw_init();
-		outpdw(MDP_BASE + 0x0038, mdp4_display_intf);
+	if (hdmi_prim_display) {
+		if (is_mdp4_hw_reset()) {
+			mdp4_hw_init();
+			outpdw(MDP_BASE + 0x0038, mdp4_display_intf);
+		}
 	}
-#endif
 	mdp4_overlay_dmae_cfg(mfd, 0);
 
 	/*
@@ -306,11 +306,10 @@ static void mdp4_overlay_dtv_alloc_pipe(struct msm_fb_data_type *mfd,
 			break;
 		case 4:
 		default:
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-			pipe->src_format = MSMFB_DEFAULT_TYPE;
-#else
-			pipe->src_format = MDP_ARGB_8888;
-#endif
+			if (hdmi_prim_display)
+				pipe->src_format = MSMFB_DEFAULT_TYPE;
+			else
+				pipe->src_format = MDP_ARGB_8888;
 			break;
 		}
 	}
@@ -350,7 +349,7 @@ int mdp4_overlay_dtv_set(struct msm_fb_data_type *mfd,
 	if (pipe != NULL && pipe->mixer_stage == MDP4_MIXER_STAGE_BASE &&
 			pipe->pipe_type == OVERLAY_TYPE_RGB)
 		dtv_pipe = pipe; /* keep it */
-	else if (mdp4_overlay_borderfill_supported())
+	else if (!hdmi_prim_display && mdp4_overlay_borderfill_supported())
 		mdp4_overlay_dtv_alloc_pipe(mfd, OVERLAY_TYPE_BF);
 	else
 		mdp4_overlay_dtv_alloc_pipe(mfd, OVERLAY_TYPE_RGB);
@@ -508,7 +507,6 @@ void mdp4_overlay1_done_dtv()
 	complete_all(&dtv_pipe->comp);
 }
 
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
 void mdp4_dtv_set_black_screen(void)
 {
 	char *rgb_base;
@@ -516,8 +514,9 @@ void mdp4_dtv_set_black_screen(void)
 	uint32 color = 0x00000000;
 	uint32 temp_src_format;
 
-	if (!dtv_pipe) {
-		pr_err("dtv_pipe is not configured yet\n");
+	if (!dtv_pipe || !hdmi_prim_display) {
+		pr_err("dtv_pipe/hdmi as primary are not"
+			   " configured yet\n");
 		return;
 	}
 	rgb_base = MDP_BASE + MDP4_RGB_BASE;
@@ -536,7 +535,6 @@ void mdp4_dtv_set_black_screen(void)
 	mdp4_overlay_reg_flush(dtv_pipe, 0);
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 }
-#endif
 
 static void mdp4_overlay_dtv_wait4dmae(struct msm_fb_data_type *mfd)
 {
