@@ -245,7 +245,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem)
 	} else {
 		ret = pem->bcmpmu->fg_acc_mas(pem->bcmpmu, &fg_result);
 		if (ret != 0) {
-			pr_em(ERROR, "%s, fg data invalid\n", __func__);
+			pr_em(DATA, "%s, fg data invalid\n", __func__);
 			fg_result = 0;
 		}
 		pem->fg_capacity += fg_result;

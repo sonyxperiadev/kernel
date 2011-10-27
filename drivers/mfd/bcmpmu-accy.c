@@ -113,6 +113,7 @@ struct bcmpmu_accy {
 	int adp_prob_comp;
 	int adp_sns_comp;
 	int retry_cnt;
+	int clock_en;
 };
 static struct bcmpmu_accy *bcmpmu_accy;
 
@@ -228,12 +229,14 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_IN, NULL);
 		break;
 	case PMU_IRQ_USBRM:
+		schedule_delayed_work(&paccy->det_work, 0);
 		break;
 	case PMU_IRQ_CHGDET_LATCH:
 		schedule_delayed_work(&paccy->det_work, msecs_to_jiffies(0));
 		break;
 
 	case PMU_IRQ_VBUS_1V5_F:
+		schedule_delayed_work(&paccy->det_work, 0);
 		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_SESSION_INVALID, NULL);
 		break;
 
@@ -482,10 +485,10 @@ static void usb_det_work(struct work_struct *work)
 	switch (paccy->det_state) {
 	case USB_IDLE:
 		bcm_hsotgctrl_en_clock(true);
-		mdelay(1);
+		pr_accy(FLOW, "%s, enable clock\n", __func__);
+		paccy->clock_en = 1;
+		msleep(1);
 		bcm_hsotgctrl_bc_reset();
-		bcmpmu->usb_accy_data.usb_type = PMU_USB_TYPE_NONE;
-		bcmpmu->usb_accy_data.chrgr_type = PMU_CHRGR_TYPE_NONE;
 		paccy->retry_cnt = 0;
 		paccy->det_state = USB_DETECT;
 		schedule_delayed_work(&paccy->det_work, msecs_to_jiffies(100));
@@ -569,13 +572,19 @@ static void usb_det_work(struct work_struct *work)
 		(paccy->det_state == USB_RETRY))
 		return;
 
+	if (paccy->clock_en != 0) {
+		bcm_hsotgctrl_en_clock(false);
+		paccy->clock_en = 0;
+		pr_accy(FLOW, "%s, disable clock\n", __func__);
+	}
 	if ((usb_type < PMU_USB_TYPE_MAX) &&
 		(usb_type != bcmpmu->usb_accy_data.usb_type)) {
-		bcm_hsotgctrl_en_clock(false);
+		if ((usb_type != PMU_USB_TYPE_NONE) &&
+			(bcmpmu->usb_accy_data.usb_type != PMU_USB_TYPE_MAX))
+			send_usb_event(paccy->bcmpmu,
+				BCMPMU_USB_EVENT_USB_DETECTION,
+				&usb_type);
 		bcmpmu->usb_accy_data.usb_type = usb_type;
-		send_usb_event(paccy->bcmpmu,
-			BCMPMU_USB_EVENT_USB_DETECTION,
-			&usb_type);
 	}
 	if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
 		(chrgr_type != bcmpmu->usb_accy_data.chrgr_type)) {
@@ -869,12 +878,6 @@ static int bcmpmu_register_usb_callback(struct bcmpmu *pmu,
 		ret = 0;
 	}
 
-#if 0 /* Do this only if BC detection is already complete */
-	send_usb_event(paccy->bcmpmu,
-		BCMPMU_USB_EVENT_USB_DETECTION,
-		&paccy->bcmpmu->usb_accy_data.usb_type);
-#endif
-
 	return ret;
 }
 
@@ -955,7 +958,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_accy_attr_group);
 #endif
-//	schedule_delayed_work(&paccy->det_work, 0); /* Disable this logic for later use */
+	schedule_delayed_work(&paccy->det_work, 500);
 	return 0;
 
 err:
