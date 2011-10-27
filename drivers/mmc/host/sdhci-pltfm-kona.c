@@ -644,18 +644,11 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 		dead = 1;
 	sdhci_remove_host(host, dead);
 
-<<<<<<< HEAD
 	sdhci_pltfm_clk_enable(host, 0);
-
-#ifndef CONFIG_MACH_BCM2850_FPGA
 	clk_disable(dev->sleep_clk);
 	clk_put(dev->sleep_clk);
 	clk_put(dev->peri_clk);
-#endif
 
-=======
-	clk_disable(dev->sleep_clk);
->>>>>>> mps/srb-android-gb
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);
 	iounmap(host->ioaddr);
