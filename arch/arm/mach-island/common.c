@@ -258,7 +258,7 @@ static struct resource rtc_device_resource[] = {
 
 static struct platform_device rtc_device =
 {
-   .name          = "bcmhana-rtc",
+   .name          = "island-rtc",
    .id            = -1,
    .resource	  = rtc_device_resource,
    .num_resources = ARRAY_SIZE(rtc_device_resource),
