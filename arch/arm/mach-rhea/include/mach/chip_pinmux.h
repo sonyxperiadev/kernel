@@ -639,6 +639,9 @@ enum PIN_FUNC {
 	PF_SD1DAT2,
 	PF_SD1DAT3,
 #endif
+#ifdef CONFIG_MACH_RHEA_BERRI_EDN40
+	PF_USBDN,
+#endif
 	PF_MAX
 };
 
