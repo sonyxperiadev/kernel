@@ -157,7 +157,7 @@ static struct gpio gpios[] = {
         {-1, GPIOF_OUT_INIT_HIGH, "battery power output on/off"},
         /* Input GPIO: AC power present/shutdown. HIGH = AC power removed. */
         {-1, GPIOF_IN, "ac present/shutdown"},
-        /* Until proper solution for docking station is found, compal docking
+        /* Until proper solution for docking station is found, cp docking
            station power is handled here */
         /* Output GPIO: controls docking station 3.3v power. 
            HIGH = letting power through, LOW = cutting power off. */

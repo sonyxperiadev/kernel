@@ -41,7 +41,6 @@
 #include <mach/rhea.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <asm/mach/map.h>
-#include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/ipcinterface.h>
 #include <asm/pmu.h>
 #include <linux/spi/spi.h>

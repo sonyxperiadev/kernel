@@ -70,7 +70,6 @@
 #include <linux/android_pmem.h>
 
 #include <asm/mach/map.h>
-#include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/ipcinterface.h>
 
 #include <linux/power_supply.h>
@@ -1169,7 +1168,7 @@ static struct i2c_board_info __initdata akm8975_info[] =
 
 static struct i2c_board_info __initdata bh1715_info[] = {
 	[0] = {
-		I2C_BOARD_INFO(BH1715_DRV_NAME, 0x5C ),
+		I2C_BOARD_INFO(BH1715_DRV_NAME, BH1715_I2C_ADDR ),
 	},
 };
 

@@ -1,23 +1,31 @@
-//****************** Copyright 2011 Mobilink Telecom, Inc. *********************
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
+
 //
 // Description:  This file contains  prototypes of functions that write to RIP 
 //				command queue  to start various voice processing  tasks.
-//
-// $RCSfile: vpripcmdq.h $
-// $Revision: 1.1 $
-// $Date: 2000/01/27 13:45:26 $
-// $Author: awong $
-//
-//******************************** History *************************************
-//
-// $Log: vpripcmdq.h $
-// Revision 1.1  2000/01/27 13:45:26  awong
-// Initial revision
-//
-//
-// $Log: csl_apcmd.h $
-// Revision 2.0  2011/03/11 11:17:26  kochanov
-// Initial revision
 //
 //******************************************************************************
 
@@ -147,4 +155,40 @@ void VPRIPCMDQ_Clear_VoIPMode(UInt16 arg0);
  */
 void VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(Boolean enable, Boolean interrupt_enabled, Boolean stereo_enabled);
 
+#ifdef VOLTE_SUPPORT
+
+/** 
+ * 	Function Name: VPRIPCMDQ_VoLTE_Init
+ * 	@note Function initializes Jitter Buffer of VoLTE interface.
+ *
+ *
+ *	@retval	None
+ */
+void VPRIPCMDQ_VoLTE_Init(void);
+
+/** 
+ * 	Function Name: VPRIPCMDQ_VoLTE_Start_Stream
+ * 	@note Function flushes Jitter Buffer of VoLTE interface for new stream.
+ *
+ *
+ *	@retval	None
+ */
+void VPRIPCMDQ_VoLTE_Start_Stream(void);
+
+/** 
+ * 	Function Name: VPRIPCMDQ_VoLTE_Put_Frame
+ * 	@note Function puts a frame into Jitter Buffer of VoLTE interface.
+ *
+ * 	@param  UInt16  	16-bit LSB of RTP timestamp
+ * 	@param  UInt8	  	codec type
+ * 	@param  UInt8  		frame type
+ * 	@param  UInt8  		frame quality (0 - bad frame, 1 - good frame)
+ * 	@param  UInt8  		frame index
+ * 	@param  UInt8  		buffer Index
+ *
+ *	@retval	None
+*/
+void VPRIPCMDQ_VoLTE_Put_Frame(UInt16 timestamp, UInt8 codecType, UInt8 frameType, UInt8 frameQuality, UInt8 frameIndex, UInt8 bufferIndex);
+
+#endif // VOLTE_SUPPORT
 #endif

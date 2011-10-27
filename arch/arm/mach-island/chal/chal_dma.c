@@ -590,6 +590,99 @@ void chal_dma_get_capabilities
    pCap->maxBurstLen = pDmaDev->config->capabilities.maxBurstLen;
 }
 
+/**
+*
+*  @brief   Get total number of descriptors added towards specified channel
+*
+*  @param   handle   (in) Handle returned in chal_dma_config_channel()
+*
+*  @return  Number of descriptors allocated towards channel
+*
+*  @note
+******************************************************************************/
+uint32_t chal_dma_get_channel_descriptor_count
+(
+   CHAL_CHANNEL_HANDLE handle
+)
+{
+   DMA_CHAN_INFO_t* pChanInfo = (DMA_CHAN_INFO_t*) handle;
+   return pChanInfo->curDescCount;
+}
+
+/**
+*
+*  @brief   Get current descriptor index in use for channel
+*
+*  @param   handle   (in) Handle returned in chal_dma_config_channel()
+*  @param   desc_idx (out) Index of descriptor currently in use
+*
+*  @return  Return 0 if found, negative if error.
+*
+*  @note
+******************************************************************************/
+int chal_dma_get_current_channel_descriptor_index
+(
+   CHAL_CHANNEL_HANDLE handle,
+   uint32_t *desc_idx
+)
+{
+   int rc = -1;
+   int found = 0;
+   uint32_t descCount;
+   uint32_t src_addr, dst_addr, buf_len;
+   uint32_t cur_src_addr, cur_dst_addr;
+   uint32_t src_inc, dst_inc;
+   int32_t src_delta, dst_delta;
+   DMA_DESC_t *chanDesc;
+   DMA_CHAN_INFO_t* pChanInfo = (DMA_CHAN_INFO_t*) handle;
+   DMA_DEV_t *pDmaDev = (DMA_DEV_t *) pChanInfo->dmaHandle;
+   CHAL_DMA_CHANNEL_t channel = pChanInfo->channel;
+
+   cur_src_addr = CHAL_REG_READ32 ( pDmaDev->baseAddr + NON_DMAC_SA_0_OFFSET + ( channel << 5 ) ) & NON_DMAC_SA_0_SRC_ADDR_MASK;
+   cur_dst_addr = CHAL_REG_READ32 ( pDmaDev->baseAddr + NON_DMAC_DA_0_OFFSET + ( channel << 5 ) ) & NON_DMAC_DA_0_DST_ADDR_MASK;
+
+   chanDesc = (DMA_DESC_t *)pChanInfo->chanVirtualAddr;
+
+   for ( descCount = 0 ; descCount < pChanInfo->curDescCount; descCount++ )
+   {
+      buf_len  = chanDesc[descCount].size;
+      src_addr = chanDesc[descCount].src;
+      dst_addr = chanDesc[descCount].dst;
+
+      src_inc = pChanInfo->config.ChanCtrlBitField.srcAddrMode;
+      dst_inc = pChanInfo->config.ChanCtrlBitField.dstAddrMode;
+
+      src_delta = cur_src_addr - src_addr;
+      dst_delta = cur_dst_addr - dst_addr;
+
+      /* If both source and destination are incrementing addresses, only check for destination */
+      if ( src_inc && dst_inc )
+      {
+         if ( dst_delta >= 0 && dst_delta <= buf_len )
+         {
+            found = 1;
+            break;
+         }
+      }
+      else
+      {
+         if( src_delta >= 0 && src_delta <= buf_len && dst_delta >= 0 && dst_delta <= buf_len )
+         {
+            found = 1;
+            break;
+         }
+      }
+   }
+
+   if ( found )
+   {
+       *desc_idx = descCount;
+       rc  = 0;
+   }
+
+   return rc;
+}
+
 /*
  * ******************************************************************************
  * 

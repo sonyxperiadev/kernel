@@ -606,7 +606,6 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 
 	enable_irq(irq);
 
-	/* register all subdevices */
 	for (i = 0; i < pdata->clients_num; i++) {
 		ret = bcm590xx_client_dev_register(info, pdata->clients[i]);
 		if (ret < 0)

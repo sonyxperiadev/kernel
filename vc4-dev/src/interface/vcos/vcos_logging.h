@@ -4,8 +4,6 @@ All rights reserved.
 
 Project  :  vcfw
 Module   :  chip driver
-File     :  $RCSfile: $
-Revision :  $Revision: $
 
 FILE DESCRIPTION
 VideoCore OS Abstraction Layer - logging support
@@ -223,7 +221,7 @@ void vcos_log_dump_mem_impl( const VCOS_LOG_CAT_T *cat,
 
 # if _MSC_VER >= 1400
 
-#  ifndef NDEBUG
+#  if !defined(NDEBUG) || defined(VCOS_ALWAYS_WANT_LOGGING)
 #   define _VCOS_LOG_X(cat, _level, fmt,...) do { if (vcos_is_log_enabled(cat,_level)) vcos_log_impl(cat, _level, fmt, __VA_ARGS__); } while (0)
 #  else
 #   define _VCOS_LOG_X(cat, _level, fmt,...) (void)0

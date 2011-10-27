@@ -35,6 +35,7 @@
 enum aaa_cmd_e
 {
    AAA_CMD_SET_WRT_CODEC = 0x15,  /* Start at 0x15 arbitrarily */
+   AAA_CMD_DSC_WRT_CODEC,
    AAA_CMD_SET_RD_CODEC,
    AAA_CMD_LAST                   /* Do no delete */
 };
@@ -55,6 +56,7 @@ struct aaa_ioctl_setrdcodec
 
 /* IOCTL numbers */
 #define AAA_IOCTL_SET_TX_CODEC       _IOR( AAA_MAGIC_TYPE, AAA_CMD_SET_WRT_CODEC, struct aaa_ioctl_setwrtcodec )
+#define AAA_IOCTL_DSC_TX_CODEC       _IO( AAA_MAGIC_TYPE, AAA_CMD_DSC_WRT_CODEC )
 #define AAA_IOCTL_SET_RX_CODEC       _IOR( AAA_MAGIC_TYPE, AAA_CMD_SET_RD_CODEC, struct aaa_ioctl_setrdcodec )
 
 /* ---- Variable Externs ------------------------------------------ */

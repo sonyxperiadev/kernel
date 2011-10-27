@@ -296,11 +296,6 @@ extern "C" {
 #define CP_LOAD_ROM2_SIZE_MAX                                  (DSP_DRAM_RAM_ADDR - CP_LOAD_ROM2_BASE)
 #endif
 
-#define MAIN_ADDRESS_OFFSET 0x30
-#define INIT_ADDRESS_OFFSET 0x34
-#define MODEM_ITCM_ADDRESS 0x3AC00000
-#define MODEM_DTCM_ADDRESS 0x3AD00000
-
 #else  // BRCM_RTOS
 /*****************************************************************************/
 /*                                                                           */
@@ -352,6 +347,11 @@ extern "C" {
 #else
 #define PARM_DEP_SIZE                                          0x00020000
 #endif
+
+#define MAIN_ADDRESS_OFFSET 0x30
+#define INIT_ADDRESS_OFFSET 0x34
+#define MODEM_ITCM_ADDRESS 0x3AC00000
+#define MODEM_DTCM_ADDRESS 0x3AD00000
 
 #ifdef __cplusplus
 }

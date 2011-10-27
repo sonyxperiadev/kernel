@@ -32,12 +32,6 @@ vchiq_platform_init(VCHIQ_STATE_T *state);
 extern void __exit
 vchiq_platform_exit(VCHIQ_STATE_T *state);
 
-extern VCHIQ_STATUS_T
-vchiq_platform_suspend(VCHIQ_STATE_T *state);
-
-extern VCHIQ_STATUS_T
-vchiq_platform_resume(VCHIQ_STATE_T *state);
-
 extern VCHIQ_STATE_T *
 vchiq_get_state(void);
 

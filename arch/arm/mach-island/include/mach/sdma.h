@@ -133,7 +133,15 @@ typedef enum
 
 } DMA_UpdateMode_t;
 
+typedef struct
+{
+   int reason;
+   uint32_t desc_idx;
+
+} DMA_Status_t;
+
 typedef void (*DMA_DeviceHandler_t)( DMA_Device_t dev, int reason, void *userData );
+typedef void (*DMA_DeviceHandlerExt_t)( DMA_Device_t dev, DMA_Status_t *status, void *userData );
 
 #define DMA_DEVICE_FLAG_ON_DMA0             0x00000001
 #define DMA_DEVICE_FLAG_ON_DMA1             0x00000002
@@ -228,6 +236,7 @@ typedef struct
 
     void                   *userData;          /* Passed to the devHandler */
     DMA_DeviceHandler_t    devHandler;         /* Called when DMA operations finish. */
+    DMA_DeviceHandlerExt_t devHandlerExt;      /* Extended device handler.  Called when DMA operations finish. */
     timer_tick_count_t     transferStartTime;  /* Time the current transfer was started */
 
     /*
@@ -569,7 +578,7 @@ static inline int sdma_transfer_mem_to_mem
 *   If a NULL callback function is set, then no callback will occur.
 *
 *   @note   @a devHandler will be called from IRQ context.
-*   
+*
 *   @return
 *       0       - Success
 *       -ENODEV - Device handed in is invalid.
@@ -581,6 +590,27 @@ int sdma_set_device_handler
     DMA_Device_t         dev,           /* Device to set the callback for. */
     DMA_DeviceHandler_t  devHandler,    /* Function to call when the DMA completes */
     void                 *userData      /* Pointer which will be passed to devHandler. */
+);
+
+/****************************************************************************/
+/**
+*   Set the callback function which will be called when a transfer completes.
+*   If a NULL callback function is set, then no callback will occur.
+*
+*   @note   @a devHandlerExt will be called from IRQ context.  If devHandlerExt
+*           is defined, devHandler will be ignored.
+*
+*   @return
+*       0       - Success
+*       -ENODEV - Device handed in is invalid.
+*/
+/****************************************************************************/
+
+int sdma_set_device_handler_extended
+(
+    DMA_Device_t           dev,           /* Device to set the callback for. */
+    DMA_DeviceHandlerExt_t devHandlerExt, /* Function to call when the DMA completes */
+    void                   *userData      /* Pointer which will be passed to devHandlerExt. */
 );
 
 /****************************************************************************/

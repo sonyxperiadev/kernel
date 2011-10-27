@@ -60,6 +60,7 @@ int dhd_msg_level;
 
 char fw_path[MOD_PARAM_PATHLEN];
 char nv_path[MOD_PARAM_PATHLEN];
+char if_prefix[MOD_PARAM_PREFIXLEN];
 
 #ifdef SOFTAP
 char fw_path2[MOD_PARAM_PATHLEN];
@@ -80,6 +81,9 @@ extern int dhd_iscan_in_progress(void *h);
 void dhd_iscan_lock(void);
 void dhd_iscan_unlock(void);
 extern int dhd_change_mtu(dhd_pub_t *dhd, int new_mtu, int ifidx);
+#if defined(SOFTAP)
+bool ap_cfg_running = FALSE;
+#endif
 
 /* Packet alignment for most efficient SDIO (can change based on platform) */
 #ifndef DHD_SDALIGN
@@ -198,6 +202,12 @@ dhd_common_init(osl_t *osh)
 #else /* CONFIG_BCM4329_NVRAM_PATH */
 	nv_path[0] = '\0';
 #endif /* CONFIG_BCM4329_NVRAM_PATH */
+#ifdef CONFIG_BCM4329_FALCON_IF_PREFIX
+	bcm_strncpy_s(if_prefix, sizeof(if_prefix), CONFIG_BCM4329_FALCON_IF_PREFIX, MOD_PARAM_PREFIXLEN-1);
+#else /* CONFIG_BCM4329_FALCON_IF_PREFIX */
+	if_prefix[0] = '\0';
+#endif /* CONFIG_BCM4329_FALCON_IF_PREFIX */
+
 #ifdef SOFTAP
 	fw_path2[0] = '\0';
 #endif
@@ -1458,7 +1468,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	memset(buf, 0, sizeof(buf));
 	ptr = buf;
 	bcm_mkiovar("ver", (char *)&buf, 4, buf, sizeof(buf));
-	dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, buf, sizeof(buf), TRUE, 0);
+	dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, buf, sizeof(buf), FALSE, 0);
 	bcmstrtok(&ptr, "\n", 0);
 	/* Print fw version info */
 	DHD_ERROR(("Firmware version = %s\n", buf));

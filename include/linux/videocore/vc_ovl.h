@@ -30,6 +30,7 @@ struct vc_ovl_info
    unsigned int   rotation;      // Overlay rotation
    unsigned int   h_flip;        // Overlay horizontal flip
    unsigned int   v_flip;        // Overlay vertical flip
+   int            layer;         // Overlay layer
 };
 
 struct vc_ovl_handle

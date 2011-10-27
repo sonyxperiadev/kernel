@@ -30,6 +30,8 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 *  @brief  csl layer driver for caph dma driver
 *
 ****************************************************************************/
+#include <linux/interrupt.h>
+#include <linux/slab.h>
 #include "log.h"
 #include "mobcom_types.h"
 #include "chal_caph_dma.h"
@@ -37,6 +39,7 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "csl_caph.h"
 #include "csl_caph_srcmixer.h"
 #include "csl_caph_dma.h"
+#include "irqs.h"
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -66,6 +69,12 @@ typedef struct
     CSL_CAPH_DMA_CALLBACK_p   caphDmaCb;	
 } CSL_CAPH_DMA_CH_t;
 
+typedef struct
+{
+    CSL_CAPH_DMA_CHNL_e     dma_channel;
+    struct tasklet_struct   dma_tasklet;
+} DMA_ISR_BOTTOM_HALF_DATA_t;
+
 
 //****************************************************************************
 // local variable definitions
@@ -82,6 +91,8 @@ static CSL_CAPH_DMA_CHNL_e csl_caph_dma_get_csl_chnl(CAPH_DMA_CHANNEL_e chal_chn
 static CAPH_DMA_CHANNEL_e csl_caph_dma_get_chal_chnl(CSL_CAPH_DMA_CHNL_e csl_chnl);
 static CAPH_CFIFO_CHNL_DIRECTION_e csl_caph_dma_get_chal_direction(
                                              CSL_CAPH_DMA_DIRECTION_e direct);
+static irqreturn_t caph_dma_isr(int irq, void *dev_id);
+static void caph_dma_isr_bottom_half_func(unsigned long data);
 
 //******************************************************************************
 // local function definitions
@@ -442,6 +453,74 @@ static CAPH_CFIFO_CHNL_DIRECTION_e csl_caph_dma_get_chal_direction(CSL_CAPH_DMA_
 	return chalDirect;
 }
 
+//******************************************************************************
+//
+// Function Name:	caph_dma_isr
+//
+// Description:		This function is the Low Level ISR for the CAPH interrupt.
+//					It simply resets the interrup registers and schedules a tasklet
+//                  to do more stuff
+//
+// Notes:
+//
+//******************************************************************************
+static irqreturn_t caph_dma_isr(int irq, void *dev_id)
+{
+	// Log_DebugPrintf(LOGID_AUDIO," %s ISR called\n", __FUNCTION__);
+		
+    CSL_CAPH_DMA_CHNL_e channel = CSL_CAPH_DMA_NONE;
+    	
+	for(channel = CSL_CAPH_DMA_CH1; channel <= CSL_CAPH_DMA_CH16; channel++)
+	{
+	    // if the DMA channel is not used, skip it.
+        if (dmaCH_ctrl[channel].bUsed == FALSE)	continue;
+
+        // check the interrupt HW source(DMA channel) and clear the HW interrupt register.
+        if(csl_caph_dma_get_intr(channel, CSL_CAPH_ARM))
+        {
+            csl_caph_dma_clear_intr(channel, CSL_CAPH_ARM);
+            if(dmaCH_ctrl[channel].eFifoStatus && dmaCH_ctrl[channel].caphDmaCb)
+            {
+                // schedule a tasklet to handle each channel in ISR bottom half.
+                DMA_ISR_BOTTOM_HALF_DATA_t *dma_bottom_half_data;
+                struct tasklet_struct *new_tasklet; 
+                dma_bottom_half_data = (DMA_ISR_BOTTOM_HALF_DATA_t *)kmalloc(sizeof(DMA_ISR_BOTTOM_HALF_DATA_t), GFP_ATOMIC);
+                dma_bottom_half_data->dma_channel = channel;
+                new_tasklet = &dma_bottom_half_data->dma_tasklet; 
+                tasklet_init(new_tasklet, caph_dma_isr_bottom_half_func, (unsigned long)dma_bottom_half_data);
+	            tasklet_schedule(new_tasklet);
+            }
+        }
+	}       
+
+    return IRQ_HANDLED;
+}
+
+/****************************************************************************
+*
+*  Function Name: void caph_dma_isr_bottom_half_func(unsigned long data)
+*
+*  Description: go through the dma channels and clear the interrupts if any
+*  Param: data the private data passed to the tasklet
+*
+****************************************************************************/
+static void caph_dma_isr_bottom_half_func(unsigned long data)
+{
+    DMA_ISR_BOTTOM_HALF_DATA_t *my_data = (DMA_ISR_BOTTOM_HALF_DATA_t *)data;
+    CSL_CAPH_DMA_CHNL_e channel = my_data->dma_channel;
+    	
+	//Log_DebugPrintf(LOGID_SOC_AUDIO, "caph_dma_isr_bottom_half_func: DMA chanel %d\n", channel);
+
+    // call the callback to do more work
+    if (dmaCH_ctrl[channel].bUsed == TRUE && dmaCH_ctrl[channel].caphDmaCb != NULL)
+        dmaCH_ctrl[channel].caphDmaCb(channel);
+
+    kfree(my_data);
+    
+    return;
+}
+
+
 /****************************************************************************
 *
 *  Function Name: void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)    
@@ -451,11 +530,24 @@ static CAPH_CFIFO_CHNL_DIRECTION_e csl_caph_dma_get_chal_direction(CSL_CAPH_DMA_
 ****************************************************************************/
 void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)    
 {
+	int rc = 0;
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_init:: \n");
-	handle = chal_caph_dma_init(baseAddressDma);
+
+    handle = chal_caph_dma_init(baseAddressDma);
 	intc_handle = (CHAL_HANDLE)caphIntcHandle;
 	memset(dmaCH_ctrl, 0, sizeof(dmaCH_ctrl));
-	return;
+	
+    // Register CAPH DMA ISR  
+    rc = request_irq(BCM_INT_ID_CAPH, caph_dma_isr, IRQF_DISABLED, 
+			 "caph-interrupt", NULL);
+
+    if (rc < 0) 
+    {
+	    Log_DebugPrintf(LOGID_AUDIO,"csl_caph_dma_init:  failed to attach interrupt, rc = %d\n", rc);
+		return;
+    }
+    
+    return;
 }
 
 /****************************************************************************
@@ -590,15 +682,16 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
 void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config)
 {
 	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
-	
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_set_buffer:: \n");
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_set_buffer:: dir %d fifo %d dma %d mem %p size %p Tsize %d dmaCB %p.\r\n",
+		chnl_config.direction, chnl_config.fifo, chnl_config.dma_ch, chnl_config.mem_addr, chnl_config.mem_size, chnl_config.Tsize, chnl_config.dmaCB);
 
 	if (chnl_config.dma_ch == CSL_CAPH_DMA_NONE)
 		return;
-	
+
 	caph_aadmac_ch = csl_caph_dma_get_chal_chnl(chnl_config.dma_ch);
 	chal_caph_dma_set_buffer_address(handle, caph_aadmac_ch, (cUInt32)(chnl_config.mem_addr));
-		
+
 	return;
 }
 
@@ -694,15 +787,15 @@ void csl_caph_dma_stop_transfer(CSL_CAPH_DMA_CHNL_e chnl)
 void csl_caph_dma_enable_intr(CSL_CAPH_DMA_CHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner)
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
-	
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_enable_intr:chnl=0x%x owner=0x%x \n", chnl, owner);
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_enable_intr:chnl=0x%x owner=0x%x \n", chnl, csl_owner);
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
-	
+
 	if (chnl != CSL_CAPH_DMA_NONE)
 		chal_caph_intc_enable_dma_intr(intc_handle, csl_caph_dma_get_chal_chnl(chnl), owner);
-	
+
 	return;
 }
 
@@ -866,37 +959,7 @@ void csl_caph_dma_clear_ddrfifo_status(CSL_CAPH_DMA_CHNL_e chnl)
 	return;
 }
 
-/****************************************************************************
-*
-*  Function Name: void csl_caph_dma_process_interrupt(void)
-*
-*  Description: go through the dma channels and clear the interrrupts if any
-*
-****************************************************************************/
-void csl_caph_dma_process_interrupt(void)
-{
-    CSL_CAPH_DMA_CHNL_e channel = CSL_CAPH_DMA_NONE;
-    	
-	//Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_process_interrupt \n");
 
-	for(channel = CSL_CAPH_DMA_CH1; channel <= CSL_CAPH_DMA_CH16; channel++)
-	{
-	    // if the DMA channel is not used, skip it.
-        if (dmaCH_ctrl[channel].bUsed == FALSE)	continue;
-
-        // if the interrupt happens, call the callback and clear the interrupt.
-        if(csl_caph_dma_get_intr(channel, CSL_CAPH_ARM))
-        {
-            csl_caph_dma_clear_intr(channel, CSL_CAPH_ARM);
-            if(dmaCH_ctrl[channel].eFifoStatus && dmaCH_ctrl[channel].caphDmaCb)
-            {
-                dmaCH_ctrl[channel].caphDmaCb(channel);
-//	            dmaCH_ctrl[channel].eFifoStatus = CAPH_READY_NONE;
-            }
-        }
-	}
-    return;
-}
 
 
 /****************************************************************************

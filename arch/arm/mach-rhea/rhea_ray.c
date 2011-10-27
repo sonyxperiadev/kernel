@@ -83,7 +83,6 @@
 #include <linux/mpu.h>
 #endif
 #define _RHEA_
-#include <linux/broadcom/bcm_fuse_memmap.h>
 #include <mach/comms/platform_mconfig.h>
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
@@ -735,11 +734,11 @@ static int __init setup_pmem_pages(char *str)
 		printk(KERN_INFO "PMEM size is   0x%08x Bytes\n", pmem_size);
 		if (*endp == '@')
 			pmem_base =  memparse(endp + 1, NULL);
-			printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
-		} else	{
-			printk("\"pmem=\" option is not set!!!\n");
-			printk("Unable to determine the memory region for pmem!!!\n");
-		}
+		printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
+	} else	{
+		printk("\"pmem=\" option is not set!!!\n");
+		printk("Unable to determine the memory region for pmem!!!\n");
+	}
 	return 0;
 }
 __setup("pmem=", setup_pmem_pages);
