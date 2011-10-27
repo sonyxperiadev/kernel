@@ -493,13 +493,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err_sleep_clk_put;
 	}
 
-	ret = clk_enable(dev->sleep_clk);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to enable sleep clock for %s\n", devname);
-		ret = -EFAULT;
-		goto err_unset_pltfm;
-	}
-
 	ret = sdhci_pltfm_clk_enable(host, 1);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize core clock for %s\n", devname);
@@ -519,7 +512,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	if (hw_cfg->is_8bit)
 		host->mmc->caps |= MMC_CAP_8_BIT_DATA;
 
-	host->quirks = SDHCI_QUIRK_NO_CARD_NO_RESET;
+	host->quirks = SDHCI_QUIRK_NO_CARD_NO_RESET | SDHCI_QUIRK_BROKEN_TIMEOUT_VAL;
 
 	ret = sdhci_add_host(host);
 	if (ret)
@@ -645,9 +638,12 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	sdhci_remove_host(host, dead);
 
 	sdhci_pltfm_clk_enable(host, 0);
+
+#ifndef CONFIG_MACH_BCM2850_FPGA
 	clk_disable(dev->sleep_clk);
 	clk_put(dev->sleep_clk);
 	clk_put(dev->peri_clk);
+#endif
 
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);
