@@ -34,7 +34,10 @@
 #else
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
 #endif
+
+#if defined( CONFIG_KONA_WFI_WORKAROUND )
 #include <mach/wfi_count.h>
+#endif
 
 #ifdef CONFIG_BCM_IDLE_PROFILER
 #include <mach/profile_timer.h>
