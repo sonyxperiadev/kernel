@@ -527,9 +527,9 @@ Latest vc4 code on map_integration_staging is (5773d20578724b39378b56ca58826b81b
 #	both modified:      drivers/char/Kconfig    (Sherman)
 #	both modified:      drivers/char/Makefile (Sherman)
 #	both modified:      drivers/char/broadcom/Makefile (Sherman)
-#	both modified:      drivers/mmc/host/sdhci-pltfm-kona.c
-#	both modified:      drivers/mmc/host/sdhci.c
-#	both added:         include/linux/mpu.h
+#	both modified:      drivers/mmc/host/sdhci-pltfm-kona.c (Edwin, use map-integration)
+#	both modified:      drivers/mmc/host/sdhci.c (Edwin)
+#	both added:         include/linux/mpu.h (Edwin, use map-integration)
 #	deleted by us:      vc4-dev/src/interface/vchiq_arm_bi/big_island/vchiq_arm.c (Sherman)
 #	deleted by us:      vc4-dev/src/interface/vchiq_arm_bi/vchiq_core.c (Sherman)
 #		include/linux/mpu6050b1.h
