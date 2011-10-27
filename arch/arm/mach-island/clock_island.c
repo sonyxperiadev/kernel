@@ -785,9 +785,6 @@ static int arm_clk_init(struct clk* clk)
     ccu_write_access_enable(peri_clk->ccu_clk, false);
     clk->init = 1;
 
-    INIT_LIST_HEAD(&clk->list);
-    list_add(&clk->list, &peri_clk->ccu_clk->peri_list);
-
     return 0;
 }
 
