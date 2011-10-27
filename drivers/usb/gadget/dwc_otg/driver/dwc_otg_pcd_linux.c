@@ -1444,7 +1444,8 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		dwc_otg_enable_global_interrupts(gadget_wrapper->pcd->core_if);
 
 #ifdef CONFIG_USB_OTG_UTILS
-		if (gadget_wrapper->pcd->core_if->xceiver->set_peripheral)
+		if (gadget_wrapper->pcd->core_if->xceiver && 
+					gadget_wrapper->pcd->core_if->xceiver->set_peripheral)
 			otg_set_peripheral(gadget_wrapper->pcd->core_if->xceiver,
 				   &gadget_wrapper->gadget);
 #endif

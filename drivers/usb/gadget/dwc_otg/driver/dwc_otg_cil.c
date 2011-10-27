@@ -260,13 +260,7 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t * reg_base_addr)
 	 */
 	core_if->xceiver = otg_get_transceiver();
 	if (!core_if->xceiver) {
-		DWC_WARN("otg_get_transceiver failed\n");
-		dwc_free(host_if);
-		dwc_free(dev_if);
-		DWC_WORKQ_FREE(core_if->wq_otg);
-		DWC_TIMER_FREE(core_if->wkp_timer);
-		dwc_free(core_if);
-		return 0;
+		DWC_WARN("Using NOP OTG transceiver\n");
 	}
 #endif
 
@@ -2096,10 +2090,12 @@ void dwc_otg_core_host_init(dwc_otg_core_if_t * core_if)
 			hprt0.b.prtpwr = 1;
 			dwc_write_reg32(host_if->hprt0, hprt0.d32);
 #ifdef CONFIG_USB_OTG_UTILS
-			if (core_if->xceiver->set_vbus)
-				core_if->xceiver->set_vbus(core_if->xceiver,
-							   true);
-			cil_hcd_session_start(core_if);
+			if (core_if->xceiver) {
+				if (core_if->xceiver->set_vbus)
+					core_if->xceiver->set_vbus(core_if->xceiver,
+								   true);
+				cil_hcd_session_start(core_if);
+			}
 #endif
 		}
 	}
@@ -6116,11 +6112,13 @@ void dwc_otg_set_prtpower(dwc_otg_core_if_t * core_if, uint32_t val)
 	hprt0.b.prtpwr = val;
 	dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
 #ifdef CONFIG_USB_OTG_UTILS
-	if (core_if->xceiver->set_vbus)
-		core_if->xceiver->set_vbus(core_if->xceiver,
-					   val ? true : false);
-	if (val)
-		cil_hcd_session_start(core_if);
+	if (core_if->xceiver) {
+		if (core_if->xceiver->set_vbus)
+			core_if->xceiver->set_vbus(core_if->xceiver,
+						   val ? true : false);
+		if (val)
+			cil_hcd_session_start(core_if);
+	}
 #endif
 }
 

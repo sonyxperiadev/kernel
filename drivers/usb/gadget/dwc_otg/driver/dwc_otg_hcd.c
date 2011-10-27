@@ -51,7 +51,7 @@ static void disable_vbus_func(void *_vp)
 {
 	dwc_otg_core_if_t *core_if = _vp;
 
-	if (core_if->xceiver->set_vbus)
+	if (core_if->xceiver && core_if->xceiver->set_vbus)
 		core_if->xceiver->set_vbus(core_if->xceiver, false);
 }
 #endif
@@ -471,7 +471,7 @@ void dwc_otg_hcd_stop(dwc_otg_hcd_t * hcd)
 	dwc_write_reg32(hcd->core_if->host_if->hprt0, hprt0.d32);
 	dwc_mdelay(1);
 #ifdef CONFIG_USB_OTG_UTILS
-	if (hcd->core_if->xceiver->set_vbus)
+	if (hcd->core_if->xceiver && hcd->core_if->xceiver->set_vbus)
 		hcd->core_if->xceiver->set_vbus(hcd->core_if->xceiver, false);
 #endif
 }
@@ -2116,7 +2116,7 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t * dwc_otg_hcd,
 			hprt0.b.prtpwr = 0;
 			dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
 #ifdef CONFIG_USB_OTG_UTILS
-			if (core_if->xceiver->set_vbus)
+			if (core_if->xceiver && core_if->xceiver->set_vbus)
 				core_if->xceiver->set_vbus(core_if->xceiver,
 							   false);
 #endif
@@ -2477,10 +2477,12 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t * dwc_otg_hcd,
 			hprt0.b.prtpwr = 1;
 			dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
 #ifdef CONFIG_USB_OTG_UTILS
-			if (core_if->xceiver->set_vbus)
-				core_if->xceiver->set_vbus(core_if->xceiver,
-							   true);
-			cil_hcd_session_start(core_if);
+			if (core_if->xceiver) {
+				if (core_if->xceiver->set_vbus)
+					core_if->xceiver->set_vbus(core_if->xceiver,
+								   true);
+				cil_hcd_session_start(core_if);
+			}
 #endif
 			break;
 		case UHF_PORT_RESET:
