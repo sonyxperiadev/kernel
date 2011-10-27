@@ -37,6 +37,9 @@ struct regulator_init_data;
 /* LDO or Switcher def */
 #define BCMPMU_LDO    0x10
 #define BCMPMU_SR     0x11
+/* HOSTCTRL1 def*/
+#define BCMPMU_SW_SHDWN 0x04
+
 
 int bcmpmu_register_regulator(struct bcmpmu *bcmpmu, int reg,
 			      struct regulator_init_data *initdata);
@@ -275,6 +278,7 @@ enum bcmpmu_reg {
 	PMU_REG_PMUID,
 	PMU_REG_PMUREV,
 	PMU_REG_PLLCTRL,
+	PMU_REG_HOSTCTRL1,
 	PMU_REG_MAX,
 };
 enum bcmpmu_irq_reg {
@@ -574,6 +578,14 @@ struct bcmpmu_temp_map {
 	int temp;
 };
 
+struct bcmpmu_charge_zone {
+	int tl;
+	int th;
+	int v;
+	int fc;
+	int qc;
+};
+
 struct bcmpmu_adc_cal {
 	unsigned int gain;
 	unsigned int offset;
@@ -628,7 +640,8 @@ enum bcmpmu_env_bit_t {
 enum bcmpmu_usb_event_t {
 	/* events for usb driver */
 	BCMPMU_USB_EVENT_USB_DETECTION,
-	BCMPMU_USB_EVENT_IN_RM,
+	BCMPMU_USB_EVENT_IN,
+	BCMPMU_USB_EVENT_RM,
 	BCMPMU_USB_EVENT_ADP_CHANGE,
 	BCMPMU_USB_EVENT_ADP_SENSE_END,
 	BCMPMU_USB_EVENT_ADP_CALIBRATION_DONE,
@@ -802,6 +815,10 @@ struct bcmpmu_platform_data {
 	int fg_smpl_rate;
 	int fg_slp_rate;
 	int fg_slp_curr_ua;
+	int chrg_1c_rate;
+	struct bcmpmu_charge_zone *chrg_zone_map;
+	int fg_capacity_full;
+	int support_fg;
 };
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
@@ -824,5 +841,7 @@ int bcmpmu_usb_add_notifier(u32, struct notifier_block *);
 int bcmpmu_usb_remove_notifier(u32, struct notifier_block *);
 int bcmpmu_batt_add_notifier(u32, struct notifier_block *);
 int bcmpmu_batt_remove_notifier(u32, struct notifier_block *);
+
+void bcmpmu_client_power_off(void);
 
 #endif

@@ -2630,7 +2630,10 @@ int sdhci_add_host(struct sdhci_host *host)
 	if ((host->version >= SDHCI_SPEC_300) &&
 	    ((host->flags & SDHCI_USE_ADMA) ||
 	     !(host->flags & SDHCI_USE_SDMA))) {
+<<<<<<< HEAD
 #ifndef CONFIG_ARCH_ISLAND
+=======
+>>>>>>> mps/srb-android-gb
 		host->flags |= SDHCI_AUTO_CMD23;
 		DBG("%s: Auto-CMD23 available\n", mmc_hostname(mmc));
 #else

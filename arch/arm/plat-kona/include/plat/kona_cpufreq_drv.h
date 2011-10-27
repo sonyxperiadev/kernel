@@ -29,24 +29,24 @@ struct kona_freq_tbl
 	.opp = __opp,   \
 }
 
-struct kona_cpu_info
+enum
 {
+	KONA_CPUFREQ_UPDATE_LPJ = 1,
+};
+
+/* Platform data for Kona cpufreq driver */
+struct kona_cpufreq_drv_pdata
+{
+	/* Number of cpus */
+	u32 flags;
 	/* Table of cpu frequencies and voltages supported for a cpu */
 	struct kona_freq_tbl *freq_tbl;
 	/* Number of entries in the DVFS table */
 	int num_freqs;
-	/* ID of the Power island to which this CCU belongs */
+	/* PROC CCU PI id */
 	int pi_id;
 	/* CPU Frequency transition latency in ns */
-	u32 kona_latency;
-};
-
-/* Platform data for BCM21553 cpufreq driver */
-struct kona_cpufreq_drv_plat
-{
-	struct kona_cpu_info *info;
-	/* Number of cpus (hence, number of entries in above table) */
-	int nr_cpus;
+	u32 latency;
 };
 
 #endif /* BCM_CPUFREQ_DRV_H */

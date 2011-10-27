@@ -493,6 +493,13 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err_sleep_clk_put;
 	}
 
+	ret = clk_enable(dev->sleep_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to enable sleep clock for %s\n", devname);
+		ret = -EFAULT;
+		goto err_unset_pltfm;
+	}
+
 	ret = sdhci_pltfm_clk_enable(host, 1);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize core clock for %s\n", devname);
@@ -637,6 +644,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 		dead = 1;
 	sdhci_remove_host(host, dead);
 
+<<<<<<< HEAD
 	sdhci_pltfm_clk_enable(host, 0);
 
 #ifndef CONFIG_MACH_BCM2850_FPGA
@@ -645,6 +653,9 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	clk_put(dev->peri_clk);
 #endif
 
+=======
+	clk_disable(dev->sleep_clk);
+>>>>>>> mps/srb-android-gb
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);
 	iounmap(host->ioaddr);

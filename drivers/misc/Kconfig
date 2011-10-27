@@ -61,8 +61,6 @@ config AD525X_DPOT_SPI
 	  To compile this driver as a module, choose M here: the
 	  module will be called ad525x_dpot-spi.
 
-source "drivers/misc/vmcs_services/Kconfig"
-
 config ANDROID_PMEM
 	bool "Android pmem allocator"
 	default y
@@ -421,6 +419,17 @@ config SENSORS_BH1715
 
 	  This driver can also be built as a module.  If so, the module
 	  will be called bt1715.
+
+config AL3006
+	tristate "AL3006 Digital Light + Proximity sensor"
+	depends on I2C && SYSFS
+	default n
+	help
+		If you say yes here you get support for DYNE image
+		Digital Light+Proximity sensor AL3006.
+
+		To compile this driver as a module, choose M here: the
+		module will be called al3006.
 
 config BMP18X
 	tristate "BMP18X digital pressure sensor"

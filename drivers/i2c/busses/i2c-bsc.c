@@ -1329,7 +1329,7 @@ static void i2c_master_reset(struct work_struct *work)
 static int __devinit bsc_probe(struct platform_device *pdev)
 {
 	int rc=0, irq;
-	struct bsc_adap_cfg *hw_cfg;
+	struct bsc_adap_cfg *hw_cfg = 0;
 	struct bsc_i2c_dev *dev;
 	struct i2c_adapter *adap;
 	struct resource *iomem, *ioarea;
@@ -1489,7 +1489,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	adap->algo = &bsc_algo;
 	adap->dev.parent = &pdev->dev;
 	adap->nr = pdev->id;
-	adap->retries = hw_cfg->retries;
+	adap->retries = hw_cfg ? hw_cfg->retries : 0;
 
 	/*
 	* Enable error (timeout) interrupt if it's not in high-speed mode. The

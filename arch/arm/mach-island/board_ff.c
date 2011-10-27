@@ -70,7 +70,6 @@
 #include <linux/android_pmem.h>
 
 #include <asm/mach/map.h>
-#include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/ipcinterface.h>
 
 #include <linux/power_supply.h>

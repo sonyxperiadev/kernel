@@ -33,6 +33,7 @@
 #include <mach/pwr_mgr.h>
 #include <mach/clock.h>
 #include <linux/mfd/bcm590xx/core.h>
+#include <linux/mfd/bcmpmu.h>
 #include <mach/gpio.h>
 #include <mach/pinmux.h>
 #include <mach/kona.h>
@@ -43,6 +44,10 @@ static void rhea_poweroff(void)
 {
 #ifdef CONFIG_MFD_BCM_PMU590XX
 	bcm590xx_shutdown();
+#endif
+
+#ifdef CONFIG_MFD_BCMPMU
+        bcmpmu_client_power_off();
 #endif
 
 	while(1)

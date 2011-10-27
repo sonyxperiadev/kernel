@@ -171,7 +171,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(MMC1CMD, MMC1CMD, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(MMC1RST, GPIO70, 0, OFF, ON, 0, 0, 16MA),
 
-	PIN_CFG(SSPSYN, GPIO85, 0, OFF, ON, 0, 0, 16MA),
+
 
 
 };

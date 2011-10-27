@@ -1,699 +1,538 @@
-2011.10.20 
-Result of git status after git merge of map-android-gb (eecd6199) into map_integration_staging (804b102817).  Please keep track of which files are resolved by marking them resolved below.
+2011.10.26: Results of (mps)srb-android-gb to (map)map_integration_staging merge.  Note that this
+is after I resolved all the drivers/misc/mpu3050 conflicts by taking the MAP version.
+
+Note:
+Latest vc4 code on map_integration_staging is (5773d20578724b39378b56ca58826b81b2e74427), committed by Edmund on 10/21. 
+
 
 # On branch map_integration_staging
 # Changes to be committed:
 #
-#	deleted:    Documentation/Broadcom/Kona PM DFS and QOS API.txt
-#	new file:   Documentation/Broadcom/Kona_PM_DFS_and_QOS_API.txt
-#	new file:   Documentation/Broadcom/usb_setup.txt
+#	modified:   arch/arm/Kconfig
 #	modified:   arch/arm/Makefile
 #	modified:   arch/arm/boot/Makefile
-#	copied:     arch/arm/boot/dts/rhearayedn1x_pinmux.dts -> arch/arm/boot/dts/rheaberri_ednxx.dts
-#	renamed:    arch/arm/boot/dts/rhearayedn1x_pinmux.dts -> arch/arm/boot/dts/rhearay_edn1x.dts
-#	deleted:    arch/arm/configs/bcm21455_samoaberri_defconfig
-#	deleted:    arch/arm/configs/bcm21455_samoafpga_defconfig
-#	deleted:    arch/arm/configs/bcm21455_samoaray_defconfig
+#	modified:   arch/arm/boot/dts/rheaberri_ednxx.dts
 #	modified:   arch/arm/configs/bcm21654_clipper_defconfig
 #	modified:   arch/arm/configs/bcm21654_clipper_edn1x_defconfig
 #	modified:   arch/arm/configs/bcm21654_rhea_dalton_defconfig
 #	modified:   arch/arm/configs/bcm21654_rheaberri_edn1x_defconfig
 #	modified:   arch/arm/configs/bcm21654_rheaberri_ednxx_defconfig
-#	renamed:    arch/arm/configs/bcm28150_islandstone_defconfig -> arch/arm/configs/bcm21654_rhealcberri_defconfig
+#	modified:   arch/arm/configs/bcm21654_rhealcberri_defconfig
 #	modified:   arch/arm/configs/bcm21654_rhearay_defconfig
 #	modified:   arch/arm/configs/bcm21654_rhearay_edn1x_defconfig
-#	deleted:    arch/arm/configs/bcm2708_defconfig
+#	modified:   arch/arm/configs/bcm28150_islandstone_defconfig
 #	modified:   arch/arm/configs/bcm28150_islandsv_defconfig
-#	deleted:    arch/arm/configs/bcm2835_buildroot_defconfig
-#	deleted:    arch/arm/configs/bcm2835dk_defconfig
+#	copied:     arch/arm/configs/hera_ray_defconfig -> arch/arm/configs/crash_bcm21654_rhearay_defconfig
+#	renamed:    arch/arm/configs/hera_ray_defconfig -> arch/arm/configs/crash_bcm21654_rhearay_edn1x_defconfig
+#	new file:   arch/arm/include/asm/idmap.h
+#	modified:   arch/arm/include/asm/pgtable.h
+#	modified:   arch/arm/include/asm/system.h
+#	modified:   arch/arm/kernel/machine_kexec.c
+#	modified:   arch/arm/kernel/process.c
+#	modified:   arch/arm/kernel/relocate_kernel.S
+#	modified:   arch/arm/kernel/smp.c
+#	modified:   arch/arm/lib/Makefile
+#	new file:   arch/arm/lib/switch_stack.S
+#	deleted:    arch/arm/mach-bcm2708/Kconfig
+#	deleted:    arch/arm/mach-bcm2708/Makefile
+#	deleted:    arch/arm/mach-bcm2708/Makefile.boot
+#	deleted:    arch/arm/mach-bcm2708/armctrl.c
+#	deleted:    arch/arm/mach-bcm2708/armctrl.h
+#	deleted:    arch/arm/mach-bcm2708/bcm2708.c
+#	deleted:    arch/arm/mach-bcm2708/bcm2708.h
+#	deleted:    arch/arm/mach-bcm2708/clock.c
+#	deleted:    arch/arm/mach-bcm2708/clock.c.new
+#	deleted:    arch/arm/mach-bcm2708/clock.h
+#	deleted:    arch/arm/mach-bcm2708/dummy_touchscreen.c
+#	deleted:    arch/arm/mach-bcm2708/include/mach/arm_control.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/bcm2708_smi.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/bcm_vuart.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/clkdev.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/debug-macro.S
+#	deleted:    arch/arm/mach-bcm2708/include/mach/entry-macro.S
+#	deleted:    arch/arm/mach-bcm2708/include/mach/fifo.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/hardware.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/input_ipc_cfg.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/io.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/ipc.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/irqs.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/media_dec_regs.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/memory.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/plat_nand.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/platform.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/powerman.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/system.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/timex.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/uncompress.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/vcio.h
+#	deleted:    arch/arm/mach-bcm2708/include/mach/vmalloc.h
+#	deleted:    arch/arm/mach-bcm2708/ipc.c
+#	deleted:    arch/arm/mach-bcm2708/ipc_chip.c
+#	deleted:    arch/arm/mach-bcm2708/vcio.c
+#	modified:   arch/arm/mach-island/Kconfig
+#	modified:   arch/arm/mach-island/Makefile
 #	modified:   arch/arm/mach-island/board-bcm59055.c
 #	modified:   arch/arm/mach-island/board_bu.c
 #	modified:   arch/arm/mach-island/board_ff.c
 #	modified:   arch/arm/mach-island/clock_island.c
 #	modified:   arch/arm/mach-island/common.c
-#	modified:   arch/arm/mach-island/include/mach/chip_pinmux.h
+#	new file:   arch/arm/mach-island/dm_ca9_gic_mcrs.S
+#	new file:   arch/arm/mach-island/dm_ca9_scu_mcrs.S
+#	new file:   arch/arm/mach-island/dm_ca9timers_mcrs.S
+#	new file:   arch/arm/mach-island/dm_mmu_mcrs.S
+#	new file:   arch/arm/mach-island/dm_mpu_mcrs.S
+#	new file:   arch/arm/mach-island/dm_pl310_syscache_mcrs.S
+#	new file:   arch/arm/mach-island/dm_pmon_mcrs.S
+#	new file:   arch/arm/mach-island/dm_pwr_dbg_mcrs.S
+#	new file:   arch/arm/mach-island/dm_pwr_policy_top.S
+#	new file:   arch/arm/mach-island/dm_pwr_restore_mcrs.S
+#	new file:   arch/arm/mach-island/dm_pwr_save_dfn.h
+#	new file:   arch/arm/mach-island/dm_pwr_save_mcrs.S
+#	new file:   arch/arm/mach-island/dm_support_ops.S
+#	new file:   arch/arm/mach-island/dm_vfp_mcrs.S
+#	deleted:    arch/arm/mach-island/hw_cfg/ISLAND_TABLET_28160/.gitignore
 #	modified:   arch/arm/mach-island/include/mach/clock.h
 #	modified:   arch/arm/mach-island/include/mach/comms/platform_mconfig_rhea.h
-#	modified:   arch/arm/mach-island/island_pinmux.c
-#	modified:   arch/arm/mach-island/pinmux_island_ff.c
+#	modified:   arch/arm/mach-island/include/mach/io_map.h
+#	modified:   arch/arm/mach-island/io_map.c
+#	modified:   arch/arm/mach-island/island.c
+#	new file:   arch/arm/mach-island/island_dormant.c
+#	modified:   arch/arm/mach-island/island_pi_mgr.c
+#	new file:   arch/arm/mach-island/island_pm.c
+#	modified:   arch/arm/mach-island/island_pwr_mgr.c
+#	new file:   arch/arm/mach-island/island_sleep.S
+#	new file:   arch/arm/mach-island/island_wfi.S
 #	modified:   arch/arm/mach-rhea/Kconfig
-#	modified:   arch/arm/mach-rhea/Makefile
-#	new file:   arch/arm/mach-rhea/bcm_selftest_bb_low.c
 #	modified:   arch/arm/mach-rhea/clock_rhea.c
 #	modified:   arch/arm/mach-rhea/common.c
-#	renamed:    sound/caph/common/xassert.h -> arch/arm/mach-rhea/include/mach/bcm_selftest_bb_low.h
-#	modified:   arch/arm/mach-rhea/include/mach/chip_pinmux.h
-#	modified:   arch/arm/mach-rhea/include/mach/clock.h
+#	renamed:    arch/arm/mach-samoa/include/mach/clock.h -> arch/arm/mach-rhea/include/mach/clock.h
 #	modified:   arch/arm/mach-rhea/include/mach/comms/platform_mconfig_rhea.h
-#	modified:   arch/arm/mach-rhea/include/mach/io_map.h
-#	modified:   arch/arm/mach-rhea/io_map.c
 #	modified:   arch/arm/mach-rhea/rhea.c
 #	modified:   arch/arm/mach-rhea/rhea_berri.c
-#	modified:   arch/arm/mach-rhea/rhea_berri_pinmux.c
 #	modified:   arch/arm/mach-rhea/rhea_dalton_pinmux.c
+#	modified:   arch/arm/mach-rhea/rhea_pi_mgr.c
 #	modified:   arch/arm/mach-rhea/rhea_pinmux.c
 #	modified:   arch/arm/mach-rhea/rhea_pm.c
 #	modified:   arch/arm/mach-rhea/rhea_pwr_mgr.c
 #	modified:   arch/arm/mach-rhea/rhea_ray.c
 #	modified:   arch/arm/mach-rhea/rhea_ray_pinmux.c
+#	new file:   arch/arm/mach-rhea/volt_tbl.h
+#	deleted:    arch/arm/mach-samoa/Kconfig
+#	deleted:    arch/arm/mach-samoa/Makefile
+#	deleted:    arch/arm/mach-samoa/Makefile.boot
+#	deleted:    arch/arm/mach-samoa/board-samoapmu.c
+#	deleted:    arch/arm/mach-samoa/clock_samoa.c
+#	deleted:    arch/arm/mach-samoa/common.c
+#	deleted:    arch/arm/mach-samoa/common.h
+#	deleted:    arch/arm/mach-samoa/include/mach/chip_pinmux.h
+#	deleted:    arch/arm/mach-samoa/include/mach/io_map.h
+#	deleted:    arch/arm/mach-samoa/include/mach/pi_mgr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/pm.h
+#	deleted:    arch/arm/mach-samoa/include/mach/pwr_mgr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_a5cpu.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_a5etm.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_a5pmu.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_aci.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_acp_sw.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_afc_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_ahintc.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_ana_audio_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_aonsw.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_apbtoatb.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_aphy_csr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_atb_stm.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_audioh.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_auxmic.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_axitp1.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_bb_tx_filters_and_2091_if.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_bbrx.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_bintc.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_bmdm_clk_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_bmdm_pwrmgr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_bmdm_rst_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_bmodem_aoncfg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_bmodem_syscfg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_cam.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_chipreg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_cipher.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_combiner.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_combiner2.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_comms_sw.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_coremem.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_cpc_harq.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_cph_aadmac.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_cph_cfifo.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_cph_ssasw.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_cpp_cluster.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_csr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_cstf.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_cstpiu.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_cti.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_deinterleaver.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dma.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dmux.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dphy_csr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_3wire_intf.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_ac.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_cipher.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_clk_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_cpmr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_digrf.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_equalizer.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_event_ctrl.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_intc.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_rf_gpo.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_rfspi.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_rst_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_rx_control.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_sys_timer.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_tl3r.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_trace.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_dsp_tx_control.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_e2ss.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_edch_fng_core_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_emmcsdxc.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_etb.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_fmon.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_fng_core_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_fsclkcal.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_gea.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_giccpu.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_gicdist.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_gictr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_glbtmr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_gpio.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_gptimers.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_harq.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_hs_scch.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_hsdpa_turbo_decoder_module.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_hsi_apb.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_hsotg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_hsotg_ctrl.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_hucm.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_i2c_mm_hs.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_include.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_isp.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_keypad.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_khub_clk_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_khub_rst_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_khubaon_rst_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_kona_gptimer.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_konatzcfg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_kpm_rst_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_kproc_rst_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_kps_clk_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_kps_rst_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_layer_1_int_cont.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_layer_2_async.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_layer_2_int_cont.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_master_timer.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_mastersw.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_mm_cfg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_mm_clk_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_mm_rst_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_mmsw.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_modem_cfg_and_core_clks.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_modem_clocks_part_1.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_modem_clocks_part_2.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_modem_sw.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_mp.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_mpdxx_apb.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_mpu.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_non_dmac.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_otp.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_otp_pmu_gasket.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_padctrlreg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pdm_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pl310.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_adc.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_cmp.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_cpd.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_csr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_dbg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_deb.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_digmbc.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_fg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_fifo.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_int.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_mbc.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_otp.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_pmu.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_pwr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_rtc.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_psychic.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_psync_for_10ppm.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_ptmr_wd.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pwm_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pwrmgr.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pwrwdog.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rake_fng_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rake_tiny_fng_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rf_interface_block1_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rf_interface_block2_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rf_interface_block3_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rf_interface_block4_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rf_interface_block5_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rfic_mst.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rfic_reg_file.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rfic_scheduler.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rng.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_root_clk_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_root_rst_mgr_reg.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_rxbitlevel.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_sc_xy_state_derive.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_sclkcal.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_scu.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_sdt.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_sec.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_sectrap.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_secwatchdog.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_simi.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_sleeptimer3g.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_slptimer.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_smi.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_spi.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_spm.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_srcmixer.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_sspil.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_ssync_apb.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_sttd_apb.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_swstm.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_sysmap.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_syssw.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_te.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_tiny_fng_core_top.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_tx.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_uartb.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_util.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_v3d.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_wcdma_gp_timers.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_wcdma_gpio.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_wcdma_uart.h
+#	deleted:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_wti.h
+#	deleted:    arch/arm/mach-samoa/include/mach/samoa.h
+#	deleted:    arch/arm/mach-samoa/io_map.c
+#	deleted:    arch/arm/mach-samoa/samoa.c
+#	deleted:    arch/arm/mach-samoa/samoa_pinmux.c
+#	deleted:    arch/arm/mach-samoa/samoa_ray.c
+#	deleted:    arch/arm/mach-samoa/samoa_ray_pinmux.c
+#	modified:   arch/arm/mm/Kconfig
+#	modified:   arch/arm/mm/cache-l2x0.c
+#	modified:   arch/arm/mm/idmap.c
+#	modified:   arch/arm/mm/mmu.c
 #	modified:   arch/arm/plat-kona/Kconfig
-#	modified:   arch/arm/plat-kona/Makefile
-#	modified:   arch/arm/plat-kona/atag_dt.c
-#	modified:   arch/arm/plat-kona/chal/chal_aci.c
 #	modified:   arch/arm/plat-kona/clock.c
-#	modified:   arch/arm/plat-kona/gpio.c
-#	renamed:    sound/caph/common/mti_build.h -> arch/arm/plat-kona/include/mach/atag_dt.h
-#	modified:   arch/arm/plat-kona/include/mach/irqs.h
-#	modified:   arch/arm/plat-kona/include/mach/pinmux.h
-#	new file:   arch/arm/plat-kona/include/plat/bcm_pwm_block.h
-#	renamed:    sound/caph/soc/chal/modules/bsp/inc/chal_bmodem_intc_inc.h -> arch/arm/plat-kona/include/plat/chal/chal_bmodem_intc_inc.h
-#	renamed:    sound/caph/soc/chal/modules/bsp/inc/chal_intc_inc.h -> arch/arm/plat-kona/include/plat/chal/chal_intc_inc.h
-#	renamed:    sound/caph/soc/chal/modules/bsp/inc/chip_irq.h -> arch/arm/plat-kona/include/plat/chal/chip_irq.h
+#	modified:   arch/arm/plat-kona/dma.c
+#	deleted:    arch/arm/plat-kona/include/plat/bcm_pwm_block.h
 #	modified:   arch/arm/plat-kona/include/plat/clock.h
-#	modified:   arch/arm/plat-kona/include/plat/kona_avs.h
-#	new file:   arch/arm/plat-kona/include/plat/kona_unicam.h
+#	modified:   arch/arm/plat-kona/include/plat/kona_cpufreq_drv.h
 #	modified:   arch/arm/plat-kona/include/plat/pi_mgr.h
-#	new file:   arch/arm/plat-kona/include/plat/syscfg.h
-#	modified:   arch/arm/plat-kona/kona_avs.c
+#	modified:   arch/arm/plat-kona/include/plat/pwr_mgr.h
+#	deleted:    arch/arm/plat-kona/include/plat/syscfg.h
 #	modified:   arch/arm/plat-kona/kona_cpufreq.c
-#	modified:   arch/arm/plat-kona/kona_pm.c
-#	modified:   arch/arm/plat-kona/kona_timer.c
-#	modified:   arch/arm/plat-kona/pinmux.c
-#	modified:   arch/arm/plat-kona/sysfs.c
-#	modified:   arch/arm/plat-kona/timer.c
+#	modified:   arch/arm/plat-kona/pi_mgr.c
+#	modified:   arch/arm/plat-kona/pwr_mgr.c
+#	modified:   arch/arm/tools/mach-types
+#	deleted:    drivers/char/bcm2708_mdec.c
+#	deleted:    drivers/char/bcm2708_mdec.h
 #	modified:   drivers/char/broadcom/Kconfig
-#	modified:   drivers/char/broadcom/fuse_log/bcmlog.c
-#	modified:   drivers/char/broadcom/fuse_log/bcmlog.h
-#	modified:   drivers/char/broadcom/fuse_log/bcmmtt.c
-#	modified:   drivers/char/broadcom/fuse_log/config.c
-#	modified:   drivers/char/broadcom/fuse_log/output.c
-#	modified:   drivers/char/broadcom/hdmi/hdmi.c
-#	new file:   drivers/char/broadcom/hw_test/Makefile
-#	new file:   drivers/char/broadcom/hw_test/hw_test.c
+#	deleted:    drivers/char/broadcom/hw_test/Makefile
+#	deleted:    drivers/char/broadcom/hw_test/hw_test.c
 #	modified:   drivers/char/broadcom/isp/isp.c
-#	modified:   drivers/char/broadcom/modem/Makefile
-#	modified:   drivers/char/broadcom/modem/README.txt
-#	modified:   drivers/char/broadcom/modem/at/Makefile
-#	modified:   drivers/char/broadcom/modem/at/at_CIB/public/at_rpc.h
 #	modified:   drivers/char/broadcom/modem/at/atc_kernel.c
-#	deleted:    drivers/char/broadcom/modem/at/temp_audio_tel.h
-#	modified:   drivers/char/broadcom/modem/ipc/Makefile
-#	modified:   drivers/char/broadcom/modem/ipc/ipc_bufferpool.c
+#	modified:   drivers/char/broadcom/modem/ipc/ipc_crashsupport.c
+#	modified:   drivers/char/broadcom/modem/ipc/ipc_debug.h
 #	modified:   drivers/char/broadcom/modem/ipc/ipc_server.c
-#	modified:   drivers/char/broadcom/modem/ipc/ipc_sharedmemory.c
-#	modified:   drivers/char/broadcom/modem/ipc/ipc_smbuffers.c
-#	modified:   drivers/char/broadcom/modem/ipc/ipc_smbuffers.h
-#	modified:   drivers/char/broadcom/modem/ipc/ipc_trace.c
-#	modified:   drivers/char/broadcom/modem/ipc/ipc_trace.h
-#	modified:   drivers/char/broadcom/modem/ipc/ipcproperties.h
-#	modified:   drivers/char/broadcom/modem/net/Makefile
-#	deleted:    drivers/char/broadcom/modem/public/bcm_urilc_def.h
-#	deleted:    drivers/char/broadcom/modem/public/brcm_urilc_cmd.h
-#	deleted:    drivers/char/broadcom/modem/public/dns_proxy.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/_sim_common.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/bastypes.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/bm_power_manager.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/capi_gen_log_msg.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/cc_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/cc_api_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/cc_def.h
-#	modified:   drivers/char/broadcom/modem/public/modem/public/common_defs.h
-#	modified:   drivers/char/broadcom/modem/public/modem/public/common_ecdc.h
-#	modified:   drivers/char/broadcom/modem/public/modem/public/common_sim.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/csd_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/dialparser_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/dialparser_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/dialstr_api.h
-#	modified:   drivers/char/broadcom/modem/public/modem/public/dlc.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/ecdc.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/engmode_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/engmode_def.h
-#	modified:   drivers/char/broadcom/modem/public/modem/public/external_synonym.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/isim_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/isim_api_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/isim_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/lcs_cplane_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/lcs_cplane_rrc_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/lcs_cplane_rrlp_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/lcs_cplane_shared_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/lcs_ftt_api.h
-#	modified:   drivers/char/broadcom/modem/public/modem/public/ms.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/ms_database_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/ms_database_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/ms_database_log_types.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/ms_database_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/ms_persistentdata_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/msdata_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/netreg_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/netreg_api_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/netreg_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/netreg_util.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/netreg_util_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/pch_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/pch_api_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/pch_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/pchex_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/pchex_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/pchex_pf_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/phonebk_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/phonebk_api_atc.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/phonebk_api_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/phonebk_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/phonectrl_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/phonectrl_api_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/phonectrl_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/sec_modem.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/secmodem_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/sim_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/sim_api_atc.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/sim_api_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/sim_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/simlock_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/simlock_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/sms_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/sms_api_atc.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/sms_api_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/sms_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/smsme_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/ss_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/ss_api_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/ss_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/ss_lcs_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/stack_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/stk_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/stk_api_atc.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/stk_api_old.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/stk_def.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/system_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/util_api.h
-#	deleted:    drivers/char/broadcom/modem/public/modem/public/util_api_old.h
-#	modified:   drivers/char/broadcom/modem/public/msp_include_paths.gmk
-#	deleted:    drivers/char/broadcom/modem/public/osevent.h
-#	deleted:    drivers/char/broadcom/modem/public/osinit.h
-#	deleted:    drivers/char/broadcom/modem/public/osloosetimer.h
-#	deleted:    drivers/char/broadcom/modem/public/osprioqueue.h
-#	modified:   drivers/char/broadcom/modem/public/peripherals/pmu/public/brcm/pmu_bcm59055.h
-#	modified:   drivers/char/broadcom/modem/public/peripherals/pmu/public/thirdparty/pmu_max8986.h
-#	modified:   drivers/char/broadcom/modem/public/resultcode.h
-#	deleted:    drivers/char/broadcom/modem/public/rtem_events.h
-#	modified:   drivers/char/broadcom/modem/public/soc/csl/bsp/public/i2c_drv.h
-#	deleted:    drivers/char/broadcom/modem/public/soc/csl/public/hal_phonectrl_ds.h
-#	modified:   drivers/char/broadcom/modem/public/soc/csl/public/i2c_drv.h
-#	modified:   drivers/char/broadcom/modem/public/soc/debug/public/logapi.h
-#	modified:   drivers/char/broadcom/modem/public/soc/os/public/ostimer.h
-#	modified:   drivers/char/broadcom/modem/public/soc/os/public/ostypes.h
-#	deleted:    drivers/char/broadcom/modem/public/soc/public/chip_config.h
-#	deleted:    drivers/char/broadcom/modem/public/stubs/ecdc.h
-#	modified:   drivers/char/broadcom/modem/public/sys_gen_mids.i
-#	modified:   drivers/char/broadcom/modem/public/sysinterface/cpps/public/cpps_control.h
-#	modified:   drivers/char/broadcom/modem/public/sysinterface/em/public/hal_em_battmgr.h
-#	modified:   drivers/char/broadcom/modem/public/sysinterface/em/public/meas_mgr.h
-#	modified:   drivers/char/broadcom/modem/public/sysinterface/hal/adc/public/hal_adc.h
-#	deleted:    drivers/char/broadcom/modem/public/sysinterface/hal/pmu/public/hal_pmu_private.h
-#	modified:   drivers/char/broadcom/modem/public/sysinterface/hal/rtc/public/rtc.h
-#	deleted:    drivers/char/broadcom/modem/public/sysinterface/public/serialmgr.h
-#	deleted:    drivers/char/broadcom/modem/public/sysinterface/public/sys_string.h
-#	modified:   drivers/char/broadcom/modem/public/sysinterface/sysparms/sysparm.h
-#	modified:   drivers/char/broadcom/modem/public/sysinterface/util/public/util_lswap.h
-#	modified:   drivers/char/broadcom/modem/public/taskmsgs.h
-#	modified:   drivers/char/broadcom/modem/public/tones_def.h
-#	modified:   drivers/char/broadcom/modem/public/uelbs_api.h
-#	modified:   drivers/char/broadcom/modem/public/xassert.h
-#	modified:   drivers/char/broadcom/modem/rpc/fuse_rpc_main.c
-#	deleted:    drivers/char/broadcom/modem/rpc/rpc_CIB/Makefile
-#	deleted:    drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/Makefile
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/inc/rpc_internal_api.h
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/rpc_api.c
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/rpc_lookup.c
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/rpc_msg.c
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/rpc_sys.c
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/rpc_test.c
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/public/rpc_api.h
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/public/rpc_sync_api.h
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/public/xdr.h
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/public/xdr_porting_layer.h
-#	deleted:    drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/Makefile
-#	deleted:    drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/inc/rpc_sync_internal.h
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/src/rpc_sync.c
-#	deleted:    drivers/char/broadcom/modem/rpc/rpc_CIB/xdr/Makefile
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/xdr/src/xdr.c
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/xdr/src/xdr_array.c
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/xdr/src/xdr_float.c
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/xdr/src/xdr_mem.c
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_CIB/xdr/src/xdr_reference.c
-#	modified:   drivers/char/broadcom/modem/rpc/rpc_ipc_kernel.c
-#	modified:   drivers/char/broadcom/modem/sysparm/Makefile
-#	modified:   drivers/char/broadcom/modem/sysparm/sysparm.c
-#	modified:   drivers/char/broadcom/modem/sysrpc/Makefile
-#	modified:   drivers/char/broadcom/modem/sysrpc/bcm_cp_cmd_handler.h
-#	modified:   drivers/char/broadcom/modem/sysrpc/bcm_kril_sysrpc_handler.c
-#	deleted:    drivers/char/broadcom/modem/sysrpc/sysrpc-capi/Makefile
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/public/capi2_cp_hal_api.h
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/public/sys_eem_rpc.h
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/public/sys_msc_rpc.h
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/public/sys_usb_rpc.h
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/public/sysrpc_init.h
-#	deleted:    drivers/char/broadcom/modem/sysrpc/sysrpc-capi/src/Makefile
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/src/sys_eem_rpc.c
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/src/sys_gen_rpc.c
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/src/sys_hal_rpc.c
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/src/sys_msc_rpc.c
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/src/sys_rpc.c
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/src/sys_usb_ap.c
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/src/sys_usb_cp.c
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/sys_inc.txt
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc-capi/sys_rpc.h
-#	modified:   drivers/char/broadcom/modem/sysrpc/sysrpc.c
-#	modified:   drivers/char/broadcom/unicam/unicam.c
-#	modified:   drivers/char/broadcom/vce/vce.c
+#	modified:   drivers/char/broadcom/modem/ipc/ipc_server_ccb.c
+#	modified:   drivers/char/broadcom/modem/ipc/lnx_support.c
+#	modified:   drivers/crypto/Kconfig
 #	modified:   drivers/crypto/Makefile
+#	new file:   drivers/crypto/brcm_spum_aes.c
+#	modified:   drivers/crypto/brcm_spum_hash.c
 #	modified:   drivers/hwmon/bcmpmu-hwmon.c
 #	modified:   drivers/i2c/busses/i2c-bsc.c
-#	modified:   drivers/i2c/busses/i2c-bsc.h
 #	modified:   drivers/input/keyboard/Kconfig
-#	modified:   drivers/input/keyboard/Makefile
-#	new file:   drivers/input/keyboard/lm8325.c
 #	modified:   drivers/input/misc/Kconfig
 #	modified:   drivers/input/misc/Makefile
-#	new file:   drivers/input/misc/bcmpmu_ponkey.c
-#	modified:   drivers/input/misc/kona_headset.c
+#	deleted:    drivers/input/misc/bcm2835_input.c
+#	deleted:    drivers/input/misc/bcm2835_ir.c
+#	deleted:    drivers/input/misc/bcm2835_ir_remote.h
+#	modified:   drivers/mfd/Kconfig
 #	modified:   drivers/mfd/Makefile
-#	modified:   drivers/mfd/bcm590xx-core.c
-#	new file:   drivers/mfd/bcm590xx-usb.c
 #	modified:   drivers/mfd/bcmpmu-accy.c
+#	deleted:    drivers/mfd/bcmpmu-apb.c
+#	modified:   drivers/mfd/bcmpmu-bcm59055-map.c
 #	modified:   drivers/mfd/bcmpmu-core.c
-#	modified:   drivers/mfd/bcmpmu-i2c.c
-#	modified:   drivers/mfd/bcmpmu-irq.c
+#	deleted:    drivers/mfd/bcmpmu-samoa-map.c
 #	modified:   drivers/misc/Kconfig
 #	modified:   drivers/misc/Makefile
-#	modified:   drivers/misc/bcm59055-adc.c
-#	modified:   drivers/misc/bcm59055-adc_chipset_api.c
-#	modified:   drivers/misc/bcm59055-audio.c
-#	new file:   drivers/misc/bcm_selftest_bb.c
-#	new file:   drivers/misc/bcmbt_lpm.c
-#	new file:   drivers/misc/bcmbt_rfkill.c
-#	modified:   drivers/misc/bcmpmu_audio.c
-#	modified:   drivers/misc/bcmpmu_audio.h
-#	modified:   drivers/misc/pmem.c
-#	new file:   drivers/misc/vc04_services/hdmi/Makefile removed by eszeto
-#	new file:   drivers/misc/vc04_services/hdmi/hdmi.c removed by eszeto
-#	modified:   drivers/misc/vc04_services/vc_dnfo/Makefile fixed by eszeto
-#	modified:   drivers/misc/vc04_services/vc_hnfo/Makefile fixed by eszeto
-#	modified:   drivers/misc/vc04_services/vc_mem/Makefile fixed by eszeto
-#	modified:   drivers/misc/vc04_services/vc_omx/Makefile fixed by eszeto
-#	modified:   drivers/misc/vc04_services/vc_ovl/Makefile fixed by eszeto
-#	modified:   drivers/misc/vc04_services/vchiq/Makefile fixed by eszeto
-#	modified:   drivers/misc/vc04_services/vchiq/shared-config.mk
-#	modified:   drivers/misc/vc04_services/vcos/Makefile fixed by eszeto
-#	modified:   drivers/misc/vc04_services/vmcs_fb/Makefile fixed by eszeto
-#	modified:   drivers/misc/vc04_services/vmcs_sm/Makefile fixed by eszeto
-#	modified:   drivers/misc/vc04_services/vmcs_sm/vc_sm_knl.h
+#	new file:   drivers/misc/al3006.c
+#	deleted:    drivers/misc/vmcs_services/Kconfig
+#	deleted:    drivers/misc/vmcs_services/Makefile
+#	deleted:    drivers/misc/vmcs_services/camera/Makefile
+#	deleted:    drivers/misc/vmcs_services/camera/camera.h
+#	deleted:    drivers/misc/vmcs_services/camera/camera_core.c
+#	deleted:    drivers/misc/vmcs_services/camera/camera_driver.c
+#	deleted:    drivers/misc/vmcs_services/camera/camera_driver.h
+#	deleted:    drivers/misc/vmcs_services/camera/camera_regs.h
+#	deleted:    drivers/misc/vmcs_services/gencmd/Makefile
+#	deleted:    drivers/misc/vmcs_services/gencmd/gencmd.h
+#	deleted:    drivers/misc/vmcs_services/gencmd/gencmd_core.c
+#	deleted:    drivers/misc/vmcs_services/gencmd/gencmd_driver.c
+#	deleted:    drivers/misc/vmcs_services/gencmd/gencmd_driver.h
+#	deleted:    drivers/misc/vmcs_services/gencmd/gencmd_regs.h
+#	deleted:    drivers/misc/vmcs_services/graphics/Makefile
+#	deleted:    drivers/misc/vmcs_services/graphics/graphics.h
+#	deleted:    drivers/misc/vmcs_services/graphics/graphics_driver.c
+#	deleted:    drivers/misc/vmcs_services/graphics/graphics_driver.h
+#	deleted:    drivers/misc/vmcs_services/graphics/graphics_regs.h
+#	deleted:    drivers/misc/vmcs_services/smi/Makefile
+#	deleted:    drivers/misc/vmcs_services/smi/bcm2708_smi.c
+#	deleted:    drivers/misc/vmcs_services/smi/bcm2708_smi_regs.h
+#	deleted:    drivers/misc/vmcs_services/tv_intf/Makefile
+#	deleted:    drivers/misc/vmcs_services/tv_intf/tv_intf.h
+#	deleted:    drivers/misc/vmcs_services/tv_intf/tv_intf_core.c
+#	deleted:    drivers/misc/vmcs_services/tv_intf/tv_intf_driver.c
+#	deleted:    drivers/misc/vmcs_services/tv_intf/tv_intf_driver.h
+#	deleted:    drivers/misc/vmcs_services/tv_intf/tv_intf_regs.h
+#	deleted:    drivers/misc/vmcs_services/vchiq/Makefile
+#	deleted:    drivers/misc/vmcs_services/vchiq/vchiq_test.c
+#	deleted:    drivers/misc/vmcs_services/vcos/Makefile
 #	modified:   drivers/mmc/card/block.c
-#	modified:   drivers/mmc/core/mmc.c
-#	modified:   drivers/net/brcm_netconsole.c
-#	renamed:    drivers/net/wireless/bcmdhd/Kconfig -> drivers/net/wireless/bcmdhd/Kconfiga
-#	deleted:    drivers/net/wireless/bcmdhd/aiutils.c
-#	deleted:    drivers/net/wireless/bcmdhd/bcmevent.c
-#	deleted:    drivers/net/wireless/bcmdhd/bcmsdh.c
-#	deleted:    drivers/net/wireless/bcmdhd/bcmsdh_linux.c
-#	deleted:    drivers/net/wireless/bcmdhd/bcmsdh_sdmmc.c
-#	deleted:    drivers/net/wireless/bcmdhd/bcmsdh_sdmmc_linux.c
-#	new file:   drivers/net/wireless/bcmdhd/bcmsdio/linux/Makefile
-#	new file:   drivers/net/wireless/bcmdhd/bcmsdio/linux/makefile.26
-#	new file:   drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmpcispi.c
-#	new file:   drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdspi.c
-#	new file:   drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdspi_linux.c
-#	new file:   drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdstd.c
-#	new file:   drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdstd_linux.c
-#	new file:   drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmspibrcm.c
-#	deleted:    drivers/net/wireless/bcmdhd/bcmutils.c
-#	deleted:    drivers/net/wireless/bcmdhd/bcmwifi.c
-#	new file:   drivers/net/wireless/bcmdhd/config/Android.mk
-#	new file:   drivers/net/wireless/bcmdhd/config/android_dhcpcd.conf
-#	new file:   drivers/net/wireless/bcmdhd/config/wpa_supplicant.conf
-#	deleted:    drivers/net/wireless/bcmdhd/dhd.h
-#	new file:   drivers/net/wireless/bcmdhd/dhd/exe/GNUmakefile
-#	new file:   drivers/net/wireless/bcmdhd/dhd/exe/dhdu.c
-#	new file:   drivers/net/wireless/bcmdhd/dhd/exe/dhdu.h
-#	renamed:    drivers/net/wireless/bcmdhd/include/proto/vlan.h -> drivers/net/wireless/bcmdhd/dhd/exe/dhdu_cmd.h
-#	renamed:    drivers/net/wireless/bcmdhd/include/pcicfg.h -> drivers/net/wireless/bcmdhd/dhd/exe/dhdu_common.h
-#	new file:   drivers/net/wireless/bcmdhd/dhd/exe/dhdu_linux.c
-#	new file:   drivers/net/wireless/bcmdhd/dhd/linux/Makefile
-#	new file:   drivers/net/wireless/bcmdhd/dhd/linux/makefile.26
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_bta.c
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_bta.h
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_bus.h
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_cdc.c
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_common.c
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_custom_gpio.c
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_dbg.h
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_linux.c
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_linux_mon.c
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_linux_sched.c
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_proto.h
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_sdio.c
-#	deleted:    drivers/net/wireless/bcmdhd/dhd_wlfc.h
-#	deleted:    drivers/net/wireless/bcmdhd/dngl_stats.h
-#	deleted:    drivers/net/wireless/bcmdhd/dngl_wlhdr.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b1-roml/sdio-ag-pool-ccx-btamp-p2p-idsup-idauth-proptxstatus-pno-aoe-toe-pktfilter-keepalive-wapi/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b1-roml/sdio-ag-pool-ccx-btamp-p2p-idsup-idauth-proptxstatus-pno-aoe-toe-pktfilter-keepalive/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b1-roml/sdio-g-pool-apsta-pno-keepalive-proptxstatus-aoe/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b1-roml/sdio-g-pool-ccx-btamp-p2p-idsup-idauth-proptxstatus-pno-aoe-toe-pktfilter-keepalive-wapi/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b2-roml/sdio-ag-pool-ccx-btamp-p2p-idsup-idauth-proptxstatus-pno-aoe-toe-pktfilter-keepalive-wapi/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b2-roml/sdio-ag-pool-ccx-btamp-p2p-idsup-idauth-proptxstatus-pno-aoe-toe-pktfilter-keepalive/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b2-roml/sdio-ag-pool-p2p/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b2-roml/sdio-ag-pool/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b2-roml/sdio-g-pool-apsta-pno-keepalive-proptxstatus-aoe/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b2-roml/sdio-g-pool-ccx-btamp-p2p-idsup-idauth-proptxstatus-pno-aoe-toe-pktfilter-keepalive-wapi/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b2-roml/sdio-g-pool-p2p/rtecdc.h
-#	new file:   drivers/net/wireless/bcmdhd/dongle/rte/wl/builds/4330b2-roml/sdio-g-pool/rtecdc.h
-#	deleted:    drivers/net/wireless/bcmdhd/hndpmu.c
-#	new file:   drivers/net/wireless/bcmdhd/include/bcm_android_types.h
-#	renamed:    drivers/net/wireless/bcmdhd/include/bcmsdspi.h -> drivers/net/wireless/bcmdhd/include/bcmspibrcm.h
-#	new file:   drivers/net/wireless/bcmdhd/include/bcmwpa.h
-#	new file:   drivers/net/wireless/bcmdhd/include/dbus.h
-#	renamed:    drivers/net/wireless/bcmdhd/include/epivers.h -> drivers/net/wireless/bcmdhd/include/epivers.h.in
-#	new file:   drivers/net/wireless/bcmdhd/include/epivers.sh
-#	new file:   drivers/net/wireless/bcmdhd/include/spid.h
-#	new file:   drivers/net/wireless/bcmdhd/include/usbrdl.h
-#	new file:   drivers/net/wireless/bcmdhd/include/usbstd.h
-#	new file:   drivers/net/wireless/bcmdhd/include/wlc_extlog_idstr.h
-#	deleted:    drivers/net/wireless/bcmdhd/linux_osl.c
-#	deleted:    drivers/net/wireless/bcmdhd/sbutils.c
-#	new file:   drivers/net/wireless/bcmdhd/shared/bcm_app_utils.c
-#	new file:   drivers/net/wireless/bcmdhd/shared/dbus.c
-#	new file:   drivers/net/wireless/bcmdhd/shared/dbus_sdio.c
-#	new file:   drivers/net/wireless/bcmdhd/shared/dbus_sdio_linux.c
-#	new file:   drivers/net/wireless/bcmdhd/shared/dbus_usb.c
-#	new file:   drivers/net/wireless/bcmdhd/shared/dbus_usb_linux.c
-#	new file:   drivers/net/wireless/bcmdhd/shared/miniopt.c
-#	deleted:    drivers/net/wireless/bcmdhd/siutils.c
-#	deleted:    drivers/net/wireless/bcmdhd/siutils_priv.h
-#	deleted:    drivers/net/wireless/bcmdhd/uamp_api.h
-#	new file:   drivers/net/wireless/bcmdhd/wl/exe/uamp.mk
-#	new file:   drivers/net/wireless/bcmdhd/wl/sys/uamp_linux.c
-#	deleted:    drivers/net/wireless/bcmdhd/wl_android.c
-#	deleted:    drivers/net/wireless/bcmdhd/wl_android.h
-#	deleted:    drivers/net/wireless/bcmdhd/wl_cfg80211.c
-#	deleted:    drivers/net/wireless/bcmdhd/wl_cfg80211.h
-#	deleted:    drivers/net/wireless/bcmdhd/wl_cfgp2p.c
-#	deleted:    drivers/net/wireless/bcmdhd/wl_cfgp2p.h
-#	deleted:    drivers/net/wireless/bcmdhd/wl_dbg.h
-#	deleted:    drivers/net/wireless/bcmdhd/wl_iw.c
-#	deleted:    drivers/net/wireless/bcmdhd/wl_iw.h
-#	deleted:    drivers/net/wireless/bcmdhd/wldev_common.c
-#	deleted:    drivers/net/wireless/bcmdhd/wldev_common.h
+#	modified:   drivers/mmc/core/sd.c
+#	modified:   drivers/mmc/host/Kconfig
+#	modified:   drivers/mmc/host/Makefile
+#	deleted:    drivers/mmc/host/bcm2708_mci.c
+#	deleted:    drivers/mmc/host/bcm2708_mci.h
+#	deleted:    drivers/mmc/host/sdhci-bcm2708.c
+#	modified:   drivers/mtd/nand/Kconfig
+#	modified:   drivers/mtd/nand/Makefile
+#	deleted:    drivers/mtd/nand/bcm2708_nand.c
+#	deleted:    drivers/mtd/nand/bcm2708_nand.h
+#	modified:   drivers/net/wireless/bcmdhd/Makefile
+#	deleted:    drivers/net/wireless/bcmdhd/config/Android.mk
+#	modified:   drivers/power/Kconfig
+#	modified:   drivers/power/Makefile
+#	deleted:    drivers/power/bcm2708_battery.c
 #	modified:   drivers/power/bcm59055_battery.c
-#	modified:   drivers/power/bcmpmu-batt.c
-#	modified:   drivers/power/bcmpmu-chrgr.c
 #	modified:   drivers/power/bcmpmu-em.c
 #	modified:   drivers/pwm/kona-pwmc.c
-#	modified:   drivers/regulator/bcmpmu-regulator.c
-#	modified:   drivers/regulator/bcmpmu-rgltr-bcm59055.c
-#	modified:   drivers/rtc/rtc-bcmpmu.c
-#	modified:   drivers/tty/serial/serial_core.c
-#	modified:   drivers/usb/gadget/Kconfig
+#	modified:   drivers/regulator/Kconfig
+#	modified:   drivers/regulator/Makefile
+#	deleted:    drivers/regulator/bcmpmu-rgltr-samoa.c
+#	modified:   drivers/tty/serial/8250.c
+#	modified:   drivers/tty/serial/Kconfig
+#	modified:   drivers/tty/serial/Makefile
+#	deleted:    drivers/tty/serial/bcm2708_vuart.c
+#	deleted:    drivers/tty/serial/bcm2708_vuart.h
 #	modified:   drivers/usb/gadget/android.c
-#	modified:   drivers/usb/gadget/composite.c
-#	modified:   drivers/usb/gadget/dwc_otg/driver/Makefile
 #	modified:   drivers/usb/gadget/dwc_otg/driver/dwc_otg_cil.c
-#	modified:   drivers/usb/gadget/dwc_otg/driver/dwc_otg_cil.h
-#	modified:   drivers/usb/gadget/dwc_otg/driver/dwc_otg_cil_intr.c
-#	modified:   drivers/usb/gadget/dwc_otg/driver/dwc_otg_hcd.c
-#	modified:   drivers/usb/gadget/dwc_otg/driver/dwc_otg_pcd_intr.c
+#	modified:   drivers/usb/gadget/dwc_otg/driver/dwc_otg_pcd_if.h
 #	modified:   drivers/usb/gadget/dwc_otg/driver/dwc_otg_pcd_linux.c
-#	deleted:    drivers/usb/gadget/dwc_otg/driver/kona_otg_device.c
-#	modified:   drivers/usb/gadget/f_adb.c
-#	modified:   drivers/usb/gadget/f_mass_storage.c
-#	modified:   drivers/usb/gadget/u_ether.c
-#	modified:   drivers/usb/otg/Kconfig
-#	modified:   drivers/usb/otg/Makefile
 #	modified:   drivers/usb/otg/bcm_hsotgctrl.c
-#	modified:   drivers/usb/otg/bcm_hsotgctrl.h
-#	deleted:    drivers/usb/otg/bcm_otg.c
-#	modified:   drivers/usb/otg/bcm_otg_adp.c
-#	modified:   drivers/usb/otg/bcm_otg_adp.h
-#	new file:   drivers/usb/otg/bcmpmu_otg_xceiv.c
-#	modified:   drivers/usb/otg/bcmpmu_otg_xceiv.h
-#	modified:   drivers/video/backlight/pwm_bl.c
-#	modified:   drivers/video/console/fb_fps.c
-#	modified:   include/linux/broadcom/bcm59055-adc.h
-#	modified:   include/linux/broadcom/bcm_fuse_sysparm_CIB.h
-#	renamed:    sound/caph/audio/audio_controller/audio_gain_table.h -> include/linux/broadcom/bcm_selftest_bb.h
-#	modified:   include/linux/broadcom/unicam.h
-#	modified:   include/linux/broadcom/vce.h
-#	modified:   include/linux/fb_fps.h
-#	modified:   include/linux/i2c-kona.h
-#	new file:   include/linux/i2c/lm8325.h
+#	modified:   drivers/usb/otg/bcmpmu_otg_xceiv.c
+#	modified:   drivers/video/Makefile
+#	deleted:    drivers/video/bcm2708_fb.c
+#	deleted:    drivers/video/bcm2708_fb.h
+#	modified:   drivers/video/broadcom/rhea_fb.c
+#	modified:   drivers/watchdog/Kconfig
+#	modified:   drivers/watchdog/Makefile
+#	new file:   drivers/watchdog/bcm59055-wd.c
+#	deleted:    include/linux/broadcom/bcm_fuse_memmap.h
 #	modified:   include/linux/mfd/bcm590xx/bcm59055_A0.h
-#	new file:   include/linux/mfd/bcm590xx/bcm59055_C0.h
-#	new file:   include/linux/mfd/bcm590xx/bcm590xx-usb.h
 #	modified:   include/linux/mfd/bcmpmu.h
-#	modified:   include/linux/pwm_backlight.h
-#	modified:   include/linux/videocore/Kbuild
-#	new file:   include/linux/videocore/vc_boot_mode.h
-#	modified:   include/linux/videocore/vc_omx.h
-#	modified:   net/core/netpoll.c
-#	new file:   scripts/mkdtb.sh
-#	deleted:    sound/caph/1khz8kmono16bit.txt
+#	modified:   include/linux/mmc/card.h
+#	modified:   include/linux/mpu3050.h
+#	renamed:    include/linux/mpu6050b1.h -> include/linux/mpu6050a2.h
+#	modified:   sound/arm/Kconfig
+#	modified:   sound/arm/Makefile
+#	deleted:    sound/arm/bcm2835-ctl.c
+#	deleted:    sound/arm/bcm2835-ipc.c
+#	deleted:    sound/arm/bcm2835-pcm.c
+#	deleted:    sound/arm/bcm2835.c
+#	deleted:    sound/arm/bcm2835.h
 #	modified:   sound/caph/Island_Makefile
+#	modified:   sound/caph/Kconfig
+#	modified:   sound/caph/Makefile
 #	modified:   sound/caph/Rhea_Makefile
-#	modified:   sound/caph/Samoa_Makefile
+#	deleted:    sound/caph/Samoa_Makefile
 #	modified:   sound/caph/at_aud_ctl.c
 #	modified:   sound/caph/audio/audio_controller/public/audio_controller.h
-#	modified:   sound/caph/audio/audio_controller/public/audio_pmu_adapt.h
 #	modified:   sound/caph/audio/audio_controller/src/audio_controller_caph.c
-#	modified:   sound/caph/audio/audio_controller/src/audio_controller_common.c
-#	deleted:    sound/caph/audio/audio_controller/src/audio_gain_table.c
-#	new file:   sound/caph/audio/audio_controller/src/audio_pmu_adapt.c
 #	modified:   sound/caph/audio/audio_datadriver/public/audio_ddriver.h
 #	modified:   sound/caph/audio/audio_datadriver/src/audio_ddriver.c
 #	modified:   sound/caph/audio/audio_vdriver/public/audio_vdriver.h
-#	modified:   sound/caph/audio/audio_vdriver/src/audio_rpc.c
-#	modified:   sound/caph/audio/audio_vdriver/src/audio_vdriver_audlog.c
 #	modified:   sound/caph/audio/audio_vdriver/src/audio_vdriver_caph.c
 #	modified:   sound/caph/audio/audio_vdriver/src/audio_vdriver_common.c
-#	modified:   sound/caph/audio/audio_vdriver/src/ripisr_audio.c
 #	modified:   sound/caph/bcm_auddrv_test.c
-#	modified:   sound/caph/bcm_audio_devices.h
 #	modified:   sound/caph/bcm_audio_thread.c
-#	modified:   sound/caph/bcm_audio_thread.h
 #	modified:   sound/caph/caph_common.h
 #	modified:   sound/caph/caph_ctl.c
 #	modified:   sound/caph/caph_hwdep.c
-#	modified:   sound/caph/caph_module.c
 #	modified:   sound/caph/caph_pcm.c
-#	deleted:    sound/caph/common/assert.h
-#	modified:   sound/caph/common/audio_consts.h
-#	deleted:    sound/caph/common/capi2_gen_mids.h
-#	deleted:    sound/caph/common/chip_version.h
-#	modified:   sound/caph/common/log.h
-#	modified:   sound/caph/common/taskmsgs.h
-#	modified:   sound/caph/soc/chal/modules/audio/caph/src/chal_caph_audioh_analogmic.c
-#	modified:   sound/caph/soc/chal/modules/audio/caph/src/chal_caph_audioh_nvin.c
-#	modified:   sound/caph/soc/chal/modules/audio/caph/src/chal_caph_audioh_vibra.c
-#	modified:   sound/caph/soc/chal/modules/audio/caph/src/chal_caph_audioh_vin.c
-#	modified:   sound/caph/soc/chal/modules/audio/caph/src/chal_caph_dma.c
-#	modified:   sound/caph/soc/chal/modules/audio/inc/chal_caph_audioh.h
-#	modified:   sound/caph/soc/chal/modules/audio/inc/chal_caph_intc.h
-#	deleted:    sound/caph/soc/chal/modules/bsp/inc/chal_types.h
-#	modified:   sound/caph/soc/csl/audio/public/csl_caph.h
-#	modified:   sound/caph/soc/csl/audio/public/csl_caph_audioh.h
-#	modified:   sound/caph/soc/csl/audio/public/csl_caph_cfifo.h
 #	modified:   sound/caph/soc/csl/audio/public/csl_caph_dma.h
-#	modified:   sound/caph/soc/csl/audio/public/csl_caph_gain.h
 #	modified:   sound/caph/soc/csl/audio/public/csl_caph_hwctrl.h
-#	modified:   sound/caph/soc/csl/audio/public/csl_caph_i2s_sspi.h
-#	modified:   sound/caph/soc/csl/audio/public/csl_caph_pcm_sspi.h
-#	modified:   sound/caph/soc/csl/audio/public/csl_caph_srcmixer.h
-#	modified:   sound/caph/soc/csl/audio/public/csl_caph_switch.h
-#	modified:   sound/caph/soc/csl/audio/public/osdw_caph_drv.h
-#	modified:   sound/caph/soc/csl/audio/src/csl_aud_queue.c
-#	modified:   sound/caph/soc/csl/audio/src/csl_caph_audioh.c
 #	modified:   sound/caph/soc/csl/audio/src/csl_caph_capture.c
-#	modified:   sound/caph/soc/csl/audio/src/csl_caph_cfifo.c
-#	deleted:    sound/caph/soc/csl/audio/src/csl_caph_config.c
 #	modified:   sound/caph/soc/csl/audio/src/csl_caph_dma.c
-#	modified:   sound/caph/soc/csl/audio/src/csl_caph_gain.c
 #	modified:   sound/caph/soc/csl/audio/src/csl_caph_hwctrl.c
-#	modified:   sound/caph/soc/csl/audio/src/csl_caph_i2s_sspi.c
-#	modified:   sound/caph/soc/csl/audio/src/csl_caph_pcm_sspi.c
 #	modified:   sound/caph/soc/csl/audio/src/csl_caph_render.c
-#	modified:   sound/caph/soc/csl/audio/src/csl_caph_srcmixer.c
 #	modified:   sound/caph/soc/csl/audio/src/csl_caph_switch.c
-#	modified:   sound/caph/soc/csl/audio/src/osdw_caph_drv.c
+#	deleted:    sound/caph/soc/csl/audio/src/osdw_caph_drv.c
 #	modified:   sound/caph/soc/csl/dsp/public/csl_apcmd.h
 #	modified:   sound/caph/soc/csl/dsp/public/csl_arm2sp.h
+#	renamed:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_pmu_env.h -> sound/caph/soc/csl/dsp/public/csl_bttap.h
+#	deleted:    sound/caph/soc/csl/dsp/public/csl_cpdspaudio.h
 #	modified:   sound/caph/soc/csl/dsp/public/csl_dsp.h
-#	new file:   sound/caph/soc/csl/dsp/public/csl_dsp_caph_control_api.h
-#	modified:   sound/caph/soc/csl/dsp/public/osdw_dsp_drv.h
-#	modified:   sound/caph/soc/csl/dsp/public/ripcmdq.h
+#	modified:   sound/caph/soc/csl/dsp/public/csl_dsp_caph_control_api.h
+#	new file:   sound/caph/soc/csl/dsp/public/csl_dsp_cneon_api.h
+#	renamed:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_etb2axi.h -> sound/caph/soc/csl/dsp/public/csl_dsp_common_util.h
+#	copied:     arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_datapacker.h -> sound/caph/soc/csl/dsp/public/csl_log.h
+#	renamed:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_atbfilter.h -> sound/caph/soc/csl/dsp/public/csl_voif.h
+#	modified:   sound/caph/soc/csl/dsp/public/csl_voip.h
+#	modified:   sound/caph/soc/csl/dsp/public/csl_vpu.h
+#	renamed:    sound/caph/soc/csl/audio/public/osdw_caph_drv.h -> sound/caph/soc/csl/dsp/public/osdw_dsp_drv.h
+#	deleted:    sound/caph/soc/csl/dsp/public/ripcmdq.h
+#	modified:   sound/caph/soc/csl/dsp/public/shared.h
 #	modified:   sound/caph/soc/csl/dsp/public/shared_ap.h
 #	modified:   sound/caph/soc/csl/dsp/src/csl_apcmd.c
 #	modified:   sound/caph/soc/csl/dsp/src/csl_arm2sp.c
-#	modified:   sound/caph/soc/csl/dsp/src/csl_bttap.c
+#	renamed:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_datapacker.h -> sound/caph/soc/csl/dsp/src/csl_bttap.c
 #	modified:   sound/caph/soc/csl/dsp/src/csl_dsp.c
-#	new file:   sound/caph/soc/csl/dsp/src/csl_dsp_caph_control_api.c
+#	modified:   sound/caph/soc/csl/dsp/src/csl_dsp_caph_control_api.c
+#	new file:   sound/caph/soc/csl/dsp/src/csl_dsp_cneon_api.c
+#	modified:   sound/caph/soc/csl/dsp/src/csl_dsp_common_util.c
+#	modified:   sound/caph/soc/csl/dsp/src/csl_log.c
+#	renamed:    arch/arm/mach-samoa/include/mach/rdb/brcm_rdb_busmaster.h -> sound/caph/soc/csl/dsp/src/csl_voif.c
+#	modified:   sound/caph/soc/csl/dsp/src/csl_voip.c
+#	modified:   sound/caph/soc/csl/dsp/src/csl_vpu.c
 #	modified:   sound/caph/soc/csl/dsp/src/osdw_dsp_drv.c
-#	modified:   vc4-dev/src/interface/vceb/host/linux/Makefile
-#	modified:   vc4-dev/src/interface/vchiq_arm/vchiq_bi_arm.c
-#	modified:   vc4-dev/src/interface/vchiq_arm/vchiq_bivcm.h
-#	modified:   vc4-dev/src/interface/vchiq_arm/vchiq_core.c
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/big_island/vchiq_arm.c
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq.h
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq_core.c
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq_core.h
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq_if.h
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq_ioctl.h
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq_memdrv.c
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq_memdrv.h
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq_memdrv_hana.c
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq_shim.c
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq_util.c
-#	new file:   vc4-dev/src/interface/vchiq_arm_bi/vchiq_util.h
 #
 # Unmerged paths:
 #   (use "git add/rm <file>..." as appropriate to mark resolution)
 #
-#	both modified:      arch/arm/configs/bcm11160_sv_defconfig fixed by rjui
-#	both modified:      arch/arm/configs/bcm11160_sv_jffs2_defconfig fixed by rjui
-#	both modified:      arch/arm/configs/bcm11160_sv_li_128mb_defconfig fixed by rjui
-#	both modified:      arch/arm/configs/bcm11160_tablet_android_defconfig fixed by rjui
-#	both modified:      arch/arm/configs/bcm11160_tablet_defconfig fixed by rjui
-#	both modified:      arch/arm/configs/bcm11160_tablet_li_128mb_android_defconfig fixed by rjui
-#	both modified:      arch/arm/configs/bcm11160_tablet_li_128mb_defconfig fixed by rjui
-#	both modified:      arch/arm/configs/bcm28160_tablet_android_defconfig fixed by rjui
-#	both modified:      arch/arm/configs/bcm28160_tablet_defconfig fixed by rjui
-#	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_android_defconfig fixed by rjui
-#	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_defconfig fixed by rjui
-#	both modified:      arch/arm/mach-island/configs/bcm28160_tablet_li_128mb_android.target fixed by rjui
-#	both modified:      arch/arm/mach-island/island.c fixed by rjui
-#	both modified:      drivers/char/broadcom/Makefile fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/ipc/ipcinterface.h fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/net/bcm_fuse_net.c fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/public/audio_consts.h fixed by rjui
-#	deleted by them:    drivers/char/broadcom/modem/public/sysinterface/public/serialapi.h fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/rpc/Makefile fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/Makefile fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/rpc_ipc.c fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/public/rpc_global.h fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/public/rpc_ipc.h fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/src/Makefile fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/xdr/src/Makefile fixed by rjui
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_stubs.c fixed by rjui
-#	both modified:      drivers/misc/vc04_services/Kconfig fixed by eszeto
-#	both modified:      drivers/misc/vc04_services/Makefile fixed by eszeto
-#	both modified:      drivers/mmc/host/sdhci.c fixed by rjui
-#	both modified:      drivers/net/wireless/bcmdhd/Makefile
-#	both modified:      drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdh.c
-#	both modified:      drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdh_linux.c
-#	both modified:      drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdh_sdmmc.c
-#	both modified:      drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdh_sdmmc_linux.c
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd.h
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_bta.c
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_bta.h
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_bus.h
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_cdc.c
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_common.c
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_custom_gpio.c
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_dbg.h
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_linux.c
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_linux_mon.c
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_linux_sched.c
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_proto.h
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_sdio.c
-#	both modified:      drivers/net/wireless/bcmdhd/dhd/sys/dhd_wlfc.h
-#	both modified:      drivers/net/wireless/bcmdhd/dongle/dngl_stats.h
-#	both modified:      drivers/net/wireless/bcmdhd/dongle/dngl_wlhdr.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/Makefile
-#	both modified:      drivers/net/wireless/bcmdhd/include/aidmp.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmcdc.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmdefs.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmdevs.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmendian.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmpcispi.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmperf.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmsdbus.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmsdh.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmsdh_sdmmc.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmsdpcm.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmsdstd.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmspi.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmutils.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/bcmwifi.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/dhdioctl.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/hndpmu.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/hndrte_armtrap.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/hndrte_cons.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/hndsoc.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/htsf.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/linux_osl.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/linuxver.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/miniopt.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/msgtrace.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/osl.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/packed_section_end.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/packed_section_start.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/802.11.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/802.11_bta.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/802.11e.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/802.1d.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/bcmeth.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/bcmevent.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/bcmip.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/bt_amp_hci.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/eapol.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/ethernet.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/p2p.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/sdspi.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/proto/wpa.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/sbchipc.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/sbconfig.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/sbhnddma.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/sbpcmcia.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/sbsdio.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/sbsdpcmdev.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/sbsocram.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/sdio.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/sdioh.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/sdiovar.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/siutils.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/trxhdr.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/typedefs.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/wlfc_proto.h
-#	both modified:      drivers/net/wireless/bcmdhd/include/wlioctl.h
-#	both modified:      drivers/net/wireless/bcmdhd/shared/aiutils.c
-#	both modified:      drivers/net/wireless/bcmdhd/shared/bcmevent.c
-#	both modified:      drivers/net/wireless/bcmdhd/shared/bcmutils.c
-#	both modified:      drivers/net/wireless/bcmdhd/shared/bcmwifi.c
-#	both modified:      drivers/net/wireless/bcmdhd/shared/hndpmu.c
-#	both modified:      drivers/net/wireless/bcmdhd/shared/linux_osl.c
-#	both modified:      drivers/net/wireless/bcmdhd/shared/sbutils.c
-#	both modified:      drivers/net/wireless/bcmdhd/shared/siutils.c
-#	both modified:      drivers/net/wireless/bcmdhd/shared/siutils_priv.h
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/uamp_api.h
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_android.c
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_android.h
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_cfg80211.c
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_cfg80211.h
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_cfgp2p.c
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_cfgp2p.h
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_dbg.h
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_iw.c
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_iw.h
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wldev_common.c
-#	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wldev_common.h
-#	both modified:      drivers/tty/serial/8250.c fixed by rjui
-#	both modified:      drivers/usb/gadget/f_acm.c fixed by rjui
-#	both modified:      drivers/usb/gadget/f_obex.c fixed by rjui
-#	both added:         include/linux/broadcom/bcmbt_lpm.h fixed by rjui, keep it
-#	both added:         include/linux/broadcom/bcmbt_rfkill.h fixed by rjui, keep it
-#	both modified:      include/linux/broadcom/ipcinterface.h fixed by rjui
-#	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_bivcm_arm.c fixed by eszeto
-#	both modified:      vc4-dev/src/interface/vcos/linuxkernel/vcos_platform.h fixed by eszeto
-#	both modified:      vc4-dev/src/interface/vcos/vcos_logging.h fixed by eszeto
-#
-# Untracked files:
-#   (use "git add <file>..." to include in what will be committed)
-#
-#	conflicts.txt
+#	both modified:      arch/arm/configs/bcm11160_sv_defconfig (Sherman)
+#	both modified:      arch/arm/configs/bcm11160_sv_jffs2_defconfig (Sherman)
+#	both modified:      arch/arm/configs/bcm11160_sv_li_128mb_defconfig (Sherman)
+#	both modified:      arch/arm/configs/bcm11160_tablet_android_defconfig (Sherman)
+#	both modified:      arch/arm/configs/bcm11160_tablet_defconfig (Sherman)
+#	both modified:      arch/arm/configs/bcm11160_tablet_li_128mb_android_defconfig (Sherman)
+#	both modified:      arch/arm/configs/bcm11160_tablet_li_128mb_defconfig (Sherman)
+#	both modified:      arch/arm/configs/bcm28160_tablet_android_defconfig (Sherman)
+#	both modified:      arch/arm/configs/bcm28160_tablet_defconfig (Sherman)
+#	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_android_defconfig (Sherman)
+#	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_defconfig (Sherman)
+#	both modified:      drivers/char/Kconfig    (Sherman)
+#	both modified:      drivers/char/Makefile (Sherman)
+#	both modified:      drivers/char/broadcom/Makefile (Sherman)
+#	both modified:      drivers/mmc/host/sdhci-pltfm-kona.c
+#	both modified:      drivers/mmc/host/sdhci.c
+#	both added:         include/linux/mpu.h
+#	deleted by us:      vc4-dev/src/interface/vchiq_arm_bi/big_island/vchiq_arm.c (Sherman)
+#	deleted by us:      vc4-dev/src/interface/vchiq_arm_bi/vchiq_core.c (Sherman)
+#		include/linux/mpu6050b1.h
+		include/linux/mpu6050a2.h
+
+
