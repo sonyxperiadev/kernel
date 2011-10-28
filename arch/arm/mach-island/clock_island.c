@@ -3263,6 +3263,26 @@ static struct bus_clk CLK_NAME(usbh_ahb) = {
     .src_clk = CLK_PTR(master_switch_ahb),
 };
 
+/*
+Bus clock name USB_IC_AHB
+*/
+static struct bus_clk CLK_NAME(usb_ic_ahb) = {
+    .clk =	{
+	.flags = USB_IC_AHB_BUS_CLK_FLAGS,
+	.clk_type = CLK_TYPE_BUS,
+	.id	= CLK_USB_IC_AHB_BUS_CLK_ID,
+	.name = USB_IC_AHB_BUS_CLK_NAME_STR,
+	.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+	.ops = &gen_bus_clk_ops,
+    },
+    .ccu_clk = &CLK_NAME(kpm),
+    .clk_gate_offset  = KPM_CLK_MGR_REG_USB_IC_CLKGATE_OFFSET,
+    .clk_en_mask = KPM_CLK_MGR_REG_USB_IC_CLKGATE_USB_IC_AHB_CLK_EN_MASK,
+    .gating_sel_mask = KPM_CLK_MGR_REG_USB_IC_CLKGATE_USB_IC_AHB_HW_SW_GATING_SEL_MASK,
+    .stprsts_mask = KPM_CLK_MGR_REG_USB_IC_CLKGATE_USB_IC_AHB_STPRSTS_MASK,
+    .freq_tbl_index = -1,
+    .src_clk = CLK_PTR(master_switch_ahb),
+};
 
 /*
 Peri clock name SDIO2
@@ -3560,6 +3580,44 @@ static struct peri_clk CLK_NAME(sdio4_sleep) = {
 	.clk_en_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_SLEEP_CLK_EN_MASK,
 	.stprsts_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_SLEEP_STPRSTS_MASK,
 	.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_VOLTAGE_LEVEL_MASK,
+};
+
+ /*
+Peri clock name USB_IC
+*/
+/*peri clk src list*/
+static struct clk* usb_ic_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal),CLK_PTR(var_96m),CLK_PTR(ref_96m));
+static struct peri_clk CLK_NAME(usb_ic) = {
+    .clk =	{
+	.flags = USB_IC_PERI_CLK_FLAGS,
+	.clk_type = CLK_TYPE_PERI,
+	.id	= CLK_USB_IC_PERI_CLK_ID,
+	.name = USB_IC_PERI_CLK_NAME_STR,
+	.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(usb_ic_ahb),NULL),
+	.rate = 0,
+	.ops = &gen_peri_clk_ops,
+    },
+    .ccu_clk = &CLK_NAME(kpm),
+    .mask_set = 0,
+    .policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_USB_IC_POLICY0_MASK_MASK,
+    .policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
+    .clk_gate_offset = KPM_CLK_MGR_REG_USB_IC_CLKGATE_OFFSET,
+    .clk_en_mask = KPM_CLK_MGR_REG_USB_IC_CLKGATE_USB_IC_CLK_EN_MASK,
+    .gating_sel_mask = KPM_CLK_MGR_REG_USB_IC_CLKGATE_USB_IC_HW_SW_GATING_SEL_MASK,
+    .hyst_val_mask = 0,
+    .hyst_en_mask = 0,
+    .stprsts_mask = KPM_CLK_MGR_REG_USB_IC_CLKGATE_USB_IC_STPRSTS_MASK,
+    .volt_lvl_mask = KPM_CLK_MGR_REG_USB_IC_CLKGATE_USB_IC_VOLTAGE_LEVEL_MASK,
+    .clk_div = {
+	.pll_select_offset= KPM_CLK_MGR_REG_USB_IC_DIV_OFFSET,
+	.pll_select_mask= KPM_CLK_MGR_REG_USB_IC_DIV_USB_IC_PLL_SELECT_MASK,
+	.pll_select_shift= KPM_CLK_MGR_REG_USB_IC_DIV_USB_IC_PLL_SELECT_SHIFT,
+    },
+    .src_clk = {
+	.count = 3,
+	.src_inx = 2,
+	.clk = usb_ic_peri_clk_src_list,
+    },
 };
 
 /*
@@ -4968,6 +5026,26 @@ static struct peri_clk CLK_NAME(spum_sec) = {
     },
 };
 
+static struct bus_clk CLK_NAME(mphi_ahb) = {
+
+ .clk =	{
+				.flags = MPHI_AHB_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_MPHI_AHB_BUS_CLK_ID,
+				.name = MPHI_AHB_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(kps),
+ .clk_gate_offset  = IKPS_CLK_MGR_REG_MPHI_CLKGATE_OFFSET,
+ .clk_en_mask = IKPS_CLK_MGR_REG_MPHI_CLKGATE_MPHI_AHB_CLK_EN_MASK,
+ .gating_sel_mask =
+	IKPS_CLK_MGR_REG_MPHI_CLKGATE_MPHI_AHB_HW_SW_GATING_SEL_MASK,
+ .stprsts_mask = IKPS_CLK_MGR_REG_MPHI_CLKGATE_MPHI_AHB_STPRSTS_MASK,
+ .freq_tbl_index = -1,
+ .src_clk = NULL,
+};
+
 
 /*Island specifc handlers*/
 
@@ -5170,6 +5248,7 @@ static struct __init clk_lookup island_clk_tbl[] =
 	BRCM_REGISTER_CLK(MASTER_SWITCH_AHB_BUS_CLK_NAME_STR,NULL,master_switch_ahb),
 	BRCM_REGISTER_CLK(MASTER_SWITCH_AXI_BUS_CLK_NAME_STR,NULL,master_switch_axi),
 	BRCM_REGISTER_CLK(USBH_AHB_BUS_CLK_NAME_STR,NULL,usbh_ahb),
+	BRCM_REGISTER_CLK(USB_IC_AHB_BUS_CLK_NAME_STR,NULL,usb_ic_ahb),
 	BRCM_REGISTER_CLK(NAND_AHB_BUS_CLK_NAME_STR,NULL,nand_ahb),
 	BRCM_REGISTER_CLK(SDIO1_AHB_BUS_CLK_NAME_STR,NULL,sdio1_ahb),
 	BRCM_REGISTER_CLK(SDIO2_PERI_CLK_NAME_STR,NULL,sdio2),
@@ -5181,6 +5260,7 @@ static struct __init clk_lookup island_clk_tbl[] =
 	BRCM_REGISTER_CLK(SDIO1_SLEEP_PERI_CLK_NAME_STR,NULL,sdio1_sleep),
 	BRCM_REGISTER_CLK(SDIO4_PERI_CLK_NAME_STR,NULL,sdio4),
 	BRCM_REGISTER_CLK(SDIO4_SLEEP_PERI_CLK_NAME_STR,NULL,sdio4_sleep),
+	BRCM_REGISTER_CLK(USB_IC_PERI_CLK_NAME_STR,NULL,usb_ic),
 	BRCM_REGISTER_CLK(USBH_48M_PERI_CLK_NAME_STR,NULL,usbh_48m),
 	BRCM_REGISTER_CLK(USBH_12M_PERI_CLK_NAME_STR,NULL,usbh_12m),
 	BRCM_REGISTER_CLK(UARTB_APB_BUS_CLK_NAME_STR,NULL,uartb_apb),
@@ -5202,6 +5282,7 @@ static struct __init clk_lookup island_clk_tbl[] =
 	BRCM_REGISTER_CLK(MSPRO_AHB_BUS_CLK_NAME_STR,NULL,mspro_ahb),
 	BRCM_REGISTER_CLK(SPUM_OPEN_APB_BUS_CLK_NAME_STR,NULL,spum_open_apb),
 	BRCM_REGISTER_CLK(SPUM_SEC_APB_BUS_CLK_NAME_STR,NULL,spum_sec_apb),
+	BRCM_REGISTER_CLK(MPHI_AHB_BUS_CLK_NAME_STR,NULL,mphi_ahb),
 	BRCM_REGISTER_CLK(APB1_BUS_CLK_NAME_STR,NULL,apb1),
 	BRCM_REGISTER_CLK(TIMERS_APB_BUS_CLK_NAME_STR,NULL,timers_apb),
 	BRCM_REGISTER_CLK(APB2_BUS_CLK_NAME_STR,NULL,apb2),
