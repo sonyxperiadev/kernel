@@ -732,7 +732,7 @@ static struct bus_clk CLK_NAME(arm_switch) = {
 
  .clk =	{
      /*JIRA HWRHEA-1111: Enable A9 AXI Auto gating for B0 */
-#ifdef CONFIG_RHEA_PM_A0_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 				.flags = ARM_SWITCH_CLK_FLAGS,
 #else
 				.flags = ARM_SWITCH_CLK_FLAGS | AUTO_GATE,
@@ -5751,7 +5751,7 @@ int root_ccu_clk_init(struct clk* clk)
     reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
     writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
 
-#ifdef CONFIG_RHEA_PM_A0_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
     /* JIRA HWRHEA-877: remove this B0 */
     /* Var_312M and Var_96M clocks default PLL is wrong. correcting here.*/
     writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);

@@ -209,7 +209,7 @@ static const struct rhea_event_table event_table[] = {
 	// AP stays awake long enough until all CP activities that could trigger MODEMBUS_ACTIVE_EVENT have completed.
 	// For A0 chip, MODEMBUS_ACTIVE_EVENT is enabled to work around the JIRA that VREQ_NONZERO_PI_MODEM_EVENT is not auto-cleared.
 	// JIRA HWRHEA-1253 : Remove MODEMBUS_ACTIVE_EVENT for B0
-#ifdef CONFIG_RHEA_PM_A0_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	{	MODEMBUS_ACTIVE_EVENT, 			PM_TRIG_POS_EDGE,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
 #endif
 	{	VREQ_NONZERO_PI_MODEM_EVENT,		PM_TRIG_POS_EDGE,		PM_DFS,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_RET,	},
