@@ -39,7 +39,7 @@
 #include <linux/kona_keypad.h>
 #include <linux/clk.h>
 
-#include <mach/rdb/brcm_rdb_keypad.h>
+#include <chal/chal_keypad.h>
 
 #define DEBOUNCE_TIME 6
 static int debounce_time = DEBOUNCE_TIME;
@@ -53,304 +53,7 @@ MODULE_PARM_DESC(debounce_time,
 #define MAX_COLS                8
 #define MAX_ROWS                8
 
-#define CHAL_KEYPAD_REG32_CNT                   (MAX_ROWS / sizeof(uint32_t))
-
-/*
- * Interrupt triggering edge. This enumeration maps directly to register
- * field values.
- */
-enum chal_keypad_interrupt_edge {
-	CHAL_KEYPAD_INTERRUPT_EDGE_NONE = 0,
-	CHAL_KEYPAD_INTERRUPT_EDGE_RISING = 1,
-	CHAL_KEYPAD_INTERRUPT_EDGE_FALLING = 2,
-	CHAL_KEYPAD_INTERRUPT_EDGE_BOTH = 3,
-	CHAL_KEYPAD_INTERRUPT_EDGE_CNT
-};
-
-/*
- * KEYPAD controller configuration parameters.
- */
-struct chal_keypad_config {
-	/* Number of rows and columns in the physical keypad layout */
-	unsigned rows;
-	unsigned columns;
-
-	/* Key press is active low. Output signals will be pulled-up. */
-	unsigned activeLowMode;
-
-	/* Swap row and column physical scan lines */
-	unsigned swapRowColumn;
-};
-typedef struct chal_keypad_config CHAL_KEYPAD_CONFIG_t;
-
-/*
- * The keypad matrix is used for scan and interrupt status, and also
- * for interrupt enable mask. This matrix info is typically contained
- * in 2 registers, with the first register containing rows 0..3 and the
- * second registers rows 4..7. To simplify access and make things more
- * readable, use a union which can be used to convert between register
- * values and an array of scan lines reflecting the rows.
- *
- * NOTE: use the keypad_matrix_xxx() routines to access variables
- * of this type. Direct access is not recommended.
- */
-/* If interrupts are to be enabled, then a row / column interrupt mask
-*           needs to be created before calling this routine. If interrupts
-*           are to be enabled / disabled / re-enabled, it is recommended
-*           that the mask be stored for subsequent use instead of re-creating
-*           the mask each time interrupts are to be enabled. The registers that
-*           contain the mask are also used to disable interrupts, and the
-*           registers are also write-only. To create the desired mask, see
-*              keypad_matrix_clear_all()
-*              keypad_matrix_set()
-*              keypad_matrix_set_all()
-*
-*
-*/
-struct keypad_matrix {
-	union {
-		uint32_t reg[CHAL_KEYPAD_REG32_CNT];
-		uint8_t line[MAX_ROWS];
-	} scan;
-};
-typedef struct keypad_matrix KEYPAD_MATRIX_t;
-
 /* ---- Public Function Prototypes --------------------------------------- */
-
-#define CHAL_KEYPAD_ROW_SHIFT       KEYPAD_KPIOR_ROWOCONTRL_SHIFT
-#define CHAL_KEYPAD_CONTROL_OFFSET  KEYPAD_KPIOR_OFFSET
-
-static void ioclrbit32(void __iomem * addr, unsigned int bits)
-{
-	iowrite32(ioread32(addr) & ~bits, addr);
-}
-
-static void iosetbit32(void __iomem * addr, unsigned int bits)
-{
-	iowrite32(ioread32(addr) | bits, addr);
-}
-
-/*===========================================================================
-* Functions for KEYPAD controller operations.
-* ===========================================================================*/
-
-/* Get scan active low mode state. 0 implies active low mode disabled. */
-static inline uint32_t chal_keypad_scan_mode_is_active_low(void __iomem *
-							   regBaseAddr)
-{
-	return ioread32(regBaseAddr +
-			KEYPAD_KPCR_OFFSET) & KEYPAD_KPCR_MODE_MASK;
-}
-
-/* Clear keypad event interrupt status. */
-static inline void chal_keypad_interrupt_clear(void __iomem * regBaseAddr,
-					       KEYPAD_MATRIX_t * status)
-{
-	iowrite32(status->scan.reg[0], regBaseAddr + KEYPAD_KPICR0_OFFSET);
-	iowrite32(status->scan.reg[1], regBaseAddr + KEYPAD_KPICR1_OFFSET);
-}
-
-/* Clear all keypad event interrupts. */
-static inline void chal_keypad_interrupt_clear_all(void __iomem * regBaseAddr)
-{
-	iowrite32(0xFFFFFFFF, regBaseAddr + KEYPAD_KPICR0_OFFSET);
-	iowrite32(0xFFFFFFFF, regBaseAddr + KEYPAD_KPICR1_OFFSET);
-}
-
-/* Disable all keypad event interrupts. */
-static inline void chal_keypad_interrupt_disable_all(void __iomem * regBaseAddr)
-{
-	iowrite32(0, regBaseAddr + KEYPAD_KPIMR0_OFFSET);
-	iowrite32(0, regBaseAddr + KEYPAD_KPIMR1_OFFSET);
-}
-
-/* Enable keypad event interrupts. */
-static inline void chal_keypad_interrupt_enable(void __iomem * regBaseAddr,
-						KEYPAD_MATRIX_t * mask)
-{
-	iowrite32(mask->scan.reg[0], regBaseAddr + KEYPAD_KPIMR0_OFFSET);
-	iowrite32(mask->scan.reg[1], regBaseAddr + KEYPAD_KPIMR1_OFFSET);
-}
-
-/* Get keypad event interrupt status. */
-static inline uint32_t chal_keypad_interrupt_get_status(void __iomem *
-							regBaseAddr,
-							KEYPAD_MATRIX_t *
-							status)
-{
-	status->scan.reg[0] = ioread32(regBaseAddr + KEYPAD_KPISR0_OFFSET);
-	status->scan.reg[1] = ioread32(regBaseAddr + KEYPAD_KPISR1_OFFSET);
-
-	/* return !0 if any status is set. */
-	return status->scan.reg[0] | status->scan.reg[1];
-}
-
-/* Get keypad scan line status. */
-static inline uint32_t chal_keypad_scan_get_status(void __iomem * regBaseAddr,
-						   KEYPAD_MATRIX_t * status)
-{
-	status->scan.reg[0] = ioread32(regBaseAddr + KEYPAD_KPSSR0_OFFSET);
-	status->scan.reg[1] = ioread32(regBaseAddr + KEYPAD_KPSSR1_OFFSET);
-
-	if (chal_keypad_scan_mode_is_active_low(regBaseAddr)) {
-		/* Register status reflects physical scan line state. Flip the bits to get the
-		 * logical state.
-		 */
-		status->scan.reg[0] = ~status->scan.reg[0];
-		status->scan.reg[1] = ~status->scan.reg[1];
-	}
-
-	/* Return !0 if any scan status is set (any key pressed). */
-	return status->scan.reg[0] | status->scan.reg[1];
-}
-
-/* Get current configured number of columns. */
-static inline uint32_t chal_keypad_scan_get_cols(void __iomem * regBaseAddr)
-{
-	return 1 +
-	    ((ioread32(regBaseAddr + KEYPAD_KPCR_OFFSET) &
-	      KEYPAD_KPCR_COLUMNWIDTH_MASK) >> KEYPAD_KPCR_COLUMNWIDTH_SHIFT);
-}
-
-/* Get current configured number of rows. */
-static inline uint32_t chal_keypad_scan_get_rows(void __iomem * regBaseAddr)
-{
-	return 1 +
-	    ((ioread32(regBaseAddr + KEYPAD_KPCR_OFFSET) &
-	      KEYPAD_KPCR_ROWWIDTH_MASK) >> KEYPAD_KPCR_ROWWIDTH_SHIFT);
-}
-
-/* Enable / disable the swapping of row / column scan lines. */
-static inline void chal_keypad_scan_swap_row_column(void __iomem * regBaseAddr,
-						    int swap)
-{
-	if (swap)
-		iosetbit32(regBaseAddr + KEYPAD_KPCR_OFFSET,
-			   KEYPAD_KPCR_SWAPROWCOLUMN_MASK);
-	else
-		ioclrbit32(regBaseAddr + KEYPAD_KPCR_OFFSET,
-			   KEYPAD_KPCR_SWAPROWCOLUMN_MASK);
-}
-
-/* Terminate keypad hardware operations. */
-static inline int chal_keypad_term(void __iomem * regBaseAddr)
-{
-	chal_keypad_interrupt_disable_all(regBaseAddr);
-	chal_keypad_interrupt_clear_all(regBaseAddr);
-	iowrite32(0, regBaseAddr + KEYPAD_KPCR_OFFSET);
-	return 0;
-}
-
-/* Initiate keypad hardware operations. */
-int chal_keypad_init(void __iomem * regBaseAddr,
-		     const CHAL_KEYPAD_CONFIG_t * config)
-{
-	uint32_t temp;
-	int i;
-
-	if (!regBaseAddr)
-		return -1;
-
-	if (!config ||
-	    (config->columns > MAX_COLS) ||
-	    (config->rows > MAX_ROWS) || (debounce_time > 7)
-	    )
-		return -2;
-
-	/* Ensure things are inactive and in a known default state. */
-	chal_keypad_term(regBaseAddr);
-
-	/* Use rows as output for scan. Need to set a bit for each row. */
-	temp = (1 << config->rows) - 1;
-	temp = temp << CHAL_KEYPAD_ROW_SHIFT;
-	iowrite32(temp, regBaseAddr + CHAL_KEYPAD_CONTROL_OFFSET);
-
-	/* Configure the individual key interrupt controls. There's 2-bits for each key
-	 * for this, spread over 4 32-bit registers. We will set all keys to the desired
-	 * value, even though all keys might not be used. Create a 32-bit value with
-	 * all the 2-bit fields set the same, and then write to the 4 registers.
-	 */
-	temp = 0;
-	for (i = 0; i < 32; i += 2) {
-		temp |= (CHAL_KEYPAD_INTERRUPT_EDGE_BOTH << i);
-	}
-	iowrite32(temp, regBaseAddr + KEYPAD_KPEMR0_OFFSET);
-	iowrite32(temp, regBaseAddr + KEYPAD_KPEMR1_OFFSET);
-	iowrite32(temp, regBaseAddr + KEYPAD_KPEMR2_OFFSET);
-	iowrite32(temp, regBaseAddr + KEYPAD_KPEMR3_OFFSET);
-
-	/* Setup the hardware configuration register, including enable of keypad operations */
-	temp = KEYPAD_KPCR_ENABLE_MASK |
-	    KEYPAD_KPCR_COLFILTERENABLE_MASK |
-	    (debounce_time << KEYPAD_KPCR_COLUMNFILTERTYPE_SHIFT) |
-	    KEYPAD_KPCR_STATUSFILTERENABLE_MASK |
-	    (debounce_time << KEYPAD_KPCR_STATUSFILTERTYPE_SHIFT) |
-	    ((config->columns - 1) << KEYPAD_KPCR_COLUMNWIDTH_SHIFT) |
-	    ((config->rows - 1) << KEYPAD_KPCR_ROWWIDTH_SHIFT);
-
-	if (config->activeLowMode)
-		temp |= KEYPAD_KPCR_MODE_MASK;
-
-	if (config->swapRowColumn)
-		temp |= KEYPAD_KPCR_SWAPROWCOLUMN_MASK;
-
-	iowrite32(temp, regBaseAddr + KEYPAD_KPCR_OFFSET);
-
-	return 0;
-}
-
-/*===========================================================================
-* Functions for accessing a KEYPAD matrix variable. Should use these instead
-* of interpreting the variable contents directly.
-* ===========================================================================*/
-
-/* Clear keypad matrix in a row / column location. */
-static inline void keypad_matrix_clear(KEYPAD_MATRIX_t * matrix, unsigned row,
-				       unsigned col)
-{
-	matrix->scan.line[row] &= ~(1 << col);
-}
-
-/* Clear all keypad matrix entries. */
-static inline void keypad_matrix_clear_all(KEYPAD_MATRIX_t * matrix)
-{
-	matrix->scan.reg[0] = 0;
-	matrix->scan.reg[1] = 0;
-}
-
-/* Indicate if keypad matrix is set in a row / column location. */
-static inline unsigned keypad_matrix_is_set(KEYPAD_MATRIX_t * matrix,
-					    unsigned row, unsigned col)
-{
-	return (matrix->scan.line[row] & (1 << col));
-}
-
-/* Set keypad matrix in a row / column location. */
-static inline void keypad_matrix_set(KEYPAD_MATRIX_t * matrix, unsigned row,
-				     unsigned col)
-{
-	matrix->scan.line[row] |= (1 << col);
-}
-
-/* Set all keypad matrix entries in row / column dimensions. */
-static inline void keypad_matrix_set_all(KEYPAD_MATRIX_t * matrix,
-					 unsigned rowCnt, unsigned colCnt)
-{
-	uint32_t colMask;
-	unsigned rowIdx;
-
-	/* Convert the column count into a mask reflecting the active columns in a row.
-	 * Use this mask for the specified row count. Clear the remaining unsed rows.
-	 */
-	colMask = (1 << colCnt) - 1;
-
-	for (rowIdx = 0; rowIdx < rowCnt; rowIdx++) {
-		matrix->scan.line[rowIdx] = colMask;
-	}
-	for (; rowIdx < MAX_ROWS; rowIdx++) {
-		matrix->scan.line[rowIdx] = 0;
-	}
-}
 
 /*===========================================================================
 * Actual driver code.
@@ -431,10 +134,12 @@ typedef struct {
 	spinlock_t status_lock;
 
 	int irq;
-	void __iomem *regBaseAddr;
-	KEYPAD_MATRIX_t keypad_enable_mask;
+	CHAL_KEYPAD_MATRIX_t keypad_enable_mask;
+        CHAL_KEYPAD_HANDLE_t hKeypad;
 
 } KEYPAD_BLK;
+
+static CHAL_KEYPAD_HANDLE_t hKeypad;
 
 static int keypad_panic(struct notifier_block *this, unsigned long event,
 			void *ptr);
@@ -447,23 +152,24 @@ static struct notifier_block panic_block = {
 
 /* Enable/disable (unmask/mask) interrupts on a specific key given a [row, col]. */
 static int irq_mask_ctrl(unsigned int row, unsigned int col,
-			 unsigned int enable, KEYPAD_MATRIX_t * mask)
+			 unsigned int enable, CHAL_KEYPAD_MATRIX_t * mask)
 {
 	if (row >= MAX_ROWS || col >= MAX_COLS || !mask) {
 		return -EINVAL;
 	}
 
 	if (enable)
-		keypad_matrix_set(mask, row, col);
+		chal_keypad_matrix_set(mask, row, col);
 	else
-		keypad_matrix_clear(mask, row, col);
+		chal_keypad_matrix_clear(mask, row, col);
 
 	return 0;
 }
 
 /* Given a keymap, enable (unmask) interrupts on keys defined in the keymap. */
 static int keymap_irq_mask_set(const struct KEYMAP *keymap,
-			       unsigned int key_cnt, KEYPAD_MATRIX_t * mask)
+			       unsigned int key_cnt,
+			       CHAL_KEYPAD_MATRIX_t * mask)
 {
 	int rc;
 	unsigned int index;
@@ -473,7 +179,7 @@ static int keymap_irq_mask_set(const struct KEYMAP *keymap,
 	}
 
 	/* clear bitmasks */
-	keypad_matrix_clear_all(mask);
+	chal_keypad_matrix_clear_all(mask);
 
 	for (index = 0; index < key_cnt; index++) {
 		unsigned int scancode;
@@ -537,10 +243,10 @@ static int keypad_panic(struct notifier_block *this, unsigned long event,
 }
 
 /* Return 1 if key is pressed. Return 0 otherwise. */
-static inline int key_is_pressed(KEYPAD_MATRIX_t * keypad_status,
+static inline int key_is_pressed(CHAL_KEYPAD_MATRIX_t * keypad_status,
 				 unsigned int row, unsigned int col)
 {
-	return keypad_matrix_is_set(keypad_status, row, col) ? 1 : 0;
+	return chal_keypad_matrix_is_set(keypad_status, row, col) ? 1 : 0;
 }
 
 /* Main key scan and event processing routine. Called from an ISR so make sure
@@ -550,10 +256,10 @@ static void key_scan(KEYPAD_BLK * blkp)
 	unsigned char keycode;
 	unsigned int scancode;
 	PWROFF_CTRL *pwroff = &blkp->pwroff_ctrl;
-	KEYPAD_MATRIX_t keypad_status;
+	CHAL_KEYPAD_MATRIX_t keypad_status;
 
 	/* read keypad status */
-	chal_keypad_scan_get_status(blkp->regBaseAddr, &keypad_status);
+	chal_keypad_scan_get_status(&blkp->hKeypad, &keypad_status);
 
 	/* if power off feature is enabled */
 	if (atomic_read(&pwroff->enable)) {
@@ -643,10 +349,10 @@ static void key_scan(KEYPAD_BLK * blkp)
 static irqreturn_t keypad_irq_handler(int irq, void *devid)
 {
 	KEYPAD_BLK *blkp = (KEYPAD_BLK *) devid;
-	KEYPAD_MATRIX_t isr_status;
+	CHAL_KEYPAD_MATRIX_t isr_status;
 
 	/* get interrupt status */
-	if (!chal_keypad_interrupt_get_status(blkp->regBaseAddr, &isr_status)) {
+	if (!chal_keypad_interrupt_get_status(&blkp->hKeypad, &isr_status)) {
 		/* got nothing, something is wrong */
 		printk(KERN_WARNING
 		       "Keypad: interrupt fired but status registers "
@@ -655,7 +361,7 @@ static irqreturn_t keypad_irq_handler(int irq, void *devid)
 	}
 
 	/* ack and clear interrupts */
-	chal_keypad_interrupt_clear(blkp->regBaseAddr, &isr_status);
+	chal_keypad_interrupt_clear(&blkp->hKeypad, &isr_status);
 
 	/* scan and process the keys */
 	key_scan(blkp);
@@ -807,6 +513,8 @@ static int __devinit keypad_probe(struct platform_device *pdev)
 	config.columns = MAX_COLS;
 	config.activeLowMode = !!datap->active_mode;
 	config.swapRowColumn = 0;	// FALSE
+	config.interruptEdge = CHAL_KEYPAD_INTERRUPT_EDGE_MAX;
+	config.debounceTime = debounce_time;
 
 	blkp->irq = platform_get_irq(pdev, 0);
 	if (blkp->irq < 0) {
@@ -819,8 +527,8 @@ static int __devinit keypad_probe(struct platform_device *pdev)
 		goto err_keypad_shutdown;
 	}
 
-	blkp->regBaseAddr = ioremap(res->start, resource_size(res));
-	if (!blkp->regBaseAddr) {
+	blkp->hKeypad.regBaseAddr = (uint32_t) ioremap(res->start, resource_size(res));
+	if (!blkp->hKeypad.regBaseAddr) {
 		rc = -ENOMEM;
 		goto err_keypad_shutdown;
 	}
@@ -831,8 +539,11 @@ static int __devinit keypad_probe(struct platform_device *pdev)
 		goto err_keypad_shutdown;
 	}
 
-	/* Interrupts are disabled and cleared during init */
-	chal_keypad_init(blkp->regBaseAddr, &config);
+	if (chal_keypad_init(&blkp->hKeypad, &config) != 0) {
+                rc = -ENXIO;
+		printk(KERN_ERR "Keypad: CHAL init failed with %d.\n", rc);
+		goto err_keypad_shutdown;
+	}
 
 	/* set the interrupt masks */
 	rc = keymap_irq_mask_set(datap->keymap, datap->keymap_cnt,
@@ -855,13 +566,13 @@ static int __devinit keypad_probe(struct platform_device *pdev)
 	printk(KERN_INFO "Keypad: driver initialized properly\n");
 
 	/* now enable interrupts on keys that are defined in the keymap */
-	chal_keypad_interrupt_enable(blkp->regBaseAddr,
+	chal_keypad_interrupt_enable(&blkp->hKeypad,
 				     &blkp->keypad_enable_mask);
 
 	return 0;
 
  err_keypad_shutdown:
-	chal_keypad_term(blkp->regBaseAddr);
+	chal_keypad_term(&blkp->hKeypad);
 
  err_pwroff_term:
 	pwroff_term(blkp);
@@ -883,13 +594,13 @@ static int __devexit keypad_remove(struct platform_device *pdev)
 	clk_disable(blkp->clock);
 
 	/* disable interrupts */
-	chal_keypad_interrupt_disable_all(blkp->regBaseAddr);
+	chal_keypad_interrupt_disable_all(&blkp->hKeypad);
 
 	/* free the interrupt line */
 	free_irq(blkp->irq, blkp);
 
 	/* shut down the keypad block */
-	chal_keypad_term(blkp->regBaseAddr);
+	chal_keypad_term(&blkp->hKeypad);
 
 	pwroff_term(blkp);
 
