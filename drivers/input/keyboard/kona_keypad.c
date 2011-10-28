@@ -139,8 +139,6 @@ typedef struct {
 
 } KEYPAD_BLK;
 
-static CHAL_KEYPAD_HANDLE_t hKeypad;
-
 static int keypad_panic(struct notifier_block *this, unsigned long event,
 			void *ptr);
 
