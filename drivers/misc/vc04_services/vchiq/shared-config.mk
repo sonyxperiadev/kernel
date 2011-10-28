@@ -23,3 +23,10 @@ VCHIQ_FLAVOUR := vchiq_arm
 #
 VCHIQ_PLATFORM := bivcm
 
+#
+# VCHIQ_SM_ALLOC - Where is the shared memory used by vchiq allocated from:
+#                    ram   - shared RAM, this is the default Big Island mode
+#                    vcddr - videocore DDR, this is the default Capri mode, can be
+#                            used on Big Island for testing/verification 
+#
+VCHIQ_SM_ALLOC := ram

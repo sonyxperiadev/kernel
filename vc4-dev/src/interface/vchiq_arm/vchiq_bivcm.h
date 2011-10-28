@@ -28,4 +28,12 @@
 #define VCHIQ_PLATFORM_FRAGMENTS_OFFSET_IDX 0
 #define VCHIQ_PLATFORM_FRAGMENTS_COUNT_IDX  1
 
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+#define VCHIQ_IPC_SHARED_MEM_SIZE            0x1E000  /* ARM and VC channels. */ 
+#define VCHIQ_IPC_SHARED_MEM_EXTRA           0x1000   /* Misc pointers: clock debug, gpio. */
+
+#define VCHIQ_IPC_SHARED_MEM_SYMBOL          "vchiq_ipc_shared_mem"
+#define VCHIQ_IPC_SHARED_MEM_SIZE_SYMBOL     "vchiq_ipc_shared_mem_size"
+#endif
+
 #endif /* VCHIQ_BIVCM_H */

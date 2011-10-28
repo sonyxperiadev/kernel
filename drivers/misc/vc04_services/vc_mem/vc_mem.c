@@ -139,6 +139,18 @@ static void vc_mem_get_size( void )
    }
 }
 
+/****************************************************************************
+*
+*   vc_mem_get_current_size
+*
+***************************************************************************/
+
+int vc_mem_get_current_size( void )
+{
+   vc_mem_get_size();
+   return mm_vc_mem_size;
+}
+EXPORT_SYMBOL_GPL( vc_mem_get_current_size );
 
 /****************************************************************************
 *
