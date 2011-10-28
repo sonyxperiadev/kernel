@@ -939,8 +939,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			path->sw[blockIdx].dataFmt = dataFormat;
 			break;
 		case CAPH_SRC:
-			if(!path->srcmRoute[0].inChnl)
-			{
+			if(!path->srcmRoute[0].inChnl){
 				blockIdx = 0;
 			} else if(!path->srcmRoute[1].inChnl) {
 				blockIdx = 1;
@@ -1009,11 +1008,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			pSrcmRoute->outSampleRate = csl_caph_srcmixer_get_srcm_outsamplerate(srOut);
 			break;
 		case CAPH_MIXER:
-			if(mode!=OBTAIN_BLOCKS_NORMAL)
-			{
-				if(mode==OBTAIN_BLOCKS_MULTICAST) blockIdx = path->curPathsinkMaxIdx;
-				else blockIdx = 0; //switching
-			} else if(!path->srcmRoute[0].inChnl) {
+			if(!path->srcmRoute[0].inChnl) {
 				blockIdx = 0;
 			} else if(!path->srcmRoute[1].inChnl) {
 				blockIdx = 1;
@@ -3270,6 +3265,7 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_
 			memcpy(&path->block[blockPathIdx], blocks+1, 5*sizeof(CAPH_BLOCK_t));
 		}
 #endif		
+		path->curPathsinkMaxIdx = sinkMaxIdx;
 		csl_caph_obtain_blocks(pathID, blockPathIdx, mode);
 
 		swPathIdx = srcmPathIdx + 1; 
@@ -3479,6 +3475,11 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONF
 		if (j == MAX_SINK_NUM)
 			return RESULT_OK;
 
+        if(path->curPathsinkMaxIdx > 0) 
+        {
+			(path->curPathsinkMaxIdx)--;
+        }
+
 		if(j > 0)
 		{
 			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 2;
@@ -3486,7 +3487,6 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONF
 			audiohIdx = j+1;
 			srcmPathIdx = blockPathIdx+1;
 			path->sink[j] = CSL_CAPH_DEV_NONE;
-			(path->curPathsinkMaxIdx)--;
 		}	
 		else 
 		{
