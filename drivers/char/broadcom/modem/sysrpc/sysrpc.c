@@ -46,6 +46,7 @@ static void __exit sysrpc_exit( void )
 
 }
 
+#ifdef INCLUDE_UNUSED_CODE
 static void safe_strncat( char *dst, const char *src, int len )
 {
 	int l_dst = strlen( dst ) ;
@@ -55,6 +56,7 @@ static void safe_strncat( char *dst, const char *src, int len )
 		strncat( dst, src, len - l_dst - l_src ) ;
 	}
 }
+#endif //INCLUDE_UNUSED_CODE
 
 static int procfile_read(char *page, char **start, off_t offset, 
 	int count, int *eof, void *data)

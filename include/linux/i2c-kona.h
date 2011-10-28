@@ -57,6 +57,7 @@ struct bsc_adap_cfg
 	/* BSC clocks */
 	char *bsc_clk;
 	char *bsc_apb_clk;
+	int retries;
 };
 
 /*

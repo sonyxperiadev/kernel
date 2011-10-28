@@ -46,8 +46,6 @@
 
 //#define memset(x,y,z)  
 
-#define OSTASK_Sleep(x)  msleep(x)
-
 //#if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
 #if 1
 #define _DBG_(a) a
@@ -60,7 +58,7 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 #define Log_DebugPrintf(logID,args...)
 #endif
 
-#define audio_xassert(a, b) (Log_DebugPrintf(LOGID_AUDIO, "%s assert line %d, %d, 0x%lx.\r\n", __FUNCTION__, __LINE__, a, (UInt32)b))
+#define audio_xassert(a, b) {if((a)==0) Log_DebugPrintf(LOGID_AUDIO, "%s assert line %d, %d, 0x%lx.\r\n", __FUNCTION__, __LINE__, a, (UInt32)b);}
 
 
 #define OSTASK_Sleep(x)  \

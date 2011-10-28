@@ -33,6 +33,7 @@
 #include <mach/pwr_mgr.h>
 #include <mach/clock.h>
 #include <linux/mfd/bcm590xx/core.h>
+#include <linux/mfd/bcmpmu.h>
 #include <mach/gpio.h>
 #include <mach/pinmux.h>
 #include <mach/kona.h>
@@ -43,6 +44,10 @@ static void rhea_poweroff(void)
 {
 #ifdef CONFIG_MFD_BCM_PMU590XX
 	bcm590xx_shutdown();
+#endif
+
+#ifdef CONFIG_MFD_BCMPMU
+        bcmpmu_client_power_off();
 #endif
 
 	while(1)
@@ -102,6 +107,12 @@ struct sys_timer kona_timer = {
 	.init	= rhea_ray_timer_init,
 };
 
+#ifdef CONFIG_KONA_ATAG_DT
+/* rhea has 4 banks of GPIO pins */
+uint32_t dt_pinmux_gpio_mask[4] = {0, 0, 0, 0};
+uint32_t dt_gpio[128];
+#endif
+
 static int __init rhea_init(void)
 {
 	pm_power_off = rhea_poweroff;
@@ -112,6 +123,12 @@ static int __init rhea_init(void)
 #endif
 
 	pinmux_init();
+
+#ifdef CONFIG_KONA_ATAG_DT
+	printk(KERN_INFO "pinmux_gpio_mask: 0x%x, 0x%x, 0x%x, 0x%x\n",
+		dt_pinmux_gpio_mask[0], dt_pinmux_gpio_mask[1],
+		dt_pinmux_gpio_mask[2], dt_pinmux_gpio_mask[3]);
+#endif
 
 #ifdef CONFIG_GPIOLIB
 	/* rhea has 4 banks of GPIO pins */

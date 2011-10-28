@@ -1,4 +1,4 @@
-/************************************************************************************************/
+ /************************************************************************************************/
 /*                                                                                              */
 /*  Copyright 2010  Broadcom Corporation                                                        */
 /*                                                                                              */
@@ -180,5 +180,24 @@
 #define KONA_AHINTC_BASE_VA          HW_IO_PHYS_TO_VIRT(AHINTC_BASE_ADDR) /* brcm_rdb_ahintc.h */
 
 #define KONA_KPS_CLK_VA              HW_IO_PHYS_TO_VIRT( KONA_SLV_CLK_BASE_ADDR )
+
+#if defined(CONFIG_MAP_LITTLE_ISLAND_MODE)
+/*
+ * For LI we are temporarily using a custom I/O mapping for videocore memory.
+ * The videocore in LI lives in a chunk of reserved DDR3 instead of LPDDR2,
+ * but for simplicity we map the DDR3 memory to the same location as where
+ * the LPDDR2 would be. As such, when we define MM_IO_BASE_VC_EMI we need to
+ * use the physical address of LPDDR2 (0x40000000) instead of that of DDR3
+ * (0x80000000).
+ */
+#define KONA_VC_EMI                  HW_IO_PHYS_TO_VIRT(  0x40000000 )
+#else
+#define KONA_VC_EMI                  HW_IO_PHYS_TO_VIRT( VC_EMI )
+#endif
+
+#define KONA_PWRWDOG_VA		HW_IO_PHYS_TO_VIRT(PWRWDOG0_BASE_ADDR)
+#define KONA_A9CPU0_VA		HW_IO_PHYS_TO_VIRT(A9CPU0_BASE_ADDR)
+#define KONA_A9PMU0_VA		HW_IO_PHYS_TO_VIRT(A9PMU0_BASE_ADDR)
+#define KONA_A9PTM0_VA		HW_IO_PHYS_TO_VIRT(A9PTM0_BASE_ADDR)
 
 #endif /* __ISLAND_IO_MAP_H */

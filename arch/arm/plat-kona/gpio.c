@@ -78,6 +78,66 @@ static struct kona_gpio kona_gpio = {
 	},
 };
 
+#ifdef CONFIG_KONA_ATAG_DT
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+
+#define DT_GPIO_INPUT		(1 << 0)
+#define DT_GPIO_OUTPUT_VAL	(1 << 1)
+#define DT_GPIO_VALID		(1 << 31)
+
+/* gpio configuration data from DT */
+extern uint32_t dt_gpio[];
+extern uint32_t dt_pinmux_gpio_mask[];
+
+
+int __init early_init_dt_scan_gpio(unsigned long node, const char *uname,
+				     int depth, void *data)
+{
+	const char *prop;
+	unsigned long size, i;
+	uint32_t *p, gpio, cfg;
+
+	//printk(KERN_INFO "%s: node=0x%lx, uname=%s, depth=%d\n", __func__, node, uname, depth);
+
+	if (depth != 1 || strcmp(uname, "gpio") != 0)
+		return 0; /* not found, continue... */
+
+	prop = of_get_flat_dt_prop(node, "reg", &i);
+
+	p = (uint32_t *)prop;
+	i = be32_to_cpu(p[1]);
+	printk(KERN_INFO "reg: 0x%x, 0x%x\n", be32_to_cpu(p[0]), be32_to_cpu(p[1]));
+
+	/* check the base address passed */
+	if (be32_to_cpu(p[0]) != GPIO2_BASE_ADDR){
+		printk(KERN_ERR "Wrong base address!\n");
+		return 1;
+	}
+
+	prop = of_get_flat_dt_prop(node, "data", &size);
+	printk("data(0x%x): size=%ld\n", (unsigned int)prop, size);
+
+	if (i != size/8) {
+		printk(KERN_ERR "Mismatch size! %ld & %ld\n", i, size/8);
+	}
+	else {
+		p = (uint32_t *)prop;
+		size = i;
+		for (i = 0; i < size; i++){
+			gpio = be32_to_cpu(*p++);
+			cfg = be32_to_cpu(*p++);
+			//printk(KERN_INFO "gpio%d: 0x%x\n", gpio, cfg);
+
+			/* mark and save for late processing */
+			dt_gpio[gpio] = cfg | DT_GPIO_VALID;
+		}
+	}
+
+	return 1;
+}
+#endif  /* CONFIG_KONA_ATAG_DT */
+
 static void kona_gpio_set(struct gpio_chip *chip, unsigned gpio, int value)
 {
 	int bankId = GPIO_BANK(gpio);
@@ -422,6 +482,10 @@ int __init kona_gpio_init(int num_bank)
 {
 	struct kona_gpio_bank *bank;
 	int i;
+#ifdef CONFIG_KONA_ATAG_DT
+	uint32_t gpio, mask, j, val;
+	void __iomem * reg_base = kona_gpio.reg_base;
+#endif
 
 	kona_gpio_reset(num_bank);
 	
@@ -444,6 +508,46 @@ int __init kona_gpio_init(int num_bank)
 
 		irq_set_chained_handler(bank->irq, kona_gpio_irq_handler);
 		irq_set_handler_data(bank->irq, bank);
+
+#ifdef CONFIG_KONA_ATAG_DT
+		gpio = i*GPIO_PER_BANK;
+		mask = dt_pinmux_gpio_mask[GPIO_BANK(gpio)];
+		for (j = 0; j < GPIO_PER_BANK; j++)
+		{
+			if (dt_gpio[gpio] & DT_GPIO_VALID) {
+				/* Cross-check against pinmux node */
+				if (mask & (1<<GPIO_BIT(gpio))) {
+					//printk(KERN_INFO "Configure GPIO%d to 0x%x\n", gpio, dt_gpio[gpio]);
+
+					if (dt_gpio[gpio] & DT_GPIO_INPUT){
+						val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+						val &= ~GPIO_GPCTR0_IOTR_MASK;
+						val |= GPIO_GPCTR0_IOTR_CMD_INPUT;
+						__raw_writel(val, reg_base + GPIO_CTRL(gpio));
+					}
+					else { /* output */
+						val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+						val &= ~GPIO_GPCTR0_IOTR_MASK;
+						val |= GPIO_GPCTR0_IOTR_CMD_0UTPUT;
+						__raw_writel(val, reg_base + GPIO_CTRL(gpio));
+
+						val = __raw_readl(reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
+						val = (dt_gpio[gpio] & DT_GPIO_OUTPUT_VAL) ?
+							(val | (1 << GPIO_BIT(gpio))) : (val & (~(1 << GPIO_BIT(gpio))));
+						__raw_writel(val, reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
+					}
+					mask &= ~(1<<GPIO_BIT(gpio));
+				}
+				else{
+					printk(KERN_ERR "Mismatch GPIO%d. The board may not boot!\n", gpio);
+				}
+			}
+			gpio++;
+		}
+		if (mask) {
+			printk(KERN_ERR "Missing initial cfg for GPIO bank%d (mask=0x%x)\n", i, mask);
+		}
+#endif
 	}
 
 	printk(KERN_INFO "kona gpio initialised.\n");

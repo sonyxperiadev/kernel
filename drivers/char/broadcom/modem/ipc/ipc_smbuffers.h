@@ -20,9 +20,11 @@
 #ifndef IPC_SmBuffers_h
 #define IPC_SmBuffers_h
 
-//#include "nandsdram_memmap.h"
-//#include <linux/broadcom/platform_mconfig.h>
+#ifdef UNDER_LINUX
 #include <mach/comms/platform_mconfig.h>
+#else
+#include "nandsdram_memmap.h"
+#endif
 
 #define IPC_SmSize IPC_SIZE
 

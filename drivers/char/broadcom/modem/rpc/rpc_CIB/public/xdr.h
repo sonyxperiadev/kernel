@@ -143,7 +143,7 @@ typedef struct __rpc_xdr {
  *
  * XXX can't actually prototype it, because some take three args!!!
  */
-typedef	bool_t (*xdrproc_t)(/* XDR *, void *, u_int */);
+typedef	bool_t (*xdrproc_t)(XDR *, void *,.../* XDR *, void *, u_int */);
 
 typedef u_int (*capi2_proc_t)(void* reqRep, void* rsp);
 

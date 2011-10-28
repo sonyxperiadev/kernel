@@ -61,6 +61,7 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_AON_CLK_VA, SZ_4K	),
 	IO_DESC( KONA_ATBFILTER_VA, SZ_4K  ),
 	IO_DESC( KONA_BINTC_BASE_ADDR, SZ_4K  ),
+	IO_DESC( KONA_BMDM_CCU_VA, SZ_4K ),
 	IO_DESC( KONA_BSC1_VA, SZ_4K  ),
 	IO_DESC( KONA_BSC2_VA, SZ_4K  ),
 	IO_DESC( KONA_CHIPREG_VA, SZ_4K	),
@@ -74,6 +75,7 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_HSI_VA, SZ_4K ),
 	IO_DESC( KONA_KPM_CLK_VA, SZ_4K ),
 	IO_DESC( KONA_KPS_CLK_VA, SZ_4K ),
+        IO_DESC( KONA_SLPTIMER_VA, SZ_4K ),
 	IO_DESC( KONA_SLV_CLK_VA, SZ_4K ),
 	IO_DESC( KONA_L2C_VA, SZ_4K ),
 	IO_DESC( KONA_MPHI_VA, SZ_4K ),
@@ -85,6 +87,7 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_PMU_BSC_VA, SZ_4K ),
 	IO_DESC( KONA_ROOT_CLK_VA, SZ_4K ),
 	IO_DESC( KONA_RNG_VA, SZ_4K ),
+	IO_DESC( KONA_SCLKCAL_VA, SZ_4K ),
 
 	/*
 	* This SCU region also covers MM_ADDR_IO_GICCPU,

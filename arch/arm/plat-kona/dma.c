@@ -290,7 +290,7 @@ int dma_request_chan(unsigned int *chan, const char *name)
 #ifdef CONFIG_KONA_PI_MGR
 	/* Add dfs request */
 	cdesc->dfs_node = pi_mgr_dfs_add_request(dma_chan[ch],
-		PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_OPP_ECONOMY);
+		PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_DFS_MIN_VALUE);
 
 	if (!cdesc->dfs_node)
 	    goto err_4;
@@ -808,15 +808,26 @@ int dma_start_transfer(unsigned int chan)
 
 	spin_lock_irqsave(&lock, flags);
 
-	/* Enable the clock before the transfer */
-	ret = clk_enable(dmac->clk);
-	if (ret)
-	    goto err;
-
 	c = chan_id_to_cdesc(chan);
 
 	if (!c || !c->is_setup || c->in_use)
-		goto err1;
+		goto err;
+
+#ifdef CONFIG_KONA_PI_MGR
+	/* Request for a update on the bus speed */
+	ret = pi_mgr_dfs_request_update(c->dfs_node, PI_OPP_ECONOMY);
+
+	/* Check if the request was handled or not */
+	if(ret) {
+		pr_err("%s : Error: could not change the bus speed\n", __func__);
+		goto err;
+	}
+#endif
+
+	/* Enable the clock before the transfer */
+	ret = clk_enable(dmac->clk);
+	if (ret)
+	    goto err1;
 
 	/* Acquire DMUX semaphore while microcode loading
 	 * This call always success because protect(unprotect) happen
@@ -838,8 +849,11 @@ int dma_start_transfer(unsigned int chan)
 	return 0;
       err2:
 	dmux_sema_unprotect();
-      err1:
 	clk_disable(dmac->clk);
+      err1:
+#ifdef CONFIG_KONA_PI_MGR
+	pi_mgr_dfs_request_update(c->dfs_node, PI_MGR_DFS_MIN_VALUE);
+#endif
       err:
 	spin_unlock_irqrestore(&lock, flags);
 	return -1;
@@ -849,6 +863,7 @@ int dma_stop_transfer(unsigned int chan)
 {
 	unsigned long flags;
 	struct pl330_chan_desc *c;
+	int ret;
 
 	spin_lock_irqsave(&lock, flags);
 
@@ -869,6 +884,16 @@ int dma_stop_transfer(unsigned int chan)
 	/* Disable clock after transfer */
 	clk_disable(dmac->clk);
 
+#ifdef CONFIG_KONA_PI_MGR
+	/* Request for a update on the bus speed */
+	ret = pi_mgr_dfs_request_update(c->dfs_node, PI_MGR_DFS_MIN_VALUE);
+
+	/* Check if the request was handled or not */
+	if(ret) {
+		pr_err("%s : Error: could not change the bus speed\n", __func__);
+		goto err;
+	}
+#endif
 	spin_unlock_irqrestore(&lock, flags);
 	return 0;
 

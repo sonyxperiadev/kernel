@@ -21,6 +21,9 @@ enum
 };
 
 
+static int allow_suspend = 0;
+module_param_named(allow_suspend, allow_suspend, int, S_IRUGO | S_IWUSR | S_IWGRP);
+
 static int kona_pm_log_lvl = KONAL_PM_LOG_LVL_ERROR;
 module_param_named(kona_pm_log_lvl, kona_pm_log_lvl, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
@@ -144,7 +147,9 @@ __weak int kona_mach_pm_valid(suspend_state_t state)
 	if(LOG_LEVEL_ENABLED(KONAL_PM_LOG_LVL_FLOW))
 		pr_info("--%s--\n",__func__);
 
-	return suspend_valid_only_mem(state);
+	if(allow_suspend)
+		return suspend_valid_only_mem(state);
+	return 0;
 }
 static struct platform_suspend_ops kona_pm_ops = {
 	.begin		= kona_mach_pm_begin,

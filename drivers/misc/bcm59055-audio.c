@@ -46,25 +46,36 @@ struct bcm59055_audio {
 	bool classAB;
 	bool i2cMethod;
 	int HSInputMode;
+	struct mutex lock;
 };
 static struct bcm59055_audio *driv_data;
+
 
 int bcm59055_ihf_set_gain(int IHFGain)
 {
 	int data;
+	int ret;
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+	pr_debug("Inside %s IHFGain %d\n", __func__, IHFGain);
+	mutex_lock(&driv_data->lock);
 	data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_IHFPGA2);
 	data &= ~BCM59055_IHFPGA2_CTL_MASK;
 	data |= (BCM59055_IHFPGA2_CTL_MASK & IHFGain);
 
-	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFPGA2, data);
+	ret = bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFPGA2, data);
+	mutex_unlock(&driv_data->lock);
+
+	return ret;
 }
 EXPORT_SYMBOL(bcm59055_ihf_set_gain);
 
 int bcm59055_ihf_bypass_en(bool enable)
 {
 	int data;
+	int ret;
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+	pr_debug("Inside %s enable is %d\n", __func__, enable);
+	mutex_lock(&driv_data->lock);
 	data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_IHFTOP);
 	if (enable) {
 		if (driv_data->IHFBypassEn) {
@@ -82,7 +93,9 @@ int bcm59055_ihf_bypass_en(bool enable)
 		driv_data->IHFBypassEn = false;
 	}
 
-	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFTOP, data);
+	ret =  bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFTOP, data);
+	mutex_unlock(&driv_data->lock);
+	return ret;
 }
 EXPORT_SYMBOL(bcm59055_ihf_bypass_en);
 
@@ -90,6 +103,8 @@ int bcm59055_ihf_power(bool on)
 {
 	int data, ret = 0;
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+	pr_debug("Inside %s, ON is %d\n", __func__, on);
+	mutex_lock(&driv_data->lock);
 
 	if (on) {
 		if (on && driv_data->IHFenabled) {
@@ -117,6 +132,7 @@ int bcm59055_ihf_power(bool on)
 		ret |= bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFTOP, data);
 		driv_data->IHFenabled = false;
 	}
+	mutex_unlock(&driv_data->lock);
 	return ret;
 }
 EXPORT_SYMBOL(bcm59055_ihf_power);
@@ -126,6 +142,8 @@ int bcm59055_hs_set_gain(int HSpath, int HSgain)
 	int data1, data2;
 	int ret;
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+	pr_debug("Inside %s, HsPath %d, HSgain %d\n", __func__, HSpath, HSgain);
+	mutex_lock(&driv_data->lock);
 
 	data1 = bcm590xx_reg_read(bcm590xx, BCM59055_REG_HSPGA1);
 	data2 = bcm590xx_reg_read(bcm590xx, BCM59055_REG_HSPGA2);
@@ -144,6 +162,7 @@ int bcm59055_hs_set_gain(int HSpath, int HSgain)
 	ret = bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSPGA1, data1);
 	ret |= bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSPGA2, data2);
 
+	mutex_unlock(&driv_data->lock);
 	return ret;
 }
 EXPORT_SYMBOL(bcm59055_hs_set_gain);
@@ -152,6 +171,7 @@ int bcm59055_hs_sc_thold(int curr)
 {
 	int data, ret;
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+	pr_debug("Inside %s\n", __func__);
 	data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_HSDRV);
 	data &= ~BCM59055_HSDRV_DRV_SCCTL_MASK;
 
@@ -167,7 +187,9 @@ int bcm59055_hs_set_input_mode(int HSgain, int HSInputmode)
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
 	int ret = 0;
 	int HSwasEn = 0;
+	pr_debug("Inside %s, HSgain %d, HSInputmode %d\n", __func__, HSgain, HSInputmode);
 
+	mutex_lock(&driv_data->lock);
 	if (HSInputmode == driv_data->HSInputMode) {
 		pr_info("%s: Input mode already configured\n", __func__);
 		return -EINVAL;
@@ -231,6 +253,7 @@ int bcm59055_hs_set_input_mode(int HSgain, int HSInputmode)
 	}
 
 	driv_data->HSInputMode = HSInputmode;
+	mutex_unlock(&driv_data->lock);
 
 	return ret;
 }
@@ -239,15 +262,18 @@ EXPORT_SYMBOL(bcm59055_hs_set_input_mode);
 int bcm59055_hs_shortcircuit_en(bool enable)
 {
 	int data;
+	int ret;
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+	pr_debug("Inside %s, enable %d\n", __func__, enable);
 	data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_HSDRV);
 
 	if (enable)
-		data &= ~BCM59055_HSDRV_DRV_DISSC;
-	else
 		data |= BCM59055_HSDRV_DRV_DISSC;
+	else
+		data &= ~BCM59055_HSDRV_DRV_DISSC;
 
-	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSDRV, data);
+	ret =  bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSDRV, data);
+	return ret;
 }
 EXPORT_SYMBOL(bcm59055_hs_shortcircuit_en);
 
@@ -256,19 +282,27 @@ int bcm59055_hs_power(bool on)
 	int data1, data2;
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
 	int ret = 0;
+	pr_debug("Inside %s, ON %d\n", __func__, on);
+	mutex_lock(&driv_data->lock);
 	data1 = bcm590xx_reg_read(bcm590xx, BCM59055_REG_HSPUP1);
 	data2 = bcm590xx_reg_read(bcm590xx, BCM59055_REG_HSPUP2);
 	if (on) {
 		data1 &= ~BCM59055_HSPUP1_IDDQ_PWRDN;
 		data2 |= BCM59055_HSPUP2_HS_PWRUP;
 		driv_data->HSenabled = true;
+		ret = bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSPUP1, data1);
+		ret |= bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSPUP2, data2);
+
+		bcm59055_hs_shortcircuit_en(true);
 	} else {
 		data2 &= ~BCM59055_HSPUP2_HS_PWRUP;
 		data1 |= BCM59055_HSPUP1_IDDQ_PWRDN;
+		ret = bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSPUP2, data2);
+		ret |= bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSPUP1, data1);
 		driv_data->HSenabled = false;
+		bcm59055_hs_shortcircuit_en(false);
 	}
-	ret = bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSPUP1, data1);
-	ret |= bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSPUP2, data2);
+	mutex_unlock(&driv_data->lock);
 	return ret;
 }
 EXPORT_SYMBOL(bcm59055_hs_power);
@@ -276,7 +310,10 @@ EXPORT_SYMBOL(bcm59055_hs_power);
 int bcm59055_hs_class_sel(bool i2cmethod, bool classAB)
 {
 	int data;
+	int ret;
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+	pr_debug("Inside %s\n", __func__);
+	mutex_lock(&driv_data->lock);
 	data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_HSCP3);
 	//data |= BCM59055_IHFPOP_AUTOSEQ;
 
@@ -291,7 +328,11 @@ int bcm59055_hs_class_sel(bool i2cmethod, bool classAB)
 		data |= BCM59055_HSCP3_CG_SEL;
 		driv_data->i2cMethod = 0;
 	}
-	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSCP3, data);
+	ret = bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSCP3, data);
+	ret = bcm590xx_reg_write(bcm590xx, BCM59055_REG_PLLCTRL, data);
+	mutex_unlock(&driv_data->lock);
+
+	return ret;
 }
 EXPORT_SYMBOL(bcm59055_hs_class_sel);
 
@@ -299,11 +340,13 @@ int bcm59055_audio_init(void)
 {
 	int data, ret = 0;
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+	pr_debug("Inside %s\n", __func__);
 
+	mutex_lock(&driv_data->lock);
 	data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_PLLCTRL);
 	data |= (BCM59055_PLLCTRL_AUDIO_EN | BCM59055_PLLCTRL_PLLEN);
 	ret = bcm590xx_reg_write(bcm590xx, BCM59055_REG_PLLCTRL, data);
-
+	mutex_unlock(&driv_data->lock);
 	return ret;
 }
 EXPORT_SYMBOL(bcm59055_audio_init);
@@ -311,13 +354,18 @@ EXPORT_SYMBOL(bcm59055_audio_init);
 int bcm59055_audio_deinit(void)
 {
 	int data;
+	int ret;
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+	pr_debug("Inside %s\n", __func__);
+	mutex_lock(&driv_data->lock);
 	data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_PLLCTRL);
 	data &= ~(BCM59055_PLLCTRL_AUDIO_EN | BCM59055_PLLCTRL_PLLEN);
 	driv_data->IHFenabled = 0;
 	driv_data->HSenabled = 0;
 	driv_data->IHFBypassEn = 0;
-	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_PLLCTRL, data);
+	ret = bcm590xx_reg_write(bcm590xx, BCM59055_REG_PLLCTRL, data);
+	mutex_unlock(&driv_data->lock);
+	return ret;
 }
 EXPORT_SYMBOL(bcm59055_audio_deinit);
 
@@ -335,6 +383,7 @@ static int __devinit bcm59055_audio_probe(struct platform_device *pdev)
 		pr_err("%s : Can not allocate memory\n", __func__);
 		return -ENOMEM;
 	}
+	mutex_init(&audio_data->lock);
 	audio_data->HSenabled = false;
 	audio_data->IHFenabled = false;
 	audio_data->IHFBypassEn = false;
@@ -358,6 +407,9 @@ static int __devinit bcm59055_audio_probe(struct platform_device *pdev)
 		bcm59055_ihf_set_gain(audio_pdata->ihf_gain);
 		bcm59055_ihf_bypass_en(audio_pdata->ihf_bypass_en);
 	}
+	/* turn off the shortcircuit logic, once HS is ON
+	 * it would be turned on again */
+	bcm59055_hs_shortcircuit_en(false);
 
 	return 0;
 }

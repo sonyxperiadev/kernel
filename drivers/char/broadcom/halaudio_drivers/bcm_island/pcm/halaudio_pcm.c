@@ -2522,7 +2522,7 @@ static int __init pcm_probe( struct platform_device *pdev )
       gPcmIrqId = BCM_INT_ID_SSP1;
       gPcmPhysBaseAddr = PCM_SSP1_PHYS_BASE_ADDR_START;
 
-      gAudiohClk = clk_get( &pdev->dev, "audioh_26m_clk" );
+      gAudiohClk = clk_get( &pdev->dev, "audioh_26m" );
 
       err = clk_enable( gAudiohClk );
       if( err )
@@ -2546,7 +2546,7 @@ static int __init pcm_probe( struct platform_device *pdev )
       gPcmIrqId = BCM_INT_ID_SSP3;
       gPcmPhysBaseAddr = PCM_SSP3_PHYS_BASE_ADDR_START;
 
-      gAudiohClk = clk_get( &pdev->dev, "audioh_26m_clk" );
+      gAudiohClk = clk_get( &pdev->dev, "audioh_26m" );
 
       err = clk_enable( gAudiohClk );
       if( err )

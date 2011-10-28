@@ -70,7 +70,6 @@ static int bcmpmu_read_irq_regs(struct bcmpmu_irq_data *idata)
 {
 	int i;
 	int count = 0;
-	int int_mask;
 	
 	idata->bcmpmu->read_dev_bulk(idata->bcmpmu,
 			idata->bcmpmu->regmap[PMU_REG_INT_START].map,
@@ -126,7 +125,6 @@ void bcmpmu_irq_handler(struct work_struct *work)
 	struct bcmpmu_irq_data *idata;
 	struct bcmpmu *bcmpmu;
 	int count = 0;
-	int i;
 
 	idata = container_of(work, struct bcmpmu_irq_data, work);
 	bcmpmu = idata->bcmpmu;
@@ -227,7 +225,7 @@ static ssize_t dbgmsk_show(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "debug_mask is %x\n", debug_mask);
 }
 static ssize_t dbgmsk_store(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				const char *buf, size_t count)
 {
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	if (val > 0xFF || val == 0)
@@ -236,7 +234,7 @@ static ssize_t dbgmsk_store(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 static ssize_t unmask_store(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				 const char *buf, size_t count)
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	unsigned long val = simple_strtoul(buf, NULL, 0);
@@ -246,7 +244,7 @@ static ssize_t unmask_store(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 static ssize_t mask_store(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				const char *buf, size_t count)
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	unsigned long val = simple_strtoul(buf, NULL, 0);
@@ -276,7 +274,6 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
 	int *irqregs;
-	struct bcmpmu_reg_map *irqregmap;
 	int i;
 
 	idata = kzalloc(sizeof(struct bcmpmu_irq_data), GFP_KERNEL);
@@ -337,7 +334,7 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	bcmpmu_clear_irqs(bcmpmu);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
-	sysfs_create_group(&pdev->dev.kobj, &bcmpmu_irq_attr_group);
+	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_irq_attr_group);
 #endif
 	return 0;
 

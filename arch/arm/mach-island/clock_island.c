@@ -31,7 +31,6 @@
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
-#include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
 #include <linux/clk.h>
 #include <asm/io.h>
 #include <mach/pi_mgr.h>
@@ -53,7 +52,6 @@ static struct gen_clk_ops root_ccu_clk_ops =
 {
 	.init		= 	root_ccu_clk_init,
 };
-
 /*
 Root CCU clock
 */
@@ -343,6 +341,7 @@ static struct ref_clk CLK_NAME(var_312m) = {
 /*
 Ref clock name VAR_500M
 */
+#if 0
 static struct ref_clk CLK_NAME(var_500m) = {
 
  .clk =	{
@@ -352,7 +351,7 @@ static struct ref_clk CLK_NAME(var_500m) = {
 		},
  .ccu_clk = &CLK_NAME(root),
 };
-
+#endif
 
 
 /*
@@ -540,8 +539,8 @@ static struct ccu_clk CLK_NAME(kproc) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
-//	.pi_id = PI_MGR_PI_ID_ARM_CORE,
-	.pi_id = -1,
+	.pi_id = PI_MGR_PI_ID_ARM_CORE,
+//	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(PROC_CLK_BASE_ADDR),
 	.wr_access_offset = KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KPROC_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -794,17 +793,26 @@ static int arm_clk_set_rate(struct clk* clk, u32 rate)
     int div = 2;
 #if UPDATE_LPJ
 	u64 lpj;
+#ifdef CONFIG_SMP
 	static unsigned long lpj_ref0 = 0;
 	static unsigned long lpj_freq_ref0 = 0;
 
-	if(lpj_ref0 == 0)
+	if (lpj_ref0 == 0)
 	{
 		lpj_ref0 =  per_cpu(cpu_data, 0).loops_per_jiffy;
 		lpj_freq_ref0 = arm_clk_get_rate(clk)/1000;
 	}
-	
-	pr_info("%s:lpj_ref0 = %d lpj_freq_ref0 = %d \n",__func__,
-		lpj_ref0, lpj_freq_ref0);
+	pr_info("%s:lpj_ref0 = %ld lpj_freq_ref0 = %ld \n", __func__, lpj_ref0, lpj_freq_ref0);
+#else
+	static unsigned long lpj_ref = 0;
+	static unsigned long lpj_freq_ref = 0;
+
+	if (lpj_ref == 0)
+		{
+			lpj_ref = loops_per_jiffy;
+			lpj_freq_ref = arm_clk_get_rate(clk)/1000;
+		}
+#endif
 #endif
 
 
@@ -838,14 +846,18 @@ static int arm_clk_set_rate(struct clk* clk, u32 rate)
 	/*Update lpj*/
 #if UPDATE_LPJ
  	/*new_lpj =  lpj_ref*new_freq/ref_freq*/
-	
+#ifdef CONFIG_SMP
 	lpj = ((u64) lpj_ref0) * ((u64) arm_clk_get_rate(clk)/1000);
 	do_div(lpj, lpj_freq_ref0);
 	per_cpu(cpu_data, 0).loops_per_jiffy = (unsigned long)lpj;
 	per_cpu(cpu_data, 1).loops_per_jiffy = (unsigned long)lpj;
-	pr_info("%s:new lpj ( = %llu\n",__func__,lpj);
-
-	
+	pr_info("%s:new lpj ( = %llu\n", __func__ , lpj);
+#else
+	lpj = ((u64) lpj_ref) * ((u64) arm_clk_get_rate(clk)/1000);
+	do_div(lpj, lpj_freq_ref);
+	loops_per_jiffy = (unsigned long)lpj;
+	pr_info("%s:new lpj = %llu\n", __func__ , lpj);
+#endif
 #endif
     clk_dbg("ARM clock set rate done \n");
 
@@ -914,6 +926,7 @@ static struct peri_clk CLK_NAME(arm) = {
 	},
 };
 
+#if 0
 static int dig_clk_set_gating_ctrl(struct peri_clk * peri_clk, int clk_id, int  gating_ctrl)
 {
     u32 reg_val;
@@ -960,7 +973,7 @@ static int dig_clk_set_gating_ctrl(struct peri_clk * peri_clk, int clk_id, int  
     return 0;
 }
 
-static int dig_clk_init(struct clk* clk)
+static int dig_clk_init(struct clk *clk)
 {
 	struct peri_clk * peri_clk;
 	struct src_clk * src_clks;
@@ -1029,12 +1042,14 @@ static int dig_clk_init(struct clk* clk)
 
 	return 0;
 }
+#endif
 
 struct gen_clk_ops dig_ch_peri_clk_ops;
 /*
 Peri clock name DIG_CH0
 */
 /*Source list of digital channels. Common for CH0, CH1, CH2, CH3 */
+#if 0
 static struct clk* dig_ch_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal)/*,CLK_PTR(pll0),CLK_PTR(pll1) */);
 static struct peri_clk CLK_NAME(dig_ch0) = {
 	.clk =	{
@@ -1186,7 +1201,7 @@ static struct peri_clk CLK_NAME(dig_ch3) = {
 	    .clk = dig_ch_peri_clk_src_list,
 	},
 };
-
+#endif
 
 static struct peri_clk CLK_NAME(arm1) = {
 	.clk =	{
@@ -1238,8 +1253,8 @@ static struct ccu_clk CLK_NAME(khub) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
-//	.pi_id = PI_MGR_PI_ID_HUB_SWITCHABLE,
-	.pi_id = -1,
+	.pi_id = PI_MGR_PI_ID_HUB_SWITCHABLE,
+//	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR),
 	.wr_access_offset = KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET,
@@ -2291,8 +2306,8 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
-//	.pi_id = PI_MGR_PI_ID_HUB_AON,
-	.pi_id = -1,
+	.pi_id = PI_MGR_PI_ID_HUB_AON,
+//	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(AON_CLK_BASE_ADDR),
 	.wr_access_offset = KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KHUBAON_CLK_MGR_REG_POLICY0_MASK1_OFFSET,
@@ -3004,8 +3019,8 @@ static struct ccu_clk CLK_NAME(kpm) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
-//	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
-	.pi_id = -1,
+	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+//	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_CLK_BASE_ADDR),
 	.wr_access_offset = KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KPM_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -3653,8 +3668,8 @@ static struct ccu_clk CLK_NAME(kps) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
-//	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
-	.pi_id = -1,
+	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+//	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_CLK_BASE_ADDR),
 	.wr_access_offset = IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = IKPS_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -5021,7 +5036,7 @@ EXPORT_SYMBOL(clk_set_crystal_pwr_on_idle);
 int root_ccu_clk_init(struct clk* clk)
 {
 	struct ccu_clk * ccu_clk;
-	u32 reg_val;
+
 	if(clk->clk_type != CLK_TYPE_CCU)
 		return -EPERM;
 
@@ -5218,7 +5233,7 @@ static struct __init clk_lookup island_clk_tbl[] =
 
 int __init island_clock_init(void)
 {
-    int base;
+	int base;
 
     printk(KERN_INFO "%s registering clocks.\n", __func__);
 

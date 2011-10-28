@@ -85,7 +85,9 @@
 //#define   tempInterface_DSP_FEATURE_DUALMIC_BTOUTPUTGAINS
 #define   _ATHENA_
 #undef   _ATHENA_
+#if !defined(_RHEA_)
 #define   _RHEA_
+#endif
 
 #define   NUM_OMEGA_VOICE_BANDS 3
 #define   NUM_OMEGA_VOICE_MAX_VOLUME_LEVELS 11

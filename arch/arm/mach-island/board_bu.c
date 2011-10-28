@@ -61,7 +61,6 @@
 #include <linux/android_pmem.h>
 
 #include <asm/mach/map.h>
-#include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/ipcinterface.h>
 
 #include <linux/power_supply.h>
@@ -75,6 +74,10 @@
 #include <linux/vchiq_platform_data_hana.h>
 #include <linux/vchiq_platform_data_memdrv_hana.h>
 
+#ifdef CONFIG_BACKLIGHT_PWM
+#include <linux/pwm_backlight.h>
+#endif
+
 #define KONA_SDIO0_PA   SDIO1_BASE_ADDR
 #define KONA_SDIO1_PA   SDIO2_BASE_ADDR
 #define KONA_SDIO2_PA   SDIO3_BASE_ADDR
@@ -82,6 +85,25 @@
 
 #define BSC_CORE_REG_SIZE      0x100
 
+#if defined(CONFIG_BACKLIGHT_PWM)
+static struct platform_pwm_backlight_data pwm_backlight_data =
+{
+	.pwm_name	= "kona_pwmc:2",
+	.max_brightness	= 255,
+	.dft_brightness	= 255,
+	.pwm_period_ns	= 5000000,
+};
+
+static struct platform_device pwm_backlight_device =
+{
+	.name     = "pwm-backlight",
+	.id       = -1,
+	.dev      =
+		{
+		.platform_data = &pwm_backlight_data,
+	},
+};
+#endif
 
 static struct resource board_i2c0_resource[] = {
 	[0] =
@@ -347,6 +369,9 @@ void __init board_map_io(void)
 }
 
 static struct platform_device *board_devices[] __initdata = {
+#if defined(CONFIG_BACKLIGHT_PWM)
+	&pwm_backlight_device,
+#endif
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
@@ -383,8 +408,6 @@ void __init board_init(void)
 
 
 MACHINE_START(ISLAND, "Island BU")
-	.phys_io = IO_START,
-	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer = &kona_timer,

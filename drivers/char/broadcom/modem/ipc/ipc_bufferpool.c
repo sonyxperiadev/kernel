@@ -447,12 +447,14 @@ void IPC_ReportFlowControlEvent (IPC_BufferPool_T *	PoolPtr, IPC_FlowCtrlEvent_T
 		break;
 		}
 
+#ifndef UNDER_LINUX
 		if (PoolPtr->DestinationEndpointId != IPC_EP_LogApps)
 		{
 			IPC_TRACE (IPC_Channel_FlowControl, "IPC_ReportFlowControlEvent",
 				"Pool %08X, Function %08X, FlowEvent %01d, ReportedEvent %01d",
 				Pool, SourceEp->FlowControlFunction, Event, ReportedFlowControlState);
 		}
+#endif
 
 #ifndef UNDER_LINUX
 		(*SourceEp->FlowControlFunction) (Pool, ReportedFlowControlState);

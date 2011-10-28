@@ -1,54 +1,27 @@
-//*********************************************************************
-//
-//	Copyright © 2000-2011 Broadcom Corporation
-//
-//	This program is the proprietary software of Broadcom Corporation
-//	and/or its licensors, and may only be used, duplicated, modified
-//	or distributed pursuant to the terms and conditions of a separate,
-//	written license agreement executed between you and Broadcom (an
-//	"Authorized License").  Except as set forth in an Authorized
-//	License, Broadcom grants no license (express or implied), right
-//	to use, or waiver of any kind with respect to the Software, and
-//	Broadcom expressly reserves all rights in and to the Software and
-//	all intellectual property rights therein.  IF YOU HAVE NO
-//	AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE
-//	IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE
-//	ALL USE OF THE SOFTWARE.
-//
-//	Except as expressly set forth in the Authorized License,
-//
-//	1.	This program, including its structure, sequence and
-//		organization, constitutes the valuable trade secrets
-//		of Broadcom, and you shall use all reasonable efforts
-//		to protect the confidentiality thereof, and to use
-//		this information only in connection with your use
-//		of Broadcom integrated circuit products.
-//
-//	2.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE
-//		IS PROVIDED "AS IS" AND WITH ALL FAULTS AND BROADCOM
-//		MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES,
-//		EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE,
-//		WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY
-//		DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE,
-//		MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A
-//		PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR
-//		COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR
-//		CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE
-//		RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
-//
-//	3.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT
-//		SHALL BROADCOM OR ITS LICENSORS BE LIABLE FOR
-//		(i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR
-//		EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY
-//		WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE
-//		SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE
-//		POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN
-//		EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE
-//		ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE
-//		LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE
-//		OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-//
-//***************************************************************************
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 /**
 *
 *   @file   csl_arm2sp.h
@@ -90,6 +63,23 @@
                                           
 #define MAX_INP_SP_TO_ARM2SP_MIXER_UL_GAIN  ((2<<14)-1)	/* 6dB in DSP Q1.14 format */
 #define MIN_INP_SP_TO_ARM2SP_MIXER_UL_GAIN  0
+
+typedef enum CSL_ARM2SP_PLAYBACK_MODE_t
+{
+	CSL_ARM2SP_PLAYBACK_NONE,
+	CSL_ARM2SP_PLAYBACK_DL,
+	CSL_ARM2SP_PLAYBACK_UL,
+	CSL_ARM2SP_PLAYBACK_BOTH
+} CSL_ARM2SP_PLAYBACK_MODE_t;
+						
+
+typedef enum CSL_ARM2SP_VOICE_MIX_MODE_t
+{
+	CSL_ARM2SP_VOICE_MIX_NONE,
+	CSL_ARM2SP_VOICE_MIX_DL,
+	CSL_ARM2SP_VOICE_MIX_UL,
+	CSL_ARM2SP_VOICE_MIX_BOTH
+} CSL_ARM2SP_VOICE_MIX_MODE_t;
 
 // ---- Function Declarations -----------------------------------------
 //*********************************************************************
@@ -308,6 +298,127 @@ Boolean CSL_SetARM2Speech2CallRecordGain(Int16 mBGain);
 **********************************************************************/
 void CSL_MuteARM2Speech2CallRecord(void);
 
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_arm2sp_get_phy_base_addr
+*
+*   @note     This function returns the base address of the low part of ARM2SP Input Buffer
+*             for programming the AADMAC (this function should not be used for any software
+*             access).
+*                                                                                         
+*   @return   Physical Base address of the low half of the ARM2SP input buffer
+*
+**/
+/*******************************************************************************************/
+UInt16 *csl_dsp_arm2sp_get_phy_base_addr(void);
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_arm2sp2_get_phy_base_addr
+*
+*   @note     This function returns the base address of the low part of ARM2SP2 Input Buffer
+*             for programming the AADMAC (this function should not be used for any software
+*             access).
+*                                                                                         
+*   @return   Physical Base address of the low half of the ARM2SP2 input buffer
+*
+**/
+/*******************************************************************************************/
+UInt16 *csl_dsp_arm2sp2_get_phy_base_addr(void);
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_arm2sp_get_size
+*
+*   @note     This function returns the size of the whole of ARM2SP Input Buffer
+*             for programming the AADMAC
+*                                               
+*   @param    Rate = 8000, 16000 or 48000                                     
+*   @return   Size of the entire ARM2SP input buffer
+*
+**/
+/*******************************************************************************************/
+UInt16 csl_dsp_arm2sp_get_size(UInt32 rate);
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_arm2sp2_get_size
+*
+*   @note     This function returns the size of the whole of ARM2SP2 Input Buffer
+*             for programming the AADMAC
+*                                                                                         
+*   @param    Rate = 8000, 16000 or 48000                                     
+*   @return   Size of the entire ARM2SP2 input buffer
+*
+**/
+/*******************************************************************************************/
+UInt16 csl_dsp_arm2sp2_get_size(UInt32 Rate);
+
+/*****************************************************************************************/
+/**
+*
+* Function Name: csl_arm2sp_set_arm2sp
+*
+*   @note     This function Starts and Stops the ARM2SP interface.
+*
+*   @param    UInt32 Rate = 8000, 16000 or 48000
+*   @param    CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
+*   @param    CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
+*   @param    UInt32 numFramesPerInterrupt
+*   @param    UInt8 audMode = 0 -> Mono \BR
+*                           = 1 -> Stereo
+*   @param    UInt16 Reset_out_ptr_flag \BR
+*                                        =0, reset output pointer - shared_Arm2SP2_InBuf_out - of buffer
+*                                            shared_Arm2SP2_InBuf[] to 0. Used for new arm2sp2 session.\BR
+*                                        =1, keep output pointer - shared_Arm2SP2_InBuf_out - unchange.
+*                                            Used for PAUSE/RESUME the same arm2sp2 session.
+*
+*   @return   None
+*
+**/
+/*******************************************************************************************/
+void csl_arm2sp_set_arm2sp(UInt32               		samplingRate,
+						   CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
+						   CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
+						   UInt32						numFramesPerInterrupt,
+						   UInt8						audMode,
+                           UInt16                       Reset_out_ptr_flag
+						   );
+
+/*****************************************************************************************/
+/**
+*
+* Function Name: csl_arm2sp_set_arm2sp2
+*
+*   @note     This function Starts and Stops the ARM2SP2 interface.
+*
+*   @param    UInt32 Rate = 8000, 16000 or 48000
+*   @param    CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
+*   @param    CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
+*   @param    UInt32 numFramesPerInterrupt
+*   @param    UInt8 audMode = 0 -> Mono \BR
+*                           = 1 -> Stereo
+*   @param    UInt16 Reset_out_ptr_flag \BR
+*                                        =0, reset output pointer - shared_Arm2SP2_InBuf_out - of buffer
+*                                            shared_Arm2SP2_InBuf[] to 0. Used for new arm2sp2 session.\BR
+*                                        =1, keep output pointer - shared_Arm2SP2_InBuf_out - unchange.
+*                                            Used for PAUSE/RESUME the same arm2sp2 session.
+*
+*   @return   None
+*
+**/
+/*******************************************************************************************/
+void csl_arm2sp_set_arm2sp2(UInt32               		samplingRate,
+						   CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
+						   CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
+						   UInt32						numFramesPerInterrupt,
+						   UInt8						audMode,
+                           UInt16                       Reset_out_ptr_flag
+						   );
 
 /** @} */
 

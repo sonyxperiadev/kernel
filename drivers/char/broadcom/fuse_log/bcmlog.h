@@ -53,6 +53,8 @@ extern "C"
 #define BCMLOG_LOG_ULOGGING_ID	1000		///<	Android unified logging (e.g., printk logging)
 #define BCMLOG_ANDROID_KRIL_BASIC	1001		///<Android KRIL logging for basic information
 #define BCMLOG_ANDROID_KRIL_DETAIL	1002		///<Android KRIL logging for detail information
+#define BCMLOG_RPC_KERNEL_BASIC	    1003		///<RPC kernel driver logging for basic information
+#define BCMLOG_RPC_KERNEL_DETAIL	1004		///<RPC kernel driver logging for detailed information
 #define BCMLOG_MAX_ASCII_STRING_LENGTH 256	//MTT limit ASCII size to be 256
 
 /**

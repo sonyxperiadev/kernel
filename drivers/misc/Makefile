@@ -1,8 +1,6 @@
 #
 # Makefile for misc devices that really don't fit anywhere else.
 #
-obj-y		+= vc04_services/
-obj-y   += vc04_services/
 obj-$(CONFIG_IBM_ASM)		+= ibmasm/
 obj-$(CONFIG_AD525X_DPOT)	+= ad525x_dpot.o
 obj-$(CONFIG_AD525X_DPOT_I2C)	+= ad525x_dpot-i2c.o
@@ -41,6 +39,7 @@ obj-$(CONFIG_MPU_SENSORS_MPU6050B1)	+= mpu3050/
 obj-$(CONFIG_BMP18X) += bmp18x-core.o
 obj-$(CONFIG_BMP18X_I2C) += bmp18x-i2c.o
 obj-$(CONFIG_BMP18X_SPI) += bmp18x-spi.o
+obj-$(CONFIG_AL3006) += al3006.o
 obj-$(CONFIG_EP93XX_PWM)	+= ep93xx_pwm.o
 obj-$(CONFIG_DS1682)		+= ds1682.o
 obj-$(CONFIG_TI_DAC7512)	+= ti_dac7512.o
@@ -64,10 +63,13 @@ obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
 obj-$(CONFIG_SENSORS_AK8975_BRCM)	+= akm8975_brcm.o
 obj-$(CONFIG_INTER_PROCESSOR_COMM)	+= ipc.o
 obj-$(CONFIG_STM_TRACE)         += stm.o
-obj-$(CONFIG_BRCM_MISC_DRIVERS) += vmcs_services/
 obj-$(CONFIG_BCM59055_AUDIO)	+= bcm59055-audio.o
 obj-$(CONFIG_BCM59055_SARADC)	+= bcm59055-adc.o
 obj-$(CONFIG_BCM59055_FUELGAUGE)+= bcm59055-fuelgauge.o
 obj-$(CONFIG_BCM59055_ADC_CHIPSET_API)+= bcm59055-adc_chipset_api.o
 obj-$(CONFIG_BCMPMU_AUDIO)	+= bcmpmu_audio.o
 obj-$(CONFIG_BTHID)		+= bthid.o
+obj-$(CONFIG_MACH_RHEA_SELFTEST)	+= bcm_selftest_bb.o
+obj-$(CONFIG_BCM_RFKILL)	+= bcmbt_rfkill.o
+obj-$(CONFIG_BCM_BT_LPM)	+= bcmbt_lpm.o
+obj-y          += vc04_services/

@@ -342,6 +342,14 @@ config KONA_WATCHDOG
 
 	  Say N if you are unsure.
 
+
+config BCM59055_WATCHDOG
+	tristate "BCM59055 Watchdog"
+	depends on MFD_BCM_PMU590XX
+	help
+	  Say Y here if to include support for the watchdog timer
+	  in BCM59055 PMU.
+
 # AVR32 Architecture
 
 config AT32AP700X_WDT

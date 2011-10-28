@@ -691,7 +691,7 @@ xdr_union(XDR *xdrs,
 	if(lookup != NULL) {
 		struct xdr_discrim* choice = lookup(dscm);
 		if(choice != NULL) {
-			if(choice->proc == xdr_pointer) {
+			if(choice->proc == (xdrproc_t)xdr_pointer) {
 					*out_entry = choice;
 
 					if(choice->unsize > 0 && choice->ptr_proc != NULL_xdrproc_t)
@@ -713,7 +713,7 @@ xdr_union(XDR *xdrs,
 		for (; choices->proc != NULL_xdrproc_t; choices++) {
 			if (choices->value == dscm)
 			{
-				if(choices->proc == xdr_pointer)
+				if(choices->proc == (xdrproc_t)xdr_pointer)
 				{
 					*out_entry = (struct xdr_discrim*)choices;
 

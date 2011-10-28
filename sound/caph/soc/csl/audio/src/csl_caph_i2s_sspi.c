@@ -779,7 +779,7 @@ static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle,
 static SSPI_hw_status_t SSPI_hw_i2s_slave_init(CSL_HANDLE handle, 
 												CSL_I2S_CONFIG_t *config)
 {
-	uint32_t frmMask = 1, word_len = 16;
+	uint32_t frmMask = 1;
     CHAL_SSPI_PROT_t mode;
 
     if(config->prot == SSPI_HW_I2S_MODE1)

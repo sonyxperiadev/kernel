@@ -103,24 +103,16 @@ typedef struct AUDIO_DRIVER_CallBackParams_t
 
 }AUDIO_DRIVER_CallBackParams_t;
 
+typedef struct voip_data
+{
+	UInt32 codec_type;
+	UInt32 bitrate_index;
+	UInt32 mic;
+	UInt32 spk; 	
+	UInt8  isVoLTE;
+}voip_data_t;
+
 /* ARM2SP declarations */
-
-typedef enum VORENDER_PLAYBACK_MODE_t
-{
-	VORENDER_PLAYBACK_NONE,
-	VORENDER_PLAYBACK_DL,
-	VORENDER_PLAYBACK_UL,
-	VORENDER_PLAYBACK_BOTH
-} VORENDER_PLAYBACK_MODE_t;
-						
-
-typedef enum VORENDER_VOICE_MIX_MODE_t
-{
-	VORENDER_VOICE_MIX_NONE,
-	VORENDER_VOICE_MIX_DL,
-	VORENDER_VOICE_MIX_UL,
-	VORENDER_VOICE_MIX_BOTH
-} VORENDER_VOICE_MIX_MODE_t;
 
 typedef enum
 {

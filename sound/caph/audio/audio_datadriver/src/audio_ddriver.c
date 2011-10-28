@@ -45,10 +45,8 @@
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "shared.h"
 #include "audio_ddriver.h"
 #include "osdal_os.h"
-#include "osheap.h"
 #include "log.h"
 #include "csl_caph.h"
 #include "audio_vdriver.h"
@@ -65,10 +63,20 @@
 // Public Variable declarations
 //=============================================================================
 
+
+#define VOIP_MAX_FRAME_LEN		642
+#ifdef VOLTE_SUPPORT
+#define VOLTECALLENABLE			0x2	
+#define VOLTEWBSTAMPSTEP		320
+#define VOLTENBSTAMPSTEP		160
+#define VOLTEFRAMEGOOD			1
+#define VOLTEFRAMESILENT		0
+#endif
+
 typedef struct ARM2SP_PLAYBACK_t
 {
-	VORENDER_PLAYBACK_MODE_t playbackMode;
-	VORENDER_VOICE_MIX_MODE_t mixMode;
+	CSL_ARM2SP_PLAYBACK_MODE_t playbackMode;
+	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode;
 	UInt32 instanceID; //ARM2SP1 or ARM2SP2
 	UInt16 	numFramesPerInterrupt;
 	UInt8 	audMode; 
@@ -88,6 +96,7 @@ typedef struct VOIP_t
 	AUDIO_DRIVER_VoipCB_t					pVoipULCallback;
 	AUDIO_DRIVER_VoipCB_t					pVoipDLCallback;
 	UInt16									codec_type;
+	Boolean									isVoLTECall;
 }VOIP_t;
 
 	
@@ -106,7 +115,7 @@ typedef struct AUDIO_DDRIVER_t
     UInt32                                  stream_id;
     UInt32                                  read_index;
     UInt32                                  write_index;
-    UInt8*                                  tmp_buffer;	
+    UInt16*                                  tmp_buffer;	
 	UInt32									bufferSize_inBytes;
 	UInt32 									num_periods;
 	ARM2SP_PLAYBACK_t						arm2sp_config;
@@ -126,12 +135,17 @@ static AUDIO_DDRIVER_t* audio_capture_driver = NULL;
 static int index = 1;
 static Boolean endOfBuffer = FALSE;
 static const UInt16 sVoIPDataLen[] = {0, 322, 160, 38, 166, 642, 70};
-static VP_Mode_AMR_t prev_amr_mode = (VP_Mode_AMR_t)0xffff;
+static CSL_VP_Mode_AMR_t prev_amr_mode = (CSL_VP_Mode_AMR_t)0xffff;
 static Boolean				telephony_amr_if2;
 
 
 static struct work_struct voip_work;
 static struct workqueue_struct *voip_workqueue = NULL;
+#ifdef VOLTE_SUPPORT
+static UInt32 djbTimeStamp = 0;
+static DJB_InputFrame *djbBuf = NULL;
+static Boolean inVoLTECall = FALSE;
+#endif
 
 //=============================================================================
 // xternal prototypes
@@ -170,13 +184,6 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 static Result_t ARM2SP_play_start (AUDIO_DDRIVER_t* aud_drv,
 										UInt32	numFramesPerInterrupt);
 
-static UInt16 ARM2SP_BuildCommandArg0 (AUDIO_SAMPLING_RATE_t		samplingRate,
-									   VORENDER_PLAYBACK_MODE_t		playbackMode,
-									   VORENDER_VOICE_MIX_MODE_t	mixMode,
-									   UInt32						numFramesPerInterrupt,
-									   UInt8						audMode
-									   );
-
 static Result_t ARM2SP_play_resume (AUDIO_DDRIVER_t* aud_drv);
 
 static Result_t VPU_record_start ( VOCAPTURE_RECORD_MODE_t	recordMode,
@@ -192,12 +199,12 @@ static Boolean VoIP_StartTelephony(void);
 
 static Boolean VoIP_StopTelephony(void);
 
-static void VoIP_StartMainAMRDecodeEncode(VP_Mode_AMR_t		decode_amr_mode,	// AMR mode for decoding the next speech frame
-													UInt8				*pBuf,		// buffer carrying the AMR speech data to be decoded
-													UInt16				length,		// number of bytes of the AMR speech data to be decoded
-													VP_Mode_AMR_t		encode_amr_mode,	// AMR mode for encoding the next speech frame
-													Boolean				dtx_mode	// Turn DTX on (TRUE) or off (FALSE)
-													);
+static void VoIP_StartMainAMRDecodeEncode(CSL_VP_Mode_AMR_t	decode_amr_mode,	// AMR mode for decoding the next speech frame
+										UInt8				*pBuf,		// buffer carrying the AMR speech data to be decoded
+										UInt16				length,		// number of bytes of the AMR speech data to be decoded
+										CSL_VP_Mode_AMR_t	encode_amr_mode,	// AMR mode for encoding the next speech frame
+										Boolean				dtx_mode	// Turn DTX on (TRUE) or off (FALSE)
+										);
 static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id);
 static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id);
 static Boolean VOIP_DumpUL_CB(
@@ -205,6 +212,10 @@ static Boolean VOIP_DumpUL_CB(
 		UInt32		amrMode		// AMR codec mode of speech data
 		);
 static Boolean VOIP_FillDL_CB(UInt32 nFrames);
+
+#ifdef VOLTE_SUPPORT
+static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf);
+#endif
 
 //=============================================================================
 // Functions
@@ -264,7 +275,7 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Open::  \n"  );
 
     // allocate memory
-    aud_drv = (AUDIO_DDRIVER_t*) OSDAL_ALLOCHEAPMEM(sizeof(AUDIO_DDRIVER_t));
+	aud_drv = (AUDIO_DDRIVER_t*) kzalloc(sizeof(AUDIO_DDRIVER_t), GFP_KERNEL);
     aud_drv->drv_type = drv_type;
     aud_drv->pCallback = NULL;
     aud_drv->interrupt_period = 0;
@@ -334,7 +345,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 		case AUDIO_DRIVER_VOIP:
 			{
             audio_voip_driver = NULL;
-			OSHEAP_Delete(aud_drv->tmp_buffer);
+			kfree(aud_drv->tmp_buffer);
 			aud_drv->tmp_buffer = NULL;
 			}
             break;
@@ -343,7 +354,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
             break;
     }
     //free the driver structure
-    OSDAL_FREEHEAPMEM(aud_drv);
+    kfree(aud_drv);
     return;  
 }
 
@@ -478,7 +489,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 {
     Result_t result_code = RESULT_ERROR;
 	AUDDRV_DEVICE_e *aud_dev;
-	Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
+	//Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
     switch (ctrl_cmd)
     {
         case AUDIO_DRIVER_START:
@@ -570,7 +581,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
 	Result_t result_code = RESULT_ERROR;
-	VORENDER_VOICE_MIX_MODE_t mixMode;
+	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode;
 	UInt32 numFramesPerInterrupt;
 	
 	Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoiceRenderCmd::%d \n",ctrl_cmd );
@@ -601,7 +612,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  numFramesPerInterrupt = 4; // use default value
 
 			  //equal to half of sizeof(shared_Arm2SP_InBuf): 4 frames, for Narrow band,160 words *4 = 1280 bytes.
-			  aud_drv->bufferSize_inBytes = (ARM2SP_INPUT_SIZE/4)*numFramesPerInterrupt;
+			  aud_drv->bufferSize_inBytes = (csl_dsp_arm2sp_get_size(AUDIO_SAMPLING_RATE_8000)/8)*numFramesPerInterrupt;
 				  
 			  if(aud_drv->sample_rate == AUDIO_SAMPLING_RATE_16000)
 			  {
@@ -609,14 +620,14 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  }     
 			  
 			  // Based on the mix mode, decide the playback mode as well
-			  if(mixMode == VORENDER_VOICE_MIX_DL)
-			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_DL;
-			  else if(mixMode == VORENDER_VOICE_MIX_UL)
-			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_UL;
-			  else if(mixMode == VORENDER_VOICE_MIX_BOTH)
-			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_BOTH;
-			  else if(mixMode == VORENDER_VOICE_MIX_NONE)
-			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_DL; //for standalone testing
+			  if(mixMode == CSL_ARM2SP_VOICE_MIX_DL)
+			  		aud_drv->arm2sp_config.playbackMode = CSL_ARM2SP_PLAYBACK_DL;
+			  else if(mixMode == CSL_ARM2SP_VOICE_MIX_UL)
+			  		aud_drv->arm2sp_config.playbackMode = CSL_ARM2SP_PLAYBACK_UL;
+			  else if(mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
+			  		aud_drv->arm2sp_config.playbackMode = CSL_ARM2SP_PLAYBACK_BOTH;
+			  else if(mixMode == CSL_ARM2SP_VOICE_MIX_NONE)
+			  		aud_drv->arm2sp_config.playbackMode = CSL_ARM2SP_PLAYBACK_DL; //for standalone testing
 				
 			  aud_drv->arm2sp_config.audMode = (aud_drv->num_channel == AUDIO_CHANNEL_STEREO)? 1 : 0; 
 			 
@@ -630,13 +641,22 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  //stop render			  
 			  if (aud_drv->arm2sp_config.instanceID == VORENDER_ARM2SP_INSTANCE1)
 			  { 			  
-				  VPRIPCMDQ_SetARM2SP( 0, 0 );
+                  csl_arm2sp_set_arm2sp((UInt32) aud_drv->sample_rate, 
+                                        CSL_ARM2SP_PLAYBACK_NONE, 
+                                        (CSL_ARM2SP_VOICE_MIX_MODE_t)aud_drv->arm2sp_config.mixMode, 
+                                        aud_drv->arm2sp_config.numFramesPerInterrupt, 
+                                        aud_drv->arm2sp_config.audMode, 0 ); 
+
 			  }
 			  else 
 			  if (aud_drv->arm2sp_config.instanceID == VORENDER_ARM2SP_INSTANCE2)
 			  { 				  
-				  VPRIPCMDQ_SetARM2SP2( 0, 0 );
-			  }
+                  csl_arm2sp_set_arm2sp2((UInt32) aud_drv->sample_rate, 
+                                        CSL_ARM2SP_PLAYBACK_NONE, 
+                                        (CSL_ARM2SP_VOICE_MIX_MODE_t)aud_drv->arm2sp_config.mixMode, 
+                                        aud_drv->arm2sp_config.numFramesPerInterrupt, 
+                                        aud_drv->arm2sp_config.audMode, 0 );			  
+              }
 			  index = 1; //reset
 			  endOfBuffer = FALSE;
 			  /*de-init during stop as the android sequence is open->start->stop->start */
@@ -647,10 +667,19 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
           {
                //pause render
 			   if (aud_drv->arm2sp_config.instanceID == VORENDER_ARM2SP_INSTANCE1)
-				   VPRIPCMDQ_SetARM2SP( 0, 1 );
+                   csl_arm2sp_set_arm2sp((UInt32) aud_drv->sample_rate, 
+                                        CSL_ARM2SP_PLAYBACK_NONE, 
+                                        (CSL_ARM2SP_VOICE_MIX_MODE_t)aud_drv->arm2sp_config.mixMode, 
+                                        aud_drv->arm2sp_config.numFramesPerInterrupt, 
+                                        aud_drv->arm2sp_config.audMode, 1 );
 			   else
 			   if (aud_drv->arm2sp_config.instanceID == VORENDER_ARM2SP_INSTANCE2)
-				   VPRIPCMDQ_SetARM2SP2( 0, 1 );
+                   csl_arm2sp_set_arm2sp2((UInt32) aud_drv->sample_rate, 
+                                        CSL_ARM2SP_PLAYBACK_NONE, 
+                                        (CSL_ARM2SP_VOICE_MIX_MODE_t)aud_drv->arm2sp_config.mixMode, 
+                                        aud_drv->arm2sp_config.numFramesPerInterrupt, 
+                                        aud_drv->arm2sp_config.audMode, 1 );
+
 			   break;
           }
           break;
@@ -779,7 +808,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 block_size;
                 UInt32 frame_size;
                 UInt32 num_frames;
-				UInt32 speech_mode = VP_SPEECH_MODE_LINEAR_PCM_8K;
+				UInt32 speech_mode = CSL_VP_SPEECH_MODE_LINEAR_PCM_8K;
 
 				if(pCtrlStruct != NULL)
 					  recordMode = (VOCAPTURE_RECORD_MODE_t *)pCtrlStruct;
@@ -813,7 +842,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 				aud_drv->num_periods = aud_drv->ring_buffer_size/aud_drv->interrupt_period;
 
                 if(aud_drv->sample_rate == 16000)
-				    speech_mode = VP_SPEECH_MODE_LINEAR_PCM_16K;
+				    speech_mode = CSL_VP_SPEECH_MODE_LINEAR_PCM_16K;
 
 
                 // update num_frames and frame_size
@@ -874,8 +903,8 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-	UInt32 *codec_type;
-	UInt32 size=0;
+	UInt32 codec_type;
+	UInt32 bitrate_index = 0;
 	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIPCmd::%d \n",ctrl_cmd );
 
@@ -885,19 +914,22 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
             {     
 
 				if(pCtrlStruct != NULL)
-			    	codec_type = (UInt32 *)pCtrlStruct;
+				{
+					codec_type = ((voip_data_t *)pCtrlStruct)->codec_type;
+					bitrate_index = ((voip_data_t *)pCtrlStruct)->bitrate_index;
+				}
 					
-				if(*codec_type == 0)
+				if(codec_type == 0)
 					aud_drv->voip_config.codec_type = VOIP_PCM;
-				else if(*codec_type == 1) 
+				else if(codec_type == 1) 
 					aud_drv->voip_config.codec_type = VOIP_FR; 
-				else if(*codec_type == 2) 
+				else if(codec_type == 2) 
 					aud_drv->voip_config.codec_type = VOIP_AMR475;
-				else if(*codec_type == 3) 
+				else if(codec_type == 3) 
 					aud_drv->voip_config.codec_type = VOIP_G711_U; 
-				else if(*codec_type == 4) 
+				else if(codec_type == 4) 
 					aud_drv->voip_config.codec_type = VOIP_PCM_16K;
-				else if(*codec_type == 5) 
+				else if(codec_type == 5) 
 					aud_drv->voip_config.codec_type = VOIP_AMR_WB_MODE_7k;
 				else
 				{
@@ -905,15 +937,36 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
 					break;
 				}
 
-				size = sVoIPDataLen[(aud_drv->voip_config.codec_type & 0xf000) >> 12];
-			
-				aud_drv->tmp_buffer = OSHEAP_Alloc(size); 
+				aud_drv->voip_config.codec_type += (bitrate_index<<8);
+				aud_drv->tmp_buffer = (UInt16 *) kzalloc(VOIP_MAX_FRAME_LEN, GFP_KERNEL);
 
 				if(aud_drv->tmp_buffer == NULL)
 					break;
 				else
-					memset(aud_drv->tmp_buffer,0,size);
-			
+					memset(aud_drv->tmp_buffer,0,VOIP_MAX_FRAME_LEN);
+
+#ifdef VOLTE_SUPPORT
+				// VoLTE call
+				inVoLTECall = ((voip_data_t *)pCtrlStruct)->isVoLTE;
+				if(inVoLTECall)
+				{
+					if ((aud_drv->voip_config.codec_type & VOIP_AMR475) ||
+						(aud_drv->voip_config.codec_type & VOIP_AMR_WB_MODE_7k)) 
+					{
+						if (djbBuf == NULL)
+							djbBuf = (DJB_InputFrame *) kzalloc(sizeof(DJB_InputFrame), GFP_KERNEL);
+
+						DJB_Init();
+						Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::VoLTE call starts, codec_type=%x\n",aud_drv->voip_config.codec_type );
+					}
+					else
+					{
+						Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported in VoLTE\n" );
+						return result_code;
+					}
+				}
+#endif
+
 				VoIP_StartTelephony();
 				result_code = RESULT_OK;
 			}
@@ -1073,8 +1126,6 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
 static Result_t ARM2SP_play_start (AUDIO_DDRIVER_t* aud_drv,
 										UInt32	numFramesPerInterrupt)
 {
-	UInt16 arg0;
-
 	// restrict numFramesPerInterrupt due to the shared memory size 
 	if (aud_drv->sample_rate == AUDIO_SAMPLING_RATE_8000 && numFramesPerInterrupt > 4)
 		aud_drv->arm2sp_config.numFramesPerInterrupt = 4;
@@ -1086,30 +1137,31 @@ static Result_t ARM2SP_play_start (AUDIO_DDRIVER_t* aud_drv,
 	{
 			aud_drv->arm2sp_config.numFramesPerInterrupt = 1; //For 48K ARM2SP, dsp only supports 2*20ms ping-pong buffer, stereo or mono
 	}
-	
-	arg0 = ARM2SP_BuildCommandArg0 (aud_drv->sample_rate, 
-									aud_drv->arm2sp_config.playbackMode, 
-									aud_drv->arm2sp_config.mixMode, 
-									aud_drv->arm2sp_config.numFramesPerInterrupt, 
-									aud_drv->arm2sp_config.audMode);
-    
 						
-	Log_DebugPrintf(LOGID_AUDIO, " ARM2SP_play_start::Start render, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=0x%lx samplingRate = %ld\n", 
-						aud_drv->arm2sp_config.playbackMode, aud_drv->arm2sp_config.mixMode, arg0, aud_drv->arm2sp_config.instanceID,aud_drv->sample_rate);
+	Log_DebugPrintf(LOGID_AUDIO, " ARM2SP_play_start::Start render, playbackMode = %d,  mixMode = %d, instanceID=0x%lx samplingRate = %ld\n", 
+						aud_drv->arm2sp_config.playbackMode, aud_drv->arm2sp_config.mixMode, aud_drv->arm2sp_config.instanceID,aud_drv->sample_rate);
 
 	if (aud_drv->arm2sp_config.instanceID == VORENDER_ARM2SP_INSTANCE1)
 	{
 		CSL_ARM2SP_Init();	// clean buffer before starting to play
 	
-		Log_DebugPrintf(LOGID_AUDIO, " start ARM2SP, arg0=0x%x\n", arg0);
-		VPRIPCMDQ_SetARM2SP( arg0, 0 );
+		Log_DebugPrintf(LOGID_AUDIO, " start ARM2SP\n");
+        csl_arm2sp_set_arm2sp((UInt32) aud_drv->sample_rate,
+								(CSL_ARM2SP_PLAYBACK_MODE_t)aud_drv->arm2sp_config.playbackMode,
+								(CSL_ARM2SP_VOICE_MIX_MODE_t)aud_drv->arm2sp_config.mixMode, 
+                                aud_drv->arm2sp_config.numFramesPerInterrupt,
+								aud_drv->arm2sp_config.audMode, 0 );
 	}
 	else if (aud_drv->arm2sp_config.instanceID == VORENDER_ARM2SP_INSTANCE2)
 	{
 		CSL_ARM2SP2_Init(); // clean buffer before starting to play
 	
-		Log_DebugPrintf(LOGID_AUDIO, " start ARM2SP2, arg0=0x%x\n", arg0);
-		VPRIPCMDQ_SetARM2SP2( arg0, 0 );
+		Log_DebugPrintf(LOGID_AUDIO, " start ARM2SP2\n");
+		csl_arm2sp_set_arm2sp2((UInt32) aud_drv->sample_rate,
+								(CSL_ARM2SP_PLAYBACK_MODE_t)aud_drv->arm2sp_config.playbackMode,
+								(CSL_ARM2SP_VOICE_MIX_MODE_t)aud_drv->arm2sp_config.mixMode, 
+                                aud_drv->arm2sp_config.numFramesPerInterrupt,
+								aud_drv->arm2sp_config.audMode, 0 );
 	}
 
 	return RESULT_OK;
@@ -1125,149 +1177,23 @@ static Result_t ARM2SP_play_start (AUDIO_DDRIVER_t* aud_drv,
 
 static Result_t ARM2SP_play_resume (AUDIO_DDRIVER_t* aud_drv)
 {
-	UInt16 arg0;	
 	Log_DebugPrintf(LOGID_AUDIO, "Resume ARM2SP voice play instanceID=0x%x \n", aud_drv->arm2sp_config.instanceID);
-	
-	arg0 = ARM2SP_BuildCommandArg0 (aud_drv->sample_rate, 
-									aud_drv->arm2sp_config.playbackMode, 
-									aud_drv->arm2sp_config.mixMode, 
-									aud_drv->arm2sp_config.numFramesPerInterrupt, 
-									aud_drv->arm2sp_config.audMode);
 
 	if (aud_drv->arm2sp_config.instanceID  == VORENDER_ARM2SP_INSTANCE1)
-		VPRIPCMDQ_SetARM2SP( arg0, 1 );
+		csl_arm2sp_set_arm2sp((UInt32) aud_drv->sample_rate, 
+                              (CSL_ARM2SP_PLAYBACK_MODE_t)aud_drv->arm2sp_config.playbackMode, 
+                              (CSL_ARM2SP_VOICE_MIX_MODE_t)aud_drv->arm2sp_config.mixMode, 
+                              aud_drv->arm2sp_config.numFramesPerInterrupt, 
+                              aud_drv->arm2sp_config.audMode, 1 ); 
+
 	else if (aud_drv->arm2sp_config.instanceID  == VORENDER_ARM2SP_INSTANCE2)	
-		VPRIPCMDQ_SetARM2SP2( arg0, 1 );
+		csl_arm2sp_set_arm2sp2((UInt32) aud_drv->sample_rate, 
+                              (CSL_ARM2SP_PLAYBACK_MODE_t)aud_drv->arm2sp_config.playbackMode, 
+                              (CSL_ARM2SP_VOICE_MIX_MODE_t)aud_drv->arm2sp_config.mixMode, 
+                              aud_drv->arm2sp_config.numFramesPerInterrupt, 
+                              aud_drv->arm2sp_config.audMode, 1 ); 
 
 	return RESULT_OK;
-}
-
-// ================================================================================
-// Function Name: ARM2SP_BuildCommandArg0
-//
-//	Description: Build the arg0 for ARM2SP DSP command.
-// ================================================================================
-static UInt16 ARM2SP_BuildCommandArg0 (AUDIO_SAMPLING_RATE_t		samplingRate,
-									   VORENDER_PLAYBACK_MODE_t		playbackMode,
-									   VORENDER_VOICE_MIX_MODE_t	mixMode,
-									   UInt32						numFramesPerInterrupt,
-									   UInt8						audMode
-									   )
-{
-	UInt16 arg0 = 0;
-	
-	/**
-	from shared.h
-		Arg0
-	#define	ARM2SP_DL_ENABLE_MASK	0x0001
-	#define	ARM2SP_UL_ENABLE_MASK	0x0002
-	
-	#define	ARM2SP_TONE_RECODED		0x0008				//bit3=1, record the tone, otherwise record UL and/or DL
-	#define	ARM2SP_UL_MIX			0x0010				//should set MIX or OVERWRITE, otherwise but not both, MIX wins
-	#define	ARM2SP_UL_OVERWRITE		0x0020
-	#define	ARM2SP_UL_BEFORE_PROC	0x0040				//bit6=1, play PCM before UL audio processing; default bit6=0
-	#define	ARM2SP_DL_MIX			0x0100
-	#define	ARM2SP_DL_OVERWRITE		0x0200
-	#define	ARM2SP_DL_AFTER_PROC	0x0400				//bit10=1, play PCM after DL audio processing; default bit10=0
-	#define	ARM2SP_16KHZ_SAMP_RATE  0x8000				//bit15=0 -> 8kHz data, bit15 = 1 -> 16kHz data
-	
-	#define	ARM2SP_FRAME_NUM		0x7000				//8K:1/2/3/4, 16K:1/2; if 0 (or other): 8K:4, 16K:2
-	#define	ARM2SP_FRAME_NUM_BIT_SHIFT	12				//Number of bits to shift to get the frame number
-	#define	ARM2SP_48K				0x0004				//bit2=[0,1]=[not_48K, 48K]
-	#define	ARM2SP_MONO_ST			0x0080				//bit7=[0,1]=[MONO,STEREO] (not used if not 48k)
-	**/
-
-	// samplingRate
-	if (samplingRate == AUDIO_SAMPLING_RATE_16000)
-		arg0 |= ARM2SP_16KHZ_SAMP_RATE;
-
-	if (samplingRate == AUDIO_SAMPLING_RATE_48000)
-		arg0 |= ARM2SP_48K;
-
-	if (audMode)
-		arg0 |= ARM2SP_MONO_ST;
-
-	// set number of frames per interrupt
-	arg0 |= (numFramesPerInterrupt << ARM2SP_FRAME_NUM_BIT_SHIFT);
-
-	// set ul
-	switch (playbackMode)
-	{
-		case VORENDER_PLAYBACK_UL:
-			// set UL_enable
-			arg0 |= ARM2SP_UL_ENABLE_MASK;
-
-			if (mixMode == VORENDER_VOICE_MIX_UL 
-				|| mixMode == VORENDER_VOICE_MIX_BOTH)
-			{
-				// mixing UL
-				arg0 |= ARM2SP_UL_MIX;
-			}
-			else
-			{
-				//overwrite UL
-				arg0 |= ARM2SP_UL_OVERWRITE;
-			}
-			break;
-
-		case VORENDER_PLAYBACK_DL:
-			// set DL_enable
-			arg0 |= ARM2SP_DL_ENABLE_MASK;
-
-			if (mixMode == VORENDER_VOICE_MIX_DL 
-				|| mixMode == VORENDER_VOICE_MIX_BOTH)
-			{
-				// mixing DL
-				arg0 |= ARM2SP_DL_MIX;
-			}
-			else
-			{
-				//overwirte DL
-				arg0 |= ARM2SP_DL_OVERWRITE;
-			}
-			break;
-
-		case VORENDER_PLAYBACK_BOTH:
-			// set UL_enable
-			arg0 |= ARM2SP_UL_ENABLE_MASK;
-
-			// set DL_enable
-			arg0 |= ARM2SP_DL_ENABLE_MASK;
-
-			if (mixMode == VORENDER_VOICE_MIX_UL 
-				|| mixMode == VORENDER_VOICE_MIX_BOTH)
-			{
-				// mixing UL
-				arg0 |= ARM2SP_UL_MIX;
-			}
-			else
-			{
-				// overwirte UL
-				arg0 |= ARM2SP_UL_OVERWRITE;
-			}
-			
-			if (mixMode == VORENDER_VOICE_MIX_DL 
-				|| mixMode == VORENDER_VOICE_MIX_BOTH)
-			{
-				// mixing DL
-				arg0 |= ARM2SP_DL_MIX;
-			}
-			else
-			{
-				// overwirte DL
-				arg0 |= ARM2SP_DL_OVERWRITE;
-			}
-			break;
-
-		case VORENDER_PLAYBACK_NONE:
-			break;
-
-		default:
-			break;
-	}
-
-	return arg0;
-
 }
 
 // ==========================================================================
@@ -1383,6 +1309,16 @@ static Boolean VoIP_StopTelephony(void)
 
     voip_workqueue = NULL;
 	prev_amr_mode = (VP_Mode_AMR_t)0xffff;
+#ifdef VOLTE_SUPPORT
+	djbTimeStamp = 0;
+
+	if (djbBuf)
+	{
+		kfree(djbBuf);
+		djbBuf = NULL;
+	}
+	inVoLTECall = FALSE;
+#endif
 	return TRUE;
 }
 
@@ -1400,7 +1336,7 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
 	
 	pAudDrv = GetPlaybackStreamHandle(stream_id);
 
-    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_RenderDmaCallback::\n");
+    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_RenderDmaCallback:: stream_id = %d\n", stream_id);
 
     if(( pAudDrv== NULL))
     {
@@ -1574,7 +1510,7 @@ void VPU_Capture_Request(UInt16 buf_index)
 		return;
     }
 
-    Log_DebugPrintf(LOGID_AUDIO,"VPU_Capture_Request:: buf_index %d aud_drv->write_index = %d \n",buf_index,aud_drv->write_index);
+    //Log_DebugPrintf(LOGID_AUDIO,"VPU_Capture_Request:: buf_index %d aud_drv->write_index = %d \n",buf_index,aud_drv->write_index);
 
     //Copy the data to the ringbuffer from dsp shared memory
     dest_index = aud_drv->write_index;
@@ -1632,15 +1568,23 @@ void VPU_Capture_Request(UInt16 buf_index)
 //
 //******************************************************************************
 static void VoIP_StartMainAMRDecodeEncode(
-	VP_Mode_AMR_t		decode_amr_mode,	// AMR mode for decoding the next speech frame
+	CSL_VP_Mode_AMR_t	decode_amr_mode,	// AMR mode for decoding the next speech frame
 	UInt8				*pBuf,		// buffer carrying the AMR speech data to be decoded
 	UInt16				length,		// number of bytes of the AMR speech data to be decoded
-	VP_Mode_AMR_t		encode_amr_mode,	// AMR mode for encoding the next speech frame
+	CSL_VP_Mode_AMR_t	encode_amr_mode,	// AMR mode for encoding the next speech frame
 	Boolean				dtx_mode	// Turn DTX on (TRUE) or off (FALSE)
 	)
 {
 	// decode the next downlink AMR speech data from application
-	CSL_WriteDLVoIPData((UInt16)decode_amr_mode, (UInt16 *)pBuf);
+#ifdef VOLTE_SUPPORT
+	if (inVoLTECall)
+	{
+		encode_amr_mode |= VOLTECALLENABLE;
+		VoLTE_WriteDLData((UInt16)decode_amr_mode, (UInt16 *)pBuf);
+	}
+	else
+#endif
+		CSL_WriteDLVoIPData((UInt16)decode_amr_mode, (UInt16 *)pBuf);
 
 	// signal DSP to start AMR decoding and encoding
 	
@@ -1691,7 +1635,7 @@ static Boolean VOIP_DumpUL_CB(
 
     AUDIO_DDRIVER_t* aud_drv;
 	UInt8 index = 0;
-	VOIP_Buffer_t *voipBufPtr = NULL;
+	CSL_VOIP_Buffer_t *voipBufPtr = NULL;
 	UInt16 codecType;
 	UInt32 ulSize = 0;
 	
@@ -1701,7 +1645,7 @@ static Boolean VOIP_DumpUL_CB(
         Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB:: Spurious call back\n");
         return TRUE;
     }
-	voipBufPtr = (VOIP_Buffer_t *)pSrc;
+	voipBufPtr = (CSL_VOIP_Buffer_t *)pSrc;
 	codecType = voipBufPtr->voip_vocoder;
 	index = (codecType & 0xf000) >> 12;
 	if (index >= 7)
@@ -1736,11 +1680,67 @@ static Boolean VOIP_FillDL_CB( UInt32 nFrames)
         Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB:: Spurious call back\n");
         return TRUE;
     }
-	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
 	dlSize = sVoIPDataLen[(aud_drv->voip_config.codec_type & 0xf000) >> 12];
+	memset(aud_drv->tmp_buffer,0,VOIP_MAX_FRAME_LEN);
+	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
 	//Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->voip_config.codec_type, dlSize);
-	aud_drv->voip_config.pVoipDLCallback(aud_drv->voip_config.pVoIPCBPrivate, (UInt8 *)&aud_drv->tmp_buffer[2], (dlSize - 2)); // 2 bytes for codec type
-	VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)aud_drv->voip_config.codec_type, aud_drv->tmp_buffer, dlSize, (VP_Mode_AMR_t)aud_drv->voip_config.codec_type, FALSE);
+	aud_drv->voip_config.pVoipDLCallback(aud_drv->voip_config.pVoIPCBPrivate, (UInt8 *)&aud_drv->tmp_buffer[1], (dlSize - 2)); // 2 bytes for codec type
+	VoIP_StartMainAMRDecodeEncode((CSL_VP_Mode_AMR_t)aud_drv->voip_config.codec_type, (UInt8 *)aud_drv->tmp_buffer, dlSize, (CSL_VP_Mode_AMR_t)aud_drv->voip_config.codec_type, FALSE);
 	return TRUE;
 };
 
+#ifdef VOLTE_SUPPORT
+//============================================================================
+//
+// Function Name: VoLTE_WriteDLData
+//
+// Description:   Pass VoLTE DL Data to DSP
+//
+//============================================================================
+static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf)
+{
+	Boolean isAMRWB = FALSE;
+	VOIP_Buffer_t *dlBuf = (VOIP_Buffer_t *)pBuf;
+	UInt16 *dataPtr = pBuf;
+
+	if (djbBuf == NULL)
+	{
+		Log_DebugPrintf(LOGID_AUDIO, "VoLTE_WriteDLData, missing VoLTE init ...\n");
+		return FALSE;
+	}
+
+	memset(djbBuf,0,sizeof(DJB_InputFrame));
+	if (decode_mode >= VOIP_AMR475 && decode_mode < VOIP_G711_U)
+		isAMRWB = FALSE;
+	else if (decode_mode >= VOIP_AMR_WB_MODE_7k && decode_mode <= VOIP_AMR_WB_MODE_24k)
+		isAMRWB = TRUE;
+	else
+	{
+		Log_DebugPrintf(LOGID_AUDIO, "VoLTE_WriteDLData, unsupported codec type.\n");
+		return FALSE;
+	}
+	
+	djbTimeStamp += (isAMRWB)? VOLTEWBSTAMPSTEP : VOLTENBSTAMPSTEP;
+	djbBuf->RTPTimestamp = djbTimeStamp;
+	dataPtr += 3; // Move to data starting address
+	djbBuf->pFramePayload = (UInt8 *)dataPtr;
+	djbBuf->payloadSize = (UInt16) ((isAMRWB)? (AMR_WB_FRAME_SIZE<<1) : (AMR_FRAME_SIZE<<1)); // In bytes
+	djbBuf->frameIndex = 0;
+	djbBuf->codecType = (UInt8) ((isAMRWB)? WB_AMR : NB_AMR);
+	if (isAMRWB)
+	{
+		djbBuf->frameType = (UInt8) ((dlBuf->voip_frame).frame_amr_wb.frame_type);
+	}
+	else
+	{
+		djbBuf->frameType = (UInt8) ((dlBuf->voip_frame).frame_amr[0]);
+	}
+	// For silence frame, set quality to 0, otherwise 1
+	djbBuf->frameQuality = (djbBuf->frameType & 0x000f)? VOLTEFRAMESILENT : VOLTEFRAMEGOOD;
+
+//	Log_DebugPrintf(LOGID_AUDIO, "VoLTE_WriteDLData, TimeStamp=%d, payloadSize=%d,codecType=%d, quality=%d \n",
+//					djbBuf->RTPTimestamp, djbBuf->payloadSize,  djbBuf->codecType, djbBuf->frameQuality);
+	DJB_PutFrame(djbBuf);
+	return TRUE;
+}
+#endif

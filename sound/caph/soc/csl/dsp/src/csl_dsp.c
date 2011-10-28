@@ -1,54 +1,27 @@
-//*********************************************************************
-//
-//	Copyright © 2000-2010 Broadcom Corporation
-//
-//	This program is the proprietary software of Broadcom Corporation
-//	and/or its licensors, and may only be used, duplicated, modified
-//	or distributed pursuant to the terms and conditions of a separate,
-//	written license agreement executed between you and Broadcom (an
-//	"Authorized License").  Except as set forth in an Authorized
-//	License, Broadcom grants no license (express or implied), right
-//	to use, or waiver of any kind with respect to the Software, and
-//	Broadcom expressly reserves all rights in and to the Software and
-//	all intellectual property rights therein.  IF YOU HAVE NO
-//	AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE
-//	IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE
-//	ALL USE OF THE SOFTWARE.
-//
-//	Except as expressly set forth in the Authorized License,
-//
-//	1.	This program, including its structure, sequence and
-//		organization, constitutes the valuable trade secrets
-//		of Broadcom, and you shall use all reasonable efforts
-//		to protect the confidentiality thereof, and to use
-//		this information only in connection with your use
-//		of Broadcom integrated circuit products.
-//
-//	2.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE
-//		IS PROVIDED "AS IS" AND WITH ALL FAULTS AND BROADCOM
-//		MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES,
-//		EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE,
-//		WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY
-//		DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE,
-//		MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A
-//		PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR
-//		COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR
-//		CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE
-//		RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
-//
-//	3.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT
-//		SHALL BROADCOM OR ITS LICENSORS BE LIABLE FOR
-//		(i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR
-//		EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY
-//		WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE
-//		SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE
-//		POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN
-//		EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE
-//		ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE
-//		LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE
-//		OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-//
-//***************************************************************************
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 /**
 *
 *   @file   csl_dsp.c
@@ -57,7 +30,6 @@
 *
 ****************************************************************************/
 #include <string.h>
-#include "assert.h"
 #include "mobcom_types.h"
 #include "log.h"
 #include "shared.h"
@@ -65,7 +37,6 @@
 #include "osdw_dsp_drv.h"
 #include "csl_arm2sp.h"
 #include "csl_vpu.h"
-
 
 AP_SharedMem_t	*vp_shared_mem;
 
@@ -77,11 +48,10 @@ static ARM2SPRenderStatusCB_t ARM2SPRenderStatusHandler = NULL;
 static ARM2SP2RenderStatusCB_t ARM2SP2RenderStatusHandler = NULL;
 static MainAMRStatusCB_t MainAMRStatusHandler = NULL;
 static VoIPStatusCB_t VoIPStatusHandler = NULL;
-#if defined(ENABLE_SPKPROT)
-static UserStatusCB_t UserStatusHandler = NULL;
-#endif
 static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
-
+static AudioEnableDoneStatusCB_t AudioEnableDoneHandler = NULL;
+void VPSHAREDMEM_PostCmdQ(VPCmdQ_t *cmd_msg);
+extern void sp_StatusUpdate(void);
 
 //*********************************************************************
 /**
@@ -91,11 +61,11 @@ static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 *   @param    dsp_shared_mem (in)	AP shared memory address 
 * 
 **********************************************************************/
-void VPSHAREDMEM_Init(UInt32 dsp_shared_mem)
+void VPSHAREDMEM_Init(UInt32 *dsp_shared_mem)
 {
 	vp_shared_mem = (AP_SharedMem_t*) dsp_shared_mem;
 	
-	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", dsp_shared_mem);
+	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", (UInt32)dsp_shared_mem);
 
 	/* Clear out shared memory */
 	memset(vp_shared_mem, 0, sizeof(AP_SharedMem_t));
@@ -167,7 +137,7 @@ static Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 	UInt8	status_out = vp_shared_mem->vp_shared_statusq_out;
 	UInt8	status_in = vp_shared_mem->vp_shared_statusq_in;
 
-	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
+//	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
 	if ( status_out == status_in )
 	{
 		return FALSE;
@@ -180,7 +150,7 @@ static Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 		status_msg->arg1 = (UInt16)p->arg1;
 		status_msg->arg2 = (UInt16)p->arg2;
 		status_msg->arg3 = (UInt16)p->arg3;
-		Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
+		//Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
 
 		vp_shared_mem->vp_shared_statusq_out = ( status_out + 1 ) % VP_STATUSQ_SIZE;
 
@@ -306,21 +276,6 @@ void CSL_RegisterVoIPStatusHandler(VoIPStatusCB_t callbackFunction)
 
 }
 
-#if defined(ENABLE_SPKPROT)
-//*********************************************************************
-/**
-*
-*   CSL_RegisterAudioLogHandler registers user status handler.
-*
-*   @param    callbackFunction	(in)	callback function to register 
-* 
-**********************************************************************/
-void CSL_RegisterUserStatusHandler(UserStatusCB_t callbackFunction)
-{
-	UserStatusHandler = callbackFunction;
-
-}
-#endif
 
 //*********************************************************************
 /**
@@ -333,6 +288,21 @@ void CSL_RegisterUserStatusHandler(UserStatusCB_t callbackFunction)
 void CSL_RegisterAudioLogHandler(AudioLogStatusCB_t callbackFunction)
 {
 	AudioLogStatusHandler = callbackFunction;
+
+}
+
+//*********************************************************************
+/**
+*
+*   CSL_RegisterAudioEnableDoneHandler registers audio enable done 
+*   status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t callbackFunction)
+{
+	AudioEnableDoneHandler = callbackFunction;
 
 }
 
@@ -458,20 +428,13 @@ void AP_ProcessStatus(void)
 				break;
 			}
 
-#if defined(ENABLE_SPKPROT)
 			case VP_STATUS_SP:
 			{
-				if(UserStatusHandler != NULL)
-				{
-					UserStatusHandler((UInt32)status_msg.arg0, (UInt32)status_msg.arg1, (UInt32)status_msg.arg2);
-				}
-				else
-				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: UserStatusHandler is not registered");
-				}
+				sp_StatusUpdate();
+				
 				break;
+
 			}
-#endif
 
 			case VP_STATUS_AUDIO_STREAM_DATA_READY:
 			{
@@ -482,6 +445,19 @@ void AP_ProcessStatus(void)
 				else
 				{
 					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: AudioLogStatusHandler is not registered");
+				}
+				break;		
+			}
+
+			case VP_STATUS_AUDIO_ENABLE_DONE:
+			{
+				if(AudioEnableDoneHandler != NULL)
+				{
+					AudioEnableDoneHandler(status_msg.arg0);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: AudioEnableDoneHandler is not registered");
 				}
 				break;		
 			}

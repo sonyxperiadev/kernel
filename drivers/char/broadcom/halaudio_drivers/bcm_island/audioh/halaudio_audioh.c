@@ -4315,7 +4315,7 @@ static int audioh_probe( struct platform_device *pdev )
    HALAUDIO_AUDIOH_PLATFORM_INFO *info;
 
    gAudiohClk.audioh_156m = clk_get( &pdev->dev, "audioh_156m_clk" );
-   gAudiohClk.audioh_26m = clk_get( &pdev->dev, "audioh_26m_clk" );
+   gAudiohClk.audioh_26m = clk_get( &pdev->dev, "audioh_26m" );
    gAudiohClk.audioh_2p4m = clk_get( &pdev->dev, "audioh_2p4m_clk" );
    gAudiohClk.audioh_apb = clk_get( &pdev->dev, "audioh_apb_clk" );
 
