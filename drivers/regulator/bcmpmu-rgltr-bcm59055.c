@@ -58,10 +58,10 @@ u32 bcm59055_sr_v_table[] = {
 	1320000,
 	1340000,
 	1800000,  /*0x1b*/
-    1200000,
-    1200000,
-    1200000,
-    1200000,  /*0x1f*/
+	1200000,
+	1200000,
+	1200000,
+	1200000,  /*0x1f*/
 };
 
 struct regulator_desc bcm59055_desc[BCMPMU_REGULATOR_MAX] = {
@@ -145,6 +145,14 @@ struct regulator_desc bcm59055_desc[BCMPMU_REGULATOR_MAX] = {
 		.type = REGULATOR_VOLTAGE,
 		.owner = THIS_MODULE,
 	},
+	[BCMPMU_REGULATOR_SIM2LDO] = {
+		.name ="sim2ldo",
+		.id = BCMPMU_REGULATOR_SIM2LDO,
+		.n_voltages = ARRAY_SIZE(bcm59055_ldo_v_table),
+		.ops = &bcmpmuldo_ops,
+		.type = REGULATOR_VOLTAGE,
+		.owner = THIS_MODULE,
+	},	
 	[BCMPMU_REGULATOR_CSR] = {
 		.name ="csr",
 		.id = BCMPMU_REGULATOR_CSR,
@@ -352,6 +360,24 @@ struct bcmpmu_reg_info bcm59055_register_info[BCMPMU_REGULATOR_MAX] = {
 		.mode_mask = 0xFF,
 		.ldo_or_sr = BCMPMU_LDO,
 	},
+	[BCMPMU_REGULATOR_SIM2LDO] = {
+		.reg_addr = PMU_REG_SIMOPMODCTRL,
+		.reg_addr_volt = PMU_REG_SIMLDOCTRL,
+		.reg_addr_volt_l = PMU_REG_SIMLDOCTRL,
+		.reg_addr_volt_t = PMU_REG_SIMLDOCTRL,
+		.en_dis_mask = 0x3,
+		.vout_mask = 0x7,
+		.vout_shift = 0,
+		.vout_mask_l = 0x7,
+		.vout_shift_l = 0,
+		.vout_mask_t = 0x7,
+		.vout_shift_t = 0,
+		.v_table = bcm59055_ldo_v_table,
+		.num_voltages = ARRAY_SIZE(bcm59055_ldo_v_table),
+		.mode = LDO_STANDBY,
+		.mode_mask = 0xFF,
+		.ldo_or_sr = BCMPMU_LDO,
+	},	
 	[BCMPMU_REGULATOR_CSR] = {
 		.reg_addr = PMU_REG_CSROPMODCTRL,
 		.reg_addr_volt = PMU_REG_CSRCTRL1,
@@ -408,11 +434,11 @@ struct bcmpmu_reg_info bcm59055_register_info[BCMPMU_REGULATOR_MAX] = {
 	},
 };
 
-const struct regulator_desc *bcmpmu_rgltr_desc(void)
+struct regulator_desc *bcmpmu_rgltr_desc(void)
 {
 	return bcm59055_desc;
 }
-const struct bcmpmu_reg_info *bcmpmu_rgltr_info(void)
+struct bcmpmu_reg_info *bcmpmu_rgltr_info(void)
 {
 	return bcm59055_register_info;
 }

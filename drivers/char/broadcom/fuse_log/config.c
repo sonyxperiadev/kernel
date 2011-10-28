@@ -34,11 +34,12 @@ static struct proc_dir_entry *g_proc_dir_entry = NULL ;	///< procfs file
 static void SetConfigDefaults( void )
 {
 	g_config.ap_crashlog_dev  = BCMLOG_OUTDEV_NONE ;
-	g_config.cp_crashlog_dev  = BCMLOG_OUTDEV_SDCARD ;
 #ifdef CONFIG_STM_DEFAULT
 	g_config.runlog_dev       = BCMLOG_OUTDEV_STM ;	        // run-time log to STM
+	g_config.cp_crashlog_dev  = BCMLOG_OUTDEV_STM ;
 #else
 	g_config.runlog_dev       = BCMLOG_OUTDEV_RNDIS ;	// run-time log to RNDIS/MTT
+	g_config.cp_crashlog_dev  = BCMLOG_OUTDEV_SDCARD ;
 #endif
 }
 

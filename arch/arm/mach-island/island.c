@@ -28,6 +28,7 @@
 #include <linux/cpumask.h>
 #include <linux/syscalls.h>
 #include <linux/mfd/bcm590xx/core.h>
+#include <linux/mfd/bcmpmu.h>
 
 #include <asm/io.h>
 #include <asm/mach/map.h>
@@ -45,6 +46,10 @@ static void island_poweroff(void)
 {
 #ifdef CONFIG_MFD_BCM_PMU590XX
 	bcm590xx_shutdown();
+#endif
+
+#ifdef CONFIG_MFD_BCMPMU
+        bcmpmu_client_power_off();
 #endif
 
 	while(1)

@@ -13,6 +13,8 @@
 #include <linux/font.h>
 #include <linux/smp.h>
 #include <linux/init.h>
+#include <linux/proc_fs.h>
+#include <asm/uaccess.h>
 
 #include <linux/fb_fps.h>
 
@@ -185,6 +187,46 @@ static void fb_fps_str_to_img( struct fb_fps_info *fps_info, const char *src, un
 
 }
 
+static int
+proc_read_fb_fps(char *buf, char **start, off_t offset,
+		       int len, int *eof, void *data)
+{
+	int *val = (int *)data;
+	len = sprintf(buf, "FPS will be recalulated after every %d frames", *val);
+	return len;
+}
+
+static int
+proc_write_fb_fps(struct file *file, const char __user *buffer,
+			unsigned long count, void *data)
+{
+	int len;
+	int *val = (int *)data;
+	char value[20];
+	int no_of_frames;
+
+	if (count > 19)
+		len = 19;
+	else
+		len = count;
+
+	if (copy_from_user(value, buffer, len))
+		return -EFAULT;
+
+	 value[len] = '\0';
+
+	 no_of_frames = simple_strtol(value, NULL, 10);
+
+	 if (no_of_frames > 0) {
+		 printk(KERN_INFO "%s: FPS will be recalulated after every %d frames\n", __func__, no_of_frames);
+		 *val = no_of_frames;
+	 }
+	 else
+		 printk(KERN_ERR "%s:wrong value passed. value cannot be %s\n", __func__, value);
+
+	 return len;
+}
+
 struct fb_fps_info * fb_fps_register(struct fb_info *info)
 {
 	struct fb_fps_info *fps_info;
@@ -212,6 +254,22 @@ struct fb_fps_info * fb_fps_register(struct fb_info *info)
 	fps_info->fb = info;
 	fps_info->interval_start_time = jiffies;
 	fps_info->frame_count = 0;
+	fps_info->frame_calc_interval = FPS_CALC_INTERVAL;
+
+	fps_info->proc_entry = create_proc_entry("fb_fps", 0666, NULL);
+
+	if (NULL == fps_info->proc_entry)
+		printk(KERN_ERR "%s: could not create proc entry."
+				"FPS will be calculated after every %d frames\n", __func__, FPS_CALC_INTERVAL);
+	else {
+		/* well we could take a lock to protect frame_calc_interval.Since its
+		 * used after every 5 frames we can avoid locking and max the
+		 * calculations can go wrong for 5 frames */
+		fps_info->proc_entry->data = &(fps_info->frame_calc_interval);
+		fps_info->proc_entry->read_proc = proc_read_fb_fps;
+		fps_info->proc_entry->write_proc = proc_write_fb_fps;
+	}
+
 	fb_fps_str_to_img(fps_info, default_str, strlen(default_str), 0, 0); 
 	return fps_info;
 err:
@@ -223,6 +281,7 @@ void fb_fps_unregister(struct fb_fps_info *fps_info)
 {
 	if( NULL == fps_info)
 		goto out;
+	remove_proc_entry("fb_fps", NULL);
 	kfree(fps_info);
 out:
 	return;
@@ -249,12 +308,12 @@ void fb_fps_display(struct fb_fps_info *fps_info, void *dst, int x, int y, int d
 	}
 
 	
-	if (fps_info->frame_count == FPS_CALC_INTERVAL || disp_now) {
+	if (fps_info->frame_count >= fps_info->frame_calc_interval || disp_now) {
 		
 		tms = jiffies_to_msecs(curr_time - fps_info->interval_start_time);
 		if (tms != 0) {
-			fps_quotient = (FPS_CALC_INTERVAL * 1000)/tms;
-			fps_decimal  = ( ( (FPS_CALC_INTERVAL * 1000)%tms ) * 100 ) /tms;
+			fps_quotient = (fps_info->frame_calc_interval * 1000)/tms;
+			fps_decimal  = ( ( (fps_info->frame_calc_interval * 1000)%tms ) * 100 ) /tms;
 			snprintf(print_str, FPS_STR_LEN, "%d.%d", fps_quotient, fps_decimal);
 		} else {
 			snprintf(print_str, FPS_STR_LEN, "*.*");

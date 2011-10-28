@@ -56,7 +56,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "xdr_porting_layer.h"
 #include "xdr.h"
 
-#include "rpc_global.h"
 #include "at_types.h"
 #include "at_rpc.h"
 
@@ -201,11 +200,17 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
 
     ATC_KERNEL_TRACE(( "ATC_KERNEL_Open\n") ) ;
 
+    if (!is_CP_running())
+    {
+       ATC_KERNEL_TRACE(( "ATC_KERNEL_Open: Error - CP is not running\n") ) ;
+       return -1;
+    }
+	
     priv = kmalloc(sizeof(ATC_KERNEL_PrivData_t), GFP_KERNEL);
     
     if (!priv) 
     {
-        ATC_KERNEL_TRACE(( "ENOMEM\n") ) ;
+        ATC_KERNEL_TRACE(( "ATC_KERNEL_Open: Error ENOMEM\n") ) ;
         return -ENOMEM;
     }
 
@@ -245,17 +250,13 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
         ATC_KERNEL_TRACE2(( "**regulator already open\n") ) ;
     }
 #else
-    if (is_CP_running() && !sysrpc_initialized)
+    if (!sysrpc_initialized)
     {
-	sysrpc_initialized = 1; 
+		sysrpc_initialized = 1; 
         KRIL_SysRpc_Init( ) ;
         ATC_ATRPCInit();
     }
-    else
-    {
-       ATC_KERNEL_TRACE(( "ATC_KERNEL_Open: Error - CP is not running\n") ) ;
-       return -1;
-    }
+
 #endif
 
     return 0;
@@ -700,7 +701,7 @@ static void ATC_AddRespToQueue(UInt8 chan, UInt32 msgId, void* atResp, UInt32 at
 
     if( atResp == NULL )
     {
-        assert(0);
+        panic("NULL AT Resp");
         return;
     }
 

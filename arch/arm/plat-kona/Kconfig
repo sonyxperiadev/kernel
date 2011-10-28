@@ -13,13 +13,9 @@ config ARCH_ISLAND
 
 config ARCH_RHEA
 	bool "BROADCOM Rhea SoC"
+	select HAVE_PWM
 	help
 	  Support for the Broadcom Rhea SoC platform.
-
-config ARCH_SAMOA
-	bool "BROADCOM Samoa SoC"
-	help
-	  Support for the Broadcom Samoa SoC platform.
 
 config ARCH_HANA
         bool "BROADCOM Hana SoC"
@@ -36,13 +32,13 @@ config KONA_POWER
 
 config GP_TIMER_CLOCK_OFF_FIX
 	bool "Enable the fix for general purpose timer clock off issue."
-	depends on ARCH_RHEA || ARCH_SAMOA
+	depends on ARCH_RHEA
 	help
 	  Say Y if you want to enable the general purpose timer clock off fix
 
 config GP_TIMER_COMPARATOR_LOAD_DELAY
         bool "Enable the delay after loading general purpose timer compare register"
-        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_SAMOA || ARCH_HANA
+        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_HANA
         default y
 
 config KONA_DCACHE_INVALIDATION
@@ -101,30 +97,21 @@ config BCM_RAM_START_RESERVED_SIZE
 	 Reserve memory at the start of RAM. This memory
 	 may be used for LCD frame buffer, DSP, modem, etc.
 
-config BCM_IPC_OFFSET
-	hex "IPC RAM offset address"
-	default 0x01E00000
-	help
-	  Set the physical offset address of IPC RAM.
-	  Default address needs to be set here and
-	  the offset may be changed by configuration
-	  Make sure that you have correct IPC area between
-	  CP and AP to communicate through the IPC shared RAM.
-
 config KONA_CPU_PM_HANDLER
 	bool "Enable Kona platform PM (idle/suspend) handler."
-	depends on CPU_IDLE || SUSPEND
+	depends on KONA_POWER_MGR && (CPU_IDLE || SUSPEND)
 	help
 	  Say Y if you want to Enable Kona platform PM (idle/suspend) default handlers.
 
 config KONA_CPU_FREQ_DRV
        bool "Enable CPU frequency scaling for kona chips"
-       depends on CPU_FREQ
+       depends on KONA_POWER_MGR && CPU_FREQ
        help
 	Say Y if you want to enable generic Kona cpu-freq driver for Kona platforms
 
 config KONA_POWER_MGR
        bool "Enable Kona power manager driver"
+       select KONA_PI_MGR
        help
 	Say Y if you want to enable Kona power manager driver
 
@@ -149,6 +136,12 @@ config KONA_ATAG_DT
        default n
        help
          Say Y if you want to enable ATAG-based DeviceTree
+
+config KONA_ATAG_DT_DTS_FILE
+       string "DTS file name"
+       depends on KONA_ATAG_DT
+       help
+         DeviceTree source file name
 
 config KONA_WFI_WORKAROUND
        bool "Prevent both cores from doing cpu_do_idle calls when VCHIQ bulk transfers pending"

@@ -10,12 +10,12 @@ menuconfig BRCM_CHAR_DRIVERS
 
 config V3D
 	tristate "V3D Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
 	default n
 
 config VCE
 	tristate "VCE Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
 	default n
 
 config BRCM_FUSE_LOG
@@ -32,12 +32,12 @@ config STM_DEFAULT
     
 config ISP
 	tristate "ISP Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
 	default n   
 
 config UNICAM
 	tristate "UNICAM Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
 	default n 	
 
 config BCM_AAA

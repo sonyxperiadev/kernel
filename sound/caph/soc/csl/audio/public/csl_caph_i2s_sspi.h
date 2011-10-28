@@ -31,6 +31,12 @@ extern "C" {
  * @{
  */
  
+ //According to PCM/I2S SSP CSL design, the transfer size for pcm and i2s should be 
+//defined as following.  If the size is less then the following value, the transferring
+//will be one-time shot. Otherwise it will be transferred continuously.
+#define CSL_I2S_SSP_TSIZE   4096
+
+
 /**
 * typedefs from cHal SSPI
 ******************************************************************************/

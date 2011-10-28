@@ -21,6 +21,7 @@
 #include <linux/kernel.h>
 #include <linux/dma-mapping.h>
 #include <linux/io.h>
+#include <linux/clk.h>
 #include <asm/cacheflush.h>
 #include <plat/mobcom_types.h>
 #include <mach/hardware.h>
@@ -65,6 +66,7 @@ struct brcm_spum_device {
 	ulong                   flags;
 	struct crypto_queue     queue;
 	struct ahash_request	*req;
+	struct clk		*spum_open_clk;
 	struct tasklet_struct	queue_task;
 };
 
@@ -395,6 +397,7 @@ static int spum_hash_handle_queue(struct brcm_spum_device *dd,
 	dd->req = req;
 	rctx = ahash_request_ctx(req);
 
+	clk_enable(dd->spum_open_clk);
 	spum_init_device(dd->io_apb_base, dd->io_axi_base);
 	spum_set_pkt_length(dd->io_axi_base, rctx->rx_len, rctx->tx_len);
 	/* Don't want to pop digest and status words from out FIFO. finish() routine will do that. */
@@ -614,6 +617,7 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 	}
 
 	clear_bit(FLAGS_BUSY, &dd->flags);
+	clk_disable(dd->spum_open_clk);
 
 	pr_debug("%s: exit\n",__func__);
 }
@@ -1053,6 +1057,14 @@ static int __devinit brcm_spum_probe(struct platform_device *pdev)
 	dd->dev = &pdev->dev;
 	platform_set_drvdata(pdev, dd);
 
+	/* Initializing the clock. */
+	dd->spum_open_clk = clk_get(NULL, "spum_open");
+	if (!dd->spum_open_clk) {
+		pr_err("%s: Clock intialization failed.\n",__func__);
+		kfree(dd);
+		return -ENOMEM;
+	}
+
 	page = (u32 *)__get_free_page(GFP_KERNEL);
 	dd->dma_addr = dma_map_single(dd->dev, page, PAGE_SIZE,
 					DMA_FROM_DEVICE);
@@ -1098,7 +1110,9 @@ static int __devinit brcm_spum_probe(struct platform_device *pdev)
 	crypto_init_queue(&dd->queue, SPUM_HASH_QUEUE_LENGTH);
 
 	/* Initialize SPU-M block */
+	clk_enable(dd->spum_open_clk);
 	spum_init_device(dd->io_apb_base, dd->io_axi_base);
+	clk_disable(dd->spum_open_clk);
 
 	ret = spum_dma_setup(dd);
 
@@ -1160,6 +1174,7 @@ static int __devexit brcm_spum_remove(struct platform_device *pdev)
 
 	dma_unmap_single(dd->dev, dd->dma_addr, PAGE_SIZE, DMA_FROM_DEVICE);
 	free_page((unsigned long)dd->dma_virt);
+	clk_put(dd->spum_open_clk);
 	kfree(dd);
 
 	return 0;

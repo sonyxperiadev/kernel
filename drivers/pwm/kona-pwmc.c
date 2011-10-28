@@ -196,10 +196,10 @@ static void kona_pwmc_config_polarity(struct kona_pwmc *ap, int chan,
     struct pwm_device *p = ap->p[chan];
 
     if ( c->polarity )
-        kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_polarity_shift,0) ;
-    else
         kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_polarity_shift,1) ;
-
+    else
+        kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_polarity_shift,0) ;
+  
     p->polarity = c->polarity ? 1 : 0;
 }
 
@@ -270,15 +270,16 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
 {
     struct kona_pwmc *ap = pwm_get_drvdata(p);
     int chan = kona_get_chan(ap, p);
-    int ret;
+    int ret = 0;
 
+    clk_enable(ap->clk);
     if (test_bit(PWM_CONFIG_POLARITY, &c->config_mask))
         kona_pwmc_config_polarity(ap, chan, c);
 
     if (test_bit(PWM_CONFIG_PERIOD_TICKS, &c->config_mask)) {
         ret = kona_pwmc_config_period_ticks(ap, chan, c);
         if (ret)
-            return ret;
+            goto out; 
 
         if (!test_bit(PWM_CONFIG_DUTY_TICKS, &c->config_mask)) {
             struct pwm_config d = {
@@ -302,6 +303,7 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
         kona_pwmc_config_duty_ticks(ap, chan, &d);
         kona_pwmc_start(ap, chan);
     }
+
     if (test_bit(PWM_CONFIG_STOP, &c->config_mask))
     {
         struct pwm_config d = {
@@ -314,7 +316,9 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
         kona_pwmc_start(ap, chan);
     }
 
-    return 0;
+out:
+    clk_disable(ap->clk);
+    return ret;
 }
 
 static int kona_pwmc_request(struct pwm_device *p)
@@ -372,6 +376,7 @@ static int __devinit kona_pwmc_probe(struct platform_device *pdev)
         if (IS_ERR_OR_NULL(ap->p[chan]))
             goto err_pwm_register;
         pwm_set_drvdata(ap->p[chan], ap);
+    	kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].smooth_type_shift,1) ;
     }
 
     printk(KERN_INFO "PWM: driver initialized properly");

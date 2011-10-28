@@ -54,7 +54,7 @@ unsigned int bcm_map_virt_to_phys(void *virt_addr)
    //Note: since shared-mem is io-mem, these kernel call to map virt to phys does not work
    //return((unsigned int)virt_to_phys(virt_addr));
 
-   IPC_DEBUG(DBG_ERROR, "%s: should not be used on this address\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "should not be used on this address\n");
    return(0);
 }
 
@@ -66,7 +66,7 @@ void *bcm_map_phys_to_virt(unsigned int physical_addr)
    //Note: since shared-mem is io-mem, these kernel call to map phys to virt does not work
    //return((void *)phys_to_virt((unsigned long)physical_addr));
 
-   IPC_DEBUG(DBG_ERROR, "%s: should not be used on this address\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "should not be used on this address\n");
    return(NULL);
 }
 

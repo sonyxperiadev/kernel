@@ -145,15 +145,16 @@ void ProcessCPCrashedDump(struct work_struct *work)
     // is some indication of CP crash in console (in case user not running MTT)
     Dump = (void*)SmLocalControl.SmControl->CrashDump;
 
-    IPC_DEBUG(DBG_ERROR, "[ipc]: IPCCrash: ProcessCPCrashedDump: ioremap_nocache\n");
+	IPC_DEBUG(DBG_ERROR, "ioremap_nocache\n");
     DumpVAddr = ioremap_nocache((UInt32)Dump,  sizeof(T_CRASH_SUMMARY));
     if(NULL == DumpVAddr)
     {
-        IPC_DEBUG(DBG_ERROR, "[ipc]: IPCCrash: VirtualAlloc failed\n");
+	IPC_DEBUG(DBG_ERROR, "VirtualAlloc failed\n");
         goto cleanUp;    
     }
     
-    IPC_DEBUG(DBG_ERROR, "[ipc]: IPCCrash: Crash Summary Virtual Addr: 0x%08X\n",(unsigned int)DumpVAddr);
+	IPC_DEBUG(DBG_ERROR, "Crash Summary Virtual Addr: 0x%08X\n",
+		(unsigned int)DumpVAddr);
     
     dumped_crash_summary_ptr = (T_CRASH_SUMMARY *)DumpVAddr;
     
@@ -162,31 +163,31 @@ void ProcessCPCrashedDump(struct work_struct *work)
     if(dumped_crash_summary_ptr->link_signature)
     { 
         GetStringFromPA((UInt32)dumped_crash_summary_ptr->link_signature, outString, 128);
-        IPC_DEBUG(DBG_ERROR,"%s\r\n", outString);
+	IPC_DEBUG(DBG_ERROR, "%s\r\n", outString);
     }   
     
     if(dumped_crash_summary_ptr->project_version) 
     {
         GetStringFromPA((UInt32)dumped_crash_summary_ptr->project_version, outString, 128);
-        IPC_DEBUG(DBG_ERROR,"%s\r\n", outString);
+	IPC_DEBUG(DBG_ERROR, "%s\r\n", outString);
     } 
 
     if(dumped_crash_summary_ptr->DSP_version) 
     {
         GetStringFromPA((UInt32)dumped_crash_summary_ptr->DSP_version, outString, 128);  
-        IPC_DEBUG(DBG_ERROR,"%s\r\n", outString);
+	IPC_DEBUG(DBG_ERROR, "%s\r\n", outString);
     }
 
     if(dumped_crash_summary_ptr->FW_version) 
     {
         GetStringFromPA((UInt32)dumped_crash_summary_ptr->FW_version, outString, 128);
-        IPC_DEBUG(DBG_ERROR,"%s\r\n", outString);
+	IPC_DEBUG(DBG_ERROR, "%s\r\n", outString);
     }
 
     if(dumped_crash_summary_ptr->decoder_version) 
     {
         GetStringFromPA((UInt32)dumped_crash_summary_ptr->decoder_version, outString, 128);
-        IPC_DEBUG(DBG_ERROR,"%s\r\n", outString);
+	IPC_DEBUG(DBG_ERROR, "%s\r\n", outString);
     }
     
     GetStringFromPA((UInt32)dumped_crash_summary_ptr->reason, crashReason, 40);  
@@ -195,7 +196,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
        
     GetStringFromPA((UInt32)dumped_crash_summary_ptr->thread, crashThread, 40);
             
-    IPC_DEBUG(DBG_ERROR,"%s f=%s l=%d v=%d/0x%x t=%s TS=%d\r\n",
+	IPC_DEBUG(DBG_ERROR, "%s f=%s l=%d v=%d/0x%x t=%s TS=%d\r\n",
         crashReason,
         crashFile,
         dumped_crash_summary_ptr->line,
@@ -235,7 +236,7 @@ int IpcCPCrashCheck(void)
         
     if(!SmLocalControl.ConfiguredReported)
     {
-        IPC_DEBUG(DBG_INFO, "[ipc]: IpcCPCrashCheck: IPC Not Initialised\n");
+	IPC_DEBUG(DBG_TRACE, "IPC Not Initialised\n");
         return 0;
     }
          
@@ -246,8 +247,9 @@ int IpcCPCrashCheck(void)
     if(IPC_CP_NOT_CRASHED != CpCrashReason && IPC_CP_MAX_CRASH_CODE > CpCrashReason && NULL!= Dump)
     {
         crashCount++; 
-        IPC_DEBUG(DBG_ERROR,"[ipc]: IPCCrash: CP Crashed!! CP Ticks[%ld] reason:%d count:%d Dump:0x%X \n",
-            TIMER_GetValue(), CpCrashReason,crashCount,(unsigned int)Dump);
+	IPC_DEBUG(DBG_ERROR,
+	"CP Crashed!! CP Ticks[%ld] reason:%d count:%d Dump:0x%X\n",
+	TIMER_GetValue(), CpCrashReason, crashCount, (unsigned int)Dump);
         
         if(crashCount>1)     
             return 0;
@@ -303,13 +305,15 @@ void DUMP_CP_assert_log(void)
 		    if ( retryCount < MAX_CP_DUMP_RETRIES )
 		    {
 		        retryCount++;
-                IPC_DEBUG(DBG_ERROR,"timeout %d, trying again...\n", (int)retryCount);
+			IPC_DEBUG(DBG_TRACE, "timeout %d, trying again...\n",
+				(int)retryCount);
 		        continue;
 		    }
 		    else
 		    {
     		    // no response from CP, so get out of here
-                IPC_DEBUG(DBG_ERROR,"Abort --- max retries %d reached\n", (int)retryCount);
+			IPC_DEBUG(DBG_ERROR,
+			"Abort --- max retries %d reached\n", (int)retryCount);
                 break;
             }
 		}
@@ -333,7 +337,9 @@ void DUMP_CP_assert_log(void)
 		// size of 0 means CP is done dumping assert log
 		if (size == 0)
 		{
-            IPC_DEBUG(DBG_INFO, "assert log size 0, exiting, packetCount:0x%x\n", (int)packetCount);
+			IPC_DEBUG(DBG_ERROR,
+			"assert log size 0, exiting, packetCount:0x%x\n",
+			(int)packetCount);
             iounmap(AssertLogVAddr);
             AssertLogVAddr = NULL;
 		    break;
@@ -361,22 +367,23 @@ void DUMP_CP_assert_log(void)
         // restarting AP	
 		if (TIMER_GetValue() - t0 > TICKS_ONE_SECOND * 10 * 60)
 		{
-			IPC_DEBUG(DBG_ERROR,"Abort --- CP assertion log too long\n");
+			IPC_DEBUG(DBG_ERROR,
+				"Abort --- CP assertion log too long\n");
 			break;
 		}
 #endif
 	}
 	
-    IPC_DEBUG(DBG_ERROR,"Starting CP RAM dump - do not power down...\n");
+	IPC_DEBUG(DBG_ERROR, "Starting CP RAM dump - do not power down...\n");
 
 	// dump all CP memory to log
     DUMP_CPMemoryByList( dumped_crash_summary_ptr->mem_dump );
     
-    IPC_DEBUG(DBG_ERROR,"CP RAM dump complete\n");
+	IPC_DEBUG(DBG_ERROR, "CP RAM dump complete\n");
     // resume normal logging activities...
     BCMLOG_EndCpCrashDump( );
     
-    IPC_DEBUG(DBG_ERROR,"CP crash dump complete\n");
+	IPC_DEBUG(DBG_ERROR, "CP crash dump complete\n");
 
 }
 
@@ -395,7 +402,7 @@ void DUMP_CPMemoryByList(T_RAMDUMP_BLOCK* mem_dump)
     RamDumpBlockVAddr = ioremap_nocache((UInt32)(mem_dump), (MAX_RAMDUMP_BLOCKS*sizeof(T_RAMDUMP_BLOCK)));  
     if ( NULL == RamDumpBlockVAddr )
     {
-        IPC_DEBUG(DBG_ERROR,"failed to remap RAM dump block addr\n");
+	IPC_DEBUG(DBG_ERROR, "failed to remap RAM dump block addr\n");
         return;
     }
     

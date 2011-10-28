@@ -14,19 +14,17 @@
 ****************************************************************************/
 
 #include <linux/kernel.h>
+#include <linux/sched.h>
 #include <linux/broadcom/csl_types.h>
-//#include <timer.h>
 
 #include "bcmmtt.h"
 #include "bcmlog.h"
 
-//extern unsigned int timer_get_tick_count(void);
-extern unsigned int timer_get_msec(void);
 
 /**
  *	MTT frame constants
  **/
-static const unsigned short MTTLOG_MsgTypeSDL	= 0x0001 ;	///<	message type SDL
+static const unsigned short MTTLOG_MsgTypeSDL	= 0x8001 ;	///<	message type SDL (high bit indicates AP)
 static const unsigned short MTTLOG_MsgTypeASCII	= 0x8002 ;	///<	payload is ASCII string (high bit indicates AP)
 static const unsigned char MTTLOG_MttVersion	= 1 ;		///<	MTT version
 static const int           MTTLOG_NumFrameBytes = 15 ;		///<	number of frame (overhead) bytes
@@ -47,6 +45,20 @@ static int MTTLOG_StringLen( const char *c )
 	while( *c++ )
 		i++ ;
 	return i ;
+}
+
+/**
+ *	read CPU time
+ *	@return	unsigned int		CPU time in millisecond
+ **/
+static unsigned int MTTLOG_GetTime(void)
+{
+	unsigned long long t;
+
+	t = cpu_clock(0);
+	do_div(t, 1000000);
+
+	return (unsigned long)t;
 }
 
 /**
@@ -98,7 +110,7 @@ int BCMMTT_MakeMTTSignalHeader( unsigned short inPayloadSize, unsigned char* out
 	unsigned long trace_time_stamp;
 
     
-	trace_time_stamp = timer_get_msec();	
+	trace_time_stamp = MTTLOG_GetTime();	
 
 	pHbuf = outFrameHdrBuf;
 
@@ -158,7 +170,7 @@ int BCMMTT_FrameString( char* p_dest, const char* p_src, int buflen )
 		return 0 ;
 	}
 
-	systime = timer_get_msec() ;	
+	systime = MTTLOG_GetTime() ;	
 	
 	pSbuf = p_dest;
 

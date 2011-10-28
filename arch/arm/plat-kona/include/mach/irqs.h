@@ -194,7 +194,7 @@
 #define BCM_INT_ID_HSM11                (120 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_AUDIO                (121 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_HSM13                (122 + BCM_INT_ID_PPI_MAX)
-#define BCM_INT_ID_HSM14                (123 + BCM_INT_ID_PPI_MAX)
+#define BCM_INT_ID_AUXMIC_COMP2_INV     (123 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_CAPH                 (124 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_RESERVED125          (125 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_RESERVED126          (126 + BCM_INT_ID_PPI_MAX)

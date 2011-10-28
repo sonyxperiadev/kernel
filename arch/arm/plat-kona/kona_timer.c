@@ -355,6 +355,7 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned int load)
 	struct kona_timer_module *ktm;
 	unsigned long flags;
 	unsigned long reg, msw, lsw;
+	unsigned long msw_exp, lsw_exp;
 
 	if (NULL == kt)
 		return -1;
@@ -376,6 +377,9 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned int load)
 	__get_counter (ktm->reg_base, &msw, &lsw);
 
 	/* Load the match register */
+	lsw_exp = load + lsw;
+	msw_exp = msw + (lsw_exp < load ? 1 : 0);
+
 	writel(load+lsw, ktm->reg_base + KONA_GPTIMER_STCM0_OFFSET + (kt->ch_num * 4));
 
 #ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
@@ -399,6 +403,29 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned int load)
 	reg |= 1 << (kt->ch_num + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);
 	reg |= (1 << (kt->ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
 	writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
+
+	/* Check that we didn't miss the timer expiration */
+	__get_counter (ktm->reg_base, &msw, &lsw);
+	reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
+
+	if ((msw > msw_exp) || ((msw == msw_exp) && (lsw >= lsw_exp))) {
+
+		/* Expiration time passed, check if interrupt fired */
+		if (0 == (reg & (1 << kt->ch_num))) {
+
+			reg &= ~KONA_GPTIMER_STCS_TIMER_MATCH_MASK;
+			reg |= 1 << (kt->ch_num + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);
+			reg &= ~(1 << (kt->ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
+			writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
+
+			if (kt->cfg.mode == MODE_PERIODIC)
+				printk(KERN_ALERT "Periodic Kona timer had suspiciously small load value- now disabled\n");
+
+			/* Invoke the call back, if any */
+			if (kt->cfg.cb != NULL)
+				(*kt->cfg.cb)(kt->cfg.arg);
+		}
+	}
 
 	spin_unlock_irqrestore (&ktm->lock, flags);
 

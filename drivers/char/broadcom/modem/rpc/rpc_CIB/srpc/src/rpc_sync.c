@@ -59,7 +59,7 @@
 #define OSHEAP_Alloc(x) kmalloc( x, GFP_KERNEL )
 #define OSHEAP_Delete(x) kfree( x )
 #define OSTASK_GetCurrentTask( ) sys_gettid( )
-#define OSTASK_IsValidTask(x)  ( NULL != find_task_by_vpid(x) )
+#define OSTASK_IsValidTask(x)  ( NULL != find_task_by_vpid( (pid_t) (x)) )
 #define OSTASK_Sleep(x)  msleep(x) 
 #endif
 
@@ -201,7 +201,7 @@ void RPC_SyncDeregisterClient( UInt8 inClientId )
 	//set user data
 }
 
-TaskRequestMap_t* RPC_SyncInitTaskMap()
+TaskRequestMap_t* RPC_SyncInitTaskMap(void)
 {
 	TaskRequestMap_t* taskMap = GetMapForCurrentTask();
 
@@ -649,10 +649,10 @@ UInt8 RPC_SyncGetClientId()
 //
 
 // get task/response map struct for current task
-TaskRequestMap_t* GetMapForCurrentTask()
+TaskRequestMap_t* GetMapForCurrentTask(void)
 {
-	TaskRequestMap_t* taskMap = NULL;
-	Task_t currTask = OSTASK_GetCurrentTask();
+	TaskRequestMap_t* taskMap = (TaskRequestMap_t*)NULL;
+	Task_t currTask = (Task_t) OSTASK_GetCurrentTask();
 	UInt8 i;
 
 	for ( i=0; i < MAX_TASKS_NUM; i++ )
@@ -681,7 +681,7 @@ TaskRequestMap_t* GetNewMapForCurrentTask()
 
 		if ( NULL == (sTaskRequestMap+i)->task )
 		{
-			(sTaskRequestMap+i)->task = OSTASK_GetCurrentTask();
+			(sTaskRequestMap+i)->task = (Task_t) OSTASK_GetCurrentTask();
 			taskMap = (sTaskRequestMap+i);
 			break;
 		}
@@ -695,7 +695,7 @@ TaskRequestMap_t* GetNewMapForCurrentTask()
 
 			if  (FALSE == OSTASK_IsValidTask((sTaskRequestMap+i)->task)) 
 			{
-				(sTaskRequestMap+i)->task = OSTASK_GetCurrentTask();
+				(sTaskRequestMap+i)->task = (Task_t) OSTASK_GetCurrentTask();
 				taskMap = (sTaskRequestMap+i);
 				break;
 			}

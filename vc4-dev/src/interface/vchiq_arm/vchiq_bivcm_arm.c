@@ -52,6 +52,10 @@
 #include <mach/io_map.h>
 #define IPC_SHARED_MEM_BASE       KONA_INT_SRAM_BASE
 
+#if defined( CONFIG_KONA_WFI_WORKAROUND )
+#include <mach/wfi_count.h>
+#endif
+
 #else
 
 #include <csp/chal_ipc.h>
@@ -284,12 +288,30 @@ vchiq_prepare_bulk_data(VCHIQ_BULK_T *bulk, VCHI_MEM_HANDLE_T memhandle,
       slave. */
    bulk->remote_data = pagelist;
 
+#if defined( CONFIG_KONA_WFI_WORKAROUND )
+
+   /*
+    * SW-7022: By incrementing wfi_count here, it prevents the 2nd core from doing
+    *          a WFI while we're doing a bulk transfer. If both cores do a WFI then
+    * the videocore access times to ARM memory increase by a factor of 600.
+    */
+   atomic_inc( &wfi_count );
+#endif
+
    return VCHIQ_SUCCESS;
 }
 
 void
 vchiq_complete_bulk(VCHIQ_BULK_T *bulk)
 {
+#if defined( CONFIG_KONA_WFI_WORKAROUND )
+   /*
+    * SW-7022: We're finished with the bulk, which means that the videocore no
+    *          longer needs to access the ARM memory, so we can allow the second
+    * core to do WFI calls once again.
+    */
+   atomic_dec( &wfi_count );
+#endif
    free_pagelist((PAGELIST_T *)bulk->remote_data, bulk->actual);
 }
 

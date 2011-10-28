@@ -140,7 +140,7 @@ Int8 gClientIndex = 0;//Client Index zero is reserved
 
 #define MAX_RPC_CLIENTS 25
 static RPC_InitParams_t gClientMap[MAX_RPC_CLIENTS];
-static RPC_InitLocalParams_t gClientLocalMap[MAX_RPC_CLIENTS]={0};
+static RPC_InitLocalParams_t gClientLocalMap[MAX_RPC_CLIENTS]={{0}};
 static UInt8 gClientIDMap[MAX_RPC_CLIENTS]={0};
 
 UInt8 gClientIDs[255]={0};
@@ -181,7 +181,7 @@ Boolean RPC_SYS_isValidClientID(UInt8 userClientID)
 	return FALSE;
 }
 
-static int RPC_FindUnsedSlot()
+static int RPC_FindUnsedSlot(void)
 {
 	UInt8 i;
 
@@ -203,7 +203,7 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params)
 	if(index == -1)
 	{
 		_DBG_(RPC_TRACE("RPC_SYS_RegisterClient ERROR Max clients reached"));
-		return (RPC_Handle_t)NULL;
+		return (RPC_Handle_t)(int)NULL;
 	}
 
 	gClientIndex++;

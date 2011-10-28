@@ -780,7 +780,8 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 
 		if ((md->flags & MMC_BLK_CMD23) &&
 		    mmc_op_multi(brq.cmd.opcode) &&
-		    (do_rel_wr || !(card->quirks & MMC_QUIRK_BLK_NO_CMD23))) {
+		    (do_rel_wr || !(card->quirks & MMC_QUIRK_BLK_NO_CMD23)) &&
+		    (!(card->quirks & MMC_QUIRK_BLK_DISABLE_CMD23))) {
 			brq.sbc.opcode = MMC_SET_BLOCK_COUNT;
 			brq.sbc.arg = brq.data.blocks |
 				(do_rel_wr ? (1 << 31) : 0);
@@ -1266,8 +1267,12 @@ static const struct mmc_fixup blk_fixups[] =
 	 */
 	MMC_FIXUP("MMC08G", 0x11, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_BLK_NO_CMD23),
+	/* 
+	 * CMD23 does not work on this Thoshiba eMMC card at all. 
+	 * We disable it even for reliable writes. 
+	 */
 	MMC_FIXUP("MMC16G", 0x11, CID_OEMID_ANY, add_quirk_mmc,
-		  MMC_QUIRK_BLK_NO_CMD23),
+		  MMC_QUIRK_BLK_NO_CMD23 | MMC_QUIRK_BLK_DISABLE_CMD23),
 	MMC_FIXUP("MMC32G", 0x11, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_BLK_NO_CMD23),
 	END_FIXUP
@@ -1299,8 +1304,14 @@ static int mmc_blk_probe(struct mmc_card *card)
 		md->disk->disk_name, mmc_card_id(card), mmc_card_name(card),
 		cap_str, md->read_only ? "(ro)" : "");
 
-	if (mmc_blk_alloc_parts(card, md))
-		goto out;
+	/*
+	 * Allocating boot partitions on certain Micron eMMC cards causes
+	 * undesired behavior.
+	 */
+	if ((0x13 != card->cid.manfid) || (0x100 != card->cid.oemid)) {
+		if (mmc_blk_alloc_parts(card, md))
+			goto out;
+	}
 
 	mmc_set_drvdata(card, md);
 	mmc_fixup_device(card, blk_fixups);

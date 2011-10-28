@@ -39,7 +39,6 @@
 #include "ossemaphore.h"
 #include "osheap.h"
 #include "msconsts.h"
-#include "shared.h"
 
 
 #include "audio_consts.h"
@@ -99,7 +98,7 @@ static UInt16 auddrv_log_state = AUDDRV_LOG_STATE_CLOSED;
 
 static int sAudioLogTaskReadyFlag = 0;
 
-Audio_Logging_Buf_t* loggingbuf = NULL;
+UInt8 *loggingbuf = NULL;
 
 //
 // APIs
@@ -276,7 +275,7 @@ Result_t AUDDRV_AudLog_Start (
 
 	//allocate memory for all the 4 streams as we read all the 4 streams data in the AUDLOG_ProcessLogChannel()
 
-	loggingbuf = (Audio_Logging_Buf_t*)kmalloc(LOG_WB_SIZE,GFP_KERNEL); //max frame size
+	loggingbuf = (UInt8 *)kmalloc(LOG_WB_SIZE,GFP_KERNEL); //max frame size
 	if(loggingbuf == NULL)
 	{
 		printk(KERN_ERR "AUDDRV_AudLog_Start : not able to allocate memory for the logging data \n");

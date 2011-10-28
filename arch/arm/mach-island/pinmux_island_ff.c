@@ -35,6 +35,11 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(TRACEDT02, PTI_DAT2, 0, OFF, OFF, 0, 0, 16MA),
 	PIN_CFG(TRACEDT03, PTI_DAT3, 0, OFF, OFF, 0, 0, 16MA),
 
+	PIN_CFG(ULPI0_DATA_3, UARTB3_URTSN, 0, OFF, OFF, 0, 0, 16MA),
+	PIN_CFG(ULPI0_DATA_4, UARTB3_UCTSN, 0, OFF, OFF, 0, 0, 16MA),
+	PIN_CFG(ULPI0_DATA_5, UARTB3_URXD, 0, OFF, OFF, 0, 0, 16MA),
+	PIN_CFG(ULPI0_DATA_6, UARTB3_UTXD, 0, OFF, OFF, 0, 0, 16MA),
+
 	/* PMU INT */
 	PIN_CFG(PMU_INT, GPIO, 0, OFF, ON, 0, 0, 8MA),
 
@@ -43,6 +48,9 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SIM DATA needs a pull up */
 	PIN_CFG(SIM_DATA, SIM_DATA, 0, OFF, ON, 0, 0, 12MA),
+	PIN_CFG(SIM_RESETN, SIM_RESETN, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SIM_CLK, SIM_CLK, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SIM_DET, SIM_DET, 0, OFF, ON, 0, 0, 8MA),
 
 	/* HDMI Hotplug Detect */
 	PIN_CFG(NORFLSH_ADDR_19, GPIO, 0, OFF, OFF, 0, 0, 8MA),
@@ -50,7 +58,6 @@ static struct __init pin_config board_pin_config[] = {
 	/* VC HDMI I2C */
 	PIN_BSC_CFG(HDMI_SCL, HDMI_SCL, 0x08),
 	PIN_BSC_CFG(HDMI_SDA, HDMI_SDA, 0x08),
-
 
 };
 

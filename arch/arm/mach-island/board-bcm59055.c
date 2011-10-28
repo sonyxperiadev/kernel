@@ -42,7 +42,8 @@
 #define PMU_DEVICE_I2C_ADDR1	0x0C
 #define PMU_DEVICE_INT_GPIO	10
 
-static const struct bcmpmu_rw_data register_init_data[] = {
+static struct bcmpmu_rw_data register_init_data[] = {
+	{.map=0, .addr=0x0c, .val=0x1b, .mask=0xFF},
 	{.map=0, .addr=0x40, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x41, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x42, .val=0xFF, .mask=0xFF},
@@ -69,40 +70,49 @@ static const struct bcmpmu_rw_data register_init_data[] = {
 	{.map=0, .addr=0x59, .val=0x00, .mask=0xFF},
 	{.map=0, .addr=0x5a, .val=0x07, .mask=0xFF},
 	{.map=0, .addr=0x69, .val=0x10, .mask=0xFF},
+/* OTG registers */
+	{.map=0, .addr=0x71, .val=0x09, .mask=0xFF},
+	{.map=0, .addr=0x77, .val=0xD4, .mask=0xFF},
+	{.map=0, .addr=0x78, .val=0x98, .mask=0xFF},
+	{.map=0, .addr=0x79, .val=0xF0, .mask=0xFF},
+	{.map=0, .addr=0x7A, .val=0x60, .mask=0xFF},
+	{.map=0, .addr=0x7B, .val=0xC3, .mask=0xFF},
+	{.map=0, .addr=0x7C, .val=0xA7, .mask=0xFF},
+	{.map=0, .addr=0x7D, .val=0x08, .mask=0xFF},
 };
 
-static const struct bcmpmu_temp_map batt_temp_map[] = {
+static struct bcmpmu_temp_map batt_temp_map[] = {
 /* This table is hardware dependent and need to get from platform team */
 /*	adc		temp*/
-	{0x3FF,		233},/* -40 C */
-	{0x3C0,		238},/* -35 C */
-	{0x380,		243},/* -30 C */
-	{0x340,		248},/* -25 C */
-	{0x300,		253},/* -20 C */
-	{0x2C0,		258},/* -15 C */
-	{0x280,		263},/* -10 C */
-	{0x240,		268},/* -5 C */
-	{0x200,		273},/* 0 C */
-	{0x1C0,		278},/* 5 C */
-	{0x180,		283},/* 10 C */
-	{0x140,		288},/* 15 C */
-	{0x100,		293},/* 20 C */
-	{0xF0,		298},/* 25 C */
-	{0xE0,		303},/* 30 C */
-	{0xD0,		308},/* 35 C */
-	{0xC0,		313},/* 40 C */
-	{0xB0,		318},/* 45 C */
-	{0xA0,		323},/* 50 C */
-	{0x90,		328},/* 55 C */
-	{0x86,		333},/* 60 C */
-	{0x70,		338},/* 65 C */
-	{0x60,		343},/* 70 C */
-	{0x50,		348},/* 75 C */
-	{0x40,		353},/* 80 C */
-	{0x30,		358},/* 85 C */
-	{0x20,		363},/* 90 C */
-	{0x10,		368},/* 95 C */
-	{0x00,		373},/* 100 C */
+	{932,		233},/* -40 C */
+	{900,		238},/* -35 C */
+	{860,		243},/* -30 C */
+	{816,		248},/* -25 C */
+	{760,		253},/* -20 C */
+	{704,		258},/* -15 C */
+	{636,		263},/* -10 C */
+	{568,		268},/* -5 C */
+	{500,		273},/* 0 C */
+	{440,		278},/* 5 C */
+	{376,		283},/* 10 C */
+	{324,		288},/* 15 C */
+	{272,		293},/* 20 C */
+	{228,		298},/* 25 C */
+	{192,		303},/* 30 C */
+	{160,		308},/* 35 C */
+	{132,		313},/* 40 C */
+	{112,		318},/* 45 C */
+	{92,		323},/* 50 C */
+	{76,		328},/* 55 C */
+	{64,		333},/* 60 C */
+	{52,		338},/* 65 C */
+	{44,		343},/* 70 C */
+	{36,		348},/* 75 C */
+	{32,		353},/* 80 C */
+	{28,		358},/* 85 C */
+	{24,		363},/* 90 C */
+	{20,		368},/* 95 C */
+	{16,		373},/* 100 C */
 };
 
 struct regulator_consumer_supply rf_supply[] = {
@@ -266,6 +276,26 @@ static struct regulator_init_data bcm59055_simldo_data = {
 	.consumer_supplies = sim_supply,
 };
 
+
+
+struct regulator_consumer_supply sim2_supply[] = {
+	{.supply = "sim2_vcc"},
+};
+static struct regulator_init_data bcm59055_sim2ldo_data = {
+	.constraints = {
+		.name = "sim2ldo",
+		.min_uV = 1300000,
+		.max_uV = 3300000,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
+		.always_on = 0,
+		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
+	},
+	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
+	.consumer_supplies = sim2_supply,
+};
+
+
+
 struct regulator_consumer_supply csr_supply[] = {
 	{.supply = "csr_uc"},
 };
@@ -325,6 +355,7 @@ struct bcmpmu_regulator_init_data bcm59055_regulators[BCMPMU_REGULATOR_MAX] = {
 	{BCMPMU_REGULATOR_HV6LDO, &bcm59055_hv6ldo_data},
 	{BCMPMU_REGULATOR_HV7LDO, &bcm59055_hv7ldo_data},
 	{BCMPMU_REGULATOR_SIMLDO, &bcm59055_simldo_data},
+	{BCMPMU_REGULATOR_SIM2LDO, &bcm59055_sim2ldo_data},
 	{BCMPMU_REGULATOR_CSR, &bcm59055_csr_data},
 	{BCMPMU_REGULATOR_IOSR, &bcm59055_iosr_data},
 	{BCMPMU_REGULATOR_SDSR, &bcm59055_sdsr_data}
@@ -342,12 +373,8 @@ static struct platform_device bcmpmu_em_device = {
 	.dev.platform_data 	= NULL,
 };
 
-/* The name of this client device will eventually
- * change to match the naming convention used by 
- * other client devices
- */
-static struct platform_device bcmpmu_otg_device = {
-	.name 			= "bcm_otg",
+static struct platform_device bcmpmu_otg_xceiv_device = {
+	.name 			= "bcmpmu_otg_xceiv",
 	.id			= -1,
 	.dev.platform_data 	= NULL,
 };
@@ -355,7 +382,7 @@ static struct platform_device bcmpmu_otg_device = {
 static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_audio_device,
 	&bcmpmu_em_device,
-	&bcmpmu_otg_device,
+	&bcmpmu_otg_xceiv_device,
 };
 
 static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
@@ -383,10 +410,20 @@ static struct i2c_board_info pmu_info_map1 = {
 	I2C_BOARD_INFO("bcmpmu_map1", PMU_DEVICE_I2C_ADDR1),
 };
 
-static const struct bcmpmu_adc_setting adc_setting = {
+static struct bcmpmu_adc_setting adc_setting = {
 	.tx_rx_sel_addr = 0,
 	.tx_delay = 0,
 	.rx_delay = 0,
+};
+
+static struct bcmpmu_charge_zone chrg_zone[] = {
+	{.tl = 253, .th = 333, .v = 3000, .fc = 10, .qc = 100},/* Zone QC */
+	{.tl = 253, .th = 272, .v = 4100, .fc = 50, .qc = 0},/* Zone LL */
+	{.tl = 273, .th = 282, .v = 4200, .fc = 50, .qc = 0},/* Zone L */
+	{.tl = 283, .th = 318, .v = 4200, .fc = 100,.qc = 0},/* Zone N */
+	{.tl = 319, .th = 323, .v = 4200, .fc = 50, .qc = 0},/* Zone H */
+	{.tl = 324, .th = 333, .v = 4100, .fc = 50, .qc = 0},/* Zone HH */
+	{.tl = 253, .th = 333, .v = 0,    .fc = 0,  .qc = 0},/* Zone OUT */
 };
 
 static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
@@ -395,15 +432,19 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.i2c_board_info_map1 = &pmu_info_map1,
 	.i2c_adapter_id = 2,
 	.i2c_pagesize = 256,
-	.init_data = &register_init_data,
+	.init_data = &register_init_data[0],
 	.init_max = ARRAY_SIZE(register_init_data),
-	.batt_temp_map = &batt_temp_map,
+	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
-	.regulator_init_data = &bcm59055_regulators,
+	.regulator_init_data = bcm59055_regulators,
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,
 	.fg_slp_curr_ua = 1000,
+	.chrg_1c_rate = 1000,
+	.chrg_zone_map = &chrg_zone[0],
+	.fg_capacity_full = 1000*3600,
+	.support_fg = 1,
 };
 
 static struct i2c_board_info __initdata pmu_info[] =

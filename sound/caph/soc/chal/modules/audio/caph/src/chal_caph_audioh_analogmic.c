@@ -31,6 +31,8 @@ Copyright 2009 - 2010 Broadcom Corporation.  All rights reserved.               
 *
 ****************************************************************************/
 
+#include "chip_version.h"
+#include "io_map.h"
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
@@ -39,7 +41,6 @@ Copyright 2009 - 2010 Broadcom Corporation.  All rights reserved.               
 #include "brcm_rdb_util.h"
 #include "brcm_rdb_aci.h"
 #include "brcm_rdb_auxmic.h"
-#include "io_map.h"
 #include "brcm_rdb_padctrlreg.h"
 
 //****************************************************************************

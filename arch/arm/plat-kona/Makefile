@@ -22,10 +22,12 @@ obj-$(CONFIG_MACH_RHEA_RAY) += chal/
 obj-$(CONFIG_MACH_RHEA_DALTON) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += chal/
 obj-$(CONFIG_MACH_RHEA_BERRI) += chal/
+obj-$(CONFIG_MACH_RHEALC_BERRI) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY) += csl/
 obj-$(CONFIG_MACH_RHEA_DALTON) += csl/
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += csl/
 obj-$(CONFIG_MACH_RHEA_BERRI) += csl/
+obj-$(CONFIG_MACH_RHEALC_BERRI) += csl/
 obj-$(CONFIG_MACH_SAMOA_RAY) += chal/
 obj-$(CONFIG_MACH_ISLAND_FF) += chal/
 # SAMOA RAY bringup only has keypad at this point, so no CSL

@@ -3766,6 +3766,10 @@ typedef enum
 	**/
 	MSG_SIM_RESTRICTED_ACCESS_REQ  = MSG_GRP_CAPI2_GEN_0 + 0xE2,	///<Payload type {CAPI2_SimApi_SubmitRestrictedAccessReq_Req_t}
 	 /** 
+	api is CAPI2_ADCMGR_Start 
+	**/
+	MSG_ADC_START_REQ  = MSG_GRP_CAPI2_GEN_0 + 0xF6,	///<Payload type {::CAPI2_ADCMGR_Start_Req_t}
+	 /** 
 	api is CAPI2_MS_GetSystemRAT 
 	**/
 	MSG_MS_GET_SYSTEM_RAT_REQ  = MSG_GRP_CAPI2_GEN_0 + 0xFA,
@@ -3969,6 +3973,18 @@ typedef enum
 	payload is ::Boolean 
 	**/
 	MSG_PBK_GET_FDN_CHECK_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x12F,	///<Payload type {::Boolean}
+	 /** 
+	api is CAPI2_PMU_Battery_Register 
+	**/
+	MSG_PMU_BATT_LEVEL_REGISTER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x130,	///<Payload type {::CAPI2_PMU_Battery_Register_Req_t}
+	 /** 
+	payload is ::HAL_EM_BATTMGR_ErrorCode_en_t 
+	**/
+	MSG_PMU_BATT_LEVEL_REGISTER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x131,	///<Payload type {::HAL_EM_BATTMGR_ErrorCode_en_t}
+	 /** 
+	payload is ::HAL_EM_BatteryLevel_t 
+	**/
+	MSG_PMU_BATT_LEVEL_IND  = MSG_GRP_CAPI2_GEN_0 + 0x133,	///<Payload type {::HAL_EM_BatteryLevel_t}
 	 /** 
 	api is CAPI2_SmsApi_SendMemAvailInd 
 	**/
@@ -4262,6 +4278,14 @@ typedef enum
 	**/
 	MSG_DIAG_MEASURE_REPORT_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x18D,
 	 /** 
+	api is CAPI2_PMU_BattChargingNotification 
+	**/
+	MSG_PMU_BATT_CHARGING_NOTIFICATION_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x18E,	///<Payload type {::CAPI2_PMU_BattChargingNotification_Req_t}
+	 /** 
+	payload is ::void 
+	**/
+	MSG_PMU_BATT_CHARGING_NOTIFICATION_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x18F,
+	 /** 
 	api is CAPI2_MsDbApi_InitCallCfg 
 	**/
 	MSG_MS_INITCALLCFG_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x190,
@@ -4336,7 +4360,7 @@ typedef enum
 	 /** 
 	api is CAPI2_SmsApi_StartCellBroadcastWithChnlReq 
 	**/
-	MSG_SMS_START_CB_WITHCHNL_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1A6,	///<Payload type {CAPI2_SmsApi_StartCellBroadcastWithChnlReq_Req_t}
+	MSG_SMS_CB_START_STOP_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1A6,	///<Payload type {CAPI2_SmsApi_StartCellBroadcastWithChnlReq_Req_t}
 	 /** 
 	payload is ::Result_t 
 	**/
@@ -4381,6 +4405,22 @@ typedef enum
 	payload is void 
 	**/
 	MSG_MS_SET_RUA_READY_TIMER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x1B3,
+	 /** 
+	api is CAPI2_LCS_RegisterRrlpDataHandler 
+	**/
+	MSG_LCS_REG_RRLP_HDL_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1B4,	///<Payload type {::CAPI2_LCS_RegisterRrlpDataHandler_Req_t}
+	 /** 
+	payload is ::Result_t 
+	**/
+	MSG_LCS_REG_RRLP_HDL_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x1B5,
+	 /** 
+	api is CAPI2_LCS_RegisterRrcDataHandler 
+	**/
+	MSG_LCS_REG_RRC_HDL_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1BA,	///<Payload type {::CAPI2_LCS_RegisterRrcDataHandler_Req_t}
+	 /** 
+	payload is ::Result_t 
+	**/
+	MSG_LCS_REG_RRC_HDL_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x1BB,
 	 /** 
 	api is CAPI2_CcApi_IsThereEmergencyCall 
 	**/
@@ -6018,21 +6058,29 @@ typedef enum
 	**/
 	MSG_PDP_GETPDPCONTEXT_CID_LIST_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x393,	///<Payload type {::Result_t}
 	 /** 
+	api is CAPI2_UTIL_ExtractImei 
+	**/
+	MSG_UTIL_GET_IMEI_STR_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x394,
+	 /** 
+	payload is ::void 
+	**/
+	MSG_UTIL_GET_IMEI_STR_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x395,	///<Payload type {::void}
+	 /** 
 	api is CAPI2_SYS_GetBootLoaderVersion 
 	**/
-	MSG_SYSPARAM_BOOTLOADER_VER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x396,	///<Payload type {CAPI2_SYS_GetBootLoaderVersion_Req_t}
+	MSG_SYSPARAM_BOOTLOADER_VER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x396,	///<Payload type {::CAPI2_SYS_GetBootLoaderVersion_Req_t}
 	 /** 
-	payload is void 
+	payload is ::void 
 	**/
-	MSG_SYSPARAM_BOOTLOADER_VER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x397,	///<Payload type {void}
+	MSG_SYSPARAM_BOOTLOADER_VER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x397,	///<Payload type {::void}
 	 /** 
 	api is CAPI2_SYS_GetDSFVersion 
 	**/
-	MSG_SYSPARAM_DSF_VER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x398,	///<Payload type {CAPI2_SYS_GetDSFVersion_Req_t}
+	MSG_SYSPARAM_DSF_VER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x398,	///<Payload type {::CAPI2_SYS_GetDSFVersion_Req_t}
 	 /** 
-	payload is void 
+	payload is ::void 
 	**/
-	MSG_SYSPARAM_DSF_VER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x399,	///<Payload type {void}
+	MSG_SYSPARAM_DSF_VER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x399,	///<Payload type {::void}
 	 /** 
 	api is CAPI2_USimApi_GetUstData 
 	**/
@@ -6398,6 +6446,38 @@ typedef enum
 	payload is ::int 
 	**/
 	MSG_LCS_ENCODEASSISTANCEREQ_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x3D5,	///<Payload type {::int}
+	 /** 
+	api is CAPI2_LCS_SendRrlpDataToNetwork 
+	**/
+	MSG_LCS_SEND_RRLP_DATA_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x3D6,	///<Payload type {::CAPI2_LCS_SendRrlpDataToNetwork_Req_t}
+	 /** 
+	payload is ::Result_t 
+	**/
+	MSG_LCS_SEND_RRLP_DATA_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x3D7,
+	 /** 
+	api is CAPI2_LCS_RrcMeasurementReport 
+	**/
+	MSG_LCS_RRC_MEAS_REPORT_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x3D8,	///<Payload type {::CAPI2_LCS_RrcMeasurementReport_Req_t}
+	 /** 
+	payload is ::Result_t 
+	**/
+	MSG_LCS_RRC_MEAS_REPORT_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x3D9,
+	 /** 
+	api is CAPI2_LCS_RrcMeasurementControlFailure 
+	**/
+	MSG_LCS_RRC_MEAS_FAILURE_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x3DA,	///<Payload type {::CAPI2_LCS_RrcMeasurementControlFailure_Req_t}
+	 /** 
+	payload is ::Result_t 
+	**/
+	MSG_LCS_RRC_MEAS_FAILURE_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x3DB,
+	 /** 
+	api is CAPI2_LCS_RrcStatus 
+	**/
+	MSG_LCS_RRC_STATUS_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x3DC,	///<Payload type {::CAPI2_LCS_RrcStatus_Req_t}
+	 /** 
+	payload is ::Result_t 
+	**/
+	MSG_LCS_RRC_STATUS_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x3DD,
 	 /** 
 	api is CAPI2_LCS_FttSyncReq 
 	**/
