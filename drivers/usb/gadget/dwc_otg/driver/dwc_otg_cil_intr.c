@@ -248,7 +248,7 @@ void w_shutdown_core(void *p)
 
 	if ((core_if->op_state == B_PERIPHERAL) && (core_if->lx_state == DWC_OTG_L0)) {
 #ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver && core_if->xceiver->shutdown)
+		if (core_if->xceiver->shutdown)
 			otg_shutdown(core_if->xceiver);
 #endif
 	}
@@ -278,7 +278,7 @@ void w_conn_id_status_change(void *p)
 		DWC_ASSERT(++count < 10000,
 			   "Connection id status change timed out");
 #ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver && core_if->xceiver->set_vbus)
+		if (core_if->xceiver->set_vbus)
 			core_if->xceiver->set_vbus(core_if->xceiver, false);
 #endif
 		core_if->op_state = B_PERIPHERAL;
