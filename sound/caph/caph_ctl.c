@@ -241,7 +241,7 @@ static int SelCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info 
 	if(pChip->streamCtl[stream].iFlags & MIXER_STREAM_FLAGS_CAPTURE)
 	{
 		uinfo->value.integer.min = AUDCTRL_MIC_MAIN;
-		uinfo->value.integer.max = MIC_TOTAL_COUNT_FOR_USER;//FIXME
+		uinfo->value.integer.max = MIC_TOTAL_COUNT_FOR_USER;
 	}
 	else
 	{
@@ -681,7 +681,7 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 				uinfo->count = 1;
 				uinfo->value.integer.min = 0x0;
 				uinfo->value.integer.max = 0x7FFFFFFF; //Each bit indicates Log ID. Max of 32 Log IDs can be supported
-			}				
+			}
 			break;
 		case CTL_FUNCTION_BYPASS_VIBRA:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -1074,8 +1074,8 @@ x{.strName = "MIC_DIGI1_ANALOG", .iVolume = {0,0},}, 	//AUDCTRL_DUAL_MIC_DIGI1_A
 {.strName = "BT SCO Mic",		.iVolume = {30,30},},	//AUDCTRL_MIC_BTM
 x{.strName = "", .iVolume = {0,0},}, 					//AUDCTRL_MIC_USB
 {.strName = "I2S",	.iVolume = {12,12},},				//AUDCTRL_MIC_I2S
-x{.strName = "MIC_DIGI3",	.iVolume = {30,30},},		//AUDCTRL_MIC_DIGI3
-x{.strName = "MIC_DIGI4",	.iVolume = {30,30},},		//AUDCTRL_MIC_DIGI4
+x{.strName = "MIC_DIGI3",	.iVolume = {28,28},},		//AUDCTRL_MIC_DIGI3
+x{.strName = "MIC_DIGI4",	.iVolume = {28,28},},		//AUDCTRL_MIC_DIGI4
 x{.strName = "MIC_SPEECH_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_SPEECH_DIGI
 x{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_EANC_DIGI
 
@@ -1109,6 +1109,8 @@ x{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_EANC_DIGI
 						{.strName = "BTM",		.iVolume = {30,30},},\
 						{.strName = "", .iVolume = {0,0},}, 		\
 						{.strName = "I2S",	.iVolume = {12,12},},	\
+						{.strName = "DG3",	.iVolume = {28,28},},	\
+						{.strName = "DG4",	.iVolume = {28,28},},	\
 					}
 
 
@@ -1185,7 +1187,29 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 
 	};
 
-#define	MAX_CTL_NUMS	130
+//Misc controls
+static struct snd_kcontrol_new sgSndCtrls[] __initdata =
+{
+	BRCM_MIXER_CTRL_MISC(0, 0, "LPT", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_LOOPBACK_TEST) ),
+	BRCM_MIXER_CTRL_MISC(0, 0, "AT-AUD", AT_AUD_CTL_INDEX, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_AT_AUDIO) ),
+	BRCM_MIXER_CTRL_MISC(0, 0, "AT-AUD", AT_AUD_CTL_DBG_LEVEL, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_AT_AUDIO) ),
+	BRCM_MIXER_CTRL_MISC(0, 0, "AT-AUD", AT_AUD_CTL_HANDLER, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_AT_AUDIO) ),
+	BRCM_MIXER_CTRL_MISC(0, 0, "VC-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_ENABLE)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "VC-MUT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_CALL_MIC_MUTE)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "P1-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "P2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "C2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_SPEECHIN, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION)),	//CTL_STREAM_PANEL_SPEECHIN
+	BRCM_MIXER_CTRL_MISC(0, 0, "FM-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_FM, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "FM-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_FM_ENABLE)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "FM-FMT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_FM_FORMAT)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "BYP-VIB", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BYPASS_VIBRA) ),
+	BRCM_MIXER_CTRL_MISC(0, 0, "BT-TST", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BT_TEST) ),
+	BRCM_MIXER_CTRL_MISC(0, 0, "CFG-IHF", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_IHF) ),
+	BRCM_MIXER_CTRL_MISC(0, 0, "CFG-SSP", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_SSP) ), //SSPI1
+	BRCM_MIXER_CTRL_MISC(0, 0, "CFG-SSP", 1, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_SSP) ), //SSPI2
+};
+
+#define	MAX_CTL_NUMS	140
 #define	MAX_CTL_NAME_LENGTH	44
 static char gStrCtlNames[MAX_CTL_NUMS][MAX_CTL_NAME_LENGTH] __initdata; // MAX_CTL_NAME_LENGTH];
 static Int32 sgCaphSpeechMixCtrls[CAPH_MAX_PCM_STREAMS] __initdata = {1,1,0,3,3,0,0,1};
@@ -1274,130 +1298,24 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		}
 	}
 
+	CAPH_ASSERT(nIndex<MAX_CTL_NUMS);
+
    //MISC
    {
-   		int 	loop;
-      //Loopback Test control
-	   struct snd_kcontrol_new ctlLoopTest = BRCM_MIXER_CTRL_MISC(0, 0, "LPT", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_LOOPBACK_TEST) );
-   	   struct snd_kcontrol_new ctlAtAud = BRCM_MIXER_CTRL_MISC(0, 0, "AT-AUD", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_AT_AUDIO) );
-	   struct snd_kcontrol_new kctlCallEnable = BRCM_MIXER_CTRL_MISC(0, 0, "VC-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_ENABLE));
-	   struct snd_kcontrol_new kctlCallMute = BRCM_MIXER_CTRL_MISC(0, 0, "VC-MUT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_CALL_MIC_MUTE));
+		for(j=0;j<(sizeof((sgSndCtrls))/sizeof(sgSndCtrls[0]));j++)//index, debug level, AT handler
+		{
+			if ((err = snd_ctl_add(card, snd_ctl_new1(&sgSndCtrls[j], pChip))) < 0)
+			{
+				BCM_AUDIO_DEBUG("error (err=%d) when adding control name=%s  index=%d\n", err, sgSndCtrls[j].name, sgSndCtrls[j].index);
+				return err;
+			}
+		}
 
-	   struct snd_kcontrol_new kctlSpeechMixingOption1 = BRCM_MIXER_CTRL_MISC(0, 0, "P1-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
-	   struct snd_kcontrol_new kctlSpeechMixingOption2 = BRCM_MIXER_CTRL_MISC(0, 0, "P2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
-
-	   //kctlSpeechInMixingOption is for CTL_STREAM_PANEL_SPEECHIN
-	   struct snd_kcontrol_new kctlSpeechInMixingOption = BRCM_MIXER_CTRL_MISC(0, 0, "C2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_SPEECHIN, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
-       struct snd_kcontrol_new kctlFMMixingOption = BRCM_MIXER_CTRL_MISC(0, 0, "FM-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_FM, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
-
-	   struct snd_kcontrol_new kctlFMEnable = BRCM_MIXER_CTRL_MISC(0, 0, "FM-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_FM_ENABLE));
-	   struct snd_kcontrol_new kctlFMFormat = BRCM_MIXER_CTRL_MISC(0, 0, "FM-FMT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_FM_FORMAT));
-	   struct snd_kcontrol_new ctlBypassVibra = BRCM_MIXER_CTRL_MISC(0, 0, "BYP-VIB", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BYPASS_VIBRA) );
-	   struct snd_kcontrol_new ctlBTTest = BRCM_MIXER_CTRL_MISC(0, 0, "BT-TST", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BT_TEST) );
-	   struct snd_kcontrol_new ctlCfgIHF = BRCM_MIXER_CTRL_MISC(0, 0, "CFG-IHF", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_IHF) );
-	   struct snd_kcontrol_new ctlCfgSSP = BRCM_MIXER_CTRL_MISC(0, 0, "CFG-SSP", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_SSP) );
-
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlLoopTest, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add loopback test control err=%d\n", err);
-		   return err;
-	   }
-
-	   for(loop=0;loop<AT_AUD_CTL_TOTAL;loop++)//index, debug level, AT handler
-	   {
-     	   ctlAtAud.index = loop;
-		   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlAtAud, pChip))) < 0)
-		   {
-			   BCM_AUDIO_DEBUG("error to add AT_AUD control err=%d index=%d\n", err,ctlAtAud.index);
-			   return err;
-		   }
-	   }
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlCallEnable, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add call enable control err=%d\n", err);
-		   return err;
-	   }
-
-
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlCallMute, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add call mic mute control err=%d\n", err);
-		   return err;
-	   }
-
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlSpeechMixingOption1, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlSpeechMixingOption1.name, err);
-		   return err;
-	   }
-
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlSpeechMixingOption2, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlSpeechMixingOption2.name, err);
-		   return err;
-	   }
-
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlSpeechInMixingOption, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlSpeechInMixingOption.name, err);
-		   return err;
-	   }
-
-       if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlFMMixingOption, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlFMMixingOption.name, err);
-		   return err;
-	   }
-
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlFMEnable, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlFMEnable.name,err);
-		   return err;
-	   }
-
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlFMFormat, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlFMFormat.name, err);
-		   return err;
-	   }
-
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlBypassVibra, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add bypass vibra control err=%d\n", err);
-		   return err;
-	   }
-
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlBTTest, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add BT test control err=%d\n", err);
-		   return err;
-	   }
-
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlCfgIHF, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", ctlCfgIHF.name, err);
-		   return err;
-	   }
-
-	   //SSPI port 0
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlCfgSSP, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", ctlCfgSSP.name, err);
-		   return err;
-	   }
-	   //SSPI port1
-	   ctlCfgSSP.index = 1;
-	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlCfgSSP, pChip))) < 0)
-	   {
-		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", ctlCfgSSP.name, err);
-		   return err;
-	   }
 	   //default value
-	   pChip->i32CfgSSP[1] = 1; //FIXME, must be consistent with driver. It is better to get hardware setting
+	   pChip->i32CfgSSP[1] = 1; // must be consistent with driver. It is better to get hardware setting
 
    }
 
-	CAPH_ASSERT(nIndex<MAX_CTL_NUMS);
    return err;
 }
 
