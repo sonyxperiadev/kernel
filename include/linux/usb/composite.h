@@ -109,6 +109,7 @@ struct usb_function {
 	struct usb_descriptor_header	**hs_descriptors;
 
 	struct usb_configuration	*config;
+	
 	/* disabled is zero if the function is enabled */
 	int				disabled;
 
@@ -139,7 +140,6 @@ struct usb_function {
 	/* internals */
 	struct list_head		list;
 	DECLARE_BITMAP(endpoints, 32);
-	struct device			*dev;
 };
 
 int usb_add_function(struct usb_configuration *, struct usb_function *);
@@ -299,9 +299,9 @@ struct usb_composite_driver {
 
 extern int usb_composite_probe(struct usb_composite_driver *driver,
 			       int (*bind)(struct usb_composite_dev *cdev));
-extern void usb_composite_unregister(struct usb_composite_driver *driver);
+extern int usb_composite_register(struct usb_composite_driver *);
+extern void usb_composite_unregister(struct usb_composite_driver *);
 extern void usb_composite_setup_continue(struct usb_composite_dev *cdev);
-
 
 /**
  * struct usb_composite_device - represents one composite usb gadget
@@ -363,8 +363,8 @@ struct usb_composite_dev {
 	 */
 	int				delayed_status;
 
-    /* protects deactivations and delayed_status counts*/
-    spinlock_t                      lock;
+	/* protects deactivations and delayed_status counts*/
+	spinlock_t			lock;
 
 	/* switch indicating connected/disconnected state */
 	struct switch_dev               sw_connected;

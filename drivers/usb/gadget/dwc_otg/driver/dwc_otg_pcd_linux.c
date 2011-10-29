@@ -1368,8 +1368,15 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 			    -EINVAL);
 		return -EINVAL;
 	}
+
+
+	dwc_otg_disable_global_interrupts(gadget_wrapper->pcd->core_if);
 	/* Gadget about to unbound, disable connection to USB host */
 	dwc_otg_pcd_disconnect(gadget_wrapper->pcd, true);
+
+	dwc_otg_pcd_stop(gadget_wrapper->pcd);
+
+	dwc_otg_enable_global_interrupts(gadget_wrapper->pcd->core_if);
 
 	driver->unbind(&gadget_wrapper->gadget);
 	gadget_wrapper->driver = 0;
@@ -1415,6 +1422,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		gadget_wrapper->driver = driver;
 		gadget_wrapper->gadget.dev.driver = &driver->driver;
 
+		dwc_otg_disable_global_interrupts(gadget_wrapper->pcd->core_if);
 		/* Default is to connect to USB host. Gadget driver may override
 		 * this during its bind using the pullup() API.
 		 */
@@ -1433,11 +1441,14 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		DWC_DEBUGPL(DBG_ANY, "probed gadget driver '%s'\n",
 				driver->driver.name);
 
+		dwc_otg_enable_global_interrupts(gadget_wrapper->pcd->core_if);
+
 #ifdef CONFIG_USB_OTG_UTILS
 		if (gadget_wrapper->pcd->core_if->xceiver->set_peripheral)
 			otg_set_peripheral(gadget_wrapper->pcd->core_if->xceiver,
 				   &gadget_wrapper->gadget);
 #endif
+
 		return 0;
 
 }

@@ -301,5 +301,12 @@ config CRYPTO_DEV_BRCM_SPUM_HASH
 	help
 	 Driver for Rhea SPUM crypto accelerator.
 
+config CRYPTO_DEV_BRCM_SPUM_AES
+	tristate "Support for BRCM SPUM AES accelerator."
+	depends on ARCH_KONA
+	select CRYPTO_AES
+	select CRYPTO_CTR
+	help
+	 Driver for Rhea SPUM crypto accelerator.
 
 endif # CRYPTO_HW

@@ -25,7 +25,8 @@ EXTRA_CFLAGS += -DUNDER_LINUX
 EXTRA_CFLAGS += -DUNDER_LINUX_MODEM
 EXTRA_CFLAGS += -DLINUX_RPC_KERNEL
 EXTRA_CFLAGS += -D _RHEA_  -D MSP -D FUSE_DUAL_PROCESSOR_ARCHITECTURE -D FUSE_APPS_PROCESSOR -D PMU_BCM59055 -D CHAL_NDEBUG_BUILD -D VPU_INCLUDED -D DEVELOPMENT_ONLY -D NDEBUG -D ENABLE_DMA_ARM2SP
-#EXTRA_CFLAGS += -D _RHEA_  -D MSP -D FUSE_DUAL_PROCESSOR_ARCHITECTURE -D FUSE_APPS_PROCESSOR -D PMU_BCM59055 -D CHAL_NDEBUG_BUILD -D VPU_INCLUDED -D DEVELOPMENT_ONLY -D NDEBUG
+#EXTRA_CFLAGS += -D ENABLE_DMA_VOICE
+#EXTRA_CFLAGS += -D VOLTE_SUPPORT
 #Linux header files
 EXTRA_CFLAGS += -I ./include/linux/
 EXTRA_CFLAGS += -I ./include/linux/broadcom
@@ -102,7 +103,6 @@ snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogtest
 snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogmic.o
 
 #CSL Source Files
-snd-brcm-omx-objs += soc/csl/audio/src/osdw_caph_drv.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_switch.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_srcmixer.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_render.o
@@ -135,5 +135,7 @@ snd-brcm-omx-objs += soc/csl/dsp/src/csl_voip.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_voif.o
 snd-brcm-omx-objs += soc/csl/dsp/src/osdw_dsp_drv.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_caph_control_api.o
+snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_cneon_api.o
+
 
 

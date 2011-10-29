@@ -51,7 +51,6 @@
 #ifndef	__AUDIO_VDRIVER_H__
 #define	__AUDIO_VDRIVER_H__
 
-
 //richlu
 #include "csl_caph_hwctrl.h"
 #include "bcm_fuse_sysparm_CIB.h"
@@ -170,10 +169,12 @@ typedef struct AUDDRV_REQUEST_MSG_t
 } AUDDRV_REQUEST_MSG_t;
 
 typedef enum {
-	AUDDRV_USER_GET_SPKPROT,
-	AUDDRV_USER_ENA_SPKPROT,
-	AUDDRV_USER_SET_EQ,
-} AudioDrvUserParam_t;
+	AUDDRV_USER_NONE,
+	AUDDRV_USER_SP_CTRL,
+	AUDDRV_USER_SP_QUERY,
+	AUDDRV_USER_SP_VAR,
+	AUDDRV_USER_EQ_CTRL,
+} AudioDrvUserCtrl_t;
 
 typedef struct AUDDRV_PathID_t{
 	CSL_CAPH_PathID ulPathID;
@@ -302,12 +303,10 @@ UInt32 AUDDRV_GetAudioDev( void );
 void AUDDRV_SetVCflag( Boolean inVoiceCall );
 Boolean AUDDRV_GetVCflag( void );
 
-void AUDDRV_User_CtrlDSP (
-				AudioDrvUserParam_t	audioDrvUserParam,
-				void			*user_CB,
-				UInt32			param1,
-				UInt32			param2
-				);
+int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType,
+							Boolean enable,
+							Int32 size,
+							void *param);
 
 void AUDDRV_User_HandleDSPInt ( UInt32 param1, UInt32 param2, UInt32 param3 );
 void AUDDRV_SetPCMOnOff(Boolean	on_off);
@@ -321,9 +320,6 @@ void AUDDRV_Telephony_DeinitHW(void *pData);
 
 void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off );
 
-void AUDDRV_SetDSPFilter( AudioMode_t audio_mode, 
-		UInt32 dev, 
-		SysAudioParm_t* pAudioParm);
 void AUDDRV_SetHWSidetoneFilter(AudioMode_t audio_mode, 
 		SysAudioParm_t* pAudioParm);
 

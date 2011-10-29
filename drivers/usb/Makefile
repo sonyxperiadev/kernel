@@ -53,3 +53,4 @@ obj-$(CONFIG_USB_MUSB_HDRC)	+= musb/
 obj-$(CONFIG_USB_RENESAS_USBHS)	+= renesas_usbhs/
 obj-$(CONFIG_USB_OTG_UTILS)	+= otg/
 obj-$(CONFIG_USB_GADGET)	+= gadget/
+obj-$(CONFIG_KONA_OTG_CP)	+= otg/

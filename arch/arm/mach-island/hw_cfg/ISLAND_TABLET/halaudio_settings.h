@@ -16,6 +16,7 @@
 #define HALAUDIO_SETTINGS_H_
 
 /* ---- Include Files ----------------------------------------*/
+#include <linux/broadcom/halaudio.h>
 #include <linux/broadcom/halaudio_cfg.h>
 
 /* ---- Constants and Types ----------------------------------*/

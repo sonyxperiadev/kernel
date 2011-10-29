@@ -305,6 +305,7 @@ static irqreturn_t hdmi_det_irq( int irq, void *dev_id )
    ch->hpd_timer.data = (unsigned long) ch;
    ch->hpd_timer.function = hdmi_det_timer_fn;
    ch->hpd_timer.expires = jiffies + (HZ / 2);
+
    LOG_DEBUG(printk("hdmi_det_irq irq: %d HZ now %lu expires %lu\n", HZ, jiffies,
             ch->hpd_timer.expires));
    add_timer(&ch->hpd_timer);

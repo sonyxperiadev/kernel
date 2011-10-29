@@ -1130,11 +1130,17 @@ static void dma_mmap_memcpy_page( struct page *page,
       SyncCpuToDev( kernel_addr, phys_addr, num_bytes, DMA_FROM_DEVICE );
       SyncDevToCpu( kernel_addr, phys_addr, num_bytes, DMA_FROM_DEVICE );
 
-      memcpy( mem_ptr, kernel_addr, num_bytes );
+      if ( (unsigned long)mem_ptr >= VMALLOC_END )
+         memcpy_toio( mem_ptr, kernel_addr, num_bytes );
+      else
+         memcpy( mem_ptr, kernel_addr, num_bytes );
    }
    else
    {
-      memcpy( kernel_addr, mem_ptr, num_bytes );
+      if ( (unsigned long)mem_ptr >= VMALLOC_END )
+         memcpy_fromio( kernel_addr, mem_ptr, num_bytes );
+      else
+         memcpy( kernel_addr, mem_ptr, num_bytes );
 
       /*
        * We've copied a bunch of data into the kernel memory. We need to
@@ -1251,11 +1257,17 @@ void dma_mmap_memcpy( DMA_MMAP_CFG_T *memMap, void *mem )
 
          if (memMap->dir == DMA_TO_DEVICE)
          {
-            memcpy( memPtr, region->virtAddr, region->numBytes );
+            if ((unsigned long)memPtr >= VMALLOC_END)
+               memcpy_toio( memPtr, region->virtAddr, region->numBytes );
+            else
+               memcpy( memPtr, region->virtAddr, region->numBytes );
          }
          else
          {
-            memcpy( region->virtAddr, memPtr, region->numBytes );
+            if ((unsigned long)memPtr >= VMALLOC_END)
+               memcpy_fromio( region->virtAddr, memPtr, region->numBytes );
+            else
+               memcpy( region->virtAddr, memPtr, region->numBytes );
          }
          memPtr += region->numBytes;
       }

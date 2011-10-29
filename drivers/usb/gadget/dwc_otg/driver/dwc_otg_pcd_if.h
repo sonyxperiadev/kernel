@@ -333,6 +333,9 @@ extern void dwc_otg_pcd_remote_wakeup(dwc_otg_pcd_t * pcd, int set);
 /** Soft disconnect enable/disable */
 extern void dwc_otg_pcd_disconnect(dwc_otg_pcd_t * pcd, int enable);
 
+/** Stop PCD */
+extern void dwc_otg_pcd_stop(dwc_otg_pcd_t * pcd);
+
 /** Starts micorsecond soft disconnect. */
 extern void dwc_otg_pcd_disconnect_us(dwc_otg_pcd_t * pcd, int no_of_usecs);
 /** This function returns whether device is dualspeed.*/
