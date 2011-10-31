@@ -993,9 +993,9 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			srcmTap = csl_caph_srcmixer_get_tapoutchnl_from_inchnl(srcmIn);
 
 			if(path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) srOut = AUDIO_SAMPLING_RATE_8000; //arm2sp 8kHz
-			else if(path->sink[0] == CSL_CAPH_DEV_BT_SPKR) 
+			else if(path->sink[0] == CSL_CAPH_DEV_BT_SPKR || path->sink[1] == CSL_CAPH_DEV_BT_SPKR) 
 			{
-				srOut = path->snk_sampleRate;
+				srOut = AUDIO_SAMPLING_RATE_8000;
 				dataFormat = CSL_CAPH_16BIT_MONO;
 			} 
 			else 
@@ -4026,9 +4026,9 @@ CSL_CAPH_PathID csl_caph_hwctrl_RegisterStream(CSL_CAPH_HWCTRL_STREAM_REGISTER_t
         if (HWConfig_Table[i].streamID == stream->streamID)
         {
             HWConfig_Table[i].streamID = stream->streamID;
-            if (HWConfig_Table[i].source ==  CSL_CAPH_DEV_MEMORY)
+            if (stream->source ==  CSL_CAPH_DEV_MEMORY)
                 HWConfig_Table[i].src_sampleRate = stream->src_sampleRate;
-            if (HWConfig_Table[i].sink ==  CSL_CAPH_DEV_MEMORY)
+            if (stream->sink ==  CSL_CAPH_DEV_MEMORY)
                 HWConfig_Table[i].snk_sampleRate = stream->snk_sampleRate;
             HWConfig_Table[i].chnlNum = stream->chnlNum;
             HWConfig_Table[i].bitPerSample = stream->bitPerSample;
