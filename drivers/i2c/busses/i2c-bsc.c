@@ -60,8 +60,8 @@
 
 struct procfs
 {
-	char name[MAX_PROC_NAME_SIZE];
-	struct proc_dir_entry *parent;
+   char name[MAX_PROC_NAME_SIZE];
+   struct proc_dir_entry *parent;
 };
 
 /*
@@ -106,7 +106,7 @@ struct bsc_i2c_dev
 	struct semaphore dev_lock;
 
 	/* to signal the command completion */
-	struct completion ses_done;
+	struct completion	ses_done;
 
 	/*
 	 * to signal the BSC controller has finished reading and all RX data has
@@ -130,6 +130,8 @@ struct bsc_i2c_dev
 	/* workqueue work for reset the master */
 	struct workqueue_struct *reset_wq;
 	struct work_struct reset_work;
+
+	int err_flag; /* Set if there is a bus error */
 };
 
 static const __devinitconst char gBanner[] = KERN_INFO "Broadcom BSC (I2C) Driver\n";
@@ -139,40 +141,44 @@ static const __devinitconst char gBanner[] = KERN_INFO "Broadcom BSC (I2C) Drive
  */
 static const unsigned int gBusSpeedTable[BSC_SPD_MAXIMUM] =
 {
-	BSC_SPD_32K,
-	BSC_SPD_50K,
-	BSC_SPD_100K,
-	BSC_SPD_230K,
-	BSC_SPD_380K,
-	BSC_SPD_400K,
-	BSC_SPD_430K,
-	BSC_SPD_HS,
-	BSC_SPD_100K_FPGA,
-	BSC_SPD_400K_FPGA,
-	BSC_SPD_HS_FPGA,
+   BSC_SPD_32K,
+   BSC_SPD_50K,
+   BSC_SPD_100K,
+   BSC_SPD_230K,
+   BSC_SPD_380K,
+   BSC_SPD_400K,
+   BSC_SPD_430K,
+   BSC_SPD_HS,
+   BSC_SPD_100K_FPGA,
+   BSC_SPD_400K_FPGA,
+   BSC_SPD_HS_FPGA,
 };
 
 static struct proc_dir_entry *gProcParent;
+
+static void bsc_put_clk(struct bsc_i2c_dev *dev);
+static int bsc_enable_clk(struct bsc_i2c_dev *dev);
+static void bsc_disable_clk(struct bsc_i2c_dev *dev);
 
 /*
  * BSC ISR routine
  */
 static irqreturn_t bsc_isr(int irq, void *devid)
 {
-	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)devid;
-	uint32_t status;
+   struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)devid;
+   uint32_t status;
 
-	/* get interrupt status */
-	status = bsc_read_intr_status((uint32_t)dev->virt_base);
+   /* get interrupt status */
+   status = bsc_read_intr_status((uint32_t)dev->virt_base);
 
-	/* got nothing, something is wrong */
+   /* got nothing, something is wrong */
 	if (!status) {
-		dev_err(dev->device, "interrupt with zero status register!\n");
-		return IRQ_NONE;
-	}
+      dev_err(dev->device, "interrupt with zero status register!\n");
+      return IRQ_NONE;
+   }
 
-	/* ack and clear the interrupts */
-	bsc_clear_intr_status((uint32_t)dev->virt_base, status);
+   /* ack and clear the interrupts */
+   bsc_clear_intr_status((uint32_t)dev->virt_base, status);
 
 	if (status & I2C_MM_HS_ISR_SES_DONE_MASK)
 		complete(&dev->ses_done);
@@ -194,14 +200,15 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 	 * master
 	 */
 	if (status & I2C_MM_HS_ISR_ERR_MASK) {
-		dev_err(dev->device, "bus error interrupt (timeout)\n");
+		dev->err_flag = 1;
+		dev_err(dev->device, "bus error interrupt (timeout) - status = %x\n", status);
 
 		/* disable interrupts since the master will now reset */
 		bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
 		queue_work(dev->reset_wq, &dev->reset_work);
 	}
    
-	return IRQ_HANDLED;
+   return IRQ_HANDLED;
 }
 
 /*
@@ -269,11 +276,12 @@ static int bsc_send_cmd(struct bsc_i2c_dev *dev, BSC_CMD_t cmd)
    time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
    bsc_disable_intr((uint32_t)dev->virt_base,
          I2C_MM_HS_IER_I2C_INT_EN_MASK);
-   if (time_left == 0)
+   if (time_left == 0 || dev->err_flag == 1)
    {
       dev_err(dev->device, "controller timed out\n");
 
       /* clear command */
+      dev->err_flag = 0;
       isl_bsc_send_cmd((uint32_t)dev->virt_base, BSC_CMD_NOACTION);
 
       return -ETIMEDOUT;
@@ -501,8 +509,9 @@ static int bsc_xfer_write_byte(struct bsc_i2c_dev *dev, unsigned int nak_ok,
    time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
    bsc_disable_intr((uint32_t)dev->virt_base,
          I2C_MM_HS_IER_I2C_INT_EN_MASK);
-   if (time_left == 0)
+   if (time_left == 0 || dev->err_flag == 1)
    {
+      dev->err_flag = 0;
       BSC_DBG(dev, "controller timed out\n");
       return -ETIMEDOUT;
    }
@@ -788,6 +797,8 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 
    down(&dev->dev_lock);
 
+   bsc_enable_clk(dev);
+
    /* set the bus speed dynamically if dynamic speed support is turned on */
    if (dev->dynamic_speed)
       client_speed_set(adapter, msgs[0].addr);   
@@ -797,6 +808,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    if (rc < 0)
    {
       dev_err(dev->device, "start command failed\n");
+      bsc_disable_clk(dev);
       up(&dev->dev_lock);
       return rc;
    }
@@ -814,6 +826,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       if (rc < 0)
       {
          dev_err(dev->device, "high-speed master code failed\n");
+         bsc_disable_clk(dev);
          up(&dev->dev_lock);
          return rc;
       }
@@ -823,6 +836,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       {
          dev_err(dev->device, "one of the slaves replied to the high-speed "
                "master code unexpectedly\n");
+         bsc_disable_clk(dev);
          up(&dev->dev_lock);
          return -EREMOTEIO;
       }
@@ -924,11 +938,23 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       }
       bsc_stop_highspeed((uint32_t)dev->virt_base);
    }
-   
+   else
+   {
+	bsc_set_autosense((uint32_t)dev->virt_base, 0);
+   }
+
+   bsc_disable_clk(dev);
    up(&dev->dev_lock);
    return (rc < 0) ? rc : num;
 
-hs_ret:
+ hs_ret:
+
+   /* Here we should not code such as rc = bsc_xfer_stop(), since it would
+    * change the value of rc, which need to be passed to the caller */
+   /* send stop command */
+   if(bsc_xfer_stop(adapter) < 0)
+      dev_err(dev->device, "stop command failed\n");
+
    if (dev->high_speed_mode)
    {
       bsc_set_tim((uint32_t)dev->virt_base, dev->tim_val);
@@ -941,7 +967,12 @@ hs_ret:
       }
       bsc_stop_highspeed((uint32_t)dev->virt_base);
    }
+   else
+   {
+	bsc_set_autosense((uint32_t)dev->virt_base, 0);
+   }
 
+   bsc_disable_clk(dev);
    up(&dev->dev_lock);
    return rc;
 }
@@ -1143,15 +1174,15 @@ static int proc_init(struct platform_device *pdev)
 	snprintf(proc->name, sizeof(proc->name), "%s%d",
 			PROC_GLOBAL_PARENT_DIR, pdev->id);
 
-	proc->parent = proc_mkdir(proc->name, gProcParent);
-	if (proc->parent == NULL)
-		return -ENOMEM;
+   proc->parent = proc_mkdir(proc->name, gProcParent);
+   if (proc->parent == NULL)
+      return -ENOMEM;
 
 	proc_debug = create_proc_entry(PROC_ENTRY_DEBUG, 0644, proc->parent);
 	if (proc_debug == NULL) {
 		rc = -ENOMEM;
 		goto err_del_parent;
-	}
+   }
 	proc_debug->read_proc = proc_debug_read;
 	proc_debug->write_proc = proc_debug_write;
 	proc_debug->data = dev;
@@ -1194,8 +1225,8 @@ err_del_debug:
 	remove_proc_entry(PROC_ENTRY_DEBUG, proc->parent);
 
 err_del_parent:
-	remove_proc_entry(proc->name, gProcParent);
-	return rc;
+   remove_proc_entry(proc->name, gProcParent);
+   return rc;
 }
 
 static int proc_term(struct platform_device *pdev)
@@ -1218,16 +1249,16 @@ static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
 
 	if (cfg->bsc_apb_clk) {
 		dev->bsc_apb_clk = clk_get(dev->device, cfg->bsc_apb_clk);
-		/* AON domain clocks may be enabled by default, need to disable */
-		clk_disable(dev->bsc_apb_clk);
+        /* AON domain clocks may be enabled by default, need to disable */
+        clk_disable(dev->bsc_apb_clk);
 		if (!dev->bsc_apb_clk)
 			return -EINVAL;
 	}
 
 	if (cfg->bsc_clk) {
 		dev->bsc_clk = clk_get(dev->device, cfg->bsc_clk);
-		/* AON domain clocks may be enabled by default, need to disable */
-		clk_disable(dev->bsc_clk);
+        /* AON domain clocks may be enabled by default, need to disable */
+        clk_disable(dev->bsc_clk);
 		if (!dev->bsc_clk)
 			return -EINVAL;
 	}
@@ -1298,7 +1329,7 @@ static void i2c_master_reset(struct work_struct *work)
 static int __devinit bsc_probe(struct platform_device *pdev)
 {
 	int rc=0, irq;
-	struct bsc_adap_cfg *hw_cfg;
+	struct bsc_adap_cfg *hw_cfg = 0;
 	struct bsc_i2c_dev *dev;
 	struct i2c_adapter *adap;
 	struct resource *iomem, *ioarea;
@@ -1355,6 +1386,9 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		dev->bsc_clk = NULL;
 		dev->bsc_apb_clk = NULL;
 	}
+
+	/* Initialize the error flag */
+	dev->err_flag = 0;
 
 	/* validate the speed parameter */
 	if (dev->speed >= BSC_BUS_SPEED_MAX) {
@@ -1445,6 +1479,8 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		goto err_destroy_wq;
 	}
 
+	dev_info(dev->device, "bus %d at speed %d \n", pdev->id, dev->speed);
+
 	adap = &dev->adapter;
 	i2c_set_adapdata(adap, dev);
 	adap->owner = THIS_MODULE;
@@ -1453,7 +1489,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	adap->algo = &bsc_algo;
 	adap->dev.parent = &pdev->dev;
 	adap->nr = pdev->id;
-	adap->retries = MAX_RETRY_NUMBER;
+	adap->retries = hw_cfg ? hw_cfg->retries : 0;
 
 	/*
 	* Enable error (timeout) interrupt if it's not in high-speed mode. The
@@ -1478,8 +1514,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		goto err_proc_term;
 	}
 
-	dev_info(dev->device, "bus %d at speed %d \n", pdev->id, dev->speed);
-
+	bsc_disable_clk(dev);
 	return 0;
 
 err_proc_term:
@@ -1518,40 +1553,40 @@ err_release_mem_region:
 
 static int bsc_remove(struct platform_device *pdev)
 {
-	struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
-	struct resource *iomem;
+   struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
+   struct resource *iomem;
 
-	i2c_del_adapter(&dev->adapter);
+   i2c_del_adapter(&dev->adapter);
 
-	proc_term(pdev);
+   proc_term(pdev);
 
-	platform_set_drvdata(pdev, NULL);
-	free_irq(dev->irq, dev);
+   platform_set_drvdata(pdev, NULL);
+   free_irq(dev->irq, dev);
 
 	if (dev->reset_wq)
 		destroy_workqueue(dev->reset_wq);
 
-	bsc_set_autosense((uint32_t)dev->virt_base, 0);
-	bsc_deinit((uint32_t)dev->virt_base);
+   bsc_set_autosense((uint32_t)dev->virt_base, 0);
+   bsc_deinit((uint32_t)dev->virt_base);
 
-	iounmap(dev->virt_base);
+   iounmap(dev->virt_base);
 
-	bsc_disable_clk(dev);
-	bsc_put_clk(dev);
+   bsc_disable_clk(dev);
+   bsc_put_clk(dev);
 
-	kfree(dev);
+   kfree(dev);
 
-	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	release_mem_region(iomem->start, resource_size(iomem));
+   iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+   release_mem_region(iomem->start, resource_size(iomem));
 
-	return 0;
+   return 0;
 }
 
 #ifdef CONFIG_PM
 static int bsc_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
-
+	
 	/* flush the workqueue to make sure all outstanding work items are done */
 	flush_workqueue(dev->reset_wq);
 	
@@ -1561,9 +1596,9 @@ static int bsc_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int bsc_resume(struct platform_device *pdev)
 {
-	struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
+   struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
 
-	return bsc_enable_clk(dev);
+   return bsc_enable_clk(dev);
 }
 #else
 #define bsc_suspend    NULL
