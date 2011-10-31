@@ -82,6 +82,9 @@ static struct {
 	struct class           *vce_class;
 	uint32_t               irq_enabled;
 	struct pi_mgr_dfs_node* dfs_node;
+	struct pi_mgr_qos_node *cpu_qos_node;
+	struct semaphore       armctl_sem;
+	uint32_t               arm_keepawake_count;
 } vce_state;
 
 /* Per open handle state: */
@@ -324,6 +327,26 @@ static void clock_off(void)
 	up(&vce_state.clockctl_sem);
 }
 
+static void cpu_keepawake_dec(void)
+{
+	down(&vce_state.armctl_sem);
+	vce_state.arm_keepawake_count -= 1;
+	if (vce_state.arm_keepawake_count == 0) {
+		pi_mgr_qos_request_update(vce_state.cpu_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+	}
+	up(&vce_state.armctl_sem);
+}
+
+static void cpu_keepawake_inc(void)
+{
+	down(&vce_state.armctl_sem);
+	if (vce_state.arm_keepawake_count == 0) {
+		pi_mgr_qos_request_update(vce_state.cpu_qos_node, 0);
+	}
+	vce_state.arm_keepawake_count += 1;
+	up(&vce_state.armctl_sem);
+}
+
 #ifdef VCE_DEBUG
 static void clock_on_(int linenum) { clock_on(); dbg_print("VCE clock_on() @ %d\n", linenum); }
 #define clock_on() clock_on_(__LINE__)
@@ -536,6 +559,18 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
+		case VCE_IOCTL_UNUSE_ACP:
+		{
+			cpu_keepawake_dec();
+		}
+		break;
+
+		case VCE_IOCTL_USE_ACP:
+		{
+			cpu_keepawake_inc();
+		}
+		break;
+
 		case VCE_IOCTL_ASSERT_IDLE:
 		{
 			assert_vce_is_idle();
@@ -709,6 +744,7 @@ int __init vce_init(void)
 
 	/* For the power management */
 	sema_init(&vce_state.clockctl_sem, 1);
+	sema_init(&vce_state.armctl_sem, 1);
 
 	/* We map the registers -- even though the power to the domain
 	 * remains off... TODO: consider whether that's dangerous?  It
@@ -767,9 +803,26 @@ int __init vce_init(void)
 	}
 	vce_state.proc_status->read_proc = proc_status_read;
 
+	/* We need a QOS node for the CPU in order to do the ACP keep alive thing (simple wfi) */
+	vce_state.cpu_qos_node = pi_mgr_qos_add_request("vce", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+	if (vce_state.cpu_qos_node == NULL) {
+		err_print("Failed to get QOS node for ARM core\n");
+		ret = -ENOENT;
+		goto err5;
+	}
+
 	return 0;
 
+	/*
+	  error exit paths
+	*/
+
+	// pi_mgr_qos_request_remove(vce_state.cpu_qos_node);
+err5:
+
+	remove_proc_entry("status", vce_state.proc_vcedir);
 err4:
+
 	remove_proc_entry("version", vce_state.proc_vcedir);
 err3:
 	remove_proc_entry(VCE_DEV_NAME, NULL);
@@ -798,6 +851,7 @@ void __exit vce_exit(void)
 
 	down(&vce_state.work_lock);
 	down(&vce_state.clockctl_sem);
+	down(&vce_state.armctl_sem);
 	BUG_ON(vce_state.clock_enable_count != 0);
 
 	/* remove proc entries */
@@ -814,6 +868,8 @@ void __exit vce_exit(void)
 
 	if (mm_rst_base)
 		iounmap(mm_rst_base);
+
+	pi_mgr_qos_request_remove(vce_state.cpu_qos_node);
 
 	device_destroy(vce_state.vce_class, MKDEV(vce_major, 0));
 	class_destroy(vce_state.vce_class);
