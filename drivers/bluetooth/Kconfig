@@ -237,6 +237,12 @@ config BCM_RFKILL
 	help
 	  This driver adds RFKILL support for Broadcom bluetooth
 
+config BCM_BT_LPM
+	bool "BCM BT Low Power support"
+	default n
+	help
+	  This driver adds Low Power mode support for Broadcom bluetooth
+
 config BCM_LPM_LDISC
 	bool "BCM BT Low Power support"
 	default n

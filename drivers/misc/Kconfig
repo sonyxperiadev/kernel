@@ -672,12 +672,6 @@ config BCMPMU_AUDIO
         help
           If you say Y to support Audio drive on BCM PMUs.
 
-config BCM_BT_LPM
-        bool "BCM BT Low Power support"
-        default n
-        ---help---
-        This driver adds Low Power mode support for Broadcom bluetooth
-
 source "drivers/misc/Kconfig.stm"
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
