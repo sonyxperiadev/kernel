@@ -817,11 +817,13 @@ void brcm_current_netcon_status(unsigned char status)
 		list_for_each_entry(nt, &target_list, list) {
 			pr_info( "2. setup/cleanup netpoll\n");
 			brcm_netconsole_target_get(nt);
+#ifndef CONFIG_ARCH_ISLAND
 			if (status)
 				netpoll_setup(&nt->np);
 			else if (cur_rndis_status)
 				netpoll_cleanup(&nt->np);
 			brcm_netconsole_target_put(nt);
+#endif
 		}
 		spin_unlock_irqrestore(&target_list_lock, flags);
 	}

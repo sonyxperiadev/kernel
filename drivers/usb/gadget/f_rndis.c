@@ -566,7 +566,11 @@ static void rndis_disable(struct usb_function *f)
 /* Keep the function for debugging purpose */
 static void rndis_suspend(struct usb_function *f)
 {
-	pr_info("%s is called...\n", __func__);
+	struct f_rndis		*rndis = func_to_rndis(f);
+	struct usb_composite_dev *cdev = f->config->cdev;
+
+	DBG(cdev, "rndis suspend\n");
+	gether_disconnect(&rndis->port);
 }
 #endif //#ifdef CONFIG_BRCM_NETCONSOLE
 
