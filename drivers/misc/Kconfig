@@ -671,14 +671,6 @@ config BCMPMU_AUDIO
         depends on MFD_BCMPMU
         help
           If you say Y to support Audio drive on BCM PMUs.
-	  
-config BCM_RFKILL
-        bool "BCM RFKILL driver support for Bluetooth"
-	depends on RFKILL
-        default n
-        ---help---
-        This driver adds RFKILL support for Broadcom bluetooth
-
 
 config BCM_BT_LPM
         bool "BCM BT Low Power support"

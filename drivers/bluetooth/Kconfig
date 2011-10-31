@@ -232,9 +232,10 @@ config BT_WILINK
 
 config BCM_RFKILL
 	bool "BCM RFKILL driver support for Bluetooth"
+	depends on RFKILL
 	default n
 	help
-	  This driver adds RFKILL support for Broadcom bluetooth.
+	  This driver adds RFKILL support for Broadcom bluetooth
 
 config BCM_LPM_LDISC
 	bool "BCM BT Low Power support"

@@ -59,11 +59,6 @@
 #include <pwm_backlight_settings.h>
 #endif
 
-#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
-#include <linux/broadcom/bcmblt-rfkill.h>
-#include <bcmblt_rfkill_settings.h>
-#endif
-
 #if defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)
 #include <linux/broadcom/bcmbt_rfkill.h>
 #include <bcmbt_rfkill_settings.h>
@@ -1117,31 +1112,6 @@ static struct i2c_board_info __initdata i2c_bmp18x_info[] =
 };
 #endif
 
-#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
-#define board_bcmblt_rfkill_cfg concatenate(ISLAND_BOARD_ID, _bcmblt_rfkill_cfg)
-static struct bcmblt_rfkill_platform_data board_bcmblt_rfkill_cfg =
-{
-#ifdef BCMBLT_RFKILL_GPIO
-   .gpio = BCMBLT_RFKILL_GPIO,
-#endif
-};
-#define board_bcmblt_rfkill_device concatenate(ISLAND_BOARD_ID, _bcmblt_rfkill_device)
-static struct platform_device board_bcmblt_rfkill_device = 
-{
-   .name = "bcmblt-rfkill",
-   .id = 1,
-   .dev =
-   {
-      .platform_data = &board_bcmblt_rfkill_cfg,
-   },
-}; 
-
-static void __init board_add_bcmblt_rfkill_device(void)
-{
-   platform_device_register(&board_bcmblt_rfkill_device);
-}
-#endif
-
 #if defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)
 #define board_bcmbt_rfkill_cfg concatenate(ISLAND_BOARD_ID, _bcmbt_rfkill_cfg)
 static struct bcmbt_rfkill_platform_data board_bcmbt_rfkill_cfg =
@@ -1695,7 +1665,7 @@ static void __init add_devices(void)
 
 #if defined(CONFIG_BCM_HEADSET_SW)
         board_add_headsetdet_device();
-#endif   
+#endif
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
         board_add_keys_device();
@@ -1703,10 +1673,6 @@ static void __init add_devices(void)
 
 #if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
         board_add_keyboard_kona();
-#endif
-
-#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
-        board_add_bcmblt_rfkill_device();
 #endif
 
 #if defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)
