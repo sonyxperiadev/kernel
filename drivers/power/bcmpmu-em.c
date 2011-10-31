@@ -404,8 +404,15 @@ static void em_algorithm(struct work_struct *work)
 
 	if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE) {
 		if (pem->charge_state != CHRG_STATE_CHRG) {
-			bcmpmu->chrgr_usb_en(bcmpmu, 1);
-			pem->charge_state = CHRG_STATE_CHRG;
+			if (bcmpmu->get_env_bit_status(bcmpmu, PMU_ENV_USB_VALID) == true) {
+				bcmpmu->chrgr_usb_en(bcmpmu, 1);
+				pem->charge_state = CHRG_STATE_CHRG;
+			} else {
+				bcmpmu->chrgr_usb_en(bcmpmu, 1);
+				pr_em(FLOW, "%s, charger not ready yet.\n", __func__);
+				schedule_delayed_work(&pem->work, msecs_to_jiffies(500));
+				return;
+			}
 		}
 	} else if (pem->charge_state != CHRG_STATE_IDLE) {
 		bcmpmu->set_vfloat(bcmpmu, 0);
