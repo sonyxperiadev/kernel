@@ -48,6 +48,16 @@ CFLAGS_board_sv.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_SV \
 -Ivc4-dev/src/interface/vceb/host \
 -Ivc4-dev/src/interface/vceb/host/linux 
 
+# Today the 28160 sv is almost identical to the 11160 sv from
+# Linux's point-of-view so we include it's hw_cfg directory and only
+# override where necessary, which today is no-where.
+obj-$(CONFIG_MACH_ISLAND_SV_28160) += board_sv_28160.o pinmux_island_sv_28160.o
+CFLAGS_board_sv_28160.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_SV_28160 \
+-Iarch/arm/mach-island/hw_cfg/ISLAND_SV \
+-Iarch/arm/mach-island/hw_cfg/BASE \
+-Ivc4-dev/src/interface/vceb/host \
+-Ivc4-dev/src/interface/vceb/host/linux 
+
 obj-$(CONFIG_MACH_ISLAND_TABLET) += board_tablet.o pinmux_island_tablet.o
 CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
 -Iarch/arm/mach-island/hw_cfg/BASE \

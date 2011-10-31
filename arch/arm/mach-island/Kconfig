@@ -30,6 +30,11 @@ config MACH_ISLAND_SV
         help
           Support for the Broadcom Island SV board.
 
+config MACH_ISLAND_SV_28160
+        bool "Support Broadcom Island SV 28160 board"
+        help
+          Support for the Broadcom Island SV 28160 board.
+
 config MACH_ISLAND_TABLET
         bool "Support Broadcom Island Tablet board"
         help
