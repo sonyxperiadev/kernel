@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2011 11:6:8                                             */
+/*     Date     : Generated on 10/25/2011 18:47:49                                             */
 /*     RDB file : /projects/BIGISLAND/revA0                                                                   */
 /************************************************************************************************/
 
@@ -104,45 +104,39 @@
 #define CHIPREG_SECURITY_SPARE_REG2_TYPE                                  UInt32
 #define CHIPREG_SECURITY_SPARE_REG2_RESERVED_MASK                         0xFFFFFFFF
 
-#define CHIPREG_HSOTG_AFE_CONF_OFFSET                                     0x00000028
-#define CHIPREG_HSOTG_AFE_CONF_TYPE                                       UInt32
-#define CHIPREG_HSOTG_AFE_CONF_RESERVED_MASK                              0x0000F800
-#define    CHIPREG_HSOTG_AFE_CONF_GENERIC_CTL_I_SHIFT                     16
-#define    CHIPREG_HSOTG_AFE_CONF_GENERIC_CTL_I_MASK                      0xFFFF0000
-#define    CHIPREG_HSOTG_AFE_CONF_SYNC_DET_LENGTH_I_SHIFT                 8
-#define    CHIPREG_HSOTG_AFE_CONF_SYNC_DET_LENGTH_I_MASK                  0x00000700
-#define    CHIPREG_HSOTG_AFE_CONF_OTG_MODE_SHIFT                          7
-#define    CHIPREG_HSOTG_AFE_CONF_OTG_MODE_MASK                           0x00000080
-#define    CHIPREG_HSOTG_AFE_CONF_CHRP_RX_SEL_I_SHIFT                     6
-#define    CHIPREG_HSOTG_AFE_CONF_CHRP_RX_SEL_I_MASK                      0x00000040
-#define    CHIPREG_HSOTG_AFE_CONF_TX_PHASE_I_SHIFT                        5
-#define    CHIPREG_HSOTG_AFE_CONF_TX_PHASE_I_MASK                         0x00000020
-#define    CHIPREG_HSOTG_AFE_CONF_IDDQ_EN_SHIFT                           4
-#define    CHIPREG_HSOTG_AFE_CONF_IDDQ_EN_MASK                            0x00000010
-#define    CHIPREG_HSOTG_AFE_CONF_UTMI_DISCON_PHY_I_SHIFT                 3
-#define    CHIPREG_HSOTG_AFE_CONF_UTMI_DISCON_PHY_I_MASK                  0x00000008
-#define    CHIPREG_HSOTG_AFE_CONF_HOSTB_DEV_I_SHIFT                       2
-#define    CHIPREG_HSOTG_AFE_CONF_HOSTB_DEV_I_MASK                        0x00000004
-#define    CHIPREG_HSOTG_AFE_CONF_UTMI_PWRDWNB_I_SHIFT                    1
-#define    CHIPREG_HSOTG_AFE_CONF_UTMI_PWRDWNB_I_MASK                     0x00000002
-#define    CHIPREG_HSOTG_AFE_CONF_AFE_PWRDWNB_I_SHIFT                     0
-#define    CHIPREG_HSOTG_AFE_CONF_AFE_PWRDWNB_I_MASK                      0x00000001
+#define CHIPREG_PERIPH_SPARE_REG3_OFFSET                                  0x00000028
+#define CHIPREG_PERIPH_SPARE_REG3_TYPE                                    UInt32
+#define CHIPREG_PERIPH_SPARE_REG3_RESERVED_MASK                           0xFFFFFFFF
 
-#define CHIPREG_USB_PLL2_CONF_OFFSET                                      0x0000002C
-#define CHIPREG_USB_PLL2_CONF_TYPE                                        UInt32
-#define CHIPREG_USB_PLL2_CONF_RESERVED_MASK                               0xFFFE0000
-#define    CHIPREG_USB_PLL2_CONF_PLL_NDIV_INT_SHIFT                       8
-#define    CHIPREG_USB_PLL2_CONF_PLL_NDIV_INT_MASK                        0x0001FF00
-#define    CHIPREG_USB_PLL2_CONF_PLL_P1DIV_SHIFT                          4
-#define    CHIPREG_USB_PLL2_CONF_PLL_P1DIV_MASK                           0x000000F0
-#define    CHIPREG_USB_PLL2_CONF_AFE_INPSEL_SHIFT                         3
-#define    CHIPREG_USB_PLL2_CONF_AFE_INPSEL_MASK                          0x00000008
-#define    CHIPREG_USB_PLL2_CONF_PLL_PWRDWNB_I_SHIFT                      2
-#define    CHIPREG_USB_PLL2_CONF_PLL_PWRDWNB_I_MASK                       0x00000004
-#define    CHIPREG_USB_PLL2_CONF_PLL_HI_RESET_SHIFT                       1
-#define    CHIPREG_USB_PLL2_CONF_PLL_HI_RESET_MASK                        0x00000002
-#define    CHIPREG_USB_PLL2_CONF_PLL_SUSPEND_EN_I_SHIFT                   0
-#define    CHIPREG_USB_PLL2_CONF_PLL_SUSPEND_EN_I_MASK                    0x00000001
+#define CHIPREG_RING_OSC_CTR_REG0_OFFSET                                  0x0000002C
+#define CHIPREG_RING_OSC_CTR_REG0_TYPE                                    UInt32
+#define CHIPREG_RING_OSC_CTR_REG0_RESERVED_MASK                           0xFFFE0300
+#define    CHIPREG_RING_OSC_CTR_REG0_ESUB_IRDROP_RESETN_SHIFT             16
+#define    CHIPREG_RING_OSC_CTR_REG0_ESUB_IRDROP_RESETN_MASK              0x00010000
+#define    CHIPREG_RING_OSC_CTR_REG0_HUB_OSC_OUT_ENABLE_SHIFT             15
+#define    CHIPREG_RING_OSC_CTR_REG0_HUB_OSC_OUT_ENABLE_MASK              0x00008000
+#define    CHIPREG_RING_OSC_CTR_REG0_HUB_IRD_MON_ENABLE_SHIFT             14
+#define    CHIPREG_RING_OSC_CTR_REG0_HUB_IRD_MON_ENABLE_MASK              0x00004000
+#define    CHIPREG_RING_OSC_CTR_REG0_ARM_OSC_OUT_ENABLE_SHIFT             12
+#define    CHIPREG_RING_OSC_CTR_REG0_ARM_OSC_OUT_ENABLE_MASK              0x00003000
+#define    CHIPREG_RING_OSC_CTR_REG0_ARM_IRD_MON_ENABLE_SHIFT             10
+#define    CHIPREG_RING_OSC_CTR_REG0_ARM_IRD_MON_ENABLE_MASK              0x00000C00
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_SEL1_OSC2_SHIFT          7
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_SEL1_OSC2_MASK           0x00000080
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_SEL0_OSC2_SHIFT          6
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_SEL0_OSC2_MASK           0x00000040
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_PWENB_OSC2_SHIFT         5
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_PWENB_OSC2_MASK          0x00000020
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_ENABLE_OSC2_SHIFT        4
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_ENABLE_OSC2_MASK         0x00000010
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_SEL1_OSC1_SHIFT          3
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_SEL1_OSC1_MASK           0x00000008
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_SEL0_OSC1_SHIFT          2
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_SEL0_OSC1_MASK           0x00000004
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_PWENB_OSC1_SHIFT         1
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_PWENB_OSC1_MASK          0x00000002
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_ENABLE_OSC1_SHIFT        0
+#define    CHIPREG_RING_OSC_CTR_REG0_PADRING_OSC_ENABLE_OSC1_MASK         0x00000001
 
 #define CHIPREG_ARM_PERI_CONTROL_OFFSET                                   0x00000030
 #define CHIPREG_ARM_PERI_CONTROL_TYPE                                     UInt32
@@ -166,33 +160,63 @@
 
 #define CHIPREG_PERIPH_SPARE_REG1_OFFSET                                  0x00000034
 #define CHIPREG_PERIPH_SPARE_REG1_TYPE                                    UInt32
-#define CHIPREG_PERIPH_SPARE_REG1_RESERVED_MASK                           0xFFFFFFFF
+#define CHIPREG_PERIPH_SPARE_REG1_RESERVED_MASK                           0x11000000
+#define    CHIPREG_PERIPH_SPARE_REG1_BMODEM_FUSE_HSDPA_CAT_SHIFT          31
+#define    CHIPREG_PERIPH_SPARE_REG1_BMODEM_FUSE_HSDPA_CAT_MASK           0x80000000
+#define    CHIPREG_PERIPH_SPARE_REG1_BMODEM_FUSE_HSDAP_ENB_SHIFT          30
+#define    CHIPREG_PERIPH_SPARE_REG1_BMODEM_FUSE_HSDAP_ENB_MASK           0x40000000
+#define    CHIPREG_PERIPH_SPARE_REG1_BMODEM_FUSE_HSUPA_CAT_SHIFT          29
+#define    CHIPREG_PERIPH_SPARE_REG1_BMODEM_FUSE_HSUPA_CAT_MASK           0x20000000
+#define    CHIPREG_PERIPH_SPARE_REG1_BMODEM_FUSE_PRISM_ENB_SHIFT          27
+#define    CHIPREG_PERIPH_SPARE_REG1_BMODEM_FUSE_PRISM_ENB_MASK           0x08000000
+#define    CHIPREG_PERIPH_SPARE_REG1_VC4_CLKMON_OUT_ENABLE_SHIFT          26
+#define    CHIPREG_PERIPH_SPARE_REG1_VC4_CLKMON_OUT_ENABLE_MASK           0x04000000
+#define    CHIPREG_PERIPH_SPARE_REG1_FABRIC_SNOOP_CTRL_SHIFT              25
+#define    CHIPREG_PERIPH_SPARE_REG1_FABRIC_SNOOP_CTRL_MASK               0x02000000
+#define    CHIPREG_PERIPH_SPARE_REG1_PM_DEBUG_BUS_SEL_SHIFT               20
+#define    CHIPREG_PERIPH_SPARE_REG1_PM_DEBUG_BUS_SEL_MASK                0x00F00000
+#define    CHIPREG_PERIPH_SPARE_REG1_CHIP_DEBUG_BUS_SEL_SHIFT             16
+#define    CHIPREG_PERIPH_SPARE_REG1_CHIP_DEBUG_BUS_SEL_MASK              0x000F0000
+#define    CHIPREG_PERIPH_SPARE_REG1_CAPH_DBG_SEL_SHIFT                   0
+#define    CHIPREG_PERIPH_SPARE_REG1_CAPH_DBG_SEL_MASK                    0x0000FFFF
 
 #define CHIPREG_PERIPH_SPARE_REG2_OFFSET                                  0x00000038
 #define CHIPREG_PERIPH_SPARE_REG2_TYPE                                    UInt32
-#define CHIPREG_PERIPH_SPARE_REG2_RESERVED_MASK                           0xFFFFFFFF
+#define CHIPREG_PERIPH_SPARE_REG2_RESERVED_MASK                           0xFFF0FFFC
+#define    CHIPREG_PERIPH_SPARE_REG2_DIFF_26M_CLK_IS_IDLE_SHIFT           19
+#define    CHIPREG_PERIPH_SPARE_REG2_DIFF_26M_CLK_IS_IDLE_MASK            0x00080000
+#define    CHIPREG_PERIPH_SPARE_REG2_SEC26M_CLK_IS_IDLE_SHIFT             18
+#define    CHIPREG_PERIPH_SPARE_REG2_SEC26M_CLK_IS_IDLE_MASK              0x00040000
+#define    CHIPREG_PERIPH_SPARE_REG2_MM_CRYSTAL_CLK_IS_IDLE_SHIFT         17
+#define    CHIPREG_PERIPH_SPARE_REG2_MM_CRYSTAL_CLK_IS_IDLE_MASK          0x00020000
+#define    CHIPREG_PERIPH_SPARE_REG2_HDMI_CRYSTAL_CLK_IS_IDLE_SHIFT       16
+#define    CHIPREG_PERIPH_SPARE_REG2_HDMI_CRYSTAL_CLK_IS_IDLE_MASK        0x00010000
+#define    CHIPREG_PERIPH_SPARE_REG2_SEL_RGMMI_SHIFT                      1
+#define    CHIPREG_PERIPH_SPARE_REG2_SEL_RGMMI_MASK                       0x00000002
+#define    CHIPREG_PERIPH_SPARE_REG2_REF_INT_EN_RGMII_VREF_SHIFT          0
+#define    CHIPREG_PERIPH_SPARE_REG2_REF_INT_EN_RGMII_VREF_MASK           0x00000001
 
-#define CHIPREG_USB_INTERNAL_MDIO0_OFFSET                                 0x0000003C
-#define CHIPREG_USB_INTERNAL_MDIO0_TYPE                                   UInt32
-#define CHIPREG_USB_INTERNAL_MDIO0_RESERVED_MASK                          0x00E00000
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_WRITE_START_SHIFT              31
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_WRITE_START_MASK               0x80000000
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_READ_START_SHIFT               30
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_READ_START_MASK                0x40000000
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_SM_SEL_SHIFT                   29
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_SM_SEL_MASK                    0x20000000
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_ID_SHIFT                       24
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_ID_MASK                        0x1F000000
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_REG_ADDR_SHIFT                 16
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_REG_ADDR_MASK                  0x001F0000
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_REG_WR_DATA_SHIFT              0
-#define    CHIPREG_USB_INTERNAL_MDIO0_MDIO_REG_WR_DATA_MASK               0x0000FFFF
+#define CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET                              0x0000003C
+#define CHIPREG_MDIO_CTRL_ADDR_WRDATA_TYPE                                UInt32
+#define CHIPREG_MDIO_CTRL_ADDR_WRDATA_RESERVED_MASK                       0x00E00000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_SHIFT           31
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK            0x80000000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_READ_START_SHIFT            30
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_READ_START_MASK             0x40000000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_SHIFT                29
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK                 0x20000000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT                    24
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_MASK                     0x1F000000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT              16
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_MASK               0x001F0000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_WR_DATA_SHIFT           0
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_WR_DATA_MASK            0x0000FFFF
 
-#define CHIPREG_USB_INTERNAL_MDIO1_OFFSET                                 0x00000040
-#define CHIPREG_USB_INTERNAL_MDIO1_TYPE                                   UInt32
-#define CHIPREG_USB_INTERNAL_MDIO1_RESERVED_MASK                          0xFFFF0000
-#define    CHIPREG_USB_INTERNAL_MDIO1_MDIO_REG_RD_DATA_SHIFT              0
-#define    CHIPREG_USB_INTERNAL_MDIO1_MDIO_REG_RD_DATA_MASK               0x0000FFFF
+#define CHIPREG_MDIO_RDDATA_OFFSET                                        0x00000040
+#define CHIPREG_MDIO_RDDATA_TYPE                                          UInt32
+#define CHIPREG_MDIO_RDDATA_RESERVED_MASK                                 0xFFFF0000
+#define    CHIPREG_MDIO_RDDATA_MDIO_REG_RD_DATA_SHIFT                     0
+#define    CHIPREG_MDIO_RDDATA_MDIO_REG_RD_DATA_MASK                      0x0000FFFF
 
 #define CHIPREG_RAM_STBY_CONTROL_OFFSET                                   0x00000044
 #define CHIPREG_RAM_STBY_CONTROL_TYPE                                     UInt32
