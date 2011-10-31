@@ -522,7 +522,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_rm_host;
 
-	/* if device is NOT SD/MMC, emulate card insert right here */
+	/* if device is eMMC, emulate card insert right here */
 	if (dev->devtype == SDIO_DEV_TYPE_EMMC) {
 		ret = bcm_kona_sd_card_emulate(dev, 1);
 		if (ret) {
