@@ -456,6 +456,15 @@ void AUDIO_Ctrl_Process(
 									parm_spkr->new_sink,
 									parm_spkr->new_spkr);
 		}
+		case ACTION_AUD_RemoveChannel:
+		{
+			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
+			AUDCTRL_RemovePlaySpk(parm_spkr->src,
+	                               parm_spkr->new_sink,
+									parm_spkr->new_spkr,
+									parm_spkr->cur_sink,
+									parm_spkr->cur_spkr);
+		}
 		break;
 		case ACTION_AUD_EnableTelephony:
 		{

@@ -393,6 +393,22 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 							}
 						}
 						pChip->streamCtl[stream-1].dev_prop.p[i].speaker = pSel[i];
+
+						// If stIHF remove EP path first.
+						if ((isSTIHF) &&
+							(pCurSel[i] == AUDCTRL_SPK_LOUDSPK) &&
+							(pChip->streamCtl[stream-1].dev_prop.p[i+1].hw_id == AUDIO_HW_EARPIECE_OUT))
+						{
+							BCM_AUDIO_DEBUG("Stereo IHF, remove EP path first.\n");
+							parm_spkr.src = pChip->streamCtl[stream-1].dev_prop.p[0].hw_src;
+							parm_spkr.cur_sink = AUDIO_HW_EARPIECE_OUT;
+							parm_spkr.cur_spkr = AUDCTRL_SPK_HANDSET;
+							parm_spkr.new_sink = curSink;
+							parm_spkr.new_spkr = curSpk;
+							AUDIO_Ctrl_Trigger(ACTION_AUD_RemoveChannel,&parm_spkr,NULL,0);
+							pChip->streamCtl[stream-1].dev_prop.p[i+1].hw_id = AUDIO_HW_NONE;
+							pChip->streamCtl[stream-1].dev_prop.p[i+1].aud_dev = AUDDRV_DEV_NONE;
+						}
 						if (i == 0)
 						{
 							// do the real switching now.

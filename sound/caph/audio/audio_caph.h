@@ -75,6 +75,7 @@ typedef enum
     ACTION_AUD_CloseRecord,
     ACTION_AUD_SetPrePareParameters,
     ACTION_AUD_AddChannel,
+    ACTION_AUD_RemoveChannel,
     ACTION_AUD_EnableTelephony,
     ACTION_AUD_DisableTelephony,
     ACTION_AUD_MutePlayback,
