@@ -174,10 +174,10 @@ typedef enum
 *****************************************************************************/
 typedef enum
 {
-    DE1_CM_888U_TO_565  = 0, ///< IN 4B OUT 2B
-    DE1_CM_565_LSB      = 1, ///< IN 4B OUT 2B  1 565 pixel per AHB per (only lower 16bits used, no conv)
-    DE1_CM_565          = 2, ///< IN 4B OUT 4B  2 565 pixel per AHB
-    DE1_CM_888U         = 3, ///< IN 4B OUT 3B  1 888 pixel per AHB (upper byte not used)
+    DE1_CM_565          = 0, ///< out -> B2 B1 B3 B2
+    DE1_CM_888U         = 1, ///< out -> B2,B1,B0 (B3 ignored)
+    DE1_CM_LE           = 2, ///< out -> B0,B1,B2,B3
+    DE1_CM_BE           = 3, ///< out -> B3,B2,B1,B0
 } CHAL_DSI_DE1_COL_MOD_t;
   
 
