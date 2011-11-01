@@ -63,6 +63,12 @@ config MAP_LITTLE_ISLAND_MEMC_QOS
         help
           Enable Memory Controller QOS in Little Island mode.
 
+config MAP_DUMMY_PM
+        bool "MAP Dummy PM ops"
+	default n
+        help
+          Support for dummy PM ops to facilitate driver PM testing.
+
 config MAP_SDMA
 	bool "MAP SDMA and Memory Map"
 	help

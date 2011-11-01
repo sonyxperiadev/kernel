@@ -14,6 +14,7 @@
 
 obj-y := io_map.o island.o ipc_chip.o island_pinmux.o common.o
 
+obj-$(CONFIG_MAP_DUMMY_PM) += dummy_pm.o
 obj-$(CONFIG_HAVE_CLK) += clock_island.o
 obj-$(CONFIG_KONA_POWER_MGR) += island_pwr_mgr.o
 obj-$(CONFIG_KONA_PI_MGR) += island_pi_mgr.o
