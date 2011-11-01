@@ -26,35 +26,13 @@ OBJ  := vceb_linux_os.o \
    ../vceb.o ../../common/vceb_common.o ../common/vceb_interface.o \
 	vceb_app_code.o vceb_2nd_stage_code.o
 
-#obj-y := vceb_linux_boot_mode.o
-
-#obj-$(CONFIG_VC_VCHIQ_BUSDRV_JAZZ) += vceb-pif.o
-#vceb-pif-objs := jazz/vceb-host-interface.o 
-
-obj-$(CONFIG_VC_VCHIQ_MEMDRV_HANA) 	+= vceb-hana.o
-#obj-$(CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM) += vceb-hana.o
-
-vceb-hana-objs := hana/vceb-host-interface-hana.o
-
-#obj-$(CONFIG_VC_VCHIQ_BUSDRV_MPHI) += vceb-mphi.o
-#vceb-mphi-objs := mphi/vceb-host-interface-mphi.o
-#vceb-mphi-objs += mphi/vchost-log.o
-# We're in the vc4/src/interface/vceb/host/linux directory and want to add in
-# arch/arm/mach-bcmhana/csp/mphi/chal_mphi.c
-#vceb-mphi-objs += ../../../../../../arch/arm/mach-bcmhana/csp/mphi/chal_mphi_new.o
-
-
-#ifneq ($(CONFIG_VC_VCHIQ_BUSDRV_VESPER),)
-#   OBJ += vesper_ep4/vceb_host_interface.o vesper_ep4/dma.o \
-#          vesper_ep4/images.o
-#endif
-
-#ifneq ($(CONFIG_VC_VCHIQ_BUSDRV_RAINBOW),)
-#   OBJ += rainbow/vceb_host_interface.o rainbow/dma.o rainbow/images.o
-#endif
-
+#vc-vceb.o needs to be before any other sub-modules
 obj-$(CONFIG_VC_VCEB) += vc-vceb.o
 vc-vceb-objs := $(OBJ)
+
+obj-$(CONFIG_VC_VCHIQ_MEMDRV_HANA) 	+= vceb-hana.o
+
+vceb-hana-objs := hana/vceb-host-interface-hana.o
 
 all:
 	$(MAKE) -C $(KERNEL_DIR) SUBDIRS=$(PWD) modules

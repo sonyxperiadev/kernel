@@ -157,4 +157,7 @@ extern int32_t vceb_get_stat( VCEB_INSTANCE_T instance,
                               char *buffer,
                               const uint32_t buffer_len );
 
+void vceb_firmware_downloaded( void );
+void vceb_add_firmware_downloaded_callback( void (*callback)(void) );
+
 #endif // VCEB_H_

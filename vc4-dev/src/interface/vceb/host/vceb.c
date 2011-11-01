@@ -1330,4 +1330,27 @@ int32_t vceb_control_run_pin(VCEB_INSTANCE_T instance, const uint32_t run_pin_hi
     return vceb_host_interface_control_run_pin( instance->host_interface_instance, run_pin_high );
 }
 
+static int firmware_downloaded;
+static void (*firmware_downloaded_callback)(void);
+
+void vceb_firmware_downloaded( void )
+{
+   firmware_downloaded = 1;
+   if ( firmware_downloaded_callback != NULL )
+   {
+      firmware_downloaded_callback();
+      firmware_downloaded_callback = NULL;
+   }
+}
+
+void vceb_add_firmware_downloaded_callback( void (*callback)(void) )
+{
+   firmware_downloaded_callback = callback;
+
+   if ( firmware_downloaded && ( firmware_downloaded_callback != NULL ))
+   {
+      firmware_downloaded_callback();
+   }
+}
+
 /* ************************************ The End ***************************************** */

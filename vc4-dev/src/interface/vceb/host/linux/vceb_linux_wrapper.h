@@ -27,5 +27,7 @@ int32_t vceb_linux_create_instance( const VCEB_HOST_INTERFACE_CREATE_PARAMS_T *c
 
 void vceb_linux_delete_instance( VCEB_LINUX_INSTANCE_T linux_inst );
 
+VCEB_INSTANCE_T vceb_linux_get_vceb_instance( VCEB_LINUX_INSTANCE_T linux_inst );
+
 #endif /* VCEB_LINUX_WRAPPER_H_ */
 

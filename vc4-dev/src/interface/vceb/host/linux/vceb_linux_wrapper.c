@@ -111,6 +111,11 @@ static VCEB_GLOBAL_STATE_T *vceb_global_state = NULL;
 Static funcs
 ******************************************************************************/
 
+VCEB_INSTANCE_T vceb_linux_get_vceb_instance( VCEB_LINUX_INSTANCE_T linux_inst )
+{
+   return linux_inst->vceb_inst;
+}
+
 int32_t vceb_parse_cmdline(   char *cmdline,
                               char **params,
                               const uint32_t max_params,
@@ -934,6 +939,7 @@ static int __init vceb_linux_wrapper_init_drv( void )
     }
 #endif
 
+    printk( KERN_INFO "vceb_linux_wrapper_init_drv called\n" );
     vceb_global_state = kzalloc( sizeof( *vceb_global_state ), GFP_KERNEL );
     if ( vceb_global_state == NULL )
     {
@@ -959,6 +965,9 @@ EXPORT_SYMBOL( vceb_framebuffer_overlay_enable );
 EXPORT_SYMBOL( vceb_framebuffer_overlay_set );
 EXPORT_SYMBOL( vceb_linux_create_instance );
 EXPORT_SYMBOL( vceb_linux_delete_instance );
+EXPORT_SYMBOL( vceb_linux_get_vceb_instance );
+EXPORT_SYMBOL( vceb_firmware_downloaded );
+EXPORT_SYMBOL( vceb_add_firmware_downloaded_callback );
 
 // We want the vceb stuff to get called before this code. So we need to ensure that
 // this code uses an initcall which comes before the one in vchiq_kernel.c
