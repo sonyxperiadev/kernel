@@ -412,6 +412,8 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 {
 	struct cma *cma = get_dev_cma_area(dev);
 	unsigned long pfn, pageno;
+	unsigned long start_from = 0;
+	unsigned int retries = 0;
 	int ret;
 
 	if (!cma)
@@ -427,10 +429,11 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 		return NULL;
 
 	mutex_lock(&cma_mutex);
-
-	pageno = bitmap_find_next_zero_area(cma->bitmap, cma->count, 0, count,
+retry:
+	pageno = bitmap_find_next_zero_area(cma->bitmap, cma->count, start_from, count,
 					    (1 << align) - 1);
 	if (pageno >= cma->count) {
+		printk(KERN_ERR"%s:%d #### CMA ALLOCATION FAILED ####\n", __func__, __LINE__);
 		pr_debug("%s : could not find %d/%d in this cma region bitmap\n", __func__, count, align);
 		ret = -ENOMEM;
 		goto error;
@@ -441,14 +444,29 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 
 	pfn = cma->base_pfn + pageno;
 	ret = alloc_contig_range(pfn, pfn + count, 0, MIGRATE_CMA);
-	if (ret)
+	if (ret) {
+		printk(KERN_ERR"%s:%d #### CMA ALLOCATION FAILED #### with ret = %d\n", __func__, __LINE__, ret);
+		if ((pfn + 2 * count) <= (cma->base_pfn + cma->count)) {
+			bitmap_clear(cma->bitmap, pfn - cma->base_pfn, count);
+			start_from = pageno + count;
+			retries++;
+			/* Maximum 10 retries to find the space and get the
+			 * migration right (This will take a long time if it
+			 * keeps failing)
+			 */
+			if (retries <= 10) {
+				printk(KERN_EMERG"#### Retry(%u) to find the allocation from pfn(0x%lu) ####\n", retries, start_from);
+				goto retry;
+			}
+		}
 		goto free;
+	}
 
 	add_cma_stats(dev, cma, pfn, count, 1);
 
 	mutex_unlock(&cma_mutex);
 
-	pr_debug("%s(): returning [%p]\n", __func__, (pfn << PAGE_SHIFT));
+	pr_debug("%s(): returning [0x%08lx]\n", __func__, (pfn << PAGE_SHIFT));
 
 	return pfn_to_page(pfn);
 free:
