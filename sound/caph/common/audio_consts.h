@@ -42,16 +42,6 @@
 /****************************************************************
  * The following part shows all the constant values needed in audio baseband code.
  ****************************************************************/
-
-#include "tones_def.h"
-
-
-/*
-	Audio MICGAIN Index (3 dB/step)
-*/
-#define	AUDIO_MICGAIN_MIN		0 						///< lowest = 0dB
-#define	AUDIO_MICGAIN_MAX 		14						///< loudest = 42dB
-
 typedef enum AUDIO_GAIN_FORMAT_t 
 {
 	AUDIO_GAIN_FORMAT_mB,     // gain in milli Bel = 1/100 dB 
@@ -59,46 +49,6 @@ typedef enum AUDIO_GAIN_FORMAT_t
 	AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE   // CUSTOMER TABLE: FM Radio audio gain table
 } AUDIO_GAIN_FORMAT_t;
 
-/**
-	 Sound Channels:
-**/
-typedef	enum
-{
-	AUDIO_CHNL_HANDSET = 0,				///< voice speaker
-	AUDIO_CHNL_HEADPHONE = 1,			///< headphone
-	AUDIO_CHNL_HANDSFREE = 2,			///< CAR_KIT
-	AUDIO_CHNL_BT_MONO = 3,				///< Bluetooth mono headset
-	AUDIO_CHNL_BLUETOOTH = 3,			///< Bluetooth headset (this is just another name for number 3.)
-	AUDIO_CHNL_SPEAKER = 4,				///< loud speaker
-	AUDIO_CHNL_TTY = 5,					///< TTY through headset port
-	AUDIO_CHNL_HAC = 6,					///< HAC
-	AUDIO_CHNL_USB = 7,					///< USB headset
-	AUDIO_CHNL_BT_STEREO = 8,			///< Bluetooth stereo headset
-	AUDIO_CHNL_I2S_TX = 9,				///< 
-	AUDIO_CHNL_I2S_RX = 10,
-	AUDMAN_CHANNEL_HEADPHONE = 11,		///< A special headset which only has speakers and no microphone.
-	AUDMAN_CHANNEL_WB_BT = 12,			///< The WideBand BT accessory which is mono and with 16KHz sample rate
-	AUDIO_CHNL_VIBRA = 13,				///< Vibrator
-	AUDIO_CHNL_RESERVE = 14,			///< RESERVED, not specified
-	AUDIO_CHNL_TOTAL = 15
-} AUDIO_CHANNEL_t;
-
-
-typedef enum  AUDIO_INPUT_CHANNEL_t
-{
-	AUDIO_INPUT_CHNL_DEFAULT,	///< the default input mapping from output channel
-	AUDIO_INPUT_CHNL_ANALOG_MIC, ///< analog mic 1
-	AUDIO_INPUT_CHNL_ANALOG_AUXMIC, ///< analog mic 2
-	AUDIO_INPUT_CHNL_DIGI_MIC_1, ///< digital mic 1
-	AUDIO_INPUT_CHNL_DIGI_MIC_2, ///< digital mic 2
-	AUDIO_INPUT_CHNL_MIC_ARRAY_1,	///< Dual-Mic for HANDSET_VOICE_CALL
-	AUDIO_INPUT_CHNL_MIC_ARRAY_2,	///< Dual-Mic for HANDSET_VOICE_CALL
-	AUDIO_INPUT_CHNL_DIGI_MIC_3, ///< digital mic 3
-	AUDIO_INPUT_CHNL_DIGI_MIC_4, ///< digital mic 4
-	AUDIO_INPUT_CHNL_I2S_RX, 	///< Input from I2S Rx (FM)
-	AUDIO_INPUT_CHNL_BLUETOOTH, ///< Input from Bluetooth
-	AUDIO_INPUT_CHNL_TOTAL,
-}AUDIO_INPUT_CHANNEL_t;
 
 #define	AUDIO_MODE_NUMBER		9	///< Up to 9 Audio Profiles (modes) after 213x1
 #define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*2)
@@ -184,106 +134,6 @@ typedef UInt32 AUDIO_BITS_PER_SAMPLE_t;
 #define AUDIO_18_BIT_PER_SAMPLE 18
 #define AUDIO_24_BIT_PER_SAMPLE 24
 #define AUDIO_32_BIT_PER_SAMPLE 32
-
-
-//for VPM.i ( AMR playback and recording)
-/**
-  	Available Audio Modes (this should be rename.)
-**/
-
-typedef enum
-{
-	AUDIO_MODE_PLAYBACK,				///< Audio playing
-	AUDIO_MODE_RECORD,					///< Audio recording
-	AUDIO_MODE_STREAM,					///< Audio/Video streaming for media player
-	AUDIO_MODE_TELEPHONY,				///< Application-based telephony (e.g., video telephony)
-	AUDIO_MODE_TELEPHONY_BT_TAP,		///< Application-based telephony (e.g., video telephony)
-	AUDIO_MODE_TOTAL
-} AUDIO_MODE_t;
-
-/**
-	 Supported Link Modes
-**/
-
-typedef enum
-{
-	AUDIO_LINK_NEAR,					///< For user only
-	AUDIO_LINK_FAR,						///< For caller only
-	AUDIO_LINK_BOTH,					///< For both user and caller
-	AUDIO_LINK_TOTAL
-} AUDIO_LINK_t;
-
-typedef enum AUDIO_SPEECH_LINK_t
-{
-	AUDIO_SPEECH_LINK_NONE,
-	AUDIO_SPEECH_LINK_NEAR,
-	AUDIO_SPEECH_LINK_FAR,										
-	AUDIO_SPEECH_LINK_BOTH					
-} AUDIO_SPEECH_LINK_t;
-
-#define	AUDIO_FORMAT_AMR		MEDIA_AMR					///< Adjustable Multi-Rate
-
-/**
-	 Supported Adaptive Multi-Rate Narrow-Band (AMR-NB) Sampling Rates
-**/
-
-typedef enum
-{
-	AUDIO_AMR_475,						///< 4.75 kbps
-	AUDIO_AMR_515,						///< 5.15 kbps
-	AUDIO_AMR_590,						///< 5.90 kbps
-	AUDIO_AMR_670,						///< 6.70 kbps
-	AUDIO_AMR_740,						///< 7.40 kbps
-	AUDIO_AMR_795,						///< 7.95 kbps
-	AUDIO_AMR_102,						///< 10.2 kbps
-	AUDIO_AMR_122						///< 12.1 kbps
-} AUDIO_AMR_t;
-
-/**
-	 Supported Adaptive Multi-Rate Wide-Band (AMR-WB) Bitstream Mode
-**/
-
-typedef enum
-{
-	AUDIO_AMRWB_ITU_0,					///< ITU-0 format
-	AUDIO_AMRWB_ITU_1,					///< ITU-1 format
-	AUDIO_AMRWB_MIME					///< MIME format
-} AUDIO_AMRWB_BITSTREAM_MODE_t;
-
-/**
-	 Supported Adaptive Multi-Rate Wide-Band (AMR-WB) Bit Rates
-**/
-
-typedef enum
-{
-	AUDIO_AMRWB_660,					///< 6.60 kbps
-	AUDIO_AMRWB_885,					///< 8.85 kbps
-	AUDIO_AMRWB_1265,					///< 12.65 kbps
-	AUDIO_AMRWB_1425,					///< 14.25 kbps
-	AUDIO_AMRWB_1585,					///< 15.85 kbps
-	AUDIO_AMRWB_1825,					///< 18.25 kbps
-	AUDIO_AMRWB_1985,					///< 19.85 kbps
-	AUDIO_AMRWB_2305,					///< 23.05 kbps
-	AUDIO_AMRWB_2385					///< 23.85 kbps
-} AUDIO_AMRWB_t;
-
-//! Audio equalization type.
-typedef enum AudioEqualizer_en_t {
-	EQU_NORMAL,		///< Normal
-	EQU_Bass,		///< Bass
-	EQU_Live,		///< Live
-	EQU_Classic,	///< Classic
-	EQU_Rock,		///< Rock
-	EQU_Jazz,		///< Jazz
-	EQU_Invalid
-} AudioEqualizer_en_t;
-
-#define EQU_ID_t AudioEqualizer_en_t
-
-// Consts and types moved from audioapi_asic.h
-
-#define		AUDIO_TONE_DURATION_FOREVER 0xFFFF
-#define		AUDIO_ERRORTONE_DURATION	1000
 
 #define PR_DAC_IIR_SIZE				25
 
@@ -637,26 +487,5 @@ typedef enum {
 
 } AudioParam_t;
 
-typedef enum { 
-  VOICE_ADC_MODE_8KHZ = 0, 
-  VOICE_ADC_MODE_16KHZ
-} VoiceADCMode_t; 
-
-#define AUDIO_FIFO_LENGTH_MS	480		//in ms, the ring buffers in Audio Router and under use this size.
-
-typedef enum
-{
-	AUDIO_SPKR_CHANNEL_DIFF,	
-	AUDIO_SPKR_CHANNEL_3WIRE_1,
-	AUDIO_SPKR_CHANNEL_3WIRE_2,
-	AUDIO_SPKR_CHANNEL_3WIRE_3,
-	AUDIO_SPKR_CHANNEL_3WIRE_4,
-	AUDIO_SPKR_CHANNEL_INVALID
-} AUDIO_SPKR_CH_Mode_t;
-
 #endif   //_INC_AUDIO_CONSTS_H_
 
-//#define ENABLE_AUDMIX_V2	//define to avoid SW mixer for headset/EP
-#if defined(ENABLE_AUDMIX_V2)
-#define ENABLE_MONO2DUAL	//required on Rhea A0, as it does not support 48k mono pass-thru
-#endif

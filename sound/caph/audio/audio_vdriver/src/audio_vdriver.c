@@ -503,7 +503,7 @@ void AUDDRV_Telephony_Deinit (void *pData)
 		AUDDRV_Telephony_DeinitHW(pData);
 	}
 
-	if (AUDIO_CHNL_BLUETOOTH == AUDDRV_GetAudioMode() )
+	if (AUDIO_MODE_BLUETOOTH == AUDDRV_GetAudioMode() )
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0 );
 
 	//at last

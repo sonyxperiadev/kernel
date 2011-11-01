@@ -169,10 +169,6 @@ static AUDCTRL_DRVMIC_Mapping_t DRVMIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 	{AUDCTRL_MIC_AUX,		        AUDDRV_MIC_ANALOG_AUX},
 	{AUDCTRL_MIC_DIGI1,     		AUDDRV_MIC_DIGI1},
 	{AUDCTRL_MIC_DIGI2,		        AUDDRV_MIC_DIGI2},
-	{AUDCTRL_DUAL_MIC_DIGI12,		AUDDRV_MIC_SPEECH_DIGI},
-	{AUDCTRL_DUAL_MIC_DIGI21,		AUDDRV_MIC_SPEECH_DIGI},
-	{AUDCTRL_DUAL_MIC_ANALOG_DIGI1,	AUDDRV_MIC_NONE},
-	{AUDCTRL_DUAL_MIC_DIGI1_ANALOG,	AUDDRV_MIC_NONE},
 	{AUDCTRL_MIC_BTM,		        AUDDRV_MIC_PCM_IF},
 	{AUDCTRL_MIC_USB,       		AUDDRV_MIC_USB_IF},
 	{AUDCTRL_MIC_I2S,		        AUDDRV_MIC_NONE},
@@ -196,10 +192,6 @@ static AUDCTRL_MIC_Mapping_t MIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 	{AUDCTRL_MIC_AUX,		        CSL_CAPH_DEV_HS_MIC},
 	{AUDCTRL_MIC_DIGI1,     		CSL_CAPH_DEV_DIGI_MIC_L},
 	{AUDCTRL_MIC_DIGI2,		        CSL_CAPH_DEV_DIGI_MIC_R},
-	{AUDCTRL_DUAL_MIC_DIGI12,		CSL_CAPH_DEV_DIGI_MIC},
-	{AUDCTRL_DUAL_MIC_DIGI21,		CSL_CAPH_DEV_DIGI_MIC},
-	{AUDCTRL_DUAL_MIC_ANALOG_DIGI1,	CSL_CAPH_DEV_NONE},
-	{AUDCTRL_DUAL_MIC_DIGI1_ANALOG,	CSL_CAPH_DEV_NONE},
 	{AUDCTRL_MIC_BTM,		        CSL_CAPH_DEV_BT_MIC},
 	{AUDCTRL_MIC_USB,       		CSL_CAPH_DEV_MEMORY},
 	{AUDCTRL_MIC_I2S,		        CSL_CAPH_DEV_FM_RADIO},
@@ -335,8 +327,6 @@ void AUDCTRL_EnableTelephony(
 	   || (mic == AUDCTRL_MIC_DIGI2) 
 	   || (mic == AUDCTRL_MIC_DIGI3) 
 	   || (mic == AUDCTRL_MIC_DIGI4) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))
 		
 	{
@@ -419,8 +409,6 @@ void AUDCTRL_DisableTelephony(
 	   || (mic == AUDCTRL_MIC_DIGI2) 
 	   || (mic == AUDCTRL_MIC_DIGI3) 
 	   || (mic == AUDCTRL_MIC_DIGI4) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))
 	{
 		// Disable power to digital microphone
@@ -616,8 +604,6 @@ void AUDCTRL_SetTelephonyMicSpkr(
 	   || (mic == AUDCTRL_MIC_DIGI2) 
 	   || (mic == AUDCTRL_MIC_DIGI3) 
 	   || (mic == AUDCTRL_MIC_DIGI4) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))
 	{
 		// Enable power to digital microphone
@@ -1516,17 +1502,13 @@ void AUDCTRL_EnableRecord(
 	   || (mic == AUDCTRL_MIC_DIGI2) 
 	   || (mic == AUDCTRL_MIC_DIGI3) 
 	   || (mic == AUDCTRL_MIC_DIGI4) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
 	{
 		// Enable power to digital microphone
 		powerOnDigitalMic(TRUE);
 	}
 
-	if(mic==AUDCTRL_DUAL_MIC_DIGI12 
-			|| mic==AUDCTRL_DUAL_MIC_DIGI21 
-			|| mic==AUDCTRL_MIC_SPEECH_DIGI)
+	if(mic==AUDCTRL_MIC_SPEECH_DIGI)
 	{
 		AUDCTRL_EnableRecordMono(src, sink, AUDCTRL_MIC_DIGI1, AUDIO_CHANNEL_MONO, sr);
 		AUDCTRL_EnableRecordMono(src, sink, AUDCTRL_MIC_DIGI2, AUDIO_CHANNEL_MONO, sr);
@@ -1556,9 +1538,7 @@ void AUDCTRL_DisableRecord(
                     "AUDCTRL_DisableRecord: src = 0x%x, sink = 0x%x,  mic = 0x%x\n", 
                     src, sink, mic);
 
-	if(mic==AUDCTRL_DUAL_MIC_DIGI12 
-			|| mic==AUDCTRL_DUAL_MIC_DIGI21 
-			|| mic==AUDCTRL_MIC_SPEECH_DIGI)
+	if(mic==AUDCTRL_MIC_SPEECH_DIGI)
 		
 	{
 		memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
@@ -1619,8 +1599,6 @@ void AUDCTRL_DisableRecord(
 	   || (mic == AUDCTRL_MIC_DIGI2) 
 	   || (mic == AUDCTRL_MIC_DIGI3) 
 	   || (mic == AUDCTRL_MIC_DIGI4) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
 	{
 		// Disable power to digital microphone
@@ -1689,7 +1667,7 @@ void AUDCTRL_SetRecordGain(
 	Log_DebugPrintf(LOGID_AUDIO,
                     "AUDCTRL_SetRecordGain: src = 0x%x,  mic = 0x%x, gainL = 0x%lx, gainR = 0x%lx\n", src, mic, gainL, gainR);
 
-	if(mic==AUDCTRL_DUAL_MIC_DIGI12 || mic==AUDCTRL_DUAL_MIC_DIGI21 || mic==AUDCTRL_MIC_SPEECH_DIGI)
+	if(mic==AUDCTRL_MIC_SPEECH_DIGI)
 	{
 		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI1, gainFormat, (Int16)gainL, (Int16)gainR);
 		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI2, gainFormat, (Int16)gainL, (Int16)gainR);
@@ -1758,7 +1736,7 @@ void AUDCTRL_SetRecordMute(
                     "AUDCTRL_SetRecordMute: src = 0x%x,  mic = 0x%x, mute = 0x%x\n", 
                     src, mic, mute);
 
-	if(mic==AUDCTRL_DUAL_MIC_DIGI12 || mic==AUDCTRL_DUAL_MIC_DIGI21 || mic==AUDCTRL_MIC_SPEECH_DIGI)
+	if(mic==AUDCTRL_MIC_SPEECH_DIGI)
 	{
 		AUDCTRL_SetRecordMuteMono(src, AUDCTRL_MIC_DIGI1, mute);
 		AUDCTRL_SetRecordMuteMono(src, AUDCTRL_MIC_DIGI2, mute);
@@ -1965,8 +1943,6 @@ void AUDCTRL_SetAudioLoopback(
     	   || (mic == AUDCTRL_MIC_DIGI2) 
     	   || (mic == AUDCTRL_MIC_DIGI3) 
     	   || (mic == AUDCTRL_MIC_DIGI4) 
-    	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-    	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
     	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
 	    {
 		    // Enable power to digital microphone
@@ -2059,8 +2035,6 @@ void AUDCTRL_SetAudioLoopback(
     	   || (mic == AUDCTRL_MIC_DIGI2) 
 	       || (mic == AUDCTRL_MIC_DIGI3) 
     	   || (mic == AUDCTRL_MIC_DIGI4) 
-	       || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-    	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	       || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
 	    {
 			// Enable power to digital microphone
@@ -2445,21 +2419,9 @@ AUDDRV_MIC_Enum_t AUDCTRL_GetDrvMic (AUDCTRL_MICROPHONE_t mic)
 		case AUDCTRL_MIC_DIGI2:
 			micSel = AUDDRV_MIC_DIGI2;
 			break;
-		case AUDCTRL_DUAL_MIC_DIGI12:
-			micSel = AUDDRV_DUAL_MIC_DIGI12;
-			break;
-		case AUDCTRL_DUAL_MIC_DIGI21:
-			micSel = AUDDRV_DUAL_MIC_DIGI21;
-			break;
 		case AUDCTRL_MIC_SPEECH_DIGI:
 			micSel = AUDDRV_MIC_SPEECH_DIGI;
 			break;			
-		case AUDCTRL_DUAL_MIC_ANALOG_DIGI1:
-			micSel = AUDDRV_DUAL_MIC_ANALOG_DIGI1;
-			break;
-		case AUDCTRL_DUAL_MIC_DIGI1_ANALOG:
-			micSel = AUDDRV_DUAL_MIC_DIGI1_ANALOG;
-			break;
 
 		case AUDCTRL_MIC_BTM:
 			micSel = AUDDRV_MIC_PCM_IF;
