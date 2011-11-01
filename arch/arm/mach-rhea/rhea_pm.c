@@ -49,8 +49,6 @@
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 
 
-#define HUB_TIMER_AFTER_WFI_WORK_AROUND 1
-
 extern void enter_wfi(void);
 extern void dormant_enter(void);
 
@@ -376,7 +374,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 	struct pi* pi = NULL;
 	u32 reg_val;
 	u32 ddr_min_pwr_state_ap = 0;
-#ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
+#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	u32 timer_lsw = 0;
 #endif
 
@@ -436,7 +434,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 	enter_wfi();
 #endif
 
-#ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
+#if	defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
 	timer_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
 	while(timer_lsw == readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET));

@@ -300,6 +300,12 @@ enum
 	CLK_TYPE_PLL_CHNL,
 };
 
+
+enum {
+    MONITOR_CAMCS_PIN,
+    MONITOR_DEBUG_BUS_GPIO
+};
+
 struct clk;
 
 /**
@@ -469,6 +475,7 @@ struct ccu_clk {
 	u32 policy_dbg_offset;
 	u32 policy_dbg_act_freq_shift;
 	u32 policy_dbg_act_policy_shift;
+	u32 clk_mon_offset;
 #endif
 
 };
@@ -478,6 +485,7 @@ struct peri_clk {
 
 	struct ccu_clk*	ccu_clk;
 	int mask_set;
+	int clk_sel_val;
 	u32 policy_bit_mask;
 	u8 policy_mask_init[4];
 	u32 clk_gate_offset;
@@ -500,6 +508,7 @@ struct peri_clk {
 };
 
 struct bus_clk {
+	int clk_sel_val;
 	struct clk	clk;
 
 	struct ccu_clk*	ccu_clk;
@@ -520,6 +529,7 @@ struct bus_clk {
 };
 
 struct ref_clk {
+	int clk_sel_val;
 	struct clk	clk;
 	struct ccu_clk*	ccu_clk;
 	u32 clk_gate_offset;

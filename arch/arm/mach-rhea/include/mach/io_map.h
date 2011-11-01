@@ -78,6 +78,11 @@
 #define KONA_SDIO1_VA               HW_IO_PHYS_TO_VIRT( SDIO1_BASE_ADDR )           /* SDIO 1 */
 #define KONA_SDIO2_VA               HW_IO_PHYS_TO_VIRT( SDIO2_BASE_ADDR )           /* SDIO 2 */
 #define KONA_SDIO3_VA               HW_IO_PHYS_TO_VIRT( SDIO3_BASE_ADDR )           /* SDIO 3 */
+
+#ifdef CONFIG_ARCH_RHEA_B0
+#define KONA_SDIO4_VA               HW_IO_PHYS_TO_VIRT( SDIO4_BASE_ADDR )           /* SDIO 4 */
+#endif
+
 #define KONA_SEC_VA                 HW_IO_PHYS_TO_VIRT( SEC_CFG_BASE_ADDR )
 #define KONA_SEC_WATCHDOG_VA        HW_IO_PHYS_TO_VIRT( SEC_WATCHDOG_BASE_ADDR )    /* Watchdog Timer in security block
                                                                                      * (not to be confused with KONA_SECWD)

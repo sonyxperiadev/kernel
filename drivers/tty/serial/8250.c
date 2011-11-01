@@ -191,6 +191,7 @@ struct uart_8250_port {
 	 */
 	struct timer_list	rx_shutoff_timer;
 #define RX_SHUTOFF_DELAY_MSECS	3000
+
 #ifdef CONFIG_KONA_PI_MGR
 	struct pi_mgr_qos_node* qos_tx_node;
 	struct pi_mgr_qos_node* qos_rx_node;
@@ -221,6 +222,9 @@ struct uart_8250_port {
 
 #endif
 
+#ifdef CONFIG_RHEA_UART_RX_FIX
+	unsigned int iir;
+#endif
 };
 
 struct irq_info {
@@ -1752,7 +1756,11 @@ static void serial8250_handle_port(struct uart_8250_port *up)
 
 	DEBUG_INTR("status = x%x...\n", status);
 
+#ifdef CONFIG_RHEA_UART_RX_FIX 
+	if (up->iir & UART_IIR_RDI)
+#else
 	if (status & (UART_LSR_DR | UART_LSR_BI))
+#endif
 		receive_chars(up, &status);
 	check_modem_status(up);
 
@@ -1809,6 +1817,9 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 
 		iir = serial_in(up, UART_IIR);
 		if (!(iir & UART_IIR_NO_INT)) {
+#ifdef CONFIG_RHEA_UART_RX_FIX
+			up->iir = iir;
+#endif
 			serial8250_handle_port(up);
 
 			handled = 1;
