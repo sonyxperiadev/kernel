@@ -160,7 +160,7 @@ static unsigned long sdhci_get_max_clk(struct sdhci_host *host)
       }
    }
 
-   printk(KERN_ERR "sdhci_clk fucked up!!!\n");
+   printk(KERN_ERR "unable to obtain sd max clock\n");
    return 0;
 }
 
