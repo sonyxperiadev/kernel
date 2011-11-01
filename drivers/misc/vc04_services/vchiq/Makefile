@@ -47,6 +47,7 @@ obj-$(CONFIG_VC_VCHIQ) += vc-vchiq.o
 
 vc-vchiq-objs := \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_arm.o \
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_connected.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_core.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_kern_lib.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_shim.o \

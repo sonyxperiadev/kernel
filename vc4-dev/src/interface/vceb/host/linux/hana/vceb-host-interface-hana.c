@@ -104,7 +104,7 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
 {
     int                         rc;
     //gpiomux_rc_e                gpiomux_rc;
-    VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
+    //VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
     VCEB_HOST_INTERFACE_STATE_T state = instance->state;
     uint32_t                    wakeup_register;
 #if 0
@@ -356,6 +356,8 @@ static int32_t vceb_hana_interface_download( VCEB_HOST_INTERFACE_INSTANCE_T inst
     // Unmap the videocore memory
     iounmap( vc_mem );
 
+    vceb_firmware_downloaded();
+
 rel_mem_region:
     // Release the I/O memory region
     release_mem_region( res->start, resource_size( res ));
@@ -535,6 +537,22 @@ static int __devinit vceb_hana_interface_probe( struct platform_device *pdev )
             platform_data->gpiomux_jtag_id,
             platform_data->gpiomux_jtag_label );
 #endif
+
+    {
+        VCEB_INSTANCE_T vceb_inst;
+
+        // The videocore is already running (probably loaded by uboot). Auto initialize.
+
+        printk( KERN_INFO "vceb_hana: Videocore already running - autoinitializing\n" );
+
+        vceb_inst = vceb_linux_get_vceb_instance( instance->state->linux_inst );
+        vceb_initialise( vceb_inst, 1 );
+    }
+
+    if ( vceb_is_videocore_running )
+    {
+        vceb_firmware_downloaded();
+    }
 
     return 0;
 
