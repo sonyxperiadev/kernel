@@ -1204,7 +1204,6 @@ CONFIG_BCM_HEADSET_SW=y
 # CONFIG_BCM_AMXR is not set
 # CONFIG_BCM_HALAUDIO is not set
 # CONFIG_BCM_HAPTICS is not set
-# CONFIG_BCM_HDMI_DET is not set
 # CONFIG_BCM_VCP is not set
 # CONFIG_BCM_GIST is not set
 # CONFIG_BCM_SIGMORPH is not set
