@@ -4,3 +4,4 @@ put here
 Date		Version Info
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 31/Oct/2011  	snap_2011-05-17 (Copied over from existing rdb directory)	
+01/Nov/2011     Updated only the USB file brcm_rdb_hsotg_ctrl.h from snap_2011-10-28
