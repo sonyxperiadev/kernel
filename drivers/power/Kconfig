@@ -235,13 +235,6 @@ config CHARGER_GPIO
 	  This driver can be build as a module. If so, the module will be
 	  called gpio-charger.
 
-config BATTERY_BCM2708
-	tristate "BCM2708 Fake Battery (Always fully charged and on AC power)"
-	depends on ARCH_BCM2708
-	help
-	  A fake battery driver which export sysfs values saying the battery is always
-	  fully chanrged and on AC is online. Helpful for Android.
-
 config BATTERY_BCM59055
 	tristate "BCM59055 Battery support"
 	depends on MFD_BCM_PMU590XX
@@ -263,6 +256,19 @@ config BCM_CMP_BATTERY_BQ24616
         help
           CMP driver based on BQ24616 for supplying battery and power supply
           information to Power Supply system.
+
+config MONITOR_ADC121C021_I2C
+        tristate "ADC121C021 Battery Monitor"
+        depends on I2C
+        help
+         Say Y here if you want to support a ADC121C021 battery monitor.
+         If unsure, say N.
+
+config MONITOR_BQ27541_I2C
+        tristate "BQ27541 Battery Monitor"
+        depends on I2C
+        help
+         Say Y here if you want to support BQ27541 battery monitor.
 
 config POWER_BCMPMU
 	tristate "BCMPMU battery and charger driver"

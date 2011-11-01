@@ -236,7 +236,9 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
    /* this function can be called from various contexts including ISR */
    spin_lock_irqsave(&host->lock, flags);
 
+#ifndef CONFIG_ARCH_ISLAND
    sdhci_pltfm_clk_enable(host, 1);
+#endif
    val = sdhci_readl(host, KONA_SDHOST_CORESTAT);
 
    if (insert) {
@@ -378,15 +380,8 @@ int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
 		ret = clk_enable(dev->peri_clk);
 		if(ret)
 			return ret;
-		/* sleep clock */
-		ret = clk_enable(dev->sleep_clk);
-		if(ret) {
-			clk_disable(dev->peri_clk);
-			return ret;
-		}
 	} else {
 		clk_disable(dev->peri_clk);
-		clk_disable(dev->sleep_clk);
 	}
 	return ret;
 #endif
@@ -488,6 +483,13 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	if(IS_ERR_OR_NULL (dev->sleep_clk))
 		return -EINVAL;
 
+	ret = clk_enable(dev->sleep_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to enable sleep clock for %s\n", devname);
+		ret = -EFAULT;
+		goto err_unset_pltfm;
+	}
+
 	ret = sdhci_pltfm_clk_enable(host, 1);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize core clock for %s\n", devname);
@@ -559,7 +561,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 	atomic_set(&dev->initialized, 1);
 
+#ifndef CONFIG_ARCH_ISLAND
 	sdhci_pltfm_clk_enable(host, 0);
+#endif
 	printk(KERN_INFO "%s initialized properly\n", devname);
 
 	return 0;
@@ -619,6 +623,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 		dead = 1;
 	sdhci_remove_host(host, dead);
 
+	clk_disable(dev->sleep_clk);
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);
 	iounmap(host->ioaddr);
@@ -758,11 +763,7 @@ struct mmc_card *sdio_get_mmc_card(enum sdio_devtype devtype)
 
    rc = sdio_dev_is_initialized(devtype);
    if (rc <= 0)
-   {
-      //TODO
-      printk(KERN_ERR "dev is not inited!!!\n");
       return NULL;
-   }
 
    dev = gDevs[devtype];
    return dev->host->mmc->card;

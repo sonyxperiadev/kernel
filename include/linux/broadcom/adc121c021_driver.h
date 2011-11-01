@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2011 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -34,6 +34,12 @@ struct I2C_ADC121C021_t
    int battery_min_voltage;
    int resistor_1;
    int resistor_2;
+
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+   int gpio_ac_power;
+   int ac_power_on_level;
+   int gpio_charger;
+#endif
 };
 
 #define ADC121C021_ADC_REG          0
@@ -55,8 +61,6 @@ struct ADC121C021_REGISTER
    int is_read_write;
    int default_val;
 };   
-
-int i2c_adc121_get_battery_voltage(int *battery_millivolts);
 
 #endif    /* _ADC121C021_I2C_H_ */
 

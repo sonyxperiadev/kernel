@@ -18,10 +18,8 @@
 
 // ---- Private Constants and Types ------------------------------------------
 
-#define CLIENT_EVENT_BIT    0
-#define SERVER_EVENT_BIT    1
-#define CLIENT_EVENT_MASK   ( 1 << CLIENT_EVENT_BIT )
-#define SERVER_EVENT_MASK   ( 1 << SERVER_EVENT_BIT )
+#define CLIENT_EVENT_MASK   0x1
+#define SERVER_EVENT_MASK   0x2
 
 // VCOS logging category for this service
 #define VCOS_LOG_CATEGORY (&sm_log_category)
@@ -55,7 +53,9 @@ typedef struct opaque_vc_vchi_sm_handle_t
    uint32_t               num_connections;
    VCHI_SERVICE_HANDLE_T  vchi_handle[VCHI_MAX_NUM_CONNECTIONS];
    VCOS_THREAD_T          io_thread;
-   VCOS_EVENT_FLAGS_T     io_event;
+   uint32_t               io_event_mask;
+   VCOS_MUTEX_T           io_lock;
+   VCOS_EVENT_T           io_event;
 
    VCOS_SEMAPHORE_T       vchi_sema;   // Use semaphore of count 1 to simulate mutex, but we need semaphore
                                        // because of interrupt handling threading.
@@ -321,26 +321,34 @@ out:
 
 static void *vc_vchi_sm_videocore_io( void *arg )
 {
-   VCOS_UNSIGNED event_mask;
+   uint32_t event_mask;
    SM_INSTANCE_T *instance = (SM_INSTANCE_T *)arg;
    int32_t success;
    uint32_t msg_len;
    VC_SM_RESULT_T *result;
    uint8_t reply_msg_buf[VC_SM_MAX_RSP_LEN];
    SM_CMD_RSP_BLK_T *waiter = NULL;
+   VCOS_STATUS_T status;
 
 
    while ( 1 )
    {
-      if (( success = vcos_event_flags_get( &instance->io_event,
-                                            ~0,
-                                            VCOS_OR_CONSUME,
-                                            VCOS_SUSPEND,
-                                            &event_mask )) != 0 )
+      event_mask = 0;
+
+      status = vcos_event_wait( &instance->io_event );
+      if ( status == VCOS_SUCCESS )
       {
-         LOG_ERR( "%s: vcos_event_flags_get failed\n",
-                  __func__ );
-         break;
+         if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+         {
+            event_mask = instance->io_event_mask;
+            instance->io_event_mask = 0;
+            vcos_mutex_unlock ( &instance->io_lock );
+         }
+         else
+         {
+            LOG_ERR( "%s: failed on io-lock",
+                     __func__ );
+         }
       }
 
       if ( event_mask & CLIENT_EVENT_MASK )
@@ -434,9 +442,17 @@ static void vc_sm_vchi_callback( void *param,
       ** waiter.
       */
       case VCHI_CALLBACK_MSG_AVAILABLE:
-         vcos_event_flags_set( &instance->io_event,
-                               SERVER_EVENT_MASK,
-                               VCOS_OR );
+         if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+         {
+            instance->io_event_mask |= SERVER_EVENT_MASK;
+            vcos_mutex_unlock ( &instance->io_lock );
+            vcos_event_signal( &instance->io_event );
+         }
+         else
+         {
+            LOG_ERR( "%s: failed on io-lock",
+                     __func__ );
+         }
       break;
 
       case VCHI_CALLBACK_SERVICE_CLOSED:
@@ -501,6 +517,22 @@ VC_VCHI_SM_HANDLE_T vc_vchi_sm_init( VCHI_INSTANCE_T vchi_instance,
       goto err_delete_cmd_lock;
    }
 
+   // Lock for io events processing
+   status = vcos_mutex_create( &instance->io_lock, "sm_io_lock" );
+   if ( status != VCOS_SUCCESS )
+   {
+      LOG_ERR( "%s: failed to create io-lock (status=%d)", __func__, status );
+      goto err_delete_rsp_lock;
+   }
+
+   // Event for io events processing
+   status = vcos_event_create( &instance->io_event, "" );
+   if ( status != VCOS_SUCCESS )
+   {
+      LOG_ERR( "%s: failed to create io-event (status=%d)", __func__, status );
+      goto err_delete_io_lock;
+   }
+
    // Open the VCHI service connections
    for ( i = 0; i < num_connections; i++ )
    {
@@ -530,17 +562,6 @@ VC_VCHI_SM_HANDLE_T vc_vchi_sm_init( VCHI_INSTANCE_T vchi_instance,
       }
    }
 
-   status = vcos_event_flags_create( &instance->io_event,
-                                     "Shared Memory IO Event" );
-   if ( status != VCOS_SUCCESS )
-   {
-      LOG_ERR( "%s: failed to create io event (status=%d)\n",
-               __func__, status );
-
-      vcos_assert( status == VCOS_SUCCESS );
-      goto err_close_services;
-   }
-
    // Create the thread which takes care of all io to/from videoocore.
    vcos_thread_attr_init( &attrs );
    vcos_thread_attr_setstacksize( &attrs, 2048 );
@@ -558,15 +579,12 @@ VC_VCHI_SM_HANDLE_T vc_vchi_sm_init( VCHI_INSTANCE_T vchi_instance,
                __func__, status );
 
       vcos_assert( status == VCOS_SUCCESS );
-      goto err_del_event;
+      goto err_close_services;
    }
-
 
    LOG_DBG( "%s: success - instance 0x%x", __func__, (unsigned)instance );
    return instance;
 
-err_del_event:
-   vcos_event_flags_delete( &instance->io_event );
 err_close_services:
    for ( i = 0; i < instance->num_connections; i++ )
    {
@@ -575,6 +593,10 @@ err_close_services:
          vchi_service_close( instance->vchi_handle[i] );
       }
    }
+   vcos_event_delete( &instance->io_event );
+err_delete_io_lock:
+   vcos_mutex_delete( &instance->io_lock );
+err_delete_rsp_lock:
    vcos_mutex_delete( &instance->rsp_lock );
 err_delete_cmd_lock:
    vcos_mutex_delete( &instance->cmd_lock );
@@ -627,10 +649,11 @@ VCOS_STATUS_T vc_vchi_sm_stop( VC_VCHI_SM_HANDLE_T *handle )
    vcos_semaphore_post( &instance->vchi_sema );
    vcos_semaphore_delete( &instance->vchi_sema );
 
-   vcos_event_flags_delete( &instance->io_event );
+   vcos_event_delete( &instance->io_event );
 
    vcos_mutex_delete( &instance->cmd_lock );
    vcos_mutex_delete( &instance->rsp_lock );
+   vcos_mutex_delete( &instance->io_lock );
    vcos_free( instance );
 
    // NULLify the handle to prevent the user from using it
@@ -721,9 +744,19 @@ VCOS_STATUS_T vc_vchi_sm_alloc( VC_VCHI_SM_HANDLE_T handle,
    vc_vchi_add_cmd( instance,
                     cmd_blk );
 
-   vcos_event_flags_set( &instance->io_event,
-                         CLIENT_EVENT_MASK,
-                         VCOS_OR );
+   if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+   {
+      instance->io_event_mask |= CLIENT_EVENT_MASK;
+      vcos_mutex_unlock ( &instance->io_lock );
+      vcos_event_signal( &instance->io_event );
+   }
+   else
+   {
+      LOG_ERR( "%s: failed on io-lock",
+               __func__ );
+      final = VCOS_EINVAL;
+      goto unlock;
+   }
 
    status = vcos_event_wait( &cmd_blk->cmd_resp );
    if ( status == VCOS_EINTR )
@@ -834,9 +867,19 @@ VCOS_STATUS_T vc_vchi_sm_free( VC_VCHI_SM_HANDLE_T handle,
    vc_vchi_add_cmd( instance,
                     cmd_blk );
 
-   vcos_event_flags_set( &instance->io_event,
-                         CLIENT_EVENT_MASK,
-                         VCOS_OR );
+   if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+   {
+      instance->io_event_mask |= CLIENT_EVENT_MASK;
+      vcos_mutex_unlock ( &instance->io_lock );
+      vcos_event_signal( &instance->io_event );
+   }
+   else
+   {
+      LOG_ERR( "%s: failed on io-lock",
+               __func__ );
+      final = VCOS_EINVAL;
+      goto unlock;
+   }
 
    status = vcos_event_wait( &cmd_blk->cmd_resp );
    if ( status == VCOS_EINTR )
@@ -953,9 +996,19 @@ VCOS_STATUS_T vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
    vc_vchi_add_cmd( instance,
                     cmd_blk );
 
-   vcos_event_flags_set( &instance->io_event,
-                         CLIENT_EVENT_MASK,
-                         VCOS_OR );
+   if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+   {
+      instance->io_event_mask |= CLIENT_EVENT_MASK;
+      vcos_mutex_unlock ( &instance->io_lock );
+      vcos_event_signal( &instance->io_event );
+   }
+   else
+   {
+      LOG_ERR( "%s: failed on io-lock",
+               __func__ );
+      final = VCOS_EINVAL;
+      goto unlock;
+   }
 
    status = vcos_event_wait( &cmd_blk->cmd_resp );
    if ( status == VCOS_EINTR )
@@ -1066,9 +1119,19 @@ VCOS_STATUS_T vc_vchi_sm_unlock( VC_VCHI_SM_HANDLE_T handle,
    vc_vchi_add_cmd( instance,
                     cmd_blk );
 
-   vcos_event_flags_set( &instance->io_event,
-                         CLIENT_EVENT_MASK,
-                         VCOS_OR );
+   if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+   {
+      instance->io_event_mask |= CLIENT_EVENT_MASK;
+      vcos_mutex_unlock ( &instance->io_lock );
+      vcos_event_signal( &instance->io_event );
+   }
+   else
+   {
+      LOG_ERR( "%s: failed on io-lock",
+               __func__ );
+      final = VCOS_EINVAL;
+      goto unlock;
+   }
 
    status = vcos_event_wait( &cmd_blk->cmd_resp );
    if ( status == VCOS_EINTR )
@@ -1177,9 +1240,19 @@ VCOS_STATUS_T vc_vchi_sm_resize( VC_VCHI_SM_HANDLE_T handle,
    vc_vchi_add_cmd( instance,
                     cmd_blk );
 
-   vcos_event_flags_set( &instance->io_event,
-                         CLIENT_EVENT_MASK,
-                         VCOS_OR );
+   if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+   {
+      instance->io_event_mask |= CLIENT_EVENT_MASK;
+      vcos_mutex_unlock ( &instance->io_lock );
+      vcos_event_signal( &instance->io_event );
+   }
+   else
+   {
+      LOG_ERR( "%s: failed on io-lock",
+               __func__ );
+      final = VCOS_EINVAL;
+      goto unlock;
+   }
 
    status = vcos_event_wait( &cmd_blk->cmd_resp );
    if ( status == VCOS_EAGAIN )
@@ -1274,9 +1347,19 @@ VCOS_STATUS_T vc_vchi_sm_walk_alloc( VC_VCHI_SM_HANDLE_T handle )
    vc_vchi_add_cmd( instance,
                     cmd_blk );
 
-   vcos_event_flags_set( &instance->io_event,
-                         CLIENT_EVENT_MASK,
-                         VCOS_OR );
+   if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+   {
+      instance->io_event_mask |= CLIENT_EVENT_MASK;
+      vcos_mutex_unlock ( &instance->io_lock );
+      vcos_event_signal( &instance->io_event );
+   }
+   else
+   {
+      LOG_ERR( "%s: failed on io-lock",
+               __func__ );
+      final = VCOS_EINVAL;
+      goto unlock;
+   }
 
    status = vcos_event_wait( &cmd_blk->cmd_resp );
    if ( status == VCOS_EINTR )
@@ -1359,9 +1442,19 @@ VCOS_STATUS_T vc_vchi_sm_clean_up( VC_VCHI_SM_HANDLE_T handle,
    vc_vchi_add_cmd( instance,
                     cmd_blk );
 
-   vcos_event_flags_set( &instance->io_event,
-                         CLIENT_EVENT_MASK,
-                         VCOS_OR );
+   if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+   {
+      instance->io_event_mask |= CLIENT_EVENT_MASK;
+      vcos_mutex_unlock ( &instance->io_lock );
+      vcos_event_signal( &instance->io_event );
+   }
+   else
+   {
+      LOG_ERR( "%s: failed on io-lock",
+               __func__ );
+      final = VCOS_EINVAL;
+      goto unlock;
+   }
 
    status = vcos_event_wait( &cmd_blk->cmd_resp );
    if ( status == VCOS_EINTR )
@@ -1458,9 +1551,19 @@ VCOS_STATUS_T vc_vchi_sm_free_all( VC_VCHI_SM_HANDLE_T handle,
    vc_vchi_add_cmd( instance,
                     cmd_blk );
 
-   vcos_event_flags_set( &instance->io_event,
-                         CLIENT_EVENT_MASK,
-                         VCOS_OR );
+   if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+   {
+      instance->io_event_mask |= CLIENT_EVENT_MASK;
+      vcos_mutex_unlock ( &instance->io_lock );
+      vcos_event_signal( &instance->io_event );
+   }
+   else
+   {
+      LOG_ERR( "%s: failed on io-lock",
+               __func__ );
+      final = VCOS_EINVAL;
+      goto unlock;
+   }
 
    status = vcos_event_wait( &cmd_blk->cmd_resp );
    if ( status == VCOS_EINTR )
@@ -1556,9 +1659,19 @@ VCOS_STATUS_T vc_vchi_sm_free_post_mortem( VC_VCHI_SM_HANDLE_T handle,
    vc_vchi_add_cmd( instance,
                     cmd_blk );
 
-   vcos_event_flags_set( &instance->io_event,
-                         CLIENT_EVENT_MASK,
-                         VCOS_OR );
+   if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+   {
+      instance->io_event_mask |= CLIENT_EVENT_MASK;
+      vcos_mutex_unlock ( &instance->io_lock );
+      vcos_event_signal( &instance->io_event );
+   }
+   else
+   {
+      LOG_ERR( "%s: failed on io-lock",
+               __func__ );
+      final = VCOS_EINVAL;
+      goto unlock;
+   }
 
    status = vcos_event_wait( &cmd_blk->cmd_resp );
    if ( status == VCOS_EINTR )

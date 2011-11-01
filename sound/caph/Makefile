@@ -118,4 +118,3 @@ snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_caph_control_api.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_cneon_api.o
 
 
-

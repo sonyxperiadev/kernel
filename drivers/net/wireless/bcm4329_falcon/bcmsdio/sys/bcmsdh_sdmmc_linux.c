@@ -297,6 +297,10 @@ void sdio_function_cleanup(void)
 
 	sdio_unregister_driver(&bcmsdh_sdmmc_driver);
 
+	/* hold WiFi circuitry in reset to minimize power consumption when WiFi
+	   is disabled. */
+	bcm_sdiowl_reset_b(0);
+
 	bcm_sdiowl_term();
 
 	if (gInstance)

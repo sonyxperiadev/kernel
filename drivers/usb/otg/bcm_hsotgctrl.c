@@ -26,11 +26,15 @@
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <plat/pi_mgr.h>
+#include <asm/irq.h>
+#include <linux/interrupt.h>
 #include "bcm_hsotgctrl.h"
 
 #define	PHY_MODE_OTG		2
 #define 	BC11CFG_SW_OVERWRITE_KEY 0x55560000
 #define	BC_CONFIG_DELAY_MS 2
+
+#define USB_IRQ 79
 
 struct bcm_hsotgctrl_drv_data {
 	struct device *dev;
@@ -400,6 +404,7 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 static struct platform_driver bcm_hsotgctrl_driver = {
 	.driver = {
 		   .name = "bcm_hsotgctrl",
+		   .owner = THIS_MODULE,
 	},
 	.probe = bcm_hsotgctrl_probe,
 	.remove = bcm_hsotgctrl_remove,

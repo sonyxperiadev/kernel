@@ -53,7 +53,7 @@ vceb-hana-objs := hana/vceb-host-interface-hana.o
 #   OBJ += rainbow/vceb_host_interface.o rainbow/dma.o rainbow/images.o
 #endif
 
-obj-m += vc-vceb.o
+obj-$(CONFIG_VC_VCEB) += vc-vceb.o
 vc-vceb-objs := $(OBJ)
 
 all:

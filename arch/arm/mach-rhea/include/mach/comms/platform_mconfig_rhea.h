@@ -93,7 +93,7 @@ extern "C" {
 
 #define LOADER_ROM_ADDR        0x00020000
 #define LOADER_RAM_ADDR                        EXT_RAM_BASE_ADDR    
-#define LOADER_SIZE                                            0x00020000
+#define LOADER_SIZE                            0x00021000
 
 #define CP_BOOT_ROM_ADDR       0x001F0000
 #define CP_BOOT_SIZE                                           0x00008000
@@ -314,8 +314,6 @@ extern "C" {
 /*                                                                           */
 /*****************************************************************************/
 
-#define RESERVED_HEADER 0x400
-
 // Shared memory defines; commonly used by RTOS and Linux builds
 
 #define DSP_SH_BASE                            EXT_RAM_BASE_ADDR     // DSP sharedmem
@@ -326,6 +324,10 @@ extern "C" {
 
 #define AP_SH_BASE                             (DSP_SH_BASE+CP_SH_SIZE)
 #define AP_SH_SIZE                                             0x00020000    // 128k  AP/DSP sharedmem
+
+#define	DSP_CP_SCRATCHMEM_BASE					0x3404A000
+#define DSP_CP_SCRATCHMEM_SIZE					0x00000C00
+
 
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define IPC_OFFSET                             0x1800000                    // 256kB IPC shared RAM
@@ -352,7 +354,7 @@ extern "C" {
 #define INIT_ADDRESS_OFFSET 0x34
 #define MODEM_ITCM_ADDRESS 0x3AC00000
 #define MODEM_DTCM_ADDRESS 0x3AD00000
-
+#define RESERVED_HEADER 0x400
 #ifdef __cplusplus
 }
 #endif

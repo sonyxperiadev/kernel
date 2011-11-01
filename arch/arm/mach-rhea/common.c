@@ -51,7 +51,15 @@
 
 #ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
+#include "volt_tbl.h"
 #endif
+
+#if defined (CONFIG_KONA_CPU_FREQ_DRV)
+#include <plat/kona_cpufreq_drv.h>
+#include <linux/cpufreq.h>
+#include <mach/pi_mgr.h>
+#endif
+
 
 #ifdef CONFIG_UNICAM
 #include <plat/kona_unicam.h>
@@ -63,7 +71,6 @@
 #define VLT_LUT_SIZE 16
 #endif
 
-#include <plat/bcm_pwm_block.h>
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
  * use FIXED type
@@ -329,6 +336,9 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",
 		.retries = 1,
+#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+		.is_pmu_i2c=false,
+#endif
 	},
 	{ /* for BSC1*/
 		.speed = BSC_BUS_SPEED_50K,
@@ -336,6 +346,9 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
 		.retries = 3,
+#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+		.is_pmu_i2c=false,
+#endif
 	},
 	{ /* for PMU */
 		.speed = BSC_BUS_SPEED_50K,
@@ -343,6 +356,9 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "pmu_bsc_clk",
 		.bsc_apb_clk = "pmu_bsc_apb",
 		.retries = 1,
+#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+		.is_pmu_i2c=true,
+#endif
 	},
 };
 
@@ -399,20 +415,7 @@ static struct resource kona_pwm_resource = {
                 .flags = IORESOURCE_MEM,
 };
 
-static struct pwm_platform_data pwm_dev = {
-        .max_pwm_id = 6,
-        .syscfg_inf = NULL,
-};
-
-void set_pwm_board_sysconfig(int (*syscfg_inf) (uint32_t module, uint32_t op))
-{
-	pwm_dev.syscfg_inf = syscfg_inf;
-}
-
 static struct platform_device kona_pwm_device = {
-		.dev = {
-			.platform_data = &pwm_dev, 
-		},
                 .name = "kona_pwmc",
                 .id = -1,
                 .resource = &kona_pwm_resource,
@@ -552,6 +555,35 @@ static struct platform_device board_kona_otg_platform_device =
 };
 #endif
 
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+struct kona_freq_tbl kona_freq_tbl[] =
+{
+/*JIRA HWRHEA-1199 : Enable Economy mode(156MHz) for B0 */
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+//    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+#endif
+    FTBL_INIT(467000, PI_OPP_NORMAL),
+    FTBL_INIT(700000, PI_OPP_TURBO),
+};
+
+struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
+
+    .freq_tbl = kona_freq_tbl,
+	.num_freqs = ARRAY_SIZE(kona_freq_tbl),
+	/*FIX ME: To be changed according to the cpu latency*/
+	.latency = 10*1000,
+	.pi_id = PI_MGR_PI_ID_ARM_CORE,
+};
+
+static struct platform_device kona_cpufreq_device = {
+	.name    = "kona-cpufreq-drv",
+	.id      = -1,
+	.dev = {
+		.platform_data		= &kona_cpufreq_drv_pdata,
+	},
+};
+#endif /*CONFIG_KONA_CPU_FREQ_DRV*/
+
 #ifdef CONFIG_KONA_AVS
 
 void avs_silicon_type_notify(u32 silicon_type)
@@ -585,14 +617,11 @@ u32 lvt_silicon_type_lut[3*3] =
 		SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,SILICON_TYPE_FAST
 	};
 
-u8 ss_vlt_tbl[] = {0x3, 0x3, 0x4, 0x4, 0x4, 0xe, 0xe, 0xe,
-						0xe, 0xe, 0xe, 0xe, 0x13, 0x13, 0x13, 0x13};
+u8 ss_vlt_tbl[] = {PMU_SCR_VLT_TBL_SS};
 
-u8 tt_vlt_tbl[] = {0x3, 0x3, 0x4, 0x4, 0x4, 0xb, 0xb, 0xb,
-							0xb, 0xb, 0xb, 0xb,  0xd,  0xd,  0xd, 0xd};
+u8 tt_vlt_tbl[] = {PMU_SCR_VLT_TBL_TT};
 
-u8 ff_vlt_tbl[] = { 0x3, 0x3, 0x4, 0x4,0x4, 0x4, 0xb, 0xb,
-							0xb, 0xb, 0xb, 0xb, 0xb, 0xd, 0xd, 0xd };
+u8 ff_vlt_tbl[] = {PMU_SCR_VLT_TBL_FF};
 static u8* volt_table[] = {ss_vlt_tbl, tt_vlt_tbl, ff_vlt_tbl};
 
 static struct kona_avs_pdata avs_pdata =
@@ -647,6 +676,31 @@ static struct platform_device board_spum_device = {
        .id             =       0,
        .resource       =       board_spum_resource,
        .num_resources  =       ARRAY_SIZE(board_spum_resource),
+};
+#endif
+
+#if defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES)
+static struct resource board_spum_aes_resource[] = {
+	[0] =
+	{
+		.start  =       SEC_SPUM_NS_APB_BASE_ADDR,
+		.end    =       SEC_SPUM_NS_APB_BASE_ADDR + SZ_64K - 1,
+		.flags  =       IORESOURCE_MEM,
+	},
+	[1] =
+	{
+		.start  =       SPUM_NS_BASE_ADDR,
+		.end    =       SPUM_NS_BASE_ADDR + SZ_64K - 1,
+		.flags  =       IORESOURCE_MEM,
+	}
+};
+
+static struct platform_device board_spum_aes_device = {
+	.name           =       "brcm-spum-aes",
+	.id             =       0,
+	.resource       =       board_spum_aes_resource,
+	.num_resources  =       ARRAY_SIZE(board_spum_aes_resource),
+};
 #endif
 
 #ifdef CONFIG_UNICAM
@@ -697,8 +751,16 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&kona_avs_device,
 #endif
 
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+	&kona_cpufreq_device,
+#endif
+
 #ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH
        &board_spum_device,
+#endif
+
+#ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_AES
+       &board_spum_aes_device,
 #endif
 
 #ifdef CONFIG_UNICAM

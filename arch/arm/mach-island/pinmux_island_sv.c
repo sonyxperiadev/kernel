@@ -65,6 +65,7 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(NORFLSH_RDY,   SDIO1_DATA_1, 0, OFF, ON, 0, 0, 2MA),
         PIN_CFG(NORFLSH_CLK_N, SDIO1_DATA_2, 0, OFF, ON, 0, 0, 2MA),
 
+#ifndef CONFIG_MTD_BCMNAND
 	/* VC4 JTAG */
 	PIN_CFG(NAND_RDY_1, VC_TRSTB, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(NAND_CLE,   VC_TCK,   0, OFF, OFF, 0, 0, 8MA),
@@ -79,7 +80,25 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(NAND_AD_2,    SDIO3_DATA_3, 0, OFF, OFF, 0, 0, 12MA),
         PIN_CFG(NAND_AD_1,    SDIO3_CLK,    0, OFF, OFF, 0, 0, 12MA),
         PIN_CFG(NAND_AD_0,    SDIO3_DATA_0, 0, OFF, OFF, 0, 0, 12MA),
-
+#else
+	PIN_CFG(NAND_WP,    NAND_WP,    0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_CEN_0, NAND_CEN_0, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_CEN_1, NAND_CEN_1, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_RDY_0, NAND_RDY_0, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_RDY_1, NAND_RDY_1, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_CLE,   NAND_CLE,   0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_ALE,   NAND_ALE,   0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_OEN,   NAND_OEN,   0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_WEN,   NAND_WEN,   0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_AD_7,  NAND_AD_7,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_AD_6,  NAND_AD_6,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_AD_5,  NAND_AD_5,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_AD_4,  NAND_AD_4,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_AD_3,  NAND_AD_3,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_AD_2,  NAND_AD_2,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_AD_1,  NAND_AD_1,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_AD_0,  NAND_AD_0,  0, OFF, OFF, 0, 0, 8MA),
+#endif
 	/* eMMC */
 	PIN_CFG(SDIO2_DATA_3, SDIO2_DATA_3, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(SDIO2_DATA_2, SDIO2_DATA_2, 0, OFF, OFF, 0, 0, 8MA),

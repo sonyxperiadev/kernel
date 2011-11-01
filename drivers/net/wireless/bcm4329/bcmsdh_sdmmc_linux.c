@@ -267,7 +267,6 @@ int sdio_function_init(void)
 
         bcm_sdiowl_rescan();
 	
-	bzero(&sdmmc_dev, sizeof(sdmmc_dev));
 	error = sdio_register_driver(&bcmsdh_sdmmc_driver);
 
 	return error;

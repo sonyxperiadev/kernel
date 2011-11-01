@@ -36,7 +36,10 @@ ifeq ($(CONFIG_KONA_ATAG_DT),y)
 				$(srctree)/arch/arm/boot/dt-blob
 	@echo '  dt-blob is ready.'
 else
-	@echo '  dt-blob is not needed'
+ifneq ($(wildcard $(srctree)/arch/arm/boot/dt-blob),)
+	rm -f $(srctree)/arch/arm/boot/dt-blob
+endif
+	@echo '  dt-blob is not needed.'
 endif
 
 ifeq ($(CONFIG_XIP_KERNEL),y)

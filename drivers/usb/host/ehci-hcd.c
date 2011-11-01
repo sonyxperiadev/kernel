@@ -1282,6 +1282,7 @@ MODULE_LICENSE ("GPL");
 #ifdef CONFIG_SPARC_LEON
 #include "ehci-grlib.c"
 #define PLATFORM_DRIVER		ehci_grlib_driver
+#endif
 
 #ifdef CONFIG_USB_EHCI_BCM
 #include "ehci-bcm.c"

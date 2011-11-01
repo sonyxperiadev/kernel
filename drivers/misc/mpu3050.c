@@ -521,7 +521,11 @@ static int __devinit mpu3050_probe
 #endif
     
     // register with BRVSENS driver 
-    brvsens_register(SENSOR_HANDLE_GYROSCOPE, MPU3050_DRV_NAME, client, mpu3050_set_power_mode, mpu3050_read_xyz);
+    brvsens_register(SENSOR_HANDLE_GYROSCOPE, 
+                MPU3050_DRV_NAME, 
+                (void*)client, 
+                (PFNACTIVATE)mpu3050_set_power_mode, 
+                (PFNREAD)mpu3050_read_xyz);
 	return 0;
 
 failed_free:

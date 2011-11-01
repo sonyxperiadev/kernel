@@ -896,24 +896,6 @@ config ARCH_KONA
 	help
 	  This enables support for system based on Broadcom KONA architecture
  
-config ARCH_BCM2708
-	bool "Broadcom BCM2708 family"
-	select CPU_V6
-	select ARM_AMBA
-	select HAVE_CLK
-	select COMMON_CLKDEV
-	select CLKDEV_LOOKUP
-	select ARM_ERRATA_411920
-	select MACH_BCM2708
-	select VC4
-	select ARCH_SPARSEMEM_ENABLE
-	select ARCH_ENABLE_MEMORY_HOTPLUG
-	select ARCH_ENABLE_MEMORY_HOTREMOVE
-	select ARCH_MEMORY_PROBE
-#	select SPARSEMEM_VMEMMAP_ENABLE
-	help
-	  This enables support for Broadcom BCM2708 boards.
-
 endchoice
 
 #
@@ -960,7 +942,6 @@ source "arch/arm/mach-kirkwood/Kconfig"
 source "arch/arm/plat-kona/Kconfig"
 source "arch/arm/mach-island/Kconfig"
 source "arch/arm/mach-rhea/Kconfig"
-source "arch/arm/mach-samoa/Kconfig"
 
 source "arch/arm/mach-ks8695/Kconfig"
 
@@ -1045,8 +1026,6 @@ source "arch/arm/plat-versatile/Kconfig"
 source "arch/arm/mach-vt8500/Kconfig"
 
 source "arch/arm/mach-w90x900/Kconfig"
-
-source "arch/arm/mach-bcm2708/Kconfig"
 
 # Definitions to make life easier
 config ARCH_ACORN
@@ -1848,7 +1827,7 @@ config XIP_PHYS_ADDR
 
 config KEXEC
 	bool "Kexec system call (EXPERIMENTAL)"
-	depends on EXPERIMENTAL
+	depends on EXPERIMENTAL && (!SMP || HOTPLUG_CPU)
 	help
 	  kexec is a system call that implements the ability to shutdown your
 	  current kernel, and to start another kernel.  It is like a reboot

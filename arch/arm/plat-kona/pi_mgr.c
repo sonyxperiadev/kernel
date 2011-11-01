@@ -15,6 +15,7 @@
 #include <plat/pwr_mgr.h>
 
 #ifdef CONFIG_DEBUG_FS
+#include <asm/uaccess.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
@@ -25,6 +26,14 @@
 #ifndef PI_MGR_DEBUG_CLIENT_MAX
 #define PI_MGR_DEBUG_CLIENT_MAX		10
 #endif /*PI_MGR_DEBUG_CLIENT_MAX*/
+
+#ifndef PI_MGR_DFS_WEIGHTAGE_BASE
+#define PI_MGR_DFS_WEIGHTAGE_BASE 100
+#endif
+
+#define pi_change_notify(pi,p) \
+				if((pi)->ops && (pi)->ops->change_notify) (pi)->ops->change_notify(pi,p)
+#define pi_is_enabled(pi) (!!(pi)->usg_cnt)
 
 struct debug_qos_client
 {
@@ -61,6 +70,14 @@ static char debug_fs_buf[3000];
 
 static int pi_debug = 0;
 
+/*PI init state*/
+enum
+{
+	PI_INIT_NONE,
+	PI_INIT_BASE,
+	PI_INIT_COMPLETE
+};
+
 
 
 enum
@@ -71,6 +88,7 @@ enum
 };
 
 static DEFINE_SPINLOCK(pi_mgr_lock);
+static DEFINE_SPINLOCK(pi_mgr_list_lock);
 
 struct pi_mgr_qos_node
 {
@@ -85,6 +103,8 @@ struct pi_mgr_dfs_node
 	char* name;
 	struct plist_node list;
 	u32 opp;
+	u32 weightage;
+	u32 req_active;
 	u32 pi_id;
 };
 
@@ -115,30 +135,173 @@ struct pi_mgr
 
 static struct pi_mgr pi_mgr;
 
+int __pi_enable(struct pi *pi)
+{
+	int inx;
+	int ret = 0;
+	struct pi* dep_pi;
+
+	pi_dbg("%s: pi_name:%s, usageCount:%d\n",__func__,pi->name,pi->usg_cnt);
+
+	/*Enable dependent PIs, if any*/
+	for(inx =0; inx < pi->num_dep_pi;inx++)
+	{
+		dep_pi = pi_mgr_get(pi->dep_pi[inx]);
+		BUG_ON(dep_pi == NULL);
+		__pi_enable(dep_pi);
+	}
+
+	/*increment usg_cnt. Return if already enabled */
+	if(pi->usg_cnt++ == 0)
+	{
+		if(pi->init == PI_INIT_COMPLETE && pi->ops && pi->ops->enable)
+			ret = pi->ops->enable(pi,1);
+	}
+	return ret;
+}
+
+int __pi_disable(struct pi *pi)
+{
+	int inx;
+	int ret = 0;
+	struct pi* dep_pi;
+
+	pi_dbg("%s: pi_name:%s, usageCount:%d\n",__func__,pi->name,pi->usg_cnt);
+
+	/*increment usg_cnt. Return if already enabled */
+	if(pi->usg_cnt && --pi->usg_cnt == 0)
+	{
+		if(pi->init == PI_INIT_COMPLETE && pi->ops && pi->ops->enable)
+			ret = pi->ops->enable(pi,0);
+	}
+	/*disable dependent PIs, if any*/
+	for(inx =0; inx < pi->num_dep_pi;inx++)
+	{
+		dep_pi = pi_mgr_get(pi->dep_pi[inx]);
+		BUG_ON(dep_pi == NULL);
+		__pi_disable(dep_pi);
+	}
+
+	return ret;
+}
+
+int pi_enable(struct pi *pi, int enable)
+{
+	int ret;
+	spin_lock(&pi_mgr_lock);
+	if(enable)
+		ret = __pi_enable(pi);
+	else
+		ret = __pi_disable(pi);
+	spin_unlock(&pi_mgr_lock);
+	return ret;
+}
+EXPORT_SYMBOL(pi_enable);
+
+
+static int __pi_init(struct pi *pi)
+{
+	int ret = 0;
+	struct pi* dep_pi;
+	int inx;
+
+	pi_dbg("%s:%s\n",__func__,pi->name);
+	if(pi->init != PI_INIT_NONE)
+		return 0;
+
+	/*Make sure that dependent PIs are initialized, if any*/
+	for(inx =0; inx < pi->num_dep_pi;inx++)
+	{
+		dep_pi = pi_mgr_get(pi->dep_pi[inx]);
+		BUG_ON(dep_pi == NULL);
+		pi_init(dep_pi);
+	}
+
+	if(pi->ops && pi->ops->init)
+		ret = pi->ops->init(pi);
+
+	pi->init = PI_INIT_BASE;
+	/*make sure that PI is at wakeup policy*/
+	pwr_mgr_pi_set_wakeup_override(pi->id,false);
+
+	return ret;
+}
+
+int pi_init(struct pi *pi)
+{
+	int ret;
+	spin_lock(&pi_mgr_lock);
+	ret = __pi_init(pi);
+	spin_unlock(&pi_mgr_lock);
+	return ret;
+}
+EXPORT_SYMBOL(pi_init);
+
+
+static int __pi_init_state(struct pi *pi)
+{
+	int ret = 0;
+	int inx;
+	struct pm_policy_cfg cfg;
+	pi_dbg("%s:%s\n",__func__,pi->name);
+	BUG_ON(pi->init == PI_INIT_NONE);
+
+	if(pi->init == PI_INIT_BASE)
+	{
+		if(pi->ops && pi->ops->init_state)
+			ret = pi->ops->init_state(pi);
+
+		pi->init = PI_INIT_COMPLETE;
+		BUG_ON(pi->num_ccu_id > MAX_CCU_PER_PI);
+		for(inx =0; inx < pi->num_ccu_id;inx++)
+		{
+			pi->pi_ccu[inx] = clk_get(NULL,pi->ccu_id[inx]);
+			BUG_ON(pi->pi_ccu[inx] == 0 || IS_ERR(pi->pi_ccu[inx]));
+		}
+
+		if(pi->num_states)
+		{
+			pi_dbg("%s: %s %s on init\n",__func__,pi->name,
+					pi->flags & PI_ENABLE_ON_INIT ? "enable" : "disable" );
+
+			if(pi->flags & PI_ENABLE_ON_INIT || pi->usg_cnt)
+				 pi->ops->enable(pi,1);
+			else
+				 pi->ops->enable(pi,0);
+		}
+		pwr_mgr_event_get_pi_policy(SOFTWARE_0_EVENT,pi->id,&cfg);
+		pi_dbg("%s: pi-%s cnt = %d  policy =%d\n",__func__, pi->name,pi->usg_cnt,cfg.policy);
+		pwr_mgr_pi_set_wakeup_override(pi->id,true /*clear*/);
+	}
+	return ret;
+}
+
+int pi_init_state(struct pi *pi)
+{
+	int ret;
+	spin_lock(&pi_mgr_lock);
+	ret = __pi_init_state(pi);
+	spin_unlock(&pi_mgr_lock);
+	return ret;
+}
+EXPORT_SYMBOL(pi_init_state);
+
+
 #ifndef CONFIG_CHANGE_POLICY_FOR_DFS
 static int pi_set_ccu_freq(struct pi *pi, u32 policy, u32 opp_inx)
 {
-	struct clk* clk;
 	int inx;
 	int res = 0;
 	u32 freq;
-
 	BUG_ON(opp_inx >= pi->num_opp);
-
 	for(inx =0; inx < pi->num_ccu_id;inx++)
 	{
-		pi_dbg("%s:pi:%s clock str:%s opp_inx = %d\n",__func__,pi->name,
-				pi->ccu_id[inx],opp_inx);
-
-		clk = clk_get(NULL,pi->ccu_id[inx]);
-		BUG_ON(clk == 0 || IS_ERR(clk));
-
 		freq = pi->pi_opp[inx].opp[opp_inx];
 
 		pi_dbg("%s:%s clock %x policy freq => %d\n",__func__,
-				clk->name,policy,freq);
+				pi->pi_ccu[inx]->name,policy,freq);
 
-		if((res = ccu_set_freq_policy(to_ccu_clk(clk),CCU_POLICY(policy),freq)) != 0)
+		if((res = ccu_set_freq_policy(to_ccu_clk(pi->pi_ccu[inx]),CCU_POLICY(policy),freq)) != 0)
 		{
 			pi_dbg("%s:ccu_set_freq_policy failed\n",__func__);
 
@@ -168,14 +331,14 @@ int pi_set_policy(const struct pi *pi, u32 policy,int type)
 		break;
 #ifdef CONFIG_CHANGE_POLICY_FOR_DFS
 	case POLICY_DFS:
-		res =  pwr_mgr_event_set_pi_policy(pi->dfs_qos_sw_event_id,pi->id,&cfg);
+		res =  pwr_mgr_event_set_pi_policy(pi->dfs_sw_event_id,pi->id,&cfg);
 		break;
 
 	case POLICY_BOTH:
 		res =  pwr_mgr_event_set_pi_policy(pi->qos_sw_event_id,pi->id,&cfg);
 
-		if(pi->dfs_qos_sw_event_id != pi->qos_sw_event_id)
-			res |=  pwr_mgr_event_set_pi_policy(pi->dfs_qos_sw_event_id,pi->id,&cfg);
+		if(pi->dfs_sw_event_id != pi->qos_sw_event_id)
+			res |=  pwr_mgr_event_set_pi_policy(pi->dfs_sw_event_id,pi->id,&cfg);
 		break;
 #endif /*CONFIG_CHANGE_POLICY_FOR_DFS*/
 	default:
@@ -191,40 +354,29 @@ int pi_set_policy(const struct pi *pi, u32 policy,int type)
 }
 EXPORT_SYMBOL_GPL(pi_set_policy);
 
+static int pi_def_init_state(struct pi *pi)
+{
+#ifdef CONFIG_CHANGE_POLICY_FOR_DFS
+	pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy = pi->pi_opp[0].opp[pi->opp_active];
+	pi_set_policy(pi, pi->pi_opp[0].opp[pi->opp_active],POLICY_DFS);
+#else
+	pi_set_ccu_freq(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
+				pi->opp_active);
+#endif
+	return 0;
+}
+
 static int pi_def_init(struct pi *pi)
 {
 	struct pi_mgr_qos_object* qos;
 	struct pi_mgr_dfs_object* dfs;
-	struct clk* clk;
-	struct pi* dep_pi;
-	int inx;
 
 	pi_dbg("%s:%s\n",__func__,pi->name);
-	if(pi->init)
-		return 0;
-
-	spin_lock(&pi_mgr_lock);
-	pi->init = 1;
-	pi->usg_cnt = 0;
-	/* Make sure that CCUs are initialized*/
-	for(inx =0; inx < pi->num_ccu_id;inx++)
-	{
-		clk = clk_get(NULL,pi->ccu_id[inx]);
-		BUG_ON(clk == 0 || IS_ERR(clk));
-		clk_init(clk);
-	}
-
-	/*Make sure that dependent PI are initialized, if any*/
-	for(inx =0; inx < pi->num_dep_pi;inx++)
-	{
-		dep_pi = pi_mgr_get(pi->dep_pi[inx]);
-		BUG_ON(dep_pi == NULL);
-		pi_init(dep_pi);
-	}
 
 	if((pi->flags & PI_NO_QOS) == 0)
 	{
 		qos = &pi_mgr.qos[pi->id];
+		qos->pi_id = pi->id;
 		BLOCKING_INIT_NOTIFIER_HEAD(&qos->notifiers);
 		plist_head_init(&qos->requests);
 		BUG_ON(pi->num_states > PI_MGR_MAX_STATE_ALLOWED);
@@ -248,27 +400,12 @@ static int pi_def_init(struct pi *pi)
 		dfs = &pi_mgr.dfs[pi->id];
 		BLOCKING_INIT_NOTIFIER_HEAD(&dfs->notifiers);
 		plist_head_init(&dfs->requests);
-
+		dfs->pi_id = pi->id;
 		dfs->default_opp = 0;
 		BUG_ON(pi->num_opp && pi->pi_opp == NULL);
 
-#ifdef CONFIG_CHANGE_POLICY_FOR_DFS
-
-		pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy = pi->pi_opp[0].opp[pi->opp_active];
-		pi_set_policy(pi, pi->pi_opp[0].opp[pi->opp_active],POLICY_DFS);
-#else
-		pi_set_ccu_freq(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
-						pi->opp_active);
-#endif
 	}
 
-	if(pi->num_states)
-	{
-		pi_dbg("%s: %s %s on init\n",__func__,pi->name,pi->flags & PI_ENABLE_ON_INIT ? "enable" : "disable" );
-
-		pi_enable(pi,pi->flags & PI_ENABLE_ON_INIT);
-	}
-	spin_unlock(&pi_mgr_lock);
 	printk(KERN_INFO " %s: count = %d\n",__func__,pi->usg_cnt);
 	return 0;
 }
@@ -276,50 +413,25 @@ static int pi_def_init(struct pi *pi)
 static int pi_def_enable(struct pi *pi, int enable)
 {
 	u32 policy;
-	int inx;
-	struct pi* dep_pi;
 	pi_dbg("%s: pi_name:%s, enable:%d usageCount:%d\n",__func__,pi->name,enable,pi->usg_cnt);
-	spin_lock(&pi_mgr_lock);
 	if(enable)
 	{
-		if(pi->usg_cnt++ != 0)
-			goto done;
 		policy = pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy;
 		pi_dbg("%s: policy = %d -- PI to be enabled\n",__func__,policy);
-
-		/*Make sure that dependent PI are enabled, if any*/
-		for(inx =0; inx < pi->num_dep_pi;inx++)
-		{
-			dep_pi = pi_mgr_get(pi->dep_pi[inx]);
-			BUG_ON(dep_pi == NULL);
-			pi_enable(dep_pi,1);
-		}
-
 	}
 	else
 	{
-		if(pi->usg_cnt == 0 || --pi->usg_cnt != 0)
-			goto done;
 		policy = pi->pi_state[pi->state_allowed].state_policy;
 		pi_dbg("%s: policy = %d pi->state_allowed = %d\n",__func__,policy,pi->state_allowed);
 
-		/*Make sure that dependent PI are disabled, if any*/
-		for(inx =0; inx < pi->num_dep_pi;inx++)
-		{
-			dep_pi = pi_mgr_get(pi->dep_pi[inx]);
-			BUG_ON(dep_pi == NULL);
-			pi_enable(dep_pi,0);
-		}
 	}
 	pi_dbg("%s: calling pi_set_policy\n",__func__);
-	pi_set_policy(pi,policy,POLICY_QOS);
-done:
-	spin_unlock(&pi_mgr_lock);
-	return 0;
+	return pi_set_policy(pi,policy,POLICY_QOS);
 }
 
 struct pi_ops gen_pi_ops = {
 	.init = pi_def_init,
+	.init_state = pi_def_init_state,
 	.enable = pi_def_enable,
 	.change_notify = NULL,
 };
@@ -327,15 +439,38 @@ struct pi_ops gen_pi_ops = {
 
 static u32 pi_mgr_dfs_get_opp(const struct pi_mgr_dfs_object* dfs)
 {
-	if (plist_head_empty(&dfs->requests))
-		return dfs->default_opp;
+	u32 opp = dfs->default_opp;
+	int sum_of_req = 0;
+	struct pi_mgr_dfs_node *dfs_node;
+	struct pi *pi = pi_mgr.pi_list[dfs->pi_id];
+
+	if(!plist_head_empty(&dfs->requests))
+	{
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
-	return list_entry(dfs->requests.node_list.prev,
+		opp =  list_entry(dfs->requests.node_list.prev,
 			  struct plist_node, plist.node_list)->prio;
 #else
-	return plist_last(&dfs->requests)->prio;
+		opp = plist_last(&dfs->requests)->prio;
 #endif
+		if(opp == (pi->num_opp - 1)) /*Highest OPP ??*/
+			return opp;
 
+		plist_for_each_entry(dfs_node, &dfs->requests, list)
+		{
+			if(dfs_node->req_active && dfs_node->opp < (pi->num_opp - 1))
+			{
+				sum_of_req +=  dfs_node->weightage;
+			}
+		}
+
+		opp = sum_of_req /PI_MGR_DFS_WEIGHTAGE_BASE;
+
+		if(opp >= pi->num_opp)
+			opp = pi->num_opp - 1;
+		pi_dbg("%s:pi :%s sum_of_req = %d opp = %d\n",__func__,pi->name, sum_of_req,opp);
+	}
+
+	return opp;
 }
 
 static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node* node, u32 pi_id, int action)
@@ -344,8 +479,8 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node* node, u32 pi_id, int action
 	struct pi_mgr_dfs_object* dfs = &pi_mgr.dfs[pi_id];
 	struct pi *pi = pi_mgr.pi_list[pi_id];
 
-	spin_lock(&pi_mgr_lock);
-	old_val = pi_mgr_dfs_get_opp(dfs);
+	spin_lock(&pi_mgr_list_lock);
+	old_val = pi->opp_active;
 	switch(action)
 	{
 	case NODE_ADD:
@@ -369,7 +504,7 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node* node, u32 pi_id, int action
 	}
 	new_val = pi_mgr_dfs_get_opp(dfs);
 	pi_dbg("%s:pi_id= %d oldval = %d new val = %d\n",__func__,pi_id,old_val,new_val);
-	spin_unlock(&pi_mgr_lock);
+	spin_unlock(&pi_mgr_list_lock);
 
 	if(old_val != new_val)
 	{
@@ -379,17 +514,19 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node* node, u32 pi_id, int action
 
 		BUG_ON(new_val >= pi->num_opp);
 		pi->opp_active = new_val;
+		if(pi->init == PI_INIT_COMPLETE)
+		{
 #ifdef CONFIG_CHANGE_POLICY_FOR_DFS
-
-		pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy = pi->pi_opp[0].opp[new_val];
-		if(pi_is_enabled(pi))
-			pi_set_policy(pi, pi->pi_opp[0].opp[new_val],POLICY_QOS);
-		if(pi->dfs_qos_sw_event_id != pi->qos_sw_event_id)
-			pi_set_policy(pi, pi->pi_opp[0].opp[new_val],POLICY_DFS);
+			pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy = pi->pi_opp[0].opp[new_val];
+			if(pi_is_enabled(pi))
+				pi_set_policy(pi, pi->pi_opp[0].opp[new_val],POLICY_QOS);
+			if(pi->dfs_sw_event_id != pi->qos_sw_event_id)
+				pi_set_policy(pi, pi->pi_opp[0].opp[new_val],POLICY_DFS);
 #else
-		pi_set_ccu_freq(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
-					new_val);
+			pi_set_ccu_freq(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
+						new_val);
 #endif
+		}
 	}
 
 	return new_val;
@@ -407,14 +544,11 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 	u32 old_val, new_val;
 	u32 old_state;
 	int i;
-	u32 old_policy;
-	u32 new_policy;
-	struct pi* dep_pi;
 	int found = 0;
 	struct pi_mgr_qos_object* qos = &pi_mgr.qos[pi_id];
 	struct pi *pi = pi_mgr.pi_list[pi_id];
 
-	spin_lock(&pi_mgr_lock);
+	spin_lock(&pi_mgr_list_lock);
 	old_val = pi_mgr_qos_get_value(qos);
 
 	switch(action)
@@ -440,7 +574,7 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 	}
 	new_val = pi_mgr_qos_get_value(qos);
 	pi_dbg("%s:pi_id= %d oldval = %d new val = %d\n",__func__,pi_id,old_val,new_val);
-	spin_unlock(&pi_mgr_lock);
+	spin_unlock(&pi_mgr_list_lock);
 
 	if(old_val != new_val)
 	{
@@ -468,37 +602,15 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 			if(!found)
 				pi->state_allowed = i-1;
 		}
-		if(!pi_is_enabled(pi) && pi->state_allowed != old_state)
-		{
-			pi_set_policy(pi, pi->pi_state[pi->state_allowed].state_policy,POLICY_QOS);
-		}
-		old_policy = pi->pi_state[old_state].state_policy;
-		new_policy = pi->pi_state[pi->state_allowed].state_policy;
 
-		if(!IS_ACTIVE_POLICY(old_policy) && IS_ACTIVE_POLICY(new_policy))
+		if(pi->init == PI_INIT_COMPLETE)
 		{
-			/*Make sure that dependent PI are enabled, if any*/
-			for(i =0; i < pi->num_dep_pi;i++)
+			if(!pi_is_enabled(pi) && pi->state_allowed != old_state)
 			{
-				dep_pi = pi_mgr_get(pi->dep_pi[i]);
-				BUG_ON(dep_pi == NULL);
-				pi_enable(dep_pi,1);
+				pi_set_policy(pi, pi->pi_state[pi->state_allowed].state_policy,POLICY_QOS);
 			}
 
 		}
-		else if(IS_ACTIVE_POLICY(old_policy) && !IS_ACTIVE_POLICY(new_policy))
-		{
-			/*Make sure that dependent PI are disabled, if any*/
-			for(i =0; i < pi->num_dep_pi;i++)
-			{
-				dep_pi = pi_mgr_get(pi->dep_pi[i]);
-				BUG_ON(dep_pi == NULL);
-				pi_enable(dep_pi,0);
-			}
-
-		}
-
-
 
 		if(pi->flags & UPDATE_PM_QOS)
 		{
@@ -508,6 +620,7 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 #else
 			pm_qos_update_request(&pi->pm_qos, new_val);
 #endif
+
 		}
 
 	}
@@ -695,10 +808,21 @@ int pi_mgr_qos_remove_notifier(u32 pi_id, struct notifier_block *notifier)
 			&pi_mgr.qos[pi_id].notifiers, notifier);
 
 }
-EXPORT_SYMBOL_GPL(pi_mgr_qos_remove_notifier);
-
+EXPORT_SYMBOL(pi_mgr_qos_remove_notifier);
 
 struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id, u32 opp)
+{
+	return pi_mgr_dfs_add_request_ex(client_name, pi_id, opp, PI_MGR_DFS_WIEGHTAGE_DEFAULT);
+}
+EXPORT_SYMBOL(pi_mgr_dfs_add_request);
+
+int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp)
+{
+	return pi_mgr_dfs_request_update_ex(node,opp,PI_MGR_DFS_WIEGHTAGE_DEFAULT);
+}
+EXPORT_SYMBOL(pi_mgr_dfs_request_update);
+
+struct pi_mgr_dfs_node* pi_mgr_dfs_add_request_ex(char* client_name, u32 pi_id, u32 opp, u32 weightage)
 {
 	struct pi_mgr_dfs_node* node;
 	struct pi* pi;
@@ -719,10 +843,17 @@ struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id, u32
 		return NULL;
 	}
 
-	if(opp >= pi->num_opp)
+	if(opp >= pi->num_opp && opp != PI_MGR_DFS_MIN_VALUE)
 	{
 		__WARN();
 		pi_dbg("%s:ERROR - %d:unsupported opp \n",__func__,opp);
+		return NULL;
+	}
+
+	if(PI_MGR_DFS_WIEGHTAGE_DEFAULT != weightage && weightage >= PI_MGR_DFS_WEIGHTAGE_BASE)
+	{
+		__WARN();
+		pi_dbg("%s:ERROR - %d:unsupported weightage \n",__func__,weightage);
 		return NULL;
 	}
 
@@ -734,14 +865,32 @@ struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id, u32
 	}
 
 	node->name = client_name;
-	node->opp = opp;
 	node->pi_id = pi_id;
+
+	if(opp == PI_MGR_DFS_MIN_VALUE)
+	{
+		node->req_active = 0;
+		node->opp = 0;
+	}
+	else
+	{
+		node->opp = opp;
+		node->req_active = 1;
+	}
+	if(weightage == PI_MGR_DFS_WIEGHTAGE_DEFAULT)
+		node->weightage = pi->opp_def_weightage[node->opp];
+	else
+		node->weightage = weightage;
+
+	BUG_ON(node->weightage >= PI_MGR_DFS_WEIGHTAGE_BASE);
+	node->weightage += node->opp*PI_MGR_DFS_WEIGHTAGE_BASE;
+
 	pi_mgr_dfs_update(node,pi_id,NODE_ADD);
 	return node;
 }
-EXPORT_SYMBOL(pi_mgr_dfs_add_request);
+EXPORT_SYMBOL(pi_mgr_dfs_add_request_ex);
 
-int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp)
+int pi_mgr_dfs_request_update_ex(struct pi_mgr_dfs_node* node, u32 opp, u32 weightage)
 {
 	struct pi* pi =  pi_mgr.pi_list[node->pi_id];
 	BUG_ON(pi==NULL);
@@ -750,23 +899,49 @@ int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp)
 		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
-	if(opp >= pi->num_opp)
+	if(opp >= pi->num_opp && opp != PI_MGR_DFS_MIN_VALUE)
 	{
 		__WARN();
 		pi_dbg("%s:ERROR - %d:unsupported opp \n",__func__,opp);
 		return -EINVAL;
 	}
-	pi_dbg("%s:client = %s pi = %d opp = %d opp_new = %d\n",__func__,
-			node->name, node->pi_id, opp,node->opp);
-	if(node->opp != opp)
+
+	if(PI_MGR_DFS_WIEGHTAGE_DEFAULT != weightage && weightage >= PI_MGR_DFS_WEIGHTAGE_BASE)
 	{
-		node->opp = opp;
+		__WARN();
+		pi_dbg("%s:ERROR - %d:unsupported weightage \n",__func__,weightage);
+		return -EINVAL;
+	}
+
+	pi_dbg("%s:client = %s pi = %d opp = %d opp_new = %d weightage = %d\n",__func__,
+			node->name, node->pi_id, opp,node->opp,weightage);
+
+	if(node->opp != opp || weightage != node->weightage)
+	{
+		if(opp == PI_MGR_DFS_MIN_VALUE)
+		{
+			node->req_active = 0;
+			node->opp = 0;
+		}
+		else
+		{
+			node->opp = opp;
+			node->req_active = 1;
+		}
+		if(weightage == PI_MGR_DFS_WIEGHTAGE_DEFAULT)
+			node->weightage = pi->opp_def_weightage[node->opp];
+		else
+			node->weightage = weightage;
+
+		BUG_ON(node->weightage >= PI_MGR_DFS_WEIGHTAGE_BASE);
+		node->weightage += node->opp*PI_MGR_DFS_WEIGHTAGE_BASE;
+
 		pi_mgr_dfs_update(node,node->pi_id,NODE_UPDATE);
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL(pi_mgr_dfs_request_update);
+EXPORT_SYMBOL(pi_mgr_dfs_request_update_ex);
 
 int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node)
 {
@@ -853,7 +1028,6 @@ EXPORT_SYMBOL(pi_mgr_get);
 
 int pi_mgr_init()
 {
-	spin_lock_init(&pi_mgr_lock);
 	memset(&pi_mgr,0,sizeof(pi_mgr));
 	pi_mgr.init = 1;
 	return 0;
@@ -996,27 +1170,48 @@ static struct file_operations pi_qos_request_list_fops =
 	.read =         read_get_qos_request_list,
 };
 
-
-static int pi_debug_set_dfs(void *data, u64 val)
+static ssize_t pi_debug_set_dfs_client_opp(struct file *file, char const __user *buf,
+					size_t count, loff_t *offset)
 {
-	u32 inx = (u32)data;
-	int ret;
+	u32 len = 0;
+	u32 opp = PI_MGR_DFS_MIN_VALUE;
+	u32 weightage = PI_MGR_DFS_WIEGHTAGE_DEFAULT;
+	char input_str[100];
+    u32 inx = (u32)file->private_data;
 	BUG_ON(debug_dfs_client[inx].debugfs_dfs_node == NULL);
-	ret = pi_mgr_dfs_request_update(debug_dfs_client[inx].debugfs_dfs_node
-			, val);
-	if(ret == 0)
-		debug_dfs_client[inx].req = (int)val;
-	return ret;
-}
-static int pi_debug_get_dfs(void *data, u64* val)
-{
-	u32 inx = (u32)data;
-	BUG_ON(debug_dfs_client[inx].debugfs_dfs_node == NULL);
-	*val = debug_dfs_client[inx].req;
-	return 0;
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+    sscanf(input_str, "%u%u", &opp, &weightage);
+	pi_mgr_dfs_request_update_ex(debug_dfs_client[inx].debugfs_dfs_node,opp,weightage);
+	return count;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(pi_dfs_client_fops, pi_debug_get_dfs, pi_debug_set_dfs, "%llu\n");
+static ssize_t pi_debug_get_dfs_client_opp(struct file *file, char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	u32 len = 0;
+    u32 inx = (u32)file->private_data;
+	BUG_ON(debug_dfs_client[inx].debugfs_dfs_node == NULL);
+
+    len += snprintf(debug_fs_buf+len, sizeof(debug_fs_buf)-len,
+		"DFS Req:%u Request active:%u Request Weightage:%u \n",
+			debug_dfs_client[inx].debugfs_dfs_node->opp,
+			debug_dfs_client[inx].debugfs_dfs_node->req_active,
+			debug_dfs_client[inx].debugfs_dfs_node->weightage);
+    return simple_read_from_buffer(user_buf, count, ppos, debug_fs_buf, len);
+}
+
+static struct file_operations pi_dfs_client_fops =
+{
+	.open = pi_debugfs_open,
+	.read = pi_debug_get_dfs_client_opp,
+	.write = pi_debug_set_dfs_client_opp,
+};
 
 static int pi_debug_get_active_dfs(void *data, u64 *val)
 {
@@ -1051,7 +1246,7 @@ static int pi_debug_register_dfs_client(void *data, u64 value)
     sprintf(debug_dfs_client[val].client_name, "%s_%d", DEBUGFS_PM_CLIENT_NAME, val);
 
     debug_dfs_client[val].debugfs_dfs_node =
-		pi_mgr_dfs_add_request(debug_dfs_client[val].client_name, pi->id, 0 /*zero is the min opp*/);
+		pi_mgr_dfs_add_request(debug_dfs_client[val].client_name, pi->id, PI_MGR_DFS_MIN_VALUE);
 
     dent_client = debugfs_create_file(debug_dfs_client[val].client_name, S_IWUSR|S_IRUSR, dfs_dir,
 	    (void*)val, &pi_dfs_client_fops);
@@ -1118,7 +1313,8 @@ static ssize_t read_get_dfs_request_list(struct file *file, char __user *user_bu
     plist_for_each_entry(dfs_node, &dfs->requests, list)
 	{
 		len += snprintf(debug_fs_buf+len, sizeof(debug_fs_buf)-len,
-			"PI: %s (Id:%d) \t\t Client:%s \t\t DFS request:%u \n", pi->name, dfs_node->pi_id, dfs_node->name, dfs_node->opp);
+			"PI: %s (Id:%d) \t\t Client:%s \t\t DFS request:%u request_active:%u request_weightage: %u\n", pi->name, dfs_node->pi_id, dfs_node->name, dfs_node->opp,dfs_node->req_active,
+					dfs_node->weightage - PI_MGR_DFS_WEIGHTAGE_BASE*dfs_node->opp);
     }
 	return simple_read_from_buffer(user_buf, count, ppos, debug_fs_buf, len);
 }
@@ -1137,9 +1333,9 @@ static int pi_debug_set_enable(void *data, u64 val)
     if(pi && pi->ops && pi->ops->enable)
 	{
 		if(val == 1)
-			pi->ops->enable(pi, 1);
+			pi_enable(pi, 1);
 		else if(val == 0)
-			pi->ops->enable(pi, 0);
+			pi_enable(pi, 0);
 		else
 			pi_dbg("write 1 to enable; 0 to disable\n");
     }
@@ -1153,10 +1349,7 @@ static int pi_debug_get_count(void *data, u64 *val)
 {
     struct pi *pi = data;
     *val = pi->usg_cnt;
-    if (*val >= 0)
-	 pi_dbg("%s count is %llu \n", pi->name, *val);
-
-    return 0;
+     return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(pi_count_fops, pi_debug_get_count, NULL, "%llu\n");
 

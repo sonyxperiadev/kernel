@@ -1,7 +1,8 @@
 #
 # Makefile for misc devices that really don't fit anywhere else.
 #
-obj-$(CONFIG_BCM_VCHIQ_VC04)		+= vc04_services/
+
+bj-$(CONFIG_BCM_VCHIQ_VC04)           += vc04_services/
 obj-$(CONFIG_BRCM_VIDEOCORE_SERVICES)   += vc04_services/
 obj-$(CONFIG_IBM_ASM)		+= ibmasm/
 obj-$(CONFIG_AD525X_DPOT)	+= ad525x_dpot.o
@@ -40,6 +41,7 @@ obj-$(CONFIG_SENSORS_MPU3050)	+= mpu3050.o
 obj-$(CONFIG_BMP18X) += bmp18x-core.o
 obj-$(CONFIG_BMP18X_I2C) += bmp18x-i2c.o
 obj-$(CONFIG_BMP18X_SPI) += bmp18x-spi.o
+obj-$(CONFIG_AL3006) += al3006.o
 obj-$(CONFIG_EP93XX_PWM)	+= ep93xx_pwm.o
 obj-$(CONFIG_DS1682)		+= ds1682.o
 obj-$(CONFIG_TI_DAC7512)	+= ti_dac7512.o
@@ -57,12 +59,13 @@ obj-y				+= ti-st/
 obj-$(CONFIG_AB8500_PWM)	+= ab8500-pwm.o
 obj-y				+= lis3lv02d/
 obj-y				+= carma/
+obj-y				+=mpu3050/
 obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
 obj-$(CONFIG_APANIC)		+= apanic.o
 obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
+obj-$(CONFIG_SENSORS_AK8975_BRCM)	+= akm8975_brcm.o
 obj-$(CONFIG_INTER_PROCESSOR_COMM)	+= ipc.o
 obj-$(CONFIG_STM_TRACE)         += stm.o
-obj-$(CONFIG_BRCM_MISC_DRIVERS) += vmcs_services/
 obj-$(CONFIG_BCM59055_AUDIO)	+= bcm59055-audio.o
 obj-$(CONFIG_BCM59055_SARADC)	+= bcm59055-adc.o
 obj-$(CONFIG_BCM59055_FUELGAUGE)+= bcm59055-fuelgauge.o

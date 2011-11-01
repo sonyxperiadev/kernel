@@ -4,8 +4,6 @@ All rights reserved.
 
 Project  :  vcfw
 Module   :  osal
-File     :  $RCSfile: $
-Revision :  $Revision: #22 $
 
 FILE DESCRIPTION
 VideoCore OS Abstraction Layer - Assertion and error-handling macros.
