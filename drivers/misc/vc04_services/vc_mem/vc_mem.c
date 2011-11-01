@@ -29,6 +29,7 @@
 #endif
 
 #include <linux/videocore/vc_mem.h>
+#include "interface/vchiq_arm/vchiq_connected.h"
 
 #define DRIVER_NAME  "vc-mem"
 
@@ -46,6 +47,7 @@
 static dev_t         vc_mem_devnum = 0;
 static struct class *vc_mem_class = NULL;
 static struct cdev   vc_mem_cdev;
+static int           vc_mem_inited = 0;
 
 // Proc entry
 static struct proc_dir_entry *vc_mem_proc_entry;
@@ -338,11 +340,13 @@ out:
 
 /****************************************************************************
 *
-*   vc_mem_init
+*   vc_mem_connected_init
+*
+*   This function is called once the videocore has been connected.
 *
 ***************************************************************************/
 
-static int __init vc_mem_init( void )
+static void vc_mem_connected_init( void )
 {
     int rc = -EFAULT;
     struct device *dev;
@@ -395,7 +399,8 @@ static int __init vc_mem_init( void )
     vc_mem_proc_entry->read_proc = vc_mem_proc_read;
     vc_mem_proc_entry->write_proc = vc_mem_proc_write;
 
-    return 0;
+    vc_mem_inited = 1;
+    return;
 
 out_device_destroy:
     device_destroy( vc_mem_class, vc_mem_devnum );
@@ -411,7 +416,22 @@ out_unregister:
     unregister_chrdev_region( vc_mem_devnum, 1 );
 
 out_err:
-    return rc;
+   return;
+}
+
+/****************************************************************************
+*
+*   vc_mem_init
+*
+***************************************************************************/
+
+static int __init vc_mem_init( void )
+{
+   printk( KERN_INFO "vc-mem: Videocore memory driver\n" );
+
+   vchiq_add_connected_callback( vc_mem_connected_init );
+
+   return 0;
 }
 
 /****************************************************************************
@@ -424,11 +444,14 @@ static void __exit vc_mem_exit( void )
 {
     LOG_DBG( "%s: called", __func__ );
 
-    remove_proc_entry( vc_mem_proc_entry->name, NULL );
-    device_destroy( vc_mem_class, vc_mem_devnum );
-    class_destroy( vc_mem_class );
-    cdev_del( &vc_mem_cdev );
-    unregister_chrdev_region( vc_mem_devnum, 1 );
+    if ( vc_mem_inited )
+    {
+       remove_proc_entry( vc_mem_proc_entry->name, NULL );
+       device_destroy( vc_mem_class, vc_mem_devnum );
+       class_destroy( vc_mem_class );
+       cdev_del( &vc_mem_cdev );
+       unregister_chrdev_region( vc_mem_devnum, 1 );
+    }
 }
 
 module_init( vc_mem_init );

@@ -31,12 +31,9 @@
 
 #include "vchiq_arm.h"
 #include "vchiq_bivcm.h"
+#include "vchiq_connected.h"
 
 #include "vchiq_memdrv.h"
-
-#ifdef USE_VCEB
-#include "interface/vceb/host/vceb.h"
-#endif
 
 #include <linux/dma-mapping.h>
 #include <mach/sdma.h>
@@ -130,6 +127,7 @@ VCOS_CFG_ENTRY_T         vc_cfg_dir;
 
 static CHAL_IPC_HANDLE   ipcHandle;
 static VCOS_EVENT_T      g_pause_event;
+static int               g_initialized;
 
 static VCHIQ_STATE_T    *g_vchiq_state;
 static VCHIQ_SLOT_ZERO_T *g_vchiq_slot_zero;
@@ -264,7 +262,7 @@ vchiq_platform_init(VCHIQ_STATE_T *state)
 #if (( defined( CONFIG_ARCH_KONA ) || defined( CONFIG_ARCH_BCMHANA )) && !defined( CONFIG_MAP_LITTLE_ISLAND_MODE ))
 
    /*
-    * On Big Island, the videocore can only access the lower 512 Mb of the ARM memory. 
+    * On Big Island, the videocore can only access the lower 512 Mb of the ARM memory.
     * So bivcm can only work if the host is located in the lower 512 Mb of physical memory.
     */
 
@@ -945,9 +943,6 @@ vchiq_late_resume(struct early_suspend *h)
 
 VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platform_data )
 {
-#ifdef USE_VCEB
-   VCEB_INSTANCE_T       vceb_instance;
-#endif
    VCHIQ_KERNEL_STATE_T   *kernState;
 
    vcos_log_warn( "%s: [bivcm] vchiq_num_instances = %d, VCHIQ_NUM_VIDEOCORES = %d",
@@ -960,18 +955,6 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
 
       return VCHIQ_ERROR;
    }
-
-#ifdef USE_VCEB
-   if ( vceb_get_instance( platform_data->instance_name, &vceb_instance ) != 0 )
-   {
-      /* No instance registered with vceb, which means the videocore is not
-         present */
-      vcos_log_error( "%s: failed to find vceb instance '%s'", __func__,
-         platform_data->instance_name );
-
-      return VCHIQ_ERROR;
-   }
-#endif
 
    /* Allocate some memory */
    kernState = kmalloc( sizeof( *kernState ), GFP_KERNEL );
@@ -1022,19 +1005,8 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
       return VCHIQ_ERROR;
    }
 
-#ifndef USE_VCEB
-   /* Direct connect the vchiq to get vmcs-fb and vmcs-sm device module built in */
-   if ( vchiq_memdrv_initialise() != VCHIQ_SUCCESS )
-   {
-      printk( KERN_ERR "%s: failed to initialise vchiq for '%s'\n",
-              __func__, kernState->instance_name );
-   }
-   else
-#endif
-   {
-      printk( KERN_INFO "%s: initialised vchiq for '%s'\n", __func__,
-              kernState->instance_name );
-   }
+   printk( KERN_INFO "%s: initialised vchiq for '%s'\n", __func__,
+           kernState->instance_name );
 
    return VCHIQ_SUCCESS;
 }
@@ -1297,6 +1269,12 @@ VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
    int err = 0;
    int i;
 
+   if ( g_initialized )
+   {
+      vcos_log_warn( "%s: already initialized", __func__ );
+      return VCOS_SUCCESS;
+   }
+
 #if defined(VCHIQ_SM_ALLOC_VCDDR)
    vcos_log_warn( "%s: ipc shared memory address                       = 0x%p", __func__, g_vchiq_ipc_shared_mem );
    vcos_log_warn( "%s: ipc shared memory size (vc+arm channels, extra) = 0x%x", __func__, g_vchiq_ipc_shared_mem_size );
@@ -1368,12 +1346,17 @@ VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
       chal_ipc_int_vcset( ipcHandle, IPC_INTERRUPT_SOURCE_4 );
    }
 
+   g_initialized = 1;
+
+   vchiq_call_connected_callbacks();
+
    return VCHIQ_SUCCESS;
 
 failed_request_irq:
 failed_init_state:
    return VCHIQ_ERROR;
 }
+EXPORT_SYMBOL( vchiq_memdrv_initialise );
 
 /* There is a potential problem with partial cache lines (pages?)
    at the ends of the block when reading. If the CPU accessed anything in
