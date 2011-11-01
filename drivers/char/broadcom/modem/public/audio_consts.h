@@ -72,17 +72,29 @@
 #include "tones_def.h"
 
 /*
+	Audio Volume
+*/
+#define	AUDIO_VOLUME_MUTE		0 						///< mute the audio
+#define	AUDIO_VOLUME_MIN		1 						///< lowest
+#define	AUDIO_VOLUME_MAX 		40						///< loudest
+#define	AUDIO_VOLUME_DEFAULT	AUDIO_VOLUME_MAX*3/4	///< default Music Audio volume
+
+/*
 	Audio MICGAIN Index (3 dB/step)
 */
 #define	AUDIO_MICGAIN_MIN		0 						///< lowest = 0dB
 #define	AUDIO_MICGAIN_MAX 		14						///< loudest = 42dB
-
+#define	AUDIO_MICGAIN_DEFAULT	((AUDIO_MICGAIN_MIN+AUDIO_MICGAIN_MAX)>>1)	///< default
 
 typedef enum AUDIO_GAIN_FORMAT_t 
 {
-	AUDIO_GAIN_FORMAT_mB,     // gain in milli Bel = 1/100 dB 
-	AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN,      // CUSTOMER TABLE: DSP voice volume dB from sysparm
-	AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE   // CUSTOMER TABLE: FM Radio audio gain table
+	AUDIO_GAIN_FORMAT_VOL_LEVEL, // logic volume level
+	AUDIO_GAIN_FORMAT_HW_REG,    // hardware register gain value
+	AUDIO_GAIN_FORMAT_Q14_1,     // gain in Q14.1 
+	AUDIO_GAIN_FORMAT_Q1_14,      // gain in Q1.14
+	AUDIO_GAIN_FORMAT_Q13_2,      // gain in Q13.2
+	AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN,      // DSP voice volume dB from sysparm
+	AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE      // FM Radio audio gain table
 } AUDIO_GAIN_FORMAT_t;
 
 /**
@@ -663,6 +675,10 @@ typedef enum {
  	
 } AudioParam_t;
 
+typedef enum { 
+  VOICE_ADC_MODE_8KHZ = 0, 
+  VOICE_ADC_MODE_16KHZ
+} VoiceADCMode_t; 
 
 #define AUDIO_FIFO_LENGTH_MS	480		//in ms, the ring buffers in Audio Router and under use this size.
 
@@ -677,4 +693,13 @@ typedef enum
 } AUDIO_SPKR_CH_Mode_t;
 
 #endif   //_INC_AUDIO_CONSTS_H_
+
+#define ENABLE_AUDMIX_V2	//define to avoid SW mixer for headset/EP
+#if defined(ENABLE_AUDMIX_V2)
+#define ENABLE_MONO2DUAL	//required on Rhea A0, as it does not support 48k mono pass-thru
+#endif
+
+//#undef ENABLE_MONO2DUAL  //if undef, means not use SRC-mixer
+#define ENABLE_MONO2DUAL  //if define, means use SRC-mixer
+
 

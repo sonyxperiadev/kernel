@@ -630,5 +630,10 @@ int mm_ccu_set_pll_select(u32 clk_id, u32 value);
 int clk_set_pll_pwr_on_idle(int pll_id, int enable);
 int clk_set_crystal_pwr_on_idle(int enable);
 int rhea_clock_init(void);
+#ifdef CONFIG_DEBUG_FS
+int set_gpio_mux_for_debug_bus(void);
+int set_clk_idle_debug_mon(int clk_idle);
+int set_clk_monitor_debug(int mon_select);
+#endif
 
 #endif /* __ARM_ARCH_BCM2165X_CLOCK_MGR_H  */

@@ -336,6 +336,9 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",
 		.retries = 1,
+#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+		.is_pmu_i2c=false,
+#endif
 	},
 	{ /* for BSC1*/
 		.speed = BSC_BUS_SPEED_50K,
@@ -343,6 +346,9 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
 		.retries = 3,
+#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+		.is_pmu_i2c=false,
+#endif
 	},
 	{ /* for PMU */
 		.speed = BSC_BUS_SPEED_50K,
@@ -350,6 +356,9 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "pmu_bsc_clk",
 		.bsc_apb_clk = "pmu_bsc_apb",
 		.retries = 1,
+#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+		.is_pmu_i2c=true,
+#endif
 	},
 };
 
@@ -550,8 +559,8 @@ static struct platform_device board_kona_otg_platform_device =
 struct kona_freq_tbl kona_freq_tbl[] =
 {
 /*JIRA HWRHEA-1199 : Enable Economy mode(156MHz) for B0 */
-#ifndef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+//    FTBL_INIT(156000000, PI_OPP_ECONOMY),
 #endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
     FTBL_INIT(700000, PI_OPP_TURBO),

@@ -265,11 +265,7 @@ CONFIG_KONA_DCACHE_INVALIDATION=y
 # CONFIG_DMAC_PL330 is not set
 CONFIG_BCM_PARAMS_PHYS=0x85000100
 CONFIG_BCM_RAM_BASE=0x80000000
-<<<<<<< HEAD:arch/arm/configs/bcm21455_samoafpga_defconfig
-CONFIG_BCM_RAM_START_RESERVED_SIZE=0x02000000
-=======
 CONFIG_BCM_RAM_START_RESERVED_SIZE=0x05000000
->>>>>>> srb-android-gb-2011-10-26:arch/arm/configs/crash_bcm21654_rhearay_defconfig
 # CONFIG_KONA_POWER_MGR is not set
 # CONFIG_KONA_AVS is not set
 # CONFIG_KONA_ATAG_DT is not set
@@ -277,14 +273,19 @@ CONFIG_BCM_RAM_START_RESERVED_SIZE=0x05000000
 #
 # Rhea SoC based Machine types
 #
+CONFIG_ARCH_RHEA_A0=y
+# CONFIG_ARCH_RHEA_B0 is not set
 CONFIG_MACH_RHEA_RAY=y
 # CONFIG_MACH_RHEA_RAY_EDN1X is not set
+# CONFIG_MACH_RHEA_RAY_EDN2X is not set
 # CONFIG_MACH_RHEA_DALTON is not set
 # CONFIG_MACH_HERA_RAY is not set
 # CONFIG_MACH_RHEA_BERRI is not set
 # CONFIG_MACH_RHEALC_BERRI is not set
 # CONFIG_RHEA_DORMANT_MODE is not set
 CONFIG_RHEA_A0_PM_ASIC_WORKAROUND=y
+# CONFIG_RHEA_B0_PM_ASIC_WORKAROUND is not set
+# CONFIG_RHEA_UART_RX_FIX is not set
 
 #
 # System MMU
@@ -497,10 +498,9 @@ CONFIG_STANDALONE=y
 # CONFIG_DEBUG_DRIVER is not set
 # CONFIG_DEBUG_DEVRES is not set
 # CONFIG_SYS_HYPERVISOR is not set
-<<<<<<< HEAD:arch/arm/configs/bcm21455_samoafpga_defconfig
 CONFIG_CMA=y
 # CONFIG_CMA_DEBUG is not set
-CONFIG_CMA_STATS=y
+# CONFIG_CMA_STATS is not set
 
 #
 # Default contiguous memory area size:
@@ -510,10 +510,8 @@ CONFIG_CMA_SIZE_SEL_ABSOLUTE=y
 # CONFIG_CMA_SIZE_SEL_PERCENTAGE is not set
 # CONFIG_CMA_SIZE_SEL_MIN is not set
 # CONFIG_CMA_SIZE_SEL_MAX is not set
-CONFIG_CMA_ALIGNMENT=4
-=======
+CONFIG_CMA_ALIGNMENT=8
 # CONFIG_CONNECTOR is not set
->>>>>>> srb-android-gb-2011-10-26:arch/arm/configs/crash_bcm21654_rhearay_defconfig
 # CONFIG_MTD is not set
 # CONFIG_PARPORT is not set
 CONFIG_BLK_DEV=y
@@ -528,43 +526,7 @@ CONFIG_BLK_DEV=y
 # CONFIG_CDROM_PKTCDVD is not set
 # CONFIG_ATA_OVER_ETH is not set
 # CONFIG_MG_DISK is not set
-<<<<<<< HEAD:arch/arm/configs/bcm21455_samoafpga_defconfig
-# CONFIG_SENSORS_LIS3LV02D is not set
-CONFIG_MISC_DEVICES=y
-# CONFIG_BRCM_MISC_DRIVERS is not set
-CONFIG_ANDROID_PMEM=y
-# CONFIG_INTEL_MID_PTI is not set
-# CONFIG_ENCLOSURE_SERVICES is not set
-# CONFIG_KERNEL_DEBUGGER_CORE is not set
-# CONFIG_BRCM_VIRTUAL_SENSOR is not set
-CONFIG_UID_STAT=y
-# CONFIG_BTHID is not set
-# CONFIG_APANIC is not set
-# CONFIG_INTER_PROCESSOR_COMM is not set
-# CONFIG_BCM_BT_LPM is not set
-# CONFIG_BRALLOC_MEM is not set
-# CONFIG_STM_TRACE is not set
-# CONFIG_C2PORT is not set
-
-#
-# EEPROM support
-#
-# CONFIG_EEPROM_93CX6 is not set
-
-#
-# Texas Instruments shared transport line discipline
-#
-# CONFIG_BRCM_VIDEOCORE_SERVICES is not set
-CONFIG_VC_VMCS_FB=y
-CONFIG_VC_VMCS_SM=m
-# CONFIG_VC_OVL is not set
-# CONFIG_VC_OMX is not set
-# CONFIG_VC_HNFO is not set
-# CONFIG_VC_DNFO is not set
-CONFIG_VC_MEM=m
-=======
 # CONFIG_MISC_DEVICES is not set
->>>>>>> srb-android-gb-2011-10-26:arch/arm/configs/crash_bcm21654_rhearay_defconfig
 CONFIG_HAVE_IDE=y
 # CONFIG_IDE is not set
 
@@ -636,7 +598,10 @@ CONFIG_SERIAL_CORE_CONSOLE=y
 CONFIG_BCM_BSC=y
 # CONFIG_BCM_GPS is not set
 # CONFIG_BCM_HAPTICS is not set
+# CONFIG_BCM_GIST is not set
+# CONFIG_BCM_SIGMORPH is not set
 # CONFIG_BCM_HDMI_DET is not set
+# CONFIG_BCM_CSX is not set
 # CONFIG_RAMOOPS is not set
 CONFIG_I2C=y
 CONFIG_I2C_BOARDINFO=y
@@ -671,6 +636,7 @@ CONFIG_I2C_HELPER_AUTO=y
 #
 CONFIG_I2C_BSC=y
 # CONFIG_I2C_BRCM_SSPI is not set
+# CONFIG_I2C_DAC6571 is not set
 # CONFIG_I2C_DEBUG_CORE is not set
 # CONFIG_I2C_DEBUG_ALGO is not set
 # CONFIG_I2C_DEBUG_BUS is not set
@@ -765,6 +731,7 @@ CONFIG_BCMA_POSSIBLE=y
 # Display device support
 #
 # CONFIG_DISPLAY_SUPPORT is not set
+# CONFIG_TFT_PANEL is not set
 # CONFIG_SOUND is not set
 # CONFIG_USB_SUPPORT is not set
 CONFIG_MMC=y
