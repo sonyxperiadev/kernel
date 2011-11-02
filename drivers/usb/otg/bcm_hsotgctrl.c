@@ -33,6 +33,7 @@
 #define	PHY_MODE_OTG		2
 #define 	BC11CFG_SW_OVERWRITE_KEY 0x55560000
 #define	BC_CONFIG_DELAY_MS 2
+#define	PHY_PLL_DELAY_MS	2
 
 #define USB_PHY_MDIO_ID 9
 #define USB_PHY_MDIO0 0
@@ -90,7 +91,7 @@ int bcm_hsotgctrl_en_clock(bool on)
 	if (on) {
 #ifdef CONFIG_ARCH_RHEA
 		if (bcm_hsotgctrl_handle->dfs_node)
-			rc = pi_mgr_dfs_request_update(bcm_hsotgctrl_handle->dfs_node, PI_OPP_NORMAL);
+			rc = pi_mgr_dfs_request_update(bcm_hsotgctrl_handle->dfs_node, PI_OPP_ECONOMY);
 			if (rc)
 				dev_warn(bcm_hsotgctrl_handle->dev, "%s: error in updating DFS request before clock enabled\n", __func__);
 #endif
@@ -130,6 +131,7 @@ int bcm_hsotgctrl_phy_init(void)
 
 	/* Clear PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(true);
+	msleep_interruptible(PHY_PLL_DELAY_MS);
 
 	/* clear bit 15 RDB error */
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
