@@ -81,6 +81,10 @@
 #define _RHEA_
 #include <mach/comms/platform_mconfig.h>
 
+#ifdef CONFIG_BACKLIGHT_PWM
+#include <linux/pwm_backlight.h>
+#endif
+
 #ifdef CONFIG_FB_BRCM_RHEA
 #include <video/kona_fb.h>
 #endif
@@ -829,13 +833,32 @@ void __init board_add_sdio_devices(void)
 
 #endif //Shri
 
+#ifdef CONFIG_BACKLIGHT_PWM
+
+static struct platform_pwm_backlight_data bcm_backlight_data = {
+/* backlight */
+	.pwm_name 	= "kona_pwmc:4",
+	.max_brightness = 32,   /* Android calibrates to 32 levels*/
+	.dft_brightness = 32,
+	.polarity       = 1,    /* Inverted polarity */
+	.pwm_period_ns 	=  5000000,
+};
+
+static struct platform_device bcm_backlight_devices = {
+	.name 	= "pwm-backlight",
+	.id 	= 0,
+	.dev 	= {
+		.platform_data  =       &bcm_backlight_data,
+	},
+};
+
+#endif /*CONFIG_BACKLIGHT_PWM */
 
 
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
-#if defined (CONFIG_MACH_RHEA_BERRI) || defined (CONFIG_MACH_RHEALC_BERRI) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
 #define GPIO_SIM2LDO_EN		99
-#endif
+
 #ifdef CONFIG_GPIO_PCA953X
 #define GPIO_SIM2LDOVSET	(KONA_MAX_GPIO + 7)
 #else
@@ -910,6 +933,44 @@ static struct platform_device tps728xx_vc_device_sim2 = {
 #endif /* CONFIG_REGULATOR_TPS728XX*/
 
 #ifdef CONFIG_FB_BRCM_RHEA
+static struct kona_fb_platform_data alex_dsi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_BCM91008_ALEX_GetFuncTable,
+	.screen_width		= 360,
+	.screen_height		= 640,
+	.bytes_per_pixel	= 4,
+	.gpio			= 41,
+	.pixel_format		= XRGB8888,
+};
+
+static struct platform_device alex_dsi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 0,
+	.dev = {
+		.platform_data		= &alex_dsi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+};
+
+static struct platform_device nt35582_smi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 1,
+	.dev = {
+		.platform_data		= &nt35582_smi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
 static struct kona_fb_platform_data r61581_smi_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
 	.screen_width		= 320,
@@ -947,11 +1008,16 @@ static struct platform_device *rhea_berri_plat_devices[] __initdata = {
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
 #endif
+#ifdef CONFIG_BACKLIGHT_PWM
+	&bcm_backlight_devices,
+#endif
 /* TPS728XX device registration */
 #ifdef CONFIG_REGULATOR_TPS728XX
 	&tps728xx_device,
 #endif
 #ifdef CONFIG_FB_BRCM_RHEA
+	&alex_dsi_display_device,
+	&nt35582_smi_display_device,
 	&r61581_smi_display_device,
 #endif
 
