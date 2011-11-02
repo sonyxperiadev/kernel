@@ -140,6 +140,7 @@ config VC_DNFO
 
 config VC_MEM
 	tristate "Videocore Memory"
-	default m
+	depends on BRCM_VIDEOCORE_SERVICES
+	default BRCM_VIDEOCORE_SERVICES
         help
           Helper for videocore memory access and total size allocation.	   
