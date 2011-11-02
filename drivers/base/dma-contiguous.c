@@ -397,6 +397,63 @@ err:
 }
 
 /**
+ * get_cma_area() - get start and length of cma region for device
+ * @dev:   Pointer to device for which the CMA region is to be found.
+ * @start: Physical start of CMA region
+ * @size:  Size of device's CMA region
+ *
+ * This functions finds device specific CMA region (or default region
+ * when there is no CMA region associated with this device), and returns
+ * the start and size of that region.
+ */
+
+void get_cma_area(struct device *dev, phys_addr_t *start,
+			  unsigned long *size)
+{
+	int i = cma_reserved_count;
+
+
+	/* If we are called after __cma_init_reserved_areas()
+	 * is done, then we can find a struct cma * in the device
+	 * pointer itself, otherwise we will have to walk through
+	 * cma_reserved array and return NULL if we can't find anything
+	 * there
+	 */
+
+	if (dma_contiguous_default_area) {
+		struct cma *cma = get_dev_cma_area(dev);
+
+		*start = __pfn_to_phys(cma->base_pfn);
+		*size = (cma->count << PAGE_SHIFT);
+
+	} else if (cma_reserved_count) {
+		struct cma_reserved *r = cma_reserved;
+		for (; i; --i, ++r) {
+			/* If there is no device associated,
+			 * then this is the default region but
+			 * dont stop searching yet
+			 */
+			if (!r->dev) {
+				*start = r->start;
+				*size = r->size;
+				continue;
+			}
+
+			if (r->dev == dev) {
+				/* Found it! */
+				*start = r->start;
+				*size = r->size;
+				break;
+			}
+		}
+	} else {
+		printk(KERN_WARNING"%s : No CMA regions reserved yet !\n", __func__);
+		*start = 0;
+		*size = 0;
+	}
+}
+
+/**
  * dma_alloc_from_contiguous() - allocate pages from contiguous area
  * @dev:   Pointer to device for which the allocation is performed.
  * @count: Requested number of pages.
