@@ -721,6 +721,7 @@ e0:
 int __init vce_init(void)
 {
 	int ret;
+	struct device *device;
 
 	dbg_print("VCE driver Init\n");
 
@@ -729,18 +730,23 @@ int __init vce_init(void)
 
 	ret = register_chrdev(0, VCE_DEV_NAME, &vce_fops);
 	if (ret < 0)
-		return -EINVAL;
+		goto errA;
 	else
 		vce_major = ret;
 
 	vce_state.vce_class = class_create(THIS_MODULE, VCE_DEV_NAME);
 	if (IS_ERR(vce_state.vce_class)) {
 		err_print("Failed to create VCE class\n");
-		unregister_chrdev(vce_major, VCE_DEV_NAME);
-		return PTR_ERR(vce_state.vce_class);
+		ret = PTR_ERR(vce_state.vce_class);
+		goto errB;
 	}
 
-	device_create(vce_state.vce_class, NULL, MKDEV(vce_major, 0), NULL, VCE_DEV_NAME);
+	device = device_create(vce_state.vce_class, NULL, MKDEV(vce_major, 0), NULL, VCE_DEV_NAME);
+	if (IS_ERR_OR_NULL(device)) {
+		err_print("Failed to create VCE device\n");
+		ret = PTR_ERR(device);
+		goto errC;
+	}
 
 	/* For the power management */
 	sema_init(&vce_state.clockctl_sem, 1);
@@ -839,7 +845,14 @@ err1:
 	vce_base = 0;
 err:
 
+	device_destroy(vce_state.vce_class, MKDEV(vce_major, 0));
+errC:
+
+	class_destroy(vce_state.vce_class);
+errB:
+
 	unregister_chrdev(vce_major, VCE_DEV_NAME);
+errA:
 
 	BUG_ON(ret >= 0);
 	return ret;
