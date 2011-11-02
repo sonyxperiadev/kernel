@@ -810,8 +810,8 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    bsc_enable_clk(dev);
 	
 #ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
-   if (dev->dev)
-	hw_cfg = (struct bsc_adap_cfg *)dev->dev->platform_data; 	
+   if (dev->device)
+	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
    if (hw_cfg && hw_cfg->is_pmu_i2c) {
    	rc = pwr_mgr_pm_i2c_sem_lock();
