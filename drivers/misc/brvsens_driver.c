@@ -1,41 +1,41 @@
 /*****************************************************************************
-* Copyright (c) 2011 Broadcom Corporation.  All rights reserved.
-*
-* This program is the proprietary software of Broadcom Corporation and/or
-* its licensors, and may only be used, duplicated, modified or distributed
-* pursuant to the terms and conditions of a separate, written license
-* agreement executed between you and Broadcom (an "Authorized License").
-* Except as set forth in an Authorized License, Broadcom grants no license
-* (express or implied), right to use, or waiver of any kind with respect to
-* the Software, and Broadcom expressly reserves all rights in and to the
-* Software and all intellectual property rights therein.  IF YOU HAVE NO
-* AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE IN ANY
-* WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE ALL USE OF
-* THE SOFTWARE.
-*
-* Except as expressly set forth in the Authorized License,
-* 1. This program, including its structure, sequence and organization,
-*    constitutes the valuable trade secrets of Broadcom, and you shall use
-*    all reasonable efforts to protect the confidentiality thereof, and to
-*    use this information only in connection with your use of Broadcom
-*    integrated circuit products.
-* 2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
-*    AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR
-*    WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH
-*    RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL
-*    IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS
-*    FOR A PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS,
-*    QUIET ENJOYMENT, QUIET POSSESSION OR CORRESPONDENCE TO DESCRIPTION. YOU
-*    ASSUME THE ENTIRE RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
-* 3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM OR ITS
-*    LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT,
-*    OR EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY RELATING TO
-*    YOUR USE OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM HAS BEEN
-*    ADVISED OF THE POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS
-*    OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER
-*    IS GREATER. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF
-*    ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-*****************************************************************************/
+ * Copyright (c) 2011 Broadcom Corporation.  All rights reserved.
+ *
+ * This program is the proprietary software of Broadcom Corporation and/or
+ * its licensors, and may only be used, duplicated, modified or distributed
+ * pursuant to the terms and conditions of a separate, written license
+ * agreement executed between you and Broadcom (an "Authorized License").
+ * Except as set forth in an Authorized License, Broadcom grants no license
+ * (express or implied), right to use, or waiver of any kind with respect to
+ * the Software, and Broadcom expressly reserves all rights in and to the
+ * Software and all intellectual property rights therein.  IF YOU HAVE NO
+ * AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE IN ANY
+ * WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE ALL USE OF
+ * THE SOFTWARE.
+ *
+ * Except as expressly set forth in the Authorized License,
+ * 1. This program, including its structure, sequence and organization,
+ *    constitutes the valuable trade secrets of Broadcom, and you shall use
+ *    all reasonable efforts to protect the confidentiality thereof, and to
+ *    use this information only in connection with your use of Broadcom
+ *    integrated circuit products.
+ * 2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
+ *    AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR
+ *    WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH
+ *    RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL
+ *    IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS
+ *    FOR A PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS,
+ *    QUIET ENJOYMENT, QUIET POSSESSION OR CORRESPONDENCE TO DESCRIPTION. YOU
+ *    ASSUME THE ENTIRE RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
+ * 3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM OR ITS
+ *    LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT,
+ *    OR EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY RELATING TO
+ *    YOUR USE OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM HAS BEEN
+ *    ADVISED OF THE POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS
+ *    OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER
+ *    IS GREATER. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF
+ *    ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
+ *****************************************************************************/
 
 
 #include <linux/init.h>
@@ -62,26 +62,25 @@
 #define DRIVER_NAME          "brvsens"
 #define DEFAULT_DELAY_MSEC    100
 
-#define ACTIVATE_SENSOR(sw, flag) \
-   if (sw->activateCbk) sw->activateCbk(sw->context, flag); 
+#define ACTIVATE_SENSOR(sw, flag)                               \
+    if (sw->activateCbk) sw->activateCbk(sw->context, flag); 
 
 static int dbg = 0;
-module_param(dbg, int, 0);  // useful for debuging when module is dynamically inserted in Kernel
-MODULE_PARM_DESC(dbg, "Enable Module Debug Mode");
+module_param_named(dbg, dbg, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 /* work struct definition */
 struct sensor_work
 {
-   struct work_struct wq;
+    struct work_struct wq;
    
-   char     name[20];           // queue name
-   u32      handle;             // sensor id -- follows Android enumeration
-   atomic_t pollrate;           // pollrate
-   atomic_t exit;               // exit flag
+    char     name[20];           // queue name
+    u32      handle;             // sensor id -- follows Android enumeration
+    atomic_t pollrate;           // pollrate
+    atomic_t exit;               // exit flag
    
-   void*       context;         // driver context
-   PFNACTIVATE activateCbk;     // activate function
-   PFNREAD     readCbk;         // read function
+    void*       context;         // driver context
+    PFNACTIVATE activateCbk;     // activate function
+    PFNREAD     readCbk;         // read function
 };
 
 /* Work Object Entry --- Sensor List Node */
@@ -90,79 +89,79 @@ struct brvnode
     struct list_head  list;             // embedded link list (Kernel way!)
     
     struct workqueue_struct*  pwq;      // dynamically allocated workqueue
-    struct sensor_work*       psw;      // dynamically allocated work function              
+    struct sensor_work*       psw;      // dynamically allocated work function
 };
 
 
 /* Main Data Structure Definition */
 struct brvsens_driver
 {
-   dev_t            devnum;            // brvsens dev registration
-   struct class*    class;
-   struct cdev      cdev;
+    dev_t            devnum;            // brvsens dev registration
+    struct class*    class;
+    struct cdev      cdev;
    
-   spinlock_t       lock;               // multiple readers (workqueues) access guard
-   struct brvnode   dnodes;             // list of sensor "nodes" -- 1 per driver registration
+    spinlock_t       lock;               // multiple readers (workqueues) access guard
+    struct brvnode   dnodes;             // list of sensor "nodes" -- 1 per driver registration
 
-// Shared Event Buffer: kfifo interface has changed between 35 and 36   
+    // Shared Event Buffer: kfifo interface has changed between 35 and 36   
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
     DECLARE_KFIFO (ebuff, BRVSENS_EVENT_NUM * sizeof(struct brvsens_event) );  
 #else  
     DECLARE_KFIFO (ebuff, struct brvsens_event, BRVSENS_EVENT_NUM);   // more civilized!
 #endif   
   
-   wait_queue_head_t esig;                                            // buffer data event; signaled on each write
+    wait_queue_head_t esig;                                            // buffer data event; signaled on each write
 };
 
 /* Global Instance of BRVSENS Driver */
 static struct brvsens_driver brvsens_data;
 
 /* 
-    Workqueue function
-    ====================
+   Workqueue function
+   ====================
 
---- Keeps polling the sensor (rate can be modified dynamically -- see ioctl) until
-    Sensor is disabled / node deactivated
+   --- Keeps polling the sensor (rate can be modified dynamically -- see ioctl) until
+   Sensor is disabled / node deactivated
     
---- Each read sticks extracted event into spinlocked shared kfifo buffer
-    then sets
+   --- Each read sticks extracted event into spinlocked shared kfifo buffer
+   then sets
 */
 static void sensor_poll(struct work_struct* work)
 {
-   // cast to our work structure
-   struct sensor_work* sw = (struct sensor_work*)work;
-   struct brvsens_event evt;
-   int result = 0;
+    // cast to our work structure
+    struct sensor_work* sw = (struct sensor_work*)work;
+    struct brvsens_event evt;
+    int result = 0;
 
-   if (dbg) printk("++++ Workqueue [%s] starting ++++\n", sw->name);
-   evt.type = sw->handle;
+    if (dbg) printk("++++ Workqueue [%s] starting ++++\n", sw->name);
+    evt.type = sw->handle;
           
-   // poll in the loop while not told to quit
-   while (atomic_read(&(sw->exit) ) == 0)
-   {
-       // always first read from the sensor, then sleep 
-       // (so that apps that just activated the queue don't have
-       //  to wait for the first measurement!)
-       result = sw->readCbk(sw->context, &(evt.data[0]) );
+    // poll in the loop while not told to quit
+    while (atomic_read(&(sw->exit) ) == 0)
+    {
+        // always first read from the sensor, then sleep 
+        // (so that apps that just activated the queue don't have
+        //  to wait for the first measurement!)
+        result = sw->readCbk(sw->context, &(evt.data[0]) );
    
-       // stick data to fifo event buffer 
+        // stick data to fifo event buffer 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
         kfifo_in_locked( &(brvsens_data.ebuff), &evt, sizeof (struct brvsens_event), &(brvsens_data.lock) );
 #else
         kfifo_in_spinlocked( &(brvsens_data.ebuff), &evt, 1, &(brvsens_data.lock) );  // more civilized
 #endif
         
-       // wake up main process, asleep in fops::read
-       wake_up_interruptible(&(brvsens_data.esig) );
+        // wake up main process, asleep in fops::read
+        wake_up_interruptible(&(brvsens_data.esig) );
        
-       // pause
-       msleep_interruptible(atomic_read(&(sw->pollrate) ) );
+        // pause
+        msleep_interruptible(atomic_read(&(sw->pollrate) ) );
   
-   }
+    }
    
-   if (dbg) printk("+++ Workqueue [%s] terminating +++\n", sw->name);
+    if (dbg) printk("+++ Workqueue [%s] terminating +++\n", sw->name);
    
-   return;
+    return;
 }
     
 
@@ -173,15 +172,15 @@ static struct brvnode* find_node(unsigned int handle)
     struct list_head* q    = 0;
     struct brvnode*   tmp  = 0;
     
-	list_for_each_safe(pos, q, &(brvsens_data.dnodes.list) )
-	{
-	   // get this node (Do NOT compare on Names, as same driver might be exposing
-	   // more than 1 reading (i.e. bmp18x-core = pressure + temperature). Handles are unique
-	   tmp = list_entry(pos, struct brvnode, list);
-	   if (tmp->psw->handle == handle) return tmp;
-	}
+    list_for_each_safe(pos, q, &(brvsens_data.dnodes.list) )
+    {
+        // get this node (Do NOT compare on Names, as same driver might be exposing
+        // more than 1 reading (i.e. bmp18x-core = pressure + temperature). Handles are unique
+        tmp = list_entry(pos, struct brvnode, list);
+        if (tmp->psw->handle == handle) return tmp;
+    }
 	
-	return 0;  // not found
+    return 0;  // not found
 }
 
 /* Utility: Search for first active node with same name, but different handle
@@ -192,14 +191,14 @@ static struct brvnode* find_active_node(struct brvnode* pn)
     struct list_head* q    = 0;
     struct brvnode*   tmp  = 0;
     
-	list_for_each_safe(pos, q, &(brvsens_data.dnodes.list) )
-	{
-	   tmp = list_entry(pos, struct brvnode, list);
-	   if ( (strcmp(pn->psw->name, tmp->psw->name) == 0) && (tmp->psw->handle != pn->psw->handle) && (tmp->pwq != 0) ) 
-	       return tmp;
-	}
+    list_for_each_safe(pos, q, &(brvsens_data.dnodes.list) )
+    {
+        tmp = list_entry(pos, struct brvnode, list);
+        if ( (strcmp(pn->psw->name, tmp->psw->name) == 0) && (tmp->psw->handle != pn->psw->handle) && (tmp->pwq != 0) ) 
+            return tmp;
+    }
 	
-	return 0;  // not found
+    return 0;  // not found
 }
 
 /* Helper called as part of destructor (exit) to stop all workqueues (if any)
@@ -210,26 +209,26 @@ static void free_nodes(void)
     struct list_head* q    = 0;
     struct brvnode*   tmp  = 0;
     
-	list_for_each_safe(pos, q, &(brvsens_data.dnodes.list) )
-	{
-	   // get this node
-	   tmp = list_entry(pos, struct brvnode, list);
+    list_for_each_safe(pos, q, &(brvsens_data.dnodes.list) )
+    {
+        // get this node
+        tmp = list_entry(pos, struct brvnode, list);
 	   
-	   // signal exit
-	   atomic_set(&(tmp->psw->exit), 1);
+        // signal exit
+        atomic_set(&(tmp->psw->exit), 1);
 	   
-	   msleep_interruptible(DEFAULT_DELAY_MSEC);
+        msleep_interruptible(DEFAULT_DELAY_MSEC);
 	   
-	   // deallocate resources
-	   destroy_workqueue(tmp->pwq);
-	   ACTIVATE_SENSOR(tmp->psw, 0);
+        // deallocate resources
+        destroy_workqueue(tmp->pwq);
+        ACTIVATE_SENSOR(tmp->psw, 0);
 	   
-	   // deallocate work
-	   kfree(tmp->psw);
+        // deallocate work
+        kfree(tmp->psw);
 	   
-	   // remove the node itself
-	   list_del(pos); kfree(tmp);
-	}	
+        // remove the node itself
+        list_del(pos); kfree(tmp);
+    }	
 }
 
 /* Helper to deactivate existing node. We terminate workqueue, but leave
@@ -243,74 +242,74 @@ static int deactivate_node (struct brvnode* pn)
     // check workqueue
     if (pn->pwq == 0)
     {
-       if (dbg) printk("++++ %s: Node [%s], Handle [0x%x] not Active! ++++\n",
-          __FUNCTION__, pn->psw->name, pn->psw->handle );
+        if (dbg) printk("++++ %s: Node [%s], Handle [0x%x] not Active! ++++\n",
+                        __FUNCTION__, pn->psw->name, pn->psw->handle );
     }
     else
     {
-		atomic_set(&(pn->psw->exit), 1);
+        atomic_set(&(pn->psw->exit), 1);
 		   
-	    // pause
-		msleep_interruptible(DEFAULT_DELAY_MSEC);
+        // pause
+        msleep_interruptible(DEFAULT_DELAY_MSEC);
 		
-	    if (dbg) printk("++++ %s: Node [%s], Handle [0x%x] deactivated ++++\n", 
-		    __FUNCTION__, pn->psw->name, pn->psw->handle );
+        if (dbg) printk("++++ %s: Node [%s], Handle [0x%x] deactivated ++++\n", 
+                        __FUNCTION__, pn->psw->name, pn->psw->handle );
 		    
-		// remove workqueue
-	    flush_workqueue(pn->pwq);
-	    destroy_workqueue(pn->pwq);
-	    pn->pwq = 0;
+        // remove workqueue
+        flush_workqueue(pn->pwq);
+        destroy_workqueue(pn->pwq);
+        pn->pwq = 0;
     }
 	      
-	// deactivate sensor ONLY if there is no other node with same name (as single sensor
-	// device can support different readings (i.e. bmp18-x --> Pressure + Temperature
-	if (find_active_node(pn) == 0)
-	{
-	    if (dbg) printk("++++ %s: Deactivating Sensor [%s] ++++\n", __FUNCTION__, pn->psw->name);
-	    ACTIVATE_SENSOR(pn->psw, 0);
-	}
-	else
-	{
-	    if (dbg) printk("++++ %s: Not deactivating Sensor [%s] - still in use! ++++\n", __FUNCTION__, pn->psw->name);
-	}
+    // deactivate sensor ONLY if there is no other node with same name (as single sensor
+    // device can support different readings (i.e. bmp18-x --> Pressure + Temperature
+    if (find_active_node(pn) == 0)
+    {
+        if (dbg) printk("++++ %s: Deactivating Sensor [%s] ++++\n", __FUNCTION__, pn->psw->name);
+        ACTIVATE_SENSOR(pn->psw, 0);
+    }
+    else
+    {
+        if (dbg) printk("++++ %s: Not deactivating Sensor [%s] - still in use! ++++\n", __FUNCTION__, pn->psw->name);
+    }
 	      
     return 0;
 }
 
 /*
-    Helper to activate driver node -- start work
- */
+  Helper to activate driver node -- start work
+*/
 static int activate_node(struct brvnode* pn)
 {
-   if (pn->pwq)
-   {
-       if (dbg) printk("++++ %s: Node [%s], Handle [0x%x] already Active! ++++\n",
-          __FUNCTION__, pn->psw->name, pn->psw->handle );
+    if (pn->pwq)
+    {
+        if (dbg) printk("++++ %s: Node [%s], Handle [0x%x] already Active! ++++\n",
+                        __FUNCTION__, pn->psw->name, pn->psw->handle );
           
-       return 0;
-   }
+        return 0;
+    }
 
-   pn->pwq = create_workqueue(pn->psw->name);
+    pn->pwq = create_workqueue(pn->psw->name);
       
-   if (pn->pwq == 0)
-   {
-      printk(KERN_ERR "%s: -- memory allocation error!", __FUNCTION__);       
-      return -ENOMEM;
-   }
+    if (pn->pwq == 0)
+    {
+        printk(KERN_ERR "%s: -- memory allocation error!", __FUNCTION__);       
+        return -ENOMEM;
+    }
 
-   // ensure sensor is active
-   if (find_active_node (pn) == 0)
-      ACTIVATE_SENSOR(pn->psw, 1);
+    // ensure sensor is active
+    if (find_active_node (pn) == 0)
+        ACTIVATE_SENSOR(pn->psw, 1);
  
-   // queue new work
-   atomic_set(&(pn->psw->exit), 0);   // must because it might have been reset last time!
-   INIT_WORK( (struct work_struct*)pn->psw, sensor_poll);
-   queue_work(pn->pwq, (struct work_struct*)pn->psw);
+    // queue new work
+    atomic_set(&(pn->psw->exit), 0);   // must because it might have been reset last time!
+    INIT_WORK( (struct work_struct*)pn->psw, sensor_poll);
+    queue_work(pn->pwq, (struct work_struct*)pn->psw);
 
-   if (dbg) printk("++++ %s: Sensor [%s] Activated. Handle [0x%x], Delay [%u] ms ++++\n",
-      __FUNCTION__, pn->psw->name, pn->psw->handle, atomic_read(&(pn->psw->pollrate) ) );
+    if (dbg) printk("++++ %s: Sensor [%s] Activated. Handle [0x%x], Delay [%u] ms ++++\n",
+                    __FUNCTION__, pn->psw->name, pn->psw->handle, atomic_read(&(pn->psw->pollrate) ) );
       
-   return 0;   // all ok
+    return 0;   // all ok
 }
 
 /*
@@ -319,148 +318,148 @@ static int activate_node(struct brvnode* pn)
   1. Wait Queue block -- signal that data is available in event buffer;
   
   2. Copy from kfifo buffer to user space and adjusts read pointer
-     We don't worry about concurrency as this is one reader, multiple writers scenario
+  We don't worry about concurrency as this is one reader, multiple writers scenario
      
   Note: This is directly invoked from "pollEvents" libsensors API
 */
 static ssize_t brvsens_read(struct file* file, char* buf, size_t count, loff_t* ptr)
 {
-	u32 iRead = 0;
+    u32 iRead = 0;
 	
-	// wait for event that data is available
-	wait_event_interruptible((brvsens_data.esig), (kfifo_len(&(brvsens_data.ebuff) ) > 0) );
+    // wait for event that data is available
+    wait_event_interruptible((brvsens_data.esig), (kfifo_len(&(brvsens_data.ebuff) ) > 0) );
 	
-	// transfer to user land
-	kfifo_to_user( &(brvsens_data.ebuff), buf, count, &iRead);
+    // transfer to user land
+    kfifo_to_user( &(brvsens_data.ebuff), buf, count, &iRead);
 
-	return iRead;
+    return iRead;
 }
 
 /*
-   ioctl device interface: Supported commands:
+  ioctl device interface: Supported commands:
       
-      -- Activate: Activates / Deactivates a sensor
-      -- SetDelay: Sets constant rate by which sensor data is reported
+  -- Activate: Activates / Deactivates a sensor
+  -- SetDelay: Sets constant rate by which sensor data is reported
 */
 static long brvsens_ioctl
 (
-   struct file*  file,
-   unsigned int  cmd,
-   unsigned long arg
+    struct file*  file,
+    unsigned int  cmd,
+    unsigned long arg
 )
 {
-	int err = 0;
-	struct brvsens_cmd command;
+    int err = 0;
+    struct brvsens_cmd command;
 	
-   	/* check cmd */
-	if (_IOC_TYPE(cmd) != BRVSENS_DRIVER_IOC_MAGIC)	
-	{	
-		printk(KERN_ERR "[%s]::cmd magic type error\n", __FUNCTION__);
-		return -EINVAL;
-	}
+    /* check cmd */
+    if (_IOC_TYPE(cmd) != BRVSENS_DRIVER_IOC_MAGIC)	
+    {	
+        printk(KERN_ERR "[%s]::cmd magic type error\n", __FUNCTION__);
+        return -EINVAL;
+    }
 	   
-   	/* cmd mapping */
-	switch (cmd)
-	{
-	   // activate node: Must be registered
-	   case BRVSENS_DRIVER_IOC_ACTIVATE:
-	   {
-	       struct brvnode* pn = 0;
+    /* cmd mapping */
+    switch (cmd)
+    {
+        // activate node: Must be registered
+    case BRVSENS_DRIVER_IOC_ACTIVATE:
+    {
+        struct brvnode* pn = 0;
 	       
-	       /* extract command */
-		   if (copy_from_user(&command, (struct brvsens_cmd*)arg, sizeof(struct brvsens_cmd) ) != 0)
-		   {
-		       printk(KERN_ERR "[%s]::copy_from_user error\n", __FUNCTION__);
-			   return -EFAULT;
-		   }
+        /* extract command */
+        if (copy_from_user(&command, (struct brvsens_cmd*)arg, sizeof(struct brvsens_cmd) ) != 0)
+        {
+            printk(KERN_ERR "[%s]::copy_from_user error\n", __FUNCTION__);
+            return -EFAULT;
+        }
 		   
-	       if (dbg)
-           {
-             printk("++++ %s:BRVSENS_DRIVER_IOC_ACTIVATE Handle: [0x%x], Delay: [%d] msec, Activate: [%d] ++++\n", 
-               __FUNCTION__, command.handle, command.delay, command.enable);
-           }
+        if (dbg)
+        {
+            printk("++++ %s:BRVSENS_DRIVER_IOC_ACTIVATE Handle: [0x%x], Delay: [%d] msec, Activate: [%d] ++++\n", 
+                   __FUNCTION__, command.handle, command.delay, command.enable);
+        }
     
-		   // Driver must register sensor in order to be activated
-           pn = find_node(command.handle);
-           if (pn == 0)
-  		   {
-  		      printk(KERN_ERR "[%s]::Sensor Node [0x%x] not Registered!",
-  		         __FUNCTION__, command.handle);
+        // Driver must register sensor in order to be activated
+        pn = find_node(command.handle);
+        if (pn == 0)
+        {
+            printk(KERN_ERR "[%s]::Sensor Node [0x%x] not Registered!",
+                   __FUNCTION__, command.handle);
   		         
-  		      err = -ENODEV;
-  		   }
-		   else
-		   {
-		      err = command.enable ? activate_node(pn) : deactivate_node(pn);
-		   }
-	   }
-       break;
+            err = -ENODEV;
+        }
+        else
+        {
+            err = command.enable ? activate_node(pn) : deactivate_node(pn);
+        }
+    }
+    break;
        
-       // Set polling rate -- node must be registered
-	   case BRVSENS_DRIVER_IOC_SET_DELAY:
-	   {	
-	       struct brvnode* pn = 0;
+    // Set polling rate -- node must be registered
+    case BRVSENS_DRIVER_IOC_SET_DELAY:
+    {	
+        struct brvnode* pn = 0;
 	       
-	       /* extract command */
-		   if (copy_from_user(&command, (struct brvsens_cmd*)arg, sizeof(struct brvsens_cmd) ) != 0)
-		   {
-		       printk(KERN_ERR "[%s]::copy_from_user error\n", __FUNCTION__);
-			   return -EFAULT;
-		   }
+        /* extract command */
+        if (copy_from_user(&command, (struct brvsens_cmd*)arg, sizeof(struct brvsens_cmd) ) != 0)
+        {
+            printk(KERN_ERR "[%s]::copy_from_user error\n", __FUNCTION__);
+            return -EFAULT;
+        }
 		   
-	   	   if (dbg)
-           {
-             printk("++++ %s:BRVSENS_DRIVER_IOC_SET_DELAY Handle: [0x%x], Delay: [%d] msec, Activate: [%d] ++++\n", 
-               __FUNCTION__, command.handle, command.delay, command.enable);
-           }
+        if (dbg)
+        {
+            printk("++++ %s:BRVSENS_DRIVER_IOC_SET_DELAY Handle: [0x%x], Delay: [%d] msec, Activate: [%d] ++++\n", 
+                   __FUNCTION__, command.handle, command.delay, command.enable);
+        }
            
-           // driver must register sensor 
-  		   pn = find_node(command.handle);
-  		   if (pn == 0)
-  		   {
-  		      printk(KERN_ERR "[%s]::Sensor Node [0x%x] not Registered!",
-  		         __FUNCTION__, command.handle);
+        // driver must register sensor 
+        pn = find_node(command.handle);
+        if (pn == 0)
+        {
+            printk(KERN_ERR "[%s]::Sensor Node [0x%x] not Registered!",
+                   __FUNCTION__, command.handle);
   		         
-  		      err = -ENODEV;
-  		   }
-  		   else
-  		   {
-  		      atomic_set(&(pn->psw->pollrate), command.delay);
-  		      if (dbg) printk("++++ %s: Polling Rate for node [0x%x (%s)] set to [%d] msec ++++\n",
-  		          __FUNCTION__, pn->psw->handle, pn->psw->name, command.delay);
-  		   }
+            err = -ENODEV;
+        }
+        else
+        {
+            atomic_set(&(pn->psw->pollrate), command.delay);
+            if (dbg) printk("++++ %s: Polling Rate for node [0x%x (%s)] set to [%d] msec ++++\n",
+                            __FUNCTION__, pn->psw->handle, pn->psw->name, command.delay);
+        }
 
-	   }
-	   break;
+    }
+    break;
 	   
-	   // Board configuration. Return bitmask of registered sensors (brvsens nodes)
-	   case BRVSENS_DRIVER_IOC_CONFIG:
-	   {
-	      struct list_head* pos  = 0;
-          struct list_head* q    = 0;
-          struct brvnode*   tmp  = 0;
-          unsigned int iMask = 0;
+    // Board configuration. Return bitmask of registered sensors (brvsens nodes)
+    case BRVSENS_DRIVER_IOC_CONFIG:
+    {
+        struct list_head* pos  = 0;
+        struct list_head* q    = 0;
+        struct brvnode*   tmp  = 0;
+        unsigned int iMask = 0;
           
-          // build bitmask
-	      list_for_each_safe(pos, q, &(brvsens_data.dnodes.list) )
-	      {
-	  	      tmp = list_entry(pos, struct brvnode, list);
-	  	      iMask |= tmp->psw->handle;
-	  	  }
+        // build bitmask
+        list_for_each_safe(pos, q, &(brvsens_data.dnodes.list) )
+        {
+            tmp = list_entry(pos, struct brvnode, list);
+            iMask |= tmp->psw->handle;
+        }
 	
-	      // transfer to user buffer
-	      if (copy_to_user((unsigned int*)arg, &iMask, sizeof(unsigned int) ) != 0)
-		  {
-			  printk(KERN_ERR "[%s]::BRVSENS_DRIVER_IOC_CONFIG -- copy_to_user error\n", __FUNCTION__);
-			  err = -EFAULT;
-		  }
-	   }
-	   break;
+        // transfer to user buffer
+        if (copy_to_user((unsigned int*)arg, &iMask, sizeof(unsigned int) ) != 0)
+        {
+            printk(KERN_ERR "[%s]::BRVSENS_DRIVER_IOC_CONFIG -- copy_to_user error\n", __FUNCTION__);
+            err = -EFAULT;
+        }
+    }
+    break;
 
-	   default:
-	       printk(KERN_ERR "[%s]::Cmd number error", __FUNCTION__); 
-		   err = -EBADRQC;
-	}
+    default:
+        printk(KERN_ERR "[%s]::Cmd number error", __FUNCTION__); 
+        err = -EBADRQC;
+    }
 	
 	
     if (dbg) printk ("++++ %s::END. Result: [%d] ++++\n", __FUNCTION__, err);
@@ -469,21 +468,21 @@ static long brvsens_ioctl
 
 /* FOPS on /dev/brvsens. Mapping
 
-    --- brvsens_read:   poll events
-    --- brvsens_ioctl:  enable/disable + setDelay
+   --- brvsens_read:   poll events
+   --- brvsens_ioctl:  enable/disable + setDelay
     
 */
 static struct file_operations brvsens_fops =
 {
-		.owner            = THIS_MODULE,
-		.read             = brvsens_read,
-		.unlocked_ioctl   = brvsens_ioctl,
+    .owner            = THIS_MODULE,
+    .read             = brvsens_read,
+    .unlocked_ioctl   = brvsens_ioctl,
 };
 
 
 /* Constructor 
 
-Allocate and register brvsens device. Note:
+   Allocate and register brvsens device. Note:
    -- Driver Registration performs allocation of brvsens nodes
    -- Node Activation/Deactivation is part of ioctl::activate
 */
@@ -492,7 +491,7 @@ static int __init brvsens_init(void)
     int rc = 0;
     struct  device* dev = 0;
 
-	if (dbg) printk ("++++ %s::BEGIN ++++\n", __FUNCTION__);
+    if (dbg) printk ("++++ %s::BEGIN ++++\n", __FUNCTION__);
 
     // allocate driver region
     rc = alloc_chrdev_region( &(brvsens_data.devnum), 0, 1, DRIVER_NAME );
@@ -531,14 +530,14 @@ static int __init brvsens_init(void)
         goto out_class_destroy;
     }
     
-	// initialize kfifo event buffer
-	INIT_KFIFO(brvsens_data.ebuff);
+    // initialize kfifo event buffer
+    INIT_KFIFO(brvsens_data.ebuff);
 	
-	// initialize spinlock
-	spin_lock_init(&(brvsens_data.lock) );
+    // initialize spinlock
+    spin_lock_init(&(brvsens_data.lock) );
 	
-	// initialize link list of sensor nodes
-	INIT_LIST_HEAD(&(brvsens_data.dnodes.list) );
+    // initialize link list of sensor nodes
+    INIT_LIST_HEAD(&(brvsens_data.dnodes.list) );
 
     // init wait queue
     init_waitqueue_head(&(brvsens_data.esig) );
@@ -569,12 +568,12 @@ out_err:
 */
 static void __exit brvsens_exit(void)
 {
-	if (dbg) printk ("++++ %s::BEGIN ++++\n", __FUNCTION__);
+    if (dbg) printk ("++++ %s::BEGIN ++++\n", __FUNCTION__);
 	
-	// free list nodes; this will also stop all workqueues
-	free_nodes();
+    // free list nodes; this will also stop all workqueues
+    free_nodes();
 	
-	// deallocate /dev/brvsens device
+    // deallocate /dev/brvsens device
     device_destroy( brvsens_data.class,  brvsens_data.devnum );
     class_destroy( brvsens_data.class );
     cdev_del( &(brvsens_data.cdev) );
@@ -593,60 +592,60 @@ int brvsens_register
     void*              context,  // Callback context (i.e. struct i2c_device*), driver specific. Null ok
     PFNACTIVATE        actCbk,   // Activation callback. Null ok 
     PFNREAD            readCbk   // Read Callback. Must be provided
-)
+    )
 {
-   struct brvnode*          pn  = 0;
-   struct sensor_work*      psw = 0;
+    struct brvnode*          pn  = 0;
+    struct sensor_work*      psw = 0;
    
-   // input validation -- handle, name and readCallback must be provided
-   if ( (handle == 0) || (!name) || (readCbk == 0) )
-   {
-      printk(KERN_ERR "%s: -- Invalid Registration Data\n", __FUNCTION__);
-      return -EFAULT;
-   }
+    // input validation -- handle, name and readCallback must be provided
+    if ( (handle == 0) || (!name) || (readCbk == 0) )
+    {
+        printk(KERN_ERR "%s: -- Invalid Registration Data\n", __FUNCTION__);
+        return -EFAULT;
+    }
    
-   // input validation -- handle must be unique
-   if (find_node(handle) != 0)
-   {
-      if (dbg) printk("++++ %s: Sensor [0x%x] already registered! ++++\n", __FUNCTION__, handle);
-      return -EFAULT;
-   }
+    // input validation -- handle must be unique
+    if (find_node(handle) != 0)
+    {
+        if (dbg) printk("++++ %s: Sensor [0x%x] already registered! ++++\n", __FUNCTION__, handle);
+        return -EFAULT;
+    }
    
-   if (dbg) printk("++++ %s: handle [0x%x], name [%s] ++++\n", __FUNCTION__, handle, name);
+    if (dbg) printk("++++ %s: handle [0x%x], name [%s] ++++\n", __FUNCTION__, handle, name);
    
-   // allocate node and work structure
-   psw = kmalloc(sizeof(struct sensor_work), GFP_KERNEL);
-   if (psw)
-     pn = kmalloc(sizeof(struct brvnode), GFP_KERNEL );
+    // allocate node and work structure
+    psw = kmalloc(sizeof(struct sensor_work), GFP_KERNEL);
+    if (psw)
+        pn = kmalloc(sizeof(struct brvnode), GFP_KERNEL );
      
-   if (!pn)
-   {
-      if (psw) kfree(psw);
-      printk(KERN_ERR "%s: -- memory allocation error!", __FUNCTION__);
+    if (!pn)
+    {
+        if (psw) kfree(psw);
+        printk(KERN_ERR "%s: -- memory allocation error!", __FUNCTION__);
       
-      return -ENOMEM;
-   }
+        return -ENOMEM;
+    }
    
-   // configure work structure
-   psw->handle = handle;   
-   atomic_set(&(psw->pollrate), DEFAULT_DELAY_MSEC);
-   atomic_set(&(psw->exit), 0);
+    // configure work structure
+    psw->handle = handle;   
+    atomic_set(&(psw->pollrate), DEFAULT_DELAY_MSEC);
+    atomic_set(&(psw->exit), 0);
    
-   strcpy(psw->name, name);
-   psw->context = context;
-   psw->activateCbk = actCbk;
-   psw->readCbk = readCbk;
+    strcpy(psw->name, name);
+    psw->context = context;
+    psw->activateCbk = actCbk;
+    psw->readCbk = readCbk;
    
-   // configure new node and add it to the list
-   pn->pwq = 0;
-   pn->psw = psw;
+    // configure new node and add it to the list
+    pn->pwq = 0;
+    pn->psw = psw;
   
-   list_add_tail(&(pn->list), &(brvsens_data.dnodes.list));
+    list_add_tail(&(pn->list), &(brvsens_data.dnodes.list));
 
-   if (dbg) printk("++++ %s: Sensor [%s] Registered. Handle [0x%x], Delay [%u] ms ++++\n",
-      __FUNCTION__, psw->name, pn->psw->handle, atomic_read(&(psw->pollrate) ) );
+    if (dbg) printk("++++ %s: Sensor [%s] Registered. Handle [0x%x], Delay [%u] ms ++++\n",
+                    __FUNCTION__, psw->name, pn->psw->handle, atomic_read(&(psw->pollrate) ) );
       
-   return 0;   // all ok
+    return 0;   // all ok
 }
 
 // driver de-registration. Initially for completeness only; has no use for Android
@@ -654,39 +653,39 @@ int brvsens_register
 // does not query again (omni-potent Google frequently sucks)
 int brvsens_deregister(u32 handle)
 {
-   struct list_head* pos  = 0;
-   struct list_head* q    = 0;
-   struct brvnode*   tmp  = 0;
+    struct list_head* pos  = 0;
+    struct list_head* q    = 0;
+    struct brvnode*   tmp  = 0;
     
-   if (dbg) printk("++++ %s: handle [0x%x] ++++\n", __FUNCTION__, handle);
+    if (dbg) printk("++++ %s: handle [0x%x] ++++\n", __FUNCTION__, handle);
    
-   list_for_each_safe(pos, q, &(brvsens_data.dnodes.list) )
-   {
-	   // get this node
-	   tmp = list_entry(pos, struct brvnode, list);
+    list_for_each_safe(pos, q, &(brvsens_data.dnodes.list) )
+    {
+        // get this node
+        tmp = list_entry(pos, struct brvnode, list);
 	   
-	   if (tmp->psw->handle == handle)
-	   {
-		   // deactivate node first (This will clear the workqueue)
-		   deactivate_node(tmp);
+        if (tmp->psw->handle == handle)
+        {
+            // deactivate node first (This will clear the workqueue)
+            deactivate_node(tmp);
 		   
-		   // deallocate work structure
-		   kfree(tmp->psw);
+            // deallocate work structure
+            kfree(tmp->psw);
 		   
-		   // remove the node itself
-		   list_del(pos); kfree(tmp);
+            // remove the node itself
+            list_del(pos); kfree(tmp);
 		   
-		   if (dbg) printk ("++++ %s: Sensor Driver [0x%x] successfully deregistered! ++++\n",
-		      __FUNCTION__, handle);
+            if (dbg) printk ("++++ %s: Sensor Driver [0x%x] successfully deregistered! ++++\n",
+                             __FUNCTION__, handle);
 		      
-		   return 0;
-	    }
-	}	
+            return 0;
+        }
+    }	
    
-   // if here, handle is not found so log an error
-   printk(KERN_ERR "%s: Sensor Driver [0x%x] has not been registered ++++\n", __FUNCTION__, handle);
+    // if here, handle is not found so log an error
+    printk(KERN_ERR "%s: Sensor Driver [0x%x] has not been registered ++++\n", __FUNCTION__, handle);
    
-   return -EFAULT;
+    return -EFAULT;
 }
 
 // just like DllExport

@@ -23,17 +23,15 @@
 #include <linux/brvsens_driver.h>
 
 #define SENSOR_NAME 			BMA150_DRIVER_NAME
-#define GRAVITY_EARTH           9806550
-#define ABSMIN_2G               (-GRAVITY_EARTH * 2)
-#define ABSMAX_2G               (GRAVITY_EARTH * 2)
+#define GRAVITY_EARTH                   9806550
+#define ABSMIN_2G                       (-GRAVITY_EARTH * 2)
+#define ABSMAX_2G                       (GRAVITY_EARTH * 2)
 #define BMA150_MAX_DELAY		200
 #define BMA150_CHIP_ID			2
 #define BMA150_RANGE_SET		0
 #define BMA150_BW_SET			4
 
-
-
-#define BMA150_CHIP_ID_REG			0x00
+#define BMA150_CHIP_ID_REG		0x00
 #define BMA150_X_AXIS_LSB_REG		0x02
 #define BMA150_X_AXIS_MSB_REG		0x03
 #define BMA150_Y_AXIS_LSB_REG		0x04
@@ -46,22 +44,22 @@
 
 #define BMA150_CUSTOMER1_REG		0x12
 #define BMA150_CUSTOMER2_REG		0x13
-#define BMA150_RANGE_BWIDTH_REG	    0x14
+#define BMA150_RANGE_BWIDTH_REG	        0x14
 #define BMA150_CONF2_REG	        0x15
 
 #define BMA150_OFFS_GAIN_X_REG		0x16
 #define BMA150_OFFS_GAIN_Y_REG		0x17
 #define BMA150_OFFS_GAIN_Z_REG		0x18
 #define BMA150_OFFS_GAIN_T_REG		0x19
-#define BMA150_OFFSET_X_REG		    0x1a
-#define BMA150_OFFSET_Y_REG		    0x1b
-#define BMA150_OFFSET_Z_REG		    0x1c
-#define BMA150_OFFSET_T_REG		    0x1d
+#define BMA150_OFFSET_X_REG		0x1a
+#define BMA150_OFFSET_Y_REG		0x1b
+#define BMA150_OFFSET_Z_REG		0x1c
+#define BMA150_OFFSET_T_REG	        0x1d
 
-#define BMA150_CHIP_ID__POS		    0
-#define BMA150_CHIP_ID__MSK		    0x07
-#define BMA150_CHIP_ID__LEN		    3
-#define BMA150_CHIP_ID__REG		    BMA150_CHIP_ID_REG
+#define BMA150_CHIP_ID__POS		0
+#define BMA150_CHIP_ID__MSK		0x07
+#define BMA150_CHIP_ID__LEN		3
+#define BMA150_CHIP_ID__REG		BMA150_CHIP_ID_REG
 
 /* DATA REGISTERS */
 #define BMA150_NEW_DATA_X__POS  	0
@@ -100,20 +98,20 @@
 #define BMA150_ACC_Z_MSB__REG		BMA150_Z_AXIS_MSB_REG
 
 /* CONTROL BITS */
-#define BMA150_SLEEP__POS			0
-#define BMA150_SLEEP__LEN			1
-#define BMA150_SLEEP__MSK			0x01
-#define BMA150_SLEEP__REG			BMA150_CTRL_REG
+#define BMA150_SLEEP__POS		0
+#define BMA150_SLEEP__LEN		1
+#define BMA150_SLEEP__MSK		0x01
+#define BMA150_SLEEP__REG		BMA150_CTRL_REG
 
 #define BMA150_SOFT_RESET__POS		1
 #define BMA150_SOFT_RESET__LEN		1
 #define BMA150_SOFT_RESET__MSK		0x02
 #define BMA150_SOFT_RESET__REG		BMA150_CTRL_REG
 
-#define BMA150_EE_W__POS			4
-#define BMA150_EE_W__LEN			1
-#define BMA150_EE_W__MSK			0x10
-#define BMA150_EE_W__REG			BMA150_CTRL_REG
+#define BMA150_EE_W__POS		4
+#define BMA150_EE_W__LEN		1
+#define BMA150_EE_W__MSK		0x10
+#define BMA150_EE_W__REG		BMA150_CTRL_REG
 
 #define BMA150_UPDATE_IMAGE__POS	5
 #define BMA150_UPDATE_IMAGE__LEN	1
@@ -132,17 +130,17 @@
 #define BMA150_BANDWIDTH__REG		BMA150_RANGE_BWIDTH_REG
 
 /* RANGE */
-#define BMA150_RANGE__POS			3
-#define BMA150_RANGE__LEN			2
-#define BMA150_RANGE__MSK			0x18
-#define BMA150_RANGE__REG			BMA150_RANGE_BWIDTH_REG
+#define BMA150_RANGE__POS		3
+#define BMA150_RANGE__LEN		2
+#define BMA150_RANGE__MSK		0x18
+#define BMA150_RANGE__REG		BMA150_RANGE_BWIDTH_REG
    
 /* WAKE UP */
 
-#define BMA150_WAKE_UP__POS			0
-#define BMA150_WAKE_UP__LEN			1
-#define BMA150_WAKE_UP__MSK			0x01
-#define BMA150_WAKE_UP__REG			BMA150_CONF2_REG
+#define BMA150_WAKE_UP__POS		0
+#define BMA150_WAKE_UP__LEN		1
+#define BMA150_WAKE_UP__MSK		0x01
+#define BMA150_WAKE_UP__REG		BMA150_CONF2_REG
    
 #define BMA150_WAKE_UP_PAUSE__POS	1
 #define BMA150_WAKE_UP_PAUSE__LEN	2
@@ -170,14 +168,8 @@
 #define BMA150_BW_750HZ		5
 #define BMA150_BW_1500HZ	6
 
-/* mode settings */
-
-#define BMA150_MODE_NORMAL  0
-#define BMA150_MODE_SLEEP   2
-#define BMA150_MODE_WAKE_UP 3
-
 /* debug I2C */
-#define BMA150_DEBUG_I2C 0
+#define BMA150_DEBUG_I2C 1
 
 /* Data Buffer Structure */
 struct bma150acc
@@ -193,17 +185,16 @@ struct bma150_data
 	struct i2c_client*           bma150_client;
 	int                          IRQ;
 	atomic_t                     delay;
-	unsigned char                mode;
 	struct input_dev*            input;
 	struct bma150acc             value;
 	struct mutex                 value_mutex;
-	struct mutex                 mode_mutex;
 	struct delayed_work          work;
 	struct work_struct           irq_work;
 };
 
 
-static int switch_values(bma150_axis_change_enum axis_source_enum, struct bma150acc *p_acc_old, s16 *p_axis)
+static int switch_values(bma150_axis_change_enum axis_source_enum, 
+                         struct bma150acc *p_acc_old, s16 *p_axis)
 {
 	switch(axis_source_enum)
 	{
@@ -238,9 +229,10 @@ static int switch_values(bma150_axis_change_enum axis_source_enum, struct bma150
 }
 
 /* The accelerometer IC has not been mounted as expected and the values
- *  reported need to be swapped and/or reversed.
+ * reported need to be swapped and/or reversed.
  */  
-static void bma150_change_orientation(struct bma150acc *p_acc_orig_t, struct t_bma150_axis_change *axis_change)
+static void bma150_change_orientation(struct bma150acc *p_acc_orig_t, 
+                                      struct t_bma150_axis_change *axis_change)
 {
 	s16 temp_x = 0, temp_y = 0, temp_z = 0;
 
@@ -253,13 +245,16 @@ static void bma150_change_orientation(struct bma150acc *p_acc_orig_t, struct t_b
 	p_acc_orig_t->z = temp_z;
 }
 
-static int bma150_smbus_read_byte(struct i2c_client *client, unsigned char reg_addr, unsigned char *data)
+static int bma150_smbus_read_byte(struct i2c_client *client, 
+                                  unsigned char reg_addr, 
+                                  unsigned char *data)
 {
 	s32 rc = i2c_smbus_read_byte_data(client, reg_addr);
 	if (rc < 0)
 	{
 #if BMA150_DEBUG_I2C
-		printk(KERN_ERR "%s: i2c_smbus_read_byte_data failed (rc=%d)\n", __FUNCTION__, rc);
+		printk(KERN_ERR "%s: i2c_smbus_read_byte_data failed (rc=%d)\n",
+                       __FUNCTION__, rc);
 #endif
 		return rc;
 	}
@@ -267,69 +262,74 @@ static int bma150_smbus_read_byte(struct i2c_client *client, unsigned char reg_a
 	return 0;
 }   
 
-static int bma150_smbus_write_byte(struct i2c_client *client, unsigned char reg_addr, unsigned char *data)
+static int bma150_smbus_write_byte(struct i2c_client *client, 
+                                   unsigned char reg_addr, 
+                                   unsigned char *data)
 {
 	s32 rc = i2c_smbus_write_byte_data(client, reg_addr, *data);
 	if (rc < 0)
 	{
 #if BMA150_DEBUG_I2C
-		printk(KERN_ERR "%s: i2c_smbus_write_byte_data failed (rc=%d)\n", __FUNCTION__, rc);
+		printk(KERN_ERR "%s: i2c_smbus_write_byte_data failed (rc=%d)\n",
+                       __FUNCTION__, rc);
 #endif
 		return rc;
 	}
 	return 0;
 }
 
-static int bma150_smbus_read_byte_block(struct i2c_client *client, unsigned char reg_addr, unsigned char *data, unsigned char len)
+static int bma150_smbus_read_byte_block(struct i2c_client *client, 
+                                        unsigned char reg_addr, 
+                                        unsigned char *data, 
+                                        unsigned char len)
 {
 	s32 rc = i2c_smbus_read_i2c_block_data(client, reg_addr, len, data);
 	if (rc < 0)
 	{
 #if BMA150_DEBUG_I2C
-		printk(KERN_ERR "%s: i2c_smbus_read_i2c_block_data failed (rc=%d)\n", __FUNCTION__, rc);
+		printk(KERN_ERR "%s: i2c_smbus_read_i2c_block_data failed (rc=%d)\n",
+                       __FUNCTION__, rc);
 #endif
 		return rc;
 	}
 	return 0;
 }
 
-static int bma150_set_mode(struct i2c_client *client, unsigned char Mode)
+
+/* brvsens activate callback; we want to set BMA150_SLEEP for deactivation and
+   clear it for activation  */
+static int activate(struct i2c_client *client, unsigned char flag)
 {
-	unsigned char data1  = 0;
-	unsigned char data2  = 0;
-	
-	struct bma150_data* bma150 = i2c_get_clientdata(client);
+	unsigned char data  = 0;
+	unsigned char sleep_bit  = flag ? 0:1;
+
+        printk(KERN_INFO "BMA150 %s() requested activation - %d\n",
+	       __FUNCTION__, flag);
 
 	if (client == NULL)
 		return -1;
-
 	
-	if (Mode < 4 && Mode != 1)
+	struct bma150_data* bma150 = i2c_get_clientdata(client);
+
+	/* if we are activated */
+	if(flag)
 	{
-		if(bma150_smbus_read_byte(client, BMA150_WAKE_UP__REG, &data1))
-			return -1;
-
-		data1 = BMA150_SET_BITSLICE(data1, BMA150_WAKE_UP, Mode);
-
-		if(bma150_smbus_read_byte(client, BMA150_SLEEP__REG, &data2))
-			return -1;
-
-		data2 = BMA150_SET_BITSLICE(data2, BMA150_SLEEP, (Mode>>1));
-
-		if(bma150_smbus_write_byte(client, BMA150_WAKE_UP__REG, &data1))
-			return -1;
-
-		if(bma150_smbus_write_byte(client, BMA150_SLEEP__REG, &data2))
-			return -1;
-
-		mutex_lock(&bma150->mode_mutex);
-		bma150->mode = (unsigned char) Mode;
-		mutex_unlock(&bma150->mode_mutex);
-		return 0;
+		schedule_delayed_work(&bma150->work,
+			      msecs_to_jiffies(atomic_read(&bma150->delay)));
 	}
-	return -1;
-}
+	else
+	{
+		flush_scheduled_work();
+		cancel_delayed_work_sync(&bma150->work);
+	}
 
+	/* read the value of the control register where SLEEP bit is defined,
+	   set or clear SLEEP bit and write the value back */
+        if(bma150_smbus_read_byte(client, BMA150_SLEEP__REG, &data))
+		return -1;
+        data = BMA150_SET_BITSLICE(data, BMA150_SLEEP, sleep_bit);
+        return bma150_smbus_write_byte(client, BMA150_SLEEP__REG, &data);
+}
 
 static int bma150_set_range(struct i2c_client *client, unsigned char Range)
 {
@@ -339,7 +339,6 @@ static int bma150_set_range(struct i2c_client *client, unsigned char Range)
 		return -1;
 
 	if (Range < 3) {
-
 		if(bma150_smbus_read_byte(client, BMA150_RANGE__REG, &data))
 			return -1;
 
@@ -438,7 +437,8 @@ static int bma150_read_accel_xyz(struct i2c_client *client, struct bma150acc *ac
 	if (client->dev.platform_data != NULL)
 	{  
 		/* Need to modify the values reported. */
-		bma150_change_orientation(acc, (struct t_bma150_axis_change *) client->dev.platform_data);
+		bma150_change_orientation(acc, (struct t_bma150_axis_change *) 
+                                          client->dev.platform_data);
 	}
 
 	return 0;
@@ -465,36 +465,8 @@ static void bma150_work_func(struct work_struct* work)
 	schedule_delayed_work(&bma150->work, delay);
 }
 
-static ssize_t bma150_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma150_data *bma150 = i2c_get_clientdata(client);
-
-	mutex_lock(&bma150->mode_mutex);
-	data = bma150->mode;
-	mutex_unlock(&bma150->mode_mutex);
-
-	return sprintf(buf, "%d\n", data);
-}
-
-static ssize_t bma150_mode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	unsigned long data;
-	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma150_data *bma150 = i2c_get_clientdata(client);
-
-	error = strict_strtoul(buf, 10, &data);
-	if (error)
-		return error;
-	if (bma150_set_mode(bma150->bma150_client, (unsigned char) data) < 0)
-		return -EINVAL;
-
-	return count;
-}
-
-static ssize_t bma150_range_show(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t bma150_range_show(struct device *dev, struct device_attribute *attr, 
+                                 char *buf)
 {
 	unsigned char data;
 	struct i2c_client *client = to_i2c_client(dev);
@@ -506,7 +478,8 @@ static ssize_t bma150_range_show(struct device *dev, struct device_attribute *at
 	return sprintf(buf, "%d\n", data);
 }
 
-static ssize_t bma150_range_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t bma150_range_store(struct device *dev, struct device_attribute *attr,
+                                  const char *buf, size_t count)
 {
 	unsigned long data;
 	int error;
@@ -522,7 +495,8 @@ static ssize_t bma150_range_store(struct device *dev, struct device_attribute *a
 	return count;
 }
 
-static ssize_t bma150_bandwidth_show(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t bma150_bandwidth_show(struct device *dev, 
+                                     struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
 	struct i2c_client *client = to_i2c_client(dev);
@@ -534,7 +508,9 @@ static ssize_t bma150_bandwidth_show(struct device *dev, struct device_attribute
 	return sprintf(buf, "%d\n", data);
 }
 
-static ssize_t bma150_bandwidth_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t bma150_bandwidth_store(struct device *dev, 
+                                      struct device_attribute *attr, 
+                                      const char *buf, size_t count)
 {
 	unsigned long data;
 	int error;
@@ -550,7 +526,8 @@ static ssize_t bma150_bandwidth_store(struct device *dev, struct device_attribut
 	return count;
 }
 
-static ssize_t bma150_value_show(struct device* dev, struct device_attribute* attr, char* buf)
+static ssize_t bma150_value_show(struct device* dev, struct device_attribute* attr, 
+                                 char* buf)
 {
 	struct input_dev* input = to_input_dev(dev);
 	struct bma150_data* bma150 = input_get_drvdata(input);
@@ -560,10 +537,11 @@ static ssize_t bma150_value_show(struct device* dev, struct device_attribute* at
 	acc_value = bma150->value;
 	mutex_unlock(&bma150->value_mutex);
 
-    return sprintf(buf, "X:%d Y:%d Z:%d\n", acc_value.x, acc_value.y, acc_value.z);
+	return sprintf(buf, "X:%d Y:%d Z:%d\n", acc_value.x, acc_value.y, acc_value.z);
 }
 
-static ssize_t bma150_get_data(struct device* dev, struct device_attribute* attr, char* buf)
+static ssize_t bma150_get_data(struct device* dev, struct device_attribute* attr, 
+                               char* buf)
 {
 	struct input_dev* input = to_input_dev(dev);
 	struct bma150_data* bma150 = input_get_drvdata(input);
@@ -573,11 +551,12 @@ static ssize_t bma150_get_data(struct device* dev, struct device_attribute* attr
 	acc_value = bma150->value;
 	mutex_unlock(&bma150->value_mutex);
 
-    memcpy(buf, &acc_value, sizeof(acc_value) );
-    return sizeof(acc_value);
+	memcpy(buf, &acc_value, sizeof(acc_value) );
+	return sizeof(acc_value);
 }
 
-static ssize_t bma150_delay_show(struct device* dev, struct device_attribute* attr, char* buf)
+static ssize_t bma150_delay_show(struct device* dev, struct device_attribute* attr, 
+                                 char* buf)
 {
 	struct i2c_client*  client = to_i2c_client(dev);
 	struct bma150_data* bma150 = i2c_get_clientdata(client);
@@ -585,7 +564,8 @@ static ssize_t bma150_delay_show(struct device* dev, struct device_attribute* at
 	return sprintf(buf, "%d\n", atomic_read(&bma150->delay));
 }
 
-static ssize_t bma150_delay_store(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+static ssize_t bma150_delay_store(struct device* dev, struct device_attribute* attr, 
+                                  const char* buf, size_t count)
 {
 	unsigned long data;
 	int error;
@@ -611,9 +591,6 @@ static DEVICE_ATTR(range, S_IRUGO|S_IWUSR|S_IWGRP,
 static DEVICE_ATTR(bandwidth, S_IRUGO|S_IWUSR|S_IWGRP,
 		bma150_bandwidth_show, bma150_bandwidth_store);
 		
-static DEVICE_ATTR(mode, S_IRUGO|S_IWUSR|S_IWGRP,
-		bma150_mode_show, bma150_mode_store);
-
 // for command line: Human readable		
 static DEVICE_ATTR(values, S_IRUGO|S_IWUSR|S_IWGRP,
 		bma150_value_show, NULL);
@@ -630,7 +607,6 @@ static struct attribute* bma150_attributes[] =
 {
 	&dev_attr_range.attr,
 	&dev_attr_bandwidth.attr,
-	&dev_attr_mode.attr,
 	&dev_attr_values.attr,
 	&dev_attr_data.attr,
 	&dev_attr_delay.attr,
@@ -693,7 +669,7 @@ static void bma150_input_delete(struct bma150_data* bma150)
 
 
 static int bma150_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
+			const struct i2c_device_id *id)
 {
 	int err = 0;
 	int tempvalue = 0;
@@ -709,14 +685,18 @@ static int bma150_probe(struct i2c_client *client,
 	if (client->dev.platform_data == NULL)
 	{  
 		/* No axis values need to be changed. */
-		printk(KERN_INFO "%s: No axis values need to be changed\n", __FUNCTION__);
+		printk(KERN_INFO "%s: No axis values need to be changed\n", 
+                       __FUNCTION__);
 	}
 	else
 	{
-		struct t_bma150_axis_change* axis_change = (struct t_bma150_axis_change*) client->dev.platform_data;
+		struct t_bma150_axis_change* axis_change = 
+			(struct t_bma150_axis_change*) client->dev.platform_data;
 		
-		printk(KERN_INFO "%s: x_change: %d y_change: %d z_change: %d\n", __FUNCTION__,
-			axis_change->x_change, axis_change->y_change, axis_change->z_change);
+		printk(KERN_INFO "%s: x_change: %d y_change: %d z_change: %d\n", 
+                       __FUNCTION__,
+                       axis_change->x_change, axis_change->y_change, 
+                       axis_change->z_change);
 	}
 
 	data = kzalloc(sizeof(struct bma150_data), GFP_KERNEL);
@@ -731,12 +711,12 @@ static int bma150_probe(struct i2c_client *client,
 	if ( (tempvalue & 0x00FF) == BMA150_CHIP_ID)
 	{
 		printk(KERN_INFO "Bosch Sensortec Device detected!\n" \
-				"BMA150 registered I2C driver!\n");
+		       "BMA150 registered I2C driver!\n");
 	} 
 	else
 	{
 		printk(KERN_INFO "Bosch Sensortec Device not found" \
-				"i2c error %d \n", tempvalue);
+		       "i2c error %d \n", tempvalue);
 				
 		err = -1;
 		goto kfree_exit;
@@ -745,7 +725,6 @@ static int bma150_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, data);
 	data->bma150_client = client;
 	mutex_init(&data->value_mutex);
-	mutex_init(&data->mode_mutex);
 	if(bma150_set_bandwidth(client, BMA150_BW_SET))
 	{
 		printk(KERN_ERR "%s: read/write error\n", __FUNCTION__);
@@ -766,20 +745,17 @@ static int bma150_probe(struct i2c_client *client,
 		goto kfree_exit;
 
 	err = sysfs_create_group(&data->input->dev.kobj,
-			&bma150_attribute_group);
+				 &bma150_attribute_group);
 			
 	if (err < 0)
 		goto error_sysfs;
 
-	schedule_delayed_work(&data->work,
-			msecs_to_jiffies(atomic_read(&data->delay)));
-
 	// register accelerometer with BRVSENS device
 	brvsens_register(SENSOR_HANDLE_ACCELEROMETER,      // sensor UID
-		BMA150_DRIVER_NAME,               // human readable name
-		(void*)client,                    // context; passed back in read/activate callbacks
-		(PFNACTIVATE)bma150_set_mode,     // activate callback
-		(PFNREAD)bma150_read_accel_xyz);  // read callback
+			 BMA150_DRIVER_NAME,               // human readable name
+			 (void*)client,                    // context; passed back in read/activate callbacks
+			 (PFNACTIVATE)activate,     // activate callback
+			 (PFNREAD)bma150_read_accel_xyz);  // read callback
 	
 	return 0;
 
@@ -796,12 +772,12 @@ exit:
 
 static int bma150_suspend(struct i2c_client* client, pm_message_t mesg)
 {
-	return bma150_set_mode(client, BMA150_MODE_SLEEP);
+	return activate(client, 0);
 }
 
 static int bma150_resume(struct i2c_client* client)
 {
-	return bma150_set_mode(client, BMA150_MODE_NORMAL);
+	return activate(client, 1);
 }
 
 static int bma150_remove(struct i2c_client* client)
