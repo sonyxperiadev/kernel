@@ -17,7 +17,7 @@
   $
  */
 
-/* 
+/*
  * Modifications for Broadcom virtual sensor driver 2011/10/03
  */
 
@@ -68,11 +68,11 @@
 #define SENSOR_HANDLE_TEMPERATURE   0x40     // (1 << (SENSOR_TYPE_TEMPERATURE - 1) )
 */
 
-static int mod_debug = 0x8;
+static int mod_debug = 0x0;
 module_param(mod_debug, int, 0644);
 
 static int compass_count = 0;
-struct axis_data 
+struct axis_data
 {
 	s16 x;
 	s16 y;
@@ -97,7 +97,7 @@ struct mpu_private_data {
 };
 
 /* Helper to switch values depending how sensor is mounted on the board */
-static int mpu_switch_values(int               axis_dir, 
+static int mpu_switch_values(int               axis_dir,
                              struct axis_data *p_axis_old,
                              s16              *p_axis)
 {
@@ -138,7 +138,7 @@ static void mpu6050_change_orientation(struct axis_data* p_axis_orig_t,
                                        struct t_brcm_axis_change *p_axis_change)
 {
 	s16 temp_x = 0, temp_y = 0, temp_z = 0;
-  
+
    if (p_axis_change == NULL)
    {
       return;
@@ -156,7 +156,7 @@ static void mpu6050_change_orientation(struct axis_data* p_axis_orig_t,
 static s16 undo_twos_complement(u16 twos_comp)
 {
    s16 temp;
-   
+
    if (!(twos_comp & 0x8000))
    {  /* No change needed. */
       return (s16)twos_comp;
@@ -980,13 +980,13 @@ static unsigned short normal_i2c[] = { I2C_CLIENT_END };
 static void mpu6050_set_power_mode(struct i2c_client* client, u8 val)
 {
    int rc;
-   
+
    struct pm_message mesg;
    if (val == 0)
    {  // Put the mpu6050 to sleep.
       mesg.event = PM_EVENT_SUSPEND;
       rc = mpu_dev_suspend(client, mesg);
-      
+
       if (mod_debug)
       {
          printk("%s() putting %s to sleep\n", __func__, MPU_NAME);
@@ -1000,21 +1000,21 @@ static void mpu6050_set_power_mode(struct i2c_client* client, u8 val)
          printk("%s() waking %s\n", __func__, MPU_NAME);
       }
    }
-   
+
    if (mod_debug > 0)
       printk("%s() called, val %d rc %d\n", __func__, val, rc);
-         
+
 }
 
 static void mpu6050_set_compass_power_mode(struct i2c_client* client, u8 val)
 {
    if (mod_debug > 0)
-      printk("%s() called, val %d\n", __func__, val);   
+      printk("%s() called, val %d\n", __func__, val);
 }
 
 static int mpu6050_xyz_read_reg(struct i2c_adapter *p_adapter,
                                 unsigned char       slave_address,
-                                int                 reg,                                
+                                int                 reg,
                                 unsigned int        length,
                                 unsigned char *     buffer)
 {
@@ -1025,65 +1025,65 @@ static int mpu6050_xyz_read_reg(struct i2c_adapter *p_adapter,
                         slave_address, /* unsigned char address */
                         reg_name,      /* unsigned char reg */
                         length,        /* unsigned int len */
-                        buffer);       /* unsigned char *data */ 
-   if (mod_debug > 0xff)                     
+                        buffer);       /* unsigned char *data */
+   if (mod_debug > 0xff)
       printk("%s() sensor_i2c_read() returned %d\n", __func__, rc);
    return rc;
 }
 
 static void mpu6050_read_gyro(struct i2c_client*  client,
                              struct axis_data*   coords)
-{  
+{
 	struct mpu_private_data *mpu = i2c_get_clientdata(client);
 	struct i2c_adapter *gyro_adapter;
-	struct i2c_adapter *accel_adapter;   
+	struct i2c_adapter *accel_adapter;
 	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
    int rc = 0;
-   unsigned int  len     = 6; 
-	struct mpu_platform_data *p_mpu_pdata = mldl_cfg->pdata;   
-   
+   unsigned int  len     = 6;
+	struct mpu_platform_data *p_mpu_pdata = mldl_cfg->pdata;
+
    struct t_brcm_sensors_axis_change *p_sensors_axis_change;
-   
+
 	u16 buffer[3] = { 0, 0, 0};
-   
+
 	gyro_adapter = client->adapter;
 	accel_adapter = i2c_get_adapter(mldl_cfg->pdata->accel.adapt_num);
-   
+
    mpu6050_xyz_read_reg(gyro_adapter,
                         client->addr,
-                        MPUREG_GYRO_XOUT_H, 
+                        MPUREG_GYRO_XOUT_H,
                         len,
                         (unsigned char *)buffer);
-                        
+
 	coords->x = be16_to_cpu(buffer[0]);
 	coords->y = be16_to_cpu(buffer[1]);
 	coords->z = be16_to_cpu(buffer[2]);
-   
+
    /* Undo the twos complement, 0xffff == -1! */
    coords->x = undo_twos_complement(coords->x);
    coords->y = undo_twos_complement(coords->y);
    coords->z = undo_twos_complement(coords->z);
 
-   if (mod_debug & SENSOR_HANDLE_GYROSCOPE)                     
-      printk("%s() called before,  x: %d, y: %d, z: %d, rc: %d\n", 
+   if (mod_debug & SENSOR_HANDLE_GYROSCOPE)
+      printk("%s() called before,  x: %d, y: %d, z: %d, rc: %d\n",
              __func__, coords->x, coords->y, coords->z, rc);
-   
-   
+
+
    if (p_mpu_pdata->accel.private_data != NULL)
    {
       p_sensors_axis_change = (struct t_brcm_sensors_axis_change *)p_mpu_pdata->accel.private_data;
-      mpu6050_change_orientation(coords, 
-                                 p_sensors_axis_change->p_gyro_axis_change);                              
-   }                                 
+      mpu6050_change_orientation(coords,
+                                 p_sensors_axis_change->p_gyro_axis_change);
+   }
 
-   if (mod_debug & SENSOR_HANDLE_GYROSCOPE)                     
-      printk("%s() called after,  x: %d, y: %d, z: %d, rc: %d\n", 
-             __func__, coords->x, coords->y, coords->z, rc);                          
+   if (mod_debug & SENSOR_HANDLE_GYROSCOPE)
+      printk("%s() called after,  x: %d, y: %d, z: %d, rc: %d\n",
+             __func__, coords->x, coords->y, coords->z, rc);
 }  /* mpu6050_read_gyro(..) */
 
 static void mpu6050_read_accel(struct i2c_client*  client,
                                struct axis_data*   coords)
-{  
+{
 	struct mpu_private_data *mpu = i2c_get_clientdata(client);
 	struct i2c_adapter *gyro_adapter;
 	struct i2c_adapter *accel_adapter;
@@ -1091,10 +1091,10 @@ static void mpu6050_read_accel(struct i2c_client*  client,
 	struct mpu_platform_data *p_mpu_pdata = mldl_cfg->pdata;
 
    struct t_brcm_sensors_axis_change *p_sensors_axis_change;
-   
+
    int rc = 0;
-   unsigned int  len     = 6; 
-      
+   unsigned int  len     = 6;
+
 	u16 buffer[3] = { 0, 0, 0};
 
 	gyro_adapter = client->adapter;
@@ -1102,14 +1102,14 @@ static void mpu6050_read_accel(struct i2c_client*  client,
 
    rc = mpu6050_xyz_read_reg(accel_adapter,
                              client->addr,
-                             MPUREG_ACCEL_XOUT_H, 
+                             MPUREG_ACCEL_XOUT_H,
                              len,
                              (unsigned char *)buffer);
-   
+
 	coords->x = be16_to_cpu(buffer[0]);
 	coords->y = be16_to_cpu(buffer[1]);
 	coords->z = be16_to_cpu(buffer[2]);
-   
+
    /* Undo the twos complement, 0xffff == -1! */
    coords->x = undo_twos_complement(coords->x);
    coords->y = undo_twos_complement(coords->y);
@@ -1117,74 +1117,73 @@ static void mpu6050_read_accel(struct i2c_client*  client,
 
    if (p_mpu_pdata->accel.private_data != NULL)
    {
-      p_sensors_axis_change = (struct t_brcm_sensors_axis_change *)p_mpu_pdata->accel.private_data;   
-      mpu6050_change_orientation(coords, 
+      p_sensors_axis_change = (struct t_brcm_sensors_axis_change *)p_mpu_pdata->accel.private_data;
+      mpu6050_change_orientation(coords,
                                  p_sensors_axis_change->p_accel_axis_change);
-   }                              
-   
-   if (mod_debug & SENSOR_HANDLE_ACCELEROMETER)                     
+   }
+
+   if (mod_debug & SENSOR_HANDLE_ACCELEROMETER)
    {
-      printk("%s() called, slave address: 0x%x, x: %d, y: %d, z: %d, rc: %d\n", 
+      printk("%s() called, slave address: 0x%x, x: %d, y: %d, z: %d, rc: %d\n",
              __func__, client->addr, coords->x, coords->y, coords->z, rc);
-   }                         
+   }
 }  /* mpu6050_read_accel(..) */
 
 void mpu6050_read_all_registers(struct i2c_client*  p_client)
 {
 	struct i2c_adapter *gyro_adapter;
    int i;
-   
-   unsigned int  len     = NUM_OF_MPU_REGISTERS; 
+
+   unsigned int  len     = NUM_OF_MPU_REGISTERS;
    unsigned char data[NUM_OF_MPU_REGISTERS];
    int rc;
 
-   printk("%s() entering \n", __func__);
 	gyro_adapter = p_client->adapter;
-   
+
    rc = mpu6050_xyz_read_reg(gyro_adapter,
                              p_client->addr,
-                             MPUREG_XG_OFFS_TC, 
+                             MPUREG_XG_OFFS_TC,
                              len,
                              data);
    if (rc != 0)
    {
       printk("%s() failed, mpu6050_xyz_read_reg() rc: %d\n", __func__, rc);
-   }   
-      
+   }
+
    for (i = 0; i < NUM_OF_MPU_REGISTERS; i++)
    {
       printk("0x%2x %3d: 0x%x\n", i, i, data[i]);
-   }   
+   }
 }
 
 static int mpu6050_read_compass(struct i2c_client*  client,
                                 struct axis_data*   coords)
-{  
+{
    int rc = 0;
 	struct mpu_private_data *mpu = i2c_get_clientdata(client);
 	struct i2c_adapter *gyro_adapter;
 	struct i2c_adapter *compass_adapter;
 	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
 	struct mpu_platform_data *p_mpu_pdata = mldl_cfg->pdata;
-   
+
    struct ext_slave_platform_data *p_slave_pdata;
    struct t_brcm_sensors_axis_change *p_sensors_axis_change;
-                          
+
    struct ext_slave_descr *p_slave_descr = mldl_cfg->compass;
    unsigned char *p_data;
 	u16 buffer[3] = { 0, 0, 0};
-   
+
    compass_count++;
-   
+
    if (compass_count == 3 && mod_debug)
    {
       mpu6050_read_all_registers(client);
-   }   
-   
-	gyro_adapter    = client->adapter;   
+   }
+
+	gyro_adapter    = client->adapter;
    compass_adapter = i2c_get_adapter(mldl_cfg->pdata->compass.adapt_num);
    p_slave_pdata = &p_mpu_pdata->compass;
-   
+
    if (gyro_adapter == NULL)
    {
       printk("%s() gyro_adapter == NULL\n", __func__);
@@ -1196,31 +1195,31 @@ static int mpu6050_read_compass(struct i2c_client*  client,
       printk("%s() compass_adapter == NULL\n", __func__);
       return -1;
    }
-   
+
 	p_data = kzalloc(p_slave_descr->read_len, GFP_KERNEL);
 	if (!p_data)
 		return -EFAULT;
-      
+
    rc = inv_mpu_slave_read(mldl_cfg,        /* struct mldl_cfg *mldl_cfg      */
-                           gyro_adapter,    /* void *gyro_handle              */ 
+                           gyro_adapter,    /* void *gyro_handle              */
                            compass_adapter, /* void *slave_handle             */
 						         p_slave_descr,   /* struct ext_slave_descr         */
                            p_slave_pdata,   /* struct ext_slave_platform_data */
                            p_data);         /* unsigned char *data            */
 
-   if (mod_debug & SENSOR_HANDLE_COMPASS)         
-   {         
-      printk("%s() called, count: %d length: %d, rc: %d x:0x%x 0x%x y:0x%x 0x%x z:0x%x 0x%x \n", 
-             __func__, compass_count, p_slave_descr->read_len, rc, 
-             p_data[0], p_data[1], p_data[2], p_data[3], p_data[4], p_data[5]);      
-   }         
-   
+   if (mod_debug & SENSOR_HANDLE_COMPASS)
+   {
+      printk("%s() called, count: %d length: %d, rc: %d x:0x%x 0x%x y:0x%x 0x%x z:0x%x 0x%x \n",
+             __func__, compass_count, p_slave_descr->read_len, rc,
+             p_data[0], p_data[1], p_data[2], p_data[3], p_data[4], p_data[5]);
+   }
+
    if (rc == 0)
    {
       buffer[0] = (p_data[0] << 8)+p_data[1];
       buffer[1] = (p_data[2] << 8)+p_data[3];
       buffer[2] = (p_data[4] << 8)+p_data[5];
-            
+
       buffer[0] = be16_to_cpu(buffer[0]);
       buffer[1] = be16_to_cpu(buffer[1]);
       buffer[2] = be16_to_cpu(buffer[2]);
@@ -1230,34 +1229,34 @@ static int mpu6050_read_compass(struct i2c_client*  client,
       coords->y = undo_twos_complement(buffer[1]);
       coords->z = undo_twos_complement(buffer[2]);
 
-      if (mod_debug & SENSOR_HANDLE_COMPASS)         
-      {         
-         printk("%s() called, before orientation, coords x:%d y:%d z:%d\n", 
-                __func__, coords->x, coords->y, coords->z);      
-      }         
-      
+      if (mod_debug & SENSOR_HANDLE_COMPASS)
+      {
+         printk("%s() called, before orientation, coords x:%d y:%d z:%d\n",
+                __func__, coords->x, coords->y, coords->z);
+      }
+
       if (p_mpu_pdata->accel.private_data != NULL)
       {
-         p_sensors_axis_change = (struct t_brcm_sensors_axis_change *)p_mpu_pdata->accel.private_data;         
-         mpu6050_change_orientation(coords, 
-                                    p_sensors_axis_change->p_compass_axis_change);                                     
+         p_sensors_axis_change = (struct t_brcm_sensors_axis_change *)p_mpu_pdata->accel.private_data;
+         mpu6050_change_orientation(coords,
+                                    p_sensors_axis_change->p_compass_axis_change);
       }
       else
       {
-         if (mod_debug)         
-         {         
-            printk("%s() compass private data is NULL\n", __func__);      
-         }         
+         if (mod_debug)
+         {
+            printk("%s() compass private data is NULL\n", __func__);
+         }
       }
-   }  
-         
-   if (mod_debug & SENSOR_HANDLE_COMPASS)         
-   {         
-      printk("%s() called, coords x:%d y:%d z:%d\n", 
-             __func__, coords->x, coords->y, coords->z);      
-   }         
-   
-   kfree(p_data);   
+   }
+
+   if (mod_debug & SENSOR_HANDLE_COMPASS)
+   {
+      printk("%s() called, coords x:%d y:%d z:%d\n",
+             __func__, coords->x, coords->y, coords->z);
+   }
+
+   kfree(p_data);
    return rc;
 }  /* mpu6050_read_compass(..) */
 
@@ -1266,14 +1265,14 @@ static int mpu6050_init(struct i2c_client*  client)
    int           i, rc;
    unsigned char address;
 	struct i2c_adapter *p_i2c_adap;
-   
+
    if (client == NULL)
    {
       return -1;
    }
-   
+
    address = client->addr;
-   
+
    /* Need to derefence the values that will be written into the registers. */
 	struct mpu_private_data *mpu_priv_data = i2c_get_clientdata(client);
 	struct mldl_cfg *mldl_cfg = &mpu_priv_data->mldl_cfg;
@@ -1281,7 +1280,7 @@ static int mpu6050_init(struct i2c_client*  client)
    struct t_brcm_sensors_axis_change *p_sensors_axis_change;
    int    *p_data_reg_vals;
 
-   unsigned char reg_values[7][2] = 
+   unsigned char reg_values[7][2] =
    {
       //{register address, value to write}
       { MPUREG_PWR_MGMT_1,  0 }, /* 0x6b, 107 */
@@ -1290,22 +1289,22 @@ static int mpu6050_init(struct i2c_client*  client)
       { MPUREG_GYRO_CONFIG, 0 }, /* 0x1b,  27 */
       { MPUREG_ACCEL_CONFIG,0 }, /* 0x1c,  28 */
       { MPUREG_PWR_MGMT_1,  1 }, /* 0x6b, 107 */
-      { MPUREG_PWR_MGMT_2,  0 }, /* 0x6C, 108 */    
-   };   
-   
-   p_sensors_axis_change = (struct t_brcm_sensors_axis_change *)p_mpu_pdata->accel.private_data;   
+      { MPUREG_PWR_MGMT_2,  0 }, /* 0x6C, 108 */
+   };
+
+   p_sensors_axis_change = (struct t_brcm_sensors_axis_change *)p_mpu_pdata->accel.private_data;
    p_data_reg_vals = (int *)p_sensors_axis_change->p_data;
-   
+
    if (p_data_reg_vals != NULL)
    {
       for (i = 0; i < 7; i++)
       {
          reg_values[i][1] = p_data_reg_vals[i];
-      }   
+      }
    }
-   
-	p_i2c_adap = client->adapter;   
-         
+
+	p_i2c_adap = client->adapter;
+
    for (i = 0; i < 7; i++)
    {
       rc = sensor_i2c_write_register(p_i2c_adap,
@@ -1316,12 +1315,12 @@ static int mpu6050_init(struct i2c_client*  client)
 
       if (mod_debug)
       {
-         printk("%s() i: %d sensor_i2c_write_register(0x%x, 0x%x) rc: %d\n", 
-                __func__, i, reg_values[i][0], reg_values[i][1], rc);         
-      }          
-   }                     
-               
-   return rc;            
+         printk("%s() i: %d sensor_i2c_write_register(0x%x, 0x%x) rc: %d\n",
+                __func__, i, reg_values[i][0], reg_values[i][1], rc);
+      }
+   }
+
+   return rc;
 }
 
 #ifdef I2C_CLIENT_INSMOD
@@ -1384,7 +1383,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 			 "Missing platform data for mpu\n");
 	} else {
 		mldl_cfg->pdata = pdata;
-      
+
 #if defined(CONFIG_INV_SENSORS_MODULE)
 		pdata->accel.get_slave_descr = get_accel_slave_descr;
 		pdata->compass.get_slave_descr = get_compass_slave_descr;
@@ -1405,8 +1404,11 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 				if (res)
 					goto out_accelirq_failed;
 			} else {
-				dev_WARN(&client->adapter->dev,
-					 "WARNING: Accel irq not assigned\n");
+            /* Remove warning and trackeback that appears on console
+				 * dev_WARN(&client->adapter->dev,
+				 *	 "WARNING: Accel irq not assigned\n");
+             */
+            printk("%s() Warning,  Accel irq not assigned\n", __func__);
 			}
 		} else {
 			dev_warn(&client->adapter->dev,
@@ -1420,14 +1422,14 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 				 mldl_cfg->compass->name);
 			compass_adapter =
 			    i2c_get_adapter(pdata->compass.adapt_num);
-         
+
          if (compass_adapter == NULL)
          {
             printk("%s() compass_adapter == NULL\n", __func__);
       		goto out_compassirq_failed;
          }
-             
-			if (pdata->compass.irq > 0) 
+
+			if (pdata->compass.irq > 0)
          {
 				dev_info(&client->adapter->dev,
 					 "Installing Compass irq using %d\n",
@@ -1445,7 +1447,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 			dev_warn(&client->adapter->dev,
 				 "%s: No Compass Present\n", MPU_NAME);
 		}
-      
+
 		if (pdata->pressure.get_slave_descr) {
 			mldl_cfg->pressure = pdata->pressure.get_slave_descr();
 			dev_info(&client->adapter->dev,
@@ -1509,22 +1511,22 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
    brvsens_register(SENSOR_HANDLE_GYROSCOPE,       /* sensor UID */
                     MPU_NAME,                      /* human readable name */
                     (void*)client,                 /* context: passed back in activate/read callbacks */
-                    (PFNACTIVATE)mpu6050_set_power_mode, 
+                    (PFNACTIVATE)mpu6050_set_power_mode,
                     (PFNREAD)mpu6050_read_gyro);   /* read callback */
 
    brvsens_register(SENSOR_HANDLE_ACCELEROMETER,   /* sensor UID */
                     MPU_NAME,                      /* human readable name */
                     (void*)client,                 /* context: passed back in activate/read callbacks */
-                    (PFNACTIVATE)NULL, 
+                    (PFNACTIVATE)NULL,
                     (PFNREAD)mpu6050_read_accel);  /* read callback */
-                    
-    brvsens_register(SENSOR_HANDLE_COMPASS, 
-                     MPU_NAME, 
-                     (void*)client, 
-                     (PFNACTIVATE)mpu6050_set_compass_power_mode, 
+
+    brvsens_register(SENSOR_HANDLE_COMPASS,
+                     MPU_NAME,
+                     (void*)client,
+                     (PFNACTIVATE)mpu6050_set_compass_power_mode,
                      (PFNREAD)mpu6050_read_compass);
-   
-   res  = mpu6050_init(client);   
+
+   res  = mpu6050_init(client);
 	return res;
 
  out_mpuirq_failed:
@@ -1581,11 +1583,11 @@ static int mpu_remove(struct i2c_client *client)
 		slaveirq_exit(&pdata->accel);
 
 	misc_deregister(&mpu->dev);
-   
+
    brvsens_deregister(SENSOR_HANDLE_COMPASS);
    brvsens_deregister(SENSOR_HANDLE_ACCELEROMETER);
    brvsens_deregister(SENSOR_HANDLE_GYROSCOPE);
-   
+
 	kfree(mpu);
 
 	return 0;
