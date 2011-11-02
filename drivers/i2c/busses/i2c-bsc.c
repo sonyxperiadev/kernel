@@ -12,6 +12,7 @@
 * consent.
 *****************************************************************************/
 
+#include <linux/device.h>
 #include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -38,23 +39,30 @@
 #include <linux/timer.h>
 #include "i2c-bsc.h"
 
-#define FPGA
-
 #define DEFAULT_I2C_BUS_SPEED    BSC_BUS_SPEED_50K
 #define CMDBUSY_DELAY            100000
 #define SES_TIMEOUT              (msecs_to_jiffies(100))
+
+/* maximum RX/TX FIFO size in bytes */
+#define MAX_RX_FIFO_SIZE         64
+#define MAX_TX_FIFO_SIZE         64
 
 /* upper 5 bits of the master code */
 #define MASTERCODE               0x08
 #define MASTERCODE_MASK          0x07
 
 #define BSC_DBG(dev, format, args...) \
-   do { if (dev->debug) dev_err(dev->dev, format, ## args); } while (0)
+   do { if (dev->debug) dev_err(dev->device, format, ## args); } while (0)
 
 #define MAX_PROC_BUF_SIZE         256
 #define MAX_PROC_NAME_SIZE        15
 #define PROC_GLOBAL_PARENT_DIR    "i2c"
 #define PROC_ENTRY_DEBUG          "debug"
+#define PROC_ENTRY_RESET          "reset"
+#define PROC_ENTRY_TX_FIFO        "txFIFO"
+#define PROC_ENTRY_RX_FIFO        "rxFIFO"
+
+#define MAX_RETRY_NUMBER        (3-1)
 
 struct procfs
 {
@@ -67,7 +75,7 @@ struct procfs
  */
 struct bsc_i2c_dev
 {
-	struct device *dev;
+	struct device *device;
 
 	/* iomapped base virtual address of the registers */
 	void __iomem *virt_base;
@@ -80,6 +88,10 @@ struct bsc_i2c_dev
 
 	/* flag to support dynamic bus speed configuration for multiple slaves */
 	int dynamic_speed;
+
+	/* flag for TX/RX FIFO support */
+	atomic_t rx_fifo_support;
+	atomic_t tx_fifo_support;
 
 	/* the 8-bit master code (0000 1XXX, 0x08) used for high speed mode */
 	unsigned char mastercode;
@@ -96,11 +108,23 @@ struct bsc_i2c_dev
 	/* Linux I2C adapter struct */
 	struct i2c_adapter adapter;
 
-	/* lock for data transfer */
-	struct semaphore xfer_lock;
+	/* lock for the I2C device */
+	struct semaphore dev_lock;
 
 	/* to signal the command completion */
 	struct completion	ses_done;
+
+	/*
+	 * to signal the BSC controller has finished reading and all RX data has
+	 * been stored in the RX FIFO
+	 */
+	struct completion rx_ready;
+
+	/*
+	 * to signal the TX FIFO is empty, which means all pending TX data has been
+	 * sent out and received by the slave 
+	 */
+	struct completion tx_fifo_empty;
 
 	struct procfs proc;
 
@@ -109,10 +133,14 @@ struct bsc_i2c_dev
 	struct clk *bsc_clk;
 	struct clk *bsc_apb_clk;
 
+	/* workqueue work for reset the master */
+	struct workqueue_struct *reset_wq;
+	struct work_struct reset_work;
+
 	int err_flag; /* Set if there is a bus error */
 };
 
-static const __devinitconst char gBanner[] = KERN_INFO "Broadcom BSC (I2C) Driver: 1.00\n";
+static const __devinitconst char gBanner[] = KERN_INFO "Broadcom BSC (I2C) Driver\n";
 
 /*
  * Bus speed lookup table
@@ -150,29 +178,44 @@ static irqreturn_t bsc_isr(int irq, void *devid)
    status = bsc_read_intr_status((uint32_t)dev->virt_base);
 
    /* got nothing, something is wrong */
-   if (!status)
-   {
-      dev_err(dev->dev, "interrupt with zero status register!\n");
+	if (!status) {
+      dev_err(dev->device, "interrupt with zero status register!\n");
       return IRQ_NONE;
    }
 
    /* ack and clear the interrupts */
    bsc_clear_intr_status((uint32_t)dev->virt_base, status);
 
-   if (status & I2C_MM_HS_ISR_SES_DONE_MASK)
-   {
-      complete(&dev->ses_done);
-   }
-   
-   if (status & I2C_MM_HS_ISR_ERR_MASK)
-   {
-      dev->err_flag = 1;
-      dev_err(dev->dev, "bus error interrupt (timeout) - status = %x\n", status);
-   }
+	if (status & I2C_MM_HS_ISR_SES_DONE_MASK)
+		complete(&dev->ses_done);
+
+	if (status & I2C_MM_HS_ISR_NOACK_MASK) {
+		// TODO: check for TX NACK status here
+		// should not clear status until figure out what's going on
+		dev_err(dev->device, "no ack detected\n");
+	}
+
+	if (status & I2C_MM_HS_ISR_TXFIFOEMPTY_MASK)
+		complete(&dev->tx_fifo_empty);
+
+	if (status & I2C_MM_HS_ISR_READ_COMPLETE_MASK)
+		complete(&dev->rx_ready);
+
+	/*
+	 * I2C bus timeout, schedule a workqueue work item to reset the
+	 * master
+	 */
+	if (status & I2C_MM_HS_ISR_ERR_MASK) {
+		dev->err_flag = 1;
+		dev_err(dev->device, "bus error interrupt (timeout) - status = %x\n", status);
+
+		/* disable interrupts since the master will now reset */
+		bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
+		queue_work(dev->reset_wq, &dev->reset_work);
+	}
    
    return IRQ_HANDLED;
 }
-
 
 /*
  * We should not need to do this in software, but this is how the hardware was
@@ -202,7 +245,7 @@ static int bsc_wait_cmdbusy(struct bsc_i2c_dev *dev)
    {
       if (count > CMDBUSY_DELAY)
       {
-         BSC_DBG(dev, "CMDBUSY timeout\n");
+         dev_err(dev->device, "CMDBUSY timeout\n");
          return -ETIMEDOUT;
       }
 
@@ -241,7 +284,7 @@ static int bsc_send_cmd(struct bsc_i2c_dev *dev, BSC_CMD_t cmd)
          I2C_MM_HS_IER_I2C_INT_EN_MASK);
    if (time_left == 0 || dev->err_flag == 1)
    {
-      BSC_DBG(dev, "controller timed out\n");
+      dev_err(dev->device, "controller timed out\n");
 
       /* clear command */
       dev->err_flag = 0;
@@ -265,7 +308,7 @@ static int bsc_xfer_start(struct i2c_adapter *adapter)
    rc = bsc_send_cmd(dev, BSC_CMD_START);
    if (rc < 0)
    {
-      dev_err(dev->dev, "failed to send the start command\n");
+      dev_err(dev->device, "failed to send the start command\n");
       return rc;
    }
 
@@ -280,7 +323,7 @@ static int bsc_xfer_repstart(struct i2c_adapter *adapter)
    rc = bsc_send_cmd(dev, BSC_CMD_RESTART);
    if (rc < 0)
    {
-      dev_err(dev->dev, "failed to send the restart command\n");
+      dev_err(dev->device, "failed to send the restart command\n");
       return rc;
    }
 
@@ -295,18 +338,17 @@ static int bsc_xfer_stop(struct i2c_adapter *adapter)
    rc = bsc_send_cmd(dev, BSC_CMD_STOP);
    if (rc < 0)
    {
-      dev_err(dev->dev, "failed to send the stop command\n");
+      dev_err(dev->device, "failed to send the stop command\n");
       return rc;
    }
 
    return 0;
 }
 
-static int bsc_xfer_read_byte(struct i2c_adapter *adapter, uint16_t no_ack,
-      unsigned char *data)
+static int bsc_xfer_read_byte(struct bsc_i2c_dev *dev, unsigned int no_ack,
+      uint8_t *data)
 {
    int rc;
-   struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
    BSC_CMD_t cmd;
 
    if (no_ack)
@@ -328,42 +370,128 @@ static int bsc_xfer_read_byte(struct i2c_adapter *adapter, uint16_t no_ack,
    return 0;
 }
 
-static int bsc_xfer_read(struct i2c_adapter *adapter, struct i2c_msg *msg)
+/*
+ * Read byte-by-byte through the BSC data register
+ */
+static unsigned int bsc_xfer_read_data(struct bsc_i2c_dev *dev, unsigned int nak,
+		uint8_t *buf, unsigned int len)
 {
-   int rc;
-   uint16_t no_ack;
-   struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
-   unsigned int bytes_read, cnt = msg->len;
-   unsigned char data, *buf = msg->buf;
+	int i, rc;
+	uint8_t data;
+	unsigned int bytes_read = 0;
 
-   no_ack = msg->flags & I2C_M_NO_RD_ACK;
-   bytes_read = 0;
-   while (cnt > 0)
-   {
-      rc = bsc_xfer_read_byte(adapter, (no_ack || (cnt == 1)), &data);
-      if (rc < 0)
-      {
-         BSC_DBG(dev, "problem experienced during data read\n");
-         break;     
-      }
-
-      BSC_DBG(dev, "reading %2.2X\n", data);
-
-      *buf = data;
-      buf++;
-      bytes_read++;
-      cnt--;
-   }
-
-   return bytes_read;
+	BSC_DBG(dev, "*** read start ***\n");
+	for (i = 0; i < len; i++) {
+		rc = bsc_xfer_read_byte(dev, (nak || (i == (len - 1))),
+				&data);
+		if (rc < 0) {
+			dev_err(dev->device, "read error\n");
+			break;
+		}
+		BSC_DBG(dev, "reading %2.2X\n", data);
+		buf[i] = data;
+		bytes_read++;
+	}
+	BSC_DBG(dev, "*** read end ***\n");
+	return bytes_read;
 }
 
-static int bsc_xfer_write_byte(struct i2c_adapter *adapter, uint16_t nak_ok,
-      unsigned char *data)
+static unsigned int bsc_xfer_read_fifo_single(struct bsc_i2c_dev *dev,
+		uint8_t *buf, unsigned int last_byte_nak, unsigned int len)
+{
+	int i;
+	unsigned long time_left;
+
+	/* enable the read complete interrupt */
+	bsc_enable_intr((uint32_t)dev->virt_base,
+			I2C_MM_HS_IER_READ_COMPLETE_INT_MASK);
+
+	/* mark as incomplete before starting the RX FIFO */
+	INIT_COMPLETION(dev->rx_ready);
+
+	/* start the RX FIFO */
+	bsc_start_rx_fifo((uint32_t)dev->virt_base, last_byte_nak, len);
+	barrier();
+	
+	/*
+	 * Block waiting for the transaction to finish. When it's finished
+	 * we'll be signaled by the interrupt
+	 */
+	time_left = wait_for_completion_timeout(&dev->rx_ready, SES_TIMEOUT);
+	bsc_disable_intr((uint32_t)dev->virt_base,
+			I2C_MM_HS_IER_READ_COMPLETE_INT_MASK);
+	if (time_left == 0) {
+		dev_err(dev->device, "RX FIFO time out\n");
+		return 0;
+	}
+
+	BSC_DBG(dev, "*** read start ***\n");
+	for (i = 0; i < len; i++) {
+		buf[i] = bsc_read_from_rx_fifo((uint32_t)dev->virt_base);
+		BSC_DBG(dev, "reading %2.2X\n", buf[i]);
+
+		/* sanity check */
+		if (bsc_rx_fifo_is_empty((uint32_t)dev->virt_base) && i != len - 1)
+			dev_err(dev->device, "RX FIFO error\n");
+	}
+	BSC_DBG(dev, "*** read end ***\n");
+
+	return len;
+}
+
+static unsigned int bsc_xfer_read_fifo(struct bsc_i2c_dev *dev, uint8_t *buf,
+		unsigned int len)
+{
+	unsigned int i, rc, last_byte_nak = 0, bytes_read = 0;
+
+	/* can only read MAX_RX_FIFO_SIZE each time */
+	for (i = 0; i < len / MAX_RX_FIFO_SIZE; i++) {
+		/* if this is the last FIFO read, need to NAK before stop */
+		if (len % MAX_RX_FIFO_SIZE == 0 && 
+				i == (len / MAX_RX_FIFO_SIZE) - 1)
+			last_byte_nak = 1;
+
+		rc = bsc_xfer_read_fifo_single(dev, buf, last_byte_nak,
+				MAX_RX_FIFO_SIZE);
+		bytes_read += rc;
+
+		/* read less than expected, something is wrong */
+		if (rc < MAX_RX_FIFO_SIZE)
+			return bytes_read;
+
+		buf += MAX_RX_FIFO_SIZE;
+	}
+
+	/* still have some bytes left */
+	if (len % MAX_RX_FIFO_SIZE != 0) {
+		rc = bsc_xfer_read_fifo_single(dev, buf, 1, len % MAX_RX_FIFO_SIZE);
+		bytes_read += rc;
+	}
+
+	return bytes_read;
+}
+
+static unsigned int bsc_xfer_read(struct i2c_adapter *adapter, struct i2c_msg *msg)
+{
+	unsigned int nak, bytes_read = 0;
+	struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
+
+	nak = (msg->flags & I2C_M_NO_RD_ACK) ? 1 : 0;
+
+	/* FIFO mode cannot handle NAK for individual bytes */
+	if (atomic_read(&dev->rx_fifo_support) && !nak)
+		bytes_read = bsc_xfer_read_fifo(dev, msg->buf, msg->len);
+	else
+		bytes_read = bsc_xfer_read_data(dev, nak, msg->buf, msg->len);
+	
+	return bytes_read;
+}
+
+static int bsc_xfer_write_byte(struct bsc_i2c_dev *dev, unsigned int nak_ok,
+      uint8_t *data)
 {
    int rc;
    unsigned long time_left;
-   struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
 
    /* make sure the hareware is ready */
    rc = bsc_wait_cmdbusy(dev);
@@ -404,30 +532,77 @@ static int bsc_xfer_write_byte(struct i2c_adapter *adapter, uint16_t nak_ok,
    return 0;
 }
 
+/*
+ * Write data byte-by-byte into the BSC data register
+ */
+static int bsc_xfer_write_data(struct bsc_i2c_dev *dev, unsigned int nak_ok,
+		uint8_t *buf, unsigned int len)
+{
+	int i, rc;
+	unsigned int bytes_written = 0;
+
+	for (i = 0; i < len; i++) {
+		rc = bsc_xfer_write_byte(dev, nak_ok, &buf[i]);
+		if (rc < 0) {
+			dev_err(dev->device, "problem experienced during data write\n");
+			break;
+		}
+		BSC_DBG(dev, "writing %2.2X\n", *buf);
+		bytes_written++;
+	}
+	return bytes_written;
+}
+
+static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
+		uint8_t *buf, unsigned int len)
+{
+	unsigned long time_left;
+
+	/* enable TX FIFO */
+	bsc_set_tx_fifo((uint32_t)dev->virt_base, 1);
+
+	/* enable the no ack and TX FIFO empty interrupt */
+	bsc_enable_intr((uint32_t)dev->virt_base,
+			I2C_MM_HS_IER_FIFO_INT_EN_MASK | I2C_MM_HS_IER_NOACK_EN_MASK);
+
+	/* mark as incomplete before sending data to the TX FIFO */
+	INIT_COMPLETION(dev->tx_fifo_empty);
+
+	/* sending data to the TX FIFO */
+	bsc_write_data((uint32_t)dev->virt_base, buf, len);
+
+	/*
+	 * Block waiting for the transaction to finish. When it's finished
+	 * we'll be signaled by the interrupt
+	 */
+	time_left = wait_for_completion_timeout(&dev->tx_fifo_empty, SES_TIMEOUT);
+	bsc_disable_intr((uint32_t)dev->virt_base,
+			I2C_MM_HS_IER_FIFO_INT_EN_MASK | I2C_MM_HS_IER_NOACK_EN_MASK);
+	if (time_left == 0) {
+		dev_err(dev->device, "TX FIFO timed out\n");
+		return 0;
+	}
+
+	/* disable TX FIFO */
+	bsc_set_tx_fifo((uint32_t)dev->virt_base, 0);
+
+	return len;
+}
+
 static int bsc_xfer_write(struct i2c_adapter *adapter, struct i2c_msg *msg)
 {
-   int rc;
-   struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
-   unsigned int bytes_written, cnt = msg->len;
-   unsigned char *buf = msg->buf;
-   uint16_t nak_ok = msg->flags & I2C_M_IGNORE_NAK;
+	struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
+	unsigned int bytes_written = 0;
+	unsigned int nak_ok = msg->flags & I2C_M_IGNORE_NAK;
 
-   bytes_written = 0;
-	while (cnt > 0)
-   {
-      rc = bsc_xfer_write_byte(adapter, nak_ok, buf);
-      if (rc < 0)
-      {
-         BSC_DBG(dev, "problem experienced during data write\n");
-         break;     
-      }
-
-      BSC_DBG(dev, "writing %2.2X\n", *buf);
-      buf++;
-      bytes_written++;
-      cnt--;
-   }
-
+	if (atomic_read(&dev->tx_fifo_support)) {
+		bytes_written = bsc_xfer_write_fifo(dev, nak_ok, msg->buf,
+				msg->len);
+	} else {
+		bytes_written = bsc_xfer_write_data(dev, nak_ok, msg->buf,
+				msg->len);
+	}
+	
 	return bytes_written;
 }
 
@@ -442,16 +617,16 @@ static int bsc_xfer_try_address(struct i2c_adapter *adapter,
 
    for (i = 0; i <= retries; i++)
    {
-      rc = bsc_xfer_write_byte(adapter, nak_ok, &addr);
-      if (rc >= 0)
-      {
+      BSC_DBG(dev, "Retry #%d\n", i);
+      rc = bsc_xfer_write_byte(dev, nak_ok, &addr);
+      if (rc >= 0) {
          success = 1;
          break;
       }
    
       /* no luck, let's keep trying */
       rc = bsc_xfer_stop(adapter);
-      if (rc < 0)
+      if (rc < 0 || i >= retries)
          break;
 
       rc = bsc_xfer_start(adapter);
@@ -462,7 +637,7 @@ static int bsc_xfer_try_address(struct i2c_adapter *adapter,
    /* unable to find a slave */
    if (!success)
    {
-      dev_err(dev->dev, "tried %u times to contact slave device at 0x%02x "
+      dev_err(dev->device, "tried %u times to contact slave device at 0x%02x "
             "but no luck success=%d rc=%d\n", i + 1, addr >> 1, success, rc);
 
       rc = -EREMOTEIO;
@@ -478,6 +653,7 @@ static int bsc_xfer_do_addr(struct i2c_adapter *adapter, struct i2c_msg *msg)
    unsigned short flags = msg->flags;
    unsigned short nak_ok = msg->flags & I2C_M_IGNORE_NAK;
    unsigned char addr;
+   struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
 
    retries = nak_ok ? 0 : adapter->retries;
 
@@ -492,7 +668,7 @@ static int bsc_xfer_do_addr(struct i2c_adapter *adapter, struct i2c_msg *msg)
 
       /* then the remaining 8 bits */
       addr = msg->addr & 0xFF;
-      rc = bsc_xfer_write_byte(adapter, nak_ok, &addr);
+      rc = bsc_xfer_write_byte(dev, nak_ok, &addr);
       if (rc < 0)
          return -EREMOTEIO;
 
@@ -625,16 +801,17 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    int rc;
    unsigned short i, nak_ok;
 
+   down(&dev->dev_lock);
 #ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
    struct bsc_adap_cfg *hw_cfg = NULL;
    bool rel_hw_sem = false ;
 #endif
 
-   down(&dev->xfer_lock);
-
+   bsc_enable_clk(dev);
+	
 #ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
-   if (dev->dev)
-	hw_cfg = (struct bsc_adap_cfg *)dev->dev->platform_data; 	
+   if (dev->device)
+	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
    if (hw_cfg && hw_cfg->is_pmu_i2c) {
    	rc = pwr_mgr_pm_i2c_sem_lock();
@@ -647,7 +824,6 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    }
 #endif
 
-   bsc_enable_clk(dev);
 
    /* set the bus speed dynamically if dynamic speed support is turned on */
    if (dev->dynamic_speed)
@@ -657,13 +833,13 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    rc = bsc_xfer_start(adapter);
    if (rc < 0)
    {
-      dev_err(dev->dev, "start command failed\n");
+      dev_err(dev->device, "start command failed\n");
       bsc_disable_clk(dev);
 #ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
       if(rel_hw_sem)
           pwr_mgr_pm_i2c_sem_unlock();
 #endif
-      up(&dev->xfer_lock);
+      up(&dev->dev_lock);
       return rc;
    }
 
@@ -676,30 +852,30 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       dev->mastercode = (MASTERCODE | (MASTERCODE_MASK & adapter->nr)) + 1;
 
       /* send the master code in F/S mode first */
-      rc = bsc_xfer_write_byte(adapter, 1, &dev->mastercode);
+      rc = bsc_xfer_write_byte(dev, 1, &dev->mastercode);
       if (rc < 0)
       {
-         dev_err(dev->dev, "high-speed master code failed\n");
+         dev_err(dev->device, "high-speed master code failed\n");
          bsc_disable_clk(dev);
 #ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
       if(rel_hw_sem)
           pwr_mgr_pm_i2c_sem_unlock();
 #endif
-         up(&dev->xfer_lock);
+         up(&dev->dev_lock);
          return rc;
       }
 
       /* check to make sure no slave replied to the master code by accident */
       if (bsc_get_ack((uint32_t)dev->virt_base))
       {
-         dev_err(dev->dev, "one of the slaves replied to the high-speed "
+         dev_err(dev->device, "one of the slaves replied to the high-speed "
                "master code unexpectedly\n");
          bsc_disable_clk(dev);
 #ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
       if(rel_hw_sem)
           pwr_mgr_pm_i2c_sem_unlock();
 #endif
-         up(&dev->xfer_lock);
+         up(&dev->dev_lock);
          return -EREMOTEIO;
       }
 
@@ -720,7 +896,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       rc = bsc_xfer_repstart(adapter);
       if (rc < 0)
       {
-         dev_err(dev->dev, "restart command failed\n");
+         dev_err(dev->device, "restart command failed\n");
          goto hs_ret;
       }
    }
@@ -740,7 +916,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
             rc = bsc_xfer_repstart(adapter);
             if (rc < 0)
             {
-               dev_err(dev->dev, "restart command failed\n");
+               dev_err(dev->device, "restart command failed\n");
                goto hs_ret;
             }
          }
@@ -748,7 +924,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
          rc = bsc_xfer_do_addr(adapter, pmsg);
          if (rc < 0)
          {
-            dev_err(dev->dev, "NAK from device addr %2.2x msg#%d\n",
+            dev_err(dev->device, "NAK from device addr %2.2x msg#%d\n",
                   pmsg->addr, i);
             goto hs_ret;
          }
@@ -761,7 +937,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
          BSC_DBG(dev, "read %d bytes msg#%d\n", rc, i);
          if (rc < pmsg->len)
          {
-            dev_err(dev->dev, "read %d bytes but asked for %d bytes\n",
+            dev_err(dev->device, "read %d bytes but asked for %d bytes\n",
                   rc, pmsg->len);
             rc = (rc < 0)? rc : -EREMOTEIO;
             goto hs_ret;
@@ -774,7 +950,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
          BSC_DBG(dev, "wrote %d bytes msg#%d\n", rc, i);
          if (rc < pmsg->len)
          {
-            dev_err(dev->dev, "wrote %d bytes but asked for %d bytes\n",
+            dev_err(dev->device, "wrote %d bytes but asked for %d bytes\n",
                   rc, pmsg->len);
             rc = (rc < 0)? rc : -EREMOTEIO;
             goto hs_ret;
@@ -785,7 +961,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    /* send stop command */
    rc = bsc_xfer_stop(adapter);
    if (rc < 0)
-      dev_err(dev->dev, "stop command failed\n");
+      dev_err(dev->device, "stop command failed\n");
 
    /* high-speed mode */
    if (dev->high_speed_mode)
@@ -810,7 +986,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       if(rel_hw_sem)
           pwr_mgr_pm_i2c_sem_unlock();
 #endif
-   up(&dev->xfer_lock);
+   up(&dev->dev_lock);
    return (rc < 0) ? rc : num;
 
  hs_ret:
@@ -819,7 +995,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
     * change the value of rc, which need to be passed to the caller */
    /* send stop command */
    if(bsc_xfer_stop(adapter) < 0)
-      dev_err(dev->dev, "stop command failed\n");
+      dev_err(dev->device, "stop command failed\n");
 
    if (dev->high_speed_mode)
    {
@@ -843,7 +1019,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       if(rel_hw_sem)
           pwr_mgr_pm_i2c_sem_unlock();
 #endif
-   up(&dev->xfer_lock);
+   up(&dev->dev_lock);
    return rc;
 }
 
@@ -874,7 +1050,7 @@ proc_debug_write(struct file *file, const char __user *buffer,
    rc = copy_from_user(kbuf, buffer, count);
    if (rc)
    {
-      dev_err(dev->dev, "copy_from_user failed status=%d", rc);
+      dev_err(dev->device, "copy_from_user failed status=%d", rc);
       return -EFAULT;
    }
 
@@ -908,34 +1084,191 @@ proc_debug_read(char *buffer, char **start, off_t off, int count,
    return len;
 }
 
+static int
+proc_reset_write(struct file *file, const char __user *buffer,
+		unsigned long count, void *data)
+{
+	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+	int rc;
+	unsigned int reset;
+	unsigned char kbuf[MAX_PROC_BUF_SIZE];
+
+	if (count > MAX_PROC_BUF_SIZE)
+		count = MAX_PROC_BUF_SIZE;
+
+	rc = copy_from_user(kbuf, buffer, count);
+	if (rc) {
+		dev_err(dev->device, "copy_from_user failed status=%d", rc);
+		return -EFAULT;
+	}
+
+	if (sscanf(kbuf, "%u", &reset) != 1) {
+		printk(KERN_ERR "echo <reset> > %s\n", PROC_ENTRY_DEBUG);
+		return count;
+	}
+
+	if (reset) {
+		/* disable all interrupts since the master will now reset */
+		bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
+		queue_work(dev->reset_wq, &dev->reset_work);
+	}
+
+	return count;
+}
+
+static int
+proc_tx_fifo_write(struct file *file, const char __user *buffer,
+		unsigned long count, void *data)
+{
+	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+	int rc;
+	unsigned int enable;
+	unsigned char kbuf[MAX_PROC_BUF_SIZE];
+
+	if (count > MAX_PROC_BUF_SIZE)
+		count = MAX_PROC_BUF_SIZE;
+
+	rc = copy_from_user(kbuf, buffer, count);
+	if (rc) {
+		dev_err(dev->device, "copy_from_user failed status=%d", rc);
+		return -EFAULT;
+	}
+
+	if (sscanf(kbuf, "%u", &enable) != 1) {
+		printk(KERN_ERR "echo <enable> > %s\n", PROC_ENTRY_TX_FIFO);
+		return count;
+	}
+
+	if (enable)
+		atomic_set(&dev->tx_fifo_support, 1);
+	else
+		atomic_set(&dev->tx_fifo_support, 0);
+	
+	return count;
+}
+
+static int
+proc_tx_fifo_read(char *buffer, char **start, off_t off, int count,
+		int *eof, void *data)
+{
+   unsigned int len = 0;
+   struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+
+   if (off > 0)
+      return 0;
+
+   len += sprintf(buffer + len, "TX FIFO is %s\n",
+         atomic_read(&dev->tx_fifo_support) ? "enabled" : "disabled");
+   
+   return len;
+}
+
+static int
+proc_rx_fifo_write(struct file *file, const char __user *buffer,
+		unsigned long count, void *data)
+{
+	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+	int rc;
+	unsigned int enable;
+	unsigned char kbuf[MAX_PROC_BUF_SIZE];
+
+	if (count > MAX_PROC_BUF_SIZE)
+		count = MAX_PROC_BUF_SIZE;
+
+	rc = copy_from_user(kbuf, buffer, count);
+	if (rc) {
+		dev_err(dev->device, "copy_from_user failed status=%d", rc);
+		return -EFAULT;
+	}
+
+	if (sscanf(kbuf, "%u", &enable) != 1) {
+		printk(KERN_ERR "echo <enable> > %s\n", PROC_ENTRY_RX_FIFO);
+		return count;
+	}
+
+	if (enable)
+		atomic_set(&dev->rx_fifo_support, 1);
+	else
+		atomic_set(&dev->rx_fifo_support, 0);
+	
+	return count;
+}
+
+static int
+proc_rx_fifo_read(char *buffer, char **start, off_t off, int count,
+		int *eof, void *data)
+{
+   unsigned int len = 0;
+   struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+
+   if (off > 0)
+      return 0;
+
+   len += sprintf(buffer + len, "RX FIFO is %s\n",
+         atomic_read(&dev->rx_fifo_support) ? "enabled" : "disabled");
+   
+   return len;
+}
+
 static int proc_init(struct platform_device *pdev)
 {
-   int rc;
-   struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
-   struct procfs *proc = &dev->proc;
-   struct proc_dir_entry *proc_debug;
+	int rc;
+	struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
+	struct procfs *proc = &dev->proc;
+	struct proc_dir_entry *proc_debug, *proc_reset, *proc_tx_fifo, *proc_rx_fifo;
    
-   snprintf(proc->name, sizeof(proc->name), "%s%d", PROC_GLOBAL_PARENT_DIR,
-         pdev->id);
+	snprintf(proc->name, sizeof(proc->name), "%s%d",
+			PROC_GLOBAL_PARENT_DIR, pdev->id);
 
-   /* sub directory */
    proc->parent = proc_mkdir(proc->name, gProcParent);
    if (proc->parent == NULL)
-   {
       return -ENOMEM;
-   }
 
-   proc_debug = create_proc_entry(PROC_ENTRY_DEBUG, 0644, proc->parent);
-   if (proc_debug == NULL)
-   {
-      rc = -ENOMEM;
-      goto err_del_parent;
+	proc_debug = create_proc_entry(PROC_ENTRY_DEBUG, 0644, proc->parent);
+	if (proc_debug == NULL) {
+		rc = -ENOMEM;
+		goto err_del_parent;
    }
-   proc_debug->read_proc = proc_debug_read;
-   proc_debug->write_proc = proc_debug_write;
-   proc_debug->data = dev;
+	proc_debug->read_proc = proc_debug_read;
+	proc_debug->write_proc = proc_debug_write;
+	proc_debug->data = dev;
 
-   return 0;
+	proc_reset = create_proc_entry(PROC_ENTRY_RESET, 0644, proc->parent);
+	if (proc_reset == NULL) {
+		rc = -ENOMEM;
+		goto err_del_debug;
+	}
+	proc_reset->write_proc = proc_reset_write;
+	proc_reset->data = dev;
+
+	proc_tx_fifo = create_proc_entry(PROC_ENTRY_TX_FIFO, 0644, proc->parent);
+	if (proc_tx_fifo == NULL) {
+		rc = -ENOMEM;
+		goto err_del_reset;
+	}
+	proc_tx_fifo->write_proc = proc_tx_fifo_write;
+	proc_tx_fifo->read_proc = proc_tx_fifo_read;
+	proc_tx_fifo->data = dev;
+
+	proc_rx_fifo = create_proc_entry(PROC_ENTRY_RX_FIFO, 0644, proc->parent);
+	if (proc_rx_fifo == NULL) {
+		rc = -ENOMEM;
+		goto err_del_tx_fifo;
+	}
+	proc_rx_fifo->write_proc = proc_rx_fifo_write;
+	proc_rx_fifo->read_proc = proc_rx_fifo_read;
+	proc_rx_fifo->data = dev;
+
+	return 0;
+
+err_del_tx_fifo:
+	remove_proc_entry(PROC_ENTRY_TX_FIFO, proc->parent);
+
+err_del_reset:
+	remove_proc_entry(PROC_ENTRY_RESET, proc->parent);
+
+err_del_debug:
+	remove_proc_entry(PROC_ENTRY_DEBUG, proc->parent);
 
 err_del_parent:
    remove_proc_entry(proc->name, gProcParent);
@@ -947,6 +1280,9 @@ static int proc_term(struct platform_device *pdev)
    struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
    struct procfs *proc = &dev->proc;
 
+   remove_proc_entry(PROC_ENTRY_RX_FIFO, proc->parent);
+   remove_proc_entry(PROC_ENTRY_TX_FIFO, proc->parent);
+   remove_proc_entry(PROC_ENTRY_RESET, proc->parent);
    remove_proc_entry(PROC_ENTRY_DEBUG, proc->parent);
    remove_proc_entry(proc->name, gProcParent);
 
@@ -958,7 +1294,7 @@ static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
 	BUG_ON (dev->bsc_clk || dev->bsc_apb_clk);
 
 	if (cfg->bsc_apb_clk) {
-		dev->bsc_apb_clk = clk_get (dev->dev, cfg->bsc_apb_clk);
+		dev->bsc_apb_clk = clk_get(dev->device, cfg->bsc_apb_clk);
         /* AON domain clocks may be enabled by default, need to disable */
         clk_disable(dev->bsc_apb_clk);
 		if (!dev->bsc_apb_clk)
@@ -966,7 +1302,7 @@ static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
 	}
 
 	if (cfg->bsc_clk) {
-		dev->bsc_clk = clk_get (dev->dev, cfg->bsc_clk);
+		dev->bsc_clk = clk_get(dev->device, cfg->bsc_clk);
         /* AON domain clocks may be enabled by default, need to disable */
         clk_disable(dev->bsc_clk);
 		if (!dev->bsc_clk)
@@ -1004,6 +1340,36 @@ static void bsc_disable_clk(struct bsc_i2c_dev *dev)
 		clk_disable(dev->bsc_clk);
 	if (dev->bsc_apb_clk)
 		clk_disable(dev->bsc_apb_clk);
+}
+
+static void i2c_master_reset(struct work_struct *work)
+{
+	int rc;
+	struct bsc_i2c_dev *dev = container_of(work, struct bsc_i2c_dev,
+			reset_work);
+	struct i2c_adapter *adap = &dev->adapter;
+
+	down(&dev->dev_lock);
+
+	dev_info(dev->device, "resetting i2c bus...\n");
+	
+	rc = bsc_xfer_stop(adap);
+	if (rc < 0) {
+		dev_err(dev->device, "failed to send stop command\n");
+		/* still go ahead to reset the master */
+	}
+
+	/* reset BSC controller */
+	bsc_reset((uint32_t)dev->virt_base);
+
+	/* clear all interrupts */
+	bsc_clear_intr_status((uint32_t)dev->virt_base, 0xFF);
+
+	/* re-enable bus error (timeout) interrupt */
+	if (!dev->high_speed_mode)
+		bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
+
+	up(&dev->dev_lock);
 }
 
 static int __devinit bsc_probe(struct platform_device *pdev)
@@ -1082,9 +1448,14 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		dev->high_speed_mode = 1;
 	}
 
-	dev->dev = &pdev->dev;
-	sema_init(&dev->xfer_lock, 1);
+	dev->device = &pdev->dev;
+	sema_init(&dev->dev_lock, 1);
 	init_completion(&dev->ses_done);
+	init_completion(&dev->rx_ready);
+	init_completion(&dev->tx_fifo_empty);
+	atomic_set(&dev->tx_fifo_support, 0);
+	atomic_set(&dev->rx_fifo_support, 0);
+	dev->debug = 0;
 	dev->irq = irq;
 	dev->virt_base = ioremap(iomem->start, resource_size(iomem));
 	if (!dev->virt_base) {
@@ -1110,9 +1481,6 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* disable and clear interrupts */
 	bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
 	bsc_clear_intr_status((uint32_t)dev->virt_base, 0xFF);
-
-	/* disable BSC TX FIFO */
-	bsc_set_FIFO((uint32_t)dev->virt_base, 0);
 
 	/* high-speed mode */
 	if (dev->speed == BSC_BUS_SPEED_HS) {
@@ -1142,14 +1510,22 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		bsc_set_autosense((uint32_t)dev->virt_base, 1);
 	}
 
+	INIT_WORK(&dev->reset_work, i2c_master_reset);
+	dev->reset_wq = create_workqueue("i2c_master_reset");
+	if (dev->reset_wq == NULL) {
+		dev_err(dev->device, "unable to create bus reset workqueue\n");
+		rc = -ENOMEM;
+		goto err_bsc_deinit;
+	}
+
 	/* register the ISR handler */
 	rc = request_irq(dev->irq, bsc_isr, IRQF_SHARED, pdev->name, dev);
 	if (rc) {
 		dev_err(&pdev->dev, "failed to request irq %i\n", dev->irq);
-		goto err_bsc_deinit;
+		goto err_destroy_wq;
 	}
 
-	dev_info(dev->dev, "bus %d at speed %d \n", pdev->id, dev->speed);
+	dev_info(dev->device, "bus %d at speed %d \n", pdev->id, dev->speed);
 
 	adap = &dev->adapter;
 	i2c_set_adapdata(adap, dev);
@@ -1161,8 +1537,6 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	adap->nr = pdev->id;
 	adap->retries = hw_cfg ? hw_cfg->retries : 0;
 
-	/* TODO: register proc entries here */
-
 	/*
 	* Enable error (timeout) interrupt if it's not in high-speed mode. The
 	* timeout counter does not work in high-speed mode
@@ -1172,7 +1546,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
 	rc = proc_init(pdev);
 	if (rc) {
-		dev_err(dev->dev, "failed to install procfs\n");
+		dev_err(dev->device, "failed to install procfs\n");
 		goto err_free_irq;
 	}
 
@@ -1182,7 +1556,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	*/
 	rc = i2c_add_numbered_adapter(adap);
 	if (rc) {
-		dev_err(dev->dev, "failed to add adapter\n");
+		dev_err(dev->device, "failed to add adapter\n");
 		goto err_proc_term;
 	}
 
@@ -1194,6 +1568,10 @@ err_proc_term:
 
 err_free_irq:
 	free_irq(dev->irq, dev);
+
+err_destroy_wq:
+	if (dev->reset_wq)
+		destroy_workqueue(dev->reset_wq); 
 
 err_bsc_deinit:
 	bsc_set_autosense((uint32_t)dev->virt_base, 0);
@@ -1215,6 +1593,7 @@ err_free_dev_mem:
 err_release_mem_region:
 	release_mem_region(iomem->start, resource_size(iomem));
 
+	dev_err(dev->device, "bus %d probe failed\n", pdev->id);
 	return rc;
 }
 
@@ -1229,6 +1608,9 @@ static int bsc_remove(struct platform_device *pdev)
 
    platform_set_drvdata(pdev, NULL);
    free_irq(dev->irq, dev);
+
+	if (dev->reset_wq)
+		destroy_workqueue(dev->reset_wq);
 
    bsc_set_autosense((uint32_t)dev->virt_base, 0);
    bsc_deinit((uint32_t)dev->virt_base);
@@ -1250,6 +1632,9 @@ static int bsc_remove(struct platform_device *pdev)
 static int bsc_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
+	
+	/* flush the workqueue to make sure all outstanding work items are done */
+	flush_workqueue(dev->reset_wq);
 	
 	bsc_disable_clk(dev);
 	return 0;
@@ -1274,7 +1659,7 @@ static struct platform_driver bsc_driver =
       .owner = THIS_MODULE,
    },
    .probe   = bsc_probe,
-   .remove  = bsc_remove,
+   .remove  = __devexit_p(bsc_remove),
    .suspend = bsc_suspend,
    .resume  = bsc_resume,
 };

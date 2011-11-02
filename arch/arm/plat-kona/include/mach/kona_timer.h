@@ -115,17 +115,14 @@ int kona_timer_config (struct kona_timer *kt, struct timer_ch_cfg *pcfg);
  *         match register. Once the timer is started when the counter 
  *         reaches this value an interrupt will be raised
  */
-int kona_timer_set_match_start (struct kona_timer* kt, unsigned int load);
+int kona_timer_set_match_start (struct kona_timer* kt, unsigned long load);
 
 /*
  * kona_timer_free - Read the counter register of the timer 
  *
  * kt - Timer context to be freed.
- * msw - pointer to the Most Significant Word (32 bits) 
- * lsw - pointer to the Leas Significant Word (32 bits) 
  */
-int kona_timer_get_counter(struct kona_timer* kt, 
-	unsigned long *msw, unsigned long *lsw);
+unsigned int kona_timer_get_counter(struct kona_timer* kt);
 /*
  * kona_timer_disable_and_clear - Disable the timer and clear the 
  * interrupt

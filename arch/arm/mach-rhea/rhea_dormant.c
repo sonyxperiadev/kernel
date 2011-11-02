@@ -1,8 +1,34 @@
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2010  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
+
 
 #include <linux/sched.h>
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
+#include <linux/slab.h>
 #include <asm/io.h>
 #include <linux/err.h>
 #include <linux/dma-mapping.h>
@@ -15,7 +41,7 @@
 #include <mach/rdb/brcm_rdb_gicdist.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
-#include <mach/rdb/brcm_rdb_sectrap.h>
+/* #include <mach/rdb/brcm_rdb_sectrap.h> */
 #include <mach/rdb/brcm_rdb_axitp1.h>
 #include <mach/rdb/brcm_rdb_swstm.h>
 #include <mach/rdb/brcm_rdb_giccpu.h>
@@ -29,7 +55,11 @@
 #include <mach/rdb/brcm_rdb_a9ptm.h>
 #include <mach/rdb/brcm_rdb_glbtmr.h>
 
-static int enable_dormant = 0;
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+#include <mach/secure_api.h>
+#endif
+
+static int enable_dormant = 1;
 module_param_named(enable_dormant, enable_dormant, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 
@@ -88,11 +118,15 @@ static u32 addnl_save_reg_list[][2] =
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_POLICY_DBG_OFFSET), 0}, //0x3FE00EC0 - POLICY_DBG
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_TGTMASK_DBG1_OFFSET), 0}, //0x3FE00EC4 - TGTMASK_DBG1
 
+	/*
+	 * Could be secure only access
 	{ (KONA_SECTRAP1_VA+SECTRAP_TRAP_CONFIG_OFFSET), 0}, //0x3FE01000 - TRAP_CONFIG
 	{ (KONA_SECTRAP1_VA+SECTRAP_TRAP_STATUS_OFFSET), 0}, //0x3FE01004 - TRAP_STATUS
 
 	{ (KONA_SECTRAP8_VA+SECTRAP_TRAP_CONFIG_OFFSET), 0}, //0x3FE02000 - TRAP_CONFIG
 	{ (KONA_SECTRAP8_VA+SECTRAP_TRAP_STATUS_OFFSET), 0}, //0x3FE02004 - TRAP_STATUS
+	 *
+	*/
 
 	{ (KONA_AXITRACE1_VA+AXITP1_ATM_CONFIG_OFFSET), 0}, //0x3FE03000 - ATM_CONFIG
 	{ (KONA_AXITRACE1_VA+AXITP1_ATM_OUTIDS_OFFSET), 0}, //0x3FE03008 - ATM_OUTIDS
@@ -431,6 +465,28 @@ static u32 addnl_save_reg_list[][2] =
 	{ (KONA_GICDIST_VA+GICDIST_INT_CONFIG15_OFFSET), 0} //0x3FF01C3C - INT_CONFIG15
 };
 
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+
+void *hw_mmu_physical_address_get(void *x)
+{
+	void *hw_mmu_pa_get(void *x);
+	return hw_mmu_pa_get(x);
+}
+
+u32 hw_sec_pub_dispatcher(u32 service_id, u32 flags, ...)
+{
+	u32 ret_val;
+	va_list list;
+
+	va_start(list, flags);
+	ret_val = hw_sec_rom_pub_bridge(service_id, flags, list);
+	va_end(list);
+
+	return ret_val;
+}
+
+#endif
+
 static void dormant_save_addnl_reg(void)
 {
 	int i;
@@ -443,6 +499,10 @@ static void dormant_save_addnl_reg(void)
 	 * we exit dormant, we have L2 disabled not causing an issue dur to
 	 * running at 156 MHZ
 	 */
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+	hw_sec_pub_dispatcher(SEC_API_DISABLE_L2_CACHE,
+		SEC_FLAGS);
+#endif
 }
 
 
@@ -496,6 +556,10 @@ static void dormant_restore_addnl_reg(void)
 	/* HWRHEA-1199 - New frequency should now be in effect enable
 	 * L2 cache now
 	 */
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+	hw_sec_pub_dispatcher(SEC_API_ENABLE_L2_CACHE,
+		SEC_FLAGS);
+#endif
 }
 
 int loop = 1;
@@ -504,29 +568,27 @@ void dormant_enter(void)
 
 	if(enable_dormant)
 	{
-		//dormant_save_addnl_reg();
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-		rom_sec_l2_disable();
-#endif
-
+		dormant_save_addnl_reg();
 		dormant_start();
-
-		//dormant_restore_addnl_reg();
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-		rom_sec_l2_enable();
-#endif
+		dormant_restore_addnl_reg();
 	}
 }
 
 
 int __init rhea_dormant_init(void)
 {
+#ifdef CONFIG_ROM_SEC_DISPATCHER
 	dma_addr_t drmt_buf_phy;
 	dormant_base_va = (u32)dma_alloc_coherent(NULL, SZ_4K,
 					      &drmt_buf_phy,
 					      GFP_ATOMIC);
 
 	dormant_base_pa = (u32)drmt_buf_phy;
+#else
+	dormant_base_va = dormant_base_pa =
+	     (u32)kmalloc(SZ_4K, GFP_ATOMIC);
+#endif
+
 	return 0;
 }
 

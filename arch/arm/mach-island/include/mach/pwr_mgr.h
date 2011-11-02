@@ -1,5 +1,16 @@
-#ifndef __RHEA_PWR_MNGR_H__
-#define __RHEA_PWR_MNGR_H__
+/****************************************************************************
+*									      
+* Copyright 2010 --2011 Broadcom Corporation.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+*****************************************************************************/
+
+#ifndef __ISLAND_PWR_MNGR_H__
+#define __ISLAND_PWR_MNGR_H__
 
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 
@@ -175,4 +186,4 @@ enum {
 
 
 int island_pwr_mgr_init(void);
-#endif /*__RHEA_PWR_MNGR_H__*/
+#endif /*__ISLAND_PWR_MNGR_H__*/

@@ -1102,6 +1102,10 @@ static void composite_disconnect(struct usb_gadget *gadget)
 	struct usb_composite_dev	*cdev = get_gadget_data(gadget);
 	unsigned long			flags;
 
+#ifdef CONFIG_USB_OTG
+	gadget->host_request = 0;
+#endif
+
 	/* REVISIT:  should we have config and device level
 	 * disconnect callbacks?
 	 */
@@ -1130,6 +1134,21 @@ static ssize_t composite_show_suspended(struct device *dev,
 
 static DEVICE_ATTR(suspended, 0444, composite_show_suspended, NULL);
 
+#ifdef CONFIG_USB_OTG
+static ssize_t composite_set_host_request(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct usb_gadget *gadget = dev_to_usb_gadget(dev);
+	int value;
+
+	if (sscanf(buf, "%d", &value) != 1)
+		return -EINVAL;
+
+	gadget->host_request = !!value;
+	return count;
+}
+static DEVICE_ATTR(host_request, S_IWUSR, NULL, composite_set_host_request);
+#endif
+
 static void
 composite_unbind(struct usb_gadget *gadget)
 {
@@ -1156,6 +1175,9 @@ composite_unbind(struct usb_gadget *gadget)
 		usb_ep_free_request(gadget->ep0, cdev->req);
 	}
 
+#ifdef CONFIG_USB_OTG
+	device_remove_file(&gadget->dev, &dev_attr_host_request);
+#endif
 	device_remove_file(&gadget->dev, &dev_attr_suspended);
 
 	switch_dev_unregister(&cdev->sw_connected);
@@ -1305,6 +1327,12 @@ static int composite_bind(struct usb_gadget *gadget)
 	status = device_create_file(&gadget->dev, &dev_attr_suspended);
 	if (status)
 		goto fail;
+
+#ifdef CONFIG_USB_OTG
+	status = device_create_file(&gadget->dev, &dev_attr_host_request);
+	if (status)
+		goto fail;
+#endif
 
 	INFO(cdev, "%s ready\n", composite->name);
 	return 0;
