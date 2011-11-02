@@ -335,7 +335,9 @@ int __init rhea_pwr_mgr_init()
 	struct v0x_spec_i2c_cmd_ptr v_ptr;
 	int i;
 	struct pi* pi;
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	u32 reg_val = 0;
+#endif
 	struct pm_policy_cfg cfg;
 	cfg.ac = 1;
 	cfg.atl = 0;

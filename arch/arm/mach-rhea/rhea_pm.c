@@ -168,6 +168,7 @@ static struct kona_idle_state rhea_cpu_states[] = {
 };
 
 
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 static int enable_sleep_prevention_clock(int enable)
 {
     int i = 0;
@@ -197,6 +198,7 @@ static int enable_sleep_prevention_clock(int enable)
 
     return 0;
 }
+#endif
 
 
 static int pm_enable_scu_standby(bool enable)

@@ -731,12 +731,7 @@ Bus clock name ARM_SWITCH
 static struct bus_clk CLK_NAME(arm_switch) = {
 
  .clk =	{
-     /*JIRA HWRHEA-1111: Enable A9 AXI Auto gating for B0 */
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 				.flags = ARM_SWITCH_CLK_FLAGS,
-#else
-				.flags = ARM_SWITCH_CLK_FLAGS | AUTO_GATE,
-#endif
 				.clk_type = CLK_TYPE_BUS,
 				.id	= CLK_ARM_SWITCH_CLK_ID,
 				.name = ARM_SWITCH_CLK_NAME_STR,
@@ -1342,13 +1337,7 @@ Bus clock name APB10
 static struct bus_clk CLK_NAME(apb10) = {
 
  .clk =	{
-     /*JIRA HWRHEA-848 HWRHEA-1444 : APB10 and APB 9 should be autogated for B0 */
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 				.flags = APB10_BUS_CLK_FLAGS,
-#else
-				.flags = APB10_BUS_CLK_FLAGS | AUTO_GATE,
-#endif
-
 				.clk_type = CLK_TYPE_BUS,
 				.id	= CLK_APB10_BUS_CLK_ID,
 				.name = APB10_BUS_CLK_NAME_STR,
@@ -1370,12 +1359,7 @@ Bus clock name APB9
 static struct bus_clk CLK_NAME(apb9) = {
 
  .clk =	{
-     /*JIRA HWRHEA-848 HWRHEA-1444 : APB10 and APB 9 should be autogated for B0 */
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 				.flags = APB9_BUS_CLK_FLAGS,
-#else
-				.flags = APB9_BUS_CLK_FLAGS | AUTO_GATE,
-#endif
 				.clk_type = CLK_TYPE_BUS,
 				.id	= CLK_APB9_BUS_CLK_ID,
 				.name = APB9_BUS_CLK_NAME_STR,

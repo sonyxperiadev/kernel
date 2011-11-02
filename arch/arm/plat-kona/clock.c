@@ -4160,8 +4160,8 @@ int __init clock_debug_add_clock(struct clk *c)
 {
 	struct dentry *dent_clk_dir=0, *dent_rate=0, *dent_enable=0,
 	*dent_status=0, *dent_div=0, *dent_use_cnt=0, *dent_id=0,
-		*dent_parent=0, *dent_source=0, *dent_ccu_dir=0, *dent_clk_mon=0,
-		*dent_round_rate=0;
+		*dent_parent=0, *dent_source=0, *dent_ccu_dir=0,
+		*dent_clk_mon=0;
 	struct peri_clk *peri_clk;
 	struct pll_clk *pll_clk;
 	struct core_clk *core_clk;
