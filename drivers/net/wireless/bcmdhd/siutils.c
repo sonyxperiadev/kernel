@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: siutils.c 275693 2011-08-04 19:59:34Z $
+ * $Id: siutils.c 279502 2011-08-24 20:46:27Z $
  */
 
 #include <typedefs.h>

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_bta.c 275786 2011-08-04 22:42:42Z $
+ * $Id: dhd_bta.c 285377 2011-09-21 17:57:59Z $
  */
 
 #include <typedefs.h>

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_sdmmc_linux.c 275784 2011-08-04 22:41:49Z $
+ * $Id: bcmsdh_sdmmc_linux.c 282820 2011-09-09 15:40:35Z $
  */
 
 #include <typedefs.h>
@@ -29,8 +29,12 @@
 #include <sdio.h>	/* SDIO Device and Protocol Specs */
 #include <bcmsdbus.h>	/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>	/* to get msglevel bit values */
+
+#if defined(CONFIG_ARCH_ISLAND)
 #include <dngl_stats.h>
 #include <dhd.h>
+#include <linux/mmc/bcm_sdiowl.h>
+#endif /* defined(CONFIG_ARCH_ISLAND) */
 
 #include <linux/sched.h>	/* request_irq() */
 
@@ -38,7 +42,6 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
-#include <linux/mmc/bcm_sdiowl.h>
 
 #if !defined(SDIO_VENDOR_ID_BROADCOM)
 #define SDIO_VENDOR_ID_BROADCOM		0x02d0
@@ -69,7 +72,11 @@ extern void wl_cfg80211_set_sdio_func(void *func);
 
 extern void sdioh_sdmmc_devintr_off(sdioh_info_t *sd);
 extern void sdioh_sdmmc_devintr_on(sdioh_info_t *sd);
+
+#if defined(CONFIG_ARCH_ISLAND)
 extern int bcm_sdiowl_rescan(void);
+struct device sdmmc_dev;
+#endif /* defined(CONFIG_ARCH_ISLAND) */
 
 int sdio_function_init(void);
 void sdio_function_cleanup(void);
@@ -90,7 +97,6 @@ PBCMSDH_SDMMC_INSTANCE gInstance;
 
 extern int bcmsdh_probe(struct device *dev);
 extern int bcmsdh_remove(struct device *dev);
-struct device sdmmc_dev;
 
 static int bcmsdh_sdmmc_probe(struct sdio_func *func,
                               const struct sdio_device_id *id)
@@ -110,7 +116,11 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 		if(func->device == 0x4) { /* 4318 */
 			gInstance->func[2] = NULL;
 			sd_trace(("NIC found, calling bcmsdh_probe...\n"));
+#if !defined(CONFIG_ARCH_ISLAND)
+			ret = bcmsdh_probe(&func->dev);
+#else
 			ret = bcmsdh_probe(&sdmmc_dev);
+#endif /* !defined(CONFIG_ARCH_ISLAND) */
 		}
 	}
 
@@ -121,7 +131,11 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 		wl_cfg80211_set_sdio_func(func);
 #endif
 		sd_trace(("F2 found, calling bcmsdh_probe...\n"));
+#if !defined(CONFIG_ARCH_ISLAND)
+		ret = bcmsdh_probe(&func->dev);
+#else
 		ret = bcmsdh_probe(&sdmmc_dev);
+#endif /* !defined(CONFIG_ARCH_ISLAND) */
 	}
 
 	return ret;
@@ -137,7 +151,16 @@ static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 
 	if (func->num == 2) {
 		sd_trace(("F2 found, calling bcmsdh_remove...\n"));
+#if !defined(CONFIG_ARCH_ISLAND)
+		bcmsdh_remove(&func->dev);
+#else
 		bcmsdh_remove(&sdmmc_dev);
+#endif /* !defined(CONFIG_ARCH_ISLAND) */
+	} else if (func->num == 1) {
+		sdio_claim_host(func);
+		sdio_disable_func(func);
+		sdio_release_host(func);
+		gInstance->func[1] = NULL;
 	}
 }
 
@@ -262,6 +285,7 @@ int sdio_function_init(void)
 	if (!gInstance)
 		return -ENOMEM;
 
+#if defined(CONFIG_ARCH_ISLAND)
 	error = bcm_sdiowl_init();
 	if (error) {
 		sd_err(("%s: bcm_sdiowl_start failed\n", __FUNCTION__));
@@ -281,8 +305,9 @@ int sdio_function_init(void)
 	}
 
 	bzero(&sdmmc_dev, sizeof(sdmmc_dev));
-	error = sdio_register_driver(&bcmsdh_sdmmc_driver);
+#endif /* defined(CONFIG_ARCH_ISLAND) */
 
+	error = sdio_register_driver(&bcmsdh_sdmmc_driver);
 
 	return error;
 }
@@ -297,11 +322,13 @@ void sdio_function_cleanup(void)
 
 	sdio_unregister_driver(&bcmsdh_sdmmc_driver);
 
-	/* hold WiFi circuitry in reset to minimize power consumption when WiFi
-	   is disabled. */
+#if defined(CONFIG_ARCH_ISLAND)
+	/* 
+ 	 * Minimize power consumption by placing WiFi in reset.
+	 */
 	bcm_sdiowl_reset_b(0);
-
 	bcm_sdiowl_term();
+#endif /* defined(CONFIG_ARCH_ISLAND) */
 
 	if (gInstance)
 		kfree(gInstance);

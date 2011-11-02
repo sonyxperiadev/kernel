@@ -77,7 +77,7 @@ s32 wldev_iovar_getbuf(
 	s32 iovar_len = 0;
 
 	iovar_len = wldev_mkiovar(iovar_name, param, paramlen, buf, buflen);
-	ret = wldev_ioctl(dev, WLC_GET_VAR, buf, iovar_len, FALSE);
+	ret = wldev_ioctl(dev, WLC_GET_VAR, buf, buflen, FALSE);
 	return ret;
 }
 
@@ -183,7 +183,7 @@ s32 wldev_iovar_getbuf_bsscfg(
 	s32 iovar_len = 0;
 
 	iovar_len = wldev_mkiovar_bsscfg(iovar_name, param, paramlen, buf, buflen, bsscfg_idx);
-	ret = wldev_ioctl(dev, WLC_GET_VAR, buf, iovar_len, FALSE);
+	ret = wldev_ioctl(dev, WLC_GET_VAR, buf, buflen, FALSE);
 	return ret;
 
 }
@@ -308,11 +308,20 @@ int wldev_set_country(
 	if (!country_code)
 		return error;
 
-	bzero(&scbval, sizeof(scb_val_t));
-	error = wldev_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t), 1);
-	if (error < 0) {
-		DHD_ERROR(("%s: set country failed due to Disassoc error\n", __FUNCTION__));
-		return error;
+	error = wldev_iovar_getbuf(dev, "country", &cspec, sizeof(cspec),
+		smbuf, sizeof(smbuf));
+	if (error < 0)
+		DHD_ERROR(("%s: get country failed = %d\n", __FUNCTION__, error));
+
+	if ((error < 0) ||
+	    (strncmp(country_code, smbuf, WLC_CNTRY_BUF_SZ) != 0)) {
+		bzero(&scbval, sizeof(scb_val_t));
+		error = wldev_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t), 1);
+		if (error < 0) {
+			DHD_ERROR(("%s: set country failed due to Disassoc error %d\n",
+				__FUNCTION__, error));
+			return error;
+		}
 	}
 	cspec.rev = -1;
 	memcpy(cspec.country_abbrev, country_code, WLC_CNTRY_BUF_SZ);

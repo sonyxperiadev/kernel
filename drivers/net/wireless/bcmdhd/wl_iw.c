@@ -179,6 +179,11 @@ static wlc_ssid_t g_specific_ssid;
 
 static wlc_ssid_t g_ssid;
 
+#ifdef CONFIG_WPS2
+static char *g_wps_probe_req_ie;
+static int g_wps_probe_req_ie_len;
+#endif 
+
 bool btcoex_is_sco_active(struct net_device *dev);  
 static wl_iw_ss_cache_ctrl_t g_ss_cache_ctrl;	
 #if defined(CONFIG_FIRST_SCAN)
@@ -1621,7 +1626,7 @@ wl_iw_send_priv_event(
 	strcpy(extra, flag);
 	wrqu.data.length = strlen(extra);
 	wireless_send_event(dev, cmd, &wrqu, extra);
-	net_os_wake_lock_timeout_enable(dev);
+	net_os_wake_lock_timeout_enable(dev, DHD_EVENT_TIMEOUT);
 	WL_TRACE(("Send IWEVCUSTOM Event as %s\n", extra));
 
 	return 0;
@@ -2412,7 +2417,7 @@ wl_iw_get_range(
 	list = (wl_uint32_list_t *)channels;
 
 	dwrq->length = sizeof(struct iw_range);
-	memset(range, 0, sizeof(range));
+	memset(range, 0, sizeof(*range));
 
 	
 	range->min_nwid = range->max_nwid = 0;
@@ -4469,7 +4474,7 @@ wl_iw_set_essid(
 	g_ssid.SSID_len = htod32(g_ssid.SSID_len);
 
 	
-	memset(join_params, 0, sizeof(join_params));
+	memset(join_params, 0, sizeof(*join_params));
 	join_params_size = sizeof(join_params->ssid);
 
 	memcpy(join_params->ssid.SSID, g_ssid.SSID, g_ssid.SSID_len);
@@ -5267,7 +5272,7 @@ wl_iw_set_encodeext(
 #if WIRELESS_EXT > 17
 struct {
 	pmkid_list_t pmkids;
-	pmkid_t foo[MAXPMKID-1];	/* This must come right after pmkids */
+	pmkid_t foo[MAXPMKID-1];	
 } pmkid_list;
 
 static int
@@ -5344,8 +5349,7 @@ wl_iw_set_pmksa(
 			bcopy(&iwpmksa->bssid.sa_data[0],
 				&pmkid_array[i].BSSID,
 				ETHER_ADDR_LEN);
-			bcopy(&iwpmksa->pmkid[0], 
-				&pmkid_array[i].PMKID,
+			bcopy(&iwpmksa->pmkid[0], &pmkid_array[i].PMKID,
 				WPA2_PMKID_LEN);
 			if (i == pmkid_list.pmkids.npmkid)
 				pmkid_list.pmkids.npmkid++;
@@ -6246,6 +6250,125 @@ exit_proc:
 
 #endif 
 
+#ifdef CONFIG_WPS2
+static int
+wl_iw_del_wps_probe_req_ie(
+	struct net_device *dev,
+	struct iw_request_info *info,
+	union iwreq_data *wrqu,
+	char *extra
+)
+{
+	int ret;
+	vndr_ie_setbuf_t *ie_delbuf;
+
+	if (g_wps_probe_req_ie) {
+		ie_delbuf = (vndr_ie_setbuf_t *)(g_wps_probe_req_ie + strlen("vndr_ie "));
+		strncpy(ie_delbuf->cmd, "del", 3);
+		ie_delbuf->cmd[3] = '\0';
+
+		ret = dev_wlc_ioctl(dev, WLC_SET_VAR, g_wps_probe_req_ie, g_wps_probe_req_ie_len);
+		if (ret) {
+			WL_ERROR(("ioctl failed %d \n", ret));
+		}
+
+		kfree(g_wps_probe_req_ie);
+		g_wps_probe_req_ie = NULL;
+		g_wps_probe_req_ie_len = 0;
+	}
+
+	return 0;
+}
+
+static int
+wl_iw_add_wps_probe_req_ie(
+	struct net_device *dev,
+	struct iw_request_info *info,
+	union iwreq_data *wrqu,
+	char *extra
+)
+{
+	char *str_ptr = NULL;
+	char *bufptr = NULL;
+	uint buflen, datalen, iecount, pktflag, iolen, total_len;
+	int ret = 0;
+	vndr_ie_setbuf_t *ie_setbuf = NULL;
+
+	if (!g_wps_probe_req_ie) {
+		ret = -1;
+		str_ptr = extra;
+		str_ptr += WPS_PROBE_REQ_IE_CMD_LENGTH;
+		datalen = wrqu->data.length - WPS_PROBE_REQ_IE_CMD_LENGTH;
+
+		
+		
+		buflen = sizeof(vndr_ie_setbuf_t) + datalen - sizeof(vndr_ie_t);
+		ie_setbuf = (vndr_ie_setbuf_t *)kmalloc(buflen, GFP_KERNEL);
+		if (!ie_setbuf) {
+			WL_ERROR(("memory alloc failure ie_setbuf\n"));
+			return ret;
+		}
+
+		memset(ie_setbuf, 0x00, buflen);
+
+		
+		strncpy(ie_setbuf->cmd, "add", VNDR_IE_CMD_LEN - 1);
+		ie_setbuf->cmd[VNDR_IE_CMD_LEN - 1] = '\0';
+
+		
+		iecount = htod32(1);
+		memcpy((void *)&ie_setbuf->vndr_ie_buffer.iecount, &iecount, sizeof(int));
+
+		
+		pktflag = 0x10;
+		memcpy((void *)&ie_setbuf->vndr_ie_buffer.vndr_ie_list[0].pktflag,
+			&pktflag, sizeof(uint32));
+
+		memcpy((void *)&ie_setbuf->vndr_ie_buffer.vndr_ie_list[0].vndr_ie_data,
+			str_ptr, datalen);
+
+		total_len = strlen("vndr_ie ") + buflen;
+		bufptr = (char *)kmalloc(total_len, GFP_KERNEL);
+		if (!bufptr) {
+			WL_ERROR(("memory alloc failure bufptr\n"));
+			goto fail;
+		}
+
+		iolen = bcm_mkiovar("vndr_ie", (char *)ie_setbuf, buflen, bufptr, total_len);
+		if (iolen == 0) {
+			WL_ERROR(("Buffer length is illegal\n"));
+			goto fail2;
+		}
+
+		ret = dev_wlc_ioctl(dev, WLC_SET_VAR, bufptr, iolen);
+		if (ret) {
+			WL_ERROR(("ioctl failed\n"));
+			goto fail2;
+		}
+
+		g_wps_probe_req_ie = (char *)kmalloc(iolen, GFP_KERNEL);
+		if (!g_wps_probe_req_ie) {
+			WL_ERROR(("memory alloc failure g_wps_probe_req_ie\n"));
+			goto fail2;
+		}
+
+		memcpy(g_wps_probe_req_ie, bufptr, iolen);
+		g_wps_probe_req_ie_len = iolen;
+	}
+
+fail2:
+	if (bufptr) {
+		kfree(bufptr);
+		bufptr = NULL;
+	}
+fail:
+	if (ie_setbuf) {
+		kfree(ie_setbuf);
+		ie_setbuf = NULL;
+	}
+	return ret;
+}
+#endif 
 
 
 #ifdef SOFTAP
@@ -7414,6 +7537,16 @@ wl_iw_set_priv(
 		else if (strnicmp(extra, CSCAN_COMMAND, strlen(CSCAN_COMMAND)) == 0)
 			ret = wl_iw_set_cscan(dev, info, (union iwreq_data *)dwrq, extra);
 #endif 
+#ifdef CONFIG_WPS2
+		else if (strnicmp(extra, WPS_ADD_PROBE_REQ_IE_CMD,
+			strlen(WPS_ADD_PROBE_REQ_IE_CMD)) == 0)
+			ret = wl_iw_add_wps_probe_req_ie(dev, info,
+				(union iwreq_data *)dwrq, extra);
+		else if (strnicmp(extra, WPS_DEL_PROBE_REQ_IE_CMD,
+			strlen(WPS_DEL_PROBE_REQ_IE_CMD)) == 0)
+			ret = wl_iw_del_wps_probe_req_ie(dev, info,
+				(union iwreq_data *)dwrq, extra);
+#endif 
 		else if (strnicmp(extra, "POWERMODE", strlen("POWERMODE")) == 0)
 			ret = wl_iw_set_power_mode(dev, info, (union iwreq_data *)dwrq, extra);
 		else if (strnicmp(extra, "BTCOEXMODE", strlen("BTCOEXMODE")) == 0)
@@ -7643,8 +7776,8 @@ static const struct iw_priv_args wl_iw_priv_args[] =
 
 	{
 		WL_AP_STA_LIST,
-		0,                     
-		IW_PRIV_TYPE_CHAR | 0, 
+		IW_PRIV_TYPE_CHAR | 0,	
+		IW_PRIV_TYPE_CHAR | 1024,  
 		"AP_GET_STA_LIST"
 	},
 
@@ -7946,8 +8079,6 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 	uint32 datalen = ntoh32(e->datalen);
 	uint32 status =  ntoh32(e->status);
 	uint32 toto;
-	static  uint32 roam_no_success = 0;
-	static bool roam_no_success_send = FALSE;
 	memset(&wrqu, 0, sizeof(wrqu));
 	memset(extra, 0, sizeof(extra));
 
@@ -8015,26 +8146,12 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 		cmd = IWEVREGISTERED;
 		break;
 	case WLC_E_ROAM:
-		if (status != WLC_E_STATUS_SUCCESS) {
-			roam_no_success++;
-			if ((roam_no_success == 3) && (roam_no_success_send == FALSE)) {
-				
-				roam_no_success_send = TRUE;
-				bzero(wrqu.addr.sa_data, ETHER_ADDR_LEN);
-				bzero(&extra, ETHER_ADDR_LEN);
-				cmd = SIOCGIWAP;
-				WL_ERROR(("%s  ROAMING did not succeeded , send Link Down\n",
-					__FUNCTION__));
-			} else {
-				WL_TRACE(("##### ROAMING did not succeeded %d\n", roam_no_success));
-				goto wl_iw_event_end;
-			}
-		} else {
-			memcpy(wrqu.addr.sa_data, &e->addr.octet, ETHER_ADDR_LEN);
-			wrqu.addr.sa_family = ARPHRD_ETHER;
-			cmd = SIOCGIWAP;
+		if (status == WLC_E_STATUS_SUCCESS) {
+			WL_ASSOC((" WLC_E_ROAM : success \n"));
+			return;
 		}
 	break;
+
 	case WLC_E_DEAUTH_IND:
 	case WLC_E_DISASSOC_IND:
 #if defined(SOFTAP)
@@ -8094,15 +8211,13 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 				wl_iw_send_priv_event(priv_dev, "AP_UP");
 			} else {
 				WL_TRACE(("STA_LINK_UP\n"));
-				roam_no_success_send = FALSE;
-				roam_no_success = 0;
 			}
 #else
 #endif 
 			WL_TRACE(("Link UP\n"));
 
 		}
-		net_os_wake_lock_timeout_enable(dev);
+		net_os_wake_lock_timeout_enable(dev, DHD_EVENT_TIMEOUT);
 		wrqu.addr.sa_family = ARPHRD_ETHER;
 		break;
 	case WLC_E_ACTION_FRAME:
@@ -8198,7 +8313,7 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 		WL_ERROR(("%s Event WLC_E_PFN_NET_FOUND, send %s up : find %s len=%d\n",
 		   __FUNCTION__, PNO_EVENT_UP, netinfo->pfnsubnet.SSID,
 		   netinfo->pfnsubnet.SSID_len));
-		net_os_wake_lock_timeout_enable(dev);
+		net_os_wake_lock_timeout_enable(dev, DHD_EVENT_TIMEOUT);
 		cmd = IWEVCUSTOM;
 		memset(&wrqu, 0, sizeof(wrqu));
 		strcpy(extra, PNO_EVENT_UP);
@@ -8215,26 +8330,7 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 			if (cmd == SIOCGIWSCAN)
 				wireless_send_event(dev, cmd, &wrqu, NULL);
 			else
-#ifdef DHD_BCM_WIFI_HDMI
-            if (cmd == SIOCGIWAP)
-            {
-                WL_ERROR(("@@@@@@SIOCGIWAP %s down=%u %02x:%02x:%02x:%02x:%02x:%02x\n",
-                dev->name, g_ss_cache_ctrl.m_link_down,
-                wrqu.addr.sa_data[0], wrqu.addr.sa_data[1], wrqu.addr.sa_data[2],
-                wrqu.addr.sa_data[3], wrqu.addr.sa_data[4], wrqu.addr.sa_data[5]));
-            }
-
-            if (strncmp(dev->name, "wl0.2", 5) == 0)
-            {
-                WL_ERROR(("@@@wl_iw_event: not sending wl0.2 event cmd=%u\n", cmd));
-            }
-            else
-            {
-                wireless_send_event(dev, cmd, &wrqu, extra);
-            }
-#else
 				wireless_send_event(dev, cmd, &wrqu, extra);
-#endif
 		}
 
 #if WIRELESS_EXT > 14
@@ -8574,6 +8670,10 @@ wl_iw_attach(struct net_device *dev, void * dhdp)
 	g_iscan->scan_flag = 0;
 #endif 
 
+#ifdef CONFIG_WPS2
+	g_wps_probe_req_ie = NULL;
+	g_wps_probe_req_ie_len = 0;
+#endif 
 	
 	iscan->timer_ms    = 8000;
 	init_timer(&iscan->timer);
@@ -8641,6 +8741,14 @@ wl_iw_detach(void)
 		kfree(g_scan);
 
 	g_scan = NULL;
+#ifdef CONFIG_WPS2
+
+	if (g_wps_probe_req_ie) {
+		kfree(g_wps_probe_req_ie);
+		g_wps_probe_req_ie = NULL;
+		g_wps_probe_req_ie_len = 0;
+	}
+#endif 
 #if !defined(CSCAN)
 	wl_iw_release_ss_cache_ctrl();
 #endif 

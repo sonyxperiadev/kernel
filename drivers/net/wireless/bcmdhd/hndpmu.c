@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: hndpmu.c 275693 2011-08-04 19:59:34Z $
+ * $Id: hndpmu.c 279296 2011-08-23 23:17:20Z $
  */
 
 #include <typedefs.h>
