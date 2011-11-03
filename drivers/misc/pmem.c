@@ -24,6 +24,7 @@
 #include <linux/android_pmem.h>
 #include <linux/mempolicy.h>
 #include <linux/sched.h>
+#include <linux/dma-mapping.h>
 #include <linux/dma-contiguous.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -94,7 +95,7 @@ struct pmem_region_node {
 	struct list_head list;
 };
 
-#define PMEM_DEBUG_MSGS 0 
+#define PMEM_DEBUG_MSGS	0
 #if PMEM_DEBUG_MSGS
 #define DLOG(fmt,args...) \
 	do { printk(KERN_INFO "[%s:%s:%d] "fmt, __FILE__, __func__, __LINE__, \
@@ -179,6 +180,19 @@ static int id_count;
 #define PMEM_CMA_PAGE_INDEX(id, page) (page_to_pfn(page) - __phys_to_pfn(pmem[id].base))
 #define PMEM_CMA_START_ADDR(id, index) (pmem[id].base + (index * PAGE_SIZE))
 #define PMEM_CMA_START_VADDR(id, index) (pmem[id].vbase + (index * PAGE_SIZE))
+
+/* Macros to set pgprot values to match write-through
+ * and write-back cache bits
+ **/
+
+#define pgprot_writethrough(prot) \
+	__pgprot((pgprot_val(prot) & ~L_PTE_MT_MASK) | L_PTE_MT_WRITETHROUGH)
+
+/* Always assume writeback mappings are going to be used for
+ * ACP, so they must also have their shared bit set
+ **/
+#define pgprot_writeback(prot) \
+	__pgprot((pgprot_val(prot) & ~L_PTE_MT_MASK) | L_PTE_MT_WRITEBACK | L_PTE_SHARED)
 
 static int pmem_release(struct inode *, struct file *);
 static int pmem_mmap(struct file *, struct vm_area_struct *);
@@ -398,6 +412,7 @@ static int pmem_open(struct inode *inode, struct file *file)
 	mutex_lock(&pmem[id].data_list_lock);
 	list_add(&data->list, &pmem[id].data_list);
 	mutex_unlock(&pmem[id].data_list_lock);
+
 	return ret;
 }
 
@@ -507,7 +522,10 @@ static pgprot_t pmem_access_prot(struct file *file, pgprot_t vma_prot)
 	else if (pmem[id].buffered)
 		return pgprot_ext_buffered(vma_prot);
 #endif
-	return ((pgprot_val(vma_prot) & ~L_PTE_MT_MASK) | L_PTE_MT_WRITEBACK | L_PTE_SHARED);
+	else if (file->f_flags & FASYNC)
+		return pgprot_writethrough(vma_prot);
+	else
+		return pgprot_writeback(vma_prot);
 }
 
 static unsigned long pmem_start_addr(int id, struct pmem_data *data)
@@ -918,7 +936,7 @@ void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
 
 	id = get_id(file);
 	data = (struct pmem_data *)file->private_data;
-	if (!pmem[id].cached || file->f_flags & O_SYNC)
+	if (!pmem[id].cached || file->f_flags & O_SYNC || file->f_flags & FASYNC)
 		return;
 
 	down_read(&data->sem);
@@ -938,6 +956,52 @@ void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
 			flush_start = vaddr + region_node->region.offset;
 			flush_end = flush_start + region_node->region.len;
 			dmac_flush_range(flush_start, flush_end);
+			break;
+		}
+	}
+end:
+	up_read(&data->sem);
+}
+
+void invalidate_pmem_file(struct file *file, unsigned long offset, unsigned long len)
+{
+	struct pmem_data *data;
+	int id;
+	void *vaddr;
+	phys_addr_t paddr, invalidate_start, invalidate_end;
+	struct pmem_region_node *region_node;
+	struct list_head *elt;
+
+	if (!is_pmem_file(file) || !has_allocation(file)) {
+		return;
+	}
+
+	id = get_id(file);
+	data = (struct pmem_data *)file->private_data;
+	if (!pmem[id].cached || file->f_flags & O_SYNC)
+		return;
+
+	down_read(&data->sem);
+	vaddr = pmem_start_vaddr(id, data);
+	paddr = pmem_start_addr(id, data);
+	/* if this isn't a submmapped file, invalidate the whole thing */
+	if (unlikely(!(data->flags & PMEM_FLAGS_CONNECTED))) {
+		outer_inv_range(paddr, paddr + pmem_len(id, data));
+		dmac_unmap_area(vaddr, pmem_len(id, data), DMA_FROM_DEVICE);
+		goto end;
+	}
+
+	/* otherwise, invalidate the region of the file we are drawing */
+	list_for_each(elt, &data->region_list) {
+		region_node = list_entry(elt, struct pmem_region_node, list);
+		if ((offset >= region_node->region.offset) &&
+		    ((offset + len) <= (region_node->region.offset +
+			region_node->region.len))) {
+			invalidate_start = paddr + region_node->region.offset;
+			invalidate_end = invalidate_start + region_node->region.len;
+			outer_inv_range(invalidate_start, invalidate_end);
+			dmac_unmap_area(vaddr + region_node->region.offset,
+					region_node->region.len, DMA_FROM_DEVICE);
 			break;
 		}
 	}
@@ -982,7 +1046,7 @@ void flush_pmem_process_file(struct file *file, void *virt_base, unsigned long o
 
 	id = get_id(file);
 	data = (struct pmem_data *)file->private_data;
-	if (!pmem[id].cached || file->f_flags & O_SYNC)
+	if (!pmem[id].cached || file->f_flags & O_SYNC || file->f_flags & FASYNC)
 		return;
 
 	down_read(&data->sem);
@@ -1024,6 +1088,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 	}
 
 	WARN_ON((src_file->f_flags & O_SYNC) != (file->f_flags & O_SYNC));
+	WARN_ON((src_file->f_flags & FASYNC) != (file->f_flags & FASYNC));
 	data->index = src_data->index;
 	data->flags |= PMEM_FLAGS_CONNECTED;
 	data->master_fd = connect;
@@ -1261,7 +1326,7 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				region.offset = pmem_start_addr(id, data);
 				region.len = pmem_len(id, data);
 			}
-			printk(KERN_INFO "pmem: request for physical address of pmem region "
+			printk(KERN_DEBUG"pmem: request for physical address of pmem region "
 					"from process %d.\n", current->pid);
 			if (copy_to_user((void __user *)arg, &region,
 						sizeof(struct pmem_region)))
@@ -1374,6 +1439,29 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #endif
 			break;
 		}
+	case PMEM_CACHE_INVALIDATE:
+		{
+			struct pmem_region region;
+			data = (struct pmem_data *)file->private_data;
+
+			if (copy_from_user(&region, (void __user *)arg,
+					   sizeof(struct pmem_region)))
+				return -EFAULT;
+#if 0
+			if (pmem_len(id, data) <= region.offset)
+				return -EINVAL;
+#endif
+#if 1
+			DLOG("Invalidate with offset=0x%08lx len=0x%08lx \n", region.offset, region.len);
+			invalidate_pmem_file(file, region.offset, region.len);
+#endif
+#if 0
+			printk(KERN_ERR "%s base=0x%08x len=0x%08x", __func__, region.len, region.offset);
+			flush_pmem_process_file(file, (void *)region.len, region.offset);
+#endif
+			break;
+		}
+
 	default:
 		if (pmem[id].ioctl)
 			return pmem[id].ioctl(file, cmd, arg);
@@ -1551,6 +1639,8 @@ int pmem_setup(struct platform_device *pdev,
 	debugfs_create_file(pdata->name, S_IFREG | S_IRUGO, NULL, (void *)id,
 			    &debug_fops);
 #endif
+	printk(KERN_INFO"Pmem driver initialised with (%s) allocator\n",
+			pmem[id].allocator == CMA_ALLOC ? "CMA" : "Buddy");
 	return 0;
 error_cant_remap:
 	kfree(pmem[id].bitmap);
