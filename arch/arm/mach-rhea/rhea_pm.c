@@ -101,8 +101,8 @@ const char *sleep_prevent_clocks[] =
 
 static struct kona_idle_state rhea_cpu_states[] = {
 	{
-		.name = "suspend",
-		.desc = "suspend(Simle WFI)",
+		.name = "C0",
+		.desc = "suspend",
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.latency = 0,
 		.target_residency = 0,
@@ -113,8 +113,8 @@ static struct kona_idle_state rhea_cpu_states[] = {
 #ifdef CONFIG_RHEA_DORMANT_MODE
 
 	{
-		.name = "suspend-dormant",
-		.desc = "suspend-dormant (XTAL ON)",
+		.name = "C1",
+		.desc = "suspend-drmnt", /*suspend-dormant*/
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.latency = 200,
 		.target_residency = 200,
@@ -123,8 +123,8 @@ static struct kona_idle_state rhea_cpu_states[] = {
 	},
 
 	{
-		.name = "deepsleep-dormant",
-		.desc = "deepsleep-dormant(XTAL OFF)",
+		.name = "C2",
+		.desc = "ds-drmnt", /*deepsleep-dormant(XTAL OFF)*/
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.latency = 300,
 		.target_residency = 300,
@@ -134,8 +134,8 @@ static struct kona_idle_state rhea_cpu_states[] = {
 
 #else
 	{
-		.name = "suspend-retention",
-		.desc = "suspend-retention (XTAL ON)",
+		.name = "C1",
+		.desc = "suspend-rtn", /*suspend-retention (XTAL ON)*/
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.latency = 200,
 		.target_residency = 200,
@@ -143,8 +143,8 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.enter = enter_dormant_state,
 	},
 	{
-		.name = "deepsleep-retention",
-		.desc = "deepsleep-retention (XTAL OFF)",
+		.name = "C2",
+		.desc = "ds-retn", /*deepsleep-retention (XTAL OFF)*/
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.latency = 300,
 		.target_residency = 300,
