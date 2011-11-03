@@ -67,8 +67,10 @@ static u32 pm_en_self_refresh = 0;
 	} while(0)
 #endif
 
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 static int print_clock_count(void);
 static int print_sw_event_info(void);
+#endif
 static int enter_dormant_state(struct kona_idle_state* state);
 static int enter_suspend_state(struct kona_idle_state* state);
 
@@ -225,6 +227,7 @@ static int pm_config_deep_sleep(void)
 
     return 0;
 }
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 
 static int print_clock_count(void)
 {
@@ -280,6 +283,41 @@ static int print_clock_count(void)
 
 }
 
+int print_sw_event_info()
+{
+    u32 reg_val = 0;
+
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET    + SOFTWARE_0_EVENT*4);
+    pm_dbg("SW0 policy for Modem and ARM core : %08x \n", reg_val);
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_MM_POLICY_OFFSET +    SOFTWARE_0_EVENT*4);
+    pm_dbg("SW0 policy for MM : %08x \n", reg_val);
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET +    SOFTWARE_0_EVENT*4);
+    pm_dbg("SW0 policy for AON and HUB : %08x \n", reg_val);
+    reg_val = readl(KONA_PWRMGR_VA +    PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET + SOFTWARE_0_EVENT*4);
+    pm_dbg("SW0 policy for ARM Sub system : %08x \n", reg_val);
+
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET    + SOFTWARE_1_EVENT*4);
+    pm_dbg("SW1 policy for Modem and ARM core : %08x \n", reg_val);
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_MM_POLICY_OFFSET +    SOFTWARE_1_EVENT*4);
+    pm_dbg("SW1 policy for MM : %08x \n", reg_val);
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET +    SOFTWARE_1_EVENT*4);
+    pm_dbg("SW1 policy for AON and HUB : %08x \n", reg_val);
+    reg_val = readl(KONA_PWRMGR_VA +    PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET + SOFTWARE_1_EVENT*4);
+    pm_dbg("SW1 policy for ARM Sub system : %08x \n", reg_val);
+
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET    + SOFTWARE_2_EVENT*4);
+    pm_dbg("SW2 policy for Modem and ARM core : %08x \n", reg_val);
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_MM_POLICY_OFFSET +    SOFTWARE_2_EVENT*4);
+    pm_dbg("SW2 policy for MM : %08x \n", reg_val);
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET +    SOFTWARE_2_EVENT*4);
+    pm_dbg("SW2 policy for AON and HUB : %08x \n", reg_val);
+    reg_val = readl(KONA_PWRMGR_VA +   PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET + SOFTWARE_2_EVENT*4);
+    pm_dbg("SW2 policy for ARM Sub system : %08x \n", reg_val);
+
+   return 0;
+}
+
+#endif /*CONFIG_RHEA_A0_PM_ASIC_WORKAROUND*/
 /*
 For timebeing, COMMON_INT_TO_AC_EVENT related functions are added here
 We may have to move these fucntions to somewhere else later
@@ -317,39 +355,6 @@ static void config_wakeup_interrupts(void)
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET6_OFFSET);
 }
 
-int print_sw_event_info()
-{
-    u32 reg_val = 0;
-
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET    + SOFTWARE_0_EVENT*4);
-    pm_dbg("SW0 policy for Modem and ARM core : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_MM_POLICY_OFFSET +    SOFTWARE_0_EVENT*4);
-    pm_dbg("SW0 policy for MM : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET +    SOFTWARE_0_EVENT*4);
-    pm_dbg("SW0 policy for AON and HUB : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA +    PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET + SOFTWARE_0_EVENT*4);
-    pm_dbg("SW0 policy for ARM Sub system : %08x \n", reg_val);
-
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET    + SOFTWARE_1_EVENT*4);
-    pm_dbg("SW1 policy for Modem and ARM core : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_MM_POLICY_OFFSET +    SOFTWARE_1_EVENT*4);
-    pm_dbg("SW1 policy for MM : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET +    SOFTWARE_1_EVENT*4);
-    pm_dbg("SW1 policy for AON and HUB : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA +    PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET + SOFTWARE_1_EVENT*4);
-    pm_dbg("SW1 policy for ARM Sub system : %08x \n", reg_val);
-
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET    + SOFTWARE_2_EVENT*4);
-    pm_dbg("SW2 policy for Modem and ARM core : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_MM_POLICY_OFFSET +    SOFTWARE_2_EVENT*4);
-    pm_dbg("SW2 policy for MM : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET +    SOFTWARE_2_EVENT*4);
-    pm_dbg("SW2 policy for AON and HUB : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA +   PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET + SOFTWARE_2_EVENT*4);
-    pm_dbg("SW2 policy for ARM Sub system : %08x \n", reg_val);
-
-   return 0;
-}
 int enter_suspend_state(struct kona_idle_state* state)
 {
 	pm_enable_scu_standby(false);
@@ -363,7 +368,9 @@ int enter_dormant_state(struct kona_idle_state* state)
 {
 	struct pi* pi = NULL;
 	u32 reg_val;
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	static struct ccu_clk* ccu_clk = NULL;
+#endif
 	u32 ddr_min_pwr_state_ap = 0;
 #if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	u32 timer_lsw = 0;
