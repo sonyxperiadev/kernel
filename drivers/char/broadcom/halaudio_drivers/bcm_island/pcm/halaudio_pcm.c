@@ -195,6 +195,10 @@ struct pcm_ch_cfg
    /* Mixer facilities */
    AMXR_PORT_ID         mixer_port;       /* Mixer port handle for channel */
 
+   /* Equalizer history */
+   uint16_t halDacFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+   uint16_t halAdcFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+
    /* CSX data */
    struct pcm_csx_data  csx_data[HALAUDIO_NUM_CSX_POINTS]; /* Array of CSX data structures */
 };
@@ -233,9 +237,6 @@ struct pcm_sspi_hw_core_t
 #endif
 
 /* ---- Private Variables ------------------------------------ */
-
-static short halDacFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
-static short halAdcFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
 
 static HALAUDIO_PCM_PLATFORM_INFO gPcmPlatformInfo;
 
@@ -377,7 +378,7 @@ static int  pcmDmaInit( void );
 static int  pcmDmaTerm( void );
 static void pcmDmaIngressHandler( DMA_Device_t dev, DMA_Status_t *status, void *data );
 static void pcmDmaEgressHandler( DMA_Device_t dev, DMA_Status_t *status, void *data );
-static void pcmDmaEgressDoTransfer( struct pcm_ch_cfg *ch );
+static void pcmDmaEgressPostProcess( struct pcm_ch_cfg *ch );
 static void pcmProcInit( void );
 static void pcmProcTerm( void );
 static int  pcmReadProc( char *buf, char **start, off_t offset, int count, int *eof, void *data );
@@ -1114,6 +1115,19 @@ static int pcmEquParmSet(
 
    ch = &gPcm.ch[chno];
 
+   /* Check lengths */
+   if ( ch->frame_size/PCM_DEFAULT_SAMP_WIDTH > HALAUDIO_SWEQU_MAX_SAMPLES )
+   {
+      printk( KERN_ERR "%s Max frame size exceeded for equalizer\n", __FUNCTION__ );
+      return -EINVAL;
+   }
+
+   if ( equ->len > HALAUDIO_EQU_COEFS_MAX_NUM )
+   {
+      printk( KERN_ERR "%s Max number of coefficients exceeded for equalizer\n", __FUNCTION__ );
+      return -EINVAL;
+   }
+
    if ( dir == HALAUDIO_DIR_ADC )
    {
       saved_equ   = &ch->equ_igr;
@@ -1740,7 +1754,7 @@ static void pcmDmaIngressHandler(
    /* put through software equalizer */
    if ( ch->equ_igr.len )
    {
-      halAudioEquProcess( ch->igrdatap, ch->equ_igr.coeffs, halAdcFiltHist,
+      halAudioEquProcess( ch->igrdatap, ch->equ_igr.coeffs, ch->halAdcFiltHist,
             ch->equ_igr.len, ch->frame_size/2 /* 16-bit samples */ );
    }
 
@@ -1823,8 +1837,6 @@ static void pcmDmaEgressHandler(
    /* Point to buffer index with actual samples */
    atomic_set( &ch->active_idx_egr, ((status->desc_idx + 1) & 1) );
 
-   pcmDmaEgressDoTransfer( ch );
-
    /* PCMLOG( "end dev=%u", dev ); */
 }
 
@@ -1839,7 +1851,7 @@ static void pcmDmaEgressHandler(
 *     DMA transfers have completed.
 *
 */
-static void pcmDmaEgressDoTransfer(
+static void pcmDmaEgressPostProcess(
    struct pcm_ch_cfg *ch         /** (io) Ptr to PCM channel */
 )
 {
@@ -1851,8 +1863,8 @@ static void pcmDmaEgressDoTransfer(
    /* put through software equalizer */
    if ( ch->equ_egr.len )
    {
-      halAudioEquProcess( ch->egrdatap, ch->equ_egr.coeffs, halDacFiltHist,
-            ch->equ_egr.len, ch->frame_size/2 /* 16-bit samples */ );
+      halAudioEquProcess( ch->egrdatap, ch->equ_egr.coeffs, ch->halDacFiltHist,
+            ch->equ_egr.len, ch->frame_size/PCM_DEFAULT_SAMP_WIDTH /* 16-bit samples */ );
    }
 
    /* Write request */
@@ -1897,6 +1909,8 @@ static void pcmDmaEgressDoTransfer(
 
    /* Interleave data for DMA */
    interleave_data( ch->buf_egr[atomic_read(&ch->active_idx_egr)].virt, ch->egrdatap, ch->dma_frame_size, 1 /*ch->slotchansused*/ );
+
+   PCMLOG( "end idx=%i ch=%d", atomic_read( &ch->active_idx_egr ), ch->ch);
 }
 
 /***************************************************************************/
@@ -2208,6 +2222,25 @@ static int16_t *pcmMixerCb_EgressGetPtr(
 
 /***************************************************************************/
 /**
+*  PCM mixer callback to indicate that the egress data has been deposited.
+*
+*  @return     None
+*
+*  @remark
+*     This callback is used to process data after mixer is complete
+*     with depositing samples.
+*/
+static void pcmMixerCb_EgressDone( int numBytes, void *privdata )
+{
+   struct pcm_ch_cfg *ch;
+
+   ch = (struct pcm_ch_cfg *)privdata;
+
+   pcmDmaEgressPostProcess( ch );
+}
+
+/***************************************************************************/
+/**
 *  PCM mixer callback to flush the egress buffers when the last destination
 *  connection is removed.
 *
@@ -2250,6 +2283,7 @@ static int pcmMixerPortsRegister( void )
       cb.getsrc         = pcmMixerCb_IngressGetPtr;
       cb.getdst         = pcmMixerCb_EgressGetPtr;
       cb.dstcnxsremoved = pcmMixerCb_EgressFlush;
+      cb.dstdone        = pcmMixerCb_EgressDone;
 
       sprintf( name, "halaudio.pcm%i", ch->ch );
 
@@ -2488,7 +2522,7 @@ static int __init pcm_probe( struct platform_device *pdev )
       gPcmIrqId = BCM_INT_ID_SSP1;
       gPcmPhysBaseAddr = PCM_SSP1_PHYS_BASE_ADDR_START;
 
-      gAudiohClk = clk_get( &pdev->dev, "audioh_26m_clk" );
+      gAudiohClk = clk_get( &pdev->dev, "audioh_26m" );
 
       err = clk_enable( gAudiohClk );
       if( err )
@@ -2512,7 +2546,7 @@ static int __init pcm_probe( struct platform_device *pdev )
       gPcmIrqId = BCM_INT_ID_SSP3;
       gPcmPhysBaseAddr = PCM_SSP3_PHYS_BASE_ADDR_START;
 
-      gAudiohClk = clk_get( &pdev->dev, "audioh_26m_clk" );
+      gAudiohClk = clk_get( &pdev->dev, "audioh_26m" );
 
       err = clk_enable( gAudiohClk );
       if( err )

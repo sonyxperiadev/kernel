@@ -42,3 +42,5 @@ obj-$(CONFIG_KONA_CPU_FREQ_DRV) += kona_cpufreq.o
 obj-$(CONFIG_KONA_AVS) += kona_avs.o
 obj-$(CONFIG_KONA_ATAG_DT) += atag_dt.o
 
+# wfi_count.o is required for SW-7022.
+obj-$(CONFIG_KONA_WFI_WORKAROUND) += wfi_count.o

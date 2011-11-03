@@ -26,8 +26,8 @@ obj-$(CONFIG_FSL_USB2_OTG)	+= fsl_usb2_otg.o
 
 # obj-$(CONFIG_USB_BCM_OTG)   += bcm_otg.o bcm_hsotgctrl.o bcm_otg_adp.o
 
-obj-$(CONFIG_BCMPMU_OTG_XCEIV)	+= bcmpmu_otg_xceiv.o bcm_hsotgctrl.o bcm_otg_adp.o
-
+obj-$(CONFIG_USB_DWC_OTG)       += bcm_hsotgctrl.o
+obj-$(CONFIG_BCMPMU_OTG_XCEIV)	+= bcmpmu_otg_xceiv.o bcm_otg_adp.o
 obj-$(CONFIG_KONA_OTG_CP)	+= kona_otg_cp.o
 obj-$(CONFIG_MAX3353)		+= max3353.o
 

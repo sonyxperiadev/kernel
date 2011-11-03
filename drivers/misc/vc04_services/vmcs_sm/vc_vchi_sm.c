@@ -335,6 +335,7 @@ static void *vc_vchi_sm_videocore_io( void *arg )
    {
       event_mask = 0;
 
+      vchi_service_release(instance->vchi_handle[0]);
       status = vcos_event_wait( &instance->io_event );
       if ( status == VCOS_SUCCESS )
       {
@@ -350,6 +351,7 @@ static void *vc_vchi_sm_videocore_io( void *arg )
                      __func__ );
          }
       }
+      vchi_service_use(instance->vchi_handle[0]);
 
       if ( event_mask & CLIENT_EVENT_MASK )
       {
@@ -641,6 +643,7 @@ VCOS_STATUS_T vc_vchi_sm_stop( VC_VCHI_SM_HANDLE_T *handle )
    for ( i = 0; i < instance->num_connections; i++ )
    {
       int32_t success;
+      vchi_service_use(instance->vchi_handle[i]);
 
       success = vchi_service_close( instance->vchi_handle[i] );
       vcos_assert( success == 0 );

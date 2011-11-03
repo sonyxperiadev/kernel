@@ -24,9 +24,8 @@
 #define OMX_PLUGIN__COMPONENT_SUPPORTED__MPEG4           "mpeg4"
 #define OMX_PLUGIN__COMPONENT_SUPPORTED__H263            "h263"
 #define OMX_PLUGIN__COMPONENT_SUPPORTED__AVC             "avc"
-#define OMX_PLUGIN__COMPONENT_SUPPORTED__VP8             "vp8"
 
-#define OMX_PLUGIN__COMPONENT_SUPPORTED__NUM            7
+#define OMX_PLUGIN__COMPONENT_SUPPORTED__NUM             6
 
 #define OMX_PLUGIN__MKNAME(a,b)                          a"."b
 
@@ -47,10 +46,17 @@ struct vc_omx_enc_color
    unsigned int   format;
 };
 
+struct vc_omx_and_ext
+{
+   unsigned int   nocreate;
+   unsigned int   andext;
+};
+
 #define VC_OMX_IOC_MAGIC  'K'
 
 #define VC_OMX_IOC_COMP_STATUS    _IOR( VC_OMX_IOC_MAGIC, 0, struct vc_omx_comp_status )
 #define VC_OMX_IOC_ENC_COLOR      _IOR( VC_OMX_IOC_MAGIC, 1, struct vc_omx_enc_color )
+#define VC_OMX_IOC_AND_EXT        _IOR( VC_OMX_IOC_MAGIC, 2, struct vc_omx_and_ext )
 
 #endif  /* VC_OMX_H */
 

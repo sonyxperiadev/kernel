@@ -2168,13 +2168,13 @@ void amxrElapsedTime(
    /* Issue done callbacks */
    llist_foreach_item( portp, &gPorts.list, lnode )
    {
-      if ( portp->cb.srcdone && AMXR_SYNC_FREQ( portp->info.src_hz ))
-      {
-         portp->cb.srcdone( portp->info.src_bytes, portp->privdata );
-      }
       if ( portp->cb.dstdone && AMXR_SYNC_FREQ( portp->info.dst_hz ))
       {
          portp->cb.dstdone( portp->info.dst_bytes, portp->privdata );
+      }
+      if ( portp->cb.srcdone && AMXR_SYNC_FREQ( portp->info.src_hz ))
+      {
+         portp->cb.srcdone( portp->info.src_bytes, portp->privdata );
       }
    }
 }
@@ -2816,9 +2816,8 @@ static void amxr_free_resamp(
 */
 static void amxr_free_resources( void )
 {
-   //These two calls do nothing if CONFIG_DEBUG_MUTEXES is not set
-   mutex_destroy( gCnxs.mutex );
-   mutex_destroy( gPorts.mutex );
+   mutex_destroy( &gCnxs.mutex );
+   mutex_destroy( &gPorts.mutex );
    if ( gScratchBufp )
    {
       kfree( gScratchBufp );

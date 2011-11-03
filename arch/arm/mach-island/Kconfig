@@ -73,6 +73,11 @@ config MAP_SSASW
    help
       Support for the CAPH Synchronous Audio Switch driver
 
+config MAP_MEMC_STATISTICS
+   bool "MAP MEMC Statistics"
+   help
+      Add MEMC statistics collection module
+
 config MAP_ISLAND_AUDIOH_CHAL
    bool "MAP AUDIOH CHAL"
    help

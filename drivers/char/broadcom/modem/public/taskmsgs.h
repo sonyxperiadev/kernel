@@ -6269,7 +6269,7 @@ typedef enum
 	**/
 	MSG_SS_RESETCLIENTID_RSP  = MSG_GRP_CAPI2_SS + 0x3D,
 
-	MSG_GRP_CAPI2_SS_END = MSG_GRP_CAPI2_SS + 0x2A,
+	MSG_GRP_CAPI2_SS_END = MSG_GRP_CAPI2_SS + 0xFF,
 
 	 /** 
 	api is CAPI2_SatkApi_GetCachedRootMenuPtr 

@@ -342,7 +342,7 @@ struct mpu_platform_data {
 	unsigned char level_shifter;
 	struct ext_slave_platform_data accel;
 	struct ext_slave_platform_data compass;
-	struct ext_slave_platform_data pressure;
+	struct ext_slave_platform_data pressure;   
 };
 
 
@@ -451,6 +451,7 @@ struct ext_slave_descr *ami30x_get_slave_descr(void);
 #endif
 
 #ifdef CONFIG_MPU_SENSORS_AMI306	/* AICHI Steel AMI306 compass */
+//#ifdef CONFIG_MPU_SENSORS_MPU6050B1
 struct ext_slave_descr *ami306_get_slave_descr(void);
 #undef get_compass_slave_descr
 #define get_compass_slave_descr ami306_get_slave_descr

@@ -21,9 +21,9 @@
 
 #define HW_USBH_PARAM \
 { \
-	.peri_clk_name = "usbh_48m_clk", \
-	.ahb_clk_name = "usbh_ahb_clk", \
-	.opt_clk_name = "usbh_12m_clk", \
+	.peri_clk_name = "usbh_48m", \
+	.ahb_clk_name = "usbh_ahb", \
+	.opt_clk_name = "usbh_12m", \
 	.num_ports = 2, \
 	.port = { \
 		[0] = { \

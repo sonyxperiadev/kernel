@@ -337,7 +337,7 @@ HALAUDIO_FREQS;
 /**
 *  Equalizer parameters structure
 */
-#define HALAUDIO_EQU_COEFS_MAX_NUM       128
+#define HALAUDIO_EQU_COEFS_MAX_NUM       256
 typedef struct halaudio_equ
 {
    int      len;                    /* Number of filter coefficents, 0 is to disable */

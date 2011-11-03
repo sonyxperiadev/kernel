@@ -143,5 +143,13 @@ config KONA_ATAG_DT_DTS_FILE
        help
          DeviceTree source file name
 
+config KONA_WFI_WORKAROUND
+       bool "Prevent both cores from doing cpu_do_idle calls when VCHIQ bulk transfers pending"
+       depends on SMP
+       help
+	 If both cores do a WFI call at the same time, then the DDR3 seems to go into some
+	 type of low power mode which causes videocore accesses to the DDR3 to slow down
+	 dramatically. This enables a workaround which prevents this from happening.
+
 endmenu
 

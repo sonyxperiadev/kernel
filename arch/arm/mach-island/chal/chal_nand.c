@@ -40,7 +40,7 @@
 /* reset timeout (> tRST) */
 #define CHAL_NAND_TIMEOUT_RESET              2000
 /* read timeout (> tR) */
-#define CHAL_NAND_TIMEOUT_READ               500
+#define CHAL_NAND_TIMEOUT_READ               5000
 /* program timeout (> tPROG) */
 #define CHAL_NAND_TIMEOUT_WRITE              10000
 /* block erase timeout (> tBERS) */

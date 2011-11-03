@@ -17,8 +17,10 @@
 #include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
+
 #include "u_serial.h"
 #include "gadget_chips.h"
+
 
 /*
  * This CDC ACM function support just wraps control functions and
@@ -785,4 +787,3 @@ int acm_bind_config(struct usb_configuration *c, u8 port_num)
 		kfree(acm);
 	return status;
 }
-

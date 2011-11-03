@@ -66,6 +66,16 @@ typedef enum VCOS_LOG_LEVEL_T
    VCOS_LOG_TRACE,
 } VCOS_LOG_LEVEL_T;
 
+
+/** Initialize a logging category without going through vcos_log_register().
+ *
+ * This is useful for the case where there is no obvious point to do the
+ * registration (no initialization function for the module). However, it
+ * means that your logging category is not registered, so cannot be easily
+ * changed at run-time.
+ */
+#define VCOS_LOG_INIT(n,l) { .name = n, .level = l }
+
 /** A registered logging category.
   */
 typedef struct VCOS_LOG_CAT_T
@@ -190,6 +200,7 @@ void vcos_log_dump_mem_impl( const VCOS_LOG_CAT_T *cat,
 #if defined(_VCOS_METAWARE) || defined(__GNUC__)
 
 # if !defined(NDEBUG) || defined(VCOS_ALWAYS_WANT_LOGGING)
+#  define VCOS_LOGGING_ENABLED
 #  define _VCOS_LOG_X(cat, _level, fmt...)   do { if (vcos_is_log_enabled(cat,_level)) vcos_log_impl(cat,_level,fmt); } while (0)
 #  define _VCOS_VLOG_X(cat, _level, fmt, ap) do { if (vcos_is_log_enabled(cat,_level)) vcos_vlog_impl(cat,_level,fmt,ap); } while (0)
 # else
@@ -222,6 +233,7 @@ void vcos_log_dump_mem_impl( const VCOS_LOG_CAT_T *cat,
 # if _MSC_VER >= 1400
 
 #  if !defined(NDEBUG) || defined(VCOS_ALWAYS_WANT_LOGGING)
+#   define VCOS_LOGGING_ENABLED
 #   define _VCOS_LOG_X(cat, _level, fmt,...) do { if (vcos_is_log_enabled(cat,_level)) vcos_log_impl(cat, _level, fmt, __VA_ARGS__); } while (0)
 #  else
 #   define _VCOS_LOG_X(cat, _level, fmt,...) (void)0

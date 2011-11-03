@@ -38,6 +38,8 @@
 /* ---- Private Constants and Types -------------------------------------- */
 
 /* ---- Private Variables ------------------------------------------------ */
+static int32_t xBufp[(HALAUDIO_SWEQU_MAX_SAMPLES + HALAUDIO_EQU_COEFS_MAX_NUM)/2];
+static spinlock_t xBufLock = __SPIN_LOCK_UNLOCKED(xBufLock);
 
 /* ---- Private Function Prototypes -------------------------------------- */
 
@@ -542,11 +544,13 @@ void halAudioEquProcess(
    int len                          /**< (i) number of samples to process */
 )
 {
-   int32_t xBufp[(HALAUDIO_SWEQU_MAX_SAMPLES + HALAUDIO_EQU_COEFS_MAX_NUM)/2];
    int16_t *xp, *xBuf16p;
+   unsigned long flags;
 
    if ( order > 0 )
    {
+      spin_lock_irqsave( &xBufLock, flags );
+
       /* Copy history and samples */
       xBuf16p = (int16_t *)xBufp;
       memcpy( xBuf16p, histp, order * sizeof(histp[0]) );
@@ -561,6 +565,8 @@ void halAudioEquProcess(
 
       /* Update the history */
       memcpy( histp, &xBuf16p[len], order * sizeof(histp[0]) );
+
+      spin_unlock_irqrestore( &xBufLock, flags );
    }
 }
 

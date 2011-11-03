@@ -579,10 +579,14 @@ static int ami306_init(void *mlsl_handle,
 	ERROR_CHECK(result);
 	result = ami306_read_win(mlsl_handle, slave, pdata);
 	ERROR_CHECK(result);
-
-	result = inv_serial_single_write(mlsl_handle, pdata->address,
-					 AMI306_REG_CNTL1, 0);
-	ERROR_CHECK(result);
+/*
+ *	result = inv_serial_single_write(mlsl_handle, pdata->address,
+ *					 AMI306_REG_CNTL1, 0);
+ */
+   result = inv_serial_single_write(mlsl_handle, pdata->address,
+	   			 AMI306_REG_CNTL3, AMI_CTRL3_FORCE_BIT);
+ 
+ 	ERROR_CHECK(result);
 
 	return INV_SUCCESS;
 }
