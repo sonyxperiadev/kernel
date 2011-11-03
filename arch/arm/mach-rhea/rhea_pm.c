@@ -80,35 +80,23 @@ enum
 };
 
 
-const char *sleep_prevent_clocks[] = {
-		"smi_clk",
-		"smi_axi_clk",
-
-		"caph_srcmixer_clk",
-		"audioh_156m_clk",
-		"audioh_2p4m_clk",
-		"ssp4_audio_clk",
-		"ssp3_audio_clk",
-		"tmon_1m_clk",
-
-		"bsc1_clk",
-		"bsc2_clk",
-		"pwm_clk",
-		//"uartb_clk",
-		//"uartb2_clk",
-		//"uartb3_clk",
-		"spum_open",
-		"spum_sec",
-		"ssp0_clk",
-
-		"usb_otg_clk",
-		"sdio1_clk",
-		"sdio1_sleep_clk",
-		"sdio2_clk",
-		"sdio2_sleep_clk",
-		"sdio3_clk",
-		"sdio3_sleep_clk",
-
+const char *sleep_prevent_clocks[] =
+		{
+			/*HUB*/
+			"caph_srcmixer_clk",
+			"ssp4_audio_clk",
+			"ssp3_audio_clk",
+			"audioh_156m_clk",
+			"audioh_2p4m_clk",
+			"audioh_26m",
+			/*MM*/
+			"dsi0_esc_clk",
+			"smi_clk",
+			"v3d_axi_clk",
+			"mm_dma_axi_clk",
+			"mm_dma_axi_clk",
+			"vce_axi_clk",
+			"smi_axi_clk"
 		};
 
 static struct kona_idle_state rhea_cpu_states[] = {
@@ -222,7 +210,7 @@ static int pm_config_deep_sleep(void)
 	pwr_mgr_ignore_power_ok_signal(true);
     clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
     clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
-    clk_set_crystal_pwr_on_idle(false);
+    clk_set_crystal_pwr_on_idle(true);
 
 	pwr_mgr_arm_core_dormant_enable(false /*disallow dormant*/);
     pm_enable_scu_standby(true);
@@ -375,6 +363,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 {
 	struct pi* pi = NULL;
 	u32 reg_val;
+	static struct ccu_clk* ccu_clk = NULL;
 	u32 ddr_min_pwr_state_ap = 0;
 #if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	u32 timer_lsw = 0;
@@ -383,7 +372,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 	BUG_ON(!state);
 
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
-	pwr_mgr_event_clear_events(USBOTG_EVENT,PHY_RESUME_EVENT);
+	pwr_mgr_event_clear_events(USBOTG_EVENT,MODEMBUS_ACTIVE_EVENT);
 
 	if(pm_en_self_refresh)
 	{
@@ -394,20 +383,25 @@ int enter_dormant_state(struct kona_idle_state* state)
 		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 	}
 
-	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
-	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
 
 	/*Turn off XTAL only for deep sleep state*/
-	if(state->state == RHEA_STATE_C2)
-		clk_set_crystal_pwr_on_idle(true);
+	if(state->state == RHEA_STATE_C1)
+		clk_set_crystal_pwr_on_idle(false);
 /*JIRA HWRHEA-1659 : Remove this workaround for B0*/
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+	if(!ccu_clk)
+	{
+		struct clk *clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
+		ccu_clk = to_ccu_clk(clk);
+	}
+	ccu_write_access_enable(ccu_clk, true);
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val &= ~ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
 	reg_val &= ~ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+	ccu_write_access_enable(ccu_clk, false);
 #endif
 
 	clear_wakeup_interrupts();
@@ -506,8 +500,8 @@ int enter_dormant_state(struct kona_idle_state* state)
 	pwr_mgr_process_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT,false);
 	pwr_mgr_process_events(USBOTG_EVENT,PHY_RESUME_EVENT,false);
 
-	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
-	pwr_mgr_event_clear_events(USBOTG_EVENT,PHY_RESUME_EVENT);
+	//pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
+	//pwr_mgr_event_clear_events(USBOTG_EVENT,MODEMBUS_ACTIVE_EVENT);
 
 /*JIRA HWRHEA-1541 : Remove force clock disabling for B0 */
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
@@ -517,18 +511,18 @@ int enter_dormant_state(struct kona_idle_state* state)
 
 /*JIRA HWRHEA-1659 : Remove this workaround for B0*/
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+	ccu_write_access_enable(ccu_clk, true);
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val |= ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
 	reg_val |= ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+	ccu_write_access_enable(ccu_clk, false);
 #endif
 
-	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, false);
-	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, false);
-	if(state->state == RHEA_STATE_C2)
-		clk_set_crystal_pwr_on_idle(false);
+	if(state->state == RHEA_STATE_C1)
+		clk_set_crystal_pwr_on_idle(true);
 	return -1;
 }
 

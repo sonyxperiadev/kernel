@@ -1252,6 +1252,183 @@ KHUB_CLK_MGR_REG_VC_ITM_CLKGATE_VC_ITM_APB_HW_SW_GATING_SEL_MASK,
 };
 
 /*
+Bus clock name SEC_VIOL_TRAP7
+*/
+static struct bus_clk CLK_NAME(sec_viol_trap7_apb) = {
+
+ .clk =	{
+				.flags = SEC_VIOL_TRAP7_APB_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_SEC_VIOL_TRAP7_APB_BUS_CLK_ID,
+				.name = SEC_VIOL_TRAP7_APB_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(khub),
+ .clk_gate_offset  = KHUB_CLK_MGR_REG_SECTRAP7_CLKGATE_OFFSET,
+ .clk_en_mask = KHUB_CLK_MGR_REG_SECTRAP7_CLKGATE_SEC_VIOL_TRAP_7_APB_CLK_EN_MASK,
+ .gating_sel_mask =
+KHUB_CLK_MGR_REG_SECTRAP7_CLKGATE_SEC_VIOL_TRAP_7_APB_HW_SW_GATING_SEL_MASK,
+ .hyst_val_mask = KHUB_CLK_MGR_REG_SECTRAP7_CLKGATE_SEC_VIOL_TRAP_7_APB_HYST_VAL_MASK,
+ .hyst_en_mask = KHUB_CLK_MGR_REG_SECTRAP7_CLKGATE_SEC_VIOL_TRAP_7_APB_HYST_EN_MASK,
+ .stprsts_mask = KHUB_CLK_MGR_REG_SECTRAP7_CLKGATE_SEC_VIOL_TRAP_7_APB_STPRSTS_MASK,
+ .freq_tbl_index = -1,
+ .src_clk = NULL,
+};
+
+/*
+Bus clock name SEC_VIOL_TRAP5
+*/
+static struct bus_clk CLK_NAME(sec_viol_trap5_apb) = {
+
+ .clk =	{
+				.flags = SEC_VIOL_TRAP5_APB_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_SEC_VIOL_TRAP5_APB_BUS_CLK_ID,
+				.name = SEC_VIOL_TRAP5_APB_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(khub),
+ .clk_gate_offset  = KHUB_CLK_MGR_REG_SECTRAP5_CLKGATE_OFFSET,
+ .clk_en_mask = KHUB_CLK_MGR_REG_SECTRAP5_CLKGATE_SEC_VIOL_TRAP_5_APB_CLK_EN_MASK,
+ .gating_sel_mask =
+KHUB_CLK_MGR_REG_SECTRAP5_CLKGATE_SEC_VIOL_TRAP_5_APB_HW_SW_GATING_SEL_MASK,
+ .hyst_val_mask = KHUB_CLK_MGR_REG_SECTRAP5_CLKGATE_SEC_VIOL_TRAP_5_APB_HYST_VAL_MASK,
+ .hyst_en_mask = KHUB_CLK_MGR_REG_SECTRAP5_CLKGATE_SEC_VIOL_TRAP_5_APB_HYST_EN_MASK,
+ .stprsts_mask = KHUB_CLK_MGR_REG_SECTRAP5_CLKGATE_SEC_VIOL_TRAP_5_APB_STPRSTS_MASK,
+ .freq_tbl_index = -1,
+ .src_clk = NULL,
+};
+
+/*
+Bus clock name SEC_VIOL_TRAP4
+*/
+static struct bus_clk CLK_NAME(sec_viol_trap4_apb) = {
+
+ .clk =	{
+				.flags = SEC_VIOL_TRAP4_APB_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_SEC_VIOL_TRAP4_APB_BUS_CLK_ID,
+				.name = SEC_VIOL_TRAP4_APB_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(khub),
+ .clk_gate_offset  = KHUB_CLK_MGR_REG_SECTRAP4_CLKGATE_OFFSET,
+ .clk_en_mask = KHUB_CLK_MGR_REG_SECTRAP4_CLKGATE_SEC_VIOL_TRAP_4_APB_CLK_EN_MASK,
+ .gating_sel_mask =
+KHUB_CLK_MGR_REG_SECTRAP4_CLKGATE_SEC_VIOL_TRAP_4_APB_HW_SW_GATING_SEL_MASK,
+ .hyst_val_mask = KHUB_CLK_MGR_REG_SECTRAP4_CLKGATE_SEC_VIOL_TRAP_4_APB_HYST_VAL_MASK,
+ .hyst_en_mask = KHUB_CLK_MGR_REG_SECTRAP4_CLKGATE_SEC_VIOL_TRAP_4_APB_HYST_EN_MASK,
+ .stprsts_mask = KHUB_CLK_MGR_REG_SECTRAP4_CLKGATE_SEC_VIOL_TRAP_4_APB_STPRSTS_MASK,
+ .freq_tbl_index = -1,
+ .src_clk = NULL,
+};
+
+/*
+Bus clock name AXI_TRACE19_APB
+*/
+static struct bus_clk CLK_NAME(axi_trace19_apb) = {
+
+ .clk =	{
+				.flags = AXI_TRACE19_APB_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_AXI_TRACE19_APB_BUS_CLK_ID,
+				.name = AXI_TRACE19_APB_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(khub),
+ .clk_gate_offset  = KHUB_CLK_MGR_REG_AXI_TRACE19_CLKGATE_OFFSET,
+ .clk_en_mask = KHUB_CLK_MGR_REG_AXI_TRACE19_CLKGATE_AXI_TRACE_19_APB_CLK_EN_MASK,
+ .gating_sel_mask =
+KHUB_CLK_MGR_REG_AXI_TRACE19_CLKGATE_AXI_TRACE_19_APB_HW_SW_GATING_SEL_MASK,
+ .hyst_val_mask = KHUB_CLK_MGR_REG_AXI_TRACE19_CLKGATE_AXI_TRACE_19_APB_HYST_VAL_MASK,
+ .hyst_en_mask = KHUB_CLK_MGR_REG_AXI_TRACE19_CLKGATE_AXI_TRACE_19_APB_HYST_EN_MASK,
+ .stprsts_mask = KHUB_CLK_MGR_REG_AXI_TRACE19_CLKGATE_AXI_TRACE_19_APB_STPRSTS_MASK,
+ .freq_tbl_index = -1,
+ .src_clk = NULL,
+};
+
+/*
+Bus clock name AXI_TRACE11_APB
+*/
+static struct bus_clk CLK_NAME(axi_trace11_apb) = {
+
+ .clk =	{
+				.flags = AXI_TRACE11_APB_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_AXI_TRACE11_APB_BUS_CLK_ID,
+				.name = AXI_TRACE11_APB_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(khub),
+ .clk_gate_offset  = KHUB_CLK_MGR_REG_AXI_TRACE11_CLKGATE_OFFSET,
+ .clk_en_mask = KHUB_CLK_MGR_REG_AXI_TRACE11_CLKGATE_AXI_TRACE_11_APB_CLK_EN_MASK,
+ .gating_sel_mask =
+KHUB_CLK_MGR_REG_AXI_TRACE11_CLKGATE_AXI_TRACE_11_APB_HW_SW_GATING_SEL_MASK,
+ .hyst_val_mask = KHUB_CLK_MGR_REG_AXI_TRACE11_CLKGATE_AXI_TRACE_11_APB_HYST_VAL_MASK,
+ .hyst_en_mask = KHUB_CLK_MGR_REG_AXI_TRACE11_CLKGATE_AXI_TRACE_11_APB_HYST_EN_MASK,
+ .stprsts_mask = KHUB_CLK_MGR_REG_AXI_TRACE11_CLKGATE_AXI_TRACE_11_APB_STPRSTS_MASK,
+ .freq_tbl_index = -1,
+ .src_clk = NULL,
+};
+
+
+/*
+Bus clock name AXI_TRACE12_APB
+*/
+static struct bus_clk CLK_NAME(axi_trace12_apb) = {
+
+ .clk =	{
+				.flags = AXI_TRACE12_APB_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_AXI_TRACE12_APB_BUS_CLK_ID,
+				.name = AXI_TRACE12_APB_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(khub),
+ .clk_gate_offset  = KHUB_CLK_MGR_REG_AXI_TRACE12_CLKGATE_OFFSET,
+ .clk_en_mask = KHUB_CLK_MGR_REG_AXI_TRACE12_CLKGATE_AXI_TRACE_12_APB_CLK_EN_MASK,
+ .gating_sel_mask =
+KHUB_CLK_MGR_REG_AXI_TRACE12_CLKGATE_AXI_TRACE_12_APB_HW_SW_GATING_SEL_MASK,
+ .hyst_val_mask = KHUB_CLK_MGR_REG_AXI_TRACE12_CLKGATE_AXI_TRACE_12_APB_HYST_VAL_MASK,
+ .hyst_en_mask = KHUB_CLK_MGR_REG_AXI_TRACE12_CLKGATE_AXI_TRACE_12_APB_HYST_EN_MASK,
+ .stprsts_mask = KHUB_CLK_MGR_REG_AXI_TRACE12_CLKGATE_AXI_TRACE_12_APB_STPRSTS_MASK,
+ .freq_tbl_index = -1,
+ .src_clk = NULL,
+};
+
+/*
+Bus clock name AXI_TRACE13_APB
+*/
+static struct bus_clk CLK_NAME(axi_trace13_apb) = {
+
+ .clk =	{
+				.flags = AXI_TRACE13_APB_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_AXI_TRACE13_APB_BUS_CLK_ID,
+				.name = AXI_TRACE13_APB_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(khub),
+ .clk_gate_offset  = KHUB_CLK_MGR_REG_AXI_TRACE13_CLKGATE_OFFSET,
+ .clk_en_mask = KHUB_CLK_MGR_REG_AXI_TRACE13_CLKGATE_AXI_TRACE_13_APB_CLK_EN_MASK,
+ .gating_sel_mask =
+KHUB_CLK_MGR_REG_AXI_TRACE13_CLKGATE_AXI_TRACE_13_APB_HW_SW_GATING_SEL_MASK,
+ .hyst_val_mask = KHUB_CLK_MGR_REG_AXI_TRACE13_CLKGATE_AXI_TRACE_13_APB_HYST_VAL_MASK,
+ .hyst_en_mask = KHUB_CLK_MGR_REG_AXI_TRACE13_CLKGATE_AXI_TRACE_13_APB_HYST_EN_MASK,
+ .stprsts_mask = KHUB_CLK_MGR_REG_AXI_TRACE13_CLKGATE_AXI_TRACE_13_APB_STPRSTS_MASK,
+ .freq_tbl_index = -1,
+ .src_clk = NULL,
+};
+
+
+/*
 Bus clock name HSI_APB
 */
 static struct bus_clk CLK_NAME(hsi_apb) = {
@@ -3277,7 +3454,7 @@ static struct peri_clk CLK_NAME(sdio2_sleep) = {
 				.clk_type = CLK_TYPE_PERI,
 				.id	= CLK_SDIO2_SLEEP_PERI_CLK_ID,
 				.name = SDIO2_SLEEP_PERI_CLK_NAME_STR,
-				.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio2_ahb),NULL),
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 				.ops = &gen_peri_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(kpm),
@@ -3347,7 +3524,7 @@ static struct peri_clk CLK_NAME(sdio3_sleep) = {
 				.clk_type = CLK_TYPE_PERI,
 				.id	= CLK_SDIO3_SLEEP_PERI_CLK_ID,
 				.name = SDIO3_SLEEP_PERI_CLK_NAME_STR,
-				.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio3_ahb),NULL),
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 				.ops = &gen_peri_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(kpm),
@@ -3460,7 +3637,7 @@ static struct peri_clk CLK_NAME(sdio1_sleep) = {
 				.clk_type = CLK_TYPE_PERI,
 				.id	= CLK_SDIO1_SLEEP_PERI_CLK_ID,
 				.name = SDIO1_SLEEP_PERI_CLK_NAME_STR,
-				.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio1_ahb),NULL),
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 				.ops = &gen_peri_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(kpm),
@@ -3484,7 +3661,7 @@ static struct peri_clk CLK_NAME(sdio4_sleep) = {
 		.clk_type = CLK_TYPE_PERI,
 		.id	= CLK_SDIO4_SLEEP_PERI_CLK_ID,
 		.name = SDIO4_SLEEP_PERI_CLK_NAME_STR,
-		.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio4_ahb),NULL),
+		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 		.ops = &gen_peri_clk_ops,
 	},
 	.ccu_clk = &CLK_NAME(kpm),
@@ -5967,6 +6144,13 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(FUNNEL_APB_BUS_CLK_NAME_STR,NULL,funnel_apb),
 	BRCM_REGISTER_CLK(TPIU_APB_BUS_CLK_NAME_STR,NULL,tpiu_apb),
 	BRCM_REGISTER_CLK(VC_ITM_APB_BUS_CLK_NAME_STR,NULL,vc_itm_apb),
+	BRCM_REGISTER_CLK(SEC_VIOL_TRAP7_APB_BUS_CLK_NAME_STR,NULL,sec_viol_trap7_apb),
+	BRCM_REGISTER_CLK(SEC_VIOL_TRAP5_APB_BUS_CLK_NAME_STR,NULL,sec_viol_trap5_apb),
+	BRCM_REGISTER_CLK(SEC_VIOL_TRAP4_APB_BUS_CLK_NAME_STR,NULL,sec_viol_trap4_apb),
+	BRCM_REGISTER_CLK(AXI_TRACE19_APB_BUS_CLK_NAME_STR,NULL,axi_trace19_apb),
+	BRCM_REGISTER_CLK(AXI_TRACE11_APB_BUS_CLK_NAME_STR,NULL,axi_trace11_apb),
+	BRCM_REGISTER_CLK(AXI_TRACE12_APB_BUS_CLK_NAME_STR,NULL,axi_trace12_apb),
+	BRCM_REGISTER_CLK(AXI_TRACE13_APB_BUS_CLK_NAME_STR,NULL,axi_trace13_apb),
 	BRCM_REGISTER_CLK(HSI_APB_BUS_CLK_NAME_STR,NULL,hsi_apb),
 	BRCM_REGISTER_CLK(HSI_TX_PERI_CLK_NAME_STR,NULL,hsi_tx),
 	BRCM_REGISTER_CLK(HSI_RX_PERI_CLK_NAME_STR,NULL,hsi_rx),

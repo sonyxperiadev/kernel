@@ -450,7 +450,8 @@ struct pi_ops gen_pi_ops = {
 static u32 pi_mgr_dfs_get_opp(const struct pi_mgr_dfs_object* dfs)
 {
 	u32 opp = dfs->default_opp;
-	int sum_of_req = 0;
+	int i;
+	int sum[PI_OPP_MAX - 1] = {0};
 	struct pi_mgr_dfs_node *dfs_node;
 	struct pi *pi = pi_mgr.pi_list[dfs->pi_id];
 
@@ -469,15 +470,19 @@ static u32 pi_mgr_dfs_get_opp(const struct pi_mgr_dfs_object* dfs)
 		{
 			if(dfs_node->req_active && dfs_node->opp < (pi->num_opp - 1))
 			{
-				sum_of_req +=  dfs_node->weightage;
+				sum[dfs_node->opp] +=  dfs_node->weightage;
 			}
 		}
 
-		opp = sum_of_req /PI_MGR_DFS_WEIGHTAGE_BASE;
+		for(i = opp ; i < pi->num_opp - 1; i++)
+		{
+			if(sum[i]/PI_MGR_DFS_WEIGHTAGE_BASE)
+				opp++;
+		}
 
 		if(opp >= pi->num_opp)
 			opp = pi->num_opp - 1;
-		pi_dbg("%s:pi :%s sum_of_req = %d opp = %d\n",__func__,pi->name, sum_of_req,opp);
+		pi_dbg("%s:pi :%s opp = %d\n",__func__,pi->name,opp);
 	}
 
 	return opp;
@@ -893,7 +898,6 @@ struct pi_mgr_dfs_node* pi_mgr_dfs_add_request_ex(char* client_name, u32 pi_id, 
 		node->weightage = weightage;
 
 	BUG_ON(node->weightage >= PI_MGR_DFS_WEIGHTAGE_BASE);
-	node->weightage += node->opp*PI_MGR_DFS_WEIGHTAGE_BASE;
 
 	pi_mgr_dfs_update(node,pi_id,NODE_ADD);
 	return node;
@@ -944,7 +948,6 @@ int pi_mgr_dfs_request_update_ex(struct pi_mgr_dfs_node* node, u32 opp, u32 weig
 			node->weightage = weightage;
 
 		BUG_ON(node->weightage >= PI_MGR_DFS_WEIGHTAGE_BASE);
-		node->weightage += node->opp*PI_MGR_DFS_WEIGHTAGE_BASE;
 
 		pi_mgr_dfs_update(node,node->pi_id,NODE_UPDATE);
 	}
@@ -1324,7 +1327,7 @@ static ssize_t read_get_dfs_request_list(struct file *file, char __user *user_bu
 	{
 		len += snprintf(debug_fs_buf+len, sizeof(debug_fs_buf)-len,
 			"PI: %s (Id:%d) \t\t Client:%s \t\t DFS request:%u request_active:%u request_weightage: %u\n", pi->name, dfs_node->pi_id, dfs_node->name, dfs_node->opp,dfs_node->req_active,
-					dfs_node->weightage - PI_MGR_DFS_WEIGHTAGE_BASE*dfs_node->opp);
+					dfs_node->weightage);
     }
 	return simple_read_from_buffer(user_buf, count, ppos, debug_fs_buf, len);
 }
