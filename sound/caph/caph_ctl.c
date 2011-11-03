@@ -641,7 +641,9 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 {
 	int priv = kcontrol->private_value;
 	int function = FUNC_OF_CTL(priv);
+	int	stream = STREAM_OF_CTL(priv);
 
+	uinfo->value.integer.step = 1;
 	switch(function)
 	{
 		case CTL_FUNCTION_LOOPBACK_TEST:
@@ -649,49 +651,42 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->count = 3;
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = CAPH_MAX_CTRL_LINES;//FIXME
-			uinfo->value.integer.step = 1;
 			break;
 		case CTL_FUNCTION_PHONE_ENABLE:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
 			uinfo->count = 1;
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = 1;
-			uinfo->value.integer.step = 1;
 			break;
 		case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
 			uinfo->count = 2;
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = 1;
-			uinfo->value.integer.step = 1;
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 			uinfo->count = 1;
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = 3;
-			uinfo->value.integer.step = 1;
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
 			uinfo->count = 1;
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = 1;
-			uinfo->value.integer.step = 1;
 			break;
 		case CTL_FUNCTION_FM_FORMAT:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 			uinfo->count = 2; //sample rate, stereo/mono
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = 48000;
-			uinfo->value.integer.step = 1;
 			break;
 		case CTL_FUNCTION_AT_AUDIO:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 			uinfo->count = 7;
 			uinfo->value.integer.min = 0x80000000;
 			uinfo->value.integer.max = 0x7FFFFFFF;
-			uinfo->value.integer.step = 1;
 			if(kcontrol->id.index==1) //val[0] is at command handler, val[1] is 1st parameter of the AT command parameters
 			{
 				uinfo->count = 1;
@@ -704,28 +699,38 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->count = 3;
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = 100;
-			uinfo->value.integer.step = 1;
 			break;
 		case CTL_FUNCTION_BT_TEST:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
 			uinfo->count = 1;
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = 1;
-			uinfo->value.integer.step = 1;
 			break;
 		case CTL_FUNCTION_CFG_IHF:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 			uinfo->count = 2;	//integer[0] -- 1 for mono, 2 for stereo; integer[1] -- data mixing option if channel is mono,  1 for left, 2 for right, 3 for (L+R)/2
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = 3;
-			uinfo->value.integer.step = 1;
 			break;
 		case CTL_FUNCTION_CFG_SSP:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 			uinfo->count = 1;
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = 1;
-			uinfo->value.integer.step = 1;
+			break;
+		case CTL_FUNCTION_VOL:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 2;
+			if(CTL_STREAM_PANEL_VOICECALL==stream)
+				uinfo->count = 1;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 19; //volume level
+			break;
+		case CTL_FUNCTION_SINK_CHG:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 2;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = AUDCTRL_SPK_TOTAL_COUNT;
 			break;
 
 		default:
@@ -796,6 +801,10 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		case CTL_FUNCTION_CFG_SSP:
 			ucontrol->value.integer.value[0] = pChip->i32CfgSSP[kcontrol->id.index];
 			break;
+		case CTL_FUNCTION_VOL:
+			memcpy(ucontrol->value.integer.value, pChip->pi32LevelVolume[stream], CAPH_MAX_PCM_STREAMS*sizeof(s32));
+			break;
+
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
 			break;
@@ -1008,6 +1017,12 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			//Port is 1 base
 			AUDCTRL_ConfigSSP(kcontrol->id.index+1, pChip->i32CfgSSP[kcontrol->id.index]);
 			break;
+		case CTL_FUNCTION_VOL:
+			memcpy(pChip->pi32LevelVolume[stream], ucontrol->value.integer.value, CAPH_MAX_PCM_STREAMS*sizeof(s32));
+			break;
+		case CTL_FUNCTION_SINK_CHG:
+			BCM_AUDIO_DEBUG("Change sink device stream=%d cmd=%d sink=%d\n", stream, ucontrol->value.integer.value[0], ucontrol->value.integer.value[1]);
+			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
 			break;
@@ -1062,6 +1077,10 @@ static const DECLARE_TLV_DB_SCALE(caph_db_scale_volume, -5000, 1, 0);
 
 #define BRCM_MIXER_CTRL_MISC(dev, subdev, xname, xindex, private_val) \
 	BRCM_MIXER_CTRL_GENERAL(SNDRV_CTL_ELEM_IFACE_MIXER, dev, subdev, xname, xindex, SNDRV_CTL_ELEM_ACCESS_READWRITE, 0, \
+	                        MiscCtrlInfo, MiscCtrlGet, MiscCtrlPut, 0,private_val)
+
+#define BRCM_MIXER_CTRL_MISC_W(dev, subdev, xname, xindex, private_val) \
+	BRCM_MIXER_CTRL_GENERAL(SNDRV_CTL_ELEM_IFACE_MIXER, dev, subdev, xname, xindex, SNDRV_CTL_ELEM_ACCESS_WRITE, 0, \
 	                        MiscCtrlInfo, MiscCtrlGet, MiscCtrlPut, 0,private_val)
 
 /*++++++++++++++++++++++++++++++++ Sink device and source devices
@@ -1223,6 +1242,10 @@ static struct snd_kcontrol_new sgSndCtrls[] __initdata =
 	BRCM_MIXER_CTRL_MISC(0, 0, "CFG-IHF", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_IHF) ),
 	BRCM_MIXER_CTRL_MISC(0, 0, "CFG-SSP", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_SSP) ), //SSPI1
 	BRCM_MIXER_CTRL_MISC(0, 0, "CFG-SSP", 1, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_SSP) ), //SSPI2
+	BRCM_MIXER_CTRL_MISC(0, 0, "VC-VOL-LEVEL", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_VOL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "FM-VOL-LEVEL", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_FM, 0, CTL_FUNCTION_VOL)),
+	BRCM_MIXER_CTRL_MISC_W(0, 0, "P1-CHG", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_SINK_CHG)),
+	BRCM_MIXER_CTRL_MISC_W(0, 0, "P2-CHG", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_SINK_CHG)),
 };
 
 #define	MAX_CTL_NUMS	140

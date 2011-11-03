@@ -136,6 +136,7 @@ typedef struct brcm_alsa_chip
 	s32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	s32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
 	s32	pi32SpeechMixOption[CAPH_MAX_PCM_STREAMS];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
+	s32	pi32LevelVolume[CAPH_MAX_PCM_STREAMS][2]; //volume level of the stream, two channels. If the stream is mono, please channel 0 only.
 	//AT-AUD
 	s32	i32AtAudHandlerParms[7];
 	s32	pi32BypassVibraParam[3];	//Bypass Vibra: bEnable, strength, direction
@@ -180,7 +181,8 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_BYPASS_VIBRA,
 	CTL_FUNCTION_BT_TEST,
 	CTL_FUNCTION_CFG_SSP,
-	CTL_FUNCTION_CFG_IHF
+	CTL_FUNCTION_CFG_IHF,
+	CTL_FUNCTION_SINK_CHG
 };
 
 enum	AT_AUD_Ctl_t
