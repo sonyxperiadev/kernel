@@ -48,7 +48,7 @@
 
 #include <linux/brvsens_driver.h>
 
-// #define PROC_DEBUG   // comment in/out to enable cmd line interface via /proc/mpu3050
+#define PROC_DEBUG   // comment in/out to enable cmd line interface via /proc/mpu3050
 
 #ifdef PROC_DEBUG
    #include <linux/proc_fs.h>
