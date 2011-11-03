@@ -59,7 +59,7 @@ struct bsc_adap_cfg
 	 * or not. This is needed to acquire the HW semaphore to sync 
 	 * with the Power Manager sequencer.
 	 */
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM 
 	bool is_pmu_i2c;
 #endif
 
