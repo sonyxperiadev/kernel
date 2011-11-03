@@ -70,4 +70,3 @@ obj-$(CONFIG_BCM59055_ADC_CHIPSET_API)+= bcm59055-adc_chipset_api.o
 obj-$(CONFIG_BCMPMU_AUDIO)	+= bcmpmu_audio.o
 obj-$(CONFIG_BTHID)		+= bthid.o
 obj-$(CONFIG_MACH_RHEA_SELFTEST)	+= bcm_selftest_bb.o
-obj-y          += vc04_services/
