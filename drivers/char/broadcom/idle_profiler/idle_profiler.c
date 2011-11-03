@@ -579,6 +579,7 @@ static int __init host_cpu_usage_init(void)
       ICP_DATA *datap = &o->data;
       cpumask_t cpu_mask;
 
+      spin_lock_init( &per_cpu( idle_lock, i ));
       o->cpu_enum = i;
 
       /* set affinity of each thread to force it to run on separate CPU */
