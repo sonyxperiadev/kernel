@@ -2891,21 +2891,16 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		path->list = LIST_SW_SRC;
 #endif
     }
-    else // For HW loopback use only: AMIC/HSMIC/DMIC1/2/3/4 -> EP/IHF/HS
+    else // For HW loopback use only: AMIC/HSMIC -> EP/IHF/HS
     if (((path->source == CSL_CAPH_DEV_ANALOG_MIC)
-            ||(path->source == CSL_CAPH_DEV_HS_MIC)
-            ||(path->source == CSL_CAPH_DEV_DIGI_MIC_L)
-            ||(path->source == CSL_CAPH_DEV_DIGI_MIC_R)
-            ||(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
-            ||(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
+            ||(path->source == CSL_CAPH_DEV_HS_MIC))
         && ((path->sink[0] == CSL_CAPH_DEV_EP)
             ||(path->sink[0] == CSL_CAPH_DEV_IHF)
             ||(path->sink[0] == CSL_CAPH_DEV_HS)))
     {
 		path->list = LIST_NONE;
     }
-#if 0 //The following is not needed for now. Maybe removed later.
-    else // HW loopback only: AUDIOH-->SSASW->SRCMixer->AudioH, Handset mic/HS mic/Digi Mic -> HS ear
+    else // HW loopback only: AUDIOH-->SSASW->SRCMixer->AudioH, Digi Mic1/2/3/4 -> HS ear
     if (((path->source == CSL_CAPH_DEV_DIGI_MIC_L) ||
 		(path->source == CSL_CAPH_DEV_DIGI_MIC_R) ||
 		(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) ||
@@ -2927,7 +2922,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
     {
 		path->list = LIST_SW;
     }
-#endif
     else
     if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[0] == CSL_CAPH_DEV_BT_SPKR))
     {
