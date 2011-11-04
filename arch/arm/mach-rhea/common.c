@@ -47,8 +47,6 @@
 #include <plat/spi_kona.h>
 #include <plat/chal/chal_trace.h>
 #include <trace/stm.h>
-#include <linux/usb/android_composite.h>
-
 #ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
 #include "volt_tbl.h"
@@ -59,7 +57,6 @@
 #include <linux/cpufreq.h>
 #include <mach/pi_mgr.h>
 #endif
-
 
 #ifdef CONFIG_UNICAM
 #include <plat/kona_unicam.h>
@@ -80,34 +77,6 @@
 #define KONA_UART0_PA	UARTB_BASE_ADDR
 #define KONA_UART1_PA	UARTB2_BASE_ADDR
 #define KONA_UART2_PA	UARTB3_BASE_ADDR
-
-
-
-#define PID_PLATFORM				0xE600
-#define FD_MASS_PRODUCT_ID			0x0001
-#define FD_SICD_PRODUCT_ID			0x0002
-#define FD_VIDEO_PRODUCT_ID			0x0004
-#define FD_DFU_PRODUCT_ID			0x0008
-#define FD_MTP_ID					0x000C
-#define FD_CDC_ACM_PRODUCT_ID		0x0020
-#define FD_CDC_RNDIS_PRODUCT_ID		0x0040
-#define FD_CDC_OBEX_PRODUCT_ID		0x0080
-
-
-#define	BRCM_VENDOR_ID				0x0a5c
-#define	BIG_ISLAND_PRODUCT_ID		0x2816
-
-/* FIXME borrow Google Nexus One ID to use windows driver */
-#define	GOOGLE_VENDOR_ID			0x18d1
-#define	NEXUS_ONE_PROD_ID			0x0d02
-
-#define	VENDOR_ID					GOOGLE_VENDOR_ID
-#define	PRODUCT_ID					NEXUS_ONE_PROD_ID
-
-/* use a seprate PID for RNDIS */
-#define RNDIS_PRODUCT_ID			0x4e13
-#define ACM_PRODUCT_ID				0x8888
-#define OBEX_PRODUCT_ID				0x685E
 
 
 #define KONA_8250PORT(name,clk)				\
@@ -140,149 +109,6 @@ static struct platform_device board_serial_device = {
 		.platform_data = uart_data,
 	},
 };
-
-static char *android_function_rndis[] = {
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	"rndis",
-#endif
-};
-
-static char *android_function_acm[] = {
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm",
-	"acm1",
-#endif
-};
-
-static char *android_function_msc_acm[] = {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
-#endif
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm",
-	"acm1",
-#endif
-};
-
-static char *android_function_obex[] = {
-#ifdef CONFIG_USB_ANDROID_OBEX
-	"obex",
-#endif
-};
-
-static char *android_function_adb_msc[] = {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
-#endif
-#ifdef CONFIG_USB_ANDROID_ADB
-	"adb",
-#endif
-};
-
-static char *android_functions_all[] = {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
-#endif
-#ifdef CONFIG_USB_ANDROID_ADB
-	"adb",
-#endif
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	"rndis",
-#endif
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm",
-#endif
-#ifdef CONFIG_USB_ANDROID_OBEX
-	"obex",
-#endif
-};
-
-
-static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
-#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
-	.nluns		=	2,
-#else
-	.nluns		=	1,
-#endif
-	.vendor		=	"Broadcom",
-	.product	=	"Rhea",
-	.release	=	0x0100
-};
-
-static struct platform_device android_mass_storage_device = {
-	.name	=	"usb_mass_storage",
-	.id	=	-1,
-	.dev	=	{
-		.platform_data	=	&android_mass_storage_pdata,
-	}
-};
-
-static struct usb_ether_platform_data android_rndis_pdata = {
-        /* ethaddr FIXME */
-        .vendorID       = __constant_cpu_to_le16(VENDOR_ID),
-        .vendorDescr    = "Broadcom RNDIS",
-};
-
-static struct platform_device android_rndis_device = {
-        .name   = "rndis",
-        .id     = -1,
-        .dev    = {
-                .platform_data = &android_rndis_pdata,
-        },
-};
-
-static struct android_usb_product android_products[] = {
-	{
-		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_adb_msc),
-		.functions	=	android_function_adb_msc,
-	},
-	{
-		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_RNDIS_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_rndis),
-		.functions	=	android_function_rndis,
-	},
-	{
-		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_acm),
-		.functions	=	android_function_acm,
-	},
-	{
-		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID | FD_MASS_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_msc_acm),
-		.functions	=	android_function_msc_acm,
-	},
-	{
-		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_OBEX_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_obex),
-		.functions	=	android_function_obex,
-	},
-};
-
-static struct android_usb_platform_data android_usb_data = {
-	.vendor_id		= 	__constant_cpu_to_le16(VENDOR_ID),
-	.product_id		=	__constant_cpu_to_le16(PRODUCT_ID),
-	.version		=	0,
-	.product_name		=	"Rhea",
-	.manufacturer_name	= 	"Broadcom",
-	.serial_number		=	"0123456789ABCDEF",
-
-	.num_products		=	ARRAY_SIZE(android_products),
-	.products		=	android_products,
-
-	.num_functions		=	ARRAY_SIZE(android_functions_all),
-	.functions		=	android_functions_all,
-};
-
-static struct platform_device android_usb = {
-	.name 	= "android_usb",
-	.id	= 1,
-	.dev	= {
-		.platform_data = &android_usb_data,
-	},
-};
-
-
 
 static struct resource board_i2c0_resource[] = {
 	[0] =
@@ -738,9 +564,6 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
-	&android_rndis_device,
-	&android_mass_storage_device,
-	&android_usb,
 	&pmu_device,
 	&kona_pwm_device,
 	&kona_sspi_spi0_device,
