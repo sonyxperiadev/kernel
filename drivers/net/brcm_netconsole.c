@@ -401,6 +401,8 @@ static ssize_t store_enabled(struct brcm_netconsole_target *nt,
 	if (enabled < 0)
 		return enabled;
 
+	pr_info("%s enabled=%d\n", __func__, enabled);
+
 	if (enabled) {	/* 1 */
 
 		/*
@@ -659,8 +661,20 @@ static struct config_item *make_brcm_netconsole_target(struct config_group *grou
 						  const char *name)
 {
 	unsigned long flags;
-	struct brcm_netconsole_target *nt;
+	struct brcm_netconsole_target *nt, *tmp;
 	u8 remote_mac[ETH_ALEN];
+
+	/* Remove the previous brcm_netconsole_target */
+	if (!list_empty(&target_list)) {
+		list_for_each_entry_safe(nt, tmp, &target_list, list) {
+			pr_info( "%s: remove previous nt->list \n", __func__);
+			if (brcm_netconsole_cb->stop)
+				brcm_netconsole_cb->stop();
+			nt_enabled = FALSE;
+			list_del(&nt->list);
+			free_param_target(nt);
+		}
+	}
 
 	/*
 	 * Allocate and initialize with defaults.
@@ -822,8 +836,9 @@ void brcm_current_netcon_status(unsigned char status)
 				netpoll_setup(&nt->np);
 			else if (cur_rndis_status)
 				netpoll_cleanup(&nt->np);
-			brcm_netconsole_target_put(nt);
 #endif
+			brcm_netconsole_target_put(nt);
+
 		}
 		spin_unlock_irqrestore(&target_list_lock, flags);
 	}
