@@ -2303,6 +2303,85 @@ dhd_stop(struct net_device *net)
 	return 0;
 }
 
+#ifdef DHD_BCM_WIFI_HDMI
+bool dhd_bcm_whdmi_enable = FALSE;
+
+/* Check for the presence of a given kernel parameter string,
+ * eg. "wifi=4330_whdmi".  Returns 0 if found.
+ */
+static int
+dhd_check_kernel_param(dhd_info_t *dhd, const char *str)
+{
+	int bcmerror = -1;
+
+	/* Define this to 1 if kernel/init/main.c has been patched to export
+	 * the kernel global variable 'saved_command_line'.
+	 */
+#define DHD_KERNEL_EXPORTS_CMDLINE 0
+#if DHD_KERNEL_EXPORTS_CMDLINE
+
+#define DHD_KPARAM_LEN 32
+	if (strstr(saved_command_line, str) != NULL) {
+		bcmerror = 0;
+	}
+
+#else /* DHD_KERNEL_EXPORTS_CMDLINE */
+
+#define DHD_KPARAM_LEN 1024
+	uint len;
+	void *fp = NULL;
+	char *kparam = NULL;
+
+	DHD_INFO(("%s\n", __FUNCTION__));
+
+	fp = dhd_os_open_image("/proc/cmdline");
+	if (fp == NULL)
+		goto err;
+
+	kparam = MALLOC(dhd->pub.osh, DHD_KPARAM_LEN);
+	if (kparam == NULL) {
+		DHD_ERROR(("%s: MALLOC of %u bytes failed!\n",
+			__FUNCTION__, DHD_KPARAM_LEN));
+		goto err;
+	}
+
+	/* Read the kernel cmdline and search for a matching string */
+	len = dhd_os_get_image_block(kparam, DHD_KPARAM_LEN, fp);
+	if (len > 0) {
+		kparam[DHD_KPARAM_LEN - 1] = '\0';
+		if (strstr(kparam, str) != NULL) {
+			bcmerror = 0;
+		}
+#if 0
+		/* for debug only */
+		{
+		char *found = strstr(kparam, str);
+		DHD_ERROR(("@@@%s: found=%s\n", __FUNCTION__, found));
+		}
+		if (strstr(kparam, "wifi=") != NULL) {
+			DHD_ERROR(("@@@%s: found wifi=\n", __FUNCTION__));
+		}
+		if (strstr(kparam, "wifi=4330_") != NULL) {
+			DHD_ERROR(("@@@%s: found wifi=4330_\n", __FUNCTION__));
+		}
+		DHD_ERROR(("@@@%s: err=%d len=%u kparam=%s\n",
+			__FUNCTION__, bcmerror, len, kparam));
+#endif /* 0 */
+	}
+
+err:
+	if (kparam) {
+		MFREE(dhd->pub.osh, kparam, DHD_KPARAM_LEN);
+	}
+
+	dhd_os_close_image(fp);
+
+#endif /* DHD_KERNEL_EXPORTS_CMDLINE */
+
+	return bcmerror;
+}
+#endif /* DHD_BCM_WIFI_HDMI */
+
 static int
 dhd_open(struct net_device *net)
 {
@@ -2313,6 +2392,13 @@ dhd_open(struct net_device *net)
 #endif
 	int ifidx;
 	int32 ret = 0;
+
+#ifdef DHD_BCM_WIFI_HDMI
+	/* Parse kernel parameters for WHDMI enable flag */
+	if (dhd_check_kernel_param(dhd, "wifi=4330_whdmi") == 0) {
+		dhd_bcm_whdmi_enable = TRUE;
+	}
+#endif /* DHD_BCM_WIFI_HDMI */
 
 	/* Update FW path if it was changed */
 	if ((firmware_path != NULL) && (firmware_path[0] != '\0')) {
@@ -2822,13 +2908,13 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #if defined(SOFTAP)
 	uint dtim = 1;
 #endif
-#if (defined(AP) && !defined(WLP2P)) || (!defined(AP) && defined(WL_CFG80211))
+#if (defined(AP) && !defined(WLP2P)) || (!defined(AP) && defined(WL_CFG80211)) || (defined(DHD_BCM_WIFI_HDMI))
 	uint32 mpc = 0; /* Turn MPC off for AP/APSTA mode */
 #endif
 
-#if (defined(AP) && !defined(WLP2P)) || (!defined(AP) && defined(WLP2P))
+#if defined(AP) || defined(WLP2P) || defined(DHD_BCM_WIFI_HDMI)
 	uint32 apsta = 1; /* Enable APSTA mode */
-#endif /* defined(AP) || defined(WLP2P) */
+#endif /* defined(AP) || defined(WLP2P) || defined(DHD_BCM_WIFI_HDMI) */
 #ifdef GET_CUSTOM_MAC_ENABLE
 	struct ether_addr ea_addr;
 #endif /* GET_CUSTOM_MAC_ENABLE */
@@ -3036,6 +3122,12 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		setbit(eventmask, WLC_E_P2P_DISC_LISTEN_COMPLETE);
 	}
 #endif /* WL_CFG80211 */
+#if 1
+	/* Uncomment this line to enable DHD to print debug logs sent up from
+	 * the 43xx chip firmware.
+	 */
+	setbit(eventmask, WLC_E_TRACE);
+#endif
 
 	/* Write updated Event mask */
 	bcm_mkiovar("event_msgs", eventmask, WL_EVENTING_MASK_LEN, iovbuf, sizeof(iovbuf));
@@ -3084,6 +3176,28 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	}
 #endif /* defined(SOFTAP) */
 #endif /* PKT_FILTER_SUPPORT */
+
+#if defined(DHD_BCM_WIFI_HDMI)
+	if (dhd_bcm_whdmi_enable) {
+		DHD_ERROR(("DHD WiFi HDMI is enabled\n"));
+#if !defined(AP) && !defined(WLP2P)
+		/* Turn off MPC, turn on APSTA */
+		bcm_mkiovar("mpc", (char *)&mpc, 4, iovbuf, sizeof(iovbuf));
+		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+		bcm_mkiovar("apsta", (char *)&apsta, 4, iovbuf, sizeof(iovbuf));
+		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+#endif /* !defined(AP) && !defined(WLP2P) */
+		/* Disable legacy power save modes */
+		power_mode = PM_OFF;
+		dhd_wl_ioctl_cmd(dhd, WLC_SET_PM, (char*)&power_mode, sizeof(power_mode), TRUE, 0);
+
+#ifdef ARP_OFFLOAD_SUPPORT
+		/* Disable ARP offload */
+		dhd_arp_offload_set(dhd, 0);
+		dhd_arp_offload_enable(dhd, FALSE);
+#endif /* ARP_OFFLOAD_SUPPORT */
+	}
+#endif /* defined(DHD_BCM_WIFI_HDMI) */
 
 	/* Force STA UP */
 	if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_UP, (char *)&up, sizeof(up), TRUE, 0)) < 0) {

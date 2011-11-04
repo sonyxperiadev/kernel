@@ -722,4 +722,9 @@ int dhd_arp_get_arp_hostip_table(dhd_pub_t *dhd, void *buf, int buflen);
 void dhd_arp_offload_add_ip(dhd_pub_t *dhd, uint32 ipaddr);
 #endif /* ARP_OFFLOAD_SUPPORT */
 
+#ifdef DHD_BCM_WIFI_HDMI
+/* Wireless HDMI run-time enable flag */
+extern bool dhd_bcm_whdmi_enable;
+#endif /* DHD_BCM_WIFI_HDMI */
+
 #endif /* _dhd_h_ */
