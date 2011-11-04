@@ -53,6 +53,7 @@ struct bcmpmu_otg_xceiv_data {
 	struct work_struct bcm_otg_chg_detect_work;
 
 	/* OTG notifier blocks for each event */
+	struct notifier_block bcm_otg_id_chg_notifier;
 	struct notifier_block bcm_otg_vbus_validity_notifier;
 	struct notifier_block bcm_otg_vbus_a_invalid_notifier;
 	struct notifier_block bcm_otg_chg_detection_notifier;
