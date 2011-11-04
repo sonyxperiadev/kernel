@@ -236,6 +236,7 @@ int vcos_strcasecmp(const char *s1, const char *s2) {
    return strcasecmp(s1,s2);
 }
 
+
 /***********************************************************
  *
  * Mutexes
@@ -452,6 +453,13 @@ void vcos_atomic_flags_delete(VCOS_ATOMIC_FLAGS_T *atomic_flags)
 
 VCOS_INLINE_DECL void _vcos_thread_sem_wait(void);
 VCOS_INLINE_DECL void _vcos_thread_sem_post(VCOS_THREAD_T *);
+
+/***********************************************************
+ *
+ * Misc
+ *
+ ***********************************************************/
+VCOS_INLINE_DECL char *vcos_strdup(const char *str);
 
 /***********************************************************
  *

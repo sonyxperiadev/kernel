@@ -23,8 +23,11 @@
 #define VC_MEM_IOC_MEM_SIZE         _IOR( VC_MEM_IOC_MAGIC, 1, unsigned int )
 
 #if defined( __KERNEL__ )
+#define VC_MEM_TO_ARM_ADDR_MASK 0x3FFFFFFF
+
 extern unsigned long mm_vc_mem_phys_addr;
 extern unsigned int  mm_vc_mem_size;
+extern int vc_mem_get_current_size( void );
 #endif
 
 #endif  /* VC_MEM_H */

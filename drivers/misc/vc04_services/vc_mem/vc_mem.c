@@ -122,23 +122,48 @@ static int vc_mem_release( struct inode *inode, struct file *file )
 static void vc_mem_get_size( void )
 {
    CHAL_IPC_HANDLE ipc_handle;
+   uint32_t wakeup_register;
 
-   // Get the videocore memory size from the IPC mailbox
+   // Get the videocore memory size from the IPC mailbox if not yet
+   // assigned.
    if ( mm_vc_mem_size == 0 )
    {
       ipc_handle = chal_ipc_config( NULL );
       if ( ipc_handle == NULL )
       {
          LOG_ERR( "%s: failed to get IPC handlle", __func__ );
+         return;
       }
-      else if ( chal_ipc_read_mailbox( ipc_handle, IPC_MAILBOX_ID_0,
-                                       &mm_vc_mem_size ) != BCM_SUCCESS )
+
+      chal_ipc_query_wakeup_vc( ipc_handle, &wakeup_register );
+      if (( wakeup_register & ~1 ) == 0 )
       {
-         LOG_ERR( "%s: failed to read from IPC mailbox", __func__ );
+         LOG_DBG( "%s: videocore not yet loaded, skipping...", __func__ );
+      }
+      else
+      {
+         if ( chal_ipc_read_mailbox( ipc_handle,
+                                     IPC_MAILBOX_ID_0,
+                                     &mm_vc_mem_size ) != BCM_SUCCESS )
+         {
+            LOG_ERR( "%s: failed to read from IPC mailbox", __func__ );
+         }
       }
    }
 }
 
+/****************************************************************************
+*
+*   vc_mem_get_current_size
+*
+***************************************************************************/
+
+int vc_mem_get_current_size( void )
+{
+   vc_mem_get_size();
+   return mm_vc_mem_size;
+}
+EXPORT_SYMBOL_GPL( vc_mem_get_current_size );
 
 /****************************************************************************
 *
@@ -323,6 +348,8 @@ static int __init vc_mem_init( void )
     struct device *dev;
 
     LOG_DBG( "%s: called", __func__ );
+
+    vc_mem_get_size();
 
     printk( "vc-mem: mm_vc_mem_phys_addr = 0x%08lx\n", mm_vc_mem_phys_addr );
     printk( "vc-mem: mm_vc_mem_size      = 0x%08x (%u MiB)\n",
