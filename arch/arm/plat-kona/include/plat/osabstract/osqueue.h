@@ -62,7 +62,7 @@ struct QueueStruct_t {
 	UInt32 msg_size;
 	UInt32 max_entries;
 	struct mutex q_mutex;
-	struct semaphore msg_queued;
+	wait_queue_head_t msg_wait;
 	struct list_head q_head;
 };
 
@@ -90,7 +90,7 @@ static inline Queue_t OSQUEUE_Create(					// returns newly-created queue
 		new_queue->msg_size = msg_size;
 		new_queue->max_entries = entries;
 		mutex_init(&new_queue->q_mutex);
-		sema_init(&new_queue->msg_queued, 0);
+		init_waitqueue_head(&new_queue->msg_wait);
 		INIT_LIST_HEAD(&new_queue->q_head);
 	}
 	return (Queue_t *)new_queue;
@@ -167,9 +167,9 @@ static inline OSStatus_t OSQUEUE_Pend(				// get message from the queue
 	if (in_interrupt())
 		return status;
 
-	do {
-		down(&queue->msg_queued);
-	} while (list_empty(&queue->q_head));
+	if (wait_event_interruptible(queue->msg_wait,
+					!list_empty(&queue->q_head)))
+		return status;
 
 	if (mutex_lock_interruptible(&queue->q_mutex) != 0)
 		return status;
@@ -224,7 +224,7 @@ static inline OSStatus_t OSQUEUE_PostGeneric( 					// internal method to post ms
 		list_add(&(tmp->head), &(queue->q_head));
 	memcpy((QMsg_t *)tmp->msg_ptr, msg, queue->msg_size);
 	mutex_unlock(&queue->q_mutex);
-	up(&queue->msg_queued);
+	wake_up(&queue->msg_wait);
 	return OSSTATUS_SUCCESS;
 
 err:
