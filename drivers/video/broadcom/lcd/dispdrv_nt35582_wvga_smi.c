@@ -83,6 +83,7 @@
 #include <plat/csl/csl_lcd.h>  
 #include <plat/csl/csl_smi.h> 
 #include <plat/csl/csl_tectl_vc4lite.h> 
+#include <plat/pi_mgr.h>
 
 #include "dispdrv_mipi_dcs.h"
 #include "dispdrv_common.h" 
@@ -134,6 +135,7 @@ typedef struct
     DISP_DRV_STATE       drvState;
     DISP_PWR_STATE       pwrState;
     struct pi_mgr_dfs_node* dfs_node;
+    volatile int	 is_clock_gated;
 } NT35582_WVGA_SMI_PANEL_T;   
 
 
@@ -178,9 +180,9 @@ Int32   NT35582_WVGA_SMI_GetDispDrvFeatures (
             UInt32*                     version_minor,
             DISPDRV_SUPPORT_FEATURES_T* flags );
 
-Int32   NT35582_WVGA_SMI_Start ( DISPDRV_HANDLE_T dispH ); 
+Int32   NT35582_WVGA_SMI_Start ( struct pi_mgr_dfs_node* dfs_node); 
 
-Int32   NT35582_WVGA_SMI_Stop  ( DISPDRV_HANDLE_T dispH ); 
+Int32   NT35582_WVGA_SMI_Stop  ( struct pi_mgr_dfs_node* dfs_node); 
 
 Int32   NT35582_WVGA_SMI_PowerControl ( 
             DISPDRV_HANDLE_T        dispH, 
@@ -579,7 +581,10 @@ Int32 NT35582_WVGA_SMI_GetDispDrvFeatures (
 Int32 NT35582_WVGA_SMI_Init ( void )
 {
     Int32   res = 0;
-    
+   
+    panel[0].is_clock_gated = 1;
+    panel[0].dfs_node = NULL;
+
     if(     panel[0].drvState != DRV_STATE_INIT 
          && panel[0].drvState != DRV_STATE_OPEN  )
     {
@@ -690,12 +695,14 @@ Int32 NT35582_WVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
         }        
     }    
 
-    if (brcm_disable_smi_lcd_clocks(lcdDrv->dfs_node))
+#if 0
+    if (NT35582_WVGA_SMI_Stop(dispH))
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
             __FUNCTION__  );
         return ( -1 );
     }
+#endif
 
     if ( res != -1 )
     {
@@ -861,13 +868,15 @@ Int32 NT35582_WVGA_SMI_Open (
             __FUNCTION__  );
         return ( -1 );
     }    
-  
-    if (brcm_enable_smi_lcd_clocks(&pPanel->dfs_node))
+
+#if 0
+    if (NT35582_WVGA_SMI_Start((DISPDRV_HANDLE_T)pPanel))
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
             __FUNCTION__  );
         return ( -1 );
     }
+#endif
 
     pSmiCfg  = &NT35582_WVGA_SMI_SmiCtrlCfg;
 
@@ -1013,14 +1022,25 @@ Int32 NT35582_WVGA_SMI_PowerControl (
 // Description:   Configure For Updates
 //
 //*****************************************************************************
-Int32 NT35582_WVGA_SMI_Start ( DISPDRV_HANDLE_T dispH )
+Int32 NT35582_WVGA_SMI_Start (struct pi_mgr_dfs_node* dfs_node)
 {
-//    Int32                       res    = 0;
-//    NT35582_WVGA_SMI_PANEL_T*   lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
 
-//    DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "NT35582_WVGA_SMI_Start");
-//    nt35582wvgaSmi_WrCmndP0 ( dispH, TRUE, NT35582_WR_MEM_START );
-    return ( 0 );
+#if 0
+    if (0 == lcdDrv->is_clock_gated)
+	return 0;
+#endif
+
+    if (brcm_enable_smi_lcd_clocks(dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    } else {
+#if 0
+	lcdDrv->is_clock_gated = 0;
+#endif
+	return ( 0 );
+    }
 }
 
 //*****************************************************************************
@@ -1030,12 +1050,26 @@ Int32 NT35582_WVGA_SMI_Start ( DISPDRV_HANDLE_T dispH )
 // Description:   
 //
 //*****************************************************************************
-Int32 NT35582_WVGA_SMI_Stop ( DISPDRV_HANDLE_T dispH )
+Int32 NT35582_WVGA_SMI_Stop (struct pi_mgr_dfs_node* dfs_node)
 {
-    DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "NT35582_WVGA_SMI_Stop");
-    LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Not Implemented\n", __FUNCTION__ );
-    
-    return ( -1 );
+
+#if 0
+    if (1 == lcdDrv->is_clock_gated)
+	return 0;
+#endif
+
+    if (brcm_disable_smi_lcd_clocks(dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    } else {
+#if 0
+	lcdDrv->is_clock_gated = 1;
+#endif
+        return 0;
+    }
+
 }
 
 //*****************************************************************************
@@ -1080,7 +1114,17 @@ static void nt35582wvgaSmi_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
               apiRes = DISPDRV_CB_RES_ERR;         
               break;
         }
-        
+
+#if 0
+	if (NT35582_WVGA_SMI_Stop((DISPDRV_HANDLE_T)&panel[0]))
+    	{
+        	LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the clock\n",
+	            __FUNCTION__  );
+    	}
+#endif
+
+ 	CSL_SMI_Unlock ( pCbRec->cslH );
+
         if ( pCbRec->dispDrvApiCbRev == DISP_DRV_CB_API_REV_1_0 ) 
         {
             ((DISPDRV_CB_T)pCbRec->dispDrvApiCb)( apiRes );
@@ -1090,10 +1134,8 @@ static void nt35582wvgaSmi_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
             ((DISPDRV_CB_API_1_1_T)pCbRec->dispDrvApiCb)
                 ( apiRes, pCbRec->dispDrvApiCbP1 );
         }    
-    }
-        
-    CSL_SMI_Unlock ( pCbRec->cslH );
-    
+    }      
+     
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
 }
 
@@ -1192,7 +1234,16 @@ Int32 NT35582_WVGA_SMI_Update (
             __FUNCTION__ );
         return ( -1 );
     }
-    
+
+#if 0
+    if (NT35582_WVGA_SMI_Start(dispH))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
+#endif
+
     CSL_SMI_Lock ( lcdDrv->cslH );
 
     if (0 == fb_idx)
@@ -1236,6 +1287,13 @@ Int32 NT35582_WVGA_SMI_Update (
         
     if( (res==-1) || (apiCb == NULL) )
     {
+#if 0
+	if (NT35582_WVGA_SMI_Stop(dispH))
+    	{
+        	LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the clock\n",
+            		__FUNCTION__  );
+    	}
+#endif
         CSL_SMI_Unlock ( lcdDrv->cslH );
     }
         

@@ -23,18 +23,46 @@
 /*                                                                                              */
 /************************************************************************************************/
 
-#include "lcd_clock.h" 
+#define __DSI_USE_CLK_API__
 
-int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node** dfs_node)
+#include "lcd_clock.h" 
+#ifdef __DSI_USE_CLK_API__
+#include <plat/clock.h>
+#endif
+
+#ifdef __DSI_USE_CLK_API__
+struct 
+{
+	char *dsi_pll_ch;    
+        char *dsi_axi;	     
+        char *dsi_esc;
+        u32  pixel_pll_sel;	     
+} dsi_bus_clk[2] = 	     
+{
+    { 
+        "dsi_pll_chnl0",
+        "dsi0_axi_clk",  
+        "dsi0_esc_clk",  
+        DSI0_PIXEL_PLL,
+    },
+    { 
+        "dsi_pll_chnl1",
+        "dsi1_axi_clk",  
+        "dsi1_esc_clk",  
+        DSI1_PIXEL_PLL,
+    },	
+};
+#endif
+
+int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 {
 	struct clk *smi_axi;
 	struct clk *mm_dma_axi;
 	struct clk *smi;
 
-	*dfs_node = pi_mgr_dfs_add_request("smi_lcd", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
-	if (!*dfs_node)
+	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
 	{
-	    printk(KERN_ERR "Failed to add dfs request for SMI LCD\n");
+	    printk(KERN_ERR "Failed to update dfs request for SMI LCD at enable\n");
 	    return  -EIO;
 	}
 
@@ -81,23 +109,153 @@ int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 	clk_disable(smi_axi);
 	clk_disable(mm_dma_axi);
 
-	if (pi_mgr_dfs_request_remove(dfs_node))
+	if (pi_mgr_dfs_request_update(dfs_node, PI_MGR_DFS_MIN_VALUE))
 	{
-	    printk(KERN_ERR "Failed to remove dfs request for SMI LCD\n");
+	    printk(KERN_ERR "Failed to update dfs request for SMI LCD at disable\n");
 	    return  -EIO;
 	}
 
 	return 0;
 }
 
-int brcm_enable_dsi_lcd_clocks(struct pi_mgr_dfs_node** dfs_node)
+#ifdef __DSI_USE_CLK_API__
+int brcm_enable_dsi_lcd_clocks(
+	struct pi_mgr_dfs_node* dfs_node,
+	unsigned int dsi_bus, 
+        unsigned int dsi_pll_hz, 
+        unsigned int dsi_pll_ch_div, 
+        unsigned int esc_clk_hz )
 {
 	struct clk *mm_dma_axi;
 
-	*dfs_node = pi_mgr_dfs_add_request("dsi_lcd", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
-	if (!*dfs_node)
+	struct clk *dsi_axi;
+	struct clk *dsi_esc;
+	struct clk *dsi_pll;
+	struct clk *dsi_pll_ch;
+	u32    pixel_pll_val;
+        u32    dsi_pll_ch_hz;
+
+	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
 	{
-	    printk(KERN_ERR "Failed to add dfs request for DSI LCD\n");
+	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
+	    return  -EIO;
+	}
+
+	mm_dma_axi  = clk_get (NULL, "mm_dma_axi_clk");
+	dsi_axi     = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_axi);
+	dsi_esc     = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_esc);
+	dsi_pll     = clk_get (NULL, "dsi_pll");
+	dsi_pll_ch  = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_pll_ch);
+	BUG_ON (!mm_dma_axi || !dsi_axi || !dsi_esc || !dsi_pll || !dsi_pll_ch);
+
+	if (clk_enable(mm_dma_axi)) {
+		printk(KERN_ERR "Failed to enable the MM DMA bus clock\n");
+		return -EIO;
+	}
+       
+	if (clk_enable (dsi_axi)) {
+		printk(KERN_ERR "Failed to enable the DSI[%d] AXI clock\n", 
+                	dsi_bus);
+		return -EIO;
+	}
+       
+	if (clk_set_rate(dsi_pll, dsi_pll_hz)) {
+		printk(KERN_ERR "Failed to set the DSI[%d] PLL to %d Hz\n", 
+                	dsi_bus, dsi_pll_hz);
+		return -EIO;
+	}
+	if (clk_enable(dsi_pll)) {
+		printk(KERN_ERR "Failed to enable the DSI[%d] PLL\n", dsi_bus);
+		return -EIO;
+	}
+        
+        dsi_pll_ch_hz = clk_get_rate(dsi_pll) / dsi_pll_ch_div;
+	if (clk_set_rate(dsi_pll_ch, dsi_pll_ch_hz)) {
+		printk(KERN_ERR "Failed to set the DSI[%d] PLL CH to %d Hz\n", 
+                	dsi_bus, dsi_pll_ch_hz);
+		return -EIO;
+	}
+        
+	if (clk_enable(dsi_pll_ch)) {
+		printk(KERN_ERR "Failed to enable DSI[%d] PLL CH\n", dsi_bus);
+		return -EIO;
+	}
+       
+       	#define DSI_CORE_MAX_HZ	 150000000
+        if(     (dsi_pll_ch_hz >> 1) <= DSI_CORE_MAX_HZ)
+        	pixel_pll_val = DSI_TXDDRCLK;
+        else if((dsi_pll_ch_hz >> 2) <= DSI_CORE_MAX_HZ)
+        	pixel_pll_val = DSI_TXDDRCLK2;
+        else 
+        	pixel_pll_val = DSI_TX0_BCLKHS;
+                
+        if (mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel,
+        	pixel_pll_val)) {
+                
+		printk(KERN_ERR "Failed to set DSI[%d] PIXEL PLL Sel to %d\n", 
+                	dsi_bus, pixel_pll_val);
+		return -EIO;
+        }
+       
+	if (clk_set_rate(dsi_esc, esc_clk_hz)) {
+		printk(KERN_ERR "Failed to set the DSI[%d] ESC clk to %d Hz\n", 
+                	dsi_bus, esc_clk_hz);
+		return -EIO;
+	}
+	if (clk_enable(dsi_esc)) {
+		printk(KERN_ERR "Failed to enable the DSI[%d] ESC clk\n", 
+                	dsi_bus );
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
+{
+	struct clk *mm_dma_axi;
+	struct clk *dsi_axi;
+	struct clk *dsi_esc;
+	struct clk *dsi_pll;
+	struct clk *dsi_pll_ch;
+
+	mm_dma_axi = clk_get (NULL, "mm_dma_axi_clk");
+	dsi_axi    = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_axi);
+	dsi_esc    = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_esc);
+	dsi_pll    = clk_get (NULL, "dsi_pll");
+	dsi_pll_ch = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_pll_ch);
+	BUG_ON (!mm_dma_axi || !dsi_axi || !dsi_esc || !dsi_pll || !dsi_pll_ch);
+
+	clk_disable(mm_dma_axi);
+	clk_disable(dsi_axi   );
+	clk_disable(dsi_esc   );
+        mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel,DSI_NO_CLOCK);
+	clk_disable(dsi_pll_ch);
+	clk_disable(dsi_pll   );
+
+	if (pi_mgr_dfs_request_update(dfs_node, PI_MGR_DFS_MIN_VALUE))
+	{
+	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
+	    return  -EIO;
+	}
+
+	return 0;
+}
+
+#else  // !__DSI_USE_CLK_API__
+
+int brcm_enable_dsi_lcd_clocks(
+	struct pi_mgr_dfs_node* dfs_node,
+	unsigned int dsi_bus, 
+        unsigned int dsi_pll_hz, 
+        unsigned int dsi_pll_ch_div, 
+        unsigned int esc_clk_hz )
+{
+	struct clk *mm_dma_axi;
+
+	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
+	{
+	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 	    return  -EIO;
 	}
 
@@ -112,7 +270,7 @@ int brcm_enable_dsi_lcd_clocks(struct pi_mgr_dfs_node** dfs_node)
 	return 0;
 }
 
-int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
+int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 {
 	struct clk *mm_dma_axi;
 
@@ -121,11 +279,13 @@ int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 
 	clk_disable(mm_dma_axi);
 
-	if (pi_mgr_dfs_request_remove(dfs_node))
+	if (pi_mgr_dfs_request_update(dfs_node, PI_MGR_DFS_MIN_VALUE));
 	{
-	    printk(KERN_ERR "Failed to remove dfs request for SMI LCD\n");
+	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 	    return  -EIO;
 	}
 
 	return 0;
 }
+
+#endif  // #ifdef __DSI_USE_CLK_API__

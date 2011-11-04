@@ -301,8 +301,8 @@ typedef struct
     Int32    (*core_freq_change)(const UInt32 core_freq_in_hz, const UInt32 pending);                                                      ///< Optional routine to handle clock change messages
     Int32    (*run_domain_change)(const UInt32 new_run_domain_active_state, const UInt32 pending);                                         ///< Optional routine to handle power domain requests
     const DISPDRV_INFO_T* (*get_info)(DISPDRV_HANDLE_T handle);                                                                            ///< Routine to get the display info
-    Int32    (*start)(DISPDRV_HANDLE_T handle);                                                                                            ///< Routine to start a display
-    Int32    (*stop)(DISPDRV_HANDLE_T handle);                                                                                             ///< Routine to stop a display
+    Int32    (*start)(struct pi_mgr_dfs_node* dfs_node);                                                                                            ///< Routine to start a display
+    Int32    (*stop)(struct pi_mgr_dfs_node* dfs_node);                                                                                             ///< Routine to stop a display
     Int32    (*power_control)(DISPDRV_HANDLE_T handle, DISPLAY_POWER_STATE_T powerState);                                                  ///< Routine to control a displays power
     Int32    (*update_no_os)(DISPDRV_HANDLE_T handle, void *fb );                                                                          ///< Routine to update a frame (EXT fb)
     Int32    (*update_dma_os)(DISPDRV_HANDLE_T handle, void *fb, DISPDRV_CB_API_1_1_T apiCb);                                              ///< Routine to update a frame (EXT fb)
