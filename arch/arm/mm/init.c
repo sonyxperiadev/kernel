@@ -20,6 +20,7 @@
 #include <linux/gfp.h>
 #include <linux/memblock.h>
 #include <linux/sort.h>
+#include <linux/dma-contiguous.h>
 
 #include <asm/mach-types.h>
 #include <asm/prom.h>
@@ -387,6 +388,13 @@ void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 	/* reserve any platform specific memblock areas */
 	if (mdesc->reserve)
 		mdesc->reserve();
+
+	/* reserve memory for DMA contigouos allocations */
+#ifdef CONFIG_ZONE_DMA
+	dma_contiguous_reserve(PHYS_OFFSET + mdesc->dma_zone_size - 1);
+#else
+	dma_contiguous_reserve(0);
+#endif
 
 	memblock_analyze();
 	memblock_dump_all();

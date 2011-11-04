@@ -36,4 +36,4 @@ uint32_t vcos_remove_thread(struct task_struct *thread_id);
 
 VCOS_THREAD_T *vcos_kthread_current(void);
 
-#endif //VCOS_THREAD_MAP_H
+#endif /*VCOS_THREAD_MAP_H */

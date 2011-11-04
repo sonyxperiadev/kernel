@@ -463,14 +463,15 @@ static int vc_ovl_proc_read( char *buf, char **start, off_t offset, int count, i
                     ovl->ovl_info.in_width,
                     ovl->ovl_info.in_height,
                     ovl->ovl_info.format );
-      p += sprintf( p, "\tpos: (x:%d, y:%d, %dx%d, r:%d, h:%d, v:%d)\n",
+      p += sprintf( p, "\tpos: (x:%d, y:%d, %dx%d, r:%d, h:%d, v:%d, l:%d)\n",
                     ovl->ovl_info.xaxis,
                     ovl->ovl_info.yaxis,
                     ovl->ovl_info.width,
                     ovl->ovl_info.height,
                     ovl->ovl_info.rotation,
                     ovl->ovl_info.h_flip,
-                    ovl->ovl_info.v_flip );
+                    ovl->ovl_info.v_flip,
+                    ovl->ovl_info.layer );
       p += sprintf( p, "\tstatus: c:%s, p:%s\n",
                     ovl->ovl_changed ? "yes" : "no",
                     ovl->ovl_pending ? "yes" : "no" );

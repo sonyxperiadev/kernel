@@ -36,7 +36,7 @@ VideoCore OS Abstraction Layer - Linux kernel (partial) implementation.
 #include <linux/sched.h>
 #include <linux/ctype.h>
 #include <linux/uaccess.h>
-#include <linux/time.h>  // for time_t
+#include <linux/time.h>  /* for time_t */
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 
@@ -46,6 +46,7 @@ VideoCore OS Abstraction Layer - Linux kernel (partial) implementation.
 #define VCOS_HAVE_QUEUE        0
 #define VCOS_HAVE_LEGACY_ISR   0
 #define VCOS_HAVE_TIMER        1
+#define VCOS_HAVE_CANCELLATION_SAFE_TIMER 0
 #define VCOS_HAVE_MEMPOOL      0
 #define VCOS_HAVE_ISR          0
 #define VCOS_HAVE_ATOMIC_FLAGS 1
@@ -64,9 +65,9 @@ VideoCore OS Abstraction Layer - Linux kernel (partial) implementation.
 #define VCOS_REENTRANT_MUTEX_H
 #define VCOS_NAMED_SEMAPHORE_H
 #define VCOS_QUICKSLOW_MUTEX_H
-//#define VCOS_INIT_H
-//#define VCOS_MEM_H
-//#define VCOS_STRING_H
+/*#define VCOS_INIT_H */
+/*#define VCOS_MEM_H */
+/*#define VCOS_STRING_H */
 
 typedef struct semaphore      VCOS_SEMAPHORE_T;
 typedef struct semaphore      VCOS_EVENT_T;
@@ -328,7 +329,7 @@ VCOS_STATUS_T vcos_event_wait(VCOS_EVENT_T *event)
    else if (ret != 0)
       /* Default (timeout) */
       return VCOS_EAGAIN;
-   // Emulate a maximum count of 1 by removing any extra upness
+   /* Emulate a maximum count of 1 by removing any extra upness */
    while (down_trylock(event) == 0) continue;
    return VCOS_SUCCESS;
 }
@@ -481,7 +482,7 @@ void _vcos_log_platform_unregister(struct VCOS_LOG_CAT_T *category);
 #define vcos_rmb() rmb()
 
 #include "interface/vcos/generic/vcos_common.h"
-//#include "interface/vcos/generic/vcos_generic_quickslow_mutex.h"
+/*#include "interface/vcos/generic/vcos_generic_quickslow_mutex.h" */
 
 #endif /* VCOS_PLATFORM_H */
 

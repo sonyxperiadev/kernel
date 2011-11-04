@@ -23,6 +23,7 @@ ethHw_driver-objs := ethHw.o ethHw_asm.o
 obj-$(CONFIG_MACH_ISLAND_FPGA) += board_fpga.o
 obj-$(CONFIG_MACH_ISLAND_BU) += board_bu.o pinmux_island_bu.o
 obj-$(CONFIG_MACH_ISLAND_FF) += board_ff.o pinmux_island_ff.o board-bcm59055.o
+CFLAGS_board_ff.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_FF
 
 obj-$(CONFIG_MAP_SDMA) += chal/
 obj-$(CONFIG_MAP_SDMA) += sdmac.o dma_mmap.o dump-mem.o dma_mmap_test.o

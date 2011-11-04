@@ -33,7 +33,7 @@
 #include <linux/bh1715.h>
 #include <linux/brvsens_driver.h>
 
-#define BH1715_DEBUG
+//#define BH1715_DEBUG
 #define PROC_DEBUG
 
 #ifdef PROC_DEBUG

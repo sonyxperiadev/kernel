@@ -29,13 +29,14 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <asm/io.h>
 
+#include <plat/pi_mgr.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_vce.h>
 
 #include <linux/broadcom/vce.h>
 
-#define DRIVER_VERSION 10099
+#define DRIVER_VERSION 10100
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -60,12 +61,18 @@ the GPL, without Broadcom's express prior written consent.
 #define err_print(fmt, arg...) \
 		printk(KERN_ERR "%s():" fmt, __func__, ##arg)
 
+/* TODO: some of these globals (all of them?) belong in one or more of
+ * the data structures that follow */
 static int vce_major = VCE_DEV_MAJOR;
 static void __iomem *vce_base = NULL;
 static void __iomem *mm_rst_base = NULL;
 static struct clk *vce_clk;
 
+/* Per VCE state: (actually, some global state mixed in here too --
+ * TODO: separate this out in order to support multiple VCEs) */
 static struct {
+	struct semaphore       clockctl_sem;
+	uint32_t               clock_enable_count;
 	struct semaphore       *g_irq_sem;
 	struct semaphore       acquire_sem;
 	struct semaphore       work_lock;
@@ -74,48 +81,25 @@ static struct {
 	struct proc_dir_entry  *proc_status;
 	struct class           *vce_class;
 	uint32_t               irq_enabled;
+	struct pi_mgr_dfs_node* dfs_node;
+	struct pi_mgr_qos_node *cpu_qos_node;
+	struct semaphore       armctl_sem;
+	uint32_t               arm_keepawake_count;
 } vce_state;
 
+/* Per open handle state: */
 typedef struct {
 	struct semaphore irq_sem;
 	int              vce_acquired;
+	int              mmap_clock_hold_count; /* hack! */
 } vce_t;
 
 /***** Function Prototypes **************/
-static int setup_vce_clock(void);
 static void reset_vce(void);
 
 /******************************************************************
 	VCE HW specific functions
 *******************************************************************/
-static int setup_vce_clock(void)
-{
-	unsigned long rate;
-	int rc;
-
-	vce_clk = clk_get(NULL, "vce_axi_clk");
-	if (!vce_clk) {
-		err_print("%s: error get clock\n", __func__);
-		return -EIO;
-	}
-
-	rc = clk_set_rate( vce_clk, 249600000);
-	if (rc) {
-		//err_print("%s: error changing clock rate\n", __func__);
-		//return -EIO;
-	}
-
-	rc = clk_enable(vce_clk);
-	if (rc) {
-		err_print("%s: error enable clock\n", __func__);
-		return -EIO;
-	}
-
-	rate = clk_get_rate(vce_clk);
-	dbg_print("vce_clk_clk rate %lu\n", rate);
-
-	return (rc);
-}
 
 #define vce_reg_poke(reg, value) \
 	writel((value), vce_base + VCE_ ## reg ## _OFFSET)
@@ -158,7 +142,7 @@ static void assert_idle_nolock(void)
 static void assert_vce_is_idle(void)
 {
 	down(&vce_state.work_lock);
-	assert_idle_nolock();
+	if (vce_state.clock_enable_count) assert_idle_nolock();
 	up(&vce_state.work_lock);
 }
 
@@ -172,6 +156,7 @@ static void reset_vce(void)
 	assert_idle_nolock();
 #endif
 
+	BUG_ON(vce_clk == NULL);
 	clk_disable(vce_clk);
 	//Write the password to enable accessing other registers
 	writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
@@ -225,6 +210,150 @@ static irqreturn_t vce_isr(int irq, void *unused)
 	return IRQ_HANDLED;
 }
 
+static int _power_on(void)
+{
+	BUG_ON(vce_state.dfs_node != NULL);
+
+	/* Platform specific power-on procedure.  May be that this
+	 * should be in a separate file?  TODO: REVIEWME */
+	vce_state.dfs_node = pi_mgr_dfs_add_request("vce", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
+	if (!vce_state.dfs_node)
+	{
+	    err_print("Failed to add dfs request for VCE\n");
+	    return  -EIO;
+	}
+
+	BUG_ON(vce_state.dfs_node == NULL);
+	return 0;
+}
+
+static void _power_off(void)
+{
+	int s;
+
+	BUG_ON(vce_state.dfs_node == NULL);
+
+	/* Platform specific power-off procedure.  May be that this
+	 * should be in a separate file?  TODO: REVIEWME */
+	s = pi_mgr_dfs_request_remove(vce_state.dfs_node);
+	BUG_ON(s!=0);
+	vce_state.dfs_node = NULL;
+
+	BUG_ON(vce_state.dfs_node != NULL);
+}
+
+static int _clock_on(void)
+{
+	int s;
+
+	BUG_ON(vce_clk != NULL);
+	BUG_ON(vce_state.dfs_node == NULL);
+
+	vce_clk = clk_get(NULL, "vce_axi_clk");
+	if (!vce_clk) {
+		err_print("%s: error get clock\n", __func__);
+		return -EIO;
+	}
+
+	s = clk_enable(vce_clk);
+	if (s != 0) {
+		err_print("%s: error enabling clock\n", __func__);
+		vce_clk = NULL;
+		return -EIO;
+	}
+
+	BUG_ON(vce_clk == NULL);
+	return 0;
+}
+
+static void _clock_off(void)
+{
+	BUG_ON(vce_clk == NULL);
+	clk_disable(vce_clk);
+	vce_clk = NULL;
+	BUG_ON(vce_clk != NULL);
+}
+
+static void power_on_and_start_clock(void)
+{
+	/* Assume clock control mutex is already acquired, and that block is currently off */
+	BUG_ON(vce_state.clock_enable_count != 0);
+
+	_power_on(); /* TODO: error handling */
+
+	/* RST regs should be already mapped?  we don't bother here */
+	BUG_ON(mm_rst_base == NULL);
+
+	_clock_on(); /* TODO: error handling */
+
+	/* We probably ought to map vce registers here, but for now,
+	 * we go with the "promise not to access them" approach */
+	BUG_ON(vce_base == NULL);
+}
+
+static void stop_clock_and_power_off(void)
+{
+	/* Assume clock control mutex is already acquired, and that block is currently off */
+	BUG_ON(vce_state.clock_enable_count != 0);
+
+	/* Theoretically, we might consider unmapping VCE regs here */
+	BUG_ON(vce_base == NULL);
+
+	_clock_off();
+
+	/* Theoretically, we might consider unmapping reset regs here */
+	BUG_ON(mm_rst_base == NULL);
+
+	_power_off();
+}
+
+static void clock_on(void)
+{
+	down(&vce_state.clockctl_sem);
+	if (vce_state.clock_enable_count == 0) {
+		power_on_and_start_clock();
+	}
+	vce_state.clock_enable_count += 1;
+	up(&vce_state.clockctl_sem);
+}
+
+static void clock_off(void)
+{
+	down(&vce_state.clockctl_sem);
+	vce_state.clock_enable_count -= 1;
+	if (vce_state.clock_enable_count == 0) {
+		stop_clock_and_power_off();
+	}
+	up(&vce_state.clockctl_sem);
+}
+
+static void cpu_keepawake_dec(void)
+{
+	down(&vce_state.armctl_sem);
+	vce_state.arm_keepawake_count -= 1;
+	if (vce_state.arm_keepawake_count == 0) {
+		pi_mgr_qos_request_update(vce_state.cpu_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+	}
+	up(&vce_state.armctl_sem);
+}
+
+static void cpu_keepawake_inc(void)
+{
+	down(&vce_state.armctl_sem);
+	if (vce_state.arm_keepawake_count == 0) {
+		pi_mgr_qos_request_update(vce_state.cpu_qos_node, 0);
+	}
+	vce_state.arm_keepawake_count += 1;
+	up(&vce_state.armctl_sem);
+}
+
+#ifdef VCE_DEBUG
+static void clock_on_(int linenum) { clock_on(); dbg_print("VCE clock_on() @ %d\n", linenum); }
+#define clock_on() clock_on_(__LINE__)
+static void clock_off_(int linenum) { dbg_print("VCE clock_ogg() @ %d\n", linenum); clock_off(); }
+#define clock_off() clock_off_(__LINE__)
+#endif
+
 /******************************************************************
 	VCE driver functions
 *******************************************************************/
@@ -240,6 +369,9 @@ static int vce_open(struct inode *inode, struct file *filp)
 
 	dev->vce_acquired = 0;
 	sema_init(&dev->irq_sem, 0);
+
+	/* A hack */
+	dev->mmap_clock_hold_count = 0;
 
 	filp->private_data = dev;
 	return 0;
@@ -282,11 +414,20 @@ static int vce_release(struct inode *inode, struct file *filp)
 		//Just free up the VCE HW
 		vce_state.g_irq_sem = NULL;
 		up(&vce_state.acquire_sem);
+		clock_off();
 	}
 
 	if (!down_trylock(&dev->irq_sem))
 	{
 		err_print("VCE driver closing with unacknowledged interrupts\n");
+	}
+
+	/* A hack */
+	/* We should be unclocking in munmap() call, but for now, we
+	 * defer to here and compensate.  Ugly.  Yes.  TODO: FIXME */
+	while (dev->mmap_clock_hold_count > 0) {
+		clock_off();
+		dev->mmap_clock_hold_count -= 1;
 	}
 
 	kfree(dev);
@@ -318,6 +459,8 @@ static int vce_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
+	clock_on();
+
 	/* Remap-pfn-range will mark the range VM_IO and VM_RESERVED */
 	if (remap_pfn_range(vma,
 			vma->vm_start,
@@ -327,6 +470,11 @@ static int vce_mmap(struct file *filp, struct vm_area_struct *vma)
 		err_print("%s(): remap_pfn_range() failed\n", __FUNCTION__);
 		return -EINVAL;
 	}
+	dev->mmap_clock_hold_count += 1; /* A Hack!  We should have a
+					  * way to unlock the clock
+					  * when munmap() is called --
+					  * TODO: FIXME */
+	/* TODO:  when unmapped?  need a clock_off()!! */
 
 	return 0;
 }
@@ -373,16 +521,28 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 		case VCE_IOCTL_RESET:
 		{
+			/* TODO: should we assert clocks are already
+			 * on?  or just ignore the request when clocks
+			 * are off?  We'll get a PoR anyway?  Or
+			 * should we handle case with power on and
+			 * clocks off (e.g. other mm block has power)
+			 * by deferring the reset to the next clock
+			 * on?  FIXME */
+			clock_on();
 			reset_vce();
+			clock_off();
 		}
 		break;
 
 		case VCE_IOCTL_HW_ACQUIRE:
 		{
+			clock_on();
+
 			//Wait for the VCE HW to become available
 			if (down_interruptible(&vce_state.acquire_sem))
 			{
 				err_print("Wait for VCE HW failed\n");
+				clock_off();
 				return -ERESTARTSYS;
 			}
 			vce_state.g_irq_sem = &dev->irq_sem;	//Replace the irq sem with current process sem
@@ -395,6 +555,19 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			vce_state.g_irq_sem = NULL;		//Free up the g_irq_sem
 			dev->vce_acquired = 0;	//Not acquired anymore
 			up(&vce_state.acquire_sem);		//VCE is up for grab
+			clock_off();
+		}
+		break;
+
+		case VCE_IOCTL_UNUSE_ACP:
+		{
+			cpu_keepawake_dec();
+		}
+		break;
+
+		case VCE_IOCTL_USE_ACP:
+		{
+			cpu_keepawake_inc();
 		}
 		break;
 
@@ -448,12 +621,17 @@ static int proc_version_read(char *buffer, char **start, off_t offset, int bytes
 	/* TODO: we have some private data here that we can use: */
 	(void)context;
 
-	/* TODO: review these locks... */
-	up(&vce_state.work_lock);
-
+	clock_on();
 	vce_version = vce_reg_peek(VERSION);
+	clock_off();
 	spec_revision = (vce_version & VCE_VERSION_SPEC_REVISION_MASK) >> VCE_VERSION_SPEC_REVISION_SHIFT;
 	sub_revision = (vce_version & VCE_VERSION_SUB_REVISION_MASK) >> VCE_VERSION_SUB_REVISION_SHIFT;
+
+	/* If this assertion fails, it means we didn't decompose the
+	   version information fully.  Perhaps you're running on a
+	   simulated version of the IP, or the register has changed
+	   its layout since this driver was written? */
+	BUG_ON(vce_version != (spec_revision << VCE_VERSION_SPEC_REVISION_SHIFT | sub_revision << VCE_VERSION_SUB_REVISION_SHIFT));
 
 	if (bytes < 20) {
 		/* TODO: be a little more precise about the length of buffer required -- we know we write just 15 right now... */
@@ -469,8 +647,6 @@ static int proc_version_read(char *buffer, char **start, off_t offset, int bytes
 
 	ret = len;
 
-	down(&vce_state.work_lock);
-
 	BUG_ON (len > bytes);
 	BUG_ON (ret < 0);
 	return ret;
@@ -480,7 +656,6 @@ static int proc_version_read(char *buffer, char **start, off_t offset, int bytes
 	*/
 
 e0:
-	down(&vce_state.work_lock);
 	BUG_ON (ret >= 0);
 	return ret;
 }
@@ -501,8 +676,10 @@ static int proc_status_read(char *buffer, char **start, off_t offset, int bytes,
 	/* TODO: we have some private data here that we can use: */
 	(void)context;
 
-	/* TODO: review these locks... */
-	up(&vce_state.work_lock);
+	/* TODO: do we need to power it on just to read the status?
+	 * Shouldn't we just write 'gated' or some such to the buffer
+	 * instead?  or return an error status? */
+	clock_on();
 
 	status = vce_reg_peek(STATUS);
 	busybits = (status & VCE_STATUS_VCE_BUSY_BITFIELD_MASK) >> VCE_STATUS_VCE_BUSY_BITFIELD_SHIFT;
@@ -525,7 +702,7 @@ static int proc_status_read(char *buffer, char **start, off_t offset, int bytes,
 
 	ret = len;
 
-	down(&vce_state.work_lock);
+	clock_off();
 
 	BUG_ON (len > bytes);
 	BUG_ON (ret < 0);
@@ -536,7 +713,7 @@ static int proc_status_read(char *buffer, char **start, off_t offset, int bytes,
 	*/
 
 e0:
-	down(&vce_state.work_lock);
+	clock_off();
 	BUG_ON (ret >= 0);
 	return ret;
 }
@@ -544,71 +721,63 @@ e0:
 int __init vce_init(void)
 {
 	int ret;
+	struct device *device;
 
 	dbg_print("VCE driver Init\n");
 
-		/* initialize the gencmd struct */
+	/* initialize the per-driver/per-vce/global struct (TODO!) */
 	memset(&vce_state, 0, sizeof(vce_state));
 
 	ret = register_chrdev(0, VCE_DEV_NAME, &vce_fops);
 	if (ret < 0)
-		return -EINVAL;
+		goto errA;
 	else
 		vce_major = ret;
 
 	vce_state.vce_class = class_create(THIS_MODULE, VCE_DEV_NAME);
 	if (IS_ERR(vce_state.vce_class)) {
 		err_print("Failed to create VCE class\n");
-		unregister_chrdev(vce_major, VCE_DEV_NAME);
-		return PTR_ERR(vce_state.vce_class);
+		ret = PTR_ERR(vce_state.vce_class);
+		goto errB;
 	}
 
-	device_create(vce_state.vce_class, NULL, MKDEV(vce_major, 0), NULL, VCE_DEV_NAME);
+	device = device_create(vce_state.vce_class, NULL, MKDEV(vce_major, 0), NULL, VCE_DEV_NAME);
+	if (IS_ERR_OR_NULL(device)) {
+		err_print("Failed to create VCE device\n");
+		ret = PTR_ERR(device);
+		goto errC;
+	}
 
-	setup_vce_clock();
+	/* For the power management */
+	sema_init(&vce_state.clockctl_sem, 1);
+	sema_init(&vce_state.armctl_sem, 1);
+
+	/* We map the registers -- even though the power to the domain
+	 * remains off... TODO: consider whether that's dangerous?  It
+	 * would be a bug to try to access these anyway while the
+	 * block is off, so let's just make sure we don't... :) */
 
 	/* Map the VCE registers */
 	/* TODO: split this out into the constituent parts: prog mem / data mem / periph mem / regs */
 	/* Also get rid of the hardcoded size */
 	vce_base = (void __iomem *)ioremap_nocache(RHEA_VCE_BASE_PERIPHERAL_ADDRESS, SZ_512K);
-	if (vce_base == NULL)
+	if (vce_base == NULL) {
+		err_print("Failed to MAP the VCE IO space\n");
 		goto err;
-
+	}
+	dbg_print("VCE register base address (remapped) = 0X%p\n", vce_base);
 
 	/* Map the RESET registers */
 	mm_rst_base = (void __iomem *)ioremap_nocache(MM_RST_BASE_ADDR, SZ_4K);
 	if (mm_rst_base == NULL)
 		goto err1;
 
-	/* Print out the VCE identification registers */
-	{
-		uint32_t vce_version;
-		uint32_t spec_revision;
-		uint32_t sub_revision;
-
-		vce_version = readl(vce_base + VCE_VERSION_OFFSET);
-		spec_revision = (vce_version & VCE_VERSION_SPEC_REVISION_MASK) >> VCE_VERSION_SPEC_REVISION_SHIFT;
-		sub_revision = (vce_version & VCE_VERSION_SUB_REVISION_MASK) >> VCE_VERSION_SUB_REVISION_SHIFT;
-		/* TODO: make this available via /proc */
-
-		dbg_print("VCE Version %u.%u [0X%x]\n", spec_revision, sub_revision, vce_version);
-
-		/* If this assertion fails, it means we didn't
-		   decompose the version information fully.  Perhaps
-		   you're running on a simulated version of the IP, or
-		   the register has changed its layout since this
-		   driver was written? */
-		BUG_ON(vce_version != (spec_revision << VCE_VERSION_SPEC_REVISION_SHIFT | sub_revision << VCE_VERSION_SUB_REVISION_SHIFT));
-	}
-
-	dbg_print("VCE register base address (remapped) = 0X%p\n", vce_base);
-
 	/* Request the VCE IRQ */
 	ret = request_irq(IRQ_VCE, vce_isr,
 			IRQF_DISABLED | IRQF_TRIGGER_RISING, VCE_DEV_NAME, NULL);
-	if (ret){
+	if (ret != 0) {
 		err_print("request_irq failed ret = %d\n", ret);
-		goto err2;
+		goto err2a;
 	}
 
 	/* Initialize the VCE acquire_sem and work_lock*/
@@ -640,19 +809,52 @@ int __init vce_init(void)
 	}
 	vce_state.proc_status->read_proc = proc_status_read;
 
+	/* We need a QOS node for the CPU in order to do the ACP keep alive thing (simple wfi) */
+	vce_state.cpu_qos_node = pi_mgr_qos_add_request("vce", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+	if (vce_state.cpu_qos_node == NULL) {
+		err_print("Failed to get QOS node for ARM core\n");
+		ret = -ENOENT;
+		goto err5;
+	}
+
 	return 0;
 
+	/*
+	  error exit paths
+	*/
+
+	// pi_mgr_qos_request_remove(vce_state.cpu_qos_node);
+err5:
+
+	remove_proc_entry("status", vce_state.proc_vcedir);
 err4:
+
 	remove_proc_entry("version", vce_state.proc_vcedir);
 err3:
 	remove_proc_entry(VCE_DEV_NAME, NULL);
 err2:
+
+	free_irq(IRQ_VCE, NULL);
+err2a:
+
 	iounmap(mm_rst_base);
+	mm_rst_base = 0;
 err1:
+
 	iounmap(vce_base);
+	vce_base = 0;
 err:
-	err_print("Failed to MAP the VCE IO space\n");
+
+	device_destroy(vce_state.vce_class, MKDEV(vce_major, 0));
+errC:
+
+	class_destroy(vce_state.vce_class);
+errB:
+
 	unregister_chrdev(vce_major, VCE_DEV_NAME);
+errA:
+
+	BUG_ON(ret >= 0);
 	return ret;
 }
 
@@ -661,7 +863,9 @@ void __exit vce_exit(void)
 	dbg_print("VCE driver Exit\n");
 
 	down(&vce_state.work_lock);
-	assert_idle_nolock();
+	down(&vce_state.clockctl_sem);
+	down(&vce_state.armctl_sem);
+	BUG_ON(vce_state.clock_enable_count != 0);
 
 	/* remove proc entries */
 	remove_proc_entry("status", vce_state.proc_vcedir);
@@ -677,6 +881,8 @@ void __exit vce_exit(void)
 
 	if (mm_rst_base)
 		iounmap(mm_rst_base);
+
+	pi_mgr_qos_request_remove(vce_state.cpu_qos_node);
 
 	device_destroy(vce_state.vce_class, MKDEV(vce_major, 0));
 	class_destroy(vce_state.vce_class);
