@@ -28,6 +28,8 @@
 
 static struct __init pin_config board_pin_config[] = 
 {
+	PIN_CFG(SIM2_RESETN, GPIO, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(SIM2_CLK, GPIO, 0, OFF, ON, 0, 0, 8MA ),
 	/* USB Host (ULPI) */
     /* For velcro, done on CP */
 	
