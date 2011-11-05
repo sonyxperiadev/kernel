@@ -24,14 +24,14 @@
 			0x00000003 /* pad 0x1c*/
 			0x00000043 /* pad 0x20*/
 			0x00000443 /* pad 0x24*/
-			0x00000443 /* pad 0x28*/
+			0x00000423 /* pad 0x28*/
 			0x00000443 /* pad 0x2c*/
 			0x00000443 /* pad 0x30*/
 			0x00000443 /* pad 0x34*/
 			0x00000023 /* pad 0x38*/
 			0x00000123 /* pad 0x3c*/
 			0x00000123 /* pad 0x40*/
-			0x00000123 /* pad 0x44*/
+			0x00000043 /* pad 0x44*/
 			0x00000123 /* pad 0x48*/
 			0x00000023 /* pad 0x4c*/
 			0x00000023 /* pad 0x50*/
@@ -39,7 +39,7 @@
 			0x00000403 /* pad 0x58*/
 			0x00000123 /* pad 0x5c*/
 			0x00000123 /* pad 0x60*/
-			0x00000123 /* pad 0x64*/
+			0x00000043 /* pad 0x64*/
 			0x00000123 /* pad 0x68*/
 			0x00000043 /* pad 0x6c*/
 			0x00000043 /* pad 0x70*/
@@ -102,7 +102,7 @@
 			0x00000423 /* pad 0x154*/
 			0x00000423 /* pad 0x158*/
 			0x00000423 /* pad 0x15c*/
-			0x00000443 /* pad 0x160*/
+			0x00000423 /* pad 0x160*/
 			0x00000003 /* pad 0x164*/
 			0x00000003 /* pad 0x168*/
 			0x00000020 /* pad 0x16c*/
@@ -167,7 +167,7 @@
 	/* gpio node must be consistent with pinmux node */
 	gpio {
 		compatible = "Broadcom,rhea-gpio";
-		reg = <0x35003000 44>;		/* base address and # of exposed GPIOs */
+		reg = <0x35003000 46>;		/* base address and # of exposed GPIOs */
 		data = <
 			43	0x00000001 /* GPIO43 input*/
 			44	0x00000001 /* GPIO44 input*/
@@ -206,13 +206,15 @@
 			73	0x00000001 /* GPIO73 input*/
 			72	0x00000001 /* GPIO72 input*/
 			71	0x00000001 /* GPIO71 input*/
-			70	0x00000001 /* GPIO70 input*/
+			70	0x00000001 /* GPIO70 output*/
 			29	0x00000001 /* GPIO29 input*/
 			93	0x00000001 /* GPIO93 input*/
 			94	0x00000001 /* GPIO94 input*/
 			105	0x00000001 /* GPIO105 input*/
 			104	0x00000001 /* GPIO104 input*/
 			103	0x00000001 /* GPIO103 input*/
+			2	0x00000000 /* GPIO2 output*/
+			10	0x00000000 /* GPIO10 output*/
 			>;
 	};
 };

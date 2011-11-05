@@ -68,11 +68,11 @@ static struct __init pin_config board_pin_config[] = {
 	/*	Pinmux for keypad */
 	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO01, KEY_R1, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO02, KEY_R2, 0, OFF, ON, 0, 0, 8MA),
+	//PIN_CFG(GPIO02, KEY_R2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO03, KEY_R3, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO08, KEY_C0, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO09, KEY_C1, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO10, KEY_C2, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO10, KEY_C2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO11, KEY_C3, 0, OFF, ON, 0, 0, 8MA),
 //	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
 //	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
@@ -120,6 +120,12 @@ static struct __init pin_config board_pin_config[] = {
 	/* Camera */
 	PIN_CFG(GPIO12, GPIO12, 0, ON, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO13, GPIO13, 0, ON, OFF, 0, 0, 8MA),
+
+/* BT */
+	PIN_CFG(GPIO02, GPIO2, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO10, GPIO10, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(MMC1RST, GPIO70, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(DCLKREQ1, GPIO111, 0, OFF, ON, 0, 1, 8MA),
 
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),

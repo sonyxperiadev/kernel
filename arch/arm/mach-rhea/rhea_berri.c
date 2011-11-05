@@ -81,6 +81,15 @@
 #define _RHEA_
 #include <mach/comms/platform_mconfig.h>
 
+
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+#include <linux/broadcom/bcmbt_rfkill.h>
+#endif
+
+#ifdef CONFIG_BCM_BT_LPM
+#include <linux/broadcom/bcmbt_lpm.h
+#endif
+
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
 #endif
@@ -627,6 +636,52 @@ static struct platform_device pl330_dmac_device = {
 };
 #endif
 
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+
+#define BCMBT_VREG_GPIO       (10)
+#define BCMBT_N_RESET_GPIO    (70)
+#define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
+#define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
+
+static struct bcmbt_rfkill_platform_data board_bcmbt_rfkill_cfg = {
+        .vreg_gpio = BCMBT_VREG_GPIO,
+        .n_reset_gpio = BCMBT_N_RESET_GPIO,
+        .aux0_gpio = BCMBT_AUX0_GPIO,  /* CLK32 */
+        .aux1_gpio = BCMBT_AUX1_GPIO,  /* UARTB_SEL, probably not required */
+};
+
+static struct platform_device board_bcmbt_rfkill_device = {
+        .name = "bcmbt-rfkill",
+        .id = -1,
+        .dev =
+        {
+                .platform_data=&board_bcmbt_rfkill_cfg,
+        },
+};
+#endif
+
+#ifdef CONFIG_BCM_BT_LPM
+#define GPIO_BT_WAKE 02
+#define GPIO_HOST_WAKE 111
+
+static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
+        .gpio_bt_wake = GPIO_BT_WAKE,
+        .gpio_host_wake = GPIO_HOST_WAKE,
+};
+
+static struct platform_device board_bcmbt_lpm_device = {
+        .name = "bcmbt-lpm",
+        .id = -1,
+        .dev =
+        {
+                .platform_data=&brcm_bt_lpm_data,
+        },
+};
+#endif
+
+
+
+
 /*
  * SPI board info for the slaves
  */
@@ -1019,6 +1074,13 @@ static struct platform_device *rhea_berri_plat_devices[] __initdata = {
 	&alex_dsi_display_device,
 	&nt35582_smi_display_device,
 	&r61581_smi_display_device,
+#endif
+
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+    &board_bcmbt_rfkill_device,
+#endif
+#ifdef CONFIG_BCM_BT_LPM
+    &board_bcmbt_lpm_device,
 #endif
 
 };
