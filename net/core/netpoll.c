@@ -1010,8 +1010,9 @@ void __netpoll_cleanup(struct netpoll *np)
 		rcu_assign_pointer(np->dev->npinfo, NULL);
 
 		/* avoid racing with NAPI reading npinfo */
+#ifndef CONFIG_ARCH_ISLAND
 		synchronize_rcu_bh();
-
+#endif
 		skb_queue_purge(&npinfo->arp_tx);
 		skb_queue_purge(&npinfo->txq);
 		cancel_delayed_work_sync(&npinfo->tx_work);
@@ -1027,6 +1028,8 @@ void netpoll_cleanup(struct netpoll *np)
 {
 	if (!np->dev)
 		return;
+
+	pr_info("%s\n", __func__);
 
 	rtnl_lock();
 	__netpoll_cleanup(np);
