@@ -23,9 +23,6 @@
 /*                                                                                              */
 /************************************************************************************************/
 
-/* Local macro test B0 build on A0 */
-#define CONFIG_DONOT_ENABLE_SDIO4
-
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/device.h>
@@ -815,6 +812,7 @@ static struct resource board_sdio2_resource[] = {
 	},
 };
 
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 static struct resource board_sdio3_resource[] = {
 	[0] = {
 		.start = SDIO3_BASE_ADDR,
@@ -827,8 +825,9 @@ static struct resource board_sdio3_resource[] = {
 		.flags = IORESOURCE_IRQ,
 	},
 };
+#endif
 
-#ifdef CONFIG_ARCH_RHEA_B0
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
 static struct resource board_sdio4_resource[] = {
 	[0] = {
 		.start = SDIO4_BASE_ADDR,
@@ -866,24 +865,6 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
-#ifdef CONFIG_DONOT_ENABLE_SDIO4
-	{ /* SDIO3 */
-		.id = 2,
-		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_WIFI,
-		.wifi_gpio = {
-			.reset		= 70,
-			.reg		= -1,
-			.host_wake	= 85,
-			.shutdown	= -1,
-		},
-		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-		.peri_clk_name = "sdio3_clk",
-		.ahb_clk_name = "sdio3_ahb_clk",
-		.sleep_clk_name = "sdio3_sleep_clk",
-		.peri_clk_rate = 48000000,
-	},
-#else /* Enable this code for B0 - disabled to test the code on A0 */
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	{ /* SDIO3 */
 		.id = 2,
@@ -902,6 +883,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.peri_clk_rate = 48000000,
 	},
 #endif
+
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
 	{ /* SDIO4 */
 		.id = 3,
@@ -919,7 +901,6 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio4_sleep_clk",
 		.peri_clk_rate = 48000000,
 	},
-#endif
 #endif
 };
 
@@ -946,17 +927,13 @@ static struct platform_device board_sdio2_device = {
 static struct platform_device board_sdio3_device = {
 	.name = "sdhci",
 	.id = 2,
-#ifdef CONFIG_DONOT_ENABLE_SDIO4
-	.resource = board_sdio3_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
-#else /* Enable this code for B0 - disabled to test the code on A0 */
-#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-	.resource = board_sdio4_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio4_resource),
-#else
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	.resource = board_sdio3_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
+	.resource = board_sdio4_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio4_resource),
 #endif
 	.dev      = {
 		.platform_data = &board_sdio_param[2],
