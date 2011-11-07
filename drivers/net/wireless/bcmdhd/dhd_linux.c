@@ -2352,20 +2352,9 @@ dhd_check_kernel_param(dhd_info_t *dhd, const char *str)
 		if (strstr(kparam, str) != NULL) {
 			bcmerror = 0;
 		}
-#if 0
-		/* for debug only */
-		{
-		char *found = strstr(kparam, str);
-		DHD_ERROR(("@@@%s: found=%s\n", __FUNCTION__, found));
-		}
-		if (strstr(kparam, "wifi=") != NULL) {
-			DHD_ERROR(("@@@%s: found wifi=\n", __FUNCTION__));
-		}
-		if (strstr(kparam, "wifi=4330_") != NULL) {
-			DHD_ERROR(("@@@%s: found wifi=4330_\n", __FUNCTION__));
-		}
-		DHD_ERROR(("@@@%s: err=%d len=%u kparam=%s\n",
-			__FUNCTION__, bcmerror, len, kparam));
+#if 1
+		/* DHD_ERROR(("@@@%s: err=%d len=%u kparam=%s\n",
+			__FUNCTION__, bcmerror, len, kparam)); */
 #endif /* 0 */
 	}
 
@@ -3180,6 +3169,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #if defined(DHD_BCM_WIFI_HDMI)
 	if (dhd_bcm_whdmi_enable) {
 		DHD_ERROR(("DHD WiFi HDMI is enabled\n"));
+
 #if !defined(AP) && !defined(WLP2P)
 		/* Turn off MPC, turn on APSTA */
 		bcm_mkiovar("mpc", (char *)&mpc, 4, iovbuf, sizeof(iovbuf));
@@ -3187,6 +3177,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		bcm_mkiovar("apsta", (char *)&apsta, 4, iovbuf, sizeof(iovbuf));
 		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 #endif /* !defined(AP) && !defined(WLP2P) */
+
 		/* Disable legacy power save modes */
 		power_mode = PM_OFF;
 		dhd_wl_ioctl_cmd(dhd, WLC_SET_PM, (char*)&power_mode, sizeof(power_mode), TRUE, 0);
@@ -3196,6 +3187,9 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		dhd_arp_offload_set(dhd, 0);
 		dhd_arp_offload_enable(dhd, FALSE);
 #endif /* ARP_OFFLOAD_SUPPORT */
+
+	} else {
+		/* DHD_ERROR(("@@@DHD WiFi HDMI is NOT enabled\n")); */
 	}
 #endif /* defined(DHD_BCM_WIFI_HDMI) */
 

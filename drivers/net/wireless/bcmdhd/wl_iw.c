@@ -8326,25 +8326,18 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 		WL_TRACE(("Unknown Event %d: ignoring\n", event_type));
 		break;
 	}
+
+#ifdef DHD_BCM_WIFI_HDMI
+	/* Do not send wireless events for the WHDMI interface */
+	if (cmd && dhd_bcm_whdmi_enable && strncmp(dev->name, "wl0.2", 5) == 0) {
+		/* printf("@@@wl_iw_event: not sending wl0.2 wlevent cmd=%u\n", cmd); */
+	} else
+#endif /* DHD_BCM_WIFI_HDMI */
 		if (cmd) {
 			if (cmd == SIOCGIWSCAN)
 				wireless_send_event(dev, cmd, &wrqu, NULL);
-#ifdef DHD_BCM_WIFI_HDMI
-                        else if (dhd_bcm_whdmi_enable) {
-                                if (strncmp(dev->name, "wl0.2", 5) == 0) {
-#if 1 /* temp debug log */
-                                        WL_ERROR(("@@@wl_iw_event: not sending "
-                                        "wl0.2 event cmd=%u\n", cmd));
-#endif /* 0 */
-                                }
-                                else {
-                                        wireless_send_event(dev, cmd, &wrqu, extra);
-                                }
-                        }
-#else
 			else
 				wireless_send_event(dev, cmd, &wrqu, extra);
-#endif /* DHD_BCM_WIFI_HDMI */
 		}
 
 #if WIRELESS_EXT > 14
