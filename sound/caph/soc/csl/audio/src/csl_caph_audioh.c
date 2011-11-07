@@ -1166,14 +1166,21 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
         case AUDDRV_PATH_VIN_INPUT:
         case AUDDRV_PATH_VIN_INPUT_L:
         case AUDDRV_PATH_VIN_INPUT_R:
-			chal_audio_vinpath_set_cic_scale(handle, gain, gain1,
-				       	gain, gain1);			
+#if defined(CONFIG_ARCH_RHEA_B0)
+			chal_audio_vinpath_set_cic_scale(handle, gain | gain1, gain | gain1);
+#else
+			chal_audio_vinpath_set_cic_scale(handle, gain, gain1, gain, gain1);			
+#endif
+
 			break;		
         case AUDDRV_PATH_NVIN_INPUT:
         case AUDDRV_PATH_NVIN_INPUT_L:
         case AUDDRV_PATH_NVIN_INPUT_R:
-			chal_audio_nvinpath_set_cic_scale(handle, gain, gain1,
-				       	gain, gain1);			
+#if defined(CONFIG_ARCH_RHEA_B0)
+			chal_audio_nvinpath_set_cic_scale(handle, gain | gain1, gain | gain1);
+#else
+			chal_audio_nvinpath_set_cic_scale(handle, gain, gain1, gain, gain1);
+#endif
 			break;		
 			
 		default:
@@ -1410,7 +1417,11 @@ void csl_audio_audiotx_get_dac_ctrl(CSL_CAPH_AUDIOH_DACCTRL_t *readdata)
 
 void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff)
 {
+#if defined(CONFIG_ARCH_RHEA_B0)
+	chal_audio_stpath_load_filter(handle, coeff, 0 );
+#else
 	chal_audio_stpath_load_filter(handle, coeff );
+#endif
 	return;
 }	
 

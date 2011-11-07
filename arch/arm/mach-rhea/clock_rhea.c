@@ -5526,13 +5526,13 @@ static struct peri_clk CLK_NAME(csi0_lp) = {
 
 	.clk_div = {
 					.div_offset = MM_CLK_MGR_REG_CSI0_DIV_OFFSET,
-					.div_mask = MM_CLK_MGR_REG_CSI0_LP_DIV_CSI0_LP_DIV_MASK,
-					.div_shift = MM_CLK_MGR_REG_CSI0_LP_DIV_CSI0_LP_DIV_SHIFT,
+					.div_mask = MM_CLK_MGR_REG_CSI0_DIV_CSI0_LP_DIV_MASK,
+					.div_shift = MM_CLK_MGR_REG_CSI0_DIV_CSI0_LP_DIV_SHIFT,
 					.div_trig_offset= MM_CLK_MGR_REG_DIV_TRIG_OFFSET,
 					.div_trig_mask= MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_MASK,
 					.pll_select_offset= MM_CLK_MGR_REG_CSI0_DIV_OFFSET,
-					.pll_select_mask= MM_CLK_MGR_REG_CSI0_LP_DIV_CSI0_LP_PLL_SELECT_MASK,
-					.pll_select_shift= MM_CLK_MGR_REG_CSI0_LP_DIV_CSI0_LP_PLL_SELECT_SHIFT,
+					.pll_select_mask= MM_CLK_MGR_REG_CSI0_DIV_CSI0_LP_PLL_SELECT_MASK,
+					.pll_select_shift= MM_CLK_MGR_REG_CSI0_DIV_CSI0_LP_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
 					.count = 2,
@@ -5575,8 +5575,8 @@ static struct peri_clk CLK_NAME(csi1_lp) = {
 					.div_trig_offset= MM_CLK_MGR_REG_DIV_TRIG_OFFSET,
 					.div_trig_mask= MM_CLK_MGR_REG_DIV_TRIG_CSI1_LP_TRIGGER_MASK,
 					.pll_select_offset= MM_CLK_MGR_REG_CSI1_DIV_OFFSET,
-					.pll_select_mask= MM_CLK_MGR_REG_CSI1_LP_DIV_CSI1_LP_PLL_SELECT_MASK,
-					.pll_select_shift= MM_CLK_MGR_REG_CSI1_LP_DIV_CSI1_LP_PLL_SELECT_SHIFT,
+					.pll_select_mask= MM_CLK_MGR_REG_CSI1_DIV_CSI1_LP_PLL_SELECT_MASK,
+					.pll_select_shift= MM_CLK_MGR_REG_CSI1_DIV_CSI1_LP_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
 					.count = 2,
@@ -5659,13 +5659,13 @@ static struct peri_clk CLK_NAME(dsi0_esc) = {
 
 	.clk_div = {
 					.div_offset = MM_CLK_MGR_REG_DSI0_DIV_OFFSET,
-					.div_mask = MM_CLK_MGR_REG_DSI0_ESC_DIV_DSI0_ESC_DIV_MASK,
-					.div_shift = MM_CLK_MGR_REG_DSI0_ESC_DIV_DSI0_ESC_DIV_SHIFT,
+					.div_mask = MM_CLK_MGR_REG_DSI0_DIV_DSI0_ESC_DIV_MASK,
+					.div_shift = MM_CLK_MGR_REG_DSI0_DIV_DSI0_ESC_DIV_SHIFT,
 					.div_trig_offset= MM_CLK_MGR_REG_DIV_TRIG_OFFSET,
 					.div_trig_mask= MM_CLK_MGR_REG_DIV_TRIG_DSI0_ESC_TRIGGER_MASK,
 					.pll_select_offset= MM_CLK_MGR_REG_DSI0_DIV_OFFSET,
-					.pll_select_mask= MM_CLK_MGR_REG_DSI0_ESC_DIV_DSI0_ESC_PLL_SELECT_MASK,
-					.pll_select_shift= MM_CLK_MGR_REG_DSI0_ESC_DIV_DSI0_ESC_PLL_SELECT_SHIFT,
+					.pll_select_mask= MM_CLK_MGR_REG_DSI0_DIV_DSI0_ESC_PLL_SELECT_MASK,
+					.pll_select_shift= MM_CLK_MGR_REG_DSI0_DIV_DSI0_ESC_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
 					.count = 2,
@@ -5707,8 +5707,8 @@ static struct peri_clk CLK_NAME(dsi1_esc) = {
 					.div_trig_offset= MM_CLK_MGR_REG_DIV_TRIG_OFFSET,
 					.div_trig_mask= MM_CLK_MGR_REG_DIV_TRIG_DSI1_ESC_TRIGGER_MASK,
 					.pll_select_offset= MM_CLK_MGR_REG_DSI1_DIV_OFFSET,
-					.pll_select_mask= MM_CLK_MGR_REG_DSI1_ESC_DIV_DSI1_ESC_PLL_SELECT_MASK,
-					.pll_select_shift= MM_CLK_MGR_REG_DSI1_ESC_DIV_DSI1_ESC_PLL_SELECT_SHIFT,
+					.pll_select_mask= MM_CLK_MGR_REG_DSI1_DIV_DSI1_ESC_PLL_SELECT_MASK,
+					.pll_select_shift= MM_CLK_MGR_REG_DSI1_DIV_DSI1_ESC_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
 					.count = 2,
