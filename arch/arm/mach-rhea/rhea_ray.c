@@ -1001,39 +1001,81 @@ static struct platform_device alex_dsi_display_device = {
 	},
 };
 
-static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
+static struct kona_fb_platform_data nt35582_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
 	.screen_width		= 480,
 	.screen_height		= 800,
 	.bytes_per_pixel	= 2,
 	.gpio			= 41,
 	.pixel_format		= RGB565,
+	.bus_width		= 16,
 };
 
-static struct platform_device nt35582_smi_display_device = {
+static struct platform_device nt35582_smi16_display_device = {
 	.name    = "rhea_fb",
 	.id      = 1,
 	.dev = {
-		.platform_data		= &nt35582_smi_display_fb_data,
+		.platform_data		= &nt35582_smi16_display_fb_data,
 		.dma_mask		= (u64 *) ~(u32)0,
 		.coherent_dma_mask	= ~(u32)0,
 	},
 };
 
-static struct kona_fb_platform_data r61581_smi_display_fb_data = {
+static struct kona_fb_platform_data nt35582_smi8_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 8,
+};
+
+static struct platform_device nt35582_smi8_display_device = {
+	.name    = "rhea_fb",
+	.id      = 2,
+	.dev = {
+		.platform_data		= &nt35582_smi8_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
 	.screen_width		= 320,
 	.screen_height		= 480,
 	.bytes_per_pixel	= 2,
 	.gpio			= 41,
 	.pixel_format		= RGB565,
+	.bus_width		= 16,
 };
 
-static struct platform_device r61581_smi_display_device = {
+static struct platform_device r61581_smi16_display_device = {
 	.name    = "rhea_fb",
-	.id      = 2,
+	.id      = 3,
 	.dev = {
-		.platform_data		= &r61581_smi_display_fb_data,
+		.platform_data		= &r61581_smi16_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi8_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 8,
+};
+
+static struct platform_device r61581_smi8_display_device = {
+	.name    = "rhea_fb",
+	.id      = 4,
+	.dev = {
+		.platform_data		= &r61581_smi8_display_fb_data,
 		.dma_mask		= (u64 *) ~(u32)0,
 		.coherent_dma_mask	= ~(u32)0,
 	},
@@ -1109,8 +1151,10 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #endif
 #ifdef CONFIG_FB_BRCM_RHEA
 	&alex_dsi_display_device,
-	&nt35582_smi_display_device,
-	&r61581_smi_display_device,
+	&nt35582_smi16_display_device,
+	&nt35582_smi8_display_device,
+	&r61581_smi8_display_device,
+	&r61581_smi16_display_device,
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))

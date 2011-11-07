@@ -89,7 +89,6 @@
 
 #endif /*  __KERNEL__ */
 
-#define __HVGA_BUSW_08__
 #define __HVGA_MODE_565__
 
 // output color mdoe must be defined before including EC .H
@@ -131,7 +130,7 @@ static void r61581hvgaSmi_IoCtlWr(
                 );
 
 //--- GEN DRIVER --------------------------------------------------------------
-Int32   R61581_HVGA_SMI_Init ( void ); 
+Int32   R61581_HVGA_SMI_Init (  unsigned int bus_width ); 
 Int32   R61581_HVGA_SMI_Exit ( void );
 
 Int32   R61581_HVGA_SMI_Open ( 
@@ -220,13 +219,7 @@ static DISPDRV_INFO_T R61581_HVGA_SMI_Info =
             
 static CSL_SMI_CTRL_T  R61581_HVGA_SMI_SmiCtrlCfg =
 {
-#if defined(__HVGA_BUSW_18__)
-    18,                     //  UInt8             busWidth;         
-#elif defined(__HVGA_BUSW_16__)
-    16,                     //  UInt8             busWidth;         
-#elif defined(__HVGA_BUSW_08__)
     8,                      //  UInt8             busWidth;         
-#endif    
     {SMI_PLL_500MHz, 2  },  //  div range 1-16 (1 unusable), 2=4ns timing step
     0,                      //  UInt8             addr_c, init by open          
     0,                      //  UInt8             addr_d, init by open          
@@ -505,12 +498,14 @@ Int32 R61581_HVGA_SMI_GetDispDrvFeatures (
 // Description:   Reset Driver Info
 //
 //*****************************************************************************
-Int32 R61581_HVGA_SMI_Init ( void )
+Int32 R61581_HVGA_SMI_Init (  unsigned int bus_width )
 {
     Int32   res = 0;
    
     panel[0].is_clock_gated = 1;
     panel[0].dfs_node = NULL;
+
+    R61581_HVGA_SMI_SmiCtrlCfg.busWidth = (unsigned char)bus_width;
 
     if(     panel[0].drvState != DRV_STATE_INIT 
          && panel[0].drvState != DRV_STATE_OPEN  )

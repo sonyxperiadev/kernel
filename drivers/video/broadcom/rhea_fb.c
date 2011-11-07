@@ -245,12 +245,12 @@ static void reset_display(u32 gpio)
 	}
 }
 
-static int enable_display(struct rhea_fb *fb, u32 gpio)
+static int enable_display(struct rhea_fb *fb, u32 gpio, u32 bus_width)
 {
 	int ret = 0;
 	DISPDRV_OPEN_PARM_T local_DISPDRV_OPEN_PARM_T;
 
-	ret = fb->display_ops->init();
+	ret = fb->display_ops->init(bus_width);
 	if (ret != 0) {
 		rheafb_error("Failed to init this display device!\n");
 		goto fail_to_init;
@@ -421,7 +421,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 #endif
 
 	rhea_clock_start(fb);
-	ret = enable_display(fb, fb_data->gpio);
+	ret = enable_display(fb, fb_data->gpio, fb_data->bus_width);
 	if (ret) {
 		rheafb_error("Failed to enable this display device\n");
 		goto err_enable_display_failed;

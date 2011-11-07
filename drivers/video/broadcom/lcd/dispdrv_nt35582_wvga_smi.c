@@ -92,28 +92,6 @@
 
 #endif /*  __KERNEL__ */
 
-#if  0 
-#if ( defined(_HERA_) )
- #define __WVGA_BUSW_08__          // outRGB565 or outRGB888  
- //#define __WVGA_BUSW_16__        // outRGB565 or outRGB888  
- //#define __WVGA_BUSW_18__        // outRGB666
- //#define __WVGA_MODE_565__       // 8-bit or 16-bit bus   
- //#define __WVGA_MODE_666__       // 18-bit bus   
- #define __WVGA_MODE_888__         // 8-bit or 16-bit bus   
-#elif ( defined(_RHEA_) )
- //#define __WVGA_BUSW_08__        // outRGB565 or outRGB888    
- //#define __WVGA_BUSW_16__        // outRGB565 or outRGB888    
- #define __WVGA_BUSW_18__          // outRGB666
- //#define __WVGA_MODE_565__       // 8-bit or 16-bit bus 
- #define __WVGA_MODE_666__         // 18-bit bus 
- //#define __WVGA_MODE_888__       // 8-bit or 16-bit bus 
-#endif
-#endif
-#ifdef CONFIG_MACH_RHEA_RAY_DEMO
-#define __WVGA_BUSW_16__
-#else
-#define __WVGA_BUSW_08__
-#endif
 #define __WVGA_MODE_565__
 // output color mdoe must be defined before including EC .H
 #include "dispdrv_ec_par_nt35582.h"  // NOVATEK NT35582 External Disp Controller    
@@ -153,7 +131,7 @@ static void nt35582wvgaSmi_IoCtlWr(
                 );
 
 //--- GEN DRIVER --------------------------------------------------------------
-Int32   NT35582_WVGA_SMI_Init ( void ); 
+Int32   NT35582_WVGA_SMI_Init ( unsigned int bus_width ); 
 Int32   NT35582_WVGA_SMI_Exit ( void );
 
 Int32   NT35582_WVGA_SMI_Open ( 
@@ -201,6 +179,8 @@ Int32   NT35582_WVGA_SMI_Update_ExtFb (
             void                    *pFb,
             DISPDRV_CB_API_1_1_T    apiCb ); 
 
+static unsigned int g_bus_width = 16;
+
 static DISPDRV_T NT35582_WVGA_SMI_Drv =
 {
    &NT35582_WVGA_SMI_Init,                  // init
@@ -242,13 +222,7 @@ static DISPDRV_INFO_T NT35582_WVGA_SMI_Info =
             
 static CSL_SMI_CTRL_T  NT35582_WVGA_SMI_SmiCtrlCfg =
 {
-#if defined(__WVGA_BUSW_18__)
-    18,                     //  UInt8             busWidth;         
-#elif defined(__WVGA_BUSW_16__)
     16,                     //  UInt8             busWidth;         
-#elif defined(__WVGA_BUSW_08__)
-    8,                      //  UInt8             busWidth;         
-#endif    
     {SMI_PLL_500MHz, 2  },  //  div range 1-16 (1 unusable), 2=4ns timing step
     0,                      //  UInt8             addr_c, init by open          
     0,                      //  UInt8             addr_d, init by open          
@@ -303,18 +277,18 @@ void nt35582wvgaSmi_WrCmndP1(
     UInt32              data )
 {
     NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+
+    if (g_bus_width == 16) { 
+    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
+    	CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
+    } else {
+    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE, (cmnd & 0xFF00) >> 8 );
+    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd & 0x00FF);
     
-#if !defined(__WVGA_BUSW_08__)
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
-    CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
-#else
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE, (cmnd & 0xFF00) >> 8 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd & 0x00FF);
-    
-    // Write MSB byte, since all regs are 8-bit write 0 for MSB
-    CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, 0 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
-#endif    
+    	// Write MSB byte, since all regs are 8-bit write 0 for MSB
+    	CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, 0 );
+    	CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
+    }
 }
 
 //*****************************************************************************
@@ -328,12 +302,12 @@ void nt35582wvgaSmi_WrCmndP0( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 cmnd
 {
     NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
     
-#if !defined(__WVGA_BUSW_08__)
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
-#else
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (cmnd & 0xFF00) >> 8 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   cmnd & 0x00FF);
-#endif    
+    if (g_bus_width == 16) { 
+    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
+    } else {
+    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (cmnd & 0xFF00) >> 8 );
+    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   cmnd & 0x00FF);
+    }
 }
 
 
@@ -352,22 +326,23 @@ static void nt35582wvgaSmi_IoCtlWr(
     NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
     UInt32 i;
     
-#if !defined(__WVGA_BUSW_08__)
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  acc->cmnd );
-#else
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (acc->cmnd & 0xFF00) >> 8 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   acc->cmnd & 0x00FF);
-#endif    
+    if (g_bus_width == 16) { 
+    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  acc->cmnd );
+    } else {
+	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (acc->cmnd & 0xFF00) >> 8 );
+	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   acc->cmnd & 0x00FF);
+    }  
     
     for(i=0; i < acc->parmCount; i++ )
     {
         // Write MSB byte, since all regs are 8-bit write 0 for MSB
-#if !defined(__WVGA_BUSW_08__)
-        CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)[i] );
-#else
-        CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, 0 );
-        CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)[i] );
-#endif        
+	if (g_bus_width == 16) { 
+        	CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)[i] );
+	} else {
+	        CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, 0 );
+        	CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)[i] );
+	}
+
         if( acc->verbose )
         {
             LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] nt35582wvgaSmi_IoCtlWr: "
@@ -392,21 +367,23 @@ static void nt35582wvgaSmi_IoCtlRd(
     NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
     UInt32 i;
     
-#if !defined(__WVGA_BUSW_08__)
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  acc->cmnd );
-#else
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (acc->cmnd & 0xFF00) >> 8 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   acc->cmnd & 0x00FF);
-#endif
+	if (g_bus_width == 16) { 
+    		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  acc->cmnd );
+	} else {
+		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (acc->cmnd & 0xFF00) >> 8 );
+    		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   acc->cmnd & 0x00FF);
+	}
+
     for(i=0; i<acc->parmCount; i++)
     {
-#if !defined(__WVGA_BUSW_08__)
-        CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
-#else
-        // first read is MSB, REG values are only 8-bit so MSB is always 0
-        CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
-        CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
-#endif        
+	if (g_bus_width == 16) { 
+	        CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
+	} else {
+	        // first read is MSB, REG values are only 8-bit so MSB is always 0
+        	CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
+	        CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
+	}
+
         if( acc->verbose )
         {
             LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: "
@@ -578,12 +555,15 @@ Int32 NT35582_WVGA_SMI_GetDispDrvFeatures (
 // Description:   Reset Driver Info
 //
 //*****************************************************************************
-Int32 NT35582_WVGA_SMI_Init ( void )
+Int32 NT35582_WVGA_SMI_Init ( unsigned int bus_width )
 {
     Int32   res = 0;
    
     panel[0].is_clock_gated = 1;
     panel[0].dfs_node = NULL;
+
+    NT35582_WVGA_SMI_SmiCtrlCfg.busWidth = (unsigned char)bus_width;
+    g_bus_width = bus_width;
 
     if(     panel[0].drvState != DRV_STATE_INIT 
          && panel[0].drvState != DRV_STATE_OPEN  )

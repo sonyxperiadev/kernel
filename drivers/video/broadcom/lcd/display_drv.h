@@ -293,7 +293,7 @@ typedef void (*DISPDRV_CB_API_1_1_T) ( DISPDRV_CB_RES_T res, void* pFb );
 *****************************************************************************/
 typedef struct
 {
-    Int32    (*init)(void);                                                                                                                ///< Routine to initialise the display driver
+    Int32    (*init)(unsigned int bus_width);                                                                                                                ///< Routine to initialise the display driver
     Int32    (*exit)(void);                                                                                                                ///< Routine to shutdown the display driver
     Int32    (*info)(const char **driverName, UInt32 *versionMajor, UInt32 *versionMinor, DISPDRV_SUPPORT_FEATURES_T *feature);            ///< Routine to return a drivers info (name, version etc..)
     Int32    (*open)(const void* params, DISPDRV_HANDLE_T *handle);                                                                        ///< Routine to open a driver
