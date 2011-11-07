@@ -111,6 +111,18 @@ extern int dwc_otg_set_param_dma_desc_enable(dwc_otg_core_if_t * core_if,
 extern int32_t dwc_otg_get_param_dma_desc_enable(dwc_otg_core_if_t * core_if);
 #define dwc_param_dma_desc_enable_default 0
 
+/**
+ * Enables setting NAK for Bulk OUT endpoints after the transfer
+ * is completed when the core is operating in Device Descriptor
+ * DMA mode.
+ * 0 - Disabled
+ * 1 - Enabled
+ */
+extern int dwc_otg_set_param_dev_out_nak_enable(dwc_otg_core_if_t * core_if,
+						int32_t val);
+extern int32_t dwc_otg_get_param_dev_out_nak_enable(dwc_otg_core_if_t * core_if);
+#define dwc_param_dev_out_nak_enable_default 0
+
 /** The DMA Burst size (applicable only for External DMA
  * Mode). 1, 4, 8 16, 32, 64, 128, 256 (default 32)
  */

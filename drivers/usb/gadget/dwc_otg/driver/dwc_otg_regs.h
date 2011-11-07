@@ -1082,7 +1082,8 @@ typedef union dcfg_data {
 #define DWC_DCFG_FRAME_INTERVAL_90 2
 #define DWC_DCFG_FRAME_INTERVAL_95 3
 
-		unsigned reserved13_17:5;
+		unsigned endevoutnak:1;
+		unsigned reserved14_17:4;
 		/** In Endpoint Mis-match count */
 		unsigned epmscnt:5;
 		/** Enable Descriptor DMA in Device mode */

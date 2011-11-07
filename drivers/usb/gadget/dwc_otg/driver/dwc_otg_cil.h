@@ -74,6 +74,7 @@ typedef enum _data_buffer_mode {
 #define OTG_CORE_REV_2_81a	0x4F54281A
 #define OTG_CORE_REV_2_90a	0x4F54290A
 #define OTG_CORE_REV_2_91a	0x4F54291A
+#define OTG_CORE_REV_2_93a	0x4F54293A
 
 /**
  * Information for each ISOC packet.
@@ -441,6 +442,14 @@ typedef struct dwc_otg_core_params {
 	 * 1 - DMA Descriptor(default, if available)
 	 */
 	int32_t dma_desc_enable;
+	/**
+	 * Enables setting NAK for Bulk OUT endpoints after the transfer
+	 * is completed when the core is operating in Device Descriptor
+	 * DMA mode.
+	 * 0 - Disabled
+	 * 1 - Enabled
+	 */
+	int32_t dev_out_nak_enable;
 	/** The DMA Burst size (applicable only for External DMA
 	 * Mode). 1, 4, 8 16, 32, 64, 128, 256 (default 32)
 	 */
@@ -812,6 +821,9 @@ struct dwc_otg_core_if {
 
 	/** 1 if DMA descriptor is enabled, 0 otherwise. */
 	uint8_t dma_desc_enable;
+
+	/** 1 if Bulk OUT NAK is enabled, 0 otherwise. */
+	uint8_t dev_out_nak_enable;
 
 	/** 1 if PTI Enhancement mode is enabled, 0 otherwise. */
 	uint8_t pti_enh_enable;
