@@ -52,15 +52,15 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 		} \
 	} while (0)
 
-#define BB_BC_STATUS		KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC11_STATUS_OFFSET
-#define BB_BC_STS_SDP_MSK	HSOTG_CTRL_BC11_STATUS_SHP_MASK
-#define BB_BC_STS_CDP_MSK	HSOTG_CTRL_BC11_STATUS_CHP_MASK
-#define BB_BC_STS_DCP_MSK	HSOTG_CTRL_BC11_STATUS_DCP_MASK
-#define BB_BC_STS_BC_DONE_MSK	HSOTG_CTRL_BC11_STATUS_BC_DONE_MASK
-#define BB_BC_STS_DM_TO_MSK	HSOTG_CTRL_BC11_STATUS_DM_TIMEOUT_MASK
-#define BB_BC_STS_DP_TO_MSK	HSOTG_CTRL_BC11_STATUS_DP_TIMEOUT_MASK
-#define BB_BC_STS_DM_ERR_MSK	HSOTG_CTRL_BC11_STATUS_DM_ERROR_MASK
-#define BB_BC_STS_DP_ERR_MSK	HSOTG_CTRL_BC11_STATUS_DP_ERROR_MASK
+#define BB_BC_STATUS		KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC_STATUS_OFFSET
+#define BB_BC_STS_SDP_MSK	HSOTG_CTRL_BC_STATUS_SHP_MASK
+#define BB_BC_STS_CDP_MSK	HSOTG_CTRL_BC_STATUS_CHP_MASK
+#define BB_BC_STS_DCP_MSK	HSOTG_CTRL_BC_STATUS_DCP_MASK
+#define BB_BC_STS_BC_DONE_MSK	HSOTG_CTRL_BC_STATUS_BC_DONE_MASK
+#define BB_BC_STS_DM_TO_MSK	HSOTG_CTRL_BC_STATUS_DM_TIMEOUT_MASK
+#define BB_BC_STS_DP_TO_MSK	HSOTG_CTRL_BC_STATUS_DP_TIMEOUT_MASK
+#define BB_BC_STS_DM_ERR_MSK	HSOTG_CTRL_BC_STATUS_DM_ERROR_MASK
+#define BB_BC_STS_DP_ERR_MSK	HSOTG_CTRL_BC_STATUS_DP_ERROR_MASK
 
 struct accy_cb {
 	void (*callback)(struct bcmpmu *,
@@ -270,12 +270,12 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_CHGDET_TO:
-		addr = KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC11_CFG_OFFSET;
+		addr = KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC_CFG_OFFSET;
 		val = readl(addr);
-		val |= HSOTG_CTRL_BC11_CFG_SW_RST_MASK;
+		val |= HSOTG_CTRL_BC_CFG_SW_RST_MASK;
 		writel(val, addr);
 		schedule_timeout_interruptible(HZ/10);
-		val &= ~HSOTG_CTRL_BC11_CFG_SW_RST_MASK;
+		val &= ~HSOTG_CTRL_BC_CFG_SW_RST_MASK;
 		writel(val, addr);
 		break;
 	
@@ -385,7 +385,7 @@ static ssize_t
 bcmpmu_dbg_show_bc_status(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
-	unsigned int addr = KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC11_STATUS_OFFSET;
+	unsigned int addr = KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC_STATUS_OFFSET;
 	unsigned int val = readl(addr);
 	return sprintf(buf, "%X\n", val);
 }
@@ -394,7 +394,7 @@ static ssize_t
 bcmpmu_dbg_show_bc_cfg(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
-	unsigned int addr = KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC11_CFG_OFFSET;
+	unsigned int addr = KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC_CFG_OFFSET;
 	unsigned int val = readl(addr);
 	return sprintf(buf, "%X\n", val);
 }
@@ -403,7 +403,7 @@ static ssize_t
 bcmpmu_dbg_set_bc_cfg(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t n)
 {
-	unsigned int addr = KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC11_CFG_OFFSET;
+	unsigned int addr = KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC_CFG_OFFSET;
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	writel((unsigned int)val, addr);
 	return n;
