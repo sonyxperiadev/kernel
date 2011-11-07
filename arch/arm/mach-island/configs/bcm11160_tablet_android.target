@@ -10,3 +10,4 @@ option = android
 option = ext4
 option = mmc
 option = wifi_hdmi
+option = island_sensors

@@ -11,3 +11,4 @@ option = usb_ehci
 option = ext4 
 option = mmc
 option = wifi_hdmi
+option = island_sensors
