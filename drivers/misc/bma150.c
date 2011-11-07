@@ -20,7 +20,10 @@
 #include <linux/delay.h>
 
 #include <linux/bma150.h>
+
+#if CONFIG_BRCM_VIRTUAL_SENSOR
 #include <linux/brvsens_driver.h>
+#endif
 
 #define SENSOR_NAME 			BMA150_DRIVER_NAME
 #define GRAVITY_EARTH                   9806550
@@ -311,6 +314,7 @@ static int activate(struct i2c_client *client, unsigned char flag)
 	
 	struct bma150_data* bma150 = i2c_get_clientdata(client);
 
+#ifndef CONFIG_BRCM_VIRTUAL_SENSOR
 	/* if we are activated */
 	if(flag)
 	{
@@ -322,6 +326,7 @@ static int activate(struct i2c_client *client, unsigned char flag)
 		flush_scheduled_work();
 		cancel_delayed_work_sync(&bma150->work);
 	}
+#endif
 
 	/* read the value of the control register where SLEEP bit is defined,
 	   set or clear SLEEP bit and write the value back */
@@ -444,6 +449,7 @@ static int bma150_read_accel_xyz(struct i2c_client *client, struct bma150acc *ac
 	return 0;
 }
 
+#ifndef CONFIG_BRCM_VIRTUAL_SENSOR
 static void bma150_work_func(struct work_struct* work)
 {
 	struct bma150_data* bma150 = container_of((struct delayed_work*)work,
@@ -464,6 +470,7 @@ static void bma150_work_func(struct work_struct* work)
 	}
 	schedule_delayed_work(&bma150->work, delay);
 }
+#endif
 
 static ssize_t bma150_range_show(struct device *dev, struct device_attribute *attr, 
                                  char *buf)
@@ -738,8 +745,11 @@ static int bma150_probe(struct i2c_client *client,
 		goto kfree_exit;
 	}
 
+#ifndef CONFIG_BRCM_VIRTUAL_SENSOR
 	INIT_DELAYED_WORK(&data->work, bma150_work_func);
 	atomic_set(&data->delay, BMA150_MAX_DELAY);
+#endif
+
 	err = bma150_input_init(data);
 	if (err < 0)
 		goto kfree_exit;
@@ -750,12 +760,14 @@ static int bma150_probe(struct i2c_client *client,
 	if (err < 0)
 		goto error_sysfs;
 
+#if CONFIG_BRCM_VIRTUAL_SENSOR
 	// register accelerometer with BRVSENS device
 	brvsens_register(SENSOR_HANDLE_ACCELEROMETER,      // sensor UID
 			 BMA150_DRIVER_NAME,               // human readable name
 			 (void*)client,                    // context; passed back in read/activate callbacks
 			 (PFNACTIVATE)activate,     // activate callback
 			 (PFNREAD)bma150_read_accel_xyz);  // read callback
+#endif
 	
 	return 0;
 
