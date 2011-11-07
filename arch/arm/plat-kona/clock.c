@@ -307,6 +307,36 @@ int clk_init(struct clk *clk)
 }
 EXPORT_SYMBOL(clk_init);
 
+static int __clk_reset(struct clk *clk)
+{
+	int ret = 0;
+
+	if(!clk)
+		return -EINVAL;
+
+	if(!clk->ops || !clk->ops->reset)
+		return -EINVAL;
+	clk_dbg("%s - %s\n",__func__, clk->name);
+	ret = clk->ops->reset(clk);
+
+	return ret;
+}
+
+int clk_reset(struct clk *clk)
+{
+	int ret;
+	unsigned long flags;
+
+	if(IS_ERR_OR_NULL(clk))
+		return -EINVAL;
+
+	spin_lock_irqsave(&clk_lock, flags);
+	ret = __clk_reset(clk);
+	spin_unlock_irqrestore(&clk_lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(clk_reset);
 
 static int __ccu_clk_enable(struct clk *clk)
 {
@@ -1457,6 +1487,36 @@ int clk_register(struct clk_lookup *clk_lkup,int num_clks)
 }
 EXPORT_SYMBOL(clk_register);
 
+int ccu_reset_write_access_enable(struct ccu_clk* ccu_clk, int enable)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->rst_write_access)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->rst_write_access(ccu_clk, enable);
+}
+EXPORT_SYMBOL(ccu_reset_write_access_enable);
+
+/*CCU reset access functions */
+static int ccu_rst_write_access_enable(struct ccu_clk* ccu_clk, int enable)
+{
+	u32 reg_val = 0;
+
+	reg_val = CLK_WR_ACCESS_PASSWORD << CLK_WR_PASSWORD_SHIFT;
+	if(enable)
+	{
+		if(ccu_clk->rst_write_access_en_count++ != 0)
+			return 0;
+		reg_val |= CLK_WR_ACCESS_EN;
+	}
+	else if(ccu_clk->rst_write_access_en_count == 0 || --ccu_clk->rst_write_access_en_count != 0)
+		return 0;
+	writel(reg_val, ccu_clk->ccu_reset_mgr_base + ccu_clk->reset_wr_access_offset);
+
+	reg_val = readl(ccu_clk->ccu_reset_mgr_base + ccu_clk->reset_wr_access_offset);
+	clk_dbg("rst mgr access %s: reg value: %08x\n", enable?"enabled":"disabled", reg_val);
+
+	return 0;
+}
+
 int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable)
 {
 	int ret;
@@ -1939,6 +1999,7 @@ static int ccu_clk_get_active_policy(struct ccu_clk * ccu_clk)
 struct ccu_clk_ops gen_ccu_ops =
 {
 	.write_access = ccu_clk_write_access_enable,
+	.rst_write_access = ccu_rst_write_access_enable,
 	.policy_engine_resume = ccu_clk_policy_engine_resume,
 	.policy_engine_stop = ccu_clk_policy_engine_stop,
 	.set_policy_ctrl = ccu_clk_set_policy_ctrl,
@@ -2771,6 +2832,50 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 	return clk->rate;
 }
 
+static int peri_clk_reset(struct clk* clk)
+{
+	u32 reg_val;
+	struct peri_clk * peri_clk;
+
+	if(clk->clk_type != CLK_TYPE_PERI)
+	{
+		BUG_ON(1);
+		return -EPERM;
+	}
+
+	peri_clk = to_peri_clk(clk);
+	clk_dbg("%s -- %s to be reset\n", __func__, clk->name);
+
+	BUG_ON(!peri_clk->ccu_clk);
+	if (!peri_clk->soft_reset_offset || !peri_clk->clk_reset_mask)
+	    return -EPERM;
+
+	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+
+	/* enable write access*/
+	ccu_reset_write_access_enable(peri_clk->ccu_clk, true);
+
+	reg_val = readl(peri_clk->ccu_clk->ccu_reset_mgr_base + peri_clk->soft_reset_offset);
+	clk_dbg("reset offset: %08x, reg_val: %08x\n",
+		(peri_clk->ccu_clk->ccu_reset_mgr_base + peri_clk->soft_reset_offset), reg_val);
+	reg_val = reg_val & ~peri_clk->clk_reset_mask;
+	clk_dbg("writing reset value: %08x\n", reg_val);
+	writel(reg_val, peri_clk->ccu_clk->ccu_reset_mgr_base + peri_clk->soft_reset_offset);
+
+	udelay(10);
+
+	reg_val = reg_val | peri_clk->clk_reset_mask;
+	clk_dbg("writing reset release value: %08x\n", reg_val);
+
+	writel(reg_val, peri_clk->ccu_clk->ccu_reset_mgr_base + peri_clk->soft_reset_offset);
+
+	ccu_reset_write_access_enable(peri_clk->ccu_clk, false);
+
+	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+
+	return 0;
+}
+
 struct gen_clk_ops gen_peri_clk_ops =
 {
 	.init           =       peri_clk_init,
@@ -2778,6 +2883,7 @@ struct gen_clk_ops gen_peri_clk_ops =
 	.set_rate       =       peri_clk_set_rate,
 	.get_rate       =       peri_clk_get_rate,
 	.round_rate     =       peri_clk_round_rate,
+	.reset			=		peri_clk_reset,
 };
 
 
@@ -3023,11 +3129,58 @@ static int bus_clk_init(struct clk *clk)
 	return 0;
 }
 
+static int bus_clk_reset(struct clk *clk)
+{
+	struct bus_clk *bus_clk;
+	u32 reg_val;
+
+	if(clk->clk_type != CLK_TYPE_BUS)
+	{
+		BUG_ON(1);
+		return -EPERM;
+	}
+	clk_dbg("%s -- %s to be reset\n", __func__, clk->name);
+
+	bus_clk = to_bus_clk(clk);
+
+	BUG_ON(!bus_clk->ccu_clk);
+	if (!bus_clk->soft_reset_offset || !bus_clk->clk_reset_mask)
+	    return -EPERM;
+
+	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+
+	/* enable write access*/
+	ccu_reset_write_access_enable(bus_clk->ccu_clk, true);
+
+	reg_val = readl(bus_clk->ccu_clk->ccu_reset_mgr_base + bus_clk->soft_reset_offset);
+
+	clk_dbg("reset offset: %08x, reg_val: %08x\n",
+		(bus_clk->ccu_clk->ccu_clk_mgr_base+bus_clk->soft_reset_offset), reg_val);
+	reg_val = reg_val & ~bus_clk->clk_reset_mask;
+	clk_dbg("writing reset val: %08x\n", reg_val);
+	writel(reg_val, bus_clk->ccu_clk->ccu_reset_mgr_base + bus_clk->soft_reset_offset);
+
+	udelay(10);
+
+	reg_val = reg_val | bus_clk->clk_reset_mask;
+	clk_dbg("writing reset release val: %08x\n", reg_val);
+	writel(reg_val, bus_clk->ccu_clk->ccu_reset_mgr_base + bus_clk->soft_reset_offset);
+
+	/* disable write access*/
+	ccu_reset_write_access_enable(bus_clk->ccu_clk, false);
+
+	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+
+	return 0;
+}
+
+
 struct gen_clk_ops gen_bus_clk_ops =
 {
 	.init           =       bus_clk_init,
 	.enable         =       bus_clk_enable,
 	.get_rate       =       bus_clk_get_rate,
+	.reset			=		bus_clk_reset,
 };
 
 static int ref_clk_get_gating_status(struct ref_clk *ref_clk)
@@ -3763,11 +3916,51 @@ static int core_clk_init(struct clk* clk)
 	return 0;
 }
 
+static int core_clk_reset(struct clk* clk)
+{
+	u32 reg_val;
+	struct core_clk * core_clk;
+
+	if(clk->clk_type != CLK_TYPE_CORE) {
+		BUG_ON(1);
+		return -EPERM;
+	}
+	core_clk = to_core_clk(clk);
+	clk_dbg("%s -- %s to be reset\n", __func__, clk->name);
+
+	BUG_ON(!core_clk->ccu_clk);
+	if (!core_clk->soft_reset_offset || !core_clk->clk_reset_mask)
+	    return -EPERM;
+
+	/* enable write access*/
+	ccu_reset_write_access_enable(core_clk->ccu_clk, true);
+
+	reg_val = readl(core_clk->ccu_clk->ccu_reset_mgr_base + core_clk->soft_reset_offset);
+	clk_dbg("reset offset: %08x, reg_val: %08x\n",
+		(core_clk->ccu_clk->ccu_reset_mgr_base + core_clk->soft_reset_offset), reg_val);
+	reg_val = reg_val & ~core_clk->clk_reset_mask;
+	clk_dbg("writing reset value: %08x\n", reg_val);
+	writel(reg_val, core_clk->ccu_clk->ccu_reset_mgr_base + core_clk->soft_reset_offset);
+	//core should have reset here. below code wont be executed.
+	udelay(10);
+
+	reg_val = reg_val | core_clk->clk_reset_mask;
+	clk_dbg("writing reset release value: %08x\n", reg_val);
+
+	writel(reg_val, core_clk->ccu_clk->ccu_reset_mgr_base + core_clk->soft_reset_offset);
+
+	ccu_reset_write_access_enable(core_clk->ccu_clk, false);
+
+	return 0;
+}
+
+
 struct gen_clk_ops gen_core_clk_ops =
 {
 	.init	        =       core_clk_init,
 	.set_rate       =       core_clk_set_rate,
 	.get_rate       =       core_clk_get_rate,
+	.reset		=	core_clk_reset,
 };
 
 
@@ -3920,6 +4113,20 @@ static int clk_debug_get_status(void *data, u64 *val)
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(clock_status_fops, clk_debug_get_status, NULL, "%llu\n");
+
+static int clk_debug_reset(void *data, u64 val)
+{
+	struct clk *clock = data;
+	if(val == 1) /*reset and release the clock from reset*/
+		clk_reset(clock);
+	else
+		clk_dbg("Invalid value \n");
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(clock_reset_fops, NULL, clk_debug_reset, "%llu\n");
+
 
 static int clk_debug_set_enable(void *data, u64 val)
 {
@@ -4168,7 +4375,7 @@ int __init clock_debug_add_clock(struct clk *c)
 	struct dentry *dent_clk_dir=0, *dent_rate=0, *dent_enable=0,
 	*dent_status=0, *dent_div=0, *dent_use_cnt=0, *dent_id=0,
 		*dent_parent=0, *dent_source=0, *dent_ccu_dir=0,
-		*dent_clk_mon=0;
+		*dent_clk_mon=0, *dent_reset=0;
 	struct peri_clk *peri_clk;
 	struct pll_clk *pll_clk;
 	struct core_clk *core_clk;
@@ -4218,6 +4425,11 @@ int __init clock_debug_add_clock(struct clk *c)
 	/* file /clock/clk_a/enable */
 	dent_enable        =       debugfs_create_file("enable", 0644, dent_clk_dir, c, &clock_enable_fops);
 	if(!dent_enable)
+		goto err;
+
+	/* file /clock/clk_a/reset */
+	dent_reset	   =	   debugfs_create_file("reset", 0644, dent_clk_dir, c, &clock_reset_fops);
+	if(!dent_reset)
 		goto err;
 
 	/* file /clock/clk_a/status */

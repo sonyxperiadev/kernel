@@ -30,6 +30,13 @@
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_kproc_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_khub_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_khubaon_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_kpm_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_kps_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #ifdef CONFIG_DEBUG_FS
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
@@ -68,6 +75,8 @@ static struct ccu_clk CLK_NAME(root) = {
 	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR),
 	.wr_access_offset = ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(ROOT_RST_BASE_ADDR),
+	.reset_wr_access_offset = ROOT_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.ccu_ops = &root_ccu_ops,
 	.clk_mon_offset = ROOT_CLK_MGR_REG_CLKMON_OFFSET,
 };
@@ -588,6 +597,8 @@ static struct ccu_clk CLK_NAME(kproc) = {
 	.freq_volt = DEFINE_ARRAY_ARGS(PROC_CCU_FREQ_VOLT_TBL),
 	.freq_count = PROC_CCU_FREQ_VOLT_TBL_SZ,
 	.freq_policy = DEFINE_ARRAY_ARGS(PROC_CCU_FREQ_POLICY_TBL),
+	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(PROC_RST_BASE_ADDR),
+	.reset_wr_access_offset = KPROC_RST_MGR_REG_WR_ACCESS_OFFSET,
 };
 
 /*
@@ -723,6 +734,8 @@ static struct core_clk CLK_NAME(a9_core) = {
 	.hyst_val_mask = KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_HYST_VAL_MASK,
 	.hyst_en_mask = KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_HYST_EN_MASK,
 	.stprsts_mask = KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_STPRSTS_MASK,
+    .soft_reset_offset      = KPROC_RST_MGR_REG_A9_CORE_SOFT_RSTN_OFFSET,
+    .clk_reset_mask         = KPROC_RST_MGR_REG_A9_CORE_SOFT_RSTN_A9_CORE_0_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1070,6 +1083,8 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = DEFINE_ARRAY_ARGS(HUB_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(khub_clk_freq_list0,khub_clk_freq_list1,khub_clk_freq_list2,khub_clk_freq_list3,khub_clk_freq_list4,khub_clk_freq_list5,khub_clk_freq_list6),
+	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_RST_BASE_ADDR),
+	.reset_wr_access_offset = KHUB_RST_MGR_REG_WR_ACCESS_OFFSET,
 
 };
 
@@ -1145,6 +1160,8 @@ static struct bus_clk CLK_NAME(apb5) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 4,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN0_APB5_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1171,6 +1188,8 @@ KHUB_CLK_MGR_REG_CTI_CLKGATE_CTI_APB_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 21,
+.soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+.clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN0_CTI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1197,6 +1216,8 @@ KHUB_CLK_MGR_REG_FUNNEL_CLKGATE_FUNNEL_APB_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 22,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN0_FUNNEL_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1223,6 +1244,8 @@ KHUB_CLK_MGR_REG_TPIU_CLKGATE_TPIU_APB_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 26,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN0_TPIU_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1249,6 +1272,8 @@ KHUB_CLK_MGR_REG_VC_ITM_CLKGATE_VC_ITM_APB_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 19,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN0_VC_ITM_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1451,6 +1476,8 @@ static struct bus_clk CLK_NAME(hsi_apb) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 28,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN0_HSI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1476,6 +1503,8 @@ static struct bus_clk CLK_NAME(etb_apb) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 25,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN0_ETB_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1506,6 +1535,8 @@ KHUB_CLK_MGR_REG_FINAL_FUNNEL_CLKGATE_FINAL_FUNNEL_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 23,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN0_FINAL_FUNNEL_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1528,6 +1559,8 @@ static struct bus_clk CLK_NAME(apb10) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 27,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN1_APB10_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1550,6 +1583,8 @@ static struct bus_clk CLK_NAME(apb9) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 14,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN1_APB9_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1576,6 +1611,8 @@ KHUB_CLK_MGR_REG_ATB_CLKGATE_ATB_FILTER_APB_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 20,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN1_ATB_FILTER_SOFT_RSTN_MASK,
 };
 
 
@@ -1711,6 +1748,8 @@ static struct peri_clk CLK_NAME(audioh_26m) = {
 					.clk = audioh_26m_peri_clk_src_list,
 				},
 	.clk_sel_val = 40,
+	.soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask		= KHUB_RST_MGR_REG_SOFT_RSTN1_AUDIOH_SOFT_RSTN_MASK,
 };
 
 
@@ -1757,6 +1796,8 @@ static struct peri_clk CLK_NAME(hub_clk) = {
 	.clk = hub_peri_clk_src_list,
     },
     .clk_sel_val = 0,
+    .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+    .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN0_HUB_SOFT_RSTN_MASK,
 };
 
 
@@ -1788,6 +1829,8 @@ KHUB_CLK_MGR_REG_BT_SLIM_CLKGATE_BT_SLIM_AHB_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(audioh_26m),
     .clk_sel_val = 41,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN1_BT_SLIM_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1814,6 +1857,8 @@ KHUB_CLK_MGR_REG_ETB2AXI_CLKGATE_ETB2AXI_APB_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 24,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN1_ETB2AXI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1913,6 +1958,8 @@ static struct bus_clk CLK_NAME(var_spm_apb) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 13,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN1_VAR_SPM_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1938,6 +1985,8 @@ static struct bus_clk CLK_NAME(nor) = {
  .freq_tbl_index = 1,
  .src_clk = NULL,
     .clk_sel_val = 1,
+ .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN0_NOR_SOFT_RSTN_MASK,
 };
 
 /*
@@ -1973,6 +2022,8 @@ static struct peri_clk CLK_NAME(audioh_2p4m) = {
 					.clk = audioh_2p4m_peri_clk_src_list,
 				},
     .clk_sel_val = 45,
+	.soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask		= KHUB_RST_MGR_REG_SOFT_RSTN1_AUDIOH_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2008,6 +2059,8 @@ static struct peri_clk CLK_NAME(audioh_156m) = {
 					.clk = audioh_156m_peri_clk_src_list,
 				},
     .clk_sel_val = 38,
+	.soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask		= KHUB_RST_MGR_REG_SOFT_RSTN1_AUDIOH_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2104,6 +2157,8 @@ static struct peri_clk CLK_NAME(ssp3) = {
 					.clk = ssp3_peri_clk_src_list,
 				},
     .clk_sel_val = 46,
+	.soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask		= KHUB_RST_MGR_REG_SOFT_RSTN1_SSP3_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2200,6 +2255,8 @@ static struct peri_clk CLK_NAME(ssp4) = {
 					.clk = ssp4_peri_clk_src_list,
 				},
     .clk_sel_val = 48,
+	.soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask		= KHUB_RST_MGR_REG_SOFT_RSTN1_SSP4_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2239,6 +2296,8 @@ static struct peri_clk CLK_NAME(tmon_1m) = {
 					.clk = tmon_1m_peri_clk_src_list,
 				},
     .clk_sel_val = 34,
+	.soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask		= KHUB_RST_MGR_REG_SOFT_RSTN1_TMON_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2302,6 +2361,8 @@ static struct peri_clk CLK_NAME(brom) = {
 		.div_shift = KHUB_CLK_MGR_REG_HUB_DIV_BROM_DIV_SHIFT,
 	},
     .clk_sel_val = 29,
+	.soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask		= KHUB_RST_MGR_REG_SOFT_RSTN0_BROM_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2337,6 +2398,8 @@ static struct peri_clk CLK_NAME(mdiomaster) = {
 		.clk = mdiomaster_peri_clk_src_list,
 	},
     .clk_sel_val = 32,
+	.soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask		= KHUB_RST_MGR_REG_SOFT_RSTN1_MDIOMASTER_SOFT_RSTN_MASK,
 };
 
 
@@ -2385,6 +2448,8 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = DEFINE_ARRAY_ARGS(AON_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(khubaon_clk_freq_list0,khubaon_clk_freq_list1,khubaon_clk_freq_list2,khubaon_clk_freq_list3,khubaon_clk_freq_list4),
+	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(AON_RST_BASE_ADDR),
+	.reset_wr_access_offset = KHUBAON_RST_MGR_REG_WR_ACCESS_OFFSET,
 
 };
 
@@ -2509,6 +2574,8 @@ static struct bus_clk CLK_NAME(aci_apb) = {
  .freq_tbl_index = 1,
  .src_clk = NULL,
     .clk_sel_val = 15,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_ACI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2583,6 +2650,8 @@ KHUBAON_CLK_MGR_REG_PWRMGR_CLKGATE_PWRMGR_AXI_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 18,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_PWRMGR_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2605,6 +2674,8 @@ static struct bus_clk CLK_NAME(apb6) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 2,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_APB6_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2631,6 +2702,8 @@ KHUBAON_CLK_MGR_REG_GPIOKP_CLKGATE_GPIOKP_APB_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 4,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_GPIOKP_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2685,6 +2758,8 @@ KHUBAON_CLK_MGR_REG_CHIPREG_CLKGATE_CHIPREG_APB_HYST_VAL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 5,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_CHIPREG_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2711,6 +2786,8 @@ KHUBAON_CLK_MGR_REG_FMON_CLKGATE_FMON_APB_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 11,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_FMON_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2741,6 +2818,8 @@ KHUBAON_CLK_MGR_REG_HUB_TZCFG_CLKGATE_HUB_TZCFG_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 3,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_HUB_TZCFG_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2767,6 +2846,8 @@ KHUBAON_CLK_MGR_REG_SEC_WD_CLKGATE_SEC_WD_APB_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 13,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_SEC_WD_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2792,6 +2873,8 @@ static struct bus_clk CLK_NAME(sysemi_sec_apb) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 7,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_SYSEMI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2817,6 +2900,8 @@ static struct bus_clk CLK_NAME(sysemi_open_apb) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 8,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_SYSEMI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2842,6 +2927,8 @@ static struct bus_clk CLK_NAME(vcemi_sec_apb) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 9,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_VCEMI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2867,6 +2954,8 @@ static struct bus_clk CLK_NAME(vcemi_open_apb) = {
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 10,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_VCEMI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2893,6 +2982,8 @@ KHUBAON_CLK_MGR_REG_SPM_CLKGATE_SPM_APB_HW_SW_GATING_SEL_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 12,
+ .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_SPM_SOFT_RSTN_MASK,
 };
 
 /*
@@ -2965,6 +3056,8 @@ static struct peri_clk CLK_NAME(sim) = {
 					.clk = sim_peri_clk_src_list,
 				},
     .clk_sel_val = 22,
+	.soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask		= KHUBAON_RST_MGR_REG_SOFT_RSTN0_SIM_SOFT_RSTN_MASK,
 };
 
 /*
@@ -3012,6 +3105,8 @@ static struct peri_clk CLK_NAME(sim2) = {
 					.clk = sim2_peri_clk_src_list,
 				},
     .clk_sel_val = 23,
+	.soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask		= KHUBAON_RST_MGR_REG_SOFT_RSTN0_SIM2_SOFT_RSTN_MASK,
 };
 
 /*
@@ -3052,6 +3147,8 @@ static struct peri_clk CLK_NAME(hub_timer) = {
 					.clk = hub_timer_peri_clk_src_list,
 				},
     .clk_sel_val = 21,
+	.soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask		= KHUBAON_RST_MGR_REG_SOFT_RSTN0_HUB_TIMER_SOFT_RSTN_MASK,
 };
 
 /*
@@ -3096,6 +3193,8 @@ static struct peri_clk CLK_NAME(pmu_bsc) = {
 	.clk = pmu_bsc_peri_clk_src_list,
     },
     .clk_sel_val = 19,
+    .soft_reset_offset	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+    .clk_reset_mask	= KHUBAON_RST_MGR_REG_SOFT_RSTN0_PMU_BSC_SOFT_RSTN_MASK,
 };
 
 
@@ -3147,6 +3246,8 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = DEFINE_ARRAY_ARGS(KPM_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(kpm_clk_freq_list0,kpm_clk_freq_list1,kpm_clk_freq_list2,kpm_clk_freq_list3,kpm_clk_freq_list4,kpm_clk_freq_list5,kpm_clk_freq_list6,kpm_clk_freq_list7),
+	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_RST_BASE_ADDR),
+	.reset_wr_access_offset = KPM_RST_MGR_REG_WR_ACCESS_OFFSET,
 
 };
 
@@ -3187,6 +3288,8 @@ static struct bus_clk CLK_NAME(usb_otg_ahb) = {
  .freq_tbl_index = 1,
  .src_clk = NULL,
     .clk_sel_val = 11,
+ .soft_reset_offset	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_OFFSET,
+ .clk_reset_mask	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_USB_OTG_SOFT_RSTN_MASK,
 };
 
 /*
@@ -3457,6 +3560,8 @@ static struct peri_clk CLK_NAME(sdio2) = {
 					.clk = sdio2_peri_clk_src_list,
 				},
     .clk_sel_val = 20,
+    .soft_reset_offset	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_OFFSET,
+    .clk_reset_mask	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_SDIO2_SOFT_RSTN_MASK,
 };
 
 /*
@@ -3527,6 +3632,8 @@ static struct peri_clk CLK_NAME(sdio3) = {
 					.clk = sdio3_peri_clk_src_list,
 				},
     .clk_sel_val = 21,
+    .soft_reset_offset	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_OFFSET,
+    .clk_reset_mask	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_SDIO3_SOFT_RSTN_MASK,
 };
 
 /*
@@ -3597,6 +3704,8 @@ static struct peri_clk CLK_NAME(sdio1) = {
 		.clk = sdio1_peri_clk_src_list,
 	},
     .clk_sel_val = 23,
+    .soft_reset_offset	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_OFFSET,
+    .clk_reset_mask	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_SDIO1_SOFT_RSTN_MASK,
 };
 
 /*
@@ -3641,6 +3750,8 @@ static struct peri_clk CLK_NAME(sdio4) = {
 		.clk = sdio4_peri_clk_src_list,
 	},
     .clk_sel_val = 22,
+    .soft_reset_offset	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_OFFSET,
+    .clk_reset_mask	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_SDIO4_SOFT_RSTN_MASK,
 };
 
 /*
@@ -3769,6 +3880,8 @@ static struct peri_clk CLK_NAME(usbh_48m) = {
 	.clk = usbh_48m_peri_clk_src_list,
     },
     .clk_sel_val = 31,
+    .soft_reset_offset	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_OFFSET,
+    .clk_reset_mask	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_USBH_SOFT_RSTN_MASK,
 };
 
 /*
@@ -3810,6 +3923,8 @@ static struct peri_clk CLK_NAME(usbh_12m) = {
 	.clk = usbh_12m_peri_clk_src_list,
     },
     .clk_sel_val = 32,
+    .soft_reset_offset	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_OFFSET,
+    .clk_reset_mask	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_USBH_SOFT_RSTN_MASK,
 };
 
 
@@ -3859,6 +3974,8 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = DEFINE_ARRAY_ARGS(KPS_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(kps_clk_freq_list0,kps_clk_freq_list1,kps_clk_freq_list2,kps_clk_freq_list3,kps_clk_freq_list4,kps_clk_freq_list5),
+	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_RST_BASE_ADDR),
+	.reset_wr_access_offset = KPS_RST_MGR_REG_WR_ACCESS_OFFSET,
 
 };
 
@@ -4019,6 +4136,8 @@ static struct bus_clk CLK_NAME(dmac_mux_apb) = {
  .freq_tbl_index = 1,
  .src_clk = NULL,
     .clk_sel_val = 13,
+ .soft_reset_offset	= KPS_RST_MGR_REG_APB2_SOFTRST_OFFSET,
+ .clk_reset_mask	= KPS_RST_MGR_REG_APB2_SOFTRST_DMAC_MUX_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4406,6 +4525,8 @@ static struct peri_clk CLK_NAME(uartb) = {
 					.clk = uartb_peri_clk_src_list,
 				},
     .clk_sel_val = 30,
+	.soft_reset_offset	= KPS_RST_MGR_REG_APB1_SOFTRST_OFFSET,
+	.clk_reset_mask		= KPS_RST_MGR_REG_APB1_SOFTRST_UARTB_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4449,6 +4570,8 @@ static struct peri_clk CLK_NAME(uartb2) = {
 					.clk = uartb2_peri_clk_src_list,
 				},
     .clk_sel_val = 29,
+	.soft_reset_offset	= KPS_RST_MGR_REG_APB1_SOFTRST_OFFSET,
+	.clk_reset_mask		= KPS_RST_MGR_REG_APB1_SOFTRST_UARTB2_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4492,6 +4615,8 @@ static struct peri_clk CLK_NAME(uartb3) = {
 					.clk = uartb3_peri_clk_src_list,
 				},
     .clk_sel_val = 28,
+	.soft_reset_offset	= KPS_RST_MGR_REG_APB1_SOFTRST_OFFSET,
+	.clk_reset_mask		= KPS_RST_MGR_REG_APB1_SOFTRST_UARTB3_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4578,6 +4703,8 @@ static struct peri_clk CLK_NAME(bsc1) = {
 					.clk = bsc1_peri_clk_src_list,
 				},
     .clk_sel_val = 26,
+	.soft_reset_offset	= KPS_RST_MGR_REG_APB2_SOFTRST_OFFSET,
+	.clk_reset_mask		= KPS_RST_MGR_REG_APB2_SOFTRST_BSC1_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4618,6 +4745,8 @@ static struct peri_clk CLK_NAME(bsc2) = {
 					.clk = bsc2_peri_clk_src_list,
 				},
     .clk_sel_val = 25,
+	.soft_reset_offset	= KPS_RST_MGR_REG_APB2_SOFTRST_OFFSET,
+	.clk_reset_mask		= KPS_RST_MGR_REG_APB2_SOFTRST_BSC2_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4645,6 +4774,8 @@ static struct peri_clk CLK_NAME(pwm) = {
 	.stprsts_mask = KPS_CLK_MGR_REG_PWM_CLKGATE_PWM_STPRSTS_MASK,
 	.volt_lvl_mask = KPS_CLK_MGR_REG_PWM_CLKGATE_PWM_VOLTAGE_LEVEL_MASK,
     .clk_sel_val = 32,
+	.soft_reset_offset	= KPS_RST_MGR_REG_APB2_SOFTRST_OFFSET,
+	.clk_reset_mask		= KPS_RST_MGR_REG_APB2_SOFTRST_PWM_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4703,6 +4834,8 @@ static struct peri_clk CLK_NAME(ssp0) = {
 					.clk = ssp0_peri_clk_src_list,
 				},
     .clk_sel_val = 27,
+	.soft_reset_offset	= KPS_RST_MGR_REG_APB1_SOFTRST_OFFSET,
+	.clk_reset_mask		= KPS_RST_MGR_REG_APB1_SOFTRST_SSP0_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4742,6 +4875,8 @@ static struct peri_clk CLK_NAME(timers) = {
 	.clk = timers_peri_clk_src_list,
     },
     .clk_sel_val = 31,
+    .soft_reset_offset	= KPS_RST_MGR_REG_APB1_SOFTRST_OFFSET,
+    .clk_reset_mask	= KPS_RST_MGR_REG_APB1_SOFTRST_TIMERS_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4798,6 +4933,8 @@ static struct peri_clk CLK_NAME(spum_open) = {
 	.clk = spum_open_peri_clk_src_list,
     },
     .clk_sel_val = 35,
+    .soft_reset_offset	= KPS_RST_MGR_REG_HSM_SOFTRST_OFFSET,
+    .clk_reset_mask	= KPS_RST_MGR_REG_HSM_SOFTRST_SPUM_OPEN_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4845,6 +4982,8 @@ static struct peri_clk CLK_NAME(spum_sec) = {
 	.clk = spum_sec_peri_clk_src_list,
     },
     .clk_sel_val = 34,
+    .soft_reset_offset	= KPS_RST_MGR_REG_HSM_SOFTRST_OFFSET,
+    .clk_reset_mask	= KPS_RST_MGR_REG_HSM_SOFTRST_SPUM_SEC_SOFT_RSTN_MASK,
 };
 
 /*
@@ -4929,6 +5068,8 @@ static struct ccu_clk CLK_NAME(mm) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = DEFINE_ARRAY_ARGS(MM_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0,mm_clk_freq_list1,mm_clk_freq_list2,mm_clk_freq_list3,mm_clk_freq_list4,mm_clk_freq_list5),
+	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(MM_RST_BASE_ADDR),
+	.reset_wr_access_offset = MM_RST_MGR_REG_WR_ACCESS_OFFSET,
 
 };
 
@@ -5262,6 +5403,8 @@ static struct bus_clk CLK_NAME(csi0_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+ .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_ISP_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5287,6 +5430,8 @@ static struct bus_clk CLK_NAME(csi1_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+ .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_VCE_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5312,6 +5457,8 @@ static struct bus_clk CLK_NAME(isp_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+ .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_MM_DMA_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5337,6 +5484,8 @@ static struct bus_clk CLK_NAME(smi_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+ .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+ .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5437,6 +5586,8 @@ static struct bus_clk CLK_NAME(mm_apb) = {
  .freq_tbl_index = 1,
  .src_clk = NULL,
     .clk_sel_val = -1,
+ .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+ .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN1_MM_APB_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5462,6 +5613,8 @@ static struct bus_clk CLK_NAME(spi_apb) = {
  .freq_tbl_index = 1,
  .src_clk = NULL,
     .clk_sel_val = -1,
+ .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+ .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN1_SPI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5556,6 +5709,8 @@ static struct peri_clk CLK_NAME(csi0_lp) = {
 					.clk = csi0_lp_peri_clk_src_list,
 				},
     .clk_sel_val = -1,
+    .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+    .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_CSI0_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5600,6 +5755,8 @@ static struct peri_clk CLK_NAME(csi1_lp) = {
 					.clk = csi1_lp_peri_clk_src_list,
 				},
     .clk_sel_val = -1,
+    .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+    .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_CSI1_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5645,6 +5802,8 @@ static struct peri_clk CLK_NAME(smi) = {
 					.clk = smi_peri_clk_src_list,
 				},
     .clk_sel_val = -1,
+    .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+    .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_SMI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5689,6 +5848,8 @@ static struct peri_clk CLK_NAME(dsi0_esc) = {
 					.clk = dsi0_esc_peri_clk_src_list,
 				},
     .clk_sel_val = -1,
+    .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+    .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN1_DSI0_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5732,6 +5893,8 @@ static struct peri_clk CLK_NAME(dsi1_esc) = {
 					.clk = dsi1_esc_peri_clk_src_list,
 				},
     .clk_sel_val = -1,
+    .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+    .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN1_DSI1_SOFT_RSTN_MASK,
 };
 
 /*
@@ -6297,6 +6460,30 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(DIG_CH0_PERI_CLK_NAME_STR,NULL,dig_ch3),
 };
 
+int chip_reset(void)
+{
+    struct clk *clk;
+    struct ccu_clk *ccu_clk;
+    u32 reg_val;
+
+    printk("RHEA CHIP RESET \n");
+    clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
+    ccu_clk = to_ccu_clk(clk);
+
+    ccu_reset_write_access_enable(ccu_clk, true);
+    reg_val = readl(ccu_clk->ccu_reset_mgr_base + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+    clk_dbg("%s: reg_val: %08x\n",__func__, reg_val);
+    reg_val = reg_val & ~ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_CHIP_SOFT_RSTN_MASK;
+    clk_dbg("writing reset value: %08x\n", reg_val);
+    writel(reg_val, ccu_clk->ccu_reset_mgr_base + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+
+    /* This will not get executed. */
+    ccu_reset_write_access_enable(ccu_clk, false);
+
+    return 0;
+}
+EXPORT_SYMBOL(chip_reset);
+
 #ifndef CONFIG_KONA_POWER_MGR
 static int set_mm_override(void)
 {
@@ -6318,8 +6505,9 @@ int __init rhea_clock_init(void)
 #endif
 	/*overrride callback functions b4 registering the clks*/
 
-	/*only write_access function is needed for root ccu*/
+/*only clk mgr write_access and reset mgr access functions is needed for root ccu*/
 	root_ccu_ops.write_access =  gen_ccu_ops.write_access;
+	root_ccu_ops.rst_write_access  = gen_ccu_ops.rst_write_access;
 
 	mm_ccu_ops = gen_ccu_ops;
 	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;

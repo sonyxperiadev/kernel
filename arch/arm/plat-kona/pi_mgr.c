@@ -16,6 +16,8 @@
 #include <linux/module.h>
 #include <linux/plist.h>
 #include <linux/slab.h>
+#include <linux/io.h>
+#include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/pm_qos_params.h>
@@ -439,10 +441,76 @@ static int pi_def_enable(struct pi *pi, int enable)
 	return pi_set_policy(pi,policy,POLICY_QOS);
 }
 
+static int pi_reset(struct pi *pi, int sub_domain)
+{
+	u32 reg_val;
+	struct clk* clk;
+	struct ccu_clk *ccu_clk;
+
+	pi_dbg("%s: pi_name:%s, usageCount:%d\n",__func__,pi->name, pi->usg_cnt);
+	if(pi->pi_info.reset_mgr_ccu_name == NULL || !pi->pi_info.pd_soft_reset_offset)
+	    return -EPERM;
+	if((sub_domain == SUB_DOMAIN_0 && !pi->pi_info.pd_reset_mask0) ||
+	    (sub_domain == SUB_DOMAIN_1 && !pi->pi_info.pd_reset_mask1) ||
+	    (sub_domain == SUB_DOMAIN_BOTH && (!pi->pi_info.pd_reset_mask0 || !pi->pi_info.pd_reset_mask1)))
+	    return -EPERM;
+
+	spin_lock(&pi_mgr_lock);
+	pi_dbg("%s:pi:%s reset ccu str:%s\n",__func__,pi->name,	pi->pi_info.reset_mgr_ccu_name);
+	clk = clk_get(NULL,pi->pi_info.reset_mgr_ccu_name);
+	BUG_ON(clk == 0 || IS_ERR(clk));
+
+	ccu_clk = to_ccu_clk(clk);
+
+	ccu_reset_write_access_enable(ccu_clk , true);
+	reg_val = readl(ccu_clk->ccu_reset_mgr_base + pi->pi_info.pd_soft_reset_offset);
+	pi_dbg("reset offset: %08x, reg_val: %08x\n",
+		(ccu_clk->ccu_reset_mgr_base + pi->pi_info.pd_soft_reset_offset), reg_val);
+	switch(sub_domain) {
+	case SUB_DOMAIN_0:
+	    reg_val = reg_val & ~pi->pi_info.pd_reset_mask0;
+	    break;
+	case SUB_DOMAIN_1:
+	    reg_val = reg_val & ~pi->pi_info.pd_reset_mask1;
+	    break;
+	case SUB_DOMAIN_BOTH:
+	    reg_val = reg_val & ~pi->pi_info.pd_reset_mask0;
+	    reg_val = reg_val & ~pi->pi_info.pd_reset_mask1;
+	    break;
+	default:
+		return -EINVAL;
+	}
+	pi_dbg("writing reset value: %08x\n", reg_val);
+	writel(reg_val, ccu_clk->ccu_reset_mgr_base + pi->pi_info.pd_soft_reset_offset);
+	udelay(10);
+
+	switch(sub_domain) {
+	case SUB_DOMAIN_0:
+	    reg_val = reg_val | pi->pi_info.pd_reset_mask0;
+	    break;
+	case SUB_DOMAIN_1:
+	    reg_val = reg_val | pi->pi_info.pd_reset_mask1;
+	    break;
+	case SUB_DOMAIN_BOTH:
+	    reg_val = reg_val | pi->pi_info.pd_reset_mask0;
+	    reg_val = reg_val | pi->pi_info.pd_reset_mask1;
+	    break;
+	default:
+		return -EINVAL;
+	}
+	pi_dbg("writing reset release value: %08x\n", reg_val);
+	writel(reg_val, ccu_clk->ccu_reset_mgr_base + pi->pi_info.pd_soft_reset_offset);
+
+	ccu_reset_write_access_enable(ccu_clk , false);
+	spin_unlock(&pi_mgr_lock);
+	return 0;
+}
+
 struct pi_ops gen_pi_ops = {
 	.init = pi_def_init,
 	.init_state = pi_def_init_state,
 	.enable = pi_def_enable,
+	.reset = pi_reset,
 	.change_notify = NULL,
 };
 
@@ -1047,6 +1115,11 @@ int pi_mgr_init()
 }
 EXPORT_SYMBOL(pi_mgr_init);
 
+__weak int chip_reset(void)
+{
+    return 0;
+}
+
 #ifdef CONFIG_DEBUG_FS
 
 static int pi_debugfs_open(struct inode *inode, struct file *file)
@@ -1338,6 +1411,32 @@ static struct file_operations pi_dfs_request_list_fops =
 	.read =         read_get_dfs_request_list,
 };
 
+static int debug_chip_reset(void *data, u64 val)
+{
+    int ret = 0;
+
+    ret = chip_reset();
+
+    return ret;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(chip_reset_fops, NULL, debug_chip_reset, "%llu\n");
+
+
+static int pi_debug_reset(void *data, u64 val)
+{
+    struct pi *pi = data;
+
+    if(pi && pi->ops && pi->ops->reset) {
+	if(val >= 0 && val <= 2)
+	    pi->ops->reset(pi, val);
+	else
+	    pi_dbg("write 0 to reset SUB_DOMAIN0, 1 to reset SUB_DOMAIN1 and 2 to reset both \n");
+    }
+    return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pi_reset_fops, NULL, pi_debug_reset, "%llu\n");
 
 static int pi_debug_set_enable(void *data, u64 val)
 {
@@ -1439,7 +1538,7 @@ static struct file_operations all_req_fops =
 static struct dentry *dent_pi_root_dir;
 int __init pi_debug_init(void)
 {
-    struct dentry *dent_all_requests = 0;
+    struct dentry *dent_all_requests = 0, *dent_chip_reset = 0;
     dent_pi_root_dir = debugfs_create_dir("power_domains", 0);
     if(!dent_pi_root_dir)
 		return -ENOMEM;
@@ -1449,6 +1548,11 @@ int __init pi_debug_init(void)
     dent_all_requests = debugfs_create_file("all_requests", S_IRUSR, dent_pi_root_dir, NULL, &all_req_fops);
     if(!dent_all_requests)
 		pi_dbg("Erro registering all_requests with debugfs\n");
+
+    dent_chip_reset = debugfs_create_file("chip_reset", S_IRUSR, dent_pi_root_dir, NULL, &chip_reset_fops);
+    if(!dent_chip_reset)
+		pi_dbg("Erro registering all_requests with debugfs\n");
+
     return 0;
 
 }
@@ -1458,8 +1562,8 @@ int __init pi_debug_add_pi(struct pi *pi)
     struct dentry *dent_pi_dir=0, *dent_count=0, *dent_enable=0,
     *dent_dfs_dir=0, *dent_dfs=0, *dent_register_qos_client=0,
     *dent_remove_qos_client=0, *dent_remove_dfs_client=0, *dent_register_dfs_client=0,
-    *dent_request_dfs=0, *dent_qos_dir=0, *dent_qos=0, *dent_request_qos=0, *dent_state,
-	*dent_opp;
+    *dent_request_dfs=0, *dent_qos_dir=0, *dent_qos=0, *dent_request_qos=0,
+    *dent_state=0, *dent_opp=0, *dent_reset=0;
 
 
     BUG_ON(!dent_pi_root_dir);
@@ -1472,7 +1576,12 @@ int __init pi_debug_add_pi(struct pi *pi)
 
 	dent_enable = debugfs_create_file("enable", S_IWUSR|S_IRUSR, dent_pi_dir, pi, &pi_enable_fops);
 	if(!dent_enable)
-		goto err;
+	    goto err;
+
+    dent_reset = debugfs_create_file("reset", S_IWUSR|S_IRUSR, dent_pi_dir, pi, &pi_reset_fops);
+	if(!dent_reset)
+	    goto err;
+
     dent_count = debugfs_create_u32("count", S_IRUSR, dent_pi_dir, &pi->usg_cnt);
     if(!dent_count)
 		goto err;

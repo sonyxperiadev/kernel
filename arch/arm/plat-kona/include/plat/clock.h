@@ -328,6 +328,7 @@ struct gen_clk_ops {
 	int	(*set_rate)(struct clk *c, u32 rate);
 	unsigned long	(*get_rate)(struct clk *c);
 	unsigned long	(*round_rate)(struct clk *c, unsigned long rate);
+	int	(*reset)(struct clk *c);
 
 };
 
@@ -344,6 +345,7 @@ struct ccu_clk;
 struct ccu_clk_ops
 {
 	int (*write_access)(struct ccu_clk* ccu_clk, int enable);
+	int (*rst_write_access)(struct ccu_clk* ccu_clk, int enable);
 	int (*policy_engine_resume)(struct ccu_clk* ccu_clk, int load_type);
 	int (*policy_engine_stop)(struct ccu_clk* ccu_clk);
 	int (*set_policy_ctrl)(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action);
@@ -447,6 +449,9 @@ struct ccu_clk {
 	u32 write_access_en_count;
 
 	u32	ccu_clk_mgr_base;
+	u32	ccu_reset_mgr_base;
+	u32	reset_wr_access_offset;
+	u32 rst_write_access_en_count;
 
 	u32	wr_access_offset;
 	u32 policy_mask1_offset;
@@ -499,6 +504,9 @@ struct peri_clk {
 
 	struct clk_div  clk_div;
 	struct src_clk	src_clk;
+	/*Reset offset and bit fields*/
+	u32 soft_reset_offset;
+	u32 clk_reset_mask;
 
 #ifdef CONFIG_KONA_PI_MGR
 	struct clk_dfs* clk_dfs;
@@ -526,6 +534,9 @@ struct bus_clk {
 	struct pi_mgr_dfs_node* dfs_node;
 #endif
 
+	/*Reset offset and bit fields*/
+	u32 soft_reset_offset;
+	u32 clk_reset_mask;
 };
 
 struct ref_clk {
@@ -617,6 +628,9 @@ struct core_clk
 	u32 hyst_en_mask;
 	u32 stprsts_mask;
 
+	/*Reset offset and bit fields*/
+	u32 soft_reset_offset;
+	u32 clk_reset_mask;
 };
 
 
@@ -701,6 +715,7 @@ int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl);
 int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay);
 int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source);
 int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable);
+int ccu_reset_write_access_enable(struct ccu_clk* ccu_clk, int enable);
 int ccu_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type);
 int ccu_policy_engine_stop(struct ccu_clk* ccu_clk);
 int ccu_set_policy_ctrl(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action);
