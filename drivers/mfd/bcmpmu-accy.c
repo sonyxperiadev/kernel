@@ -561,6 +561,9 @@ static void usb_det_work(struct work_struct *work)
 			usb_type = PMU_USB_TYPE_NONE;
 			chrgr_type = PMU_CHRGR_TYPE_NONE;
 			paccy->det_state = USB_IDLE;
+		} else {
+			usb_type = bcmpmu->usb_accy_data.usb_type;
+			chrgr_type = bcmpmu->usb_accy_data.chrgr_type;
 		}
 		break;
 	default:
