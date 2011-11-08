@@ -12,33 +12,27 @@
 * consent.
 *****************************************************************************/
 
-#ifndef I2C_SETTINGS_H
-#define I2C_SETTINGS_H
+#ifndef ADC121C021_I2C_SETTINGS_H
+#define ADC121C021_I2C_SETTINGS_H
 
 /*
- * Refer to linux/i2c-kona.h for details
+ * Refer to include/linux/broadcom/adc121c021_driver.h for details
  */
 
-/*
- * HW_I2C_ADAP_PARAM defines the array of the struct bsc_adap_cfg data
- * structure, with each element in the array representing an adapter (host/master)
- */
-#define HW_I2C_ADAP_PARAM \
-{ \
-	{ /* disable BSC0 */ \
-		.disable = 1, \
-	}, \
-	{ /* BSC1 */ \
-		.speed = BSC_BUS_SPEED_430K, \
-		.bsc_clk = "bsc2_clk", \
-		.bsc_apb_clk = "bsc2_apb_clk", \
-		.retries = 3, \
-	}, \
-	{ /* PMBSC */ \
-		.speed = BSC_BUS_SPEED_400K, \
-		.bsc_clk = "pmu_bsc_clk", \
-		.bsc_apb_clk = "pmu_bsc_apb", \
-		.retries = 3, \
-	}, \
-}
-#endif /* I2C_SETTINGS_H */
+/* connected to BSC0 */
+#define HW_ADC121C021_I2C_BUS_ID    1
+
+/* use GPIO0 to signal the host processor for battery alerts */
+#define HW_ADC121C021_GPIO_EVENT    18 /* GPIO #18 */
+
+#define HW_ADC121C021_BYTES_TO_READ 2
+
+#define HW_ADC121C021_RESISTOR_1    158
+#define HW_ADC121C021_RESISTOR_2    100
+
+#define HW_ADC121C021_GPIO_AC_POWER      126 /* AC_OK_B */
+#define HW_ADC121C021_AC_POWER_ON_LEVEL    1
+
+#define HW_ADC121C021_GPIO_CHARGER       121 /* BAT_CHG_B */
+
+#endif /* ADC121C021_I2C_SETTINGS_H */

@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2003 - 2009 Broadcom Corporation.  All rights reserved.
+* Copyright 2010 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -12,12 +12,22 @@
 * consent.
 *****************************************************************************/
 
-#define ISLAND_BOARD_ID ISLAND_SV
-#include "board_template.c"
+/*
+ * GPIO keys configurations
+ */
 
-#ifndef CONFIG_MAP_LITTLE_ISLAND_MODE
-#define ISLAND_BOARD_NAME "BCM928160_SV"
-#else
-#define ISLAND_BOARD_NAME "BCM928160_SV_LI"
-#endif
-CREATE_BOARD_INSTANCE(ISLAND_BOARD_ID,ISLAND_BOARD_NAME)
+#ifndef GPIO_KEYS_SETTINGS_H
+#define GPIO_KEYS_SETTINGS_H
+
+#define GPIO_KEYS_SETTINGS \
+{ \
+    { \
+        .code = KEY_POWER, \
+        .desc = "Power", \
+        .gpio = 4, \
+        .active_low = 1, \
+    } \
+};
+
+
+#endif /* GPIO_KEYS_SETTINGS_H */

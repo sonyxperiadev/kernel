@@ -12,33 +12,29 @@
 * consent.
 *****************************************************************************/
 
-#ifndef I2C_SETTINGS_H
-#define I2C_SETTINGS_H
+#ifndef MPU3050_I2C_SETTINGS_H
+#define MPU3050_I2C_SETTINGS_H
 
-/*
- * Refer to linux/i2c-kona.h for details
+#define MPU3050_I2C_BUS_ID    2
+#define MPU3050_GPIO_IRQ_PIN 11
+
+// Application programmable full-scale range of +- 250, +-500,
+// +- 1000 or +- 2000 degrees/second. Calibration for BCMHANA_TABLET 
+// identified following pre-configured value
+#define MPU3050_SCALE        250	
+
+/* 
+ * Correction for the mount position of MPU3050 sensor on daughter card PCB.
+ *  For x x
+ *  For y y
+ *  For z reverse z
  */
 
-/*
- * HW_I2C_ADAP_PARAM defines the array of the struct bsc_adap_cfg data
- * structure, with each element in the array representing an adapter (host/master)
- */
-#define HW_I2C_ADAP_PARAM \
+#define MPU3050_DRIVER_AXIS_SETTINGS \
 { \
-	{ /* disable BSC0 */ \
-		.disable = 1, \
-	}, \
-	{ /* BSC1 */ \
-		.speed = BSC_BUS_SPEED_430K, \
-		.bsc_clk = "bsc2_clk", \
-		.bsc_apb_clk = "bsc2_apb_clk", \
-		.retries = 3, \
-	}, \
-	{ /* PMBSC */ \
-		.speed = BSC_BUS_SPEED_400K, \
-		.bsc_clk = "pmu_bsc_clk", \
-		.bsc_apb_clk = "pmu_bsc_apb", \
-		.retries = 3, \
-	}, \
+   .x_change = gyro_x_dir_rev, \
+   .y_change = gyro_y_dir, \
+   .z_change = gyro_z_dir_rev, \
 }
-#endif /* I2C_SETTINGS_H */
+
+#endif /* MPU3050_I2C_SETTINGS_H */

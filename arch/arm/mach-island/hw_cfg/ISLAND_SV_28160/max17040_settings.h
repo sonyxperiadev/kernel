@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2003 - 2009 Broadcom Corporation.  All rights reserved.
+* Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -12,12 +12,14 @@
 * consent.
 *****************************************************************************/
 
-#define ISLAND_BOARD_ID ISLAND_SV
-#include "board_template.c"
+#ifndef MAX17040_I2C_SETTINGS_H
+#define MAX17040_I2C_SETTINGS_H
 
-#ifndef CONFIG_MAP_LITTLE_ISLAND_MODE
-#define ISLAND_BOARD_NAME "BCM928160_SV"
-#else
-#define ISLAND_BOARD_NAME "BCM928160_SV_LI"
-#endif
-CREATE_BOARD_INSTANCE(ISLAND_BOARD_ID,ISLAND_BOARD_NAME)
+/* connected to BSC0 */
+#define HW_MAX17040_I2C_BUS_ID    1
+
+#define HW_MAX17040_GPIO_AC_POWER      126 /* AC_OK_B */
+#define HW_MAX17040_AC_POWER_ON_LEVEL    0
+#define HW_MAX17040_GPIO_CHARGER        -1 /* BAT_CHG_B */
+
+#endif /* MAX17040_I2C_SETTINGS_H */
