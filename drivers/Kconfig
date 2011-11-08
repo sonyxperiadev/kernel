@@ -134,4 +134,6 @@ source "drivers/hwspinlock/Kconfig"
 
 source "drivers/clocksource/Kconfig"
 
+source "drivers/videocore/Kconfig"
+
 endmenu
