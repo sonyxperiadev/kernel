@@ -126,3 +126,4 @@ obj-y				+= clk/
 
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
 obj-$(CONFIG_MMCPOLL)		+= mmc-poll/
+obj-$(CONFIG_BRCM_VIDEOCORE_SERVICES) += videocore/
