@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
+/*  Copyright 2007 - 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -48,7 +48,6 @@ typedef enum AUDIO_GAIN_FORMAT_t
 	AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN,      // CUSTOMER TABLE: DSP voice volume dB from sysparm
 	AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE   // CUSTOMER TABLE: FM Radio audio gain table
 } AUDIO_GAIN_FORMAT_t;
-
 
 #define	AUDIO_MODE_NUMBER		9	///< Up to 9 Audio Profiles (modes) after 213x1
 #define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*2)
@@ -135,7 +134,6 @@ typedef UInt32 AUDIO_BITS_PER_SAMPLE_t;
 #define AUDIO_24_BIT_PER_SAMPLE 24
 #define AUDIO_32_BIT_PER_SAMPLE 32
 
-#define PR_DAC_IIR_SIZE				25
 
 typedef enum {
     PARAM_AUDIO_AGC_DL_DECAY,							// 0  to delete

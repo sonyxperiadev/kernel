@@ -66,47 +66,53 @@
 #endif
 
 
-/********************************************************************
-*  @brief  Convert Headset gain dB value to PMU-format gain value
-*
-*  @param  Headset gain dB galue
-*
-*  @return PMU_HS_Gain_t PMU-format gain value
-*
-****************************************************************************/
-UInt32 map2pmu_hs_gain_fromDB( Int16 db_gain );
-
-/********************************************************************
-*  @brief  Convert IHF gain dB value to PMU-format gain value
-*
-*  @param  IHF gain dB galue
-*
-*  @return PMU_HS_Gain_t PMU-format gain value
-*
-****************************************************************************/
-UInt32 map2pmu_ihf_gain_fromDB( Int16 db_gain );
+typedef struct
+{
+	int gain_mB;
+	unsigned int PMU_gain_enum;
+}PMU_AudioGainMapping_t;
 
 
 /********************************************************************
-*  @brief  Convert Headset gain dB value to PMU-format gain value
+*  @brief  Convert Headset gain mB value to PMU gain enum
 *
-*  @param  Headset gain (Q13.2 dB)
+*  @param  Headset gain mB galue
 *
-*  @return PMU_HS_Gain_t PMU-format gain value
+*  @return PMU_HS_Gain_t PMU gain enum
 *
 ****************************************************************************/
-UInt32 map2pmu_hs_gain_fromQ13dot2( Int16 gain );
+PMU_AudioGainMapping_t map2pmu_hs_gain( int gain_mB );
 
 /********************************************************************
-*  @brief  Convert IHF gain dB value to PMU-format gain value
+*  @brief  Convert IHF gain mB value to PMU gain enum
 *
-*  @param  IHF gain (Q13.2 dB)
+*  @param  IHF gain mB galue
 *
-*  @return PMU_HS_Gain_t PMU-format gain value
+*  @return PMU_HS_Gain_t PMU gain enum
 *
 ****************************************************************************/
-UInt32 map2pmu_ihf_gain_fromQ13dot2( Int16 gain );
+PMU_AudioGainMapping_t map2pmu_ihf_gain( int gain_mB );
 
+
+/********************************************************************
+*  @brief  Mute Headset gain in PMU
+*
+*  @param  none
+*
+*  @return none
+*
+****************************************************************************/
+void pmu_hs_mute( unsigned int left_right );
+
+/********************************************************************
+*  @brief  Mute IHF gain in PMU
+*
+*  @param  none
+*
+*  @return none
+*
+****************************************************************************/
+void pmu_ihf_mute( void );
 
 #endif  //#if (!defined(CONFIG_BCM59055_AUDIO) && !defined(CONFIG_BCMPMU_AUDIO)) 
 

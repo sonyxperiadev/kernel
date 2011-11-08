@@ -210,6 +210,24 @@ typedef struct
 	AUDDRV_PATH_DATA_TRANSFER_MODE_Enum_t data_handle_mode; 
 } audio_config_t;
 
+#define GAIN_SYSPARM 0x8000
+#define GAIN_NA 0x8001
+
+typedef enum
+{
+	MIC_ANALOG_HEADSET,
+	MIC_DIGITAL,
+}csl_caph_MIC_Path_e;
+
+typedef struct csl_caph_Mic_Gain_t
+{
+	int gain_in_mB;
+	UInt16 micPGA;
+	UInt16 micCICFineScale;
+	UInt16 micCICBitSelect;
+	int micDSPULGain;  // mdB in Q15
+}csl_caph_Mic_Gain_t;
+
 
 void csl_caph_audioh_init (UInt32 baseAddr, UInt32 sdtBaseAddr);
 void csl_caph_audioh_deinit(void);
@@ -217,22 +235,39 @@ void csl_caph_audioh_config(int path_id, void *pcfg);
 void csl_caph_audioh_unconfig(int path_id);
 CSL_CAPH_AUDIOH_BUFADDR_t csl_caph_audioh_get_fifo_addr(int path_id);
 void csl_caph_audioh_start(int path_id);
-void csl_caph_audioh_stop_keep_config(int path_id);
 void csl_caph_audioh_stop(int path_id);
 void csl_caph_audioh_mute(int path_id, Boolean mute_ctrl);
-void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1);
+
+void csl_caph_audioh_setgain_register(int path_id, UInt32 gain, UInt32 fine_scale);
+
+void csl_caph_audioh_setMicPga_by_mB( int gain_mB );
+void csl_caph_audioh_vin_set_cic_scale_by_mB( int mic1_coarse_gain,
+	int mic1_fine_gain, int mic2_coarse_gain, int mic2_fine_gain );
+void csl_caph_audioh_nvin_set_cic_scale_by_mB( int mic1_coarse_gain,
+	int mic1_fine_gain, int mic2_coarse_gain, int mic2_fine_gain );
+
+
 void csl_caph_audioh_sidetone_control(int path_id, Boolean ctrl);
 void csl_caph_audioh_eanc_output_control(int path_id, Boolean ctrl);
 void csl_caph_audioh_loopback_control(int lbpath, Boolean ctrl);
 void csl_caph_audioh_eanc_input_control(int dmic);
 void csl_caph_audioh_sidetone_set_gain(UInt32 gain);
 void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff);
-void csl_caph_audioh_set_hwgain(CSL_CAPH_HW_GAIN_e hw, UInt32 gain);
-void csl_caph_audioh_ihfpath_set_dac_pwr(UInt16 enable_chnl);
-CSL_CAPH_AUDIOH_IHF_DAC_PWR_e csl_caph_audioh_ihfpath_get_dac_pwr(void);
 void csl_caph_audioh_vinpath_digi_mic_enable(UInt16 ctrl);
 void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl);
-CSL_CAPH_AUDIOH_VINPATH_DMIC_ENABLE_e csl_caph_audioh_vinpath_digi_mic_enable_read(void);
-CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e csl_caph_audioh_nvinpath_digi_mic_enable_read(void);
 void csl_caph_audioh_adcpath_global_enable(Boolean enable);
+
+/**
+*
+*  @brief  Find register values for required mic path gain.
+*  
+*  @param  mic	  mic path
+*  @param  gain   Requested gain in mB.
+*
+*  @return csl_caph_Mic_Gain_t	 the structure containing register values for setting the gains on mic
+*					  path.
+*****************************************************************************/
+csl_caph_Mic_Gain_t csl_caph_map_mB_gain_to_registerVal(csl_caph_MIC_Path_e mic, 
+		int gain_mB);
+
 #endif // _CSL_CAPH_AUDIOH_

@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
+/*  Copyright 2010 - 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -44,7 +44,7 @@
 #include "bcm_fuse_sysparm_CIB.h"
 
 #include "csl_caph.h"
-#include "csl_caph_gain.h"
+#include "csl_caph_audioh.h"
 #include "csl_caph_hwctrl.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
@@ -217,6 +217,22 @@ static int telephony_ul_gain_mB = 0;  // 0 mB
 
 static AUDCTRL_Table_t* tableHead = NULL;
 
+//left_channel in stereo, or mono:
+static int mixerInputGain[AUDCTRL_SPK_TOTAL_COUNT] = {0}; // Register value.
+static int mixerOutputFineGain[AUDCTRL_SPK_TOTAL_COUNT] = {0};  // Bit12:0, Output Fine Gain
+static int mixerOutputBitSelect[AUDCTRL_SPK_TOTAL_COUNT] = {0};
+static int pmu_gain[AUDCTRL_SPK_TOTAL_COUNT] = {0};
+
+//for right channel in stereo:
+static int mixerInputGain_right[AUDCTRL_SPK_TOTAL_COUNT] = {0}; // Register value.
+static int mixerOutputFineGain_right[AUDCTRL_SPK_TOTAL_COUNT] = {0};	// Bit12:0, Output Fine Gain
+static int mixerOutputBitSelect_right[AUDCTRL_SPK_TOTAL_COUNT] = {0};
+static int pmu_gain_right[AUDCTRL_SPK_TOTAL_COUNT] = {0};
+
+static unsigned int recordGainL[ AUDCTRL_MIC_TOTAL_COUNT ] = {0};
+static unsigned int recordGainR[ AUDCTRL_MIC_TOTAL_COUNT ] = {0};
+
+
 //=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -254,6 +270,8 @@ static void audctrl_UpdatePath (CSL_CAPH_PathID pathID,
                                                 AUDCTRL_MICROPHONE_t mic);
 
 static void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag, Boolean use );
+
+extern CSL_CAPH_HWConfig_Table_t HWConfig_Table[MAX_AUDIO_PATH];
 
 //=============================================================================
 // Functions
@@ -670,18 +688,13 @@ void AUDCTRL_SetTelephonySpkrVolume(
 			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain,
 								volume,  //DSP accepts [-3600, 0] mB
 								0, 0, 0, 0);
+
+			/***
+			voice call volume control does not use PMU gain
 			
-			pmuGain = (Int16)AUDDRV_GetPMUGain(getDeviceFromSpkr(speaker),
-					((Int16)volume)/25);   //mB to quarter dB
-			if (pmuGain != (Int16)GAIN_NA)
-			{
-				if (pmuGain == (Int16)(GAIN_SYSPARM))
-				{
-					//Read from sysparm.
-					pmuGain = (Int16)volume; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
-				}
-				SetGainOnExternalAmp(speaker, pmuGain, PMU_AUDIO_HS_BOTH);
-			}
+			pmuGain = (Int16) AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //0.25 dB
+			SetGainOnExternalAmp_mB(speaker, pmuGain*25, PMU_AUDIO_HS_BOTH);
+			***/
 		}
 	}
 }
@@ -860,6 +873,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 //	sink -- Sink device coresponding to audio mode
 //Return	none
 //**********************************************************************/
+//TBD: should return mode
 void AUDCTRL_GetAudioModeBySink(AUDCTRL_SPEAKER_t sink, AudioMode_t *mode)
 {
 	switch(sink)
@@ -1091,6 +1105,7 @@ void AUDCTRL_DisablePlay(
 		}
 	}
 }
+
 //============================================================================
 //
 // Function Name: AUDCTRL_SetPlayVolume
@@ -1102,95 +1117,305 @@ void AUDCTRL_SetPlayVolume(
 				AUDIO_HW_ID_t			sink,
 				AUDCTRL_SPEAKER_t		spk,
 				AUDIO_GAIN_FORMAT_t     gain_format,
-				UInt32					vol_left,
-				UInt32					vol_right
+				int					vol_left,
+				int					vol_right
 				)
 {
-	Int16 gain_q13p2=0, gain_q13p2_p1=0;
-    UInt32 gainHW, gainHW2, gainHW3, gainHW4, gainHW5, gainHW6;  //quarter dB
-    int pmuGain = 0x00;
     CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
     CSL_CAPH_PathID pathID = 0;
 
-    gainHW = gainHW2 = gainHW3 = gainHW4 = gainHW5 = gainHW6 = 0;
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))	
+	PMU_AudioGainMapping_t pmuAudioGainMap;
+#endif
+
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE; 
+
+	if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
+		return;
+
+	//determine hardware gains
+	
+	/***
+	MixerIn Gain:	SRC_M1D0_CH**_GAIN_CTRL : SRC_M1D0_CH**_TARGET_GAIN
+	sfix<16,2>
+	0x7FFF = 6 dB
+	0x4000 (2 to the power of 14), =1.0, =0 dB
+	0x0000 the input path is essentially switched off
+	
+	MixerOutFineGain:	SRC_SPK0_LT_GAIN_CTRL2 : SPK0_LT_FIXED_GAIN
+	13-bit interger unsigned
+	0x0000, = 0 dB
+	0x0001, = (6.02/256) dB attenuation ~ 0.0235 dB
+	0x1FFF	max attenuation
+	
+	MixerBitSelect:  SRC_SPK0_LT_GAIN_CTRL1 : SPK0_LT_BIT_SELECT
+	3-bit unsigned
+	***/
+
+	if (gain_format == AUDIO_GAIN_FORMAT_mB)
+	{
+		switch( spk )
+		{
+		case AUDCTRL_SPK_HANDSET:
+			pmu_gain[spk] = 0;
+			pmu_gain_right[spk] = 0;
+			break;
+		
+		case AUDCTRL_SPK_HEADSET:
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#if 1
+			/***** fix PMU gain, adjust CAPH gain **/
+			pmu_gain[spk] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_HEADSET ].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain[spk] = pmu_gain[spk] * 25;  //mB
+			pmuAudioGainMap = map2pmu_hs_gain( pmu_gain[spk] );
+
+			pmu_gain_right[spk] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_HEADSET ].ext_speaker_pga_r; //Q13p2 dB
+			pmu_gain_right[spk] = pmu_gain_right[spk] * 25;  //mB
+#else
+			/***** adjust PMU gain, adjust CAPH gain **/
+			pmuAudioGainMap = map2pmu_hs_gain( vol_left );
+			//determine actual PMU gain in mB:
+			pmu_gain[spk] = pmuAudioGainMap.gain_mB;
+#endif
+#endif
+			break;
+			
+		case AUDCTRL_SPK_TTY:
+		//case AUDIO_CHNL_HEADPHONE_NO_MIC:
+
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#if 1
+			/***** fix PMU gain, adjust CAPH gain **/
+			pmu_gain[spk] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_TTY ].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain[spk] = pmu_gain[spk] * 25;  //mB
+			pmuAudioGainMap = map2pmu_hs_gain( pmu_gain[spk] );
+
+			pmu_gain_right[spk] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_TTY ].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain_right[spk] = pmu_gain_right[spk] * 25;  //mB
+#else
+			/***** adjust PMU gain, adjust CAPH gain **/
+			pmuAudioGainMap = map2pmu_hs_gain( vol_left );
+			//determine actual PMU gain in mB:
+			pmu_gain[spk] = pmuAudioGainMap.gain_mB;
+#endif
+#endif
+
+			break;
+		
+		case AUDCTRL_SPK_LOUDSPK:
+			
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#if 1
+			/***** fixed PMU gain, adjust CAPH gain **/
+			pmu_gain[spk] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_SPEAKERPHONE ].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain[spk] = pmu_gain[spk] * 25;  //mB
+			pmuAudioGainMap = map2pmu_ihf_gain( pmu_gain[spk] );
+
+			pmu_gain_right[spk] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_SPEAKERPHONE ].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain_right[spk] = pmu_gain_right[spk] * 25;  //mB
+#else
+			/***** adjust PMU gain, adjust CAPH gain **/
+			pmuAudioGainMap = map2pmu_ihf_gain( vol_left );
+			pmu_gain[spk] = pmuAudioGainMap.gain_mB;
+#endif
+#endif
+
+			break;
+					
+		default:
+			break;
+		}
+
+		
+		//set CAPH gain
+		vol_left = vol_left - pmu_gain[spk];
+		mixerInputGain[spk] = 0; //0 dB
+
+		if( vol_left >= 4214 )
+		{
+			mixerOutputBitSelect[spk] = 7;
+			mixerOutputFineGain[spk] = 0;
+		}
+		else if( vol_left > 0 )  //0~4213
+		{
+			mixerOutputBitSelect[spk] = vol_left / 602;
+			mixerOutputBitSelect[spk] += 1; //since fine-gain is only an attenuation, round up to the next bit shift
+			mixerOutputFineGain[spk] = vol_left - (mixerOutputBitSelect[spk]*602);  //put in attenuation, negative number.
+		}
+		else if( vol_left == 0 )
+		{
+			mixerOutputBitSelect[spk] = 0;
+			mixerOutputFineGain[spk] = 0;
+		}
+		else //if(vol_left < 0)
+		{
+			mixerOutputBitSelect[spk] = 0;
+			mixerOutputFineGain[spk] = vol_left; //put in attenuation, negative number.
+		}
+
+		vol_right = vol_right - pmu_gain_right[spk];
+		mixerInputGain_right[spk] = 0; //0 dB
+
+		if( vol_right >= 4214 )
+		{
+			mixerOutputBitSelect_right[spk] = 7;
+			mixerOutputFineGain_right[spk] = 0;
+		}
+		else if( vol_right > 0 )  //0~4213
+		{
+			mixerOutputBitSelect_right[spk] = vol_right / 602;
+			mixerOutputBitSelect_right[spk] += 1; //since fine-gain is only an attenuation, round up to the next bit shift
+			mixerOutputFineGain_right[spk] = vol_right - (mixerOutputBitSelect_right[spk]*602);  //put in attenuation, negative number.
+		}
+		else if( vol_right == 0 )
+		{
+			mixerOutputBitSelect_right[spk] = 0;
+			mixerOutputFineGain_right[spk] = 0;
+		}
+		else //if(vol__right < 0)
+		{
+			mixerOutputBitSelect_right[spk] = 0;
+			mixerOutputFineGain_right[spk] = vol_right; //put in attenuation, negative number.
+		}
+		
+	}
+	else
+	{
+		return;
+	}
+
+	//determine which mixer output to apply the gains to
+	
     Log_DebugPrintf(LOGID_AUDIO,
+		"AUDCTRL_SetPlayVolume: pmu_gain %d, mixerInputGain = 0x%x, mixerOutputFineGain = 0x%x, mixerOutputBitSelect %d\n",
+		pmu_gain[spk], mixerInputGain[spk], mixerOutputFineGain[spk], mixerOutputBitSelect[spk]);
+
+	Log_DebugPrintf(LOGID_AUDIO,
 		"AUDCTRL_SetPlayVolume: sink = 0x%x, spk = 0x%x, gain_format %d, vol_left = 0x%x(%d) vol_right 0x%x(%d)\n",
 		sink, spk, gain_format, vol_left, vol_left, vol_right, vol_right);
     
     speaker = getDeviceFromSpkr(spk);
-
-    if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
-		return;
     
     pathID = audctrl_GetPathIDFromTable(AUDIO_HW_NONE,
 		    sink, spk, AUDCTRL_MIC_UNDEFINED);
     //if(pathID == 0)
-    {
-		//audio_xassert(0,pathID);
-		//return;
+	//	return;
 
-		if (gain_format == AUDIO_GAIN_FORMAT_mB)
-		{
-			gain_q13p2_p1 = (Int16) vol_left;
-			gain_q13p2 = gain_q13p2_p1/25;
-			Log_DebugPrintf(LOGID_AUDIO,
-				"AUDCTRL_SetPlayVolume: sink = 0x%x, spk = 0x%x, gain_q13p2_p1 = 0x%x(%d) gain_q13p2 0x%x(%d)\n",
-				sink, spk, gain_q13p2_p1, gain_q13p2_p1, gain_q13p2, gain_q13p2);
-			gainHW = AUDDRV_GetHWDLGain(speaker, gain_q13p2);
-			
-			gain_q13p2 = (Int16)(vol_right/25);
-			Log_DebugPrintf(LOGID_AUDIO,
-				"AUDCTRL_SetPlayVolume: sink = 0x%x, spk = 0x%x, vol_right = 0x%x(%d) gain_q13p2 0x%x(%d)\n",
-				sink, spk, vol_right, vol_right, gain_q13p2, gain_q13p2);
-			gainHW2 = AUDDRV_GetHWDLGain(speaker, gain_q13p2);	
-			
-			pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, (Int16)(vol_left/25) );
-		}
-		
-		if ((gainHW != (UInt32)GAIN_NA)&&(gainHW2 != (UInt32)GAIN_NA))
-		{
-				gainHW3 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_l);
-				gainHW4 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_r);
-				(void)csl_caph_hwctrl_SetHWGain(pathID, CSL_CAPH_SRCM_INPUT_GAIN_L,
-												 gainHW3, speaker);
-				(void)csl_caph_hwctrl_SetHWGain(pathID, CSL_CAPH_SRCM_INPUT_GAIN_R,
-									 gainHW4, speaker);
-		
-				gainHW6 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l);
-				gainHW5 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r);
-				csl_caph_hwctrl_SetHWGain(pathID, 
-								   CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L,
-								   gainHW6, speaker);
-		
-				csl_caph_hwctrl_SetHWGain(pathID,
-								   CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R, 
-								   gainHW5,  speaker);
-
-				Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: pathID = 0x%x, speaker = 0x%x, gainHW %d(0x%x), gainHW2 = %d(0x%x)\n",
-					pathID, speaker, (UInt16)gainHW, (UInt16)gainHW, (UInt16)gainHW2, (UInt16)gainHW2 );
-				csl_caph_hwctrl_SetSinkGain(pathID, speaker, (UInt16)gainHW, (UInt16)gainHW2);
-		}
+	Log_DebugPrintf(LOGID_AUDIO,
+		"AUDCTRL_SetPlayVolume: pathID %d\n",
+		pathID);
 	
-    }
-   
-	//Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: pmuGain = 0x%x, gainHW %x:%x:%x:%x:%x:%x\n", pmuGain, gainHW, gainHW2, gainHW3, gainHW4, gainHW5, gainHW6);
-
-	// Set the gain to the external amplifier
-    if (pmuGain == (Int16)GAIN_SYSPARM)
+    if (pathID != 0)
     {
-		pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
-        SetGainOnExternalAmp(spk, pmuGain, PMU_AUDIO_HS_LEFT);
-
-		pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_r;
-		SetGainOnExternalAmp(spk, pmuGain, PMU_AUDIO_HS_RIGHT);
+		path = &HWConfig_Table[pathID-1];
+        outChnl = path->srcmRoute[0].outChnl;
     }
     else
-    if (pmuGain != (Int16)GAIN_NA)
     {
-        SetGainOnExternalAmp(spk, pmuGain, PMU_AUDIO_HS_BOTH);
+       	if (speaker == CSL_CAPH_DEV_EP)
+       	{
+			outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
+       	}
+		else
+    	if (speaker == CSL_CAPH_DEV_IHF)
+    	{
+		    outChnl = CSL_CAPH_SRCM_STEREO_CH2_R; 
+			//for the case of Stereo_IHF
+			outChnl = (CSL_CAPH_SRCM_STEREO_CH2_R | CSL_CAPH_SRCM_STEREO_CH2_L);
+    	}
+	    else
+	    if (speaker == CSL_CAPH_DEV_HS)
+	    {
+		    //outChnl = (CSL_CAPH_SRCM_STEREO_CH1_L | CSL_CAPH_SRCM_STEREO_CH1_R); 
+			outChnl = CSL_CAPH_SRCM_STEREO_CH1;
+    	}
     }
-    return;
 
+	//determine which which mixer input to apply the gains to
+
+    if (pathID != 0)
+    {
+    	//is the inChnl stereo two channels?
+		csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0].inChnl, 
+                                    outChnl, 
+                                    mixerInputGain[spk], 
+                                    mixerInputGain[spk]);
+    }
+    else
+    {
+    	csl_caph_srcmixer_set_mix_all_in_gain(outChnl, mixerInputGain[spk], mixerInputGain[spk]);
+    }
+			/***
+            //Save the mixer gain information.
+            //So that it can be picked up by the
+            //next call of csl_caph_hwctrl_EnablePath().
+            //This is to overcome the situation in music playback that
+            //_SetHWGain() is called before Render Driver calls
+            //_EnablePath() 
+            mixGain.mixInGainL = outGain.mixerInputGain;
+            mixGain.mixInGainR = outGain.mixerInputGain;
+            if (hw == CSL_CAPH_SRCM_INPUT_GAIN_L)
+        	    csl_caph_hwctrl_SetPathRouteConfigMixerInputGainL(pathID, mixGain);
+            else if (hw == CSL_CAPH_SRCM_INPUT_GAIN_R)
+        	    csl_caph_hwctrl_SetPathRouteConfigMixerInputGainR(pathID, mixGain);
+			***/
+		
+	csl_caph_srcmixer_set_mix_out_gain( outChnl, mixerOutputFineGain[spk] );
+			/****
+			LIPING: should save them in audio controller?
+			
+            //Save the mixer gain information.
+            //So that it can be picked up by the
+            //next call of csl_caph_hwctrl_EnablePath().
+            //This is to overcome the situation in music playback that
+            //_SetHWGain() is called before Render Driver calls
+            //_EnablePath() 
+            mixGain.mixOutGainL = outGain.mixerOutputFineGain&0x1FFF;
+            mixGain.mixOutGainR = outGain.mixerOutputFineGain&0x1FFF;
+            if ( hw == CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_L )
+            	csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainL(pathID, mixGain);
+            else if ( hw == CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_R )
+            	csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainR(pathID, mixGain);
+
+            	
+			//I think the following can be deleted?
+			
+			//Save the mixer gain information.
+			//So that it can be picked up by the
+			//next call of csl_caph_hwctrl_EnablePath().
+			//This is to overcome the problem that
+			//_SetSinkGain() is called before _EnablePath() 
+			mixGain.mixOutGainL = mixGainL.mixerOutputFineGain&0x1FFF;
+			mixGain.mixOutGainR = mixGainR.mixerOutputFineGain&0x1FFF;
+			csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainL(
+												 pathID, 
+												 mixGain);
+			csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainR(
+												 pathID, 
+												 mixGain);
+			***/
+
+	csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixerOutputBitSelect[spk] );
+			/***
+			//Save the mixer gain information.
+			//So that it can be picked up by the
+			//next call of csl_caph_hwctrl_EnablePath().
+			//This is to overcome the situation in music playback that
+			//_SetHWGain() is called before Render Driver calls
+			//_EnablePath() 
+			mixGain.mixOutCoarseGainL = (mixer_out_bitsel & 0x7);
+			mixGain.mixOutCoarseGainR = (mixer_out_bitsel & 0x7);
+			if (hw == CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L) 
+				csl_caph_hwctrl_SetPathRouteConfigMixerOutputCoarseGainL(pathID, mixGain);
+			else if (hw == CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R) 
+				csl_caph_hwctrl_SetPathRouteConfigMixerOutputCoarseGainR(pathID, mixGain);
+			***/				
+   
+	// Set the gain to the external amplifier
+	SetGainOnExternalAmp_mB(spk, pmu_gain[spk], PMU_AUDIO_HS_BOTH);
+		
+    return;
 }
 
 //============================================================================
@@ -1606,48 +1831,6 @@ void AUDCTRL_DisableRecord(
 	}	
 }
 
-//============================================================================
-//
-// Function Name: AUDCTRL_SetRecordGainMono
-//
-// Description:   set gain of a record path for a single mic
-//
-//============================================================================
-static void AUDCTRL_SetRecordGainMono(
-				AUDIO_HW_ID_t			src,
-				AUDCTRL_MICROPHONE_t	mic,
-                AUDIO_GAIN_FORMAT_t     gainFormat,
-				Int16					gainL,
-				Int16					gainR
-				)
-{
-    CSL_CAPH_PathID pathID = 0;
-    Int16 gainLTemp = 0; //quarter dB
-    Int16 gainRTemp = 0;
-
-	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_SetRecordGainMono: src = 0x%x,  mic = 0x%x, gainL = 0x%x, gainR = 0x%x\n", src, mic, gainL, gainR);
-
-	if( src == AUDIO_HW_USB_IN)
-		return;
-
-    pathID = audctrl_GetPathIDFromTable(src, AUDIO_HW_NONE, AUDCTRL_SPK_UNDEFINED, mic);
-    if(pathID == 0)
-    {
-	    audio_xassert(0,pathID);
-	    return;
-    }
-
-	if(gainFormat == AUDIO_GAIN_FORMAT_mB)
-	{
-        gainLTemp = (gainL/25);
-        gainRTemp = (gainR/25);
-    }
-
-    (void) csl_caph_hwctrl_SetSourceGain(pathID, gainLTemp, gainRTemp);
-
-    return;
-}
 
 //============================================================================
 //
@@ -1664,15 +1847,92 @@ void AUDCTRL_SetRecordGain(
 				UInt32					gainR
 				)
 {
-	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_SetRecordGain: src = 0x%x,  mic = 0x%x, gainL = 0x%lx, gainR = 0x%lx\n", src, mic, gainL, gainR);
+	CSL_CAPH_PathID pathID = 0;
+	CSL_CAPH_HWConfig_Table_t *path;
+	csl_caph_Mic_Gain_t outGain;
 
-	if(mic==AUDCTRL_MIC_SPEECH_DIGI)
+	Log_DebugPrintf(LOGID_AUDIO,
+                    "AUDCTRL_SetRecordGain: src = 0x%x,  mic = 0x%x, gainL = 0x%lx, gainR = 0x%lx\n",
+                    src, mic, gainL, gainR);
+
+	recordGainL[mic] = gainL;
+	recordGainR[mic] = gainR;
+				
+	pathID = audctrl_GetPathIDFromTable(src, AUDIO_HW_NONE, AUDCTRL_SPK_UNDEFINED, mic);
+	if(pathID == 0)
 	{
-		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI1, gainFormat, (Int16)gainL, (Int16)gainR);
-		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI2, gainFormat, (Int16)gainL, (Int16)gainR);
-	} else {
-		AUDCTRL_SetRecordGainMono(src, mic, gainFormat, (Int16)gainL, (Int16)gainR);
+		audio_xassert(0,pathID);
+		return;
+	}
+
+	if (!pathID) return;
+	path = &HWConfig_Table[pathID-1];
+
+	if( gainFormat == AUDIO_GAIN_FORMAT_mB )
+	{
+		//switch( mic )  why not this. simply see mic. does audio_caph.c pass down correct mic param?
+		switch(path->source)
+		{
+		case AUDCTRL_MIC_MAIN:
+		case AUDCTRL_MIC_AUX:
+			
+			outGain = csl_caph_map_mB_gain_to_registerVal(MIC_ANALOG_HEADSET, (int)gainL);
+			if (path->source == CSL_CAPH_DEV_ANALOG_MIC)
+				csl_caph_audioh_setgain_register(AUDDRV_PATH_ANALOGMIC_INPUT, outGain.micPGA, 0);
+			else
+				csl_caph_audioh_setgain_register(AUDDRV_PATH_HEADSET_INPUT, outGain.micPGA, 0);
+			
+			csl_caph_audioh_setgain_register(AUDDRV_PATH_VIN_INPUT_L, outGain.micCICBitSelect, outGain.micCICFineScale);
+			
+			break;
+
+		case AUDCTRL_MIC_DIGI1:
+		
+			outGain = csl_caph_map_mB_gain_to_registerVal(MIC_DIGITAL, (int)gainL);		
+			csl_caph_audioh_setgain_register(AUDDRV_PATH_VIN_INPUT_L, outGain.micCICBitSelect, outGain.micCICFineScale);
+			break;
+
+		case AUDCTRL_MIC_DIGI2:
+		case AUDCTRL_MIC_NOISE_CANCEL: //Mic for noise cancellation. Used in Dual mic case.
+		
+			outGain = csl_caph_map_mB_gain_to_registerVal(MIC_DIGITAL, (int)gainL);		
+			csl_caph_audioh_setgain_register(AUDDRV_PATH_VIN_INPUT_R, outGain.micCICBitSelect, outGain.micCICFineScale);
+
+			break;
+			
+		//case AUDCTRL_DUAL_MIC_DIGI12:
+		//case AUDCTRL_DUAL_MIC_DIGI21:
+		case AUDCTRL_MIC_SPEECH_DIGI: //Digital Mic1/Mic2 in recording/Normal Quality Voice call.
+		
+			outGain = csl_caph_map_mB_gain_to_registerVal(MIC_DIGITAL, (int)gainL);		
+			csl_caph_audioh_setgain_register(AUDDRV_PATH_VIN_INPUT, outGain.micCICBitSelect, outGain.micCICFineScale);
+			break;
+			
+		//case AUDCTRL_DUAL_MIC_ANALOG_DIGI1:
+		//case AUDCTRL_DUAL_MIC_DIGI1_ANALOG:
+		
+		case AUDCTRL_MIC_BTM:  //Bluetooth Mono Headset Mic
+		case AUDCTRL_MIC_USB:  //USB headset Mic
+		case AUDCTRL_MIC_I2S:
+			break;
+			
+		case AUDCTRL_MIC_DIGI3: //Only for loopback path
+		
+			outGain = csl_caph_map_mB_gain_to_registerVal(MIC_DIGITAL, (int)gainL);		
+			csl_caph_audioh_setgain_register(AUDDRV_PATH_NVIN_INPUT_L, outGain.micCICBitSelect, outGain.micCICFineScale);
+			break;
+			
+		case AUDCTRL_MIC_DIGI4: //Only for loopback path
+			outGain = csl_caph_map_mB_gain_to_registerVal(MIC_DIGITAL, (int)gainL);		
+			csl_caph_audioh_setgain_register(AUDDRV_PATH_NVIN_INPUT_R, outGain.micCICBitSelect, outGain.micCICFineScale);
+			break;
+			
+		//case AUDCTRL_MIC_EANC_DIGI: //Digital Mic1/2/3/4 for Supreme Quality Voice Call.
+
+		default:
+			break;
+		}
+			
 	}
 
     return;
@@ -1957,6 +2217,7 @@ void AUDCTRL_SetAudioLoopback(
         hwCtrlConfig.chnlNum = (speaker == AUDCTRL_SPK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
         hwCtrlConfig.bitPerSample = AUDIO_16_BIT_PER_SAMPLE;
 
+		/*************
         tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_l);	
         hwCtrlConfig.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
         tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_l);
@@ -1970,6 +2231,7 @@ void AUDCTRL_SetAudioLoopback(
         hwCtrlConfig.mixGain.mixOutGainR = AUDDRV_GetMixerOutputFineGain(tempGain);	
         tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_r);
         hwCtrlConfig.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
+        ********/
 
         pathID = csl_caph_hwctrl_EnablePath(hwCtrlConfig);
 
@@ -1978,7 +2240,9 @@ void AUDCTRL_SetAudioLoopback(
 		csl_caph_hwctrl_ConfigSidetoneFilter(coeff);
 		csl_caph_hwctrl_SetSidetoneGain(0); // Set sidetone gain to 0dB.
 		csl_caph_hwctrl_EnableSidetone(sink);
-#endif        
+#endif   
+
+		AUDCTRL_SetAudioMode( audio_mode ); //this function also sets all HW gains.
     
         // Enable Loopback ctrl
 	    //Enable PMU for headset/IHF
@@ -2322,9 +2586,9 @@ Boolean  AUDCTRL_QueryHWClock(void)
 
 //============================================================================
 //
-// Function Name: SetGainOnExternalAmp
+// Function Name: SetGainOnExternalAmp_mB
 //
-// Description:   Set gain on external amplifier driver. Gain in Q13.2
+// Description:   Set gain on external amplifier driver.
 //
 // parameter:
 //	left_right is of this enum
@@ -2335,31 +2599,34 @@ Boolean  AUDCTRL_QueryHWClock(void)
 //};
 //
 //============================================================================
-void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int arg_gain, int left_right)
+void SetGainOnExternalAmp_mB(AUDCTRL_SPEAKER_t speaker, int gain_mB, int left_right)
 {
 #if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
-	int gain=0;
+	PMU_AudioGainMapping_t gain_map;
 
 	switch(speaker)
 	{
 		case AUDCTRL_SPK_HEADSET:
 		case AUDCTRL_SPK_TTY:
-			gain = map2pmu_hs_gain_fromQ13dot2( arg_gain );
-			AUDIO_PMU_HS_SET_GAIN( left_right, gain );
+			gain_map = map2pmu_hs_gain( gain_mB );
+			Log_DebugPrintf(LOGID_AUDIO, 
+						"SetGainOnExternalAmp_mB, hs gain_mB=%d, pmu_gain_enum=%d \n",
+						gain_mB, gain_map.PMU_gain_enum );
+			AUDIO_PMU_HS_SET_GAIN( left_right, gain_map.PMU_gain_enum );
 			break;
 
 		case AUDCTRL_SPK_LOUDSPK:
-			gain = map2pmu_ihf_gain_fromQ13dot2( arg_gain );
-			AUDIO_PMU_IHF_SET_GAIN( gain );
+			gain_map = map2pmu_ihf_gain( gain_mB );
+			Log_DebugPrintf(LOGID_AUDIO, 
+						"SetGainOnExternalAmp_mB, spk gain_mB=%d, pmu_gain_enum=%d \n",
+						gain_mB, gain_map.PMU_gain_enum );
+			AUDIO_PMU_IHF_SET_GAIN( gain_map.PMU_gain_enum );
 			break;
 
 		default:
 			break;
 	}
 
-	Log_DebugPrintf(LOGID_AUDIO, 
-				"SetGainOnExternalAmp, speaker = %d, arg_gain=%d, gain=%d \n",
-				speaker, arg_gain, gain);
 #endif
 }
 
@@ -2817,10 +3084,10 @@ static void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usa
 		
 		//the ext_speaker_pga_l is in q13.2 format
 		hs_gain = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
-		SetGainOnExternalAmp( AUDCTRL_SPK_HEADSET, hs_gain, PMU_AUDIO_HS_LEFT);
+		SetGainOnExternalAmp_mB( AUDCTRL_SPK_HEADSET, hs_gain, PMU_AUDIO_HS_LEFT);
 
 		hs_gain = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_r;
-		SetGainOnExternalAmp( AUDCTRL_SPK_HEADSET, hs_gain, PMU_AUDIO_HS_RIGHT);
+		SetGainOnExternalAmp_mB( AUDCTRL_SPK_HEADSET, hs_gain, PMU_AUDIO_HS_RIGHT);
 
 		HS_IsOn = TRUE;
 	}
@@ -2850,7 +3117,7 @@ static void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usa
 
 		//the ext_speaker_pga_l is in q13.2 format		
 		ihf_gain = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
-		SetGainOnExternalAmp( AUDCTRL_SPK_LOUDSPK, ihf_gain, PMU_AUDIO_HS_BOTH);
+		SetGainOnExternalAmp_mB( AUDCTRL_SPK_LOUDSPK, ihf_gain, PMU_AUDIO_HS_BOTH);
 
 		IHF_IsOn = TRUE;
 	}

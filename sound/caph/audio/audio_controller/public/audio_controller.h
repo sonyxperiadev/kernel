@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
+/*  Copyright 2009 - 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -67,13 +67,14 @@ typedef enum AUDCTRL_SPEAKER_t
 	AUDCTRL_SPK_HEADSET,
 	AUDCTRL_SPK_HANDSFREE,
 	AUDCTRL_SPK_BTM,  //Bluetooth HFP
-	AUDCTRL_SPK_LOUDSPK,
+	AUDCTRL_SPK_LOUDSPK = 4,
 	AUDCTRL_SPK_TTY,
 	AUDCTRL_SPK_HAC,	
 	AUDCTRL_SPK_USB,
 	AUDCTRL_SPK_BTS,  //Bluetooth A2DP
 	AUDCTRL_SPK_I2S,
 	AUDCTRL_SPK_VIBRA,
+	AUDCTRL_SPK_HEADPHONE = 11,		///< A special headset which only has speakers and no microphone.
 	AUDCTRL_SPK_UNDEFINED,
 	AUDCTRL_SPK_TOTAL_COUNT
 } AUDCTRL_SPEAKER_t;
@@ -448,8 +449,8 @@ void AUDCTRL_SetPlayVolume(
 				AUDIO_HW_ID_t			sink,
 				AUDCTRL_SPEAKER_t		spk,
 				AUDIO_GAIN_FORMAT_t     gainF,
-				UInt32					vol_left,
-				UInt32					vol_right
+				int					vol_left,
+				int					vol_right
 				);
 
 /********************************************************************
@@ -782,7 +783,7 @@ void  AUDCTRL_ControlHWClock(Boolean enable);
 ****************************************************************************/
 Boolean  AUDCTRL_QueryHWClock(void);
 
-void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int gain, int left_right);
+void SetGainOnExternalAmp_mB(AUDCTRL_SPEAKER_t speaker, int gain_mB, int left_right);
 
 /**
 *  @brief  This function controls the power on/off the power supply for

@@ -95,7 +95,6 @@ snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_dma.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_cfifo.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_capture.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_audioh.o
-snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_gain.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_aud_queue.o
 
 #audio vdriver Source Files
