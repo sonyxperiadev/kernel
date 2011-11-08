@@ -56,6 +56,7 @@
 #define BB_BC_CFG_SW_RST	(0x1 << 15)
 
 #define MAX_BC_DET_RETRY	5
+#define MAX_BC_STATUS_CHECK	20
 
 
 #define DETECT_USB_CHARGER_FROM_BB_REGISTERS
@@ -109,7 +110,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 {
 	u8 regVal1, regVal2;
 	u32 bcStatus;
-	int usb_type;
+	int usb_type = USB_CHARGER_UNKNOWN;
 	int count = 0;
 
 	bcStatus = readl(BB_BC_STATUS);
@@ -135,7 +136,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 		return -EAGAIN;
 	} /* BC error condition */
 #ifdef DETECT_USB_CHARGER_FROM_BB_REGISTERS
-	while (count < 20) {
+	while (count < MAX_BC_STATUS_CHECK) {
 		if (bcStatus & BB_BC_STS_BC_DONE_MSK) {
 			if (bcStatus & BB_BC_STS_SDP_MSK)
 				usb_type = USB_CHARGER_SDP;
@@ -153,7 +154,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 			pr_debug("%s: BC STATUS (0x%x) = 0x%x..Count %d\n", __func__, BB_BC_STATUS, bcStatus, count);
 		}
 	}
-	if (count == 20) {
+	if (count == MAX_BC_STATUS_CHECK) {
 			pr_info("%s: BC Detection DONE bit is not set, check if BCDLDO was ON\n", __func__);
 			return -EIO;
 	}
@@ -354,6 +355,10 @@ static void bcmpmu_usb_isr(int intr, void *data)
 				event, NULL);
 		break;
 	case BCM59055_IRQID_INT4_VBUS_VALID_F:
+		event = BCMPMU_USB_EVENT_VBUS_INVALID;
+		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_VBUS_INVALID].notifiers,
+					event, NULL);
+		break;
 	case BCM59055_IRQID_INT4_VBUS_VALID_R:
 		event = BCMPMU_USB_EVENT_VBUS_VALID;
 		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_VBUS_VALID].notifiers,
@@ -361,11 +366,15 @@ static void bcmpmu_usb_isr(int intr, void *data)
 		break;
 
 	case BCM59055_IRQID_INT4_OTG_SESS_VALID_F:
-		event = BCMPMU_USB_EVENT_SESSION_VALID;
-		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_SESSION_VALID].notifiers,
+		event = BCMPMU_USB_EVENT_SESSION_INVALID;
+		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_SESSION_INVALID].notifiers,
 				event, NULL);
 		break;
 	case BCM59055_IRQID_INT4_VB_SESS_END_F:
+		event = BCMPMU_USB_EVENT_SESSION_END_INVALID;
+		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_SESSION_END_INVALID].notifiers,
+					event, NULL);
+		break;
 	case BCM59055_IRQID_INT4_VB_SESS_END_R:
 		event = BCMPMU_USB_EVENT_SESSION_END_VALID;
 		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_SESSION_END_VALID].notifiers,
@@ -375,6 +384,9 @@ static void bcmpmu_usb_isr(int intr, void *data)
 	case BCM59055_IRQID_INT4_OTG_A_DEVICE:
 		break;
 	case BCM59055_IRQID_INT4_VA_SESS_VALID_R:
+		event = BCMPMU_USB_EVENT_SESSION_VALID;
+		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_SESSION_VALID].notifiers,
+				event, NULL);
 		break;
 	case BCM59055_IRQID_INT5_RIC_C_TO_FLOAT:
 		event = BCMPMU_USB_EVENT_RIC_C_TO_FLOAT;
