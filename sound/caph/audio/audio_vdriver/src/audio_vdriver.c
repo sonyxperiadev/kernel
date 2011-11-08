@@ -490,13 +490,13 @@ void AUDDRV_Telephony_Deinit (void *pData)
 							FALSE);
 		}	
 
-		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
-
 #if defined(ENABLE_DMA_VOICE)
 		//csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN | (UInt16)DSP_AADMAC_PRI_MIC_EN | (UInt16)DSP_AADMAC_SEC_MIC_EN);
 		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN | (UInt16)DSP_AADMAC_PRI_MIC_EN); //no second mic on lmp
 #endif
 		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
+
+		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
 
 		OSTASK_Sleep( 3 ); //make sure audio is off, rtos does not have this.
 
