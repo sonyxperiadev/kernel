@@ -424,7 +424,6 @@ int detect_hs_type(struct mic_t *mic_dev)
 		 * present. If yes, then break the loop. If not, continue
 		 */
 		if (aci_hw_read(i) == i) {
-			pr_info("detect hs type identified : %d (1- Headphone, 2 - Open cable, 3 - Headset)\r\n",i);
 			break;
 		} 
 
@@ -440,9 +439,10 @@ int detect_hs_type(struct mic_t *mic_dev)
 		evetns to the input sub-system.
     Return type     : void
 ------------------------------------------------------------------------------*/
-static void button_press_work_func(struct delayed_work *work)
+static void button_press_work_func(struct work_struct *work)
 {
-	struct mic_t *p = container_of(work, struct mic_t, button_press_work);
+	struct mic_t *p = container_of(work, struct mic_t,
+						button_press_work.work);
 
 	/* 
 	 * Just to be sure check whether this is happened when the
@@ -459,9 +459,10 @@ static void button_press_work_func(struct delayed_work *work)
 	}
 }
 
-static void button_release_work_func (struct delayed_work *work)
+static void button_release_work_func (struct work_struct *work)
 {
-	struct mic_t *p = container_of(work, struct mic_t, button_release_work);
+	struct mic_t *p = container_of(work, struct mic_t,
+						button_release_work.work);
 
 	/* 
 	 * Just to be sure check whether this is happened when the
@@ -484,9 +485,10 @@ static void button_release_work_func (struct delayed_work *work)
 		switch dev and enable/disable the HS button interrupt
     Return type     : void
 ------------------------------------------------------------------------------*/
-static void accessory_detect_work_func(struct delayed_work *work)
+static void accessory_detect_work_func(struct work_struct *work)
 {
-	struct mic_t *p = container_of(work, struct mic_t, accessory_detect_work);
+	struct mic_t *p = container_of(work, struct mic_t,
+						accessory_detect_work.work);
 	unsigned headset_state = gpio_get_value(irq_to_gpio(p->hsirq));
 
 	pr_debug("SWITCH WORK GPIO STATE: 0x%x default state 0x%x \r\n", headset_state,  p->headset_pd->hs_default_state); 
@@ -1016,8 +1018,9 @@ static int hs_remove(struct platform_device *pdev)
 
 	mic = platform_get_drvdata(pdev);
 
-	free_irq(mic->hsirq, NULL);
-	free_irq(mic->hsbirq_press, NULL);
+	free_irq(mic->hsirq, mic);
+	free_irq(mic->hsbirq_press, mic);
+	free_irq(mic->hsbirq_release, mic);
 
 	hs_unreginputdev(mic);
 	hs_unregswitchdev(mic);
@@ -1028,7 +1031,7 @@ static int hs_remove(struct platform_device *pdev)
 
 static int __init hs_probe(struct platform_device *pdev)
 {
-	int ret = 0, val;
+	int ret = 0;
 	struct resource *mem_resource;
 	struct mic_t *mic;
 
@@ -1126,7 +1129,8 @@ static int __init hs_probe(struct platform_device *pdev)
 			(IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING |
 			 IRQF_NO_SUSPEND), "aci_accessory_detect", mic);
 	if (ret < 0) {
-		pr_err("%s() : Request irq failed for Headset\n", __func__);
+		pr_err("%s(): request_irq() failed for headset %s: %d\n",
+			__func__, "irq", ret);
 		goto err1;
 	}
 
@@ -1135,10 +1139,10 @@ static int __init hs_probe(struct platform_device *pdev)
 	    request_irq(mic->hsbirq_press, comp2_isr, IRQF_NO_SUSPEND,
 			"aci_hs_button_press", mic);
 	if (ret < 0) {
-		pr_err("%s() : Request irq failed for Headset button\n",
-		       __func__);
+		pr_err("%s(): request_irq() failed for headset %s: %d\n",
+			__func__, "button press", ret);
 		/* Free the HS IRQ if the HS Button IRQ request fails */
-		free_irq(mic->hsirq, NULL);
+		free_irq(mic->hsirq, mic);
 		goto err1;
 	}
 
@@ -1147,11 +1151,11 @@ static int __init hs_probe(struct platform_device *pdev)
 	    request_irq(mic->hsbirq_release, comp2_inv_isr, IRQF_NO_SUSPEND,
 			"aci_hs_button_release", mic);
 	if (ret < 0) {
-		pr_err("%s() : Request irq failed for Headset button\n",
-		       __func__);
+		pr_err("%s(): request_irq() failed for headset %s: %d\n",
+			__func__, "button release", ret);
 		/* Free the HS IRQ if the HS Button IRQ request fails */
-		free_irq(mic->hsirq, NULL);
-		free_irq(mic->hsbirq_press, NULL);
+		free_irq(mic->hsirq, mic);
+		free_irq(mic->hsbirq_press, mic);
 		goto err1;
 	}
 
