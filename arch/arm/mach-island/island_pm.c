@@ -510,66 +510,6 @@ int kona_mach_pm_enter(suspend_state_t state)
 	return 0;
 }
 
-int kona_mach_pm_enter(suspend_state_t state)
-{
-	int ret = 0;
-	static struct clk *clk = NULL;
-	struct pi *pi = NULL;
-	u32 reg_val;
-
-	switch (state) {
-	case PM_SUSPEND_STANDBY:
-	case PM_SUSPEND_MEM:
-
-		/* suspend */
-		pr_info("%s:Enter\n", __func__);
-		
-		#if CONFIG_ISLAND_DORMANT_MODE
-		if (!clk) {
-			clk = clk_get(NULL, PMU_BSC_PERI_CLK_NAME_STR);
-			if (IS_ERR_OR_NULL(clk)) {
-				pr_err("Inavlid clock name: %s\n", __func__);
-				BUG_ON(1);
-				return -EINVAL;
-			}
-		}
-		pwr_mgr_event_clear_events(LCDTE_EVENT, SPARE3_A_EVENT); /*SPARE4_A_EVENT is used for ModemBus_active*/
-		pwr_mgr_event_clear_events(SPARE5_A_EVENT, BRIDGE_TO_MODEM_EVENT); /* skip VREQ_NONZERO_PI_MODEM_EVENT*/
-		pwr_mgr_event_clear_events(USBOTG_EVENT, ACI_EVENT);
-		pwr_mgr_event_clear_events(VPM_WAKEUP_EVENT, ULPI2_EVENT);
-
-		peri_clk_set_hw_gating_ctrl(clk, CLK_GATING_AUTO);
-		clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
-		clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
-		clk_set_crystal_pwr_on_idle(true);
-
-		reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-		reg_val &= ~IROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
-		writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-		reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-		reg_val &= ~IROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
-		writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-		clear_wakeup_interrupts();
-		config_wakeup_interrupts();
-		pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
-			pi_enable(pi, 0);
-			pwr_mgr_arm_core_dormant_enable(true);
-
-			dormant_enter();
-		#else
-		      enter_wfi();
-		#endif
-
-		break;
-	default:
-		pr_info("%s:Exit(error)\n", __func__);
-		ret = -EINVAL;
-	}
-
-	pr_info("%s:Exit\n", __func__);
-	return 0;
-}
-
 int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
 {
 	pr_info("ISLAND => kona_mach_get_idle_states\n");
