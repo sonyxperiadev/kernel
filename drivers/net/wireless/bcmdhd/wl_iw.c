@@ -8329,8 +8329,12 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 
 #ifdef DHD_BCM_WIFI_HDMI
 	/* Do not send wireless events for the WHDMI interface */
-	if (cmd && dhd_bcm_whdmi_enable && strncmp(dev->name, "wl0.2", 5) == 0) {
-		/* printf("@@@wl_iw_event: not sending wl0.2 wlevent cmd=%u\n", cmd); */
+	if (cmd && dhd_bcm_whdmi_enable &&
+		strncmp(dev->name, DHD_WHDMI_SOFTAP_IF_NAME, 5) == 0) {
+		/*
+		printf("@@@wl_iw_event: not sending %s wlevent cmd=%u\n",
+			DHD_WHDMI_SOFTAP_IF_NAME, cmd);
+		*/
 	} else
 #endif /* DHD_BCM_WIFI_HDMI */
 		if (cmd) {

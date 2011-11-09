@@ -725,6 +725,11 @@ void dhd_arp_offload_add_ip(dhd_pub_t *dhd, uint32 ipaddr);
 #ifdef DHD_BCM_WIFI_HDMI
 /* Wireless HDMI run-time enable flag */
 extern bool dhd_bcm_whdmi_enable;
+
+/* Network interface created for the Wireless HDMI soft AP */
+#define DHD_WHDMI_SOFTAP_IF_NAME	"wl0.2"
+#define DHD_WHDMI_SOFTAP_IF_NUM		2
+
 #endif /* DHD_BCM_WIFI_HDMI */
 
 #endif /* _dhd_h_ */
