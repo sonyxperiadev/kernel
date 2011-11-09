@@ -1,5 +1,5 @@
 /****************************************************************************
-*									      
+*
 * Copyright 2010 --2011 Broadcom Corporation.
 *
 * Unless you and Broadcom execute a separate written software license
@@ -1563,7 +1563,7 @@ int __init pi_debug_add_pi(struct pi *pi)
     *dent_dfs_dir=0, *dent_dfs=0, *dent_register_qos_client=0,
     *dent_remove_qos_client=0, *dent_remove_dfs_client=0, *dent_register_dfs_client=0,
     *dent_request_dfs=0, *dent_qos_dir=0, *dent_qos=0, *dent_request_qos=0,
-    *dent_state=0, *dent_opp=0, *dent_reset=0;
+    *dent_state=0, *dent_opp=0, *dent_reset=0, *dent_flags=0;
 
 
     BUG_ON(!dent_pi_root_dir);
@@ -1572,14 +1572,18 @@ int __init pi_debug_add_pi(struct pi *pi)
 
     dent_pi_dir = debugfs_create_dir(pi->name, dent_pi_root_dir);
     if(!dent_pi_dir)
-		goto err;
+	goto err;
 
-	dent_enable = debugfs_create_file("enable", S_IWUSR|S_IRUSR, dent_pi_dir, pi, &pi_enable_fops);
+    dent_enable = debugfs_create_file("enable", S_IWUSR|S_IRUSR, dent_pi_dir, pi, &pi_enable_fops);
 	if(!dent_enable)
 	    goto err;
 
     dent_reset = debugfs_create_file("reset", S_IWUSR|S_IRUSR, dent_pi_dir, pi, &pi_reset_fops);
 	if(!dent_reset)
+	    goto err;
+
+    dent_flags = debugfs_create_u32("flags", S_IWUSR|S_IRUSR, dent_pi_dir, &pi->flags);
+	if(!dent_flags)
 	    goto err;
 
     dent_count = debugfs_create_u32("count", S_IRUSR, dent_pi_dir, &pi->usg_cnt);
@@ -1592,53 +1596,56 @@ int __init pi_debug_add_pi(struct pi *pi)
 	if(!dent_opp)
 		goto err;
 
-    dent_qos_dir = debugfs_create_dir("qos", dent_pi_dir);
-    if(!dent_qos_dir)
-		goto err;
+    debugfs_info[pi->id].pi_id = pi->id;
+    if (!(pi->flags & PI_NO_QOS)) {
+	dent_qos_dir = debugfs_create_dir("qos", dent_pi_dir);
+	if(!dent_qos_dir)
+	    goto err;
+	debugfs_info[pi->id].qos_dir = dent_qos_dir;
 
+	dent_register_qos_client = debugfs_create_file("register_client", S_IWUSR|S_IRUSR, dent_qos_dir, pi, &pi_qos_register_client_fops);
+	if(!dent_register_qos_client)
+	    goto err;
+
+	dent_remove_qos_client = debugfs_create_file("remove_client", S_IWUSR|S_IRUSR, dent_qos_dir, pi,
+				&pi_qos_remove_client_fops);
+	if(!dent_remove_qos_client)
+	    goto err;
+
+	dent_qos = debugfs_create_file("qos", S_IRUSR, dent_qos_dir, pi, &pi_qos_fops);
+	if(!dent_qos)
+	    goto err;
+
+	dent_request_qos = debugfs_create_file("request_list", S_IRUSR, dent_qos_dir,
+				pi, &pi_qos_request_list_fops);
+	if(!dent_request_qos)
+	    goto err;
+    }
+
+    if (!(pi->flags & PI_NO_DFS)) {
 	dent_dfs_dir = debugfs_create_dir("dfs", dent_pi_dir);
 	if(!dent_dfs_dir)
-		goto err;
+	    goto err;
+	debugfs_info[pi->id].dfs_dir = dent_dfs_dir;
 
-    debugfs_info[pi->id].pi_id = pi->id;
-    debugfs_info[pi->id].qos_dir = dent_qos_dir;
-    debugfs_info[pi->id].dfs_dir = dent_dfs_dir;
+	dent_dfs = debugfs_create_file("dfs", S_IRUSR, dent_dfs_dir, pi, &pi_dfs_fops);
+	if(!dent_dfs)
+	    goto err;
 
-    dent_register_qos_client = debugfs_create_file("register_client", S_IWUSR|S_IRUSR, dent_qos_dir, pi, &pi_qos_register_client_fops);
-    if(!dent_register_qos_client)
-		goto err;
-
-    dent_remove_qos_client = debugfs_create_file("remove_client", S_IWUSR|S_IRUSR, dent_qos_dir, pi,
-				&pi_qos_remove_client_fops);
-    if(!dent_remove_qos_client)
-		goto err;
-
-    dent_qos = debugfs_create_file("qos", S_IRUSR, dent_qos_dir, pi, &pi_qos_fops);
-    if(!dent_qos)
-		goto err;
-
-    dent_request_qos = debugfs_create_file("request_list", S_IRUSR, dent_qos_dir,
-		    pi, &pi_qos_request_list_fops);
-    if(!dent_request_qos)
-		goto err;
-
-    dent_dfs = debugfs_create_file("dfs", S_IRUSR, dent_dfs_dir, pi, &pi_dfs_fops);
-    if(!dent_dfs)
-		goto err;
-
-    dent_register_dfs_client = debugfs_create_file("register_client", S_IWUSR|S_IRUSR,
+	dent_register_dfs_client = debugfs_create_file("register_client", S_IWUSR|S_IRUSR,
 			dent_dfs_dir, pi, &pi_dfs_register_client_fops);
-    if(!dent_register_dfs_client)
-		goto err;
+	if(!dent_register_dfs_client)
+	    goto err;
 
-    dent_remove_dfs_client = debugfs_create_file("remove_client", S_IWUSR|S_IRUSR, dent_dfs_dir, pi,
-		&pi_dfs_remove_client_fops);
-    if(!dent_remove_dfs_client)
-		goto err;
+	dent_remove_dfs_client = debugfs_create_file("remove_client", S_IWUSR|S_IRUSR, dent_dfs_dir, pi,
+				&pi_dfs_remove_client_fops);
+	if(!dent_remove_dfs_client)
+	    goto err;
 
-    dent_request_dfs = debugfs_create_file("request_list", S_IRUSR, dent_dfs_dir, pi, &pi_dfs_request_list_fops);
-    if(!dent_request_dfs)
-		goto err;
+	dent_request_dfs = debugfs_create_file("request_list", S_IRUSR, dent_dfs_dir, pi, &pi_dfs_request_list_fops);
+	if(!dent_request_dfs)
+	    goto err;
+    }
 
     return 0;
 
@@ -1647,7 +1654,6 @@ err:
     debugfs_remove(dent_count);
 
     return -ENOMEM;
-
 }
 
 #endif /* CONFIG_DEBUG_FS  */

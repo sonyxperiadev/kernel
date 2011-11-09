@@ -1839,6 +1839,9 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 
     if(!debugfs_create_u32("debug", S_IWUSR|S_IRUSR, dent_pwr_root_dir, (int*)&pwr_debug))
 		return -ENOMEM;
+
+    if(!debugfs_create_u32("flags", S_IWUSR|S_IRUSR, dent_pwr_root_dir, (int*)&pwr_mgr.info->flags))
+		return -ENOMEM;
     /* Debug Bus control via Debugfs */
     if(!debugfs_create_file("pm_debug_bus", S_IWUSR|S_IRUSR, dent_pwr_root_dir, NULL, &set_pm_dbg_bus_fops))
 		return -ENOMEM;

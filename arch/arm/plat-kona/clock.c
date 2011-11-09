@@ -73,9 +73,7 @@ static int __ccu_clk_init(struct clk *clk)
 
 	CCU_PI_ENABLE(ccu_clk,1);
 
-	INIT_LIST_HEAD(&ccu_clk->peri_list);
-	INIT_LIST_HEAD(&ccu_clk->bus_list);
-	INIT_LIST_HEAD(&ccu_clk->ref_list);
+	INIT_LIST_HEAD(&ccu_clk->clk_list);
 
 	if(clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
@@ -111,7 +109,7 @@ static int __peri_clk_init(struct clk *clk)
 		ret = clk->ops->init(clk);
 
 	INIT_LIST_HEAD(&clk->list);
-	list_add(&clk->list, &peri_clk->ccu_clk->peri_list);
+	list_add(&clk->list, &peri_clk->ccu_clk->clk_list);
 
 
 
@@ -147,7 +145,7 @@ static int __bus_clk_init(struct clk *clk)
 	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
 
 	INIT_LIST_HEAD(&clk->list);
-	list_add(&clk->list, &bus_clk->ccu_clk->bus_list);
+	list_add(&clk->list, &bus_clk->ccu_clk->clk_list);
 
 	return ret;
 }
@@ -171,7 +169,7 @@ static int __ref_clk_init(struct clk* clk)
 
 	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
 	INIT_LIST_HEAD(&clk->list);
-	list_add(&clk->list, &ref_clk->ccu_clk->ref_list);
+	list_add(&clk->list, &ref_clk->ccu_clk->clk_list);
 
 	return ret;
 }
@@ -204,7 +202,7 @@ static int __pll_clk_init(struct clk *clk)
 		}
 	}
 	INIT_LIST_HEAD(&clk->list);
-	list_add(&clk->list, &pll_clk->ccu_clk->peri_list);
+	list_add(&clk->list, &pll_clk->ccu_clk->clk_list);
 
 	CCU_PI_ENABLE(pll_clk->ccu_clk,0);
 	return ret;
@@ -227,7 +225,7 @@ static int __pll_chnl_clk_init(struct clk *clk)
 		ret = clk->ops->init(clk);
 
 	INIT_LIST_HEAD(&clk->list);
-	list_add(&clk->list, &pll_chnl_clk->ccu_clk->peri_list);
+	list_add(&clk->list, &pll_chnl_clk->ccu_clk->clk_list);
 
 	if(CLK_FLG_ENABLED(clk,ENABLE_ON_INIT))
 	{
@@ -2181,7 +2179,10 @@ static int peri_clk_get_gating_ctrl(struct peri_clk * peri_clk)
 	if(!peri_clk->clk_gate_offset || !peri_clk->gating_sel_mask)
 		return -EINVAL;
 
+	BUG_ON(!peri_clk->ccu_clk);
+	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
 	reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset));
+	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
 
 	return GET_BIT_USING_MASK(reg_val, peri_clk->gating_sel_mask);
 }
@@ -2285,15 +2286,32 @@ int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay)
 }
 EXPORT_SYMBOL(peri_clk_hyst_enable);
 
-int peri_clk_get_gating_status(struct peri_clk * peri_clk)
+static int peri_clk_get_gating_status(struct peri_clk * peri_clk)
 {
 	u32 reg_val;
 
+	BUG_ON(!peri_clk->ccu_clk);
 	if(!peri_clk->clk_gate_offset || !peri_clk->stprsts_mask)
 		return -EINVAL;
+	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
 	reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset));
+	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
 
 	return GET_BIT_USING_MASK(reg_val, peri_clk->stprsts_mask);
+}
+
+static int peri_clk_get_enable_bit(struct peri_clk * peri_clk)
+{
+	u32 reg_val;
+
+	BUG_ON(!peri_clk->ccu_clk);
+	if(!peri_clk->clk_gate_offset || !peri_clk->clk_en_mask)
+		return -EINVAL;
+	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+	reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset));
+	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+
+	return GET_BIT_USING_MASK(reg_val, peri_clk->clk_en_mask);
 }
 
 static int peri_clk_set_voltage_lvl(struct peri_clk * peri_clk, int voltage_lvl)
@@ -2771,7 +2789,7 @@ static unsigned long peri_clk_round_rate(struct clk *clk, unsigned long rate)
 static unsigned long peri_clk_get_rate(struct clk *clk)
 {
 	struct peri_clk *peri_clk;
-	int sel = 0;
+	int sel = -1;
 	u32 div = 0, pre_div = 0;
 	u32 reg_val = 0;
 	u32 max_diether;
@@ -2819,7 +2837,9 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 	}
 
 	BUG_ON(sel >= peri_clk->src_clk.count);
-	peri_clk->src_clk.src_inx = sel;
+	/*For clocks which doesnt have PLL select value, sel will be -1*/
+	if (sel >= 0)
+	    peri_clk->src_clk.src_inx = sel;
 	src_clk = GET_PERI_SRC_CLK(peri_clk);
 	BUG_ON(!src_clk || !src_clk->ops || !src_clk->ops->get_rate);
 	parent_rate = src_clk->ops->get_rate(src_clk);
@@ -2894,7 +2914,10 @@ int bus_clk_get_gating_ctrl(struct bus_clk * bus_clk)
 	if(!bus_clk->clk_gate_offset || !bus_clk->gating_sel_mask)
 		return -EINVAL;
 
+	BUG_ON(!bus_clk->ccu_clk);
+	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
 	reg_val = readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
+	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
 
 	return GET_BIT_USING_MASK(reg_val, bus_clk->gating_sel_mask);
 }
@@ -2925,13 +2948,30 @@ static int bus_clk_get_gating_status(struct bus_clk *bus_clk)
 {
 	u32 reg_val;
 
+	BUG_ON(!bus_clk->ccu_clk);
 	if(!bus_clk->clk_gate_offset || !bus_clk->stprsts_mask)
 		return -EINVAL;
+	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
 	reg_val = readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
+	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
 
 	return GET_BIT_USING_MASK(reg_val, bus_clk->stprsts_mask);
 }
 EXPORT_SYMBOL(bus_clk_get_gating_status);
+
+static int bus_clk_get_enable_bit(struct bus_clk *bus_clk)
+{
+	u32 reg_val;
+
+	BUG_ON(!bus_clk->ccu_clk);
+	if(!bus_clk->clk_gate_offset || !bus_clk->clk_en_mask)
+		return -EINVAL;
+	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+	reg_val = readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
+	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+
+	return GET_BIT_USING_MASK(reg_val, bus_clk->clk_en_mask);
+}
 
 static int bus_clk_hyst_enable(struct bus_clk * bus_clk, int enable, int delay)
 {
@@ -3187,13 +3227,46 @@ static int ref_clk_get_gating_status(struct ref_clk *ref_clk)
 {
 	u32 reg_val;
 
+	BUG_ON(!ref_clk->ccu_clk);
 	if(!ref_clk->clk_gate_offset || !ref_clk->stprsts_mask)
 		return -EINVAL;
+	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
 	reg_val = readl(CCU_REG_ADDR(ref_clk->ccu_clk, ref_clk->clk_gate_offset));
+	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
 
 	return GET_BIT_USING_MASK(reg_val, ref_clk->stprsts_mask);
 }
 EXPORT_SYMBOL(ref_clk_get_gating_status);
+
+static int ref_clk_get_enable_bit(struct ref_clk *ref_clk)
+{
+	u32 reg_val;
+
+	BUG_ON(!ref_clk->ccu_clk);
+	if(!ref_clk->clk_gate_offset || !ref_clk->clk_en_mask)
+		return -EINVAL;
+	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+	reg_val = readl(CCU_REG_ADDR(ref_clk->ccu_clk, ref_clk->clk_gate_offset));
+	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+
+	return GET_BIT_USING_MASK(reg_val, ref_clk->clk_en_mask);
+}
+
+static int ref_clk_get_gating_ctrl(struct ref_clk * ref_clk)
+{
+	u32 reg_val;
+
+	if(!ref_clk->clk_gate_offset || !ref_clk->gating_sel_mask)
+		return -EINVAL;
+
+	BUG_ON(!ref_clk->ccu_clk);
+	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+	reg_val = readl(CCU_REG_ADDR(ref_clk->ccu_clk, ref_clk->clk_gate_offset));
+	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+
+	return GET_BIT_USING_MASK(reg_val, ref_clk->gating_sel_mask);
+}
+EXPORT_SYMBOL(ref_clk_get_gating_ctrl);
 
 static int ref_clk_set_gating_ctrl(struct ref_clk * ref_clk, int gating_ctrl)
 {
@@ -3616,6 +3689,84 @@ static int pll_clk_init(struct clk* clk)
 	return 0;
 }
 
+static int pll_clk_get_lock_status(struct pll_clk* pll_clk)
+{
+    u32 reg_val;
+
+    BUG_ON(!pll_clk->ccu_clk);
+    if(!pll_clk->pll_ctrl_offset || !pll_clk->pll_lock)
+	return -EINVAL;
+    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+
+    return GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock);
+}
+static int pll_clk_get_pdiv(struct pll_clk* pll_clk)
+{
+    u32 reg_val;
+
+    BUG_ON(!pll_clk->ccu_clk);
+    if(!pll_clk->pll_ctrl_offset || !pll_clk->pdiv_mask)
+	return -EINVAL;
+    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+
+    return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->pdiv_mask, pll_clk->pdiv_shift);
+}
+static int pll_clk_get_ndiv_int(struct pll_clk* pll_clk)
+{
+    u32 reg_val;
+
+    BUG_ON(!pll_clk->ccu_clk);
+    if(!pll_clk->pll_ctrl_offset || !pll_clk->ndiv_int_mask)
+	return -EINVAL;
+    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+
+    return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->ndiv_int_mask, pll_clk->ndiv_int_shift);
+}
+static int pll_clk_get_ndiv_frac(struct pll_clk* pll_clk)
+{
+    u32 reg_val;
+
+    BUG_ON(!pll_clk->ccu_clk);
+    if(!pll_clk->ndiv_frac_offset || !pll_clk->ndiv_frac_mask)
+	return -EINVAL;
+    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_frac_offset));
+    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+
+    return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->ndiv_frac_mask, pll_clk->ndiv_frac_shift);
+}
+static int pll_clk_get_idle_pwrdwn_sw_ovrride(struct pll_clk* pll_clk)
+{
+    u32 reg_val;
+
+    BUG_ON(!pll_clk->ccu_clk);
+    if(!pll_clk->pll_ctrl_offset || !pll_clk->idle_pwrdwn_sw_ovrride_mask)
+	return -EINVAL;
+    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+
+    return GET_BIT_USING_MASK(reg_val, pll_clk->idle_pwrdwn_sw_ovrride_mask);
+}
+static int pll_clk_get_pwrdwn(struct pll_clk* pll_clk)
+{
+    u32 reg_val;
+
+    BUG_ON(!pll_clk->ccu_clk);
+    if(!pll_clk->pll_ctrl_offset || !pll_clk->pwrdwn_mask)
+	return -EINVAL;
+    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+
+    return GET_BIT_USING_MASK(reg_val, pll_clk->pwrdwn_mask);
+}
 
 struct gen_clk_ops gen_pll_clk_ops =
 {
@@ -3783,6 +3934,32 @@ static int pll_chnl_clk_init(struct clk* clk)
 				!pll_chnl_clk->pll_clk || !pll_chnl_clk->cfg_reg_offset);
 	return 0;
 }
+static int pll_chnl_clk_get_mdiv(struct pll_chnl_clk* pll_chnl_clk)
+{
+    u32 reg_val;
+
+    BUG_ON(!pll_chnl_clk->ccu_clk);
+    if(!pll_chnl_clk->cfg_reg_offset || !pll_chnl_clk->mdiv_mask)
+	return -EINVAL;
+    CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
+    reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->cfg_reg_offset));
+    CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
+
+    return GET_VAL_USING_MASK_SHIFT(reg_val, pll_chnl_clk->mdiv_mask, pll_chnl_clk->mdiv_shift);
+}
+static int pll_chnl_clk_get_enb_clkout(struct pll_chnl_clk* pll_chnl_clk)
+{
+    u32 reg_val;
+
+    BUG_ON(!pll_chnl_clk->ccu_clk);
+    if(!pll_chnl_clk->cfg_reg_offset || !pll_chnl_clk->out_en_mask)
+	return -EINVAL;
+    CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
+    reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->cfg_reg_offset));
+    CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
+
+    return GET_BIT_USING_MASK(reg_val, pll_chnl_clk->out_en_mask);
+}
 
 struct gen_clk_ops gen_pll_chnl_clk_ops =
 {
@@ -3911,7 +4088,7 @@ static int core_clk_init(struct clk* clk)
 	BUG_ON(!core_clk->ccu_clk ||
 				!core_clk->pll_clk || !core_clk->num_chnls);
 	INIT_LIST_HEAD(&clk->list);
-	list_add(&clk->list, &core_clk->ccu_clk->peri_list);
+	list_add(&clk->list, &core_clk->ccu_clk->clk_list);
 
 	return 0;
 }
@@ -3954,6 +4131,46 @@ static int core_clk_reset(struct clk* clk)
 	return 0;
 }
 
+int core_clk_get_gating_status(struct core_clk * core_clk)
+{
+	u32 reg_val;
+
+	BUG_ON(!core_clk->ccu_clk);
+	if(!core_clk->clk_gate_offset || !core_clk->stprsts_mask)
+		return -EINVAL;
+	CCU_PI_ENABLE(core_clk->ccu_clk,1);
+	reg_val = readl(CCU_REG_ADDR(core_clk->ccu_clk, core_clk->clk_gate_offset));
+	CCU_PI_ENABLE(core_clk->ccu_clk,0);
+
+	return GET_BIT_USING_MASK(reg_val, core_clk->stprsts_mask);
+}
+static int core_clk_get_gating_ctrl(struct core_clk * core_clk)
+{
+	u32 reg_val;
+
+	if(!core_clk->clk_gate_offset || !core_clk->gating_sel_mask)
+		return -EINVAL;
+
+	BUG_ON(!core_clk->ccu_clk);
+	CCU_PI_ENABLE(core_clk->ccu_clk,1);
+	reg_val = readl(CCU_REG_ADDR(core_clk->ccu_clk, core_clk->clk_gate_offset));
+	CCU_PI_ENABLE(core_clk->ccu_clk,0);
+
+	return GET_BIT_USING_MASK(reg_val, core_clk->gating_sel_mask);
+}
+static int core_clk_get_enable_bit(struct core_clk * core_clk)
+{
+	u32 reg_val;
+
+	BUG_ON(!core_clk->ccu_clk);
+	if(!core_clk->clk_gate_offset || !core_clk->clk_en_mask)
+		return -EINVAL;
+	CCU_PI_ENABLE(core_clk->ccu_clk,1);
+	reg_val = readl(CCU_REG_ADDR(core_clk->ccu_clk, core_clk->clk_gate_offset));
+	CCU_PI_ENABLE(core_clk->ccu_clk,0);
+
+	return GET_BIT_USING_MASK(reg_val, core_clk->clk_en_mask);
+}
 
 struct gen_clk_ops gen_core_clk_ops =
 {
@@ -4065,54 +4282,72 @@ static int ccu_debug_get_policy(void *data, u64 *val)
 DEFINE_SIMPLE_ATTRIBUTE(ccu_policy_fops, ccu_debug_get_policy,
                         NULL, "%llu\n");
 
-
-
-static int _get_clk_status(struct clk *c)
+static int clock_status_show(struct seq_file *seq, void *p)
 {
+	struct clk *c = seq->private;
 	struct peri_clk *peri_clk;
 	struct bus_clk *bus_clk;
 	struct ref_clk *ref_clk;
+	struct pll_clk *pll_clk;
+	struct pll_chnl_clk *pll_chnl_clk;
+	struct core_clk *core_clk;
 	int enabled = 0;
 
-	clk_dbg("%s clock id:: %d\n",__func__,c->id);
-	if(c->clk_type == CLK_TYPE_PERI)
-	{
+	switch (c->clk_type) {
+	case CLK_TYPE_PERI:
 		peri_clk = to_peri_clk(c);
 		enabled = peri_clk_get_gating_status(peri_clk);
-	}
-	else if(c->clk_type == CLK_TYPE_BUS)
-	{
-		bus_clk = to_bus_clk(c);
-		enabled = bus_clk_get_gating_status(bus_clk);
-	}
-	else if(c->clk_type == CLK_TYPE_REF)
-	{
+		break;
+	case CLK_TYPE_BUS:
+		 bus_clk = to_bus_clk(c);
+		 enabled = bus_clk_get_gating_status(bus_clk);
+		 break;
+	case CLK_TYPE_REF:
 		ref_clk = to_ref_clk(c);
 		enabled = ref_clk_get_gating_status(ref_clk);
-	}
-	else if(c->clk_type == CLK_TYPE_CCU)
-	{
+		break;
+	case CLK_TYPE_PLL:
+		pll_clk = to_pll_clk(c);
+		enabled = pll_clk_get_lock_status(pll_clk);
+		break;
+	case CLK_TYPE_PLL_CHNL:
+		pll_chnl_clk = to_pll_chnl_clk(c);
+		/*0= divider outputs enabled, 1= divider outputs disabled
+		* So inverting to display status.
+		*/
+		enabled = !pll_chnl_clk_get_enb_clkout(pll_chnl_clk);
+		break;
+	case CLK_TYPE_CORE:
+		core_clk = to_core_clk(c);
+		enabled = core_clk_get_gating_status(core_clk);
+		break;
+	case CLK_TYPE_CCU:
 		if (c->use_cnt > 0)
-			enabled = 1;
+		    enabled = 1;
+		break;
+	default:
+		enabled = -1;
 	}
 	if(enabled < 0)
-		clk_dbg("Status register not available for clock %s\n", c->name);
+		seq_printf(seq, "-1\n");
 	else
-		clk_dbg("clock %s \n", enabled ? "enabled" : "disabled");
-	return enabled;
-}
-
-static int clk_debug_get_status(void *data, u64 *val)
-{
-	struct clk *clock = data;
-	*val = _get_clk_status(clock);
-	if (*val >= 0)
-		clk_dbg("%s is %s \n", clock->name, *val ? "enabled" : "disabled");
-
+		seq_printf(seq, "%d\n", enabled);
 	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(clock_status_fops, clk_debug_get_status, NULL, "%llu\n");
+static int fops_clock_status_show_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, clock_status_show, inode->i_private);
+}
+
+static const struct file_operations clock_status_show_fops =
+{
+	.open                   = fops_clock_status_show_open,
+	.read                   = seq_read,
+	.llseek                 = seq_lseek,
+	.release                = single_release,
+};
+
 
 static int clk_debug_reset(void *data, u64 val)
 {
@@ -4143,67 +4378,189 @@ static int clk_debug_set_enable(void *data, u64 val)
 
 DEFINE_SIMPLE_ATTRIBUTE(clock_enable_fops, NULL, clk_debug_set_enable, "%llu\n");
 
-static int ccu_active_clks_show(struct seq_file *seq, void *p)
+static int print_ref_clock_params(struct seq_file *seq, struct clk *temp_clk)
+{
+    int status, auto_gate, enable_bit;
+    struct ref_clk *ref_clk;
+    ref_clk = to_ref_clk(temp_clk);
+    status = ref_clk_get_gating_status(ref_clk);
+    if(status < 0)
+	status = -1;
+    auto_gate = ref_clk_get_gating_ctrl(ref_clk);
+    if(auto_gate < 0)
+	auto_gate = -1;
+    enable_bit = ref_clk_get_enable_bit(ref_clk);
+    if (enable_bit < 0)
+	enable_bit = -1;
+    seq_printf(seq, "Ref clock:%20s\t\tenable_bit:%d\t\tStatus:%d\t\tuse count:%d\t\tGating:%d\n",
+		temp_clk->name, enable_bit, status, temp_clk->use_cnt, auto_gate);
+
+    return 0;
+}
+static int print_peri_clock_params(struct seq_file *seq, struct clk *temp_clk)
+{
+    int status, auto_gate, sleep_prev, enable_bit;
+    struct peri_clk *peri_clk;
+
+    peri_clk = to_peri_clk(temp_clk);
+    status = peri_clk_get_gating_status(peri_clk);
+    if(status < 0)
+	status = -1;
+    auto_gate = peri_clk_get_gating_ctrl(peri_clk);
+    if(auto_gate < 0)
+	auto_gate = -1;
+    enable_bit = peri_clk_get_enable_bit(peri_clk);
+    if (enable_bit < 0)
+	enable_bit = -1;
+    sleep_prev = !CLK_FLG_ENABLED(temp_clk, DONOT_NOTIFY_STATUS_TO_CCU);
+    seq_printf(seq, "Peri clock:%20s\t\tenable_bit:%d\t\tStatus:%d\t\tuse count:%d\t\tGating:%d\t\tprevents_retn:%s\n",
+    	temp_clk->name, enable_bit, status, temp_clk->use_cnt, auto_gate, sleep_prev?"YES":"NO");
+
+    return 0;
+}
+static int print_bus_clock_params(struct seq_file *seq, struct clk *temp_clk)
+{
+    int status, auto_gate, sleep_prev, enable_bit;
+    struct bus_clk *bus_clk;
+
+    bus_clk = to_bus_clk(temp_clk);
+    status = bus_clk_get_gating_status(bus_clk);
+    if(status < 0)
+	status = -1;
+    auto_gate = bus_clk_get_gating_ctrl(bus_clk);
+    if(auto_gate < 0)
+	auto_gate = -1;
+    enable_bit = bus_clk_get_enable_bit(bus_clk);
+    if (enable_bit < 0)
+	enable_bit = -1;
+    sleep_prev = CLK_FLG_ENABLED(temp_clk, NOTIFY_STATUS_TO_CCU) && !CLK_FLG_ENABLED(temp_clk, AUTO_GATE);
+    seq_printf(seq, "Bus clock:%20s\t\tenable_bit:%d\t\tStatus:%d\t\tuse count:%d\t\tGating:%d\t\tprevents_retn:%s\n",
+    	temp_clk->name, enable_bit, status, temp_clk->use_cnt, auto_gate, sleep_prev?"YES":"NO");
+
+    return 0;
+
+}
+static int print_pll_clock_params(struct seq_file *seq, struct clk *temp_clk)
+{
+    int lock, pdiv, ndiv_int, ndiv_frac, idle_pwrdwn_sw_ovrrid, pll_pwrdwn;
+    struct pll_clk *pll_clk;
+
+    pll_clk = to_pll_clk(temp_clk);
+    lock = pll_clk_get_lock_status(pll_clk);
+    if(lock < 0)
+	lock = -1;
+    pdiv = pll_clk_get_pdiv(pll_clk);
+    if(pdiv < 0)
+	pdiv = -1;
+    ndiv_int = pll_clk_get_ndiv_int(pll_clk);
+    if(ndiv_int < 0)
+	ndiv_int = -1;
+    ndiv_frac = pll_clk_get_ndiv_frac(pll_clk);
+    if(ndiv_frac < 0)
+	ndiv_frac = -1;
+    idle_pwrdwn_sw_ovrrid = pll_clk_get_idle_pwrdwn_sw_ovrride(pll_clk);
+    if(idle_pwrdwn_sw_ovrrid < 0)
+	idle_pwrdwn_sw_ovrrid = -1;
+    pll_pwrdwn = pll_clk_get_pwrdwn(pll_clk);
+    if(pll_pwrdwn < 0)
+	pll_pwrdwn = -1;
+
+    seq_printf(seq, "PLL clock:%20s\t\tLock:%d\t\tpdiv:%x\t\tndiv_int:%x\t\tndiv_frac:%x\t\tidle_pwrdwn_sw_ovrrid:%d\tpwr_dwn:%d\n",
+    	temp_clk->name, lock, pdiv, ndiv_int, ndiv_frac, idle_pwrdwn_sw_ovrrid, pll_pwrdwn);
+
+    return 0;
+}
+
+static int print_pll_chnl_clock_params(struct seq_file *seq, struct clk *temp_clk)
+{
+    int mdiv, out_enable;
+    struct pll_chnl_clk *pll_chnl_clk;
+
+    pll_chnl_clk = to_pll_chnl_clk(temp_clk);
+    mdiv = pll_chnl_clk_get_mdiv(pll_chnl_clk);
+    if(mdiv < 0)
+	mdiv = -1;
+    out_enable = pll_chnl_clk_get_enb_clkout(pll_chnl_clk);
+    if(out_enable < 0)
+	out_enable = -1;
+
+    seq_printf(seq, "PLL_chnl clock:%20s\t\tmdiv:%x\t\tclkout_enable:%d\t\t\n",
+			temp_clk->name, mdiv, out_enable);
+
+    return 0;
+
+}
+
+static int print_core_clock_params(struct seq_file *seq, struct clk *temp_clk)
+{
+    int status, auto_gate, enable_bit;
+    struct core_clk *core_clk;
+
+    core_clk = to_core_clk(temp_clk);
+    status = core_clk_get_gating_status(core_clk);
+    if(status < 0)
+	status = -1;
+    auto_gate = core_clk_get_gating_ctrl(core_clk);
+    if(auto_gate < 0)
+	auto_gate = -1;
+    enable_bit = core_clk_get_enable_bit(core_clk);
+    if (enable_bit < 0)
+	enable_bit = -1;
+
+    seq_printf(seq, "core clock:%20s\t\tenable_bit:%d\t\tStatus:%d\t\tGating:%d\t\t\n",
+		temp_clk->name, enable_bit, status, auto_gate);
+
+    return 0;
+}
+
+static int ccu_clock_list_show(struct seq_file *seq, void *p)
 {
 	struct clk *clock = seq->private;
 	struct ccu_clk *ccu_clk;
-	struct ref_clk *ref_clk;
-	struct bus_clk *bus_clk;
-	struct peri_clk *peri_clk;
 	struct clk *temp_clk;
-	int status;
 
 	ccu_clk = to_ccu_clk(clock);
-
-	list_for_each_entry(temp_clk, &ccu_clk->ref_list, list) {
-		ref_clk = to_ref_clk(temp_clk);
-		status = ref_clk_get_gating_status(ref_clk);
-		seq_printf(seq, "Ref clock:%20s\t\ten_status:%d\t\tuse count:%d\t\tAUTO_GATE = %d\n",
-		           temp_clk->name, status, temp_clk->use_cnt, CLK_FLG_ENABLED(temp_clk, AUTO_GATE));
-	}
-
-	list_for_each_entry(temp_clk, &ccu_clk->peri_list, list)
+	list_for_each_entry(temp_clk, &ccu_clk->clk_list, list)
 	{
 		switch(temp_clk->clk_type)
 		{
-		case CLK_TYPE_PERI:
-			peri_clk = to_peri_clk(temp_clk);
-			status = peri_clk_get_gating_status(peri_clk);
-			seq_printf(seq, "Peri clock:%20s\t\ten_status:%d\t\tuse count:%d\t\tAUTO_GATE:%d\t\tNOTIFY PI:%d\n",
-		           temp_clk->name, status, temp_clk->use_cnt, CLK_FLG_ENABLED(temp_clk, AUTO_GATE),
-		           !CLK_FLG_ENABLED(temp_clk, DONOT_NOTIFY_STATUS_TO_CCU));
-
+		case CLK_TYPE_REF:
+			print_ref_clock_params(seq, temp_clk);
 			break;
 
+		case CLK_TYPE_PERI:
+			print_peri_clock_params(seq, temp_clk);
+			break;
+		case CLK_TYPE_BUS:
+			print_bus_clock_params(seq, temp_clk);
+			break;
+		case CLK_TYPE_PLL:
+			print_pll_clock_params(seq, temp_clk);
+			break;
+		case CLK_TYPE_PLL_CHNL:
+			print_pll_chnl_clock_params(seq, temp_clk);
+			break;
+		case CLK_TYPE_CORE:
+			print_core_clock_params(seq, temp_clk);
+			break;
 		default:
-			seq_printf(seq, "clock:%20s\t\tuse count:%d\t\tAUTO_GATE:%d\n",
+			seq_printf(seq, "clock:%20s\t\tuse count:%d\t\tGating:%d\n",
 		           temp_clk->name, temp_clk->use_cnt, CLK_FLG_ENABLED(temp_clk, AUTO_GATE));
-
 			break;
 		}
-
-	}
-
-	list_for_each_entry(temp_clk, &ccu_clk->bus_list, list) {
-		bus_clk = to_bus_clk(temp_clk);
-		status = bus_clk_get_gating_status(bus_clk);
-
-		seq_printf(seq, "Bus clock:%20s\t\ten_status:%d\t\tuse count:%d\t\tAUTO_GATE:%d\t\tNOTIFY PI:%d\n",
-		           temp_clk->name, status, temp_clk->use_cnt, CLK_FLG_ENABLED(temp_clk, AUTO_GATE),
-		           CLK_FLG_ENABLED(temp_clk, NOTIFY_STATUS_TO_CCU) && !CLK_FLG_ENABLED(temp_clk, AUTO_GATE));
 	}
 
 	return 0;
 }
 
-static int fops_ccu_active_clks_open(struct inode *inode, struct file *file)
+static int fops_ccu_clock_list_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, ccu_active_clks_show, inode->i_private);
+	return single_open(file, ccu_clock_list_show, inode->i_private);
 }
 
-static const struct file_operations ccu_active_clks_fops =
+static const struct file_operations ccu_clock_list_fops =
 {
-	.open                   = fops_ccu_active_clks_open,
+	.open                   = fops_ccu_clock_list_open,
 	.read                   = seq_read,
 	.llseek                 = seq_lseek,
 	.release                = single_release,
@@ -4215,6 +4572,9 @@ static int clk_parent_show(struct seq_file *seq, void *p)
 	struct peri_clk *peri_clk;
 	struct bus_clk *bus_clk;
 	struct ref_clk *ref_clk;
+	struct pll_clk *pll_clk;
+	struct pll_chnl_clk *pll_chnl_clk;
+	struct core_clk *core_clk;
 	switch(clock->clk_type) {
 	case CLK_TYPE_PERI:
 		peri_clk = to_peri_clk(clock);
@@ -4227,7 +4587,7 @@ static int clk_parent_show(struct seq_file *seq, void *p)
 	case CLK_TYPE_BUS:
 		bus_clk = to_bus_clk(clock);
 		seq_printf(seq, "name   -- %s\n", clock->name);
-		if (bus_clk->freq_tbl_index < 0)
+		if (bus_clk->freq_tbl_index < 0 && bus_clk->src_clk)
 			seq_printf(seq, "parent -- %s\n", bus_clk->src_clk->name);
 		else
 			seq_printf(seq, "parent derived from internal bus\n");
@@ -4240,6 +4600,19 @@ static int clk_parent_show(struct seq_file *seq, void *p)
 		else
 			seq_printf(seq, "Derived from %s ccu\n", ref_clk->ccu_clk->clk.name);
 		break;
+	case CLK_TYPE_PLL:
+		pll_clk = to_pll_clk(clock);
+		seq_printf(seq, "PLL:  %s\n", clock->name);
+		break;
+	case CLK_TYPE_PLL_CHNL:
+		pll_chnl_clk = to_pll_chnl_clk(clock);
+		seq_printf(seq, "PLL:  %s; PLL channel:%s\n", pll_chnl_clk->pll_clk->clk.name, clock->name);
+		break;
+	case CLK_TYPE_CORE:
+		core_clk = to_core_clk(clock);
+		seq_printf(seq, "PLL:  %s; core_clk:%s\n", core_clk->pll_clk->clk.name, clock->name);
+		break;
+
 	default:
 		return -EINVAL;
 	}
@@ -4265,6 +4638,9 @@ static int clk_source_show(struct seq_file *seq, void *p)
 	struct peri_clk *peri_clk;
 	struct bus_clk *bus_clk;
 	struct ref_clk *ref_clk;
+	struct pll_clk *pll_clk;
+	struct pll_chnl_clk *pll_chnl_clk;
+	struct core_clk *core_clk;
 	switch(clock->clk_type) {
 	case CLK_TYPE_PERI:
 		peri_clk = to_peri_clk(clock);
@@ -4282,10 +4658,10 @@ static int clk_source_show(struct seq_file *seq, void *p)
 		break;
 	case CLK_TYPE_BUS:
 		bus_clk = to_bus_clk(clock);
-		if (bus_clk->freq_tbl_index < 0)
-			seq_printf(seq, "source for %s is %s\n", clock->name, bus_clk->src_clk->name);
+		if (bus_clk->freq_tbl_index < 0 && bus_clk->src_clk)
+		    seq_printf(seq, "source for %s is %s\n", clock->name, bus_clk->src_clk->name);
 		else
-			seq_printf(seq, "%s derived from %s CCU\n", clock->name, bus_clk->ccu_clk->clk.name);
+		    seq_printf(seq, "%s derived from %s CCU\n", clock->name, bus_clk->ccu_clk->clk.name);
 		break;
 	case CLK_TYPE_REF:
 		ref_clk = to_ref_clk(clock);
@@ -4295,6 +4671,19 @@ static int clk_source_show(struct seq_file *seq, void *p)
 			seq_printf(seq, "%s derived from %s CCU\n", clock->name,
 			           ref_clk->ccu_clk->clk.name);
 		break;
+	case CLK_TYPE_PLL:
+		pll_clk = to_pll_clk(clock);
+		seq_printf(seq, "PLL: %s\n", clock->name);
+		break;
+	case CLK_TYPE_PLL_CHNL:
+		pll_chnl_clk = to_pll_chnl_clk(clock);
+		seq_printf(seq, "PLL: %s PLL Channel:%s\n", pll_chnl_clk->pll_clk->clk.name, clock->name);
+		break;
+	case CLK_TYPE_CORE:
+		core_clk = to_core_clk(clock);
+		seq_printf(seq, "PLL: %s core_clk:%s\n", core_clk->pll_clk->clk.name, clock->name);
+		break;
+
 	default:
 		return -EINVAL;
 	}
@@ -4336,7 +4725,7 @@ int __init clock_debug_init(void)
 int __init clock_debug_add_ccu(struct clk *c)
 {
 	struct ccu_clk *ccu_clk;
-	struct dentry *dent_active_clocks = 0, *dent_freqid=0, *dent_policy =0;
+	struct dentry *dent_clock_list = 0, *dent_freqid=0, *dent_policy =0;
 	struct dentry * dent_count;
 
 	BUG_ON(!dent_clk_root_dir);
@@ -4346,8 +4735,8 @@ int __init clock_debug_add_ccu(struct clk *c)
 	if(!ccu_clk->dent_ccu_dir)
 		goto err;
 
-	dent_active_clocks = debugfs_create_file("active_clocks", 0644, ccu_clk->dent_ccu_dir, c, &ccu_active_clks_fops);
-	if(!dent_active_clocks)
+	dent_clock_list = debugfs_create_file("clock_list", 0644, ccu_clk->dent_ccu_dir, c, &ccu_clock_list_fops);
+	if(!dent_clock_list)
 		goto err;
 
 	dent_freqid = debugfs_create_file("freq_id", 0644, ccu_clk->dent_ccu_dir, c, &ccu_freqid_fops);
@@ -4366,14 +4755,14 @@ int __init clock_debug_add_ccu(struct clk *c)
 	return 0;
 err:
 	debugfs_remove(ccu_clk->dent_ccu_dir);
-	debugfs_remove(dent_active_clocks);
+	debugfs_remove(dent_clock_list);
 	return -ENOMEM;
 }
 
 int __init clock_debug_add_clock(struct clk *c)
 {
 	struct dentry *dent_clk_dir=0, *dent_rate=0, *dent_enable=0,
-	*dent_status=0, *dent_div=0, *dent_use_cnt=0, *dent_id=0,
+	*dent_status=0, *dent_flags=0, *dent_use_cnt=0, *dent_id=0,
 		*dent_parent=0, *dent_source=0, *dent_ccu_dir=0,
 		*dent_clk_mon=0, *dent_reset=0;
 	struct peri_clk *peri_clk;
@@ -4433,7 +4822,7 @@ int __init clock_debug_add_clock(struct clk *c)
 		goto err;
 
 	/* file /clock/clk_a/status */
-	dent_status      =         debugfs_create_file("status", 0644, dent_clk_dir, c, &clock_status_fops);
+	dent_status      =         debugfs_create_file("status", 0644, dent_clk_dir, c, &clock_status_show_fops);
 	if(!dent_status)
 		goto err;
 
@@ -4445,12 +4834,12 @@ int __init clock_debug_add_clock(struct clk *c)
 	dent_clk_mon    =       debugfs_create_file("clk_mon", 0444, dent_clk_dir, c, &clock_mon_fops);
 	if(!dent_clk_mon)
 	    goto err;
-#if 0
-	/* file /clock/clk_a/div */
-	dent_div        =       debugfs_create_u32("div", 0444, dent_clk_dir, (unsigned int*)&c->div);
-	if(!dent_div)
+
+	/* file /clock/clk_a/flags */
+	dent_flags        =       debugfs_create_u32("flags", 0644, dent_clk_dir, (unsigned int*)&c->flags);
+	if(!dent_flags)
 		goto err;
-#endif
+
 	/* file /clock/clk_a/use_cnt */
 	dent_use_cnt    =       debugfs_create_u32("use_cnt", 0444, dent_clk_dir, (unsigned int*)&c->use_cnt);
 	if(!dent_use_cnt)
@@ -4475,7 +4864,7 @@ int __init clock_debug_add_clock(struct clk *c)
 
 err:
 	debugfs_remove(dent_rate);
-	debugfs_remove(dent_div);
+	debugfs_remove(dent_flags);
 	debugfs_remove(dent_use_cnt);
 	debugfs_remove(dent_id);
 	debugfs_remove(dent_parent);

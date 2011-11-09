@@ -390,9 +390,11 @@ int __init pi_mgr_late_init(void)
 {
     int i;
     pi_debug_init();
-    for(i=0;i<ARRAY_SIZE(pi_list);i++)
+    for(i=0;i < ARRAY_SIZE(pi_list);i++)
     {
-		pi_debug_add_pi(pi_list[i]);
+	/*add debug interface for all domains except for modem*/
+	if (pi_list[i]->id != PI_MGR_PI_ID_MODEM)
+	    pi_debug_add_pi(pi_list[i]);
     }
     return 0;
 }

@@ -30,6 +30,7 @@
 #define	REF_96M_REF_CLK_NAME_STR		"ref_48m_clk"
 #define	VAR_96M_REF_CLK_NAME_STR		"var_48m_clk"
 #define	VAR_500M_VARVDD_REF_CLK_NAME_STR	"var_500m_varvdd_clk"
+#define	VAR_500M_REF_CLK_NAME_STR		"var_500m_clk"
 #define	REF_312M_REF_CLK_NAME_STR		"ref_312m_clk"
 #define	REF_208M_REF_CLK_NAME_STR		"ref_208m_clk"
 #define	REF_156M_REF_CLK_NAME_STR		"ref_156m_clk"

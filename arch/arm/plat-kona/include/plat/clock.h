@@ -1,5 +1,5 @@
 /****************************************************************************
-*									      
+*
 * Copyright 2010 --2011 Broadcom Corporation.
 *
 * Unless you and Broadcom execute a separate written software license
@@ -441,9 +441,7 @@ struct proc_clock {
 struct ccu_clk {
 	struct clk	clk;
 	int pi_id;
-	struct list_head peri_list;
-	struct list_head bus_list;
-	struct list_head ref_list;
+	struct list_head clk_list;
 
 	u32 pol_engine_dis_cnt;
 	u32 write_access_en_count;

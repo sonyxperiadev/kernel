@@ -372,6 +372,7 @@ static struct ref_clk CLK_NAME(var_500m) = {
 				.clk_type = CLK_TYPE_REF,
 				.rate = 500000000,
 				.ops = &gen_ref_clk_ops,
+				.name = VAR_500M_REF_CLK_NAME_STR,
 		},
  .ccu_clk = &CLK_NAME(root),
     .clk_sel_val = -1,
@@ -909,7 +910,7 @@ static struct peri_clk CLK_NAME(dig_ch0) = {
 		.pll_select_shift= ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT
 	},
 	.src_clk = {
-	    .count = 1, /*shoudl be 3 once we add PLL sources*/
+	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list), /*shoudl be 3 once we add PLL sources*/
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
@@ -949,7 +950,7 @@ static struct peri_clk CLK_NAME(dig_ch1) = {
 		.pll_select_shift= ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT
 	},
 	.src_clk = {
-	    .count = 1, /*shoudl be 3 once we add PLL sources*/
+	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list), /*shoudl be 3 once we add PLL sources*/
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
@@ -989,7 +990,7 @@ static struct peri_clk CLK_NAME(dig_ch2) = {
 		.pll_select_shift= ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT
 	},
 	.src_clk = {
-	    .count = 1, /*shoudl be 3 once we add PLL sources*/
+	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list), /*shoudl be 3 once we add PLL sources*/
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
@@ -1028,7 +1029,7 @@ static struct peri_clk CLK_NAME(dig_ch3) = {
 		.pll_select_shift= ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT
 	},
 	.src_clk = {
-	    .count = 1, /*shoudl be 3 once we add PLL sources*/
+	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list), /*shoudl be 3 once we add PLL sources*/
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
@@ -1656,7 +1657,7 @@ static struct peri_clk CLK_NAME(hsi_tx) = {
 					.pll_select_shift= KHUB_CLK_MGR_REG_HSI_DIV_HSI_TX_PRE_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 2,
+					.count = ARRAY_SIZE(hsi_tx_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = hsi_tx_peri_clk_src_list,
 				},
@@ -1702,7 +1703,7 @@ static struct peri_clk CLK_NAME(hsi_rx) = {
 					.pll_select_shift= KHUB_CLK_MGR_REG_HSI_DIV_HSI_RX_PRE_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 2,
+					.count = ARRAY_SIZE(hsi_rx_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = hsi_rx_peri_clk_src_list,
 				},
@@ -1743,7 +1744,7 @@ static struct peri_clk CLK_NAME(audioh_26m) = {
 					.pll_select_shift= KHUB_CLK_MGR_REG_AUDIOH_DIV_AUDIOH_26M_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 2,
+					.count = ARRAY_SIZE(audioh_26m_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = audioh_26m_peri_clk_src_list,
 				},
@@ -1791,7 +1792,7 @@ static struct peri_clk CLK_NAME(hub_clk) = {
 	.pll_select_shift= KHUB_CLK_MGR_REG_HUB_DIV_HUB_PLL_SELECT_SHIFT,
     },
     .src_clk = {
-	.count = 2,
+	.count = ARRAY_SIZE(hub_peri_clk_src_list),
 	.src_inx = 1,
 	.clk = hub_peri_clk_src_list,
     },
@@ -2017,7 +2018,7 @@ static struct peri_clk CLK_NAME(audioh_2p4m) = {
 	.volt_lvl_mask = KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_VOLTAGE_LEVEL_MASK,
 
 	.src_clk = {
-					.count = 1,
+					.count = ARRAY_SIZE(audioh_2p4m_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = audioh_2p4m_peri_clk_src_list,
 				},
@@ -2054,7 +2055,7 @@ static struct peri_clk CLK_NAME(audioh_156m) = {
 	.volt_lvl_mask = KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_VOLTAGE_LEVEL_MASK,
 
 	.src_clk = {
-					.count = 1,
+					.count = ARRAY_SIZE(audioh_156m_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = audioh_156m_peri_clk_src_list,
 				},
@@ -2105,7 +2106,7 @@ static struct peri_clk CLK_NAME(ssp3_audio) = {
 					.pll_select_shift= KHUB_CLK_MGR_REG_SSP3_AUDIO_DIV_SSP3_AUDIO_PRE_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 3,
+					.count = ARRAY_SIZE(ssp3_audio_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = ssp3_audio_peri_clk_src_list,
 				},
@@ -2152,7 +2153,7 @@ static struct peri_clk CLK_NAME(ssp3) = {
 					.pll_select_shift= KHUB_CLK_MGR_REG_SSP3_DIV_SSP3_PRE_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 5,
+					.count = ARRAY_SIZE(ssp3_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = ssp3_peri_clk_src_list,
 				},
@@ -2203,7 +2204,7 @@ static struct peri_clk CLK_NAME(ssp4_audio) = {
 					.pll_select_shift= KHUB_CLK_MGR_REG_SSP4_AUDIO_DIV_SSP4_AUDIO_PRE_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 3,
+					.count = ARRAY_SIZE(ssp4_audio_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = ssp4_audio_peri_clk_src_list,
 				},
@@ -2250,7 +2251,7 @@ static struct peri_clk CLK_NAME(ssp4) = {
 					.pll_select_shift= KHUB_CLK_MGR_REG_SSP4_DIV_SSP4_PRE_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 5,
+					.count = ARRAY_SIZE(ssp4_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = ssp4_peri_clk_src_list,
 				},
@@ -2291,7 +2292,7 @@ static struct peri_clk CLK_NAME(tmon_1m) = {
 					.pll_select_shift= KHUB_CLK_MGR_REG_TMON_DIV_DBG_TMON_1M_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 2,
+					.count = ARRAY_SIZE(tmon_1m_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = tmon_1m_peri_clk_src_list,
 				},
@@ -2333,6 +2334,7 @@ static struct peri_clk CLK_NAME(dap_switch) = {
 Peri clock name BROM
 */
 /*peri clk src list*/
+static struct clk* brom_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(hub_clk));
 static struct peri_clk CLK_NAME(brom) = {
 
 	.clk =	{
@@ -2359,6 +2361,11 @@ static struct peri_clk CLK_NAME(brom) = {
 		.div_offset = KHUB_CLK_MGR_REG_HUB_DIV_OFFSET,
 		.div_mask = KHUB_CLK_MGR_REG_HUB_DIV_BROM_DIV_MASK,
 		.div_shift = KHUB_CLK_MGR_REG_HUB_DIV_BROM_DIV_SHIFT,
+	},
+	.src_clk = {
+		.count = ARRAY_SIZE(brom_peri_clk_src_list),
+		.src_inx = 0,
+		.clk = brom_peri_clk_src_list,
 	},
     .clk_sel_val = 29,
 	.soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET,
@@ -2393,7 +2400,7 @@ static struct peri_clk CLK_NAME(mdiomaster) = {
 	.stprsts_mask = KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_STPRSTS_MASK,
 	.volt_lvl_mask =KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_VOLTAGE_LEVEL_MASK,
 	.src_clk = {
-		.count = 1,
+		.count = ARRAY_SIZE(mdiomaster_peri_clk_src_list),
 		.src_inx = 0,
 		.clk = mdiomaster_peri_clk_src_list,
 	},
@@ -2478,7 +2485,7 @@ static struct ref_clk CLK_NAME(pmu_bsc_var) = {
 	.pll_select_shift= KHUBAON_CLK_MGR_REG_ASYNC_PRE_DIV_ASYNC_PRE_PLL_SELECT_SHIFT,
     },
     .src_clk = {
-	.count = 2,
+	.count = ARRAY_SIZE(pmu_bsc_var_ref_clk_src_list),
 	.src_inx = 0,
 	.clk = pmu_bsc_var_ref_clk_src_list,
     },
@@ -3051,7 +3058,7 @@ static struct peri_clk CLK_NAME(sim) = {
 					.pll_select_shift= KHUBAON_CLK_MGR_REG_SIM_DIV_SIM_PRE_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 5,
+					.count = ARRAY_SIZE(sim_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = sim_peri_clk_src_list,
 				},
@@ -3100,7 +3107,7 @@ static struct peri_clk CLK_NAME(sim2) = {
 					.pll_select_shift= KHUBAON_CLK_MGR_REG_SIM2_DIV_SIM2_PRE_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 5,
+					.count = ARRAY_SIZE(sim2_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = sim2_peri_clk_src_list,
 				},
@@ -3142,7 +3149,7 @@ static struct peri_clk CLK_NAME(hub_timer) = {
 					.pll_select_shift= KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_HUB_TIMER_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 3,
+					.count = ARRAY_SIZE(hub_timer_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = hub_timer_peri_clk_src_list,
 				},
@@ -3188,7 +3195,7 @@ static struct peri_clk CLK_NAME(pmu_bsc) = {
 	.pll_select_shift= KHUBAON_CLK_MGR_REG_PMU_BSC_DIV_PMU_BSC_PLL_SELECT_SHIFT,
     },
     .src_clk = {
-	.count = 3,
+	.count = ARRAY_SIZE(pmu_bsc_peri_clk_src_list),
 	.src_inx = 0,
 	.clk = pmu_bsc_peri_clk_src_list,
     },
@@ -3555,7 +3562,7 @@ static struct peri_clk CLK_NAME(sdio2) = {
 					.pll_select_shift= KPM_CLK_MGR_REG_SDIO2_DIV_SDIO2_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 5,
+					.count = ARRAY_SIZE(sdio2_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = sdio2_peri_clk_src_list,
 				},
@@ -3568,6 +3575,7 @@ static struct peri_clk CLK_NAME(sdio2) = {
 Peri clock name SDIO2_SLEEP
 */
 /*peri clk src list*/
+static struct clk* sdio2_sleep_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(ref_32k));
 static struct peri_clk CLK_NAME(sdio2_sleep) = {
 
 	.clk =	{
@@ -3585,7 +3593,12 @@ static struct peri_clk CLK_NAME(sdio2_sleep) = {
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO2_CLKGATE_OFFSET,
 	.clk_en_mask = KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_SLEEP_CLK_EN_MASK,
 	.stprsts_mask = KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_SLEEP_STPRSTS_MASK,
-	.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_VOLTAGE_LEVEL_MASK,
+	.src_clk = {
+		.count = ARRAY_SIZE(sdio2_sleep_peri_clk_src_list),
+		.src_inx = 0,
+		.clk = sdio2_sleep_peri_clk_src_list,
+	},
+.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_VOLTAGE_LEVEL_MASK,
     .clk_sel_val = 28,
 };
 
@@ -3627,7 +3640,7 @@ static struct peri_clk CLK_NAME(sdio3) = {
 					.pll_select_shift= KPM_CLK_MGR_REG_SDIO3_DIV_SDIO3_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 5,
+					.count = ARRAY_SIZE(sdio3_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = sdio3_peri_clk_src_list,
 				},
@@ -3640,6 +3653,7 @@ static struct peri_clk CLK_NAME(sdio3) = {
 Peri clock name SDIO3_SLEEP
 */
 /*peri clk src list*/
+static struct clk* sdio3_sleep_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(ref_32k));
 static struct peri_clk CLK_NAME(sdio3_sleep) = {
 
 	.clk =	{
@@ -3657,7 +3671,12 @@ static struct peri_clk CLK_NAME(sdio3_sleep) = {
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO3_CLKGATE_OFFSET,
 	.clk_en_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_SLEEP_CLK_EN_MASK,
 	.stprsts_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_SLEEP_STPRSTS_MASK,
-	.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_VOLTAGE_LEVEL_MASK,
+	.src_clk = {
+		.count = ARRAY_SIZE(sdio3_sleep_peri_clk_src_list),
+		.src_inx = 0,
+		.clk = sdio3_sleep_peri_clk_src_list,
+	},
+.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_VOLTAGE_LEVEL_MASK,
     .clk_sel_val = 29,
 };
 
@@ -3699,7 +3718,7 @@ static struct peri_clk CLK_NAME(sdio1) = {
 		.pll_select_shift= KPM_CLK_MGR_REG_SDIO1_DIV_SDIO1_PLL_SELECT_SHIFT,
 	},
 	.src_clk = {
-		.count = 5,
+		.count = ARRAY_SIZE(sdio1_peri_clk_src_list),
 		.src_inx = 0,
 		.clk = sdio1_peri_clk_src_list,
 	},
@@ -3745,7 +3764,7 @@ static struct peri_clk CLK_NAME(sdio4) = {
 		.pll_select_shift= KPM_CLK_MGR_REG_SDIO4_DIV_SDIO4_PLL_SELECT_SHIFT,
 	},
 	.src_clk = {
-		.count = 5,
+		.count = ARRAY_SIZE(sdio4_peri_clk_src_list),
 		.src_inx = 0,
 		.clk = sdio4_peri_clk_src_list,
 	},
@@ -3757,6 +3776,7 @@ static struct peri_clk CLK_NAME(sdio4) = {
 /*
 Peri clock name SDIO1_SLEEP
 */
+static struct clk* sdio1_sleep_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(ref_32k));
 static struct peri_clk CLK_NAME(sdio1_sleep) = {
 
 	.clk =	{
@@ -3774,7 +3794,12 @@ static struct peri_clk CLK_NAME(sdio1_sleep) = {
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET,
 	.clk_en_mask = KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_SLEEP_CLK_EN_MASK,
 	.stprsts_mask = KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_SLEEP_STPRSTS_MASK,
-	.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_VOLTAGE_LEVEL_MASK,
+	.src_clk = {
+		.count = ARRAY_SIZE(sdio1_sleep_peri_clk_src_list),
+		.src_inx = 0,
+		.clk = sdio1_sleep_peri_clk_src_list,
+	},
+.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_VOLTAGE_LEVEL_MASK,
     .clk_sel_val = 27,
 };
 
@@ -3782,6 +3807,7 @@ static struct peri_clk CLK_NAME(sdio1_sleep) = {
 /*
 Peri clock name SDIO4_SLEEP
 */
+static struct clk* sdio4_sleep_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(ref_32k));
 static struct peri_clk CLK_NAME(sdio4_sleep) = {
 	.clk =	{
 		.flags = SDIO4_SLEEP_PERI_CLK_FLAGS,
@@ -3798,7 +3824,12 @@ static struct peri_clk CLK_NAME(sdio4_sleep) = {
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO4_CLKGATE_OFFSET,
 	.clk_en_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_SLEEP_CLK_EN_MASK,
 	.stprsts_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_SLEEP_STPRSTS_MASK,
-	.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_VOLTAGE_LEVEL_MASK,
+	.src_clk = {
+		.count = ARRAY_SIZE(sdio4_sleep_peri_clk_src_list),
+		.src_inx = 0,
+		.clk = sdio4_sleep_peri_clk_src_list,
+	},
+.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_VOLTAGE_LEVEL_MASK,
     .clk_sel_val = 30,
 };
 
@@ -3834,7 +3865,7 @@ static struct peri_clk CLK_NAME(usb_ic) = {
 	.pll_select_shift= KPM_CLK_MGR_REG_USB_IC_DIV_USB_IC_PLL_SELECT_SHIFT,
     },
     .src_clk = {
-	.count = 3,
+	.count = ARRAY_SIZE(usb_ic_peri_clk_src_list),
 	.src_inx = 2,
 	.clk = usb_ic_peri_clk_src_list,
     },
@@ -3875,7 +3906,7 @@ static struct peri_clk CLK_NAME(usbh_48m) = {
 	.pll_select_shift= KPM_CLK_MGR_REG_USB_EHCI_DIV_USBH_48M_PLL_SELECT_SHIFT,
     },
     .src_clk = {
-	.count = 3,
+	.count = ARRAY_SIZE(usbh_48m_peri_clk_src_list),
 	.src_inx = 2,
 	.clk = usbh_48m_peri_clk_src_list,
     },
@@ -3918,7 +3949,7 @@ static struct peri_clk CLK_NAME(usbh_12m) = {
 	.pll_select_shift= KPM_CLK_MGR_REG_USB_EHCI_DIV_USBH_48M_PLL_SELECT_SHIFT,
     },
     .src_clk = {
-	.count = 3,
+	.count = ARRAY_SIZE(usbh_12m_peri_clk_src_list),
 	.src_inx = 2,
 	.clk = usbh_12m_peri_clk_src_list,
     },
@@ -4038,7 +4069,7 @@ static struct peri_clk CLK_NAME(caph_srcmixer) = {
 					.pll_select_shift= KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 2,
+					.count = ARRAY_SIZE(caph_srcmixer_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = caph_srcmixer_peri_clk_src_list,
 				},
@@ -4520,7 +4551,7 @@ static struct peri_clk CLK_NAME(uartb) = {
 					.pll_select_shift= KPS_CLK_MGR_REG_UARTB_DIV_UARTB_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 3,
+					.count = ARRAY_SIZE(uartb_peri_clk_src_list),
 					.src_inx = 1,
 					.clk = uartb_peri_clk_src_list,
 				},
@@ -4565,7 +4596,7 @@ static struct peri_clk CLK_NAME(uartb2) = {
 					.pll_select_shift= KPS_CLK_MGR_REG_UARTB2_DIV_UARTB2_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 3,
+					.count = ARRAY_SIZE(uartb2_peri_clk_src_list),
 					.src_inx = 1,
 					.clk = uartb2_peri_clk_src_list,
 				},
@@ -4610,7 +4641,7 @@ static struct peri_clk CLK_NAME(uartb3) = {
 					.pll_select_shift= KPS_CLK_MGR_REG_UARTB3_DIV_UARTB3_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 3,
+					.count = ARRAY_SIZE(uartb3_peri_clk_src_list),
 					.src_inx = 1,
 					.clk = uartb3_peri_clk_src_list,
 				},
@@ -4658,7 +4689,7 @@ static struct peri_clk CLK_NAME(ssp0_audio) = {
 					.pll_select_shift= KPS_CLK_MGR_REG_SSP0_DIV_SSP0_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 3,
+					.count = ARRAY_SIZE(ssp0_audio_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = ssp0_audio_peri_clk_src_list,
 				},
@@ -4698,7 +4729,7 @@ static struct peri_clk CLK_NAME(bsc1) = {
 					.pll_select_shift= KPS_CLK_MGR_REG_BSC1_DIV_BSC1_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 5,
+					.count = ARRAY_SIZE(bsc1_peri_clk_src_list),
 					.src_inx = 3,
 					.clk = bsc1_peri_clk_src_list,
 				},
@@ -4740,7 +4771,7 @@ static struct peri_clk CLK_NAME(bsc2) = {
 					.pll_select_shift= KPS_CLK_MGR_REG_BSC2_DIV_BSC2_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 5,
+					.count = ARRAY_SIZE(bsc2_peri_clk_src_list),
 					.src_inx = 3,
 					.clk = bsc2_peri_clk_src_list,
 				},
@@ -4829,7 +4860,7 @@ static struct peri_clk CLK_NAME(ssp0) = {
 					.pll_select_shift= KPS_CLK_MGR_REG_SSP0_DIV_SSP0_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 5,
+					.count = ARRAY_SIZE(ssp0_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = ssp0_peri_clk_src_list,
 				},
@@ -4870,7 +4901,7 @@ static struct peri_clk CLK_NAME(timers) = {
 	.pll_select_shift= KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT,
     },
     .src_clk = {
-	.count = 2,
+	.count = ARRAY_SIZE(timers_peri_clk_src_list),
 	.src_inx = 1,
 	.clk = timers_peri_clk_src_list,
     },
@@ -4928,7 +4959,7 @@ static struct peri_clk CLK_NAME(spum_open) = {
 	.pll_select_shift= KPS_CLK_MGR_REG_SPUM_OPEN_DIV_SPUM_OPEN_PLL_SELECT_SHIFT,
     },
     .src_clk = {
-	.count = 2,
+	.count = ARRAY_SIZE(spum_open_peri_clk_src_list),
 	.src_inx = 0,
 	.clk = spum_open_peri_clk_src_list,
     },
@@ -4977,7 +5008,7 @@ static struct peri_clk CLK_NAME(spum_sec) = {
 	.pll_select_shift= KPS_CLK_MGR_REG_SPUM_SEC_DIV_SPUM_SEC_PLL_SELECT_SHIFT,
     },
     .src_clk = {
-	.count = 2,
+	.count = ARRAY_SIZE(spum_sec_peri_clk_src_list),
 	.src_inx = 0,
 	.clk = spum_sec_peri_clk_src_list,
     },
@@ -5373,7 +5404,7 @@ static struct peri_clk CLK_NAME(mm_switch_axi) = {
 					.pll_select_shift= MM_CLK_MGR_REG_AXI_DIV_MM_SWITCH_AXI_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 3,
+					.count = ARRAY_SIZE(mm_switch_axi_peri_clk_src_list),
 					.src_inx = 2,
 					.clk = mm_switch_axi_peri_clk_src_list,
 				},
@@ -5704,7 +5735,7 @@ static struct peri_clk CLK_NAME(csi0_lp) = {
 					.pll_select_shift= MM_CLK_MGR_REG_CSI0_DIV_CSI0_LP_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 2,
+					.count = ARRAY_SIZE(csi0_lp_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = csi0_lp_peri_clk_src_list,
 				},
@@ -5750,7 +5781,7 @@ static struct peri_clk CLK_NAME(csi1_lp) = {
 					.pll_select_shift= MM_CLK_MGR_REG_CSI1_DIV_CSI1_LP_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 2,
+					.count = ARRAY_SIZE(csi1_lp_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = csi1_lp_peri_clk_src_list,
 				},
@@ -5797,7 +5828,7 @@ static struct peri_clk CLK_NAME(smi) = {
 					.pll_select_shift= MM_CLK_MGR_REG_SMI_DIV_SMI_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 2,
+					.count = ARRAY_SIZE(smi_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = smi_peri_clk_src_list,
 				},
@@ -5843,7 +5874,7 @@ static struct peri_clk CLK_NAME(dsi0_esc) = {
 					.pll_select_shift= MM_CLK_MGR_REG_DSI0_DIV_DSI0_ESC_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 2,
+					.count = ARRAY_SIZE(dsi0_esc_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = dsi0_esc_peri_clk_src_list,
 				},
@@ -5888,7 +5919,7 @@ static struct peri_clk CLK_NAME(dsi1_esc) = {
 					.pll_select_shift= MM_CLK_MGR_REG_DSI1_DIV_DSI1_ESC_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
-					.count = 2,
+					.count = ARRAY_SIZE(dsi1_esc_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = dsi1_esc_peri_clk_src_list,
 				},
@@ -5928,7 +5959,7 @@ static struct peri_clk CLK_NAME(dsi_pll_o_dsi_pll) = {
 					.div_shift = MM_CLK_MGR_REG_O_DSI_PLL_CLK_DIV_DSI_PLL_O_DSI_PLL_DIV_SHIFT,
 				},
 	.src_clk = {
-					.count = 1,
+					.count = ARRAY_SIZE(dsi_pll_o_dsi_pll_peri_clk_src_list),
 					.src_inx = 0,
 					.clk = dsi_pll_o_dsi_pll_peri_clk_src_list,
 				},
