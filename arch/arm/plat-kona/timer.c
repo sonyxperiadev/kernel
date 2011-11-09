@@ -32,6 +32,7 @@
 
 #include <asm/smp_twd.h>
 #include <asm/mach/time.h>
+#include <asm/sched_clock.h>
 #include <mach/io.h>
 #include <mach/io_map.h>
 #include <mach/kona_timer.h>
@@ -43,6 +44,7 @@
 
 static struct kona_timer *gpt_evt = NULL;
 static struct kona_timer *gpt_src = NULL;
+static DEFINE_CLOCK_DATA(cd);
 
 /*
  * read_persistent_clock -  Return time from a *fake* persistent clock.
@@ -220,14 +222,18 @@ static void __init timers_init(struct gp_timer_setup *gpt_setup)
 
 	return ;
 }
-unsigned long long sched_clock(void)
+
+unsigned long long notrace sched_clock(void)
 {
-	if (gpt_src == NULL)
-		return (unsigned long long)(jiffies - INITIAL_JIFFIES) *
-							(NSEC_PER_SEC / HZ);
-	else
-		return clocksource_cyc2ns(gptimer_clksrc_read(NULL),
-					clksrc_gptimer.mult, clksrc_gptimer.shift);
+	if (unlikely(gpt_src == NULL))
+		return 0;
+
+        return cyc_to_sched_clock(&cd, gptimer_clksrc_read(NULL), (u32)~0);
+}
+
+static void notrace kona_update_sched_clock(void)
+{
+        update_sched_clock(&cd, gptimer_clksrc_read(NULL), (u32)~0);
 }
 
 void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
@@ -240,5 +246,7 @@ void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
 #ifdef CONFIG_LOCAL_TIMERS
 	twd_base = IOMEM(KONA_PTIM_VA);
 #endif
+
+        init_sched_clock(&cd, kona_update_sched_clock, 32, CLOCK_TICK_RATE);
 }
 
