@@ -186,6 +186,8 @@ struct dwc_otg_pcd {
 	unsigned request_config:1;
 	/** The state of the Remote Wakeup Enable. */
 	unsigned remote_wakeup_enable:1;
+	/** The state of Self-powered. */
+	unsigned self_powered:1;
 	/** The state of the B-Device HNP Enable. */
 	unsigned b_hnp_enable:1;
 	/** The state of A-Device HNP Support. */

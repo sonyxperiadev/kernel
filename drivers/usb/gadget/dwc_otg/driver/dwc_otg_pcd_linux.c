@@ -744,6 +744,25 @@ static int wakeup(struct usb_gadget *gadget)
 	return 0;
 }
 
+/**
+ * Sets device self-powered state.
+ *
+ */
+static int set_selfpowered(struct usb_gadget *gadget, int is_selfpowered)
+{
+	struct gadget_wrapper *d;
+
+	DWC_DEBUGPL(DBG_PCDV, "%s(%p)\n", __func__, gadget);
+
+	if (gadget == 0) {
+		return -ENODEV;
+	} else {
+		d = container_of(gadget, struct gadget_wrapper, gadget);
+	}
+	d->pcd->self_powered = is_selfpowered ? 1 : 0;
+	return 0;
+}
+
 static const struct usb_gadget_ops dwc_otg_pcd_ops = {
 	.get_frame = get_frame_number,
 	.pullup = pullup,
@@ -751,7 +770,7 @@ static const struct usb_gadget_ops dwc_otg_pcd_ops = {
 #ifdef CONFIG_USB_DWC_OTG_LPM
 	.lpm_support = test_lpm_enabled,
 #endif
-	// current versions must always be self-powered
+	.set_selfpowered = set_selfpowered,
 };
 
 static int _setup(dwc_otg_pcd_t * pcd, uint8_t * bytes)
