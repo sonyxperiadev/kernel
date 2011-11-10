@@ -108,23 +108,22 @@ static int tps728xx_regulator_set_voltage(struct regulator_dev *rdev,
 						int min_uV, int max_uV)
 {
 	struct tps728xx *tps728xx = rdev_get_drvdata(rdev);
-	u8 val = -1;
+	int val = -1;
 
 	pr_info("Inside %s: minUv %d, maxuV %d\n", __func__, min_uV, max_uV);
 
-	if (max_uV != min_uV) {
-		if (max_uV <= tps728xx->vout0)
-			val = 0;
-		else if (min_uV >= tps728xx->vout1)
-			val = 1;
-	} else if (min_uV == tps728xx->vout0)
-		val =0;
-	else if (min_uV == tps728xx->vout1)
+	if (min_uV > max_uV)
+		val = -1;
+	if (tps728xx->vout0 >= min_uV)
+		val = 0;
+	else if (tps728xx->vout1 == max_uV)
 		val = 1;
 
 	if (val == -1)
 		return -EINVAL;
-	(val == 1) ? gpio_set_value(tps728xx->vset_gpio, HIGH) :
+	if (val == 1)
+		gpio_set_value(tps728xx->vset_gpio, HIGH);
+	else
 		gpio_set_value(tps728xx->vset_gpio, LOW);
 
 	return 0;
