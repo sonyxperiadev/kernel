@@ -7,7 +7,7 @@
 # CONFIG_ARCH_KONA is used for the Big Red Tablet and MAP build system
 # Everything else is assumed to be for the Cambridge build system.
 #
-include shared-config.mk
+#include shared-config.mk
 
 ifeq ($(CONFIG_ARCH_KONA),y)
 
