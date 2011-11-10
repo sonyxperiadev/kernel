@@ -7,6 +7,7 @@
 # CONFIG_ARCH_KONA is used for the Big Red Tablet and MAP build system
 # Everything else is assumed to be for the Cambridge build system.
 #
+include shared-config.mk
 
 ifeq ($(CONFIG_ARCH_KONA),y)
 
@@ -45,6 +46,9 @@ EXTRA_CFLAGS  += -DVCHIQ_HOST_BUS_ALIGNMENT=$(VCHIQ_HOST_BUS_ALIGNMENT)
 EXTRA_CFLAGS  += -DVCHIQ_SLOT_PADDING=16
 EXTRA_CFLAGS  += -DVCHIQ_ARM_SIDE
 EXTRA_CFLAGS  += -DUSE_VCHIQ_ARM
+ifeq ($(VCHIQ_SM_ALLOC),vcddr)
+EXTRA_CFLAGS  += -DVCHIQ_SM_ALLOC_VCDDR
+endif
 
 obj-$(CONFIG_VC_VCHIQ) += vc-vchiq.o
 
@@ -56,6 +60,10 @@ vc-vchiq-objs := \
     vchiq_shim.o \
     vchiq_util.o \
     vchiq_bivcm_arm.o
+ifeq ($(VCHIQ_SM_ALLOC),vcddr)
+vc-vchiq-objs += \
+    ../../host_applications/linux/libs/debug_sym/debug_sym.o
+endif
 
 obj-$(CONFIG_VC_VCHIQ_MEMDRV_KONA) += vc-vchiq-memdrv-kona.o
 
