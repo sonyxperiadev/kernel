@@ -176,14 +176,21 @@ static struct sdhci_ops sdhci_pltfm_ops = {
 
 static int bcm_kona_sd_reset(struct sdio_dev *dev)
 {
-	struct sdhci_host *host = dev->host;
+   struct sdhci_host *host = dev->host;
    unsigned int val;
+   unsigned long timeout;
 
-   /* make sure the host block is not in software reset */
-   val = sdhci_readl(host, SDHCI_CLOCK_CONTROL);
-   if (val & SDHCI_SOFT_RESET) {
-      dev_err(dev->dev, "host is in reset\n");
-      return -EFAULT;
+   /* Reset host controller by setting 'Software Reset for All' */
+   sdhci_writeb(host, SDHCI_RESET_ALL, SDHCI_SOFTWARE_RESET);
+
+   /* Wait for 100 ms max (100ms timeout is taken from sdhci.c) */
+   timeout = jiffies + msecs_to_jiffies(100);
+
+   while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & SDHCI_RESET_ALL) {
+      if (time_is_before_jiffies(timeout)) {
+         dev_err(dev->dev, "Error: sd host is in reset!!!\n");
+         return -EFAULT;
+      }
    }
 
    /* reset the host using the top level reset */
