@@ -3345,14 +3345,21 @@ static int pll_clk_set_rate(struct clk* clk, u32 rate)
 	writel(reg_val,
 		CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
 
-	insurance = 0;
-	do
+	/*Loop for lock bit only if the
+		- PLL is AUTO GATED or
+		- PLL is enabled */
+	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
+	if(clk->flags & AUTO_GATE || ((reg_val & pll_clk->pwrdwn_mask) == 0))
 	{
-		udelay(1);
-		reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
-		insurance++;
-	} while(!(GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock)) && insurance < 1000);
-	WARN_ON(insurance >= 1000);
+		insurance = 0;
+		do
+		{
+			udelay(1);
+			reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+			insurance++;
+		} while(!(GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock)) && insurance < 1000);
+		WARN_ON(insurance >= 1000);
+	}
 
 	/* disable write access*/
 	ccu_write_access_enable(pll_clk->ccu_clk,false);
