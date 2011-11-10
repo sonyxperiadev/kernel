@@ -47,7 +47,8 @@ typedef enum AUDIO_DRIVER_TYPE_t
     AUDIO_DRIVER_CAPT_HQ,
     AUDIO_DRIVER_CAPT_FM,
     AUDIO_DRIVER_CAPT_BT,
-    AUDIO_DRIVER_VOIP
+    AUDIO_DRIVER_VOIP,
+    AUDIO_DRIVER_VOIF
 } AUDIO_DRIVER_TYPE_t;
 
 typedef enum AUDIO_DRIVER_CTRL_t
@@ -66,7 +67,8 @@ typedef enum AUDIO_DRIVER_CTRL_t
     AUDIO_DRIVER_ALLOC_BUFFER,                 
     AUDIO_DRIVER_FREE_BUFFER,
     AUDIO_DRIVER_SET_VOIP_DL_CB,
-    AUDIO_DRIVER_SET_VOIP_UL_CB
+    AUDIO_DRIVER_SET_VOIP_UL_CB,
+    AUDIO_DRIVER_SET_VOIF_CB
 } AUDIO_DRIVER_CTRL_t;
 
 typedef struct AUDIO_DRIVER_CONFIG_t
@@ -254,6 +256,31 @@ void ARM2SP2_Render_Request(UInt16 buf_index);
 //
 // ====================================================================
 void VPU_Capture_Request(UInt16 buf_index);
+
+//*********************************************************************
+/**
+* Prototype of voif callback function.
+*
+*   @param  ulData: The data pointer of the UL data. Input of VOIF processing
+*   @param  dlData: The data pointer of the DL data. Input of VOIF processing and output VOIF processing.
+*   @param  sampleCout: the number of samples, 16 bit per sample
+*   @param  isCall16K: indicates whether voice call is WB or NB
+*   @return void
+*   @note   The user code use the callback function to get UL/DL data and write back processed DL.
+**************************************************************************/
+typedef void (*VOIF_CB) (Int16 * ulData, Int16 *dlData, UInt32 sampleCount, UInt8 isCall16K);
+
+
+//*********************************************************************
+/**
+* VOIF processing interrupt handler.
+*
+*   @param  bufferIndex: The index of the ping-pong buffers to hold the DL/DL data
+*   @return void
+*   @note   Not for application programming.
+**************************************************************************/
+// voif interrupt handler, called by hw interrupt.
+void VOIF_Buffer_Request (UInt32 bufferIndex, UInt32 samplingRate);
 
 
 #endif //#define __AUDIO_DDRIVER_H__

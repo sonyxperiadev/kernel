@@ -160,12 +160,12 @@ extern void Audio_InitRpc(void);
 extern void VPU_Capture_Request(UInt16 buf_index);
 extern void VPU_Render_Request(UInt16 bufferIndex);
 extern Result_t AUDDRV_USB_HandleDSPInt(UInt16 arg0, UInt16 inBuf, UInt16 outBuf);
-extern void VOIF_ISR_Handler (UInt32 bufferIndex, UInt32 samplingRate);
 extern void ARM2SP_Render_Request(UInt16 buf_index);
 extern void ARM2SP2_Render_Request(UInt16 buf_index);
 extern void AP_ProcessStatusMainAMRDone(UInt16 codecType);
 extern void VOIP_ProcessVOIPDLDone(void);
 extern void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx);
+extern void VOIF_Buffer_Request(UInt32 bufferIndex, UInt32 samplingRate);
 
 
 //=============================================================================
@@ -186,13 +186,13 @@ void AUDDRV_Init( void )
 #if 0  // These features are not needed in LMP now.
 	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
 	CSL_RegisterUSBStatusHandler((USBStatusCB_t)&AUDDRV_USB_HandleDSPInt);
-	CSL_RegisterVOIFStatusHandler((VOIFStatusCB_t)&VOIF_ISR_Handler);
 #endif	
 	CSL_RegisterVoIPStatusHandler((VoIPStatusCB_t)&VOIP_ProcessVOIPDLDone);
 	CSL_RegisterMainAMRStatusHandler((MainAMRStatusCB_t)&AP_ProcessStatusMainAMRDone);
 	CSL_RegisterARM2SPRenderStatusHandler((ARM2SPRenderStatusCB_t)&ARM2SP_Render_Request);
 	CSL_RegisterARM2SP2RenderStatusHandler((ARM2SP2RenderStatusCB_t)&ARM2SP2_Render_Request);
 	CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);
+	CSL_RegisterVOIFStatusHandler((VOIFStatusCB_t)&VOIF_Buffer_Request);
 
 	Audio_InitRpc();
 

@@ -57,6 +57,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_ddriver.h"
 #include "audio_caph.h"
 #include "caph_common.h"
+#include "voif_handler.h"
 
 #include "brcm_rdb_sysmap.h"
 #include "brcm_rdb_khub_clk_mgr_reg.h"
@@ -505,6 +506,26 @@ static int HandleControlCommand()
 		}
         break;
 #endif        
+#ifdef INTERNAL_VOIF_TEST
+        case 11: // VoIF
+        {
+			Boolean onOff = sgBrcm_auddrv_TestValues[2];
+			AudioMode_t audMode = AUDIO_MODE_HANDSET;
+            DEBUG(" VoIF test.\n");
+
+			if (onOff)
+			{
+				VoIF_SetDelay(sgBrcm_auddrv_TestValues[3]);
+				if (sgBrcm_auddrv_TestValues[4]>0)
+					VoIF_SetGain(sgBrcm_auddrv_TestValues[4]);
+				audMode = AUDCTRL_GetAudioMode();
+            	VoIF_init (audMode);
+			}
+			else
+				VoIF_Deinit();
+        }
+		break;
+#endif
 
         default:
             DEBUG(" Invalid Control Command\n");

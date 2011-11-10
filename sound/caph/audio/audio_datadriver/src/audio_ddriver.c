@@ -55,6 +55,7 @@
 #include "dspcmd.h"
 #include "csl_voip.h"
 #include "csl_caph_hwctrl.h"
+#include "csl_voif.h"
 
 //=============================================================================
 // Public Variable declarations
@@ -69,6 +70,8 @@
 #define VOLTEFRAMEGOOD			1
 #define VOLTEFRAMESILENT		0
 #endif
+#define VOIF_8K_SAMPLE_COUNT    160
+#define VOIF_16K_SAMPLE_COUNT   320
 
 typedef struct ARM2SP_PLAYBACK_t
 {
@@ -96,7 +99,12 @@ typedef struct VOIP_t
 	Boolean									isVoLTECall;
 }VOIP_t;
 
-	
+typedef struct AUDDRV_VOIF_t
+{
+	UInt8									isRunning;
+	VOIF_CB									cb;
+} AUDDRV_VOIF_t;
+
 typedef struct AUDIO_DDRIVER_t
 {
     AUDIO_DRIVER_TYPE_t                     drv_type;
@@ -143,6 +151,8 @@ static UInt32 djbTimeStamp = 0;
 static DJB_InputFrame *djbBuf = NULL;
 static Boolean inVoLTECall = FALSE;
 #endif
+static AUDDRV_VOIF_t voifDrv = { 0 };
+static Boolean voif_enabled = 0;
 
 //=============================================================================
 // xternal prototypes
@@ -172,6 +182,10 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct);
 
 static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
+                                          AUDIO_DRIVER_CTRL_t ctrl_cmd,
+                                          void* pCtrlStruct);
+
+static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t* aud_drv,
                                           AUDIO_DRIVER_CTRL_t ctrl_cmd,
                                           void* pCtrlStruct);
 
@@ -297,6 +311,7 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
         case AUDIO_DRIVER_PLAY_RINGER:
         case AUDIO_DRIVER_CAPT_HQ:
         case AUDIO_DRIVER_CAPT_VOICE:
+		case AUDIO_DRIVER_VOIF:
             break;
 			
 		case AUDIO_DRIVER_VOIP:
@@ -335,6 +350,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
         case AUDIO_DRIVER_PLAY_RINGER:		
         case AUDIO_DRIVER_CAPT_HQ:
         case AUDIO_DRIVER_CAPT_VOICE:
+		case AUDIO_DRIVER_VOIF:
             break;
 		case AUDIO_DRIVER_VOIP:
 			{
@@ -437,6 +453,11 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 		 case AUDIO_DRIVER_VOIP:
             { 
 				result_code =  AUDIO_DRIVER_ProcessVoIPCmd(aud_drv,ctrl_cmd,pCtrlStruct);
+		 	}
+		 	break;
+		 case AUDIO_DRIVER_VOIF:
+            { 
+				result_code =  AUDIO_DRIVER_ProcessVoIFCmd(aud_drv,ctrl_cmd,pCtrlStruct);
 		 	}
 		 	break;
         default:
@@ -1010,6 +1031,58 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
     return result_code;
 }
 
+//============================================================================
+//
+// Function Name: AUDIO_DRIVER_ProcessVoIFCmd
+//
+// Description:   This function is used to process VoIP commands
+//
+//============================================================================
+
+static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t* aud_drv,
+											AUDIO_DRIVER_CTRL_t ctrl_cmd,
+											void* pCtrlStruct)
+{
+	Result_t result_code = RESULT_ERROR;
+
+	switch (ctrl_cmd)
+	{
+		case AUDIO_DRIVER_START:
+			{
+				if (voifDrv.isRunning)
+					return result_code;
+
+				VPRIPCMDQ_VOIFControl( 1 );
+				voif_enabled = TRUE;
+				voifDrv.isRunning = TRUE;
+				Log_DebugPrintf(LOGID_AUDIO," AUDDRV_VOIF_Start end \r\n");
+                result_code = RESULT_OK;
+			}
+            break;
+        case AUDIO_DRIVER_STOP:
+            {
+				if (voifDrv.isRunning == FALSE)
+					return result_code;
+				VPRIPCMDQ_VOIFControl( 0 );
+				voifDrv.cb = NULL;
+				voif_enabled = FALSE;
+				voifDrv.isRunning = FALSE;
+				Log_DebugPrintf(LOGID_AUDIO,"AUDDRV_VOIF_Stop end \r\n");
+                result_code = RESULT_OK;
+            }
+            break;
+        case AUDIO_DRIVER_SET_VOIF_CB:
+            {
+				voifDrv.cb = (VOIF_CB)pCtrlStruct;
+                result_code = RESULT_OK;
+            }
+            break;
+        default:
+            Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIFCmd::Unsupported command  \n"  );
+            break;
+    }
+    return result_code;
+}
 
 //============================================================================
 //
@@ -1252,6 +1325,34 @@ void VOIP_ProcessVOIPDLDone(void)
 {
     if ( voip_workqueue )
         queue_work(voip_workqueue, &voip_work);               
+}
+
+// handle interrupt from DSP of data ready
+void VOIF_Buffer_Request (UInt32 bufferIndex, UInt32 samplingRate)
+{
+    UInt32 dlIndex;
+    Int16   *ulBuf, *dlBuf;
+    UInt32 sampleCount = VOIF_8K_SAMPLE_COUNT;
+
+    if (!voif_enabled)
+        return;
+    ulBuf = CSL_GetULVoIFBuffer();
+    dlIndex = bufferIndex & 0x1;
+
+    if (samplingRate)
+    {
+        sampleCount = VOIF_16K_SAMPLE_COUNT;
+    }
+    else
+    {
+        sampleCount = VOIF_8K_SAMPLE_COUNT;
+    }
+    //Log_DebugPrintf(LOGID_AUDIO,"VOIF_ISR_Handler received VOIF_DATA_READY. dlIndex = %d isCall16K = %d \r\n", dlIndex, samplingRate);
+
+    dlBuf = CSL_GetDLVoIFBuffer(sampleCount, dlIndex);
+    if (voifDrv.cb)
+            voifDrv.cb (ulBuf, dlBuf, sampleCount, (UInt8)samplingRate);
+
 }
 
 //******************************************************************************

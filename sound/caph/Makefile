@@ -17,6 +17,7 @@
 EXTRA_CFLAGS +=  -DMSP -DFUSE_DUAL_PROCESSOR_ARCHITECTURE -DFUSE_APPS_PROCESSOR -DDEVELOPMENT_ONLY -D_RHEA_ -DUNDER_LINUX -DUNDER_LINUX_MODEM -DLINUX_RPC_KERNEL 
 #EXTRA_CFLAGS += -DENABLE_DMA_VOICE
 #EXTRA_CFLAGS += -DVOLTE_SUPPORT
+EXTRA_CFLAGS += -DINTERNAL_VOIF_TEST
 
 
 #Linux header files
@@ -29,6 +30,7 @@ EXTRA_CFLAGS += -I $(src) -I $(src)/common -I $(src)/audio -I $(src)/audio/audio
 EXTRA_CFLAGS += -I $(src)/audio/audio_vdriver/public/
 EXTRA_CFLAGS += -I $(src)/audio/public/
 EXTRA_CFLAGS += -I $(src)/audio/audio_datadriver/public/
+EXTRA_CFLAGS += -I $(src)/audio/voif_handler/public/
 #CSL header files
 EXTRA_CFLAGS += -I $(src)/soc/csl/audio/public/
 EXTRA_CFLAGS += -I $(src)/soc/csl/dsp/public/
@@ -116,4 +118,6 @@ snd-brcm-omx-objs += soc/csl/dsp/src/osdw_dsp_drv.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_caph_control_api.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_cneon_api.o
 
+#voif handler source files
+snd-brcm-omx-objs += audio/voif_handler/src/voif_handler.o
 
