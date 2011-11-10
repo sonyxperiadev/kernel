@@ -105,7 +105,6 @@ static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data *xcei
 		dev_info(xceiv_data->dev, "Switching to Host\n");
 		xceiv_data->host = true;
 		bcm_hsotgctrl_set_phy_off(false);
-		bcm_hsotgctrl_phy_set_vbus_stat(false);
 		msleep(PERIPHERAL_TO_HOST_DELAY_MS);
 		bcm_hsotgctrl_phy_set_id_stat(false);
 	} else {
@@ -250,7 +249,19 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 
-	bcmpmu_otg_xceiv_select_host_mode(xceiv_data, id_gnd);
+	if (!id_gnd) {
+		int vbus_status;
+#ifdef CONFIG_MFD_BCMPMU
+		xceiv_data->bcmpmu->usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_VBUS_STATUS, &vbus_status);
+#else
+		vbus_status = bcmpmu_usb_get(BCMPMU_CTRL_GET_VBUS_STATUS, xceiv_data->bcm590xx);
+#endif
+		if (!vbus_status) {
+			/* Non-ACA ID interpretation for now since RID_A is not tested yet on this platform */
+			bcm_hsotgctrl_phy_deinit(); /* Shutdown the core */
+		}
+	} else
+		bcmpmu_otg_xceiv_select_host_mode(xceiv_data, id_gnd);
 
 	return status;
 }
