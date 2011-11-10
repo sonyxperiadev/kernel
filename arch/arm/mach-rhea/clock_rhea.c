@@ -3153,6 +3153,19 @@ static struct ccu_clk CLK_NAME(kpm) = {
 /*
 Bus clock name USB_OTG_AHB
 */
+
+#ifdef CONFIG_KONA_PI_MGR
+static struct clk_dfs usb_otg_dfs =
+	{
+		.dfs_policy = CLK_DFS_POLICY_STATE,
+		. policy_param = PI_OPP_ECONOMY,
+		.opp_weightage = {
+					[PI_OPP_ECONOMY] = 25,
+				},
+
+	};
+#endif
+
 static struct bus_clk CLK_NAME(usb_otg_ahb) = {
 
  .clk =	{
@@ -3164,6 +3177,9 @@ static struct bus_clk CLK_NAME(usb_otg_ahb) = {
 				.ops = &gen_bus_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(kpm),
+ #ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs = &usb_otg_dfs,
+#endif
  .clk_gate_offset  = KPM_CLK_MGR_REG_USB_OTG_CLKGATE_OFFSET,
  .clk_en_mask = KPM_CLK_MGR_REG_USB_OTG_CLKGATE_USB_OTG_AHB_CLK_EN_MASK,
  .gating_sel_mask = KPM_CLK_MGR_REG_USB_OTG_CLKGATE_USB_OTG_AHB_HW_SW_GATING_SEL_MASK,
