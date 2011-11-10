@@ -296,22 +296,26 @@ static void bcm590xx_irq_workq(struct work_struct *work)
 	int i;
 	u8 intStatus[BCM590XX_MAX_INT_REGS];
 	struct bcm_pmu_irq *handler;
+	int int_state;
 	pr_debug("inside %s\n", __func__);
 
-	/* Read all interrupt status registers. All interrupt status registers are R&C */
-	for (i = 0; i < BCM590XX_MAX_INT_REGS; i++) {
-		intStatus[i] = bcm590xx_reg_read(bcm590xx, BCM590XX_INT_REG_BASE + i);
-	}
-
-	mutex_lock(&bcm590xx->list_lock);
-	list_for_each_entry(handler, &bcm590xx->irq_handlers, node) {
-		if (handler->irq_enabled &&
-				(intStatus[IRQ_TO_REG_INX(handler->irq)] &
-				 (1 << IRQ_TO_REG_BIT(handler->irq)))) {
-			handler->handler(handler->irq, handler->data);
+	do {
+		/* Read all interrupt status registers. All interrupt status registers are R&C */
+		for (i = 0; i < BCM590XX_MAX_INT_REGS; i++) {
+			intStatus[i] = bcm590xx_reg_read(bcm590xx, BCM590XX_INT_REG_BASE + i);
 		}
-	}
-	mutex_unlock(&bcm590xx->list_lock);
+
+		mutex_lock(&bcm590xx->list_lock);
+		list_for_each_entry(handler, &bcm590xx->irq_handlers, node) {
+			if (handler->irq_enabled &&
+					(intStatus[IRQ_TO_REG_INX(handler->irq)] &
+					 (1 << IRQ_TO_REG_BIT(handler->irq)))) {
+				handler->handler(handler->irq, handler->data);
+			}
+		}
+		mutex_unlock(&bcm590xx->list_lock);
+		int_state = gpio_get_value(irq_to_gpio(bcm590xx->irq));
+	} while(int_state == 0);
 }
 
 static irqreturn_t pmu_irq_handler(int irq, void *dev_id)
@@ -320,7 +324,7 @@ static irqreturn_t pmu_irq_handler(int irq, void *dev_id)
 
 	pr_debug("inside %s\n", __func__);
 	if (queue_work(bcm590xx ->pmu_workqueue, &bcm590xx ->work) == 0) {
-		pr_info("%s: Work previously queued\n", __func__);
+		pr_debug("%s: Work previously queued\n", __func__);
 	}
 	return IRQ_HANDLED;
 }
@@ -557,6 +561,7 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 	INIT_WORK(&bcm590xx->work, bcm590xx_irq_workq);
 	mutex_init(&bcm590xx->list_lock);
 	mutex_init(&bcm590xx->i2c_rw_lock);
+	bcm590xx->irq = irq;
 #ifdef DEBUG_ON
 	printk("%s: Slave at index 0 0x%x and at index 1 0x%x\n", __func__,
 			bcm590xx->i2c_client[0].addr, bcm590xx->i2c_client[1].addr);
