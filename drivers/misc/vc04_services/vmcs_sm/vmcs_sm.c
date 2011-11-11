@@ -38,6 +38,7 @@
 #include <linux/videocore/vc_mem.h>
 
 #include "interface/vcos/vcos.h"
+#include "interface/vchiq_arm/vchiq_connected.h"
 #include "vc_vchi_sm.h"
 
 #include <linux/videocore/vmcs_sm_ioctl.h>
@@ -236,6 +237,7 @@ typedef struct
 
 static SM_STATE_T *sm_state;
 static unsigned int sm_debug_log = 0;
+static int sm_inited = 0;
 
 static const char * sm_cache_map_vector[] =
 {
@@ -969,7 +971,7 @@ static int vc_sm_single_proc_open( struct inode *inode, struct file *file )
     return single_open( file, vc_sm_seq_file_proc_read, PDE(inode)->data );
 }
 
-static const struct file_operations vc_sm_proc_fops = 
+static const struct file_operations vc_sm_proc_fops =
 {
     .open       = vc_sm_single_proc_open,
     .read       = seq_read,
@@ -1233,7 +1235,7 @@ static int vc_sm_open( struct inode *inode, struct file *file )
    {
       LOG_ERR( "[%s]: invalid device",
                __func__ );
-      
+
       ret = -EPERM;
       goto out;
    }
@@ -1562,7 +1564,7 @@ static int vc_sm_mmap( struct file *file, struct vm_area_struct *vma )
             "[%s]: using private data %p",
             __func__,
             file_data );
- 
+
    /* As extra precaution, make sure the tgid of the caller is the
    ** same as the registered owner for this data.
    */
@@ -1711,8 +1713,9 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
    */
    if ( file_data->pid != current->tgid )
    {
-      LOG_ERR( "[%s]: current tgid %u != %u owner",
+      LOG_ERR( "[%s]: cmd %x current tgid %u != %u owner",
                __func__,
+               cmdnr,
                current->tgid,
                file_data->pid );
 
@@ -3170,9 +3173,9 @@ out:
    return ret;
 }
 
-/* Driver loading.
+/* Videocore connected.
 */
-static int __init vc_sm_init( void )
+static void vc_sm_connected_init( void )
 {
    int                    ret;
    VCHI_INSTANCE_T        vchi_instance;
@@ -3371,8 +3374,8 @@ static int __init vc_sm_init( void )
 
    /* Done!
    */
+   sm_inited = 1;
    goto out;
-
 
 err_remove_shared_memory:
    vc_sm_remove_sharedmemory();
@@ -3398,8 +3401,18 @@ out:
    LOG_INFO( "[%s]: end - returning %d",
              __func__,
              ret );
-   return ret;
 }
+
+/* Driver loading.
+*/
+static int __init vc_sm_init( void )
+{
+   printk( KERN_INFO "vc-sm: Videocore shared memory driver\n" );
+
+   vchiq_add_connected_callback( vc_sm_connected_init );
+   return 0;
+}
+
 
 /* Driver unloading.
 */
@@ -3408,28 +3421,31 @@ static void __exit vc_sm_exit( void )
    LOG_INFO( "[%s]: start",
              __func__ );
 
-   /* Remove shared memory device.
-   */
-   vc_sm_remove_sharedmemory();
+   if ( sm_inited )
+   {
+      /* Remove shared memory device.
+      */
+      vc_sm_remove_sharedmemory();
 
-   /* Remove all proc entries.
-   */
-   remove_proc_entry( PROC_CFG_GUID_SHIFT, sm_state->dir_cfg );
-   remove_proc_entry( PROC_DIR_CFG_NAME,   sm_state->dir_root );
-   remove_proc_entry( PROC_DIR_ALLOC_NAME, sm_state->dir_root );
-   remove_proc_entry( PROC_DEBUG,          sm_state->dir_root );
-   remove_proc_entry( PROC_STATE,          sm_state->dir_root );
-   remove_proc_entry( PROC_STATS,          sm_state->dir_root );
-   remove_proc_entry( PROC_DIR_ROOT_NAME,  NULL );
+      /* Remove all proc entries.
+      */
+      remove_proc_entry( PROC_CFG_GUID_SHIFT, sm_state->dir_cfg );
+      remove_proc_entry( PROC_DIR_CFG_NAME,   sm_state->dir_root );
+      remove_proc_entry( PROC_DIR_ALLOC_NAME, sm_state->dir_root );
+      remove_proc_entry( PROC_DEBUG,          sm_state->dir_root );
+      remove_proc_entry( PROC_STATE,          sm_state->dir_root );
+      remove_proc_entry( PROC_STATS,          sm_state->dir_root );
+      remove_proc_entry( PROC_DIR_ROOT_NAME,  NULL );
 
-   /* Stop the videocore shared memory service.
-   */
-   vc_vchi_sm_stop( &sm_state->sm_handle );
+      /* Stop the videocore shared memory service.
+      */
+      vc_vchi_sm_stop( &sm_state->sm_handle );
 
-   /* Free the memory for the state structure.
-   */
-   mutex_destroy( &(sm_state->map_lock) );
-   vcos_kfree( sm_state );
+      /* Free the memory for the state structure.
+      */
+      mutex_destroy( &(sm_state->map_lock) );
+      vcos_kfree( sm_state );
+   }
 
    LOG_INFO( "[%s]: end",
              __func__ );
