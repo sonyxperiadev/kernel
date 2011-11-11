@@ -38,8 +38,8 @@ static void SetConfigDefaults( void )
 	g_config.runlog_dev       = BCMLOG_OUTDEV_STM ;	        // run-time log to STM
 	g_config.cp_crashlog_dev  = BCMLOG_OUTDEV_STM ;
 #else
-	g_config.runlog_dev       = BCMLOG_OUTDEV_RNDIS ;	// run-time log to RNDIS/MTT
-	g_config.cp_crashlog_dev  = BCMLOG_OUTDEV_SDCARD ;
+	g_config.runlog_dev       = BCMLOG_OUTDEV_STM ;
+	g_config.cp_crashlog_dev  = BCMLOG_OUTDEV_STM ; //eventually set to BCMLOG_OUTDEV_PANIC once its working
 #endif
 }
 
@@ -156,7 +156,7 @@ static ssize_t proc_write(struct file *file, const char *buffer, unsigned long c
 		case 's':      
 			g_config.runlog_dev = BCMLOG_OUTDEV_STM;
 			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_STM;
-                        break ;
+			break ;
 		case 'i': 
 			SetConfigDefaults( ) ;
 			BCMLOG_SaveConfig( 0 ) ;
@@ -173,6 +173,13 @@ static ssize_t proc_write(struct file *file, const char *buffer, unsigned long c
 		case 'm':
 			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_RNDIS ;
 			break ;
+		case 'n':
+			g_config.runlog_dev = BCMLOG_OUTDEV_STM;
+			break ;
+		case 'o':
+			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_STM;
+			break ;
+
 		}
 	}
 
