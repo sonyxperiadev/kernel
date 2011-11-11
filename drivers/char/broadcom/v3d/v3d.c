@@ -156,7 +156,7 @@ v3d_t;
 #define TURN	0x8
 
 /* Job Error Handling variables */
-#define V3D_ISR_TIMEOUT_IN_MS	(500)
+#define V3D_ISR_TIMEOUT_IN_MS	(2000)
 #define V3D_JOB_TIMEOUT_IN_MS	(V3D_ISR_TIMEOUT_IN_MS)
 
 /* Enable the macro to retry the job on timeout, else will skip the job */
