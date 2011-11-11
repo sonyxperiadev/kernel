@@ -49,7 +49,6 @@
 struct bcm_hsotgctrl_drv_data {
 	struct device *dev;
 	struct clk *otg_clk;
-	struct pi_mgr_dfs_node*  dfs_node;
 	void *hsotg_ctrl_base;
 	void *chipregs_base;
 	void *hub_clk_base;
@@ -88,34 +87,15 @@ int bcm_hsotgctrl_en_clock(bool on)
 	if (!bcm_hsotgctrl_handle || !bcm_hsotgctrl_handle->otg_clk)
 		return -EIO;
 
-	if (on) {
-#ifdef CONFIG_ARCH_RHEA
-		if (bcm_hsotgctrl_handle->dfs_node)
-			rc = pi_mgr_dfs_request_update(bcm_hsotgctrl_handle->dfs_node, PI_OPP_ECONOMY);
-			if (rc)
-				dev_warn(bcm_hsotgctrl_handle->dev, "%s: error in updating DFS request before clock enabled\n", __func__);
-#endif
+	if (on)
 		rc = clk_enable(bcm_hsotgctrl_handle->otg_clk);
-	}
-	else {
+	else
 		clk_disable(bcm_hsotgctrl_handle->otg_clk);
 
-#ifdef CONFIG_ARCH_RHEA
-		if (bcm_hsotgctrl_handle->dfs_node) {
-			rc = pi_mgr_dfs_request_update(bcm_hsotgctrl_handle->dfs_node, PI_MGR_DFS_MIN_VALUE);
-			if (rc)
-				dev_warn(bcm_hsotgctrl_handle->dev, "%s: DFS update request failed after clock disabled\n", __func__);
-		} else
-			dev_warn(bcm_hsotgctrl_handle->dev, "%s: error in updating DFS request after clock disabled\n", __func__);
-#endif
-	}
-
-	if (rc) {
+	if (rc)
 		dev_warn(bcm_hsotgctrl_handle->dev, "%s: error in controlling clock\n", __func__);
-		return -EIO;
-	}
 
-	return 0;
+	return rc;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_en_clock);
 
@@ -354,15 +334,6 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
-#ifdef CONFIG_ARCH_RHEA
-	/* Add a DFS request. Update when USB OTG AHB clock is enabled/disabled */
-	hsotgctrl_drvdata->dfs_node = pi_mgr_dfs_add_request("bcm_hsotgctrl",
-								  PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_DFS_MIN_VALUE);
-
-	if (hsotgctrl_drvdata->dfs_node == NULL)
-		dev_warn(hsotgctrl_drvdata->dev, "\n%s: DFS request failed for bcm_hsotgctrl\n", __func__);
-#endif
-
 	platform_set_drvdata(pdev, hsotgctrl_drvdata);
 
 	/* Init the PHY */
@@ -455,13 +426,6 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 	iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
 	iounmap(hsotgctrl_drvdata->chipregs_base);
 	iounmap(hsotgctrl_drvdata->hub_clk_base);
-
-#ifdef CONFIG_ARCH_RHEA
-	if (hsotgctrl_drvdata->dfs_node) {
-		pi_mgr_dfs_request_remove(hsotgctrl_drvdata->dfs_node);
-		hsotgctrl_drvdata->dfs_node = NULL;
-	}
-#endif
 
 	clk_put(hsotgctrl_drvdata->otg_clk);
 	local_hsotgctrl_handle = NULL;
