@@ -38,6 +38,7 @@
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#include <mach/rdb/brcm_rdb_khubaon_rst_mgr_reg.h>
 #if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_SAMOA)
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
@@ -860,6 +861,31 @@ local_clk_cfg:
 	 reg_val |= val;
 	 writel(reg_val, reg_base + KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_OFFSET);
 
+	 /*
+	  * Changing the HUB_TIMER source does not result in resetting the counter
+	  * the first read of the counter reflects the time from the starting of uboot
+	  * So, reset the counter so that next read indicates the start of Linux
+	  */
+	reg_val = readl(KONA_AON_RST_VA);
+	old_enable = reg_val & 0x1;
+	reg_val &= 0x80000000;
+	reg_val |= 0xA5A500 | 0x1;
+	writel(reg_val, KONA_AON_RST_VA);
+
+	reg_val = readl(KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+	reg_val = (reg_val) & ~(1 << KHUBAON_RST_MGR_REG_SOFT_RSTN0_HUB_TIMER_SOFT_RSTN_SHIFT);
+	writel(reg_val, KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+
+	reg_val = readl(KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+	reg_val = (reg_val) | (1 << KHUBAON_RST_MGR_REG_SOFT_RSTN0_HUB_TIMER_SOFT_RSTN_SHIFT);
+	writel(reg_val, KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+
+	reg_val = readl(KONA_AON_RST_VA);
+	old_enable = reg_val & 0x1;
+	reg_val &= 0x80000000;
+	reg_val |= 0xA5A500;
+	reg_val |= old_enable & 0x1;
+	writel(reg_val, KONA_AON_RST_VA);
 
 	reg_val = readl(reg_base + KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET);
 	writel(val | (1 << KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_HUB_TIMER_TRIGGER_SHIFT), 
