@@ -65,6 +65,7 @@ typedef enum
 
     DISPLAY_POWER_STATE_OFF,              ///<  Power Off
     DISPLAY_POWER_STATE_ON,               ///<  Power On
+    DISPLAY_POWER_STATE_BLANK_SCREEN,	  ///<  Screen blank
     DISPLAY_POWER_STATE_SLEEP,            ///<  Sleep State
 
     DISPLAY_POWER_STATE_MAX,              ///<  Max Number

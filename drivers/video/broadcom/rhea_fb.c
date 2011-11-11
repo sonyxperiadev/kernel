@@ -27,8 +27,8 @@
 #ifdef CONFIG_FRAMEBUFFER_FPS
 #include <linux/fb_fps.h>
 #endif
-#ifdef CONFIG_ANDROID_POWER
-#include <linux/android_power.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
 #endif
 #include <linux/clk.h>
 #include <plat/pi_mgr.h>
@@ -67,8 +67,13 @@ struct rhea_fb {
 	const DISPDRV_INFO_T *display_info;
 	DISPDRV_HANDLE_T display_hdl; 
 	struct pi_mgr_dfs_node* dfs_node;
-#ifdef CONFIG_ANDROID_POWER
-	android_early_suspend_t early_suspend;
+	int g_stop_drawing; 
+	u32 gpio;
+	u32 bus_width;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend early_suspend_level1;
+	struct early_suspend early_suspend_level2;
+	struct early_suspend early_suspend_level3;
 #endif
 };
 
@@ -180,6 +185,11 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 	if (down_killable(&fb->update_sem))
 		return -EINTR;
 
+	if (1 == fb->g_stop_drawing) {
+		rheafb_debug("RHEA FB/LCd is in the early suspend state and stops drawing now!");
+		goto skip_drawing;
+	}
+
 	atomic_set(&fb->buff_idx, buff_idx);
 
 #ifdef CONFIG_FRAMEBUFFER_FPS
@@ -209,27 +219,12 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 		rhea_clock_start(fb);
 		ret = fb->display_ops->update(fb->display_hdl, buff_idx, p_region, (DISPDRV_CB_T)rhea_display_done_cb);
 	}
+skip_drawing:
 	up(&fb->update_sem);
 
 	rheafb_debug("RHEA Display is updated once at %d time with yoffset=%d\n", fb->base_update_count, var->yoffset);
-
 	return ret;
 }
-
-#ifdef CONFIG_ANDROID_POWER
-static void rhea_fb_early_suspend(android_early_suspend_t *h)
-{
-	struct rhea_fb *fb = container_of(h, struct rhea_fb, early_suspend);
-	rheafb_info("TODO: BRCM fb early suspend ...\n");
-}
-
-static void rhea_fb_late_resume(android_early_suspend_t *h)
-{
-	struct rhea_fb *fb = container_of(h, struct rhea_fb, early_suspend);
-	rheafb_info("TODO: BRCM fb late resume ...\n");
-}
-#endif
-
 
 static void reset_display(u32 gpio)
 {
@@ -296,6 +291,95 @@ static int disable_display(struct rhea_fb *fb)
 	return ret;
 }
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void rhea_fb_early_suspend(struct early_suspend *h)
+{
+	struct rhea_fb *fb;
+
+	rheafb_error("BRCM fb early suspend with level = %d\n", h->level);
+
+	switch (h->level) {
+	
+	case EARLY_SUSPEND_LEVEL_BLANK_SCREEN:
+		/* Turn off the backlight */
+		fb = container_of(h, struct rhea_fb, early_suspend_level1);
+		down(&fb->update_sem);
+		down(&fb->prev_buf_done_sem);
+	 	rhea_clock_start(fb);
+		if (fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_BLANK_SCREEN))
+			rheafb_error("Failed to blank this display device!\n");
+		rhea_clock_stop(fb);
+		up(&fb->prev_buf_done_sem);
+		up(&fb->update_sem);
+
+		break;
+
+	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
+		fb = container_of(h, struct rhea_fb, early_suspend_level2);
+		down(&fb->update_sem);
+		down(&fb->prev_buf_done_sem);
+		fb->g_stop_drawing = 1;
+		up(&fb->prev_buf_done_sem);
+		up(&fb->update_sem);
+		break;
+
+	case EARLY_SUSPEND_LEVEL_DISABLE_FB:
+		fb = container_of(h, struct rhea_fb, early_suspend_level3);
+		/* screen goes to sleep mode*/
+		down(&fb->update_sem);
+	 	rhea_clock_start(fb);
+		disable_display(fb);
+		rhea_clock_stop(fb);
+		up(&fb->update_sem);
+		/* Turn off the ldo */
+		break;
+
+	default:
+		rheafb_error("Early suspend with the wrong level!\n");
+		break;
+	}
+}
+
+static void rhea_fb_late_resume(struct early_suspend *h)
+{
+	struct rhea_fb *fb;
+
+	rheafb_error("BRCM fb late resume with level = %d\n", h->level);
+
+	switch (h->level) {
+	
+	case EARLY_SUSPEND_LEVEL_BLANK_SCREEN:
+		/* Turn on the backlight */
+		fb = container_of(h, struct rhea_fb, early_suspend_level1);
+		break;
+
+	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
+		fb = container_of(h, struct rhea_fb, early_suspend_level2);
+		down(&fb->update_sem);
+		fb->g_stop_drawing = 0;
+		up(&fb->update_sem);
+		break;
+
+	case EARLY_SUSPEND_LEVEL_DISABLE_FB:
+		fb = container_of(h, struct rhea_fb, early_suspend_level3);
+		/* Turn on the ldo */
+		/* screen comes out of sleep */
+	 	rhea_clock_start(fb);
+		if (enable_display(fb, fb->gpio, fb->bus_width))
+			rheafb_error("Failed to enable this display device\n");
+		rhea_clock_stop(fb);
+		break;
+
+	default:
+		rheafb_error("Early suspend with the wrong level!\n");
+		break;
+	}
+
+
+}
+#endif
+
+
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) \
 	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 static int rhea_refresh_thread(void *arg)
@@ -307,10 +391,12 @@ static int rhea_refresh_thread(void *arg)
 	do {
 		down(&fb->refresh_wait_sem);
 		down(&fb->update_sem);
-		rhea_clock_start(fb);
-		fb->display_ops->update(fb->display_hdl, 0, NULL, NULL);
-		rhea_clock_stop(fb);
-		fb->base_update_count++;
+		if (0 == fb->g_stop_drawing) {
+			rhea_clock_start(fb);
+			fb->display_ops->update(fb->display_hdl, 0, NULL, NULL);
+			rhea_clock_stop(fb);
+			fb->base_update_count++;
+		}
 		up(&fb->update_sem);
 	} while (1);
 
@@ -367,6 +453,8 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_fb_alloc_failed;
 	}
+	fb->g_stop_drawing = 0;
+
 	g_rhea_fb = fb;
  	g_rhea_fb->dfs_node = pi_mgr_dfs_add_request("lcd", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
 	if (!g_rhea_fb->dfs_node)
@@ -421,8 +509,10 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->display_ops->start(fb->dfs_node);
 #endif
 
+	fb->gpio = fb_data->gpio;
+	fb->bus_width = fb_data->bus_width;
 	rhea_clock_start(fb);
-	ret = enable_display(fb, fb_data->gpio, fb_data->bus_width);
+	ret = enable_display(fb, fb->gpio, fb->bus_width);
 	if (ret) {
 		rheafb_error("Failed to enable this display device\n");
 		goto err_enable_display_failed;
@@ -542,10 +632,21 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	up(&fb->update_sem);
 #endif
 
-#ifdef CONFIG_ANDROID_POWER
-	fb->early_suspend.suspend = rhea_fb_early_suspend;
-	fb->early_suspend.resume = rhea_fb_late_resume;
-	android_register_early_suspend(&fb->early_suspend);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	fb->early_suspend_level1.suspend	= rhea_fb_early_suspend;
+	fb->early_suspend_level1.resume	= rhea_fb_late_resume;
+	fb->early_suspend_level1.level		=  EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
+	register_early_suspend(&fb->early_suspend_level1);
+
+	fb->early_suspend_level2.suspend	= rhea_fb_early_suspend;
+	fb->early_suspend_level2.resume	= rhea_fb_late_resume;
+	fb->early_suspend_level2.level		=  EARLY_SUSPEND_LEVEL_STOP_DRAWING;
+	register_early_suspend(&fb->early_suspend_level2);
+
+	fb->early_suspend_level3.suspend	= rhea_fb_early_suspend;
+	fb->early_suspend_level3.resume	= rhea_fb_late_resume;
+	fb->early_suspend_level3.level		=  EARLY_SUSPEND_LEVEL_DISABLE_FB;
+	register_early_suspend(&fb->early_suspend_level3);
 #endif
 
 	return 0;
@@ -587,10 +688,12 @@ static int __devexit rhea_fb_remove(struct platform_device *pdev)
 	
 	framesize = fb->fb.var.xres_virtual * fb->fb.var.yres_virtual * 2;
 
-#ifdef CONFIG_ANDROID_POWER
-        android_unregister_early_suspend(&fb->early_suspend);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&fb->early_suspend_level1);
+	unregister_early_suspend(&fb->early_suspend_level2);
+	unregister_early_suspend(&fb->early_suspend_level3);
 #endif
-	
+
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	fb_fps_unregister(fb->fps_info);
 #endif

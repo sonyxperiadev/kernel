@@ -963,7 +963,25 @@ Int32 NT35582_WVGA_SMI_PowerControl (
                     break;    
             }        
             break;
+           
+	case DISPLAY_POWER_STATE_BLANK_SCREEN:
+            if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
+            {
+                nt35582wvgaSmi_WrCmndP0( dispH, TRUE, NT35582_DISPLAY_OFF );
+                OSTASK_Sleep ( TICKS_IN_MILLISECONDS ( 10 ) );
+                pPanel->pwrState = DISP_PWR_SLEEP_OFF;
+                LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP-IN\n", __FUNCTION__ );
+            } 
+            else
+            {
+                LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP Requested, But Not "
+                    "In POWER-ON State\n", __FUNCTION__ );
+                res = -1;
+            }   
+            break;
             
+
+
         case DISPLAY_POWER_STATE_SLEEP:
             if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
             {

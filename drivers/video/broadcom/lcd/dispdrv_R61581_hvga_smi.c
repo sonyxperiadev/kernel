@@ -907,7 +907,23 @@ Int32 R61581_HVGA_SMI_PowerControl (
                     break;    
             }        
             break;
-            
+           
+	case DISPLAY_POWER_STATE_BLANK_SCREEN:
+            if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
+            {
+                r61581hvgaSmi_WrCmndP0( dispH, TRUE,  MIPI_DCS_SET_DISPLAY_OFF);
+                OSTASK_Sleep ( TICKS_IN_MILLISECONDS ( 10 ) );
+                pPanel->pwrState = DISP_PWR_SLEEP_ON;
+                LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP-IN\n", __FUNCTION__ );
+            } 
+            else
+            {
+                LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP Requested, But Not "
+                    "In POWER-ON State\n", __FUNCTION__ );
+                res = -1;
+            }   
+            break;
+
         case DISPLAY_POWER_STATE_SLEEP:
             if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
             {

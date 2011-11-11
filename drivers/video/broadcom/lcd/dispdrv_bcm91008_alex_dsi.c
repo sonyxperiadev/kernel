@@ -130,7 +130,7 @@ static void     bcm91008_alex_WrCmndP1  (
                     UInt32                  val );
 
 // DRV INTERFACE FUNCTIONs
-Int32           BCM91008_ALEX_Init          ( void ); 
+Int32           BCM91008_ALEX_Init          ( unsigned int bus_width ); 
 Int32           BCM91008_ALEX_Exit          ( void ); 
 
 Int32           BCM91008_ALEX_Open          ( 
@@ -547,7 +547,7 @@ DISPDRV_T* DISP_DRV_BCM91008_ALEX_GetFuncTable ( void )
 // Description:   Reset Driver Info
 //
 //*****************************************************************************
-Int32 BCM91008_ALEX_Init ( void )
+Int32 BCM91008_ALEX_Init ( unsigned int bus_width )
 {
     Int32 res = 0;
 
