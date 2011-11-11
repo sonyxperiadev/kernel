@@ -19,7 +19,7 @@
 #ifndef VCHIQ_BI_H
 #define VCHIQ_BI_H
 
-#include "vcinclude/bigisland_chip/ipc_shared_mem.h"
+#include "vchiq_bi_ipc_shared_mem.h"
 
 #define IPC_SHARED_MEM_SLOTS      (IPC_SHARED_MEM_BASE + IPC_SHARED_MEM_VC_OFFSET)
 #define IPC_SHARED_MEM_SLOTS_SIZE (IPC_SHARED_MEM_CLOCK_DEBUG_OFFSET)
