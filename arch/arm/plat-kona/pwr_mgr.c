@@ -717,10 +717,13 @@ int pwr_mgr_pm_i2c_sem_lock()
 		return -EINVAL;
 	}
 	BUG_ON(pwr_mgr.sem_locked);
-	if(!pwr_mgr.sem_dfs_client)
-		pwr_mgr.sem_dfs_client = pi_mgr_dfs_add_request("sem_wa",PWRMGR_HW_SEM_WA_PI_ID, PWRMGR_HW_SEM_WA_PI_OPP);
-	else
-		pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_WA_PI_OPP);
+	if((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
+	{
+		if(!pwr_mgr.sem_dfs_client)
+			pwr_mgr.sem_dfs_client = pi_mgr_dfs_add_request("sem_wa",PWRMGR_HW_SEM_WA_PI_ID, PWRMGR_HW_SEM_WA_PI_OPP);
+		else
+			pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_WA_PI_OPP);
+	}
     spin_lock_irqsave(&pwr_mgr_lock,flgs);
 
 	mdelay(2);
@@ -753,7 +756,8 @@ int pwr_mgr_pm_i2c_sem_unlock()
 	pwr_mgr_pm_i2c_enable(true);
 	pwr_mgr.sem_locked = false;
 	spin_unlock_irqrestore(&pwr_mgr_lock,flgs);
-	pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PI_MGR_DFS_MIN_VALUE);
+	if((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
+		pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PI_MGR_DFS_MIN_VALUE);
 	return 0;
 }
 EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);
@@ -773,10 +777,13 @@ int pwr_mgr_pm_i2c_sem_lock()
 
 	BUG_ON(pwr_mgr.sem_locked);
 
-	if(!pwr_mgr.sem_dfs_client)
-		pwr_mgr.sem_dfs_client = pi_mgr_dfs_add_request("sem_wa",PWRMGR_HW_SEM_WA_PI_ID, PWRMGR_HW_SEM_WA_PI_OPP);
-	else
-		pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_WA_PI_OPP);
+	if((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
+	{
+		if(!pwr_mgr.sem_dfs_client)
+			pwr_mgr.sem_dfs_client = pi_mgr_dfs_add_request("sem_wa",PWRMGR_HW_SEM_WA_PI_ID, PWRMGR_HW_SEM_WA_PI_OPP);
+		else
+			pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_WA_PI_OPP);
+	}
 	udelay(2);
 
 	max_val = 1 + (PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_I2C_HARDWARE_SEMAPHORE_WRITE_VALUE_MASK >>
@@ -827,7 +834,8 @@ int pwr_mgr_pm_i2c_sem_unlock()
 			PWR_MGR_REG_ADDR(PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_OFFSET));
 	pwr_mgr.sem_locked = false;
 	spin_unlock(&pwr_mgr_lock);
-	pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PI_MGR_DFS_MIN_VALUE);
+	if((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
+		pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PI_MGR_DFS_MIN_VALUE);
 	return 0;
 }
 EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);

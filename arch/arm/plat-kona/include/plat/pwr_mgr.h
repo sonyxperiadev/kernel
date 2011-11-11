@@ -1,5 +1,5 @@
 /****************************************************************************
-*									      
+*
 * Copyright 2010 --2011 Broadcom Corporation.
 *
 * Unless you and Broadcom execute a separate written software license
@@ -69,17 +69,17 @@
 #define PWRMGR_INTR_STATUS_OFFSET		0x40A0
 #define PWRMGR_INTR_MASK_OFFSET			0x40A4
 #define PWRMGR_EVENT_BANK1_OFFSET		0x40A8
-#define PWRMGR_I2C_SW_CMD_CTRL_OFFSET	0x41B8
+#define PWRMGR_I2C_SW_CMD_CTRL_OFFSET		0x41B8
 
-		
+
 #define PWRMGR_I2C_SW_START_ADDR_SHIFT		16
 #define PWRMGR_I2C_SW_START_ADDR_MASK		(0x3F << 16)
-#define PWRMGR_I2C_REQ_BUSY_SHIFT			12
-#define PWRMGR_I2C_REQ_BUSY_MASK			(1 << 12)		
-#define PWRMGR_I2C_REQ_TRG_SHIFT			8
-#define PWRMGR_I2C_REQ_TRG_MASK				(0xF << 8)		
-#define PWRMGR_I2C_READ_DATA_SHIFT			0
-#define PWRMGR_I2C_READ_DATA_MASK			0xFF		
+#define PWRMGR_I2C_REQ_BUSY_SHIFT		12
+#define PWRMGR_I2C_REQ_BUSY_MASK		(1 << 12)
+#define PWRMGR_I2C_REQ_TRG_SHIFT		8
+#define PWRMGR_I2C_REQ_TRG_MASK			(0xF << 8)
+#define PWRMGR_I2C_READ_DATA_SHIFT		0
+#define PWRMGR_I2C_READ_DATA_MASK		0xFF
 
 #endif /*CONFIG_KONA_PWRMGR_REV2*/
 
@@ -113,17 +113,17 @@ enum
 	REG_DATA 		= 1, /*executes a write to I2C controller via APB*/
 	I2C_DATA		= 2, /*data to be written to PMU via I2C*/
 	I2C_VAR 		= 3, /*data returned for voltage lookup (payload is the index to table)*/
-	WAIT_I2C_RETX	= 4, /*wait for retry from I2C control register*/
-	WAIT_I2C_STAT	= 5, /* wait for good status (loop until good)*/
+	WAIT_I2C_RETX		= 4, /*wait for retry from I2C control register*/
+	WAIT_I2C_STAT		= 5, /* wait for good status (loop until good)*/
 	WAIT_TIMER		= 6, /*wait for the number of clocks in the payload*/
-	END				= 7, /*stop and wait for new voltage request change*/
+	END			= 7, /*stop and wait for new voltage request change*/
 	SET_PC_PINS		= 8, /*pc pins are set based on value and mask*/
-	SET_UPPER_DATA	= 9, 	/*sets the data in the upper byte of apb data bus*/
+	SET_UPPER_DATA		= 9, 	/*sets the data in the upper byte of apb data bus*/
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	READ_FIFO		= 0xA,	/*Read I2C FIFO*/
-	SET_READ_DATA	= 0xB,	/*Copy I2C read data to PWRMGR register */ 
-#endif /*CONFIG_KONA_PWRMGR_REV2*/	
-	JUMP_VOLTAGE	= 0xE, /*jump to address based on current voltage request*/
+	SET_READ_DATA		= 0xB,	/*Copy I2C read data to PWRMGR register */
+#endif /*CONFIG_KONA_PWRMGR_REV2*/
+	JUMP_VOLTAGE		= 0xE, /*jump to address based on current voltage request*/
 	JUMP			= 0xF  /*jump to address defined in payload*/
 };
 
@@ -166,9 +166,10 @@ enum pc_pin
 enum
 {
 	PM_PMU_I2C = (1 << 0),
+	PM_HW_SEM_NO_DFS_REQ  =	(1 << 1), /*Don't request for turbo mode when acquiring HW SEM - test only*/
 #if defined(CONFIG_KONA_PWRMGR_REV2)
-	PROCESS_EVENTS_ON_INTR = (1 << 1),
-	I2C_SIMULATE_BURST_MODE = (1 << 2),
+	PROCESS_EVENTS_ON_INTR = (1 << 2),
+	I2C_SIMULATE_BURST_MODE = (1 << 3),
 #endif
 };
 
@@ -205,7 +206,7 @@ struct pwr_mgr_info
 	u8* i2c_var_data;
 	u32 num_i2c_var_data;
 	struct v0x_spec_i2c_cmd_ptr* i2c_cmd_ptr[V_SET_MAX];
-	
+
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 pwrmgr_intr;
 	u32 i2c_rd_off;
