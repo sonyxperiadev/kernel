@@ -40,7 +40,7 @@
 #include <mach/pi_mgr.h>
 #include <asm/div64.h>
 #include <plat/pi_mgr.h>
-#include "volt_tbl.h"
+#include "pm_params.h"
 
 unsigned long clock_get_xtal(void)
 {

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-* Voltage tables for Rhea platform
+* Power Manager config parameters for Rhea platform
 *
 * Copyright 2010 Broadcom Corporation.  All rights reserved.
 *
@@ -14,8 +14,10 @@
 * license other than the GPL, without Broadcom's express prior written
 * consent.
 *****************************************************************************/
-#ifndef __VLT_TBL_H__
-#define __VLT_TBL_H__
+#ifndef __PM_PARAMS_H__
+#define __PM_PARAMS_H__
+
+#include<plat/pwr_mgr.h>
 
 #define VLT_ID_OFF		0
 #define VLT_ID_RETN	1
@@ -159,6 +161,29 @@
 					CSR_REG_VAL_TURBO_FF,\
 					CSR_REG_VAL_TURBO_FF
 
+#ifdef CONFIG_KONA_POWER_MGR
+struct pwrmgr_init_param
+{
+	struct i2c_cmd* cmd_buf;
+	u32 cmb_buf_size;
+	struct v0x_spec_i2c_cmd_ptr * v0ptr;
+	u8* def_vlt_tbl;
+	u32 vlt_tbl_size;
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+	u32 i2c_rd_off;
+	u32 i2c_rd_slv_addr_off;
+	u32 i2c_rd_reg_addr_off;
+	u32 i2c_wr_off;
+	u32 i2c_wr_slv_addr_off;
+	u32 i2c_wr_reg_addr_off;
+	u32 i2c_wr_val_addr_off;
+	u32 i2c_seq_timeout;
+#endif
+};
 
+extern struct pwrmgr_init_param pwrmgr_init_param;
 
-#endif /*__VLT_TBL_H__*/
+#endif /*CONFIG_KONA_POWER_MGR*/
+
+#endif /*__PM_PARAMS_H__*/
+

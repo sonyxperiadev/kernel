@@ -36,7 +36,7 @@
 #include<mach/pi_mgr.h>
 #include<plat/pwr_mgr.h>
 #include<plat/pi_mgr.h>
-#include "volt_tbl.h"
+#include "pm_params.h"
 
 #define RUN_POLICY PM_POLICY_5
 #define RETN_POLICY PM_POLICY_1

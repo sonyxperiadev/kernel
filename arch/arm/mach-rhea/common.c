@@ -49,7 +49,7 @@
 #include <trace/stm.h>
 #ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
-#include "volt_tbl.h"
+#include "pm_params.h"
 #endif
 
 #if defined (CONFIG_KONA_CPU_FREQ_DRV)
