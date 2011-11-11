@@ -131,10 +131,10 @@ static CSL_HANDLE pcmHandleSSP = 0;
 static Boolean fmRxRunning = FALSE; //This is only to indicate FM direct playback
 static Boolean fmRunning = FALSE;
 static Boolean pcmRunning = FALSE;
-static CSL_CAPH_SWITCH_TRIGGER_e fmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0;
-static CSL_CAPH_SWITCH_TRIGGER_e fmRxTrigger = CSL_CAPH_TRIG_SSP4_RX0;
-static CSL_CAPH_SWITCH_TRIGGER_e pcmTxTrigger = CSL_CAPH_TRIG_SSP3_TX0;
-static CSL_CAPH_SWITCH_TRIGGER_e pcmRxTrigger = CSL_CAPH_TRIG_SSP3_RX0;
+static CAPH_SWITCH_TRIGGER_e fmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
+static CAPH_SWITCH_TRIGGER_e fmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
+static CAPH_SWITCH_TRIGGER_e pcmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
+static CAPH_SWITCH_TRIGGER_e pcmRxTrigger = CAPH_SSP3_RX0_TRIGGER;
 static CSL_CAPH_SSP_e sspidPcmUse = CSL_CAPH_SSP_3;
 static CSL_CAPH_SSP_e sspidI2SUse = CSL_CAPH_SSP_4;
 static Boolean sspTDM_enabled = FALSE;
@@ -175,7 +175,7 @@ static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_DEVICE_e source,
                                                CSL_CAPH_DEVICE_e sink,
                                                AUDIO_SAMPLING_RATE_t src_sampleRate,
                                                AUDIO_SAMPLING_RATE_t snk_sampleRate,
-                                               AUDIO_CHANNEL_NUM_t chnlNum,
+                                               AUDIO_NUM_OF_CHANNEL_t chnlNum,
                                                AUDIO_BITS_PER_SAMPLE_t bitPerSample);
 static void csl_caph_hwctrl_RemovePathInTable(CSL_CAPH_PathID pathID);
 static void csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
@@ -223,8 +223,8 @@ typedef struct
 	UInt32 dmaBytes;
 	UInt32 numFramesPerInterrupt;
 	CAPH_LIST_t path;
-	CSL_CAPH_SWITCH_TRIGGER_e trigger;
-	AUDIO_CHANNEL_NUM_t chNumOut;
+	CAPH_SWITCH_TRIGGER_e trigger;
+	AUDIO_NUM_OF_CHANNEL_t chNumOut;
 	UInt16 arg0;
 	UInt32 mixMode;
 	UInt32 playbackMode;
@@ -284,21 +284,21 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 		if(path->src_sampleRate==AUDIO_SAMPLING_RATE_48000)
 		{
 			arm2spCfg.numFramesPerInterrupt = csl_dsp_arm2sp_get_size(AUDIO_SAMPLING_RATE_48000)/(48*20*8); //mono uses half size, frame size is 20ms.
-			arm2spCfg.trigger = CSL_CAPH_48KHZ;
+			arm2spCfg.trigger = CAPH_48KHZ;
 			arm2spCfg.dmaBytes = csl_dsp_arm2sp_get_size(AUDIO_SAMPLING_RATE_48000);
 			if(path->chnlNum == AUDIO_CHANNEL_MONO && path->bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
 			{
-				arm2spCfg.trigger = CSL_CAPH_24KHZ; //switch does not differentiate 16bit mono from 16bit stereo, hence reduce the clock.
+				arm2spCfg.trigger = CAPH_24KHZ; //switch does not differentiate 16bit mono from 16bit stereo, hence reduce the clock.
 				arm2spCfg.dmaBytes >>= 1; //For 48K, dsp only supports 2*20ms ping-pong buffer, stereo or mono
 			}
 		} else if(path->src_sampleRate==AUDIO_SAMPLING_RATE_16000) {
 			arm2spCfg.numFramesPerInterrupt = 2;
-			arm2spCfg.trigger = CSL_CAPH_16KHZ;
-			if(path->chnlNum == AUDIO_CHANNEL_MONO && path->bitPerSample == AUDIO_16_BIT_PER_SAMPLE) arm2spCfg.trigger = CSL_CAPH_8KHZ;
+			arm2spCfg.trigger = CAPH_16KHZ;
+			if(path->chnlNum == AUDIO_CHANNEL_MONO && path->bitPerSample == AUDIO_16_BIT_PER_SAMPLE) arm2spCfg.trigger = CAPH_8KHZ;
 		} else if(path->src_sampleRate==AUDIO_SAMPLING_RATE_8000) {
 			arm2spCfg.numFramesPerInterrupt = 4;
-			arm2spCfg.trigger = CSL_CAPH_8KHZ;
-			if(path->chnlNum == AUDIO_CHANNEL_MONO && path->bitPerSample == AUDIO_16_BIT_PER_SAMPLE) arm2spCfg.trigger = CSL_CAPH_4KHZ;
+			arm2spCfg.trigger = CAPH_8KHZ;
+			if(path->chnlNum == AUDIO_CHANNEL_MONO && path->bitPerSample == AUDIO_16_BIT_PER_SAMPLE) arm2spCfg.trigger = CAPH_4KHZ;
 		}
 	} else if(arm2spCfg.path==LIST_DMA_MIX_DMA) {
 		arm2spCfg.numFramesPerInterrupt = csl_dsp_arm2sp_get_size(AUDIO_SAMPLING_RATE_48000)/(48*20*8); //mono uses half size, frame size is 20ms.
@@ -442,7 +442,7 @@ static void csl_caph_hwctrl_PrintPath(CSL_CAPH_HWConfig_Table_t *path)
 // Description: data format based on bistPerSample and channel mode
 //
 // =========================================================================
-static CSL_CAPH_DATAFORMAT_e csl_caph_get_dataformat(AUDIO_BITS_PER_SAMPLE_t bitPerSample, AUDIO_CHANNEL_NUM_t chnlNum)
+static CSL_CAPH_DATAFORMAT_e csl_caph_get_dataformat(AUDIO_BITS_PER_SAMPLE_t bitPerSample, AUDIO_NUM_OF_CHANNEL_t chnlNum)
 {
 	CSL_CAPH_DATAFORMAT_e dataFormat = CSL_CAPH_16BIT_MONO;
 
@@ -486,22 +486,22 @@ static CSL_CAPH_DATAFORMAT_e csl_caph_get_sink_dataformat(CSL_CAPH_DATAFORMAT_e 
 // Description: get mixer output trigger, maybe should be moved to mixer file.
 //
 // =========================================================================
-static CSL_CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_outchnl_trigger(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
+static CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_outchnl_trigger(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
 {
-	CSL_CAPH_SWITCH_TRIGGER_e trigger = CSL_CAPH_TRIG_NONE;
+	CAPH_SWITCH_TRIGGER_e trigger = CAPH_VOID;
 
 	switch (outChnl)
 	{
 	case CSL_CAPH_SRCM_STEREO_CH1:
 	case CSL_CAPH_SRCM_STEREO_CH1_L:
 	case CSL_CAPH_SRCM_STEREO_CH1_R:
-		trigger = CSL_CAPH_TRIG_MIX1_OUT_THR; //HS
+		trigger = CAPH_TRIG_MIX1_OUT_THR; //HS
 		break;
 	case CSL_CAPH_SRCM_STEREO_CH2_L:
-		trigger = CSL_CAPH_TRIG_MIX2_OUT2_THR; //EP
+		trigger = CAPH_TRIG_MIX2_OUT2_THR; //EP
 		break;
 	case CSL_CAPH_SRCM_STEREO_CH2_R:
-		trigger = CSL_CAPH_TRIG_MIX2_OUT1_THR; //IHF
+		trigger = CAPH_TRIG_MIX2_OUT1_THR; //IHF
 		break;
 	default:
 		audio_xassert(0, outChnl);
@@ -567,37 +567,37 @@ static AUDDRV_PATH_Enum_t csl_caph_get_audio_path(CSL_CAPH_DEVICE_e dev)
 // Description: get device trigger
 //
 // =========================================================================
-static CSL_CAPH_SWITCH_TRIGGER_e csl_caph_get_dev_trigger(CSL_CAPH_DEVICE_e dev)
+static CAPH_SWITCH_TRIGGER_e csl_caph_get_dev_trigger(CSL_CAPH_DEVICE_e dev)
 {
-	CSL_CAPH_SWITCH_TRIGGER_e trigger = CSL_CAPH_TRIG_NONE;
+	CAPH_SWITCH_TRIGGER_e trigger = CAPH_VOID;
 
 	switch (dev)
 	{
 	case CSL_CAPH_DEV_HS:
-		trigger = CSL_CAPH_TRIG_HS_THR_MET;
+		trigger = CAPH_HS_THR_MET;
 		break;
 	case CSL_CAPH_DEV_IHF:
-		trigger = CSL_CAPH_TRIG_IHF_THR_MET;
+		trigger = CAPH_IHF_THR_MET;
 		break;
 	case CSL_CAPH_DEV_EP:
-		trigger = CSL_CAPH_TRIG_EP_THR_MET;
+		trigger = CAPH_EP_THR_MET;
 		break;
 	case CSL_CAPH_DEV_VIBRA:
-		trigger = CSL_CAPH_TRIG_VB_THR_MET;
+		trigger = CAPH_VB_THR_MET;
 		break;
 	case CSL_CAPH_DEV_ANALOG_MIC:
 	case CSL_CAPH_DEV_HS_MIC:
 	case CSL_CAPH_DEV_DIGI_MIC_L:
-		trigger = CSL_CAPH_TRIG_ADC_VOICE_FIFOR_THR_MET;
+		trigger = CAPH_ADC_VOICE_FIFOR_THR_MET;
 		break;
 	case CSL_CAPH_DEV_DIGI_MIC_R:
-		trigger = CSL_CAPH_TRIG_ADC_VOICE_FIFOL_THR_MET;
+		trigger = CAPH_ADC_VOICE_FIFOL_THR_MET;
 		break;
 	case CSL_CAPH_DEV_EANC_DIGI_MIC_L:
-		trigger = CSL_CAPH_TRIG_ADC_NOISE_FIFOR_THR_MET;
+		trigger = CAPH_ADC_NOISE_FIFOR_THR_MET;
 		break;
 	case CSL_CAPH_DEV_EANC_DIGI_MIC_R:
-		trigger = CSL_CAPH_TRIG_ADC_NOISE_FIFOL_THR_MET;
+		trigger = CAPH_ADC_NOISE_FIFOL_THR_MET;
 		break;
 	case CSL_CAPH_DEV_BT_MIC:
 		trigger = pcmRxTrigger;
@@ -1020,8 +1020,8 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 	{
 		path->audiohCfg[audiohSinkPathIdx].sample_size = 16;
 		if(dataFormat==CSL_CAPH_24BIT_MONO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[audiohSinkPathIdx].sample_size = 24;
-		path->audiohCfg[audiohSinkPathIdx].sample_mode = (AUDIO_CHANNEL_NUM_t) 1;
-		if(dataFormat==CSL_CAPH_16BIT_STEREO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[audiohSinkPathIdx].sample_mode = (AUDIO_CHANNEL_NUM_t) 2;
+		path->audiohCfg[audiohSinkPathIdx].sample_mode = (AUDIO_NUM_OF_CHANNEL_t) 1;
+		if(dataFormat==CSL_CAPH_16BIT_STEREO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[audiohSinkPathIdx].sample_mode = (AUDIO_NUM_OF_CHANNEL_t) 2;
 		path->audiohPath[audiohSinkPathIdx] = csl_caph_get_audio_path(sink);
 	}
 	csl_caph_hwctrl_PrintPath(path);
@@ -1219,7 +1219,7 @@ static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
 			swCfg->trigger = arm2spCfg.trigger;
 		} else if(path->block[blockPathIdx-1]==CAPH_SRC) { //if src is ahead, use src tap as trigger
 			blockIdxTmp = path->blockIdx[blockPathIdx-1];
-			swCfg->trigger = (CSL_CAPH_SWITCH_TRIGGER_e)((UInt32)CSL_CAPH_TRIG_TAPSDOWN_CH1_NORM_INT+(UInt32)path->srcmRoute[blockIdxTmp].tapOutChnl-(UInt32)CSL_CAPH_SRCM_TAP_MONO_CH1);
+			swCfg->trigger = (CAPH_SWITCH_TRIGGER_e)((UInt32)CAPH_TAPSDOWN_CH1_NORM_INT+(UInt32)path->srcmRoute[blockIdxTmp].tapOutChnl-(UInt32)CSL_CAPH_SRCM_TAP_MONO_CH1);
 		} else if(path->block[blockPathIdx+1]==CAPH_SRC || path->block[blockPathIdx+1]==CAPH_MIXER) { //if src is behind, use src input as trigger
 			blockIdxTmp = path->blockIdx[blockPathIdx+1];
 			swCfg->trigger = csl_caph_srcmixer_get_inchnl_trigger(path->srcmRoute[blockIdxTmp].inChnl);
@@ -1741,7 +1741,7 @@ void csl_caph_ControlHWClock(Boolean enable)
 *                                               CSL_CAPH_DEVICE_e sink,
 *                                               AUDIO_SAMPLING_RATE_t src_sampleRate,
 *                                               AUDIO_SAMPLING_RATE_t snk_sampleRate,
-*                                               AUDIO_CHANNEL_NUM_t chnlNum,
+*                                               AUDIO_NUM_OF_CHANNEL_t chnlNum,
 *                                               AUDIO_BITS_PER_SAMPLE_t bitPerSample)
 *
 *  Description: Add the new path into the path table
@@ -1751,7 +1751,7 @@ static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_DEVICE_e source,
                                                CSL_CAPH_DEVICE_e sink,
                                                AUDIO_SAMPLING_RATE_t src_sampleRate,
                                                AUDIO_SAMPLING_RATE_t snk_sampleRate,
-                                               AUDIO_CHANNEL_NUM_t chnlNum,
+                                               AUDIO_NUM_OF_CHANNEL_t chnlNum,
                                                AUDIO_BITS_PER_SAMPLE_t bitPerSample)
 {
     UInt8 i = 0;
@@ -2378,20 +2378,20 @@ void csl_caph_hwctrl_init(void)
     csl_caph_dma_init(addr.aadmac_baseAddr, (UInt32)caph_intc_handle);
 
 #if defined(SSP3_FOR_FM)
-	fmTxTrigger = CSL_CAPH_TRIG_SSP3_TX0;
-	fmRxTrigger = CSL_CAPH_TRIG_SSP3_RX0;
-	pcmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0;
-	pcmRxTrigger = CSL_CAPH_TRIG_SSP4_RX0;
+	fmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
+	fmRxTrigger = CAPH_SSP3_RX0_TRIGGER;
+	pcmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
+	pcmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
 	sspidPcmUse = CSL_CAPH_SSP_4;
 	sspidI2SUse = CSL_CAPH_SSP_3;
 
     fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp3_baseAddr);
     pcmHandleSSP = (CSL_HANDLE)csl_pcm_init(addr.ssp4_baseAddr, (UInt32)caph_intc_handle);
 #else
-    fmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0;
-	fmRxTrigger = CSL_CAPH_TRIG_SSP4_RX0;
-	pcmTxTrigger = CSL_CAPH_TRIG_SSP3_TX0;
-	pcmRxTrigger = CSL_CAPH_TRIG_SSP3_RX0;
+    fmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
+	fmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
+	pcmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
+	pcmRxTrigger = CAPH_SSP3_RX0_TRIGGER;
 	sspidPcmUse = CSL_CAPH_SSP_3;
 	sspidI2SUse = CSL_CAPH_SSP_4;
     // Initialize SSP4 port for FM.
@@ -4025,7 +4025,7 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus)
 {
 	CSL_CAPH_SSP_e ssp_port;
 	UInt32 addr;
-	CSL_CAPH_SWITCH_TRIGGER_e tx_trigger, rx_trigger;
+	CAPH_SWITCH_TRIGGER_e tx_trigger, rx_trigger;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_ConfigSSP:: port %d, bus %d, fmHandleSSP %p, pcmHandleSSP %p.\r\n", port, bus, fmHandleSSP, pcmHandleSSP));
 
@@ -4033,13 +4033,13 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus)
 	{
 		ssp_port = CSL_CAPH_SSP_3;
 		addr = SSP3_BASE_ADDR1;
-		rx_trigger = CSL_CAPH_TRIG_SSP3_RX0;
-		tx_trigger = CSL_CAPH_TRIG_SSP3_TX0;
+		rx_trigger = CAPH_SSP3_RX0_TRIGGER;
+		tx_trigger = CAPH_SSP3_TX0_TRIGGER;
 	} else if(port==CSL_SSP_4) {
 		ssp_port = CSL_CAPH_SSP_4;
 		addr = SSP4_BASE_ADDR1;
-		rx_trigger = CSL_CAPH_TRIG_SSP4_RX0;
-		tx_trigger = CSL_CAPH_TRIG_SSP4_TX0;
+		rx_trigger = CAPH_SSP4_RX0_TRIGGER;
+		tx_trigger = CAPH_SSP4_TX0_TRIGGER;
 	} else {
 		return;
 	}

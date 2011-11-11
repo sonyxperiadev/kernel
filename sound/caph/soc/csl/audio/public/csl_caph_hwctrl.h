@@ -153,7 +153,7 @@ typedef struct
     CSL_CAPH_DMA_CHNL_e dmaCH2;
     AUDIO_SAMPLING_RATE_t src_sampleRate;
     AUDIO_SAMPLING_RATE_t snk_sampleRate;	
-    AUDIO_CHANNEL_NUM_t chnlNum;
+    AUDIO_NUM_OF_CHANNEL_t chnlNum;
     AUDIO_BITS_PER_SAMPLE_t bitPerSample;
     CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
 }CSL_CAPH_HWCTRL_CONFIG_t;
@@ -169,7 +169,7 @@ typedef struct
     CSL_CAPH_DEVICE_e sink;
     AUDIO_SAMPLING_RATE_t src_sampleRate;
     AUDIO_SAMPLING_RATE_t snk_sampleRate;
-    AUDIO_CHANNEL_NUM_t chnlNum;
+    AUDIO_NUM_OF_CHANNEL_t chnlNum;
     AUDIO_BITS_PER_SAMPLE_t bitPerSample;
     UInt8* pBuf;
     UInt8* pBuf2;
@@ -267,7 +267,7 @@ typedef struct
 	CSL_CAPH_DEVICE_e sink[MAX_SINK_NUM];
 	AUDIO_SAMPLING_RATE_t src_sampleRate;
 	AUDIO_SAMPLING_RATE_t snk_sampleRate;	
-	AUDIO_CHANNEL_NUM_t chnlNum;
+	AUDIO_NUM_OF_CHANNEL_t chnlNum;
 	AUDIO_BITS_PER_SAMPLE_t bitPerSample;
 	UInt8* pBuf;
 	UInt8* pBuf2;

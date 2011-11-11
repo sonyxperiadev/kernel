@@ -261,8 +261,8 @@ int BrcmCreateAuddrv_testSysFs(struct snd_card *card)
 
 static int HandleControlCommand()
 {
-    AUDCTRL_SPEAKER_t		spkr;
-	AUDCTRL_MICROPHONE_t		mic;
+    AUDIO_SINK_Enum_t	spkr;
+    AUDIO_SOURCE_Enum_t		mic;
 
     switch(sgBrcm_auddrv_TestValues[1])
     {
@@ -347,7 +347,7 @@ static int HandleControlCommand()
         case 4:// Enable telephony
         {
             DEBUG(" Enable telephony\n");
-            AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET);
+            AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDIO_SOURCE_ANALOG_MAIN,AUDIO_SINK_HANDSET);
 	    		           
             DEBUG(" Telephony enabled \n");
         }
@@ -355,7 +355,7 @@ static int HandleControlCommand()
         case 5:// Disable telephony
         {
             DEBUG(" Disable telephony\n");
-            AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET);   
+            AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDIO_SOURCE_ANALOG_MAIN,AUDIO_SINK_HANDSET);   
 		            DEBUG(" Telephony disabled \n");
         }
 		break;
@@ -548,7 +548,7 @@ static int HandlePlayCommand()
     static AUDIO_DRIVER_HANDLE_t drv_handle = NULL;
     static AUDIO_DRIVER_CONFIG_t drv_config;
     static dma_addr_t            dma_addr;
-    static AUDCTRL_SPEAKER_t     spkr;
+    static AUDIO_SINK_Enum_t     spkr;
     static int src_used=0;
     char* src;
     char* dest;
@@ -668,7 +668,7 @@ static int HandlePlayCommand()
         break;
         case 4: //Start the playback
             {
-				AUDDRV_DEVICE_e aud_dev = AUDDRV_DEV_EP; // EP is default now
+				CSL_CAPH_DEVICE_e aud_dev = CSL_CAPH_DEV_EP; // EP is default now
 				AUDIO_HW_ID_t	audPlayHw = AUDIO_HW_EARPIECE_OUT;
 
                 DEBUG(" Start Playback\n");
@@ -679,19 +679,19 @@ static int HandlePlayCommand()
 				if (spkr == 0)// for rhea
 				{
 					// earpiece
-					aud_dev = AUDDRV_DEV_EP;  
+					aud_dev = CSL_CAPH_DEV_EP;  
 					audPlayHw = AUDIO_HW_EARPIECE_OUT;
 				}
 				else  if (spkr == 1)// for rhea
 				{
 					// headset
-					aud_dev = AUDDRV_DEV_HS; 
+					aud_dev = CSL_CAPH_DEV_HS; 
 					audPlayHw = AUDIO_HW_HEADSET_OUT;
 				}
 				else  if ((spkr == 2) || (spkr == 4)) // for rhea
 				{
 					// ihf
-					aud_dev = AUDDRV_DEV_IHF;  
+					aud_dev = CSL_CAPH_DEV_IHF;  
 					audPlayHw = AUDIO_HW_IHF_OUT;
 				}	
                 AUDCTRL_EnablePlay(AUDIO_HW_MEM,
@@ -735,7 +735,7 @@ static int HandlePlayCommand()
 				Val4 -   0 - playback 
 				Val5 - Sampling rate  0 -> playback of 8K PCM
 				Val6  - Mix mode CSL_ARM2SP_VOICE_MIX_MODE_t */
-				//AUDTST_VoicePlayback(AUDCTRL_SPK_HANDSET,0, 0 , VORENDER_PLAYBACK_DL, VORENDER_VOICE_MIX_NONE );
+				//AUDTST_VoicePlayback(AUDIO_SINK_HANDSET,0, 0 , VORENDER_PLAYBACK_DL, VORENDER_VOICE_MIX_NONE );
 				AUDTST_VoicePlayback(0, sgBrcm_auddrv_TestValues[2],sgBrcm_auddrv_TestValues[3], VORENDER_PLAYBACK_DL, sgBrcm_auddrv_TestValues[4] ); //play to DL
 			}
 			break;
@@ -783,7 +783,7 @@ static int HandleCaptCommand()
     //static AUDIO_DRIVER_BUFFER_t buf_param;
     static AUDIO_DRIVER_CONFIG_t drv_config;
     static dma_addr_t            dma_addr;
-    static AUDCTRL_MICROPHONE_t     mic = AUDCTRL_MIC_MAIN;
+    static AUDIO_SOURCE_Enum_t     mic = AUDIO_SOURCE_ANALOG_MAIN;
     AUDIO_DRIVER_CallBackParams_t	cbParams;
  
    
@@ -871,7 +871,7 @@ static int HandleCaptCommand()
         case 3: //Start the capture
             {
                 AUDIO_HW_ID_t           hw_id = AUDIO_HW_NONE;
-		AUDDRV_DEVICE_e aud_dev = AUDDRV_DEV_ANALOG_MIC;
+		CSL_CAPH_DEVICE_e aud_dev = CSL_CAPH_DEV_ANALOG_MIC;
 
 		if(!record_buf_allocated)
 		{	
@@ -894,24 +894,24 @@ static int HandleCaptCommand()
 				     drv_config.num_channel,
                                      drv_config.sample_rate);
 
-		if(mic == 1) //AUDCTRL_MIC_MAIN 
+		if(mic == 1) //AUDIO_SOURCE_ANALOG_MAIN 
 		{
-			aud_dev = AUDDRV_DEV_ANALOG_MIC;
+			aud_dev = CSL_CAPH_DEV_ANALOG_MIC;
 		}
-		else if(mic == 2) //AUDCTRL_MIC_AUX
+		else if(mic == 2) //AUDIO_SOURCE_AUX
 		{
 			//aux mic
-			aud_dev = AUDDRV_DEV_HS_MIC;
+			aud_dev = CSL_CAPH_DEV_HS_MIC;
 		}
-		else if(mic == 3) //AUDCTRL_MIC_DIGI1
+		else if(mic == 3) //AUDIO_SOURCE_DIGI1
 		{
 			// digi mic 1
-			aud_dev = AUDDRV_DEV_DIGI_MIC_L;
+			aud_dev = CSL_CAPH_DEV_DIGI_MIC_L;
 		}
-		else if(mic == 4) //AUDCTRL_MIC_DIGI2
+		else if(mic == 4) //AUDIO_SOURCE_DIGI2
 		{
 			// digi mic 2
-			aud_dev = AUDDRV_DEV_DIGI_MIC_R;
+			aud_dev = CSL_CAPH_DEV_DIGI_MIC_R;
 		}
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_START,&aud_dev);
                 
@@ -989,9 +989,9 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 		CSL_ARM2SP_PLAYBACK_MODE_t playbackMode; 
 		CSL_ARM2SP_VOICE_MIX_MODE_t mixMode;  
 		AUDIO_SAMPLING_RATE_t	sr = AUDIO_SAMPLING_RATE_8000;
-		AUDCTRL_SPEAKER_t speaker = AUDCTRL_SPK_HANDSET; 
+		AUDIO_SINK_Enum_t speaker = AUDIO_SINK_HANDSET; 
 		Boolean		setTransfer = FALSE;
-		AUDIO_CHANNEL_NUM_t stereo = AUDIO_CHANNEL_MONO;
+		AUDIO_NUM_OF_CHANNEL_t stereo = AUDIO_CHANNEL_MONO;
 		audPlayHw = AUDIO_HW_VOICE_OUT;
 	
 
@@ -1001,21 +1001,21 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 			drvtype = VORENDER_TYPE_PCM_ARM2SP;			
 			// earpiece
 			audPlayHw = AUDIO_HW_EARPIECE_OUT;  
-			speaker = AUDCTRL_SPK_HANDSET;
+			speaker = AUDIO_SINK_HANDSET;
 		}
 		else  if (Val3 == 1)// for rhea
 		{
 			drvtype = VORENDER_TYPE_PCM_ARM2SP;
 			// headset
 			audPlayHw = AUDIO_HW_HEADSET_OUT; 
-			speaker = AUDCTRL_SPK_HEADSET;
+			speaker = AUDIO_SINK_HEADSET;
 		}
 		else  if (Val3 == 2)// for rhea
 		{
 			drvtype = VORENDER_TYPE_PCM_ARM2SP;
 			// ihf
 			audPlayHw = AUDIO_HW_IHF_OUT;  
-			speaker = AUDCTRL_SPK_LOUDSPK;
+			speaker = AUDIO_SINK_LOUDSPK;
 		}
 
 
@@ -1024,7 +1024,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 		//sr = AUDIO_SAMPLING_RATE_16000; // provide user option to select the sampling rate
 			
 		Log_DebugPrintf(LOGID_AUDIO, "\n debug 1, stereo =%d audPlayHw = %d, drvtype =%d\n", stereo, audPlayHw,drvtype);
-		AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET); //rhea cases.
+		AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDIO_SOURCE_ANALOG_MAIN,AUDIO_SINK_HANDSET); //rhea cases.
 
 		AUDCTRL_SetPlayVolume (audPlayHw, 
    					               speaker, 
@@ -1122,7 +1122,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 		AUDDRV_VoiceRender_Shutdown (drvtype);
 
 		printk(KERN_INFO "\n  Voice render stop done \n");
-		AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET); 
+		AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDIO_SOURCE_ANALOG_MAIN,AUDIO_SINK_HANDSET); 
 
 		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
 	}
@@ -1145,8 +1145,8 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6
 	UInt32 codecVal = 0;
 	static AUDIO_DRIVER_HANDLE_t drv_handle = NULL;
 	AUDIO_DRIVER_CallBackParams_t	cbParams;
-	AUDCTRL_MICROPHONE_t mic = (AUDCTRL_MICROPHONE_t)Val2; // mic
-	AUDCTRL_SPEAKER_t spk = (AUDCTRL_SPEAKER_t)Val3; //speaker
+	AUDIO_SOURCE_Enum_t mic = (AUDIO_SOURCE_Enum_t)Val2; // mic
+	AUDIO_SINK_Enum_t spk = (AUDIO_SINK_Enum_t)Val3; //speaker
 	UInt32		delayMs = Val4; // delay in milliseconds
 	UInt32 count = 0; //20ms each count
 	UInt32 count1 = 0; //20ms each count

@@ -16,7 +16,7 @@
  */
 
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.
 
 Unless you and Broadcom execute a separate written software license agreement
 governing use of this software, this software is licensed to you under the
@@ -82,8 +82,8 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 #define	MIXER_STREAM_FLAGS_FM		0x00000004
 
 #define	CAPH_MIXER_NAME_LENGTH		20	//Max length of a mixer name
-#define	MIC_TOTAL_COUNT_FOR_USER	(AUDCTRL_MIC_DIGI4+1)
-#define	CAPH_MAX_CTRL_LINES			((MIC_TOTAL_COUNT_FOR_USER>AUDCTRL_SPK_TOTAL_COUNT)?MIC_TOTAL_COUNT_FOR_USER:AUDCTRL_SPK_TOTAL_COUNT)
+#define	MIC_TOTAL_COUNT_FOR_USER    (AUDIO_SOURCE_DIGI4+1)
+#define	CAPH_MAX_CTRL_LINES         ((MIC_TOTAL_COUNT_FOR_USER>AUDIO_SINK_TOTAL_COUNT)?MIC_TOTAL_COUNT_FOR_USER:AUDIO_SINK_TOTAL_COUNT)
 #define	CAPH_MAX_PCM_STREAMS		8
 #define MAX_USERCTRL_DATA_SIZE		300
 

@@ -112,7 +112,7 @@ typedef struct AUDIO_DDRIVER_t
 	void *									pCBPrivate;
     UInt32                                  interrupt_period;
     AUDIO_SAMPLING_RATE_t                   sample_rate;
-    AUDIO_CHANNEL_NUM_t		                num_channel;
+    AUDIO_NUM_OF_CHANNEL_t		            num_channel;
     AUDIO_BITS_PER_SAMPLE_t	                bits_per_sample;
     UInt8*                                  ring_buffer;
     UInt32                                  ring_buffer_size;
@@ -450,12 +450,12 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
             }
             break;
 
-		 case AUDIO_DRIVER_VOIP:
+	 case AUDIO_DRIVER_VOIP:
             { 
 				result_code =  AUDIO_DRIVER_ProcessVoIPCmd(aud_drv,ctrl_cmd,pCtrlStruct);
 		 	}
 		 	break;
-		 case AUDIO_DRIVER_VOIF:
+	 case AUDIO_DRIVER_VOIF:
             { 
 				result_code =  AUDIO_DRIVER_ProcessVoIFCmd(aud_drv,ctrl_cmd,pCtrlStruct);
 		 	}
@@ -503,7 +503,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-	AUDDRV_DEVICE_e *aud_dev;
+	CSL_CAPH_DEVICE_e *aud_dev;
 	//Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
     switch (ctrl_cmd)
     {
@@ -513,7 +513,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 num_blocks;
 						
 				if(pCtrlStruct != NULL)
-			    	aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
+			    	aud_dev = (CSL_CAPH_DEVICE_e *)pCtrlStruct;
                 //check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
                     (aud_drv->interrupt_period == 0) ||
@@ -528,7 +528,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::All Configuration is not set yet  \n"  );
                     return result_code;
                 }
-				aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY,AUDDRV_GetCSLDevice(*aud_dev));
+				aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY, (*aud_dev));
 				SetPlaybackStreamHandle(aud_drv);//save the driver handle after ID is assigned
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
 		                 * Number of blocks = buffer size/block size
@@ -724,7 +724,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-    AUDDRV_DEVICE_e *aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
+    CSL_CAPH_DEVICE_e *aud_dev = (CSL_CAPH_DEVICE_e *)pCtrlStruct;
 
     switch (ctrl_cmd)
     {
@@ -746,7 +746,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureCmd::All Configuration is not set yet  \n"  );
                     return result_code;
                 }
-                aud_drv->stream_id = csl_audio_capture_init (AUDDRV_GetCSLDevice(*aud_dev),CSL_CAPH_DEV_MEMORY);
+                aud_drv->stream_id = csl_audio_capture_init ( (*aud_dev),CSL_CAPH_DEV_MEMORY);
                 audio_capture_driver = aud_drv;
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
 				* Number of blocks = buffer size/block size

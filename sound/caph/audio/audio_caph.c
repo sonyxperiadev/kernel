@@ -403,7 +403,7 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 			
-			if((param_start->callMode != 1) || (param_start->pdev_prop->c.mic == AUDCTRL_MIC_I2S)) // allow FM recording in call mode
+			if((param_start->callMode != 1) || (param_start->pdev_prop->c.mic == AUDIO_SOURCE_I2S)) // allow FM recording in call mode
 			{
 	        	AUDCTRL_EnableRecord(param_start->pdev_prop->c.hw_id,
 				                     param_start->pdev_prop->c.hw_sink,	
@@ -441,7 +441,7 @@ void AUDIO_Ctrl_Process(
                
             AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
-			if((param_stop->callMode != 1) || (param_stop->pdev_prop->c.mic == AUDCTRL_MIC_I2S)) // allow FM recording in call mode
+			if((param_stop->callMode != 1) || (param_stop->pdev_prop->c.mic == AUDIO_SOURCE_I2S)) // allow FM recording in call mode
 			{		
             	AUDCTRL_DisableRecord(param_stop->pdev_prop->c.hw_id,
                                       AUDIO_HW_MEM,
@@ -491,8 +491,8 @@ void AUDIO_Ctrl_Process(
 			BRCM_AUDIO_Param_Call_t *parm_call = (BRCM_AUDIO_Param_Call_t *)arg_param;
 			AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,
 									AUDIO_HW_VOICE_OUT,
-									(AUDCTRL_MICROPHONE_t)parm_call->new_mic,
-									(AUDCTRL_SPEAKER_t)parm_call->new_spkr);
+									(AUDIO_SOURCE_Enum_t)parm_call->new_mic,
+									(AUDIO_SINK_Enum_t)parm_call->new_spkr);
 		}
 		break;
 		case ACTION_AUD_DisableTelephony:
@@ -500,8 +500,8 @@ void AUDIO_Ctrl_Process(
 			BRCM_AUDIO_Param_Call_t *parm_call = (BRCM_AUDIO_Param_Call_t *)arg_param;
 			AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,
 									 AUDIO_HW_VOICE_OUT,
-									 (AUDCTRL_MICROPHONE_t)parm_call->cur_mic,
-									 (AUDCTRL_SPEAKER_t)parm_call->cur_spkr);
+									 (AUDIO_SOURCE_Enum_t)parm_call->cur_mic,
+									 (AUDIO_SINK_Enum_t)parm_call->cur_spkr);
 		}
 		break;
 		case ACTION_AUD_MutePlayback:
@@ -590,7 +590,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_SetHWLoopback:
 		{
 			BRCM_AUDIO_Param_Loopback_t *parm_loop = (BRCM_AUDIO_Param_Loopback_t *)arg_param;
-			AUDCTRL_SetAudioLoopback(parm_loop->parm,(AUDCTRL_MICROPHONE_t)parm_loop->mic,(AUDCTRL_SPEAKER_t)parm_loop->spkr);
+			AUDCTRL_SetAudioLoopback(parm_loop->parm,(AUDIO_SOURCE_Enum_t)parm_loop->mic,(AUDIO_SINK_Enum_t)parm_loop->spkr);
 		}
 		break;
 		case ACTION_AUD_EnableFMPlay:

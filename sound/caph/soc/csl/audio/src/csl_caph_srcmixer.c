@@ -32,6 +32,7 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 ****************************************************************************/
 #include "log.h"
 #include "mobcom_types.h"
+#include "chal_caph.h"
 #include "csl_caph.h"
 #include "chal_caph_intc.h"
 #include "chal_caph_srcmixer.h"
@@ -523,45 +524,45 @@ CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_tapoutchnl_fifo(
 
 /****************************************************************************
 *
-*  Function Name: CSL_CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
+*  Function Name: CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
 *                                                  CSL_CAPH_SRCM_INCHNL_e inChnl)
 *
 *  Description: Get the csl Mixer Input Channel trigger
 *
 ****************************************************************************/
-CSL_CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
+CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
                                                    CSL_CAPH_SRCM_INCHNL_e inChnl)
 {
-    CSL_CAPH_SWITCH_TRIGGER_e inChnlTrig = CSL_CAPH_TRIG_NONE; 
+    CAPH_SWITCH_TRIGGER_e inChnlTrig = CAPH_VOID; 
 	
     switch (inChnl)
     {
         case CSL_CAPH_SRCM_MONO_CH1:
-            inChnlTrig = CSL_CAPH_TRIG_TAPSUP_CH1_NORM_INT;
+            inChnlTrig = CAPH_TAPSUP_CH1_NORM_INT;
             break;
         case CSL_CAPH_SRCM_MONO_CH2:
-            inChnlTrig = CSL_CAPH_TRIG_TAPSUP_CH2_NORM_INT;
+            inChnlTrig = CAPH_TAPSUP_CH2_NORM_INT;
             break;
         case CSL_CAPH_SRCM_MONO_CH3:
-            inChnlTrig = CSL_CAPH_TRIG_TAPSUP_CH3_NORM_INT;
+            inChnlTrig = CAPH_TAPSUP_CH3_NORM_INT;
             break;
         case CSL_CAPH_SRCM_MONO_CH4:
-            inChnlTrig = CSL_CAPH_TRIG_TAPSUP_CH4_NORM_INT;
+            inChnlTrig = CAPH_TAPSUP_CH4_NORM_INT;
             break;
         case CSL_CAPH_SRCM_STEREO_PASS_CH1:
         case CSL_CAPH_SRCM_STEREO_PASS_CH1_L:
         case CSL_CAPH_SRCM_STEREO_PASS_CH1_R:
-            inChnlTrig = CSL_CAPH_TRIG_PASSTHROUGH_CH1_FIFO_THRESMET;
+            inChnlTrig = CAPH_PASSTHROUGH_CH1_FIFO_THRESMET;
             break;
         case CSL_CAPH_SRCM_STEREO_PASS_CH2:
         case CSL_CAPH_SRCM_STEREO_PASS_CH2_L:
         case CSL_CAPH_SRCM_STEREO_PASS_CH2_R:
-            inChnlTrig = CSL_CAPH_TRIG_PASSTHROUGH_CH2_FIFO_THRESMET;
+            inChnlTrig = CAPH_PASSTHROUGH_CH2_FIFO_THRESMET;
             break;
         case CSL_CAPH_SRCM_STEREO_CH5:
         case CSL_CAPH_SRCM_STEREO_CH5_L:
         case CSL_CAPH_SRCM_STEREO_CH5_R:
-            inChnlTrig = CSL_CAPH_TRIG_TAPSUP_CH5_NORM_INT;
+            inChnlTrig = CAPH_TAPSUP_CH5_NORM_INT;
             break;
         default:
             audio_xassert(0, inChnl);

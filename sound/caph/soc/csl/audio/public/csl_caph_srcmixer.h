@@ -384,9 +384,9 @@ CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_tapoutchnl_fifo(
 *
 *  @param   fifo  (in) caph srcmixer in channel
 *
-*  @return CSL_CAPH_SWITCH_TRIGGER_e trigger
+*  @return CAPH_SWITCH_TRIGGER_e trigger
 *****************************************************************************/
-CSL_CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
+CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
                                                    CSL_CAPH_SRCM_INCHNL_e inChnl);
 /**
 *

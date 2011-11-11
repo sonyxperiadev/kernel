@@ -98,48 +98,8 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 //	Params  --- P1,P2,...,P6
 //
 /**
-typedef enum AUDCTRL_SPEAKER_t
-{
-	AUDCTRL_SPK_HANDSET,
-	AUDCTRL_SPK_HEADSET,
-	AUDCTRL_SPK_HANDSFREE,
-	AUDCTRL_SPK_BTM,  //Bluetooth HFP
-	AUDCTRL_SPK_LOUDSPK,
-	AUDCTRL_SPK_TTY,
-	AUDCTRL_SPK_HAC,	
-	AUDCTRL_SPK_USB,
-	AUDCTRL_SPK_BTS,  //Bluetooth A2DP
-	AUDCTRL_SPK_I2S,
-	AUDCTRL_SPK_VIBRA,
-	AUDCTRL_SPK_UNDEFINED,
-	AUDCTRL_SPK_TOTAL_COUNT
-} AUDCTRL_SPEAKER_t;
-
-typedef enum AUDCTRL_MIC_Enum_t
-{
-	AUDCTRL_MIC_UNDEFINED,
-	AUDCTRL_MIC_MAIN,
-	AUDCTRL_MIC_AUX,
-	AUDCTRL_MIC_DIGI1,
-	AUDCTRL_MIC_DIGI2,
-	AUDCTRL_DUAL_MIC_DIGI12,
-	AUDCTRL_DUAL_MIC_DIGI21,
-	AUDCTRL_DUAL_MIC_ANALOG_DIGI1,
-	AUDCTRL_DUAL_MIC_DIGI1_ANALOG,
-	AUDCTRL_MIC_BTM,  //Bluetooth Mono Headset Mic
-	//AUDCTRL_MIC_BTS,	//not exist
-	AUDCTRL_MIC_USB,  //USB headset Mic
-	AUDCTRL_MIC_I2S,
-	AUDCTRL_MIC_DIGI3, //Only for loopback path
-	AUDCTRL_MIC_DIGI4, //Only for loopback path
-	AUDCTRL_MIC_SPEECH_DIGI, //Digital Mic1/Mic2 in recording/Normal Quality Voice call.
-	AUDCTRL_MIC_EANC_DIGI, //Digital Mic1/2/3/4 for Supreme Quality Voice Call.
-	AUDCTRL_MIC_NOISE_CANCEL, //Mic for noise cancellation. Used in Dual mic case.
-	AUDCTRL_MIC_TOTAL_COUNT
-} AUDCTRL_MIC_Enum_t;
-
 loopback:
-at*maudmode=11, 1, 0  //HANDSET
+at*maudmode=11, 1, 0  //HANDSET  ( 11,  AUDIO_SINK_Enum_t, AUDIO_SOURCE_Enum_t )
 at*maudmode=12  //disable loopback
 
 at*maudmode=11, 1, 4  //main mic to IHF
@@ -152,8 +112,8 @@ at*maudmode=12
 //---------------------------------------------------------------------------
 int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
-	AUDCTRL_MICROPHONE_t mic = AUDCTRL_MIC_MAIN;
-	AUDCTRL_SPEAKER_t spk = AUDCTRL_SPK_HANDSET;
+    AUDIO_SOURCE_Enum_t mic = AUDIO_SOURCE_ANALOG_MAIN;
+    AUDIO_SINK_Enum_t spk = AUDIO_SINK_HANDSET;
     int rtn = 0;  //0 means Ok
     static UInt8 loopback_status = 0, loopback_input = 0, loopback_output = 0;
 	AudioMode_t mode;
@@ -412,18 +372,18 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			break;
 			
 		
-		//! typedef enum AUDCTRL_SPEAKER_t {
-		//!	AUDCTRL_SPK_HANDSET,
-		//!	AUDCTRL_SPK_HEADSET,
-		//!	AUDCTRL_SPK_HANDSFREE,
-		//!	AUDCTRL_SPK_BTM,  //Bluetooth HFP
-		//!	AUDCTRL_SPK_LOUDSPK,
-		//!	AUDCTRL_SPK_TTY,
-		//!	AUDCTRL_SPK_HAC,	
-		//!	AUDCTRL_SPK_USB,
-		//!	AUDCTRL_SPK_BTS,  //Bluetooth A2DP
-		//!	AUDCTRL_SPK_I2S,
-		//!	AUDCTRL_SPK_VIBRA,
+		//! typedef enum AUDIO_SINK_Enum_t {
+		//!	AUDIO_SINK_HANDSET,
+		//!	AUDIO_SINK_HEADSET,
+		//!	AUDIO_SINK_HANDSFREE,
+		//!	AUDIO_SINK_BTM,  //Bluetooth HFP
+		//!	AUDIO_SINK_LOUDSPK,
+		//!	AUDIO_SINK_TTY,
+		//!	AUDIO_SINK_HAC,	
+		//!	AUDIO_SINK_USB,
+		//!	AUDIO_SINK_BTS,  //Bluetooth A2DP
+		//!	AUDIO_SINK_I2S,
+		//!	AUDIO_SINK_VIBRA,
 		//! -------------------------------------------------------------------------------------
 		case 26:
 			AUDCTRL_SetPlayMute( AUDIO_HW_NONE,
@@ -448,7 +408,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			//! 				   0 - un-mute
 			//! -------------------------------------------------------------------------------------
 		case 32:
-			AUDCTRL_SetTelephonyMicMute( AUDIO_HW_NONE, AUDCTRL_MIC_UNDEFINED, (Boolean) Params[2] );
+			AUDCTRL_SetTelephonyMicMute( AUDIO_HW_NONE, AUDIO_SOURCE_UNDEFINED, (Boolean) Params[2] );
 			break;
 
 
@@ -967,7 +927,7 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		pVolume[0] = Params[1];
 		pVolume[1] = Params[1];
 		AUDCTRL_SetTelephonySpkrVolume(	AUDIO_HW_NONE,
-									AUDCTRL_SPK_UNDEFINED,
+									AUDIO_SINK_UNDEFINED,
 									(Params[1]*100),   //Params[1] in dB
 									AUDIO_GAIN_FORMAT_mB
 									);

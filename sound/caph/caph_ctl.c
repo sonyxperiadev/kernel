@@ -240,13 +240,13 @@ static int SelCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info 
 	stream--;
 	if(pChip->streamCtl[stream].iFlags & MIXER_STREAM_FLAGS_CAPTURE)
 	{
-		uinfo->value.integer.min = AUDCTRL_MIC_MAIN;
+		uinfo->value.integer.min = AUDIO_SOURCE_ANALOG_MAIN;
 		uinfo->value.integer.max = MIC_TOTAL_COUNT_FOR_USER;
 	}
 	else
 	{
-		uinfo->value.integer.min = AUDCTRL_SPK_HANDSET;
-		uinfo->value.integer.max = AUDCTRL_SPK_TOTAL_COUNT;//last valid device is AUDCTRL_SPK_VIBRA
+		uinfo->value.integer.min = AUDIO_SINK_HANDSET;
+		uinfo->value.integer.max = AUDIO_SINK_TOTAL_COUNT;//last valid device is AUDIO_SINK_VIBRA
 	}
 	uinfo->value.integer.step = 1;
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -307,20 +307,20 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	pSel[1] = ucontrol->value.integer.value[1];
 
 	if((stream != CTL_STREAM_PANEL_VOICECALL) && (pSel[0] == pSel[1]))
-		pSel[1] = AUDCTRL_SPK_TOTAL_COUNT;
+		pSel[1] = AUDIO_SINK_TOTAL_COUNT;
 
-	pSel[2] = AUDCTRL_SPK_TOTAL_COUNT;
+	pSel[2] = AUDIO_SINK_TOTAL_COUNT;
 
 	if (isSTIHF == TRUE)
 	{
-		if (pSel[0] == AUDCTRL_SPK_LOUDSPK)
+		if (pSel[0] == AUDIO_SINK_LOUDSPK)
 		{
-			if (pSel[1] != AUDCTRL_SPK_TOTAL_COUNT)
+			if (pSel[1] != AUDIO_SINK_TOTAL_COUNT)
         		pSel[2] = pSel[1];
-			pSel[1] = AUDCTRL_SPK_HANDSET;
+			pSel[1] = AUDIO_SINK_HANDSET;
 		}
-		else if (pSel[1] == AUDCTRL_SPK_LOUDSPK)
-			pSel[2] = AUDCTRL_SPK_HANDSET;
+		else if (pSel[1] == AUDIO_SINK_LOUDSPK)
+			pSel[2] = AUDIO_SINK_HANDSET;
 	}
 
 	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%ld, pSel[1]=%ld, pSel[2]=%ld,\n", stream,pSel[0],pSel[1],pSel[2]);
@@ -332,8 +332,8 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 		{
 			AUDIO_HW_ID_t newSink = AUDIO_HW_NONE;
 			AUDIO_HW_ID_t curSink = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
-			AUDCTRL_SPEAKER_t newSpk = pSel[0];
-			AUDCTRL_SPEAKER_t curSpk = pCurSel[0];
+			AUDIO_SINK_Enum_t newSpk = pSel[0];
+			AUDIO_SINK_Enum_t curSpk = pCurSel[0];
 
 			if(pChip->streamCtl[stream-1].pSubStream != NULL)
 				pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
@@ -353,35 +353,35 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 
 					if(pSel[i] != pCurSel[i])
 					{
-						if(pSel[i]==AUDCTRL_SPK_HANDSET)
+						if(pSel[i]==AUDIO_SINK_HANDSET)
 						{
 							pChip->streamCtl[stream-1].dev_prop.p[i].hw_id = AUDIO_HW_EARPIECE_OUT;
-							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = AUDDRV_DEV_EP;
+							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_EP;
 						}
-						else if(pSel[i]==AUDCTRL_SPK_HEADSET)
+						else if(pSel[i]==AUDIO_SINK_HEADSET)
 						{
 							pChip->streamCtl[stream-1].dev_prop.p[i].hw_id = AUDIO_HW_HEADSET_OUT;
-							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = AUDDRV_DEV_HS;
+							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_HS;
 						}
-						else if(pSel[i]==AUDCTRL_SPK_LOUDSPK || pSel[i]==AUDCTRL_SPK_HANDSFREE)
+						else if(pSel[i]==AUDIO_SINK_LOUDSPK || pSel[i]==AUDIO_SINK_HANDSFREE)
 						{
 							pChip->streamCtl[stream-1].dev_prop.p[i].hw_id = AUDIO_HW_IHF_OUT;
-							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = AUDDRV_DEV_IHF;
+							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_IHF;
 						}
-						else if(pSel[i]==AUDCTRL_SPK_BTM)
+						else if(pSel[i]==AUDIO_SINK_BTM)
 						{
 							pChip->streamCtl[stream-1].dev_prop.p[i].hw_id = AUDIO_HW_MONO_BT_OUT;
-							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = AUDDRV_DEV_BT_SPKR;
+							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_BT_SPKR;
 						}
-						else if(pSel[i]==AUDCTRL_SPK_I2S)
+						else if(pSel[i]==AUDIO_SINK_I2S)
 						{
 							pChip->streamCtl[stream-1].dev_prop.p[i].hw_id = AUDIO_HW_I2S_OUT;
-							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = AUDDRV_DEV_FM_TX;
+							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_FM_TX;
 						}
-						else if(pSel[i]==AUDCTRL_SPK_VIBRA)
+						else if(pSel[i]==AUDIO_SINK_VIBRA)
 						{
 							pChip->streamCtl[stream-1].dev_prop.p[i].hw_id = AUDIO_HW_VIBRA_OUT;
-							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = AUDDRV_DEV_VIBRA;
+							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_VIBRA;
 						}
 						else
 						{
@@ -389,25 +389,25 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
                             {
 								BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[i]);
 								pChip->streamCtl[stream-1].dev_prop.p[i].hw_id = AUDIO_HW_EARPIECE_OUT;
-								pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = AUDDRV_DEV_EP;
+								pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_EP;
 							}
 						}
 						pChip->streamCtl[stream-1].dev_prop.p[i].speaker = pSel[i];
 
 						// If stIHF remove EP path first.
 						if ((isSTIHF) &&
-							(pCurSel[i] == AUDCTRL_SPK_LOUDSPK) &&
+							(pCurSel[i] == AUDIO_SINK_LOUDSPK) &&
 							(pChip->streamCtl[stream-1].dev_prop.p[i+1].hw_id == AUDIO_HW_EARPIECE_OUT))
 						{
 							BCM_AUDIO_DEBUG("Stereo IHF, remove EP path first.\n");
 							parm_spkr.src = pChip->streamCtl[stream-1].dev_prop.p[0].hw_src;
 							parm_spkr.cur_sink = AUDIO_HW_EARPIECE_OUT;
-							parm_spkr.cur_spkr = AUDCTRL_SPK_HANDSET;
+							parm_spkr.cur_spkr = AUDIO_SINK_HANDSET;
 							parm_spkr.new_sink = curSink;
 							parm_spkr.new_spkr = curSpk;
 							AUDIO_Ctrl_Trigger(ACTION_AUD_RemoveChannel,&parm_spkr,NULL,0);
 							pChip->streamCtl[stream-1].dev_prop.p[i+1].hw_id = AUDIO_HW_NONE;
-							pChip->streamCtl[stream-1].dev_prop.p[i+1].aud_dev = AUDDRV_DEV_NONE;
+							pChip->streamCtl[stream-1].dev_prop.p[i+1].aud_dev = CSL_CAPH_DEV_NONE;
 						}
 						if (i == 0)
 						{
@@ -464,48 +464,48 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
        {
         AUDIO_HW_ID_t newSink = AUDIO_HW_NONE;
 		AUDIO_HW_ID_t curSink = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
-		AUDCTRL_SPEAKER_t newSpk = pSel[0];
-		AUDCTRL_SPEAKER_t curSpk = pCurSel[0];
+		AUDIO_SINK_Enum_t newSpk = pSel[0];
+		AUDIO_SINK_Enum_t curSpk = pCurSel[0];
         pChip->streamCtl[stream-1].dev_prop.p[0].hw_src = AUDIO_HW_I2S_IN;
 
         if((pChip->iEnableFM) && (!(pChip->iEnablePhoneCall)) && (curSpk != newSpk))
         {
             // change the sink/spk
-            if(pSel[0]==AUDCTRL_SPK_HANDSET)
+            if(pSel[0]==AUDIO_SINK_HANDSET)
             {
                 pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
-                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_EP;
             }
-            else if(pSel[0]==AUDCTRL_SPK_HEADSET)
+            else if(pSel[0]==AUDIO_SINK_HEADSET)
             {
                 pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_HEADSET_OUT;
-                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_HS;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_HS;
             }
-            else if(pSel[0]==AUDCTRL_SPK_LOUDSPK || pSel[0]==AUDCTRL_SPK_HANDSFREE)
+            else if(pSel[0]==AUDIO_SINK_LOUDSPK || pSel[0]==AUDIO_SINK_HANDSFREE)
             {
                 pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_IHF_OUT;
-                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_IHF;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_IHF;
             }
-            else if(pSel[0]==AUDCTRL_SPK_BTM)
+            else if(pSel[0]==AUDIO_SINK_BTM)
             {
                 pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_MONO_BT_OUT;
-                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_BT_SPKR;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_BT_SPKR;
             }
-            else if(pSel[0]==AUDCTRL_SPK_I2S)
+            else if(pSel[0]==AUDIO_SINK_I2S)
             {
                 pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_I2S_OUT;
-                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_FM_TX;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_FM_TX;
             }
-            else if(pSel[0]==AUDCTRL_SPK_VIBRA)
+            else if(pSel[0]==AUDIO_SINK_VIBRA)
 			{
 				pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_VIBRA_OUT;
-				pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_VIBRA;
+				pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_VIBRA;
 			}
             else
             {
                 BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
                 pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
-                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_EP;
             }
 
             pChip->streamCtl[stream-1].dev_prop.p[0].speaker = pSel[0];
@@ -730,7 +730,7 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 			uinfo->count = 2;
 			uinfo->value.integer.min = 0;
-			uinfo->value.integer.max = AUDCTRL_SPK_TOTAL_COUNT;
+			uinfo->value.integer.max = AUDIO_SINK_TOTAL_COUNT;
 			break;
 
 		default:
@@ -909,46 +909,46 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
                 if (callMode)
                 {
                     pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_DSP_VOICE;	//sink
-                    pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_DSP_throughMEM;  // used by ddriver
+                    pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_DSP_throughMEM;  // used by ddriver
                 }
                 else
                 {
                     //Update Sink, volume , mute info from mixer controls
-                    if(pSel[0]==AUDCTRL_SPK_HANDSET)
+                    if(pSel[0]==AUDIO_SINK_HANDSET)
                     {
                         pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
-                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_EP;
                     }
-                    else if(pSel[0]==AUDCTRL_SPK_HEADSET)
+                    else if(pSel[0]==AUDIO_SINK_HEADSET)
                     {
                         pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_HEADSET_OUT;
-                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_HS;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_HS;
                     }
-                    else if(pSel[0]==AUDCTRL_SPK_LOUDSPK || pSel[0]==AUDCTRL_SPK_HANDSFREE)
+                    else if(pSel[0]==AUDIO_SINK_LOUDSPK || pSel[0]==AUDIO_SINK_HANDSFREE)
                     {
                         pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_IHF_OUT;
-                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_IHF;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_IHF;
                     }
-                    else if(pSel[0]==AUDCTRL_SPK_BTM)
+                    else if(pSel[0]==AUDIO_SINK_BTM)
                     {
                         pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_MONO_BT_OUT;
-                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_BT_SPKR;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_BT_SPKR;
                     }
-                    else if(pSel[0]==AUDCTRL_SPK_I2S)
+                    else if(pSel[0]==AUDIO_SINK_I2S)
                     {
                         pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_I2S_OUT;
-                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_FM_TX;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_FM_TX;
                     }
-                    else if(pSel[0]==AUDCTRL_SPK_VIBRA)
+                    else if(pSel[0]==AUDIO_SINK_VIBRA)
         			{
         				pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_VIBRA_OUT;
-        				pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_VIBRA;
+        				pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_VIBRA;
         			}
                     else
                     {
                         BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
                         pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
-                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_EP;
                     }
                 }
 
@@ -1084,35 +1084,35 @@ static const DECLARE_TLV_DB_SCALE(caph_db_scale_volume, -5000, 1, 0);
 	                        MiscCtrlInfo, MiscCtrlGet, MiscCtrlPut, 0,private_val)
 
 /*++++++++++++++++++++++++++++++++ Sink device and source devices
-{.strName = "Handset",	.iVolume = {0,0},},		//AUDCTRL_SPK_HANDSET
-{.strName = "Headset",		.iVolume = {-400,-400},},	//AUDCTRL_SPK_HEADSET
-x{.strName = "Handsfree",	.iVolume = {-10,-10},},	//AUDCTRL_SPK_HANDSFREE
-{.strName = "BT SCO",	.iVolume = {-10,-10},},		//AUDCTRL_SPK_BTM
-{.strName = "Loud Speaker", .iVolume = {400,400},},	//AUDCTRL_SPK_LOUDSPK
-{.strName = "", .iVolume = {-400,-400},}, 			//AUDCTRL_SPK_TTY
-{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_HAC
-x{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_USB
-x{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_BTS
-{.strName = "I2S", .iVolume = {0,0},},			//AUDCTRL_SPK_I2S
-{.strName = "Speaker Vibra", .iVolume = {-10,-10},},	//AUDCTRL_SPK_VIBRA
+{.strName = "Handset",	.iVolume = {0,0},},		//AUDIO_SINK_HANDSET
+{.strName = "Headset",		.iVolume = {-400,-400},},	//AUDIO_SINK_HEADSET
+x{.strName = "Handsfree",	.iVolume = {-10,-10},},	//AUDIO_SINK_HANDSFREE
+{.strName = "BT SCO",	.iVolume = {-10,-10},},		//AUDIO_SINK_BTM
+{.strName = "Loud Speaker", .iVolume = {400,400},},	//AUDIO_SINK_LOUDSPK
+{.strName = "", .iVolume = {-400,-400},}, 			//AUDIO_SINK_TTY
+{.strName = "", .iVolume = {0,0},}, 				//AUDIO_SINK_HAC
+x{.strName = "", .iVolume = {0,0},}, 				//AUDIO_SINK_USB
+x{.strName = "", .iVolume = {0,0},}, 				//AUDIO_SINK_BTS
+{.strName = "I2S", .iVolume = {0,0},},			//AUDIO_SINK_I2S
+{.strName = "Speaker Vibra", .iVolume = {-10,-10},},	//AUDIO_SINK_VIBRA
 
 
-{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_MIC_UNDEFINED
-{.strName = "Main Mic", 	.iVolume = {28,28},},		//AUDCTRL_MIC_MAIN
-{.strName = "AUX Mic",	.iVolume = {28,28},},			//AUDCTRL_MIC_AUX
-{.strName = "Digital MIC 1",	.iVolume = {28,28},},	//AUDCTRL_MIC_DIGI1
-{.strName = "Digital MIC 2",	.iVolume = {28,28},},	//AUDCTRL_MIC_DIGI2
+{.strName = "", .iVolume = {0,0},}, 				//AUDIO_SOURCE_UNDEFINED
+{.strName = "Main Mic", 	.iVolume = {28,28},},		//AUDIO_SOURCE_ANALOG_MAIN
+{.strName = "AUX Mic",	.iVolume = {28,28},},			//AUDIO_SOURCE_AUX
+{.strName = "Digital MIC 1",	.iVolume = {28,28},},	//AUDIO_SOURCE_DIGI1
+{.strName = "Digital MIC 2",	.iVolume = {28,28},},	//AUDIO_SOURCE_DIGI2
 x{.strName = "Digital Mic 12",	.iVolume = {28,28},},	//AUDCTRL_DUAL_MIC_DIGI12
 x{.strName = "Digital Mic 21",	.iVolume = {28,28},},	//AUDCTRL_DUAL_MIC_DIGI21
 x{.strName = "MIC_ANALOG_DIGI1", .iVolume = {12,12},},	//AUDCTRL_DUAL_MIC_ANALOG_DIGI1
 x{.strName = "MIC_DIGI1_ANALOG", .iVolume = {0,0},}, 	//AUDCTRL_DUAL_MIC_DIGI1_ANALOG
-{.strName = "BT SCO Mic",		.iVolume = {30,30},},	//AUDCTRL_MIC_BTM
-x{.strName = "", .iVolume = {0,0},}, 					//AUDCTRL_MIC_USB
-{.strName = "I2S",	.iVolume = {12,12},},				//AUDCTRL_MIC_I2S
-x{.strName = "MIC_DIGI3",	.iVolume = {28,28},},		//AUDCTRL_MIC_DIGI3
-x{.strName = "MIC_DIGI4",	.iVolume = {28,28},},		//AUDCTRL_MIC_DIGI4
-x{.strName = "MIC_SPEECH_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_SPEECH_DIGI
-x{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_EANC_DIGI
+{.strName = "BT SCO Mic",		.iVolume = {30,30},},	//AUDIO_SOURCE_BTM
+x{.strName = "", .iVolume = {0,0},}, 					//AUDIO_SOURCE_USB
+{.strName = "I2S",	.iVolume = {12,12},},				//AUDIO_SOURCE_I2S
+x{.strName = "MIC_DIGI3",	.iVolume = {28,28},},		//AUDIO_SOURCE_DIGI3
+x{.strName = "MIC_DIGI4",	.iVolume = {28,28},},		//AUDIO_SOURCE_DIGI4
+x{.strName = "MIC_SPEECH_DIGI",	.iVolume = {30,30},},	//AUDIO_SOURCE_SPEECH_DIGI
+x{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},},	//AUDIO_SOURCE_EANC_DIGI
 
 --------------------------------------------------*/
 
@@ -1155,24 +1155,24 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 	{
 		//PCMOut1
 		{
-			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_HANDSET, AUDCTRL_SPK_TOTAL_COUNT, AUDCTRL_SPK_TOTAL_COUNT},
+			.iTotalCtlLines = AUDIO_SINK_TOTAL_COUNT,
+			.iLineSelect = {AUDIO_SINK_HANDSET, AUDIO_SINK_TOTAL_COUNT, AUDIO_SINK_TOTAL_COUNT},
 			.strStreamName = "P1",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},
 
 		//PCMOut2
 		{
-			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_TOTAL_COUNT, AUDCTRL_SPK_TOTAL_COUNT},
+			.iTotalCtlLines = AUDIO_SINK_TOTAL_COUNT,
+			.iLineSelect = {AUDIO_SINK_LOUDSPK, AUDIO_SINK_TOTAL_COUNT, AUDIO_SINK_TOTAL_COUNT},
 			.strStreamName = "P2",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},
 
 		//VOIP Out
 		{
-			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_LOUDSPK},
+			.iTotalCtlLines = AUDIO_SINK_TOTAL_COUNT,
+			.iLineSelect = {AUDIO_SINK_LOUDSPK, AUDIO_SINK_LOUDSPK},
 			.strStreamName = "VD",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},
@@ -1181,7 +1181,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
 			.iTotalCtlLines = MIC_TOTAL_COUNT_FOR_USER,
-			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_MIC_MAIN},
+			.iLineSelect = {AUDIO_SOURCE_ANALOG_MAIN, AUDIO_SOURCE_ANALOG_MAIN},
 			.strStreamName = "C1",
 			.ctlLine = BCM_CTL_SRC_LINES,
 		},
@@ -1190,7 +1190,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
 			.iTotalCtlLines = MIC_TOTAL_COUNT_FOR_USER,
-			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_MIC_MAIN},
+			.iLineSelect = {AUDIO_SOURCE_ANALOG_MAIN, AUDIO_SOURCE_ANALOG_MAIN},
 			.strStreamName = "C2",
 			.ctlLine = BCM_CTL_SRC_LINES,
 		},
@@ -1198,7 +1198,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
 			.iTotalCtlLines = MIC_TOTAL_COUNT_FOR_USER,
-			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_MIC_MAIN},
+			.iLineSelect = {AUDIO_SOURCE_ANALOG_MAIN, AUDIO_SOURCE_ANALOG_MAIN},
 			.strStreamName = "VU",
 			.ctlLine = BCM_CTL_SRC_LINES,
 		},
@@ -1206,16 +1206,16 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		//Voice call
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CALL,
-			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_SPK_HANDSET},
+			.iTotalCtlLines = AUDIO_SINK_TOTAL_COUNT,
+			.iLineSelect = {AUDIO_SOURCE_ANALOG_MAIN, AUDIO_SINK_HANDSET},
 			.strStreamName = "VC",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},
 		//FM Radio
 		{
 			.iFlags = MIXER_STREAM_FLAGS_FM,
-			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_HEADSET, AUDCTRL_SPK_HEADSET},
+			.iTotalCtlLines = AUDIO_SINK_TOTAL_COUNT,
+			.iLineSelect = {AUDIO_SINK_HEADSET, AUDIO_SINK_HEADSET},
 			.strStreamName = "FM",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},

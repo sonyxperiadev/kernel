@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.                                
+Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.                                
 
 Unless you and Broadcom execute a separate written software license agreement 
 governing use of this software, this software is licensed to you under the 
@@ -16,7 +16,6 @@ the GPL, without Broadcom's express prior written consent.
 *   This code is OS independent and Device independent for audio device control.
 ****************************************************************************/
 
-
 #ifndef _AUDIO_CAPH_H__
 #define _AUDIO_CAPH_H__
 
@@ -24,38 +23,38 @@ the GPL, without Broadcom's express prior written consent.
 
 typedef struct _TIDChanOfPlaybackDev
 {
-    AUDIO_DRIVER_TYPE_t     drv_type;
-	AUDIO_HW_ID_t     		hw_src;
-    AUDIO_HW_ID_t           hw_id;
-    AUDCTRL_SPEAKER_t       speaker;
-	AUDDRV_DEVICE_e aud_dev;
+  AUDIO_DRIVER_TYPE_t     drv_type;
+  AUDIO_HW_ID_t     		hw_src;
+  AUDIO_HW_ID_t           hw_id;
+  AUDIO_SINK_Enum_t    speaker;
+  CSL_CAPH_DEVICE_e aud_dev;
 }TIDChanOfPlaybackDev;
 
 
 typedef struct _TIDChanOfCaptureDev
 {
     AUDIO_DRIVER_TYPE_t     drv_type;
-	AUDIO_HW_ID_t     		hw_sink;
+    AUDIO_HW_ID_t     		hw_sink;
     AUDIO_HW_ID_t           hw_id;
-    AUDCTRL_MICROPHONE_t       mic;
-	AUDDRV_DEVICE_e aud_dev;
+    AUDIO_SOURCE_Enum_t       mic;
+	CSL_CAPH_DEVICE_e aud_dev;
 }TIDChanOfCaptureDev;
 
 typedef struct _TIDChanOfVoiceCallDev
 {
     AUDIO_HW_ID_t           in_hw_id;
-    AUDCTRL_MICROPHONE_t       mic;
+    AUDIO_SOURCE_Enum_t       mic;
     AUDIO_HW_ID_t           out_hw_id;
-    AUDCTRL_SPEAKER_t       speaker;
+    AUDIO_SINK_Enum_t       speaker;
 
 }TIDChanOfVoiceCallDev;
 
 
 typedef struct _TIDChanOfDev
 {
-	TIDChanOfPlaybackDev	p[MAX_PLAYBACK_DEV];
-	TIDChanOfCaptureDev		c;
-	TIDChanOfVoiceCallDev	v;
+  TIDChanOfPlaybackDev	p[MAX_PLAYBACK_DEV];
+  TIDChanOfCaptureDev		c;
+  TIDChanOfVoiceCallDev	v;
 }TIDChanOfDev;
 
 //! The higher layer calls this Audio hardware abstraction layer to perform the following actions. This is expandable
@@ -63,64 +62,64 @@ typedef struct _TIDChanOfDev
 
 typedef enum
 {
-	ACTION_AUD_OpenPlay,
-	ACTION_AUD_ClosePlay,
-	ACTION_AUD_StartPlay,
-	ACTION_AUD_StopPlay,
-	ACTION_AUD_PausePlay,
-	ACTION_AUD_ResumePlay,
-	ACTION_AUD_StartRecord,
-	ACTION_AUD_StopRecord,
-    ACTION_AUD_OpenRecord,
-    ACTION_AUD_CloseRecord,
-    ACTION_AUD_SetPrePareParameters,
-    ACTION_AUD_AddChannel,
-    ACTION_AUD_RemoveChannel,
-    ACTION_AUD_EnableTelephony,
-    ACTION_AUD_DisableTelephony,
-    ACTION_AUD_MutePlayback,
-    ACTION_AUD_MuteRecord,
-    ACTION_AUD_MuteTelephony,
-    ACTION_AUD_EnableByPassVibra,
-    ACTION_AUD_DisableByPassVibra,
-    ACTION_AUD_SetVibraStrength,
-    ACTION_AUD_SetPlaybackVolume,
-    ACTION_AUD_SetRecordGain,
-	ACTION_AUD_SetTelephonySpkrVolume,  
-    ACTION_AUD_SwitchSpkr,
-	ACTION_AUD_SetHWLoopback,
-    ACTION_AUD_SetAudioMode,
-    ACTION_AUD_EnableFMPlay,
-    ACTION_AUD_DisableFMPlay,
-    ACTION_AUD_SetARM2SPInst,
-    ACTION_AUD_RateChange,
-	ACTION_AUD_TOTAL			
+  ACTION_AUD_OpenPlay,
+  ACTION_AUD_ClosePlay,
+  ACTION_AUD_StartPlay,
+  ACTION_AUD_StopPlay,
+  ACTION_AUD_PausePlay,
+  ACTION_AUD_ResumePlay,
+  ACTION_AUD_StartRecord,
+  ACTION_AUD_StopRecord,
+  ACTION_AUD_OpenRecord,
+  ACTION_AUD_CloseRecord,
+  ACTION_AUD_SetPrePareParameters,
+  ACTION_AUD_AddChannel,
+  ACTION_AUD_RemoveChannel,
+  ACTION_AUD_EnableTelephony,
+  ACTION_AUD_DisableTelephony,
+  ACTION_AUD_MutePlayback,
+  ACTION_AUD_MuteRecord,
+  ACTION_AUD_MuteTelephony,
+  ACTION_AUD_EnableByPassVibra,
+  ACTION_AUD_DisableByPassVibra,
+  ACTION_AUD_SetVibraStrength,
+  ACTION_AUD_SetPlaybackVolume,
+  ACTION_AUD_SetRecordGain,
+  ACTION_AUD_SetTelephonySpkrVolume,  
+  ACTION_AUD_SwitchSpkr,
+  ACTION_AUD_SetHWLoopback,
+  ACTION_AUD_SetAudioMode,
+  ACTION_AUD_EnableFMPlay,
+  ACTION_AUD_DisableFMPlay,
+  ACTION_AUD_SetARM2SPInst,
+  ACTION_AUD_RateChange,
+  ACTION_AUD_TOTAL			
 } BRCM_AUDIO_ACTION_en_t;
 
 typedef struct
 {
-    void*   drv_handle;
-    TIDChanOfDev	*pdev_prop;
-    UInt32 channels;
-    UInt32 rate;
-	Int32  vol[2];
-	Int32  mixMode;
-	Int32  callMode;
+  void*   drv_handle;
+  TIDChanOfDev	*pdev_prop;
+  UInt32 channels;
+  UInt32 rate;
+  Int32  vol[2];
+  Int32  mixMode;
+  Int32  callMode;
 }BRCM_AUDIO_Param_Start_t;
 
 typedef struct
 {
-    void*   drv_handle;
-    TIDChanOfDev	*pdev_prop;
-	Int32 callMode;
+  void*   drv_handle;
+  TIDChanOfDev	*pdev_prop;
+  Int32 callMode;
 
 }BRCM_AUDIO_Param_Stop_t;
 
 typedef struct
 {
-    void*   drv_handle;
-    TIDChanOfDev	*pdev_prop;
-
+  void*   drv_handle;
+  TIDChanOfDev	*pdev_prop;
+  
 }BRCM_AUDIO_Param_Pause_t;
 
 typedef struct
@@ -148,11 +147,11 @@ typedef struct
 
 typedef struct
 {
-	unsigned long period_bytes;
-	AUDIO_DRIVER_HANDLE_t  drv_handle;
-    AUDIO_DRIVER_BUFFER_t buf_param;
-    AUDIO_DRIVER_CONFIG_t drv_config;
-	AUDIO_DRIVER_CallBackParams_t	cbParams;
+  unsigned long period_bytes;
+  AUDIO_DRIVER_HANDLE_t  drv_handle;
+  AUDIO_DRIVER_BUFFER_t buf_param;
+  AUDIO_DRIVER_CONFIG_t drv_config;
+  AUDIO_DRIVER_CallBackParams_t	cbParams;
 }BRCM_AUDIO_Param_Prepare_t;
 
 typedef struct

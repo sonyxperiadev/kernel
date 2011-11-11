@@ -96,8 +96,8 @@ typedef struct __bcm_caph_hwdep_voip
 	int writecount;
 	wait_queue_head_t sleep;
 	audio_voip_driver_t* buffer_handle;
-	AUDCTRL_MIC_Enum_t mic; 
-	AUDCTRL_SPEAKER_t spk;
+	AUDIO_SOURCE_Enum_t mic; 
+	AUDIO_SINK_Enum_t spk;
 	u32 codec_type;
 	u8 voip_type;
 	u32 frame_size; 
@@ -279,8 +279,8 @@ static int hwdep_open(struct snd_hwdep *hw, struct file * file)
 	if(!setdefault)
 	{
 		setdefault = TRUE;
-		voip_data.mic = AUDCTRL_MIC_MAIN;
-		voip_data.spk = AUDCTRL_SPK_HANDSET;
+		voip_data.mic = AUDIO_SOURCE_ANALOG_MAIN;
+		voip_data.spk = AUDIO_SINK_HANDSET;
 		voip_data.codec_type = 0; //PCM 8K
 	}
 	return 0;
@@ -436,7 +436,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 			{
 				int data;
 				get_user(data,__user (int *)arg);
-				voip_data.mic = (AUDCTRL_MIC_Enum_t)data;
+				voip_data.mic = (AUDIO_SOURCE_Enum_t)data;
 				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSource mic %d, \n",voip_data.mic);
 			}
 			break;
@@ -445,7 +445,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 			{
 				int data;
 				get_user(data,__user (int *)arg);
-				voip_data.spk = (AUDCTRL_SPEAKER_t)data;				
+				voip_data.spk = (AUDIO_SINK_Enum_t)data;				
 				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSink spk %d, \n",voip_data.spk);
 			}
 			break;
@@ -500,8 +500,8 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 		case VoIP_Ioctl_SetMode:
 			{
 				int mode;
-				AUDCTRL_MICROPHONE_t cur_mic,new_mic;
-				AUDCTRL_SPEAKER_t cur_spk,new_spk;
+				AUDIO_SOURCE_Enum_t cur_mic,new_mic;
+				AUDIO_SINK_Enum_t cur_spk,new_spk;
 				get_user(mode,__user (int *)arg);
 				AUDCTRL_GetVoiceSrcSinkByMode((AudioMode_t)(mode), &new_mic, &new_spk);
 
