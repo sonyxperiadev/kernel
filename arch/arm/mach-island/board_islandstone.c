@@ -79,9 +79,9 @@
 #include <mach/io_map.h>
 #include <mach/aram_layout.h>
 
-#include <linux/vceb_platform_data_hana.h>
-#include <linux/vchiq_platform_data_hana.h>
-#include <linux/vchiq_platform_data_memdrv_hana.h>
+#include <vceb_platform_data_kona.h>
+#include <vchiq_platform_data_kona.h>
+#include <vchiq_platform_data_memdrv_kona.h>
 #endif
 
 #ifdef CONFIG_BACKLIGHT_PWM
@@ -479,20 +479,20 @@ static struct resource board_sdio2_resource[] = {
 *
 ***************************************************************************/
 
-#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE ) \
+#if defined( CONFIG_VC_VCHIQ_MEMDRV_KONA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_KONA_MODULE ) \
  || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM ) || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM_MODULE )
 
 /* Internal videocore is defined - Assume that it's for display */
 
 #define  VCEB_DISPLAY_DEVICE
 
-static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
+static VCEB_PLATFORM_DATA_KONA_T vceb_kona_display_data =
 {
     .create_params =
     {
         .instance_name = "display",
         .videocore_param = "vca",
-        .host_param = &vceb_hana_display_data,
+        .host_param = &vceb_kona_display_data,
     },
 
     .vcMemAddr          = VC_EMI,
@@ -512,10 +512,10 @@ static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
 };
 
 static struct platform_device vceb_display_device = {
-   .name = "vceb_hana",
+   .name = "vceb_kona",
    .id = 0,
     .dev = {
-       .platform_data = &vceb_hana_display_data,
+       .platform_data = &vceb_kona_display_data,
     },
 };
 
@@ -1181,7 +1181,7 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 *   VCHIQ display device
 *
 ***************************************************************************/
-#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE )
+#if defined( CONFIG_VC_VCHIQ_MEMDRV_KONA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_KONA_MODULE )
 
 /*
  * Internal videocore using the vchiq_arm stack
@@ -1193,7 +1193,7 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 #define IPC_SHARED_CHANNEL_VIRT     ( KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
 #define IPC_SHARED_CHANNEL_PHYS     ( INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
 
-static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
+static VCHIQ_PLATFORM_DATA_MEMDRV_KONA_T vchiq_display_data_memdrv_kona = {
     .memdrv = {
         .common = {
             .instance_name = "display",
@@ -1206,10 +1206,10 @@ static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
 };
 
 static struct platform_device vchiq_display_device = {
-    .name = "vchiq_memdrv_hana",
+    .name = "vchiq_memdrv_kona",
     .id = 0,
     .dev = {
-        .platform_data = &vchiq_display_data_memdrv_hana,
+        .platform_data = &vchiq_display_data_memdrv_kona,
     },
 };
 
@@ -1221,7 +1221,7 @@ static struct platform_device vchiq_display_device = {
 
 #define  VCHIQ_DISPLAY_DEVICE
 
-static VCHIQ_PLATFORM_DATA_HANA_T vchiq_display_data_shared_mem = {
+static VCHIQ_PLATFORM_DATA_KONA_T vchiq_display_data_shared_mem = {
     .common = {
         .instance_name  = "display",
         .dev_type       = VCHIQ_DEVICE_TYPE_HOST_PORT,
