@@ -15,15 +15,15 @@
  *
  */
 /*******************************************************************************************
-Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.                                
+Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.
 
-Unless you and Broadcom execute a separate written software license agreement 
-governing use of this software, this software is licensed to you under the 
-terms of the GNU General Public License version 2, available at 
-http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+Unless you and Broadcom execute a separate written software license agreement
+governing use of this software, this software is licensed to you under the
+terms of the GNU General Public License version 2, available at
+http://www.gnu.org/copyleft/gpl.html (the "GPL").
 
-Notwithstanding the above, under no circumstances may you combine this software 
-in any way with any other Broadcom software provided under a license other than 
+Notwithstanding the above, under no circumstances may you combine this software
+in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************************/
 
@@ -77,7 +77,7 @@ the GPL, without Broadcom's express prior written consent.
 void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...)
 {
 	va_list args;
-	
+
 	if(!(gAudioDebugLevel & level))
 	{
 //		printk("gAudioDebugLevel=%d level=%d\n", gAudioDebugLevel, level);
@@ -90,7 +90,7 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 #endif
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//Description: 
+//Description:
 //	AT command handler, handle command AT commands at*maudmode=P1,P2,P3
 //Parameters:
 //	pChip -- Pointer to chip data structure
@@ -119,7 +119,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 	AudioMode_t mode;
     Int32 pCurSel[2];
 
-	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);
 
 	AUDCTRL_ControlHWClock(TRUE);
 
@@ -127,7 +127,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 	{
 
 		case 0:	//at*maudmode 0
-			Params[0] = AUDCTRL_GetAudioMode(); 
+			Params[0] = AUDCTRL_GetAudioMode();
 			BCM_AUDIO_DEBUG("%s mode %d \n", __FUNCTION__, Params[0]);
 			break;
 
@@ -136,8 +136,8 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             pCurSel[0] = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0]; //save current setting
             pCurSel[1] = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1];
 
-            // Update 'VC-SEL' -- 
-			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0] = mic; 
+            // Update 'VC-SEL' --
+			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0] = mic;
 			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1] = spk;
             AUDCTRL_SetAudioMode( Params[1] );
 
@@ -155,7 +155,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
         case 8:	//at*maudmode=8
             Params[0] = loopback_status;
-            BCM_AUDIO_DEBUG("%s loopback status is %d \n", __FUNCTION__, loopback_status);  
+            BCM_AUDIO_DEBUG("%s loopback status is %d \n", __FUNCTION__, loopback_status);
             break;
 
         case 9: //at*maudmode=9,x.  x = 0 --> disable; x = other --> enable loopback
@@ -172,7 +172,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
             Params[0] = loopback_input;
             Params[1] = loopback_output;
-            BCM_AUDIO_DEBUG("%s loopback path is from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output);  
+            BCM_AUDIO_DEBUG("%s loopback path is from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output);
             break;
 
         case 11: //at*maudmode=11,x,y  --> set loopback path.  doesn't affect audio mode
@@ -180,13 +180,13 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             loopback_output = Params[2]; //spk: 0 = handset, 1 = headset, 2 = loud speaker
             /*if ( (loopback_input > 1) || (loopback_output > 2))
             {
-                BCM_AUDIO_DEBUG("%s src or sink exceeds its range. Please enter src <= 1 and sink <=2\n", __FUNCTION__); 
+                BCM_AUDIO_DEBUG("%s src or sink exceeds its range. Please enter src <= 1 and sink <=2\n", __FUNCTION__);
                 rtn = -1;
                 break;
             }*/
             if ( ((loopback_input > 4) && (loopback_input != 11))|| ((loopback_output > 2) && (loopback_output != 9) && (loopback_output != 4)) )
             {
-                BCM_AUDIO_DEBUG("%s src or sink exceeds its range. Please enter src <= 4 or src = 1, and sink <=2 or sink =9\n", __FUNCTION__); 
+                BCM_AUDIO_DEBUG("%s src or sink exceeds its range. Please enter src <= 4 or src = 1, and sink <=2 or sink =9\n", __FUNCTION__);
                 rtn = -1;
                 break;
             }
@@ -200,33 +200,33 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             AUDCTRL_SetAudioMode( mode );
             //pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1] = spk;
             //pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0] = mic; // set mic also
-            
+
             loopback_status = 1;
             //enable the HW loopback from loopback_input to loopback_output without DSP.
             AUDCTRL_SetAudioLoopback( TRUE, loopback_input, loopback_output);
-            //OSTASK_Sleep(100);				
-            BCM_AUDIO_DEBUG("%s enable loopback from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output); 
+            //OSTASK_Sleep(100);
+            BCM_AUDIO_DEBUG("%s enable loopback from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output);
             break;
 
         case 12: //at*maudmode=12  --> disable loopback path
             loopback_status = 0;
             AUDCTRL_SetAudioLoopback( FALSE, loopback_input, loopback_output);
-            //OSTASK_Sleep(100);				
-            BCM_AUDIO_DEBUG("%s disable loopback from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output);  
+            //OSTASK_Sleep(100);
+            BCM_AUDIO_DEBUG("%s disable loopback from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output);
             break;
 
         case 13: //at*maudmode=13  --> Get call ID
-			BCM_AUDIO_DEBUG("%s get call ID is not supported \n", __FUNCTION__);  
+			BCM_AUDIO_DEBUG("%s get call ID is not supported \n", __FUNCTION__);
             rtn = -1;
             break;
 
         case 14: //at*maudmode=14  --> read current mode and operation
-			BCM_AUDIO_DEBUG("%s read current mode and operation is not supported \n", __FUNCTION__);  
+			BCM_AUDIO_DEBUG("%s read current mode and operation is not supported \n", __FUNCTION__);
             rtn = -1;
 			break;
 
         case 15: //at*maudmode=15  --> set current mode and operation
-            BCM_AUDIO_DEBUG("%s set current mode and operation is not supported \n", __FUNCTION__);  
+            BCM_AUDIO_DEBUG("%s set current mode and operation is not supported \n", __FUNCTION__);
             rtn = -1;
 			break;
 
@@ -235,14 +235,14 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 		case 100: //at*maudmode=100  --> set external audio amplifer gain in PMU
 			//PCG and loadcal currently use Q13p2 gain format
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO)) 
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
             {
             PMU_AudioGainMapping_t pmu_gain;
 
 			if (Params[1] == 3)
 			if( Params[2]==PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL || Params[2]==PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL ) // EXT_SPEAKER_PGA
 			{
-				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB) 
+				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB)
 					 || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )
 				{
 					AUDIO_PMU_IHF_POWER(FALSE);
@@ -256,7 +256,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 					else
 					if( Params[2]==PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL )
 						AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_RIGHT, pmu_gain.PMU_gain_enum );
-					
+
 				}
 				else if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE) || (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE_WB) )
 				{
@@ -270,20 +270,20 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			}
             }
 #endif
-							
+
 			break;
 
 		default:
-			BCM_AUDIO_DEBUG("%s Unsupported cmd %d \n", __FUNCTION__, Params[0]);		
+			BCM_AUDIO_DEBUG("%s Unsupported cmd %d \n", __FUNCTION__, Params[0]);
             rtn = -1;
 			break;
 	}
-	
-	return rtn;		
+
+	return rtn;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//Description: 
+//Description:
 //	AT command handler, handle command AT commands at+maudlooptest=P1,P2,P3
 //Parameters:
 //	pChip -- Pointer to chip data structure
@@ -292,13 +292,13 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 //---------------------------------------------------------------------------
 int	AtMaudLoopback(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
-	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);
 
-	return -1;		
+	return -1;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//Description: 
+//Description:
 //	AT command handler, handle command AT commands at*maudlog=P1,P2,P3
 //Parameters:
 //	pChip -- Pointer to chip data structure
@@ -309,7 +309,7 @@ int	AtMaudLog(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
     int rtn = 0;
 
-	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);
 
     switch(Params[0])//P1
 	{
@@ -320,16 +320,16 @@ int	AtMaudLog(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
                 BCM_AUDIO_DEBUG("\n Couldnt setup channel \n");
                 rtn = -1;
             }
-			BCM_AUDIO_DEBUG("%s start log on stream %d, capture pt %d, consumer %d \n", __FUNCTION__, Params[1],Params[2],Params[3]);  
+			BCM_AUDIO_DEBUG("%s start log on stream %d, capture pt %d, consumer %d \n", __FUNCTION__, Params[1],Params[2],Params[3]);
             break;
 
-        case 2:	//at*maudlog=2,x 
+        case 2:	//at*maudlog=2,x
             rtn = AUDDRV_AudLog_Stop(Params[1]);
             if (rtn < 0 )
             {
                 rtn = -1;
             }
-			BCM_AUDIO_DEBUG("%s start log on stream %d \n", __FUNCTION__, Params[1]);  
+			BCM_AUDIO_DEBUG("%s start log on stream %d \n", __FUNCTION__, Params[1]);
 			break;
 
         default:
@@ -337,11 +337,11 @@ int	AtMaudLog(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             break;
     }
 
-	return rtn;		
+	return rtn;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//Description: 
+//Description:
 //	AT command handler, handle command AT commands at*maudtst=P1,P2,P3,P4,P5,P6
 //Parameters:
 //	pChip -- Pointer to chip data structure
@@ -350,7 +350,7 @@ int	AtMaudLog(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 //---------------------------------------------------------------------------
 int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
-	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);
 
 	 //this test command argument 100/101 is provided to control the HW clock.In that case, dont enable the clock
 	if(Params[0] != 100 && Params[0] != 101)
@@ -365,13 +365,12 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
                       Params[1],  //	  //speaker channel
                       AUDIO_GAIN_FORMAT_mB,
 					  Params[2],  //left volume
-                      Params[3]  //right volume
-				);
-		
+                      Params[3],//right volume
+                      0);
+
             BCM_AUDIO_DEBUG( "Set speaker volume left %d right %d \n", Params[2], Params[3] );
 			break;
-			
-		
+
 		//! typedef enum AUDIO_SINK_Enum_t {
 		//!	AUDIO_SINK_HANDSET,
 		//!	AUDIO_SINK_HEADSET,
@@ -379,7 +378,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		//!	AUDIO_SINK_BTM,  //Bluetooth HFP
 		//!	AUDIO_SINK_LOUDSPK,
 		//!	AUDIO_SINK_TTY,
-		//!	AUDIO_SINK_HAC,	
+		//!	AUDIO_SINK_HAC,
 		//!	AUDIO_SINK_USB,
 		//!	AUDIO_SINK_BTS,  //Bluetooth A2DP
 		//!	AUDIO_SINK_I2S,
@@ -388,8 +387,8 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		case 26:
 			AUDCTRL_SetPlayMute( AUDIO_HW_NONE,
 				     Params[1],  //speaker channel
-				     Params[2]  // mute flag   1 - mute   0 - un-mute
-                     );				     
+				     Params[2],  // mute flag   1 - mute   0 - un-mute
+                     0);
 
 			if( Params[2] ==0)
 				BCM_AUDIO_DEBUG( "Set speaker un-mute \n" );
@@ -433,16 +432,16 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		case 121: //at*maudtst=121,x,y  // x=0: EXT_SPEAKER_PGA, x=1:EXT_SPEAKER_PREPGA, x=2: MIC_PGA, y: gain value register value(enum value)
             if (Params[1] == 0) // EXT_SPEAKER_PGA
             {
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO)) 
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
 				int gain;
-				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB) 
+				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB)
                      || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )
 				{
                     AUDIO_PMU_IHF_POWER(FALSE);
                     AUDIO_PMU_HS_POWER(TRUE);
                     gain = Params[2]; // gain
                     AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, gain);
-                    BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d \n", __FUNCTION__, Params[2]);		
+                    BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d \n", __FUNCTION__, Params[2]);
 				}
 				else if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE) || (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE_WB) )
 				{
@@ -450,15 +449,15 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
                     AUDIO_PMU_IHF_POWER(TRUE);
                     gain = Params[2]; // gain
                     AUDIO_PMU_IHF_SET_GAIN(gain);
-                    BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d \n", __FUNCTION__, Params[2]);		
+                    BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d \n", __FUNCTION__, Params[2]);
 				}
 #endif
-                
+
                 return 0;
             }
             else
             {
-                BCM_AUDIO_DEBUG("%s Not supported command \n", __FUNCTION__);		
+                BCM_AUDIO_DEBUG("%s Not supported command \n", __FUNCTION__);
                 return -1;
             }
             break;
@@ -515,7 +514,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain4 = value;
             gain4 &= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_MASK);
             gain4 >>= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_SHIFT);
-			
+
             printk(" AUDIOH_VIN_FILTER_CTRL=0x%x \n", value );
             printk("DMIC1_CIC_BIT_SEL=0x%x, DMIC1_CIC_FINE=0x%x \n", gain1, gain2 );
             printk("DMIC2_CIC_BIT_SEL=0x%x, DMIC2_CIC_FINE_SCL=0x%x \n", gain3, gain4 );
@@ -547,7 +546,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain4 = value;
             gain4 &= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_MASK);
             gain4 >>= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_SHIFT);
-			
+
             printk(" AUDIOH_VIN_FILTER_CTRL=0x%x \n", value );
             printk("DMIC3_CIC_BIT_SEL=0x%x, DMIC3_CIC_FINE=0x%x \n", gain1, gain2 );
             printk("DMIC4_CIC_BIT_SEL=0x%x, DMIC4_CIC_FINE_SCL=0x%x \n", gain3, gain4 );
@@ -839,7 +838,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
             printk("MIXER 1 D1, channel 7 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
-			//**********	
+			//**********
 			for ( index = 0x00000160; index <= 0x00000270; index=index+4 )
 			{
 			    address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + index), sizeof(UInt32));
@@ -892,7 +891,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//Description: 
+//Description:
 //	AT command handler, handle command AT commands at*maudvol=P1,P2,P3
 //Parameters:
 //	pChip -- Pointer to chip data structure
@@ -977,7 +976,7 @@ int	AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCoun
 			break;//go next ..
 		default:
 			return -1;//unlikely
-				
+
 	}
 
 	switch(Params[0])
@@ -999,7 +998,7 @@ int	AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCoun
 			rtn = AtMaudLoopback(pChip,ParamCount-1, &Params[1]);
             break;
 		default:
-			BCM_AUDIO_DEBUG("%s Unsupported handler %d \n", __FUNCTION__, Params[0]);	
+			BCM_AUDIO_DEBUG("%s Unsupported handler %d \n", __FUNCTION__, Params[0]);
             rtn = -1;
 			break;
 	}
@@ -1026,7 +1025,7 @@ int	AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCoun
 
 	switch(cmdIndex)
 	{
-	
+
 		case AT_AUD_CTL_HANDLER:
 		case AT_AUD_CTL_INDEX:
 			{
@@ -1043,7 +1042,7 @@ int	AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCoun
 			return 0;
 		default:
 			return -1;//unlikely
-				
+
 	}
 
 	switch(Params[0])
@@ -1061,10 +1060,10 @@ int	AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCoun
 			rtn = AtMaudLog(pChip,ParamCount-1, &Params[1]);
             break;
 		case AT_AUD_HANDLER_LBTST:
-			rtn = AtMaudLoopback(pChip,ParamCount-1, &Params[1]);			
+			rtn = AtMaudLoopback(pChip,ParamCount-1, &Params[1]);
             break;
 		default:
-			BCM_AUDIO_DEBUG("%s Unsupported handler %d \n", __FUNCTION__, Params[0]);	
+			BCM_AUDIO_DEBUG("%s Unsupported handler %d \n", __FUNCTION__, Params[0]);
             rtn = -1;
 			break;
 	}

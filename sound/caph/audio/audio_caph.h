@@ -1,13 +1,13 @@
 /*******************************************************************************************
-Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.                                
+Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.
 
-Unless you and Broadcom execute a separate written software license agreement 
-governing use of this software, this software is licensed to you under the 
-terms of the GNU General Public License version 2, available at 
-http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+Unless you and Broadcom execute a separate written software license agreement
+governing use of this software, this software is licensed to you under the
+terms of the GNU General Public License version 2, available at
+http://www.gnu.org/copyleft/gpl.html (the "GPL").
 
-Notwithstanding the above, under no circumstances may you combine this software 
-in any way with any other Broadcom software provided under a license other than 
+Notwithstanding the above, under no circumstances may you combine this software
+in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************************/
 /**
@@ -85,7 +85,7 @@ typedef enum
   ACTION_AUD_SetVibraStrength,
   ACTION_AUD_SetPlaybackVolume,
   ACTION_AUD_SetRecordGain,
-  ACTION_AUD_SetTelephonySpkrVolume,  
+  ACTION_AUD_SetTelephonySpkrVolume,
   ACTION_AUD_SwitchSpkr,
   ACTION_AUD_SetHWLoopback,
   ACTION_AUD_SetAudioMode,
@@ -93,7 +93,7 @@ typedef enum
   ACTION_AUD_DisableFMPlay,
   ACTION_AUD_SetARM2SPInst,
   ACTION_AUD_RateChange,
-  ACTION_AUD_TOTAL			
+  ACTION_AUD_TOTAL
 } BRCM_AUDIO_ACTION_en_t;
 
 typedef struct
@@ -105,6 +105,7 @@ typedef struct
   Int32  vol[2];
   Int32  mixMode;
   Int32  callMode;
+  int stream;
 }BRCM_AUDIO_Param_Start_t;
 
 typedef struct
@@ -112,14 +113,14 @@ typedef struct
   void*   drv_handle;
   TIDChanOfDev	*pdev_prop;
   Int32 callMode;
-
+  int stream;
 }BRCM_AUDIO_Param_Stop_t;
 
 typedef struct
 {
   void*   drv_handle;
   TIDChanOfDev	*pdev_prop;
-  
+  int stream;
 }BRCM_AUDIO_Param_Pause_t;
 
 typedef struct
@@ -128,7 +129,7 @@ typedef struct
     TIDChanOfDev	*pdev_prop;
     UInt32 channels;
     UInt32 rate;
-
+	int stream;
 }BRCM_AUDIO_Param_Resume_t;
 
 typedef struct
@@ -160,7 +161,7 @@ typedef struct
    Int32 device; //mic or speaker
    Int32 volume1;
    Int32 volume2;
-
+   int stream;
 }BRCM_AUDIO_Param_Volume_t;
 
 typedef struct
@@ -169,6 +170,7 @@ typedef struct
    Int32 device; //mic or speaker
    Int32 mute1;
    Int32 mute2;
+   int stream;
 
 }BRCM_AUDIO_Param_Mute_t;
 
@@ -176,11 +178,9 @@ typedef struct
 typedef struct
 {
    Int32 src;
-   Int32 cur_sink;
-   Int32 new_sink;
-   Int32 cur_spkr;
-   Int32 new_spkr;
-
+   Int32 sink;
+   Int32 spkr;
+   int stream;
 }BRCM_AUDIO_Param_Spkr_t;
 
 typedef struct
@@ -212,6 +212,7 @@ typedef struct
    Int32 volume1;
    Int32 volume2;
    UInt32 fm_mix;
+   int stream;
 }BRCM_AUDIO_Param_FM_t;
 
 typedef struct

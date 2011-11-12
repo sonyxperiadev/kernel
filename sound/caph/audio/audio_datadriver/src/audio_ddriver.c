@@ -865,7 +865,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 aud_drv->voicecapt_config.speech_mode 				= speech_mode;
 			
 				if(*recordMode == VOCAPTURE_RECORD_NONE)
-					*recordMode = VOCAPTURE_RECORD_BOTH; //default capture mode
+					*recordMode = VOCAPTURE_RECORD_UL; //default capture mode
 
         		aud_drv->voicecapt_config.recordMode = *recordMode;
                 audio_capture_driver = aud_drv;

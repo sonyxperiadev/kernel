@@ -706,7 +706,7 @@ static int HandlePlayCommand()
               	AUDCTRL_SetPlayVolume (audPlayHw,
    		     			spkr, 
     				   	AUDIO_GAIN_FORMAT_mB, 
-				   	0x00, 0x00); // 0 db for both L and R channels.
+				   	0x00, 0x00,0); // 0 db for both L and R channels.
 				   	
 
 
@@ -892,7 +892,9 @@ static int HandleCaptCommand()
 				     AUDIO_HW_MEM,
                                      mic,
 				     drv_config.num_channel,
-                                     drv_config.sample_rate);
+                     drv_config.sample_rate,
+                     NULL
+                     );
 
 		if(mic == 1) //AUDIO_SOURCE_ANALOG_MAIN 
 		{
@@ -923,7 +925,7 @@ static int HandleCaptCommand()
 
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_STOP,NULL);
 
-                AUDCTRL_DisableRecord(hw_id,AUDIO_HW_MEM,mic);
+                AUDCTRL_DisableRecord(hw_id,AUDIO_HW_MEM,mic,0);
 
 		DEBUG("capture stopped\n");
 
@@ -1029,7 +1031,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 		AUDCTRL_SetPlayVolume (audPlayHw, 
    					               speaker, 
     							   AUDIO_GAIN_FORMAT_mB, 
-	    						   0, 0);
+	    						   0, 0,0);
 			
 
 			// init driver

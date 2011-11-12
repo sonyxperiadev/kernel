@@ -1,13 +1,13 @@
 /*******************************************************************************************
-Copyright 2010-2011 Broadcom Corporation.  All rights reserved.                                
+Copyright 2010-2011 Broadcom Corporation.  All rights reserved.
 
-Unless you and Broadcom execute a separate written software license agreement 
-governing use of this software, this software is licensed to you under the 
-terms of the GNU General Public License version 2, available at 
-http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+Unless you and Broadcom execute a separate written software license agreement
+governing use of this software, this software is licensed to you under the
+terms of the GNU General Public License version 2, available at
+http://www.gnu.org/copyleft/gpl.html (the "GPL").
 
-Notwithstanding the above, under no circumstances may you combine this software 
-in any way with any other Broadcom software provided under a license other than 
+Notwithstanding the above, under no circumstances may you combine this software
+in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************************/
 
@@ -82,6 +82,7 @@ typedef	struct	_TAudioHalThreadData
 
 }TAudioControlThreadData, *PTAudioControlThreadData;
 
+static unsigned long pathID[CAPH_MAX_PCM_STREAMS];
 
 static TAudioControlThreadData	sgThreadData;
 #define	KFIFO_SIZE		(9*sizeof(TMsgAudioCtrl))
@@ -106,7 +107,7 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 	while(1)
 	{
 		//get operation code from fifo
-		len = kfifo_out_locked(&sgThreadData.m_pkfifo, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl), &sgThreadData.m_lock);		
+		len = kfifo_out_locked(&sgThreadData.m_pkfifo, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl), &sgThreadData.m_lock);
 
 	/* Commenting debug prints to eliminate compilation errors for kfifo member accesses */
 	/*
@@ -115,7 +116,7 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 	*/
 		if(len == 0) //FIFO empty sleep
 			return;
-		
+
 		//process the operation
 		AUDIO_Ctrl_Process(msgAudioCtrl.action_code, &msgAudioCtrl.param, msgAudioCtrl.pCallBack,msgAudioCtrl.block);
 	}
@@ -139,10 +140,10 @@ static void AudioCodecIdHander(UInt8 codecID)
 //registers callback for handling rate change and if any init required.
 //----------------------------------------------------------------
 void caph_audio_init(void)
-{		
-	AUDDRV_RegisterRateChangeCallback(AudioCodecIdHander);        
+{
+	AUDDRV_RegisterRateChangeCallback(AudioCodecIdHander);
 }
-	
+
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //LaunchAudioHalThread
@@ -152,7 +153,7 @@ int LaunchAudioCtrlThread(void)
 {
 	int ret;
 	sgThreadData.m_lock =  __SPIN_LOCK_UNLOCKED();
-	
+
 	ret = kfifo_alloc(&sgThreadData.m_pkfifo,KFIFO_SIZE, GFP_KERNEL);
 	/* Commenting debug prints to eliminate compilation errors for kfifo member access*/
 	/*
@@ -164,7 +165,7 @@ int LaunchAudioCtrlThread(void)
 	BCM_AUDIO_DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n", KFIFO_SIZE,sgThreadData.m_pkfifo_out.size);
 	*/
 	INIT_WORK(&sgThreadData.mwork, AudioCtrlWorkThread);
-	
+
 	sgThreadData.pWorkqueue_AudioControl = create_workqueue("AudioCtrlWq");
 	if(!sgThreadData.pWorkqueue_AudioControl)
 		DEBUG("\n Error : Can not create work queue:AudioCtrlWq\n");
@@ -179,7 +180,7 @@ int LaunchAudioCtrlThread(void)
 //----------------------------------------------------------------
 int TerminateAudioHalThread(void)
 {
-	
+
 	if(sgThreadData.pWorkqueue_AudioControl)
 	{
 		flush_workqueue(sgThreadData.pWorkqueue_AudioControl);
@@ -232,7 +233,7 @@ Result_t AUDIO_Ctrl_Trigger(
         {
             BCM_AUDIO_DEBUG("AUDIO_Ctrl_Trigger Timeout=%d\r\n",osStatus);
 			status = RESULT_ERROR;
-			return status; 
+			return status;
         }
 
         while(1)
@@ -252,7 +253,7 @@ Result_t AUDIO_Ctrl_Trigger(
 		        memset(arg_param, 0, sizeof(BRCM_AUDIO_Control_Params_un_t));
 	    }
     }
-	
+
 	return status;
 }
 
@@ -266,15 +267,16 @@ void AUDIO_Ctrl_Process(
    	TMsgAudioCtrl	msgAudioCtrl;
 	unsigned int	len;
 	int i;
+	unsigned long path;
 
 	BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process action_code=%d\r\n", action_code);
-	
+
     switch (action_code)
     {
 		case ACTION_AUD_OpenPlay:
 		{
 			BRCM_AUDIO_Param_Open_t* param_open = (BRCM_AUDIO_Param_Open_t*) arg_param;
-			
+
 			param_open->drv_handle = AUDIO_DRIVER_Open(param_open->pdev_prop->p[0].drv_type);
 		    if(param_open->drv_handle == NULL)
     		{
@@ -282,50 +284,53 @@ void AUDIO_Ctrl_Process(
     		}
 		}
 		break;
-			
+
 		case ACTION_AUD_ClosePlay:
 		{
 			BRCM_AUDIO_Param_Close_t* param_close = (BRCM_AUDIO_Param_Close_t*) arg_param;
-			
+
 			AUDIO_DRIVER_Close(param_close->drv_handle);
 		}
 		break;
-					
+
         case ACTION_AUD_StartPlay:
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
+			CAPH_ASSERT(param_start->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_start->stream<CTL_STREAM_PANEL_LAST);
 			if(param_start->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 
 	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->p[0].speaker );
 
-            // Enable the playback the path
-            AUDCTRL_EnablePlay(AUDIO_HW_MEM, 
+            	// Enable the playback the path
+            	AUDCTRL_EnablePlay(AUDIO_HW_MEM,
                                    param_start->pdev_prop->p[0].hw_id,
                                    AUDIO_HW_NONE,
                                    param_start->pdev_prop->p[0].speaker,
 				                   param_start->channels,
-                                   param_start->rate, 
-                                   NULL);
-			//AUDCTRL_EnablePlay enables HW path, reads SYSPARM and sets HW gains as defined in SYSPARM.
+                                   param_start->rate,
+                                   &path);
+				pathID[param_start->stream] = path;
 
+			//AUDCTRL_EnablePlay enables HW path, reads SYSPARM and sets HW gains as defined in SYSPARM.
 			/***
-			when playback / recording starts audio driver sets HW gains from SYSPARM. (default gain) 
+			when playback / recording starts audio driver sets HW gains from SYSPARM. (default gain)
 			 amixer command to change volume /gain is only effective AFTER playback / recording has started.
 			  When HW team uses amixer command to change volume / gain after playback/recording has started, audio driver sets HW to achieve the user required gain.
 			  HW team can use AT command (at*mdsptst=201, addr, value ) to directly poke HW gain registers for their test purpose.
-			  
+
 			AUDCTRL_SetPlayVolume (param_start->pdev_prop->p[0].hw_id,
-					param_start->pdev_prop->p[0].speaker, 
-					AUDIO_GAIN_FORMAT_mB, 
+					param_start->pdev_prop->p[0].speaker,
+					AUDIO_GAIN_FORMAT_mB,
 					param_start->vol[0],
-					param_start->vol[1]
+					param_start->vol[1],
+					pathID[param_start->stream]
 					);
 			***/
 
      			AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->p[0].aud_dev);
-			
+
 			}
 			else if(param_start->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_VOICE)
 			{
@@ -336,7 +341,9 @@ void AUDIO_Ctrl_Process(
         case ACTION_AUD_StopPlay:
         {
             BRCM_AUDIO_Param_Stop_t* param_stop = (BRCM_AUDIO_Param_Stop_t*) arg_param;
-	 
+
+			CAPH_ASSERT(param_stop->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_stop->stream<CTL_STREAM_PANEL_LAST);
+
 			AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
 			// Remove secondary playback path if it's in use
@@ -345,20 +352,21 @@ void AUDIO_Ctrl_Process(
 				if (param_stop->pdev_prop->p[i].hw_id != AUDIO_HW_NONE)
 				{
            			AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_src,
-										param_stop->pdev_prop->p[0].hw_id,
-										param_stop->pdev_prop->p[0].speaker,
 										param_stop->pdev_prop->p[i].hw_id,
-										param_stop->pdev_prop->p[i].speaker);
+										param_stop->pdev_prop->p[i].speaker,
+										pathID[param_stop->stream]);
 				}
 			}
 
 		    if(param_stop->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 			     //disable the playback path
-    	    	   AUDCTRL_DisablePlay(AUDIO_HW_MEM, 
-                        param_stop->pdev_prop->p[0].hw_id,
-                        param_stop->pdev_prop->p[0].speaker,0
-                    );
+			     AUDCTRL_DisablePlay(AUDIO_HW_MEM,
+                        			param_stop->pdev_prop->p[0].hw_id,
+                        			param_stop->pdev_prop->p[0].speaker,
+                        			pathID[param_stop->stream]);
+
+				 pathID[param_stop->stream] = 0;
 		    }
 			BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process Stop Playback completed \n");
         }
@@ -366,14 +374,17 @@ void AUDIO_Ctrl_Process(
         case ACTION_AUD_PausePlay:
         {
             BRCM_AUDIO_Param_Pause_t* param_pause = (BRCM_AUDIO_Param_Pause_t*) arg_param;
-			
+			CAPH_ASSERT(param_pause->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_pause->stream<CTL_STREAM_PANEL_LAST);
+
 			if(param_pause->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
             	//disable the playback path
-             	AUDCTRL_DisablePlay(AUDIO_HW_MEM,	
-                        param_pause->pdev_prop->p[0].hw_id,
-                        param_pause->pdev_prop->p[0].speaker,0
-                    ); 
+            	AUDCTRL_DisablePlay(AUDIO_HW_MEM,
+                			        param_pause->pdev_prop->p[0].hw_id,
+                			        param_pause->pdev_prop->p[0].speaker,
+			                        pathID[param_pause->stream] );
+
+				pathID[param_pause->stream]  = 0;
 			}
             AUDIO_DRIVER_Ctrl(param_pause->drv_handle,AUDIO_DRIVER_PAUSE,NULL);
         }
@@ -383,69 +394,83 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Resume_t* param_resume = (BRCM_AUDIO_Param_Resume_t*) arg_param;
 
+			CAPH_ASSERT(param_resume->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_resume->stream<CTL_STREAM_PANEL_LAST);
+
             AUDIO_DRIVER_Ctrl(param_resume->drv_handle,AUDIO_DRIVER_RESUME,NULL);
-		
+
 			if(param_resume->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 
            		// Enable the playback the path
-            	AUDCTRL_EnablePlay(AUDIO_HW_MEM,	
+           		AUDCTRL_EnablePlay(AUDIO_HW_MEM,
                                    param_resume->pdev_prop->p[0].hw_id,
                                    AUDIO_HW_NONE,
                                    param_resume->pdev_prop->p[0].speaker,
 				                   param_resume->channels,
-                                   param_resume->rate, NULL
-								    );
+                                   param_resume->rate,
+                                   &path);
+				pathID[param_resume->stream] = path;
 			}
         }
         break;
         case ACTION_AUD_StartRecord:
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
-			
+
+			CAPH_ASSERT(param_start->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_start->stream<CTL_STREAM_PANEL_LAST);
+
 			if((param_start->callMode != 1) || (param_start->pdev_prop->c.mic == AUDIO_SOURCE_I2S)) // allow FM recording in call mode
 			{
 	        	AUDCTRL_EnableRecord(param_start->pdev_prop->c.hw_id,
-				                     param_start->pdev_prop->c.hw_sink,	
+				                     param_start->pdev_prop->c.hw_sink,
                                      param_start->pdev_prop->c.mic,
 				                     param_start->channels,
-                                     param_start->rate);
+                                     param_start->rate,
+									 &path);
+
+				 pathID[param_start->stream] = path;
 				//AUDCTRL_EnableRecord enables HW path, reads SYSPARM and sets HW gains as defined in SYSPARM.
 
 				/***
-				
-				when playback / recording starts audio driver sets HW gains from SYSPARM. (default gain) 
+
+				when playback / recording starts audio driver sets HW gains from SYSPARM. (default gain)
 				 amixer command to change volume /gain is only effective AFTER playback / recording has started.
 				  When HW team uses amixer command to change volume / gain after playback/recording has started, audio driver sets HW to achieve the user required gain.
 				  HW team can use AT command (at*mdsptst=201, addr, value ) to directly poke HW gain registers for their test purpose.
-				  
+
 	            AUDCTRL_SetRecordGain(param_start->pdev_prop->c.hw_id,
-					
+
                                   param_start->pdev_prop->c.mic,
                                   AUDIO_GAIN_FORMAT_mB,
                                   param_start->vol[0],
-                                  param_start->vol[1]);
+                                  param_start->vol[1],
+								   pathID[param_start->stream]);
                                   ***/
-                                  
+
 			}
 			if(param_start->pdev_prop->c.drv_type == AUDIO_DRIVER_CAPT_HQ)
-				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->c.aud_dev); 
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->c.aud_dev);
 			else
-				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->mixMode); 
-			
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->mixMode);
+
         }
         break;
         case ACTION_AUD_StopRecord:
         {
             BRCM_AUDIO_Param_Stop_t* param_stop = (BRCM_AUDIO_Param_Stop_t*) arg_param;
-               
+
+			CAPH_ASSERT(param_stop->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_stop->stream<CTL_STREAM_PANEL_LAST);
+
             AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
 			if((param_stop->callMode != 1) || (param_stop->pdev_prop->c.mic == AUDIO_SOURCE_I2S)) // allow FM recording in call mode
-			{		
+			{
             	AUDCTRL_DisableRecord(param_stop->pdev_prop->c.hw_id,
                                       AUDIO_HW_MEM,
-                                      param_stop->pdev_prop->c.mic);
+                                      param_stop->pdev_prop->c.mic,
+                                      pathID[param_stop->stream]
+                                      );
+				pathID[param_stop->stream] = 0;
 			}
 
         }
@@ -457,33 +482,35 @@ void AUDIO_Ctrl_Process(
             param_open->drv_handle = AUDIO_DRIVER_Open(param_open->pdev_prop->c.drv_type);
 
             BCM_AUDIO_DEBUG("param_open->drv_handle -  0x%lx \n",(UInt32)param_open->drv_handle);
-		
+
 		}
 	    break;
 		case ACTION_AUD_CloseRecord:
 		{
 			BRCM_AUDIO_Param_Close_t* param_close = (BRCM_AUDIO_Param_Close_t*) arg_param;
-			
+
 			AUDIO_DRIVER_Close(param_close->drv_handle);
 		}
 		break;
 		case ACTION_AUD_AddChannel:
 		{
 			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
+			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_AddPlaySpk(parm_spkr->src,
-	                               parm_spkr->cur_sink,
-									parm_spkr->cur_spkr,
-									parm_spkr->new_sink,
-									parm_spkr->new_spkr);
+									parm_spkr->sink,
+									parm_spkr->spkr,
+									pathID[parm_spkr->stream]);
 		}
+		break;
 		case ACTION_AUD_RemoveChannel:
 		{
 			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
+			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_RemovePlaySpk(parm_spkr->src,
-	                               parm_spkr->new_sink,
-									parm_spkr->new_spkr,
-									parm_spkr->cur_sink,
-									parm_spkr->cur_spkr);
+	                              parm_spkr->sink,
+								  parm_spkr->spkr,
+								  pathID[parm_spkr->stream]
+								  );
 		}
 		break;
 		case ACTION_AUD_EnableTelephony:
@@ -507,17 +534,21 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_MutePlayback:
 		{
 			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
+			CAPH_ASSERT(parm_mute->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_mute->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_SetPlayMute (parm_mute->hw_id,
 									parm_mute->device,
-									parm_mute->mute1);	//currently driver doesnt handle Mute for left/right channels
+									parm_mute->mute1,
+									pathID[parm_mute->stream]);	//currently driver doesnt handle Mute for left/right channels
 		}
 		break;
 		case ACTION_AUD_MuteRecord:
 		{
 			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
+			CAPH_ASSERT(parm_mute->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_mute->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_SetRecordMute (parm_mute->hw_id,
 		 							parm_mute->device,
-		 							parm_mute->mute1);
+		 							parm_mute->mute1,
+		 							pathID[parm_mute->stream]);
 		}
 		break;
 		case ACTION_AUD_EnableByPassVibra:
@@ -539,22 +570,26 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_SetPlaybackVolume:
 		{
 			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
+			CAPH_ASSERT(parm_vol->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_vol->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_SetPlayVolume (parm_vol->hw_id,
 								   parm_vol->device,
 								   AUDIO_GAIN_FORMAT_mB,
 								   parm_vol->volume1,
-								   parm_vol->volume2
+								   parm_vol->volume2,
+								   pathID[parm_vol->stream]
 								   );
 		}
 		break;
 		case ACTION_AUD_SetRecordGain:
 		{
 			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
+			CAPH_ASSERT(parm_vol->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_vol->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_SetRecordGain (parm_vol->hw_id,
 								   parm_vol->device,
 								   AUDIO_GAIN_FORMAT_mB,
 								   parm_vol->volume1,
-								   parm_vol->volume2);
+								   parm_vol->volume2,
+								   pathID[parm_vol->stream]);
 		}
 		break;
 		case ACTION_AUD_SetTelephonySpkrVolume:
@@ -568,12 +603,12 @@ void AUDIO_Ctrl_Process(
 		break;
 		case ACTION_AUD_SwitchSpkr:
 		{
-			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
+			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;\
+			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_SwitchPlaySpk( parm_spkr->src,
-                                    parm_spkr->cur_sink,
-									parm_spkr->cur_spkr,
-									parm_spkr->new_sink,
-									parm_spkr->new_spkr);
+									parm_spkr->sink,
+									parm_spkr->spkr,
+									pathID[parm_spkr->stream]);
 		}
 		break;
 		case ACTION_AUD_SetAudioMode:
@@ -596,6 +631,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_EnableFMPlay:
 		{
 			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
+			CAPH_ASSERT(parm_FM->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_FM->stream<CTL_STREAM_PANEL_LAST);
 			//re-enable FM
 			AUDCTRL_SaveAudioModeFlag((AudioMode_t)parm_FM->device);
 			AUDCTRL_EnablePlay(AUDIO_HW_I2S_IN,
@@ -604,21 +640,22 @@ void AUDIO_Ctrl_Process(
 								parm_FM->device,
 								AUDIO_CHANNEL_STEREO,
 								AUDIO_SAMPLING_RATE_48000,
-								NULL);
+								&path);
 
-			//AUDCTRL_EnablePlay enables HW path, reads SYSPARM and sets HW gains as defined in SYSPARM.
+			pathID[parm_FM->stream] = path;
 
 			/***
-			when playback / recording starts audio driver sets HW gains from SYSPARM. (default gain) 
+			when playback / recording starts audio driver sets HW gains from SYSPARM. (default gain)
 			 amixer command to change volume /gain is only effective AFTER playback / recording has started.
 			  When HW team uses amixer command to change volume / gain after playback/recording has started, audio driver sets HW to achieve the user required gain.
 			  HW team can use AT command (at*mdsptst=201, addr, value ) to directly poke HW gain registers for their test purpose.
-			  
+
             AUDCTRL_SetPlayVolume (parm_FM->hw_id,
                                        parm_FM->device,
                                        AUDIO_GAIN_FORMAT_mB,
                                        parm_FM->volume1,
-                                       parm_FM->volume2
+                                       parm_FM->volume2,
+									   pathID[parm_FM->stream]
                                        );
                       ***/
 		}
@@ -626,10 +663,12 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_DisableFMPlay:
 		{
 			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
+			CAPH_ASSERT(parm_FM->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_FM->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_DisablePlay(AUDIO_HW_I2S_IN,
 								parm_FM->hw_id,
 								parm_FM->device,
-								0); 
+  							    pathID[parm_FM->stream]);
+			pathID[parm_FM->stream] = 0;
 		}
 		break;
 		case ACTION_AUD_SetARM2SPInst:
@@ -718,7 +757,7 @@ void AUDIO_Ctrl_Process(
         len = kfifo_in_locked(&sgThreadData.m_pkfifo_out, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl), &sgThreadData.m_lock_out);
         if(len != sizeof(TMsgAudioCtrl))
 		    BCM_AUDIO_DEBUG("Error AUDIO_Ctrl_Process len=%d expected %d \n", len, sizeof(TMsgAudioCtrl));
-        // release the semaphore 
+        // release the semaphore
         OSSEMAPHORE_Release(sgThreadData.action_complete);
 
     }
