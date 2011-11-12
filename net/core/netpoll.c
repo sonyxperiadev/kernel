@@ -960,9 +960,6 @@ int netpoll_setup(struct netpoll *np)
 
 	np->dev = ndev;
 
-	/* fill up the skb queue */
-	reserve_skbs_list();
-
 	rtnl_lock();
 	err = __netpoll_setup(np);
 	rtnl_unlock();
@@ -980,6 +977,8 @@ put:
 static int __init netpoll_init(void)
 {
 	skb_queue_head_init(&skb_pool);
+	/* preallocate skb buffers */
+	reserve_skbs_list();
 	return 0;
 }
 core_initcall(netpoll_init);
@@ -1011,8 +1010,9 @@ void __netpoll_cleanup(struct netpoll *np)
 		rcu_assign_pointer(np->dev->npinfo, NULL);
 
 		/* avoid racing with NAPI reading npinfo */
+#ifndef CONFIG_ARCH_ISLAND
 		synchronize_rcu_bh();
-
+#endif
 		skb_queue_purge(&npinfo->arp_tx);
 		skb_queue_purge(&npinfo->txq);
 		cancel_delayed_work_sync(&npinfo->tx_work);
@@ -1028,6 +1028,8 @@ void netpoll_cleanup(struct netpoll *np)
 {
 	if (!np->dev)
 		return;
+
+	pr_info("%s\n", __func__);
 
 	rtnl_lock();
 	__netpoll_cleanup(np);

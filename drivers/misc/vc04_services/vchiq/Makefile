@@ -57,7 +57,7 @@ vc-vchiq-objs += \
     ../../../../vc4-dev/src/host_applications/linux/libs/debug_sym/debug_sym.o
 endif
 
-obj-$(CONFIG_VC_VCHIQ_MEMDRV_HANA) += vchiq-memdrv-hana.o
+obj-$(CONFIG_VC_VCHIQ) += vchiq-memdrv-hana.o
 
 vchiq-memdrv-hana-objs := \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_memdrv_hana.o

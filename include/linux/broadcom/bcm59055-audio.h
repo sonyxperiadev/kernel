@@ -255,6 +255,11 @@ enum
     PMU_IHFGAIN_NUM
 };
 
+/* HS/IHF Test Mode */
+#define PMU_TEST_READ_AND_ENABLE  0x03
+#define PMU_TEST_READ_AND_DISABLE 0x02
+#define PMU_TEST_ENABLE_NO_READ   0x01
+#define PMU_TEST_DISABLE_NO_READ  0x00
 
 extern int bcm59055_audio_deinit(void);
 extern int bcm59055_audio_init(void);
@@ -268,5 +273,12 @@ extern int bcm59055_ihf_power(bool on);
 extern int bcm59055_ihf_bypass_en(bool enable);
 extern int bcm59055_ihf_set_gain(int IHFGain);
 
+extern int bcm59055_audio_ihf_selftest_stimulus_input(int stimulus);
+extern int bcm59055_audio_ihf_selftest_stimulus_output(int stimulus);
+extern void bcm59055_audio_ihf_selftest_result(u8 *result);
+extern int bcm59055_audio_ihf_testmode(int Mode);
+extern int bcm59055_audio_hs_selftest_stimulus(int stimulus);
+extern void bcm59055_audio_hs_selftest_result(u8 *result);
+extern int bcm59055_audio_hs_testmode(int Mode);
 
 #endif

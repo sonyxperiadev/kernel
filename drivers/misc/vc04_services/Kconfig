@@ -102,7 +102,7 @@ config VC_VMCS_FB
         help
           Support for the VC framebuffer on the Broadcom reference
           phone. Uses the VCHIQ stack.	   
-	   
+
 config VC_VMCS_SM
 	tristate "VMCS Shared Memory"
 	default n

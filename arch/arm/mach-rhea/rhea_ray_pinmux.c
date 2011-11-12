@@ -40,7 +40,16 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_BSC_CFG(PMBSCCLK, PMBSCCLK, 0x20),
 	PIN_BSC_CFG(PMBSCDAT, PMBSCDAT, 0x20),
 
-	/* eMMC - SDIO1 8 bit interface */
+	/*
+	 * Note:- For eMMC, Enable Slew-rate, Increase pin drive strength to 10mA.
+	 * 	This is to fix the random eMMC timeout errors due to data crc error
+	 * 	seen on few rhea edn11 hardware, where eMMC is on a daughter-card.
+	 *
+	 * 	We may need to revisit these settings for other platforms where the
+	 * 	pin drive requirements can change.
+	 *
+	 */
+	/* eMMC */
 	PIN_CFG(MMC0CK, MMC0CK, 0, OFF, OFF, 1, 0, 10MA),
 	PIN_CFG(MMC0CMD, MMC0CMD, 0, OFF, ON, 1, 0, 10MA),
 	PIN_CFG(MMC0RST, MMC0RST, 0, OFF, ON, 1, 0, 10MA),

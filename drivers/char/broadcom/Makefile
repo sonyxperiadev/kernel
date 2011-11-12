@@ -25,5 +25,9 @@ obj-$(CONFIG_BCM_WIFI_HDMI) 		          += wifi_hdmi/
 
 obj-$(CONFIG_BCM_SIGMORPH)                 += sigmorph.o
 #obj-$(CONFIG_BCM_SIGMORPH)                += sigmorph-test.o
+obj-$(CONFIG_BCM_HDMI_DET)		+= hdmi/
+
+bj-$(CONFIG_BCM_SIGMORPH)              += sigmorph.o
+#obj-$(CONFIG_BCM_SIGMORPH)              += sigmorph-test.o
 
 obj-$(CONFIG_BCM_CSX)                      += csx/

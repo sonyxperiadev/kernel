@@ -1,16 +1,14 @@
-/*****************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+/****************************************************************************
+*									      
+* Copyright 2010 --2011 Broadcom Corporation.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2, available at
 * http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
 *
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a
-* license other than the GPL, without Broadcom's express prior written
-* consent.
 *****************************************************************************/
+
 #ifndef __ARM_ARCH_BCM2165X_CLOCK_MGR_H
 #define __ARM_ARCH_BCM2165X_CLOCK_MGR_H
 
@@ -125,6 +123,7 @@
 #define	MASTER_SWITCH_AHB_BUS_CLK_NAME_STR "master_switch_ahb"
 #define	MASTER_SWITCH_AXI_BUS_CLK_NAME_STR "master_switch_axi"
 #define	USBH_AHB_BUS_CLK_NAME_STR "usbh_ahb"
+#define	USB_IC_AHB_BUS_CLK_NAME_STR "usb_ic_ahb"
 #define	SDIO2_PERI_CLK_NAME_STR "sdio2_clk"
 #define	SDIO2_SLEEP_PERI_CLK_NAME_STR "sdio2_sleep_clk"
 #define	SDIO3_PERI_CLK_NAME_STR "sdio3_clk"
@@ -133,6 +132,7 @@
 #define	NAND_PERI_CLK_NAME_STR "nand_clk"
 #define	SDIO1_SLEEP_PERI_CLK_NAME_STR "sdio1_sleep_clk"
 #define	SDIO4_PERI_CLK_NAME_STR "sdio4"
+#define	USB_IC_PERI_CLK_NAME_STR "usb_ic"
 #define	SDIO4_SLEEP_PERI_CLK_NAME_STR "sdio4_sleep"
 #define	USBH_48M_PERI_CLK_NAME_STR "usbh_48m"
 #define	USBH_12M_PERI_CLK_NAME_STR "usbh_12m"
@@ -179,6 +179,7 @@
 #define	TIMERS_PERI_CLK_NAME_STR "timers"
 #define	SPUM_OPEN_PERI_CLK_NAME_STR "spum_open"
 #define	SPUM_SEC_PERI_CLK_NAME_STR "spum_sec"
+#define	MPHI_AHB_BUS_CLK_NAME_STR "mphi_ahb_clk"
 #define	MM_CCU_CLK_NAME_STR "mm_ccu"
 #define	mm_switch_axi_PERI_CLK_NAME_STR "mm_switch_axi_clk"
 #define	CSI0_AXI_BUS_CLK_NAME_STR "csi0_axi_clk"
@@ -316,6 +317,7 @@ enum
 	CLK_MASTER_SWITCH_AHB_BUS_CLK_ID,
 	CLK_MASTER_SWITCH_AXI_BUS_CLK_ID,
 	CLK_USBH_AHB_BUS_CLK_ID,
+	CLK_USB_IC_AHB_BUS_CLK_ID,
 	CLK_SDIO2_PERI_CLK_ID,
 	CLK_SDIO2_SLEEP_PERI_CLK_ID,
 	CLK_SDIO3_PERI_CLK_ID,
@@ -325,6 +327,7 @@ enum
 	CLK_SDIO1_SLEEP_PERI_CLK_ID,
 	CLK_SDIO4_PERI_CLK_ID,
 	CLK_SDIO4_SLEEP_PERI_CLK_ID,
+	CLK_USB_IC_PERI_CLK_ID,
 	CLK_USBH_48M_PERI_CLK_ID,
 	CLK_USBH_12M_PERI_CLK_ID,
 	CLK_KPS_CCU_CLK_ID,
@@ -370,6 +373,7 @@ enum
 	CLK_TIMERS_PERI_CLK_ID,
 	CLK_SPUM_OPEN_PERI_CLK_ID,
 	CLK_SPUM_SEC_PERI_CLK_ID,
+	CLK_MPHI_AHB_BUS_CLK_ID,
 	CLK_MM_CCU_CLK_ID,
 	CLK_mm_switch_axi_PERI_CLK_ID,
 	CLK_CSI0_AXI_BUS_CLK_ID,
@@ -453,8 +457,8 @@ enum
 #define BT_SLIM_AHB_APB_BUS_CLK_FLAGS 			HYST_ENABLE |HYST_HIGH
 #define ETB2AXI_APB_BUS_CLK_FLAGS 		AUTO_GATE|HYST_ENABLE |HYST_HIGH
 #define AUDIOH_APB_BUS_CLK_FLAGS 		HYST_ENABLE | HYST_HIGH
-#define SSP3_APB_BUS_CLK_FLAGS 			AUTO_GATE|HYST_ENABLE | HYST_HIGH
-#define SSP4_APB_BUS_CLK_FLAGS 			AUTO_GATE|HYST_ENABLE | HYST_HIGH
+#define SSP3_APB_BUS_CLK_FLAGS      	(HYST_ENABLE | HYST_HIGH)
+#define SSP4_APB_BUS_CLK_FLAGS          (HYST_ENABLE | HYST_HIGH)
 #define VAR_SPM_APB_BUS_CLK_FLAGS 			HYST_ENABLE |HYST_HIGH
 #define NOR_BUS_CLK_FLAGS 			HYST_ENABLE | HYST_HIGH
 #define AUDIOH_2P4M_PERI_CLK_FLAGS 		HYST_ENABLE|HYST_HIGH|RATE_FIXED
@@ -502,6 +506,7 @@ enum
 #define MASTER_SWITCH_AHB_BUS_CLK_FLAGS 	HYST_ENABLE |HYST_HIGH
 #define MASTER_SWITCH_AXI_BUS_CLK_FLAGS 	HYST_ENABLE |HYST_HIGH
 #define USBH_AHB_BUS_CLK_FLAGS 			0
+#define USB_IC_AHB_BUS_CLK_FLAGS		0
 #define SDIO2_PERI_CLK_FLAGS 			DISABLE_ON_INIT
 #define SDIO2_SLEEP_PERI_CLK_FLAGS 		0
 #define SDIO3_PERI_CLK_FLAGS 			DISABLE_ON_INIT
@@ -511,6 +516,7 @@ enum
 #define SDIO1_SLEEP_PERI_CLK_FLAGS 		0
 #define SDIO4_PERI_CLK_FLAGS 			DISABLE_ON_INIT
 #define SDIO4_SLEEP_PERI_CLK_FLAGS 		0
+#define USB_IC_PERI_CLK_FLAGS 			DISABLE_ON_INIT
 #define USBH_48M_PERI_CLK_FLAGS 			HYST_ENABLE|HYST_HIGH
 #define USBH_12M_PERI_CLK_FLAGS 			HYST_ENABLE|HYST_HIGH
 #define KPS_CCU_CLK_FLAGS 			CCU_TARGET_AC
@@ -538,6 +544,7 @@ enum
 #define APB2_BUS_CLK_FLAGS 			AUTO_GATE|HYST_ENABLE | HYST_HIGH
 #define SPUM_OPEN_AXI_BUS_CLK_FLAGS 			0
 #define SPUM_SEC_AXI_BUS_CLK_FLAGS 			0
+#define MPHI_AHB_BUS_CLK_FLAGS 			DISABLE_ON_INIT
 #define UARTB_PERI_CLK_FLAGS 			0
 #define UARTB2_PERI_CLK_FLAGS 			0
 #define UARTB3_PERI_CLK_FLAGS 			0

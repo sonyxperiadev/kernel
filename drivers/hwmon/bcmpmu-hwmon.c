@@ -648,7 +648,7 @@ static int bcmpmu_get_fg_acc_mas(struct bcmpmu *bcmpmu, int *data)
 	}
 	
 	if ((acc3 & 0x80) == 0) {
-		pr_hwmon(ERROR, "%s fg data invalid.\n", __func__);
+		pr_hwmon(DATA, "%s fg data invalid.\n", __func__);
 		return -EINVAL;
 	}
 	acc3 = acc3 & 0x03;

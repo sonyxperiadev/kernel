@@ -626,8 +626,8 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 err:
 	destroy_workqueue(bcm590xx->pmu_workqueue);
 err_create_workq:
-	mutex_destroy(bcm590xx->list_lock);
-	mutex_destroy(bcm590xx->i2c_rw_lock);
+	mutex_destroy(&bcm590xx->list_lock);
+	mutex_destroy(&bcm590xx->i2c_rw_lock);
 	while (i < BCM590XX_NUM_SLAVES) {
 		if (bcm590xx->i2c_client[i].client)
 			i2c_unregister_device(bcm590xx->i2c_client[i].client);
@@ -640,8 +640,8 @@ EXPORT_SYMBOL_GPL(bcm590xx_device_init);
 void bcm590xx_device_exit(struct bcm590xx *bcm590xx)
 {
 	int i = 1;
-	mutex_destroy(bcm590xx->list_lock);
-	mutex_destroy(bcm590xx->i2c_rw_lock);
+	mutex_destroy(&bcm590xx->list_lock);
+	mutex_destroy(&bcm590xx->i2c_rw_lock);
 	destroy_workqueue(bcm590xx->pmu_workqueue);
 	while (i < BCM590XX_NUM_SLAVES) {
 		if (bcm590xx->i2c_client[i].client)

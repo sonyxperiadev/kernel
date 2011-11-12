@@ -62,7 +62,6 @@
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
 #include <linux/broadcom/bcm59055-power.h>
 #include <linux/clk.h>
-#include <linux/android_pmem.h>
 #include <linux/bootmem.h>
 #include "common.h"
 #ifdef CONFIG_KEYBOARD_BCM
@@ -79,6 +78,9 @@
 #endif
 #if defined (CONFIG_BMP18X)
 #include <linux/bmp18x.h>
+#endif
+#if defined (CONFIG_AL3006)
+#include <linux/al3006.h>
 #endif
 #if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
 #include <linux/mpu.h>
@@ -283,8 +285,8 @@ static const char *pmu_clients[] = {
 #ifdef CONFIG_BCMPMU_OTG_XCEIV
 	"bcmpmu_otg_xceiv",
 #endif
-#ifdef CONFIG_MACH_RHEA_SELFTEST
-       "bcm_selftest_bb",
+#ifdef CONFIG_BCM59055_SELFTEST
+       "bcm59055-selftest",
 #endif
 };
 
@@ -411,6 +413,7 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 
 #if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 #define GPIO_PCA953X_GPIO_PIN      121 /* Configure pad MMC1DAT4 to GPIO74 */
+#define GPIO_PCA953X_2_GPIO_PIN      122 /* Configure ICUSBDM pad to GPIO122 */
 #else
 #define GPIO_PCA953X_GPIO_PIN      74 /* Configure pad MMC1DAT4 to GPIO74 */
 #endif
@@ -451,6 +454,45 @@ static struct i2c_board_info __initdata pca953x_info[] = {
 		.platform_data = &board_expander_info,
 	},
 };
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+/* Expander #2 on RheaRay EDN1X*/
+static int pca953x_2_platform_init_hw(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio, void *context)
+{
+	int rc;
+	rc = gpio_request(GPIO_PCA953X_2_GPIO_PIN, "gpio_expander_2");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", GPIO_PCA953X_2_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(GPIO_PCA953X_2_GPIO_PIN);
+	return 0;
+}
+
+static int pca953x_2_platform_exit_hw(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio, void *context)
+{
+	gpio_free(GPIO_PCA953X_2_GPIO_PIN);
+	return 0;
+}
+
+static struct pca953x_platform_data board_expander_2_info = {
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.gpio_base	= KONA_MAX_GPIO+16,
+	.irq_base	= gpio_to_irq(KONA_MAX_GPIO+16),
+	.setup		= pca953x_2_platform_init_hw,
+	.teardown	= pca953x_2_platform_exit_hw,
+};
+
+static struct i2c_board_info __initdata pca953x_2_info[] = {
+	{
+		I2C_BOARD_INFO("pca9539", 0x75),
+		.irq = gpio_to_irq(GPIO_PCA953X_2_GPIO_PIN),
+		.platform_data = &board_expander_2_info,
+	},
+};
+#endif
 #endif /* CONFIG_GPIO_PCA953X */
 
 #ifdef CONFIG_TOUCHSCREEN_QT602240
@@ -515,11 +557,42 @@ static struct i2c_board_info __initdata bmp18x_info[] =
 };
 #endif
 #ifdef CONFIG_AL3006
+#ifdef CONFIG_GPIO_PCA953X
+	#define AL3006_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 6)
+#else
+	#define AL3006_INT_GPIO_PIN		122	/*  skip expander chip */
+#endif
+static int al3006_platform_init_hw(void)
+{
+	int rc;
+	rc = gpio_request(AL3006_INT_GPIO_PIN, "al3006");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", AL3006_INT_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(AL3006_INT_GPIO_PIN);
+
+	return 0;
+}
+
+static void al3006_platform_exit_hw(void)
+{
+	gpio_free(AL3006_INT_GPIO_PIN);
+}
+
+static struct al3006_platform_data al3006_platform_data = {
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.init_platform_hw = al3006_platform_init_hw,
+	.exit_platform_hw = al3006_platform_exit_hw,
+};
+
 static struct i2c_board_info __initdata al3006_info[] =
 {
 	{
 		I2C_BOARD_INFO("al3006", 0x1d ),
-		/*.irq = */
+		.platform_data = &al3006_platform_data,
+		.irq = gpio_to_irq(AL3006_INT_GPIO_PIN),
 	},
 };
 #endif
@@ -652,43 +725,6 @@ static struct spi_board_info spi_slave_board_info[] __initdata = {
 	 },
 #endif
 	/* TODO: adding more slaves here */
-};
-
-static unsigned long pmem_base = 0;
-static unsigned int pmem_size = SZ_16M;
-static int __init setup_pmem_pages(char *str)
-{
-	char * endp = NULL;
-	if(str)	{
-		pmem_size = memparse((const char *)str, &endp);
-		printk(KERN_INFO "PMEM size is   0x%08x Bytes\n", pmem_size);
-		if (*endp == '@')
-			pmem_base =  memparse(endp + 1, NULL);
-		printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
-	} else	{
-		printk("\"pmem=\" option is not set!!!\n");
-		printk("Unable to determine the memory region for pmem!!!\n");
-	}
-	return 0;
-}
-__setup("pmem=", setup_pmem_pages);
-
-/* Allocate the top 16M of the DRAM for the pmem. */
-static struct android_pmem_platform_data android_pmem_data = {
-	.name = "pmem",
-	.start = 0x0,
-	.size = SZ_16M,
-	.no_allocator = 0,
-	.cached = 1,
-	.buffered = 1,
-};
-
-static struct platform_device android_pmem = {
-	.name 	= "android_pmem",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &android_pmem_data,
-	},
 };
 
 #if defined (CONFIG_HAPTIC_SAMSUNG_PWM)
@@ -1117,7 +1153,6 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_DMAC_PL330
 	&pl330_dmac_device,
 #endif
-	&android_pmem,
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
 #endif
@@ -1182,6 +1217,11 @@ static void __init rhea_ray_add_i2c_devices (void)
 	i2c_register_board_info(1,
 			pca953x_info,
 			ARRAY_SIZE(pca953x_info));
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+	i2c_register_board_info(1,
+			pca953x_2_info,
+			ARRAY_SIZE(pca953x_2_info));
+#endif
 #endif
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 	i2c_register_board_info(1,
@@ -1211,11 +1251,14 @@ static int __init rhea_ray_add_lateInit_devices (void)
 	return 0;
 }
 
+static void __init rhea_ray_reserve(void)
+{
+	board_common_reserve();
+}
+
 /* All Rhea Ray specific devices */
 static void __init rhea_ray_add_devices(void)
 {
-	android_pmem_data.start = (unsigned long)pmem_base;
-	android_pmem_data.size  = pmem_size;
 
 #ifdef CONFIG_KEYBOARD_BCM
 	bcm_kp_device.dev.platform_data = &bcm_keypad_data;
@@ -1255,4 +1298,5 @@ MACHINE_START(RHEA, "RheaRay")
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
 	.init_machine = board_init,
+	.reserve = rhea_ray_reserve
 MACHINE_END

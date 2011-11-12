@@ -2,18 +2,18 @@
 
 EXTRA_CFLAGS += -DPMU_BCM59055
 
-include drivers/char/broadcom/modem/public/msp_include_paths.gmk
+include ./drivers/char/broadcom/modem/public/msp_include_paths.gmk
 
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/ipc/ipc_CIB/public/
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/rpc/rpc_CIB/public/
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/inc/
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/inc/
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/public/
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/sysrpc/sysrpc-capi/public/
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/sysrpc/sysrpc-capi/gen/
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/sysrpc/sysrpc-capi/
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/sysrpc/
-EXTRA_CFLAGS += -I drivers/char/broadcom/fuse_log/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/ipc/ipc_CIB/public/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/public/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/inc/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/inc/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/public/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/sysrpc/sysrpc-capi/public/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/sysrpc/sysrpc-capi/gen/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/sysrpc/sysrpc-capi/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/sysrpc/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/fuse_log/
 
 
 EXTRA_CFLAGS += -D_BSDTYPES_DEFINED -DTYPEDEF_U_CHAR -DTYPEDEF_U_SHORT
@@ -30,8 +30,5 @@ EXTRA_CFLAGS += -DLINUX_RPC_KERNEL
 obj-$(CONFIG_BCM_MODEM) += \
 	sysrpc.o \
 	bcm_kril_sysrpc_handler.o \
-	sysrpc-capi/src/sys_gen_rpc.o \
-	sysrpc-capi/src/sys_hal_rpc.o \
-	sysrpc-capi/src/sys_msg.o \
-	sysrpc-capi/src/sys_rpc.o \
+	sysrpc-capi/
 

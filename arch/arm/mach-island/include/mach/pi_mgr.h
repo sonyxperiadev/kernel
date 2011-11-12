@@ -1,6 +1,16 @@
+/****************************************************************************
+*									      
+* Copyright 2010 --2011 Broadcom Corporation.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+*****************************************************************************/
 
-#ifndef __RHEA_PI_MNGR_H__
-#define __RHEA_PI_MNGR_H__
+#ifndef __ISLAND_PI_MNGR_H__
+#define __ISLAND_PI_MNGR_H__
 
 enum
 {
@@ -39,4 +49,4 @@ enum
 void island_pi_mgr_init(void);
 
 
-#endif /*__RHEA_PI_MNGR_H__*/
+#endif /*__ISLAND_PI_MNGR_H__*/

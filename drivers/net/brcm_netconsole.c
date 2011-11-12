@@ -401,6 +401,8 @@ static ssize_t store_enabled(struct brcm_netconsole_target *nt,
 	if (enabled < 0)
 		return enabled;
 
+	pr_info("%s enabled=%d\n", __func__, enabled);
+
 	if (enabled) {	/* 1 */
 
 		/*
@@ -659,8 +661,20 @@ static struct config_item *make_brcm_netconsole_target(struct config_group *grou
 						  const char *name)
 {
 	unsigned long flags;
-	struct brcm_netconsole_target *nt;
+	struct brcm_netconsole_target *nt, *tmp;
 	u8 remote_mac[ETH_ALEN];
+
+	/* Remove the previous brcm_netconsole_target */
+	if (!list_empty(&target_list)) {
+		list_for_each_entry_safe(nt, tmp, &target_list, list) {
+			pr_info( "%s: remove previous nt->list \n", __func__);
+			if (brcm_netconsole_cb->stop)
+				brcm_netconsole_cb->stop();
+			nt_enabled = FALSE;
+			list_del(&nt->list);
+			free_param_target(nt);
+		}
+	}
 
 	/*
 	 * Allocate and initialize with defaults.
@@ -764,6 +778,7 @@ char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks *_cb)
 /* .... to be discarded .... */
 unsigned char brcm_get_netcon_status(void)
 {
+	pr_info("%s: rndis is %s...\n", __func__, cur_rndis_status ? "on":"off");
         return cur_rndis_status;
 }
 
@@ -802,6 +817,7 @@ void brcm_current_netcon_status(unsigned char status)
 	pr_info( "%s\n",__func__);
 
 	if (list_empty(&target_list)) {
+		pr_info( "1. list_empty\n");
 		nt = alloc_param_target(NULL);
 		if (IS_ERR(nt)) {
 			return;
@@ -810,10 +826,23 @@ void brcm_current_netcon_status(unsigned char status)
 		spin_lock_irqsave(&target_list_lock, flags);
 		list_add(&nt->list, &target_list);
 		spin_unlock_irqrestore(&target_list_lock, flags);
+	} else {
+		spin_lock_irqsave(&target_list_lock, flags);
+		list_for_each_entry(nt, &target_list, list) {
+			pr_info( "2. setup/cleanup netpoll\n");
+			brcm_netconsole_target_get(nt);
+#ifndef CONFIG_ARCH_ISLAND
+			if (status)
+				netpoll_setup(&nt->np);
+			else if (cur_rndis_status)
+				netpoll_cleanup(&nt->np);
+#endif
+			brcm_netconsole_target_put(nt);
+
+		}
+		spin_unlock_irqrestore(&target_list_lock, flags);
 	}
-	
-	pr_info( "status= %d, nt_enabled = %d\n", status, nt_enabled);
-	
+
 #ifndef DHCP_CALLBACK
 	if (status) {
 		/* Temporary solution: wait for DHCP to complete the IP address assignment... */		
@@ -822,16 +851,17 @@ void brcm_current_netcon_status(unsigned char status)
 	} else 
 		cancel_delayed_work(&g_delay_workq_cb);
 #endif
-	cur_rndis_status = status;		
-	
-	 /* Start/stop broadcom logging.... */
-	if ( cur_rndis_status && nt_enabled) {
+
+	cur_rndis_status = status;
+	/* Start/stop broadcom logging.... */
+	if(cur_rndis_status &&  nt_enabled) {
 		if (brcm_netconsole_cb->start)
-			brcm_netconsole_cb->start();		
-	} else {
-		if (brcm_netconsole_cb->stop)
-			brcm_netconsole_cb->stop();
-	}	 	
+			brcm_netconsole_cb->start();
+	} else if (brcm_netconsole_cb->stop)
+		brcm_netconsole_cb->stop();
+
+	pr_info( "status= %d, nt_enabled = %d\n", status, nt_enabled);
+
 }
 
 EXPORT_SYMBOL(brcm_get_netcon_status);
@@ -942,6 +972,7 @@ int brcm_klogging(char *data, int length)
 
 			if (netpoll_free_memory() == 0) {
 				pr_info("brcm_netconsole_klogging: out of memory.....\n");
+				brcm_netconsole_target_put(nt);
 				spin_unlock_irqrestore(&target_list_lock, flags);
 				return 0;
 			}
