@@ -594,6 +594,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
 	Result_t result_code = RESULT_ERROR;
+#if defined(CONFIG_BCM_MODEM) 
 	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode;
 	UInt32 numFramesPerInterrupt;
 	
@@ -707,7 +708,9 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoiceRenderCmd::Unsupported command  \n"	);
 			  break;
 	  }
-	
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_ProcessCaptureCmd : dummy for AP only, NO DSP (ARM2SP is not supported)");
+#endif	
 	  return result_code;
 
 }
@@ -724,6 +727,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
+
     CSL_CAPH_DEVICE_e *aud_dev = (CSL_CAPH_DEVICE_e *)pCtrlStruct;
 
     switch (ctrl_cmd)
@@ -795,6 +799,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
             break;
     }
 
+
     return result_code;
 }
 
@@ -811,6 +816,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
+#if defined(CONFIG_BCM_MODEM) 
 	VOCAPTURE_RECORD_MODE_t *recordMode;
 	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureVoiceCmd::%d \n",ctrl_cmd );
@@ -900,7 +906,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
             Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureVoiceCmd::Unsupported command  \n"  );
             break;
     }
-
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_ProcessCaptureVoiceCmd : dummy for AP only");
+#endif
     return result_code;
 }
 
@@ -1044,7 +1052,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t* aud_drv,
 											void* pCtrlStruct)
 {
 	Result_t result_code = RESULT_ERROR;
-
+#if defined(CONFIG_BCM_MODEM) 
 	switch (ctrl_cmd)
 	{
 		case AUDIO_DRIVER_START:
@@ -1081,6 +1089,9 @@ static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t* aud_drv,
             Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIFCmd::Unsupported command  \n"  );
             break;
     }
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_ProcessVoIFCmd : dummy for AP only (no DSP)");
+#endif
     return result_code;
 }
 
@@ -1244,6 +1255,7 @@ static Result_t ARM2SP_play_start (AUDIO_DDRIVER_t* aud_drv,
 
 static Result_t ARM2SP_play_resume (AUDIO_DDRIVER_t* aud_drv)
 {
+#if defined(CONFIG_BCM_MODEM)
 	Log_DebugPrintf(LOGID_AUDIO, "Resume ARM2SP voice play instanceID=0x%x \n", aud_drv->arm2sp_config.instanceID);
 
 	if (aud_drv->arm2sp_config.instanceID  == VORENDER_ARM2SP_INSTANCE1)
@@ -1259,7 +1271,9 @@ static Result_t ARM2SP_play_resume (AUDIO_DDRIVER_t* aud_drv)
                               (CSL_ARM2SP_VOICE_MIX_MODE_t)aud_drv->arm2sp_config.mixMode, 
                               aud_drv->arm2sp_config.numFramesPerInterrupt, 
                               aud_drv->arm2sp_config.audMode, 1 ); 
-
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "ARM2SP_play_resume  : dummy for AP only");
+#endif
 	return RESULT_OK;
 }
 
@@ -1291,9 +1305,11 @@ static Result_t VPU_record_start ( VOCAPTURE_RECORD_MODE_t	recordMode,
 
 	Log_DebugPrintf(LOGID_AUDIO, " VPU_record_start::Start capture, encodingMode = 0x%x, recordMode = 0x%x, procEnable = 0x%x, dtxEnable = 0x%x, speechMode = 0x%lx, dataRate = 0x%lx\n", 
 							encodingMode, recordMode, procEnable, dtxEnable, speechMode, dataRate);
-	
+#if defined(CONFIG_BCM_MODEM)	
 	VPRIPCMDQ_StartCallRecording((UInt8)recordMode, (UInt8)numFramesPerInterrupt, (UInt16)encodingMode);
-
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "VPU_record_start  : dummy for AP only");
+#endif
 	return RESULT_OK;
 }
 
@@ -1330,6 +1346,7 @@ void VOIP_ProcessVOIPDLDone(void)
 // handle interrupt from DSP of data ready
 void VOIF_Buffer_Request (UInt32 bufferIndex, UInt32 samplingRate)
 {
+#if defined(CONFIG_BCM_MODEM) 
     UInt32 dlIndex;
     Int16   *ulBuf, *dlBuf;
     UInt32 sampleCount = VOIF_8K_SAMPLE_COUNT;
@@ -1352,7 +1369,9 @@ void VOIF_Buffer_Request (UInt32 bufferIndex, UInt32 samplingRate)
     dlBuf = CSL_GetDLVoIFBuffer(sampleCount, dlIndex);
     if (voifDrv.cb)
             voifDrv.cb (ulBuf, dlBuf, sampleCount, (UInt8)samplingRate);
-
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "VOIF_Buffer_Request : dummy for AP only (no DSP)");
+#endif
 }
 
 //******************************************************************************
@@ -1468,10 +1487,11 @@ void ARM2SP_Render_Request(UInt16 buf_index)
 	srcIndex = pAudDrv->read_index;
 
 	//copy the data from ring buffer to shared memory	
+#if defined(CONFIG_BCM_MODEM) 
 	copied_bytes = CSL_ARM2SP_Write( (pSrc + srcIndex), pAudDrv->bufferSize_inBytes, buf_index, in48K, pAudDrv->arm2sp_config.audMode );
 
 	srcIndex += copied_bytes;
-
+#endif
 	if(srcIndex >= pAudDrv->ring_buffer_size)
 	{
 		srcIndex -= pAudDrv->ring_buffer_size;
@@ -1520,9 +1540,10 @@ void ARM2SP2_Render_Request(UInt16 buf_index)
 	srcIndex = pAudDrv->read_index;
 		
 	//copy the data from ring buffer to shared memory
+#if defined(CONFIG_BCM_MODEM) 
 	copied_bytes = CSL_ARM2SP_Write( (pSrc + srcIndex), pAudDrv->bufferSize_inBytes, buf_index, in48K, pAudDrv->arm2sp_config.audMode );
 	srcIndex += copied_bytes;
-	
+#endif	
 	if(srcIndex >= pAudDrv->ring_buffer_size)
 	{
 		srcIndex -= pAudDrv->ring_buffer_size;
@@ -1611,12 +1632,12 @@ void VPU_Capture_Request(UInt16 buf_index)
     dest_index = aud_drv->write_index;
     pdest_buf= aud_drv->ring_buffer;
     num_bytes_to_copy = (aud_drv->voicecapt_config.num_frames) * (aud_drv->voicecapt_config.frame_size); 
-
+#if defined(CONFIG_BCM_MODEM) 
     recv_size = CSL_VPU_ReadPCM ( pdest_buf+dest_index, num_bytes_to_copy, buf_index, aud_drv->voicecapt_config.speech_mode);
 	
     // update the write index
     dest_index += recv_size;
-
+#endif
 	if(dest_index >= aud_drv->ring_buffer_size)
     {  
 	   	dest_index -= aud_drv->ring_buffer_size;
@@ -1671,6 +1692,7 @@ static void VoIP_StartMainAMRDecodeEncode(
 	)
 {
 	// decode the next downlink AMR speech data from application
+#if defined(CONFIG_BCM_MODEM) 
 #ifdef VOLTE_SUPPORT
 	if (inVoLTECall)
 	{
@@ -1690,7 +1712,7 @@ static void VoIP_StartMainAMRDecodeEncode(
 		prev_amr_mode = encode_amr_mode;
 		VPRIPCMDQ_DSP_AMR_RUN((UInt16)encode_amr_mode, telephony_amr_if2, FALSE);
 	}
-
+#endif
 }
 
 
@@ -1705,6 +1727,7 @@ static void VoIP_StartMainAMRDecodeEncode(
 //******************************************************************************
 void AP_ProcessStatusMainAMRDone(UInt16 codecType)
 {
+#if defined(CONFIG_BCM_MODEM) 
  	static UInt16 Buf[321]; // buffer to hold UL data and codec type
 
 	// encoded uplink AMR speech data now ready in DSP shared memory, copy it to application
@@ -1712,6 +1735,7 @@ void AP_ProcessStatusMainAMRDone(UInt16 codecType)
 	
 	CSL_ReadULVoIPData(codecType, Buf);
 	VOIP_DumpUL_CB((UInt8*)Buf,0);
+#endif
 }
 
 //============================================================================
@@ -1780,7 +1804,9 @@ static Boolean VOIP_FillDL_CB( UInt32 nFrames)
 	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
 	//Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->voip_config.codec_type, dlSize);
 	aud_drv->voip_config.pVoipDLCallback(aud_drv->voip_config.pVoIPCBPrivate, (UInt8 *)&aud_drv->tmp_buffer[1], (dlSize - 2)); // 2 bytes for codec type
+#if defined(CONFIG_BCM_MODEM) 
 	VoIP_StartMainAMRDecodeEncode((CSL_VP_Mode_AMR_t)aud_drv->voip_config.codec_type, (UInt8 *)aud_drv->tmp_buffer, dlSize, (CSL_VP_Mode_AMR_t)aud_drv->voip_config.codec_type, FALSE);
+#endif
 	return TRUE;
 };
 

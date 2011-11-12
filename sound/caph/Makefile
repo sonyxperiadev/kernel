@@ -104,20 +104,24 @@ snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_rpc.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_audlog.o
 
-#dsp source files
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_apcmd.o
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp.o
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_common_util.o
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_arm2sp.o
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_bttap.o
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_vpu.o
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_log.o
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_voip.o
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_voif.o
-snd-brcm-omx-objs += soc/csl/dsp/src/osdw_dsp_drv.o
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_caph_control_api.o
-snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_cneon_api.o
-
 #voif handler source files
 snd-brcm-omx-objs += audio/voif_handler/src/voif_handler.o
+
+#dsp source files (put to the end)
+obj-$(CONFIG_BCM_MODEM) += snd-brcm-dsp.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_apcmd.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_dsp.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_dsp_common_util.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_arm2sp.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_bttap.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_vpu.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_log.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_voip.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_voif.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/osdw_dsp_drv.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_dsp_caph_control_api.o
+snd-brcm-dsp-objs += soc/csl/dsp/src/csl_dsp_cneon_api.o
+
+
+
 

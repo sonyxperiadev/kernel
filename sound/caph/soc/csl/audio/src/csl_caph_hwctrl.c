@@ -270,6 +270,7 @@ static void ARM2SP2_DMA_Req(UInt16 bufferPosition)
 // =========================================================================
 static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 {
+#if defined(CONFIG_BCM_MODEM)
 	CSL_CAPH_HWConfig_Table_t *path;
 
 	if(!pathID) return;
@@ -316,7 +317,7 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 		arm2spCfg.dmaBytes = csl_dsp_arm2sp_get_size(AUDIO_SAMPLING_RATE_8000); //ARM2SP_INPUT_SIZE*2;
 		arm2spCfg.chNumOut = AUDIO_CHANNEL_MONO;
 	}
-
+#endif
 }
 
 
@@ -377,6 +378,7 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 {
 	if(!arm2sp_start[arm2spCfg.instanceID])
 	{
+#if defined(CONFIG_BCM_MODEM) 
 		if(arm2spCfg.instanceID == 1)
 		{
 			CSL_ARM2SP_Init();
@@ -397,9 +399,10 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
                                   arm2spCfg.numFramesPerInterrupt,
                                   (arm2spCfg.chNumOut == AUDIO_CHANNEL_STEREO)? 1 : 0,
                                   0 );
-        }
+        	}
 
 		arm2sp_start[arm2spCfg.instanceID] = TRUE;
+#endif
 	}
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_LOW) == CSL_CAPH_READY_NONE)
 	{
@@ -1072,12 +1075,14 @@ static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int blockPathIdx)
 	{
 		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx+1]]; //fifo has to follow dma
 	} else if(path->sink[0]==CSL_CAPH_DEV_DSP_throughMEM && blockPathIdx) { //dma to shared mem
+#if defined(CONFIG_BCM_MODEM)
 		dmaCfg.direction = CSL_CAPH_DMA_OUT;
 		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]]; //fifo has be followed by dma
 		/* Linux Specific - For DMA, we need to pass the physical address of AP SM */
 		dmaCfg.mem_addr = (void *)(csl_dsp_arm2sp_get_phy_base_addr());
 		dmaCfg.mem_size = arm2spCfg.dmaBytes;
 		dmaCfg.dmaCB = AUDIO_DMA_CB2;
+#endif
 	} else if(path->sink[0]==CSL_CAPH_DEV_MEMORY && blockPathIdx) { //dma to mem
 		dmaCfg.direction = CSL_CAPH_DMA_OUT;
 		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]]; //fifo has be followed by dma
@@ -1513,6 +1518,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) ||
         (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
 	{
+#if defined(CONFIG_BCM_MODEM) 
 		if(arm2spCfg.instanceID == 1)
 		{
 			CSL_RegisterARM2SPRenderStatusHandler((void*)&ARM2SP_DMA_Req);
@@ -1531,6 +1537,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 		{
 			CSL_RegisterARM2SP2RenderStatusHandler((void*)&ARM2SP2_DMA_Req);
 		}
+#endif
 	}
 	if (path->source == CSL_CAPH_DEV_HS_MIC) csl_caph_hwctrl_ACIControl();
 }
@@ -2819,6 +2826,7 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) ||
         (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
 	{
+#if defined(CONFIG_BCM_MODEM) 
 		if(arm2spCfg.instanceID == 1)
             csl_arm2sp_set_arm2sp((UInt32) arm2spCfg.srOut,
                                   CSL_ARM2SP_PLAYBACK_NONE,
@@ -2833,10 +2841,12 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
                                   arm2spCfg.numFramesPerInterrupt,
                                   (arm2spCfg.chNumOut == AUDIO_CHANNEL_STEREO)? 1 : 0,
                                   0 );
+#endif
 		arm2sp_start[arm2spCfg.instanceID] = FALSE; //reset
 
 		if(arm2sp_start[1] == FALSE && arm2sp_start[2] == FALSE)
 			memset(&arm2spCfg, 0, sizeof(arm2spCfg));
+
 	}
 
 	//stopping sequence may be important in some cases: dma, cfifo, switch, srcmixer, source/sink

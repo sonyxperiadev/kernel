@@ -182,6 +182,7 @@ void AUDDRV_Init( void )
 	if (sAudDrv.isRunning == TRUE)
 		return;
 	/* register DSP VPU status processing handlers */
+#if defined(CONFIG_BCM_MODEM) 
 	CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);
 #if 0  // These features are not needed in LMP now.
 	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
@@ -195,7 +196,9 @@ void AUDDRV_Init( void )
 	CSL_RegisterVOIFStatusHandler((VOIFStatusCB_t)&VOIF_Buffer_Request);
 
 	Audio_InitRpc();
-
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Init : dummy for AP only (no DSP)");
+#endif
 	sAudDrv.isRunning = TRUE;
 }
 
@@ -299,10 +302,11 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 
 	// The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done since it is a command via CP.
 		OSTASK_Sleep(1);
-
+#if defined(CONFIG_BCM_MODEM) 
 		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
 						FALSE,
 						FALSE);
+#endif
 	}
 	else
 	{
@@ -484,9 +488,11 @@ void AUDDRV_Telephony_Deinit (void *pData)
 
 		if(currVoiceSpkr == AUDIO_SINK_LOUDSPK)
 		{
+#if defined(CONFIG_BCM_MODEM) 
 			VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
 							FALSE,
 							FALSE);
+#endif
 		}
 
 #if defined(ENABLE_DMA_VOICE)
@@ -561,11 +567,13 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDIO_SOURCE_Enum_t mic,
 	{
 		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
+#if defined(CONFIG_BCM_MODEM) 
 		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
 							FALSE,
 							FALSE);
-	}
-
+#endif
+	}	
+	
 	//Enable the new speaker path
 	currSpkr = speaker;
 	config.streamID = CSL_CAPH_STREAM_NONE;
@@ -624,10 +632,12 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDIO_SOURCE_Enum_t mic,
 
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
+#if defined(CONFIG_BCM_MODEM) 
 		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
 							FALSE,
 							FALSE); //integrate SDB CL 366484
-	}
+#endif
+	}	
 
 	((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
 
@@ -1203,6 +1213,7 @@ Boolean AUDDRV_GetVCflag( void )
 //=============================================================================
 int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType, Boolean enable, Int32 size, void *param)
 {
+#if defined(CONFIG_BCM_MODEM)
 	static Boolean ConfigSP = FALSE;
 	static UInt32 *spCtrl = NULL, *spVar = NULL;
 
@@ -1217,6 +1228,7 @@ int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType, Boolean enable, Int32
 				return -EINVAL;
 
 			csl_dsp_sp_query_msg((UInt32 *)param);
+
 			break;
 		case AUDDRV_USER_SP_CTRL:
 			Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_SP_CTRL *\n\r");
@@ -1295,6 +1307,9 @@ int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType, Boolean enable, Int32
 			Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_User_CtrlDSP: Invalid request %d \n\r", UserCtrlType);
 			break;
 	}
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_User_CtrlDSP : dummy for AP only");
+#endif
 	return 0;
 }
 

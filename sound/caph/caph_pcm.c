@@ -1015,7 +1015,9 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 		BCM_AUDIO_DEBUG("\n PcmDeviceNew : call AUDIO_Init\n");
 		caph_audio_init();
         AUDCTRL_Init ();
+#if defined(CONFIG_BCM_MODEM) 
         DSPDRV_Init ();
+#endif
         audio_init_complete = 1;
     }
 

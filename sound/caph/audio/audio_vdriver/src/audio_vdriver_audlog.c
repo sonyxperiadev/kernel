@@ -173,9 +173,10 @@ void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 	for(n = 0; n < LOG_STREAM_NUMBER; n++)
 	{
 		stream =  n + 1;
-		
+#if defined(CONFIG_BCM_MODEM) 		
 		if(loggingbuf != NULL)
 			size = CSL_LOG_Read(stream,audio_stream_buffer_idx,(UInt8 *)loggingbuf,&sender);
+#endif
 		//check the SHmem ctrl point.
 		if ( sender != 0 )
 		{
@@ -283,7 +284,9 @@ Result_t AUDDRV_AudLog_Start (
 		return RESULT_LOW_MEMORY; 
 	}
 	
+#if defined(CONFIG_BCM_MODEM) 
 	res = CSL_LOG_Start(log_stream,log_capture_point);
+#endif
 	Log_DebugPrintf(LOGID_AUDIO, "===> Start_Log stream %ld log_consumer %d===>\r\n", log_stream,(uint)log_consumer);
 	return res;
 }
@@ -305,7 +308,9 @@ Result_t AUDDRV_AudLog_Stop( UInt32 log_stream )
 
 	Log_DebugPrintf(LOGID_AUDIO, "<=== Stop_Log stream %ld <===", log_stream);
 
+#if defined(CONFIG_BCM_MODEM) 
 	res = CSL_LOG_Stop((UInt16)log_stream, &flag);
+#endif
 	Log_DebugPrintf(LOGID_AUDIO, "<=== Stop_Log stream done %ld <===, flag %d", log_stream,flag);
 
 	if (flag == 1)
