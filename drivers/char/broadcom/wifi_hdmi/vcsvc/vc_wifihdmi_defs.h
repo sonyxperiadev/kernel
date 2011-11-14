@@ -150,8 +150,8 @@ typedef struct
    uint32_t trans_id;       // Transaction identifier
 
    uint32_t tx_cnt;         // Transmit counter (queued up and signaled to host)
+   uint32_t tx_dst_cnt;     // Transmit (with destination) counter (queued up and signaled to host)
    uint32_t tx_miss_cnt;    // Transmit miss counter (failed to queue up to host)
-
    uint32_t tx_rec_cnt;     // Transmit recycled counter
    uint32_t tx_busy_cnt;    // Transmit busied counter
 
