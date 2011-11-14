@@ -428,13 +428,26 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned long load)
 			if (kt->cfg.mode == MODE_PERIODIC)
 				printk(KERN_ALERT "Periodic Kona timer had suspiciously small load value- now disabled\n");
 
+			/*
+			 * Release the spin lock here.
+			 * Note that if we call this call back from this
+			 * context i.e
+			 * hrtimer_interrupt - tick_program_event -
+			 * tick_dev_program_event - clockevents_program_event
+			 * - gptimer_set_next_event - kona_timer_set_match_start
+			 * this might re-trigger the same cycle. This will
+			 * lead to acquiring of the spin lock recurrsively.
+			 */
+			spin_unlock_irqrestore (&ktm->lock, flags);
+
 			/* Invoke the call back, if any */
 			if (kt->cfg.cb != NULL)
 				(*kt->cfg.cb)(kt->cfg.arg);
 		}
 	}
-
-	spin_unlock_irqrestore (&ktm->lock, flags);
+	else {
+		spin_unlock_irqrestore (&ktm->lock, flags);
+	}
 
 	return 0;
 }
