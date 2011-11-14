@@ -14,7 +14,6 @@ extern "C" {
 #endif
 
 #include "interface/vcos/vcos_types.h"
-#include "vcos_platform.h"
 
 /**
   * \file

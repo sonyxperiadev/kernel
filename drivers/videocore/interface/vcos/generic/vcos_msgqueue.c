@@ -251,6 +251,7 @@ VCOS_MSG_T * vcos_msg_wait_specific(VCOS_MSGQUEUE_T *queue, VCOS_MSG_T *msg)
    vcos_assert(self);
    reply = vcos_msg_wait_helper(&self->secondary);
    vcos_assert(reply == msg); /* if this fires, someone is playing fast and loose with sendwait */
+   (void)msg;
    return reply;
 }
 

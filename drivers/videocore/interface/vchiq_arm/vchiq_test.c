@@ -166,8 +166,8 @@ static int vchiq_test(int argc, char **argv)
       }
    }
 
-   vcos_log_register("vchiq_test", VCOS_LOG_CATEGORY);
    vcos_log_set_level(VCOS_LOG_CATEGORY, verbose ? VCOS_LOG_TRACE : VCOS_LOG_INFO);
+   vcos_log_register("vchiq_test", VCOS_LOG_CATEGORY);
 
 #ifdef VCHIQ_LOCAL
    {

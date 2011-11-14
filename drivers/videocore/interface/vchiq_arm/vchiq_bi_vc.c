@@ -29,7 +29,7 @@ static DRIVER_HANDLE_T ipc_handle;
 static VCHIQ_SLOT_ZERO_T *g_vchiq_slot_zero;
 
 #if defined(VCHIQ_SM_ALLOC_VCDDR)
-#include "vcinclude/vc_debug_sym.h"
+#include "host_support/include/vc_debug_sym.h"
 VC_DEBUG_DECLARE_UNCACHED_STATIC_VAR( int, vchiq_ipc_shared_mem, 0 );
 #define vchiq_ipc_shared_mem VC_DEBUG_ACCESS_UNCACHED_VAR( vchiq_ipc_shared_mem )
 VC_DEBUG_DECLARE_UNCACHED_STATIC_VAR( int, vchiq_ipc_shared_mem_size, 0 );

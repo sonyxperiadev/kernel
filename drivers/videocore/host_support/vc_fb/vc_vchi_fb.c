@@ -76,8 +76,8 @@ VC_VCHI_FB_HANDLE_T vc_vchi_fb_init( VCHI_INSTANCE_T vchi_instance,
    VCOS_STATUS_T status;
 
    // Set up the VCOS logging
-	vcos_log_register( "fb", &fb_log_category );
    vcos_log_set_level( VCOS_LOG_CATEGORY, LOG_LEVEL );
+   vcos_log_register( "fb", VCOS_LOG_CATEGORY );
 
    LOG_DBG( "%s: start", __func__ );
 

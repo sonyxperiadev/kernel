@@ -10,3 +10,4 @@ obj-$(CONFIG_VC_FB)	+= vc_fb/
 obj-$(CONFIG_VC_OVL)	+= vc_ovl/
 obj-$(CONFIG_VC_SM)	+= vc_sm/
 
+header-y += include/
