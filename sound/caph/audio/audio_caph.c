@@ -603,7 +603,7 @@ void AUDIO_Ctrl_Process(
 		break;
 		case ACTION_AUD_SwitchSpkr:
 		{
-			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;\
+			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
 			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_SwitchPlaySpk( parm_spkr->src,
 									parm_spkr->sink,

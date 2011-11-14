@@ -1275,7 +1275,8 @@ void AUDCTRL_SetPlayMute(
 //
 // Function Name: AUDCTRL_SwitchPlaySpk
 //
-// Description:   switch a speaker to a playback path - suggested to use when a single device in use
+// Description:   switch a speaker to a playback path - suggested to use when a single device is in associated with single path.
+// 				For multicasting use cases, use Add/Remove Spk API
 //
 //============================================================================
 void AUDCTRL_SwitchPlaySpk(
@@ -1286,8 +1287,8 @@ void AUDCTRL_SwitchPlaySpk(
 				)
 {
     CSL_CAPH_HWCTRL_CONFIG_t config;
-    CSL_CAPH_DEVICE_e speaker[MAX_SINK_NUM] = {CSL_CAPH_DEV_NONE};
-	int i,j,dev_ind=0;
+	CSL_CAPH_DEVICE_e curr_spk = CSL_CAPH_DEV_NONE;
+	int i,j;
 
 	Log_DebugPrintf(LOGID_AUDIO,
                     "AUDCTRL_SwitchPlaySpk src = 0x%x, newSink = 0x%x,  newSpk = 0x%x\n",
@@ -1307,22 +1308,21 @@ void AUDCTRL_SwitchPlaySpk(
 			{
 				if(HWConfig_Table[i].sink[j] != CSL_CAPH_DEV_NONE)
 				{
-					speaker[j] = HWConfig_Table[i].sink[j];
-					dev_ind = j;
+					curr_spk = HWConfig_Table[i].sink[j];
 					break;
 				}
 
 			}
 		}
-		if(!dev_ind)
+		if(curr_spk != CSL_CAPH_DEV_NONE)
 			break;
 	}
 
-	if (!dev_ind)
+	if (curr_spk != CSL_CAPH_DEV_NONE)
 	{
-		if(speaker[dev_ind] == CSL_CAPH_DEV_HS)
+		if(curr_spk == CSL_CAPH_DEV_HS)
 			powerOnExternalAmp( AUDIO_SINK_HEADSET, AudioUseExtSpkr, FALSE );
-		else if(speaker[dev_ind] == CSL_CAPH_DEV_IHF)
+		else if(curr_spk == CSL_CAPH_DEV_IHF)
 			powerOnExternalAmp( AUDIO_SINK_LOUDSPK, AudioUseExtSpkr, FALSE );
 	}
 
@@ -1335,10 +1335,10 @@ void AUDCTRL_SwitchPlaySpk(
     }
 
     // remove current spk
-    if (speaker[dev_ind] != CSL_CAPH_DEV_NONE)
+    if (curr_spk != CSL_CAPH_DEV_NONE)
     {
         config.source = getDeviceFromHWID(src);
-        config.sink = speaker[dev_ind];
+        config.sink = curr_spk;
         (void) csl_caph_hwctrl_RemovePath(pathID, config);
     }
     if ((spk == AUDIO_SINK_LOUDSPK)||(spk == AUDIO_SINK_HEADSET))
