@@ -248,6 +248,9 @@ static struct platform_device rtc_device =
    .id            = -1,
    .resource	  = rtc_device_resource,
    .num_resources = ARRAY_SIZE(rtc_device_resource),
+   .dev = {
+        .platform_data = "bbl_apb_clk",
+    },
 };
 #endif
 

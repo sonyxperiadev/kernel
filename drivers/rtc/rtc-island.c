@@ -14,8 +14,8 @@
  *    - GPIO:         Fully supported.    No GPIOs are used.
  *    - MMU:          Partiall done.      CHAL layer is broken needs interface like kona keypad
  *    - Dynamic /dev: Not applicable.
- *    - Suspend:      Implemented.        Suspend and resume are implemented and should work.
- *    - Clocks:       Not done.
+ *    - Suspend:      Not done.
+ *    - Clocks:       Not done.           Need to move clock to platform data.
  *    - Power:        Not done.
  *
  */
@@ -89,14 +89,17 @@ static void island_rtc_setaie(int to)
 {
 	pr_debug("%s: aie=%d\n", __func__, to);
 
+	spin_lock_irq(&island_rtc_lock);
+
 	if (to) {
 		chal_rtc_intEnable(rtc->handle, CHAL_RTC_INT_MATCH);
 	} else {
 		chal_rtc_intDisable(rtc->handle, CHAL_RTC_INT_MATCH);
 	}
+	spin_unlock_irq(&island_rtc_lock);
 }
 
-static int island_rtc_setpie(struct device *dev, int enabled)
+static int island_rtc_setpie(int enabled)
 {
 	pr_debug("%s: pie=%d\n", __func__, enabled);
 
@@ -117,7 +120,6 @@ static int island_rtc_setfreq(struct device *dev, int freq)
 	chal_RTC_PER_INTERVAL_e interval = 0xffffffff;	/* invalid */
 
 	pr_debug("%s: freq=%d\n", __func__, freq);
-	spin_lock_irq(&island_rtc_lock);
 	switch (freq) {
 	case 1:
 		interval = CHAL_RTC_PER_INTERVAL_1000ms;
@@ -132,12 +134,13 @@ static int island_rtc_setfreq(struct device *dev, int freq)
 		interval = CHAL_RTC_PER_INTERVAL_125ms;
 		break;
 	}
-	spin_unlock_irq(&island_rtc_lock);
 
 	if (interval != 0xffffffff) {
 		pr_debug("%s: OKAY freq=%d interval=%d\n", __func__, freq,
 			 interval);
+                spin_lock_irq(&island_rtc_lock);
 		chal_rtc_periodInterruptValSet(rtc->handle, interval);
+                spin_unlock_irq(&island_rtc_lock);
 	} else {
 		pr_debug("%s: BAD freq=%d\n", __func__, freq);
 		return -EINVAL;
@@ -152,6 +155,7 @@ static int island_rtc_getfreq(struct device *dev, int *freq)
 
 	spin_lock_irq(&island_rtc_lock);
 	interval = chal_rtc_readReg(rtc->handle, RTC_PERIODIC_TIMER_ADDR);
+	spin_unlock_irq(&island_rtc_lock);
 	switch (interval) {
 	case CHAL_RTC_PER_INTERVAL_125ms:	/* avoid compiler warnings */
 		*freq = 8;
@@ -175,7 +179,6 @@ static int island_rtc_getfreq(struct device *dev, int *freq)
 	case CHAL_RTC_PER_INTERVAL_256000ms:
 		break;
 	}
-	spin_unlock_irq(&island_rtc_lock);
 	if (*freq == 0xffffffff) {
 		pr_debug("%s: Bad interval=%d\n", __func__, interval);
 		return -EINVAL;
@@ -232,7 +235,6 @@ static int island_rtc_getalarm(struct device *dev, struct rtc_wkalrm *alrm)
 	chal_rtc_TIME_t alm_reg_secs;
 	struct rtc_time *alm_tm = &alrm->time;
 	alrm->enabled = chal_rtc_intIsEnabled(rtc->handle, CHAL_RTC_INT_MATCH);
-//    alrm->pending = ( bbl_readReg( RTC_INTERRUPT_STATUS_ADDR ) & RTC_CMD_ONESHOT_INTERRUPT_STATUS ) ? 1 : 0;
 
 	epoch_sec = mktime(epoch, 1, 1, 0, 0, 0);
 	elapsed_sec = chal_rtc_secGet(rtc->handle);
@@ -279,6 +281,8 @@ static int island_rtc_setalarm(struct device *dev, struct rtc_wkalrm *alrm)
 	pr_debug("%s: epoch_sec=%u, elapsed_sec=%u, alm_secs=%lu\n", __func__,
 		 epoch_sec, elapsed_sec, (unsigned long)alm_secs);
 
+	spin_lock_irq(&island_rtc_lock);
+
 	chal_rtc_intDisable(rtc->handle, CHAL_RTC_INT_MATCH);
 	chal_rtc_intStatusClr(rtc->handle, CHAL_RTC_INT_MATCH);
 
@@ -287,6 +291,8 @@ static int island_rtc_setalarm(struct device *dev, struct rtc_wkalrm *alrm)
 	if (alrm->enabled) {
 		chal_rtc_intEnable(rtc->handle, CHAL_RTC_INT_MATCH);
 	}
+
+	spin_unlock_irq(&island_rtc_lock);
 
 	return 0;
 }
@@ -311,24 +317,16 @@ island_rtc_ioctl(struct device *dev, unsigned int cmd, unsigned long arg)
 {
 	switch (cmd) {
 	case RTC_AIE_OFF:
-		spin_lock_irq(&island_rtc_lock);
 		island_rtc_setaie(0);
-		spin_unlock_irq(&island_rtc_lock);
 		return 0;
 	case RTC_AIE_ON:
-		spin_lock_irq(&island_rtc_lock);
 		island_rtc_setaie(1);
-		spin_unlock_irq(&island_rtc_lock);
 		return 0;
 	case RTC_PIE_OFF:
-		spin_lock_irq(&island_rtc_lock);
-		chal_rtc_intDisable(rtc->handle, CHAL_RTC_INT_PER);
-		spin_unlock_irq(&island_rtc_lock);
+		island_rtc_setpie(0);
 		return 0;
 	case RTC_PIE_ON:
-		spin_lock_irq(&island_rtc_lock);
-		chal_rtc_intEnable(rtc->handle, CHAL_RTC_INT_PER);
-		spin_unlock_irq(&island_rtc_lock);
+		island_rtc_setpie(1);
 		return 0;
 	case RTC_IRQP_READ:
 		{
@@ -348,7 +346,7 @@ island_rtc_ioctl(struct device *dev, unsigned int cmd, unsigned long arg)
 static void island_rtc_release(struct device *dev)
 {
 	island_rtc_setaie(0);
-	island_rtc_setpie(dev, 0);
+	island_rtc_setpie(0);
 }
 
 static const struct rtc_class_ops island_rtcops = {
@@ -377,7 +375,7 @@ static int __exit island_rtc_remove(struct platform_device *dev)
 
 	platform_set_drvdata(dev, NULL);
 
-	island_rtc_setpie(&dev->dev, 0);
+	island_rtc_setpie(0);
 	island_rtc_setaie(0);
 
 	free_irq(rtc->irq2, rtc);
@@ -410,7 +408,7 @@ static int __devinit island_rtc_probe(struct platform_device *dev)
 		goto err_out;
 	}
 
-	rtc->clock = clk_get(&dev->dev, "bbl_apb_clk");
+        rtc->clock = clk_get(&dev->dev, dev->dev.platform_data);
 	if (rtc->clock < 0) {
 		ret = -ENXIO;
 		goto err_free;
