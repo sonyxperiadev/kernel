@@ -24,7 +24,6 @@ extern "C" {
 #endif
 
 #include "interface/vcos/vcos_types.h"
-#include "vcos_platform.h"
 
 /** Bits 0 to (VCOS_BLOCKPOOL_SUBPOOL_BITS - 1) are used to store the
  * subpool id. */

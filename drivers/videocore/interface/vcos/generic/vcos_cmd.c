@@ -583,7 +583,7 @@ VCOS_STATUS_T vcos_cmd_register( VCOS_CMD_T *cmd_entry )
          * from ERROR to be the more reasonable INFO level.
          */
 
-        vcos_cmd_log_category.level = VCOS_LOG_INFO;
+        vcos_log_set_level(&vcos_cmd_log_category, VCOS_LOG_INFO);
         vcos_log_register("vcos_cmd", &vcos_cmd_log_category);
 
         /* We register a help command so that it shows up in the usage. */

@@ -13,7 +13,6 @@
 *****************************************************************************/
 
 // ---- Include Files --------------------------------------------------------
-
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/types.h>
@@ -47,6 +46,7 @@
 #define VCOS_LOG_CATEGORY (&wifihdmi_log_category)
 
 // Default VCOS logging level
+// #define LOG_LEVEL  VCOS_LOG_TRACE
 #define LOG_LEVEL  VCOS_LOG_INFO
 
 // Logging macros (for remapping to other logging mechanisms, i.e., printf)
@@ -640,8 +640,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
          skt_data.handle    = (uint32_t) ptr->km_socket_handle;
          skt_data.data_len  = ptr->data_len;
 
-         LOG_DBG( "%s: data on connection %x, %u bytes",
-                  __func__, skt_data.handle, skt_data.data_len );
+         //LOG_DBG( "%s: data on connection %x, %u bytes",
+         //         __func__, skt_data.handle, skt_data.data_len );
 
          if ( skt_data.data_len < VC_WIFIHDMI_MAX_DATA_LEN )
          {
@@ -919,13 +919,15 @@ static void *vc_vchi_wifihdmi_videocore_snd( void *arg )
                                        sndblk->size,
                                        (uint8_t *) data_ptr );
 
-               //LOG_DBG( "%s: data-pump de-queue %p, handle %x, size %d, @ 0x%lx - returns %d",
-               //         __func__,
-               //         sndblk,
-               //         sndblk->handle,
-               //         sndblk->size,
-               //         data_ptr,
-               //         rc );
+               LOG_DBG( "%s: data-pump de-queue %p, handle %x, size %d, @ 0x%lx, to %x:%d - returns %d",
+                        __func__,
+                        sndblk,
+                        sndblk->handle,
+                        sndblk->size,
+                        data_ptr,
+                        sndblk->address,
+                        sndblk->port,
+                        rc );
             }
 
             vc_sm_unlock( sndblk->handle,
@@ -1231,8 +1233,8 @@ VC_VCHI_WIFIHDMI_HANDLE_T vc_vchi_wifihdmi_init( VCHI_INSTANCE_T vchi_instance,
    int handle;
 
    // Set up the VCOS logging
-	vcos_log_register( "wifihdmi", &wifihdmi_log_category );
    vcos_log_set_level( VCOS_LOG_CATEGORY, LOG_LEVEL );
+   vcos_log_register( "wifihdmi", VCOS_LOG_CATEGORY );
 
    LOG_DBG( "%s: start", __func__ );
 
@@ -2884,8 +2886,8 @@ VCOS_STATUS_T vc_vchi_wifihdmi_tx_pool( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                blk->handle  = set.res_handle;
                blk->size    = set.res_size;
 
-               LOG_DBG( "%s: data-pump creating %p, handle %x, size %d",
-                        __func__, blk, blk->handle, blk->size );
+               //LOG_DBG( "%s: data-pump creating %p, handle %x, size %d",
+               //         __func__, blk, blk->handle, blk->size );
 
                vc_vchi_add_data( instance,
                                  blk );

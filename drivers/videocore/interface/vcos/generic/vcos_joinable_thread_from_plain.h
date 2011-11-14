@@ -98,7 +98,7 @@ typedef struct VCOS_THREAD_T
    VCOS_SEMAPHORE_T wait;        /**< Semaphore to wait on at join */
    VCOS_SEMAPHORE_T suspend;     /**< Semaphore to wait on for counted suspend */
    int16_t          joined;      /**< Joined yet? For debug. */
-   int16_t          legacy;      /**< Use (argc,argv) for entry point arguments */
+   VCOS_UNSIGNED    legacy;      /**< Use (argc,argv) for entry point arguments */
    void *(*entry)(void*);        /**< Entry point */
    void             *arg;        /**< Argument passed to entry point */
    void *(*term)(void*);         /**< Termination function, used by reaper */

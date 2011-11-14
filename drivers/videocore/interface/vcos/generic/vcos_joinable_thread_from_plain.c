@@ -338,7 +338,10 @@ VCOS_STATUS_T vcos_thread_create_classic(VCOS_THREAD_T *thread,
    vcos_thread_attr_setstack(&attrs, stack, stacksz);
 #else
    vcos_assert(stack == 0);
+   (void)stack;
 #endif
+
+   (void)stacksz;
 
    vcos_assert((autostart == VCOS_START) || (autostart == VCOS_NO_START));
 

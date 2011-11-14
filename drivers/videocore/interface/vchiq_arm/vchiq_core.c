@@ -409,12 +409,11 @@ queue_message(VCHIQ_STATE_T *state, VCHIQ_SERVICE_T *service,
 
    vcos_assert(stride <= VCHIQ_SLOT_SIZE);
 
-   /* coverity[constant_expression_result]
-
-      On platforms where vcos_mutex_lock cannot fail, the return will never
+   /* On platforms where vcos_mutex_lock cannot fail, the return will never
       be taken and the compiler may optimise out that code. Let Coverity
       know this is intentional.
    */
+   /* coverity[constant_expression_result] */
    if ((VCHIQ_MSG_TYPE(msgid) != VCHIQ_MSG_RESUME) &&
       (vcos_mutex_lock(&state->slot_mutex) != VCOS_SUCCESS))
       return VCHIQ_RETRY;
@@ -463,7 +462,7 @@ queue_message(VCHIQ_STATE_T *state, VCHIQ_SERVICE_T *service,
       int i, pos;
       int tx_end_index;
 
-      vcos_log_trace("%d: qm %s@%x,%x (%d->%d)", state->id,
+      vcos_log_info("%d: qm %s@%x,%x (%d->%d)", state->id,
          msg_type_str(VCHIQ_MSG_TYPE(msgid)),
          (unsigned int)header, size,
          VCHIQ_MSG_SRCPORT(msgid),
@@ -1422,10 +1421,10 @@ vchiq_init_state(VCHIQ_STATE_T *state, VCHIQ_SLOT_ZERO_T *slot_zero, int is_mast
    static int id = 0;
    int i;
 
-   vcos_log_register("vchiq_core", &vchiq_core_log_category);
-   vcos_log_register("vchiq_core_msg", &vchiq_core_msg_log_category);
    vcos_log_set_level(&vchiq_core_log_category, vchiq_default_core_log_level);
    vcos_log_set_level(&vchiq_core_msg_log_category, vchiq_default_core_msg_log_level);
+   vcos_log_register("vchiq_core", &vchiq_core_log_category);
+   vcos_log_register("vchiq_core_msg", &vchiq_core_msg_log_category);
 
    vcos_log_warn( "%s: slot_zero = 0x%08lx, is_master = %d\n", __func__, (unsigned long)slot_zero, is_master );
 

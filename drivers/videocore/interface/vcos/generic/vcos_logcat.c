@@ -260,7 +260,7 @@ static int read_tok(char *tok, size_t toklen, const char **pstr, char sep)
 {
    const char *str = *pstr;
    size_t n = 0;
-   int ch;
+   char ch;
 
    /* skip past any whitespace */
    while (str[0] && isspace((int)(str[0])))
@@ -268,7 +268,7 @@ static int read_tok(char *tok, size_t toklen, const char **pstr, char sep)
 
    while ((ch = *str) != '\0' &&
           ch != sep &&
-          (isalnum(ch) || (ch == '_')) &&
+          (isalnum((int)ch) || (ch == '_')) &&
           n != toklen-1)
    {
       tok[n++] = ch;

@@ -475,8 +475,8 @@ VC_VCHI_SM_HANDLE_T vc_vchi_sm_init( VCHI_INSTANCE_T vchi_instance,
    VCOS_THREAD_ATTR_T attrs;
 
    // Set up the VCOS logging
-	vcos_log_register( "smem", &sm_log_category );
    vcos_log_set_level( VCOS_LOG_CATEGORY, LOG_LEVEL );
+   vcos_log_register( "smem", VCOS_LOG_CATEGORY );
 
    LOG_DBG( "%s: start", __func__ );
 

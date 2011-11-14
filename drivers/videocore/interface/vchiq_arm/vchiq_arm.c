@@ -1220,8 +1220,8 @@ vchiq_init(void)
    if (err != 0)
       goto failed_platform_vcos_init;
 
-   vcos_log_register("vchiq_arm", &vchiq_arm_log_category);
-   vcos_log_set_level(&vchiq_arm_log_category, vchiq_default_arm_log_level);
+   vcos_log_set_level(VCOS_LOG_CATEGORY, vchiq_default_arm_log_level);
+   vcos_log_register("vchiq_arm", VCOS_LOG_CATEGORY);
 
    if ((err =
         alloc_chrdev_region(&vchiq_devid, VCHIQ_MINOR, 1,
@@ -1284,7 +1284,7 @@ vchiq_exit(void)
    class_destroy(vchiq_class);
    cdev_del(&vchiq_cdev);
    unregister_chrdev_region(vchiq_devid, 1);
-   vcos_log_unregister(&vchiq_arm_log_category);
+   vcos_log_unregister(VCOS_LOG_CATEGORY);
 }
 
 module_init(vchiq_init);

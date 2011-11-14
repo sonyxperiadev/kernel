@@ -48,8 +48,8 @@ vchiq_initialise(VCHIQ_INSTANCE_T *instance)
    if (!mutex_initialised)
    {
       vcos_mutex_create(&initialise_mutex, "vchiq-init");
-      vcos_log_register("vchiq_vc", &vchiq_vc_log_category);
-      vcos_log_set_level(&vchiq_vc_log_category, vchiq_default_vc_log_level);
+      vcos_log_set_level(VCOS_LOG_CATEGORY, vchiq_default_vc_log_level);
+      vcos_log_register("vchiq_vc", VCOS_LOG_CATEGORY);
       mutex_initialised = 1;
    }
    vcos_global_unlock();
