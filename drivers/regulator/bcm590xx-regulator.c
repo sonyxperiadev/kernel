@@ -36,7 +36,7 @@
 #define DEBUG_ON
 
 static int bcm590xxldo_get_voltage(struct regulator_dev *rdev);
-static int bcm590xxldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max_uv);
+static int bcm590xxldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max_uv, unsigned *selector);
 static int bcm590xxldo_list_voltage(struct regulator_dev *rdev, unsigned index);
 static unsigned int bcm590xxreg_get_mode (struct regulator_dev *rdev);
 static int bcm590xxreg_set_mode(struct regulator_dev *rdev, unsigned mode);
@@ -259,7 +259,7 @@ static int bcm590xxldo_list_voltage(struct regulator_dev *rdev, unsigned index)
 /* @set_voltage: Set the voltage for the regulator within the range specified.
  *               The driver should select the voltage closest to min_uV.
  *               */
-static int bcm590xxldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max_uv)
+static int bcm590xxldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max_uv, unsigned *selector)
 {
 	struct bcm590xx_regl_priv *priv = rdev_get_drvdata(rdev);
 	struct bcm590xx	*bcm590xx = priv->bcm590xx;

@@ -61,12 +61,24 @@
 
 #define VOLTAGE_ADC_MAX_SAMPLE          6
 
+/* wake reason */
+#define BCM590XX_REG_WAKE_REASON		BCM59055_REG_ENV8
+
+enum {
+	BCM590XX_CGPD_WAKE	= 1 << 0,
+	BCM590XX_UBPD_WAKE	= 1 << 1,
+	BCM590XX_RTC_ALARM_WAKE	= 1 << 2,
+	BCM590XX_AUXON_WAKE	= 1 << 3,
+	BCM590XX_POK_WAKE	= 1 << 4,
+	BCM590XX_GBAT_PLUGIN	= 1 << 5
+};
 /*regualtor DSM settings */
 enum {
 	BCM590XX_REGL_LPM_IN_DSM,   /*if enabled, LPM in DSM (PC1 = 0)*/
 	BCM590XX_REGL_OFF_IN_DSM, /*if enabled, off in DSM (PC1 = 0)*/
 	BCM590XX_REGL_ON_IN_DSM,   /*if enabled, ON in DSM (PC1 = 0)*/
 };
+
 
 
 /* LDO or Switcher def */

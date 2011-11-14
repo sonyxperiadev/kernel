@@ -90,5 +90,6 @@ int bcm590xx_enable_irq(struct bcm590xx *bcm590xx, int irq);
 int bcm590xx_disable_irq(struct bcm590xx *bcm590xx, int irq);
 
 void bcm590xx_shutdown(void);
+int bcm590xx_wake_reason(void);
 
 #endif
