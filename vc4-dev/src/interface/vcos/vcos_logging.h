@@ -66,6 +66,16 @@ typedef enum VCOS_LOG_LEVEL_T
    VCOS_LOG_TRACE,
 } VCOS_LOG_LEVEL_T;
 
+
+/** Initialize a logging category without going through vcos_log_register().
+ *
+ * This is useful for the case where there is no obvious point to do the
+ * registration (no initialization function for the module). However, it
+ * means that your logging category is not registered, so cannot be easily
+ * changed at run-time.
+ */
+#define VCOS_LOG_INIT(n,l) { .name = n, .level = l }
+
 /** A registered logging category.
   */
 typedef struct VCOS_LOG_CAT_T

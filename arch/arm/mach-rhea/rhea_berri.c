@@ -57,7 +57,6 @@
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
 #include <linux/broadcom/bcm59055-power.h>
 #include <linux/clk.h>
-#include <linux/android_pmem.h>
 #include <linux/bootmem.h>
 #include "common.h"
 #include <mach/sdio_platform.h>
@@ -252,6 +251,10 @@ static struct platform_device bcm59055_vc_device_sim = {
 #endif
 
 static const char *pmu_clients[] = {
+#ifdef CONFIG_BCM59055_WATCHDOG
+	"bcm59055-wdog",
+#endif
+	"bcmpmu_usb",
 #ifdef CONFIG_INPUT_BCM59055_ONKEY
 	"bcm590xx-onkey",
 #endif
@@ -276,8 +279,11 @@ static const char *pmu_clients[] = {
 #ifdef CONFIG_BCM59055_ADC_CHIPSET_API
 	"bcm59055-adc_chipset_api",
 #endif
-#ifdef CONFIG_USB_BCM_OTG
-	"bcm_otg",
+#ifdef CONFIG_BCMPMU_OTG_XCEIV
+	"bcmpmu_otg_xceiv",
+#endif
+#ifdef CONFIG_BCM59055_SELFTEST
+       "bcm59055-selftest",
 #endif
 };
 
@@ -706,42 +712,6 @@ static struct spi_board_info spi_slave_board_info[] __initdata = {
 	/* TODO: adding more slaves here */
 };
 
-static unsigned long pmem_base = 0;
-static unsigned int pmem_size = SZ_16M;
-static int __init setup_pmem_pages(char *str)
-{
-	char * endp = NULL;
-	if(str)	{
-		pmem_size = memparse((const char *)str, &endp);
-		printk(KERN_INFO "PMEM size is   0x%08x Bytes\n", pmem_size);
-		if (*endp == '@')
-			pmem_base =  memparse(endp + 1, NULL);
-			printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
-		} else	{
-			printk("\"pmem=\" option is not set!!!\n");
-			printk("Unable to determine the memory region for pmem!!!\n");
-		}
-	return 0;
-}
-__setup("pmem=", setup_pmem_pages);
-
-/* Allocate the top 16M of the DRAM for the pmem. */
-static struct android_pmem_platform_data android_pmem_data = {
-	.name = "pmem",
-	.start = 0x0,
-	.size = SZ_16M,
-	.no_allocator = 0,
-	.cached = 1,
-	.buffered = 1,
-};
-
-static struct platform_device android_pmem = {
-	.name 	= "android_pmem",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &android_pmem_data,
-	},
-};
 
 #if defined (CONFIG_HAPTIC_SAMSUNG_PWM)
 void haptic_gpio_setup(void)
@@ -1065,7 +1035,6 @@ static struct platform_device *rhea_berri_plat_devices[] __initdata = {
 #ifdef CONFIG_DMAC_PL330
 	&pl330_dmac_device,
 #endif
-	&android_pmem,
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
 #endif
@@ -1148,6 +1117,11 @@ static int __init rhea_berri_add_lateInit_devices (void)
 	return 0;
 }
 
+static void __init rhea_berri_reserve(void)
+{
+	board_common_reserve();
+}
+
 static void enable_smi_display_clks(void)
 {
 	struct clk *smi_axi;
@@ -1172,9 +1146,6 @@ static void enable_smi_display_clks(void)
 static void __init rhea_berri_add_devices(void)
 {
 	enable_smi_display_clks();
-
-	android_pmem_data.start = (unsigned long)pmem_base;
-	android_pmem_data.size  = pmem_size;
 
 #ifdef CONFIG_KEYBOARD_BCM
 	bcm_kp_device.dev.platform_data = &bcm_keypad_data;
@@ -1214,4 +1185,5 @@ MACHINE_START(RHEA_BERRI, "RheaBerri")
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
 	.init_machine = board_init,
+	.reserve = rhea_berri_reserve
 MACHINE_END

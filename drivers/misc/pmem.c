@@ -456,7 +456,7 @@ static pgprot_t pmem_access_prot(struct file *file, pgprot_t vma_prot)
 	else if (pmem[id].buffered)
 		return pgprot_ext_buffered(vma_prot);
 #endif
-	return vma_prot;
+	return ((pgprot_val(vma_prot) & ~L_PTE_MT_MASK) | L_PTE_MT_WRITEBACK | L_PTE_SHARED);
 }
 
 static unsigned long pmem_start_addr(int id, struct pmem_data *data)

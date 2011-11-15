@@ -41,7 +41,7 @@ struct t_akm8975_axis_change
 
 #define AKM8975_DEVICE_NAME   "compass"
 #define AKM8975_DRV_NAME      "akm8975"
-
+#define AKM8975_I2C_ADDR      0x0C
 
 #endif
 

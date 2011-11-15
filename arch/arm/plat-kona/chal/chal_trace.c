@@ -87,13 +87,6 @@ cBool chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr)
 {
     chal_dprintf(CDBG_INFO, "chal_trace_init\n");
     
-     // clear pti_clk_is_idle
-#if defined(CONFIG_ARCH_RHEA)
-    BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_PERIPH_SPARE_CONTROL1, PTI_CLK_IS_IDLE, 1);
-#elif defined(CONFIG_ARCH_ISLAND)
-    BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_ARM_PERI_CONTROL, PTI_CLK_IS_IDLE, 1);
-#endif
-    
     // All register config values taken from T32 script
     
     // Config ATB Filter rm id's for STM
@@ -106,6 +99,19 @@ cBool chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr)
     BRCM_WRITE_REG(KONA_SWSTM_VA, SWSTM_R_CONFIG, 0x82);
     BRCM_WRITE_REG(KONA_SWSTM_ST_VA, SWSTM_R_CONFIG, 0x82);
 
+    /* Hack to ungate PTI & TPIU clocks */	
+#if defined(CONFIG_ARCH_RHEA)
+    BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
+                         CHIPREG_PERIPH_SPARE_CONTROL1, PTI_CLK_IS_IDLE, 0);
+    BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
+                         CHIPREG_PERIPH_SPARE_CONTROL1, TPIU_CLK_IS_IDLE, 0);
+#elif defined(CONFIG_ARCH_ISLAND)
+    BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
+                         CHIPREG_ARM_PERI_CONTROL, PTI_CLK_IS_IDLE, 0);		
+    BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
+                         CHIPREG_ARM_PERI_CONTROL, TPIU_CLK_IS_IDLE, 0);
+#endif
+    /* Do nothing */
     return TRUE;
 }
 

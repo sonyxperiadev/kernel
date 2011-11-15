@@ -131,7 +131,7 @@ static void cmd_log_results( VCOS_CMD_PARAM_T *param )
         start = end;
     }
 
-    // Since we logged the buffer, reset the pointer back to the beginning.
+    /* Since we logged the buffer, reset the pointer back to the beginning. */
 
     param->result_ptr = param->result_buf;
     param->result_buf[0] = '\0';
@@ -156,8 +156,9 @@ void vcos_cmd_vprintf( VCOS_CMD_PARAM_T *param, const char *fmt, va_list args )
 
     if ( cmd_globals.log_category != NULL )
     {
-        // We're going to log each line as we encounter it. If the buffer
-        // doesn't end in a newline, then we'll wait for one first.
+        /* We're going to log each line as we encounter it. If the buffer
+         * doesn't end in a newline, then we'll wait for one first.
+         */
 
         if ( (( bytes_written + 1 ) >= bytes_remaining ) 
         ||   ( param->result_ptr[ bytes_written - 1 ] == '\n' ))
@@ -173,13 +174,13 @@ void vcos_cmd_vprintf( VCOS_CMD_PARAM_T *param, const char *fmt, va_list args )
     {
         if (( bytes_written + 1 ) >= bytes_remaining )
         {
-            // Output doesn't fit - switch over to logging
+            /* Output doesn't fit - switch over to logging */
 
             param->use_log = 1;
 
-            *param->result_ptr = '\0';  // Zap the partial line that didn't fit above.
+            *param->result_ptr = '\0';  /* Zap the partial line that didn't fit above. */
 
-            cmd_log_results( param );   // resets result_ptr
+            cmd_log_results( param );   /* resets result_ptr */
 
             bytes_written = vcos_vsnprintf( param->result_ptr, bytes_remaining, fmt, args );
         }
@@ -301,7 +302,7 @@ void vcos_cmd_usage( VCOS_CMD_PARAM_T *param )
 
     if ( cmd_entry->sub_cmd_entry != NULL )
     {
-        // This command is command with sub-commands
+        /* This command is command with sub-commands */
 
         usage( param, param->cmd_entry->sub_cmd_entry );
     }
@@ -339,31 +340,33 @@ static VCOS_STATUS_T help_cmd( VCOS_CMD_PARAM_T *param )
     }
 #endif
 
-    // If there is an argument after the word help, then we want to print
-    // help for that command.
+    /* If there is an argument after the word help, then we want to print
+     * help for that command.
+     */
 
     if ( param->argc == 1 )
     {
         if ( param->cmd_parent_entry == cmd_globals.cmd_entry )
         {
-            // Bare help - print the command usage for the root
+            /* Bare help - print the command usage for the root */
 
             usage( param, cmd_globals.cmd_entry );
             return VCOS_SUCCESS;
         }
 
-        // For all other cases help requires an argument
+        /* For all other cases help requires an argument */
             
         vcos_cmd_error( param, "%s requires an argument", param->argv[0] );
         return VCOS_EINVAL;
     }
 
-    // We were given an argument.
+    /* We were given an argument. */
 
     if (( found_entry = find_cmd( param->cmd_parent_entry, param->argv[1] )) != NULL )
     {
-        // Make it look like the command that was specified is the one that's
-        // currently running
+        /* Make it look like the command that was specified is the one that's
+         * currently running
+         */
 
         param->cmd_entry = found_entry;
         param->argv[0] = param->argv[1];
@@ -439,20 +442,21 @@ static VCOS_STATUS_T execute_cmd( VCOS_CMD_PARAM_T *param, VCOS_CMD_T *cmd_entry
 
     if ( param->argc <= 1 )
     {
-        // No command specified
+        /* No command specified */
 
         vcos_cmd_error( param, "%s - no command specified", param->argv[0] );
         return VCOS_EINVAL;
     }
 
-    // argv[0] is the command/program that caused us to get invoked, so we strip
-    // it off.
+    /* argv[0] is the command/program that caused us to get invoked, so we strip
+     * it off.
+     */
 
     param->argc--;
     param->argv++;
     param->cmd_parent_entry = cmd_entry;
 
-    // Not the help command, scan for the command and execute it.
+    /* Not the help command, scan for the command and execute it. */
 
     cmdStr = param->argv[0];
 
@@ -467,7 +471,7 @@ static VCOS_STATUS_T execute_cmd( VCOS_CMD_PARAM_T *param, VCOS_CMD_T *cmd_entry
         return found_entry->cmd_fn( param );
     }
 
-    // Unrecognized command - check to see if it was the help command
+    /* Unrecognized command - check to see if it was the help command */
 
     if ( vcos_strcmp( cmdStr, cmd_help.name ) == 0 )
     {
@@ -530,7 +534,7 @@ VCOS_STATUS_T vcos_cmd_execute( int argc, char **argv, size_t result_size, char 
     {
         if ( result_buf[0] != '\0' )
         {
-            // There is a partial line still buffered.
+            /* There is a partial line still buffered. */
 
             vcos_cmd_printf( &param, "\n" );
         }
@@ -566,9 +570,10 @@ VCOS_STATUS_T vcos_cmd_register( VCOS_CMD_T *cmd_entry )
     vcos_assert(( cmd_entry->cmd_fn != NULL ) || ( cmd_entry->sub_cmd_entry != NULL ));
     vcos_assert( cmd_entry->descr != NULL );
 
-    // We expect vcos_cmd_init to be called before vcos_logging_init, so we
-    // need to defer registering our logging category until someplace
-    // like right here.
+    /* We expect vcos_cmd_init to be called before vcos_logging_init, so we
+     * need to defer registering our logging category until someplace
+     * like right here.
+     */
 
     if ( vcos_cmd_log_category.name == NULL )
     {
@@ -581,7 +586,7 @@ VCOS_STATUS_T vcos_cmd_register( VCOS_CMD_T *cmd_entry )
         vcos_cmd_log_category.level = VCOS_LOG_INFO;
         vcos_log_register("vcos_cmd", &vcos_cmd_log_category);
 
-        // We register a help command so that it shows up in the usage.
+        /* We register a help command so that it shows up in the usage. */
 
         vcos_cmd_register( &cmd_help );
 #ifdef HAVE_VCOS_VERSION
@@ -595,14 +600,14 @@ VCOS_STATUS_T vcos_cmd_register( VCOS_CMD_T *cmd_entry )
     {
         if ( cmd_globals.num_cmd_alloc == 0 )
         {
-            // We haven't allocated a table yet
+            /* We haven't allocated a table yet */
         }
 
-        // The number 8 is rather arbitrary.
+        /* The number 8 is rather arbitrary. */
 
         new_num_cmd_alloc = cmd_globals.num_cmd_alloc + 8;
 
-        // The + 1 is to ensure that we always have a NULL entry at the end.
+        /* The + 1 is to ensure that we always have a NULL entry at the end. */
 
         new_cmd_entry = (VCOS_CMD_T *)vcos_calloc( new_num_cmd_alloc + 1, sizeof( *cmd_entry ), "vcos_cmd_entries" );
         if ( new_cmd_entry == NULL )
@@ -619,21 +624,22 @@ VCOS_STATUS_T vcos_cmd_register( VCOS_CMD_T *cmd_entry )
 
     if ( cmd_globals.num_cmd_entries == 0 )
     {
-        // This is the first command being registered
+        /* This is the first command being registered */
 
         cmd_globals.cmd_entry[0] = *cmd_entry;
     }
     else
     {
-        // Keep the list in alphabetical order. We start at the end and work backwards
-        // shuffling entries up one until we find an insertion point.
+        /* Keep the list in alphabetical order. We start at the end and work backwards
+         * shuffling entries up one until we find an insertion point.
+         */
 
         for ( scan_entry = &cmd_globals.cmd_entry[cmd_globals.num_cmd_entries - 1];
               scan_entry >= cmd_globals.cmd_entry; scan_entry-- )
         {
             if ( vcos_strcmp( cmd_entry->name, scan_entry->name ) > 0 )
             {
-                // We found an insertion point.
+                /* We found an insertion point. */
 
                 break;
             }

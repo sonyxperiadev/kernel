@@ -44,6 +44,30 @@
 static struct kona_timer *gpt_evt = NULL;
 static struct kona_timer *gpt_src = NULL;
 
+/*
+ * read_persistent_clock -  Return time from a *fake* persistent clock.
+ * Reads the time as 2 Jan, 1970 for the first time. This is necessary so
+ * Android does not reset the time and then AlarmManager is happy.
+ * Every subsequentcall will return 0 in timespec, so that the suspend/resume
+ * timekeeping code will take the the appropriate path (i.e as if the arch does
+ * not support read_persistent_clock()
+ * */
+
+static unsigned int first_persistent_clock_read = 1;
+#define SECS_PER_DAY (86400UL)
+void read_persistent_clock(struct timespec *ts)
+{
+	if (first_persistent_clock_read) {
+		ts->tv_sec = SECS_PER_DAY;
+		ts->tv_nsec = 0;
+		first_persistent_clock_read = 0;
+		return;
+	}
+
+	ts->tv_sec = 0;
+	ts->tv_nsec = 0;
+}
+
 static int gptimer_set_next_event(unsigned long clc,
 		struct clock_event_device *unused)
 {
