@@ -483,7 +483,7 @@ static struct adc_channels_t *hal_adc_map_channel(struct adc_channels_t *channel
 		pchan->unit.unit = adc_unit_bom;
 		break;
 	}
-	printk(KERN_INFO "%s, Nokia channel %d, pChan 0x%x", __func__, channel, (u32)pchan);
+	pr_debug("%s, CSAPI channel %d, pChan 0x%x", __func__, channel, (u32)pchan);
 	return pchan;
 }
 
@@ -506,7 +506,7 @@ static int read_rtm_adc(int physical_channel)
 	int reading;
 	do {
 		reading = bcm59055_saradc_request_rtm(physical_channel);
-		/* printk(KERN_INFO "%s: reading %d", reading); */
+		/* pr_debug(KERN_INFO "%s: reading %d", reading); */
 		if (reading < 0) {
 			mdelay(20);
 		}
@@ -529,7 +529,7 @@ static int update_columb(void)
 	bcm59055_fg_init_read();
 	ret = bcm59055_fg_read_soc(&fg_accm, &fg_cnt, &fg_sleep_cnt);
 
-	printk(KERN_INFO "%s: raw data: %x, %d, %d\n", __func__, fg_accm, fg_cnt, fg_sleep_cnt);
+	pr_debug("%s: raw data: %x, %d, %d\n", __func__, fg_accm, fg_cnt, fg_sleep_cnt);
 
 	if (ret < 0) { /* || !(fg_accm & BCM59055_REG_FGACCM_VALID)) { */
 		return ibat_avg;
@@ -567,7 +567,7 @@ static int update_columb(void)
 	}
 	/* Calculate the average current consumption - right now it is uC/ms = mA*/
 
-	printk(KERN_INFO "%s: fg_accm %d, ibat_avg %d, signbit %d, smpltime %d\n", __func__, fg_accm, ibat_avg, signbit, smpl_time);
+	pr_debug("%s: fg_accm %d, ibat_avg %d, signbit %d, smpltime %d\n", __func__, fg_accm, ibat_avg, signbit, smpl_time);
 
 	/* Return new average current */
 	return ibat_avg;
@@ -594,7 +594,7 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 		if (!bcm59055_adc_chipset_api)
 			return -ENOMEM;
 
-		/* Special Nokia IBAT channels */
+		/* Special CSAPI IBAT channels */
 		if (cha == CSAPI_ADC_IBAT_AVG) {
 			*val = update_columb();
 			return CSAPI_ADC_ERR_SUCCESS;
@@ -606,7 +606,7 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 		}
 
 		pchan = hal_adc_map_channel(bcm59055_adc_chipset_api->adc_channels, cha);
-		GLUE_DBG(("hal_adc_raw_read: Reading Nokia channel %x, pchan %x", cha, pchan));
+		GLUE_DBG(("hal_adc_raw_read: Reading CSAPI channel %x, pchan %x", cha, pchan));
 
 		if (!pchan) {
 			return -ENODEV;
@@ -651,7 +651,29 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 
 		overflow = (1 << pchan->bits) - 1;
 
-		reading = read_hk_adc(pchan->select);
+		switch (pchan->select) {
+		case ADC_VMBAT_CHANNEL:
+		case ADC_VBBAT_CHANNEL:
+		case ADC_VWALL_CHANNEL:
+		case ADC_VBUS_CHANNEL:
+		case ADC_ID_CHANNEL:
+		case ADC_NTC_CHANNEL:
+		case ADC_BOM_CHANNEL:
+		case ADC_32KTEMP_CHANNEL:
+		case ADC_PATEMP_CHANNEL:
+		case ADC_ALS_CHANNEL:
+			reading = read_hk_adc(pchan->select);
+			break;
+		case ADC_BSI_CHANNEL:
+		case ADC_BSI_CAL_L_CHANNEL:
+		case ADC_NTC_CAL_L_CHANNEL:
+		case ADC_NTC_CAL_H_CHANNEL:
+		case ADC_BSI_CAL_H_CHANNEL:
+		default:
+			reading = read_rtm_adc(pchan->select);
+			break;
+		}
+
 		if (reading == overflow) {
 			status = -ERANGE;
 		} else
@@ -709,111 +731,46 @@ static int bsearch_descending_int_table(int *table, int sz, int value)
 	return res;
 }
 
-/*int bcm59055_hal_adc_unit_convert(u8 cha, u32 val)*/
-int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
+static int get_cal_vread (struct adc_channels_t *chan,  u32 raw)
 {
-	struct adc_channels_t *chan;
-	int vread, temp_to_return=298, ibat_to_return, ibat, ibat_cal;
-	u32 u_iread, u_rread;
+	int vread;
 #ifdef VENDOR_ADC_TEMPERATURE_COMP_CHANNEL
+	/* Voyager back compability - or for future use with only one referece channel */
 	u32 stored_reference_reading = 0;
-#endif
-	double vread_f, vpullup, iread, rread, rpullup;
-#if 0
-	double rr0, lnrr0, temperature, ft;
-#endif
-#ifdef DEBUGOUT_ADC_CHIPSET_API
-	int vread_32, intc, iread_32, rread_32, rr0_32, lnrr0_32;
-#endif
-
-	if (!bcm59055_adc_chipset_api) {
-		return -ENOMEM;
+	stored_reference_reading = bcm59055_adc_chipset_api->adc_channels[VENDOR_ADC_BSI_CHANNEL].unit.data.ohms.reference_reading;
+	if (stored_reference_reading && value) {
+		u16 reference_reading = 0;
+		reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
+		reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
+		reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
+		reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
+		reference_reading += 2;			/* Ensure correct rounding */
+		reference_reading >>= 2;			/* Divide by four */
+		raw *= stored_reference_reading;
+		raw /= reference_reading;
+		vread = raw * chan->unit.uvperlsb + chan->unit.offset;
+		pr_debug("get_cal_vread: Temperature compensated value %d, reference_reading = %d, vread = %d",
+				  raw, chan->unit.uvperlsb, reference_reading, vread);
+		return vread;
 	}
-
-	/* Special Nokia IBAT channels */
-	if (cha == CSAPI_ADC_IBAT_AVG || cha == CSAPI_ADC_IBAT_CC) {
-		return raw;
-	}
-
-	chan = hal_adc_map_channel(bcm59055_adc_chipset_api->adc_channels, cha);
-#ifdef VENDOR_ADC_TEMPERATURE_COMP_CHANNEL
-	stored_reference_reading = bcm59055_adc_chipset_api->adc_channels[8].unit.data.ohms.reference_reading;
-#endif
-	if (!chan) {
-		return -ENODEV;
-	}
-	if (chan->locked) {
-		return chan->lockvalue;
-	}
-
-	vread = raw * chan->unit.uvperlsb;
-	vread += chan->unit.offset;
-
-	GLUE_DBG(("hal_adc_unit_convert: value %d, unit %d, uv %d, vread = %d", value, chan->unit.unit, chan->unit.uvperlsb, vread));
-	switch (chan->unit.unit) {
-	case adc_unit_volts:
-#ifdef VENDOR_ADC_TEMPERATURE_COMP_CHANNEL
-		{
-			if (stored_reference_reading && value) {
-				u16 reference_reading = 0;
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += 2;			/* Ensure correct rounding */
-				reference_reading >>= 2;			/* Divide by four */
-				raw *= stored_reference_reading;
-				raw /= reference_reading;
-				vread = raw * chan->unit.uvperlsb + chan->unit.offset;
-				GLUE_DBG(("hal_adc_unit_convert: Temperature compensated value %d, reference_reading = %d, vread = %d",
-						  value, chan->unit.uvperlsb, reference_reading, vread));
-			}
-		}
-#endif
-		/* should return in millivolts */
-		if ((vread % 1000) > 500) {
-			vread += 500;		/* round up... */
-		}
-		GLUE_DBG(("hal_adc_unit_convert: Millivolts %d", (vread/1000)));
-		return (int)(vread/1000);
-
-	case adc_unit_amps:
-		iread = vread/chan->unit.data.amps.rshunt;	/* uV / ohms = uA */
-		return (int)(iread/1000);
-
-	case adc_unit_ohms:
-#ifdef VENDOR_ADC_TEMPERATURE_COMP_CHANNEL
-		{
-			if (chan->unit.data.ohms.reference_reading) {
-				u16 reference_reading = 0;
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += 2;			/* Ensure correct rounding */
-				reference_reading >>= 2;			/* Divide by four */
-				raw *= chan->unit.data.ohms.reference_reading;
-				raw /= reference_reading;
-				vread = raw * chan->unit.uvperlsb + chan->unit.offset;
-				GLUE_DBG(("hal_adc_unit_convert: Temperature compensated value %d, reference_reading = %d, vread = %d",
-						  raw, chan->unit.uvperlsb, reference_reading, vread));
-			}
-		}
 #endif
 #ifdef VENDOR_ADC_BSI_COMP_CHANNELS
-		{
-			/* Read the two ADC channels
-			*  calculate gain and offset
-			*/
-			u16 read0, read1, read2, i;
-			int gain;
-			int offset;
+	if (chan->unit.unit == adc_unit_ohms || chan->unit.unit == adc_unit_kelvin_down_table) {
+		/* Read the two ADC channels
+		*  calculate gain and offset
+		*  Both the reading and gain variables needs to be static - there are multiple channels using the
+		*  same data. 
+		*/
+		u16 read0, i;
+		static u16 read1, read2;
+		static int gain, offset;
+		static u32 last_time;
 
-			gain = chan->unit.uvperlsb;
-			offset = chan->unit.offset;
+		if ((!read1) || (last_time + VENDOR_ADC_COMP_FREQUENCY < get_seconds())) {
+			last_time = get_seconds();
 			read1 = 0;
 			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
-				read0 = read_rtm_adc(VENDOR_ADC_BSI_CAL_L_CHANNEL);
+				read0 = read_rtm_adc(VENDOR_ADC_NTC_CAL_L_CHANNEL);
 				if (read0 != 0x3ff) {
 					read1 += read0;
 					i++;
@@ -824,7 +781,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 
 			read2 = 0;
 			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
-				read0 = read_rtm_adc(VENDOR_ADC_BSI_CAL_H_CHANNEL);
+				read0 = read_rtm_adc(VENDOR_ADC_NTC_CAL_H_CHANNEL);
 				if (read0 != 0x3ff) {
 					read2 += read0;
 					i++;
@@ -838,14 +795,67 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 				gain = ((VENDOR_ADC_BSI_COMP_HIGH_VOLTAGE-VENDOR_ADC_BSI_COMP_LOW_VOLTAGE)*1000) / (read2 - read1);
 				offset = VENDOR_ADC_BSI_COMP_HIGH_VOLTAGE*1000 - (read2*gain);
 			}
-			vread = raw * gain + offset;
-			GLUE_DBG(("hal_adc_unit_convert: Value %d, read1 %d, read2 %d, gain %d, offset %d, new vread %d, vmax %d",
-					  val, read1, read2, gain, offset, vread, chan->unit.vmax));
-			printk(KERN_INFO "hal_adc_unit_convert: Value %d, read1 %d, read2 %d, gain %d, offset %d, new vread %d, vmax %d",
-				   raw, read1, read2, gain, offset, vread, chan->unit.vmax);
-
+			pr_debug("get_cal_vread: Value %d, read1 %d, read2 %d, gain %d, offset %d, vmax %d",
+					  raw, read1, read2, gain, offset, chan->unit.vmax);
 		}
+		chan->unit.uvperlsb = gain;
+		chan->unit.offset = offset;
+	}
 #endif
+	vread = raw * chan->unit.uvperlsb;
+	vread += chan->unit.offset;
+	
+	return vread;
+}
+
+/*int bcm59055_hal_adc_unit_convert(u8 cha, u32 val)*/
+int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
+{
+	struct adc_channels_t *chan;
+	int vread, temp_to_return=298, ibat_to_return, ibat, ibat_cal;
+	u32 u_iread, u_rread;
+	double vread_f, vpullup, iread, rread, rpullup;
+#if 0
+	double rr0, lnrr0, temperature, ft;
+#endif
+#ifdef DEBUGOUT_ADC_CHIPSET_API
+	int vread_32, intc, iread_32, rread_32, rr0_32, lnrr0_32;
+#endif
+
+	if (!bcm59055_adc_chipset_api) {
+		return -ENOMEM;
+	}
+
+	/* Special CSAPI IBAT channels */
+	if (cha == CSAPI_ADC_IBAT_AVG || cha == CSAPI_ADC_IBAT_CC) {
+		return raw;
+	}
+
+	chan = hal_adc_map_channel(bcm59055_adc_chipset_api->adc_channels, cha);
+	if (!chan) {
+		return -ENODEV;
+	}
+	if (chan->locked) {
+		return chan->lockvalue;
+	}
+
+	vread = get_cal_vread (chan, raw);
+
+	GLUE_DBG(("hal_adc_unit_convert: value %d, unit %d, uv %d, vread = %d", value, chan->unit.unit, chan->unit.uvperlsb, vread));
+	switch (chan->unit.unit) {
+	case adc_unit_volts:
+		/* should return in millivolts */
+		if ((vread % 1000) > 500) {
+			vread += 500;		/* round up... */
+		}
+		GLUE_DBG(("hal_adc_unit_convert: Millivolts %d", (vread/1000)));
+		return (int)(vread/1000);
+
+	case adc_unit_amps:
+		iread = vread/chan->unit.data.amps.rshunt;	/* uV / ohms = uA */
+		return (int)(iread/1000);
+
+	case adc_unit_ohms:
 		/* vread_f = vread; */
 		if (cha == CSAPI_ADC_MAIN_CAL) {
 			return vread;
@@ -872,24 +882,6 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 
 	case adc_unit_kelvin_down:					/* Temperature where NTC is connected to ground */
 #if 0
-#ifdef VENDOR_ADC_TEMPERATURE_COMP_CHANNEL
-		{
-			if (stored_reference_reading) {
-				u16 reference_reading = 0;
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += 2;			/* Ensure correct rounding */
-				reference_reading >>= 2;		/* Divide by four */
-				raw *= stored_reference_reading;
-				raw /= reference_reading;
-				vread = value * chan->unit.uvperlsb + chan->unit.offset;
-				GLUE_DBG(("hal_adc_unit_convert: Temperature compensated value %d, reference_reading = %d, vread = %d",
-						  value, chan->unit.uvperlsb, reference_reading, vread));
-			}
-		}
-#endif
 		vread_f = 0;
 		vread_f += vread;
 		vpullup = chan->unit.vmax - vread;
@@ -934,70 +926,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 		return temp_to_return;
 
 #ifdef VENDOR_ADC_KELVIN_DOWN_TABLE
-	case adc_unit_kelvin_down_table:					/* Temperature where NTC is connected to ground, using Nokia supplied lookup table. */
-#ifdef VENDOR_ADC_TEMPERATURE_COMP_CHANNEL
-		{
-			if (stored_reference_reading) {
-				u16 reference_reading = 0;
-				reference_reading += read_rtm_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_rtm_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_rtm_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += read_rtm_adc(VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);
-				reference_reading += 2;			/* Ensure correct rounding */
-				reference_reading >>= 2;		/* Divide by four */
-				raw *= stored_reference_reading;
-				raw /= reference_reading;
-				vread = raw * chan->unit.uvperlsb + chan->unit.offset;
-				GLUE_DBG(("hal_adc_unit_convert: Temperature compensated value %d, reference_reading = %d, vread = %d",
-						  value, chan->unit.uvperlsb, reference_reading, vread));
-			}
-		}
-#endif
-#ifdef VENDOR_ADC_BSI_COMP_CHANNELS
-		{
-			/* Read the two ADC channels
-			*  calculate gain and offset
-			*/
-			u16 read0, read1, read2, i;
-			int gain;
-			int offset;
-
-			gain = chan->unit.uvperlsb;
-			offset = chan->unit.offset;
-			read1 = 0;
-			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
-				read0 = read_rtm_adc(VENDOR_ADC_BSI_CAL_L_CHANNEL);
-				if (read0 != 0x3ff) {
-					read1 += read0;
-					i++;
-				}
-			}
-			read1 += VENDOR_ADC_COMP_SAMPLES/2;	/* add samples/2 for rounding */
-			read1 /= VENDOR_ADC_COMP_SAMPLES;	/* Divide by the number of samples */
-
-			read2 = 0;
-			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
-				read0 = read_rtm_adc(VENDOR_ADC_BSI_CAL_H_CHANNEL);
-				if (read0 != 0x3ff) {
-					read2 += read0;
-					i++;
-				}
-			}
-			read2 += VENDOR_ADC_COMP_SAMPLES/2;	/* For rounding */
-			read2 /= VENDOR_ADC_COMP_SAMPLES;	/* Divide to get average */
-
-			/* Calculate uvperbit and offset */
-			if (read1 != read2) {
-				gain = ((VENDOR_ADC_BSI_COMP_HIGH_VOLTAGE-VENDOR_ADC_BSI_COMP_LOW_VOLTAGE)*1000) / (read2 - read1);
-				offset = VENDOR_ADC_BSI_COMP_HIGH_VOLTAGE*1000 - (read2*gain);
-			}
-			vread = raw * gain + offset;
-			GLUE_DBG(("hal_adc_unit_convert: Value %d, read1 %d, read2 %d, gain %d, offset %d, new vread %d, vmax %d",
-					  value, read1, read2, gain, offset, vread, chan->unit.vmax));
-
-		}
-#endif
-
+	case adc_unit_kelvin_down_table:					/* Temperature where NTC is connected to ground, using CSAPI supplied lookup table. */
 		vread_f = 0;
 		vread_f += vread;
 		vpullup = chan->unit.vmax - vread;
@@ -1096,7 +1025,7 @@ int csapi_cal_unit_convert_lock(struct csapi_cli *cli, u8 cha, int val)
 		GLUE_DBG(("%s returns Not supported for channel %d", __func__, cha));
 		return -ENODEV;
 	}
-	printk(KERN_INFO "%s: pchan 0x%x", __func__, (u32)chan);
+	pr_debug("%s: pchan 0x%x", __func__, (u32)chan);
 
 	chan->locked = true;
 	chan->lockvalue = val;
@@ -1114,7 +1043,7 @@ int csapi_cal_unit_convert_unlock(struct csapi_cli *cli, u8 cha)
 		GLUE_DBG(("%s returns Not supported for channel %d", __func__, cha));
 		return -ENODEV;
 	}
-	printk(KERN_INFO "%s: pchan 0x%x", __func__, (u32)chan);
+	pr_debug(KERN_INFO "%s: pchan 0x%x", __func__, (u32)chan);
 
 	chan->locked = false;
 	chan->lockvalue = 0;
@@ -1134,7 +1063,7 @@ int csapi_cal_data_get(struct csapi_cli *cli,
 		GLUE_DBG(("hal_adc_cal_get returns Not supported for channel %d", cha));
 		return -ENODEV;
 	}
-	printk(KERN_INFO "%s: pchan 0x%x", __func__, (u32)pchan);
+	pr_debug("%s: pchan 0x%x", __func__, (u32)pchan);
 	*p1 = 0;
 	*p2 = 0;
 	*p3 = 0;
@@ -1521,7 +1450,7 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 		}
 
 		else if (strcmp(argv[i], "csapi_adc_raw_read") == 0) {
-			/* Only(Nokia) channel can be supplied here, rest is given */
+			/* Only(CSAPI) channel can be supplied here, rest is given */
 			if (argv[i+1]) {
 				csapi_adc_raw_read(NULL, simple_strtol(argv[i+1], NULL, 0), &adc_raw, NULL, NULL);
 				printk(KERN_INFO "%s: Raw %d\n", __func__, adc_raw);
@@ -1531,7 +1460,7 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 			}
 
 		} else if (strcmp(argv[i], "csapi_adc_unit_convert") == 0) {
-			/* Nokia channel and raw reading can be supplied here, rest is given */
+			/* CSAPI channel and raw reading can be supplied here, rest is given */
 			if (argv[i+2]) {
 				channel = simple_strtol(argv[i+1], NULL, 0);
 				adc_raw = simple_strtol(argv[i+2], NULL, 0);
@@ -1542,7 +1471,7 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 				printk(KERN_INFO "%s: Not enough parameters for %s\n", __func__, argv[i]);
 			}
 		} else if (strcmp(argv[i], "csapi_cal_unit_convert_lock") == 0) {
-			/* Nokia channel and raw reading can be supplied here, rest is given */
+			/* CSAPI channel and raw reading can be supplied here, rest is given */
 			if (argv[i+2]) {
 				channel = simple_strtol(argv[i+1], NULL, 0);
 				adc_unit = simple_strtol(argv[i+2], NULL, 0);
@@ -1553,7 +1482,7 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 				printk(KERN_INFO "%s: Not enough parameters for %s\n", __func__, argv[i]);
 			}
 		} else if (strcmp(argv[i], "csapi_cal_unit_convert_unlock") == 0) {
-			/* Nokia channel and raw reading can be supplied here, rest is given */
+			/* CSAPI channel and raw reading can be supplied here, rest is given */
 			if (argv[i+1]) {
 				channel = simple_strtol(argv[i+1], NULL, 0);
 				csapi_cal_unit_convert_unlock(NULL, channel);

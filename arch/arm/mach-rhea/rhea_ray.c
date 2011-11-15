@@ -79,6 +79,9 @@
 #if defined (CONFIG_BMP18X)
 #include <linux/bmp18x.h>
 #endif
+#if defined (CONFIG_AL3006)
+#include <linux/al3006.h>
+#endif
 #if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
 #include <linux/mpu.h>
 #endif
@@ -282,8 +285,8 @@ static const char *pmu_clients[] = {
 #ifdef CONFIG_BCMPMU_OTG_XCEIV
 	"bcmpmu_otg_xceiv",
 #endif
-#ifdef CONFIG_MACH_RHEA_SELFTEST
-       "bcm_selftest_bb",
+#ifdef CONFIG_BCM59055_SELFTEST
+       "bcm59055-selftest",
 #endif
 };
 
@@ -427,6 +430,7 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 
 #if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 #define GPIO_PCA953X_GPIO_PIN      121 /* Configure pad MMC1DAT4 to GPIO74 */
+#define GPIO_PCA953X_2_GPIO_PIN      122 /* Configure ICUSBDM pad to GPIO122 */
 #else
 #define GPIO_PCA953X_GPIO_PIN      74 /* Configure pad MMC1DAT4 to GPIO74 */
 #endif
@@ -467,6 +471,45 @@ static struct i2c_board_info __initdata pca953x_info[] = {
 		.platform_data = &board_expander_info,
 	},
 };
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+/* Expander #2 on RheaRay EDN1X*/
+static int pca953x_2_platform_init_hw(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio, void *context)
+{
+	int rc;
+	rc = gpio_request(GPIO_PCA953X_2_GPIO_PIN, "gpio_expander_2");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", GPIO_PCA953X_2_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(GPIO_PCA953X_2_GPIO_PIN);
+	return 0;
+}
+
+static int pca953x_2_platform_exit_hw(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio, void *context)
+{
+	gpio_free(GPIO_PCA953X_2_GPIO_PIN);
+	return 0;
+}
+
+static struct pca953x_platform_data board_expander_2_info = {
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.gpio_base	= KONA_MAX_GPIO+16,
+	.irq_base	= gpio_to_irq(KONA_MAX_GPIO+16),
+	.setup		= pca953x_2_platform_init_hw,
+	.teardown	= pca953x_2_platform_exit_hw,
+};
+
+static struct i2c_board_info __initdata pca953x_2_info[] = {
+	{
+		I2C_BOARD_INFO("pca9539", 0x75),
+		.irq = gpio_to_irq(GPIO_PCA953X_2_GPIO_PIN),
+		.platform_data = &board_expander_2_info,
+	},
+};
+#endif
 #endif /* CONFIG_GPIO_PCA953X */
 
 #ifdef CONFIG_TOUCHSCREEN_QT602240
@@ -531,11 +574,42 @@ static struct i2c_board_info __initdata bmp18x_info[] =
 };
 #endif
 #ifdef CONFIG_AL3006
+#ifdef CONFIG_GPIO_PCA953X
+	#define AL3006_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 6)
+#else
+	#define AL3006_INT_GPIO_PIN		122	/*  skip expander chip */
+#endif
+static int al3006_platform_init_hw(void)
+{
+	int rc;
+	rc = gpio_request(AL3006_INT_GPIO_PIN, "al3006");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", AL3006_INT_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(AL3006_INT_GPIO_PIN);
+
+	return 0;
+}
+
+static void al3006_platform_exit_hw(void)
+{
+	gpio_free(AL3006_INT_GPIO_PIN);
+}
+
+static struct al3006_platform_data al3006_platform_data = {
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.init_platform_hw = al3006_platform_init_hw,
+	.exit_platform_hw = al3006_platform_exit_hw,
+};
+
 static struct i2c_board_info __initdata al3006_info[] =
 {
 	{
 		I2C_BOARD_INFO("al3006", 0x1d ),
-		/*.irq = */
+		.platform_data = &al3006_platform_data,
+		.irq = gpio_to_irq(AL3006_INT_GPIO_PIN),
 	},
 };
 #endif
@@ -1205,6 +1279,11 @@ static void __init rhea_ray_add_i2c_devices (void)
 	i2c_register_board_info(1,
 			pca953x_info,
 			ARRAY_SIZE(pca953x_info));
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+	i2c_register_board_info(1,
+			pca953x_2_info,
+			ARRAY_SIZE(pca953x_2_info));
+#endif
 #endif
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 	i2c_register_board_info(1,

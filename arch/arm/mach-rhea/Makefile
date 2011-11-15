@@ -27,5 +27,5 @@ obj-$(CONFIG_MACH_RHEA_DALTON) += rhea_ray.o rhea_dalton_pinmux.o
 obj-$(CONFIG_MACH_RHEA_BERRI) += rhea_berri.o rhea_berri_pinmux.o
 obj-$(CONFIG_MACH_RHEA_BERRI_EDN40) += rhea_berri.o rhea_berri_pinmux.o
 obj-$(CONFIG_MACH_RHEALC_BERRI) += rhea_berri.o rhea_berri_pinmux.o
-obj-$(CONFIG_MACH_RHEA_SELFTEST) += bcm_selftest_bb_low.o
 
+obj-$(CONFIG_ROM_SEC_DISPATCHER) += sec_bridge_tz.i

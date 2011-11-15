@@ -100,9 +100,9 @@ config IPC
 	  Support for IPC.
 
 config ISLAND_DORMANT_MODE
-       bool "Enable dormant mode support for Rhea platform"
+       bool "Enable dormant mode support for Island platform"
        help
-	Say Y if you want to enable dormant mode support for Rhea platform
+	Say Y if you want to enable dormant mode support for Island platform
 endmenu
 
 source "arch/arm/mach-island/custom_boards/Kconfig"

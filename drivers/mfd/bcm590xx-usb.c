@@ -150,7 +150,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 			pr_debug("%s: BC STATUS (0x%x) = 0x%x..Count %d\n", __func__, BB_BC_STATUS, bcStatus, count);
 		}
 	}
-	if (count == 200) {
+	if (count == 20) {
 			pr_info("%s: BC Detection DONE bit is not set, check if BCDLDO was ON\n", __func__);
 			return -EIO;
 	}

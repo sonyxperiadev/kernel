@@ -80,7 +80,7 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed);
 static inline void isl_bsc_init(uint32_t baseAddr);
 static inline void bsc_disable_intr(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_clear_intr_status(uint32_t baseAddr, uint32_t mask);
-static inline void bsc_set_FIFO(uint32_t baseAddr, unsigned char enable);
+static inline void bsc_set_tx_fifo(uint32_t baseAddr, unsigned char enable);
 static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on);
 static inline unsigned char bsc_get_timeout(uint32_t baseAddr);
 static inline void bsc_enable_intr(uint32_t baseAddr, uint32_t mask);
@@ -134,7 +134,7 @@ static inline void isl_bsc_init(uint32_t baseAddr)
    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET), I2C_MM_HS_TOUT_TOUT_HIGH_MASK, I2C_MM_HS_TOUT_TOUT_HIGH_SHIFT,0x3);
 
    /* FIFO */
-   bsc_set_FIFO(baseAddr, 0);
+   bsc_set_tx_fifo(baseAddr, 0);
 
    /* CRC */
    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_RCM_OFFSET),I2C_MM_HS_RCM_EN_MASK , I2C_MM_HS_RCM_EN_SHIFT, 0);
@@ -416,23 +416,30 @@ static inline void bsc_stop_highspeed(uint32_t baseAddr)
 *
 *  @return set mode
 *****************************************************************************/
-static inline void bsc_set_FIFO(uint32_t baseAddr, unsigned char enable)
+static inline void bsc_set_tx_fifo(uint32_t baseAddr, unsigned char enable)
 {
-    if (enable){
-#ifdef I2C_MM_HS_FCR_OFFSET
-        BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_FCR_OFFSET), I2C_MM_HS_FCR_FIFO_FLUSH_MASK, I2C_MM_HS_FCR_FIFO_FLUSH_SHIFT ,1);
-        BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_FCR_OFFSET), I2C_MM_HS_FCR_FIFO_EN_MASK ,I2C_MM_HS_FCR_FIFO_EN_SHIFT,1);
-#else
-	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK, I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT ,1);
+	if (enable) {
+		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK, I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT ,1);
 	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_EN_MASK ,I2C_MM_HS_TXFCR_FIFO_EN_SHIFT,1);
-#endif
-    }else{
-#ifdef I2C_MM_HS_FCR_OFFSET
-        BSC_WRITE_REG((baseAddr+I2C_MM_HS_FCR_OFFSET),0);
-#else
-	BSC_WRITE_REG((baseAddr+I2C_MM_HS_TXFCR_OFFSET),0);
-#endif
+    } else {
+	    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK, I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT ,1);
+	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_EN_MASK ,I2C_MM_HS_TXFCR_FIFO_EN_SHIFT,0);
     }
+}
+
+static inline void bsc_start_rx_fifo(uint32_t baseAddr, unsigned int noack, unsigned int len)
+{
+	uint32_t val;
+
+	val = ((noack ? 1 : 0) << I2C_MM_HS_RXFCR_NACK_EN_SHIFT) |
+		((len << I2C_MM_HS_RXFCR_READ_COUNT_SHIFT) & I2C_MM_HS_RXFCR_READ_COUNT_MASK);
+
+	BSC_WRITE_REG((baseAddr + I2C_MM_HS_RXFCR_OFFSET), val);
+}
+
+static uint8_t bsc_read_from_rx_fifo(uint32_t baseAddr)
+{
+	return (BSC_READ_REG(baseAddr + I2C_MM_HS_RXFIFORDOUT_OFFSET) & I2C_MM_HS_RXFIFORDOUT_RXFIFO_RDOUT_MASK);
 }
 
 /**
@@ -552,7 +559,7 @@ static inline void isl_bsc_send_cmd(uint32_t baseAddr, BSC_CMD_t cmd)
     bsc_dprintf( CDBG_INFO, "bsc_send_cmd, %d\n", cmd);
     switch (cmd) {
         case BSC_CMD_NOACTION:
-            temp = (temp & ~I2C_MM_HS_CS_CMD_MASK) |
+            temp = (temp & ~I2C_MM_HS_CS_CMD_MASK & ~I2C_MM_HS_CS_ACK_MASK) |
                 (I2C_MM_HS_CS_CMD_CMD_NO_ACTION << I2C_MM_HS_CS_CMD_SHIFT);
 			break;
 		case BSC_CMD_START:
@@ -722,13 +729,41 @@ static inline unsigned char bsc_get_bus_status(uint32_t baseAddr)
 {
 	uint8_t temp;
 
-#ifdef I2C_MM_HS_BSTAT_OFFSET
-	temp = BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_BSTAT_OFFSET), I2C_MM_HS_BSTAT_STATUS_MASK, I2C_MM_HS_BSTAT_STATUS_SHIFT );
-#else
 	temp = BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_TXCOUNT_OFFSET), I2C_MM_HS_TXCOUNT_STATUS_MASK, I2C_MM_HS_TXCOUNT_STATUS_SHIFT );
-#endif
 
 	return temp;
+}
+
+static inline int bsc_tx_fifo_is_full(uint32_t baseAddr)
+{
+	uint32_t val;
+
+	val = BSC_READ_REG(baseAddr + I2C_MM_HS_FIFO_STATUS_OFFSET) & I2C_MM_HS_FIFO_STATUS_TXFIFO_FULL_MASK;
+	return (val ? 1 : 0);
+}
+
+static inline int bsc_tx_fifo_is_empty(uint32_t baseAddr)
+{
+	uint32_t val;
+
+	val = BSC_READ_REG(baseAddr + I2C_MM_HS_FIFO_STATUS_OFFSET) & I2C_MM_HS_FIFO_STATUS_TXFIFO_EMPTY_MASK;
+	return (val ? 1 : 0);
+}
+
+static inline int bsc_rx_fifo_is_full(uint32_t baseAddr)
+{
+	uint32_t val;
+
+	val = BSC_READ_REG(baseAddr + I2C_MM_HS_FIFO_STATUS_OFFSET) & I2C_MM_HS_FIFO_STATUS_RXFIFO_FULL_MASK;
+	return (val ? 1 : 0);
+}
+
+static inline int bsc_rx_fifo_is_empty(uint32_t baseAddr)
+{
+	uint32_t val;
+
+	val = BSC_READ_REG(baseAddr + I2C_MM_HS_FIFO_STATUS_OFFSET) & I2C_MM_HS_FIFO_STATUS_RXFIFO_EMPTY_MASK;
+	return (val ? 1 : 0);
 }
 
 /**

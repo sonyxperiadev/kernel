@@ -458,13 +458,14 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
 		.wifi_gpio = {
 			.reset		= 179,
-			.reg		= 177,
+			.reg		= -1,
 			.host_wake	= 178,
+			.shutdown       = -1,
 		},
 		.peri_clk_name = "sdio1_clk",
 		.ahb_clk_name = "sdio1_ahb_clk",
 		.sleep_clk_name = "sdio1_sleep_clk",
-		.peri_clk_rate = 20000000,
+		.peri_clk_rate = 48000000,
 	},
 	{ /* SDIO1 */
 		.id = 1,

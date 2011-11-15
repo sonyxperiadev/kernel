@@ -236,6 +236,10 @@ static struct platform_device bcm59055_vc_device_sim = {
 #endif
 
 static const char *pmu_clients[] = {
+#ifdef CONFIG_BCM59055_WATCHDOG
+	"bcm59055-wdog",
+#endif
+	"bcmpmu_usb",
 #ifdef CONFIG_INPUT_BCM59055_ONKEY
 	"bcm590xx-onkey",
 #endif
@@ -260,8 +264,11 @@ static const char *pmu_clients[] = {
 #ifdef CONFIG_BCM59055_ADC_CHIPSET_API
 	"bcm59055-adc_chipset_api",
 #endif
-#ifdef CONFIG_USB_BCM_OTG
-	"bcm_otg",
+#ifdef CONFIG_BCMPMU_OTG_XCEIV
+	"bcmpmu_otg_xceiv",
+#endif
+#ifdef CONFIG_BCM59055_SELFTEST
+       "bcm59055-selftest",
 #endif
 };
 

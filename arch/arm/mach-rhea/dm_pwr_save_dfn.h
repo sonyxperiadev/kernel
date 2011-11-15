@@ -41,6 +41,7 @@
 #define __DM_PWR_SAVE_DFN_H__
 
 #include <mach/io_map.h>
+#include <mach/memory.h>
 
 /* Aliases for mode encodings - do not change */
 #define MODE_USR	0x10
@@ -207,7 +208,8 @@
 #define CA9_TIMER		(CA9_SCU_BASE + CA9_SCU_TIMER)
 #define CA9_TIM64		(CA9_SCU_BASE + CA9_SCU_TIM64)
 
-#define L2CC_BASE		(CA9_SCU_BASE + CA9_SCU_L2CC)
+/* Define to 0 to not touch L2C related stuff.  We use secure API's */
+#define L2CC_BASE       0
 
 #define GIC_ICD_BASE	(CA9_SCU_BASE + CA9_SCU_ICD)
 #define GIC_ICC_BASE	(CA9_SCU_BASE + CA9_SCU_ICC)
@@ -215,11 +217,9 @@
 #define TEMP_STACK		0x05000000
 
 #define WARM_START_FLAG		0x1111
-#define POWER_CONTROLLER_WARM_START_STATUS	( DORMANT_BASE_PA + RESET_FLAG_PTR )
-#define POWER_CONTROLLER_CONTEXT_BASE_PA	( DORMANT_BASE_PA + BASE_PTRS )
-
-#define POWER_CONTROLLER_WARM_START_STATUS_OFFSET	 RESET_FLAG_PTR
-#define POWER_CONTROLLER_CONTEXT_BASE_PA_OFFSET		 BASE_PTRS
+#define POWER_CONTROLLER_CONTEXT_BASE_PA    0x3404BF80
+#define POWER_CONTROLLER_CONTEXT_BASE_VA    \
+		HW_IO_PHYS_TO_VIRT(POWER_CONTROLLER_CONTEXT_BASE_PA)
 
 #endif /*__DM_PWR_SAVE_DFN_H__*/
 

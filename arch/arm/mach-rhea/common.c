@@ -121,7 +121,7 @@
 	.regshift   = 2,					\
 	.iotype	    = UPIO_DWAPB,					\
 	.type	    = PORT_16550A,          			\
-	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,	\
+	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST | UPF_LOW_LATENCY, \
 	.private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET), \
 	.clk_name = clk,	\
 }
@@ -514,11 +514,21 @@ static struct platform_device rng_device =
 };
 #endif
 
-#ifdef CONFIG_USB
+#ifdef CONFIG_USB_DWC_OTG
 static struct resource kona_hsotgctrl_platform_resource[] = {
 	[0] = {
 		.start = HSOTG_CTRL_BASE_ADDR,
 		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = CHIPREGS_BASE_ADDR,
+		.end = CHIPREGS_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[2] = {
+		.start = HUB_CLK_BASE_ADDR,
+		.end = HUB_CLK_BASE_ADDR + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 };
@@ -530,9 +540,7 @@ static struct platform_device board_kona_hsotgctrl_platform_device =
 	.resource = kona_hsotgctrl_platform_resource,
 	.num_resources = ARRAY_SIZE(kona_hsotgctrl_platform_resource),
 };
-#endif
 
-#ifdef CONFIG_USB_DWC_OTG
 static struct resource kona_otg_platform_resource[] = {
 	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to be compatible with legacy code */
 		.start = HSOTG_BASE_ADDR,
@@ -563,7 +571,12 @@ struct kona_freq_tbl kona_freq_tbl[] =
 //    FTBL_INIT(156000000, PI_OPP_ECONOMY),
 #endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
+
+#ifdef CONFIG_RHEALC_2093
+    FTBL_INIT(600000, PI_OPP_TURBO),
+#else
     FTBL_INIT(700000, PI_OPP_TURBO),
+#endif
 };
 
 struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
@@ -777,10 +790,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #if defined(CONFIG_HW_RANDOM_KONA)
 	&rng_device,
 #endif
-#ifdef CONFIG_USB
-	&board_kona_hsotgctrl_platform_device,
-#endif
+
 #ifdef CONFIG_USB_DWC_OTG
+	&board_kona_hsotgctrl_platform_device,
 	&board_kona_otg_platform_device,
 #endif
 

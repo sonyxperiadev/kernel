@@ -98,18 +98,18 @@ config VC_VMCS_FB
     select FB_CFB_FILLRECT
     select FB_CFB_COPYAREA
     select FB_CFB_IMAGEBLIT	
-	default y
+	default n
         help
           Support for the VC framebuffer on the Broadcom reference
           phone. Uses the VCHIQ stack.	   
-	   
+
 config VC_VMCS_SM
 	tristate "VMCS Shared Memory"
-	default m
+	default n
         help
           Support for the VC shared memory on the Broadcom reference
           design. Uses the VCHIQ stack.	   
-
+	   
 config VC_OVL
 	tristate "Videocore Overlay"
 	default n
@@ -140,7 +140,6 @@ config VC_DNFO
 
 config VC_MEM
 	tristate "Videocore Memory"
-	depends on BRCM_VIDEOCORE_SERVICES
-	default BRCM_VIDEOCORE_SERVICES
+	default n
         help
           Helper for videocore memory access and total size allocation.	   

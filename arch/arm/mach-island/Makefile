@@ -53,9 +53,9 @@ obj-$(CONFIG_MACH_ISLAND_TABLET) += board_tablet.o pinmux_island_tablet.o
 CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
 -Iarch/arm/mach-island/hw_cfg/BASE \
 -Ivc4-dev/src/interface/vceb/host \
--Ivc4-dev/src/interface/vceb/host/linux 
+-Ivc4-dev/src/interface/vceb/host/linux
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += island_pm.o island_wfi.o
-obj-$(CONFIG_ISLAND_DORMANT_MODE) += rhea_dormant.o dm_pwr_policy_top.o
+obj-$(CONFIG_ISLAND_DORMANT_MODE) += island_dormant.o dm_pwr_policy_top.o
 
 # Today the 28160 tablet is almost identical to the 11160 tablet from
 # Linux's point-of-view so we include it's hw_cfg directory and only
@@ -65,7 +65,7 @@ CFLAGS_board_tablet_28160.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET_28160
 -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
 -Iarch/arm/mach-island/hw_cfg/BASE \
 -Ivc4-dev/src/interface/vceb/host \
--Ivc4-dev/src/interface/vceb/host/linux 
+-Ivc4-dev/src/interface/vceb/host/linux
 
 obj-$(CONFIG_MACH_ISLAND_CUSTOM_BOARDS_SUPPORT) += custom_boards/
 
