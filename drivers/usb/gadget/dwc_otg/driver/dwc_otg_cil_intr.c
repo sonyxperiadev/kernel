@@ -759,7 +759,7 @@ static int32_t dwc_otg_handle_pwrdn_session_change(dwc_otg_core_if_t *core_if)
  */
 static uint32_t dwc_otg_handle_pwrdn_stschng_intr(dwc_otg_core_if_t *core_if)
 {
-	int retval;
+	int retval = 0;
 	gpwrdn_data_t gpwrdn = { .d32 = 0 };
 	gpwrdn_data_t gpwrdn_temp = { .d32 = 0 };
 
