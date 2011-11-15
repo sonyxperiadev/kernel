@@ -188,16 +188,16 @@ dhd_common_init(osl_t *osh)
 	memset(cmn, 0, sizeof(dhd_cmn_t));
 	cmn->osh = osh;
 
-#ifdef CONFIG_BCMDHD_FW_PATH
-	bcm_strncpy_s(fw_path, sizeof(fw_path), CONFIG_BCMDHD_FW_PATH, MOD_PARAM_PATHLEN-1);
-#else /* CONFIG_BCMDHD_FW_PATH */
+#ifdef CONFIG_BCMDHD_43362_FW_PATH
+	bcm_strncpy_s(fw_path, sizeof(fw_path), CONFIG_BCMDHD_43362_FW_PATH, MOD_PARAM_PATHLEN-1);
+#else /* CONFIG_BCMDHD_43362_FW_PATH */
 	fw_path[0] = '\0';
-#endif /* CONFIG_BCMDHD_FW_PATH */
-#ifdef CONFIG_BCMDHD_NVRAM_PATH
-	bcm_strncpy_s(nv_path, sizeof(nv_path), CONFIG_BCMDHD_NVRAM_PATH, MOD_PARAM_PATHLEN-1);
-#else /* CONFIG_BCMDHD_NVRAM_PATH */
+#endif /* CONFIG_BCMDHD_43362_FW_PATH */
+#ifdef CONFIG_BCMDHD_43362_NVRAM_PATH
+	bcm_strncpy_s(nv_path, sizeof(nv_path), CONFIG_BCMDHD_43362_NVRAM_PATH, MOD_PARAM_PATHLEN-1);
+#else /* CONFIG_BCMDHD_43362_NVRAM_PATH */
 	nv_path[0] = '\0';
-#endif /* CONFIG_BCMDHD_NVRAM_PATH */
+#endif /* CONFIG_BCMDHD_43362_NVRAM_PATH */
 #ifdef SOFTAP
 	fw_path2[0] = '\0';
 #endif
