@@ -1389,6 +1389,28 @@ static int whdmi_proc_write(
             return -EFAULT;
         }
     }
+    else if ( !strncmp( "vcstats", &local_buffer[read_count], strlen("vcstats") ) )
+    {
+       VC_WIFIHDMI_MODE_T mode;
+       VC_WIFIHDMI_STATS_T stats;
+       uint32_t trans_id;
+
+       memset ( &mode, 0, sizeof(mode) );
+       memset ( &stats, 0, sizeof(stats) );
+
+       mode.wifihdmi = 1;
+       vc_vchi_wifihdmi_stats( whvcsvc_handle,
+                               &mode, 
+                               &stats,
+                               &trans_id );
+
+       printk( KERN_INFO "stats tx:%d, tx-dst-cnt:%d, tx-missed:%d, tx-busy:%d, tx-rec:%d\n",
+               stats.tx_cnt,
+               stats.tx_dst_cnt,
+               stats.tx_miss_cnt,
+               stats.tx_busy_cnt,
+               stats.tx_rec_cnt );
+    }
 
     kfree ( local_buffer );
     local_buffer = NULL;

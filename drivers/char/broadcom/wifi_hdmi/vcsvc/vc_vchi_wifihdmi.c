@@ -1030,7 +1030,6 @@ static void *vc_vchi_wifihdmi_videocore_io( void *arg )
 
       if ( event_mask & SERVER_EVENT_MASK )
       {
-         vchi_service_use( instance->vchi_server[0] );
          success = vchi_msg_dequeue( instance->vchi_server[0],
                                      reply_msg_buf,
                                      sizeof( reply_msg_buf ),
@@ -1073,14 +1072,7 @@ static void *vc_vchi_wifihdmi_videocore_io( void *arg )
                                      sizeof( ntfy_msg_buf ),
                                      &msg_len,
                                      VCHI_FLAGS_NONE );
-
-         if ( success != 0 )
-         {
-            LOG_ERR( "%s: failed to dequeue message (success=%d)",
-                     __func__,
-                     success );
-         }
-         else
+         while ( success == 0 )
          {
             msg_hdr = (VC_WIFIHDMI_MSG_HDR_T *)ntfy_msg_buf;
             if ( msg_len < sizeof( VC_WIFIHDMI_MSG_HDR_T ))
@@ -1145,6 +1137,12 @@ static void *vc_vchi_wifihdmi_videocore_io( void *arg )
                default:
                break;
             }
+
+            success = vchi_msg_dequeue( instance->vchi_notifier[0],
+                                        ntfy_msg_buf,
+                                        sizeof( ntfy_msg_buf ),
+                                        &msg_len,
+                                        VCHI_FLAGS_NONE );
          }
       }
    }

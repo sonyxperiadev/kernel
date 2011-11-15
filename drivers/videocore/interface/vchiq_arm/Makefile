@@ -7,9 +7,10 @@
 # CONFIG_ARCH_KONA is used for the Big Red Tablet and MAP build system
 # Everything else is assumed to be for the Cambridge build system.
 #
-#include shared-config.mk
 
 ifeq ($(CONFIG_ARCH_KONA),y)
+
+include $(srctree)/drivers/videocore/interface/vchiq_arm/shared-config.mk
 
 ##############################################################################
 #
@@ -49,7 +50,6 @@ EXTRA_CFLAGS  += -DUSE_VCHIQ_ARM
 ifeq ($(VCHIQ_SM_ALLOC),vcddr)
 EXTRA_CFLAGS  += -DVCHIQ_SM_ALLOC_VCDDR
 endif
-
 obj-$(CONFIG_VC_VCHIQ) += vc-vchiq.o
 
 vc-vchiq-objs := \

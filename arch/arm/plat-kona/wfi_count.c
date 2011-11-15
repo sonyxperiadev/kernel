@@ -10,7 +10,7 @@ atomic_t   wfi_count = ATOMIC_INIT(0);
 
 EXPORT_SYMBOL( wfi_count );
 
-int wfi_workaround_enabled = 0;
+int wfi_workaround_enabled = 1;
 
 static struct ctl_table_header    *wfi_workaround_sysctl_header;
 static struct ctl_table wfi_workaround_sysctl[] = {
