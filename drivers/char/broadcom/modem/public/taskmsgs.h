@@ -232,9 +232,9 @@ typedef enum
 	is ready to be re-powered up. During the modem power-cycle procedure for STK refresh of SIM reset type, the BRCM 
 	platform will automatically re-power up the modem.
 	**/
-	MSG_POWER_OFF_IND			= MSG_GRP_SYS+0x02,	
+//	MSG_POWER_OFF_IND			= MSG_GRP_SYS+0x02,	
 
-	MSG_ROAMING_STATUS			= MSG_GRP_SYS+0x03,
+	MSG_ROAMING_STATUS			= MSG_GRP_SYS+0x02,
 
 	// End of MSG_GRP_SYS (0x0000)
 
@@ -4360,7 +4360,8 @@ typedef enum
 	 /** 
 	api is CAPI2_SmsApi_StartCellBroadcastWithChnlReq 
 	**/
-	MSG_SMS_CB_START_STOP_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1A6,	///<Payload type {CAPI2_SmsApi_StartCellBroadcastWithChnlReq_Req_t}
+	//MSG_SMS_CB_START_STOP_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1A6,	///<Payload type {CAPI2_SmsApi_StartCellBroadcastWithChnlReq_Req_t}
+	 MSG_SMS_START_CB_WITHCHNL_REQ = MSG_GRP_CAPI2_GEN_0 + 0x1A6,
 	 /** 
 	payload is ::Result_t 
 	**/
@@ -6268,7 +6269,7 @@ typedef enum
 	**/
 	MSG_SS_RESETCLIENTID_RSP  = MSG_GRP_CAPI2_SS + 0x3D,
 
-	MSG_GRP_CAPI2_SS_END = MSG_GRP_CAPI2_SS + 0xFF,
+	MSG_GRP_CAPI2_SS_END = MSG_GRP_CAPI2_SS + 0x2A,
 
 	 /** 
 	api is CAPI2_SatkApi_GetCachedRootMenuPtr 

@@ -101,7 +101,6 @@ static int bcm59055_wdog_reset(struct bcm59055_wdog *wddev)
 {
 	struct bcm590xx *bcm590xx = wddev->bcm590xx;
 	u8 regVal;
-	pr_debug("Inside %s\n", __func__);
 
 	/* Reset the WD to avoid system restart */
 	regVal = bcm590xx_reg_read(bcm590xx, BCM59055_REG_HOSTCTRL1);
@@ -206,7 +205,7 @@ static void bcm59055_keepalive_work(struct work_struct *work)
 	pr_debug("Inside %s\n", __func__);
 	bcm59055_wdog_reset(wddog);
 	schedule_delayed_work(&wddog->reset_wd_timer_wq,
-						msecs_to_jiffies(100000));
+						msecs_to_jiffies(20000));
 }
 
 static int __devinit bcm59055_wdog_probe(struct platform_device *pdev)

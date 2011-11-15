@@ -451,6 +451,7 @@ struct fsg_dev {
 	struct usb_ep		*bulk_out;
 };
 
+#ifdef CONFIG_USB_OTG
 static struct usb_otg_descriptor otg_descriptor = {
 	.bLength =		sizeof otg_descriptor,
 	.bDescriptorType =	USB_DT_OTG,
@@ -461,6 +462,7 @@ static const struct usb_descriptor_header *otg_desc[] = {
 	(struct usb_descriptor_header *) &otg_descriptor,
 	NULL,
 };
+#endif
 
 static inline int __fsg_is_set(struct fsg_common *common,
 			       const char *func, unsigned line)
@@ -3225,6 +3227,9 @@ static struct platform_driver fsg_platform_driver = {
 
 int mass_storage_bind_config(struct usb_configuration *c)
 {
+#ifndef CONFIG_USB_OTG
+	struct fsg_common *common = fsg_common_init(NULL, c->cdev, &fsg_cfg);
+#else
 	struct fsg_common *common;
 
 	if (gadget_is_otg(c->cdev->gadget)) {
@@ -3239,6 +3244,8 @@ int mass_storage_bind_config(struct usb_configuration *c)
 	}
 
 	common = fsg_common_init(NULL, c->cdev, &fsg_cfg);
+#endif
+
 	if (IS_ERR(common))
 		return -1;
 

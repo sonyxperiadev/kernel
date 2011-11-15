@@ -40,20 +40,29 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_BSC_CFG(PMBSCCLK, PMBSCCLK, 0x20),
 	PIN_BSC_CFG(PMBSCDAT, PMBSCDAT, 0x20),
 
+	/*
+	 * Note:- For eMMC, Enable Slew-rate, Increase pin drive strength to 10mA.
+	 * 	This is to fix the random eMMC timeout errors due to data crc error
+	 * 	seen on few rhea edn11 hardware, where eMMC is on a daughter-card.
+	 *
+	 * 	We may need to revisit these settings for other platforms where the
+	 * 	pin drive requirements can change.
+	 *
+	 */
 	/* eMMC */
-	PIN_CFG(MMC0CK, MMC0CK, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(MMC0CMD, MMC0CMD, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(MMC0RST, MMC0RST, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(MMC0DAT7, MMC0DAT7, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(MMC0DAT6, MMC0DAT6, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(MMC0DAT5, MMC0DAT5, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(MMC0DAT4, MMC0DAT4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(MMC0DAT3, MMC0DAT3, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(MMC0DAT2, MMC0DAT2, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(MMC0DAT1, MMC0DAT1, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(MMC0DAT0, MMC0DAT0, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC0CK, MMC0CK, 0, OFF, OFF, 1, 0, 10MA),
+	PIN_CFG(MMC0CMD, MMC0CMD, 0, OFF, ON, 1, 0, 10MA),
+	PIN_CFG(MMC0RST, MMC0RST, 0, OFF, ON, 1, 0, 10MA),
+	PIN_CFG(MMC0DAT7, MMC0DAT7, 0, OFF, ON, 1, 0, 10MA),
+	PIN_CFG(MMC0DAT6, MMC0DAT6, 0, OFF, ON, 1, 0, 10MA),
+	PIN_CFG(MMC0DAT5, MMC0DAT5, 0, OFF, ON, 1, 0, 10MA),
+	PIN_CFG(MMC0DAT4, MMC0DAT4, 0, OFF, ON, 1, 0, 10MA),
+	PIN_CFG(MMC0DAT3, MMC0DAT3, 0, OFF, ON, 1, 0, 10MA),
+	PIN_CFG(MMC0DAT2, MMC0DAT2, 0, OFF, ON, 1, 0, 10MA),
+	PIN_CFG(MMC0DAT1, MMC0DAT1, 0, OFF, ON, 1, 0, 10MA),
+	PIN_CFG(MMC0DAT0, MMC0DAT0, 0, OFF, ON, 1, 0, 10MA),
 
-	/* Micro SD */
+    /* Micro SD - SDIO0 4 bit interface */
 	PIN_CFG(SDCK, SDCK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(SDCMD, SDCMD, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SDDAT3, SDDAT3, 0, OFF, ON, 0, 0, 8MA),
@@ -61,7 +70,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SDDAT1, SDDAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SDDAT0, SDDAT0, 0, OFF, ON, 0, 0, 8MA),
 
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+#if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 	/* GPIO121 for TCA9539 IO expander */
 	PIN_CFG(ICUSBDP, GPIO121, 0, OFF, ON, 0, 0, 8MA),
 #else
@@ -96,6 +105,9 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
 
 	/* SSP4 - I2S */
+	/* TODO: Need to find out the mappting for END2x, if its same as 1x
+	 * just add the macro to the defined list.
+	 */
 #if defined(CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
@@ -159,8 +171,13 @@ static struct __init pin_config board_pin_config[] = {
         /* Bluetooth related GPIOS */
         PIN_CFG(GPIO04, GPIO4, 0, ON, OFF, 0, 0, 8MA),
         PIN_CFG(DCLKREQ1, GPIO111, 0, OFF, ON, 0, 1, 8MA),
+
 	/*WLAN set SSPSYN as GPIO85 */
-	
+	/*
+	 * On Rhearay EDN1x the MMC1 i.e SDIO3 is used for 
+	 * WLAN connectivity
+	 */
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	PIN_CFG(MMC1DAT0, MMC1DAT0, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(MMC1DAT1, MMC1DAT1, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(MMC1DAT2, MMC1DAT2, 0, OFF, ON, 0, 0, 16MA),
@@ -172,8 +189,25 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(MMC1RST, GPIO70, 0, OFF, ON, 0, 0, 16MA),
 
 
+#endif
 
-
+	/* WLAN configuration for EDN2x */
+	/*
+	 * On Rhearay EDN2x the MMC1 i.e SDIO3 is used for 
+	 * WLAN connectivity
+	 */
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
+	/* WLAN - SDIO4 - 4 bit interface */
+	/* TODO - This is not complete, connectivity team to
+	 * review and update if needed
+	 */
+	PIN_CFG(SPI0FSS, SD1DAT3, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(SPI0CLK, SD1CK, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(SPI0TXD, SD1CMD, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(SPI0RXD, SD1DAT0, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(GPIO93, SD1DAT1, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(GPIO94, SD1DAT2, 0, OFF, ON, 0, 0, 16MA),
+#endif
 };
 
 /* board level init */

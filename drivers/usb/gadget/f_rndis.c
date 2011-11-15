@@ -500,6 +500,7 @@ static int rndis_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 
 		if (rndis->port.in_ep->driver_data) {
 			DBG(cdev, "reset rndis\n");
+			pr_info("reset rndis\n");
 			gether_disconnect(&rndis->port);
 		}
 
@@ -552,6 +553,7 @@ static void rndis_disable(struct usb_function *f)
 		return;
 
 	DBG(cdev, "rndis deactivated\n");
+	pr_info("%s\n", __func__);
 
 	rndis_uninit(rndis->config);
 	gether_disconnect(&rndis->port);
@@ -561,6 +563,7 @@ static void rndis_disable(struct usb_function *f)
 }
 
 #ifdef CONFIG_BRCM_NETCONSOLE
+/* Keep the function for debugging purpose */
 static void rndis_suspend(struct usb_function *f)
 {
 	struct f_rndis		*rndis = func_to_rndis(f);
@@ -569,7 +572,6 @@ static void rndis_suspend(struct usb_function *f)
 	DBG(cdev, "rndis suspend\n");
 	gether_disconnect(&rndis->port);
 }
-
 #endif //#ifdef CONFIG_BRCM_NETCONSOLE
 
 /*-------------------------------------------------------------------------*/

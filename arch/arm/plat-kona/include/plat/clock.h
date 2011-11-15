@@ -1,16 +1,14 @@
-/*****************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+/****************************************************************************
+*									      
+* Copyright 2010 --2011 Broadcom Corporation.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2, available at
 * http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
 *
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a
-* license other than the GPL, without Broadcom's express prior written
-* consent.
 *****************************************************************************/
+
 #ifndef __ARM_ARCH_KONA_CLOCK_H
 #define __ARM_ARCH_KONA_CLOCK_H
 
@@ -302,6 +300,12 @@ enum
 	CLK_TYPE_PLL_CHNL,
 };
 
+
+enum {
+    MONITOR_CAMCS_PIN,
+    MONITOR_DEBUG_BUS_GPIO
+};
+
 struct clk;
 
 /**
@@ -471,6 +475,7 @@ struct ccu_clk {
 	u32 policy_dbg_offset;
 	u32 policy_dbg_act_freq_shift;
 	u32 policy_dbg_act_policy_shift;
+	u32 clk_mon_offset;
 #endif
 
 };
@@ -480,6 +485,7 @@ struct peri_clk {
 
 	struct ccu_clk*	ccu_clk;
 	int mask_set;
+	int clk_sel_val;
 	u32 policy_bit_mask;
 	u8 policy_mask_init[4];
 	u32 clk_gate_offset;
@@ -502,6 +508,7 @@ struct peri_clk {
 };
 
 struct bus_clk {
+	int clk_sel_val;
 	struct clk	clk;
 
 	struct ccu_clk*	ccu_clk;
@@ -522,6 +529,7 @@ struct bus_clk {
 };
 
 struct ref_clk {
+	int clk_sel_val;
 	struct clk	clk;
 	struct ccu_clk*	ccu_clk;
 	u32 clk_gate_offset;

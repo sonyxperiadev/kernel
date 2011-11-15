@@ -1,3 +1,27 @@
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2010  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 
 #include <linux/sched.h>
 #include <linux/cpuidle.h>
@@ -24,8 +48,6 @@
 #include <mach/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 
-
-#define HUB_TIMER_AFTER_WFI_WORK_AROUND 1
 
 extern void enter_wfi(void);
 extern void dormant_enter(void);
@@ -200,7 +222,7 @@ static int pm_config_deep_sleep(void)
     clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
     clk_set_crystal_pwr_on_idle(false);
 
-    pwr_mgr_arm_core_dormant_enable(true /*allow retention*/);
+	pwr_mgr_arm_core_dormant_enable(false /*disallow dormant*/);
     pm_enable_scu_standby(true);
 
 	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
@@ -352,7 +374,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 	struct pi* pi = NULL;
 	u32 reg_val;
 	u32 ddr_min_pwr_state_ap = 0;
-#ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
+#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	u32 timer_lsw = 0;
 #endif
 
@@ -397,18 +419,22 @@ int enter_dormant_state(struct kona_idle_state* state)
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	pi_enable(pi,0);
 #ifdef CONFIG_RHEA_DORMANT_MODE
+#ifdef CONFIG_ROM_SEC_DISPATCHER
 	/*Ignore dap power-up request and clear the bits that disallow dormant*/
 	/*TBD - Change pwrmgr interface function*/
 	writel(0x06600000,
 		KONA_PWRMGR_VA+PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+#else
+	/* If no rom dispatcher, enter retention instead of dormant */
+	writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+#endif /* CONFIG_ROM_SEC_DISPATCHER*/
 	dormant_enter();
-
 #else
 	writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
 	enter_wfi();
 #endif
 
-#ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
+#if	defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
 	timer_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
 	while(timer_lsw == readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET));
@@ -419,9 +445,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
 
 	pi_enable(pi,1);
-#ifndef CONFIG_RHEA_DORMANT_MODE
 	writel(0, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
-#endif
 
 	if(pm_en_self_refresh)
 	{

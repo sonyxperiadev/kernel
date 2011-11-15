@@ -67,7 +67,7 @@ static struct bcm59055_saradc *bcm59055_saradc;
 
 #define CLOCK_CYCLE_IN_USEC		32
 #define CYCLE_TO_COMPLETE_I2C_RTM	23
-#define DELTA_CYCLE_I2C_RTM		(320 - 23) /* Need to come up with optimum delta, for now with 320 cycle no RTM interrupt missed */
+#define DELTA_CYCLE_I2C_RTM		1250 /* 1250 cycles seems to cover a correctly working ADC */
 #define CYCLE_TO_COMPLETE_ADCSYN_RTM	18
 #define DELTA_CYCLE_ADCSYN_RTM		100 /* This one must have max timing for delay between two CP wakeup evetns */
 #define INT_REG_READ_TIME_IN_USEC	63
@@ -272,7 +272,7 @@ int bcm59055_saradc_read_data(int sel)
 	regVal = bcm590xx_reg_read(bcm59055, regD1);
 
 	if (regVal & BCM59055_ADCDATA_INVALID) {
-		pr_info("bcm59055_saradc_read_data: Invalid data\n");
+		pr_debug("bcm59055_saradc_read_data: Invalid data\n");
 		mutex_unlock(&bcm59055_saradc->lock);
 		return -EINVAL;	/* Current data is invalid user should call read again */
 	}
@@ -324,7 +324,7 @@ int bcm59055_saradc_rtm_read(int ch_sel, bool adc_sync, u32 delay)
 	int ret;
 	unsigned long time_left;
 	struct bcm590xx *bcm59055;
-	pr_info("inside %s\n", __func__);
+	pr_debug("inside %s\n", __func__);
 	if(!bcm59055_saradc || !bcm59055_saradc->bcm59055)
 		return -EPERM;
 	bcm59055 = bcm59055_saradc->bcm59055;

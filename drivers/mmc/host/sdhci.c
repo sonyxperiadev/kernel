@@ -2450,6 +2450,7 @@ int sdhci_add_host(struct sdhci_host *host)
 	u32 max_current_caps;
 	unsigned int ocr_avail;
 	int ret;
+	unsigned int vendor_version = 0;
 
 	WARN_ON(host == NULL);
 	if (host == NULL)
@@ -2463,6 +2464,8 @@ int sdhci_add_host(struct sdhci_host *host)
 	sdhci_reset(host, SDHCI_RESET_ALL);
 
 	host->version = sdhci_readw(host, SDHCI_HOST_VERSION);
+	vendor_version = (host->version & SDHCI_VENDOR_VER_MASK) 
+				>> SDHCI_VENDOR_VER_SHIFT;
 	host->version = (host->version & SDHCI_SPEC_VER_MASK)
 				>> SDHCI_SPEC_VER_SHIFT;
 	if (host->version > SDHCI_SPEC_300) {
@@ -2623,9 +2626,20 @@ int sdhci_add_host(struct sdhci_host *host)
 		host->flags |= SDHCI_AUTO_CMD12;
 
 	/* Auto-CMD23 stuff only works in ADMA or PIO. */
-	if ((host->version >= SDHCI_SPEC_300) &&
-	    ((host->flags & SDHCI_USE_ADMA) ||
-	     !(host->flags & SDHCI_USE_SDMA))) {
+	/*
+	 * In the 10.7 version of the SDHC controller AutoCMD23 has 
+	 * issues. 
+	 * 1) The controller sends unexpected CMD23 before CMD13
+	 * 2) When the driver enables Auto CMD23, the controller
+	 *    issues CMD23 and then issue CMD25. However, the controller
+	 *    resets all the response contents when it receives response
+	 *    for CMD25
+	 * So do not enable AutoCMD23 support if the vendor version is 0xA7 
+	 */  
+	if ( (host->version >= SDHCI_SPEC_300) &&
+	     ((host->flags & SDHCI_USE_ADMA) || !(host->flags & SDHCI_USE_SDMA)) &&
+             (vendor_version != 0xA7)
+	   ) {
 #ifndef CONFIG_ARCH_ISLAND
 		host->flags |= SDHCI_AUTO_CMD23;
 		DBG("%s: Auto-CMD23 available\n", mmc_hostname(mmc));

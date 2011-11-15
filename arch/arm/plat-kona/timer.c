@@ -44,6 +44,30 @@
 static struct kona_timer *gpt_evt = NULL;
 static struct kona_timer *gpt_src = NULL;
 
+/*
+ * read_persistent_clock -  Return time from a *fake* persistent clock.
+ * Reads the time as 2 Jan, 1970 for the first time. This is necessary so
+ * Android does not reset the time and then AlarmManager is happy.
+ * Every subsequentcall will return 0 in timespec, so that the suspend/resume
+ * timekeeping code will take the the appropriate path (i.e as if the arch does
+ * not support read_persistent_clock()
+ * */
+
+static unsigned int first_persistent_clock_read = 1;
+#define SECS_PER_DAY (86400UL)
+void read_persistent_clock(struct timespec *ts)
+{
+	if (first_persistent_clock_read) {
+		ts->tv_sec = SECS_PER_DAY;
+		ts->tv_nsec = 0;
+		first_persistent_clock_read = 0;
+		return;
+	}
+
+	ts->tv_sec = 0;
+	ts->tv_nsec = 0;
+}
+
 static int gptimer_set_next_event(unsigned long clc,
 		struct clock_event_device *unused)
 {
@@ -84,11 +108,9 @@ static void gptimer_set_mode(enum clock_event_mode mode,
 
 static cycle_t gptimer_clksrc_read (struct clocksource *cs)
 {
-	unsigned long msw, lsw;
 	cycle_t	count = 0;
 
-	kona_timer_get_counter (gpt_src, &msw, &lsw);
-	count = ((cycle_t)msw << 32) | (cycle_t)lsw;
+	count = kona_timer_get_counter(gpt_src);
 	return count;
 }
 
@@ -104,7 +126,12 @@ static struct clocksource clksrc_gptimer = {
 	.name		= "gpt_source_2",
 	.rating		= 200,
 	.read		= gptimer_clksrc_read,
-	.mask		= CLOCKSOURCE_MASK(64), /* Kona timers have 64 bit counters */
+	.mask		= CLOCKSOURCE_MASK(32), /* Although Kona timers have 64 bit counters,
+						   To avail all the four channels of HUB_TIMER
+						   the match register is compared with 32 bit value
+						   and to make everything in sync, the Linux framework
+						   is informed that CS timer is 32 bit.
+						   */
 	.shift		= 16, /* Fix shift as 16 and calculate mult based on this during init */
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
 };
@@ -192,6 +219,15 @@ static void __init timers_init(struct gp_timer_setup *gpt_setup)
 	 gpt_src = gpt_evt;
 
 	return ;
+}
+unsigned long long sched_clock(void)
+{
+	if (gpt_src == NULL)
+		return (unsigned long long)(jiffies - INITIAL_JIFFIES) *
+							(NSEC_PER_SEC / HZ);
+	else
+		return clocksource_cyc2ns(gptimer_clksrc_read(NULL),
+					clksrc_gptimer.mult, clksrc_gptimer.shift);
 }
 
 void __init gp_timer_init(struct gp_timer_setup *gpt_setup)

@@ -35,7 +35,7 @@
 
 #include <asm/io.h>
 #include <mach/io_map.h>
-#include "bcm_hsotgctrl.h"
+#include <linux/usb/bcm_hsotgctrl.h>
 #include "bcm_otg_adp.h"
 #include "bcmpmu_otg_xceiv.h"
 
@@ -120,13 +120,12 @@ static void bcmpmu_usb_event_notif_callback(struct bcmpmu * pmu_handle, unsigned
 			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_vbus_valid_work);
 			break;
 		case BCMPMU_USB_EVENT_IN:
-			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_chg_detect_work);
 			break;
 		case BCMPMU_USB_EVENT_ID_CHANGE:
 			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_id_status_change_work);
 			break;
 		case BCMPMU_USB_EVENT_USB_DETECTION: /* Rhea PMU driver uses this event instead of CHGR_DETECTION. Revisit later */
-//			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_chg_detect_work);
+			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_chg_detect_work);
 			break;
 		default:
 			break;

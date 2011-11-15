@@ -24,8 +24,9 @@
 #define OMX_PLUGIN__COMPONENT_SUPPORTED__MPEG4           "mpeg4"
 #define OMX_PLUGIN__COMPONENT_SUPPORTED__H263            "h263"
 #define OMX_PLUGIN__COMPONENT_SUPPORTED__AVC             "avc"
+#define OMX_PLUGIN__COMPONENT_SUPPORTED__VP8             "vp8"
 
-#define OMX_PLUGIN__COMPONENT_SUPPORTED__NUM             6
+#define OMX_PLUGIN__COMPONENT_SUPPORTED__NUM            7
 
 #define OMX_PLUGIN__MKNAME(a,b)                          a"."b
 

@@ -2,6 +2,18 @@ menu	"Rhea SoC based Machine types"
 	depends on ARCH_RHEA
 
 choice
+	prompt "Choose Rhea SOC Silicon Version"
+	depends on ARCH_RHEA
+
+config  ARCH_RHEA_A0
+        bool "Rhea SOC Version - A0"
+	default y
+config  ARCH_RHEA_B0
+        bool "Rhea SOC Version - B0"
+	default n
+endchoice
+
+choice
 	prompt "Rhea SoC based board type"
 	default MACH_RHEA_RAY
 
@@ -15,8 +27,14 @@ config MACH_RHEA_RAY_EDN1X
 	help
 	  Support for the Broadcom Rhea Ray EDN1X board.
 
+config MACH_RHEA_RAY_EDN2X
+	bool "Support Broadcom Rhea Ray EDN2X board"
+	help
+	  Support for the Broadcom Rhea Ray EDN2X board.
+
 config MACH_RHEA_DALTON
 	bool "Support Nokia Dalton board"
+	select RHEALC_2093
 	help
 	  Support for the Nokia Dalton board.
 	  This will be based on RheaLC program and
@@ -35,6 +53,7 @@ config MACH_RHEA_BERRI
 
 config MACH_RHEALC_BERRI
         bool "Support Broadcom RheaLC Berri board"
+	select RHEALC_2093
         help
           Support for the Broadcom RheaLC Berri board.
 
@@ -45,20 +64,54 @@ config RHEA_DORMANT_MODE
        help
 	Say Y if you want to enable dormant mode support for Rhea platform
 
+config ROM_SEC_DISPATCHER
+	depends on RHEA_DORMANT_MODE
+	default n
+	bool "Enable calls to secure rom code"
+	help
+		Say Y if rom code is present in the chip.  Enabling this flag
+		would either need the secure library or source code and the make file
+		change to use the .o instead of the the .i.  If only the parent flag
+		is enabled, based on not enabling this feature, the code would enter
+		retention instead of dormant even though most of the save restore
+		code gets executed.
+
 config RHEA_A0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA
-       bool "Enable ASIC workarounds for Power management"
+       bool "Enable A0 ASIC workarounds for Power management"
        default y
        help
-       Say Y if you want to enable Rhea ASIC workarounds for Power management
+       Say Y if you want to enable Rhea A0 ASIC workarounds for Power management
 
-config MACH_RHEA_SELFTEST
-        bool "Selftest CSAPI"
-	depends on MFD_BCM_PMU590XX
+config RHEA_B0_PM_ASIC_WORKAROUND
+       depends on ARCH_RHEA
+       bool "Enable B0 ASIC workarounds for Power management"
+       default n
+       help
+       Say Y if you want to enable Rhea B0 ASIC workarounds for Power management
+
+config RHEALC_2093
+	bool "Enable RheaLC&2093"
 	default n
         help
-          Selftest CSAPI support.
+           Enable ReahLC&2093.
 
+config RHEA_UART_RX_FIX
+	bool "Rhea UART Rx Fix"
+	depends on ARCH_RHEA
+	help
+	  UART RX interrupt happened but in LSR Data Ready is not set.
+	  This fix modifies the serial driver to take decission to 
+	  call receive_chars based on iir and not based on LSR
+
+config RHEA_I2C_USE_PMGR_HW_SEM
+	bool "use HW sem to sync i2c between sw & sequencer"
+	depends on ARCH_RHEA_B0 && KONA_POWER_MGR
+	default y
+	help
+	  The HW sequencer can generate i2c transcations on the PMU i2c
+	  bus while SW driver can still generate the same. To sync 
+	  between the two use HW semaphore.
 endmenu
 
 

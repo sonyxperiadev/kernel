@@ -268,11 +268,21 @@ static struct platform_device pmu_device = {
        .num_resources = 1,
 };
 
-#ifdef CONFIG_USB
+#ifdef CONFIG_USB_DWC_OTG
 static struct resource kona_hsotgctrl_platform_resource[] = {
 	[0] = {
 		.start = HSOTG_CTRL_BASE_ADDR,
 		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = CHIPREGS_BASE_ADDR,
+		.end = CHIPREGS_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[2] = {
+		.start = HUB_CLK_BASE_ADDR,
+		.end = HUB_CLK_BASE_ADDR + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 };
@@ -284,9 +294,7 @@ static struct platform_device board_kona_hsotgctrl_platform_device =
 	.resource = kona_hsotgctrl_platform_resource,
 	.num_resources = ARRAY_SIZE(kona_hsotgctrl_platform_resource),
 };
-#endif
 
-#ifdef CONFIG_USB_DWC_OTG
 static struct resource kona_otg_platform_resource[] = {
 	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to be compatible with legacy code */
 		.start = HSOTG_BASE_ADDR,
@@ -504,7 +512,7 @@ static struct platform_device android_usb_device = {
 struct kona_freq_tbl kona_freq_tbl[] =
 {
 #ifndef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+//    FTBL_INIT(156000000, PI_OPP_ECONOMY),     /*island has this issue too, will be remove in capri */
 #endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
     FTBL_INIT(700000, PI_OPP_TURBO),
@@ -528,6 +536,28 @@ static struct platform_device kona_cpufreq_device = {
 	},
 };
 #endif /*CONFIG_KONA_CPU_FREQ_DRV*/
+
+#ifdef CONFIG_SENSORS_KONA
+static struct resource board_tmon_resource[] = {
+	{	/* For Current Temperature */
+		.start = TMON_BASE_ADDR,
+		.end = TMON_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{	/* For Temperature IRQ */
+		.start = BCM_INT_ID_TEMP_MON,
+		.end = BCM_INT_ID_TEMP_MON,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device tmon_device = {
+	.name = "kona-tmon",
+	.id = -1,
+	.resource = board_tmon_resource,
+	.num_resources = ARRAY_SIZE(board_tmon_resource),
+};
+#endif
 
 /* Common devices among all Island boards */
 static struct platform_device *board_common_plat_devices[] __initdata = {
@@ -555,10 +585,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&kona_stm_device,
 #endif
 	&pmu_device,
-#ifdef CONFIG_USB
-	&board_kona_hsotgctrl_platform_device,
-#endif
+
 #ifdef CONFIG_USB_DWC_OTG
+	&board_kona_hsotgctrl_platform_device,
 	&board_kona_otg_platform_device,
 #endif
 
@@ -574,6 +603,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 	&kona_cpufreq_device,
+#endif
+#ifdef CONFIG_SENSORS_KONA
+	&tmon_device,
 #endif
 
 };

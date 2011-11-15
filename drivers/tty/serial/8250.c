@@ -191,6 +191,7 @@ struct uart_8250_port {
 	 */
 	struct timer_list	rx_shutoff_timer;
 #define RX_SHUTOFF_DELAY_MSECS	3000
+
 #ifdef CONFIG_KONA_PI_MGR
 	struct pi_mgr_qos_node* qos_tx_node;
 	struct pi_mgr_qos_node* qos_rx_node;
@@ -221,6 +222,9 @@ struct uart_8250_port {
 
 #endif
 
+#ifdef CONFIG_RHEA_UART_RX_FIX
+	unsigned int iir;
+#endif
 };
 
 struct irq_info {
@@ -262,8 +266,8 @@ static const struct serial8250_config uart_config[] = {
 		.name		= "16550A",
 		.fifo_size	= 256,
 		.tx_loadsz	= 256,
-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
-		.flags		= UART_CAP_FIFO,
+		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_11,
+		.flags		= UART_CAP_FIFO | UART_CAP_AFE,
 	},
 	[PORT_CIRRUS] = {
 		.name		= "Cirrus",
@@ -1654,7 +1658,7 @@ static void transmit_chars(struct uart_8250_port *up)
 	struct circ_buf *xmit = &up->port.state->xmit;
 	int count;
 
-	pi_mgr_qos_request_update(up->qos_tx_node,0);	
+	pi_mgr_qos_request_update(up->qos_tx_node,0);
 
 	if (up->port.x_char) {
 		serial_outp(up, UART_TX, up->port.x_char);
@@ -1662,17 +1666,37 @@ static void transmit_chars(struct uart_8250_port *up)
 		up->port.x_char = 0;
 		return;
 	}
-	if (uart_tx_stopped(&up->port)) {
+	/* in case of automatic hw flow control, upper layers should not stop if tty stopped tx */
+	if (!(up->mcr & UART_MCR_AFE) && uart_tx_stopped(&up->port)) {
 		serial8250_stop_tx(&up->port);
 		pi_mgr_qos_request_update(up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 
 		return;
 	}
+    /*
+     * The below piece of code disables the TX interrupt if the
+     * circular buffer is empty. But please note that while using
+     * the qos APIs we need to disable the uart peri clock
+     * when
+     * a) The THR is empty, The Transmit FIFO is empty &&
+     * b) The circular buffer is also empty.
+     *
+     * But for that condition to happen we should not disable the
+     * interrupt after copying the data from the circular buffer to the
+     * FIFO and the circular buffer becomes empty.
+     * Instead we should keep the tx interrupt enabled and then when
+     * the next interrupt happens condition a)might have happended, now
+     * if the circular buffer is still empty there is nothing to transmit
+     * so go and disable the clock
+     */
+#ifndef CONFIG_ARCH_RHEA
 	if (uart_circ_empty(xmit)) {
 		__stop_tx(up);
 		pi_mgr_qos_request_update(up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 		return;
 	}
+#endif
+
 
 	count = up->tx_loadsz;
 	do {
@@ -1686,30 +1710,12 @@ static void transmit_chars(struct uart_8250_port *up)
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(&up->port);
 
-	DEBUG_INTR("THRE...");
+	DEBUG_INTR("THRE:count %d...\n", WAKEUP_CHARS-count);
 
-	/*
-	 * The below piece of code disables the TX interrupt if the 
-	 * circular buffer is empty. But please note that while using
-	 * the qos APIs we need to disable the uart peri clock 
-	 * when 
-	 * a) The THR is empty, The Transmit FIFO is empty &&
-	 * b) The circular buffer is also empty.
-	 *
-	 * But for that condition to happen we should not disable the
-	 * interrupt after copying the data from the circular buffer to the
-	 * FIFO and the circular buffer becomes empty. 
-	 * Instead we should keep the tx interrupt enabled and then when
-	 * the next interrupt happens condition a)might have happended, now
-	 * if the circular buffer is still empty there is nothing to transmit
-	 * so go and disable the clock
-	 */
 #ifndef CONFIG_ARCH_RHEA
-	if (uart_circ_empty(xmit)) {
+	if (uart_circ_empty(xmit))
 		__stop_tx(up);
-	}
 #endif
-
 }
 
 static unsigned int check_modem_status(struct uart_8250_port *up)
@@ -1726,7 +1732,7 @@ static unsigned int check_modem_status(struct uart_8250_port *up)
 			up->port.icount.dsr++;
 		if (status & UART_MSR_DDCD)
 			uart_handle_dcd_change(&up->port, status & UART_MSR_DCD);
-		if (status & UART_MSR_DCTS)
+		if (!(up->mcr & UART_MCR_AFE) && (status & UART_MSR_DCTS))
 			uart_handle_cts_change(&up->port, status & UART_MSR_CTS);
 
 		wake_up_interruptible(&up->port.state->port.delta_msr_wait);
@@ -1748,9 +1754,13 @@ static void serial8250_handle_port(struct uart_8250_port *up)
 
 	status = serial_inp(up, UART_LSR);
 
-	DEBUG_INTR("status = %x...", status);
+	DEBUG_INTR("status = x%x...\n", status);
 
+#ifdef CONFIG_RHEA_UART_RX_FIX 
+	if (up->iir & UART_IIR_RDI)
+#else
 	if (status & (UART_LSR_DR | UART_LSR_BI))
+#endif
 		receive_chars(up, &status);
 	check_modem_status(up);
 
@@ -1807,6 +1817,9 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 
 		iir = serial_in(up, UART_IIR);
 		if (!(iir & UART_IIR_NO_INT)) {
+#ifdef CONFIG_RHEA_UART_RX_FIX
+			up->iir = iir;
+#endif
 			serial8250_handle_port(up);
 
 			handled = 1;
@@ -2042,7 +2055,8 @@ static unsigned int serial8250_get_mctrl(struct uart_port *port)
 		ret |= TIOCM_RNG;
 	if (status & UART_MSR_DSR)
 		ret |= TIOCM_DSR;
-	if (status & UART_MSR_CTS)
+	/* in case of automatic hw flow control, always show CTS as asserted to avoid dead lock! */
+	if ((up->mcr & UART_MCR_AFE) || (status & UART_MSR_CTS))
 		ret |= TIOCM_CTS;
 	return ret;
 }
@@ -2346,7 +2360,8 @@ static int serial8250_startup(struct uart_port *port)
 		if (is_real_interrupt(up->port.irq))
 			up->port.mctrl |= TIOCM_OUT2;
 
-	serial8250_set_mctrl(&up->port, up->port.mctrl);
+	/* only set OUT1&OUT2,termios is setting flow control signals. */
+	serial8250_set_mctrl(&up->port, up->port.mctrl & (TIOCM_OUT1|TIOCM_OUT2));
 
 	/* Serial over Lan (SoL) hack:
 	   Intel 8257x Gigabit ethernet chips have a
@@ -2635,8 +2650,11 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	 */
 	if (up->capabilities & UART_CAP_AFE && up->port.fifosize >= 32) {
 		up->mcr &= ~UART_MCR_AFE;
-		if (termios->c_cflag & CRTSCTS)
+		if (termios->c_cflag & CRTSCTS) {
+		    up->port.flags &= ~ASYNC_CTS_FLOW;  /* in case of AFE, needs to be ignored to avoid
+		                                         * lock up in serialcore cts handler */
 			up->mcr |= UART_MCR_AFE;
+		}
 	}
 
 	/*

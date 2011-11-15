@@ -22,6 +22,10 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
+
+/* Local macro test B0 build on A0 */
+#define CONFIG_DONOT_ENABLE_SDIO4
+
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/device.h>
@@ -58,7 +62,6 @@
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
 #include <linux/broadcom/bcm59055-power.h>
 #include <linux/clk.h>
-#include <linux/android_pmem.h>
 #include <linux/bootmem.h>
 #include "common.h"
 #ifdef CONFIG_KEYBOARD_BCM
@@ -75,6 +78,9 @@
 #endif
 #if defined (CONFIG_BMP18X)
 #include <linux/bmp18x.h>
+#endif
+#if defined (CONFIG_AL3006)
+#include <linux/al3006.h>
 #endif
 #if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
 #include <linux/mpu.h>
@@ -279,8 +285,8 @@ static const char *pmu_clients[] = {
 #ifdef CONFIG_BCMPMU_OTG_XCEIV
 	"bcmpmu_otg_xceiv",
 #endif
-#ifdef CONFIG_MACH_RHEA_SELFTEST
-       "bcm_selftest_bb",
+#ifdef CONFIG_BCM59055_SELFTEST
+       "bcm59055-selftest",
 #endif
 };
 
@@ -290,7 +296,7 @@ static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	 * we will switch to HS mode 3.4Mbps (BSC_BUS_SPEED_HS)
 	 */
 	/*.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),*/
-	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), 
+	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
 	.pmu_event_cb = bcm590xx_event_callback,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
@@ -405,8 +411,9 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 
 #ifdef CONFIG_GPIO_PCA953X
 
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+#if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 #define GPIO_PCA953X_GPIO_PIN      121 /* Configure pad MMC1DAT4 to GPIO74 */
+#define GPIO_PCA953X_2_GPIO_PIN      122 /* Configure ICUSBDM pad to GPIO122 */
 #else
 #define GPIO_PCA953X_GPIO_PIN      74 /* Configure pad MMC1DAT4 to GPIO74 */
 #endif
@@ -447,6 +454,45 @@ static struct i2c_board_info __initdata pca953x_info[] = {
 		.platform_data = &board_expander_info,
 	},
 };
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+/* Expander #2 on RheaRay EDN1X*/
+static int pca953x_2_platform_init_hw(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio, void *context)
+{
+	int rc;
+	rc = gpio_request(GPIO_PCA953X_2_GPIO_PIN, "gpio_expander_2");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", GPIO_PCA953X_2_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(GPIO_PCA953X_2_GPIO_PIN);
+	return 0;
+}
+
+static int pca953x_2_platform_exit_hw(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio, void *context)
+{
+	gpio_free(GPIO_PCA953X_2_GPIO_PIN);
+	return 0;
+}
+
+static struct pca953x_platform_data board_expander_2_info = {
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.gpio_base	= KONA_MAX_GPIO+16,
+	.irq_base	= gpio_to_irq(KONA_MAX_GPIO+16),
+	.setup		= pca953x_2_platform_init_hw,
+	.teardown	= pca953x_2_platform_exit_hw,
+};
+
+static struct i2c_board_info __initdata pca953x_2_info[] = {
+	{
+		I2C_BOARD_INFO("pca9539", 0x75),
+		.irq = gpio_to_irq(GPIO_PCA953X_2_GPIO_PIN),
+		.platform_data = &board_expander_2_info,
+	},
+};
+#endif
 #endif /* CONFIG_GPIO_PCA953X */
 
 #ifdef CONFIG_TOUCHSCREEN_QT602240
@@ -511,11 +557,42 @@ static struct i2c_board_info __initdata bmp18x_info[] =
 };
 #endif
 #ifdef CONFIG_AL3006
+#ifdef CONFIG_GPIO_PCA953X
+	#define AL3006_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 6)
+#else
+	#define AL3006_INT_GPIO_PIN		122	/*  skip expander chip */
+#endif
+static int al3006_platform_init_hw(void)
+{
+	int rc;
+	rc = gpio_request(AL3006_INT_GPIO_PIN, "al3006");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", AL3006_INT_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(AL3006_INT_GPIO_PIN);
+
+	return 0;
+}
+
+static void al3006_platform_exit_hw(void)
+{
+	gpio_free(AL3006_INT_GPIO_PIN);
+}
+
+static struct al3006_platform_data al3006_platform_data = {
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.init_platform_hw = al3006_platform_init_hw,
+	.exit_platform_hw = al3006_platform_exit_hw,
+};
+
 static struct i2c_board_info __initdata al3006_info[] =
 {
 	{
 		I2C_BOARD_INFO("al3006", 0x1d ),
-		/*.irq = */
+		.platform_data = &al3006_platform_data,
+		.irq = gpio_to_irq(AL3006_INT_GPIO_PIN),
 	},
 };
 #endif
@@ -650,43 +727,6 @@ static struct spi_board_info spi_slave_board_info[] __initdata = {
 	/* TODO: adding more slaves here */
 };
 
-static unsigned long pmem_base = 0;
-static unsigned int pmem_size = SZ_16M;
-static int __init setup_pmem_pages(char *str)
-{
-	char * endp = NULL;
-	if(str)	{
-		pmem_size = memparse((const char *)str, &endp);
-		printk(KERN_INFO "PMEM size is   0x%08x Bytes\n", pmem_size);
-		if (*endp == '@')
-			pmem_base =  memparse(endp + 1, NULL);
-		printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
-	} else	{
-		printk("\"pmem=\" option is not set!!!\n");
-		printk("Unable to determine the memory region for pmem!!!\n");
-	}
-	return 0;
-}
-__setup("pmem=", setup_pmem_pages);
-
-/* Allocate the top 16M of the DRAM for the pmem. */
-static struct android_pmem_platform_data android_pmem_data = {
-	.name = "pmem",
-	.start = 0x0,
-	.size = SZ_16M,
-	.no_allocator = 0,
-	.cached = 1,
-	.buffered = 1,
-};
-
-static struct platform_device android_pmem = {
-	.name 	= "android_pmem",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &android_pmem_data,
-	},
-};
-
 #if defined (CONFIG_HAPTIC_SAMSUNG_PWM)
 void haptic_gpio_setup(void)
 {
@@ -711,9 +751,7 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
-#if 1 //Shri
-
-static struct resource board_sdio0_resource[] = {
+static struct resource board_sdio1_resource[] = {
 	[0] = {
 		.start = SDIO1_BASE_ADDR,
 		.end = SDIO1_BASE_ADDR + SZ_64K - 1,
@@ -726,7 +764,7 @@ static struct resource board_sdio0_resource[] = {
 	},
 };
 
-static struct resource board_sdio1_resource[] = {
+static struct resource board_sdio2_resource[] = {
 	[0] = {
 		.start = SDIO2_BASE_ADDR,
 		.end = SDIO2_BASE_ADDR + SZ_64K - 1,
@@ -739,7 +777,7 @@ static struct resource board_sdio1_resource[] = {
 	},
 };
 
-static struct resource board_sdio2_resource[] = {
+static struct resource board_sdio3_resource[] = {
 	[0] = {
 		.start = SDIO3_BASE_ADDR,
 		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
@@ -751,8 +789,24 @@ static struct resource board_sdio2_resource[] = {
 		.flags = IORESOURCE_IRQ,
 	},
 };
+
+#ifdef CONFIG_ARCH_RHEA_B0
+static struct resource board_sdio4_resource[] = {
+	[0] = {
+		.start = SDIO4_BASE_ADDR,
+		.end = SDIO4_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_MMC,
+		.end = BCM_INT_ID_SDIO_MMC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+#endif
+
 static struct sdio_platform_cfg board_sdio_param[] = {
-	{ /* SDIO0 */
+	{ /* SDIO1 */
 		.id = 0,
 		.data_pullup = 0,
 		.cd_gpio = SD_CARDDET_GPIO_PIN,
@@ -763,7 +817,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio1_sleep_clk",
 		.peri_clk_rate = 48000000,
 	},
-	{ /* SDIO1 */
+	{ /* SDIO2 */
 		.id = 1,
 		.data_pullup = 0,
 		.is_8bit = 1,
@@ -774,7 +828,8 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
-	{ /* SDIO2 */
+#ifdef CONFIG_DONOT_ENABLE_SDIO4
+	{ /* SDIO3 */
 		.id = 2,
 		.data_pullup = 0,
 		.devtype = SDIO_DEV_TYPE_WIFI,
@@ -790,33 +845,81 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 48000000,
 	},
+#else /* Enable this code for B0 - disabled to test the code on A0 */
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+	{ /* SDIO3 */
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 70,
+			.reg		= -1,
+			.host_wake	= 85,
+			.shutdown	= -1,
+		},
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+#endif
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
+	{ /* SDIO4 */
+		.id = 3,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 70,
+			.reg		= -1,
+			.host_wake	= 85,
+			.shutdown	= -1,
+		},
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+		.peri_clk_name = "sdio4_clk",
+		.ahb_clk_name = "sdio4_ahb_clk",
+		.sleep_clk_name = "sdio4_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+#endif
+#endif
 };
 
-static struct platform_device board_sdio0_device = {
+static struct platform_device board_sdio1_device = {
 	.name = "sdhci",
 	.id = 0,
-	.resource = board_sdio0_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio0_resource),
+	.resource = board_sdio1_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
 	.dev      = {
 		.platform_data = &board_sdio_param[0],
 	},
 };
 
-static struct platform_device board_sdio1_device = {
+static struct platform_device board_sdio2_device = {
 	.name = "sdhci",
 	.id = 1,
-	.resource = board_sdio1_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
+	.resource = board_sdio2_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
 	.dev      = {
 		.platform_data = &board_sdio_param[1],
 	},
 };
 
-static struct platform_device board_sdio2_device = {
+static struct platform_device board_sdio3_device = {
 	.name = "sdhci",
 	.id = 2,
-	.resource = board_sdio2_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
+#ifdef CONFIG_DONOT_ENABLE_SDIO4
+	.resource = board_sdio3_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
+#else /* Enable this code for B0 - disabled to test the code on A0 */
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
+	.resource = board_sdio4_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio4_resource),
+#else
+	.resource = board_sdio3_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
+#endif
+#endif
 	.dev      = {
 		.platform_data = &board_sdio_param[2],
 	},
@@ -825,19 +928,15 @@ static struct platform_device board_sdio2_device = {
 
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_sdio_plat_devices[] __initdata = {
-	&board_sdio1_device,
 	&board_sdio2_device,
-	&board_sdio0_device,
+	&board_sdio3_device,
+	&board_sdio1_device,
 };
 
 void __init board_add_sdio_devices(void)
 {
 	platform_add_devices(board_sdio_plat_devices, ARRAY_SIZE(board_sdio_plat_devices));
 }
-
-
-#endif //Shri
-
 
 #ifdef CONFIG_BACKLIGHT_PWM
 
@@ -864,7 +963,7 @@ static struct platform_device bcm_backlight_devices = {
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
 #if defined(CONFIG_MACH_RHEA_RAY) || defined(CONFIG_MACH_RHEA_RAY_EDN1X) \
-	|| defined(CONFIG_MACH_RHEA_DALTON)
+	|| defined(CONFIG_MACH_RHEA_DALTON) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X
@@ -944,7 +1043,7 @@ static struct kona_fb_platform_data alex_dsi_display_fb_data = {
 	.screen_width		= 360,
 	.screen_height		= 640,
 	.bytes_per_pixel	= 4,
-	.gpio			= (KONA_MAX_GPIO + 3),  
+	.gpio			= (KONA_MAX_GPIO + 3),
 	.pixel_format		= XRGB8888,
 };
 
@@ -963,7 +1062,7 @@ static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
 	.screen_width		= 480,
 	.screen_height		= 800,
 	.bytes_per_pixel	= 2,
-	.gpio			= 41, 
+	.gpio			= 41,
 	.pixel_format		= RGB565,
 };
 
@@ -1054,7 +1153,6 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_DMAC_PL330
 	&pl330_dmac_device,
 #endif
-	&android_pmem,
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
 #endif
@@ -1119,6 +1217,11 @@ static void __init rhea_ray_add_i2c_devices (void)
 	i2c_register_board_info(1,
 			pca953x_info,
 			ARRAY_SIZE(pca953x_info));
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+	i2c_register_board_info(1,
+			pca953x_2_info,
+			ARRAY_SIZE(pca953x_2_info));
+#endif
 #endif
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 	i2c_register_board_info(1,
@@ -1148,11 +1251,14 @@ static int __init rhea_ray_add_lateInit_devices (void)
 	return 0;
 }
 
+static void __init rhea_ray_reserve(void)
+{
+	board_common_reserve();
+}
+
 /* All Rhea Ray specific devices */
 static void __init rhea_ray_add_devices(void)
 {
-	android_pmem_data.start = (unsigned long)pmem_base;
-	android_pmem_data.size  = pmem_size;
 
 #ifdef CONFIG_KEYBOARD_BCM
 	bcm_kp_device.dev.platform_data = &bcm_keypad_data;
@@ -1192,4 +1298,5 @@ MACHINE_START(RHEA, "RheaRay")
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
 	.init_machine = board_init,
+	.reserve = rhea_ray_reserve
 MACHINE_END
