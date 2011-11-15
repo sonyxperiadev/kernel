@@ -194,10 +194,18 @@ const char* _island__event2str[] =
 
 #endif
 
+struct pm_special_event_range island_special_event_list[] = {
+	{GPIO29_A_EVENT, GPIO156_A_EVENT},
+	{GPIO29_B_EVENT, GPIO156_B_EVENT},
+	{KEY_R0_EVENT, KEY_R7_EVENT}
+};
+
 struct pwr_mgr_info island_pwr_mgr_info = {
 	.num_pi = PI_MGR_PI_ID_MAX,
 	.base_addr = KONA_PWRMGR_VA,
 	.flags = PM_PMU_I2C,
+	.special_event_list = &island_special_event_list,
+	.num_special_event_range = ARRAY_SIZE(island_special_event_list),
 };
 
 struct island_event_table

@@ -312,6 +312,8 @@ int pwr_mgr_event_set_pi_policy(int event_id,int pi_id,const struct pm_policy_cf
 {
 	u32 reg_val = 0;
 	const struct pi* pi;
+	int realEventId, i;
+
 	pwr_dbg("%s : event_id = %d : pi_id = %d, ac : %d, ATL : %d, policy: %d\n",
 		__func__,event_id,pi_id,pm_policy_cfg->ac, pm_policy_cfg->atl, pm_policy_cfg->policy);
 
@@ -330,7 +332,17 @@ int pwr_mgr_event_set_pi_policy(int event_id,int pi_id,const struct pm_policy_cf
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
 
-	reg_val = readl(PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset,event_id*4));
+	realEventId = event_id*4;
+	if (pwr_mgr.info->num_special_event_range) {
+	    for (i = 0; i < pwr_mgr.info->num_special_event_range; i++) {
+		if (event_id >= pwr_mgr.info->special_event_list[i].start && event_id <= pwr_mgr.info->special_event_list[i].end) {
+		    realEventId = pwr_mgr.info->special_event_list[i].start * 4;
+		    break;
+		}
+	    }
+	}
+
+	reg_val = readl(PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, realEventId));
 
 	if(pm_policy_cfg->ac)
 		reg_val |= (1 << pi->pi_info.ac_shift);
@@ -348,7 +360,7 @@ int pwr_mgr_event_set_pi_policy(int event_id,int pi_id,const struct pm_policy_cf
 
 	pwr_dbg("%s:reg val %08x shift val: %08x\n",__func__,reg_val, pi->pi_info.pm_policy_shift);
 
-	writel(reg_val,PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset,event_id*4));
+	writel(reg_val, PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, realEventId));
 	pwr_dbg("%s : event_id = %d : pi_id = %d, ac : %d, ATL : %d, policy: %d\n",
 		__func__,event_id,pi_id,pm_policy_cfg->ac, pm_policy_cfg->atl, pm_policy_cfg->policy);
 
@@ -366,6 +378,7 @@ int pwr_mgr_event_get_pi_policy(int event_id,int pi_id,struct pm_policy_cfg* pm_
 {
 	u32 reg_val = 0;
 	const struct pi* pi;
+	int realEventId, i;
 	pwr_dbg("%s : event_id = %d : pi_id = %d\n",
 				__func__,event_id, pi_id);
 
@@ -383,8 +396,16 @@ int pwr_mgr_event_get_pi_policy(int event_id,int pi_id,struct pm_policy_cfg* pm_
 	spin_lock(&pwr_mgr_lock);
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
-
-	reg_val = readl(PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset,event_id*4));
+	realEventId = event_id*4;
+	if (pwr_mgr.info->num_special_event_range) {
+	    for (i = 0; i < pwr_mgr.info->num_special_event_range; i++) {
+		if (event_id >= pwr_mgr.info->special_event_list[i].start && event_id <= pwr_mgr.info->special_event_list[i].end) {
+		    realEventId = pwr_mgr.info->special_event_list[i].start * 4;
+		    break;
+		}
+	    }
+	}
+	reg_val = readl(PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, realEventId));
 
 	pm_policy_cfg->ac = !!(reg_val & (1 << pi->pi_info.ac_shift));
 	pm_policy_cfg->atl = !!(reg_val & (1 << pi->pi_info.atl_shift));
