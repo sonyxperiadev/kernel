@@ -83,8 +83,15 @@ static struct early_suspend g_vchiq_early_suspend =
 #define TOTAL_SLOTS (VCHIQ_SLOT_ZERO_SLOTS + 2 * 32)
 
 #define VCHIQ_DOORBELL_IRQ BCM_INT_ID_IPC_OPEN
-#define VIRT_TO_VC(x) ((unsigned long)x - PAGE_OFFSET + CONFIG_BCM_RAM_START_RESERVED_SIZE + 0xe0000000)
-#define PHYS_TO_VC(x) ((unsigned long)x - PHYS_OFFSET + CONFIG_BCM_RAM_START_RESERVED_SIZE + 0xe0000000)
+
+#ifdef CONFIG_MAP_LITTLE_ISLAND_MODE
+#define ARM_RAM_BASE_IN_VC 0xc0000000
+#else
+#define ARM_RAM_BASE_IN_VC 0xe0000000
+#endif
+#define VIRT_TO_VC(x) PHYS_TO_VC((unsigned long)x - PAGE_OFFSET + PHYS_OFFSET)
+#define PHYS_TO_VC(x) ((unsigned long)x - 0x80000000 + ARM_RAM_BASE_IN_VC)
+
 
 #define VCOS_LOG_CATEGORY (&vchiq_arm_log_category)
 

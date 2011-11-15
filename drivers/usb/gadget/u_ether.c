@@ -101,6 +101,30 @@ struct eth_dev {
 	u8			host_mac[ETH_ALEN];
 };
 
+#ifdef CONFIG_BRCM_NETCONSOLE
+#define MAX_RETRY_NO	1000
+
+static DEFINE_MUTEX(cleanup_netpoll_mutex);
+
+void cleanup_netpoll_lock(void)
+{
+	mutex_lock(&cleanup_netpoll_mutex);
+}
+
+void cleanup_netpoll_unlock(void)
+{
+	mutex_unlock(&cleanup_netpoll_mutex);
+}
+
+int cleanup_netpoll_is_locked(void)
+{
+	return mutex_is_locked(&cleanup_netpoll_mutex);
+}
+
+extern void brcm_current_netcon_status(unsigned char status);
+extern unsigned char brcm_get_netcon_status(void);
+#endif
+
 /*-------------------------------------------------------------------------*/
 
 #define RX_EXTRA	20	/* bytes guarding against rx overflows */
@@ -478,6 +502,7 @@ static void eth_work(struct work_struct *work)
 	}
 	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_OFF, &dev->todo)) {
 				brcm_current_netcon_status(USB_RNDIS_OFF);
+				cleanup_netpoll_unlock();
 	}
 #endif
 	
@@ -913,14 +938,32 @@ int gether_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
  */
 void gether_cleanup(void)
 {
+#ifdef CONFIG_BRCM_NETCONSOLE
+	unsigned short retry = 0;
+#endif
+	pr_info("%s\n", __func__);
+
 	if (!the_dev)
 		return;
+
+#ifdef CONFIG_BRCM_NETCONSOLE
+	/* Check if the netpoll has been released or not... */
+	do {
+		msleep(10);
+		if (retry++ == MAX_RETRY_NO) {
+			pr_err("failed to release netpoll...\n");
+			cleanup_netpoll_unlock();
+			break;
+		}
+	} while (cleanup_netpoll_is_locked());
+#endif
 
 	unregister_netdev(the_dev->net);
 	flush_work_sync(&the_dev->work);
 	free_netdev(the_dev->net);
 
 	the_dev = NULL;
+
 }
 
 /**
@@ -943,6 +986,8 @@ struct net_device *gether_connect(struct gether *link)
 {
 	struct eth_dev		*dev = the_dev;
 	int			result = 0;
+
+	pr_info("%s\n", __func__);
 
 	if (!dev)
 		return ERR_PTR(-EINVAL);
@@ -1028,8 +1073,10 @@ void gether_disconnect(struct gether *link)
 		return;
 
 	DBG(dev, "%s\n", __func__);
+	pr_info("%s\n", __func__);
 
-#ifdef CONFIG_BRCM_NETCONSOLE			
+#ifdef CONFIG_BRCM_NETCONSOLE
+	cleanup_netpoll_lock();
 	defer_kevent(dev, WORK_BRCM_NETCONSOLE_OFF);
 #endif
 

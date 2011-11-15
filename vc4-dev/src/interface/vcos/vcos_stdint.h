@@ -74,9 +74,9 @@ typedef uint64_t           uintmax_t;
 
 #include <stdint.h>
 
-#elif defined(_MSC_VER)                     // Visual C define equivalent types
+#elif defined(_MSC_VER)                     /* Visual C define equivalent types */
 
-#include <stddef.h> // Avoids intptr_t being defined in vadefs.h
+#include <stddef.h> /* Avoids intptr_t being defined in vadefs.h */
 
 typedef          __int8    int8_t;
 typedef unsigned __int8    uint8_t;
@@ -106,8 +106,8 @@ typedef unsigned short     uint16_t;
 typedef signed   long      int32_t;
 typedef unsigned long      uint32_t;
 
-typedef signed   long      int64_t; //!!!! PFCD, this means code using 64bit numbers will be broken on the VCE
-typedef unsigned long      uint64_t; // !!!! PFCD
+typedef signed   long      int64_t; /*!!!! PFCD, this means code using 64bit numbers will be broken on the VCE */
+typedef unsigned long      uint64_t; /* !!!! PFCD */
 
 typedef int32_t            intptr_t;
 typedef uint32_t           uintptr_t;
@@ -124,9 +124,9 @@ typedef int16_t            int_least16_t;
 #define INT32_MIN LONG_MIN
 #define INT32_MAX LONG_MAX
 #define UINT32_MAX ULONG_MAX
-#define INT64_MIN LONG_MIN // !!!! PFCD
-#define INT64_MAX LONG_MAX // !!!! PFCD
-#define UINT64_MAX ULONG_MAX // !!!! PFCD
+#define INT64_MIN LONG_MIN /* !!!! PFCD */
+#define INT64_MAX LONG_MAX /* !!!! PFCD */
+#define UINT64_MAX ULONG_MAX /* !!!! PFCD */
 
 #define INTPTR_MIN INT32_MIN
 #define INTPTR_MAX INT32_MAX

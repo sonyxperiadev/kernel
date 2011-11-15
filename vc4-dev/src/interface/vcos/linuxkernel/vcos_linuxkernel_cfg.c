@@ -73,8 +73,9 @@ static ssize_t cfg_proc_write( struct file *file, const char __user *buffer, siz
 
     if ( entry->parseFunc != NULL )
     {
-        // The number 4000 is rather arbitrary. It just needs to be bigger than any input
-        // string we expect to use.
+        /* The number 4000 is rather arbitrary. It just needs to be bigger than any input
+         * string we expect to use.
+         */
 
         len = count;
         if ( count > 4000 )
@@ -82,7 +83,7 @@ static ssize_t cfg_proc_write( struct file *file, const char __user *buffer, siz
             len = 4000;
         }
 
-        // Allocate a kernel buffer to contain the string being written.
+        /* Allocate a kernel buffer to contain the string being written. */
 
         charBuf = kmalloc( len + 1, GFP_KERNEL );
         if ( copy_from_user( charBuf, buffer, len ))
@@ -91,7 +92,7 @@ static ssize_t cfg_proc_write( struct file *file, const char __user *buffer, siz
             return -EFAULT;
         }
 
-        // echo puts a trailing newline in the buffer - strip it out.
+        /* echo puts a trailing newline in the buffer - strip it out. */
 
         if (( len > 0 ) && ( charBuf[ len - 1 ] == '\n' ))
         {
@@ -265,7 +266,7 @@ void vcos_cfg_buf_printf( VCOS_CFG_BUF_T buf, const char *fmt, ... )
 {
     struct seq_file *m = buf->seq;
 
-    // Bah - there is no seq_vprintf
+    /* Bah - there is no seq_vprintf */
 
     va_list args;
     int len;

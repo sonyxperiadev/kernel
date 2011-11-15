@@ -55,6 +55,20 @@ config VC_VCHIQ
 	help
 	  VCHIQ kernel service module used by almost all other services.
 
+config VC_VCOS
+	tristate "VCOS module"
+	depends on BRCM_VIDEOCORE_SERVICES
+	default BRCM_VIDEOCORE_SERVICES
+	help
+	  VCOS kernel module used by all videocore kernel services.
+
+config VC_VCEB
+	tristate "VCEB module"
+	depends on BRCM_VIDEOCORE_SERVICES
+	default BRCM_VIDEOCORE_SERVICES
+	help
+	  VCEB - early boot kernel module.
+
 config BCM_VCHIQ_VC04
 	tristate "VCHIQ stack model"
 	default BRCM_VIDEOCORE_SERVICES
@@ -84,10 +98,48 @@ config VC_VMCS_FB
     select FB_CFB_FILLRECT
     select FB_CFB_COPYAREA
     select FB_CFB_IMAGEBLIT	
-	default y
+	default n
         help
           Support for the VC framebuffer on the Broadcom reference
           phone. Uses the VCHIQ stack.	   
+
+config VC_VMCS_SM
+	tristate "VMCS Shared Memory"
+	default n
+        help
+          Support for the VC shared memory on the Broadcom reference
+          design. Uses the VCHIQ stack.	   
 	   
+config VC_OVL
+	tristate "Videocore Overlay"
+	default n
+        help
+          Tracker for videocore overlay allocation, used in integration
+          with Android for multimedia support.	   
 
+config VC_OMX
+	tristate "Videocore OpenMAX"
+	default n
+        help
+          Tracker for videocore openmax capabilities, used in integration
+          with Android for multimedia support of StageFright.	   
 
+config VC_HNFO
+	tristate "Videocore HDMI Information"
+	default n
+        help
+          Tracker for videocore hdmi capabilities, used in integration
+          with Android for multimedia support.	   
+
+config VC_DNFO
+	tristate "Videocore Display Information"
+	default n
+        help
+          Tracker for videocore display capabilities, used in integration
+          with Android.	   
+
+config VC_MEM
+	tristate "Videocore Memory"
+	default n
+        help
+          Helper for videocore memory access and total size allocation.	   

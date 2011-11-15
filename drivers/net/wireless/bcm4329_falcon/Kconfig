@@ -1,5 +1,5 @@
 config BCM4329_FALCON
-	tristate "Broadcom 4329 wireless cards support"
+	tristate "Broadcom 4329 (FALCON driver) wireless card support"
 	depends on MMC
 	select WIRELESS_EXT
 	select WEXT_PRIV

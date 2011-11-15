@@ -41,7 +41,11 @@ int vc_sm_lock( int handle, VC_SM_LOCK_CACHE_MODE_T mode, long unsigned int *dat
 
 /* Unlock a memory handle in use by kernel.
 */
-int vc_sm_unlock( int handle );
+int vc_sm_unlock( int handle, int flush );
+
+/* Get an internal resource handle mapped from the external one.
+*/
+int vc_sm_int_handle( int handle );
 
 #endif /* __VC_SM_KNL_H__INCLUDED__ */
 

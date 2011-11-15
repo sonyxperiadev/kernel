@@ -28,17 +28,17 @@ typedef struct VCOS_CMD_S VCOS_CMD_T;
 
 typedef struct
 {
-    int         argc;           // Number of arguments (includes the command/sub-command)
-    char      **argv;           // Array of arguments
-    char      **argv_orig;      // Original array of arguments
+    int         argc;           /* Number of arguments (includes the command/sub-command) */
+    char      **argv;           /* Array of arguments */
+    char      **argv_orig;      /* Original array of arguments */
 
     VCOS_CMD_T *cmd_entry;
     VCOS_CMD_T *cmd_parent_entry;
 
-    int         use_log;        // Output being logged?
-    size_t      result_size;    // Size of result buffer.
-    char       *result_ptr;     // Next place to put output.
-    char       *result_buf;     // Start of the buffer.
+    int         use_log;        /* Output being logged? */
+    size_t      result_size;    /* Size of result buffer. */
+    char       *result_ptr;     /* Next place to put output. */
+    char       *result_buf;     /* Start of the buffer. */
 
 } VCOS_CMD_PARAM_T;
 

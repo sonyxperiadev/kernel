@@ -21,39 +21,39 @@ EXTRA_CFLAGS += -DINTERNAL_VOIF_TEST
 
 
 #Linux header files
-EXTRA_CFLAGS += -I ./include/linux/
+EXTRA_CFLAGS += -I./include/linux/
 # For pmu audio driver
-EXTRA_CFLAGS += -I ./include/linux/broadcom
-EXTRA_CFLAGS += -I ./drivers/misc/
+EXTRA_CFLAGS += -I./include/linux/broadcom
+EXTRA_CFLAGS += -I./drivers/misc/
 #Audio Controller header files
-EXTRA_CFLAGS += -I $(src) -I $(src)/common -I $(src)/audio -I $(src)/audio/audio_controller -I $(src)/audio/audio_controller/public
-EXTRA_CFLAGS += -I $(src)/audio/audio_vdriver/public/
-EXTRA_CFLAGS += -I $(src)/audio/public/
-EXTRA_CFLAGS += -I $(src)/audio/audio_datadriver/public/
-EXTRA_CFLAGS += -I $(src)/audio/voif_handler/public/
+EXTRA_CFLAGS += -I$(src) -I$(src)/common -I$(src)/audio -I$(src)/audio/audio_controller -I$(src)/audio/audio_controller/public
+EXTRA_CFLAGS += -I$(src)/audio/audio_vdriver/public/
+EXTRA_CFLAGS += -I$(src)/audio/public/
+EXTRA_CFLAGS += -I$(src)/audio/audio_datadriver/public/
+EXTRA_CFLAGS += -I$(src)/audio/voif_handler/public/
 #CSL header files
-EXTRA_CFLAGS += -I $(src)/soc/csl/audio/public/
-EXTRA_CFLAGS += -I $(src)/soc/csl/dsp/public/
+EXTRA_CFLAGS += -I$(src)/soc/csl/audio/public/
+EXTRA_CFLAGS += -I$(src)/soc/csl/dsp/public/
 #CHAL header files
-EXTRA_CFLAGS += -I $(src)/soc/chal/modules/audio/inc/
-EXTRA_CFLAGS += -I $(src)/soc/chal/modules/audio/caph/
+EXTRA_CFLAGS += -I$(src)/soc/chal/modules/audio/inc/
+EXTRA_CFLAGS += -I$(src)/soc/chal/modules/audio/caph/
 #RPC Header files
-EXTRA_CFLAGS += -I ./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
-EXTRA_CFLAGS += -I ./drivers/char/broadcom/modem/CAPI2_CIB/soc/debug/public/
-EXTRA_CFLAGS += -I ./drivers/char/broadcom/modem/CAPI2_CIB/public/
-EXTRA_CFLAGS += -I ./drivers/char/broadcom/fuse_log
+EXTRA_CFLAGS += -I./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
+EXTRA_CFLAGS += -I./drivers/char/broadcom/modem/CAPI2_CIB/soc/debug/public/
+EXTRA_CFLAGS += -I./drivers/char/broadcom/modem/CAPI2_CIB/public/
+EXTRA_CFLAGS += -I./drivers/char/broadcom/fuse_log
 
 #Platform header files
-EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/
-EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/
-EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/mach
-EXTRA_CFLAGS += -I ./drivers/char/broadcom/
-EXTRA_CFLAGS += -I ./arch/arm/mach-rhea/include/
-EXTRA_CFLAGS += -I ./arch/arm/mach-rhea/include/mach/
-EXTRA_CFLAGS += -I ./arch/arm/mach-rhea/include/mach/rdb/
-EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/chal/
-EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/csl/
-EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/osabstract/
+EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/
+EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/
+EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/mach
+EXTRA_CFLAGS += -I./drivers/char/broadcom/
+EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/
+EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/mach/
+EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/mach/rdb/
+EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/chal/
+EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/csl/
+EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/osabstract/
 
 obj-$(CONFIG_BCM_ALSA_SOUND)		+= snd-brcm-omx.o
 snd-brcm-omx-objs := caph_module.o 

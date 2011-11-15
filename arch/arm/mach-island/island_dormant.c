@@ -1,3 +1,14 @@
+/****************************************************************************
+*									      
+* Copyright 2010 --2011 Broadcom Corporation.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+*****************************************************************************/
+
 
 #include <linux/sched.h>
 #include <linux/delay.h>
@@ -7,11 +18,11 @@
 #include <linux/err.h>
 #include <linux/dma-mapping.h>
 #include <mach/io_map.h>
-
+#include <linux/slab.h>
 #include <mach/rdb/brcm_rdb_scu.h>
 #include <mach/rdb/brcm_rdb_csr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
-#include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_iroot_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_gicdist.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
@@ -28,10 +39,15 @@
 #include <mach/rdb/brcm_rdb_a9pmu.h>
 #include <mach/rdb/brcm_rdb_a9ptm.h>
 #include <mach/rdb/brcm_rdb_glbtmr.h>
+#include <plat/pwr_mgr.h>
+#include <mach/pwr_mgr.h>
 
 static int enable_dormant = 0;
 module_param_named(enable_dormant, enable_dormant, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+#include <mach/secure_api.h>
+#endif
 
 u32 dormant_base_va;
 u32 dormant_base_pa;
@@ -431,6 +447,29 @@ static u32 addnl_save_reg_list[][2] =
 	{ (KONA_GICDIST_VA+GICDIST_INT_CONFIG15_OFFSET), 0} //0x3FF01C3C - INT_CONFIG15
 };
 
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+
+void *hw_mmu_physical_address_get(void *x)
+{
+	void *hw_mmu_pa_get(void *x);
+	return hw_mmu_pa_get(x);
+}
+
+u32 hw_sec_pub_dispatcher(u32 service_id, u32 flags, ...)
+{
+	u32 ret_val;
+	va_list list;
+
+	va_start(list, flags);
+	ret_val = hw_sec_rom_pub_bridge(service_id, flags, list);
+	va_end(list);
+
+	return ret_val;
+}
+
+#endif
+
+
 static void dormant_save_addnl_reg(void)
 {
 	int i;
@@ -443,6 +482,10 @@ static void dormant_save_addnl_reg(void)
 	 * we exit dormant, we have L2 disabled not causing an issue dur to
 	 * running at 156 MHZ
 	 */
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+	hw_sec_pub_dispatcher(SEC_API_DISABLE_L2_CACHE,
+		SEC_FLAGS);
+#endif
 }
 
 
@@ -496,6 +539,10 @@ static void dormant_restore_addnl_reg(void)
 	/* HWRHEA-1199 - New frequency should now be in effect enable
 	 * L2 cache now
 	 */
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+	hw_sec_pub_dispatcher(SEC_API_ENABLE_L2_CACHE,
+		SEC_FLAGS);
+#endif
 }
 
 int loop = 1;
@@ -504,30 +551,35 @@ void dormant_enter(void)
 
 	if(enable_dormant)
 	{
-		//dormant_save_addnl_reg();
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-		rom_sec_l2_disable();
-#endif
+		pr_info("%s:Enter\n", __func__);
+		dormant_save_addnl_reg();
 
 		dormant_start();
 
-		//dormant_restore_addnl_reg();
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-		rom_sec_l2_enable();
-#endif
+		dormant_restore_addnl_reg();
+
+	} else{
+		pr_info("%s:Dummy\n", __func__);
 	}
+	pr_info("%s: Exit\n", __func__);
+
 }
 
 
-int __init rhea_dormant_init(void)
+int __init island_dormant_init(void)
 {
+#ifdef CONFIG_ROM_SEC_DISPATCHER
 	dma_addr_t drmt_buf_phy;
 	dormant_base_va = (u32)dma_alloc_coherent(NULL, SZ_4K,
 					      &drmt_buf_phy,
 					      GFP_ATOMIC);
 
 	dormant_base_pa = (u32)drmt_buf_phy;
+#else
+	dormant_base_va = dormant_base_pa =
+	     (u32)kmalloc(SZ_4K, GFP_ATOMIC);
+#endif
 	return 0;
 }
 
-module_init(rhea_dormant_init);
+module_init(island_dormant_init);

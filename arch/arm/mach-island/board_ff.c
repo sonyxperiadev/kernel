@@ -33,12 +33,21 @@
 #include <linux/irq.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 #include <linux/bh1715.h>
+#endif
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/tango_ts.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
 #include <linux/smb380.h>
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) || \
+    defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
 #include <linux/akm8975.h>
+#include <linux/akm8975_brcm.h>
+#endif
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+#include <linux/mpu3050.h>
+#endif
 #include <mach/dma_mmap.h>
 #include <mach/sdma.h>
 
@@ -76,6 +85,7 @@
 
 #include "island.h"
 #include "common.h"
+
 
 #include <mach/io_map.h>
 #include <mach/aram_layout.h>
@@ -444,13 +454,14 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
 		.wifi_gpio = {
 			.reset		= 179,
-			.reg		= 177,
+			.reg		= -1,
 			.host_wake	= 178,
+			.shutdown       = -1,
 		},
 		.peri_clk_name = "sdio1_clk",
 		.ahb_clk_name = "sdio1_ahb_clk",
 		.sleep_clk_name = "sdio1_sleep_clk",
-		.peri_clk_rate = 20000000,
+		.peri_clk_rate = 48000000,
 	},
 	{ /* SDIO1 */
 		.id = 1,
@@ -1147,6 +1158,8 @@ static struct i2c_board_info __initdata bma150_info[] =
 	}
 };
 
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) || \
+	defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
 #define AKM8975_IRQ_PIN 155
 
 static struct akm8975_platform_data akm8975_plat_data = {
@@ -1159,18 +1172,43 @@ static struct akm8975_platform_data akm8975_plat_data = {
 static struct i2c_board_info __initdata akm8975_info[] =
 {
 	[0] = {
-		I2C_BOARD_INFO("akm8975", 0x0C ),
+		I2C_BOARD_INFO(AKM8975_DRV_NAME, AKM8975_I2C_ADDR ),
 		.platform_data = &akm8975_plat_data,
 		.irq = gpio_to_irq(AKM8975_IRQ_PIN),
 	},
 };
+#endif
 
-
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 static struct i2c_board_info __initdata bh1715_info[] = {
 	[0] = {
 		I2C_BOARD_INFO(BH1715_DRV_NAME, BH1715_I2C_ADDR ),
 	},
 };
+#endif
+
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+#define MPU3050_GPIO_IRQ_PIN 121
+
+// Application programmable full-scale range of +- 250, +-500,
+// +- 1000 or +- 2000 degrees/second.
+#define MPU3050_SCALE        250	
+
+static struct mpu3050_platform_data board_mpu3050_data = 
+{ 
+   .gpio_irq_pin = MPU3050_GPIO_IRQ_PIN,
+   .scale        = MPU3050_SCALE,
+   .p_axis_change = 0,
+};
+
+static struct i2c_board_info __initdata mpu3050_info[] = 
+{
+	[0] = {
+		I2C_BOARD_INFO(MPU3050_DRV_NAME, MPU3050_I2C_ADDR),
+		.platform_data  = &board_mpu3050_data,
+	},
+};
+#endif
 
 static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
@@ -1266,6 +1304,55 @@ static struct platform_device board_bcmbt_lpm_device = {
 #endif
 
 
+#if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
+#include <linux/broadcom/hdmi_cfg.h>
+#include <hdmi_settings.h>
+
+#define ISLAND_BOARD_ID ISLAND_FF
+
+#ifndef ISLAND_BOARD_ID
+#error ISLAND_BOARD_ID needs to be defined in board_xxx.c
+#endif
+
+/*
+ * Since this board template is included by each board_xxx.c. We concatenate
+ * ISLAND_BOARD_ID to help debugging when multiple boards are compiled into
+ * a single image
+ */
+#define concatenate_again(a, b) a ## b
+#define concatenate(a, b) concatenate_again(a, b)
+
+#define board_hdmidet_data concatenate(ISLAND_BOARD_ID, _hdmidet_data)
+static struct hdmi_hw_cfg board_hdmidet_data =
+#ifdef HW_CFG_HDMI
+   HW_CFG_HDMI;
+#else
+{
+   .gpio_hdmi_det = -1,
+};
+#endif
+
+#define board_hdmidet_device concatenate(ISLAND_BOARD_ID, _hdmidet_device)
+static struct platform_device board_hdmidet_device =
+{
+   .name = "hdmi-detect",
+   .id = -1,
+   .dev =
+   {
+      .platform_data = &board_hdmidet_data,
+   },
+};
+
+#define board_add_hdmidet_device concatenate(ISLAND_BOARD_ID, _add_hdmidet_device)
+static void __init board_add_hdmidet_device(void)
+{
+   platform_device_register(&board_hdmidet_device);
+}
+
+#endif
+
+
+
 static struct platform_device *board_devices[] __initdata = {
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
@@ -1325,13 +1412,24 @@ static void __init board_add_devices(void)
 		bma150_info,
 		ARRAY_SIZE(bma150_info));
 
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) \
+			|| defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
 	i2c_register_board_info(3,
 		akm8975_info,
 		ARRAY_SIZE(akm8975_info));
+#endif
 	
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 	i2c_register_board_info(3,
 		bh1715_info,
 		ARRAY_SIZE(bh1715_info));
+#endif
+
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+	i2c_register_board_info(3,
+		mpu3050_info,
+		ARRAY_SIZE(mpu3050_info));
+#endif
 
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 	platform_add_devices(bcm59055_userspace_consumer_devices, ARRAY_SIZE(bcm59055_userspace_consumer_devices));
@@ -1339,6 +1437,10 @@ static void __init board_add_devices(void)
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 	platform_add_devices(bcm59055_virtual_consumer_devices, ARRAY_SIZE(bcm59055_virtual_consumer_devices));
 #endif
+
+#if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
+   board_add_hdmidet_device();
+#endif   
 
    platform_add_devices( vchiq_devices, ARRAY_SIZE( vchiq_devices ) );
 

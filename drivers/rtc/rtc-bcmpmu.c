@@ -103,7 +103,8 @@ static int bcmpmu_read_time(struct device *dev, struct rtc_time *tm)
 					&val, PMU_BITMASK_ALL);
 	if (unlikely(ret))
 		goto err;
-	tm->tm_mon = val - 1;
+	if (val >= 1)
+		tm->tm_mon = val - 1;
 
 	ret = rdata->bcmpmu->read_dev(rdata->bcmpmu, PMU_REG_RTCDT,
 					&val, PMU_BITMASK_ALL);
@@ -204,7 +205,8 @@ static int bcmpmu_read_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 					&val, PMU_BITMASK_ALL);
 	if (unlikely(ret))
 		goto err;
-	alarm->time.tm_mon = val - 1;
+	if (val >= 1)
+		alarm->time.tm_mon = val - 1;
 
 	ret = rdata->bcmpmu->read_dev(rdata->bcmpmu, PMU_REG_RTCDT_ALM,
 					&val, PMU_BITMASK_ALL);
@@ -345,6 +347,13 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	rdata->bcmpmu = bcmpmu;
+
+	init_waitqueue_head(&rdata->wait);
+	mutex_init(&rdata->lock);
+	bcmpmu->rtcinfo = (void *)rdata;
+	rdata->update_irq_enabled = 0;
+	rdata->alarm_irq_enabled = 0;
+
 	platform_set_drvdata(pdev, rdata);
 	rdata->rtc = rtc_device_register(pdev->name,
 			&pdev->dev, &bcmpmu_rtc_ops, THIS_MODULE);
@@ -352,12 +361,6 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 		ret = PTR_ERR(rdata->rtc);
 		goto err;
 	}
-
-	init_waitqueue_head(&rdata->wait);
-	mutex_init(&rdata->lock);
-	bcmpmu->rtcinfo = (void *)rdata;
-	rdata->update_irq_enabled = 0;
-	rdata->alarm_irq_enabled = 0;
 
 	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTC_ALARM, bcmpmu_rtc_isr, rdata);
 	if (unlikely(ret))

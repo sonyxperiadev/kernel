@@ -260,11 +260,13 @@ ENTRY(dormant_start)
 	    UBFX r2, r2, #0, #2		@ extract the CPUID field
 								@ IMP DEF width: Cortex-A9
         LDR r0, =DORMANT_BASE  @ pointer to context save area
+        LDR r0, [r0]
         LDR r1, =DORMANT_BASE_CPU_OFFSET
         MUL r1, r1, r2
         ADD r0, r0, r1
     .else
         LDR r0, =DORMANT_BASE  @ pointer to uniprocessor context save area
+        LDR r0, [r0]
     .endif
     LDR r1, =CA9_SCU_BASE  @ pointer to the CA9 memory-mapped resources
                             @ r0 and r1 are arguments (can be VAs)
@@ -286,20 +288,20 @@ DormantSave:
 @ Exact requirement IMPLEMENTATION DEFINED, for example power level on restore
 @ The sequence might require additional write(s)
 
-    LDR r2, =WARM_START_FLAG
-    LDR r3, =POWER_CONTROLLER_WARM_START_STATUS
-    LDR r5, =POWER_CONTROLLER_CONTEXT_BASE_PA
+@    LDR r2, =WARM_START_FLAG
+@    LDR r3, =POWER_CONTROLLER_WARM_START_STATUS
+    LDR r5, =POWER_CONTROLLER_CONTEXT_BASE_VA
 
     .if(CA9_SCU_PRESENT)       @ if an MP system, calculate offset addresses
         MRC	p15,0,r1,c0,c0,5	@ read the MPIDR, MP affinity register
 	    UBFX r1, r1, #0, #2		@ extract the CPUID field
 								@ IMP DEF width: Cortex-A9
         LSLS r1, r1, #2
-        ADD r3, r3, r1          @ MP: modified ptr for warm start flag
+@        ADD r3, r3, r1          @ MP: modified ptr for warm start flag
         ADD r5, r5, r1          @ MP: modified ptr for base address
     .endif
 
-    STR r2, [r3]
+@    STR r2, [r3]
 	.if(V7_MMU_PRESENT)
     	MOV r4, r0   @ copy pointer to the context save area
 DMtop:	VA_TO_PA r4, r7, r6
@@ -325,7 +327,8 @@ DMtop:	VA_TO_PA r4, r7, r6
 	    .if L2CC_BASE       @ IMPLEMENTATION DEFINED, PL310 present
     		LDR	r1, [r0, #DM_CA9_SCU_VA]
 @			MOV32 r2, CA9_SCU_L2CC
-			LDR	r2, =0x20000
+@			LDR	r2, =0x20000
+   LDR r2, =CA9_SCU_L2CC
 			ADD	r2, r2, #0x730  @ addr offset for a PL310 cache sync operation
 			STR r0, [r1, r2]    @ execute a PL310 cache sync operation
 			DSB
@@ -354,8 +357,8 @@ UpdatePwrStatus:
 	* WARNING: SYSTEM DEFINED behaviour
 	*
 	*****************************************************************/
-@		MOV	r2, #3
-		MOV	r2, #1		@set for dormant mode
+		MOV	r2, #3
+@		MOV	r2, #1		@set for dormant mode
 		@ NOTE: for Cortex-A9 = r1p0 and later revisions ONLY
 		ADD	r3, r7, #SCU_PwrStatus
 		@ each cpu has its own byte in the PwrStatus register, no lock required
@@ -366,7 +369,8 @@ UpdatePwrStatus:
 	    .if L2CC_BASE       @ IMPLEMENTATION DEFINED, PL310 present
     		LDR	r1, [r0, #DM_CA9_SCU_VA]
 @			MOV32 r2, CA9_SCU_L2CC
-			LDR	r2, =0x20000
+@			LDR	r2, =0x20000
+   LDR r2, =CA9_SCU_L2CC
 			ADD	r2, r2, #0x730    @ addr offset for a PL310 cache sync operation
 			STR r0, [r1, r2]    @ execute a PL310 cache sync operation
 			DSB
@@ -383,6 +387,7 @@ UpdatePwrStatus:
 	@ The first dword of the buffer is the dormant exit routine
 	@ Save the handler at the first index.
 	LDR r0,=EnterResetHandler
+	VA_TO_PA r0, r1, r2
 	STR   r0,[r11]
 
 
@@ -392,52 +397,45 @@ UpdatePwrStatus:
 	@ Disable interrupts.. i.e do not pass interrupts to NS side.
 	LDR r1,=0xB
 	@ Start of buffer
-	ADD   r2, r11, #0
+	@ADD   r2, r11, #0
+ LDR r2, =DORMANT_BASE_PA  @ pointer to uniprocessor context save area
+ LDR r2, [r2]
 	@ End of buffer.. Note the actual buffer is larger but
 	@ secure side max is 0x280@
-	ADD   r3,r2,#0x280
-
+	@ADD   r3,r2,#0x280
+ ADD r2, r2, #0x80
 	@ invoke the dispatcher
-	blx   rom_sec_dormant_enter
+	@blx   rom_sec_dormant_enter
+ bl hw_sec_pub_dispatcher
+#else
+	@ Do not enter dormant but enter suspend
+	BLX enter_wfi
 #endif /*CONFIG_ROM_SEC_DISPATCHER*/
 
-LateWakeupEventHandler: @ SYSTEM DEFINED – stub here.
-
+@LateWakeupEventHandler: @ SYSTEM DEFINED  stub here.
+LateWakeupEventHandler: @ Secure routine returned without entering dormant here
 /*****************************************************************
     In case if we do not enter dormant, the pc would
-    come down to this place.  Continue as though we entered
-    dormant and restore context.  i.e will execute
-    EnterResetHandler which is the dormant exit routine.
-    MOV pc, lr          Use to handle unexpected or unavoidable
-                        wakeup events that stop powerdown.
-     ...handler code here incl. 'return' or dormant save re-entry
+    come down to this place.
 
-     ...
-     wakeup through reset => DormantRestore
-     ...
+    MMU remains un-disabled.  Let us continue from the second part
+    dormant restore.
 *****************************************************************/
-@@ PowerRestore support software
+    @ Restore Supervisor mode context
+    @ initial restore of r0, DORMANT_BASE pointer
+    ADD	r0,r11,#(DM_BLOCK+4*14)
+    LDM	r0,{r1,r2}	  @ recover the CPSR and SPSR
+    MSR	CPSR_fsxc,r1	  @ restore the CPSR
+    MSR	SPSR_fsxc,r2	  @ restore the SPSR
+    SUB	r0,r0,#(4*14)
+    LDR	SP, [r0], #4  @ restore the stack pointer
+    LDM	r0,{r1-r12,r14}	  @ restore other ARM registers
+                          @ (except r0 and PC)
+    SUB	r0,r0,#(DM_BLOCK + 4) @ restore r0.
+    MOV	pc,lr		          @ execution returns to WarmStartContinue
 
     .align 5
 EnterResetHandler:
-
-@@ Check for a warm start - exact requirement IMPLEMENTATION DEFINED
-    LDR r2, =POWER_CONTROLLER_WARM_START_STATUS
-
-    .if (CA9_SCU_PRESENT)       @ if an MP system, calculate offset address
-        MRC	p15,0,r1,c0,c0,5	@ read the MPIDR, MP affinity register
-	    UBFX r1, r1, #0, #2		@ extract the CPUID field
-								@ IMP DEF width: Cortex-A9
-        LSLS r1, r1, #2
-        ADD r2, r2, r1          @ MP: modified ptr for warm start flag
-    .endif
-
-    LDR r3, [r2]
-    LDR r4, =WARM_START_FLAG   @ non-zero value loaded
-    CMP r3, r4           @ NOTE: r3 might require data processing first
-    BNE FullSystemReset
-    EOR	r3, r3, r3
-    STR	r3, [r2]         @ clear the warm start flag
 
 DormantRestoreStart:
    	@ copy of DORMANT_BASE => r0 as an 'argument' for DORMANT_RESTORE1
@@ -445,6 +443,10 @@ DormantRestoreStart:
    	LDR r5, =POWER_CONTROLLER_CONTEXT_BASE_PA
 
    	.if (CA9_SCU_PRESENT)       @ if an MP system, calculate offset addresses
+        MRC	p15,0,r1,c0,c0,5	@ read the MPIDR, MP affinity register
+        UBFX r1, r1, #0, #2		@ extract the CPUID field
+
+        LSLS r1, r1, #2
         ADD r5, r5, r1      @ MP: modified ptr for base address
     .endif
 
@@ -479,7 +481,7 @@ DormantRestore:
 		MCR p15,0,r1,c1,c0,0     @ enable MMU, Icache and branch prediction
 		                         @ leave the $L1Dcache OFF
 		                         @ $L2 is ON if SYSCACHE restored
-@		BX lr
+		BX lr
 		NOP
 		NOP
 		NOP
@@ -489,6 +491,20 @@ PAtoVAentry:
 		ISB
 	.endif
 ContinueRestore:
+    /*
+    At this point, the general MMU is enabled.  However, Linux seems to be
+    using TEX remapping.  Check to see if TEX remapping was enabled before
+    entering dormant and restore that bit accordingly
+    */
+    LDR	r0,[r11,#DM_SCTLR]  @ recover SCTLR from fixed address
+    AND r0, r0,#0x10000000
+    CMP r0, #0x10000000
+    BNE ContinueRestoreNoTEX
+    ORR r1, r1, r0
+    MCR p15,0,r1,c1,c0,0     @ enable MMU, Icache and branch prediction
+
+
+ContinueRestoreNoTEX:
 	DORMANT_RESTORE2
 		MOV	pc,lr		          @ execution returns to WarmStartContinue
 FullSystemReset:                   @ nothing to recover, execute a full reset

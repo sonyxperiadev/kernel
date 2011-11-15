@@ -119,7 +119,7 @@ VCOS_STATUS_T vcos_thread_create(VCOS_THREAD_T *thread,
       return st;
    }
 
-   //required for event groups
+   /*required for event groups */
    vcos_timer_create(&thread->_timer.timer, thread->name, NULL, NULL);
 
    kthread = kthread_create((int (*)(void *))vcos_thread_wrapper, (void*)thread, name);
@@ -157,7 +157,7 @@ void vcos_thread_join(VCOS_THREAD_T *thread,
 uint32_t vcos_getmicrosecs( void )
 {
    struct timeval tv;
-//XXX FIX ME! switch to ktime_get_ts to use MONOTONIC clock
+/*XXX FIX ME! switch to ktime_get_ts to use MONOTONIC clock */
    do_gettimeofday(&tv);
    return (tv.tv_sec*1000000) + tv.tv_usec;
 }
@@ -169,12 +169,12 @@ VCOS_STATUS_T vcos_timer_init(void)
 
 static const char *log_prefix[] =
 {
-   "",            // VCOS_LOG_UNINITIALIZED
-   "",            // VCOS_LOG_NEVER
-   KERN_ERR,      // VCOS_LOG_ERROR
-   KERN_WARNING,  // VCOS_LOG_WARN
-   KERN_INFO,     // VCOS_LOG_INFO
-   KERN_INFO      // VCOS_LOG_TRACE
+   "",            /* VCOS_LOG_UNINITIALIZED */
+   "",            /* VCOS_LOG_NEVER */
+   KERN_ERR,      /* VCOS_LOG_ERROR */
+   KERN_WARNING,  /* VCOS_LOG_WARN */
+   KERN_INFO,     /* VCOS_LOG_INFO */
+   KERN_INFO      /* VCOS_LOG_TRACE */
 };
 
 void vcos_vlog_default_impl(const VCOS_LOG_CAT_T *cat, VCOS_LOG_LEVEL_T _level, const char *fmt, va_list args)
@@ -348,7 +348,7 @@ int vcos_snprintf(char *buf, size_t buflen, const char *fmt, ...)
 }
 
 int vcos_llthread_running(VCOS_LLTHREAD_T *t) {
-   vcos_assert(0);   // this function only exists as a nasty hack for the video codecs!
+   vcos_assert(0);   /* this function only exists as a nasty hack for the video codecs! */
    return 1;
 }
 
@@ -466,13 +466,14 @@ void *vcos_platform_malloc( VCOS_UNSIGNED required_size )
 {
    if ( required_size >= ( 2 * PAGE_SIZE ))
    {
-      // For larger allocations, use vmalloc, whose underlying allocator
-      // returns pages
+      /* For larger allocations, use vmalloc, whose underlying allocator
+       * returns pages
+       */
 
       return vmalloc( required_size );
    }
 
-   // For smaller allocation, use kmalloc
+   /* For smaller allocation, use kmalloc */
 
    return kmalloc( required_size, GFP_KERNEL );
 }
@@ -505,10 +506,11 @@ void  vcos_platform_free( void *ptr )
 VCOS_STATUS_T vcos_once(VCOS_ONCE_T *once_control,
                         void (*init_routine)(void))
 {
-   // In order to be thread-safe we need to re-test *once_control
-   // inside the lock. The outer test is basically an optimization
-   // so that once it is initialized we don't need to waste time
-   // trying to acquire the lock.
+   /* In order to be thread-safe we need to re-test *once_control
+    * inside the lock. The outer test is basically an optimization
+    * so that once it is initialized we don't need to waste time
+    * trying to acquire the lock.
+    */
 
    if ( *once_control == 0 )
    {

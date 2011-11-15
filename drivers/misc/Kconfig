@@ -674,6 +674,13 @@ config BCM59055_ADC_CHIPSET_API
 	---help---
 	 BCM59055 ADC chispet API driver 
 
+config BCM59055_SELFTEST
+        bool "BCM59055 Selftest"
+	depends on MFD_BCM_PMU590XX && BCM59055_AUDIO
+	default n
+        help
+          Selftest support.
+
 config BCMPMU_AUDIO
         tristate "BCM PMU Audio Driver"
         depends on MFD_BCMPMU
@@ -701,12 +708,26 @@ config BCM_RFKILL
         ---help---
         This driver adds RFKILL support for Broadcom bluetooth
 
-
 config BCM_BT_LPM
         bool "BCM BT Low Power support"
         default n
         ---help---
         This driver adds Low Power mode support for Broadcom bluetooth
+
+config BRALLOC_MEM
+	bool "Broadcom contiguous memory allocator based on CMA"
+	depends on CMA
+	help
+	  This option enables Broadcom's "bralloc" driver to allocate
+	  physically contiguous memory for userspace libraries/applications.
+	  It also provides APIs to handle cache coherency for these regions
+
+config BRALLOC_MEM_STATS
+	bool "Enable bralloc stats in /proc/brallocstat"
+	depends on BRALLOC_MEM && PROC_FS
+	help
+	  This option enables statistics for Bralloc memory driver to be
+	  shown in /proc/brallocstat file
 
 source "drivers/misc/Kconfig.stm"
 source "drivers/misc/c2port/Kconfig"

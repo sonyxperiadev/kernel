@@ -63,7 +63,7 @@ struct QueueStruct_t {
 	UInt32 max_entries;
 	struct mutex q_mutex;
 	struct semaphore msg_queued;
-	struct QueueLLI_t q_list;
+	struct list_head q_head;
 };
 
 //******************************************************************************
@@ -91,7 +91,7 @@ static inline Queue_t OSQUEUE_Create(					// returns newly-created queue
 		new_queue->max_entries = entries;
 		mutex_init(&new_queue->q_mutex);
 		sema_init(&new_queue->msg_queued, 0);
-		INIT_LIST_HEAD(&new_queue->q_list.head);
+		INIT_LIST_HEAD(&new_queue->q_head);
 	}
 	return (Queue_t *)new_queue;
 }
@@ -108,11 +108,12 @@ static inline void OSQUEUE_FlushQ(					// clear queue
 	struct QueueStruct_t *queue = (struct QueueStruct_t *)q;
 	struct QueueLLI_t *tmpLLI;
 	struct list_head *pos;
-	list_for_each(pos, &queue->q_list.head)
+	list_for_each(pos, &queue->q_head)
 	{
 		tmpLLI = list_entry(pos, struct QueueLLI_t, head);
 		if(tmpLLI->msg_ptr) {
 			kfree(tmpLLI->msg_ptr);
+			kfree(tmpLLI);
 		}
 		if (in_interrupt()) {
 			if (!mutex_trylock(&queue->q_mutex))
@@ -161,24 +162,24 @@ static inline OSStatus_t OSQUEUE_Pend(				// get message from the queue
 {
 	OSStatus_t status = OSSTATUS_FAILURE;
 	struct QueueStruct_t *queue = (struct QueueStruct_t *)q;
+	struct QueueLLI_t *qlli;
 
 	if (in_interrupt())
 		return status;
 
 	do {
 		down(&queue->msg_queued);
-	} while (list_empty(&queue->q_list.head));
+	} while (list_empty(&queue->q_head));
 
+	if (mutex_lock_interruptible(&queue->q_mutex) != 0)
+		return status;
 
-    if(mutex_lock_interruptible(&queue->q_mutex) != 0)
-    {
-        return status;
-    }
-	memcpy(msg, container_of(queue->q_list.head.next, struct QueueLLI_t, head)->msg_ptr, queue->msg_size);
-	kfree(queue->q_list.msg_ptr);
-	list_del_init(queue->q_list.head.next);
+	qlli = container_of(queue->q_head.next, struct QueueLLI_t, head);
+	memcpy(msg, qlli->msg_ptr, queue->msg_size);
+	list_del(queue->q_head.next);
 	mutex_unlock(&queue->q_mutex);
-
+	kfree(qlli->msg_ptr);
+	kfree(qlli);
 
 	return OSSTATUS_SUCCESS;
 }
@@ -200,37 +201,38 @@ static inline OSStatus_t OSQUEUE_PostGeneric( 					// internal method to post ms
 	bool post_to_tail					// set to TRUE for normal queuing; FALSE to queue at the beginning of the queue
 	)
 {
-	OSStatus_t status = OSSTATUS_FAILURE;
 	struct QueueStruct_t *queue = (struct QueueStruct_t *)q;
-	struct QueueLLI_t *tmp = (struct QueueLLI_t *) kzalloc(sizeof(struct QueueLLI_t), GFP_KERNEL);
-	if(tmp)
-	{
-		tmp->msg_ptr = (UInt32 *) kzalloc(queue->msg_size, GFP_KERNEL);
-		if(tmp->msg_ptr) {
-			if (in_interrupt()) {
-				if (!mutex_trylock(&queue->q_mutex))
-					return status;
-			} 
-			else
+	struct QueueLLI_t *tmp = (struct QueueLLI_t *)
+				kzalloc(sizeof(struct QueueLLI_t), GFP_KERNEL);
+	if (!tmp)
+		goto err_tmp;
 
-			{
-                if(mutex_lock_interruptible(&queue->q_mutex) != 0)
-                {
-                    return status;
-                }
-			}
-			if(post_to_tail) {
-				list_add_tail(&(tmp->head), &(queue->q_list.head));
-			} else {
-				list_add(&(tmp->head), &(queue->q_list.head));
-			}
-			memcpy((QMsg_t *)tmp->msg_ptr, msg, queue->msg_size);
-			mutex_unlock(&queue->q_mutex);
-			up(&queue->msg_queued);
-			status = OSSTATUS_SUCCESS;
-		}
+	tmp->msg_ptr = (UInt32 *) kzalloc(queue->msg_size, GFP_KERNEL);
+	if (!tmp->msg_ptr)
+		goto err_msg;
+
+	if (in_interrupt()) {
+		if (!mutex_trylock(&queue->q_mutex))
+			goto err;
+	} else if (mutex_lock_interruptible(&queue->q_mutex)) {
+		goto err;
 	}
-	return status;
+
+	if (post_to_tail)
+		list_add_tail(&(tmp->head), &(queue->q_head));
+	else
+		list_add(&(tmp->head), &(queue->q_head));
+	memcpy((QMsg_t *)tmp->msg_ptr, msg, queue->msg_size);
+	mutex_unlock(&queue->q_mutex);
+	up(&queue->msg_queued);
+	return OSSTATUS_SUCCESS;
+
+err:
+	kfree(tmp->msg_ptr);
+err_msg:
+	kfree(tmp);
+err_tmp:
+	return OSSTATUS_FAILURE;
 }
 
 /**
