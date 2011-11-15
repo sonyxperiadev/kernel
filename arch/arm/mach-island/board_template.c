@@ -149,6 +149,7 @@
 #if defined(CONFIG_MONITOR_ADC121C021_I2C)  || defined(CONFIG_MONITOR_ADC121C021_I2C_MODULE)
 #include <linux/broadcom/adc121c021_driver.h>
 #include <adc121c021_settings.h>
+#include <battery_settings.h>
 #endif
 
 #if defined(CONFIG_MONITOR_BQ27541_I2C) || defined(CONFIG_MONITOR_BQ27541_I2C_MODULE)
@@ -1431,9 +1432,11 @@ static void __init add_i2c_device(void)
    board_adc121c021_i2c_param.resistor_1          = HW_ADC121C021_RESISTOR_1;
    board_adc121c021_i2c_param.resistor_2          = HW_ADC121C021_RESISTOR_2;
 
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
    board_adc121c021_i2c_param.gpio_ac_power       = HW_ADC121C021_GPIO_AC_POWER;
    board_adc121c021_i2c_param.ac_power_on_level   = HW_ADC121C021_AC_POWER_ON_LEVEL;
    board_adc121c021_i2c_param.gpio_charger        = HW_ADC121C021_GPIO_CHARGER;
+#endif
 
    printk("board_template.c %s() IRQ pin %d\n", __FUNCTION__, board_adc121c021_i2c_param.gpio_irq_pin);
    board_adc121c021_i2c_boardinfo[0].irq = 
