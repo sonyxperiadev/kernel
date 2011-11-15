@@ -105,7 +105,13 @@
 #ifdef CONFIG_GPIO_PCA953X
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
 #else
+#ifdef CONFIG_MACH_RHEA_BERRI
+/* RheaBerri edn33: GPIO8 is card detect gpio */
+#define SD_CARDDET_GPIO_PIN      8
+#else
+/* RheaBerri edn40:  GPIO75 is card detect gpio */
 #define SD_CARDDET_GPIO_PIN      75
+#endif
 #endif
 
 
