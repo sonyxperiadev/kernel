@@ -242,7 +242,7 @@ UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h)
 
 static int	SetPlaybackStreamHandle(AUDIO_DDRIVER_t* h)
 {
-	if(h->stream_id>CSL_CAPH_STREAM_TOTAL)
+	if(h->stream_id>=CSL_CAPH_STREAM_TOTAL)
 	{
 		Log_DebugPrintf(LOGID_AUDIO,"Error: SetPlaybackStreamHandle invalid stream id=%ld\n" ,h->stream_id);
 		return -1;
@@ -503,7 +503,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-	CSL_CAPH_DEVICE_e *aud_dev;
+	CSL_CAPH_DEVICE_e *aud_dev = NULL;
 	//Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
     switch (ctrl_cmd)
     {
@@ -817,7 +817,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 {
     Result_t result_code = RESULT_ERROR;
 #if defined(CONFIG_BCM_MODEM) 
-	VOCAPTURE_RECORD_MODE_t *recordMode;
+	VOCAPTURE_RECORD_MODE_t *recordMode = NULL;
 	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureVoiceCmd::%d \n",ctrl_cmd );
 
@@ -926,7 +926,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-	UInt32 codec_type;
+	UInt32 codec_type = 99; // Assign to an invalid number, current valid number:0~5
 	UInt32 bitrate_index = 0;
 	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIPCmd::%d \n",ctrl_cmd );

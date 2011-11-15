@@ -942,10 +942,6 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 arg_dev )
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
-	SysAudioParm_t* pAudioParm;
-	pAudioParm = AUDIO_GetParmAccessPtr();
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode() audio_mode==%d\n\r", audio_mode );
-
 	// load DSP parameters:
 	//if ( audio_mode >= AUDIO_MODE_NUMBER )
 	if ( audio_mode >= AUDIO_MODE_NUMBER_VOICE )
