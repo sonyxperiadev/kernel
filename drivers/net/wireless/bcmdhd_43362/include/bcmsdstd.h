@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdstd.h 275703 2011-08-04 20:20:27Z $
+ * $Id: bcmsdstd.h 281610 2011-09-02 19:06:11Z $
  */
 #ifndef	_BCM_SD_STD_H
 #define	_BCM_SD_STD_H
@@ -149,8 +149,8 @@ struct sdioh_info {
 	bool		got_hcint;		/* local interrupt flag */
 	uint16		last_intrstatus;	/* to cache intrstatus */
 	int 	host_UHSISupported;		/* whether UHSI is supported for HC. */
-	int 	card_UHSI_voltage_Supported; 	/* whether UHSI is supported for 
-						 * Card in terms of Voltage [1.8 or 3.3]. 
+	int 	card_UHSI_voltage_Supported; 	/* whether UHSI is supported for
+						 * Card in terms of Voltage [1.8 or 3.3].
 						 */
 	int	global_UHSI_Supp;	/* type of UHSI support in both host and card.
 					 * HOST_SDR_UNSUPP: capabilities not supported/matched
@@ -229,6 +229,7 @@ extern void sdstd_3_disable_retuning_int(sdioh_info_t *sd);
 extern bool sdstd_3_is_retuning_int_set(sdioh_info_t *sd);
 extern bool sdstd_3_check_and_set_retuning(sdioh_info_t *sd);
 extern int sdstd_3_get_tune_state(sdioh_info_t *sd);
+extern int sdstd_3_get_data_state(sdioh_info_t *sd);
 extern void sdstd_3_set_tune_state(sdioh_info_t *sd, int state);
 extern uint8 sdstd_3_get_tuning_exp(sdioh_info_t *sd);
 extern uint32 sdstd_3_get_uhsi_clkmode(sdioh_info_t *sd);
