@@ -22,7 +22,9 @@
 #include "vchiq_core.h"
 #include "vchiq_memdrv.h"
 
+#if defined( CONFIG_VC_VCEB ) || defined( CONFIG_VC_VCEB_MODULE )
 void vceb_add_firmware_downloaded_callback( void (*callback)(void) );
+#endif
 
 /****************************************************************************
 *
@@ -72,7 +74,21 @@ static int __devinit vchiq_memdrv_kona_interface_probe( struct platform_device *
         return -ENOMEM;
     }
 
+#if defined( CONFIG_VC_VCEB ) || defined( CONFIG_VC_VCEB_MODULE )
+    /*
+     * If we're using VCEB, then we register a callback to initialize the 
+     * vchiq stack once the firmware is downloaded to the videocore.
+     */
+
     vceb_add_firmware_downloaded_callback( firmware_downloaded_callback );
+#else
+    /*
+     * If we're not using VCEB, then we assume that the boot loader has already 
+     * loaded the firmware, so we'll go ahead and initialize the vchiq stack.
+     */
+
+    firmware_downloaded_callback();
+#endif
 
     return 0;
 }
