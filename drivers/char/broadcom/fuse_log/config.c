@@ -72,7 +72,7 @@ static void bld_device_status_str( char *buf, int len, char *label, int device )
 		safe_strncat( buf, "-> flash\n", len ) ;
 		break ;
 	case BCMLOG_OUTDEV_RNDIS:
-		safe_strncat( buf, "-> MTT\n", len ) ;
+		safe_strncat( buf, "-> RNDIS\n", len ) ;
 		break ;
 	case BCMLOG_OUTDEV_SDCARD:
 		safe_strncat( buf, "-> SD card\n", len ) ;
@@ -81,7 +81,7 @@ static void bld_device_status_str( char *buf, int len, char *label, int device )
 		safe_strncat( buf, "-> UART\n", len ) ;
 		break ;
 	case BCMLOG_OUTDEV_ACM:
-		safe_strncat( buf, "-> USB serial\n", len ) ;
+		safe_strncat( buf, "-> ACM\n", len ) ;
 		break ;
 	case BCMLOG_OUTDEV_STM:
 		safe_strncat( buf, "-> STM\n", len ) ;
@@ -121,7 +121,10 @@ static int proc_read(char *page, char **start, off_t offset, int count, int *eof
  *		k - CP crash dump -> SD card
  *		l - CP crash dump -> disabled
  *		m - CP crash dump -> RNDIS
- *		s - STM logging
+ *		n - BMTT logging   -> STM
+ *		o - CP crash dump -> STM
+ *		p - CP crash dump -> ACM
+ *		s -  both BMTT and CP crash dump -> STM
  **/
 static ssize_t proc_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {	
@@ -178,6 +181,9 @@ static ssize_t proc_write(struct file *file, const char *buffer, unsigned long c
 			break ;
 		case 'o':
 			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_STM;
+			break ;
+		case 'p':
+			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_ACM;
 			break ;
 
 		}
