@@ -547,7 +547,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 						            			          block_size,
 						                      			  (CSL_AUDRENDER_CB) AUDIO_DRIVER_RenderDmaCallback,
                                         			      aud_drv->stream_id);
-				csl_caph_arm2sp_set_param((UInt32)aud_drv->arm2sp_config.mixMode,(aud_drv->arm2sp_config.instanceID+1)); //0 is instance_none
+				csl_caph_arm2sp_set_param((UInt32)aud_drv->arm2sp_config.mixMode,(aud_drv->arm2sp_config.instanceID));
                 //start render
                 result_code = csl_audio_render_start (aud_drv->stream_id);
             }

@@ -216,6 +216,13 @@ typedef enum
 
 CAPH_LIST_t arm2spPath = LIST_DMA_SRC_DMA;
 
+typedef enum
+{
+	VORENDER_ARM2SP_INSTANCE1,
+	VORENDER_ARM2SP_INSTANCE2,
+	VORENDER_ARM2SP_INSTANCE_TOTAL
+} VORENDER_ARM2SP_INSTANCE_e;
+
 typedef struct
 {
 	UInt32 instanceID; //arm2sp instance
@@ -379,7 +386,7 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 	if(!arm2sp_start[arm2spCfg.instanceID])
 	{
 #if defined(CONFIG_BCM_MODEM) 
-		if(arm2spCfg.instanceID == 1)
+		if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1)
 		{
 			CSL_ARM2SP_Init();
             csl_arm2sp_set_arm2sp((UInt32) arm2spCfg.srOut,
@@ -390,7 +397,7 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
                                   0 );
 
 		}
-		else if(arm2spCfg.instanceID == 2)
+		else if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE2)
 		{
 			CSL_ARM2SP2_Init();
             csl_arm2sp_set_arm2sp2((UInt32) arm2spCfg.srOut,
@@ -1519,7 +1526,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
         (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
 	{
 #if defined(CONFIG_BCM_MODEM) 
-		if(arm2spCfg.instanceID == 1)
+		if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1)
 		{
 			CSL_RegisterARM2SPRenderStatusHandler((void*)&ARM2SP_DMA_Req);
 			// don't start immediately,start the ARM2SP after the 1st DMA interrrupt
@@ -1533,7 +1540,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
                                   0 );
 			*/
 		}
-		else if(arm2spCfg.instanceID == 2)
+		else if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE2)
 		{
 			CSL_RegisterARM2SP2RenderStatusHandler((void*)&ARM2SP2_DMA_Req);
 		}
@@ -2827,14 +2834,14 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
 	{
 #if defined(CONFIG_BCM_MODEM) 
-		if(arm2spCfg.instanceID == 1)
+		if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1)
             csl_arm2sp_set_arm2sp((UInt32) arm2spCfg.srOut,
                                   CSL_ARM2SP_PLAYBACK_NONE,
                                   (CSL_ARM2SP_VOICE_MIX_MODE_t)arm2spCfg.mixMode,
                                   arm2spCfg.numFramesPerInterrupt,
                                   (arm2spCfg.chNumOut == AUDIO_CHANNEL_STEREO)? 1 : 0,
                                   0 );
-		else if(arm2spCfg.instanceID == 2)
+		else if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE2)
             csl_arm2sp_set_arm2sp2((UInt32) arm2spCfg.srOut,
                                   CSL_ARM2SP_PLAYBACK_NONE,
                                   (CSL_ARM2SP_VOICE_MIX_MODE_t)arm2spCfg.mixMode,
@@ -2844,7 +2851,7 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 #endif
 		arm2sp_start[arm2spCfg.instanceID] = FALSE; //reset
 
-		if(arm2sp_start[1] == FALSE && arm2sp_start[2] == FALSE)
+		if(arm2sp_start[0] == FALSE && arm2sp_start[1] == FALSE)
 			memset(&arm2spCfg, 0, sizeof(arm2spCfg));
 
 	}

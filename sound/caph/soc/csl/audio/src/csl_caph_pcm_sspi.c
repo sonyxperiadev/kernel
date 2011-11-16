@@ -732,6 +732,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
             task_conf.cs_sel = SSPI_CS_SEL_CS0;
 		task_conf.rx_sel = (configTx->loopback_enable)
 						   ? SSPI_RX_SEL_COPY_TX0 : SSPI_RX_SEL_RX0;
+		//task_conf.rx_sel = SSPI_RX_SEL_COPY_TX0; //loopback tx to rx
             task_conf.tx_sel = SSPI_TX_SEL_TX0;
             task_conf.div_sel = SSPI_CLK_DIVIDER0;
             task_conf.seq_ptr = 0;
@@ -1536,7 +1537,7 @@ void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_intc_enable_pcm_intr:: \n");
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_intc_disable_pcm_intr:: owner %d, ssp %d.\n", csl_owner, csl_sspid);
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
