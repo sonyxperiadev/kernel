@@ -695,6 +695,30 @@ void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config)
 	return;
 }
 
+#if defined(CONFIG_ARCH_RHEA_B0)
+/****************************************************************************
+*
+*  Function Name:void csl_caph_dma_set_hibuffer_address(CSL_CAPH_DMA_CHNL_e chnl, UInt8* addr)
+*
+*  Description: set hibuffer address
+*
+****************************************************************************/
+void csl_caph_dma_set_hibuffer_address(CSL_CAPH_DMA_CHNL_e chnl, UInt8* addr)
+{
+        CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
+
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_set_hibuffer_address:: \n"));
+
+        if (chnl == CSL_CAPH_DMA_NONE)
+                return;
+
+        caph_aadmac_ch = csl_caph_dma_get_chal_chnl(chnl);
+        chal_caph_dma_set_hibuffer(handle, caph_aadmac_ch, (cUInt32)addr, 0);
+
+        return;
+}
+#endif
+
 /****************************************************************************
 *
 *  Function Name: void csl_caph_dma_switch_buffer(CSL_CAPH_DMA_CONFIG_t chnl_config)

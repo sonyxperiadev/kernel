@@ -24,6 +24,7 @@
 /************************************************************************************************/
 #include <linux/version.h>
 #include <linux/init.h>
+#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/sysdev.h>
@@ -32,7 +33,7 @@
 #include <asm/mach/arch.h>
 #include <mach/io_map.h>
 #include <linux/io.h>
-
+#include <mach/irqs.h>
 #include<mach/clock.h>
 #include<plat/pi_mgr.h>
 #include<mach/pi_mgr.h>
@@ -42,7 +43,7 @@
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif
-
+#include "pm_params.h"
 #ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
 #endif
@@ -182,11 +183,6 @@ const char* _rhea__event2str[] =
 
 #endif
 
-struct pwr_mgr_info rhea_pwr_mgr_info = {
-	.num_pi = PI_MGR_PI_ID_MAX,
-	.base_addr = KONA_PWRMGR_VA,
-	.flags = PM_PMU_I2C,
-};
 
 struct rhea_event_table
 {
@@ -238,114 +234,46 @@ static const struct rhea_event_table event_table[] = {
 
 };
 
-static const struct i2c_cmd i2c_cmd[] = {
-							{REG_ADDR,0},		//0 - NOP
-							{JUMP_VOLTAGE,0},		//1 - jump to address based on current voltage request
-							{REG_ADDR,0},		//other:2 - NOP
-							{SET_PC_PINS,0xC0},	//3 - Set PC3/4 pins to 0 to begin transaction (HW has semaphore)
-							{REG_ADDR,0},		//4 - NOP
-							{REG_ADDR,0x20},	//5 - Set Address for i2cmmhs BSC_CS register
-							{REG_DATA,0x03},	//6 - Set Start condition - write 3 to CS register
-							{WAIT_TIMER,0x10},	//7 - Wait..
-							{REG_DATA,1},  		//8 - Clear Start Condition - write 1 to CS
-							{WAIT_TIMER,0x08},	//9 - Wait..
-							{I2C_DATA,0x10},	//10 - PMU client addr  - 8 ..write to FIFO
-							{WAIT_TIMER,0x80},	//11 - Wait..
-							{I2C_DATA,0xC0},	//12 - PMU register addr C0 (CSRSTRL1)
-							{WAIT_TIMER,0x80},	//13 - Wait..
-							{I2C_VAR,0},		//14 - Data - Write the requested voltage
-							{WAIT_TIMER,0x80},	//15 - Wait..
-							{SET_PC_PINS,0xCC},	//16 - Set PC3/4 to 1 to signal End of transaction
-							{END,0},			//17 - End
-							{REG_ADDR,0},		//18 - NOP
-							{REG_ADDR,0},		//19 - NOP
-							{REG_ADDR,0},		//20 - NOP
-							{REG_ADDR,0},		//21 - NOP
-							{REG_ADDR,0},		//22 - NOP
-							{REG_ADDR,0},		//23 - NOP
-							{REG_ADDR,0},		//24 - NOP
-							{REG_ADDR,0},		//25 - NOP
-							{REG_ADDR,0},		//26 - NOP
-							{REG_ADDR,0},		//27 - NOP
-							{REG_ADDR,0},		//28 - NOP
-							{REG_ADDR,0},		//29 - NOP
-							{REG_ADDR,0},		//30 - NOP
-							{REG_ADDR,0},		//31 - NOP
-							{REG_ADDR,0},		//32 - NOP
-							{REG_ADDR,0},		//33 - NOP
-							{REG_ADDR,0},		//34 - NOP
-							{REG_ADDR,0},		//35 - NOP
-							{REG_ADDR,0},		//36 - NOP
-							{REG_ADDR,0},		//37 - NOP
-							{REG_ADDR,0},		//38 - NOP
-							{REG_ADDR,0},		//39 - NOP
-							{REG_ADDR,0},		//40 - NOP
-							{REG_ADDR,0},		//41 - NOP
-							{REG_ADDR,0},		//42 - NOP
-							{REG_ADDR,0},		//43 - NOP
-							{REG_ADDR,0},		//44 - NOP
-							{REG_ADDR,0},		//set2/zero:45 - NOP
-							{SET_PC_PINS,0x30},	//46 - Set PC1 pins to 0
-							{REG_ADDR,0},		//47 -NOP
-							{END,0},			//48 -END
-							{REG_ADDR,0},		//set1:49 -NOP
-							{SET_PC_PINS,0x31},	//50 - Set PC1 pins to 1
-							{REG_ADDR,0},		//51 -NOP
-							{END,0},			//52 -END
-							{REG_ADDR,0},		//53 - NOP
-							{REG_ADDR,0},		//54 - NOP
-							{REG_ADDR,0},		//55 - NOP
-							{REG_ADDR,0},		//56 - NOP
-							{REG_ADDR,0},		//57 - NOP
-							{REG_ADDR,0},		//58 - NOP
-							{REG_ADDR,0},		//59 - NOP
-							{REG_ADDR,0},		//60 - NOP
-							{REG_ADDR,0},		//61 - NOP
-							{REG_ADDR,0},		//62 - NOP
-							{REG_ADDR,0},		//63 - NOP
 
-						  };
+struct pwr_mgr_info rhea_pwr_mgr_info = {
+	.num_pi = PI_MGR_PI_ID_MAX,
+	.base_addr = KONA_PWRMGR_VA,
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+	.flags = PM_PMU_I2C|I2C_SIMULATE_BURST_MODE,
+	.pwrmgr_intr = BCM_INT_ID_PWR_MGR,
+#else
+	.flags = PM_PMU_I2C,
+#endif
 
-/*Default voltage lookup table
-Need to move this to board-file
-*/
-static u8 pwrmgr_default_volt_lut[] =
-								{
-									0x03,
-									0x03,
-									0x04,
-									0x04,
-									0x04,
-									0x0e,
-									0x0e,
-									0x0e,
-									0x0e,
-									0x0e,
-									0x0e,
-									0x0e,
-									0x13,
-									0x13,
-									0x13,
-									0x13
-								};
-
+};
 
 int __init rhea_pwr_mgr_init()
 {
-	struct v0x_spec_i2c_cmd_ptr v_ptr;
+
 	int i;
 	struct pi* pi;
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	u32 reg_val = 0;
+#endif
 	struct pm_policy_cfg cfg;
 	cfg.ac = 1;
 	cfg.atl = 0;
 
-	v_ptr.other_ptr = 2;
-	v_ptr.set2_val = 1; /*Retention voltage inx*/
-	v_ptr.set2_ptr = 45;
-	v_ptr.set1_val = 2;/*wakeup from retention voltage inx*/
-	v_ptr.set1_ptr = 49;
-	v_ptr.zerov_ptr = 45; /*Not used for Rhea*/
+	rhea_pwr_mgr_info.i2c_cmds = pwrmgr_init_param.cmd_buf;
+	rhea_pwr_mgr_info.num_i2c_cmds = pwrmgr_init_param.cmb_buf_size;
+	rhea_pwr_mgr_info.i2c_var_data = pwrmgr_init_param.def_vlt_tbl;
+	rhea_pwr_mgr_info.num_i2c_var_data = pwrmgr_init_param.vlt_tbl_size;
+	rhea_pwr_mgr_info.i2c_cmd_ptr[VOLT0] = pwrmgr_init_param.v0ptr;
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+	rhea_pwr_mgr_info.i2c_rd_off = pwrmgr_init_param.i2c_rd_off;
+	rhea_pwr_mgr_info.i2c_rd_slv_addr_off = pwrmgr_init_param.i2c_rd_slv_addr_off;
+	rhea_pwr_mgr_info.i2c_rd_reg_addr_off = pwrmgr_init_param.i2c_rd_reg_addr_off;
+	rhea_pwr_mgr_info.i2c_wr_off = pwrmgr_init_param.i2c_wr_off;
+	rhea_pwr_mgr_info.i2c_wr_slv_addr_off = pwrmgr_init_param.i2c_wr_slv_addr_off;
+	rhea_pwr_mgr_info.i2c_wr_reg_addr_off = pwrmgr_init_param.i2c_wr_reg_addr_off;
+	rhea_pwr_mgr_info.i2c_wr_val_addr_off = pwrmgr_init_param.i2c_wr_val_addr_off;
+	rhea_pwr_mgr_info.i2c_seq_timeout = pwrmgr_init_param.i2c_seq_timeout;
+#endif
 
 	pwr_mgr_init(&rhea_pwr_mgr_info);
 	rhea_pi_mgr_init();
@@ -377,15 +305,11 @@ int __init rhea_pwr_mgr_init()
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
 	pwr_mgr_event_set(SOFTWARE_0_EVENT,1);
 
-		/*Init I2c seq*/
-	pwr_mgr_pm_i2c_enable(false);
-	/*Program I2C sequencer*/
-	pwr_mgr_pm_i2c_cmd_write(i2c_cmd,ARRAY_SIZE(i2c_cmd));
-	/*Program voltage lookup table
-	AVS driver may chnage this later*/
-	pwr_mgr_pm_i2c_var_data_write(pwrmgr_default_volt_lut,VLT_LUT_SIZE);
-	/*populate the jump voltage table */
-	pwr_mgr_set_v0x_specific_i2c_cmd_ptr(VOLT0,&v_ptr);
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+	pwr_mgr_event_set(VREQ_NONZERO_PI_MODEM_EVENT,1);
+#endif
+
+	pwr_mgr_set_pc_clkreq_override(PC1,true,1);
 	pwr_mgr_pm_i2c_enable(true);
 
 	/*Init event table*/
@@ -432,7 +356,7 @@ int __init rhea_pwr_mgr_init()
 	    pi_init_state(pi);
 	}
 
-return 0;
+	return 0;
 }
 early_initcall(rhea_pwr_mgr_init);
 

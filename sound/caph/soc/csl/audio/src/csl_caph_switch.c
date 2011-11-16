@@ -463,6 +463,16 @@ static CAPH_SWITCH_TRIGGER_e csl_caph_switch_get_trigger(CSL_CAPH_SWITCH_TRIGGER
             chal_trig = CAPH_PASSTHROUGH_CH1_FIFO_THRESMET;
             break;
 
+#if defined(CONFIG_ARCH_RHEA_B0)
+        case CSL_CAPH_TRIG_PASSTHROUGH_CH3_FIFO_THRESMET:
+            chal_trig = CAPH_PASSTHROUGH_CH3_FIFO_THRESMET;
+            break;
+
+        case CSL_CAPH_TRIG_PASSTHROUGH_CH4_FIFO_THRESMET:
+            chal_trig = CAPH_PASSTHROUGH_CH4_FIFO_THRESMET;
+            break;
+#endif
+
         case CSL_CAPH_TRIG_TAPSDOWN_CH1_NORM_INT:
             chal_trig = CAPH_TAPSDOWN_CH1_NORM_INT;
             break;

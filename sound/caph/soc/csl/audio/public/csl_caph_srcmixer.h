@@ -39,10 +39,17 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "csl_caph_cfifo.h"
 #include "csl_caph_switch.h"
 
+#if defined(CONFIG_ARCH_RHEA_B0)
+/* Total number of input channels */
+#define MAX_INCHNLS 0x9
+/* Total number of single input channels */
+#define MAX_SINGLE_INCHNLS 0xC
+#else
 /* Total number of input channels */
 #define MAX_INCHNLS 0x7
 /* Total number of single input channels */
 #define MAX_SINGLE_INCHNLS 0xA
+#endif
 /* Total number of output channels */
 #define OUTCHNL_MAX_NUM_CHNL 0x5
 /* Bit Selection for Mixer Spkr gain */
@@ -113,6 +120,12 @@ typedef enum
                                     |CSL_CAPH_SRCM_STEREO_PASS_CH2),    
 	CSL_CAPH_SRCM_STEREO_CH5 = (CSL_CAPH_SRCM_STEREO_CH5_L
                                 |CSL_CAPH_SRCM_STEREO_CH5_R),
+#if defined(CONFIG_ARCH_RHEA_B0)
+	CSL_CAPH_SRCM_MONO_PASS_CH3 = 0x0400,
+	CSL_CAPH_SRCM_MONO_PASS_CH4 = 0x0800,
+	CSL_CAPH_SRCM_MONO_PASS_CH = (CSL_CAPH_SRCM_MONO_PASS_CH3
+                                |CSL_CAPH_SRCM_MONO_PASS_CH4),	
+#endif	
 }CSL_CAPH_SRCM_INCHNL_e;
 
 /**
