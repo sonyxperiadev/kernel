@@ -90,8 +90,8 @@
 #include <mach/io_map.h>
 #include <mach/aram_layout.h>
 
-#include <linux/vchiq_platform_data_hana.h>
-#include <linux/vchiq_platform_data_memdrv_hana.h>
+#include <vchiq_platform_data_kona.h>
+#include <vchiq_platform_data_memdrv_kona.h>
 
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
@@ -1131,7 +1131,7 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 #define IPC_SHARED_CHANNEL_VIRT     ( KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
 #define IPC_SHARED_CHANNEL_PHYS     ( INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
 
-static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
+static VCHIQ_PLATFORM_DATA_MEMDRV_KONA_T vchiq_display_data_memdrv_kona = {
     .memdrv = {
         .common = {
             .instance_name = "display",
@@ -1144,10 +1144,10 @@ static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
 };
 
 static struct platform_device vchiq_display_device = {
-    .name = "vchiq_memdrv_hana",
+    .name = "vchiq_memdrv_kona",
     .id = 0,
     .dev = {
-        .platform_data = &vchiq_display_data_memdrv_hana,
+        .platform_data = &vchiq_display_data_memdrv_kona,
     },
 };
 
