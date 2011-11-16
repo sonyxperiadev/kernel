@@ -102,8 +102,9 @@
 
 #define PM_POLICY_MASK	0x7
 
-#define CCU_POLICY(policy) ((policy) & 0x3)
-#define IS_ACTIVE_POLICY(policy)	((policy) & 0x4)
+#define CCU_POLICY(p) ((p) & 0x3)
+#define IS_ACTIVE_POLICY(p)	((p) & 0x4)
+#define IS_SHUTDOWN_POLICY(p) ((p) == 0)
 
 /*I2C commands - 4 bits*/
 
