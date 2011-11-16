@@ -31,6 +31,7 @@ EXTRA_CFLAGS += -I$(src)/audio/audio_vdriver/public/
 EXTRA_CFLAGS += -I$(src)/audio/public/
 EXTRA_CFLAGS += -I$(src)/audio/audio_datadriver/public/
 EXTRA_CFLAGS += -I$(src)/audio/voif_handler/public/
+
 #CSL header files
 EXTRA_CFLAGS += -I$(src)/soc/csl/audio/public/
 EXTRA_CFLAGS += -I$(src)/soc/csl/dsp/public/

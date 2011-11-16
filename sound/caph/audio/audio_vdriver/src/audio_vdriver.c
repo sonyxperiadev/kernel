@@ -42,7 +42,7 @@
 #include "audio_consts.h"
 #include "dspcmd.h"
 #include "csl_apcmd.h"
-#include "audio_consts.h"
+
 #include "bcm_fuse_sysparm_CIB.h"
 #include "ostask.h"
 #include "osheap.h"
@@ -77,7 +77,11 @@ typedef void (*AUDDRV_User_CB) (UInt32 param1, UInt32 param2, UInt32 param3);
 //=============================================================================
 // Private Type and Constant declarations
 //=============================================================================
-
+#if defined(CONFIG_BCM_MODEM) 
+#define AUDIO_MODEM(a) a
+#else
+#define AUDIO_MODEM(a)      
+#endif
 
 //static Boolean voiceInPathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN for both voiceIn and voiceOut
 static Boolean voicePlayOutpathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN
@@ -182,23 +186,20 @@ void AUDDRV_Init( void )
 	if (sAudDrv.isRunning == TRUE)
 		return;
 	/* register DSP VPU status processing handlers */
-#if defined(CONFIG_BCM_MODEM) 
-	CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);
+
+	AUDIO_MODEM(CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);)
 #if 0  // These features are not needed in LMP now.
-	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
-	CSL_RegisterUSBStatusHandler((USBStatusCB_t)&AUDDRV_USB_HandleDSPInt);
+	AUDIO_MODEM(CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);)
+	AUDIO_MODEM(CSL_RegisterUSBStatusHandler((USBStatusCB_t)&AUDDRV_USB_HandleDSPInt);)
 #endif
-	CSL_RegisterVoIPStatusHandler((VoIPStatusCB_t)&VOIP_ProcessVOIPDLDone);
-	CSL_RegisterMainAMRStatusHandler((MainAMRStatusCB_t)&AP_ProcessStatusMainAMRDone);
-	CSL_RegisterARM2SPRenderStatusHandler((ARM2SPRenderStatusCB_t)&ARM2SP_Render_Request);
-	CSL_RegisterARM2SP2RenderStatusHandler((ARM2SP2RenderStatusCB_t)&ARM2SP2_Render_Request);
-	CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);
-	CSL_RegisterVOIFStatusHandler((VOIFStatusCB_t)&VOIF_Buffer_Request);
+	AUDIO_MODEM(CSL_RegisterVoIPStatusHandler((VoIPStatusCB_t)&VOIP_ProcessVOIPDLDone);)
+	AUDIO_MODEM(CSL_RegisterMainAMRStatusHandler((MainAMRStatusCB_t)&AP_ProcessStatusMainAMRDone);)
+	AUDIO_MODEM(CSL_RegisterARM2SPRenderStatusHandler((ARM2SPRenderStatusCB_t)&ARM2SP_Render_Request);)
+	AUDIO_MODEM(CSL_RegisterARM2SP2RenderStatusHandler((ARM2SP2RenderStatusCB_t)&ARM2SP2_Render_Request);)
+	AUDIO_MODEM(CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);)
+	AUDIO_MODEM(CSL_RegisterVOIFStatusHandler((VOIFStatusCB_t)&VOIF_Buffer_Request);)
 
 	Audio_InitRpc();
-#else
-	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Init : dummy for AP only (no DSP)");
-#endif
 	sAudDrv.isRunning = TRUE;
 }
 
@@ -302,11 +303,7 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 
 	// The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done since it is a command via CP.
 		OSTASK_Sleep(1);
-#if defined(CONFIG_BCM_MODEM) 
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
-						FALSE,
-						FALSE);
-#endif
+		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,FALSE,FALSE);)
 	}
 	else
 	{
@@ -488,11 +485,7 @@ void AUDDRV_Telephony_Deinit (void *pData)
 
 		if(currVoiceSpkr == AUDIO_SINK_LOUDSPK)
 		{
-#if defined(CONFIG_BCM_MODEM) 
-			VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
-							FALSE,
-							FALSE);
-#endif
+			AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,FALSE,FALSE);)
 		}
 
 #if defined(ENABLE_DMA_VOICE)
@@ -567,11 +560,7 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDIO_SOURCE_Enum_t mic,
 	{
 		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
-#if defined(CONFIG_BCM_MODEM) 
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
-							FALSE,
-							FALSE);
-#endif
+		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,FALSE,FALSE);)
 	}	
 	
 	//Enable the new speaker path
@@ -632,11 +621,7 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDIO_SOURCE_Enum_t mic,
 
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
-#if defined(CONFIG_BCM_MODEM) 
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
-							FALSE,
-							FALSE); //integrate SDB CL 366484
-#endif
+		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,FALSE,FALSE);)  //integrate SDB CL 366484
 	}	
 
 	((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
