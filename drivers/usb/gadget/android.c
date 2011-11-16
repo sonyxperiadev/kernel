@@ -366,7 +366,7 @@ static void rndis_function_cleanup(struct android_usb_function *f)
 static int rndis_function_bind_config(struct android_usb_function *f,
 					struct usb_configuration *c)
 {
-	int ret;
+	int ret = 0;
 	struct rndis_function_config *rndis = f->config;
 
 	if (!rndis) {
@@ -1254,7 +1254,8 @@ void set_enable_store(char *str, int value)
 		 */
 		if(!strcmp(str,"rndis")){
 			list_for_each_safe(pos, n, &dev->enabled_functions){
-				f = list_entry(pos, struct android_usb_function, enabled_list);
+				if(pos)
+					f = list_entry(pos, struct android_usb_function, enabled_list);
 				if (!strcmp(f->name, "mass_storage")
 					|| !strcmp(f->name, "mtp")) {
 					f->enabled = 0;
@@ -1430,7 +1431,8 @@ composite_uevent(struct device *dev, struct kobj_uevent_env *env)
 	}
 	list_for_each_safe(pos, n, &adev->enabled_functions)
 	{
-		f = list_entry(pos, struct android_usb_function, enabled_list);
+		if(pos)
+			f = list_entry(pos, struct android_usb_function, enabled_list);
 		if(pos && f && !strcmp(f->name, name)){
 			enabled = f->enabled;
 		}

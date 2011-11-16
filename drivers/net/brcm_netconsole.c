@@ -884,20 +884,7 @@ static int brcm_netconsole_netdev_event(struct notifier_block *this,
 	list_for_each_entry(nt, &target_list, list) {
 		brcm_netconsole_target_get(nt);
 		if (nt->np.dev == dev) {
-			switch (event) {
-			case NETDEV_CHANGENAME:
-				strlcpy(nt->np.dev_name, dev->name, IFNAMSIZ);
-				break;
-			case NETDEV_UNREGISTER:
-				if (!nt->enabled)
-					break;
-				netpoll_cleanup(&nt->np);
-				nt->enabled = 0;
-				pr_info("netconsole: network logging stopped"
-					", interface %s unregistered\n",
-					dev->name);
-				break;
-			}
+			strlcpy(nt->np.dev_name, dev->name, IFNAMSIZ);
 		}
 		brcm_netconsole_target_put(nt);
 	}
