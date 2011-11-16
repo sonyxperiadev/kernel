@@ -536,6 +536,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->bcm_otg_work_queue = create_workqueue("bcm_otg_events");
 	if (xceiv_data->bcm_otg_work_queue == NULL) {
 		dev_warn(&pdev->dev, "BCM OTG events work queue creation failed\n");
+		kfree(xceiv_data);
 		return -ENOMEM;
 	}
 
