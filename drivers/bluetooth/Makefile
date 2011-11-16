@@ -29,3 +29,6 @@ hci_uart-$(CONFIG_BT_HCIUART_BCSP)	+= hci_bcsp.o
 hci_uart-$(CONFIG_BT_HCIUART_LL)	+= hci_ll.o
 hci_uart-$(CONFIG_BT_HCIUART_ATH3K)	+= hci_ath.o
 hci_uart-objs				:= $(hci_uart-y)
+
+obj-$(CONFIG_BCM_RFKILL)        += bcmbt_rfkill.o
+obj-$(CONFIG_BCM_BT_LPM)        += bcmbt_lpm.o
