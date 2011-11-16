@@ -39,7 +39,7 @@
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_khubaon_rst_mgr_reg.h>
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_SAMOA)
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_SAMOA) || defined(CONFIG_ARCH_ISLAND)
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
@@ -126,8 +126,12 @@ static struct kona_timer_module timer_module_list[NUM_OF_TIMER_MODULES] = {
 
 /* Local static functions */
 static struct kona_timer_module * __get_timer_module(char *name);
-static int __config_aon_hub_timer_clock(unsigned int rt);
-static int __config_slave_timer_clock(unsigned int rt);
+static int __config_aon_hub_timer_clock(struct kona_timer_module *pktm,
+	unsigned int rate,
+	unsigned int reg_val);
+static int __config_slave_timer_clock(struct kona_timer_module *pktm,
+	unsigned int rate,
+	unsigned int reg_val);
 static inline void __disable_all_channels(void __iomem *reg_base);
 static inline void __disable_channel(void __iomem *reg_base, int ch_num);
 static inline void __get_counter (void __iomem *reg_base, unsigned long *msw,
@@ -216,36 +220,95 @@ int kona_timer_module_set_rate(char* name, unsigned int rate)
 	struct kona_timer_module *pktm = NULL;
 	int ret;
 	unsigned long flags;
+	unsigned int reg_val;
 
 	pktm = __get_timer_module(name);
-	if ( (pktm == NULL) || (pktm->cfg_state == CONFIGURED_BUSY)) {
+	if (pktm == NULL)
 		return -1;
-	}
 
 	/* 
-	 * Based on the timer name and the speed requested configure the 
-	 * appropriate clock registers.
-	 * This implementation should be changed to call the clock APIs
-	 * once they are up.
+	 * While multiple clients want to set the rate for the same timer, we
+	 * need protection
 	 */
+
 	spin_lock_irqsave (&pktm->lock, flags);
 
-	if (pktm->reg_base == IOMEM(KONA_SYSTMR_VA))
-		ret = __config_slave_timer_clock(rate);
-	else
-		ret = __config_aon_hub_timer_clock(rate);
+	/* given time is already configured */
+	if (pktm->cfg_state == CONFIGURED_BUSY)
+		goto err_out;
 
 #ifdef CONFIG_ARCH_RHEA
 	/* Configure KONA Timer count in 32 bit mode */
 	writel(0x0, KONA_CHIPREG_VA + CHIPREG_HUB_TIMER_WIDTH_OFFSET);
 #endif
-
-	if (ret != -1) {
-		pktm->rate = rate;
-		pktm->cfg_state = CONFIGURED_FREE;
+	/*
+	 * Updating the configured state should also be protected,
+	 * there should not be a situation where we have set the rate
+	 * but before updating the state variable there is a context switch.
+	 *
+	 * It may sound odd to do this before actualling setting the rate.
+	 * But we know for sure that we have taken a decission to set the
+	 * timer to the 'rate' here and the following __config_xx functions
+	 * will set the timer to this rate. We cannot protect this full
+	 * function with spin lock since the clock calls invoked by the
+	 * __config_xx functions acquire mutex-s which sleeps and which leads
+	 * to theoretical deadlock as reported by CONFIG_DEBUG_LOCKDEP.
+	 * So we do all the operations that needs to be protected using
+	 * spin_lock once and then release it and call the sub functions to
+	 * configure the clock. From the sub-functions if we are to do local
+	 * settings (if clock call fails) then we re-acquire the spin_lock
+	 *
+	 */
+	if (pktm->reg_base == IOMEM(KONA_SYSTMR_VA)) {
+		/* Slave timer only supports 32KHz and 1MHz */
+		if (rate == 32000)
+			reg_val = 1;
+		else if (rate == 1000000)
+			reg_val = 0;
+		else
+			goto err_out;
+	} else {
+		/* AON timer only supports 32KHz, 1MHz and 19.5 MHz*/
+		switch (rate) {
+		case 32000:
+			/* 32 KHz */
+			reg_val = 0;
+			break;
+		case 1000000:
+			/* 1 MHz */
+			reg_val = 1;
+			break;
+		case 19500000:
+			/* 19.5 MHz */
+			reg_val = 2;
+			break;
+		default:
+			pr_err("aon hub timer clock: Invalid value requested %d\r\n", rate);
+			goto err_out;
+		}
 	}
 
+	pktm->rate = rate;
+	pktm->cfg_state = CONFIGURED_FREE;
 	spin_unlock_irqrestore (&pktm->lock, flags);
+
+	/*
+	 * Based on the timer name and the speed requested configure the
+	 * appropriate clock registers. Note that these sub-functions first
+	 * try to make clk calls. If the clk call fails which means the clock
+	 * manager is not up yet, then it will peform the configuration on its
+	 * own.
+	 */
+	if (pktm->reg_base == IOMEM(KONA_SYSTMR_VA))
+		ret = __config_slave_timer_clock(pktm, rate, reg_val);
+	else
+		ret = __config_aon_hub_timer_clock(pktm, rate, reg_val);
+	goto out;
+
+err_out:
+	spin_unlock_irqrestore (&pktm->lock, flags);
+	ret = -1;
+out:
 	return ret;
 }
 EXPORT_SYMBOL(kona_timer_module_set_rate);
@@ -606,7 +669,9 @@ static struct kona_timer_module * __get_timer_module(char *name)
 	return 0;
 }
 
-static int  __config_slave_timer_clock(unsigned int rt)
+static int __config_slave_timer_clock(struct kona_timer_module *pktm,
+	unsigned int rate,
+	unsigned int reg_val)
 {
 	void __iomem *slaveClockMgr_regs = IOMEM(KONA_SLV_CLK_VA);
 #ifdef CONFIG_PERIPHERAL_TIMER_FIX
@@ -615,18 +680,12 @@ static int  __config_slave_timer_clock(unsigned int rt)
 #if !defined(CONFIG_ARCH_SAMOA) || defined(CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY)
 	uint32_t old_enable;
 #endif
-	uint32_t val, mask, rate_val;
+	uint32_t val, mask;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
 #endif
+	unsigned long flags;
 
-	/* Slave timer only supports 32KHz and 1MHz */
-	if (rt == 32000)
-		rate_val = 1;
-	else if (rt == 1000000)
-		rate_val = 0;
-	else
-		return -1;
 /*
  * Protect the clock APIs in the CONFIG_HAVE_CLK macro.
  * In case if the platform does not support clock manager we should still be
@@ -650,15 +709,14 @@ static int  __config_slave_timer_clock(unsigned int rt)
 		pr_err("clk_get failed, so clock manager is not up use local calls \r\n");
 		goto local_clk_cfg;
 	}
-	clk_set_rate(clk, rt);
+	clk_set_rate(clk, rate);
 	clk_enable(clk);
 	return 0;
 #endif
-
 local_clk_cfg:
-
+	spin_lock_irqsave (&pktm->lock, flags);
 	/* Adjust clock source to 1Mhz */
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_ISLAND)
 	/* unlock slave clock manager */
 	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
 	old_enable = val & 0x1;	
@@ -670,7 +728,7 @@ local_clk_cfg:
 	mask = KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
 	kona_set_reg_field(slaveClockMgr_regs + KPS_CLK_MGR_REG_TIMERS_DIV_OFFSET,
 			mask, KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT,
-		rate_val);
+		reg_val);
 
 
 	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET);
@@ -756,7 +814,7 @@ local_clk_cfg:
 	 * 1MHz is from frac_1M. The 32KHz clock is from PMU and is always ON.
 	 */
 #ifndef CONFIG_ARCH_SAMOA
-	if (rate_val == 1) {
+	if (reg_val == 1) {
 		/* unlock root clock manager */
 		val = readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
 		old_enable = val & 0x1;	
@@ -792,10 +850,13 @@ local_clk_cfg:
 	}
 #endif
 #endif
+	spin_unlock_irqrestore (&pktm->lock, flags);
 	return 0;
 }
 
-static int  __config_aon_hub_timer_clock(unsigned int rt)
+static int __config_aon_hub_timer_clock(struct kona_timer_module *pktm,
+	unsigned int rate,
+	unsigned int reg_val)
 {
 	/*
 	 * The source of all the 3 clocks 32KHz, 1MHz and 19.5MHz
@@ -804,29 +865,11 @@ static int  __config_aon_hub_timer_clock(unsigned int rt)
 	 * so all are ON
 	 */
 	void __iomem *reg_base = IOMEM(KONA_AON_CLK_VA);
-	unsigned long val, reg_val, old_enable; 
+	unsigned long val, old_enable;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
 #endif
-
-	/* AON timer only supports 32KHz, 1MHz and 19.5 MHz*/
-	switch (rt) {
-		case 32000:
-			/* 32 KHz */
-			val = 0;
-			break;
-		case 1000000:
-			/* 1 MHz */
-			val = 1;
-			break;
-		case 19500000:
-			/* 19.5 MHz */
-			val = 2;
-			break;
-		default:
-			pr_err("aon hub timer clock: Invalid value requested %d\r\n", rt);
-			return -1;
-	}
+	unsigned long flags;
 
 /*
  * Protect the clock APIs in the CONFIG_HAVE_CLK macro.
@@ -851,12 +894,13 @@ static int  __config_aon_hub_timer_clock(unsigned int rt)
 		pr_err("clk_get failed, so clock manager is not up use local calls \r\n");
 		goto local_clk_cfg;
 	}
-	clk_set_rate(clk,rt);
+	clk_set_rate(clk,rate);
 	clk_enable(clk);
 	return 0;
 #endif
 
 local_clk_cfg:
+	spin_lock_irqsave(&pktm->lock, flags);
 
 	/* unlock root clock manager */
 	reg_val = readl(reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
@@ -915,6 +959,7 @@ local_clk_cfg:
 	reg_val |= old_enable & 0x1;
 	writel(val, reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
 
+	spin_unlock_irqrestore (&pktm->lock, flags);
 	return 0;
 }
 
