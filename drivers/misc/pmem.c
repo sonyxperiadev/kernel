@@ -1092,6 +1092,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 	data->index = src_data->index;
 	data->flags |= PMEM_FLAGS_CONNECTED;
 	data->master_fd = connect;
+	data->size = src_data->size;
 	data->master_file = src_file;
 
 err_bad_file:
