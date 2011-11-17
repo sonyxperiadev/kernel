@@ -219,19 +219,19 @@ static void ProcessReport(unsigned char *buf, int buflen)
    {
       for (i = 0; i < MAX_SUPPORT_POINT; i++)
       {
-         if (PointBuf[i].Status >= 0)
+         if (PointBuf[i].Status > 0)
          {
             input_report_abs(input_dev, ABS_MT_TRACKING_ID, i);         
             input_report_abs(input_dev, ABS_MT_TOUCH_MAJOR, PointBuf[i].Status);
             input_report_abs(input_dev, ABS_MT_WIDTH_MAJOR, 0);
             input_report_abs(input_dev, ABS_MT_POSITION_X, PointBuf[i].X);
             input_report_abs(input_dev, ABS_MT_POSITION_Y, PointBuf[i].Y);
-
-            input_mt_sync(input_dev);
-
-            if (PointBuf[i].Status == 0)
-               PointBuf[i].Status--;
+            TS_DEBUG("input sync point data [%d]!\n", i);
          }
+         input_mt_sync(input_dev);
+
+         if (PointBuf[i].Status == 0)
+            PointBuf[i].Status--;
       }
       input_sync(input_dev);
       TS_DEBUG("input sync point data done!\n");
