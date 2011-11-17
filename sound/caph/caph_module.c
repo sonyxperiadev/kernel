@@ -119,8 +119,9 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	sgpCaph_chip->card = card;
 	
 	card->dev = &pdev->dev;
-	strncpy(card->driver, pdev->dev.driver->name, sizeof(card->driver));
-
+	strncpy(card->driver, pdev->dev.driver->name, sizeof(card->driver)-1);
+	//add Null terminating character
+	card->driver[sizeof(card->driver)-1]='\0';
 	//PCM interface	
 	err = PcmDeviceNew(card);
 	if (err)
