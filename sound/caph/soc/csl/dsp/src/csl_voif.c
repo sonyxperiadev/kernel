@@ -63,4 +63,5 @@ Int16* CSL_GetULVoIFBuffer(void)
 Int16* CSL_GetDLVoIFBuffer(UInt16 sampleCount, UInt16 dlBufferIndex)
 {
 	return(&vp_shared_mem->shared_voif_DL_buffer[dlBufferIndex*sampleCount]);
+
 }
