@@ -21,8 +21,10 @@
 
 #include "vcinclude/bigisland_chip/ipc_shared_mem.h"
 
-#define IPC_SHARED_MEM_SLOTS      (IPC_SHARED_MEM_BASE + IPC_SHARED_MEM_VC_OFFSET)
-#define IPC_SHARED_MEM_SLOTS_SIZE (IPC_SHARED_MEM_CLOCK_DEBUG_OFFSET)
+/* It turns out the modem/dsp is using 4KB of the VideoCore space, so leave a gap */
+#define IPC_SHARED_MEM_VC_AVOID      (0x3000)
+#define IPC_SHARED_MEM_SLOTS      (IPC_SHARED_MEM_BASE + IPC_SHARED_MEM_VC_OFFSET + IPC_SHARED_MEM_VC_AVOID)
+#define IPC_SHARED_MEM_SLOTS_SIZE (IPC_SHARED_MEM_CLOCK_DEBUG_OFFSET - IPC_SHARED_MEM_VC_AVOID)
 
 #if defined(VCHIQ_SM_ALLOC_VCDDR)
 #define VCHIQ_IPC_SHARED_MEM_SIZE            0x1E000  /* ARM and VC channels. */ 
