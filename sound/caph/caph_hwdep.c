@@ -388,7 +388,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 					{
 						mode = AUDCTRL_GetAudioMode();
 						//set the audio mode to WB
-						AUDCTRL_SetAudioMode((AudioMode_t)(mode + AUDIO_MODE_NUMBER));
+						AUDCTRL_SaveAudioModeFlag((AudioMode_t)(mode + AUDIO_MODE_NUMBER));
 					}
 
 	

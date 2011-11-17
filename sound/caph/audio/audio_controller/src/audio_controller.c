@@ -661,9 +661,12 @@ void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode )
 //**********************************************************************/
 void AUDCTRL_SetAudioMode( AudioMode_t mode )
 {
+	Boolean bClk = csl_caph_QueryHWClock();
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode: mode = %d\n",  mode);
 	AUDCTRL_SaveAudioModeFlag( mode );
+	if(!bClk) csl_caph_ControlHWClock(TRUE); //enable clock if it is not enabled.
 	AUDDRV_SetAudioMode( mode, AUDDRV_MIC1|AUDDRV_MIC2|AUDDRV_SPEAKER);
+	if(!bClk) csl_caph_ControlHWClock(FALSE); //disable clock if it is enabled by this function.
 
 //load PMU gain
 }
