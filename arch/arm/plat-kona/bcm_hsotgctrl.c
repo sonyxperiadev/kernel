@@ -248,6 +248,21 @@ int bcm_hsotgctrl_bc_reset(void)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_reset);
 
+int bcm_hsotgctrl_bc_status(unsigned long *status)
+{
+	unsigned int val;
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
+
+	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+		return -EIO;
+
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_STATUS_OFFSET);
+	*status = val;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_status);
+
 int bcm_hsotgctrl_bc_vdp_src_off(void)
 {
 	int val;

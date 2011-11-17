@@ -519,6 +519,13 @@ static void em_algorithm(struct work_struct *work)
 		pr_em(FLOW, "%s, cstate=%d, ctype=%d, ccurr=%d, czone=%d, ifc=%d, iqc=%d, vf=%d\n",
 		__func__, pem->charge_state, pem->chrgr_type, pem->chrgr_curr, pem->charge_zone,
 				pem->icc_fc, pem->icc_qc, pem->vfloat);
+
+	/* Workaround for bcm59039 as its watchdog is enabled by otp,
+	 and can't be disabled. This wordaround needs to be removed
+	 once pmu watchdog driver in place*/
+	bcmpmu->write_dev(bcmpmu, PMU_REG_SYS_WDT_CLR,
+		bcmpmu->regmap[PMU_REG_SYS_WDT_CLR].mask,
+		bcmpmu->regmap[PMU_REG_SYS_WDT_CLR].mask);
 }
 
 static int em_charger_event_handler(struct notifier_block *nb,
