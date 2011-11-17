@@ -392,8 +392,8 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 					}
 
 	
-					AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pVoIP->mic,pVoIP->spk);
-					AUDCTRL_SetTelephonySpkrVolume(AUDIO_HW_VOICE_OUT, pVoIP->spk, 0, AUDIO_GAIN_FORMAT_mB);				
+					AUDCTRL_EnableTelephony(pVoIP->mic,pVoIP->spk);
+					AUDCTRL_SetTelephonySpkrVolume(pVoIP->spk, 0, AUDIO_GAIN_FORMAT_mB);
 					AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,AUDIO_DRIVER_START,&voip_data);
 
 					pVoIP->writecount = 1;										
@@ -416,7 +416,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				else if(voipInstCnt == 1)
 				{
 					AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,AUDIO_DRIVER_STOP,NULL);				
-					AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pVoIP->mic,pVoIP->spk);
+					AUDCTRL_DisableTelephony(pVoIP->mic,pVoIP->spk);
 				
 					if((pVoIP->codec_type == 4) || (pVoIP->codec_type == 5))// VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k
 						AUDCTRL_SetAudioMode(mode); //setting it back the original mode
@@ -514,7 +514,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				if(pVoIP->status == VoIP_Hwdep_Status_Started)
 				{
 					//call the audio driver to switch to the new path
-				    AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, cur_mic, cur_spk);
+				    AUDCTRL_DisableTelephony(cur_mic, cur_spk);
 
 					if((pVoIP->codec_type == 4) || (pVoIP->codec_type == 5))// VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k
 					{
@@ -522,7 +522,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 						//set the audio mode to WB
 						AUDCTRL_SetAudioMode((AudioMode_t)(mode + AUDIO_MODE_NUMBER));
 					}
-					AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, voip_data.mic, voip_data.spk);
+					AUDCTRL_EnableTelephony(voip_data.mic, voip_data.spk);
 				}
 				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetMode mode %d, \n",mode);
 			}

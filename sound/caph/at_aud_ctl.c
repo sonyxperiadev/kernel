@@ -147,8 +147,8 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
                 break;
 			else // switch source/sink
             {
-                AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, pCurSel[0], pCurSel[1]);
-                AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, mic, spk);
+                AUDCTRL_DisableTelephony(pCurSel[0], pCurSel[1]);
+                AUDCTRL_EnableTelephony(mic, spk);
             }
 			BCM_AUDIO_DEBUG("%s mic %d spk %d mode %d \n", __FUNCTION__, mic,spk,Params[1]);
 			break;
@@ -361,7 +361,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 		case 25:
 			AUDCTRL_SetPlayVolume(
-                      AUDIO_HW_NONE,
+                      AUDIO_SOURCE_MEM,
                       Params[1],  //	  //speaker channel
                       AUDIO_GAIN_FORMAT_mB,
 					  Params[2],  //left volume
@@ -385,7 +385,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		//!	AUDIO_SINK_VIBRA,
 		//! -------------------------------------------------------------------------------------
 		case 26:
-			AUDCTRL_SetPlayMute( AUDIO_HW_NONE,
+			AUDCTRL_SetPlayMute( AUDIO_SOURCE_UNDEFINED,
 				     Params[1],  //speaker channel
 				     Params[2],  // mute flag   1 - mute   0 - un-mute
                      0);
@@ -407,7 +407,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			//! 				   0 - un-mute
 			//! -------------------------------------------------------------------------------------
 		case 32:
-			AUDCTRL_SetTelephonyMicMute( AUDIO_HW_NONE, AUDIO_SOURCE_UNDEFINED, (Boolean) Params[2] );
+			AUDCTRL_SetTelephonyMicMute( AUDIO_SOURCE_UNDEFINED, (Boolean) Params[2] );
 			break;
 
 
@@ -925,8 +925,7 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		pVolume = (s32*) pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
 		pVolume[0] = Params[1];
 		pVolume[1] = Params[1];
-		AUDCTRL_SetTelephonySpkrVolume(	AUDIO_HW_NONE,
-									AUDIO_SINK_UNDEFINED,
+		AUDCTRL_SetTelephonySpkrVolume(	AUDIO_SINK_UNDEFINED,
 									(Params[1]*100),   //Params[1] in dB
 									AUDIO_GAIN_FORMAT_mB
 									);

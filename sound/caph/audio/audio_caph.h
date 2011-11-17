@@ -23,28 +23,22 @@ the GPL, without Broadcom's express prior written consent.
 
 typedef struct _TIDChanOfPlaybackDev
 {
-  AUDIO_DRIVER_TYPE_t     drv_type;
-  AUDIO_HW_ID_t     		hw_src;
-  AUDIO_HW_ID_t           hw_id;
-  AUDIO_SINK_Enum_t    speaker;
-  CSL_CAPH_DEVICE_e aud_dev;
+  AUDIO_DRIVER_TYPE_t   drv_type;
+  AUDIO_SOURCE_Enum_t 	source;
+  AUDIO_SINK_Enum_t     sink;
 }TIDChanOfPlaybackDev;
 
 
 typedef struct _TIDChanOfCaptureDev
 {
     AUDIO_DRIVER_TYPE_t     drv_type;
-    AUDIO_HW_ID_t     		hw_sink;
-    AUDIO_HW_ID_t           hw_id;
-    AUDIO_SOURCE_Enum_t       mic;
-	CSL_CAPH_DEVICE_e aud_dev;
+    AUDIO_SOURCE_Enum_t     source;
+    AUDIO_SINK_Enum_t     sink;
 }TIDChanOfCaptureDev;
 
 typedef struct _TIDChanOfVoiceCallDev
 {
-    AUDIO_HW_ID_t           in_hw_id;
     AUDIO_SOURCE_Enum_t       mic;
-    AUDIO_HW_ID_t           out_hw_id;
     AUDIO_SINK_Enum_t       speaker;
 
 }TIDChanOfVoiceCallDev;
@@ -157,8 +151,8 @@ typedef struct
 
 typedef struct
 {
-   Int32 hw_id; //source or sink
-   Int32 device; //mic or speaker
+   Int32 source;
+   Int32 sink;
    Int32 volume1;
    Int32 volume2;
    int stream;
@@ -166,8 +160,8 @@ typedef struct
 
 typedef struct
 {
-   Int32 hw_id; //source or sink
-   Int32 device; //mic or speaker
+   Int32 source;
+   Int32 sink;
    Int32 mute1;
    Int32 mute2;
    int stream;
@@ -179,7 +173,6 @@ typedef struct
 {
    Int32 src;
    Int32 sink;
-   Int32 spkr;
    int stream;
 }BRCM_AUDIO_Param_Spkr_t;
 
@@ -207,8 +200,8 @@ typedef struct
 
 typedef struct
 {
-   Int32 hw_id;
-   Int32 device;
+   Int32 source;
+   Int32 sink;
    Int32 volume1;
    Int32 volume2;
    UInt32 fm_mix;

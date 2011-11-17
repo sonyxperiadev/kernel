@@ -54,8 +54,9 @@
 #include "csl_vpu.h"
 #include "dspcmd.h"
 #include "csl_voip.h"
-#include "csl_caph_hwctrl.h"
 #include "csl_voif.h"
+#include "csl_caph_hwctrl.h"
+#include "audio_controller.h"
 
 //=============================================================================
 // Public Variable declarations
@@ -503,7 +504,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-	CSL_CAPH_DEVICE_e *aud_dev = NULL;
+	AUDIO_SINK_Enum_t *dev = NULL;
 	//Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
     switch (ctrl_cmd)
     {
@@ -513,7 +514,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 num_blocks;
 						
 				if(pCtrlStruct != NULL)
-			    	aud_dev = (CSL_CAPH_DEVICE_e *)pCtrlStruct;
+			    	dev = (AUDIO_SINK_Enum_t *)pCtrlStruct;
                 //check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
                     (aud_drv->interrupt_period == 0) ||
@@ -528,7 +529,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::All Configuration is not set yet  \n"  );
                     return result_code;
                 }
-				aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY, (*aud_dev));
+				aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY, getDeviceFromSink(*dev));
 				SetPlaybackStreamHandle(aud_drv);//save the driver handle after ID is assigned
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
 		                 * Number of blocks = buffer size/block size
@@ -727,8 +728,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-
-    CSL_CAPH_DEVICE_e *aud_dev = (CSL_CAPH_DEVICE_e *)pCtrlStruct;
+	AUDIO_SOURCE_Enum_t *dev = NULL;
 
     switch (ctrl_cmd)
     {
@@ -736,6 +736,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
             {
                 UInt32 block_size;
                 UInt32 num_blocks;
+				if(pCtrlStruct != NULL)
+					dev = (AUDIO_SOURCE_Enum_t *)pCtrlStruct;
                 //check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
                     (aud_drv->interrupt_period == 0) ||
@@ -750,7 +752,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureCmd::All Configuration is not set yet  \n"  );
                     return result_code;
                 }
-                aud_drv->stream_id = csl_audio_capture_init ( (*aud_dev),CSL_CAPH_DEV_MEMORY);
+                aud_drv->stream_id = csl_audio_capture_init ( getDeviceFromSrc(*dev),CSL_CAPH_DEV_MEMORY);
                 audio_capture_driver = aud_drv;
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
 				* Number of blocks = buffer size/block size

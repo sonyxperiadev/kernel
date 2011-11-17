@@ -339,75 +339,46 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
     AUDIO_DRIVER_HANDLE_t  drv_handle;
     int substream_number = substream->number ;
 	s32	*pSel;
-	int i,count;
+	int i,count=0;
 
 	BCM_AUDIO_DEBUG("\n PcmPlaybackTrigger substream_number=%d\n",substream_number);
-
 
 	callMode = chip->iEnablePhoneCall;
     drv_handle = substream->runtime->private_data;
 	pSel = chip->streamCtl[substream_number].iLineSelect;
 
 	for (i = 0; i < MAX_PLAYBACK_DEV; i++)
-    	chip->streamCtl[substream_number].dev_prop.p[i].hw_src = AUDIO_HW_MEM;
+    {
+    	chip->streamCtl[substream_number].dev_prop.p[i].source = AUDIO_SOURCE_MEM;
+		chip->streamCtl[substream_number].dev_prop.p[i].sink = AUDIO_SINK_UNDEFINED;
+	}
 
 	if((callMode == 1) && (chip->streamCtl[substream_number].iLineSelect[0] != AUDIO_SINK_I2S)) //call mode & not FM Tx playback
 	{
-		chip->streamCtl[substream_number].dev_prop.p[0].hw_id = AUDIO_HW_DSP_VOICE;
-		chip->streamCtl[substream_number].dev_prop.p[0].aud_dev = CSL_CAPH_DEV_DSP_throughMEM;
-		chip->streamCtl[substream_number].dev_prop.p[0].speaker = pSel[0];
+		chip->streamCtl[substream_number].dev_prop.p[0].source = AUDIO_SOURCE_MEM;
+		chip->streamCtl[substream_number].dev_prop.p[0].sink = AUDIO_SINK_DSP;
 	}
 
     if((callMode != 1) || (chip->streamCtl[substream_number].iLineSelect[0] == AUDIO_SINK_I2S))
     {
         for (i = 0; i < MAX_PLAYBACK_DEV; i++)
-        {
-            //Update Sink, volume , mute info from mixer controls
-            if(pSel[i]==AUDIO_SINK_HANDSET)
-            {
-                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_EARPIECE_OUT;
-                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_EP;
-            }
-            else if(pSel[i]==AUDIO_SINK_HEADSET)
-            {
-                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_HEADSET_OUT;
-                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_HS;
-            }
-            else if(pSel[i]==AUDIO_SINK_LOUDSPK || pSel[i]==AUDIO_SINK_HANDSFREE)
-            {
-                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_IHF_OUT;
-                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_IHF;
-            }
-            else if(pSel[i]==AUDIO_SINK_BTM)
-            {
-                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_MONO_BT_OUT;
-                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_BT_SPKR;
-            }
-            else if(pSel[i]==AUDIO_SINK_I2S)
-            {
-                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_I2S_OUT;
-                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_FM_TX;
-            }
-            else if(pSel[i]==AUDIO_SINK_VIBRA)
-            {
-                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_VIBRA_OUT;
-                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_VIBRA;
-            }
+		{
+			if(pSel[i] >= AUDIO_SINK_HANDSET && pSel[i] < AUDIO_SINK_VALID_TOTAL)
+           	{
+           		chip->streamCtl[substream_number].dev_prop.p[i].sink = pSel[i];
+           	}
             else
             {
-				if(i == 0)
-                {
-                    BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[i]);
-                    chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_EARPIECE_OUT;
-                    chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_EP;
-                }
-                else
-                {
-                    chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_NONE;
-                    chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = CSL_CAPH_DEV_NONE;
-                }
+            	// No valid device in the list to do a playback,return error
+				if(++count == MAX_PLAYBACK_DEV)
+				{
+					BCM_AUDIO_DEBUG("No device selected by the user ?\n");
+					return -EINVAL;
+				}
+				else
+					chip->streamCtl[substream_number].dev_prop.p[i].sink = AUDIO_SINK_UNDEFINED;
             }
-            chip->streamCtl[substream_number].dev_prop.p[i].speaker = pSel[i];
+
         }
     }
 
@@ -432,11 +403,10 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 
             for (i = 1; i < MAX_PLAYBACK_DEV; i++) //the for loop starts with p[1], the second channel.
             {
-                if(chip->streamCtl[substream_number].dev_prop.p[i].hw_id != AUDIO_HW_NONE)
+                if(chip->streamCtl[substream_number].dev_prop.p[i].sink != AUDIO_SINK_UNDEFINED)
                 {
-                    param_spkr.src = chip->streamCtl[substream_number].dev_prop.p[0].hw_src;
-                    param_spkr.sink = chip->streamCtl[substream_number].dev_prop.p[i].hw_id;
-                    param_spkr.spkr = chip->streamCtl[substream_number].dev_prop.p[i].speaker;
+                    param_spkr.src = chip->streamCtl[substream_number].dev_prop.p[i].source;
+                    param_spkr.sink = chip->streamCtl[substream_number].dev_prop.p[i].sink;
 					param_spkr.stream = substream_number;
                     AUDIO_Ctrl_Trigger(ACTION_AUD_AddChannel,&param_spkr,NULL,0);
                 }
@@ -688,62 +658,17 @@ static int PcmCaptureTrigger(
 	BCM_AUDIO_DEBUG("\n %lx:capture_trigger subdevice=%d cmd=%d\n",jiffies,substream_number, cmd);
 
     drv_handle = substream->runtime->private_data;
-
-
 	pSel = chip->streamCtl[substream_number].iLineSelect;
 
-	//Update Sink, volume , mute info from mixer controls
-	if(pSel[0]==AUDIO_SOURCE_ANALOG_MAIN)
+	if(pSel[0] >= AUDIO_SOURCE_ANALOG_MAIN && pSel[0] < AUDIO_SOURCE_VALID_TOTAL)
 	{
-		chip->streamCtl[substream_number].dev_prop.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[substream_number].dev_prop.c.aud_dev = CSL_CAPH_DEV_ANALOG_MIC;
-		BCM_AUDIO_DEBUG("updated with main mic info \n");
-	}
-	else if(pSel[0]==AUDIO_SOURCE_ANALOG_AUX)
-	{
-		chip->streamCtl[substream_number].dev_prop.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[substream_number].dev_prop.c.aud_dev = CSL_CAPH_DEV_HS_MIC;
-	}
-	else if(pSel[0]==AUDIO_SOURCE_DIGI1)
-	{
-		chip->streamCtl[substream_number].dev_prop.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[substream_number].dev_prop.c.aud_dev = CSL_CAPH_DEV_DIGI_MIC_L;
-	}
-	else if(pSel[0]==AUDIO_SOURCE_DIGI2)
-	{
-		chip->streamCtl[substream_number].dev_prop.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[substream_number].dev_prop.c.aud_dev = CSL_CAPH_DEV_DIGI_MIC_R;
-	}
-	else if(pSel[0]==AUDIO_SOURCE_BTM)
-	{
-		chip->streamCtl[substream_number].dev_prop.c.hw_id = AUDIO_HW_MONO_BT_IN;
-		chip->streamCtl[substream_number].dev_prop.c.aud_dev = CSL_CAPH_DEV_BT_MIC;
-	}
-	else if(pSel[0]==AUDIO_SOURCE_I2S)
-	{
-		chip->streamCtl[substream_number].dev_prop.c.hw_id = AUDIO_HW_I2S_IN;
-		chip->streamCtl[substream_number].dev_prop.c.aud_dev = CSL_CAPH_DEV_FM_RADIO;
-	}
-	else if(pSel[0]==AUDIO_SOURCE_DIGI3)
-	{
-		chip->streamCtl[substream_number].dev_prop.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[substream_number].dev_prop.c.aud_dev = CSL_CAPH_DEV_EANC_DIGI_MIC_L;
-	}
-	else if(pSel[0]==AUDIO_SOURCE_DIGI4)
-	{
-		chip->streamCtl[substream_number].dev_prop.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[substream_number].dev_prop.c.aud_dev = CSL_CAPH_DEV_EANC_DIGI_MIC_R;
+		chip->streamCtl[substream_number].dev_prop.c.source = pSel[0];
 	}
 	else
 	{
-		BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
-		chip->streamCtl[substream_number].dev_prop.c.hw_id = AUDIO_HW_NONE;
-
-		chip->streamCtl[substream_number].dev_prop.c.aud_dev = CSL_CAPH_DEV_ANALOG_MIC;
+		BCM_AUDIO_DEBUG("Error!! No valid device selected by the user\n", pSel[0]);
 		return -EINVAL;
 	}
-
-	chip->streamCtl[substream_number].dev_prop.c.mic = pSel[0];
 	switch (cmd)
 	{
 		case SNDRV_PCM_TRIGGER_START:
@@ -768,13 +693,9 @@ static int PcmCaptureTrigger(
 				param_start.callMode = callMode;
 
 				if((substream_number + 1) == CTL_STREAM_PANEL_PCMIN)
-				{
-					chip->streamCtl[substream_number].dev_prop.c.hw_sink = AUDIO_HW_MEM;
-				}
+					chip->streamCtl[substream_number].dev_prop.c.sink = AUDIO_SINK_MEM;
 				else if((substream_number + 1) == CTL_STREAM_PANEL_SPEECHIN)
-				{
-					chip->streamCtl[substream_number].dev_prop.c.hw_sink = AUDIO_HW_DSP_VOICE;
-				}
+					chip->streamCtl[substream_number].dev_prop.c.sink = AUDIO_SINK_DSP;
 
 				param_start.vol[0] = chip->streamCtl[substream_number].ctlLine[pSel[0]].iVolume[0];
 				param_start.vol[1] = chip->streamCtl[substream_number].ctlLine[pSel[0]].iVolume[1];
@@ -1015,7 +936,7 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 		BCM_AUDIO_DEBUG("\n PcmDeviceNew : call AUDIO_Init\n");
 		caph_audio_init();
         AUDCTRL_Init ();
-#if defined(CONFIG_BCM_MODEM) 
+#if defined(CONFIG_BCM_MODEM)
         DSPDRV_Init ();
 #endif
         audio_init_complete = 1;

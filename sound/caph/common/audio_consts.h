@@ -106,15 +106,18 @@ typedef enum AUDIO_SINK_Enum_t
     AUDIO_SINK_BTS, //Bluetooth stereo (A2DP) (UART interface)
     AUDIO_SINK_I2S,
     AUDIO_SINK_VIBRA,
-    AUDIO_SINK_HEADPHONE = 11, 	///< A special headset which only has speakers and no microphone.
-    
+    AUDIO_SINK_HEADPHONE = 11, 	// A special headset which only has speakers and no microphone.
+	//Any valid enums that needs to be exposed to user for playback needs to be added before AUDIO_SINK_VALID_TOTAL
+    AUDIO_SINK_VALID_TOTAL,
+	AUDIO_SINK_MEM,
+	AUDIO_SINK_DSP,
     //these four are not used now:
     AUDIO_SINK_EP_STEREO,
     AUDIO_SINK_IHF_STEREO,
     AUDIO_SINK_HS_LEFT,
     AUDIO_SINK_HS_RIGHT,
-    
-    AUDIO_SINK_UNDEFINED,
+
+	AUDIO_SINK_UNDEFINED,
     AUDIO_SINK_TOTAL_COUNT
 } AUDIO_SINK_Enum_t;
 
@@ -126,16 +129,17 @@ typedef enum AUDIO_SOURCE_Enum_t
     AUDIO_SOURCE_DIGI1,  // DMIC1
     AUDIO_SOURCE_DIGI2,  // DMIC2
     AUDIO_SOURCE_BTM,    //Bluetooth Mono Headset Mic  (PCM_Interface)
-    //AUDIO_SOURCE_BTS,    //not exist
     AUDIO_SOURCE_USB,  //USB headset Mic
     AUDIO_SOURCE_I2S,
-    AUDIO_SOURCE_DIGI3, //Only for loopback path
-    AUDIO_SOURCE_DIGI4, //Only for loopback path
-    
+    AUDIO_SOURCE_DIGI3,
+	AUDIO_SOURCE_DIGI4,
+	//Any valid enums that needs to be exposed to user for recording needs to be added before AUDIO_SOURCE_VALID_TOTAL
+    AUDIO_SOURCE_VALID_TOTAL,
     AUDIO_SOURCE_SPEECH_DIGI, //Digital Mic1/Mic2 in recording/Normal Quality Voice call.
     AUDIO_SOURCE_EANC_DIGI, //Digital Mic1/2/3/4 for Supreme Quality Voice Call.
+    AUDIO_SOURCE_MEM,
+    AUDIO_SOURCE_DSP,
     AUDIO_SOURCE_NOISE_CANCEL, //Mic for noise cancellation. Used in Dual mic case.
-    
     AUDIO_SOURCE_TOTAL_COUNT
 } AUDIO_SOURCE_Enum_t;
 
@@ -258,11 +262,11 @@ typedef enum {
     PARAM_VOLUME_STEP_SIZE,								// 81
     PARAM_NUM_SUPPORTED_VOLUME_LEVELS,					// 82
     PARAM_DAC_FILTER_SCALE_FACTOR,						// 83   to delete
-    
+
     PARAM_ECHO_DUAL_EC_ECLEN = 84,						// 84
     PARAM_ECHO_DUAL_EC_DT_TH_ERL_dB = 87,				// 87
     PARAM_ECHO_DUAL_EC_echo_step_size_gain,				// 88
-    
+
     PARAM_COMPANDER_FLAG = 92,							// 92
     PARAM_EXPANDER_ALPHA,								// 93
     PARAM_EXPANDER_BETA,								// 94
@@ -272,7 +276,7 @@ typedef enum {
     PARAM_COMPRESSOR_BETA,								// 98
     PARAM_COMPRESSOR_OUTPUT_GAIN,						// 99
     PARAM_COMPRESSOR_GAIN,								// 100
-    
+
     PARAM_COMPANDER_FLAG_UL,							// 101
     PARAM_EXPANDER_ALPHA_UL,							// 102
     PARAM_EXPANDER_BETA_UL,								// 103
@@ -282,40 +286,40 @@ typedef enum {
     PARAM_COMPRESSOR_BETA_UL,							// 107
     PARAM_COMPRESSOR_OUTPUT_GAIN_UL,					// 108
     PARAM_COMPRESSOR_GAIN_UL,							// 109
-    
+
     PARAM_AUDIO_DSP_SIDETONE,							// 110
     PARAM_AUDIO_DL_IDLE_PGA_ADJ,						// 111
     PARAM_AUDIO_NS_UL_IDLE_ADJ,							// 112
-    
+
     PARAM_SIDETONE_OUTPUT_GAIN,							// 113
     PARAM_SIDETONE_BIQUAD_SCALE_FACTOR,					// 114
     PARAM_SIDETONE_BIQUAD_SYS_GAIN,       				// 115
-    
+
     PARAM_AUDIO_EC_DE_EMP_FILT_COEF,					// 116
     PARAM_AUDIO_EC_PRE_EMP_FILT_COEF,					// 117
-    
+
     PARAM_AUDIO_HPF_ENABLE,	   							// 118
     PARAM_AUDIO_UL_HPF_COEF_B, 							// 119
     PARAM_AUDIO_UL_HPF_COEF_A, 							// 120
     PARAM_AUDIO_DL_HPF_COEF_B, 							// 121
     PARAM_AUDIO_DL_HPF_COEF_A, 							// 122
-    
+
     PARAM_AUDVOC_VCFGR,									// 123
-    
+
     //	PARAM_BLUETOOTH_FILTER_ENABLE,						// 124
     //	PARAM_BLUETOOTH_UL_BIQUAD_GAIN,						// 125
     //	PARAM_BLUETOOTH_DL_BIQUAD_GAIN,						// 126
     //	PARAM_BLUETOOTH_DL_FILTER,							// 127
     //	PARAM_BLUETOOTH_UL_FILTER,							// 128
-    
+
     //	PARAM_COMP_BIQUAD_GAIN,								// 129
     //	PARAM_COMP_BIQUAD_FILTER,							// 130
     PARAM_ECHO_SUBBAND_NLP_DISTORTION_THRESH = 131,		// 131
     PARAM_ECHO_SUBBAND_NLP_UL_MARGIN,					// 132
     PARAM_ECHO_SUBBAND_NLP_NOISE_MARGIN,				// 133
-    
+
     PARAM_DL_SUBBAND_COMPANDER_FLAG,					// 134
-    
+
     PARAM_COMPRESS_DL_FIR1_T2LIN,						// 135
     PARAM_COMPRESS_DL_FIR1_G2T2,						// 136
     PARAM_COMPRESS_DL_FIR1_G3T3,						// 137
@@ -326,7 +330,7 @@ typedef enum {
     PARAM_COMPRESS_DL_FIR1_STEP2,						// 142
     PARAM_COMPRESS_DL_FIR1_STEP3,						// 143
     PARAM_COMPRESS_DL_FIR1_STEP4,						// 144
-    
+
     PARAM_COMPRESS_DL_FIR2_T2LIN,						// 145
     PARAM_COMPRESS_DL_FIR2_G2T2,						// 146
     PARAM_COMPRESS_DL_FIR2_G3T3,						// 147
@@ -337,7 +341,7 @@ typedef enum {
     PARAM_COMPRESS_DL_FIR2_STEP2,						// 152
     PARAM_COMPRESS_DL_FIR2_STEP3,						// 153
     PARAM_COMPRESS_DL_FIR2_STEP4,						// 154
-    
+
     PARAM_COMPRESS_DL_STREAM3_T2LIN,					// 155
     PARAM_COMPRESS_DL_STREAM3_G2T2,						// 156
     PARAM_COMPRESS_DL_STREAM3_G3T3,						// 157
@@ -348,7 +352,7 @@ typedef enum {
     PARAM_COMPRESS_DL_STREAM3_STEP2,					// 162
     PARAM_COMPRESS_DL_STREAM3_STEP3,					// 163
     PARAM_COMPRESS_DL_STREAM3_STEP4,					// 164
-    
+
     PARAM_COMPRESS_DL_T2LIN,							// 165
     PARAM_COMPRESS_DL_G2T2,								// 166
     PARAM_COMPRESS_DL_G3T3,								// 167
@@ -359,9 +363,9 @@ typedef enum {
     PARAM_COMPRESS_DL_STEP2,							// 172
     PARAM_COMPRESS_DL_STEP3,							// 173
     PARAM_COMPRESS_DL_STEP4,							// 174
-    
+
     PARAM_ECHO_SUBBAND_NLP_ENABLE,						// 175
-    
+
     PARAM_VOICE_VOLUME_MAX,								// 176
     PARAM_VOICE_VOLUME_INIT,							// 177
     PARAM_AUDVOC_ADAC_IIR,								// 178  (5 Biquads, total 25 coefficients.)
@@ -369,7 +373,7 @@ typedef enum {
     PARAM_AUDVOC_AEQPATHGAIN,							// 180
     PARAM_AUDVOC_AEQCOF,								// 181
     PARAM_AUDVOC_MIXER_IIR,								// 182
-    
+
     PARAM_MPM_NIIR_COEFFICIENT,							// 183
     PARAM_MPM_GAIN_ATTACK_STEP,							// 184
     PARAM_MPM_GAIN_ATTACK_SLOPE,						// 185
@@ -390,7 +394,7 @@ typedef enum {
     PARAM_GE_CROSSOVER_FREQ_2,						// 200
     PARAM_GE_CROSSOVER_FREQ_3,						// 201
     PARAM_GE_CROSSOVER_FREQ_4,						// 202
-    
+
     PARAM_SIDETONE_FILTER,							// 203
     //parm used for Omega Voice tuning
     PARAM_OMEGA_VOICE_ENABLE				=204,	// 204	//Start at idx 204 to align ids with all chips
@@ -399,7 +403,7 @@ typedef enum {
     PARAM_OMEGA_VOICE_GAIN_STEP_UP_DB256,			// 207
     PARAM_OMEGA_VOICE_GAIN_STEP_DN_DB256,			// 208
     PARAM_OMEGA_VOICE_MAX_GAIN_DB_SCALE_FACTOR,		// 209
-    
+
     PARAM_VOICE_DAC_HPF_ENABLE=210,					// 210
     PARAM_VOICE_DAC_HPF_CUTOFF_FREQ,				// 211
     /***
@@ -407,23 +411,23 @@ typedef enum {
     PARAM_AUDVOC_ADAC_IIR_HPF_CUTOFF_FREQ,			// 213
     ***/
     PARAM_OMEGA_VOICE_MAX_ALLOWED_GAIN_SPREAD_DB=214,		// 214
-    
+
     PARAM_AUDVOC_MIXER_IIR_HPF_ENABLE = 215,		// 215
     PARAM_AUDVOC_MIXER_IIR_HPF_CUTOFF_FREQ = 216,	// 216
     PARAM_MPMBIQUAD_CFG = 217,						// 217
-    
+
     PARAM_EXT_SPEAKER_PGA, 						// 218
     PARAM_EXT_SPEAKER_PREAMP_PGA, 				// 219
-    
+
     //	PARAM_BLUETOOTH_DL_BIQUAD_OUTPUT_GAIN = 220, // 220
     //	PARAM_BLUETOOTH_UL_BIQUAD_OUTPUT_GAIN, 		// 221
-    
+
     PARAM_ALPHA_VOICE_ENABLE =222, 				// 222 Start at idx 222 to align ids with all chips
     PARAM_ALPHA_VOICE_AVC_TARGET_DB, 			// 223
     PARAM_ALPHA_VOICE_AVC_MAX_GAIN_DB, 			// 224
     PARAM_ALPHA_VOICE_AVC_STEP_UP_DB256, 		// 225
     PARAM_ALPHA_VOICE_AVC_STEP_DOWN_DB256, 		// 226
-    
+
     // KAPPA_VOICE
     PARAM_KAPPA_VOICE_ENABLE, 					// 227
     PARAM_KAPPA_VOICE_HIGH_PITCHED_TONE_TARGET_DB, 		// 228
@@ -431,31 +435,31 @@ typedef enum {
     PARAM_KAPPA_VOICE_FAST_DETECTOR_MAX_SUPP_DB, 		// 230
     PARAM_KAPPA_VOICE_SLOW_DETECTOR_LOUDNESS_TARGET_DB, // 231
     PARAM_KAPPA_VOICE_SLOW_DETECTOR_MAX_SUPP_DB, 		// 232
-    
+
     PARAM_EXT_SPEAKER_ENABLE = 233,				// 233  (not used in Athena platform)
     PARAM_ECHO_SUBBAND_NLP_ERL_ERLE_ADJ_WB = 234,		// 234  (not used in Athena platform)
     PARAM_ECHO_SUBBAND_NLP_UL_MARGIN_WB,				// 235  (not used in Athena platform)
     PARAM_ECHO_SUBBAND_NLP_NOISE_MARGIN_WB,				// 236  (not used in Athena platform)
-    
+
     PARAM_VOICE_DUALMIC_ENABLE = 237,					// 237
     PARAM_VOICE_ADC_D1,									// 238
     PARAM_VOICE_ADC_D2,									// 239
     PARAM_VOICE_DIGMIC_SAMPLE_SEL,						// 240
-    
+
     PARAM_ECHO_SUBBAND_NLP_DT_FINE_CONTROL,             // 241
-    
+
     PARAM_VOICE_DUALMIC_ANC_ENABLE=242,					// 242
     PARAM_VOICE_DUALMIC_NLP_ENABLE,						// 243
     PARAM_VOICE_DUALMIC_PRE_WNR_ENABLE,					// 244
     PARAM_VOICE_DUALMIC_POST_WNR_ENABLE,				// 245
     PARAM_VOICE_DUALMIC_NS_LEVEL,						// 246
-    
+
     PARAM_ECHO_CANCEL_MIC2_INPUT_GAIN=247,			   	// 247
     PARAM_ECHO_CANCEL_MIC2_OUTPUT_GAIN,					// 248
     PARAM_ECHO_MIC2_FEED_FORWARD_GAIN,					// 249
-    
+
     PARAM_NLP_DISTORTION_COUPLING = 250,				// 250
-    
+
     PARAM_AMIC_DGA_COARSE_GAIN = 251,	//251
     PARAM_AMIC_DGA_FINE_GAIN,
     PARAM_DMIC1_DGA_COARSE_GAIN,
@@ -466,28 +470,28 @@ typedef enum {
     PARAM_DMIC3_DGA_FINE_GAIN,
     PARAM_DMIC4_DGA_COARSE_GAIN,
     PARAM_DMIC4_DGA_FINE_GAIN,
-    
+
     PARAM_HW_MIXER_INPUT_GAIN_CTRL_L,	//261
     PARAM_HW_MIXER_COARSE_GAIN_CTRL_L,
     PARAM_HW_MIXER_FINE_GAIN_CTRL_L,
     PARAM_HW_MIXER_INPUT_GAIN_CTRL_R,
     PARAM_HW_MIXER_COARSE_GAIN_CTRL_R,
     PARAM_HW_MIXER_FINE_GAIN_CTRL_R,
-    
+
     PARAM_PMU_HIGH_GAIN_MODE_FLAG,	//267
     PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL,
     PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL,
-    
+
     PARAM_VOICE_MIC1_BIQUAD_NUM,	//270
     PARAM_VOICE_MIC1_SCALE_INPUT,
     PARAM_VOICE_MIC1_SCALE_OUTPUT,
     PARAM_VOICE_MIC1_EQ,
-    
+
     PARAM_VOICE_MIC2_BIQUAD_NUM,	//274
     PARAM_VOICE_MIC2_SCALE_INPUT,
     PARAM_VOICE_MIC2_SCALE_OUTPUT,
     PARAM_VOICE_MIC2_EQ,
-    
+
     PARAM_VOICE_SPEAKER_BIQUAD_NUM,	//278
     PARAM_VOICE_SPEAKER_SCALE_INPUT,
     PARAM_VOICE_SPEAKER_SCALE_OUTPUT,
@@ -503,22 +507,22 @@ typedef enum {
     PARAM_HW_SIDETONE_FLAG = 288, //288
     PARAM_HW_SIDETONE_GAIN,
     PARAM_HW_SIDETONE_EQ,
-    
-    
+
+
     PARAM_REVERB_TIME_CONSTANT=293,	 			// 293
     PARAM_REVERB_LEVEL, 			  			// 294
     PARAM_SMART_COMPRESS_G1LIN,					// 295
     PARAM_SMART_COMPRESS_G2T2,					// 296
     PARAM_ECHO_PATH_CHANGE_DETECTION_THRESHOLD=297,				// 297
-    
+
     PARAM_DL_NOISE_SUPP_MAX,					// 298
     PARAM_DL_NOISE_SUPPRESSION_ENABLE,			// 299
-    
+
     PARAM_VOICE_MIC1_HPF_ENABLE,                // 300
     PARAM_VOICE_MIC1_HPF_CUTOFF_FREQ,           // 301
     PARAM_VOICE_MIC2_HPF_ENABLE,                // 302
     PARAM_VOICE_MIC2_HPF_CUTOFF_FREQ,           // 303
-    
+
     AUDIO_PARM_NUMBER   						// 304
 
 } AudioParam_t;

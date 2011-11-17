@@ -82,7 +82,7 @@ typedef	struct	_TAudioHalThreadData
 
 }TAudioControlThreadData, *PTAudioControlThreadData;
 
-static unsigned long pathID[CAPH_MAX_PCM_STREAMS];
+static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 
 static TAudioControlThreadData	sgThreadData;
 #define	KFIFO_SIZE		(9*sizeof(TMsgAudioCtrl))
@@ -267,7 +267,7 @@ void AUDIO_Ctrl_Process(
    	TMsgAudioCtrl	msgAudioCtrl;
 	unsigned int	len;
 	int i;
-	unsigned long path;
+	unsigned int path;
 
 	BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process action_code=%d\r\n", action_code);
 
@@ -301,13 +301,11 @@ void AUDIO_Ctrl_Process(
 			if(param_start->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 
-	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->p[0].speaker );
+	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->p[0].sink );
 
             	// Enable the playback the path
-            	AUDCTRL_EnablePlay(AUDIO_HW_MEM,
-                                   param_start->pdev_prop->p[0].hw_id,
-                                   AUDIO_HW_NONE,
-                                   param_start->pdev_prop->p[0].speaker,
+            	AUDCTRL_EnablePlay(param_start->pdev_prop->p[0].source,
+                                   param_start->pdev_prop->p[0].sink,
 				                   param_start->channels,
                                    param_start->rate,
                                    &path);
@@ -329,7 +327,7 @@ void AUDIO_Ctrl_Process(
 					);
 			***/
 
-     			AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->p[0].aud_dev);
+     			AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->p[0].sink);
 
 			}
 			else if(param_start->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_VOICE)
@@ -349,11 +347,10 @@ void AUDIO_Ctrl_Process(
 			// Remove secondary playback path if it's in use
 			for (i = (MAX_PLAYBACK_DEV-1); i > 0; i--)
 			{
-				if (param_stop->pdev_prop->p[i].hw_id != AUDIO_HW_NONE)
+				if (param_stop->pdev_prop->p[i].sink != AUDIO_SINK_UNDEFINED)
 				{
-           			AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_src,
-										param_stop->pdev_prop->p[i].hw_id,
-										param_stop->pdev_prop->p[i].speaker,
+           			AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].source,
+										param_stop->pdev_prop->p[i].sink,
 										pathID[param_stop->stream]);
 				}
 			}
@@ -361,9 +358,8 @@ void AUDIO_Ctrl_Process(
 		    if(param_stop->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 			     //disable the playback path
-			     AUDCTRL_DisablePlay(AUDIO_HW_MEM,
-                        			param_stop->pdev_prop->p[0].hw_id,
-                        			param_stop->pdev_prop->p[0].speaker,
+			     AUDCTRL_DisablePlay(param_stop->pdev_prop->p[0].source,
+                        			param_stop->pdev_prop->p[0].sink,
                         			pathID[param_stop->stream]);
 
 				 pathID[param_stop->stream] = 0;
@@ -379,9 +375,8 @@ void AUDIO_Ctrl_Process(
 			if(param_pause->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
             	//disable the playback path
-            	AUDCTRL_DisablePlay(AUDIO_HW_MEM,
-                			        param_pause->pdev_prop->p[0].hw_id,
-                			        param_pause->pdev_prop->p[0].speaker,
+            	AUDCTRL_DisablePlay(param_pause->pdev_prop->p[0].source,
+                			        param_pause->pdev_prop->p[0].sink,
 			                        pathID[param_pause->stream] );
 
 				pathID[param_pause->stream]  = 0;
@@ -402,10 +397,8 @@ void AUDIO_Ctrl_Process(
 			{
 
            		// Enable the playback the path
-           		AUDCTRL_EnablePlay(AUDIO_HW_MEM,
-                                   param_resume->pdev_prop->p[0].hw_id,
-                                   AUDIO_HW_NONE,
-                                   param_resume->pdev_prop->p[0].speaker,
+           		AUDCTRL_EnablePlay(param_resume->pdev_prop->p[0].source,
+                                   param_resume->pdev_prop->p[0].sink,
 				                   param_resume->channels,
                                    param_resume->rate,
                                    &path);
@@ -419,11 +412,10 @@ void AUDIO_Ctrl_Process(
 
 			CAPH_ASSERT(param_start->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_start->stream<CTL_STREAM_PANEL_LAST);
 
-			if((param_start->callMode != 1) || (param_start->pdev_prop->c.mic == AUDIO_SOURCE_I2S)) // allow FM recording in call mode
+			if((param_start->callMode != 1) || (param_start->pdev_prop->c.source == AUDIO_SOURCE_I2S)) // allow FM recording in call mode
 			{
-	        	AUDCTRL_EnableRecord(param_start->pdev_prop->c.hw_id,
-				                     param_start->pdev_prop->c.hw_sink,
-                                     param_start->pdev_prop->c.mic,
+	        	AUDCTRL_EnableRecord(param_start->pdev_prop->c.source,
+                                     param_start->pdev_prop->c.sink,
 				                     param_start->channels,
                                      param_start->rate,
 									 &path);
@@ -449,7 +441,7 @@ void AUDIO_Ctrl_Process(
 
 			}
 			if(param_start->pdev_prop->c.drv_type == AUDIO_DRIVER_CAPT_HQ)
-				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->c.aud_dev);
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->c.source);
 			else
 				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->mixMode);
 
@@ -463,11 +455,10 @@ void AUDIO_Ctrl_Process(
 
             AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
-			if((param_stop->callMode != 1) || (param_stop->pdev_prop->c.mic == AUDIO_SOURCE_I2S)) // allow FM recording in call mode
+			if((param_stop->callMode != 1) || (param_stop->pdev_prop->c.source == AUDIO_SOURCE_I2S)) // allow FM recording in call mode
 			{
-            	AUDCTRL_DisableRecord(param_stop->pdev_prop->c.hw_id,
-                                      AUDIO_HW_MEM,
-                                      param_stop->pdev_prop->c.mic,
+            	AUDCTRL_DisableRecord(param_stop->pdev_prop->c.source,
+									  param_stop->pdev_prop->c.sink,
                                       pathID[param_stop->stream]
                                       );
 				pathID[param_stop->stream] = 0;
@@ -498,7 +489,6 @@ void AUDIO_Ctrl_Process(
 			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_AddPlaySpk(parm_spkr->src,
 									parm_spkr->sink,
-									parm_spkr->spkr,
 									pathID[parm_spkr->stream]);
 		}
 		break;
@@ -508,7 +498,6 @@ void AUDIO_Ctrl_Process(
 			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_RemovePlaySpk(parm_spkr->src,
 	                              parm_spkr->sink,
-								  parm_spkr->spkr,
 								  pathID[parm_spkr->stream]
 								  );
 		}
@@ -516,18 +505,14 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_EnableTelephony:
 		{
 			BRCM_AUDIO_Param_Call_t *parm_call = (BRCM_AUDIO_Param_Call_t *)arg_param;
-			AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,
-									AUDIO_HW_VOICE_OUT,
-									(AUDIO_SOURCE_Enum_t)parm_call->new_mic,
+			AUDCTRL_EnableTelephony((AUDIO_SOURCE_Enum_t)parm_call->new_mic,
 									(AUDIO_SINK_Enum_t)parm_call->new_spkr);
 		}
 		break;
 		case ACTION_AUD_DisableTelephony:
 		{
 			BRCM_AUDIO_Param_Call_t *parm_call = (BRCM_AUDIO_Param_Call_t *)arg_param;
-			AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,
-									 AUDIO_HW_VOICE_OUT,
-									 (AUDIO_SOURCE_Enum_t)parm_call->cur_mic,
+			AUDCTRL_DisableTelephony((AUDIO_SOURCE_Enum_t)parm_call->cur_mic,
 									 (AUDIO_SINK_Enum_t)parm_call->cur_spkr);
 		}
 		break;
@@ -535,8 +520,8 @@ void AUDIO_Ctrl_Process(
 		{
 			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
 			CAPH_ASSERT(parm_mute->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_mute->stream<CTL_STREAM_PANEL_LAST);
-			AUDCTRL_SetPlayMute (parm_mute->hw_id,
-									parm_mute->device,
+			AUDCTRL_SetPlayMute (parm_mute->source,
+									parm_mute->sink,
 									parm_mute->mute1,
 									pathID[parm_mute->stream]);	//currently driver doesnt handle Mute for left/right channels
 		}
@@ -545,8 +530,7 @@ void AUDIO_Ctrl_Process(
 		{
 			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
 			CAPH_ASSERT(parm_mute->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_mute->stream<CTL_STREAM_PANEL_LAST);
-			AUDCTRL_SetRecordMute (parm_mute->hw_id,
-		 							parm_mute->device,
+			AUDCTRL_SetRecordMute (parm_mute->source,
 		 							parm_mute->mute1,
 		 							pathID[parm_mute->stream]);
 		}
@@ -571,8 +555,8 @@ void AUDIO_Ctrl_Process(
 		{
 			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
 			CAPH_ASSERT(parm_vol->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_vol->stream<CTL_STREAM_PANEL_LAST);
-			AUDCTRL_SetPlayVolume (parm_vol->hw_id,
-								   parm_vol->device,
+			AUDCTRL_SetPlayVolume (parm_vol->source,
+								   parm_vol->sink,
 								   AUDIO_GAIN_FORMAT_mB,
 								   parm_vol->volume1,
 								   parm_vol->volume2,
@@ -584,8 +568,7 @@ void AUDIO_Ctrl_Process(
 		{
 			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
 			CAPH_ASSERT(parm_vol->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_vol->stream<CTL_STREAM_PANEL_LAST);
-			AUDCTRL_SetRecordGain (parm_vol->hw_id,
-								   parm_vol->device,
+			AUDCTRL_SetRecordGain (parm_vol->source,
 								   AUDIO_GAIN_FORMAT_mB,
 								   parm_vol->volume1,
 								   parm_vol->volume2,
@@ -595,8 +578,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_SetTelephonySpkrVolume:
 		{
 			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
-			AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,
-											parm_vol->device,
+			AUDCTRL_SetTelephonySpkrVolume (parm_vol->sink,
 											parm_vol->volume1,
 											AUDIO_GAIN_FORMAT_mB);
 		}
@@ -607,7 +589,6 @@ void AUDIO_Ctrl_Process(
 			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
 			AUDCTRL_SwitchPlaySpk( parm_spkr->src,
 									parm_spkr->sink,
-									parm_spkr->spkr,
 									pathID[parm_spkr->stream]);
 		}
 		break;
@@ -633,11 +614,9 @@ void AUDIO_Ctrl_Process(
 			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
 			CAPH_ASSERT(parm_FM->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_FM->stream<CTL_STREAM_PANEL_LAST);
 			//re-enable FM
-			AUDCTRL_SaveAudioModeFlag((AudioMode_t)parm_FM->device);
-			AUDCTRL_EnablePlay(AUDIO_HW_I2S_IN,
-								parm_FM->hw_id,  // =AUDIO_HW_DSP_VOICE if CallMode = 1
-								AUDIO_HW_NONE,
-								parm_FM->device,
+			AUDCTRL_SaveAudioModeFlag((AudioMode_t)parm_FM->sink);
+			AUDCTRL_EnablePlay(parm_FM->source,
+								parm_FM->sink,
 								AUDIO_CHANNEL_STEREO,
 								AUDIO_SAMPLING_RATE_48000,
 								&path);
@@ -664,9 +643,8 @@ void AUDIO_Ctrl_Process(
 		{
 			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
 			CAPH_ASSERT(parm_FM->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_FM->stream<CTL_STREAM_PANEL_LAST);
-			AUDCTRL_DisablePlay(AUDIO_HW_I2S_IN,
-								parm_FM->hw_id,
-								parm_FM->device,
+			AUDCTRL_DisablePlay(parm_FM->source,
+								parm_FM->sink,
   							    pathID[parm_FM->stream]);
 			pathID[parm_FM->stream] = 0;
 		}
@@ -693,8 +671,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_MuteTelephony:
 		{
 			BRCM_AUDIO_Param_Mute_t	*parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
-			AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,
-										parm_mute->device,
+			AUDCTRL_SetTelephonyMicMute(parm_mute->source,
 										parm_mute->mute1);
 		}
 		break;
