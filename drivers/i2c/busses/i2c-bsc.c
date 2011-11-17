@@ -727,15 +727,15 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 {
 	struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
 	struct device *d;
+	struct i2c_client *client = NULL;
+	struct i2c_slave_platform_data *pd = NULL;
 	enum bsc_bus_speed set_speed;
 
 	/* Get slave speed configuration */
 	d = bsc_i2c_get_client(adapter, addr);
 	if (d) {
-		struct i2c_client *client = NULL;
-		struct i2c_slave_platform_data *pd = NULL;
 
-		client = i2c_verify_client(d);
+        client = i2c_verify_client(d);
 		pd = (struct i2c_slave_platform_data *)client->dev.platform_data;
 		if (pd) {
 			BSC_DBG(dev, "client addr=0x%x, speed=0x%x\n",
@@ -782,11 +782,19 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 		 * Auto-sense allows the slave device to stretch the clock for a long
 		 * time. Need to turn off auto-sense for high-speed mode
 		 */
-		bsc_set_autosense((uint32_t)dev->virt_base, 0);
+		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 	} else {
 		/* Enable Timeout interrupts for F/S mode */
 		bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
-		bsc_set_autosense((uint32_t)dev->virt_base, 1);
+
+        /* In case of the Keypad controller LM8325, the maximum timeout set
+         * by the BSC controller does not suffice the time for which it holds
+         * the clk line low when busy resulting in bus errors. To overcome this
+         * problem we need ot enable autosense with the timeout disabled */
+        if (TIMEOUT_IS_VALID(pd))
+		    bsc_set_autosense((uint32_t)dev->virt_base, 1, pd->autosense_timeout_enable);
+        else
+		    bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 	}
 }
 
@@ -978,7 +986,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    }
    else
    {
-	bsc_set_autosense((uint32_t)dev->virt_base, 0);
+	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
    }
 
    bsc_disable_clk(dev);
@@ -1011,7 +1019,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    }
    else
    {
-	bsc_set_autosense((uint32_t)dev->virt_base, 0);
+	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
    }
 
    bsc_disable_clk(dev);
@@ -1498,7 +1506,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		* Auto-sense allows the slave device to stretch the clock for a long
 		* time. Need to turn off auto-sense for high-speed mode
 		*/
-		bsc_set_autosense((uint32_t)dev->virt_base, 0);
+		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
 		/*
 		* Now save the BSC_TIM register value as it will be modified before the
@@ -1509,7 +1517,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	}
 	else {
 		dev->high_speed_mode = 0;
-		bsc_set_autosense((uint32_t)dev->virt_base, 1);
+		bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 	}
 
 	INIT_WORK(&dev->reset_work, i2c_master_reset);
@@ -1576,7 +1584,7 @@ err_destroy_wq:
 		destroy_workqueue(dev->reset_wq); 
 
 err_bsc_deinit:
-	bsc_set_autosense((uint32_t)dev->virt_base, 0);
+	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 	bsc_deinit((uint32_t)dev->virt_base);
 
 	iounmap(dev->virt_base);
@@ -1614,7 +1622,7 @@ static int bsc_remove(struct platform_device *pdev)
 	if (dev->reset_wq)
 		destroy_workqueue(dev->reset_wq);
 
-   bsc_set_autosense((uint32_t)dev->virt_base, 0);
+   bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
    bsc_deinit((uint32_t)dev->virt_base);
 
    iounmap(dev->virt_base);

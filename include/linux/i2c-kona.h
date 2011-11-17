@@ -81,15 +81,26 @@ struct i2c_slave_platform_data
 	/* Magic number to validate */
 	unsigned long spd_magic;
 	enum bsc_bus_speed i2c_speed;
+    /* Magic number to validate the timeout enable */
+    unsigned long timeout_magic;
+    int autosense_timeout_enable;
 };
 
 /* Magic number = "spd" in ascii codes */
 #define SLAVE_SPD_MAGIC_NUM            0x00647073
+/* Magic number = "tout" in ascii codes */
+#define TIMEOUT_MAGIC_NUM            0x746F7574
 
 #define ADD_I2C_SLAVE_SPEED(s) {   .spd_magic = SLAVE_SPD_MAGIC_NUM,       \
                                    .i2c_speed = s,                         \
                                }
 
+#define ENABLE_AUTOSENSE_TIMEOUT(s) {   .timeout_magic = TIMEOUT_MAGIC_NUM,       \
+                                        .autosense_timeout_enable = s,            \
+                               }
+
 #define I2C_SPEED_IS_VALID(x)  (x->spd_magic == SLAVE_SPD_MAGIC_NUM)
+
+#define TIMEOUT_IS_VALID(x)  (x->timeout_magic == TIMEOUT_MAGIC_NUM)
 
 #endif // _I2C_KONA_H_

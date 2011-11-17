@@ -97,7 +97,7 @@ static inline void isl_bsc_init(uint32_t baseAddr);
 static inline void bsc_disable_intr(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_clear_intr_status(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_set_tx_fifo(uint32_t baseAddr, unsigned char enable);
-static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on);
+static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on, unsigned char timeout_enable);
 static inline unsigned char bsc_get_timeout(uint32_t baseAddr);
 static inline void bsc_enable_intr(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_deinit(uint32_t baseAddr);
@@ -714,7 +714,7 @@ static inline unsigned char bsc_get_autosense(uint32_t baseAddr)
 *
 *  @return none
 *****************************************************************************/
-static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on)
+static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on, unsigned char timeout_enable)
 {
     if (on)
     {
@@ -723,7 +723,7 @@ static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on)
 		   We use max timeout value (1023 6.5MHz cycles)*/
 		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET), I2C_MM_HS_TOUT_TOUT_LOW_MASK, I2C_MM_HS_TOUT_TOUT_LOW_SHIFT, 0x7F);
 		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET), I2C_MM_HS_TOUT_TOUT_HIGH_MASK,I2C_MM_HS_TOUT_TOUT_HIGH_SHIFT, 0x7);
-		bsc_set_timeout(baseAddr, 1);
+		bsc_set_timeout(baseAddr, timeout_enable);
     }
     else
     {
