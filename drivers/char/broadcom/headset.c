@@ -42,6 +42,8 @@
 #include <linux/broadcom/headset.h>
 #include <linux/broadcom/headset_cfg.h>
 
+#include <linux/broadcom/knllog.h>           /* for debugging */
+
 /* ---- Public Variables ------------------------------------------------- */
 /* ---- Private Constants and Types -------------------------------------- */
 
@@ -112,9 +114,7 @@ static void check_headset_det_gpio( struct headset_info *ch )
 {
    int spkr_gpio_val = 0;
    int mic_gpio_val = 0;
-   unsigned long flags;
 
-   spin_lock_irqsave( &detlock, flags );
    if ( ch->hw_cfg.gpio_headset_det >= 0 )
    {
       spkr_gpio_val = gpio_get_value( ch->hw_cfg.gpio_headset_det );
@@ -126,7 +126,7 @@ static void check_headset_det_gpio( struct headset_info *ch )
    else
    {
       ch->state = HEADSET_STATE_INIT;
-      goto check_headset_exit;
+      return;
    }
 
    if ( ch->hw_cfg.gpio_mic_det >= 0 )
@@ -156,9 +156,6 @@ static void check_headset_det_gpio( struct headset_info *ch )
    ch->changed = 1;
 
    wake_up_interruptible( &ch->waitq );
-
-check_headset_exit:
-   spin_unlock_irqrestore( &detlock, flags );
 }
 
 /***************************************************************************/
@@ -169,10 +166,39 @@ check_headset_exit:
 static void setsw(struct work_struct *work)
 {
    struct headset_info *ch = gHeadset;
+   headset_state start_state;
+   unsigned long flags;
+
+   spin_lock_irqsave( &detlock, flags );
+
+   start_state = ch->state;
 
    check_headset_det_gpio( ch );
 
+   if ( start_state == HEADSET_TOGGLE_SPKR_ONLY || start_state == HEADSET_TOGGLE_SPKR_MIC )
+   {
+      KNLLOG( "Start_state = %d\n", start_state );
+      if ( start_state != ch->state )
+      {
+         switch( ch-> state )
+         {
+            case HEADSET_TOGGLE_SPKR_MIC:
+            case HEADSET_TOGGLE_SPKR_ONLY:
+               KNLLOG( "Setting state to unplugged\n" );
+               switch_set_state(&headset_switch, HEADSET_UNPLUGGED);
+               break;
+            default:
+               /* Do nothing */
+               break;
+         }
+      }
+   }
+
    switch_set_state(&headset_switch,ch->state);
+   KNLLOG( "State set to %d\n", ch->state );
+
+   spin_unlock_irqrestore( &detlock, flags );
+
 }
 #endif
 
@@ -272,6 +298,7 @@ static DEVICE_ATTR(mic_debounce, S_IRUGO | S_IWUSR, mic_debounce_show, mic_debou
 static int headset_open( struct inode *inode, struct file *file )
 {
    struct headset_info *ch;
+   unsigned long flags;
 
    ch = gHeadset;
 
@@ -290,10 +317,15 @@ static int headset_open( struct inode *inode, struct file *file )
 
    file->private_data = ch;
 
+
+   spin_lock_irqsave( &detlock, flags );
+
    check_headset_det_gpio( ch );
 #if defined(CONFIG_SWITCH)
    schedule_delayed_work(&setsw_work, 0);
 #endif
+
+   spin_unlock_irqrestore( &detlock, flags );
 
    return 0;
 }
@@ -422,10 +454,16 @@ static unsigned int headset_poll(
 */
 static irqreturn_t headset_det_irq( int irq, void *dev_id )
 {
+   unsigned long flags;
+
+   spin_lock_irqsave( &detlock, flags );
+
 #if defined(CONFIG_SWITCH)
-   cancel_delayed_work(&setsw_work);
    schedule_delayed_work(&setsw_work, HEADSET_DEFAULT_SCHED_DELAY);
 #endif
+
+   spin_unlock_irqrestore( &detlock, flags );
+
    return IRQ_HANDLED;
 }
 
@@ -437,6 +475,7 @@ static int __devinit headset_pltfm_probe(struct platform_device *pdev)
 {
    struct headset_info *ch;
    int ret;
+   unsigned long flags;
 
    BUG_ON( pdev == NULL );
 
@@ -539,10 +578,15 @@ static int __devinit headset_pltfm_probe(struct platform_device *pdev)
          goto probe_no_gpio;
       }
    }
+
+   spin_lock_irqsave( &detlock, flags );
+
    check_headset_det_gpio( ch );
 #if defined(CONFIG_SWITCH)
    schedule_delayed_work(&setsw_work, 0);
 #endif
+
+   spin_unlock_irqrestore( &detlock, flags );
 
    return 0;
 
