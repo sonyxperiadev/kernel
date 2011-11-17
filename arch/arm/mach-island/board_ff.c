@@ -1458,7 +1458,7 @@ void __init board_init(void)
 	board_add_devices();
 }
 
-MACHINE_START(ISLAND, "Island DK/FF")
+MACHINE_START(ISLAND, "Island")
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer = &kona_timer,
