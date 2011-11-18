@@ -413,9 +413,9 @@ UInt16 csl_caph_srcmixer_get_chal_inchnl(UInt16 inChnl)
     if (inChnl&CSL_CAPH_SRCM_STEREO_PASS_CH2_L) chalChnl |= CAPH_SRCM_PASSCH2_L;
     if (inChnl&CSL_CAPH_SRCM_STEREO_PASS_CH2_R) chalChnl |= CAPH_SRCM_PASSCH2_R;
 #if defined(CONFIG_ARCH_RHEA_B0)
-    if (inChnl&CSL_CAPH_SRCM_MONO_PASS_CH3) chalChnl |= CAPH_SRCM_PASSCH3;
-    if (inChnl&CSL_CAPH_SRCM_MONO_PASS_CH4) chalChnl |= CAPH_SRCM_PASSCH4;
-#endif	
+    if (inChnl&CSL_CAPH_SRCM_MONO_PASS_CH3) chalChnl |= CAPH_SRCM_PASSCH1_L; //CAPH_SRCM_PASSCH3;
+    if (inChnl&CSL_CAPH_SRCM_MONO_PASS_CH4) chalChnl |= CAPH_SRCM_PASSCH2_L; //CAPH_SRCM_PASSCH4;
+#endif
     return chalChnl;
 }
 
@@ -590,12 +590,12 @@ CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
             break;
 #if defined(CONFIG_ARCH_RHEA_B0)
         case CSL_CAPH_SRCM_MONO_PASS_CH3:
-            inChnlTrig = CSL_CAPH_TRIG_PASSTHROUGH_CH3_FIFO_THRESMET;
+            inChnlTrig = CAPH_PASSTHROUGH_CH3_FIFO_THRESMET;
             break;
         case CSL_CAPH_SRCM_MONO_PASS_CH4:
-            inChnlTrig = CSL_CAPH_TRIG_PASSTHROUGH_CH4_FIFO_THRESMET;
+            inChnlTrig = CAPH_PASSTHROUGH_CH4_FIFO_THRESMET;
             break;
-#endif			
+#endif
         default:
             audio_xassert(0, inChnl);
     }
@@ -1824,7 +1824,7 @@ void csl_caph_srcmixer_set_mix_all_in_gain( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_L, CAPH_M0_Left, left_scale);
 	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_R, CAPH_M0_Left, left_scale);
 
-#if CONFIG_ARCH_RHEA_B0
+#if defined(CONFIG_ARCH_RHEA_B0)
    	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH3, CAPH_M0_Left, left_scale);
    	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH4, CAPH_M0_Left, left_scale);
 #endif
@@ -1843,7 +1843,7 @@ void csl_caph_srcmixer_set_mix_all_in_gain( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_L, CAPH_M0_Right, right_scale);
 		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_R, CAPH_M0_Right, right_scale);
 
-#if CONFIG_ARCH_RHEA_B0
+#if defined(CONFIG_ARCH_RHEA_B0)
 		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH3, CAPH_M0_Right, right_scale);
 		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH4, CAPH_M0_Right, right_scale);
 #endif
@@ -1862,7 +1862,7 @@ void csl_caph_srcmixer_set_mix_all_in_gain( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_L, CAPH_M1_Left, left_scale);
 	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_R, CAPH_M1_Left, left_scale);
 
-#if CONFIG_ARCH_RHEA_B0
+#if defined(CONFIG_ARCH_RHEA_B0)
    	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH3, CAPH_M1_Left, left_scale);
    	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH4, CAPH_M1_Left, left_scale);
 #endif
@@ -1881,7 +1881,7 @@ void csl_caph_srcmixer_set_mix_all_in_gain( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_L, CAPH_M1_Right, right_scale);
 		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_R, CAPH_M1_Right, right_scale);
 
-#if CONFIG_ARCH_RHEA_B0
+#if defined(CONFIG_ARCH_RHEA_B0)
 		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH3, CAPH_M0_Right, right_scale);
 		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH4, CAPH_M0_Right, right_scale);
 #endif

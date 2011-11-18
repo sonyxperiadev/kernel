@@ -1405,7 +1405,8 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
 
 	if ((path->source == CSL_CAPH_DEV_FM_RADIO) &&
 		((path->sink[0] == CSL_CAPH_DEV_EP) ||
-		 (path->sink[0] == CSL_CAPH_DEV_BT_SPKR) ||
+		(path->sink[0] == CSL_CAPH_DEV_IHF) ||
+		(path->sink[0] == CSL_CAPH_DEV_BT_SPKR) ||
 		 (path->sink[0] == CSL_CAPH_DEV_HS)))
 	{
 		memcpy(&fm_sw_config, &path->sw[0], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
@@ -2541,8 +2542,11 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
     {
 		path->list = LIST_DMA_MIX_SW;
 
-		if(path->sink[0] == CSL_CAPH_DEV_VIBRA || //vibra does not go thru mixer
-		   (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000 && path->chnlNum == AUDIO_CHANNEL_MONO)) //no 48kHz mono pass-thru on A0, bypass mixer.
+		if(path->sink[0] == CSL_CAPH_DEV_VIBRA //vibra does not go thru mixer
+#if !defined(CONFIG_ARCH_RHEA_B0)
+			||(path->src_sampleRate == AUDIO_SAMPLING_RATE_48000 && path->chnlNum == AUDIO_CHANNEL_MONO) //no 48kHz mono pass-thru on A0, bypass mixer
+#endif
+			)
 		{
 			path->list = LIST_DMA_SW;
 		}
@@ -2577,10 +2581,11 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
     else
     if ((path->source == CSL_CAPH_DEV_FM_RADIO) &&
         ((path->sink[0] == CSL_CAPH_DEV_EP) ||
-         (path->sink[0] == CSL_CAPH_DEV_BT_SPKR) ||
+		(path->sink[0] == CSL_CAPH_DEV_IHF) ||
+		(path->sink[0] == CSL_CAPH_DEV_BT_SPKR) ||
          (path->sink[0] == CSL_CAPH_DEV_HS)))
     {
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP or HS or BTM *****\r\n"));
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback *****\r\n"));
 		fmRxRunning = TRUE;
 		path->list = LIST_SW_MIX_SW;
 		if(path->sink[0] == CSL_CAPH_DEV_BT_SPKR) path->list = LIST_SW_MIX_SRC_SW;
@@ -2670,7 +2675,12 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		//according to ASIC team, switch can be used as 1:2 splitter, with two idential destination address. But data format should be 24bit unpack.
 		memcpy(&(path->srcmRoute[1].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
 		memcpy(&(path->srcmRoute[2].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
+#if defined(CONFIG_ARCH_RHEA_B0)
+		path->chnlNum = 1; //o.w. stereo passthru src is picked.
+		path->list = LIST_SW_MIX_SW;
+#else
 		path->list = LIST_SW;
+#endif
     }
     else // For HW loopback use only: DIGI_MIC1/2/3/4 -> SSASW -> Handset Ear/IHF
     if (((path->source == CSL_CAPH_DEV_DIGI_MIC_L) ||
