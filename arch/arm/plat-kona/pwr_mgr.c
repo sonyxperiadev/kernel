@@ -50,6 +50,10 @@
 #define PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP 	PI_MGR_DFS_MIN_VALUE
 #endif
 
+#ifndef PWRMGR_SEM_VALUE
+#define PWRMGR_SEM_VALUE 1
+#endif
+
 
 #ifdef CONFIG_DEBUG_FS
 #ifndef PWRMGR_EVENT_ID_TO_STR
@@ -136,9 +140,6 @@ struct pwr_mgr
 	struct pwr_mgr_info* info;
 	struct pwr_mgr_event event_cb[PWR_MGR_NUM_EVENTS];
 	struct pi_mgr_dfs_node* sem_dfs_client;
-#ifndef CONFIG_KONA_PWRMGR_ENABLE_HW_SEM_WORKAROUND
-	u32 i2c_sem_val;
-#endif /*CONFIG_KONA_PWRMGR_ENABLE_HW_SEM_WORKAROUND*/
 	bool sem_locked;
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 i2c_seq_trg;
@@ -790,7 +791,6 @@ EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);
 int pwr_mgr_pm_i2c_sem_lock()
 {
 	u32 value, read_val,write_val;
-	u32 max_val;
 	u32 ret = 0;
 	u32 insurance = 1000;
 	if(unlikely(!pwr_mgr.info))
@@ -810,18 +810,11 @@ int pwr_mgr_pm_i2c_sem_lock()
 	}
 	udelay(2);
 
-	max_val = 1 + (PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_I2C_HARDWARE_SEMAPHORE_WRITE_VALUE_MASK >>
-				PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_I2C_HARDWARE_SEMAPHORE_WRITE_VALUE_SHIFT);
-
 	spin_lock(&pwr_mgr_lock);
-	pwr_mgr.i2c_sem_val = (pwr_mgr.i2c_sem_val+1)% max_val;
-	if(pwr_mgr.i2c_sem_val == 0)
-		pwr_mgr.i2c_sem_val++;
 
-	value = pwr_mgr.i2c_sem_val;
+	value = PWRMGR_SEM_VALUE;
 	write_val = (value << PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_I2C_HARDWARE_SEMAPHORE_WRITE_VALUE_SHIFT)
 				& PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_I2C_HARDWARE_SEMAPHORE_WRITE_VALUE_MASK;
-	pwr_dbg("%s: value = %x max_val = %x\n",__func__,value,max_val);
 	do
 	{
 		writel(write_val,
@@ -1540,9 +1533,6 @@ int pwr_mgr_init(struct pwr_mgr_info* info)
 	u32 v_set;
 	pwr_mgr.info = info;
 	pwr_mgr.sem_dfs_client = NULL;
-#ifndef CONFIG_KONA_PWRMGR_ENABLE_HW_SEM_WORKAROUND
-	pwr_mgr.i2c_sem_val = 0;
-#endif
 	pwr_mgr.sem_locked = false;
 
 	/*I2C seq is disabled by default*/
