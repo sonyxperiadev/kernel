@@ -12,6 +12,7 @@
 # consent.
 #*****************************************************************************
 obj-$(CONFIG_FB_BRCM_RHEA) += csl_dsi.o csl_smi.o csl_dma_vc4lite.o csl_tectl_vc4lite.o
+obj-$(CONFIG_VIDEO_UNICAM_CAMERA) += csl_cam.o
 # obj-$(CONFIG_BCM_STM) += csl_trace.o
 # we have moved SW configuration for STM trace to stm.c so commenting out
 

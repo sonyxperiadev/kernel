@@ -802,6 +802,11 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 		ret = ov5640_reg_write(client, 0x3108, 0x2);
 	}
 
+	printk(KERN_ERR"%s:enabling test color pattern\n", __func__);
+	ret = ov5640_reg_write(client, 0x503d, 0x80);
+	if (ret)
+		printk("%s:error enabling color pattern\n", __func__);
+	
 	return ret;
 }
 

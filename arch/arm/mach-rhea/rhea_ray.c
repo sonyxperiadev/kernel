@@ -1253,6 +1253,10 @@ static int rhea_camera_power(struct device *dev, int on)
 	void __iomem* padctl_base = (void __iomem *)HW_IO_PHYS_TO_VIRT(PAD_CTRL_BASE_ADDR);
 	unsigned int value;
 	struct clk *clock;
+	static int count  = 0;
+
+	if (count)
+		return 0;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -1264,6 +1268,7 @@ static int rhea_camera_power(struct device *dev, int on)
 		return -1;
 	}
 	if (on) {
+		count = 1;
 		/* enable clk */
 		value = clk_enable(clock);
 		if (value) {

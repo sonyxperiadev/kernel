@@ -9,7 +9,10 @@
 #include <linux/list.h>
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
+#include <linux/delay.h>
 
+#include <linux/fs.h>
+#include <linux/syscalls.h>
 #include <linux/videodev2.h>
 #include <media/v4l2-common.h>
 #include <media/v4l2-dev.h>
@@ -17,11 +20,15 @@
 #include <media/soc_camera.h>
 #include <media/soc_mediabus.h>
 
+#include <plat/mobcom_types.h>
+#include <plat/csl/csl_cam.h>
+
 #define UNICAM_CAM_DRV_NAME		"unicam-camera"
+#define dev_dbg(dev, format, arg...)		\
+	printk(KERN_ERR, format, ##arg)
 
 enum unicam_cam_memresource {
-	UNICAM_CAM_CSI0_REGS,
-	UNICAM_NUM_RSRC
+	UNICAM_NUM_RSRC,
 };
 
 struct unicam_camera_dev {
@@ -33,19 +40,50 @@ struct unicam_camera_dev {
 	struct resource				*res[UNICAM_NUM_RSRC];
 	unsigned int				irq;
 	struct device				*dev;
+	/* h/w specific */
 	void __iomem				*csi_base;
+	void __iomem				*mm_cfg_base;
+	void __iomem				*mm_clk_base;
+
+	CSL_CAM_HANDLE				cslCamHandle;
 	/* data structure needed to support streaming */
 	int							sequence;
 	spinlock_t					lock;
 	struct vb2_buffer			*active;
 	struct list_head			capture;
 	u8							streaming;
+
+	char *hack;
 };
 
 struct unicam_camera_buffer {
 	struct vb2_buffer vb;
 	struct list_head queue;
 };
+
+
+static void dump_file(char *filename, void *src, int size)
+{
+	mm_segment_t old_fs;
+	int fd = 0, nbytes = 0;
+
+	old_fs = get_fs();
+	set_fs(get_ds());
+
+	printk(KERN_ERR"Writing %d bytes to file %s\n", size, filename);
+	fd = sys_open(filename, (O_RDWR | O_CREAT ), 0777);
+	if (fd < 0) {
+		printk(KERN_ERR"Error in opening file %s\n", filename);
+		goto out;
+	}
+
+	nbytes = sys_write(fd, src, size);
+	printk(KERN_ERR "Wrote %d bytes to file %s\n", nbytes, filename);
+	sys_close(fd);
+
+out:
+	set_fs(old_fs);
+}
 
 
 static struct unicam_camera_buffer *to_unicam_camera_vb(struct vb2_buffer *vb)
@@ -111,6 +149,105 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 	return 0;
 }
 
+/* should be called with unicam_dev->lock held */
+static int  unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
+{
+    
+	CSL_CAM_BUFFER_st_t     cslCamBuffer0;
+    CSL_CAM_BUFFER_st_t     cslCamBuffer1;
+    CSL_CAM_BUFFER_st_t     cslCamBufferData0;
+    CSL_CAM_BUFFER_st_t     cslCamBufferData1;
+	dma_addr_t phys_addr;
+	unsigned int line_stride;
+
+	if (!unicam_dev->active) {
+		dev_err(unicam_dev->dev,"No active buffer\n");
+		return -ENOMEM;
+	}
+
+	phys_addr = vb2_dma_contig_plane_paddr(unicam_dev->active, 0);
+
+	/*
+	unicam_dev->hack = ioremap(phys_addr, (640*480*2));
+	memset(unicam_dev->hack, 0, 640*480*2);
+	*/
+
+
+	/*TODO: fix resolution */
+	/* stride is in bytes */
+	line_stride = 640*2;
+
+	/* image 0 */
+	cslCamBuffer0.start_addr = (UInt32)phys_addr;
+	cslCamBuffer0.line_stride = (UInt32)line_stride; 
+	cslCamBuffer0.size = line_stride * 480;
+	cslCamBuffer0.buffer_wrap_en = 1;
+	cslCamBuffer0.mem_type = CSL_CAM_MEM_TYPE_NONE;
+	
+	/* image 1 */
+	cslCamBuffer1.start_addr = 0;
+	cslCamBuffer1.line_stride = cslCamBuffer0.line_stride;
+	cslCamBuffer1.size = cslCamBuffer0.size;
+	cslCamBuffer1.buffer_wrap_en = cslCamBuffer0.buffer_wrap_en;
+	cslCamBuffer1.mem_type = cslCamBuffer0.mem_type;
+	
+	/* set date buffer 0 */
+	cslCamBufferData0.start_addr = (UInt32)0;
+	cslCamBufferData0.line_stride = 0;
+	cslCamBufferData0.buffer_wrap_en = 0;
+	cslCamBufferData0.size = 0;
+	cslCamBufferData0.mem_type = cslCamBuffer0.mem_type;
+
+	/* set data buffer 1 */
+	cslCamBufferData1.start_addr = 0;
+
+	if (cslCamBuffer1.start_addr != 0) 	{
+		if (csl_cam_set_input_addr(unicam_dev->cslCamHandle, &cslCamBuffer0,
+					&cslCamBuffer1, &cslCamBufferData0)) {
+
+			dev_err(unicam_dev->dev, "csl_cam_set_input_addr(): FAILED\n");
+			return -1;
+		}
+	}
+	else {
+		if (csl_cam_set_input_addr(unicam_dev->cslCamHandle, &cslCamBuffer0,
+					NULL, &cslCamBufferData0)) {
+
+			dev_err(unicam_dev->dev, "CamCslSetInputIntf(): csl_cam_set_input_addr(): FAILED\n");
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+/* should be called with unicam_dev->lock held */
+static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
+{
+	int ret = 0;
+    CSL_CAM_FRAME_st_t      cslCamFrame;
+
+	if (!unicam_dev->active)
+		return ret;
+	
+
+	cslCamFrame.int_enable      = (CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT) ;
+	/* for testing enable frame start interrupt */
+	cslCamFrame.int_enable      |= CSL_CAM_INT_FRAME_START ;
+	cslCamFrame.int_line_count  = 479;
+	cslCamFrame.capture_mode    = CSL_CAM_CAPTURE_MODE_TRIGGER;
+
+	/*TODO: fix resolution */
+	cslCamFrame.capture_size    = 640*2*480;
+	
+	if (csl_cam_trigger_capture(unicam_dev->cslCamHandle) != 0)	{
+		dev_err(unicam_dev->dev, "error in triggering capture\n");
+		return -1;
+	}
+
+	return ret;
+}
+
 static void unicam_videobuf_queue(struct vb2_buffer *vb)
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vb->vb2_queue);
@@ -127,7 +264,12 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 
 	if (!unicam_dev->active) {
 		unicam_dev->active = vb;
+		
 		/* use this buffer to trigger capture */
+		unicam_camera_update_buf(unicam_dev);
+		unicam_camera_capture(unicam_dev);
+		csl_cam_register_display(unicam_dev->cslCamHandle);
+
 	}
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 }
@@ -158,17 +300,89 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(q);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
-	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 
-	/*enable clocks */
+	CSL_CAM_INTF_CFG_st_t csl_cam_intf_cfg_st;
+	CSL_CAM_LANE_CONTROL_st_t cslCamLaneCtrl_st;
+	CSL_CAM_PIPELINE_st_t   cslCamPipeline;
+	CSL_CAM_INPUT_st_t      cslCamInput;
+	CSL_CAM_IMAGE_ID_st_t   cslCamImageCtrl;
+	CSL_CAM_FRAME_st_t      cslCamFrame;
 
-	/* wait for hw to initialize */
+	/* set camera interface parameters */
+	csl_cam_intf_cfg_st.intf = CSL_CAM_INTF_CSI;
+	csl_cam_intf_cfg_st.afe_port = CSL_CAM_PORT_AFE_0;
+	csl_cam_intf_cfg_st.frame_time_out = 1000;
 
-	/* enable h/w interrupts */
+	/* open camera interface */
+	csl_cam_intf_cfg_st.p_cpi_intf_st  = NULL;
+	csl_cam_intf_cfg_st.input_mode = CSL_CAM_INPUT_SINGLE_LANE;
 
-	/* lane configuration */
+	if (csl_cam_open(&csl_cam_intf_cfg_st, &unicam_dev->cslCamHandle)) 	{
+		dev_err(unicam_dev->dev, "%s: csl_cam_open(): ERROR\n", __func__);
+		return -1;
+	}
 
+	/* lane/clk configuration */
+	cslCamInput.input_mode = CSL_CAM_INPUT_SINGLE_LANE;
+	cslCamInput.frame_time_out = 1000;
+
+	if (csl_cam_set_input_mode(unicam_dev->cslCamHandle, &cslCamInput))	{
+		dev_err(unicam_dev->dev, "csl_cam_set_input_mode(): FAILED\n");
+		return -1;
+	}
+
+	/* set data lane timing */
+	cslCamLaneCtrl_st.lane_select = CSL_CAM_DATA_LANE_0;
+	cslCamLaneCtrl_st.lane_control = CSL_CAM_LANE_HS_TERM_TIME;
+	cslCamLaneCtrl_st.param = 7;
+	if (csl_cam_set_lane_control(unicam_dev->cslCamHandle, &cslCamLaneCtrl_st)) {
+		dev_err(unicam_dev->dev, "csl_cam_set_lane_control(): FAILED\n");
+		return -1;
+	}
+
+	/* pipelince decode */
+	cslCamPipeline.decode = CSL_CAM_DEC_NONE;
+	cslCamPipeline.unpack = CSL_CAM_PIXEL_NONE;
+	cslCamPipeline.pack = CSL_CAM_PIXEL_NONE;
+	cslCamPipeline.dec_adv_predictor    = FALSE;
+
+	cslCamPipeline.encode = CSL_CAM_ENC_NONE;
+	cslCamPipeline.enc_adv_predictor    = FALSE;
+	cslCamPipeline.encode_blk_size      = 0x0000;
+	
+	/* set pipeline */
+	if (csl_cam_set_pipeline_control(unicam_dev->cslCamHandle, &cslCamPipeline)) {
+		dev_err(unicam_dev->dev, "csl_cam_set_pipeline_control(): FAILE\n");
+		return -1;
+	}
+
+	/* set image identifier (CSI mode only) */
+	memset( &cslCamImageCtrl, 0, sizeof(CSL_CAM_IMAGE_ID_st_t) );
+	cslCamImageCtrl.image_data_id0 = 0x1E;
+
+	if (csl_cam_set_image_type_control(unicam_dev->cslCamHandle, &cslCamImageCtrl)) {
+		dev_err(unicam_dev->dev, "csl_cam_set_image_type_control(): FAILED\n");
+		return -1;
+	}
+
+	/* start receiver */
+	if (csl_cam_rx_start(unicam_dev->cslCamHandle))	{
+		dev_err(unicam_dev->dev, "csl_cam_rx_start(): FAILED\n");
+		return -1;
+	}
+
+	/* enable frame Interrupts */
+	cslCamFrame.int_enable      = CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT;
+	/* for testing enabled frame start interrupt */
+	cslCamFrame.int_enable      |= CSL_CAM_INT_FRAME_START; 
+	cslCamFrame.int_line_count  = 479;
+	cslCamFrame.capture_mode    = CSL_CAM_CAPTURE_MODE_TRIGGER; //CSL_CAM_CAPTURE_MODE_TRIGGER
+	cslCamFrame.capture_size    = 0;
+	if (csl_cam_set_frame_control(unicam_dev->cslCamHandle, &cslCamFrame))	{
+		dev_err(unicam_dev->dev, "csl_cam_set_frame_control(): FAILED\n");
+		return -1;
+	}
 	unicam_dev->streaming = 1;
 	return 0;
 }
@@ -177,19 +391,35 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(q);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
-	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
+   	CSL_CAM_FRAME_st_t      cslCamFrame;
+	int ret;
 
 	/* disable csi2 interface */
+	
+	/* disable frame interrupts */
+    cslCamFrame.int_enable      = CSL_CAM_INT_DISABLE;
+    cslCamFrame.int_line_count  = 0;
+    cslCamFrame.capture_mode    = CSL_CAM_CAPTURE_MODE_TRIGGER;
+    cslCamFrame.capture_size    = 0;
+    if (csl_cam_set_frame_control(unicam_dev->cslCamHandle, &cslCamFrame)) {
+		    dev_err(unicam_dev->dev, "csl_cam_set_frame_control(): FAILED\n");
+            ret = -1;
+    }
 
+	/* disable receiver */
+    if (csl_cam_rx_stop(unicam_dev->cslCamHandle)) {
+		    dev_err(unicam_dev->dev, "csl_cam_rx_stop(): FAILED\n");
+            ret = -1;
+    }
+
+	if (csl_cam_exit())	{
+		dev_err(unicam_dev->dev, "cals_cam_exit(): FAILED\n");
+		ret = -1;
+	}
 	unicam_dev->active = NULL;
-
-	/* Disable h/w interrupts */
-
-	/* disable clocks */
-
 	unicam_dev->streaming = 0;
-	return 0;
+	return ret;
 }
 
 
@@ -251,6 +481,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	__u32 pixfmt = pix->pixelformat;
 	int ret;
 
+	printk(KERN_ERR"%s:%d\n", __func__, __LINE__);
 	xlate = soc_camera_xlate_by_fourcc(icd, pixfmt);
 	if (!xlate) {
 		dev_warn(icd->dev.parent, "Format %x not found\n", pixfmt);
@@ -315,6 +546,7 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	struct v4l2_mbus_framefmt mf;
 	int ret;
 
+	printk(KERN_ERR"%s:%d\n", __func__, __LINE__);
 	xlate = soc_camera_xlate_by_fourcc(icd, pix->pixelformat);
 	if (!xlate) {
 		dev_warn(dev, "Format %x not found\n", pix->pixelformat);
@@ -400,6 +632,63 @@ static struct soc_camera_host_ops unicam_soc_camera_host_ops = {
 static irqreturn_t unicam_camera_isr(int irq, void *arg)
 {
 	struct unicam_camera_dev *unicam_dev = (struct unicam_camera_dev *)arg;
+	unsigned int status;
+	unsigned int reg_status;
+	int j;
+	volatile int i;
+
+	/* has the interrupt occured for Channel 0? */
+    reg_status = csl_cam_get_rx_status(unicam_dev->cslCamHandle, (CSL_CAM_RX_STATUS_t *)&status);
+	printk(KERN_INFO "received unicam interrupt reg_status=0x%x status=0x%x\n", reg_status, status);
+
+    if (status & CSL_CAM_RX_INT) {
+
+    	/* get and clear interrupt status */
+        reg_status = csl_cam_get_intr_status(unicam_dev->cslCamHandle, (CSL_CAM_INTERRUPT_t *)&status );
+
+        if (status & (CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT)) {
+			struct vb2_buffer *vb = unicam_dev->active;
+			int ret;
+			printk(KERN_INFO "Frame received\n");
+
+			if (!vb)
+				goto out;
+			
+			/* mark  the buffer done */
+			/* queue another buffer and trigger capture */
+			spin_lock(&unicam_dev->lock);
+			list_del_init(&to_unicam_camera_vb(vb)->queue);
+
+			if (!list_empty(&unicam_dev->capture)) 
+				unicam_dev->active = &list_entry(unicam_dev->capture.next,
+						struct unicam_camera_buffer, queue)->vb;
+			else
+				unicam_dev->active = NULL;
+			ret = unicam_camera_update_buf(unicam_dev);
+			if (ret)
+				printk(KERN_INFO "error while queueing the buffer\n");
+			ret = unicam_camera_capture(unicam_dev);
+			if (ret)
+				printk(KERN_INFO "error triggering capture\n");
+
+			do_gettimeofday(&vb->v4l2_buf.timestamp);
+			vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
+			spin_unlock(&unicam_dev->lock);
+		}
+		else
+			dev_err(unicam_dev->dev, "interrupt not handled reg_status=0x%x status=0x%x\n", reg_status, status);
+	}
+	else
+			dev_err(unicam_dev->dev, "interrupt not handled reg_status=0x%x status=0x%x\n", reg_status, status);
+
+out:
+/*	for(status = 0; status < 80000; status++)
+		for(j = 0; j < 80000; j++)
+			i = j+status;
+	printk(KERN_ERR "Printing memory: \n");
+	for(j=0; j < (64); j++)
+			printk("%x ", unicam_dev->hack[j]); 
+	printk("\n");*/
 	return IRQ_HANDLED;
 }
 
@@ -445,14 +734,7 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	for (i = 0; i < UNICAM_NUM_RSRC; i++)
 		unicam_dev->res[i] = res[i];
 
-	unicam_dev->csi_base = ioremap(res[UNICAM_CAM_CSI0_REGS]->start,
-					resource_size(res[UNICAM_CAM_CSI0_REGS]));
-	if (!unicam_dev->csi_base) {
-		dev_err(&pdev->dev, "Unable to map csi0 regs\n");
-		err = -ENOMEM;
-		goto ecsioregs;
-	}
-
+	unicam_dev->dev			= &pdev->dev;
 	unicam_dev->irq			= irq;
 	soc_host				= &unicam_dev->soc_host;
 	soc_host->drv_name		= UNICAM_CAM_DRV_NAME;
@@ -476,6 +758,14 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 		goto eallocctx;
 	}
 
+	err = csl_cam_init();
+	if (err) {
+		dev_err(&pdev->dev, "error initializing csl camera\n");
+		err = -ENODEV;
+		goto ecslcaminit;
+	}
+
+
 	err = soc_camera_host_register(soc_host);
 	if (err) 
 		goto ecamhostreg;
@@ -483,12 +773,14 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	return 0;
 
 ecamhostreg:
+	err = csl_cam_exit();
+	if (err)
+		dev_err(&pdev->dev, "error in deinitializing csl camera\n");
+ecslcaminit:
 	vb2_dma_contig_cleanup_ctx(unicam_dev->alloc_ctx);
 eallocctx:
 	free_irq(unicam_dev->irq, unicam_dev);
 eirq:
-	iounmap(unicam_dev->csi_base);
-ecsioregs:
 	vfree(unicam_dev);
 ealloc:
 	for (i = 0; i < UNICAM_NUM_RSRC; i++) {
@@ -501,6 +793,7 @@ edev:
 
 static int __devexit unicam_camera_remove(struct platform_device *pdev)
 {
+	/*TODO */
 	return 0;
 }
 

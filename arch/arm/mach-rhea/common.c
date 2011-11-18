@@ -773,13 +773,7 @@ static struct platform_device android_pmem[] = {
 static u64 unicam_camera_dma_mask = DMA_BIT_MASK(32);
 
 static struct resource board_unicam_resource[] = {
-	[0] =
-	{
-		.start	=	MM_CSI0_BASE_ADDR,
-		.end	=	MM_CSI0_BASE_ADDR + SZ_4K - 1, /* verify this */
-		.flags	=	IORESOURCE_MEM,
-	},
-	[1] =
+	[0] = 
 	{
 		.start	=	BCM_INT_ID_RESERVED156,
 		.end	=	BCM_INT_ID_RESERVED156,
