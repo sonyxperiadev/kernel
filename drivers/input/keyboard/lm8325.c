@@ -21,18 +21,7 @@
  * from scanning a matrix-addressed keypad and to provide flexible and general 
  * purpose, host programmable input/output functions.
  *
- * Version 1
- */
-
-/* TODO : For Version 2
- * 1. Implement Multi-key press detection. With the current driver, the
- * controller will enter a unknown state if multiple keys are pressed.
- * 2. Get the reset functionality working.
- * 3. Since the data read on a bus error is not consistently correct, we are
- * handling the key release on bus error by storing the key_code of the
- * previous key press. For a key press on bus error, we ignore both the key
- * press as well as the next release interrupts. This will be removed once the
- * bus error condition is taken care of.
+ * Version 2
  */
 
 #include <linux/module.h>
@@ -372,12 +361,9 @@ static int lm8325_configure(struct lm8325_chip *lm)
  */
 static int lm8325_process_key(struct lm8325_chip *lm)
 {
-	int row, col, key_release, key_code;
-	u8 ints;
-	int ret;
-
-	/* TODO: Now we are handling only one key press event. Will need to
-	 * implement multi-key detection later */
+	int row, col, key_release, key_code, multi_key;
+	u8 ints, ints1;
+    static int code_count;
 
 	if (!lm->kp_enabled) {
 		dev_err(&lm->client->dev,
@@ -386,82 +372,69 @@ static int lm8325_process_key(struct lm8325_chip *lm)
 		return -1;
 	}
 
-	/* Read EVTCODE */
-	ret = lm8325_read(lm, LM8325_CMD_EVTCODE, &ints, 1);
+    /* Read the appropriate KBDCODE */
+    lm8325_read(lm, (LM8325_CMD_KBDCODE0 + code_count), &ints, 1);
 
-	/* Handle the read error due to bus error */
-	if (ret != 1) {
-		lm->err_flag = 1;
-		lm->error_count++;
-		/* If the bus error is encountered for a key press, ignore it */
-		if (lm->key_pressed == 0)
-			return -1;
-	}
+    /* Read the EVTCODE */
+	lm8325_read(lm, LM8325_CMD_EVTCODE, &ints1, 1);
 
-	/* Get the row and column numbers of the key pressed/released */
-	row = (ints & 0x70);
-	col = (ints & 0xf);
+    /* Check if the key is pressed */
+    if ((ints & 0x7f) != 0x7f){
+        /* Get the row and column numbers of the key pressed/released */
+	    row = (ints & 0x70);
+	    col = (ints & 0xf);
 
-	key_code = (row | col);
+	    key_code = (row | col);
 
-	/* Check if the key was pressed or released */
-	key_release = (ints & 0x80);
+	    /* Check if the key was pressed or released */
+	    key_release = (ints1 & 0x80);
 
-	if (key_release == 0 && lm->key_pressed == 0) {
-		/* Handle the key press */
-		input_report_key(lm->idev, lm->keymap[key_code], 1);
+        if (key_release == 0) {
+            if (code_count > 3) {
+                dev_err(&lm->client->dev, "%s: more then 4 keys pressed..error\n", __func__);
+                return -1;
+            }
+		    /* Handle the key press */
+		    input_report_key(lm->idev, lm->keymap[key_code], 1);
+		    input_sync(lm->idev);
+            code_count++;
+        } else {
+            if (code_count == 0) {
+                dev_err(&lm->client->dev, "%s: key release for now new key press..error\n", __func__);
+                return -1;
+            }
+		    /* Handle the key release */
+		    input_report_key(lm->idev, lm->keymap[key_code], 0);
+		    input_sync(lm->idev);
+            code_count--;
+        }
+    } else if ((ints1 & 0x80) == 0x80){
+        /* Key release */
+        /* Get the row and column numbers of the key pressed/released */
+	    row = (ints1 & 0x70);
+	    col = (ints1 & 0xf);
+
+	    key_code = (row | col);
+
+        if (code_count == 0) {
+            dev_err(&lm->client->dev, "%s: key release for now new key press..error\n", __func__);
+            return -1;
+        }
+		input_report_key(lm->idev, lm->keymap[key_code], 0);
 		input_sync(lm->idev);
-		lm->key_pressed = 1;
-		/* This keycode is used if a bus error is encountered for a
-		 * key release interrupt read */
-		lm->bckup_key_code = key_code;
-	} else {
-		/* Handle key release when there has been a bus error on read */
-		if (lm->err_flag == 1) {
-			/* Condition to ignore the key release interrupt
-			 * after a key press on bus error. This is again not
-			 * handled */
-			if (lm->error_count == 2) {
-				lm->error_count = 0;
-				lm->err_flag = 0;
-				return -1;
-			/* Handle the condition when the bus error was
-			 * encountered for key press and the key release was
-			 * fine - Send a key press for the key code read for
-			 * key release*/
-			} else if (lm->error_count == 1 && lm->key_pressed == 0) {
-				/* Handle the key press for the keycode read
-				 * for key release */
-				input_report_key(lm->idev, lm->keymap[key_code],
-						 1);
-				input_sync(lm->idev);
-				/* Handle the key release */
-				input_report_key(lm->idev, lm->keymap[key_code],
-						 0);
-				input_sync(lm->idev);
-				lm->err_flag = 0;
-				lm->error_count = 0;
-			/* Handle the condition when the bus error was seen
-			 * for the key release read. This is taken care by
-			 * sending a key release for the keycode read during
-			 * previous key press */
-			} else {
-				/* Handle the key release */
-				input_report_key(lm->idev,
-						 lm->keymap[lm->bckup_key_code],
-						 0);
-				input_sync(lm->idev);
-				lm->err_flag = 0;
-				lm->error_count = 0;
-			}
-		} else {
-			/* Handle the key release */
-			input_report_key(lm->idev, lm->keymap[key_code], 0);
-			input_sync(lm->idev);
-		}
-		/* Reset the key pressed flag after key release is handled */
-		lm->key_pressed = 0;
-	}
+        code_count--;
+        goto ret;
+    } else {
+        dev_err(&lm->client->dev, "%s: no press or release\n", __func__);
+    }
+
+    /* Check if the multi-key scenario needs to be handled */
+    multi_key = (ints & 0x80);
+    if (multi_key)
+    {
+        lm8325_process_key(lm);
+    }
+ret:
 	return 0;
 }
 
@@ -476,7 +449,7 @@ static int lm8325_process_key(struct lm8325_chip *lm)
 static void lm8325_work(struct work_struct *work)
 {
 	struct lm8325_chip *lm = container_of(work, struct lm8325_chip, work);
-	u8 ints = 0;
+	u8 ints = 0, ret = 0;
 	u8 buf[2];
 
 	disable_irq_nosync(lm->client->irq);
@@ -496,7 +469,22 @@ static void lm8325_work(struct work_struct *work)
 			 * key-press/release */
 
 			/* Process the data */
-			lm8325_process_key(lm);
+			ret = lm8325_process_key(lm);
+
+            /* Error encountered if more tha 4 keys are pressed */
+            if (ret == -1)
+            {
+				dev_err(&lm->client->dev, "%s: Error encountered while processing the key pressed\n", __func__);
+			    /* clear any interrupts set */
+			    buf[0] = LM8325_CMD_KBDIC;
+			    buf[1] = 0x83;
+			    lm8325_write(lm, 2, buf);
+
+			    /* Mask the required interrupts */
+			    buf[0] = LM8325_CMD_KBDMSK;
+			    buf[1] = 0x3;
+			    lm8325_write(lm, 2, buf);
+            }
 		} else {
 			/* Check the bits set in the KBDMIS register and handle the
 			 * interrupt issued */
@@ -676,14 +664,14 @@ static int lm8325_probe(struct i2c_client *client, struct i2c_device_id *id)
 	//lm8325_reset(lm);
 
 #ifdef DEBUG_ENABLE
-	lm8325_reg_dump();
+	lm8325_reg_dump(lm);
 #endif
 
 	/* 7. Initial configuration of the controller */
 	lm8325_configure(lm);
 
 #ifdef DEBUG_ENABLE
-	lm8325_reg_dump();
+	lm8325_reg_dump(lm);
 #endif
 
 	mutex_init(&lm->lock);
