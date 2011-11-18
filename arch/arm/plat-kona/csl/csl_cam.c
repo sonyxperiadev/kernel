@@ -13,7 +13,7 @@
 //       HERA, RHEA CAM CSL implementation.
 //
 
-#define ENABLE_DEBUG
+//#define ENABLE_DEBUG
 //#define ENABLE_DEBUG_REGISTER_DISPLAY
 
     #include <linux/string.h>
@@ -50,7 +50,11 @@
                #define DBG_OUT(x) 
             #endif
     #define CSLCAM_DBG_ID 10   
-    #define CSLCAM_DBG(id, fmt, args...)	do { if (id == CSLCAM_DBG_ID) printk(KERN_ERR fmt, ##args); } while (0)
+	#ifdef ENABLE_DEBUG
+	    #define CSLCAM_DBG(id, fmt, args...)	do { if (id == CSLCAM_DBG_ID) printk(KERN_ERR fmt, ##args); } while (0)
+	#else
+		#define CSLCAM_DBG(id, fmt, args...)
+	#endif
 
 
 
@@ -144,14 +148,6 @@ static CSL_CAM_DRV_st  cslCamDrv;
 // handles
 static void         *sClkHandle = NULL;     // clock handle
 
-// csl cam Task Semaphore
-static Semaphore_t  sSemCslCamTask = NULL;              // for coordinating HISR and TASK
-// csl cam Hisr
-static Interrupt_t  sHisrCslCam = NULL;
-// csl cam Task
-static Task_t       sCslCamTask = NULL;
-
-
 /******************************************************************************
  Local Functions
  *****************************************************************************/
@@ -159,11 +155,6 @@ static CHAL_CAM_INTF_t cslCamChalIntf(CSL_CAM_INTF_T csl_val);
 static CHAL_CAM_PORT_AFE_t cslCamChalPortAFE(CSL_CAM_PORT_AFE_T csl_val);
 static CHAL_CAM_CHAN_t cslCamChalPortChan(CSL_CAM_PORT_CHAN_T csl_val);
 
-static irqreturn_t cslCamFrameLisr(int irq, void *dev_id);
-
-static void cslCamFrameHisr( void );
-
-static void cslCamFrameTask( void );
 static Int32 cslCamClock(UInt32 clk_select, UInt32 freq, Boolean enable);
  
 /******************************************************************************
@@ -718,425 +709,6 @@ static Int32 cslCamClock(UInt32 clk_select, UInt32 freq, Boolean enable)
     return success;
 }            
 
-
- /***********************************************************
- * Name: cslCamTaskInit
- * 
- * Arguments: 
- *       void
- *
- * Description: Initialize Csl Camera task and Semaphore
- *
- * Returns: int == 0 is success, all other values are failures
- *
- ***********************************************************/
-static Int32 cslCamTaskInit(void)
-{
-    Int32 success = CSL_CAM_OK;          //pass by default
-
-// Semaphore Create
-    if (sSemCslCamTask == NULL)
-    {    
-        printk("cslCamTaskInit() sSemCslCamTask\n");   
-        cslCamDrv.frame_task_running = FALSE;
-        sSemCslCamTask = OSSEMAPHORE_Create (0, OSSUSPEND_PRIORITY);
-        if (sSemCslCamTask ==  NULL)
-        {
-            DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamTaskInit][Error] : sSemCslCamTask: FAILED \n") );
-            success |= CSL_CAM_OS_ERR;
-        }
-        else
-        {
-            OSSEMAPHORE_ChangeName ( sSemCslCamTask, "SEMCSLCAMTASK");
-        }
-    }
-
-// Task Create
-    if (sCslCamTask == NULL)
-    { 
-        printk("cslCamTaskInit() sCslCamTask\n");   
-        sCslCamTask = OSTASK_Create (cslCamFrameTask, TASKNAME_CSLCAM, (TPriority_t)(ABOVE_NORMAL), (STACKSIZE_CSLCAM));
-        if( sCslCamTask == NULL )
-        {
-            DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamTaskInit][Error]: cslCamFrameTask: FAILED \n") );
-            success |= CSL_CAM_OS_ERR;
-        }
-    }
-
-// Hisr Create
-    if (sHisrCslCam == NULL)
-    {    
-        printk("cslCamTaskInit() sHisrCslCam\n");   
-        sHisrCslCam = OSINTERRUPT_Create( (IEntry_t)&cslCamFrameHisr, HISRNAME_CSLCAM, IPRIORITY_MIDDLE, HISRSTACKSIZE_CSLCAM );
-        if( sHisrCslCam == NULL )
-        {
-            DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamTaskInit][Error]: cslCamFrameHisr: FAILED \n") );
-            success |= CSL_CAM_OS_ERR;
-        }
-    }
-    return success;
-}
-
-
- /***********************************************************
- * Name: cslCamTaskDeInit
- * 
- * Arguments: 
- *       void
- *
- * Description: DeInitialize Csl Camera task and Semaphore
- *
- * Returns: int == 0 is success, all other values are failures
- *
- ***********************************************************/
-static Int32 cslCamTaskDeInit(void)
-{
-    Int32 success = CSL_CAM_OK;          //pass by default
-
-// Hisr Destroy
-    if (sHisrCslCam != NULL)
-    {    
-        DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamTaskDeInit][Info] : Destroy sCslCamTask \n") );
-        OSINTERRUPT_Destroy (sHisrCslCam);
-        sHisrCslCam = NULL;
-    }
-// Task Destroy
-    if (sCslCamTask != NULL)
-    {
-    // Wait for task to complete
-        if (cslCamDrv.frame_task_running == TRUE)
-        {
-            while ( cslCamDrv.frame_task_running == TRUE );
-        }
-        DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamTaskDeInit][Info] : Destroy sCslCamTask \n") );
-        OSTASK_Destroy (sCslCamTask);
-        sCslCamTask = NULL;
-    }
-// Semaphore Destroy
-   if (sSemCslCamTask != NULL)
-    {    
-        DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamTaskDeInit][Info] : Destroy sSemCslCamTask \n") );
-        OSSEMAPHORE_Destroy (sSemCslCamTask);
-        sSemCslCamTask = NULL;
-    }  
-      
-    return success;
-}
-
-/***********************************************************
- * Name: cslCamFrameLisr
- * 
- * Arguments: 
- *       none
- *
- * Description: Csl Camera HISR, Triggered from HISR
- * note:        Static: Triggers CSL CAM Task.
- ***********************************************************/
- 
- 
-static irqreturn_t cslCamFrameLisr(int irq, void *dev_id)
-{
-    CAM_HANDLE camH;
-    CSL_CAM_BUFFER_PTR_st_t buffers;
-    CSL_CAM_CB_st_t csl_cb_st;
-
-    camH = cslCamDrv.currHandle;
-/* Has the interrupt occured for Channel 0? */
-    camH->state.raw_rx_status = csl_cam_get_rx_status( (CSL_CAM_HANDLE)camH, (CSL_CAM_RX_STATUS_t *)&camH->state.rx_status );
-    if (camH->state.rx_status & CSL_CAM_RX_INT)
-    {
-    // Get and clear interrupt status
-        camH->state.raw_intr_status = csl_cam_get_intr_status( (CSL_CAM_HANDLE)camH, (CSL_CAM_INTERRUPT_t *)&camH->state.intr_status );
-
-    // No Hardware Double Buffering       
-        if (camH->state.doubleBufferEn == FALSE)      
-        {
-    // Set buffers    
-            camH->state.currentDataBuffer = &camH->state.data_buffer_0;     // Only 1 data buffer
-            if (camH->state.bufferIndex == 0) 
-            {
-                camH->state.currentBuffer = &camH->state.image_buffer_0;
-            
-                if ((void *)camH->state.image_buffer_1.start_addr != NULL)
-                {
-                        camH->state.nextBuffer = &camH->state.image_buffer_1;              
-                }
-                else
-                {
-                        camH->state.nextBuffer = NULL;
-                }
-            }
-            else
-            {
-                    camH->state.currentBuffer = &camH->state.image_buffer_1;   
-                    camH->state.nextBuffer    = &camH->state.image_buffer_0;            
-            }
-            
-        // Make sure we have a callback registered */
-            if (camH->state.lisr_callback != NULL)
-            {
-            #if (defined CSL_CAM_ENABLE_DBL_BUFFER)
-                csl_cb_st.intr_status = camH->state.intr_status;
-                csl_cb_st.rx_status = camH->state.rx_status;
-                csl_cb_st.image_addr = camH->state.currentBuffer->start_addr;
-                csl_cb_st.image_size = camH->state.currentBuffer->size;
-                csl_cb_st.image_stride = camH->state.currentBuffer->line_stride;
-                csl_cb_st.data_addr = camH->state.currentDataBuffer->start_addr;
-                csl_cb_st.data_size = camH->state.currentDataBuffer->size;
-                csl_cb_st.data_stride = camH->state.currentDataBuffer->line_stride;
-                csl_cb_st.raw_intr_status = camH->state.raw_intr_status;
-                csl_cb_st.raw_rx_status = camH->state.raw_rx_status;
-                    csl_cb_st.dropped_frames = camH->state.dropped_frames;
-                (*camH->state.lisr_callback)(csl_cb_st, camH->state.lisr_cb_userdata);
-            #else
-                (*camH->state.lisr_callback)(camH->state.intr_status, camH->state.rx_status, camH->state.currentBuffer->start_addr, camH->state.currentBuffer->size, camH->state.raw_intr_status, camH->state.raw_rx_status, camH->state.lisr_cb_userdata);
-            #endif
-            }
-        // Change buffers if task finished    
-            if (cslCamDrv.frame_task_running == FALSE)
-            {
-                if ( camH->state.intr_status & (CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT) )
-                {
-                    buffers.image1Buff = NULL;
-                        buffers.data0Buff   = NULL;
-                        buffers.data1Buff   = NULL;
-                    
-                    if ((void *)camH->state.image_buffer_1.start_addr != NULL)
-                    {
-                        // Software Ping-Pong buffering
-                            buffers.image0Buff = camH->state.nextBuffer;                
-                            if (csl_cam_set_buffer_params( camH, buffers ) != 0)
-                            {
-                                camH->state.rx_status |= CSL_CAM_RX_ERROR;
-                            }
-                    // switch buffer index
-                        camH->state.bufferIndex = (camH->state.bufferIndex == 0)?1:0;                
-                    }
-                }  // if ( camH->state.intr_status & (CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT) )
-
-                if ( (camH->state.task_callback != NULL) && (sHisrCslCam != NULL) )
-                {
-                    OSINTERRUPT_Trigger( sHisrCslCam );
-                }
-            }   // if (cslCamDrv.frame_task_running == FALSE)
-        }
-        else    // if (camH->state.doubleBufferEn == FALSE)
-        {
-        // Hardware Double Buffering       
-            if ( (camH->state.rx_status & CSL_CAM_RX_BUF0_RDY) && (((camH->state.rx_status & CSL_CAM_RX_BUF1_RDY) == 0) || (camH->state.rx_status & CSL_CAM_RX_BUF0_NO)) )
-            {
-	            DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID, "cslCamFrameLisr: Dbl Buffer 0\n"));
-                camH->state.currentBuffer = &camH->state.image_buffer_0;
-                camH->state.currentDataBuffer = &camH->state.data_buffer_0;
-            }
-            else
-            {
-	            DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID, "cslCamFrameLisr: Dbl Buffer 1\n"));
-                camH->state.currentBuffer = &camH->state.image_buffer_1;   
-                camH->state.currentDataBuffer = &camH->state.data_buffer_1;
-            }
-    
-        // Make sure we have a callback registered */
-            if (camH->state.lisr_callback != NULL)
-            {
-        #if (defined CSL_CAM_ENABLE_DBL_BUFFER)
-                csl_cb_st.intr_status = camH->state.intr_status;
-                csl_cb_st.rx_status = camH->state.rx_status;
-                csl_cb_st.image_addr = camH->state.currentBuffer->start_addr;
-                csl_cb_st.image_size = camH->state.currentBuffer->size;
-                csl_cb_st.image_stride = camH->state.currentBuffer->line_stride;
-                csl_cb_st.data_addr = camH->state.currentDataBuffer->start_addr;
-                csl_cb_st.data_size = camH->state.currentDataBuffer->size;
-                csl_cb_st.data_stride = camH->state.currentDataBuffer->line_stride;
-                csl_cb_st.raw_intr_status = camH->state.raw_intr_status;
-                csl_cb_st.raw_rx_status = camH->state.raw_rx_status;
-                csl_cb_st.dropped_frames = camH->state.dropped_frames;
-                (*camH->state.lisr_callback)(csl_cb_st, camH->state.lisr_cb_userdata);
-        #else
-                (*camH->state.lisr_callback)(camH->state.intr_status, camH->state.rx_status, camH->state.currentBuffer->start_addr, camH->state.currentBuffer->size, camH->state.raw_intr_status, camH->state.raw_rx_status, camH->state.lisr_cb_userdata);
-        #endif
-            }
-       // Change buffers if task finished    
-            if (cslCamDrv.frame_task_running == FALSE)
-            {
-                if ( (camH->state.task_callback != NULL) && (sHisrCslCam != NULL) )
-                {
-                    OSINTERRUPT_Trigger( sHisrCslCam );
-                }
-            }   // if (cslCamDrv.frame_task_running == FALSE)
-        }   // else:  if (camH->state.doubleBufferEn == FALSE)
-    }  // if (camH->state.rx_status & CSL_CAM_RX_INT)
-    return IRQ_HANDLED;
-}
-
-
-/***********************************************************
- * Name: cslCamFrameHisr
- * 
- * Arguments: 
- *       none
- *
- * Description: Csl Camera HISR, Triggered from LISR
- * note:        Static: Triggers CSL CAM Task.
- ***********************************************************/
-static void cslCamFrameHisr( void )
-{
-    UInt32 frame_time;
-    CAM_HANDLE camH;
-    Boolean isr_defined = FALSE;
-
-// obtain semaphore to run Task
-    camH = cslCamDrv.currHandle;
-
-    printk("cslCamFrameHisr() \n");   
-
-    frame_time = 0;
-
-    if (camH->state.FS_time == 0)
-    {
-        camH->state.FS_time = frame_time; 
-        camH->state.FE_time = frame_time; 
-        camH->state.LC_time = frame_time; 
-    }
-
-    if (camH->state.intr_status & CSL_CAM_INT_FRAME_START)
-    {
-        isr_defined = TRUE;
-        DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameHisr][Info]: FS: FrameRate=%d ms \n", (frame_time - camH->state.FS_time)) );
-        camH->state.FS_time = frame_time;
-    }
-    if ( camH->state.intr_status & CSL_CAM_INT_FRAME_END )
-    {
-        isr_defined = TRUE;
-        DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameHisr][Info]: FE: FrameRate=%d ms \n", (frame_time - camH->state.FE_time)) );
-        camH->state.FE_time = frame_time;
-    }
-    if ( camH->state.intr_status & CSL_CAM_INT_LINE_COUNT )
-    {
-        isr_defined = TRUE;
-        DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameHisr][Info]: LC: FrameRate=%d ms \n", (frame_time - camH->state.LC_time)) );
-        camH->state.LC_time = frame_time;
-    }
-    if ( camH->state.intr_status & CSL_CAM_INT_DATA )
-    {
-        isr_defined = TRUE;
-        DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameHisr][Info]: EDL: \n") );
-    }
-    if ( camH->state.intr_status & CHAL_CAM_INT_PKT )
-    {
-        isr_defined = TRUE;
-        DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameHisr][Info]: PACKET: \n") );
-    }
-    if ( isr_defined == FALSE )
-    {
-        DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameHisr][Info]: Unknown: \n") );
-//        DBG_OUT_REGISTER_DISPLAY( csl_cam_register_display( (CSL_CAM_HANDLE)camH ));
-    }
-    DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameHisr][Info]: CAM_STA=0x%x CAM_ISTA=0x%x csl_rx=0x%x csl_int=0x%x time=%d \n", camH->state.raw_rx_status, camH->state.raw_intr_status, camH->state.rx_status, camH->state.intr_status, frame_time) );
-    if ( isr_defined == TRUE )
-    {
-        DBG_OUT_REGISTER_DISPLAY( csl_cam_register_display( (CSL_CAM_HANDLE)camH ));
-    }
-// Frame Receiver Status            
-    if (camH->state.rx_status & CSL_CAM_RX_ERROR)
-    {
-        CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameHisr][Info]: Rx Error=0x%x RawStatus=0x%x \n", camH->state.rx_status,camH->state.raw_rx_status);
-    }
-
-// Run Task if registered 
-    if ( (sSemCslCamTask != NULL) && (sCslCamTask != NULL) )
-    {
-        DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameHisr][Info]: sSemCslCamTask release: \n") );
-        OSSEMAPHORE_Release( sSemCslCamTask ); //let task handle this state too.
-    }
-}
-/** @} */
-
-
-/***********************************************************
- * Name: cslCamTaskEntry
- * 
- * Arguments: 
- *       none
- *
- * Description: Csl Camera Task, Called from HISR
- * note:        Static: Task Call-Back performed in this Task.
- ***********************************************************/
-static void cslCamFrameTask( void )
-{
-    Boolean wait_event_status = TRUE;
-    CAM_HANDLE camH;
-    UInt32 intr_status, rx_status;
-    CSL_CAM_CB_st_t csl_cb_st;
-
-        printk("cslCamFrameTask() start\n");   
-
-    while( TRUE )
-    {
-      // obtain semaphore to run Task
-        camH = cslCamDrv.currHandle;
-        cslCamDrv.frame_task_running = FALSE;
-        if ( (camH->state.active == 1) && (cslCamDrv.intf_cfg.frame_time_out != 0) && (camH->state.task_callback != NULL) )
-        {
-            DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameTask][Info]: sSemCslCamTask Obtain timeout=%d: \n", cslCamDrv.intf_cfg.frame_time_out) );
-            wait_event_status = OSSEMAPHORE_Obtain( sSemCslCamTask, cslCamDrv.intf_cfg.frame_time_out );
-
-    printk("cslCamFrameTask() run\n");   
-
-        // Update and Clear status
-            cslCamDrv.frame_task_running = TRUE;
-            intr_status = camH->state.intr_status;
-            rx_status = camH->state.rx_status;
-            camH->state.intr_status = 0; 
-            camH->state.rx_status = 0; 
-
-            if ( (camH->state.active == 1) && (camH->state.task_callback != NULL) )
-            {
-                if (wait_event_status == FALSE) 
-                {
-                /* Get Receiver Status if no interrupt */
-                    camH->state.raw_rx_status = csl_cam_get_rx_status( (CSL_CAM_HANDLE)camH, (CSL_CAM_RX_STATUS_t *)&camH->state.rx_status );
-                    camH->state.raw_intr_status = csl_cam_get_intr_status( (CSL_CAM_HANDLE)camH, (CSL_CAM_INTERRUPT_t *)&camH->state.intr_status );
-                    intr_status = camH->state.intr_status;
-                    rx_status = camH->state.rx_status;
-                    camH->state.intr_status = 0; 
-                    camH->state.rx_status = 0; 
-                    intr_status |= CSL_CAM_INT_TASK_ERROR;
-                    DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameTask][Error]: wait_event_status FAILED:  CAM_STA=0x%x CAM_ISTA=0x%x csl_rx=0x%x csl_int=0x%x \n", camH->state.raw_rx_status, camH->state.raw_intr_status, rx_status, intr_status) );
-                }
-        printk("cslCamFrameTask() callback\n");   
-               //Csl Task Call-back
-                 #if (defined CSL_CAM_ENABLE_DBL_BUFFER)
-                        csl_cb_st.intr_status = intr_status;
-                        csl_cb_st.rx_status = rx_status;
-                        csl_cb_st.image_addr = camH->state.currentBuffer->start_addr;
-                        csl_cb_st.image_size = camH->state.currentBuffer->size;
-                        csl_cb_st.image_stride = camH->state.currentBuffer->line_stride;
-                        csl_cb_st.data_addr = camH->state.currentDataBuffer->start_addr;
-                        csl_cb_st.data_size = camH->state.currentDataBuffer->size;
-                        csl_cb_st.data_stride = camH->state.currentDataBuffer->line_stride;
-                        csl_cb_st.raw_intr_status = camH->state.raw_intr_status;
-                        csl_cb_st.raw_rx_status = camH->state.raw_rx_status;
-                        csl_cb_st.dropped_frames = camH->state.dropped_frames;
-                        (*camH->state.task_callback)(csl_cb_st, camH->state.task_cb_userdata);
-                #else
-                       (*camH->state.task_callback)(intr_status, rx_status, camH->state.currentBuffer->start_addr, camH->state.currentBuffer->size, camH->state.raw_intr_status, camH->state.raw_rx_status, camH->state.task_cb_userdata);
-                #endif
-            }
-        }
-        else
-        {
-            DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[cslCamFrameTask][Info]: sSemCslCamTask Obtain TICKS_FOREVER: active=%d frame_time_out=%d callback=0x%x\n", camH->state.active,cslCamDrv.intf_cfg.frame_time_out,camH->state.task_callback));
-            OSSEMAPHORE_Obtain( sSemCslCamTask, TICKS_FOREVER );
-        }
-        DBG_OUT_REGISTER_DISPLAY( csl_cam_register_display( (CSL_CAM_HANDLE)camH ));
-    }      
-}            
-
-
-
-
-
 /******************************************************************************
  Global Functions
  *****************************************************************************/
@@ -1181,27 +753,19 @@ Int32 csl_cam_init( void )
         }  
 #endif          
                 
-        printk("csl_cam_init() init task\n");   
-        if ( (success |= cslCamTaskInit()) == 0 )
-        {
         // Init CHAL
         printk("csl_cam_init() chal_cam_init()\n");   
-            cslCamDrv.chalCamH = (CHAL_HANDLE)chal_cam_init( HW_IO_PHYS_TO_VIRT(MM_CSI0_BASE_ADDR) );
-            if (cslCamDrv.chalCamH == NULL)
-            {
-                DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_init][Error] : chal_cam_init() FAILED \n") );
-                success |= CSL_CAM_BAD_HANDLE;
-            }
-            else
-            {
-                cslCamDrv.init = 1;
-                DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_init]: Ok \n") );
-            }
+        cslCamDrv.chalCamH = (CHAL_HANDLE)chal_cam_init( HW_IO_PHYS_TO_VIRT(MM_CSI0_BASE_ADDR) );
+        if (cslCamDrv.chalCamH == NULL)
+        {
+             DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_init][Error] : chal_cam_init() FAILED \n") );
+             success |= CSL_CAM_BAD_HANDLE;
         }
         else
         {
-            DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_init][Error] : cslCamTaskInit() FAILED \n") );
-        }    
+             cslCamDrv.init = 1;
+             DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_init]: Ok \n") );
+        }
     }    
     return success;
 }
@@ -1225,15 +789,6 @@ Int32 csl_cam_exit( void )
     if (cslCamDrv.init)
     {
         chal_cam_deinit(cslCamDrv.chalCamH);
-    // Remove Task
-        if ( (success |= cslCamTaskDeInit()) == 0 )
-        {
-            DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_exit]: cslCamTaskDeInit]: Ok \n") );
-        }
-        else
-        {
-            DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_exit][ERROR]:  cslCamTaskDeInit \n") );
-        }
 #if POWER_MANAGEMENT_ENABLE        
     // De-Register Power Management Client Id
         if (PRM_client_deregister(cslCamDrv.prmClientId) != 0)
@@ -1306,7 +861,6 @@ Int32 csl_cam_open(  pCSL_CAM_INTF_CFG_st intfCfg, CSL_CAM_HANDLE* cslCamH )
 
 
     DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_open][Info] : Start! \n") );
-    printk("csl_cam_open() \n");   
     
 // need to guard against NULL params being passed
     *cslCamH = NULL;
@@ -2593,7 +2147,6 @@ UInt32 csl_cam_get_intr_status( CSL_CAM_HANDLE cslCamH, CSL_CAM_INTERRUPT_t *int
 {
     CAM_HANDLE                  camH = (CAM_HANDLE)cslCamH;
     CHAL_CAM_PARAM_st_t         chal_cam_param_st;
-    UInt32              irq_status = 0;
     UInt32              raw_status = 0;
 
 // Interface
@@ -2786,16 +2339,6 @@ Int32 csl_cam_rx_start( CSL_CAM_HANDLE cslCamH )
     {
         chal_status |= chal_cam_rx_start(cslCamDrv.chalCamH, &chal_cam_param_st);
         camH->state.active = 1;
-
-    // Release Task Semaphore to put in proper time-out state
-        if ( (sSemCslCamTask != NULL) && (sCslCamTask != NULL) )
-        {
-            if (cslCamDrv.frame_task_running == FALSE)
-            {
-                DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_rx_start][Info]: sSemCslCamTask release: \n") );
-                OSSEMAPHORE_Release( sSemCslCamTask ); //let task handle this state
-            }
-        }
     }
     if (chal_status != CHAL_OP_OK)
     {
@@ -2849,15 +2392,6 @@ Int32 csl_cam_rx_stop( CSL_CAM_HANDLE cslCamH )
         if ( (success |= csl_cam_reset( cslCamH, CSL_CAM_RESET_ARST )) )
         {
             DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_rx_stop][Error] :  csl_cam_reset(): CSL_CAM_RESET_ARST: FAILED \n") );
-        }
-    // Release Task Semaphore to put in proper time-out state
-        if ( (sSemCslCamTask != NULL) && (sCslCamTask != NULL) )
-        {
-            if (cslCamDrv.frame_task_running == FALSE)
-            {
-                DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_rx_stop][Info]: sSemCslCamTask release: \n") );
-                OSSEMAPHORE_Release( sSemCslCamTask ); //let task handle this state
-            }
         }
     }
     if (chal_status != CHAL_OP_OK)
