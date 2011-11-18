@@ -109,9 +109,8 @@ int bcm_hsotgctrl_phy_init(void)
 
 	bcm_hsotgctrl_en_clock(true);
 
-	/* Clear PHY clock request */
-	bcm_hsotgctrl_set_phy_clk_request(true);
-	msleep_interruptible(PHY_PLL_DELAY_MS);
+	/* Set Vbus status to valid */
+	bcm_hsotgctrl_phy_set_vbus_stat(true);
 
 	/* clear bit 15 RDB error */
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
@@ -123,11 +122,15 @@ int bcm_hsotgctrl_phy_init(void)
 	/* Clear IDDQ */
 	bcm_hsotgctrl_set_phy_off(false);
 
+	/* PHY clock request */
+	bcm_hsotgctrl_set_phy_clk_request(true);
+	msleep_interruptible(PHY_PLL_DELAY_MS);
+
+	/* Do MDIO init values after PHY is up */
+	bcm_hsotgctrl_phy_mdio_init();
+
 	/* Come up connected  */
 	bcm_hsotgctrl_phy_set_non_driving(false);
-
-	/* Set Vbus status to valid */
-	bcm_hsotgctrl_phy_set_vbus_stat(true);
 
 	return (0);
 
@@ -147,11 +150,11 @@ int bcm_hsotgctrl_phy_deinit(void)
 	/* Set IDDQ */
 	bcm_hsotgctrl_set_phy_off(true);
 
-	/* Clear Vbus valid state */
-	bcm_hsotgctrl_phy_set_vbus_stat(false);
-
 	/* Clear PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(false);
+
+	/* Clear Vbus valid state */
+	bcm_hsotgctrl_phy_set_vbus_stat(false);
 
 	/* Disable the OTG core AHB clock */
 	bcm_hsotgctrl_en_clock(false);
