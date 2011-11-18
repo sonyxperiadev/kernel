@@ -96,6 +96,13 @@ config RHEA_B0_PM_ASIC_WORKAROUND
        help
        Say Y if you want to enable Rhea B0 ASIC workarounds for Power management
 
+config RHEA_PWRMGR_USE_DUMMY_SEQ
+       bool "Use dummy PWRMGR HW I2C sequencer"
+       default n
+       help
+       Say Y if you want to use dummy PWRMGR HW I2C sequencer
+
+
 config RHEALC_2093
 	bool "Enable RheaLC&2093"
 	default n
@@ -107,7 +114,7 @@ config RHEA_UART_RX_FIX
 	depends on ARCH_RHEA
 	help
 	  UART RX interrupt happened but in LSR Data Ready is not set.
-	  This fix modifies the serial driver to take decission to 
+	  This fix modifies the serial driver to take decission to
 	  call receive_chars based on iir and not based on LSR
 
 endmenu
