@@ -485,7 +485,7 @@ void AUDDRV_Telephony_Deinit (void *pData)
 
 		if(currVoiceSpkr == AUDIO_SINK_LOUDSPK)
 		{
-			AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,FALSE,FALSE);)
+			AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,FALSE,FALSE);)
 		}
 
 #if defined(ENABLE_DMA_VOICE)
@@ -560,7 +560,7 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDIO_SOURCE_Enum_t mic,
 	{
 		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
-		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,FALSE,FALSE);)
+		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,FALSE,FALSE);)
 	}	
 	
 	//Enable the new speaker path
