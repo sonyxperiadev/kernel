@@ -56,7 +56,11 @@ EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/mach
 EXTRA_CFLAGS += -I./drivers/char/broadcom/
 EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/
 EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/mach/
-EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/mach/rdb/
+ifdef CONFIG_ARCH_RHEA_B0
+EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/mach/rdb_B0/
+else
+EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/mach/rdb_A0/
+endif
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/chal/
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/csl/
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/osabstract/
