@@ -623,12 +623,15 @@ static int pmem_unmap_pfn_range(int id, struct vm_area_struct *vma,
 				unsigned long len)
 {
 	int garbage_pages;
+	unsigned long end;
 	DLOG("unmap offset %lx len %lx\n", offset, len);
 
 	BUG_ON(!PMEM_IS_PAGE_ALIGNED(len));
 
 	garbage_pages = len >> PAGE_SHIFT;
-	zap_page_range(vma, vma->vm_start + offset, len, NULL);
+	end = zap_page_range(vma, vma->vm_start + offset, len, NULL);
+	printk(KERN_ERR"vma_start=0x%p len=0x%p end=0x%p\n",
+			(void *)(vma->vm_start + offset), (void *)len, (void *)end);
 	pmem_map_garbage(id, vma, data, offset, len);
 	return 0;
 }
@@ -677,7 +680,10 @@ static void pmem_vma_open(struct vm_area_struct *vma)
 	BUG_ON(!has_allocation(file));
 	down_write(&data->sem);
 	/* remap the garbage pages, forkers don't get access to the data */
-	pmem_unmap_pfn_range(id, vma, data, 0, vma->vm_start - vma->vm_end);
+	if (data->pid != current->pid) {
+		printk(KERN_ERR"Warning! unmapping the pfn range and remapping it with garbage page\n");
+		pmem_unmap_pfn_range(id, vma, data, 0, vma->vm_end - vma->vm_start);
+	}
 	up_write(&data->sem);
 }
 
@@ -796,9 +802,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		get_task_struct(current->group_leader);
 		data->task = current->group_leader;
 		data->vma = vma;
-#if PMEM_DEBUG
 		data->pid = current->pid;
-#endif
 		DLOG("submmapped file %p vma %p pid %u\n", file, vma,
 		     current->pid);
 	} else {
