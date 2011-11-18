@@ -1072,7 +1072,7 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 arg_dev )
 
 	if (pathID != 0)
 	{
-		csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0].inChnl, outChnl, mixerInputGain, mixerInputGain);
+		csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, mixerInputGain, mixerInputGain);
 	}
 	else
 	{

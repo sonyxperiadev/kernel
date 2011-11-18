@@ -875,6 +875,7 @@ void AUDCTRL_SetPlayVolume(
 				unsigned int			pathID
 				)
 {
+    int j = 0, sinkNo = 0;
     CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
 
 #if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
@@ -1056,7 +1057,17 @@ void AUDCTRL_SetPlayVolume(
 	if (pathID != 0)
     {
 		path = &HWConfig_Table[pathID-1];
-        outChnl = path->srcmRoute[0].outChnl;
+      
+        // find the sinkNo with the same sink of input speaker 
+        for(j = 0; j < MAX_SINK_NUM; j++)
+        {
+            if (path->sink[j] == speaker) 
+            {
+                sinkNo = j;
+                break;
+            }
+        }      
+        outChnl = path->srcmRoute[sinkNo][0].outChnl;
     }
     else
     {
@@ -1084,7 +1095,7 @@ void AUDCTRL_SetPlayVolume(
     if (pathID != 0)
     {
     	//is the inChnl stereo two channels?
-		csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0].inChnl,
+		csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[sinkNo][0].inChnl,
                                     outChnl,
                                     mixerInputGain[sink],
                                     mixerInputGain[sink]);

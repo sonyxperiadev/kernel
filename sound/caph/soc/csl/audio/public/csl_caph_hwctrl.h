@@ -261,33 +261,33 @@ typedef enum //the naming does not count CFIFO and SW in the middle of the path.
 ******************************************************************************/
 typedef struct
 {
-	CSL_CAPH_PathID pathID;
-	CSL_CAPH_STREAM_e streamID;
-	CSL_CAPH_DEVICE_e source;
-	CSL_CAPH_DEVICE_e sink[MAX_SINK_NUM];
-	AUDIO_SAMPLING_RATE_t src_sampleRate;
-	AUDIO_SAMPLING_RATE_t snk_sampleRate;	
-	AUDIO_NUM_OF_CHANNEL_t chnlNum;
-	AUDIO_BITS_PER_SAMPLE_t bitPerSample;
-	UInt8* pBuf;
-	UInt8* pBuf2;
-	UInt32 size;
-	CSL_CAPH_DMA_CALLBACK_p dmaCB;
-	Boolean status;
-	UInt8 curPathsinkMaxIdx;
+    CSL_CAPH_PathID pathID;
+    CSL_CAPH_STREAM_e streamID;
+    CSL_CAPH_DEVICE_e source;
+    CSL_CAPH_DEVICE_e sink[MAX_SINK_NUM];
+    AUDIO_SAMPLING_RATE_t src_sampleRate;
+    AUDIO_SAMPLING_RATE_t snk_sampleRate;	
+    AUDIO_NUM_OF_CHANNEL_t chnlNum;
+    AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+    UInt8* pBuf;
+    UInt8* pBuf2;
+    UInt32 size;
+    CSL_CAPH_DMA_CALLBACK_p dmaCB;
+    Boolean status;
+    UInt8 sinkCount;
 
 	//for new api
-	CAPH_LIST_t list;
-	CSL_CAPH_CFIFO_FIFO_e cfifo[MAX_BLOCK_NUM];
-	CSL_CAPH_SWITCH_CONFIG_t sw[MAX_BLOCK_NUM];
-	CSL_CAPH_DMA_CHNL_e dma[MAX_BLOCK_NUM];
-	CSL_CAPH_SRCM_ROUTE_t srcmRoute[MAX_BLOCK_NUM]; 
-	CAPH_BLOCK_t block[MAX_PATH_LEN];
-	int blockIdx[MAX_PATH_LEN];
+    int block_split_offset;       // The offset of the block lists where they split for different sinks.
+    int block_split_inCh;          // the inCh of mixer for multicasting 
+	CSL_CAPH_CFIFO_FIFO_e cfifo[MAX_SINK_NUM][MAX_BLOCK_NUM];
+	CSL_CAPH_SWITCH_CONFIG_t sw[MAX_SINK_NUM][MAX_BLOCK_NUM];
+	CSL_CAPH_DMA_CHNL_e dma[MAX_SINK_NUM][MAX_BLOCK_NUM];
+	CSL_CAPH_SRCM_ROUTE_t srcmRoute[MAX_SINK_NUM][MAX_BLOCK_NUM];	
+	CAPH_BLOCK_t block[MAX_SINK_NUM][MAX_PATH_LEN];
+	int blockIdx[MAX_SINK_NUM][MAX_PATH_LEN];
 	AUDDRV_PATH_Enum_t audiohPath[MAX_SINK_NUM+1]; //0 for source, 1 for sink, 2 for sink2
 	audio_config_t audiohCfg[MAX_SINK_NUM+1];
 }CSL_CAPH_HWConfig_Table_t;
-
 
 typedef enum
 {

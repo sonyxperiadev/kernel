@@ -171,12 +171,8 @@ static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] =
 //****************************************************************************
 // local function declarations
 //****************************************************************************
-static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_DEVICE_e source,
-                                               CSL_CAPH_DEVICE_e sink,
-                                               AUDIO_SAMPLING_RATE_t src_sampleRate,
-                                               AUDIO_SAMPLING_RATE_t snk_sampleRate,
-                                               AUDIO_NUM_OF_CHANNEL_t chnlNum,
-                                               AUDIO_BITS_PER_SAMPLE_t bitPerSample);
+
+static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_HWCTRL_CONFIG_t config); 
 static void csl_caph_hwctrl_RemovePathInTable(CSL_CAPH_PathID pathID);
 static void csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
                                           CSL_CAPH_PathID pathID);
@@ -207,12 +203,6 @@ static CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void);
 // local function definitions
 //******************************************************************************
 
-typedef enum
-{
-	OBTAIN_BLOCKS_NORMAL,
-	OBTAIN_BLOCKS_SWITCH,
-	OBTAIN_BLOCKS_MULTICAST
-} OBTAIN_BLOCKS_MODE_t;
 
 CAPH_LIST_t arm2spPath = LIST_DMA_SRC_DMA;
 
@@ -433,16 +423,88 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 // =========================================================================
 static void csl_caph_hwctrl_PrintPath(CSL_CAPH_HWConfig_Table_t *path)
 {
-    UInt32 i = 0;
+    UInt32 i = 0, j = 0, k = 0;
 	if(!path) return;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "path %d caph block list: ", path->pathID));
-    for (i = 0; i < MAX_PATH_LEN; i++)
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_PrintPath:: path %d ", path->pathID);
+    for (i = 0; i < MAX_SINK_NUM; i++)
     {
-        if (path->block[i]!=CAPH_NONE)
-	        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "--> %s(%d) ", blockName[path->block[i]], path->blockIdx[i]));
-    }
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "\r\n"));
+        if (path->sink[i] != CSL_CAPH_DEV_NONE)
+        {
+	        Log_DebugPrintf(LOGID_SOC_AUDIO, "\n\tblock list %d: ", i);
+            for (j = 0; j < MAX_PATH_LEN; j++)
+            {
+                k =  path->blockIdx[i][j];
+                switch (path->block[i][j])
+                {
+                    case CAPH_DMA:
+                        if (j < path->block_split_offset)
+                        {
+	                        Log_DebugPrintf(LOGID_SOC_AUDIO, "--> *%s(%d) ", blockName[path->block[i][j]], path->dma[0][k]);
+                        }
+                        else
+                        {
+	                        Log_DebugPrintf(LOGID_SOC_AUDIO, "--> %s(%d) ", blockName[path->block[i][j]], path->dma[i][k]);
+                        }
+                        break;
+                         
+                    case CAPH_CFIFO:
+                        if (j < path->block_split_offset)
+	                    {
+                            Log_DebugPrintf(LOGID_SOC_AUDIO, "--> *%s(%d) ", blockName[path->block[i][j]], path->cfifo[0][k]);
+	                    }
+                        else
+                        {
+                            Log_DebugPrintf(LOGID_SOC_AUDIO, "--> %s(%d) ", blockName[path->block[i][j]], path->cfifo[i][k]);
+                        }
+                        break;
+
+                    case CAPH_SW:
+                        if (j < path->block_split_offset)
+                        {
+	                        Log_DebugPrintf(LOGID_SOC_AUDIO, "--> *%s(%d:0x%x:0x%x:0x%x) ", 
+                                blockName[path->block[i][j]], path->sw[0][k].chnl, path->sw[0][k].FIFO_srcAddr, path->sw[0][k].FIFO_dstAddr, path->sw[0][k].trigger);
+                        }
+                        else
+                        {
+	                        Log_DebugPrintf(LOGID_SOC_AUDIO, "--> %s(%d:0x%x:0x%x:0x%x) ", 
+                                blockName[path->block[i][j]], path->sw[i][k].chnl, path->sw[i][k].FIFO_srcAddr, path->sw[i][k].FIFO_dstAddr, path->sw[i][k].trigger);
+                        }
+                        break;
+
+                    case CAPH_SRC:
+                        if (j < path->block_split_offset)
+                        {
+	                        Log_DebugPrintf(LOGID_SOC_AUDIO, "--> *%s(0x%x:0x%x) ", 
+                                blockName[path->block[i][j]], path->srcmRoute[0][k].inChnl, path->srcmRoute[0][k].tapOutChnl);
+                        }
+                        else
+                        {
+	                        Log_DebugPrintf(LOGID_SOC_AUDIO, "--> %s(0x%x:0x%x) ", 
+                                blockName[path->block[i][j]], path->srcmRoute[i][k].inChnl, path->srcmRoute[i][k].tapOutChnl);
+                        }
+                        break;
+
+                    case CAPH_MIXER:
+                        if (j < path->block_split_offset)
+                        {
+	                        Log_DebugPrintf(LOGID_SOC_AUDIO, "--> *%s(0x%x:0x%x) ", 
+                                blockName[path->block[i][j]], path->srcmRoute[0][k].inChnl, path->srcmRoute[0][k].outChnl);
+                        }
+                        else
+                        {
+	                        Log_DebugPrintf(LOGID_SOC_AUDIO, "--> %s(0x%x:0x%x) ", 
+                                blockName[path->block[i][j]], path->srcmRoute[i][k].inChnl, path->srcmRoute[i][k].outChnl);
+                        }
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+        }
+    }	
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "\r\n");
 }
 
 // ==========================================================================
@@ -637,7 +699,7 @@ static CAPH_SWITCH_TRIGGER_e csl_caph_get_dev_trigger(CSL_CAPH_DEVICE_e dev)
 //	direction 0 - in, 1 - out
 //
 // =========================================================================
-static UInt32 csl_caph_get_fifo_addr(CSL_CAPH_PathID pathID, int blockPathIdx, int direction)
+static UInt32 csl_caph_get_fifo_addr(CSL_CAPH_PathID pathID, int sinkNo, int blockPathIdx, int direction)
 {
 	int blockIdx;
 	CAPH_BLOCK_t block;
@@ -647,22 +709,22 @@ static UInt32 csl_caph_get_fifo_addr(CSL_CAPH_PathID pathID, int blockPathIdx, i
 
 	if(!pathID) return addr;
 	path = &HWConfig_Table[pathID-1];
-	block = path->block[blockPathIdx];
-	blockIdx = path->blockIdx[blockPathIdx];
+	block = path->block[sinkNo][blockPathIdx];
+	blockIdx = path->blockIdx[sinkNo][blockPathIdx];
 
 	switch(block)
 	{
 	case CAPH_CFIFO:
-		addr = csl_caph_cfifo_get_fifo_addr(path->cfifo[blockIdx]);
+		addr = csl_caph_cfifo_get_fifo_addr(path->cfifo[sinkNo][blockIdx]);
 		break;
 	case CAPH_SRC:
-		if(direction) srcmFifo = csl_caph_srcmixer_get_tapoutchnl_fifo(path->srcmRoute[blockIdx].tapOutChnl);
-		else srcmFifo = csl_caph_srcmixer_get_inchnl_fifo(path->srcmRoute[blockIdx].inChnl);
+		if(direction) srcmFifo = csl_caph_srcmixer_get_tapoutchnl_fifo(path->srcmRoute[sinkNo][blockIdx].tapOutChnl);
+		else srcmFifo = csl_caph_srcmixer_get_inchnl_fifo(path->srcmRoute[sinkNo][blockIdx].inChnl);
 		addr = csl_caph_srcmixer_get_fifo_addr(srcmFifo);
 		break;
 	case CAPH_MIXER:
-		if(direction) srcmFifo = csl_caph_srcmixer_get_outchnl_fifo(path->srcmRoute[blockIdx].outChnl);
-		else srcmFifo = csl_caph_srcmixer_get_inchnl_fifo(path->srcmRoute[blockIdx].inChnl);
+		if(direction) srcmFifo = csl_caph_srcmixer_get_outchnl_fifo(path->srcmRoute[sinkNo][blockIdx].outChnl);
+		else srcmFifo = csl_caph_srcmixer_get_inchnl_fifo(path->srcmRoute[sinkNo][blockIdx].inChnl);
 		addr = csl_caph_srcmixer_get_fifo_addr(srcmFifo);
 		break;
 	default:
@@ -677,11 +739,13 @@ static UInt32 csl_caph_get_fifo_addr(CSL_CAPH_PathID pathID, int blockPathIdx, i
 // Function Name: csl_caph_obtain_blocks
 //
 // Description: obtain caph blocks
-//
+// Params: sinkNo --        the sink No. of this block list.
+//         startOffset --   the startOffset of the block(new blocks) that should
+//                          be obtained for this sink. 
 // =========================================================================
-static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart, OBTAIN_BLOCKS_MODE_t mode)
+static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int startOffset)
 {
-	int i = blockPathIdxStart;
+	int offset = startOffset;
 	int blockIdx;
 	CAPH_BLOCK_t block;
 	CSL_CAPH_HWConfig_Table_t *path;
@@ -695,13 +759,11 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 	AUDIO_SAMPLING_RATE_t srOut;
 	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
 	CSL_CAPH_DMA_CHNL_e dmaCH = CSL_CAPH_DMA_NONE;
-	CSL_CAPH_DEVICE_e sink2 = CSL_CAPH_DEV_NONE;
-	int audiohSinkPathIdx = 1;
 	int j;
 
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
-
+	
 	memset(&pcmRxCfg, 0, sizeof(pcmRxCfg));
 	memset(&pcmTxCfg, 0, sizeof(pcmTxCfg));
 	memset(&fmCfg, 0, sizeof(fmCfg));
@@ -710,19 +772,18 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
     {
         path->chnlNum = 2;  //force the channel configuration to stereo.
     }
-
 	dataFormat = csl_caph_get_dataformat(path->bitPerSample, path->chnlNum); //dataFormat would change according to block combination.
 	srOut = path->src_sampleRate;
 	if(path->source==CSL_CAPH_DEV_DSP) dataFormat = CSL_CAPH_24BIT_MONO; //dsp data is 24bit mono
-	if(path->sink[0]==CSL_CAPH_DEV_BT_SPKR)
+	if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR)
 	{
 		path->snk_sampleRate = AUDIO_SAMPLING_RATE_8000;
 	} else if (path->snk_sampleRate==0) {
 		path->snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
 	}
 
-	if(mode==OBTAIN_BLOCKS_NORMAL) 	//non-zero for switching or multicasting during playback
-	{
+	if (path->sinkCount == 1) // config source only once.
+    {
 		path->audiohCfg[0].sample_size = path->bitPerSample;
 		path->audiohCfg[0].sample_pack = DATA_UNPACKED;
 		path->audiohCfg[0].sample_mode = path->chnlNum;
@@ -731,18 +792,17 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 
 	while(1)
 	{
-		block = path->block[i];
+		block = path->block[sinkNo][offset];
 		if(block==CAPH_NONE) break;
-		blockIdx = 0;
+		
+        blockIdx = 0;
 
 		switch(block)
 		{
 		case CAPH_SAME:
-			audiohSinkPathIdx = (path->curPathsinkMaxIdx) + 1;
-			sink2 = path->sink[audiohSinkPathIdx-1];
 			break;
 		case CAPH_DMA:
-			if(!path->dma[0])
+			if(!path->dma[sinkNo][0]) 
 			{
 				dmaCH = CSL_CAPH_DMA_NONE;
 				/*
@@ -753,15 +813,17 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				15 ARM2SP DSP channel? Since DSP does not take arm2sp interrupt, so it can be dynamic.
 				16 ARM2SP2 DSP channel?
 				*/
-				if(path->source==CSL_CAPH_DEV_DSP)
-				{
+                if (path->source == CSL_CAPH_DEV_DSP_throughMEM && path->sink[sinkNo] == CSL_CAPH_DEV_IHF)
+                {
+                    dmaCH = CSL_CAPH_DMA_CH12;
+                } else if(path->source==CSL_CAPH_DEV_DSP) {
 					dmaCH = CSL_CAPH_DMA_CH12;
 #if defined(ENABLE_DMA_VOICE)
 					path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SPKR_EN);
 					Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp spk buf@ 0x%x\r\n", path->pBuf);
-#endif
-				} else if(path->sink[0]==CSL_CAPH_DEV_DSP) {
-					if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R)
+#endif					
+				} else if(path->sink[sinkNo]==CSL_CAPH_DEV_DSP) {
+					if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R) 
 					{
 						dmaCH = CSL_CAPH_DMA_CH14;
 #if defined(ENABLE_DMA_VOICE)
@@ -776,10 +838,10 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 #endif
 					}
 				} /*else {
-					path->dma[0] = csl_caph_dma_obtain_channel();
+					path->dma[sinkNo][0] = csl_caph_dma_obtain_channel();
 				}*/
 #if defined(ENABLE_DMA_LOOPBACK)
-				if(path->source==CSL_CAPH_DEV_DSP && path->sink[0]!=CSL_CAPH_DEV_BT_SPKR) //for loopback, use mic as input
+				if(path->source==CSL_CAPH_DEV_DSP && path->sink[sinkNo]!=CSL_CAPH_DEV_BT_SPKR) //for loopback, use mic as input
 					path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_PRI_MIC_EN);
 				path->size = DMA_VOICE_SIZE;
 				path->dmaCB = AUDIO_DMA_CB2;
@@ -788,21 +850,21 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			}
 
 			blockIdx = 0;
-			if(!path->dma[0]) {
+			if(!path->dma[sinkNo][0]) {
 				blockIdx = 0;
-				if(dmaCH)
-					path->dma[0] = csl_caph_dma_obtain_given_channel(dmaCH);
-				else
-					path->dma[0] = csl_caph_dma_obtain_channel();
+				if(dmaCH) 
+					path->dma[sinkNo][0] = csl_caph_dma_obtain_given_channel(dmaCH);
+				else 
+					path->dma[sinkNo][0] = csl_caph_dma_obtain_channel();
 				break;
 			}
 
-			if(!path->dma[1] && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM && i>0)
+			if(!path->dma[sinkNo][1] && path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM && offset > 0) 
 			{
 				//dmaCH = CSL_CAPH_DMA_CH15;
 				//if(arm2spCfg.instanceID==2) dmaCH = CSL_CAPH_DMA_CH16;
 				//path->dmaCH2 = csl_caph_dma_obtain_given_channel(dmaCH);
-				path->dma[1] = csl_caph_dma_obtain_channel();
+				path->dma[sinkNo][1] = csl_caph_dma_obtain_channel();
 				blockIdx = 1;
 			}
 			break;
@@ -813,7 +875,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				fifo = csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CH12);
 				Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp spk cfifo# 0x%x\r\n", fifo);
 			}
-			else if(path->sink[0]==CSL_CAPH_DEV_DSP)
+			else if(path->sink[sinkNo]==CSL_CAPH_DEV_DSP) 
 			{
 				if (path->source ==CSL_CAPH_DEV_EANC_DIGI_MIC_R)
 				{
@@ -828,55 +890,54 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			}
 			else
 #endif
-			if (path->source == CSL_CAPH_DEV_DSP_throughMEM && path->sink[0] == CSL_CAPH_DEV_IHF) {
-				fifo = csl_caph_cfifo_get_fifo_by_dma(path->dma[0]);
-			} else 	if (path->source == CSL_CAPH_DEV_FM_RADIO || path->sink[0] == CSL_CAPH_DEV_FM_TX) {
+			if (path->source == CSL_CAPH_DEV_DSP_throughMEM && path->sink[sinkNo] == CSL_CAPH_DEV_IHF) {
+				fifo = csl_caph_cfifo_get_fifo_by_dma(path->dma[sinkNo][0]);
+			} else 	if (path->source == CSL_CAPH_DEV_FM_RADIO || path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX) {
 				fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
 			} else {
 				fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
 			}
-
-			if(!path->cfifo[0])
+			
+			if(!path->cfifo[sinkNo][0]) 
 			{
 				blockIdx = 0;
 			} else {
 				blockIdx = 1;
 			}
-			path->cfifo[blockIdx] = fifo;
+			path->cfifo[sinkNo][blockIdx] = fifo;
 			break;
 		case CAPH_SW:
-			if(path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_MEMORY && fmRxRunning == TRUE) //FM recording during direct playback
+			if(path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY && fmRxRunning == TRUE) //FM recording during direct playback
 				break; //share the same switch as direct playback path
 			sw = csl_caph_switch_obtain_channel();
-			blockIdx = (int)sw;
-			if(!path->sw[0].chnl)
+			if(!path->sw[sinkNo][0].chnl)
 			{
 				blockIdx = 0;
-			} else if (!path->sw[1].chnl) {
+			} else if (!path->sw[sinkNo][1].chnl) {
 				blockIdx = 1;
-			} else if (!path->sw[2].chnl) {
+			} else if (!path->sw[sinkNo][2].chnl) {
 				blockIdx = 2;
 			} else {
 				blockIdx = 3;
 			}
-			path->sw[blockIdx].chnl = sw;
-			path->sw[blockIdx].dataFmt = dataFormat;
+			path->sw[sinkNo][blockIdx].chnl = sw;
+			path->sw[sinkNo][blockIdx].dataFmt = dataFormat;
 			break;
 		case CAPH_SRC:
-			if(!path->srcmRoute[0].inChnl){
+			if(!path->srcmRoute[sinkNo][0].inChnl){
 				blockIdx = 0;
-			} else if(!path->srcmRoute[1].inChnl) {
+			} else if(!path->srcmRoute[sinkNo][1].inChnl) {
 				blockIdx = 1;
 			} else {
 				blockIdx = 2;
 			}
-			pSrcmRoute = &path->srcmRoute[blockIdx];
+			pSrcmRoute = &path->srcmRoute[sinkNo][blockIdx];
 
 			pSrcmRoute->inThres = 3;
 			pSrcmRoute->outThres = 3;
 			pSrcmRoute->inDataFmt = dataFormat;
 			pSrcmRoute->inSampleRate = csl_caph_srcmixer_get_srcm_insamplerate(srOut);
-			if(path->srcmRoute[0].inChnl)
+			if(path->srcmRoute[sinkNo][0].inChnl)
 			{	//if not the first srcmixer block, assume 16bit mono output?
 				dataFormat = CSL_CAPH_16BIT_MONO;
 			}
@@ -887,7 +948,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				srcmIn = CSL_CAPH_SRCM_MONO_CH1;
 				csl_caph_srcmixer_set_inchnl_status(srcmIn);
 			}
-			else if(path->sink[0]==CSL_CAPH_DEV_DSP)
+			else if(path->sink[sinkNo]==CSL_CAPH_DEV_DSP)
 			{
 				if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R)
 				{
@@ -902,7 +963,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			}
 			else
 #else
-			if (path->sink[0] == CSL_CAPH_DEV_DSP)
+			if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) 
 			{
 				// fix the SRC-Mixer in channel for DSP
 				if(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L || path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R) srcmIn = EANC_MIC_UL_TO_DSP_CHNL;
@@ -916,8 +977,8 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			}
 			srcmTap = csl_caph_srcmixer_get_tapoutchnl_from_inchnl(srcmIn);
 
-			if(path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) srOut = AUDIO_SAMPLING_RATE_8000; //arm2sp 8kHz
-			else if(path->sink[0] == CSL_CAPH_DEV_BT_SPKR || path->sink[1] == CSL_CAPH_DEV_BT_SPKR) 
+			if(path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM) srOut = AUDIO_SAMPLING_RATE_8000; //arm2sp 8kHz
+			else if(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR || path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) 
 			{
 				srOut = AUDIO_SAMPLING_RATE_8000;
 				dataFormat = CSL_CAPH_16BIT_MONO;
@@ -932,24 +993,23 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			pSrcmRoute->outSampleRate = csl_caph_srcmixer_get_srcm_outsamplerate(srOut);
 			break;
 		case CAPH_MIXER:
-			if(!path->srcmRoute[0].inChnl) {
+			if(!path->srcmRoute[sinkNo][0].inChnl) {
 				blockIdx = 0;
-			} else if(!path->srcmRoute[1].inChnl) {
+			} else if(!path->srcmRoute[sinkNo][1].inChnl) {
 				blockIdx = 1;
 			} else {
 				blockIdx = 2;
 			}
-			pSrcmRoute = &path->srcmRoute[blockIdx];
+			pSrcmRoute = &path->srcmRoute[sinkNo][blockIdx];
 
 			pSrcmRoute->inThres = 3;
 			pSrcmRoute->outThres = 3;
 			pSrcmRoute->inDataFmt = dataFormat;
 			pSrcmRoute->inSampleRate = csl_caph_srcmixer_get_srcm_insamplerate(srOut);
-			pSrcmRoute->sink = path->sink[0];
+			pSrcmRoute->sink = path->sink[sinkNo];
 
 			srOut = AUDIO_SAMPLING_RATE_48000;
-			sink = path->sink[0];
-			if(sink2) sink = sink2;
+			sink = path->sink[sinkNo];
 			pSrcmRoute->sink = sink;
 			// check whether EP path is used as IHF R channel
 			if (isSTIHF == TRUE && pSrcmRoute->sink == CSL_CAPH_DEV_EP)
@@ -971,7 +1031,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				srcmIn = CSL_CAPH_SRCM_MONO_CH1;
 				csl_caph_srcmixer_set_inchnl_status(srcmIn);
 			}
-			else if(path->sink[0]==CSL_CAPH_DEV_DSP)
+			else if(path->sink[sinkNo]==CSL_CAPH_DEV_DSP)
 			{
 				if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R)
 				{
@@ -999,8 +1059,15 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			} else
 #endif
 			{
-				if(mode!=OBTAIN_BLOCKS_NORMAL) srcmIn = path->srcmRoute[0].inChnl;
-				else srcmIn = csl_caph_srcmixer_obtain_inchnl(dataFormat, pSrcmRoute->inSampleRate);
+				if(path->sinkCount > 1) // add a sink, reuse the mixer input
+                {
+                    srcmIn =  path->block_split_inCh;
+                }
+				else // first sink
+                {
+                    srcmIn = csl_caph_srcmixer_obtain_inchnl(dataFormat, pSrcmRoute->inSampleRate);
+                    path->block_split_inCh = srcmIn;
+                }
 			}
 
 			if(sink==CSL_CAPH_DEV_DSP_throughMEM)
@@ -1021,20 +1088,212 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 		default:
 			break;
 		}
-		path->blockIdx[i++] = blockIdx;
+		path->blockIdx[sinkNo][offset++] = blockIdx;
 	}
 
-	sink = path->sink[0];
-	if(sink2) sink = sink2;
+	sink = path->sink[sinkNo];
 	if(sink==CSL_CAPH_DEV_EP || sink==CSL_CAPH_DEV_HS || sink==CSL_CAPH_DEV_IHF || sink==CSL_CAPH_DEV_VIBRA)
 	{
-		path->audiohCfg[audiohSinkPathIdx].sample_size = 16;
-		if(dataFormat==CSL_CAPH_24BIT_MONO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[audiohSinkPathIdx].sample_size = 24;
-		path->audiohCfg[audiohSinkPathIdx].sample_mode = (AUDIO_NUM_OF_CHANNEL_t) 1;
-		if(dataFormat==CSL_CAPH_16BIT_STEREO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[audiohSinkPathIdx].sample_mode = (AUDIO_NUM_OF_CHANNEL_t) 2;
-		path->audiohPath[audiohSinkPathIdx] = csl_caph_get_audio_path(sink);
+		path->audiohCfg[sinkNo+1].sample_size = 16;
+		if(dataFormat==CSL_CAPH_24BIT_MONO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[sinkNo+1].sample_size = 24;
+		path->audiohCfg[sinkNo+1].sample_mode = (AUDIO_NUM_OF_CHANNEL_t) 1;
+		if(dataFormat==CSL_CAPH_16BIT_STEREO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[sinkNo+1].sample_mode = (AUDIO_NUM_OF_CHANNEL_t) 2;
+		path->audiohPath[sinkNo+1] = csl_caph_get_audio_path(sink);
 	}
-	csl_caph_hwctrl_PrintPath(path);
+}
+
+
+static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, int startOffset)
+{
+    CSL_CAPH_HWConfig_Table_t *path;
+	CSL_CAPH_SRCM_INCHNL_e srcmIn;
+	int i, blockIdx = 0;
+
+    path = &HWConfig_Table[pathID-1];
+
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_remove_blocks:: pathID %d, sinkCount %d, sinkNo %d, startOffset %d\r\n", 
+                                                pathID, path->sinkCount, sinkNo, startOffset));
+
+#if !defined(ENABLE_DMA_VOICE)
+	if(path->sink[sinkNo]==CSL_CAPH_DEV_DSP && path->source != CSL_CAPH_DEV_BT_MIC) //UL to dsp
+	{
+		// stop the src intc to dsp
+		if ((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)) srcmIn = EANC_MIC_UL_TO_DSP_CHNL;
+		else srcmIn = MAIN_MIC_UL_TO_DSP_CHNL;
+		csl_caph_intc_disable_tapout_intr(srcmIn, CSL_CAPH_DSP);
+	}
+#endif
+
+	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM) ||
+        (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM))
+	{
+		if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1)
+            csl_arm2sp_set_arm2sp((UInt32) arm2spCfg.srOut, 
+                                  CSL_ARM2SP_PLAYBACK_NONE, 
+                                  (CSL_ARM2SP_VOICE_MIX_MODE_t)arm2spCfg.mixMode, 
+                                  arm2spCfg.numFramesPerInterrupt, 
+                                  (arm2spCfg.chNumOut == AUDIO_CHANNEL_STEREO)? 1 : 0, 
+                                  0 ); 
+		else if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE2)
+            csl_arm2sp_set_arm2sp2((UInt32) arm2spCfg.srOut, 
+                                  CSL_ARM2SP_PLAYBACK_NONE, 
+                                  (CSL_ARM2SP_VOICE_MIX_MODE_t)arm2spCfg.mixMode, 
+                                  arm2spCfg.numFramesPerInterrupt, 
+                                  (arm2spCfg.chNumOut == AUDIO_CHANNEL_STEREO)? 1 : 0, 
+                                  0 ); 
+		arm2sp_start[arm2spCfg.instanceID] = FALSE; //reset
+
+		if(arm2sp_start[1] == FALSE && arm2sp_start[2] == FALSE)
+			memset(&arm2spCfg, 0, sizeof(arm2spCfg));
+	}
+
+    for (i = startOffset; i < MAX_PATH_LEN; i++)
+    {
+        if (path->block[sinkNo][i] == CAPH_DMA)
+        {
+            blockIdx = path->blockIdx[sinkNo][i];
+            if (path->dma[sinkNo][blockIdx] != 0)
+            {
+                csl_caph_hwctrl_closeDMA(path->dma[sinkNo][blockIdx], path->pathID);
+                path->dma[sinkNo][blockIdx] = 0;
+            }
+        }
+    }
+
+    for (i = startOffset; i < MAX_PATH_LEN; i++)
+    {
+        if (path->block[sinkNo][i] == CAPH_CFIFO)
+        {
+            blockIdx = path->blockIdx[sinkNo][i];
+            if (path->cfifo[sinkNo][blockIdx] != CSL_CAPH_CFIFO_NONE)
+            {
+                csl_caph_hwctrl_closeCFifo(path->cfifo[sinkNo][blockIdx], path->pathID);
+                path->cfifo[sinkNo][blockIdx] = CSL_CAPH_CFIFO_NONE;
+            }
+        }
+    }
+
+
+	if((path->source == CSL_CAPH_DEV_FM_RADIO) && (path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY))
+	{	//This assumes direct playback is on during recording. how about direct playback is stopped during recording?
+		//do not close switch in this case
+	} else {
+        for (i = startOffset; i < MAX_PATH_LEN; i++)
+        {
+            if (path->block[sinkNo][i] == CAPH_SW)
+            {
+                blockIdx = path->blockIdx[sinkNo][i];
+                if (path->sw[sinkNo][blockIdx].chnl != CSL_CAPH_SWITCH_NONE)
+                {
+                    csl_caph_hwctrl_closeSwitchCH(path->sw[sinkNo][blockIdx], path->pathID);
+                    memset(&path->sw[sinkNo][blockIdx], 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+                }
+            }
+        }
+
+		if ((path->source == CSL_CAPH_DEV_FM_RADIO) || (path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX))
+		{
+			if (fmRunning == TRUE)
+			{
+				csl_i2s_stop_tx(fmHandleSSP);
+				csl_i2s_stop_rx(fmHandleSSP);
+				fmRunning = FALSE;
+				if(path->source == CSL_CAPH_DEV_FM_RADIO && fmRxRunning) fmRxRunning = FALSE;
+			}
+		}
+	}
+
+    for (i = startOffset; i < MAX_PATH_LEN; i++)
+    {
+        if (path->block[sinkNo][i] == CAPH_SRC || path->block[sinkNo][i] == CAPH_MIXER)
+        {
+            blockIdx = path->blockIdx[sinkNo][i];
+            if (path->srcmRoute[sinkNo][blockIdx].inChnl != CSL_CAPH_SRCM_INCHNL_NONE)
+            {
+                if (path->sinkCount > 1 && path->srcmRoute[sinkNo][blockIdx].inChnl == path->block_split_inCh)
+                {
+                    // multicasting, only close the output channel of the split block (Mixer)
+                    // but the BT may use the same output channel with the new added sink, we don't close it in this case.
+                    // The following is to figure out if BT use the same output channel with the new added sink
+                    int closeOutChnl = 1;
+                    if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR)
+                    {
+                        int k,l;
+                        for (k = 0; k < MAX_SINK_NUM; k++)
+                        {
+                            if (k != sinkNo)
+                            {
+                                for (l = 0; l< MAX_BLOCK_NUM; l++)
+                                {
+                                    if(path->srcmRoute[k][l].outChnl == path->srcmRoute[sinkNo][blockIdx].outChnl)
+                                        closeOutChnl = 0;
+                                }
+                            }
+                        }
+                    }
+                    if (closeOutChnl)
+                    {
+                        csl_caph_hwctrl_closeSRCMixerOutput(path->srcmRoute[sinkNo][blockIdx], path->pathID);
+                    }
+                    path->srcmRoute[sinkNo][blockIdx].outChnl = CSL_CAPH_SRCM_CH_NONE;
+                    path->srcmRoute[sinkNo][blockIdx].inChnl = CSL_CAPH_SRCM_INCHNL_NONE;
+                }
+                else
+                {
+                    csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[sinkNo][blockIdx], path->pathID);
+                    memset(&path->srcmRoute[sinkNo][blockIdx], 0, sizeof(CSL_CAPH_SRCM_ROUTE_t));
+                }
+            }
+        }
+    }
+
+    if (path->sinkCount == 1) // last sink, close source also
+    {
+	    if(path->audiohPath[0]) 
+        {
+            csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
+            path->audiohPath[0] = AUDDRV_PATH_NONE;
+            memset(&path->audiohCfg[0], 0, sizeof(audio_config_t));
+        }
+    }
+
+    // close the sink with sinkNo
+	if(path->audiohPath[sinkNo+1]) 
+    {
+        csl_caph_hwctrl_closeAudioH(path->sink[sinkNo], path->pathID);
+        path->audiohPath[sinkNo+1] = AUDDRV_PATH_NONE;
+        memset(&path->audiohCfg[sinkNo+1], 0, sizeof(audio_config_t));
+    }
+
+	if (((path->source == CSL_CAPH_DEV_DSP)&&(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR)) ||
+		((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_DSP)))	
+	{
+		if (pcmRunning)
+		{
+			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+#if !defined(ENABLE_DMA_VOICE)
+			csl_caph_intc_disable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
+#endif
+			pcmRunning = FALSE;
+		}
+	} else if(path->source == CSL_CAPH_DEV_BT_MIC || path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) {
+		ssp_pcm_usecount--;
+		if ((pcmRunning == TRUE) && (ssp_pcm_usecount <= 0))
+		{
+			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
+			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
+		    csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
+			pcmRunning = FALSE;
+			ssp_pcm_usecount = 0;
+		}
+	}
+  
+    // clean up the block list of this sink 
+    memset(path->block[sinkNo], 0, sizeof(path->block[sinkNo]));
+    memset(path->blockIdx[sinkNo], 0, sizeof(path->blockIdx[sinkNo]));
 }
 
 // ==========================================================================
@@ -1044,7 +1303,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 // Description: config dma block
 //
 // =========================================================================
-static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int blockPathIdx)
+static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int sinkNo, int blockPathIdx)
 {
 	int blockIdx;
 	CAPH_BLOCK_t block;
@@ -1054,25 +1313,25 @@ static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int blockPathIdx)
 
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
-	block = path->block[blockPathIdx];
+	block = path->block[sinkNo][blockPathIdx];
 	if(block!=CAPH_DMA) return;
-	blockIdx = path->blockIdx[blockPathIdx];
+	blockIdx = path->blockIdx[sinkNo][blockPathIdx];
 
 	memset(&dmaCfg, 0, sizeof(dmaCfg));
 
-	if(path->source==CSL_CAPH_DEV_DSP_throughMEM && path->sink[0]==CSL_CAPH_DEV_IHF && blockPathIdx==0)
+	if(path->source==CSL_CAPH_DEV_DSP_throughMEM && path->sink[sinkNo]==CSL_CAPH_DEV_IHF && blockPathIdx==0)
 	{	//ihf call: shared mem to ihf, special case
 		//hard coded to in direction.
 		//DMA channel configuration is done by DSP.
 		//So ARM code does not configure the AADMAC.
-		dmaCfg.dma_ch = path->dma[blockIdx];
+		dmaCfg.dma_ch = path->dma[sinkNo][blockIdx];
 		dmaCfg.mem_addr = (UInt8*)dspSharedMemAddr;
 		csl_caph_dma_set_buffer_address(dmaCfg);
 		return;
 	}
 
 	dmaCfg.direction = CSL_CAPH_DMA_IN;
-	dmaCfg.dma_ch = path->dma[blockIdx];
+	dmaCfg.dma_ch = path->dma[sinkNo][blockIdx];
 	dmaCfg.Tsize = CSL_AADMAC_TSIZE;
 	dmaCfg.dmaCB = path->dmaCB;
 	dmaCfg.mem_addr = path->pBuf;
@@ -1080,22 +1339,22 @@ static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int blockPathIdx)
 
 	if(blockPathIdx==0) //dma from ddr
 	{
-		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx+1]]; //fifo has to follow dma
-	} else if(path->sink[0]==CSL_CAPH_DEV_DSP_throughMEM && blockPathIdx) { //dma to shared mem
+		dmaCfg.fifo = path->cfifo[sinkNo][path->blockIdx[sinkNo][blockPathIdx+1]]; //fifo has to follow dma
+	} else if(path->sink[sinkNo]==CSL_CAPH_DEV_DSP_throughMEM && blockPathIdx) { //dma to shared mem
 #if defined(CONFIG_BCM_MODEM)
 		dmaCfg.direction = CSL_CAPH_DMA_OUT;
-		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]]; //fifo has be followed by dma
+		dmaCfg.fifo = path->cfifo[sinkNo][path->blockIdx[sinkNo][blockPathIdx-1]]; //fifo has be followed by dma
 		/* Linux Specific - For DMA, we need to pass the physical address of AP SM */
 		dmaCfg.mem_addr = (void *)(csl_dsp_arm2sp_get_phy_base_addr());
 		dmaCfg.mem_size = arm2spCfg.dmaBytes;
 		dmaCfg.dmaCB = AUDIO_DMA_CB2;
 #endif
-	} else if(path->sink[0]==CSL_CAPH_DEV_MEMORY && blockPathIdx) { //dma to mem
+	} else if(path->sink[sinkNo]==CSL_CAPH_DEV_MEMORY && blockPathIdx) { //dma to mem
 		dmaCfg.direction = CSL_CAPH_DMA_OUT;
-		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]]; //fifo has be followed by dma
-	} else if(path->sink[0]==CSL_CAPH_DEV_DSP && blockPathIdx) {
+		dmaCfg.fifo = path->cfifo[sinkNo][path->blockIdx[sinkNo][blockPathIdx-1]]; //fifo has be followed by dma
+	} else if(path->sink[sinkNo]==CSL_CAPH_DEV_DSP && blockPathIdx) {
 		dmaCfg.direction = CSL_CAPH_DMA_OUT;
-		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]];
+		dmaCfg.fifo = path->cfifo[sinkNo][path->blockIdx[sinkNo][blockPathIdx-1]];
 	} else {
 		audio_xassert(0, pathID);
 	}
@@ -1121,7 +1380,7 @@ static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int blockPathIdx)
 // Description: config cfifo block
 //
 // =========================================================================
-static void csl_caph_config_cfifo(CSL_CAPH_PathID pathID, int blockPathIdx)
+static void csl_caph_config_cfifo(CSL_CAPH_PathID pathID, int sinkNo, int blockPathIdx)
 {
 	int blockIdx;
 	CAPH_BLOCK_t block;
@@ -1132,13 +1391,13 @@ static void csl_caph_config_cfifo(CSL_CAPH_PathID pathID, int blockPathIdx)
 
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
-	block = path->block[blockPathIdx];
+	block = path->block[sinkNo][blockPathIdx];
 	if(block!=CAPH_CFIFO) return;
-	blockIdx = path->blockIdx[blockPathIdx];
+	blockIdx = path->blockIdx[sinkNo][blockPathIdx];
 
-	fifo = path->cfifo[blockIdx];
+	fifo = path->cfifo[sinkNo][blockIdx];
 	threshold = csl_caph_cfifo_get_fifo_thres(fifo);
-	if(path->block[blockPathIdx+1]==CAPH_DMA) direction = CSL_CAPH_CFIFO_OUT; //if followed by DMA, must be output.
+	if(path->block[sinkNo][blockPathIdx+1]==CAPH_DMA) direction = CSL_CAPH_CFIFO_OUT; //if followed by DMA, must be output.
 	csl_caph_cfifo_config_fifo(fifo, direction, threshold);
 }
 
@@ -1149,7 +1408,7 @@ static void csl_caph_config_cfifo(CSL_CAPH_PathID pathID, int blockPathIdx)
 // Description: config switch block
 //
 // =========================================================================
-static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
+static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int sinkNo, int blockPathIdx)
 {
 	int blockIdx, blockIdxTmp;
 	CAPH_BLOCK_t block;
@@ -1157,26 +1416,25 @@ static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
 	CSL_CAPH_SWITCH_CONFIG_t *swCfg;
 	CSL_CAPH_AUDIOH_BUFADDR_t audiohBufAddr;
 	CSL_CAPH_DEVICE_e sink;
-	int audiohSinkPathIdx;
 
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
-	block = path->block[blockPathIdx];
+	block = path->block[sinkNo][blockPathIdx];
 	if(block!=CAPH_SW) return;
-	blockIdx = path->blockIdx[blockPathIdx];
+	blockIdx = path->blockIdx[sinkNo][blockPathIdx];
 
-	swCfg = &path->sw[blockIdx];
+	swCfg = &path->sw[sinkNo][blockIdx];
 
-	if(path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_MEMORY && fmRxRunning == TRUE) //FM recording during direct playback
-	{
+    if(path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY && fmRxRunning == TRUE) //FM recording during direct playback
+	{ 
 		// add this FIFO as second destination in switch
-		fm_sw_config.FIFO_dst2Addr = csl_caph_cfifo_get_fifo_addr(path->cfifo[0]);
+		fm_sw_config.FIFO_dst2Addr = csl_caph_cfifo_get_fifo_addr(path->cfifo[sinkNo][0]);
 		csl_caph_switch_add_dst(fm_sw_config.chnl, fm_sw_config.FIFO_dst2Addr);
 		return;
 	}
 
-	if(blockPathIdx) swCfg->FIFO_srcAddr = csl_caph_get_fifo_addr(pathID, blockPathIdx-1, 1);
-	if(path->block[blockPathIdx+1]!=CAPH_NONE) swCfg->FIFO_dstAddr = csl_caph_get_fifo_addr(pathID, blockPathIdx+1, 0);
+	if(blockPathIdx) swCfg->FIFO_srcAddr = csl_caph_get_fifo_addr(pathID, sinkNo, blockPathIdx-1, 1);
+	if(path->block[sinkNo][blockPathIdx+1]!=CAPH_NONE) swCfg->FIFO_dstAddr = csl_caph_get_fifo_addr(pathID, sinkNo, blockPathIdx+1, 0);
 
 	if(!swCfg->FIFO_srcAddr)
 	{
@@ -1197,22 +1455,17 @@ static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
 
 	if(!swCfg->FIFO_dstAddr)
 	{
-		sink = path->sink[0];
-		audiohSinkPathIdx = 1;
-		if (path->curPathsinkMaxIdx > 0) // Multicast
-		{
-			audiohSinkPathIdx = path->curPathsinkMaxIdx + 1;
-			sink = path->sink[audiohSinkPathIdx-1];
-		}
+		sink = path->sink[sinkNo];
+		
 		if (sink == CSL_CAPH_DEV_BT_SPKR) {
 			if(!swCfg->trigger) swCfg->trigger = pcmTxTrigger;
 			swCfg->FIFO_dstAddr = csl_pcm_get_tx0_fifo_data_port(pcmHandleSSP);
 		}
-		else if(path->audiohPath[audiohSinkPathIdx])
+		else if(path->audiohPath[sinkNo+1]) 
 		{ //and audioh is sink
 			//if(!swCfg->trigger) //audioH trigger has higher priority?
 			swCfg->trigger = csl_caph_get_dev_trigger(sink);
-			audiohBufAddr = csl_caph_audioh_get_fifo_addr(path->audiohPath[audiohSinkPathIdx]);
+			audiohBufAddr = csl_caph_audioh_get_fifo_addr(path->audiohPath[sinkNo+1]);
 			swCfg->FIFO_dstAddr = audiohBufAddr.bufAddr;
 		}
 		else if (sink == CSL_CAPH_DEV_FM_TX) {
@@ -1226,30 +1479,30 @@ static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
 
 	if(!swCfg->trigger)
 	{
-		if(path->block[blockPathIdx-1]==CAPH_CFIFO && path->block[blockPathIdx+1]==CAPH_CFIFO)
+		if(path->block[sinkNo][blockPathIdx-1]==CAPH_CFIFO && path->block[sinkNo][blockPathIdx+1]==CAPH_CFIFO) 
 		{ //is this arm2sp direct?
 			swCfg->trigger = arm2spCfg.trigger;
-		} else if(path->block[blockPathIdx-1]==CAPH_SRC) { //if src is ahead, use src tap as trigger
-			blockIdxTmp = path->blockIdx[blockPathIdx-1];
-			swCfg->trigger = (CAPH_SWITCH_TRIGGER_e)((UInt32)CAPH_TAPSDOWN_CH1_NORM_INT+(UInt32)path->srcmRoute[blockIdxTmp].tapOutChnl-(UInt32)CSL_CAPH_SRCM_TAP_MONO_CH1);
-		} else if(path->block[blockPathIdx+1]==CAPH_SRC || path->block[blockPathIdx+1]==CAPH_MIXER) { //if src is behind, use src input as trigger
-			blockIdxTmp = path->blockIdx[blockPathIdx+1];
-			swCfg->trigger = csl_caph_srcmixer_get_inchnl_trigger(path->srcmRoute[blockIdxTmp].inChnl);
-		} else if(path->block[blockPathIdx-1]==CAPH_MIXER) { //if mixer is ahead, use mixer output as trigger?
-			blockIdxTmp = path->blockIdx[blockPathIdx-1];
-			swCfg->trigger = csl_caph_srcmixer_get_outchnl_trigger(path->srcmRoute[blockIdxTmp].outChnl);
+		} else if(path->block[sinkNo][blockPathIdx-1]==CAPH_SRC) { //if src is ahead, use src tap as trigger
+			blockIdxTmp = path->blockIdx[sinkNo][blockPathIdx-1];
+			swCfg->trigger = (CAPH_SWITCH_TRIGGER_e)((UInt32)CAPH_TAPSDOWN_CH1_NORM_INT+(UInt32)path->srcmRoute[sinkNo][blockIdxTmp].tapOutChnl-(UInt32)CSL_CAPH_SRCM_TAP_MONO_CH1);
+		} else if(path->block[sinkNo][blockPathIdx+1]==CAPH_SRC || path->block[sinkNo][blockPathIdx+1]==CAPH_MIXER) { //if src is behind, use src input as trigger
+			blockIdxTmp = path->blockIdx[sinkNo][blockPathIdx+1];
+			swCfg->trigger = csl_caph_srcmixer_get_inchnl_trigger(path->srcmRoute[sinkNo][blockIdxTmp].inChnl);
+		} else if(path->block[sinkNo][blockPathIdx-1]==CAPH_MIXER) { //if mixer is ahead, use mixer output as trigger?
+			blockIdxTmp = path->blockIdx[sinkNo][blockPathIdx-1];
+			swCfg->trigger = csl_caph_srcmixer_get_outchnl_trigger(path->srcmRoute[sinkNo][blockIdxTmp].outChnl);
 		} else {
 			audio_xassert(0, pathID);
 		}
 	}
 
-	swCfg->status = csl_caph_switch_config_channel(path->sw[blockIdx]);
+	swCfg->status = csl_caph_switch_config_channel(path->sw[sinkNo][blockIdx]);
 
-	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_srcAddr, pathID);
-	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_dstAddr, pathID);
-	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_dst2Addr, pathID);
-	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_dst3Addr, pathID);
-	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_dst4Addr, pathID);
+	csl_caph_hwctrl_addHWResource(path->sw[sinkNo][blockIdx].FIFO_srcAddr, pathID);
+	csl_caph_hwctrl_addHWResource(path->sw[sinkNo][blockIdx].FIFO_dstAddr, pathID);
+	csl_caph_hwctrl_addHWResource(path->sw[sinkNo][blockIdx].FIFO_dst2Addr, pathID);
+	csl_caph_hwctrl_addHWResource(path->sw[sinkNo][blockIdx].FIFO_dst3Addr, pathID);
+	csl_caph_hwctrl_addHWResource(path->sw[sinkNo][blockIdx].FIFO_dst4Addr, pathID);
 }
 
 // ==========================================================================
@@ -1259,7 +1512,7 @@ static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
 // Description: config mixer block
 //
 // =========================================================================
-static void csl_caph_config_mixer(CSL_CAPH_PathID pathID, int blockPathIdx)
+static void csl_caph_config_mixer(CSL_CAPH_PathID pathID, int sinkNo, int blockPathIdx)
 {
 	int blockIdx;
 	CAPH_BLOCK_t block;
@@ -1268,11 +1521,11 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID pathID, int blockPathIdx)
 
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
-	block = path->block[blockPathIdx];
+	block = path->block[sinkNo][blockPathIdx];
 	if(block!=CAPH_MIXER) return;
-	blockIdx = path->blockIdx[blockPathIdx];
+	blockIdx = path->blockIdx[sinkNo][blockPathIdx];
 
-	pSrcmRoute = &path->srcmRoute[blockIdx];
+	pSrcmRoute = &path->srcmRoute[sinkNo][blockIdx];
 
 	if ((pSrcmRoute->mixGain.mixInGainL == MIX_IN_MUTE)
 		&&(pSrcmRoute->mixGain.mixInGainR == MIX_IN_MUTE))
@@ -1282,7 +1535,7 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID pathID, int blockPathIdx)
 		pSrcmRoute->mixGain.mixInGainR		= MIX_IN_PASS;
 		pSrcmRoute->mixGain.mixOutCoarseGainR	= BIT_SELECT;
 	}
-	csl_caph_srcmixer_config_mix_route(path->srcmRoute[blockIdx]);
+	csl_caph_srcmixer_config_mix_route(path->srcmRoute[sinkNo][blockIdx]);
 }
 
 // ==========================================================================
@@ -1292,7 +1545,7 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID pathID, int blockPathIdx)
 // Description: config src block
 //
 // =========================================================================
-static void csl_caph_config_src(CSL_CAPH_PathID pathID, int blockPathIdx)
+static void csl_caph_config_src(CSL_CAPH_PathID pathID, int sinkNo, int blockPathIdx)
 {
 	int blockIdx;
 	CAPH_BLOCK_t block;
@@ -1301,13 +1554,13 @@ static void csl_caph_config_src(CSL_CAPH_PathID pathID, int blockPathIdx)
 
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
-	block = path->block[blockPathIdx];
+	block = path->block[sinkNo][blockPathIdx];
 	if(block!=CAPH_SRC) return;
-	blockIdx = path->blockIdx[blockPathIdx];
+	blockIdx = path->blockIdx[sinkNo][blockPathIdx];
 
-	//pSrcmRoute = &path->srcmRoute[blockIdx];
+	//pSrcmRoute = &path->srcmRoute[sinkNo][blockIdx];
 
-	csl_caph_srcmixer_config_src_route(path->srcmRoute[blockIdx]);
+	csl_caph_srcmixer_config_src_route(path->srcmRoute[sinkNo][blockIdx]);
 }
 
 
@@ -1316,38 +1569,44 @@ static void csl_caph_config_src(CSL_CAPH_PathID pathID, int blockPathIdx)
 // Function Name: csl_caph_config_blocks
 //
 // Description: obtain caph blocks and configure them
-//
+// Params: sinkNo --        the sink No. of this block list.
+//         startOffset --   the startOffset of the block(new blocks) that should
+//                          be configured for this sink. 
 // =========================================================================
-static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
+static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, int sinkNo, int startOffset)
 {
-	int i = 0;
 	CAPH_BLOCK_t block;
 	CSL_CAPH_HWConfig_Table_t *path;
+	int i = startOffset;
+    
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_config_blocks::  PathID %d,  SinkNo: %d, startOffset %d \r\n", 
+            pathID, sinkNo, startOffset);
 
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
 
 	while(1)
 	{
-		block = path->block[i];
+		block = path->block[sinkNo][i];
+
 		if(block==CAPH_NONE) break;
 
 		switch(block)
 		{
 		case CAPH_DMA:
-			csl_caph_config_dma(pathID, i);
-			break;
+			csl_caph_config_dma(pathID, sinkNo, i);
+			break; 
 		case CAPH_CFIFO:
-			csl_caph_config_cfifo(pathID, i);
+			csl_caph_config_cfifo(pathID, sinkNo, i);
 			break;
 		case CAPH_SW:
-			csl_caph_config_sw(pathID, i);
+			csl_caph_config_sw(pathID, sinkNo, i);
 			break;
 		case CAPH_SRC:
-			csl_caph_config_src(pathID, i);
+			csl_caph_config_src(pathID, sinkNo, i);
 			break;
 		case CAPH_MIXER:
-			csl_caph_config_mixer(pathID, i);
+			csl_caph_config_mixer(pathID, sinkNo, i);
 			break;
 		default:
 			break;
@@ -1355,10 +1614,15 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
 		i++;
 	}
 
-	if (path->audiohPath[1]) csl_caph_audioh_config(path->audiohPath[1], (void *)&path->audiohCfg[1]);
-	if (path->audiohPath[0]) csl_caph_audioh_config(path->audiohPath[0], (void *)&path->audiohCfg[0]);
+    if (path->sinkCount == 1) // first sink, config source also.
+    {
+	    if (path->audiohPath[0]) csl_caph_audioh_config(path->audiohPath[0], (void *)&path->audiohCfg[0]);
+    }
+    
+    // config the new sink
+    if (path->audiohPath[sinkNo+1]) csl_caph_audioh_config(path->audiohPath[sinkNo+1], (void *)&path->audiohCfg[sinkNo+1]);
 
-	if(path->sink[0]==CSL_CAPH_DEV_BT_SPKR || path->source==CSL_CAPH_DEV_BT_MIC)
+	if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR || path->source==CSL_CAPH_DEV_BT_MIC)
 	{
 		if(!pcmRunning && !sspTDM_enabled)
 		{
@@ -1371,7 +1635,7 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
 				pcmCfg.protocol   = CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL; //CSL_PCM_PROTOCOL_MONO;
 				pcmCfg.format     = CSL_PCM_WORD_LENGTH_24_BIT; //CSL_PCM_WORD_LENGTH_24_BIT;
 			}
-			if(path->sink[0]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC) pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
+			if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC) pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
 			if(path->source == CSL_CAPH_DEV_MEMORY) pcmCfg.format = CSL_PCM_WORD_LENGTH_PACK_16_BIT;
 			pcmCfg.sample_rate = path->snk_sampleRate;
 			if (path->source == CSL_CAPH_DEV_DSP) pcmCfg.sample_rate = path->src_sampleRate;
@@ -1386,7 +1650,7 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
 		}
 	}
 
-	if(!fmRunning && (path->sink[0]==CSL_CAPH_DEV_FM_TX || path->source==CSL_CAPH_DEV_FM_RADIO))
+	if(!fmRunning && (path->sink[sinkNo]==CSL_CAPH_DEV_FM_TX || path->source==CSL_CAPH_DEV_FM_RADIO))
 	{
 		fmCfg.mode = CSL_I2S_MASTER_MODE;
 		fmCfg.tx_ena = 1;
@@ -1404,11 +1668,11 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
 	}
 
 	if ((path->source == CSL_CAPH_DEV_FM_RADIO) &&
-		((path->sink[0] == CSL_CAPH_DEV_EP) ||
-		 (path->sink[0] == CSL_CAPH_DEV_BT_SPKR) ||
-		 (path->sink[0] == CSL_CAPH_DEV_HS)))
+		((path->sink[sinkNo] == CSL_CAPH_DEV_EP) ||
+		 (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) ||
+		 (path->sink[sinkNo] == CSL_CAPH_DEV_HS)))
 	{
-		memcpy(&fm_sw_config, &path->sw[0], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+		memcpy(&fm_sw_config, &path->sw[sinkNo][0], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
 	}
 }
 
@@ -1417,22 +1681,26 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
 // Function Name: csl_caph_start_blocks
 //
 // Description: start caph blocks, has to be in sequence?
-//
+// Params: sinkNo --        the sink No. of this block list.
+//         startOffset --   the startOffset of the block(new blocks) that should
+//                          be configured for this sink. 
 // =========================================================================
-static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
+static void csl_caph_start_blocks(CSL_CAPH_PathID pathID, int sinkNo, int startOffset)
 {
-	int i = 0;
+	int i = startOffset;
 	int blockIdx;
 	CAPH_BLOCK_t block;
 	CSL_CAPH_HWConfig_Table_t *path;
+    
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_start_blocks::  PathID %d,  SinkNo: %d, startOffset %d \r\n", 
+            pathID, sinkNo, startOffset);
 
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_start_blocks path %d.\r\n", pathID);
 
 #if !defined(ENABLE_DMA_VOICE)
-	if(path->sink[0]==CSL_CAPH_DEV_DSP && path->audiohPath[0]) //UL mic to dsp
+	if(path->sink[sinkNo]==CSL_CAPH_DEV_DSP && path->audiohPath[0]) //UL mic to dsp
 	{
 		csl_caph_intc_enable_tapout_intr(MAIN_MIC_UL_TO_DSP_CHNL, CSL_CAPH_DSP);
 	}
@@ -1440,19 +1708,19 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 
 	while(1)
 	{
-		block = path->block[i];
+		block = path->block[sinkNo][i];
 		if(block==CAPH_NONE) break;
-		blockIdx = path->blockIdx[i];
+		blockIdx = path->blockIdx[sinkNo][i];
 
 		switch(block)
 		{
 		case CAPH_DMA:
 			break;
 		case CAPH_CFIFO:
-			if(path->cfifo[blockIdx]) csl_caph_cfifo_start_fifo(path->cfifo[blockIdx]);
+			if(path->cfifo[sinkNo][blockIdx]) csl_caph_cfifo_start_fifo(path->cfifo[sinkNo][blockIdx]);
 			break;
 		case CAPH_SW:
-			if(path->sw[blockIdx].chnl) csl_caph_switch_start_transfer(path->sw[blockIdx].chnl);
+			if(path->sw[sinkNo][blockIdx].chnl) csl_caph_switch_start_transfer(path->sw[sinkNo][blockIdx].chnl);
 			break;
 		default:
 			break;
@@ -1460,43 +1728,51 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 		i++;
 	}
 
-	if (path->audiohPath[1])
-	{
-		csl_caph_audioh_start(path->audiohPath[1]);
-	}
+	// start the new sink        
+    if (path->audiohPath[sinkNo+1]) csl_caph_audioh_start(path->audiohPath[sinkNo+1]);
 
-	if (path->audiohPath[0])
-	{
+    if (path->sinkCount == 1) // first sink, start the source also.
+    {
+        if (path->audiohPath[0])
+        {
 #if defined(ENABLE_DMA_VOICE)
-		if (path->sink[0] == CSL_CAPH_DEV_DSP)
-			csl_caph_audioh_adcpath_global_enable(FALSE);
+            if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
+                csl_caph_audioh_adcpath_global_enable(FALSE);
 #endif
-		csl_caph_audioh_start(path->audiohPath[0]);
-	}
+            csl_caph_audioh_start(path->audiohPath[0]);
+        } 
+    }
 
 	//have to start dma in the end?
-	if(!(path->source==CSL_CAPH_DEV_DSP_throughMEM && path->sink[0]==CSL_CAPH_DEV_IHF))//ihf call, dsp starts dma.
+	if(!(path->source==CSL_CAPH_DEV_DSP_throughMEM && path->sink[sinkNo]==CSL_CAPH_DEV_IHF))//ihf call, dsp starts dma.
 	{
 		for(i=0; i<MAX_BLOCK_NUM; i++)
 		{
-			if(!path->dma[i]) break;
+			if(!path->dma[sinkNo][i]) break;
 #if defined(ENABLE_DMA_VOICE) && !defined(ENABLE_DMA_LOOPBACK)
-			if ((path->dma[i] < CSL_CAPH_DMA_CH12)||(path->dma[i] > CSL_CAPH_DMA_CH14))
+			if ((path->dma[sinkNo][i] < CSL_CAPH_DMA_CH12)||(path->dma[sinkNo][i] > CSL_CAPH_DMA_CH14))
 #endif
-			csl_caph_dma_start_transfer(path->dma[i]);
+            {
+                if (!(path->sinkCount > 1 && sinkNo == 0 && i == 0))
+			    {
+                    // Don't need to start the DMA again for new sink add to the path.It is shared and
+                    // already started by the first sink.
+                    csl_caph_dma_start_transfer(path->dma[sinkNo][i]);
+                }
+            }
 		}
 	}
 
-	if(!pcmRunning && (path->sink[0]==CSL_CAPH_DEV_BT_SPKR || path->source==CSL_CAPH_DEV_BT_MIC))
+	if(!pcmRunning && (path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR || path->source==CSL_CAPH_DEV_BT_MIC))
 	{
 #if !defined(ENABLE_DMA_VOICE)
-		if((path->sink[0]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC)
-			|| (path->source == CSL_CAPH_DEV_DSP)
-			|| (path->sink[0] == CSL_CAPH_DEV_DSP)
+		if((path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC) 
+			|| (path->source == CSL_CAPH_DEV_DSP) 
+			|| (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) 
 			|| sspTDM_enabled)
 			csl_caph_intc_enable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
 #endif
-		if((path->source == CSL_CAPH_DEV_DSP) || (path->sink[0] == CSL_CAPH_DEV_DSP) || sspTDM_enabled)
+		if((path->source == CSL_CAPH_DEV_DSP) || (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) || sspTDM_enabled)
 		{
 #if defined(ENABLE_DMA_VOICE)
 			//dma sequence will divert from non-dma eventually, hence make 2 copies.
@@ -1516,14 +1792,14 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 		pcmRunning = TRUE;
 	}
 
-	if(!fmRunning && (path->sink[0]==CSL_CAPH_DEV_FM_TX || path->source==CSL_CAPH_DEV_FM_RADIO))
+	if(!fmRunning && (path->sink[sinkNo]==CSL_CAPH_DEV_FM_TX || path->source==CSL_CAPH_DEV_FM_RADIO))
 	{
 		csl_i2s_start(fmHandleSSP, &fmCfg);
 		fmRunning = TRUE;
 	}
 
-	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) ||
-        (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
+	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM) || 
+        (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM))
 	{
 #if defined(CONFIG_BCM_MODEM) 
 		if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1)
@@ -1751,55 +2027,35 @@ void csl_caph_ControlHWClock(Boolean enable)
 
 /****************************************************************************
 *
-*  Function Name: CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_DEVICE_e source,
-*                                               CSL_CAPH_DEVICE_e sink,
-*                                               AUDIO_SAMPLING_RATE_t src_sampleRate,
-*                                               AUDIO_SAMPLING_RATE_t snk_sampleRate,
-*                                               AUDIO_NUM_OF_CHANNEL_t chnlNum,
-*                                               AUDIO_BITS_PER_SAMPLE_t bitPerSample)
-*
+*  Function Name: CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_HWCTRL_CONFIG_t config)
 *  Description: Add the new path into the path table
 *
 ****************************************************************************/
-static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_DEVICE_e source,
-                                               CSL_CAPH_DEVICE_e sink,
-                                               AUDIO_SAMPLING_RATE_t src_sampleRate,
-                                               AUDIO_SAMPLING_RATE_t snk_sampleRate,
-                                               AUDIO_NUM_OF_CHANNEL_t chnlNum,
-                                               AUDIO_BITS_PER_SAMPLE_t bitPerSample)
+static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_HWCTRL_CONFIG_t config)
 {
     UInt8 i = 0;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_AddPathInTable:: Source: %d, Sink: %d, sr %d:%d, nc %d, bitPerSample %d.\r\n", source, sink, src_sampleRate, snk_sampleRate, chnlNum, bitPerSample);
-	if((source == CSL_CAPH_DEV_DSP && sink == CSL_CAPH_DEV_MEMORY) || (sink == CSL_CAPH_DEV_DSP && source == CSL_CAPH_DEV_MEMORY)) //in this case, search for existing paths first
-	{
-		for (i=0; i<MAX_AUDIO_PATH; i++)
-		{
-			//Log_DebugPrintf(LOGID_SOC_AUDIO, "i %d, pathID %d, Source %d, Sink %d, sr %d:%d.\r\n", i, HWConfig_Table[i].pathID, HWConfig_Table[i].source, HWConfig_Table[i].sink[0], HWConfig_Table[i].src_sampleRate, HWConfig_Table[i].snk_sampleRate);
-			if(HWConfig_Table[i].source == source && HWConfig_Table[i].sink[0] == sink)
-			{
-				Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_AddPathInTable:: required path %d already exists.\r\n", HWConfig_Table[i].pathID);
-				return HWConfig_Table[i].pathID;
-			}
-		}
-	}
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_AddPathInTable:: Source: %d, Sink: %d, sr %d:%d, nc %d, bitPerSample %d.\r\n", config.source, config.sink, config.src_sampleRate, config.snk_sampleRate, config.chnlNum, config.bitPerSample);
 
     for (i=0; i<MAX_AUDIO_PATH; i++)
     {
-		//Log_DebugPrintf(LOGID_SOC_AUDIO, "i %d, pathID %d, Source %d, Sink %d, sr %d:%d.\r\n", i, HWConfig_Table[i].pathID, HWConfig_Table[i].source, HWConfig_Table[i].sink[0], HWConfig_Table[i].src_sampleRate, HWConfig_Table[i].snk_sampleRate);
+		//Log_DebugPrintf(LOGID_SOC_AUDIO, "i %d, pathID %d, Source %d, Sink %d, sr %d:%d.\r\n", i, HWConfig_Table[i].pathID, HWConfig_Table[i].source, HWConfig_Table[i].sink[sinkNo], HWConfig_Table[i].src_sampleRate, HWConfig_Table[i].snk_sampleRate);
 		if ((HWConfig_Table[i].source == CSL_CAPH_DEV_NONE)
            &&(HWConfig_Table[i].sink[0] == CSL_CAPH_DEV_NONE))
         {
             HWConfig_Table[i].pathID = (CSL_CAPH_PathID)(i + 1);
-            HWConfig_Table[i].source = source;
-            HWConfig_Table[i].sink[0] = sink;
-            HWConfig_Table[i].src_sampleRate = src_sampleRate;
-            HWConfig_Table[i].snk_sampleRate = snk_sampleRate;
-            HWConfig_Table[i].chnlNum = chnlNum;
-            HWConfig_Table[i].bitPerSample = bitPerSample;
+            HWConfig_Table[i].source = config.source;
+            HWConfig_Table[i].sink[0] = config.sink;
+            HWConfig_Table[i].src_sampleRate = config.src_sampleRate;
+            HWConfig_Table[i].snk_sampleRate = config.snk_sampleRate;			
+            HWConfig_Table[i].chnlNum = config.chnlNum;
+            HWConfig_Table[i].bitPerSample = config.bitPerSample;
+
             return (CSL_CAPH_PathID)(i + 1);
         }
     }
+        
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_AddPathInTable: Fatal error! No availabe path in table.\n");
     return (CSL_CAPH_PathID)0;
 }
 
@@ -1812,7 +2068,7 @@ static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_DEVICE_e source,
 ****************************************************************************/
 static void csl_caph_hwctrl_RemovePathInTable(CSL_CAPH_PathID pathID)
 {
-    UInt8 i = 0;
+    UInt8 i = 0, j = 0;
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_RemovePathInTable, pathID %d.\r\n", pathID);
     if (pathID == 0) return;
     for (i=0; i<MAX_AUDIO_PATH; i++)
@@ -1820,14 +2076,17 @@ static void csl_caph_hwctrl_RemovePathInTable(CSL_CAPH_PathID pathID)
 		//Log_DebugPrintf(LOGID_SOC_AUDIO, "i %d, pathID %d, Source %d, Sink %d, sr %d:%d.\r\n", i, HWConfig_Table[i].pathID, HWConfig_Table[i].source, HWConfig_Table[i].sink[0], HWConfig_Table[i].src_sampleRate, HWConfig_Table[i].snk_sampleRate);
         if (HWConfig_Table[i].pathID == pathID)
         {
-            //Before removing the path from the Table,
-            //Do the ownership switching if needed.
-            csl_caph_hwctrl_changeSwitchCHOwner(
-                HWConfig_Table[i].sw[0], pathID);
-            csl_caph_hwctrl_changeSwitchCHOwner(
-                HWConfig_Table[i].sw[1], pathID);
-            csl_caph_hwctrl_changeSwitchCHOwner(
-                HWConfig_Table[i].sw[2], pathID);
+            for (j = 0; j < MAX_SINK_NUM; j++)
+            {
+                //Before removing the path from the Table,
+                //Do the ownership switching if needed.
+                csl_caph_hwctrl_changeSwitchCHOwner(
+                    HWConfig_Table[i].sw[j][0], pathID);
+                csl_caph_hwctrl_changeSwitchCHOwner(
+                    HWConfig_Table[i].sw[j][1], pathID);
+                csl_caph_hwctrl_changeSwitchCHOwner(
+                    HWConfig_Table[i].sw[j][2], pathID);
+            }
 
             memset(&(HWConfig_Table[i]), 0, sizeof(CSL_CAPH_HWConfig_Table_t));
             return;
@@ -1835,7 +2094,6 @@ static void csl_caph_hwctrl_RemovePathInTable(CSL_CAPH_PathID pathID)
     }
     return;
 }
-
 
 /****************************************************************************
 *
@@ -2048,48 +2306,51 @@ static void csl_caph_hwctrl_closeCFifo(CSL_CAPH_CFIFO_FIFO_e fifo,
 static void csl_caph_hwctrl_changeSwitchCHOwner(
         CSL_CAPH_SWITCH_CONFIG_t switchCH, CSL_CAPH_PathID myPathID)
 {
-    UInt32 i = 0;
-
+    UInt32 i,j;
+    
     if((switchCH.chnl == CSL_CAPH_SWITCH_NONE)||(myPathID == 0)) return;
 
     for (i=0; i<MAX_AUDIO_PATH; i++)
 	{
         if(HWConfig_Table[i].pathID == myPathID) continue;
-		if((HWConfig_Table[i].sw[0].FIFO_srcAddr == switchCH.FIFO_srcAddr)
-		&&((HWConfig_Table[i].sw[0].FIFO_dstAddr == switchCH.FIFO_dstAddr)
-            || (HWConfig_Table[i].sw[0].FIFO_dst2Addr == switchCH.FIFO_dstAddr)
-            || (HWConfig_Table[i].sw[0].FIFO_dst3Addr == switchCH.FIFO_dstAddr)
-            || (HWConfig_Table[i].sw[0].FIFO_dst4Addr == switchCH.FIFO_dstAddr))
-        &&(HWConfig_Table[i].sw[0].status == CSL_CAPH_SWITCH_BORROWER))
-		{
-			HWConfig_Table[i].sw[0].chnl = switchCH.chnl;
-			HWConfig_Table[i].sw[0].status = CSL_CAPH_SWITCH_OWNER;
-			return;
-		}
-        else
-		if((HWConfig_Table[i].sw[1].FIFO_srcAddr == switchCH.FIFO_srcAddr)
-		&&((HWConfig_Table[i].sw[1].FIFO_dstAddr == switchCH.FIFO_dstAddr)
-            || (HWConfig_Table[i].sw[1].FIFO_dst2Addr == switchCH.FIFO_dstAddr)
-            || (HWConfig_Table[i].sw[1].FIFO_dst3Addr == switchCH.FIFO_dstAddr)
-            || (HWConfig_Table[i].sw[1].FIFO_dst4Addr == switchCH.FIFO_dstAddr))
-        &&(HWConfig_Table[i].sw[1].status == CSL_CAPH_SWITCH_BORROWER))
-		{
-			HWConfig_Table[i].sw[1].chnl = switchCH.chnl;
-			HWConfig_Table[i].sw[1].status = CSL_CAPH_SWITCH_OWNER;
-			return;
-		}
-        else
-		if((HWConfig_Table[i].sw[2].FIFO_srcAddr == switchCH.FIFO_srcAddr)
-		&&((HWConfig_Table[i].sw[2].FIFO_dstAddr == switchCH.FIFO_dstAddr)
-            || (HWConfig_Table[i].sw[2].FIFO_dst2Addr == switchCH.FIFO_dstAddr)
-            || (HWConfig_Table[i].sw[2].FIFO_dst3Addr == switchCH.FIFO_dstAddr)
-            || (HWConfig_Table[i].sw[2].FIFO_dst4Addr == switchCH.FIFO_dstAddr))
-        &&(HWConfig_Table[i].sw[2].status == CSL_CAPH_SWITCH_BORROWER))
-		{
-			HWConfig_Table[i].sw[2].chnl = switchCH.chnl;
-			HWConfig_Table[i].sw[2].status = CSL_CAPH_SWITCH_OWNER;
-			return;
-		}
+        for (j = 0; j < MAX_SINK_NUM; j++)
+        {
+            if((HWConfig_Table[i].sw[j][0].FIFO_srcAddr == switchCH.FIFO_srcAddr) 
+            &&((HWConfig_Table[i].sw[j][0].FIFO_dstAddr == switchCH.FIFO_dstAddr) 
+                || (HWConfig_Table[i].sw[j][0].FIFO_dst2Addr == switchCH.FIFO_dstAddr) 
+                || (HWConfig_Table[i].sw[j][0].FIFO_dst3Addr == switchCH.FIFO_dstAddr) 
+                || (HWConfig_Table[i].sw[j][0].FIFO_dst4Addr == switchCH.FIFO_dstAddr))
+            &&(HWConfig_Table[i].sw[j][0].status == CSL_CAPH_SWITCH_BORROWER)) 
+            {
+                HWConfig_Table[i].sw[j][0].chnl = switchCH.chnl;
+                HWConfig_Table[i].sw[j][0].status = CSL_CAPH_SWITCH_OWNER;
+                return;
+            }
+            else
+            if((HWConfig_Table[i].sw[j][1].FIFO_srcAddr == switchCH.FIFO_srcAddr) 
+            &&((HWConfig_Table[i].sw[j][1].FIFO_dstAddr == switchCH.FIFO_dstAddr) 
+                || (HWConfig_Table[i].sw[j][1].FIFO_dst2Addr == switchCH.FIFO_dstAddr) 
+                || (HWConfig_Table[i].sw[j][1].FIFO_dst3Addr == switchCH.FIFO_dstAddr) 
+                || (HWConfig_Table[i].sw[j][1].FIFO_dst4Addr == switchCH.FIFO_dstAddr)) 
+            &&(HWConfig_Table[i].sw[j][1].status == CSL_CAPH_SWITCH_BORROWER)) 
+            {
+                HWConfig_Table[i].sw[j][1].chnl = switchCH.chnl;
+                HWConfig_Table[i].sw[j][1].status = CSL_CAPH_SWITCH_OWNER;
+                return;
+            }
+            else
+            if((HWConfig_Table[i].sw[j][2].FIFO_srcAddr == switchCH.FIFO_srcAddr) 
+            &&((HWConfig_Table[i].sw[j][2].FIFO_dstAddr == switchCH.FIFO_dstAddr) 
+                || (HWConfig_Table[i].sw[j][2].FIFO_dst2Addr == switchCH.FIFO_dstAddr) 
+                || (HWConfig_Table[i].sw[j][2].FIFO_dst3Addr == switchCH.FIFO_dstAddr) 
+                || (HWConfig_Table[i].sw[j][2].FIFO_dst4Addr == switchCH.FIFO_dstAddr)) 
+            &&(HWConfig_Table[i].sw[j][2].status == CSL_CAPH_SWITCH_BORROWER)) 
+            {
+                HWConfig_Table[i].sw[j][2].chnl = switchCH.chnl;
+                HWConfig_Table[i].sw[j][2].status = CSL_CAPH_SWITCH_OWNER;
+                return;
+            }
+        }
 	}
     return;
 }
@@ -2200,7 +2461,6 @@ static void csl_caph_hwctrl_closeSRCMixer(CSL_CAPH_SRCM_ROUTE_t routeConfig,
     }
     return;
 }
-
 
 
 /****************************************************************************
@@ -2465,86 +2725,42 @@ void csl_caph_hwctrl_deinit(void)
 
 /****************************************************************************
 *
-*  Function Name:Result_t csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
+*  Function Name:Result_t csl_caph_hwctrl_SetupPath 
 *
 *  Description: Set up a HW path with block list
+*  Params: config --    The (source,sink) configuration to set up the path
+*          sinkNo --    The sink No. allocated for this (source,sink) configuration.
 *
 ****************************************************************************/
-CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
+CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int sinkNo)
 {
-    CSL_CAPH_PathID pathID = 0;
+    CAPH_LIST_t list;
+    
+    CSL_CAPH_PathID pathID = config.pathID;
+
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_SetupPath::  Source: %d, Sink: %d, streamID %d.\r\n",
-            config.source, config.sink, config.streamID));
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_SetupPath:: pathID: %d, sinkNo: %d Source: %d, Sink: %d\r\n", 
+            pathID, sinkNo, config.source, config.sink));
 
-    // The passed in parameters will be stored in the table with index pathID
-    config.pathID = pathID = csl_caph_hwctrl_AddPathInTable(config.source,
-                                     config.sink,
-                                     config.src_sampleRate,
-                                     config.snk_sampleRate,
-                                     config.chnlNum,
-                                     config.bitPerSample);
-
-    if (pathID == 0)
-    {
-        Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_SetupPath: Fatal error! No availabe path in table.\n");
-    }
-
-    // The following code is to make sure we use reserved DMA channels for some special use cases.
-    if (config.source == CSL_CAPH_DEV_DSP_throughMEM && config.sink == CSL_CAPH_DEV_IHF)
-    {
-        config.dmaCH = CSL_CAPH_DMA_CH12;
-    }
-    else if (config.source == CSL_CAPH_DEV_DIGI_MIC && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
-    {
-        config.dmaCH = CSL_CAPH_DMA_CH13;
-        config.dmaCH2 = CSL_CAPH_DMA_CH14;
-    }
-    else if (config.source == CSL_CAPH_DEV_DIGI_MIC_L && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
-    {
-        config.dmaCH = CSL_CAPH_DMA_CH13;
-    }
-    else if (config.source == CSL_CAPH_DEV_DIGI_MIC_R && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
-    {
-        config.dmaCH2 = CSL_CAPH_DMA_CH14;
-    }
-    else if (config.source == CSL_CAPH_DEV_EANC_DIGI_MIC && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
-    {
-        config.dmaCH = CSL_CAPH_DMA_CH13;
-        config.dmaCH2 = CSL_CAPH_DMA_CH15;
-    }
-    else if (config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
-    {
-        config.dmaCH = CSL_CAPH_DMA_CH13;
-    }
-    else if (config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
-    {
-        config.dmaCH2 = CSL_CAPH_DMA_CH15;
-    }
-    else if (config.source == CSL_CAPH_DEV_EANC_INPUT && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
-    {
-        config.dmaCH = CSL_CAPH_DMA_CH16;
-    }
+   
+    // after this, don't change structure config, and just use it.
 
     path = &HWConfig_Table[pathID-1];
-
-	if(config.dmaCH) path->dma[0] = config.dmaCH;
-	if(config.dmaCH2) path->dma[1] = config.dmaCH2;
-
-    path->list = LIST_NUM;
+	
+    list = LIST_NUM;
     if ((path->source == CSL_CAPH_DEV_MEMORY)
-         &&((path->sink[0] == CSL_CAPH_DEV_EP)
-	        ||(path->sink[0] == CSL_CAPH_DEV_HS)
-	        ||(path->sink[0] == CSL_CAPH_DEV_IHF)
-	        ||(path->sink[0] == CSL_CAPH_DEV_VIBRA)))
+         &&((path->sink[sinkNo] == CSL_CAPH_DEV_EP)
+	        ||(path->sink[sinkNo] == CSL_CAPH_DEV_HS)
+	        ||(path->sink[sinkNo] == CSL_CAPH_DEV_IHF)
+	        ||(path->sink[sinkNo] == CSL_CAPH_DEV_VIBRA)))
     {
-		path->list = LIST_DMA_MIX_SW;
+		list = LIST_DMA_MIX_SW;
 
-		if(path->sink[0] == CSL_CAPH_DEV_VIBRA || //vibra does not go thru mixer
+		if(path->sink[sinkNo] == CSL_CAPH_DEV_VIBRA || //vibra does not go thru mixer
 		   (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000 && path->chnlNum == AUDIO_CHANNEL_MONO)) //no 48kHz mono pass-thru on A0, bypass mixer.
 		{
-			path->list = LIST_DMA_SW;
+			list = LIST_DMA_SW;
 		}
     }
     else
@@ -2554,87 +2770,87 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	    || (path->source == CSL_CAPH_DEV_DIGI_MIC_R)
 	    || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
 	    || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
-	    && (path->sink[0] == CSL_CAPH_DEV_MEMORY))
+	    && (path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY))
     {
-		path->list = LIST_SW_DMA;
-    }
+		list = LIST_SW_DMA;
+    } 
     else
-    if ((path->source == CSL_CAPH_DEV_FM_RADIO)&&(path->sink[0] == CSL_CAPH_DEV_MEMORY))
+    if ((path->source == CSL_CAPH_DEV_FM_RADIO)&&(path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY))
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM recording *** \r\n"));
-		path->list = LIST_SW_DMA;
-    }
+		list = LIST_SW_DMA;
+    }   
     else
-    if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink[0] == CSL_CAPH_DEV_FM_TX))
+    if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX))
     {
-		path->list = LIST_DMA_SW;
-    }
+		list = LIST_DMA_SW;
+    }   
     else
-    if ((path->source == CSL_CAPH_DEV_ANALOG_MIC)&&(path->sink[0] == CSL_CAPH_DEV_FM_TX))
+    if ((path->source == CSL_CAPH_DEV_ANALOG_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX))
     {
-		path->list = LIST_SW;
-    }
+		list = LIST_SW;
+    } 
     else
     if ((path->source == CSL_CAPH_DEV_FM_RADIO) &&
-        ((path->sink[0] == CSL_CAPH_DEV_EP) ||
-         (path->sink[0] == CSL_CAPH_DEV_BT_SPKR) ||
-         (path->sink[0] == CSL_CAPH_DEV_HS)))
+        ((path->sink[sinkNo] == CSL_CAPH_DEV_EP) ||
+         (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) ||
+         (path->sink[sinkNo] == CSL_CAPH_DEV_HS)))
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP or HS or BTM *****\r\n"));
 		fmRxRunning = TRUE;
-		path->list = LIST_SW_MIX_SW;
-		if(path->sink[0] == CSL_CAPH_DEV_BT_SPKR) path->list = LIST_SW_MIX_SRC_SW;
-    }
+		list = LIST_SW_MIX_SW;
+		if(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) list = LIST_SW_MIX_SRC_SW;
+    }   
     else
-    if ((path->source == CSL_CAPH_DEV_FM_RADIO) && (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
+    if ((path->source == CSL_CAPH_DEV_FM_RADIO) && (path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM))
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP/HS via arm2sp (during voice call) *****\r\n"));
 		arm2spPath = LIST_SW_DMA;
-		path->list = arm2spPath;
+		list = arm2spPath;
 		csl_caph_config_arm2sp(path->pathID);
     }
     else
-    if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[0] == CSL_CAPH_DEV_MEMORY))
+    if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY))
     {
-		path->list = LIST_SW_DMA;
+		list = LIST_SW_DMA;
 		ssp_pcm_usecount++;
     }
     else
-    if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink[0] == CSL_CAPH_DEV_BT_SPKR))
+    if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR))
     {
-		path->list = LIST_DMA_MIX_SRC_SW;
-		if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && bBTTest) path->list = LIST_DMA_SW; //avoid SRC for production test.
+		list = LIST_DMA_MIX_SRC_SW;
+		if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && bBTTest) list = LIST_DMA_SW; //avoid SRC for production test.
 		ssp_pcm_usecount++;
     }
     else
-    if ((path->source == CSL_CAPH_DEV_ANALOG_MIC)&&(path->sink[0] == CSL_CAPH_DEV_BT_SPKR))
+    if ((path->source == CSL_CAPH_DEV_ANALOG_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR))
     {
-		path->list = LIST_SW;
-    }
+		list = LIST_SW;
+    } 
     else
-    if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[0] == CSL_CAPH_DEV_EP))
+    if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_EP))
     {
-		path->list = LIST_SW_MIX_SW;
-    }
+		list = LIST_SW_MIX_SW;
+    }	
     else
-    if ((path->source == CSL_CAPH_DEV_DSP_throughMEM)&&(path->sink[0] == CSL_CAPH_DEV_IHF))
+    if ((path->source == CSL_CAPH_DEV_DSP_throughMEM)&&(path->sink[sinkNo] == CSL_CAPH_DEV_IHF))	
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice DL: DDR->AUDIOH(IHF)\r\n"));
-		path->list = LIST_DMA_SW;
-    }
+		list = LIST_DMA_SW;
+    }	
     else //DSP-->SRC-->SW-->AUDIOH
     if ((path->source == CSL_CAPH_DEV_DSP)
-        &&((path->sink[0] == CSL_CAPH_DEV_EP)
-        ||(path->sink[0] == CSL_CAPH_DEV_HS)))
+        &&((path->sink[sinkNo] == CSL_CAPH_DEV_EP)
+        ||(path->sink[sinkNo] == CSL_CAPH_DEV_HS)))
     {
         _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice DL: DSP->AUDIOH(EP/HS)\r\n"));
 #if defined(ENABLE_DMA_VOICE)
-		path->list = LIST_DMA_MIX_SW;
+		list = LIST_DMA_MIX_SW;
 #else
-		path->list = LIST_MIX_SW;
+		list = LIST_MIX_SW;
 #endif
-		memcpy(&(path->srcmRoute[0].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
-    }
+		memcpy(&(path->srcmRoute[sinkNo][0].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
+    }	
     else //AUDIOH-->SW-->SRC-->DSP
 	if (((path->source == CSL_CAPH_DEV_ANALOG_MIC)
          ||(path->source == CSL_CAPH_DEV_HS_MIC)
@@ -2642,94 +2858,110 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
          ||(path->source == CSL_CAPH_DEV_DIGI_MIC_R)
          ||(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
          ||(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
-        &&(path->sink[0] == CSL_CAPH_DEV_DSP))
+        &&(path->sink[sinkNo] == CSL_CAPH_DEV_DSP))
     {
 	    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice UL: AudioH(AnalogMic/HSMic/DMIC1/2/3/4)->DSP\r\n"));
 #if defined(ENABLE_DMA_VOICE)
-		path->list = LIST_SW_SRC_DMA;
+		list = LIST_SW_SRC_DMA;
 #else
-		path->list = LIST_SW_SRC;
+		list = LIST_SW_SRC;
 #endif
-    }
+    }		
     else // For HW loopback use only: AMIC/HSMIC -> EP/IHF/HS
-    if (((path->source == CSL_CAPH_DEV_ANALOG_MIC)
-            ||(path->source == CSL_CAPH_DEV_HS_MIC))
-        && ((path->sink[0] == CSL_CAPH_DEV_EP)
-            ||(path->sink[0] == CSL_CAPH_DEV_IHF)
-            ||(path->sink[0] == CSL_CAPH_DEV_HS)))
+    if (((path->source == CSL_CAPH_DEV_ANALOG_MIC) 
+            ||(path->source == CSL_CAPH_DEV_HS_MIC)) 
+        && ((path->sink[sinkNo] == CSL_CAPH_DEV_EP) 
+            ||(path->sink[sinkNo] == CSL_CAPH_DEV_IHF) 
+            ||(path->sink[sinkNo] == CSL_CAPH_DEV_HS)))
     {
-		path->list = LIST_NONE;
+		list = LIST_NONE;
     }
     else // HW loopback only: AUDIOH-->SSASW->SRCMixer->AudioH, Digi Mic1/2/3/4 -> HS ear
     if (((path->source == CSL_CAPH_DEV_DIGI_MIC_L) ||
 		(path->source == CSL_CAPH_DEV_DIGI_MIC_R) ||
 		(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) ||
 		(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
-		&& (path->sink[0] == CSL_CAPH_DEV_HS))
+		&& (path->sink[sinkNo] == CSL_CAPH_DEV_HS))
     {
 		//according to ASIC team, switch can be used as 1:2 splitter, with two idential destination address. But data format should be 24bit unpack.
-		memcpy(&(path->srcmRoute[1].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
-		memcpy(&(path->srcmRoute[2].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
-		path->list = LIST_SW;
+		memcpy(&(path->srcmRoute[sinkNo][1].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
+		memcpy(&(path->srcmRoute[sinkNo][2].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
+		list = LIST_SW;
     }
     else // For HW loopback use only: DIGI_MIC1/2/3/4 -> SSASW -> Handset Ear/IHF
     if (((path->source == CSL_CAPH_DEV_DIGI_MIC_L) ||
 	 (path->source == CSL_CAPH_DEV_DIGI_MIC_R) ||
 	 (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) ||
 	 (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
-        && ((path->sink[0] == CSL_CAPH_DEV_EP) ||
-            (path->sink[0] == CSL_CAPH_DEV_IHF)))
+        && ((path->sink[sinkNo] == CSL_CAPH_DEV_EP) ||
+            (path->sink[sinkNo] == CSL_CAPH_DEV_IHF)))
     {
-		path->list = LIST_SW;
+		list = LIST_SW;
     }
     else
-    if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[0] == CSL_CAPH_DEV_BT_SPKR))
+    if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR))
     {
          /* a simple loopback test case with dsp
          Set up the path for BT playback: SSP4 RX->DSP->SSP4 TX
          */
-		path->list = LIST_NONE;
+		list = LIST_NONE;
     }
-    else  if ((path->source == CSL_CAPH_DEV_DSP)&&(path->sink[0] == CSL_CAPH_DEV_BT_SPKR))
+    else  if ((path->source == CSL_CAPH_DEV_DSP)&&(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR))
     {
 #if defined(ENABLE_DMA_VOICE)
-		path->list = LIST_DMA_SW;
+		list = LIST_DMA_SW;
 #else
-		path->list = LIST_NONE;
+		list = LIST_NONE;
 #endif
     }
-    else  if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[0] == CSL_CAPH_DEV_DSP))
+    else  if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_DSP))
     {
 #if defined(ENABLE_DMA_VOICE)
-		path->list = LIST_SW_DMA;
+		list = LIST_SW_DMA;
 #else
-		path->list = LIST_NONE;
+		list = LIST_NONE;
 #endif
     }
 	else  // DSP --> HW src --> HW src mixerout --> CFIFO->Memory
- 	if ((path->source == CSL_CAPH_DEV_DSP)&&(path->sink[0] == CSL_CAPH_DEV_MEMORY))
+ 	if ((path->source == CSL_CAPH_DEV_DSP)&&(path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY))
     {
-		path->list = LIST_MIX_DMA;
-    }
+		list = LIST_MIX_DMA;
+    }    
 	else  // DDR --> HW src --> HW src tapout --> DSP
- 	if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink[0] == CSL_CAPH_DEV_DSP))
+ 	if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink[sinkNo] == CSL_CAPH_DEV_DSP))
     {
-		path->list = LIST_DMA_SRC;
-	}
-	else if (path->source == CSL_CAPH_DEV_MEMORY && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM)
+		list = LIST_DMA_SRC;
+	} 
+	else if (path->source == CSL_CAPH_DEV_MEMORY && path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM)
 	{
 		if(path->src_sampleRate==AUDIO_SAMPLING_RATE_44100) arm2spPath = LIST_DMA_MIX_DMA;
 		//if(path->src_sampleRate==AUDIO_SAMPLING_RATE_44100 || path->src_sampleRate==AUDIO_SAMPLING_RATE_48000) arm2spPath = LIST_DMA_MIX_SRC_DMA;
 		else arm2spPath = LIST_DMA_DMA;
-		path->list = arm2spPath;
+		list = arm2spPath;
 		csl_caph_config_arm2sp(path->pathID);
 	}
 
-    if(path->list!=LIST_NUM)
+    if(list!=LIST_NUM)
 	{
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_SetupPath pathID %d, caph list %d.\r\n", path->pathID, path->list);
-        memcpy(path->block, caph_block_list[path->list], sizeof(path->block));
-        csl_caph_obtain_blocks(path->pathID, 0, OBTAIN_BLOCKS_NORMAL);
+        int j, offset = 0;
+        memcpy(path->block[sinkNo], caph_block_list[list], sizeof(path->block[sinkNo]));
+        csl_caph_obtain_blocks(path->pathID, sinkNo, path->block_split_offset);
+
+        // update the offset for the other sinks
+        // Assumption: for multiple sinks, all the blocks only split at the Mixer. This is 
+        // the rule of our design for multicasting support.
+        // so we search for the Mixer in the block list and make the next block as the offset
+        for (j = 0; j < MAX_PATH_LEN; j++)
+        {
+            if (path->block[sinkNo][j] == CAPH_MIXER)
+            {
+                offset = j;
+                break;
+            }
+        }
+   
+        path->block_split_offset = offset;
+        
     }
 
     return path->pathID;
@@ -2738,29 +2970,36 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
 /****************************************************************************
 *
-*  Function Name:Result_t csl_caph_hwctrl_StartPath(CSL_CAPH_HWCTRL_CONFIG_t config)
+*  Function Name:Result_t csl_caph_hwctrl_StartPath() 
 *
-*  Description:  Start a HW path already configured
-*
+*  Description:  Start a HW path already configured, always start the first sink
+*  Params: pathID --    The ID oF the Path
 ****************************************************************************/
 CSL_CAPH_PathID csl_caph_hwctrl_StartPath(CSL_CAPH_PathID pathID)
 {
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
+    int offset = 0; // The offset of which block to start with. 
 
     if(pathID) path = &HWConfig_Table[pathID-1];
     else return 0;
 
-    Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_StartPath::  PathID %d, Source: %d, Sink: %d:%d, streamID %d.\r\n",
-            path->pathID, path->source, path->sink[0], path->sink[1], path->streamID);
-
-	if(path->list!=LIST_NUM)
-	{
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_StartPath pathID %d, caph list %d.\r\n", path->pathID, path->list);
-		csl_caph_config_blocks(path->pathID, path->block);
-		csl_caph_start_blocks(path->pathID);
-	}
+    if (path->sinkCount > 1)
+        offset = path->block_split_offset;
+    
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_StartPath::  PathID %d, Source: %d, sinkCount %d, Sink: %d, streamID %d \r\n", 
+            path->pathID, path->source, path->sinkCount, path->sink[0],  path->streamID);
+    
+    
+    if (path->sink[0] != CSL_CAPH_DEV_NONE)
+    {
+        csl_caph_config_blocks(path->pathID, 0, offset);
+        csl_caph_start_blocks(path->pathID, 0, offset);
+    }
+   
     path->status = PATH_OCCUPIED;
 
+    csl_caph_hwctrl_PrintPath(path);
+    
     return path->pathID;
 }
 
@@ -2768,19 +3007,32 @@ CSL_CAPH_PathID csl_caph_hwctrl_StartPath(CSL_CAPH_PathID pathID)
 *
 *  Function Name:Result_t csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 *
-*  Description: Enable a HW path. only do HW configuration for streaming.
-*
+*  Description: Enable a HW path. only do HW configuration for streaming. 
+*  Params: config -- The (source, sink) configuration of the Path
 ****************************************************************************/
 CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 {
-    config.pathID = csl_caph_hwctrl_SetupPath(config);
-    // enable CAPH clocks first
+    CSL_CAPH_PathID pathID = config.pathID;
+    CSL_CAPH_HWConfig_Table_t *path;
+
+    // try to enable all audio clock first
     csl_caph_ControlHWClock (TRUE);
-	//enable SSP clocks only when used
-	csl_ssp_ControlHWClock(TRUE,config.source,config.sink);
-	if (!(config.source == CSL_CAPH_DEV_MEMORY || config.sink == CSL_CAPH_DEV_MEMORY))
+
+    if (pathID == 0)
     {
-        // only start the path if it is not streaming with Memeory.
+        // The passed in parameters will be stored in the table with index pathID
+        config.pathID = pathID = csl_caph_hwctrl_AddPathInTable(config);
+    }
+
+    path = &HWConfig_Table[pathID-1];
+
+    path->sinkCount = 1;
+
+    config.pathID = csl_caph_hwctrl_SetupPath(config, 0);
+
+    if (!(config.source == CSL_CAPH_DEV_MEMORY || config.sink == CSL_CAPH_DEV_MEMORY))
+    { 
+        // only start the path if it is not streaming with Memeory.  
         csl_caph_hwctrl_StartPath(config.pathID);
     }
 
@@ -2796,154 +3048,70 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 ****************************************************************************/
 Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 {
+    int i, j;
     CSL_CAPH_HWConfig_Table_t *path;
-	CSL_CAPH_SRCM_INCHNL_e srcmIn;
-	int i;
 
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_DisablePath:: streamID: %d, pathID %d.\r\n",
-            config.streamID, config.pathID));
+                config.streamID, config.pathID));
 
     if (config.streamID != CSL_CAPH_STREAM_NONE)
     {
         // Request comes from Audio Router
-		return RESULT_OK;
+        return RESULT_OK;
     }
     else
     if ((config.streamID == CSL_CAPH_STREAM_NONE)&&(config.pathID != 0))
     {
         //Request comes from Audio Controller
-		path = &HWConfig_Table[config.pathID-1];
+        path = &HWConfig_Table[config.pathID-1];
     }
     else
     if ((config.streamID == CSL_CAPH_STREAM_NONE)&&(config.pathID == 0))
     {
         return RESULT_ERROR;
     }
+	
+    for (i = 0; i < MAX_SINK_NUM; i++)
+    {
+        if (path->sink[i] != CSL_CAPH_DEV_NONE)
+        {
+            if (path->sinkCount == 1)
+            {
+                path->block_split_offset = 0;
+            }
+            csl_caph_hwctrl_remove_blocks (path->pathID, i, path->block_split_offset);
+            path->sinkCount--;
+        }
+    }
 
-#if !defined(ENABLE_DMA_VOICE)
-	if(path->sink[0]==CSL_CAPH_DEV_DSP && path->source != CSL_CAPH_DEV_BT_MIC) //UL to dsp
-	{
-		// stop the src intc to dsp
-		if ((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)) srcmIn = EANC_MIC_UL_TO_DSP_CHNL;
-		else srcmIn = MAIN_MIC_UL_TO_DSP_CHNL;
-		csl_caph_intc_disable_tapout_intr(srcmIn, CSL_CAPH_DSP);
-	}
-#endif
+    // Tring to close the blocks shared by multiple sinks if they were not closed.
+    if (path->dma[0][0])    
+    {
+        csl_caph_hwctrl_closeDMA(path->dma[0][0], path->pathID);
+        path->dma[0][0] = 0;
+    }
+    if (path->cfifo[0][0])
+    {
+        csl_caph_hwctrl_closeCFifo(path->cfifo[0][0], path->pathID);
+        path->cfifo[0][0] = CSL_CAPH_CFIFO_NONE;
+    }
+    if (path->sw[0][0].chnl)
+    {
+        csl_caph_hwctrl_closeSwitchCH(path->sw[0][0], path->pathID);
+        path->sw[0][0].chnl = CSL_CAPH_SWITCH_NONE;
+    }
 
-	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) ||
-        (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
-	{
-#if defined(CONFIG_BCM_MODEM) 
-		if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1)
-            csl_arm2sp_set_arm2sp((UInt32) arm2spCfg.srOut,
-                                  CSL_ARM2SP_PLAYBACK_NONE,
-                                  (CSL_ARM2SP_VOICE_MIX_MODE_t)arm2spCfg.mixMode,
-                                  arm2spCfg.numFramesPerInterrupt,
-                                  (arm2spCfg.chNumOut == AUDIO_CHANNEL_STEREO)? 1 : 0,
-                                  0 );
-		else if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE2)
-            csl_arm2sp_set_arm2sp2((UInt32) arm2spCfg.srOut,
-                                  CSL_ARM2SP_PLAYBACK_NONE,
-                                  (CSL_ARM2SP_VOICE_MIX_MODE_t)arm2spCfg.mixMode,
-                                  arm2spCfg.numFramesPerInterrupt,
-                                  (arm2spCfg.chNumOut == AUDIO_CHANNEL_STEREO)? 1 : 0,
-                                  0 );
-#endif
-		arm2sp_start[arm2spCfg.instanceID] = FALSE; //reset
-
-		if(arm2sp_start[0] == FALSE && arm2sp_start[1] == FALSE)
-			memset(&arm2spCfg, 0, sizeof(arm2spCfg));
-
-	}
-
-	//stopping sequence may be important in some cases: dma, cfifo, switch, srcmixer, source/sink
-	for(i=0; i<MAX_BLOCK_NUM; i++)
-	{
-		if(!path->dma[i]) break;
-		csl_caph_hwctrl_closeDMA(path->dma[i], path->pathID);
-		path->dma[i] = 0;
-	}
-
-	for(i=0; i<MAX_BLOCK_NUM; i++)
-	{
-		if(!path->cfifo[i]) break;
-		csl_caph_hwctrl_closeCFifo(path->cfifo[i], path->pathID);
-		path->cfifo[i] = CSL_CAPH_CFIFO_NONE;
-	}
-
-	if((path->source == CSL_CAPH_DEV_FM_RADIO) && (path->sink[0] == CSL_CAPH_DEV_MEMORY))
-	{	//This assumes direct playback is on during recording. how about direct playback is stopped during recording?
-		//do not close switch in this case
-	} else {
-		for(i=0; i<MAX_BLOCK_NUM; i++)
-		{
-			if(!path->sw[i].chnl) break;
-			csl_caph_hwctrl_closeSwitchCH(path->sw[i], path->pathID);
-			path->sw[i].chnl = CSL_CAPH_SWITCH_NONE;
-		}
-		if ((path->source == CSL_CAPH_DEV_FM_RADIO) || (path->sink[0] == CSL_CAPH_DEV_FM_TX))
-		{
-			if (fmRunning == TRUE)
-			{
-				csl_i2s_stop_tx(fmHandleSSP);
-				csl_i2s_stop_rx(fmHandleSSP);
-				fmRunning = FALSE;
-				if(path->source == CSL_CAPH_DEV_FM_RADIO && fmRxRunning) fmRxRunning = FALSE;
-				//disable SSP clocks if enabled
-				csl_ssp_ControlHWClock(FALSE,path->source,path->sink[0]);
-			}
-		}
-	}
-
-	for(i=0; i<MAX_BLOCK_NUM; i++)
-	{
-		if(!path->srcmRoute[i].inChnl) break;
-		csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[i], path->pathID);
-		path->srcmRoute[i].inChnl = CSL_CAPH_SRCM_INCHNL_NONE;
-	}
-
-	if(path->audiohPath[0]) csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-	for (i = 1; i <= MAX_SINK_NUM; i++)
-		if(path->audiohPath[i]) csl_caph_hwctrl_closeAudioH(path->sink[i-1], path->pathID);
-
-	//this is for debug purpose only
-	for(i=0; i<MAX_BLOCK_NUM; i++)
-	{
-		if(path->dma[i]) audio_xassert(0, path->dma[i]);
-		if(path->sw[i].chnl) audio_xassert(0, path->sw[i].chnl);
-		if(path->srcmRoute[i].inChnl) audio_xassert(0, path->srcmRoute[i].inChnl);
-		if(path->cfifo[i]) audio_xassert(0, path->cfifo[i]);
-	}
-
-	if (((path->source == CSL_CAPH_DEV_DSP)&&(path->sink[0] == CSL_CAPH_DEV_BT_SPKR)) ||
-		((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[0] == CSL_CAPH_DEV_DSP)))
-	{
-		if (pcmRunning)
-		{
-			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-#if !defined(ENABLE_DMA_VOICE)
-			csl_caph_intc_disable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
-#endif
-			pcmRunning = FALSE;
-			//disable SSP clocks if enabled
-			csl_ssp_ControlHWClock(FALSE,path->source,path->sink[0]);
-		}
-	} else if(path->source == CSL_CAPH_DEV_BT_MIC || path->sink[0] == CSL_CAPH_DEV_BT_SPKR) {
-		ssp_pcm_usecount--;
-		if ((pcmRunning == TRUE) && (ssp_pcm_usecount <= 0))
-		{
-			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
-			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
-		    csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
-			pcmRunning = FALSE;
-			ssp_pcm_usecount = 0;
-			//disable SSP clocks if enabled
-			csl_ssp_ControlHWClock(FALSE,path->source,path->sink[0]);
-		}
-	}
+	//this is for house cleaning 
+    for (i = 0; i < MAX_SINK_NUM; i++)
+    {
+        for(j=0; j<MAX_BLOCK_NUM; j++)
+        {
+            if(path->dma[i][j]) audio_xassert(0, path->dma[i][j]);
+            if(path->sw[i][j].chnl) audio_xassert(0, path->sw[i][j].chnl);
+            if(path->srcmRoute[i][j].inChnl) audio_xassert(0, path->srcmRoute[i][j].inChnl);
+            if(path->cfifo[i][j]) audio_xassert(0, path->cfifo[i][j]);
+        }
+    }
 
 	csl_caph_hwctrl_RemovePathInTable(path->pathID);
 
@@ -2953,200 +3121,57 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         csl_caph_ControlHWClock (FALSE);
     }
 
-	return RESULT_OK;
+    return RESULT_OK;
 }
+
 
 /****************************************************************************
 *
-*  Function Name: Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config)
+*  Function Name: Result_t csl_caph_hwctrl_AddPath
 *
 *  Description: Add a source/sink to a HW path
+*  Params:  pathID --   The ID of the current Path
+*           config --   The configuration of the (source,sink) to be added
 *
 ****************************************************************************/
 Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config)
 {
+    int i, sinkNo = 0, offset = 0;
 	CSL_CAPH_HWConfig_Table_t *path;
-	int blockPathIdx, swBlockIdx, swPathIdx, srcmPathIdx;
-	OBTAIN_BLOCKS_MODE_t mode;
-	CSL_CAPH_SRCM_INCHNL_e srcmIn;
-	int i, sinkMaxIdx;
-	Boolean btInUse = FALSE;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_AddPath:: pathID %d, config source %d sink %d.\r\n", pathID, config.source, config.sink));
+    path = &HWConfig_Table[pathID-1];
 
-	if(!pathID) return RESULT_OK;
-	path = &HWConfig_Table[pathID-1];
-	csl_caph_hwctrl_PrintPath(path);
-	sinkMaxIdx = path->curPathsinkMaxIdx;
-	//enable SSP clocks only when used
-	csl_ssp_ControlHWClock(TRUE,config.source,config.sink);
-
-	if((config.sink == CSL_CAPH_DEV_EP)
-		||(config.sink == CSL_CAPH_DEV_HS)
-		||(config.sink == CSL_CAPH_DEV_IHF)
-		||(config.sink == CSL_CAPH_DEV_VIBRA))
-	{
-		CAPH_BLOCK_t blocks[4] = {CAPH_SAME, CAPH_MIXER, CAPH_SW, CAPH_NONE};
-		//playback blocks: {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE}
-		//voice call DL: {CAPH_MIXER, CAPH_SW, CAPH_NONE}
-        //FM playback blocks: {CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE}
-
-		// If sink is the same changed, do nothing.
-		for (i = 0; i <= sinkMaxIdx; i++)
-		{
-			if (config.sink == path->sink[i])
-				return RESULT_OK;
-			else if (path->sink[i] == CSL_CAPH_DEV_BT_SPKR)
-				btInUse = TRUE;
-		}
-
-		if(btInUse == TRUE)
-		{
-			mode=OBTAIN_BLOCKS_MULTICAST;
-			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 2;
-			else blockPathIdx = 7; //where 2nd path starts
-			sinkMaxIdx++; // Add one more sink to current path
-			srcmPathIdx = blockPathIdx+1;
-			path->sink[sinkMaxIdx] = config.sink;
-			memcpy(&path->srcmRoute[2].mixGain, &path->srcmRoute[0].mixGain, sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
-			memcpy(&path->block[blockPathIdx], blocks, 4*sizeof(CAPH_BLOCK_t));
-		}
-		else
-		{
-			if(path->audiohPath[sinkMaxIdx+1])
-			{
-				mode=OBTAIN_BLOCKS_MULTICAST;
-				if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 2;
-				else blockPathIdx = 5; //where 2nd path starts
-				sinkMaxIdx++; // Add one more sink to current path
-				srcmPathIdx = blockPathIdx+1;
-				path->sink[sinkMaxIdx] = config.sink;
-				memcpy(&path->srcmRoute[1].mixGain, &path->srcmRoute[0].mixGain, sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
-				memcpy(&path->block[blockPathIdx], blocks, 4*sizeof(CAPH_BLOCK_t));
-			} else {
-				mode=OBTAIN_BLOCKS_SWITCH;
-				if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
-				else blockPathIdx = 3;
-				sinkMaxIdx = 0; // First sink
-				srcmPathIdx = blockPathIdx;
-				path->sink[sinkMaxIdx] = config.sink;
-				memcpy(&path->block[blockPathIdx], blocks+1, 3*sizeof(CAPH_BLOCK_t));
-			}
-		}
-		path->curPathsinkMaxIdx = sinkMaxIdx;
-		csl_caph_obtain_blocks(pathID, blockPathIdx, mode);
-
-		swPathIdx = srcmPathIdx + 1;
-		swBlockIdx = path->blockIdx[swPathIdx];
-
-		csl_caph_config_mixer(pathID, srcmPathIdx);
-		csl_caph_config_sw(pathID, swPathIdx);
-		csl_caph_audioh_config(path->audiohPath[sinkMaxIdx+1], (void *)&path->audiohCfg[sinkMaxIdx+1]);
-
-		csl_caph_switch_start_transfer(path->sw[swBlockIdx].chnl);
-		csl_caph_audioh_start(path->audiohPath[sinkMaxIdx+1]);
-	}
-
-	else if(config.sink == CSL_CAPH_DEV_BT_SPKR)
-	{
-		int swPathIdx2, swBlockIdx2;
-		CAPH_BLOCK_t blocks[6] = {CAPH_SAME, CAPH_MIXER, CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_NONE};
-		//playback blocks: {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE}
-		//voice call DL: {CAPH_MIXER, CAPH_SW, CAPH_NONE}
-
-		// If sink is the same changed, do nothing.
-		for (i = 0; i <= sinkMaxIdx; i++)
-		{
-			if ((config.sink == path->sink[i]))
-				return RESULT_OK;
-		}
-
-//		if(path->audiohPath[1])
-		{
-			mode=OBTAIN_BLOCKS_MULTICAST;
-			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 2;
-			else blockPathIdx = 5; //where 2nd path starts
-			sinkMaxIdx++; // Add one more sink to current path
-			srcmPathIdx = blockPathIdx+1;
-			path->sink[sinkMaxIdx] = config.sink;
-
-			memcpy(&path->srcmRoute[1].mixGain, &path->srcmRoute[0].mixGain, sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
-			memcpy(&path->block[blockPathIdx], blocks, 6*sizeof(CAPH_BLOCK_t));
-		}
-#if	0
-		else {
-			mode=OBTAIN_BLOCKS_SWITCH;
-			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
-			else blockPathIdx = 3;
-			audiohIdx = 1;
-			srcmPathIdx = blockPathIdx;
-			path->sink = config.sink;
-			memcpy(&path->block[blockPathIdx], blocks+1, 5*sizeof(CAPH_BLOCK_t));
-		}
-#endif		
-		path->curPathsinkMaxIdx = sinkMaxIdx;
-		csl_caph_obtain_blocks(pathID, blockPathIdx, mode);
-
-		swPathIdx = srcmPathIdx + 1;
-		swBlockIdx = path->blockIdx[swPathIdx];
-		swPathIdx2 = swPathIdx + 2;
-		swBlockIdx2 = path->blockIdx[swPathIdx2];
-
-		csl_caph_config_mixer(pathID, srcmPathIdx);
-		csl_caph_config_sw(pathID, swPathIdx);
-		csl_caph_config_src(pathID, swPathIdx+1);
-		csl_caph_config_sw(pathID, swPathIdx2);
-
-        if (pcmRunning == FALSE)
-		{
-			pcmCfg.mode = CSL_PCM_MASTER_MODE;
-			pcmCfg.protocol = CSL_PCM_PROTOCOL_MONO;
-			pcmCfg.format = CSL_PCM_WORD_LENGTH_PACK_16_BIT; // CSL_PCM_WORD_LENGTH_16_BIT
-			pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_8000;
-			pcmCfg.interleave = TRUE;
-			pcmCfg.ext_bits = 0;
-			pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
-			pcmTxCfg.enable = 1;
-			pcmTxCfg.loopback_enable = 0;
-			pcmRxCfg.enable = 1;
-			pcmRxCfg.loopback_enable = 0;
-			csl_pcm_config(pcmHandleSSP, &pcmCfg, &pcmTxCfg, &pcmRxCfg);
-			ssp_pcm_usecount++;
-		}
-
-		csl_caph_switch_start_transfer(path->sw[swBlockIdx].chnl);
-		csl_caph_switch_start_transfer(path->sw[swBlockIdx2].chnl);
-
-        if (pcmRunning == FALSE)
+    // use an available sink storage for this new sink.
+    for(i = 0; i < MAX_SINK_NUM; i++)
+    {
+        if (path->sink[i] == CSL_CAPH_DEV_NONE)
         {
-			csl_pcm_start(pcmHandleSSP, &pcmCfg);
-            pcmRunning = TRUE;
+            sinkNo = i;
+            path->sink[sinkNo] = config.sink;
+
+            break;
         }
-
-	}
-
-	else if (config.source != CSL_CAPH_DEV_NONE) { //add a mic
-		path->source = config.source;
-		path->audiohCfg[0].sample_size = path->bitPerSample;
-		path->audiohCfg[0].sample_pack = DATA_UNPACKED;
-		path->audiohCfg[0].sample_mode = path->chnlNum;
-		path->audiohPath[0] = csl_caph_get_audio_path(path->source);
-
-		csl_caph_config_sw(pathID, 0);
-		csl_caph_audioh_config(path->audiohPath[0], (void *)&path->audiohCfg[0]);
-
-        if(path->sink[0] == CSL_CAPH_DEV_DSP)
-		{
-			if ((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)) srcmIn = EANC_MIC_UL_TO_DSP_CHNL; //this may not be necessary
-			else srcmIn = MAIN_MIC_UL_TO_DSP_CHNL;
-			csl_caph_intc_enable_tapout_intr(srcmIn, CSL_CAPH_DSP); //this may not be necessary
-		}
-
-		csl_caph_switch_start_transfer(path->sw[0].chnl);
-		csl_caph_audioh_start(path->audiohPath[0]);
-		if (path->source == CSL_CAPH_DEV_HS_MIC) csl_caph_hwctrl_ACIControl();
     }
-	csl_caph_hwctrl_PrintPath(path);
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_AddPath:: pathID %d, sinkCount %d, sinkNo %d.\r\n", pathID, path->sinkCount, sinkNo));
+    
+    // use the current pathID
+    config.pathID = path->pathID;
+    
+    path->sinkCount++;
+    
+    csl_caph_hwctrl_SetupPath(config, sinkNo);
+	
+    if (path->sinkCount > 1)
+        offset = path->block_split_offset;
+    
+    if (path->sink[sinkNo] != CSL_CAPH_DEV_NONE)
+    {
+        csl_caph_config_blocks(path->pathID, sinkNo, offset);
+        csl_caph_start_blocks(path->pathID, sinkNo, offset);
+    }
+   
+    csl_caph_hwctrl_PrintPath(path);
 
     return RESULT_OK;
 }
@@ -3162,248 +3187,31 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_
 Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config)
 {
 	CSL_CAPH_HWConfig_Table_t *path;
-	int blockPathIdx, audiohIdx, swBlockIdx, swPathIdx, srcmBlockIdx, srcmPathIdx;
-	CSL_CAPH_SRCM_INCHNL_e srcmIn;
-	int i, j, sw_index, src_mixer_index;
-	int swPathIdx2, swBlockIdx2;
-	int srcmPathIdx2, srcmBlockIdx2;
-
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_RemovePath:: pathID %d, config source %d sink %d.\r\n", pathID, config.source, config.sink));
+    int i, sinkNo = 0;
 
 	if(!pathID) return RESULT_OK;
 	path = &HWConfig_Table[pathID-1];
-	csl_caph_hwctrl_PrintPath(path);
 
-	if ((config.sink == CSL_CAPH_DEV_EP)
-		||(config.sink == CSL_CAPH_DEV_HS)
-		||(config.sink == CSL_CAPH_DEV_IHF)
-		||(config.sink == CSL_CAPH_DEV_VIBRA))
-	{
-		for (j = 0; j < MAX_SINK_NUM; j++)
-		{
-			if (path->sink[j] == config.sink)
-				break;
-		}
-		if (j == MAX_SINK_NUM)
-			return RESULT_OK;
-
-		if (path->curPathsinkMaxIdx > 0)
-			(path->curPathsinkMaxIdx)--;
-
-		if (j > 0)
-		{
-			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 2;
-			else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 3;
-			else blockPathIdx = 5; //where 2nd path starts
-			audiohIdx = j+1;
-			srcmPathIdx = blockPathIdx+1;
-			path->sink[j] = CSL_CAPH_DEV_NONE;
-		} else {
-			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
-            else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 1;
-			else blockPathIdx = 3;
-			audiohIdx = 1;
-			srcmPathIdx = blockPathIdx;
-		}
-
-		swPathIdx = srcmPathIdx + 1;
-
-		swBlockIdx = path->blockIdx[swPathIdx];
-		srcmBlockIdx = path->blockIdx[srcmPathIdx];
-
-		csl_caph_hwctrl_closeAudioH(config.sink, pathID);
-		if(path->sw[swBlockIdx].chnl) csl_caph_hwctrl_closeSwitchCH(path->sw[swBlockIdx], pathID);
-		if(path->srcmRoute[srcmBlockIdx].inChnl) csl_caph_hwctrl_closeSRCMixerOutput(path->srcmRoute[srcmBlockIdx], pathID);
-
-		if(j == 0 && path->sink[1]) //align all structure members.
-		{
-
-			if(path->sink[1] == CSL_CAPH_DEV_BT_SPKR)
-			{
-				if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
-				else blockPathIdx = 3;
-
-				memcpy(&path->block[blockPathIdx], &path->block[blockPathIdx+3], 4*sizeof(CAPH_BLOCK_t));
-				memset(&path->block[blockPathIdx+4], 0, 4*sizeof(int));
-
-				memcpy(&path->blockIdx[blockPathIdx], &path->blockIdx[blockPathIdx+3], 4*sizeof(int));
-				memset(&path->blockIdx[blockPathIdx+4], 0, 4*sizeof(int));
-
-				memcpy(&path->sw[swBlockIdx], &path->sw[swBlockIdx+1], 2*sizeof(CSL_CAPH_SWITCH_CONFIG_t));
-				memset(&path->sw[swBlockIdx+2], 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t));
-
-				memcpy(&path->srcmRoute[srcmBlockIdx], &path->srcmRoute[srcmBlockIdx+1], 2*sizeof(CSL_CAPH_SRCM_ROUTE_t));
-				memset(&path->srcmRoute[srcmBlockIdx+2], 0, sizeof(CSL_CAPH_SRCM_ROUTE_t));
-
-				sw_index = 0;
-				src_mixer_index = 0;
-				for(i = 0; i < MAX_PATH_LEN; i++)
-				{
-					if(path->block[i] == CAPH_SW)
-					{
-						path->blockIdx[i] = sw_index++;
-					}
-					else if ((path->block[i] == CAPH_MIXER) || (path->block[i] == CAPH_SRC))
-					{
-						path->blockIdx[i] = src_mixer_index++;
-					}
-				}
-			}
-			else
-			{
-				if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
-				else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 1;
-				else blockPathIdx = 3;
-				memcpy(&path->block[blockPathIdx], &path->block[blockPathIdx+3], 4*sizeof(CAPH_BLOCK_t));
-				memset(&path->block[blockPathIdx+3], 0, 4*sizeof(int));
-
-				//memcpy(&path->blockIdx[blockPathIdx], &path->blockIdx[blockPathIdx+3], 4*sizeof(int));
-				memset(&path->blockIdx[blockPathIdx+3], 0, 4*sizeof(int));
-
-				memcpy(&path->sw[swBlockIdx], &path->sw[swBlockIdx+1], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
-				memset(&path->sw[swBlockIdx+1], 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t));
-
-				memcpy(&path->srcmRoute[srcmBlockIdx], &path->srcmRoute[srcmBlockIdx+1], sizeof(CSL_CAPH_SRCM_ROUTE_t));
-				memset(&path->srcmRoute[srcmBlockIdx+1], 0, sizeof(CSL_CAPH_SRCM_ROUTE_t));
-
-				path->audiohPath[audiohIdx] = path->audiohPath[audiohIdx+1];
-				path->audiohPath[audiohIdx+1] = AUDDRV_PATH_NONE;
-
-				memcpy(&path->audiohCfg[audiohIdx], &path->audiohCfg[srcmBlockIdx+1], sizeof(audio_config_t));
-				memset(&path->audiohCfg[audiohIdx+1], 0, sizeof(audio_config_t));
-			}
-			path->sink[0] = path->sink[1];
-			path->sink[1] = CSL_CAPH_DEV_NONE;
-		} else { //don't destroy route info, new path may need it.
-			memset(&path->block[blockPathIdx], 0, 3*sizeof(CAPH_BLOCK_t));
-			memset(&path->blockIdx[blockPathIdx], 0, 3*sizeof(int));
-			memset(&path->sw[swBlockIdx], 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t));
-			path->audiohPath[audiohIdx] = AUDDRV_PATH_NONE;
-			memset(&path->audiohCfg[audiohIdx], 0, sizeof(audio_config_t));
-		}
-	}
-	else if(config.sink == CSL_CAPH_DEV_BT_SPKR) {
-
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "*** remove BTM speaker path *** \r\n" ));
-
-		for (j = 0; j < MAX_SINK_NUM; j++)
-		{
-			if (path->sink[j] == config.sink)
-				break;
-		}
-		if (j == MAX_SINK_NUM)
-			return RESULT_OK;
-
-        if(path->curPathsinkMaxIdx > 0) 
+    // find the  sink to remove.
+    for(i = 0; i < MAX_SINK_NUM; i++)
+    {
+        if (path->sink[i] == config.sink)
         {
-			(path->curPathsinkMaxIdx)--;
+            sinkNo = i;
+            break;
         }
+    }
+	
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_RemovePath:: pathID %d, sinkCount %d, sinkNo %d.\r\n", pathID, path->sinkCount, sinkNo));
 
-		if(j > 0)
-		{
-			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 2;
-			else blockPathIdx = 7; //where 2nd path starts
-			audiohIdx = j+1;
-			srcmPathIdx = blockPathIdx+1;
-			path->sink[j] = CSL_CAPH_DEV_NONE;
-		}
-		else
-		{
-			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
-			else blockPathIdx = 3;
-			audiohIdx = 1;
-			srcmPathIdx = blockPathIdx;
-		}
+    csl_caph_hwctrl_remove_blocks(pathID, sinkNo, path->block_split_offset);
 
-		swPathIdx = srcmPathIdx + 1;
-		swBlockIdx = path->blockIdx[swPathIdx];
+    path->sink[sinkNo] = CSL_CAPH_DEV_NONE;
 
-		swPathIdx2 = swPathIdx + 2;
-		swBlockIdx2 = path->blockIdx[swPathIdx2];
-
-		srcmBlockIdx = path->blockIdx[srcmPathIdx];
-
-		srcmPathIdx2 = srcmPathIdx + 2;
-		srcmBlockIdx2 = path->blockIdx[srcmPathIdx2];
-
-		// csl_caph_hwctrl_closeAudioH(config.sink, pathID);
-
-		if(path->sw[swBlockIdx].chnl) csl_caph_hwctrl_closeSwitchCH(path->sw[swBlockIdx], pathID);
-		if(path->sw[swBlockIdx2].chnl) csl_caph_hwctrl_closeSwitchCH(path->sw[swBlockIdx2], pathID);
-		if(path->srcmRoute[srcmBlockIdx].inChnl) csl_caph_hwctrl_closeSRCMixerOutput(path->srcmRoute[srcmBlockIdx], pathID);
-		if(path->srcmRoute[srcmBlockIdx2].inChnl) csl_caph_hwctrl_closeSRCMixerOutput(path->srcmRoute[srcmBlockIdx2], pathID);
-
-
-		ssp_pcm_usecount--;
-		if ((pcmRunning == TRUE) && (ssp_pcm_usecount <= 0))
-		{
-			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
-			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
-		    csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
-			pcmRunning = FALSE;
-			ssp_pcm_usecount = 0;
-			//disable SSP clocks if enabled
-			csl_ssp_ControlHWClock(FALSE,config.source,config.sink);
-		}
-		if(j == 0 && path->sink[1]) //align all structure members.
-		{
-			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
-			else blockPathIdx = 3;
-
-			memcpy(&path->block[blockPathIdx], &path->block[blockPathIdx+5], 4*sizeof(CAPH_BLOCK_t));
-			memset(&path->block[blockPathIdx+3], 0, 4*sizeof(int));
-
-			memcpy(&path->blockIdx[blockPathIdx], &path->blockIdx[blockPathIdx+5], 4*sizeof(int));
-			memset(&path->blockIdx[blockPathIdx+3], 0, 4*sizeof(int));
-
-			memcpy(&path->sw[swBlockIdx], &path->sw[swBlockIdx+2], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
-			memset(&path->sw[swBlockIdx+1], 0, 2*sizeof(CSL_CAPH_SWITCH_CONFIG_t));
-
-			memcpy(&path->srcmRoute[srcmBlockIdx], &path->srcmRoute[srcmBlockIdx+2], 2*sizeof(CSL_CAPH_SRCM_ROUTE_t));
-			memset(&path->srcmRoute[srcmBlockIdx+1], 0, 2*sizeof(CSL_CAPH_SRCM_ROUTE_t));
-
-			sw_index = 0;
-			src_mixer_index = 0;
-			for(i = 0; i < MAX_PATH_LEN; i++)
-			{
-				if(path->block[i] == CAPH_SW)
-				{
-					path->blockIdx[i] = sw_index++;
-				}
-				else if ((path->block[i] == CAPH_MIXER) || (path->block[i] == CAPH_SRC))
-				{
-					path->blockIdx[i] = src_mixer_index++;
-				}
-			}
-			path->sink[0] = path->sink[1];
-			path->sink[1] = CSL_CAPH_DEV_NONE;
-		} else { //don't destroy route info, new path may need it.
-			memset(&path->block[blockPathIdx], 0, 3*sizeof(CAPH_BLOCK_t));
-			memset(&path->blockIdx[blockPathIdx], 0, 3*sizeof(int));
-			memset(&path->sw[swBlockIdx], 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t));
-			path->audiohPath[audiohIdx] = AUDDRV_PATH_NONE;
-			memset(&path->audiohCfg[audiohIdx], 0, sizeof(audio_config_t));
-		}
-	}
-	else if (config.source != CSL_CAPH_DEV_NONE) { //remove a mic
-		if (path->source != config.source || path->audiohPath[0]==AUDDRV_PATH_NONE)
-			return RESULT_OK;
-
-		if(path->sink[0] == CSL_CAPH_DEV_DSP)
-		{
-			if ((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)) srcmIn = EANC_MIC_UL_TO_DSP_CHNL;
-			else srcmIn = MAIN_MIC_UL_TO_DSP_CHNL;
-			csl_caph_intc_disable_tapout_intr(srcmIn, CSL_CAPH_DSP);
-		}
-		csl_caph_hwctrl_closeAudioH(config.source, pathID);
-		if(path->sw[0].chnl) csl_caph_hwctrl_closeSwitchCH(path->sw[0], pathID);
-
-		path->audiohPath[0]=AUDDRV_PATH_NONE;
-	}
+    path->sinkCount--;
 
 	csl_caph_hwctrl_PrintPath(path);
+   
     return RESULT_OK;
 }
 
@@ -3713,35 +3521,10 @@ CSL_CAPH_DMA_CHNL_e csl_caph_hwctrl_GetdmaCH(CSL_CAPH_PathID pathID)
 {
     CSL_CAPH_DMA_CHNL_e dmaCH = CSL_CAPH_DMA_NONE;
 
-    Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_GetdmaCH: pathID = %d, list = %d\r\n",
-                                                  pathID, HWConfig_Table[pathID - 1].list);
     // give the correct DMA channel based on the routing block list.
-    switch (HWConfig_Table[pathID - 1].list)
-    {
-    	case LIST_DMA_MIX_SW:
-	    case LIST_DMA_SW:
-        case LIST_DMA_MIX_SRC_SW:
-        case LIST_DMA_SRC:
-        case LIST_DMA_DMA:
-        case LIST_DMA_MIX_DMA:
-        case LIST_DMA_SRC_DMA:
-        case LIST_DMA_MIX_SRC_DMA:
-        case LIST_SW_DMA:
-        case LIST_SW_MIX_SRC_DMA:
-        case LIST_SW_SRC_DMA:
-        case LIST_MIX_DMA:
-            dmaCH =  HWConfig_Table[pathID - 1].dma[0];
-            break;
-
-        case LIST_NONE:
-        case LIST_SW_MIX_SRC_SW:
-        case LIST_SW_MIX_SW:
-        case LIST_SW_SRC:
-        case LIST_SW:
-        case LIST_MIX_SW:
-        default:
-            break;
-    }
+    dmaCH =  HWConfig_Table[pathID - 1].dma[0][0];
+    
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_GetdmaCH: pathID = %d, dmaCH = %d\r\n", pathID, dmaCH);
 
     return dmaCH;
 }
@@ -3951,7 +3734,6 @@ void csl_caph_hwctrl_SetSidetoneGain(UInt32 gain)
 	return;
 }
 
-
 /****************************************************************************
 *
 *  Function Name: csl_caph_hwctrl_SetSspTdmMode
@@ -4001,20 +3783,21 @@ void csl_caph_hwctrl_SetBTMode(Boolean mode)
 ****************************************************************************/
 CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void)
 {
-	int m,n;
+	int m,n,s;
 	CSL_CAPH_DEVICE_e mixer_sink;
 	Boolean isCH2RFree = TRUE;
 	Boolean isCH2LFree = TRUE;
 
 	for(m = 0; m < MAX_AUDIO_PATH; m++)
 	{
+        for (s = 0; s < MAX_SINK_NUM; s++)
 		for(n = 0; n < MAX_BLOCK_NUM; n++)
 		{
-			if(HWConfig_Table[m].srcmRoute[n].outChnl == CSL_CAPH_SRCM_STEREO_CH2_R)
+			if(HWConfig_Table[m].srcmRoute[s][n].outChnl == CSL_CAPH_SRCM_STEREO_CH2_R)
 			{
 				isCH2RFree = FALSE;
 			}
-			if(HWConfig_Table[m].srcmRoute[n].outChnl == CSL_CAPH_SRCM_STEREO_CH2_L)
+			if(HWConfig_Table[m].srcmRoute[s][n].outChnl == CSL_CAPH_SRCM_STEREO_CH2_L)
 			{
 				isCH2LFree = FALSE;
 			}
