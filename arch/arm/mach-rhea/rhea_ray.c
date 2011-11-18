@@ -114,6 +114,12 @@
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
+
+#include <media/soc_camera.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_padctrlreg.h>
+#include <linux/delay.h>
+
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
 
@@ -435,6 +441,15 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 #define GPIO_PCA953X_GPIO_PIN      74 /* Configure pad MMC1DAT4 to GPIO74 */
 #endif
 
+#define SENSOR_0_GPIO_PWRDN		12
+#define SENSOR_0_GPIO_RST		(KONA_MAX_GPIO + 10)
+#define SENSOR_0_CLK			"dig_ch0_clk"
+#define SENSOR_0_CLK_FREQ		(13000000)
+
+#define SENSOR_1_GPIO_PWRDN		13
+#define SENSOR_1_CLK			"dig_ch0_clk"
+
+
 static int pca953x_platform_init_hw(struct i2c_client *client,
 		unsigned gpio, unsigned ngpio, void *context)
 {
@@ -446,6 +461,30 @@ static int pca953x_platform_init_hw(struct i2c_client *client,
 		return rc;
 	}
 	gpio_direction_input(GPIO_PCA953X_GPIO_PIN);
+
+	/*init sensor gpio here to be off */
+	rc = gpio_request(SENSOR_0_GPIO_PWRDN, "CAM_STANDBY0");
+	if (rc < 0)
+		printk(KERN_ERR "unable to request GPIO pin %d\n", SENSOR_0_GPIO_PWRDN);
+
+	gpio_direction_output(SENSOR_0_GPIO_PWRDN, 0);
+	gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
+
+	rc = gpio_request(SENSOR_0_GPIO_RST, "CAM_RESET0");
+	if (rc < 0)
+		printk(KERN_ERR "unable to request GPIO pin %d\n", SENSOR_0_GPIO_RST);
+
+	gpio_direction_output(SENSOR_0_GPIO_RST, 0);
+	gpio_set_value(SENSOR_0_GPIO_RST, 0);
+
+
+	rc = gpio_request(SENSOR_1_GPIO_PWRDN, "CAM_STANDBY1");
+	if (rc < 0)
+		printk(KERN_ERR "unable to request GPIO pin %d\n", SENSOR_1_GPIO_PWRDN);
+
+	gpio_direction_output(SENSOR_1_GPIO_PWRDN, 0);
+	gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+
 	return 0;
 }
 
@@ -1200,6 +1239,100 @@ static struct platform_device board_bcmbt_lpm_device = {
 };
 #endif
 
+#define OV5640_I2C_ADDRESS (0x3C)
+
+static struct i2c_board_info rhea_i2c_camera[] = {
+	{
+		I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
+	},
+};
+
+static int rhea_camera_power(struct device *dev, int on)
+{
+
+	void __iomem* padctl_base = (void __iomem *)HW_IO_PHYS_TO_VIRT(PAD_CTRL_BASE_ADDR);
+	unsigned int value;
+	struct clk *clock;
+
+	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
+
+	value = ioread32(padctl_base + PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
+	iowrite32(value, padctl_base + PADCTRLREG_DCLK1_OFFSET);
+	clock = clk_get(NULL, SENSOR_0_CLK);
+	if (!clock) {
+		printk(KERN_ERR "%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
+		return -1;
+	}
+	if (on) {
+		/* enable clk */
+		value = clk_enable(clock);
+		if (value) {
+			printk(KERN_ERR "%s: failed to enabled clock %s\n", __func__,
+					SENSOR_0_CLK);
+			return -1;
+		}
+		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
+		if (value) {
+			printk(KERN_ERR "%s: failed to set the clock %s to freq %d\n",
+					__func__, SENSOR_0_CLK, SENSOR_0_CLK_FREQ);
+			return -1;
+		}
+
+		/* Delay for clk to start */
+		msleep(10);
+
+		/* enable reset gpio */
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		msleep(10);
+
+		/* disable power down gpio */
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
+		msleep(5);
+
+		/* disable reset gpio */
+		gpio_set_value(SENSOR_0_GPIO_RST, 1);
+
+		/* wait for sensor to come up */
+		msleep(30);
+
+	}
+	else {
+		/* enable reset gpio */
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		msleep(1);
+		/* enable power down gpio */
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
+
+		clk_disable(clock);
+	}
+	return 0;
+}
+
+static int rhea_camera_reset(struct device *dev)
+{
+	/* reset the camera gpio */
+	printk(KERN_INFO"%s:camera reset\n", __func__);
+	return 0;
+}
+static struct soc_camera_link iclink_ov5640 = {
+	.bus_id		= 0,
+	.board_info	= &rhea_i2c_camera[0],
+	.i2c_adapter_id	= 0,
+	.module_name	= "ov5640",
+	.power		= &rhea_camera_power,
+	.reset		= &rhea_camera_reset,
+};
+
+static struct platform_device rhea_camera = {
+	.name	= "soc-camera-pdrv",
+	.id		= 0,
+	.dev	= {
+		.platform_data = &iclink_ov5640,
+	},
+};
+
+
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -1237,6 +1370,7 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_BCM_BT_LPM
     &board_bcmbt_lpm_device,
 #endif
+	&rhea_camera,
 
 
 };
