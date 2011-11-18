@@ -769,7 +769,7 @@ static struct platform_device android_pmem[] = {
 	},
 };
 
-
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
 static u64 unicam_camera_dma_mask = DMA_BIT_MASK(32);
 
 static struct resource board_unicam_resource[] = {
@@ -791,6 +791,7 @@ static struct platform_device unicam_camera_device = {
 		.coherent_dma_mask	= 0xffffffff,
 	},
 };
+#endif
 
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
@@ -838,7 +839,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #ifdef CONFIG_UNICAM
 	&board_unicam_device,
 #endif
-	   &unicam_camera_device,
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+	&unicam_camera_device,
+#endif
 };
 
 static int __init setup_pmem_alloc(char *p)
