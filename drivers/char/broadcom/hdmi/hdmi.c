@@ -45,8 +45,8 @@
 #include <linux/broadcom/hdmi.h>
 #include <linux/broadcom/hdmi_cfg.h>
 
-#define HDMI_DEBUG
-#define HDMI_TRACE
+//#define HDMI_DEBUG
+//#define HDMI_TRACE
 
 #ifdef HDMI_DEBUG
    #define LOG_DEBUG(X) (X)
