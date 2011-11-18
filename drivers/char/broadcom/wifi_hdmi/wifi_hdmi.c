@@ -1404,8 +1404,9 @@ static int whdmi_proc_write(
                                &stats,
                                &trans_id );
 
-       printk( KERN_INFO "stats tx:%d, tx-dst-cnt:%d, tx-missed:%d, tx-busy:%d, tx-rec:%d\n",
+       printk( KERN_INFO "stats tx:%d, tx-frames:%d, tx-dst-cnt:%d, tx-missed:%d, tx-busy:%d, tx-rec:%d\n",
                stats.tx_cnt,
+               stats.tx_frame_cnt,
                stats.tx_dst_cnt,
                stats.tx_miss_cnt,
                stats.tx_busy_cnt,
