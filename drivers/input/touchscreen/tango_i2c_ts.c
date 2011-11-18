@@ -1062,6 +1062,8 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 						 g_blob_size, 0, 0);
 #endif
 
+    __set_bit(INPUT_PROP_DIRECT, &gp_input_dev->propbit);
+
 	rc = input_register_device(gp_input_dev);
 	if (rc < 0)
 	{
