@@ -43,7 +43,7 @@
 #define AUDIO_PMU_IHF_POWER(a) NULL
 #define AUDIO_PMU_DEINIT() NULL
 #else
-#ifdef CONFIG_BCM59055_AUDIO
+#ifdef PMU_BCM59055 
 
 #include "linux/broadcom/bcm59055-audio.h"
 #define AUDIO_PMU_INIT bcm59055_audio_init

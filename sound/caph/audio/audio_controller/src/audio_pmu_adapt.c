@@ -32,7 +32,7 @@
 
 #if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) 
 
-#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( CONFIG_BCM59055_AUDIO )||defined(CONFIG_BCMPMU_AUDIO))
+#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 )||defined(CONFIG_BCMPMU_AUDIO))
 
 //=============================================================================
 // Include directives
