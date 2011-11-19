@@ -48,6 +48,7 @@ obj-$(CONFIG_REGULATOR_BCM_PMU59055) += bcm590xx-regulator.o bcm59055_A0.o
 obj-$(CONFIG_REGULATOR_BCMPMU)  += bcmpmu-regulator.o
 obj-$(CONFIG_REGULATOR_BCMPMU) += bcmpmu-regulator.o
 obj-$(CONFIG_REGULATOR_BCM59055) += bcmpmu-rgltr-bcm59055.o
+obj-$(CONFIG_REGULATOR_BCM59039) += bcmpmu-rgltr-bcm59039.o
 obj-$(CONFIG_REGULATOR_TPS728XX) += tps728xx-regulator.o
 		
 
