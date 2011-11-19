@@ -34,9 +34,6 @@
 // Include directives
 //=============================================================================
 
-//#include "osqueue.h"
-//#include "msconsts.h"
-
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
@@ -69,13 +66,19 @@
 */
 
 //=============================================================================
-// Public Variable declarations
+// Private Type and Constant declarations
 //=============================================================================
 
 typedef void (*AUDDRV_User_CB) (UInt32 param1, UInt32 param2, UInt32 param3);
 
+typedef struct AUDDRV_PathID_t{
+	CSL_CAPH_PathID ulPathID;
+	CSL_CAPH_PathID ul2PathID;
+	CSL_CAPH_PathID dlPathID;
+} AUDDRV_PathID_t;
+
 //=============================================================================
-// Private Type and Constant declarations
+// Private Variable declarations
 //=============================================================================
 #if defined(CONFIG_BCM_MODEM) 
 #define AUDIO_MODEM(a) a
@@ -86,6 +89,8 @@ typedef void (*AUDDRV_User_CB) (UInt32 param1, UInt32 param2, UInt32 param3);
 //static Boolean voiceInPathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN for both voiceIn and voiceOut
 static Boolean voicePlayOutpathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN
 
+static AUDDRV_PathID_t telephonyPathID;
+
 static void *sUserCB = NULL;
 static CSL_CAPH_DEVICE_e sink = CSL_CAPH_DEV_NONE;
 static AUDIO_SINK_Enum_t currSpkr = AUDIO_SINK_UNDEFINED;
@@ -93,11 +98,14 @@ static AUDIO_SOURCE_Enum_t currMic = AUDIO_SOURCE_UNDEFINED;
 static AUDIO_SAMPLING_RATE_t currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED;
 static Boolean userEQOn = FALSE; // If TRUE, bypass EQ filter setting request from audio controller.
 
-static Boolean bInVoiceCall = FALSE;
 static AUDIO_SOURCE_Enum_t  currVoiceMic = AUDIO_SOURCE_UNDEFINED;	 //used in pcm i/f control. assume one mic, one spkr.
 static AUDIO_SINK_Enum_t	currVoiceSpkr = AUDIO_SINK_UNDEFINED;	//used in pcm i/f control. assume one mic, one spkr.
-static Boolean inVoiceCall = FALSE;
+static Boolean bInVoiceCall = FALSE;
 static Boolean bmuteVoiceCall = FALSE;
+static Boolean bDuringTelephonySwitchMicSpkr = FALSE;
+
+static int telephony_digital_gain_dB = 12;  //dB
+static int telephony_ul_gain_mB = 0;  // 0 mB
 
 static Boolean controlFlagForCustomGain = FALSE;
 
@@ -110,7 +118,7 @@ typedef struct Audio_Driver_t
 } Audio_Driver_t;
 
 static Audio_Driver_t sAudDrv = {0};
-static UInt32 voiceCallSampleRate = 8000;  // defalut to 8K Hz
+static unsigned int voiceCallSampleRate = AUDIO_SAMPLING_RATE_8000;  // defalut to 8K Hz
 
 static Boolean IsBTM_WB = FALSE;  //this flag remembers if the Bluetooth headset is a wideband headset (16KHz voice)
 
@@ -118,10 +126,9 @@ static audio_codecId_handler_t codecId_handler = NULL;
 static UInt8 audio_codecID = 6; //default CODEC ID = AMR NB
 
 
-static Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
-static Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode);
-
-static Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode);
+static void AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
+static void AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode);
+static void AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode);
 
 //=============================================================================
 // Private function prototypes
@@ -144,12 +151,9 @@ static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void);
 
 static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
                                     AUDIO_SINK_Enum_t speaker,
-                                    AUDIO_SAMPLING_RATE_t sample_rate,
-                                    void * pData);
+                                    AUDIO_SAMPLING_RATE_t sample_rate);
 
-static void AUDDRV_Telephony_DeinitHW (void *pData);
-static void AUDDRV_SetHWSidetoneFilter(AudioMode_t audio_mode,
-		SysAudioParm_t* pAudioParm);
+static void AUDDRV_Telephony_DeinitHW ( void );
 static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr (AUDIO_SINK_Enum_t spkr);
 static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic (AUDIO_SOURCE_Enum_t mic);
 
@@ -230,9 +234,15 @@ void AUDDRV_Shutdown(void)
 //Prepare DSP before turn on hardware audio path for voice call.
 //	This is part of the control sequence for starting telephony audio.
 void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
-		AUDIO_SINK_Enum_t speaker,
-			void *pData)
+		AUDIO_SINK_Enum_t speaker)
 {
+	AudioMode_t mode;
+	int dev = 0;
+	
+	telephonyPathID.ulPathID = 0;
+	telephonyPathID.ul2PathID = 0;
+	telephonyPathID.dlPathID = 0;
+
 	///////////////////////////////////////////////////////////////////////
 	// Phone Setup Sequence
 	// 1. Init CAPH HW
@@ -242,20 +252,10 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 
 	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_Init");
 
+	//control HW and flags at AP
+	bInVoiceCall = TRUE;  //to prevent sending DSP Audio Enable when enable voice path.
 	currVoiceMic = mic;
 	currVoiceSpkr = speaker;
-	pData = pData;
-
-#if defined(FUSE_APPS_PROCESSOR)&&!defined(BSP_ONLY_BUILD)
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_Init AP	mic %d, spkr %d *\n\r", mic, speaker);
-#else
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_Init CP *\n\r");
-#endif
-
-	//control HW and flags at AP
-
-	//at beginning
-	inVoiceCall = TRUE;  //to prevent sending DSP Audio Enable when enable voice path.
 
 	audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, FALSE, FALSE, 0, 0, 0 );
@@ -264,33 +264,34 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
 
-	if( AUDDRV_GetAudioMode() >= AUDIO_MODE_NUMBER )
+	mode = AUDDRV_GetAudioModeBySink( speaker );
+	if (voiceCallSampleRate == AUDIO_SAMPLING_RATE_16000)
 	{
-		AUDDRV_Telephony_InitHW ( mic,
-				speaker,
-				AUDIO_SAMPLING_RATE_16000,
-					pData);
+		mode = mode + AUDIO_MODE_NUMBER;	//WB
+	}
+
+	if( mode >= AUDIO_MODE_NUMBER )
+	{
+		AUDDRV_Telephony_InitHW ( mic, speaker, AUDIO_SAMPLING_RATE_16000 );
 #if defined(ENABLE_DMA_VOICE)
 		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
 #endif
 	} else {
-		AUDDRV_Telephony_InitHW ( mic,
-				speaker,
-				AUDIO_SAMPLING_RATE_8000,
-					pData);
+		AUDDRV_Telephony_InitHW ( mic, speaker, AUDIO_SAMPLING_RATE_8000 );
 #if defined(ENABLE_DMA_VOICE)
 		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
 #endif
 	}
 
-	if (voiceCallSampleRate == 16000)
-	{
-		AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), AUDIO_APP_VOICE_CALL_WB );	//WB
-	}
-	else
-	{
-		AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), AUDIO_APP_VOICE_CALL );  //NB
-	}
+    dev |= AUDDRV_SPEAKER;
+    dev |= AUDDRV_MIC1;
+    if(AUDDRV_IsDualMicEnabled()==TRUE)
+    {
+    	dev |= AUDDRV_MIC2;
+    }
+
+    // Set new filter coef.
+    AUDDRV_SetAudioMode( mode, dev);
 
 	if(speaker == AUDIO_SINK_LOUDSPK)
 	{
@@ -317,8 +318,7 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 		OSTASK_Sleep(1);
 	}
 
-	//after AUDDRV_Telephony_InitHW to make SRST.
-	AUDDRV_SetVCflag(TRUE);  //let HW control logic know.
+	AUDDRV_SetVoiceCallFlag(TRUE);  //let HW control logic know.
 
 #if defined(ENABLE_DMA_VOICE)
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0 );
@@ -336,14 +336,14 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 	audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, TRUE, 0, 0, 0, 0 );
 
-	//Right now, Android HWdep code switches audio device by doing Disable and Enable,
-	//therefore when switch audio device while muted we need to mute it here.
-	//
-	//for the next call, upper layer (HWdep) in Android unmute mic before start the next voice call.
-	//
-	//but in LMP (it has no Android code) the next call is also muted.
-	//I will fixed it in the next commit. Basically when switch audio device in voice call better
-	//use AUDDRV_Telephony_SelectMicSpkr( ) instead of calling TelephonyDeinit( ) and TelephonyInit( ).
+	//for the next call, upper layer in Android un-mute mic before start the next voice call.
+	//but in LMP (it has no Android code).
+	// in case it was muted from last voice call, need to un-mute it.
+	if (bDuringTelephonySwitchMicSpkr == FALSE)
+	{
+		//printk("UnMute\r\n");
+		bmuteVoiceCall = FALSE;
+	}
 
 	//printk("bmuteVoiceCall = %d \r\n", bmuteVoiceCall);
 	if (bmuteVoiceCall == FALSE)
@@ -375,9 +375,11 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 //
 //=============================================================================
 
-void AUDDRV_Telephony_RateChange( UInt32 sampleRate )
+void AUDDRV_Telephony_RateChange( unsigned int sample_rate )
 {
-	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_RateChange, sampleRate = %d\n\r", sampleRate);
+    AudioMode_t mode;
+
+    Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_RateChange, sampleRate = %d\n\r", sample_rate);
 
 #if defined(FUSE_APPS_PROCESSOR)&&!defined(BSP_ONLY_BUILD)
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_RateChange AP  *\n\r");
@@ -385,9 +387,12 @@ void AUDDRV_Telephony_RateChange( UInt32 sampleRate )
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_RateChange CP *\n\r");
 #endif
 
-	voiceCallSampleRate = sampleRate;  //remember the rate for current call. (or for the incoming call in ring state.)
+    if ( voiceCallSampleRate == sample_rate )
+      return;
 
-	if ( AUDDRV_GetVCflag() )
+    voiceCallSampleRate = sample_rate;  //remember the rate for current call. (or for the incoming call in ring state.)
+
+    if ( AUDDRV_InVoiceCall() )
 	{
 
 	audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
@@ -397,8 +402,12 @@ void AUDDRV_Telephony_RateChange( UInt32 sampleRate )
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
 
-	//need to know the mode!  need to set HW to 16Khz.
-	AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), 0);
+    if( voiceCallSampleRate==AUDIO_SAMPLING_RATE_8000 )
+      mode = AUDDRV_GetAudioMode() % AUDIO_MODE_NUMBER;
+    else
+      mode = (AUDDRV_GetAudioMode() % AUDIO_MODE_NUMBER) + AUDIO_MODE_NUMBER;
+
+    AUDDRV_SetAudioMode( mode, 0);  //dev
 
 	//AUDDRV_Enable_Output (AUDDRV_VOICE_OUTPUT, speaker, TRUE, AUDIO_SAMPLING_RATE_8000);
 #if defined(ENABLE_DMA_VOICE)
@@ -431,6 +440,40 @@ void AUDDRV_Telephony_RateChange( UInt32 sampleRate )
 }
 
 
+//*********************************************************************
+//
+//	 Registers callback for rate change request
+//
+//	@param	   callback function
+//	@return 	void
+//	 @note
+//**********************************************************************/
+
+void AUDDRV_RegisterRateChangeCallback( audio_codecId_handler_t codecId_cb )
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "\n\r\t*  AUDDRV_RegisterRateChangeCallback, 0x%x\n\r", codecId_cb);
+	codecId_handler = codecId_cb;
+}
+
+//*********************************************************************
+//
+//	 Post rate change message for telephony session
+//
+//	@param		codec ID
+//	@return 	void
+//	 @note
+//**********************************************************************/
+void AUDDRV_Telephone_RequestRateChange(int codecID)
+{
+	//if((audio_codecID != codecID) && (codecId_handler != NULL)) //if current codecID is same as new, ignore the request
+	if(codecId_handler != NULL)
+	{
+		audio_codecID = codecID;
+		codecId_handler(codecID);
+	}
+
+}
+
 //=============================================================================
 //
 // Function Name: AUDDRV_Telephone_GetSampleRate
@@ -438,21 +481,21 @@ void AUDDRV_Telephony_RateChange( UInt32 sampleRate )
 // Description:   Get the sample rate for voice call
 //
 //=============================================================================
-UInt32 AUDDRV_Telephone_GetSampleRate()
+unsigned int AUDDRV_Telephone_GetSampleRate()
 {
 	return voiceCallSampleRate;
 }
 
 //=============================================================================
 //
-// Function Name: AUDDRV_Telephone_SetSampleRate
+// Function Name: AUDDRV_Telephone_SaveSampleRate
 //
 // Description:   Set the sample rate for voice call
 //
 //=============================================================================
-void AUDDRV_Telephony_SetSampleRate(UInt32 samplerate)
+void AUDDRV_Telephone_SaveSampleRate( unsigned int sample_rate )
 {
-	voiceCallSampleRate = samplerate;
+	voiceCallSampleRate = sample_rate;
 }
 
 //=============================================================================
@@ -465,11 +508,16 @@ void AUDDRV_Telephony_SetSampleRate(UInt32 samplerate)
 
 //Prepare DSP before turn off hardware audio path for voice call.
 // This is part of the control sequence for ending telephony audio.
-void AUDDRV_Telephony_Deinit (void *pData)
+void AUDDRV_Telephony_Deinit (void)
 {
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_Deinit voicePlayOutpathEnabled = %d*\n\r", voicePlayOutpathEnabled);
 
-	AUDDRV_SetVCflag(FALSE);  //let HW control logic know.
+	AUDDRV_SetVoiceCallFlag(FALSE);  //let HW control logic know.
+
+	// continues speech playback when end the phone call.
+	// continues speech recording when end the phone call.
+//	if ( FALSE==vopath_enabled && FALSE==DspVoiceIfActive_DL() && FALSE==vipath_enabled )  //VO path is off and DSP IF is off, VI path is off
+//	{
 
 	// a quick fix not to disable voice path for speech playbck when end the phone call.
 	if (voicePlayOutpathEnabled == FALSE)
@@ -498,14 +546,26 @@ void AUDDRV_Telephony_Deinit (void *pData)
 
 		OSTASK_Sleep( 3 ); //make sure audio is off, rtos does not have this.
 
-		AUDDRV_Telephony_DeinitHW(pData);
+		AUDDRV_Telephony_DeinitHW( );
 	}
 
 	if (AUDIO_MODE_BLUETOOTH == AUDDRV_GetAudioMode() )
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0 );
 
 	//at last
-	inVoiceCall = FALSE;
+	bInVoiceCall = FALSE;
+	currVoiceMic = AUDIO_SOURCE_UNDEFINED;
+	currVoiceSpkr = AUDIO_SINK_UNDEFINED;
+
+	if (bDuringTelephonySwitchMicSpkr == FALSE)
+	{
+		//reset to 8KHz as default for the next call
+		voiceCallSampleRate = AUDIO_SAMPLING_RATE_8000;
+	}
+
+	telephonyPathID.ulPathID = 0;
+	telephonyPathID.ul2PathID = 0;
+	telephonyPathID.dlPathID = 0;
 
 	return;
 }
@@ -520,182 +580,17 @@ void AUDDRV_Telephony_Deinit (void *pData)
 //=============================================================================
 
 void AUDDRV_Telephony_SelectMicSpkr (AUDIO_SOURCE_Enum_t mic,
-                                    AUDIO_SINK_Enum_t speaker,
-                                    void *pData)
+                                    AUDIO_SINK_Enum_t speaker)
 {
-	CSL_CAPH_HWCTRL_CONFIG_t config;
-	AudioMode_t mode = AUDIO_MODE_HANDSET;
-	UInt32 dev = 0;
-	UInt32 *memAddr = 0;
+    if(currVoiceMic==mic && currVoiceSpkr==speaker)
+      return;
 
-	mode = mode;
+    bDuringTelephonySwitchMicSpkr = TRUE;
 
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_SelectMicSpkr mic %d, spkr %d *\n\r", mic, speaker);
+    AUDDRV_Telephony_Deinit( );
+    AUDDRV_Telephony_Init ( mic, speaker );
 
-	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
-
-	mode = AUDDRV_GetAudioMode();
-	// The sequence from dsp is:
-	// 1. first send digital sound cmd to dsp
-	// 2. then config and start sspi
-	//if( speaker == AUDIO_SINK_BTM || mic==AUDIO_SOURCE_BTM )
-	if( mic==AUDIO_SOURCE_BTM )
-	{
-		AUDDRV_SetPCMOnOff( 1 );
-	}
-	else
-	{
-		AUDDRV_SetPCMOnOff( 0 );
-	}
-
-	if (speaker != currSpkr)
-	{
-	//Disable the existing speaker path.
-	config.streamID = CSL_CAPH_STREAM_NONE;
-	config.pathID = ((AUDDRV_PathID_t *)pData)->dlPathID;
-	(void)csl_caph_hwctrl_DisablePath(config);
-	((AUDDRV_PathID_t *)pData)->dlPathID = 0;
-
-	if(AUDDRV_GetDRVDeviceFromSpkr(currSpkr) == CSL_CAPH_DEV_IHF)
-	{
-		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
-		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
-		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,FALSE,FALSE);)
-	}	
-	
-	//Enable the new speaker path
-	currSpkr = speaker;
-	config.streamID = CSL_CAPH_STREAM_NONE;
-	config.pathID = 0;
-	config.source = CSL_CAPH_DEV_DSP;
-	config.sink = AUDDRV_GetDRVDeviceFromSpkr(speaker);
-	dev |= AUDDRV_SPEAKER;
-	config.dmaCH = CSL_CAPH_DMA_NONE;
-	//If DSP DL goes to IHF, Sample rate should be 48KHz.
-	if (speaker == AUDIO_SINK_LOUDSPK)
-	{
-		config.source = CSL_CAPH_DEV_DSP_throughMEM;
-		config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
-	}
-	else
-	{
-		config.src_sampleRate = currSampleRate;
-	}
-	config.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
-
-	if(config.sink == CSL_CAPH_DEV_HS)
-	{
-		config.chnlNum = AUDIO_CHANNEL_STEREO;
-	}
-	else
-	{
-		config.chnlNum = AUDIO_CHANNEL_MONO;
-	}
-
-	config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
-
-	sink = config.sink;
-	if(sink == CSL_CAPH_DEV_IHF)
-	{
-		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
-		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
-	}
-
-	/***
-	tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);
-	config.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
-	tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l);
-	config.mixGain.mixOutGainL = AUDDRV_GetMixerOutputFineGain(tempGain);
-	tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l);
-	config.mixGain.mixOutCoarseGainL = AUDDRV_GetMixerOutputCoarseGain(tempGain);
-
-	tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r);
-	config.mixGain.mixInGainR = AUDDRV_GetMixerInputGain(tempGain);
-	tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r);
-	config.mixGain.mixOutGainR = AUDDRV_GetMixerOutputFineGain(tempGain);
-	tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r);
-	config.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
-	***/
-
-	//already called from audio ctrl AUDCTRL_SetAudioMode( mode ); //this function also sets all HW gains.
-
-	if(sink == CSL_CAPH_DEV_IHF)
-	{
-		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,FALSE,FALSE);)  //integrate SDB CL 366484
-	}	
-
-	((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
-
-	//Config sidetone
-	AUDDRV_SetHWSidetoneFilter(AUDDRV_GetAudioMode(),
-			AUDIO_GetParmAccessPtr());
-
-	}
-
-	if (mic != currMic)
-	{
-		//Disable the existing mic path.
-		config.streamID = CSL_CAPH_STREAM_NONE;
-		config.pathID = ((AUDDRV_PathID_t *)pData)->ulPathID;
-		(void)csl_caph_hwctrl_DisablePath(config);
-		((AUDDRV_PathID_t *)pData)->ulPathID = 0;
-
-		if(((AUDDRV_PathID_t *)pData)->ul2PathID != 0)
-		{
-			config.streamID = CSL_CAPH_STREAM_NONE;
-			config.pathID = ((AUDDRV_PathID_t *)pData)->ul2PathID;
-			(void)csl_caph_hwctrl_DisablePath(config);
-			((AUDDRV_PathID_t *)pData)->ul2PathID = 0;
-		}
-
-
-		currMic = mic;
-		//UL
-		config.streamID = CSL_CAPH_STREAM_NONE;
-		config.pathID = 0;
-		config.source = AUDDRV_GetDRVDeviceFromMic(mic);
-		dev |= AUDDRV_MIC1;
-		config.sink = CSL_CAPH_DEV_DSP;
-		config.dmaCH = CSL_CAPH_DMA_NONE;
-		config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
-		config.snk_sampleRate = currSampleRate;
-		config.chnlNum = AUDIO_CHANNEL_MONO;
-		config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
-		((AUDDRV_PathID_t *)pData)->ulPathID = csl_caph_hwctrl_EnablePath(config);
-
-		//If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used
-		//Here Let us assume it is DMIC3. It can be changed.
-		if((AUDDRV_IsDualMicEnabled()==TRUE)
-			&&(((AUDDRV_PathID_t *)pData)->ul2PathID == 0))
-		{
-			dev |= AUDDRV_MIC2;
-			config.streamID = CSL_CAPH_STREAM_NONE;
-			config.pathID = 0;
-			config.source = MIC_NOISE_CANCEL;
-			config.sink = CSL_CAPH_DEV_DSP;
-			config.dmaCH = CSL_CAPH_DMA_NONE;
-			config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
-			config.snk_sampleRate = currSampleRate;
-			config.chnlNum = AUDIO_CHANNEL_MONO;
-			config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
-			((AUDDRV_PathID_t *)pData)->ul2PathID = csl_caph_hwctrl_EnablePath(config);
-		}
-	}
-	// Set new filter coef.
-	AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), dev);
-
-#if 0
-	//if( speaker == AUDIO_SINK_BTM || mic==AUDIO_SOURCE_BTM )
-	if( mic==AUDIO_SOURCE_BTM )
-	{
-		//use audio_control_dsp( ), and combine this file with csl_aud_drv_hw.c
-		AUDDRV_SetPCMOnOff( 1 );
-	}
-	else
-	{
-		AUDDRV_SetPCMOnOff( 0 );
-	}
-#endif
+    bDuringTelephonySwitchMicSpkr = FALSE;
 }
 
 
@@ -712,14 +607,14 @@ void AUDDRV_EnableDSPOutput (
 			    AUDIO_SAMPLING_RATE_t  sample_rate
 			    )
 {
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_EnableDSPOutput mixer %d, invoicecall %d, sample_rate %ld *\n\r", mixer_speaker_selection, inVoiceCall, sample_rate);
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_EnableDSPOutput mixer %d, bInVoiceCall %d, sample_rate %ld *\n\r", mixer_speaker_selection, bInVoiceCall, sample_rate);
 
 	OSTASK_Sleep( 5 );	//sometimes BBC video has no audio. This delay may help the mixer filter and mixer gain loading.
 	currVoiceSpkr = mixer_speaker_selection;
 
-	if(inVoiceCall != TRUE)
+	if(bInVoiceCall != TRUE)
 	{
-		//if inVoiceCall== TRUE, assume the telphony_init() function sends ENABLE and CONNECT_DL
+		//if bInVoiceCall== TRUE, assume the telphony_init() function sends ENABLE and CONNECT_DL
 		if (sample_rate == AUDIO_SAMPLING_RATE_8000)
 		{
 #if defined(ENABLE_DMA_VOICE)
@@ -744,7 +639,7 @@ void AUDDRV_EnableDSPOutput (
 		}
 		voicePlayOutpathEnabled = TRUE;
 
-		Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Enable_Output: inVoiceCall = %d, voicePlayOutpathEnabled = %d\n\r", inVoiceCall, voicePlayOutpathEnabled);
+		Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Enable_Output: bInVoiceCall = %d, voicePlayOutpathEnabled = %d\n\r", bInVoiceCall, voicePlayOutpathEnabled);
 
 #if 0
 		if (currVoiceSpkr == AUDIO_SINK_BTM)
@@ -775,9 +670,9 @@ void AUDDRV_EnableDSPInput (
 {
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_EnableDSPInput mic_selection %d *\n\r", mic_selection );
 
-	if(inVoiceCall != TRUE)
+	if(bInVoiceCall != TRUE)
 	{
-		//if inVoiceCall== TRUE, assume the telphony_init() function sends ENABLE and CONNECT_UL
+		//if bInVoiceCall== TRUE, assume the telphony_init() function sends ENABLE and CONNECT_UL
 		if (sample_rate == AUDIO_SAMPLING_RATE_8000)
 		{
 #if defined(ENABLE_DMA_VOICE)
@@ -874,6 +769,7 @@ Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode)
 		}
 	return is_call16k;
 }
+
 //=============================================================================
 //
 // Function Name: AUDDRV_InVoiceCall
@@ -884,9 +780,21 @@ Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode)
 
 Boolean AUDDRV_InVoiceCall( void )
 {
-	return inVoiceCall;
+	return bInVoiceCall;
 }
 
+
+//=============================================================================
+//
+// Function Name: AUDDRV_SetVoiceCallFlag
+//
+// Description:   Set voice call flag for HW control loic.
+//
+//=============================================================================
+void AUDDRV_SetVoiceCallFlag( Boolean inVoiceCall )
+{
+	bInVoiceCall = inVoiceCall;
+}
 
 //=============================================================================
 //
@@ -927,6 +835,8 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 arg_dev )
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode() audio_mode==%d\n\r", audio_mode );
+
 	// load DSP parameters:
 	//if ( audio_mode >= AUDIO_MODE_NUMBER )
 	if ( audio_mode >= AUDIO_MODE_NUMBER_VOICE )
@@ -937,10 +847,11 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 arg_dev )
 		// BTM needs to support NB or WB too
 		if ((audio_mode == AUDIO_MODE_BLUETOOTH_WB) || (audio_mode == AUDIO_MODE_BLUETOOTH) )
 		{
+			//HW sampling rate depends on BT headset's capability
 			if (AUDDRV_IsBTMWB())
-				audio_mode = AUDIO_MODE_BLUETOOTH_WB;
+				audio_mode = AUDIO_MODE_BLUETOOTH_WB;  //16Khz HW sampling rate
 			else
-				audio_mode = AUDIO_MODE_BLUETOOTH;
+				audio_mode = AUDIO_MODE_BLUETOOTH;  //8KHz HW sampling rate
 		}
 		Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode() AUDDRV_InVoiceCall audio_mode=%d \n\r", audio_mode );
 	}
@@ -948,10 +859,8 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 arg_dev )
 	currAudioMode = audio_mode; // update mode
 	//currMusicAudioMode = currAudioMode;
 
-	audio_control_generic( AUDDRV_CPCMD_PassAudioMode,
-				(UInt32)audio_mode, 0, 0, 0, 0 );
-	audio_control_generic( AUDDRV_CPCMD_SetAudioMode,
-				(UInt32)audio_mode, 0, 0, 0, 0 );
+	audio_control_generic( AUDDRV_CPCMD_PassAudioMode, (UInt32)audio_mode, 0, 0, 0, 0 );  //??
+	audio_control_generic( AUDDRV_CPCMD_SetAudioMode, (UInt32)audio_mode, 0, 0, 0, 0 );
 
 	if (userEQOn == FALSE)
 	{
@@ -1093,6 +1002,29 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 arg_dev )
 	csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixerOutputBitSelect);
 	csl_caph_srcmixer_set_mix_out_gain( outChnl, mixerOutputFineGain );
 
+    //Config sidetone
+    {
+	Int32 *coeff = NULL;
+	UInt16 gain = 0;
+	UInt16 enable = 0;
+	SysAudioParm_t* pAudioParm;
+	pAudioParm = AUDIO_GetParmAccessPtr();
+
+	enable = AUDIO_GetParmAccessPtr()[currAudioMode].hw_sidetone_enable;
+	if (!enable)
+	{
+		AUDDRV_HWControl_DisableSideTone(currAudioMode);
+	}
+	else
+	{
+		AUDDRV_HWControl_EnableSideTone(currAudioMode);
+
+		coeff = &(AUDIO_GetParmAccessPtr()[currAudioMode].hw_sidetone_eq[0]);
+		AUDDRV_HWControl_SetFilter(AUDDRV_SIDETONE_FILTER, (void *)coeff);
+		gain = AUDIO_GetParmAccessPtr()[currAudioMode].hw_sidetone_gain;
+		csl_caph_audioh_sidetone_set_gain(gain);
+	}
+    }
 
 	//Load PMU gain from sysparm.
 	switch ( currAudioMode )
@@ -1159,31 +1091,50 @@ AudioMode_t AUDDRV_GetAudioMode( void )
 	return currAudioMode;
 }
 
-
-//=============================================================================
-//
-// Function Name: AUDDRV_SetVCflag
-//
-// Description:   Set voice call flag for HW control loic.
-//
-//=============================================================================
-void AUDDRV_SetVCflag( Boolean inVoiceCall )
+//*********************************************************************
+//Description:
+//	Get audio mode from sink
+//Parameters
+//	mode -- audio mode
+//	sink -- Sink device coresponding to audio mode
+//Return	none
+//**********************************************************************/
+AudioMode_t AUDDRV_GetAudioModeBySink(AUDIO_SINK_Enum_t sink)
 {
-	bInVoiceCall = inVoiceCall;
-}
+    switch(sink)
+    {
+    case AUDIO_SINK_HANDSET:
+          return AUDIO_MODE_HANDSET;
 
-//=============================================================================
-//
-// Function Name: AUDDRV_GetVCflag
-//
-// Description:   Get voice call flag.
-//
-//=============================================================================
-Boolean AUDDRV_GetVCflag( void )
-{
-	return bInVoiceCall;
-}
+    case AUDIO_SINK_HEADSET:
+          return AUDIO_MODE_HEADSET;
 
+    case AUDIO_SINK_HANDSFREE:
+          return AUDIO_MODE_HANDSFREE;
+
+    case AUDIO_SINK_BTM:
+    case AUDIO_SINK_BTS:
+          return AUDIO_MODE_BLUETOOTH;
+
+    case AUDIO_SINK_LOUDSPK:
+          return AUDIO_MODE_SPEAKERPHONE;
+
+    case AUDIO_SINK_TTY:
+          return AUDIO_MODE_TTY;
+
+    case AUDIO_SINK_HAC:
+          return AUDIO_MODE_HAC;
+
+    case AUDIO_SINK_USB:
+          return AUDIO_MODE_USB;
+
+    case AUDIO_SINK_I2S:
+    case AUDIO_SINK_VIBRA:
+	default:
+		Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetAudioModeBySink(): can not find mode for sink %d \n", sink);
+		return AUDIO_MODE_INVALID;
+}
+}
 
 //=============================================================================
 //
@@ -1350,6 +1301,75 @@ void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off )
 	controlFlagForCustomGain = on_off;
 }
 
+//============================================================================
+//
+// Function Name: AUDDRV_SetTelephonyMicGain
+//
+// Description:   Set ul gain of telephony path
+//
+//============================================================================
+void AUDDRV_SetTelephonyMicGain(
+			AUDIO_SOURCE_Enum_t	mic,
+			Int16					gain,
+			AUDIO_GAIN_FORMAT_t		gain_format
+			)
+{
+    Log_DebugPrintf(LOGID_AUDIO,"AUDDRV_SetTelephonyMicGain: gain = 0x%x\n", gain);
+
+    if (gain_format == AUDIO_GAIN_FORMAT_mB)
+    {
+      telephony_ul_gain_mB = gain;
+    }
+
+    audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, telephony_ul_gain_mB, 0, 0, 0, 0);
+
+    //sysparm.c(4990):	pg1_mem->shared_echo_fast_NLP_gain[1] = SYSPARM_GetAudioParmAccessPtr()->audio_parm[currentAudioMode].echoNlp_parms.echo_nlp_gain;
+    //should also load this parameter in SetAudioMode() in CP build.
+}
+
+//============================================================================
+//
+// Function Name: AUDDRV_SetTelephonySpkrVolume
+//
+// Description:   Set dl volume of telephony path
+//
+//============================================================================
+void AUDDRV_SetTelephonySpkrVolume(
+			AUDIO_SINK_Enum_t		speaker,
+			Int32					volume,
+			AUDIO_GAIN_FORMAT_t		gain_format
+			)
+{
+    Log_DebugPrintf(LOGID_AUDIO,"AUDDRV_SetTelephonySpkrVolume: volume = %d \n", volume );
+
+    if (gain_format == AUDIO_GAIN_FORMAT_mB)
+    {
+      telephony_digital_gain_dB = (volume / 100) + 36;
+      if ( telephony_digital_gain_dB > AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max )	//dB
+        telephony_digital_gain_dB = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max; //dB
+
+      if( volume <=-10000 )  //less than -100dB
+      {  //mute
+        audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkMute, 0, 0, 0, 0, 0);
+      }
+      else
+      {
+/*********
+	OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
+
+	omega_voice_parms = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].omega_voice_parms;	//dB
+	audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam,
+				(UInt32)(&(omega_voice_parms[telephony_digital_gain_dB])),	//?
+				0, 0, 0, 0);
+********/
+
+        //if parm4 (OV_volume_step) is zero, volumectrl.c will calculate OV volume step based on digital_gain_dB, VOICE_VOLUME_MAX and NUM_SUPPORTED_VOLUME_LEVELS.
+        audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, volume,  //DSP accepts [-3600, 0] mB
+               0, 0, 0, 0);
+      }
+    }
+}
+
 //=============================================================================
 //
 // Function Name: Spkr AUDDRV_Telephony_MuteMic
@@ -1358,8 +1378,7 @@ void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off )
 //
 //=============================================================================
 
-void AUDDRV_Telephony_MuteMic (AUDIO_SOURCE_Enum_t mic,
-                              void *pData)
+void AUDDRV_Telephony_MuteMic (AUDIO_SOURCE_Enum_t mic)
 {
 	bmuteVoiceCall = TRUE;
 	//printk(" bmuteVoiceCall = TRUE\r\n");
@@ -1374,8 +1393,7 @@ void AUDDRV_Telephony_MuteMic (AUDIO_SOURCE_Enum_t mic,
 //
 //=============================================================================
 
-void AUDDRV_Telephony_UnmuteMic (AUDIO_SOURCE_Enum_t mic,
-                                void *pData)
+void AUDDRV_Telephony_UnmuteMic (AUDIO_SOURCE_Enum_t mic)
 {
 	bmuteVoiceCall = FALSE;
 	//printk(" bmuteVoiceCall = FALSE\r\n");
@@ -1390,8 +1408,7 @@ void AUDDRV_Telephony_UnmuteMic (AUDIO_SOURCE_Enum_t mic,
 //
 //=============================================================================
 
-void AUDDRV_Telephony_MuteSpkr (AUDIO_SINK_Enum_t speaker,
-                              void *pData)
+void AUDDRV_Telephony_MuteSpkr (AUDIO_SINK_Enum_t speaker)
 {
 	audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkMute, 0, 0, 0, 0, 0);
 }
@@ -1404,8 +1421,7 @@ void AUDDRV_Telephony_MuteSpkr (AUDIO_SINK_Enum_t speaker,
 //
 //=============================================================================
 
-void AUDDRV_Telephony_UnmuteSpkr (AUDIO_SINK_Enum_t speaker,
-                                  void *pData)
+void AUDDRV_Telephony_UnmuteSpkr (AUDIO_SINK_Enum_t speaker)
 {
 	audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkUnmute, 0, 0, 0, 0, 0);
 }
@@ -1468,39 +1484,6 @@ void AUDDRV_SetBTMTypeWB( Boolean isWB)
 	//AUDDRV_SetPCMRate(IsBTM_WB);
 }
 
-//*********************************************************************
-//
-//	 Registers callback for rate change request
-//
-//	@param	   callback function
-//	@return 	void
-//	 @note
-//**********************************************************************/
-
-void AUDDRV_RegisterRateChangeCallback( audio_codecId_handler_t codecId_cb )
-{
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "\n\r\t*  AUDDRV_RegisterRateChangeCallback, 0x%x\n\r", codecId_cb);
-	codecId_handler = codecId_cb;
-}
-
-//*********************************************************************
-//
-//	 Post rate change message for telephony session
-//
-//	@param		codec ID
-//	@return 	void
-//	 @note
-//**********************************************************************/
-void AUDDRV_RequestRateChange(UInt8 codecID)
-{
-	if((audio_codecID != codecID) && (codecId_handler != NULL)) //if current codecID is same as new, ignore the request
-	{
-		audio_codecID = codecID;
-		codecId_handler(codecID);
-	}
-
-}
-
 
 //=============================================================================
 // Private function prototypes
@@ -1516,17 +1499,14 @@ void AUDDRV_RequestRateChange(UInt8 codecID)
 //=============================================================================
 static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
                                     AUDIO_SINK_Enum_t speaker,
-                                    AUDIO_SAMPLING_RATE_t	sample_rate,
-                                    void * pData)
+                                    AUDIO_SAMPLING_RATE_t	sample_rate)
 {
     CSL_CAPH_HWCTRL_CONFIG_t config;
-	UInt32 dev = 0;
     Int16 tempGain = 0;
     AudioMode_t mode = AUDIO_MODE_HANDSET;
 
     UInt32 *memAddr = 0;
 
-    pData = pData;
     mode = mode;
     tempGain = tempGain;
     Log_DebugPrintf(LOGID_AUDIO,
@@ -1544,7 +1524,6 @@ static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
     config.pathID = 0;
     config.source = CSL_CAPH_DEV_DSP;
     config.sink = AUDDRV_GetDRVDeviceFromSpkr(speaker);
-    dev |= AUDDRV_SPEAKER;
     config.dmaCH = CSL_CAPH_DMA_NONE;
     //If DSP DL goes to IHF, Sample rate should be 48KHz.
     if (speaker == AUDIO_SINK_LOUDSPK)
@@ -1603,13 +1582,12 @@ static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
     config.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
     ***/
 
-    ((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
+    telephonyPathID.dlPathID = csl_caph_hwctrl_EnablePath(config);
 
     //UL
     config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = 0;
     config.source = AUDDRV_GetDRVDeviceFromMic(mic);
-    dev |= AUDDRV_MIC1;
     config.sink = CSL_CAPH_DEV_DSP;
     config.dmaCH = CSL_CAPH_DMA_NONE;
     config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
@@ -1617,12 +1595,11 @@ static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
     config.chnlNum = AUDIO_CHANNEL_MONO;
     config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
 
-    ((AUDDRV_PathID_t *)pData)->ulPathID = csl_caph_hwctrl_EnablePath(config);
+    telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
     //If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used
     //Here Let us assume it is DMIC3. It can be changed.
     if(AUDDRV_IsDualMicEnabled()==TRUE)
     {
-    	dev |= AUDDRV_MIC2;
         config.streamID = CSL_CAPH_STREAM_NONE;
         config.pathID = 0;
         config.source = MIC_NOISE_CANCEL;
@@ -1633,20 +1610,11 @@ static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
         config.chnlNum = AUDIO_CHANNEL_MONO;
         config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
 
-        ((AUDDRV_PathID_t *)pData)->ul2PathID = csl_caph_hwctrl_EnablePath(config);
+        telephonyPathID.ul2PathID = csl_caph_hwctrl_EnablePath(config);
     }
-
-    //Config sidetone
-    AUDDRV_SetHWSidetoneFilter(AUDDRV_GetAudioMode(),
-				AUDIO_GetParmAccessPtr());
-
-    // Set new filter coef.
-    AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), dev);
 
     return;
 }
-
-
 
 
 //=============================================================================
@@ -1656,7 +1624,7 @@ static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
 // Description:   Disable the HW for Telephone voice call
 //
 //=============================================================================
-static void AUDDRV_Telephony_DeinitHW (void *pData)
+static void AUDDRV_Telephony_DeinitHW (void)
 {
     CSL_CAPH_HWCTRL_CONFIG_t config;
 	Log_DebugPrintf(LOGID_AUDIO,
@@ -1667,25 +1635,24 @@ static void AUDDRV_Telephony_DeinitHW (void *pData)
     currSpkr = AUDIO_SINK_UNDEFINED;
     currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED;
 
-    // Disable sidetone.
-    (void)AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
+    AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
 
     config.streamID = CSL_CAPH_STREAM_NONE;
-    config.pathID = ((AUDDRV_PathID_t *)pData)->ulPathID;
+    config.pathID = telephonyPathID.ulPathID;
 
     (void)csl_caph_hwctrl_DisablePath(config);
 
-	if(((AUDDRV_PathID_t *)pData)->ul2PathID != 0)
+	if( telephonyPathID.ul2PathID != 0)
     {
         config.streamID = CSL_CAPH_STREAM_NONE;
-        config.pathID = ((AUDDRV_PathID_t *)pData)->ul2PathID;
+        config.pathID = telephonyPathID.ul2PathID;
 
         (void)csl_caph_hwctrl_DisablePath(config);
     }
 
     currMic = AUDIO_SOURCE_UNDEFINED;
     config.streamID = CSL_CAPH_STREAM_NONE;
-    config.pathID = ((AUDDRV_PathID_t *)pData)->dlPathID;
+    config.pathID = telephonyPathID.dlPathID;
 
     (void)csl_caph_hwctrl_DisablePath(config);
 
@@ -1695,63 +1662,30 @@ static void AUDDRV_Telephony_DeinitHW (void *pData)
 }
 
 
-//=============================================================================
-//
-// Function Name: AUDDRV_SetHWSidetoneFilter
-//
-// Description:   Set HW Sidetone filter
-//
-//=============================================================================
-
-static void AUDDRV_SetHWSidetoneFilter(AudioMode_t audio_mode,
-		SysAudioParm_t* pAudioParm)
-{
-	Int32 *coeff = NULL;
-	UInt16 gain = 0;
-	UInt16 enable = 0;
-
-	enable = pAudioParm[audio_mode].hw_sidetone_enable;
-	if (!enable)
-	{
-		AUDDRV_HWControl_DisableSideTone(audio_mode);
-		return;
-	}
-
-	coeff = &(pAudioParm[audio_mode].hw_sidetone_eq[0]);
-	AUDDRV_HWControl_SetFilter(AUDDRV_SIDETONE_FILTER, (void *)coeff);
-	gain = pAudioParm[audio_mode].hw_sidetone_gain;
-	csl_caph_audioh_sidetone_set_gain(gain);
-	AUDDRV_HWControl_EnableSideTone(audio_mode);
-
-	return;
-}
-
-
 /****************************************************************************
 *
-*  Function Name: Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter,
+*  Function Name: AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter,
 *                                                     void* coeff)
 *
 *  Description: Load filter coefficients
 *
 ****************************************************************************/
-static Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff)
+static void AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff)
 {
     if (filter == AUDDRV_SIDETONE_FILTER)
     {
         csl_caph_audioh_sidetone_load_filter((UInt32 *)coeff);
     }
-    return RESULT_OK;
 }
 
 /****************************************************************************
 *
-*  Function Name: Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode)
+*  Function Name: AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode)
 *
 *  Description: Enable Sidetone path
 *
 ****************************************************************************/
-static Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode)
+static void AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode)
 {
     AUDDRV_PATH_Enum_t pathId = AUDDRV_PATH_VIBRA_OUTPUT;
     switch(audio_mode)
@@ -1777,18 +1711,17 @@ static Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode)
             ;
     }
     csl_caph_audioh_sidetone_control((int)pathId, TRUE);
-    return RESULT_OK;
 }
 
 
 /****************************************************************************
 *
-*  Function Name: Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode)
+*  Function Name: AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode)
 *
 *  Description: Disable Sidetone path
 *
 ****************************************************************************/
-static Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode)
+static void AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode)
 {
     AUDDRV_PATH_Enum_t pathId = AUDDRV_PATH_VIBRA_OUTPUT;
     switch(audio_mode)
@@ -1814,7 +1747,6 @@ static Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode)
             ;
     }
     csl_caph_audioh_sidetone_control((int)pathId, FALSE);
-    return RESULT_OK;
 }
 
 

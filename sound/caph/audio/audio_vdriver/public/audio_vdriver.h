@@ -141,12 +141,6 @@ typedef enum {
 	AUDDRV_USER_EQ_CTRL,
 } AudioDrvUserCtrl_t;
 
-typedef struct AUDDRV_PathID_t{
-	CSL_CAPH_PathID ulPathID;
-	CSL_CAPH_PathID ul2PathID;
-	CSL_CAPH_PathID dlPathID;
-} AUDDRV_PathID_t;
-
 #ifndef MAX_NO_OF_BIQUADS
 #define MAX_NO_OF_BIQUADS	12
 #endif
@@ -216,29 +210,66 @@ void AUDDRV_Shutdown( void );
 
 //  the control sequence for starting telephony audio.
 void AUDDRV_Telephony_Init (AUDIO_SOURCE_Enum_t   mic,
-                            AUDIO_SINK_Enum_t  speaker,
-                            void * pData
-                            );
+                            AUDIO_SINK_Enum_t  speaker );
 
-// the control sequence for ratechange of voice call.
-void AUDDRV_Telephony_RateChange ( UInt32 sampleRate );
+/**
+*  @brief  the control sequence for rate change of voice call.
+*
+*  @param  sample_rate  (in) voice call sampling rate
+*
+*  @return none
+*
+****************************************************************************/
+void AUDDRV_Telephony_RateChange ( unsigned int sample_rate );
 
-UInt32 AUDDRV_Telephone_GetSampleRate( void );
+/**
+*
+*  @brief  Register callback for rate change
+*
+*  @param  codecId_cb
+*
+*  @return none
+*****************************************************************************/
+void AUDDRV_RegisterRateChangeCallback( audio_codecId_handler_t codecId_cb);
 
-void AUDDRV_Telephony_SetSampleRate(UInt32 samplerate);
+/**
+*  @brief  the rate change request function called by CAPI message listener
+*
+*  @param  codecID		(in) voice call speech codec ID
+*
+*  @return none
+*
+****************************************************************************/
+void AUDDRV_Telephone_RequestRateChange(int codecID);
 
-// rate change request function
-void AUDDRV_RequestRateChange(UInt8 codecID);
+/**
+*  @brief  Get voice call sampling rate, stored for call session.
+*
+*  @param  none
+*
+*  @return unsigned int (voiceCallSampleRate)
+*
+****************************************************************************/
+unsigned int AUDDRV_Telephone_GetSampleRate( void );
+
+/**
+*  @brief  Save voice call sampling rate, stored for call session.
+*
+*  @param  unsigned int (in) voiceCallSampleRate
+*
+*  @return none
+*
+****************************************************************************/
+void AUDDRV_Telephone_SaveSampleRate( unsigned int sample_rate );
 
 // the control sequence for ending telephony audio.
 //this func let DSP to turn off voice path, if need to resume apps operation on voice, controller needs to reenable voice path after phonce call ends.
-void AUDDRV_Telephony_Deinit (void *pData);
+void AUDDRV_Telephony_Deinit (void );
 
 
 void AUDDRV_Telephony_SelectMicSpkr  (
 				AUDIO_SOURCE_Enum_t   mic,
-				AUDIO_SINK_Enum_t  speaker,
-				void *pData);
+				AUDIO_SINK_Enum_t  speaker);
 // Enable DSP output processing.
 void AUDDRV_EnableDSPOutput (
 				AUDIO_SINK_Enum_t      mixer_speaker_selection,
@@ -254,6 +285,8 @@ Boolean AUDDRV_IsVoiceCallWB(AudioMode_t audio_mode);
 Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode);
 Boolean AUDDRV_InVoiceCall( void );
 
+void AUDDRV_SetVoiceCallFlag( Boolean inVoiceCall );
+
 #if defined(USE_NEW_AUDIO_PARAM)
 AudioApp_t AUDDRV_GetAudioApp( void );
 //void AUDDRV_SaveAudioApp( AudioApp_t audio_app );
@@ -268,8 +301,7 @@ void AUDDRV_SetMusicMode ( AudioMode_t  audio_mode);
 
 AudioMode_t AUDDRV_GetAudioMode( void );
 
-void AUDDRV_SetVCflag( Boolean inVoiceCall );
-Boolean AUDDRV_GetVCflag( void );
+AudioMode_t AUDDRV_GetAudioModeBySink(AUDIO_SINK_Enum_t sink);
 
 int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType,
 							Boolean enable,
@@ -281,14 +313,41 @@ void AUDDRV_SetPCMOnOff(Boolean	on_off);
 
 void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off );
 
-void AUDDRV_Telephony_MuteMic (AUDIO_SOURCE_Enum_t mic,
-					void *pData);
-void AUDDRV_Telephony_UnmuteMic (AUDIO_SOURCE_Enum_t mic,
-					void *pData);
-void AUDDRV_Telephony_MuteSpkr (AUDIO_SINK_Enum_t speaker,
-					void *pData);
-void AUDDRV_Telephony_UnmuteSpkr (AUDIO_SINK_Enum_t speaker,
-					void *pData);
+/**
+*  @brief  Set telephony microphone (uplink) gain
+*
+*  @param  mic	(in)  microphone selection
+*  @param  gain	(in)  gain
+*  @param  gain_format	(in)  gain format
+*
+*  @return none
+*
+****************************************************************************/
+void AUDDRV_SetTelephonyMicGain(
+			AUDIO_SOURCE_Enum_t	 mic,
+			Int16				 gain,
+			AUDIO_GAIN_FORMAT_t  gain_format
+			);
+/**
+*  @brief  Set telephony speaker (downlink) volume
+*
+*  @param  speaker	(in)  downlink sink, speaker selection
+*  @param  volume	(in)  downlink volume
+*  @param  gain_format	 (in)  gain format
+*
+*  @return none
+*
+****************************************************************************/
+void AUDDRV_SetTelephonySpkrVolume(
+			AUDIO_SINK_Enum_t		speaker,
+			Int32					volume,
+			AUDIO_GAIN_FORMAT_t		gain_format
+			);
+
+void AUDDRV_Telephony_MuteMic (AUDIO_SOURCE_Enum_t mic);
+void AUDDRV_Telephony_UnmuteMic (AUDIO_SOURCE_Enum_t mic);
+void AUDDRV_Telephony_MuteSpkr (AUDIO_SINK_Enum_t speaker);
+void AUDDRV_Telephony_UnmuteSpkr (AUDIO_SINK_Enum_t speaker);
 void AUDDRV_SetULSpeechRecordGain(Int16 gain);
 Boolean AUDDRV_IsDualMicEnabled(void);
 
@@ -313,18 +372,6 @@ Boolean AUDDRV_IsBTMWB( void );
 *	@note	isWB=TRUE for BT WB headset; =FALSE for BT NB (8k) headset.
 **********************************************************************/
 void AUDDRV_SetBTMTypeWB( Boolean isWB);
-
-
-/**
-*
-*  @brief  Register callback for rate change
-*
-*  @param  codecId_cb
-*
-*  @return none
-*****************************************************************************/
-
-void AUDDRV_RegisterRateChangeCallback( audio_codecId_handler_t codecId_cb);
 
 #ifdef __cplusplus
 }

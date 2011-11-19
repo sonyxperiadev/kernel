@@ -71,6 +71,7 @@ typedef enum
   ACTION_AUD_RemoveChannel,
   ACTION_AUD_EnableTelephony,
   ACTION_AUD_DisableTelephony,
+  ACTION_AUD_SetTelephonyMicSpkr,
   ACTION_AUD_MutePlayback,
   ACTION_AUD_MuteRecord,
   ACTION_AUD_MuteTelephony,
@@ -178,11 +179,10 @@ typedef struct
 
 typedef struct
 {
-   Int32 cur_spkr;
-   Int32 new_spkr;
-   Int32 cur_mic;
-   Int32 new_mic;
-
+   AUDIO_SINK_Enum_t cur_spkr;
+   AUDIO_SINK_Enum_t new_spkr;
+   AUDIO_SOURCE_Enum_t cur_mic;
+   AUDIO_SOURCE_Enum_t new_mic;
 }BRCM_AUDIO_Param_Call_t;
 
 typedef struct

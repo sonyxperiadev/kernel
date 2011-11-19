@@ -128,7 +128,7 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 //callback function that handles the rate change
 //----------------------------------------------------------------
 
-static void AudioCodecIdHander(UInt8 codecID)
+static void AudioCodecIdHander(int codecID)
 {
     BRCM_AUDIO_Param_RateChange_t param_rate_change;
     BCM_AUDIO_DEBUG("AudioCodeCIdHander : CodecId = %d \r\n", codecID);
@@ -502,20 +502,27 @@ void AUDIO_Ctrl_Process(
 								  );
 		}
 		break;
-		case ACTION_AUD_EnableTelephony:
-		{
-			BRCM_AUDIO_Param_Call_t *parm_call = (BRCM_AUDIO_Param_Call_t *)arg_param;
-			AUDCTRL_EnableTelephony((AUDIO_SOURCE_Enum_t)parm_call->new_mic,
-									(AUDIO_SINK_Enum_t)parm_call->new_spkr);
-		}
-		break;
-		case ACTION_AUD_DisableTelephony:
-		{
-			BRCM_AUDIO_Param_Call_t *parm_call = (BRCM_AUDIO_Param_Call_t *)arg_param;
-			AUDCTRL_DisableTelephony((AUDIO_SOURCE_Enum_t)parm_call->cur_mic,
-									 (AUDIO_SINK_Enum_t)parm_call->cur_spkr);
-		}
-		break;
+
+      case ACTION_AUD_EnableTelephony:
+        {
+        BRCM_AUDIO_Param_Call_t *parm_call = (BRCM_AUDIO_Param_Call_t *)arg_param;
+        AUDCTRL_EnableTelephony( parm_call->new_mic, parm_call->new_spkr);
+        }
+        break;
+
+        case ACTION_AUD_DisableTelephony:
+        {
+        AUDCTRL_DisableTelephony( );
+        }
+        break;
+
+      case ACTION_AUD_SetTelephonyMicSpkr:
+        {
+        BRCM_AUDIO_Param_Call_t *parm_call = (BRCM_AUDIO_Param_Call_t *)arg_param;
+        AUDCTRL_SetTelephonyMicSpkr(parm_call->new_mic, parm_call->new_spkr);
+        }
+        break;
+		
 		case ACTION_AUD_MutePlayback:
 		{
 			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
@@ -575,34 +582,33 @@ void AUDIO_Ctrl_Process(
 								   pathID[parm_vol->stream]);
 		}
 		break;
-		case ACTION_AUD_SetTelephonySpkrVolume:
-		{
-			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
-			AUDCTRL_SetTelephonySpkrVolume (parm_vol->sink,
-											parm_vol->volume1,
-											AUDIO_GAIN_FORMAT_mB);
-		}
-		break;
-		case ACTION_AUD_SwitchSpkr:
-		{
-			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
-			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
-			AUDCTRL_SwitchPlaySpk( parm_spkr->src,
-									parm_spkr->sink,
-									pathID[parm_spkr->stream]);
-		}
-		break;
-		case ACTION_AUD_SetAudioMode:
-		{
-			BRCM_AUDIO_Param_Call_t *parm_call =  (BRCM_AUDIO_Param_Call_t *)arg_param;
-			AudioMode_t tempMode = (AudioMode_t)parm_call->new_spkr;
-			if ((AUDIO_SAMPLING_RATE_t)AUDCTRL_RateGetTelephony() == AUDIO_SAMPLING_RATE_16000)
-			{
-				tempMode += AUDIO_MODE_NUMBER;
-            }
-			AUDCTRL_SaveAudioModeFlag(tempMode);
-		}
-		break;
+
+      case ACTION_AUD_SetTelephonySpkrVolume:
+      {
+        BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
+        AUDCTRL_SetTelephonySpkrVolume (parm_vol->sink, parm_vol->volume1, AUDIO_GAIN_FORMAT_mB);
+      }
+      break;
+
+      case ACTION_AUD_SwitchSpkr:
+      {
+        BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
+        CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
+        AUDCTRL_SwitchPlaySpk( parm_spkr->src,
+							parm_spkr->sink,
+							pathID[parm_spkr->stream]);
+        }
+        break;
+
+      case ACTION_AUD_SetAudioMode:
+      {
+        BRCM_AUDIO_Param_Call_t *parm_call =  (BRCM_AUDIO_Param_Call_t *)arg_param;
+        AudioMode_t tempMode = (AudioMode_t)parm_call->new_spkr;
+
+        AUDCTRL_SetAudioMode(tempMode);
+      }
+      break;
+
 		case ACTION_AUD_SetHWLoopback:
 		{
 			BRCM_AUDIO_Param_Loopback_t *parm_loop = (BRCM_AUDIO_Param_Loopback_t *)arg_param;
@@ -668,58 +674,29 @@ void AUDIO_Ctrl_Process(
 			AUDIO_DRIVER_Ctrl(parm_prepare->drv_handle,AUDIO_DRIVER_CONFIG,(void*)&parm_prepare->drv_config);
 		}
 		break;
-		case ACTION_AUD_MuteTelephony:
-		{
-			BRCM_AUDIO_Param_Mute_t	*parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
-			AUDCTRL_SetTelephonyMicMute(parm_mute->source,
-										parm_mute->mute1);
-		}
-		break;
-		case ACTION_AUD_RateChange:
-		{
-			BRCM_AUDIO_Param_RateChange_t *param_rate_change = (BRCM_AUDIO_Param_RateChange_t *)arg_param;
-			AudioMode_t mode;
-			UInt32 sampleRate = 8000;
 
-			// 0x0A as per 3GPP 26.103 Sec 6.3 indicates AMR WB  AUDIO_ID_CALL16k
-			// 0x06 indicates AMR NB
+      case ACTION_AUD_MuteTelephony:
+        {
+        BRCM_AUDIO_Param_Mute_t	*parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
+			AUDCTRL_SetTelephonyMicMute(parm_mute->source, parm_mute->mute1);
+        }
+        break;
 
-			if((param_rate_change->codecID == 0x06) || (param_rate_change->codecID == 0x0A))
-			{
-				if(AUDCTRL_InVoiceCall() == TRUE) //If in voice call mode
-				{
-					mode = AUDCTRL_GetAudioMode();
-					if ( param_rate_change->codecID == 0x0A ) // AMR-WB
-					{
-						sampleRate = 16000;
-						if (mode < AUDIO_MODE_NUMBER)
-							mode = (AudioMode_t)(mode + AUDIO_MODE_NUMBER);
-					}
-					else if (param_rate_change->codecID == 0x06)// AMR-NB
-					{
-						sampleRate = 8000;
-						if (mode >= AUDIO_MODE_NUMBER)
-							mode = (AudioMode_t)(mode - AUDIO_MODE_NUMBER);
-					}
+      case ACTION_AUD_RateChange:
+        {
+        BRCM_AUDIO_Param_RateChange_t *param_rate_change = (BRCM_AUDIO_Param_RateChange_t *)arg_param;
 
-					AUDCTRL_SaveAudioModeFlag(mode);
-					AUDCTRL_RateChangeTelephony(sampleRate);
-				}
-				else // Not in voice call yet, audio mode will be set during path setup
-				{
-					if ( param_rate_change->codecID == 0x0A ) // AMR-WB
-						sampleRate = 16000;
-					else  if (param_rate_change->codecID == 0x06) // AMR-NB
-						sampleRate = 8000;
-					AUDCTRL_RateSetTelephony(sampleRate);
-				}
-			}
-		}
-		break;
+        // 0x0A as per 3GPP 26.103 Sec 6.3 indicates AMR WB  AUDIO_ID_CALL16k
+        // 0x06 indicates AMR NB
+        AUDCTRL_Telephony_RequestRateChange( param_rate_change->codecID );
+        }
+        break;
+
         default:
             BCM_AUDIO_DEBUG("Error AUDIO_Ctrl_Process Invalid acction command \n");
 			break;
     }
+
     if(block)
     {
         // put the message in output fifo if waiting

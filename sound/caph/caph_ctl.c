@@ -407,18 +407,7 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 		parm_call.cur_spkr = pCurSel[1];
 		parm_call.new_mic = pSel[0];
 		parm_call.new_spkr = pSel[1];
-		// save the mode first.
-		AUDIO_Ctrl_Trigger(ACTION_AUD_SetAudioMode,&parm_call,NULL,0);
-
-        if(!pChip->iEnablePhoneCall)//if call is not enabled, we only update the sink and source inpSel, do nothing
-	        break;
-        else if(pCurSel[0] == pSel[0] && pCurSel[1] == pSel[1]) //And even call is enabled, but source and sink are not changed, we  do nothing
-	        break;
-        else //Swith source/sink
-        {
-			AUDIO_Ctrl_Trigger(ACTION_AUD_DisableTelephony,&parm_call,NULL,0);
-			AUDIO_Ctrl_Trigger(ACTION_AUD_EnableTelephony,&parm_call,NULL,0);
-         }
+        AUDIO_Ctrl_Trigger( ACTION_AUD_SetTelephonyMicSpkr,&parm_call,NULL,0);
 		break;
 
     case CTL_STREAM_PANEL_FM:      // FM
@@ -779,9 +768,6 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				AUDIO_Ctrl_Trigger(ACTION_AUD_DisableTelephony,&parm_call,NULL,0);
 			else
 			{
-				// save the mode first.
-				AUDIO_Ctrl_Trigger(ACTION_AUD_SetAudioMode,&parm_call,NULL,0);
-
 				//enable voice call with sink and source
 				AUDIO_Ctrl_Trigger(ACTION_AUD_EnableTelephony,&parm_call,NULL,0);
 			}

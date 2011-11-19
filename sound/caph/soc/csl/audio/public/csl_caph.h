@@ -158,7 +158,6 @@ typedef enum
 	CSL_CAPH_DEV_BT_MIC,  /*Bluetooth headset mic*/
 	CSL_CAPH_DEV_FM_RADIO,  /*FM Radio playback*/
 	CSL_CAPH_DEV_MEMORY,  /*DDR memory*/
-	CSL_CAPH_DEV_SRCM,  /*SRCMixer*/
 	CSL_CAPH_DEV_DSP_throughMEM,  /*DSP connection through shared mem*/
     CSL_CAPH_DEV_MAXNUM,
 }CSL_CAPH_DEVICE_e;

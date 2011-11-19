@@ -41,7 +41,6 @@ typedef enum {
    AudioUseExtSpkr,
 } ExtSpkrUsage_en_t;
 
-
 typedef enum
 {
   AUDCTRL_SSP_4 = 1, //SSPI1 --- ASIC SSPI4, SSPI2 --- ASIC SSPI3
@@ -77,77 +76,67 @@ void AUDCTRL_Shutdown (void);
 /**
 *  @brief  Enable telephony audio path in HW and DSP
 *
-*  @param  mic		(in)  microphone selection
-*  @param  speaker	(in)  speaker selection
+*  @param  source  (in)  uplink source, microphone selection
+*  @param  sink	   (in)  downlink sink, speaker selection
 *
 *  @return none
 *
 ****************************************************************************/
 void AUDCTRL_EnableTelephony(
-				AUDIO_SOURCE_Enum_t		mic,
-				AUDIO_SINK_Enum_t		speaker
-				);
+           AUDIO_SOURCE_Enum_t	 source,
+           AUDIO_SINK_Enum_t	 sink
+           );
 
 /**
 *  @brief  Disable telephony audio path in HW and DSP
 *
-*  @param  mic		(in)  microphone selection
-*  @param  speaker	(in)  speaker selection
+*  @param  none
 *
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_DisableTelephony(
-				AUDIO_SOURCE_Enum_t		mic,
-				AUDIO_SINK_Enum_t		speaker
-				);
+void AUDCTRL_DisableTelephony( void );
 
 /**
 *  @brief  Rate change telephony audio for DSP
 *
+*  @param  sample_rate	(in)  sample rate
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_Telephony_RateChange( unsigned int sample_rate );
+
+/**
+*  @brief  the rate change request function called by CAPI message listener
+*
+*  @param  codecID		(in) voice call speech codec ID
 *
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_RateChangeTelephony( UInt32 sampleRate );
+void AUDCTRL_Telephony_RequestRateChange(UInt8 codecID);
 
-/**
-*  @brief  Get voice call sample rate
-*
-*
-*  @return voice call sample rate
-*
-****************************************************************************/
-UInt32 AUDCTRL_RateGetTelephony( void );
-
-/**
-*  @brief  Set voice call sample rate
-*
-*
-*  @none
-*
-****************************************************************************/
-void AUDCTRL_RateSetTelephony(UInt32 samplerate);
 
 /**
 *  @brief  Change telephony audio path in HW and DSP
 *
-*  @param  mic		(in)  microphone selection
-*  @param  speaker	(in)  speaker selection
+*  @param  source  (in)  uplink source, microphone selection
+*  @param  sink    (in)  downlink sink, speaker selection
 *
 *  @return none
 *
 ****************************************************************************/
 void AUDCTRL_SetTelephonyMicSpkr(
-				AUDIO_SOURCE_Enum_t		mic,
-				AUDIO_SINK_Enum_t		speaker
-				);
+            AUDIO_SOURCE_Enum_t  source,
+            AUDIO_SINK_Enum_t	 sink
+            );
 
 /**
 *  @brief  Set telephony speaker (downlink) volume
 *
-*  @param  speaker	(in)  speaker selection
+*  @param  speaker	(in)  downlink sink, speaker selection
 *  @param  volume	(in)  downlink volume
+*  @param  gain_format	 (in)  gain format
 *
 *  @return none
 *
@@ -171,8 +160,8 @@ UInt32 AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format );
 /**
 *  @brief  Set telephony speaker (downlink) mute / un-mute
 *
-*  @param  speaker	(in)  speaker selection
-*  @param  mute		(in)  TRUE: mute;    FALSE: un-mute
+*  @param  speaker  (in)  downlink sink, speaker selection
+*  @param  mute	    (in)  TRUE: mute;    FALSE: un-mute
 *
 *  @return none
 *
@@ -201,8 +190,8 @@ void AUDCTRL_SetTelephonyMicGain(
 /**
 *  @brief  Set telephony mic (uplink) mute /un-mute
 *
-*  @param  mic		(in)  microphone selection
-*  @param  mute		(in)  TRUE: mute;    FALSE: un-mute
+*  @param  mic    (in)  uplink source, microphone selection
+*  @param  mute	  (in)  TRUE: mute;    FALSE: un-mute
 *
 *  @return none
 *
@@ -212,25 +201,6 @@ void AUDCTRL_SetTelephonyMicMute(
 				Boolean					mute
 				);
 
-/**
-*  @brief  Check whether in voice call mode.
-*
-*  @param  none
-*
-*  @return TRUE or FALSE
-*
-****************************************************************************/
-Boolean AUDCTRL_InVoiceCall( void );
-
-/**
-*  @brief  Check whether in WB voice call mode.
-*
-*  @param  none
-*
-*  @return TRUE or FALSE
-*
-****************************************************************************/
-Boolean AUDCTRL_InVoiceCallWB( void );
 
 /**
 *   Get current (voice call) audio mode
@@ -239,7 +209,6 @@ Boolean AUDCTRL_InVoiceCallWB( void );
 *
 *	@return		AudioMode_t		(voice call) audio mode
 *
-*   @note
 ****************************************************************************/
 AudioMode_t AUDCTRL_GetAudioMode( void );
 
@@ -280,16 +249,6 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode );
 #endif
 
 /**
-*   Get Audio Mode From Sink (speaker)
-*
-*   @param      sink        speaker
-*	@param		mode		(voice call) audio mode
-*
-*	@return		none
-****************************************************************************/
-void AUDCTRL_GetAudioModeBySink(AUDIO_SINK_Enum_t sink, AudioMode_t *mode);
-
-/**
 *   Get src and sink from audio mode
 *
 *	@param		mode		(voice call) audio mode
@@ -303,11 +262,12 @@ void AUDCTRL_GetVoiceSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic, 
 /**
 *  @brief  Enable a playback path
 *
-*  @param  source	(in)  playback source
-*  @param  sink	(in)  playback sink
-*  @param  numCh	(in)  stereo, momo
-*  @param  sr	(in)  sample rate
-*  @param  pPathID	(in)  to return pathID
+*  @param  src  (in)  playback source
+*  @param  sink (in)  playback sink
+*  @param  spk  (in)  speaker selection
+*  @param  numCh (in)  stereo, momo
+*  @param  sr    (in)  sample rate
+*  @param  pPathID (in)  to return pathID
 *
 *  @return none
 *

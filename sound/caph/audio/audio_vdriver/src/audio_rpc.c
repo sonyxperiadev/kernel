@@ -382,7 +382,7 @@ void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
 		Log_DebugPrintf(LOGID_AUDIO, "HandleAudioEventrespCb : codecid=0x%x \r\n",(*codecID));
 
 		if ((*codecID) != 0) // Make sure codeid is not 0
-			AUDDRV_RequestRateChange((UInt8)(*codecID));
+			AUDDRV_Telephone_RequestRateChange((UInt8)(*codecID));
 	}
 
 	if ( dataBufHandle )

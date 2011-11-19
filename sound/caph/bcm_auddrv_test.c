@@ -355,7 +355,7 @@ static int HandleControlCommand()
         case 5:// Disable telephony
         {
             DEBUG(" Disable telephony\n");
-            AUDCTRL_DisableTelephony(AUDIO_SOURCE_ANALOG_MAIN,AUDIO_SINK_HANDSET);
+            AUDCTRL_DisableTelephony( );
 		            DEBUG(" Telephony disabled \n");
         }
 		break;
@@ -1069,7 +1069,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 		AUDDRV_VoiceRender_Shutdown (drvtype);
 
 		printk(KERN_INFO "\n  Voice render stop done \n");
-		AUDCTRL_DisableTelephony(AUDIO_SOURCE_ANALOG_MAIN,AUDIO_SINK_HANDSET);
+		AUDCTRL_DisableTelephony( ); 
 
 		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
 	}
@@ -1180,7 +1180,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6
 	printk(KERN_INFO "\n VoIP: Stop\n");
 
 	// disable the hw
-	AUDCTRL_DisableTelephony (mic, spk);
+	AUDCTRL_DisableTelephony ( );
 
 	if((codecVal == 4) || (codecVal == 5))// VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k
 		AUDCTRL_SetAudioMode(mode); //setting it back the original mode

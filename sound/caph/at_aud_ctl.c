@@ -116,7 +116,6 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
     AUDIO_SINK_Enum_t spk = AUDIO_SINK_HANDSET;
     int rtn = 0;  //0 means Ok
     static UInt8 loopback_status = 0, loopback_input = 0, loopback_output = 0;
-	AudioMode_t mode;
     Int32 pCurSel[2];
 
 	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);
@@ -141,17 +140,8 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1] = spk;
             AUDCTRL_SetAudioMode( Params[1] );
 
-            if(!pChip->iEnablePhoneCall)//if call is not enabled, we only update the sink and source in pSel, do nothing
-                break;
-			else if(pCurSel[0] == mic && pCurSel[1] == spk) // if call is enabled, but source and sink are not changed, do nothing
-                break;
-			else // switch source/sink
-            {
-                AUDCTRL_DisableTelephony(pCurSel[0], pCurSel[1]);
-                AUDCTRL_EnableTelephony(mic, spk);
-            }
-			BCM_AUDIO_DEBUG("%s mic %d spk %d mode %d \n", __FUNCTION__, mic,spk,Params[1]);
-			break;
+            BCM_AUDIO_DEBUG("%s mic %d spk %d mode %d \n", __FUNCTION__, mic,spk,Params[1]);
+            break;
 
         case 8:	//at*maudmode=8
             Params[0] = loopback_status;
@@ -195,16 +185,10 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             if (loopback_input == 0)  // default mic: use main mic
                 loopback_input = 1;
 
-            // also set audio mode to apply appropriate gain to sink
-            AUDCTRL_GetAudioModeBySink(loopback_output, &mode);
-            AUDCTRL_SetAudioMode( mode );
-            //pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1] = spk;
-            //pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0] = mic; // set mic also
-
             loopback_status = 1;
             //enable the HW loopback from loopback_input to loopback_output without DSP.
             AUDCTRL_SetAudioLoopback( TRUE, loopback_input, loopback_output);
-            //OSTASK_Sleep(100);
+
             BCM_AUDIO_DEBUG("%s enable loopback from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output);
             break;
 
@@ -926,9 +910,9 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		pVolume[0] = Params[1];
 		pVolume[1] = Params[1];
 		AUDCTRL_SetTelephonySpkrVolume(	AUDIO_SINK_UNDEFINED,
-									(Params[1]*100),   //Params[1] in dB
-									AUDIO_GAIN_FORMAT_mB
-									);
+							(Params[1]*100),   //Params[1] in dB
+							AUDIO_GAIN_FORMAT_mB
+							);
 
 		BCM_AUDIO_DEBUG("%s pVolume[0] %d mode=%d \n", __FUNCTION__, pVolume[0],mode);
 		return 0;
