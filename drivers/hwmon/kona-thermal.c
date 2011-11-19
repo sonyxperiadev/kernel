@@ -335,11 +335,10 @@ static int set_thermal_notification(void *data, u64 val)
 
     therm_debug("%s: val: %lld\n", __func__, val);
     if ((val != 0) && (val != 10)) {
-        if(val < 10) {
+        if (val < 10) {
             kona_thermal_register_notify(val, &thermal_test_block);
             therm_debug("thermal notify register test (%lld)\n", val-1);
-        }
-        else {
+        } else {
             kona_thermal_unregister_notify(val-10, &thermal_test_block);
             therm_debug("thermal notify unregister test (%lld)\n", val-11);
         }
