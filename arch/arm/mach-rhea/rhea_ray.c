@@ -299,12 +299,17 @@ static const char *pmu_clients[] = {
 };
 
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
+#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
 	/*
-	 * PMU in Fast mode. Once the Rhea clock changes are in place,
-	 * we will switch to HS mode 3.4Mbps (BSC_BUS_SPEED_HS)
+	 * PMU in High Speed (HS) mode. I2C CLK is 3.25MHz
+	 * derived from 26MHz input clock.
+	 *
+	 * Rhea: PMBSC is always in HS mode, i2c_pdata is not in use.
 	 */
-	/*.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),*/
-	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),
+#else
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
+#endif
 	.pmu_event_cb = bcm590xx_event_callback,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
