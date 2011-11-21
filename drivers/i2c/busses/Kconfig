@@ -883,6 +883,13 @@ config I2C_BSC
 	help
 	Enable the i2c adapter on Island.
 
+config KONA_PMU_BSC_HS_MODE
+	tristate "PMU BSC adapter in High Speed Mode"
+	depends on ARCH_KONA && I2C_BSC
+	default n
+	help
+	 Enable this option to use High speed mode for PMU I2C adapter
+
 config I2C_BRCM_SSPI
 	tristate "BRCM SSPI-based I2C"
 	depends on ARCH_KONA
