@@ -792,7 +792,7 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
          * by the BSC controller does not suffice the time for which it holds
          * the clk line low when busy resulting in bus errors. To overcome this
          * problem we need ot enable autosense with the timeout disabled */
-        if (TIMEOUT_IS_VALID(pd))
+        if (pd && TIMEOUT_IS_VALID(pd))
 		    bsc_set_autosense((uint32_t)dev->virt_base, 1, pd->autosense_timeout_enable);
         else
 		    bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
