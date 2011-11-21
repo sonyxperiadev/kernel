@@ -208,6 +208,19 @@
 #define	DIG_CH1_PERI_CLK_NAME_STR	"dig_ch1_clk"
 #define	DIG_CH2_PERI_CLK_NAME_STR	"dig_ch2_clk"
 #define	DIG_CH3_PERI_CLK_NAME_STR	"dig_ch3_clk"
+#define ESUB_CCU_CLK_NAME_STR   "esub_ccu"
+#define ESUB_PLL_CLK_NAME_STR "esub_pll_clk"
+#define ESW_SYS_125M_CH1_CLK_NAME_STR "pll_esw_sys_125m_ch1"
+#define ESW_SYS_CH2_CLK_NAME_STR "pll_esw_sys_ch2"
+#define VPM1_CH3_CLK_NAME_STR "pll_vpm1_ch3_clk"
+#define VPM2_CH4_CLK_NAME_STR "pll_vpm2_ch4_clk"
+#define REF_ESW_GPIO_125M_CLK_NAME_STR "ref_esw_gpio_125m_clk"
+#define ESUB_AXI_BUS_CLK_NAME_STR "esub_axi"
+#define ESUB_APB_BUS_CLK_NAME_STR "esub_apb"
+#define ESUB_ATB_BUS_CLK_NAME_STR "esub_atb"
+#define ESW_SYS_PERI_CLK_NAME_STR "esw_sys_clk"
+#define VPM_PERI_CLK_NAME_STR "vpm_clk"
+#define ESW_25M_PERI_CLK_NAME_STR "esw_25m_clk"
 
 /*
 Clock ids
@@ -407,7 +420,19 @@ enum
 	CLK_DIG_CH1_PERI_CLK_ID,
 	CLK_DIG_CH2_PERI_CLK_ID,
 	CLK_DIG_CH3_PERI_CLK_ID,
-
+    CLK_ESUB_CCU_CLK_ID,
+    CLK_ESUB_PLL_CLK_ID,
+    CLK_ESW_SYS_125M_CH1_CLK_ID,
+    CLK_ESW_SYS_CH2_CLK_ID,
+    CLK_VPM1_CH3_CLK_ID,
+    CLK_VPM2_CH4_CLK_ID,
+    CLK_REF_ESW_GPIO_125M_CLK_ID,
+    CLK_ESUB_AXI_BUS_CLK_ID,
+    CLK_ESUB_APB_BUS_CLK_ID,
+    CLK_ESUB_ATB_BUS_CLK_ID,
+    CLK_ESW_SYS_PERI_CLK_ID,
+    CLK_VPM_PERI_CLK_ID,
+    CLK_ESW_25M_PERI_CLK_ID,
 };
 
 #define ARM_CORE_CLK_FLAGS			UPDATE_LPJ
@@ -603,7 +628,19 @@ enum
 #define	DIG_CH1_PERI_CLK_FLAGS			0
 #define	DIG_CH2_PERI_CLK_FLAGS			0
 #define	DIG_CH3_PERI_CLK_FLAGS			0
-
+#define ESUB_CCU_CLK_FLAGS              0
+#define ESUB_PLL_CLK_FLAGS              0
+#define ESW_SYS_125M_CH1_CLK_FLAGS      0
+#define ESW_SYS_CH2_CLK_FLAGS           0
+#define VPM1_CH3_CLK_FLAGS              0
+#define VPM2_CH4_CLK_FLAGS              0
+#define ESW_GPIO_125M_CLK_FLAGS         0
+#define ESUB_AXI_BUS_CLK_FLAGS          0
+#define ESUB_APB_BUS_CLK_FLAGS          0
+#define ESUB_ATB_BUS_CLK_FLAGS          0
+#define ESW_SYS_PERI_CLK_FLAGS          0
+#define VPM_PERI_CLK_FLAGS              0
+#define ESW_25M_PERI_CLK_FLAGS          0
 
 enum {
     ROOT_CCU_PLL0A,

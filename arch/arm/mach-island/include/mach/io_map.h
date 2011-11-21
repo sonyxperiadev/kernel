@@ -84,6 +84,7 @@
 #define KONA_KPM_RST_VA             HW_IO_PHYS_TO_VIRT( KONA_MST_RST_BASE_ADDR )    /* Kona Peripheral Master Reset Manager */
 #define KONA_KPS_CLK_VA             HW_IO_PHYS_TO_VIRT( KONA_SLV_CLK_BASE_ADDR )    /* Kona Peripheral Master Clock Manager */
 #define KONA_KPS_RST_VA             HW_IO_PHYS_TO_VIRT( KONA_SLV_RST_BASE_ADDR )    /* Kona Peripheral Master Reset Manager */
+#define KONA_ESUB_CLK_VA            HW_IO_PHYS_TO_VIRT( ESUB_CLK_BASE_ADDR )    /* Kona ESUB Clock Manager */
 #define KONA_L2C_VA                 HW_IO_PHYS_TO_VIRT( L2C_BASE_ADDR )             /* L2 Cache Controller */
 #define KONA_MEMC0_APHY_VA          HW_IO_PHYS_TO_VIRT( MEMC0_OPEN_APHY_BASE_ADDR ) /* System Memory Controller APHY */
 #define KONA_MEMC0_DPHY_VA          HW_IO_PHYS_TO_VIRT( MEMC0_OPEN_DPHY_BASE_ADDR ) /* System Memory Controller DPHY */
