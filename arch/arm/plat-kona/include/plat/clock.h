@@ -602,16 +602,21 @@ struct pll_clk
 	struct ccu_clk*	ccu_clk;
 
 	u32 pll_ctrl_offset;
+    u32 soft_post_resetb_offset;
 	u32 soft_post_resetb_mask;
+    u32 soft_resetb_offset;
 	u32 soft_resetb_mask;
+	u32 pwrdwn_offset;
 	u32 pwrdwn_mask;
 	u32 idle_pwrdwn_sw_ovrride_mask;
+    u32 ndiv_pdiv_offset;
 	u32 ndiv_int_mask;
 	u32 ndiv_int_shift;
 	u32 ndiv_int_max;
 	u32 pdiv_mask;
 	u32 pdiv_shift;
 	u32 pdiv_max;
+    u32 pll_lock_offset;
 	u32 pll_lock;
 
 	u32 ndiv_frac_offset;
@@ -628,6 +633,13 @@ struct pll_chnl_clk
 	struct pll_clk*	pll_clk;
 
 	u32 cfg_reg_offset;
+    u32 pll_ctrl0_offset;
+    u32 pll_ctrl0_hold_ch_shift;
+    u32 pll_load_ch_en_offset;
+    u32 pll_load_ch_en_shift;
+    u32 pll_enableb_offset;
+    u32 pll_enableb_shift;
+	u32 ch_index;
 	u32 mdiv_mask;
 	u32 mdiv_shift;
 	u32 mdiv_max;
