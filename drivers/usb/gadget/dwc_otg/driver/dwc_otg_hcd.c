@@ -193,8 +193,10 @@ static void kill_urbs_in_qh_list(dwc_otg_hcd_t * hcd, dwc_list_link_t * qh_list)
 						    qtd->urb,
 						    -DWC_E_TIMEOUT);
 				dwc_otg_hcd_qtd_remove_and_free(hcd, qtd, qh);
+				/* remove_and_free would change the first in the queue but if it is same then avoid accessing freed element */
+				if (qtd == DWC_CIRCLEQ_FIRST(&qh->qtd_list))
+					break;
 			}
-
 		}
 	}
 }

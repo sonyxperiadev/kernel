@@ -48,14 +48,16 @@
 void dwc_otg_adp_write_reg(dwc_otg_core_if_t * core_if, uint32_t value)
 {
  	adpctl_data_t adpctl;
-	
+	unsigned int access_request_count = 10;
+
  	adpctl.d32 = value;
  	adpctl.b.ar = 0x2;
  	
  	dwc_write_reg32(&core_if->core_global_regs->adpctl, adpctl.d32);
  	
-	while(adpctl.b.ar) {
+	while (adpctl.b.ar && (access_request_count--)) {
 	 	adpctl.d32 = dwc_read_reg32(&core_if->core_global_regs->adpctl);
+		dwc_mdelay(100);
 	}
  	
 }
@@ -65,14 +67,16 @@ void dwc_otg_adp_write_reg(dwc_otg_core_if_t * core_if, uint32_t value)
 uint32_t dwc_otg_adp_read_reg(dwc_otg_core_if_t * core_if)
 {
  	adpctl_data_t adpctl;
-	
+	unsigned int access_request_count = 10;
+
  	adpctl.d32 = 0;
  	adpctl.b.ar = 0x1;
  	
  	dwc_write_reg32(&core_if->core_global_regs->adpctl, adpctl.d32);
  	
-	while(adpctl.b.ar) {
+	while (adpctl.b.ar && (access_request_count--)) {
 	 	adpctl.d32 = dwc_read_reg32(&core_if->core_global_regs->adpctl);
+		dwc_mdelay(100);
 	}
  	
  	return adpctl.d32;
@@ -110,9 +114,10 @@ static void adp_vbuson_timeout(void *ptr)
 	hprt0_data_t hprt0 = { .d32 = 0 };
 	pcgcctl_data_t pcgcctl = {.d32 = 0 };
 
-	core_if->adp.vbuson_timer_started = 0;
-
 	if (core_if) {
+
+		core_if->adp.vbuson_timer_started = 0;
+
 		/* Turn off vbus */
 		hprt0.b.prtpwr = 1;
 		dwc_modify_reg32(core_if->host_if->hprt0, 0, hprt0.d32);
@@ -272,6 +277,18 @@ static void unmask_sess_req_intr(dwc_otg_core_if_t * core_if)
 }
 
 
+static void dwc_otg_wait_for_adp_reset_completion(dwc_otg_core_if_t * core_if)
+{
+	adpctl_data_t adpctl;
+	unsigned int reset_count = 10;
+
+	adpctl.d32 = dwc_otg_adp_read_reg(core_if);
+
+	while (adpctl.b.adpres && (reset_count--)) {
+		dwc_mdelay(100);
+		adpctl.d32 = dwc_otg_adp_read_reg(core_if);
+	}
+}
 
 /**
  * Starts the ADP Probing
@@ -299,9 +316,7 @@ uint32_t dwc_otg_adp_probe_start(dwc_otg_core_if_t * core_if)
  	adpctl.b.adpres = 1;
  	dwc_otg_adp_write_reg(core_if, adpctl.d32);
  	
-	while(adpctl.b.adpres) {
-	 	adpctl.d32 = dwc_otg_adp_read_reg(core_if);
-	}
+	dwc_otg_wait_for_adp_reset_completion(core_if);
  	
 	adpctl.d32 = 0;
 	adpctl.b.adp_tmout_int_msk = 1;
@@ -345,9 +360,7 @@ uint32_t dwc_otg_adp_sense_start(dwc_otg_core_if_t * core_if)
  	adpctl.b.adpres = 1;
  	dwc_otg_adp_write_reg(core_if, adpctl.d32);
  	
-	while(adpctl.b.adpres) {
-	 	adpctl.d32 = dwc_otg_adp_read_reg(core_if);
-	}
+	dwc_otg_wait_for_adp_reset_completion(core_if);
 
 	adpctl.b.adpen = 1;
 	adpctl.b.enasns = 1;
@@ -374,10 +387,7 @@ uint32_t dwc_otg_adp_probe_stop(dwc_otg_core_if_t * core_if)
  	adpctl.b.adpres = 1;
  	dwc_otg_adp_write_reg(core_if, adpctl.d32);
  	
-	/** todo: check if ADP is needed to be reset */
- 	while(adpctl.b.adpres) {
-	 	adpctl.d32 = dwc_otg_adp_read_reg(core_if);
-	}
+	dwc_otg_wait_for_adp_reset_completion(core_if);
  	
 	dwc_otg_adp_write_reg(core_if, 0);
 
@@ -385,6 +395,7 @@ uint32_t dwc_otg_adp_probe_stop(dwc_otg_core_if_t * core_if)
 
 	return 0;
 }
+
 /**
  * Stops the ADP Sensing
  *
@@ -393,16 +404,12 @@ uint32_t dwc_otg_adp_probe_stop(dwc_otg_core_if_t * core_if)
 uint32_t dwc_otg_adp_sense_stop(dwc_otg_core_if_t * core_if)
 {
  	adpctl_data_t adpctl;
-
  	core_if->adp.sense_enabled = 0;
 
  	adpctl.b.adpres = 1;
  	dwc_otg_adp_write_reg(core_if, adpctl.d32);
  	
-	/** todo: check if ADP is needed to be reset */
-	while(adpctl.b.adpres) {
-	 	adpctl.d32 = dwc_otg_adp_read_reg(core_if);
-	}
+	dwc_otg_wait_for_adp_reset_completion(core_if);
 
 	dwc_otg_adp_write_reg(core_if, 0);
 

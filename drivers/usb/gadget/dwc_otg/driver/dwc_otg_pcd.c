@@ -114,6 +114,10 @@ void dwc_otg_request_nuke(dwc_otg_pcd_ep_t * ep)
 	while (!DWC_CIRCLEQ_EMPTY(&ep->queue)) {
 		req = DWC_CIRCLEQ_FIRST(&ep->queue);
 		dwc_otg_request_done(ep, req, -DWC_E_SHUTDOWN);
+
+		/* done would change the first in the queue but if it is same then avoid accessing freed element */
+		if (req == DWC_CIRCLEQ_FIRST(&ep->queue))
+			break;
 	}
 }
 
