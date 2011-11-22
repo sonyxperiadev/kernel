@@ -507,8 +507,9 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_TX0, 0);
 #endif
 
-	switch(protocol) {
-	case SSPI_PROT_MONO_16B_PCM:
+	//to avoid both coverity and compiler warnings, can not use switch here.
+	if(protocol==SSPI_PROT_MONO_16B_PCM)
+	{
 		chal_sspi_set_fifo_size(pDevice,
 								SSPI_FIFO_ID_RX0, SSPI_FIFO_SIZE_FULL);
 		chal_sspi_set_fifo_size(pDevice,
@@ -542,9 +543,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 			chal_sspi_set_fifo_pack(pDevice,
 									SSPI_FIFO_ID_TX1, SSPI_FIFO_DATA_PACK_NONE);
 		}
-		break;
-
-	case SSPI_PROT_MONO_25B_PCM:
+	} else if(protocol==SSPI_PROT_MONO_25B_PCM) {
 		chal_sspi_set_fifo_size(pDevice,
 								SSPI_FIFO_ID_RX0, SSPI_FIFO_SIZE_FULL);
 		chal_sspi_set_fifo_size(pDevice,
@@ -571,9 +570,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		chal_sspi_set_fifo_pack(pDevice,
 								SSPI_FIFO_ID_TX1, SSPI_FIFO_DATA_PACK_NONE);
 
-		break;
-
-	case SSPI_PROT_STEREO_16B_PCM:
+	} else if(protocol==SSPI_PROT_STEREO_16B_PCM) {
 		chal_sspi_set_fifo_size(pDevice,
 								SSPI_FIFO_ID_RX0, SSPI_FIFO_SIZE_HALF);
 		chal_sspi_set_fifo_size(pDevice,
@@ -600,9 +597,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		chal_sspi_set_fifo_pack(pDevice,
 								SSPI_FIFO_ID_TX1, SSPI_FIFO_DATA_PACK_16BIT);
 
-		break;
-
-	case SSPI_PROT_STEREO_25B_PCM:
+	} else if(protocol==SSPI_PROT_STEREO_25B_PCM) {
 		chal_sspi_set_fifo_size(pDevice,
 								SSPI_FIFO_ID_RX0, SSPI_FIFO_SIZE_HALF);
 		chal_sspi_set_fifo_size(pDevice,
@@ -629,9 +624,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		chal_sspi_set_fifo_pack(pDevice,
 								SSPI_FIFO_ID_TX1, SSPI_FIFO_DATA_PACK_16BIT);
 
-		break;
-
-	case SSPI_PROT_3CHAN_16B_TDM_PCM:
+	} else if(protocol==SSPI_PROT_3CHAN_16B_TDM_PCM) {
 		chal_sspi_set_fifo_size(pDevice,
 								SSPI_FIFO_ID_RX0, SSPI_FIFO_SIZE_HALF);
 		chal_sspi_set_fifo_size(pDevice,
@@ -662,9 +655,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		chal_sspi_set_fifo_pack(pDevice,
 								SSPI_FIFO_ID_TX2, SSPI_FIFO_DATA_PACK_16BIT);
 
-		break;
-
-	case SSPI_PROT_4CHAN_16B_TDM_PCM:
+	} else if(protocol==SSPI_PROT_4CHAN_16B_TDM_PCM) {
 		chal_sspi_set_fifo_size(pDevice,
 								SSPI_FIFO_ID_RX0, SSPI_FIFO_SIZE_QUARTER);
 		chal_sspi_set_fifo_size(pDevice,
@@ -698,11 +689,6 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 								SSPI_FIFO_ID_TX2, SSPI_FIFO_DATA_PACK_16BIT);
 		chal_sspi_set_fifo_pack(pDevice,
 								SSPI_FIFO_ID_TX3, SSPI_FIFO_DATA_PACK_16BIT);
-
-		break;
-
-	default:
-		break;
 	}
 
     //

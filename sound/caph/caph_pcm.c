@@ -485,10 +485,11 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream * substream
 		dmaPointer = 0; //FIXME: remove this line after MEM PTR clarify by ASIC team
 	}
 	pos = chip->streamCtl[substream->number].stream_hw_ptr + bytes_to_frames(runtime, dmaPointer);
-	if(pos<0)
+	//pos is unsigned, comment out to avoid coverity error
+	/*if(pos<0)
 	{
 		pos += runtime->buffer_size;
-	}
+	}*/
 	pos %= runtime->buffer_size;
 
 	return pos;
@@ -557,9 +558,6 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
     }
 
     substream->runtime->private_data = drv_handle;
-
-	if (err<0)
-		return err;
 
 	BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d\n",jiffies, substream_number);
 
@@ -785,13 +783,14 @@ void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 	AUDIO_DRIVER_TYPE_t    drv_type;
 	struct snd_pcm_runtime *runtime;
 	brcm_alsa_chip_t *pChip = NULL;
-	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
+	int substream_number;
 
 	if(!substream)
 	{
     		BCM_AUDIO_DEBUG("Invalid substream 0x%p \n", substream);
 		return;
 	}
+	substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 	pChip = snd_pcm_substream_chip(substream);
 	runtime = substream->runtime;
     	if(!runtime)

@@ -191,7 +191,84 @@ int TerminateAudioHalThread(void)
 	return 0;
 }
 
+//this is to avoid coverity error: CID 17571: 
+//Out-of-bounds access (OVERRUN_STATIC)Overrunning struct type BRCM_AUDIO_Param_Close_t (and other structures) of size 16 bytes by passing it as an argument to a function which indexes it at byte position 103. 
+static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
+{
+	int size = 0;
 
+	switch (action_code)
+	{
+		case ACTION_AUD_OpenRecord:
+		case ACTION_AUD_OpenPlay:
+			size = sizeof(BRCM_AUDIO_Param_Open_t);
+			break;
+		case ACTION_AUD_CloseRecord:
+		case ACTION_AUD_ClosePlay:
+			size = sizeof(BRCM_AUDIO_Param_Close_t);
+			break;
+		case ACTION_AUD_StartRecord:
+		case ACTION_AUD_StartPlay:
+			size = sizeof(BRCM_AUDIO_Param_Start_t);
+			break;
+		case ACTION_AUD_StopRecord:
+		case ACTION_AUD_StopPlay:
+			size = sizeof(BRCM_AUDIO_Param_Stop_t);
+			break;
+		case ACTION_AUD_PausePlay:
+			size = sizeof(BRCM_AUDIO_Param_Pause_t);
+			break;
+		case ACTION_AUD_ResumePlay:
+			size = sizeof(BRCM_AUDIO_Param_Resume_t);
+			break;
+		case ACTION_AUD_SetPrePareParameters:
+			size = sizeof(BRCM_AUDIO_Param_Prepare_t);
+			break;
+		case ACTION_AUD_AddChannel:
+		case ACTION_AUD_RemoveChannel:
+		case ACTION_AUD_SwitchSpkr:
+			size = sizeof(BRCM_AUDIO_Param_Spkr_t);
+			break;
+		case ACTION_AUD_EnableTelephony:
+		case ACTION_AUD_DisableTelephony:
+		case ACTION_AUD_SetTelephonyMicSpkr:
+			size = sizeof(BRCM_AUDIO_Param_Call_t);
+			break;
+		case ACTION_AUD_MutePlayback:
+		case ACTION_AUD_MuteRecord:
+		case ACTION_AUD_MuteTelephony:
+			size = sizeof(BRCM_AUDIO_Param_Mute_t);
+			break;
+		case ACTION_AUD_EnableByPassVibra:
+		case ACTION_AUD_DisableByPassVibra:
+			size = 0;
+			break;
+		case ACTION_AUD_SetVibraStrength:
+			size = sizeof(BRCM_AUDIO_Param_Vibra_t);
+			break;
+		case ACTION_AUD_SetPlaybackVolume:
+		case ACTION_AUD_SetRecordGain:
+		case ACTION_AUD_SetTelephonySpkrVolume:
+			size = sizeof(BRCM_AUDIO_Param_Volume_t);
+			break;
+		case ACTION_AUD_SetHWLoopback:
+			size = sizeof(BRCM_AUDIO_Param_Loopback_t);
+			break;
+		//case ACTION_AUD_SetAudioMode:
+		//	break;
+		case ACTION_AUD_EnableFMPlay:
+		case ACTION_AUD_DisableFMPlay:
+		case ACTION_AUD_SetARM2SPInst:
+			size = sizeof(BRCM_AUDIO_Param_FM_t);
+			break;
+		case ACTION_AUD_RateChange:
+			size = sizeof(BRCM_AUDIO_Param_RateChange_t);
+			break;
+		default:
+			break;
+	}
+	return size;
+}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //HAL_AUDIO_Ctrl
@@ -209,14 +286,15 @@ Result_t AUDIO_Ctrl_Trigger(
 	Result_t status = RESULT_OK;
 	unsigned int	len;
     OSStatus_t  osStatus;
+	int params_size = AUDIO_Ctrl_Trigger_GetParamsSize(action_code);
 
 	BCM_AUDIO_DEBUG("AudioHalThread action=%d\r\n", action_code);
 
 	msgAudioCtrl.action_code = action_code;
 	if(arg_param)
-		memcpy(&msgAudioCtrl.param, arg_param, sizeof(BRCM_AUDIO_Control_Params_un_t));
+		memcpy(&msgAudioCtrl.param, arg_param, params_size);
 	else
-		memset(&msgAudioCtrl.param, 0, sizeof(BRCM_AUDIO_Control_Params_un_t));
+		memset(&msgAudioCtrl.param, 0, params_size);
 	msgAudioCtrl.pCallBack = callback;
     msgAudioCtrl.block = block;
 
@@ -249,9 +327,9 @@ Result_t AUDIO_Ctrl_Trigger(
 			    return status;
 
             if(arg_param)
-		        memcpy(arg_param,&msgAudioCtrl.param,  sizeof(BRCM_AUDIO_Control_Params_un_t));
+		        memcpy(arg_param,&msgAudioCtrl.param, params_size);
 	        //else
-		        //memset(arg_param, 0, sizeof(BRCM_AUDIO_Control_Params_un_t));
+		    //    memset(arg_param, 0, params_size);
 	    }
     }
 
