@@ -62,6 +62,7 @@ struct unicam_camera_dev {
 	struct vb2_buffer			*active;
 	struct list_head			capture;
 	u8							streaming;
+	u32							skip_frames;
 
 };
 
@@ -583,6 +584,7 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	struct v4l2_pix_format *pix = &f->fmt.pix;
 	struct v4l2_mbus_framefmt mf;
 	int ret;
+	u32 skip_frames = 0;
 
 	dprintk("-enter");
 	xlate = soc_camera_xlate_by_fourcc(icd, pix->pixelformat);
@@ -608,6 +610,15 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 		return ret;
 	}
 	/*TODO limit here any maximum size */
+
+	ret = v4l2_subdev_call(sd, sensor, g_skip_frames, &skip_frames);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		dev_warn(dev, "sensor driver doesn't implement g_skip_frames operation\n");
+		dev_warn(dev, "assuming zero skip frames\n");
+		skip_frames = 0;
+	}
+
+	unicam_dev->skip_frames = skip_frames;
 
 	pix->width = mf.width;
 	pix->height = mf.height;
@@ -692,28 +703,34 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			struct vb2_buffer *vb = unicam_dev->active;
 			int ret;
 			dprintk("frame received");
-
 			if (!vb)
 				goto out;
 			/* mark  the buffer done */
 			/* queue another buffer and trigger capture */
 			spin_lock(&unicam_dev->lock);
-			list_del_init(&to_unicam_camera_vb(vb)->queue);
+			if (likely(unicam_dev->skip_frames <= 0)) {
 
-			if (!list_empty(&unicam_dev->capture)) 
-				unicam_dev->active = &list_entry(unicam_dev->capture.next,
-						struct unicam_camera_buffer, queue)->vb;
+				list_del_init(&to_unicam_camera_vb(vb)->queue);
+				do_gettimeofday(&vb->v4l2_buf.timestamp);
+				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
+
+				if (!list_empty(&unicam_dev->capture)) 
+					unicam_dev->active = &list_entry(unicam_dev->capture.next,
+							struct unicam_camera_buffer, queue)->vb;
+				else
+					unicam_dev->active = NULL;
+			}
 			else
-				unicam_dev->active = NULL;
+				unicam_dev->skip_frames--;
+
 			ret = unicam_camera_update_buf(unicam_dev);
 			if (ret)
 				dprintk("error while queueing the buffer");
+
 			ret = unicam_camera_capture(unicam_dev);
 			if (ret)
 				dprintk(KERN_INFO "error triggering capture");
 
-			do_gettimeofday(&vb->v4l2_buf.timestamp);
-			vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
 			spin_unlock(&unicam_dev->lock);
 		}
 

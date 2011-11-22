@@ -1207,15 +1207,15 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 	.g_parm = ov5640_g_parm,
 	.s_parm = ov5640_s_parm,
 };
-#if 0
+
 static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
 	*frames = 3;
-
 	return 0;
 }
 
+#if 0
 static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 			struct v4l2_subdev_sensor_interface_parms *parms)
 {
@@ -1231,17 +1231,17 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 
 	return 0;
 }
+#endif
 
 static struct v4l2_subdev_sensor_ops ov5640_subdev_sensor_ops = {
 	.g_skip_frames	= ov5640_g_skip_frames,
-	.g_interface_parms = ov5640_g_interface_parms,
+	//.g_interface_parms = ov5640_g_interface_parms,
 };
-#endif
 
 static struct v4l2_subdev_ops ov5640_subdev_ops = {
 	.core	= &ov5640_subdev_core_ops,
 	.video	= &ov5640_subdev_video_ops,
-//	.sensor	= &ov5640_subdev_sensor_ops,
+	.sensor	= &ov5640_subdev_sensor_ops,
 };
 
 static int ov5640_probe(struct i2c_client *client,
