@@ -247,10 +247,11 @@ Result_t AUDIO_Ctrl_Trigger(
 	*/
 		    if(len == 0) //FIFO empty sleep
 			    return status;
+
             if(arg_param)
 		        memcpy(arg_param,&msgAudioCtrl.param,  sizeof(BRCM_AUDIO_Control_Params_un_t));
-	        else
-		        memset(arg_param, 0, sizeof(BRCM_AUDIO_Control_Params_un_t));
+	        //else
+		        //memset(arg_param, 0, sizeof(BRCM_AUDIO_Control_Params_un_t));
 	    }
     }
 
