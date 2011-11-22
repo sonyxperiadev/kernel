@@ -1488,9 +1488,13 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 	struct pmem_data *data;
 	struct pmem_region_node *region_node;
 	int id = (int)file->private_data;
-	const int debug_bufmax = 4096;
-	static char buffer[4096];
-	int n = 0;
+	const int debug_bufmax = 8192;
+	char *buffer;
+	int n = 0, ret;
+
+	buffer = kmalloc(debug_bufmax, GFP_KERNEL);
+	if (!buffer)
+		return -ENOMEM;
 
 	n = scnprintf(buffer, debug_bufmax,
 		      "pid #: flags | size | range | mapped regions (offset, len) (offset,len)...\n");
@@ -1529,7 +1533,9 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 
 	n++;
 	buffer[n] = 0;
-	return simple_read_from_buffer(buf, count, ppos, buffer, n);
+	ret = simple_read_from_buffer(buf, count, ppos, buffer, n);
+	kfree(buffer);
+	return ret;
 }
 
 static struct file_operations debug_fops = {
