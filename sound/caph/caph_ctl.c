@@ -790,7 +790,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 
 			BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ENABLE pSel[0] = %d-%d, EnablePhoneCall %d \n", pSel[0],pSel[1], pChip->iEnablePhoneCall );
 			parm_call.new_mic = parm_call.cur_mic = pSel[0];
-			parm_call.new_spkr = parm_call.new_spkr = pSel[1];
+			parm_call.new_spkr = parm_call.cur_spkr = pSel[1];
 
 			if(!pChip->iEnablePhoneCall)
 				//disable voice call
