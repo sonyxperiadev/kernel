@@ -438,8 +438,7 @@ static int pmem_cma_allocate(int id, unsigned long len)
 		return -1;
 	}
 
-	page = dma_alloc_from_contiguous(&pmem[id].pdev->dev, (len >> PAGE_SHIFT),
-					  CONFIG_CMA_ALIGNMENT);
+	page = dma_alloc_from_contiguous(&pmem[id].pdev->dev, (len >> PAGE_SHIFT), 0);
 	if (!page) {
 		printk(KERN_ERR"pmem : cma allocation for size (%ld) failed\n", len);
 		return -1;
