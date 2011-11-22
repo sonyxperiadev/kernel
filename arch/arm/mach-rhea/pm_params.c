@@ -108,7 +108,7 @@ static struct i2c_cmd i2c_cmd[] =
 
 #ifdef CONFIG_KONA_PMU_BSC_HS_MODE
 #ifdef CONFIG_KONA_PWRMGR_REV2
-	#define RESTART_DELAY 		1
+	#define RESTART_DELAY 		6
 	#define WRITE_DELAY	  		3
 	#define VLT_CHANGE_DELAY	0x20
 #else
