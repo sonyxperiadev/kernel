@@ -54,9 +54,19 @@
 #include <halaudio_audioh_settings.h>
 #include <halaudio_pcm_settings.h>
 
-#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
-#include <linux/broadcom/bcmblt-rfkill.h>
-#include <bcmblt_rfkill_settings.h>
+#if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
+#include <linux/pwm_backlight.h>
+#include <pwm_backlight_settings.h>
+#endif
+
+#if defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)
+#include <linux/broadcom/bcmbt_rfkill.h>
+#include <bcmbt_rfkill_settings.h>
+#endif
+
+#if defined(CONFIG_BCM_LPM_LDISC) || defined(CONFIG_BCM_LPM_LDISC_MODULE)
+#include <linux/broadcom/bcmbt_lpm_ldisc.h>
+#include <bcmbt_lpm_settings.h>
 #endif
 
 #if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
@@ -77,6 +87,13 @@
 #if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
 #include <linux/mpu3050.h>
 #include <mpu3050_i2c_settings.h>
+#endif
+
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#include <linux/mpu.h>
+#include <linux/mpu6050b1.h>
+#include <linux/brcm_axis_change.h>
+#include <mpu6050_settings.h>
 #endif
 
 #if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
@@ -119,9 +136,9 @@
 #include <mach/io_map.h>
 #include <mach/aram_layout.h>
 
-#include <linux/vceb_platform_data_hana.h>
-#include <linux/vchiq_platform_data_hana.h>
-#include <linux/vchiq_platform_data_memdrv_hana.h>
+#include <vceb_platform_data_kona.h>
+#include <vchiq_platform_data_kona.h>
+#include <vchiq_platform_data_memdrv_kona.h>
 #endif
 
 #if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
@@ -132,6 +149,7 @@
 #if defined(CONFIG_MONITOR_ADC121C021_I2C)  || defined(CONFIG_MONITOR_ADC121C021_I2C_MODULE)
 #include <linux/broadcom/adc121c021_driver.h>
 #include <adc121c021_settings.h>
+#include <battery_settings.h>
 #endif
 
 #if defined(CONFIG_MONITOR_BQ27541_I2C) || defined(CONFIG_MONITOR_BQ27541_I2C_MODULE)
@@ -233,6 +251,31 @@
 #define USBH_CTRL_CORE_REG_SIZE    0x20
 
 #define OTG_CTRL_CORE_REG_SIZE     0x100
+
+#if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
+static struct platform_pwm_backlight_data pwm_backlight_data =
+#ifdef HW_PWM_BACKLIGHT_PARAM
+	HW_PWM_BACKLIGHT_PARAM;
+#else /* use default setting here */
+{
+	.pwm_name	= "kona_pwmc:2",
+	.max_brightness	= 255,
+	.dft_brightness	= 255,
+	.pwm_period_ns	= 5000000,
+	.polarity = 1,
+};
+#endif
+
+static struct platform_device pwm_backlight_device =
+{
+	.name     = "pwm-backlight",
+	.id       = -1,
+	.dev      =
+		{
+		.platform_data = &pwm_backlight_data,
+	},
+};
+#endif
 
 static struct resource sdio0_resource[] = {
 	[0] = {
@@ -409,7 +452,9 @@ static struct headset_hw_cfg board_headsetdet_data =
 #else
 {
    .gpio_headset_det = -1,
+   .gpio_headset_active_low = 0,
    .gpio_mic_det = -1,
+   .gpio_mic_active_low = 0,
 };
 #endif
 
@@ -754,20 +799,20 @@ static struct platform_device otg_cp_device =
 *
 ***************************************************************************/
 
-#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE ) \
+#if defined( CONFIG_VC_VCHIQ_MEMDRV_KONA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_KONA_MODULE ) \
  || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM ) || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM_MODULE )
 
 /* Internal videocore is defined - Assume that it's for display */
 
 #define  VCEB_DISPLAY_DEVICE
 
-static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
+static VCEB_PLATFORM_DATA_KONA_T vceb_kona_display_data =
 {
     .create_params =
     {
         .instance_name = "display",
         .videocore_param = "vca",
-        .host_param = &vceb_hana_display_data,
+        .host_param = &vceb_kona_display_data,
     },
 
     .vcMemAddr          = VC_EMI,
@@ -787,10 +832,10 @@ static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
 };
 
 static struct platform_device vceb_display_device = {
-   .name = "vceb_hana",
+   .name = "vceb_kona",
    .id = 0,
     .dev = {
-       .platform_data = &vceb_hana_display_data,
+       .platform_data = &vceb_kona_display_data,
     },
 };
 
@@ -800,7 +845,7 @@ static struct platform_device vceb_display_device = {
 *   VCHIQ display device
 *
 ***************************************************************************/
-#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE )
+#if defined( CONFIG_VC_VCHIQ_MEMDRV_KONA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_KONA_MODULE )
 
 /*
  * Internal videocore using the vchiq_arm stack
@@ -811,7 +856,7 @@ static struct platform_device vceb_display_device = {
 #define IPC_SHARED_CHANNEL_VIRT     ( KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
 #define IPC_SHARED_CHANNEL_PHYS     ( INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
 
-static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
+static VCHIQ_PLATFORM_DATA_MEMDRV_KONA_T vchiq_display_data_memdrv_kona = {
     .memdrv = {
         .common = {
             .instance_name = "display",
@@ -824,10 +869,10 @@ static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
 };
 
 static struct platform_device vchiq_display_device = {
-    .name = "vchiq_memdrv_hana",
+    .name = "vchiq_memdrv_kona",
     .id = 0,
     .dev = {
-        .platform_data = &vchiq_display_data_memdrv_hana,
+        .platform_data = &vchiq_display_data_memdrv_kona,
     },
 };
 
@@ -839,7 +884,7 @@ static struct platform_device vchiq_display_device = {
 
 #define  VCHIQ_DISPLAY_DEVICE
 
-static VCHIQ_PLATFORM_DATA_HANA_T vchiq_display_data_shared_mem = {
+static VCHIQ_PLATFORM_DATA_KONA_T vchiq_display_data_shared_mem = {
     .common = {
         .instance_name  = "display",
         .dev_type       = VCHIQ_DEVICE_TYPE_HOST_PORT,
@@ -965,6 +1010,100 @@ static struct i2c_board_info __initdata i2c_mpu3050_info[] =
 };
 #endif
 
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+
+#define mpu6050_platform_data concatenate(ISLAND_BOARD_ID, _mpu6050_data)
+
+#ifdef MPU6050_DRIVER_ACCEL_GYRO_SETTINGS
+static struct t_brcm_axis_change board_mpu6050_accel_gyro_change = MPU6050_DRIVER_ACCEL_GYRO_SETTINGS;
+#endif
+
+#ifdef MPU6050_DRIVER_COMPASS_SETTINGS
+static struct t_brcm_axis_change board_mpu6050_compass_change = MPU6050_DRIVER_COMPASS_SETTINGS;
+#endif
+
+#ifdef MPU6050_DRIVER_REG_VALUES
+static int mpu6060_reg_vals[] = MPU6050_DRIVER_REG_VALUES;
+#endif
+
+static struct t_brcm_sensors_axis_change board_mpu6050_sensors_change =
+{
+/* The MPU6050 is an accelerometer and a gyro. */
+#ifdef MPU6050_DRIVER_ACCEL_GYRO_SETTINGS
+   .p_accel_axis_change   = &board_mpu6050_accel_gyro_change,
+   .p_gyro_axis_change    = &board_mpu6050_accel_gyro_change,
+#else
+   .p_accel_axis_change   = NULL,
+   .p_gyro_axis_change    = NULL,
+#endif
+
+#ifdef MPU6050_DRIVER_COMPASS_SETTINGS
+   .p_compass_axis_change = &board_mpu6050_compass_change,
+#else
+   .p_compass_axis_change = NULL,
+#endif
+
+#ifdef MPU6050_DRIVER_REG_VALUES
+   .p_data = (void *) &mpu6060_reg_vals,
+#else   
+   .p_data = NULL;
+#endif   
+};
+
+static struct mpu_platform_data mpu6050_platform_data =
+{
+	.int_config  = MPU6050_INIT_CFG,
+/* gyro settings */
+	.orientation = {  0,  -1,  0,
+			            -1,  0,  0,
+			            0,  0, -1 },
+/* accel settings */
+	.accel = {
+#if defined CONFIG_INV_SENSORS_MODULE
+	   .get_slave_descr = NULL,
+#else
+		.get_slave_descr = get_accel_slave_descr,
+#endif
+/*		.irq         not used */
+		.adapt_num   = MPU6050_ADAPT_NUM,
+		.bus         = EXT_SLAVE_BUS_PRIMARY,
+		.address     = DEFAULT_MPU_SLAVEADDR,
+	   .orientation = {  0,  -1,  0,
+                        -1,  0,  0,
+                        0,  0, -1 },
+      .private_data = (void *)&board_mpu6050_sensors_change,
+	 },
+/* compass settings */
+	.compass =
+   {
+
+#if defined CONFIG_INV_SENSORS_MODULE
+		.get_slave_descr = NULL,
+#else
+		.get_slave_descr = get_compass_slave_descr,
+#endif
+/*		.irq         not used */
+		.adapt_num   = MPU6050_ADAPT_NUM,
+		.bus         = EXT_SLAVE_BUS_SECONDARY,
+		.address     = MPU6050_COMPASS_SLAVE_ADDR,
+      .orientation = { 1, 0, 0,
+           	           0, 1, 0,
+				           0, 0, 1 },
+	 },
+};
+
+static struct i2c_board_info __initdata i2c_mpu6050_info[] =
+{
+	{
+		I2C_BOARD_INFO(MPU_NAME, MPU6050_SLAVE_ADDR),
+#ifdef MPU6050_ACCEL_GYRO_INT
+      .irq = MPU6050_ACCEL_GYRO_INT,
+#endif
+		.platform_data  = &mpu6050_platform_data,
+	},
+};
+#endif /* CONFIG_MPU_SENSORS_MPU6050B1 */
+
 #if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 static struct i2c_board_info __initdata i2c_bmp18x_info[] = 
 {
@@ -974,31 +1113,59 @@ static struct i2c_board_info __initdata i2c_bmp18x_info[] =
 };
 #endif
 
-#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
-#define board_bcmblt_rfkill_cfg concatenate(ISLAND_BOARD_ID, _bcmblt_rfkill_cfg)
-static struct bcmblt_rfkill_platform_data board_bcmblt_rfkill_cfg =
+#if defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)
+#define board_bcmbt_rfkill_cfg concatenate(ISLAND_BOARD_ID, _bcmbt_rfkill_cfg)
+static struct bcmbt_rfkill_platform_data board_bcmbt_rfkill_cfg =
 {
-#ifdef BCMBLT_RFKILL_GPIO
-   .gpio = BCMBLT_RFKILL_GPIO,
+#if defined(BCMBT_VREG_GPIO)
+   .vreg_gpio = BCMBT_VREG_GPIO,
+#else
+   .vreg_gpio = -1,
 #endif
+	.n_reset_gpio = -1,
+	.aux0_gpio = -1,
+	.aux1_gpio = -1
 };
-#define board_bcmblt_rfkill_device concatenate(ISLAND_BOARD_ID, _bcmblt_rfkill_device)
-static struct platform_device board_bcmblt_rfkill_device = 
+#define board_bcmbt_rfkill_device concatenate(ISLAND_BOARD_ID, _bcmbt_rfkill_device)
+static struct platform_device board_bcmbt_rfkill_device =
 {
-   .name = "bcmblt-rfkill",
+   .name = "bcmbt-rfkill",
    .id = 1,
    .dev =
    {
-      .platform_data = &board_bcmblt_rfkill_cfg,
+      .platform_data = &board_bcmbt_rfkill_cfg,
    },
-}; 
+};
 
-static void __init board_add_bcmblt_rfkill_device(void)
+static void __init board_add_bcmbt_rfkill_device(void)
 {
-   platform_device_register(&board_bcmblt_rfkill_device);
+   platform_device_register(&board_bcmbt_rfkill_device);
 }
 #endif
 
+#if defined(CONFIG_BCM_LPM_LDISC) || defined(CONFIG_BCM_LPM_LDISC_MODULE)
+#define board_bcmbt_lpm_cfg concatenate(ISLAND_BOARD_ID, _bcmbt_lpm_cfg)
+static struct bcmbt_lpm_ldisc_platform_data board_bcmbt_lpm_cfg =
+{
+    .gpio_bt_wake = GPIO_BT_WAKE,
+    .gpio_host_wake = GPIO_HOST_WAKE,
+};
+#define board_bcmbt_lpm_device concatenate(ISLAND_BOARD_ID, _bcmbt_lpm_device)
+static struct platform_device board_bcmbt_lpm_device =
+{
+    .name = "bcmbt-lpm-ldisc",
+    .id = -1,
+    .dev =
+    {
+       .platform_data = &board_bcmbt_lpm_cfg,
+    },
+};
+
+static void __init board_add_bcmbt_lpm_device(void)
+{
+    platform_device_register(&board_bcmbt_lpm_device);
+}
+#endif
 
 #if defined(CONFIG_MONITOR_ADC121C021_I2C) || defined(CONFIG_MONITOR_ADC121C021_I2C_MODULE)
 
@@ -1228,6 +1395,10 @@ static void __init add_i2c_device(void)
       i2c_mpu3050_info, ARRAY_SIZE(i2c_mpu3050_info));
 #endif
 
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+   i2c_register_board_info(MPU6050_I2C_BUS_ID,
+                           i2c_mpu6050_info, ARRAY_SIZE(i2c_mpu6050_info));
+#endif
 
 #if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) \
 	|| defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
@@ -1261,9 +1432,11 @@ static void __init add_i2c_device(void)
    board_adc121c021_i2c_param.resistor_1          = HW_ADC121C021_RESISTOR_1;
    board_adc121c021_i2c_param.resistor_2          = HW_ADC121C021_RESISTOR_2;
 
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
    board_adc121c021_i2c_param.gpio_ac_power       = HW_ADC121C021_GPIO_AC_POWER;
    board_adc121c021_i2c_param.ac_power_on_level   = HW_ADC121C021_AC_POWER_ON_LEVEL;
    board_adc121c021_i2c_param.gpio_charger        = HW_ADC121C021_GPIO_CHARGER;
+#endif
 
    printk("board_template.c %s() IRQ pin %d\n", __FUNCTION__, board_adc121c021_i2c_param.gpio_irq_pin);
    board_adc121c021_i2c_boardinfo[0].irq = 
@@ -1477,6 +1650,10 @@ static void __init board_add_halaudio_device(void)
 
 static void __init add_devices(void)
 {
+#if defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_PWM_MODULE)
+	platform_device_register(&pwm_backlight_device);
+#endif
+
 #ifdef HW_SDIO_PARAM
 	add_sdio_device();
 #endif
@@ -1491,7 +1668,7 @@ static void __init add_devices(void)
 
 #if defined(CONFIG_BCM_HEADSET_SW)
         board_add_headsetdet_device();
-#endif   
+#endif
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
         board_add_keys_device();
@@ -1501,8 +1678,12 @@ static void __init add_devices(void)
         board_add_keyboard_kona();
 #endif
 
-#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
-        board_add_bcmblt_rfkill_device();
+#if defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)
+        board_add_bcmbt_rfkill_device();
+#endif
+
+#if defined(CONFIG_BCM_LPM_LDISC) || defined(CONFIG_BCM_LPM_LDISC_MODULE)
+        board_add_bcmbt_lpm_device();
 #endif
 
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)

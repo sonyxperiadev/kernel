@@ -225,6 +225,12 @@ static int mantis_init(void *mlsl_handle,
 	return INV_ERROR_INVALID_MODULE;
 #endif
 
+   if (pdata == NULL)
+   {
+      printk("%s() pdata == NULL\n", __func__);
+      return INV_ERROR;
+   }
+
 	private_data = (struct mantis_private_data *)
 	    inv_malloc(sizeof(struct mantis_private_data));
 

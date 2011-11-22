@@ -15,7 +15,7 @@
 *
 *  @file    headset.c
 *
-*  @brief   Implements simple GPIO-based headset detection interface 
+*  @brief   Implements simple GPIO-based headset detection interface
 *
 ****************************************************************************/
 /* ---- Include Files ---------------------------------------------------- */
@@ -42,18 +42,23 @@
 #include <linux/broadcom/headset.h>
 #include <linux/broadcom/headset_cfg.h>
 
+#include <linux/broadcom/knllog.h>           /* for debugging */
+
 /* ---- Public Variables ------------------------------------------------- */
 /* ---- Private Constants and Types -------------------------------------- */
+
+#define HEADSET_DEFAULT_SCHED_DELAY          30
 
 /* Headset channel info structure */
 struct headset_info
 {
-   atomic_t          avail;         /* Only allow single user because of select() */
-   int               changed;       /* Changed flag used by poll */
-   int               debounce;      /* Debounce time in microseconds */
-   headset_state     state;         /* Current state */
-   wait_queue_head_t waitq;         /* wait queue */
-   struct headset_hw_cfg hw_cfg;    /* board hw configuration */
+   atomic_t                avail;            /* Only allow single user because of select() */
+   int                     changed;          /* Changed flag used by poll */
+   int                     hs_spkr_debounce; /* Speaker debounce time in microseconds */
+   int                     hs_mic_debounce;  /* Mic debounce time in microseconds */
+   headset_state           state;            /* Speaker/mic current state */
+   wait_queue_head_t       waitq;            /* wait queue */
+   struct headset_hw_cfg   hw_cfg;           /* board hw configuration */
 };
 
 /* ---- Private Variables ------------------------------------------------ */
@@ -86,7 +91,7 @@ static unsigned int headset_poll( struct file *file, struct poll_table_struct *p
 
 #if defined(CONFIG_SWITCH)
 static void setsw( struct work_struct *work );
-DECLARE_WORK(setsw_work, setsw);
+DECLARE_DELAYED_WORK(setsw_work, setsw);
 #endif
 
 /* File Operations (these are the device driver entry points) */
@@ -103,68 +108,185 @@ struct file_operations headset_fops =
 
 /***************************************************************************/
 /**
-*  Helper function to schedule switch state changes for Android  
-*/
-#if defined(CONFIG_SWITCH)
-static void setsw(struct work_struct *work){
-  struct headset_info *ch = gHeadset;
-  switch_set_state(&headset_switch,ch->state);  
-}
-#endif
-/***************************************************************************/
-/**
-*  Helper routine to check headset detection gpio  
+*  Helper routine to check headset detection gpio
 */
 static void check_headset_det_gpio( struct headset_info *ch )
 {
+   int spkr_gpio_val = 0;
+   int mic_gpio_val = 0;
+
    if ( ch->hw_cfg.gpio_headset_det >= 0 )
    {
-      int gpio_val;
-      unsigned long flags;
-
-      spin_lock_irqsave( &detlock, flags );
-      gpio_val = gpio_get_value( ch->hw_cfg.gpio_headset_det );
-      ch->state = gpio_val ? HEADSET_TOGGLE_A : HEADSET_UNPLUGGED;
-      ch->changed = 1;
-#if defined(CONFIG_SWITCH)
-      schedule_work(&setsw_work);
-#endif
-      
-      
-      wake_up_interruptible( &ch->waitq );
-      spin_unlock_irqrestore( &detlock, flags );
+      spkr_gpio_val = gpio_get_value( ch->hw_cfg.gpio_headset_det );
+      if ( ch->hw_cfg.gpio_headset_active_low )
+      {
+         spkr_gpio_val = !spkr_gpio_val;
+      }
    }
    else
    {
       ch->state = HEADSET_STATE_INIT;
+      return;
    }
+
+   if ( ch->hw_cfg.gpio_mic_det >= 0 )
+   {
+      mic_gpio_val = gpio_get_value( ch->hw_cfg.gpio_mic_det );
+      if ( ch->hw_cfg.gpio_mic_active_low )
+      {
+         mic_gpio_val = !mic_gpio_val;
+      }
+   }
+
+   if ( spkr_gpio_val )
+   {
+      if ( mic_gpio_val )
+      {
+         ch->state = HEADSET_TOGGLE_SPKR_MIC;
+      }
+      else
+      {
+         ch->state = HEADSET_TOGGLE_SPKR_ONLY;
+      }
+   }
+   else
+   {
+      ch->state = HEADSET_UNPLUGGED;
+   }
+   ch->changed = 1;
+
+   wake_up_interruptible( &ch->waitq );
 }
 
+/***************************************************************************/
+/**
+*  Helper function to schedule switch state changes for Android
+*/
 #if defined(CONFIG_SWITCH)
-static ssize_t debounce_show(struct device *dev, struct device_attribute *attr,
+static void setsw(struct work_struct *work)
+{
+   struct headset_info *ch = gHeadset;
+   headset_state start_state;
+   unsigned long flags;
+
+   spin_lock_irqsave( &detlock, flags );
+
+   start_state = ch->state;
+
+   check_headset_det_gpio( ch );
+
+   if ( start_state == HEADSET_TOGGLE_SPKR_ONLY || start_state == HEADSET_TOGGLE_SPKR_MIC )
+   {
+      KNLLOG( "Start_state = %d\n", start_state );
+      if ( start_state != ch->state )
+      {
+         switch( ch-> state )
+         {
+            case HEADSET_TOGGLE_SPKR_MIC:
+            case HEADSET_TOGGLE_SPKR_ONLY:
+               KNLLOG( "Setting state to unplugged\n" );
+               switch_set_state(&headset_switch, HEADSET_UNPLUGGED);
+               break;
+            default:
+               /* Do nothing */
+               break;
+         }
+      }
+   }
+
+   switch_set_state(&headset_switch,ch->state);
+   KNLLOG( "State set to %d\n", ch->state );
+
+   spin_unlock_irqrestore( &detlock, flags );
+
+}
+#endif
+
+#if defined(CONFIG_SWITCH)
+static ssize_t spkr_debounce_show(struct device *dev, struct device_attribute *attr,
 			char *buf)
 {
    struct headset_info *ch = gHeadset;
-   return sprintf(buf,"%d\n",ch->debounce);
+
+   if ( ch->hw_cfg.gpio_headset_det < 0 )
+   {
+      return -EPERM;
+   }
+
+   return snprintf(buf, PAGE_SIZE, "%d\n", ch->hs_spkr_debounce);
 }
-static ssize_t debounce_store(struct device *dev, struct device_attribute *attr,
+
+static ssize_t mic_debounce_show(struct device *dev, struct device_attribute *attr,
+			char *buf)
+{
+   struct headset_info *ch = gHeadset;
+
+   if ( ch->hw_cfg.gpio_mic_det < 0 )
+   {
+      return -EPERM;
+   }
+
+   return snprintf(buf, PAGE_SIZE, "%d\n", ch->hs_mic_debounce);
+}
+
+static ssize_t spkr_debounce_store(struct device *dev, struct device_attribute *attr,
 			 const char *buf, size_t count)
 {
-   int ret,debounce;
-   char lbuf[16]={0};
+   int ret;
+   long int debounce;
    struct headset_info *ch = gHeadset;
-   ret = sscanf(buf,"%d",&debounce);
-   if ( ret == 1 ) {
-      if( !gpio_set_debounce(ch->hw_cfg.gpio_headset_det, debounce) ){
-            ch->debounce = debounce;
-      }
-      sprintf(lbuf,"%d",debounce);
-      return strlen(lbuf);
-   }
-   return 0;
-}
-static DEVICE_ATTR(debounce, S_IRUGO | S_IWUSR, debounce_show, debounce_store);
 
+   if ( ch->hw_cfg.gpio_headset_det < 0 )
+   {
+      return -EPERM;
+   }
+
+   ret = kstrtol( buf, 0, &debounce );
+   if ( ret == 0 )
+   {
+      if( (ret = gpio_set_debounce(ch->hw_cfg.gpio_headset_det, debounce)) == 0 )
+      {
+         ch->hs_spkr_debounce = debounce;
+      }
+      else
+      {
+         return ret;
+      }
+      return count;
+   }
+   return -EINVAL;
+}
+
+static ssize_t mic_debounce_store(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+   int ret;
+   long int debounce;
+   struct headset_info *ch = gHeadset;
+
+   if ( ch->hw_cfg.gpio_mic_det < 0 )
+   {
+      return -EPERM;
+   }
+
+   ret = kstrtol( buf, 0, &debounce );
+   if ( ret == 0 )
+   {
+      if( (ret = gpio_set_debounce(ch->hw_cfg.gpio_mic_det, debounce)) == 0 )
+      {
+         ch->hs_mic_debounce = debounce;
+      }
+      else
+      {
+         return ret;
+      }
+      return count;
+   }
+   return -EINVAL;
+}
+
+static DEVICE_ATTR(spkr_debounce, S_IRUGO | S_IWUSR, spkr_debounce_show, spkr_debounce_store);
+static DEVICE_ATTR(mic_debounce, S_IRUGO | S_IWUSR, mic_debounce_show, mic_debounce_store);
 
 #endif
 /***************************************************************************/
@@ -176,6 +298,7 @@ static DEVICE_ATTR(debounce, S_IRUGO | S_IWUSR, debounce_show, debounce_store);
 static int headset_open( struct inode *inode, struct file *file )
 {
    struct headset_info *ch;
+   unsigned long flags;
 
    ch = gHeadset;
 
@@ -194,7 +317,15 @@ static int headset_open( struct inode *inode, struct file *file )
 
    file->private_data = ch;
 
+
+   spin_lock_irqsave( &detlock, flags );
+
    check_headset_det_gpio( ch );
+#if defined(CONFIG_SWITCH)
+   schedule_delayed_work(&setsw_work, 0);
+#endif
+
+   spin_unlock_irqrestore( &detlock, flags );
 
    return 0;
 }
@@ -234,24 +365,58 @@ static long headset_ioctl( struct file *file, unsigned int cmd, unsigned long ar
             return -EFAULT;
          }
          break;
+
       case HEADSET_IOCTL_GET_DEBOUNCE:
-         if ( copy_to_user( (unsigned long *)arg, &ch->debounce, sizeof(ch->debounce) ) != 0 )
+         if ( copy_to_user( (unsigned long *)arg, &ch->hs_spkr_debounce, sizeof(ch->hs_spkr_debounce) ) != 0 )
          {
             return -EFAULT;
          }
          break;
-                        
+
+      case HEADSET_IOCTL_GET_MIC_DEBOUNCE:
+         if ( copy_to_user( (unsigned long *)arg, &ch->hs_mic_debounce, sizeof(ch->hs_mic_debounce) ) != 0 )
+         {
+            return -EFAULT;
+         }
+         break;
+
       case HEADSET_IOCTL_SET_DEBOUNCE:
+         if ( ch->hw_cfg.gpio_headset_det < 0 )
+         {
+            return -EINVAL;
+         }
+
          if ( copy_to_user( (unsigned long *)arg, &debounce, sizeof(debounce) ) != 0 )
          {
             return -EFAULT;
          }
-         if ( (rc=gpio_set_debounce(ch->hw_cfg.gpio_headset_det, debounce)) ) {
+
+         if ( (rc=gpio_set_debounce(ch->hw_cfg.gpio_headset_det, debounce)) )
+         {
             return rc;
          }
-         ch->debounce=debounce;
+
+         ch->hs_spkr_debounce=debounce;
          break;
-         
+
+      case HEADSET_IOCTL_SET_MIC_DEBOUNCE:
+         if ( ch->hw_cfg.gpio_mic_det < 0 )
+         {
+            return -EINVAL;
+         }
+
+         if ( copy_to_user( (unsigned long *)arg, &debounce, sizeof(debounce) ) != 0 )
+         {
+            return -EFAULT;
+         }
+
+         if ( (rc=gpio_set_debounce(ch->hw_cfg.gpio_mic_det, debounce)) )
+         {
+            return rc;
+         }
+
+         ch->hs_mic_debounce=debounce;
+         break;
 
       default:
          return -ENOTTY;
@@ -266,8 +431,8 @@ static long headset_ioctl( struct file *file, unsigned int cmd, unsigned long ar
 *  @remarks
 */
 static unsigned int headset_poll(
-   struct file *file, 
-   struct poll_table_struct *poll_table 
+   struct file *file,
+   struct poll_table_struct *poll_table
 )
 {
    struct headset_info *ch = file->private_data;
@@ -289,7 +454,16 @@ static unsigned int headset_poll(
 */
 static irqreturn_t headset_det_irq( int irq, void *dev_id )
 {
-   check_headset_det_gpio( dev_id );
+   unsigned long flags;
+
+   spin_lock_irqsave( &detlock, flags );
+
+#if defined(CONFIG_SWITCH)
+   schedule_delayed_work(&setsw_work, HEADSET_DEFAULT_SCHED_DELAY);
+#endif
+
+   spin_unlock_irqrestore( &detlock, flags );
+
    return IRQ_HANDLED;
 }
 
@@ -301,6 +475,7 @@ static int __devinit headset_pltfm_probe(struct platform_device *pdev)
 {
    struct headset_info *ch;
    int ret;
+   unsigned long flags;
 
    BUG_ON( pdev == NULL );
 
@@ -315,7 +490,7 @@ static int __devinit headset_pltfm_probe(struct platform_device *pdev)
 
    if ( ch->hw_cfg.gpio_headset_det >= 0 )
    {
-      ret = gpio_request( ch->hw_cfg.gpio_headset_det, "headset det");
+      ret = gpio_request( ch->hw_cfg.gpio_headset_det, "headset spkr det");
       if ( ret < 0 )
       {
          dev_err( &pdev->dev, "Unable to request GPIO pin %d\n", ch->hw_cfg.gpio_headset_det );
@@ -324,53 +499,124 @@ static int __devinit headset_pltfm_probe(struct platform_device *pdev)
 
       ret = request_irq( gpio_to_irq( ch->hw_cfg.gpio_headset_det ),
             headset_det_irq, IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
-            "headset_det", ch );
+            "headset_spkr_det", ch );
       if ( ret )
       {
          dev_err( &pdev->dev, "Unable to request headset detect irq=%d for gpio=%d\n",
                gpio_to_irq( ch->hw_cfg.gpio_headset_det ), ch->hw_cfg.gpio_headset_det );
-         goto err_free_cd_gpio;
+         goto err_free_spkr_det_gpio;
       }
-#if defined(CONFIG_SWITCH)
-      /* Create a headset switch */
-      headset_switch.name="h2w";
-      
-      ret = switch_dev_register(&headset_switch);
-      if (ret < 0) {
-         printk(KERN_ERR "HEADSET: Device switch create failed\n");
-         ret = -EFAULT;
-         goto err_irq_free;
+   }
+   else
+   {
+      dev_err( &pdev->dev, "Missing headset speaker gpio configuration\n" );
+      return -EPERM;
+   }
+
+   if ( ch->hw_cfg.gpio_mic_det >= 0 )
+   {
+      ret = gpio_request( ch->hw_cfg.gpio_mic_det, "headset mic det");
+      if ( ret < 0 )
+      {
+         dev_err( &pdev->dev, "Unable to request GPIO pin %d\n", ch->hw_cfg.gpio_mic_det );
+         goto err_irq_spkr_free;
       }
 
-      /* Add the debounce sysfs entry for h2w */
-      ret = device_create_file(headset_switch.dev, &dev_attr_debounce);
-      if (ret < 0)
-	      goto err_swdev_destroy;
+      ret = request_irq( gpio_to_irq( ch->hw_cfg.gpio_mic_det ),
+            headset_det_irq, IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+            "headset_mic_det", ch );
+      if ( ret )
+      {
+         dev_err( &pdev->dev, "Unable to request headset detect irq=%d for gpio=%d\n",
+               gpio_to_irq( ch->hw_cfg.gpio_mic_det ), ch->hw_cfg.gpio_mic_det );
+         goto err_free_mic_det_gpio;
+      }
+   }
+#if defined(CONFIG_SWITCH)
+   /* Create a headset switch */
+   headset_switch.name="h2w";
+
+   ret = switch_dev_register(&headset_switch);
+   if (ret < 0) {
+      printk(KERN_ERR "HEADSET: Device switch create failed\n");
+      ret = -EFAULT;
+      goto err_irq_free;
+   }
+
+   /* Add the debounce sysfs entry for h2w */
+   ret = device_create_file(headset_switch.dev, &dev_attr_spkr_debounce);
+   if (ret < 0)
+      goto err_swdev_destroy;
+
+   ret = device_create_file(headset_switch.dev, &dev_attr_mic_debounce);
+   if (ret < 0)
+      goto err_swdev_destroy;
 #endif
 
-      /* set the default debounce */
-      ch->debounce = HEADSET_DEBOUNCE_DEFAULT;
-      ret = gpio_set_debounce(ch->hw_cfg.gpio_headset_det, ch->debounce);
-      if ( ret < 0 ) {
+   /* set the default debounce */
+   ch->hs_spkr_debounce = HEADSET_DEBOUNCE_DEFAULT;
+   ch->hs_mic_debounce = HEADSET_DEBOUNCE_DEFAULT;
+
+   if ( ch->hw_cfg.gpio_headset_det >= 0 )
+   {
+      ret = gpio_set_debounce(ch->hw_cfg.gpio_headset_det, ch->hs_spkr_debounce);
+      if ( ret < 0 )
+      {
          ret = -EPERM;
          printk(KERN_ERR "HEADSET: Hardware GPIO debounce not supported and software debounce not implemented\n");
          goto probe_no_gpio;
       }
-      check_headset_det_gpio( ch );
    }
+
+   if ( ch->hw_cfg.gpio_mic_det >= 0 )
+   {
+      ret = gpio_set_debounce(ch->hw_cfg.gpio_mic_det, ch->hs_mic_debounce);
+      if ( ret < 0 )
+      {
+         ret = -EPERM;
+         printk(KERN_ERR "HEADSET: Hardware GPIO debounce not supported and software debounce not implemented\n");
+         goto probe_no_gpio;
+      }
+   }
+
+   spin_lock_irqsave( &detlock, flags );
+
+   check_headset_det_gpio( ch );
+#if defined(CONFIG_SWITCH)
+   schedule_delayed_work(&setsw_work, 0);
+#endif
+
+   spin_unlock_irqrestore( &detlock, flags );
 
    return 0;
 
 probe_no_gpio:
 #if defined(CONFIG_SWITCH)
-   device_remove_file(headset_switch.dev, &dev_attr_debounce);
+   device_remove_file(headset_switch.dev, &dev_attr_spkr_debounce);
+   device_remove_file(headset_switch.dev, &dev_attr_mic_debounce);
 err_swdev_destroy:
    switch_dev_unregister(&headset_switch);
 err_irq_free:
 #endif
-   free_irq(gpio_to_irq( ch->hw_cfg.gpio_headset_det ), &pdev->dev); 
-err_free_cd_gpio:
-   gpio_free( ch->hw_cfg.gpio_headset_det );
+   if ( ch->hw_cfg.gpio_mic_det >= 0 )
+   {
+      free_irq(gpio_to_irq( ch->hw_cfg.gpio_mic_det ), &pdev->dev);
+   }
+err_free_mic_det_gpio:
+   if ( ch->hw_cfg.gpio_mic_det >= 0 )
+   {
+      gpio_free( ch->hw_cfg.gpio_mic_det );
+   }
+err_irq_spkr_free:
+   if ( ch->hw_cfg.gpio_headset_det >= 0 )
+   {
+      free_irq(gpio_to_irq( ch->hw_cfg.gpio_headset_det ), &pdev->dev);
+   }
+err_free_spkr_det_gpio:
+   if ( ch->hw_cfg.gpio_headset_det >= 0 )
+   {
+      gpio_free( ch->hw_cfg.gpio_headset_det );
+   }
    return ret;
 }
 
@@ -384,14 +630,22 @@ static int __devexit headset_pltfm_remove( struct platform_device *pdev )
    ch = gHeadset;
 
 #if defined(CONFIG_SWITCH)
-   device_remove_file(headset_switch.dev, &dev_attr_debounce);
+   device_remove_file(headset_switch.dev, &dev_attr_spkr_debounce);
+   device_remove_file(headset_switch.dev, &dev_attr_mic_debounce);
    switch_dev_unregister(&headset_switch);
 #endif
-   free_irq(gpio_to_irq( ch->hw_cfg.gpio_headset_det ), &pdev->dev); 
    if ( ch->hw_cfg.gpio_headset_det >= 0 )
    {
+      free_irq(gpio_to_irq( ch->hw_cfg.gpio_headset_det ), &pdev->dev);
       gpio_free( ch->hw_cfg.gpio_headset_det );
    }
+
+   if ( ch->hw_cfg.gpio_mic_det >= 0 )
+   {
+      free_irq(gpio_to_irq( ch->hw_cfg.gpio_mic_det ), &pdev->dev);
+      gpio_free( ch->hw_cfg.gpio_mic_det );
+   }
+
    platform_set_drvdata( pdev, NULL );
 
    return 0;
@@ -453,7 +707,7 @@ static int __init headset_init( void )
       rc = -EFAULT;
       goto err_class_destroy;
    }
-   
+
 #endif
    ch = gHeadset;
    if ( ch->hw_cfg.gpio_headset_det < 0 )
@@ -464,10 +718,10 @@ static int __init headset_init( void )
       goto init_no_gpio;
 
    }
-   
+
    return 0;
 
-init_no_gpio:   
+init_no_gpio:
 #if CONFIG_SYSFS
    device_destroy(headset_class, MKDEV( gDriverMajor, 0 ));
 

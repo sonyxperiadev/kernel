@@ -146,6 +146,8 @@ struct sdhci_host {
 
 	struct timer_list timer;	/* Timer for timeouts */
 
+	struct work_struct wait_erase_work; /* work to wait for erase to finish */
+
 	unsigned int caps;	/* Alternative capabilities */
 
 	unsigned int            ocr_avail_sdio;	/* OCR bit masks */

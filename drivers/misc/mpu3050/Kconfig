@@ -67,7 +67,7 @@ endchoice
 choice
     prompt "Accelerometer Type"
     depends on I2C
-    default MPU_SENSORS_BMA150
+    default MPU_SENSORS_ACCELEROMETER_NONE
 
 config MPU_SENSORS_ACCELEROMETER_NONE
     bool "NONE"
@@ -155,7 +155,7 @@ endchoice
 
 choice
     prompt "Compass Type"
-    default MPU_SENSORS_AK8975
+    default MPU_SENSORS_COMPASS_NONE
 
 config MPU_SENSORS_COMPASS_NONE
     bool "NONE"

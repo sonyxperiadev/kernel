@@ -603,14 +603,6 @@ config WL127X_RFKILL
 	 Creates an rfkill entry in sysfs for power control of Bluetooth
 	 TI wl127x chips.
 
-config BCMBLT_RFKILL
-	tristate "Broadcom Bluetooth RFKILL"
-	depends on RFKILL
-	default n
-	---help---
-	This driver adds support for rfkill for Broadcom bluetooth
-	devices.
-
 config BTHID
 	tristate "Bluetooth HID"
 	depends on HID
@@ -737,7 +729,6 @@ source "drivers/misc/iwmc3200top/Kconfig"
 source "drivers/misc/ti-st/Kconfig"
 source "drivers/misc/lis3lv02d/Kconfig"
 source "drivers/misc/carma/Kconfig"
-source "drivers/misc/vc04_services/Kconfig"
 source "drivers/misc/mpu3050/Kconfig"
 
 endif # MISC_DEVICES

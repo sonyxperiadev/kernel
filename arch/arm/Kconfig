@@ -899,6 +899,7 @@ config ARCH_KONA
 	select ARM_ERRATA_751472 if SMP
 	select ARM_ERRATA_754322
 	select ARM_ERRATA_764369 if SMP
+	select KONA_WFI_WORKAROUND if SMP
 	help
 	  This enables support for system based on Broadcom KONA architecture
  

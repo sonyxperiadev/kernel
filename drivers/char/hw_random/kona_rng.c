@@ -183,7 +183,7 @@ static int rng_data_present(struct hwrng *rng, int wait)
     return data;
 }
 
-int rng_data_read(struct hwrng *rng, u32 *data)
+static int rng_data_read(struct hwrng *rng, u32 *data)
 {
     if (!atomic_read(&bus_is_probed))
         return -ENODEV;
@@ -194,7 +194,6 @@ int rng_data_read(struct hwrng *rng, u32 *data)
     mutex_unlock(&lock);
     return 4;
 }
-EXPORT_SYMBOL(rng_data_read);
 
 static struct hwrng rng_ops = {
     .name = "bcmkona",

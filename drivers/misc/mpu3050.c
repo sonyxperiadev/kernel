@@ -51,9 +51,9 @@
 // #define PROC_DEBUG   // comment in/out to enable cmd line interface via /proc/mpu3050
 
 #ifdef PROC_DEBUG
-   #include <linux/proc_fs.h>
-   #include <asm/uaccess.h>
-   #include <linux/unistd.h>
+#include <linux/proc_fs.h>
+#include <asm/uaccess.h>
+#include <linux/unistd.h>
 #endif
 
 #define MPU3050_CHIP_ID_REG	    0x00
@@ -224,6 +224,10 @@ static void mpu3050_read_xyz
 static void mpu3050_set_power_mode(struct i2c_client* client, u8 val)
 {
 	u8 value;
+
+        printk(KERN_INFO "%s() requested power mode - %d\n",
+               __FUNCTION__, val); 
+
 	value = i2c_smbus_read_byte_data(client, MPU3050_PWR_MGM);
 	value = (value & ~MPU3050_PWR_MGM_MASK) |
 		(((val << MPU3050_PWR_MGM_POS) & MPU3050_PWR_MGM_MASK) ^
@@ -589,41 +593,6 @@ static int mpu3050_resume(struct i2c_client* client)
    #define mpu3050_resume NULL
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
-static int mpu3050_runtime_suspend(struct device* dev)
-{
-    struct i2c_client* client = to_i2c_client(dev);
-    if (client == 0)
-    {
-        printk(KERN_ERR "+++ %s: i2c client not registered +++\n", __FUNCTION__);
-        return -EINVAL;
-    }
-    
-	mpu3050_set_power_mode(client, 0);
-	return 0;
-}
-
-static int mpu3050_runtime_resume(struct device* dev)
-{
-    struct i2c_client* client = to_i2c_client(dev);
-    if (client == 0)
-    {
-        printk(KERN_ERR "+++ %s: i2c client not registered +++\n", __FUNCTION__);
-        return -EINVAL;
-    }
-    
-	mpu3050_set_power_mode(client, 1);
-	msleep_interruptible(100);  /* wait for gyro chip resume */
-	return 0;
-}
-
-
-static const struct dev_pm_ops mpu3050_pm = 
-{
-	.runtime_suspend = mpu3050_runtime_suspend,
-	.runtime_resume  = mpu3050_runtime_resume,
-};
-#endif
 
 static const struct i2c_device_id mpu3050_ids[] = 
 {
@@ -637,9 +606,6 @@ static struct i2c_driver mpu3050_i2c_driver =
 	.driver	= 
 	{
 		.name	= SENSOR_NAME, 
-#ifdef CONFIG_PM_RUNTIME
-		.pm		= &mpu3050_pm,
-#endif
 	},
 	.probe		= mpu3050_probe,
 	.remove		= __devexit_p(mpu3050_remove),

@@ -32,6 +32,7 @@ obj-$(CONFIG_MACH_RHEA_BERRI) += csl/
 obj-$(CONFIG_MACH_RHEALC_BERRI) += csl/
 obj-$(CONFIG_MACH_SAMOA_RAY) += chal/
 obj-$(CONFIG_MACH_ISLAND_FF) += chal/
+obj-$(CONFIG_MACH_ISLAND_IS) += chal/
 # SAMOA RAY bringup only has keypad at this point, so no CSL
 #obj-$(CONFIG_MACH_SAMOA_RAY) += csl/
 obj-$(CONFIG_DMAC_PL330) += dmux.o dma.o
@@ -42,3 +43,5 @@ obj-$(CONFIG_KONA_CPU_FREQ_DRV) += kona_cpufreq.o
 obj-$(CONFIG_KONA_AVS) += kona_avs.o
 obj-$(CONFIG_KONA_ATAG_DT) += atag_dt.o
 
+# wfi_count.o is required for SW-7022.
+obj-$(CONFIG_KONA_WFI_WORKAROUND) += wfi_count.o

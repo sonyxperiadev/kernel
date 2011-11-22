@@ -58,12 +58,12 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(NORFLSH_ADDR_23,   KP_COL_IP_6, 0, OFF, OFF, 0, 0, 8MA),
 
 	/* WiFi SDIO */
-        PIN_CFG(NORFLSH_AD_03, SDIO1_DATA_3, 0, OFF, ON, 0, 0, 2MA),
-        PIN_CFG(NORFLSH_AD_02, SDIO1_CLK,    0, OFF, ON, 0, 0, 2MA),
-        PIN_CFG(NORFLSH_AD_01, SDIO1_DATA_0, 0, OFF, ON, 0, 0, 2MA),
-        PIN_CFG(NORFLSH_AD_00, SDIO1_CMD,    0, OFF, ON, 0, 0, 2MA),
-        PIN_CFG(NORFLSH_RDY,   SDIO1_DATA_1, 0, OFF, ON, 0, 0, 2MA),
-        PIN_CFG(NORFLSH_CLK_N, SDIO1_DATA_2, 0, OFF, ON, 0, 0, 2MA),
+        PIN_CFG(NORFLSH_AD_03, SDIO1_DATA_3, 0, OFF, ON, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AD_02, SDIO1_CLK,    0, OFF, ON, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AD_01, SDIO1_DATA_0, 0, OFF, ON, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AD_00, SDIO1_CMD,    0, OFF, ON, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_RDY,   SDIO1_DATA_1, 0, OFF, ON, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_CLK_N, SDIO1_DATA_2, 0, OFF, ON, 0, 0, 8MA),
 
 #ifndef CONFIG_MTD_BCMNAND
 	/* VC4 JTAG */

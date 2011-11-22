@@ -259,7 +259,7 @@ int register_battery_monitor(struct battery_monitor *p_monitor, void *p_data)
    if (is_ac_connected())
    {
       wake_lock(&g_multi_data.wakelock);
-      printk(KERN_INFO "%s() adding wake lock\n", __FUNCTION__);
+      printk(KERN_INFO "%s() taking wake lock\n", __FUNCTION__);
    }   
    
    /*  schedule delayed work for battery PSY */
@@ -527,6 +527,7 @@ static void battery_external_power_changed(struct power_supply *t_power_supply)
 
 static void cmp_battery_multi_power_off(void)
 {
+   printk(KERN_INFO "%s() power off called\n",  __FUNCTION__);
    gpio_set_value(g_gpio_power_control, 0);
 }
 
@@ -634,6 +635,14 @@ static int battery_suspend(struct platform_device *p_dev, pm_message_t state)
 
 static int battery_resume(struct platform_device *p_dev)
 {
+   /* take wakelock if AC is connected. This is needed as we do not know what
+      was happening when we were suspended */
+   if (is_ac_connected())
+   {
+      wake_lock(&g_multi_data.wakelock);
+      printk(KERN_INFO "%s() taking wake lock\n", __FUNCTION__);
+   }   
+
    /* How to do in a SMP centric safe manner? */
    schedule_delayed_work(&g_multi_data.t_battery_dwork, MULTI_WAIT_PERIOD);
    return 0;
