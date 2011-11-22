@@ -1148,7 +1148,7 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
                                   0 ); 
 		arm2sp_start[arm2spCfg.instanceID] = FALSE; //reset
 
-		if(arm2sp_start[1] == FALSE && arm2sp_start[2] == FALSE)
+		if(arm2sp_start[0] == FALSE && arm2sp_start[1] == FALSE)
 			memset(&arm2spCfg, 0, sizeof(arm2spCfg));
 	}
 
