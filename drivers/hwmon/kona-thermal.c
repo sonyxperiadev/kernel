@@ -40,6 +40,7 @@
 
 #define USE_INTERRUPT
 
+#ifdef CONFIG_ARCH_RHEA
 #define therm_debug(format...)              \
     do {                    \
         if (thermal_debug)  \
@@ -296,7 +297,7 @@ static void kona_thermal_wakeup_event( struct work_struct *ws)
                 temp = convert_adc_to_temp(bcm59055_saradc_read_data(board->sensors[i].thermal_sensor_param));
                 if (temp > board->sensors[i].thermal_warning_lvl_1) {
                     /* Perform WARNING (maximum) action */
-                    therm_debug("sensor%d max exceeded %d > %d\n", i+1, temp, board->sensors[i].thermal_warning_lvl_1);
+                    therm_debug("sensor%d max exceeded %d > %ld\n", i+1, temp, board->sensors[i].thermal_warning_lvl_1);
 					panic_buf[1] = 1;
 					panic_buf[2] = i;
 					atomic_notifier_call_chain(&therm_notifier[i], 0, panic_buf);
@@ -307,7 +308,7 @@ static void kona_thermal_wakeup_event( struct work_struct *ws)
 					kobject_uevent(&pdata->pdev->dev.kobj, KOBJ_CHANGE);
 					if (temp > board->sensors[i].thermal_fatal_lvl) {
                         /* Perform FATAL (critical) action */
-                        therm_debug("sensor%d exceeded %d > %d\n", i+1, temp, board->sensors[i].thermal_fatal_lvl);
+                        therm_debug("sensor%d exceeded %d > %ld\n", i+1, temp, board->sensors[i].thermal_fatal_lvl);
 						panic_buf[3] = i;
 						atomic_notifier_call_chain(&therm_notifier[i], 0, panic_buf);
                         if ((board->sensors[i].thermal_fatal_action == THERM_ACTION_NOTIFY_SHUTDOWN) ||
@@ -520,4 +521,4 @@ MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("Broadcom Thermal Management Monitor");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");
-
+#endif
