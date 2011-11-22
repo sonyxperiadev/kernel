@@ -523,42 +523,42 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 		return NULL;
 
 	mutex_lock(&cma_mutex);
-retry:
-	pageno = bitmap_find_next_zero_area(cma->bitmap, cma->count, start_from, count,
-					    (1 << align) - 1);
-	if (pageno >= cma->count) {
-		unsigned long total_alloc = 0,largest_free_block = 0;
-		printk(KERN_ERR"%s:%d #### CMA ALLOCATION FAILED ####\n", __func__, __LINE__);
-		printk(KERN_ERR"%s : could not find %d/%d in this cma region bitmap\n", __func__, count, align);
-		analyze_cma_region(cma, &total_alloc, &largest_free_block);
-		printk(KERN_ERR"%s:%d ### Total allocation(%lukB), Largest free block(%lukB)\n",
-				__func__, __LINE__, total_alloc, largest_free_block);
-		ret = -ENOMEM;
-		goto error;
-	}
 
-	pr_debug("%s: allocating (%d) pages starting from pageno (%ld)\n", __func__, count, pageno);
-	bitmap_set(cma->bitmap, pageno, count);
+	do {
+		pageno = bitmap_find_next_zero_area(cma->bitmap, cma->count, start_from, count,
+				(1 << align) - 1);
+		if (pageno >= cma->count) {
+			unsigned long total_alloc = 0,largest_free_block = 0;
+			printk(KERN_ERR"%s:%d #### CMA ALLOCATION FAILED ####\n", __func__, __LINE__);
+			printk(KERN_ERR"%s : could not find %d/%d in this cma region bitmap\n", __func__, count, align);
+			analyze_cma_region(cma, &total_alloc, &largest_free_block);
+			printk(KERN_ERR"%s:%d ### Total allocation(%lukB), Largest free block(%lukB)\n",
+					__func__, __LINE__, total_alloc, largest_free_block);
+			ret = -ENOMEM;
+			goto error;
+		}
 
-	pfn = cma->base_pfn + pageno;
-	ret = alloc_contig_range(pfn, pfn + count, 0, MIGRATE_CMA);
-	if (ret) {
-		printk(KERN_ERR"%s:%d #### CMA ALLOCATION FAILED #### with ret = %d\n", __func__, __LINE__, ret);
-		if ((pfn + 2 * count) <= (cma->base_pfn + cma->count)) {
-			bitmap_clear(cma->bitmap, pfn - cma->base_pfn, count);
-			start_from = pageno + count;
-			retries++;
-			/* Maximum 10 retries to find the space and get the
-			 * migration right (This will take a long time if it
-			 * keeps failing)
-			 */
-			if (retries <= 10) {
-				printk(KERN_EMERG"#### Retry(%u) to find the allocation from pfn(0x%lu) ####\n", retries, start_from);
-				goto retry;
+		pr_debug("%s: allocating (%d) pages starting from pageno (%ld)\n", __func__, count, pageno);
+		bitmap_set(cma->bitmap, pageno, count);
+
+		pfn = cma->base_pfn + pageno;
+		ret = alloc_contig_range(pfn, pfn + count, 0, MIGRATE_CMA);
+		if (ret) {
+			printk(KERN_ERR"%s:%d #### CMA ALLOCATION FAILED #### with ret = %d for range(%08x-%08x)\n",
+					__func__, __LINE__, ret, __pfn_to_phys(pfn), __pfn_to_phys(pfn + count));
+
+			start_from = __ALIGN_MASK(pageno + count, ((1 << align) - 1));
+			if ((start_from + count) <= (cma->base_pfn + cma->count)) {
+				bitmap_clear(cma->bitmap, pageno, count);
+				retries++;
+				printk(KERN_ERR"#### Retry(%u) with new start pfn/phys(%08lx/0x%08x) ####\n",
+						retries, cma->base_pfn + start_from, __pfn_to_phys(cma->base_pfn + start_from));
+			} else {
+				printk(KERN_ERR"#### Not enough memory left in the CMA region for retries ####\n");
+				goto free;
 			}
 		}
-		goto free;
-	}
+	} while (ret != 0 && retries < 10);
 
 	add_cma_stats(dev, cma, pfn, count, align, 1);
 
