@@ -128,6 +128,10 @@ typedef enum AUDIO_SOURCE_Enum_t
     AUDIO_SOURCE_ANALOG_AUX,
     AUDIO_SOURCE_DIGI1,  // DMIC1
     AUDIO_SOURCE_DIGI2,  // DMIC2
+    AUDIO_SOURCE_RESERVED1, // reserved                     
+    AUDIO_SOURCE_RESERVED2, // reserved 
+    AUDIO_SOURCE_RESERVED3, // reserved 
+    AUDIO_SOURCE_RESERVED4, // reserved 
     AUDIO_SOURCE_BTM,    //Bluetooth Mono Headset Mic  (PCM_Interface)
     AUDIO_SOURCE_USB,  //USB headset Mic
     AUDIO_SOURCE_I2S,
