@@ -957,7 +957,7 @@ static struct platform_device bcm_backlight_devices = {
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
 #if defined(CONFIG_MACH_RHEA_RAY) || defined(CONFIG_MACH_RHEA_RAY_EDN1X) \
-	|| defined(CONFIG_MACH_RHEA_DALTON) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+	|| defined(CONFIG_MACH_RHEA_FARADAY_EB10) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X

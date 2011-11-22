@@ -113,7 +113,7 @@ static struct __init pin_config board_pin_config[] = {
 
 		
 	/* Camera */
-	PIN_CFG(CAMCS0, ANA_SYSREQ_1, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(CAMCS0, ANA_SYS_REQ1, 0, ON, OFF, 0, 0, 8MA),
 
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
