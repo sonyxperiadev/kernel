@@ -108,8 +108,9 @@ void KRIL_SysRpc_Init( void )
 
         // make sure we can't be re-initialized...
         inited = 1;
-
+#ifdef CONFIG_HAS_WAKELOCK
         wake_lock_init(&sKrilSysRpcWakeLock, WAKE_LOCK_SUSPEND, "kril_sysrpc_wake_lock");
+#endif
 
         KRIL_DEBUG(DBG_INFO," calling SYS_InitRpc\n");
         SYS_InitRpc();
