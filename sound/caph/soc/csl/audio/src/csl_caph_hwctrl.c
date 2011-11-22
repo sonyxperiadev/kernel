@@ -346,7 +346,6 @@ void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId)
 	  	arm2spCfg.playbackMode = CSL_ARM2SP_PLAYBACK_DL; //for standalone testing
 }
 
-#if defined(ENABLE_DMA_VOICE)
 // ==========================================================================
 //
 // Function Name: csl_caph_enable_adcpath_by_dsp
@@ -356,23 +355,29 @@ void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId)
 // =========================================================================
 static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 {
-	Boolean enable = FALSE;
-
 	Log_DebugPrintf(LOGID_AUDIO, "csl_caph_enable_adcpath_by_dsp enabled_path=0x%x, pcmRunning %d.\r\n", enabled_path, pcmRunning);
 
-	if(enabled_path) enable = TRUE;
-
-	if(pcmRunning && enable)
+#if !defined(ENABLE_DMA_VOICE)
+	if(pcmRunning)
+	{	//workaround for bt call, dsp callback always comes at pair, once when call starts, another when call drops.
+		//without the workaround, at the second call, rx fifo may be full and dsp does not get interrupt.
+		static Boolean bStartPcm = FALSE;
+		bStartPcm = !bStartPcm;
+		Log_DebugPrintf(LOGID_AUDIO, "csl_caph_enable_adcpath_by_dsp bStartPcm=%d.\r\n", bStartPcm);
+		if(bStartPcm) csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+	}
+#else
+	if(pcmRunning && enabled_path)
 	{
 		//if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
 		//csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 		csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 		//csl_pcm_start(pcmHandleSSP, &pcmCfg);
 	} else {
-		csl_caph_audioh_adcpath_global_enable(enable);
+		csl_caph_audioh_adcpath_global_enable(FALSE);
 	}
-}
 #endif
+}
 
 // ==========================================================================
 //
@@ -1507,8 +1512,8 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 #else
 			if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
 			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-			csl_pcm_start(pcmHandleSSP, &pcmCfg);
+			//csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+			//csl_pcm_start(pcmHandleSSP, &pcmCfg);
 #endif
 		} else {
 			csl_pcm_start(pcmHandleSSP, &pcmCfg);
@@ -2420,9 +2425,7 @@ void csl_caph_hwctrl_init(void)
     csl_caph_ControlHWClock(FALSE);
 	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
 
-#if defined(ENABLE_DMA_VOICE)
 	CSL_RegisterAudioEnableDoneHandler(&csl_caph_enable_adcpath_by_dsp);
-#endif
 
     return;
 }
