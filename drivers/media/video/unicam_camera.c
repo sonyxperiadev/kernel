@@ -71,6 +71,8 @@ struct unicam_camera_buffer {
 	struct list_head queue;
 };
 
+static irqreturn_t unicam_camera_isr(int irq, void *arg);
+
 /* for debugging purpose */
 static void dump_file(char *filename, void *src, int size)
 {
@@ -636,18 +638,31 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 {
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
+	int err = 0;
 
 	if (unicam_dev->icd) {
 		dev_warn(icd->dev.parent, "Unicam camera driver already attached to another client\n");
-		return -EBUSY;
+		err = -EBUSY;
+		goto eicd;
+	}
+
+
+	/* register irq */
+	err = request_irq(unicam_dev->irq, unicam_camera_isr, IRQF_DISABLED | IRQF_SHARED,
+			UNICAM_CAM_DRV_NAME, unicam_dev);
+	if (err) {
+		dev_err(icd->dev.parent, "cound not install irq %d\n", unicam_dev->irq);
+		err = -ENODEV;
+		goto eirq;
 	}
 
 	unicam_dev->icd = icd;
 
 	dev_info(icd->dev.parent, "Unicam Camera driver attached to camera %d\n",
 			icd->devnum);
-
-	return 0;
+eirq:
+eicd:
+	return err;
 }
 
 static void unicam_camera_remove_device(struct soc_camera_device *icd)
@@ -665,6 +680,7 @@ static void unicam_camera_remove_device(struct soc_camera_device *icd)
 		unicam_videobuf_stop_streaming(&icd->vb2_vidq);
 	}
 
+	free_irq(unicam_dev->irq, unicam_dev);
 
 	dev_info(icd->dev.parent, "Unicam Camera driver detached from camera %d\n",
 			icd->devnum);
@@ -795,15 +811,6 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	soc_host->v4l2_dev.dev	= &pdev->dev;
 	soc_host->nr			= pdev->id;
 
-	/* register irq */
-	err = request_irq(unicam_dev->irq, unicam_camera_isr, IRQF_DISABLED | IRQF_SHARED,
-			UNICAM_CAM_DRV_NAME, unicam_dev);
-	if (err) {
-		dev_err(&pdev->dev, "cound not install irq %d\n", unicam_dev->irq);
-		err = -ENODEV;
-		goto eirq;
-	}
-
 	unicam_dev->alloc_ctx = vb2_dma_contig_init_ctx(&pdev->dev);
 	if (IS_ERR(unicam_dev->alloc_ctx)) {
 		err = PTR_ERR(unicam_dev->alloc_ctx);
@@ -831,8 +838,6 @@ ecamhostreg:
 ecslcaminit:
 	vb2_dma_contig_cleanup_ctx(unicam_dev->alloc_ctx);
 eallocctx:
-	free_irq(unicam_dev->irq, unicam_dev);
-eirq:
 	vfree(unicam_dev);
 ealloc:
 	for (i = 0; i < UNICAM_NUM_RSRC; i++) {
