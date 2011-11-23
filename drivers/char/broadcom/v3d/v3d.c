@@ -895,7 +895,6 @@ static void v3d_power(int flag)
 static void v3d_print_status(void)
 {
 	down(&v3d_state.work_lock);
-
 	if(v3d_is_on)
 	{
 		KLOG_D("v3d reg: ct0_ca[0x%x] ct0_ea[0x%x] ct1_ca[0x%x] ct1_ea[0x%x]",
@@ -917,6 +916,7 @@ static void v3d_print_status(void)
 			v3d_read(0xf00),
 			v3d_read(0xf04));
 	}
+	up(&v3d_state.work_lock);
 }
 
 static void v3d_reg_init(void)
@@ -1018,7 +1018,7 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 	if (flags & (1 << 2)) {
 		irq_retval = 1;
 		if (v3d_oom_block_used == 0) {
-			KLOG_V("v3d oom blk not used: flags[0x%02x] intctl[0x%08x] bpoa[0x%08x] bpos[0x%08x] bpca[0x%08x] bpcs[0x%08x]",
+			KLOG_E("v3d oom blk not used: flags[0x%02x] intctl[0x%08x] bpoa[0x%08x] bpos[0x%08x] bpca[0x%08x] bpcs[0x%08x]",
 				   flags, v3d_read(V3D_INTCTL_OFFSET), v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET), v3d_read(V3D_BPCA_OFFSET), v3d_read(V3D_BPCS_OFFSET));
 			v3d_write(v3d_bin_oom_block,  V3D_BPOA_OFFSET);
 			v3d_write(v3d_bin_oom_size,  V3D_BPOS_OFFSET);
