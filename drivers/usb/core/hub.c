@@ -1639,12 +1639,15 @@ void usb_disconnect(struct usb_device **pdev)
 {
 	struct usb_device	*udev = *pdev;
 	int			i;
-	struct usb_hcd		*hcd = bus_to_hcd(udev->bus);
+	struct usb_hcd		*hcd;
 
 	if (!udev) {
 		pr_debug ("%s nodev\n", __func__);
 		return;
 	}
+
+	/* Coverity REVERSE_INULL fix */
+	hcd = bus_to_hcd(udev->bus);
 
 	/* mark the device as inactive, so any further urb submissions for
 	 * this device (and any of its children) will fail immediately.
@@ -2011,6 +2014,7 @@ int usb_authorize_device(struct usb_device *usb_dev)
 	if (usb_dev->authorized == 1)
 		goto out_authorized;
 
+	/* Coverity 'Unchecked Return Value' ignored */
 	result = usb_autoresume_device(usb_dev);
 	if (result < 0) {
 		dev_err(&usb_dev->dev,
@@ -3833,6 +3837,10 @@ static int descriptors_changed(struct usb_device *udev,
 	}
 
 	if (!changed && serial_len) {
+		/* Coverity NEGATIVE_RETURNS. If length is negative, below
+		 * if statement will always be true, since serial_len is
+		 * greater than zero.
+		 */
 		length = usb_string(udev, udev->descriptor.iSerialNumber,
 				buf, serial_len);
 		if (length + 1 != serial_len) {

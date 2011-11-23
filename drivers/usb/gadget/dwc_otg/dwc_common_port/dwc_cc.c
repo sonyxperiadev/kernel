@@ -184,6 +184,10 @@ static int32_t cc_add(dwc_cc_if_t *cc_if, uint8_t *chid, uint8_t *cdid, uint8_t 
 	if (uid) {
 		DWC_DEBUG("Replacing previous connection context id=%d name=%p name_len=%d", uid, name, length);
 		cc = cc_find(cc_if, uid);
+		if (!cc) {
+			DWC_ERROR("Uid %d not found in cc list", uid);
+			return 0;
+		}
 	}
 	else {
 		cc = alloc_cc(name, length);
@@ -208,6 +212,10 @@ static void cc_clear(dwc_cc_if_t *cc_if)
 	while (!DWC_CIRCLEQ_EMPTY(&cc_if->list)) {
 		dwc_cc_t *cc = DWC_CIRCLEQ_FIRST(&cc_if->list);
 		DWC_CIRCLEQ_REMOVE_INIT(&cc_if->list, cc, list_entry);
+		if (DWC_CIRCLEQ_FIRST(&cc_if->list)) {
+			free_cc(cc);
+			break;
+		}
 		free_cc(cc);
 	}
 }

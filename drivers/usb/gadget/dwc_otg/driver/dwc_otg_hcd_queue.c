@@ -141,7 +141,7 @@ static uint32_t calc_bus_time(int speed, int is_in, int is_isoc,
 		break;
 	default:
 		DWC_WARN("Unknown device speed\n");
-		retval = -1;
+		return -1;
 	}
 	
 	return NS_TO_US(retval);

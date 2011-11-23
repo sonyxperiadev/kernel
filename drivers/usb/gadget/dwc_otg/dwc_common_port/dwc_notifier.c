@@ -99,9 +99,16 @@ static notifier_t *alloc_notifier(void *object)
 
 static void free_notifier(notifier_t *notifier)
 {
-	observer_t *observer;
-	DWC_CIRCLEQ_FOREACH(observer, &notifier->observers, list_entry) {
-		free_observer(observer);
+	observer_t *next_observer;
+	observer_t *prev_observer = NULL;
+	DWC_CIRCLEQ_FOREACH(next_observer, &notifier->observers, list_entry) {
+		if (prev_observer) {
+			free_observer(prev_observer);
+		}
+		prev_observer = next_observer;
+	}
+	if (prev_observer) {
+		free_observer(prev_observer);
 	}
 	DWC_FREE(notifier);
 }
