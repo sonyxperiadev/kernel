@@ -76,6 +76,7 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 		case CTL_STREAM_PANEL_PCMOUT1:
 		case CTL_STREAM_PANEL_PCMOUT2:
 		case CTL_STREAM_PANEL_VOIPOUT:
+		case CTL_STREAM_PANEL_FM:
 			uinfo->count = 2;
 			uinfo->value.integer.min = MIN_VOLUME_mB;
 			uinfo->value.integer.max = MAX_VOLUME_mB;
@@ -174,6 +175,21 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 					parm_vol.stream = (stream - 1);
 					AUDIO_Ctrl_Trigger(ACTION_AUD_SetPlaybackVolume,&parm_vol,NULL,0);
 				}
+			}
+		}
+		break;
+		case CTL_STREAM_PANEL_FM:
+		{
+			if(pCurSel[0] == dev) //if current sink is diffent, dont call the driver to change the volume
+			{
+				//call audio driver to set volume
+				BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetPlayVolume pVolume[0] =%ld (0.25dB), pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
+				parm_vol.source = pChip->streamCtl[stream-1].dev_prop.p[0].source;
+				parm_vol.sink = pChip->streamCtl[stream-1].dev_prop.p[0].sink;
+				parm_vol.volume1 = pVolume[0];
+				parm_vol.volume2 = pVolume[1];
+				parm_vol.stream = (stream - 1);
+				AUDIO_Ctrl_Trigger(ACTION_AUD_SetPlaybackVolume,&parm_vol,NULL,0);
 			}
 		}
 		break;
@@ -514,6 +530,16 @@ static int SwitchCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 			}
 		}
 			break;
+		case CTL_STREAM_PANEL_FM:
+		{
+				//call audio driver to set mute
+				parm_mute.source = pChip->streamCtl[stream-1].dev_prop.p[0].source;
+				parm_mute.sink = pChip->streamCtl[stream-1].dev_prop.p[0].sink;
+				parm_mute.mute1 = pMute[0];
+				parm_mute.stream = (stream - 1);
+				AUDIO_Ctrl_Trigger(ACTION_AUD_MutePlayback,&parm_mute,NULL,0);
+		}
+		break;
 
 		case CTL_STREAM_PANEL_PCMIN:
 		{
