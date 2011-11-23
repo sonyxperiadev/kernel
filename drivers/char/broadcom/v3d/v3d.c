@@ -192,8 +192,8 @@ static int dbg_job_timeout_cnt = 0;
 #endif //SUPPORT_V3D_WORKLIST
 
 /***** Function Prototypes **************/
-static int setup_v3d_clock(void);
-
+static int enable_v3d_clock(void);
+static int disable_v3d_clock(void);
 static void v3d_enable_irq(void);
 static inline uint32_t v3d_read(uint32_t reg);
 static inline void v3d_write(uint32_t val, uint32_t reg);
@@ -522,6 +522,7 @@ static int v3d_thread(void *data)
 {
 	int ret;
 	int timeout;
+	int inited = 0;
 	static int timout_min = 1000;
 
 	KLOG_D("v3d_thread launched");
@@ -529,11 +530,16 @@ static int v3d_thread(void *data)
 		KLOG_E("lock acquire failed");
 		do_exit( -1);
 	}
+
 	while (1) {
 		if (v3d_job_curr == NULL) {
 			/* No jobs pending - wait till a job gets posted */
 			KLOG_V("v3d_thread going to sleep till a post happens");
-			v3d_hw_release();
+			if( inited )
+				v3d_hw_release();
+			else
+				inited = 1;
+
 			while (v3d_job_curr == NULL) {
 				up(&v3d_sem);
 				if (wait_event_interruptible(v3d_start_q, (v3d_job_curr != NULL))) {
@@ -595,7 +601,7 @@ static int v3d_thread(void *data)
 					if (v3d_job_curr != NULL) {
 						ret = v3d_job_start();
 					}
-				} 
+				}
 				else if ( ((v3d_job_curr->job_type == V3D_JOB_BIN_REND) && (v3d_job_curr->job_intern_state == 2)) ||
 						((v3d_job_curr->job_type == V3D_JOB_REND) && (v3d_job_curr->job_intern_state == 2)) ||
 						((v3d_job_curr->job_type == V3D_JOB_USER) && (v3d_job_curr->job_intern_state == v3d_job_curr->user_cnt)) ) {
@@ -612,7 +618,7 @@ static int v3d_thread(void *data)
 
 					if (v3d_job_curr != NULL) {
 						ret = v3d_job_start();
-					} 
+					}
 				}
 				else if (v3d_job_curr->job_intern_state == 0) {
 					ret = v3d_job_start(); //What is this?
@@ -620,7 +626,7 @@ static int v3d_thread(void *data)
 				else {
 					KLOG_E("Assert: v3d thread wait exited as 'done' or 'killed' but job state not valid");
 				}
-			} 
+			}
 			else {
 				/* V3D timed out */
 				if (timeout != 0 ) {
@@ -769,18 +775,67 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 static inline u32 v3d_read(u32 reg)
 {
 	u32 flags;
+
+	if(unlikely(!v3d_is_on))
+		KLOG_E("V3D reg access without clock\n\n\n\n");
 	flags = ioread32(v3d_base + reg);
 	return flags;
 }
 
 static inline void v3d_write(uint32_t val, uint32_t reg)
 {
+	if(unlikely(!v3d_is_on))
+		KLOG_E("V3D reg access without clock\n\n\n\n");
 	iowrite32( val, v3d_base + reg);
 }
 
 /******************************************************************
 	V3D Power managment function
 *******************************************************************/
+static int enable_v3d_clock(void)
+{
+	int rc = 0;
+
+	if (pi_mgr_dfs_request_update(v3d_state.dfs_node, PI_OPP_TURBO)) {
+		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
+		return  -EIO;
+	}
+
+	v3d_clk = clk_get(NULL, "v3d_axi_clk");
+	if (!v3d_clk) {
+		KLOG_E("%s: error get clock\n", __func__);
+		return -EIO;
+	}
+
+	rc = clk_enable(v3d_clk);
+	if (rc) {
+		KLOG_E("%s: error enable clock\n", __func__);
+		return -EIO;
+	}
+
+	return (rc);
+}
+
+static int disable_v3d_clock(void)
+{
+	int rc = 0;
+
+	v3d_clk = clk_get(NULL, "v3d_axi_clk");
+	if (!v3d_clk) {
+		KLOG_E("%s: error get clock\n", __func__);
+		return -EIO;
+	}
+
+	clk_disable(v3d_clk);
+
+	if (pi_mgr_dfs_request_update(v3d_state.dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
+		return  -EIO;
+	}
+
+	return (rc);
+}
+
 static void v3d_power(int flag)
 {
 	uint32_t value;
@@ -790,7 +845,7 @@ static void v3d_power(int flag)
 
 	if (flag) {
 		// Enable V3D
-		clk_enable(v3d_clk);
+		enable_v3d_clock();
 		value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
 		value = value | ( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
 		writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
@@ -812,7 +867,7 @@ static void v3d_power(int flag)
 			v3d_state.free_time = 0;
 			v3d_state.acquired_time = 0;
 		}
-	} 
+	}
 	else {
 		//Update counters
 		v3d_state.j2 = jiffies;
@@ -830,8 +885,8 @@ static void v3d_power(int flag)
 		value = value & ~( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
 		writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
 		/* Disable V3D clock */
-		clk_disable(v3d_clk);
 		v3d_is_on = 0;
+		disable_v3d_clock();
 	}
 
 	up(&v3d_state.work_lock);
@@ -934,35 +989,6 @@ static void v3d_hw_release(void)
 	free_irq(IRQ_GRAPHICS, NULL);
 	v3d_power(0);
 	up(&v3d_state.acquire_sem);		//V3D is up for grab
-}
-
-static int setup_v3d_clock(void)
-{
-	unsigned long rate;
-	int rc;
-
-	v3d_state.dfs_node = pi_mgr_dfs_add_request("v3d", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
-	if (!v3d_state.dfs_node) {
-		KLOG_E("Failed to add dfs request for V3D\n");
-		return -EIO;
-	}
-
-	v3d_clk = clk_get(NULL, "v3d_axi_clk");
-	if (!v3d_clk) {
-		KLOG_E("%s: error get clock\n", __func__);
-		return -EIO;
-	}
-
-	rc = clk_enable(v3d_clk);
-	if (rc) {
-		KLOG_E("%s: error enable clock\n", __func__);
-		return -EIO;
-	}
-
-	rate = clk_get_rate(v3d_clk);
-	printk("v3d_clk_clk rate %lu\n", rate);
-
-	return (rc);
 }
 
 #ifdef SUPPORT_V3D_WORKLIST
@@ -1381,8 +1407,6 @@ int __init v3d_init(void)
 	v3d_state.v3d_device = device_create(v3d_state.v3d_class, NULL, MKDEV(v3d_major, 0), NULL, V3D_DEV_NAME);
 	v3d_state.v3d_device->coherent_dma_mask = ISA_DMA_THRESHOLD;
 
-	setup_v3d_clock();
-
 	/* Map the V3D registers */
 	v3d_base = (void __iomem *)ioremap_nocache(RHEA_V3D_BASE_PERIPHERAL_ADDRESS, SZ_4K);
 	if (v3d_base == NULL)
@@ -1419,6 +1443,10 @@ int __init v3d_init(void)
 	v3d_state.qos_node = pi_mgr_qos_add_request("v3d", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
 	if (NULL == v3d_state.qos_node)
 		KLOG_E("failed to register qos client. ACP wont work\n");
+
+	v3d_state.dfs_node = pi_mgr_dfs_add_request("v3d", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+	if (NULL == v3d_state.dfs_node)
+		KLOG_E("failed to register PI DFS request\n");
 
 #ifdef SUPPORT_V3D_WORKLIST
 	/* Allocate the binning overspill memory upfront */
@@ -1475,6 +1503,9 @@ void __exit v3d_exit(void)
 
 	if (pi_mgr_qos_request_remove(v3d_state.qos_node))
 		KLOG_E("failed to unregister qos client\n");
+
+	if (pi_mgr_dfs_request_remove(v3d_state.dfs_node))
+		KLOG_E("failed to unregister PI DFS request\n");
 
 	/* remove proc entry */
 	remove_proc_entry("v3d", NULL);
