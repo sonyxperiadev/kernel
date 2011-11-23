@@ -16,9 +16,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #define V3D_DEV_NAME	"v3d"
 #define BCM_V3D_MAGIC	'V'
-#ifdef __KERNEL__
-#define V3D_MEMPOOL_SIZE	SZ_32M
-#endif
 
 #define SUPPORT_V3D_WORKLIST
 
