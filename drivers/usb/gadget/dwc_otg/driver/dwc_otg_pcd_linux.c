@@ -433,6 +433,7 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 		usb_req->dma = virt_to_phys(buf);
 		if (ep->dwc_ep.is_in)
 			memcpy (buf, usb_req->buf, usb_req->length);
+		/* coverity[leaked_storage] */
 	}
 	else
 		usb_req->dma = virt_to_phys(usb_req->buf);
