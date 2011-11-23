@@ -94,17 +94,6 @@ static void __iomem *v3d_base = NULL;
 static void __iomem *mm_rst_base = NULL;
 static struct clk *v3d_clk;
 
-//external pointer to the V3D memory
-//This is the relocatable heap
-void *v3d_mempool_base = NULL;
-int v3d_mempool_size = V3D_MEMPOOL_SIZE;
-
-//Maximum number of relocatable heap that can be created in V3D mem pool
-volatile unsigned int max_slots = 1;
-//Simple way to keep track of slot allocation
-volatile unsigned int g_mem_slots = 0;
-volatile uint32_t	v3d_relocatable_chunk_size = 0;
-
 static struct {
 	struct semaphore *g_irq_sem;
 	struct semaphore acquire_sem;
@@ -126,7 +115,6 @@ v3d_state;
 typedef struct {
 	mem_t mempool;
 	struct semaphore irq_sem;
-	unsigned int mem_slot;
 	volatile int	v3d_acquired;
 	u32 id;
 	bool uses_worklist;
@@ -178,8 +166,6 @@ v3d_job_t;
 
 /* Driver module init variables */
 struct task_struct *v3d_thread_task = (struct task_struct *) - ENOMEM;
-unsigned int v3d_mempool_phys_base;
-extern void *v3d_mempool_base;
 static int v3d_bin_oom_block;
 static int v3d_bin_oom_size = (2*1024*1024);
 static void* v3d_bin_oom_cpuaddr = NULL;
@@ -243,8 +229,7 @@ static int dbg_job_timeout_cnt = 0;
 
 /***** Function Prototypes **************/
 static int setup_v3d_clock(void);
-static unsigned int get_reloc_mem_slot(void);
-static void free_reloc_mem_slot(unsigned int slot);
+
 static void reset_v3d(void);
 static void v3d_enable_irq(void);
 static inline u32 v3d_read(u32 reg);
@@ -253,30 +238,6 @@ static void v3d_turn_all_on(void);
 static void v3d_turn_all_off(void);
 static int v3d_hw_acquire(bool for_worklist);
 static void v3d_hw_release(void);
-
-/******************************************************************
-	Simple slot management to give out chunks of V3D mem pool
-	Every user creates a relocatable heap in their memory chunk.
-*******************************************************************/
-static unsigned int get_reloc_mem_slot(void)
-{
-	int i;
-
-	for (i = 0; i < max_slots; i++) {
-		if ( (1 << i) & ~(g_mem_slots) ) {
-			g_mem_slots |= ( 1 << i);
-			return (i);
-		}
-	}
-	return MEM_SLOT_UNAVAILABLE;
-}
-
-static void free_reloc_mem_slot(unsigned int slot)
-{
-	down(&v3d_state.work_lock);
-	g_mem_slots &= ~( 1 << slot);
-	up(&v3d_state.work_lock);
-}
 
 /******************************************************************
 	V3D Work queue related functions
@@ -1280,7 +1241,6 @@ static int v3d_open(struct inode *inode, struct file *filp)
 	filp->private_data = dev;
 
 	dev->v3d_acquired = 0;
-	dev->mem_slot = MEM_SLOT_UNAVAILABLE;
 
 	sema_init(&dev->irq_sem, 0);
 
@@ -1306,8 +1266,6 @@ err:
 static int v3d_release(struct inode *inode, struct file *filp)
 {
 	v3d_t *dev = (v3d_t *)filp->private_data;
-
-	free_reloc_mem_slot(dev->mem_slot);
 
 	if(dev->uses_worklist == true)
 	{
@@ -1417,35 +1375,12 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 		case V3D_IOCTL_SYNCTRACE: {
-			KLOG_V("v3d_ioctl :V3D_IOCTL_TRACE");
+			KLOG_V("v3d_ioctl :V3D_IOCTL_TRACE: Unsupported");
 		}
 		break;
 
 		case V3D_IOCTL_GET_MEMPOOL: {
-			KLOG_V("v3d_ioctl :V3D_IOCTL_GET_MEMPOOL");
-			if ( dev->mem_slot == MEM_SLOT_UNAVAILABLE ) {
-				down(&v3d_state.work_lock);
-				dev->mem_slot = get_reloc_mem_slot();
-				if ( dev->mem_slot == MEM_SLOT_UNAVAILABLE || !v3d_mempool_base ) {
-					KLOG_E("Failed to find slot in relocatable heap\n");
-					up(&v3d_state.work_lock);
-					return -EPERM;
-				}
-
-				dev->mempool.ptr = v3d_mempool_base + ( v3d_relocatable_chunk_size * dev->mem_slot);
-				dev->mempool.addr = virt_to_phys(dev->mempool.ptr);
-				/* change the physical address to ACP address space*/
-				dev->mempool.addr &= ~0x80000000;
-				dev->mempool.addr |= 0x40000000;
-
-
-				dev->mempool.size = v3d_relocatable_chunk_size;
-				dev->mempool.ioptr = (uint32_t) dev->mempool.ptr;
-				up(&v3d_state.work_lock);
-			}
-			//This is used to give userspace the pointer to the relocatable heap memory
-			if (copy_to_user((mem_t *)arg, &(dev->mempool), sizeof(mem_t)))
-				ret = -EPERM;
+			KLOG_E("v3d_ioctl :V3D_IOCTL_GET_MEMPOOL: Unsupported");
 		}
 		break;
 
@@ -1564,7 +1499,6 @@ int proc_v3d_write(struct file *file, const char __user *buffer, unsigned long c
 {
 	char v3d_req[200], v3d_resp[100];
 	int ret = 0;
-	int input = 0;
 
 	if ( count > (sizeof(v3d_req) - 1) ) {
 		KLOG_E(KERN_ERR"%s:v3d max length=%d\n", __func__, sizeof(v3d_req));
@@ -1599,20 +1533,8 @@ int proc_v3d_write(struct file *file, const char __user *buffer, unsigned long c
 				readl(v3d_base + 0xf04));
 
 	}
-	else if (!g_mem_slots) {
-		input = simple_strtoul(v3d_req, (char**)NULL, 0);
-		if ( input < 0 || ( (input != 1) && (input % 2))) {
-			KLOG_E("Max user needs to be >= 1 or multiple of 2\n");
-		}
-		else {
-			max_slots = input;
-			//Calculate relocatable heap Chunks size based on max users that can fit into v3d_mempool
-			v3d_relocatable_chunk_size = v3d_mempool_size / max_slots;
-			KLOG_E("Setting Max user = %d, Chunk Size = 0x%x\n", max_slots, v3d_relocatable_chunk_size);
-		}
-	}
 	else
-		KLOG_E("Can't change max user while in use\n");
+		KLOG_E("Invalid command\n");
 
 	up(&v3d_state.work_lock);
 
@@ -1628,20 +1550,6 @@ static int proc_v3d_read( char *buffer, char **start, off_t offset, int bytes, i
 	return ret;
 }
 
-static int __init setup_v3d_mempool(char *str)
-{
-	if (str) {
-		get_option(&str, &v3d_mempool_size);
-	}
-	KLOG_D("Allocating relocatable heap of size = %d\n", v3d_mempool_size);
-	v3d_mempool_base = alloc_bootmem_pages( v3d_mempool_size );
-	if ( !v3d_mempool_base )
-		KLOG_E("Failed to allocate relocatable heap memory\n");
-	return 0;
-}
-
-__setup("v3d_mem=", setup_v3d_mempool);
-
 int __init v3d_init(void)
 {
 	int ret;
@@ -1650,9 +1558,6 @@ int __init v3d_init(void)
 
 	/* initialize the V3D struct */
 	memset(&v3d_state, 0, sizeof(v3d_state));
-
-	//Calculate relocatable heap Chunks size based on max users that can fit into v3d_mempool
-	v3d_relocatable_chunk_size = v3d_mempool_size / max_slots;
 
 	ret = register_chrdev(v3d_major, V3D_DEV_NAME, &v3d_fops);
 	if (ret < 0)
@@ -1800,12 +1705,6 @@ void __exit v3d_exit(void)
 	device_destroy(v3d_state.v3d_class, MKDEV(v3d_major, 0));
 	class_destroy(v3d_state.v3d_class);
 	unregister_chrdev(v3d_major, V3D_DEV_NAME);
-
-	/* Free up the relocatable memory allocated */
-	if (v3d_mempool_base)
-		free_bootmem((long unsigned int)v3d_mempool_base, v3d_mempool_size);
-
-	v3d_mempool_base = NULL;
 }
 
 module_init(v3d_init);
