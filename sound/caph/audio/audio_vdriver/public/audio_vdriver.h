@@ -280,7 +280,8 @@ void AUDDRV_EnableDSPInput (
 				AUDIO_SOURCE_Enum_t		 mic_selection,
 				AUDIO_SAMPLING_RATE_t	 sample_rate
 				);
-
+void AUDDRV_DisableDSPOutput (void);
+void AUDDRV_DisableDSPInput (void);
 Boolean AUDDRV_IsVoiceCallWB(AudioMode_t audio_mode);
 Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode);
 Boolean AUDDRV_InVoiceCall( void );

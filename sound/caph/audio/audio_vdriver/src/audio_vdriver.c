@@ -80,10 +80,10 @@ typedef struct AUDDRV_PathID_t{
 //=============================================================================
 // Private Variable declarations
 //=============================================================================
-#if defined(CONFIG_BCM_MODEM) 
+#if defined(CONFIG_BCM_MODEM)
 #define AUDIO_MODEM(a) a
 #else
-#define AUDIO_MODEM(a)      
+#define AUDIO_MODEM(a)
 #endif
 
 //static Boolean voiceInPathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN for both voiceIn and voiceOut
@@ -238,7 +238,7 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 {
 	AudioMode_t mode;
 	int dev = 0;
-	
+
 	telephonyPathID.ulPathID = 0;
 	telephonyPathID.ul2PathID = 0;
 	telephonyPathID.dlPathID = 0;
@@ -654,6 +654,32 @@ void AUDDRV_EnableDSPOutput (
 	}
 }
 
+//=============================================================================
+//
+// Function Name: AUDDRV_DisableDSPOutput
+//
+// Description:   Disable audio DSP output for playback
+//
+//=============================================================================
+
+void AUDDRV_DisableDSPOutput (void)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r AUDDRV_DisableDSPOutput bInVoiceCall %d\n\r", bInVoiceCall);
+
+	if(bInVoiceCall != TRUE)
+	{
+		//if bInVoiceCall== TRUE, assume the telphony_deinit() function sends DISABLE
+		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
+
+#if defined(ENABLE_DMA_VOICE)
+		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN);
+#endif
+		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
+
+		voicePlayOutpathEnabled = FALSE;
+	}
+}
+
 
 //=============================================================================
 //
@@ -698,6 +724,13 @@ void AUDDRV_EnableDSPInput (
 #endif
 		}
 //		voiceInPathEnabled = TRUE;
+
+		/*When voice call ends, DSPCMD_TYPE_MUTE_DSP_UL is being sent to DSP and this command mutes UL record gain
+		Not sure why this is done and there is no clarification if we really need to send the MUTE UL command when
+		disconnecting the voice call. For now, when voice record is started, UMUTE UL command will be sent */
+
+		audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
+
 	}
 
 #if 0
@@ -714,6 +747,31 @@ void AUDDRV_EnableDSPInput (
 
 }
 
+//=============================================================================
+//
+// Function Name: AUDDRV_DisableDSPInput
+//
+// Description:   Disable audio DSP input for record
+//
+//=============================================================================
+
+void AUDDRV_DisableDSPInput (void)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r AUDDRV_DisableDSPInput bInVoiceCall %d\n\r",bInVoiceCall);
+
+	if(bInVoiceCall != TRUE)
+	{
+		//if bInVoiceCall== TRUE, assume the telphony_deinit() function sends DISABLE
+
+		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0 );
+
+#if defined(ENABLE_DMA_VOICE)
+		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_PRI_MIC_EN);
+#endif
+		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
+		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
+	}
+}
 
 //=============================================================================
 //

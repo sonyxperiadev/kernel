@@ -704,7 +704,7 @@ void AUDCTRL_EnablePlay(
 
 	if((source == AUDIO_SOURCE_MEM || source == AUDIO_SOURCE_I2S) && sink == AUDIO_SINK_DSP)
 	{
-		config.sink = CSL_CAPH_DEV_DSP_throughMEM; //convert from CSL_CAPH_DEV_EP
+		config.sink = CSL_CAPH_DEV_DSP_throughMEM;
 	}
 
 	if((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB) || sink == AUDIO_SINK_BTS)
@@ -720,13 +720,13 @@ void AUDCTRL_EnablePlay(
 	// in case it was muted from last play,
 	AUDCTRL_SetPlayMute (sink, spk, FALSE);
 #endif
-	// Enable DSP DL for Voice Call.
-	if(config.source == CSL_CAPH_DEV_DSP)
+	// Enable DSP DL
+	if(config.source == CSL_CAPH_DEV_DSP || config.sink == CSL_CAPH_DEV_DSP_throughMEM)
 	{
 		AUDDRV_EnableDSPOutput(sink, sr);
 	}
 	if(pPathID) *pPathID = pathID;
-	//Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %x, pathID %d.\r\n", *pPathID, pathID);
+	//Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %x, pathID %d\r\n", *pPathID, pathID);
 }
 //============================================================================
 //
@@ -766,6 +766,11 @@ void AUDCTRL_DisablePlay(
 	src_dev = getDeviceFromSrc(source);
 	sink_dev = getDeviceFromSink(sink);
 
+	// Disable DSP DL
+	if(source == AUDIO_SOURCE_DSP || sink == AUDIO_SINK_DSP)
+	{
+		AUDDRV_DisableDSPOutput();
+	}
 	if((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB) || sink == AUDIO_SINK_BTS)
 		;
 	else
@@ -1439,6 +1444,11 @@ void AUDCTRL_DisableRecord(
 	Log_DebugPrintf(LOGID_AUDIO,
                     "AUDCTRL_DisableRecord: src = 0x%x, sink = 0x%x \n",source, sink);
 
+	// Disable DSP UL
+	if(sink == AUDIO_SINK_DSP)
+	{
+		AUDDRV_DisableDSPInput();
+	}
 	if(source == AUDIO_SOURCE_SPEECH_DIGI)
 	{
 		/* Not supported - One stream - two paths use case for record. Will be supported with one path itself */
