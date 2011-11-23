@@ -743,7 +743,10 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	BRCM_AUDIO_Param_Mute_t	parm_mute;
 	BRCM_AUDIO_Param_Vibra_t parm_vibra;
 	BRCM_AUDIO_Param_FM_t parm_FM;
-    int rtn = 0;
+	BRCM_AUDIO_Param_Spkr_t parm_spkr;
+    int rtn = 0,cmd,i,indexVal = -1,cnt=0;
+	struct snd_pcm_substream *pStream=NULL;
+	Int32 sink;
 
 	switch(function)
 	{
@@ -902,6 +905,88 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			break;
 		case CTL_FUNCTION_SINK_CHG:
 			BCM_AUDIO_DEBUG("Change sink device stream=%d cmd=%d sink=%d\n", stream, ucontrol->value.integer.value[0], ucontrol->value.integer.value[1]);
+			cmd = ucontrol->value.integer.value[0];
+			pSel = pChip->streamCtl[stream-1].iLineSelect;
+			if(cmd == 0)//add device
+			{
+				for(i=0;i<MAX_PLAYBACK_DEV;i++)
+				{
+					if(pSel[i] == AUDIO_SINK_UNDEFINED && indexVal == -1)
+					{
+						indexVal = i;
+						continue;
+					}
+					else if(pSel[i] == ucontrol->value.integer.value[1])
+					{
+						indexVal = -1;
+						BCM_AUDIO_DEBUG("Device already added in the list \n");
+						break;
+					}
+					else if(++cnt == MAX_PLAYBACK_DEV)
+					{
+						BCM_AUDIO_DEBUG("Max devices count reached. Cannot add more device \n");
+						return -1;
+					}
+				}
+				if(indexVal != -1)
+				{
+					pSel[indexVal] = ucontrol->value.integer.value[1];
+
+					if(pChip->streamCtl[stream-1].pSubStream != NULL)
+					{
+						pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
+						//if the stream is running, then call the audio driver API to add the device
+						if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED)
+						{
+							if(pSel[indexVal] >= AUDIO_SINK_HANDSET && pSel[indexVal] < AUDIO_SINK_VALID_TOTAL)
+							{
+								parm_spkr.src = AUDIO_SINK_MEM;
+								parm_spkr.sink = pSel[indexVal];
+								parm_spkr.stream = (stream - 1);
+								AUDIO_Ctrl_Trigger(ACTION_AUD_AddChannel,&parm_spkr,NULL,0);
+							}
+						}
+			        }
+				}
+			}
+			else if(cmd == 1) //remove device
+			{
+				for(i = 0; i < MAX_PLAYBACK_DEV; i++)
+				{
+					if(pSel[i] == ucontrol->value.integer.value[1] && indexVal == -1)
+					{
+						indexVal = i;
+						sink = pSel[indexVal]; //sink to remove
+						if(i != 0)
+							break;
+					}
+					else if(indexVal != -1)
+					{
+						if(pSel[i] != AUDIO_SINK_UNDEFINED)
+						{
+							pSel[indexVal] = pSel[i];
+							indexVal = i;
+							break;
+						}
+					}
+				}
+				if(indexVal != -1)
+				{
+					if(pChip->streamCtl[stream-1].pSubStream != NULL)
+					{
+						pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
+						//if the stream is running, then call the audio driver API to remove the device
+						if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED)
+						{
+							parm_spkr.src = AUDIO_SINK_MEM;
+							parm_spkr.sink = sink;
+							parm_spkr.stream = (stream - 1);
+							AUDIO_Ctrl_Trigger(ACTION_AUD_RemoveChannel,&parm_spkr,NULL,0);
+						}
+					}
+					pSel[indexVal] = AUDIO_SINK_UNDEFINED;
+				}
+			}
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
@@ -1124,7 +1209,7 @@ static struct snd_kcontrol_new sgSndCtrls[] __initdata =
 	BRCM_MIXER_CTRL_MISC_W(0, 0, "P2-CHG", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_SINK_CHG)),
 };
 
-#define	MAX_CTL_NUMS	140
+#define	MAX_CTL_NUMS	160
 #define	MAX_CTL_NAME_LENGTH	44
 static char gStrCtlNames[MAX_CTL_NUMS][MAX_CTL_NAME_LENGTH] __initdata; // MAX_CTL_NAME_LENGTH];
 static Int32 sgCaphSpeechMixCtrls[CAPH_MAX_PCM_STREAMS] __initdata = {1,1,0,3,3,0,0,1};
