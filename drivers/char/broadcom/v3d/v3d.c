@@ -52,9 +52,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #define MEM_SLOT_UNAVAILABLE		(0xFFFF)
 
-/* Always check for idle at every reset:  TODO: make this configurable? */
-//#define V3D_RESET_IMPLIES_ASSERT_IDLE
-
 /******************************************************************
 	V3D kernel prints
 *******************************************************************/
@@ -108,14 +105,6 @@ volatile unsigned int max_slots = 1;
 volatile unsigned int g_mem_slots = 0;
 volatile uint32_t	v3d_relocatable_chunk_size = 0;
 
-struct trace_entry {
-	unsigned long timestamp;
-	uint32_t id;
-	uint32_t arg0, arg1, arg2, arg3, arg4;
-	unsigned long tag;
-};
-#define INITIAL_TRACE_HISTORY 0
-#define MAX_TRACE_HISTORY 1024
 static struct {
 	struct semaphore *g_irq_sem;
 	struct semaphore acquire_sem;
@@ -124,10 +113,6 @@ static struct {
 	struct class *v3d_class;
 	struct device *v3d_device;
 	volatile uint32_t	irq_enabled;
-	int traceptr;
-	spinlock_t trace_lock;
-	int num_trace_ents;
-	struct trace_entry *tracebuf;
 	struct pi_mgr_dfs_node* dfs_node;
 	struct pi_mgr_qos_node* qos_node;
 	unsigned long j1;  //jiffies of acquire
@@ -1141,50 +1126,6 @@ static void reset_v3d(void)
 	up(&v3d_state.work_lock);
 }
 
-/* Trace entry types up to 0x7FFFFFFF are for userspace use.  We reserve the rest for kernel use */
-#define TRACE_CLE_STATE 0x80000001
-#define TRACE_ISR 0x80000002
-#define TRACE_RESET 0x80000003
-#define TRACE_WAIT_IRQ 0x80000004
-
-static void trace_add_entry(unsigned long id, uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e, unsigned long tag, int want_cle_state_too)
-{
-	/* This one is intended for adding an entry as passed down via
-	   IOCTL, so there's an inherent non-realtimeness to it,
-	   because the information passed from user space is
-	   determined _before_ the current CLE state is read.  Just be
-	   aware of this when interpreting the trace */
-
-	struct trace_entry *tr;
-	unsigned long irqflags;
-
-	spin_lock_irqsave(&v3d_state.trace_lock, irqflags);
-	if (v3d_state.num_trace_ents > 0) {
-		if (want_cle_state_too) {
-			tr = &v3d_state.tracebuf[v3d_state.traceptr++ & (v3d_state.num_trace_ents - 1)];
-			tr->timestamp = jiffies;
-			tr->id = TRACE_CLE_STATE;
-			tr->arg0 = readl(v3d_base + V3D_CT0CA_OFFSET);
-			tr->arg1 = readl(v3d_base + V3D_CT1CA_OFFSET);
-			tr->arg2 = readl(v3d_base + V3D_BPCS_OFFSET);
-			tr->arg3 = 0;
-			tr->arg4 = 0;
-			tr->tag = 0;
-		}
-
-		tr = &v3d_state.tracebuf[v3d_state.traceptr++ & (v3d_state.num_trace_ents - 1)];
-		tr->timestamp = jiffies;
-		tr->id = id;
-		tr->arg0 = a;
-		tr->arg1 = b;
-		tr->arg2 = c;
-		tr->arg3 = d;
-		tr->arg4 = e;
-		tr->tag = tag;
-	}
-	spin_unlock_irqrestore(&v3d_state.trace_lock, irqflags);
-}
-
 static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 {
 	u32 flags, flags_qpu, tmp;
@@ -1257,30 +1198,6 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 
 static irqreturn_t v3d_isr_no_worklist(int irq, void *unused)
 {
-	struct trace_entry *tr;
-	unsigned long irqflags;
-	uint32_t a, b, c;
-
-	spin_lock_irqsave(&v3d_state.trace_lock, irqflags);
-	if (v3d_state.num_trace_ents > 0) {
-		a = readl(v3d_base + V3D_CT0CA_OFFSET);
-		b = readl(v3d_base + V3D_CT1CA_OFFSET);
-		c = readl(v3d_base + V3D_BPCS_OFFSET);
-
-		tr = &v3d_state.tracebuf[v3d_state.traceptr++ & (v3d_state.num_trace_ents - 1)];
-
-		tr->timestamp = jiffies;
-		tr->arg3 = 0;
-		tr->arg4 = 0;
-		tr->tag = 0;
-
-		tr->id = TRACE_ISR;
-		tr->arg0 = a;
-		tr->arg1 = b;
-		tr->arg2 = c;
-	}
-	spin_unlock_irqrestore(&v3d_state.trace_lock, irqflags);
-
 	if ( v3d_state.g_irq_sem )
 		up(v3d_state.g_irq_sem);
 
@@ -1500,14 +1417,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 		case V3D_IOCTL_SYNCTRACE: {
-			struct { int t; uint32_t arg0; uint32_t arg1; int l; }
-			x;
-			int s;
 			KLOG_V("v3d_ioctl :V3D_IOCTL_TRACE");
-			s = copy_from_user(&x, (const void *)arg, sizeof(x));
-			BUG_ON(s);
-			if (!s)
-				trace_add_entry(x.t, x.arg0, x.arg1, 0, 0, 0, x.l, 1);
 		}
 		break;
 
@@ -1586,8 +1496,6 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			//Enable V3D block to generate interrupt
 			KLOG_D("Enabling v3d interrupt\n");
 			KLOG_V("v3d_ioctl :V3D_IOCTL_WAIT_IRQ");
-			trace_add_entry(TRACE_WAIT_IRQ, 0, 0, 0, 0, 0, 0, 1);
-
 			v3d_enable_irq();
 
 			KLOG_D("Waiting for interrupt\n");
@@ -1606,8 +1514,6 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 		case V3D_IOCTL_RESET: {
 			KLOG_V("v3d_ioctl :V3D_IOCTL_RESET");
-			trace_add_entry(TRACE_RESET, 0, 0, 0, 0, 0, 0, 0);
-//			reset_v3d();
 			v3d_reset();
 		}
 		break;
@@ -1654,94 +1560,6 @@ static struct file_operations v3d_fops =
 	.unlocked_ioctl	= v3d_ioctl,
 };
 
-static void trace_dump_now(void)
-{
-	int i;
-	unsigned long tsbase;
-
-	int first_ent;
-	int last_ent;
-
-	if (!v3d_state.num_trace_ents)
-		return ;
-
-	last_ent = v3d_state.traceptr;
-	first_ent = last_ent - v3d_state.num_trace_ents;
-	if (first_ent < 0) {
-		first_ent = 0;
-	}
-	tsbase = v3d_state.tracebuf[first_ent & (v3d_state.num_trace_ents - 1)].timestamp;
-
-	/* TODO:
-
-	   really we should expose this trace via /proc, rather than
-	   having it spew into the kernel log, but, this'll do for
-	   now...  *HACK ALERT!*
-	*/
-	for (i = first_ent; i < last_ent; i++) {
-		/* NB: race condition here - in theory this memory
-		   could be kfree()d before we read it, or could even
-		   wrap around and modify the entries as we read them,
-		   because we don't have the spinlock.  In practice,
-		   we don't do that anyway, so it doesn't matter, but
-		   this is a "note to self" to sort this out when we
-		   replace this hacky syslog spew with a proper
-		   interface */
-		struct trace_entry *te;
-
-		te = &v3d_state.tracebuf[i & (v3d_state.num_trace_ents - 1)];
-		printk(KERN_ERR "djlb-trace[%d@%lu]: 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X %lu\n",
-			   i, te->timestamp - tsbase,
-			   te->id, te->arg0, te->arg1,
-			   te->arg2, te->arg3, te->arg4,
-			   te->tag);
-	}
-
-	if (i != v3d_state.traceptr) {
-		KLOG_E(KERN_ERR "djlb-trace: trace cannot be trusted.  Read the comment in the code about the race condition\n");
-	}
-}
-
-static void trace_realloc(int newbufsz)
-{
-	unsigned long irqflags;
-
-	if (newbufsz > MAX_TRACE_HISTORY)
-		newbufsz = MAX_TRACE_HISTORY;
-
-	newbufsz &= ~(newbufsz - 1);
-
-	spin_lock_irqsave(&v3d_state.trace_lock, irqflags);
-
-	if (v3d_state.num_trace_ents > 0)
-		kfree(v3d_state.tracebuf);
-
-	v3d_state.num_trace_ents = newbufsz;
-	if (v3d_state.num_trace_ents > 0) {
-		v3d_state.tracebuf = kmalloc(v3d_state.num_trace_ents * sizeof(*v3d_state.tracebuf), GFP_KERNEL);
-		if (!v3d_state.tracebuf)
-			v3d_state.num_trace_ents = 0;
-	} else {
-		v3d_state.tracebuf = NULL;
-	}
-
-	v3d_state.traceptr = 0;
-
-	spin_unlock_irqrestore(&v3d_state.trace_lock, irqflags);
-}
-
-static void trace_control_stuff(const char *req)
-{
-	if (!strncmp("now", req, 3)) {
-		trace_dump_now();
-	}
-	else {
-		int newsize;
-		newsize = simple_strtoul(req, NULL, 0);
-		trace_realloc(newsize);
-	}
-}
-
 int proc_v3d_write(struct file *file, const char __user *buffer, unsigned long count, void *data)
 {
 	char v3d_req[200], v3d_resp[100];
@@ -1761,10 +1579,7 @@ int proc_v3d_write(struct file *file, const char __user *buffer, unsigned long c
 
 	down(&v3d_state.work_lock);
 
-	if (!strncmp("trace=", v3d_req, 6)) {
-		trace_control_stuff(v3d_req + 6);
-	}
-	else if (!strncmp("print_usage=on", v3d_req, 14)) {
+	if (!strncmp("print_usage=on", v3d_req, 14)) {
 		v3d_state.show_v3d_usage = 1;
 	}
 	else if (!strncmp("print_usage=off", v3d_req, 15)) {
@@ -1873,19 +1688,6 @@ int __init v3d_init(void)
 	sema_init(&v3d_state.acquire_sem, 1); //First request should succeed
 	sema_init(&v3d_state.work_lock, 1); //First request should succeed
 
-	/* Initialize the trace buffer */
-	v3d_state.traceptr = 0;
-	v3d_state.num_trace_ents = INITIAL_TRACE_HISTORY;
-	if (v3d_state.num_trace_ents > 0) {
-		v3d_state.tracebuf = kmalloc(v3d_state.num_trace_ents * sizeof(*v3d_state.tracebuf), GFP_KERNEL);
-		if (!v3d_state.tracebuf)
-			v3d_state.num_trace_ents = 0;
-	}
-	else {
-		v3d_state.tracebuf = NULL;
-	}
-	v3d_state.trace_lock = __SPIN_LOCK_UNLOCKED();
-
 	v3d_state.show_v3d_usage = 0;
 
 	/* create a proc entry */
@@ -1987,9 +1789,6 @@ void __exit v3d_exit(void)
 	if (v3d_bin_oom_cpuaddr)
 		dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size, v3d_bin_oom_cpuaddr, v3d_bin_oom_block);
 #endif
-
-	if (v3d_state.num_trace_ents > 0)
-		kfree(v3d_state.tracebuf);
 
 	/* Unmap addresses */
 	if (v3d_base)
