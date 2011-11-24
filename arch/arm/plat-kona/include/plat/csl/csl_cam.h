@@ -22,7 +22,6 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
-
 /**
 *
 *   @file   csl_cam.h
@@ -50,21 +49,48 @@ extern "C" {
  * @{
  */
 
-    #define MAX_PACKET_CAPTURE  1
-    #define CAM_MAX_HANDLES     2
-    #define CSL_CAM_MEM_ACP_TYPE    0x00000000
-#if defined (_HERA_) || defined(_RHEA_)
     #define MAX_PACKET_CAPTURE      2
     #define CAM_MAX_HANDLES         1
     #define CAM_BASE_ADDR           MM_CSI0_BASE_ADDR
-    #define CSL_CAM_MEM_ACP_TYPE    0x40000000
-#endif
+// ACP Memory Type Define    
+        #define CSL_MEM_ACP_BITS        0xF0000000
+        #define CSL_CAM_MEM_ACP_TYPE    0x40000000
 
 #define CSL_CAM_BUFFER_BASE     0x00000020 
+#define CSL_CAM_ISP_LINESTRIDE_BASE     0x00000020
+//#define CSL_CAM_ENABLE_DBL_BUFFER       1
+
 
 /******************************************************************************
 Global types
 *****************************************************************************/
+
+/**
+*
+* CSL CAM Interface Result  
+*
+*****************************************************************************/
+typedef enum
+{
+    CSL_CAM_OK          = 0,            ///< OK, no Error
+    CSL_CAM_ERR          = (1 << 0),     ///< CSL Generic Error
+    CSL_CAM_OP_INVALID   = (1 << 1),     ///< Operation Invalid
+    CSL_CAM_NOT_INIT     = (1 << 2),     ///< CSL not Init
+    CSL_CAM_NOT_OPEN     = (1 << 3),     ///< CSL not Open
+    CSL_CAM_IS_OPEN      = (1 << 4),     ///< CSL Already Open
+    CSL_CAM_OS_TOUT      = (1 << 5),     ///< Generic OS TimeOut
+    CSL_CAM_OS_ERR       = (1 << 6),     ///< Generic OS Err 
+    CSL_CAM_ID           = (1 << 7),     ///< invalid ID
+    CSL_CAM_BAD_CLK      = (1 << 8),     ///< Clock Operation Invalid
+    CSL_CAM_BAD_HANDLE   = (1 << 10),    ///< Invalid handle
+    CSL_CAM_BAD_STATE    = (1 << 11),    ///< Action Not Supported In Curr. Interface State
+    CSL_CAM_BAD_PARAM    = (1 << 12),    ///< bad parameter passed to function
+    CSL_CAM_INST_COUNT   = (1 << 13),    ///< open failure due to instance count
+    CSL_CAM_CHAL_ERR     = (1 << 14),    ///< CHAL Generic Error
+} CSL_CAM_RES_T;    
+
+
+
 //Interface mode
 typedef enum
 {
@@ -144,6 +170,8 @@ typedef enum
     CSL_CAM_MEM_TYPE_CACHEABLE_BUFFERABLE        = (1 << 0),     ///< cacheable & bufferable
     CSL_CAM_MEM_TYPE_UNCACHEABLE_UNBUFFERABLE    = (1 << 1),     ///< uncacheable & unbufferable
     CSL_CAM_MEM_TYPE_ACP_COMPATIBLE              = (1 << 2),     ///< ACP compatible
+// Memory pointer type
+    CSL_CAM_MEM_TYPE_BRALLOC_HANDLE              = (1 << 16),    ///< BRALLOC HANDLE
 } CSL_CAM_MEM_TYPE_T;
 
 /**
@@ -186,6 +214,10 @@ typedef enum
     CSL_CAM_RX_CLK_PRESENT          = (1 << 10),     ///< High Speed Clock status
     CSL_CAM_RX_SYNCD                = (1 << 11),    ///< Synchronisation status
     CSL_CAM_RX_ERROR                = (1 << 12),    ///< Receiver Error status
+    CSL_CAM_RX_BUF0_RDY             = (1 << 13),    ///< Buffer 0 Ready
+    CSL_CAM_RX_BUF0_NO              = (1 << 14),    ///< Buffer 0 Frame Number
+    CSL_CAM_RX_BUF1_RDY             = (1 << 15),    ///< Buffer 1 Ready
+    CSL_CAM_RX_BUF1_NO              = (1 << 16),    ///< Buffer 1 Frame Number
 } CSL_CAM_RX_STATUS_t;
 
 /**
@@ -381,6 +413,7 @@ typedef struct
     CSL_CAM_CPI_INTF_st_t   *p_cpi_intf_st;
 } CSL_CAM_INTF_CFG_st_t, *pCSL_CAM_INTF_CFG_st;
 
+
 /**
 * CAM Interface Control
 *****************************************************************************/
@@ -448,6 +481,17 @@ typedef struct
 } CSL_CAM_BUFFER_st_t, *pCSL_CAM_BUFFER_st;               
 
 /**
+* CAM Buffers, For setting Double Buffering
+*****************************************************************************/
+typedef struct
+{
+    CSL_CAM_BUFFER_st_t *image0Buff;
+    CSL_CAM_BUFFER_st_t *image1Buff;    
+    CSL_CAM_BUFFER_st_t *data0Buff;    
+    CSL_CAM_BUFFER_st_t *data1Buff;    
+} CSL_CAM_BUFFER_PTR_st_t, *pCSL_CAM_BUFFER_PTR_st;               
+
+/**
 * CAM Buffer, can set each frame
 *****************************************************************************/
 typedef struct 
@@ -490,6 +534,10 @@ typedef struct
     UInt8               image_data_id1;         ///< Image Data Identifier 1 CSI=Packet Data Identifier)
     UInt8               image_data_id2;         ///< Image Data Identifier 2 (CSI=Packet Data Identifier)
     UInt8               image_data_id3;         ///< Image Data Identifier 3 (CSI=Packet Data Identifier)
+    UInt8               image_data_id4;         ///< Image Data Identifier 4 (CSI=Packet Data Identifier)
+    UInt8               image_data_id5;         ///< Image Data Identifier 5 (CSI=Packet Data Identifier)
+    UInt8               image_data_id6;         ///< Image Data Identifier 6 (CSI=Packet Data Identifier)
+    UInt8               image_data_id7;         ///< Image Data Identifier 7 (CSI=Packet Data Identifier)
 } CSL_CAM_IMAGE_ID_st_t, *pCSL_CAM_IMAGE_ID_st;               
 
 /**
@@ -534,8 +582,87 @@ typedef struct
 } CSL_CAM_LANE_CONTROL_st_t, *pCSL_CAM_LANE_CONTROL_st;               
 
 
-typedef void (*cslCamCB_t)(UInt32 intr_status, UInt32 rx_status, UInt32 image_addr, UInt32 image_size, UInt32 raw_intr_status, UInt32 raw_rx_status, void *userdata);
+/**
+* CAM Buffer, can set each frame
+*****************************************************************************/
+typedef struct 
+{
+    UInt32              intr_status;            ///< interrupt status
+    UInt32              rx_status;              ///< receiver status
+    UInt32              image_addr;             ///< image addr
+    UInt32              image_size;             ///< image size in bytes
+    UInt32              image_stride;           ///< line stride
+    UInt32              data_addr;              ///< embedded data addr
+    UInt32              data_size;              ///< embedded data size in bytes
+    UInt32              data_stride;            ///< line stride
+    UInt32              raw_intr_status;        ///< raw interrupt status
+    UInt32              raw_rx_status;          ///< raw receiver status
+    UInt32              dropped_frames;         ///< frames dropped
+} CSL_CAM_CB_st_t, *pCSL_CB_st;               
 
+
+
+/**
+* CAM GPIO Control
+*****************************************************************************/
+typedef struct 
+{
+    UInt32                  select;         ///< GPIO selected
+    UInt32                  enable;         ///< GPIO on/off
+} CSL_CAM_GPIO_st_t, *pCSL_CAM_GPIO_st;               
+
+/**
+* CAM Sensor Control
+*****************************************************************************/
+typedef struct 
+{
+    UInt32                  sensor_id;              ///< sensor select
+    Boolean                 gpio_ctrl;              ///< select GPIO control
+    CSL_CAM_GPIO_st_t       sensor_gpio_ctrl_st;    ///< GPIO settings if selected
+    Boolean                 clk_ctrl;               ///< select CLK control
+    CSL_CAM_CLOCK_OUT_st_t  sensor_clk_ctrl_st;     ///< Clk setting if selected
+} CSL_CAM_SENSOR_CNTRL_st_t, *pCSL_CAM_SENSOR_CNTRL_st;               
+
+
+#if  0
+//the setup for this peripheral
+typedef struct
+{
+// which input mode are we using?
+    CSL_CAM_INTF_T          intf;
+// Which Camera port
+    CSL_CAM_PORT_AFE_T      afe_port;
+// data input mode
+    CSL_CAM_INPUT_MODE_t    input_mode;
+// Data Lane Timings
+    UInt32                  hs_rx_delay;      // = 0
+    UInt32                  hs_settle_delay;  // = 0
+    UInt32                  hs_term_delay;    // = 5
+// Image Id's    
+    UInt32                  image_ids;
+// Interrupts Enabled
+    CSL_CAM_INTERRUPT_t     interrupts;
+// Line Count if enabled (ms)
+    UInt32                  line_count;
+    
+// Set these pointers = NULL if do not need to be configured    
+// Image Buffer Info
+    CSL_CAM_BUFFER_st_t     *image_buf_0;
+    CSL_CAM_BUFFER_st_t     *image_buf_1;
+// Embedded Data Buffer Info
+    CSL_CAM_BUFFER_st_t     *data_buf_0;
+    CSL_CAM_BUFFER_st_t     *data_buf_1;
+    CSL_CAM_PIPELINE_st_t   *pipleline;
+    CSL_CAM_DATA_st_t       *embdd_data;
+} CSL_CAM_INTF_SETUP_st_t, *pCSL_CAM_INTF_SETUP_st;
+#endif
+
+
+    #if (defined CSL_CAM_ENABLE_DBL_BUFFER)
+typedef void (*cslCamCB_t)(CSL_CAM_CB_st_t csl_cb_st, void *userdata);
+    #else
+typedef void (*cslCamCB_t)(UInt32 intr_status, UInt32 rx_status, UInt32 image_addr, UInt32 image_size, UInt32 raw_intr_status, UInt32 raw_rx_status, void *userdata);
+    #endif
 /******************************************************************************
  API
  *****************************************************************************/
@@ -558,6 +685,7 @@ Int32 csl_cam_close( CSL_CAM_HANDLE cslCamH );
 Int32 csl_cam_set_intf_control( CSL_CAM_HANDLE cslCamH, pCSL_CAM_INTF_CNTRL_st intfCtrl );
 Int32 csl_cam_set_input_mode( CSL_CAM_HANDLE cslCamH, pCSL_CAM_INPUT_st inputMode );
 Int32 csl_cam_set_input_addr( CSL_CAM_HANDLE cslCamH, pCSL_CAM_BUFFER_st imageAddr_0, pCSL_CAM_BUFFER_st imageAddr_1, pCSL_CAM_BUFFER_st dataAddr );
+Int32 csl_cam_set_dbl_buf( CSL_CAM_HANDLE cslCamH, CSL_CAM_BUFFER_PTR_st_t cslBuffers );
 Int32 csl_cam_set_frame_control( CSL_CAM_HANDLE cslCamH, pCSL_CAM_FRAME_st frameCtrl );
 Int32 csl_cam_set_image_type_control( CSL_CAM_HANDLE cslCamH, pCSL_CAM_IMAGE_ID_st imageCtrl );
 Int32 csl_cam_set_data_type_control( CSL_CAM_HANDLE cslCamH, pCSL_CAM_DATA_st dataCtrl );
@@ -578,7 +706,8 @@ Int32 csl_cam_channel_stop( CSL_CAM_HANDLE cslCamH );
 Int32 csl_cam_reset( CSL_CAM_HANDLE cslCamH, CSL_CAM_RESET_t mode );
 Int32 csl_cam_register_event_callback( CSL_CAM_HANDLE cslCamH, CSL_CAM_CB_EVENT_t event, cslCamCB_t callback, void *userdata);
 Int32 csl_cam_get_handle( CSL_CAM_HANDLE* cslCamH );    // for testing only!!!
-void cslCamFrameLisr( void );
+Int32 csl_cam_set_sensor_control( CSL_CAM_HANDLE cslCamH, pCSL_CAM_SENSOR_CNTRL_st sensorCtrl );
+
 #ifdef __cplusplus
 }
 #endif

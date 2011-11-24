@@ -24,4 +24,12 @@
 #define IPC_SHARED_MEM_SLOTS      (IPC_SHARED_MEM_BASE + IPC_SHARED_MEM_VC_OFFSET)
 #define IPC_SHARED_MEM_SLOTS_SIZE (IPC_SHARED_MEM_CLOCK_DEBUG_OFFSET)
 
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+#define VCHIQ_IPC_SHARED_MEM_SIZE            0x1E000  /* ARM and VC channels. */ 
+#define VCHIQ_IPC_SHARED_MEM_EXTRA           0x1000   /* Misc pointers: clock debug, gpio. */
+
+#define VCHIQ_IPC_SHARED_MEM_SYMBOL          "vchiq_ipc_shared_mem"
+#define VCHIQ_IPC_SHARED_MEM_SIZE_SYMBOL     "vchiq_ipc_shared_mem_size"
+#endif
+
 #endif /* VCHIQ_BI_H */

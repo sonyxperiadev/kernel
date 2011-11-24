@@ -146,8 +146,8 @@
 #define KONA_MM_CLK_VA		    HW_IO_PHYS_TO_VIRT( MM_CLK_BASE_ADDR )            /* MultiMedia CCU */
 #define KONA_MM_RST_VA		    HW_IO_PHYS_TO_VIRT( MM_RST_BASE_ADDR )            /* MultiMedia CCU */
 
-#define KONA_MM_TECTL_VA	    HW_IO_PHYS_TO_VIRT( MM_TECTL_BASE_ADDR )        /* TECTL interface in MM subsystem */
-
+#define KONA_MM_TECTL_VA		HW_IO_PHYS_TO_VIRT( MM_TECTL_BASE_ADDR )        /* TECTL interface in MM subsystem */
+#define KONA_MM_CSI0_VA		HW_IO_PHYS_TO_VIRT( MM_CSI0_BASE_ADDR )         /* CSI Interface */
 #define KONA_MM_DMA_VA		    HW_IO_PHYS_TO_VIRT( MM_DMA_BASE_ADDR )
 
 #define KONA_MM_CFG_VA		    HW_IO_PHYS_TO_VIRT( MM_CFG_BASE_ADDR )

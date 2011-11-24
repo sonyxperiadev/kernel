@@ -20,6 +20,7 @@ obj-$(CONFIG_KONA_POWER_MGR) += rhea_pwr_mgr.o
 obj-$(CONFIG_KONA_PI_MGR) += rhea_pi_mgr.o
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += rhea_pm.o rhea_wfi.o
 obj-$(CONFIG_RHEA_DORMANT_MODE) += rhea_dormant.o dm_pwr_policy_top.o
+obj-$(CONFIG_MACH_RHEA_RAY_DEMO) += rhea_ray.o rhea_ray_pinmux.o
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += rhea_ray.o rhea_ray_pinmux.o
 obj-$(CONFIG_MACH_RHEA_RAY_EDN2X) += rhea_ray.o rhea_ray_pinmux.o
 obj-$(CONFIG_MACH_RHEA_FARADAY_EB10) += rhea_ray.o rhea_faraday_eb10_pinmux.o

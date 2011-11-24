@@ -33,6 +33,10 @@
 #include <linux/irq.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#include <linux/delay.h>
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#include <linux/bmp18x.h>
+#endif
 #if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 #include <linux/bh1715.h>
 #endif
@@ -1210,11 +1214,63 @@ static struct i2c_board_info __initdata mpu3050_info[] =
 };
 #endif
 
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#define BMP18X_I2C_ADDRESS 0x77
+#define BMP18X_XCLR_GPIO_PIN 62
+#define BMP18X_I2C_DONT_RESET 1
+#define BMP18X_I2C_DO_RESET 0
+#define BMP18X_I2C_RESET_DELAY_MSECS 10
+
+static int bmp18x_init_hw(void)
+{
+	int rc;
+
+	/* reset the XCLR pin */  
+	rc = gpio_request(BMP18X_XCLR_GPIO_PIN, "bmp18x_reset");
+	if (rc < 0) {
+		printk(KERN_ERR "bmp18x_init_hw:unable to request GPIO pin %d\n", BMP18X_XCLR_GPIO_PIN);
+		return rc;
+	}
+               
+	rc = gpio_direction_output(BMP18X_XCLR_GPIO_PIN, BMP18X_I2C_DONT_RESET);
+	if (rc != 0)
+	{
+		printk(KERN_ERR "bmp18x_init_hw:gpio_direction_output(%d, BMP18X_I2C_DRIVER_RESET) error %d\n",
+				BMP18X_XCLR_GPIO_PIN, rc);
+	}
+
+	gpio_set_value(BMP18X_XCLR_GPIO_PIN, BMP18X_I2C_DO_RESET);
+	mdelay(BMP18X_I2C_RESET_DELAY_MSECS);
+               
+	gpio_set_value(BMP18X_XCLR_GPIO_PIN, BMP18X_I2C_DONT_RESET);
+	mdelay(BMP18X_I2C_RESET_DELAY_MSECS);
+
+	return 0;
+}
+
+
+static struct bmp18x_platform_data bmp18x_plat_data = {
+	.chip_id = 0, 
+	.default_oversampling = 3, 
+	.init_hw = &bmp18x_init_hw,
+	.deinit_hw = NULL,
+}; 
+
+static struct i2c_board_info __initdata bmp18x_info[] = 
+{
+	[0] = {
+		I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
+		.platform_data  = &bmp18x_plat_data,
+	},
+};
+#endif
+
+
 static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
 	.start = 0x9C000000,
 	.size = SZ_64M,
-	.no_allocator = 0,
+	.allocator = DEFAULT_ALLOC,
 	.cached = 0,
 	.buffered = 0,
 };
@@ -1429,6 +1485,12 @@ static void __init board_add_devices(void)
 	i2c_register_board_info(3,
 		mpu3050_info,
 		ARRAY_SIZE(mpu3050_info));
+#endif
+
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+	i2c_register_board_info(3,
+		bmp18x_info, 
+		ARRAY_SIZE(bmp18x_info));
 #endif
 
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
