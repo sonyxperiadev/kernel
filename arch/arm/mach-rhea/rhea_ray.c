@@ -221,11 +221,16 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 		[BCM59055_HV6LDO]	= 0x00,
 		[BCM59055_HV7LDO]	= 0x00,
 		[BCM59055_SIMLDO]	= 0x00,
-		[BCM59055_CSR]		= 0x00,
+		[BCM59055_CSR]		= 0x31,
 		[BCM59055_IOSR]		= 0x00,
 		[BCM59055_SDSR]		= 0x00,
 	},
+/*Set default values for SS silicon type*/
+	.csr_nm_volt = 0x14,
+	.csr_lpm_volt = 4,
+	.csr_turbo_volt = 0x14,
 };
+
 
 
 
@@ -673,7 +678,7 @@ static struct mpu_platform_data mpu6050_data={
 		.adapt_num = 2,
 		.bus = EXT_SLAVE_BUS_SECONDARY,
 		.address = 0x38,
-		.orientation = 
+		.orientation =
 			{ 0,1,0,
 			  1,0,0,
 			  0,0,-1},
@@ -1277,7 +1282,7 @@ static int rhea_camera_power(struct device *dev, int on)
 	unsigned int value;
 	struct clk *clock;
 	struct clk *axi_clk;
-	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
+	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -1350,7 +1355,7 @@ static int rhea_camera_power(struct device *dev, int on)
 		/* enable reset gpio */
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 		msleep(1);
-		
+
 		/* enable power down gpio */
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 

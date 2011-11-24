@@ -317,14 +317,14 @@ int set_csr_volt(int nm, int lpm, int turbo, struct bcm590xx *bcm590xx)
 	if (lpm > 0) {
 		val = bcm590xx_reg_read(bcm590xx, reg);
 		val &= ~mask;
-		val |= (nm & mask);
+		val |= (lpm & mask);
 		ret |= bcm590xx_reg_write(bcm590xx, reg, val);
 	}
 	reg++;
 	if (turbo > 0) {
 		val = bcm590xx_reg_read(bcm590xx, reg);
 		val &= ~mask;
-		val |= (nm & mask);
+		val |= (turbo & mask);
 		ret |= bcm590xx_reg_write(bcm590xx, reg, val);
 	}
 	if (ret)
