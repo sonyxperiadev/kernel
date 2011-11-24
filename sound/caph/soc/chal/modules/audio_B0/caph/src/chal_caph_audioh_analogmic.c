@@ -28,9 +28,6 @@ Broadcom's express prior written consent.
 #include "brcm_rdb_auxmic.h"
 #include "brcm_rdb_padctrlreg.h"
 
-#define    AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK                     0x00000300
-#define    AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT                    8
-
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************

@@ -24,7 +24,7 @@
 /************************************************************************************************/
 /**
 *
-*   @file   csl_bttap.c
+*   @file   csl_bt_tap.c
 *
 *   @brief  This file contains CSL (DSP) API to BT TAP interface
 *

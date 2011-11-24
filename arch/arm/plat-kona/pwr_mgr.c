@@ -54,6 +54,10 @@
 #define PWRMGR_SEM_VALUE 1
 #endif
 
+#ifndef PWRMGR_SEM_VALUE
+#define PWRMGR_SEM_VALUE 1
+#endif
+
 
 #ifdef CONFIG_DEBUG_FS
 #ifndef PWRMGR_EVENT_ID_TO_STR

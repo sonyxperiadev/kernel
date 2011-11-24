@@ -599,7 +599,7 @@ CSL_CAPH_DMA_CHNL_e csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CHNL_e csl_ca
 {
 	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_obtain_given_channel:: \n");
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_obtain_given_channel:: %d\n", csl_caph_aadmac_ch);
 
 	caph_aadmac_ch = csl_caph_dma_get_chal_chnl(csl_caph_aadmac_ch);
 	caph_aadmac_ch = chal_caph_dma_alloc_given_channel(handle, caph_aadmac_ch);
@@ -621,7 +621,7 @@ CSL_CAPH_DMA_CHNL_e csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CHNL_e csl_ca
 ****************************************************************************/
 void csl_caph_dma_release_channel(CSL_CAPH_DMA_CHNL_e chnl)    
 {	
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_release_channel:: \n");
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_release_channel:: %d\n", chnl);
 	
 	if (chnl != CSL_CAPH_DMA_NONE)
 	{
@@ -771,7 +771,7 @@ void csl_caph_dma_switch_buffer(CSL_CAPH_DMA_CONFIG_t chnl_config)
 ****************************************************************************/
 void csl_caph_dma_start_transfer(CSL_CAPH_DMA_CHNL_e chnl)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_start_transfer:: \n");
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_start_transfer:: %d\n", chnl);
 
 	if (chnl != CSL_CAPH_DMA_NONE)
 		chal_caph_dma_enable(handle, csl_caph_dma_get_chal_chnl(chnl));
@@ -788,7 +788,7 @@ void csl_caph_dma_start_transfer(CSL_CAPH_DMA_CHNL_e chnl)
 ****************************************************************************/
 void csl_caph_dma_stop_transfer(CSL_CAPH_DMA_CHNL_e chnl)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_stop_transfer:: \n");
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_stop_transfer:: %d\n", chnl);
 	
 	if (chnl != CSL_CAPH_DMA_NONE)
 	{

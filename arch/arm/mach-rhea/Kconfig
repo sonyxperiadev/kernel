@@ -32,11 +32,11 @@ config MACH_RHEA_RAY_EDN2X
 	help
 	  Support for the Broadcom Rhea Ray EDN2X board.
 
-config MACH_RHEA_DALTON
-	bool "Support Nokia Dalton board"
+config MACH_RHEA_FARADAY_EB10
+	bool "Support Nokia Faraday EB10 board"
 	select RHEALC_2093
 	help
-	  Support for the Nokia Dalton board.
+	  Support for the Nokia Faraday EB10 board.
 	  This will be based on RheaLC program and
 	  form one of the platforms for Nokia.
 	  Rhea plus delta RF modules.

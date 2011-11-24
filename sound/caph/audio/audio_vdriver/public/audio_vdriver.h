@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
+/*  Copyright 2009 - 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -66,6 +66,8 @@
 extern "C" {
 #endif
 
+typedef void (*audio_codecId_handler_t)(UInt8 codecId);
+
 //Define the other mic which is used for Noise Cancellation.
 //It is product-dependent.
 #define MIC_NOISE_CANCEL CSL_CAPH_DEV_EANC_DIGI_MIC_R
@@ -101,55 +103,18 @@ typedef enum {
 
 typedef enum AUDDRV_REQUEST_ID_t
 {
-    AUDDRV_RATE_CHANGE_REQ,     //0x00
-	AUDDRV_REQUEST_ID_TOTAL_COUNT
+  AUDDRV_RATE_CHANGE_REQ,     //0x00
+  AUDDRV_REQUEST_ID_TOTAL_COUNT
 } AUDDRV_REQUEST_ID_t;
-
-/**
-* Devices
-******************************************************************************/
-typedef enum
-{
-	AUDDRV_DEV_NONE,
-
-	AUDDRV_RENDER_DEV_AUDIO, /* Athena AUDIO path */
-	AUDDRV_RENDER_DEV_POLYRINGER, /*Athena POLY path */
-	AUDDRV_CAPTURE_DEV_AUDIO,
-	AUDDRV_CAPTURE_DEV_BTW,
-
-	AUDDRV_DEV_EP,  /*Earpiece*/
-	AUDDRV_DEV_HS,  /*Headset speaker*/
-	AUDDRV_DEV_IHF,  /*IHF speaker*/
-	AUDDRV_DEV_VIBRA,  /*Vibra output*/
-	AUDDRV_DEV_FM_TX,  /*FM TX broadcaster*/
-	AUDDRV_DEV_BT_SPKR,  /*Bluetooth headset speaker*/
-	AUDDRV_DEV_DSP,  /*DSP direct connection with SRCMixer in voice call*/
-	AUDDRV_DEV_DIGI_MIC,  /*Two Digital microphones*/
-//	AUDDRV_DEV_DIGI_MIC_L = AUDDRV_DEV_DIGI_MIC,  /*Digital microphone: L-channel*/
-	AUDDRV_DEV_DIGI_MIC_L,  /*Digital microphone: L-channel*/
-	AUDDRV_DEV_DIGI_MIC_R,  /*Digital microphone: R-channel*/
-	AUDDRV_DEV_EANC_DIGI_MIC,  /*Two Noise Digital microphones for EANC control*/
-	AUDDRV_DEV_EANC_DIGI_MIC_L,  /*ENAC Digital microphone: L-channel*/
-	AUDDRV_DEV_EANC_DIGI_MIC_R,  /*ENAC Digital microphone: R-channel*/
-	AUDDRV_DEV_SIDETONE_INPUT,  /*Sidetone path input*/
-	AUDDRV_DEV_EANC_INPUT,  /*EANC Anti-noise input*/
-	AUDDRV_DEV_ANALOG_MIC,  /*Phone analog mic*/
-	AUDDRV_DEV_HS_MIC,  /*Headset mic*/
-	AUDDRV_DEV_BT_MIC,  /*Bluetooth headset mic*/
-	AUDDRV_DEV_FM_RADIO,  /*FM Radio playback*/
-	AUDDRV_DEV_MEMORY,  /*DDR memory*/
-	AUDDRV_DEV_SRCM,  /*SRCMixer*/
-	AUDDRV_DEV_DSP_throughMEM,  /*DSP connection through Shared mem*/
-}AUDDRV_DEVICE_e;
 
 /**
 * CAPH HW filters
 ******************************************************************************/
 typedef enum
 {
-    AUDDRV_EANC_FILTER1, 
-    AUDDRV_EANC_FILTER2, 
-    AUDDRV_SIDETONE_FILTER, 
+    AUDDRV_EANC_FILTER1,
+    AUDDRV_EANC_FILTER2,
+    AUDDRV_SIDETONE_FILTER,
 }AUDDRV_HWCTRL_FILTER_e;
 
 
@@ -189,33 +154,35 @@ typedef struct AUDDRV_PathID_t{
 #define EQ_COEFF_FW_NUM		3
 #define EQ_COEFF_BW_NUM		2
 
-typedef struct 
+typedef struct
 {
-	Int32  dl_coef_fw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_FW_NUM];			
-	Int32  dl_coef_bw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_BW_NUM];			
-	Int16  dl_comp_filter_gain_8k[MAX_NO_OF_BIQUADS];		
+	Int32  dl_coef_fw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_FW_NUM];
+	Int32  dl_coef_bw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_BW_NUM];
+	Int16  dl_comp_filter_gain_8k[MAX_NO_OF_BIQUADS];
 	Int32  dl_output_bit_select_8k;
-	Int32  dl_coef_fw_16k[MAX_NO_OF_BIQUADS][EQ_COEFF_FW_NUM];			
-	Int32  dl_coef_bw_16k[MAX_NO_OF_BIQUADS][EQ_COEFF_BW_NUM];			
-	Int16  dl_comp_filter_gain_16k[MAX_NO_OF_BIQUADS];	
-	Int32  dl_output_bit_select_16k;		
+	Int32  dl_coef_fw_16k[MAX_NO_OF_BIQUADS][EQ_COEFF_FW_NUM];
+	Int32  dl_coef_bw_16k[MAX_NO_OF_BIQUADS][EQ_COEFF_BW_NUM];
+	Int16  dl_comp_filter_gain_16k[MAX_NO_OF_BIQUADS];
+	Int32  dl_output_bit_select_16k;
 	UInt16 dl_nstage_filter;
+	UInt16 reserved;
 } EQDlCompfilter_t;
 
-typedef struct 
+typedef struct
 {
-	Int32  ul_coef_fw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_FW_NUM];		
-	Int32  ul_coef_bw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_BW_NUM];		
+	Int32  ul_coef_fw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_FW_NUM];
+	Int32  ul_coef_bw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_BW_NUM];
 	Int16  ul_comp_filter_gain_8k[MAX_NO_OF_BIQUADS];
-	Int32  ul_output_bit_select_8k;	
-	Int32  ul_coef_fw_16k[MAX_NO_OF_BIQUADS][EQ_COEFF_FW_NUM];				
-	Int32  ul_coef_bw_16k[MAX_NO_OF_BIQUADS][EQ_COEFF_BW_NUM];				
-	Int16  ul_comp_filter_gain_16k[MAX_NO_OF_BIQUADS];		
-	Int32  ul_output_bit_select_16k;			
-	UInt16 ul_nstage_filter;	
+	Int32  ul_output_bit_select_8k;
+	Int32  ul_coef_fw_16k[MAX_NO_OF_BIQUADS][EQ_COEFF_FW_NUM];
+	Int32  ul_coef_bw_16k[MAX_NO_OF_BIQUADS][EQ_COEFF_BW_NUM];
+	Int16  ul_comp_filter_gain_16k[MAX_NO_OF_BIQUADS];
+	Int32  ul_output_bit_select_16k;
+	UInt16 ul_nstage_filter;
+	UInt16 reserved;
 } EQUlCompfilter_t;
 
-typedef struct 
+typedef struct
 {
 	EQDlCompfilter_t dl;
 	EQUlCompfilter_t ul;
@@ -248,15 +215,17 @@ void AUDDRV_Init( void );
 void AUDDRV_Shutdown( void );
 
 //  the control sequence for starting telephony audio.
-void AUDDRV_Telephony_Init (AUDDRV_MIC_Enum_t   mic,
-				AUDDRV_SPKR_Enum_t  speaker,
-				void * pData
-				);
+void AUDDRV_Telephony_Init (AUDIO_SOURCE_Enum_t   mic,
+                            AUDIO_SINK_Enum_t  speaker,
+                            void * pData
+                            );
 
 // the control sequence for ratechange of voice call.
 void AUDDRV_Telephony_RateChange ( UInt32 sampleRate );
 
 UInt32 AUDDRV_Telephone_GetSampleRate( void );
+
+void AUDDRV_Telephony_SetSampleRate(UInt32 samplerate);
 
 // rate change request function
 void AUDDRV_RequestRateChange(UInt8 codecID);
@@ -267,17 +236,17 @@ void AUDDRV_Telephony_Deinit (void *pData);
 
 
 void AUDDRV_Telephony_SelectMicSpkr  (
-				AUDDRV_MIC_Enum_t   mic,
-				AUDDRV_SPKR_Enum_t  speaker,
+				AUDIO_SOURCE_Enum_t   mic,
+				AUDIO_SINK_Enum_t  speaker,
 				void *pData);
 // Enable DSP output processing.
 void AUDDRV_EnableDSPOutput (
-				AUDDRV_SPKR_Enum_t      mixer_speaker_selection,
+				AUDIO_SINK_Enum_t      mixer_speaker_selection,
 				AUDIO_SAMPLING_RATE_t   sample_rate
 				);
 // Enable DSP input processing.
 void AUDDRV_EnableDSPInput (
-				AUDDRV_MIC_Enum_t		 mic_selection,
+				AUDIO_SOURCE_Enum_t		 mic_selection,
 				AUDIO_SAMPLING_RATE_t	 sample_rate
 				);
 
@@ -298,7 +267,6 @@ void AUDDRV_SetMusicMode ( AudioMode_t  audio_mode);
 #endif
 
 AudioMode_t AUDDRV_GetAudioMode( void );
-UInt32 AUDDRV_GetAudioDev( void );
 
 void AUDDRV_SetVCflag( Boolean inVoiceCall );
 Boolean AUDDRV_GetVCflag( void );
@@ -311,27 +279,15 @@ int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType,
 void AUDDRV_User_HandleDSPInt ( UInt32 param1, UInt32 param2, UInt32 param3 );
 void AUDDRV_SetPCMOnOff(Boolean	on_off);
 
-void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
-			  AUDDRV_SPKR_Enum_t speaker,
-			  AUDIO_SAMPLING_RATE_t	sample_rate,
-			  void * pData);
-
-void AUDDRV_Telephony_DeinitHW(void *pData);
-
 void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off );
 
-void AUDDRV_SetHWSidetoneFilter(AudioMode_t audio_mode, 
-		SysAudioParm_t* pAudioParm);
-
-void AUDDRV_SetHWGain(CSL_CAPH_HW_GAIN_e hw, 
-		UInt32 gain); 
-void AUDDRV_Telephony_UnmuteMic (AUDDRV_MIC_Enum_t mic,
+void AUDDRV_Telephony_MuteMic (AUDIO_SOURCE_Enum_t mic,
 					void *pData);
-void AUDDRV_Telephony_MuteMic (AUDDRV_MIC_Enum_t mic,
+void AUDDRV_Telephony_UnmuteMic (AUDIO_SOURCE_Enum_t mic,
 					void *pData);
-void AUDDRV_Telephony_MuteSpkr (AUDDRV_SPKR_Enum_t speaker,
+void AUDDRV_Telephony_MuteSpkr (AUDIO_SINK_Enum_t speaker,
 					void *pData);
-void AUDDRV_Telephony_UnmuteSpkr (AUDDRV_SPKR_Enum_t speaker,
+void AUDDRV_Telephony_UnmuteSpkr (AUDIO_SINK_Enum_t speaker,
 					void *pData);
 void AUDDRV_SetULSpeechRecordGain(Int16 gain);
 Boolean AUDDRV_IsDualMicEnabled(void);
@@ -341,17 +297,17 @@ Boolean AUDDRV_IsDualMicEnabled(void);
 /**
 *	Get BTM headset NB or WB info
 
-*	@return 	Boolean, TRUE for WB and FALSE for NB (8k) 
-*	@note	   
+*	@return 	Boolean, TRUE for WB and FALSE for NB (8k)
+*	@note
 **********************************************************************/
 Boolean AUDDRV_IsBTMWB( void );
 
 
 //*********************************************************************
 /**
-*	Set BTM type 
+*	Set BTM type
 
-*	@param		Boolean isWB 
+*	@param		Boolean isWB
 *	@return 	none
 *
 *	@note	isWB=TRUE for BT WB headset; =FALSE for BT NB (8k) headset.
@@ -359,120 +315,16 @@ Boolean AUDDRV_IsBTMWB( void );
 void AUDDRV_SetBTMTypeWB( Boolean isWB);
 
 
-// move from drv_audio_commom.h
 /**
 *
-*  @brief  Get the audio csl Device from the Driver device 
+*  @brief  Register callback for rate change
 *
-*  @param  AUDDRV_DEVICE_e (in) Driver layer device
+*  @param  codecId_cb
 *
-*  @return CSL_CAPH_DEVICE_e CSL layer device
+*  @return none
 *****************************************************************************/
-CSL_AUDIO_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev);
 
-
-
-/**
-*
-*  @brief  Get the audio driver device from the microphone selection
-*
-*  @param  AUDDRV_MIC_Enum_t (in) Driver microphone selection
-*
-*  @return CSL_CAPH_DEVICE_e Driver device
-*****************************************************************************/
-CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic (AUDDRV_MIC_Enum_t mic);
-
-/**
-*
-*  @brief  Get the audio driver device from the speaker selection
-*
-*  @param  AUDDRV_SPKR_Enum_t (in) Driver speaker selection
-*
-*  @return CSL_CAPH_DEVICE_e Driver device
-*****************************************************************************/
-CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr (AUDDRV_SPKR_Enum_t spkr);
-
-
-/**
-*
-*  @brief  Get the DSP UL gain
-*
-*  @param  CSL_CAPH_DEVICE_e (in) Driver microphone selection
-*
-*  @return DSP gain in Q1.14
-*****************************************************************************/
-Int16 AUDDRV_GetDSPULGain(CSL_CAPH_DEVICE_e mic, Int16 gain);
-
-
-/**
-*
-*  @brief  Get the DSP DL gain
-*
-*  @param  CSL_CAPH_DEVICE_e (in) Driver speaker selection
-*
-*  @return DSP gain in mdB in Q15
-*****************************************************************************/
-Int16 AUDDRV_GetDSPDLGain(CSL_CAPH_DEVICE_e spkr, Int16 gain);
-
-
-
-/**
-*
-*  @brief  Get the Mixer input gain
-*
-*  @param  gain (in) Gain in Q13.2 
-*
-*  @return HW gain (out)  mixer input gain -- register value.
-*****************************************************************************/
-UInt16 AUDDRV_GetMixerInputGain(Int16 gain);
-
-
-
-
-/**
-*
-*  @brief  Get the Mixer output fine gain
-*
-*  @param  gain (in) Gain in Q13.2 
-*
-*  @return HW gain (out)  mixer output fine gain -- register value.
-*****************************************************************************/
-UInt16 AUDDRV_GetMixerOutputFineGain(Int16 gain);
-
-
-/**
-*
-*  @brief  Get the Mixer output coarse gain
-*
-*  @param  gain (in) Gain in Q13.2 
-*
-*  @return HW gain (out)  mixer output coarse gain -- register value.
-*****************************************************************************/
-UInt16 AUDDRV_GetMixerOutputCoarseGain(Int16 gain);
-
-
-/**
-*
-*  @brief  Get the HW DL gain
-*
-*  @param  spkr (in) Driver speaker selection
-*  @param  gain (in) Gain in Q1.14 
-*
-*  @return HW gain
-*****************************************************************************/
-Int16 AUDDRV_GetHWDLGain(CSL_CAPH_DEVICE_e spkr, Int16 gain);
-
-
-/**
-*
-*  @brief  Get the PMU gain
-*
-*  @param  CSL_CAPH_DEVICE_e (in) Driver speaker selection
-*
-*  @return PMU gain
-*****************************************************************************/
-UInt16 AUDDRV_GetPMUGain(CSL_CAPH_DEVICE_e spkr, Int16 gain);
-
+void AUDDRV_RegisterRateChangeCallback( audio_codecId_handler_t codecId_cb);
 
 #ifdef __cplusplus
 }

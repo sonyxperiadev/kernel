@@ -2579,10 +2579,21 @@ EXTERN Int16	shared_speech_rec_gain_dl[5]				 AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
-#if defined(VOLTE_SUPPORT)
+
+/**
+ * @addtogroup Adaptive Jitter Buffer
+ * @{
+ */
+
+/** 
+ * Adaptive Jitter Buffer queue and payload.\BR
+ * 
+ */
 EXTERN DJB_PAYLOADQ ajcPayloadQueue							AP_SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 ajcPayloadBuffer[DJB_BUFFER_SIZE]				AP_SHARED_SEC_GEN_AUDIO;
-#endif
+/**
+ * @}
+ */
 
 EXTERN UInt16 shared_audio_stream_0_crtl									AP_SHARED_SEC_DIAGNOS;                        // Ctrl info specifying 1 out of N capture points for audio stream_0
 EXTERN UInt16 shared_audio_stream_1_crtl									AP_SHARED_SEC_DIAGNOS;                    	  // Ctrl info specifying 1 out of N capture points for audio stream_1

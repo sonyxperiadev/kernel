@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                                */
+Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.                                */
 
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -308,9 +308,23 @@ void csl_caph_srcmixer_config_src_route(CSL_CAPH_SRCM_ROUTE_t routeConfig);
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl, 
+void csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl, 
                                     CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                                    UInt16 gainL, UInt16 gainR);
+                                    int gainL_mB, int gainR_mB);
+
+/**
+*
+*  @brief  set the mixer input gain on all inputs
+*
+*  @param	outChnl  (in) caph srcmixer mixer output channel
+*  @param	gainL  (in) caph srcmixer mixer input Left channel gain
+*  @param	gainR  (in) caph srcmixer mixer input Right channel gain
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_srcmixer_set_mix_all_in_gain( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
+									int gainL_mB, int gainR_mB);
+
 
 /**
 *
@@ -321,8 +335,8 @@ void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                                     UInt16 gain);
+void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
+                                     int gain_mB);
 
 
 /**
@@ -334,9 +348,9 @@ void csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mixoutcoarsegain(
+void csl_caph_srcmixer_set_mix_out_bit_select(
 		CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                UInt16 gain);
+                unsigned int bit_shift);
 
 /**
 *
@@ -383,9 +397,9 @@ CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_tapoutchnl_fifo(
 *
 *  @param   fifo  (in) caph srcmixer in channel
 *
-*  @return CSL_CAPH_SWITCH_TRIGGER_e trigger
+*  @return CAPH_SWITCH_TRIGGER_e trigger
 *****************************************************************************/
-CSL_CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
+CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
                                                    CSL_CAPH_SRCM_INCHNL_e inChnl);
 /**
 *
