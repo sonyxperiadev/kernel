@@ -221,10 +221,15 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 		[BCM59055_HV6LDO]	= 0x00,
 		[BCM59055_HV7LDO]	= 0x00,
 		[BCM59055_SIMLDO]	= 0x00,
-		[BCM59055_CSR]		= 0x00,
+		[BCM59055_CSR]		= 0x31,
 		[BCM59055_IOSR]		= 0x00,
 		[BCM59055_SDSR]		= 0x00,
 	},
+/*Set default values for SS silicon type*/
+       .csr_nm_volt = 0x14,
+       .csr_lpm_volt = 4,
+       .csr_turbo_volt = 0x14,
+
 };
 
 
