@@ -1279,7 +1279,9 @@ static void __init rhea_ray_add_devices(void)
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 	platform_add_devices(rhea_ray_virtual_consumer_devices, ARRAY_SIZE(rhea_ray_virtual_consumer_devices));
 #endif
-
+#ifdef CONFIG_MFD_BCMPMU
+	board_pmu_init();
+#endif
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
 }

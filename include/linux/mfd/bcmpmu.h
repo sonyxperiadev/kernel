@@ -40,7 +40,7 @@ struct regulator_init_data;
 int bcmpmu_register_regulator(struct bcmpmu *bcmpmu, int reg,
 			      struct regulator_init_data *initdata);
 
-struct bcmpmu_reg_info 
+struct bcmpmu_reg_info
 {
 	u8  reg_addr;		/* address of regulator control register for mode control */
 	u8  reg_addr_volt;	/* address of control register to change voltage */
@@ -226,6 +226,7 @@ enum bcmpmu_reg {
 	PMU_REG_CHRGR_EOC,
 	PMU_REG_CHRGR_BCDLDO,
 	PMU_REG_CHRGR_BCDLDO_AON,
+	PMU_REG_CHP_TYP,
 	/* fuel gauge */
 	PMU_REG_FG_ACCM0,
 	PMU_REG_FG_ACCM1,
@@ -692,6 +693,7 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_GET_SESSION_STATUS,
 	BCMPMU_USB_CTRL_GET_SESSION_END_STATUS,
 	BCMPMU_USB_CTRL_GET_ID_VALUE,
+	BCMPMU_USB_CTRL_GET_CHRGR_TYPE,
 	BCMPMU_USB_CTRL_SW_UP,
 };
 
@@ -760,7 +762,7 @@ struct bcmpmu {
 	int (*read_dev_bulk)(struct bcmpmu *bcmpmu, int map, int addr, unsigned int *val, int len);
 	int (*write_dev_bulk)(struct bcmpmu *bcmpmu, int map, int addr, unsigned int *val, int len);
 	const struct bcmpmu_reg_map *regmap;
-	/* irq */	
+	/* irq */
 	int (*register_irq)(struct bcmpmu *pmu, enum bcmpmu_irq irq,
 		void (*callback)(enum bcmpmu_irq irq, void *), void *data);
 	int (*unregister_irq)(struct bcmpmu *pmu, enum bcmpmu_irq irq);
@@ -782,14 +784,14 @@ struct bcmpmu {
 	int (*set_icc_qc)(struct bcmpmu *pmu, int curr);
 	int (*set_eoc)(struct bcmpmu *pmu, int curr);
 	int (*set_vfloat)(struct bcmpmu *pmu, int volt);
-	
+
 	/* fg */
 	int (*fg_currsmpl)(struct bcmpmu *pmu, int *data);
 	int (*fg_vmbatt)(struct bcmpmu *pmu, int *data);
 	int (*fg_acc_mas)(struct bcmpmu *pmu, int *data);
 	int (*fg_enable)(struct bcmpmu *pmu, int en);
 	int (*fg_reset)(struct bcmpmu *pmu);
-	
+
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;
 	int (* register_usb_callback)(struct bcmpmu *pmu,
@@ -806,7 +808,7 @@ struct bcmpmu {
 	struct bcmpmu_reg_info *rgltr_info;
 
 	void *debugfs_root_dir;
-	
+
 	/* Client devices */
 	struct platform_device *pdev[BCMPMU_REGULATOR_MAX];
 };

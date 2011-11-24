@@ -432,8 +432,8 @@ static void em_algorithm(struct work_struct *work)
 			pem->chrgr_curr = 0;
 			bcmpmu->chrgr_usb_en(bcmpmu, 0);
 		}
-		if ((ps) && (pem->batt_status != POWER_SUPPLY_STATUS_NOT_CHARGING)) {
-			propval.intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
+		if ((ps) && (pem->batt_status != POWER_SUPPLY_STATUS_DISCHARGING)) {
+			propval.intval = POWER_SUPPLY_STATUS_DISCHARGING;
 			ps->set_property(ps, POWER_SUPPLY_PROP_STATUS, &propval);
 			pem->batt_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
 			pr_em(FLOW, "%s, transition to discharging\n", __func__);

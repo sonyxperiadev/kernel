@@ -318,6 +318,7 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	idata->irq = pdata->irq;
 	idata->runagain = 0;
 	
+	bcmpmu->irqinfo = idata;
 	ret = request_irq(pdata->irq, bcmpmu_isr,
 		IRQF_DISABLED | IRQF_TRIGGER_FALLING | IRQF_NO_SUSPEND,
 		"bcmpmu-irq", idata);
@@ -326,12 +327,11 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	bcmpmu->irqinfo = idata;
 
-	enable_irq_wake(pdata->irq);
-
+	disable_irq(pdata->irq);
 	bcmpmu_read_irq_regs(idata);
 	bcmpmu_clear_irqs(bcmpmu);
+	enable_irq(pdata->irq);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_irq_attr_group);

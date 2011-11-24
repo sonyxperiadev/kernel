@@ -27,7 +27,7 @@
 #endif
 
 #include <linux/mfd/bcmpmu.h>
-#include "bcmpmu_audio.h"
+#include <linux/broadcom/bcmpmu_audio.h>
 
 struct bcmpmu_audio {
 	struct bcmpmu *bcmpmu;

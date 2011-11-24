@@ -141,7 +141,7 @@ static int bcmpmu_i2c_read_device_direct_bulk(struct bcmpmu *bcmpmu, int map, in
 	struct bcmpmu_i2c *acc = (struct bcmpmu_i2c *)bcmpmu->accinfo;
 	u8 *uval = (u8 *)val;
 	int i;
-	
+
 	if (addr + len > acc->pagesize) return -ENODEV;
 
 	mutex_lock(&acc->i2c_mutex);
@@ -165,7 +165,7 @@ static int bcmpmu_i2c_write_device_direct_bulk(struct bcmpmu *bcmpmu, int map, i
 	struct bcmpmu_i2c *acc = (struct bcmpmu_i2c *)bcmpmu->accinfo;
 	u8 *uval = (u8 *)val;
 	int i;
-	
+
 	if (addr + len > acc->pagesize) return -ENODEV;
 
 	for (i = 0; i < len; i++)
@@ -199,11 +199,11 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	struct i2c_client *clt;
 	struct i2c_adapter *adp;
 	struct bcmpmu_i2c *bcmpmu_i2c;
-		
+
 	pdata = (struct bcmpmu_platform_data *)i2c->dev.platform_data;
-	
+
 	printk(KERN_INFO "%s called\n", __func__);
-	
+
 	bcmpmu = kzalloc(sizeof(struct bcmpmu), GFP_KERNEL);
 	if (bcmpmu == NULL) {
 		printk(KERN_ERR "%s: failed to alloc mem.\n", __func__);
@@ -224,7 +224,7 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	bcmpmu_i2c->i2c_client = i2c;
 
 	adp = i2c_get_adapter(pdata->i2c_adapter_id);
-	clt = i2c_new_device(adp, pdata->i2c_board_info_map1);
+	clt = i2c_new_dummy(adp, pdata->i2c_board_info_map1->addr);
 	if (!clt)
 		printk(KERN_ERR "%s: add new device for map1 failed\n", __func__);
 

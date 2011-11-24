@@ -338,7 +338,6 @@ static void send_chrgr_event(struct bcmpmu *pmu,
 
 static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 {
-	unsigned int addr, val;
 	struct bcmpmu_accy *paccy = data;
 	struct bcmpmu *bcmpmu = paccy->bcmpmu;
 	pr_accy(FLOW, "%s interrupt = %d\n",__func__, irq);
@@ -594,12 +593,10 @@ static void usb_det_work(struct work_struct *work)
 	}
 	if ((usb_type < PMU_USB_TYPE_MAX) &&
 		(usb_type != bcmpmu->usb_accy_data.usb_type)) {
-		if ((usb_type != PMU_USB_TYPE_NONE) &&
-			(bcmpmu->usb_accy_data.usb_type != PMU_USB_TYPE_MAX))
+		bcmpmu->usb_accy_data.usb_type = usb_type;
 			send_usb_event(paccy->bcmpmu,
 				BCMPMU_USB_EVENT_USB_DETECTION,
 				&usb_type);
-		bcmpmu->usb_accy_data.usb_type = usb_type;
 	}
 	if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
 		(chrgr_type != bcmpmu->usb_accy_data.chrgr_type)) {
@@ -807,7 +804,7 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
 {
 	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)bcmpmu->accyinfo;
 	unsigned int val, val1;
-	int ret;
+	int ret = -EINVAL;
 	switch(ctrl) {
 	case BCMPMU_USB_CTRL_GET_ADP_CHANGE_STATUS:
 		ret = bcmpmu->read_dev(bcmpmu,
@@ -868,14 +865,26 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
 				(val < paccy->usb_id_map_len))
 				val = paccy->usb_id_map[val];
 		break;
+	/* client for bcmpmu-accy notification can not register before accy driver get probed
+	 * if, USB/Charger is plugged while system boot up, em driver will miss the first
+	 * notification. So, BCMPMU_USB_CTRL_GET_CHRGR_TYPE is required to know the type
+	 * explicitly
+	*/
+	case BCMPMU_USB_CTRL_GET_CHRGR_TYPE:
+		ret = bcmpmu->read_dev(bcmpmu,
+				PMU_REG_CHP_TYP,
+				&val,
+				bcmpmu->regmap[PMU_REG_CHP_TYP].mask);
+		val = val >> bcmpmu->regmap[PMU_REG_CHP_TYP].shift;
+		break;
 	default:
 		ret = -EINVAL;
 		break;
 	}
-	if (ret == 0)
+	if ((ret == 0) && (data != NULL))
 		*(unsigned int*)data = val;
 
-	pr_accy(FLOW, "%s, ctrl=%d, val=0x%X\n", __func__, ctrl, *(unsigned int*)data);
+	pr_accy(FLOW, "%s, ctrl=%d, val=0x%X\n", __func__, ctrl, ((data)?(*(unsigned int*)data):0));
 	return ret;
 }
 
@@ -920,7 +929,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 
 	bcmpmu->usb_get = bcmpmu_usb_get;
 	bcmpmu->usb_set = bcmpmu_usb_set;
-	bcmpmu->usb_accy_data.usb_type = PMU_USB_TYPE_MAX;
+	bcmpmu->usb_accy_data.usb_type = PMU_USB_TYPE_NONE;
 	bcmpmu->usb_accy_data.chrgr_type = PMU_CHRGR_TYPE_MAX;
 	bcmpmu->usb_accy_data.max_curr_chrgr = 0;
 
