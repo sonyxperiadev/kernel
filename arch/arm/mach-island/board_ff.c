@@ -33,13 +33,17 @@
 #include <linux/irq.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+
 #if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 #include <linux/bh1715.h>
 #endif
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/tango_ts.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
-#include <linux/smb380.h>
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
+#include <linux/bma150.h>
+#include <sensors_bma150_i2c_settings.h>
+#endif
 #if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) || \
     defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
 #include <linux/akm8975.h>
@@ -92,6 +96,15 @@
 
 #include <linux/vchiq_platform_data_hana.h>
 #include <linux/vchiq_platform_data_memdrv_hana.h>
+
+/*
+ * Since this board template is included by each board_xxx.c. We concatenate
+ * ISLAND_BOARD_ID to help debugging when multiple boards are compiled into
+ * a single image
+ */
+#define concatenate_again(a, b) a ## b
+#define concatenate(a, b) concatenate_again(a, b)
+
 
 #define KONA_SDIO0_PA   SDIO1_BASE_ADDR
 #define KONA_SDIO1_PA   SDIO2_BASE_ADDR
@@ -1129,34 +1142,25 @@ static struct platform_device vchiq_display_device = {
 
 struct platform_device * vchiq_devices[] __initdata = {&vchiq_display_device};
 
-#define BMA150_IRQ_PIN 120
 
-static struct smb380_platform_data bma150_plat_data = {
-	.range = RANGE_2G,
-	.bandwidth = BW_375HZ,
-	.enable_adv_int = 1,
-	.new_data_int = 0 ,
-	.hg_int = 0 ,
-	.lg_int = 0 ,
-	.lg_dur = 150 ,
-	.lg_thres = 20 ,
-	.lg_hyst = 0 ,
-	.hg_dur = 60 ,
-	.hg_thres = 160 ,
-	.hg_hyst = 0 ,
-	.any_motion_dur = 1 ,
-	.any_motion_thres = 20 ,
-	.any_motion_int = 1 ,
-};
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
+#define board_bma150_axis_change concatenate(ISLAND_BOARD_ID, _bma150_axis_change)
+
+#ifdef BMA150_DRIVER_AXIS_SETTINGS
+static struct t_bma150_axis_change board_bma150_axis_change = BMA150_DRIVER_AXIS_SETTINGS;
+#endif
 
 static struct i2c_board_info __initdata bma150_info[] =
 {
 	[0] = {
-		I2C_BOARD_INFO("bma150", 0x38 ),
-		.platform_data = &bma150_plat_data,
-		.irq = gpio_to_irq(BMA150_IRQ_PIN)
-	}
+		I2C_BOARD_INFO(BMA150_DRIVER_NAME, BMA150_DRIVER_SLAVE_NUMBER_0x38),
+#ifdef BMA150_DRIVER_AXIS_SETTINGS
+		.platform_data  = &board_bma150_axis_change,
+#endif
+	},
 };
+#endif
+
 
 #if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) || \
 	defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
@@ -1314,13 +1318,6 @@ static struct platform_device board_bcmbt_lpm_device = {
 #error ISLAND_BOARD_ID needs to be defined in board_xxx.c
 #endif
 
-/*
- * Since this board template is included by each board_xxx.c. We concatenate
- * ISLAND_BOARD_ID to help debugging when multiple boards are compiled into
- * a single image
- */
-#define concatenate_again(a, b) a ## b
-#define concatenate(a, b) concatenate_again(a, b)
 
 #define board_hdmidet_data concatenate(ISLAND_BOARD_ID, _hdmidet_data)
 static struct hdmi_hw_cfg board_hdmidet_data =
@@ -1408,9 +1405,11 @@ static void __init board_add_devices(void)
 		ARRAY_SIZE(pmu_info));*/
     board_pmu_init();
 
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
 	i2c_register_board_info(3,
 		bma150_info,
 		ARRAY_SIZE(bma150_info));
+#endif
 
 #if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) \
 			|| defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
