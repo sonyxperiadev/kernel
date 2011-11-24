@@ -364,7 +364,9 @@ static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 		csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 		//csl_pcm_start(pcmHandleSSP, &pcmCfg);
 	} else {
-		csl_caph_audioh_adcpath_global_enable(FALSE);
+		Boolean enable = FALSE;
+		if(enabled_path) enable = TRUE;
+		csl_caph_audioh_adcpath_global_enable(enable);
 	}
 #endif
 }
@@ -378,7 +380,8 @@ static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 // =========================================================================
 static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 {
-	if(!arm2sp_start[arm2spCfg.instanceID])
+	//when system is busy, dma cb may come after stop is issued.
+	if(!arm2sp_start[arm2spCfg.instanceID] && arm2spCfg.playbackMode!=CSL_ARM2SP_PLAYBACK_NONE)
 	{
 #if defined(CONFIG_BCM_MODEM) 
 		if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1)

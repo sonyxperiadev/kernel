@@ -238,7 +238,8 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 {
 	AudioMode_t mode;
 	int dev = 0;
-
+	UInt16 dma_mic_spk;
+	
 	telephonyPathID.ulPathID = 0;
 	telephonyPathID.ul2PathID = 0;
 	telephonyPathID.dlPathID = 0;
@@ -298,7 +299,9 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 #if defined(ENABLE_DMA_VOICE)
 		//csl_dsp_caph_control_aadmac_disable_path((UInt16)(DSP_AADMAC_SEC_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN));
 		csl_dsp_caph_control_aadmac_disable_path((UInt16)(DSP_AADMAC_SPKR_EN));
-		csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN));
+		dma_mic_spk = (UInt16)DSP_AADMAC_PRI_MIC_EN;
+		//if(AUDDRV_IsDualMicEnabled()==TRUE) dma_mic_spk |= (UInt16)DSP_AADMAC_SEC_MIC_EN; //dual mic leads to crash when single-mic switches to dual-mic on lmp
+		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
 
@@ -309,8 +312,9 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 	else
 	{
 #if defined(ENABLE_DMA_VOICE)
-		//csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SEC_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN));
-		csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN));
+		dma_mic_spk = (UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN);
+		//if(AUDDRV_IsDualMicEnabled()==TRUE) dma_mic_spk |= (UInt16)DSP_AADMAC_SEC_MIC_EN; //dual mic leads to crash when single-mic switches to dual-mic on lmp
+		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
 
@@ -415,6 +419,7 @@ void AUDDRV_Telephony_RateChange( unsigned int sample_rate )
 		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
 	else
 		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
 #else
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
 #endif
@@ -510,6 +515,8 @@ void AUDDRV_Telephone_SaveSampleRate( unsigned int sample_rate )
 // This is part of the control sequence for ending telephony audio.
 void AUDDRV_Telephony_Deinit (void)
 {
+	UInt16 dma_mic_spk;
+
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_Deinit voicePlayOutpathEnabled = %d*\n\r", voicePlayOutpathEnabled);
 
 	AUDDRV_SetVoiceCallFlag(FALSE);  //let HW control logic know.
@@ -537,8 +544,9 @@ void AUDDRV_Telephony_Deinit (void)
 		}
 
 #if defined(ENABLE_DMA_VOICE)
-		//csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN | (UInt16)DSP_AADMAC_PRI_MIC_EN | (UInt16)DSP_AADMAC_SEC_MIC_EN);
-		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN | (UInt16)DSP_AADMAC_PRI_MIC_EN); //no second mic on lmp
+		dma_mic_spk = (UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN);
+		//if(AUDDRV_IsDualMicEnabled()==TRUE) dma_mic_spk |= (UInt16)DSP_AADMAC_SEC_MIC_EN; //dual mic leads to crash when single-mic switches to dual-mic on lmp
+		csl_dsp_caph_control_aadmac_disable_path(dma_mic_spk);
 #endif
 		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 
@@ -619,6 +627,7 @@ void AUDDRV_EnableDSPOutput (
 		{
 #if defined(ENABLE_DMA_VOICE)
 			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
+			csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_SPKR_EN));
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_SPKR_EN, 0, 0, 0, 0 );
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, 1, 0, 0, 0, 0 );
 #else
@@ -630,6 +639,7 @@ void AUDDRV_EnableDSPOutput (
 		{
 #if defined(ENABLE_DMA_VOICE)
 			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
+			csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_SPKR_EN));
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_SPKR_EN, 0, 0, 0, 0 );
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, 1, 0, 0, 0, 0 );
 #else
@@ -703,9 +713,9 @@ void AUDDRV_EnableDSPInput (
 		{
 #if defined(ENABLE_DMA_VOICE)
 			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
+			csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN));
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
-			//audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
-			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0 ); //no second mic on lmp
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0 );
 #else
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 0, 0, 0, 0 );
@@ -715,9 +725,9 @@ void AUDDRV_EnableDSPInput (
 		{
 #if defined(ENABLE_DMA_VOICE)
 			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
-			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
-			//audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
-			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0 ); //no second mic on lmp
+			csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN));
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 1, 0, 0, 0);
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN, 1, 0, 0, 0 );
 #else
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 1, 0, 0, 0);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 1, 0, 0, 0 );
@@ -1940,4 +1950,3 @@ static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void)
         return memAddr;
 
 }
-
