@@ -239,7 +239,7 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 	AudioMode_t mode;
 	int dev = 0;
 	UInt16 dma_mic_spk;
-	
+
 	telephonyPathID.ulPathID = 0;
 	telephonyPathID.ul2PathID = 0;
 	telephonyPathID.dlPathID = 0;
