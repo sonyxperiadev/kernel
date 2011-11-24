@@ -86,6 +86,7 @@ EXPORT_SYMBOL(dwc_alloc_debug);
 EXPORT_SYMBOL(dwc_alloc_atomic_debug);
 EXPORT_SYMBOL(dwc_free_debug);
 EXPORT_SYMBOL(dwc_dma_alloc_debug);
+EXPORT_SYMBOL(dwc_dma_alloc_atomic_debug);
 EXPORT_SYMBOL(dwc_dma_free_debug);
 #endif
 
@@ -422,6 +423,17 @@ void *__DWC_DMA_ALLOC(uint32_t size, dwc_dma_t *dma_addr)
 	return buf;
 }
 EXPORT_SYMBOL(__DWC_DMA_ALLOC);
+
+void *__DWC_DMA_ALLOC_ATOMIC(uint32_t size, dwc_dma_t *dma_addr)
+{
+	void *buf = dma_alloc_coherent(NULL, (size_t)size, dma_addr, GFP_ATOMIC);
+	if (!buf) {
+		return NULL;
+	}
+	memset(buf, 0, (size_t)size);
+	return buf;
+}
+EXPORT_SYMBOL(__DWC_DMA_ALLOC_ATOMIC);
 
 void __DWC_DMA_FREE(uint32_t size, void *virt_addr, dwc_dma_t dma_addr)
 {

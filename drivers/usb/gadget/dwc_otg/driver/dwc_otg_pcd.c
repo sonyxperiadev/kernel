@@ -238,10 +238,15 @@ static dwc_otg_cil_callbacks_t pcd_callbacks = {
  * buffer to be used for a transfer to/from the specified endpoint.
  */
 dwc_otg_dev_dma_desc_t *dwc_otg_ep_alloc_desc_chain(uint32_t * dma_desc_addr,
-						uint32_t count)
+						    uint32_t count,
+						    int atomic_alloc)
 {
-
-	return dwc_dma_alloc(count * sizeof(dwc_otg_dev_dma_desc_t), dma_desc_addr);
+	if (atomic_alloc)
+		return dwc_dma_alloc_atomic(count * sizeof(dwc_otg_dev_dma_desc_t),
+					    dma_desc_addr);
+	else
+		return dwc_dma_alloc(count * sizeof(dwc_otg_dev_dma_desc_t),
+				     dma_desc_addr);
 }
 
 /**
@@ -264,7 +269,7 @@ void dwc_otg_ep_free_desc_chain(dwc_otg_dev_dma_desc_t * desc_addr,
  *
  */
 void dwc_otg_iso_ep_start_ddma_transfer(dwc_otg_core_if_t * core_if,
-					dwc_ep_t * dwc_ep)
+					dwc_ep_t * dwc_ep, int atomic_alloc)
 {
 
 	dsts_data_t dsts = {.d32 = 0 };
@@ -282,7 +287,7 @@ void dwc_otg_iso_ep_start_ddma_transfer(dwc_otg_core_if_t * core_if,
 	/** Allocate descriptors for double buffering */
 	dwc_ep->iso_desc_addr =
 	    dwc_otg_ep_alloc_desc_chain(&dwc_ep->iso_dma_desc_addr,
-					dwc_ep->desc_cnt * 2);
+					dwc_ep->desc_cnt * 2, atomic_alloc);
 	if (dwc_ep->desc_addr) {
 		DWC_WARN("%s, can't allocate DMA descriptor chain\n", __func__);
 		return;
@@ -607,7 +612,7 @@ void dwc_otg_iso_ep_start_buf_transfer(dwc_otg_core_if_t * core_if,
  */
 
 static void dwc_otg_iso_ep_start_transfer(dwc_otg_core_if_t * core_if,
-					  dwc_ep_t * ep)
+					  dwc_ep_t * ep, int atomic_alloc)
 {
 	if (core_if->dma_enable) {
 		if (core_if->dma_desc_enable) {
@@ -616,7 +621,8 @@ static void dwc_otg_iso_ep_start_transfer(dwc_otg_core_if_t * core_if,
 			} else {
 				ep->desc_cnt = ep->pkt_cnt;
 			}
-			dwc_otg_iso_ep_start_ddma_transfer(core_if, ep);
+			dwc_otg_iso_ep_start_ddma_transfer(core_if, ep,
+							   atomic_alloc);
 		} else {
 			if (core_if->pti_enh_enable) {
 				dwc_otg_iso_ep_start_buf_transfer(core_if, ep);
@@ -796,7 +802,7 @@ int dwc_otg_pcd_iso_ep_start(dwc_otg_pcd_t * pcd, void *ep_handle,
 	ep->iso_req_handle = req_handle;
 
 	DWC_SPINUNLOCK_IRQRESTORE(pcd->lock, flags);
-	dwc_otg_iso_ep_start_transfer(core_if, dwc_ep);
+	dwc_otg_iso_ep_start_transfer(core_if, dwc_ep, atomic_alloc);
 	return 0;
 }
 
@@ -1160,17 +1166,21 @@ dwc_otg_pcd_t *dwc_otg_pcd_init(dwc_otg_core_if_t * core_if)
 			dev_if->setup_desc_addr[0] =
 			    dwc_otg_ep_alloc_desc_chain(&dev_if->
 							dma_setup_desc_addr[0],
-							1);
+							1,
+							0);
 			dev_if->setup_desc_addr[1] =
 			    dwc_otg_ep_alloc_desc_chain(&dev_if->
 							dma_setup_desc_addr[1],
-							1);
+							1,
+							0);
 			dev_if->in_desc_addr =
 			    dwc_otg_ep_alloc_desc_chain(&dev_if->
-							dma_in_desc_addr, 1);
+							dma_in_desc_addr, 1,
+							0);
 			dev_if->out_desc_addr =
 			    dwc_otg_ep_alloc_desc_chain(&dev_if->
-							dma_out_desc_addr, 1);
+							dma_out_desc_addr, 1,
+							0);
 
 			if (dev_if->setup_desc_addr[0] == 0
 			    || dev_if->setup_desc_addr[1] == 0
@@ -1504,7 +1514,8 @@ int dwc_otg_pcd_ep_enable(dwc_otg_pcd_t * pcd,
 			ep->dwc_ep.desc_addr =
 			    dwc_otg_ep_alloc_desc_chain(&ep->dwc_ep.
 							dma_desc_addr,
-							MAX_DMA_DESC_CNT);
+							MAX_DMA_DESC_CNT,
+							1);
 			if (!ep->dwc_ep.desc_addr) {
 				DWC_WARN("%s, can't allocate DMA descriptor\n",
 					 __func__);

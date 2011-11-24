@@ -156,6 +156,13 @@ void *dwc_dma_alloc_debug(uint32_t size, dwc_dma_t *dma_addr, char const *func, 
 	return addr;
 }
 
+void *dwc_dma_alloc_atomic_debug(uint32_t size, dwc_dma_t *dma_addr, char const *func, int line)
+{
+	void *addr = __DWC_DMA_ALLOC_ATOMIC(size, dma_addr);
+	add_allocation(size, func, line, addr, 1);
+	return addr;
+}
+
 void dwc_dma_free_debug(uint32_t size, void *virt_addr, dwc_dma_t dma_addr, char const *func, int line)
 {
 	free_allocation(virt_addr, func, line);

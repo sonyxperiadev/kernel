@@ -332,7 +332,7 @@ extern uint32_t dwc_otg_hcd_urb_get_iso_desc_actual_length(dwc_otg_hcd_urb_t *
  */
 extern int dwc_otg_hcd_urb_enqueue(dwc_otg_hcd_t * dwc_otg_hcd,
 				   dwc_otg_hcd_urb_t * dwc_otg_urb,
-				   void **ep_handle);
+				   void **ep_handle, int atomic_alloc);
 
 /** De-queue the specified URB
  *
