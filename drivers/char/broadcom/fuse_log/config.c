@@ -38,8 +38,8 @@ static void SetConfigDefaults( void )
 	g_config.runlog_dev       = BCMLOG_OUTDEV_STM ;	        // run-time log to STM
 	g_config.cp_crashlog_dev  = BCMLOG_OUTDEV_STM ;
 #else
-	g_config.runlog_dev       = BCMLOG_OUTDEV_RNDIS ;	// run-time log to RNDIS/MTT
-	g_config.cp_crashlog_dev  = BCMLOG_OUTDEV_SDCARD ;
+	g_config.runlog_dev       = BCMLOG_OUTDEV_STM ;
+	g_config.cp_crashlog_dev  = BCMLOG_OUTDEV_STM ; //eventually set to BCMLOG_OUTDEV_PANIC once its working
 #endif
 }
 
@@ -72,7 +72,7 @@ static void bld_device_status_str( char *buf, int len, char *label, int device )
 		safe_strncat( buf, "-> flash\n", len ) ;
 		break ;
 	case BCMLOG_OUTDEV_RNDIS:
-		safe_strncat( buf, "-> MTT\n", len ) ;
+		safe_strncat( buf, "-> RNDIS\n", len ) ;
 		break ;
 	case BCMLOG_OUTDEV_SDCARD:
 		safe_strncat( buf, "-> SD card\n", len ) ;
@@ -81,7 +81,7 @@ static void bld_device_status_str( char *buf, int len, char *label, int device )
 		safe_strncat( buf, "-> UART\n", len ) ;
 		break ;
 	case BCMLOG_OUTDEV_ACM:
-		safe_strncat( buf, "-> USB serial\n", len ) ;
+		safe_strncat( buf, "-> ACM\n", len ) ;
 		break ;
 	case BCMLOG_OUTDEV_STM:
 		safe_strncat( buf, "-> STM\n", len ) ;
@@ -121,7 +121,10 @@ static int proc_read(char *page, char **start, off_t offset, int count, int *eof
  *		k - CP crash dump -> SD card
  *		l - CP crash dump -> disabled
  *		m - CP crash dump -> RNDIS
- *		s - STM logging
+ *		n - BMTT logging   -> STM
+ *		o - CP crash dump -> STM
+ *		p - CP crash dump -> ACM
+ *		s -  both BMTT and CP crash dump -> STM
  **/
 static ssize_t proc_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {	
@@ -156,7 +159,7 @@ static ssize_t proc_write(struct file *file, const char *buffer, unsigned long c
 		case 's':      
 			g_config.runlog_dev = BCMLOG_OUTDEV_STM;
 			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_STM;
-                        break ;
+			break ;
 		case 'i': 
 			SetConfigDefaults( ) ;
 			BCMLOG_SaveConfig( 0 ) ;
@@ -173,6 +176,16 @@ static ssize_t proc_write(struct file *file, const char *buffer, unsigned long c
 		case 'm':
 			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_RNDIS ;
 			break ;
+		case 'n':
+			g_config.runlog_dev = BCMLOG_OUTDEV_STM;
+			break ;
+		case 'o':
+			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_STM;
+			break ;
+		case 'p':
+			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_ACM;
+			break ;
+
 		}
 	}
 

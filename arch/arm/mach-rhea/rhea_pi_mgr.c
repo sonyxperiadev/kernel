@@ -31,12 +31,13 @@
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <mach/io_map.h>
+#include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
 
 #include<mach/clock.h>
 #include<mach/pi_mgr.h>
 #include<plat/pwr_mgr.h>
 #include<plat/pi_mgr.h>
-#include "volt_tbl.h"
+#include "pm_params.h"
 
 #define RUN_POLICY PM_POLICY_5
 #define RETN_POLICY PM_POLICY_1
@@ -144,6 +145,10 @@ static struct pi mm_pi =
 					.wakeup_overide_mask = PWRMGR_PI_DEFAULT_POWER_STATE_PI_MM_WAKEUP_OVERRIDE_MASK,
 					.counter_reg_offset = PWRMGR_PI_MM_ON_COUNTER_OFFSET,
 					.rtn_clmp_dis_mask = PWRMGR_PI_DEFAULT_POWER_STATE_PI_MM_RETENTION_CLAMP_DISABLE_MASK,
+					.reset_mgr_ccu_name = ROOT_CCU_CLK_NAME_STR,
+					.pd_soft_reset_offset = ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET,
+					.pd_reset_mask0 = ROOT_RST_MGR_REG_PD_SOFT_RSTN_MM_SOFT_RSTN_MASK,
+					.pd_reset_mask1 = ROOT_RST_MGR_REG_PD_SOFT_RSTN_MM_SUB_SOFT_RSTN_MASK,
 				},
 		.ops = &gen_pi_ops,
 	};
@@ -195,6 +200,10 @@ static struct pi hub_pi =
 					.wakeup_overide_mask = PWRMGR_PI_DEFAULT_POWER_STATE_PI_HUB_SWITCHABLE_WAKEUP_OVERRIDE_MASK,
 					.counter_reg_offset = PWRMGR_PI_HUB_SWITCHABLE_ON_COUNTER_OFFSET,
 					.rtn_clmp_dis_mask = PWRMGR_PI_DEFAULT_POWER_STATE_PI_HUB_SWITCHABLE_RETENTION_CLAMP_DISABLE_MASK,
+					.reset_mgr_ccu_name = ROOT_CCU_CLK_NAME_STR,
+					.pd_soft_reset_offset = ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET,
+					.pd_reset_mask0 = ROOT_RST_MGR_REG_PD_SOFT_RSTN_HUB_SOFT_RSTN_MASK,
+
 				},
 		.ops = &gen_pi_ops,
 	};
@@ -304,6 +313,11 @@ static struct pi sub_sys_pi =
 					.wakeup_overide_mask = PWRMGR_PI_DEFAULT_POWER_STATE_PI_ARM_SUBSYSTEM_WAKEUP_OVERRIDE_MASK,
 					.counter_reg_offset = PWRMGR_PI_ARM_SUBSYSTEM_ON_COUNTER_OFFSET,
 					.rtn_clmp_dis_mask = PWRMGR_PI_DEFAULT_POWER_STATE_PI_ARM_SUBSYSTEM_RETENTION_CLAMP_DISABLE_MASK,
+					.reset_mgr_ccu_name = ROOT_CCU_CLK_NAME_STR,
+					.pd_soft_reset_offset = ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET,
+					.pd_reset_mask0 = ROOT_RST_MGR_REG_PD_SOFT_RSTN_KSLV_SOFT_RSTN_MASK,
+					.pd_reset_mask1 = ROOT_RST_MGR_REG_PD_SOFT_RSTN_KMST_SOFT_RSTN_MASK,
+
 				},
 		.ops = &gen_pi_ops,
 	};
@@ -335,6 +349,11 @@ static struct pi modem_pi =
 					.wakeup_overide_mask = PWRMGR_PI_DEFAULT_POWER_STATE_PI_MODEM_WAKEUP_OVERRIDE_MASK,
 					.counter_reg_offset = PWRMGR_PI_MODEM_ON_COUNTER_OFFSET,
 					.rtn_clmp_dis_mask = PWRMGR_PI_DEFAULT_POWER_STATE_PI_MODEM_RETENTION_CLAMP_DISABLE_MASK,
+					.reset_mgr_ccu_name = ROOT_CCU_CLK_NAME_STR,
+					.pd_soft_reset_offset = ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET,
+					.pd_reset_mask0 = ROOT_RST_MGR_REG_PD_SOFT_RSTN_MDM_SOFT_RSTN_MASK,
+					.pd_reset_mask1 = ROOT_RST_MGR_REG_PD_SOFT_RSTN_MDM_SUB_SOFT_RSTN_MASK,
+
 				},
 		.ops = NULL,
 	};
@@ -371,9 +390,11 @@ int __init pi_mgr_late_init(void)
 {
     int i;
     pi_debug_init();
-    for(i=0;i<ARRAY_SIZE(pi_list);i++)
+    for(i=0;i < ARRAY_SIZE(pi_list);i++)
     {
-		pi_debug_add_pi(pi_list[i]);
+	/*add debug interface for all domains except for modem*/
+	if (pi_list[i]->id != PI_MGR_PI_ID_MODEM)
+	    pi_debug_add_pi(pi_list[i]);
     }
     return 0;
 }

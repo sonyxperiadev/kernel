@@ -2799,7 +2799,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
          (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) ||
          (path->sink[sinkNo] == CSL_CAPH_DEV_HS)))
     {
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP or HS or BTM *****\r\n"));
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback *****\r\n"));
 		fmRxRunning = TRUE;
 		list = LIST_SW_MIX_SW;
 		if(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) list = LIST_SW_MIX_SRC_SW;

@@ -1159,8 +1159,12 @@ void csl_caph_audioh_setgain_register(int path_id ,UInt32 gain, UInt32 fine_scal
 			break;
 
         case AUDDRV_PATH_VIN_INPUT:
-			chal_audio_vinpath_set_cic_scale(handle, gain, fine_scale, gain, fine_scale);			
-			break;		
+#if defined(CONFIG_ARCH_RHEA_B0)
+			chal_audio_vinpath_set_cic_scale(handle, gain | fine_scale, gain | fine_scale);
+#else
+			chal_audio_vinpath_set_cic_scale(handle, gain, fine_scale, gain, fine_scale);
+#endif
+			break;
 
 		case AUDDRV_PATH_VIN_INPUT_L:		
 			chal_audio_vinpath_set_each_cic_scale( handle, CAPH_AUDIOH_MIC1_COARSE_GAIN, gain);
@@ -1173,8 +1177,12 @@ void csl_caph_audioh_setgain_register(int path_id ,UInt32 gain, UInt32 fine_scal
 			break;
 
         case AUDDRV_PATH_NVIN_INPUT:
-			chal_audio_nvinpath_set_cic_scale(handle, gain, fine_scale, gain, fine_scale);			
-			break;		
+#if defined(CONFIG_ARCH_RHEA_B0)
+			chal_audio_nvinpath_set_cic_scale(handle, gain | fine_scale, gain | fine_scale);
+#else
+			chal_audio_nvinpath_set_cic_scale(handle, gain, fine_scale, gain, fine_scale);
+#endif
+			break;
 
 		case AUDDRV_PATH_NVIN_INPUT_L:
 			chal_audio_nvinpath_set_each_cic_scale(handle, CAPH_AUDIOH_MIC3_COARSE_GAIN, gain );
@@ -1431,7 +1439,11 @@ void csl_caph_audioh_vin_set_cic_scale_by_mB( int mic1_coarse_gain,
 	mic2_coarse_scale = mic2_coarse_gain/600;
 	mic2_fine_scale = convert_gain_to_scale( mic2_fine_gain );
 	
+#if defined(CONFIG_ARCH_RHEA_B0)
+	chal_audio_vinpath_set_cic_scale(handle, mic1_coarse_scale | mic1_fine_scale, mic2_coarse_scale | mic2_fine_scale);
+#else
 	chal_audio_vinpath_set_cic_scale(handle, mic1_coarse_scale, mic1_fine_scale, mic2_coarse_scale, mic2_fine_scale);
+#endif
 }
 
 //============================================================================
@@ -1462,7 +1474,11 @@ void csl_caph_audioh_nvin_set_cic_scale_by_mB( int mic1_coarse_gain,
 	mic2_coarse_scale = mic2_coarse_gain/600;
 	mic2_fine_scale = convert_gain_to_scale( mic2_fine_gain );
 	
+#if defined(CONFIG_ARCH_RHEA_B0)
+	chal_audio_nvinpath_set_cic_scale(handle, mic1_coarse_scale | mic1_fine_scale, mic2_coarse_scale | mic2_fine_scale);
+#else
 	chal_audio_nvinpath_set_cic_scale(handle, mic1_coarse_scale, mic1_fine_scale, mic2_coarse_scale, mic2_fine_scale);
+#endif
 }
 
 //============================================================================
@@ -1691,7 +1707,11 @@ void csl_audio_audiotx_get_dac_ctrl(CSL_CAPH_AUDIOH_DACCTRL_t *readdata)
 
 void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff)
 {
+#if defined(CONFIG_ARCH_RHEA_B0)
+	chal_audio_stpath_load_filter(handle, coeff, 0 );
+#else
 	chal_audio_stpath_load_filter(handle, coeff );
+#endif
 	return;
 }	
 

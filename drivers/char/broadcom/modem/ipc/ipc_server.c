@@ -266,6 +266,7 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 			break;
 #endif // 0
 		case BCMLOG_OUTDEV_RNDIS:
+		case BCMLOG_OUTDEV_ACM:
 			//Using RNDIS causes work queue event/0 lock up so it needs its own thread
 			g_ipc_info.crash_dump_workqueue = create_singlethread_workqueue("dump-wq");
 			if (!g_ipc_info.crash_dump_workqueue)

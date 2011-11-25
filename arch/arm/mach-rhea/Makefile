@@ -22,8 +22,10 @@ obj-$(CONFIG_KONA_CPU_PM_HANDLER) += rhea_pm.o rhea_wfi.o
 obj-$(CONFIG_RHEA_DORMANT_MODE) += rhea_dormant.o dm_pwr_policy_top.o
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += rhea_ray.o rhea_ray_pinmux.o
 obj-$(CONFIG_MACH_RHEA_RAY_EDN2X) += rhea_ray.o rhea_ray_pinmux.o
-obj-$(CONFIG_MACH_RHEA_DALTON) += rhea_ray.o rhea_dalton_pinmux.o
+obj-$(CONFIG_MACH_RHEA_FARADAY_EB10) += rhea_ray.o rhea_faraday_eb10_pinmux.o
 obj-$(CONFIG_MACH_RHEA_BERRI) += rhea_berri.o rhea_berri_pinmux.o
+obj-$(CONFIG_MACH_RHEA_BERRI_EDN40) += rhea_berri.o rhea_berri_pinmux.o
 obj-$(CONFIG_MACH_RHEALC_BERRI) += rhea_berri.o rhea_berri_pinmux.o
+obj-y += pm_params.o
 
 obj-$(CONFIG_ROM_SEC_DISPATCHER) += sec_bridge_tz.i

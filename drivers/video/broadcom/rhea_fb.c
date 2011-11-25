@@ -49,7 +49,7 @@ struct rhea_fb {
 	struct semaphore thread_sem;
 	struct semaphore update_sem;
 	struct semaphore prev_buf_done_sem;
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEABERRI_EDN40) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 	struct semaphore refresh_wait_sem;
 #endif
 	atomic_t buff_idx;
@@ -330,7 +330,7 @@ static int disable_display(struct rhea_fb *fb)
 	return ret;
 }
 
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEABERRI_EDN40) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 static int rhea_refresh_thread(void *arg)
 {
 	struct rhea_fb *fb = arg;
@@ -418,7 +418,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_graphics_started, 0);
 	sema_init(&fb->thread_sem, 0);
 
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEABERRI_EDN40) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 
 	sema_init(&fb->refresh_wait_sem, 0);
 
@@ -595,7 +595,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_fb_registered, 1);
 	rheafb_info("RHEA Framebuffer probe successfull\n");
 
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEABERRI_EDN40) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 	register_vt_notifier(&vt_notifier_block);
 #endif
 
@@ -623,7 +623,7 @@ err_set_var_failed:
 
 err_enable_display_failed:
 err_fbmem_alloc_failed:
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEABERRI_EDN40) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 thread_create_failed:
 #endif
 fb_data_failed:

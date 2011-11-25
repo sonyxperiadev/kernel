@@ -36,8 +36,13 @@ EXTRA_CFLAGS += -I$(src)/audio/voif_handler/public/
 EXTRA_CFLAGS += -I$(src)/soc/csl/audio/public/
 EXTRA_CFLAGS += -I$(src)/soc/csl/dsp/public/
 #CHAL header files
+ifdef CONFIG_ARCH_RHEA_B0
+EXTRA_CFLAGS += -I$(src)/soc/chal/modules/audio_B0/inc/
+EXTRA_CFLAGS += -I$(src)/soc/chal/modules/audio_B0/caph/
+else
 EXTRA_CFLAGS += -I$(src)/soc/chal/modules/audio/inc/
 EXTRA_CFLAGS += -I$(src)/soc/chal/modules/audio/caph/
+endif
 #RPC Header files
 EXTRA_CFLAGS += -I./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
 EXTRA_CFLAGS += -I./drivers/char/broadcom/modem/CAPI2_CIB/soc/debug/public/
@@ -51,7 +56,11 @@ EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/mach
 EXTRA_CFLAGS += -I./drivers/char/broadcom/
 EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/
 EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/mach/
-EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/mach/rdb/
+ifdef CONFIG_ARCH_RHEA_B0
+EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/mach/rdb_B0/
+else
+EXTRA_CFLAGS += -I./arch/arm/mach-rhea/include/mach/rdb_A0/
+endif
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/chal/
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/csl/
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/osabstract/
@@ -69,23 +78,44 @@ snd-brcm-omx-objs += audio/audio_datadriver/src/audio_ddriver.o
 snd-brcm-omx-objs += caph_hwdep.o
 
 #CHAL Source Files
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_switch.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_srcmixer.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_other.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_intc.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_dma.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_cfifo.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_vout.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_vin.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_vibra.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_sidetone.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_nvin.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_ihf.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_hs.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_eanc.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_audio.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogtest.o
-snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogmic.o
+ifdef CONFIG_ARCH_RHEA_B0
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_switch.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_srcmixer.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_other.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_intc.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_dma.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_dma_rhea_B0.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_cfifo.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_vout.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_vin.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_vibra.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_sidetone.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_nvin.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_ihf.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_hs.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_eanc.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_audio.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_analogtest.o
+	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_audioh_analogmic.o
+else
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_switch.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_srcmixer.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_other.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_intc.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_dma.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_cfifo.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_vout.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_vin.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_vibra.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_sidetone.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_nvin.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_ihf.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_hs.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_eanc.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_audio.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogtest.o
+	snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogmic.o
+endif
 
 #CSL Source Files
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_switch.o

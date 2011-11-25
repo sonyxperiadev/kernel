@@ -23,9 +23,6 @@
 /*                                                                                              */
 /************************************************************************************************/
 
-/* Local macro test B0 build on A0 */
-#define CONFIG_DONOT_ENABLE_SDIO4
-
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/device.h>
@@ -641,8 +638,25 @@ static struct i2c_board_info __initdata mpu6050_info[] =
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
 static struct kona_headset_pd headset_data = {
-	.hs_default_state = 1, /* GPIO state read is 0 on HS insert and 1 for
-							* HS remove*/
+	/* GPIO state read is 0 on HS insert and 1 for
+	 * HS remove
+	 */
+
+	.hs_default_state = 1,
+	/*
+	 * Because of the presence of the resistor in the MIC_IN line.
+	 * The actual ground is not 0, but a small offset is added to it.
+	 * This needs to be subtracted from the measured voltage to determine the
+	 * correct value. This will vary for different HW based on the resistor
+	 * values used.
+	 *
+	 * What this means to Rhearay?
+	 * From the schematics looks like there is no such resistor put on
+	 * Rhearay. That means technically there is no need to subtract any extra load
+	 * from the read Voltages. On other HW, if there is a resistor present
+	 * on this line, please measure the load value and put it here.
+	 */
+	.phone_ref_offset = 0,
 };
 
 static struct resource board_headset_resource[] = {
@@ -777,6 +791,7 @@ static struct resource board_sdio2_resource[] = {
 	},
 };
 
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 static struct resource board_sdio3_resource[] = {
 	[0] = {
 		.start = SDIO3_BASE_ADDR,
@@ -789,8 +804,9 @@ static struct resource board_sdio3_resource[] = {
 		.flags = IORESOURCE_IRQ,
 	},
 };
+#endif
 
-#ifdef CONFIG_ARCH_RHEA_B0
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
 static struct resource board_sdio4_resource[] = {
 	[0] = {
 		.start = SDIO4_BASE_ADDR,
@@ -828,24 +844,6 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
-#ifdef CONFIG_DONOT_ENABLE_SDIO4
-	{ /* SDIO3 */
-		.id = 2,
-		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_WIFI,
-		.wifi_gpio = {
-			.reset		= 70,
-			.reg		= -1,
-			.host_wake	= 85,
-			.shutdown	= -1,
-		},
-		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-		.peri_clk_name = "sdio3_clk",
-		.ahb_clk_name = "sdio3_ahb_clk",
-		.sleep_clk_name = "sdio3_sleep_clk",
-		.peri_clk_rate = 48000000,
-	},
-#else /* Enable this code for B0 - disabled to test the code on A0 */
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	{ /* SDIO3 */
 		.id = 2,
@@ -864,6 +862,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.peri_clk_rate = 48000000,
 	},
 #endif
+
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
 	{ /* SDIO4 */
 		.id = 3,
@@ -881,7 +880,6 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio4_sleep_clk",
 		.peri_clk_rate = 48000000,
 	},
-#endif
 #endif
 };
 
@@ -908,17 +906,13 @@ static struct platform_device board_sdio2_device = {
 static struct platform_device board_sdio3_device = {
 	.name = "sdhci",
 	.id = 2,
-#ifdef CONFIG_DONOT_ENABLE_SDIO4
-	.resource = board_sdio3_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
-#else /* Enable this code for B0 - disabled to test the code on A0 */
-#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-	.resource = board_sdio4_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio4_resource),
-#else
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	.resource = board_sdio3_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
+	.resource = board_sdio4_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio4_resource),
 #endif
 	.dev      = {
 		.platform_data = &board_sdio_param[2],
@@ -963,7 +957,7 @@ static struct platform_device bcm_backlight_devices = {
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
 #if defined(CONFIG_MACH_RHEA_RAY) || defined(CONFIG_MACH_RHEA_RAY_EDN1X) \
-	|| defined(CONFIG_MACH_RHEA_DALTON) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+	|| defined(CONFIG_MACH_RHEA_FARADAY_EB10) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X

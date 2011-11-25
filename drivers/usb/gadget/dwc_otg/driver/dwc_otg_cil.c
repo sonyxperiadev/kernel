@@ -1355,6 +1355,7 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 		ahbcfg.b.ptxfemplvl = DWC_GAHBCFG_TXFEMPTYLVL_HALFEMPTY;
 		core_if->dma_enable = 0;
 		core_if->dma_desc_enable = 0;
+		core_if->dev_out_nak_enable = 0;
 		break;
 
 	case DWC_EXT_DMA_ARCH:
@@ -1370,6 +1371,8 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 		core_if->dma_enable = (core_if->core_params->dma_enable != 0);
 		core_if->dma_desc_enable =
 		    (core_if->core_params->dma_desc_enable != 0);
+		core_if->dev_out_nak_enable =
+		    (core_if->core_params->dev_out_nak_enable != 0);
 		break;
 
 	case DWC_INT_DMA_ARCH:
@@ -1383,12 +1386,17 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 		core_if->dma_enable = (core_if->core_params->dma_enable != 0);
 		core_if->dma_desc_enable =
 		    (core_if->core_params->dma_desc_enable != 0);
+		core_if->dev_out_nak_enable =
+		    (core_if->core_params->dev_out_nak_enable != 0);
 		break;
 
 	}
 	if (core_if->dma_enable) {
 		if (core_if->dma_desc_enable) {
 			DWC_PRINTF("Using Descriptor DMA mode\n");
+			if (core_if->dev_out_nak_enable) {
+				DWC_PRINTF("Using Bulk OUT NAK mode\n");
+			}
 		} else {
 			DWC_PRINTF("Using Buffer DMA mode\n");
 
@@ -1396,6 +1404,7 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 	} else {
 		DWC_PRINTF("Using Slave mode\n");
 		core_if->dma_desc_enable = 0;
+		core_if->dev_out_nak_enable = 0;
 	}
 	
 	ahbcfg.b.dmaenable = core_if->dma_enable;
@@ -1621,6 +1630,7 @@ void dwc_otg_core_dev_init(dwc_otg_core_if_t * core_if)
 	init_devspd(core_if);
 	dcfg.d32 = dwc_read_reg32(&dev_if->dev_global_regs->dcfg);
 	dcfg.b.descdma = (core_if->dma_desc_enable) ? 1 : 0;
+	dcfg.b.endevoutnak = (core_if->dev_out_nak_enable) ? 1 : 0;
 	dcfg.b.perfrint = DWC_DCFG_FRAME_INTERVAL_80;
 
 	dwc_write_reg32(&dev_if->dev_global_regs->dcfg, dcfg.d32);
@@ -3427,6 +3437,17 @@ void dwc_otg_ep_start_transfer(dwc_otg_core_if_t * core_if, dwc_ep_t * ep)
 				/** DOEPDMAn Register write */
 				dwc_write_reg32(&out_regs->doepdma,
 						ep->dma_desc_addr);
+
+				if ((ep->type == DWC_OTG_EP_TYPE_BULK) &&
+				    core_if->dev_out_nak_enable) {
+					deptsiz.b.pktcnt =
+						(ep->total_len + (ep->maxpacket - 1)) /
+						ep->maxpacket;
+					ep->xfer_len = deptsiz.b.pktcnt * ep->maxpacket;
+					deptsiz.b.xfersize = ep->xfer_len;
+					dwc_write_reg32(&out_regs->doeptsiz,
+							deptsiz.d32);
+				}
 #ifdef DWC_UTE_CFI
 				}
 #endif
@@ -4768,6 +4789,8 @@ static int dwc_otg_setup_params(dwc_otg_core_if_t * core_if)
 	dwc_otg_set_param_dma_enable(core_if, dwc_param_dma_enable_default);
 	dwc_otg_set_param_dma_desc_enable(core_if,
 					  dwc_param_dma_desc_enable_default);
+	dwc_otg_set_param_dev_out_nak_enable(core_if,
+					     dwc_param_dev_out_nak_enable_default);
 	dwc_otg_set_param_opt(core_if, dwc_param_opt_default);
 	dwc_otg_set_param_dma_burst_size(core_if,
 					 dwc_param_dma_burst_size_default);
@@ -4948,6 +4971,7 @@ int dwc_otg_set_param_dma_enable(dwc_otg_core_if_t * core_if, int32_t val)
 	core_if->core_params->dma_enable = val;
 	if (val == 0) {
 		dwc_otg_set_param_dma_desc_enable(core_if, 0);
+		dwc_otg_set_param_dev_out_nak_enable(core_if, 0);
 	}
 	return retval;
 }
@@ -4985,6 +5009,37 @@ int dwc_otg_set_param_dma_desc_enable(dwc_otg_core_if_t * core_if, int32_t val)
 int32_t dwc_otg_get_param_dma_desc_enable(dwc_otg_core_if_t * core_if)
 {
 	return core_if->core_params->dma_desc_enable;
+}
+
+int dwc_otg_set_param_dev_out_nak_enable(dwc_otg_core_if_t * core_if, int32_t val)
+{
+	int retval = 0;
+	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
+		DWC_WARN("Wrong value for dev_out_nak_enable\n");
+		DWC_WARN("dev_out_nak_enable must be 0 or 1\n");
+		return -DWC_E_INVALID;
+	}
+
+	if ((val == 1)
+	    && ((core_if->snpsid < OTG_CORE_REV_2_93a)
+		|| (dwc_otg_get_param_dma_enable(core_if) == 0)
+		|| (dwc_otg_get_param_dma_desc_enable(core_if) == 0))) {
+		if (dwc_otg_param_initialized
+		    (core_if->core_params->dev_out_nak_enable)) {
+			DWC_ERROR
+			    ("%d invalid for dev_out_nak_enable paremter. Check HW configuration.\n",
+			     val);
+		}
+		val = 0;
+		retval = -DWC_E_INVALID;
+	}
+	core_if->core_params->dev_out_nak_enable = val;
+	return retval;
+}
+
+int32_t dwc_otg_get_param_dev_out_nak_enable(dwc_otg_core_if_t * core_if)
+{
+	return core_if->core_params->dev_out_nak_enable;
 }
 
 int dwc_otg_set_param_host_support_fs_ls_low_power(dwc_otg_core_if_t * core_if,
