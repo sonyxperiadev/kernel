@@ -313,11 +313,11 @@ int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start, lbaint_t blkcnt)
 static ulong mmc_bread(int dev_num, ulong start, lbaint_t blkcnt, void *dst)
 {
 	lbaint_t cur, blocks_todo = blkcnt;
+	struct mmc *mmc = find_mmc_device(dev_num);
 
 	if (blkcnt == 0)
 		return 0;
 
-	struct mmc *mmc = find_mmc_device(dev_num);
 	if (!mmc)
 		return 0;
 

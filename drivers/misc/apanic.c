@@ -76,7 +76,7 @@ struct panic_header {
 struct apanic_data {
 	struct mtd_info		*mtd;
 #ifdef CONFIG_APANIC_ON_MMC
-	unsigned long dev_num;	
+	int dev_num;
 	struct mmc *mmc;
 #endif
 	struct panic_header	curr;
@@ -114,6 +114,7 @@ static unsigned int get_bb(unsigned int block, unsigned int *bbt)
 	return apanic_bbt[block/32] & flag;
 }
 
+#ifndef CONFIG_APANIC_ON_MMC
 static void alloc_bbt(struct mtd_info *mtd, unsigned int *bbt)
 {
 	int bbt_size;
@@ -154,6 +155,7 @@ static unsigned int phy_offset(struct mtd_info *mtd, unsigned int offset)
 
 	return offset + ((phy_block-logic_block)<<mtd->erasesize_shift);
 }
+#endif
 
 static void apanic_erase_callback(struct erase_info *done)
 {
@@ -161,6 +163,7 @@ static void apanic_erase_callback(struct erase_info *done)
 	wake_up(wait_q);
 }
 
+#ifndef CONFIG_APANIC_ON_MMC
 static int apanic_proc_read(char *buffer, char **start, off_t offset,
 			       int count, int *peof, void *dat)
 {
@@ -219,7 +222,7 @@ static int apanic_proc_read(char *buffer, char **start, off_t offset,
 		count -= page_offset;
 	memcpy(buffer, ctx->bounce + page_offset, count);
 
-	*start = count;
+	*start = (char *)count;
 
 	if ((offset + count) == file_length)
 		*peof = 1;
@@ -227,6 +230,7 @@ static int apanic_proc_read(char *buffer, char **start, off_t offset,
 	mutex_unlock(&drv_mutex);
 	return count;
 }
+#endif
 
 static void mtd_panic_erase(void)
 {
@@ -306,6 +310,7 @@ static void apanic_remove_proc_work(struct work_struct *work)
 	mutex_unlock(&drv_mutex);
 }
 
+#ifndef CONFIG_APANIC_ON_MMC
 static int apanic_proc_write(struct file *file, const char __user *buffer,
 				unsigned long count, void *data)
 {
@@ -421,9 +426,11 @@ static struct mtd_notifier mtd_panic_notifier = {
 	.add	= mtd_panic_notify_add,
 	.remove	= mtd_panic_notify_remove,
 };
+#endif
 
 static int in_panic = 0;
 
+#ifndef CONFIG_APANIC_ON_MMC 
 static int apanic_writeflashpage(struct mtd_info *mtd, loff_t to,
 				 const u_char *buf)
 {
@@ -459,10 +466,12 @@ static int apanic_writeflashpage(struct mtd_info *mtd, loff_t to,
 
 	return wlen;
 }
+#endif
 
 extern int log_buf_copy(char *dest, int idx, int len);
 extern void log_buf_clear(void);
 
+#ifndef CONFIG_APANIC_ON_MMC 
 /*
  * Writes the contents of the console to the specified offset in flash.
  * Returns number of bytes written
@@ -505,6 +514,7 @@ static int apanic_write_console(struct mtd_info *mtd, unsigned int off)
 	}
 	return idx;
 }
+#endif
 
 #ifdef CONFIG_APANIC_ON_MMC
 

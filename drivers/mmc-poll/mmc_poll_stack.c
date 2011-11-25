@@ -72,6 +72,7 @@ int mmc_poll_stack_init (struct mmc **mmc, int *dev_num)
 	return 0;
 }
 
+#ifdef DEBUG
 static void print_mmcinfo(struct mmc *mmc)
 {
 	printk("Device: %s\n", mmc->name);
@@ -92,3 +93,4 @@ static void print_mmcinfo(struct mmc *mmc)
 
 	printk("Bus Width: %d-bit\n", mmc->bus_width);
 }
+#endif

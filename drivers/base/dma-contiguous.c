@@ -448,7 +448,7 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 
 	mutex_unlock(&cma_mutex);
 
-	pr_debug("%s(): returning [%p]\n", __func__, (pfn << PAGE_SHIFT));
+	pr_debug("%s(): returning [%lu]\n", __func__, (pfn << PAGE_SHIFT));
 
 	return pfn_to_page(pfn);
 free:

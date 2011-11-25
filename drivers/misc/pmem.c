@@ -870,7 +870,7 @@ void flush_pmem_process_file(struct file *file, void *virt_base, unsigned long o
 
 	down_read(&data->sem);
 	vaddr = virt_base;
-	printk(KERN_ERR "%s start=0x%08x end=0x%08x", __func__, (unsigned long)vaddr + offset, (unsigned long)vaddr + pmem_len(id, data));
+	printk(KERN_ERR "%s start=0x%08lx end=0x%08lx", __func__, (unsigned long)vaddr + offset, (unsigned long)vaddr + pmem_len(id, data));
 	do_cache_op((unsigned long)vaddr + offset, (unsigned long)vaddr + pmem_len(id, data), 0);
 	up_read(&data->sem);
 }

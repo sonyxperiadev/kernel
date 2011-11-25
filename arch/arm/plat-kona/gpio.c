@@ -249,7 +249,7 @@ static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigne
 #define	GPIO_DB_ENABLE (1<<8)
 
 	void __iomem * reg_base = kona_gpio.reg_base;
-	u32 val, res;
+	u32 val, res = 0;
 	unsigned long flags;
 
 	(void) chip; /* unused input parameter */
