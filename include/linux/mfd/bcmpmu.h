@@ -838,6 +838,7 @@ struct bcmpmu_platform_data {
 	int irq;
 	struct bcmpmu_rw_data *init_data;
 	int init_max;
+	int num_of_regl;
 	struct bcmpmu_regulator_init_data *regulator_init_data;
 	struct bcmpmu_temp_map *batt_temp_map;
 	int batt_temp_map_len;
@@ -876,8 +877,6 @@ const int *bcmpmu_get_usb_id_map(int *len);
 struct regulator_desc *bcmpmu_rgltr_desc(void);
 struct bcmpmu_reg_info *bcmpmu_rgltr_info(void);
 
-void bcmpmu_reg_dev_init(struct bcmpmu *bcmpmu);
-void bcmpmu_reg_dev_exit(struct bcmpmu *bcmpmu);
 int bcmpmu_usb_add_notifier(u32, struct notifier_block *);
 int bcmpmu_usb_remove_notifier(u32, struct notifier_block *);
 int bcmpmu_batt_add_notifier(u32, struct notifier_block *);
