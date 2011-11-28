@@ -1683,15 +1683,12 @@ static int bsc_suspend(struct platform_device *pdev, pm_message_t state)
 	/* flush the workqueue to make sure all outstanding work items are done */
 	flush_workqueue(dev->reset_wq);
 	
-	bsc_disable_clk(dev);
 	return 0;
 }
 
 static int bsc_resume(struct platform_device *pdev)
 {
-   struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
-
-   return bsc_enable_clk(dev);
+   return 0;
 }
 #else
 #define bsc_suspend    NULL
