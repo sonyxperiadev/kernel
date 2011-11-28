@@ -309,8 +309,9 @@ static int bcm59055_rtc_probe(struct platform_device *pdev)
 						&bcm59055_rtc_ops, THIS_MODULE);
 	if (IS_ERR(bcm59055_rtc->rtc)) {
 		pr_err("bcm59055_rtc_probe:rtc_device_register failed !!!\n");
+		ret = bcm59055_rtc->rtc;
 		kfree(bcm59055_rtc);
-		return PTR_ERR(bcm59055_rtc->rtc);
+		return ret;
 
 	}
 	ret = bcm590xx_enable_irq(bcm590xx, BCM59055_IRQID_INT8_RTCADJ);
