@@ -1677,6 +1677,7 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 
 	if ((path->source == CSL_CAPH_DEV_FM_RADIO) &&
 		((path->sink[sinkNo] == CSL_CAPH_DEV_EP) ||
+		(path->sink[sinkNo] == CSL_CAPH_DEV_IHF) ||
 		 (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) ||
 		 (path->sink[sinkNo] == CSL_CAPH_DEV_HS)))
 	{
@@ -2763,8 +2764,11 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
     {
 		list = LIST_DMA_MIX_SW;
 
-		if(path->sink[sinkNo] == CSL_CAPH_DEV_VIBRA || //vibra does not go thru mixer
-		   (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000 && path->chnlNum == AUDIO_CHANNEL_MONO)) //no 48kHz mono pass-thru on A0, bypass mixer.
+		if(path->sink[sinkNo] == CSL_CAPH_DEV_VIBRA //vibra does not go thru mixer
+#if !defined(CONFIG_ARCH_RHEA_B0)
+			||(path->src_sampleRate == AUDIO_SAMPLING_RATE_48000 && path->chnlNum == AUDIO_CHANNEL_MONO) //no 48kHz mono pass-thru on A0, bypass mixer
+#endif
+			)
 		{
 			list = LIST_DMA_SW;
 		}
@@ -2799,6 +2803,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
     else
     if ((path->source == CSL_CAPH_DEV_FM_RADIO) &&
         ((path->sink[sinkNo] == CSL_CAPH_DEV_EP) ||
+		(path->sink[sinkNo] == CSL_CAPH_DEV_IHF) ||
          (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) ||
          (path->sink[sinkNo] == CSL_CAPH_DEV_HS)))
     {
@@ -2892,7 +2897,12 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
 		//according to ASIC team, switch can be used as 1:2 splitter, with two idential destination address. But data format should be 24bit unpack.
 		memcpy(&(path->srcmRoute[sinkNo][1].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
 		memcpy(&(path->srcmRoute[sinkNo][2].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
+#if defined(CONFIG_ARCH_RHEA_B0)
+		path->chnlNum = 1; //o.w. stereo passthru src is picked.
+		list = LIST_SW_MIX_SW;
+#else
 		list = LIST_SW;
+#endif
     }
     else // For HW loopback use only: DIGI_MIC1/2/3/4 -> SSASW -> Handset Ear/IHF
     if (((path->source == CSL_CAPH_DEV_DIGI_MIC_L) ||
