@@ -30,6 +30,8 @@
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_bmdm_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_dsp_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kproc_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_khub_rst_mgr_reg.h>
@@ -53,6 +55,57 @@ unsigned long clock_get_xtal(void)
 {
 	return FREQ_MHZ(26);
 }
+
+/*
+modem CCU clock
+*/
+static struct ccu_clk CLK_NAME(bmdm) = {
+	.clk = {
+	    .flags = BMDM_CCU_CLK_FLAGS,
+	    .name = BMDM_CCU_CLK_NAME_STR,
+	    .id = CLK_BMDM_CCU_CLK_ID,
+	    .ops = &gen_ccu_clk_ops,
+	    .clk_type = CLK_TYPE_CCU,
+	},
+	.ccu_ops = &gen_ccu_ops,
+	.pi_id = -1,
+	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(BMDM_CCU_BASE_ADDR),
+	.wr_access_offset = BMDM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.lvm_en_offset = BMDM_CLK_MGR_REG_LVM_EN_OFFSET,
+	.policy_ctl_offset = BMDM_CLK_MGR_REG_POLICY_CTL_OFFSET,
+
+	.vlt0_3_offset = BMDM_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = BMDM_CLK_MGR_REG_VLT4_7_OFFSET,
+	.freq_volt = DEFINE_ARRAY_ARGS(BMDM_CCU_FREQ_VOLT_TBL),
+	.freq_count = BMDM_CCU_FREQ_VOLT_TBL_SZ,
+	.clk_mon_offset = BMDM_CLK_MGR_REG_CLKMON_OFFSET,
+};
+
+/*
+DSP CCU clock
+*/
+static struct ccu_clk CLK_NAME(dsp) = {
+	.clk = {
+	    .flags = DSP_CCU_CLK_FLAGS,
+	    .name = DSP_CCU_CLK_NAME_STR,
+	    .id = CLK_DSP_CCU_CLK_ID,
+	    .ops = &gen_ccu_clk_ops,
+	    .clk_type = CLK_TYPE_CCU,
+	},
+	.ccu_ops = &gen_ccu_ops,
+	.pi_id = -1,
+	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(DSP_CCU_BASE_ADDR),
+	.wr_access_offset = DSP_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.lvm_en_offset = DSP_CLK_MGR_REG_LVM_EN_OFFSET,
+	.policy_ctl_offset = DSP_CLK_MGR_REG_POLICY_CTL_OFFSET,
+
+	.vlt0_3_offset = DSP_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = DSP_CLK_MGR_REG_VLT4_7_OFFSET,
+	.freq_volt = DEFINE_ARRAY_ARGS(DSP_CCU_FREQ_VOLT_TBL),
+	.freq_count = DSP_CCU_FREQ_VOLT_TBL_SZ,
+	.clk_mon_offset = DSP_CLK_MGR_REG_CLKMON_OFFSET,
+};
+
 
 /*root ccu ops */
 static int root_ccu_clk_init(struct clk* clk);
@@ -6330,6 +6383,8 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(KPM_CCU_CLK_NAME_STR,NULL,kpm),
 	BRCM_REGISTER_CLK(KPS_CCU_CLK_NAME_STR,NULL,kps),
 	BRCM_REGISTER_CLK(MM_CCU_CLK_NAME_STR,NULL,mm),
+	BRCM_REGISTER_CLK(BMDM_CCU_CLK_NAME_STR,NULL,bmdm),
+	BRCM_REGISTER_CLK(DSP_CCU_CLK_NAME_STR,NULL,dsp),
 	/* CCU registration end */
 
 	/* Clocks registration */

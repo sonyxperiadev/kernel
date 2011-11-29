@@ -1782,7 +1782,7 @@ static int ccu_clk_policy_engine_stop(struct ccu_clk* ccu_clk)
 	if(ccu_clk->pol_engine_dis_cnt++ != 0)
 		return 0; /*Already in disabled state */
 
-	reg_val = (CCU_POLICY_OP_EN < CCU_POLICY_CONFIG_EN_SHIFT);
+	reg_val = (CCU_POLICY_OP_EN << CCU_POLICY_CONFIG_EN_SHIFT);
 	writel(reg_val,CCU_LVM_EN_REG(ccu_clk));
 	while(readl(CCU_LVM_EN_REG(ccu_clk)) & CCU_POLICY_CONFIG_EN_MASK) ;
 
@@ -2195,11 +2195,14 @@ static int ccu_clk_init(struct clk* clk)
 			ccu_set_peri_voltage(ccu_clk,inx,ccu_clk->volt_peri[inx]);
 		}
 	}
-	/*Init freq policy */
-	for (inx = 0; inx < MAX_CCU_POLICY_COUNT; inx++)
+	if (ccu_clk->policy_freq_offset != 0)
 	{
+	    /*Init freq policy */
+	    for (inx = 0; inx < MAX_CCU_POLICY_COUNT; inx++)
+	    {
 		BUG_ON(ccu_clk->freq_policy[inx] >= ccu_clk->freq_count);
 		ccu_set_freq_policy(ccu_clk,inx,ccu_clk->freq_policy[inx]);
+	    }
 	}
 	/*Set ATL & AC */
 	if(clk->flags & CCU_TARGET_LOAD)
