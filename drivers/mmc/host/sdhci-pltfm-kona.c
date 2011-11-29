@@ -561,13 +561,12 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		}
 
 		/*
-		* Since the card detection GPIO interrupt is configured to be edge
-		* sensitive, check the initial GPIO value here
-		*/
+		 * Since the card detection GPIO interrupt is configured to be
+		 * edge sensitive, check the initial GPIO value here, emulate
+		 * only if the card is present
+		 */
 		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
 			bcm_kona_sd_card_emulate(dev, 1);
-		else
-			bcm_kona_sd_card_emulate(dev, 0);
 	}
 
 	atomic_set(&dev->initialized, 1);
@@ -691,14 +690,18 @@ static int sdhci_pltfm_resume(struct platform_device *pdev)
 #endif
 
 
-	/* card state might have been changed during system suspend. Need to sync up */
+#ifndef CONFIG_MMC_UNSAFE_RESUME
+	/*
+	 * card state might have been changed during system suspend.
+	 * Need to sync up only if MMC_UNSAFE_RESUME is not enabled
+	 */
 	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
 		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
 			bcm_kona_sd_card_emulate(dev, 1);
 		else
 			bcm_kona_sd_card_emulate(dev, 0);
 	}
-	
+#endif
 	return 0;
 }
 #else
