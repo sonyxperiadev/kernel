@@ -230,11 +230,12 @@ void csl_caph_srcmixer_deinit(void);
 *
 *  @param  dataFormat (in) dataformat of the data in the input channel
 *  @param  sampleRate (in) sample rate of the data in the input channel
+*  @param  srOut (in) output sample rate
 *
 *  @return CSL_CAPH_SRCM_INCHNL_e srcmixer input channel
 *****************************************************************************/
 CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dataFormat, 
-                              CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate);
+                              CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate, AUDIO_SAMPLING_RATE_t srOut);
 
 /**
 *

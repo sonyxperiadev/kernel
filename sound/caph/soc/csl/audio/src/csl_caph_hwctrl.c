@@ -768,6 +768,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
 	CSL_CAPH_DMA_CHNL_e dmaCH = CSL_CAPH_DMA_NONE;
 	int j;
+	CSL_CAPH_DATAFORMAT_e dataFormatTmp;
 
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
@@ -949,6 +950,17 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 			{	//if not the first srcmixer block, assume 16bit mono output?
 				dataFormat = CSL_CAPH_16BIT_MONO;
 			}
+			dataFormatTmp = dataFormat;
+			if(path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM) srOut = AUDIO_SAMPLING_RATE_8000; //arm2sp 8kHz
+			else if(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR || path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) 
+			{
+				srOut = AUDIO_SAMPLING_RATE_8000;
+				dataFormat = CSL_CAPH_16BIT_MONO;
+			}
+			else
+			{
+				srOut = (path->snk_sampleRate == 0) ? AUDIO_SAMPLING_RATE_8000 : path->snk_sampleRate ;
+			}
 #if defined(ENABLE_DMA_VOICE)
 			// unconditionally assign fixed src channel to dsp
 			if(path->source==CSL_CAPH_DEV_DSP)
@@ -981,20 +993,10 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 			} else
 #endif
 			{
-				srcmIn = csl_caph_srcmixer_obtain_inchnl(dataFormat, pSrcmRoute->inSampleRate);
+				srcmIn = csl_caph_srcmixer_obtain_inchnl(dataFormatTmp, pSrcmRoute->inSampleRate, srOut);
 			}
 			srcmTap = csl_caph_srcmixer_get_tapoutchnl_from_inchnl(srcmIn);
 
-			if(path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM) srOut = AUDIO_SAMPLING_RATE_8000; //arm2sp 8kHz
-			else if(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR || path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) 
-			{
-				srOut = AUDIO_SAMPLING_RATE_8000;
-				dataFormat = CSL_CAPH_16BIT_MONO;
-			}
-			else
-			{
-				srOut = (path->snk_sampleRate == 0) ? AUDIO_SAMPLING_RATE_8000 : path->snk_sampleRate ;
-			}
 			pSrcmRoute->inChnl = srcmIn;
 			pSrcmRoute->tapOutChnl = srcmTap;
 			pSrcmRoute->outDataFmt = dataFormat;
@@ -1073,7 +1075,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
                 }
 				else // first sink
                 {
-                    srcmIn = csl_caph_srcmixer_obtain_inchnl(dataFormat, pSrcmRoute->inSampleRate);
+                    srcmIn = csl_caph_srcmixer_obtain_inchnl(dataFormat, pSrcmRoute->inSampleRate, srOut);
                     path->block_split_inCh = srcmIn;
                 }
 			}
