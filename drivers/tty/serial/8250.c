@@ -2545,7 +2545,15 @@ uart_fix_clock_rate(struct uart_port *port, struct ktermios *termios)
                 else
                    cbaud += 15;
         }
-        uart_clk = uartclk_table[cbaud];
+
+        if(cbaud <= ARRAY_SIZE(uartclk_table))	{
+            uart_clk = uartclk_table[cbaud];
+        }
+        else {
+            pr_info("clock rate not available for given baud, using 26MHz!\n");
+            /* Use default clock rate */
+            uart_clk = 26000000;
+        }
 
         round_clk = clk_round_rate(up->clk, uart_clk);
         if (port->uartclk != round_clk) {
