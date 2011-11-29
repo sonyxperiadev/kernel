@@ -599,6 +599,7 @@ EXPORT_SYMBOL( vcos_mutex_create );
 EXPORT_SYMBOL( vcos_mutex_delete );
 EXPORT_SYMBOL( vcos_mutex_lock );
 EXPORT_SYMBOL( vcos_mutex_unlock );
+EXPORT_SYMBOL( vcos_mutex_trylock );
 
 EXPORT_SYMBOL( vcos_timer_cancel );
 EXPORT_SYMBOL( vcos_timer_create );

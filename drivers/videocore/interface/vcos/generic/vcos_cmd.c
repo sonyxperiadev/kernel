@@ -150,7 +150,7 @@ void vcos_cmd_vprintf( VCOS_CMD_PARAM_T *param, const char *fmt, va_list args )
     int     bytes_written;
     int     bytes_remaining;
 
-    bytes_remaining = param->result_size - ( param->result_ptr - param->result_buf );
+    bytes_remaining = (int)(param->result_size - ( param->result_ptr - param->result_buf ));
 
     bytes_written = vcos_vsnprintf( param->result_ptr, bytes_remaining, fmt, args );
 

@@ -76,12 +76,19 @@ VCOS_STATUS_T vc_vchi_wifihdmi_stop( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                                      VC_WIFIHDMI_RESULT_T *result,
                                      uint32_t *trans_id );
 
-/* Tell wifi-hdmi service some data is available for a given socket connection.
+/* Gets statistics information from the wifi-hdmi service to report to host.
 */
 VCOS_STATUS_T vc_vchi_wifihdmi_stats( VC_VCHI_WIFIHDMI_HANDLE_T handle,
                                       VC_WIFIHDMI_MODE_T *mode,
                                       VC_WIFIHDMI_STATS_T *stats,
                                       uint32_t *trans_id );
+
+/* Checks the status of an audio stream associated with the wifi-hdmi service.
+*/
+VCOS_STATUS_T vc_vchi_wifihdmi_audio_status( VC_VCHI_WIFIHDMI_HANDLE_T handle,
+                                             VC_WIFIHDMI_STREAM_T *stream,
+                                             VC_WIFIHDMI_STR_STA_RES_T *status,
+                                             uint32_t *trans_id );
 
 /* Tell wifi-hdmi service of an incoming socket connection request.
 */

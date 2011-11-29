@@ -26,6 +26,7 @@ VCHIQ_INSTANCE_STRUCT_T vchiq_instances[2];
 
 static VCHIQ_SLOT_ZERO_T *vchiq_slot_zero;
 
+
 void
 remote_event_signal(REMOTE_EVENT_T *event)
 {
@@ -72,6 +73,13 @@ vchiq_platform_init(void)
 
    return VCHIQ_SUCCESS;
 }
+
+VCHIQ_STATUS_T
+vchiq_platform_init_state(VCHIQ_STATE_T *state)
+{ // not required on this platform
+   return VCHIQ_SUCCESS;
+}
+
 
 VCHIQ_STATUS_T
 vchiq_copy_from_user(void *dst, const void *src, int size)
@@ -148,3 +156,23 @@ vchiq_platform_resumed(VCHIQ_STATE_T *state)
    vcos_assert_msg(0, "Suspend/resume not supported");
 }
 
+VCHIQ_STATUS_T
+vchiq_use_service_internal(VCHIQ_SERVICE_T *service)
+{
+   vcos_unused(service);
+   return VCHIQ_SUCCESS;
+}
+
+VCHIQ_STATUS_T
+vchiq_release_service_internal(VCHIQ_SERVICE_T *service)
+{
+   vcos_unused(service);
+   return VCHIQ_SUCCESS;
+}
+
+VCHIQ_VC_STATE_T*
+vchiq_platform_get_vc_state(VCHIQ_STATE_T *state)
+{
+   vcos_unused(state);
+   return NULL;
+}

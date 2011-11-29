@@ -233,6 +233,22 @@ vchiq_dump_platform_state(void *dump_context)
         vchiq_dump(dump_context, buf, len + 1);
 }
 
+VCHIQ_STATUS_T
+vchiq_platform_suspend(VCHIQ_STATE_T *state)
+{
+   vcos_unused(state);
+   vcos_assert_msg(0, "Suspend/resume not supported");
+   return VCHIQ_ERROR;
+}
+
+VCHIQ_STATUS_T
+vchiq_platform_resume(VCHIQ_STATE_T *state)
+{
+   vcos_unused(state);
+   vcos_assert_msg(0, "Suspend/resume not supported");
+   return VCHIQ_ERROR;
+}
+
 void
 vchiq_platform_paused(VCHIQ_STATE_T *state)
 {
@@ -247,31 +263,38 @@ vchiq_platform_resumed(VCHIQ_STATE_T *state)
    vcos_assert_msg(0, "Suspend/resume not supported");
 }
 
-VCHIQ_STATUS_T
-vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
+int
+vchiq_platform_videocore_wanted(VCHIQ_STATE_T* state)
 {
-   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *)handle;
-   if (!service)
-      return VCHIQ_ERROR;
-   return VCHIQ_SUCCESS;
+   vcos_unused(state);
+   return 1; // autosuspend not supported - videocore always wanted
+}
+
+#if VCOS_HAVE_TIMER
+int
+vchiq_platform_use_suspend_timer(void)
+{
+   return 0;
+}
+#endif
+void
+vchiq_dump_platform_use_state(VCHIQ_STATE_T *state)
+{
+   vcos_unused(state);
 }
 
 VCHIQ_STATUS_T
-vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
+vchiq_platform_init_state(VCHIQ_STATE_T *state)
 {
-   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *)handle;
-   if (!service)
-      return VCHIQ_ERROR;
+   vcos_unused(state);
    return VCHIQ_SUCCESS;
 }
 
-VCHIQ_STATUS_T
-vchiq_check_service(VCHIQ_SERVICE_HANDLE_T handle)
+VCHIQ_ARM_STATE_T*
+vchiq_platform_get_arm_state(VCHIQ_STATE_T *state)
 {
-   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *)handle;
-   if (!service)
-      return VCHIQ_ERROR;
-   return VCHIQ_SUCCESS;
+   vcos_unused(state);
+   return NULL;
 }
 
 /*

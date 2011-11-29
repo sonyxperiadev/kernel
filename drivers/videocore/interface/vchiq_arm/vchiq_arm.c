@@ -44,6 +44,15 @@
 
 #define VCOS_LOG_CATEGORY (&vchiq_arm_log_category)
 
+#define VCHIQ_ARM_VCSUSPEND_TASK_STACK 4096
+
+#if VCOS_HAVE_TIMER
+#define SUSPEND_TIMER_TIMEOUT_MS 100
+static VCOS_TIMER_T      g_suspend_timer;
+static void suspend_timer_callback(void *context);
+#endif
+
+
 typedef struct client_service_struct {
    VCHIQ_SERVICE_T *service;
    void *userdata;
@@ -106,10 +115,13 @@ static const char *ioctl_names[] =
    "GET_CONFIG",
    "CLOSE_SERVICE",
    "USE_SERVICE",
-   "RELEASE_SERIVCE"
+   "RELEASE_SERVICE",
+   "SET_SERVICE_OPTION"
 };
 
-VCOS_LOG_LEVEL_T vchiq_default_arm_log_level = VCOS_LOG_WARN;
+vcos_static_assert(vcos_countof(ioctl_names) == (VCHIQ_IOC_MAX + 1));
+
+VCOS_LOG_LEVEL_T vchiq_default_arm_log_level = VCOS_LOG_ERROR;
 
 /****************************************************************************
 *
@@ -438,7 +450,7 @@ vchiq_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             if (args.is_open) {
                status =
                    vchiq_open_service_internal
-                   (service, current->pid);
+                   (service, instance->pid);
                if (status != VCHIQ_SUCCESS) {
                   vchiq_remove_service
                       (&service->base);
@@ -524,7 +536,7 @@ vchiq_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             status = (cmd == VCHIQ_IOC_USE_SERVICE) ? vchiq_use_service(&user_service->service->base) : vchiq_release_service(&user_service->service->base);
             if (status != VCHIQ_SUCCESS)
             {
-               ret = -EINVAL; // ???
+               ret = -EINVAL; /* ??? */
             }
          }
       }
@@ -926,7 +938,7 @@ vchiq_open(struct inode *inode, struct file *file)
             return -ENOMEM;
 
          instance->state = state;
-         instance->pid = current->pid;
+         instance->pid = current->tgid;
          vcos_event_create(&instance->insert_event, DEVICE_NAME);
          vcos_event_create(&instance->remove_event, DEVICE_NAME);
 
@@ -1204,6 +1216,476 @@ vchiq_fops = {
    .read = vchiq_read
 };
 
+/*
+ * Autosuspend related functionality
+ */
+
+static int vchiq_videocore_wanted(VCHIQ_STATE_T* state)
+{
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+   int override = vchiq_platform_videocore_wanted(state);
+
+   return (arm_state->videocore_use_count || override);
+}
+
+
+/* Called by the lp thread */
+static void *
+lp_func(void *v)
+{
+   VCHIQ_STATE_T *state = (VCHIQ_STATE_T *) v;
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+
+   while (1) {
+      vcos_event_wait(&arm_state->lp_evt);
+
+      vcos_mutex_lock(&arm_state->use_count_mutex);
+      if (!vchiq_videocore_wanted(state))
+      {
+         arm_state->suspend_pending = 1;
+      }
+      vcos_mutex_unlock(&arm_state->use_count_mutex);
+
+      vchiq_arm_vcsuspend(state);
+   }
+   return NULL;
+}
+/* Called by the hp thread */
+static void *
+hp_func(void *v)
+{
+   VCHIQ_STATE_T *state = (VCHIQ_STATE_T *) v;
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+   int send_pending;
+
+   while (1) {
+      vcos_event_wait(&arm_state->hp_evt);
+
+      send_pending = 0;
+
+      vcos_mutex_lock(&arm_state->use_count_mutex);
+      if (vchiq_videocore_wanted(state))
+      {
+         vchiq_arm_vcresume(state);
+      }
+      if(arm_state->use_notify_pending)
+      {
+         send_pending = 1;
+         arm_state->use_notify_pending = 0;
+      }
+      vcos_mutex_unlock(&arm_state->use_count_mutex);
+      if(send_pending)
+      {
+         vcos_log_info( "%s sending VCHIQ_MSG_REMOTE_USE_ACTIVE", __func__);
+         if ( vchiq_send_remote_use_active(state) != VCHIQ_SUCCESS)
+         {
+            BUG();  /* vc should be resumed, so shouldn't be a problem sending message */
+         }
+      }
+   }
+   return NULL;
+}
+
+VCHIQ_STATUS_T
+vchiq_arm_init_state(VCHIQ_STATE_T* state, VCHIQ_ARM_STATE_T *arm_state)
+{
+   VCHIQ_STATUS_T status = VCHIQ_SUCCESS;
+   VCOS_THREAD_ATTR_T attrs;
+   char threadname[10];
+
+   vcos_mutex_create(&arm_state->use_count_mutex, "v.use_count_mutex");
+   vcos_mutex_create(&arm_state->suspend_resume_mutex, "v.susp_res_mutex");
+
+   vcos_event_create(&arm_state->lp_evt, "LP_EVT");
+   vcos_event_create(&arm_state->hp_evt, "HP_EVT");
+
+   vcos_thread_attr_init(&attrs);
+   vcos_thread_attr_setstacksize(&attrs, VCHIQ_ARM_VCSUSPEND_TASK_STACK);
+   vcos_thread_attr_setpriority(&attrs, VCOS_THREAD_PRI_LOWEST);
+   vcos_snprintf(threadname, sizeof(threadname), "VCHIQl-%d", state->id);
+   if(vcos_thread_create(&arm_state->lp_thread, threadname, &attrs, lp_func, state) != VCOS_SUCCESS)
+   {
+      vcos_log_error("vchiq: FATAL: couldn't create thread %s", threadname);
+      status = VCHIQ_ERROR;
+   }
+   else
+   {
+      vcos_thread_attr_init(&attrs);
+      vcos_thread_attr_setstacksize(&attrs, VCHIQ_ARM_VCSUSPEND_TASK_STACK);
+      vcos_thread_attr_setpriority(&attrs, VCOS_THREAD_PRI_HIGHEST);
+      vcos_snprintf(threadname, sizeof(threadname), "VCHIQh-%d", state->id);
+
+      if(vcos_thread_create(&arm_state->hp_thread, threadname, &attrs, hp_func, state) != VCOS_SUCCESS)
+      {
+         vcos_log_error("vchiq: FATAL: couldn't create thread %s", threadname);
+         status = VCHIQ_ERROR;
+      }
+   }
+
+   return status;
+}
+
+
+VCHIQ_STATUS_T
+vchiq_arm_vcsuspend(VCHIQ_STATE_T *state)
+{
+   VCHIQ_STATUS_T status = VCHIQ_SUCCESS;
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+
+   if (state->conn_state != VCHIQ_CONNSTATE_CONNECTED)
+      return VCHIQ_ERROR;
+
+   if(arm_state->suspend_pending)
+   {
+      vcos_mutex_lock(&arm_state->suspend_resume_mutex);
+      if(arm_state->videocore_suspended)
+      {
+         vcos_log_info("%s - already suspended", __func__);
+      }
+      else
+      {
+         vcos_log_info("%s - suspending", __func__);
+
+         status = vchiq_platform_suspend(state);
+         arm_state->videocore_suspended = (status == VCHIQ_SUCCESS) ? 1 : 0;
+
+         vcos_mutex_unlock(&arm_state->suspend_resume_mutex);
+
+         vcos_mutex_lock(&arm_state->use_count_mutex);
+         if(!arm_state->suspend_pending)
+         { /* Something has changed the suspend_pending state while we were suspending.
+            Run the HP task to check if we need to resume */
+            vcos_log_info( "%s trigger HP task to check resume", __func__);
+            vcos_event_signal(&arm_state->hp_evt);
+         }
+         arm_state->suspend_pending = 0;
+         vcos_mutex_unlock(&arm_state->use_count_mutex);
+      }
+   }
+   else
+   {
+      vchiq_check_resume(state);
+   }
+   return status;
+}
+
+
+VCHIQ_STATUS_T
+vchiq_arm_vcresume(VCHIQ_STATE_T *state)
+{
+   VCHIQ_STATUS_T status = VCHIQ_SUCCESS;
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+   vcos_mutex_lock(&arm_state->suspend_resume_mutex);
+
+   status = vchiq_platform_resume(state);
+   arm_state->videocore_suspended = (status == VCHIQ_RETRY) ? 1 : 0;
+
+   vcos_mutex_unlock(&arm_state->suspend_resume_mutex);
+   return status;
+}
+
+void
+vchiq_check_resume(VCHIQ_STATE_T* state)
+{
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+   vcos_mutex_lock(&arm_state->use_count_mutex);
+
+   if (arm_state->videocore_suspended && vchiq_videocore_wanted(state))
+   { /* signal high priority task to resume vc */
+      vcos_event_signal(&arm_state->hp_evt);
+   }
+
+   vcos_mutex_unlock(&arm_state->use_count_mutex);
+}
+void
+vchiq_check_suspend(VCHIQ_STATE_T* state)
+{
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+   vcos_mutex_lock(&arm_state->use_count_mutex);
+
+   if (!arm_state->videocore_suspended && !vchiq_videocore_wanted(state))
+   { /* signal low priority task to suspend vc */
+      vcos_event_signal(&arm_state->lp_evt);
+   }
+
+   vcos_mutex_unlock(&arm_state->use_count_mutex);
+}
+
+
+
+static VCHIQ_STATUS_T
+vchiq_use_internal(VCHIQ_STATE_T *state, VCHIQ_SERVICE_T *service, int block_while_resume)
+{
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+   VCHIQ_STATUS_T ret = VCHIQ_SUCCESS;
+   char entity[10];
+   int* entity_uc;
+
+   vcos_mutex_lock(&arm_state->use_count_mutex);
+
+   if (service)
+   {
+      sprintf(entity, "%c%c%c%c:%03d",VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id);
+      entity_uc = &service->service_use_count;
+   }
+   else
+   {
+      sprintf(entity, "PEER:   ");
+      entity_uc = &arm_state->peer_use_count;
+   }
+
+   if (!arm_state->videocore_suspended && !vchiq_videocore_wanted(state))
+   {
+#if VCOS_HAVE_TIMER
+      if (vchiq_platform_use_suspend_timer())
+      {
+         vcos_log_trace( "%s %s - cancel suspend timer", __func__, entity);
+      }
+      vcos_timer_cancel(&g_suspend_timer);
+#endif
+   }
+
+   arm_state->videocore_use_count++;
+   (*entity_uc)++;
+   arm_state->suspend_pending = 0;
+
+   if (arm_state->videocore_suspended && vchiq_videocore_wanted(state))
+   {
+      vcos_log_info( "%s %s count %d, state count %d", __func__, entity, *entity_uc, arm_state->videocore_use_count);
+      if(block_while_resume)
+      {
+         ret = vchiq_arm_vcresume(state);
+      }
+      else
+      {
+         vcos_log_info( "%s trigger HP task to do resume", __func__); /* triggering is done below */
+      }
+   }
+   else
+   {
+      vcos_log_trace( "%s %s count %d, state count %d", __func__, entity, *entity_uc, arm_state->videocore_use_count);
+   }
+   if(!block_while_resume)
+   {
+      arm_state->use_notify_pending = 1;
+      vcos_event_signal(&arm_state->hp_evt); /* hp task will check if we need to resume and also send use notify */
+   }
+
+   if (ret == VCHIQ_RETRY)
+   { /* if we're told to retry, decrement the counters.  VCHIQ_ERROR probably means we're already resumed. */
+      (*entity_uc)--;
+      arm_state->videocore_use_count--;
+   }
+
+   vcos_mutex_unlock(&arm_state->use_count_mutex);
+
+   return ret;
+}
+
+static VCHIQ_STATUS_T
+vchiq_release_internal(VCHIQ_STATE_T *state, VCHIQ_SERVICE_T *service)
+{
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+   VCHIQ_STATUS_T ret = VCHIQ_SUCCESS;
+   char entity[10];
+   int* entity_uc;
+
+   vcos_mutex_lock(&arm_state->use_count_mutex);
+
+   if (service)
+   {
+      sprintf(entity, "%c%c%c%c:%03d",VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id);
+      entity_uc = &service->service_use_count;
+   }
+   else
+   {
+      sprintf(entity, "PEER:   ");
+      entity_uc = &arm_state->peer_use_count;
+   }
+
+   if (*entity_uc && arm_state->videocore_use_count)
+   {
+      arm_state->videocore_use_count--;
+      (*entity_uc)--;
+
+      if (!vchiq_videocore_wanted(state))
+      {
+#if VCOS_HAVE_TIMER
+         if (vchiq_platform_use_suspend_timer())
+         {
+            vcos_log_trace( "%s %s count %d, state count %d - starting suspend timer", __func__, entity, *entity_uc, arm_state->videocore_use_count);
+            vcos_timer_cancel(&g_suspend_timer);
+            vcos_timer_set(&g_suspend_timer, SUSPEND_TIMER_TIMEOUT_MS);
+         }
+         else
+#endif
+         {
+            vcos_log_info( "%s %s count %d, state count %d - suspend pending", __func__, entity, *entity_uc, arm_state->videocore_use_count);
+            vcos_event_signal(&arm_state->lp_evt); /* kick the lp thread to do the suspend */
+         }
+      }
+      else
+      {
+         vcos_log_trace( "%s %s count %d, state count %d", __func__, entity, *entity_uc, arm_state->videocore_use_count);
+      }
+   }
+   else
+   {
+      vcos_log_error( "%s %s ERROR releasing service; count %d, state count %d", __func__, entity, *entity_uc, arm_state->videocore_use_count);
+      ret = VCHIQ_ERROR;
+   }
+
+   vcos_mutex_unlock(&arm_state->use_count_mutex);
+
+   return ret;
+}
+
+VCHIQ_STATUS_T
+vchiq_on_remote_use(VCHIQ_STATE_T *state)
+{
+   vcos_log_info("%s state %p", __func__, state);
+   return state ? vchiq_use_internal(state, NULL, 0) : VCHIQ_ERROR;
+}
+
+VCHIQ_STATUS_T
+vchiq_on_remote_release(VCHIQ_STATE_T *state)
+{
+   vcos_log_info("%s state %p", __func__, state);
+   return state ? vchiq_release_internal(state, NULL) : VCHIQ_ERROR;
+}
+
+VCHIQ_STATUS_T
+vchiq_use_service_internal(VCHIQ_SERVICE_T *service)
+{
+   VCHIQ_STATE_T* state = NULL;
+
+   if (service)
+   {
+      state = service->state;
+   }
+
+   if (!service || !state)
+   {
+      return VCHIQ_ERROR;
+   }
+   return vchiq_use_internal(state, service, 1);
+}
+
+VCHIQ_STATUS_T
+vchiq_release_service_internal(VCHIQ_SERVICE_T *service)
+{
+   VCHIQ_STATE_T* state = NULL;
+
+   if (service)
+   {
+      state = service->state;
+   }
+
+   if (!service || !state)
+   {
+      return VCHIQ_ERROR;
+   }
+   return vchiq_release_internal(state, service);
+}
+
+
+#if VCOS_HAVE_TIMER
+static void suspend_timer_callback(void* context)
+{
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state((VCHIQ_STATE_T*)context);
+   vcos_log_info( "%s - suspend pending", __func__);
+   vcos_event_signal(&arm_state->lp_evt);
+}
+#endif
+
+VCHIQ_STATUS_T
+vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
+{
+   VCHIQ_STATUS_T ret = VCHIQ_ERROR;
+   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *) handle;
+   if (service)
+   {
+      ret = vchiq_use_service_internal(service);
+   }
+   return ret;
+}
+
+VCHIQ_STATUS_T
+vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
+{
+   VCHIQ_STATUS_T ret = VCHIQ_ERROR;
+   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *) handle;
+   if (service)
+   {
+      ret = vchiq_release_service_internal(service);
+   }
+   return ret;
+}
+
+void
+vchiq_dump_service_use_state(VCHIQ_STATE_T *state)
+{
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(state);
+   int i;
+   vcos_mutex_lock(&arm_state->suspend_resume_mutex);
+   if (arm_state->videocore_suspended)
+   {
+      vcos_log_warn("--VIDEOCORE SUSPENDED--");
+   }
+   else
+   {
+      vcos_log_warn("--VIDEOCORE AWAKE--");
+   }
+   for (i = 0; i < state->unused_service; i++) {
+      VCHIQ_SERVICE_T *service_ptr = state->services[i];
+      if (service_ptr && (service_ptr->srvstate != VCHIQ_SRVSTATE_FREE))
+      {
+         if (service_ptr->service_use_count)
+            vcos_log_error("----- %c%c%c%c:%d service count %d <-- preventing suspend", VCHIQ_FOURCC_AS_4CHARS(service_ptr->base.fourcc), service_ptr->client_id, service_ptr->service_use_count);
+         else
+            vcos_log_warn("----- %c%c%c%c:%d service count 0", VCHIQ_FOURCC_AS_4CHARS(service_ptr->base.fourcc), service_ptr->client_id);
+      }
+   }
+   vcos_log_warn("----- PEER use count count %d", arm_state->peer_use_count);
+   vcos_log_warn("--- Overall vchiq instance use count %d", arm_state->videocore_use_count);
+
+   vchiq_dump_platform_use_state(state);
+
+   vcos_mutex_unlock(&arm_state->suspend_resume_mutex);
+}
+
+VCHIQ_STATUS_T
+vchiq_check_service(VCHIQ_SERVICE_T * service)
+{
+   VCHIQ_ARM_STATE_T *arm_state = vchiq_platform_get_arm_state(service->state);
+   VCHIQ_STATUS_T ret = VCHIQ_ERROR;
+   if (service)
+   {
+      vcos_mutex_lock(&arm_state->use_count_mutex);
+      if (!service->service_use_count)
+      {
+         vcos_log_error( "%s ERROR - %c%c%c%c:%d service count %d, state count %d, videocore_suspended %d", __func__,VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, arm_state->videocore_use_count, arm_state->videocore_suspended);
+         vchiq_dump_service_use_state(service->state);
+#ifndef NDEBUG
+         BUG();
+#endif
+      }
+      else
+      {
+         ret = VCHIQ_SUCCESS;
+      }
+      vcos_mutex_unlock(&arm_state->use_count_mutex);
+   }
+   return ret;
+}
+
+/* stub functions */
+void vchiq_on_remote_use_active(VCHIQ_STATE_T *state)
+{
+   vcos_unused(state);
+}
+
+
 /****************************************************************************
 *
 *   vchiq_init - called when the module is loaded.
@@ -1249,6 +1731,10 @@ vchiq_init(void)
    err = vchiq_platform_init(&g_state);
    if (err != 0)
       goto failed_platform_init;
+
+#if VCOS_HAVE_TIMER
+   vcos_timer_create( &g_suspend_timer, "suspend_timer", suspend_timer_callback, (void*)(&g_state));
+#endif
 
    vcos_log_error("vchiq: initialised - version %d (min %d), device %d.%d",
       VCHIQ_VERSION, VCHIQ_VERSION_MIN,

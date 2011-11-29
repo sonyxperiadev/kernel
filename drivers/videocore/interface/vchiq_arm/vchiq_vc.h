@@ -37,10 +37,24 @@ typedef struct vchiq_instance_struct
    int connected;
 } VCHIQ_INSTANCE_STRUCT_T;
 
+
+typedef struct vchiq_vc_state_struct {
+   VCOS_EVENT_T                remote_use_active;
+   VCHIQ_REMOTE_USE_CALLBACK_T remote_use_callback;
+   void*                       remote_use_cb_arg;
+} VCHIQ_VC_STATE_T;
+
+
 extern VCHIQ_INSTANCE_STRUCT_T vchiq_instances[];
 extern int vchiq_num_instances;
 
 extern VCHIQ_STATUS_T
 vchiq_platform_init(void);
+
+extern VCHIQ_STATUS_T
+vchiq_vc_init_state(VCHIQ_VC_STATE_T* vc_state);
+
+extern VCHIQ_VC_STATE_T*
+vchiq_platform_get_vc_state(VCHIQ_STATE_T *state);
 
 #endif

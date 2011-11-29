@@ -137,7 +137,7 @@ VCOS_STATUS_T vcos_log_status_cmd( VCOS_CMD_PARAM_T *param )
 
       for ( cat = vcos_logging_categories; cat != NULL; cat = cat->next )
       {
-         nw = strlen( cat->name );
+         nw = (int)strlen( cat->name );
 
          if ( nw > nameWidth )
          {

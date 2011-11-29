@@ -47,6 +47,9 @@ vcos_static_assert(IS_POW2(VCHIQ_MAX_SLOTS_PER_SIDE));
 #define VCHIQ_MSG_BULK_TX_DONE         9  // + (srcport, dstport), actual
 #define VCHIQ_MSG_PAUSE               10  // -
 #define VCHIQ_MSG_RESUME              11  // -
+#define VCHIQ_MSG_REMOTE_USE          12  // -
+#define VCHIQ_MSG_REMOTE_RELEASE      13  // -
+#define VCHIQ_MSG_REMOTE_USE_ACTIVE   14  // -
 
 #define VCHIQ_PORT_MAX                 (VCHIQ_MAX_SERVICES - 1)
 #define VCHIQ_PORT_FREE                0x1000
@@ -194,6 +197,8 @@ typedef struct remote_event_struct {
    VCOS_EVENT_T * event;
 } REMOTE_EVENT_T;
 
+typedef struct opaque_platform_state_t* VCHIQ_PLATFORM_STATE_T;
+
 typedef struct vchiq_state_struct VCHIQ_STATE_T;
 
 typedef struct vchiq_slot_struct {
@@ -322,15 +327,12 @@ struct vchiq_state_struct {
 
    VCOS_THREAD_T slot_handler_thread;  // processes incoming messages
    VCOS_THREAD_T recycle_thread;       // processes recycled slots
-   VCOS_THREAD_T lp_thread;            // processes low priority messages (eg suspend)
 
    /* Local implementation of the trigger remote event */
    VCOS_EVENT_T trigger_event;
 
    /* Local implementation of the recycle remote event */
    VCOS_EVENT_T recycle_event;
-
-   VCOS_EVENT_T lp_evt;
 
    char *tx_data;
    char *rx_data;
@@ -339,17 +341,6 @@ struct vchiq_state_struct {
    VCOS_MUTEX_T slot_mutex;
 
    VCOS_MUTEX_T recycle_mutex;
-
-   VCOS_MUTEX_T suspend_resume_mutex;
-   VCOS_MUTEX_T use_count_mutex;
-
-   /* Global use count for videocore.
-    * This is equal to the sum of the use counts for all services.  When this hits
-    * zero the videocore suspend procedure will be initiated. */
-   int videocore_use_count;
-
-   /* Flag to indicate whether videocore is currently suspended */
-   int videocore_suspended;
 
    /* Indicates the byte position within the stream from where the next message
       will be read. The least significant bits are an index into the slot.
@@ -388,6 +379,8 @@ struct vchiq_state_struct {
    VCHIQ_SERVICE_T *services[VCHIQ_MAX_SERVICES];
    VCHIQ_SERVICE_QUOTA_T service_quotas[VCHIQ_MAX_SERVICES];
    VCHIQ_SLOT_INFO_T slot_info[VCHIQ_MAX_SLOTS];
+
+   VCHIQ_PLATFORM_STATE_T platform_state;
 };
 
 extern VCHIQ_SLOT_ZERO_T *
@@ -476,5 +469,34 @@ vchiq_dump_platform_instances(void *dump_context);
 extern void
 vchiq_dump_platform_service_state(void *dump_context,
    VCHIQ_SERVICE_T *service);
+
+extern VCHIQ_STATUS_T
+vchiq_use_service_internal(VCHIQ_SERVICE_T *service);
+
+extern VCHIQ_STATUS_T
+vchiq_release_service_internal(VCHIQ_SERVICE_T *service);
+
+extern VCHIQ_STATUS_T
+vchiq_on_remote_use(VCHIQ_STATE_T *state);
+
+extern VCHIQ_STATUS_T
+vchiq_on_remote_release(VCHIQ_STATE_T *state);
+
+extern VCHIQ_STATUS_T
+vchiq_platform_init_state(VCHIQ_STATE_T *state);
+
+extern void
+vchiq_on_remote_use_active(VCHIQ_STATE_T *state);
+
+extern VCHIQ_STATUS_T
+vchiq_send_remote_use(VCHIQ_STATE_T * state);
+
+extern VCHIQ_STATUS_T
+vchiq_send_remote_release(VCHIQ_STATE_T * state);
+
+extern VCHIQ_STATUS_T
+vchiq_send_remote_use_active(VCHIQ_STATE_T * state);
+
+
 
 #endif
