@@ -94,8 +94,12 @@
 #include <mach/io_map.h>
 #include <mach/aram_layout.h>
 
-#include <linux/vchiq_platform_data_hana.h>
-#include <linux/vchiq_platform_data_memdrv_hana.h>
+#include <vchiq_platform_data_kona.h>
+#include <vchiq_platform_data_memdrv_kona.h>
+
+#ifdef CONFIG_BACKLIGHT_PWM
+#include <linux/pwm_backlight.h>
+#endif
 
 /*
  * Since this board template is included by each board_xxx.c. We concatenate
@@ -155,6 +159,26 @@
 #define MAX8649_LDO_TOTAL	0
 #endif
 #define BCM59055_LDO_OFFSET	MAX8649_LDO_TOTAL
+
+#if defined(CONFIG_BACKLIGHT_PWM)
+static struct platform_pwm_backlight_data pwm_backlight_data =
+{
+	.pwm_name	= "kona_pwmc:2",
+	.max_brightness	= 255,
+	.dft_brightness	= 255,
+	.pwm_period_ns	= 5000000,
+};
+
+static struct platform_device pwm_backlight_device =
+{
+	.name     = "pwm-backlight",
+	.id       = -1,
+	.dev      =
+		{
+		.platform_data = &pwm_backlight_data,
+	},
+};
+#endif
 
 static struct resource board_i2c0_resource[] = {
 	[0] =
@@ -1120,7 +1144,7 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 #define IPC_SHARED_CHANNEL_VIRT     ( KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
 #define IPC_SHARED_CHANNEL_PHYS     ( INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
 
-static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
+static VCHIQ_PLATFORM_DATA_MEMDRV_KONA_T vchiq_display_data_memdrv_kona = {
     .memdrv = {
         .common = {
             .instance_name = "display",
@@ -1133,10 +1157,10 @@ static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
 };
 
 static struct platform_device vchiq_display_device = {
-    .name = "vchiq_memdrv_hana",
+    .name = "vchiq_memdrv_kona",
     .id = 0,
     .dev = {
-        .platform_data = &vchiq_display_data_memdrv_hana,
+        .platform_data = &vchiq_display_data_memdrv_kona,
     },
 };
 
@@ -1351,6 +1375,9 @@ static void __init board_add_hdmidet_device(void)
 
 
 static struct platform_device *board_devices[] __initdata = {
+#if defined(CONFIG_BACKLIGHT_PWM)
+	&pwm_backlight_device,
+#endif
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],

@@ -137,7 +137,7 @@ struct bsc_i2c_dev
 	struct workqueue_struct *reset_wq;
 	struct work_struct reset_work;
 
-	int err_flag; /* Set if there is a bus error */
+	volatile int err_flag; /* Set if there is a bus error */
 };
 
 static const __devinitconst char gBanner[] = KERN_INFO "Broadcom BSC (I2C) Driver\n";
@@ -1350,6 +1350,7 @@ static void i2c_master_reset(struct work_struct *work)
 	struct i2c_adapter *adap = &dev->adapter;
 
 	down(&dev->dev_lock);
+	bsc_enable_clk(dev);
 
 	dev_info(dev->device, "resetting i2c bus...\n");
 	
@@ -1369,6 +1370,7 @@ static void i2c_master_reset(struct work_struct *work)
 	if (!dev->high_speed_mode)
 		bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
 
+	bsc_disable_clk(dev);
 	up(&dev->dev_lock);
 }
 
@@ -1636,7 +1638,13 @@ static int bsc_suspend(struct platform_device *pdev, pm_message_t state)
 	/* flush the workqueue to make sure all outstanding work items are done */
 	flush_workqueue(dev->reset_wq);
 	
-	bsc_disable_clk(dev);
+	/* grab lock to prevent further I2C transactions */
+	down(&dev->dev_lock);
+
+	/*
+	 * Don't need to disable BSC clocks here since they are now only
+	 * turned on for each transaction
+	 */
 	return 0;
 }
 
@@ -1644,7 +1652,9 @@ static int bsc_resume(struct platform_device *pdev)
 {
    struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
 
-   return bsc_enable_clk(dev);
+   up(&dev->dev_lock);
+
+   return 0;
 }
 #else
 #define bsc_suspend    NULL

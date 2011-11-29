@@ -45,8 +45,8 @@
 #include <linux/broadcom/hdmi.h>
 #include <linux/broadcom/hdmi_cfg.h>
 
-#define HDMI_DEBUG
-#define HDMI_TRACE
+//#define HDMI_DEBUG
+//#define HDMI_TRACE
 
 #ifdef HDMI_DEBUG
    #define LOG_DEBUG(X) (X)
@@ -60,7 +60,14 @@
    #define LOG_TRACE(X)
 #endif
 
+#define DRIVER_NAME "hdmi-detect"
+
+#define HDMI_CONNECTED_STR "CONNECTED"
+#define HDMI_UNPLUGGED_STR "UNPLUGGED"
+
 #define PROC_HDMI_HPD "hdmi-hpd"
+#define PROC_WRITE_BUF_SIZE 128
+static struct proc_dir_entry *hdmi_proc_entry;
 
 /* ---- Public Variables ------------------------------------------------- */
 /* ---- Private Constants and Types -------------------------------------- */
@@ -106,8 +113,8 @@ struct file_operations hdmi_fops =
    .owner   = THIS_MODULE,
    .open    = hdmi_open,
    .unlocked_ioctl = hdmi_ioctl,
-   .poll    = hdmi_poll, 
-   .read    = hdmi_read
+   .poll    = hdmi_poll,
+   .read    = hdmi_read,
 };
 
 /* ---- Functions -------------------------------------------------------- */
@@ -115,10 +122,10 @@ struct file_operations hdmi_fops =
 /** Read the HPD GPIO, update driver state and schedule work queue fn
  * to update the Android HPD switch.
  * TODO HPD switch is not the same as HDMI switch because Android expects
- * HDMI switch to be set once audio is usable. 
+ * HDMI switch to be set once audio is usable.
  * Perhaps this driver could accept an IOCTL to configure the HDMI switch
  * once tvserver has done it's work
- */ 
+ */
 static void check_hdmi_det_gpio( struct hdmi_info *ch )
 {
    LOG_TRACE(printk("check_hdmi_det_gpio %p\n", ch));
@@ -131,7 +138,6 @@ static void check_hdmi_det_gpio( struct hdmi_info *ch )
       spin_lock_irqsave( &detlock, flags );
       gpio_val = gpio_get_value( ch->hw_cfg.gpio_hdmi_det );
 
-      /* FIXME - Why is GPIO val inverted ? */
       new_state = (! gpio_val ) ? HDMI_CONNECTED : HDMI_UNPLUGGED;
 
       if (ch->state != new_state)
@@ -245,8 +251,8 @@ static unsigned int hdmi_poll(
 }
 
 /** Driver read method. Contains 1 if connected, otherwise 0 */
-static ssize_t hdmi_read( struct file *file, char __user *buf, size_t count,
-      loff_t *f_pos)
+static ssize_t hdmi_read( struct file *file, char __user *buf,
+      size_t count, loff_t *f_pos)
 {
    struct hdmi_info *ch = file->private_data;
    char status_buf[2] = {0};
@@ -257,7 +263,7 @@ static ssize_t hdmi_read( struct file *file, char __user *buf, size_t count,
    sprintf(status_buf, "%d\n", (ch->state == HDMI_CONNECTED ? 1 : 0));
    status_len = strlen(status_buf);
 
-   LOG_TRACE(printk("hdmi_read count %d f_pos %d status_len %d\n", 
+   LOG_TRACE(printk("hdmi_read count %d f_pos %d status_len %d\n",
             count, (int) *f_pos, status_len));
 
    if (*f_pos >= status_len)
@@ -313,14 +319,82 @@ static irqreturn_t hdmi_det_irq( int irq, void *dev_id )
    return IRQ_HANDLED;
 }
 
-static int hdmi_read_procmem(char *buf, char **start, off_t offset, int count,
-      int *eof, void *data)
+/**
+ * Displays the connection status and the time in jiffies when it was updated.
+ */
+static int hdmi_proc_read( char *buf, char **start, off_t offset, int count,
+      int *eof, void *data )
 {
    struct hdmi_info* ch = gHDMI;
-   sprintf(buf, "%s: %lu\n", (ch->state ? "CONNECTED" : "DISCONNECTED"),
-           ch->changed_at);
+   sprintf(buf, "%s: %lu\n",
+         ( ch->state ? HDMI_CONNECTED_STR : HDMI_UNPLUGGED_STR ),
+         ch->changed_at);
    *eof = 1;
    return strlen(buf);
+}
+
+/**
+ * hdmi_proc_write
+ * Allows the HDMI connection status to be set from user-space. This is for
+ * testing.
+ */
+static int hdmi_proc_write( struct file *file, const char __user *buffer,
+      unsigned long count, void *data )
+{
+   int ret = -EFAULT;
+   unsigned char kbuf[PROC_WRITE_BUF_SIZE + 1];
+   int state_changed = 0;
+   hdmi_state new_state = HDMI_CONNECTED;
+   struct hdmi_info* ch = gHDMI;
+
+   if ( count >= PROC_WRITE_BUF_SIZE )
+   {
+      count = PROC_WRITE_BUF_SIZE;
+   }
+
+   if ( copy_from_user( kbuf, buffer, count ) != 0 )
+   {
+      printk(KERN_ERR "%s: failed to copy %ld bytes from user", __func__, count);
+      ret = -EFAULT;
+      goto out;
+   }
+   kbuf[count] = '\0';
+
+   if ( strcmp( kbuf, HDMI_CONNECTED_STR ) == 0 )
+   {
+      state_changed = 1;
+      new_state = HDMI_CONNECTED;
+   }
+   else if ( strcmp( kbuf, HDMI_UNPLUGGED_STR ) == 0 )
+   {
+      state_changed = 1;
+      new_state = HDMI_UNPLUGGED;
+   }
+   else
+   {
+      printk(KERN_ERR "[%s]: parameter '%s' is **unknown** to driver '%s'." \
+            "Valid parameters: %s,%s",
+            __func__, kbuf, DRIVER_NAME,
+            HDMI_CONNECTED_STR, HDMI_UNPLUGGED_STR);
+      goto out;
+   }
+
+   if ( state_changed )
+   {
+      ch->changed_at = jiffies;
+      ch->changed = 1;
+      if ( ch->state != new_state )
+      {
+         /* If the fake hotplug has changed the state then we want
+          * to wake up any processes waiting on this.
+          */
+         ch->state = new_state;
+         wake_up_interruptible( &ch->waitq );
+      }
+   }
+   ret = count;
+out:
+   return ret;
 }
 
 /***************************************************************************/
@@ -349,7 +423,7 @@ static int __devinit hdmi_pltfm_probe(struct platform_device *pdev)
       ret = gpio_request( ch->hw_cfg.gpio_hdmi_det, "hdmi det");
       if ( ret < 0 )
       {
-         dev_err( &pdev->dev, "Unable to request GPIO pin %d, reason %d\n", 
+         dev_err( &pdev->dev, "Unable to request GPIO pin %d, reason %d\n",
                   ch->hw_cfg.gpio_hdmi_det, ret );
          return ret;
       }
@@ -396,7 +470,7 @@ static struct platform_driver gPlatform_driver =
 {
    .driver =
    {
-      .name    = "hdmi-detect",
+      .name    = DRIVER_NAME,
       .owner   = THIS_MODULE,
    },
    .probe      = hdmi_pltfm_probe,
@@ -449,20 +523,28 @@ static int __init hdmi_init( void )
       goto err_class_destroy;
    }
 
-   create_proc_read_entry( PROC_HDMI_HPD, 0, NULL, hdmi_read_procmem, NULL);
+   hdmi_proc_entry = create_proc_entry( PROC_HDMI_HPD, 0660, NULL);
+   if ( ! hdmi_proc_entry )
+   {
+      rc = -EFAULT;
+      printk(KERN_ERR "[%s]: create_proc_entry failed", __func__);
+      goto err_device_destroy;
+   }
+   hdmi_proc_entry->read_proc = hdmi_proc_read;
+   hdmi_proc_entry->write_proc = hdmi_proc_write;
 #endif
 
    rc = platform_driver_register( &gPlatform_driver );
    if ( rc < 0 )
    {
-      printk(KERN_ERR "%s: failed to register platform driver\n", __FUNCTION__ );
+      printk(KERN_ERR "[%s]: failed to register platform driver\n", __func__ );
       goto err_device_destroy;
    }
 
 #ifdef CONFIG_BCM_HDMI_DET_SWITCH
    /* Create the hdmi switch */
    hdmi_hpd_switch.name = "hdmi";
-   
+
    rc = switch_dev_register( &hdmi_hpd_switch );
    if (rc < 0) {
       printk(KERN_ERR "HDMI: Device switch create failed\n");

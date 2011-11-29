@@ -244,6 +244,30 @@ int amxrSetPortSrcChannels(
    int            src_bytes         /*<< (i) Source period size in bytes */
 );
 
+#if !defined( __KERNEL__ )
+/* User space only APIs */
+
+/***************************************************************************/
+/**
+*  Direct write for port's src data to support low latency applications.
+*
+*  @return        Number of bytes written, or negative error code
+*
+*  @remarks       If this method is desired, do not install user getsrc
+*                 callback when creating the port.
+*
+*                 Caller has to take care to check return codes to ensure
+*                 data has been queued as it is non-blocking. A -ENOMEM
+*                 is returned if there is insufficient memory to queue
+*                 data.
+*/
+int amxrWritePortSrcData(
+   AMXR_PORT_ID portid,             /**< (i) Source port id */
+   const void *bufp,                /**< (i) Buffer ptr */
+   size_t bytes                     /**< (i) Number of bytes to write */
+);
+#endif
+
 #if defined( __KERNEL__ )
 /* Move following definitions here from amxr.h to resolve circular dependency
  * between amxr.h and amxr_ports.h. These definitions will be made obsolete

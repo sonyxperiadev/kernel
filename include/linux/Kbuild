@@ -402,4 +402,3 @@ header-y += xattr.h
 header-y += xfrm.h
 
 header-y += broadcom/
-header-y += videocore/

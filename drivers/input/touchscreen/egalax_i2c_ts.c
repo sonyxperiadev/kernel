@@ -126,6 +126,9 @@ struct _egalax_i2c {
    struct mutex mutex_wq;
    struct i2c_client *client;
    struct egalax_i2c_ts_cfg hw_cfg;
+#if defined(CONFIG_PM) || defined(CONFIG_HAS_EARLYSUSPEND)
+   atomic_t is_suspended;
+#endif
    struct proc_dir proc;
 };
 
@@ -216,19 +219,19 @@ static void ProcessReport(unsigned char *buf, int buflen)
    {
       for (i = 0; i < MAX_SUPPORT_POINT; i++)
       {
-         if (PointBuf[i].Status >= 0)
+         if (PointBuf[i].Status > 0)
          {
             input_report_abs(input_dev, ABS_MT_TRACKING_ID, i);         
             input_report_abs(input_dev, ABS_MT_TOUCH_MAJOR, PointBuf[i].Status);
             input_report_abs(input_dev, ABS_MT_WIDTH_MAJOR, 0);
             input_report_abs(input_dev, ABS_MT_POSITION_X, PointBuf[i].X);
             input_report_abs(input_dev, ABS_MT_POSITION_Y, PointBuf[i].Y);
-
-            input_mt_sync(input_dev);
-
-            if (PointBuf[i].Status == 0)
-               PointBuf[i].Status--;
+            TS_DEBUG("input sync point data [%d]!\n", i);
          }
+         input_mt_sync(input_dev);
+
+         if (PointBuf[i].Status == 0)
+            PointBuf[i].Status--;
       }
       input_sync(input_dev);
       TS_DEBUG("input sync point data done!\n");
@@ -681,42 +684,73 @@ static int proc_term(struct _egalax_i2c *egalax_i2c)
    return 0;
 }
 
+#if defined(CONFIG_PM) || defined(CONFIG_HAS_EARLYSUSPEND)
+static int device_suspend(struct i2c_client *client)
+{
+	int ret;
+	struct _egalax_i2c *egalax_i2c = i2c_get_clientdata(client);
+
+	/* already suspended */
+	if (atomic_read(&egalax_i2c->is_suspended))
+		return 0;
+
+	atomic_set(&egalax_i2c->is_suspended, 1);
+
+	/* send the command to put the controller into sleep */
+	ret = i2c_master_send(client, cmd_str_sleep, MAX_I2C_LEN);
+	if (ret != MAX_I2C_LEN)
+	{
+		TS_ERR("failed to send sleep command ret=%d\n", ret);
+		ret = -EFAULT;
+		atomic_set(&egalax_i2c->is_suspended, 0);
+		return ret;
+	}
+
+	TS_DEBUG("sleep command sent successfully\n");
+
+	/* disable interrupt */
+	disable_irq(client->irq);
+
+	/*
+	 * flush the workqueue to make sure all outstanding work items are
+	 * done
+	 */
+	flush_workqueue(egalax_i2c->ktouch_wq);
+
+	TS_INFO("device suspended\n");
+
+	return 0;
+}
+
+static int device_resume(struct i2c_client *client)
+{
+	struct _egalax_i2c *egalax_i2c = i2c_get_clientdata(client);
+
+	/* already resumed */
+	if (atomic_read(&egalax_i2c->is_suspended) == 0)
+		return 0;
+
+	enable_irq(client->irq);
+	wakeup_controller(irq_to_gpio(client->irq));
+
+	atomic_set(&egalax_i2c->is_suspended, 0);
+
+	TS_INFO("device resumed\n");
+
+	return 0;
+}
+
+#endif
+
 #ifdef CONFIG_PM
 static int egalax_i2c_suspend(struct i2c_client *client, pm_message_t mesg)
 {
-   int ret;
-   struct _egalax_i2c *egalax_i2c = i2c_get_clientdata(client);
-
-   /* send the command to put the controller into sleep */
-   ret = i2c_master_send(client, cmd_str_sleep, MAX_I2C_LEN);
-   if (ret != MAX_I2C_LEN)
-   {
-      TS_ERR("failed to send sleep command ret=%d\n", ret);
-      ret = -EFAULT;
-      return ret;
-   }
-
-   TS_DEBUG("sleep command sent successfully\n");
-
-   /* disable interrupt */
-   disable_irq(client->irq);
-
-   /* flush the workqueue to make sure all outstanding work items are done */
-   flush_workqueue(egalax_i2c->ktouch_wq);
-
-   TS_INFO("device suspended\n");
-
-   return 0;
+	return device_suspend(client);
 }
 
 static int egalax_i2c_resume(struct i2c_client *client)
 {
-   enable_irq(client->irq);
-   wakeup_controller(irq_to_gpio(client->irq));
-
-   TS_INFO("device resumed\n");
-
-   return 0;
+	return device_resume(client);
 }
 #else
 #define egalax_i2c_suspend       NULL
@@ -726,37 +760,12 @@ static int egalax_i2c_resume(struct i2c_client *client)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void egalax_i2c_early_suspend(struct early_suspend *h)
 {
-   int ret;
-
-   /* send the command to put the controller into sleep */
-   ret = i2c_master_send(p_egalax_i2c_dev->client, cmd_str_sleep, MAX_I2C_LEN);
-   if (ret != MAX_I2C_LEN)
-   {
-      TS_ERR("Early suspend failed to send sleep command ret=%d\n", ret);
-      return;
-   }
-
-   TS_DEBUG("Early suspend sleep command sent successfully\n");
-
-   /* disable interrupt */
-
-   /* Note that, we should be aware of the possibility that the regular linux
-      "suspend" is called subsequent to the early suspension. In this case
-      disable_irq() will be called twice. Any possible bad effects of this
-      should be properly tested when PM framework is available. */
-   disable_irq(p_egalax_i2c_dev->client->irq);
-
-   /* flush the workqueue to make sure all outstanding work items are done */
-   flush_workqueue(p_egalax_i2c_dev->ktouch_wq);
-   TS_INFO("device early suspended\n");
+	device_suspend(p_egalax_i2c_dev->client);
 }
 
 static void egalax_i2c_late_resume(struct early_suspend *h)
 {
-   enable_irq(p_egalax_i2c_dev->client->irq);
-   wakeup_controller(irq_to_gpio(p_egalax_i2c_dev->client->irq));
-
-   TS_INFO("device late resumed\n");
+	device_resume(p_egalax_i2c_dev->client);
 }
 
 /* we early suspend handler to be called after EARLY_SUSPEND_LEVEL_BLANK_SCREEN
@@ -880,6 +889,9 @@ static int __devinit egalax_i2c_probe(struct i2c_client *client,
 
    p_egalax_i2c_dev->client = client;
    mutex_init(&p_egalax_i2c_dev->mutex_wq);
+#if defined(CONFIG_PM) || defined(CONFIG_HAS_EARLYSUSPEND)
+   atomic_set(&p_egalax_i2c_dev->is_suspended, 0);
+#endif
 
    p_egalax_i2c_dev->ktouch_wq = create_workqueue("egalax_touch_wq");
    if (p_egalax_i2c_dev->ktouch_wq == NULL)

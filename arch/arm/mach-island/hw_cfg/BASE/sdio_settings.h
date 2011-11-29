@@ -40,6 +40,7 @@
       .sleep_clk_name = "sdio1_sleep_clk", \
       .peri_clk_rate = 52000000, \
       .devtype = SDIO_DEV_TYPE_WIFI, \
+      .flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE, \
    }, \
    { /* SDIO1 */ \
       .id = 1, \
@@ -50,6 +51,7 @@
       .sleep_clk_name = "sdio2_sleep_clk", \
       .peri_clk_rate = 52000000, \
       .devtype = SDIO_DEV_TYPE_EMMC, \
+      .flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE, \
    }, \
    { /* SDIO3 */ \
       .id = 2, \
@@ -60,6 +62,7 @@
       .peri_clk_rate = 48000000, \
       .cd_gpio = 106, \
       .devtype = SDIO_DEV_TYPE_SDMMC, \
+      .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE, \
    }, \
 }
 

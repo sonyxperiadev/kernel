@@ -38,8 +38,10 @@
  * Videocore is given the remaining 128K
  *
  * Any changes made to BCMHANA_ARAM_VC_OFFSET must also be reflected in
- * IPC_SHARED_MEM_VC_OFFSET, which can be found in
- * vc4/src/vcinclude/bigisland_chip/ipc_shared_mem.h
+ * IPC_SHARED_MEM_VC_OFFSET, which can be found in the vc4-dev tree
+ * in interface/vchiq_arm/vchiq_bi_ipc_shared_mem.h. The corresponding
+ * location of that file in the kernel tree is
+ * drivers/videocore/interface/vchiq_arm/vchiq_bi_ipc_shared_mem.h
  */
 
 #define BCMHANA_ARAM_VC_OFFSET  (BCMHANA_ARAM_PM_SIZE)
