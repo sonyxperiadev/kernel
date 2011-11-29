@@ -208,6 +208,8 @@
 #define	DIG_CH1_PERI_CLK_NAME_STR	"dig_ch1_clk"
 #define	DIG_CH2_PERI_CLK_NAME_STR	"dig_ch2_clk"
 #define	DIG_CH3_PERI_CLK_NAME_STR	"dig_ch3_clk"
+#define BMDM_CCU_CLK_NAME_STR			"bmdm_ccu"
+#define DSP_CCU_CLK_NAME_STR			"dsp_ccu"
 
 /*
 Clock ids
@@ -404,6 +406,8 @@ enum
 	CLK_DIG_CH1_PERI_CLK_ID,
 	CLK_DIG_CH2_PERI_CLK_ID,
 	CLK_DIG_CH3_PERI_CLK_ID,
+	CLK_BMDM_CCU_CLK_ID,
+	CLK_DSP_CCU_CLK_ID,
 
 };
 
@@ -625,6 +629,8 @@ enum
 #define	DIG_CH1_PERI_CLK_FLAGS			0
 #define	DIG_CH2_PERI_CLK_FLAGS			0
 #define	DIG_CH3_PERI_CLK_FLAGS			0
+#define BMDM_CCU_CLK_FLAGS 			CCU_TARGET_AC
+#define DSP_CCU_CLK_FLAGS			CCU_TARGET_AC
 
 
 #define DIG_CHANNEL_AUTO_GATE_REQ_MASK	7

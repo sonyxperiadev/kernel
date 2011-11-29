@@ -64,6 +64,7 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_ATBFILTER_VA, SZ_4K  ),
 	IO_DESC( KONA_BINTC_BASE_ADDR, SZ_4K  ),
 	IO_DESC( KONA_BMDM_CCU_VA, SZ_4K ),
+	IO_DESC( KONA_DSP_CCU_VA, SZ_4K),
 	IO_DESC( KONA_BSC1_VA, SZ_4K  ),
 	IO_DESC( KONA_BSC2_VA, SZ_4K  ),
 	IO_DESC( KONA_CHIPREG_VA, SZ_4K	),
