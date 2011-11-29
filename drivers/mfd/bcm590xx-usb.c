@@ -33,6 +33,7 @@
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/bcm590xx-usb.h>
+#include <linux/usb/bcm_hsotgctrl.h>
 
 #define BB_BC_STATUS            KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC_STATUS_OFFSET
 #define BB_BC_STS_BC_DONE_MSK   HSOTG_CTRL_BC_STATUS_BC_DONE_MASK
@@ -112,7 +113,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 	u32 bcStatus;
 	int usb_type = USB_CHARGER_UNKNOWN;
 	int count = 0;
-
+	bcm_hsotgctrl_en_clock(true);
 	bcStatus = readl(BB_BC_STATUS);
 	pr_debug("%s: BC STATUS (0x%x) = 0x%x\n", __func__, BB_BC_STATUS, bcStatus);
 	/* Check if error occured while BC detection happened */
@@ -133,6 +134,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 		regVal1 = bcm590xx_reg_read(bcm590xx, BCM59055_REG_MBCCTRL5);
 		regVal1 |= MBCCTRL5_USB_DET_LDO_EN;
 		bcm590xx_reg_write(bcm590xx, BCM59055_REG_MBCCTRL5, regVal1);
+		bcm_hsotgctrl_en_clock(false);
 		return -EAGAIN;
 	} /* BC error condition */
 #ifdef DETECT_USB_CHARGER_FROM_BB_REGISTERS
@@ -156,6 +158,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 	}
 	if (count == MAX_BC_STATUS_CHECK) {
 			pr_info("%s: BC Detection DONE bit is not set, check if BCDLDO was ON\n", __func__);
+			bcm_hsotgctrl_en_clock(false);
 			return -EIO;
 	}
 #else
@@ -163,6 +166,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 	regVal1 >>= MBCCTRL5_CHP_TYP_SHIFT;
 	usb_type = (regVal1 & MBCCTRL5_CHP_TYP_MASK);
 #endif
+	bcm_hsotgctrl_en_clock(false);
 	return usb_type;
 }
 
@@ -339,8 +343,6 @@ static void bcmpmu_usb_isr(int intr, void *data)
 		evnt_sts = 1;
 		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_IN_RM].notifiers,
 				event, &evnt_sts);
-		/* call usb charger detection method */
-		usb_charger_det(bcmpmu_usb);
 		break;
 	case BCM59055_IRQID_INT2_USBRM:
 		wake_unlock(&bcmpmu_usb->wake_lock);
@@ -411,6 +413,7 @@ static void bcmpmu_usb_isr(int intr, void *data)
 		break;
 	default:
 		pr_info("%s: %d interrupt does not get handled\n", __func__, intr);
+		break;
 	}
 }
 
