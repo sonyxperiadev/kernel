@@ -831,9 +831,6 @@ static long handle_pkt_send_buffer_ioc(struct file *filp, unsigned int cmd, UInt
 #endif
 	//fixme: Handle return value?
 	{
-		UInt8* buffer;
-		buffer = RPC_PACKET_GetBufferData(ioc_param.dataBufHandle);
-
 		RPC_READ_UNLOCK;
 		RPC_PACKET_SendData(ioc_param.clientId, ioc_param.interfaceType, ioc_param.channel, ioc_param.dataBufHandle);
 		RPC_READ_LOCK;
