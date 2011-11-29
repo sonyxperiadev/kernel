@@ -26,10 +26,12 @@
 #include <linux/ioctl.h>
 #include <linux/semaphore.h>
 #include <linux/proc_fs.h>
+#include <linux/gpio.h>
 
 #include "vc_vchi_wifihdmi.h"
 #include <vc_sm_defs.h>
 #include <vc_sm_knl.h>
+#include <linux/broadcom/hdmi.h>
 #include <linux/broadcom/whdmi.h>
 #include <asm/memory.h>
 
@@ -40,7 +42,7 @@
 #define NOTIFY_EVENT_MASK   0x4
 
 #define SMEM_POOL_SIZE      1600
-#define SMEM_POOL_DEPTH     40
+#define SMEM_POOL_DEPTH     100
 
 // VCOS logging category for this service
 #define VCOS_LOG_CATEGORY (&wifihdmi_log_category)
@@ -106,12 +108,18 @@ typedef struct opaque_vc_vchi_wifihdmi_handle_t
 {
    uint32_t               num_connections;
    VCHI_SERVICE_HANDLE_T  vchi_server[VCHI_MAX_NUM_CONNECTIONS];
-   VCHI_SERVICE_HANDLE_T  vchi_notifier[VCHI_MAX_NUM_CONNECTIONS];
+   VCHI_SERVICE_HANDLE_T  vchi_notifier_ctrl[VCHI_MAX_NUM_CONNECTIONS];
+   VCHI_SERVICE_HANDLE_T  vchi_notifier_data[VCHI_MAX_NUM_CONNECTIONS];
 
    VCOS_THREAD_T          io_thread;
    uint32_t               io_event_mask;
    VCOS_MUTEX_T           io_lock;
    VCOS_EVENT_T           io_event;
+
+   VCOS_THREAD_T          dt_thread;
+   uint32_t               dt_event_mask;
+   VCOS_MUTEX_T           dt_lock;
+   VCOS_EVENT_T           dt_event;
 
    VCOS_THREAD_T          snd_thread;
    VCOS_EVENT_T           snd_event;
@@ -141,6 +149,9 @@ typedef struct opaque_vc_vchi_wifihdmi_handle_t
 
    uint32_t               data_in_handle;
    uint32_t               pool_init;
+
+   uint32_t               gpio_toggle;
+   uint32_t               gpio_toggle_cnt;
 
 } WIFIHDMI_INSTANCE_T;
 
@@ -764,6 +775,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
 
          mode.wifihdmi = 1;
 
+         hdmi_set_wifi_hdmi ( 1 );
+
          vc_vchi_wifihdmi_start( instance,
                                  &mode, 
                                  &result,
@@ -781,10 +794,27 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
 
          mode.wifihdmi = 1;
 
+         hdmi_set_wifi_hdmi ( 0 );
+
          vc_vchi_wifihdmi_stop( instance,
                                 &mode, 
                                 &result,
                                 &trans_id );
+      }
+      break;
+
+      case WHDMI_EVENT_AUDIO_STREAM_STATUS:
+      {
+         VC_WIFIHDMI_STR_STA_RES_T result;
+         VC_WIFIHDMI_STREAM_T stream;
+         WHDMI_EVENT_AUDIO_STREAM_STATUS_PARAM *ptr = (WHDMI_EVENT_AUDIO_STREAM_STATUS_PARAM *) param;
+
+         vc_vchi_wifihdmi_audio_status( instance,
+                                        &stream,
+                                        &result,
+                                        &trans_id );
+
+         ptr->enabled = (int)result.enabled;
       }
       break;
 
@@ -893,7 +923,7 @@ static void *vc_vchi_wifihdmi_videocore_snd( void *arg )
          data_ptr = 0;
 
          if ( vc_sm_lock( sndblk->handle,
-                          VC_SM_LOCK_CACHED,
+                          VC_SM_LOCK_NON_CACHED,
                           &data_ptr ) == 0 )
          {
             if ( (sndblk->address == 0) &&
@@ -972,7 +1002,7 @@ static void *vc_vchi_wifihdmi_videocore_io( void *arg )
       event_mask = 0;
 
       vchi_service_release( instance->vchi_server[0] );
-      vchi_service_release( instance->vchi_notifier[0] );
+      vchi_service_release( instance->vchi_notifier_ctrl[0] );
 
       status = vcos_event_wait( &instance->io_event );
       if ( status == VCOS_SUCCESS )
@@ -990,7 +1020,7 @@ static void *vc_vchi_wifihdmi_videocore_io( void *arg )
          }
       }
       vchi_service_use( instance->vchi_server[0] );
-      vchi_service_use( instance->vchi_notifier[0] );
+      vchi_service_use( instance->vchi_notifier_ctrl[0] );
 
       if ( event_mask & CLIENT_EVENT_MASK )
       {
@@ -1067,7 +1097,117 @@ static void *vc_vchi_wifihdmi_videocore_io( void *arg )
 
       if ( event_mask & NOTIFY_EVENT_MASK )
       {
-         success = vchi_msg_dequeue( instance->vchi_notifier[0],
+         success = vchi_msg_dequeue( instance->vchi_notifier_ctrl[0],
+                                     ntfy_msg_buf,
+                                     sizeof( ntfy_msg_buf ),
+                                     &msg_len,
+                                     VCHI_FLAGS_NONE );
+         while ( success == 0 )
+         {
+            msg_hdr = (VC_WIFIHDMI_MSG_HDR_T *)ntfy_msg_buf;
+            if ( msg_len < sizeof( VC_WIFIHDMI_MSG_HDR_T ))
+            {
+               vcos_assert( msg_len >= sizeof( VC_WIFIHDMI_MSG_HDR_T ));
+            }
+            if ( msg_hdr->type >= VC_WIFIHDMI_MSG_TYPE_MAX )
+            {
+               vcos_assert( msg_hdr->type < VC_WIFIHDMI_MSG_TYPE_MAX );
+            }
+
+            switch ( msg_hdr->type )
+            {
+               case VC_WIFIHDMI_MSG_TYPE_SKT_OPEN:
+               case VC_WIFIHDMI_MSG_TYPE_SKT_CLOSE:
+               case VC_WIFIHDMI_MSG_TYPE_SKT_LISTEN:
+                  if ( msg_len ==
+                         ( sizeof( VC_WIFIHDMI_MSG_HDR_T ) + sizeof( VC_WIFIHDMI_SKT_ACTION_T )) )
+                  {
+                     VC_WIFIHDMI_SKT_ACTION_T *sktaction = (VC_WIFIHDMI_SKT_ACTION_T *)msg_hdr->body;
+                     WIFIHDMI_CTRL_BLK_T *ctrlblk = vcos_malloc( sizeof( *ctrlblk ), "" );
+
+                     if ( ctrlblk != NULL )
+                     {
+                        ctrlblk->action   = msg_hdr->type;
+                        ctrlblk->handle   = sktaction->socket_handle;
+                        ctrlblk->port     = sktaction->socket_port;
+                        ctrlblk->sendonly = sktaction->socket_send_only;
+
+                        vc_vchi_add_ctrl( instance,
+                                          ctrlblk );
+                        vcos_event_signal ( &instance->ctrl_event );
+                     }
+                  }
+               break;
+
+               /****** DEBUG CODE ******/
+               case VC_WIFIHDMI_MSG_TYPE_FRAME_TOGGLE:
+               {
+                  /* To help measure the frame rate and latency seen on the wifi/hdmi link
+                  ** we toggle the led located at gpio 0 (red) (1160 big-island tablet).
+                  */
+                  instance->gpio_toggle = (instance->gpio_toggle == 0) ? 1 : 0;
+                  
+                  /* gpio_direction_output( 0, 1 ); */
+                  gpio_set_value ( 0, instance->gpio_toggle );
+
+                  instance->gpio_toggle_cnt++;
+               }
+               break;
+               /****** DEBUG CODE ******/
+
+               default:
+               break;
+            }
+
+            success = vchi_msg_dequeue( instance->vchi_notifier_ctrl[0],
+                                        ntfy_msg_buf,
+                                        sizeof( ntfy_msg_buf ),
+                                        &msg_len,
+                                        VCHI_FLAGS_NONE );
+         }
+      }
+   }
+
+   return NULL;
+}
+
+static void *vc_vchi_wifihdmi_videocore_dt( void *arg )
+{
+   uint32_t event_mask;
+   WIFIHDMI_INSTANCE_T *instance = (WIFIHDMI_INSTANCE_T *)arg;
+   int32_t success;
+   uint32_t msg_len;
+   uint8_t ntfy_msg_buf[VC_WIFIHDMI_MAX_MSG_LEN];
+   VCOS_STATUS_T status;
+   VC_WIFIHDMI_MSG_HDR_T *msg_hdr;
+
+
+   while ( 1 )
+   {
+      event_mask = 0;
+
+      vchi_service_release( instance->vchi_notifier_data[0] );
+
+      status = vcos_event_wait( &instance->dt_event );
+      if ( status == VCOS_SUCCESS )
+      {
+         if ( vcos_mutex_lock ( &instance->dt_lock ) == VCOS_SUCCESS )
+         {
+            event_mask = instance->dt_event_mask;
+            instance->dt_event_mask = 0;
+            vcos_mutex_unlock ( &instance->dt_lock );
+         }
+         else
+         {
+            LOG_ERR( "%s: failed on dt-lock",
+                     __func__ );
+         }
+      }
+      vchi_service_use( instance->vchi_notifier_data[0] );
+
+      if ( event_mask & NOTIFY_EVENT_MASK )
+      {
+         success = vchi_msg_dequeue( instance->vchi_notifier_data[0],
                                      ntfy_msg_buf,
                                      sizeof( ntfy_msg_buf ),
                                      &msg_len,
@@ -1111,34 +1251,11 @@ static void *vc_vchi_wifihdmi_videocore_io( void *arg )
                   }
                break;
 
-               case VC_WIFIHDMI_MSG_TYPE_SKT_OPEN:
-               case VC_WIFIHDMI_MSG_TYPE_SKT_CLOSE:
-               case VC_WIFIHDMI_MSG_TYPE_SKT_LISTEN:
-                  if ( msg_len ==
-                         ( sizeof( VC_WIFIHDMI_MSG_HDR_T ) + sizeof( VC_WIFIHDMI_SKT_ACTION_T )) )
-                  {
-                     VC_WIFIHDMI_SKT_ACTION_T *sktaction = (VC_WIFIHDMI_SKT_ACTION_T *)msg_hdr->body;
-                     WIFIHDMI_CTRL_BLK_T *ctrlblk = vcos_malloc( sizeof( *ctrlblk ), "" );
-
-                     if ( ctrlblk != NULL )
-                     {
-                        ctrlblk->action   = msg_hdr->type;
-                        ctrlblk->handle   = sktaction->socket_handle;
-                        ctrlblk->port     = sktaction->socket_port;
-                        ctrlblk->sendonly = sktaction->socket_send_only;
-
-                        vc_vchi_add_ctrl( instance,
-                                          ctrlblk );
-                        vcos_event_signal ( &instance->ctrl_event );
-                     }
-                  }
-               break;
-
                default:
                break;
             }
 
-            success = vchi_msg_dequeue( instance->vchi_notifier[0],
+            success = vchi_msg_dequeue( instance->vchi_notifier_data[0],
                                         ntfy_msg_buf,
                                         sizeof( ntfy_msg_buf ),
                                         &msg_len,
@@ -1185,9 +1302,9 @@ static void vc_wifihdmi_server_callback( void *param,
    }
 }
 
-static void vc_wifihdmi_notifier_callback( void *param,
-                                           const VCHI_CALLBACK_REASON_T reason,
-                                           void *msg_handle )
+static void vc_wifihdmi_notifier_ctrl_cb( void *param,
+                                          const VCHI_CALLBACK_REASON_T reason,
+                                          void *msg_handle )
 {
    WIFIHDMI_INSTANCE_T *instance = (WIFIHDMI_INSTANCE_T *)param;
 
@@ -1203,6 +1320,40 @@ static void vc_wifihdmi_notifier_callback( void *param,
             instance->io_event_mask |= NOTIFY_EVENT_MASK;
             vcos_mutex_unlock ( &instance->io_lock );
             vcos_event_signal( &instance->io_event );
+         }
+         else
+         {
+            LOG_ERR( "%s: failed on io-lock",
+                     __func__ );
+         }
+      break;
+
+      case VCHI_CALLBACK_SERVICE_CLOSED:
+         LOG_INFO( "%s: service CLOSED!!",
+                   __func__ );
+      default:
+      break;
+   }
+}
+
+static void vc_wifihdmi_notifier_data_cb( void *param,
+                                          const VCHI_CALLBACK_REASON_T reason,
+                                          void *msg_handle )
+{
+   WIFIHDMI_INSTANCE_T *instance = (WIFIHDMI_INSTANCE_T *)param;
+
+   (void)msg_handle;
+
+   switch( reason )
+   {
+      /* Notification message is available from the service.
+      */
+      case VCHI_CALLBACK_MSG_AVAILABLE:
+         if ( vcos_mutex_lock ( &instance->dt_lock ) == VCOS_SUCCESS )
+         {
+            instance->dt_event_mask |= NOTIFY_EVENT_MASK;
+            vcos_mutex_unlock ( &instance->dt_lock );
+            vcos_event_signal( &instance->dt_event );
          }
          else
          {
@@ -1323,6 +1474,22 @@ VC_VCHI_WIFIHDMI_HANDLE_T vc_vchi_wifihdmi_init( VCHI_INSTANCE_T vchi_instance,
       goto err_delete_ctrl_lock;
    }
 
+   // Lock for data events processing
+   status = vcos_mutex_create( &instance->dt_lock, "sm_data_lock" );
+   if ( status != VCOS_SUCCESS )
+   {
+      LOG_ERR( "%s: failed to create io-lock (status=%d)", __func__, status );
+      goto err_delete_ctrl_event;
+   }
+
+   // Event for data events processing
+   status = vcos_event_create( &instance->dt_event, "" );
+   if ( status != VCOS_SUCCESS )
+   {
+      LOG_ERR( "%s: failed to create io-event (status=%d)", __func__, status );
+      goto err_delete_dt_lock;
+   }
+
    // Open the VCHI service connections
    for ( i = 0; i < num_connections; i++ )
    {
@@ -1339,13 +1506,26 @@ VC_VCHI_WIFIHDMI_HANDLE_T vc_vchi_wifihdmi_init( VCHI_INSTANCE_T vchi_instance,
          VCOS_FALSE,                  // want crc check on bulk transfers
       };
 
-      SERVICE_CREATION_T notifier =
+      SERVICE_CREATION_T notifier_ctrl =
       {
-         VC_WIFIHDMI_NOTIFY_NAME,       // 4cc service code
+         VC_WIFIHDMI_NOTIFY_CTRL_NAME,  // 4cc service code
          vchi_connections[i],           // passed in fn pointers
          0,                             // rx fifo size
          0,                             // tx fifo size
-         vc_wifihdmi_notifier_callback, // service callback
+         vc_wifihdmi_notifier_ctrl_cb,  // service callback
+         instance,                      // service callback parameter
+         VCOS_FALSE,                    // unaligned bulk recieves
+         VCOS_FALSE,                    // unaligned bulk transmits
+         VCOS_FALSE,                    // want crc check on bulk transfers
+      };
+
+      SERVICE_CREATION_T notifier_data =
+      {
+         VC_WIFIHDMI_NOTIFY_DATA_NAME,  // 4cc service code
+         vchi_connections[i],           // passed in fn pointers
+         0,                             // rx fifo size
+         0,                             // tx fifo size
+         vc_wifihdmi_notifier_data_cb,  // service callback
          instance,                      // service callback parameter
          VCOS_FALSE,                    // unaligned bulk recieves
          VCOS_FALSE,                    // unaligned bulk transmits
@@ -1365,11 +1545,23 @@ VC_VCHI_WIFIHDMI_HANDLE_T vc_vchi_wifihdmi_init( VCHI_INSTANCE_T vchi_instance,
       }
 
       status = vchi_service_open( vchi_instance,
-                                  &notifier,
-                                  &instance->vchi_notifier[i] );
+                                  &notifier_ctrl,
+                                  &instance->vchi_notifier_ctrl[i] );
       if ( status != VCOS_SUCCESS )
       {
-         LOG_ERR( "%s: failed to open VCHI service notifier connection (status=%d)",
+         LOG_ERR( "%s: failed to open VCHI service notifier-ctrl connection (status=%d)",
+                  __func__, status );
+
+         vcos_assert( status == VCOS_SUCCESS );
+         goto err_close_services;
+      }
+
+      status = vchi_service_open( vchi_instance,
+                                  &notifier_data,
+                                  &instance->vchi_notifier_data[i] );
+      if ( status != VCOS_SUCCESS )
+      {
+         LOG_ERR( "%s: failed to open VCHI service notifier-data connection (status=%d)",
                   __func__, status );
 
          vcos_assert( status == VCOS_SUCCESS );
@@ -1377,14 +1569,15 @@ VC_VCHI_WIFIHDMI_HANDLE_T vc_vchi_wifihdmi_init( VCHI_INSTANCE_T vchi_instance,
       }
 
       vchi_service_release( instance->vchi_server[i] );
-      vchi_service_release( instance->vchi_notifier[i] );
+      vchi_service_release( instance->vchi_notifier_ctrl[i] );
+      vchi_service_release( instance->vchi_notifier_data[i] );
    }
 
    // Create the thread which takes care of all io to/from videoocore.
    vcos_thread_attr_init( &attrs );
-   vcos_thread_attr_setstacksize( &attrs, 2048 );
-   vcos_thread_attr_settimeslice( &attrs, 1 );
-
+   vcos_thread_attr_setstacksize( &attrs, 4096 );
+   vcos_thread_attr_setpriority( &attrs,
+                                 VCOS_THREAD_PRI_NORMAL );
    // Create a thread to process the server command/responses
    status = vcos_thread_create( &instance->io_thread,
                                 "WIFIHDMI IO",
@@ -1400,7 +1593,30 @@ VC_VCHI_WIFIHDMI_HANDLE_T vc_vchi_wifihdmi_init( VCHI_INSTANCE_T vchi_instance,
       goto err_close_services;
    }
 
+   // Create a thread to process the server data notification
+   vcos_thread_attr_init( &attrs );
+   vcos_thread_attr_setstacksize( &attrs, 4096 );
+   vcos_thread_attr_setpriority( &attrs,
+                                 VCOS_THREAD_PRI_HIGHEST );
+   status = vcos_thread_create( &instance->dt_thread,
+                                "WIFIHDMI DT",
+                                &attrs,
+                                vc_vchi_wifihdmi_videocore_dt,
+                                instance );
+   if ( status != VCOS_SUCCESS )
+   {
+      LOG_ERR( "%s: failed to create videocore io thread (status=%d)",
+               __func__, status );
+
+      vcos_assert( status == VCOS_SUCCESS );
+      goto err_close_services;
+   }
+
    // Create a thread to process the data pump notifications
+   vcos_thread_attr_init( &attrs );
+   vcos_thread_attr_setstacksize( &attrs, 4096 );
+   vcos_thread_attr_setpriority( &attrs,
+                                 VCOS_THREAD_PRI_HIGHEST );
    status = vcos_thread_create( &instance->snd_thread,
                                 "WIFIHDMI SND",
                                 &attrs,
@@ -1416,6 +1632,10 @@ VC_VCHI_WIFIHDMI_HANDLE_T vc_vchi_wifihdmi_init( VCHI_INSTANCE_T vchi_instance,
    }
 
    // Create a thread to process the socket control notifications
+   vcos_thread_attr_init( &attrs );
+   vcos_thread_attr_setstacksize( &attrs, 4096 );
+   vcos_thread_attr_setpriority( &attrs,
+                                 VCOS_THREAD_PRI_NORMAL );
    status = vcos_thread_create( &instance->ctrl_thread,
                                 "WIFIHDMI CTRL",
                                 &attrs,
@@ -1473,12 +1693,22 @@ err_close_services:
          vchi_service_close( instance->vchi_server[i] );
       }
 
-      if ( instance->vchi_notifier[i] != NULL )
+      if ( instance->vchi_notifier_ctrl[i] != NULL )
       {
-         vchi_service_use( instance->vchi_notifier[i] );
-         vchi_service_close( instance->vchi_notifier[i] );
+         vchi_service_use( instance->vchi_notifier_ctrl[i] );
+         vchi_service_close( instance->vchi_notifier_ctrl[i] );
+      }
+
+      if ( instance->vchi_notifier_data[i] != NULL )
+      {
+         vchi_service_use( instance->vchi_notifier_data[i] );
+         vchi_service_close( instance->vchi_notifier_data[i] );
       }
    }
+   vcos_event_delete( &instance->dt_event );
+err_delete_dt_lock:
+   vcos_mutex_delete( &instance->data_lock );
+err_delete_ctrl_event:
    vcos_event_delete( &instance->snd_event );
 err_delete_ctrl_lock:
    vcos_mutex_delete( &instance->ctrl_lock );
@@ -1545,10 +1775,17 @@ VCOS_STATUS_T vc_vchi_wifihdmi_end( VC_VCHI_WIFIHDMI_HANDLE_T *handle )
          vcos_assert( success == 0 );
       }
 
-      if ( instance->vchi_notifier[i] )
+      if ( instance->vchi_notifier_ctrl[i] )
       {
-         vchi_service_use( instance->vchi_notifier[i] );
-         success = vchi_service_close( instance->vchi_notifier[i] );
+         vchi_service_use( instance->vchi_notifier_ctrl[i] );
+         success = vchi_service_close( instance->vchi_notifier_ctrl[i] );
+         vcos_assert( success == 0 );
+      }
+
+      if ( instance->vchi_notifier_data[i] )
+      {
+         vchi_service_use( instance->vchi_notifier_data[i] );
+         success = vchi_service_close( instance->vchi_notifier_data[i] );
          vcos_assert( success == 0 );
       }
    }
@@ -1567,10 +1804,12 @@ VCOS_STATUS_T vc_vchi_wifihdmi_end( VC_VCHI_WIFIHDMI_HANDLE_T *handle )
    vcos_event_delete( &instance->io_event );
    vcos_event_delete( &instance->snd_event );
    vcos_event_delete( &instance->ctrl_event );
+   vcos_event_delete( &instance->dt_event );
 
    vcos_mutex_delete( &instance->cmd_lock );
    vcos_mutex_delete( &instance->rsp_lock );
    vcos_mutex_delete( &instance->io_lock );
+   vcos_mutex_delete( &instance->dt_lock );
    vcos_mutex_delete( &instance->snd_lock );
    vcos_mutex_delete( &instance->ctrl_lock );
    vcos_mutex_delete( &instance->data_lock );
@@ -2644,6 +2883,130 @@ VCOS_STATUS_T vc_vchi_wifihdmi_skt_data( VC_VCHI_WIFIHDMI_HANDLE_T handle,
    msg_hdr->type     = VC_WIFIHDMI_MSG_TYPE_SKT_DATA;
    msg_hdr->trans_id = ++instance->trans_id;
    memcpy( msg_hdr->body, skt_data, sizeof( *skt_data ));
+
+   cmd_blk->reply_wait = 1;
+   cmd_blk->trans_id   = msg_hdr->trans_id;
+   if ( trans_id != NULL ) { *trans_id = msg_hdr->trans_id; }
+
+   vc_vchi_add_cmd( instance,
+                    cmd_blk );
+
+   if ( vcos_mutex_lock ( &instance->io_lock ) == VCOS_SUCCESS )
+   {
+      instance->io_event_mask |= CLIENT_EVENT_MASK;
+      vcos_mutex_unlock ( &instance->io_lock );
+      vcos_event_signal( &instance->io_event );
+   }
+   else
+   {
+      LOG_ERR( "%s: failed on io-lock",
+               __func__ );
+      final = VCOS_EINVAL;
+      goto unlock;
+   }
+
+   status = vcos_event_wait( &cmd_blk->cmd_resp );
+   if ( status == VCOS_EAGAIN )
+   {
+      final = VCOS_EINTR;
+      goto unlock;
+   }
+   else if ( status != VCOS_SUCCESS )
+   {
+      LOG_ERR( "%s: failed on waiting for event (status=%d)",
+               __func__, status );
+      goto unlock;
+   }
+
+   rsp_blk = vc_vchi_rsp_from_tid( instance,
+                                   cmd_blk->trans_id );
+   if ( rsp_blk )
+   {
+      memcpy ( result,
+               rsp_blk->reply_msg_buf,
+               sizeof( *result ) );
+      cmd_blk = NULL;
+      final = VCOS_SUCCESS;
+   }
+
+
+unlock:
+   vcos_semaphore_post( &instance->vchi_sema );
+lock:
+   if ( cmd_blk != NULL )
+   {
+      vc_vchi_rem_cmd( instance,
+                       &cmd_blk );
+   }
+   if ( rsp_blk != NULL )
+   {
+      vc_vchi_rem_rsp( instance,
+                       &rsp_blk );
+   }
+   return final;
+}
+
+VCOS_STATUS_T vc_vchi_wifihdmi_audio_status( VC_VCHI_WIFIHDMI_HANDLE_T handle,
+                                             VC_WIFIHDMI_STREAM_T *stream,
+                                             VC_WIFIHDMI_STR_STA_RES_T *result,
+                                             uint32_t *trans_id )
+{
+   VCOS_STATUS_T final = VCOS_EINVAL;
+   WIFIHDMI_INSTANCE_T *instance = handle;
+   VC_WIFIHDMI_MSG_HDR_T *msg_hdr;
+   VCOS_STATUS_T status;
+   WIFIHDMI_CMD_RSP_BLK_T *cmd_blk = NULL;
+   WIFIHDMI_CMD_RSP_BLK_T *rsp_blk = NULL;
+
+   if ( handle == NULL )
+   {
+      LOG_ERR( "%s: invalid handle", __func__ );
+
+      vcos_assert( handle != NULL );
+      goto lock;
+   }
+
+   if ( (stream == NULL) || (result == NULL) )
+   {
+      LOG_ERR( "%s: invalid input pointer", __func__ );
+
+      vcos_assert( stream != NULL );
+      vcos_assert( result != NULL );
+      goto lock;
+   }
+
+   cmd_blk = vcos_malloc( sizeof( *cmd_blk ), "" );
+   if ( cmd_blk == NULL )
+   {
+      LOG_ERR( "[%s]: failed to allocate global tracking resource",
+               __func__ );
+      goto lock;
+   }
+   else
+   {
+      status = vcos_event_create( &cmd_blk->cmd_resp, "" );
+      if ( status != VCOS_SUCCESS )
+      {
+         LOG_ERR( "%s: failed to create cmd-resp-evt (status=%d)", __func__, status );
+         goto lock;
+      }
+   }
+
+   if ( (status = vcos_semaphore_wait( &instance->vchi_sema )) != VCOS_SUCCESS )
+   {
+      LOG_ERR( "%s: failed to wait on vchi-sema (status=%d)", __func__, status );
+      goto lock;
+   }
+
+   cmd_blk->command_len = sizeof( *msg_hdr ) + sizeof( *stream );
+   memset( cmd_blk->command_msg_buf,
+           0,
+           cmd_blk->command_len );
+
+   msg_hdr           = (VC_WIFIHDMI_MSG_HDR_T *)cmd_blk->command_msg_buf;
+   msg_hdr->type     = VC_WIFIHDMI_MSG_TYPE_AUDIO_STREAM_STAT;
+   msg_hdr->trans_id = ++instance->trans_id;
+   memcpy( msg_hdr->body, stream, sizeof( *stream ));
 
    cmd_blk->reply_wait = 1;
    cmd_blk->trans_id   = msg_hdr->trans_id;

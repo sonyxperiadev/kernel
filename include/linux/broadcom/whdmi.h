@@ -61,7 +61,8 @@ typedef enum whdmi_event
     WHDMI_EVENT_SOCKET_DATA_AVAIL,          /* Data is available on socket */
     WHDMI_EVENT_SOCKET_CLOSED,              /* Socket has been closed (by userspace app) */
     WHDMI_EVENT_START_SERVICE,              /* User application wishes to start the service */
-    WHDMI_EVENT_STOP_SERVICE                /* User application wishes to stop the service */
+    WHDMI_EVENT_STOP_SERVICE,               /* User application wishes to stop the service */
+    WHDMI_EVENT_AUDIO_STREAM_STATUS         /* User application checks the status of the audio stream */
 } WHDMI_EVENT;
 
 /* Socket has been accepted */
@@ -105,6 +106,13 @@ typedef struct whdmi_event_stop_service_param
     int                     not_used;               /* Place-holder for future value */
 } WHDMI_EVENT_STOP_SERVICE_PARAM;
 
+/* Check status of audio stream */
+typedef struct whdmi_event_audio_stream_status_param
+{
+    int                     enabled;               /* To be filled by callback function once the callback returns */
+} WHDMI_EVENT_AUDIO_STREAM_STATUS_PARAM;
+
+
 /* A union of event parameters */
 typedef union whdmi_event_param
 {
@@ -114,6 +122,7 @@ typedef union whdmi_event_param
     WHDMI_EVENT_SOCKET_CLOSED_PARAM             socket_closed;
     WHDMI_EVENT_START_SERVICE_PARAM             start_service;
     WHDMI_EVENT_STOP_SERVICE_PARAM              stop_service;
+    WHDMI_EVENT_AUDIO_STREAM_STATUS_PARAM       audio_stream_status;
 } WHDMI_EVENT_PARAM;
 
 typedef void* (* WHDMI_CALLBACK) (WHDMI_EVENT event, WHDMI_EVENT_PARAM *param, void *callback_param);

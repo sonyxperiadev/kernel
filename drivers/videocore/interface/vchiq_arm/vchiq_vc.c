@@ -216,6 +216,75 @@ vchiq_open_service_params(VCHIQ_INSTANCE_T instance,
    return status;
 }
 
+VCHIQ_STATUS_T
+vchiq_vc_init_state(VCHIQ_VC_STATE_T* vc_state)
+{
+   return vcos_event_create(&vc_state->remote_use_active, "remote_use_active") == VCOS_SUCCESS ? VCHIQ_SUCCESS : VCHIQ_ERROR;
+}
+
+
+/* This is a private api only intended for use by powerman. */
+VCHIQ_STATUS_T
+vchiq_remote_use(VCHIQ_INSTANCE_T instance, VCHIQ_REMOTE_USE_CALLBACK_T callback, void* cb_arg)
+{
+   VCHIQ_STATE_T *state = &instance->state;
+   VCHIQ_VC_STATE_T *vc_state = vchiq_platform_get_vc_state(state);
+   VCHIQ_STATUS_T status = vc_state ? VCHIQ_RETRY : VCHIQ_ERROR; // vc_state null probably means not supported on this platform, so no point retrying
+   if(vc_state && (state->conn_state > VCHIQ_CONNSTATE_DISCONNECTED) && !vc_state->remote_use_callback)
+   {
+      /* NOTE - use counting should be done externally. This function only supports
+          one client and will always send a message to the host on calling */
+
+      vc_state->remote_use_callback = callback;
+      vc_state->remote_use_cb_arg = cb_arg;
+      status = vchiq_send_remote_use(state);
+   }
+   return status;
+}
+
+/* This is a private api only intended for use by powerman. */
+VCHIQ_STATUS_T
+vchiq_remote_release(VCHIQ_INSTANCE_T instance)
+{
+   VCHIQ_STATE_T *state = &instance->state;
+   VCHIQ_VC_STATE_T *vc_state = vchiq_platform_get_vc_state(state);
+   VCHIQ_STATUS_T status = vc_state ? VCHIQ_RETRY : VCHIQ_ERROR; // vc_state null probably means not supported on this platform, so no point retrying
+   if(vc_state && (state->conn_state > VCHIQ_CONNSTATE_DISCONNECTED) && !vc_state->remote_use_callback)
+   {
+      status = vchiq_send_remote_release(state);
+   }
+   return status;
+}
+
+/* This is called when we receive the acknowledgement from the host of the remote use */
+void
+vchiq_on_remote_use_active(VCHIQ_STATE_T *state)
+{
+   VCHIQ_VC_STATE_T *vc_state = vchiq_platform_get_vc_state(state);
+   if(vc_state && vc_state->remote_use_callback)
+   {
+      vc_state->remote_use_callback(vc_state->remote_use_cb_arg);
+      vc_state->remote_use_callback = 0;
+   }
+}
+
+
+
+/* stub functions */
+
+VCHIQ_STATUS_T
+vchiq_on_remote_use(VCHIQ_STATE_T *state)
+{
+   vcos_unused(state);
+   return VCHIQ_SUCCESS;
+}
+VCHIQ_STATUS_T
+vchiq_on_remote_release(VCHIQ_STATE_T *state)
+{
+   vcos_unused(state);
+   return VCHIQ_SUCCESS;
+}
+
 void
 vchiq_dump_platform_state(void *dump_context)
 {
@@ -257,9 +326,3 @@ vchiq_check_service(VCHIQ_SERVICE_HANDLE_T handle)
    return VCHIQ_SUCCESS;
 }
 
-VCHIQ_STATUS_T
-vchiq_platform_suspend(VCHIQ_STATE_T *state)
-{
-   vcos_unused(state);
-   return VCHIQ_SUCCESS;
-}

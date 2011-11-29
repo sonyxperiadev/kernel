@@ -59,7 +59,7 @@ vc-vchiq-objs := \
     vchiq_kern_lib.o \
     vchiq_shim.o \
     vchiq_util.o \
-    vchiq_bivcm_arm.o
+    vchiq_$(VCHIQ_PLATFORM)_arm.o
 ifeq ($(VCHIQ_SM_ALLOC),vcddr)
 vc-vchiq-objs += \
     ../../host_applications/linux/libs/debug_sym/debug_sym.o

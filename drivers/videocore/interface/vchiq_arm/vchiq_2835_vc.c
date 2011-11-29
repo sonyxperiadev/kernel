@@ -171,3 +171,31 @@ vchiq_platform_resumed(VCHIQ_STATE_T *state)
 {
    vcos_unused(state);
 }
+
+VCHIQ_STATUS_T
+vchiq_platform_init_state(VCHIQ_STATE_T *state)
+{
+   vcos_unused(state);
+   return VCHIQ_SUCCESS;
+}
+
+VCHIQ_VC_STATE_T*
+vchiq_platform_get_vc_state(VCHIQ_STATE_T *state)
+{
+   vcos_unused(state);
+   return NULL;
+}
+
+VCHIQ_STATUS_T
+vchiq_use_service_internal(VCHIQ_SERVICE_T *service)
+{
+   vcos_unused(service);
+   return VCHIQ_SUCCESS;
+}
+
+VCHIQ_STATUS_T
+vchiq_release_service_internal(VCHIQ_SERVICE_T *service)
+{
+   vcos_unused(service);
+   return VCHIQ_SUCCESS;
+}

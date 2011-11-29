@@ -38,6 +38,12 @@ VC_DEBUG_DECLARE_UNCACHED_STATIC_VAR( int, vchiq_ipc_shared_mem_size, 0 );
 
 VCHIQ_INSTANCE_STRUCT_T vchiq_instances[1];
 
+typedef struct vchiq_bi_state_struct {
+   int inited;
+   VCHIQ_VC_STATE_T vc_state;
+} VCHIQ_BI_VC_STATE_T;
+
+
 VCHIQ_STATUS_T
 vchiq_platform_init(void)
 {
@@ -97,6 +103,30 @@ vchiq_platform_init(void)
 
    return status;
 }
+
+VCHIQ_STATUS_T
+vchiq_platform_init_state(VCHIQ_STATE_T *state)
+{
+   VCHIQ_STATUS_T status = VCHIQ_SUCCESS;
+   state->platform_state = vcos_calloc(1, sizeof(VCHIQ_BI_VC_STATE_T), "VCHIQ_BI_VC_STATE");
+   status = vchiq_vc_init_state(&((VCHIQ_BI_VC_STATE_T*)state->platform_state)->vc_state);
+   if(status == VCHIQ_SUCCESS)
+   {
+      ((VCHIQ_BI_VC_STATE_T*)state->platform_state)->inited = 1;
+   }
+   return status;
+}
+
+VCHIQ_VC_STATE_T*
+vchiq_platform_get_vc_state(VCHIQ_STATE_T *state)
+{
+   if(!((VCHIQ_BI_VC_STATE_T*)state->platform_state)->inited)
+   {
+      vcos_demand(0);
+   }
+   return &((VCHIQ_BI_VC_STATE_T*)state->platform_state)->vc_state;
+}
+
 
 VCHIQ_STATUS_T
 vchiq_prepare_bulk_data(VCHIQ_BULK_T *bulk,
@@ -188,4 +218,18 @@ void
 vchiq_platform_resumed(VCHIQ_STATE_T *state)
 {
    vcos_unused(state);
+}
+
+VCHIQ_STATUS_T
+vchiq_use_service_internal(VCHIQ_SERVICE_T *service)
+{
+   vcos_unused(service);
+   return VCHIQ_SUCCESS;
+}
+
+VCHIQ_STATUS_T
+vchiq_release_service_internal(VCHIQ_SERVICE_T *service)
+{
+   vcos_unused(service);
+   return VCHIQ_SUCCESS;
 }

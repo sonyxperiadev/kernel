@@ -18,8 +18,9 @@
 typedef void* (*SOCKET_CALLBACK) (int socket_handle, void *data);
 
 // FourCC code used for VCHI connection
-#define VC_WIFIHDMI_SERVER_NAME MAKE_FOURCC("WOHS")
-#define VC_WIFIHDMI_NOTIFY_NAME MAKE_FOURCC("WOHN")
+#define VC_WIFIHDMI_SERVER_NAME      MAKE_FOURCC("WHSV")
+#define VC_WIFIHDMI_NOTIFY_CTRL_NAME MAKE_FOURCC("WHNS")
+#define VC_WIFIHDMI_NOTIFY_DATA_NAME MAKE_FOURCC("WHND")
 
 // Maximum message length
 #define VC_WIFIHDMI_MAX_MSG_LEN (sizeof( VC_WIFIHDMI_MSG_UNION_T ) + \
@@ -46,15 +47,26 @@ typedef enum
    VC_WIFIHDMI_MSG_TYPE_START,
    VC_WIFIHDMI_MSG_TYPE_STOP,
 
+   VC_WIFIHDMI_MSG_TYPE_AUDIO_STREAM_STAT,
+
    // VC->HOST
    VC_WIFIHDMI_MSG_TYPE_SKT_OPEN,
    VC_WIFIHDMI_MSG_TYPE_SKT_CLOSE,
    VC_WIFIHDMI_MSG_TYPE_SKT_LISTEN,
    VC_WIFIHDMI_MSG_TYPE_TX_DATA,
+   VC_WIFIHDMI_MSG_TYPE_FRAME_TOGGLE,
 
    VC_WIFIHDMI_MSG_TYPE_MAX
 
 } VC_WIFIHDMI_MSG_TYPE;
+
+typedef enum
+{
+   VC_WIFIHDMI_RESERVED_NONE,
+   VC_WIFIHDMI_RESERVED_AUDIO,
+   VC_WIFIHDMI_RESERVED_VIDEO
+
+} VC_WIFIHDMI_RESERVED;
 
 // Message header for all messages in HOST->VC direction
 typedef struct
@@ -81,6 +93,15 @@ typedef struct
    uint32_t handle;
 
 } VC_WIFIHDMI_SKT_RES_T;
+
+// Stream status result for a request (VC->HOST)
+typedef struct
+{
+   uint32_t trans_id;       // Transaction identifier
+   int32_t  success;        // Action status
+   uint32_t enabled;
+
+} VC_WIFIHDMI_STR_STA_RES_T;
 
 // Request to set a buffer for a specific purpose (HOST->VC)
 typedef struct
@@ -135,6 +156,13 @@ typedef struct
 
 } VC_WIFIHDMI_SKT_DATA_T;
 
+// Stream identifier (HOST->VC)
+typedef struct
+{
+   uint32_t handle;
+
+} VC_WIFIHDMI_STREAM_T;
+
 // Socket action information (VC->HOST)
 typedef struct
 {
@@ -148,12 +176,26 @@ typedef struct
 typedef struct
 {
    uint32_t trans_id;       // Transaction identifier
+   
+   uint32_t tx_pool;
+   uint32_t tx_aud_pool;
+   uint32_t tx_vid_pool;
+   uint32_t tx_misc_pool;
 
-   uint32_t tx_cnt;         // Transmit counter (queued up and signaled to host)
+   uint32_t tx_snd;         // Transmit (asked to be sent)
+   uint32_t tx_cnt;         // Transmit (queued up and signaled to host)
    uint32_t tx_dst_cnt;     // Transmit (with destination) counter (queued up and signaled to host)
-   uint32_t tx_miss_cnt;    // Transmit miss counter (failed to queue up to host)
+   uint32_t tx_miss_cnt;    // Transmit miss
+   uint32_t tx_retry_cnt;   // Transmit retry
+   uint32_t tx_retry2_cnt;  // Transmit retry (second counter)
+   uint32_t tx_frame_cnt;   // Transmit frame counter (reported by application)
    uint32_t tx_rec_cnt;     // Transmit recycled counter
    uint32_t tx_busy_cnt;    // Transmit busied counter
+
+   uint32_t tx_aud_cnt;     // Transmit audio packet
+   uint32_t tx_aud_ret_cnt; // Transmit audio packet retried
+   uint32_t tx_vid_cnt;     // Transmit video packet
+   uint32_t tx_vid_ret_cnt; // Transmit video packet retried
 
 } VC_WIFIHDMI_STATS_T;
 
@@ -170,6 +212,8 @@ typedef union
    VC_WIFIHDMI_SKT_T         skt;
    VC_WIFIHDMI_SKT_DATA_T    skt_data;
    VC_WIFIHDMI_SKT_ACTION_T  skt_action;
+   VC_WIFIHDMI_STREAM_T      stream;
+   VC_WIFIHDMI_STR_STA_RES_T stream_res;
 
 } VC_WIFIHDMI_MSG_UNION_T;
 

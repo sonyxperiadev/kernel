@@ -75,7 +75,7 @@ static VCOS_STATUS_T vcos_generic_named_semaphore_init(void)
    if (status != VCOS_SUCCESS)
       goto fail_blockpool;
 
-   status = vcos_blockpool_extend(&sems_pool, MAX_EXTENSIONS, NUM_SEMS * 2);
+   status = vcos_blockpool_extend(&sems_pool, MAX_EXTENSIONS, NUM_SEMS * 4);
    if (status != VCOS_SUCCESS)
       goto fail_extend;
 

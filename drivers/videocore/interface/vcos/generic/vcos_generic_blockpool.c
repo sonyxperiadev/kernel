@@ -23,16 +23,36 @@ VideoCore OS Abstraction Layer - generic block pool library
 #define VCOS_BLOCKPOOL_SUBPOOL_FLAG_OWNS_MEM    (1 << 0)
 #define VCOS_BLOCKPOOL_SUBPOOL_FLAG_EXTENSION   (1 << 1)
 
-/* Use the least significant bits for the subpool id */
+/* Whether to overwrite freed blocks with 0xBD */
+#ifdef NDEBUG
+#define VCOS_BLOCKPOOL_OVERWRITE_ON_FREE 0
+#else
+#define VCOS_BLOCKPOOL_OVERWRITE_ON_FREE 1
+#endif
+
+/* Uncomment to enable really verbose debug messages */
+/* #define VCOS_BLOCKPOOL_DEBUGGING */
+
+#ifdef VCOS_BLOCKPOOL_DEBUGGING
+#define VCOS_BLOCKPOOL_ASSERT vcos_demand
+#define VCOS_BLOCKPOOL_TRACE_LEVEL VCOS_LOG_TRACE
+#define VCOS_BLOCKPOOL_DEBUG_LOG(s, ...) vcos_log_trace("%s: " s, VCOS_FUNCTION, __VA_ARGS__)
+#undef  VCOS_BLOCKPOOL_OVERWRITE_ON_FREE
+#define VCOS_BLOCKPOOL_OVERWRITE_ON_FREE 1
+#else
+#define VCOS_BLOCKPOOL_ASSERT vcos_demand
+#define VCOS_BLOCKPOOL_TRACE_LEVEL VCOS_LOG_ERROR
+#define VCOS_BLOCKPOOL_DEBUG_LOG(s, ...)
+#endif
 
 #define ASSERT_POOL(p) \
-   vcos_assert((p) && (p)->magic == VCOS_BLOCKPOOL_MAGIC);
+   VCOS_BLOCKPOOL_ASSERT((p) && (p)->magic == VCOS_BLOCKPOOL_MAGIC);
 
 #define ASSERT_SUBPOOL(p) \
-   vcos_assert((p) && (p)->magic == VCOS_BLOCKPOOL_SUBPOOL_MAGIC);
+   VCOS_BLOCKPOOL_ASSERT((p) && (p)->magic == VCOS_BLOCKPOOL_SUBPOOL_MAGIC);
 
 static VCOS_LOG_CAT_T vcos_blockpool_log =
-VCOS_LOG_INIT("vcos_blockpool", VCOS_LOG_ERROR);
+VCOS_LOG_INIT("vcos_blockpool", VCOS_BLOCKPOOL_TRACE_LEVEL);
 
 static void vcos_generic_blockpool_subpool_init(
       VCOS_BLOCKPOOL_T *pool, VCOS_BLOCKPOOL_SUBPOOL_T *subpool,
@@ -45,7 +65,7 @@ static void vcos_generic_blockpool_subpool_init(
 
    vcos_log_trace(
          "%s: pool %p subpool %p start %p pool_size %d num_blocks %d flags %x",
-         __FUNCTION__, 
+         __FUNCTION__,
          pool, subpool, start, (uint32_t) pool_size, num_blocks, flags);
 
    subpool->magic = VCOS_BLOCKPOOL_SUBPOOL_MAGIC;
@@ -235,6 +255,8 @@ void *vcos_generic_blockpool_alloc(VCOS_BLOCKPOOL_T *pool)
       --(subpool->available_blocks);
    }
    vcos_mutex_unlock(&pool->mutex);
+
+   VCOS_BLOCKPOOL_DEBUG_LOG("pool %p subpool %p ret %p", pool, subpool, ret);
    return ret;
 }
 
@@ -248,6 +270,7 @@ void *vcos_generic_blockpool_calloc(VCOS_BLOCKPOOL_T *pool)
 
 void vcos_generic_blockpool_free(void *block)
 {
+   VCOS_BLOCKPOOL_DEBUG_LOG("block %p", block);
    if (block)
    {
       VCOS_BLOCKPOOL_HEADER_T* hdr = (VCOS_BLOCKPOOL_HEADER_T*) block - 1;
@@ -257,22 +280,23 @@ void vcos_generic_blockpool_free(void *block)
       ASSERT_SUBPOOL(subpool);
       pool = subpool->owner;
       ASSERT_POOL(pool);
-      vcos_assert((unsigned) subpool->available_blocks < subpool->num_blocks);
 
       vcos_mutex_lock(&pool->mutex);
+      vcos_assert((unsigned) subpool->available_blocks < subpool->num_blocks);
 
       /* Change ownership of block to be the free list */
       hdr->owner.next = subpool->free_list;
       subpool->free_list = hdr;
       ++(subpool->available_blocks);
 
-#ifndef NDEBUG
-      memset(block, 0xBD, pool->block_data_size); /* For debugging */
-#endif
+      if (VCOS_BLOCKPOOL_OVERWRITE_ON_FREE)
+         memset(block, 0xBD, pool->block_data_size); /* For debugging */
 
       if ( (subpool->flags & VCOS_BLOCKPOOL_SUBPOOL_FLAG_EXTENSION) &&
             subpool->available_blocks == subpool->num_blocks)
       {
+         VCOS_BLOCKPOOL_DEBUG_LOG("%s: freeing subpool %p mem %p", __FUNCTION__,
+               subpool, subpool->mem);
          /* Free the sub-pool if it was dynamically allocated */
          vcos_free(subpool->mem);
          subpool->mem = NULL;
