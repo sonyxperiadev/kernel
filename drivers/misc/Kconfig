@@ -674,6 +674,13 @@ config BCM59055_ADC_CHIPSET_API
 	---help---
 	 BCM59055 ADC chispet API driver 
 
+config BCMPMU_CSAPI_ADC
+	tristate "BCMPMU ADC chipset API driver"
+	depends on SENSORS_BCMPMU
+	default n
+	---help---
+	 BCMPMU ADC chispet API driver (CSAPI_ADC)
+
 config BCM59055_SELFTEST
         bool "BCM59055 Selftest"
 	depends on MFD_BCM_PMU590XX && BCM59055_AUDIO

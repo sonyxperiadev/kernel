@@ -353,6 +353,14 @@ static struct platform_device bcmpmu_em_device = {
 	.dev.platform_data 	= NULL,
 };
 
+#ifdef CONFIG_BCMPMU_CSAPI_ADC
+static struct platform_device bcmpmu_adc_chipset_api = {
+	.name 			= "bcmpmu_adc_chipset_api",
+	.id			= -1,
+	.dev.platform_data 	= NULL,
+};
+#endif
+
 static struct platform_device bcmpmu_otg_xceiv_device = {
 	.name 			= "bcmpmu_otg_xceiv",
 	.id			= -1,
@@ -362,6 +370,9 @@ static struct platform_device bcmpmu_otg_xceiv_device = {
 static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_audio_device,
 	&bcmpmu_em_device,
+#ifdef CONFIG_BCMPMU_CSAPI_ADC
+	&bcmpmu_adc_chipset_api,
+#endif
 	&bcmpmu_otg_xceiv_device,
 };
 

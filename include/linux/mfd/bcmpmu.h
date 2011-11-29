@@ -238,8 +238,12 @@ enum bcmpmu_reg {
 	PMU_REG_FG_SLEEPCNT1,
 	PMU_REG_FG_HOSTEN,
 	PMU_REG_FG_RESET,
+	PMU_REG_FG_CAL,
 	PMU_REG_FG_FRZREAD,
 	PMU_REG_FG_FRZSMPL,
+	PMU_REG_FG_OFFSET0,
+	PMU_REG_FG_OFFSET1,
+	PMU_REG_FG_GAINTRIM,
 	/* usb control */
 	PMU_REG_OTG_VBUS_PULSE,
 	PMU_REG_OTG_VBUS_BOOST,
@@ -375,6 +379,7 @@ enum bcmpmu_adc_sig {
 	PMU_ADC_ID,
 	PMU_ADC_NTC,
 	PMU_ADC_BSI,
+	PMU_ADC_BOM,
 	PMU_ADC_32KTEMP,
 	PMU_ADC_PATEMP,
 	PMU_ADC_ALS,
@@ -791,6 +796,9 @@ struct bcmpmu {
 	int (*fg_acc_mas)(struct bcmpmu *pmu, int *data);
 	int (*fg_enable)(struct bcmpmu *pmu, int en);
 	int (*fg_reset)(struct bcmpmu *pmu);
+	int (*fg_offset_cal)(struct bcmpmu *pmu);
+	int (*fg_offset_cal_read)(struct bcmpmu *pmu, int *data);
+	int (*fg_trim_write)(struct bcmpmu *pmu, int data);
 
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;
@@ -842,6 +850,16 @@ struct bcmpmu_platform_data {
 	int fg_capacity_full;
 	int support_fg;
 	enum bcmpmu_bc_t bc;
+};
+
+struct bcmpmu_fg {
+	struct bcmpmu *bcmpmu;
+	int fg_acc;
+	int fg_smpl_cnt;
+	int fg_slp_cnt;
+	int fg_smpl_cnt_tm;
+	int fg_slp_cnt_tm;
+	int fg_slp_curr_ua;
 };
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);

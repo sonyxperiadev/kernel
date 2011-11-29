@@ -101,16 +101,6 @@ struct bcmpmu_env {
 	unsigned long int env_status;
 };
 
-struct bcmpmu_fg {
-	struct bcmpmu *bcmpmu;
-	int fg_acc;
-	int fg_smpl_cnt;
-	int fg_slp_cnt;
-	int fg_smpl_cnt_tm;
-	int fg_slp_cnt_tm;
-	int fg_slp_curr_ua;
-};
-
 struct bcmpmu_adc_irq_data {
 	struct bcmpmu_adc *adc;
 	struct bcmpmu_adc_req *req;
@@ -139,6 +129,7 @@ static int read_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 	int ret = 0;
 	unsigned int val;
 	unsigned int val1;
+	unsigned int values[2];
 	struct bcmpmu_adc_map adcmap;
 	req->raw = 0;
 	
@@ -160,6 +151,14 @@ static int read_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 	if ((adcmap.addr0 == 0) && (adcmap.addr1 == 0)) {
 		pr_hwmon(ERROR, "%s: sig map failed\n",__func__);
 		return -EINVAL;
+	} else if (adcmap.addr0 == adcmap.addr1 + 1) {
+		ret = padc->bcmpmu->read_dev_bulk(padc->bcmpmu,
+			adcmap.map, adcmap.addr1, values, 2);
+
+		val = values[0];
+		val <<= 8;
+		val |= values [1];
+		pr_hwmon (DATA, "%s: Signal %d, value[0] %x, value[1] %x ==> val %x", __func__, req->sig, values[0], values[1], val);
 	} else {
 		ret = padc->bcmpmu->read_dev_drct(padc->bcmpmu,
 			adcmap.map, adcmap.addr1, &val, adcmap.dmask|adcmap.vmask);
@@ -229,7 +228,7 @@ static int update_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req
 {
 	int ret;
 	req->raw = -EINVAL;
-	if (req->sig == PMU_ADC_FG_CURRSMPL) {
+	if (req->sig == PMU_ADC_FG_CURRSMPL || req->sig == PMU_ADC_FG_RAW) {
 		ret = padc->bcmpmu->write_dev(padc->bcmpmu,
 			PMU_REG_FG_FRZSMPL,
 			padc->bcmpmu->regmap[PMU_REG_FG_FRZSMPL].mask,
@@ -313,6 +312,7 @@ static void adc_isr(enum bcmpmu_irq irq, void *data)
 		(irq == PMU_IRQ_RTM_UPPER) ||
 		(irq == PMU_IRQ_RTM_IGNORE) ||
 		(irq == PMU_IRQ_RTM_OVERRIDDEN)) {
+		pr_hwmon(FLOW, "%s: irq %d 'Getting handled'\n", __func__, irq);
 	} else {
 		pr_hwmon(FLOW, "%s: irq %d unsupported\n", __func__, irq);
 		return;
@@ -388,6 +388,10 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu,
 			return ret;
 		}
 		ret =  update_adc_result(padc, req);
+		break;
+	case PMU_ADC_TM_MAX:
+	default:
+		ret = -EINVAL;
 	}
 	return ret;
 }
@@ -750,6 +754,55 @@ static int bcmpmu_fg_reset(struct bcmpmu *bcmpmu)
 	return ret;
 }
 
+static int bcmpmu_fg_offset_cal(struct bcmpmu *bcmpmu)
+{
+	int ret;
+	ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_FG_CAL,
+			1 << bcmpmu->regmap[PMU_REG_FG_CAL].shift,
+			bcmpmu->regmap[PMU_REG_FG_CAL].mask);
+	if (ret != 0)
+		pr_hwmon(ERROR, "%s failed to write device.\n", __func__);
+	return ret;
+}
+
+static int bcmpmu_fg_offset_cal_read(struct bcmpmu *bcmpmu, int *data)
+{
+	int off, off0, off1, ret;
+
+	ret = bcmpmu->read_dev(bcmpmu,
+			PMU_REG_FG_OFFSET0,
+			&off0,
+			PMU_BITMASK_ALL);
+	if (ret != 0) {
+		pr_hwmon(ERROR, "%s failed to read fg offset0.\n", __func__);
+		return ret;
+	}
+	ret = bcmpmu->read_dev(bcmpmu,
+			PMU_REG_FG_OFFSET1,
+			&off1,
+			PMU_BITMASK_ALL);
+	if (ret != 0) {
+		pr_hwmon(ERROR, "%s failed to read fg offset1.\n", __func__);
+		return ret;
+	}
+	off = off0 | (off1 << 8);
+	*data = off;
+	return 0;
+}
+
+static int bcmpmu_fg_trim_write(struct bcmpmu *bcmpmu, int data)
+{
+	int ret;
+	ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_FG_GAINTRIM,
+			data << bcmpmu->regmap[PMU_REG_FG_CAL].shift,
+			bcmpmu->regmap[PMU_REG_FG_CAL].mask);
+	if (ret != 0)
+		pr_hwmon(ERROR, "%s failed to write device.\n", __func__);
+	return ret;
+}
+
 static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -823,6 +876,9 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	pfg->bcmpmu->fg_acc_mas = bcmpmu_get_fg_acc_mas;
 	pfg->bcmpmu->fg_enable = bcmpmu_fg_enable;
 	pfg->bcmpmu->fg_reset = bcmpmu_fg_reset;
+	pfg->bcmpmu->fg_offset_cal = bcmpmu_fg_offset_cal;
+	pfg->bcmpmu->fg_offset_cal_read = bcmpmu_fg_offset_cal_read;
+	pfg->bcmpmu->fg_trim_write = bcmpmu_fg_trim_write;
 	bcmpmu->fginfo = pfg;
 
 	padc->hwmon_dev = hwmon_device_register(&pdev->dev);
@@ -837,17 +893,17 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 		goto exit_remove_files;
 
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY, adc_isr, padc);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS, adc_isr, padc);
+	/*bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS, adc_isr, padc);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_UPPER, adc_isr, padc);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IGNORE, adc_isr, padc);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN, adc_isr, padc);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN, adc_isr, padc);*/
 
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC);
+	/*bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC);*/
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
+	/*bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);*/
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = device_create_file(&pdev->dev, &dev_attr_dbgmsk);
@@ -864,10 +920,10 @@ static int __devexit bcmpmu_hwmon_remove(struct platform_device *pdev)
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
+	/*bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);*/
 	return 0;
 }
 
