@@ -258,24 +258,33 @@ static void spi_kona_fifo_config(struct spi_kona_data *spi_kona, int enable_dma)
 	return;
 }
 
-static void spi_kona_configure(struct spi_kona_data *spi_kona,
+static int spi_kona_configure(struct spi_kona_data *spi_kona,
 			       struct spi_kona_config *config)
 {
 	CHAL_HANDLE chandle = spi_kona->chandle;
 	uint32_t frame_mask = 1;
+	int ret;
 
 	/* Configure FIFO Packing and Read/Write Data Size */
 	spi_kona_fifo_config(spi_kona, spi_kona->enable_dma);
 
 	/* Set default FIFO threshold */
-	chal_sspi_set_fifo_threshold(chandle, SSPI_FIFO_ID_TX0, 0x1);
+	ret = chal_sspi_set_fifo_threshold(chandle, SSPI_FIFO_ID_TX0, 0x1);
+	if(ret < 0)
+		return ret;
 
 	/* Configure the clock speed */
-	spi_kona_config_clk(spi_kona, config->speed_hz);
+	ret = spi_kona_config_clk(spi_kona, config->speed_hz);
+	if(ret < 0)
+		return ret;
 
 	/* Set frame data size */
-	chal_sspi_set_frame(chandle, &frame_mask, config->mode & SPI_MODE_3,
+	ret = chal_sspi_set_frame(chandle, &frame_mask, config->mode & SPI_MODE_3,
 			    config->bpw, 0);
+	if(ret < 0)
+		return ret;
+
+	return 0;
 }
 
 static int spi_kona_setupxfer(struct spi_device *spi, struct spi_transfer *t)
@@ -312,9 +321,7 @@ static int spi_kona_setupxfer(struct spi_device *spi, struct spi_transfer *t)
 	} else
 		BUG();
 
-	spi_kona_configure(spi_kona, &config);
-
-	return 0;
+	return spi_kona_configure(spi_kona, &config);
 }
 
 /* TODO Need to find a better way to stop sequence in continuous mode */
@@ -800,8 +807,11 @@ static void spi_kona_work(struct work_struct *work)
 		m->complete(m->context);
 
 		/* restore speed and wordsize if it was overridden */
-		if (do_setup == 1)
-			spi_kona_setupxfer(spi, NULL);
+		if (do_setup == 1)	{
+			status = spi_kona_setupxfer(spi, NULL);
+			if (status < 0)
+				break;
+		}
 		do_setup = 0;
 
 		/* normally deactivate chipselect ... unless no error and
@@ -876,7 +886,8 @@ static int spi_kona_config_spi_hw(struct spi_kona_data *spi_kona)
 	 * Set SSPI IDLE State in Mode 0 SPI
 	 * Currently only Mode 0 SPI supported by the driver
 	 */
-	chal_sspi_set_idle_state(chandle, SSPI_PROT_SPI_MODE0);
+	if(chal_sspi_set_idle_state(chandle, SSPI_PROT_SPI_MODE0))
+		return -EIO;
 
 	/* Set SSPI FIFO Size: Rx0/Tx0 - Full, other Rx/Tx to zero */
 	chal_sspi_set_fifo_size(chandle, SSPI_FIFO_ID_RX0, SSPI_FIFO_SIZE_FULL);
