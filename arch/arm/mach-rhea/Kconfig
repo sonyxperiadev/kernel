@@ -37,6 +37,11 @@ config MACH_RHEA_RAY_EDN2X
 	help
 	  Support for the Broadcom Rhea Ray EDN2X board.
 
+config MACH_RHEA_SS
+	bool "Support Broadcom Rhea SS board"
+	help
+	  Support for the Broadcom Rhea SS board.
+
 config MACH_RHEA_FARADAY_EB10
 	bool "Support Nokia Faraday EB10 board"
 	select RHEALC_2093
