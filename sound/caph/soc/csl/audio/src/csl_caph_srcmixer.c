@@ -868,8 +868,9 @@ void csl_caph_srcmixer_deinit(void)
 *  Description: obtain a CAPH srcmixer input channel
 *
 ****************************************************************************/
-CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dataFormat, 
-                              CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate)    
+CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dataFormat,
+                              CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate,
+								AUDIO_SAMPLING_RATE_t srOut)
 {
     Int8 ch = 0;
     CSL_CAPH_SRCM_INCHNL_e neededChnl = CSL_CAPH_SRCM_INCHNL_NONE;
@@ -893,7 +894,7 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dat
 #if defined(CONFIG_ARCH_RHEA_B0)
     /* 48k mono pass through */
     /* even there are 4 mono pass throughs, 3 and 4 will be used for mono for now*/
-    else if (sampleRate == CSL_CAPH_SRCMIN_48KHZ)
+    else if (sampleRate == CSL_CAPH_SRCMIN_48KHZ && srOut==AUDIO_SAMPLING_RATE_48000)
     {
        neededChnl = CSL_CAPH_SRCM_MONO_PASS_CH;
     }
