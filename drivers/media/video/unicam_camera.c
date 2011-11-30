@@ -614,10 +614,11 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	/*TODO limit here any maximum size */
 
 	ret = v4l2_subdev_call(sd, sensor, g_skip_frames, &skip_frames);
-	if (ret < 0 && ret != -ENOIOCTLCMD) {
+	if (ret < 0) {
 		dev_warn(dev, "sensor driver doesn't implement g_skip_frames operation\n");
 		dev_warn(dev, "assuming zero skip frames\n");
 		skip_frames = 0;
+		ret = 0;
 	}
 
 	unicam_dev->skip_frames = skip_frames;
