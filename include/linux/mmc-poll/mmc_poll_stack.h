@@ -26,8 +26,7 @@
 #ifndef __MMC_POLL_STACK_H
 #define __MMC_POLL_STACK_H
 
-#include <linux/mmc-poll/mmc_poll.h>
-
-int mmc_poll_stack_init (struct mmc **mmc, int *dev_num);
+void mmc_poll_stack_device(unsigned dev_num);
+int mmc_poll_stack_init(void **mmc_p, int *dev_num);
 
 #endif /* __MMC_POLL_STACK_H */

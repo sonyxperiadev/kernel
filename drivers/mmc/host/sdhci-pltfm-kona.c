@@ -37,6 +37,10 @@
 #include <mach/sdio_platform.h>
 #include "sdhci.h"
 
+#ifdef CONFIG_APANIC_ON_MMC
+#include <linux/mmc-poll/mmc_poll_stack.h>
+#endif
+
 #define SDHCI_SOFT_RESET            0x01000000
 
 #define KONA_SDHOST_CORECTRL        0x8000
@@ -423,6 +427,11 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		ret = -EFAULT;
 		goto err;
 	}
+
+#ifdef CONFIG_APANIC_ON_MMC
+	if (hw_cfg->devtype == SDIO_DEV_TYPE_EMMC)
+		mmc_poll_stack_device(hw_cfg->id);
+#endif
 
 	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!iomem) {
