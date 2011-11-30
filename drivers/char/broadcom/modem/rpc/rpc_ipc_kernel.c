@@ -1041,7 +1041,6 @@ void __iomem *rpcipc_shmem;
 
 static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 param )
 {
-	RPC_Result_t res;
     rpc_pkt_test_cmd_t ioc_param = { 0 };
     
     if (copy_from_user(&ioc_param, (rpc_pkt_test_cmd_t *)param, sizeof(rpc_pkt_test_cmd_t)) != 0)
@@ -1084,7 +1083,7 @@ static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 para
         return -1;
     }
 	
-    return res;
+    return 0;
 }
 
 
