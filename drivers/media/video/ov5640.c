@@ -23,14 +23,16 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 
-#define OV5640_BRIGHTNESS_MIN				0
-#define OV5640_BRIGHTNESS_MAX				200
-#define OV5640_BRIGHTNESS_STEP				100
-#define OV5640_BRIGHTNESS_DEF				100
+//#define FPS_30_MODE		
+
+#define OV5640_BRIGHTNESS_MIN           0
+#define OV5640_BRIGHTNESS_MAX           200
+#define OV5640_BRIGHTNESS_STEP          100
+#define OV5640_BRIGHTNESS_DEF           100
 
 #define OV5640_CONTRAST_MIN				0
 #define OV5640_CONTRAST_MAX				200
-#define OV5640_CONTRAST_STEP				100
+#define OV5640_CONTRAST_STEP            100
 #define OV5640_CONTRAST_DEF				100
 
 /* OV5640 has only one fixed colorspace per pixelcode */
@@ -54,6 +56,10 @@ struct ov5640_timing_cfg {
 	u8 h_even_ss_inc;
 	u8 v_odd_ss_inc;
 	u8 v_even_ss_inc;
+	u8 isp_scale_down;
+	u8 clk_dividers;
+	u8 mipi_lanes;
+	
 };
 
 static const struct ov5640_datafmt ov5640_fmts[] = {
@@ -66,10 +72,13 @@ static const struct ov5640_datafmt ov5640_fmts[] = {
 };
 
 enum ov5640_size {
-	OV5640_SIZE_QVGA,
-	OV5640_SIZE_VGA,
+	OV5640_SIZE_QVGA,       // 320 x 240
+	OV5640_SIZE_VGA,        // 640 x 480
+	OV5640_SIZE_XGA,        // 1024 x 768 
 	OV5640_SIZE_720P,
+	OV5640_SIZE_UXGA,       // 1600 x 1200 (2M)
 	OV5640_SIZE_1080P,
+	OV5640_SIZE_QXGA,       // 2048 x 1536 (3M)
 	OV5640_SIZE_5MP,
 	OV5640_SIZE_LAST,
 };
@@ -77,8 +86,11 @@ enum ov5640_size {
 static const struct v4l2_frmsize_discrete ov5640_frmsizes[OV5640_SIZE_LAST] = {
 	{  320,  240 },
 	{  640,  480 },
+	{ 1024,  768 },
 	{ 1280,  720 },
+	{ 1600, 1200 },
 	{ 1920, 1080 },
+	{ 2048, 1536 },
 	{ 2592, 1944 },
 };
 
@@ -146,121 +158,200 @@ struct ov5640_reg {
 
 /* TODO: Divide this properly */
 static const struct ov5640_reg configscript_common1[] = {
-	{ 0x3103, 0x03 },
-	{ 0x3017, 0x00 },
-	{ 0x3018, 0x00 },
-	{ 0x3630, 0x2e },
-	{ 0x3632, 0xe2 },
-	{ 0x3633, 0x23 },
-	{ 0x3634, 0x44 },
-	{ 0x3621, 0xe0 },
-	{ 0x3704, 0xa0 },
-	{ 0x3703, 0x5a },
-	{ 0x3715, 0x78 },
-	{ 0x3717, 0x01 },
-	{ 0x370b, 0x60 },
-	{ 0x3705, 0x1a },
-	{ 0x3905, 0x02 },
-	{ 0x3906, 0x10 },
-	{ 0x3901, 0x0a },
-	{ 0x3731, 0x12 },
-	{ 0x3600, 0x04 },
-	{ 0x3601, 0x22 },
-	{ 0x471c, 0x50 },
-	{ 0x3002, 0x1c },
-	{ 0x3006, 0xc3 },
-	{ 0x300e, 0x05 },
-	{ 0x302e, 0x08 },
-	{ 0x3612, 0x4b },
-	{ 0x3618, 0x04 },
-	{ 0x3034, 0x18 },
-	{ 0x3035, 0x11 },
-	{ 0x3036, 0x54 },
-	{ 0x3037, 0x13 },
-	{ 0x3708, 0x21 },
-	{ 0x3709, 0x12 },
-	{ 0x370c, 0x00 },
-};
+//System Control
+    {0x3008,0x82},      // Reset [7] PowerDn [6]
+    {0xFFFF,  3 },      // Sleep 3ms
+    {0x3008,0x42},
+    {0x3103,0x03},      //PLL Clock Select    
+//IO Config
+    {0x3017,0x00},      //IO [3:0] D9-D6 (MIPI MD1-D9:D8 MC-D7:D6)
+    {0x3018,0x00},      //IO [7:2] D5-D0 (MIPI MD0-D5:D4) [1]GPIO1 [0]GPIO0 (MIPI MD2/MC/MD1)
+//????
+    {0x3630,0x2e},
+    {0x3632,0xe2},
+    {0x3633,0x23},
+    {0x3634,0x44},
+    {0x3621,0xe0},
+    {0x3704,0xa0},
+    {0x3703,0x5a},
+    {0x3715,0x78},
+    {0x3717,0x01},
+    {0x370b,0x60},
+    {0x3705,0x1a},
+    {0x3905,0x02},
+    {0x3906,0x10},
+    {0x3901,0x0a},
+    {0x3731,0x12},
+//VCM Control
+    {0x3600,0x04},      //VCM Control
+    {0x3601,0x22},
+//????
+    {0x471c, 0x50},
+//AEC
+    {0x3a18,0x00},      //Real Gain
+    {0x3a19,0xf8},
+    {0x3503,0x07},
+    {0x3500,0x00},
+    {0x3501,0x01},
+    {0x3502,0x00},
+    {0x350a,0x00},
+    {0x350b,0x3f},
 
-/* TODO: Divide this properly */
-static const struct ov5640_reg configscript_common2[] = {
-	{ 0x3a02, 0x01 },
-	{ 0x3a03, 0xec },
-	{ 0x3a08, 0x01 },
-	{ 0x3a09, 0x27 },
-	{ 0x3a0a, 0x00 },
-	{ 0x3a0b, 0xf6 },
-	{ 0x3a0e, 0x06 },
-	{ 0x3a0d, 0x08 },
-	{ 0x3a14, 0x01 },
-	{ 0x3a15, 0xec },
-	{ 0x4001, 0x02 },
-	{ 0x4004, 0x06 },
-	{ 0x460b, 0x37 },
-	{ 0x4750, 0x00 },
-	{ 0x4751, 0x00 },
-	{ 0x4800, 0x24 },
-	{ 0x5a00, 0x08 },
-	{ 0x5a21, 0x00 },
-	{ 0x5a24, 0x00 },
-	{ 0x5000, 0x27 },
-	{ 0x5001, 0x87 },
-	{ 0x3820, 0x40 },
-	{ 0x3821, 0x06 },
-	{ 0x3824, 0x01 },
-	{ 0x5481, 0x08 },
-	{ 0x5482, 0x14 },
-	{ 0x5483, 0x28 },
-	{ 0x5484, 0x51 },
-	{ 0x5485, 0x65 },
-	{ 0x5486, 0x71 },
-	{ 0x5487, 0x7d },
-	{ 0x5488, 0x87 },
-	{ 0x5489, 0x91 },
-	{ 0x548a, 0x9a },
-	{ 0x548b, 0xaa },
-	{ 0x548c, 0xb8 },
-	{ 0x548d, 0xcd },
-	{ 0x548e, 0xdd },
-	{ 0x548f, 0xea },
-	{ 0x5490, 0x1d },
-	{ 0x5381, 0x20 },
-	{ 0x5382, 0x64 },
-	{ 0x5383, 0x08 },
-	{ 0x5384, 0x20 },
-	{ 0x5385, 0x80 },
-	{ 0x5386, 0xa0 },
-	{ 0x5387, 0xa2 },
-	{ 0x5388, 0xa0 },
-	{ 0x5389, 0x02 },
-	{ 0x538a, 0x01 },
-	{ 0x538b, 0x98 },
-	{ 0x5300, 0x08 },
-	{ 0x5301, 0x30 },
-	{ 0x5302, 0x10 },
-	{ 0x5303, 0x00 },
-	{ 0x5304, 0x08 },
-	{ 0x5305, 0x30 },
-	{ 0x5306, 0x08 },
-	{ 0x5307, 0x16 },
-	{ 0x5580, 0x00 },
-	{ 0x5587, 0x00 },
-	{ 0x5588, 0x00 },
-	{ 0x5583, 0x40 },
-	{ 0x5584, 0x10 },
-	{ 0x5589, 0x10 },
-	{ 0x558a, 0x00 },
-	{ 0x558b, 0xf8 },
-	{ 0x3a0f, 0x36 },
-	{ 0x3a10, 0x2e },
-	{ 0x3a1b, 0x38 },
-	{ 0x3a1e, 0x2c },
-	{ 0x3a11, 0x70 },
-	{ 0x3a1f, 0x18 },
-	{ 0x3a18, 0x00 },
-	{ 0x3a19, 0xf8 },
-	{ 0x3003, 0x03 },
-	{ 0x3003, 0x01 },
+//System/IO pad Control
+    {0x3000,0x00},      //Resets
+    {0x3002,0x1c},
+    {0x3004,0xff},      //Clocks
+    {0x3006,0xc3},
+    {0x300e,0x25},      //MIPI Control  Single Lane       ********************
+//????
+    {0x302e,0x08},      //undocumented
+    {0x3612,0x4b},
+    {0x3618,0x04},
+    
+// MIPI CLK = 300Mbps 8-bit    
+    {0x3034,0x18},      //MIPI BIT_Mode 3:0
+    {0x3035,0x12},      //SystemClkDiv 7:4, /1=364Mhz  MIPI Sclk Div 3:0, /1=364Mhz
+    {0x3036,0x7c},      //PLL Mult 4~252 0:7  0x7C=124=806Mhz
+    {0x3037,0x12},      //PLL Pre-Div [0:3], /2=6.5Mhz   PLL Root Div [4] /1=806Mhz
+    {0x3108,0x01},      //SclkDiv [1:0] 1=/2  Sclk2*Div [3:2] 0=/1 PclkDiv [5:4]0=/1   [1,2,4,8]
+    
+    {0x303d,0x20},      //PreDivSp [5:4] /2=6.5Mhz 
+    {0x303b,0x20},      //DivCntsb [4:0] *35=195Mhz 
+
+//????
+    {0x3708,0x21},
+    {0x3709,0x12},
+    {0x370c,0x00},
+// Sensor Timing control
+    {0x3800,0x00},      //X start
+    {0x3801,0x00},
+    {0x3802,0x00},      //Y start
+    {0x3803,0x00},
+    {0x3804,0x0a},      //X end
+    {0x3805,0x3f},
+    {0x3806,0x07},      //Y end
+    {0x3807,0x9f},
+// Output size
+    {0x3808,0x0a},      //output X  2592
+    {0x3809,0x20},
+    {0x380a,0x07},      //output Y  1944
+    {0x380b,0x98},
+    {0x380c,0x0b},      //Total X  2844
+    {0x380d,0x1c},
+    {0x380e,0x07},      //Total Y  1968
+    {0x380f,0xb0},
+    {0x3810,0x00},      //ISP X offset = 16
+    {0x3811,0x10},
+    {0x3812,0x00},      //ISP Y offset = 6
+    {0x3813,0x06},
+    {0x3814,0x11},      //X incr
+    {0x3815,0x11},      //Y incr
+    {0x3820,0x40},      //vflip
+    {0x3821,0x06},      //mirror
+    {0x3824,0x01},      //Scale Divider [4:0]
+//AEC/AGC
+    {0x3a02,0x07},
+    {0x3a03,0xb0},
+    {0x3a08,0x01},
+    {0x3a09,0x27},
+    {0x3a0a,0x00},
+    {0x3a0b,0xf6},
+    {0x3a0e,0x06},
+    {0x3a0d,0x08},
+    {0x3a14,0x07},
+    {0x3a15,0xb0},
+//BLC Control
+    {0x4001,0x02},
+    {0x4004,0x06},
+//Format control
+    {0x4300,0x32},      //Output Format[7:4] Sequence[3:0]
+    {0x460b,0x37},      //???
+    {0x460c,0x20},      //DVP PCLK Control (PCLK auto)
+//JPG Control
+    {0x4713,0x02},      //JPG Mode Select
+    {0x4750,0x00},      //???
+    {0x4751,0x00},      //???
+//ISP Control
+    {0x5000,0x07},
+    {0x5001,0x03},
+    {0x501d,0x00},      //ISP Misc
+    {0x501f,0x00},      //ISP Format
+//AVG Control
+    {0x5684,0x10},
+    {0x5685,0xa0},
+    {0x5686,0x0c},
+    {0x5687,0x78},
+//???   
+    {0x5a00,0x08},
+    {0x5a21,0x00},
+    {0x5a24,0x00},
+//ISP Control
+    {0x5000,0x27},
+    {0x5001,0x83},
+
+    {0x3821,0x06},      //mirror
+//Gamma Control
+    {0x5481,0x08},
+    {0x5482,0x14},
+    {0x5483,0x28},
+    {0x5484,0x51},
+    {0x5485,0x65},
+    {0x5486,0x71},
+    {0x5487,0x7d},
+    {0x5488,0x87},
+    {0x5489,0x91},
+    {0x548a,0x9a},
+    {0x548b,0xaa},
+    {0x548c,0xb8},
+    {0x548d,0xcd},
+    {0x548e,0xdd},
+    {0x548f,0xea},
+    {0x5490,0x1d},
+//CMX Control
+    {0x5381,0x20},
+    {0x5382,0x64},
+    {0x5383,0x08},
+    {0x5384,0x20},
+    {0x5385,0x80},
+    {0x5386,0xa0},
+    {0x5387,0xa2},
+    {0x5388,0xa0},
+    {0x5389,0x02},
+    {0x538a,0x01},
+    {0x538b,0x98},
+//CIP Control
+    {0x5300,0x08},
+    {0x5301,0x30},
+    {0x5302,0x10},
+    {0x5303,0x00},
+    {0x5304,0x08},
+    {0x5305,0x30},
+    {0x5306,0x08},
+    {0x5307,0x16},
+//SDE Control
+    {0x5580,0x02},
+    {0x5583,0x40},
+    {0x5584,0x10},
+    {0x5589,0x10},
+    {0x558a,0x00},
+    {0x558b,0xf8},
+//AEC Controls
+    {0x3a0f,0x36},
+    {0x3a10,0x2e},
+    {0x3a1b,0x38},
+    {0x3a1e,0x2c},
+    {0x3a11,0x70},
+    {0x3a1f,0x18},
+    {0x3a18,0x00},      //Real Gain
+    {0x3a19,0xf8},
+//System Reset
+    {0x3003,0x03},
+    {0x3003,0x01},
+    {0x3503,0x00},
+    
+    {0x3008,0x42},      //stop sensor streaming
+
+   { 0xFFFF, 0x00 }
 };
 
 static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
@@ -271,14 +362,26 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.y_addr_end = 1951,
 		.h_output_size = 320,
 		.v_output_size = 240,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
 		.isp_h_offset = 16,
 		.isp_v_offset = 6,
+    #ifdef FPS_30_MODE		
+		.h_total_size = 2176,
+		.v_total_size = 1632,
+		.h_odd_ss_inc = 1,
+		.h_even_ss_inc = 3,
+		.v_odd_ss_inc = 1,
+		.v_even_ss_inc = 3,
+    #else		
+		.h_total_size = 2844,
+		.v_total_size = 1968,
 		.h_odd_ss_inc = 1,
 		.h_even_ss_inc = 1,
 		.v_odd_ss_inc = 1,
 		.v_even_ss_inc = 1,
+    #endif		
+    	.isp_scale_down = 0x23,
+    	.clk_dividers = 0x01,
+    	.mipi_lanes = 0x25,
 	},
 	[OV5640_SIZE_VGA] = {
 		.x_addr_start = 0,
@@ -287,6 +390,34 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.y_addr_end = 1951,
 		.h_output_size = 640,
 		.v_output_size = 480,
+		.isp_h_offset = 16,
+		.isp_v_offset = 6,
+    #ifdef FPS_30_MODE		
+		.h_total_size = 2176,
+		.v_total_size = 1632,
+		.h_odd_ss_inc = 1,
+		.h_even_ss_inc = 3,
+		.v_odd_ss_inc = 1,
+		.v_even_ss_inc = 3,
+    #else		
+		.h_total_size = 2844,
+		.v_total_size = 1968,
+		.h_odd_ss_inc = 1,
+		.h_even_ss_inc = 1,
+		.v_odd_ss_inc = 1,
+		.v_even_ss_inc = 1,
+    #endif		
+    	.isp_scale_down = 0x23,
+    	.clk_dividers = 0x01,
+    	.mipi_lanes = 0x25,
+	},
+	[OV5640_SIZE_XGA] = {
+		.x_addr_start = 0,
+		.y_addr_start = 0,
+		.x_addr_end = 2623,
+		.y_addr_end = 1951,
+		.h_output_size = 1024,
+		.v_output_size = 768,
 		.h_total_size = 2844,
 		.v_total_size = 1968,
 		.isp_h_offset = 16,
@@ -295,6 +426,9 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.h_even_ss_inc = 1,
 		.v_odd_ss_inc = 1,
 		.v_even_ss_inc = 1,
+    	.isp_scale_down = 0x23,
+    	.clk_dividers = 0x01,
+    	.mipi_lanes = 0x25,
 	},
 	[OV5640_SIZE_720P] = {
 		.x_addr_start = 336,
@@ -311,6 +445,28 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.h_even_ss_inc = 1,
 		.v_odd_ss_inc = 1,
 		.v_even_ss_inc = 1,
+    	.isp_scale_down = 0x23,
+    	.clk_dividers = 0x01,
+    	.mipi_lanes = 0x25,
+	},
+	[OV5640_SIZE_UXGA] = {
+		.x_addr_start = 0,
+		.y_addr_start = 0,
+		.x_addr_end = 2623,
+		.y_addr_end = 1951,
+		.h_output_size = 1600,
+		.v_output_size = 1200,
+		.h_total_size = 2844,
+		.v_total_size = 1968,
+		.isp_h_offset = 16,
+		.isp_v_offset = 6,
+		.h_odd_ss_inc = 1,
+		.h_even_ss_inc = 1,
+		.v_odd_ss_inc = 1,
+		.v_even_ss_inc = 1,
+    	.isp_scale_down = 0x23,
+    	.clk_dividers = 0x02,
+    	.mipi_lanes = 0x25,
 	},
 	[OV5640_SIZE_1080P] = {
 		.x_addr_start = 336,
@@ -327,6 +483,28 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.h_even_ss_inc = 1,
 		.v_odd_ss_inc = 1,
 		.v_even_ss_inc = 1,
+    	.isp_scale_down = 0x03,
+    	.clk_dividers = 0x02,
+    	.mipi_lanes = 0x25,
+	},
+	[OV5640_SIZE_QXGA] = {
+		.x_addr_start = 0,
+		.y_addr_start = 0,
+		.x_addr_end = 2623,
+		.y_addr_end = 1951,
+		.h_output_size = 2048,
+		.v_output_size = 1536,
+		.h_total_size = 2844,
+		.v_total_size = 1968,
+		.isp_h_offset = 16,
+		.isp_v_offset = 6,
+		.h_odd_ss_inc = 1,
+		.h_even_ss_inc = 1,
+		.v_odd_ss_inc = 1,
+		.v_even_ss_inc = 1,
+    	.isp_scale_down = 0x23,
+    	.clk_dividers = 0x02,
+    	.mipi_lanes = 0x25,
 	},
 	[OV5640_SIZE_5MP] = {
 		.x_addr_start = 0,
@@ -343,6 +521,9 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.h_even_ss_inc = 1,
 		.v_odd_ss_inc = 1,
 		.v_even_ss_inc = 1,
+    	.isp_scale_down = 0x03,
+    	.clk_dividers = 0x02,
+    	.mipi_lanes = 0x25,
 	},
 };
 #if 0
@@ -359,13 +540,31 @@ static struct v4l2_subdev_sensor_serial_parms mipi_cfgs[OV5640_SIZE_LAST] = {
 		.phy_rate = (336 * 2 * 1000000),
 		.pix_clk = 21, /* Revisit */
 	},
+	[OV5640_SIZE_XGA] = {
+		.lanes = 1,
+		.channel = 0,
+		.phy_rate = (336 * 2 * 1000000),
+		.pix_clk = 21, /* Revisit */
+	},
 	[OV5640_SIZE_1080P] = {
 		.lanes = 1,
 		.channel = 0,
 		.phy_rate = (336 * 2 * 1000000),
 		.pix_clk = 21, /* Revisit */
 	},
+	[OV5640_SIZE_UXGA] = {
+		.lanes = 1,
+		.channel = 0,
+		.phy_rate = (336 * 2 * 1000000),
+		.pix_clk = 21, /* Revisit */
+	},
 	[OV5640_SIZE_720P] = {
+		.lanes = 1,
+		.channel = 0,
+		.phy_rate = (336 * 2 * 1000000),
+		.pix_clk = 21, /* Revisit */
+	},
+	[OV5640_SIZE_QXGA] = {
 		.lanes = 1,
 		.channel = 0,
 		.phy_rate = (336 * 2 * 1000000),
@@ -487,17 +686,20 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
  * Returns zero if successful, or non-zero otherwise.
  */
 static int ov5640_reg_writes(struct i2c_client *client,
-			     const struct ov5640_reg reglist[],
-			     int size)
+			     const struct ov5640_reg reglist[])
 {
-	int err = 0, i;
+	int err = 0, index;
 
-	for (i = 0; i < size; i++) {
-		err = ov5640_reg_write(client, reglist[i].reg,
-				reglist[i].val);
-		if (err)
-			return err;
-	}
+    for (index=0; ((reglist[index].reg != 0xFFFF) && (err == 0)); index++)
+    {
+        err |= ov5640_reg_write( client, reglist[index].reg, reglist[index].val );
+    // Check for Pause condition
+        if ( (reglist[index+1].reg == 0xFFFF) && (reglist[index+1].val != 0) )
+        {
+            msleep(reglist[index+1].val);
+            index += 1;
+       }
+    }
 	return 0;
 }
 
@@ -661,6 +863,30 @@ static int ov5640_config_timing(struct i2c_client *client)
 			0x3815,
 			((timing_cfg[i].v_odd_ss_inc & 0xF) << 4) |
 			(timing_cfg[i].v_even_ss_inc & 0xF));
+			
+	ret = ov5640_reg_write(client,
+			0x3812,
+			(timing_cfg[i].isp_v_offset & 0xFF00) >> 8);
+	if (ret)
+		return ret;
+			
+	ret = ov5640_reg_write(client,
+			0x5001,
+			timing_cfg[i].isp_scale_down & 0xFF);
+	if (ret)
+		return ret;
+
+	ret = ov5640_reg_write(client,
+			0x3108,
+			timing_cfg[i].clk_dividers & 0xFF);
+	if (ret)
+		return ret;
+
+	ret = ov5640_reg_write(client,
+			0x300E,
+			timing_cfg[i].mipi_lanes & 0xFF);
+	if (ret)
+		return ret;
 
 	return ret;
 }
@@ -671,7 +897,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 	int ret = 0;
 
 	if (enable) {
-		ret = ov5640_reg_clr(client, 0x3008, 0x40);
+		ret = ov5640_reg_write(client, 0x3008, 0x02);
 		if (ret)
 			goto out;
 	} else {
@@ -750,7 +976,7 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
-	int ret;
+	int ret = 0;
 	u8 fmtreg = 0, fmtmuxreg = 0;
 
 	ret = ov5640_try_fmt(sd, mf);
@@ -775,6 +1001,11 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 		return ret;
 	}
 
+// Configure common settings
+	ret = ov5640_reg_writes(client, configscript_common1);
+	if (ret)
+		return ret;
+
 	ret = ov5640_reg_write(client, 0x4300, fmtreg);
 	if (ret)
 		return ret;
@@ -787,26 +1018,6 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 	if (ret)
 		return ret;
 
-	if ((ov5640->i_size == OV5640_SIZE_QVGA) ||
-	    (ov5640->i_size == OV5640_SIZE_VGA) ||
-	    (ov5640->i_size == OV5640_SIZE_720P)) {
-		ret = ov5640_reg_set(client, 0x5001, 0x20);
-		if (ret)
-			return ret;
-		ret = ov5640_reg_write(client, 0x3108,
-			(ov5640->i_size == OV5640_SIZE_720P) ? 0x1 : 0);
-	} else {
-		ret = ov5640_reg_clr(client, 0x5001, 0x20);
-		if (ret)
-			return ret;
-		ret = ov5640_reg_write(client, 0x3108, 0x2);
-	}
-
-	printk(KERN_ERR"%s:enabling test color pattern\n", __func__);
-	ret = ov5640_reg_write(client, 0x503d, 0x80);
-	if (ret)
-		printk("%s:error enabling color pattern\n", __func__);
-	
 	return ret;
 }
 
@@ -868,11 +1079,9 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return -EINVAL;
 
 		ov5640->brightness = ctrl->value;
-
 		ret = ov5640_reg_write(client, 0x5580, 0x04);
 		if (ret)
 			return ret;
-
 		switch(ov5640->brightness) {
 		case OV5640_BRIGHTNESS_MIN:
 			i_sde_ctrl7 = 0x40;
@@ -887,7 +1096,6 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			i_sde_ctrl8 = 0x00;
 		break;
 		}
-
 		ret = ov5640_reg_write(client, 0x5587, i_sde_ctrl7);
 		if (ret)
 			return ret;
@@ -895,7 +1103,6 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ret = ov5640_reg_write(client, 0x5588, i_sde_ctrl8);
 		if (ret)
 			return ret;
-
 		break;
 	case V4L2_CID_CONTRAST:
 
@@ -903,11 +1110,9 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return -EINVAL;
 
 		ov5640->contrast = ctrl->value;
-
 		ret = ov5640_reg_write(client, 0x5580, 0x04);
 		if (ret)
 			return ret;
-
 		switch(ov5640->contrast) {
 		case OV5640_CONTRAST_MIN:
 			i_sde_ctrl5 = 0x10;
@@ -937,7 +1142,6 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ret = ov5640_reg_write(client, 0x5588, i_sde_ctrl8);
 		if (ret)
 			return ret;
-
 		break;
 	case V4L2_CID_COLORFX:
 		if (ctrl->value > V4L2_COLORFX_NEGATIVE)
@@ -979,7 +1183,6 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ret = ov5640_reg_write(client, 0x5584, i_sde_ctrl4);
 		if (ret)
 			return ret;
-
 		break;
 	}
 
@@ -1035,36 +1238,13 @@ static int ov5640_init(struct i2c_client *client)
 	struct ov5640 *ov5640 = to_ov5640(client);
 	int ret = 0;
 
-	/* SW Reset */
-	ret = ov5640_reg_set(client, 0x3008, 0x80);
-	if (ret)
-		goto out;
-
-	msleep(2);
-
-	ret = ov5640_reg_clr(client, 0x3008, 0x80);
-	if (ret)
-		goto out;
-
-	/* SW Powerdown */
-	ret = ov5640_reg_set(client, 0x3008, 0x40);
-	if (ret)
-		goto out;
-
-	ret = ov5640_reg_writes(client, configscript_common1,
-			ARRAY_SIZE(configscript_common1));
-	if (ret)
-		goto out;
-
-	ret = ov5640_reg_writes(client, configscript_common2,
-			ARRAY_SIZE(configscript_common2));
+	ret = ov5640_reg_writes(client, configscript_common1);
 	if (ret)
 		goto out;
 
 	/* default brightness and contrast */
 	ov5640->brightness = OV5640_BRIGHTNESS_DEF;
 	ov5640->contrast = OV5640_CONTRAST_DEF;
-
 	ov5640->colorlevel = V4L2_COLORFX_NONE;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
@@ -1173,11 +1353,14 @@ static int ov5640_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 		cparm->timeperframe.numerator = 2;
 		cparm->timeperframe.denominator = 15;
 		break;
+	case OV5640_SIZE_QXGA:
 	case OV5640_SIZE_1080P:
+	case OV5640_SIZE_UXGA:
 		cparm->timeperframe.numerator = 1;
 		cparm->timeperframe.denominator = 15;
 		break;
 	case OV5640_SIZE_720P:
+	case OV5640_SIZE_XGA:
 	case OV5640_SIZE_VGA:
 	case OV5640_SIZE_QVGA:
 	default:
@@ -1207,11 +1390,11 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 	.g_parm = ov5640_g_parm,
 	.s_parm = ov5640_s_parm,
 };
-
 static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
-	*frames = 3;
+	*frames = 5;
+
 	return 0;
 }
 
@@ -1232,10 +1415,9 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 	return 0;
 }
 #endif
-
 static struct v4l2_subdev_sensor_ops ov5640_subdev_sensor_ops = {
 	.g_skip_frames	= ov5640_g_skip_frames,
-	//.g_interface_parms = ov5640_g_interface_parms,
+//	.g_interface_parms = ov5640_g_interface_parms,
 };
 
 static struct v4l2_subdev_ops ov5640_subdev_ops = {
