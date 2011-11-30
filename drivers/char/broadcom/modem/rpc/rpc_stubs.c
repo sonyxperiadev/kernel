@@ -162,11 +162,10 @@ void InitRingBuffer(void)
 
 int getNextWriteIndex(mRingBuffer_t *p)
 {
-	unsigned long       irql ;
 	int cur_wi;
 
 	InitRingBuffer();
-	spin_lock_irqsave( &mLogLock, irql ) ;
+	spin_lock( &mLogLock ) ;
 	if(p->wi == p->ri && p->isAvail)
 	{
 		p->ri = INC_INDEX(p->ri);
@@ -176,36 +175,34 @@ int getNextWriteIndex(mRingBuffer_t *p)
 	
 	p->wi = INC_INDEX(p->wi);
 	p->isAvail = 1;
-	spin_unlock_irqrestore( &mLogLock, irql ) ;    
+	spin_unlock( &mLogLock ) ;
 	return cur_wi;
 }
 
 int peekNextReadIndex(mRingBuffer_t *p)
 {
-	unsigned long       irql ;
 	int cur_ri;
 	InitRingBuffer();
-	spin_lock_irqsave( &mLogLock, irql ) ;
+	spin_lock( &mLogLock ) ;
 	if( p->ri == p->wi && p->isAvail == 0)
 	{
-		spin_unlock_irqrestore( &mLogLock, irql ) ;    
+		spin_unlock( &mLogLock ) ;
 		return -1;
 	}
 	cur_ri = p->ri;
-	spin_unlock_irqrestore( &mLogLock, irql ) ;    
+	spin_unlock( &mLogLock ) ;
 	return cur_ri;
 }
 
 int getNextReadIndex(mRingBuffer_t *p)
 {
-	unsigned long       irql ;
 	int cur_ri;
 
 	InitRingBuffer();
-	spin_lock_irqsave( &mLogLock, irql ) ;
+	spin_lock( &mLogLock ) ;
 	if( p->ri == p->wi && p->isAvail == 0)
 	{
-		spin_unlock_irqrestore( &mLogLock, irql ) ;    
+		spin_unlock( &mLogLock ) ;
 		return -1;
 	}
 	
@@ -217,7 +214,7 @@ int getNextReadIndex(mRingBuffer_t *p)
 	{
 		p->isAvail = 0;
 	}
-	spin_unlock_irqrestore( &mLogLock, irql ) ;    
+	spin_unlock( &mLogLock ) ;
 	return cur_ri;
 }
 

@@ -430,7 +430,6 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 
 RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType, UInt8 clientId, UInt8 channel, PACKET_BufHandle_t dataBufHandle, UInt16 msgId)
 {
-    unsigned long       irql ;
 	RpcCbkElement_t* elem;
 	RpcClientInfo_t *cInfo;
 	
@@ -465,9 +464,9 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType, UInt8 c
 	_DBG(RPC_TRACE("k:RPC_ServerDispatchMsg cInfo=%x h=0x%x cid=%d elem=%x msgId=%x\n", (int)cInfo, (int)dataBufHandle, clientId, (int)elem, (int)msgId));
 
     //add to queue
-    spin_lock_irqsave( &cInfo->mLock, irql ) ;
+    spin_lock( &cInfo->mLock ) ;
     list_add_tail(&elem->mList, &cInfo->mQ.mList); 
-    spin_unlock_irqrestore( &cInfo->mLock, irql ) ;    
+    spin_unlock( &cInfo->mLock ) ;
 	
     
 	gAvailData = 1;
@@ -549,7 +548,6 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel
 static unsigned int rpcipc_poll(struct file *filp, poll_table *wait)
 {
     UInt32 mask = 0;
-    unsigned long       irql ;
 	RpcClientInfo_t *cInfo;
     RpcIpc_PrivData_t *priv = filp->private_data;
     
@@ -572,15 +570,15 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table *wait)
    //_DBG(RPC_TRACE("k:rpcipc_poll() start client=%d\n", priv->clientId));
 
     //if data exist already, just return
-    spin_lock_irqsave(&cInfo->mLock, irql);
+    spin_lock(&cInfo->mLock);
     if (!list_empty(&cInfo->mQ.mList))
     {
         _DBG(RPC_TRACE("k:rpcipc_poll() precheck list not empty\n"));
         mask |= (POLLIN | POLLRDNORM);
-        spin_unlock_irqrestore(&cInfo->mLock, irql);
+        spin_unlock(&cInfo->mLock);
 		return mask;
     }
-    spin_unlock_irqrestore(&cInfo->mLock, irql);
+    spin_unlock(&cInfo->mLock);
 
     //wait till data is ready
    //_DBG(RPC_TRACE("k:rpcipc_poll() begin wait %x\n", (int)jiffies));
@@ -592,13 +590,13 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table *wait)
 
    //_DBG(RPC_TRACE("k:rpcipc_poll() end wait %x\n", (int)jiffies));
 
-    spin_lock_irqsave(&cInfo->mLock, irql);
+    spin_lock(&cInfo->mLock);
     if (!list_empty(&cInfo->mQ.mList))
     {
 		_DBG(RPC_TRACE("rpcipc_poll() list not empty\n"));
         mask |= (POLLIN | POLLRDNORM);
     }
-    spin_unlock_irqrestore(&cInfo->mLock, irql);
+    spin_unlock(&cInfo->mLock);
 
 	//_DBG(RPC_TRACE("k:rpcipc_poll() mask=%x avail=%d\n", (int)mask, (int)(mask & (POLLIN | POLLRDNORM))?1:0 ));
 
@@ -607,7 +605,6 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table *wait)
 
 static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd, UInt32 param )
 {
-    unsigned long       irql ;
 	RpcClientInfo_t *cInfo;
     rpc_pkt_avail_t ioc_param = { 0 };
     
@@ -624,9 +621,9 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd, UInt32 para
 		return -EINVAL;
 	}
 
-    spin_lock_irqsave(&cInfo->mLock, irql);
+    spin_lock(&cInfo->mLock);
 	ioc_param.isEmpty = (Boolean)list_empty(&cInfo->mQ.mList);
-    spin_unlock_irqrestore(&cInfo->mLock, irql);
+    spin_unlock(&cInfo->mLock);
 
     if(ioc_param.waitTime > 0 && ioc_param.isEmpty)
     {
@@ -640,9 +637,9 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd, UInt32 para
 
 		RPC_READ_LOCK;
 
-		spin_lock_irqsave(&cInfo->mLock, irql);
+		spin_lock(&cInfo->mLock);
 		ioc_param.isEmpty = (Boolean)list_empty(&cInfo->mQ.mList);
-		spin_unlock_irqrestore(&cInfo->mLock, irql);
+		spin_unlock(&cInfo->mLock);
     }
     
 	_DBG(RPC_TRACE("k:handle_pkt_poll_ioc clientId=%d empty=%d wait=%d\n", (int)ioc_param.clientId, (int)ioc_param.isEmpty, (int)ioc_param.waitTime));
@@ -663,7 +660,6 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd, UInt32
     struct list_head *entry;
     RpcCbkElement_t *Item = NULL;
 	RpcClientInfo_t *cInfo;
-    unsigned long       irql ;
   
     
     if (copy_from_user(&ioc_param, (rpc_pkt_rx_buf_t *)param, sizeof(rpc_pkt_rx_buf_t)) != 0)
@@ -684,12 +680,12 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd, UInt32
 
 
     /* Get one resp from the queue */
-    spin_lock_irqsave( &cInfo->mLock, irql ) ;
+    spin_lock( &cInfo->mLock ) ;
 
     if (list_empty(&cInfo->mQ.mList))
     {
         _DBG(RPC_TRACE( "k:handle_pkt_rx_buffer_ioc Q empty\n" ));
-        spin_unlock_irqrestore(&cInfo->mLock, irql);
+        spin_unlock(&cInfo->mLock);
         return -EAGAIN;
     }
 
@@ -710,7 +706,7 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd, UInt32
     list_del(entry);
     kfree(entry);
 
-    spin_unlock_irqrestore(&cInfo->mLock, irql);
+    spin_unlock(&cInfo->mLock);
 
     if (copy_to_user((rpc_pkt_rx_buf_t *)param, &ioc_param, sizeof(rpc_pkt_rx_buf_t)) != 0)
     {
@@ -1077,7 +1073,6 @@ static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 para
 static void RpcListCleanup(UInt8 clientId)
 {
     struct list_head *listptr, *pos;
-    unsigned long       irql ;
 	RpcClientInfo_t* cInfo;
 	RpcCbkElement_t *Item = NULL;
 
@@ -1085,7 +1080,7 @@ static void RpcListCleanup(UInt8 clientId)
 	if(!cInfo)
 		return;
 
-	spin_lock_irqsave( &cInfo->mLock, irql );
+	spin_lock( &cInfo->mLock );
 	list_for_each_safe(listptr, pos, &cInfo->mQ.mList)
 	{
 		Item = list_entry(listptr, RpcCbkElement_t, mList);
@@ -1098,7 +1093,7 @@ static void RpcListCleanup(UInt8 clientId)
 	gRpcClientList[clientId] = NULL;
 	gNumActiveClients--;
 
-	spin_unlock_irqrestore(&cInfo->mLock, irql);
+	spin_unlock(&cInfo->mLock);
 }
 
 static void RpcServerCleanup(void)

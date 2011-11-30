@@ -285,7 +285,6 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
 static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 {
     int retVal = 0;
-    unsigned long       irql ;
     
     ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl\n" )) ;
 
@@ -342,9 +341,9 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 newCmdQueueItem->mATCmd.fSimId = inAtCmd->fSimId;
 
                 //add to queue
-                spin_lock_irqsave( &sModule.mCmdLock, irql ) ;
+                spin_lock( &sModule.mCmdLock ) ;
                 list_add_tail(&newCmdQueueItem->mList, &sModule.mCmdQueue.mList); 
-                spin_unlock_irqrestore( &sModule.mCmdLock, irql ) ;
+                spin_unlock( &sModule.mCmdLock ) ;
 
                 schedule_work( &sModule.mCmdWorker) ;
 
@@ -367,11 +366,11 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                     break;
                 }
                 /* Get one resp from the queue */
-                spin_lock_irqsave( &sModule.mRespLock, irql ) ;
+                spin_lock( &sModule.mRespLock ) ;
                 if (list_empty(&sModule.mRespQueue.mList))
                 {
                     ATC_KERNEL_TRACE(("ERROR: AT Resp queue is empty \n"));
-                    spin_unlock_irqrestore(&sModule.mRespLock, irql);
+                    spin_unlock(&sModule.mRespLock);
                     retVal = -1;
                     break;
                 }
@@ -386,7 +385,7 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 if (copy_to_user(atRespU.buffPtr, respItem->mATResp.buffPtr, respItem->mATResp.dataLen) != 0)
                 {
                     ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl() - copy_to_user() had error\n" ));
-                    spin_unlock_irqrestore(&sModule.mRespLock, irql);
+                    spin_unlock(&sModule.mRespLock);
                     retVal = -1;
                     break;
                 }
@@ -394,7 +393,7 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 if (copy_to_user(arg,  &atRespU, sizeof(ATC_KERNEL_ATResp_t)) != 0)
                 {
                     ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl() - copy_to_user() had error\n" ));
-                    spin_unlock_irqrestore(&sModule.mRespLock, irql);
+                    spin_unlock(&sModule.mRespLock);
                     retVal = -1;
                     break;
                 }
@@ -403,7 +402,7 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 kfree(respItem->mATResp.buffPtr);
                 kfree(respItem);
 
-                spin_unlock_irqrestore(&sModule.mRespLock, irql);
+                spin_unlock(&sModule.mRespLock);
 				
                 break;
             }
@@ -446,7 +445,6 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 static unsigned int ATC_KERNEL_Poll(struct file *filp, poll_table *wait)
 {
     UInt32 mask = 0;
-    unsigned long       irql ;
 
     ATC_KERNEL_TRACE(("Enter ATC_KERNEL_Poll()"));
 
@@ -457,26 +455,26 @@ static unsigned int ATC_KERNEL_Poll(struct file *filp, poll_table *wait)
     }
 
     //if data exist already, just return
-    spin_lock_irqsave(&sModule.mRespLock, irql);
+    spin_lock(&sModule.mRespLock);
     if (!list_empty(&sModule.mRespQueue.mList))
     {
         ATC_KERNEL_TRACE(("ATC_KERNEL_Poll() list not empty\n"));
         mask |= (POLLIN | POLLRDNORM);
-        spin_unlock_irqrestore(&sModule.mRespLock, irql);
+        spin_unlock(&sModule.mRespLock);
 		return mask;
     }
-    spin_unlock_irqrestore(&sModule.mRespLock, irql);
+    spin_unlock(&sModule.mRespLock);
 
     //wait till data is ready
     poll_wait(filp, &sModule.mRespWaitQueue, wait);
 
-    spin_lock_irqsave(&sModule.mRespLock, irql);
+    spin_lock(&sModule.mRespLock);
     if (!list_empty(&sModule.mRespQueue.mList))
     {
 		ATC_KERNEL_TRACE(("ATC_KERNEL_Poll() list not empty\n"));
         mask |= (POLLIN | POLLRDNORM);
     }
-    spin_unlock_irqrestore(&sModule.mRespLock, irql);
+    spin_unlock(&sModule.mRespLock);
 
     ATC_KERNEL_TRACE(("Exit ATC_KERNEL_Poll()"));
 
@@ -697,7 +695,6 @@ static Result_t ATC_RegisterCPTerminal(UInt8 chan, Boolean unsolicited)
 static void ATC_AddRespToQueue(UInt8 chan, UInt32 msgId, void* atResp, UInt32 atRespLen)
 {
     AT_RespQueue_t* newRespQueueItem = NULL;
-    unsigned long       irql ;
 
     if( atResp == NULL )
     {
@@ -725,9 +722,9 @@ static void ATC_AddRespToQueue(UInt8 chan, UInt32 msgId, void* atResp, UInt32 at
     newRespQueueItem->mATResp.dataLen= atRespLen;
     memcpy((char*) newRespQueueItem->mATResp.buffPtr, atResp, atRespLen);
     //add to queue
-    spin_lock_irqsave( &sModule.mRespLock, irql ) ;
+    spin_lock( &sModule.mRespLock ) ;
     list_add_tail(&newRespQueueItem->mList, &sModule.mRespQueue.mList); 
-    spin_unlock_irqrestore( &sModule.mRespLock, irql ) ;    
+    spin_unlock( &sModule.mRespLock ) ;
     
     wake_up_interruptible(&sModule.mRespWaitQueue);
 }
@@ -740,7 +737,6 @@ static void ATC_AddRespToQueue(UInt8 chan, UInt32 msgId, void* atResp, UInt32 at
 static void ATC_Cleanup(void)
 {
     struct list_head *listptr, *pos;
-    unsigned long       irql ;
 
     //memory deallocate
     ATC_KERNEL_TRACE(( "ATC_Cleanup\n" ) );
@@ -750,7 +746,7 @@ static void ATC_Cleanup(void)
     sModule.mRPCHandle = 0;
     
 	//clean up cmd and resp list
-	spin_lock_irqsave( &sModule.mCmdLock, irql ) ;
+    spin_lock( &sModule.mCmdLock ) ;
     list_for_each_safe(listptr, pos, &sModule.mCmdQueue.mList)
     {
         AT_CmdQueue_t *cmdEntry = NULL;
@@ -759,11 +755,11 @@ static void ATC_Cleanup(void)
 		kfree(cmdEntry->mATCmd.fATCmdStr);
         kfree(cmdEntry);
     }
-	spin_unlock_irqrestore( &sModule.mRespLock, irql ) ;
+	spin_unlock( &sModule.mRespLock ) ;
 
 	
 	//clean up cmd and resp list
-	spin_lock_irqsave( &sModule.mRespLock, irql ) ;
+	spin_lock( &sModule.mRespLock ) ;
     list_for_each_safe(listptr, pos, &sModule.mRespQueue.mList)
     {
         AT_RespQueue_t *respEntry = NULL;
@@ -772,7 +768,7 @@ static void ATC_Cleanup(void)
 		kfree(respEntry->mATResp.buffPtr);
         kfree(respEntry);
     }
-	spin_unlock_irqrestore( &sModule.mRespLock, irql ) ;
+	spin_unlock( &sModule.mRespLock ) ;
 
 
     return;
@@ -789,30 +785,29 @@ static void ATC_Cleanup(void)
 static void ATC_KERNEL_CommandThread(struct work_struct *inCmdWorker)
 {
     struct list_head *listptr, *pos;
-    unsigned long       irql ;
 
     ATC_KERNEL_TRACE(("enter ATC_KERNEL_CommandThread()\n"));
 
-    spin_lock_irqsave( &sModule.mCmdLock, irql ) ;
+    spin_lock( &sModule.mCmdLock ) ;
 
     list_for_each_safe(listptr, pos, &sModule.mCmdQueue.mList)
     {
         AT_CmdQueue_t *cmdEntry = NULL;
         cmdEntry = list_entry(listptr, AT_CmdQueue_t, mList);
         ATC_KERNEL_TRACE(("entry at_cmd-%s Chan-%d\n", cmdEntry->mATCmd.fATCmdStr, cmdEntry->mATCmd.fChan));
-        spin_unlock_irqrestore( &sModule.mCmdLock, irql ) ;
+        spin_unlock( &sModule.mCmdLock ) ;
 
         //pass to capi2
         ATC_KERNEL_TRACE(("Sending to RPC \n"));
 
         ATC_SendRPCATCmd(cmdEntry->mATCmd.fChan, cmdEntry->mATCmd.fATCmdStr, cmdEntry->mATCmd.fSimId);
 
-        spin_lock_irqsave( &sModule.mCmdLock, irql ) ;
+        spin_lock( &sModule.mCmdLock ) ;
         list_del(listptr);
 		kfree(cmdEntry->mATCmd.fATCmdStr);
         kfree(cmdEntry);
     }
-    spin_unlock_irqrestore( &sModule.mCmdLock, irql ) ;
+    spin_unlock( &sModule.mCmdLock ) ;
     ATC_KERNEL_TRACE(("exit ATC_KERNEL_CommandThread()\n"));
 } 
 
