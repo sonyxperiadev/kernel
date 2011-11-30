@@ -15,7 +15,7 @@ MODULE_LICENSE ("GPL");
 
 static int dwc_common_port_init_module(void)
 {
-	printk( KERN_DEBUG "Module dwc_common_port init\n" );
+	pr_debug("Module dwc_common_port init\n" );
 #ifdef DEBUG_MEMORY
 	dwc_memory_debug_start();
 #endif
@@ -25,7 +25,7 @@ static int dwc_common_port_init_module(void)
 
 static void dwc_common_port_exit_module(void)
 {
-	printk( KERN_DEBUG "Module dwc_common_port exit\n" );
+	pr_debug("Module dwc_common_port exit\n" );
 	dwc_free_notification_manager();
 #ifdef DEBUG_MEMORY
 	dwc_memory_debug_stop();
@@ -464,7 +464,7 @@ int DWC_AES_CBC(uint8_t *message, uint32_t messagelen, uint8_t *key, uint32_t ke
 
 	tfm = crypto_alloc_blkcipher("cbc(aes)", 0, CRYPTO_ALG_ASYNC);
 	if (tfm == NULL) {
-		printk("failed to load transform for aes CBC\n");
+		pr_err("failed to load transform for aes CBC\n");
 		return -1;
 	}
 

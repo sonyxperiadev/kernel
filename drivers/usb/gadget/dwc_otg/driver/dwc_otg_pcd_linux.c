@@ -182,9 +182,9 @@ static int ep_enable(struct usb_ep *usb_ep,
 	/* Delete after check - MAS */
 #if 0
 	nat = (uint32_t) ep_desc->wMaxPacketSize;
-	printk(KERN_ALERT "%s: nat (before) =%d\n", __func__, nat);
+	pr_alert("%s: nat (before) =%d\n", __func__, nat);
 	nat = (nat >> 11) & 0x03;
-	printk(KERN_ALERT "%s: nat (after) =%d\n", __func__, nat);
+	pr_alert("%s: nat (after) =%d\n", __func__, nat);
 #endif
 	retval = dwc_otg_pcd_ep_enable(gadget_wrapper->pcd,
 				       (const uint8_t *)ep_desc,
