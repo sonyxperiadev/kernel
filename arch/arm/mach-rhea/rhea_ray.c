@@ -1254,8 +1254,6 @@ static int rhea_camera_power(struct device *dev, int on)
 	struct clk *clock;
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
-	struct clk *v3d_clk;
-
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -1279,12 +1277,6 @@ static int rhea_camera_power(struct device *dev, int on)
 		return -1;
 	}
 
-	v3d_clk = clk_get(NULL, "v3d_axi_clk");
-	if (!v3d_clk) {
-		printk("%s: error get clock\n", __func__);
-		return -1;
-	}
-
 	if (on) {
 
 		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_OPP_TURBO)) {
@@ -1298,11 +1290,6 @@ static int rhea_camera_power(struct device *dev, int on)
 			return -1;
 		}
 
-		value = clk_enable(v3d_clk);
-		if (value) {
-			printk(KERN_ERR "%s:failed to enable v3d clock\n", __func__);
-			return -1;
-		}
 		/* enable clk */
 		value = clk_enable(clock);
 		if (value) {
@@ -1344,8 +1331,6 @@ static int rhea_camera_power(struct device *dev, int on)
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 
 		clk_disable(clock);
-
-		clk_disable(v3d_clk);
 
 		clk_disable(axi_clk);
 
