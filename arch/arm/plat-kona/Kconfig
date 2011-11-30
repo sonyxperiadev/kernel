@@ -163,6 +163,11 @@ config KONA_ATAG_DT_DTS_FILE
        depends on KONA_ATAG_DT
        help
          DeviceTree source file name
+         
+config PROC_PINMUX_DUMP
+       bool "Enable Pin-mux Dump"
+       help
+         Say Y if you want to enable pin-mix dump
 
 endmenu
 
