@@ -547,9 +547,14 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 			printk(KERN_ERR"%s:%d #### CMA ALLOCATION FAILED #### with ret = %d for range(%08x-%08x)\n",
 					__func__, __LINE__, ret, __pfn_to_phys(pfn), __pfn_to_phys(pfn + count));
 
-			start_from = __ALIGN_MASK(pageno + count, ((1 << align) - 1));
+			/* Always retry from a new pageblock, that wasn't used before.
+			 * if we reach the end of region before running out of retries .. bad luck !
+			 */
+			start_from = ALIGN(pfn + count, MAX_ORDER_NR_PAGES);
 			if ((start_from + count) <= (cma->base_pfn + cma->count)) {
 				bitmap_clear(cma->bitmap, pageno, count);
+				/* Go back to the index withing CMA region */
+				start_from -= cma->base_pfn;
 				retries++;
 				printk(KERN_ERR"#### Retry(%u) with new start pfn/phys(%08lx/0x%08x) ####\n",
 						retries, cma->base_pfn + start_from, __pfn_to_phys(cma->base_pfn + start_from));
