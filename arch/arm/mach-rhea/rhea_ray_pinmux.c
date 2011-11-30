@@ -217,6 +217,11 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO93, SD1DAT1, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(GPIO94, SD1DAT2, 0, OFF, ON, 0, 0, 16MA),
 #endif
+
+#if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+	/* camera - setup DCLK1 */
+	PIN_CFG(DCLK1, DCLK1, 0, ON, OFF, 0, 0, 12MA),
+#endif
 };
 
 /* board level init */

@@ -313,6 +313,8 @@ CHAL_HANDLE chal_cam_init(cUInt32 baseAddr)
 cVoid chal_cam_deinit(CHAL_HANDLE handle)
 {
     chal_cam_t *pCamDevice = (chal_cam_t *)handle;
+    cUInt32 clk_base_addr;
+    clk_base_addr = HW_IO_PHYS_TO_VIRT(MM_CLK_BASE_ADDR);
 
     if (pCamDevice == NULL)
     {
@@ -322,6 +324,11 @@ cVoid chal_cam_deinit(CHAL_HANDLE handle)
     {
         pCamDevice->baseAddr = 0;
         pCamDevice->init = FALSE;
+		/* Disable clocks here */
+        BRCM_WRITE_REG(clk_base_addr,MM_CLK_MGR_REG_WR_ACCESS,0xA5A501); // enable access
+        BRCM_WRITE_REG(clk_base_addr,MM_CLK_MGR_REG_CSI0_LP_CLKGATE, 0x00000000);  // default value
+        BRCM_WRITE_REG(clk_base_addr,MM_CLK_MGR_REG_CSI0_AXI_CLKGATE, 0x0000000);  // ...
+
     }
 }
 
