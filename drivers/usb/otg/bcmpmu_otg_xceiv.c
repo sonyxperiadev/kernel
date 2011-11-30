@@ -190,11 +190,10 @@ static int bcmpmu_otg_xceiv_id_chg_notif_handler(struct notifier_block *nb, unsi
 		container_of(nb, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_id_chg_notifier);
 
-	dev_info(xceiv_data->dev, "ID change detected\n");
-
-	if (xceiv_data)
+	if (xceiv_data) {
+		dev_info(xceiv_data->dev, "ID change detected\n");
 		queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_id_status_change_work);
-	else
+	} else
 		return -EINVAL;
 
 	return 0;
