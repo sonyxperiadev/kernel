@@ -42,7 +42,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/moduleparam.h>
 #include <linux/sched.h>
 #include <linux/kernel.h>
-
+#include <linux/printk.h>
 
 #include <sound/core.h>
 #include <sound/control.h>
@@ -62,13 +62,25 @@ the GPL, without Broadcom's express prior written consent.
 #endif
 
 #if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
-//#if 1
-void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
-#define BCM_AUDIO_DEBUG(format, args...) \
-	_bcm_snd_printk(2, __FILE__, __LINE__, format, ##args)
-
-#define DEBUG(format, args...) \
-	_bcm_snd_printk(2, __FILE__, __LINE__, format, ##args)
+//variables
+extern int gAudioDebugLevel;
+// use pr_debug for dynamic kernel logging
+//void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
+#define BCM_AUDIO_DEBUG(format, args...) \ 
+		 do { \
+			if(!(gAudioDebugLevel & 2)) \
+			  break;\
+			pr_info(pr_fmt(format), ##args);\
+		  } while(0)
+//	_bcm_snd_printk(2, __FILE__, __LINE__, format, ##args)
+ 
+#define DEBUG(format, args...) \ 
+	  do { \
+		if(!(gAudioDebugLevel & 2)) \
+		  break;\
+		pr_info(pr_fmt(format), ##args);\
+	  } while(0)
+//_bcm_snd_printk(2, __FILE__, __LINE__, format, ##args)
 
 #else
 #define BCM_AUDIO_DEBUG(format, args...)	do { } while (0)
@@ -255,9 +267,6 @@ enum {
 #define	FUNC_OF_CTL(private)		((private)&0xFF)
 
 
-
-//variables
-extern int gAudioDebugLevel;
 
 //functions
 extern int __devinit PcmDeviceNew(struct snd_card *card);

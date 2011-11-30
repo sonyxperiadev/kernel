@@ -1355,7 +1355,7 @@ void caphassert(const char *fcn, int line, const char *expr)
 //	else
 	{
 		int x;
-		printk(KERN_ERR "ASSERTION FAILED, %s:%s:%d %s\n",
+		pr_err("ASSERTION FAILED, %s:%s:%d %s\n",
 		       __FILE__, fcn, line, expr);
 		x = * (volatile int *) 0; /* force proc to exit */
 	}

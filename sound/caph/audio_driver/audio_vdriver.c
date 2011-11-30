@@ -345,14 +345,14 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 	// in case it was muted from last voice call, need to un-mute it.
 	if (bDuringTelephonySwitchMicSpkr == FALSE)
 	{
-		//printk("UnMute\r\n");
+		//pr_info("UnMute\r\n");
 		bmuteVoiceCall = FALSE;
 	}
 
-	//printk("bmuteVoiceCall = %d \r\n", bmuteVoiceCall);
+	//pr_info("bmuteVoiceCall = %d \r\n", bmuteVoiceCall);
 	if (bmuteVoiceCall == FALSE)
 	{
-		//printk("UnMute\r\n");
+		//pr_info("UnMute\r\n");
 		audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
 	}
 
@@ -1449,7 +1449,7 @@ void AUDDRV_SetTelephonySpkrVolume(
 void AUDDRV_Telephony_MuteMic (AUDIO_SOURCE_Enum_t mic)
 {
 	bmuteVoiceCall = TRUE;
-	//printk(" bmuteVoiceCall = TRUE\r\n");
+	//pr_info(" bmuteVoiceCall = TRUE\r\n");
 	audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 }
 
@@ -1464,7 +1464,7 @@ void AUDDRV_Telephony_MuteMic (AUDIO_SOURCE_Enum_t mic)
 void AUDDRV_Telephony_UnmuteMic (AUDIO_SOURCE_Enum_t mic)
 {
 	bmuteVoiceCall = FALSE;
-	//printk(" bmuteVoiceCall = FALSE\r\n");
+	//pr_info(" bmuteVoiceCall = FALSE\r\n");
 	audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
 }
 

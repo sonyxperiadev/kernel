@@ -39,7 +39,7 @@
 #include <linux/string.h>
 #include <linux/delay.h>
 #include <linux/jiffies.h>
-
+#include <linux/printk.h>
 
 //#define Log_DebugPrintf dprintf
 
@@ -49,9 +49,14 @@
 //#if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
 #if 1
 #define _DBG_(a) a
-void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
+extern int gAudioDebugLevel;
+//void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
 #define Log_DebugPrintf(logID, format, args...) \
-	_bcm_snd_printk(1, __FILE__, __LINE__, format, ##args)
+		 do { \
+			if(!(gAudioDebugLevel & 1)) \
+			  break;\
+			pr_info(pr_fmt(format), ##args);\
+		  } while(0)
 
 #else
 #define _DBG_(a)

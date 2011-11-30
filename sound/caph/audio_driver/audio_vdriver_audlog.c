@@ -145,7 +145,7 @@ Result_t AUDDRV_AudLog_Init( void  )
             pr_info("Couldn't get proper page boundry , may be issue for page swapping to user space \n");
             return -1;
         }
-		//printk(KERN_ALERT "Setup bcmlog_stream_area = %x\n",bcmlog_stream_area);
+		//pr_alert( "Setup bcmlog_stream_area = %x\n",bcmlog_stream_area);
 
         for (n = 0; n < (2*PAGE_SIZE); n+=PAGE_SIZE)            {
             // reserve all pages to make them remapable
@@ -230,7 +230,7 @@ Result_t AUDDRV_AudLog_Shutdown( void )
 	 UInt16 *local_bcmlogptr = bcmlog_stream_ptr;
 	 // Use local pointer to free so it wouldnt disturb ISR activities
         bcmlog_stream_ptr = NULL;
-	//printk(KERN_ALERT "AUDDRV_AudLog_Shutdown\n");
+	//pr_alert( "AUDDRV_AudLog_Shutdown\n");
 	if ( sLogInfo.log_consumer[0] == LOG_TO_FLASH
 		|| sLogInfo.log_consumer[1] == LOG_TO_FLASH
 		|| sLogInfo.log_consumer[2] == LOG_TO_FLASH
@@ -286,7 +286,7 @@ Result_t AUDDRV_AudLog_Start (
 	loggingbuf = (UInt8 *)kmalloc(LOG_WB_SIZE,GFP_KERNEL); //max frame size
 	if(loggingbuf == NULL)
 	{
-		printk(KERN_ERR "AUDDRV_AudLog_Start : not able to allocate memory for the logging data \n");
+		pr_err( "AUDDRV_AudLog_Start : not able to allocate memory for the logging data \n");
 		return RESULT_LOW_MEMORY; 
 	}
 	

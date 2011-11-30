@@ -36,6 +36,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/delay.h>
 #include <linux/moduleparam.h>
 #include <linux/sched.h>
+#include <linux/printk.h>
 
 #include <sound/core.h>
 #include <sound/control.h>
@@ -72,22 +73,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "audio_pmu_adapt.h"
 
-
-#if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
-void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...)
-{
-	va_list args;
-
-	if(!(gAudioDebugLevel & level))
-	{
-//		printk("gAudioDebugLevel=%d level=%d\n", gAudioDebugLevel, level);
-		return;
-	}
-	va_start(args, format);
-	vprintk(format, args);
-	va_end(args);
-}
-#endif
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //Description:
@@ -470,7 +455,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain1 &= (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_GAINCTRL_MASK);
             gain1 >>= (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_GAINCTRL_SHIFT);
 
-            printk(" AUDIOH_AUDIORX_VRX1=0x%x, AMIC_PGA=0x%x \n", value, gain1 );
+            pr_err(" AUDIOH_AUDIORX_VRX1=0x%x, AMIC_PGA=0x%x \n", value, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (AUDIOH_BASE_ADDR + AUDIOH_VIN_FILTER_CTRL_OFFSET), sizeof(UInt32));
 			if(!address)
@@ -499,9 +484,9 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain4 &= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_MASK);
             gain4 >>= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_SHIFT);
 
-            printk(" AUDIOH_VIN_FILTER_CTRL=0x%x \n", value );
-            printk("DMIC1_CIC_BIT_SEL=0x%x, DMIC1_CIC_FINE=0x%x \n", gain1, gain2 );
-            printk("DMIC2_CIC_BIT_SEL=0x%x, DMIC2_CIC_FINE_SCL=0x%x \n", gain3, gain4 );
+            pr_err(" AUDIOH_VIN_FILTER_CTRL=0x%x \n", value );
+            pr_err("DMIC1_CIC_BIT_SEL=0x%x, DMIC1_CIC_FINE=0x%x \n", gain1, gain2 );
+            pr_err("DMIC2_CIC_BIT_SEL=0x%x, DMIC2_CIC_FINE_SCL=0x%x \n", gain3, gain4 );
 
 
 			address = (char*)ioremap_nocache((UInt32) (AUDIOH_BASE_ADDR + AUDIOH_NVIN_FILTER_CTRL_OFFSET), sizeof(UInt32));
@@ -531,9 +516,9 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain4 &= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_MASK);
             gain4 >>= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_SHIFT);
 
-            printk(" AUDIOH_VIN_FILTER_CTRL=0x%x \n", value );
-            printk("DMIC3_CIC_BIT_SEL=0x%x, DMIC3_CIC_FINE=0x%x \n", gain1, gain2 );
-            printk("DMIC4_CIC_BIT_SEL=0x%x, DMIC4_CIC_FINE_SCL=0x%x \n", gain3, gain4 );
+            pr_err(" AUDIOH_VIN_FILTER_CTRL=0x%x \n", value );
+            pr_err("DMIC3_CIC_BIT_SEL=0x%x, DMIC3_CIC_FINE=0x%x \n", gain1, gain2 );
+            pr_err("DMIC4_CIC_BIT_SEL=0x%x, DMIC4_CIC_FINE_SCL=0x%x \n", gain3, gain4 );
 
 			//**********
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_OFFSET), sizeof(UInt32));
@@ -553,7 +538,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D0, channel 1, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D0, channel 1, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -567,7 +552,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D0, channel 2, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D0, channel 2, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D0_CH3M_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -581,7 +566,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D0, channel 3, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D0, channel 3, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D0_CH4M_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -595,7 +580,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D0, channel 4, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D0, channel 4, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D0_CH5L_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -609,7 +594,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D0, channel 5 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D0, channel 5 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D0_CH5R_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -623,7 +608,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D0, channel 5 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D0, channel 5 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D0_CH6L_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -637,7 +622,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D0, channel 6 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D0, channel 6 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D0_CH6R_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -651,7 +636,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D0, channel 6 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D0, channel 6 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D0_CH7L_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -665,7 +650,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D0, channel 7 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D0, channel 7 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D0_CH7R_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -679,7 +664,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D0, channel 7 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D0, channel 7 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			//**********
             address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D1_CH1M_GAIN_CTRL_OFFSET), sizeof(UInt32));
@@ -694,7 +679,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D1, channel 1, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D1, channel 1, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D1_CH2M_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -708,7 +693,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D1, channel 2, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D1, channel 2, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D1_CH3M_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -722,7 +707,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D1, channel 3, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D1, channel 3, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D1_CH4M_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -736,7 +721,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D1, channel 4, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D1, channel 4, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D1_CH5L_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -750,7 +735,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D1, channel 5 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D1, channel 5 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D1_CH5R_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -764,7 +749,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D1, channel 5 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D1, channel 5 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D1_CH6L_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -778,7 +763,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D1, channel 6 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D1, channel 6 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D1_CH6R_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -792,7 +777,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D1, channel 6 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D1, channel 6 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D1_CH7L_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -806,7 +791,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D1, channel 7 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D1, channel 7 left, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + SRCMIXER_SRC_M1D1_CH7R_GAIN_CTRL_OFFSET), sizeof(UInt32));
 			value = ioread32(address);
@@ -820,7 +805,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             gain2 &= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
             gain2 >>= (SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
 
-            printk("MIXER 1 D1, channel 7 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
+            pr_err("MIXER 1 D1, channel 7 right, Target_Gain=0x%x, Gain_RampStep=0x%x \n", gain2, gain1 );
 
 			//**********
 			for ( index = 0x00000160; index <= 0x00000270; index=index+4 )
@@ -828,7 +813,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			    address = (char*)ioremap_nocache((UInt32) (SRCMIXER_BASE_ADDR + index), sizeof(UInt32));
 			    value = ioread32(address);
 			    iounmap(address);
-                printk("SRCMIXER_BASE_ADDR + offset 0x%x, value = 0x%x \n", index, value );
+                pr_err("SRCMIXER_BASE_ADDR + offset 0x%x, value = 0x%x \n", index, value );
 			}
 
         }
@@ -850,7 +835,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 				return 0;
 			}
 
-			printk("Read phy_addr 0x%08x (virtual %p), size = 0x%08x bytes\n", phy_addr, addr, size<<2);
+			pr_err("Read phy_addr 0x%08x (virtual %p), size = 0x%08x bytes\n", phy_addr, addr, size<<2);
 			iounmap(addr);
 
 			for ( index = 0; index < size; index++ )
@@ -860,7 +845,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 				{
 					value = ioread32(addr);
 					iounmap(addr);
-					printk("[%08x] = %08x\n", phy_addr, value);
+					pr_err("[%08x] = %08x\n", phy_addr, value);
 				}
 				phy_addr += 4;
 			}

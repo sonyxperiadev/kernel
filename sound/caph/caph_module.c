@@ -102,7 +102,7 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	struct snd_card *card;
 	int err;
 	
-	printk(KERN_INFO "ALSA:In Driver Probe:\n");
+	pr_info("ALSA:In Driver Probe:\n");
 	
 	BCM_AUDIO_DEBUG("\n %lx:DriverProbe \n",jiffies);
 		

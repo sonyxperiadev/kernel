@@ -151,9 +151,9 @@ static void AudDrv_VOIP_DumpUL_CB (void *pPrivate, u8	*pSrc, u32 nSize)
 	UInt32 copied = 0;
 
 	copied = AUDQUE_Write (sVtQueue, pSrc, nSize);
-	printk(KERN_INFO  "\n AudDrv_VOIP_DumpUL_CB UL ready, size = 0x%x, copied = 0x%lx\n",  nSize, copied);
+	pr_info("\n AudDrv_VOIP_DumpUL_CB UL ready, size = 0x%x, copied = 0x%lx\n",  nSize, copied);
 	OSSEMAPHORE_Release (sVtQueue_Sema);
-	printk(KERN_INFO  "\n AudDrv_VOIP_DumpUL_CB UL done \n");
+	pr_info(  "\n AudDrv_VOIP_DumpUL_CB UL done \n");
 }
 
 static void AudDrv_VOIP_FillDL_CB(void *pPrivate, u8 *pDst, u32 nSize)
@@ -161,7 +161,7 @@ static void AudDrv_VOIP_FillDL_CB(void *pPrivate, u8 *pDst, u32 nSize)
 	UInt32 copied = 0;
 
 	copied = AUDQUE_Read (sVtQueue, pDst, nSize);
-	printk(KERN_INFO "\n VOIP_FillDL_CB DL ready, size =0x%x, copied = 0x%lx\n", nSize, copied);
+	pr_info( "\n VOIP_FillDL_CB DL ready, size =0x%x, copied = 0x%lx\n", nSize, copied);
 
     OSSEMAPHORE_Release (AUDDRV_BufDoneSema);
 }
@@ -201,12 +201,12 @@ ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev, struct device_attribute 
 	if(5!= sscanf(buf, "%d %d %d %d %d",&sgBrcm_auddrv_TestValues[0], &sgBrcm_auddrv_TestValues[1], &sgBrcm_auddrv_TestValues[2], &sgBrcm_auddrv_TestValues[3],&sgBrcm_auddrv_TestValues[4]))
 	{
 
-		DEBUG("\n<-Brcm_AudDrv_test SysFS Handler: test type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d \n", sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]],
+		BCM_AUDIO_DEBUG("\n<-Brcm_AudDrv_test SysFS Handler: test type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d \n", sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]],
 											sgBrcm_auddrv_TestValues[1],
 											sgBrcm_auddrv_TestValues[2],
 											sgBrcm_auddrv_TestValues[3],
                                                                              sgBrcm_auddrv_TestValues[4]);
-		DEBUG("error reading buf=%s count=%d\n", buf, count);
+		BCM_AUDIO_DEBUG("error reading buf=%s count=%d\n", buf, count);
 		return count;
 	}
 
@@ -214,7 +214,7 @@ ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev, struct device_attribute 
 	{
 	case 1: //Aud_play
         {
-              DEBUG("I am in case 1 (Aud_play) -- test type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d \n", sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]-1],
+              BCM_AUDIO_DEBUG("I am in case 1 (Aud_play) -- test type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d \n", sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]-1],
 											sgBrcm_auddrv_TestValues[1],
 											sgBrcm_auddrv_TestValues[2],
 											sgBrcm_auddrv_TestValues[3],
@@ -224,7 +224,7 @@ ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev, struct device_attribute 
         }
        case 2: //Aud_rec
         {
-              DEBUG("I am in case 2 (Aud_Rec) -- test type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d \n", sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]-1],
+              BCM_AUDIO_DEBUG("I am in case 2 (Aud_Rec) -- test type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d \n", sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]-1],
 											sgBrcm_auddrv_TestValues[1],
 											sgBrcm_auddrv_TestValues[2],
 											sgBrcm_auddrv_TestValues[3],
@@ -234,7 +234,7 @@ ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev, struct device_attribute 
         }
        case 3: //Aud_control
         {
-             DEBUG("I am in case 3 (Aud_Control) -- test type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d \n", sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]-1],
+             BCM_AUDIO_DEBUG("I am in case 3 (Aud_Control) -- test type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d \n", sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]-1],
 											sgBrcm_auddrv_TestValues[1],
 											sgBrcm_auddrv_TestValues[2],
 											sgBrcm_auddrv_TestValues[3],
@@ -243,7 +243,7 @@ ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev, struct device_attribute 
              break;
         }
       default:
-             DEBUG(" I am in Default case\n");
+             BCM_AUDIO_DEBUG(" I am in Default case\n");
 	}
 	return count;
 }
@@ -253,7 +253,7 @@ int BrcmCreateAuddrv_testSysFs(struct snd_card *card)
 	int ret = 0;
 	//create sysfs file for Aud Driver test control
 	ret = snd_add_device_sysfs_file(SNDRV_DEVICE_TYPE_CONTROL,card,-1,&Brcm_auddrv_Test_attrib);
-	//	DEBUG("BrcmCreateControlSysFs ret=%d", ret);
+	//	BCM_AUDIO_DEBUG("BrcmCreateControlSysFs ret=%d", ret);
 	return ret;
 }
 
@@ -268,9 +268,9 @@ static int HandleControlCommand()
     {
         case 1:// Initialize the audio controller
         {
-            DEBUG(" Audio Controller Init\n");
+            BCM_AUDIO_DEBUG(" Audio Controller Init\n");
             AUDCTRL_Init ();
-            DEBUG(" Audio Controller Init Complete\n");
+            BCM_AUDIO_DEBUG(" Audio Controller Init Complete\n");
         }
         break;
         case 2:// Start Hw loopback
@@ -278,13 +278,13 @@ static int HandleControlCommand()
 			Boolean onOff = sgBrcm_auddrv_TestValues[2];
             mic = sgBrcm_auddrv_TestValues[3];
 			spkr = sgBrcm_auddrv_TestValues[4];
-			DEBUG(" Audio Loopback onOff = %d, from %d to %d\n", onOff, mic, spkr);
+			BCM_AUDIO_DEBUG(" Audio Loopback onOff = %d, from %d to %d\n", onOff, mic, spkr);
             AUDCTRL_SetAudioLoopback(onOff,mic,spkr);
         }
         break;
         case 3:// Dump registers
         {
-            DEBUG(" Dump registers\n");
+            BCM_AUDIO_DEBUG(" Dump registers\n");
             //dump_audio_registers();
 			{
 				char *MsgBuf =  NULL;
@@ -306,7 +306,7 @@ static int HandleControlCommand()
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x34000a40)))
 										);
 
-				DEBUG(MsgBuf);
+				BCM_AUDIO_DEBUG("%s",MsgBuf);
 
 				sprintf( MsgBuf, "0x3502f000 =0x%08lx, 04 =0x%08lx, 08 =0x%08lx, 0c =0x%08lx, 10 =0x%08lx, 14 =0x%08lx, 18 =0x%08lx, 1c =0x%08lx, 20 =0x%08lx, 24 =0x%08lx, 28 =0x%08lx, 2c =0x%08lx, 30 =0x%08lx, 34 =0x%08lx, 38 =0x%08lx, 3c =0x%08lx, 40 =0x%08lx, 44 =0x%08lx, 48 =0x%08lx, 4c =0x%08lx,50 =0x%08lx, 54 =0x%08lx, 58 =0x%08lx, 5c =0x%08lx \n",
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502f000))),
@@ -335,28 +335,28 @@ static int HandleControlCommand()
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502f05c)))
 										);
 
-				DEBUG(MsgBuf);
+				BCM_AUDIO_DEBUG("%s",MsgBuf);
 
 				kfree(MsgBuf);
 				AUDCTRL_ControlHWClock(FALSE);
 			}
-            DEBUG(" Dump registers done \n");
+            BCM_AUDIO_DEBUG(" Dump registers done \n");
         }
         break;
 
         case 4:// Enable telephony
         {
-            DEBUG(" Enable telephony\n");
+            BCM_AUDIO_DEBUG(" Enable telephony\n");
             AUDCTRL_EnableTelephony(AUDIO_SOURCE_ANALOG_MAIN,AUDIO_SINK_HANDSET);
 
-            DEBUG(" Telephony enabled \n");
+            BCM_AUDIO_DEBUG(" Telephony enabled \n");
         }
         break;
         case 5:// Disable telephony
         {
-            DEBUG(" Disable telephony\n");
+            BCM_AUDIO_DEBUG(" Disable telephony\n");
             AUDCTRL_DisableTelephony( );
-		            DEBUG(" Telephony disabled \n");
+		            BCM_AUDIO_DEBUG(" Telephony disabled \n");
         }
 		break;
 #ifdef CONFIG_VOIP_DRIVER_TEST
@@ -375,10 +375,10 @@ static int HandleControlCommand()
         {
 			UInt32 regAddr = sgBrcm_auddrv_TestValues[2];
 			UInt32 regVal = 0;
-			DEBUG(" peek a register, 0x%08lx\n", regAddr);
+			BCM_AUDIO_DEBUG(" peek a register, 0x%08lx\n", regAddr);
 			AUDCTRL_ControlHWClock(TRUE);
 			regVal = *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)));
-            DEBUG("		value = 0x%08lx\n",regVal );
+            BCM_AUDIO_DEBUG("		value = 0x%08lx\n",regVal );
 			AUDCTRL_ControlHWClock(FALSE);
 		}
 		break;
@@ -389,7 +389,7 @@ static int HandleControlCommand()
 			UInt32 regVal = sgBrcm_auddrv_TestValues[3];
 			AUDCTRL_ControlHWClock(TRUE);
 			*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))) = regVal;
-            DEBUG(" poke a register, 0x%08lx = 0x%08lx\n", regAddr, *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))));
+            BCM_AUDIO_DEBUG(" poke a register, 0x%08lx = 0x%08lx\n", regAddr, *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))));
 			AUDCTRL_ControlHWClock(FALSE);
 		}
 		break;
@@ -401,7 +401,7 @@ static int HandleControlCommand()
 
             UInt32 regVal;
 
-            DEBUG(" hard code caph clock register for debugging..\n");
+            BCM_AUDIO_DEBUG(" hard code caph clock register for debugging..\n");
 			AUDCTRL_ControlHWClock(TRUE);
 			regVal = (0x00A5A5 << KHUB_CLK_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
             regVal |= KHUB_CLK_MGR_REG_WR_ACCESS_CLKMGR_ACC_MASK;
@@ -511,7 +511,7 @@ static int HandleControlCommand()
         {
 			Boolean onOff = sgBrcm_auddrv_TestValues[2];
 			AudioMode_t audMode = AUDIO_MODE_HANDSET;
-            DEBUG(" VoIF test.\n");
+            BCM_AUDIO_DEBUG(" VoIF test.\n");
 
 			if (onOff)
 			{
@@ -528,7 +528,7 @@ static int HandleControlCommand()
 #endif
 
         default:
-            DEBUG(" Invalid Control Command\n");
+            BCM_AUDIO_DEBUG(" Invalid Control Command\n");
     }
 	return 0;
 }
@@ -560,9 +560,9 @@ static int HandlePlayCommand()
     {
         case 1://open the plyabck device
         {
-            DEBUG(" Audio DDRIVER Open\n");
+            BCM_AUDIO_DEBUG(" Audio DDRIVER Open\n");
             drv_handle = AUDIO_DRIVER_Open(AUDIO_DRIVER_PLAY_AUDIO);
-            DEBUG(" Audio DDRIVER Open Complete\n");
+            BCM_AUDIO_DEBUG(" Audio DDRIVER Open Complete\n");
         }
         break;
 	case 2:
@@ -572,12 +572,12 @@ static int HandlePlayCommand()
             {
             	if(sgBrcm_auddrv_TestValues[3] == 0) // default
 		{
-                	DEBUG(" Playback of pre-defined sample 48KHz Mono\n");
+                	BCM_AUDIO_DEBUG(" Playback of pre-defined sample 48KHz Mono\n");
                 	samplePCM16_inaudiotest = (char *)playback_audiotest;
 		}
 		else if(sgBrcm_auddrv_TestValues[3] == 1)
 		{
-                	DEBUG(" Playback of pre-defined sample 8KHz Mono : use HW SRC mixer\n");
+                	BCM_AUDIO_DEBUG(" Playback of pre-defined sample 8KHz Mono : use HW SRC mixer\n");
                 	samplePCM16_inaudiotest = (char *)playback_audiotest_srcmixer;
 			src_used = 1;
 		}
@@ -587,18 +587,18 @@ static int HandlePlayCommand()
             {
                 if(record_test_buf != NULL)
                 {
-                	DEBUG(" Playback of recorded data\n");
+                	BCM_AUDIO_DEBUG(" Playback of recorded data\n");
 		        samplePCM16_inaudiotest = (char *)record_test_buf;
                 }
 		else
-                        DEBUG(" record buffer freed: record data to play\n");
+                        BCM_AUDIO_DEBUG(" record buffer freed: record data to play\n");
             }
 
 	}
 	break;
 	case 3:
         {
-            DEBUG(" Audio DDRIVER Config\n");
+            BCM_AUDIO_DEBUG(" Audio DDRIVER Config\n");
             //set the callback
             //AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)AUDIO_DRIVER_TEST_InterruptPeriodCB);
 	    cbParams.pfCallBack = AUDIO_DRIVER_TEST_InterruptPeriodCB;
@@ -620,7 +620,7 @@ static int HandlePlayCommand()
             if(sgBrcm_auddrv_TestValues[3] != 0)
                 drv_config.num_channel = sgBrcm_auddrv_TestValues[3];
 
-            DEBUG("Config:sr=%ld nc=%d bs=%ld \n",drv_config.sample_rate,drv_config.num_channel,drv_config.bits_per_sample);
+            BCM_AUDIO_DEBUG("Config:sr=%ld nc=%d bs=%ld \n",drv_config.sample_rate,drv_config.num_channel,drv_config.bits_per_sample);
 
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_CONFIG,(void*)&drv_config);
 
@@ -631,19 +631,19 @@ static int HandlePlayCommand()
             //set the interrupt period
             period_bytes = period_ms * (drv_config.sample_rate/1000) * (drv_config.num_channel) * 2;
 	    	num_blocks = 2; // for RHEA
-            DEBUG("Period: ms=%ld bytes=%ld blocks:%ld\n",period_ms,period_bytes,num_blocks);
+            BCM_AUDIO_DEBUG("Period: ms=%ld bytes=%ld blocks:%ld\n",period_ms,period_bytes,num_blocks);
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_INT_PERIOD,(void*)&period_bytes);
 
             buf_param.buf_size = PCM_TEST_MAX_PLAYBACK_BUF_BYTES;
             buf_param.pBuf = dma_alloc_coherent (NULL, buf_param.buf_size, &dma_addr,GFP_KERNEL);
             if(buf_param.pBuf == NULL)
             {
-                DEBUG("Cannot allocate Buffer \n");
+                BCM_AUDIO_DEBUG("Cannot allocate Buffer \n");
                 return 0;
             }
             buf_param.phy_addr = (UInt32)dma_addr;
 
-            DEBUG("virt_addr = %s phy_addr=0x%lx\n",buf_param.pBuf,(UInt32)dma_addr);
+            BCM_AUDIO_DEBUG("virt_addr = %s phy_addr=0x%lx\n",buf_param.pBuf,(UInt32)dma_addr);
 
             current_ipbuffer_index = 0;
             dma_buffer_write_index = 0;
@@ -660,17 +660,17 @@ static int HandlePlayCommand()
 
             current_ipbuffer_index += copy_bytes;
 
-	    DEBUG("copy_bytes %ld",copy_bytes);
+	    BCM_AUDIO_DEBUG("copy_bytes %ld",copy_bytes);
 	        //set the buffer params
 	    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
-            DEBUG(" Audio DDRIVER Config Complete\n");
+            BCM_AUDIO_DEBUG(" Audio DDRIVER Config Complete\n");
         }
         break;
         case 4: //Start the playback
             {
 				CSL_CAPH_DEVICE_e aud_dev = CSL_CAPH_DEV_EP; // EP is default now
 
-                DEBUG(" Start Playback\n");
+                BCM_AUDIO_DEBUG(" Start Playback\n");
                 spkr = sgBrcm_auddrv_TestValues[2];
 
                 AUDCTRL_SaveAudioModeFlag(spkr);
@@ -690,12 +690,12 @@ static int HandlePlayCommand()
 
 
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_START,&aud_dev);
-                DEBUG("Playback started\n");
+                BCM_AUDIO_DEBUG("Playback started\n");
 
 
 		//  Need to implement some sync mechanism
 	        OSTASK_Sleep(5000);
-                DEBUG(" Stop playback\n");
+                BCM_AUDIO_DEBUG(" Stop playback\n");
 
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_STOP,NULL);
 
@@ -720,7 +720,7 @@ static int HandlePlayCommand()
 			break;
 #endif
         default:
-            DEBUG(" Invalid Playback Command\n");
+            BCM_AUDIO_DEBUG(" Invalid Playback Command\n");
     }
 	return 0;
 }
@@ -743,7 +743,7 @@ static void AUDIO_DRIVER_TEST_InterruptPeriodCB(void *pPrivate)
 
     if(dma_buffer_write_index >= (num_blocks * period_bytes))
         dma_buffer_write_index = 0;
-    //DEBUG(" current_ipbuffer_index %d: dma_buffer_write_index- %d\n",current_ipbuffer_index,dma_buffer_write_index);
+    //BCM_AUDIO_DEBUG(" current_ipbuffer_index %d: dma_buffer_write_index- %d\n",current_ipbuffer_index,dma_buffer_write_index);
     return;
 }
 
@@ -775,15 +775,15 @@ static int HandleCaptCommand()
         {
             if(sgBrcm_auddrv_TestValues[2] != 0)
             	drv_type = sgBrcm_auddrv_TestValues[2];
-            DEBUG(" Audio Capture DDRIVER Open drv_type %d\n",drv_type);
+            BCM_AUDIO_DEBUG(" Audio Capture DDRIVER Open drv_type %d\n",drv_type);
             drv_handle = AUDIO_DRIVER_Open(drv_type);
-            DEBUG(" Audio DDRIVER Open Complete\n");
+            BCM_AUDIO_DEBUG(" Audio DDRIVER Open Complete\n");
 
         }
         break;
         case 2://configure capture device
         {
-            DEBUG(" Audio Capture DDRIVER Config\n");
+            BCM_AUDIO_DEBUG(" Audio Capture DDRIVER Config\n");
             //set the callback
 	    cbParams.pfCallBack = AUDIO_DRIVER_TEST_CaptInterruptPeriodCB;
 	    cbParams.pPrivateData = (void *)drv_handle;
@@ -810,7 +810,7 @@ static int HandleCaptCommand()
             if(sgBrcm_auddrv_TestValues[3] != 0)
                 drv_config.num_channel = sgBrcm_auddrv_TestValues[3];
 
-            DEBUG("Config:sr=%ld nc=%d bs=%ld \n",drv_config.sample_rate,drv_config.num_channel,drv_config.bits_per_sample);
+            BCM_AUDIO_DEBUG("Config:sr=%ld nc=%d bs=%ld \n",drv_config.sample_rate,drv_config.num_channel,drv_config.bits_per_sample);
 
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_CONFIG,(void*)&drv_config);
 
@@ -822,7 +822,7 @@ static int HandleCaptCommand()
             capt_period_bytes = period_ms * (drv_config.sample_rate/1000) * (drv_config.num_channel) * 2;
             capt_num_blocks =  2; // limitation for RHEA
 
-            DEBUG("Period: ms=%ld bytes=%ld blocks:%ld\n",period_ms,capt_period_bytes,capt_num_blocks);
+            BCM_AUDIO_DEBUG("Period: ms=%ld bytes=%ld blocks:%ld\n",period_ms,capt_period_bytes,capt_num_blocks);
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_INT_PERIOD,(void*)&capt_period_bytes);
 
 	    current_capt_buffer_index = 0;
@@ -832,18 +832,18 @@ static int HandleCaptCommand()
             capt_buf_param.pBuf = dma_alloc_coherent (NULL, capt_buf_param.buf_size, &dma_addr,GFP_KERNEL);
             if(capt_buf_param.pBuf == NULL)
             {
-                DEBUG("Cannot allocate Buffer \n");
+                BCM_AUDIO_DEBUG("Cannot allocate Buffer \n");
                 return 0;
             }
             capt_buf_param.phy_addr = (UInt32)dma_addr;
 
-            DEBUG("virt_addr = %s phy_addr=0x%lx\n",capt_buf_param.pBuf,(UInt32)dma_addr);
+            BCM_AUDIO_DEBUG("virt_addr = %s phy_addr=0x%lx\n",capt_buf_param.pBuf,(UInt32)dma_addr);
 
             memset(capt_buf_param.pBuf,0,PCM_TEST_MAX_CAPTURE_BUF_BYTES);
             //set the buffer params
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&capt_buf_param);
 
-            DEBUG(" Audio DDRIVER Config Complete\n");
+            BCM_AUDIO_DEBUG(" Audio DDRIVER Config Complete\n");
         }
         break;
         case 3: //Start the capture
@@ -858,7 +858,7 @@ static int HandleCaptCommand()
 		if(sgBrcm_auddrv_TestValues[2] != 0)
 			mic = sgBrcm_auddrv_TestValues[2];
 
-		DEBUG(" Start capture mic %d\n",mic);
+		BCM_AUDIO_DEBUG(" Start capture mic %d\n",mic);
 
                 AUDCTRL_EnableRecord(mic,
 								     AUDIO_SINK_MEM,
@@ -869,30 +869,30 @@ static int HandleCaptCommand()
 
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_START,&mic);
 
-                DEBUG("capture started\n");
+                BCM_AUDIO_DEBUG("capture started\n");
 
 		OSTASK_Sleep(5000);
 
-                DEBUG(" Stop capture\n");
+                BCM_AUDIO_DEBUG(" Stop capture\n");
 
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_STOP,NULL);
 
                 AUDCTRL_DisableRecord(mic,AUDIO_SOURCE_MEM,0);
 
-		DEBUG("capture stopped\n");
+		BCM_AUDIO_DEBUG("capture stopped\n");
 
             }
             break;
 
 	case 4:
 		// free the buffer record_test_buf
-            	DEBUG(" Freed the recorded test buf \n");
+            	BCM_AUDIO_DEBUG(" Freed the recorded test buf \n");
                 kfree(record_test_buf);
 		record_buf_allocated = 0;
 		record_test_buf = NULL;
 	    break;
         default:
-            DEBUG(" Invalid capture Command\n");
+            BCM_AUDIO_DEBUG(" Invalid capture Command\n");
     }
 	return 0;
 
@@ -903,7 +903,7 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate)
     char* src;
     char* dest;
 
-    //DEBUG(" %lx: capture Interrupt- %d\n",jiffies);
+    //BCM_AUDIO_DEBUG(" %lx: capture Interrupt- %d\n",jiffies);
 
     if((current_capt_buffer_index + capt_period_bytes) >= TEST_BUF_SIZE)
     {
@@ -920,7 +920,7 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate)
     if(capt_dma_buffer_read_index >= (capt_num_blocks * capt_period_bytes))
         capt_dma_buffer_read_index = 0;
 
-    //DEBUG(" current_capt_buffer_index %d: capt_dma_buffer_read_index- %d\n",current_capt_buffer_index,capt_dma_buffer_read_index);
+    //BCM_AUDIO_DEBUG(" current_capt_buffer_index %d: capt_dma_buffer_read_index- %d\n",current_capt_buffer_index,capt_dma_buffer_read_index);
 
     return;
 }
@@ -1068,7 +1068,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 
 		AUDDRV_VoiceRender_Shutdown (drvtype);
 
-		printk(KERN_INFO "\n  Voice render stop done \n");
+		pr_info( "\n  Voice render stop done \n");
 		AUDCTRL_DisableTelephony( ); 
 
 		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
@@ -1171,13 +1171,13 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6
 
 	}
 
-	printk(KERN_INFO "\n VoIP: Finished\n");
+	pr_info( "\n VoIP: Finished\n");
 
 	// finish all the data
 	// stop the driver
 	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_STOP,NULL);
 
-	printk(KERN_INFO "\n VoIP: Stop\n");
+	pr_info( "\n VoIP: Stop\n");
 
 	// disable the hw
 	AUDCTRL_DisableTelephony ( );
