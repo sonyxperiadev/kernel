@@ -63,6 +63,7 @@
 #include <linux/broadcom/bcm59055-power.h>
 #include <linux/clk.h>
 #include <linux/bootmem.h>
+#include <plat/pi_mgr.h>
 #include "common.h"
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
@@ -1249,26 +1250,59 @@ static struct i2c_board_info rhea_i2c_camera[] = {
 
 static int rhea_camera_power(struct device *dev, int on)
 {
-
-	void __iomem* padctl_base = (void __iomem *)HW_IO_PHYS_TO_VIRT(PAD_CTRL_BASE_ADDR);
 	unsigned int value;
 	struct clk *clock;
-	static int count  = 0;
+	struct clk *axi_clk;
+	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
+	struct clk *v3d_clk;
 
-	if (count)
-		return 0;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	value = ioread32(padctl_base + PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
-	iowrite32(value, padctl_base + PADCTRLREG_DCLK1_OFFSET);
+	if (NULL == unicam_dfs_node) {
+		unicam_dfs_node = pi_mgr_dfs_add_request("unicam", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+		if (NULL == unicam_dfs_node) {
+			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+			return -1;
+		}
+	}
+
 	clock = clk_get(NULL, SENSOR_0_CLK);
 	if (!clock) {
 		printk(KERN_ERR "%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
 		return -1;
 	}
+
+	axi_clk = clk_get(NULL, "csi0_axi_clk");
+	if (!axi_clk) {
+		printk(KERN_ERR "%s:unable to get clock csi0_axi_clk\n", __func__);
+		return -1;
+	}
+
+	v3d_clk = clk_get(NULL, "v3d_axi_clk");
+	if (!v3d_clk) {
+		printk("%s: error get clock\n", __func__);
+		return -1;
+	}
+
 	if (on) {
-		count = 1;
+
+		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_OPP_TURBO)) {
+			printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
+			return -1;
+		}
+
+		value = clk_enable(axi_clk);
+		if (value) {
+			printk(KERN_ERR "%s:failed to enable csi2 axi clock\n", __func__);
+			return -1;
+		}
+
+		value = clk_enable(v3d_clk);
+		if (value) {
+			printk(KERN_ERR "%s:failed to enable v3d clock\n", __func__);
+			return -1;
+		}
 		/* enable clk */
 		value = clk_enable(clock);
 		if (value) {
@@ -1305,11 +1339,21 @@ static int rhea_camera_power(struct device *dev, int on)
 		/* enable reset gpio */
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 		msleep(1);
+		
 		/* enable power down gpio */
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 
 		clk_disable(clock);
+
+		clk_disable(v3d_clk);
+
+		clk_disable(axi_clk);
+
+		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
+		}
 	}
+
 	return 0;
 }
 

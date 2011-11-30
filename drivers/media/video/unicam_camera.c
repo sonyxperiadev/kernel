@@ -336,6 +336,12 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 
 	dprintk("-enter");
 	iprintk("enabling csi");
+	if (csl_cam_init()) {
+		dev_err(&unicam_dev->dev, "error initializing csl camera\n");
+		return -1;
+	}
+
+
 	/* set camera interface parameters */
 	csl_cam_intf_cfg_st.intf = CSL_CAM_INTF_CSI;
 	csl_cam_intf_cfg_st.afe_port = CSL_CAM_PORT_AFE_0;
@@ -447,6 +453,12 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 		dev_err(unicam_dev->dev, "cals_cam_exit(): FAILED\n");
 		ret = -1;
 	}
+
+	if (csl_cam_exit()) {
+		dev_err(unicam_dev->dev, "csl_cam_exit(): FAILED\n");
+		ret = -1;
+	}
+
 	unicam_dev->active = NULL;
 	unicam_dev->streaming = 0;
 	dprintk("-exit");
@@ -818,14 +830,6 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 		goto eallocctx;
 	}
 
-	err = csl_cam_init();
-	if (err) {
-		dev_err(&pdev->dev, "error initializing csl camera\n");
-		err = -ENODEV;
-		goto ecslcaminit;
-	}
-
-
 	err = soc_camera_host_register(soc_host);
 	if (err) 
 		goto ecamhostreg;
@@ -833,10 +837,6 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	return 0;
 
 ecamhostreg:
-	err = csl_cam_exit();
-	if (err)
-		dev_err(&pdev->dev, "error in deinitializing csl camera\n");
-ecslcaminit:
 	vb2_dma_contig_cleanup_ctx(unicam_dev->alloc_ctx);
 eallocctx:
 	vfree(unicam_dev);
