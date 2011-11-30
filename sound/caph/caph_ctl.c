@@ -740,7 +740,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			ucontrol->value.integer.value[0] = pChip->i32CfgSSP[kcontrol->id.index];
 			break;
 		case CTL_FUNCTION_VOL:
-			memcpy(ucontrol->value.integer.value, pChip->pi32LevelVolume[stream], CAPH_MAX_PCM_STREAMS*sizeof(s32));
+			memcpy(ucontrol->value.integer.value, pChip->pi32LevelVolume[stream-1], CAPH_MAX_PCM_STREAMS*sizeof(s32));
 			break;
 
 		default:
@@ -927,8 +927,9 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			AUDCTRL_ConfigSSP(kcontrol->id.index+1, pChip->i32CfgSSP[kcontrol->id.index]);
 			break;
 		case CTL_FUNCTION_VOL:
-			memcpy(pChip->pi32LevelVolume[stream], ucontrol->value.integer.value, CAPH_MAX_PCM_STREAMS*sizeof(s32));
+			memcpy(pChip->pi32LevelVolume[stream-1], ucontrol->value.integer.value, CAPH_MAX_PCM_STREAMS*sizeof(s32));
 			break;
+			
 		case CTL_FUNCTION_SINK_CHG:
 			BCM_AUDIO_DEBUG("Change sink device stream=%d cmd=%d sink=%d\n", stream, ucontrol->value.integer.value[0], ucontrol->value.integer.value[1]);
 			cmd = ucontrol->value.integer.value[0];

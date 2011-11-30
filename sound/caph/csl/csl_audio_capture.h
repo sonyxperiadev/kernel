@@ -37,6 +37,22 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 
 typedef void (*CSL_AUDCAPTURE_CB)(UInt32 streamID);
 
+typedef	struct
+{
+	UInt32		streamID;
+	CSL_AUDIO_DEVICE_e 		source;	
+	CSL_AUDIO_DEVICE_e 		sink;
+	CSL_CAPH_PathID         pathID;
+	CSL_AUDCAPTURE_CB dmaCB;	
+	CSL_CAPH_DMA_CHNL_e	    dmaCH;
+	CSL_CAPH_DMA_CHNL_e	    dmaCH2; //temp leave this back compatible
+
+	UInt8                   *ringBuffer;
+	UInt32                  numBlocks;
+	UInt32                  blockSize;
+	AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+} CSL_CAPH_Capture_Drv_t;
+
 /**
 *
 *  @brief  initialize the audio capture block
@@ -123,6 +139,8 @@ Result_t csl_audio_capture_pause (UInt32 streamID);
 *  @return Result_t status
 *****************************************************************************/
 Result_t csl_audio_capture_resume (UInt32 streamID);
+
+CSL_CAPH_Capture_Drv_t* GetCaptureDriverByType (UInt32 streamID);
 
 #endif // _CSL_AUDIO_CAPTURE_
 

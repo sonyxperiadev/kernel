@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2010,2011 Broadcom Corporation.  All rights reserved.
 *
 * 	@file	include/linux/broadcom/bcm_fuse_sysparm_CIB.h
 *
@@ -16,7 +16,6 @@
 #ifndef _BCM_FUSE_SYSPARM_CIB_H_
 #define _BCM_FUSE_SYSPARM_CIB_H_
 
-#define _RHEA_
 #define SYSPARM_INDEX_READY_INDICATOR   0x5059504D	
 #define MAX_SYSPARM_NAME_SIZE   128
 
@@ -324,7 +323,6 @@ typedef struct
 	UInt16 echo_cancel_mic2_output_gain;
 	UInt16 echo_mic2_feed_forward_gain;
 
-#if defined(_RHEA_) || defined(_SAMOA_)	
 	UInt16 amic_dga_coarse_gain;
 	UInt16 amic_dga_fine_gain;
 	UInt16 dmic1_dga_coarse_gain;
@@ -377,7 +375,6 @@ typedef struct
 	UInt16 hw_sidetone_enable;
 	UInt16 hw_sidetone_gain;
 	Int32 hw_sidetone_eq[COEF_NUM_OF_EACH_GROUP_HW_SIDETONE*NUM_OF_GROUP_HW_SIDETONE];
-#endif	
 
 	UInt16 echo_path_change_detection_threshold;				//Used in echo path change detection
 	Smart_Compressor_t smart_compressor;    				//smart compressor

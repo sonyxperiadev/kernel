@@ -59,31 +59,15 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 //****************************************************************************
 // local typedef declarations
 //****************************************************************************
-typedef	struct
-{
-	UInt32		streamID;
-	CSL_AUDIO_DEVICE_e 		source;	
-	CSL_AUDIO_DEVICE_e 		sink;
-	CSL_CAPH_PathID         pathID;
-	CSL_AUDCAPTURE_CB dmaCB;	
-	CSL_CAPH_DMA_CHNL_e	    dmaCH;
-	CSL_CAPH_DMA_CHNL_e	    dmaCH2; //temp leave this back compatible
-
-	UInt8                   *ringBuffer;
-	UInt32                  numBlocks;
-	UInt32                  blockSize;
-	AUDIO_BITS_PER_SAMPLE_t bitPerSample;
-} CSL_CAPH_Drv_t;
 
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {{0}};
+static CSL_CAPH_Capture_Drv_t	sCaptureDrv[CSL_CAPH_STREAM_TOTAL] = {{0}};
 
 //****************************************************************************
 // local function declarations
 //****************************************************************************
-static CSL_CAPH_Drv_t* GetDriverByType (UInt32 streamID);
 static CSL_CAPH_STREAM_e GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH);
 static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl);
 
@@ -102,15 +86,15 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl);
 UInt32 csl_audio_capture_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 {
 	UInt32 streamID = CSL_CAPH_STREAM_NONE;
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Capture_Drv_t	*audDrv = NULL;
 	
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_init::source=0x%x sink=0x%x.\n", source, sink));
 
     // allocate a unique streamID	
 	streamID = (UInt32)csl_caph_hwctrl_AllocateStreamID();
-	audDrv = GetDriverByType(streamID);
+	audDrv = GetCaptureDriverByType(streamID);
 	
-	memset(audDrv, 0, sizeof(CSL_CAPH_Drv_t));
+	memset(audDrv, 0, sizeof(CSL_CAPH_Capture_Drv_t));
 
 	audDrv->streamID = streamID;
 	audDrv->source = source;
@@ -128,9 +112,9 @@ UInt32 csl_audio_capture_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink
 ****************************************************************************/
 Result_t csl_audio_capture_deinit(UInt32 streamID)
 {
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Capture_Drv_t	*audDrv = NULL;
 
-	audDrv = GetDriverByType (streamID);
+	audDrv = GetCaptureDriverByType (streamID);
 
 	if (audDrv == NULL)
 		return RESULT_ERROR;	
@@ -138,7 +122,7 @@ Result_t csl_audio_capture_deinit(UInt32 streamID)
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_deinit::dmaCH=0x%x, dmaCH2-0x%x\n", 
                     audDrv->dmaCH, audDrv->dmaCH2));
 	
-	memset(audDrv, 0, sizeof(CSL_CAPH_Drv_t));
+	memset(audDrv, 0, sizeof(CSL_CAPH_Capture_Drv_t));
 	
 	return RESULT_OK;
 }
@@ -159,12 +143,12 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
 						CSL_AUDCAPTURE_CB csl_audio_capture_cb,
 						UInt32 streamID )
 {
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Capture_Drv_t	*audDrv = NULL;
 	CSL_CAPH_HWCTRL_STREAM_REGISTER_t stream;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_configure::\n"));
 
-	audDrv = GetDriverByType (streamID);
+	audDrv = GetCaptureDriverByType (streamID);
 
 	if (audDrv == NULL)
 		return RESULT_ERROR;	
@@ -212,11 +196,11 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
 ****************************************************************************/
 Result_t csl_audio_capture_start (UInt32 streamID)
 {
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Capture_Drv_t	*audDrv = NULL;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_start::streamID=0x%x\n", streamID));
 
-	audDrv = GetDriverByType (streamID);
+	audDrv = GetCaptureDriverByType (streamID);
 
 	if (audDrv == NULL)
 		return RESULT_ERROR;	
@@ -288,16 +272,16 @@ Result_t csl_audio_capture_resume (UInt32 streamID)
 
 // ==========================================================================
 //
-// Function Name: GetDriverByType
+// Function Name: GetCaptureDriverByType
 //
 // Description: Get the audio render driver reference from the steamID.
 //
 // =========================================================================
-static CSL_CAPH_Drv_t* GetDriverByType (UInt32 streamID)
+CSL_CAPH_Capture_Drv_t* GetCaptureDriverByType (UInt32 streamID)
 {
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Capture_Drv_t	*audDrv = NULL;
 
-	audDrv = &sCaphDrv[streamID];
+	audDrv = &sCaptureDrv[streamID];
 
 	return audDrv;
 }
@@ -311,7 +295,7 @@ static CSL_CAPH_Drv_t* GetDriverByType (UInt32 streamID)
 // =========================================================================
 static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 {
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Capture_Drv_t	*audDrv = NULL;
 	UInt32     streamID = CSL_CAPH_STREAM_NONE;
 
 	//_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDIO_DMA_CB:: DMA callback.\n"));
@@ -330,7 +314,7 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 	}
 	streamID = GetStreamIDByDmaCH(chnl);
 
-	audDrv = GetDriverByType(streamID);
+	audDrv = GetCaptureDriverByType(streamID);
 	
 	if (audDrv->dmaCB != NULL)
 		audDrv->dmaCB(audDrv->streamID);
@@ -348,12 +332,12 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 static CSL_CAPH_STREAM_e GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH)
 {
 	CSL_CAPH_STREAM_e streamID = CSL_CAPH_STREAM_NONE;
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Capture_Drv_t	*audDrv = NULL;
     UInt32 i = 0;
     
     for (i = 0; i < CSL_CAPH_STREAM_TOTAL; i++)
     {
-	    audDrv = GetDriverByType(i);
+	    audDrv = GetCaptureDriverByType(i);
         if (audDrv != NULL)
         {
             if (audDrv->dmaCH == dmaCH)

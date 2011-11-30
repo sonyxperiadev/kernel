@@ -91,8 +91,6 @@ No support for I2S on Island */
 //#define ENABLE_DMA_LOOPBACK		//Enable HW loopback test of DMA call. This is to verify CAPH path is set up properly for DSP
 #endif
 
-#define PATH_OCCUPIED   1
-#define PATH_AVAILABLE  0
 #define DATA_PACKED	1
 
 #define AUDIOH_BASE_ADDR1            KONA_AUDIOH_BASE_VA /* brcm_rdb_cph_cfifo.h */
@@ -112,7 +110,7 @@ No support for I2S on Island */
 //static Interrupt_t AUDDRV_HISR_HANDLE;
 //static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
 static struct clk *clkIDCAPH[MAX_CAPH_CLOCK_NUM] = {NULL,NULL,NULL,NULL};
-static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM] = {NULL,NULL};
+//static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM] = {NULL,NULL};
 
 //****************************************************************************
 // local function declarations
@@ -320,7 +318,7 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 
 void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_arm2sp_set_Mode mixMode %d, instanceId %d\r\n", mixMode, instanceId);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_arm2sp_set_Mode mixMode %d, instanceId %d\r\n", (int)mixMode, (int)instanceId);
 
 	arm2spCfg.mixMode = mixMode;
 
@@ -431,7 +429,7 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 // =========================================================================
 static void csl_caph_hwctrl_PrintPath(CSL_CAPH_HWConfig_Table_t *path)
 {
-    UInt32 i = 0, j = 0, k = 0;
+    unsigned int i = 0, j = 0, k = 0;
 	if(!path) return;
 
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_PrintPath:: path %d ", path->pathID);
@@ -471,12 +469,14 @@ static void csl_caph_hwctrl_PrintPath(CSL_CAPH_HWConfig_Table_t *path)
                         if (j < path->block_split_offset)
                         {
 	                        Log_DebugPrintf(LOGID_SOC_AUDIO, "--> *%s(%d:0x%x:0x%x:0x%x) ", 
-                                blockName[path->block[i][j]], path->sw[0][k].chnl, path->sw[0][k].FIFO_srcAddr, path->sw[0][k].FIFO_dstAddr, path->sw[0][k].trigger);
+                                blockName[path->block[i][j]], path->sw[0][k].chnl, 
+                                (unsigned int)path->sw[0][k].FIFO_srcAddr, (unsigned int)path->sw[0][k].FIFO_dstAddr, path->sw[0][k].trigger);
                         }
                         else
                         {
 	                        Log_DebugPrintf(LOGID_SOC_AUDIO, "--> %s(%d:0x%x:0x%x:0x%x) ", 
-                                blockName[path->block[i][j]], path->sw[i][k].chnl, path->sw[i][k].FIFO_srcAddr, path->sw[i][k].FIFO_dstAddr, path->sw[i][k].trigger);
+                                blockName[path->block[i][j]], path->sw[i][k].chnl, 
+                                (unsigned int)path->sw[i][k].FIFO_srcAddr, (unsigned int)path->sw[i][k].FIFO_dstAddr, path->sw[i][k].trigger);
                         }
                         break;
 
@@ -1537,14 +1537,6 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID pathID, int sinkNo, int blockP
 
 	pSrcmRoute = &path->srcmRoute[sinkNo][blockIdx];
 
-	if ((pSrcmRoute->mixGain.mixInGainL == MIX_IN_MUTE)
-		&&(pSrcmRoute->mixGain.mixInGainR == MIX_IN_MUTE))
-	{
-		pSrcmRoute->mixGain.mixInGainL		= MIX_IN_PASS;
-		pSrcmRoute->mixGain.mixOutCoarseGainL	= BIT_SELECT;
-		pSrcmRoute->mixGain.mixInGainR		= MIX_IN_PASS;
-		pSrcmRoute->mixGain.mixOutCoarseGainR	= BIT_SELECT;
-	}
 	csl_caph_srcmixer_config_mix_route(path->srcmRoute[sinkNo][blockIdx]);
 }
 
@@ -1935,7 +1927,7 @@ Boolean csl_caph_QueryHWClock(void)
 // Description: This is to enable/disable SSP clock
 //
 // =========================================================================
-
+#if 0 // this function is use called. comment it out to avoid compilation warning.
 static void csl_ssp_ControlHWClock(Boolean enable, CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVICE_e sink)
 {
 	Boolean ssp3 = FALSE;
@@ -1979,7 +1971,7 @@ static void csl_ssp_ControlHWClock(Boolean enable, CSL_CAPH_DEVICE_e source, CSL
 #endif
 
 }
-
+#endif
 
 // ==========================================================================
 //
@@ -2046,7 +2038,8 @@ static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_HWCTRL_CONFIG_t c
 {
     UInt8 i = 0;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_AddPathInTable:: Source: %d, Sink: %d, sr %d:%d, nc %d, bitPerSample %d.\r\n", config.source, config.sink, config.src_sampleRate, config.snk_sampleRate, config.chnlNum, config.bitPerSample);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_AddPathInTable:: Source: %d, Sink: %d, sr %d:%d, nc %d, bitPerSample %d.\r\n",
+		config.source, config.sink, (int)config.src_sampleRate, (int)config.snk_sampleRate, (int)config.chnlNum, (int)config.bitPerSample);
 
     for (i=0; i<MAX_AUDIO_PATH; i++)
     {
@@ -2379,7 +2372,7 @@ static void csl_caph_hwctrl_closeSwitchCH(CSL_CAPH_SWITCH_CONFIG_t switchCH,
                                           CSL_CAPH_PathID pathID)
 {
     if((switchCH.chnl == CSL_CAPH_SWITCH_NONE)||(pathID == 0)) return;
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeSwitch path %d, sw %d.\r\n", pathID, switchCH);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeSwitch path %d, sw %d.\r\n", pathID, switchCH.chnl);
 
     csl_caph_hwctrl_removeHWResource(switchCH.FIFO_srcAddr, pathID);
     csl_caph_hwctrl_removeHWResource(switchCH.FIFO_dstAddr, pathID);
@@ -2862,7 +2855,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
 #else
 		list = LIST_MIX_SW;
 #endif
-		memcpy(&(path->srcmRoute[sinkNo][0].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
     }	
     else //AUDIOH-->SW-->SRC-->DSP
 	if (((path->source == CSL_CAPH_DEV_ANALOG_MIC)
@@ -2897,8 +2889,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
 		&& (path->sink[sinkNo] == CSL_CAPH_DEV_HS))
     {
 		//according to ASIC team, switch can be used as 1:2 splitter, with two idential destination address. But data format should be 24bit unpack.
-		memcpy(&(path->srcmRoute[sinkNo][1].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
-		memcpy(&(path->srcmRoute[sinkNo][2].mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
 #if defined(CONFIG_ARCH_RHEA_B0)
 		path->chnlNum = 1; //o.w. stereo passthru src is picked.
 		list = LIST_SW_MIX_SW;

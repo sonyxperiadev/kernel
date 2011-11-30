@@ -494,7 +494,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				AUDIO_SOURCE_Enum_t new_mic;
 				AUDIO_SINK_Enum_t new_spk;
 				get_user(mode,__user (int *)arg);
-				AUDCTRL_GetVoiceSrcSinkByMode((AudioMode_t)(mode), &new_mic, &new_spk);
+				AUDCTRL_GetSrcSinkByMode((AudioMode_t)(mode), &new_mic, &new_spk);
 
 				voip_data.mic = new_mic;
 				voip_data.spk = new_spk;

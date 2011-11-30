@@ -37,6 +37,20 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 
 typedef void (*CSL_AUDRENDER_CB)(UInt32 streamID);
 
+typedef	struct
+{
+	UInt32		streamID;
+	CSL_AUDIO_DEVICE_e 		source;	
+	CSL_AUDIO_DEVICE_e 		sink;
+	CSL_CAPH_PathID         pathID;
+    CSL_AUDRENDER_CB        dmaCB;	
+	CSL_CAPH_DMA_CHNL_e	    dmaCH;
+	CSL_CAPH_DMA_CHNL_e	    dmaCH2;
+	AUDIO_NUM_OF_CHANNEL_t  numChannels;
+	AUDIO_BITS_PER_SAMPLE_t bitsPerSample;
+	AUDIO_SAMPLING_RATE_t	sampleRate;
+} CSL_CAPH_Render_Drv_t;
+
 /**
 *
 *  @brief  initialize the audio render block
@@ -133,5 +147,8 @@ Result_t csl_audio_render_resume (UInt32 streamID);
 *  @return UInt16 currmemptr in SR  
 *****************************************************************************/
 UInt16 csl_audio_render_get_current_position (UInt32 streamID);
+
+CSL_CAPH_Render_Drv_t* GetRenderDriverByType (UInt32 streamID);
+
 #endif // _CSL_AUDIO_RENDER_
 

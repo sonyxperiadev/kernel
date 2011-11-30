@@ -25,16 +25,9 @@
 
 /**
 *
-*   @file   audio_vdriver.h
-*
-*   @brief  common APIs for audio
-*
-****************************************************************************/
-/**
-*
 * @defgroup Audio    Audio Component
 *
-* @brief    This group defines the common APIs for audio virtual driver
+* @brief    This group defines the APIs for audio driver
 *
 * @ingroup  Audio Component
 *****************************************************************************/
@@ -43,7 +36,7 @@
 *
 *  @file  audio_vdriver.h
 *
-*  @brief Audio Virtual Driver API
+*  @brief Audio Driver API
 *
 *  @note
 *****************************************************************************/
@@ -53,7 +46,7 @@
 
 //richlu
 #include "csl_caph_hwctrl.h"
-#include "bcm_fuse_sysparm_CIB.h"
+//#include "bcm_fuse_sysparm_CIB.h"
 
 
 /**
@@ -66,7 +59,7 @@
 extern "C" {
 #endif
 
-typedef void (*audio_codecId_handler_t)(UInt8 codecId);
+typedef void (*audio_codecId_handler_t)(int codecId);
 
 //Define the other mic which is used for Noise Cancellation.
 //It is product-dependent.
@@ -116,13 +109,6 @@ typedef enum
     AUDDRV_EANC_FILTER2,
     AUDDRV_SIDETONE_FILTER,
 }AUDDRV_HWCTRL_FILTER_e;
-
-
-typedef enum {
-	AUDDRV_MIC1 = 0x1,
-	AUDDRV_MIC2 = 0x2,
-	AUDDRV_SPEAKER = 0x4
-} AUDDRV_DSPFILTER_DEVICE_Enum_t;
 
 // audio controller request message structure
 typedef struct AUDDRV_REQUEST_MSG_t
@@ -296,8 +282,9 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, AudioApp_t audio_app);
 void AUDDRV_SetMusicMode ( AudioMode_t  audio_mode, AudioApp_t audio_app);
 #else
 void AUDDRV_SaveAudioMode( AudioMode_t audio_mode );
-void AUDDRV_SetAudioMode ( AudioMode_t  audio_mode, UInt32 dev);
-void AUDDRV_SetMusicMode ( AudioMode_t  audio_mode);
+void AUDDRV_SetAudioMode ( AudioMode_t  audio_mode );
+void AUDDRV_SetAudioMode_ForMusicPlayback( AudioMode_t  audio_mode, unsigned int arg_pathID);
+void AUDDRV_SetAudioMode_ForMusicRecord( AudioMode_t  audio_mode, unsigned int arg_pathID);
 #endif
 
 AudioMode_t AUDDRV_GetAudioMode( void );
@@ -350,7 +337,6 @@ void AUDDRV_Telephony_UnmuteMic (AUDIO_SOURCE_Enum_t mic);
 void AUDDRV_Telephony_MuteSpkr (AUDIO_SINK_Enum_t speaker);
 void AUDDRV_Telephony_UnmuteSpkr (AUDIO_SINK_Enum_t speaker);
 void AUDDRV_SetULSpeechRecordGain(Int16 gain);
-Boolean AUDDRV_IsDualMicEnabled(AudioMode_t mode);
 
 
 //*********************************************************************

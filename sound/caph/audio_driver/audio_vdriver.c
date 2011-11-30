@@ -58,6 +58,7 @@
 #endif
 
 #include "audio_pmu_adapt.h"
+#include "audio_controller.h"
 
 /**
 *
@@ -93,9 +94,6 @@ static AUDDRV_PathID_t telephonyPathID;
 
 static void *sUserCB = NULL;
 static CSL_CAPH_DEVICE_e sink = CSL_CAPH_DEV_NONE;
-static AUDIO_SINK_Enum_t currSpkr = AUDIO_SINK_UNDEFINED;
-static AUDIO_SOURCE_Enum_t currMic = AUDIO_SOURCE_UNDEFINED;
-static AUDIO_SAMPLING_RATE_t currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED;
 static Boolean userEQOn = FALSE; // If TRUE, bypass EQ filter setting request from audio controller.
 
 static AUDIO_SOURCE_Enum_t  currVoiceMic = AUDIO_SOURCE_UNDEFINED;	 //used in pcm i/f control. assume one mic, one spkr.
@@ -125,11 +123,6 @@ static Boolean IsBTM_WB = FALSE;  //this flag remembers if the Bluetooth headset
 static audio_codecId_handler_t codecId_handler = NULL;
 static UInt8 audio_codecID = 6; //default CODEC ID = AMR NB
 
-
-static void AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
-static void AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode);
-static void AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode);
-
 //=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -151,12 +144,19 @@ static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void);
 
 static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
                                     AUDIO_SINK_Enum_t speaker,
-                                    AUDIO_SAMPLING_RATE_t sample_rate);
+                                    AUDIO_SAMPLING_RATE_t sample_rate,
+                                    Boolean bNeedDualMic);
 
 static void AUDDRV_Telephony_DeinitHW ( void );
 static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr (AUDIO_SINK_Enum_t spkr);
 static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic (AUDIO_SOURCE_Enum_t mic);
 
+static void AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
+static void AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode);
+static void AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode);
+
+static void auddrv_SetAudioMode_mic( AudioMode_t audio_mode, unsigned int arg_pathID );
+static void auddrv_SetAudioMode_speaker( AudioMode_t audio_mode, unsigned int arg_pathID );
 
 //=============================================================================
 // Functions
@@ -237,8 +237,10 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 		AUDIO_SINK_Enum_t speaker)
 {
 	AudioMode_t mode;
-	int dev = 0;
+	Boolean bDualMic_IsNeeded = FALSE;
+#if defined(ENABLE_DMA_VOICE)
 	UInt16 dma_mic_spk;
+#endif
 
 	telephonyPathID.ulPathID = 0;
 	telephonyPathID.ul2PathID = 0;
@@ -266,33 +268,45 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
 
 	mode = AUDDRV_GetAudioModeBySink( speaker );
+	//check to see the network speech coder's sampling rate and determine our HW sampling rate (and audio mode).
 	if (voiceCallSampleRate == AUDIO_SAMPLING_RATE_16000)
 	{
 		mode = mode + AUDIO_MODE_NUMBER;	//WB
 	}
 
+	bDualMic_IsNeeded = (AUDIO_GetParmAccessPtr()[mode].dual_mic_enable != 0);  //in parm_audio.txt, VOICE_DUALMIC_ENABLE
+
+	if ( mode==AUDIO_MODE_BLUETOOTH || mode==AUDIO_MODE_BLUETOOTH_WB )
+	{
+	  //if use BT headset, BT headset's NB/WB capability is the determining factor, supersdes the above.
+	  //BT WB headset always works at 16 KHz PCM interface in hardware.
+	  //BT NB headset always works at 8 KHz PCM interface in hardware.
+
+	  //user space code (BT stack) knows BT headset type and calls AUDDRV_SetBTMTypeWB( ).
+
+	  if ( AUDDRV_IsBTMWB() )
+	    mode = AUDIO_MODE_BLUETOOTH_WB;
+	  else
+	    mode = AUDIO_MODE_BLUETOOTH;
+
+	  bDualMic_IsNeeded = FALSE;
+	}
+
 	if( mode >= AUDIO_MODE_NUMBER )
 	{
-		AUDDRV_Telephony_InitHW ( mic, speaker, AUDIO_SAMPLING_RATE_16000 );
+		AUDDRV_Telephony_InitHW ( mic, speaker, AUDIO_SAMPLING_RATE_16000, bDualMic_IsNeeded );
 #if defined(ENABLE_DMA_VOICE)
 		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
 #endif
 	} else {
-		AUDDRV_Telephony_InitHW ( mic, speaker, AUDIO_SAMPLING_RATE_8000 );
+		AUDDRV_Telephony_InitHW ( mic, speaker, AUDIO_SAMPLING_RATE_8000, bDualMic_IsNeeded );
 #if defined(ENABLE_DMA_VOICE)
 		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
 #endif
 	}
 
-    dev |= AUDDRV_SPEAKER;
-    dev |= AUDDRV_MIC1;
-    if(AUDDRV_IsDualMicEnabled(mode)==TRUE)
-    {
-    	dev |= AUDDRV_MIC2;
-    }
-
     // Set new filter coef.
-    AUDDRV_SetAudioMode( mode, dev);
+    AUDDRV_SetAudioMode( mode );
 
 	if(speaker == AUDIO_SINK_LOUDSPK)
 	{
@@ -300,7 +314,6 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 		//csl_dsp_caph_control_aadmac_disable_path((UInt16)(DSP_AADMAC_SEC_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN));
 		csl_dsp_caph_control_aadmac_disable_path((UInt16)(DSP_AADMAC_SPKR_EN));
 		dma_mic_spk = (UInt16)DSP_AADMAC_PRI_MIC_EN;
-		//if(AUDDRV_IsDualMicEnabled(mode)==TRUE) dma_mic_spk |= (UInt16)DSP_AADMAC_SEC_MIC_EN; //dual mic leads to crash when single-mic switches to dual-mic on lmp
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
@@ -313,7 +326,6 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 	{
 #if defined(ENABLE_DMA_VOICE)
 		dma_mic_spk = (UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN);
-		//if(AUDDRV_IsDualMicEnabled(mode)==TRUE) dma_mic_spk |= (UInt16)DSP_AADMAC_SEC_MIC_EN; //dual mic leads to crash when single-mic switches to dual-mic on lmp
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
@@ -337,7 +349,12 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0, 0 );
 #endif
 	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0 );
-	audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
+
+    if(bDualMic_IsNeeded==TRUE)
+    {
+		audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
+    }
+
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, TRUE, 0, 0, 0, 0 );
 
 	//for the next call, upper layer in Android un-mute mic before start the next voice call.
@@ -382,6 +399,7 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 void AUDDRV_Telephony_RateChange( unsigned int sample_rate )
 {
     AudioMode_t mode;
+    Boolean bDualMic_IsNeeded = FALSE;
 
     Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_RateChange, sampleRate = %d\n\r", sample_rate);
 
@@ -411,7 +429,7 @@ void AUDDRV_Telephony_RateChange( unsigned int sample_rate )
     else
       mode = (AUDDRV_GetAudioMode() % AUDIO_MODE_NUMBER) + AUDIO_MODE_NUMBER;
 
-    AUDDRV_SetAudioMode( mode, 0);  //dev
+    AUDDRV_SetAudioMode( mode );
 
 	//AUDDRV_Enable_Output (AUDDRV_VOICE_OUTPUT, speaker, TRUE, AUDIO_SAMPLING_RATE_8000);
 #if defined(ENABLE_DMA_VOICE)
@@ -431,7 +449,14 @@ void AUDDRV_Telephony_RateChange( unsigned int sample_rate )
 
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0 );
-	audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
+
+	bDualMic_IsNeeded = (AUDIO_GetParmAccessPtr()[mode].dual_mic_enable != 0);  //in parm_audio.txt, VOICE_DUALMIC_ENABLE
+
+    if(bDualMic_IsNeeded==TRUE)
+    {
+		audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
+    }
+
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, TRUE, 0, 0, 0, 0 );
 
 	if (bmuteVoiceCall == FALSE)
@@ -515,7 +540,9 @@ void AUDDRV_Telephone_SaveSampleRate( unsigned int sample_rate )
 // This is part of the control sequence for ending telephony audio.
 void AUDDRV_Telephony_Deinit (void)
 {
+#if defined(ENABLE_DMA_VOICE)
 	UInt16 dma_mic_spk;
+#endif
 
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_Deinit voicePlayOutpathEnabled = %d*\n\r", voicePlayOutpathEnabled);
 
@@ -545,7 +572,6 @@ void AUDDRV_Telephony_Deinit (void)
 
 #if defined(ENABLE_DMA_VOICE)
 		dma_mic_spk = (UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN);
-		//if(AUDDRV_IsDualMicEnabled(mode)==TRUE) dma_mic_spk |= (UInt16)DSP_AADMAC_SEC_MIC_EN; //dual mic leads to crash when single-mic switches to dual-mic on lmp
 		csl_dsp_caph_control_aadmac_disable_path(dma_mic_spk);
 #endif
 		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
@@ -874,7 +900,9 @@ void AUDDRV_SetVoiceCallFlag( Boolean inVoiceCall )
 
 // intentionally put this static var here to prevent any code above this lines to use this var.
 static AudioMode_t currAudioMode = AUDIO_MODE_HANDSET;	//need to update this on AP and also in audioapi.c on CP.
-//static AudioMode_t currMusicAudioMode = AUDIO_MODE_HANDSET;
+//static AudioMode_t currAudioMode_ForPlayback = AUDIO_MODE_HANDSET;
+//static AudioMode_t currAudioMode_ForRecord = AUDIO_MODE_HANDSET;
+
 
 void AUDDRV_SaveAudioMode( AudioMode_t audio_mode )
 {
@@ -885,24 +913,12 @@ void AUDDRV_SaveAudioMode( AudioMode_t audio_mode )
 //
 // Function Name: AUDDRV_SetAudioMode
 //
-// Description:   set audio mode.
+// Description:   set audio mode for voice call.
 //
 //=============================================================================
-#include "audio_controller.h"
 
-void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 arg_dev )
+void AUDDRV_SetAudioMode( AudioMode_t audio_mode )
 {
-	UInt16 gainTemp1=0, gainTemp2=0, gainTemp3=0, gainTemp4=0;
-
-	int mixerInputGain; // Register value.
-	int mixerOutputFineGain;  // Bit12:0, Output Fine Gain
-	int mixerOutputBitSelect;
-	int pmu_gain = 0;
-
-	CSL_CAPH_PathID pathID = 0;
-	CSL_CAPH_HWConfig_Table_t *path = NULL;
-	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
-
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode() audio_mode==%d\n\r", audio_mode );
 
 	// load DSP parameters:
@@ -933,216 +949,50 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 arg_dev )
 	if (userEQOn == FALSE)
 	{
 		//load speaker EQ filter and Mic EQ filter from sysparm to DSP
-		audio_control_generic( AUDDRV_CPCMD_SetFilter, audio_mode, arg_dev, 0, 0, 0 );
+		audio_control_generic( AUDDRV_CPCMD_SetFilter, audio_mode, 7, 0, 0, 0 );  //7 can be removed later on. It means mic1, mic2, speaker
 	}
 	//else
 		//There is no need for this function to load the ECI-headset-provided speaker EQ filter and Mic EQ filter to DSP.
 		//The ECI headset enable/disable request comes with the data. It means we'll get the coefficients every time they want to switch ECI headset on.
 		//audio_cmf_filter((AudioCompfilter_t *) &copy_of_AudioCompfilter );
 
-	//audDev = arg_dev;  //what for?
 
+	auddrv_SetAudioMode_mic(audio_mode, 0);
+	auddrv_SetAudioMode_speaker(audio_mode, 0);
 
-	//Load the mic gains from sysparm.
-
-	/***
-	do not touch DSP UL gain in this function.
-	if(isDSPNeeded == TRUE)
-	{
-		dspULGain = 64; //AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;
-		audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain,
-				dspULGain, 0, 0, 0, 0);
-	}
-	***/
-
-	gainTemp1 = AUDIO_GetParmAccessPtr()[currAudioMode].mic_pga;  //Q13p2
-	csl_caph_audioh_setMicPga_by_mB( ((int)gainTemp1)*25 );
-
-	gainTemp1 = AUDIO_GetParmAccessPtr()[currAudioMode].amic_dga_coarse_gain; //Q13p2 dB
-	gainTemp2 = AUDIO_GetParmAccessPtr()[currAudioMode].amic_dga_fine_gain; //Q13p2 dB
-
-	gainTemp1 = AUDIO_GetParmAccessPtr()[currAudioMode].dmic1_dga_coarse_gain;
-	// dmic1_dga_coarse_gain is the same register as amic_dga_coarse_gain
-	gainTemp2 = AUDIO_GetParmAccessPtr()[currAudioMode].dmic1_dga_fine_gain;
-
-	gainTemp3 = AUDIO_GetParmAccessPtr()[currAudioMode].dmic2_dga_coarse_gain;
-	gainTemp4 = AUDIO_GetParmAccessPtr()[currAudioMode].dmic2_dga_fine_gain;
-
-	csl_caph_audioh_vin_set_cic_scale_by_mB ( ((int)gainTemp1)*25,
-		((int)gainTemp2)*25,
-		((int)gainTemp3)*25,
-		((int)gainTemp4)*25
-		);
-
-	gainTemp1 = AUDIO_GetParmAccessPtr()[currAudioMode].dmic3_dga_coarse_gain;
-	gainTemp2 = AUDIO_GetParmAccessPtr()[currAudioMode].dmic3_dga_fine_gain;
-	gainTemp3 = AUDIO_GetParmAccessPtr()[currAudioMode].dmic4_dga_coarse_gain;
-	gainTemp4 = AUDIO_GetParmAccessPtr()[currAudioMode].dmic4_dga_fine_gain;
-
-	csl_caph_audioh_nvin_set_cic_scale_by_mB ( ((int)gainTemp1)*25,
-		((int)gainTemp2)*25,
-		((int)gainTemp3)*25,
-		((int)gainTemp4)*25
-		);
-
-
-	//Load the speaker gains form sysparm.
-/******
-	Int16 dspDLGain = 0;
-
-	// Set DSP DL gain from sysparm.
-	if(isDSPNeeded == TRUE)
-	{
-		dspDLGain = 64; //AUDIO_GetParmAccessPtr()[mode].echo_nlp_downlink_volume_ctrl;
-		audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain,
-						dspDLGain, 0, 0, 0, 0);
-	}
-	********/
-
-	//determine which mixer output to apply the gains to
-
-	switch ( currAudioMode )
-	{
-	case AUDIO_MODE_HANDSET:
-	case AUDIO_MODE_HANDSET_WB:
-	case AUDIO_MODE_HAC:
-	case AUDIO_MODE_HAC_WB:
-		outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
-		break;
-
-	case AUDIO_MODE_HEADSET:
-	case AUDIO_MODE_HEADSET_WB:
-	case AUDIO_MODE_TTY:
-	case AUDIO_MODE_TTY_WB:
-		//outChnl = (CSL_CAPH_SRCM_STEREO_CH1_L | CSL_CAPH_SRCM_STEREO_CH1_R);
-		outChnl = CSL_CAPH_SRCM_STEREO_CH1;
-		break;
-
-	case AUDIO_MODE_SPEAKERPHONE:
-	case AUDIO_MODE_SPEAKERPHONE_WB:
-		outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;
-		//for the case of Stereo_IHF
-		outChnl = (CSL_CAPH_SRCM_STEREO_CH2_R | CSL_CAPH_SRCM_STEREO_CH2_L);
-		break;
-
-	case AUDIO_MODE_BLUETOOTH:
-		//does it go through HW mixer gain?
-		//outChnl = (CSL_CAPH_SRCM_STEREO_CH1_L | CSL_CAPH_SRCM_STEREO_CH1_R);
-		outChnl = CSL_CAPH_SRCM_STEREO_CH1;
-		break;
-
-	default:
-		break;
-	}
-
-
-	//Load HW Mixer gains from sysparm
-
-	mixerInputGain = (int) AUDIO_GetParmAccessPtr()[currAudioMode].srcmixer_input_gain_l; //Q13p2 dB
-	mixerInputGain = mixerInputGain*25; //into mB
-	//mixerInputGain = (int) AUDIO_GetParmAccessPtr()[currAudioMode].srcmixer_input_gain_r;
-	//mixerInputGain = mixerInputGain*25; //into mB
-
-	//determine which which mixer input to apply the gains to
-
-    //need to find the pathID then the mixer inputs,
-
-	if (pathID != 0)
-	{
-		csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, mixerInputGain, mixerInputGain);
-	}
-	else
-	{
-		csl_caph_srcmixer_set_mix_all_in_gain( outChnl, mixerInputGain, mixerInputGain);
-	}
-
-	mixerOutputFineGain = (int) AUDIO_GetParmAccessPtr()[currAudioMode].srcmixer_output_fine_gain_l; //Q13p2 dB
-	mixerOutputFineGain = mixerOutputFineGain*25; //into mB
-	//mixerOutputFineGain = (int) AUDIO_GetParmAccessPtr()[currAudioMode].srcmixer_output_fine_gain_r;
-	//mixerOutputFineGain = mixerOutputFineGain*25; //into mB
-
-
-	mixerOutputBitSelect = (int) AUDIO_GetParmAccessPtr()[currAudioMode].srcmixer_output_coarse_gain_l; //Q13p2 dB
-	mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
-	//mixerOutputBitSelect = (int) AUDIO_GetParmAccessPtr()[currAudioMode].srcmixer_output_coarse_gain_r;
-	//mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
-
-	csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixerOutputBitSelect);
-	csl_caph_srcmixer_set_mix_out_gain( outChnl, mixerOutputFineGain );
-
-    //Config sidetone
-    {
-	Int32 *coeff = NULL;
-	UInt16 gain = 0;
-	UInt16 enable = 0;
-	SysAudioParm_t* pAudioParm;
-	pAudioParm = AUDIO_GetParmAccessPtr();
-
-	enable = AUDIO_GetParmAccessPtr()[currAudioMode].hw_sidetone_enable;
-	if (!enable)
-	{
-		AUDDRV_HWControl_DisableSideTone(currAudioMode);
-	}
-	else
-	{
-		AUDDRV_HWControl_EnableSideTone(currAudioMode);
-
-		coeff = &(AUDIO_GetParmAccessPtr()[currAudioMode].hw_sidetone_eq[0]);
-		AUDDRV_HWControl_SetFilter(AUDDRV_SIDETONE_FILTER, (void *)coeff);
-		gain = AUDIO_GetParmAccessPtr()[currAudioMode].hw_sidetone_gain;
-		csl_caph_audioh_sidetone_set_gain(gain);
-	}
-    }
-
-	//Load PMU gain from sysparm.
-	switch ( currAudioMode )
-	{
-	case AUDIO_MODE_HANDSET:
-	case AUDIO_MODE_HANDSET_WB:
-	case AUDIO_MODE_HAC:
-	case AUDIO_MODE_HAC_WB:
-		break;
-
-	case AUDIO_MODE_HEADSET:
-	case AUDIO_MODE_HEADSET_WB:
-	case AUDIO_MODE_TTY:
-	case AUDIO_MODE_TTY_WB:
-		//enum {
-		//		PMU_AUDIO_HS_RIGHT,
-		//		PMU_AUDIO_HS_LEFT,
-		//		PMU_AUDIO_HS_BOTH
-		//};
-
-		pmu_gain = (int) AUDIO_GetParmAccessPtr()[currAudioMode].ext_speaker_pga_l; //Q13p2 dB
-		SetGainOnExternalAmp_mB(AUDIO_SINK_HEADSET, pmu_gain*25, 1); //PMU_AUDIO_HS_LEFT);
-
-		pmu_gain = (int) AUDIO_GetParmAccessPtr()[currAudioMode].ext_speaker_pga_r; //Q13p2 dB
-		SetGainOnExternalAmp_mB(AUDIO_SINK_HEADSET, pmu_gain*25, 0); //PMU_AUDIO_HS_RIGHT);
-		break;
-
-	case AUDIO_MODE_SPEAKERPHONE:
-	case AUDIO_MODE_SPEAKERPHONE_WB:
-
-		pmu_gain = (int) AUDIO_GetParmAccessPtr()[currAudioMode].ext_speaker_pga_l; //Q13p2 dB
-		SetGainOnExternalAmp_mB( AUDIO_SINK_LOUDSPK, pmu_gain*25, 0); //PMU_AUDIO_HS_BOTH);
-		break;
-
-	default:
-		break;
-	}
 }
 
 
 //=============================================================================
 //
-// Function Name: AUDDRV_SetMusicMode
+// Function Name: AUDDRV_SetAudioMode_ForMusicPlayback
 //
 // Description:   set audio mode.
 //
 //=============================================================================
 
-void AUDDRV_SetMusicMode( AudioMode_t audio_mode) //add a second audio_mode for broadcast case
+void AUDDRV_SetAudioMode_ForMusicPlayback( AudioMode_t audio_mode, unsigned int arg_pathID)
+ //add a second audio_mode for broadcast case
 {
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode_ForMusicPlayback() audio_mode==%d\n\r", audio_mode );
+
+	auddrv_SetAudioMode_speaker(audio_mode, 0);
+}
+
+
+//=============================================================================
+//
+// Function Name: AUDDRV_SetAudioMode_ForMusicRecord
+//
+// Description:   set audio mode.
+//
+//=============================================================================
+
+void AUDDRV_SetAudioMode_ForMusicRecord( AudioMode_t audio_mode, unsigned int arg_pathID)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode_ForMusicRecord() audio_mode==%d\n\r", audio_mode );
+
+	auddrv_SetAudioMode_mic(audio_mode, 0);
 }
 
 
@@ -1509,20 +1359,6 @@ void AUDDRV_SetULSpeechRecordGain(Int16 gain)
 	return;
 }
 
-
-//=============================================================================
-//
-// Function Name: AUDDRV_IsDualMicEnable
-//
-// Description:   Check whether Dual Mic is enabled
-//
-//=============================================================================
-
-Boolean AUDDRV_IsDualMicEnabled(AudioMode_t mode)
-{
-	return (AUDIO_GetParmAccessPtr()[mode].dual_mic_enable != 0);	//in parm_audio.txt, VOICE_DUALMIC_ENABLE
-}
-
 //*********************************************************************
 /**
 *	Get BTM headset NB or WB info
@@ -1532,7 +1368,6 @@ Boolean AUDDRV_IsDualMicEnabled(AudioMode_t mode)
 **********************************************************************/
 Boolean AUDDRV_IsBTMWB( void )
 {
-	if (voiceCallSampleRate == AUDIO_SAMPLING_RATE_16000) IsBTM_WB = TRUE;
 	return IsBTM_WB;
 }
 
@@ -1566,29 +1401,18 @@ void AUDDRV_SetBTMTypeWB( Boolean isWB)
 //=============================================================================
 static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
                                     AUDIO_SINK_Enum_t speaker,
-                                    AUDIO_SAMPLING_RATE_t	sample_rate)
+                                    AUDIO_SAMPLING_RATE_t sample_rate,
+                                    Boolean bNeedDualMic)
 {
     CSL_CAPH_HWCTRL_CONFIG_t config;
-    Int16 tempGain = 0;
-    AudioMode_t mode = AUDIO_MODE_HANDSET;
-
     UInt32 *memAddr = 0;
 
-    tempGain = tempGain;
     Log_DebugPrintf(LOGID_AUDIO,
                     "\n\r\t* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%ld*\n\r",
                     mic, speaker, sample_rate);
 
     memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
-    currSpkr = speaker;
-    currMic = mic;
-    currSampleRate = sample_rate;
-	mode = AUDDRV_GetAudioModeBySink(speaker);
-	if (voiceCallSampleRate == AUDIO_SAMPLING_RATE_16000)
-	{
-		mode = mode + AUDIO_MODE_NUMBER;	//WB
-	}
     //DL
     config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = 0;
@@ -1633,24 +1457,6 @@ static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
 	    config.source = CSL_CAPH_DEV_DSP;
 	}
 
-	/***
-
-	 SetAudioMode() should already set HW gains from SYSPARM
-
-    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);
-    config.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
-    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l);
-    config.mixGain.mixOutGainL = AUDDRV_GetMixerOutputFineGain(tempGain);
-    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l);
-    config.mixGain.mixOutCoarseGainL = AUDDRV_GetMixerOutputCoarseGain(tempGain);
-
-    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r);
-    config.mixGain.mixInGainR = AUDDRV_GetMixerInputGain(tempGain);
-    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r);
-    config.mixGain.mixOutGainR = AUDDRV_GetMixerOutputFineGain(tempGain);
-    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r);
-    config.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
-    ***/
 
     telephonyPathID.dlPathID = csl_caph_hwctrl_EnablePath(config);
 
@@ -1668,7 +1474,7 @@ static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
     telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
     //If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used
     //Here Let us assume it is DMIC3. It can be changed.
-    if(AUDDRV_IsDualMicEnabled(mode)==TRUE)
+    if(bNeedDualMic==TRUE)
     {
         config.streamID = CSL_CAPH_STREAM_NONE;
         config.pathID = 0;
@@ -1702,9 +1508,6 @@ static void AUDDRV_Telephony_DeinitHW (void)
 
     memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
-    currSpkr = AUDIO_SINK_UNDEFINED;
-    currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED;
-
     AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
 
     config.streamID = CSL_CAPH_STREAM_NONE;
@@ -1720,7 +1523,6 @@ static void AUDDRV_Telephony_DeinitHW (void)
         (void)csl_caph_hwctrl_DisablePath(config);
     }
 
-    currMic = AUDIO_SOURCE_UNDEFINED;
     config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = telephonyPathID.dlPathID;
 
@@ -1820,10 +1622,234 @@ static void AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode)
 }
 
 
+//=============================================================================
+//
+// Function Name: auddrv_SetAudioMode_mic
+//
+// Description:   set audio mode on mic path.
+//
+//=============================================================================
+
+static void auddrv_SetAudioMode_mic( AudioMode_t arg_audio_mode, unsigned int arg_pathID )
+{
+	UInt16 gainTemp1=0, gainTemp2=0, gainTemp3=0, gainTemp4=0;
+
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* auddrv_SetAudioMode_mic() arg_audio_mode==%d\n\r", arg_audio_mode );
+
+	//Load the mic gains from sysparm.
+
+	/***
+	do not touch DSP UL gain in this function.
+	if(isDSPNeeded == TRUE)
+	{
+		dspULGain = 64; //AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;
+		audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain,
+				dspULGain, 0, 0, 0, 0);
+	}
+	***/
+
+	gainTemp1 = AUDIO_GetParmAccessPtr()[arg_audio_mode].mic_pga;  //Q13p2
+	csl_caph_audioh_setMicPga_by_mB( ((int)gainTemp1)*25 );
+
+	gainTemp1 = AUDIO_GetParmAccessPtr()[arg_audio_mode].amic_dga_coarse_gain; //Q13p2 dB
+	gainTemp2 = AUDIO_GetParmAccessPtr()[arg_audio_mode].amic_dga_fine_gain; //Q13p2 dB
+
+	gainTemp1 = AUDIO_GetParmAccessPtr()[arg_audio_mode].dmic1_dga_coarse_gain;
+	// dmic1_dga_coarse_gain is the same register as amic_dga_coarse_gain
+	gainTemp2 = AUDIO_GetParmAccessPtr()[arg_audio_mode].dmic1_dga_fine_gain;
+
+	gainTemp3 = AUDIO_GetParmAccessPtr()[arg_audio_mode].dmic2_dga_coarse_gain;
+	gainTemp4 = AUDIO_GetParmAccessPtr()[arg_audio_mode].dmic2_dga_fine_gain;
+
+	csl_caph_audioh_vin_set_cic_scale_by_mB ( ((int)gainTemp1)*25,
+		((int)gainTemp2)*25,
+		((int)gainTemp3)*25,
+		((int)gainTemp4)*25
+		);
+
+	gainTemp1 = AUDIO_GetParmAccessPtr()[arg_audio_mode].dmic3_dga_coarse_gain;
+	gainTemp2 = AUDIO_GetParmAccessPtr()[arg_audio_mode].dmic3_dga_fine_gain;
+	gainTemp3 = AUDIO_GetParmAccessPtr()[arg_audio_mode].dmic4_dga_coarse_gain;
+	gainTemp4 = AUDIO_GetParmAccessPtr()[arg_audio_mode].dmic4_dga_fine_gain;
+
+	csl_caph_audioh_nvin_set_cic_scale_by_mB ( ((int)gainTemp1)*25,
+		((int)gainTemp2)*25,
+		((int)gainTemp3)*25,
+		((int)gainTemp4)*25
+		);
+
+}
 
 
-// move from drv_audio_commom.c
+//=============================================================================
+//
+// Function Name: auddrv_SetAudioMode_speaker
+//
+// Description:   set audio mode on speaker path.
+//
+//=============================================================================
 
+static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned int arg_pathID )
+{
+	int mixerInputGain; // Register value.
+	int mixerOutputFineGain;  // Bit12:0, Output Fine Gain
+	int mixerOutputBitSelect;
+	int pmu_gain = 0;
+
+	CSL_CAPH_PathID pathID = 0;
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
+
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* auddrv_SetAudioMode_speaker() arg_audio_mode==%d\n\r", arg_audio_mode );
+
+		//Load the speaker gains form sysparm.
+	/******
+		Int16 dspDLGain = 0;
+	
+		// Set DSP DL gain from sysparm.
+		if(isDSPNeeded == TRUE)
+		{
+			dspDLGain = 64; //AUDIO_GetParmAccessPtr()[mode].echo_nlp_downlink_volume_ctrl;
+			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain,
+							dspDLGain, 0, 0, 0, 0);
+		}
+		********/
+	
+		//determine which mixer output to apply the gains to
+	
+		switch ( arg_audio_mode )
+		{
+		case AUDIO_MODE_HANDSET:
+		case AUDIO_MODE_HANDSET_WB:
+		case AUDIO_MODE_HAC:
+		case AUDIO_MODE_HAC_WB:
+			outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
+			break;
+	
+		case AUDIO_MODE_HEADSET:
+		case AUDIO_MODE_HEADSET_WB:
+		case AUDIO_MODE_TTY:
+		case AUDIO_MODE_TTY_WB:
+			//outChnl = (CSL_CAPH_SRCM_STEREO_CH1_L | CSL_CAPH_SRCM_STEREO_CH1_R);
+			outChnl = CSL_CAPH_SRCM_STEREO_CH1;
+			break;
+	
+		case AUDIO_MODE_SPEAKERPHONE:
+		case AUDIO_MODE_SPEAKERPHONE_WB:
+			outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;
+			
+			//for the case of Stereo_IHF
+			outChnl = (CSL_CAPH_SRCM_STEREO_CH2_R | CSL_CAPH_SRCM_STEREO_CH2_L);
+			break;
+	
+		case AUDIO_MODE_BLUETOOTH:
+			//does it go through HW mixer gain?
+			//outChnl = (CSL_CAPH_SRCM_STEREO_CH1_L | CSL_CAPH_SRCM_STEREO_CH1_R);
+			outChnl = CSL_CAPH_SRCM_STEREO_CH1;
+			break;
+	
+		default:
+			break;
+		}
+	
+	
+		//Load HW Mixer gains from sysparm
+	
+		mixerInputGain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_input_gain_l; //Q13p2 dB
+		mixerInputGain = mixerInputGain*25; //into mB
+		//mixerInputGain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_input_gain_r;
+		//mixerInputGain = mixerInputGain*25; //into mB
+	
+		//determine which which mixer input to apply the gains to
+	
+		//need to find the pathID then the mixer inputs,
+	
+		if (pathID != 0)
+		{
+			csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, mixerInputGain, mixerInputGain);
+		}
+		else
+		{
+			csl_caph_srcmixer_set_mix_all_in_gain( outChnl, mixerInputGain, mixerInputGain);
+		}
+	
+		mixerOutputFineGain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_fine_gain_l; //Q13p2 dB
+		mixerOutputFineGain = mixerOutputFineGain*25; //into mB
+		//mixerOutputFineGain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_fine_gain_r;
+		//mixerOutputFineGain = mixerOutputFineGain*25; //into mB
+	
+	
+		mixerOutputBitSelect = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_coarse_gain_l; //Q13p2 dB
+		mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
+		//mixerOutputBitSelect = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_coarse_gain_r;
+		//mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
+	
+		csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixerOutputBitSelect);
+		csl_caph_srcmixer_set_mix_out_gain( outChnl, mixerOutputFineGain );
+	
+		//Config sidetone
+		{
+		Int32 *coeff = NULL;
+		UInt16 gain = 0;
+		UInt16 enable = 0;
+		SysAudioParm_t* pAudioParm;
+		pAudioParm = AUDIO_GetParmAccessPtr();
+	
+		enable = AUDIO_GetParmAccessPtr()[arg_audio_mode].hw_sidetone_enable;
+		if (!enable)
+		{
+			AUDDRV_HWControl_DisableSideTone(arg_audio_mode);
+		}
+		else
+		{
+			AUDDRV_HWControl_EnableSideTone(arg_audio_mode);
+	
+			coeff = &(AUDIO_GetParmAccessPtr()[arg_audio_mode].hw_sidetone_eq[0]);
+			AUDDRV_HWControl_SetFilter(AUDDRV_SIDETONE_FILTER, (void *)coeff);
+			gain = AUDIO_GetParmAccessPtr()[arg_audio_mode].hw_sidetone_gain;
+			csl_caph_audioh_sidetone_set_gain(gain);
+		}
+		}
+	
+		//Load PMU gain from sysparm.
+		switch ( arg_audio_mode )
+		{
+		case AUDIO_MODE_HANDSET:
+		case AUDIO_MODE_HANDSET_WB:
+		case AUDIO_MODE_HAC:
+		case AUDIO_MODE_HAC_WB:
+			break;
+	
+		case AUDIO_MODE_HEADSET:
+		case AUDIO_MODE_HEADSET_WB:
+		case AUDIO_MODE_TTY:
+		case AUDIO_MODE_TTY_WB:
+			//enum {
+			//		PMU_AUDIO_HS_RIGHT,
+			//		PMU_AUDIO_HS_LEFT,
+			//		PMU_AUDIO_HS_BOTH
+			//};
+	
+			pmu_gain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_l; //Q13p2 dB
+			SetGainOnExternalAmp_mB(AUDIO_SINK_HEADSET, pmu_gain*25, 1); //PMU_AUDIO_HS_LEFT);
+	
+			pmu_gain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_r; //Q13p2 dB
+			SetGainOnExternalAmp_mB(AUDIO_SINK_HEADSET, pmu_gain*25, 0); //PMU_AUDIO_HS_RIGHT);
+			break;
+	
+		case AUDIO_MODE_SPEAKERPHONE:
+		case AUDIO_MODE_SPEAKERPHONE_WB:
+	
+			pmu_gain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_l; //Q13p2 dB
+			SetGainOnExternalAmp_mB( AUDIO_SINK_LOUDSPK, pmu_gain*25, 0); //PMU_AUDIO_HS_BOTH);
+			break;
+	
+		default:
+			break;
+		}
+
+
+}
 
 
 // ==========================================================================

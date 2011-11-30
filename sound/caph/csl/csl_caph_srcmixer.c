@@ -631,12 +631,20 @@ static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outCh
         case CSL_CAPH_SRCM_STEREO_CH2_R:
             chalOutChnl = CAPH_M1_Right;
             break;
+
+        case (CSL_CAPH_SRCM_STEREO_CH2_L | CSL_CAPH_SRCM_STEREO_CH2_R ):
+            chalOutChnl = CAPH_M1_Left | CAPH_M1_Right;
+            break;
+            
         case CSL_CAPH_SRCM_CH_NONE:
             chalOutChnl = CAPH_M_NONE;
             break;	    
         default:
             audio_xassert(0, chalOutChnl);
     }
+
+    Log_DebugPrintf(LOGID_AUDIO, "csl_caph_srcmixer_get_chaloutchnl  outChnl %d, chalOutChnl %d \r\n", outChnl, chalOutChnl);
+    
     return chalOutChnl;
 }
 
@@ -1182,9 +1190,6 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_mix_route:: ch %x:%x dataFmt %d:%d sr %d:%d tapCh %d.\r\n", 
 		routeConfig.inChnl, routeConfig.outChnl, routeConfig.inDataFmt, routeConfig.outDataFmt, routeConfig.inSampleRate, routeConfig.outSampleRate, routeConfig.tapOutChnl));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_mix_route:: threshold %x:%x.\r\n", routeConfig.inThres, routeConfig.outThres));
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_mix_route:: gain %x:%x:%x:%x:%x:%x.\r\n", 
-		routeConfig.mixGain.mixInGainL, routeConfig.mixGain.mixInGainR, routeConfig.mixGain.mixOutGainL, routeConfig.mixGain.mixOutGainR, routeConfig.mixGain.mixOutCoarseGainL, routeConfig.mixGain.mixOutCoarseGainR));
-
 
     if (routeConfig.inSampleRate == CSL_CAPH_SRCMIN_8KHZ )
     {
@@ -1290,47 +1295,37 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 			if (chalOutChnl & (UInt8)CAPH_M0_Left)
 			{
 				chalInChnlMono = csl_caph_srcmixer_get_mono_inchnl(chalInChnl, CAPH_M0_Left);
-				chal_caph_srcmixer_set_mixingain(handle, chalInChnlMono, CAPH_M0_Left, routeConfig.mixGain.mixInGainL);
 				chal_caph_srcmixer_enable_mixing(handle, chalInChnlMono, CAPH_M0_Left );
 
-				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Left, routeConfig.mixGain.mixOutCoarseGainL);
 				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M0_Left, MIX_IN_GAINSTEP);
-				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Left, routeConfig.mixGain.mixOutGainL);	
 			}
 			if (chalOutChnl & (UInt8)CAPH_M0_Right)
 			{
 				chalInChnlMono = csl_caph_srcmixer_get_mono_inchnl(chalInChnl, CAPH_M0_Right);
-				chal_caph_srcmixer_set_mixingain(handle, chalInChnlMono, CAPH_M0_Right, routeConfig.mixGain.mixInGainR);
  				chal_caph_srcmixer_enable_mixing(handle, chalInChnlMono, CAPH_M0_Right ); 
 
-				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Right, routeConfig.mixGain.mixOutCoarseGainR);
 				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M0_Right, MIX_IN_GAINSTEP);
-				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Right, routeConfig.mixGain.mixOutGainR);	
 			}	
 			if (chalOutChnl & (UInt8)CAPH_M1_Left)
 			{
 				chalInChnlMono = chalInChnl;
 				if (isSTIHF == TRUE && routeConfig.sink == CSL_CAPH_DEV_IHF) 
 					chalInChnlMono = csl_caph_srcmixer_get_mono_inchnl(chalInChnl, CAPH_M1_Left);
-				chal_caph_srcmixer_set_mixingain(handle, chalInChnlMono, CAPH_M1_Left, routeConfig.mixGain.mixInGainL);
+
 				chal_caph_srcmixer_enable_mixing(handle, chalInChnlMono, CAPH_M1_Left );
 
-				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Left, routeConfig.mixGain.mixOutCoarseGainL);
 				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M1_Left, MIX_IN_GAINSTEP);
-				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Left, routeConfig.mixGain.mixOutGainL);	
 			}	
 			if (chalOutChnl & (UInt8)CAPH_M1_Right)
 			{
 				chalInChnlMono = chalInChnl;
 				if (isSTIHF == TRUE && routeConfig.sink == CSL_CAPH_DEV_IHF) 
 					chalInChnlMono = csl_caph_srcmixer_get_mono_inchnl(chalInChnl, CAPH_M1_Right);
-				chal_caph_srcmixer_set_mixingain(handle, chalInChnlMono, CAPH_M1_Right, routeConfig.mixGain.mixInGainR);
+
 				chal_caph_srcmixer_enable_mixing(handle, chalInChnlMono, CAPH_M1_Right );
 
-				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Right, routeConfig.mixGain.mixOutCoarseGainR);
 				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M1_Right, MIX_IN_GAINSTEP);
-				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Right, routeConfig.mixGain.mixOutGainR);	
-			}	
+			}
 		}
     }
 	
@@ -1379,9 +1374,6 @@ void csl_caph_srcmixer_config_src_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_src_route:: ch %x:%x dataFmt %d:%d sr %d:%d tapCh %d.\r\n", 
 		routeConfig.inChnl, routeConfig.outChnl, routeConfig.inDataFmt, routeConfig.outDataFmt, routeConfig.inSampleRate, routeConfig.outSampleRate, routeConfig.tapOutChnl));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_src_route:: threshold %x:%x.\r\n", routeConfig.inThres, routeConfig.outThres));
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_src_route:: gain %x:%x:%x:%x:%x:%x.\r\n", 
-		routeConfig.mixGain.mixInGainL, routeConfig.mixGain.mixInGainR, routeConfig.mixGain.mixOutGainL, routeConfig.mixGain.mixOutGainR, routeConfig.mixGain.mixOutCoarseGainL, routeConfig.mixGain.mixOutCoarseGainR));
-
 
     if ((routeConfig.inSampleRate == CSL_CAPH_SRCMIN_8KHZ)
         &(routeConfig.outSampleRate == CSL_CAPH_SRCMOUT_48KHZ))

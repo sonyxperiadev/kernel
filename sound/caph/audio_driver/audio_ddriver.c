@@ -550,13 +550,13 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                         			      aud_drv->stream_id);
 				csl_caph_arm2sp_set_param((UInt32)aud_drv->arm2sp_config.mixMode,(aud_drv->arm2sp_config.instanceID));
                 //start render
-                result_code = csl_audio_render_start (aud_drv->stream_id);
+                result_code = AUDCTRL_StartRender (aud_drv->stream_id);
             }
             break;
         case AUDIO_DRIVER_STOP:
             {
                 //stop render
-                result_code = csl_audio_render_stop (aud_drv->stream_id);
+                result_code = AUDCTRL_StopRender (aud_drv->stream_id);
 				/* de-init during stop itself as the sequence is open->start->stop->start in android */
                 csl_audio_render_deinit (aud_drv->stream_id);
 				ResetPlaybackStreamHandle(aud_drv->stream_id);
@@ -584,7 +584,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 
 //============================================================================
 //
-// Function Name: AUDIO_DRIVER_ProcessRenderCmd
+// Function Name: AUDIO_DRIVER_ProcessVoiceRenderCmd
 //
 // Description:   This function is used to process voice render control commands
 //
@@ -649,6 +649,8 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  //start render
 			  result_code = ARM2SP_play_start(aud_drv,
 											 numFramesPerInterrupt); 											
+
+			  //voice render shares the audio mode with voice call.
 		  }
 		  break;
 		  case AUDIO_DRIVER_STOP:
@@ -772,13 +774,13 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                                               			      aud_drv->stream_id);
 
                 //start capture
-                result_code = csl_audio_capture_start (aud_drv->stream_id);
+                result_code = AUDCTRL_StartCapture (aud_drv->stream_id);
             }
             break;
         case AUDIO_DRIVER_STOP:
             {
                 //stop capture
-                result_code = csl_audio_capture_stop (aud_drv->stream_id);
+                result_code = AUDCTRL_StopCapture (aud_drv->stream_id);
 				/*de-init as the sequence is open->start->stop->start in android */
                 csl_audio_capture_deinit (aud_drv->stream_id);
                 audio_capture_driver = NULL;
@@ -885,7 +887,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 								0,
 								0,
 								num_frames);
-	
+
+	   		   //voice render shares the audio mode with voice call.
             }
             break;
         case AUDIO_DRIVER_STOP:

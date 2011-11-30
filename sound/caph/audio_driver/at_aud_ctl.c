@@ -105,7 +105,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);
 
-	AUDCTRL_ControlHWClock(TRUE);
+	csl_caph_ControlHWClock(TRUE);
 
 	switch(Params[0])//P1
 	{
@@ -116,7 +116,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			break;
 
 		case 1:	//at*maudmode 1 mode
-			AUDCTRL_GetVoiceSrcSinkByMode(Params[1], &mic, &spk);
+			AUDCTRL_GetSrcSinkByMode(Params[1], &mic, &spk);
             pCurSel[0] = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0]; //save current setting
             pCurSel[1] = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1];
 
@@ -323,7 +323,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 	 //this test command argument 100/101 is provided to control the HW clock.In that case, dont enable the clock
 	if(Params[0] != 100 && Params[0] != 101)
-		AUDCTRL_ControlHWClock(TRUE);
+		csl_caph_ControlHWClock(TRUE);
 
     switch(Params[0])//P1
     {
@@ -384,18 +384,18 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			if(Params[1] == 1)
 			{
 				BCM_AUDIO_DEBUG( "Enable CAPH clock \n" );
-				AUDCTRL_ControlHWClock(TRUE);
+				csl_caph_ControlHWClock(TRUE);
 			}
 			else if(Params[1] == 0)
 			{
 				BCM_AUDIO_DEBUG( "Disable CAPH clock \n" );
-				AUDCTRL_ControlHWClock(FALSE);
+				csl_caph_ControlHWClock(FALSE);
 			}
 			break;
 
 		case 101:
-			Params[0] = (Int32)AUDCTRL_QueryHWClock();
-			BCM_AUDIO_DEBUG( "AUDCTRL_QueryHWClock %d \n",Params[0] );
+			Params[0] = (Int32)csl_caph_QueryHWClock();
+			BCM_AUDIO_DEBUG( "csl_caph_QueryHWClock %d \n",Params[0] );
 			break;
 
 		case 121: //at*maudtst=121,x,y  // x=0: EXT_SPEAKER_PGA, x=1:EXT_SPEAKER_PREPGA, x=2: MIC_PGA, y: gain value register value(enum value)
@@ -874,7 +874,7 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);
 
-	AUDCTRL_ControlHWClock(TRUE);
+	csl_caph_ControlHWClock(TRUE);
 
 	switch(Params[0])//P1
 	{

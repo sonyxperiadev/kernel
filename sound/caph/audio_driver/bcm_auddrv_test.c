@@ -290,7 +290,7 @@ static int HandleControlCommand()
 				char *MsgBuf =  NULL;
 				MsgBuf = kmalloc(2408,GFP_KERNEL);
 
-				AUDCTRL_ControlHWClock(TRUE);
+				csl_caph_ControlHWClock(TRUE);
 
 				sprintf( MsgBuf, "0x35026800 =0x%08lx, 0x3502c910 =0x%08lx, 0x3502c990 =0x%08lx, 0x3502c900 =0x%08lx,0x3502cc20 =0x%08lx,0x35025800 =0x%08lx, 0x34000a34 =0x%08lx, 0x340004b0 =0x%08lx, 0x3400000c =0x%08lx, 0x3400047c =0x%08lx, 0x34000a40=0x%08lx\n",
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x35026800))),
@@ -338,7 +338,7 @@ static int HandleControlCommand()
 				BCM_AUDIO_DEBUG("%s",MsgBuf);
 
 				kfree(MsgBuf);
-				AUDCTRL_ControlHWClock(FALSE);
+				csl_caph_ControlHWClock(FALSE);
 			}
             BCM_AUDIO_DEBUG(" Dump registers done \n");
         }
@@ -376,10 +376,10 @@ static int HandleControlCommand()
 			UInt32 regAddr = sgBrcm_auddrv_TestValues[2];
 			UInt32 regVal = 0;
 			BCM_AUDIO_DEBUG(" peek a register, 0x%08lx\n", regAddr);
-			AUDCTRL_ControlHWClock(TRUE);
+			csl_caph_ControlHWClock(TRUE);
 			regVal = *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)));
             BCM_AUDIO_DEBUG("		value = 0x%08lx\n",regVal );
-			AUDCTRL_ControlHWClock(FALSE);
+			csl_caph_ControlHWClock(FALSE);
 		}
 		break;
 
@@ -387,10 +387,10 @@ static int HandleControlCommand()
         {
 			UInt32 regAddr = sgBrcm_auddrv_TestValues[2];
 			UInt32 regVal = sgBrcm_auddrv_TestValues[3];
-			AUDCTRL_ControlHWClock(TRUE);
+			csl_caph_ControlHWClock(TRUE);
 			*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))) = regVal;
             BCM_AUDIO_DEBUG(" poke a register, 0x%08lx = 0x%08lx\n", regAddr, *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))));
-			AUDCTRL_ControlHWClock(FALSE);
+			csl_caph_ControlHWClock(FALSE);
 		}
 		break;
 
@@ -402,7 +402,7 @@ static int HandleControlCommand()
             UInt32 regVal;
 
             BCM_AUDIO_DEBUG(" hard code caph clock register for debugging..\n");
-			AUDCTRL_ControlHWClock(TRUE);
+			csl_caph_ControlHWClock(TRUE);
 			regVal = (0x00A5A5 << KHUB_CLK_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
             regVal |= KHUB_CLK_MGR_REG_WR_ACCESS_CLKMGR_ACC_MASK;
             //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET),regVal);
@@ -502,7 +502,7 @@ static int HandleControlCommand()
 
             //( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET)) = (UInt32)0x0000ffaa);
 
-			AUDCTRL_ControlHWClock(FALSE);
+			csl_caph_ControlHWClock(FALSE);
 		}
         break;
 #endif

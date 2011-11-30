@@ -60,29 +60,15 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 //****************************************************************************
 // local typedef declarations
 //****************************************************************************
-typedef	struct
-{
-	UInt32		streamID;
-	CSL_AUDIO_DEVICE_e 		source;	
-	CSL_AUDIO_DEVICE_e 		sink;
-	CSL_CAPH_PathID         pathID;
-    CSL_AUDRENDER_CB        dmaCB;	
-	CSL_CAPH_DMA_CHNL_e	    dmaCH;
-	CSL_CAPH_DMA_CHNL_e	    dmaCH2;
-	AUDIO_NUM_OF_CHANNEL_t  numChannels;
-	AUDIO_BITS_PER_SAMPLE_t bitsPerSample;
-	AUDIO_SAMPLING_RATE_t	sampleRate;
-} CSL_CAPH_Drv_t;
 
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {{0}};
+static CSL_CAPH_Render_Drv_t	sRenderDrv[CSL_CAPH_STREAM_TOTAL] = {{0}};
 
 //****************************************************************************
 // local function declarations
 //****************************************************************************
-static CSL_CAPH_Drv_t* GetDriverByType (UInt32 streamID);
 static CSL_CAPH_STREAM_e GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH);
 static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl);
 
@@ -98,18 +84,21 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl);
 *  Description: init CAPH render block
 *
 ****************************************************************************/
+
+//already know source and sink, hmm
+
 UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 {
 	UInt32 streamID = CSL_CAPH_STREAM_NONE;
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
 
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_init::source=0x%x sink=0x%x.\n", source, sink);
 
     // allocate a unique streamID	
 	streamID = (UInt32)csl_caph_hwctrl_AllocateStreamID();
-	audDrv = GetDriverByType(streamID);
+	audDrv = GetRenderDriverByType(streamID);
 	
-	memset(audDrv, 0, sizeof(CSL_CAPH_Drv_t));
+	memset(audDrv, 0, sizeof(CSL_CAPH_Render_Drv_t));
 
 	audDrv->streamID = streamID;
 	audDrv->source = source;
@@ -127,16 +116,16 @@ UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 ****************************************************************************/
 Result_t csl_audio_render_deinit(UInt32 streamID)
 {
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
 	
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_deinit::streamID=0x%x\n", streamID);
 
-	audDrv = GetDriverByType (streamID);
+	audDrv = GetRenderDriverByType (streamID);
 
 	if (audDrv == NULL)
 		return RESULT_ERROR;	
 	
-   	memset(audDrv, 0, sizeof(CSL_CAPH_Drv_t));
+   	memset(audDrv, 0, sizeof(CSL_CAPH_Render_Drv_t));
 	
 	return RESULT_OK;
 }
@@ -157,7 +146,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
 						CSL_AUDRENDER_CB csl_audio_render_cb,
 						UInt32 streamID)
 {
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
 	CSL_CAPH_HWCTRL_STREAM_REGISTER_t stream;
 		
 #ifdef DSP_FPGA_TEST	
@@ -167,7 +156,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_configure:: streamID = 0x%x, sampleRate =0x%x, numChannels = 0x%x, numbBuffers = 0x%x, blockSize = 0x%x, bitsPerSample %d, cb = %x.\r\n", 
 					streamID, sampleRate, numChannels, numBlocks, blockSize, bitsPerSample, csl_audio_render_cb);
 	
-	audDrv = GetDriverByType (streamID);
+	audDrv = GetRenderDriverByType (streamID);
 
 	if (audDrv == NULL)
 		return RESULT_ERROR;	
@@ -212,11 +201,11 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
 ****************************************************************************/
 Result_t csl_audio_render_start (UInt32 streamID)
 {
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
 	
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_render_start::streamID=0x%x\n", streamID);
 
-	audDrv = GetDriverByType (streamID);
+	audDrv = GetRenderDriverByType (streamID);
 
 	if (audDrv == NULL)
 		return RESULT_ERROR;	
@@ -287,16 +276,16 @@ Result_t csl_audio_render_resume (UInt32 streamID)
 
 // ==========================================================================
 //
-// Function Name: GetDriverByType
+// Function Name: GetRenderDriverByType
 //
 // Description: Get the audio render driver reference from the steamID.
 //
 // =========================================================================
-static CSL_CAPH_Drv_t* GetDriverByType (UInt32 streamID)
+CSL_CAPH_Render_Drv_t* GetRenderDriverByType (UInt32 streamID)
 {
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
 
-    audDrv = &sCaphDrv[streamID];
+    audDrv = &sRenderDrv[streamID];
 
 	return audDrv;
 }
@@ -311,7 +300,7 @@ static CSL_CAPH_Drv_t* GetDriverByType (UInt32 streamID)
 static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 {
 	UInt32 streamID = 0; 
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
 
 	//Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDIO_DMA_CB:: DMA callback. chnl = %d\n", chnl);
 
@@ -333,7 +322,7 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 	}
 	streamID = GetStreamIDByDmaCH(chnl);
 
-	audDrv = GetDriverByType(streamID);
+	audDrv = GetRenderDriverByType(streamID);
 	
 	//Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDIO_DMA_CB:: DMA callback. streamID = %d, audDrv->streamID = %d, audDrv->dmaCB = %x\n",
     //                             streamID, audDrv->streamID, audDrv->dmaCB);
@@ -352,12 +341,12 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 static CSL_CAPH_STREAM_e GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH)
 {
 	CSL_CAPH_STREAM_e streamID = CSL_CAPH_STREAM_NONE;
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
     UInt32 i = 0;
     
     for (i = 0; i < CSL_CAPH_STREAM_TOTAL; i++)
     {
-	    audDrv = GetDriverByType(i);
+	    audDrv = GetRenderDriverByType(i);
         if (audDrv != NULL)
         {
 	        //Log_DebugPrintf(LOGID_SOC_AUDIO, "GetStreamIDByDmaCH::  audDrv->dmaCH = %d, dmaCH = %d, i = %d\n", 
@@ -382,10 +371,10 @@ static CSL_CAPH_STREAM_e GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH)
 // =========================================================================
 UInt16 csl_audio_render_get_current_position (UInt32 streamID)
 {
-	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
 
 	if (streamID != CSL_CAPH_STREAM_NONE)
-		audDrv = &sCaphDrv[streamID];
+		audDrv = &sRenderDrv[streamID];
 	else
 	{	
 		return 0;

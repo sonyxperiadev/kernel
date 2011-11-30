@@ -178,7 +178,6 @@ typedef struct
 	UInt8 outThres;
 	CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate;
 	CSL_CAPH_DATAFORMAT_e outDataFmt;
-	CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
     CSL_CAPH_DEVICE_e sink;
 }CSL_CAPH_SRCM_ROUTE_t;
 

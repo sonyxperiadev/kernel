@@ -246,18 +246,38 @@ void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode );
 *	@return		none
 ****************************************************************************/
 void AUDCTRL_SetAudioMode( AudioMode_t mode );
+
+/**
+*   Set audio mode for music playback. (no DSP voice)
+*
+*	@param		mode		music audio mode
+*
+*	@return		none
+****************************************************************************/
+void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_pathID );
+
+/**
+*   Set audio mode for music record. (no DSP voice)
+*
+*	@param		mode		music audio mode
+*
+*	@return		none
+****************************************************************************/
+void AUDCTRL_SetAudioMode_ForMusicRecord( AudioMode_t mode, unsigned int arg_pathID );
+
+
 #endif
 
 /**
 *   Get src and sink from audio mode
 *
-*	@param		mode		(voice call) audio mode
+*	@param		mode		audio mode
 *   @param      pMic        microphone
 *   @param      pSpk        speaker
 *
 *	@return		none
 ****************************************************************************/
-void AUDCTRL_GetVoiceSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic, AUDIO_SINK_Enum_t *pSpk);
+void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic, AUDIO_SINK_Enum_t *pSpk);
 
 /**
 *  @brief  Enable a playback path
@@ -295,6 +315,24 @@ void AUDCTRL_DisablePlay(
 				AUDIO_SINK_Enum_t		sink,
 				unsigned int			pathID
 				);
+
+/********************************************************************
+*  @brief  start the stream for audio render
+*
+*  @param   streamID  (in) render audio stream id
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t AUDCTRL_StartRender (unsigned int streamID);
+
+/********************************************************************
+*  @brief  stop the stream for audio render
+*
+*  @param   streamID  (in) render audio stream id
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t AUDCTRL_StopRender (unsigned int streamID);
 
 /********************************************************************
 *  @brief  Set playback volume
@@ -417,6 +455,26 @@ void AUDCTRL_DisableRecord(
 				AUDIO_SINK_Enum_t		sink,
 				unsigned int			pathID
 				);
+
+/**
+*
+*  @brief  start the stream for audio capture
+*
+*  @param   streamID  (in) capture audio stream id
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t AUDCTRL_StartCapture (unsigned int streamID);
+
+/**
+*
+*  @brief  stop the stream for a caph capture
+*
+*  @param   streamID  (in) capture audio stream id
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t AUDCTRL_StopCapture (unsigned int streamID);
 
 /********************************************************************
 *  @brief  Set gain of a record path
@@ -582,25 +640,6 @@ void AUDCTRL_SetIHFmode (Boolean stIHF);
 ****************************************************************************/
 void  AUDCTRL_SetBTMode(Boolean mode);
 
-/********************************************************************
-*  @brief  Enable/Disable CAPH clock
-*
-*  @param  enable/disable
-*
-*  @return  none
-*
-****************************************************************************/
-void  AUDCTRL_ControlHWClock(Boolean enable);
-
-/********************************************************************
-*  @brief  Query CAPH clock is enabled/disabled
-*
-*  @param  none
-*
-*  @return  Boolean
-*
-****************************************************************************/
-Boolean  AUDCTRL_QueryHWClock(void);
 
 void SetGainOnExternalAmp_mB(AUDIO_SINK_Enum_t speaker, int gain_mB, int left_right);
 

@@ -49,6 +49,9 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 #define MAIN_MIC_UL_TO_DSP_CHNL  CSL_CAPH_SRCM_MONO_CH2
 #define EANC_MIC_UL_TO_DSP_CHNL  CSL_CAPH_SRCM_MONO_CH3
 
+#define PATH_OCCUPIED   1
+#define PATH_AVAILABLE  0
+
 typedef UInt8 CSL_CAPH_PathID;
 
 /**
@@ -155,9 +158,11 @@ typedef struct
     AUDIO_SAMPLING_RATE_t snk_sampleRate;	
     AUDIO_NUM_OF_CHANNEL_t chnlNum;
     AUDIO_BITS_PER_SAMPLE_t bitPerSample;
-    CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
 }CSL_CAPH_HWCTRL_CONFIG_t;
 
+//merge CSL_CAPH_HWCTRL_CONFIG_t and CSL_CAPH_HWCTRL_STREAM_REGISTER_t into CSL_CAPH_HWConfig_Table_t?
+//merge CSL_CAPH_STREAM_CONFIG_t into CSL_CAPH_HWConfig_Table_t?
+//or delete these.
 
 /**
 * CAPH HW path configuration parameters

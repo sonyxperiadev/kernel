@@ -47,6 +47,9 @@
 #include "csl_caph.h"
 #include "csl_caph_audioh.h"
 #include "csl_caph_hwctrl.h"
+#include "csl_audio_render.h"
+#include "csl_audio_capture.h"
+
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "log.h"
@@ -162,8 +165,8 @@ static int mixerOutputFineGain_right[AUDIO_SINK_TOTAL_COUNT] = {0};	// Bit12:0, 
 static int mixerOutputBitSelect_right[AUDIO_SINK_TOTAL_COUNT] = {0};
 static int pmu_gain_right[AUDIO_SINK_TOTAL_COUNT] = {0};
 
-static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
-static unsigned int recordGainR[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
+//static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
+//static unsigned int recordGainR[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 
 
 //=============================================================================
@@ -582,7 +585,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 
     if(!bClk) csl_caph_ControlHWClock(TRUE); //enable clock if it is not enabled.
 
-    AUDCTRL_GetVoiceSrcSinkByMode(mode, &mic, &spk);
+    AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 
     if( (voiceCallMic == mic) && (voiceCallSpkr == spk) )
     {
@@ -604,6 +607,82 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 
     if(!bClk) csl_caph_ControlHWClock(FALSE); //disable clock if it is enabled by this function.
 }
+
+//*********************************************************************
+//	 Set audio mode for music playback
+//	@param		mode		audio mode for music playback
+//	@return 	none
+//
+//**********************************************************************/
+void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_pathID )
+{
+    AUDIO_SOURCE_Enum_t mic;
+    AUDIO_SINK_Enum_t spk;
+    Boolean bClk = csl_caph_QueryHWClock();
+	
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode_ForMusicPlayback: mode = %d\n",  mode);
+
+    //if( mode==AUDDRV_GetAudioMode() )
+    //  return;
+
+    if ( AUDDRV_InVoiceCall() )
+    {
+      return;  //don't affect voice call audio mode
+    }
+
+    if(!bClk) csl_caph_ControlHWClock(TRUE); //enable clock if it is not enabled.
+
+    AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
+
+//set PMU on/off, gain,
+
+//for multicast, need to find the other mode and reconcile on mixer gains. like BT + IHF
+
+    AUDDRV_SetAudioMode_ForMusicPlayback( mode, 0 );
+
+
+    if(!bClk) csl_caph_ControlHWClock(FALSE); //disable clock if it is enabled by this function.
+}
+
+
+//*********************************************************************
+//	 Set audio mode for music record
+//	@param		mode		audio mode
+//	@return 	none
+//
+//**********************************************************************/
+void AUDCTRL_SetAudioMode_ForMusicRecord( AudioMode_t mode, unsigned int arg_pathID )
+{
+    AUDIO_SOURCE_Enum_t mic;
+    AUDIO_SINK_Enum_t spk;
+    Boolean bClk = csl_caph_QueryHWClock();
+	
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode_ForMusicPlayback: mode = %d\n",  mode);
+
+    //if( mode==AUDDRV_GetAudioMode() )
+    //  return;
+
+    if ( AUDDRV_InVoiceCall() )
+    {
+    //FM radio recording should be able to co-exist with voice call
+      return;  //don't affect voice call audio mode
+    }
+
+    if(!bClk) csl_caph_ControlHWClock(TRUE); //enable clock if it is not enabled.
+
+    AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
+
+//no PMU
+
+//for FM recording + voice call, need to fidn separate gains from sysparm and HW paths
+
+	//also need to support audio profile (and/or mode) set from user space code to support multi-profile/app.
+
+    AUDDRV_SetAudioMode_ForMusicRecord( mode, 0 );
+
+    if(!bClk) csl_caph_ControlHWClock(FALSE); //disable clock if it is enabled by this function.
+}
+
 #endif
 
 //*********************************************************************
@@ -615,7 +694,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 //	pSpk -- Sink device coresponding to audio mode
 //Return   none
 //**********************************************************************/
-void AUDCTRL_GetVoiceSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic, AUDIO_SINK_Enum_t *pSpk)
+void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic, AUDIO_SINK_Enum_t *pSpk)
 {
     switch(mode)
     {
@@ -648,7 +727,7 @@ void AUDCTRL_GetVoiceSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic, 
         break;
 
     default:
-        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetVoiceSrcSinkByMode() mode %d is out of range\n", mode);
+        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetSrcSinkByMode() mode %d is out of range\n", mode);
         break;
     }
 }
@@ -805,6 +884,80 @@ void AUDCTRL_DisablePlay(
 		}
 	}
 }
+
+/****************************************************************************
+*
+*  Function Name: AUDCTRL_StartRender
+*
+*  Description: Start the data transfer of audio path render
+*
+****************************************************************************/
+Result_t AUDCTRL_StartRender(unsigned int streamID)
+{
+	AudioMode_t mode=AUDIO_MODE_HANDSET;
+	Result_t res;
+	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+
+	audDrv = GetRenderDriverByType (streamID);
+	
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StartRender::streamID=0x%x\n", streamID);
+
+	if (audDrv == NULL)
+		return RESULT_ERROR;
+
+	res = csl_audio_render_start (streamID);
+
+    if(audDrv->pathID)
+    	path = &HWConfig_Table[ audDrv->pathID - 1 ];
+    else
+    	return 0;
+
+	if ( path->status == PATH_OCCUPIED )
+	{
+		if( path->sink[0] == CSL_CAPH_DEV_EP)
+			mode=AUDIO_MODE_HANDSET;
+		else
+		if( path->sink[0] == CSL_CAPH_DEV_HS)
+			mode=AUDIO_MODE_HEADSET;
+		else
+		if( path->sink[0] == CSL_CAPH_DEV_IHF)
+			mode=AUDIO_MODE_SPEAKERPHONE;
+		else
+		if( path->sink[0] == CSL_CAPH_DEV_BT_SPKR)
+			mode= AUDIO_MODE_BLUETOOTH;
+	}
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StartRender::audDrv->pathID=0x%x, path->status=%d, path->sink[0]=%d, mode=%d \n",
+		audDrv->pathID, path->status, path->sink[0], mode);
+
+	//also need to support audio profile/mode set from user space code to support multi-profile/app.
+
+	AUDCTRL_SetAudioMode_ForMusicPlayback( mode, 0 );
+
+	//for multi-cast, also use path->sink[1]
+				
+	return RESULT_OK;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: AUDCTRL_StopRender
+*
+*  Description: Stop the data transfer of audio path render
+*
+****************************************************************************/
+Result_t AUDCTRL_StopRender(unsigned int streamID)
+{
+	Result_t res;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StopRender::streamID=0x%x\n", streamID);
+	res = csl_audio_render_stop(streamID);
+	
+	return res;
+}
+
 
 //============================================================================
 //
@@ -1051,71 +1204,10 @@ void AUDCTRL_SetPlayVolume(
     {
     	csl_caph_srcmixer_set_mix_all_in_gain(outChnl, mixerInputGain[sink], mixerInputGain[sink]);
     }
-			/***
-            //Save the mixer gain information.
-            //So that it can be picked up by the
-            //next call of csl_caph_hwctrl_EnablePath().
-            //This is to overcome the situation in music playback that
-            //_SetHWGain() is called before Render Driver calls
-            //_EnablePath()
-            mixGain.mixInGainL = outGain.mixerInputGain;
-            mixGain.mixInGainR = outGain.mixerInputGain;
-            if (hw == CSL_CAPH_SRCM_INPUT_GAIN_L)
-        	    csl_caph_hwctrl_SetPathRouteConfigMixerInputGainL(pathID, mixGain);
-            else if (hw == CSL_CAPH_SRCM_INPUT_GAIN_R)
-        	    csl_caph_hwctrl_SetPathRouteConfigMixerInputGainR(pathID, mixGain);
-			***/
 
 	csl_caph_srcmixer_set_mix_out_gain( outChnl, mixerOutputFineGain[sink] );
-			/****
-			LIPING: should save them in audio controller?
-
-            //Save the mixer gain information.
-            //So that it can be picked up by the
-            //next call of csl_caph_hwctrl_EnablePath().
-            //This is to overcome the situation in music playback that
-            //_SetHWGain() is called before Render Driver calls
-            //_EnablePath()
-            mixGain.mixOutGainL = outGain.mixerOutputFineGain&0x1FFF;
-            mixGain.mixOutGainR = outGain.mixerOutputFineGain&0x1FFF;
-            if ( hw == CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_L )
-            	csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainL(pathID, mixGain);
-            else if ( hw == CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_R )
-            	csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainR(pathID, mixGain);
-
-
-			//I think the following can be deleted?
-
-			//Save the mixer gain information.
-			//So that it can be picked up by the
-			//next call of csl_caph_hwctrl_EnablePath().
-			//This is to overcome the problem that
-			//_SetSinkGain() is called before _EnablePath()
-			mixGain.mixOutGainL = mixGainL.mixerOutputFineGain&0x1FFF;
-			mixGain.mixOutGainR = mixGainR.mixerOutputFineGain&0x1FFF;
-			csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainL(
-												 pathID,
-												 mixGain);
-			csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainR(
-												 pathID,
-												 mixGain);
-			***/
 
 	csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixerOutputBitSelect[sink] );
-			/***
-			//Save the mixer gain information.
-			//So that it can be picked up by the
-			//next call of csl_caph_hwctrl_EnablePath().
-			//This is to overcome the situation in music playback that
-			//_SetHWGain() is called before Render Driver calls
-			//_EnablePath()
-			mixGain.mixOutCoarseGainL = (mixer_out_bitsel & 0x7);
-			mixGain.mixOutCoarseGainR = (mixer_out_bitsel & 0x7);
-			if (hw == CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L)
-				csl_caph_hwctrl_SetPathRouteConfigMixerOutputCoarseGainL(pathID, mixGain);
-			else if (hw == CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R)
-				csl_caph_hwctrl_SetPathRouteConfigMixerOutputCoarseGainR(pathID, mixGain);
-			***/
 
 	// Set the gain to the external amplifier
 	SetGainOnExternalAmp_mB(sink, pmu_gain[sink], PMU_AUDIO_HS_BOTH);
@@ -1507,6 +1599,77 @@ void AUDCTRL_DisableRecord(
 	}
 }
 
+/****************************************************************************
+*
+*  Function Name: AUDCTRL_StartCapturet
+*
+*  Description: Start the data transfer of audio path capture
+*
+****************************************************************************/
+Result_t AUDCTRL_StartCapture(unsigned int streamID)
+{
+	AudioMode_t mode=AUDIO_MODE_HANDSET;
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	CSL_CAPH_Capture_Drv_t	*audDrv = NULL;
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StartCapture::streamID=0x%x\n", streamID));
+
+	csl_audio_capture_start(streamID);
+
+	audDrv = GetCaptureDriverByType (streamID);
+
+	if (audDrv == NULL)
+		return RESULT_ERROR;
+
+    if( audDrv->pathID ) path = &HWConfig_Table[ audDrv->pathID - 1 ];
+    else return 0;
+
+	if ( path->status == PATH_OCCUPIED )
+	{
+		if( path->source == CSL_CAPH_DEV_ANALOG_MIC)
+		{
+			mode = AUDIO_MODE_HANDSET;
+			//mode = AUDIO_MODE_SPEAKERPHONE; which mode?
+		}
+		else
+		if( path->source == CSL_CAPH_DEV_HS_MIC)
+			mode = AUDIO_MODE_HEADSET;
+		else
+		if( path->source == CSL_CAPH_DEV_DIGI_MIC
+			|| path->source == CSL_CAPH_DEV_DIGI_MIC_L
+			|| path->source == CSL_CAPH_DEV_DIGI_MIC_R
+			)
+		{
+			mode = AUDIO_MODE_SPEAKERPHONE;
+			//mode = AUDIO_MODE_HANDSET;  //which mode?
+		}
+		else
+		if( path->source == CSL_CAPH_DEV_BT_MIC)
+			mode = AUDIO_MODE_BLUETOOTH;
+	}
+
+	AUDCTRL_SetAudioMode_ForMusicRecord( mode, 0 );
+	
+    return RESULT_OK;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: csl_audio_capture_stop
+*
+*  Description: Stop the data transfer of audio path capture
+*
+****************************************************************************/
+Result_t AUDCTRL_StopCapture (unsigned int streamID)
+{
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StopCapture::streamID=0x%x\n", streamID));
+
+	csl_audio_capture_stop (streamID);
+
+    return RESULT_OK;
+}
+
 
 //============================================================================
 //
@@ -1849,21 +2012,6 @@ void AUDCTRL_SetAudioLoopback(
         hwCtrlConfig.chnlNum = (speaker == AUDIO_SINK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
         hwCtrlConfig.bitPerSample = AUDIO_16_BIT_PER_SAMPLE;
 
-		/*************
-        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_l);
-        hwCtrlConfig.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
-        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_l);
-        hwCtrlConfig.mixGain.mixOutGainL = AUDDRV_GetMixerOutputFineGain(tempGain);
-        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_l);
-        hwCtrlConfig.mixGain.mixOutCoarseGainL = AUDDRV_GetMixerOutputCoarseGain(tempGain);
-
-        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_r);
-        hwCtrlConfig.mixGain.mixInGainR = AUDDRV_GetMixerInputGain(tempGain);
-        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_r);
-        hwCtrlConfig.mixGain.mixOutGainR = AUDDRV_GetMixerOutputFineGain(tempGain);
-        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_r);
-        hwCtrlConfig.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
-        ********/
 
         pathID = csl_caph_hwctrl_EnablePath(hwCtrlConfig);
 
@@ -2104,35 +2252,6 @@ void  AUDCTRL_SetBTMode(Boolean mode)
 {
 	 csl_caph_hwctrl_SetBTMode(mode);
 }
-
-//============================================================================
-//
-// Function Name: AUDCTRL_ControlHWClock
-//
-// Description:   Enable/Disable CAPH clock
-//
-//============================================================================
-//move this to driver
-void  AUDCTRL_ControlHWClock(Boolean enable)
-{
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_ControlHWClock enable %d\r\n",enable);
-	csl_caph_ControlHWClock(enable);
-}
-
-//============================================================================
-//
-// Function Name: AUDCTRL_ControlHWClock
-//
-// Description:  Query if CAPH clock is enabled/disabled
-//
-//============================================================================
-//move this to driver
-Boolean  AUDCTRL_QueryHWClock(void)
-{
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_QueryHWClock \r\n");
-	return csl_caph_QueryHWClock();
-}
-
 
 //============================================================================
 //
