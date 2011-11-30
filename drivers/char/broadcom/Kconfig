@@ -52,14 +52,6 @@ config BCM_BSC
     ---help---
     Say Y to enable the BSC support.
 
-config BCM_GPS
-    tristate "GPS support"
-	default n
-    ---help---
-        Select this to include GPS support for BCMHANA
-
-        If unsure, say N.
-		
 config BCM_GPS_UART
 	int "GPS UART"	
 	depends on BCM_GPS
@@ -155,14 +147,7 @@ config BCM_HALAUDIO_PCM_ISLAND
     help
       Select m to build the HAL Audio PCM driver.This driver must
       be built as a loadable module otherwise initialization will fail.
-              
-config BCM_HAPTICS
-    tristate "HAPTICS driver"
-    default n
-    ---help---
-    Select m to build the generic HAPTICS driver. This driver must be
-    built as a loadable module otherwise initialization will fail.
-    
+
 config BCM_VCP
     bool "Video Calling driver support"
     depends on BRCM_CHAR_DRIVERS
@@ -211,6 +196,17 @@ config BCM_FRAME_PROFILER_SUPPORT
     ---help---
       Maintain a history of time spent processing frames.      
 
+config BCM_WIFI_HDMI
+    tristate "WIFI HDMI"
+    default n
+    ---help---
+      Select to build the WIFI HDMI driver.
+
+config VC_TEST_WIFI_HDMI
+    tristate "Wifi-Hdmi Videocore Service Tester"
+    default n
+    ---help---
+      Select to build the Wifi-Hdmi Videocore Service test driver.
 
 source "drivers/char/broadcom/csx/Kconfig"
 

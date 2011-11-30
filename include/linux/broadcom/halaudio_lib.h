@@ -30,10 +30,10 @@
 /* ---- Constants and Types ---------------------------------------------- */
 #if defined( __KERNEL__ )
 
-/* The maximum number of input samples that can be processed by 
+/* The maximum number of input samples that can be processed by
  * the software equalizer at one time.
  */
-#define HALAUDIO_SWEQU_MAX_SAMPLES     160
+#define HALAUDIO_SWEQU_MAX_SAMPLES  480   /* Max 48 KHz stereo */
 
 typedef struct halaudio_sinectl
 {

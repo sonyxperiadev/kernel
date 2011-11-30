@@ -1,32 +1,27 @@
-config BCMDHD
-	tristate "Broadcom bcm43xx wireless cards support"
+config BCMDHD_43362
+	tristate "Broadcom bcm43362 wireless cards support"
 	depends on MMC
 	select WIRELESS_EXT
 	select WEXT_PRIV
 	---help---
 	  This module adds support for wireless adapters based on
-	  Broadcom 43xx chipset.
+	  Broadcom 43362 chipset.
 	  This driver uses the kernel's wireless extensions subsystem.
-	  If you choose to build a module, it'll be called bcmdhd.ko. Say M if
+	  If you choose to build a module, it'll be called bcmdhd_43362.ko. Say M if
 	  unsure.
 
 
-config BCMDHD_FW_PATH
+config BCMDHD_43362_FW_PATH
 	depends on BCMDHD
 	string "Firmware path"
 	default "/system/vendor/firmware/fw_bcmdhd.bin"
 	---help---
 	  Path to the firmware file.
 
-config BCMDHD_NVRAM_PATH
+config BCMDHD_43362_NVRAM_PATH
 	depends on BCMDHD
 	string "NVRAM path"
 	default "/system/vendor/firmware/nvram.txt"
 	---help---
 	  Path to the calibration file.
 
-#config BCM43362_KONA_SDIO
-#	bool "Broadcom 43362 KONA SDIO support"
-#	depends on BCM43362_FALCON && MMC_SDHCI_PLTFM_KONA
-#	---help---
-#	  This enables Broadcom KONA platform SDIO interface for the BCM43xx chip.

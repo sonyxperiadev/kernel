@@ -67,8 +67,8 @@ static void island_restart(char mode, const char *cmd)
 /* Default L2 settings */
 static int l2off = 0;
 static int l2_non_secure_access = 1;
-static int l2_d_prefetch = 0;
-static int l2_i_prefetch = 0;
+static int l2_d_prefetch = 1;
+static int l2_i_prefetch = 1;
 static int l2_early_bresp = 1;
 
 static int __init l2off_setup(char *str)

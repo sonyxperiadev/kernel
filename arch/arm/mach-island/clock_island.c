@@ -773,8 +773,6 @@ static int arm_clk_init(struct clk* clk)
     /* ARM clock is never disabled by Software. So set use_cnt to 1*/
     clk->use_cnt = 1;
 
-	/*Temp hack....need to move this somewhere else*/
-	arm_clk_set_rate(clk,FREQ_MHZ(700));
     /* Disable write access*/
     ccu_write_access_enable(peri_clk->ccu_clk, false);
     clk->init = 1;

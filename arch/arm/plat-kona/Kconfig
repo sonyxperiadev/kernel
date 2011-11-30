@@ -17,11 +17,6 @@ config ARCH_RHEA
 	help
 	  Support for the Broadcom Rhea SoC platform.
 
-config ARCH_HANA
-        bool "BROADCOM Hana SoC"
-        help
-          Support for the Broadcom Hana SoC platform.
-
 endchoice
 
 config KONA_POWER
@@ -38,7 +33,7 @@ config GP_TIMER_CLOCK_OFF_FIX
 
 config GP_TIMER_COMPARATOR_LOAD_DELAY
         bool "Enable the delay after loading general purpose timer compare register"
-        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_HANA
+        depends on ARCH_RHEA || ARCH_ISLAND
         default y
 
 config KONA_DCACHE_INVALIDATION
@@ -142,6 +137,14 @@ config KONA_ATAG_DT_DTS_FILE
        depends on KONA_ATAG_DT
        help
          DeviceTree source file name
+
+config KONA_WFI_WORKAROUND
+       bool "Prevent both cores from doing cpu_do_idle calls when VCHIQ bulk transfers pending"
+       depends on SMP
+       help
+	 If both cores do a WFI call at the same time, then the DDR3 seems to go into some
+	 type of low power mode which causes videocore accesses to the DDR3 to slow down
+	 dramatically. This enables a workaround which prevents this from happening.
 
 endmenu
 

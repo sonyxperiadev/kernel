@@ -45,8 +45,7 @@
 /* -    Variables.     - */
 /* --------------------- */
 
-#if defined CONFIG_MPU_SENSORS_MPU6050A2 || \
-	defined CONFIG_MPU_SENSORS_MPU6050B1
+#if defined CONFIG_MPU_SENSORS_MPU6050A2 || defined CONFIG_MPU_SENSORS_MPU6050B1
 #define SLEEP   0
 #define WAKE_UP 7
 #define RESET   1
@@ -309,7 +308,7 @@ static int mpu_set_i2c_bypass(struct mldl_cfg *mldl_cfg,
 }
 
 
-#define NUM_OF_PROD_REVS (ARRAY_SIZE(prod_rev_map))
+#define NUM_OF_PROD_REVS (DIM(prod_rev_map))
 
 /* NOTE : when not indicated, product revision
 	  is considered an 'npp'; non production part */
@@ -334,22 +333,23 @@ static struct prod_rev_map_t prod_rev_map[] = {
 	{MPL_PROD_KEY(0,  4), MPU_SILICON_REV_A2, 131, 16384},
 	{MPL_PROD_KEY(0,  5), MPU_SILICON_REV_A2, 131, 16384},
 	{MPL_PROD_KEY(0,  6), MPU_SILICON_REV_A2, 131, 16384},	/* (A2/C2-1) */
+	/* prod_ver = 1, forced to 0 for MPU6050 A2 */
+	{MPL_PROD_KEY(0,  7), MPU_SILICON_REV_A2, 131, 16384},
+	{MPL_PROD_KEY(0,  8), MPU_SILICON_REV_A2, 131, 16384},
+	{MPL_PROD_KEY(0,  9), MPU_SILICON_REV_A2, 131, 16384},
+	{MPL_PROD_KEY(0, 10), MPU_SILICON_REV_A2, 131, 16384},
+	{MPL_PROD_KEY(0, 11), MPU_SILICON_REV_A2, 131, 16384},	/* (A2/D2-1) */
+	{MPL_PROD_KEY(0, 12), MPU_SILICON_REV_A2, 131, 16384},
+	{MPL_PROD_KEY(0, 13), MPU_SILICON_REV_A2, 131, 16384},
+	{MPL_PROD_KEY(0, 14), MPU_SILICON_REV_A2, 131, 16384},
+	{MPL_PROD_KEY(0, 15), MPU_SILICON_REV_A2, 131, 16384},
+	{MPL_PROD_KEY(0, 27), MPU_SILICON_REV_A2, 131, 16384},	/* (A2/D4)   */
 	/* prod_ver = 1 */
-	{MPL_PROD_KEY(1,  7), MPU_SILICON_REV_A2, 131, 16384},
-	{MPL_PROD_KEY(1,  8), MPU_SILICON_REV_A2, 131, 16384},
-	{MPL_PROD_KEY(1,  9), MPU_SILICON_REV_A2, 131, 16384},
-	{MPL_PROD_KEY(1, 10), MPU_SILICON_REV_A2, 131, 16384},
-	{MPL_PROD_KEY(1, 11), MPU_SILICON_REV_A2, 131, 16384},	/* (A2/D2-1) */
-	{MPL_PROD_KEY(1, 12), MPU_SILICON_REV_A2, 131, 16384},
-	{MPL_PROD_KEY(1, 13), MPU_SILICON_REV_A2, 131, 16384},
-	{MPL_PROD_KEY(1, 14), MPU_SILICON_REV_A2, 131, 16384},
-	{MPL_PROD_KEY(1, 15), MPU_SILICON_REV_A2, 131, 16384},
 	{MPL_PROD_KEY(1, 16), MPU_SILICON_REV_B1, 131, 16384},	/* (B1/D2-1) */
 	{MPL_PROD_KEY(1, 17), MPU_SILICON_REV_B1, 131, 16384},	/* (B1/D2-2) */
 	{MPL_PROD_KEY(1, 18), MPU_SILICON_REV_B1, 131, 16384},	/* (B1/D2-3) */
 	{MPL_PROD_KEY(1, 19), MPU_SILICON_REV_B1, 131, 16384},	/* (B1/D2-4) */
 	{MPL_PROD_KEY(1, 20), MPU_SILICON_REV_B1, 131, 16384},	/* (B1/D2-5) */
-	{MPL_PROD_KEY(1, 27), MPU_SILICON_REV_A2, 131, 16384},	/* (A2/D4)   */
 	{MPL_PROD_KEY(1, 28), MPU_SILICON_REV_B1, 131, 16384},	/* (B1/D4)   */
 	{MPL_PROD_KEY(1,  1), MPU_SILICON_REV_B1, 131, 16384},	/* (B1/E1-1) */
 	{MPL_PROD_KEY(1,  2), MPU_SILICON_REV_B1, 131, 16384},	/* (B1/E1-2) */
@@ -369,7 +369,8 @@ static struct prod_rev_map_t prod_rev_map[] = {
 	{MPL_PROD_KEY(3, 30), MPU_SILICON_REV_B1, 131, 16384},	/* (B2/E2)   */
 	/* prod_ver = 4 */
 	{MPL_PROD_KEY(4, 31), MPU_SILICON_REV_B1, 131,  8192},	/* (B2/F1)   */
-	{MPL_PROD_KEY(4,  1), MPU_SILICON_REV_B1, 131,  8192}	/* (B3/F1)   */
+	{MPL_PROD_KEY(4,  1), MPU_SILICON_REV_B1, 131,  8192},	/* (B3/F1)   */
+	{MPL_PROD_KEY(4,  3), MPU_SILICON_REV_B1, 131,  8192}	/* (B4/F1)   */
 };
 
 /**
@@ -417,9 +418,14 @@ static int inv_get_silicon_rev_mpu6050(
 	unsigned short memAddr = ((bank << 8) | 0x06);
 	unsigned short key, index;
 
+#if defined CONFIG_MPU_SENSORS_MPU6050B1
 	result = inv_serial_read(mlsl_handle, mldl_cfg->addr,
 				 MPUREG_PRODUCT_ID, 1, &prod_ver);
 	ERROR_CHECK(result);
+#else
+	/* MPU6050 A2 does not have an equivalent PRODUCT_ID register */
+	prod_ver = 0;
+#endif
 
 	result = inv_serial_read_mem(mlsl_handle, mldl_cfg->addr,
 				     memAddr, 1, &prod_rev);
@@ -434,7 +440,7 @@ static int inv_get_silicon_rev_mpu6050(
 
 	key = MPL_PROD_KEY(prod_ver, prod_rev);
 	if (key == 0) {
-		MPL_LOGE("Product id read as 0 "
+		MPL_LOGE("Product key 0 "
 			 "indicates device is either "
 			 "incompatible or an MPU3050\n");
 		return INV_ERROR_INVALID_MODULE;
@@ -466,6 +472,7 @@ static int inv_get_silicon_rev_mpu6050(
 
 	return result;
 }
+
 #define inv_get_silicon_rev inv_get_silicon_rev_mpu6050
 
 #else /* not CONFIG_MPU_SENSORS_MPU6050XX */
@@ -707,6 +714,7 @@ static inv_error_t mpu60xx_pwr_mgmt(struct mldl_cfg *mldl_cfg,
 }
 
 #elif defined CONFIG_MPU_SENSORS_MPU6050B1
+
 /**
  * @internal
  * @brief MPU6050 B1 power management functions.
@@ -726,70 +734,64 @@ static inv_error_t mpu60xx_pwr_mgmt(struct mldl_cfg *mldl_cfg,
 				    void *mlsl_handle,
 				    unsigned int reset, unsigned long sensors)
 {
-	unsigned char pwr_mgmt_1;
-	unsigned char pwr_mgmt_2;
-	unsigned char pwr_mgmt_1_prev;
-	unsigned char pwr_mgmt_2_prev;
+	unsigned char pwr_mgmt[2];
+	unsigned char pwr_mgmt_prev[2];
 	inv_error_t result;
 	int sleep = !(sensors & (INV_THREE_AXIS_GYRO | INV_THREE_AXIS_ACCEL));
-
-	result = inv_serial_read(mlsl_handle, mldl_cfg->addr,
-				 MPUREG_PWR_MGMT_1, 1, &pwr_mgmt_1_prev);
-	ERROR_CHECK(result);
-	pwr_mgmt_1 = pwr_mgmt_1_prev;
 
 	if (reset) {
 		MPL_LOGI("Reset MPU6050 B1\n");
 		result = inv_serial_single_write(mlsl_handle, mldl_cfg->addr,
-						 MPUREG_PWR_MGMT_1,
-						 pwr_mgmt_1 | BIT_H_RESET);
+						 MPUREG_PWR_MGMT_1, BIT_H_RESET);
 		ERROR_CHECK(result);
 		mldl_cfg->gyro_is_bypassed = FALSE;
 		inv_sleep(15);
 	}
 
-	result =
-	    inv_serial_read(mlsl_handle, mldl_cfg->addr, MPUREG_PWR_MGMT_2, 1,
-			    &pwr_mgmt_2_prev);
+	/* NOTE : reading both PWR_MGMT_1 and PWR_MGMT_2 for efficiency because
+		  they are accessible even when the device is powered off */
+	result = inv_serial_read(mlsl_handle, mldl_cfg->addr,
+				 MPUREG_PWR_MGMT_1, 2, pwr_mgmt_prev);
 	ERROR_CHECK(result);
 
-	pwr_mgmt_2 = pwr_mgmt_2_prev;
-	pwr_mgmt_2 &= ~(BIT_STBY_XG | BIT_STBY_YG | BIT_STBY_ZG);
-	if (!(sensors & INV_X_GYRO))
-		pwr_mgmt_2 |= BIT_STBY_XG;
-	if (!(sensors & INV_Y_GYRO))
-		pwr_mgmt_2 |= BIT_STBY_YG;
-	if (!(sensors & INV_Z_GYRO))
-		pwr_mgmt_2 |= BIT_STBY_ZG;
+	pwr_mgmt[0] = pwr_mgmt_prev[0];
+	pwr_mgmt[1] = pwr_mgmt_prev[1];
 
-	if (pwr_mgmt_2 != pwr_mgmt_2_prev) {
+	if (sleep)
+		pwr_mgmt[0] |= BIT_SLEEP;
+	else
+		pwr_mgmt[0] &= ~BIT_SLEEP;
+
+	if (pwr_mgmt[0] != pwr_mgmt_prev[0]) {
 		result = inv_serial_single_write(mlsl_handle, mldl_cfg->addr,
-						 MPUREG_PWR_MGMT_2, pwr_mgmt_2);
+						 MPUREG_PWR_MGMT_1, pwr_mgmt[0]);
+		ERROR_CHECK(result);
+	}
+	pwr_mgmt[1] &= ~(BIT_STBY_XG | BIT_STBY_YG | BIT_STBY_ZG);
+	if (!(sensors & INV_X_GYRO))
+		pwr_mgmt[1] |= BIT_STBY_XG;
+	if (!(sensors & INV_Y_GYRO))
+		pwr_mgmt[1] |= BIT_STBY_YG;
+	if (!(sensors & INV_Z_GYRO))
+		pwr_mgmt[1] |= BIT_STBY_ZG;
+
+	if (pwr_mgmt[1] != pwr_mgmt_prev[1]) {
+		result = inv_serial_single_write(mlsl_handle, mldl_cfg->addr,
+						 MPUREG_PWR_MGMT_2, pwr_mgmt[1]);
 		ERROR_CHECK(result);
 	}
 
-	if ((pwr_mgmt_2 & (BIT_STBY_XG | BIT_STBY_YG | BIT_STBY_ZG)) ==
+	if ((pwr_mgmt[1] & (BIT_STBY_XG | BIT_STBY_YG | BIT_STBY_ZG)) ==
 	    (BIT_STBY_XG | BIT_STBY_YG | BIT_STBY_ZG)) {
 		mldl_cfg->gyro_is_suspended = TRUE;
 	} else {
 		mldl_cfg->gyro_is_suspended = FALSE;
 	}
 
-	if (sleep)
-		pwr_mgmt_1 |= BIT_SLEEP;
-	else
-		pwr_mgmt_1 &= ~BIT_SLEEP;
-
-	if (pwr_mgmt_1 != pwr_mgmt_1_prev) {
-		result = inv_serial_single_write(mlsl_handle, mldl_cfg->addr,
-						 MPUREG_PWR_MGMT_1, pwr_mgmt_1);
-		ERROR_CHECK(result);
-	}
-
 	return INV_SUCCESS;
 }
 
-#else				/* CONFIG_MPU_SENSORS_MPU6050xxx */
+#else	/* CONFIG_MPU_SENSORS_MPU6050xxx */
 
 /**
  * @internal
@@ -1029,12 +1031,12 @@ void mpu_print_cfg(struct mldl_cfg *mldl_cfg)
 	MPL_LOGI("mldl_cfg.offset_tc[2]     = %02x\n", mldl_cfg->offset_tc[2]);
 	MPL_LOGI("mldl_cfg.silicon_revision = %02x\n",
 		 mldl_cfg->silicon_revision);
-	MPL_LOGD("mldl_cfg.product_revision = %02x\n",
+	MPL_LOGI("mldl_cfg.product_revision = %02x\n",
 		 mldl_cfg->product_revision);
-	MPL_LOGD("mldl_cfg.gyro_sens_trim   = %02x\n",
+	MPL_LOGI("mldl_cfg.gyro_sens_trim   = %02x\n",
 		 mldl_cfg->gyro_sens_trim);
 #if defined CONFIG_MPU_SENSORS_MPU6050A2 || defined CONFIG_MPU_SENSORS_MPU6050B1
-	MPL_LOGD("mldl_cfg.accel_sens_trim   = %02x\n",
+	MPL_LOGI("mldl_cfg.accel_sens_trim   = %02x\n",
 		 mldl_cfg->accel_sens_trim);
 #endif
 	MPL_LOGI("mldl_cfg.requested_sensors= %04lx\n",
@@ -1616,13 +1618,13 @@ int inv_mpu_open(struct mldl_cfg *mldl_cfg,
 	/*
 	 * Reset,
 	 * Take the DMP out of sleep, and
-	 * read the product_id, sillicon rev and whoami
+	 * read the product_id, silicon rev and whoami
 	 */
 #if defined CONFIG_MPU_SENSORS_MPU6050A2 || \
 	defined CONFIG_MPU_SENSORS_MPU6050B1
 	mldl_cfg->gyro_is_bypassed = FALSE;
 	result = mpu60xx_pwr_mgmt(mldl_cfg, mlsl_handle, TRUE,
-				  INV_DMP_PROCESSOR);
+				  INV_THREE_AXIS_GYRO);
 #else
 	mldl_cfg->gyro_is_bypassed = TRUE;
 	result = mpu3050_pwr_mgmt(mldl_cfg, mlsl_handle, RESET, 0, 0, 0, 0);
@@ -1659,7 +1661,8 @@ int inv_mpu_open(struct mldl_cfg *mldl_cfg,
 #endif
 	ERROR_CHECK(result);
 
-	if (mldl_cfg->accel && mldl_cfg->accel->init) {
+	if (0) //if (mldl_cfg->accel && mldl_cfg->accel->init) 
+   {
 		result = mldl_cfg->accel->init(accel_handle,
 					       mldl_cfg->accel,
 					       &mldl_cfg->pdata->accel);

@@ -21,7 +21,9 @@
 struct headset_hw_cfg
 {
    int gpio_headset_det;
+   int gpio_headset_active_low;
    int gpio_mic_det;
+   int gpio_mic_active_low;
 };
 
 #endif /* HEADSET_CFG_H */

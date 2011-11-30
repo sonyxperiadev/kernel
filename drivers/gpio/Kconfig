@@ -63,6 +63,17 @@ config GPIO_SYSFS
 	  Kernel drivers may also request that a particular GPIO be
 	  exported to userspace; this can be useful when debugging.
 
+config GPIO_SYSFS_ENHANCED
+	bool "Enhanced GPIO sysfs support"
+	depends on GPIO_SYSFS && ARCH_ISLAND
+	default n
+	help
+	  Say Y here to add the enhanced sysfs interface support for GPIOs.
+
+	  This will populate the force-export sys entry that allows the user to
+	  export a GPIO even if that GPIO has been requested by another entity.
+	  This is sometimes very helpful in debugging.
+
 # put drivers in the right section, in alphabetical order
 
 config GPIO_MAX730X

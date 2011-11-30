@@ -40,20 +40,11 @@ typedef enum
 {
     HDMI_UNPLUGGED = 0,  /* hdmi unplugged */
     HDMI_CONNECTED,      /* hdmi connected */
+    HDMI_WIFI,           /* hdmi over wifi */
 
 } hdmi_state;
 
 #define HDMI_STATE_INIT (hdmi_state)-1
-
-#ifdef __KERNEL__
-typedef enum
-{
-    HDMI_NULL = 0,       /* NULL event */
-    HDMI_REMOVED,        /* hdmi unplugged */
-    HDMI_INSERTED,       /* hdmi inserted */
-
-} hdmi_event;
-#endif
 
 /* ---- Constants and Types ---------------------------------------------- */
 
@@ -71,5 +62,10 @@ typedef enum
 
 /* ---- Variable Externs ------------------------------------------------- */
 /* ---- Function Prototypes ---------------------------------------------- */
+
+#if defined(__KERNEL__)
+int hdmi_set_wifi_hdmi( int enable );
+#endif
+
 
 #endif  /* LINUX_HDMI_H */

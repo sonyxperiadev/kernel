@@ -46,6 +46,7 @@ enum whdmi_cmd_e
     WHDMI_CMD_SOCKET_CLOSED,
     WHDMI_CMD_START_SERVICE,
     WHDMI_CMD_STOP_SERVICE,
+    WHDMI_CMD_AUDIO_STREAM_STATE,
     WHDMI_CMD_LAST                      /* Do not delete */
 };
 
@@ -102,6 +103,7 @@ union whdmi_ioctl_params
 #define WHDMI_IOCTL_SOCKET_CLOSED           _IOW( WHDMI_MAGIC_TYPE, WHDMI_CMD_SOCKET_CLOSED, struct whdmi_ioctl_socket_closed )
 #define WHDMI_IOCTL_START_SERVICE           _IOW( WHDMI_MAGIC_TYPE, WHDMI_CMD_START_SERVICE, int )
 #define WHDMI_IOCTL_STOP_SERVICE            _IOW( WHDMI_MAGIC_TYPE, WHDMI_CMD_STOP_SERVICE, int )
+#define WHDMI_IOCTL_AUDIO_STREAM_STATE      _IOR( WHDMI_MAGIC_TYPE, WHDMI_CMD_AUDIO_STREAM_STATE, int )
 
 
 /* Messages from WIFI HDMI Driver */
