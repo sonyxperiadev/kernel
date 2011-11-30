@@ -531,25 +531,12 @@ static int enable_unicam_clock(void)
     unsigned long rate;
     int ret;
     struct clk *unicam_clk;
-	struct clk *v3d_clk;
 	
 	if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_OPP_TURBO)) {
 		printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
 		return -EIO;
 	}
  
-	v3d_clk = clk_get(NULL, "v3d_axi_clk");
-	if (!v3d_clk) {
-		printk("%s: error get clock\n", __func__);
-		return -EIO;
-	}
-
-	ret = clk_enable(v3d_clk);
-	if (ret) {
-		printk(KERN_ERR "%s:failed to enable v3d clock\n", __func__);
-		return -EIO;
-	}
-		
 	unicam_clk = clk_get(NULL, "csi0_axi_clk");
     if (!unicam_clk) {
         err_print("%s: error get clock\n", __func__);
@@ -577,15 +564,11 @@ static int enable_unicam_clock(void)
 static void disable_unicam_clock(void)
 {
     struct clk *unicam_clk;
-	struct clk *v3d_clk;
-    
-    unicam_clk = clk_get(NULL, "csi0_axi_clk");
+
+	unicam_clk = clk_get(NULL, "csi0_axi_clk");
     if (!unicam_clk) return;
     clk_disable(unicam_clk);     
 
-	v3d_clk = clk_get(NULL, "v3d_axi_clk");
-	if(!v3d_clk) return;
-	clk_disable(v3d_clk);
 	if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) 
 		printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
 }
