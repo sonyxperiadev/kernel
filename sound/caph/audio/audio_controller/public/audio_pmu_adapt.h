@@ -34,7 +34,7 @@
 #define __AUDIO_PMU_ADAPT_H__
 
 #if (!defined(CONFIG_BCM59055_AUDIO) && !defined(CONFIG_BCMPMU_AUDIO)) 
-
+#include "linux/broadcom/bcm59055-audio.h"
 #define AUDIO_PMU_INIT() NULL
 #define AUDIO_PMU_HS_SET_GAIN(a, b) NULL
 #define AUDIO_PMU_HS_POWER(a) NULL
