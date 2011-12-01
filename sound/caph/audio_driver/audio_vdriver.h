@@ -350,7 +350,7 @@ void AUDDRV_Telephony_UnmuteMic (AUDIO_SOURCE_Enum_t mic);
 void AUDDRV_Telephony_MuteSpkr (AUDIO_SINK_Enum_t speaker);
 void AUDDRV_Telephony_UnmuteSpkr (AUDIO_SINK_Enum_t speaker);
 void AUDDRV_SetULSpeechRecordGain(Int16 gain);
-Boolean AUDDRV_IsDualMicEnabled(void);
+Boolean AUDDRV_IsDualMicEnabled(AudioMode_t mode);
 
 
 //*********************************************************************
