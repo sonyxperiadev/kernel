@@ -114,6 +114,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_HSPUP2_HS_PWRUP] =	{.map = 0x01, .addr = 0xA3, .mask = 0x80, .ro = 0},
 	[PMU_REG_HSPGA1_GAIN] =		{.map = 0x01, .addr = 0x9E, .mask = 0x3F, .ro = 0},
 	[PMU_REG_HSPGA2_GAIN] =		{.map = 0x01, .addr = 0x9F, .mask = 0x3F, .ro = 0},
+	[PMU_REG_HSPGA3_GAIN] =		{.map = 0x01, .addr = 0xA0, .mask = 0x3F, .ro = 0},
 	/* charge */
 	[PMU_REG_CHRGR_USB_EN] =	{.map = 0x00, .addr = 0x52, .mask = 0x02, .ro = 0, .shift = 1},
 	[PMU_REG_CHRGR_WAC_EN] =	{.map = 0x00, .addr = 0x52, .mask = 0x01, .ro = 0, .shift = 0},
@@ -170,6 +171,15 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_ADP_STATUS_ATTACH_DET] =	{.map = 0x01, .addr = 0x70, .mask = 0x04, .ro = 0, .shift = 3},
 	[PMU_REG_ADP_STATUS_SNS_DET] =		{.map = 0x01, .addr = 0x70, .mask = 0x10, .ro = 0, .shift = 4},
 	[PMU_REG_ADP_STATUS_RISE_TIMES_MSB] =	{.map = 0x01, .addr = 0x74, .mask = 0x30, .ro = 0, .shift = 4},
+	/* test */
+	[PMU_REG_HSIST_I_HS_ENST] =		{.map = 1, .addr = 0xA4, .mask = 0x03, .ro = 0, .shift = 0},
+	[PMU_REG_HSIST_I_HS_IST] =		{.map = 1, .addr = 0xA4, .mask = 0x04, .ro = 0, .shift = 2},
+	[PMU_REG_IHFSTIN_I_IHFSELFTEST_EN] =	{.map = 1, .addr = 0x8F, .mask = 0x03, .ro = 0, .shift = 0},
+	[PMU_REG_IHFSTIN_I_IHFSTI] =		{.map = 1, .addr = 0x8F, .mask = 0x0C, .ro = 0, .shift = 2},
+	[PMU_REG_IHFSTIN_I_IHFSTO] =		{.map = 1, .addr = 0x8F, .mask = 0x30, .ro = 0, .shift = 4},
+	[PMU_REG_IHFSTO_O_IHFSTI] =		{.map = 1, .addr = 0x90, .mask = 0x03, .ro = 0, .shift = 0},
+	[PMU_REG_HSOUT1_O_HS_IST] =		{.map = 1, .addr = 0xA9, .mask = 0xF0, .ro = 0, .shift = 4},	
+
 	/* interrupt */
 	[PMU_REG_INT_START] =			{.map = 0, .addr = 0x30, .mask = 0xFF, .ro = 0, .shift = 0},
 	[PMU_REG_INT_MSK_START] =		{.map = 0, .addr = 0x40, .mask = 0xFF, .ro = 0, .shift = 0},
@@ -179,6 +189,9 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_PMUREV] =		{.map = 0x01, .addr = 0xF8, .mask = 0xFF, .ro = 0},
 	[PMU_REG_PLLCTRL] =		{.map = 0x00, .addr = 0x0b, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HOSTCTRL1] =		{.map = 0x00, .addr = 0x01, .mask = 0xFF, .ro = 0},
+	[PMU_REG_HOSTCTRL3] =		{.map = 0x00, .addr = 0x03, .mask = 0xFF, .ro = 0},
+	[PMU_REG_MBCCTRL5_USB_DET_LDO_EN] =	{.map = 0x00, .addr = 0x54, .mask = 0x04, .ro = 0, .shift = 2},
+	[PMU_REG_MBCCTRL5_CHARGE_DET] =	{.map = 0x00, .addr = 0x54, .mask = 0x07, .ro = 0, .shift = 0},
 };
 
 static const struct bcmpmu_irq_map bcm59055_irq_map[PMU_IRQ_MAX] = {//revisit

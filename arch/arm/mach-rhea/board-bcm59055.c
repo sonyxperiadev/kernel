@@ -367,6 +367,14 @@ static struct platform_device bcmpmu_otg_xceiv_device = {
 	.dev.platform_data 	= NULL,
 };
 
+#ifdef CONFIG_BCMPMU_SELFTEST
+static struct platform_device bcmpmu_selftest_device = {
+	.name 			= "bcmpmu_selftest",
+	.id			= -1,
+	.dev.platform_data 	= NULL,
+};
+#endif
+
 static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_audio_device,
 	&bcmpmu_em_device,
@@ -374,6 +382,9 @@ static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_adc_chipset_api,
 #endif
 	&bcmpmu_otg_xceiv_device,
+#ifdef CONFIG_BCMPMU_SELFTEST
+	&bcmpmu_selftest_device,
+#endif
 };
 
 static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)

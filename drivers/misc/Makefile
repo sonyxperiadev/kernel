@@ -78,3 +78,5 @@ obj-$(CONFIG_MONITOR_BQ27541_I2C)	+= bq27541.o
 obj-$(CONFIG_BCM59055_SELFTEST)	+= bcm59055-selftest.o
 obj-$(CONFIG_BRALLOC_MEM)	+= bralloc_mem.o
 obj-$(CONFIG_MPU_SENSORS_MPU6050B1)	+= mpu3050/
+obj-$(CONFIG_BCMPMU_SELFTEST)	+= bcmpmu-selftest.o
+
