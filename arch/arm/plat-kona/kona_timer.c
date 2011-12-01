@@ -261,7 +261,7 @@ int kona_timer_module_set_rate(char* name, unsigned int rate)
 	 */
 	if (pktm->reg_base == IOMEM(KONA_SYSTMR_VA)) {
 		/* Slave timer only supports 32KHz and 1MHz */
-		if (rate == 32000)
+		if (rate == 32768)
 			reg_val = 1;
 		else if (rate == 1000000)
 			reg_val = 0;
@@ -270,7 +270,7 @@ int kona_timer_module_set_rate(char* name, unsigned int rate)
 	} else {
 		/* AON timer only supports 32KHz, 1MHz and 19.5 MHz*/
 		switch (rate) {
-		case 32000:
+		case 32768:
 			/* 32 KHz */
 			reg_val = 0;
 			break;
