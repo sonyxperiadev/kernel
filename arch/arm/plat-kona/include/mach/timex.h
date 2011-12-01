@@ -33,8 +33,7 @@
 #ifdef CONFIG_MACH_SAMOA_FPGA
 #define CLOCK_TICK_RATE     (32000)
 #else
-//#define CLOCK_TICK_RATE     (1000000)
-#define CLOCK_TICK_RATE     (32000)
+#define CLOCK_TICK_RATE     (32768)
 #endif
 
 #endif /* __PLAT_KONA_TIMEX_H */
