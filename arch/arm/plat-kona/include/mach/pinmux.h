@@ -132,4 +132,6 @@ static inline int is_ball_valid(enum PIN_NAME name)
 	return name < PN_MAX;
 }
 
+int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio, enum PIN_FUNC *PF_gpio);
+
 #endif /*__PINMUX_H_ */
