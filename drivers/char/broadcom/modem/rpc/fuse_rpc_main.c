@@ -25,10 +25,6 @@
 #include <linux/timer.h>
 #include <linux/poll.h>
 
-//#include <asm/io.h>
-//#include <asm/semaphore.h>
-//#include <asm/atomic.h>
-
 #include <linux/unistd.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -41,6 +37,7 @@
 #include <linux/broadcom/bcm_rpc.h>
 #include <linux/broadcom/ipcinterface.h>
 #include <linux/broadcom/ipcproperties.h>
+#include <linux/kthread.h>
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -53,12 +50,34 @@
 #include "rpc_internal_api.h"
 #include "rpc_debug.h"
 #include "rpc_sync_api.h"
+#include "bcmlog.h"
 
+#define SYSRPC_TRACE_TRACE_ON
+
+#ifdef SYSRPC_TRACE_TRACE_ON
+#define _DBG(a) a
+#define SYSRPC_TRACE(fmt,args...) BCMLOG_Printf( BCMLOG_RPC_KERNEL_BASIC, fmt, ##args )
+#else
+#define SYSRPC_TRACE(str) {}
+#endif
 
 static int __init bcm_fuse_rpc_init_module(void);
 static void __exit bcm_fuse_rpc_exit_module(void);
 
 static struct class *rpc_class;
+static struct task_struct* sysRpcThread = NULL;
+static int gAvailData = 0;
+
+typedef struct
+{
+	struct list_head mList;
+	void* data;
+}SysRpcMsgInfo_t;
+
+static spinlock_t  mLock;
+static wait_queue_head_t mWaitQ;
+
+SysRpcMsgInfo_t gSysRpcMsgInfo={0};
 
 /***************************************************************************/
 /**
@@ -122,6 +141,81 @@ static struct file_operations rpc_ops =
 	.release = rpc_release,
 };
 
+/****************************************************************************
+*
+*  sysRpcKthreadFn(void);
+*
+*  kthread handler
+*
+***************************************************************************/
+static int sysRpcKthreadFn(void* data)
+{
+	Boolean isEmpty;
+	while(1)
+	{
+	  	spin_lock(&mLock);
+		isEmpty = (Boolean)list_empty(&gSysRpcMsgInfo.mList);
+    		spin_unlock(&mLock);
+
+    		if(isEmpty)
+    		{
+			gAvailData = 0;
+        		_DBG(SYSRPC_TRACE("sysrpc:before wait %x\n", (int)jiffies));
+			wait_event_interruptible(mWaitQ, gAvailData);
+        		_DBG(SYSRPC_TRACE("sysrpc:after wait %x\n", (int)jiffies));
+		}
+		else
+    		{
+			struct list_head *entry;
+			SysRpcMsgInfo_t *Item = NULL;
+			void* data;
+
+	  		spin_lock(&mLock);
+    			entry = gSysRpcMsgInfo.mList.next;
+    			Item = list_entry(entry, SysRpcMsgInfo_t, mList);
+			data = Item->data;
+    			
+			list_del(entry);
+			kfree(entry);
+			spin_unlock(&mLock);
+
+			_DBG(SYSRPC_TRACE("sysrpc: Handle event=%x\n", (int)data));
+			
+			RPC_HandleEvent(data);
+		}
+	}
+	return 0;
+}
+
+/****************************************************************************
+*
+*  sysRpcHandlerCbk(void);
+*
+*  Sys RPC Handler Cbk
+*
+***************************************************************************/
+static void sysRpcHandlerCbk(void* eventHandle)
+{
+	SysRpcMsgInfo_t* elem;
+
+	elem = kmalloc(sizeof(SysRpcMsgInfo_t), GFP_KERNEL);
+    	if( !elem ) 
+    	{
+        	_DBG(SYSRPC_TRACE( "sysrpc: sysRpcHandlerCbk Allocation error\n" ) );
+        	return;
+    	}
+	elem->data = eventHandle;
+
+    	//add to queue
+    	spin_lock( &mLock ) ;
+    	list_add_tail(&elem->mList, &gSysRpcMsgInfo.mList); 
+    	spin_unlock( &mLock ) ;    
+	
+	_DBG(SYSRPC_TRACE("sysrpc: Post event=%x\n", (int)eventHandle));
+    
+	gAvailData = 1;
+    	wake_up_interruptible(&mWaitQ);
+}
 
 /****************************************************************************
 *
@@ -132,23 +226,34 @@ static struct file_operations rpc_ops =
 ***************************************************************************/
 UInt32 RPC_Init(void)
 {
+    	INIT_LIST_HEAD(&gSysRpcMsgInfo.mList);
+    	spin_lock_init( &mLock ) ;
+    	init_waitqueue_head(&mWaitQ);
 
-    if(RPC_SYS_Init(NULL) == RESULT_ERROR)
-    {
-        RPC_DEBUG(DBG_ERROR, "RPC device init fail...!\n");
-        return 1;
-    }
+	sysRpcThread = kthread_run(sysRpcKthreadFn, NULL, "sysrpc_kthread");
+
+	if(!sysRpcThread)
+	{
+	        RPC_DEBUG(DBG_ERROR, "sysrpc: kthread_run fail...!\n");
+	        return 1;		
+	}
+
+	if(RPC_SYS_Init(sysRpcHandlerCbk) == RESULT_ERROR)
+    	{
+        	RPC_DEBUG(DBG_ERROR, "RPC device init fail...!\n");
+        	return 1;
+    	}
 	if(RPC_SYS_EndPointRegister(RPC_APPS) == RPC_RESULT_ERROR)
-    {
-        RPC_DEBUG(DBG_ERROR, "registering the RPC device fail...!\n");
-        return 1;
-    }
+    	{
+        	RPC_DEBUG(DBG_ERROR, "registering the RPC device fail...!\n");
+        	return 1;
+    	}
 
-    // initialize the synchronous RPC interface
+    	// initialize the synchronous RPC interface
 	if( RPC_SyncInitialize() != RESULT_OK )
 	{
-        RPC_DEBUG(DBG_ERROR, "RPC_SyncInitialize fail...!\n");
-        return 1;
+        	RPC_DEBUG(DBG_ERROR, "RPC_SyncInitialize fail...!\n");
+	        return 1;
 	}
 
     return(0);
@@ -188,7 +293,7 @@ static int __init bcm_fuse_rpc_init_module(void)
     if (ret) 
     {
         ret = -1;
-        RPC_DEBUG(DBG_ERROR, "KRIL_Init fail...!\n");
+        RPC_DEBUG(DBG_ERROR, "RPC_Init fail...!\n");
     }
 
 out:
