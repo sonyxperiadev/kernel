@@ -13,7 +13,6 @@
 
 #define PWRMGR_HW_SEM_WA_PI_ID		PI_MGR_PI_ID_ARM_CORE
 #define PWRMGR_HW_SEM_LOCK_WA_PI_OPP	PI_OPP_TURBO
-#define PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP	PI_OPP_NORMAL
 #ifdef CONFIG_DEBUG_FS
 extern const char* _rhea__event2str[];
 #define PWRMGR_EVENT_ID_TO_STR(e) _rhea__event2str[e]

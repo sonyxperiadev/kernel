@@ -26,7 +26,13 @@
 #define VLT_ID_NORMAL	0xD
 #define VLT_ID_TURBO	0xF
 
+/*JIRA HWRHEA-1199 : Don't enable Economy mode(156MHz) for A0 */
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 #define PROC_CCU_FREQ_ID_ECO		6 /*3*/
+#else
+#define PROC_CCU_FREQ_ID_ECO		3
+#endif
+
 #define PROC_CCU_FREQ_ID_NRML		6
 #define PROC_CCU_FREQ_ID_TURBO		7
 

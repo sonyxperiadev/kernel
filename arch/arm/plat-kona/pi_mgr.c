@@ -331,17 +331,17 @@ static int __pi_init_state(struct pi *pi)
 		/*PI_STATE_SAVE_CONTEXT should not be defined for active state*/
 		BUG_ON(pi->pi_state[PI_MGR_ACTIVE_STATE_INX].flags &
 					PI_STATE_SAVE_CONTEXT);
-
-		if(pi->ops && pi->ops->init_state)
-			ret = pi->ops->init_state(pi);
-
-		pi->init = PI_INIT_COMPLETE;
 		BUG_ON(pi->num_ccu_id > MAX_CCU_PER_PI);
 		for(inx =0; inx < pi->num_ccu_id;inx++)
 		{
 			pi->pi_ccu[inx] = clk_get(NULL,pi->ccu_id[inx]);
 			BUG_ON(pi->pi_ccu[inx] == 0 || IS_ERR(pi->pi_ccu[inx]));
 		}
+
+		if(pi->ops && pi->ops->init_state)
+			ret = pi->ops->init_state(pi);
+
+		pi->init = PI_INIT_COMPLETE;
 
 		if(pi->num_states)
 		{
