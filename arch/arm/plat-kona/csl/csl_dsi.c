@@ -1848,12 +1848,6 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc (
         case LCD_IF_CM_I_RGB888U:         
             switch ( dsiCmVcCfg->cm_out )
             {
-                case LCD_IF_CM_O_RGB565:
-                    cmVcH->bpp_dma   = 4;  
-                    cmVcH->bpp_wire  = 2;
-                    cmVcH->wc_rshift = 0;
-                    cmVcH->cm = DE1_CM_888U_TO_565;
-                    break;
                 case LCD_IF_CM_O_RGB666:
                 case LCD_IF_CM_O_RGB888:
                     cmVcH->bpp_dma   = 4;  
@@ -1876,22 +1870,6 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc (
                     cmVcH->bpp_wire  = 2;
                     cmVcH->wc_rshift = 1;
                     cmVcH->cm = DE1_CM_565;
-                    break;
-                default:
-                    colCfgValid = FALSE;
-                    break;
-            }    
-            break;
-            
-        // 1x565 pixel per 32-bit word (LSB)
-        case LCD_IF_CM_I_RGB565U_LSB:    
-            switch ( dsiCmVcCfg->cm_out )
-            {
-                case LCD_IF_CM_O_RGB565:
-                    cmVcH->bpp_dma   = 4;  
-                    cmVcH->bpp_wire  = 2;
-                    cmVcH->wc_rshift = 0;
-                    cmVcH->cm = DE1_CM_565_LSB;
                     break;
                 default:
                     colCfgValid = FALSE;

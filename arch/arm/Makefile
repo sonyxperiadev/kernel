@@ -289,6 +289,15 @@ boot := arch/arm/boot
 
 archprepare:
 	$(Q)$(MAKE) $(build)=arch/arm/tools include/generated/mach-types.h
+ifeq ($(CONFIG_ARCH_RHEA_B0),y)
+	$(Q)echo "Creating rdb link for Rhea B0"; \
+	ln -fsn $(srctree)/arch/arm/mach-rhea/include/mach/rdb_B0 $(srctree)/arch/arm/mach-rhea/include/mach/rdb
+endif
+ifeq ($(CONFIG_ARCH_RHEA_A0),y)
+	$(Q)echo "Creating rdb link for Rhea A0"; \
+	ln -fsn $(srctree)/arch/arm/mach-rhea/include/mach/rdb_A0 $(srctree)/arch/arm/mach-rhea/include/mach/rdb
+endif
+
 
 # Convert bzImage to zImage
 bzImage: zImage
@@ -302,6 +311,10 @@ zinstall uinstall install: vmlinux
 # We use MRPROPER_FILES and CLEAN_FILES now
 archclean:
 	$(Q)$(MAKE) $(clean)=$(boot)
+	$(Q)echo "Removing rdb link for Rhea"; \
+	if test -e $(srctree)/arch/arm/mach-rhea/include/mach/rdb; then \
+		rm $(srctree)/arch/arm/mach-rhea/include/mach/rdb; \
+	fi;
 
 # My testing targets (bypasses dependencies)
 bp:;	$(Q)$(MAKE) $(build)=$(boot) MACHINE=$(MACHINE) $(boot)/bootpImage

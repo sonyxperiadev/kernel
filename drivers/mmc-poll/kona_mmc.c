@@ -624,6 +624,21 @@ static int kona_mmc_core_init(struct mmc *mmc)
 	return 0;
 }
 
+void kona_mmc_clk_init(unsigned long *clk_base, unsigned long *clk_gate)
+{
+	unsigned long reg_val;
+
+	/* Unlock the clock registers */
+	writel(0x00a5a501, clk_base);
+
+	/* Enable both the bus clock and peripheral clock */
+	reg_val = readl(clk_gate);
+	reg_val = reg_val |
+		KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_CLK_EN_MASK |
+		KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_AHB_CLK_EN_MASK;
+	writel(reg_val, clk_gate);
+}
+
 int kona_mmc_init(int dev_index)
 {
 	struct mmc *mmc;
@@ -636,15 +651,21 @@ int kona_mmc_init(int dev_index)
 		case 1:
 			mmc_reg_base = (void*) KONA_SDIO1_VA;
 			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO1_DIV_OFFSET;
+			kona_mmc_clk_init(KONA_KPM_CLK_VA, KONA_KPM_CLK_VA +
+				KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET);
 			break;
 		case 2:
 			mmc_reg_base = (void*) KONA_SDIO2_VA;
 			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO2_DIV_OFFSET;
+			kona_mmc_clk_init(KONA_KPM_CLK_VA, KONA_KPM_CLK_VA +
+				KPM_CLK_MGR_REG_SDIO2_CLKGATE_OFFSET);
 			break;
 #ifdef SDIO3_BASE_ADDR
 		case 3:
 			mmc_reg_base = (void*) KONA_SDIO3_VA;
 			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO3_DIV_OFFSET;
+			kona_mmc_clk_init(KONA_KPM_CLK_VA, KONA_KPM_CLK_VA +
+				KPM_CLK_MGR_REG_SDIO3_CLKGATE_OFFSET);
 			break;
 #endif			
 		default:

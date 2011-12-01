@@ -36,11 +36,7 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #define _CSL_CAPH_CFIFO_
 
 // total ring buffer size for cfifo. make sure sync with cfifo config table 
-#if defined (_RHEA_)
 #define CSL_CFIFO_TOTAL_SIZE 0x2000
-#elif defined (_SAMOA_)
-#define CSL_CFIFO_TOTAL_SIZE 0x1000
-#endif
 
 /**
 * CAPH CFIFO Data Sample Rate

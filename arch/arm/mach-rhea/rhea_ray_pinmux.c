@@ -114,10 +114,7 @@ static struct __init pin_config board_pin_config[] = {
 #endif
 
 	/* SSP4 - I2S */
-	/* TODO: Need to find out the mappting for END2x, if its same as 1x
-	 * just add the macro to the defined list.
-	 */
-#if defined(CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X) \
+#if defined(CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X) || defined (CONFIG_MACH_RHEA_RAY_EDN2X) \
 	|| defined(CONFIG_MACH_RHEA_RAY_DEMO)
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),

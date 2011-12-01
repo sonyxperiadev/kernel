@@ -35,6 +35,9 @@
 #include <linux/workqueue.h>
 #include <mach/pwr_mgr.h>
 #include <asm/gpio.h>
+#include <linux/irq.h>
+#include <linux/interrupt.h>
+
 
 extern void enter_wfi(void);
 extern void dormant_enter(void);
@@ -42,7 +45,7 @@ extern void dormant_enter(void);
 static u32 force_retention = 0;
 static u32 pm_debug = 2;
 static u32 pm_en_self_refresh = 0;
-
+static u32 enable_test;
 
 #if defined(DEBUG)
 #define pm_dbg printk
@@ -357,172 +360,111 @@ int print_sw_event_info()
    return 0;
 }
 
-int enter_idle_state(struct kona_idle_state* state)
+static int arm_pll_disable(int en)
 {
-    static struct clk *clk = NULL;
-	struct pi* pi = NULL;
 	u32 reg_val;
 
+	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, (bool) en);
+	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, (bool) en);
+	clk_set_crystal_pwr_on_idle((bool) en);
+
+	if (en) {
+		reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
+		reg_val &= ~IROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
+		writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
+		reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+		reg_val &= ~IROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
+		writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+	} else {
+		reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
+		reg_val |= IROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
+		writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
+		reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+		reg_val |= IROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
+		writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+	}
+	return 0;
+}
+
+int enter_idle_state(struct kona_idle_state* state)
+{
+	static struct clk *pbsc_clk;
+	struct pi* pi = NULL;
+
+	#define WFI_MASK				0x00000001
+	#define SCU_DORMANT_MODE		0x02020202
+	#define SCU_DORMANT2_MODE_OFF	0x02020000
+
 	BUG_ON(!state);
-#if 0
-	if(!clk)
+	if (!pbsc_clk)
 	{
-		clk = clk_get(NULL, PMU_BSC_PERI_CLK_NAME_STR);
-		if(IS_ERR_OR_NULL(clk))
+		pbsc_clk = clk_get(NULL, PMU_BSC_PERI_CLK_NAME_STR);
+		if (IS_ERR_OR_NULL(pbsc_clk))
 		{
-			pr_err("Inavlid clock name: %s\n", __func__);
+			pr_err("pbsc_clk Inavlid clock name: %s\n", __func__);
 			BUG_ON(1);
 			return -EINVAL;
 		}
 	}
+	/*must be enable_test!=0 for retention test mode */
+	if (enable_test) {
 
-	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
-	pwr_mgr_event_clear_events(USBOTG_EVENT, ACI_EVENT);
+		/* Code for basic retention of all A9 CCUs*/
+		/*disable PLL */
+		arm_pll_disable(true);
 
-	if(pm_en_self_refresh)
-	{
-		writel(0, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-		reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-		reg_val |=CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
-		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-	}
+		/*enable AUTOGATING BSC */
+		peri_clk_set_hw_gating_ctrl(pbsc_clk, CLK_GATING_AUTO);
+		/*clearing the limited number of enabled
+		wake up events, add more as use cases grow*/
+		pwr_mgr_event_clear_events(SOFTWARE_0_EVENT, SOFTWARE_0_EVENT);
+		pwr_mgr_event_clear_events(UBRX_EVENT, UBRX_EVENT);
+		pwr_mgr_event_clear_events(GPIO142_A_EVENT, GPIO142_A_EVENT);
+		clear_wakeup_interrupts();
+		config_wakeup_interrupts();
+		/*set A9's to retention state status*/
+		writel(SCU_DORMANT_MODE, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
 
-	peri_clk_set_hw_gating_ctrl(clk, CLK_GATING_AUTO);
-	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
-	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
-	clk_set_crystal_pwr_on_idle(true);
+		if (force_retention)
+			enable_sleep_prevention_clock(0);
 
-	reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-	reg_val &= ~IROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
-	writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-	reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-	reg_val &= ~IROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
-	writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-
-	clear_wakeup_interrupts();
-	config_wakeup_interrupts();
-
-	if(force_retention)
-		enable_sleep_prevention_clock(0);
-
-	if(state->state == ISLAND_STATE_C1)
-	{
 		pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 		pi_enable(pi,0);
-#ifdef CONFIG_ISLAND_DORMANT_MODE
-	/*Ignore dap power-up request and clear the bits that disallow dormant*/
-	/*TBD - Change pwrmgr interface function*/
-	writel(0x06600000,
-		KONA_PWRMGR_VA+PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
-	dormant_enter();
 
-#else
-		writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
-		enter_wfi();
-#endif
-	}
-	else
-	{
-		enter_wfi(); /*C0 - simple WFI*/
-	}
+		if (enable_test & WFI_MASK)
+			enter_wfi();
 
-	if(pm_debug != 2)
-		pr_info("SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
-	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
-
-	if(state->state == ISLAND_STATE_C1)
-	{
+		pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 		pi_enable(pi,1);
-#ifndef CONFIG_RHEA_DORMANT_MODE
-		writel(0, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
-#endif
+
+		/*enable SW2 Active bit*/
+		pwr_mgr_event_set(SOFTWARE_2_EVENT, 1);
+
+		writel(SCU_DORMANT2_MODE_OFF, KONA_SCU_VA +
+			SCU_POWER_STATUS_OFFSET);
+
+		/*disable AUTOGATING BSC */
+		peri_clk_set_hw_gating_ctrl(pbsc_clk, CLK_GATING_SW);
+		/*enable PLL */
+		arm_pll_disable(true);
+		clear_wakeup_interrupts();
+		/*process and clear event for wake up*/
+		pwr_mgr_process_events(LCDTE_EVENT, BRIDGE_TO_MODEM_EVENT, false);
+		pwr_mgr_process_events(USBOTG_EVENT, ACI_EVENT, false);
+
+	} else {
+		enter_wfi();
 	}
-
-	if(pm_en_self_refresh)
-	{
-		writel(1, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-		reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-		reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
-		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-	}
-#ifdef PM_DEBUG
-	if(pwr_mgr_is_event_active(COMMON_INT_TO_AC_EVENT))
-	{
-		pm_dbg("%s:GIC act status1 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS1_OFFSET));
-		pm_dbg("%s:GIC act status2 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS2_OFFSET));
-
-		pm_dbg("%s:GIC act status3 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS3_OFFSET));
-
-		pm_dbg("%s:GIC act status4 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS4_OFFSET));
-
-		pm_dbg("%s:GIC act status5 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS5_OFFSET));
-
-		pm_dbg("%s:GIC act status6 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS6_OFFSET));
-
-		pm_dbg("%s:GIC act status7 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS7_OFFSET));
-
-		pm_dbg("%s:GIC pending status1 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET1_OFFSET));
-		pm_dbg("%s:GIC pending status2 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET2_OFFSET));
-
-		pm_dbg("%s:GIC pending status3 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
-
-		pm_dbg("%s:GIC pending status4 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
-
-		pm_dbg("%s:GIC pending status5 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET5_OFFSET));
-
-		pm_dbg("%s:GIC pending status6 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET6_OFFSET));
-
-		pm_dbg("%s:GIC pending status7 = %x\n",__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET7_OFFSET));
-
-	}
-#endif
-
-	clear_wakeup_interrupts();
-	pwr_mgr_process_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT,false);
-	pwr_mgr_process_events(USBOTG_EVENT,ACI_EVENT,false);
-
-	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
-	pwr_mgr_event_clear_events(USBOTG_EVENT, ACI_EVENT);
-
-	if(force_retention)
-		enable_sleep_prevention_clock(1);
-
-	reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-	reg_val |= IROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
-	writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-	reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-	reg_val |= IROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
-	writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-
-	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, false);
-	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, false);
-	clk_set_crystal_pwr_on_idle(false);
-
-	peri_clk_set_hw_gating_ctrl(clk, CLK_GATING_SW);
-#endif
-	return -1;
+	return 0;
 }
 
 int kona_mach_pm_enter(suspend_state_t state)
 {
 	int ret = 0;
-	static struct clk *clk = NULL;
+#ifdef CONFIG_ISLAND_DORMANT_MODE
+	static struct clk *clk;
 	struct pi *pi = NULL;
-	u32 reg_val;
+#endif
 
 	switch (state) {
 	case PM_SUSPEND_STANDBY:
@@ -530,8 +472,8 @@ int kona_mach_pm_enter(suspend_state_t state)
 
 		/* suspend */
 		pr_info("%s:Enter\n", __func__);
-		
-		#if CONFIG_ISLAND_DORMANT_MODE
+
+		#ifdef CONFIG_ISLAND_DORMANT_MODE
 		if (!clk) {
 			clk = clk_get(NULL, PMU_BSC_PERI_CLK_NAME_STR);
 			if (IS_ERR_OR_NULL(clk)) {
@@ -546,16 +488,7 @@ int kona_mach_pm_enter(suspend_state_t state)
 		pwr_mgr_event_clear_events(VPM_WAKEUP_EVENT, ULPI2_EVENT);
 
 		peri_clk_set_hw_gating_ctrl(clk, CLK_GATING_AUTO);
-		clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
-		clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
-		clk_set_crystal_pwr_on_idle(true);
-
-		reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-		reg_val &= ~IROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
-		writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-		reg_val = readl(KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-		reg_val &= ~IROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
-		writel(reg_val, KONA_ROOT_CLK_VA + IROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+		arm_pll_disable(true);
 		clear_wakeup_interrupts();
 		config_wakeup_interrupts();
 		pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
@@ -654,6 +587,8 @@ int __init island_pm_debug_init(void)
 		return -ENOMEM;
 
     if (!debugfs_create_u32("force_retention", 0644, dent_island_pm_root_dir, (int*)&force_retention))
+		return -ENOMEM;
+    if (!debugfs_create_u32("enable_test", 0644, dent_island_pm_root_dir, (int *)&enable_test))
 		return -ENOMEM;
 
 	    return 0;

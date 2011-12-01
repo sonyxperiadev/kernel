@@ -37,6 +37,7 @@
 #include "shared.h"
 #include "osdw_dsp_drv.h"
 #include "csl_dsp.h"
+#include "dspcmd.h"
 #include "csl_dsp_caph_control_api.h"
 #include "log.h"
 
