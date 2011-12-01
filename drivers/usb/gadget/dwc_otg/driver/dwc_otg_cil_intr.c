@@ -114,9 +114,9 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t * core_if)
 			 * clean state. */
 			core_if->lx_state = DWC_OTG_L0;
 			cil_pcd_stop(core_if);
-			/* Schedule a work item to shutdown the core */
-			DWC_WORKQ_SCHEDULE(core_if->wq_otg, w_shutdown_core,
-			   core_if, "shutdown core");
+			/* Schedule a delayed work item to shutdown the core */
+			DWC_WORKQ_SCHEDULE_DELAYED(core_if->wq_otg,
+				   w_shutdown_core, core_if, 100, "shutdown core");
 
 			if (core_if->adp_enable) {
 				if (core_if->power_down == 2) {
@@ -1178,6 +1178,7 @@ static inline uint32_t dwc_otg_read_common_intr(dwc_otg_core_if_t * core_if)
 
 	gintsts.d32 = dwc_read_reg32(&core_if->core_global_regs->gintsts);
 	gintmsk.d32 = dwc_read_reg32(&core_if->core_global_regs->gintmsk);
+
 #ifdef DEBUG
 	/* if any common interrupts set */
 	if (gintsts.d32 & gintmsk_common.d32) {
@@ -1270,7 +1271,6 @@ int32_t dwc_otg_handle_common_intr(dwc_otg_core_if_t * core_if)
 	} else {
 		gpwrdn.d32 = dwc_read_reg32(&core_if->core_global_regs->gpwrdn);
 		DWC_DEBUGPL(DBG_ANY,"gpwrdn=%08x\n", gpwrdn.d32);
-
 		if (gpwrdn.b.disconn_det && gpwrdn.b.disconn_det_msk) {
 			CLEAR_GPWRDN_INTR(core_if, disconn_det);
 			if (gpwrdn.b.linestate == 0)
