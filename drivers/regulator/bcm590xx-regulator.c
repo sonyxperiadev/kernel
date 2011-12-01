@@ -87,11 +87,10 @@ static int bcm590xxreg_is_enabled(struct regulator_dev *rdev)
 	}
 
 	rc = (rc >> PC2_IS_1_PC1_IS_1) & PM_MODE_MASK;
-	if (rc != LDO_OFF)
-		return 1;
 	if (rc == LDO_OFF)
 		return 0;
-	return -EIO;
+	else
+		return 1;
 }
 
 /* @enable: Configure the regulator as enabled. */
@@ -373,11 +372,11 @@ static int bcm590xx_regulator_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
-	regl_priv = kzalloc((sizeof(struct bcm590xx_regl_priv) +
+	regl_priv =(struct bcm590xx_regl_priv *) kzalloc((sizeof(struct bcm590xx_regl_priv) +
 				regulator->num_regulator * sizeof(
 					struct regulator_dev *)),
 			GFP_KERNEL);
-	if (unlikely(!regl_priv)) {
+	if (!regl_priv) {
 		pr_info("%s: Could not create regl_priv\n", __func__);
 		return -ENOMEM;
 	}

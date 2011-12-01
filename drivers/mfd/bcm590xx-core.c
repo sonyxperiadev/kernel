@@ -175,7 +175,7 @@ int bcm590xx_disable_irq(struct bcm590xx *bcm590xx, int irq)
 	regInx = IRQ_TO_REG_INX(irq);
 
 	st = bcm590xx_reg_read(bcm590xx, regInx + BCM590XX_INT_MASK_REG_BASE);
-	if (reg_val < 0) {
+	if (st < 0) {
 		printk("bcm590xx_disable_irq : PMU reg read error !!!\n");
 		return st;
 	}
@@ -585,7 +585,7 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 		printk("BCM590XX: Chip Version [0x%x]\n", ret);
 	}
 
-	if (pdata && pdata->pmu_event_cb) {
+	if (pdata->pmu_event_cb) {
 		ret = pdata->pmu_event_cb(BCM590XX_INITIALIZATION, 0);
 		if (ret != 0) {
 			dev_err(bcm590xx->dev, "Platform init() failed: %d\n",
@@ -634,6 +634,7 @@ err:
 err_create_workq:
 	mutex_destroy(&bcm590xx->list_lock);
 	mutex_destroy(&bcm590xx->i2c_rw_lock);
+	i = 1;
 	while (i < BCM590XX_NUM_SLAVES) {
 		if (bcm590xx->i2c_client[i].client)
 			i2c_unregister_device(bcm590xx->i2c_client[i].client);
