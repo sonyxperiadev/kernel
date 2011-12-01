@@ -203,7 +203,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SPI0TXD, SD1CMD, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(SPI0RXD, SD1DAT0, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(GPIO93, SD1DAT1, 0, OFF, ON, 0, 0, 16MA),
-	PIN_CFG(GPIO94, SD1DAT2, 0, OFF, ON, 0, 0, 16MA),
+	//PIN_CFG(GPIO94, SD1DAT2, 0, OFF, ON, 0, 0, 16MA), //conflict with SSP1SYN, disabled for now.
 #endif
 };
 
