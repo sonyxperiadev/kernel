@@ -128,22 +128,20 @@ typedef enum AUDIO_SOURCE_Enum_t
     AUDIO_SOURCE_ANALOG_AUX,
     AUDIO_SOURCE_DIGI1,  // DMIC1
     AUDIO_SOURCE_DIGI2,  // DMIC2
-    AUDIO_SOURCE_RESERVED1, // reserved                     
-    AUDIO_SOURCE_RESERVED2, // reserved 
-    AUDIO_SOURCE_RESERVED3, // reserved 
-    AUDIO_SOURCE_RESERVED4, // reserved 
+	AUDIO_SOURCE_DIGI3,
+	AUDIO_SOURCE_DIGI4,
+    AUDIO_SOURCE_MIC_ARRAY1, // reserved 
+    AUDIO_SOURCE_MIC_ARRAY2, // reserved 
     AUDIO_SOURCE_BTM,    //Bluetooth Mono Headset Mic  (PCM_Interface)
     AUDIO_SOURCE_USB,  //USB headset Mic
     AUDIO_SOURCE_I2S,
-    AUDIO_SOURCE_DIGI3,
-	AUDIO_SOURCE_DIGI4,
 	//Any valid enums that needs to be exposed to user for recording needs to be added before AUDIO_SOURCE_VALID_TOTAL
+    AUDIO_SOURCE_RESERVED1, // reserved                     
+    AUDIO_SOURCE_RESERVED2, // reserved 
     AUDIO_SOURCE_VALID_TOTAL,
     AUDIO_SOURCE_SPEECH_DIGI, //Digital Mic1/Mic2 in recording/Normal Quality Voice call.
-    AUDIO_SOURCE_EANC_DIGI, //Digital Mic1/2/3/4 for Supreme Quality Voice Call.
     AUDIO_SOURCE_MEM,
     AUDIO_SOURCE_DSP,
-    AUDIO_SOURCE_NOISE_CANCEL, //Mic for noise cancellation. Used in Dual mic case.
     AUDIO_SOURCE_TOTAL_COUNT
 } AUDIO_SOURCE_Enum_t;
 

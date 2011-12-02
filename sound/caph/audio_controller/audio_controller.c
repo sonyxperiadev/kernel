@@ -56,7 +56,7 @@
 #include "osheap.h"
 
 #ifdef CONFIG_DIGI_MIC
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#ifdef CONFIG_BCMPMU_AUDIO
 #include "pmu.h"
 #include "hal_pmu.h"
 #include "hal_pmu_private.h"
@@ -123,18 +123,17 @@ static AUDIO_SOURCE_Mapping_t MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] =
 	{AUDIO_SOURCE_ANALOG_AUX,		    CSL_CAPH_DEV_HS_MIC},
 	{AUDIO_SOURCE_DIGI1,     			CSL_CAPH_DEV_DIGI_MIC_L},
 	{AUDIO_SOURCE_DIGI2,		        CSL_CAPH_DEV_DIGI_MIC_R},
-	{AUDIO_SOURCE_RESERVED1,		    CSL_CAPH_DEV_NONE},
-	{AUDIO_SOURCE_RESERVED2,		    CSL_CAPH_DEV_NONE},
-	{AUDIO_SOURCE_RESERVED3,		    CSL_CAPH_DEV_NONE},
-	{AUDIO_SOURCE_RESERVED4,		    CSL_CAPH_DEV_NONE},
+	{AUDIO_SOURCE_DIGI3,				CSL_CAPH_DEV_EANC_DIGI_MIC_L},
+	{AUDIO_SOURCE_DIGI4,				CSL_CAPH_DEV_EANC_DIGI_MIC_R},
+	{AUDIO_SOURCE_MIC_ARRAY1,		    CSL_CAPH_DEV_NONE},
+	{AUDIO_SOURCE_MIC_ARRAY2,		    CSL_CAPH_DEV_NONE},
 	{AUDIO_SOURCE_BTM,		        	CSL_CAPH_DEV_BT_MIC},
 	{AUDIO_SOURCE_USB,       			CSL_CAPH_DEV_MEMORY},
 	{AUDIO_SOURCE_I2S,		        	CSL_CAPH_DEV_FM_RADIO},
-	{AUDIO_SOURCE_DIGI3,	        	CSL_CAPH_DEV_EANC_DIGI_MIC_L},
-	{AUDIO_SOURCE_DIGI4,		        CSL_CAPH_DEV_EANC_DIGI_MIC_R},
+	{AUDIO_SOURCE_RESERVED1,			CSL_CAPH_DEV_NONE},
+	{AUDIO_SOURCE_RESERVED2,			CSL_CAPH_DEV_NONE},
 	{AUDIO_SOURCE_VALID_TOTAL,			CSL_CAPH_DEV_NONE},
 	{AUDIO_SOURCE_SPEECH_DIGI,       	CSL_CAPH_DEV_DIGI_MIC},
-	{AUDIO_SOURCE_EANC_DIGI,		    CSL_CAPH_DEV_EANC_DIGI_MIC},
 	{AUDIO_SOURCE_MEM,		    		CSL_CAPH_DEV_MEMORY},
 	{AUDIO_SOURCE_DSP,		    		CSL_CAPH_DEV_DSP}
 };
@@ -978,7 +977,7 @@ void AUDCTRL_SetPlayVolume(
     int j = 0, sinkNo = 0;
     CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
 
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#ifdef CONFIG_BCMPMU_AUDIO
 	PMU_AudioGainMapping_t pmuAudioGainMap;
 #endif
 
@@ -1017,7 +1016,7 @@ void AUDCTRL_SetPlayVolume(
 			break;
 
 		case AUDIO_SINK_HEADSET:
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#ifdef CONFIG_BCMPMU_AUDIO
 #if 1
 			/***** fix PMU gain, adjust CAPH gain **/
 			pmu_gain[sink] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_HEADSET ].ext_speaker_pga_l; //Q13p2 dB
@@ -1038,7 +1037,7 @@ void AUDCTRL_SetPlayVolume(
 		case AUDIO_SINK_TTY:
 		//case AUDIO_CHNL_HEADPHONE_NO_MIC:
 
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#ifdef CONFIG_BCMPMU_AUDIO
 #if 1
 			/***** fix PMU gain, adjust CAPH gain **/
 			pmu_gain[sink] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_TTY ].ext_speaker_pga_l; //Q13p2 dB
@@ -1058,7 +1057,7 @@ void AUDCTRL_SetPlayVolume(
 			break;
 
 		case AUDIO_SINK_LOUDSPK:
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#ifdef CONFIG_BCMPMU_AUDIO
 #if 1
 			/***** fixed PMU gain, adjust CAPH gain **/
 			pmu_gain[sink] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_SPEAKERPHONE ].ext_speaker_pga_l; //Q13p2 dB
@@ -1719,7 +1718,6 @@ void AUDCTRL_SetRecordGain(
 			break;
 
 		case AUDIO_SOURCE_DIGI2:
-		case AUDIO_SOURCE_NOISE_CANCEL: //Mic for noise cancellation. Used in Dual mic case.
 			outGain = csl_caph_map_mB_gain_to_registerVal(MIC_DIGITAL, (int)gainL);
 			csl_caph_audioh_setgain_register(AUDDRV_PATH_VIN_INPUT_R, outGain.micCICBitSelect, outGain.micCICFineScale);
 
@@ -2270,7 +2268,7 @@ void  AUDCTRL_SetBTMode(Boolean mode)
 //============================================================================
 void SetGainOnExternalAmp_mB(AUDIO_SINK_Enum_t speaker, int gain_mB, int left_right)
 {
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#ifdef CONFIG_BCMPMU_AUDIO
 	PMU_AudioGainMapping_t gain_map;
 
 	switch(speaker)
@@ -2308,7 +2306,7 @@ void SetGainOnExternalAmp_mB(AUDIO_SINK_Enum_t speaker, int gain_mB, int left_ri
 //============================================================================
 void powerOnDigitalMic(Boolean powerOn)
 {
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#ifdef CONFIG_BCMPMU_AUDIO
 
 	if (powerOn == TRUE)
 	{
@@ -2377,7 +2375,7 @@ static void powerOnExternalAmp(
 //AUDIO_SINK_Enum_t should be moved to public and let PMU driver includes it.
 //and rename it AUD_SPEAKER_t
 
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#ifdef CONFIG_BCMPMU_AUDIO
 	static Boolean telephonyUseHS = FALSE;
 	static Boolean audioUseHS = FALSE;
 

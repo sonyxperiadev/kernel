@@ -30,9 +30,7 @@
 *
 ******************************************************************************/
 
-#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) 
-
-#if !defined(NO_PMU) && (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#if !defined(NO_PMU) && defined(CONFIG_BCMPMU_AUDIO)
 
 //=============================================================================
 // Include directives
@@ -317,5 +315,4 @@ void pmu_ihf_mute( void )
 
 #endif //#if !defined(NO_PMU) && (defined(CONFIG_BCM59055_AUDIO))
 
-#endif //#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR)
 

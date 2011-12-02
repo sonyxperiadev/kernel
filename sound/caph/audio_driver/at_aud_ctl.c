@@ -204,7 +204,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 		case 100: //at*maudmode=100  --> set external audio amplifer gain in PMU
 			//PCG and loadcal currently use Q13p2 gain format
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#ifdef CONFIG_BCMPMU_AUDIO
             {
             PMU_AudioGainMapping_t pmu_gain;
 
@@ -401,7 +401,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		case 121: //at*maudtst=121,x,y  // x=0: EXT_SPEAKER_PGA, x=1:EXT_SPEAKER_PREPGA, x=2: MIC_PGA, y: gain value register value(enum value)
             if (Params[1] == 0) // EXT_SPEAKER_PGA
             {
-#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
+#ifdef CONFIG_BCMPMU_AUDIO
 				int gain;
 				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB)
                      || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )

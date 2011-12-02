@@ -1890,10 +1890,6 @@ static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic (AUDIO_SOURCE_Enum_t mic)
             dev = CSL_CAPH_DEV_DIGI_MIC_R;
             break;
 
-         case AUDIO_SOURCE_EANC_DIGI:
-            dev = CSL_CAPH_DEV_EANC_DIGI_MIC;
-            break;
-
          case AUDIO_SOURCE_ANALOG_MAIN:
             dev = CSL_CAPH_DEV_ANALOG_MIC;
             break;
