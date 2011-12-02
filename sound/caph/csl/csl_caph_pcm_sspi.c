@@ -718,7 +718,9 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	} else { //voice mode
 		//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0xf, 0x1);
 		//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x1, 0x1); //this requires bigger CFIFO size, does not work well with SRC either.
-		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0x1f, 0x3);  // SSPI send out RX_Start interrupt when there is 1 sample in RX0 fifo and Rx_stop interrupt when there are 3 samples in the RX0 fifo.
+		//0x1f/0x3 combo does not work for DMA-based BT call: DSP keeps sending unknown interrupts.
+		//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0x1f, 0x3);  // SSPI send out RX_Start interrupt when there is 1 sample in RX0 fifo and Rx_stop interrupt when there are 3 samples in the RX0 fifo.
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0x1c, 0x3);  // SSPI send out RX_Start interrupt when there is 4 sample in RX0 fifo and Rx_stop interrupt when there are 3 samples in the RX0 fifo.
 		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x3, 0x1c);  // SSPI send out TX_Start interrupt when there are less 3 samples in TX0 fifo and Tx_stop interrupt when there are 4 samples in the TX0 fifo.
 	}
 
