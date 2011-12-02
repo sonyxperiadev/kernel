@@ -50,7 +50,11 @@ struct pi_ops;
 struct pi_mgr_qos_node;
 struct pi_mgr_dfs_node;
 
-
+enum {
+    SUB_DOMAIN_0,
+    SUB_DOMAIN_1,
+    SUB_DOMAIN_BOTH,
+};
 enum
 {
 	POLICY_QOS = 	(1 << 0),
@@ -84,6 +88,11 @@ struct pm_pi_info
 
 	u32 counter_reg_offset;
 	u32 rtn_clmp_dis_mask;
+
+	char *reset_mgr_ccu_name;
+	u32 pd_soft_reset_offset;
+	u32 pd_reset_mask0;
+	u32 pd_reset_mask1;
 };
 
 struct pi_state
@@ -134,6 +143,7 @@ struct pi_ops
 {
 	int	(*init)(struct pi *pi);
 	int	(*init_state)(struct pi *pi);
+	int	(*reset)(struct pi *pi, int sub_domain);
 	int	(*enable)(struct pi *pi, int enable);
 	int (*change_notify)(struct pi *pi, int policy);
 };

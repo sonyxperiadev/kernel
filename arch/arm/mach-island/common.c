@@ -35,11 +35,6 @@
 #include <plat/chal/chal_trace.h>
 #include <trace/stm.h>
 #include <asm/pmu.h>
-
-#if defined(CONFIG_USB_ANDROID)
-#include <linux/usb/android_composite.h>
-#endif
-
 #if defined (CONFIG_KONA_CPU_FREQ_DRV)
 #include <plat/kona_cpufreq_drv.h>
 #include <linux/cpufreq.h>
@@ -317,197 +312,6 @@ static struct platform_device board_kona_otg_platform_device =
 };
 #endif
 
-#if defined(CONFIG_USB_ANDROID)
-/* FIXME borrow GOOGLE vendor ID to use windows driver */
-#define PID_PLATFORM				0xE700
-#define FD_MASS_PRODUCT_ID			0x0001
-#define FD_SICD_PRODUCT_ID			0x0002
-#define FD_VIDEO_PRODUCT_ID			0x0004
-#define FD_DFU_PRODUCT_ID			0x0008
-#define FD_MTP_ID					0x000C
-#define FD_CDC_ACM_PRODUCT_ID		0x0020
-#define FD_CDC_RNDIS_PRODUCT_ID		0x0040
-#define FD_CDC_OBEX_PRODUCT_ID		0x0080
-
-#define GOOGLE_VENDOR_ID        0x18d1
-#define VENDOR_ID               GOOGLE_VENDOR_ID
-#define PRODUCT_ID              0x0d02
-
-/* FIXME need revise these IDs*/
-#define UMS_PRODUCT_ID          PRODUCT_ID
-#define UMS_ADB_PRODUCT_ID      PRODUCT_ID
-#define RNDIS_PRODUCT_ID        0x4e13
-#define RNDIS_ADB_PRODUCT_ID    0x4e14
-
-#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
-static struct usb_mass_storage_platform_data mass_storage_pdata = {
-#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
-	.nluns		=	2,
-#else
-	.nluns		=	1,
-#endif
-   .vendor = "Broadcom",
-   .product = "Media Broadcom Reference Design",
-   .release = 0x0100,
-};
-
-static struct platform_device usb_mass_storage_device = {
-   .name = "usb_mass_storage",
-   .id = -1,
-   .dev = {
-             .platform_data = &mass_storage_pdata,
-          },
-};
-#endif /* CONFIG_USB_ANDROID_MASS_STORAGE */
-
-#if defined(CONFIG_USB_ANDROID_RNDIS)
-static struct usb_ether_platform_data rndis_pdata = {
-   /* ethaddr is filled by board_serialno_setup */
-   .vendorID       = __constant_cpu_to_le16(VENDOR_ID),
-   .vendorDescr    = "Broadcom",
-};
-
-static struct platform_device rndis_device = {
-   .name   = "rndis",
-   .id     = -1,
-   .dev    = {
-                .platform_data = &rndis_pdata,
-             },
-};
-#endif /* CONFIG_USB_ANDROID_RNDIS */
-
-static char *usb_functions_ums[] = {
-#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
-   "usb_mass_storage",
-#endif
-};
-
-static char *usb_functions_ums_adb[] = {
-#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
-   "usb_mass_storage",
-#endif
-#if defined(CONFIG_USB_ANDROID_ADB)
-   "adb",
-#endif
-};
-
-static char *usb_functions_rndis[] = {
-#if defined(CONFIG_USB_ANDROID_RNDIS)
-   "rndis",
-#endif
-};
-
-static char *usb_functions_rndis_adb[] = {
-#if defined(CONFIG_USB_ANDROID_RNDIS)
-   "rndis",
-#endif
-#if defined(CONFIG_USB_ANDROID_ADB)
-   "adb",
-#endif
-};
-
-static char *android_function_acm[] = {
-#if defined(CONFIG_USB_ANDROID_ACM)
-	"acm",
-	"acm1",
-#endif
-};
-
-static char *android_function_msc_acm[] = {
-#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
-	"usb_mass_storage",
-#endif
-#if defined(CONFIG_USB_ANDROID_ACM)
-	"acm",
-	"acm1",
-#endif
-};
-
-static char *android_function_obex[] = {
-#if defined(CONFIG_USB_ANDROID_OBEX)
-	"obex",
-#endif
-};
-
-
-static char *usb_functions_all[] = {
-#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
-   "usb_mass_storage",
-#endif
-#if defined(CONFIG_USB_ANDROID_ADB)
-   "adb",
-#endif
-#if defined(CONFIG_USB_ANDROID_RNDIS)
-   "rndis",
-#endif
-#if defined(CONFIG_USB_ANDROID_ACM)
-   "acm",
-#endif
-#if defined (CONFIG_USB_ANDROID_OBEX)
-	"obex",
-#endif
-};
-
-static struct android_usb_product usb_products[] = {
-   {
-      .product_id     = __constant_cpu_to_le16(UMS_PRODUCT_ID),
-      .num_functions  = ARRAY_SIZE(usb_functions_ums),
-      .functions      = usb_functions_ums,
-   },
-   {
-      .product_id     = __constant_cpu_to_le16(UMS_ADB_PRODUCT_ID),
-      .num_functions  = ARRAY_SIZE(usb_functions_ums_adb),
-      .functions      = usb_functions_ums_adb,
-   },
-   {
-      .product_id     = __constant_cpu_to_le16(RNDIS_PRODUCT_ID),
-      .num_functions  = ARRAY_SIZE(usb_functions_rndis),
-      .functions      = usb_functions_rndis,
-   },
-   {
-      .product_id     = __constant_cpu_to_le16(RNDIS_ADB_PRODUCT_ID),
-      .num_functions  = ARRAY_SIZE(usb_functions_rndis_adb),
-      .functions      = usb_functions_rndis_adb,
-   },
-	{
-		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_acm),
-		.functions	=	android_function_acm,
-	},
-	{
-		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID | FD_MASS_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_msc_acm),
-		.functions	=	android_function_msc_acm,
-	},
-	{
-		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_OBEX_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_obex),
-		.functions	=	android_function_obex,
-	},
-};
-
-static struct android_usb_platform_data android_usb_pdata = {
-   .vendor_id         = __constant_cpu_to_le16(VENDOR_ID),
-   .product_id        = __constant_cpu_to_le16(PRODUCT_ID),
-   .version           = 0x0100,
-   .product_name      = "Media Broadcom Reference Design",
-   .manufacturer_name = "Broadcom",
-   .serial_number     = "0123456789ABCDEF",
-   .num_products      = ARRAY_SIZE(usb_products),
-   .products          = usb_products,
-   .num_functions     = ARRAY_SIZE(usb_functions_all),
-   .functions         = usb_functions_all,
-};
-
-static struct platform_device android_usb_device = {
-   .name   = "android_usb",
-   .id     = -1,
-   .dev    = {
-                .platform_data = &android_usb_pdata,
-             },
-};
-#endif /* CONFIG_USB_ANDROID */
-
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] =
 {
@@ -601,6 +405,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif /* CONFIG_USB_ANDROID_RNDIS */
 #endif /* CONFIG_USB_ANDROID */
 
+#if defined(CONFIG_BACKLIGHT_PWM)
+	&pwm_backlight_device,
+#endif
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 	&kona_cpufreq_device,
 #endif

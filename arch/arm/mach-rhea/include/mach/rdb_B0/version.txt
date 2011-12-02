@@ -1,0 +1,6 @@
+This file is the place holder that mentions what version of rdb was taken and
+put here
+
+Date		Version Info
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+31/Oct/2011	snap_2011-10-28

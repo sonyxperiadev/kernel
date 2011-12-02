@@ -9,7 +9,7 @@ if test $# -ne 2; then
 	exit 1
 fi
 
-DTC=${srctree}/scripts/dtc/dtc
+DTC=${objtree}/scripts/dtc/dtc
 
 if [ -z "${DTC}" ]; then
 	# Doesn't exist

@@ -228,6 +228,7 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	if (!clt)
 		printk(KERN_ERR "%s: add new device for map1 failed\n", __func__);
 
+	clt->dev.platform_data = pdata;
 	bcmpmu_i2c->i2c_client1 = clt;
 	mutex_init(&bcmpmu_i2c->i2c_mutex);
 	

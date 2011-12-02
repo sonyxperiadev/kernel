@@ -78,6 +78,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(MMC1DAT4, GPIO74, 0, OFF, ON, 0, 0, 8MA),
 #endif
 	/*	Pinmux for keypad */
+#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO01, KEY_R1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO02, KEY_R2, 0, OFF, ON, 0, 0, 8MA),
@@ -90,6 +91,12 @@ static struct __init pin_config board_pin_config[] = {
 //	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
 //	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
 //	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
+#else
+	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
+#endif
 
 	/* SSP0 */
 	PIN_CFG(SPI0FSS, SSP0SYN, 0, OFF, OFF, 0, 0, 8MA),
@@ -99,16 +106,16 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SSP3 - PCM
 	   SSP3 pinmux is set since keypad also check the same pins currently */
+#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO14, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO07, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
+#endif
 
 	/* SSP4 - I2S */
-	/* TODO: Need to find out the mappting for END2x, if its same as 1x
-	 * just add the macro to the defined list.
-	 */
-#if defined(CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
+#if defined(CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X) || defined (CONFIG_MACH_RHEA_RAY_EDN2X) \
+	|| defined(CONFIG_MACH_RHEA_RAY_DEMO)
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
@@ -139,14 +146,16 @@ static struct __init pin_config board_pin_config[] = {
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(LCDSDA, LCDD0, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO00, LCDD15, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO01, LCDD14, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO02, LCDD13, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO03, LCDD12, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO08, LCDD11, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO09, LCDD10, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO10, LCDD9, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO11, LCDD8, 0, OFF, ON, 0, 0, 8MA),
+#ifdef CONFIG_MACH_RHEA_RAY_DEMO
+	PIN_CFG(GPIO00, LCDD15, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO01, LCDD14, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO02, LCDD13, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO03, LCDD12, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO08, LCDD11, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO09, LCDD10, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO10, LCDD9, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO11, LCDD8, 0, OFF, ON, 0, 0, 8MA),
+#endif
 	PIN_CFG(GPIO18, LCDCS1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO19, LCDWE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO20, LCDRE, 0, OFF, ON, 0, 0, 8MA),
@@ -168,9 +177,9 @@ static struct __init pin_config board_pin_config[] = {
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
 	PIN_CFG(GPS_CALREQ, GPIO99, 0, OFF, ON, 0, 0, 8MA),
 
-        /* Bluetooth related GPIOS */
-        PIN_CFG(GPIO04, GPIO4, 0, ON, OFF, 0, 0, 8MA),
-        PIN_CFG(DCLKREQ1, GPIO111, 0, OFF, ON, 0, 1, 8MA),
+	/* Bluetooth related GPIOS */
+	PIN_CFG(GPIO04, GPIO4, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(DCLKREQ1, GPIO111, 0, OFF, ON, 0, 1, 8MA),
 
 	/*WLAN set SSPSYN as GPIO85 */
 	/*
@@ -207,6 +216,11 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SPI0RXD, SD1DAT0, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(GPIO93, SD1DAT1, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(GPIO94, SD1DAT2, 0, OFF, ON, 0, 0, 16MA),
+#endif
+
+#if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+	/* camera - setup DCLK1 */
+	PIN_CFG(DCLK1, DCLK1, 0, ON, OFF, 0, 0, 12MA),
 #endif
 };
 

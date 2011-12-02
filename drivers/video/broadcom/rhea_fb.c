@@ -24,23 +24,22 @@
 #include <video/kona_fb.h>
 
 #include <mach/io.h>
-
 #ifdef CONFIG_FRAMEBUFFER_FPS
 #include <linux/fb_fps.h>
 #endif
-
-#ifdef CONFIG_ANDROID_POWER
-#include <linux/android_power.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
 #endif
-
-//#define RHEA_FB_DEBUG 
-#include "rhea_fb.h"
+#include <linux/clk.h>
+#include <plat/pi_mgr.h>
 #include <plat/mobcom_types.h>
+
+#include "rhea_fb.h"
 #include "lcd/display_drv.h"
 
-//extern DISPDRV_T* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable ( void );
-//extern DISPDRV_T* DISP_DRV_BCM91008_ALEX_GetFuncTable( void );
-//extern DISPDRV_T* DISP_DRV_R61581_HVGA_SMI_GetFuncTable ( void );
+//#define RHEA_FB_DEBUG 
+//#define PARTIAL_UPDATE_SUPPORT
+#define RHEA_FB_ENABLE_DYNAMIC_CLOCK	1
 
 struct rhea_fb {
 	dma_addr_t phys_fbbase;
@@ -49,7 +48,8 @@ struct rhea_fb {
 	struct semaphore thread_sem;
 	struct semaphore update_sem;
 	struct semaphore prev_buf_done_sem;
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 	struct semaphore refresh_wait_sem;
 #endif
 	atomic_t buff_idx;
@@ -66,8 +66,14 @@ struct rhea_fb {
 	DISPDRV_T *display_ops;
 	const DISPDRV_INFO_T *display_info;
 	DISPDRV_HANDLE_T display_hdl; 
-#ifdef CONFIG_ANDROID_POWER
-	android_early_suspend_t early_suspend;
+	struct pi_mgr_dfs_node* dfs_node;
+	int g_stop_drawing; 
+	u32 gpio;
+	u32 bus_width;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend early_suspend_level1;
+	struct early_suspend early_suspend_level2;
+	struct early_suspend early_suspend_level3;
 #endif
 };
 
@@ -124,20 +130,6 @@ static int rhea_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info
 		}
 	}
 
-	if((var->xoffset != info->var.xoffset) ||
-	   (var->bits_per_pixel != info->var.bits_per_pixel) ||
-	   (var->grayscale != info->var.grayscale)) {
-		rheafb_error("fb_check_var_failed\n");
-		return -EINVAL;
-	}
-
-	if ((var->yoffset != 0) &&
-		(var->yoffset != info->var.yres)) {
-		rheafb_error("fb_check_var failed\n");
-		rheafb_alert("BRCM fb does not support partial FB updates\n");
-		return -EINVAL;
-	}
-
 	return 0;
 }
 
@@ -155,9 +147,24 @@ static int rhea_fb_set_par(struct fb_info *info)
 	return 0;
 }
 
+static inline void rhea_clock_start(struct rhea_fb *fb)
+{
+#if (RHEA_FB_ENABLE_DYNAMIC_CLOCK == 1)
+	fb->display_ops->start(fb->dfs_node);
+#endif
+}
+
+static inline void rhea_clock_stop(struct rhea_fb *fb)
+{
+#if (RHEA_FB_ENABLE_DYNAMIC_CLOCK == 1)
+	fb->display_ops->stop(fb->dfs_node);
+#endif
+}
+
 static void rhea_display_done_cb(int status)
 {	
 	(void)status;
+	rhea_clock_stop(g_rhea_fb);
 	up(&g_rhea_fb->prev_buf_done_sem);
 }
 
@@ -169,16 +176,19 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	void *dst;
 #endif
+        DISPDRV_WIN_t region, *p_region;
 
-	/* We are here only if yoffset is '0' or 'yres',
-	 * so if yoffset = 0, update first buffer or update second
-	 */
 	buff_idx = var->yoffset ? 1 : 0;
 
 	rheafb_debug("RHEA %s with buff_idx =%d \n", __func__, buff_idx);
 
 	if (down_killable(&fb->update_sem))
 		return -EINTR;
+
+	if (1 == fb->g_stop_drawing) {
+		rheafb_debug("RHEA FB/LCd is in the early suspend state and stops drawing now!");
+		goto skip_drawing;
+	}
 
 	atomic_set(&fb->buff_idx, buff_idx);
 
@@ -189,34 +199,32 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 #endif
 	
 	if (!atomic_read(&fb->is_fb_registered)) {
-		ret = fb->display_ops->update(fb->display_hdl, buff_idx, NULL /* Callback */);
+		rhea_clock_start(fb);
+		ret = fb->display_ops->update(fb->display_hdl, buff_idx, NULL, NULL /* Callback */);
+		rhea_clock_stop(fb);
 	} else {
 		atomic_set(&fb->is_graphics_started, 1);
+		if (var->reserved[0] == 0x54445055) {
+			region.t	= var->reserved[1] >> 16;
+			region.l	= (u16)var->reserved[1]; 
+			region.b	= (var->reserved[2] >> 16) -1;
+			region.r	= (u16)var->reserved[2] - 1;
+			region.w	= region.r - region.l + 1;
+			region.h	= region.b - region.t + 1;
+                        p_region = &region;                
+		} else {
+			p_region = NULL;	
+		}
 		down(&fb->prev_buf_done_sem);
-		ret = fb->display_ops->update(fb->display_hdl, buff_idx,(DISPDRV_CB_T)rhea_display_done_cb);
+		rhea_clock_start(fb);
+		ret = fb->display_ops->update(fb->display_hdl, buff_idx, p_region, (DISPDRV_CB_T)rhea_display_done_cb);
 	}
-	
+skip_drawing:
 	up(&fb->update_sem);
 
 	rheafb_debug("RHEA Display is updated once at %d time with yoffset=%d\n", fb->base_update_count, var->yoffset);
-
 	return ret;
 }
-
-#ifdef CONFIG_ANDROID_POWER
-static void rhea_fb_early_suspend(android_early_suspend_t *h)
-{
-	struct rhea_fb *fb = container_of(h, struct rhea_fb, early_suspend);
-	rheafb_info("TODO: BRCM fb early suspend ...\n");
-}
-
-static void rhea_fb_late_resume(android_early_suspend_t *h)
-{
-	struct rhea_fb *fb = container_of(h, struct rhea_fb, early_suspend);
-	rheafb_info("TODO: BRCM fb late resume ...\n");
-}
-#endif
-
 
 static void reset_display(u32 gpio)
 {
@@ -232,21 +240,17 @@ static void reset_display(u32 gpio)
 	}
 }
 
-static int enable_display(struct rhea_fb *fb, u32 gpio)
+static int enable_display(struct rhea_fb *fb, u32 gpio, u32 bus_width)
 {
 	int ret = 0;
 	DISPDRV_OPEN_PARM_T local_DISPDRV_OPEN_PARM_T;
 
-	ret = fb->display_ops->init();
+	ret = fb->display_ops->init(bus_width);
 	if (ret != 0) {
 		rheafb_error("Failed to init this display device!\n");
 		goto fail_to_init;
 	}
 	
-	/* Hack
-	 * Since the display driver is not using this field, 
-	 * we use it to pass the dma addr.
-	 */
 	reset_display(gpio);
 
 	local_DISPDRV_OPEN_PARM_T.busId = fb->phys_fbbase;
@@ -255,12 +259,6 @@ static int enable_display(struct rhea_fb *fb, u32 gpio)
 	if (ret != 0) {
 		rheafb_error("Failed to open this display device!\n");
 		goto fail_to_open;
-	}
-
-	ret = fb->display_ops->start(fb->display_hdl);
-	if (ret != 0) {
-		rheafb_error("Failed to start this display device!\n");
-		goto fail_to_start;
 	}
 
 	ret = fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_ON);
@@ -273,8 +271,6 @@ static int enable_display(struct rhea_fb *fb, u32 gpio)
 	return 0;
  
 fail_to_power_control:
-	fb->display_ops->stop(fb->display_hdl);
-fail_to_start:
 	fb->display_ops->close(fb->display_hdl);
 fail_to_open:
 	fb->display_ops->exit();
@@ -282,45 +278,10 @@ fail_to_init:
  	return ret;
 
 }
-#if 0
-
-#if defined(CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA)
-	fb->display_ops = DISP_DRV_BCM91008_ALEX_GetFuncTable();
-#elif defined(CONFIG_FB_BRCM_LCDC_NT35582_SMI_WVGA)
-	fb->display_ops = DISP_DRV_NT35582_WVGA_SMI_GetFuncTable();
-#elif defined(CONFIG_FB_BRCM_LCDC_R61581_SMI_HVGA)
-	fb->display_ops = DISP_DRV_R61581_HVGA_SMI_GetFuncTable(); 
-#else 
-#error "Wrong LCD configuration!" 
-#endif
-	fb->display_ops->init();
-	{
-		DISPDRV_OPEN_PARM_T local_DISPDRV_OPEN_PARM_T;
-		/* Hack
-		 * Since the smi display driver is not using this field, 
-		 * we use it to pass the dma addr.
-		 */
-		local_DISPDRV_OPEN_PARM_T.busId = fb->phys_fbbase;
-		local_DISPDRV_OPEN_PARM_T.busCh = 0;
-		fb->display_ops->open((void *)&local_DISPDRV_OPEN_PARM_T, &fb->display_hdl);
-		fb->display_ops->start(fb->display_hdl);
-		fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_ON);
-	}
-	rheafb_info("RHEA display is enabled successfully\n");
-
-	return ret;
-}
-
-#endif
 
 static int disable_display(struct rhea_fb *fb)
 {
 	int ret = 0;
-
-	/* TODO:  HACK
-	 * Need to fill the blank.
-	 */
-	fb->display_ops->stop(fb->display_hdl);
 
 	fb->display_ops->close(fb->display_hdl);
 
@@ -330,7 +291,96 @@ static int disable_display(struct rhea_fb *fb)
 	return ret;
 }
 
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void rhea_fb_early_suspend(struct early_suspend *h)
+{
+	struct rhea_fb *fb;
+
+	rheafb_error("BRCM fb early suspend with level = %d\n", h->level);
+
+	switch (h->level) {
+	
+	case EARLY_SUSPEND_LEVEL_BLANK_SCREEN:
+		/* Turn off the backlight */
+		fb = container_of(h, struct rhea_fb, early_suspend_level1);
+		down(&fb->update_sem);
+		down(&fb->prev_buf_done_sem);
+	 	rhea_clock_start(fb);
+		if (fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_BLANK_SCREEN))
+			rheafb_error("Failed to blank this display device!\n");
+		rhea_clock_stop(fb);
+		up(&fb->prev_buf_done_sem);
+		up(&fb->update_sem);
+
+		break;
+
+	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
+		fb = container_of(h, struct rhea_fb, early_suspend_level2);
+		down(&fb->update_sem);
+		down(&fb->prev_buf_done_sem);
+		fb->g_stop_drawing = 1;
+		up(&fb->prev_buf_done_sem);
+		up(&fb->update_sem);
+		break;
+
+	case EARLY_SUSPEND_LEVEL_DISABLE_FB:
+		fb = container_of(h, struct rhea_fb, early_suspend_level3);
+		/* screen goes to sleep mode*/
+		down(&fb->update_sem);
+	 	rhea_clock_start(fb);
+		disable_display(fb);
+		rhea_clock_stop(fb);
+		up(&fb->update_sem);
+		/* Turn off the ldo */
+		break;
+
+	default:
+		rheafb_error("Early suspend with the wrong level!\n");
+		break;
+	}
+}
+
+static void rhea_fb_late_resume(struct early_suspend *h)
+{
+	struct rhea_fb *fb;
+
+	rheafb_error("BRCM fb late resume with level = %d\n", h->level);
+
+	switch (h->level) {
+	
+	case EARLY_SUSPEND_LEVEL_BLANK_SCREEN:
+		/* Turn on the backlight */
+		fb = container_of(h, struct rhea_fb, early_suspend_level1);
+		break;
+
+	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
+		fb = container_of(h, struct rhea_fb, early_suspend_level2);
+		down(&fb->update_sem);
+		fb->g_stop_drawing = 0;
+		up(&fb->update_sem);
+		break;
+
+	case EARLY_SUSPEND_LEVEL_DISABLE_FB:
+		fb = container_of(h, struct rhea_fb, early_suspend_level3);
+		/* Turn on the ldo */
+		/* screen comes out of sleep */
+	 	rhea_clock_start(fb);
+		if (enable_display(fb, fb->gpio, fb->bus_width))
+			rheafb_error("Failed to enable this display device\n");
+		rhea_clock_stop(fb);
+		break;
+
+	default:
+		rheafb_error("Early suspend with the wrong level!\n");
+		break;
+	}
+
+
+}
+#endif
+
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 static int rhea_refresh_thread(void *arg)
 {
 	struct rhea_fb *fb = arg;
@@ -340,8 +390,12 @@ static int rhea_refresh_thread(void *arg)
 	do {
 		down(&fb->refresh_wait_sem);
 		down(&fb->update_sem);
-		fb->display_ops->update(fb->display_hdl, 0, NULL);
-		fb->base_update_count++;
+		if (0 == fb->g_stop_drawing) {
+			rhea_clock_start(fb);
+			fb->display_ops->update(fb->display_hdl, 0, NULL, NULL);
+			rhea_clock_stop(fb);
+			fb->base_update_count++;
+		}
 		up(&fb->update_sem);
 	} while (1);
 
@@ -365,7 +419,7 @@ static struct notifier_block vt_notifier_block = {
 	.notifier_call = vt_notifier_call,
 };
 
-#endif /* !CONFIG_MACH_RHEA_RAY_EDN1X  && !CONFIG_MACH_RHEA_RAY_EDN2X */
+#endif /* !CONFIG_MACH_RHEA_RAY_EDN1X  && !CONFIG_MACH_RHEA_RAY_EDN2X && !CONFIG_MACH_RHEA_SS */
 
 static struct fb_ops rhea_fb_ops = {
 	.owner          = THIS_MODULE,
@@ -398,7 +452,16 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_fb_alloc_failed;
 	}
+	fb->g_stop_drawing = 0;
+
 	g_rhea_fb = fb;
+ 	g_rhea_fb->dfs_node = pi_mgr_dfs_add_request("lcd", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+	if (!g_rhea_fb->dfs_node)
+	{
+		printk(KERN_ERR "Failed to add dfs request for LCD\n");
+		ret = -EIO;
+		goto fb_data_failed;
+	}
 
 	fb_data = pdev->dev.platform_data;
 	if (!fb_data) {
@@ -418,7 +481,8 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_graphics_started, 0);
 	sema_init(&fb->thread_sem, 0);
 
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 
 	sema_init(&fb->refresh_wait_sem, 0);
 
@@ -429,25 +493,6 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	}
 #endif
 
-	/* Hack
-	 * The screen info can only be obtained from the display driver;and, therefore, 
-	 * only then the frame buffer mem can be allocated.
-	 * However, we need to pass the frame buffer phy addr into the CSL layer right before
-	 * the screen info can be obtained.
-	 * So either the display driver allocates the memory and pass the pointer to us, or
-	 * we allocate memory and pass into the display. 
-	 */
-#if 0
-#if defined(CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA)
-	framesize = 640 * 360 * 4 * 2;
-#elif defined(CONFIG_FB_BRCM_LCDC_NT35582_SMI_WVGA)
-	framesize = 480 * 800 * 2 * 2;
-#elif defined(CONFIG_FB_BRCM_LCDC_R61581_SMI_HVGA)
-	framesize = 320 * 480 * 2 * 2;
-#else 
-#error "Wrong LCD configuration!" 
-#endif
-#endif
 	framesize = fb_data->screen_width * fb_data->screen_height * 
 				fb_data->bytes_per_pixel * 2;
 
@@ -459,13 +504,21 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		goto err_fbmem_alloc_failed;
 	}
 
-	ret = enable_display(fb, fb_data->gpio);
+#if (RHEA_FB_ENABLE_DYNAMIC_CLOCK != 1)
+	fb->display_ops->start(fb->dfs_node);
+#endif
+
+	fb->gpio = fb_data->gpio;
+	fb->bus_width = fb_data->bus_width;
+	rhea_clock_start(fb);
+	ret = enable_display(fb, fb->gpio, fb->bus_width);
 	if (ret) {
 		rheafb_error("Failed to enable this display device\n");
 		goto err_enable_display_failed;
 	} else {
 		fb->is_display_found = 1;
  	}
+	rhea_clock_stop(fb);
 
 	fb->display_info = fb->display_ops->get_info(fb->display_hdl);
 
@@ -479,58 +532,25 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.pseudo_palette	= fb->cmap;
 	fb->fb.fix.type		= FB_TYPE_PACKED_PIXELS;
 	fb->fb.fix.visual	= FB_VISUAL_TRUECOLOR;
-#if 0
-#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
-	fb->fb.fix.line_length	= width * 4;
-#else
-	fb->fb.fix.line_length	= width * 2;
-#endif
-#endif
 	fb->fb.fix.line_length	= width * fb_data->bytes_per_pixel;
 
 	fb->fb.fix.accel	= FB_ACCEL_NONE;
 	fb->fb.fix.ypanstep	= 1;
 	fb->fb.fix.xpanstep	= 4;
+#ifdef PARTIAL_UPDATE_SUPPORT
+	fb->fb.fix.reserved[0]	=  0x5444;
+	fb->fb.fix.reserved[1]	=  0x5055;
+#endif
 
 	fb->fb.var.xres		= width;
 	fb->fb.var.yres		= height;
 	fb->fb.var.xres_virtual	= width;
 	fb->fb.var.yres_virtual	= height * 2;
-#if 0
-#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
-	fb->fb.var.bits_per_pixel = 32;
-#else
-	fb->fb.var.bits_per_pixel = 16;
-#endif
-#endif
 	fb->fb.var.bits_per_pixel = fb_data->bytes_per_pixel * 8;
 	fb->fb.var.activate	= FB_ACTIVATE_NOW;
 	fb->fb.var.height	= height;
 	fb->fb.var.width	= width;
 
-#if 0
-#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
-	fb->fb.var.red.offset = 16;
-	fb->fb.var.red.length = 8;
-	fb->fb.var.green.offset = 8;
-	fb->fb.var.green.length = 8;
-	fb->fb.var.blue.offset = 0;
-	fb->fb.var.blue.length = 8;
-	fb->fb.var.transp.offset = 24;
-	fb->fb.var.transp.length = 8;
-
-	framesize = width * height * 4 * 2;
-#else
-	fb->fb.var.red.offset = 11;
-	fb->fb.var.red.length = 5;
-	fb->fb.var.green.offset = 5;
-	fb->fb.var.green.length = 6;
-	fb->fb.var.blue.offset = 0;
-	fb->fb.var.blue.length = 5;
-
-	framesize = width * height * 2 * 2;
-#endif
-#endif
 	switch (fb_data->pixel_format) {
 	case RGB565:
 	fb->fb.var.red.offset = 11;
@@ -595,22 +615,37 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_fb_registered, 1);
 	rheafb_info("RHEA Framebuffer probe successfull\n");
 
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 	register_vt_notifier(&vt_notifier_block);
 #endif
 
 #ifdef CONFIG_LOGO
-	/*  Display the default logo/splash screen. */
 	fb_prepare_logo(&fb->fb, 0);
 	fb_show_logo(&fb->fb, 0);
-	fb->display_ops->update(fb->display_hdl, 0, NULL /* Callback */);
+
+	down(&fb->update_sem);
+	rhea_clock_start(fb);
+	fb->display_ops->update(fb->display_hdl, 0, NULL, NULL /* Callback */);
+	rhea_clock_stop(fb);
+	up(&fb->update_sem);
 #endif
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	fb->early_suspend_level1.suspend	= rhea_fb_early_suspend;
+	fb->early_suspend_level1.resume	= rhea_fb_late_resume;
+	fb->early_suspend_level1.level		=  EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
+	register_early_suspend(&fb->early_suspend_level1);
 
-#ifdef CONFIG_ANDROID_POWER
-	fb->early_suspend.suspend = rhea_fb_early_suspend;
-	fb->early_suspend.resume = rhea_fb_late_resume;
-	android_register_early_suspend(&fb->early_suspend);
+	fb->early_suspend_level2.suspend	= rhea_fb_early_suspend;
+	fb->early_suspend_level2.resume	= rhea_fb_late_resume;
+	fb->early_suspend_level2.level		=  EARLY_SUSPEND_LEVEL_STOP_DRAWING;
+	register_early_suspend(&fb->early_suspend_level2);
+
+	fb->early_suspend_level3.suspend	= rhea_fb_early_suspend;
+	fb->early_suspend_level3.resume	= rhea_fb_late_resume;
+	fb->early_suspend_level3.level		=  EARLY_SUSPEND_LEVEL_DISABLE_FB;
+	register_early_suspend(&fb->early_suspend_level3);
 #endif
 
 	return 0;
@@ -619,18 +654,29 @@ err_fb_register_failed:
 err_set_var_failed:
 	dma_free_writecombine(&pdev->dev, fb->fb.fix.smem_len,
 			      fb->fb.screen_base, fb->fb.fix.smem_start);
+
+	rhea_clock_start(fb);
 	disable_display(fb);
+	rhea_clock_stop(fb);
+
+#if (RHEA_FB_ENABLE_DYNAMIC_CLOCK != 1)
+	fb->display_ops->stop(fb->dfs_node);
+#endif
 
 err_enable_display_failed:
 err_fbmem_alloc_failed:
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 thread_create_failed:
 #endif
+	if (pi_mgr_dfs_request_remove(fb->dfs_node))
+	{
+	    printk(KERN_ERR "Failed to remove dfs request for LCD\n");
+	}
 fb_data_failed:
 	kfree(fb);
 	g_rhea_fb = NULL;
 err_fb_alloc_failed:
-	rheafb_alert("RHEA Framebuffer probe FAILED !!\n");
 	return ret;
 }
 
@@ -641,10 +687,12 @@ static int __devexit rhea_fb_remove(struct platform_device *pdev)
 	
 	framesize = fb->fb.var.xres_virtual * fb->fb.var.yres_virtual * 2;
 
-#ifdef CONFIG_ANDROID_POWER
-        android_unregister_early_suspend(&fb->early_suspend);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&fb->early_suspend_level1);
+	unregister_early_suspend(&fb->early_suspend_level2);
+	unregister_early_suspend(&fb->early_suspend_level3);
 #endif
-	
+
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	fb_fps_unregister(fb->fps_info);
 #endif
@@ -663,17 +711,6 @@ static struct platform_driver rhea_fb_driver = {
 	}
 };
 
-#if 0
-static struct platform_device rhea_fb_device = {
-	.name    = "rhea_fb",
-	.id      = -1,
-	.dev = {
-		.dma_mask      = (u64 *) ~(u32)0,
-		.coherent_dma_mask   = ~(u32)0,
-	},
-};
-#endif
-
 static int __init rhea_fb_init(void)
 {
 	int ret;
@@ -684,15 +721,6 @@ static int __init rhea_fb_init(void)
 		goto fail_to_register;
 	}
 
-#if 0
-	ret = platform_device_register(&rhea_fb_device);
-	if (ret) {
-		printk(KERN_ERR"%s : Unable to register Rhea framebuffer device\n", __func__);
-		platform_driver_unregister(&rhea_fb_driver);
-		goto fail_to_register;
-	}
-#endif
-
 fail_to_register:
 	printk(KERN_INFO"BRCM Framebuffer Init %s !\n", ret ? "FAILED" : "OK");
 
@@ -701,10 +729,7 @@ fail_to_register:
 
 static void __exit rhea_fb_exit(void)
 {
-	/* Clean up .. */
-	//platform_device_unregister(&rhea_fb_device);
 	platform_driver_unregister(&rhea_fb_driver);
-
 	printk(KERN_INFO"BRCM Framebuffer exit OK\n");
 }
 

@@ -86,7 +86,8 @@ typedef enum {
 	adc_unit_kelvin_down_table,	/* NTC resistor is connected to ground(table lookup) */
 	adc_unit_kelvin_up,		/* NTC resistor is connected to supply */
 	adc_unit_bom,			/* BOM detection */
-	adc_unit_ibat_k
+	adc_unit_ibat_k,
+	adc_unit_raw
 } adc_channel_unit_t;
 
 struct adc_unit_t {
@@ -117,7 +118,7 @@ struct adc_unit_t {
 		struct {
 			u32 k;
 		} ibat_k;
-	} data; 
+	} data;
 };
 
 
@@ -147,11 +148,6 @@ void hal_adc_init_channels(u8 use_cal_data)
 	struct adc_channels_t local_adc_channels[VENDOR_ADC_NUM_CHANNELS];
 	struct adc_channels_t *adc_cal_channels = NULL;
 	int channel;
-#if 0
-	u8 status;
-	u32 size;
-	int EM_PMM_index;
-#endif
 
 	memset(local_adc_channels, 0, sizeof(local_adc_channels));
 
@@ -163,41 +159,6 @@ void hal_adc_init_channels(u8 use_cal_data)
 		local_adc_channels[channel].unit.cal_id = 0;
 		GLUE_DBG(("hal_adc_init_channel: Initializing channel %x(%x, %d)", channel, local_adc_channels[channel].select, local_adc_channels[channel].bits));
 	}
-
-#if 0 /* TBD how this is done in Clipper */
-	status = vendor_secure_storage_data_size_get(&size, VENDOR_AREA_EM_CAL);
-	/*backward compatibility*/
-	/*check if data has the right size. If not then attempt to read from the old index*/
-	if ((status == VENDOR_SECURE_STORAGE_OK) && (size == sizeof(adc_channels_t) * VENDOR_ADC_NUM_CHANNELS)) {
-		EM_PMM_index = VENDOR_AREA_EM_CAL;
-	} else {
-		EM_PMM_index = VENDOR_AREA_EM_CAL_OLD;
-		status = vendor_secure_storage_data_size_get(&size, EM_PMM_index);
-	}
-	GLUE_DBG(("hal_adc_init: Status %d, Reading EM cal from PMM index %d, size %d", status, EM_PMM_index, size));
-	if ((status == VENDOR_SECURE_STORAGE_OK) && (size == sizeof(adc_channels_t) * VENDOR_ADC_NUM_CHANNELS)) {
-		/*OK, let us get the data. */
-		adc_cal_channels = OSHEAP_Alloc(size);
-		assert(adc_cal_channels);
-		status = vendor_secure_storage_data_read(adc_cal_channels, size, 0, EM_PMM_index);
-		/* Verify structure */
-		if (status == VENDOR_SECURE_STORAGE_OK) {
-			GLUE_DBG(("hal_adc_init: Verifying ADC data integrity"));
-
-			for (channel=0; channel<VENDOR_ADC_NUM_CHANNELS; channel++) {
-				if (adc_cal_channels[channel].select != local_adc_channels[channel].select) {
-					channel = 0;
-					break;
-				}
-			}
-			if (!channel) {
-				GLUE_DBG(("hal_adc_init: ADC data integrity test failed"));
-				OSHEAP_Delete(adc_cal_channels);
-				adc_cal_channels = NULL;
-			}
-		}
-	}
-#endif
 
 #ifdef VENDOR_ADC_VBAT_SCALE_CHANNEL
 	local_adc_channels[VENDOR_ADC_VBAT_SCALE_CHANNEL].unit.unit = adc_unit_volts;
@@ -375,6 +336,11 @@ void hal_adc_init_channels(u8 use_cal_data)
 	}
 #endif
 
+#ifdef VENDOR_ADC_ALS_CHANNEL
+	local_adc_channels[VENDOR_ADC_ALS_CHANNEL].unit.uvperlsb = VENDOR_ADC_REFERENCE_VOLTAGE * 1000 / (1<<local_adc_channels[VENDOR_ADC_ID_CHANNEL].bits);	/* 1,2 v, 1024 steps, 10 bit ADC */
+	local_adc_channels[VENDOR_ADC_ALS_CHANNEL].unit.unit = adc_unit_raw;
+#endif
+
 #ifdef VENDOR_ADC_ID_CHANNEL
 	local_adc_channels[VENDOR_ADC_ID_CHANNEL].unit.uvperlsb = VENDOR_ADC_REFERENCE_VOLTAGE * 1000 / (1<<local_adc_channels[VENDOR_ADC_ID_CHANNEL].bits);	/* 1,2 v, 1024 steps, 10 bit ADC */
 	local_adc_channels[VENDOR_ADC_ID_CHANNEL].unit.unit = adc_unit_volts;
@@ -390,12 +356,6 @@ void hal_adc_init_channels(u8 use_cal_data)
 	local_adc_channels[VENDOR_ADC_BOM_CHANNEL_2].unit.unit = adc_unit_bom;
 #endif
 
-#if 0
-	if (adc_cal_channels) {
-		OSHEAP_Delete(adc_cal_channels);
-		adc_cal_channels = NULL;
-	}
-#endif
 	memcpy(bcm59055_adc_chipset_api->adc_channels, local_adc_channels, sizeof(local_adc_channels));
 }
 
@@ -460,6 +420,12 @@ static struct adc_channels_t *hal_adc_map_channel(struct adc_channels_t *channel
 		pchan = &channel_array[VENDOR_ADC_ID_CHANNEL];
 		break;
 #endif
+#ifdef VENDOR_ADC_ALS_CHANNEL
+	case CSAPI_ADC_IDIN:
+		pchan = &channel_array[VENDOR_ADC_ALS_CHANNEL];
+		break;
+#endif
+
 #ifdef VENDOR_ADC_BSI_COMP_CHANNELS
 	case CSAPI_ADC_VENDOR_CH_0:
 		pchan = &channel_array[VENDOR_ADC_BSI_CAL_L_CHANNEL];
@@ -478,9 +444,14 @@ static struct adc_channels_t *hal_adc_map_channel(struct adc_channels_t *channel
 		pchan->unit.unit = adc_unit_bom;
 		break;
 #endif
-	default:
+#ifdef VENDOR_ADC_BOM_CHANNEL_1
+	case CSAPI_ADC_VENDOR_CH_4:
 		pchan = &channel_array[VENDOR_ADC_BOM_CHANNEL_1];
 		pchan->unit.unit = adc_unit_bom;
+		break;
+#endif
+	default:
+		pchan = NULL;
 		break;
 	}
 	pr_debug("%s, CSAPI channel %d, pChan 0x%x", __func__, channel, (u32)pchan);
@@ -536,7 +507,7 @@ static int update_columb(void)
 	}
 	/* Calculate for how long the FG has been averaging */
 	/* Time(ms) = FGCNT * 500 + FGSLEEPCNT * 32 */
-	smpl_time = fg_cnt * 500 + fg_sleep_cnt * 32; 
+	smpl_time = fg_cnt * 500 + fg_sleep_cnt * 32;
 	/* if time == 0, return the previous value */
 	if (smpl_time < 500) {
 		return ibat_avg;
@@ -556,13 +527,13 @@ static int update_columb(void)
 
 	fg_accm *= 976;	/* To make it uC */
 	/* Adjust fg_accm for sleep current */
-	fg_accm /= 1000; 
+	fg_accm /= 1000;
 	/* Update the final columb counter */
 	if (signbit) {
 		ibat_avg = -(fg_accm / samples);
 		columb_counter += (ibat_avg * smpl_time)/1000;
 	} else {
-		ibat_avg = fg_accm / samples; 
+		ibat_avg = fg_accm / samples;
 		columb_counter += (ibat_avg * smpl_time)/1000;
 	}
 	/* Calculate the average current consumption - right now it is uC/ms = mA*/
@@ -576,117 +547,104 @@ static int update_columb(void)
 int csapi_adc_raw_read(struct csapi_cli *cli,
 					   u8 cha, u32 *val, csapi_cb cb, void *ptr)
 {
-#if 0
-	if ((cha >= 50) && (cha < 100)) {
-		*value = glue_selftest_debug_executer(channel);
+
+	struct adc_channels_t *pchan;
+	u32 reading, overflow, current_time;
+	int status = CSAPI_ADC_ERR_SUCCESS;
+	static u32 ibat_last_sample_time = 0;
+	struct timespec ts_current_time;
+
+	if (!bcm59055_adc_chipset_api)
+		return -ENOMEM;
+
+	/* Special CSAPI IBAT channels */
+	if (cha == CSAPI_ADC_IBAT_AVG) {
+		*val = update_columb();
 		return CSAPI_ADC_ERR_SUCCESS;
-	} else
-#endif
-	{
-		struct adc_channels_t *pchan;
-		u32 reading, overflow;
-		int status = CSAPI_ADC_ERR_SUCCESS;
-#if 0
-		static u32 ibat_last_sample_time = 0;
-		u32 current_time;
-#endif
+	}
+	if (cha == CSAPI_ADC_IBAT_CC) {
+		update_columb();
+		*val = columb_counter;
+		return CSAPI_ADC_ERR_SUCCESS;
+	}
 
-		if (!bcm59055_adc_chipset_api)
-			return -ENOMEM;
+	pchan = hal_adc_map_channel(bcm59055_adc_chipset_api->adc_channels, cha);
+	GLUE_DBG(("hal_adc_raw_read: Reading CSAPI channel %x, pchan %x", cha, pchan));
 
-		/* Special CSAPI IBAT channels */
-		if (cha == CSAPI_ADC_IBAT_AVG) {
-			*val = update_columb();
-			return CSAPI_ADC_ERR_SUCCESS;
-		}
-		if (cha == CSAPI_ADC_IBAT_CC) {
-			update_columb();
-			*val = columb_counter;
-			return CSAPI_ADC_ERR_SUCCESS;
-		}
+	if (!pchan) {
+		return -ENODEV;
+	}
 
-		pchan = hal_adc_map_channel(bcm59055_adc_chipset_api->adc_channels, cha);
-		GLUE_DBG(("hal_adc_raw_read: Reading CSAPI channel %x, pchan %x", cha, pchan));
-
-		if (!pchan) {
-			return -ENODEV;
-		}
-
-#ifdef VENDOR_ADC_IBAT_CHANNEL	
+#ifdef VENDOR_ADC_IBAT_CHANNEL
 		if (pchan->unit.unit == adc_unit_ibat_k) {
 			/* Fuel gauge... */
 			/* Get the current time */
-#if 0
-			current_time = TIMER_GetValue();
+
+			ts_current_time = CURRENT_TIME;
+			current_time = (ts_current_time.tv_sec * 1000) + (ts_current_time.tv_nsec / 1000000); /* milliseconds */
 			GLUE_DBG(("hal_adc_raw_read: ibat: last_sample_time %d, current_time %d", ibat_last_sample_time, current_time));
 			if (ibat_last_sample_time) {
 				if ((current_time - ibat_last_sample_time) < FUELGAUGE_MINIMUM_TIME_BETWEEN_ADC_READS) {
-					OSTASK_Sleep(FUELGAUGE_MINIMUM_TIME_BETWEEN_ADC_READS - (current_time - ibat_last_sample_time));
+					udelay((FUELGAUGE_MINIMUM_TIME_BETWEEN_ADC_READS - (current_time - ibat_last_sample_time)) * 1000);
 					GLUE_DBG(("hal_adc_raw_read: Waittime %d", FUELGAUGE_MINIMUM_TIME_BETWEEN_ADC_READS - (current_time - ibat_last_sample_time)));
-					current_time = TIMER_GetValue();
+					ts_current_time = CURRENT_TIME;
+					current_time = (ts_current_time.tv_sec * 1000) + (ts_current_time.tv_nsec / 1000000); /* milliseconds */
 					GLUE_DBG(("hal_adc_raw_read: Waiting for next sample to be available, new current_time %d", current_time));
 				}
 			}
 			ibat_last_sample_time = current_time;
-#endif	    
 			/* Read sampleB register... */
 			{
 				s16 ibat;
-
-
-				/*CSAPI_EM_PMU_Ctrl(EM_PMU_ACTION_READ_FGSMPL, &data, NULL);*/
-				/* down_interruptible(bcm59055_adc_chipset_api->fg_read_sem); */
 
 				bcm59055_fg_set_fgfrzsmpl();
 				bcm59055_fg_read_sample(fg_smpl_raw, &ibat);
 				ibat += 2;	/* For rounding... */
 				ibat >>= 2;
 				*val = ibat;
-				/* fg_reading_in_progress = false; */
 				GLUE_DBG(("hal_adc_raw_read: IBAT reading returns %d", ibat));
 				return CSAPI_ADC_ERR_SUCCESS;
 			}
 		}
 #endif
 
-		overflow = (1 << pchan->bits) - 1;
+	overflow = (1 << pchan->bits) - 1;
 
-		switch (pchan->select) {
-		case ADC_VMBAT_CHANNEL:
-		case ADC_VBBAT_CHANNEL:
-		case ADC_VWALL_CHANNEL:
-		case ADC_VBUS_CHANNEL:
-		case ADC_ID_CHANNEL:
-		case ADC_NTC_CHANNEL:
-		case ADC_BOM_CHANNEL:
-		case ADC_32KTEMP_CHANNEL:
-		case ADC_PATEMP_CHANNEL:
-		case ADC_ALS_CHANNEL:
-			reading = read_hk_adc(pchan->select);
-			break;
-		case ADC_BSI_CHANNEL:
-		case ADC_BSI_CAL_L_CHANNEL:
-		case ADC_NTC_CAL_L_CHANNEL:
-		case ADC_NTC_CAL_H_CHANNEL:
-		case ADC_BSI_CAL_H_CHANNEL:
-		default:
-			reading = read_rtm_adc(pchan->select);
-			break;
-		}
-
-		if (reading == overflow) {
-			status = -ERANGE;
-		} else
-			status = CSAPI_ADC_ERR_SUCCESS;
-		*val = reading;
-
-		if (cb) {
-			cb(cha, *val, status, ptr);
-			GLUE_DBG(("hal_adc_raw_read: returned from callback"));
-		}
-		GLUE_DBG(("hal_adc_raw_read: Returning value %x, status %d, callback %x, context %x", *val, status, adc_handler, ptr));
-		return status;
+	switch (pchan->select) {
+	case ADC_VMBAT_CHANNEL:
+	case ADC_VBBAT_CHANNEL:
+	case ADC_VWALL_CHANNEL:
+	case ADC_VBUS_CHANNEL:
+	case ADC_ID_CHANNEL:
+	case ADC_NTC_CHANNEL:
+	case ADC_BOM_CHANNEL:
+	case ADC_32KTEMP_CHANNEL:
+	case ADC_PATEMP_CHANNEL:
+	case ADC_ALS_CHANNEL:
+		reading = read_hk_adc(pchan->select);
+		break;
+	case ADC_BSI_CHANNEL:
+	case ADC_BSI_CAL_L_CHANNEL:
+	case ADC_NTC_CAL_L_CHANNEL:
+	case ADC_NTC_CAL_H_CHANNEL:
+	case ADC_BSI_CAL_H_CHANNEL:
+	default:
+		reading = read_rtm_adc(pchan->select);
+		break;
 	}
+
+	if (reading == overflow) {
+		status = -ERANGE;
+	} else
+		status = CSAPI_ADC_ERR_SUCCESS;
+	*val = reading;
+
+	if (cb) {
+		cb(cha, *val, status, ptr);
+		GLUE_DBG(("hal_adc_raw_read: returned from callback"));
+	}
+	GLUE_DBG(("hal_adc_raw_read: Returning value %x, status %d, callback %x, context %x", *val, status, adc_handler, ptr));
+	return status;
 }
 EXPORT_SYMBOL(csapi_adc_raw_read);
 
@@ -759,7 +717,7 @@ static int get_cal_vread (struct adc_channels_t *chan,  u32 raw)
 		/* Read the two ADC channels
 		*  calculate gain and offset
 		*  Both the reading and gain variables needs to be static - there are multiple channels using the
-		*  same data. 
+		*  same data.
 		*/
 		u16 read0, i;
 		static u16 read1, read2;
@@ -804,7 +762,7 @@ static int get_cal_vread (struct adc_channels_t *chan,  u32 raw)
 #endif
 	vread = raw * chan->unit.uvperlsb;
 	vread += chan->unit.offset;
-	
+
 	return vread;
 }
 
@@ -815,7 +773,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 	int vread, temp_to_return=298, ibat_to_return, ibat, ibat_cal;
 	u32 u_iread, u_rread;
 	double vread_f, vpullup, iread, rread, rpullup;
-#if 0
+#ifdef MATHEMATICAL_TEMPERATURE_CALC
 	double rr0, lnrr0, temperature, ft;
 #endif
 #ifdef DEBUGOUT_ADC_CHIPSET_API
@@ -881,7 +839,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 		return u_rread;
 
 	case adc_unit_kelvin_down:					/* Temperature where NTC is connected to ground */
-#if 0
+#ifdef MATHEMATICAL_TEMPERATURE_CALC
 		vread_f = 0;
 		vread_f += vread;
 		vpullup = chan->unit.vmax - vread;
@@ -916,12 +874,14 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 		iread_32 = (vpullup/rpullup)*1000;
 		intc = iread * 1000;
 		rread_32 = rread;
-		rr0_32 = rr0 * 1000, 
+		rr0_32 = rr0 * 1000,
 		lnrr0_32 = lnrr0 * 1000000;
 		GLUE_DBG(("hal_adc_unit_convert: temperature: vread_32, iread_32, intc, rread_32, rr0_32, lnrr0_32"));
 		GLUE_DBG(("hal_adc_unit_convert: temperature: %d, %d, %d, %d, %d, %d", vread_32, iread_32, intc, rread_32, rr0_32, lnrr0_32));
 
 #endif
+#else
+		return 0;
 #endif
 		return temp_to_return;
 
@@ -963,7 +923,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 #endif /* VENDOR_ADC_KELVIN_DOWN_TABLE */
 
 	case adc_unit_kelvin_up:					/* Temperature where NTC is connected to supply voltage */
-#if 0
+#ifdef MATHEMATICAL_TEMPERATURE_CALC
 		vread_f = vread;
 		vpullup = bcm59055_adc_chipset_api->adc_channels[channel].unit.vmax - vread;
 		iread = vpullup/chan->unit.data.kelvin.rpullup;
@@ -983,6 +943,8 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 		GLUE_DBG(("hal_adc_unit_convert: temperature(vpullup, iread, rread, rr0, temperature)"));
 		GLUE_DBG(("hal_adc_unit_convert: temperature(%d, %3.8f, %f, %1.3f, %3.2f)",
 				  vpullup, iread, rread, rr0, temp_to_return));
+#else
+		return 0;
 #endif
 		return temp_to_return;
 	case adc_unit_bom:
@@ -1000,6 +962,8 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 			GLUE_DBG(("hal_adc_unit_convert: value %d, modifier %d Offset %d, ibat %d", value, modifier, chan->unit.offset, ibat_to_return));
 			return ibat_to_return;
 		}
+	case adc_unit_raw:
+		return raw;
 	case adc_unit_unknown:
 		return 0;
 	}
@@ -1105,6 +1069,7 @@ int csapi_cal_data_get(struct csapi_cli *cli,
 		break;
 	case adc_unit_amps:
 	case adc_unit_bom:
+	case adc_unit_raw:
 	case adc_unit_unknown:
 		break;
 	}
@@ -1160,6 +1125,7 @@ int csapi_cal_data_set(struct csapi_cli *cli,
 		break;
 	case adc_unit_amps:
 	case adc_unit_bom:
+	case adc_unit_raw:
 	case adc_unit_unknown:
 		break;
 
@@ -1200,11 +1166,7 @@ s32 hal_adc_cal_calc_dalton(struct csapi_cal_req *Data)
 
 	}
 	for (element=0; element < Data->size; element++) {
-#if 0
-		pchan = hal_adc_map_channel(adc_cal_channels, Data->data[element].Channel);
-#else
 		pchan = hal_adc_map_channel(adc_channels, Data->data[element].cha);
-#endif
 		if (!pchan) {
 			return -ENODEV;
 		}
@@ -1253,7 +1215,7 @@ s32 hal_adc_cal_calc_dalton(struct csapi_cal_req *Data)
 				pchan->unit.vmax = vbsi_pullup;
 			}
 			break;
-#endif		
+#endif
 
 #ifdef VENDOR_ADC_VBAT_SCALE_CHANNEL
 		case CSAPI_ADC_VBAT:
@@ -1353,13 +1315,6 @@ s32 hal_adc_cal_calc_dalton(struct csapi_cal_req *Data)
 int csapi_cal_calc(struct csapi_cal_req *req)
 {
 	/* Allocate copy of structure */
-#if 0
-	if (!adc_cal_channels) {
-		adc_cal_channels = malloc(VENDOR_ADC_NUM_CHANNELS * sizeof(adc_channels_t));
-		assert(adc_cal_channels);
-		memcpy(adc_cal_channels, adc_channels, VENDOR_ADC_NUM_CHANNELS * sizeof(adc_channels_t));
-	}
-#endif
 	if (hal_adc_hw_cal_calc_func) {
 		return hal_adc_hw_cal_calc_func(req);
 	} else {
@@ -1454,6 +1409,15 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 			if (argv[i+1]) {
 				csapi_adc_raw_read(NULL, simple_strtol(argv[i+1], NULL, 0), &adc_raw, NULL, NULL);
 				printk(KERN_INFO "%s: Raw %d\n", __func__, adc_raw);
+				i++; /* since we are using two arguments here, add one extra to i */
+			} else {
+				printk(KERN_INFO "%s: Not enough parameters for %s\n", __func__, argv[i]);
+			}
+		} else if (strcmp(argv[i], "csapi_adc_unit_read") == 0) {
+			/* Only(CSAPI) channel can be supplied here, rest is given */
+			if (argv[i+1]) {
+				csapi_adc_unit_read(NULL, simple_strtol(argv[i+1], NULL, 0), &adc_raw, NULL, NULL);
+				printk(KERN_INFO "%s: Channel %s, %d\n", __func__,argv[i+1], adc_raw);
 				i++; /* since we are using two arguments here, add one extra to i */
 			} else {
 				printk(KERN_INFO "%s: Not enough parameters for %s\n", __func__, argv[i]);

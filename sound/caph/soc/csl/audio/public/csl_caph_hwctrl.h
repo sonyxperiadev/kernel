@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                                */
+Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.                                */
 
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -153,7 +153,7 @@ typedef struct
     CSL_CAPH_DMA_CHNL_e dmaCH2;
     AUDIO_SAMPLING_RATE_t src_sampleRate;
     AUDIO_SAMPLING_RATE_t snk_sampleRate;	
-    AUDIO_CHANNEL_NUM_t chnlNum;
+    AUDIO_NUM_OF_CHANNEL_t chnlNum;
     AUDIO_BITS_PER_SAMPLE_t bitPerSample;
     CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
 }CSL_CAPH_HWCTRL_CONFIG_t;
@@ -169,7 +169,7 @@ typedef struct
     CSL_CAPH_DEVICE_e sink;
     AUDIO_SAMPLING_RATE_t src_sampleRate;
     AUDIO_SAMPLING_RATE_t snk_sampleRate;
-    AUDIO_CHANNEL_NUM_t chnlNum;
+    AUDIO_NUM_OF_CHANNEL_t chnlNum;
     AUDIO_BITS_PER_SAMPLE_t bitPerSample;
     UInt8* pBuf;
     UInt8* pBuf2;
@@ -212,6 +212,82 @@ typedef struct
     UInt32 fifoAddr;
     CSL_CAPH_PathID pathID[MAX_AUDIO_PATH];
 }CSL_CAPH_HWResource_Table_t;
+
+#define MAX_SSP_CLOCK_NUM 2
+#define MAX_CAPH_CLOCK_NUM 4
+#define MAX_SINK_NUM 3
+
+#define MAX_BLOCK_NUM	4	//max number of same block in a path
+#define MAX_PATH_LEN	20	//max block number in a path
+
+typedef enum
+{
+	CAPH_NONE,
+	CAPH_DMA,
+	CAPH_SW,
+	CAPH_CFIFO,
+	CAPH_SRC,
+	CAPH_MIXER,
+	CAPH_SAME,
+	CAPH_TOTAL
+} CAPH_BLOCK_t;
+
+typedef enum //the naming does not count CFIFO and SW in the middle of the path.
+{
+	LIST_NONE,
+	LIST_DMA_MIX_SW,
+	LIST_DMA_SW,
+	LIST_DMA_MIX_SRC_SW,
+	LIST_DMA_SRC,
+	LIST_DMA_DMA, 
+	LIST_DMA_MIX_DMA, 
+	LIST_DMA_SRC_DMA, 
+	LIST_DMA_MIX_SRC_DMA, 
+	LIST_SW_DMA,
+	LIST_SW_MIX_SRC_SW,
+	LIST_SW_MIX_SRC_DMA,
+	LIST_SW_MIX_SW,
+	LIST_SW_SRC_DMA,
+	LIST_SW_SRC,
+	LIST_SW,
+	LIST_MIX_SW,
+	LIST_MIX_DMA,
+	LIST_NUM,
+} CAPH_LIST_t; //the order must match caph_block_list[]
+
+
+/**
+* CAPH HW configuration
+******************************************************************************/
+typedef struct
+{
+	CSL_CAPH_PathID pathID;
+	CSL_CAPH_STREAM_e streamID;
+	CSL_CAPH_DEVICE_e source;
+	CSL_CAPH_DEVICE_e sink[MAX_SINK_NUM];
+	AUDIO_SAMPLING_RATE_t src_sampleRate;
+	AUDIO_SAMPLING_RATE_t snk_sampleRate;	
+	AUDIO_NUM_OF_CHANNEL_t chnlNum;
+	AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+	UInt8* pBuf;
+	UInt8* pBuf2;
+	UInt32 size;
+	CSL_CAPH_DMA_CALLBACK_p dmaCB;
+	Boolean status;
+	UInt8 curPathsinkMaxIdx;
+
+	//for new api
+	CAPH_LIST_t list;
+	CSL_CAPH_CFIFO_FIFO_e cfifo[MAX_BLOCK_NUM];
+	CSL_CAPH_SWITCH_CONFIG_t sw[MAX_BLOCK_NUM];
+	CSL_CAPH_DMA_CHNL_e dma[MAX_BLOCK_NUM];
+	CSL_CAPH_SRCM_ROUTE_t srcmRoute[MAX_BLOCK_NUM]; 
+	CAPH_BLOCK_t block[MAX_PATH_LEN];
+	int blockIdx[MAX_PATH_LEN];
+	AUDDRV_PATH_Enum_t audiohPath[MAX_SINK_NUM+1]; //0 for source, 1 for sink, 2 for sink2
+	audio_config_t audiohCfg[MAX_SINK_NUM+1];
+}CSL_CAPH_HWConfig_Table_t;
+
 
 typedef enum
 {
@@ -342,35 +418,6 @@ Result_t csl_caph_hwctrl_PausePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 *****************************************************************************/
 Result_t csl_caph_hwctrl_ResumePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 
-
-/**
-*
-*  @brief  Set the gain for the sink
-*
-*  @param   pathID  (in) path handle of HW path
-*  @param   gainL  (in) L-Ch Gain in Q13.2
-*  @param   gainR  (in) R-Ch Gain in Q13.2
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_SetSinkGain(CSL_CAPH_PathID pathID, 
-                                      CSL_CAPH_DEVICE_e dev,
-                                      UInt16 gainL,
-                                      UInt16 gainR);
-
-/**
-*
-*  @brief  Set the gain for the source
-*
-*  @param   pathID  (in) path handle of HW path
-*  @param   gainL  (in) L-Ch Gain in Q13.2
-*  @param   gainR  (in) R-Ch Gain in Q13.2
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_SetSourceGain(CSL_CAPH_PathID pathID,
-                                        UInt16 gainL,
-                                        UInt16 gainR);
 
 /**
 *
@@ -534,54 +581,6 @@ void csl_caph_hwctrl_SetSidetoneGain(UInt32 gain);
 
 /****************************************************************************
 *
-*  @brief  Set Mixing gain in HW mixer
-*
-*  @param   pathID  (in) path handle of HW path
-*  @param   gainL  (in) Mixer L-ch input gain in Q13.2
-*  @param   gainR  (in) Mixer R-ch input gain in Q13.2
-*
-*  @return
-****************************************************************************/
-void csl_caph_hwctrl_SetMixingGain(CSL_CAPH_PathID pathID, 
-  						UInt32 gainL, 
- 						UInt32 gainR);
-
-
-/****************************************************************************
-*
-*  @brief  Set Mixer output gain in HW mixer
-*
-*  @param   pathID  (in) path handle of HW path
-*  @param   fineGainL  (in) Mixer L-ch output fine gain in Register value
-*  @param   coarseGainL  (in) Mixer L-ch output coarse gain in Register value
-*  @param   fineGainR  (in) Mixer R-ch output fine gain in Register value
-*  @param   coarseGainR  (in) Mixer R<S-Del>L-ch output coarse gain in Register value
-*
-*  @return
-****************************************************************************/
-void csl_caph_hwctrl_SetMixOutGain(CSL_CAPH_PathID pathID, 
-                                      UInt32 fineGainL,
-                                      UInt32 coarseGainL,
-				      UInt32 fineGainR,
-                                      UInt32 coarseGainR);
-/****************************************************************************
-*
-*  @brief  Set Hw gain. For audio tuning purpose only.
-*
-*  @param   pathID  (in) path handle of HW path
-*  @param   hw (in) which hw gain to set
-*  @param   gain  (in) Mixing gain in Q15.0 format.
-*  @param   dev  (in) device
-*
-*  @return
-****************************************************************************/
-void csl_caph_hwctrl_SetHWGain(CSL_CAPH_PathID pathID,
-        CSL_CAPH_HW_GAIN_e hw, 
-		UInt32 gain, 
-		CSL_CAPH_DEVICE_e dev);
-
-/****************************************************************************
-*
 *  Function Name: csl_caph_hwctrl_SetSspTdmMode
 *
 *  Description: control the ssp tdm feature
@@ -627,7 +626,6 @@ void csl_caph_hwctrl_SetIHFmode(Boolean stIHF);
 ****************************************************************************/
 void csl_caph_hwctrl_SetBTMode(Boolean mode);
 
-#ifdef ENABLE_DMA_ARM2SP
 
 /****************************************************************************
 *
@@ -637,7 +635,6 @@ void csl_caph_hwctrl_SetBTMode(Boolean mode);
 *
 ****************************************************************************/
 void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId);
-#endif
 
 void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus);
 #endif // _CSL_CAPH_HWCTRL_
