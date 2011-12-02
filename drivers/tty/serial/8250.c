@@ -1689,13 +1689,13 @@ static void transmit_chars(struct uart_8250_port *up)
      * if the circular buffer is still empty there is nothing to transmit
      * so go and disable the clock
      */
-#ifndef CONFIG_ARCH_RHEA
 	if (uart_circ_empty(xmit)) {
+#ifndef CONFIG_ARCH_RHEA
 		__stop_tx(up);
 		pi_mgr_qos_request_update(up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
+#endif
 		return;
 	}
-#endif
 
 
 	count = up->tx_loadsz;
