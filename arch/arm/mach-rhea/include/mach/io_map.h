@@ -30,6 +30,7 @@
 #include <mach/rdb/brcm_rdb_sysmap.h>
 
 #define KONA_PROC_CLK_VA             HW_IO_PHYS_TO_VIRT( PROC_CLK_BASE_ADDR )
+#define KONA_PROC_RST_VA             HW_IO_PHYS_TO_VIRT( PROC_RST_BASE_ADDR )
 #define KONA_AON_CLK_VA             HW_IO_PHYS_TO_VIRT( AON_CLK_BASE_ADDR )
 #define KONA_AON_RST_VA             HW_IO_PHYS_TO_VIRT( AON_RST_BASE_ADDR )
 #define KONA_ATBFILTER_VA           HW_IO_PHYS_TO_VIRT( ATBFILTER_BASE_ADDR )
@@ -125,6 +126,7 @@
 #define KONA_SYSTMR_VA              HW_IO_PHYS_TO_VIRT( TIMER_BASE_ADDR )           /* SYSTEM TIMER */
 #define KONA_TMR_HUB_VA             HW_IO_PHYS_TO_VIRT( HUB_TIMER_BASE_ADDR )       /* Hub timer */
 #define KONA_HUB_CLK_VA             HW_IO_PHYS_TO_VIRT( HUB_CLK_BASE_ADDR )		/* Hub Clock */
+#define KONA_HUB_RST_VA             HW_IO_PHYS_TO_VIRT( HUB_RST_BASE_ADDR )		/* Hub Clock */
 #define KONA_TZCFG_VA               HW_IO_PHYS_TO_VIRT( TZCFG_BASE_ADDR )
 #define KONA_UART0_VA               HW_IO_PHYS_TO_VIRT( UARTB_BASE_ADDR )           /* UART 0 */
 #define KONA_UART1_VA               HW_IO_PHYS_TO_VIRT( UARTB2_BASE_ADDR )          /* UART 1 */
@@ -142,9 +144,10 @@
 #define KONA_SMI_VA		    HW_IO_PHYS_TO_VIRT( SMI_BASE_ADDR )            /* SMI Interface */
 
 #define KONA_MM_CLK_VA		    HW_IO_PHYS_TO_VIRT( MM_CLK_BASE_ADDR )            /* MultiMedia CCU */
+#define KONA_MM_RST_VA		    HW_IO_PHYS_TO_VIRT( MM_RST_BASE_ADDR )            /* MultiMedia CCU */
 
-#define KONA_MM_TECTL_VA	    HW_IO_PHYS_TO_VIRT( MM_TECTL_BASE_ADDR )        /* TECTL interface in MM subsystem */
-
+#define KONA_MM_TECTL_VA		HW_IO_PHYS_TO_VIRT( MM_TECTL_BASE_ADDR )        /* TECTL interface in MM subsystem */
+#define KONA_MM_CSI0_VA		HW_IO_PHYS_TO_VIRT( MM_CSI0_BASE_ADDR )         /* CSI Interface */
 #define KONA_MM_DMA_VA		    HW_IO_PHYS_TO_VIRT( MM_DMA_BASE_ADDR )
 
 #define KONA_MM_CFG_VA		    HW_IO_PHYS_TO_VIRT( MM_CFG_BASE_ADDR )

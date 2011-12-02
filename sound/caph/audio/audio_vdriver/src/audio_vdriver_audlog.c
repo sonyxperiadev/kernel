@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
+/*  Copyright 2009 - 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -54,6 +54,7 @@
 
 #include "csl_log.h"
 #include "bcmlog.h"
+#include "audio_caph.h"
 #include "caph_common.h"
 
 
@@ -72,6 +73,11 @@
 //#define	DBG_MSG_TO_FILE
 #undef	DBG_MSG_TO_FILE
 
+#if defined(CONFIG_BCM_MODEM) 
+#define AUDIO_MODEM(a) a
+#else
+#define AUDIO_MODEM(a)    
+#endif
 
 //
 // local structures
@@ -174,7 +180,9 @@ void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 		stream =  n + 1;
 		
 		if(loggingbuf != NULL)
-			size = CSL_LOG_Read(stream,audio_stream_buffer_idx,(UInt8 *)loggingbuf,&sender);
+		{
+			AUDIO_MODEM(size = CSL_LOG_Read(stream,audio_stream_buffer_idx,(UInt8 *)loggingbuf,&sender);)
+		}
 		//check the SHmem ctrl point.
 		if ( sender != 0 )
 		{
@@ -273,7 +281,7 @@ Result_t AUDDRV_AudLog_Start (
 	// start the stream logging captrue
 
 
-	//allocate memory for all the 4 streams as we read all the 4 streams data in the AUDLOG_ProcessLogChannel()
+	//allocate memory for all the 4 streams as we read all the 4 streams data in the 	AUDLOG_ProcessLogChannel()
 
 	loggingbuf = (UInt8 *)kmalloc(LOG_WB_SIZE,GFP_KERNEL); //max frame size
 	if(loggingbuf == NULL)
@@ -282,7 +290,8 @@ Result_t AUDDRV_AudLog_Start (
 		return RESULT_LOW_MEMORY; 
 	}
 	
-	res = CSL_LOG_Start(log_stream,log_capture_point);
+	AUDIO_MODEM(res = CSL_LOG_Start(log_stream,log_capture_point);)
+
 	Log_DebugPrintf(LOGID_AUDIO, "===> Start_Log stream %ld log_consumer %d===>\r\n", log_stream,(uint)log_consumer);
 	return res;
 }
@@ -304,7 +313,8 @@ Result_t AUDDRV_AudLog_Stop( UInt32 log_stream )
 
 	Log_DebugPrintf(LOGID_AUDIO, "<=== Stop_Log stream %ld <===", log_stream);
 
-	res = CSL_LOG_Stop((UInt16)log_stream, &flag);
+	AUDIO_MODEM(res = CSL_LOG_Stop((UInt16)log_stream, &flag);)
+
 	Log_DebugPrintf(LOGID_AUDIO, "<=== Stop_Log stream done %ld <===, flag %d", log_stream,flag);
 
 	if (flag == 1)

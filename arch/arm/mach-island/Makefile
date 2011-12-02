@@ -83,6 +83,7 @@ CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
 -Idrivers/videocore/interface/vceb/host/linux
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += island_pm.o island_wfi.o
 obj-$(CONFIG_ISLAND_DORMANT_MODE) += island_dormant.o dm_pwr_policy_top.o
+obj-$(CONFIG_ISLAND_PM_TEST) += island_pm_test.o
 
 # Today the 28160 tablet is almost identical to the 11160 tablet from
 # Linux's point-of-view so we include it's hw_cfg directory and only

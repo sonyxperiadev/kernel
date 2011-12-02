@@ -69,7 +69,7 @@ typedef	struct
     CSL_AUDRENDER_CB        dmaCB;	
 	CSL_CAPH_DMA_CHNL_e	    dmaCH;
 	CSL_CAPH_DMA_CHNL_e	    dmaCH2;
-	AUDIO_CHANNEL_NUM_t     numChannels;
+	AUDIO_NUM_OF_CHANNEL_t  numChannels;
 	AUDIO_BITS_PER_SAMPLE_t bitsPerSample;
 	AUDIO_SAMPLING_RATE_t	sampleRate;
 } CSL_CAPH_Drv_t;
@@ -149,7 +149,7 @@ Result_t csl_audio_render_deinit(UInt32 streamID)
 *
 ****************************************************************************/
 Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate, 
-						AUDIO_CHANNEL_NUM_t    numChannels,
+						AUDIO_NUM_OF_CHANNEL_t    numChannels,
 						AUDIO_BITS_PER_SAMPLE_t bitsPerSample,
 						UInt8 *ringBuffer,
 						UInt32 numBlocks,
@@ -178,7 +178,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
 	audDrv->sampleRate = sampleRate;	
 
 #ifdef DSP_FPGA_TEST		
-        if (audDrv->source == AUDDRV_DEV_DSP)
+        if (audDrv->source == CSL_CAPH_DEV_DSP)
             ringBuffer = (UInt8*)(&(((AP_SharedMem_t *)pSharedMem)->shared_aud_out_buf_48k[0][0]));
 #endif
 	// : make sure ringbuffer, numblocks and block size are legal for Rhea 

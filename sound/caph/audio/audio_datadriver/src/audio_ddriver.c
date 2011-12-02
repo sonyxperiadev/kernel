@@ -35,13 +35,10 @@
 //=============================================================================
 
 
-#ifdef UNDER_LINUX
 #include <linux/kernel.h>
 #include <linux/workqueue.h>
-
 #include <linux/slab.h>
 #include "plat/osdal_os.h"   
-#endif
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
@@ -57,7 +54,9 @@
 #include "csl_vpu.h"
 #include "dspcmd.h"
 #include "csl_voip.h"
+#include "csl_voif.h"
 #include "csl_caph_hwctrl.h"
+#include "audio_controller.h"
 
 //=============================================================================
 // Public Variable declarations
@@ -72,6 +71,8 @@
 #define VOLTEFRAMEGOOD			1
 #define VOLTEFRAMESILENT		0
 #endif
+#define VOIF_8K_SAMPLE_COUNT    160
+#define VOIF_16K_SAMPLE_COUNT   320
 
 typedef struct ARM2SP_PLAYBACK_t
 {
@@ -99,7 +100,12 @@ typedef struct VOIP_t
 	Boolean									isVoLTECall;
 }VOIP_t;
 
-	
+typedef struct AUDDRV_VOIF_t
+{
+	UInt8									isRunning;
+	VOIF_CB									cb;
+} AUDDRV_VOIF_t;
+
 typedef struct AUDIO_DDRIVER_t
 {
     AUDIO_DRIVER_TYPE_t                     drv_type;
@@ -107,7 +113,7 @@ typedef struct AUDIO_DDRIVER_t
 	void *									pCBPrivate;
     UInt32                                  interrupt_period;
     AUDIO_SAMPLING_RATE_t                   sample_rate;
-    AUDIO_CHANNEL_NUM_t		                num_channel;
+    AUDIO_NUM_OF_CHANNEL_t		            num_channel;
     AUDIO_BITS_PER_SAMPLE_t	                bits_per_sample;
     UInt8*                                  ring_buffer;
     UInt32                                  ring_buffer_size;
@@ -146,6 +152,8 @@ static UInt32 djbTimeStamp = 0;
 static DJB_InputFrame *djbBuf = NULL;
 static Boolean inVoLTECall = FALSE;
 #endif
+static AUDDRV_VOIF_t voifDrv = { 0 };
+static Boolean voif_enabled = 0;
 
 //=============================================================================
 // xternal prototypes
@@ -175,6 +183,10 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct);
 
 static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
+                                          AUDIO_DRIVER_CTRL_t ctrl_cmd,
+                                          void* pCtrlStruct);
+
+static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t* aud_drv,
                                           AUDIO_DRIVER_CTRL_t ctrl_cmd,
                                           void* pCtrlStruct);
 
@@ -231,7 +243,7 @@ UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h)
 
 static int	SetPlaybackStreamHandle(AUDIO_DDRIVER_t* h)
 {
-	if(h->stream_id>CSL_CAPH_STREAM_TOTAL)
+	if(h->stream_id>=CSL_CAPH_STREAM_TOTAL)
 	{
 		Log_DebugPrintf(LOGID_AUDIO,"Error: SetPlaybackStreamHandle invalid stream id=%ld\n" ,h->stream_id);
 		return -1;
@@ -298,11 +310,9 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
         case AUDIO_DRIVER_PLAY_VOICE:
         case AUDIO_DRIVER_PLAY_AUDIO:
         case AUDIO_DRIVER_PLAY_RINGER:
-            break;
-			
         case AUDIO_DRIVER_CAPT_HQ:
         case AUDIO_DRIVER_CAPT_VOICE:
-            audio_capture_driver = aud_drv;
+		case AUDIO_DRIVER_VOIF:
             break;
 			
 		case AUDIO_DRIVER_VOIP:
@@ -341,6 +351,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
         case AUDIO_DRIVER_PLAY_RINGER:		
         case AUDIO_DRIVER_CAPT_HQ:
         case AUDIO_DRIVER_CAPT_VOICE:
+		case AUDIO_DRIVER_VOIF:
             break;
 		case AUDIO_DRIVER_VOIP:
 			{
@@ -440,9 +451,14 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
             }
             break;
 
-		 case AUDIO_DRIVER_VOIP:
+	 case AUDIO_DRIVER_VOIP:
             { 
 				result_code =  AUDIO_DRIVER_ProcessVoIPCmd(aud_drv,ctrl_cmd,pCtrlStruct);
+		 	}
+		 	break;
+	 case AUDIO_DRIVER_VOIF:
+            { 
+				result_code =  AUDIO_DRIVER_ProcessVoIFCmd(aud_drv,ctrl_cmd,pCtrlStruct);
 		 	}
 		 	break;
         default:
@@ -488,7 +504,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-	AUDDRV_DEVICE_e *aud_dev;
+	AUDIO_SINK_Enum_t *dev = NULL;
 	//Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
     switch (ctrl_cmd)
     {
@@ -498,7 +514,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 num_blocks;
 						
 				if(pCtrlStruct != NULL)
-			    	aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
+			    	dev = (AUDIO_SINK_Enum_t *)pCtrlStruct;
                 //check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
                     (aud_drv->interrupt_period == 0) ||
@@ -513,7 +529,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::All Configuration is not set yet  \n"  );
                     return result_code;
                 }
-				aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY,AUDDRV_GetCSLDevice(*aud_dev));
+				aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY, getDeviceFromSink(*dev));
 				SetPlaybackStreamHandle(aud_drv);//save the driver handle after ID is assigned
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
 		                 * Number of blocks = buffer size/block size
@@ -532,9 +548,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 						            			          block_size,
 						                      			  (CSL_AUDRENDER_CB) AUDIO_DRIVER_RenderDmaCallback,
                                         			      aud_drv->stream_id);
-#ifdef ENABLE_DMA_ARM2SP
-				csl_caph_arm2sp_set_param((UInt32)aud_drv->arm2sp_config.mixMode,(aud_drv->arm2sp_config.instanceID+1)); //0 is instance_none
-#endif
+				csl_caph_arm2sp_set_param((UInt32)aud_drv->arm2sp_config.mixMode,(aud_drv->arm2sp_config.instanceID));
                 //start render
                 result_code = csl_audio_render_start (aud_drv->stream_id);
             }
@@ -581,6 +595,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
 	Result_t result_code = RESULT_ERROR;
+#if defined(CONFIG_BCM_MODEM) 
 	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode;
 	UInt32 numFramesPerInterrupt;
 	
@@ -694,7 +709,9 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoiceRenderCmd::Unsupported command  \n"	);
 			  break;
 	  }
-	
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_ProcessCaptureCmd : dummy for AP only, NO DSP (ARM2SP is not supported)");
+#endif	
 	  return result_code;
 
 }
@@ -711,7 +728,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-    AUDDRV_DEVICE_e *aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
+	AUDIO_SOURCE_Enum_t *dev = NULL;
 
     switch (ctrl_cmd)
     {
@@ -719,6 +736,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
             {
                 UInt32 block_size;
                 UInt32 num_blocks;
+				if(pCtrlStruct != NULL)
+					dev = (AUDIO_SOURCE_Enum_t *)pCtrlStruct;
                 //check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
                     (aud_drv->interrupt_period == 0) ||
@@ -733,7 +752,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureCmd::All Configuration is not set yet  \n"  );
                     return result_code;
                 }
-                aud_drv->stream_id = csl_audio_capture_init (AUDDRV_GetCSLDevice(*aud_dev),CSL_CAPH_DEV_MEMORY);
+                aud_drv->stream_id = csl_audio_capture_init ( getDeviceFromSrc(*dev),CSL_CAPH_DEV_MEMORY);
+                audio_capture_driver = aud_drv;
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
 				* Number of blocks = buffer size/block size
 				*
@@ -781,6 +801,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
             break;
     }
 
+
     return result_code;
 }
 
@@ -797,7 +818,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-	VOCAPTURE_RECORD_MODE_t *recordMode;
+#if defined(CONFIG_BCM_MODEM) 
+	VOCAPTURE_RECORD_MODE_t *recordMode = NULL;
 	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureVoiceCmd::%d \n",ctrl_cmd );
 
@@ -851,9 +873,10 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 aud_drv->voicecapt_config.speech_mode 				= speech_mode;
 			
 				if(*recordMode == VOCAPTURE_RECORD_NONE)
-					*recordMode = VOCAPTURE_RECORD_BOTH; //default capture mode
+					*recordMode = VOCAPTURE_RECORD_UL; //default capture mode
 
         		aud_drv->voicecapt_config.recordMode = *recordMode;
+                audio_capture_driver = aud_drv;
 		   
       		    result_code = VPU_record_start (*recordMode,
 								aud_drv->sample_rate,
@@ -885,7 +908,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
             Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureVoiceCmd::Unsupported command  \n"  );
             break;
     }
-
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_ProcessCaptureVoiceCmd : dummy for AP only");
+#endif
     return result_code;
 }
 
@@ -903,7 +928,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-	UInt32 codec_type;
+	UInt32 codec_type = 99; // Assign to an invalid number, current valid number:0~5
 	UInt32 bitrate_index = 0;
 	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIPCmd::%d \n",ctrl_cmd );
@@ -1016,6 +1041,61 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
     return result_code;
 }
 
+//============================================================================
+//
+// Function Name: AUDIO_DRIVER_ProcessVoIFCmd
+//
+// Description:   This function is used to process VoIP commands
+//
+//============================================================================
+
+static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t* aud_drv,
+											AUDIO_DRIVER_CTRL_t ctrl_cmd,
+											void* pCtrlStruct)
+{
+	Result_t result_code = RESULT_ERROR;
+#if defined(CONFIG_BCM_MODEM) 
+	switch (ctrl_cmd)
+	{
+		case AUDIO_DRIVER_START:
+			{
+				if (voifDrv.isRunning)
+					return result_code;
+
+				VPRIPCMDQ_VOIFControl( 1 );
+				voif_enabled = TRUE;
+				voifDrv.isRunning = TRUE;
+				Log_DebugPrintf(LOGID_AUDIO," AUDDRV_VOIF_Start end \r\n");
+                result_code = RESULT_OK;
+			}
+            break;
+        case AUDIO_DRIVER_STOP:
+            {
+				if (voifDrv.isRunning == FALSE)
+					return result_code;
+				VPRIPCMDQ_VOIFControl( 0 );
+				voifDrv.cb = NULL;
+				voif_enabled = FALSE;
+				voifDrv.isRunning = FALSE;
+				Log_DebugPrintf(LOGID_AUDIO,"AUDDRV_VOIF_Stop end \r\n");
+                result_code = RESULT_OK;
+            }
+            break;
+        case AUDIO_DRIVER_SET_VOIF_CB:
+            {
+				voifDrv.cb = (VOIF_CB)pCtrlStruct;
+                result_code = RESULT_OK;
+            }
+            break;
+        default:
+            Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIFCmd::Unsupported command  \n"  );
+            break;
+    }
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_ProcessVoIFCmd : dummy for AP only (no DSP)");
+#endif
+    return result_code;
+}
 
 //============================================================================
 //
@@ -1177,6 +1257,7 @@ static Result_t ARM2SP_play_start (AUDIO_DDRIVER_t* aud_drv,
 
 static Result_t ARM2SP_play_resume (AUDIO_DDRIVER_t* aud_drv)
 {
+#if defined(CONFIG_BCM_MODEM)
 	Log_DebugPrintf(LOGID_AUDIO, "Resume ARM2SP voice play instanceID=0x%x \n", aud_drv->arm2sp_config.instanceID);
 
 	if (aud_drv->arm2sp_config.instanceID  == VORENDER_ARM2SP_INSTANCE1)
@@ -1192,7 +1273,9 @@ static Result_t ARM2SP_play_resume (AUDIO_DDRIVER_t* aud_drv)
                               (CSL_ARM2SP_VOICE_MIX_MODE_t)aud_drv->arm2sp_config.mixMode, 
                               aud_drv->arm2sp_config.numFramesPerInterrupt, 
                               aud_drv->arm2sp_config.audMode, 1 ); 
-
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "ARM2SP_play_resume  : dummy for AP only");
+#endif
 	return RESULT_OK;
 }
 
@@ -1224,9 +1307,11 @@ static Result_t VPU_record_start ( VOCAPTURE_RECORD_MODE_t	recordMode,
 
 	Log_DebugPrintf(LOGID_AUDIO, " VPU_record_start::Start capture, encodingMode = 0x%x, recordMode = 0x%x, procEnable = 0x%x, dtxEnable = 0x%x, speechMode = 0x%lx, dataRate = 0x%lx\n", 
 							encodingMode, recordMode, procEnable, dtxEnable, speechMode, dataRate);
-	
+#if defined(CONFIG_BCM_MODEM)	
 	VPRIPCMDQ_StartCallRecording((UInt8)recordMode, (UInt8)numFramesPerInterrupt, (UInt16)encodingMode);
-
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "VPU_record_start  : dummy for AP only");
+#endif
 	return RESULT_OK;
 }
 
@@ -1258,6 +1343,37 @@ void VOIP_ProcessVOIPDLDone(void)
 {
     if ( voip_workqueue )
         queue_work(voip_workqueue, &voip_work);               
+}
+
+// handle interrupt from DSP of data ready
+void VOIF_Buffer_Request (UInt32 bufferIndex, UInt32 samplingRate)
+{
+#if defined(CONFIG_BCM_MODEM) 
+    UInt32 dlIndex;
+    Int16   *ulBuf, *dlBuf;
+    UInt32 sampleCount = VOIF_8K_SAMPLE_COUNT;
+
+    if (!voif_enabled)
+        return;
+    ulBuf = CSL_GetULVoIFBuffer();
+    dlIndex = bufferIndex & 0x1;
+
+    if (samplingRate)
+    {
+        sampleCount = VOIF_16K_SAMPLE_COUNT;
+    }
+    else
+    {
+        sampleCount = VOIF_8K_SAMPLE_COUNT;
+    }
+    //Log_DebugPrintf(LOGID_AUDIO,"VOIF_ISR_Handler received VOIF_DATA_READY. dlIndex = %d isCall16K = %d \r\n", dlIndex, samplingRate);
+
+    dlBuf = CSL_GetDLVoIFBuffer(sampleCount, dlIndex);
+    if (voifDrv.cb)
+            voifDrv.cb (ulBuf, dlBuf, sampleCount, (UInt8)samplingRate);
+#else
+	Log_DebugPrintf(LOGID_AUDIO, "VOIF_Buffer_Request : dummy for AP only (no DSP)");
+#endif
 }
 
 //******************************************************************************
@@ -1373,10 +1489,11 @@ void ARM2SP_Render_Request(UInt16 buf_index)
 	srcIndex = pAudDrv->read_index;
 
 	//copy the data from ring buffer to shared memory	
+#if defined(CONFIG_BCM_MODEM) 
 	copied_bytes = CSL_ARM2SP_Write( (pSrc + srcIndex), pAudDrv->bufferSize_inBytes, buf_index, in48K, pAudDrv->arm2sp_config.audMode );
 
 	srcIndex += copied_bytes;
-
+#endif
 	if(srcIndex >= pAudDrv->ring_buffer_size)
 	{
 		srcIndex -= pAudDrv->ring_buffer_size;
@@ -1425,9 +1542,10 @@ void ARM2SP2_Render_Request(UInt16 buf_index)
 	srcIndex = pAudDrv->read_index;
 		
 	//copy the data from ring buffer to shared memory
+#if defined(CONFIG_BCM_MODEM) 
 	copied_bytes = CSL_ARM2SP_Write( (pSrc + srcIndex), pAudDrv->bufferSize_inBytes, buf_index, in48K, pAudDrv->arm2sp_config.audMode );
 	srcIndex += copied_bytes;
-	
+#endif	
 	if(srcIndex >= pAudDrv->ring_buffer_size)
 	{
 		srcIndex -= pAudDrv->ring_buffer_size;
@@ -1516,12 +1634,12 @@ void VPU_Capture_Request(UInt16 buf_index)
     dest_index = aud_drv->write_index;
     pdest_buf= aud_drv->ring_buffer;
     num_bytes_to_copy = (aud_drv->voicecapt_config.num_frames) * (aud_drv->voicecapt_config.frame_size); 
-
+#if defined(CONFIG_BCM_MODEM) 
     recv_size = CSL_VPU_ReadPCM ( pdest_buf+dest_index, num_bytes_to_copy, buf_index, aud_drv->voicecapt_config.speech_mode);
 	
     // update the write index
     dest_index += recv_size;
-
+#endif
 	if(dest_index >= aud_drv->ring_buffer_size)
     {  
 	   	dest_index -= aud_drv->ring_buffer_size;
@@ -1576,6 +1694,7 @@ static void VoIP_StartMainAMRDecodeEncode(
 	)
 {
 	// decode the next downlink AMR speech data from application
+#if defined(CONFIG_BCM_MODEM) 
 #ifdef VOLTE_SUPPORT
 	if (inVoLTECall)
 	{
@@ -1595,7 +1714,7 @@ static void VoIP_StartMainAMRDecodeEncode(
 		prev_amr_mode = encode_amr_mode;
 		VPRIPCMDQ_DSP_AMR_RUN((UInt16)encode_amr_mode, telephony_amr_if2, FALSE);
 	}
-
+#endif
 }
 
 
@@ -1610,6 +1729,7 @@ static void VoIP_StartMainAMRDecodeEncode(
 //******************************************************************************
 void AP_ProcessStatusMainAMRDone(UInt16 codecType)
 {
+#if defined(CONFIG_BCM_MODEM) 
  	static UInt16 Buf[321]; // buffer to hold UL data and codec type
 
 	// encoded uplink AMR speech data now ready in DSP shared memory, copy it to application
@@ -1617,6 +1737,7 @@ void AP_ProcessStatusMainAMRDone(UInt16 codecType)
 	
 	CSL_ReadULVoIPData(codecType, Buf);
 	VOIP_DumpUL_CB((UInt8*)Buf,0);
+#endif
 }
 
 //============================================================================
@@ -1685,7 +1806,9 @@ static Boolean VOIP_FillDL_CB( UInt32 nFrames)
 	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
 	//Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->voip_config.codec_type, dlSize);
 	aud_drv->voip_config.pVoipDLCallback(aud_drv->voip_config.pVoIPCBPrivate, (UInt8 *)&aud_drv->tmp_buffer[1], (dlSize - 2)); // 2 bytes for codec type
+#if defined(CONFIG_BCM_MODEM) 
 	VoIP_StartMainAMRDecodeEncode((CSL_VP_Mode_AMR_t)aud_drv->voip_config.codec_type, (UInt8 *)aud_drv->tmp_buffer, dlSize, (CSL_VP_Mode_AMR_t)aud_drv->voip_config.codec_type, FALSE);
+#endif
 	return TRUE;
 };
 

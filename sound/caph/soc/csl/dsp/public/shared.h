@@ -23,8 +23,6 @@
 /*                                                                                              */
 /************************************************************************************************/
 
-
-
 /*! \mainpage DSP Shared Memory Interface
  *
  * \section intro_sec Introduction
@@ -58,6 +56,7 @@
 #define TXGPIO_SIZE            ((UInt16) 16    )    // Size of Tx GPIO table entry
 #define AGC_GAIN_SIZE          ((UInt16) 64    )    // # of AGC gain entries
 #define BER_SIZE               ((UInt16) 7     )   // Size of the BER tables
+#define PARTIAL_BER_SIZE	   ((UInt16) 2     )   // Partil size of the BER tables
 #define SNR_SIZE               ((UInt16) 32    )   // Size of the SNR tables
 #define SHARED_INVALID_CELL    ((UInt16) 0x1f  )   // Invalid cell ID
 #define N_BANDS                ((UInt16) 8     )   // Number of frequency bands supported by DSP
@@ -232,6 +231,8 @@
 #define		DSP_FEATURE_CONFIG_FQCR_FCWR
 #define		DSP_FEATURE_SLOW_CLOCK_TRACK
 #define		DSP_FEATURE_LITTLE_ENDIAN
+//#define 	COMMAND_TIMESTAMP
+//#define 	RETENTION_TIMESTAMP
 
 //#define        JUNO_AUDIO_CONFIG    // Enable Juno audio configuration
 
@@ -423,7 +424,10 @@ typedef enum
 	VOIP_AMR_WB_MODE_18k	= 0x6500,		//VOIP WB AMR18.25
 	VOIP_AMR_WB_MODE_20k	= 0x6600,		//VOIP WB AMR19.85
 	VOIP_AMR_WB_MODE_23k	= 0x6700,		//VOIP WB AMR23.05
-	VOIP_AMR_WB_MODE_24k	= 0x6800		//VOIP WB AMR23.85
+	VOIP_AMR_WB_MODE_24k	= 0x6800,		//VOIP WB AMR23.85
+
+	VOIP_DL_FLAG	= 0x0080,		//VOIP DL_FLAG
+	VOIP_UL_FLAG	= 0x0040		//VOIP UL_FLAG
 }VP_Mode_AMR_t;
 
 /*****************************************************************************

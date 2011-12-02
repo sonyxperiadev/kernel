@@ -23,7 +23,7 @@
 #define VENDOR_ADC_CAL_FUNCTION hal_adc_cal_calc_dalton
 
 /*
-	VENDOR_ADC_NUM_CHANNELS 
+	VENDOR_ADC_NUM_CHANNELS
 	Description: Number of physical channels in ADC
  	Default value for Voyager: 9
  	In dalton we store data for 17 channels - the 16 in the normal ADC and one for IBAT fast channel
@@ -73,7 +73,7 @@
 /*
 	VENDOR_ADC_BOM_VALUES
 	Description: 	The values of the limits for BOM detections
-	Default value: 	
+	Default value:
 */
 #define VENDOR_ADC_BOM_VALUES {{0, 7},{8, 38},{39, 93},{94, 166},{167, 250},{251, 255}}
 
@@ -114,6 +114,31 @@
 					In dalton, no external components are used for VBAT channel
 */
 #define VENDOR_ADC_VBAT_SCALE_UVPERBITS 4687
+
+#define VENDOR_ADC_VBBAT_CHANNEL ADC_VBBAT_CHANNEL
+/*
+	VENDOR_ADC_VBAT_SCALE_PULLUP
+	Description: 	Total resistance from VBAT+ to ADC (upper part of voltage divider)
+ 	Default value: 	540000 for B1.2 and onwards, 680000 for previous
+				 	In dalton, no external components are used for VBAT channel
+*/
+
+//#define VENDOR_ADC_VBBAT_PULLUP 540000
+/*
+	VENDOR_ADC_VBAT_SCALE_PULLDOWN
+	Description: 	Total resistance from ADC to battery ground (lower part of voltage divider)
+ 	Default value: 	180000 for B1.2 and onwards, 220000 for previous
+					In dalton, no external components are used for VBAT channel
+*/
+//#define VENDOR_ADC_VBBAT_PULLDOWN 180000
+
+/*
+	VENDOR_ADC_VBAT_SCALE_UVPERBITS
+	Description: 	Total resistance from ADC to battery ground (lower part of voltage divider)
+ 	Default value: 	180000 for B1.2 and onwards, 220000 for previous
+					In dalton, no external components are used for VBAT channel
+*/
+#define VENDOR_ADC_VBBAT_UVPERBITS 4687
 
 /*
 	VENDOR_ADC_BSI_CHANNEL
@@ -281,7 +306,7 @@
 #define VENDOR_ADC_X32TEMP_B 4050
 
 
-/* 
+/*
     VENDOR_ADC_VCHAR_CHANNEL
     Description: 	The physical channel for the VCHAR circuit
 	Default value: 	HAL_ADC_AUXADC_BASE_CHANNEL + 3 (Calama B2)

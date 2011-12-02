@@ -30,7 +30,7 @@
 #include <linux/clk.h>
 #include <linux/i2c-kona.h>
 
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 #include <plat/pwr_mgr.h>
 #endif
 
@@ -802,14 +802,14 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    unsigned short i, nak_ok;
 
    down(&dev->dev_lock);
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
    struct bsc_adap_cfg *hw_cfg = NULL;
    bool rel_hw_sem = false ;
 #endif
 
    bsc_enable_clk(dev);
 	
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
    if (dev->device)
 	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
@@ -835,7 +835,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    {
       dev_err(dev->device, "start command failed\n");
       bsc_disable_clk(dev);
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
       if(rel_hw_sem)
           pwr_mgr_pm_i2c_sem_unlock();
 #endif
@@ -857,7 +857,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       {
          dev_err(dev->device, "high-speed master code failed\n");
          bsc_disable_clk(dev);
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
       if(rel_hw_sem)
           pwr_mgr_pm_i2c_sem_unlock();
 #endif
@@ -871,7 +871,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
          dev_err(dev->device, "one of the slaves replied to the high-speed "
                "master code unexpectedly\n");
          bsc_disable_clk(dev);
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
       if(rel_hw_sem)
           pwr_mgr_pm_i2c_sem_unlock();
 #endif
@@ -982,7 +982,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    }
 
    bsc_disable_clk(dev);
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
       if(rel_hw_sem)
           pwr_mgr_pm_i2c_sem_unlock();
 #endif
@@ -1015,7 +1015,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    }
 
    bsc_disable_clk(dev);
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
       if(rel_hw_sem)
           pwr_mgr_pm_i2c_sem_unlock();
 #endif

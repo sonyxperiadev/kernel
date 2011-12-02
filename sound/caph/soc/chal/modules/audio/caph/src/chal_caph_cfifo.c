@@ -69,7 +69,6 @@ Copyright 2010 Broadcom Corporation.  All rights reserved.                      
 /* Time stamp register size for each channel */
 #define CHAL_CAPH_CFIFO_TS_REG_SIZE     ((CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH2_OFFSET-CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH1_OFFSET)/sizeof(cUInt32))
 
-#if defined (_RHEA_)
 /* Read CFIFO_CTL_X register contents */
 #define CHAL_READ_CFIFO_CTL_IDX(b, i, val)                                                                                                           \
             if(i < 8)                                                                                                                                                           \
@@ -91,14 +90,6 @@ Copyright 2010 Broadcom Corporation.  All rights reserved.                      
                         {                                                                                                                                                                      \
                             BRCM_WRITE_REG_IDX( b,  CPH_CFIFO_CPH_CTL_5  , (((i-8)/2)*CHAL_CAPH_CFIFO_CTL_REG_SIZE), val);      \
                         }
-#elif defined (_SAMOA_)
-/* Read CFIFO_CTL_X register contents */
-#define CHAL_READ_CFIFO_CTL_IDX(b, i, val)                                                                                                           \
-                val = BRCM_READ_REG_IDX( b,  CPH_CFIFO_CPH_CTL_1  , ((i/2)*CHAL_CAPH_CFIFO_CTL_REG_SIZE))
-/* Write CFIFO_CTL_X register */
-#define CHAL_WRITE_CFIFO_CTL_IDX(b, i, val)                                                                                                     \
-                BRCM_WRITE_REG_IDX( b,  CPH_CFIFO_CPH_CTL_1  , ((i/2)*CHAL_CAPH_CFIFO_CTL_REG_SIZE), val)
-#endif
 
 //****************************************************************************
 // local typedef declarations
@@ -514,7 +505,6 @@ cVoid chal_caph_cfifo_set_size(CHAL_HANDLE handle,
 
             ((chal_caph_cfifo_cb_t*)handle)->size[index] = size;
 
-#if defined (_RHEA_)
            /* Convert it in to register format */
             if(size >= 128)
             {
@@ -524,20 +514,7 @@ cVoid chal_caph_cfifo_set_size(CHAL_HANDLE handle,
             {
                 size = 0;
             }
-#elif defined (_SAMOA_)
-            /* Convert it in to register format (calculate RING_SIZE), suitable for Samoa:
-         * Size = 8  DWORDs, RING_SIZE = 0
-         * Size = 64 DWORDs, RING_SIZE = 16
-         * else, Size = (RING_SIZE+1)*64 Dword
-         */
 
-            if(size == 8)
-                size = 0;
-            else if(size == 64)
-                size = 16;
-            else
-                size = (size/64) - 1;
-#endif
             if(index&0x01)
             {
                 /* configure size */

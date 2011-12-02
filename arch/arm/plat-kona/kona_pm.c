@@ -31,7 +31,7 @@ enum
 };
 
 
-static int allow_suspend = 0;
+static int allow_suspend = 1;
 module_param_named(allow_suspend, allow_suspend, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 static int kona_pm_log_lvl = KONAL_PM_LOG_LVL_ERROR;
@@ -47,7 +47,7 @@ __weak int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
 {
 	static struct kona_idle_state def_state = {
 		.name = "kona_c0",
-		.desc = "kona default state",
+		.desc = "def state",
 	};
 
 	*idle_states = &def_state;
@@ -206,8 +206,10 @@ int __init kona_pm_init()
 		state->enter = kona_mach_enter_idle_state;
 		if (i == 0)
 			dev->safe_state = state;
-		strncpy(state->name,idle_states[i].name,CPUIDLE_NAME_LEN);
-		strncpy(state->desc,idle_states[i].desc,CPUIDLE_DESC_LEN);
+		strncpy(state->name,idle_states[i].name,CPUIDLE_NAME_LEN-1);
+		state->name[CPUIDLE_NAME_LEN-1] =0;
+		strncpy(state->desc,idle_states[i].desc,CPUIDLE_DESC_LEN-1);
+		state->desc[CPUIDLE_DESC_LEN-1] =0;
 	}
 	def_suspend_state = &idle_states[num_states-1];
 

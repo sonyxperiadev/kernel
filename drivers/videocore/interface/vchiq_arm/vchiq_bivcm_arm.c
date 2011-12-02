@@ -68,6 +68,10 @@
 #include "host_applications/linux/libs/debug_sym/debug_sym.h"
 #endif
 
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+#include "host_applications/linux/libs/debug_sym/debug_sym.h"
+#endif
+
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 #include <linux/earlysuspend.h>
 

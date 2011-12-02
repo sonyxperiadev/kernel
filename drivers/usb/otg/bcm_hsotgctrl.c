@@ -31,8 +31,9 @@
 #include <linux/usb/bcm_hsotgctrl.h>
 
 #define	PHY_MODE_OTG		2
-#define 	BC11CFG_SW_OVERWRITE_KEY 0x55560000
+#define 	BCCFG_SW_OVERWRITE_KEY 0x55560000
 #define	BC_CONFIG_DELAY_MS 2
+#define	PHY_PLL_DELAY_MS	2
 
 #define USB_PHY_MDIO_ID 9
 #define USB_PHY_MDIO0 0
@@ -48,7 +49,6 @@
 struct bcm_hsotgctrl_drv_data {
 	struct device *dev;
 	struct clk *otg_clk;
-	struct pi_mgr_dfs_node*  dfs_node;
 	void *hsotg_ctrl_base;
 	void *chipregs_base;
 	void *hub_clk_base;
@@ -66,8 +66,8 @@ static ssize_t dump_hsotgctrl(struct device *dev,
 	printk("\nusbotgcontrol: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
 	printk("\nphy_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET));
 	printk("\nphy_p1ctl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET));
-	printk("\nbc11_status: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC11_STATUS_OFFSET));
-	printk("\nbc11_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET));
+	printk("\nbc11_status: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC_STATUS_OFFSET));
+	printk("\nbc11_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET));
 	printk("\ntp_in: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_IN_OFFSET));
 	printk("\ntp_out: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_OUT_OFFSET));
 	printk("\nphy_ctrl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CTRL_OFFSET));
@@ -87,34 +87,15 @@ int bcm_hsotgctrl_en_clock(bool on)
 	if (!bcm_hsotgctrl_handle || !bcm_hsotgctrl_handle->otg_clk)
 		return -EIO;
 
-	if (on) {
-#ifdef CONFIG_ARCH_RHEA
-		if (bcm_hsotgctrl_handle->dfs_node)
-			rc = pi_mgr_dfs_request_update(bcm_hsotgctrl_handle->dfs_node, PI_OPP_NORMAL);
-			if (rc)
-				dev_warn(bcm_hsotgctrl_handle->dev, "%s: error in updating DFS request before clock enabled\n", __func__);
-#endif
+	if (on)
 		rc = clk_enable(bcm_hsotgctrl_handle->otg_clk);
-	}
-	else {
+	else
 		clk_disable(bcm_hsotgctrl_handle->otg_clk);
 
-#ifdef CONFIG_ARCH_RHEA
-		if (bcm_hsotgctrl_handle->dfs_node) {
-			rc = pi_mgr_dfs_request_update(bcm_hsotgctrl_handle->dfs_node, PI_MGR_DFS_MIN_VALUE);
-			if (rc)
-				dev_warn(bcm_hsotgctrl_handle->dev, "%s: DFS update request failed after clock disabled\n", __func__);
-		} else
-			dev_warn(bcm_hsotgctrl_handle->dev, "%s: error in updating DFS request after clock disabled\n", __func__);
-#endif
-	}
-
-	if (rc) {
+	if (rc)
 		dev_warn(bcm_hsotgctrl_handle->dev, "%s: error in controlling clock\n", __func__);
-		return -EIO;
-	}
 
-	return 0;
+	return rc;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_en_clock);
 
@@ -130,10 +111,11 @@ int bcm_hsotgctrl_phy_init(void)
 
 	/* Clear PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(true);
+	msleep_interruptible(PHY_PLL_DELAY_MS);
 
 	/* clear bit 15 RDB error */
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-	val &= ~HSOTG_CTRL_PHY_P1CTL_PLL_SUSPEND_ENABLE_MASK;
+	val &= ~HSOTG_CTRL_PHY_P1CTL_USB11_OEB_IS_TXEB_MASK;
 	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
@@ -239,28 +221,44 @@ int bcm_hsotgctrl_bc_reset(void)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET);
 
 	/* Clear overwrite key */
-	val &= ~(HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_MASK | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK);
-	val |= (BC11CFG_SW_OVERWRITE_KEY | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK); //We need this key written for this register access
-	val |= HSOTG_CTRL_BC11_CFG_SW_RST_MASK;
+	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
+	val |= (BCCFG_SW_OVERWRITE_KEY | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK); //We need this key written for this register access
+	val |= HSOTG_CTRL_BC_CFG_SW_RST_MASK;
 
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET); //Reset BC1.1 state machine
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET); //Reset BC1.1 state machine
 
 	msleep_interruptible(BC_CONFIG_DELAY_MS);
 
-	val &= ~HSOTG_CTRL_BC11_CFG_SW_RST_MASK;
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET); //Clear reset
+	val &= ~HSOTG_CTRL_BC_CFG_SW_RST_MASK;
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET); //Clear reset
 
-	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET);
 
 	/* Clear overwrite key so we don't accidently write to these bits */
-	val &= ~(HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_MASK | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK);
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
+	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET);
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_reset);
+
+int bcm_hsotgctrl_bc_status(unsigned long *status)
+{
+	unsigned int val;
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
+
+	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+		return -EIO;
+
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_STATUS_OFFSET);
+	*status = val;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_status);
 
 int bcm_hsotgctrl_bc_vdp_src_off(void)
 {
@@ -271,20 +269,20 @@ int bcm_hsotgctrl_bc_vdp_src_off(void)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET);
 
 	/* Clear overwrite key */
-	val &= ~(HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_MASK | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK);
-	val |= (BC11CFG_SW_OVERWRITE_KEY | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK); //We need this key written for this register access
-	val &= ~HSOTG_CTRL_BC11_CFG_BC11_OVWR_SET_P0_MASK;
+	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
+	val |= (BCCFG_SW_OVERWRITE_KEY | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK); //We need this key written for this register access
+	val &= ~HSOTG_CTRL_BC_CFG_BC_OVWR_SET_P0_MASK;
 
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET); //Reset BC1.1 state machine
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET); //Reset BC1.1 state machine
 
 	msleep_interruptible(BC_CONFIG_DELAY_MS);
 
 	/* Clear overwrite key so we don't accidently write to these bits */
-	val &= ~(HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_MASK | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK);
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
+	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET);
 
 	return 0;
 }
@@ -351,15 +349,6 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
-#ifdef CONFIG_ARCH_RHEA
-	/* Add a DFS request. Update when USB OTG AHB clock is enabled/disabled */
-	hsotgctrl_drvdata->dfs_node = pi_mgr_dfs_add_request("bcm_hsotgctrl",
-								  PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_DFS_MIN_VALUE);
-
-	if (hsotgctrl_drvdata->dfs_node == NULL)
-		dev_warn(hsotgctrl_drvdata->dev, "\n%s: DFS request failed for bcm_hsotgctrl\n", __func__);
-#endif
-
 	platform_set_drvdata(pdev, hsotgctrl_drvdata);
 
 	/* Init the PHY */
@@ -370,7 +359,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	/* clear bit 15 RDB error */
 	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-	val &= ~HSOTG_CTRL_PHY_P1CTL_PLL_SUSPEND_ENABLE_MASK;
+	val &= ~HSOTG_CTRL_PHY_P1CTL_USB11_OEB_IS_TXEB_MASK;
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
@@ -452,13 +441,6 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 	iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
 	iounmap(hsotgctrl_drvdata->chipregs_base);
 	iounmap(hsotgctrl_drvdata->hub_clk_base);
-
-#ifdef CONFIG_ARCH_RHEA
-	if (hsotgctrl_drvdata->dfs_node) {
-		pi_mgr_dfs_request_remove(hsotgctrl_drvdata->dfs_node);
-		hsotgctrl_drvdata->dfs_node = NULL;
-	}
-#endif
 
 	clk_put(hsotgctrl_drvdata->otg_clk);
 	local_hsotgctrl_handle = NULL;

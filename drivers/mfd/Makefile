@@ -98,3 +98,4 @@ obj-$(CONFIG_TPS65911_COMPARATOR)	+= tps65911-comparator.o
 obj-$(CONFIG_MFD_BCM_PMU590XX)  += bcm590xx-i2c.o bcm590xx-core.o bcm590xx-usb.o
 obj-$(CONFIG_MFD_BCMPMU)	+= bcmpmu-i2c.o bcmpmu-core.o bcmpmu-irq.o bcmpmu-accy.o
 obj-$(CONFIG_MFD_BCM59055)	+= bcmpmu-bcm59055-map.o
+obj-$(CONFIG_MFD_BCM59039)	+= bcmpmu-bcm59039-map.o

@@ -186,6 +186,7 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 	/* First, check if we are requested to hibernate */
 	if (len == 4 && !strncmp(buf, "disk", len)) {
+		printk(KERN_ERR "entering hibernate");
 		error = hibernate();
   goto Exit;
 	}
@@ -195,11 +196,15 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 		if (*s && len == strlen(*s) && !strncmp(buf, *s, len))
 			break;
 	}
+	printk(KERN_ERR "entering sleep state = %d\n", state);
+
 	if (state < PM_SUSPEND_MAX && *s)
 #ifdef CONFIG_EARLYSUSPEND
 		if (state == PM_SUSPEND_ON || valid_state(state)) {
 			error = 0;
 			request_suspend_state(state);
+		} else {
+			printk(KERN_ERR "not valid state with state = %d", state);
 		}
 #else
 		error = enter_state(state);

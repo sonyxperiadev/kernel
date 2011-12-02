@@ -31,6 +31,26 @@
 #include <mach/hardware.h>
 
 
+static int __init early_init_dt_scan_kona_root(unsigned long node, const char *uname,
+				     int depth, void *data)
+{
+	const char *prop;
+	unsigned long size;
+
+	/*printk(KERN_INFO "%s: node=0x%lx, uname=%s, depth=%d\n", __func__, node, uname, depth);*/
+
+	if (depth != 0 || strcmp(uname, "") != 0)
+		return 0; /* not found, continue... */
+
+	prop = (char *)of_get_flat_dt_prop(node, "model", &size);
+	printk(KERN_INFO "model: %s\n", prop);
+
+	prop = (char *)of_get_flat_dt_prop(node, "compatible", &size);
+	printk(KERN_INFO "compatible: %s\n", prop);
+
+	return 1;
+}
+
 static int __init parse_tag_dt(const struct tag *tag)
 {
 	unsigned long dt_root;
@@ -41,6 +61,9 @@ static int __init parse_tag_dt(const struct tag *tag)
 	dt_root = of_get_flat_dt_root();
 	printk(KERN_INFO "Kona dt @0x%x, size of 0x%x words, rooted @ 0x%lx\n",
 		(unsigned int)tag->u.cmdline.cmdline, tag->hdr.size, dt_root);
+
+	/* Retrieve info from the / node */
+	of_scan_flat_dt(early_init_dt_scan_kona_root, NULL);
 
 	/* Retrieve info from the /pinmux node */
 	of_scan_flat_dt(early_init_dt_scan_pinmux, NULL);

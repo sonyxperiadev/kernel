@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                                */
+Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.                                */
 
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -32,6 +32,7 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 ****************************************************************************/
 #include "log.h"
 #include "mobcom_types.h"
+#include "chal_caph.h"
 #include "csl_caph.h"
 #include "chal_caph_intc.h"
 #include "chal_caph_srcmixer.h"
@@ -96,7 +97,11 @@ static CSL_CAPH_SRCM_INCHNL_STATUS_t inChnlStatus[MAX_INCHNLS] =
     {CSL_CAPH_SRCM_MONO_CH4, FALSE},
     {CSL_CAPH_SRCM_STEREO_CH5, FALSE},
     {CSL_CAPH_SRCM_STEREO_PASS_CH1, FALSE},
-    {CSL_CAPH_SRCM_STEREO_PASS_CH2, FALSE}
+    {CSL_CAPH_SRCM_STEREO_PASS_CH2, FALSE},
+#if defined(CONFIG_ARCH_RHEA_B0)
+    {CSL_CAPH_SRCM_MONO_PASS_CH3, FALSE},
+    {CSL_CAPH_SRCM_MONO_PASS_CH4, FALSE},
+#endif
 };
 /* SRCMixer output channel usage table */
 static CSL_CAPH_SRCM_CHNL_TABLE_t chnlTable[OUTCHNL_MAX_NUM_CHNL] =
@@ -122,8 +127,7 @@ static void csl_caph_srcmixer_use_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
                                           CSL_CAPH_SRCM_INCHNL_e inChnl);
 static UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
 static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
-//static CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_chal_fifo(
-//                                                   CSL_CAPH_SRCM_FIFO_e fifo);
+
 //******************************************************************************
 // local function definitions
 //******************************************************************************
@@ -374,6 +378,14 @@ CAPH_SRCMixer_CHNL_e csl_caph_srcmixer_get_single_chal_inchnl(
         case CSL_CAPH_SRCM_STEREO_CH5_R:
             chalChnl = CAPH_SRCM_CH5_R;
             break;
+#if defined(CONFIG_ARCH_RHEA_B0)
+        case CSL_CAPH_SRCM_MONO_PASS_CH3:
+            chalChnl = CAPH_SRCM_PASSCH3;
+            break;
+        case CSL_CAPH_SRCM_MONO_PASS_CH4:
+            chalChnl = CAPH_SRCM_PASSCH4;
+            break;
+#endif						
         default:
             audio_xassert(0, chalChnl);
     }
@@ -400,6 +412,10 @@ UInt16 csl_caph_srcmixer_get_chal_inchnl(UInt16 inChnl)
     if (inChnl&CSL_CAPH_SRCM_STEREO_PASS_CH1_R) chalChnl |= CAPH_SRCM_PASSCH1_R;
     if (inChnl&CSL_CAPH_SRCM_STEREO_PASS_CH2_L) chalChnl |= CAPH_SRCM_PASSCH2_L;
     if (inChnl&CSL_CAPH_SRCM_STEREO_PASS_CH2_R) chalChnl |= CAPH_SRCM_PASSCH2_R;
+#if defined(CONFIG_ARCH_RHEA_B0)
+    if (inChnl&CSL_CAPH_SRCM_MONO_PASS_CH3) chalChnl |= CAPH_SRCM_PASSCH1_L; //CAPH_SRCM_PASSCH3;
+    if (inChnl&CSL_CAPH_SRCM_MONO_PASS_CH4) chalChnl |= CAPH_SRCM_PASSCH2_L; //CAPH_SRCM_PASSCH4;
+#endif
     return chalChnl;
 }
 
@@ -446,6 +462,14 @@ CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_inchnl_fifo(
         case CSL_CAPH_SRCM_STEREO_CH5_R:
             inChnlFIFO = CAPH_CH5_INFIFO;
             break;
+#if defined(CONFIG_ARCH_RHEA_B0)
+        case CSL_CAPH_SRCM_MONO_PASS_CH3:
+            inChnlFIFO = CAPH_PASSCH3_INFIFO;
+            break;
+       case CSL_CAPH_SRCM_MONO_PASS_CH4:
+            inChnlFIFO = CAPH_PASSCH4_INFIFO;
+            break;		
+#endif				
         default:
             audio_xassert(0, inChnlFIFO);
     }
@@ -524,46 +548,54 @@ CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_tapoutchnl_fifo(
 
 /****************************************************************************
 *
-*  Function Name: CSL_CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
+*  Function Name: CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
 *                                                  CSL_CAPH_SRCM_INCHNL_e inChnl)
 *
 *  Description: Get the csl Mixer Input Channel trigger
 *
 ****************************************************************************/
-CSL_CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
+CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
                                                    CSL_CAPH_SRCM_INCHNL_e inChnl)
 {
-    CSL_CAPH_SWITCH_TRIGGER_e inChnlTrig = CSL_CAPH_TRIG_NONE; 
+    CAPH_SWITCH_TRIGGER_e inChnlTrig = CAPH_VOID; 
 	
     switch (inChnl)
     {
         case CSL_CAPH_SRCM_MONO_CH1:
-            inChnlTrig = CSL_CAPH_TRIG_TAPSUP_CH1_NORM_INT;
+            inChnlTrig = CAPH_TAPSUP_CH1_NORM_INT;
             break;
         case CSL_CAPH_SRCM_MONO_CH2:
-            inChnlTrig = CSL_CAPH_TRIG_TAPSUP_CH2_NORM_INT;
+            inChnlTrig = CAPH_TAPSUP_CH2_NORM_INT;
             break;
         case CSL_CAPH_SRCM_MONO_CH3:
-            inChnlTrig = CSL_CAPH_TRIG_TAPSUP_CH3_NORM_INT;
+            inChnlTrig = CAPH_TAPSUP_CH3_NORM_INT;
             break;
         case CSL_CAPH_SRCM_MONO_CH4:
-            inChnlTrig = CSL_CAPH_TRIG_TAPSUP_CH4_NORM_INT;
+            inChnlTrig = CAPH_TAPSUP_CH4_NORM_INT;
             break;
         case CSL_CAPH_SRCM_STEREO_PASS_CH1:
         case CSL_CAPH_SRCM_STEREO_PASS_CH1_L:
         case CSL_CAPH_SRCM_STEREO_PASS_CH1_R:
-            inChnlTrig = CSL_CAPH_TRIG_PASSTHROUGH_CH1_FIFO_THRESMET;
+            inChnlTrig = CAPH_PASSTHROUGH_CH1_FIFO_THRESMET;
             break;
         case CSL_CAPH_SRCM_STEREO_PASS_CH2:
         case CSL_CAPH_SRCM_STEREO_PASS_CH2_L:
         case CSL_CAPH_SRCM_STEREO_PASS_CH2_R:
-            inChnlTrig = CSL_CAPH_TRIG_PASSTHROUGH_CH2_FIFO_THRESMET;
+            inChnlTrig = CAPH_PASSTHROUGH_CH2_FIFO_THRESMET;
             break;
         case CSL_CAPH_SRCM_STEREO_CH5:
         case CSL_CAPH_SRCM_STEREO_CH5_L:
         case CSL_CAPH_SRCM_STEREO_CH5_R:
-            inChnlTrig = CSL_CAPH_TRIG_TAPSUP_CH5_NORM_INT;
+            inChnlTrig = CAPH_TAPSUP_CH5_NORM_INT;
             break;
+#if defined(CONFIG_ARCH_RHEA_B0)
+        case CSL_CAPH_SRCM_MONO_PASS_CH3:
+            inChnlTrig = CAPH_PASSTHROUGH_CH3_FIFO_THRESMET;
+            break;
+        case CSL_CAPH_SRCM_MONO_PASS_CH4:
+            inChnlTrig = CAPH_PASSTHROUGH_CH4_FIFO_THRESMET;
+            break;
+#endif
         default:
             audio_xassert(0, inChnl);
     }
@@ -624,7 +656,12 @@ static CAPH_DATA_FORMAT_e csl_caph_srcmixer_get_chal_dataformat(CHAL_HANDLE hand
     switch (dataFmt)
     {
         case CSL_CAPH_16BIT_MONO:
-            chalDataFmt = CAPH_MONO_16BIT;
+#if defined(CONFIG_ARCH_RHEA_B0)
+			/* test 16bit mono in pass through */
+            chalDataFmt = CAPH_MONO_16BITP;
+#else
+			chalDataFmt = CAPH_MONO_16BIT;
+#endif			
             break;
         case CSL_CAPH_16BIT_STEREO:
             chalDataFmt = CAPH_STEREO_16BIT;
@@ -641,77 +678,6 @@ static CAPH_DATA_FORMAT_e csl_caph_srcmixer_get_chal_dataformat(CHAL_HANDLE hand
     return chalDataFmt;
 }
 
-/****************************************************************************
-*
-*  Function Name: CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_chal_fifo(
-*                                                  CSL_CAPH_SRCM_FIFO_e fifo)
-*
-*  Description: Get the cHAL Mixer FIFO
-*
-****************************************************************************/
-// Temporarily comment it out, since a compilation warning happens because
-// this API is not called anywhere in the code at the moment.
-#if 0
-static CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_chal_fifo(
-                                                   CSL_CAPH_SRCM_FIFO_e fifo)
-{
-    CAPH_SRCMixer_FIFO_e chalFIFO = CAPH_CH_INFIFO_NONE; 
-    switch (fifo)
-    {
-        case CSL_CAPH_SRCM_FIFO_NONE:
-            chalFIFO = CAPH_CH_INFIFO_NONE;
-            break;
-        case CSL_CAPH_SRCM_MONO_CH1_FIFO:
-            chalFIFO = CAPH_CH1_INFIFO;
-            break;
-        case CSL_CAPH_SRCM_MONO_CH2_FIFO:
-            chalFIFO = CAPH_CH2_INFIFO;
-            break;
-        case CSL_CAPH_SRCM_MONO_CH3_FIFO:
-            chalFIFO = CAPH_CH3_INFIFO;
-            break;
-        case CSL_CAPH_SRCM_MONO_CH4_FIFO:
-            chalFIFO = CAPH_CH4_INFIFO;
-            break;
-        case CSL_CAPH_SRCM_STEREO_PASS_CH1_FIFO:
-            chalFIFO = CAPH_PASSCH1_INFIFO;
-            break;
-        case CSL_CAPH_SRCM_STEREO_PASS_CH2_FIFO:
-            chalFIFO = CAPH_PASSCH2_INFIFO;
-            break;
-        case CSL_CAPH_SRCM_STEREO_CH5_FIFO:
-            chalFIFO = CAPH_CH5_INFIFO;
-            break;
-        case CSL_CAPH_SRCM_TAP_MONO_CH1_FIFO:
-            chalFIFO = CAPH_CH1_TAP_OUTFIFO;
-            break;
-        case CSL_CAPH_SRCM_TAP_MONO_CH2_FIFO:
-            chalFIFO = CAPH_CH2_TAP_OUTFIFO;
-            break;
-        case CSL_CAPH_SRCM_TAP_MONO_CH3_FIFO:
-            chalFIFO = CAPH_CH3_TAP_OUTFIFO;
-            break;
-        case CSL_CAPH_SRCM_TAP_MONO_CH4_FIFO:
-            chalFIFO = CAPH_CH4_TAP_OUTFIFO;
-            break;
-        case CSL_CAPH_SRCM_TAP_STEREO_CH5_FIFO:
-            chalFIFO = CAPH_CH5_TAP_OUTFIFO;
-            break;
-        case CSL_CAPH_SRCM_STEREO_CH1_FIFO:
-            chalFIFO = CAPH_MIXER1_OUTFIFO;
-            break;
-        case CSL_CAPH_SRCM_STEREO_CH2_L_FIFO:
-            chalFIFO = CAPH_MIXER2_OUTFIFO1;
-            break;
-        case CSL_CAPH_SRCM_STEREO_CH2_R_FIFO:
-            chalFIFO = CAPH_MIXER2_OUTFIFO2;
-            break;
-        default:
-            audio_xassert(0, chalFIFO);
-    }
-    return chalFIFO;
-}
-#endif
 
 /****************************************************************************
 *
@@ -902,8 +868,9 @@ void csl_caph_srcmixer_deinit(void)
 *  Description: obtain a CAPH srcmixer input channel
 *
 ****************************************************************************/
-CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dataFormat, 
-                              CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate)    
+CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dataFormat,
+                              CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate,
+								AUDIO_SAMPLING_RATE_t srOut)
 {
     Int8 ch = 0;
     CSL_CAPH_SRCM_INCHNL_e neededChnl = CSL_CAPH_SRCM_INCHNL_NONE;
@@ -924,6 +891,14 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dat
             neededChnl = CSL_CAPH_SRCM_STEREO_PASS_CH;
         }
     }
+#if defined(CONFIG_ARCH_RHEA_B0)
+    /* 48k mono pass through */
+    /* even there are 4 mono pass throughs, 3 and 4 will be used for mono for now*/
+    else if (sampleRate == CSL_CAPH_SRCMIN_48KHZ && srOut==AUDIO_SAMPLING_RATE_48000)
+    {
+       neededChnl = CSL_CAPH_SRCM_MONO_PASS_CH;
+    }
+#endif	
     else 
     {
         neededChnl = CSL_CAPH_SRCM_MONO_CH;
@@ -1358,6 +1333,7 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 			}	
 		}
     }
+	
 	return;
 }
 
@@ -1399,6 +1375,7 @@ void csl_caph_srcmixer_config_src_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
     CAPH_SRCMixer_SRC_e srcSampleRate = CAPH_8KHz_48KHz;
     CAPH_SRCMixer_FIFO_e fifo = CAPH_CH_INFIFO_NONE;
     CAPH_DATA_FORMAT_e dataFmt = CAPH_MONO_16BIT;
+
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_src_route:: ch %x:%x dataFmt %d:%d sr %d:%d tapCh %d.\r\n", 
 		routeConfig.inChnl, routeConfig.outChnl, routeConfig.inDataFmt, routeConfig.outDataFmt, routeConfig.inSampleRate, routeConfig.outSampleRate, routeConfig.tapOutChnl));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_src_route:: threshold %x:%x.\r\n", routeConfig.inThres, routeConfig.outThres));
@@ -1492,23 +1469,81 @@ void csl_caph_srcmixer_config_src_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	return;
 }
 
+
 /****************************************************************************
 *
-*  Function Name: void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl, 
+*  Function Name:  csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl, 
 *                                    CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-*                                    UInt16 gainL, UInt16 gainR)    
+*                                    int gainL_mB, int gainR_mB)    
 *                                              
 *  Description: Set the mixer input gain
 *
 ****************************************************************************/
-void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl, 
+void csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl, 
                                     CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                                    UInt16 gainL, UInt16 gainR)    
+                                    int gainL_mB, int gainR_mB)    
 {
     CAPH_SRCMixer_CHNL_e chalInChnl = CAPH_SRCM_CH_NONE;
     UInt8 chalOutChnl = 0x0;
+	unsigned int left_scale=0, right_scale=0;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_set_mixingain:: ch %x:%x gain 0x%x:%x.\r\n", inChnl, outChnl, gainL, gainR));
+	/***
+	MixerIn Gain:	SRC_M1D0_CH**_GAIN_CTRL : SRC_M1D0_CH**_TARGET_GAIN
+	sfix<16,2>
+	0x7FFF = 6 dB
+	0x4000 (2 to the power of 14), =1.0, =0 dB
+	0x0000 the input path is essentially switched off
+	***/
+	
+	/***if( gainL_mB == 0)
+		left_scale = 0x4000;
+	else
+	if( gainL_mB >= 600)
+		left_scale = 0x7FFF;  ///scale 2
+	else
+	if( gainL_mB >= 300)
+		left_scale = 0x5A67;  //scale 1.42
+	else***/
+	if( gainL_mB >= 0)
+		left_scale = 0x4000;
+	else
+	if( gainL_mB >= -300)
+		left_scale = 0x2D4E;   // scale 1/1.42
+	else
+	if( gainL_mB >= -600)
+		left_scale = 0x2000;   // scale 1/2
+	else
+	if( gainL_mB >= -900)
+		left_scale = 0x1555;  //scale 1/3
+	else
+		left_scale = 0x1000;  //scale 1/4
+
+	/***if( gainR_mB == 0)
+		right_scale = 0x4000;
+	else
+	if( gainR_mB >= 600)
+		right_scale = 0x7FFF;  ///scale 2
+	else
+	if( gainR_mB >= 300)
+		right_scale = 0x5A67;  //scale 1.42
+	else***/
+	if( gainR_mB >= 0)
+		right_scale = 0x4000;
+	else
+	if( gainR_mB >= -300)
+		right_scale = 0x2D4E;   // scale 1/1.42
+	else
+	if( gainR_mB >= -600)
+		right_scale = 0x2000;   // scale 1/2
+	else
+	if( gainR_mB >= -900)
+		right_scale = 0x1555;  //scale 1/3
+	else
+		right_scale = 0x1000;  //scale 1/4
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
+		"csl_caph_srcmixer_set_mixingain:: ch %x:%x gain %d:%d, scale 0x%x:%x.\r\n",
+		inChnl, outChnl, gainL_mB, gainR_mB, left_scale, right_scale));
 
     /* Map CSL SRCM input channel to cHAL SRC Input channel */
     chalInChnl = csl_caph_srcmixer_get_single_chal_inchnl(inChnl);
@@ -1528,26 +1563,30 @@ void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl,
         case CAPH_SRCM_PASSCH1_R:
         case CAPH_SRCM_PASSCH2_L:
         case CAPH_SRCM_PASSCH2_R:
+#if defined(CONFIG_ARCH_RHEA_B0)
+        case CAPH_SRCM_PASSCH3:
+        case CAPH_SRCM_PASSCH4:
+#endif					
     		if (chalOutChnl&CAPH_M0_Left)
          	   chal_caph_srcmixer_set_mixingain(handle, 
 				   		chalInChnl, 
 						CAPH_M0_Left, 
-						gainL);
+						left_scale);
     		if (chalOutChnl&CAPH_M0_Right)
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		chalInChnl, 
 						CAPH_M0_Right, 
-						gainL);
+						left_scale);
     		if (chalOutChnl&CAPH_M1_Left)
          	   chal_caph_srcmixer_set_mixingain(handle, 
 				   		chalInChnl, 
 						CAPH_M1_Left, 
-						gainL);
+						left_scale);
     		if (chalOutChnl&CAPH_M1_Right)
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		chalInChnl, 
 						CAPH_M1_Right, 
-						gainL);
+						left_scale);
             break;
         case CAPH_SRCM_PASSCH1:
     		if (chalOutChnl&CAPH_M0_Left)
@@ -1555,44 +1594,44 @@ void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH1_L,
 					        CAPH_M0_Left, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH1_R,
 					        CAPH_M0_Left, 
-						gainR);
+						right_scale);
 		}
 		if (chalOutChnl&CAPH_M0_Right)
 		{
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH1_L,
 					        CAPH_M0_Right, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH1_R,
 					        CAPH_M0_Right, 
-						gainR);
+						right_scale);
 		}
     		if (chalOutChnl&CAPH_M1_Left)
 		{
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH1_L,
 					        CAPH_M1_Left, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH1_R,
 					        CAPH_M1_Left, 
-						gainR);
+						right_scale);
 		}
 		if (chalOutChnl&CAPH_M1_Right)
 		{
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH1_L,
 					        CAPH_M1_Right, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH1_R,
 					        CAPH_M1_Right, 
-						gainR);
+						right_scale);
 		}
             break;
         case CAPH_SRCM_PASSCH2:
@@ -1601,44 +1640,44 @@ void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH2_L,
 					        CAPH_M0_Left, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH2_R,
 					        CAPH_M0_Left, 
-						gainR);
+						right_scale);
 		}
 		if (chalOutChnl&CAPH_M0_Right)
 		{
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH2_L,
 					        CAPH_M0_Right, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH2_R,
 					        CAPH_M0_Right, 
-						gainR);
+						right_scale);
 		}
     		if (chalOutChnl&CAPH_M1_Left)
 		{
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH2_L,
 					        CAPH_M1_Left, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH2_R,
 					        CAPH_M1_Left, 
-						gainR);
+						right_scale);
 		}
 		if (chalOutChnl&CAPH_M1_Right)
 		{
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH2_L,
 					        CAPH_M1_Right, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_PASSCH2_R,
 					        CAPH_M1_Right, 
-						gainR);
+						right_scale);
 		}
 		break;
 	    
@@ -1648,44 +1687,44 @@ void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_CH5_L,
 					        CAPH_M0_Left, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_CH5_R,
 					        CAPH_M0_Left, 
-						gainR);
+						right_scale);
 		}
 		if (chalOutChnl&CAPH_M0_Right)
 		{
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_CH5_L,
 					        CAPH_M0_Right, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_CH5_R,
 					        CAPH_M0_Right, 
-						gainR);
+						right_scale);
 		}
     		if (chalOutChnl&CAPH_M1_Left)
 		{
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_CH5_L,
 					        CAPH_M1_Left, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_CH5_R,
 					        CAPH_M1_Left, 
-						gainR);
+						right_scale);
 		}
 		if (chalOutChnl&CAPH_M1_Right)
 		{
 	            chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_CH5_L,
 					        CAPH_M1_Right, 
-						gainL);
+						left_scale);
         	    chal_caph_srcmixer_set_mixingain(handle, 
 				    		CAPH_SRCM_CH5_R,
 					        CAPH_M1_Right, 
-						gainR);
+						right_scale);
 		}
 	    
             break;
@@ -1695,32 +1734,209 @@ void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 	return;
 }
 
+
 /****************************************************************************
 *
-*  Function Name:void csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-*                                     UInt16 gainL, UInt16 gainR)    
+*  Function Name:  csl_caph_srcmixer_set_mix_all_in_gain( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
+*									 int gainL_mB, int gainR_mB)	
+*											   
+*  Description: set the mixer input gain on all inputs
+*
+****************************************************************************/
+void csl_caph_srcmixer_set_mix_all_in_gain( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
+									int gainL_mB, int gainR_mB)
+{
+	UInt8 chalOutChnl = 0x0;
+	unsigned int left_scale=0, right_scale=0;
+
+	/***
+	MixerIn Gain:	SRC_M1D0_CH**_GAIN_CTRL : SRC_M1D0_CH**_TARGET_GAIN
+	sfix<16,2>
+	0x7FFF = 6 dB
+	0x4000 (2 to the power of 14), =1.0, =0 dB
+	0x0000 the input path is essentially switched off
+	***/
+	
+	/***if( gainL_mB == 0)
+		left_scale = 0x4000;
+	else
+	if( gainL_mB >= 600)
+		left_scale = 0x7FFF;  ///scale 2
+	else
+	if( gainL_mB >= 300)
+		left_scale = 0x5A67;  //scale 1.42
+	else***/
+	if( gainL_mB >= 0)
+		left_scale = 0x4000;
+	else
+	if( gainL_mB >= -300)
+		left_scale = 0x2D4E;   // scale 1/1.42
+	else
+	if( gainL_mB >= -600)
+		left_scale = 0x2000;   // scale 1/2
+	else
+	if( gainL_mB >= -900)
+		left_scale = 0x1555;  //scale 1/3
+	else
+		left_scale = 0x1000;  //scale 1/4
+
+	/***if( gainR_mB == 0)
+		right_scale = 0x4000;
+	else
+	if( gainR_mB >= 600)
+		right_scale = 0x7FFF;  ///scale 2
+	else
+	if( gainR_mB >= 300)
+		right_scale = 0x5A67;  //scale 1.42
+	else***/
+	if( gainR_mB >= 0)
+		right_scale = 0x4000;
+	else
+	if( gainR_mB >= -300)
+		right_scale = 0x2D4E;	// scale 1/1.42
+	else
+	if( gainR_mB >= -600)
+		right_scale = 0x2000;	// scale 1/2
+	else
+	if( gainR_mB >= -900)
+		right_scale = 0x1555;  //scale 1/3
+	else
+		right_scale = 0x1000;  //scale 1/4
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
+		"csl_caph_srcmixer_set_mixingain:: outCh %x gain %d:%d, scale 0x%x:%x.\r\n",
+		outChnl, gainL_mB, gainR_mB, left_scale, right_scale));
+
+	/* get the cHAL output channel from CSL output channel */
+	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+
+	/* Set the mixer input gain on all inputs */
+
+	if (chalOutChnl&CAPH_M0_Left)
+	{
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1, CAPH_M0_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH2, CAPH_M0_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH3, CAPH_M0_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH4, CAPH_M0_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH5_L, CAPH_M0_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH5_R, CAPH_M0_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH1_L, CAPH_M0_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH1_R, CAPH_M0_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_L, CAPH_M0_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_R, CAPH_M0_Left, left_scale);
+
+#if defined(CONFIG_ARCH_RHEA_B0)
+   	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH3, CAPH_M0_Left, left_scale);
+   	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH4, CAPH_M0_Left, left_scale);
+#endif
+	}
+	
+	if (chalOutChnl&CAPH_M0_Right)
+	{
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH2, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH3, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH4, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH5_L, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH5_R, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH1_L, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH1_R, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_L, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_R, CAPH_M0_Right, right_scale);
+
+#if defined(CONFIG_ARCH_RHEA_B0)
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH3, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH4, CAPH_M0_Right, right_scale);
+#endif
+	}
+	
+	if (chalOutChnl&CAPH_M1_Left)
+	{
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1, CAPH_M1_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH2, CAPH_M1_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH3, CAPH_M1_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH4, CAPH_M1_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH5_L, CAPH_M1_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH5_R, CAPH_M1_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH1_L, CAPH_M1_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH1_R, CAPH_M1_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_L, CAPH_M1_Left, left_scale);
+	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_R, CAPH_M1_Left, left_scale);
+
+#if defined(CONFIG_ARCH_RHEA_B0)
+   	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH3, CAPH_M1_Left, left_scale);
+   	   chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH4, CAPH_M1_Left, left_scale);
+#endif
+	}
+
+	if (chalOutChnl&CAPH_M1_Right)
+	{
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1, CAPH_M1_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH2, CAPH_M1_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH3, CAPH_M1_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH4, CAPH_M1_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH5_L, CAPH_M1_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH5_R, CAPH_M1_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH1_L, CAPH_M1_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH1_R, CAPH_M1_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_L, CAPH_M1_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH2_R, CAPH_M1_Right, right_scale);
+
+#if defined(CONFIG_ARCH_RHEA_B0)
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH3, CAPH_M0_Right, right_scale);
+		chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_PASSCH4, CAPH_M0_Right, right_scale);
+#endif
+	}
+		
+	return;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
+*										 int gain_mB)    
 *
 *  Description: Set the SRCMixer mixer output gain
 *
 ****************************************************************************/
-void csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                                     UInt16 gain)
+void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
+										 int gain_mB)
 {
     UInt8 chalOutChnl = 0x0;
+	unsigned int scale=0;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_set_mixoutgain:: ch %x gain 0x%x.\r\n", outChnl, gain));
+	/***
+	MixerOutFineGain:	SRC_SPK0_LT_GAIN_CTRL2 : SPK0_LT_FIXED_GAIN
+		13-bit interger unsigned
+		0x0000, = 0 dB
+		0x0001, = (6.02/256) dB attenuation ~ 0.0235 dB
+		0x1FFF	max attenuation
+	***/
+	
+	if( gain_mB >= 0)
+		scale = 0x0000;
+	else
+	if( gain_mB <= -10000)
+		scale = 0x1FFF;  //max attenuation
+	else
+		scale = ((0 - gain_mB)*256)/602;
+	//-6dB = -600 mB = 600*256/602 = 153600/602 = (0x25800) / 602 = 255
+	//-90 dB = -9000 mB = 9000*256/602 = 2304000 / 602 = (0x232800) / 256 = 3827 = 0xEF3.
 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+		"csl_caph_srcmixer_set_mixoutgain:: ch %x gain %d, scale 0x%x.\r\n", outChnl, gain_mB, scale));
+		
     /* get the cHAL output channel from CSL output channel */
     chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
     /* Set the mixer left/right channel output gain */    
     if (chalOutChnl&CAPH_M0_Left)
-    chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Left, gain);
+    	chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Left, scale);
     if (chalOutChnl&CAPH_M0_Right)
-    chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Right, gain);
+    	chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Right, scale);
     if (chalOutChnl&CAPH_M1_Left)
-    chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Left, gain);
+    	chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Left, scale);
     if (chalOutChnl&CAPH_M1_Right)
-    chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Right, gain);
+    	chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Right, scale);
 
 	return;
 }
@@ -1728,35 +1944,44 @@ void csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 
 /****************************************************************************
 *
-*  Function Name:void csl_caph_srcmixer_set_mixoutcoarsegain(
-*  				CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-*                                     UInt16 gainL, UInt16 gainR)    
+*  Function Name: csl_caph_srcmixer_set_mix_out_bit_select(
+*			CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
+*					unsigned int bit_shift)    
 *
 *  Description: Set the SRCMixer mixer output coarse gain
 *
 ****************************************************************************/
-void csl_caph_srcmixer_set_mixoutcoarsegain(
-		CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                UInt16 gain)
+void csl_caph_srcmixer_set_mix_out_bit_select(
+			CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
+					unsigned int bit_shift)
 {
     UInt8 chalOutChnl = 0x0;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_set_mixoutcoarsegain:: ch %x gain 0x%x.\r\n", outChnl, gain));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
+		"csl_caph_srcmixer_set_mixoutcoarsegain:: ch %x bit_shift 0x%x.\r\n", outChnl, bit_shift));
+
+	/**
+	MixerBitSelect:  SRC_SPK0_LT_GAIN_CTRL1 : SPK0_LT_BIT_SELECT
+	3-bit unsigned
+	***/
 
     /* get the cHAL output channel from CSL output channel */
+	//LIPING: not useful:
     chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
-    /* Set the mixer left/right channel output gain */    
+	
+    /* Set the mixer left/right channel output bit_shift */    
     if (chalOutChnl&CAPH_M0_Left)
-    chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Left, gain);
+    	chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Left, bit_shift);
     if (chalOutChnl&CAPH_M0_Right)
-    chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Right, gain);
+    	chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Right, bit_shift);
     if (chalOutChnl&CAPH_M1_Left)
-    chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Left, gain);
+    	chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Left, bit_shift);
     if (chalOutChnl&CAPH_M1_Right)
-    chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Right, gain);
+    	chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Right, bit_shift);
 
 	return;
 }
+
 /****************************************************************************
 *
 *  Function Name:UInt32 csl_caph_srcmixer_get_fifo_addr(CSL_CAPH_SRCM_FIFO_e fifo)
