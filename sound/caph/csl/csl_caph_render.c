@@ -78,8 +78,8 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl);
 
 /****************************************************************************
 *
-*  Function Name:UInt32 csl_caph_render_init(CSL_AUDIO_DEVICE_e source, 
-*                                                        CSL_AUDIO_DEVICE_e sink)
+*  Function Name:UInt32 csl_caph_render_init(CSL_CAPH_DEVICE_e source, 
+*                                                        CSL_CAPH_DEVICE_e sink)
 *
 *  Description: init CAPH render block
 *
@@ -87,7 +87,9 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl);
 
 //already know source and sink, hmm
 
-UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
+extern CSL_CAPH_HWConfig_Table_t HWConfig_Table[MAX_AUDIO_PATH];
+
+UInt32 csl_audio_render_init(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVICE_e sink)
 {
 	UInt32 streamID = CSL_CAPH_STREAM_NONE;
 	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
@@ -99,6 +101,10 @@ UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 	audDrv = GetRenderDriverByType(streamID);
 	
 	memset(audDrv, 0, sizeof(CSL_CAPH_Render_Drv_t));
+
+//should directly assign to
+//HWConfig_Table[i].source
+//HWConfig_Table[i].sink[0]
 
 	audDrv->streamID = streamID;
 	audDrv->source = source;
@@ -188,7 +194,38 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
 		return RESULT_ERROR;
 	}
     audDrv->dmaCH = csl_caph_hwctrl_GetdmaCH(audDrv->pathID);
-    
+
+//shall direclty save to HWConfig_Table
+#if 0
+{
+    UInt8 i = 0;
+    CSL_CAPH_PathID pathID = 0;
+
+    for (i=0; i<MAX_AUDIO_PATH; i++)
+    {
+        if (HWConfig_Table[i].streamID == stream->streamID)
+        {
+            HWConfig_Table[i].streamID = stream->streamID;
+            if (stream->source ==  CSL_CAPH_DEV_MEMORY)
+                HWConfig_Table[i].src_sampleRate = stream->src_sampleRate;
+            if (stream->sink ==  CSL_CAPH_DEV_MEMORY)
+                HWConfig_Table[i].snk_sampleRate = stream->snk_sampleRate;
+            HWConfig_Table[i].chnlNum = stream->chnlNum;
+            HWConfig_Table[i].bitPerSample = stream->bitPerSample;
+            HWConfig_Table[i].pBuf = stream->pBuf;
+            HWConfig_Table[i].pBuf2 = stream->pBuf2;
+            HWConfig_Table[i].size = stream->size;
+            HWConfig_Table[i].dmaCB = stream->dmaCB;
+
+            pathID = HWConfig_Table[i].pathID;
+            Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_RegisterStream: streamID = %d, pathID = %d, i = %d\r\n",
+                                                 stream->streamID, pathID, i);
+            break;
+        }
+    }
+    }
+#endif
+
    	return RESULT_OK;
 }
 
@@ -351,6 +388,10 @@ static CSL_CAPH_STREAM_e GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH)
         {
 	        //Log_DebugPrintf(LOGID_SOC_AUDIO, "GetStreamIDByDmaCH::  audDrv->dmaCH = %d, dmaCH = %d, i = %d\n", 
             //                        audDrv->dmaCH, dmaCH, i);
+
+            //should directly get from
+//HWConfig_Table[i].dma
+
             if (audDrv->dmaCH == dmaCH)
             {
                 streamID = audDrv->streamID;

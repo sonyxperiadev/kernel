@@ -1759,9 +1759,9 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 	
 		//Load HW Mixer gains from sysparm
 	
-		mixerInputGain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_input_gain_l; //Q13p2 dB
+		mixerInputGain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_input_gain_l; //Q13p2 dB
 		mixerInputGain = mixerInputGain*25; //into mB
-		//mixerInputGain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_input_gain_r;
+		//mixerInputGain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_input_gain_r;
 		//mixerInputGain = mixerInputGain*25; //into mB
 	
 		//determine which which mixer input to apply the gains to
@@ -1778,15 +1778,15 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 			csl_caph_srcmixer_set_mix_all_in_gain( outChnl, mixerInputGain, mixerInputGain);
 		}
 	
-		mixerOutputFineGain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_fine_gain_l; //Q13p2 dB
+		mixerOutputFineGain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_fine_gain_l; //Q13p2 dB
 		mixerOutputFineGain = mixerOutputFineGain*25; //into mB
-		//mixerOutputFineGain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_fine_gain_r;
+		//mixerOutputFineGain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_fine_gain_r;
 		//mixerOutputFineGain = mixerOutputFineGain*25; //into mB
 	
 	
-		mixerOutputBitSelect = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_coarse_gain_l; //Q13p2 dB
+		mixerOutputBitSelect = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_coarse_gain_l; //Q13p2 dB
 		mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
-		//mixerOutputBitSelect = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_coarse_gain_r;
+		//mixerOutputBitSelect = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_coarse_gain_r;
 		//mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
 	
 		csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixerOutputBitSelect);
@@ -1835,17 +1835,17 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 			//		PMU_AUDIO_HS_BOTH
 			//};
 	
-			pmu_gain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_l; //Q13p2 dB
 			SetGainOnExternalAmp_mB(AUDIO_SINK_HEADSET, pmu_gain*25, 1); //PMU_AUDIO_HS_LEFT);
 	
-			pmu_gain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_r; //Q13p2 dB
+			pmu_gain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_r; //Q13p2 dB
 			SetGainOnExternalAmp_mB(AUDIO_SINK_HEADSET, pmu_gain*25, 0); //PMU_AUDIO_HS_RIGHT);
 			break;
 	
 		case AUDIO_MODE_SPEAKERPHONE:
 		case AUDIO_MODE_SPEAKERPHONE_WB:
 	
-			pmu_gain = (int) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_l; //Q13p2 dB
 			SetGainOnExternalAmp_mB( AUDIO_SINK_LOUDSPK, pmu_gain*25, 0); //PMU_AUDIO_HS_BOTH);
 			break;
 	

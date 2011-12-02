@@ -145,7 +145,7 @@ typedef enum
 	CSL_CAPH_DEV_BT_SPKR,  /*Bluetooth headset speaker*/
 	CSL_CAPH_DEV_DSP,  /*DSP direct connection with SRCMixer in voice call*/
 	CSL_CAPH_DEV_DIGI_MIC,  /*Two Digital microphones*/
-//	CSL_CAPH_DEV_DIGI_MIC_L=CSL_CAPH_DEV_DIGI_MIC,  /*Digital microphones: left channel*/
+      // CSL_CAPH_DEV_DIGI_MIC_L=CSL_CAPH_DEV_DIGI_MIC,  /*Digital microphones: left channel*/
 	CSL_CAPH_DEV_DIGI_MIC_L,  /*Digital microphones: left channel*/
 	CSL_CAPH_DEV_DIGI_MIC_R,  /*Digital microphones: right channel*/	
 	CSL_CAPH_DEV_EANC_DIGI_MIC,  /*Two Noise Digital microphones for EANC control*/
@@ -161,6 +161,5 @@ typedef enum
 	CSL_CAPH_DEV_DSP_throughMEM,  /*DSP connection through shared mem*/
     CSL_CAPH_DEV_MAXNUM,
 }CSL_CAPH_DEVICE_e;
-#define CSL_AUDIO_DEVICE_e CSL_CAPH_DEVICE_e
 
 #endif // _CSL_CAPH_

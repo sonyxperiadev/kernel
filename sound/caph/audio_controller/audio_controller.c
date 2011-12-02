@@ -353,9 +353,10 @@ void AUDCTRL_SetTelephonyMicSpkr(
 
     if( AUDDRV_InVoiceCall( ) == FALSE )
     {
-	voiceCallSpkr = sink;
-	voiceCallMic = source;
-	return;
+      voiceCallSpkr = sink;
+      voiceCallMic = source;
+      AUDCTRL_SaveAudioModeFlag( AUDDRV_GetAudioModeBySink(sink) );
+      return;
     }
 	
     if(voiceCallMic==source && voiceCallSpkr==sink)
@@ -409,13 +410,13 @@ void AUDCTRL_SetTelephonyMicSpkr(
 //============================================================================
 void AUDCTRL_SetTelephonySpkrVolume(
 				AUDIO_SINK_Enum_t		speaker,
-				Int32					volume,
+				int						volume,
 				AUDIO_GAIN_FORMAT_t		gain_format
 				)
 {
     //int pmuGain = 0;
     //pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
-    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = %ld \n", volume );
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = %d \n", volume );
 
     if (gain_format == AUDIO_GAIN_FORMAT_mB)
     {
@@ -1019,11 +1020,11 @@ void AUDCTRL_SetPlayVolume(
 #ifdef CONFIG_BCMPMU_AUDIO
 #if 1
 			/***** fix PMU gain, adjust CAPH gain **/
-			pmu_gain[sink] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_HEADSET ].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain[sink] = (short) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_HEADSET ].ext_speaker_pga_l; //Q13p2 dB
 			pmu_gain[sink] = pmu_gain[sink] * 25;  //mB
 			pmuAudioGainMap = map2pmu_hs_gain( pmu_gain[sink] );
 
-			pmu_gain_right[sink] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_HEADSET ].ext_speaker_pga_r; //Q13p2 dB
+			pmu_gain_right[sink] = (short) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_HEADSET ].ext_speaker_pga_r; //Q13p2 dB
 			pmu_gain_right[sink] = pmu_gain_right[sink] * 25;  //mB
 #else
 			/***** adjust PMU gain, adjust CAPH gain **/
@@ -1040,11 +1041,11 @@ void AUDCTRL_SetPlayVolume(
 #ifdef CONFIG_BCMPMU_AUDIO
 #if 1
 			/***** fix PMU gain, adjust CAPH gain **/
-			pmu_gain[sink] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_TTY ].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain[sink] = (short) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_TTY ].ext_speaker_pga_l; //Q13p2 dB
 			pmu_gain[sink] = pmu_gain[sink] * 25;  //mB
 			pmuAudioGainMap = map2pmu_hs_gain( pmu_gain[sink] );
 
-			pmu_gain_right[sink] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_TTY ].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain_right[sink] = (short) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_TTY ].ext_speaker_pga_l; //Q13p2 dB
 			pmu_gain_right[sink] = pmu_gain_right[sink] * 25;  //mB
 #else
 			/***** adjust PMU gain, adjust CAPH gain **/
@@ -1060,11 +1061,11 @@ void AUDCTRL_SetPlayVolume(
 #ifdef CONFIG_BCMPMU_AUDIO
 #if 1
 			/***** fixed PMU gain, adjust CAPH gain **/
-			pmu_gain[sink] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_SPEAKERPHONE ].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain[sink] = (short) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_SPEAKERPHONE ].ext_speaker_pga_l; //Q13p2 dB
 			pmu_gain[sink] = pmu_gain[sink] * 25;  //mB
 			pmuAudioGainMap = map2pmu_ihf_gain( pmu_gain[sink] );
 
-			pmu_gain_right[sink] = (int) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_SPEAKERPHONE ].ext_speaker_pga_l; //Q13p2 dB
+			pmu_gain_right[sink] = (short) AUDIO_GetParmAccessPtr()[ AUDIO_MODE_SPEAKERPHONE ].ext_speaker_pga_l; //Q13p2 dB
 			pmu_gain_right[sink] = pmu_gain_right[sink] * 25;  //mB
 #else
 			/***** adjust PMU gain, adjust CAPH gain **/
@@ -1876,7 +1877,7 @@ void AUDCTRL_SetAudioLoopback(
 								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 							};
     UInt32 *coeff = &sidetoneCoeff[0];
-    CSL_AUDIO_DEVICE_e source, sink;
+    CSL_CAPH_DEVICE_e source, sink;
     static CSL_CAPH_DEVICE_e audSpkr;
     CSL_CAPH_PathID pathID;
     CSL_CAPH_HWCTRL_CONFIG_t hwCtrlConfig;

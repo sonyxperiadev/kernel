@@ -3421,12 +3421,12 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID)
 
 /****************************************************************************
 *
-*  Function Name: Result_t csl_caph_hwctrl_DisableSideTone(CSL_AUDIO_DEVICE_e sink)
+*  Function Name: Result_t csl_caph_hwctrl_DisableSideTone(CSL_CAPH_DEVICE_e sink)
 *
 *  Description: Disable Sidetone path
 *
 ****************************************************************************/
-void csl_caph_hwctrl_DisableSidetone(CSL_AUDIO_DEVICE_e sink)
+void csl_caph_hwctrl_DisableSidetone(CSL_CAPH_DEVICE_e sink)
 {
 	int path_id = 0;
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_DisableSidetone.\r\n"));
@@ -3685,12 +3685,12 @@ void csl_caph_hwctrl_vibrator_strength(int strength)
 /****************************************************************************
 *
 *  Function Name:void csl_caph_hwctrl_EnableSidetone(
-*  					CSL_AUDIO_DEVICE_e sink)
+*  					CSL_CAPH_DEVICE_e sink)
 *
 *  Description: Enable/Disable a HW Sidetone path
 *
 ****************************************************************************/
-void csl_caph_hwctrl_EnableSidetone(CSL_AUDIO_DEVICE_e sink)
+void csl_caph_hwctrl_EnableSidetone(CSL_CAPH_DEVICE_e sink)
 {
 	int path_id = 0;
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_EnableSidetone.\r\n"));

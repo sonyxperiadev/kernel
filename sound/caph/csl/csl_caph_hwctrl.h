@@ -22,7 +22,6 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 /*                                                                                              */
 /************************************************************************************************/
 
-
 /**
 *
 *   @file   csl_caph_hwctrl.h
@@ -30,7 +29,6 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 *   @brief  This file contains the definition for HW control CSL driver layer
 *
 ****************************************************************************/
-
 
 #ifndef _CSL_CAPH_HWCTRL_
 #define _CSL_CAPH_HWCTRL_
@@ -471,7 +469,7 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID);
 *
 *  @return
 *****************************************************************************/
-void csl_caph_hwctrl_DisableSidetone(CSL_AUDIO_DEVICE_e sink);
+void csl_caph_hwctrl_DisableSidetone(CSL_CAPH_DEVICE_e sink);
 
 
 /**
@@ -557,7 +555,7 @@ void csl_caph_hwctrl_vibrator_strength(int strength);
 *  @return
 ****************************************************************************/
 
-void csl_caph_hwctrl_EnableSidetone(CSL_AUDIO_DEVICE_e sink);
+void csl_caph_hwctrl_EnableSidetone(CSL_CAPH_DEVICE_e sink);
 
 
 

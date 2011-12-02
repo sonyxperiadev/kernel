@@ -77,13 +77,13 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl);
 
 /****************************************************************************
 *
-*  Function Name:UInt32 csl_audio_capture_init(CSL_AUDIO_DEVICE_e source, 
-*                                                        CSL_AUDIO_DEVICE_e sink)
+*  Function Name:UInt32 csl_audio_capture_init(CSL_CAPH_DEVICE_e source, 
+*                                                        CSL_CAPH_DEVICE_e sink)
 *
 *  Description: init CAPH capture block
 *
 ****************************************************************************/
-UInt32 csl_audio_capture_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
+UInt32 csl_audio_capture_init(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVICE_e sink)
 {
 	UInt32 streamID = CSL_CAPH_STREAM_NONE;
 	CSL_CAPH_Capture_Drv_t	*audDrv = NULL;

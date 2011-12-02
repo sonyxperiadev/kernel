@@ -40,8 +40,8 @@ typedef void (*CSL_AUDRENDER_CB)(UInt32 streamID);
 typedef	struct
 {
 	UInt32		streamID;
-	CSL_AUDIO_DEVICE_e 		source;	
-	CSL_AUDIO_DEVICE_e 		sink;
+	CSL_CAPH_DEVICE_e 		source;	
+	CSL_CAPH_DEVICE_e 		sink;
 	CSL_CAPH_PathID         pathID;
     CSL_AUDRENDER_CB        dmaCB;	
 	CSL_CAPH_DMA_CHNL_e	    dmaCH;
@@ -60,7 +60,7 @@ typedef	struct
 *
 *  @return UInt32 the obtained stream id.
 *****************************************************************************/
-UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink);
+UInt32 csl_audio_render_init(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVICE_e sink);
 
 
 /**
