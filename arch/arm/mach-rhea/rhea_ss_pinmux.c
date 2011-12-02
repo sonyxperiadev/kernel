@@ -122,6 +122,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(DCLKREQ4, SSP1DI, 0, OFF,  ON, 0, 0, 8MA),
 #endif
 
+	PIN_CFG(DCLK4,  GPIO95, 0, OFF, OFF, 0, 0, 8MA),
 	/* LCD */
 	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(LCDRES, GPIO41, 0, OFF, ON, 0, 0, 8MA),

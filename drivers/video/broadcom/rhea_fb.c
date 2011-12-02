@@ -228,6 +228,12 @@ skip_drawing:
 
 static void reset_display(u32 gpio)
 {
+
+	
+	gpio_request(95,"BK_LIGHT");
+	gpio_direction_output(95, 0);
+	gpio_set_value_cansleep(95, 1);
+	
 	if (gpio != 0) {
 		gpio_request(gpio, "LCD_RST1");
 		gpio_direction_output(gpio, 0);
@@ -252,6 +258,8 @@ static int enable_display(struct rhea_fb *fb, u32 gpio, u32 bus_width)
 	}
 	
 	reset_display(gpio);
+	printk("sleep 100ms after reset gpio %d\n",gpio);
+	msleep(100); //haipeng Temporary
 
 	local_DISPDRV_OPEN_PARM_T.busId = fb->phys_fbbase;
 	local_DISPDRV_OPEN_PARM_T.busCh = 0;

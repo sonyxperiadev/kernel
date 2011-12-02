@@ -2056,10 +2056,12 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
 #endif
 
     // restore TE mode config - complex, simplify
-    dsiChH->chalCmCfg.isTE = isTE;  
+    
+    dsiChH->chalCmCfg.isTE = 0; 
     
     if ( req->cslLcdCb == NULL )
     {   
+    	printk("cslLcdCb == NULL\n");
         osStat = OSSEMAPHORE_Obtain ( dsiH->semaDma, 
             TICKS_IN_MILLISECONDS( req->timeOut_ms ) );
 

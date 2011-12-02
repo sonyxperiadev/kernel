@@ -443,7 +443,7 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 #endif
 
 #define SENSOR_0_GPIO_PWRDN		12
-#define SENSOR_0_GPIO_RST		(KONA_MAX_GPIO + 10)
+#define SENSOR_0_GPIO_RST		33
 #define SENSOR_0_CLK			"dig_ch0_clk"
 #define SENSOR_0_CLK_FREQ		(13000000)
 
@@ -498,8 +498,8 @@ static int pca953x_platform_exit_hw(struct i2c_client *client,
 
 static struct pca953x_platform_data board_expander_info = {
 	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
-	.gpio_base	= KONA_MAX_GPIO,
-	.irq_base	= gpio_to_irq(KONA_MAX_GPIO),
+	.gpio_base	= 33, //Temporay value KONA_MAX_GPIO,
+	.irq_base	= gpio_to_irq(33),
 	.setup		= pca953x_platform_init_hw,
 	.teardown	= pca953x_platform_exit_hw,
 };
@@ -536,8 +536,8 @@ static int pca953x_2_platform_exit_hw(struct i2c_client *client,
 
 static struct pca953x_platform_data board_expander_2_info = {
 	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
-	.gpio_base	= KONA_MAX_GPIO+16,
-	.irq_base	= gpio_to_irq(KONA_MAX_GPIO+16),
+	.gpio_base	= 33; //Temporay value  KONA_MAX_GPIO+16,
+	.irq_base	= gpio_to_irq(33),
 	.setup		= pca953x_2_platform_init_hw,
 	.teardown	= pca953x_2_platform_exit_hw,
 };
@@ -554,7 +554,7 @@ static struct i2c_board_info __initdata pca953x_2_info[] = {
 
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 #ifdef CONFIG_GPIO_PCA953X
-#define QT602240_INT_GPIO_PIN      (KONA_MAX_GPIO + 8)
+#define QT602240_INT_GPIO_PIN      (121)
 #else
 #define QT602240_INT_GPIO_PIN      74 /* skip expander chip */
 #endif
@@ -615,7 +615,7 @@ static struct i2c_board_info __initdata bmp18x_info[] =
 #endif
 #ifdef CONFIG_AL3006
 #ifdef CONFIG_GPIO_PCA953X
-	#define AL3006_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 6)
+	#define AL3006_INT_GPIO_PIN		(121)
 #else
 	#define AL3006_INT_GPIO_PIN		122	/*  skip expander chip */
 #endif
@@ -1094,24 +1094,25 @@ static struct platform_device tps728xx_vc_device_sim2 = {
 #endif /* CONFIG_REGULATOR_TPS728XX*/
 
 #ifdef CONFIG_FB_BRCM_RHEA
-static struct kona_fb_platform_data alex_dsi_display_fb_data = {
-	.get_dispdrv_func_tbl	= &DISP_DRV_BCM91008_ALEX_GetFuncTable,
-	.screen_width		= 360,
-	.screen_height		= 640,
+static struct kona_fb_platform_data rhea_ss_dsi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISPDRV_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
 	.bytes_per_pixel	= 4,
-	.gpio			= (KONA_MAX_GPIO + 3),
+	.gpio			= 41,
 	.pixel_format		= XRGB8888,
 };
 
-static struct platform_device alex_dsi_display_device = {
+static struct platform_device rhea_ss_dsi_display_device = {
 	.name    = "rhea_fb",
 	.id      = 0,
 	.dev = {
-		.platform_data		= &alex_dsi_display_fb_data,
+		.platform_data		= &rhea_ss_dsi_display_fb_data,
 		.dma_mask		= (u64 *) ~(u32)0,
 		.coherent_dma_mask	= ~(u32)0,
 	},
 };
+
 
 static struct kona_fb_platform_data nt35582_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
@@ -1197,8 +1198,8 @@ static struct platform_device r61581_smi8_display_device = {
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 
-#define BCMBT_VREG_GPIO       (KONA_MAX_GPIO +4)
-#define BCMBT_N_RESET_GPIO    (KONA_MAX_GPIO + 14)
+#define BCMBT_VREG_GPIO       100
+#define BCMBT_N_RESET_GPIO    90
 #define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
 #define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
 
@@ -1361,11 +1362,7 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 	&tps728xx_device,
 #endif
 #ifdef CONFIG_FB_BRCM_RHEA
-	&alex_dsi_display_device,
-	&nt35582_smi16_display_device,
-	&nt35582_smi8_display_device,
-	&r61581_smi8_display_device,
-	&r61581_smi16_display_device,
+	&rhea_ss_dsi_display_device,	
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
