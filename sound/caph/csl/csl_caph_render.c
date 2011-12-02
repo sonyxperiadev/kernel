@@ -118,7 +118,7 @@ Result_t csl_audio_render_deinit(UInt32 streamID)
 {
 	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
 	
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_deinit::streamID=0x%x\n", streamID);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_deinit::streamID=0x%lx\n", streamID);
 
 	audDrv = GetRenderDriverByType (streamID);
 
@@ -153,7 +153,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
 	AP_SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
 #endif
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_configure:: streamID = 0x%x, sampleRate =0x%x, numChannels = 0x%x, numbBuffers = 0x%x, blockSize = 0x%x, bitsPerSample %d, cb = %x.\r\n", 
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_configure:: streamID = 0x%lx, sampleRate =0x%lx, numChannels = 0x%x, numbBuffers = 0x%lx, blockSize = 0x%lx, bitsPerSample %d, cb = %lx.\r\n", 
 					streamID, sampleRate, numChannels, numBlocks, blockSize, bitsPerSample, csl_audio_render_cb);
 	
 	audDrv = GetRenderDriverByType (streamID);
@@ -203,7 +203,7 @@ Result_t csl_audio_render_start (UInt32 streamID)
 {
 	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
 	
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_render_start::streamID=0x%x\n", streamID);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_render_start::streamID=0x%lx\n", streamID);
 
 	audDrv = GetRenderDriverByType (streamID);
 
@@ -227,7 +227,7 @@ Result_t csl_audio_render_stop (UInt32 streamID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_render_stop::streamID=0x%x\n", streamID);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_render_stop::streamID=0x%lx\n", streamID);
 	config.streamID = (CSL_CAPH_STREAM_e)streamID;
 	(void)csl_caph_hwctrl_DisablePath(config);
 	
@@ -246,7 +246,7 @@ Result_t csl_audio_render_pause (UInt32 streamID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_render_pause::streamID=0x%x\n", streamID);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_render_pause::streamID=0x%lx\n", streamID);
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 	config.streamID = (CSL_CAPH_STREAM_e)streamID;
 	(void)csl_caph_hwctrl_PausePath(config);
@@ -266,7 +266,7 @@ Result_t csl_audio_render_resume (UInt32 streamID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_render_resume::streamID=0x%x\n", streamID);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_render_resume::streamID=0x%lx\n", streamID);
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 	config.streamID = (CSL_CAPH_STREAM_e)streamID;
 	(void)csl_caph_hwctrl_ResumePath(config);

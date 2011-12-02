@@ -429,7 +429,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				int data;
 				get_user(data,__user (int *)arg);
 				voip_data.mic = (AUDIO_SOURCE_Enum_t)data;
-				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSource mic %d, \n",voip_data.mic);
+				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSource mic %ld, \n",voip_data.mic);
 			}
 			break;
 			
@@ -438,7 +438,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				int data;
 				get_user(data,__user (int *)arg);
 				voip_data.spk = (AUDIO_SINK_Enum_t)data;				
-				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSink spk %d, \n",voip_data.spk);
+				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSink spk %ld, \n",voip_data.spk);
 			}
 			break;
 			
@@ -447,7 +447,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				int data;
 				get_user(data,__user (int *)arg);
 				voip_data.codec_type = (u32)data;				
-				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetCodecType codec_type %d, \n",voip_data.codec_type);
+				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetCodecType codec_type %ld, \n",voip_data.codec_type);
 			}
 			break;
 		case VoIP_Ioctl_SetBitrate:
@@ -455,7 +455,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				int data;
 				get_user(data,__user (int *)arg);
 				voip_data.bitrate_index = (u32)data;
-				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetBitrate bitrate_index %d, \n",voip_data.bitrate_index);
+				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetBitrate bitrate_index %ld, \n",voip_data.bitrate_index);
 			}
 			break;
 		case VoIP_Ioctl_GetSource:

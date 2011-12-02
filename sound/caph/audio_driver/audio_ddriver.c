@@ -1261,7 +1261,7 @@ static Result_t ARM2SP_play_start (AUDIO_DDRIVER_t* aud_drv,
 static Result_t ARM2SP_play_resume (AUDIO_DDRIVER_t* aud_drv)
 {
 #if defined(CONFIG_BCM_MODEM)
-	Log_DebugPrintf(LOGID_AUDIO, "Resume ARM2SP voice play instanceID=0x%x \n", aud_drv->arm2sp_config.instanceID);
+	Log_DebugPrintf(LOGID_AUDIO, "Resume ARM2SP voice play instanceID=0x%lx \n", aud_drv->arm2sp_config.instanceID);
 
 	if (aud_drv->arm2sp_config.instanceID  == VORENDER_ARM2SP_INSTANCE1)
 		csl_arm2sp_set_arm2sp((UInt32) aud_drv->sample_rate, 

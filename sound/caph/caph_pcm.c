@@ -232,7 +232,7 @@ static int PcmPlaybackOpen(
 	param_open.drv_handle = NULL;
 	param_open.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
 
-    BCM_AUDIO_DEBUG("\n %lx:playback_open route the playback to CAPH\n");
+    BCM_AUDIO_DEBUG("\n %lx:playback_open route the playback to CAPH\n", jiffies);
     //route the playback to CAPH
     runtime->hw = brcm_playback_hw;
     chip->streamCtl[substream_number].dev_prop.p[0].drv_type = AUDIO_DRIVER_PLAY_AUDIO;
@@ -664,7 +664,7 @@ static int PcmCaptureTrigger(
 	}
 	else
 	{
-		BCM_AUDIO_DEBUG("Error!! No valid device selected by the user\n", pSel[0]);
+		BCM_AUDIO_DEBUG("Error!! No valid device selected by the user, pSel[0]=%d\n", pSel[0]);
 		return -EINVAL;
 	}
 	switch (cmd)

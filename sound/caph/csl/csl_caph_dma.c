@@ -644,7 +644,7 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
 	CAPH_CFIFO_e caph_cfifo_fifo = CAPH_CFIFO_VOID;
     CAPH_CFIFO_CHNL_DIRECTION_e direction = CAPH_CFIFO_IN;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_config_channel:: dir %d fifo %d dma %d mem %p size %p Tsize %d dmaCB %p.\r\n", 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_config_channel:: dir %d fifo %d dma %d mem %p size %ld Tsize %d dmaCB %p.\r\n", 
 		chnl_config.direction, chnl_config.fifo, chnl_config.dma_ch, chnl_config.mem_addr, chnl_config.mem_size, chnl_config.Tsize, chnl_config.dmaCB));
 
 	if ((chnl_config.fifo == CSL_CAPH_CFIFO_NONE) || (chnl_config.dma_ch == CSL_CAPH_DMA_NONE))
@@ -683,7 +683,7 @@ void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config)
 {
 	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_set_buffer:: dir %d fifo %d dma %d mem %p size %p Tsize %d dmaCB %p.\r\n",
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_set_buffer:: dir %d fifo %d dma %d mem %p size %ld Tsize %d dmaCB %p.\r\n",
 		chnl_config.direction, chnl_config.fifo, chnl_config.dma_ch, chnl_config.mem_addr, chnl_config.mem_size, chnl_config.Tsize, chnl_config.dmaCB);
 
 	if (chnl_config.dma_ch == CSL_CAPH_DMA_NONE)

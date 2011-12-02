@@ -163,7 +163,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_start(CSL_PCM_HANDLE handle,
     CHAL_SSPI_STATUS_t status;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start:: handle %p.\r\n", handle));
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start:: cfgDev mode %d interleave %d protocol %d format %d size %d bits %d sr %d.\r\n", 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start:: cfgDev mode %d interleave %d protocol %d format %d size %ld bits %ld sr %ld.\r\n", 
 		config->mode, config->interleave, config->protocol, config->format, config->xferSize, config->ext_bits, config->sample_rate));
 	
 //    pcm_config_dma(handle, config);
@@ -397,7 +397,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	uint32_t intrMask;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: handle %p.\r\n", handle));
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: cfgDev mode %d interleave %d protocol %d format %d size %d bits %d sr %d.\r\n", 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: cfgDev mode %d interleave %d protocol %d format %d size %ld bits %ld sr %ld.\r\n", 
 		configDev->mode, configDev->interleave, configDev->protocol, configDev->format, configDev->xferSize, configDev->ext_bits, configDev->sample_rate));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: cfgTx ena %d ch %d sr %d lpbEna %d.\r\n", configTx->enable, configTx->channel, configTx->sampleRate, configTx->loopback_enable));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: cfgRx ena %d ch %d sr %d lpbEna %d.\r\n", configRx->enable, configRx->channel, configRx->sampleRate, configRx->loopback_enable));

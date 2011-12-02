@@ -167,7 +167,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 				if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED
 				{
 					//call audio driver to set volume
-					BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetPlayVolume pVolume[0] =%ld (0.25dB), pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
+					BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetPlayVolume pVolume[0] =%d (0.25dB), pVolume[1]=%d\n", pVolume[0],pVolume[1]);
 					parm_vol.source = pChip->streamCtl[stream-1].dev_prop.p[0].source;
 					parm_vol.sink = pChip->streamCtl[stream-1].dev_prop.p[0].sink;
 					parm_vol.volume1 = pVolume[0];
@@ -183,7 +183,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 			if(pCurSel[0] == dev) //if current sink is diffent, dont call the driver to change the volume
 			{
 				//call audio driver to set volume
-				BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetPlayVolume pVolume[0] =%ld (0.25dB), pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
+				BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetPlayVolume pVolume[0] =%d (0.25dB), pVolume[1]=%d\n", pVolume[0],pVolume[1]);
 				parm_vol.source = pChip->streamCtl[stream-1].dev_prop.p[0].source;
 				parm_vol.sink = pChip->streamCtl[stream-1].dev_prop.p[0].sink;
 				parm_vol.volume1 = pVolume[0];
@@ -195,7 +195,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 		break;
 		case CTL_STREAM_PANEL_VOICECALL:
 		{
-			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[1] = %ld, pVolume[0] =%ld, dev =%ld\n", pCurSel[1],pVolume[0],dev);
+			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[1] = %d, pVolume[0] =%d, dev =%d\n", pCurSel[1],pVolume[0],dev);
 
 			//call audio driver to set gain/volume
 			if(pCurSel[1] == dev)
@@ -220,7 +220,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 				if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED
 				{
 					//call audio driver to set volume
-					BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetRecordGain pVolume[0] =%ld, pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
+					BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetRecordGain pVolume[0] =%d, pVolume[1]=%d\n", pVolume[0],pVolume[1]);
 					parm_vol.source = pChip->streamCtl[stream-1].dev_prop.c.source;
 					parm_vol.volume1 = pVolume[0];
 					parm_vol.volume2 = pVolume[1];
@@ -339,7 +339,7 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 			pSel[2] = AUDIO_SINK_HANDSET;
 	}
 
-	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%ld, pSel[1]=%ld, pSel[2]=%ld,\n", stream,pSel[0],pSel[1],pSel[2]);
+	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%d, pSel[1]=%d, pSel[2]=%d,\n", stream,pSel[0],pSel[1],pSel[2]);
 
 	switch(stream)
 	{
@@ -720,7 +720,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			struct snd_ctl_elem_info info;
 			kcontrol->info(kcontrol, &info);
 			rtn = AtAudCtlHandler_get(kcontrol->id.index, pChip, info.count, ucontrol->value.integer.value);
-			BCM_AUDIO_DEBUG("%s values [%d %d %d %d %d %d %d]", __FUNCTION__, ucontrol->value.integer.value[0],
+			BCM_AUDIO_DEBUG("%s values [%ld %ld %ld %ld %ld %ld %ld]", __FUNCTION__, ucontrol->value.integer.value[0],
 				ucontrol->value.integer.value[1],ucontrol->value.integer.value[2], ucontrol->value.integer.value[3], ucontrol->value.integer.value[4],
 				ucontrol->value.integer.value[5],ucontrol->value.integer.value[6]);
 		}
@@ -788,7 +788,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			pChip->iEnablePhoneCall = ucontrol->value.integer.value[0];
 			pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect;
 
-			BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ENABLE pSel[0] = %ld-%ld\n", pSel[0],pSel[1] );
+			BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ENABLE pSel[0] = %d-%d\n", pSel[0],pSel[1] );
 			parm_call.new_mic = parm_call.cur_mic = pSel[0];
 			parm_call.new_spkr = parm_call.new_spkr = pSel[1];
 
@@ -812,7 +812,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				{
 					pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect;
 
-					BCM_AUDIO_DEBUG("MiscCtrlPut pSel[0] = %ld pMute[0] =%ld pMute[1] =%ld\n", pSel[0], pChip->iMutePhoneCall[0], pChip->iMutePhoneCall[1]);
+					BCM_AUDIO_DEBUG("MiscCtrlPut pSel[0] = %d pMute[0] =%d pMute[1] =%d\n", pSel[0], pChip->iMutePhoneCall[0], pChip->iMutePhoneCall[1]);
 
 					//call audio driver to mute
 					parm_mute.source =  pSel[0];
@@ -830,7 +830,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			pChip->iEnableFM = ucontrol->value.integer.value[0];
             pChip->streamCtl[stream-1].dev_prop.p[0].source = AUDIO_SOURCE_I2S;
 			pSel = pChip->streamCtl[stream-1].iLineSelect;
-			BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_FM_ENABLE stream = %d, status = %d, pSel[0] = %ld-%ld \n", stream, pChip->iEnableFM,pSel[0],pSel[1]);
+			BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_FM_ENABLE stream = %d, status = %d, pSel[0] = %d-%d \n", stream, pChip->iEnableFM,pSel[0],pSel[1]);
 
 			if(!pChip->iEnableFM)  // disable FM
             {
@@ -918,7 +918,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			}
 			else
 			{
-				BCM_AUDIO_DEBUG("%s, Invalid value for setting IHF mode: %d, 1-mono, 2-stereo.", __FUNCTION__, ucontrol->value.integer.value[0]);
+				BCM_AUDIO_DEBUG("%s, Invalid value for setting IHF mode: %ld, 1-mono, 2-stereo.", __FUNCTION__, ucontrol->value.integer.value[0]);
 			}
 			break;
 		case CTL_FUNCTION_CFG_SSP:
@@ -931,7 +931,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			break;
 			
 		case CTL_FUNCTION_SINK_CHG:
-			BCM_AUDIO_DEBUG("Change sink device stream=%d cmd=%d sink=%d\n", stream, ucontrol->value.integer.value[0], ucontrol->value.integer.value[1]);
+			BCM_AUDIO_DEBUG("Change sink device stream=%d cmd=%ld sink=%ld\n", stream, ucontrol->value.integer.value[0], ucontrol->value.integer.value[1]);
 			cmd = ucontrol->value.integer.value[0];
 			pSel = pChip->streamCtl[stream-1].iLineSelect;
 			if(cmd == 0)//add device

@@ -198,7 +198,7 @@ Result_t csl_audio_capture_start (UInt32 streamID)
 {
 	CSL_CAPH_Capture_Drv_t	*audDrv = NULL;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_start::streamID=0x%x\n", streamID));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_start::streamID=0x%lx\n", streamID));
 
 	audDrv = GetCaptureDriverByType (streamID);
 
@@ -222,7 +222,7 @@ Result_t csl_audio_capture_stop (UInt32 streamID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_stop::streamID=0x%x\n", streamID));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_stop::streamID=0x%lx\n", streamID));
 
 	config.streamID = (CSL_CAPH_STREAM_e)streamID;
     (void)csl_caph_hwctrl_DisablePath(config);
@@ -242,7 +242,7 @@ Result_t csl_audio_capture_pause (UInt32 streamID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_pause::streamID=0x%x\n", streamID));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_pause::streamID=0x%lx\n", streamID));
 
 	config.streamID = (CSL_CAPH_STREAM_e)streamID;	
     (void)csl_caph_hwctrl_PausePath(config);
@@ -262,7 +262,7 @@ Result_t csl_audio_capture_resume (UInt32 streamID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_resume::streamID=0x%x\n", streamID));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_resume::streamID=0x%lx\n", streamID));
 
 	config.streamID = (CSL_CAPH_STREAM_e)streamID;
     (void)csl_caph_hwctrl_ResumePath(config);

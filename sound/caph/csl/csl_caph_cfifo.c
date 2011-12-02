@@ -396,7 +396,7 @@ void csl_caph_cfifo_config_fifo(CSL_CAPH_CFIFO_FIFO_e fifo,
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
 	CAPH_CFIFO_CHNL_DIRECTION_e chalDirect = CAPH_CFIFO_IN;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_config_fifo:: fifo %d dir %d threshold %p.\r\n", fifo, direction, threshold));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_config_fifo:: fifo %d dir %d threshold %d.\r\n", fifo, direction, threshold));
 	
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(fifo);
     chalDirect = csl_caph_cfifo_get_chal_direction(direction); 

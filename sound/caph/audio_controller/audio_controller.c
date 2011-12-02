@@ -416,7 +416,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 {
     //int pmuGain = 0;
     //pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
-    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = %d \n", volume );
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = %ld \n", volume );
 
     if (gain_format == AUDIO_GAIN_FORMAT_mB)
     {
@@ -827,7 +827,7 @@ void AUDCTRL_DisablePlay(
 
     memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_DisablePlay: src = 0x%x, sink = 0x%x, pathID %ld.\r\n",
+                    "AUDCTRL_DisablePlay: src = 0x%x, sink = 0x%x, pathID %d.\r\n",
                     source, sink,  pathID);
 
     if(pathID == 0)

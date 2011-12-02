@@ -113,9 +113,9 @@ void csl_i2s_config(CSL_HANDLE handle,CSL_I2S_CONFIG_t *config)
 	CSL_SSPI_HANDLE_T *pDevice = NULL;
     SSPI_hw_status_t status=SSPI_HW_NOERR;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_i2s_config:: handle %p mode %d txEn %d rxEn %d txLbEn %d rxLbEn %d trans_size %d.\r\n", 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_i2s_config:: handle %p mode %ld txEn %ld rxEn %ld txLbEn %ld rxLbEn %ld trans_size %ld.\r\n", 
 		handle, config->mode, config->tx_ena, config->rx_ena, config->tx_loopback_ena, config->rx_loopback_ena, config->trans_size));
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_i2s_config:: prot %d interleave %d sr %d.\r\n", config->prot, config->interleave, config->sampleRate));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_i2s_config:: prot %ld interleave %ld sr %d.\r\n", config->prot, config->interleave, config->sampleRate));
 
 	if (config->mode == CSL_I2S_MASTER_MODE){ 
 		pDevice = (CSL_SSPI_HANDLE_T *)handle;

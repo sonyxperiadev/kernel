@@ -142,7 +142,7 @@ void csl_dsp_caph_control_aadmac_enable_path(UInt16 path)
 
 
         vp_shared_mem->shared_aadmac_aud_enable |= path;
-    	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* csl_dsp_caph_control_aadmac_enable_path: vp_shared_mem = %x,&(vp_shared_mem->shared_aadmac_aud_enable) =%x, shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem, (UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)), vp_shared_mem->shared_aadmac_aud_enable);
+    	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* csl_dsp_caph_control_aadmac_enable_path: vp_shared_mem = %lx,&(vp_shared_mem->shared_aadmac_aud_enable) =%lx, shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem, (UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)), vp_shared_mem->shared_aadmac_aud_enable);
 
     }
 
@@ -173,7 +173,7 @@ void csl_dsp_caph_control_aadmac_disable_path(UInt16 path)
     else
     {
         vp_shared_mem->shared_aadmac_aud_enable &= ~path;
-    	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* csl_dsp_caph_control_aadmac_disable_path vp_shared_mem = %x,&(vp_shared_mem->shared_aadmac_aud_enable) =%x, shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem, (UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)), vp_shared_mem->shared_aadmac_aud_enable);
+    	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* csl_dsp_caph_control_aadmac_disable_path vp_shared_mem = %lx,&(vp_shared_mem->shared_aadmac_aud_enable) =%lx, shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem, (UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)), vp_shared_mem->shared_aadmac_aud_enable);
     }
 
 }
