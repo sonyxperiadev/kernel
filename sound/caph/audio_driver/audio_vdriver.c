@@ -158,6 +158,8 @@ static void AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode);
 static void auddrv_SetAudioMode_mic( AudioMode_t audio_mode, unsigned int arg_pathID );
 static void auddrv_SetAudioMode_speaker( AudioMode_t audio_mode, unsigned int arg_pathID );
 
+extern CSL_CAPH_HWConfig_Table_t HWConfig_Table[MAX_AUDIO_PATH];
+
 //=============================================================================
 // Functions
 //=============================================================================
@@ -481,7 +483,7 @@ void AUDDRV_Telephony_RateChange( unsigned int sample_rate )
 
 void AUDDRV_RegisterRateChangeCallback( audio_codecId_handler_t codecId_cb )
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "\n\r\t*  AUDDRV_RegisterRateChangeCallback, 0x%x\n\r", codecId_cb);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "\n\r\t*  AUDDRV_RegisterRateChangeCallback \n\r");
 	codecId_handler = codecId_cb;
 }
 
@@ -1254,7 +1256,7 @@ void AUDDRV_SetTelephonyMicGain(
 //============================================================================
 void AUDDRV_SetTelephonySpkrVolume(
 			AUDIO_SINK_Enum_t		speaker,
-			Int32					volume,
+			int						volume,
 			AUDIO_GAIN_FORMAT_t		gain_format
 			)
 {
@@ -1472,6 +1474,9 @@ static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
     config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
 
     telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
+
+    Log_DebugPrintf(LOGID_AUDIO, "\n* AUDDRV_Telephony_InitHW bNeedDualMic=%d *\n\r", bNeedDualMic );
+    
     //If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used
     //Here Let us assume it is DMIC3. It can be changed.
     if(bNeedDualMic==TRUE)
@@ -1696,7 +1701,6 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 	int mixerOutputBitSelect;
 	int pmu_gain = 0;
 
-	CSL_CAPH_PathID pathID = 0;
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
@@ -1762,9 +1766,10 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 	
 		//determine which which mixer input to apply the gains to
 	
-		//need to find the pathID then the mixer inputs,
+		if( arg_pathID >= 1 )
+			path = &HWConfig_Table[ arg_pathID - 1 ];
 	
-		if (pathID != 0)
+		if (path != 0)
 		{
 			csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, mixerInputGain, mixerInputGain);
 		}

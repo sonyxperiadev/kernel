@@ -328,7 +328,7 @@ void AUDDRV_SetTelephonyMicGain(
 ****************************************************************************/
 void AUDDRV_SetTelephonySpkrVolume(
 			AUDIO_SINK_Enum_t		speaker,
-			Int32					volume,
+			int						volume,
 			AUDIO_GAIN_FORMAT_t		gain_format
 			);
 
