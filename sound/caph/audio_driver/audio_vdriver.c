@@ -484,7 +484,6 @@ void AUDDRV_Telephony_RateChange( unsigned int sample_rate )
 void AUDDRV_RegisterRateChangeCallback( audio_codecId_handler_t codecId_cb )
 {
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "\n\r\t*  AUDDRV_RegisterRateChangeCallback, 0x%lx\n\r", codecId_cb);
-
 	codecId_handler = codecId_cb;
 }
 
