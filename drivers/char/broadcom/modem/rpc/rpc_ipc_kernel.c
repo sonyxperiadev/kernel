@@ -271,8 +271,8 @@ static int rpcipc_open(struct inode *inode, struct file *file)
 		}
 		else
 		{
-			_DBG(RPC_TRACE("rpcipc_open FAIL CP is NOT running file=%x\n", (int)file));
-		    ret = -1;
+			_DBG(RPC_TRACE("rpcipc_open FAIL CP is NOT running file=%x\n", (int)file));		    
+			ret = -ENODEV;
 		    if( priv )
 			kfree( priv ) ;
                     file->private_data = NULL;
@@ -287,50 +287,41 @@ static int rpcipc_open(struct inode *inode, struct file *file)
 
 
 static int rpcipc_release(struct inode *inode, struct file *file)
-{
-	int ret = -1;
+{	
 	unsigned char k = 0;
     RpcIpc_PrivData_t *priv = file->private_data;
 
 	RPC_WRITE_LOCK;
     
-    if( !priv )
-	{
-		_DBG(RPC_TRACE("k:rpcipc_release invalid priv data\n"));
-		ret = -1;
-	}
-	else
-	{
-		for(k=0;k<0xFF;k++)
-		{
-			RpcClientInfo_t *cInfo;
-			cInfo = gRpcClientList[k];
-
-			if(cInfo && (cInfo->filep == file))
-			{
-				RpcListCleanup(cInfo->clientId);
-			}
-		}
-
-		SYS_ReleaseClientID(priv->clientId);
-
-		_DBG(RPC_TRACE( "rpcipc_release ok\n" ) );
-
-		if( priv )
-			kfree( priv ) ;
-
-		ret = 0;
-	}
+    BUG_ON(!priv);
 	
+	for(k=0;k<0xFF;k++)
+	{
+		RpcClientInfo_t *cInfo;
+		cInfo = gRpcClientList[k];
+
+		if(cInfo && (cInfo->filep == file))
+		{
+			RpcListCleanup(cInfo->clientId);
+		}
+	}
+
+	SYS_ReleaseClientID(priv->clientId);
+
+	_DBG(RPC_TRACE( "rpcipc_release ok\n" ) );
+
+	if( priv )
+		kfree( priv ) ;
+
 	RPC_WRITE_UNLOCK;
     
-    return ret;
+    return 0;
 }
 
 
 ssize_t rpcipc_read(struct file *filep, char __user *buf, size_t len, loff_t *off)
 {
-	return -1;
+	return -ENOSYS;
 }
 
 ssize_t rpcipc_write(struct file *filep, const char __user *buf, size_t len, loff_t *off)
@@ -340,18 +331,18 @@ ssize_t rpcipc_write(struct file *filep, const char __user *buf, size_t len, lof
 
 static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 {
-    int retVal = 0;
+    long retVal = 0;
     
     if(!is_CP_running())
     {
         _DBG(RPC_TRACE( "rpcipc_ioctl: Error - CP is not running\n" )) ;
-        return -1;
+        return -ENODEV;
     }
 
 	if ( _IOC_TYPE(cmd) != RPC_SERVER_IOC_MAGIC || _IOC_NR(cmd) >= RPC_SERVER_IOC_MAXNR) 
 	{
 		_DBG(RPC_TRACE( "rpcipc_ioctl ERROR cmd=0x%x\n", cmd )) ;
-		return -ENOTTY;
+		return -ENOIOCTLCMD;
 	}
 
 	
@@ -360,79 +351,78 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 	case RPC_PKT_REGISTER_DATA_IND_IOC:
 		{
 			RPC_WRITE_LOCK;
-			handle_pkt_register_data_ind_ioc(filp, cmd, arg);
+			retVal = handle_pkt_register_data_ind_ioc(filp, cmd, arg);
 			RPC_WRITE_UNLOCK;
 			break;
 		}
 	case RPC_RX_BUFFER_IOC:
 		{
 			RPC_READ_LOCK;
-			handle_pkt_rx_buffer_ioc(filp, cmd, arg);
+			retVal = handle_pkt_rx_buffer_ioc(filp, cmd, arg);
 			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_READ_BUFFER_IOC:
 		{
 			RPC_READ_LOCK;
-			handle_pkt_read_buffer_ioc(filp, cmd, arg);
+			retVal = handle_pkt_read_buffer_ioc(filp, cmd, arg);
 			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_BUFF_INFO_IOC:
 		{
 			RPC_READ_LOCK;
-			handle_pkt_get_buffer_info_ioc(filp, cmd, arg);
+			retVal = handle_pkt_get_buffer_info_ioc(filp, cmd, arg);
 			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_SEND_BUFFER_IOC:
 		{
 			RPC_READ_LOCK;
-			handle_pkt_send_buffer_ioc(filp, cmd, arg);
+			retVal = handle_pkt_send_buffer_ioc(filp, cmd, arg);
 			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_PKT_ALLOC_BUFFER_IOC:
 		{
 			RPC_READ_LOCK;
-			handle_pkt_alloc_buffer_ioc(filp, cmd, arg);
+			retVal = handle_pkt_alloc_buffer_ioc(filp, cmd, arg);
 			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_PKT_FREE_BUFFER_IOC:
 		{
 			RPC_READ_LOCK;
-			handle_pkt_free_buffer_ioc(filp, cmd, arg);
+			retVal = handle_pkt_free_buffer_ioc(filp, cmd, arg);
 			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_PKT_CMD_IOC:
 		{
 			RPC_READ_LOCK;
-			handle_pkt_cmd_ioc(filp, cmd, arg);
+			retVal = handle_pkt_cmd_ioc(filp, cmd, arg);
 			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_TEST_CMD_IOC:
 		{
 			RPC_READ_LOCK;
-			handle_test_cmd_ioc(filp, cmd, arg);
+			retVal = handle_test_cmd_ioc(filp, cmd, arg);
 			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_PKT_POLL_IOC:
 		{
 			RPC_READ_LOCK;
-			handle_pkt_poll_ioc(filp, cmd, arg);
+			retVal = handle_pkt_poll_ioc(filp, cmd, arg);
 			RPC_READ_UNLOCK;
 			break;
 		}
 	default:
-		retVal = -1 ;
+		retVal = -ENOIOCTLCMD;
 		_DBG(RPC_TRACE( "rpcipc_ioctl ERROR unhandled cmd=0x%x tst=0x%x\n", cmd , RPC_RX_BUFFER_IOC)) ;
 		break ;
-    }
-	
+    }	
 
     return retVal;
 }
@@ -566,22 +556,17 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table *wait)
     if(!is_CP_running())
     {
         _DBG(RPC_TRACE( "rpcipc_poll: Error - CP is not running\n" )) ;
-        return -1;
+        return POLLERR;
     }
-
  
-    if( !priv )
-	{
-		_DBG(RPC_TRACE("k:rpcipc_poll invalid priv data\n"));
-		return -1;
-	}
+    BUG_ON(!priv);	
     
 	cInfo = gRpcClientList[priv->clientId];
 
 	if(!cInfo)
 	{
 		_DBG(RPC_TRACE("k:rpcipc_poll invalid clientID %d\n", priv->clientId));
-		return -1;
+		return POLLERR;
 	}
 
    //_DBG(RPC_TRACE("k:rpcipc_poll() start client=%d\n", priv->clientId));
@@ -629,14 +614,14 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd, UInt32 para
     if (copy_from_user(&ioc_param, (rpc_pkt_avail_t *)param, sizeof(rpc_pkt_avail_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_poll_ioc - copy_from_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 	
 	cInfo = gRpcClientList[ioc_param.clientId];
 	if(!cInfo)
 	{
 		_DBG(RPC_TRACE("k:rpcipc_poll invalid clientID %d\n", ioc_param.clientId));
-		return -1;
+		return -EINVAL;
 	}
 
     spin_lock_irqsave(&cInfo->mLock, irql);
@@ -665,7 +650,7 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd, UInt32 para
     if (copy_to_user((rpc_pkt_avail_t*)param, &ioc_param, sizeof(rpc_pkt_avail_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_poll_ioc - copy_to_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 	
     return 0;
@@ -684,7 +669,7 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd, UInt32
     if (copy_from_user(&ioc_param, (rpc_pkt_rx_buf_t *)param, sizeof(rpc_pkt_rx_buf_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_rx_buffer_ioc - copy_from_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
 	_DBG(RPC_TRACE("k:handle_pkt_rx_buffer_ioc client=%d\n", ioc_param.clientId));
@@ -694,7 +679,7 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd, UInt32
 	if(!cInfo)
 	{
 		_DBG(RPC_TRACE("k:handle_pkt_rx_buffer_ioc invalid clientID %d\n", ioc_param.clientId));
-		return -1;
+		return -EINVAL;
 	}
 
 
@@ -705,7 +690,7 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd, UInt32
     {
         _DBG(RPC_TRACE( "k:handle_pkt_rx_buffer_ioc Q empty\n" ));
         spin_unlock_irqrestore(&cInfo->mLock, irql);
-        return -1;
+        return -EAGAIN;
     }
 
     entry = cInfo->mQ.mList.next;
@@ -730,9 +715,8 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd, UInt32
     if (copy_to_user((rpc_pkt_rx_buf_t *)param, &ioc_param, sizeof(rpc_pkt_rx_buf_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_rx_buffer_ioc - copy_to_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
-
 
     return 0;
 }
@@ -747,7 +731,7 @@ static long handle_pkt_read_buffer_ioc(struct file *filp, unsigned int cmd, UInt
     if (copy_from_user(&ioc_param, (rpc_pkt_user_buf_t *)param, sizeof(rpc_pkt_user_buf_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_read_buffer_ioc - copy_from_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
 	cInfo = gRpcClientList[ioc_param.clientId];
@@ -755,7 +739,7 @@ static long handle_pkt_read_buffer_ioc(struct file *filp, unsigned int cmd, UInt
 	if(!cInfo)
 	{
 		_DBG(RPC_TRACE("k:handle_pkt_read_buffer_ioc invalid clientID %d\n", ioc_param.clientId));
-		return -1;
+		return -EINVAL;
 	}
 
 	_DBG(RPC_TRACE("k:handle_pkt_read_buffer_ioc client=%d pkt=%x len=%d\n", ioc_param.clientId, (int)ioc_param.dataBufHandle, (int)ioc_param.userBufLen));
@@ -765,7 +749,7 @@ static long handle_pkt_read_buffer_ioc(struct file *filp, unsigned int cmd, UInt
     if (copy_to_user(ioc_param.userBuf, buffer, ioc_param.userBufLen) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_read_buffer_ioc - copy_to_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
     return 0;
@@ -779,7 +763,7 @@ static long handle_pkt_get_buffer_info_ioc(struct file *filp, unsigned int cmd, 
     if (copy_from_user(&ioc_param, (rpc_pkt_buf_info_t *)param, sizeof(rpc_pkt_buf_info_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_get_buffer_info_ioc - copy_from_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
 	buffer = RPC_PACKET_GetBufferData(ioc_param.dataBufHandle);
@@ -793,7 +777,7 @@ static long handle_pkt_get_buffer_info_ioc(struct file *filp, unsigned int cmd, 
     if (copy_to_user((rpc_pkt_buf_info_t *)param, &ioc_param, sizeof(rpc_pkt_buf_info_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_get_buffer_info_ioc - copy_to_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
     return 0;
@@ -808,7 +792,7 @@ static long handle_pkt_send_buffer_ioc(struct file *filp, unsigned int cmd, UInt
     if (copy_from_user(&ioc_param, (rpc_pkt_user_buf_t *)param, sizeof(rpc_pkt_user_buf_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_send_buffer_ioc - copy_from_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
 
@@ -824,7 +808,7 @@ static long handle_pkt_send_buffer_ioc(struct file *filp, unsigned int cmd, UInt
 		if (copy_from_user(buffer, ioc_param.userBuf, bufLen) != 0)
 		{
 			_DBG(RPC_TRACE( "k:handle_pkt_send_buffer_ioc - buf copy_from_user() had error\n" ));
-			return -1;
+			return -EFAULT;
 		}
 		_DBG(RPC_TRACE("k:handle_pkt_send_buffer_ioc len=%d dest[%x:%x:%x:%x:%x], src[%x:%x:%x:%x:%x] \n",bufLen, buffer[0],buffer[1],buffer[2],buffer[3],buffer[4], srcBuf[0],srcBuf[1],srcBuf[2],srcBuf[3],srcBuf[4]));
 	}
@@ -846,7 +830,7 @@ static long handle_pkt_alloc_buffer_ioc(struct file *filp, unsigned int cmd, UIn
     if (copy_from_user(&ioc_param, (rpc_pkt_alloc_buf_t *)param, sizeof(rpc_pkt_alloc_buf_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_alloc_buffer_ioc - copy_from_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
 	RPC_READ_UNLOCK;
@@ -858,7 +842,7 @@ static long handle_pkt_alloc_buffer_ioc(struct file *filp, unsigned int cmd, UIn
     if (copy_to_user((rpc_pkt_alloc_buf_t*)param, &ioc_param, sizeof(rpc_pkt_alloc_buf_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_alloc_buffer_ioc - copy_to_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
     return 0;
@@ -872,14 +856,14 @@ static long handle_pkt_free_buffer_ioc(struct file *filp, unsigned int cmd, UInt
     if (copy_from_user(&ioc_param, (rpc_pkt_free_buf_t *)param, sizeof(rpc_pkt_free_buf_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_free_buffer_ioc - copy_from_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
 	res = RPC_PACKET_FreeBufferEx(ioc_param.dataBufHandle, ioc_param.clientId);
 	
 	_DBG(RPC_TRACE("k:handle_pkt_free_buffer_ioc pkt=%x res=%d\n", (int)ioc_param.dataBufHandle, res));
 
-    return res;
+    return res ? -EINVAL : 0;
 }
 
 static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 param )
@@ -889,7 +873,7 @@ static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 param
     if (copy_from_user(&ioc_param, (rpc_pkt_cmd_t *)param, sizeof(rpc_pkt_cmd_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_cmd_ioc - copy_from_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
 	ioc_param.outParam = 0;
@@ -967,7 +951,7 @@ static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 param
     if (copy_to_user((rpc_pkt_cmd_t*)param, &ioc_param, sizeof(rpc_pkt_cmd_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_cmd_ioc - copy_to_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
     return 0;
@@ -982,16 +966,12 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp, unsigned int cmd
 	rpc_pkt_reg_ind_t ioc_param = { 0 };
     RpcIpc_PrivData_t *priv = filp->private_data;
     
-    if( !priv )
-	{
-        _DBG(RPC_TRACE( "handle_pkt_register_data_ind_ioc - invalid priv data\n" ));
-		return -1;
-	}
+    BUG_ON(!priv);
     
 	if (copy_from_user(&ioc_param, (rpc_pkt_reg_ind_t *)param, sizeof(rpc_pkt_reg_ind_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_pkt_register_data_ind_ioc - copy_from_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 
 	
@@ -1001,13 +981,13 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp, unsigned int cmd
 	if(clientId == 0)
 	{
         _DBG(RPC_TRACE( "handle_pkt_register_data_ind_ioc - clientId is zero\n" ));
-		return -1;
+		return -EINVAL;
 	}
 	
 	if(gRpcClientList[clientId])
 	{
         _DBG(RPC_TRACE( "handle_pkt_register_data_ind_ioc - clientId exist\n" ));
-		return -1;
+		return -EBUSY;
 	}
 	
 	cInfo = (RpcClientInfo_t*)kmalloc( sizeof(RpcClientInfo_t), GFP_KERNEL);
@@ -1015,7 +995,7 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp, unsigned int cmd
 	if(!cInfo)
 	{
         _DBG(RPC_TRACE( "handle_pkt_register_data_ind_ioc - kmalloc fail\n" ));
-		return -1;
+		return -ENOMEM;
 	}
 
 	gRpcClientList[clientId] = cInfo;
@@ -1046,7 +1026,7 @@ static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 para
     if (copy_from_user(&ioc_param, (rpc_pkt_test_cmd_t *)param, sizeof(rpc_pkt_test_cmd_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_test_cmd_ioc - copy_from_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 	
 	_DBG(RPC_TRACE("k:handle_test_cmd_ioc cmd1=%x cmd2=%x cmd3=%x\n", ioc_param.cmd1, ioc_param.cmd2, ioc_param.cmd3));
@@ -1080,7 +1060,7 @@ static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 para
     if (copy_to_user((rpc_pkt_test_cmd_t*)param, &ioc_param, sizeof(rpc_pkt_test_cmd_t)) != 0)
     {
         _DBG(RPC_TRACE( "k:handle_test_cmd_ioc - copy_to_user() had error\n" ));
-        return -1;
+        return -EFAULT;
     }
 	
     return 0;
@@ -1294,7 +1274,7 @@ static int __init rpcipc_ModuleInit(void)
     {
         _DBG(RPC_TRACE( "driver class_create failed\n" ) );
         unregister_chrdev( major, BCM_KERNEL_RPC_NAME ) ;
-        return -1 ;
+        return PTR_ERR(sModule.mDriverClass) ;
     }
 
     drvdata = device_create( sModule.mDriverClass, NULL, MKDEV(major, 0), NULL, BCM_KERNEL_RPC_NAME ) ;  
@@ -1302,7 +1282,7 @@ static int __init rpcipc_ModuleInit(void)
     {
         _DBG(RPC_TRACE( "device_create_drvdata failed\n" ) );
         unregister_chrdev( major, BCM_KERNEL_RPC_NAME ) ;
-        return -1 ;
+        return PTR_ERR(drvdata) ;
     }
 
 	log_proc_init();
