@@ -31,6 +31,7 @@
 
 #include <linux/mfd/bcmpmu.h>
 
+#define SENSE_RES_COEF		97 /* for sense resistor 10m Ohm */
 #define BCMPMU_PRINT_ERROR (1U << 0)
 #define BCMPMU_PRINT_INIT (1U << 1)
 #define BCMPMU_PRINT_FLOW (1U << 2)
@@ -42,20 +43,6 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 			pr_info(args); \
 		} \
 	} while (0)
-#ifdef CONFIG_MFD_BCMPMU_DBG
-static ssize_t dbgmsk_show(struct device *dev, struct device_attribute *attr,
-				char *buf)
-{
-	return sprintf(buf, "debug_mask is %x\n", debug_mask);
-}
-static ssize_t dbgmsk_store(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	sscanf(buf, "%x", &debug_mask);
-	return count;
-}
-static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_store);
-#endif
 
 static struct bcmpmu_adc_cal adc_cal[PMU_ADC_MAX] = {
 	[PMU_ADC_VMBATT] =	{.gain = 1024, .offset = 0},
@@ -584,6 +571,8 @@ static int bcmpmu_get_fg_currsmpl(struct bcmpmu *bcmpmu, int *data)
 {
 	int ret;
 	struct bcmpmu_adc_req req;
+	struct bcmpmu_fg *pfg = bcmpmu->fginfo;
+	int curr;
 	ret = bcmpmu->write_dev(bcmpmu,
 			PMU_REG_FG_FRZSMPL,
 			bcmpmu->regmap[PMU_REG_FG_FRZSMPL].mask,
@@ -599,7 +588,8 @@ static int bcmpmu_get_fg_currsmpl(struct bcmpmu *bcmpmu, int *data)
 		pr_hwmon(ERROR, "%s failed to get adc result.\n", __func__);
 		return ret;
 	}
-	*data = req.cnv;
+	curr = ((req.cnv * SENSE_RES_COEF)/pfg->fg_sns_res)/10;
+	*data = (curr * pfg->fg_factor)/1000;
 	return	ret;
 }
 
@@ -622,12 +612,12 @@ static int bcmpmu_get_fg_acc_mas(struct bcmpmu *bcmpmu, int *data)
 {
 	int ret;
 	unsigned int acc0, acc1, acc2, acc3;
-	int acc;
+	long int acc;
 	unsigned int cnt, cnt0, cnt1;
 	unsigned int slpcnt, slpcnt0, slpcnt1;
 	struct bcmpmu_fg *pfg = bcmpmu->fginfo;
 	long int actacc, slpacc;
-	 
+
 	ret = bcmpmu->write_dev(bcmpmu,
 			PMU_REG_FG_FRZREAD,
 			bcmpmu->regmap[PMU_REG_FG_FRZREAD].mask,
@@ -679,6 +669,8 @@ static int bcmpmu_get_fg_acc_mas(struct bcmpmu *bcmpmu, int *data)
 	
 	acc = (int) (acc0 | (acc1 << 8) | (acc2 << 16) | (acc3 << 24));
 	pfg->fg_acc = acc;
+	pr_hwmon(DATA, "%s: acc=%ld, acc3=%X acc2=%X acc1=%X acc0=%X\n",
+		__func__, acc, acc3, acc2, acc1, acc0);
 
 	ret = bcmpmu->read_dev(bcmpmu,
 			PMU_REG_FG_CNT0,
@@ -720,11 +712,14 @@ static int bcmpmu_get_fg_acc_mas(struct bcmpmu *bcmpmu, int *data)
 	pfg->fg_slp_cnt = slpcnt;
 
 	actacc = acc * pfg->fg_smpl_cnt_tm;		/* mams */
+	actacc = ((actacc * (int)SENSE_RES_COEF)/pfg->fg_sns_res)/10;
+	actacc = (actacc/1000) * pfg->fg_factor;
 	slpacc = slpcnt * pfg->fg_slp_cnt_tm; 		/* ms */
 	slpacc = (slpacc * pfg->fg_slp_curr_ua) / 1000;	/* mams */
 	*data = (actacc + slpacc)/1000; 		/* mas */
 
-	pr_hwmon(FLOW, "%s: fg acc\n actacc=%ld, actcnt=%d\n slpacc=%ld, slpcnt=%d\n acc_mAsec = %d\n",
+	pr_hwmon(FLOW, "%s: fg acc\n actacc=%ld, actcnt=%d\n \
+		slpacc=%ld, slpcnt=%d\n acc_mAsec = %d\n",
 		__func__, actacc, cnt, slpacc, slpcnt, *data);
 
 	return ret;
@@ -803,6 +798,40 @@ static int bcmpmu_fg_trim_write(struct bcmpmu *bcmpmu, int data)
 	return ret;
 }
 
+#ifdef CONFIG_MFD_BCMPMU_DBG
+static ssize_t dbgmsk_show(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "debug_mask is %x\n", debug_mask);
+}
+static ssize_t dbgmsk_store(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	sscanf(buf, "%x", &debug_mask);
+	return count;
+}
+static ssize_t fg_status_show(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_fg *pfg = bcmpmu->fginfo;
+	return sprintf(buf, "Fuel Gauge Status\n \
+	fg_acc=%d\n fg_smpl_cnt=%d\n fg_slp_cnt=%d\n \
+	fg_smpl_cnt_tm=%d\n fg_slp_cnt_tm=%d\n \
+	fg_slp_curr_ua=%d\n fg_sns_res=%d\n fg_factor=%d\n",
+	pfg->fg_acc,
+	pfg->fg_smpl_cnt,
+	pfg->fg_slp_cnt,
+	pfg->fg_smpl_cnt_tm,
+	pfg->fg_slp_cnt_tm,
+	pfg->fg_slp_curr_ua,
+	pfg->fg_sns_res,
+	pfg->fg_factor);
+}
+static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_store);
+static DEVICE_ATTR(fg_status, 0644, fg_status_show, NULL);
+#endif
+
 static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -871,6 +900,15 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 		pfg->fg_slp_curr_ua = pdata->fg_slp_curr_ua;
 	else
 		pfg->fg_slp_curr_ua = 1000;
+	if (pdata->fg_sns_res)
+		pfg->fg_sns_res = pdata->fg_sns_res;
+	else
+		pfg->fg_sns_res = 10; /* default sense resistor */
+	if (pdata->fg_factor)
+		pfg->fg_factor = pdata->fg_factor;
+	else
+		pfg->fg_factor = 1000;
+
 	pfg->bcmpmu->fg_currsmpl = bcmpmu_get_fg_currsmpl;
 	pfg->bcmpmu->fg_vmbatt = bcmpmu_get_fg_vmbatt;
 	pfg->bcmpmu->fg_acc_mas = bcmpmu_get_fg_acc_mas;
@@ -907,6 +945,7 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = device_create_file(&pdev->dev, &dev_attr_dbgmsk);
+	ret = device_create_file(&pdev->dev, &dev_attr_fg_status);
 #endif
 	return 0;
 

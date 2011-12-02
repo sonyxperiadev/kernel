@@ -91,8 +91,6 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 {
 	struct bcmpmu	*bcmpmu = rdev_get_drvdata(rdev);
 	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
-	unsigned int ldo_or_sr = info->ldo_or_sr;
-	unsigned int val;
 
 	int rc = LDO_NORMAL << PM1_SHIFT | LDO_NORMAL << PM2_SHIFT | LDO_NORMAL << PM3_SHIFT;
 	return ( bcmpmu->write_dev(bcmpmu, info->reg_addr,
@@ -104,7 +102,6 @@ static int bcmpmureg_disable(struct regulator_dev *rdev)
 {
 	struct bcmpmu	*bcmpmu = rdev_get_drvdata(rdev);
 	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
-	unsigned int val;
 
 	int rc = LDO_OFF << PM1_SHIFT | LDO_OFF << PM2_SHIFT | LDO_OFF << PM3_SHIFT;
 	return ( bcmpmu->write_dev(bcmpmu, info->reg_addr,
@@ -189,7 +186,6 @@ static int bcmpmureg_set_mode(struct regulator_dev *rdev, unsigned mode)
 	struct bcmpmu	*bcmpmu = rdev_get_drvdata(rdev);
 	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
 	unsigned int ldo_or_sr = info->ldo_or_sr;
-	unsigned int val;
 	int rc = 0;
 	
 	switch ( mode ) {

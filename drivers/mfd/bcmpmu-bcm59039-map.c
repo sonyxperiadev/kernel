@@ -150,6 +150,7 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_FG_RESET] =		{.map = 0x01, .addr = 0x41, .mask = 0x10, .ro = 0, .shift = 4},
 	[PMU_REG_FG_FRZREAD] =		{.map = 0x01, .addr = 0x41, .mask = 0x20, .ro = 0, .shift = 5},
 	[PMU_REG_FG_FRZSMPL] =		{.map = 0x01, .addr = 0x41, .mask = 0x40, .ro = 0, .shift = 6},
+	[PMU_REG_FG_DELTA] =		{.map = 0x01, .addr = 0x5A, .mask = 0xFF, .ro = 0, .shift = 0},
 	/* usb control */
 	[PMU_REG_OTG_VBUS_PULSE] =	{.map = 0, .addr = 0, .mask = 0x01, .ro = 0, .shift = 0},
 	[PMU_REG_OTG_VBUS_BOOST] =	{.map = 0, .addr = 0, .mask = 0x04, .ro = 0, .shift = 2},
@@ -239,6 +240,7 @@ static const struct bcmpmu_irq_map bcm59039_irq_map[PMU_IRQ_MAX] = {
 	[PMU_IRQ_SDSROVRI] =		{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x04},
 	[PMU_IRQ_ASROVRI] =		{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x08},
 	[PMU_IRQ_UBPD_CHG_F] =		{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x10},
+	[PMU_IRQ_FGC] =			{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x20},
 	[PMU_IRQ_ACD_INS] =		{.int_addr = 0x36, .mask_addr = 0x46, .bit_mask = 0x01},
 	[PMU_IRQ_ACD_RM] =		{.int_addr = 0x36, .mask_addr = 0x46, .bit_mask = 0x02},
 	[PMU_IRQ_PONKEYB_HOLD] =	{.int_addr = 0x36, .mask_addr = 0x46, .bit_mask = 0x04},

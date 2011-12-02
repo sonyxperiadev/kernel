@@ -244,6 +244,7 @@ enum bcmpmu_reg {
 	PMU_REG_FG_OFFSET0,
 	PMU_REG_FG_OFFSET1,
 	PMU_REG_FG_GAINTRIM,
+	PMU_REG_FG_DELTA,
 	/* usb control */
 	PMU_REG_OTG_VBUS_PULSE,
 	PMU_REG_OTG_VBUS_BOOST,
@@ -368,6 +369,7 @@ enum bcmpmu_irq {
 	PMU_IRQ_SESSION_END_VLD,
 	PMU_IRQ_SESSION_END_INVLD,
 	PMU_IRQ_VBUS_OVERCURRENT,
+	PMU_IRQ_FGC,
 	PMU_IRQ_MAX,
 };
 
@@ -597,6 +599,11 @@ struct bcmpmu_temp_map {
 	int temp;
 };
 
+struct bcmpmu_voltcap_map {
+	int volt;
+	int cap;
+};
+
 struct bcmpmu_charge_zone {
 	int tl;
 	int th;
@@ -656,7 +663,7 @@ enum bcmpmu_env_bit_t {
 	PMU_ENV_MAX,
 };
 
-enum bcmpmu_usb_event_t {
+enum bcmpmu_event_t {
 	/* events for usb driver */
 	BCMPMU_USB_EVENT_USB_DETECTION,
 	BCMPMU_USB_EVENT_IN,
@@ -676,6 +683,8 @@ enum bcmpmu_usb_event_t {
 	/* events for battery charging */
 	BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
 	BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+	/* events for fuel gauge */
+	BCMPMU_FG_EVENT_FGC,
 	BCMPMU_EVENT_MAX,
 };
 
@@ -842,11 +851,17 @@ struct bcmpmu_platform_data {
 	struct bcmpmu_regulator_init_data *regulator_init_data;
 	struct bcmpmu_temp_map *batt_temp_map;
 	int batt_temp_map_len;
+	struct bcmpmu_voltcap_map *batt_voltcap_map;
+	int batt_voltcap_map_len;
 	struct bcmpmu_adc_setting *adc_setting;
 	int fg_smpl_rate;
 	int fg_slp_rate;
 	int fg_slp_curr_ua;
+	int fg_factor;
+	int fg_sns_res;
 	int chrg_1c_rate;
+	int chrg_eoc;
+	int batt_impedence;
 	struct bcmpmu_charge_zone *chrg_zone_map;
 	int fg_capacity_full;
 	int support_fg;
@@ -861,6 +876,8 @@ struct bcmpmu_fg {
 	int fg_smpl_cnt_tm;
 	int fg_slp_cnt_tm;
 	int fg_slp_curr_ua;
+	int fg_sns_res;
+	int fg_factor;
 };
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
@@ -877,10 +894,10 @@ const int *bcmpmu_get_usb_id_map(int *len);
 struct regulator_desc *bcmpmu_rgltr_desc(void);
 struct bcmpmu_reg_info *bcmpmu_rgltr_info(void);
 
-int bcmpmu_usb_add_notifier(u32, struct notifier_block *);
-int bcmpmu_usb_remove_notifier(u32, struct notifier_block *);
-int bcmpmu_batt_add_notifier(u32, struct notifier_block *);
-int bcmpmu_batt_remove_notifier(u32, struct notifier_block *);
+void bcmpmu_reg_dev_init(struct bcmpmu *bcmpmu);
+void bcmpmu_reg_dev_exit(struct bcmpmu *bcmpmu);
+int bcmpmu_add_notifier(u32, struct notifier_block *);
+int bcmpmu_remove_notifier(u32, struct notifier_block *);
 
 void bcmpmu_client_power_off(void);
 

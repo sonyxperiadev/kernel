@@ -62,6 +62,8 @@ static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
 	case PMU_IRQ_MBOV_DIS:
 		pbatt->state.health = POWER_SUPPLY_HEALTH_GOOD;
 		break;
+	default:
+		break;
 	}
 }
 

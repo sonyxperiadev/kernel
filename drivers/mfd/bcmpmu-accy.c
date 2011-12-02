@@ -240,7 +240,7 @@ static void reset_bc(struct bcmpmu_accy *paccy)
 		bcm_hsotgctrl_bc_reset();
 }
 
-int bcmpmu_usb_add_notifier(u32 event_id, struct notifier_block *notifier)
+int bcmpmu_add_notifier(u32 event_id, struct notifier_block *notifier)
 {
 	if (!bcmpmu_accy) {
 		pr_accy(ERROR,"%s: BCMPMU Accy driver is not initialized\n", __func__);
@@ -253,9 +253,9 @@ int bcmpmu_usb_add_notifier(u32 event_id, struct notifier_block *notifier)
 	return blocking_notifier_chain_register(
 			&bcmpmu_accy->event[event_id].notifiers, notifier);
 }
-EXPORT_SYMBOL_GPL(bcmpmu_usb_add_notifier);
+EXPORT_SYMBOL_GPL(bcmpmu_add_notifier);
 
-int bcmpmu_usb_remove_notifier(u32 event_id, struct notifier_block *notifier)
+int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier)
 {
 	if (!bcmpmu_accy) {
 		pr_accy(ERROR,"%s: BCMPMU accy driver is not initialized\n", __func__);
@@ -269,11 +269,11 @@ int bcmpmu_usb_remove_notifier(u32 event_id, struct notifier_block *notifier)
 	return blocking_notifier_chain_unregister(
 			&bcmpmu_accy->event[event_id].notifiers, notifier);
 }
-EXPORT_SYMBOL_GPL(bcmpmu_usb_remove_notifier);
+EXPORT_SYMBOL_GPL(bcmpmu_remove_notifier);
 
 
 static void send_usb_event(struct bcmpmu *pmu,
-	enum bcmpmu_usb_event_t event, void *para)
+	enum bcmpmu_event_t event, void *para)
 {
 	struct power_supply *ps;
 	union power_supply_propval propval;
@@ -306,7 +306,7 @@ static void send_usb_event(struct bcmpmu *pmu,
 }
 
 static void send_chrgr_event(struct bcmpmu *pmu,
-	enum bcmpmu_usb_event_t event, void *para)
+	enum bcmpmu_event_t event, void *para)
 {
 	struct power_supply *ps;
 	union power_supply_propval propval;
@@ -399,6 +399,12 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 	case PMU_IRQ_CHGDET_TO:
 		break;
 	
+	case PMU_IRQ_FGC:
+		blocking_notifier_call_chain(
+			&paccy->event[BCMPMU_FG_EVENT_FGC].notifiers,
+			BCMPMU_FG_EVENT_FGC, NULL);
+		break;
+
 	default:
 		break;
 	}
@@ -966,6 +972,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_SESSION_END_VLD, bcmpmu_accy_isr, paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_SESSION_END_INVLD, bcmpmu_accy_isr, paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_VBUS_OVERCURRENT, bcmpmu_accy_isr, paccy);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_FGC, bcmpmu_accy_isr, paccy);
 
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBINS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBRM);
@@ -981,6 +988,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_SESSION_END_VLD);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_SESSION_END_INVLD);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_VBUS_OVERCURRENT);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_FGC);
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_accy_attr_group);
 #endif
@@ -1011,6 +1019,7 @@ static int __devexit bcmpmu_accy_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_SESSION_END_VLD);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_SESSION_END_INVLD);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_VBUS_OVERCURRENT);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_FGC);
 	cancel_delayed_work_sync(&paccy->det_work);
 	cancel_delayed_work_sync(&paccy->adp_work);
 	wake_lock_destroy(&paccy->wake_lock);
