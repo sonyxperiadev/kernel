@@ -268,7 +268,7 @@ static CSL_DSI_CFG_t DISPDRV_dsiCfg = {
     FALSE,         // enaLpRxEotPkt        
 };    
 
-//#define printk(format, arg...)	do {} while (0)
+#define printk(format, arg...)	do {} while (0)
 
 static  DISPDRV_PANEL_T   panel[2];
 
