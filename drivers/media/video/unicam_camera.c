@@ -337,7 +337,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	dprintk("-enter");
 	iprintk("enabling csi");
 	if (csl_cam_init()) {
-		dev_err(&unicam_dev->dev, "error initializing csl camera\n");
+		dev_err(unicam_dev->dev, "error initializing csl camera\n");
 		return -1;
 	}
 
@@ -426,19 +426,27 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	struct soc_camera_device *icd = soc_camera_from_vb2q(q);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
-   	CSL_CAM_FRAME_st_t      cslCamFrame;
-	int ret;
+	CSL_CAM_FRAME_st_t      cslCamFrame;
+	int ret = 0;
+	unsigned long flags;
 
+	/* grab the lock */
+	spin_lock_irqsave(&unicam_dev->lock, flags);
 	dprintk("-enter");
 	dprintk("disabling csi");
-	/* disable csi2 interface */
-	
+	iprintk("stopping stream");
+	if (!unicam_dev->streaming) {
+		dev_err(unicam_dev->dev, "stream already turned off\n");
+		goto out;
+	}
 	/* disable frame interrupts */
+
     cslCamFrame.int_enable      = CSL_CAM_INT_DISABLE;
     cslCamFrame.int_line_count  = 0;
     cslCamFrame.capture_mode    = CSL_CAM_CAPTURE_MODE_TRIGGER;
     cslCamFrame.capture_size    = 0;
-    if (csl_cam_set_frame_control(unicam_dev->cslCamHandle, &cslCamFrame)) {
+
+	if (csl_cam_set_frame_control(unicam_dev->cslCamHandle, &cslCamFrame)) {
 		    dev_err(unicam_dev->dev, "csl_cam_set_frame_control(): FAILED\n");
             ret = -1;
     }
@@ -461,7 +469,9 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 
 	unicam_dev->active = NULL;
 	unicam_dev->streaming = 0;
+out:
 	dprintk("-exit");
+	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	return ret;
 }
 
