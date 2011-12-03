@@ -216,8 +216,8 @@ CSL_DSI_CM_VC_t DISPDRV_VcCmCfg =
     MIPI_DCS_WRITE_MEMORY_START,    // dcsCmndStart       
     MIPI_DCS_WRITE_MEMORY_CONTINUE, // dcsCmndContinue       
     FALSE,                          // isLP          
-    LCD_IF_CM_I_RGB888U,            // cm_in         
-    LCD_IF_CM_O_RGB888,             // cm_out   
+    LCD_IF_CM_I_RGB565P,            // cm_in         
+    LCD_IF_CM_O_RGB565,             // cm_out   
 	
     // TE configuration
     {
@@ -1156,7 +1156,7 @@ Int32 DISPDRV_Update_ExtFb (
     req.buff           = pFb;
     req.lineLenP       = Disp_Info.width;
     req.lineCount      = Disp_Info.height;
-    req.buffBpp        = 4;    
+    req.buffBpp        = 2;    
     req.timeOut_ms     = 100;
 
     req.cslLcdCbRec.cslH            = pPanel->clientH;
@@ -1219,7 +1219,7 @@ Int32 DISPDRV_Update (
 //    req.buff           = pPanel->pFbA;
     req.lineLenP       = Disp_Info.width;
     req.lineCount      = Disp_Info.height;
-    req.buffBpp        = 4;    
+    req.buffBpp        = 2;    
     req.timeOut_ms     = 100;
    
     printk(KERN_ERR "buf=%08x, linelenp = %d, linecnt =%d\n", (u32)req.buff, req.lineLenP, req.lineCount);

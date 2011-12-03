@@ -552,6 +552,67 @@ static struct i2c_board_info __initdata pca953x_2_info[] = {
 #endif
 #endif /* CONFIG_GPIO_PCA953X */
 
+#ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
+#define TSP_INT_GPIO_PIN      (121)
+
+static int tma340_platform_init_hw(void)
+{
+	int rc;
+	rc = gpio_request(TSP_INT_GPIO_PIN, "ts_tma340");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", TSP_INT_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(TSP_INT_GPIO_PIN);
+
+	return 0;
+}
+
+static void tma340_platform_exit_hw(void)
+{
+	gpio_free(TSP_INT_GPIO_PIN);
+}
+
+static struct tma340_platform_data tma340_platform_data = {
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.x_line		= 15,
+	.y_line		= 11,
+	.x_size		= 1023,
+	.y_size		= 1023,
+	.x_min		= 90,
+	.y_min		= 90,
+	.x_max		= 0x3ff,
+	.y_max		= 0x3ff,
+	.max_area	= 0xff,
+	.blen		= 33,
+	.threshold	= 70,
+	.voltage	= 2700000,              /* 2.8V */
+	.orient		= QT602240_DIAGONAL_COUNTER,
+	.init_platform_hw = tma340_platform_init_hw,
+	.exit_platform_hw = tma340_platform_exit_hw,
+};
+
+static struct i2c_board_info __initdata qt602240_info[] = {
+	
+#if defined(CONFIG_TOUCHSCREEN_MMS128_TASSCOOPER)
+	{
+		I2C_BOARD_INFO("melfas-mms128", 0x48),
+		.platform_data = &qt602240_platform_data,
+		.irq = GPIO_TO_IRQ(TSP_INT),
+	},
+#endif
+#ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
+	{
+		I2C_BOARD_INFO("synaptics-rmi-ts", 0x20),
+		.platform_data = &qt602240_platform_data,
+		.irq = GPIO_TO_IRQ(TSP_INT),
+	},
+#endif
+};
+#endif /* CONFIG_TOUCHSCREEN_TMA340_COOPERVE */
+
+
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 #ifdef CONFIG_GPIO_PCA953X
 #define QT602240_INT_GPIO_PIN      (121)
@@ -1098,9 +1159,10 @@ static struct kona_fb_platform_data rhea_ss_dsi_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISPDRV_GetFuncTable,
 	.screen_width		= 320,
 	.screen_height		= 480,
-	.bytes_per_pixel	= 4,
+	.bytes_per_pixel	= 2,
 	.gpio			= 41,
-	.pixel_format		= XRGB8888,
+	.pixel_format		= RGB565,
+	//.pixel_format		= XRGB8888,
 };
 
 static struct platform_device rhea_ss_dsi_display_device = {
@@ -1456,6 +1518,33 @@ static void __init rhea_ray_reserve(void)
 	board_common_reserve();
 }
 
+#define TSP_SDA 86
+#define TSP_SDL 87
+#if defined(CONFIG_I2C_GPIO)
+static struct i2c_gpio_platform_data touch_i2c_gpio_data = {
+        .sda_pin    = TSP_SDA,
+        .scl_pin    = TSP_SCL,
+        .udelay  = 3,  //// brian :3
+        .timeout = 100,
+};
+
+static struct platform_device touch_i2c_gpio_device = {
+        .name       = "i2c-gpio",
+        .id     = 0x3,
+        .dev        = {
+            .platform_data  = &touch_i2c_gpio_data,
+        },
+};
+
+static struct platform_device *gpio_i2c_devices[] __initdata = {
+
+#if defined(CONFIG_I2C_GPIO)
+	&touch_i2c_gpio_device,
+	
+#endif
+};
+
+#endif	
 /* All Rhea Ray specific devices */
 static void __init rhea_ray_add_devices(void)
 {
@@ -1472,6 +1561,11 @@ static void __init rhea_ray_add_devices(void)
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 	platform_add_devices(rhea_ray_virtual_consumer_devices, ARRAY_SIZE(rhea_ray_virtual_consumer_devices));
 #endif
+
+#if defined(CONFIG_I2C_GPIO)
+	platform_add_devices(gpio_i2c_devices, ARRAY_SIZE(gpio_i2c_devices));
+#endif
+
 
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));

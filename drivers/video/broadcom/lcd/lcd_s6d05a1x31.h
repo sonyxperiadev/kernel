@@ -31,11 +31,10 @@
 #define PIXEL_FORMAT_RGB666  0x66   // for MPU & RGB interface
 #define PIXEL_FORMAT_RGB888  0x77   // for MPU & RGB interface
 
-#define LCD_HEIGHT		480
-#define LCD_WIDTH		320
 
-//#define LCD_BITS_PER_PIXEL      16
-#define LCD_BITS_PER_PIXEL      32
+
+#define LCD_BITS_PER_PIXEL      16
+//#define LCD_BITS_PER_PIXEL      32
 #define TEAR_LINE 500
 
 
@@ -71,7 +70,8 @@ static DISPDRV_INFO_T Disp_Info =
     DISPLAY_TYPE_LCD_STD,         // DISPLAY_TYPE_T          type;          
     320,                          // UInt32                  width;         
     480,                          // UInt32                  height;        
-    DISPDRV_FB_FORMAT_RGB888_U,   // DISPDRV_FB_FORMAT_T     input_format;
+    //DISPDRV_FB_FORMAT_RGB888_U,   // DISPDRV_FB_FORMAT_T     input_format;
+	DISPDRV_FB_FORMAT_RGB565,
     DISPLAY_BUS_DSI,              // DISPLAY_BUS_T           bus_type;
     0,                            // UInt32                  interlaced;    
     DISPDRV_DITHER_NONE,          // DISPDRV_DITHER_T        output_dither; 
@@ -186,7 +186,9 @@ DISPCTRL_REC_T power_on_seq_s5d05a1x31_cooperve_AUO[] =
 	{DISPCTRL_WR_CMND, 0x29,0}, // (DISPON) 
 	{DISPCTRL_SLEEP_MS, 0, 100}, // 120ms
 
-	{DISPCTRL_WR_CMND_DATA,0x36,0xD8},
+	{DISPCTRL_WR_CMND_DATA,0x36,0x88},
+	{DISPCTRL_WR_CMND_DATA, 0x3A,0x55}, //RGB565
+	//{DISPCTRL_WR_DATA, 0, 0x77},  //Format RGB888
 
 	{DISPCTRL_WR_CMND, 0x2C,0}, // ( RAM DISPCTRL_WRITE )
 	
