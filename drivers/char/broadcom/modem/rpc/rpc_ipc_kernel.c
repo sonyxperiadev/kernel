@@ -321,7 +321,7 @@ static int rpcipc_release(struct inode *inode, struct file *file)
 
 ssize_t rpcipc_read(struct file *filep, char __user *buf, size_t len, loff_t *off)
 {
-	return -ENOSYS;
+	return -EFAULT;
 }
 
 ssize_t rpcipc_write(struct file *filep, const char __user *buf, size_t len, loff_t *off)
@@ -863,7 +863,7 @@ static long handle_pkt_free_buffer_ioc(struct file *filp, unsigned int cmd, UInt
 	
 	_DBG(RPC_TRACE("k:handle_pkt_free_buffer_ioc pkt=%x res=%d\n", (int)ioc_param.dataBufHandle, res));
 
-    return res ? -EINVAL : 0;
+    return res != RPC_RESULT_OK ? -EINVAL : 0;
 }
 
 static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 param )
