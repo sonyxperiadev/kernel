@@ -27,23 +27,6 @@
 
 #include "vchiq_core.h"
 #include "vchiq_memdrv.h"
-#ifdef USE_VCEB
-void vceb_add_firmware_downloaded_callback( void (*callback)(void) );
-#endif
-/****************************************************************************
-*
-* firmware_downloaded_callback
-*
-*   This function will be called by vceb once the firmware is loaded.
-*
-***************************************************************************/
-
-static void firmware_downloaded_callback( void )
-{
-    printk( KERN_INFO "vchiq_memdrv_hana: firmware downloaded - connecting\n" );
-    vchiq_memdrv_initialise();
-}
-
 #if defined( CONFIG_VC_VCEB ) || defined( CONFIG_VC_VCEB_MODULE )
 void vceb_add_firmware_downloaded_callback( void (*callback)(void) );
 #endif
