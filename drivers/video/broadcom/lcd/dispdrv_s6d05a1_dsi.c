@@ -217,13 +217,14 @@ CSL_DSI_CM_VC_t DISPDRV_VcCmCfg =
     MIPI_DCS_WRITE_MEMORY_CONTINUE, // dcsCmndContinue       
     FALSE,                          // isLP          
     LCD_IF_CM_I_RGB888U,            // cm_in         
-    LCD_IF_CM_O_RGB888,             // cm_out        
+    LCD_IF_CM_O_RGB888,             // cm_out   
+	
     // TE configuration
     {
 #if defined(_HERA_)  || defined(_RHEA_)  
-        DSI_TE_CTRLR_INPUT_0,         // DSI Te Input Type
+        DSI_TE_NONE,         // DSI Te Input Type
 #else
-        DSI_TE_CTRLR_INPUT_0,         // DSI Te Input Type
+        DSI_TE_NONE,         // DSI Te Input Type
         #if ( defined (_ATHENA_)&& (CHIP_REVISION >= 20) ) 
         &DISPDRV_teInCfg                    // DSI Te Input Config
         #endif
@@ -536,7 +537,7 @@ static void DISPDRV_ExecCmndList(
             DISPDRV_WrCmndP1 (drvH, cmnd_lst[i].cmnd, cmnd_lst[i].data);
         }
         else if (cmnd_lst[i].type == DISPCTRL_WR_CMND)
-        {
+        {	
             DISPDRV_WrCmndP1 (drvH, cmnd_lst[i].cmnd, NULL);
         }
         else if (cmnd_lst[i].type == DISPCTRL_SLEEP_MS)

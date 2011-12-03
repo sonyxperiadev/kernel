@@ -1989,7 +1989,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
 
     // set TE mode
     isTE = dsiChH->chalCmCfg.isTE;
-	WARN_ON(isTE == FALSE);
+	//WARN_ON(isTE == FALSE); //Comment temporarily by Haipeng
 
     chal_dsi_te_mode ( dsiH->chalH, dsiChH->teMode );
 
@@ -2057,7 +2057,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
 
     // restore TE mode config - complex, simplify
     
-    dsiChH->chalCmCfg.isTE = 0; 
+    dsiChH->chalCmCfg.isTE = isTE; 
     
     if ( req->cslLcdCb == NULL )
     {   
