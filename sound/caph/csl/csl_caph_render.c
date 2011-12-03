@@ -154,7 +154,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
 #endif
 
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_configure:: streamID = 0x%lx, sampleRate =0x%lx, numChannels = 0x%x, numbBuffers = 0x%lx, blockSize = 0x%lx, bitsPerSample %d, cb = %lx.\r\n", 
-					streamID, sampleRate, numChannels, numBlocks, blockSize, bitsPerSample, csl_audio_render_cb);
+					streamID, sampleRate, numChannels, numBlocks, blockSize, (int)bitsPerSample, (long unsigned int)csl_audio_render_cb);
 	
 	audDrv = GetRenderDriverByType (streamID);
 
