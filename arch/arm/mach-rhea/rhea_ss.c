@@ -349,22 +349,15 @@ struct platform_device bcm_kp_device = {
 	GPIO07, GPIO12, GPIO13, for now keypad can only be set as a 2x2 matrix
 	by using pin GPIO04, GPIO05, GPIO14 and GPIO15 */
 static struct bcm_keymap newKeymap[] = {
-#ifndef CONFIG_MACH_RHEA_RAY_DEMO
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Back Key", KEY_BACK},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "Home-Key", KEY_HOME},
-#else
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "VOL UP", KEY_VOLUMEUP},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
-#endif
 	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_0,  "VOL DOWN", KEY_VOLUMEDOWN},
 	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "unused", 0},
@@ -372,7 +365,7 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "unused", 0},
 	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "Home-Key", KEY_HOME},
 	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "unused", 0},
@@ -410,31 +403,21 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
-#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
-#else
-	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "Back Key", KEY_BACK},
-#endif
 	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
-#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
-#else
-	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "Home-Key", KEY_HOME},
-#endif
 };
 
 static struct bcm_keypad_platform_info bcm_keypad_data = {
-	.row_num = 8,
-	.col_num = 8,
+	.row_num = 3,
+	.col_num = 1,
 	.keymap = newKeymap,
 	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
 };
