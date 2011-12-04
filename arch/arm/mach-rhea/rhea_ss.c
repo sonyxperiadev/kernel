@@ -34,6 +34,7 @@
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
+#include <mach/memory.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
 #include <linux/gpio_keys.h>
@@ -45,6 +46,9 @@
 #endif
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 #include <linux/i2c/qt602240_ts.h>
+#endif
+#ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
+#include <linux/i2c/tma340_ts.h>
 #endif
 #ifdef CONFIG_REGULATOR_TPS728XX
 #include <linux/regulator/tps728xx.h>
@@ -93,6 +97,10 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
+#ifdef CONFIG_I2C_GPIO
+
+#include <linux/i2c-gpio.h>
+#endif
 
 #include <video/kona_fb.h>
 #include <linux/pwm_backlight.h>
@@ -555,10 +563,18 @@ static struct i2c_board_info __initdata pca953x_2_info[] = {
 #ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
 #define TSP_INT_GPIO_PIN      (121)
 
+
 static int tma340_platform_init_hw(void)
 {
 	int rc;
 	rc = gpio_request(TSP_INT_GPIO_PIN, "ts_tma340");
+	//SCL
+	writel(0x405, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350049E0));
+	//SDK
+	writel(0x405, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350049E8));
+	//INT
+	writel(0x405, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350048D0));
+	printk("haipeng, tma340_platform_init_hw\n");
 	if (rc < 0)
 	{
 		printk(KERN_ERR "unable to request GPIO pin %d\n", TSP_INT_GPIO_PIN);
@@ -588,29 +604,32 @@ static struct tma340_platform_data tma340_platform_data = {
 	.blen		= 33,
 	.threshold	= 70,
 	.voltage	= 2700000,              /* 2.8V */
-	.orient		= QT602240_DIAGONAL_COUNTER,
+	.orient		= TMA340_DIAGONAL_COUNTER,
 	.init_platform_hw = tma340_platform_init_hw,
 	.exit_platform_hw = tma340_platform_exit_hw,
 };
 
-static struct i2c_board_info __initdata qt602240_info[] = {
+
+
+#endif /* CONFIG_TOUCHSCREEN_TMA340_COOPERVE */
+
+static struct i2c_board_info __initdata rhea_ss_i2cgpio0_board_info[] = {
 	
 #if defined(CONFIG_TOUCHSCREEN_MMS128_TASSCOOPER)
 	{
 		I2C_BOARD_INFO("melfas-mms128", 0x48),
-		.platform_data = &qt602240_platform_data,
-		.irq = GPIO_TO_IRQ(TSP_INT),
+		.platform_data = &tma340_platform_data,
+		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
 	},
 #endif
 #ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
 	{
 		I2C_BOARD_INFO("synaptics-rmi-ts", 0x20),
-		.platform_data = &qt602240_platform_data,
-		.irq = GPIO_TO_IRQ(TSP_INT),
+		.platform_data = &tma340_platform_data,
+		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
 	},
 #endif
 };
-#endif /* CONFIG_TOUCHSCREEN_TMA340_COOPERVE */
 
 
 #ifdef CONFIG_TOUCHSCREEN_QT602240
@@ -1505,6 +1524,9 @@ static void __init rhea_ray_add_i2c_devices (void)
 			mpu6050_info,
 			ARRAY_SIZE(mpu6050_info));
 #endif
+
+i2c_register_board_info(0x3, rhea_ss_i2cgpio0_board_info,
+				ARRAY_SIZE(rhea_ss_i2cgpio0_board_info));
 }
 
 static int __init rhea_ray_add_lateInit_devices (void)
@@ -1519,11 +1541,13 @@ static void __init rhea_ray_reserve(void)
 }
 
 #define TSP_SDA 86
-#define TSP_SDL 87
+#define TSP_SCL 87
 #if defined(CONFIG_I2C_GPIO)
 static struct i2c_gpio_platform_data touch_i2c_gpio_data = {
         .sda_pin    = TSP_SDA,
         .scl_pin    = TSP_SCL,
+		//.sda_is_open_drain = true,
+		//.scl_is_open_drain = true,
         .udelay  = 3,  //// brian :3
         .timeout = 100,
 };
@@ -1563,7 +1587,9 @@ static void __init rhea_ray_add_devices(void)
 #endif
 
 #if defined(CONFIG_I2C_GPIO)
+	printk("haipeng, add finished <<<<\n");
 	platform_add_devices(gpio_i2c_devices, ARRAY_SIZE(gpio_i2c_devices));
+	printk("haipeng, add finished >>>>\n");
 #endif
 
 

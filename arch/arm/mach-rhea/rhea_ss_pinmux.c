@@ -161,7 +161,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO19, LCDWE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO20, LCDRE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO21, LCDD7, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO22, LCDD6, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO22, GPIO22, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO23, LCDD5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO24, LCDD4, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO25, LCDD3, 0, OFF, ON, 0, 0, 8MA),
@@ -218,6 +218,10 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO93, SD1DAT1, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(GPIO94, SD1DAT2, 0, OFF, ON, 0, 0, 16MA),
 #endif
+
+
+	PIN_CFG(SSPDO, GPIO87, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(SSPCK, GPIO86, 0, OFF, ON, 0, 0, 16MA),
 };
 
 /* board level init */
