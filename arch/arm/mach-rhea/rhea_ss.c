@@ -551,13 +551,7 @@ static int tma340_platform_init_hw(void)
 {
 	int rc;
 	rc = gpio_request(TSP_INT_GPIO_PIN, "ts_tma340");
-	//SCL
-	writel(0x405, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350049E0));
-	//SDK
-	writel(0x405, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350049E8));
-	//INT
-	writel(0x405, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350048D0));
-	printk("haipeng, tma340_platform_init_hw\n");
+
 	if (rc < 0)
 	{
 		printk(KERN_ERR "unable to request GPIO pin %d\n", TSP_INT_GPIO_PIN);
@@ -597,6 +591,14 @@ static struct tma340_platform_data tma340_platform_data = {
 #endif /* CONFIG_TOUCHSCREEN_TMA340_COOPERVE */
 
 static struct i2c_board_info __initdata rhea_ss_i2cgpio0_board_info[] = {
+
+#ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
+	{
+		I2C_BOARD_INFO("synaptics-rmi-ts", 0x20),
+		.platform_data = &tma340_platform_data,
+		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
+	},
+#endif
 	
 #if defined(CONFIG_TOUCHSCREEN_MMS128_TASSCOOPER)
 	{
@@ -605,14 +607,9 @@ static struct i2c_board_info __initdata rhea_ss_i2cgpio0_board_info[] = {
 		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
 	},
 #endif
-#ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
-	{
-		I2C_BOARD_INFO("synaptics-rmi-ts", 0x20),
-		.platform_data = &tma340_platform_data,
-		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
-	},
-#endif
+
 };
+
 
 
 #ifdef CONFIG_TOUCHSCREEN_QT602240
@@ -1570,9 +1567,9 @@ static void __init rhea_ray_add_devices(void)
 #endif
 
 #if defined(CONFIG_I2C_GPIO)
-	printk("haipeng, add finished <<<<\n");
+	
 	platform_add_devices(gpio_i2c_devices, ARRAY_SIZE(gpio_i2c_devices));
-	printk("haipeng, add finished >>>>\n");
+	
 #endif
 
 

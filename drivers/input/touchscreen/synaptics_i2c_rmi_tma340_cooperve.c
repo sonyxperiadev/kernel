@@ -850,12 +850,6 @@ static int __devinit synaptics_ts_init(void)
 	}
 #endif
 
-	//SCL
-	writel(0x45, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350049E0));
-	//SDK
-	writel(0x45, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350049E8));
-	//INT
-	writel(0x45, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350048D0));
 
 	printk("[TSP] %s\n", __func__ );
 
@@ -866,7 +860,7 @@ static int __devinit synaptics_ts_init(void)
 	irq_set_irq_type(gpio_to_irq(TSP_INT), IRQ_TYPE_EDGE_FALLING);
 
 	//disable BB internal pulls for touch int, scl, sda pin
-	bcm_gpio_pull_up_down_enable(TSP_INT, 0);
+	//bcm_gpio_pull_up_down_enable(TSP_INT, 0);
 	bcm_gpio_pull_up_down_enable(TSP_SCL, 0);
 	bcm_gpio_pull_up_down_enable(TSP_SDA, 0);
 

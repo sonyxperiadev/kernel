@@ -153,10 +153,11 @@ static struct workqueue_struct *check_ic_wq;
 
 /** functions **/
 
-//Haipeng, temporary function
+// temporary function
 
 int bcm_gpio_pull_up(unsigned int gpio, bool up)
 {
+#if 0
 	u32 reg_addr;
 	u32 reg_value;
 	if(gpio == GPIO_TOUCH_INT)
@@ -177,18 +178,20 @@ int bcm_gpio_pull_up(unsigned int gpio, bool up)
 		return -1;
 	}
 	reg_value=readl((volatile u32 *)HW_IO_PHYS_TO_VIRT(reg_addr));
-	
-	
+	/*
 	if(up==true)
 		reg_value = (reg_value&~0x60)|0x20;
-	else	
+	else
+	*/
 		reg_value = (reg_value&~0x60)|0x40;
 	writel(reg_value,(volatile u32 *)HW_IO_PHYS_TO_VIRT(reg_addr));
 	return 0;
+#endif
 }
 
 int bcm_gpio_pull_down(unsigned int gpio, bool up)
 {
+	#if 0
 	u32 reg_addr;
 	u32 reg_value;
 	if(gpio == GPIO_TOUCH_INT)
@@ -214,12 +217,14 @@ int bcm_gpio_pull_down(unsigned int gpio, bool up)
 	else
 		reg_value = (reg_value&~0x60);
 	writel(reg_value,(volatile u32 *)HW_IO_PHYS_TO_VIRT(reg_addr));
+	#endif
 	return 0;
 }
 
 
 int bcm_gpio_pull_up_down_enable(unsigned int gpio, bool enable)
 {
+	#if 0
 	u32 reg_addr;
 	u32 reg_value;
 	if(enable==true)
@@ -244,6 +249,7 @@ int bcm_gpio_pull_up_down_enable(unsigned int gpio, bool enable)
 	reg_value=readl((volatile u32 *)HW_IO_PHYS_TO_VIRT(reg_addr));
 	reg_value = (reg_value&~0x60);
 	writel(reg_value,(volatile u32 *)HW_IO_PHYS_TO_VIRT(reg_addr));
+	#endif
 	return 0;
 }
 
@@ -333,7 +339,7 @@ void touch_ctrl_regulator_mms128(int on_off)
 	writel(0x5, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x35004894));
 	if (on_off == TOUCH_ON)
 	{
-		printk("haipeng, turn on Touch, TOUCH_EN = %d\n",TOUCH_EN);
+		
 		gpio_request(TOUCH_EN,"Touch_en");
 		gpio_direction_output(TOUCH_EN,1);
 		gpio_set_value(TOUCH_EN,1);
@@ -360,7 +366,8 @@ int tsp_i2c_read_melfas(u8 reg, unsigned char *rbuf, int buf_size) //same with t
 	int i, ret=-1;
 	struct i2c_msg rmsg;
 	uint8_t start_reg;
-  int retry = 10;
+
+  int retry = 3;
 
 	for (i = 0; i < retry; i++)
 	{
@@ -977,21 +984,15 @@ static int melfas_ts_probe(struct i2c_client *client, const struct i2c_device_id
 
 	/* Pin Initialize ****************************************************/
 	//disable BB internal pulls for touch int, scl, sda pin
-	bcm_gpio_pull_up_down_enable(GPIO_TOUCH_INT, 0);
-	bcm_gpio_pull_up_down_enable(GPIO_TSP_SCL, 0);
-	bcm_gpio_pull_up_down_enable(GPIO_TSP_SDA, 0);
-	
+
 	//gpio_direction_output( GPIO_TOUCH_INT , 0 );
 	gpio_direction_output( GPIO_TSP_SCL , 0 ); 
 	gpio_direction_output( GPIO_TSP_SDA , 0 ); 
-
 	gpio_request(GPIO_TOUCH_INT, "ts_irq");
 	gpio_direction_input(GPIO_TOUCH_INT);
+	
 	irq_set_irq_type(gpio_to_irq(GPIO_TOUCH_INT), IRQ_TYPE_EDGE_FALLING);	
-	
-	bcm_gpio_pull_up(GPIO_TOUCH_INT, false);
-	bcm_gpio_pull_up_down_enable(GPIO_TOUCH_INT, true);
-	
+
 
 	//touch_ctrl_regulator_mms128(TOUCH_OFF);
 
@@ -1362,12 +1363,6 @@ static int __devinit melfas_ts_init(void)
 	}
 #endif
 
-	//SCL
-	writel(0x405, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350049E0));
-	//SDK
-	writel(0x405, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350049E8));
-	//INT
-	writel(0x405, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x350048D0));
 
 #if USE_THREADED_IRQ
 

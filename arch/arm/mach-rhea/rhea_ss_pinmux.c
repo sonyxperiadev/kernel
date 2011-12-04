@@ -71,6 +71,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SDDAT0, SDDAT0, 0, OFF, ON, 0, 0, 8MA),
 
 #if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) 
+	
 	/* GPIO121 for TCA9539 IO expander */
 	PIN_CFG(ICUSBDP, GPIO121, 0, OFF, ON, 0, 0, 8MA),
 #else
@@ -206,8 +207,8 @@ static struct __init pin_config board_pin_config[] = {
 #endif
 
 
-	PIN_CFG(SSPDO, GPIO87, 0, OFF, ON, 0, 0, 16MA),
-	PIN_CFG(SSPCK, GPIO86, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(SSPDO, GPIO86, 0, OFF, OFF, 0, 0, 16MA),
+	PIN_CFG(SSPCK, GPIO87, 0, OFF, OFF, 0, 0, 16MA),
 };
 
 /* board level init */
