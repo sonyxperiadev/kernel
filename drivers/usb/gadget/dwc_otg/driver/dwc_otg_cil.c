@@ -88,6 +88,7 @@ void w_init_core(void *p)
 	}
 }
 
+#ifdef CONFIG_USB_OTG_UTILS
 static int dwc_otg_xceiv_nb_callback(struct notifier_block *nb, unsigned long val,
 			       void *priv)
 {
@@ -107,6 +108,7 @@ static int dwc_otg_xceiv_nb_callback(struct notifier_block *nb, unsigned long va
 
 	return NOTIFY_OK;
 }
+#endif
 
 /**
  * This function is called to initialize the DWC_otg CSR data
