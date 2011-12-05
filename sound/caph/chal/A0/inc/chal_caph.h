@@ -298,7 +298,9 @@ typedef enum
     // mixer triggers
     CAPH_TRIG_MIX1_OUT_THR  =   0x5C,
     CAPH_TRIG_MIX2_OUT1_THR  =  0x5D,
-    CAPH_TRIG_MIX2_OUT2_THR  =  0x5E
+    CAPH_TRIG_MIX2_OUT2_THR  =  0x5E,
+    CAPH_PASSTHROUGH_CH3_FIFO_THRESMET = 0x60, //dummy
+    CAPH_PASSTHROUGH_CH4_FIFO_THRESMET = 0x61, 
 } CAPH_SWITCH_TRIGGER_e;
 
 /**
@@ -320,6 +322,8 @@ typedef enum
     CAPH_SRCM_PASSCH2_L = 0x0100,
     CAPH_SRCM_PASSCH2_R = 0x0200,
     CAPH_SRCM_PASSCH2 = (CAPH_SRCM_PASSCH2_L| CAPH_SRCM_PASSCH2_R),
+    CAPH_SRCM_PASSCH3 = 0x0400, //dummy
+    CAPH_SRCM_PASSCH4 = 0x0800,
 }CAPH_SRCMixer_CHNL_e;
 
 
@@ -356,6 +360,8 @@ typedef enum
     CAPH_MIXER1_OUTFIFO = 0x1000,       /* Left, Right interleaved */
     CAPH_MIXER2_OUTFIFO1 = 0x2000,      /* Right non-interleaved */
     CAPH_MIXER2_OUTFIFO2 = 0x4000,      /* Left non-interleaved */
+    CAPH_PASSCH3_INFIFO = 0x8000,       /* dummy */
+    CAPH_PASSCH4_INFIFO = 0x10000,      /* dummy */
 }CAPH_SRCMixer_FIFO_e; 
 
 /**

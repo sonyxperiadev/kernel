@@ -189,6 +189,11 @@ cVoid chal_caph_dma_set_buffer_address(CHAL_HANDLE handle,
             CAPH_DMA_CHANNEL_e  channel,
 			cUInt32             address);
 
+cVoid chal_caph_dma_set_hibuffer(CHAL_HANDLE handle,
+            CAPH_DMA_CHANNEL_e  channel,
+			cUInt32             address,
+			cUInt32             size);
+
 /**
 *
 *  @brief  Set caph dma channel buffer size

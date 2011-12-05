@@ -105,18 +105,17 @@ cVoid chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable)
 //============================================================================
 //
 // Function Name: cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle,
-//                        cUInt16 *src, cUInt32 length )
+//                        cUInt16 *src)
 //
 // Description:  Load coefficient to sidetone path
 //
 // Parameters:   handle - audio chal handle.
 //                 *src   - the coefficient buffer
-//                 length - the coefficient length
 // Return:       None.
 //
 //============================================================================
 
-cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff, cUInt32 length )
+cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff)
 {
     cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->sdt_base;
     cUInt32      index;

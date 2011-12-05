@@ -119,7 +119,7 @@ cVoid chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable)
 //============================================================================
 //
 // Function Name: cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle,
-//                        cUInt16 *src, cUInt32 length )
+//                        cUInt16 *src)
 //
 // Description:  Load coefficient to sidetone path
 //

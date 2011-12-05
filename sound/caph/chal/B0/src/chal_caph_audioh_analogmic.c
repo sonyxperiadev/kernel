@@ -404,12 +404,6 @@ cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
         reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
         reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
         reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
-#if defined(CONFIG_ARCH_RHEA_B0)
-		//nothing
-#else
-        reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
-        reg_val |= (3 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
-#endif
         BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VMIC, reg_val);
 
         // power up AUDIORX_REF, others "0"
@@ -433,12 +427,6 @@ cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
         reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
         reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
         reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
-#if defined(CONFIG_ARCH_RHEA_B0)
-		//nothing
-#else
-        reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
-        reg_val |= (0 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
-#endif
         BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VMIC, reg_val);
 
         //5.  turn off everything

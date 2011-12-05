@@ -772,7 +772,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	BRCM_AUDIO_Param_Spkr_t parm_spkr;
     int rtn = 0,cmd,i,indexVal = -1,cnt=0;
 	struct snd_pcm_substream *pStream=NULL;
-	Int32 sink;
+	Int32 sink = 0;
 
 	switch(function)
 	{

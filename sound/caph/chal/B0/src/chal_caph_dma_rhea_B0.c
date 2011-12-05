@@ -168,18 +168,33 @@ static cVoid chal_caph_dma_rheaB0_set_ddrfifo_status(CHAL_HANDLE handle,
             {
                 cr &= (~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_MASK);
                 cr &= (~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_HIGH_MASK);
+                BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
             }
             else
             {
+#if 1
+                if (status & CAPH_READY_LOW)
+                {
+                    cr = CAPH_READY_LOW << CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT;
+                    BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
+                }
+                if (status & CAPH_READY_HIGH)
+                {
+                    cr |= CAPH_READY_HIGH << CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT;
+                    BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
+                }
+#else
                 cr |= (status << CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT);
+                BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
+#endif
             }
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
             break;
         }
     }
 
     return;
 }
+
 
 /****************************************************************************
 *

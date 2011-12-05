@@ -726,9 +726,9 @@ cVoid chal_audio_nvinpath_int_clear(CHAL_HANDLE handle, Boolean thr_int, Boolean
 
 //============================================================================
 //
-// Function Name: cVoid chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle,UInt32 dmic3_scale, UInt32 dmic4_scale)
+// Function Name: cVoid chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle,  UInt32 dmic3_coarse_scale, UInt32 dmic3_fine_scale, UInt32 dmic4_coarse_scale, UInt32 dmic4_fine_scale)
 //
-// Description:  Set the CIC fine scale for the Digital MIC 3 & 4
+// Description:  Set the CIC coarse/fine scale for the Digital MIC 3 & 4
 //
 // Parameters:   handle  the noise voice input path handle.
 //
@@ -736,8 +736,10 @@ cVoid chal_audio_nvinpath_int_clear(CHAL_HANDLE handle, Boolean thr_int, Boolean
 //
 //============================================================================
 
-cVoid chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle, UInt32 dmic3_scale, UInt32 dmic4_scale)
+cVoid chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle,  UInt32 dmic3_coarse_scale, UInt32 dmic3_fine_scale, UInt32 dmic4_coarse_scale, UInt32 dmic4_fine_scale)
 {
+	UInt32 dmic3_scale = dmic3_coarse_scale | dmic3_fine_scale;
+	UInt32 dmic4_scale = dmic4_coarse_scale | dmic4_fine_scale;
     cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
 
     dmic3_scale &= (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_BIT_SEL_MASK|AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_MASK);

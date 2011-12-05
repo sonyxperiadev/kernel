@@ -695,7 +695,6 @@ void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config)
 	return;
 }
 
-#if defined(CONFIG_ARCH_RHEA_B0)
 /****************************************************************************
 *
 *  Function Name:void csl_caph_dma_set_hibuffer_address(CSL_CAPH_DMA_CHNL_e chnl, UInt8* addr)
@@ -717,7 +716,6 @@ void csl_caph_dma_set_hibuffer_address(CSL_CAPH_DMA_CHNL_e chnl, UInt8* addr)
 
         return;
 }
-#endif
 
 /****************************************************************************
 *

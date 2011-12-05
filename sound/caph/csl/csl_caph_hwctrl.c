@@ -2760,7 +2760,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
 		list = LIST_DMA_MIX_SW;
 
 		if(path->sink[sinkNo] == CSL_CAPH_DEV_VIBRA //vibra does not go thru mixer
-#if !defined(CONFIG_ARCH_RHEA_B0)
+#if !defined(CAPH_48K_MONO_PASSTHRU)
 			||(path->src_sampleRate == AUDIO_SAMPLING_RATE_48000 && path->chnlNum == AUDIO_CHANNEL_MONO) //no 48kHz mono pass-thru on A0, bypass mixer
 #endif
 			)
@@ -2889,7 +2889,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
 		&& (path->sink[sinkNo] == CSL_CAPH_DEV_HS))
     {
 		//according to ASIC team, switch can be used as 1:2 splitter, with two idential destination address. But data format should be 24bit unpack.
-#if defined(CONFIG_ARCH_RHEA_B0)
+#if defined(CAPH_48K_MONO_PASSTHRU)
 		path->chnlNum = 1; //o.w. stereo passthru src is picked.
 		list = LIST_SW_MIX_SW;
 #else

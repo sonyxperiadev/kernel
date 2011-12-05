@@ -424,13 +424,19 @@ extern  cUInt32 chal_audio_vinpath_read_int_status(CHAL_HANDLE handle);
 *  @brief  set CIC scale parameters for vinpath
 *
 *  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dmic1_scale       (in) specifies the CIC scale for Digital MIC 1
-*  @param  dmic2_scale       (in) specifies the CIC scale for Digital MIC 2
+*  @param  dmic1_coarse_scale   (in) the CIC coarse scale for Digital MIC 1
+*  @param  dmic1_fine_scale     (in) the CIC fine scale for Digital MIC 1
+*  @param  dmic2_coarse_scale   (in) the CIC coarse scale for Digital MIC 2
+*  @param  dmic2_fine_scale     (in) the CIC fine scale for Digital MIC 2
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle, cUInt32 dmic1_scale, cUInt32 dmic2_scale);
+extern void chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle,
+		cUInt32 dmic1_coarse_scale,
+		cUInt32 dmic1_fine_scale,
+		cUInt32 dmic2_coarse_scale,
+		cUInt32 dmic2_fine_scale);
 
 /**
 *
@@ -723,13 +729,19 @@ extern  cUInt32 chal_audio_nvinpath_read_int_status(CHAL_HANDLE handle);
 *  @brief  set CIC scale parameters for Noise vinpath
 *
 *  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dmic3_scale       (in) specifies the CIC scale for Digital MIC 3
-*  @param  dmic4_scale       (in) specifies the CIC scale for Digital MIC 4
+*  @param  dmic3_coarse_scale   (in) the CIC coarse scale for Digital MIC 3
+*  @param  dmic3_fine_scale     (in) the CIC fine scale for Digital MIC 3
+*  @param  dmic4_coarse_scale   (in) the CIC coarse scale for Digital MIC 4
+*  @param  dmic4_fine_scale     (in) the CIC fine scale for Digital MIC 4
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle, cUInt32 dmic3_scale, cUInt32 dmic4_scale);
+extern void chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle,
+		cUInt32 dmic3_coarse_scale,
+		cUInt32 dmic3_fine_scale,
+		cUInt32 dmic4_coarse_scale,
+		cUInt32 dmic4_fine_scale);
 
 /**
 *
@@ -2221,11 +2233,10 @@ extern  void chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable);
 *
 *  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
 *  @param  coeff              (in) this specify the location where filter coefficients are located
-*  @param  length            (in) this specify the size of the filter coefficients
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff, cUInt32 length );
+extern  void chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff);
 
 /**
 *
