@@ -140,6 +140,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_FG_OFFSET0] =		{.map = 0x01, .addr = 0xD4, .mask = 0xFF, .ro = 1, .shift = 6},
 	[PMU_REG_FG_OFFSET1] =		{.map = 0x01, .addr = 0xD5, .mask = 0xFF, .ro = 1, .shift = 6},
 	[PMU_REG_FG_GAINTRIM] =		{.map = 0x01, .addr = 0xC5, .mask = 0xFF, .ro = 0, .shift = 0},
+	[PMU_REG_FG_DELTA] =		{.map = 0x01, .addr = 0xDA, .mask = 0xFF, .ro = 0, .shift = 0},
 	/* usb control */
 	[PMU_REG_OTG_VBUS_PULSE] =	{.map = 0, .addr = 0x70, .mask = 0x01, .ro = 0, .shift = 0},
 	[PMU_REG_OTG_VBUS_BOOST] =	{.map = 0, .addr = 0x70, .mask = 0x04, .ro = 0, .shift = 2},
@@ -192,6 +193,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_HOSTCTRL3] =		{.map = 0x00, .addr = 0x03, .mask = 0xFF, .ro = 0},
 	[PMU_REG_MBCCTRL5_USB_DET_LDO_EN] =	{.map = 0x00, .addr = 0x54, .mask = 0x04, .ro = 0, .shift = 2},
 	[PMU_REG_MBCCTRL5_CHARGE_DET] =	{.map = 0x00, .addr = 0x54, .mask = 0x07, .ro = 0, .shift = 0},
+	[PMU_REG_SYS_WDT_CLR] = 	{.map = 0x00, .addr = 0x01, .mask = 0x02, .ro = 0},
 };
 
 static const struct bcmpmu_irq_map bcm59055_irq_map[PMU_IRQ_MAX] = {//revisit
@@ -272,7 +274,8 @@ static const struct bcmpmu_env_info bcm59055_env_reg_map[PMU_ENV_MAX] = {//revis
 	[PMU_ENV_P_UBPD_CHR] = 		{.regmap = {.addr = 0xE1, .mask = 0x04, .shift = 2, .ro = 1}, .bitmask = PMU_ENV_BITMASK_P_UBPD_CHR},
 	[PMU_ENV_PORT_DISABLE] = 	{.regmap = {.addr = 0x00, .mask = 0x00, .shift = 0, .ro = 1}, .bitmask = PMU_ENV_BITMASK_PORT_DISABLE},
 	[PMU_ENV_MBPD] = 		{.regmap = {.addr = 0xE4, .mask = 0x01, .shift = 0, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBPD},
-	[PMU_ENV_MBOV] = 		{.regmap = {.addr = 0xE0, .mask = 0x10, .shift = 3, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBOV},
+	[PMU_ENV_MBOV] = 		{.regmap = {.addr = 0xE0, .mask = 0x10, .shift = 4, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBOV},
+	[PMU_ENV_MBMC] = 		{.regmap = {.addr = 0xE0, .mask = 0x08, .shift = 3, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBMC},
 };
 
 static const struct bcmpmu_adc_map bcm59055_adc_map[PMU_ADC_MAX] = {//revisit

@@ -26,6 +26,7 @@
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 #include <linux/power_supply.h>
+#include <linux/time.h>
 
 #include <linux/mfd/bcmpmu.h>
 
@@ -141,6 +142,7 @@ struct bcmpmu_em {
 	unsigned char batt_capacity_lvl;
 	unsigned char batt_present;
 	unsigned char batt_capacity;
+	unsigned long time;
 };
 static struct bcmpmu_em *bcmpmu_em;
 
@@ -312,7 +314,8 @@ fgdelta_show(struct device *dev, struct device_attribute *attr,
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	int data;
-	int ret = get_fg_delta(bcmpmu, &data);
+	int ret;
+	ret = get_fg_delta(bcmpmu, &data);
 	return sprintf(buf, "fgdelta is 0x%X\n", data);
 }
 
@@ -348,11 +351,17 @@ static const struct attribute_group bcmpmu_em_attr_group = {
 };
 #endif
 
-static int em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int curr, bool comp)
+static int em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int curr)
 {
 	int i = 0;
 	int cap = pem->bvcap[i].cap;
 	int index;
+	int comp = 1;
+	
+	if ((pem->chrgr_type != PMU_CHRGR_TYPE_NONE) ||
+		(pem->bcmpmu->get_env_bit_status(pem->bcmpmu, PMU_ENV_MBMC) == false))
+		comp = 0;
+
 	if (comp)
 		volt = volt - (pem->batt_impedence * curr)/1000;
 
@@ -396,7 +405,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 
 	if (pem->support_fg == 0) {
 		capacity = em_batt_get_capacity(pem,
-			pem->batt_volt, pem->batt_curr, 1);
+			pem->batt_volt, pem->batt_curr);
 	} else {
 		ret = pem->bcmpmu->fg_acc_mas(pem->bcmpmu, &fg_result);
 		if (ret != 0) {
@@ -411,16 +420,16 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 
 		capacity = (pem->fg_capacity * 100)
 			/pem->fg_capacity_full;
-		if ((pem->batt_capacity != 100) &&
+		if ((pem->chrgr_type != PMU_CHRGR_TYPE_NONE) &&
+			(pem->batt_capacity != 100) &&
 			(capacity >= 100))
 			capacity--;
+		if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
+			(capacity < 100))
+			capacity++;
 
-		if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE)
-			capacity_v = em_batt_get_capacity(pem,
-				pem->batt_volt, pem->batt_curr, 0);
-		else
-			capacity_v = em_batt_get_capacity(pem,
-				pem->batt_volt, pem->batt_curr, 1);
+		capacity_v = em_batt_get_capacity(pem,
+				pem->batt_volt, pem->batt_curr);
 
 		if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
 			(pem->fg_cal == 1) &&
@@ -592,7 +601,7 @@ static void em_algorithm(struct work_struct *work)
 		} else {
 			pem->batt_volt = req.cnv;
 			capacity = em_batt_get_capacity(pem,
-				pem->batt_volt, 0, 0);
+				pem->batt_volt, 0);
 			pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
 			pem->batt_capacity = capacity;
 			pem->mode = MODE_IDLE;
@@ -620,12 +629,8 @@ static void em_algorithm(struct work_struct *work)
 		iacc = req.cnv;
 		pem->batt_volt = vacc/POLL_SAMPLES;
 		pem->batt_curr = iacc;
-		if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE)
-			capacity = em_batt_get_capacity(pem,
-				pem->batt_volt, pem->batt_curr, 0);
-		else
-			capacity = em_batt_get_capacity(pem,
-				pem->batt_volt, pem->batt_curr, 1);
+		capacity = em_batt_get_capacity(pem,
+			pem->batt_volt, pem->batt_curr);
 		if (pem->fg_cal == 1) {
 			pem->cap_delta = capacity - pem->batt_capacity;
 			ret = save_fg_delta(pem->bcmpmu, pem->cap_delta);
@@ -740,7 +745,7 @@ static void em_algorithm(struct work_struct *work)
 	propval.intval = pem->batt_volt;
 	ps->set_property(ps, POWER_SUPPLY_PROP_VOLTAGE_NOW, &propval);
 
-	if ((pem->charge_state != CHRG_STATE_CHRG) &&
+	if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
 		(capacity > pem->batt_capacity))
 		capacity = pem->batt_capacity;
 
@@ -793,6 +798,8 @@ static void em_algorithm(struct work_struct *work)
 	bcmpmu->write_dev(bcmpmu, PMU_REG_SYS_WDT_CLR,
 		bcmpmu->regmap[PMU_REG_SYS_WDT_CLR].mask,
 		bcmpmu->regmap[PMU_REG_SYS_WDT_CLR].mask);
+
+	pem->time = get_seconds();
 }
 
 static int em_event_handler(struct notifier_block *nb,
@@ -824,7 +831,7 @@ static int em_event_handler(struct notifier_block *nb,
 		req.tm = PMU_ADC_TM_HK;
 		pem->bcmpmu->adc_req(pem->bcmpmu, &req);
 		
-		capacity_v = em_batt_get_capacity(pem, req.cnv, 0, 0);
+		capacity_v = em_batt_get_capacity(pem, req.cnv, 0);
 		if ((pem->batt_capacity > (capacity_v + 10)) ||
 			((pem->batt_capacity + 10) < (capacity_v))) {
 			pem->batt_capacity = capacity_v;
@@ -979,7 +986,13 @@ static int bcmpmu_em_resume(struct platform_device *pdev)
 {
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_em *pem = bcmpmu->eminfo;
-	schedule_delayed_work(&pem->work, 0);
+	unsigned long time;
+	time = get_seconds();
+
+	if ((time - pem->time)*1000 > get_update_rate(pem)) {
+		cancel_delayed_work_sync(&pem->work);
+		schedule_delayed_work(&pem->work, 0);
+	}
 	return 0;
 }
 

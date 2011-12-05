@@ -588,7 +588,7 @@ static int bcmpmu_get_fg_currsmpl(struct bcmpmu *bcmpmu, int *data)
 		pr_hwmon(ERROR, "%s failed to get adc result.\n", __func__);
 		return ret;
 	}
-	curr = ((req.cnv * SENSE_RES_COEF)/pfg->fg_sns_res)/10;
+	curr = req.cnv;
 	*data = (curr * pfg->fg_factor)/1000;
 	return	ret;
 }
@@ -616,7 +616,7 @@ static int bcmpmu_get_fg_acc_mas(struct bcmpmu *bcmpmu, int *data)
 	unsigned int cnt, cnt0, cnt1;
 	unsigned int slpcnt, slpcnt0, slpcnt1;
 	struct bcmpmu_fg *pfg = bcmpmu->fginfo;
-	long int actacc, slpacc;
+	int64_t actacc, slpacc;
 
 	ret = bcmpmu->write_dev(bcmpmu,
 			PMU_REG_FG_FRZREAD,
@@ -711,16 +711,16 @@ static int bcmpmu_get_fg_acc_mas(struct bcmpmu *bcmpmu, int *data)
 	slpcnt = slpcnt0 | (slpcnt1 << 8);
 	pfg->fg_slp_cnt = slpcnt;
 
-	actacc = acc * pfg->fg_smpl_cnt_tm;		/* mams */
-	actacc = ((actacc * (int)SENSE_RES_COEF)/pfg->fg_sns_res)/10;
-	actacc = (actacc/1000) * pfg->fg_factor;
-	slpacc = slpcnt * pfg->fg_slp_cnt_tm; 		/* ms */
-	slpacc = (slpacc * pfg->fg_slp_curr_ua) / 1000;	/* mams */
-	*data = (actacc + slpacc)/1000; 		/* mas */
-
-	pr_hwmon(FLOW, "%s: fg acc\n actacc=%ld, actcnt=%d\n \
-		slpacc=%ld, slpcnt=%d\n acc_mAsec = %d\n",
-		__func__, actacc, cnt, slpacc, slpcnt, *data);
+	actacc = acc * pfg->fg_smpl_cnt_tm;
+	actacc = actacc * pfg->fg_factor;
+	slpacc = slpcnt * pfg->fg_slp_cnt_tm;
+	slpacc = slpacc * pfg->fg_slp_curr_ua;
+	pr_hwmon(DATA, "%s: actacc=%lld, actcnt=%d, slpacc=%lld, slpcnt=%d\n",
+		__func__, actacc, cnt, slpacc, slpcnt);
+	actacc = actacc + slpacc;
+	actacc = div_s64(actacc, 1000000);
+	*data = (int) actacc;
+	pr_hwmon(FLOW, "%s: fg acc mAsec = %d\n", __func__, *data);
 
 	return ret;
 }
@@ -908,6 +908,10 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 		pfg->fg_factor = pdata->fg_factor;
 	else
 		pfg->fg_factor = 1000;
+
+	pfg->fg_factor = pfg->fg_factor * SENSE_RES_COEF;
+	pfg->fg_factor = pfg->fg_factor/pfg->fg_sns_res;
+	pfg->fg_factor = pfg->fg_factor/10;
 
 	pfg->bcmpmu->fg_currsmpl = bcmpmu_get_fg_currsmpl;
 	pfg->bcmpmu->fg_vmbatt = bcmpmu_get_fg_vmbatt;
