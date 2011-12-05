@@ -152,7 +152,8 @@ void caph_audio_init(void)
 int LaunchAudioCtrlThread(void)
 {
 	int ret;
-	sgThreadData.m_lock =  __SPIN_LOCK_UNLOCKED();
+	spin_lock_init(&sgThreadData.m_lock);
+	spin_lock_init(&sgThreadData.m_lock_out);
 
 	ret = kfifo_alloc(&sgThreadData.m_pkfifo,KFIFO_SIZE, GFP_KERNEL);
 	/* Commenting debug prints to eliminate compilation errors for kfifo member access*/
