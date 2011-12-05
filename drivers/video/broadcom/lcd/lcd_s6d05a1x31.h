@@ -31,18 +31,6 @@
 #define PIXEL_FORMAT_RGB666  0x66   // for MPU & RGB interface
 #define PIXEL_FORMAT_RGB888  0x77   // for MPU & RGB interface
 
-
-
-#define LCD_BITS_PER_PIXEL      16
-//#define LCD_BITS_PER_PIXEL      32
-#define TEAR_LINE 500
-
-
-
-//#define PANEL_BOE           0x61a511
-#define PANEL_BOE           0x61bc11
-#define LCD_DET 32
-
 #define RESET_SEQ 	{DISPCTRL_WR_CMND, 0x2A,0},\
 	{DISPCTRL_WR_DATA, 0, (dev->col_start) >> 8},\
 	{DISPCTRL_WR_DATA, 0, dev->col_start & 0xFF},\
@@ -70,7 +58,7 @@ static DISPDRV_INFO_T Disp_Info =
     DISPLAY_TYPE_LCD_STD,         // DISPLAY_TYPE_T          type;          
     320,                          // UInt32                  width;         
     480,                          // UInt32                  height;        
-    //DISPDRV_FB_FORMAT_RGB888_U,   // DISPDRV_FB_FORMAT_T     input_format;
+   // DISPDRV_FB_FORMAT_RGB888_U,   // DISPDRV_FB_FORMAT_T     input_format; //@HW
 	DISPDRV_FB_FORMAT_RGB565,
     DISPLAY_BUS_DSI,              // DISPLAY_BUS_T           bus_type;
     0,                            // UInt32                  interlaced;    
@@ -186,14 +174,34 @@ DISPCTRL_REC_T power_on_seq_s5d05a1x31_cooperve_AUO[] =
 	{DISPCTRL_WR_CMND, 0x29,0}, // (DISPON) 
 	{DISPCTRL_SLEEP_MS, 0, 100}, // 120ms
 
+	{DISPCTRL_WR_CMND_DATA, 0x35,0x01}, // (TEON)
+	
+
 	{DISPCTRL_WR_CMND_DATA,0x36,0x88},
-	{DISPCTRL_WR_CMND_DATA, 0x3A,0x55}, //RGB565
-	//{DISPCTRL_WR_DATA, 0, 0x77},  //Format RGB888
+	{DISPCTRL_WR_CMND_DATA, 0x3A,0x55}, //RGB565 //@HW
+	//{DISPCTRL_WR_CMND_DATA, 0x3A,0x77},  //Format RGB888
+	//{DISPCTRL_WR_CMND_DATA, 0x3A,0x66},  //Format RGB666
 
 	{DISPCTRL_WR_CMND, 0x2C,0}, // ( RAM DISPCTRL_WRITE )
 	
 	{DISPCTRL_LIST_END, 0, 0}
 };
+
+
+DISPCTRL_REC_T enter_sleep_seq_AUO[] =
+{
+	{DISPCTRL_WR_CMND, 0x10,0}, // (SLPIN)
+	{DISPCTRL_SLEEP_MS, 0, 120},
+	{DISPCTRL_LIST_END, 0, 0}
+};
+
+DISPCTRL_REC_T exit_sleep_seq_AUO[] =
+{
+	{DISPCTRL_WR_CMND, 0x11,0}, // (SLPIN)
+	{DISPCTRL_SLEEP_MS, 0, 120},
+	{DISPCTRL_LIST_END, 0, 0}
+};
+
 
 #endif
 

@@ -675,7 +675,7 @@ static struct i2c_board_info __initdata bmp18x_info[] =
 #endif
 #ifdef CONFIG_AL3006
 #ifdef CONFIG_GPIO_PCA953X
-	#define AL3006_INT_GPIO_PIN		(121)
+	#define AL3006_INT_GPIO_PIN		(121) //@Fixed me Temporay value
 #else
 	#define AL3006_INT_GPIO_PIN		122	/*  skip expander chip */
 #endif
@@ -1158,10 +1158,10 @@ static struct kona_fb_platform_data rhea_ss_dsi_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISPDRV_GetFuncTable,
 	.screen_width		= 320,
 	.screen_height		= 480,
-	.bytes_per_pixel	= 2,
+	.bytes_per_pixel	= 4,//2, //@HW
 	.gpio			= 41,
-	.pixel_format		= RGB565,
-	//.pixel_format		= XRGB8888,
+	//.pixel_format		= RGB565,
+	.pixel_format		= XRGB8888,
 };
 
 static struct platform_device rhea_ss_dsi_display_device = {
@@ -1219,9 +1219,9 @@ static struct kona_fb_platform_data r61581_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
 	.screen_width		= 320,
 	.screen_height		= 480,
-	.bytes_per_pixel	= 2,
+	.bytes_per_pixel	= 4, 
 	.gpio			= 41,
-	.pixel_format		= RGB565,
+	.pixel_format		= RGB565, //XRGB8888, //RGB565, //@HW
 	.bus_width		= 16,
 };
 

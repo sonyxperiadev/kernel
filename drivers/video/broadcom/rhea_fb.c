@@ -227,13 +227,7 @@ skip_drawing:
 }
 
 static void reset_display(u32 gpio)
-{
-
-	
-	gpio_request(95,"BK_LIGHT");
-	gpio_direction_output(95, 0);
-	gpio_set_value_cansleep(95, 1);
-	
+{	
 	if (gpio != 0) {
 		gpio_request(gpio, "LCD_RST1");
 		gpio_direction_output(gpio, 0);
