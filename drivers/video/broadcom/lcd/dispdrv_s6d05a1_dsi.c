@@ -1219,7 +1219,7 @@ Int32 DISPDRV_Update (
     	req.buff           = pPanel->pFbA;
      else
 	req.buff 	   = (void *)((UInt32)pPanel->pFbA + 
-		Disp_Info.width * Disp_Info.height * 4);
+		Disp_Info.width * Disp_Info.height * 2); //@HW
 
 //    req.buff           = pPanel->pFbA;
     req.lineLenP       = Disp_Info.width;

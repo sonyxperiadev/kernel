@@ -111,7 +111,11 @@ static struct __init pin_config board_pin_config[] = {
 
 	PIN_CFG(DCLK4,  GPIO95, 0, OFF, OFF, 0, 0, 8MA),
 	/* LCD */
+#if defined(CONFIG_MACH_RHEA_RAY)
+	PIN_CFG(DSI0TE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
+#else
 	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
+#endif
 	PIN_CFG(LCDRES, GPIO41, 0, OFF, ON, 0, 0, 8MA),
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	/* conflicts with SSP4 so comment it out.  Leave the code here for possible future change */

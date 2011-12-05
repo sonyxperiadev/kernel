@@ -1158,10 +1158,10 @@ static struct kona_fb_platform_data rhea_ss_dsi_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISPDRV_GetFuncTable,
 	.screen_width		= 320,
 	.screen_height		= 480,
-	.bytes_per_pixel	= 4,//2, //@HW
+	.bytes_per_pixel	= 2,//2, //@HW
 	.gpio			= 41,
-	//.pixel_format		= RGB565,
-	.pixel_format		= XRGB8888,
+	.pixel_format		= RGB565,
+	//.pixel_format		= XRGB8888,
 };
 
 static struct platform_device rhea_ss_dsi_display_device = {
