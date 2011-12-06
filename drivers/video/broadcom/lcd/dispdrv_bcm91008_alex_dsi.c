@@ -53,6 +53,7 @@
 #include "dispdrv_mipi_dsi.h"      // MIPI DSI      
 #else
 #include <plat/dma_drv.h>
+#include <plat/pi_mgr.h>
 #include "display_drv.h"           // display driver interface
 #include <plat/csl/csl_lcd.h>               // LCD CSL Common Interface 
 #include <plat/csl/csl_dsi.h>               // DSI CSL 
@@ -129,7 +130,7 @@ static void     bcm91008_alex_WrCmndP1  (
                     UInt32                  val );
 
 // DRV INTERFACE FUNCTIONs
-Int32           BCM91008_ALEX_Init          ( void ); 
+Int32           BCM91008_ALEX_Init          ( unsigned int bus_width ); 
 Int32           BCM91008_ALEX_Exit          ( void ); 
 
 Int32           BCM91008_ALEX_Open          ( 
@@ -146,8 +147,8 @@ Int32           BCM91008_ALEX_GetDispDrvFeatures (
 
 const DISPDRV_INFO_T* BCM91008_ALEX_GetDispDrvData ( DISPDRV_HANDLE_T drvH );
 
-Int32           BCM91008_ALEX_Start         ( DISPDRV_HANDLE_T drvH ); 
-Int32           BCM91008_ALEX_Stop          ( DISPDRV_HANDLE_T drvH ); 
+Int32           BCM91008_ALEX_Start         ( struct pi_mgr_dfs_node* dfs_node); 
+Int32           BCM91008_ALEX_Stop          ( struct pi_mgr_dfs_node* dfs_node); 
 
 Int32           BCM91008_ALEX_PowerControl  ( DISPDRV_HANDLE_T drvH, 
                    DISPLAY_POWER_STATE_T state ); 
@@ -155,6 +156,7 @@ Int32           BCM91008_ALEX_PowerControl  ( DISPDRV_HANDLE_T drvH,
 Int32           BCM91008_ALEX_Update       ( 
                     DISPDRV_HANDLE_T    drvH, 
 		    int			fb_idx,
+	            DISPDRV_WIN_t*	p_win,
                     DISPDRV_CB_T        apiCb ); 
 
 Int32           BCM91008_ALEX_Update_ExtFb ( 
@@ -545,7 +547,7 @@ DISPDRV_T* DISP_DRV_BCM91008_ALEX_GetFuncTable ( void )
 // Description:   Reset Driver Info
 //
 //*****************************************************************************
-Int32 BCM91008_ALEX_Init ( void )
+Int32 BCM91008_ALEX_Init ( unsigned int bus_width )
 {
     Int32 res = 0;
 
@@ -777,12 +779,17 @@ Int32 BCM91008_ALEX_Open (
     }
 #endif
 
-    if (brcm_enable_dsi_lcd_clocks(&pPanel->dfs_node))
+#if 0
+    if (brcm_enable_dsi_lcd_clocks(&pPanel->dfs_node,0,
+    		dsiCfg.hsBitClk.clkIn_MHz * 1000000,
+                dsiCfg.hsBitClk.clkInDiv,
+                dsiCfg.escClk.clkIn_MHz   * 1000000 / dsiCfg.escClk.clkInDiv ))
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
             __FUNCTION__  );
         return ( -1 );
     }
+#endif
 
     if( bcm91008_AlexTeOn ( pPanel ) ==  -1 )
     {
@@ -880,13 +887,15 @@ Int32 BCM91008_ALEX_Close ( DISPDRV_HANDLE_T drvH )
 #if (defined (_HERA_) || defined(_RHEA_))
     bcm91008_AlexTeOff ( pPanel );
 #endif
-   
-    if (brcm_disable_dsi_lcd_clocks(pPanel->dfs_node))
+
+#if 0
+    if (brcm_disable_dsi_lcd_clocks(pPanel->dfs_node,0))
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
             __FUNCTION__  );
         return ( -1 );
     }
+#endif
 
     pPanel->pwrState = DISP_PWR_OFF;
     pPanel->drvState = DRV_STATE_INIT;
@@ -990,13 +999,19 @@ Int32 BCM91008_ALEX_PowerControl (
 // Description:   Configure For Updates
 //
 //*****************************************************************************
-Int32 BCM91008_ALEX_Start ( DISPDRV_HANDLE_T drvH )
+Int32 BCM91008_ALEX_Start (struct pi_mgr_dfs_node* dfs_node)
 {
-    Int32 res = 0;
+    if (brcm_enable_dsi_lcd_clocks(dfs_node,0,
+    		dsiCfg.hsBitClk.clkIn_MHz * 1000000,
+                dsiCfg.hsBitClk.clkInDiv,
+                dsiCfg.escClk.clkIn_MHz   * 1000000 / dsiCfg.escClk.clkInDiv ))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
 
-    DISPDRV_CHECK_PTR_2_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
-    
-    return ( res );
+    return ( 0 );
 }
 
 //*****************************************************************************
@@ -1006,13 +1021,17 @@ Int32 BCM91008_ALEX_Start ( DISPDRV_HANDLE_T drvH )
 // Description:   
 //
 //*****************************************************************************
-Int32 BCM91008_ALEX_Stop ( DISPDRV_HANDLE_T drvH )
+Int32 BCM91008_ALEX_Stop (struct pi_mgr_dfs_node* dfs_node)
 {
-    Int32 res = 0;
-    
-    DISPDRV_CHECK_PTR_2_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
-    
-    return ( res );
+    if (brcm_disable_dsi_lcd_clocks(dfs_node,0))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
+
+
+    return ( 0 );
 }
 
 //*****************************************************************************
@@ -1164,6 +1183,7 @@ Int32 BCM91008_ALEX_Update_ExtFb (
 Int32 BCM91008_ALEX_Update ( 
     DISPDRV_HANDLE_T    drvH, 
     int			fb_idx,
+    DISPDRV_WIN_t*	p_win,
     DISPDRV_CB_T        apiCb
     )
 {

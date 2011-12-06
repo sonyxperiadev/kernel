@@ -31,12 +31,9 @@
 
 #include "vchiq_arm.h"
 #include "vchiq_bivcm.h"
+#include "vchiq_connected.h"
 
 #include "vchiq_memdrv.h"
-
-#ifdef USE_VCEB
-#include "interface/vceb/host/vceb.h"
-#endif
 
 #include <linux/dma-mapping.h>
 #include <mach/sdma.h>
@@ -52,6 +49,10 @@
 #include <mach/io_map.h>
 #define IPC_SHARED_MEM_BASE       KONA_INT_SRAM_BASE
 
+#if defined( CONFIG_KONA_WFI_WORKAROUND )
+#include <mach/wfi_count.h>
+#endif
+
 #else
 
 #include <csp/chal_ipc.h>
@@ -62,6 +63,10 @@
 #endif
 
 #include <linux/videocore/vc_mem.h>
+
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+#include "host_applications/linux/libs/debug_sym/debug_sym.h"
+#endif
 
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 #include <linux/earlysuspend.h>
@@ -123,6 +128,7 @@ VCOS_CFG_ENTRY_T         vc_cfg_dir;
 
 static CHAL_IPC_HANDLE   ipcHandle;
 static VCOS_EVENT_T      g_pause_event;
+static int               g_initialized;
 
 static VCHIQ_STATE_T    *g_vchiq_state;
 static VCHIQ_SLOT_ZERO_T *g_vchiq_slot_zero;
@@ -148,6 +154,12 @@ static VCOS_TIMER_T      g_suspend_timer;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static int               g_early_susp_ctrl = 0;
 static int               g_earlysusp_suspend_allowed = 0;
+#endif
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+static VC_MEM_ACCESS_HANDLE_T g_vchiq_mem_hndl;
+static void                   *g_vchiq_ipc_shared_mem;
+static int                    g_vchiq_ipc_shared_mem_addr;
+static int                    g_vchiq_ipc_shared_mem_size;
 #endif
 
 static irqreturn_t
@@ -179,7 +191,7 @@ vchiq_platform_init(VCHIQ_STATE_T *state)
 #if (( defined( CONFIG_ARCH_KONA ) || defined( CONFIG_ARCH_BCMHANA )) && !defined( CONFIG_MAP_LITTLE_ISLAND_MODE ))
 
    /*
-    * On Big Island, the videocore can only access the lower 512 Mb of the ARM memory. 
+    * On Big Island, the videocore can only access the lower 512 Mb of the ARM memory.
     * So bivcm can only work if the host is located in the lower 512 Mb of physical memory.
     */
 
@@ -285,12 +297,30 @@ vchiq_prepare_bulk_data(VCHIQ_BULK_T *bulk, VCHI_MEM_HANDLE_T memhandle,
       slave. */
    bulk->remote_data = pagelist;
 
+#if defined( CONFIG_KONA_WFI_WORKAROUND )
+
+   /*
+    * SW-7022: By incrementing wfi_count here, it prevents the 2nd core from doing
+    *          a WFI while we're doing a bulk transfer. If both cores do a WFI then
+    * the videocore access times to ARM memory increase by a factor of 600.
+    */
+   atomic_inc( &wfi_count );
+#endif
+
    return VCHIQ_SUCCESS;
 }
 
 void
 vchiq_complete_bulk(VCHIQ_BULK_T *bulk)
 {
+#if defined( CONFIG_KONA_WFI_WORKAROUND )
+   /*
+    * SW-7022: We're finished with the bulk, which means that the videocore no
+    *          longer needs to access the ARM memory, so we can allow the second
+    * core to do WFI calls once again.
+    */
+   atomic_dec( &wfi_count );
+#endif
    free_pagelist((PAGELIST_T *)bulk->remote_data, bulk->actual);
 }
 
@@ -842,9 +872,6 @@ vchiq_late_resume(struct early_suspend *h)
 
 VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platform_data )
 {
-#ifdef USE_VCEB
-   VCEB_INSTANCE_T       vceb_instance;
-#endif
    VCHIQ_KERNEL_STATE_T   *kernState;
 
    vcos_log_warn( "%s: [bivcm] vchiq_num_instances = %d, VCHIQ_NUM_VIDEOCORES = %d",
@@ -857,18 +884,6 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
 
       return VCHIQ_ERROR;
    }
-
-#ifdef USE_VCEB
-   if ( vceb_get_instance( platform_data->instance_name, &vceb_instance ) != 0 )
-   {
-      /* No instance registered with vceb, which means the videocore is not
-         present */
-      vcos_log_error( "%s: failed to find vceb instance '%s'", __func__,
-         platform_data->instance_name );
-
-      return VCHIQ_ERROR;
-   }
-#endif
 
    /* Allocate some memory */
    kernState = kmalloc( sizeof( *kernState ), GFP_KERNEL );
@@ -919,19 +934,8 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
       return VCHIQ_ERROR;
    }
 
-#ifndef USE_VCEB
-   /* Direct connect the vchiq to get vmcs-fb and vmcs-sm device module built in */
-   if ( vchiq_memdrv_initialise() != VCHIQ_SUCCESS )
-   {
-      printk( KERN_ERR "%s: failed to initialise vchiq for '%s'\n",
-              __func__, kernState->instance_name );
-   }
-   else
-#endif
-   {
-      printk( KERN_INFO "%s: initialised vchiq for '%s'\n", __func__,
-              kernState->instance_name );
-   }
+   printk( KERN_INFO "%s: initialised vchiq for '%s'\n", __func__,
+           kernState->instance_name );
 
    return VCHIQ_SUCCESS;
 }
@@ -1082,15 +1086,24 @@ EXPORT_SYMBOL( vchiq_userdrv_resume );
 static void
 service_gpio( uint32_t irq_status )
 {
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+   volatile uint32_t gpio_mailbox_write = (*(volatile uint32_t *)(g_vchiq_ipc_shared_mem + IPC_SHARED_MEM_CHANNEL_ARM_OFFSET + IPC_SHARED_MEM_GPIO_WRITE_OFFSET));
+   volatile uint32_t gpio_mailbox_read  = (*(volatile uint32_t *)(g_vchiq_ipc_shared_mem + IPC_SHARED_MEM_CHANNEL_ARM_OFFSET + IPC_SHARED_MEM_GPIO_READ_OFFSET));
+#else
 #define GPIO_MAILBOX_WRITE            (*(volatile uint32_t *)(IPC_SHARED_MEM_BASE + IPC_SHARED_MEM_CHANNEL_ARM_OFFSET + IPC_SHARED_MEM_GPIO_WRITE_OFFSET))
 #define GPIO_MAILBOX_READ             (*(volatile uint32_t *)(IPC_SHARED_MEM_BASE + IPC_SHARED_MEM_CHANNEL_ARM_OFFSET + IPC_SHARED_MEM_GPIO_READ_OFFSET))
+#endif
 
 #define GPIO_MAILBOX_WRITE_SET        (0x80000000)
 #define GPIO_MAILBOX_WRITE_PIN_MASK   (0x7FFFFFFF)
 
    if ( irq_status & ( IPC_INTERRUPT_STATUS_ENABLED << IPC_INTERRUPT_SOURCE_2 ))
    {
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+      uint32_t reg = gpio_mailbox_write;
+#else
       uint32_t reg = GPIO_MAILBOX_WRITE;
+#endif
 
       if ( reg & GPIO_MAILBOX_WRITE_SET )
       {
@@ -1111,8 +1124,12 @@ service_gpio( uint32_t irq_status )
 
    if ( irq_status & ( IPC_INTERRUPT_STATUS_ENABLED << IPC_INTERRUPT_SOURCE_3 ))
    {
-      /* GPIO set */
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+      gpio_mailbox_read = gpio_get_value( gpio_mailbox_read );
+#else
       GPIO_MAILBOX_READ = gpio_get_value( GPIO_MAILBOX_READ );
+#endif
+      /* GPIO set */
 
       /* Notify videocore that GPIO has been set */
       chal_ipc_int_vcset( ipcHandle, IPC_INTERRUPT_SOURCE_3 );
@@ -1181,11 +1198,98 @@ VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
    int err = 0;
    int i;
 
+   if ( g_initialized )
+   {
+      vcos_log_warn( "%s: already initialized", __func__ );
+      return VCOS_SUCCESS;
+   }
+
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+   VC_MEM_ADDR_T vcMemAddr;
+   size_t vcMemSize;
+   uint8_t *mapAddr;
+   off_t  vcMapAddr;
+
+   g_vchiq_ipc_shared_mem_size = 0;
+   
+   if ( OpenVideoCoreMemory( &g_vchiq_mem_hndl ) == 0 )
+   {
+      if ( LookupVideoCoreSymbol( g_vchiq_mem_hndl,
+                                  VCHIQ_IPC_SHARED_MEM_SIZE_SYMBOL,
+                                  &vcMemAddr,
+                                  &vcMemSize ) )
+      {
+         vcMapAddr = (off_t)vcMemAddr & VC_MEM_TO_ARM_ADDR_MASK;
+         vcMapAddr += mm_vc_mem_phys_addr;
+         mapAddr = ioremap_nocache( vcMapAddr, vcMemSize );
+         if ( mapAddr != 0 )
+         {
+            memcpy ( &g_vchiq_ipc_shared_mem_size,
+                     mapAddr,
+                     vcMemSize );
+            iounmap( mapAddr );
+         }
+      }
+
+      if ( LookupVideoCoreSymbol( g_vchiq_mem_hndl,
+                                  VCHIQ_IPC_SHARED_MEM_SYMBOL,
+                                  &vcMemAddr,
+                                  &vcMemSize ) )
+      {
+         vcMapAddr = (off_t)vcMemAddr & VC_MEM_TO_ARM_ADDR_MASK;
+         vcMapAddr += mm_vc_mem_phys_addr;
+         mapAddr = ioremap_nocache( vcMapAddr, vcMemSize );
+         if ( mapAddr != 0 )
+         {
+            memcpy ( &g_vchiq_ipc_shared_mem_addr,
+                     mapAddr,
+                     vcMemSize );
+            iounmap( mapAddr );
+         }
+
+         vcMapAddr = (off_t)g_vchiq_ipc_shared_mem_addr & VC_MEM_TO_ARM_ADDR_MASK;
+         vcMapAddr = vcMapAddr + mm_vc_mem_phys_addr;
+         mapAddr = ioremap_nocache( vcMapAddr, (size_t)g_vchiq_ipc_shared_mem_size );
+         if ( mapAddr != 0 )
+         {
+            g_vchiq_ipc_shared_mem = mapAddr;
+            /* Do not **iounmap** at this time, we can now use the shared memory mapped.
+            */
+         }
+      }
+
+      CloseVideoCoreMemory( g_vchiq_mem_hndl );
+   }
+
+   printk( KERN_INFO "Videocore allocated %u (0x%x) bytes of shared memory.\n",
+           g_vchiq_ipc_shared_mem_size,
+           g_vchiq_ipc_shared_mem_size );
+   printk( KERN_INFO "Shared memory (0x%x) mapped @ 0x%p for kernel usage.\n",
+           (unsigned int)g_vchiq_ipc_shared_mem_addr,
+           g_vchiq_ipc_shared_mem );
+
+   if ( (g_vchiq_ipc_shared_mem_size == 0) ||
+        (g_vchiq_ipc_shared_mem == NULL) )
+   {
+      BUG();
+      return VCHIQ_ERROR;
+   }
+#endif
+
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+   vcos_log_warn( "%s: ipc shared memory address                       = 0x%p", __func__, g_vchiq_ipc_shared_mem );
+   vcos_log_warn( "%s: ipc shared memory size (vc+arm channels, extra) = 0x%x", __func__, g_vchiq_ipc_shared_mem_size );
+#else
    vcos_log_warn( "%s: IPC_SHARED_MEM_SLOTS_VIRT = 0x%lx", __func__, IPC_SHARED_MEM_SLOTS_VIRT );
    vcos_log_warn( "%s: IPC_SHARED_MEM_SLOTS_SIZE = 0x%x", __func__, IPC_SHARED_MEM_SLOTS_SIZE );
+#endif
    vcos_log_warn( "%s: VCHIQ_MAX_SERVICES        = %d", __func__, VCHIQ_MAX_SERVICES );
 
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+   g_vchiq_slot_zero = (VCHIQ_SLOT_ZERO_T *)g_vchiq_ipc_shared_mem;
+#else
    g_vchiq_slot_zero = (VCHIQ_SLOT_ZERO_T *)IPC_SHARED_MEM_SLOTS_VIRT;
+#endif
    state = g_vchiq_state;
 
    /* Initialize the local state. Note that vc04 has already started by now
@@ -1199,8 +1303,13 @@ VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
    }
 
    g_pagelist_count = 0;
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
+   g_fragments_base = (FRAGMENTS_T *)(g_vchiq_ipc_shared_mem +
+      g_vchiq_slot_zero->platform_data[VCHIQ_PLATFORM_FRAGMENTS_OFFSET_IDX]);
+#else
    g_fragments_base = (FRAGMENTS_T *)(IPC_SHARED_MEM_SLOTS_VIRT +
       g_vchiq_slot_zero->platform_data[VCHIQ_PLATFORM_FRAGMENTS_OFFSET_IDX]);
+#endif
    g_free_fragments_count =
       g_vchiq_slot_zero->platform_data[VCHIQ_PLATFORM_FRAGMENTS_COUNT_IDX];
 
@@ -1238,12 +1347,17 @@ VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
       chal_ipc_int_vcset( ipcHandle, IPC_INTERRUPT_SOURCE_4 );
    }
 
+   g_initialized = 1;
+
+   vchiq_call_connected_callbacks();
+
    return VCHIQ_SUCCESS;
 
 failed_request_irq:
 failed_init_state:
    return VCHIQ_ERROR;
 }
+EXPORT_SYMBOL( vchiq_memdrv_initialise );
 
 /* There is a potential problem with partial cache lines (pages?)
    at the ends of the block when reading. If the CPU accessed anything in

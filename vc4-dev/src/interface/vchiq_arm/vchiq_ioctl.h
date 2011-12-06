@@ -73,6 +73,12 @@ typedef struct {
    VCHIQ_CONFIG_T *pconfig;
 } VCHIQ_GET_CONFIG_T;
 
+typedef struct {
+   int handle;
+   VCHIQ_SERVICE_OPTION_T option;
+   int value;
+} VCHIQ_SET_SERVICE_OPTION_T;
+
 #define VCHIQ_IOC_CONNECT              _IO(VCHIQ_IOC_MAGIC,   0)
 #define VCHIQ_IOC_SHUTDOWN             _IO(VCHIQ_IOC_MAGIC,   1)
 #define VCHIQ_IOC_CREATE_SERVICE       _IOWR(VCHIQ_IOC_MAGIC, 2, VCHIQ_CREATE_SERVICE_T)
@@ -87,6 +93,7 @@ typedef struct {
 #define VCHIQ_IOC_CLOSE_SERVICE        _IO(VCHIQ_IOC_MAGIC,  11)
 #define VCHIQ_IOC_USE_SERVICE          _IO(VCHIQ_IOC_MAGIC,  12)
 #define VCHIQ_IOC_RELEASE_SERVICE      _IO(VCHIQ_IOC_MAGIC,  13)
-#define VCHIQ_IOC_MAX                  13
+#define VCHIQ_IOC_SET_SERVICE_OPTION   _IOW(VCHIQ_IOC_MAGIC, 14, VCHIQ_SET_SERVICE_OPTION_T)
+#define VCHIQ_IOC_MAX                  14
 
 #endif

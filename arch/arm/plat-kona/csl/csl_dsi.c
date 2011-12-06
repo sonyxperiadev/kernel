@@ -23,6 +23,7 @@
 ****************************************************************************/
 
 #define __CSL_DSI_USE_INT__
+#define __CSL_DSI_USE_CLK_API__
 
 #define UNDER_LINUX
 
@@ -97,6 +98,7 @@ extern void *videomemory;
 #endif
 
 
+#define CORE_CLK_MAX_MHZ        125
 
 #define DSI_INITIALIZED         0x13579BDF
 #if (defined(_HERA_)  || defined(_RHEA_))
@@ -119,6 +121,7 @@ typedef struct {
     UInt32  hsPll_P1;       // out: ATHENA's PLL setting
     UInt32  hsPll_N_int;    // out: ATHENA's PLL setting
     UInt32  hsPll_N_frac;   // out: ATHENA's PLL setting
+    CHAL_DSI_CLK_SEL_t  coreClkSel;  // out: chal core_clk_sel
 } DSI_CLK_CFG_T;
 
 // DSI Client 
@@ -216,15 +219,12 @@ static DSI_HANDLE_t         dsiBus[DSI_INST_COUNT];
 #define STACKSIZE_DSI           STACKSIZE_BASIC*5
 #define HISRSTACKSIZE_DSISTAT  (256 + RESERVED_STACK_FOR_LISR)
 
+#ifndef __CSL_DSI_USE_CLK_API__    
 static Boolean        cslDsiClkTreeInit( DSI_HANDLE dsiH, const DSI_CLK_T *hsClk, 
                         const DSI_CLK_T *escClk );
-
-#if (defined(_HERA_) || defined(_RHEA_))
-static Boolean        cslDsiClkTreeEna ( DSI_HANDLE dsiH, 
-                        pCHAL_DSI_CLK_SEL pCoreClkSel  );
-#else                        
 static Boolean        cslDsiClkTreeEna ( DSI_HANDLE dsiH );
-#endif
+#endif // #ifndef __CSL_DSI_USE_CLK_API__    
+
 
 static void           cslDsiEnaIntEvent( DSI_HANDLE dsiH, 
                         UInt32 intEventMask );
@@ -908,9 +908,27 @@ static CSL_LCD_RES_T cslDsiDmaStop ( DSI_UPD_REQ_MSG_T* updMsg )
 
 
 
+#if (defined(_HERA_) || defined(_RHEA_))
+//*****************************************************************************
+//
+// Function Name:  cslAfeLdoOn
+// 
+// Description:    Turn AFE LDO On ?
+//
+//*****************************************************************************
+static void cslAfeLdoOn ( DSI_HANDLE dsiH )
+{
+    wmb();
+    if( dsiH->bus == 0 )
+        *(volatile cUInt32 *)HW_IO_PHYS_TO_VIRT(0x3C004030)=0x00000005;
+    else
+        *(volatile cUInt32 *)HW_IO_PHYS_TO_VIRT(0x3C004034)=0x00000005;
+        
+    OSTASK_Sleep( TICKS_IN_MILLISECONDS(1) );
+}    
+#endif // #if (defined(_HERA_) || defined(_RHEA_))
 
-
-
+#ifndef __CSL_DSI_USE_CLK_API__    
 //*****************************************************************************
 //
 // Function Name:  cslDsiClkTreeInit
@@ -965,7 +983,7 @@ static Boolean cslDsiClkTreeInit(
     
     dsiH->clkCfg.hsPllReq_MHz = hsClk.clkIn_MHz;
     dsiH->clkCfg.hsPllSet_MHz = hsClkSet;
-#endif
+#endif // #if ( defined (_ATHENA_)  )
         
 #if (defined(_HERA_) || defined(_RHEA_))
     // check for valid HS clk divider value ( PLL CH )   
@@ -988,7 +1006,7 @@ static Boolean cslDsiClkTreeInit(
     // calculate HS Bit Clock & init HS clk div value     
     dsiH->clkCfg.hsBitClk_MHz = hsClkSet / hsClk.clkInDiv;
     dsiH->clkCfg.hsClkDiv     = hsClk.clkInDiv;
-#endif    
+#endif // #if (defined(_HERA_) || defined(_RHEA_))   
     
     LCD_DBG ( LCD_DBG_ID, "[CSL DSI] INFO-HS -CLK: "
         "InClk[%u] InDiv[%d], InSet[%u] => %u[Mhz]\r\n",
@@ -1012,7 +1030,7 @@ static Boolean cslDsiClkTreeInit(
             "ERR ESC CLK In, Valid Input: 156[MHz]\r\n" ); 
         return ( FALSE );      
     }    
-#endif
+#endif // #if ( defined (_HERA_) || defined(_RHEA_))
     // need it later since HERA can have multiple esc clk source
     dsiH->clkCfg.escClkIn_MHz = escClk.clkIn_MHz;
 
@@ -1040,7 +1058,7 @@ static Boolean cslDsiClkTreeInit(
         dsiH->clkCfg.escClkDiv = escClk.clkInDiv; 
         
     dsiH->clkCfg.escClk_MHz = escClk.clkIn_MHz / escClk.clkInDiv;
-#endif 
+#endif  // #if ( defined (_ATHENA_) )
 
     LCD_DBG ( LCD_DBG_ID, "[CSL DSI] INFO-ESC-CLK: "
         "InClk[%u] InDiv[%d]                => %u[Mhz]\r\n",
@@ -1133,23 +1151,6 @@ static Boolean cslDsiClkTreeEna( DSI_HANDLE dsiH )
 //                            H  E  R  A
 //=============================================================================
 
-//*****************************************************************************
-//
-// Function Name:  cslAfeLdoOn
-// 
-// Description:    Turn AFE LDO On ?
-//
-//*****************************************************************************
-static void cslAfeLdoOn ( DSI_HANDLE dsiH )
-{
-    wmb();
-    if( dsiH->bus == 0 )
-        *(volatile cUInt32 *)HW_IO_PHYS_TO_VIRT(0x3C004030)=0x00000005;
-    else
-        *(volatile cUInt32 *)HW_IO_PHYS_TO_VIRT(0x3C004034)=0x00000005;
-        
-    OSTASK_Sleep( TICKS_IN_MILLISECONDS(1) );
-}    
 
 struct {
     volatile UInt32* pAxiClkEnaR;   
@@ -1192,12 +1193,8 @@ struct {
 //    o  Nfrac range = 20 bits MM_CLK_PLLDSIB[19..00]
 //
 //*****************************************************************************
-static Boolean cslDsiClkTreeEna( 
-    DSI_HANDLE          dsiH, 
-    pCHAL_DSI_CLK_SEL   pCoreClkSel 
-    )
+static Boolean cslDsiClkTreeEna(DSI_HANDLE dsiH)
 {
-    #define CORE_CLK_MAX_MHZ                    125
 
     #define MM_CLK_PLLDSIA_RELEASE_RST          ((UInt32)0x00000001)
     #define MM_CLK_PLLDSIA_RELEASE_CH_RST       ((UInt32)0x00000002)
@@ -1306,7 +1303,8 @@ static Boolean cslDsiClkTreeEna(
     {
         dsiCoreClkSel = DSI_CORE_CLK_dsi0_txddrclk;
 	wmb();
-        *pCoreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_2;
+        //*pCoreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_2;
+        dsiH->clkCfg.coreClkSel	= CHAL_DSI_BIT_CLK_DIV_BY_2;
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
             "DSI CORE CLK SET TO ... BIT_CLK/2\r\n" ); 
     }    
@@ -1314,7 +1312,8 @@ static Boolean cslDsiClkTreeEna(
     {
         dsiCoreClkSel = DSI_CORE_CLK_dsi0_txddrclk2;
 	wmb();
-        *pCoreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_4;
+        //*pCoreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_4;
+        dsiH->clkCfg.coreClkSel	= CHAL_DSI_BIT_CLK_DIV_BY_4;
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
             "DSI CORE CLK SET TO ... BIT_CLK/4\r\n" ); 
     }
@@ -1322,7 +1321,8 @@ static Boolean cslDsiClkTreeEna(
     {
         dsiCoreClkSel = DSI_CORE_CLK_dsi0_tx0_bclkhs;
 	wmb();
-        *pCoreClkSel  = CHAL_DSI_BIT_CLK_DIV_BY_8;
+        //*pCoreClkSel  = CHAL_DSI_BIT_CLK_DIV_BY_8;
+        dsiH->clkCfg.coreClkSel	= CHAL_DSI_BIT_CLK_DIV_BY_8;
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
             "DSI CORE CLK SET TO ... BIT_CLK/8\r\n" ); 
     }
@@ -1360,7 +1360,8 @@ static Boolean cslDsiClkTreeEna(
     return ( TRUE );
 }
 
-#endif 
+#endif // #if ( defined (_ATHENA_) )
+#endif // #ifndef __CSL_DSI_USE_CLK_API__    
 
 
 //*****************************************************************************
@@ -2512,6 +2513,38 @@ CSL_DSI_CloseRet:
     return ( res );
 }
 
+#ifdef __CSL_DSI_USE_CLK_API__
+static void csl_dsi_set_chal_api_clks( 
+	DSI_HANDLE dsiH, 
+        const pCSL_DSI_CFG dsiCfg )
+{
+
+    dsiH->clkCfg.escClk_MHz   = dsiCfg->escClk.clkIn_MHz     
+    	/ dsiCfg->escClk.clkInDiv;
+    dsiH->clkCfg.hsBitClk_MHz = dsiCfg->hsBitClk.clkIn_MHz 
+    	/ dsiCfg->hsBitClk.clkInDiv;
+
+    if ( (UInt32)(dsiH->clkCfg.hsBitClk_MHz / 2) <= CORE_CLK_MAX_MHZ )
+    {
+        dsiH->clkCfg.coreClkSel	= CHAL_DSI_BIT_CLK_DIV_BY_2;
+        LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
+            "DSI CORE CLK SET TO ... BIT_CLK/2\r\n" ); 
+    }    
+    else if ( (UInt32)(dsiH->clkCfg.hsBitClk_MHz / 4) <= CORE_CLK_MAX_MHZ )
+    {
+        dsiH->clkCfg.coreClkSel	= CHAL_DSI_BIT_CLK_DIV_BY_4;
+        LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
+            "DSI CORE CLK SET TO ... BIT_CLK/4\r\n" ); 
+    }
+    else
+    {
+        dsiH->clkCfg.coreClkSel	= CHAL_DSI_BIT_CLK_DIV_BY_8;
+        LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
+            "DSI CORE CLK SET TO ... BIT_CLK/8\r\n" ); 
+    }
+}
+#endif // #ifdef 2__CSL_DSI_USE_CLK_API__
+
 //*****************************************************************************
 //                 
 // Function Name:  CSL_DSI_Init
@@ -2527,9 +2560,6 @@ CSL_LCD_RES_T  CSL_DSI_Init ( const pCSL_DSI_CFG dsiCfg )
     CHAL_DSI_MODE_t     chalMode;
     CHAL_DSI_INIT_t     chalInit;
     CHAL_DSI_AFE_CFG_t  chalAfeCfg;                     
-#if (defined (_HERA_)  || defined(_RHEA_))
-    CHAL_DSI_CLK_SEL_t  coreClkSel;
-#endif
 
     if ( dsiCfg->bus >= DSI_INST_COUNT )
     {
@@ -2613,7 +2643,10 @@ CSL_LCD_RES_T  CSL_DSI_Init ( const pCSL_DSI_CFG dsiCfg )
     chalAfeCfg.afeClkIdr     = 6;      // 0 - 7  DEF 6
     chalAfeCfg.afeDlIdr      = 6;      // 0 - 7  DEF 6
 #endif
-    
+
+#ifdef __CSL_DSI_USE_CLK_API__    
+	csl_dsi_set_chal_api_clks( dsiH, dsiCfg	);
+#else        
     // Init Values for HS/ESC Clock Trees 
     if(!cslDsiClkTreeInit (dsiH, &dsiCfg->hsBitClk, &dsiCfg->escClk) )
     {
@@ -2621,16 +2654,15 @@ CSL_LCD_RES_T  CSL_DSI_Init ( const pCSL_DSI_CFG dsiCfg )
             "[CSL DSI] CSL_DSI_Init(): ERROR HS/ESC Clk Init!\r\n" ); 
         return ( CSL_LCD_ERR );    
     }
+#endif
     
 #if ( defined (_HERA_)  || defined(_RHEA_))
     cslAfeLdoOn ( dsiH );
 #endif
-    
-#if ( defined (_HERA_) || defined(_RHEA_))
-    if ( cslDsiClkTreeEna( dsiH, &coreClkSel ) )
-#else
+
+#ifndef __CSL_DSI_USE_CLK_API__    
     if ( cslDsiClkTreeEna( dsiH ) )
-#endif    
+#endif
     {   
         dsiH->chalH = chal_dsi_init ( dsiH->dsiCoreRegAddr, &chalInit );
 
@@ -2647,7 +2679,7 @@ CSL_LCD_RES_T  CSL_DSI_Init ( const pCSL_DSI_CFG dsiCfg )
             // as per HERA rdb clksel must be done before ANY timing is set
             #if ( defined (_HERA_) || defined(_RHEA_))
             // 0=byte clock 1=bitclk2 2=bitclk
-            chalMode.clkSel = coreClkSel;  
+            chalMode.clkSel = dsiH->clkCfg.coreClkSel;  
             #endif
             chal_dsi_on ( dsiH->chalH, &chalMode );
 
@@ -2655,7 +2687,7 @@ CSL_LCD_RES_T  CSL_DSI_Init ( const pCSL_DSI_CFG dsiCfg )
                     dsiH->chalH, 
                     dsiCfg->dPhySpecRev,
                     #if ( defined (_HERA_) || defined(_RHEA_))                    
-                    coreClkSel,
+                    dsiH->clkCfg.coreClkSel,
                     #endif
                     dsiH->clkCfg.escClk_MHz,
                     dsiH->clkCfg.hsBitClk_MHz,
@@ -2684,12 +2716,14 @@ CSL_LCD_RES_T  CSL_DSI_Init ( const pCSL_DSI_CFG dsiCfg )
             }
         } 
     } 
+#ifndef __CSL_DSI_USE_CLK_API__    
     else
     {
         LCD_DBG ( LCD_DBG_ID, 
             "[CSL DSI] CSL_DSI_Init(): ERROR Enabling DSI Clocks\r\n" ); 
         res = CSL_LCD_ERR;    
     }
+#endif
     
     if( res == CSL_LCD_OK )
     {    

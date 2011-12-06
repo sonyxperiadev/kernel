@@ -3526,7 +3526,6 @@ static unsigned long compute_pll_vco_div(struct pll_clk* pll_clk, u32 rate,
 
     _nfrac  &= (frac_div - 1);
 
-    clk_dbg("_nfrac  = %x\n",_nfrac );
     temp_rate = compute_pll_vco_rate(_ndiv_int,_nfrac,frac_div,_pdiv);
 
 	if(temp_rate != rate)
@@ -3545,12 +3544,9 @@ static unsigned long compute_pll_vco_div(struct pll_clk* pll_clk, u32 rate,
 	}
 
 	new_rate = compute_pll_vco_rate(_ndiv_int,_nfrac,frac_div,_pdiv);
-	clk_dbg("%s:new rate =  %u\n",__func__,new_rate);
 
 	if(_ndiv_int == max_ndiv)
 		_ndiv_int = 0;
-	clk_dbg("%s:_ndiv_int = %x _nfrac = %x _pdiv = %x\n",
-			__func__,_ndiv_int, _nfrac, _pdiv);
 
 	if(ndiv_int)
 	*ndiv_int = _ndiv_int;
@@ -3645,7 +3641,6 @@ static int pll_clk_set_rate(struct clk* clk, u32 rate)
 	new_rate = compute_pll_vco_div(pll_clk, rate,
 					&pdiv, &ndiv_int, &nfrac);
 
-	clk_dbg("%s:new_rate = %d rate = %d\n",__func__,new_rate,rate);
 	if(abs(new_rate-rate) > 100)
 	{
 		clk_dbg("%s : %s - rate(%d) not supported\n",
@@ -3673,7 +3668,6 @@ static int pll_clk_set_rate(struct clk* clk, u32 rate)
 				break;
 			}
 		}
-		clk_dbg("%s:pll_cfg_ctrl = %x\n",__func__,pll_cfg_ctrl);
 		if(inx != pll_clk->cfg_ctrl_info->thold_count)
 		{
 			writel(pll_cfg_ctrl,
@@ -3962,7 +3956,6 @@ static unsigned long pll_chnl_clk_round_rate(struct clk *clk, unsigned long rate
 	if(mdiv > pll_chnl_clk->mdiv_max)
 		mdiv = pll_chnl_clk->mdiv_max;
 	new_rate = vco_rate/mdiv;
-	clk_dbg("%s:rate = %d\n", __func__, new_rate);
 
 	return new_rate;
 }
@@ -3983,8 +3976,6 @@ static unsigned long pll_chnl_clk_get_rate(struct clk *clk)
 	if(mdiv == 0)
 		mdiv = pll_chnl_clk->mdiv_max;
 	vco_rate = __pll_clk_get_rate(&pll_chnl_clk->pll_clk->clk);
-	clk_dbg("%s:vco_rate = %x, mdiv = %x reg_val - %x\n", __func__,
-		vco_rate,mdiv,reg_val);
 	return (vco_rate/mdiv);
 }
 

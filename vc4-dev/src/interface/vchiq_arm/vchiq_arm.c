@@ -816,7 +816,6 @@ vchiq_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
       }
       break;
 
-
    case VCHIQ_IOC_GET_CONFIG:
       {
          VCHIQ_GET_CONFIG_T args;
@@ -842,6 +841,33 @@ vchiq_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
                ret = -EFAULT;
                break;
             }
+         }
+      }
+      break;
+
+   case VCHIQ_IOC_SET_SERVICE_OPTION:
+      {
+         VCHIQ_SET_SERVICE_OPTION_T args;
+         USER_SERVICE_T *user_service;
+
+         if (copy_from_user(
+            &args, (const void __user *)arg,
+            sizeof(args)) != 0)
+         {
+            ret = -EFAULT;
+            break;
+         }
+
+         user_service = find_service_by_handle(instance, args.handle);
+         if (user_service != NULL)
+         {
+            status = vchiq_set_service_option(
+               &user_service->service->base,
+               args.option, args.value);
+         }
+         else
+         {
+            ret = -EINVAL;
          }
       }
       break;
