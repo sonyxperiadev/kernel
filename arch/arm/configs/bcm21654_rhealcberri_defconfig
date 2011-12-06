@@ -991,6 +991,7 @@ CONFIG_BCM4329_NVRAM_PATH="/system/vendor/firmware/nvram.txt"
 # CONFIG_BCM4329_KONA_SDIO is not set
 # CONFIG_BCMDHD is not set
 # CONFIG_BCM4329_FALCON is not set
+# CONFIG_BCM4330_FALCON is not set
 # CONFIG_HOSTAP is not set
 
 #

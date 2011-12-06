@@ -32,5 +32,5 @@ obj-$(CONFIG_BCM_MODEM) += \
 	bcm_sysrpc_handler.o \
 	sys_gen_rpc.o \
 	sys_msg.o \
-	sys_rpc.o \
-
+	sys_rpc.o
+obj-$(CONFIG_BCMPMU_RPC) += bcmpmu-rpc.o

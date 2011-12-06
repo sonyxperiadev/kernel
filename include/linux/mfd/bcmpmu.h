@@ -758,6 +758,7 @@ struct bcmpmu {
 	void *accyinfo;
 	void *eminfo;
 	void *ponkeyinfo;
+	void *rpcinfo;
 
 	/* reg access */
 	int (*read_dev)(struct bcmpmu *bcmpmu, int reg, unsigned int *val, unsigned int mask);
@@ -847,6 +848,7 @@ struct bcmpmu_platform_data {
 	int fg_capacity_full;
 	int support_fg;
 	enum bcmpmu_bc_t bc;
+	int rpc_rate;
 };
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
