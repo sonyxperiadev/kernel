@@ -1,0 +1,2 @@
+for i in $(ls arch/arm/configs/bcm[0-9]*); do make "`basename $i`"; cp -v .config $i; done 
+
