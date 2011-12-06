@@ -2248,7 +2248,7 @@ extern  void chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable);
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff);
+extern  void chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff, cUInt32 length);
 
 /**
 *

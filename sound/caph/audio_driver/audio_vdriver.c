@@ -307,7 +307,7 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 #endif
 	}
 
-    // Set new filter coef.
+    // Set new filter coef, sidetone filters, gains.
     AUDDRV_SetAudioMode( mode );
 
 	if(speaker == AUDIO_SINK_LOUDSPK)
@@ -1807,10 +1807,13 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 		}
 		else
 		{
+			//first step: enable sidetone
 			AUDDRV_HWControl_EnableSideTone(arg_audio_mode);
-	
+
+			//second step: set filter and gain.
 			coeff = &(AUDIO_GetParmAccessPtr()[arg_audio_mode].hw_sidetone_eq[0]);
 			AUDDRV_HWControl_SetFilter(AUDDRV_SIDETONE_FILTER, (void *)coeff);
+			
 			gain = AUDIO_GetParmAccessPtr()[arg_audio_mode].hw_sidetone_gain;
 			csl_caph_audioh_sidetone_set_gain(gain);
 		}

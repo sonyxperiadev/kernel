@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2009 - 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.
 
 Unless you and Broadcom execute a separate written software license agreement governing use 
 of this software, this software is licensed to you under the terms of the GNU General Public 
@@ -40,7 +40,7 @@ Broadcom's express prior written consent.
 //****************************************************************************
 // local macro declarations
 //****************************************************************************
-
+#define SIDETONE_FIT_TAP_VALUE 0x3F
 
 //****************************************************************************
 // local typedef declarations
@@ -105,17 +105,18 @@ cVoid chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable)
 //============================================================================
 //
 // Function Name: cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle,
-//                        cUInt16 *src)
+//                        cUInt16 *src, cUInt32 length )
 //
 // Description:  Load coefficient to sidetone path
 //
 // Parameters:   handle - audio chal handle.
 //                 *src   - the coefficient buffer
+//                 length - the coefficient length
 // Return:       None.
 //
 //============================================================================
 
-cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff)
+cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff, cUInt32 length )
 {
     cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->sdt_base;
     cUInt32      index;
@@ -126,6 +127,9 @@ cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff)
     reg_val |= SDT_SDT_CTL_FIR_FILTER_DISABLE_MASK;
     BRCM_WRITE_REG(base, SDT_SDT_CTL, reg_val);
 
+    //Set the lower tap
+    chal_audio_stpath_set_filter_lowertaps(handle, SIDETONE_FIT_TAP_VALUE);
+
     //Set the index to start at 0
     BRCM_WRITE_REG(base, SDT_SDT_COEF_ADDR, 0);
 
@@ -135,7 +139,11 @@ cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff)
         BRCM_WRITE_REG(base, SDT_SDT_COEF_DATA, coeff[index]);
     }
 
+    //Set the upper tap
+    chal_audio_stpath_set_filter_uppertaps(handle, SIDETONE_FIT_TAP_VALUE);
+
     //Enable loading the filter as we are updating the filter coefficients
+    reg_val = BRCM_READ_REG(base, SDT_SDT_CTL);
     reg_val &= (~SDT_SDT_CTL_FIR_FILTER_DISABLE_MASK);
     BRCM_WRITE_REG(base, SDT_SDT_CTL, reg_val);
 
@@ -167,11 +175,13 @@ cVoid chal_audio_stpath_set_gain(CHAL_HANDLE handle, cUInt32 gain)
     BRCM_WRITE_REG(base, SDT_SDT_CTL, reg_val);
 
     //Set the Gain
+    reg_val = BRCM_READ_REG(base, SDT_SDT_CTL);
     reg_val &= (~SDT_SDT_CTL_TARGET_GAIN_MASK);
     reg_val |= ((gain << SDT_SDT_CTL_TARGET_GAIN_SHIFT) & SDT_SDT_CTL_TARGET_GAIN_MASK);
     BRCM_WRITE_REG(base, SDT_SDT_CTL, reg_val);
 
     //Enable gain loading
+    reg_val = BRCM_READ_REG(base, SDT_SDT_CTL);
     reg_val |= (SDT_SDT_CTL_TARGET_GAIN_LOAD_MASK);
     BRCM_WRITE_REG(base, SDT_SDT_CTL, reg_val);
 
@@ -269,32 +279,51 @@ cVoid chal_audio_stpath_config_misc(CHAL_HANDLE handle, cUInt16 clipping, cUInt1
 
 //============================================================================
 //
-// Function Name: cVoid chal_audio_stpath_set_filter_taps(CHAL_HANDLE handle, cUInt16 lower_taps, cUInt16 upper_taps)
+// Function Name: cVoid chal_audio_stpath_set_filter_uppertaps(CHAL_HANDLE handle, cUInt16 taps)
 //
-// Description:  Set the soft slope gain parameters
+// Description:  Set upper tap value for sidetone.
 //
 // Parameters:   handle - audio chal handle.
-//                      gain   - gain valaue.
+//               taps   - tap valaue.
 //
 // Return:       None.
 //
 //============================================================================
 
-cVoid chal_audio_stpath_set_filter_taps(CHAL_HANDLE handle, cUInt16 lower_taps, cUInt16 upper_taps)
+cVoid chal_audio_stpath_set_filter_uppertaps(CHAL_HANDLE handle, cUInt16 taps)
 {
     cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->sdt_base;
     cUInt32     reg_val = 0;
 
-    //Update the soft slope
     reg_val = BRCM_READ_REG(base, SDT_SDT_CTRL_2);
     reg_val &= (~SDT_SDT_CTRL_2_UPPER_FIT_TAP_MASK);
-    reg_val |= (upper_taps << SDT_SDT_CTRL_2_UPPER_FIT_TAP_SHIFT);
+    reg_val |= (taps << SDT_SDT_CTRL_2_UPPER_FIT_TAP_SHIFT);
     BRCM_WRITE_REG(base, SDT_SDT_CTRL_2, reg_val);
 
-    //Update the linear and soft slope
+    return;
+}
+
+//============================================================================
+//
+// Function Name: cVoid chal_audio_stpath_set_filter_lowertaps(CHAL_HANDLE handle, cUInt16 taps)
+//
+// Description:  Set lower tap value for sidetone.
+//
+// Parameters:   handle - audio chal handle.
+//               taps   - tap valaue.
+//
+// Return:       None.
+//
+//============================================================================
+
+cVoid chal_audio_stpath_set_filter_lowertaps(CHAL_HANDLE handle, cUInt16 taps)
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->sdt_base;
+    cUInt32     reg_val = 0;
+
     reg_val = BRCM_READ_REG(base, SDT_SDT_CTL);
     reg_val &= (~SDT_SDT_CTL_LOWER_FIT_TAP_MASK);
-    reg_val |= (lower_taps << SDT_SDT_CTL_LOWER_FIT_TAP_SHIFT);
+    reg_val |= (taps << SDT_SDT_CTL_LOWER_FIT_TAP_SHIFT);
     BRCM_WRITE_REG(base, SDT_SDT_CTL, reg_val);
 
     return;

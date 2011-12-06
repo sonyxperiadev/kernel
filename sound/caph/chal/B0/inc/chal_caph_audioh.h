@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.
 
 Unless you and Broadcom execute a separate written software license agreement governing use
 of this software, this software is licensed to you under the terms of the GNU General Public
@@ -2233,10 +2233,11 @@ extern  void chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable);
 *
 *  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
 *  @param  coeff              (in) this specify the location where filter coefficients are located
+*  @param  length            (in) this specify the size of the filter coefficients
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff);
+extern  void chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff, cUInt32 length );
 
 /**
 *
@@ -2277,16 +2278,25 @@ extern void chal_audio_stpath_config_misc(CHAL_HANDLE handle, cUInt16 clipping, 
 
 /**
 *
-*  @brief  Set Sidetone path filter taps
+*  @brief  Set Sidetone path filter lower taps
 *
 *  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  lower_taps          (in) this specify the lower filter taps
-*  @param  upper_taps         (in) this specifies the upper filter taps
+*  @param  taps          (in) this specify the lower filter taps
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_set_filter_taps(CHAL_HANDLE handle, cUInt16 lower_taps, cUInt16 upper_taps);
+extern void chal_audio_stpath_set_filter_lowertaps(CHAL_HANDLE handle, cUInt16 taps);
 
+/**
+*
+*  @brief  Set Sidetone path filter upper taps
+*
+*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  taps         (in) this specifies the upper filter taps
+*
+*  @return none
+*****************************************************************************/
+extern void chal_audio_stpath_set_filter_uppertaps(CHAL_HANDLE handle, cUInt16 taps);
 
 /**
 *

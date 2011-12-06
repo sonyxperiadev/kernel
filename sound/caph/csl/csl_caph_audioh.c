@@ -1481,6 +1481,8 @@ void csl_caph_audioh_nvin_set_cic_scale_by_mB( int mic1_coarse_gain,
 void csl_caph_audioh_sidetone_control(int path_id, Boolean ctrl)
 {
 
+    chal_audio_stpath_enable(handle, ctrl);
+
 	switch(path_id)
 	{
 
@@ -1546,7 +1548,7 @@ void csl_caph_audioh_eanc_output_control(int path_id, Boolean ctrl)
 			break;
 		
 		case AUDDRV_PATH_IHF_OUTPUT:
-            chal_audio_hspath_sidetone_in(handle, ctrl);
+            chal_audio_ihfpath_sidetone_in(handle, ctrl);
 			break;
 
 		case AUDDRV_PATH_EARPICEC_OUTPUT:
@@ -1691,7 +1693,7 @@ void csl_audio_audiotx_get_dac_ctrl(CSL_CAPH_AUDIOH_DACCTRL_t *readdata)
 
 void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff)
 {
-	chal_audio_stpath_load_filter(handle, coeff );
+	chal_audio_stpath_load_filter(handle, coeff, 0 );
 	return;
 }	
 
@@ -1710,8 +1712,6 @@ void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff)
 void csl_caph_audioh_sidetone_set_gain(UInt32 gain)
 {
 	chal_audio_stpath_set_gain(handle, gain);
-    //Set LOWER_FIT_TAP and UPPER_FIT_TAP to 63.
-    chal_audio_stpath_set_filter_taps(handle, 63, 63);
 	return;
 }	
 

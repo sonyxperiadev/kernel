@@ -129,7 +129,7 @@ cVoid chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable)
 //
 //============================================================================
 
-cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff )
+cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff, cUInt32 length_nouse )
 {
     cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->sdt_base;
     cUInt32      index;

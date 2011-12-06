@@ -2016,9 +2016,11 @@ void AUDCTRL_SetAudioLoopback(
 
 #ifdef HW_SIDETONE_LOOPBACK
         //Enable the sidetone path.
+		//first step: enable sidetone
+		csl_caph_hwctrl_EnableSidetone(sink);
+		//second step: set filter and gain
 		csl_caph_hwctrl_ConfigSidetoneFilter(coeff);
 		csl_caph_hwctrl_SetSidetoneGain(0); // Set sidetone gain to 0dB.
-		csl_caph_hwctrl_EnableSidetone(sink);
 #endif
 
 		AUDCTRL_SetAudioMode( audio_mode ); //this function also sets all HW gains.
