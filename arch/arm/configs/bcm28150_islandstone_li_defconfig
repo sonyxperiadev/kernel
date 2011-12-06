@@ -999,6 +999,7 @@ CONFIG_BCMDHD=m
 CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_bcmdhd.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/nvram.txt"
 # CONFIG_BCM4329_FALCON is not set
+# CONFIG_BCM4330_FALCON is not set
 # CONFIG_HOSTAP is not set
 
 #
@@ -1234,6 +1235,7 @@ CONFIG_BCM_HEADSET_SW=y
 # CONFIG_BCM_SIGMORPH is not set
 CONFIG_BCM_HDMI_DET=y
 # CONFIG_BCM_HDMI_DET_SWITCH is not set
+# CONFIG_BCMPMU_RPC is not set
 # CONFIG_BCM_CSX is not set
 # CONFIG_RAMOOPS is not set
 CONFIG_I2C=y

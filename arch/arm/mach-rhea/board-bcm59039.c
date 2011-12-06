@@ -413,10 +413,21 @@ static struct platform_device bcmpmu_otg_xceiv_device = {
 	.dev.platform_data 	= NULL,
 };
 
+#ifdef CONFIG_BCMPMU_RPC
+static struct platform_device bcmpmu_rpc = {
+	.name 			= "bcmpmu_rpc",
+	.id			= -1,
+	.dev.platform_data 	= NULL,
+};
+#endif
+
 static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_audio_device,
 	&bcmpmu_em_device,
 	&bcmpmu_otg_xceiv_device,
+#ifdef CONFIG_BCMPMU_RPC
+	&bcmpmu_rpc,
+#endif
 };
 
 static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)

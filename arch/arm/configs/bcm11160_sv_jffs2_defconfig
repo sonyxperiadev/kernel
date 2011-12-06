@@ -1042,6 +1042,7 @@ CONFIG_BCMDHD=m
 CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_wifi.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/fw_wifi_nvram.txt"
 CONFIG_BCM4329_FALCON=m
+# CONFIG_BCM4330_FALCON is not set
 CONFIG_BCM4329_FALCON_IF_PREFIX="wlan%d"
 # CONFIG_HOSTAP is not set
 

@@ -992,6 +992,7 @@ CONFIG_BCMDHD=m
 CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_bcmdhd.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/nvram.txt"
 # CONFIG_BCM4329_FALCON is not set
+# CONFIG_BCM4330_FALCON is not set
 # CONFIG_HOSTAP is not set
 
 #
