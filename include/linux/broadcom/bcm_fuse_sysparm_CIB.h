@@ -249,10 +249,6 @@ typedef struct
 	UInt16	expander_alpha;
 	UInt16	expander_beta;
 	UInt16	expander_upper_limit;
-	UInt16	expander_b;
-	UInt16	expander_c;
-	UInt16	expander_c_div_b;
-	UInt16	expander_inv_b;
 	UInt16	expander_flag_sidetone ;
 	UInt16	expander_alpha_sidetone;
 	UInt16	expander_beta_sidetone;
@@ -264,10 +260,6 @@ typedef struct
 	UInt16	expander_alpha_ul;
 	UInt16	expander_beta_ul;
 	UInt16	expander_upper_limit_ul;
-	UInt16	expander_b_ul;
-	UInt16	expander_c_ul;
-	UInt16	expander_c_div_b_ul;
-	UInt16	expander_inv_b_ul;
 	UInt16	compressor_gain_ul;
 	UInt16	compressor_alpha_ul;
 	UInt16	compressor_beta_ul;

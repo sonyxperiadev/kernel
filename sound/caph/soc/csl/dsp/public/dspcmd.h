@@ -84,7 +84,6 @@ typedef enum
 	DSPCMD_TYPE_CONFIG_COMPRESS_GAIN,
 	DSPCMD_TYPE_CONFIG_EXP_ALPHA,
 	DSPCMD_TYPE_CONFIG_EXP_BETA,
-	DSPCMD_TYPE_CONFIG_EXPANDER,
 	DSPCMD_TYPE_CONFIG_ECHO_DUAL,
 	DSPCMD_TYPE_CONFIG_COMPANDER_FLAG,
 	
@@ -276,14 +275,6 @@ typedef struct
 	UInt16  mst_flag;
 } DspCmdDSPAMRMode_t;
 
-
-typedef struct{
-	UInt16 expander_b;
-	UInt16 expander_c;
-	UInt16 expander_c_div_b;
-	UInt16 expander_inv_b; 
-}DspCmdExpander_t;
-
 typedef struct{
    UInt16 echo_dual_ec_eclen;
    UInt16 echo_dual_ec_dt_th_erl_db;
@@ -325,7 +316,6 @@ typedef struct
 		DspCmdDSPAMRMode_t		DspCmdDSPAMRMode;
 		UInt16					DspCmdExpAlpha;
 		UInt16					DspCmdExpBeta;
-		DspCmdExpander_t		DspCmdExpander;
 		DspCmdEchoDual_t		DspCmdEchodual;
 		UInt16					DspCmdCompandflag;
 		//misc
@@ -428,10 +418,6 @@ void DSPCMD_ConfigExpAlpha(
 	);
 void DSPCMD_ConfigExpBeta(
 	UInt16 expander_beta      
-	);
-
-void DSPCMD_ConfigExpander(
-     DspCmdExpander_t *exp_parm 
 	);
  
 void DSPCMD_ConfigEchoDual(
