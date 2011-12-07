@@ -20,6 +20,11 @@ HEAD	= head.o
 OBJS	+= misc.o decompress.o
 FONTC	= $(srctree)/drivers/video/console/font_acorn_8x8.c
 
+# GCOV patch 
+ifeq ($(CONFIG_GCOV_KERNEL),y)
+GCOV_PROFILE		:= n
+endif
+
 #
 # Architecture dependencies
 #

@@ -471,10 +471,17 @@
 	}
 
 #ifdef CONFIG_CONSTRUCTORS
+#ifdef CONFIG_GCOV_KERNEL	
+#define KERNEL_CTORS()	. = ALIGN(8);			   \
+			VMLINUX_SYMBOL(__ctors_start) = .; \
+			*(CONFIG_GCOV_CTORS)		   \
+			VMLINUX_SYMBOL(__ctors_end) = .;
+#else
 #define KERNEL_CTORS()	. = ALIGN(8);			   \
 			VMLINUX_SYMBOL(__ctors_start) = .; \
 			*(.ctors)			   \
 			VMLINUX_SYMBOL(__ctors_end) = .;
+#endif /*CONFIG_GCOV_KERNEL*/
 #else
 #define KERNEL_CTORS()
 #endif
