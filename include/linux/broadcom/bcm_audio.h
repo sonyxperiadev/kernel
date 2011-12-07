@@ -31,6 +31,8 @@ enum bcmaud_ioctl
 {
 	LOG_CONFIG_CHANNEL=105,
 	LOG_START_CHANNEL,
+	LOG_FLUSH_CHANNEL,
+	LOG_GETMSG_CHANNEL,
 	LOG_STOP
 };
 
@@ -43,8 +45,33 @@ typedef struct log_msg_info_t
 } AUDDRV_CFG_LOG_INFO;
 
 
+typedef struct  WAV_HEADER
+{
+	char                RIFF[4];        /* RIFF Header      */ //Magic header
+	unsigned long       ChunkSize;      /* RIFF Chunk Size  */
+	char                WAVE[4];        /* WAVE Header      */
+	char                fmt[4];         /* FMT header       */
+	unsigned long       Subchunk1Size;  /* Size of the fmt chunk                                */
+	unsigned short      AudioFormat;    /* Audio format 1=PCM,6=mulaw,7=alaw, 257=IBM Mu-Law, 258=IBM A-Law, 259=ADPCM */
+	unsigned short      NumOfChan;      /* Number of channels 1=Mono 2=Sterio                   */
+	unsigned long       SamplesPerSec;  /* Sampling Frequency in Hz                             */
+	unsigned long       bytesPerSec;    /* bytes per second */
+	unsigned short      blockAlign;     /* 2=16-bit mono, 4=16-bit stereo */
+	unsigned short      bitsPerSample;  /* Number of bits per sample      */
+	char                Subchunk2ID[4]; /* "data"  string   */
+	unsigned long       Subchunk2Size;  /* Sampled data length    */
+}wav_hdr; 
+
+typedef struct stream_info_t
+{
+	int       stream_index;
+	wav_hdr   wav_info;
+} STREAM_INFO;
+
 #define BCM_LOG_IOCTL_CONFIG_CHANNEL               _IO(BCMAUDIO_MAGIC, LOG_CONFIG_CHANNEL)
 #define BCM_LOG_IOCTL_START_CHANNEL                _IOW(BCMAUDIO_MAGIC,LOG_START_CHANNEL,AUDDRV_CFG_LOG_INFO)
+#define BCM_LOG_IOCTL_FLUSH_CHANNEL                _IOW(BCMAUDIO_MAGIC,LOG_FLUSH_CHANNEL,AUDDRV_CFG_LOG_INFO)
+#define BCM_LOG_IOCTL_GETMSG_CHANNEL               _IOW(BCMAUDIO_MAGIC,LOG_GETMSG_CHANNEL,STREAM_INFO)
 #define BCM_LOG_IOCTL_STOP                         _IOW(BCMAUDIO_MAGIC,LOG_STOP,AUDDRV_CFG_LOG_INFO)
 
 

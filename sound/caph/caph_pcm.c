@@ -52,6 +52,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
+#include "auddrv_audlog.h"
 #include "audio_caph.h"
 #include "caph_common.h"
 
@@ -87,6 +88,10 @@ int audio_init_complete = 0;
 #define	PCM_MAX_VOICE_CAPTURE_PERIOD_BYTES    (PCM_MIN_VOICE_CAPTURE_PERIOD_BYTES * 2)
 
 #define	PCM_TOTAL_BUF_BYTES	(PCM_MAX_CAPTURE_BUF_BYTES+PCM_MAX_VOICE_PLAYBACK_BUF_BYTES)
+
+
+extern int logmsg_ready (struct snd_pcm_substream *substream, int log_point);
+
 
 void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate);
 void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate);
@@ -808,13 +813,16 @@ void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 		case AUDIO_DRIVER_CAPT_HQ:
         case AUDIO_DRIVER_CAPT_VOICE:
             {
-                //update the PCM read pointer by period size
+				//update the PCM read pointer by period size
                 pChip->streamCtl[substream_number].stream_hw_ptr += runtime->period_size;
                 if(pChip->streamCtl[substream_number].stream_hw_ptr > runtime->boundary)
                     pChip->streamCtl[substream_number].stream_hw_ptr -= runtime->boundary;
                 // send the period elapsed
 	            snd_pcm_period_elapsed(substream);
-            }
+
+				logmsg_ready (substream, AUD_LOG_PCMIN);
+
+			}
             break;
         default:
             BCM_AUDIO_DEBUG("Invalid driver type\n");
@@ -868,6 +876,9 @@ void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 					pChip->streamCtl[substream->number].stream_hw_ptr -= runtime->boundary;
 				// send the period elapsed
 				snd_pcm_period_elapsed(substream);
+
+				logmsg_ready (substream, AUD_LOG_PCMOUT);
+
 			}
 			break;
 		default:

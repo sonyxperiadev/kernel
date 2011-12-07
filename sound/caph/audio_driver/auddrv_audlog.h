@@ -61,19 +61,71 @@
 **/
 typedef enum
 {
+	PCM_TYPE,
+	AMR_WB_TYPE,
+	AMR_NB_TYPE,
+    AAC_TYPE
+}Media_t;
+
+
+typedef enum
+{
+	AUD_LOG_NONE,
+	AUD_LOG_PCMOUT,          // CAPH output.
+	AUD_LOG_PCMIN,           // CAPH input.
+	AUD_LOG_VOCODER_DL,      // VoIP DL.
+	AUD_LOG_VOCODER_UL,      // VoIP UL.
+	AUD_LOG_VOICEIN          // voice recording via DSP.
+} CAPTURE_POINT_t;
+
+
+/**
+	Log message consumer type
+**/
+typedef enum
+{
 	LOG_TO_PC = 0,		//< Log message to PC/MTT 
 	LOG_TO_FLASH,		//< Save log message to local flash
 } AUDLOG_DEST_en_t;
+
+
+typedef enum
+{
+	AUDIO_LOG_PATH_1 = 17, 
+	AUDIO_LOG_PATH_2 = 18, 
+	AUDIO_LOG_PATH_3 = 19, 
+	AUDIO_LOG_PATH_4 = 20, 
+} AUDLOG_MUSIC_STREAM_INDEX_t;
+
+
+typedef struct AUDIOLOG_HEADER_t 
+{	
+	UInt32  magicID;                        //unique ID for audio header: 0xA0D10106		
+    UInt32  logPointID;                     //in case need to support multi logging points simultaneously.
+	Media_t audioFormat;                    // PCM, AMR, AAC etc.
+	AUDIO_SAMPLING_RATE_t	samplingRate;   // 8000 ¨C 48000 Hz
+	AUDIO_NUM_OF_CHANNEL_t  stereoType;     // mono/stereo
+	AUDIO_BITS_PER_SAMPLE_t  bitsPerSample; // 8/16/24/32
+} AUDIOLOG_HEADER_t;
 
 /**
 	Audvoc driver call back for logging message save to file system
 **/
 typedef struct audlog_cb_info_t
 {
-  UInt16 *p_LogRead;	//< shared memory read pointer
-  UInt32 size_to_read;	//< read size
-  UInt32 capture_point;	//< the capture point value in the stream
-  UInt32 stream_index;	//< the stream number
+	spinlock_t audio_log_lock;	
+	Boolean capture_ready;
+	UInt16 *p_LogRead;	    //< shared memory read pointer
+    UInt32 size_to_read;	//< read size
+    CAPTURE_POINT_t capture_point;	//< the capture point value in the stream
+    UInt32 stream_index;	//< the stream number
+	AUDLOG_DEST_en_t consumer;
+	void *pPrivate;
+	AUDIOLOG_HEADER_t audlog_header;
+
+	int dma_count;
+	int read_count;
+
 } AUDLOG_CB_INFO;
 
 typedef void (*AUDLOG_CB_FUNC)( AUDLOG_CB_INFO *);

@@ -266,6 +266,12 @@ Result_t AUDDRV_AudLog_Start (
 {
 	Result_t res = RESULT_OK;
 
+	if((log_stream >= 0x10) && (log_stream < 0x20))
+	{
+		Log_DebugPrintf(LOGID_AUDIO, "===> Start Music Playback Log @stream %ld log_consumer %d===>\r\n", log_stream,(uint)log_consumer);
+
+		return res;
+	}
 	// check the capture point number is in reasonable range
 	if((log_capture_point <= 0) || (log_capture_point > 0x8000))
 		return RESULT_ERROR;
