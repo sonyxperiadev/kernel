@@ -354,6 +354,7 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		schedule_delayed_work(&paccy->det_work, 0);
 		break;
 	case PMU_IRQ_CHGDET_LATCH:
+		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_CHGDET_LATCH, NULL);
 		schedule_delayed_work(&paccy->det_work, msecs_to_jiffies(0));
 		break;
 

@@ -694,6 +694,13 @@ config BCMPMU_AUDIO
         help
           If you say Y to support Audio drive on BCM PMUs.
 	  
+config BCMPMU_SELFTEST
+        bool "BCM PMU Selftest Driver"
+        depends on MFD_BCMPMU
+	default n
+        help
+          If you say Y to support selftest drive on BCM PMUs.
+	  
 config MONITOR_ADC121C021_I2C
 	tristate "ADC121C021 Battery Monitor"
 	depends on I2C
