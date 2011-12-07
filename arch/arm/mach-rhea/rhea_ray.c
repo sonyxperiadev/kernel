@@ -919,7 +919,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.wifi_gpio = {
 			.reset		= 70,
 			.reg		= -1,
-			.host_wake	= 85,
+			.host_wake	= -1,
 			.shutdown	= -1,
 		},
 		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
@@ -938,7 +938,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.wifi_gpio = {
 			.reset		= 70,
 			.reg		= -1,
-			.host_wake	= 85,
+			.host_wake	= -1,
 			.shutdown	= -1,
 		},
 		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
