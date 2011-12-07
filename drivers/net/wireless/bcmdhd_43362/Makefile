@@ -50,13 +50,13 @@ DHDCFLAGS += -DSDIO_ISR_THREAD
 #DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=85
 
 DHDCFLAGS += \
-	-Idrivers/net/wireless/bcmdhd/dhd/sys \
-	-Idrivers/net/wireless/bcmdhd/bcmsdio/sys \
-	-Idrivers/net/wireless/bcmdhd/shared \
-	-Idrivers/net/wireless/bcmdhd/dongle \
-	-Idrivers/net/wireless/bcmdhd/wl/exe \
-	-Idrivers/net/wireless/bcmdhd/wl/sys \
-	-Idrivers/net/wireless/bcmdhd/include
+	-Idrivers/net/wireless/bcmdhd_43362/dhd/sys \
+	-Idrivers/net/wireless/bcmdhd_43362/bcmsdio/sys \
+	-Idrivers/net/wireless/bcmdhd_43362/shared \
+	-Idrivers/net/wireless/bcmdhd_43362/dongle \
+	-Idrivers/net/wireless/bcmdhd_43362/wl/exe \
+	-Idrivers/net/wireless/bcmdhd_43362/wl/sys \
+	-Idrivers/net/wireless/bcmdhd_43362/include
 
 #------------------------------------------------------------------------
 
