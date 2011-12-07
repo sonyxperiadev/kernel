@@ -132,8 +132,10 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(TRACEDT03, PTI_DAT3, 0, OFF, ON, 0, 0, 8MA),
 		
 	/* Camera */
-	PIN_CFG(GPIO12, GPIO12, 0, ON, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO13, GPIO13, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO12, GPIO12, 0, ON, OFF, 0, 0, 8MA), //CAM_CORE_EN
+	PIN_CFG(GPIO13, GPIO13, 0, ON, OFF, 0, 0, 8MA), //CAM_FLASH_MODE
+	PIN_CFG(GPIO33, GPIO33, 0, OFF,OFF, 0, 0, 8MA), //CAM0_RESET
+	PIN_CFG(GPIO34, GPIO34, 0, OFF,OFF, 0, 0, 8MA), //CAM_FLASH_EN
 
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
@@ -152,10 +154,10 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO19, LCDWE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO20, LCDRE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO21, LCDD7, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO22, GPIO22, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO22, GPIO22, 0, OFF, ON, 0, 0, 8MA), //TOUCH_EN
 	PIN_CFG(GPIO23, LCDD5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO24, LCDD4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO25, LCDD3, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO25, GPIO25, 0, OFF, ON, 0, 0, 8MA), //@CAM_AF_EN
 	PIN_CFG(GPIO26, LCDD2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO27, LCDD1, 0, OFF, ON, 0, 0, 8MA),
 
@@ -213,6 +215,7 @@ static struct __init pin_config board_pin_config[] = {
 
 	PIN_CFG(SSPDO, GPIO86, 0, OFF, OFF, 0, 0, 16MA),
 	PIN_CFG(SSPCK, GPIO87, 0, OFF, OFF, 0, 0, 16MA),
+	PIN_CFG(MMC1DAT6, GPIO72, 0, OFF, OFF, 0, 0, 16MA), //SD_DECTECT
 };
 
 /* board level init */

@@ -114,7 +114,7 @@
 #else
 #define SD_CARDDET_GPIO_PIN      75
 #endif
-
+#define SD_CARDDET_GPIO_PIN      72
 
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
