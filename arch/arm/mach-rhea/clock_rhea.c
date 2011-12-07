@@ -683,18 +683,22 @@ static struct pll_clk CLK_NAME(a9_pll) = {
 		},
 	.ccu_clk = &CLK_NAME(kproc),
 	.pll_ctrl_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
+	.soft_post_resetb_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
 	.soft_post_resetb_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_POST_RESETB_MASK,
+	.soft_resetb_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
 	.soft_resetb_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_RESETB_MASK,
+	.pwrdwn_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
 	.pwrdwn_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PWRDWN_MASK,
 	.idle_pwrdwn_sw_ovrride_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK,
+	.ndiv_pdiv_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
 	.ndiv_int_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK,
 	.ndiv_int_shift = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT,
 	.ndiv_int_max = 512,
 	.pdiv_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK,
 	.pdiv_shift = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT,
 	.pdiv_max = 8,
+	.pll_lock_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
 	.pll_lock = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_MASK,
-
 	.ndiv_frac_offset = KPROC_CLK_MGR_REG_PLLARMB_OFFSET,
 	.ndiv_frac_mask = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK,
 	.ndiv_frac_shift = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT,
@@ -720,8 +724,11 @@ static struct pll_chnl_clk CLK_NAME(a9_pll_chnl0) = {
 		.mdiv_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_MASK,
 		.mdiv_shift = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT,
 		.mdiv_max = 256,
+		.pll_enableb_offset = KPROC_CLK_MGR_REG_PLLARMC_OFFSET,
 		.out_en_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_ENB_CLKOUT_MASK,
+		.pll_load_ch_en_offset = KPROC_CLK_MGR_REG_PLLARMC_OFFSET,
 		.load_en_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
+		.pll_hold_ch_offset = KPROC_CLK_MGR_REG_PLLARMC_OFFSET,
 		.hold_en_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_HOLD_MASK,
 };
 
@@ -744,8 +751,11 @@ static struct pll_chnl_clk CLK_NAME(a9_pll_chnl1) = {
 		.mdiv_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK,
 		.mdiv_shift = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_SHIFT,
 		.mdiv_max = 256,
+		.pll_enableb_offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET,
 		.out_en_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_ENB_CLKOUT_MASK,
+		.pll_load_ch_en_offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET,
 		.load_en_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_LOAD_EN_MASK,
+		.pll_hold_ch_offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET,
 		.hold_en_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_HOLD_MASK,
 };
 
@@ -5372,22 +5382,25 @@ static struct pll_clk CLK_NAME(dsi_pll) = {
 		},
 	.ccu_clk = &CLK_NAME(mm),
 	.pll_ctrl_offset = MM_CLK_MGR_REG_PLLDSIA_OFFSET,
+	.soft_post_resetb_offset = MM_CLK_MGR_REG_PLLDSIA_OFFSET,
 	.soft_post_resetb_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_SOFT_POST_RESETB_MASK,
+	.soft_resetb_offset = MM_CLK_MGR_REG_PLLDSIA_OFFSET,
 	.soft_resetb_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_SOFT_RESETB_MASK,
+	.pwrdwn_offset = MM_CLK_MGR_REG_PLLDSIA_OFFSET,
 	.pwrdwn_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_PWRDWN_MASK,
 	.idle_pwrdwn_sw_ovrride_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_IDLE_PWRDWN_SW_OVRRIDE_MASK,
+	.ndiv_pdiv_offset = MM_CLK_MGR_REG_PLLDSIA_OFFSET,
 	.ndiv_int_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_NDIV_INT_MASK,
 	.ndiv_int_shift = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_NDIV_INT_SHIFT,
 	.ndiv_int_max = 512,
 	.pdiv_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_PDIV_MASK,
 	.pdiv_shift = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_PDIV_SHIFT,
 	.pdiv_max = 8,
+	.pll_lock_offset = MM_CLK_MGR_REG_PLLDSIA_OFFSET,
 	.pll_lock = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_LOCK_MASK,
-
 	.ndiv_frac_offset = MM_CLK_MGR_REG_PLLDSIB_OFFSET,
 	.ndiv_frac_mask = MM_CLK_MGR_REG_PLLDSIB_PLLDSI_NDIV_FRAC_MASK,
 	.ndiv_frac_shift = MM_CLK_MGR_REG_PLLDSIB_PLLDSI_NDIV_FRAC_SHIFT,
-
 	.cfg_ctrl_info = &dsi_pll_cfg_ctrl,
 };
 
@@ -5409,8 +5422,11 @@ static struct pll_chnl_clk CLK_NAME(dsi_pll_chnl0) = {
 		.mdiv_mask = MM_CLK_MGR_REG_PLLDSIC_PLLDSI_MDIV0_MASK,
 		.mdiv_shift = MM_CLK_MGR_REG_PLLDSIC_PLLDSI_MDIV0_SHIFT,
 		.mdiv_max = 256,
+		.pll_enableb_offset = MM_CLK_MGR_REG_PLLDSIC_OFFSET,
 		.out_en_mask = MM_CLK_MGR_REG_PLLDSIC_PLLDSI_ENB_CLKOUT0_MASK,
+		.pll_load_ch_en_offset = MM_CLK_MGR_REG_PLLDSIC_OFFSET,
 		.load_en_mask = MM_CLK_MGR_REG_PLLDSIC_PLLDSI_LOAD_EN0_MASK,
+		.pll_hold_ch_offset = MM_CLK_MGR_REG_PLLDSIC_OFFSET,
 		.hold_en_mask = MM_CLK_MGR_REG_PLLDSIC_PLLDSI_HOLD0_MASK,
 };
 
@@ -5432,8 +5448,11 @@ static struct pll_chnl_clk CLK_NAME(dsi_pll_chnl1) = {
 		.mdiv_mask = MM_CLK_MGR_REG_PLLDSID_PLLDSI_MDIV1_MASK,
 		.mdiv_shift = MM_CLK_MGR_REG_PLLDSID_PLLDSI_MDIV1_SHIFT,
 		.mdiv_max = 256,
+		.pll_enableb_offset = MM_CLK_MGR_REG_PLLDSID_OFFSET,
 		.out_en_mask = MM_CLK_MGR_REG_PLLDSID_PLLDSI_ENB_CLKOUT1_MASK,
+		.pll_load_ch_en_offset = MM_CLK_MGR_REG_PLLDSID_OFFSET,
 		.load_en_mask = MM_CLK_MGR_REG_PLLDSID_PLLDSI_LOAD_EN1_MASK,
+		.pll_hold_ch_offset = MM_CLK_MGR_REG_PLLDSID_OFFSET,
 		.hold_en_mask = MM_CLK_MGR_REG_PLLDSID_PLLDSI_HOLD1_MASK,
 };
 
@@ -5456,8 +5475,11 @@ static struct pll_chnl_clk CLK_NAME(dsi_pll_chnl2) = {
 		.mdiv_mask = MM_CLK_MGR_REG_PLLDSIE_PLLDSI_MDIV2_MASK,
 		.mdiv_shift = MM_CLK_MGR_REG_PLLDSIE_PLLDSI_MDIV2_SHIFT,
 		.mdiv_max = 256,
+		.pll_enableb_offset = MM_CLK_MGR_REG_PLLDSIE_OFFSET,
 		.out_en_mask = MM_CLK_MGR_REG_PLLDSIE_PLLDSI_ENB_CLKOUT2_MASK,
+		.pll_load_ch_en_offset = MM_CLK_MGR_REG_PLLDSIE_OFFSET,
 		.load_en_mask = MM_CLK_MGR_REG_PLLDSIE_PLLDSI_LOAD_EN2_MASK,
+		.pll_hold_ch_offset = MM_CLK_MGR_REG_PLLDSIE_OFFSET,
 		.hold_en_mask = MM_CLK_MGR_REG_PLLDSIE_PLLDSI_HOLD2_MASK,
 };
 

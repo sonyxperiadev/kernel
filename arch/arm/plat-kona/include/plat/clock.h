@@ -631,15 +631,20 @@ struct pll_chnl_clk
 	struct clk	clk;
 	struct ccu_clk*	ccu_clk;
 	struct pll_clk*	pll_clk;
+#warning "these variables need to be removed once capri code start using common implementation for ESUB"
+	/*** These members to be removed once ESUB CCU uses common
+	 * implementation **/
+	 u32 pll_ctrl0_offset;
+	 u32 pll_ctrl0_hold_ch_shift;
+	 u32 pll_load_ch_en_shift;
+	 u32 pll_enableb_shift;
+	 u32 ch_index;
+	 /**************************************************/
 
 	u32 cfg_reg_offset;
-    u32 pll_ctrl0_offset;
-    u32 pll_ctrl0_hold_ch_shift;
+    u32 pll_hold_ch_offset;
     u32 pll_load_ch_en_offset;
-    u32 pll_load_ch_en_shift;
     u32 pll_enableb_offset;
-    u32 pll_enableb_shift;
-	u32 ch_index;
 	u32 mdiv_mask;
 	u32 mdiv_shift;
 	u32 mdiv_max;

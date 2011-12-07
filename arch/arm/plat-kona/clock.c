@@ -3601,7 +3601,7 @@ static unsigned long pll_clk_get_rate(struct clk *clk)
 	nfrac =
 		(reg_val & pll_clk->ndiv_frac_mask) >> pll_clk->ndiv_frac_shift;
 
-	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
+	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->ndiv_pdiv_offset));
 	pdiv =
 		(reg_val & pll_clk->pdiv_mask) >> pll_clk->pdiv_shift;
 	ndiv_int =
@@ -3684,28 +3684,33 @@ static int pll_clk_set_rate(struct clk* clk, u32 rate)
 	writel(reg_val,
 		CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->ndiv_frac_offset));
 
+
 	/*write nint & pdiv*/
-	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
+	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->ndiv_pdiv_offset));
 	reg_val &= ~(pll_clk->pdiv_mask | pll_clk->ndiv_int_mask);
 	reg_val |= (pdiv << pll_clk->pdiv_shift)
-			| (ndiv_int << pll_clk->ndiv_int_shift)
-			| pll_clk->soft_resetb_mask
-			| pll_clk->soft_resetb_mask;
+			| (ndiv_int << pll_clk->ndiv_int_shift);
+	writel(reg_val, CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->ndiv_pdiv_offset));
 
-	writel(reg_val,
-		CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
+	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->soft_post_resetb_offset));
+	reg_val |= pll_clk->soft_post_resetb_mask;
+	writel(reg_val, CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->soft_post_resetb_offset));
+
+	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->soft_resetb_offset));
+	reg_val |= pll_clk->soft_resetb_mask;
+	writel(reg_val, CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->soft_resetb_offset));
 
 	/*Loop for lock bit only if the
 		- PLL is AUTO GATED or
 		- PLL is enabled */
-	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
+	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pwrdwn_offset));
 	if(clk->flags & AUTO_GATE || ((reg_val & pll_clk->pwrdwn_mask) == 0))
 	{
 		insurance = 0;
 		do
 		{
 			udelay(1);
-			reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+			reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_lock_offset));
 			insurance++;
 		} while(!(GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock)) && insurance < 1000);
 		WARN_ON(insurance >= 1000);
@@ -3740,36 +3745,52 @@ static int pll_clk_enable(struct clk* clk, int enable)
 	/*enable write access*/
 	ccu_write_access_enable(pll_clk->ccu_clk, true);
 
-	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
-	clk_dbg("%s, Before change pll_ctrl reg value: %08x  \n",__func__, reg_val);
-
-	/*Return if sw_override bit is set ?*/
-	if(!GET_BIT_USING_MASK(reg_val,pll_clk->idle_pwrdwn_sw_ovrride_mask))
+	if (pll_clk->idle_pwrdwn_sw_ovrride_mask != 0) {
+	    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
+	    clk_dbg("%s, Before change pll_ctrl reg value: %08x  \n",__func__, reg_val);
+	    /*Return if sw_override bit is set ?*/
+	    if(!GET_BIT_USING_MASK(reg_val,pll_clk->idle_pwrdwn_sw_ovrride_mask))
+		goto auto_gated;
+	}
+	if(enable)
 	{
-		if(enable)
-		{
-			reg_val &= ~pll_clk->pwrdwn_mask;
-			reg_val |=  pll_clk->soft_post_resetb_mask|pll_clk->soft_resetb_mask;
-		}
-		else
-			reg_val = reg_val | pll_clk->pwrdwn_mask;
-		clk_dbg("%s, writing %08x to clk_gate reg\n",__func__, reg_val);
-		writel(reg_val, CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+	    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pwrdwn_offset));
+	    reg_val &= ~pll_clk->pwrdwn_mask;
+	    clk_dbg("%s, writing %08x to pwrdwn reg\n",__func__, reg_val);
+	    writel(reg_val, CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pwrdwn_offset));
 
-		if(enable)
-		{
-			insurance = 0;
-			do
-			{
-				udelay(1);
-				reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
-				insurance++;
-			} while(!(GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock)) && insurance < 1000);
-			WARN_ON(insurance >= 1000);
-		}
-		clk_dbg("%s, %s is %s..! \n",__func__, clk->name, enable ? "enabled" : "disabled");
+	    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->soft_post_resetb_offset));
+	    reg_val |=  pll_clk->soft_post_resetb_mask;
+	    clk_dbg("%s, writing %08x to soft_post_resetb reg\n",__func__, reg_val);
+	    writel(reg_val, CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->soft_post_resetb_offset));
+
+	    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->soft_resetb_offset));
+	    reg_val |=  pll_clk->soft_post_resetb_mask|pll_clk->soft_resetb_mask;
+	    clk_dbg("%s, writing %08x to soft_resetb reg\n",__func__, reg_val);
+	    writel(reg_val, CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->soft_resetb_offset));
+
+	} else
+	{
+	    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pwrdwn_offset));
+	    reg_val = reg_val | pll_clk->pwrdwn_mask;
+	    clk_dbg("%s, writing %08x to pwrdwn reg\n",__func__, reg_val);
+	    writel(reg_val, CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pwrdwn_offset));
 	}
 
+	if(enable)
+	{
+	    insurance = 0;
+	    do
+	    {
+		udelay(1);
+		reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_lock_offset));
+		insurance++;
+	    } while(!(GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock)) && insurance < 1000);
+	    WARN_ON(insurance >= 1000);
+	}
+
+	clk_dbg("%s, %s is %s..! \n",__func__, clk->name, enable ? "enabled" : "disabled");
+auto_gated:
 	/* disable write access*/
 	ccu_write_access_enable(pll_clk->ccu_clk,false);
 
@@ -3794,21 +3815,23 @@ static int pll_clk_init(struct clk* clk)
 	/* enable write access*/
 	ccu_write_access_enable(pll_clk->ccu_clk, true);
 
-	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
-	if(clk->flags & AUTO_GATE)
-	{
+	if (pll_clk->idle_pwrdwn_sw_ovrride_mask != 0) {
+	    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
+	    if(clk->flags & AUTO_GATE)
+	    {
 		reg_val |= pll_clk->idle_pwrdwn_sw_ovrride_mask;
-	}
-	else
-	{
+	    }
+	    else
+	    {
 		reg_val &= ~pll_clk->idle_pwrdwn_sw_ovrride_mask;
+	    }
+	    writel(reg_val,CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
 	}
-	writel(reg_val,CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
 	/* Disable write access*/
 	ccu_write_access_enable(pll_clk->ccu_clk, false);
 
 	clk_dbg("*************%s: peri clock %s count after init %d **************\n",
-	        __func__, clk->name, clk->use_cnt);
+		__func__, clk->name, clk->use_cnt);
 
 	return 0;
 }
@@ -3818,10 +3841,10 @@ static int pll_clk_get_lock_status(struct pll_clk* pll_clk)
     u32 reg_val;
 
     BUG_ON(!pll_clk->ccu_clk);
-    if(!pll_clk->pll_ctrl_offset || !pll_clk->pll_lock)
+    if(!pll_clk->pll_lock_offset || !pll_clk->pll_lock)
 	return -EINVAL;
     CCU_PI_ENABLE(pll_clk->ccu_clk,1);
-    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_lock_offset));
     CCU_PI_ENABLE(pll_clk->ccu_clk,0);
 
     return GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock);
@@ -3831,10 +3854,10 @@ static int pll_clk_get_pdiv(struct pll_clk* pll_clk)
     u32 reg_val;
 
     BUG_ON(!pll_clk->ccu_clk);
-    if(!pll_clk->pll_ctrl_offset || !pll_clk->pdiv_mask)
+    if(!pll_clk->ndiv_pdiv_offset || !pll_clk->pdiv_mask)
 	return -EINVAL;
     CCU_PI_ENABLE(pll_clk->ccu_clk,1);
-    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_pdiv_offset));
     CCU_PI_ENABLE(pll_clk->ccu_clk,0);
 
     return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->pdiv_mask, pll_clk->pdiv_shift);
@@ -3844,10 +3867,10 @@ static int pll_clk_get_ndiv_int(struct pll_clk* pll_clk)
     u32 reg_val;
 
     BUG_ON(!pll_clk->ccu_clk);
-    if(!pll_clk->pll_ctrl_offset || !pll_clk->ndiv_int_mask)
+    if(!pll_clk->ndiv_pdiv_offset || !pll_clk->ndiv_int_mask)
 	return -EINVAL;
     CCU_PI_ENABLE(pll_clk->ccu_clk,1);
-    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_pdiv_offset));
     CCU_PI_ENABLE(pll_clk->ccu_clk,0);
 
     return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->ndiv_int_mask, pll_clk->ndiv_int_shift);
@@ -3883,10 +3906,10 @@ static int pll_clk_get_pwrdwn(struct pll_clk* pll_clk)
     u32 reg_val;
 
     BUG_ON(!pll_clk->ccu_clk);
-    if(!pll_clk->pll_ctrl_offset || !pll_clk->pwrdwn_mask)
+    if(!pll_clk->pwrdwn_offset || !pll_clk->pwrdwn_mask)
 	return -EINVAL;
     CCU_PI_ENABLE(pll_clk->ccu_clk,1);
-    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
+    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pwrdwn_offset));
     CCU_PI_ENABLE(pll_clk->ccu_clk,0);
 
     return GET_BIT_USING_MASK(reg_val, pll_clk->pwrdwn_mask);
@@ -3914,19 +3937,24 @@ static int pll_chnl_clk_enable(struct clk* clk, int enable)
 	/*enable write access*/
 	ccu_write_access_enable(pll_chnl_clk->ccu_clk, true);
 
-	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->cfg_reg_offset));
-	clk_dbg("%s, Before change pll_cannnel_ctrl reg value: %08x  \n",__func__, reg_val);
-
 	if(enable)
 	{
-			reg_val &= ~pll_chnl_clk->out_en_mask;
-			reg_val |=  pll_chnl_clk->load_en_mask;
-	}
-	else
-		reg_val = reg_val | pll_chnl_clk->out_en_mask;
+	    reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->pll_enableb_offset));
+	    reg_val &= ~pll_chnl_clk->out_en_mask;
+	    clk_dbg("%s, writing %08x to pll_enableb_offset reg\n",__func__, reg_val);
+	    writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->pll_enableb_offset));
 
-	clk_dbg("%s, writing %08x to pll_cannnel_ctrl reg\n",__func__, reg_val);
-	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->cfg_reg_offset));
+	    reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->pll_load_ch_en_offset));
+	    reg_val |=  pll_chnl_clk->load_en_mask;
+	    clk_dbg("%s, writing %08x to pll_load_ch_en_offset reg\n",__func__, reg_val);
+	    writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->pll_load_ch_en_offset));
+
+	} else {
+	    reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->pll_enableb_offset));
+	    reg_val = reg_val | pll_chnl_clk->out_en_mask;
+	    clk_dbg("%s, writing %08x to pll_enableb_offset reg\n",__func__, reg_val);
+	    writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->pll_enableb_offset));
+	}
 
 	/* disable write access*/
 	ccu_write_access_enable(pll_chnl_clk->ccu_clk,false);
@@ -4032,9 +4060,13 @@ static int pll_chnl_clk_set_rate(struct clk* clk, u32 rate)
 
 	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->cfg_reg_offset));
 	reg_val &= ~pll_chnl_clk->mdiv_mask;
-	reg_val |= mdiv << pll_chnl_clk->mdiv_shift | pll_chnl_clk->load_en_mask;
-
+	reg_val |= mdiv << pll_chnl_clk->mdiv_shift;
 	writel(reg_val,CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->cfg_reg_offset));
+
+
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->pll_load_ch_en_offset));
+	reg_val |= pll_chnl_clk->load_en_mask;
+	writel(reg_val,CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->pll_load_ch_en_offset));
 
 	/* disable write access*/
 	ccu_write_access_enable(pll_chnl_clk->ccu_clk,false);
@@ -4073,10 +4105,10 @@ static int pll_chnl_clk_get_enb_clkout(struct pll_chnl_clk* pll_chnl_clk)
     u32 reg_val;
 
     BUG_ON(!pll_chnl_clk->ccu_clk);
-    if(!pll_chnl_clk->cfg_reg_offset || !pll_chnl_clk->out_en_mask)
+    if(!pll_chnl_clk->pll_enableb_offset || !pll_chnl_clk->out_en_mask)
 	return -EINVAL;
     CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
-    reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->cfg_reg_offset));
+    reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->pll_enableb_offset));
     CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
 
     return GET_BIT_USING_MASK(reg_val, pll_chnl_clk->out_en_mask);
