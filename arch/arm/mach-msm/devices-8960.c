@@ -2794,3 +2794,13 @@ struct platform_device msm8960_device_cache_erp = {
 	.num_resources	= ARRAY_SIZE(msm_cache_erp_resources),
 	.resource	= msm_cache_erp_resources,
 };
+
+static int msm8960_LPM_latency = 1000; /* >100 usec for WFI */
+
+struct platform_device msm8960_cpu_idle_device = {
+	.name   = "msm_cpu_idle",
+	.id     = -1,
+	.dev = {
+		.platform_data = &msm8960_LPM_latency,
+	},
+};

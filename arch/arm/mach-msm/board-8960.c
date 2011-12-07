@@ -2149,6 +2149,7 @@ static struct platform_device *common_devices[] __initdata = {
 #ifdef CONFIG_MSM_CACHE_DUMP
 	&msm_cache_dump_device,
 #endif
+	&msm8960_cpu_idle_device,
 };
 
 static struct platform_device *sim_devices[] __initdata = {
