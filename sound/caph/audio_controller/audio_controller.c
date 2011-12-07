@@ -415,7 +415,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 				)
 {
     //int pmuGain = 0;
-    //pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
+    //pmuGain = (short) AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = %d \n", volume );
 
     if (gain_format == AUDIO_GAIN_FORMAT_mB)
@@ -429,7 +429,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
       /***
       voice call volume control does not use PMU gain
 
-      pmuGain = (Int16) AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //0.25 dB
+      pmuGain = (short) AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //0.25 dB
       SetGainOnExternalAmp_mB(speaker, pmuGain*25, PMU_AUDIO_HS_BOTH);
       ***/
       }
@@ -657,7 +657,7 @@ void AUDCTRL_SetAudioMode_ForMusicRecord( AudioMode_t mode, unsigned int arg_pat
     AUDIO_SINK_Enum_t spk;
     Boolean bClk = csl_caph_QueryHWClock();
 	
-    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode_ForMusicPlayback: mode = %d\n",  mode);
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode_ForMusicRecord: mode = %d\n",  mode);
 
     //if( mode==AUDDRV_GetAudioMode() )
     //  return;
@@ -1326,8 +1326,12 @@ void AUDCTRL_SwitchPlaySpk(
         config.sink = curr_spk;
         (void) csl_caph_hwctrl_RemovePath(pathID, config);
     }
+
     if ((sink == AUDIO_SINK_LOUDSPK)||(sink == AUDIO_SINK_HEADSET))
         powerOnExternalAmp( sink, AudioUseExtSpkr, TRUE );
+    
+	AUDCTRL_SetAudioMode_ForMusicPlayback( AUDDRV_GetAudioModeBySink(sink), 0 );
+
     return;
 }
 
@@ -1347,14 +1351,13 @@ void AUDCTRL_AddPlaySpk(
     CSL_CAPH_HWCTRL_CONFIG_t config;
     CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
 
-	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_AddPlaySpk: src = 0x%x, sink = 0x%x\n",
-                    source, sink);
-    if(pathID == 0)
-    {
-	    audio_xassert(0,pathID);
-	    return;
-    }
+	Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_AddPlaySpk: src = %d, sink = %d, pathID %d \n", source, sink, pathID);
+	
+    //if(pathID == 0)
+    //{
+	//    audio_xassert(0,pathID);
+	//    return;
+    //}
     speaker = getDeviceFromSink(sink);
     if (speaker != CSL_CAPH_DEV_NONE)
     {
@@ -1366,6 +1369,9 @@ void AUDCTRL_AddPlaySpk(
         config.sink = speaker;
         (void) csl_caph_hwctrl_AddPath(pathID, config);
     }
+
+    AUDCTRL_SetAudioMode_ForMusicPlayback( AUDDRV_GetAudioModeBySink(sink), 0 );
+    	
     return;
 
 }
@@ -2494,10 +2500,10 @@ static void powerOnExternalAmp(
 		}
 
 		//the ext_speaker_pga_l is in q13.2 format
-		hs_gain = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
+		hs_gain = (short) AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 		SetGainOnExternalAmp_mB( AUDIO_SINK_HEADSET, hs_gain, PMU_AUDIO_HS_LEFT);
 
-		hs_gain = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_r;
+		hs_gain = (short) AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_r;
 		SetGainOnExternalAmp_mB( AUDIO_SINK_HEADSET, hs_gain, PMU_AUDIO_HS_RIGHT);
 
 		HS_IsOn = TRUE;
@@ -2527,7 +2533,7 @@ static void powerOnExternalAmp(
 		}
 
 		//the ext_speaker_pga_l is in q13.2 format
-		ihf_gain = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
+		ihf_gain = (short) AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 		SetGainOnExternalAmp_mB( AUDIO_SINK_LOUDSPK, ihf_gain, PMU_AUDIO_HS_BOTH);
 
 		IHF_IsOn = TRUE;

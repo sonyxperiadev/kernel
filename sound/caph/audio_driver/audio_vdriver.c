@@ -995,6 +995,9 @@ void AUDDRV_SetAudioMode_ForMusicRecord( AudioMode_t audio_mode, unsigned int ar
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode_ForMusicRecord() audio_mode==%d\n\r", audio_mode );
 
 	auddrv_SetAudioMode_mic(audio_mode, 0);
+	
+	//for 48 KHz recording no DSP and 8KHz recording through DSP.
+	//AUDDRV_SetAudioMode( audio_mode );
 }
 
 
