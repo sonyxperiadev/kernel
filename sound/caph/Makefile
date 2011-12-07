@@ -77,6 +77,10 @@ snd-brcm-omx-objs += audio/audio_controller/src/audio_pmu_adapt.o
 snd-brcm-omx-objs += audio/audio_datadriver/src/audio_ddriver.o
 snd-brcm-omx-objs += caph_hwdep.o
 
+ifdef CONFIG_BCM_AUDIO_SELFTEST
+snd-brcm-omx-objs += bcm_auddrv_selftest.o
+endif
+
 #CHAL Source Files
 ifdef CONFIG_ARCH_RHEA_B0
 	snd-brcm-omx-objs += soc/chal/modules/audio_B0/caph/src/chal_caph_switch.o

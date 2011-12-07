@@ -238,20 +238,13 @@ static bool DigiMicInterruptReceived;
 /**********************************************************/
 /** Stuff that should be defined in header files - Begin **/
 /**********************************************************/
-/* GPIO defines */
-#define GPIO_DMIC0DQ		124
-#define GPIO_33  		 33
-#define GPIO_DMIC0CLK   	123
-#define GPIO_34  		 34
-
-#define ST_GPIO_DMIC0DQ  GPIO_DMIC0DQ
-#define ST_GPIO_DMIC1DQ  GPIO_34
-#define ST_GPIO_DMIC0CLK GPIO_DMIC0CLK
-#define ST_GPIO_DMIC1CLK GPIO_33
 #define ST_PN_DMIC1DQ  PN_GPIO34
 #define ST_PN_DMIC1CLK PN_GPIO33
 
 #define DIGMIC_VCC_REGULATOR "hv7ldo_uc"
+/**********************************************************/
+/** Stuff that should be defined in header files - End **/
+/**********************************************************/
 
 /************************/
 /* Test Implementations */
@@ -416,9 +409,9 @@ void st_audio_store_registers(selftest_store_e test)
 		pinmux_get_pin_config(&DmicStoredValue[0]);
 		DmicStoredValue[1].name  =  PN_DMIC0DQ;
 		pinmux_get_pin_config(&DmicStoredValue[1]);
-		DmicStoredValue[2].name  =  PN_GPIO33;
+		DmicStoredValue[2].name  =  ST_PN_DMIC1CLK;
 		pinmux_get_pin_config(&DmicStoredValue[2]);
-		DmicStoredValue[3].name  =  PN_GPIO34;
+		DmicStoredValue[3].name  =  ST_PN_DMIC1DQ;
 		pinmux_get_pin_config(&DmicStoredValue[3]);
 		/* Store PMU register Values */
 		regl_hv7ldo = regulator_get(NULL, DIGMIC_VCC_REGULATOR);
@@ -921,29 +914,28 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 	int i;
 	struct regulator *regl_hv7ldo = NULL;
 	bool TestMic[MAX_DIGIMIC_COUNT] = {false, false, false, false};
-	/*  int CLK_CONNECTION[MAX_DIGIMIC_IF_COUNT]  =  { ST_GPIO_DMIC0CLK, ST_GPIO_DMIC1CLK };*/
-	int DQ_CONNECTION[MAX_DIGIMIC_IF_COUNT]   =  { ST_GPIO_DMIC0DQ, ST_GPIO_DMIC1DQ };
 	enum PIN_NAME PMUX_CLK_CONNECTION[MAX_DIGIMIC_IF_COUNT]   =  { PN_DMIC0CLK, ST_PN_DMIC1CLK };
 	enum PIN_NAME PMUX_DQ_CONNECTION[MAX_DIGIMIC_IF_COUNT]   =  { PN_DMIC0DQ, ST_PN_DMIC1DQ };
 	enum PIN_FUNC PMUX_DMIC_CLK_MODE_CLK[MAX_DIGIMIC_IF_COUNT]  =  { PF_DMIC0CLK, PF_DMIC1CLK };
-	enum PIN_FUNC PMUX_DMIC_DQ_MODE_GPIO[MAX_DIGIMIC_IF_COUNT]  =  { PF_GPIO124, PF_GPIO34 };
-	/*enum PIN_FUNC PMUX_DMIC_CLK_MODE_GPIO[MAX_DIGIMIC_IF_COUNT]  =  { PF_GPIO123, PF_GPIO33 };*/
-
-/*    enum PIN_FUNC PMUX_DMIC_MODE_DATA[MAX_DIGIMIC_IF_COUNT]  =  { PF_DMIC0DQ, PF_DMIC1DQ };*/
+	enum PIN_FUNC PMUX_DMIC_DQ_MODE_GPIO[MAX_DIGIMIC_IF_COUNT];
+	unsigned DQ_CONNECTION[MAX_DIGIMIC_IF_COUNT];
 	int MIC_IF[MAX_DIGIMIC_COUNT]  =  { 0, 0, 1, 1 };
 	struct pin_config PIN_DMIC_Setup;
 	struct pin_config PIN_GPIO_Setup;
 	CHAL_HANDLE audiohandle;
+	unsigned find_gpio;
+	enum PIN_FUNC find_PF_gpio;
 	u8 Status[DIGIMIC_NUMBER_OF_SUBTESTS] = { ST_SELFTEST_PASS,
 						  ST_SELFTEST_PASS };
 
 	st_audio_store_registers(SELFTEST_DMIC);
 
+	for (Mic = 0 ; Mic < MAX_DIGIMIC_IF_COUNT ; Mic++) {
+		pinmux_find_gpio(PMUX_DQ_CONNECTION[i], &find_gpio, &find_PF_gpio);
+		DQ_CONNECTION[i] = find_gpio;
+		PMUX_DMIC_DQ_MODE_GPIO[i] = find_PF_gpio;
+	}
 
-	/* Pins: DMIC0CLK(GPIO123) Reg: PAD_CTRL - DMIC0CLK*/
-	/*  	 DMIC0DQ(GPIO124)  Reg: PAD_CTRL - DMIC0DQ*/
-	/* Pins: DMIC1CLK(GPIO33)  Reg: PAD_CTRL - GPIO33 */
-	/*  	 DMIC1DQ(GPIO34)   Reg: PAD_CTRL - GPIO34*/
 	switch (cmddata->parm1) {
 	default:
 	case ST_SELFTEST_DIGIMIC_ALL:
