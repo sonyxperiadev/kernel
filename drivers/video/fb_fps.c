@@ -4823,7 +4823,12 @@ proc_read_fb_fps(char *buf, char **start, off_t offset,
 		       int len, int *eof, void *data)
 {
 	int *val = (int *)data;
-	len = sprintf(buf, "FPS will be recalulated after every %d frames", *val);
+
+	if (!*val)
+		len = sprintf(buf, "FPS Display is disabled\n");
+	else
+		len = sprintf(buf, "FPS will be recalulated after every %d frames\n", *val);
+
 	return len;
 }
 
@@ -4852,8 +4857,10 @@ proc_write_fb_fps(struct file *file, const char __user *buffer,
 		 printk(KERN_INFO "%s: FPS will be recalulated after every %d frames\n", __func__, no_of_frames);
 		 *val = no_of_frames;
 	 }
-	 else
-		 printk(KERN_ERR "%s:wrong value passed. value cannot be %s\n", __func__, value);
+	 else {
+		 printk(KERN_ERR "%s: FPS display disable !!!\n", __func__);
+		 *val = 0;
+	 }
 
 	 return len;
 }
@@ -4941,6 +4948,9 @@ void fb_fps_display(struct fb_fps_info *fps_info, void *dst, int x, int y, int d
 		printk(KERN_ERR"%s need destination\n", __func__);
 		goto out;
 	}
+
+	if (!fps_info->frame_calc_interval)
+		goto out;
 
 	
 	if (fps_info->frame_count >= fps_info->frame_calc_interval || disp_now) {

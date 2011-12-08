@@ -5,7 +5,7 @@
 #include <linux/kd.h>
 #include <linux/proc_fs.h>
 
-#define FPS_CALC_INTERVAL	5 /* update fps after how many frames */
+#define FPS_CALC_INTERVAL	0 /* update fps after how many frames */
 #define FPS_STR_LEN		20
 #define MAX_CELLSIZE	20  /* Max size of cell per character */
 
