@@ -143,6 +143,7 @@ static int ssp_pcm_usecount = 0;
 static Boolean isSTIHF = FALSE;
 static Boolean bBTTest = FALSE;
 static Boolean sClkCurEnabled = FALSE;
+static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] =
 { //the order must match CAPH_LIST_t
@@ -1086,6 +1087,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 				dataFormat = CSL_CAPH_16BIT_MONO;
 			} else if(sink==CSL_CAPH_DEV_BT_SPKR) {
 				sink = csl_caph_hwctrl_obtainMixerOutChannelSink();
+				bt_spk_mixer_sink = sink;
 				dataFormat = CSL_CAPH_16BIT_MONO;
 			}
 			dataFormat = csl_caph_get_sink_dataformat(dataFormat, sink);
@@ -1789,6 +1791,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID, int sinkNo, int startO
 			//csl_pcm_start(pcmHandleSSP, &pcmCfg);
 #endif
 		} else {
+			if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && bBTTest) udelay(500); //without small delay, BT production test is not consistent.
 			csl_pcm_start(pcmHandleSSP, &pcmCfg);
 		}
 
@@ -3873,3 +3876,21 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus)
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_ConfigSSP:: new fmHandleSSP %p, pcmHandleSSP %p.\r\n", fmHandleSSP, pcmHandleSSP));
 }
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_GetMixerOutChannelForBT
+*
+*  Description: get mixer out channel for BT speaker path
+*
+****************************************************************************/
+CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEVICE_e sink)
+{
+	CSL_CAPH_SRCM_MIX_OUTCHNL_e rtn = CSL_CAPH_SRCM_CH_NONE;
+
+	if(sink==CSL_CAPH_DEV_BT_SPKR)
+	{
+		if(bt_spk_mixer_sink==CSL_CAPH_DEV_IHF) rtn = CSL_CAPH_SRCM_STEREO_CH2_R;
+		else if(bt_spk_mixer_sink==CSL_CAPH_DEV_EP) rtn = CSL_CAPH_SRCM_STEREO_CH2_L;
+	}
+	return rtn;
+}

@@ -1750,9 +1750,7 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 			break;
 	
 		case AUDIO_MODE_BLUETOOTH:
-			//does it go through HW mixer gain?
-			//outChnl = (CSL_CAPH_SRCM_STEREO_CH1_L | CSL_CAPH_SRCM_STEREO_CH1_R);
-			outChnl = CSL_CAPH_SRCM_STEREO_CH1;
+			outChnl = csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEV_BT_SPKR);
 			break;
 	
 		default:

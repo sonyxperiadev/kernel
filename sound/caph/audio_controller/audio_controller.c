@@ -82,6 +82,7 @@ typedef struct
     CSL_CAPH_DEVICE_e dev;
 } AUDCTRL_SPKR_Mapping_t;
 
+//must match AUDIO_SINK_Enum_t
 static AUDCTRL_SPKR_Mapping_t SPKR_Mapping_Table[AUDIO_SINK_TOTAL_COUNT] =
 {
 	//sink ino					// Device ID
@@ -115,6 +116,7 @@ typedef struct
     CSL_CAPH_DEVICE_e dev;
 } AUDIO_SOURCE_Mapping_t;
 
+//must match AUDIO_SOURCE_Enum_t
 static AUDIO_SOURCE_Mapping_t MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] =
 {
 	//source info							// Device ID

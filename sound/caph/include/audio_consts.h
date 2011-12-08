@@ -93,6 +93,7 @@ typedef enum {
     AUDIO_MODE_INVALID  // numbers of modes above this line has to be the same as the AUDIO_MODE_NUMBER
 } AudioMode_t;  // Audio Profiles
 
+//if changed, must update SPKR_Mapping_Table and BCM_CTL_SINK_LINES
 typedef enum AUDIO_SINK_Enum_t
 {
     AUDIO_SINK_HANDSET,  //Earpiece
@@ -121,6 +122,7 @@ typedef enum AUDIO_SINK_Enum_t
     AUDIO_SINK_TOTAL_COUNT
 } AUDIO_SINK_Enum_t;
 
+//if changed, must update MIC_Mapping_Table and BCM_CTL_SRC_LINES
 typedef enum AUDIO_SOURCE_Enum_t
 {
     AUDIO_SOURCE_UNDEFINED,

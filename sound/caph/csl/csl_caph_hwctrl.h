@@ -640,5 +640,15 @@ void csl_caph_hwctrl_SetBTMode(Boolean mode);
 void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId);
 
 void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus);
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_GetMixerOutChannel
+*
+*  Description: get mixer out channel for speaker path
+*
+****************************************************************************/
+CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEVICE_e sink);
+
 #endif // _CSL_CAPH_HWCTRL_
 

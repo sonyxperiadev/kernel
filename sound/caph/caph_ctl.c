@@ -1108,34 +1108,39 @@ x{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},},	//AUDIO_SOURCE_EANC_DIGI
 
 --------------------------------------------------*/
 
+//must match AUDIO_SINK_Enum_t
 #define	BCM_CTL_SINK_LINES	{\
-						{.strName = "HNT",	.iVolume = {0,0},},		\
-						{.strName = "HST",	.iVolume = {-400,-400},}, 	\
-						{.strName = "HNF",	.iVolume = {-10,-10},},	\
-						{.strName = "BTM",	.iVolume = {-10,-10},},		\
-						{.strName = "SPK",	.iVolume = {400,400},},	\
-						{.strName = "TTY",	.iVolume = {-400,-400},}, 				\
-						{.strName = "HAC",	.iVolume = {0,0},}, 				\
-						{.strName = "",	.iVolume = {0,0},},					\
-						{.strName = "", .iVolume = {0,0},}, 				\
-						{.strName = "I2S", .iVolume = {-10,-10},}, 			\
-						{.strName = "VIB", .iVolume = {-10,-10},},	\
+/*AUDIO_SINK_HANDSET*/		{.strName = "HNT",	.iVolume = {0,0},},	\
+/*AUDIO_SINK_HEADSET*/		{.strName = "HST",	.iVolume = {-400,-400},},	\
+/*AUDIO_SINK_HANDSFREE*/	{.strName = "HNF",	.iVolume = {0,0},},	\
+/*AUDIO_SINK_BTM*/			{.strName = "BTM",	.iVolume = {0,0},},	\
+/*AUDIO_SINK_LOUDSPK*/		{.strName = "SPK",	.iVolume = {400,400},},	\
+/*AUDIO_SINK_TTY*/			{.strName = "TTY",	.iVolume = {-400,-400},},	\
+/*AUDIO_SINK_HAC*/			{.strName = "HAC",	.iVolume = {0,0},},	\
+/*AUDIO_SINK_USB*/			{.strName = "",	.iVolume = {0,0},},	\
+/*AUDIO_SINK_BTS*/			{.strName = "", .iVolume = {0,0},},	\
+/*AUDIO_SINK_I2S*/			{.strName = "I2S", .iVolume = {0,0},},	\
+/*AUDIO_SINK_VIBRA*/		{.strName = "VIB", .iVolume = {0,0},},	\
+/*AUDIO_SINK_HEADPHONE*/	{.strName = "", .iVolume = {0,0},},	\
 					}
 
-
+//must match AUDIO_SOURCE_Enum_t
 #define	BCM_CTL_SRC_LINES	{ \
-						{.strName = "", .iVolume = {0,0},}, 		\
-						{.strName = "MIC", 	.iVolume = {120,120},},	\
-						{.strName = "AUX",	.iVolume = {120,120},},	\
-						{.strName = "DG1",	.iVolume = {28,28},},	\
-						{.strName = "DG2",	.iVolume = {28,28},},	\
-						{.strName = "BTM",		.iVolume = {30,30},},\
-						{.strName = "", .iVolume = {0,0},}, 		\
-						{.strName = "I2S",	.iVolume = {12,12},},	\
-						{.strName = "DG3",	.iVolume = {28,28},},	\
-						{.strName = "DG4",	.iVolume = {28,28},},	\
+/*AUDIO_SOURCE_UNDEFINED*/		{.strName = "", .iVolume = {0,0},}, 		\
+/*AUDIO_SOURCE_ANALOG_MAIN*/	{.strName = "MIC", 	.iVolume = {3000,3000},},	\
+/*AUDIO_SOURCE_ANALOG_AUX*/		{.strName = "AUX",	.iVolume = {3000,3000},},	\
+/*AUDIO_SOURCE_DIGI1*/			{.strName = "DG1",	.iVolume = {700,700},},	\
+/*AUDIO_SOURCE_DIGI2*/			{.strName = "DG2",	.iVolume = {700,700},},	\
+/*AUDIO_SOURCE_DIGI3*/			{.strName = "",	.iVolume = {0,0},},	\
+/*AUDIO_SOURCE_DIGI4*/			{.strName = "",	.iVolume = {0,0},},	\
+/*AUDIO_SOURCE_MIC_ARRAY1*/		{.strName = "", .iVolume = {0,0},}, 		\
+/*AUDIO_SOURCE_MIC_ARRAY2*/		{.strName = "", .iVolume = {0,0},}, 		\
+/*AUDIO_SOURCE_BTM*/			{.strName = "BTM",		.iVolume = {700,700},},\
+/*AUDIO_SOURCE_USB*/			{.strName = "", .iVolume = {0,0},}, 		\
+/*AUDIO_SOURCE_I2S*/			{.strName = "I2S",	.iVolume = {300,300},},	\
+/*AUDIO_SOURCE_RESERVED1*/		{.strName = "", .iVolume = {0,0},}, 		\
+/*AUDIO_SOURCE_RESERVED2*/		{.strName = "", .iVolume = {0,0},}, 		\
 					}
-
 
 //
 //Initial data of controls, runtime data is in 'chip' data structure
