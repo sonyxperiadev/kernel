@@ -754,7 +754,7 @@ static struct i2c_board_info __initdata mpu6050_info[] =
 #endif
 
 #ifdef CONFIG_KONA_HEADSET
-#define HS_IRQ		gpio_to_irq(71)
+#define HS_IRQ		gpio_to_irq(74)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
 static struct kona_headset_pd headset_data = {
