@@ -1,40 +1,18 @@
-/******************************************************************************************
-*  Copyright (C) 1999-2007 Broadcom Corporation
+/****************************************************************************
 *  
-*  This program is the proprietary software of Broadcom Corporation and/or its licensors, and 
-*  may only be used, duplicated, modified or distributed pursuant to the terms and conditions 
-*  of a separate, written license agreement executed between you and Broadcom 
-*  (an "Authorized License").  Except as set forth in an Authorized License, Broadcom grants 
-*  no license (express or implied), right to use, or waiver of any kind with respect to the 
-*  oftware, and Broadcom expressly reserves all rights in and to the Software and all 
-*  intellectual property rights therein.  IF YOU HAVE NO AUTHORIZED LICENSE, THEN YOU HAVE 
-*  NO RIGHT TO USE THIS SOFTWARE IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND 
-*  DISCONTINUE ALL USE OF THE SOFTWARE.  
+*     Copyright (c) 2007-2008 Broadcom Corporation
 *  
-*  Except as expressly set forth in the Authorized License,
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *  
-*  1.     This program, including its structure, sequence and organization, constitutes the 
-*  valuable trade secrets of Broadcom, and you shall use all reasonable efforts to protect the 
-*  confidentiality thereof, and to use this information only in connection with your use of 
-*  Broadcom integrated circuit products.
+*   Notwithstanding the above, under no circumstances may you combine this
+*   software in any way with any other Broadcom software provided under a license
+*   other than the GPL, without Broadcom's express prior written consent.
 *  
-*  2.     TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS" AND WITH 
-*  ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES, EITHER EXPRESS, 
-*  IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY 
-*  DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS
-*  FOR A PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET 
-*  POSSESSION OR CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE RISK ARISING OUT OF USE 
-*  OR PERFORMANCE OF THE SOFTWARE.
-*  
-*  3.     TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM OR ITS LICENSORS 
-*  BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR EXEMPLARY DAMAGES 
-*  WHATSOEVER ARISING OUT OF OR IN ANY WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE 
-*  SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY 
-*  AMOUNT IN EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. , WHICHEVER 
-*  IS GREATER. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF ESSENTIAL PURPOSE 
-*  OF ANY LIMITED REMEDY.
-*   
-******************************************************************************************/
+****************************************************************************/
+
 /* C Header for all SDL signal codes and processe IDs for logging purpose only
 **
 */
@@ -98,17 +76,56 @@
 #define LOG_SIG_CODE_H
 
 #ifndef SDTENV
-#define P_log_gl1s              (36|0x80)
-#define P_log_l1u               (0|0x80)
-#define P_log_mmc               (24|0x80)
+#ifdef MS_SKEL
+#include "skel_pid.h"
+#else
+#include "proc_id.h"
+#endif
+#define	P_log_cmc			(P_cmc|0x80)
+#define	P_log_cmm			(P_cmm|0x80)
+#define	P_log_cms			(P_cms|0x80)
+#define	P_log_dch			(P_dch|0x80)
+#define	P_log_df2			(P_df2|0x80)
+#define	P_log_dll			(P_dll|0x80)
+#define	P_log_drf			(P_drf|0x80)
+#define	P_log_dtn			(P_dtn|0x80)
+#define	P_log_dtt			(P_dtt|0x80)
+#define	P_log_gl1s			(P_gl1s|0x80)
+#define	P_log_gme			(P_gme|0x80)
+#define	P_log_gmm			(P_gmm|0x80)
+#define	P_log_gmr			(P_gmr|0x80)
+#define	P_log_grr			(P_grr|0x80)
+#define	P_log_l1u			(P_l1u|0x80)
+#define	P_log_llc			(P_llc|0x80)
+#define	P_log_mac			(P_mac|0x80)
+#define	P_log_mma			(P_mma|0x80)
+#define	P_log_mmc			(P_mmc|0x80)
+#define	P_log_mme			(P_mme|0x80)
+#define	P_log_mmr			(P_mmr|0x80)
+#define	P_log_mmreg			(P_mmreg|0x80)
+#define	P_log_mncc			(P_mncc|0x80)
+#define	P_log_mnr			(P_mnr|0x80)
+#define	P_log_mns			(P_mns|0x80)
+#define	P_log_mnss			(P_mnss|0x80)
+#define	P_log_oms			(P_oms|0x80)
+#define	P_log_rlc			(P_rlc|0x80)
+#define	P_log_rrc			(P_rrc|0x80)
+#define	P_log_sim			(P_sim|0x80)
+#define	P_log_sme			(P_sme|0x80)
+#define	P_log_smr			(P_smr|0x80)
+#define	P_log_snp			(P_snp|0x80)
 #if defined(STACK_wedge) && defined(UMTS)
-#define P_log_umacdl            (3|0x80)
-#define P_log_umacul            (4|0x80)
-#define P_log_urabmupdcp        (5|0x80)
-#define P_log_urlcdl            (7|0x80)
-#define P_log_urlcul            (8|0x80)
-#define P_log_urrcdc            (10|0x80)
-#define P_log_urrcm             (11|0x80)
+#define	P_log_ubmc			(P_ubmc|0x80)
+#define	P_log_umacc			(P_umacc|0x80)
+#define	P_log_umacdl		(P_umacdl|0x80)
+#define	P_log_umacul		(P_umacul|0x80)
+#define	P_log_urabmupdcp	(P_urabmupdcp|0x80)
+#define	P_log_urlcc			(P_urlcc|0x80)
+#define	P_log_urlcdl		(P_urlcdl|0x80)
+#define	P_log_urlcul		(P_urlcul|0x80)
+#define	P_log_urrcbp		(P_urrcbp|0x80)
+#define	P_log_urrcdc		(P_urrcdc|0x80)
+#define	P_log_urrcm			(P_urrcm|0x80)
 #endif // #if defined(STACK_wedge) && defined(UMTS)
 #define	P_no_receiver		253
 #define	P_many_receiver		254
@@ -119,6 +136,7 @@
 #define	P_log_general		250
 #define	P_log_api			249
 #define	P_dspfw				248
+#define	P_log_group			247
 
 
 typedef enum
@@ -172,6 +190,26 @@ typedef enum
    L1DATA_SEARCH_REQ,
    SC_TRACK_DATA,
    VMS_TRACE,
+   SCH_TRACK_DATA,
+   BP_TRACK_DATA,
+   PH_SDCCH_REQ,
+   PH_FACCH_REQ,
+   PH_SACCH_REQ,
+   L1DATA_RTVMS,   ///<Payload type {::RTVMS_LOG_t}                      
+   L1DATA_3G_EVENT,  ///<Payload type {::T_VMS_EVENT_IF}                      
+   L1DATA_EMA_RXLEV,
+   L1DATA_PCH_MON,
+   L1DATA_SNR_SPEECH,
+   L1DATA_SNR_SACCH,
+   L1DATA_SNR_TBF,
+   L1DATA_SNR_IDLE,
+   L1DATA_USF,
+   L1DATA_DCH_PWRSTEP,
+   L1DATA_TXPWR,
+   L1DATA_AMR,
+   L1DATA_SACCH,
+   L1DATA_FACCH,
+
    /* End of log_gl1s */
 
 #if defined(STACK_wedge) && defined(UMTS)
@@ -208,6 +246,10 @@ typedef enum
    MACE_PREEVAL_PERNTX_INFO = ((P_log_umacul<<16)|5),
    UMAC_UL_PREEVAL_TFCI_INFO = ((P_log_umacul<<16)|6),
    MACIS_HDR = ((P_log_umacul<<16)|7),
+   UMTS_HS_UL_DTX_INFO = ((P_log_umacul<<16)|8),
+   UMTS_HS_DL_DRX_INFO = ((P_log_umacul<<16)|9), 
+   UMTS_HS_NODEB_DRX_INFO = ((P_log_umacul<<16)|10),
+   UMACUL_AMR_UL = ((P_log_umacul<<16)|11),
 #else
    UMTS_HS_TX_INFO,
    UMTS_HS_GRANT_INFO,
@@ -216,6 +258,10 @@ typedef enum
    MACE_PREEVAL_PERNTX_INFO,
    UMAC_UL_PREEVAL_TFCI_INFO,
    MACIS_HDR,
+   UMTS_HS_UL_DTX_INFO,
+   UMTS_HS_DL_DRX_INFO,
+   UMTS_HS_NODEB_DRX_INFO,
+   UMACUL_AMR_UL,
 #endif
    /* End of log_umacul */
 #endif // #if defined(STACK_wedge) && defined(UMTS)
@@ -249,6 +295,7 @@ typedef enum
 #endif
    URLC_UL_STATS_RBS_INFO,
    URLC_DL_STATS_RBS_INFO,
+   UAS_CIPHER_KEYS_IND,
    /* End of log_urlcul */
 
    /* Start of log_urrcdc */
@@ -262,13 +309,23 @@ typedef enum
    /* End of log_urrcdc */
 #endif // #if defined(STACK_wedge) && defined(UMTS)
 
-// penglu add for MMC value logging(MobC00134984) 
+   /* Start of log_mmc */
 #ifndef SDTENV
-	MMC_LOCAL_VALUE 	 = ((P_log_mmc<<16) | (1 ) ), 								  
+	MMC_LOCAL_VALUE 	 = ((P_log_mmc<<16)|1),
 #else
 	MMC_LOCAL_VALUE,
 #endif
+   /* End of log_mmc */
 
+   /* Start of log_rlc */
+#ifndef SDTENV
+    RLC_TRACE_UL_WIN_VARS = ((P_log_rlc<<16)|1),
+    RLC_TRACE_DL_WIN_VARS,
+#else
+    RLC_TRACE_UL_WIN_VARS,
+    RLC_TRACE_DL_WIN_VARS,
+#endif
+   /* End of log_rlc */
 
    /* Start of dspfw */
 	DSP_PROFILE = ((P_dspfw<<16)|1),
@@ -277,8 +334,6 @@ typedef enum
    /* End of dspfw */
 
    /* Start of log_api */
-
-   // Start of CAPI API
 API_CAPI_API_CAPI_MSG_DUMMY_1                      = ((P_log_api<<16) | 1 ),                                                                                                  
 API_CAPI_API_CAPI_MSG_DUMMY_2                      = ((P_log_api<<16) | 2 ),                                                                                                  
 API_CAPI_API_CAPI_MSG_DUMMY_3                      = ((P_log_api<<16) | 3 ),                                                                                                  
@@ -434,8 +489,8 @@ API_CAPI_MSG_PMU_BATT_LEVEL_REGISTER_REQ           = ((P_log_api<<16) | 152 ),  
 API_CAPI_API_CAPI_MSG_DUMMY_153                    = ((P_log_api<<16) | 153 ),                                                                                                
 API_CAPI_MSG_SMS_SEND_MEM_AVAL_IND_REQ             = ((P_log_api<<16) | 154 ),                                    	///<Payload type {::T_SmsApi_SendMemAvailInd}              
 API_CAPI_MSG_SMS_CONFIGUREMESTORAGE_REQ            = ((P_log_api<<16) | 155 ),                                    	///<Payload type {::T_SMS_ConfigureMEStorage}              
-API_CAPI_MSG_MS_SET_ELEMENT_REQ                    = ((P_log_api<<16) | 156 ),                                      ///<Payload type {::T_MsDbApi_SetElement}
-API_CAPI_MSG_MS_GET_ELEMENT_REQ                    = ((P_log_api<<16) | 157 ),                                      ///<Payload type {::T_MsDbApi_GetElement}
+API_CAPI_API_CAPI_MSG_DUMMY_156                    = ((P_log_api<<16) | 156 ),                                                                                                
+API_CAPI_API_CAPI_MSG_DUMMY_157                    = ((P_log_api<<16) | 157 ),                                                                                                
 API_CAPI_MSG_USIM_IS_APP_SUPPORTED_REQ             = ((P_log_api<<16) | 158 ),                                    	///<Payload type {::T_USimApi_IsApplicationSupported}      
 API_CAPI_MSG_USIM_IS_APN_ALLOWED_REQ               = ((P_log_api<<16) | 159 ),                                    	///<Payload type {::T_USimApi_IsAllowedAPN}                
 API_CAPI_MSG_USIM_GET_NUM_APN_REQ                  = ((P_log_api<<16) | 160 ),                                    	///<Payload type {::T_USimApi_GetNumOfAPN}                 
@@ -739,7 +794,7 @@ API_CAPI_MSG_PDP_GETPDPCONTEXT_CID_LIST_REQ        = ((P_log_api<<16) | 457 ),  
 API_CAPI_API_CAPI_MSG_DUMMY_458                    = ((P_log_api<<16) | 458 ),                                                                                                
 API_CAPI_MSG_SYSPARAM_BOOTLOADER_VER_REQ           = ((P_log_api<<16) | 459 ),                                    	///<Payload type {::T_SYS_GetBootLoaderVersion}            
 API_CAPI_MSG_SYSPARAM_DSF_VER_REQ                  = ((P_log_api<<16) | 460 ),                                    	///<Payload type {::T_SYS_GetDSFVersion}                   
-API_CAPI_MSG_USIM_UST_DATA_REQ                     = ((P_log_api<<16) | 461 ),                                    	///<Payload type {::T_USimApi_GetUst}                      
+API_CAPI_MSG_USIM_UST_DATA_REQ                     = ((P_log_api<<16) | 461 ),                                    	///<Payload type {::T_USimApi_GetUstData}                       
 API_CAPI_API_CAPI_MSG_DUMMY_462                    = ((P_log_api<<16) | 462 ),                                                                                                
 API_CAPI_MSG_SATK_GETCACHEDROOTMENUPTR_REQ         = ((P_log_api<<16) | 463 ),                                    	///<Payload type {::T_SatkApi_GetCachedRootMenuPtr}        
 API_CAPI_MSG_SATK_SENDUSERACTIVITYEVENT_REQ        = ((P_log_api<<16) | 464 ),                                    	///<Payload type {::T_SatkApi_SendUserActivityEvent}       
@@ -915,9 +970,9 @@ API_CAPI_API_CAPI_MSG_DUMMY_633                    = ((P_log_api<<16) | 633 ),
 API_CAPI_MSG_PDP_CHECKUMTSTFT_REQ                  = ((P_log_api<<16) | 634 ),                                    	///<Payload type {::T_PdpApi_CheckUMTSTft}                 
 API_CAPI_MSG_PDP_ISANYPDPCONTEXTACTIVE_REQ         = ((P_log_api<<16) | 635 ),                                    	///<Payload type {::T_PdpApi_IsAnyPDPContextActive}        
 API_CAPI_MSG_PDP_ISANYPDPCONTEXTPENDING_REQ        = ((P_log_api<<16) | 636 ),                                    	///<Payload type {::T_PdpApi_IsAnyPDPContextActivePending} 
-API_CAPI_MSG_ELEM_PTR_CC_ELEM_AUTO_REJECT_SWITCH   = ((P_log_api<<16) | 637 ),                                    	///<Payload type {::T_ELEM_PTR_CC_ELEM_AUTO_REJECT_SWITCH} 
-API_CAPI_MSG_ELEM_PTR_CC_ELEM_TEXT_TELEPHONY_SWITCH = ((P_log_api<<16) | 638 ),                                    	///<Payload type {::T_ELEM_PTR_CC_ELEM_TEXT_TELEPHONY_SWITCH}
-API_CAPI_MSG_ELEM_PTR_CC_ELEM_MT_CALL_HANDLING     = ((P_log_api<<16) | 639 ),                                    	///<Payload type {::T_ELEM_PTR_CC_ELEM_MT_CALL_HANDLING}   
+API_CAPI_MSG_ELEM_PTR_CC_ELEM_AUTO_REJECT_SWITCH   = ((P_log_api<<16) | 637 ),                                    	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_PTR_CC_ELEM_TEXT_TELEPHONY_SWITCH = ((P_log_api<<16) | 638 ),                                    	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_PTR_CC_ELEM_MT_CALL_HANDLING     = ((P_log_api<<16) | 639 ),                                    	///<Payload type {::T_ELEM_MSDB_UINT8} 
 API_CAPI_MSG_ELEM_PTR_CC_ELEM_END_CALL_CAUSE       = ((P_log_api<<16) | 640 ),                                    	///<Payload type {::T_ELEM_PTR_CC_ELEM_END_CALL_CAUSE}     
 API_CAPI_MSG_ELEM_PTR_CC_ELEM_SPEECH_CODEC         = ((P_log_api<<16) | 641 ),                                    	///<Payload type {::T_ELEM_PTR_CC_ELEM_SPEECH_CODEC}       
 API_CAPI_MSG_ELEM_PTR_CC_ELEM_CHANNEL_MODE         = ((P_log_api<<16) | 642 ),                                    	///<Payload type {::T_ELEM_PTR_CC_ELEM_CHANNEL_MODE}       
@@ -1016,8 +1071,8 @@ API_CAPI_API_CAPI_MSG_DUMMY_734                    = ((P_log_api<<16) | 734 ),
 API_CAPI_API_CAPI_MSG_DUMMY_735                    = ((P_log_api<<16) | 735 ),                                                                                                
 API_CAPI_API_CAPI_MSG_DUMMY_736                    = ((P_log_api<<16) | 736 ),                                                                                                
 API_CAPI_API_CAPI_MSG_DUMMY_737                    = ((P_log_api<<16) | 737 ),                                                                                                
-API_CAPI_MSG_CMP_PTR_CC_ELEM_AUTO_REJECT_SWITCH    = ((P_log_api<<16) | 738 ),                                    	///<Payload type {::T_CMP_PTR_CC_ELEM_AUTO_REJECT_SWITCH}  
-API_CAPI_MSG_CMP_PTR_CC_ELEM_END_CALL_CAUSE        = ((P_log_api<<16) | 739 ),                                    	///<Payload type {::T_CMP_PTR_CC_ELEM_END_CALL_CAUSE}      
+API_CAPI_MSG_CMP_PTR_CC_ELEM_AUTO_REJECT_SWITCH    = ((P_log_api<<16) | 738 ),                                    	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_CMP_PTR_CC_ELEM_END_CALL_CAUSE        = ((P_log_api<<16) | 739 ),                                    	///<Payload type {::T_ELEM_MSDB_UINT8}      
 API_CAPI_API_CAPI_MSG_DUMMY_740                    = ((P_log_api<<16) | 740 ),                                                                                                
 API_CAPI_API_CAPI_MSG_DUMMY_741                    = ((P_log_api<<16) | 741 ),                                                                                                
 API_CAPI_API_CAPI_MSG_DUMMY_742                    = ((P_log_api<<16) | 742 ),                                                                                                
@@ -1128,9 +1183,9 @@ API_CAPI_API_CAPI_MSG_DUMMY_846                    = ((P_log_api<<16) | 846 ),
 API_CAPI_API_CAPI_MSG_DUMMY_847                    = ((P_log_api<<16) | 847 ),                                                                                                
 API_CAPI_API_CAPI_MSG_DUMMY_848                    = ((P_log_api<<16) | 848 ),                                                                                                
 API_CAPI_API_CAPI_MSG_DUMMY_849                    = ((P_log_api<<16) | 849 ),                                                                                                
-API_CAPI_MSG_CCAPI_SET_ELEMENT_REQ                 = ((P_log_api<<16) | 850 ),                                    	///<Payload type {::T_CcApi_SetElement}                    
-API_CAPI_MSG_CCAPI_GET_ELEMENT_REQ                 = ((P_log_api<<16) | 851 ),                                    	///<Payload type {::T_CcApi_GetElement}                    
-API_CAPI_MSG_WL_PS_SET_FILTER_LIST_REQ             = ((P_log_api<<16) | 852 ),                                      ///<Payload type {::T_WL_PsSetFilterList}
+API_CAPI_API_CAPI_MSG_DUMMY_850                    = ((P_log_api<<16) | 850 ),                                                                                                
+API_CAPI_API_CAPI_MSG_DUMMY_851                    = ((P_log_api<<16) | 851 ),                                                                                                
+API_CAPI_API_CAPI_MSG_DUMMY_852                    = ((P_log_api<<16) | 852 ),                                                                                                
 API_CAPI_API_CAPI_MSG_DUMMY_853                    = ((P_log_api<<16) | 853 ),                                                                                                
 API_CAPI_API_CAPI_MSG_DUMMY_854                    = ((P_log_api<<16) | 854 ),                                                                                                
 API_CAPI_API_CAPI_MSG_DUMMY_855                    = ((P_log_api<<16) | 855 ),                                                                                                
@@ -1778,33 +1833,33 @@ API_CAPI_API_CAPI_MSG_DUMMY_1496                   = ((P_log_api<<16) | 1496 ),
 API_CAPI_API_CAPI_MSG_DUMMY_1497                   = ((P_log_api<<16) | 1497 ),                                                                                               
 API_CAPI_API_CAPI_MSG_DUMMY_1498                   = ((P_log_api<<16) | 1498 ),                                                                                               
 API_CAPI_API_CAPI_MSG_DUMMY_1499                   = ((P_log_api<<16) | 1499 ),                                                                                               
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CLIP   = ((P_log_api<<16) | 1500 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CLIP} 
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CLIR   = ((P_log_api<<16) | 1501 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CLIR} 
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_COLP   = ((P_log_api<<16) | 1502 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_COLP} 
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CCWA   = ((P_log_api<<16) | 1503 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CCWA} 
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_LONG_FTN_SUPPORTED = ((P_log_api<<16) | 1504 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_LONG_FTN_SUPPORTED}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_FDN_CHECK = ((P_log_api<<16) | 1505 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_FDN_CHECK}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_TX_USSD_DATA_ENCODE = ((P_log_api<<16) | 1506 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_TX_USSD_DATA_ENCODE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_RX_USSD_DATA_ENCODE = ((P_log_api<<16) | 1507 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_RX_USSD_DATA_ENCODE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_INCLUDE_FACILITY_IE = ((P_log_api<<16) | 1508 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_INCLUDE_FACILITY_IE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_INVOKE_ID = ((P_log_api<<16) | 1509 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_INVOKE_ID}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_ENABLE_OLD_SS_MSG = ((P_log_api<<16) | 1510 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_ENABLE_OLD_SS_MSG}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CLIENT_HANDLE_USSD_NOTIFY = ((P_log_api<<16) | 1511 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CLIENT_HANDLE_USSD_NOTIFY}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CLIP   = ((P_log_api<<16) | 1500 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CLIR   = ((P_log_api<<16) | 1501 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_COLP   = ((P_log_api<<16) | 1502 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CCWA   = ((P_log_api<<16) | 1503 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_LONG_FTN_SUPPORTED = ((P_log_api<<16) | 1504 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_FDN_CHECK = ((P_log_api<<16) | 1505 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_TX_USSD_DATA_ENCODE = ((P_log_api<<16) | 1506 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_RX_USSD_DATA_ENCODE = ((P_log_api<<16) | 1507 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_INCLUDE_FACILITY_IE = ((P_log_api<<16) | 1508 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_INVOKE_ID = ((P_log_api<<16) | 1509 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_ENABLE_OLD_SS_MSG = ((P_log_api<<16) | 1510 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SS_ELEM_CLIENT_HANDLE_USSD_NOTIFY = ((P_log_api<<16) | 1511 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}  
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_TEST_ELEM_CHAN = ((P_log_api<<16) | 1512 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_TEST_ELEM_CHAN}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_TEST_ELEM_PROD_MODE = ((P_log_api<<16) | 1513 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_TEST_ELEM_PROD_MODE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_AUDIO  = ((P_log_api<<16) | 1514 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_AUDIO}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_VIDEO_CALL = ((P_log_api<<16) | 1515 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_VIDEO_CALL}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_TEST_ELEM_PROD_MODE = ((P_log_api<<16) | 1513 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_AUDIO  = ((P_log_api<<16) | 1514 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_VIDEO_CALL = ((P_log_api<<16) | 1515 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DEF_VOICE_BC = ((P_log_api<<16) | 1516 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DEF_VOICE_BC}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CLIENT_GEN_TONE = ((P_log_api<<16) | 1517 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CLIENT_GEN_TONE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SCUDIF = ((P_log_api<<16) | 1518 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SCUDIF}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CLIENT_GEN_TONE = ((P_log_api<<16) | 1517 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SCUDIF = ((P_log_api<<16) | 1518 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURR_CALL_CFG = ((P_log_api<<16) | 1519 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURR_CALL_CFG}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_HSCSD_REPORT = ((P_log_api<<16) | 1520 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_HSCSD_REPORT}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_IS_HSCSD_CALL = ((P_log_api<<16) | 1521 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_IS_HSCSD_CALL}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_RX_SLOTS = ((P_log_api<<16) | 1522 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_RX_SLOTS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_TX_SLOTS = ((P_log_api<<16) | 1523 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_TX_SLOTS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_AIR_IF_USER_RATE = ((P_log_api<<16) | 1524 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_AIR_IF_USER_RATE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURRENT_CODING = ((P_log_api<<16) | 1525 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURRENT_CODING}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURRENT_CONNECT_ELEMENT = ((P_log_api<<16) | 1526 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURRENT_CONNECT_ELEMENT}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_IS_HSCSD_CALL = ((P_log_api<<16) | 1521 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_RX_SLOTS = ((P_log_api<<16) | 1522 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_TX_SLOTS = ((P_log_api<<16) | 1523 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_AIR_IF_USER_RATE = ((P_log_api<<16) | 1524 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURRENT_CODING = ((P_log_api<<16) | 1525 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURRENT_CONNECT_ELEMENT = ((P_log_api<<16) | 1526 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_TEL_NUMBER = ((P_log_api<<16) | 1527 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_TEL_NUMBER}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CALLING_SUBADDR = ((P_log_api<<16) | 1528 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CALLING_SUBADDR}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CALLED_SUBADDR = ((P_log_api<<16) | 1529 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CALLED_SUBADDR}
@@ -1812,99 +1867,99 @@ API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CONNECT_SUBADDR = ((P_log_api<<16) |
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CBST   = ((P_log_api<<16) | 1531 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CBST} 
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DS_NEG_DATACOMP = ((P_log_api<<16) | 1532 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DS_NEG_DATACOMP}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DS_REQ_DATACOMP = ((P_log_api<<16) | 1533 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DS_REQ_DATACOMP}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DS_REQ_SUCCESS_NEG = ((P_log_api<<16) | 1534 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DS_REQ_SUCCESS_NEG}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DS_REQ_SUCCESS_NEG = ((P_log_api<<16) | 1534 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_EC_REQUESTED = ((P_log_api<<16) | 1535 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_EC_REQUESTED}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_EC_FALLBACK_NOT_NEGOTIABLE = ((P_log_api<<16) | 1536 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_EC_FALLBACK_NOT_NEGOTIABLE}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_EC_FALLBACK_NO_ANSWER = ((P_log_api<<16) | 1537 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_EC_FALLBACK_NO_ANSWER}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_EC_PARAMS = ((P_log_api<<16) | 1538 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_EC_PARAMS}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DC_PARAMS = ((P_log_api<<16) | 1539 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DC_PARAMS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MCLASS = ((P_log_api<<16) | 1540 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MCLASS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MAX_RX_SLOTS = ((P_log_api<<16) | 1541 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MAX_RX_SLOTS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MAX_TX_SLOTS = ((P_log_api<<16) | 1542 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MAX_TX_SLOTS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SUM_SLOTS = ((P_log_api<<16) | 1543 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SUM_SLOTS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CODINGS = ((P_log_api<<16) | 1544 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CODINGS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_WANTED_RX_SLOTS = ((P_log_api<<16) | 1545 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_WANTED_RX_SLOTS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_WANTED_AIR_USER_RATE = ((P_log_api<<16) | 1546 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_WANTED_AIR_USER_RATE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MAX_TX_SLOTS_SUPPORTED = ((P_log_api<<16) | 1547 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MAX_TX_SLOTS_SUPPORTED}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURR_TI_PD = ((P_log_api<<16) | 1548 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURR_TI_PD}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURR_SERVICE_MODE = ((P_log_api<<16) | 1549 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURR_SERVICE_MODE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DS_DATACOMP_IND = ((P_log_api<<16) | 1550 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DS_DATACOMP_IND}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CUGI   = ((P_log_api<<16) | 1551 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CUGI} 
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SPKR_LOUDNESS = ((P_log_api<<16) | 1552 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SPKR_LOUDNESS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SPKR_MONITOR = ((P_log_api<<16) | 1553 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SPKR_MONITOR}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MCLASS = ((P_log_api<<16) | 1540 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MAX_RX_SLOTS = ((P_log_api<<16) | 1541 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MAX_TX_SLOTS = ((P_log_api<<16) | 1542 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SUM_SLOTS = ((P_log_api<<16) | 1543 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CODINGS = ((P_log_api<<16) | 1544 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_WANTED_RX_SLOTS = ((P_log_api<<16) | 1545 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_WANTED_AIR_USER_RATE = ((P_log_api<<16) | 1546 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_MAX_TX_SLOTS_SUPPORTED = ((P_log_api<<16) | 1547 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURR_TI_PD = ((P_log_api<<16) | 1548 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CURR_SERVICE_MODE = ((P_log_api<<16) | 1549 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_DS_DATACOMP_IND = ((P_log_api<<16) | 1550 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CUGI   = ((P_log_api<<16) | 1551 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SPKR_LOUDNESS = ((P_log_api<<16) | 1552 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SPKR_MONITOR = ((P_log_api<<16) | 1553 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CALL_METER = ((P_log_api<<16) | 1554 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CALL_METER}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_ENABLE_AUTO_REJECT = ((P_log_api<<16) | 1555 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_ENABLE_AUTO_REJECT}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_ENABLE_AUTO_REJECT = ((P_log_api<<16) | 1555 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_ETBM   = ((P_log_api<<16) | 1556 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_ETBM} 
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CLIR   = ((P_log_api<<16) | 1557 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CLIR} 
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_FAX_PARAMS = ((P_log_api<<16) | 1558 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_FAX_PARAMS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_FAX_FCLASS = ((P_log_api<<16) | 1559 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_FAX_FCLASS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CSNS   = ((P_log_api<<16) | 1560 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CSNS} 
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_DEF_REC_NUMBER = ((P_log_api<<16) | 1561 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_DEF_REC_NUMBER}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_CLIENT_HANDLE_MT_SMS = ((P_log_api<<16) | 1562 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_CLIENT_HANDLE_MT_SMS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_CLIENT_HANDLE_MO_SMS_RETRY = ((P_log_api<<16) | 1563 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_CLIENT_HANDLE_MO_SMS_RETRY}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_MORE_MESSAGE_TO_SEND = ((P_log_api<<16) | 1564 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_MORE_MESSAGE_TO_SEND}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SETUP_CALL_CTR = ((P_log_api<<16) | 1565 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SETUP_CALL_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_SS_CTR = ((P_log_api<<16) | 1566 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_SS_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_USSD_CTR = ((P_log_api<<16) | 1567 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_USSD_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_SMS_CTR = ((P_log_api<<16) | 1568 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_SMS_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_DTMF_CTR = ((P_log_api<<16) | 1569 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_DTMF_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_CALL_CONTROL_CTR = ((P_log_api<<16) | 1570 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_CALL_CONTROL_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SS_CONTROL_CTR = ((P_log_api<<16) | 1571 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SS_CONTROL_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_USSD_CONTROL_CTR = ((P_log_api<<16) | 1572 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_USSD_CONTROL_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SMS_CONTROL_CTR = ((P_log_api<<16) | 1573 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SMS_CONTROL_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_GENERIC_INTERFACE_CTR = ((P_log_api<<16) | 1574 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_GENERIC_INTERFACE_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_DYN_TERM_PROFILE = ((P_log_api<<16) | 1575 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_DYN_TERM_PROFILE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_CMD_FETCH_ENABLED_AT_STARTUP = ((P_log_api<<16) | 1576 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_CMD_FETCH_ENABLED_AT_STARTUP}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PBK_ELEM_BDN_CACHE_CTR = ((P_log_api<<16) | 1577 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PBK_ELEM_BDN_CACHE_CTR}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PCH_ELEM_SECONDARY_PDP_CONTEXT = ((P_log_api<<16) | 1578 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PCH_ELEM_SECONDARY_PDP_CONTEXT}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_EBSE = ((P_log_api<<16) | 1579 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_EBSE}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_FAX_FCLASS = ((P_log_api<<16) | 1559 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CSNS   = ((P_log_api<<16) | 1560 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_DEF_REC_NUMBER = ((P_log_api<<16) | 1561 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_CLIENT_HANDLE_MT_SMS = ((P_log_api<<16) | 1562 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_CLIENT_HANDLE_MO_SMS_RETRY = ((P_log_api<<16) | 1563 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SMS_ELEM_MORE_MESSAGE_TO_SEND = ((P_log_api<<16) | 1564 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SETUP_CALL_CTR = ((P_log_api<<16) | 1565 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_SS_CTR = ((P_log_api<<16) | 1566 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_USSD_CTR = ((P_log_api<<16) | 1567 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_SMS_CTR = ((P_log_api<<16) | 1568 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SEND_DTMF_CTR = ((P_log_api<<16) | 1569 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_CALL_CONTROL_CTR = ((P_log_api<<16) | 1570 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SS_CONTROL_CTR = ((P_log_api<<16) | 1571 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_USSD_CONTROL_CTR = ((P_log_api<<16) | 1572 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_SMS_CONTROL_CTR = ((P_log_api<<16) | 1573 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_GENERIC_INTERFACE_CTR = ((P_log_api<<16) | 1574 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_DYN_TERM_PROFILE = ((P_log_api<<16) | 1575 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_SATK_ELEM_CMD_FETCH_ENABLED_AT_STARTUP = ((P_log_api<<16) | 1576 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PBK_ELEM_BDN_CACHE_CTR = ((P_log_api<<16) | 1577 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PCH_ELEM_SECONDARY_PDP_CONTEXT = ((P_log_api<<16) | 1578 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_EBSE = ((P_log_api<<16) | 1579 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMN_SESSION = ((P_log_api<<16) | 1580 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMN_SESSION}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMN_MODE = ((P_log_api<<16) | 1581 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMN_MODE}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PREV_PLMN_MODE = ((P_log_api<<16) | 1582 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PREV_PLMN_MODE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMN_SELECT_RAT = ((P_log_api<<16) | 1583 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMN_SELECT_RAT}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PREV_PLMN_SELECT_RAT = ((P_log_api<<16) | 1584 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PREV_PLMN_SELECT_RAT}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMN_SELECT_RAT = ((P_log_api<<16) | 1583 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PREV_PLMN_SELECT_RAT = ((P_log_api<<16) | 1584 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMN_FORMAT = ((P_log_api<<16) | 1585 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMN_FORMAT}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_ABORT_PLMN_SELECT = ((P_log_api<<16) | 1586 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_ABORT_PLMN_SELECT}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PCM_MODE = ((P_log_api<<16) | 1587 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PCM_MODE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_IS_PWRDWN_SOFTRESET = ((P_log_api<<16) | 1588 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_IS_PWRDWN_SOFTRESET}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_ABORT_PLMN_SELECT = ((P_log_api<<16) | 1586 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PCM_MODE = ((P_log_api<<16) | 1587 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_IS_PWRDWN_REFRESH_SIM_RESET = ((P_log_api<<16) | 1588 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_IS_PWRDWN_SOFTRESET}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_SELECTED_PLMN = ((P_log_api<<16) | 1589 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_SELECTED_PLMN}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PREV_SEL_PLMN = ((P_log_api<<16) | 1590 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PREV_SEL_PLMN}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PREF_USIM_PBK = ((P_log_api<<16) | 1591 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PREF_USIM_PBK}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PWRDWN_DETACH_TIMER = ((P_log_api<<16) | 1592 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PWRDWN_DETACH_TIMER}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PWRDWN_STORAGE_TIMER = ((P_log_api<<16) | 1593 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PWRDWN_STORAGE_TIMER}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PWRDWN_DETACH_TIMER = ((P_log_api<<16) | 1592 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PWRDWN_STORAGE_TIMER = ((P_log_api<<16) | 1593 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_ATTACH_MODE = ((P_log_api<<16) | 1594 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_ATTACH_MODE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_USER_NW_RESELECT = ((P_log_api<<16) | 1595 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_USER_NW_RESELECT}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_USER_NW_RESELECT = ((P_log_api<<16) | 1595 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_WAIT_BEFORE_DETACH_TIME = ((P_log_api<<16) | 1596 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_WAIT_BEFORE_DETACH_TIME}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_SYSTEM_STATE = ((P_log_api<<16) | 1597 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_SYSTEM_STATE}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_POWER_DOWN_STATE = ((P_log_api<<16) | 1598 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_POWER_DOWN_STATE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_IMEI = ((P_log_api<<16) | 1599 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_IMEI}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_FORCE_SIM_NOT_RDY = ((P_log_api<<16) | 1600 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_FORCE_SIM_NOT_RDY}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_FAST_BAND_SELECT_DISABLE = ((P_log_api<<16) | 1601 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_FAST_BAND_SELECT_DISABLE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_SMSME_STORAGE_ENABLE = ((P_log_api<<16) | 1602 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_SMSME_STORAGE_ENABLE}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_IMEI = ((P_log_api<<16) | 1599 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_FORCE_SIM_NOT_RDY = ((P_log_api<<16) | 1600 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_FAST_BAND_SELECT_DISABLE = ((P_log_api<<16) | 1601 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_SMSME_STORAGE_ENABLE = ((P_log_api<<16) | 1602 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_SMSME_MAX_CAPACITY = ((P_log_api<<16) | 1603 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_SMSME_MAX_CAPACITY}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_GAN_MODE = ((P_log_api<<16) | 1604 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_GAN_MODE}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_CELL_LOCK_PARAMS = ((P_log_api<<16) | 1605 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_CELL_LOCK_PARAMS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_AT_ELEM_AUDIO_CTRL = ((P_log_api<<16) | 1606 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_AT_ELEM_AUDIO_CTRL}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_MS_ELEM_ASYNC_RETURN_RESULT = ((P_log_api<<16) | 1607 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_MS_ELEM_ASYNC_RETURN_RESULT}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_AT_ELEM_AUDIO_CTRL = ((P_log_api<<16) | 1606 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_MS_ELEM_ASYNC_RETURN_RESULT = ((P_log_api<<16) | 1607 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_MS_ELEM_DIALOG_ID = ((P_log_api<<16) | 1608 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_MS_ELEM_DIALOG_ID}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_NVRAM_CLASSMARK = ((P_log_api<<16) | 1609 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_STACK_ELEM_NVRAM_CLASSMARK}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_DTX_STATUS = ((P_log_api<<16) | 1610 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_STACK_ELEM_DTX_STATUS}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_DTX_STATUS = ((P_log_api<<16) | 1610 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_CELL_BARR_STATUS = ((P_log_api<<16) | 1611 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_STACK_ELEM_CELL_BARR_STATUS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_IS_DEDICATED_MODE = ((P_log_api<<16) | 1612 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_STACK_ELEM_IS_DEDICATED_MODE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_CURR_TIMING_ADVANCE = ((P_log_api<<16) | 1613 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_STACK_ELEM_CURR_TIMING_ADVANCE}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_IS_DEDICATED_MODE = ((P_log_api<<16) | 1612 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_CURR_TIMING_ADVANCE = ((P_log_api<<16) | 1613 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_SPEECHCODEC_BITMAP = ((P_log_api<<16) | 1614 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_STACK_ELEM_SPEECHCODEC_BITMAP}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_CHANNELMODE_SUPPORTED = ((P_log_api<<16) | 1615 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_STACK_ELEM_CHANNELMODE_SUPPORTED}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_ISGPRS_ALLOWED = ((P_log_api<<16) | 1616 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_ISGPRS_ALLOWED}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_ISGPRS_ALLOWED = ((P_log_api<<16) | 1616 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_SYSTEM_RAT = ((P_log_api<<16) | 1617 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_SYSTEM_RAT}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_SUPPORTED_RAT = ((P_log_api<<16) | 1618 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_SUPPORTED_RAT}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_SYSTEM_BAND = ((P_log_api<<16) | 1619 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_SYSTEM_BAND}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_SUPPORTED_BAND = ((P_log_api<<16) | 1620 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_SUPPORTED_BAND}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_ISREGISTERED_GSM_OR_GPRS = ((P_log_api<<16) | 1621 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_ISREGISTERED_GSM_OR_GPRS}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_ISREGISTERED_GSM_OR_GPRS = ((P_log_api<<16) | 1621 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_GET_MS_CLASS = ((P_log_api<<16) | 1622 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_GET_MS_CLASS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_IS_REGISTER_IN_PROGRESS = ((P_log_api<<16) | 1623 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_IS_REGISTER_IN_PROGRESS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_IS_DEREGISTER_IN_PROGRESS = ((P_log_api<<16) | 1624 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_IS_DEREGISTER_IN_PROGRESS}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_IS_REGISTER_IN_PROGRESS = ((P_log_api<<16) | 1623 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_IS_DEREGISTER_IN_PROGRESS = ((P_log_api<<16) | 1624 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_GPRSATTACH_STATUS = ((P_log_api<<16) | 1625 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_GPRSATTACH_STATUS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_MANUAL_PLMN_SELECT_RAT = ((P_log_api<<16) | 1626 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_MANUAL_PLMN_SELECT_RAT}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_NETREG_ELEM_MANUAL_PLMN_SELECT_RAT = ((P_log_api<<16) | 1626 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_DTM     = ((P_log_api<<16) | 1627 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_DTM}   
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_HSDPA_SUPPORT = ((P_log_api<<16) | 1628 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_HSDPA_SUPPORT}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_HSUPA_SUPPORT = ((P_log_api<<16) | 1629 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_HSUPA_SUPPORT}
@@ -1913,59 +1968,55 @@ API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_EGPRS_SUPPORT = ((P_log_api<<16) | 16
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GAN_SUPPORT = ((P_log_api<<16) | 1632 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GAN_SUPPORT}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_NOM     = ((P_log_api<<16) | 1633 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_NOM}   
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_NW_TYPE = ((P_log_api<<16) | 1634 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_NW_TYPE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_RAC     = ((P_log_api<<16) | 1635 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_RAC}   
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_RAC     = ((P_log_api<<16) | 1635 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_RNC     = ((P_log_api<<16) | 1636 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_RNC}   
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GSMREG_STATE = ((P_log_api<<16) | 1637 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GSMREG_STATE}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRSREG_STATE = ((P_log_api<<16) | 1638 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRSREG_STATE}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GSM_CAUSE = ((P_log_api<<16) | 1639 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GSM_CAUSE}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_CAUSE = ((P_log_api<<16) | 1640 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_CAUSE}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_NET_INFO = ((P_log_api<<16) | 1641 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_NET_INFO}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GSM_NW_CAUSE = ((P_log_api<<16) | 1642 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GSM_NW_CAUSE}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_NW_CAUSE = ((P_log_api<<16) | 1643 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_NW_CAUSE}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GSM_NW_CAUSE = ((P_log_api<<16) | 1642 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_NW_CAUSE = ((P_log_api<<16) | 1643 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_REG_INFO = ((P_log_api<<16) | 1644 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_REG_INFO}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_REGSTATE_INFO = ((P_log_api<<16) | 1645 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_REGSTATE_INFO}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_ISGSM_REGISTERED = ((P_log_api<<16) | 1646 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_ISGSM_REGISTERED}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_ISGPRS_REGISTERED = ((P_log_api<<16) | 1647 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_ISGPRS_REGISTERED}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_ISGSM_REGISTERED = ((P_log_api<<16) | 1646 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_ISGPRS_REGISTERED = ((P_log_api<<16) | 1647 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_CSINVALID_SIM_MS_ME_STATUS = ((P_log_api<<16) | 1648 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_CSINVALID_SIM_MS_ME_STATUS}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRSINVALID_SIM_MS_ME_STATUS = ((P_log_api<<16) | 1649 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRSINVALID_SIM_MS_ME_STATUS}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_IS_UMTS_DCH_STATE = ((P_log_api<<16) | 1650 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_IS_UMTS_DCH_STATE}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_UAS_CONN_INFO = ((P_log_api<<16) | 1650 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_UAS_CONN_INFO}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_RADIO_STATUS = ((P_log_api<<16) | 1651 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_RADIO_STATUS}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_CURRENT_CAMPED_PLMN = ((P_log_api<<16) | 1652 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_CURRENT_CAMPED_PLMN}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_UARFCN_DL = ((P_log_api<<16) | 1653 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_UARFCN_DL}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_SPECIAL_CGSEND_MODE = ((P_log_api<<16) | 1654 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_SPECIAL_CGSEND_MODE}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_SPECIAL_CGSEND_MODE = ((P_log_api<<16) | 1654 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_CALL_ACTIVE_BY_CHAN = ((P_log_api<<16) | 1655 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_CALL_ACTIVE_BY_CHAN}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_CID_BY_CHAN = ((P_log_api<<16) | 1656 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_CID_BY_CHAN}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_CALL_ACTIVE_BY_CID = ((P_log_api<<16) | 1657 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_NETWORK_ELEM_GPRS_CALL_ACTIVE_BY_CID}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_PIN1_STATUS = ((P_log_api<<16) | 1658 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_PIN1_STATUS}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_PIN2_STATUS = ((P_log_api<<16) | 1659 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_PIN2_STATUS}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_SST         = ((P_log_api<<16) | 1660 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_SST}       
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_ONS_LEN = ((P_log_api<<16) | 1661 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_ONS_LEN}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_ONSS_LEN = ((P_log_api<<16) | 1662 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_ONSS_LEN}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_GID1_LEN    = ((P_log_api<<16) | 1663 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_GID1_LEN}  
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_GID2_LEN    = ((P_log_api<<16) | 1664 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_GID2_LEN}  
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_CFG_ELEM_SIM_LOCK_SUPPORTED = ((P_log_api<<16) | 1665 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_CFG_ELEM_SIM_LOCK_SUPPORTED}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_CFG_ELEM_SIM_CINGULAR_ENS_ENABLED = ((P_log_api<<16) | 1666 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_CFG_ELEM_SIM_CINGULAR_ENS_ENABLED}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_CFG_ELEM_SKT_AUTO_SEND_CONFIRMATION = ((P_log_api<<16) | 1667 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_CFG_ELEM_SKT_AUTO_SEND_CONFIRMATION}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_CFG_ELEM_PLMN_NAME_FLAGS = ((P_log_api<<16) | 1668 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_CFG_ELEM_PLMN_NAME_FLAGS}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_ONS_LEN = ((P_log_api<<16) | 1661 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_ONSS_LEN = ((P_log_api<<16) | 1662 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_GID1_LEN    = ((P_log_api<<16) | 1663 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_GID2_LEN    = ((P_log_api<<16) | 1664 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_CFG_ELEM_SIM_LOCK_SUPPORTED = ((P_log_api<<16) | 1665 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_CFG_ELEM_SIM_CINGULAR_ENS_ENABLED = ((P_log_api<<16) | 1666 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_CFG_ELEM_SKT_AUTO_SEND_CONFIRMATION = ((P_log_api<<16) | 1667 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_CFG_ELEM_PLMN_NAME_FLAGS = ((P_log_api<<16) | 1668 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SPEECH_CODEC_LIST = ((P_log_api<<16) | 1669 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_SPEECH_CODEC_LIST}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CRLP   = ((P_log_api<<16) | 1670 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_CC_ELEM_CRLP} 
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_CGEREP = ((P_log_api<<16) | 1671 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_CGEREP}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_CSCS = ((P_log_api<<16) | 1672 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_CSCS}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_CPWC = ((P_log_api<<16) | 1673 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_CPWC}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMNSEL_REGISTERED_PLMN = ((P_log_api<<16) | 1674 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMNSEL_REGISTERED_PLMN}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMNSEL_REGISTERED_PLMN = ((P_log_api<<16) | 1674 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_FREQ_SEARCH_LIST = ((P_log_api<<16) | 1675 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_FREQ_SEARCH_LIST}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_NW_MEAS_RESULT = ((P_log_api<<16) | 1676 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_STACK_ELEM_NW_MEAS_RESULT}
-API_CAPI_MSG_ELEM_MSDB_PTR_MS_DRIVER_ELEM_SPINNER_SLEEP_MODE = ((P_log_api<<16) | 1677 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_DRIVER_ELEM_SPINNER_SLEEP_MODE}
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_STACK_ELEM_NW_MEAS_RESULT = ((P_log_api<<16) | 1676 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
+API_CAPI_MSG_ELEM_MSDB_PTR_MS_DRIVER_ELEM_SPINNER_SLEEP_MODE = ((P_log_api<<16) | 1677 ),                                   	///<Payload type {::T_ELEM_MSDB_UINT8}                     
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_RAW_ICC_ID  = ((P_log_api<<16) | 1678 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_RAW_ICC_ID}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_ONS    = ((P_log_api<<16) | 1679 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_ONS}  
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_ONSS   = ((P_log_api<<16) | 1680 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_ONSS} 
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_INFO   = ((P_log_api<<16) | 1681 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_CPHS_INFO} 
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_ECC_REC_LIST = ((P_log_api<<16) | 1682 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_ECC_REC_LIST}
 API_CAPI_MSG_ELEM_MSDB_PTR_MS_SIM_ELEM_ICC_ID      = ((P_log_api<<16) | 1683 ),                                   	///<Payload type {::T_ELEM_MSDB_PTR_MS_SIM_ELEM_ICC_ID}    
-
-
-   // End of CAPI API
-
    /* End of log_api */
 
    /* Start of log_general */

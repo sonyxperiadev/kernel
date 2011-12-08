@@ -345,7 +345,7 @@ typedef enum {
     PARAM_AUDIO_AGC_UL_MAX_THRESH,						// 16
     PARAM_AUDIO_AGC_UL_MIN_IDX,							// 17
     PARAM_AUDIO_AGC_UL_STEP_DOWN,						// 18
-    PARAM_AUDIO_AGC_UL_STEP_UP,							// 19
+    PARAM_AUDIO_AGC_UL_STEP_UP,							// 19  to delete
     PARAM_ECHO_ADAPT_NORM_FACTOR,						// 20
     PARAM_ECHO_CANCEL_DTD_HANG,							// 21
     PARAM_ECHO_CANCEL_DTD_THRESH,						// 22
@@ -656,6 +656,8 @@ typedef enum {
 	PARAM_HW_SIDETONE_GAIN,
 	PARAM_HW_SIDETONE_EQ,
 
+	PARAM_DSP_VOICE_VOLUME_TABLE = 291,			// 291
+	PARAM_FM_RADIO_DIGITAL_VOLUME = 292,		// 292
 
 	PARAM_REVERB_TIME_CONSTANT 	  = 293,				// 293
 	PARAM_REVERB_LEVEL, 			  			// 294
@@ -671,7 +673,12 @@ typedef enum {
 	PARAM_VOICE_MIC2_HPF_ENABLE,                // 302	
 	PARAM_VOICE_MIC2_HPF_CUTOFF_FREQ,           // 303
 
-	AUDIO_PARM_NUMBER   						// 304
+	PARAM_EXT_SPEAKER_GENERIC_PARAM1 = 304,               // 304
+	PARAM_EXT_SPEAKER_GENERIC_PARAM2,                     // 305
+	PARAM_EXT_SPEAKER_GENERIC_PARAM3,                     // 306
+	PARAM_EXT_SPEAKER_GENERIC_PARAM4,                     // 307
+	
+	AUDIO_PARM_NUMBER               = 308                 // 308
  	
 } AudioParam_t;
 
