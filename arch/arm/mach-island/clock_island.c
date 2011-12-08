@@ -586,18 +586,22 @@ static struct pll_clk CLK_NAME(a9_pll) = {
 		},
 	.ccu_clk = &CLK_NAME(kproc),
 	.pll_ctrl_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
+	.soft_post_resetb_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
 	.soft_post_resetb_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_POST_RESETB_MASK,
+	.soft_resetb_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
 	.soft_resetb_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_RESETB_MASK,
+	.pwrdwn_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
 	.pwrdwn_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PWRDWN_MASK,
 	.idle_pwrdwn_sw_ovrride_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK,
+	.ndiv_pdiv_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
 	.ndiv_int_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK,
 	.ndiv_int_shift = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT,
 	.ndiv_int_max = 512,
 	.pdiv_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK,
 	.pdiv_shift = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT,
 	.pdiv_max = 8,
+	.pll_lock_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
 	.pll_lock = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_MASK,
-
 	.ndiv_frac_offset = KPROC_CLK_MGR_REG_PLLARMB_OFFSET,
 	.ndiv_frac_mask = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK,
 	.ndiv_frac_shift = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT,
@@ -623,8 +627,11 @@ static struct pll_chnl_clk CLK_NAME(a9_pll_chnl0) = {
 		.mdiv_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_MASK,
 		.mdiv_shift = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT,
 		.mdiv_max = 256,
+		.pll_enableb_offset = KPROC_CLK_MGR_REG_PLLARMC_OFFSET,
 		.out_en_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_ENB_CLKOUT_MASK,
+		.pll_load_ch_en_offset = KPROC_CLK_MGR_REG_PLLARMC_OFFSET,
 		.load_en_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
+		.pll_hold_ch_offset = KPROC_CLK_MGR_REG_PLLARMC_OFFSET,
 		.hold_en_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_HOLD_MASK,
 };
 
@@ -647,8 +654,11 @@ static struct pll_chnl_clk CLK_NAME(a9_pll_chnl1) = {
 		.mdiv_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK,
 		.mdiv_shift = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_SHIFT,
 		.mdiv_max = 256,
+		.pll_enableb_offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET,
 		.out_en_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_ENB_CLKOUT_MASK,
+		.pll_load_ch_en_offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET,
 		.load_en_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_LOAD_EN_MASK,
+		.pll_hold_ch_offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET,
 		.hold_en_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_HOLD_MASK,
 };
 
@@ -679,7 +689,7 @@ static struct core_clk CLK_NAME(a9_core) = {
 	.pll_clk = &CLK_NAME(a9_pll),
 	.pll_chnl_clk = arm_pll_chnl,
 	.num_chnls = 2,
-	.active_policy = 1, /*PI policy 5*/
+	.active_policy = 3, /*PI policy 5*/
 	.pre_def_freq = freq_tbl,
 	.num_pre_def_freq = ARRAY_SIZE(freq_tbl),
 
@@ -5051,425 +5061,6 @@ static struct pll_cfg_ctrl_info esub_pll_cfg_ctrl =
 	.thold_count = ARRAY_SIZE(esub_vc0_thold),
 };
 
-
-static u32 esub_compute_pll_vco_rate(u32 ndiv_int, u32 nfrac,u32 frac_div, u32 pdiv)
-{
-	unsigned long xtal = clock_get_xtal();
-	u64 temp;
-	/*
-		vco_rate = 26Mhz*(ndiv_int + ndiv_frac/frac_div)/pdiv
-		 = 26(*ndiv_int*frac_div + ndiv_frac)/(pdiv*frac_div)
-	*/
-	//pr_info("%s:pdiv = %x, nfrac = %x ndiv_int = %x\n", __func__, pdiv, nfrac, ndiv_int);
-	temp = ((u64)(ndiv_int*frac_div + nfrac)*xtal);
-
-	//pr_info("%s: temp = %llu\n",__func__,temp);
-	do_div(temp, pdiv*frac_div);
-
-	//pr_info("%s: after div temp = %llu\n",__func__,temp);
-	return (unsigned long)temp;
-}
-
-static unsigned long esub_compute_pll_vco_div(struct pll_clk* pll_clk, u32 rate,
-					u32* pdiv, u32* ndiv_int, u32 *nfrac)
-{
-	u32 max_ndiv;
-	u32 frac_div;
-	u32 _pdiv = 1;
-	u32 _ndiv_int, _nfrac;
-	u32 temp_rate;
-	u32 new_rate;
-	unsigned long xtal = clock_get_xtal();
-	u64 temp_frac;
-
-	max_ndiv = pll_clk->ndiv_int_max;
-	frac_div = 1 +
-			(pll_clk->ndiv_frac_mask >> pll_clk->ndiv_frac_shift);
-
-	_ndiv_int = rate/xtal; /*pdiv = 1*/
-
-	if(_ndiv_int > max_ndiv)
-		_ndiv_int = max_ndiv;
-
-	temp_frac= ((u64)rate - (u64)_ndiv_int*xtal)*frac_div;
-	do_div(temp_frac, xtal);
-
-    _nfrac = (u32)temp_frac;
-
-    _nfrac  &= (frac_div - 1);
-
-    pr_info("_nfrac  = %x\n",_nfrac );
-    temp_rate = esub_compute_pll_vco_rate(_ndiv_int,_nfrac,frac_div,_pdiv);
-
-	if(temp_rate != rate)
-	{
-        for(; _nfrac  < frac_div; _nfrac++)
-        {
-            temp_rate = esub_compute_pll_vco_rate(_ndiv_int,_nfrac,frac_div,_pdiv);
-            if(temp_rate > rate)
-            {
-				u32 temp = esub_compute_pll_vco_rate(_ndiv_int,_nfrac-1,frac_div,_pdiv);
-				if(abs(temp_rate - rate) > abs(rate - temp))
-				_nfrac--;
-                 break;
-            }
-        }
-	}
-
-	new_rate = esub_compute_pll_vco_rate(_ndiv_int,_nfrac,frac_div,_pdiv);
-	pr_info("%s:new rate =  %u\n",__func__,new_rate);
-
-	if(_ndiv_int == max_ndiv)
-		_ndiv_int = 0;
-	pr_info("%s:_ndiv_int = %x _nfrac = %x _pdiv = %x\n",
-			__func__,_ndiv_int, _nfrac, _pdiv);
-
-	if(ndiv_int)
-	*ndiv_int = _ndiv_int;
-
-	if(nfrac)
-		*nfrac = _nfrac;
-
-	if(pdiv)
-		*pdiv = _pdiv;
-    return new_rate;
-}
-
-static unsigned long esub_pll_clk_round_rate(struct clk *clk, unsigned long rate)
-{
-	u32 new_rate;
-	struct pll_clk *pll_clk;
-
-	if(clk->clk_type != CLK_TYPE_PLL)
-		return -EPERM;
-
-	pll_clk = to_pll_clk(clk);
-
-		new_rate = esub_compute_pll_vco_div(pll_clk, rate,
-					NULL, NULL, NULL);
-
-	clk_dbg("%s:rate = %d\n", __func__, new_rate);
-
-	return new_rate;
-}
-
-static unsigned long esub_pll_clk_get_rate(struct clk *clk)
-{
-	struct pll_clk *pll_clk;
-	u32 reg_val = 0;
-	u32 ndiv_int, nfrac, pdiv;
-	u32 frac_div;
-
-	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
-
-	pll_clk = to_pll_clk(clk);
-
-	if(CLK_FLG_ENABLED(clk,RATE_FIXED))
-	{
-		clk_dbg("%s : %s - fixed rate clk...\n",
-		        __func__, clk->name);
-		return clk->rate;
-	}
-
-        clk_dbg("%s:, clock name: ESUB_PLL \n",__func__);
-
-        reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->ndiv_frac_offset));
-        nfrac =
-            (reg_val & pll_clk->ndiv_frac_mask) >> pll_clk->ndiv_frac_shift;
-
-        reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->ndiv_pdiv_offset));
-        pdiv =
-            (reg_val & pll_clk->pdiv_mask) >> pll_clk->pdiv_shift;
-        ndiv_int =
-            (reg_val & pll_clk->ndiv_int_mask) >> pll_clk->ndiv_int_shift;
-
-        if(pdiv == 0)
-            pdiv = pll_clk->pdiv_max;
-        if(ndiv_int == 0)
-            ndiv_int = pll_clk->ndiv_int_max;
-
-        frac_div = 1 +
-            (pll_clk->ndiv_frac_mask >> pll_clk->ndiv_frac_shift);
- 
-	return esub_compute_pll_vco_rate(ndiv_int,nfrac,frac_div,pdiv);
-}
-
-static int esub_pll_clk_set_rate(struct clk* clk, u32 rate)
-{
-	struct pll_clk * pll_clk;
-	u32 new_rate, reg_val;
-	u32 pll_cfg_ctrl = 0;
-	int insurance;
-	u32 ndiv_int, nfrac, pdiv;
-	int inx;
-	struct pll_cfg_ctrl_info* cfg_ctrl;
-	if(clk->clk_type != CLK_TYPE_PLL)
-		return -EPERM;
-
-	pll_clk = to_pll_clk(clk);
-
-	clk_dbg("%s : %s\n",
-	        __func__, clk->name);
-
-	if(CLK_FLG_ENABLED(clk,RATE_FIXED))
-	{
-		clk_dbg("%s : %s - fixed rate clk...rate cannot be changed\n",
-		        __func__, clk->name);
-		return -EINVAL;
-
-	}
-	new_rate = esub_compute_pll_vco_div(pll_clk, rate,
-					&pdiv, &ndiv_int, &nfrac);
-
-	pr_info("%s:new_rate = %d rate = %d\n",__func__,new_rate,rate);
-	if(abs(new_rate-rate) > 100)
-	{
-		clk_dbg("%s : %s - rate(%d) not supported\n",
-		        __func__, clk->name,rate);
-		return -EINVAL;
-	}
-
-	/* enable write access*/
-	ccu_write_access_enable(pll_clk->ccu_clk, true);
-
-       clk_dbg("%s:, clock name: ESUB_PLL \n",__func__);
-
-        /*Write pll_cfg_ctrl*/
-       if(pll_clk->cfg_ctrl_info &&
-            pll_clk->cfg_ctrl_info->thold_count)
-       {
-           cfg_ctrl = pll_clk->cfg_ctrl_info;
-           for(inx = 0; inx < cfg_ctrl->thold_count; inx++)
-           {
-               if(cfg_ctrl->vco_thold[inx] == PLL_VCO_RATE_MAX
-                || new_rate < cfg_ctrl->vco_thold[inx])
-               {
-                   pll_cfg_ctrl =
-                    cfg_ctrl->pll_config_value[inx];
-                   pll_cfg_ctrl <<= cfg_ctrl->pll_cfg_ctrl_shift;
-                   pll_cfg_ctrl &= cfg_ctrl->pll_cfg_ctrl_mask;
-                break;
-               }
-           }
-           pr_info("%s:pll_cfg_ctrl = %x\n",__func__,pll_cfg_ctrl);
-           if(inx != pll_clk->cfg_ctrl_info->thold_count)
-           {
-               writel(pll_cfg_ctrl,
-                      CCU_REG_ADDR(pll_clk->ccu_clk, cfg_ctrl->pll_cfg_ctrl_offset));
-           }
-       }
-       /*Write nfrac*/
-       reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->ndiv_frac_offset));
-       reg_val &= ~pll_clk->ndiv_frac_mask;
-       reg_val |= nfrac << pll_clk->ndiv_frac_shift;
-       writel(reg_val,
-              CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->ndiv_frac_offset));
-
-       /*write nint & pdiv*/
-       reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->ndiv_pdiv_offset));
-       reg_val &= ~(pll_clk->pdiv_mask | pll_clk->ndiv_int_mask);
-       reg_val |= (pdiv << pll_clk->pdiv_shift)
-               | (ndiv_int << pll_clk->ndiv_int_shift);
-       writel(reg_val,
-              CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->ndiv_pdiv_offset));
-
-       reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->soft_resetb_offset));
-
-       reg_val	|= pll_clk->soft_resetb_mask
-                | pll_clk->soft_resetb_mask;
-       writel(reg_val,
-              CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->soft_resetb_offset));
-
-	    /*Loop for lock bit only if the
-		    - PLL is AUTO GATED or
-		    - PLL is enabled */
-       reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pwrdwn_offset));
-       if(clk->flags & AUTO_GATE || ((reg_val & pll_clk->pwrdwn_mask) == 0))
-       {
-           insurance = 0;
-           do
-           {
-               udelay(1);
-               reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_lock_offset));
-               insurance++;
-           } while(!(GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock)) && insurance < 1000);
-           WARN_ON(insurance >= 1000);
-       }
-
-	/* disable write access*/
-	ccu_write_access_enable(pll_clk->ccu_clk,false);
-
-	clk_dbg("clock set rate done \n");
-	return 0;
-}
-
-
-static int esub_pll_clk_enable(struct clk* clk, int enable)
-{
-	u32 reg_val;
-	struct pll_clk * pll_clk;
-	int insurance;
-	clk_dbg("%s:%d, clock name: %s \n",__func__,enable, clk->name);
-
-	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
-	pll_clk = to_pll_clk(clk);
-
-        	clk_dbg("%s:%d, clock name: ESUB_PLL \n",__func__,enable);
-            if(clk->flags & AUTO_GATE || !pll_clk->pwrdwn_mask)
-            {
-                clk_dbg("%s:%s: is auto gated or no enable bit\n",__func__, clk->name);
-                return 0;
-            }
-
-            /*enable write access*/
-            ccu_write_access_enable(pll_clk->ccu_clk, true);
-
-
-             if(enable)
-            {
-                reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pwrdwn_offset));
-                clk_dbg("%s, Before change pwrdwn reg value: %08x  \n",__func__, reg_val);
-                reg_val &= ~pll_clk->pwrdwn_mask;
-                writel(reg_val, CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pwrdwn_offset));
-
-                reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->soft_resetb_offset));
-                clk_dbg("%s, Before change soft_resetb reg value: %08x  \n",__func__, reg_val);
-                reg_val |=  pll_clk->soft_post_resetb_mask|pll_clk->soft_resetb_mask;
-            }
-            else
-            {
-                reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pwrdwn_offset));
-                reg_val = reg_val | pll_clk->pwrdwn_mask;
-                writel(reg_val, CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pwrdwn_offset));
-            }
-
-            if(enable)
-            {
-                insurance = 0;
-                do
-                {
-                    udelay(1);
-                    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_lock_offset));
-                    insurance++;
-                } while(!(GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock)) && insurance < 1000);
-                WARN_ON(insurance >= 1000);
-            }
-            clk_dbg("%s, %s is %s..! \n",__func__, clk->name, enable ? "enabled" : "disabled");
-
-            /* disable write access*/
-            ccu_write_access_enable(pll_clk->ccu_clk,false);
- 
-	clk_dbg("*************%s: pll clock %s count after %s : %d ***************\n",
-	        __func__, clk->name, enable ? "enable" : "disable", clk->use_cnt);
-
-	return 0;
-}
-
-static int esub_pll_clk_init(struct clk* clk)
-{
-	struct pll_clk * pll_clk;
-	u32 reg_val;
-
-	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
-	pll_clk = to_pll_clk(clk);
-
-	BUG_ON(pll_clk->ccu_clk == NULL);
-
-	clk_dbg("%s, clock name: %s \n",__func__, clk->name);
-
-	/* enable write access*/
-	ccu_write_access_enable(pll_clk->ccu_clk, true);
-
-        clk_dbg("%s, clock name: ESUB_PLL \n",__func__);
-
-	/* Disable write access*/
-	ccu_write_access_enable(pll_clk->ccu_clk, false);
-
-	clk_dbg("*************%s: peri clock %s count after init %d **************\n",
-	        __func__, clk->name, clk->use_cnt);
-
-	return 0;
-}
-
-static int esub_pll_clk_get_lock_status(struct pll_clk* pll_clk)
-{
-    u32 reg_val;
-
-    BUG_ON(!pll_clk->ccu_clk);
-
-        if(!pll_clk->pll_lock_offset || !pll_clk->pll_lock)
-            return -EINVAL;
-        CCU_PI_ENABLE(pll_clk->ccu_clk,1);
-        reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_lock_offset));
-        CCU_PI_ENABLE(pll_clk->ccu_clk,0);
-
-    return GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock);
-}
-static int esub_pll_clk_get_pdiv(struct pll_clk* pll_clk)
-{
-    u32 reg_val;
-
-    BUG_ON(!pll_clk->ccu_clk);
-
-        if(!pll_clk->ndiv_pdiv_offset || !pll_clk->pdiv_mask)
-            return -EINVAL;
-        CCU_PI_ENABLE(pll_clk->ccu_clk,1);
-        reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_pdiv_offset));
-        CCU_PI_ENABLE(pll_clk->ccu_clk,0);
-
-    return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->pdiv_mask, pll_clk->pdiv_shift);
-}
-static int esub_pll_clk_get_ndiv_int(struct pll_clk* pll_clk)
-{
-    u32 reg_val;
-
-    BUG_ON(!pll_clk->ccu_clk);
-
-        if(!pll_clk->ndiv_pdiv_offset || !pll_clk->ndiv_int_mask)
-            return -EINVAL;
-        CCU_PI_ENABLE(pll_clk->ccu_clk,1);
-        reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_pdiv_offset));
-        CCU_PI_ENABLE(pll_clk->ccu_clk,0);
- 
-    return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->ndiv_int_mask, pll_clk->ndiv_int_shift);
-}
-static int esub_pll_clk_get_ndiv_frac(struct pll_clk* pll_clk)
-{
-    u32 reg_val;
-
-    BUG_ON(!pll_clk->ccu_clk);
-    if(!pll_clk->ndiv_frac_offset || !pll_clk->ndiv_frac_mask)
-	return -EINVAL;
-    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
-    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_frac_offset));
-    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
-
-    return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->ndiv_frac_mask, pll_clk->ndiv_frac_shift);
-}
-
-static int esub_pll_clk_get_pwrdwn(struct pll_clk* pll_clk)
-{
-    u32 reg_val;
-
-    BUG_ON(!pll_clk->ccu_clk);
-        if(!pll_clk->pwrdwn_offset || !pll_clk->pwrdwn_mask)
-            return -EINVAL;
-        CCU_PI_ENABLE(pll_clk->ccu_clk,1);
-        reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pwrdwn_offset));
-        CCU_PI_ENABLE(pll_clk->ccu_clk,0);
-
-    return GET_BIT_USING_MASK(reg_val, pll_clk->pwrdwn_mask);
-}
-
-struct gen_clk_ops esub_pll_clk_ops =
-{
-	.init	        =       esub_pll_clk_init,
-	.enable         =       esub_pll_clk_enable,
-	.set_rate       =       esub_pll_clk_set_rate,
-	.get_rate       =       esub_pll_clk_get_rate,
-	.round_rate     =       esub_pll_clk_round_rate,
-};
-
 static struct pll_clk CLK_NAME(esub_pll) = {
 
 	.clk =	{
@@ -5477,7 +5068,7 @@ static struct pll_clk CLK_NAME(esub_pll) = {
 				.id	   = CLK_ESUB_PLL_CLK_ID,
 				.name = ESUB_PLL_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_PLL,
-				.ops = &esub_pll_clk_ops,
+				.ops = &gen_pll_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(esub),
 	.pll_ctrl_offset = 0,
@@ -5485,7 +5076,7 @@ static struct pll_clk CLK_NAME(esub_pll) = {
 	.soft_post_resetb_mask = ESUB_CLK_MGR_REG_PLL_POST_RESETB_I_POST_RESETB_MASK,
     .soft_resetb_offset = ESUB_CLK_MGR_REG_PLL_RESETB_OFFSET,
 	.soft_resetb_mask = ESUB_CLK_MGR_REG_PLL_RESETB_I_PLL_RESETB_MASK,
-    .pwrdwn_mask = ESUB_CLK_MGR_REG_PLL_PWRDN_OFFSET,
+    .pwrdwn_offset = ESUB_CLK_MGR_REG_PLL_PWRDN_OFFSET,
 	.pwrdwn_mask = ESUB_CLK_MGR_REG_PLL_PWRDN_I_PLL_PWRDWN_MASK,
     .ndiv_pdiv_offset = ESUB_CLK_MGR_REG_PLL_NDIV_PDIV_OFFSET,
 	.ndiv_int_mask = ESUB_CLK_MGR_REG_PLL_NDIV_PDIV_I_NDIV_INT_MASK,
@@ -5496,235 +5087,11 @@ static struct pll_clk CLK_NAME(esub_pll) = {
 	.pdiv_max = 8,
     .pll_lock_offset = ESUB_CLK_MGR_REG_PLL_LOCK_OFFSET,
 	.pll_lock = ESUB_CLK_MGR_REG_PLL_LOCK_PLL_LOCK_MASK,
-
 	.ndiv_frac_offset = ESUB_CLK_MGR_REG_PLL_NDIV_FRAC_OFFSET,
 	.ndiv_frac_mask = ESUB_CLK_MGR_REG_PLL_NDIV_FRAC_I_NDIV_FRAC_SHIFT,
 	.ndiv_frac_shift = ESUB_CLK_MGR_REG_PLL_NDIV_FRAC_I_NDIV_FRAC_MASK,
 
 	.cfg_ctrl_info = &esub_pll_cfg_ctrl,
-};
-
-static unsigned long __esub_pll_clk_get_rate(struct clk *clk)
-{
-	unsigned long rate = 0;
-	struct pll_clk * pll_clk;
-
-	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
-	pll_clk = to_pll_clk(clk);
-
-	CCU_PI_ENABLE(pll_clk->ccu_clk,1);
-
-	if(clk->ops && clk->ops->get_rate)
-		rate = clk->ops->get_rate(clk);
-
-	CCU_PI_ENABLE(pll_clk->ccu_clk,0);
-
-	return rate;
-}
-
-static int esub_pll_chnl_clk_enable(struct clk* clk, int enable)
-{
-	u32 reg_val;
-	struct pll_chnl_clk * pll_chnl_clk;
-	clk_dbg("%s:%d, clock name: %s \n",__func__,enable, clk->name);
-
-	BUG_ON(clk->clk_type != CLK_TYPE_PLL_CHNL);
-	pll_chnl_clk = to_pll_chnl_clk(clk);
-
-	/*enable write access*/
-	ccu_write_access_enable(pll_chnl_clk->ccu_clk, true);
-
-        clk_dbg("%s, ESUB CCU PLL chl  \n",__func__);
-
-        if(enable)
-        {
-            reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->pll_load_ch_en_offset));
-            clk_dbg("%s, Before changepll_load_ch_en_offset: %08x  \n",__func__, reg_val);
-            reg_val |=  (1<<(pll_chnl_clk->ch_index + pll_chnl_clk->pll_load_ch_en_shift));
-            writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->pll_load_ch_en_offset));
-
-            reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->pll_enableb_offset));
-            clk_dbg("%s, Before changepll_load_ch_en_offset: %08x  \n",__func__, reg_val);
-            reg_val |=  (1<<(pll_chnl_clk->ch_index + pll_chnl_clk->pll_enableb_shift));
-            writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->pll_enableb_offset));
-        }
-        else{
-            reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->pll_enableb_offset));
-            reg_val &= ~(1<<(pll_chnl_clk->ch_index + pll_chnl_clk->pll_load_ch_en_shift));   
-            clk_dbg("%s, writing %08x to pll_cannnel_ctrl reg\n",__func__, reg_val);
-            writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->pll_enableb_offset));
-        }
-
-	/* disable write access*/
-	ccu_write_access_enable(pll_chnl_clk->ccu_clk,false);
-
-	clk_dbg("*************%s: pll channrl clock %s count after %s : %d ***************\n",
-	        __func__, clk->name, enable ? "enable" : "disable", clk->use_cnt);
-
-	return 0;
-}
-
-static unsigned long esub_pll_chnl_clk_round_rate(struct clk *clk, unsigned long rate)
-{
-	u32 new_rate;
-	u32 vco_rate;
-	u32 mdiv;
-	struct pll_chnl_clk *pll_chnl_clk;
-
-	if(clk->clk_type != CLK_TYPE_PLL_CHNL)
-		return 0;
-
-	pll_chnl_clk = to_pll_chnl_clk(clk);
-
-	vco_rate = __esub_pll_clk_get_rate(&pll_chnl_clk->pll_clk->clk);
-
-	if(vco_rate < rate || rate == 0)
-		return 0;
-
-	mdiv = 	vco_rate/rate;
-
-	if(mdiv > pll_chnl_clk->mdiv_max)
-		mdiv = pll_chnl_clk->mdiv_max;
-	new_rate = vco_rate/mdiv;
-	pr_info("%s:rate = %d\n", __func__, new_rate);
-
-	return new_rate;
-}
-
-static unsigned long esub_pll_chnl_clk_get_rate(struct clk *clk)
-{
-	struct pll_chnl_clk *pll_chnl_clk;
-	u32 mdiv;
-	u32 reg_val;
-	u32 vco_rate;
-	BUG_ON(clk->clk_type != CLK_TYPE_PLL_CHNL);
-
-	pll_chnl_clk = to_pll_chnl_clk(clk);
-
-	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->cfg_reg_offset));
-	mdiv =
-		(reg_val & pll_chnl_clk->mdiv_mask) >> pll_chnl_clk->mdiv_shift;
-	if(mdiv == 0)
-		mdiv = pll_chnl_clk->mdiv_max;
-	vco_rate = __esub_pll_clk_get_rate(&pll_chnl_clk->pll_clk->clk);
-	pr_info("%s:vco_rate = %x, mdiv = %x reg_val - %x\n", __func__,
-		vco_rate,mdiv,reg_val);
-	return (vco_rate/mdiv);
-}
-
-static int esub_pll_chnl_clk_set_rate(struct clk* clk, u32 rate)
-{
-	u32 reg_val;
-	u32 vco_rate;
-	u32 mdiv;
-	struct pll_chnl_clk *pll_chnl_clk;
-
-	if(clk->clk_type != CLK_TYPE_PLL_CHNL)
-		return 0;
-
-	clk_dbg("%s : %s\n",
-	        __func__, clk->name);
-
-
-	pll_chnl_clk = to_pll_chnl_clk(clk);
-
-	vco_rate = __esub_pll_clk_get_rate(&pll_chnl_clk->pll_clk->clk);
-
-	if(vco_rate < rate || rate == 0)
-	{
-		clk_dbg("%s : invalid rate : %d\n",
-	        __func__, rate);
-		return -EINVAL;
-	}
-
-	mdiv = 	vco_rate/rate;
-
-	if(mdiv == 0)
-		mdiv++;
-	if(abs(rate - vco_rate/mdiv) > abs(rate - vco_rate/(mdiv+1)))
-		mdiv++;
-	if(mdiv > pll_chnl_clk->mdiv_max)
-		mdiv = pll_chnl_clk->mdiv_max;
-
-	if(abs(rate - vco_rate/mdiv) > 100)
-	{
-		clk_dbg("%s : invalid rate : %d\n",
-	        __func__, rate);
-		return -EINVAL;
-	}
-
-	/* enable write access*/
-	ccu_write_access_enable(pll_chnl_clk->ccu_clk, true);
-
-        /*Write mdiv*/
-        if(mdiv == pll_chnl_clk->mdiv_max)
-            mdiv = 0;
-
-        reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->cfg_reg_offset));
-        reg_val &= ~pll_chnl_clk->mdiv_mask;
-        reg_val |= mdiv << pll_chnl_clk->mdiv_shift;
-        writel(reg_val,CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->cfg_reg_offset));
-
-        reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->pll_load_ch_en_offset));
-        reg_val |=  (1<<(pll_chnl_clk->ch_index + pll_chnl_clk->pll_load_ch_en_shift));
-
-        writel(reg_val,CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->pll_load_ch_en_offset));
-
-	/* disable write access*/
-	ccu_write_access_enable(pll_chnl_clk->ccu_clk,false);
-
-	clk_dbg("clock set rate done \n");
-	return 0;
-}
-
-static int esub_pll_chnl_clk_init(struct clk* clk)
-{
-	struct pll_chnl_clk * pll_chnl_clk;
-	clk_dbg("%s, clock name: %s \n",__func__, clk->name);
-
-	BUG_ON(clk->clk_type != CLK_TYPE_PLL_CHNL);
-	pll_chnl_clk = to_pll_chnl_clk(clk);
-
-	BUG_ON(!pll_chnl_clk->ccu_clk ||
-				!pll_chnl_clk->pll_clk || !pll_chnl_clk->cfg_reg_offset);
-	return 0;
-}
-static int esub_pll_chnl_clk_get_mdiv(struct pll_chnl_clk* pll_chnl_clk)
-{
-    u32 reg_val;
-
-    BUG_ON(!pll_chnl_clk->ccu_clk);
-    if(!pll_chnl_clk->cfg_reg_offset || !pll_chnl_clk->mdiv_mask)
-	return -EINVAL;
-    CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
-    reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->cfg_reg_offset));
-    CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
-
-    return GET_VAL_USING_MASK_SHIFT(reg_val, pll_chnl_clk->mdiv_mask, pll_chnl_clk->mdiv_shift);
-}
-static int esub_pll_chnl_clk_get_enb_clkout(struct pll_chnl_clk* pll_chnl_clk)
-{
-    u32 reg_val;
-
-    BUG_ON(!pll_chnl_clk->ccu_clk);
-
-        if(!pll_chnl_clk->pll_enableb_offset || !pll_chnl_clk->out_en_mask)
-            return -EINVAL;
-        CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
-        reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->pll_enableb_offset));
-        CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
-        return GET_BIT_USING_MASK(reg_val, (1<<(pll_chnl_clk->ch_index+pll_chnl_clk->pll_enableb_shift)));
-
-    return GET_BIT_USING_MASK(reg_val, pll_chnl_clk->out_en_mask);
-}
-
-struct gen_clk_ops esub_pll_chnl_clk_ops =
-{
-	.init	        =       esub_pll_chnl_clk_init,
-	.enable         =       esub_pll_chnl_clk_enable,
-	.set_rate       =       esub_pll_chnl_clk_set_rate,
-	.get_rate       =       esub_pll_chnl_clk_get_rate,
-	.round_rate     =       esub_pll_chnl_clk_round_rate,
 };
 
 /*esw_sys_125M - channel 1*/
@@ -5735,7 +5102,7 @@ static struct pll_chnl_clk CLK_NAME(esw_sys_125m_ch1) = {
 				.id	   = CLK_ESW_SYS_125M_CH1_CLK_ID,
 				.name = ESW_SYS_125M_CH1_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_PLL_CHNL,
-				.ops = &esub_pll_chnl_clk_ops,
+				.ops = &gen_pll_chnl_clk_ops,
 		},
 
 		.ccu_clk = &CLK_NAME(esub),
@@ -5745,13 +5112,12 @@ static struct pll_chnl_clk CLK_NAME(esw_sys_125m_ch1) = {
 		.mdiv_mask = ESUB_CLK_MGR_REG_PLL_MDIV_ESW_SYS_125M_CH1_I_CH1_MDIV_MASK,
 		.mdiv_shift = ESUB_CLK_MGR_REG_PLL_MDIV_ESW_SYS_125M_CH1_I_CH1_MDIV_SHIFT,
 		.mdiv_max = 256,
-		.ch_index = 1,
-		.pll_ctrl0_offset = ESUB_CLK_MGR_REG_PLL_CTRL0_OFFSET,
-        .pll_ctrl0_hold_ch_shift = ESUB_CLK_MGR_REG_PLL_CTRL0_I_HOLD_CH_SHIFT,
+		.pll_enableb_offset = ESUB_CLK_MGR_REG_PLL_ENABLEB_OFFSET,
+		.out_en_mask = 1<<(0+ESUB_CLK_MGR_REG_PLL_ENABLEB_I_ENABLEB_SHIFT),
 		.pll_load_ch_en_offset = ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_OFFSET,
-        .pll_load_ch_en_shift = ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_I_LOAD_EN_CH_SHIFT,
-        .pll_enableb_offset = ESUB_CLK_MGR_REG_PLL_ENABLEB_OFFSET,
-        .pll_enableb_shift = ESUB_CLK_MGR_REG_PLL_ENABLEB_I_ENABLEB_SHIFT,
+		.load_en_mask = 1<<(0+ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_I_LOAD_EN_CH_SHIFT),
+		.pll_hold_ch_offset =  ESUB_CLK_MGR_REG_PLL_CTRL0_OFFSET,
+		.hold_en_mask = 1<<(0+ESUB_CLK_MGR_REG_PLL_CTRL0_I_HOLD_CH_SHIFT),
 };
 
 /*esw_sys - channel 2*/
@@ -5762,7 +5128,7 @@ static struct pll_chnl_clk CLK_NAME(esw_sys_ch2) = {
 				.id	   = CLK_ESW_SYS_CH2_CLK_ID,
 				.name = ESW_SYS_CH2_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_PLL_CHNL,
-				.ops = &esub_pll_chnl_clk_ops,
+				.ops = &gen_pll_chnl_clk_ops,
 		},
 
 		.ccu_clk = &CLK_NAME(esub),
@@ -5772,13 +5138,12 @@ static struct pll_chnl_clk CLK_NAME(esw_sys_ch2) = {
 		.mdiv_mask = ESUB_CLK_MGR_REG_PLL_MDIV_ESW_SYS_CH2_I_CH2_MDIV_MASK,
 		.mdiv_shift = ESUB_CLK_MGR_REG_PLL_MDIV_ESW_SYS_CH2_I_CH2_MDIV_SHIFT,
 		.mdiv_max = 256,
-		.ch_index = 2,
-		.pll_ctrl0_offset = ESUB_CLK_MGR_REG_PLL_CTRL0_OFFSET,
-        .pll_ctrl0_hold_ch_shift = ESUB_CLK_MGR_REG_PLL_CTRL0_I_HOLD_CH_SHIFT,
+		.pll_enableb_offset = ESUB_CLK_MGR_REG_PLL_ENABLEB_OFFSET,
+		.out_en_mask = 1<<(1+ESUB_CLK_MGR_REG_PLL_ENABLEB_I_ENABLEB_SHIFT),
 		.pll_load_ch_en_offset = ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_OFFSET,
-        .pll_load_ch_en_shift = ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_I_LOAD_EN_CH_SHIFT,
-        .pll_enableb_offset = ESUB_CLK_MGR_REG_PLL_ENABLEB_OFFSET,
-        .pll_enableb_shift = ESUB_CLK_MGR_REG_PLL_ENABLEB_I_ENABLEB_SHIFT,
+		.load_en_mask = 1<<(1+ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_I_LOAD_EN_CH_SHIFT),
+		.pll_hold_ch_offset =  ESUB_CLK_MGR_REG_PLL_CTRL0_OFFSET,
+		.hold_en_mask = 1<<(1+ESUB_CLK_MGR_REG_PLL_CTRL0_I_HOLD_CH_SHIFT),
 };
 
 /*vpm1_ch3 - channel 3*/
@@ -5789,7 +5154,7 @@ static struct pll_chnl_clk CLK_NAME(vpm1_ch3) = {
 				.id	   = CLK_VPM1_CH3_CLK_ID,
 				.name = VPM1_CH3_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_PLL_CHNL,
-				.ops = &esub_pll_chnl_clk_ops,
+				.ops = &gen_pll_chnl_clk_ops,
 		},
 
 		.ccu_clk = &CLK_NAME(esub),
@@ -5799,13 +5164,12 @@ static struct pll_chnl_clk CLK_NAME(vpm1_ch3) = {
 		.mdiv_mask = ESUB_CLK_MGR_REG_PLL_MDIV_VPM1_CH3_I_CH3_MDIV_MASK,
 		.mdiv_shift = ESUB_CLK_MGR_REG_PLL_MDIV_VPM1_CH3_I_CH3_MDIV_SHIFT,
 		.mdiv_max = 256,
-		.ch_index = 3,
-		.pll_ctrl0_offset = ESUB_CLK_MGR_REG_PLL_CTRL0_OFFSET,
-        .pll_ctrl0_hold_ch_shift = ESUB_CLK_MGR_REG_PLL_CTRL0_I_HOLD_CH_SHIFT,
+		.pll_enableb_offset = ESUB_CLK_MGR_REG_PLL_ENABLEB_OFFSET,
+		.out_en_mask = 1<<(2+ESUB_CLK_MGR_REG_PLL_ENABLEB_I_ENABLEB_SHIFT),
 		.pll_load_ch_en_offset = ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_OFFSET,
-        .pll_load_ch_en_shift = ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_I_LOAD_EN_CH_SHIFT,
-        .pll_enableb_offset = ESUB_CLK_MGR_REG_PLL_ENABLEB_OFFSET,
-        .pll_enableb_shift = ESUB_CLK_MGR_REG_PLL_ENABLEB_I_ENABLEB_SHIFT,
+		.load_en_mask = 1<<(2+ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_I_LOAD_EN_CH_SHIFT),
+		.pll_hold_ch_offset =  ESUB_CLK_MGR_REG_PLL_CTRL0_OFFSET,
+		.hold_en_mask = 1<<(2+ESUB_CLK_MGR_REG_PLL_CTRL0_I_HOLD_CH_SHIFT),
 };
 
 /*vpm2 - channel 4*/
@@ -5816,7 +5180,7 @@ static struct pll_chnl_clk CLK_NAME(vpm2_ch4) = {
 				.id	   = CLK_VPM2_CH4_CLK_ID,
 				.name = VPM2_CH4_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_PLL_CHNL,
-				.ops = &esub_pll_chnl_clk_ops,
+				.ops = &gen_pll_chnl_clk_ops,
 		},
 
 		.ccu_clk = &CLK_NAME(esub),
@@ -5826,13 +5190,12 @@ static struct pll_chnl_clk CLK_NAME(vpm2_ch4) = {
 		.mdiv_mask = ESUB_CLK_MGR_REG_PLL_MDIV_VPM2_CH4_I_CH4_MDIV_MASK,
 		.mdiv_shift = ESUB_CLK_MGR_REG_PLL_MDIV_VPM2_CH4_I_CH4_MDIV_SHIFT,
 		.mdiv_max = 256,
-		.ch_index = 4,
-		.pll_ctrl0_offset = ESUB_CLK_MGR_REG_PLL_CTRL0_OFFSET,
-        .pll_ctrl0_hold_ch_shift = ESUB_CLK_MGR_REG_PLL_CTRL0_I_HOLD_CH_SHIFT,
+		.pll_enableb_offset = ESUB_CLK_MGR_REG_PLL_ENABLEB_OFFSET,
+		.out_en_mask = 1<<(3+ESUB_CLK_MGR_REG_PLL_ENABLEB_I_ENABLEB_SHIFT),
 		.pll_load_ch_en_offset = ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_OFFSET,
-        .pll_load_ch_en_shift = ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_I_LOAD_EN_CH_SHIFT,
-        .pll_enableb_offset = ESUB_CLK_MGR_REG_PLL_ENABLEB_OFFSET,
-        .pll_enableb_shift = ESUB_CLK_MGR_REG_PLL_ENABLEB_I_ENABLEB_SHIFT,
+		.load_en_mask = 1<<(3+ESUB_CLK_MGR_REG_PLL_LOAD_CH_EN_I_LOAD_EN_CH_SHIFT),
+		.pll_hold_ch_offset =  ESUB_CLK_MGR_REG_PLL_CTRL0_OFFSET,
+		.hold_en_mask = 1<<(3+ESUB_CLK_MGR_REG_PLL_CTRL0_I_HOLD_CH_SHIFT),
 };
 
 /*
