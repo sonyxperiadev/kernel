@@ -93,10 +93,12 @@ static int bcmpmu_otg_xceiv_set_vbus(struct otg_transceiver *otg, bool enabled)
 
 static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
 {
+#if 0
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
 
 	if (xceiv_data)
 		bcm_hsotgctrl_phy_deinit(); /* De-initialize OTG core and PHY */
+#endif
 }
 
 static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data *xceiv_data, bool enable)
@@ -250,6 +252,7 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 
 	if (!id_gnd) {
+#if 0
 		int vbus_status;
 #ifdef CONFIG_MFD_BCMPMU
 		xceiv_data->bcmpmu->usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_VBUS_STATUS, &vbus_status);
@@ -258,8 +261,17 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 #endif
 		if (!vbus_status) {
 			/* Non-ACA ID interpretation for now since RID_A is not tested yet on this platform */
+
+			/* Temporarily disable USB PM to make USB work in ICS. The DWC OTG driver does not check
+			 * the PM state before setting/clearing the soft disconnect bit when the gadget framework
+			 * invokes the usb_gadget_ops->pullup() callback. This can lead to the DWC OTG DCTL register
+			 * being accessed when the USB core is in powered off state. In ICS this happens on system
+			 * startup, when the Android framework sets the default USB mode after the USB core has been
+			 * powered off.
+			 */
 			bcm_hsotgctrl_phy_deinit(); /* Shutdown the core */
 		}
+#endif
 	} else
 		bcmpmu_otg_xceiv_select_host_mode(xceiv_data, id_gnd);
 
@@ -457,6 +469,7 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 	bcmpmu_otg_xceiv_select_host_mode(xceiv_data, id_gnd);
 
 	if (!id_gnd) {
+#if 0
 #ifdef CONFIG_MFD_BCMPMU
 		xceiv_data->bcmpmu->usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_VBUS_STATUS, &vbus_status);
 #else
@@ -466,6 +479,7 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 			/* Non-ACA ID interpretation for now since RID_A is not tested yet on this platform */
 			bcm_hsotgctrl_phy_deinit(); /* Shutdown the core */
 		}
+#endif
 	} else {
 		bcm_hsotgctrl_phy_init();
 		/* Non-ACA ID interpretation for now since RID_A is not tested yet on this platform */
@@ -607,7 +621,9 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
 	kfree(xceiv_data);
+#if 0
 	bcm_hsotgctrl_phy_deinit();
+#endif
 
 	return 0;
 }
