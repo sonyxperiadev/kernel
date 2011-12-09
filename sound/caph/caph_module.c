@@ -227,8 +227,6 @@ BCMAudLOG_open(struct inode *inode, struct file *file)
 		return 0;
 	}
 
-	BCM_AUDIO_DEBUG("\n audio_log_queue = 0x%x, audio_log_thread = 0x%0x \n", audio_log_queue, audio_log_thread);
-
 	init_waitqueue_head(&audio_log_queue);
 
 	if(!audio_log_thread)
@@ -569,7 +567,7 @@ int process_logmsg(void *data)
 	struct snd_pcm_runtime *runtime;
 	AUDIOLOG_HEADER_t log_header;
 	unsigned char *p_dma_area;
-	UInt32 sig_code;
+//	UInt32 sig_code;
 
 	log_link_list_t link_list[2];
 

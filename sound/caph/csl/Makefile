@@ -40,9 +40,9 @@ EXTRA_CFLAGS += -I./sound/caph/csl/
 EXTRA_CFLAGS += -I./sound/caph/dsp/
 #CHAL header files
 ifdef CONFIG_ARCH_RHEA_B0
-EXTRA_CFLAGS += -I$(src)/chal/B0/inc/
+EXTRA_CFLAGS += -I./sound/caph/chal/B0/inc/
 else
-EXTRA_CFLAGS += -I$(src)/chal/A0/inc/
+EXTRA_CFLAGS += -I./sound/caph/chal/A0/inc/
 endif
 #RPC Header files
 EXTRA_CFLAGS += -I./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
@@ -66,20 +66,16 @@ EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/chal/
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/csl/
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/osabstract/
 
-obj-$(CONFIG_BCM_ALSA_SOUND) 	+= caph_module.o 
-obj-$(CONFIG_BCM_ALSA_SOUND) 	+= caph_ctl.o
-obj-$(CONFIG_BCM_ALSA_SOUND) 	+= caph_pcm.o
-obj-$(CONFIG_BCM_ALSA_SOUND) 	+= caph_hwdep.o
-obj-$(CONFIG_BCM_ALSA_SOUND)	+= audio_controller/ audio_driver/
-ifdef CONFIG_ARCH_RHEA_B0
-obj-$(CONFIG_BCM_ALSA_SOUND) += chal/B0/src/
-else
-obj-$(CONFIG_BCM_ALSA_SOUND) += chal/A0/src/
-endif
-obj-$(CONFIG_BCM_ALSA_SOUND)	+= csl/
-obj-$(CONFIG_BCM_MODEM)    += dsp/
-
-
-
-
+#CSL Source Files
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_caph_switch.o 
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_caph_srcmixer.o
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_caph_render.o
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_caph_pcm_sspi.o
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_caph_i2s_sspi.o
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_caph_hwctrl.o
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_caph_dma.o
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_caph_cfifo.o
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_caph_capture.o
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_caph_audioh.o
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= csl_aud_queue.o
 
