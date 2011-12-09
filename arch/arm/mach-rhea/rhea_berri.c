@@ -648,11 +648,18 @@ static struct platform_device pl330_dmac_device = {
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-
+#ifdef CONFIG_MACH_RHEA_BERRI_EDN40
+#define BCMBT_VREG_GPIO       (38)
+#define BCMBT_N_RESET_GPIO    (70)
+#define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
+#define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
+#else
 #define BCMBT_VREG_GPIO       (10)
 #define BCMBT_N_RESET_GPIO    (70)
 #define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
 #define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
+#endif
+
 
 static struct bcmbt_rfkill_platform_data board_bcmbt_rfkill_cfg = {
         .vreg_gpio = BCMBT_VREG_GPIO,
@@ -672,8 +679,13 @@ static struct platform_device board_bcmbt_rfkill_device = {
 #endif
 
 #ifdef CONFIG_BCM_BT_LPM
+#ifdef CONFIG_MACH_RHEA_BERRI_EDN40
+#define GPIO_BT_WAKE 122
+#define GPIO_HOST_WAKE 111
+#else
 #define GPIO_BT_WAKE 02
 #define GPIO_HOST_WAKE 111
+#endif
 
 static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
         .gpio_bt_wake = GPIO_BT_WAKE,
