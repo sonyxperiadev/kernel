@@ -720,7 +720,22 @@ int pwr_mgr_pi_counter_read(int pi_id,bool* over_flow)
 	}
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
+	spin_lock(&pwr_mgr_lock);
 	reg_val = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
+
+	if (reg_val&
+	   PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_ENABLE_MASK) {
+		reg_val &=
+	~PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_ENABLE_MASK;
+		writel(reg_val, PWR_MGR_PI_ADDR(counter_reg_offset));
+
+		reg_val = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
+
+		reg_val |=
+	PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_ENABLE_MASK;
+		writel(reg_val, PWR_MGR_PI_ADDR(counter_reg_offset));
+	}
+	spin_unlock(&pwr_mgr_lock);
 	pwr_dbg("%s:counter reg val = %x\n",__func__,reg_val);
 
 	if(over_flow)
