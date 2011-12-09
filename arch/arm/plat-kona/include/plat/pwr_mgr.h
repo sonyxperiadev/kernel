@@ -1,5 +1,5 @@
 /****************************************************************************
-*									      
+*
 * Copyright 2010 --2011 Broadcom Corporation.
 *
 * Unless you and Broadcom execute a separate written software license
@@ -65,6 +65,23 @@
 #define PWRMGR_PI_ON_COUNTER_OVERFLOW_MASK		0x40000000
 #define PWRMGR_PI_ON_COUNTER_MASK			0x3FFFFFFF
 
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+#define PWRMGR_INTR_STATUS_OFFSET		0x40A0
+#define PWRMGR_INTR_MASK_OFFSET			0x40A4
+#define PWRMGR_EVENT_BANK1_OFFSET		0x40A8
+#define PWRMGR_I2C_SW_CMD_CTRL_OFFSET		0x41B8
+
+
+#define PWRMGR_I2C_SW_START_ADDR_SHIFT		16
+#define PWRMGR_I2C_SW_START_ADDR_MASK		(0x3F << 16)
+#define PWRMGR_I2C_REQ_BUSY_SHIFT		12
+#define PWRMGR_I2C_REQ_BUSY_MASK		(1 << 12)
+#define PWRMGR_I2C_REQ_TRG_SHIFT		8
+#define PWRMGR_I2C_REQ_TRG_MASK			(0xF << 8)
+#define PWRMGR_I2C_READ_DATA_SHIFT		0
+#define PWRMGR_I2C_READ_DATA_MASK		0xFF
+
+#endif /*CONFIG_KONA_PWRMGR_REV2*/
 
 #if defined(DEBUG)
 #define pwr_dbg printk
@@ -96,13 +113,17 @@ enum
 	REG_DATA 		= 1, /*executes a write to I2C controller via APB*/
 	I2C_DATA		= 2, /*data to be written to PMU via I2C*/
 	I2C_VAR 		= 3, /*data returned for voltage lookup (payload is the index to table)*/
-	WAIT_I2C_RETX	= 4, /*wait for retry from I2C control register*/
-	WAIT_I2C_STAT	= 5, /* wait for good status (loop until good)*/
+	WAIT_I2C_RETX		= 4, /*wait for retry from I2C control register*/
+	WAIT_I2C_STAT		= 5, /* wait for good status (loop until good)*/
 	WAIT_TIMER		= 6, /*wait for the number of clocks in the payload*/
-	END				= 7, /*stop and wait for new voltage request change*/
+	END			= 7, /*stop and wait for new voltage request change*/
 	SET_PC_PINS		= 8, /*pc pins are set based on value and mask*/
-	SET_UPPER_DATA	= 9, 	/*sets the data in the upper byte of apb data bus*/
-	JUMP_VOLTAGE	= 0xE, /*jump to address based on current voltage request*/
+	SET_UPPER_DATA		= 9, 	/*sets the data in the upper byte of apb data bus*/
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+	READ_FIFO		= 0xA,	/*Read I2C FIFO*/
+	SET_READ_DATA		= 0xB,	/*Copy I2C read data to PWRMGR register */
+#endif /*CONFIG_KONA_PWRMGR_REV2*/
+	JUMP_VOLTAGE		= 0xE, /*jump to address based on current voltage request*/
 	JUMP			= 0xF  /*jump to address defined in payload*/
 };
 
@@ -130,7 +151,8 @@ enum v_set
 {
 	VOLT0,
 	VOLT1,
-	VOLT2
+	VOLT2,
+	V_SET_MAX
 };
 
 enum pc_pin
@@ -144,7 +166,11 @@ enum pc_pin
 enum
 {
 	PM_PMU_I2C = (1 << 0),
-
+	PM_HW_SEM_NO_DFS_REQ  =	(1 << 1), /*Don't request for turbo mode when acquiring HW SEM - test only*/
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+	PROCESS_EVENTS_ON_INTR = (1 << 2),
+	I2C_SIMULATE_BURST_MODE = (1 << 3),
+#endif
 };
 
 struct pm_policy_cfg
@@ -175,7 +201,36 @@ struct pwr_mgr_info
 	u32 flags;
 	u16	num_pi;
 	u32 base_addr;
+	struct i2c_cmd* i2c_cmds;
+	u32 num_i2c_cmds;
+	u8* i2c_var_data;
+	u32 num_i2c_var_data;
+	struct v0x_spec_i2c_cmd_ptr* i2c_cmd_ptr[V_SET_MAX];
+
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+	u32 pwrmgr_intr;
+	u32 i2c_rd_off;
+	u32 i2c_rd_slv_addr_off;
+	u32 i2c_rd_reg_addr_off;
+	u32 i2c_wr_off;
+	u32 i2c_wr_slv_addr_off;
+	u32 i2c_wr_reg_addr_off;
+	u32 i2c_wr_val_addr_off;
+	u32 i2c_seq_timeout; /*timeout in ms*/
+#endif
 };
+
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+/*PWRMGR interrupts -  entries are based on offset*/
+enum
+{
+	PWRMGR_INTR_I2C_SW_SEQ,
+	PWRMGR_INTR_EVENTS,
+	PWRMGR_INTR_MAX,
+	PWRMGR_INTR_ALL = 0xFF
+};
+
+#endif /*CONFIG_KONA_PWRMGR_REV2*/
 
 int pwr_mgr_event_trg_enable(int event_id,int event_trg_type);
 int	pwr_mgr_get_event_trg_type(int event_id);
@@ -201,7 +256,7 @@ int pwr_mgr_pm_i2c_sem_lock(void);
 int pwr_mgr_pm_i2c_sem_unlock(void);
 int pwr_mgr_pm_i2c_enable(bool enable);
 int pwr_mgr_set_v0x_specific_i2c_cmd_ptr(int v0x, const struct v0x_spec_i2c_cmd_ptr* cmd_ptr);
-int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd* i2c_cmd , u32 num_cmds);
+int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd* i2c_cmd, u32 num_cmds);
 int pwr_mgr_pm_i2c_var_data_write(const u8* var_data,int count);
 
 int	pwr_mgr_arm_core_dormant_enable(bool enable);
@@ -214,8 +269,14 @@ int pwr_mgr_unregister_event_handler(u32 event_id);
 int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event);
 int pwr_mgr_init(struct pwr_mgr_info* info);
 
-int pm_set_pll_pwr_on_idle(int pll_num, int enable);
-int pm_set_crystal_pwr_on_idle(int enable);
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+int pwr_mgr_mask_intr(u32 intr, bool mask);
+int pwr_mgr_get_intr_status(u32 intr);
+int pwr_mgr_pmu_reg_read(u8 reg_addr,u8 slave_addr, u8* reg_val);
+int pwr_mgr_pmu_reg_write(u8 reg_addr,u8 slave_addr, u8 reg_val);
+int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start,u8 slave_addr, u8 count, u8* reg_val);
+int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start,u8 slave_addr, u8 count, u8* reg_val);
+#endif /*CONFIG_KONA_PWRMGR_REV2*/
 
 #ifdef CONFIG_DEBUG_FS
 int __init pwr_mgr_debug_init(u32 bmdm_pwr_base);

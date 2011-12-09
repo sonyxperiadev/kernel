@@ -1130,10 +1130,7 @@ void BCMLOG_HandleCpCrashDumpData( const char *buf, int size )
 		BCMLOG_WriteMTD (buf, size);
 		break;
 	case BCMLOG_OUTDEV_RNDIS:
-	    irql = AcquireOutputLock( ) ;
-		BCMLOG_Output( (unsigned char *)buf, size, 0 );
-		ReleaseOutputLock( irql ) ;
-		break;
+	case BCMLOG_OUTDEV_ACM:
 	case BCMLOG_OUTDEV_STM:
 	    irql = AcquireOutputLock( ) ;
 		BCMLOG_Output( (unsigned char *)buf, size, 0 );
@@ -1185,11 +1182,8 @@ void BCMLOG_LogCPCrashDumpString( const char* inLogString )
 			BCMLOG_WriteMTD (kbuf_mtt, mttFrameSize);
 			break;
 		case BCMLOG_OUTDEV_RNDIS:
-			irql = AcquireOutputLock( ) ;
-			BCMLOG_Output( kbuf_mtt, mttFrameSize, 0 );
-			ReleaseOutputLock( irql ) ;
-			break;
 		case BCMLOG_OUTDEV_STM:
+		case BCMLOG_OUTDEV_ACM:
 			irql = AcquireOutputLock( ) ;
 			BCMLOG_Output( kbuf_mtt, mttFrameSize, 0 );
 			ReleaseOutputLock( irql ) ;

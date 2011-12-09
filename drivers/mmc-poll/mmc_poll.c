@@ -1062,7 +1062,7 @@ int mmc_init(struct mmc *mmc)
 	/* Test for SD version 2 */
 	err = mmc_poll_send_if_cond(mmc);
 	if (err < 0) {
-		printk("mmc_poll_send_if_cond returned %d \r\n", err);
+		debug("mmc_poll_send_if_cond returned %d \r\n", err);
 	}
 
 	/* Now try to get the SD card's operating condition */

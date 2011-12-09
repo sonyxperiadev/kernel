@@ -1,6 +1,6 @@
 /****************************************************************************
 *									      
-* Copyright 2010 --2011 Broadcom Corporation.
+* Copyright 2010 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -30,12 +30,7 @@
 #include <mach/pi_mgr.h>
 
 #include <plat/pi_mgr.h>
-
-#ifdef CONFIG_KONA_CPU_FREQ_DRV
-#define UPDATE_LPJ 0                    
-#else
-#define UPDATE_LPJ 1
-#endif
+#include "volt_tbl.h"
 
 unsigned long clock_get_xtal(void)
 {
@@ -550,171 +545,118 @@ static struct ccu_clk CLK_NAME(kproc) = {
 	.lvm_en_offset = KPROC_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KPROC_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPROC_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = KPROC_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KPROC_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,4,0xb,0xb,0xb,0xe),
-	.freq_count = 8,
-	.freq_policy = DEFINE_ARRAY_ARGS(7,7,7,7),
+	.freq_volt = DEFINE_ARRAY_ARGS(PROC_CCU_FREQ_VOLT_TBL),
+	.freq_count = PROC_CCU_FREQ_VOLT_TBL_SZ,
+	.freq_policy = DEFINE_ARRAY_ARGS(PROC_CCU_FREQ_POLICY_TBL),
+
 };
 
-/* post divider for ARM PLL */
-static inline void __proc_clk_set_pll_div(u32 base, int div)
+/*
+PLL Clk name a9_pll
+*/
+
+u32 a9_vc0_thold[] = {FREQ_MHZ(1750),PLL_VCO_RATE_MAX};
+u32 a9_cfg_val[] = {0x8000000,0x8102000};
+static struct pll_cfg_ctrl_info a9_cfg_ctrl =
 {
-	clk_dbg ("%s: div %d\n", __func__, div);
-	writel(div, base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
-	writel((div<<KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT) | KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
-		base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
-	writel(div, base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
+	.pll_cfg_ctrl_offset = KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET,
+	.pll_cfg_ctrl_mask = KPROC_CLK_MGR_REG_PLLARMCTRL3_PLLARM_PLL_CONFIG_CTRL_MASK,
+	.pll_cfg_ctrl_shift = KPROC_CLK_MGR_REG_PLLARMCTRL3_PLLARM_PLL_CONFIG_CTRL_SHIFT,
 
-	div = div+1; /*For policy 6 divder should be for VCO/3 */
+	.vco_thold = a9_vc0_thold,
+	.pll_config_value= a9_cfg_val,
+	.thold_count = ARRAY_SIZE(a9_cfg_val),
+};
 
-	writel(div, base + KPROC_CLK_MGR_REG_PLLARMC_OFFSET);
-	writel((div << KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT) | KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
-		base + KPROC_CLK_MGR_REG_PLLARMC_OFFSET);
-	writel(div, base + KPROC_CLK_MGR_REG_PLLARMC_OFFSET);
+static struct pll_clk CLK_NAME(a9_pll) = {
 
-}
+	.clk =	{
+				.flags = A9_PLL_CLK_FLAGS,
+				.id	   = CLK_A9_PLL_CLK_ID,
+				.name = A9_PLL_CLK_NAME_STR,
+				.clk_type = CLK_TYPE_PLL,
+				.ops = &gen_pll_clk_ops,
+		},
+	.ccu_clk = &CLK_NAME(kproc),
+	.pll_ctrl_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
+	.soft_post_resetb_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_POST_RESETB_MASK,
+	.soft_resetb_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_RESETB_MASK,
+	.pwrdwn_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PWRDWN_MASK,
+	.idle_pwrdwn_sw_ovrride_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK,
+	.ndiv_int_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK,
+	.ndiv_int_shift = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT,
+	.ndiv_int_max = 512,
+	.pdiv_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK,
+	.pdiv_shift = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT,
+	.pdiv_max = 8,
+	.pll_lock = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_MASK,
 
-static inline void __proc_clk_dump_register (u32 base)
-{
-#if defined(CONFIG_SMP) && defined(DEBUG)
-	unsigned int cpu = get_cpu();
-	clk_dbg("current cpu %d\n", cpu);
-	put_cpu();
-#endif
-	clk_dbg ("%s: \n", __func__);
-	clk_dbg ("policy freq      0x%08x\n", readl(base+KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET));
-	clk_dbg ("policy_ctrl      0x%08x\n", readl(base+KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET));
-	clk_dbg ("arma             0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMA_OFFSET));
-	clk_dbg ("armb             0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMB_OFFSET));
-	clk_dbg ("armc             0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMC_OFFSET));
-	clk_dbg ("armctrl3         0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET));
-	clk_dbg ("armctrl5         0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET));
-	clk_dbg ("lvm_en           0x%08x\n", readl(base+KPROC_CLK_MGR_REG_LVM_EN_OFFSET));
-	clk_dbg ("arm_div          0x%08x\n", readl(base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET));
-}
+	.ndiv_frac_offset = KPROC_CLK_MGR_REG_PLLARMB_OFFSET,
+	.ndiv_frac_mask = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK,
+	.ndiv_frac_shift = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT,
 
+	.cfg_ctrl_info = &a9_cfg_ctrl,
+};
 
-static u32 compute_vco_rate(u32 ndiv_int, u32 nfrac, u32 pdiv)
-{
-	unsigned long xtal = clock_get_xtal();
-	u64 temp;
-	const u32 frac_div = 0x100000; //2^20
-	/*
-		vco_rate = 26Mhz*(ndiv_int + ndiv_frac/frac_div)/pdiv
-		 = 26(*ndiv_int*frac_div + ndiv_frac)/(pdiv*frac_div)
-	*/
-	//pr_info("%s:pdiv = %x, nfrac = %x ndiv_int = %x\n", __func__, pdiv, nfrac, ndiv_int);
-	temp = ((u64)(ndiv_int*frac_div + nfrac)*xtal);
+/*A9 pll - channel 0*/
+static struct pll_chnl_clk CLK_NAME(a9_pll_chnl0) = {
 
-	//pr_info("%s: temp = %llu\n",__func__,temp);
-	do_div(temp, pdiv*frac_div);
+		.clk =	{
+				.flags = A9_PLL_CHNL0_CLK_FLAGS,
+				.id	   = CLK_A9_PLL_CHNL0_CLK_ID,
+				.name = A9_PLL_CHNL0_CLK_NAME_STR,
+				.clk_type = CLK_TYPE_PLL_CHNL,
+				.ops = &gen_pll_chnl_clk_ops,
+		},
 
-	//pr_info("%s: after div temp = %llu\n",__func__,temp);
-	return (unsigned long)temp;
-}
+		.ccu_clk = &CLK_NAME(kproc),
+		.pll_clk = &CLK_NAME(a9_pll),
 
-
-static unsigned long __proc_clk_set_vco_rate(u32 base, u32 rate)
-{
-	const u32 max_ndiv = 512; /*512  == 0*/
-	const u32 frac_div = 0x100000; //2^20
-	u32 pdiv = 1;
-	u32 ndiv_int, ndiv_frac;
-	u32 temp_rate;
-	u32 new_rate;
-	unsigned long xtal = clock_get_xtal();
-	u64 temp_frac;
-	u32 reg_val;
-
-	ndiv_int = rate/xtal; /*pdiv = 1*/
-	temp_frac= ((u64)rate - (u64)ndiv_int*xtal)*frac_div;
-	do_div(temp_frac, xtal);
-
-	ndiv_frac = (u32)temp_frac;
-
-	ndiv_frac  &= 0xFFFFF;
-
-	pr_info("ndiv_frac  = %x\n",ndiv_frac );
-	temp_rate = compute_vco_rate(ndiv_int,ndiv_frac,pdiv);
-
-	if(temp_rate != rate)
-	{
-
-		for(; ndiv_frac  < 0xFFFFF; ndiv_frac++)
-		{
-			temp_rate = compute_vco_rate(ndiv_int,ndiv_frac,1);
-			if(temp_rate > rate)
-			{
-				 break;
-			}
-		}
-	}
+		.cfg_reg_offset = KPROC_CLK_MGR_REG_PLLARMC_OFFSET,
+		.mdiv_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_MASK,
+		.mdiv_shift = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT,
+		.mdiv_max = 256,
+		.out_en_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_ENB_CLKOUT_MASK,
+		.load_en_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
+		.hold_en_mask = KPROC_CLK_MGR_REG_PLLARMC_PLLARM_HOLD_MASK,
+};
 
 
-	if(ndiv_int == max_ndiv)
-		ndiv_int = 0;
-	pr_info("%s:ndiv_int = %x ndiv_frac = %x pdiv = %x\n", __func__,ndiv_int, ndiv_frac, pdiv);
+/*A9 pll - channel 1*/
+static struct pll_chnl_clk CLK_NAME(a9_pll_chnl1) = {
 
-	/*Set PLLARMCTRL3 to 0x8102000 if vco freq > 1.75Ghz
-			set to 0x8000000 otherwise
-	*/
-	if(rate > FREQ_MHZ(1750))
-	{
-		writel(0x8102000,base + KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET);
-	}
-	else
-		writel(0x8000000,base + KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET);
+		.clk =	{
+				.flags = A9_PLL_CHNL1_CLK_FLAGS,
+				.id	   = CLK_A9_PLL_CHNL1_CLK_ID,
+				.name = A9_PLL_CHNL1_CLK_NAME_STR,
+				.clk_type = CLK_TYPE_PLL_CHNL,
+				.ops = &gen_pll_chnl_clk_ops,
+		},
 
-	reg_val = (pdiv << KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT)
-			| (ndiv_int<<KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT)
-			| KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_RESETB_MASK
-			| KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_POST_RESETB_MASK;
+		.ccu_clk = &CLK_NAME(kproc),
+		.pll_clk = &CLK_NAME(a9_pll),
 
-	writel(reg_val, base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+		.cfg_reg_offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET,
+		.mdiv_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK,
+		.mdiv_shift = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_SHIFT,
+		.mdiv_max = 256,
+		.out_en_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_ENB_CLKOUT_MASK,
+		.load_en_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_LOAD_EN_MASK,
+		.hold_en_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_HOLD_MASK,
+};
 
-	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
-	reg_val &= ~KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK;
-	reg_val |= ndiv_frac << KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
-	writel(reg_val, base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
 
-	  /* wait for pll to lock */
-	while (! (readl(base +KPROC_CLK_MGR_REG_PLLARMA_OFFSET)
-			& KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_MASK) );
-
-	new_rate = compute_vco_rate(ndiv_int,ndiv_frac,pdiv);
-	pr_info("%s:new rate =  %u\n",__func__,new_rate);
-
-    return new_rate;
-}
-
-static unsigned long __proc_clk_get_vco_rate(u32 base)
-{
-	unsigned long vco_rate;
-	const u32 max_ndiv = 512; /*512  == 0*/
-	u32 pdiv;
-	u32 reg_val;
-	u32 ndiv_int, ndiv_frac;
-
-	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-
-	ndiv_int = (reg_val & KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK)
-					>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
-	pdiv = (reg_val & KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK) >> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT;
-	ndiv_frac = (readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET) & KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK)
-		>> KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
-
-	if(ndiv_int == 0)
-		ndiv_int = max_ndiv;
-	vco_rate = compute_vco_rate(ndiv_int, ndiv_frac, pdiv);
-//	pr_info("%s vco_rate = %lu reg_val = %x ndiv_frac = %x\n",__func__, vco_rate,reg_val,ndiv_frac);
-	return vco_rate;
-}
-
-static u32 freq_lut[] =
+/*
+Core clock name ARM
+*/
+static struct pll_chnl_clk* arm_pll_chnl[] = {&CLK_NAME(a9_pll_chnl0),&CLK_NAME(a9_pll_chnl1)};
+static u32 freq_tbl[] =
 	{
 		FREQ_MHZ(26),
 		FREQ_MHZ(52),
@@ -724,185 +666,23 @@ static u32 freq_lut[] =
 		FREQ_MHZ(312)
 	};
 
-static unsigned long __proc_clk_get_rate(u32 base)
-{
-	unsigned long vco_rate;
-	u32 reg_val;
-	u32 freq_id;
-	int div;
-
-	reg_val = readl(base+KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET);
-
-	/*active policy 5 assumed*/
-	freq_id =  (reg_val& KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_MASK)
-					>> KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT;
-	if(freq_id < 6)
-		return freq_lut[freq_id];
-
-	vco_rate = __proc_clk_get_vco_rate (base);
-	div = (readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET)& KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK)
-		>> KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_SHIFT;
-
-	if(freq_id == 6)
-		div++;
-
-	return vco_rate /div;
-}
-static int arm_clk_set_rate(struct clk* clk, u32 rate);
-static unsigned long arm_clk_get_rate(struct clk *clk);
-static int arm_clk_init(struct clk* clk)
-{
-    struct peri_clk * peri_clk;
-
-    if(clk->clk_type != CLK_TYPE_PERI)
-	return -EPERM;
-
-    if(clk->init)
-	return 0;
-
-    peri_clk = to_peri_clk(clk);
-    BUG_ON(peri_clk->ccu_clk == NULL);
-
-    clk_dbg("%s, clock name: %s \n",__func__, clk->name);
-
-    /* enable write access*/
-    ccu_write_access_enable(peri_clk->ccu_clk, true);
-
-    peri_clk_hyst_enable(peri_clk,HYST_ENABLE & clk->flags,
-    	(clk->flags & HYST_HIGH) ? CLK_HYST_HIGH: CLK_HYST_LOW);
-    /* ARM clock is never disabled by Software. So set use_cnt to 1*/
-    clk->use_cnt = 1;
-
-    /* Disable write access*/
-    ccu_write_access_enable(peri_clk->ccu_clk, false);
-    clk->init = 1;
-
-    return 0;
-}
-
-static int arm_clk_set_rate(struct clk* clk, u32 rate)
-{
-    struct peri_clk * peri_clk;
-    unsigned long vco_rate;
-    int div = 2;
-#if UPDATE_LPJ
-	u64 lpj;
-#ifdef CONFIG_SMP
-	static unsigned long lpj_ref0 = 0;
-	static unsigned long lpj_freq_ref0 = 0;
-
-	if (lpj_ref0 == 0)
-	{
-		lpj_ref0 =  per_cpu(cpu_data, 0).loops_per_jiffy;
-		lpj_freq_ref0 = arm_clk_get_rate(clk)/1000;
-	}
-	pr_info("%s:lpj_ref0 = %ld lpj_freq_ref0 = %ld \n", __func__, lpj_ref0, lpj_freq_ref0);
-#else
-	static unsigned long lpj_ref = 0;
-	static unsigned long lpj_freq_ref = 0;
-
-	if (lpj_ref == 0)
-		{
-			lpj_ref = loops_per_jiffy;
-			lpj_freq_ref = arm_clk_get_rate(clk)/1000;
-		}
-#endif
-#endif
-
-
-    if(clk->clk_type != CLK_TYPE_PERI)
-	return -EPERM;
-
-    peri_clk = to_peri_clk(clk);
-    clk_dbg("%s : %s\n", __func__, clk->name);
-
-    /* enable write access*/
-    ccu_write_access_enable(peri_clk->ccu_clk, true);
-
-    vco_rate = __proc_clk_get_vco_rate (peri_clk->ccu_clk->ccu_clk_mgr_base);
-    div = vco_rate/rate;
-
-
-	if(div < 2 || rate*div != vco_rate)
-	{
-		vco_rate = __proc_clk_set_vco_rate(peri_clk->ccu_clk->ccu_clk_mgr_base,rate*2);
-		div = vco_rate/rate;
-	}
-    /* to get minimium clock >= desired_rate */
-    div = min (max (2, div), 255);
-    clk->rate = vco_rate / div;
-    /* set the PLL divider such that default ARM freq is 700MHz*/
-    __proc_clk_set_pll_div (peri_clk->ccu_clk->ccu_clk_mgr_base, div);
-
-    /* disable write access*/
-    ccu_write_access_enable(peri_clk->ccu_clk,false);
-
-	/*Update lpj*/
-#if UPDATE_LPJ
- 	/*new_lpj =  lpj_ref*new_freq/ref_freq*/
-#ifdef CONFIG_SMP
-	lpj = ((u64) lpj_ref0) * ((u64) arm_clk_get_rate(clk)/1000);
-	do_div(lpj, lpj_freq_ref0);
-	per_cpu(cpu_data, 0).loops_per_jiffy = (unsigned long)lpj;
-	per_cpu(cpu_data, 1).loops_per_jiffy = (unsigned long)lpj;
-	pr_info("%s:new lpj ( = %llu\n", __func__ , lpj);
-#else
-	lpj = ((u64) lpj_ref) * ((u64) arm_clk_get_rate(clk)/1000);
-	do_div(lpj, lpj_freq_ref);
-	loops_per_jiffy = (unsigned long)lpj;
-	pr_info("%s:new lpj = %llu\n", __func__ , lpj);
-#endif
-#endif
-    clk_dbg("ARM clock set rate done \n");
-
-    return 0;
-}
-static unsigned long arm_clk_get_rate(struct clk *clk)
-{
-    struct peri_clk * peri_clk;
-
-    if(clk->clk_type != CLK_TYPE_PERI)
-	return -EPERM;
-
-    peri_clk = to_peri_clk(clk);
-    clk_dbg("%s : %s\n", __func__, clk->name);
-
-    /* enable write access*/
-    ccu_write_access_enable(peri_clk->ccu_clk, true);
-
-    clk->rate = __proc_clk_get_rate(peri_clk->ccu_clk->ccu_clk_mgr_base);
-
-    /* disable write access*/
-    ccu_write_access_enable(peri_clk->ccu_clk,false);
-
-    clk_dbg("%s : rate: %lu\n", __func__, (unsigned long)clk->rate);
-    return clk->rate;
-}
-
-
-struct gen_clk_ops arm_peri_clk_ops =
-{
-    .init           =       arm_clk_init,
-    .enable         =       NULL,
-    .set_rate       =       arm_clk_set_rate,
-    .get_rate       =       arm_clk_get_rate,
-    .round_rate     =       NULL,
-};
-
-/*
-Peri clock name ARM
-*/
-static struct peri_clk CLK_NAME(arm) = {
+static struct core_clk CLK_NAME(a9_core) = {
 	.clk =	{
-		.flags = ARM_PERI_CLK_FLAGS,
-		.clk_type = CLK_TYPE_PERI,
-		.id	= CLK_ARM_PERI_CLK_ID,
-		.name = ARM_PERI_CLK_NAME_STR,
+		.flags = ARM_CORE_CLK_FLAGS,
+		.clk_type = CLK_TYPE_CORE,
+		.id	= CLK_ARM_CORE_CLK_ID,
+		.name = ARM_CORE_CLK_NAME_STR,
 		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
-		.ops = &arm_peri_clk_ops,
+		.ops = &gen_core_clk_ops,
 	},
 	.ccu_clk = &CLK_NAME(kproc),
-	.mask_set = 0,
+	.pll_clk = &CLK_NAME(a9_pll),
+	.pll_chnl_clk = arm_pll_chnl,
+	.num_chnls = 2,
+	.active_policy = 1, /*PI policy 5*/
+	.pre_def_freq = freq_tbl,
+	.num_pre_def_freq = ARRAY_SIZE(freq_tbl),
+
 	.policy_bit_mask = KPROC_CLK_MGR_REG_POLICY0_MASK_ARM_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = KPROC_CLK_MGR_REG_CORE0_CLKGATE_OFFSET,
@@ -911,13 +691,35 @@ static struct peri_clk CLK_NAME(arm) = {
 	.hyst_val_mask = KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_HYST_VAL_MASK,
 	.hyst_en_mask = KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_HYST_EN_MASK,
 	.stprsts_mask = KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_STPRSTS_MASK,
-	.clk_div = {
-		.div_trig_offset= KPROC_CLK_MGR_REG_ARM_SEG_TRG_OFFSET,
-		.div_trig_mask= KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK,
-		.pll_select_offset= KPROC_CLK_MGR_REG_ARM_DIV_OFFSET,
-		.pll_select_mask= KPROC_CLK_MGR_REG_ARM_DIV_ARM_PLL_SELECT_MASK,
-		.pll_select_shift= KPROC_CLK_MGR_REG_ARM_DIV_ARM_PLL_SELECT_SHIFT,
-	},
+};
+
+/*
+Bus clock name ARM_SWITCH
+*/
+static struct bus_clk CLK_NAME(arm_switch) = {
+
+ .clk =	{
+     /*JIRA HWRHEA-1111: Enable A9 AXI Auto gating for B0 */
+//#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+				.flags = ARM_SWITCH_CLK_FLAGS,
+//#else
+//				.flags = ARM_SWITCH_CLK_FLAGS | AUTO_GATE,
+//#endif
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_ARM_SWITCH_CLK_ID,
+				.name = ARM_SWITCH_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(kproc),
+ .clk_gate_offset  = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_OFFSET,
+ .clk_en_mask = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_CLK_EN_MASK,
+ .gating_sel_mask = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_HW_SW_GATING_SEL_MASK,
+ .hyst_val_mask = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_HYST_VAL_MASK,
+ .hyst_en_mask = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_HYST_EN_MASK,
+ .stprsts_mask = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_STPRSTS_MASK,
+ .freq_tbl_index = -1,
+ .src_clk = NULL,
 };
 
 #if 0
@@ -1199,12 +1001,12 @@ static struct peri_clk CLK_NAME(dig_ch3) = {
 
 static struct peri_clk CLK_NAME(arm1) = {
 	.clk =	{
-		.flags = ARM1_PERI_CLK_FLAGS,
+		.flags = ARM1_CORE_CLK_FLAGS,
 		.clk_type = CLK_TYPE_PERI,
-		.id	= CLK_ARM1_PERI_CLK_ID,
-		.name = ARM1_PERI_CLK_NAME_STR,
+		.id	= CLK_ARM1_CORE_CLK_ID,
+		.name = ARM1_CORE_CLK_NAME_STR,
 		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
-		.ops = &arm_peri_clk_ops,
+//		.ops = &arm_peri_clk_ops,
 	},
 	.ccu_clk = &CLK_NAME(kproc),
 	.mask_set = 0,
@@ -1261,16 +1063,17 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.lvm_en_offset = KHUB_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KHUB_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KHUB_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = KHUB_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KHUB_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,0xb,0xe,0xe,0xe,0xe),
-	.freq_count = 8,
-	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
-	.freq_policy = DEFINE_ARRAY_ARGS(2,2,2,2),
-	.freq_tbl = DEFINE_ARRAY_ARGS(khub_clk_freq_list0,khub_clk_freq_list1,khub_clk_freq_list2,khub_clk_freq_list3,khub_clk_freq_list4,khub_clk_freq_list5,khub_clk_freq_list6),
+    .freq_volt = DEFINE_ARRAY_ARGS(HUB_CCU_FREQ_VOLT_TBL),
+    .freq_count = HUB_CCU_FREQ_VOLT_TBL_SZ,
+    .volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
+    .freq_policy = DEFINE_ARRAY_ARGS(HUB_CCU_FREQ_POLICY_TBL),
+    .freq_tbl = DEFINE_ARRAY_ARGS(khub_clk_freq_list0,khub_clk_freq_list1,khub_clk_freq_list2,khub_clk_freq_list3,khub_clk_freq_list4,khub_clk_freq_list5,khub_clk_freq_list6),
 
 };
 
@@ -1628,6 +1431,7 @@ static struct peri_clk CLK_NAME(audioh_26m) = {
 					.clk = audioh_26m_peri_clk_src_list,
 				},
 };
+
 
 /*
 Peri clock name HUB
@@ -2142,49 +1946,6 @@ static struct peri_clk CLK_NAME(tmon_1m) = {
 };
 
 /*
-Peri clock name CAPH_SRCMIXER
-*/
-/*peri clk src list*/
-static struct clk* caph_srcmixer_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal),CLK_PTR(ref_312m));
-static struct peri_clk CLK_NAME(caph_srcmixer) = {
-
-	.clk =	{
-				.flags = CAPH_SRCMIXER_PERI_CLK_FLAGS,
-				.clk_type = CLK_TYPE_PERI,
-				.id	= CLK_CAPH_SRCMIXER_PERI_CLK_ID,
-				.name = CAPH_SRCMIXER_PERI_CLK_NAME_STR,
-				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
-				.ops = &gen_peri_clk_ops,
-		},
-	.ccu_clk = &CLK_NAME(khub),
-	.mask_set = 1,
-	.policy_bit_mask = KHUB_CLK_MGR_REG_POLICY0_MASK1_CAPH_POLICY0_MASK_MASK,
-	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
-	.clk_gate_offset = KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET,
-	.clk_en_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_CLK_EN_MASK,
-	.gating_sel_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HW_SW_GATING_SEL_MASK,
-	.hyst_val_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_VAL_MASK,
-	.hyst_en_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_EN_MASK,
-	.stprsts_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_STPRSTS_MASK,
-	.volt_lvl_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_VOLTAGE_LEVEL_MASK,
-	.clk_div = {
-					.div_offset = KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET,
-					.div_mask = KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_DIV_MASK,
-					.div_shift = KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_DIV_SHIFT,
-					.div_trig_offset= KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET,
-					.div_trig_mask= KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_CAPH_SRCMIXER_TRIGGER_MASK,
-					.pll_select_offset= KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET,
-					.pll_select_mask= KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_PLL_SELECT_MASK,
-					.pll_select_shift= KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_PLL_SELECT_SHIFT,
-				},
-	.src_clk = {
-					.count = 2,
-					.src_inx = 0,
-					.clk = caph_srcmixer_peri_clk_src_list,
-				},
-};
-
-/*
 Peri clock name DAP_SWITCH
 */
 /*peri clk src list*/
@@ -2314,16 +2075,17 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.lvm_en_offset = KHUBAON_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KHUBAON_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KHUBAON_CLK_MGR_REG_VLT0_3_OFFSET,
+    .vlt4_7_offset = KHUBAON_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
-	.policy_dbg_offset = KHUBAON_CLK_MGR_REG_POLICY_DBG_OFFSET,
-	.policy_dbg_act_freq_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
-	.policy_dbg_act_policy_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+    .policy_dbg_offset = KHUBAON_CLK_MGR_REG_POLICY_DBG_OFFSET,
+    .policy_dbg_act_freq_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
+    .policy_dbg_act_policy_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(0xe,0xe,0xe,0xe,0xe,0xe,0xe,0xe),
-	.freq_count = 8,
-	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
-	.freq_policy = DEFINE_ARRAY_ARGS(4,4,4,4),
-	.freq_tbl = DEFINE_ARRAY_ARGS(khubaon_clk_freq_list0,khubaon_clk_freq_list1,khubaon_clk_freq_list2,khubaon_clk_freq_list3,khubaon_clk_freq_list4),
+    .freq_volt = DEFINE_ARRAY_ARGS(AON_CCU_FREQ_VOLT_TBL),
+    .freq_count = AON_CCU_FREQ_VOLT_TBL_SZ,
+    .volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
+    .freq_policy = DEFINE_ARRAY_ARGS(AON_CCU_FREQ_POLICY_TBL),
+    .freq_tbl = DEFINE_ARRAY_ARGS(khubaon_clk_freq_list0,khubaon_clk_freq_list1,khubaon_clk_freq_list2,khubaon_clk_freq_list3,khubaon_clk_freq_list4),
 
 };
 
@@ -2373,6 +2135,31 @@ static struct ref_clk CLK_NAME(bbl_32k) = {
     .ccu_clk = &CLK_NAME(khubaon),
 };
 
+/*
+Bus clock name HUBAON.
+ This clock has dividers present in seperate register. Since its not used as
+ of now, we are declaring this as BUS clock and not initializing divider
+ values. Also, clock SW enable bit is present in DIV register for debug.
+ So this clock need to be autogated always from Rhea B0 or Capri.
+*/
+static struct bus_clk CLK_NAME(hubaon) = {
+    .clk =	{
+	.flags = HUBAON_BUS_CLK_FLAGS,
+	.clk_type = CLK_TYPE_BUS,
+	.id	= CLK_HUBAON_BUS_CLK_ID,
+	.name = HUBAON_BUS_CLK_NAME_STR,
+	.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+	.ops = &gen_bus_clk_ops,
+    },
+    .ccu_clk = &CLK_NAME(khubaon),
+    .clk_gate_offset  = KHUBAON_CLK_MGR_REG_HUB_CLKGATE_OFFSET,
+    .gating_sel_mask = KHUBAON_CLK_MGR_REG_HUB_CLKGATE_HUBAON_HW_SW_GATING_SEL_MASK,
+    .hyst_val_mask = KHUBAON_CLK_MGR_REG_HUB_CLKGATE_HUBAON_HYST_VAL_MASK,
+    .hyst_en_mask = KHUBAON_CLK_MGR_REG_HUB_CLKGATE_HUBAON_HYST_EN_MASK,
+    .stprsts_mask = KHUBAON_CLK_MGR_REG_HUB_CLKGATE_HUBAON_STPRSTS_MASK,
+    .freq_tbl_index = -1,
+    .src_clk = CLK_PTR(var_312m),
+};
 
 /*
 Bus clock name HUB_TIMER_APB
@@ -3027,15 +2814,16 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.lvm_en_offset = KPM_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KPM_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPM_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = KPM_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KPM_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,0xb,0xb,0xe,0xe,0xe),
-	.freq_count = 8,
-	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
-	.freq_policy = DEFINE_ARRAY_ARGS(2,2,2,2),
+	.freq_volt = DEFINE_ARRAY_ARGS(KPM_CCU_FREQ_VOLT_TBL),
+	.freq_count = KPM_CCU_FREQ_VOLT_TBL_SZ,
+	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
+	.freq_policy = DEFINE_ARRAY_ARGS(KPM_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(kpm_clk_freq_list0,kpm_clk_freq_list1,kpm_clk_freq_list2,kpm_clk_freq_list3,kpm_clk_freq_list4,kpm_clk_freq_list5,kpm_clk_freq_list6,kpm_clk_freq_list7),
 
 };
@@ -3282,6 +3070,25 @@ static struct bus_clk CLK_NAME(usb_ic_ahb) = {
     .src_clk = CLK_PTR(master_switch_ahb),
 };
 
+
+/*DFS def for SDIO */
+#ifdef CONFIG_KONA_PI_MGR
+static struct dfs_rate_thold sdio_rate_thold[2] =
+			{
+				{FREQ_MHZ(26), PI_OPP_ECONOMY},
+				{-1, PI_OPP_NORMAL},
+			};
+static struct clk_dfs sdio_clk_dfs =
+	{
+		.dfs_policy = CLK_DFS_POLICY_RATE,
+		. policy_param = (u32)&sdio_rate_thold,
+		.opp_weightage = {
+							[PI_OPP_ECONOMY] = 25,
+							[PI_OPP_NORMAL] = 0,
+						},
+
+	};
+#endif
 /*
 Peri clock name SDIO2
 */
@@ -3299,6 +3106,9 @@ static struct peri_clk CLK_NAME(sdio2) = {
 		},
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs = &sdio_clk_dfs,
+#endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO2_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO2_CLKGATE_OFFSET,
@@ -3364,6 +3174,9 @@ static struct peri_clk CLK_NAME(sdio3) = {
 		},
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs = &sdio_clk_dfs,
+#endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO3_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO3_CLKGATE_OFFSET,
@@ -3470,6 +3283,9 @@ static struct peri_clk CLK_NAME(sdio1) = {
 		},
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs = &sdio_clk_dfs,
+#endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO1_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET,
@@ -3510,6 +3326,9 @@ static struct peri_clk CLK_NAME(sdio4) = {
 	},
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs = &sdio_clk_dfs,
+#endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO4_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO4_CLKGATE_OFFSET,
@@ -3617,6 +3436,7 @@ static struct peri_clk CLK_NAME(usb_ic) = {
 	.clk = usb_ic_peri_clk_src_list,
     },
 };
+
 
 /*
 Peri clock name USBH_48M
@@ -3734,18 +3554,85 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.lvm_en_offset = IKPS_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = IKPS_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = IKPS_CLK_MGR_REG_VLT0_3_OFFSET,
+    .vlt4_7_offset = IKPS_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
-	.policy_dbg_offset = IKPS_CLK_MGR_REG_POLICY_DBG_OFFSET,
-	.policy_dbg_act_freq_shift = IKPS_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
-	.policy_dbg_act_policy_shift = IKPS_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+    .policy_dbg_offset = IKPS_CLK_MGR_REG_POLICY_DBG_OFFSET,
+    .policy_dbg_act_freq_shift = IKPS_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
+    .policy_dbg_act_policy_shift = IKPS_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(4,4,0xb,0xb,0xe,0xe,0xe,0xe),
-	.freq_count = 8,
-	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
-	.freq_policy = DEFINE_ARRAY_ARGS(1,1,1,1),
-	.freq_tbl = DEFINE_ARRAY_ARGS(kps_clk_freq_list0,kps_clk_freq_list1,kps_clk_freq_list2,kps_clk_freq_list3,kps_clk_freq_list4,kps_clk_freq_list5),
+    .freq_volt = DEFINE_ARRAY_ARGS(KPS_CCU_FREQ_VOLT_TBL),
+    .freq_count = KPS_CCU_FREQ_VOLT_TBL_SZ,
+    .volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
+    .freq_policy = DEFINE_ARRAY_ARGS(KPS_CCU_FREQ_POLICY_TBL),
+    .freq_tbl = DEFINE_ARRAY_ARGS(kps_clk_freq_list0,kps_clk_freq_list1,kps_clk_freq_list2,kps_clk_freq_list3,kps_clk_freq_list4,kps_clk_freq_list5),
 
 };
+
+/*
+Peri clock name CAPH_SRCMIXER
+*/
+/*DFS def for CAPH */
+#ifdef CONFIG_KONA_PI_MGR
+static struct dfs_rate_thold caph_rate_thold[2] =
+			{
+				{FREQ_MHZ(26), PI_OPP_ECONOMY},
+				{-1, PI_OPP_NORMAL},
+			};
+static struct clk_dfs caph_clk_dfs =
+	{
+		.dfs_policy = CLK_DFS_POLICY_RATE,
+		. policy_param = (u32)&caph_rate_thold,
+		.opp_weightage = {
+							[PI_OPP_ECONOMY] = 25,
+							[PI_OPP_NORMAL] = 0,
+						},
+
+	};
+#endif
+
+/*peri clk src list*/
+static struct clk* caph_srcmixer_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal),CLK_PTR(ref_312m));
+static struct peri_clk CLK_NAME(caph_srcmixer) = {
+
+	.clk =	{
+				.flags = CAPH_SRCMIXER_PERI_CLK_FLAGS,
+				.clk_type = CLK_TYPE_PERI,
+				.id	= CLK_CAPH_SRCMIXER_PERI_CLK_ID,
+				.name = CAPH_SRCMIXER_PERI_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(kps),CLK_PTR(kpm),NULL),/*Don't allow arm subsys to enter retention when CapH is active*/
+				.ops = &gen_peri_clk_ops,
+		},
+	.ccu_clk = &CLK_NAME(khub),
+#ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs = &caph_clk_dfs,
+#endif
+	.mask_set = 1,
+	.policy_bit_mask = KHUB_CLK_MGR_REG_POLICY0_MASK1_CAPH_POLICY0_MASK_MASK,
+	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
+	.clk_gate_offset = KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET,
+	.clk_en_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_CLK_EN_MASK,
+	.gating_sel_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_VAL_MASK,
+	.hyst_en_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_EN_MASK,
+	.stprsts_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_STPRSTS_MASK,
+	.volt_lvl_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_VOLTAGE_LEVEL_MASK,
+	.clk_div = {
+					.div_offset = KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET,
+					.div_mask = KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_DIV_MASK,
+					.div_shift = KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_DIV_SHIFT,
+					.div_trig_offset= KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET,
+					.div_trig_mask= KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_CAPH_SRCMIXER_TRIGGER_MASK,
+					.pll_select_offset= KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET,
+					.pll_select_mask= KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_PLL_SELECT_MASK,
+					.pll_select_shift= KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_PLL_SELECT_SHIFT,
+				},
+	.src_clk = {
+					.count = 2,
+					.src_inx = 0,
+					.clk = caph_srcmixer_peri_clk_src_list,
+				},
+};
+
 
 /*
 Bus clock name UARTB_APB
@@ -4822,6 +4709,22 @@ static struct peri_clk CLK_NAME(mspro) = {
 /*
 Peri clock name SSP0
 */
+#ifdef CONFIG_KONA_PI_MGR
+static struct clk_dfs ssp0_dfs =
+	{
+		.dfs_policy = CLK_DFS_POLICY_STATE,
+		. policy_param = PI_OPP_ECONOMY,
+				.opp_weightage = {
+							[PI_OPP_ECONOMY] = 25,
+							[PI_OPP_NORMAL] = 0,
+						},
+
+	};
+#endif
+
+/*
+Peri clock name SSP0
+*/
 /*peri clk src list*/
 static struct clk* ssp0_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal),CLK_PTR(var_104m),CLK_PTR(ref_104m),CLK_PTR(var_96m),CLK_PTR(ref_96m));
 static struct peri_clk CLK_NAME(ssp0) = {
@@ -4836,6 +4739,9 @@ static struct peri_clk CLK_NAME(ssp0) = {
 		},
 	.ccu_clk = &CLK_NAME(kps),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs = &ssp0_dfs,
+#endif
 	.policy_bit_mask = IKPS_CLK_MGR_REG_POLICY0_MASK_SSP0_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = IKPS_CLK_MGR_REG_SSP0_CLKGATE_OFFSET,
@@ -4877,6 +4783,9 @@ static struct peri_clk CLK_NAME(ssp1) = {
 		},
 	.ccu_clk = &CLK_NAME(kps),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs = &ssp0_dfs,
+#endif
 	.policy_bit_mask = IKPS_CLK_MGR_REG_POLICY0_MASK_SSP1_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = IKPS_CLK_MGR_REG_SSP1_CLKGATE_OFFSET,
@@ -4941,6 +4850,15 @@ static struct peri_clk CLK_NAME(timers) = {
 /*
 Peri clock name SPUM_OPEN
 */
+
+#ifdef CONFIG_KONA_PI_MGR
+static struct clk_dfs spum_dfs =
+	{
+		.dfs_policy = CLK_DFS_POLICY_STATE,
+		. policy_param = PI_OPP_NORMAL,
+	};
+#endif
+
 /*peri clk src list*/
 static struct clk* spum_open_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(var_312m),CLK_PTR(ref_312m));
 static struct peri_clk CLK_NAME(spum_open) = {
@@ -4955,6 +4873,9 @@ static struct peri_clk CLK_NAME(spum_open) = {
     },
     .ccu_clk = &CLK_NAME(kps),
     .mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs =  &spum_dfs,
+#endif
     .policy_bit_mask = IKPS_CLK_MGR_REG_POLICY0_MASK_SPUM_OPEN_POLICY0_MASK_MASK,
     .policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
     .clk_gate_offset = IKPS_CLK_MGR_REG_SPUM_OPEN_CLKGATE_OFFSET,
@@ -4997,6 +4918,9 @@ static struct peri_clk CLK_NAME(spum_sec) = {
 	.ops = &gen_peri_clk_ops,
     },
     .ccu_clk = &CLK_NAME(kps),
+#ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs =  &spum_dfs,
+#endif
     .mask_set = 0,
     .policy_bit_mask = IKPS_CLK_MGR_REG_POLICY0_MASK_SPUM_SEC_POLICY0_MASK_MASK,
     .policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
@@ -5024,6 +4948,17 @@ static struct peri_clk CLK_NAME(spum_sec) = {
     },
 };
 
+/*
+BUS clock name MPHI_AHB
+*/
+#ifdef CONFIG_KONA_PI_MGR
+static struct clk_dfs mphi_ahb_clk_dfs =
+	{
+		.dfs_policy = CLK_DFS_POLICY_STATE,
+		. policy_param = PI_OPP_NORMAL,
+	};
+#endif
+
 static struct bus_clk CLK_NAME(mphi_ahb) = {
 
  .clk =	{
@@ -5035,6 +4970,9 @@ static struct bus_clk CLK_NAME(mphi_ahb) = {
 				.ops = &gen_bus_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(kps),
+#ifdef CONFIG_KONA_PI_MGR
+ .clk_dfs = &mphi_ahb_clk_dfs,
+#endif
  .clk_gate_offset  = IKPS_CLK_MGR_REG_MPHI_CLKGATE_OFFSET,
  .clk_en_mask = IKPS_CLK_MGR_REG_MPHI_CLKGATE_MPHI_AHB_CLK_EN_MASK,
  .gating_sel_mask =
@@ -5116,13 +5054,9 @@ int root_ccu_clk_init(struct clk* clk)
 		return 0;
 
 	ccu_clk = to_ccu_clk(clk);
-	INIT_LIST_HEAD(&ccu_clk->peri_list);
-	INIT_LIST_HEAD(&ccu_clk->bus_list);
-	INIT_LIST_HEAD(&ccu_clk->ref_list);
 
 	clk_dbg("%s - %s\n",__func__, clk->name);
 
-	ccu_clk->write_access_en_count = 0;
 
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, 1);
     clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, 1);
@@ -5140,7 +5074,7 @@ int root_ccu_clk_init(struct clk* clk)
 
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
-	clk->init = 1;
+
 	return 0;
 }
 /* table for registering clock */
@@ -5155,9 +5089,12 @@ static struct __init clk_lookup island_clk_tbl[] =
 	BRCM_REGISTER_CLK(KPS_CCU_CLK_NAME_STR,NULL,kps),
 	/* CCU registration end */
 
+	BRCM_REGISTER_CLK(ARM_CORE_CLK_NAME_STR,NULL,a9_core),
+	BRCM_REGISTER_CLK(ARM_SWITCH_CLK_NAME_STR,NULL,arm_switch),
+	BRCM_REGISTER_CLK(A9_PLL_CLK_NAME_STR,NULL,a9_pll),
+	BRCM_REGISTER_CLK(A9_PLL_CHNL0_CLK_NAME_STR,NULL,a9_pll_chnl0),
+	BRCM_REGISTER_CLK(A9_PLL_CHNL1_CLK_NAME_STR,NULL,a9_pll_chnl1),
 
-	BRCM_REGISTER_CLK(ARM_PERI_CLK_NAME_STR,NULL,arm),
-	BRCM_REGISTER_CLK(ARM1_PERI_CLK_NAME_STR,NULL,arm1),
 	BRCM_REGISTER_CLK(FRAC_1M_REF_CLK_NAME_STR,NULL,frac_1m),
 	BRCM_REGISTER_CLK(REF_96M_VARVDD_REF_CLK_NAME_STR,NULL,ref_96m_varvdd),
 	BRCM_REGISTER_CLK(REF_96M_REF_CLK_NAME_STR,NULL,ref_96m),

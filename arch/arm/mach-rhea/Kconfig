@@ -3,14 +3,14 @@ menu	"Rhea SoC based Machine types"
 
 choice
 	prompt "Choose Rhea SOC Silicon Version"
-	depends on ARCH_RHEA
+	default ARCH_RHEA_A0
 
 config  ARCH_RHEA_A0
         bool "Rhea SOC Version - A0"
-	default y
+
 config  ARCH_RHEA_B0
         bool "Rhea SOC Version - B0"
-	default n
+
 endchoice
 
 choice
@@ -22,6 +22,11 @@ config MACH_RHEA_RAY
 	help
 	  Support for the Broadcom Rhea Ray board.
 
+config MACH_RHEA_RAY_DEMO
+	bool "Support Broadcom Rhea Ray Demo board"
+	help
+	  Support for the Broadcom Rhea Ray Demo board.
+
 config MACH_RHEA_RAY_EDN1X
 	bool "Support Broadcom Rhea Ray EDN1X board"
 	help
@@ -32,11 +37,16 @@ config MACH_RHEA_RAY_EDN2X
 	help
 	  Support for the Broadcom Rhea Ray EDN2X board.
 
-config MACH_RHEA_DALTON
-	bool "Support Nokia Dalton board"
+config MACH_RHEA_SS
+	bool "Support Broadcom Rhea SS board"
+	help
+	  Support for the Broadcom Rhea SS board.
+
+config MACH_RHEA_FARADAY_EB10
+	bool "Support Nokia Faraday EB10 board"
 	select RHEALC_2093
 	help
-	  Support for the Nokia Dalton board.
+	  Support for the Nokia Faraday EB10 board.
 	  This will be based on RheaLC program and
 	  form one of the platforms for Nokia.
 	  Rhea plus delta RF modules.
@@ -50,6 +60,11 @@ config MACH_RHEA_BERRI
         bool "Support Broadcom Rhea Berri board"
         help
           Support for the Broadcom Rhea Berri board.
+
+config MACH_RHEA_BERRI_EDN40
+        bool "Support Broadcom Rhea Berri EDN40 board"
+        help
+          Support for the Broadcom Rhea Berri EDN40 board.
 
 config MACH_RHEALC_BERRI
         bool "Support Broadcom RheaLC Berri board"
@@ -90,6 +105,13 @@ config RHEA_B0_PM_ASIC_WORKAROUND
        help
        Say Y if you want to enable Rhea B0 ASIC workarounds for Power management
 
+config RHEA_PWRMGR_USE_DUMMY_SEQ
+       bool "Use dummy PWRMGR HW I2C sequencer"
+       default n
+       help
+       Say Y if you want to use dummy PWRMGR HW I2C sequencer
+
+
 config RHEALC_2093
 	bool "Enable RheaLC&2093"
 	default n
@@ -101,17 +123,9 @@ config RHEA_UART_RX_FIX
 	depends on ARCH_RHEA
 	help
 	  UART RX interrupt happened but in LSR Data Ready is not set.
-	  This fix modifies the serial driver to take decission to 
+	  This fix modifies the serial driver to take decission to
 	  call receive_chars based on iir and not based on LSR
 
-config RHEA_I2C_USE_PMGR_HW_SEM
-	bool "use HW sem to sync i2c between sw & sequencer"
-	depends on ARCH_RHEA_B0 && KONA_POWER_MGR
-	default y
-	help
-	  The HW sequencer can generate i2c transcations on the PMU i2c
-	  bus while SW driver can still generate the same. To sync 
-	  between the two use HW semaphore.
 endmenu
 
 

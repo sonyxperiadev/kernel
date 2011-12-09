@@ -846,6 +846,12 @@ config SOC_CAMERA_OV2640
 	help
 	  This is a ov2640 camera driver
 
+config SOC_CAMERA_OV5640
+	tristate "ov5640 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a ov5640 camera driver
+
 config SOC_CAMERA_OV6650
 	tristate "ov6650 sensor support"
 	depends on SOC_CAMERA && I2C
@@ -960,6 +966,16 @@ config VIDEO_S5P_MIPI_CSIS
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called s5p-csis.
+
+config VIDEO_UNICAM_CAMERA
+	tristate "Broadcom Unicam camera host interface driver"
+	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	select VIDEOBUF2_DMA_CONTIG
+	---help---
+	  This is a v4l2 driver for Broadcom Unicam host interface.
+
+	  To compile this driver as a modulem choose M here: the
+	  module will be called unicam_camera
 
 #
 # USB Multimedia device configuration

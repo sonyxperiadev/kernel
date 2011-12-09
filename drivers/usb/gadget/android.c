@@ -366,7 +366,7 @@ static void rndis_function_cleanup(struct android_usb_function *f)
 static int rndis_function_bind_config(struct android_usb_function *f,
 					struct usb_configuration *c)
 {
-	int ret;
+	int ret = 0;
 	struct rndis_function_config *rndis = f->config;
 
 	if (!rndis) {
@@ -567,6 +567,7 @@ static int mass_storage_function_init(struct android_usb_function *f,
 				&common->luns[0].dev.kobj,
 				"lun0");
 	if (err) {
+		fsg_common_release(&common->ref);
 		kfree(config);
 		return err;
 	}
@@ -578,6 +579,7 @@ static int mass_storage_function_init(struct android_usb_function *f,
 
 		if (err) {
 			sysfs_remove_link(&f->dev->kobj, "lun0"); /* Remove link to "lun0" before freeing config */
+			fsg_common_release(&common->ref);
 			kfree(config);
 			return err;
 		}
@@ -590,7 +592,11 @@ static int mass_storage_function_init(struct android_usb_function *f,
 
 static void mass_storage_function_cleanup(struct android_usb_function *f)
 {
-	kfree(f->config);
+	struct mass_storage_function_config *config;
+
+	config = f->config;
+	fsg_common_release(&config->common->ref);
+	kfree(config);
 	f->config = NULL;
 }
 
@@ -1248,7 +1254,8 @@ void set_enable_store(char *str, int value)
 		 */
 		if(!strcmp(str,"rndis")){
 			list_for_each_safe(pos, n, &dev->enabled_functions){
-				f = list_entry(pos, struct android_usb_function, enabled_list);
+				if(pos)
+					f = list_entry(pos, struct android_usb_function, enabled_list);
 				if (!strcmp(f->name, "mass_storage")
 					|| !strcmp(f->name, "mtp")) {
 					f->enabled = 0;
@@ -1424,7 +1431,8 @@ composite_uevent(struct device *dev, struct kobj_uevent_env *env)
 	}
 	list_for_each_safe(pos, n, &adev->enabled_functions)
 	{
-		f = list_entry(pos, struct android_usb_function, enabled_list);
+		if(pos)
+			f = list_entry(pos, struct android_usb_function, enabled_list);
 		if(pos && f && !strcmp(f->name, name)){
 			enabled = f->enabled;
 		}
@@ -1476,6 +1484,7 @@ static int __init init(void)
 	value = device_create_file(adb_comp_device, &dev_attr_adb_enable);
 	if (value < 0) {
 		device_destroy(usb_composite_class, MKDEV(0, 0));
+		device_destroy(usb_composite_class, MKDEV(0, 0));
 		return value;
 	}
 
@@ -1484,6 +1493,8 @@ static int __init init(void)
 
 	value = device_create_file(msc_device, &dev_attr_msc_enable);
 	if (value < 0) {
+		device_destroy(usb_composite_class, MKDEV(0, 0));
+		device_destroy(usb_composite_class, MKDEV(0, 0));
 		device_destroy(usb_composite_class, MKDEV(0, 0));
 		return value;
 	}
@@ -1521,6 +1532,12 @@ module_init(init);
 static void __exit cleanup(void)
 {
 	usb_composite_unregister(&android_usb_driver);
+#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
+	device_destroy(usb_composite_class, MKDEV(0, 0));
+	device_destroy(usb_composite_class, MKDEV(0, 0));
+	device_destroy(usb_composite_class, MKDEV(0, 0));
+	class_destroy(usb_composite_class);
+#endif
 	class_destroy(android_class);
 	kfree(_android_dev);
 	_android_dev = NULL;

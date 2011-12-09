@@ -76,7 +76,7 @@ Result_t csl_audio_capture_deinit(UInt32 streamID);
 *  @return Result_t status
 *****************************************************************************/
 Result_t csl_audio_capture_configure(AUDIO_SAMPLING_RATE_t    sampleRate, 
-						AUDIO_CHANNEL_NUM_t    numChannels,
+						AUDIO_NUM_OF_CHANNEL_t    numChannels,
 						AUDIO_BITS_PER_SAMPLE_t bitsPerSample,						
 						UInt8 *ringBuffer,
 						UInt32 numBlocks,

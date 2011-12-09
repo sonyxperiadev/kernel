@@ -34,22 +34,29 @@
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/bcm590xx-usb.h>
 
-#define BB_BC_STATUS            KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC11_STATUS_OFFSET
-#define BB_BC_STS_SDP_MSK       HSOTG_CTRL_BC11_STATUS_SHP_MASK
-#define BB_BC_STS_CDP_MSK       HSOTG_CTRL_BC11_STATUS_CHP_MASK
-#define BB_BC_STS_DCP_MSK       HSOTG_CTRL_BC11_STATUS_DCP_MASK
-#define BB_BC_STS_BC_DONE_MSK   HSOTG_CTRL_BC11_STATUS_BC_DONE_MASK
-#define BB_BC_STS_DM_TO_MSK     HSOTG_CTRL_BC11_STATUS_DM_TIMEOUT_MASK
-#define BB_BC_STS_DP_TO_MSK     HSOTG_CTRL_BC11_STATUS_DP_TIMEOUT_MASK
-#define BB_BC_STS_DM_ERR_MSK    HSOTG_CTRL_BC11_STATUS_DM_ERROR_MASK
-#define BB_BC_STS_DP_ERR_MSK    HSOTG_CTRL_BC11_STATUS_DP_ERROR_MASK
+#define BB_BC_STATUS            KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC_STATUS_OFFSET
+#define BB_BC_STS_BC_DONE_MSK   HSOTG_CTRL_BC_STATUS_BC_DONE_MASK
 
-#define BB_BC_CFG		KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC11_CFG_OFFSET
+#ifdef CONFIG_ARCH_RHEA_B0
+#define BB_BC_STS_SDP_MSK       HSOTG_CTRL_BC_STATUS_SDP_MASK
+#define BB_BC_STS_CDP_MSK       HSOTG_CTRL_BC_STATUS_CDP_MASK
+#define BB_BC_STS_DCP_MSK       HSOTG_CTRL_BC_STATUS_DCP_MASK
+/* No action indicating error status bits for BC1.2 */
+#define BB_BC_ERROR_STS_BITS		0
+#else
+#define BB_BC_STS_SDP_MSK       HSOTG_CTRL_BC_STATUS_SHP_MASK
+#define BB_BC_STS_CDP_MSK       HSOTG_CTRL_BC_STATUS_CHP_MASK
+#define BB_BC_STS_DCP_MSK       HSOTG_CTRL_BC_STATUS_DCP_MASK
+#define BB_BC_ERROR_STS_BITS	(HSOTG_CTRL_BC_STATUS_DM_TIMEOUT_MASK | HSOTG_CTRL_BC_STATUS_DP_TIMEOUT_MASK | HSOTG_CTRL_BC_STATUS_DM_ERROR_MASK | HSOTG_CTRL_BC_STATUS_DP_ERROR_MASK)
+#endif
+
+#define BB_BC_CFG		KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_BC_CFG_OFFSET
 #define BB_BC_CFG_OVWR_KEY	(0x5556 << 17)
 #define BB_BC_CFG_SW_OVWR_EN	(0x1 << 16)
 #define BB_BC_CFG_SW_RST	(0x1 << 15)
 
 #define MAX_BC_DET_RETRY	5
+#define MAX_BC_STATUS_CHECK	20
 
 
 #define DETECT_USB_CHARGER_FROM_BB_REGISTERS
@@ -103,16 +110,13 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 {
 	u8 regVal1, regVal2;
 	u32 bcStatus;
-	int usb_type;
+	int usb_type = USB_CHARGER_UNKNOWN;
 	int count = 0;
 
 	bcStatus = readl(BB_BC_STATUS);
 	pr_debug("%s: BC STATUS (0x%x) = 0x%x\n", __func__, BB_BC_STATUS, bcStatus);
 	/* Check if error occured while BC detection happened */
-	if ((bcStatus & BB_BC_STS_DM_TO_MSK) ||
-			(bcStatus & BB_BC_STS_DP_TO_MSK) ||
-			(bcStatus & BB_BC_STS_DM_ERR_MSK) ||
-			(bcStatus & BB_BC_STS_DP_ERR_MSK)) {
+	if (bcStatus & BB_BC_ERROR_STS_BITS) {
 		pr_debug("%s: Error occured while BC detection\n", __func__);
 		/* set the code and sw enable bit in BC_CFG in BB */
 		regVal2 = readl(BB_BC_CFG);
@@ -132,7 +136,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 		return -EAGAIN;
 	} /* BC error condition */
 #ifdef DETECT_USB_CHARGER_FROM_BB_REGISTERS
-	while (count < 20) {
+	while (count < MAX_BC_STATUS_CHECK) {
 		if (bcStatus & BB_BC_STS_BC_DONE_MSK) {
 			if (bcStatus & BB_BC_STS_SDP_MSK)
 				usb_type = USB_CHARGER_SDP;
@@ -141,7 +145,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 			else if (bcStatus & BB_BC_STS_DCP_MSK)
 				usb_type = USB_CHARGER_DCP;
 			else
-				usb_type = USB_CHARGER_UNKNOWN;
+				usb_type = USB_CHARGER_UNKNOWN; /* Need to update the logic for new charger types for RheaB0 */
 			break;
 		} else {
 			msleep(10);
@@ -150,7 +154,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 			pr_debug("%s: BC STATUS (0x%x) = 0x%x..Count %d\n", __func__, BB_BC_STATUS, bcStatus, count);
 		}
 	}
-	if (count == 20) {
+	if (count == MAX_BC_STATUS_CHECK) {
 			pr_info("%s: BC Detection DONE bit is not set, check if BCDLDO was ON\n", __func__);
 			return -EIO;
 	}
@@ -351,6 +355,10 @@ static void bcmpmu_usb_isr(int intr, void *data)
 				event, NULL);
 		break;
 	case BCM59055_IRQID_INT4_VBUS_VALID_F:
+		event = BCMPMU_USB_EVENT_VBUS_INVALID;
+		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_VBUS_INVALID].notifiers,
+					event, NULL);
+		break;
 	case BCM59055_IRQID_INT4_VBUS_VALID_R:
 		event = BCMPMU_USB_EVENT_VBUS_VALID;
 		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_VBUS_VALID].notifiers,
@@ -358,11 +366,15 @@ static void bcmpmu_usb_isr(int intr, void *data)
 		break;
 
 	case BCM59055_IRQID_INT4_OTG_SESS_VALID_F:
-		event = BCMPMU_USB_EVENT_SESSION_VALID;
-		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_SESSION_VALID].notifiers,
+		event = BCMPMU_USB_EVENT_SESSION_INVALID;
+		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_SESSION_INVALID].notifiers,
 				event, NULL);
 		break;
 	case BCM59055_IRQID_INT4_VB_SESS_END_F:
+		event = BCMPMU_USB_EVENT_SESSION_END_INVALID;
+		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_SESSION_END_INVALID].notifiers,
+					event, NULL);
+		break;
 	case BCM59055_IRQID_INT4_VB_SESS_END_R:
 		event = BCMPMU_USB_EVENT_SESSION_END_VALID;
 		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_SESSION_END_VALID].notifiers,
@@ -372,6 +384,9 @@ static void bcmpmu_usb_isr(int intr, void *data)
 	case BCM59055_IRQID_INT4_OTG_A_DEVICE:
 		break;
 	case BCM59055_IRQID_INT4_VA_SESS_VALID_R:
+		event = BCMPMU_USB_EVENT_SESSION_VALID;
+		blocking_notifier_call_chain(&bcmpmu_usb->event[BCMPMU_USB_EVENT_SESSION_VALID].notifiers,
+				event, NULL);
 		break;
 	case BCM59055_IRQID_INT5_RIC_C_TO_FLOAT:
 		event = BCMPMU_USB_EVENT_RIC_C_TO_FLOAT;

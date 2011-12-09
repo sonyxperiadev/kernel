@@ -52,41 +52,17 @@ void SYS_GenGetPayloadInfo(void* dataBuf, MsgType_t msgType, void** ppBuf, UInt3
 UInt8 SYS_GetClientId(void);
 void sysGetXdrStruct(RPC_XdrInfo_t** ptr, UInt16* size);
 
-
-typedef struct
+typedef enum 
 {
-	UInt16 	adc_ch; 	///< ADC channel
-	UInt16	adc_trg;	///< ADC sample trigger
-}MeasMngrCnfgReq_t;
+    SIMLDO1,
+    SIMLDO2
+} PMU_SIMLDO_t;
 
-typedef struct
-{
-	MeasMgrDbaseResult_t	res;
-	UInt16	o_rd_data;	///< output ADC read data
-}MeasMngrCnfgRsp_t;
-
-typedef struct
-{
-	Int32 res;
-	UInt8* data;
-	UInt32 len;
-}MtestOutput_t;
-
-
-UInt16 HAL_EM_BATTMGR_BattLevelPercent(void);
-UInt16 HAL_EM_BATTMGR_BattLevel(void);
-Boolean HAL_EM_BATTMGR_USB_ChargerPresent(void);
-Boolean HAL_EM_BATTMGR_WALL_ChargerPresent(void);
-HAL_EM_BATTMGR_ErrorCode_en_t HAL_EM_BATTMGR_Run_BattMgr(UInt16 inBattVolt);
-HAL_EM_BATTMGR_ErrorCode_en_t HAL_EM_BATTMGR_Config_BattMgr(HAL_EM_BATTMGR_Action_ConfigBattmgr_st_t *inBattVolt);
-EM_BATTMGR_ChargingStatus_en_t HAL_EM_BATTMGR_GetChargingStatus(void);
-HAL_EM_BATTMGR_ErrorCode_en_t HAL_EM_BATTMGR_SetComp(Int16 compValue);
-void HAL_EM_BATTMGR_GetBattTemp(HAL_EM_BATTMGR_Action_GetBatteryTemp_st_t* val);
-void SYSRPC_MEASMGR_GetDataB_Adc(MeasMngrCnfgReq_t *req, MeasMngrCnfgRsp_t* rsp);
-void SYSRPC_HAL_ADC_Ctrl(HAL_ADC_Action_en_t action, HAL_ADC_ReadConfig_st_t *req, HAL_ADC_ReadConfig_st_t *rsp);
-HAL_EM_BATTMGR_ErrorCode_en_t SYS_HAL_EM_BATTMGR_RegisterEventCB(HAL_EM_BATTMGR_Events_en_t event, Boolean validCbk);
-
-
+typedef enum {
+      PMU_SIM3P0Volt = 0,
+      PMU_SIM1P8Volt,
+      PMU_SIM0P0Volt
+} PMU_SIMVolt_t;
 
 //***************** < 1 > **********************
 

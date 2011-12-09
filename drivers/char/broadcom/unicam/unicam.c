@@ -43,6 +43,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <mach/rdb/brcm_rdb_util.h>
+#include <plat/pi_mgr.h>
 
 #if (1) //(defined (_RHEA_) && (CHIP_REVISION == 10))   
     #include <mach/rdb/brcm_rdb_csr.h>
@@ -87,6 +88,7 @@ static void __iomem *mmcfg_base = NULL;
 static void __iomem *mmclk_base = NULL;
 static void __iomem *padctl_base = NULL;
 static void __iomem *csr_base = NULL;
+static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
 
 typedef struct {
     struct semaphore irq_sem;
@@ -180,6 +182,7 @@ static int unicam_release(struct inode *inode, struct file *filp)
     
     disable_irq(IRQ_UNICAM);
     free_irq(IRQ_UNICAM, dev);
+    unicam_close_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
     if (dev)
         kfree(dev);
 
@@ -376,6 +379,8 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
     unsigned int value, ret;
     struct clk *dig_chan_clk;    
    
+    enable_unicam_clock();
+
     if (port == 0) {    
         // Set Camera CSI0 Phy & Clock Registers
         reg_write(mmcfg_base, MM_CFG_CSI0_LDO_CTL_OFFSET, 0x5A00000F);
@@ -517,6 +522,7 @@ static void unicam_close_csi(unsigned int port, unsigned int clk_src)
             RegCsrDdrPllPwrdnBit = CSR_DDR_PLL_REG_UNSET_FLAG;
         }
     #endif    
+    disable_unicam_clock();        
 }
 
 
@@ -525,13 +531,18 @@ static int enable_unicam_clock(void)
     unsigned long rate;
     int ret;
     struct clk *unicam_clk;
-    
-    unicam_clk = clk_get(NULL, "csi0_axi_clk");
+	
+	if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_OPP_TURBO)) {
+		printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
+		return -EIO;
+	}
+ 
+	unicam_clk = clk_get(NULL, "csi0_axi_clk");
     if (!unicam_clk) {
         err_print("%s: error get clock\n", __func__);
         return -EIO;
     }
-    
+ 
     ret = clk_enable(unicam_clk);
     if (ret) {
         err_print("%s: error enable unicam clock\n", __func__);
@@ -553,11 +564,13 @@ static int enable_unicam_clock(void)
 static void disable_unicam_clock(void)
 {
     struct clk *unicam_clk;
-    
-    unicam_clk = clk_get(NULL, "csi0_axi_clk");
+
+	unicam_clk = clk_get(NULL, "csi0_axi_clk");
     if (!unicam_clk) return;
-    
     clk_disable(unicam_clk);     
+
+	if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) 
+		printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
 }
 
 static int __devexit unicam_drv_remove(struct platform_device *pdev)
@@ -580,6 +593,13 @@ static int unicam_drv_probe(struct platform_device *pdev)
 
     unicam_info.csi0_unicam_gpio = pdata->csi0_gpio;
     unicam_info.csi1_unicam_gpio = pdata->csi1_gpio;
+
+	unicam_dfs_node = pi_mgr_dfs_add_request("unicam", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+	if (NULL == unicam_dfs_node) {
+		printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+		return -EIO;
+	}
+
 error:
     return ret;
 }
@@ -612,7 +632,6 @@ int __init unicam_init(void)
 
     device_create(unicam_class, NULL, MKDEV(unicam_major, 0), NULL, UNICAM_DEV_NAME);
     
-    enable_unicam_clock();
     
     // Map the unicam registers 
     unicam_base = (void __iomem *)ioremap_nocache(RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS, SZ_4K);
@@ -668,7 +687,6 @@ void __exit unicam_exit(void)
         iounmap(csr_base);    
 #endif
 
-    disable_unicam_clock();        
    
     device_destroy(unicam_class, MKDEV(unicam_major, 0));
     class_destroy(unicam_class);

@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                                */
+Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.                                */
 
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -38,8 +38,8 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "chal_caph_audioh.h"
 #include "csl_caph.h"
 #include "csl_caph_audioh.h"
-#include "csl_caph_gain.h"
 #include "log.h"
+
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -726,6 +726,7 @@ void csl_caph_audioh_start(int path_id)
 {
 	UInt16	chnl_enable = 0x0;
 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_start:: %d.\r\n", path_id));
 	switch(path_id)
 	{
 		case AUDDRV_PATH_VIBRA_OUTPUT:
@@ -910,7 +911,7 @@ void csl_caph_audioh_start(int path_id)
 //
 //============================================================================
 
-void csl_caph_audioh_stop_keep_config(int path_id)
+static void csl_caph_audioh_stop_keep_config(int path_id)
 {
 	UInt16	chnl_disable = 0x0;
 	switch(path_id)
@@ -1114,26 +1115,24 @@ void csl_caph_audioh_mute(int path_id, Boolean mute_ctrl)
 
 //============================================================================
 //
-// Function Name: void csl_caph_audioh_setgain(int path_id, UInt32 gain, UInt32 gain1)
+// Function Name: void csl_caph_audioh_setgain_register(int path_id, UInt32 gain, UInt32 gain1)
 //
 // Description:  set gain on path "path_id" on CSL layer
 //
 // Parameters:   path_id : audio path
-//              gain and gain1
+//              gain and gain1    register bitwise value
 //
 // Return:   
 //
 //============================================================================
 
-void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
+void csl_caph_audioh_setgain_register(int path_id ,UInt32 gain, UInt32 fine_scale)
 {
-
 	switch(path_id)
 	{
-
 		case AUDDRV_PATH_EARPICEC_OUTPUT:
-
-			chal_audio_earpath_set_gain(handle, gain);
+			//chal_audio_earpath_set_gain(handle, gain);
+			chal_audio_earpath_set_gain(handle, 0);  //why  0x100A00;  // Hard code for now, based on value provided by ASIC team.
 			break;
 
 		case AUDDRV_PATH_HEADSET_OUTPUT:
@@ -1142,11 +1141,8 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
 		case AUDDRV_PATH_IHF_OUTPUT:
 			break;
 
-
 		case AUDDRV_PATH_EANC_INPUT:
-
-			chal_audio_eancpath_set_cic_gain(handle, gain, gain1);
-
+			chal_audio_eancpath_set_cic_gain(handle, gain, fine_scale);
 			break;
 		
 		case AUDDRV_PATH_SIDETONE_INPUT:
@@ -1159,22 +1155,44 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
 
         case AUDDRV_PATH_ANALOGMIC_INPUT:
         case AUDDRV_PATH_HEADSET_INPUT:
-
 			chal_audio_mic_pga(handle, gain);
-
 			break;
+
         case AUDDRV_PATH_VIN_INPUT:
-        case AUDDRV_PATH_VIN_INPUT_L:
-        case AUDDRV_PATH_VIN_INPUT_R:
-			chal_audio_vinpath_set_cic_scale(handle, gain, gain1,
-				       	gain, gain1);			
-			break;		
+#if defined(CONFIG_ARCH_RHEA_B0)
+			chal_audio_vinpath_set_cic_scale(handle, gain | fine_scale, gain | fine_scale);
+#else
+			chal_audio_vinpath_set_cic_scale(handle, gain, fine_scale, gain, fine_scale);
+#endif
+			break;
+
+		case AUDDRV_PATH_VIN_INPUT_L:		
+			chal_audio_vinpath_set_each_cic_scale( handle, CAPH_AUDIOH_MIC1_COARSE_GAIN, gain);
+			chal_audio_vinpath_set_each_cic_scale( handle, CAPH_AUDIOH_MIC1_FINE_GAIN, fine_scale);
+			break;
+
+		case AUDDRV_PATH_VIN_INPUT_R:
+			chal_audio_vinpath_set_each_cic_scale( handle, CAPH_AUDIOH_MIC2_COARSE_GAIN, gain);
+			chal_audio_vinpath_set_each_cic_scale( handle, CAPH_AUDIOH_MIC2_FINE_GAIN, fine_scale);
+			break;
+
         case AUDDRV_PATH_NVIN_INPUT:
-        case AUDDRV_PATH_NVIN_INPUT_L:
-        case AUDDRV_PATH_NVIN_INPUT_R:
-			chal_audio_nvinpath_set_cic_scale(handle, gain, gain1,
-				       	gain, gain1);			
-			break;		
+#if defined(CONFIG_ARCH_RHEA_B0)
+			chal_audio_nvinpath_set_cic_scale(handle, gain | fine_scale, gain | fine_scale);
+#else
+			chal_audio_nvinpath_set_cic_scale(handle, gain, fine_scale, gain, fine_scale);
+#endif
+			break;
+
+		case AUDDRV_PATH_NVIN_INPUT_L:
+			chal_audio_nvinpath_set_each_cic_scale(handle, CAPH_AUDIOH_MIC3_COARSE_GAIN, gain );
+			chal_audio_nvinpath_set_each_cic_scale(handle, CAPH_AUDIOH_MIC3_FINE_GAIN, fine_scale );
+			break;
+
+		case AUDDRV_PATH_NVIN_INPUT_R:
+			chal_audio_nvinpath_set_each_cic_scale(handle, CAPH_AUDIOH_MIC4_COARSE_GAIN, gain );
+			chal_audio_nvinpath_set_each_cic_scale(handle, CAPH_AUDIOH_MIC4_FINE_GAIN, fine_scale );
+			break;
 			
 		default:
 			audio_xassert(0, path_id);	
@@ -1182,7 +1200,286 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
 	return;
 }
 
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_setMicPga_by_mB( int gain_mB )
+//
+// Description:  set Mic PGA
+//
+// Parameters:	gain milli Bel
+//
+// Return:	 
+//
+//============================================================================
+void csl_caph_audioh_setMicPga_by_mB( int gain_mB )
+{
+	//currently audio sysparm file uses 0.25dB step size in MIC_PGA. Every point at 0.25dB can find a mic pga register value from this function.
+	if( gain_mB < 296 )
+		chal_audio_mic_pga(handle, 0);
+	else
+	if( gain_mB < 600 )
+		chal_audio_mic_pga(handle, 1);
+	else
+	if( gain_mB < 898 )
+		chal_audio_mic_pga(handle, 2);
+	else
+	if( gain_mB < 1200 )
+		chal_audio_mic_pga(handle, 3);
+	else
+	if( gain_mB < 1500 )
+		chal_audio_mic_pga(handle, 4);
+	else
+	if( gain_mB < 1750 )
+		chal_audio_mic_pga(handle, 5);
+	else
+	if( gain_mB < 1850 )
+		chal_audio_mic_pga(handle, 0x20);
+	else
+	if( gain_mB < 1900 )
+		chal_audio_mic_pga(handle, 0x21);
+	else
+	if( gain_mB < 2000 )
+		chal_audio_mic_pga(handle, 0x22);
+	else
+	if( gain_mB < 2100 )
+		chal_audio_mic_pga(handle, 0x23);
+	else
+	if( gain_mB < 2150 )
+		chal_audio_mic_pga(handle, 0x24);
+	else
+	if( gain_mB < 2250 )
+		chal_audio_mic_pga(handle, 0x25);
+	else
+	if( gain_mB < 2350 )
+		chal_audio_mic_pga(handle, 0x26);
+	else
+	if( gain_mB < 2450 )
+		chal_audio_mic_pga(handle, 0x27);
+	else
+	if( gain_mB < 2500 )
+		chal_audio_mic_pga(handle, 0x28);
+	else
+	if( gain_mB < 2588 )
+		chal_audio_mic_pga(handle, 0x29);
+	else
+	if( gain_mB < 2650 )
+		chal_audio_mic_pga(handle, 0x2A);
+	else
+	if( gain_mB < 2700 )
+		chal_audio_mic_pga(handle, 0x2B);
+	else
+	if( gain_mB < 2800 )
+		chal_audio_mic_pga(handle, 0x2C);
+	else
+	if( gain_mB < 2895 )
+		chal_audio_mic_pga(handle, 0x2D);
+	else
+	if( gain_mB < 2992 )
+		chal_audio_mic_pga(handle, 0x2E);
+	else
+	if( gain_mB < 3100 )
+		chal_audio_mic_pga(handle, 0x2F);
+	else
+	if( gain_mB < 3150 )
+		chal_audio_mic_pga(handle, 0x30);
+	else
+	if( gain_mB < 3200 )
+		chal_audio_mic_pga(handle, 0x31);
+	else
+	if( gain_mB < 3296 )
+		chal_audio_mic_pga(handle, 0x32);
+	else
+	if( gain_mB < 3350 )
+		chal_audio_mic_pga(handle, 0x33);
+	else
+	if( gain_mB < 3450 )
+		chal_audio_mic_pga(handle, 0x34);
+	else
+	if( gain_mB < 3549 )
+		chal_audio_mic_pga(handle, 0x35);
+	else
+	if( gain_mB < 3650 )
+		chal_audio_mic_pga(handle, 0x36);
+	else
+	if( gain_mB < 3700 )
+		chal_audio_mic_pga(handle, 0x37);
+	else
+	if( gain_mB < 3800 )
+		chal_audio_mic_pga(handle, 0x38);
+	else
+	if( gain_mB < 3900 )
+		chal_audio_mic_pga(handle, 0x39);
+	else
+	if( gain_mB < 4000 )
+		chal_audio_mic_pga(handle, 0x3A);
+	else
+	if( gain_mB < 4097 )
+		chal_audio_mic_pga(handle, 0x3B);
+	else
+	if( gain_mB < 4194 )
+		chal_audio_mic_pga(handle, 0x3C);
+	else
+	if( gain_mB < 4300 )
+		chal_audio_mic_pga(handle, 0x3D);
+	else
+	if( gain_mB < 4400 )
+		chal_audio_mic_pga(handle, 0x3E);
+	else
+		chal_audio_mic_pga(handle, 0x3F);
+	
+}
 
+static int convert_gain_to_scale( int gain_mB )
+{
+	int scale = 0;
+	
+	if( gain_mB<25 )
+		scale = 0x1000;
+	else
+	if( gain_mB<50 )
+		scale = 0x1078;
+	else
+	if( gain_mB<75 )
+		scale = 0x10F3;
+	else
+	if( gain_mB<100 )
+		scale = 0x1171;
+	else
+	if( gain_mB<125 )
+		scale = 0x11F4;
+	else
+	if( gain_mB<150 )
+		scale = 0x127A;
+	else
+	if( gain_mB<175 )
+		scale = 0x1304;
+	else
+	if( gain_mB<200 )
+		scale = 0x1392;
+	else
+	if( gain_mB<225 )
+		scale = 0x1425;
+	else
+	if( gain_mB<250 )
+		scale = 0x14BB;
+	else
+	if( gain_mB<275 )
+		scale = 0x1556;
+	else
+	if( gain_mB<300 )
+		scale = 0x15F6;
+	else
+	if( gain_mB<325 )
+		scale = 0x169A;
+	else
+	if( gain_mB<350 )
+		scale = 0x1743;
+	else
+	if( gain_mB<375 )
+		scale = 0x17F1;
+	else
+	if( gain_mB<400 )
+		scale = 0x18A4;
+	else
+	if( gain_mB<425 )
+		scale = 0x195C;
+	else
+	if( gain_mB<450 )
+		scale = 0x1A19;
+	else
+	if( gain_mB<475 )
+		scale = 0x1ADC;
+	else
+	if( gain_mB<500 )
+		scale = 0x1BA5;
+	else
+	if( gain_mB<525 )
+		scale = 0x1BA5;
+	else
+	if( gain_mB<550 )
+		scale = 0x1D49;
+	else
+	if( gain_mB<575 )
+		scale = 0x1E23;
+	else
+	if( gain_mB<600 )
+		scale = 0x1F05;
+	else
+	if( gain_mB<625 )
+		scale = 0x1FED;
+
+	return scale;
+}
+
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_vin_set_cic_scale_by_mB( int gain_mB )
+//
+// Description:  set vin path cic scale
+//
+// Parameters:	gain milli Bel
+//
+// Return:	 
+//
+//============================================================================
+
+void csl_caph_audioh_vin_set_cic_scale_by_mB( int mic1_coarse_gain,
+		int mic1_fine_gain,
+		int mic2_coarse_gain,
+		int mic2_fine_gain )
+{
+	unsigned int mic1_coarse_scale=0, mic1_fine_scale=0, mic2_coarse_scale=0, mic2_fine_scale=0;
+
+	//currently audio sysparm file uses 0.25dB step size in these four parameters.
+	//this function determine the register values for every 0.25 stop points, but not need to be finer than 0.25 dB.
+
+	mic1_coarse_scale = mic1_coarse_gain/600;
+	mic1_fine_scale = convert_gain_to_scale( mic1_fine_gain );
+	
+	mic2_coarse_scale = mic2_coarse_gain/600;
+	mic2_fine_scale = convert_gain_to_scale( mic2_fine_gain );
+	
+#if defined(CONFIG_ARCH_RHEA_B0)
+	chal_audio_vinpath_set_cic_scale(handle, mic1_coarse_scale | mic1_fine_scale, mic2_coarse_scale | mic2_fine_scale);
+#else
+	chal_audio_vinpath_set_cic_scale(handle, mic1_coarse_scale, mic1_fine_scale, mic2_coarse_scale, mic2_fine_scale);
+#endif
+}
+
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_vin_set_cic_scale_by_mB( int gain_mB )
+//
+// Description:  set vin path cic scale
+//
+// Parameters:	gain milli Bel
+//
+// Return:	 
+//
+//============================================================================
+
+void csl_caph_audioh_nvin_set_cic_scale_by_mB( int mic1_coarse_gain,
+		int mic1_fine_gain,
+		int mic2_coarse_gain,
+		int mic2_fine_gain )
+{
+	unsigned int mic1_coarse_scale=0, mic1_fine_scale=0, mic2_coarse_scale=0, mic2_fine_scale=0;
+
+	//currently audio sysparm file uses 0.25dB step size in these four parameters.
+	//this function determine the register values for every 0.25 stop points, but not need to be finer than 0.25 dB.
+
+	mic1_coarse_scale = mic1_coarse_gain/600;
+	mic1_fine_scale = convert_gain_to_scale( mic1_fine_gain );
+	
+	mic2_coarse_scale = mic2_coarse_gain/600;
+	mic2_fine_scale = convert_gain_to_scale( mic2_fine_gain );
+	
+#if defined(CONFIG_ARCH_RHEA_B0)
+	chal_audio_nvinpath_set_cic_scale(handle, mic1_coarse_scale | mic1_fine_scale, mic2_coarse_scale | mic2_fine_scale);
+#else
+	chal_audio_nvinpath_set_cic_scale(handle, mic1_coarse_scale, mic1_fine_scale, mic2_coarse_scale, mic2_fine_scale);
+#endif
+}
 
 //============================================================================
 //
@@ -1410,7 +1707,11 @@ void csl_audio_audiotx_get_dac_ctrl(CSL_CAPH_AUDIOH_DACCTRL_t *readdata)
 
 void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff)
 {
+#if defined(CONFIG_ARCH_RHEA_B0)
+	chal_audio_stpath_load_filter(handle, coeff, 0 );
+#else
 	chal_audio_stpath_load_filter(handle, coeff );
+#endif
 	return;
 }	
 
@@ -1437,133 +1738,6 @@ void csl_caph_audioh_sidetone_set_gain(UInt32 gain)
 
 //============================================================================
 //
-// Function Name: void csl_caph_audioh_set_hwgain(CSL_CAPH_HW_GAIN_e hw, 
-// 						UInt32 gain)
-//
-// Description:  Set HW gain
-//
-// Parameters:  hw     - which HW gain
-// 		gain   - gain value in Q13.2.			
-// Return:  
-//
-//============================================================================
-
-void csl_caph_audioh_set_hwgain(CSL_CAPH_HW_GAIN_e hw, UInt32 gain)
-{
-	CAPH_AUDIOH_MIC_GAIN_e micGainSelect = CAPH_AUDIOH_NONE_MIC_GAIN;
-    csl_caph_Mic_GainMapping_t outGain;
-    memset(&outGain, 0, sizeof(csl_caph_Mic_GainMapping_t));
-
-    outGain = csl_caph_gain_GetMicMappingGain((Int16)gain);
-	switch(hw)
-	{
-		case CSL_CAPH_AMIC_PGA_GAIN:
-			chal_audio_mic_pga(handle, (int)(outGain.micPGA));
-			break;
-		case CSL_CAPH_AMIC_DGA_COARSE_GAIN:
-		case CSL_CAPH_DMIC1_DGA_COARSE_GAIN:
-			micGainSelect = CAPH_AUDIOH_MIC1_COARSE_GAIN;
-			chal_audio_vinpath_set_each_cic_scale(handle,
-					micGainSelect,
-					(UInt32)(outGain.micCICBitSelect));
-			break;
-		case CSL_CAPH_AMIC_DGA_FINE_GAIN:
-		case CSL_CAPH_DMIC1_DGA_FINE_GAIN:
-			micGainSelect = CAPH_AUDIOH_MIC1_FINE_GAIN;
-			chal_audio_vinpath_set_each_cic_scale(handle,
-					micGainSelect,
-					(UInt32)(outGain.micCICFineScale));
-			break;
-		case CSL_CAPH_DMIC2_DGA_COARSE_GAIN:
-			micGainSelect = CAPH_AUDIOH_MIC2_COARSE_GAIN;
-			chal_audio_vinpath_set_each_cic_scale(handle,
-					micGainSelect,
-					(UInt32)(outGain.micCICBitSelect));
-			break;
-		case CSL_CAPH_DMIC2_DGA_FINE_GAIN:
-			micGainSelect = CAPH_AUDIOH_MIC2_FINE_GAIN;
-			chal_audio_vinpath_set_each_cic_scale(handle,
-					micGainSelect,
-					(UInt32)(outGain.micCICFineScale));
-			break;
-
-		case CSL_CAPH_DMIC3_DGA_COARSE_GAIN:
-			micGainSelect = CAPH_AUDIOH_MIC3_COARSE_GAIN;
-			chal_audio_nvinpath_set_each_cic_scale(handle,
-					micGainSelect,
-					(UInt32)(outGain.micCICBitSelect));
-			break;
-			
-		case CSL_CAPH_DMIC3_DGA_FINE_GAIN:
-			micGainSelect = CAPH_AUDIOH_MIC3_FINE_GAIN;
-			chal_audio_nvinpath_set_each_cic_scale(handle,
-					micGainSelect,
-					(UInt32)(outGain.micCICFineScale));
-			break;
-			
-		case CSL_CAPH_DMIC4_DGA_COARSE_GAIN:
-			micGainSelect = CAPH_AUDIOH_MIC4_COARSE_GAIN;
-			chal_audio_nvinpath_set_each_cic_scale(handle,
-					micGainSelect,
-					(UInt32)(outGain.micCICBitSelect));
-			break;
-			
-		case CSL_CAPH_DMIC4_DGA_FINE_GAIN:
-			micGainSelect = CAPH_AUDIOH_MIC4_FINE_GAIN;
-			chal_audio_nvinpath_set_each_cic_scale(handle,
-					micGainSelect,
-					(UInt32)(outGain.micCICFineScale));
-			break;
-
-		default:
-			audio_xassert(0, hw);
-			
-	}
-	return;
-}	
-
-
-
-//============================================================================
-//
-// Function Name: void csl_caph_audioh_ihfpath_set_dac_pwr(UInt16 enable_chnl)
-//
-// Description:  Set DAC power on IHF path. For testing purpose
-//
-// Parameters:  enable_chnl - DAC channle to enable.			
-// Return:  
-//
-//============================================================================
-
-void csl_caph_audioh_ihfpath_set_dac_pwr(UInt16 enable_chnl)
-{
-	chal_audio_ihfpath_set_dac_pwr(handle, enable_chnl);	
-	return;
-}	
-
-
-
-//============================================================================
-//
-// Function Name: CSL_CAPH_AUDIOH_IHF_DAC_PWR_e csl_caph_audioh_ihfpath_get_dac_pwr(void)
-//
-// Description:  Get DAC power on IHF path. For testing purpose
-//
-// Parameters:  void			
-// Return:  CSL_CAPH_AUDIOH_IHF_DAC_PWR_e dac power status.
-//
-//============================================================================
-
-CSL_CAPH_AUDIOH_IHF_DAC_PWR_e csl_caph_audioh_ihfpath_get_dac_pwr(void)
-{
-	return (CSL_CAPH_AUDIOH_IHF_DAC_PWR_e)chal_audio_ihfpath_get_dac_pwr(handle);	
-}	
-
-
-
-
-//============================================================================
-//
 // Function Name: void csl_caph_audioh_vinpath_digi_mic_enable(UInt16 ctrl)
 //
 // Description:  Enable the mic. For testing purpose
@@ -1579,21 +1753,6 @@ void csl_caph_audioh_vinpath_digi_mic_enable(UInt16 ctrl)
 	return;
 }	
 
-
-//============================================================================
-//
-// Function Name: CSL_CAPH_AUDIOH_VINPATH_DMIC_ENABLE_e csl_caph_audioh_vinpath_digi_mic_enable_read()
-//
-// Description:  Get the enabling status of the mic1 and mic2. For testing purpose
-//
-// Return:  CSL_CAPH_AUDIOH_VINPATH_DMIC_ENABLE_e mic status.
-//
-//============================================================================
-
-CSL_CAPH_AUDIOH_VINPATH_DMIC_ENABLE_e csl_caph_audioh_vinpath_digi_mic_enable_read(void)
-{
-	return (CSL_CAPH_AUDIOH_VINPATH_DMIC_ENABLE_e)chal_audio_vinpath_digi_mic_enable_read(handle);
-}	
 
 //============================================================================
 //
@@ -1615,15 +1774,383 @@ void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl)
 
 //============================================================================
 //
-// Function Name: CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e csl_caph_audioh_nvinpath_digi_mic_enable_read()
+// Function Name: void csl_caph_audioh_adcpath_global_enable(Boolean enable)
 //
-// Description:  Get the enabling status of the mic3 and mic4. For testing purpose
+// Description:  started the adcpath in one write
 //
-// Return:  CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e mic status.
+// Parameters: enable: enable/disable the global en bit
+//
+// Return:
 //
 //============================================================================
-
-CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e csl_caph_audioh_nvinpath_digi_mic_enable_read(void)
+void csl_caph_audioh_adcpath_global_enable(Boolean enable)
 {
-	return (CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e)chal_audio_nvinpath_digi_mic_enable_read(handle);
-}	
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_adcpath_global_enable:: enable %d.\r\n", enable));
+	if (enable)
+	{
+		chal_audio_adcpath_global_enable(handle,FALSE);
+		chal_audio_adcpath_fifo_global_clear(handle,TRUE); //clear fifo when global en is 0
+		chal_audio_adcpath_fifo_global_clear(handle,FALSE); //clear bit needs to be reset to start interrupt
+		chal_audio_adcpath_global_enable(handle,TRUE);
+	}
+	else
+	{
+		if (chal_audio_adcpath_global_enable_status(handle))
+			chal_audio_adcpath_global_enable(handle,FALSE);
+	}
+	return;
+}
+
+#define AMIC_GAIN_LEVEL_NUM 179
+#define DMIC_GAIN_LEVEL_NUM 97
+
+//Gain Distribution of Analog Mic gain. For analog main mic and headset Mic.
+static csl_caph_Mic_Gain_t AMic_GainTable[AMIC_GAIN_LEVEL_NUM]=
+{
+  /* comment */  /*Requested Gain in milliBel,	Mic PGA,  Mic CIC Fine Scale,  Mic CIC Bit Select,	Dsp UL Gain*/
+	/* 0dB */	{	0,	0x0, 0x1000,  0x0000, GAIN_SYSPARM},
+	/* 0.25dB */ {	25, 0x0, 0x1078, 0x0000, GAIN_SYSPARM},
+	/* 0.5dB */  {	50, 0x0, 0x10F3, 0x0000, GAIN_SYSPARM},
+	/* 0.75dB */ {	75, 0x0, 0x1171, 0x0000, GAIN_SYSPARM},
+	/* 1.0dB */  { 100, 0x0, 0x11F4, 0x0000, GAIN_SYSPARM},
+	/* 1.25dB */ { 125, 0x0, 0x127A, 0x0000, GAIN_SYSPARM},
+	/* 1.5dB */  { 150, 0x0, 0x1304, 0x0000, GAIN_SYSPARM},
+	/* 1.75dB */ { 175, 0x0, 0x1392, 0x0000, GAIN_SYSPARM},
+	/* 2.0dB */  { 200, 0x0, 0x1425, 0x0000, GAIN_SYSPARM},
+	/* 2.25dB */ { 225, 0x0, 0x14BB, 0x0000, GAIN_SYSPARM},
+	/* 2.5dB */  { 250, 0x0, 0x1556, 0x0000, GAIN_SYSPARM},
+	/* 2.75dB */ { 275, 0x0, 0x15F6, 0x0000, GAIN_SYSPARM},
+	/* 3.0dB */  { 300, 0x01, 0x1013, 0x0000, GAIN_SYSPARM},
+	/* 3.25dB */ { 325, 0x01, 0x108B, 0x0000, GAIN_SYSPARM},
+	/* 3.5dB */  { 350, 0x01, 0x1107, 0x0000, GAIN_SYSPARM},
+	/* 3.75dB */ { 375, 0x01, 0x1186, 0x0000, GAIN_SYSPARM},
+	/* 4.0dB */  { 400, 0x01, 0x1209, 0x0000, GAIN_SYSPARM},
+	/* 4.25dB */ { 425, 0x01, 0x1290, 0x0000, GAIN_SYSPARM},
+	/* 4.5dB */  { 450, 0x01, 0x131B, 0x0000, GAIN_SYSPARM},
+	/* 4.75dB */ { 475, 0x01, 0x13A9, 0x0000, GAIN_SYSPARM},
+	/* 5.0dB */  { 500, 0x01, 0x143C, 0x0000, GAIN_SYSPARM},
+	/* 5.25dB */ { 525, 0x01, 0x14D4, 0x0000, GAIN_SYSPARM},
+	/* 5.5dB */  { 550, 0x01, 0x156F, 0x0000, GAIN_SYSPARM},
+	/* 5.75dB */ { 575, 0x01, 0x1610, 0x0000, GAIN_SYSPARM},
+	/* 6.0dB */  { 600, 0x01, 0x16B4, 0x0000, GAIN_SYSPARM},
+	/* 6.25dB */ { 625, 0x02, 0x105B, 0x0000, GAIN_SYSPARM},
+	/* 6.5dB */  { 650, 0x02, 0x10D5, 0x0000, GAIN_SYSPARM},
+	/* 6.75dB */ { 675, 0x02, 0x1153, 0x0000, GAIN_SYSPARM},
+	/* 7.0dB */  { 700, 0x02, 0x11D4, 0x0000, GAIN_SYSPARM},
+	/* 7.25dB */ { 725, 0x02, 0x1259, 0x0000, GAIN_SYSPARM},
+	/* 7.5dB */  { 750, 0x02, 0x12E3, 0x0000, GAIN_SYSPARM},
+	/* 7.75dB */ { 775, 0x02, 0x1370, 0x0000, GAIN_SYSPARM},
+	/* 8.0dB */  { 800, 0x02, 0x1401, 0x0000, GAIN_SYSPARM},
+	/* 8.25dB */ { 825, 0x02, 0x1497, 0x0000, GAIN_SYSPARM},
+	/* 8.5dB */  { 850, 0x02, 0x1531, 0x0000, GAIN_SYSPARM},
+	/* 8.75dB */ { 875, 0x02, 0x15CF, 0x0000, GAIN_SYSPARM},
+	/* 9.0dB */  { 900, 0x03, 0x1009, 0x0000, GAIN_SYSPARM},
+	/* 9.25dB */ { 925, 0x03, 0x1081, 0x0000, GAIN_SYSPARM},
+	/* 9.5dB */  { 950, 0x03, 0x10FD, 0x0000, GAIN_SYSPARM},
+	/* 9.75dB */ { 975, 0x03, 0x117C, 0x0000, GAIN_SYSPARM},
+	/* 10.0dB */ {1000, 0x03, 0x11FE, 0x0000, GAIN_SYSPARM},
+	/* 10.25dB */{1025, 0x03, 0x1285, 0x0000, GAIN_SYSPARM},
+	/* 10.5dB */ {1050, 0x03, 0x130F, 0x0000, GAIN_SYSPARM},
+	/* 10.75dB */{1075, 0x03, 0x139E, 0x0000, GAIN_SYSPARM},
+	/* 11.0dB */ {1100, 0x03, 0x1430, 0x0000, GAIN_SYSPARM},
+	/* 11.25dB */{1125, 0x03, 0x14C7, 0x0000, GAIN_SYSPARM},
+	/* 11.5dB */ {1150, 0x03, 0x1563, 0x0000, GAIN_SYSPARM},
+	/* 11.75dB */{1175, 0x03, 0x1603, 0x0000, GAIN_SYSPARM},
+	/* 12.0dB */ {1200, 0x03, 0x16A7, 0x0000, GAIN_SYSPARM},
+	/* 12.25dB */{1225, 0x04, 0x1051, 0x0000, GAIN_SYSPARM},
+	/* 12.5dB */ {1250, 0x04, 0x10CB, 0x0000, GAIN_SYSPARM},
+	/* 12.75dB */{1275, 0x04, 0x1148, 0x0000, GAIN_SYSPARM},
+	/* 13.0dB */ {1300, 0x04, 0x11CA, 0x0000, GAIN_SYSPARM},
+	/* 13.25dB */ {1325, 0x04, 0x124F, 0x0000, GAIN_SYSPARM},
+	/* 13.5dB */  {1350, 0x04, 0x12D7, 0x0000, GAIN_SYSPARM},
+	/* 13.75dB */ {1375, 0x04, 0x1364, 0x0000, GAIN_SYSPARM},
+	/* 14.0dB */  {1400, 0x04, 0x13F5, 0x0000, GAIN_SYSPARM},
+	/* 14.25dB */ {1425, 0x04, 0x148A, 0x0000, GAIN_SYSPARM},
+	/* 14.5dB */  {1450, 0x04, 0x1524, 0x0000, GAIN_SYSPARM},
+	/* 14.75dB */ {1475, 0x04, 0x15C2, 0x0000, GAIN_SYSPARM},
+	/* 15.0dB */  {1500, 0x05, 0x1000, 0x0000, GAIN_SYSPARM},
+	/* 15.25dB */ {1525, 0x05, 0x1078, 0x0000, GAIN_SYSPARM},
+	/* 15.5dB */  {1550, 0x05, 0x10F3, 0x0000, GAIN_SYSPARM},
+	/* 15.75dB */ {1575, 0x05, 0x1171, 0x0000, GAIN_SYSPARM},
+	/* 16.0dB */  {1600, 0x05, 0x11F4, 0x0000, GAIN_SYSPARM},
+	/* 16.25dB */ {1625, 0x05, 0x127A, 0x0000, GAIN_SYSPARM},
+	/* 16.5dB */  {1650, 0x05, 0x1304, 0x0000, GAIN_SYSPARM},
+	/* 16.75dB */ {1675, 0x05, 0x1392, 0x0000, GAIN_SYSPARM},
+	/* 17.0dB */  {1700, 0x05, 0x1425, 0x0000, GAIN_SYSPARM},
+	/* 17.25dB */ {1725, 0x05, 0x14BB, 0x0000, GAIN_SYSPARM},
+	/* 17.5dB */  {1750, 0x05, 0x1556, 0x0000, GAIN_SYSPARM},
+	/* 17.75dB */ {1775, 0x20, 0x1013, 0x0000, GAIN_SYSPARM},
+	/* 18.0dB */  {1800, 0x20, 0x108B, 0x0000, GAIN_SYSPARM},
+	/* 18.25dB */ {1825, 0x20, 0x1107, 0x0000, GAIN_SYSPARM},
+	/* 18.5dB */  {1850, 0x21, 0x1000, 0x0000, GAIN_SYSPARM},
+	/* 18.75dB */ {1875, 0x21, 0x1078, 0x0000, GAIN_SYSPARM},
+	/* 19.0dB */  {1900, 0x21, 0x10F3, 0x0000, GAIN_SYSPARM},
+	/* 19.25dB */ {1925, 0x21, 0x1171, 0x0000, GAIN_SYSPARM},
+	/* 19.5dB */  {1950, 0x22, 0x103E, 0x0000, GAIN_SYSPARM},
+	/* 19.75dB */ {1975, 0x22, 0x10B7, 0x0000, GAIN_SYSPARM},
+	/* 20.0dB */  {2000, 0x22, 0x1134, 0x0000, GAIN_SYSPARM},
+	/* 20.25dB */ {2025, 0x22, 0x11B5, 0x0000, GAIN_SYSPARM},
+	/* 20.5dB */  {2050, 0x23, 0x104C, 0x0000, GAIN_SYSPARM},
+	/* 20.75dB */ {2075, 0x23, 0x10C6, 0x0000, GAIN_SYSPARM},
+	/* 21.0dB */  {2100, 0x23, 0x1143, 0x0000, GAIN_SYSPARM},
+	/* 21.25dB */ {2125, 0x24, 0x105F, 0x0000, GAIN_SYSPARM},
+	/* 21.5dB */  {2150, 0x24, 0x10DA, 0x0000, GAIN_SYSPARM},
+	/* 21.75dB */ {2175, 0x24, 0x1158, 0x0000, GAIN_SYSPARM},
+	/* 22.0dB */  {2200, 0x25, 0x1051, 0x0000, GAIN_SYSPARM},
+	/* 22.25dB */ {2225, 0x25, 0x10CB, 0x0000, GAIN_SYSPARM},
+	/* 22.5dB */  {2250, 0x25, 0x1148, 0x0000, GAIN_SYSPARM},
+	/* 22.75dB */ {2275, 0x26, 0x1021, 0x0000, GAIN_SYSPARM},
+	/* 23.0dB */  {2300, 0x26, 0x109A, 0x0000, GAIN_SYSPARM},
+	/* 23.25dB */ {2325, 0x26, 0x1116, 0x0000, GAIN_SYSPARM},
+	/* 23.5dB */  {2350, 0x26, 0x1196, 0x0000, GAIN_SYSPARM},
+	/* 23.75dB */ {2375, 0x27, 0x103E, 0x0000, GAIN_SYSPARM},
+	/* 24.0dB */  {2400, 0x27, 0x10B7, 0x0000, GAIN_SYSPARM},
+	/* 24.25dB */ {2425, 0x27, 0x1134, 0x0000, GAIN_SYSPARM},
+	/* 24.5dB */  {2450, 0x27, 0x11B5, 0x0000, GAIN_SYSPARM},
+	/* 24.75dB */ {2475, 0x28, 0x1021, 0x0000, GAIN_SYSPARM},
+	/* 25.0dB */  {2500, 0x28, 0x109A, 0x0000, GAIN_SYSPARM},
+	/* 25.25dB */ {2525, 0x28, 0x1116, 0x0000, GAIN_SYSPARM},
+	/* 25.5dB */  {2550, 0x29, 0x1073, 0x0000, GAIN_SYSPARM},
+	/* 25.75dB */ {2575, 0x29, 0x10EE, 0x0000, GAIN_SYSPARM},
+	/* 26.0dB */  {2600, 0x2A, 0x1039, 0x0000, GAIN_SYSPARM},
+	/* 26.25dB */ {2625, 0x2A, 0x10B2, 0x0000, GAIN_SYSPARM},
+	/* 26.5dB */  {2650, 0x2A, 0x112F, 0x0000, GAIN_SYSPARM},
+	/* 26.75dB */ {2675, 0x2B, 0x105F, 0x0000, GAIN_SYSPARM},
+	/* 27.0dB */  {2700, 0x2B, 0x10DA, 0x0000, GAIN_SYSPARM},
+	/* 27.25dB */ {2725, 0x2B, 0x1158, 0x0000, GAIN_SYSPARM},
+	/* 27.5dB */  {2750, 0x2C, 0x1069, 0x0000, GAIN_SYSPARM},
+	/* 27.75dB */ {2775, 0x2C, 0x10E4, 0x0000, GAIN_SYSPARM},
+	/* 28.0dB */  {2800, 0x2C, 0x1162, 0x0000, GAIN_SYSPARM},
+	/* 28.25dB */ {2825, 0x2D, 0x1056, 0x0000, GAIN_SYSPARM},
+	/* 28.5dB */  {2850, 0x2D, 0x10D0, 0x0000, GAIN_SYSPARM},
+	/* 28.75dB */ {2875, 0x2D, 0x114E, 0x0000, GAIN_SYSPARM},
+	/* 29.0dB */  {2900, 0x2E, 0x1018, 0x0000, GAIN_SYSPARM},
+	/* 29.25dB */ {2925, 0x2E, 0x1090, 0x0000, GAIN_SYSPARM},
+	/* 29.5dB */  {2950, 0x2E, 0x110C, 0x0000, GAIN_SYSPARM},
+	/* 29.75dB */ {2975, 0x2E, 0x118B, 0x0000, GAIN_SYSPARM},
+	/* 30.0dB */  {3000, 0x2F, 0x1026, 0x0000, GAIN_SYSPARM},
+	/* 30.25dB */ {3025, 0x2F, 0x109F, 0x0000, GAIN_SYSPARM},
+	/* 30.5dB */  {3050, 0x2F, 0x111B, 0x0000, GAIN_SYSPARM},
+	/* 30.75dB */ {3075, 0x2F, 0x119B, 0x0000, GAIN_SYSPARM},
+	/* 31.0dB */  {3100, 0x2F, 0x121E, 0x0000, GAIN_SYSPARM},
+	/* 31.25dB */ {3125, 0x30, 0x1073, 0x0000, GAIN_SYSPARM},
+	/* 31.5dB */  {3150, 0x30, 0x10EE, 0x0000, GAIN_SYSPARM},
+	/* 31.75dB */ {3175, 0x31, 0x103E, 0x0000, GAIN_SYSPARM},
+	/* 32.0dB */  {3200, 0x31, 0x10B7, 0x0000, GAIN_SYSPARM},
+	/* 32.25dB */ {3225, 0x31, 0x1134, 0x0000, GAIN_SYSPARM},
+	/* 32.5dB */  {3250, 0x32, 0x1073, 0x0000, GAIN_SYSPARM},
+	/* 32.75dB */ {3275, 0x32, 0x10EE, 0x0000, GAIN_SYSPARM},
+	/* 33.0dB */  {3300, 0x33, 0x1013, 0x0000, GAIN_SYSPARM},
+	/* 33.25dB */ {3325, 0x33, 0x108B, 0x0000, GAIN_SYSPARM},
+	/* 33.5dB */  {3350, 0x33, 0x1107, 0x0000, GAIN_SYSPARM},
+	/* 33.75dB */ {3375, 0x34, 0x1009, 0x0000, GAIN_SYSPARM},
+	/* 34.0dB */  {3400, 0x34, 0x1081, 0x0000, GAIN_SYSPARM},
+	/* 34.25dB */ {3425, 0x34, 0x10FD, 0x0000, GAIN_SYSPARM},
+	/* 34.5dB */  {3450, 0x34, 0x117C, 0x0000, GAIN_SYSPARM},
+	/* 34.75dB */ {3475, 0x35, 0x105B, 0x0000, GAIN_SYSPARM},
+	/* 35.0dB */  {3500, 0x35, 0x10D5, 0x0000, GAIN_SYSPARM},
+	/* 35.25dB */ {3525, 0x35, 0x1153, 0x0000, GAIN_SYSPARM},
+	/* 35.5dB */  {3550, 0x36, 0x1005, 0x0000, GAIN_SYSPARM},
+	/* 35.75dB */ {3575, 0x36, 0x107C, 0x0000, GAIN_SYSPARM},
+	/* 36.0dB */  {3600, 0x36, 0x10F8, 0x0000, GAIN_SYSPARM},
+	/* 36.25dB */ {3625, 0x36, 0x1177, 0x0000, GAIN_SYSPARM},
+	/* 36.5dB */  {3650, 0x36, 0x11F9, 0x0000, GAIN_SYSPARM},
+	/* 36.75dB */ {3675, 0x37, 0x106E, 0x0000, GAIN_SYSPARM},
+	/* 37.0dB */  {3700, 0x37, 0x10E9, 0x0000, GAIN_SYSPARM},
+	/* 37.25dB */ {3725, 0x37, 0x1167, 0x0000, GAIN_SYSPARM},
+	/* 37.5dB */  {3750, 0x38, 0x1064, 0x0000, GAIN_SYSPARM},
+	/* 37.75dB */ {3775, 0x38, 0x10DF, 0x0000, GAIN_SYSPARM},
+	/* 38.0dB */  {3800, 0x38, 0x115D, 0x0000, GAIN_SYSPARM},
+	/* 38.25dB */ {3825, 0x39, 0x1039, 0x0000, GAIN_SYSPARM},
+	/* 38.5dB */  {3850, 0x39, 0x10B2, 0x0000, GAIN_SYSPARM},
+	/* 38.75dB */ {3875, 0x39, 0x112F, 0x0000, GAIN_SYSPARM},
+	/* 39.0dB */  {3900, 0x39, 0x11B0, 0x0000, GAIN_SYSPARM},
+	/* 39.25dB */ {3925, 0x3A, 0x105B, 0x0000, GAIN_SYSPARM},
+	/* 39.5dB */  {3950, 0x3A, 0x10D5, 0x0000, GAIN_SYSPARM},
+	/* 39.75dB */ {3975, 0x3A, 0x1153, 0x0000, GAIN_SYSPARM},
+	/* 40.0dB */  {4000, 0x3A, 0x11D4, 0x0000, GAIN_SYSPARM},
+	/* 40.25dB */ {4025, 0x3B, 0x1047, 0x0000, GAIN_SYSPARM},
+	/* 40.5dB */  {4050, 0x3B, 0x10C1, 0x0000, GAIN_SYSPARM},
+	/* 40.75dB */ {4075, 0x3B, 0x113E, 0x0000, GAIN_SYSPARM},
+	/* 41.0dB */  {4100, 0x3C, 0x100E, 0x0000, GAIN_SYSPARM},
+	/* 41.25dB */ {4125, 0x3C, 0x1086, 0x0000, GAIN_SYSPARM},
+	/* 41.5dB */  {4150, 0x3C, 0x1102, 0x0000, GAIN_SYSPARM},
+	/* 41.75dB */ {4175, 0x3C, 0x1181, 0x0000, GAIN_SYSPARM},
+	/* 42.0dB */  {4200, 0x3D, 0x101C, 0x0000, GAIN_SYSPARM},
+	/* 42.25dB */ {4225, 0x3D, 0x1095, 0x0000, GAIN_SYSPARM},
+	/* 42.5dB */  {4250, 0x3D, 0x1111, 0x0000, GAIN_SYSPARM},
+	/* 42.75dB */ {4275, 0x3D, 0x1190, 0x0000, GAIN_SYSPARM},
+	/* 43.0dB */  {4300, 0x3D, 0x1214, 0x0000, GAIN_SYSPARM},
+	/* 43.25dB */ {4325, 0x3E, 0x1069, 0x0000, GAIN_SYSPARM},
+	/* 43.5dB */  {4350, 0x3E, 0x10E4, 0x0000, GAIN_SYSPARM},
+	/* 43.75dB */ {4375, 0x3E, 0x1162, 0x0000, GAIN_SYSPARM},
+	/* 44.0dB */  {4400, 0x3E, 0x11E4, 0x0000, GAIN_SYSPARM},
+	/* 44.25dB */ {4425, 0x3F, 0x106E, 0x0000, GAIN_SYSPARM},
+	/* 44.5dB */  {4450, 0x3F, 0x10E9, 0x0000, GAIN_SYSPARM}
+};
+
+
+//Gain Distribution of Digital Mic gain.
+static csl_caph_Mic_Gain_t DMic_GainTable[DMIC_GAIN_LEVEL_NUM]=
+{
+	/* comment */  /*Requested Gain in milliBel,	Mic PGA,  Mic CIC Fine Scale,  Mic CIC Bit Select,	 Dsp UL Gain*/
+	/* 0dB */	   {   0, GAIN_NA, 0x1000, 0x0000, GAIN_SYSPARM},
+	/* 0.25dB */   {  25, GAIN_NA, 0x1078, 0x0000, GAIN_SYSPARM},
+	/* 0.5dB */    {  50, GAIN_NA, 0x10F3, 0x0000, GAIN_SYSPARM},
+	/* 0.75dB */   {  75, GAIN_NA, 0x1171, 0x0000, GAIN_SYSPARM},
+	/* 1.0dB */    { 100, GAIN_NA, 0x11F4, 0x0000, GAIN_SYSPARM},
+	/* 1.25dB */   { 125, GAIN_NA, 0x127A, 0x0000, GAIN_SYSPARM},
+	/* 1.5dB */    { 150, GAIN_NA, 0x1304, 0x0000, GAIN_SYSPARM},
+	/* 1.75dB */   { 175, GAIN_NA, 0x1392, 0x0000, GAIN_SYSPARM},
+	/* 2.0dB */    { 200, GAIN_NA, 0x1425, 0x0000, GAIN_SYSPARM},
+	/* 2.25dB */   { 225, GAIN_NA, 0x14BB, 0x0000, GAIN_SYSPARM},
+	/* 2.5dB */    { 250, GAIN_NA, 0x1556, 0x0000, GAIN_SYSPARM},
+	/* 2.75dB */   { 275, GAIN_NA, 0x15F6, 0x0000, GAIN_SYSPARM},
+	/* 3.0dB */    { 300, GAIN_NA, 0x169A, 0x0000, GAIN_SYSPARM},	
+	/* 3.25dB */   { 325, GAIN_NA, 0x1743, 0x0000, GAIN_SYSPARM},
+	/* 3.5dB */    { 350, GAIN_NA, 0x17F1, 0x0000, GAIN_SYSPARM},
+	/* 3.75dB */   { 375, GAIN_NA, 0x18A4, 0x0000, GAIN_SYSPARM},
+	/* 4.0dB */    { 400, GAIN_NA, 0x195C, 0x0000, GAIN_SYSPARM},
+	/* 4.25dB */   { 425, GAIN_NA, 0x1A19, 0x0000, GAIN_SYSPARM},
+	/* 4.5dB */    { 450, GAIN_NA, 0x1ADC, 0x0000, GAIN_SYSPARM},
+	/* 4.75dB */   { 475, GAIN_NA, 0x1BA5, 0x0000, GAIN_SYSPARM},
+	/* 5.0dB */    { 500, GAIN_NA, 0x1C74, 0x0000, GAIN_SYSPARM},
+	/* 5.25dB */   { 525, GAIN_NA, 0x1D49, 0x0000, GAIN_SYSPARM},
+	/* 5.5dB */    { 550, GAIN_NA, 0x1E23, 0x0000, GAIN_SYSPARM},
+	/* 5.75dB */   { 575, GAIN_NA, 0x1F05, 0x0000, GAIN_SYSPARM},
+	/* 6.0dB */    { 600, GAIN_NA, 0x1FED, 0x0000, GAIN_SYSPARM},
+	/* 6.25dB */   { 625, GAIN_NA, 0x106E, 0x0001, GAIN_SYSPARM},
+	/* 6.5dB */    { 650, GAIN_NA, 0x10E8, 0x0001, GAIN_SYSPARM},
+	/* 6.75dB */   { 675, GAIN_NA, 0x1167, 0x0001, GAIN_SYSPARM},
+	/* 7.0dB */    { 700, GAIN_NA, 0x11E9, 0x0001, GAIN_SYSPARM},
+	/* 7.25dB */   { 725, GAIN_NA, 0x126F, 0x0001, GAIN_SYSPARM},
+	/* 7.5dB */    { 750, GAIN_NA, 0x12F9, 0x0001, GAIN_SYSPARM},
+	/* 7.75dB */   { 775, GAIN_NA, 0x1386, 0x0001, GAIN_SYSPARM},
+	/* 8.0dB */    { 800, GAIN_NA, 0x1418, 0x0001, GAIN_SYSPARM},
+	/* 8.25dB */   { 825, GAIN_NA, 0x14AF, 0x0001, GAIN_SYSPARM},
+	/* 8.5dB */    { 850, GAIN_NA, 0x1549, 0x0001, GAIN_SYSPARM},
+	/* 8.75dB */   { 875, GAIN_NA, 0x15E8, 0x0001, GAIN_SYSPARM},
+	/* 9.0dB */    { 900, GAIN_NA, 0x168C, 0x0001, GAIN_SYSPARM},
+	/* 9.25dB */   { 925, GAIN_NA, 0x1735, 0x0001, GAIN_SYSPARM},
+	/* 9.5dB */    { 950, GAIN_NA, 0x17E2, 0x0001, GAIN_SYSPARM},
+	/* 9.75dB */   { 975, GAIN_NA, 0x1895, 0x0001, GAIN_SYSPARM},
+	/* 10.0dB */   {1000, GAIN_NA, 0x194C, 0x0001, GAIN_SYSPARM},
+	/* 10.25dB */  {1025, GAIN_NA, 0x1A09, 0x0001, GAIN_SYSPARM},
+	/* 10.5dB */   {1050, GAIN_NA, 0x1ACC, 0x0001, GAIN_SYSPARM},
+	/* 10.75dB */  {1075, GAIN_NA, 0x1B94, 0x0001, GAIN_SYSPARM},
+	/* 11.0dB */   {1100, GAIN_NA, 0x1C63, 0x0001, GAIN_SYSPARM},
+	/* 11.25dB */  {1125, GAIN_NA, 0x1D37, 0x0001, GAIN_SYSPARM},
+	/* 11.5dB */   {1150, GAIN_NA, 0x1E11, 0x0001, GAIN_SYSPARM},
+	/* 11.75dB */  {1175, GAIN_NA, 0x1EF2, 0x0001, GAIN_SYSPARM},
+	/* 12.0dB */   {1200, GAIN_NA, 0x1FD9, 0x0001, GAIN_SYSPARM},
+	/* 12.25dB */  {1225, GAIN_NA, 0x1064, 0x0002, GAIN_SYSPARM},
+	/* 12.5dB */   {1250, GAIN_NA, 0x10DE, 0x0002, GAIN_SYSPARM},
+	/* 12.75dB */  {1275, GAIN_NA, 0x115C, 0x0002, GAIN_SYSPARM},
+	/* 13.0dB */   {1300, GAIN_NA, 0x11DE, 0x0002, GAIN_SYSPARM},
+	/* 13.25dB */  {1325, GAIN_NA, 0x1264, 0x0002, GAIN_SYSPARM},
+	/* 13.5dB */   {1350, GAIN_NA, 0x12ED, 0x0002, GAIN_SYSPARM},
+	/* 13.75dB */  {1375, GAIN_NA, 0x137B, 0x0002, GAIN_SYSPARM},
+	/* 14.0dB */   {1400, GAIN_NA, 0x140C, 0x0002, GAIN_SYSPARM},
+	/* 14.25dB */  {1425, GAIN_NA, 0x14A2, 0x0002, GAIN_SYSPARM},
+	/* 14.5dB */   {1450, GAIN_NA, 0x153C, 0x0002, GAIN_SYSPARM},
+	/* 14.75dB */  {1475, GAIN_NA, 0x15DB, 0x0002, GAIN_SYSPARM},
+	/* 15.0dB */   {1500, GAIN_NA, 0x167E, 0x0002, GAIN_SYSPARM},
+	/* 15.25dB */  {1525, GAIN_NA, 0x1727, 0x0002, GAIN_SYSPARM},
+	/* 15.5dB */   {1550, GAIN_NA, 0x17D4, 0x0002, GAIN_SYSPARM},
+	/* 15.75dB */  {1575, GAIN_NA, 0x1886, 0x0002, GAIN_SYSPARM},
+	/* 16.0dB */   {1600, GAIN_NA, 0x193D, 0x0002, GAIN_SYSPARM},
+	/* 16.25dB */  {1625, GAIN_NA, 0x19FA, 0x0002, GAIN_SYSPARM},
+	/* 16.5dB */   {1650, GAIN_NA, 0x1ABC, 0x0002, GAIN_SYSPARM},
+	/* 16.75dB */  {1675, GAIN_NA, 0x1B84, 0x0002, GAIN_SYSPARM},
+	/* 17.0dB */   {1700, GAIN_NA, 0x1C51, 0x0002, GAIN_SYSPARM},
+	/* 17.25dB */  {1725, GAIN_NA, 0x1D25, 0x0002, GAIN_SYSPARM},
+	/* 17.5dB */   {1750, GAIN_NA, 0x1DFF, 0x0002, GAIN_SYSPARM},
+	/* 17.75dB */  {1775, GAIN_NA, 0x1EDF, 0x0002, GAIN_SYSPARM},
+	/* 18.0dB */   {1800, GAIN_NA, 0x1FC6, 0x0002, GAIN_SYSPARM},
+	/* 18.25dB */  {1825, GAIN_NA, 0x105A, 0x0003, GAIN_SYSPARM},
+	/* 18.5dB */   {1850, GAIN_NA, 0x10D4, 0x0003, GAIN_SYSPARM},
+	/* 18.75dB */  {1875, GAIN_NA, 0x1152, 0x0003, GAIN_SYSPARM},
+	/* 19.0dB */   {1900, GAIN_NA, 0x11D3, 0x0003, GAIN_SYSPARM},
+	/* 19.25dB */  {1925, GAIN_NA, 0x1258, 0x0003, GAIN_SYSPARM},
+	/* 19.5dB */   {1950, GAIN_NA, 0x12E2, 0x0003, GAIN_SYSPARM},
+	/* 19.75dB */  {1975, GAIN_NA, 0x136F, 0x0003, GAIN_SYSPARM},
+	/* 20.0dB */   {2000, GAIN_NA, 0x1400, 0x0003, GAIN_SYSPARM},
+	/* 20.25dB */  {2025, GAIN_NA, 0x1496, 0x0003, GAIN_SYSPARM},
+	/* 20.5dB */   {2050, GAIN_NA, 0x152F, 0x0003, GAIN_SYSPARM},
+	/* 20.75dB */  {2075, GAIN_NA, 0x15CE, 0x0003, GAIN_SYSPARM},
+	/* 21.0dB */   {2100, GAIN_NA, 0x1671, 0x0003, GAIN_SYSPARM},
+	/* 21.25dB */  {2125, GAIN_NA, 0x1718, 0x0003, GAIN_SYSPARM},
+	/* 21.5dB */   {2150, GAIN_NA, 0x17C5, 0x0003, GAIN_SYSPARM},
+	/* 21.75dB */  {2175, GAIN_NA, 0x1877, 0x0003, GAIN_SYSPARM},
+	/* 22.0dB */   {2200, GAIN_NA, 0x192E, 0x0003, GAIN_SYSPARM},
+	/* 22.25dB */  {2225, GAIN_NA, 0x19EA, 0x0003, GAIN_SYSPARM},
+	/* 22.5dB */   {2250, GAIN_NA, 0x1AAC, 0x0003, GAIN_SYSPARM},
+	/* 22.75dB */  {2275, GAIN_NA, 0x1B73, 0x0003, GAIN_SYSPARM},
+	/* 23.0dB */   {2300, GAIN_NA, 0x1C40, 0x0003, GAIN_SYSPARM},
+	/* 23.25dB */  {2325, GAIN_NA, 0x1D13, 0x0003, GAIN_SYSPARM},
+	/* 23.5dB */   {2350, GAIN_NA, 0x1DED, 0x0003, GAIN_SYSPARM},
+	/* 23.75dB */  {2375, GAIN_NA, 0x1ECC, 0x0003, GAIN_SYSPARM},
+	/* 24.0dB */   {2400, GAIN_NA, 0x1FB3, 0x0003, GAIN_SYSPARM},
+};
+
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_Mic_Gain_t csl_caph_map_mB_gain_to_registerVal(
+*										  csl_caph_MIC_Path_e mic, UInt16 gain)
+*
+*  Description: Find register values for required mic path gain.
+*
+****************************************************************************/
+csl_caph_Mic_Gain_t csl_caph_map_mB_gain_to_registerVal(csl_caph_MIC_Path_e mic, int gain_mB)
+{
+	csl_caph_Mic_Gain_t outGain;
+	csl_caph_Mic_Gain_t *Mic_GainTable = NULL;
+	UInt8 i = 0;
+	UInt8 maxNum = 0;
+	
+	memset(&outGain, 0, sizeof(csl_caph_Mic_Gain_t));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_gain_GetMicDSPGain::mic=%d, gain_mB=0x%x\n", mic, gain_mB));
+	
+	if (mic == MIC_ANALOG_HEADSET)
+	{
+		maxNum = AMIC_GAIN_LEVEL_NUM;
+		Mic_GainTable=&AMic_GainTable[0];
+	}
+	else
+	if (mic == MIC_DIGITAL)
+	{
+		maxNum = DMIC_GAIN_LEVEL_NUM;
+		Mic_GainTable=&DMic_GainTable[0];
+	}
+
+	if (gain_mB == Mic_GainTable[0].gain_in_mB)
+	{
+		memcpy(&outGain, &Mic_GainTable[0], sizeof(csl_caph_Mic_Gain_t));
+	}
+	else
+	if (gain_mB >= Mic_GainTable[maxNum-1].gain_in_mB)
+	{
+		memcpy(&outGain, &Mic_GainTable[maxNum-1], sizeof(csl_caph_Mic_Gain_t));
+	}
+	else
+	{
+		for (i=1; i<(maxNum-1); i++)
+		{
+			if(gain_mB <= Mic_GainTable[i].gain_in_mB)
+			{
+				memcpy(&outGain, &Mic_GainTable[i], sizeof(csl_caph_Mic_Gain_t));
+				break;
+			}	
+		}
+	}
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+		"map_mB_gain_to_registerVal micPGA=0x%x, micCICFineScale=0x%x, micCICBitSelect=0x%x, micDSPULGain=0x%x\n",
+		outGain.micPGA, outGain.micCICFineScale, outGain.micCICBitSelect, outGain.micDSPULGain));
+	
+	return outGain; 	
+
+}
+
+

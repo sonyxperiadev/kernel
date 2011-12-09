@@ -69,7 +69,6 @@ typedef enum
 	DSPCMD_TYPE_CONFIG_EC_GAIN,
 	DSPCMD_TYPE_CONFIG_EC_PARMS1,
 	DSPCMD_TYPE_CONFIG_EC_PARMS2,
-	DSPCMD_TYPE_CONFIG_EC_STABLE_COEFF_THRESH,
 	DSPCMD_TYPE_CONFIG_EC_MODE,
 	DSPCMD_TYPE_CONFIG_NS_GAIN,
 	DSPCMD_TYPE_HD_ON,
@@ -81,7 +80,6 @@ typedef enum
 	DSPCMD_TYPE_SET_VOCODER_INIT,
 	DSPCMD_TYPE_SET_VOICE_DTX,
 	DSPCMD_TYPE_MAIN_AMR_RUN,
-	DSPCMD_TYPE_CONFIG_NLP_TIMEOUT,
 	DSPCMD_TYPE_CONFIG_NLP_FILTER,
 	DSPCMD_TYPE_CONFIG_COMPRESS_GAIN,
 	DSPCMD_TYPE_CONFIG_EXP_ALPHA,
@@ -461,23 +459,12 @@ void DSPCMD_ECOn(						///< Enable/Disable Echo Cancellor
 
 Boolean DSPCMD_IsEchoOn(	void );		///< Query Echo Canceller Status
 
-void DSPCMD_ConfigECFarInFilter(		///< Configure EC Far In filter Coefficients
-	UInt16	*coefs						///< Pointer to 10 coefficients
-	);
-
 void DSPCMD_ConfigEC(
 	UInt16	aud_mode,
 	Boolean audioTuningMode);		///< Configure EC  settings
 
 /** @} */
-	
-void DSPCMD_ConfigECStableThresholds(
- UInt16 stable_coef_thresh_1,
- UInt16 stable_coef_thresh_2
-); 
-void DSPCMD_ConfigEC_NLP_Timeout(
- UInt16 timeout_val
-);
+
 
 void DSPCMD_ConfigEC_NLP_Filter( 
  UInt16 *coefs

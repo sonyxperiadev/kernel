@@ -27,6 +27,7 @@
 #include <linux/rtc.h>
 #include <trace/stm.h>
 #include "plat/mobcom_types.h"
+#include <linux/vt_kern.h>
 #include "bcmlog.h"
 #include "fifo.h"
 #include "bcmmtt.h"
@@ -440,10 +441,24 @@ static void WriteToLogDev_ACM( void )
 	 */
 	if( !g_devWrParms.file )
 	{
-		g_devWrParms.file = filp_open( "/dev/ttyGS1", O_WRONLY|O_TRUNC|O_CREAT, 0666); 
+		struct tty_struct *tty = NULL;
 
-		if( IS_ERR( g_devWrParms.file ) )
+		g_devWrParms.file = filp_open( "/dev/ttyGS1", O_WRONLY|O_TRUNC|O_CREAT, 0666);
+
+		if( IS_ERR( g_devWrParms.file ) ) {
+			pr_info("can not open /dev/ttyGS1\n");
 			g_devWrParms.file = 0 ;
+			return;
+		}
+
+		tty = ((struct tty_file_private *) g_devWrParms.file->private_data)->tty;
+		tty->termios->c_iflag |= IGNBRK | ISTRIP | IGNPAR;
+		tty->termios->c_oflag = 0;
+		tty->termios->c_lflag = 0;
+		tty->termios->c_cc[VERASE] = 0;
+		tty->termios->c_cc[VKILL]  = 0;
+		tty->termios->c_cc[VMIN]   = 1;
+		tty->termios->c_cc[VTIME]  = 0;
 
 		g_devWrParms.acm_file = g_devWrParms.file;
 	}

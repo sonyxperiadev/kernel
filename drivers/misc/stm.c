@@ -563,7 +563,7 @@ static int __devinit stm_probe(struct platform_device *pdev)
 #endif
 
 	dev_info(&pdev->dev, "STM-Trace driver probed successfully\n");
-	stm_printk("STM-Trace driver initialized\n");
+	pr_info("STM-Trace driver initialized\n");
 	return 0;
 
 err_channels:

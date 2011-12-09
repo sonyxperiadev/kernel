@@ -17,6 +17,22 @@
 #endif
 #include <mach/rdb/brcm_rdb_i2c_mm_hs.h>
 
+/* 
+ * Map the B0 macros to the appropriate A0 macros to get both the variants
+ * working - This has to be done as a part of adding the changes in the B0
+ * specific RDB to the A0 RDB 
+ */
+#if defined(CONFIG_ARCH_RHEA_B0)
+#define I2C_MM_HS_CS_CMD_CMD_GEN_START          I2C_MM_HS_CS_CMD_CMD_START_RESTART
+#define I2C_MM_HS_CS_EN_CMD_RST_BSC             I2C_MM_HS_CS_EN_CMD_RESET_BSC
+#define I2C_MM_HS_TIM_PRESCALE_CMD_NODIV        I2C_MM_HS_TIM_PRESCALE_CMD_DIV1
+#define I2C_MM_HS_CS_CMD_CMD_GEN_STOP           I2C_MM_HS_CS_CMD_CMD_STOP
+#define I2C_MM_HS_CS_CMD_CMD_RD_A_BYTE          I2C_MM_HS_CS_CMD_CMD_READ_BYTE
+#define I2C_MM_HS_PADCTL_PAD_SLEW_RATE_SHIFT    I2C_MM_HS_PADCTL_PULLUP_EN_SHIFT
+#define I2C_MM_HS_PADCTL_PAD_SLEW_RATE_MASK     I2C_MM_HS_PADCTL_PULLUP_EN_MASK
+#endif
+
+
 /*#define BSC_HS*/   /* Athena has HS controller*/
 
 #define BSC_WRITE_REG_FIELD(addr,mask,shift,data) (writel((((data << shift) & (mask)) | ( readl(addr) & ~mask ) ) , addr)) 

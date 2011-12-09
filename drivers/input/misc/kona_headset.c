@@ -362,11 +362,33 @@ static int aci_hw_read(int hst)
 		return -EFAULT;
 	}
 
+	/*
+	 * What is phone_ref_offset?
+	 *
+	 * Because of the resistor in the MIC IN line the actual ground is not 0,
+	 * but a small offset is added to it. We call this as
+	 * phone_ref_offset.
+	 * This needs to be subtracted from the measured voltage to determine
+	 * the correct value. This will vary for different HW based on the
+	 * resistor values used. So by default this variable is 0, if no one
+	 * initializes it. For boards on which this resistor is present this
+	 * value should be passed from the board specific data structure
+	 *
+	 * In the below logic, if mic_level read is less than or equal to 0
+	 * then we don't do anything.
+	 * If the read value is greater than  phone_ref_offset then subtract this offset
+	 * from the value read, otherwise mic_level is zero
+	 */
+	mic_level = chal_aci_block_read(mic_dev->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ADC, CHAL_ACI_BLOCK_ADC_RAW);
+	pr_debug(" ++ aci_hw_read: mic_level before calc %d \r\n", mic_level);
+	mic_level = mic_level <= 0 ? mic_level :
+		((mic_level > mic_dev->headset_pd->phone_ref_offset) ?
+		(mic_level - mic_dev->headset_pd->phone_ref_offset) : 0);
+	pr_debug(" ++ aci_hw_read: mic_level after calc %d \r\n", mic_level);
+
 	switch (hst) {
 	case HEADPHONE:
-		mic_level = chal_aci_block_read(mic_dev->aci_chal_hdl,
-			CHAL_ACI_BLOCK_ADC, CHAL_ACI_BLOCK_ADC_RAW);
-
 		if (( mic_level >= HEADPHONE_DETECT_LEVEL_MIN && 
 		      mic_level <= HEADPHONE_DETECT_LEVEL_MAX)
 		    ||
@@ -375,19 +397,11 @@ static int aci_hw_read(int hst)
 			status = HEADPHONE;		
 		break;
 	case OPEN_CABLE:
-		pr_debug("aci_hw_read: Reading back for Open Cable \r\n");
-		mic_level = chal_aci_block_read(mic_dev->aci_chal_hdl,
-			CHAL_ACI_BLOCK_ADC, CHAL_ACI_BLOCK_ADC_RAW);
-
  		if (mic_level >= OPENCABLE_DETECT_LEVEL_MIN && 
 		    mic_level <= OPENCABLE_DETECT_LEVEL_MAX)
 			status = OPEN_CABLE;
 		break;
 	case HEADSET:
-		pr_debug("aci_hw_read: Reading back for Headset \r\n");
-		mic_level = chal_aci_block_read(mic_dev->aci_chal_hdl,
-			CHAL_ACI_BLOCK_ADC, CHAL_ACI_BLOCK_ADC_RAW);
-
 		if (mic_level >= BASIC_HEADSET_DETECT_LEVEL_MIN && 
 		    mic_level <= BASIC_HEADSET_DETECT_LEVEL_MAX)
 			status = HEADSET;
@@ -405,6 +419,7 @@ static int aci_hw_read(int hst)
 int detect_hs_type(struct mic_t *mic_dev)
 {
 	int i;
+	int type;
 
 	if (mic_dev == NULL) {
 		pr_err("mic_dev is empty \r\n");
@@ -423,15 +438,13 @@ int detect_hs_type(struct mic_t *mic_dev)
 		 * Now, read back to check whether the given accessory is
 		 * present. If yes, then break the loop. If not, continue
 		 */
-		if (aci_hw_read(i) == i) {
-			pr_info("detect hs type identified : %d (1- Headphone, 2 - Open cable, 3 - Headset)\r\n",i);
+		if ( (type=aci_hw_read(i)) == i) {
 			break;
 		} 
 
 	} /* end of loop to check the devices */
 
-	/* TODO: If none of the 3 types are detected, what should we do ???? */
-	return i;
+	return type;
 }
 
 /*------------------------------------------------------------------------------
@@ -440,9 +453,10 @@ int detect_hs_type(struct mic_t *mic_dev)
 		evetns to the input sub-system.
     Return type     : void
 ------------------------------------------------------------------------------*/
-static void button_press_work_func(struct delayed_work *work)
+static void button_press_work_func(struct work_struct *work)
 {
-	struct mic_t *p = container_of(work, struct mic_t, button_press_work);
+	struct mic_t *p = container_of(work, struct mic_t,
+						button_press_work.work);
 
 	/* 
 	 * Just to be sure check whether this is happened when the
@@ -459,9 +473,10 @@ static void button_press_work_func(struct delayed_work *work)
 	}
 }
 
-static void button_release_work_func (struct delayed_work *work)
+static void button_release_work_func (struct work_struct *work)
 {
-	struct mic_t *p = container_of(work, struct mic_t, button_release_work);
+	struct mic_t *p = container_of(work, struct mic_t,
+						button_release_work.work);
 
 	/* 
 	 * Just to be sure check whether this is happened when the
@@ -484,9 +499,10 @@ static void button_release_work_func (struct delayed_work *work)
 		switch dev and enable/disable the HS button interrupt
     Return type     : void
 ------------------------------------------------------------------------------*/
-static void accessory_detect_work_func(struct delayed_work *work)
+static void accessory_detect_work_func(struct work_struct *work)
 {
-	struct mic_t *p = container_of(work, struct mic_t, accessory_detect_work);
+	struct mic_t *p = container_of(work, struct mic_t,
+						accessory_detect_work.work);
 	unsigned headset_state = gpio_get_value(irq_to_gpio(p->hsirq));
 
 	pr_debug("SWITCH WORK GPIO STATE: 0x%x default state 0x%x \r\n", headset_state,  p->headset_pd->hs_default_state); 
@@ -599,6 +615,7 @@ static void accessory_detect_work_func(struct delayed_work *work)
 #endif
 			break;
 		default:
+			pr_err("%s():Unknown accessory type %d \r\n",__func__, p->hs_state);
 			break;
 		}
 
@@ -1016,8 +1033,9 @@ static int hs_remove(struct platform_device *pdev)
 
 	mic = platform_get_drvdata(pdev);
 
-	free_irq(mic->hsirq, NULL);
-	free_irq(mic->hsbirq_press, NULL);
+	free_irq(mic->hsirq, mic);
+	free_irq(mic->hsbirq_press, mic);
+	free_irq(mic->hsbirq_release, mic);
 
 	hs_unreginputdev(mic);
 	hs_unregswitchdev(mic);
@@ -1028,7 +1046,7 @@ static int hs_remove(struct platform_device *pdev)
 
 static int __init hs_probe(struct platform_device *pdev)
 {
-	int ret = 0, val;
+	int ret = 0;
 	struct resource *mem_resource;
 	struct mic_t *mic;
 
@@ -1040,6 +1058,17 @@ static int __init hs_probe(struct platform_device *pdev)
 
 	if (pdev->dev.platform_data)
 		mic->headset_pd = pdev->dev.platform_data;
+	else {
+		/* The driver depends on the platform data (board specific)
+		 * information to know two things
+		 * 1) The GPIO state that determines accessory insertion (HIGH or LOW)
+		 * 2) The resistor value put on the MIC_IN line.
+		 *
+		 * So if the platform data is not present, do not proceed.
+		 */
+		 pr_err("hs_probe: Platform data not present, could not proceed \r\n");
+		 return -EINVAL;
+	}
 
 	/* Initialize the switch dev for headset */
 #ifdef CONFIG_SWITCH
@@ -1126,7 +1155,8 @@ static int __init hs_probe(struct platform_device *pdev)
 			(IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING |
 			 IRQF_NO_SUSPEND), "aci_accessory_detect", mic);
 	if (ret < 0) {
-		pr_err("%s() : Request irq failed for Headset\n", __func__);
+		pr_err("%s(): request_irq() failed for headset %s: %d\n",
+			__func__, "irq", ret);
 		goto err1;
 	}
 
@@ -1135,10 +1165,10 @@ static int __init hs_probe(struct platform_device *pdev)
 	    request_irq(mic->hsbirq_press, comp2_isr, IRQF_NO_SUSPEND,
 			"aci_hs_button_press", mic);
 	if (ret < 0) {
-		pr_err("%s() : Request irq failed for Headset button\n",
-		       __func__);
+		pr_err("%s(): request_irq() failed for headset %s: %d\n",
+			__func__, "button press", ret);
 		/* Free the HS IRQ if the HS Button IRQ request fails */
-		free_irq(mic->hsirq, NULL);
+		free_irq(mic->hsirq, mic);
 		goto err1;
 	}
 
@@ -1147,11 +1177,11 @@ static int __init hs_probe(struct platform_device *pdev)
 	    request_irq(mic->hsbirq_release, comp2_inv_isr, IRQF_NO_SUSPEND,
 			"aci_hs_button_release", mic);
 	if (ret < 0) {
-		pr_err("%s() : Request irq failed for Headset button\n",
-		       __func__);
+		pr_err("%s(): request_irq() failed for headset %s: %d\n",
+			__func__, "button release", ret);
 		/* Free the HS IRQ if the HS Button IRQ request fails */
-		free_irq(mic->hsirq, NULL);
-		free_irq(mic->hsbirq_press, NULL);
+		free_irq(mic->hsirq, mic);
+		free_irq(mic->hsbirq_press, mic);
 		goto err1;
 	}
 

@@ -114,10 +114,6 @@ void VPRIPCMDQ_DSP_AMR_RUN(UInt16 , Boolean , UInt16 );
 
 void VPRIPCMDQ_DigitalSound(UInt16 arg0);
 
-void VPRIPCMDQ_SetARM2SP(UInt16 arg0, UInt16 arg1);
-
-void VPRIPCMDQ_SetARM2SP2(UInt16 arg0, UInt16 arg1);
-
 void VPRIPCMDQ_SetBTNarrowBand(UInt16 arg0);
 
 void VPRIPCMDQ_USBHeadset(UInt16 arg0);
@@ -191,4 +187,5 @@ void VPRIPCMDQ_VoLTE_Start_Stream(void);
 void VPRIPCMDQ_VoLTE_Put_Frame(UInt16 timestamp, UInt8 codecType, UInt8 frameType, UInt8 frameQuality, UInt8 frameIndex, UInt8 bufferIndex);
 
 #endif // VOLTE_SUPPORT
+
 #endif

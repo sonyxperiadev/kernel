@@ -16,22 +16,21 @@
  */
 
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.                                
+Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.
 
-Unless you and Broadcom execute a separate written software license agreement 
-governing use of this software, this software is licensed to you under the 
-terms of the GNU General Public License version 2, available at 
-http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+Unless you and Broadcom execute a separate written software license agreement
+governing use of this software, this software is licensed to you under the
+terms of the GNU General Public License version 2, available at
+http://www.gnu.org/copyleft/gpl.html (the "GPL").
 
-Notwithstanding the above, under no circumstances may you combine this software 
-in any way with any other Broadcom software provided under a license other than 
+Notwithstanding the above, under no circumstances may you combine this software
+in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************************/
 
 
 #ifndef __CAPH_COMMON_H__
 #define __CAPH_COMMON_H__
-
 
 #include <linux/platform_device.h>
 #include <linux/init.h>
@@ -51,8 +50,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 #include <linux/wakelock.h>
-
-#include "bcm_audio_devices.h"
 
 #ifdef	CONFIG_SND_BCM_PREALLOC_MEM_FOR_PCM
 #define	IS_PCM_MEM_PREALLOCATED		1
@@ -85,10 +82,21 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 #define	MIXER_STREAM_FLAGS_FM		0x00000004
 
 #define	CAPH_MIXER_NAME_LENGTH		20	//Max length of a mixer name
-#define	MIC_TOTAL_COUNT_FOR_USER	AUDCTRL_MIC_DIGI3
-#define	CAPH_MAX_CTRL_LINES			((MIC_TOTAL_COUNT_FOR_USER>AUDCTRL_SPK_TOTAL_COUNT)?MIC_TOTAL_COUNT_FOR_USER:AUDCTRL_SPK_TOTAL_COUNT)
+#define	MIC_TOTAL_COUNT_FOR_USER    (AUDIO_SOURCE_DIGI4+1)
+#define	CAPH_MAX_CTRL_LINES         ((MIC_TOTAL_COUNT_FOR_USER>AUDIO_SINK_TOTAL_COUNT)?MIC_TOTAL_COUNT_FOR_USER:AUDIO_SINK_TOTAL_COUNT)
 #define	CAPH_MAX_PCM_STREAMS		8
 #define MAX_USERCTRL_DATA_SIZE		300
+
+//Output volume
+#define	MIN_VOLUME_mB			-5000
+#define	MAX_VOLUME_mB			4200
+//Voice volume
+#define	MIN_VOICE_VOLUME_mB		-3600
+#define	MAX_VOICE_VOLUME_mB		0
+//input gain
+#define	MIN_GAIN_mB				0
+#define	MAX_GAIN_mB				4450
+
 
 
 typedef	struct _TCtrl_Line
@@ -104,14 +112,14 @@ typedef	struct _TPcm_Stream_Ctrls
 {
 	s32	 iFlags;
 	s32	 iTotalCtlLines;
-	s32	 iLineSelect[MAX_PLAYBACK_DEV];	//Multiple selection, For playback sink, one bit represent one sink; for capture source, 
+	s32	 iLineSelect[MAX_PLAYBACK_DEV];	//Multiple selection, For playback sink, one bit represent one sink; for capture source,
 	char strStreamName[CAPH_MIXER_NAME_LENGTH];
 	TCtrl_Line	ctlLine[CAPH_MAX_CTRL_LINES];
 	snd_pcm_uframes_t	 stream_hw_ptr;
 	TIDChanOfDev	dev_prop;
-	void   *pSubStream;	
+	void   *pSubStream;
 	//s32    drvHandle;
-	
+
 }TPcm_Stream_Ctrls, *PTPcm_Stream_Ctrls;
 
 
@@ -128,8 +136,9 @@ typedef struct brcm_alsa_chip
 	s32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	s32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
 	s32	pi32SpeechMixOption[CAPH_MAX_PCM_STREAMS];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
+	s32	pi32LevelVolume[CAPH_MAX_PCM_STREAMS][2]; //volume level of the stream, two channels. If the stream is mono, please channel 0 only.
 	//AT-AUD
-	s32	i32AtAudHandlerParms[7];	
+	s32	i32AtAudHandlerParms[7];
 	s32	pi32BypassVibraParam[3];	//Bypass Vibra: bEnable, strength, direction
     s32   iEnableFM;                  //Enable/disable FM radio receiving
 	s32	iEnableBTTest;				//Enable/disable BT production test
@@ -146,7 +155,7 @@ enum	CTL_STREAM_PANEL_t
 {
 	CTL_STREAM_PANEL_PCMOUT1=1,
 	CTL_STREAM_PANEL_FIRST=CTL_STREAM_PANEL_PCMOUT1,
-	CTL_STREAM_PANEL_PCMOUT2,	
+	CTL_STREAM_PANEL_PCMOUT2,
 	CTL_STREAM_PANEL_VOIPOUT,
 	CTL_STREAM_PANEL_PCMIN,
 	CTL_STREAM_PANEL_SPEECHIN,
@@ -172,7 +181,8 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_BYPASS_VIBRA,
 	CTL_FUNCTION_BT_TEST,
 	CTL_FUNCTION_CFG_SSP,
-	CTL_FUNCTION_CFG_IHF
+	CTL_FUNCTION_CFG_IHF,
+	CTL_FUNCTION_SINK_CHG
 };
 
 enum	AT_AUD_Ctl_t
@@ -217,10 +227,10 @@ typedef struct __userCtrl_data
 	s32 data[MAX_USERCTRL_DATA_SIZE];
 } UserCtrl_data_t;
 
-enum { 
-  VoIP_Ioctl_GetVersion = _IOR ('H', 0x10, int), 
-  VoIP_Ioctl_Start = _IOW ('H', 0x11, voip_start_stop_type_t), 
-  VoIP_Ioctl_Stop = _IOW ('H', 0x12, voip_start_stop_type_t),	 
+enum {
+  VoIP_Ioctl_GetVersion = _IOR ('H', 0x10, int),
+  VoIP_Ioctl_Start = _IOW ('H', 0x11, voip_start_stop_type_t),
+  VoIP_Ioctl_Stop = _IOW ('H', 0x12, voip_start_stop_type_t),
   VoIP_Ioctl_SetSource = _IOW('H', 0x13, int),
   VoIP_Ioctl_SetSink = _IOW('H', 0x14, int),
   VoIP_Ioctl_SetCodecType = _IOW('H', 0x15, int),
@@ -237,7 +247,7 @@ enum {
   DSPCtrl_Ioctl_SPSetVar = _IOW ('H', 0x31, UserCtrl_data_t),
   DSPCtrl_Ioctl_SPQuery = _IOR('H', 0x32, UserCtrl_data_t),
   DSPCtrl_Ioctl_EQCtrl = _IOW('H', 0x33, UserCtrl_data_t)
- }; 
+ };
 
 #define	CAPH_CTL_PRIVATE(dev, line, function) ((dev)<<16|(line)<<8|(function))
 #define	STREAM_OF_CTL(private)		(((private)>>16)&0xFF)

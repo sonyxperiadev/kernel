@@ -2683,7 +2683,7 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 
 		int hs_path;	
 		int hs_gain = 0;
-#if defined(PMU_BCM59055) || defined(CONFIG_BCMPMU_AUDIO) 
+#if defined(CONFIG_BCM59055_AUDIO) || defined(CONFIG_BCMPMU_AUDIO) 
 		hs_path = PMU_AUDIO_HS_BOTH;
 #endif
 

@@ -421,7 +421,9 @@ queue_message(VCHIQ_STATE_T *state, VCHIQ_SERVICE_T *service,
 
    vcos_assert(stride <= VCHIQ_SLOT_SIZE);
 
-   /* On platforms where vcos_mutex_lock cannot fail, the return will never
+   /* coverity[constant_expression_result]
+
+      On platforms where vcos_mutex_lock cannot fail, the return will never
       be taken and the compiler may optimise out that code. Let Coverity
       know this is intentional.
    */

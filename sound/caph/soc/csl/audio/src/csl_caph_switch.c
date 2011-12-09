@@ -87,7 +87,6 @@ static void csl_caph_switch_setDSTStatus(CAPH_SWITCH_CHNL_e chal_chnl,
                                             CAPH_DST_STATUS_e dstStatus);
 static CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_get_cslchnl(CAPH_SWITCH_CHNL_e chal_chnl);
 static CAPH_SWITCH_CHNL_e csl_caph_switch_get_chalchnl(CSL_CAPH_SWITCH_CHNL_e chnl);
-static CAPH_SWITCH_TRIGGER_e csl_caph_switch_get_trigger(CSL_CAPH_SWITCH_TRIGGER_e trigger);
 
 //******************************************************************************
 // local function definitions
@@ -335,205 +334,6 @@ static CAPH_SWITCH_CHNL_e csl_caph_switch_get_chalchnl(CSL_CAPH_SWITCH_CHNL_e ch
 }
 
 /****************************************************************************
-*  Function Name: CAPH_SWITCH_TRIGGER_e csl_caph_switch_get_trigger(
-*                               CSL_CAPH_SWITCH_TRIGGER_e trigger)
-*
-*  Description: get the CHAL SWITCH trigger from CSL SWITCH trigger
-*
-****************************************************************************/
-static CAPH_SWITCH_TRIGGER_e csl_caph_switch_get_trigger(CSL_CAPH_SWITCH_TRIGGER_e trigger)
-{
-    CAPH_SWITCH_TRIGGER_e chal_trig = CAPH_VOID;
-
-    switch (trigger)
-    {
-        case CSL_CAPH_SWITCH_NONE:
-            chal_trig = CAPH_VOID;
-            break;
-
-        case CSL_CAPH_TRIG_EANC_FIFO_THRESMET:
-            chal_trig = CAPH_EANC_FIFO_THRESMET;
-            break;
-
-        case CSL_CAPH_TRIG_ADC_VOICE_FIFOR_THR_MET:
-            chal_trig = CAPH_ADC_VOICE_FIFOR_THR_MET;
-            break;
-
-        case CSL_CAPH_TRIG_ADC_NOISE_FIFOR_THR_MET:
-            chal_trig = CAPH_ADC_NOISE_FIFOR_THR_MET;
-            break;
-
-        case CSL_CAPH_TRIG_VB_THR_MET:
-            chal_trig = CAPH_VB_THR_MET;
-            break;
-
-        case CSL_CAPH_TRIG_HS_THR_MET:
-            chal_trig = CAPH_HS_THR_MET;
-            break;
-
-        case CSL_CAPH_TRIG_IHF_THR_MET:
-            chal_trig = CAPH_IHF_THR_MET;
-            break;
-            
-        case CSL_CAPH_TRIG_EP_THR_MET:
-            chal_trig = CAPH_EP_THR_MET;
-            break;
-
-        case CSL_CAPH_TRIG_SDT_THR_MET:
-            chal_trig = CAPH_SDT_THR_MET;
-            break;
-
-        case CSL_CAPH_TRIG_ADC_VOICE_FIFOL_THR_MET:
-            chal_trig = CAPH_ADC_VOICE_FIFOL_THR_MET;
-            break;
-
-        case CSL_CAPH_TRIG_ADC_NOISE_FIFOL_THR_MET:
-            chal_trig = CAPH_ADC_NOISE_FIFOL_THR_MET;
-            break;
-	    
-        case CSL_CAPH_TRIG_SSP3_RX0:
-            chal_trig = CAPH_SSP3_RX0_TRIGGER;
-            break;
-
-        case CSL_CAPH_TRIG_SSP3_RX1:
-            chal_trig = CAPH_SSP3_RX1_TRIGGER;
-            break;
-        
-        case CSL_CAPH_TRIG_SSP3_RX2:
-            chal_trig = CAPH_SSP3_RX2_TRIGGER;
-            break;
-        
-        case CSL_CAPH_TRIG_SSP3_RX3:
-            chal_trig = CAPH_SSP3_RX3_TRIGGER;
-            break;
-
-        case CSL_CAPH_TRIG_SSP3_TX0:
-            chal_trig = CAPH_SSP3_TX0_TRIGGER;
-            break;
-
-        case CSL_CAPH_TRIG_SSP3_TX1:
-            chal_trig = CAPH_SSP3_TX1_TRIGGER;
-            break;
-        
-        case CSL_CAPH_TRIG_SSP3_TX2:
-            chal_trig = CAPH_SSP3_TX2_TRIGGER;
-            break;
-        
-        case CSL_CAPH_TRIG_SSP3_TX3:
-            chal_trig = CAPH_SSP3_TX3_TRIGGER;
-            break;
-            
-        case CSL_CAPH_TRIG_SSP4_RX0:
-            chal_trig = CAPH_SSP4_RX0_TRIGGER;
-            break;
-
-        case CSL_CAPH_TRIG_SSP4_RX1:
-            chal_trig = CAPH_SSP4_RX1_TRIGGER;
-            break;
-        
-        case CSL_CAPH_TRIG_SSP4_RX2:
-            chal_trig = CAPH_SSP4_RX2_TRIGGER;
-            break;
-        
-        case CSL_CAPH_TRIG_SSP4_RX3:
-            chal_trig = CAPH_SSP4_RX3_TRIGGER;
-            break;
-
-        case CSL_CAPH_TRIG_SSP4_TX0:
-            chal_trig = CAPH_SSP4_TX0_TRIGGER;
-            break;
-
-        case CSL_CAPH_TRIG_SSP4_TX1:
-            chal_trig = CAPH_SSP4_TX1_TRIGGER;
-            break;
-        
-        case CSL_CAPH_TRIG_SSP4_TX2:
-            chal_trig = CAPH_SSP4_TX2_TRIGGER;
-            break;
-        
-        case CSL_CAPH_TRIG_SSP4_TX3:
-            chal_trig = CAPH_SSP4_TX3_TRIGGER;
-            break;
-
-        case CSL_CAPH_TRIG_PASSTHROUGH_CH2_FIFO_THRESMET:
-            chal_trig = CAPH_PASSTHROUGH_CH2_FIFO_THRESMET;
-            break;
-
-        case CSL_CAPH_TRIG_PASSTHROUGH_CH1_FIFO_THRESMET:
-            chal_trig = CAPH_PASSTHROUGH_CH1_FIFO_THRESMET;
-            break;
-
-        case CSL_CAPH_TRIG_TAPSDOWN_CH1_NORM_INT:
-            chal_trig = CAPH_TAPSDOWN_CH1_NORM_INT;
-            break;
-
-        case CSL_CAPH_TRIG_TAPSDOWN_CH2_NORM_INT:
-            chal_trig = CAPH_TAPSDOWN_CH2_NORM_INT;
-            break;
-
-        case CSL_CAPH_TRIG_TAPSDOWN_CH3_NORM_INT:
-            chal_trig = CAPH_TAPSDOWN_CH3_NORM_INT;
-            break;
-
-        case CSL_CAPH_TRIG_TAPSDOWN_CH4_NORM_INT:
-            chal_trig = CAPH_TAPSDOWN_CH4_NORM_INT;
-            break;
-
-        case CSL_CAPH_TRIG_TAPSUP_CH1_NORM_INT:
-            chal_trig = CAPH_TAPSUP_CH1_NORM_INT;
-            break;
-
-        case CSL_CAPH_TRIG_TAPSUP_CH2_NORM_INT:
-            chal_trig = CAPH_TAPSUP_CH2_NORM_INT;
-            break;
-
-        case CSL_CAPH_TRIG_TAPSUP_CH3_NORM_INT:
-            chal_trig = CAPH_TAPSUP_CH3_NORM_INT;
-            break;
-
-        case CSL_CAPH_TRIG_TAPSUP_CH4_NORM_INT:
-            chal_trig = CAPH_TAPSUP_CH4_NORM_INT;
-            break;
-            
-        case CSL_CAPH_TRIG_TAPSUP_CH5_NORM_INT:
-            chal_trig = CAPH_TAPSUP_CH5_NORM_INT;
-            break;
-
-		case CSL_CAPH_TRIG_TAPSDOWN_CH5_NORM_INT:
-			chal_trig = CAPH_TAPSDOWN_CH5_NORM_INT;
-			break;
-
-		case CSL_CAPH_TRIG_MIX1_OUT_THR:
-			chal_trig = CAPH_TRIG_MIX1_OUT_THR;
-			break;
-		case CSL_CAPH_TRIG_MIX2_OUT1_THR:
-			chal_trig = CAPH_TRIG_MIX2_OUT1_THR;
-			break;
-		case CSL_CAPH_TRIG_MIX2_OUT2_THR:
-			chal_trig = CAPH_TRIG_MIX2_OUT2_THR;
-			break;
-		case CSL_CAPH_48KHZ:
-			chal_trig = CAPH_48KHZ;
-			break;
-		case CSL_CAPH_24KHZ:
-			chal_trig = CAPH_24KHZ;
-			break;
-		case CSL_CAPH_16KHZ:
-			chal_trig = CAPH_16KHZ;
-			break;
-		case CSL_CAPH_8KHZ:
-			chal_trig = CAPH_8KHZ;
-			break;
-		case CSL_CAPH_4KHZ:
-			chal_trig = CAPH_4KHZ;
-			break;
-        default:
-            audio_xassert(0, trigger);
-    };
-    return chal_trig;
-}
-
-/****************************************************************************
 *
 *  Function Name: void csl_caph_switch_init(cUInt32 baseAddress)    
 *
@@ -580,8 +380,6 @@ CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_obtain_channel(void)
 {
     CSL_CAPH_SWITCH_CHNL_e chnl = CSL_CAPH_SWITCH_NONE;
     CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
-
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_obtain_channel:: \n"));
 
     chal_chnl = chal_caph_switch_alloc_channel(handle);
     chnl = csl_caph_switch_get_cslchnl(chal_chnl);
@@ -672,7 +470,7 @@ CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t
     }
     chal_caph_switch_set_datafmt(handle, chal_chnl, chal_dataFormat);
     /* Select the trigger */
-    chal_trig = csl_caph_switch_get_trigger(chnl_config.trigger);
+    chal_trig = chnl_config.trigger;
     chal_caph_switch_select_trigger(handle, chal_chnl, chal_trig);
  
 	return status;

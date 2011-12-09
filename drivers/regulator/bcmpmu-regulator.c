@@ -21,6 +21,15 @@
 #include <linux/regulator/machine.h>
 #include <linux/mfd/bcmpmu.h>
 
+/* Register field values for regulator. */
+#define LDO_NORMAL              0   /* FOR LDO and Switchers it is NORMAL ( NM/NM1 for SRs).*/
+#define LDO_STANDBY             1   /* FOR LDO and Swtichers it is STANDBY( LPM for SRs ). */
+#define LDO_OFF                 2   /* OFF.*/
+#define LDO_RESERVED_SR_IDLE    3   /* For LDO it is reserved. For CSR, IOSR, SDSR this is NM2 for SRs */
+#define PM0_SHIFT		0
+#define PM1_SHIFT		2
+#define PM2_SHIFT		4
+#define PM3_SHIFT		6
 
 static int bcmpmuldo_get_voltage(struct regulator_dev *rdev);
 static int bcmpmuldo_set_voltage(struct regulator_dev *rdev,
@@ -85,30 +94,9 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 	unsigned int ldo_or_sr = info->ldo_or_sr;
 	unsigned int val;
 
-	int rc = bcmpmu->read_dev(bcmpmu, info->reg_addr, &val, info->mode_mask);
-
-	if (rc < 0)
-	{
-		printk(KERN_ERR "%s: error reading regulator OPmode register.\n", __func__);
-		return rc;
-	}
-
-	/* In case of LDO always enable in LPM (1) */
-	/* In case of SR always enable in NM (0) */
-	if ( ldo_or_sr == BCMPMU_LDO ) {
-		if ( ( ( val >> info->en_dis_shift ) & ( info->en_dis_mask ) ) < LDO_OFF )
-			return 1;
-		else return ( bcmpmu->write_dev(bcmpmu, info->reg_addr,
-			(( rc & ~info->en_dis_mask  ) | LDO_STANDBY ),
-			info->en_dis_mask));
-	}
-	else {
-		if ( ( ( val >> info->en_dis_shift ) & ( info->en_dis_mask ) ) != LDO_OFF )
-			return 1;
-		else return ( bcmpmu->write_dev(bcmpmu, info->reg_addr,
-			(( rc & ~info->en_dis_mask  ) | LDO_NORMAL ),
-			info->en_dis_mask));
-	}
+	int rc = LDO_NORMAL << PM1_SHIFT | LDO_NORMAL << PM2_SHIFT | LDO_NORMAL << PM3_SHIFT;
+	return ( bcmpmu->write_dev(bcmpmu, info->reg_addr,
+		rc, info->mode_mask));
 }
 
 /* @disable: Configure the regulator as disabled. */
@@ -118,20 +106,9 @@ static int bcmpmureg_disable(struct regulator_dev *rdev)
 	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
 	unsigned int val;
 
-	int rc = bcmpmu->read_dev(bcmpmu, info->reg_addr, &val, info->mode_mask);
-
-	if (rc < 0) {
-		printk(KERN_ERR "%s: error reading regulator OPmode register.\n", __func__);
-		return rc;
-	}
-
-	if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) == LDO_OFF )
-		return 1;
-	else {
-		return ( bcmpmu->write_dev(bcmpmu, info->reg_addr,
-			(( rc & ~info->en_dis_mask  ) | LDO_OFF ),
-			info->en_dis_mask));
-	}
+	int rc = LDO_OFF << PM1_SHIFT | LDO_OFF << PM2_SHIFT | LDO_OFF << PM3_SHIFT;
+	return ( bcmpmu->write_dev(bcmpmu, info->reg_addr,
+		rc, info->mode_mask));
 }
 
 /* @get_status: Return actual (not as-configured) status of regulator, as a
@@ -163,6 +140,8 @@ static int bcmpmureg_get_status(struct regulator_dev *rdev)
 		case LDO_RESERVED_SR_IDLE:
 			if ( ldo_or_sr == BCMPMU_SR )
 				return REGULATOR_STATUS_IDLE;
+			else
+				return -EINVAL;
 		default:
 			return -EINVAL;
 	}
@@ -197,6 +176,8 @@ static unsigned int bcmpmureg_get_mode (struct regulator_dev *rdev)
 		case LDO_RESERVED_SR_IDLE:
 			if ( ldo_or_sr == BCMPMU_SR )
 				return REGULATOR_MODE_IDLE;
+			else
+				return -EINVAL;
 		default:
 			return -EINVAL;
 	}
@@ -209,16 +190,8 @@ static int bcmpmureg_set_mode(struct regulator_dev *rdev, unsigned mode)
 	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
 	unsigned int ldo_or_sr = info->ldo_or_sr;
 	unsigned int val;
-	int rc = bcmpmu->read_dev(bcmpmu,info->reg_addr, &val, info->mode_mask);
-
-	if (rc < 0) {
-		printk(KERN_ERR "%s: error reading regulator OPmode register.\n", __func__);
-		return rc;
-	}
-
-	/* Clear up last 2 bits after read. */
-	rc = ( val >> info->en_dis_shift ) & ( ~info->en_dis_mask ) ;
-
+	int rc = 0;
+	
 	switch ( mode ) {
 		case REGULATOR_MODE_NORMAL:
 			rc = rc | LDO_NORMAL;
@@ -234,7 +207,9 @@ static int bcmpmureg_set_mode(struct regulator_dev *rdev, unsigned mode)
 		default:
 			return -EINVAL;
 	}
-	return ( bcmpmu->write_dev(bcmpmu,info->reg_addr, rc, info->en_dis_mask ) );
+	rc = rc << PM1_SHIFT | rc << PM2_SHIFT | rc << PM3_SHIFT;
+
+	return ( bcmpmu->write_dev(bcmpmu,info->reg_addr, rc, info->mode_mask ) );
 }
 
 /* @list_voltage: Return one of the supported voltages, in microvolts; zero

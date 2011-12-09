@@ -135,6 +135,7 @@ struct dwc_otg_driver_module_params {
 	int32_t otg_cap;
 	int32_t dma_enable;
 	int32_t dma_desc_enable;
+	int32_t dev_out_nak_enable;
 	int32_t dma_burst_size;
 	int32_t speed;
 	int32_t host_support_fs_ls_low_power;
@@ -183,6 +184,7 @@ static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 #endif
 	.dma_enable = 1,
 	.dma_desc_enable = 0,
+	.dev_out_nak_enable = -1,
 	.dma_burst_size = -1,
 	.speed = -1,
 	.host_support_fs_ls_low_power = -1,
@@ -320,6 +322,12 @@ static int set_parameters(dwc_otg_core_if_t * core_if)
 		    dwc_otg_set_param_dma_desc_enable(core_if,
 						      dwc_otg_module_params.
 						      dma_desc_enable);
+	}
+	if (dwc_otg_module_params.dev_out_nak_enable != -1) {
+		retval +=
+		    dwc_otg_set_param_dev_out_nak_enable(core_if,
+							 dwc_otg_module_params.
+							 dev_out_nak_enable);
 	}
 	if (dwc_otg_module_params.opt != -1) {
 		retval +=
@@ -1063,6 +1071,11 @@ module_param_named(dma_desc_enable, dwc_otg_module_params.dma_desc_enable, int,
 		   0444);
 MODULE_PARM_DESC(dma_desc_enable,
 		 "DMA Desc Mode 0=Address DMA 1=DMA Descriptor enabled");
+
+module_param_named(dev_out_nak_enable, dwc_otg_module_params.dev_out_nak_enable, int,
+		   0444);
+MODULE_PARM_DESC(dev_out_nak_enable,
+		 "DMA Desc Bulk OUT NAK 0=Disabled 1=Enabled");
 
 module_param_named(dma_burst_size, dwc_otg_module_params.dma_burst_size, int,
 		   0444);

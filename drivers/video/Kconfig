@@ -69,6 +69,14 @@ menuconfig FB
 	  (e.g. an accelerated X server) and that are not frame buffer
 	  device-aware may cause unexpected results. If unsure, say N.
 
+config FRAMEBUFFER_FPS
+		tristate "Enable framebuffer fps display"
+		default n
+		---help---
+		  Say Y here if you would like to calculate and display frames per second.
+		  If unsure, select n.
+
+
 config FIRMWARE_EDID
        bool "Enable firmware EDID"
        depends on FB

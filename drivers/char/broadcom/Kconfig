@@ -65,12 +65,13 @@ config BCM_MODEM
         help
           Broadcom Modem IPC drivers
 
-config BCM_MODEM_HEADER_SIZE
-        int "Broadcom Modem Header Size"
+config BCM_MODEM_DEFER_CP_START
+        bool "Release CP from reset from main image (deferred)"
         depends on BRCM_CHAR_DRIVERS && NET && BCM_MODEM
-        default 0
+        default n
         help
-          Sets the length of the modem binary header reserved area
+          Causes the main image to release the CP from reset in the case
+          where this is not done already from the loader.
 
 config BCM_IDLE_PROFILER
 	bool "Broadcom Idle Profiler Support"

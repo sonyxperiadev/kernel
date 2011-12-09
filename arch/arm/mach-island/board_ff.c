@@ -33,13 +33,20 @@
 #include <linux/irq.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#include <linux/delay.h>
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#include <linux/bmp18x.h>
+#endif
 #if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 #include <linux/bh1715.h>
 #endif
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/tango_ts.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
-#include <linux/smb380.h>
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
+#include <linux/bma150.h>
+#include <sensors_bma150_i2c_settings.h>
+#endif
 #if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) || \
     defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
 #include <linux/akm8975.h>
@@ -96,6 +103,15 @@
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
 #endif
+
+/*
+ * Since this board template is included by each board_xxx.c. We concatenate
+ * ISLAND_BOARD_ID to help debugging when multiple boards are compiled into
+ * a single image
+ */
+#define concatenate_again(a, b) a ## b
+#define concatenate(a, b) concatenate_again(a, b)
+
 
 #define KONA_SDIO0_PA   SDIO1_BASE_ADDR
 #define KONA_SDIO1_PA   SDIO2_BASE_ADDR
@@ -1153,34 +1169,25 @@ static struct platform_device vchiq_display_device = {
 
 struct platform_device * vchiq_devices[] __initdata = {&vchiq_display_device};
 
-#define BMA150_IRQ_PIN 120
 
-static struct smb380_platform_data bma150_plat_data = {
-	.range = RANGE_2G,
-	.bandwidth = BW_375HZ,
-	.enable_adv_int = 1,
-	.new_data_int = 0 ,
-	.hg_int = 0 ,
-	.lg_int = 0 ,
-	.lg_dur = 150 ,
-	.lg_thres = 20 ,
-	.lg_hyst = 0 ,
-	.hg_dur = 60 ,
-	.hg_thres = 160 ,
-	.hg_hyst = 0 ,
-	.any_motion_dur = 1 ,
-	.any_motion_thres = 20 ,
-	.any_motion_int = 1 ,
-};
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
+#define board_bma150_axis_change concatenate(ISLAND_BOARD_ID, _bma150_axis_change)
+
+#ifdef BMA150_DRIVER_AXIS_SETTINGS
+static struct t_bma150_axis_change board_bma150_axis_change = BMA150_DRIVER_AXIS_SETTINGS;
+#endif
 
 static struct i2c_board_info __initdata bma150_info[] =
 {
 	[0] = {
-		I2C_BOARD_INFO("bma150", 0x38 ),
-		.platform_data = &bma150_plat_data,
-		.irq = gpio_to_irq(BMA150_IRQ_PIN)
-	}
+		I2C_BOARD_INFO(BMA150_DRIVER_NAME, BMA150_DRIVER_SLAVE_NUMBER_0x38),
+#ifdef BMA150_DRIVER_AXIS_SETTINGS
+		.platform_data  = &board_bma150_axis_change,
+#endif
+	},
 };
+#endif
+
 
 #if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) || \
 	defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
@@ -1234,11 +1241,63 @@ static struct i2c_board_info __initdata mpu3050_info[] =
 };
 #endif
 
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#define BMP18X_I2C_ADDRESS 0x77
+#define BMP18X_XCLR_GPIO_PIN 62
+#define BMP18X_I2C_DONT_RESET 1
+#define BMP18X_I2C_DO_RESET 0
+#define BMP18X_I2C_RESET_DELAY_MSECS 10
+
+static int bmp18x_init_hw(void)
+{
+	int rc;
+
+	/* reset the XCLR pin */  
+	rc = gpio_request(BMP18X_XCLR_GPIO_PIN, "bmp18x_reset");
+	if (rc < 0) {
+		printk(KERN_ERR "bmp18x_init_hw:unable to request GPIO pin %d\n", BMP18X_XCLR_GPIO_PIN);
+		return rc;
+	}
+               
+	rc = gpio_direction_output(BMP18X_XCLR_GPIO_PIN, BMP18X_I2C_DONT_RESET);
+	if (rc != 0)
+	{
+		printk(KERN_ERR "bmp18x_init_hw:gpio_direction_output(%d, BMP18X_I2C_DRIVER_RESET) error %d\n",
+				BMP18X_XCLR_GPIO_PIN, rc);
+	}
+
+	gpio_set_value(BMP18X_XCLR_GPIO_PIN, BMP18X_I2C_DO_RESET);
+	mdelay(BMP18X_I2C_RESET_DELAY_MSECS);
+               
+	gpio_set_value(BMP18X_XCLR_GPIO_PIN, BMP18X_I2C_DONT_RESET);
+	mdelay(BMP18X_I2C_RESET_DELAY_MSECS);
+
+	return 0;
+}
+
+
+static struct bmp18x_platform_data bmp18x_plat_data = {
+	.chip_id = 0, 
+	.default_oversampling = 3, 
+	.init_hw = &bmp18x_init_hw,
+	.deinit_hw = NULL,
+}; 
+
+static struct i2c_board_info __initdata bmp18x_info[] = 
+{
+	[0] = {
+		I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
+		.platform_data  = &bmp18x_plat_data,
+	},
+};
+#endif
+
+
 static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
 	.start = 0x9C000000,
 	.size = SZ_64M,
-	.no_allocator = 0,
+	.allocator = DEFAULT_ALLOC,
 	.cached = 0,
 	.buffered = 0,
 };
@@ -1338,13 +1397,6 @@ static struct platform_device board_bcmbt_lpm_device = {
 #error ISLAND_BOARD_ID needs to be defined in board_xxx.c
 #endif
 
-/*
- * Since this board template is included by each board_xxx.c. We concatenate
- * ISLAND_BOARD_ID to help debugging when multiple boards are compiled into
- * a single image
- */
-#define concatenate_again(a, b) a ## b
-#define concatenate(a, b) concatenate_again(a, b)
 
 #define board_hdmidet_data concatenate(ISLAND_BOARD_ID, _hdmidet_data)
 static struct hdmi_hw_cfg board_hdmidet_data =
@@ -1435,9 +1487,11 @@ static void __init board_add_devices(void)
 		ARRAY_SIZE(pmu_info));*/
     board_pmu_init();
 
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
 	i2c_register_board_info(3,
 		bma150_info,
 		ARRAY_SIZE(bma150_info));
+#endif
 
 #if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) \
 			|| defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
@@ -1456,6 +1510,12 @@ static void __init board_add_devices(void)
 	i2c_register_board_info(3,
 		mpu3050_info,
 		ARRAY_SIZE(mpu3050_info));
+#endif
+
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+	i2c_register_board_info(3,
+		bmp18x_info, 
+		ARRAY_SIZE(bmp18x_info));
 #endif
 
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER

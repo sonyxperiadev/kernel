@@ -71,6 +71,11 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(NORFLSH_RDY,   SDIO1_DATA_1, 0, OFF, ON, 0, 0, 2MA),
 	PIN_CFG(NORFLSH_CLK_N, SDIO1_DATA_2, 0, OFF, ON, 0, 0, 2MA),
 
+	/*Required for Bluetooth to work correctly*/
+	PIN_CFG(SSP1_TXD,SSP1_TXD, 0, OFF, OFF, 0, 0,8MA),
+	PIN_CFG(ULPI0_DATA_4, UARTB3_UCTSN, 0, OFF, ON, 0, 0,8MA),
+
+
 };
 
 /* board level init */

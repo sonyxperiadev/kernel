@@ -1,17 +1,27 @@
-/****************************************************************************
-*
-*     Copyright (c) 2007-2008 Broadcom Corporation
-*
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
-*
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
-*
-****************************************************************************/
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2009 - 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "taskmsgs.h"
@@ -32,9 +42,6 @@
 #include "csl_apcmd.h"
 #include "log.h"
 
-static UInt8 audioClientId = 0;
-static Boolean audioRpcInited = FALSE;
-
 //If this struct is changed then please change xdr_Audio_Params_t() also.
 typedef struct
 {
@@ -46,11 +53,15 @@ typedef struct
 	UInt32 param6;
 }Audio_Params_t;
 
-static bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp);
-static bool_t xdr_AudioCompfilter_t(void* xdrs, AudioCompfilter_t *rsp);
-#define _T(a) a
 
 /*************************************  FRAMEWORK CODE *******************************************************************/
+#if defined(CONFIG_BCM_MODEM) // for AP only without MODEM (CP, DSP)
+static UInt8 audioClientId = 0;
+static Boolean audioRpcInited = FALSE;
+static bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp);
+static bool_t xdr_AudioCompfilter_t(void* xdrs, AudioCompfilter_t *rsp);
+
+#define _T(a) a
 static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 	
 	/* Add phonebook message serialize/deserialize routine map */
@@ -64,6 +75,35 @@ static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 	{ (MsgType_t)__dontcare__, "",NULL_xdrproc_t, 0,0 } 
 };
 
+void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
+                            ResultDataBufHandle_t dataBufHandle,
+                            UInt32 userContextData);
+
+static Boolean AudioCopyPayload( MsgType_t msgType, 
+						 void* srcDataBuf, 
+						 UInt32 destBufSize,
+						 void* destDataBuf, 
+						 UInt32* outDestDataSize, 
+						 Result_t *outResult)
+{
+	UInt32 len;
+
+	audio_xassert(srcDataBuf != NULL, 0);
+
+	len = RPC_GetMsgPayloadSize(msgType);
+
+	*outResult = RESULT_OK;
+	*outDestDataSize = len;
+
+	if(destDataBuf && srcDataBuf && len <= destBufSize)
+	{
+		memcpy(destDataBuf, srcDataBuf, len);
+		return TRUE;
+	}
+	return FALSE;
+
+}
+#endif
 
 #if defined(FUSE_COMMS_PROCESSOR) 
 static Result_t SendAudioRspForRequest(RPC_Msg_t* req, MsgType_t msgType, void* payload)
@@ -103,28 +143,7 @@ void HandleCallStatusIndCb(InterTaskMsg_t *taskMsg)
 	}
 }
 #endif
-#if defined(FUSE_APPS_PROCESSOR)
-void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
-                            ResultDataBufHandle_t dataBufHandle,
-                            UInt32 userContextData)
-{   
-	if (MSG_AUDIO_CALL_STATUS_IND == pMsg->msgId )
-	{
-		UInt32* codecID = NULL;
-		codecID = (UInt32*)pMsg->dataBuf;
-		
-		Log_DebugPrintf(LOGID_AUDIO, "HandleAudioEventrespCb : codecid=0x%x \r\n",(*codecID));
 
-		if ((*codecID) != 0) // Make sure codeid is not 0
-			AUDDRV_RequestRateChange((UInt8)(*codecID));
-	}
-
-	if ( dataBufHandle )
-        RPC_SYSFreeResultDataBuffer(dataBufHandle);
-    else
-        Log_DebugPrintf(LOGID_MISC, "HandleAudioEventrespCb : dataBufHandle is NULL \r\n");
-}
-#endif
 
 void HandleAudioEventReqCb(RPC_Msg_t* pMsg, 
 						 ResultDataBufHandle_t dataBufHandle, 
@@ -160,37 +179,14 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 	else
 		audio_xassert(0, pMsg->msgId);
 #endif
-
+#if defined(CONFIG_BCM_MODEM) 
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
-}
-
-static Boolean AudioCopyPayload( MsgType_t msgType, 
-						 void* srcDataBuf, 
-						 UInt32 destBufSize,
-						 void* destDataBuf, 
-						 UInt32* outDestDataSize, 
-						 Result_t *outResult)
-{
-	UInt32 len;
-
-	audio_xassert(srcDataBuf != NULL, 0);
-
-	len = RPC_GetMsgPayloadSize(msgType);
-
-	*outResult = RESULT_OK;
-	*outDestDataSize = len;
-
-	if(destDataBuf && srcDataBuf && len <= destBufSize)
-	{
-		memcpy(destDataBuf, srcDataBuf, len);
-		return TRUE;
-	}
-	return FALSE;
-
+#endif
 }
 
 
-
+/*************************************  AUDIO API CODE *******************************************************************/
+#if defined(CONFIG_BCM_MODEM) 
 void Audio_InitRpc(void)
 {
 	if(!audioRpcInited)
@@ -222,10 +218,9 @@ void Audio_InitRpc(void)
 	}
 }
 
-/*************************************  AUDIO API CODE *******************************************************************/
-
 void CAPI2_audio_control_generic(UInt32 tid, UInt8 clientID, Audio_Params_t* params)
 {
+
 	RPC_Msg_t msg;
 
 	msg.msgId = MSG_AUDIO_CTRL_GENERIC_REQ;
@@ -275,8 +270,10 @@ bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp)
 	1)
 		return TRUE;
 	else
+
 		return FALSE;
 }
+
 bool_t xdr_DlCompfilter_t(void* xdrs, EQDlCompfilter_t *rsp)
 {
 	XDR_LOG(xdrs,"EQDlCompfilter_t")
@@ -326,11 +323,78 @@ bool_t xdr_AudioCompfilter_t(void* xdrs, AudioCompfilter_t *rsp)
 		return FALSE;
 }
 
+#else 
+void Audio_InitRpc(void)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "Audio_InitRpc : dummy for AP only");
+}
+
+void CAPI2_audio_control_generic(UInt32 tid, UInt8 clientID, Audio_Params_t* params)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "CAPI2_audio_control_generic : dummy for AP only");
+}
+
+void CAPI2_audio_control_dsp(UInt32 tid, UInt8 clientID, Audio_Params_t* params)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "CAPI2_audio_control_dsp : dummy for AP only");
+}
+
+void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t* cf)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "CCAPI2_audio_cmf_filter : dummy for AP only");
+}
+
+
+bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp)
+{
+	return TRUE;
+}
+
+bool_t xdr_DlCompfilter_t(void* xdrs, EQDlCompfilter_t *rsp)
+{
+
+	return TRUE;
+}
+
+bool_t xdr_UlCompfilter_t(void* xdrs, EQUlCompfilter_t *rsp)
+{
+	return TRUE;
+}
+
+bool_t xdr_AudioCompfilter_t(void* xdrs, AudioCompfilter_t *rsp)
+{
+
+	return TRUE;
+}
+#endif
+
 #if defined(FUSE_APPS_PROCESSOR) 
+#if defined(CONFIG_BCM_MODEM) 
+void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
+                            ResultDataBufHandle_t dataBufHandle,
+                            UInt32 userContextData)
+{   
+	if (MSG_AUDIO_CALL_STATUS_IND == pMsg->msgId )
+	{
+		UInt32* codecID = NULL;
+		codecID = (UInt32*)pMsg->dataBuf;
+		
+		Log_DebugPrintf(LOGID_AUDIO, "HandleAudioEventrespCb : codecid=0x%x \r\n",(*codecID));
+
+		if ((*codecID) != 0) // Make sure codeid is not 0
+			AUDDRV_RequestRateChange((UInt8)(*codecID));
+	}
+
+	if ( dataBufHandle )
+        RPC_SYSFreeResultDataBuffer(dataBufHandle);
+    else
+        Log_DebugPrintf(LOGID_MISC, "HandleAudioEventrespCb : dataBufHandle is NULL \r\n");
+}
 
 UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4,UInt32 param5,UInt32 param6)
 {
 	UInt32 val = (UInt32)0;
+
 	Audio_Params_t audioParam;
 	UInt32 tid;
 	MsgType_t msgType;
@@ -346,6 +410,7 @@ UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 pa
 	tid = RPC_SyncCreateTID( &val, sizeof( UInt32 ) );
 	CAPI2_audio_control_generic(tid, audioClientId,&audioParam);
 	RPC_SyncWaitForResponse( tid,audioClientId, &ackResult, &msgType, NULL );
+
 	return val;
 
 }
@@ -388,12 +453,11 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 				
 			break;
 			
-#if 1	// AMCR PCM enable bit is controlled by ARM audio		
+	// AMCR PCM enable bit is controlled by ARM audio		
 		case DSPCMD_TYPE_AUDIO_SET_PCM:
 			VPRIPCMDQ_DigitalSound((UInt16)param2);
 
-			break;			
-#endif							
+			break;								
 			
 		case DSPCMD_TYPE_COMMAND_VOIF_CONTROL:
 			VPRIPCMDQ_VOIFControl((UInt16)param2);
@@ -431,6 +495,7 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 UInt32 audio_cmf_filter(AudioCompfilter_t* cf)
 {
 	UInt32 val = (UInt32)0;
+
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
@@ -439,8 +504,50 @@ UInt32 audio_cmf_filter(AudioCompfilter_t* cf)
 	tid = RPC_SyncCreateTID( &val, sizeof( UInt32 ) );
 	CAPI2_audio_cmf_filter(tid, audioClientId,cf);
 	RPC_SyncWaitForResponse( tid,audioClientId, &ackResult, &msgType, NULL );
+
 	return val;
 }
 
+
+
+#else //CONFIG_BCM_MODEM
+void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
+                            ResultDataBufHandle_t dataBufHandle,
+                            UInt32 userContextData)
+{   
+
+	Log_DebugPrintf(LOGID_AUDIO, "HandleAudioEventrespCb : dummy for AP only");
+}
+
+UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4,UInt32 param5,UInt32 param6)
+{
+	UInt32 val = (UInt32)0;
+
+	Log_DebugPrintf(LOGID_AUDIO, "audio_control_generic : dummy for AP only");
+
+	return val;
+
+}
+
+UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4,UInt32 param5,UInt32 param6)
+{
+	UInt32 val = (UInt32)0;
+
+	Log_DebugPrintf(LOGID_AUDIO, "audio_control_dsp : dummy for AP only");
+	
+	return val;
+}
+
+UInt32 audio_cmf_filter(AudioCompfilter_t* cf)
+{
+	UInt32 val = (UInt32)0;
+
+	Log_DebugPrintf(LOGID_AUDIO, "audio_cmf_filter : dummy for AP only");
+
+	return val;
+}
 #endif
+#endif //#if defined(FUSE_APPS_PROCESSOR) 
+
+
 

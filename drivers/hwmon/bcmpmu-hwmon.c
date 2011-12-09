@@ -60,14 +60,22 @@ static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_store);
 static struct bcmpmu_adc_cal adc_cal[PMU_ADC_MAX] = {
 	[PMU_ADC_VMBATT] =	{.gain = 1024, .offset = 0},
 	[PMU_ADC_VBBATT] =	{.gain = 1024, .offset = 0},
+	[PMU_ADC_VWALL] =	{.gain = 1024, .offset = 0},
 	[PMU_ADC_VBUS] =	{.gain = 1024, .offset = 0},
 	[PMU_ADC_ID] =		{.gain = 1024, .offset = 0},
 	[PMU_ADC_NTC] =		{.gain = 1024, .offset = 0},
 	[PMU_ADC_BSI] =		{.gain = 1024, .offset = 0},
 	[PMU_ADC_32KTEMP] =	{.gain = 1024, .offset = 0},
+	[PMU_ADC_PATEMP] =	{.gain = 1024, .offset = 0},
+	[PMU_ADC_ALS] =		{.gain = 1024, .offset = 0},
 	[PMU_ADC_RTM] =		{.gain = 1024, .offset = 0},
 	[PMU_ADC_FG_CURRSMPL] =	{.gain = 1024, .offset = 0},
+	[PMU_ADC_FG_RAW] =	{.gain = 1024, .offset = 0},
 	[PMU_ADC_FG_VMBATT] =	{.gain = 1024, .offset = 0},
+	[PMU_ADC_BSI_CAL_LO] =	{.gain = 1024, .offset = 0},
+	[PMU_ADC_BSI_CAL_HI] =	{.gain = 1024, .offset = 0},
+	[PMU_ADC_NTC_CAL_LO] =	{.gain = 1024, .offset = 0},
+	[PMU_ADC_NTC_CAL_HI] =	{.gain = 1024, .offset = 0},
 };
 
 struct bcmpmu_adc {
@@ -135,13 +143,19 @@ static int read_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 	req->raw = 0;
 	
 	if (req->sig >= PMU_ADC_MAX) return -EINVAL;
-	if (req->tm == PMU_ADC_TM_HK)
+	switch (req->tm) {
+	case PMU_ADC_TM_HK:
 		adcmap = padc->adcmap[req->sig];
-	else if ((req->tm == PMU_ADC_TM_RTM_TX) ||
-		(req->tm == PMU_ADC_TM_RTM_RX))
+		break;
+	case PMU_ADC_TM_RTM_TX:
+	case PMU_ADC_TM_RTM_RX:
+	case PMU_ADC_TM_RTM_SW:
 		adcmap = padc->adcmap[PMU_ADC_RTM];
-	else
+		break;
+	case PMU_ADC_TM_MAX:
+	default:
 		return  -EINVAL;
+	}
 		
 	if ((adcmap.addr0 == 0) && (adcmap.addr1 == 0)) {
 		pr_hwmon(ERROR, "%s: sig map failed\n",__func__);
@@ -311,10 +325,13 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu,
 	struct bcmpmu_adc *padc = bcmpmu->adcinfo;
 	int ret = -EINVAL;
 
-	if (req->tm == PMU_ADC_TM_HK)
+	switch (req->tm) {
+	case PMU_ADC_TM_HK:
 		ret =  update_adc_result(padc, req);
-	else if ((req->tm == PMU_ADC_TM_RTM_TX) ||
-		(req->tm == PMU_ADC_TM_RTM_RX)) {
+		break;
+	case PMU_ADC_TM_RTM_TX:
+	case PMU_ADC_TM_RTM_RX:
+	case PMU_ADC_TM_RTM_SW:
 		mutex_lock(&padc->lock);
 		list_add_tail(&req->list, &padc->list);
 		if ((!list_empty(&padc->list)) &&
@@ -350,11 +367,13 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu,
 				padc->ctrlmap[PMU_ADC_RTM_MASK].map,
 				padc->ctrlmap[PMU_ADC_RTM_MASK].addr, 0,
 				padc->ctrlmap[PMU_ADC_RTM_MASK].mask);
-			padc->bcmpmu->write_dev_drct(padc->bcmpmu,
-				padc->ctrlmap[PMU_ADC_RTM_MASK].map,
-				padc->ctrlmap[PMU_ADC_RTM_START].addr,
-				padc->ctrlmap[PMU_ADC_RTM_START].mask,
-				padc->ctrlmap[PMU_ADC_RTM_START].mask);
+			if (req->tm == PMU_ADC_TM_RTM_SW) {
+				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
+					padc->ctrlmap[PMU_ADC_RTM_MASK].map,
+					padc->ctrlmap[PMU_ADC_RTM_START].addr,
+					padc->ctrlmap[PMU_ADC_RTM_START].mask,
+					padc->ctrlmap[PMU_ADC_RTM_START].mask);
+			}
 			pr_hwmon(FLOW, "%s: start rtm adc\n", __func__);
 		}
 		mutex_unlock(&padc->lock);

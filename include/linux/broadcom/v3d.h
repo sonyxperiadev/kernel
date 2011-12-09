@@ -16,9 +16,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #define V3D_DEV_NAME	"v3d"
 #define BCM_V3D_MAGIC	'V'
-#ifdef __KERNEL__
-#define V3D_MEMPOOL_SIZE	SZ_32M
-#endif
 
 #define SUPPORT_V3D_WORKLIST
 
@@ -30,6 +27,8 @@ typedef struct {
 } mem_t;
 
 #ifdef SUPPORT_V3D_WORKLIST
+
+#define MAX_USER_JOBS 4 // Based on number of QPUs
 typedef struct {
 	uint32_t v3d_irq_flags;
 	uint32_t qpu_irq_flags;
@@ -39,6 +38,7 @@ typedef struct {
 #define V3D_JOB_INVALID     0
 #define V3D_JOB_BIN         1
 #define V3D_JOB_REND        2
+#define V3D_JOB_USER        4
 #define V3D_JOB_BIN_REND    (V3D_JOB_BIN | V3D_JOB_REND)
 
 typedef enum {
@@ -61,6 +61,10 @@ typedef struct {
 	uint32_t v3d_ct1ca;
 	uint32_t v3d_ct1ea;
 	uint32_t v3d_vpm_size;
+	uint32_t user_cnt;
+	uint32_t v3d_srqpc[MAX_USER_JOBS];
+	uint32_t v3d_srqua[MAX_USER_JOBS];
+	uint32_t v3d_srqul[MAX_USER_JOBS];
 } v3d_job_post_t;
 
 typedef struct {

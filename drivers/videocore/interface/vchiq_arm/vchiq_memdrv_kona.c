@@ -19,9 +19,14 @@
 #include <linux/platform_device.h>
 #include <vchiq_platform_data_memdrv_kona.h>
 
+#ifdef USE_VCEB
+#if defined( CONFIG_ARCH_BCMHANA )
+#include <csp/chal_ipc.h>
+#endif
+#endif 
+
 #include "vchiq_core.h"
 #include "vchiq_memdrv.h"
-
 #if defined( CONFIG_VC_VCEB ) || defined( CONFIG_VC_VCEB_MODULE )
 void vceb_add_firmware_downloaded_callback( void (*callback)(void) );
 #endif
@@ -73,6 +78,11 @@ static int __devinit vchiq_memdrv_kona_interface_probe( struct platform_device *
 
         return -ENOMEM;
     }
+#ifdef USE_VCEB
+    vceb_add_firmware_downloaded_callback( firmware_downloaded_callback );
+#else
+    firmware_downloaded_callback();
+#endif
 
 #if defined( CONFIG_VC_VCEB ) || defined( CONFIG_VC_VCEB_MODULE )
     /*

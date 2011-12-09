@@ -663,8 +663,6 @@ cVoid chal_caph_dma_set_ddrfifo_status(CHAL_HANDLE handle,
     cUInt8      index;
     cUInt32     cr = 0;
 
-#if defined (_RHEA_) 
-
     /* Find the channel we are looking for */
     for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
     {
@@ -686,30 +684,6 @@ cVoid chal_caph_dma_set_ddrfifo_status(CHAL_HANDLE handle,
         }
     }
 
-#elif defined (_SAMOA_) || (defined (_RHEA_) && (CHIP_REVISION == 20))
-
-    /* Find the channel we are looking for */
-    for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
-    {
-        if((1UL << index)&channel)
-        {
-            /* found the channel we are looking for, Set the DDR fifo status */
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
-            if(status == CAPH_READY_NONE)
-            {
-                cr &= (~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_MASK);
-                cr &= (~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_HIGH_MASK);
-            }
-            else
-            {
-                cr |= (status << CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT);
-            }
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
-            break;
-        }
-    }
-#endif
-
     return;
 }
 
@@ -730,8 +704,6 @@ cVoid chal_caph_dma_clr_ddrfifo_status(CHAL_HANDLE handle,
     cUInt8      index;
     cUInt32     sr = 0;
 
-#if defined (_RHEA_)
-
     /* Find the channel we are looking for */
     for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
     {
@@ -745,25 +717,6 @@ cVoid chal_caph_dma_clr_ddrfifo_status(CHAL_HANDLE handle,
         }
 
     }
-
-#elif defined (_SAMOA_)
-
-    /* Find the channel we are looking for */
-    for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
-    {
-        if((1UL << index)&channel)
-        {
-            /* found the channel we are looking for, Get the channel status */
-            sr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
-            /* write 0 to clear the bits that had been set */
-            sr &= ~((status & CAPH_READY_HIGHLOW)<<CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_SHIFT);
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), sr);
-            break;
-        }
-
-    }
-
-#endif
 
     return;
 }
@@ -782,8 +735,6 @@ cVoid chal_caph_dma_clr_channel_fifo(CHAL_HANDLE handle,
     cUInt32     base = ((chal_caph_dma_cb_t*)handle)->base;
     cUInt8      index;
     cUInt32     cr;
-
-#if defined (_RHEA_) 
 
     /* Find the FIFOs we are looking for */
     for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
@@ -812,38 +763,6 @@ cVoid chal_caph_dma_clr_channel_fifo(CHAL_HANDLE handle,
 
     }
 
-#elif defined (_SAMOA_) || (defined (_RHEA_) && (CHIP_REVISION == 20))
-
-    /* Find the FIFOs we are looking for */
-    for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
-    {
-        if((1UL << index)&channel)
-        {
-            /* found the Channel we are looking for, Disable the FIFO */
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
-
-            /* Send Reset Pulse to the Hardware. First make sure it is 0, set to 1, then clear to 0 */
-            /* Clear Reset */
-            cr &= ~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
-
-            /* Start Reset  process on Hardware*/
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
-            cr |= CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
-
-
-            /* Clear Reset */
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
-            cr &= ~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
-        }
-
-    }
-
-
-#endif
-
     return;
 }
 
@@ -862,8 +781,6 @@ CAPH_DMA_CHNL_FIFO_STATUS_e chal_caph_dma_read_ddrfifo_sw_status(CHAL_HANDLE han
     cUInt8      index;
     cUInt32     cr = (cUInt32)CAPH_READY_NONE;
 
-#if defined (_RHEA_) 
-
     /* Find the channel we are looking for */
     for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
     {
@@ -878,25 +795,6 @@ CAPH_DMA_CHNL_FIFO_STATUS_e chal_caph_dma_read_ddrfifo_sw_status(CHAL_HANDLE han
             break;
         }
     }
-
-#elif defined (_SAMOA_) || (defined (_RHEA_) && (CHIP_REVISION == 20))
-
-    /* Find the channel we are looking for */
-    for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
-    {
-        if((1UL << index)&channel)
-        {
-            /* found the channel we are looking for, Get the channel status */
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
-
-            /* Retrieve the DDR FIFO staus information from status */
-            cr &= (CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_HIGH_MASK|CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_MASK);
-            cr >>= CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT;
-            break;
-        }
-    }
-
-#endif
 
     return (CAPH_DMA_CHNL_FIFO_STATUS_e)cr;
 }

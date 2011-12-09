@@ -52,10 +52,9 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
-#include "bcm_audio_devices.h"
 
 #include "auddrv_audlog.h"
-
+#include "audio_caph.h"
 #include "caph_common.h"
 #include "bcm_audio.h"
 
@@ -120,8 +119,9 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	sgpCaph_chip->card = card;
 	
 	card->dev = &pdev->dev;
-	strncpy(card->driver, pdev->dev.driver->name, sizeof(card->driver));
-
+	strncpy(card->driver, pdev->dev.driver->name, sizeof(card->driver)-1);
+	//add Null terminating character
+	card->driver[sizeof(card->driver)-1]='\0';
 	//PCM interface	
 	err = PcmDeviceNew(card);
 	if (err)

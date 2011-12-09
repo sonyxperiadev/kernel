@@ -124,6 +124,13 @@ config ISLAND_DORMANT_MODE
        bool "Enable dormant mode support for Island platform"
        help
 	Say Y if you want to enable dormant mode support for Island platform
+
+config ISLAND_PM_TEST
+   bool "Test PM Command for Islandray"
+   depends on MACH_ISLAND_BU
+   help
+      Say Y if you want to enable pm test command.
+
 endmenu
 
 source "arch/arm/mach-island/custom_boards/Kconfig"

@@ -498,6 +498,7 @@ static void eth_work(struct work_struct *work)
 	}
 #ifdef CONFIG_BRCM_NETCONSOLE
 	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_ON, &dev->todo)) {
+				cleanup_netpoll_lock();
 				brcm_current_netcon_status(USB_RNDIS_ON);
 	}
 	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_OFF, &dev->todo)) {
@@ -1076,7 +1077,6 @@ void gether_disconnect(struct gether *link)
 	pr_info("%s\n", __func__);
 
 #ifdef CONFIG_BRCM_NETCONSOLE
-	cleanup_netpoll_lock();
 	defer_kevent(dev, WORK_BRCM_NETCONSOLE_OFF);
 #endif
 

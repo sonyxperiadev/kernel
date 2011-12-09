@@ -54,9 +54,6 @@
 #include <mach/rdb/brcm_rdb_bintc.h>
 #include <mach/irqs.h>
 
-#ifndef CONFIG_BCM_MODEM_HEADER_SIZE
-#define CONFIG_BCM_MODEM_HEADER_SIZE 0
-#endif
 // definitions for Rhea/BI BModem IRQ's
 // extracted from chip_irq.h for Rhea
 #define NUM_KONAIRQs          224
@@ -269,6 +266,7 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 			break;
 #endif // 0
 		case BCMLOG_OUTDEV_RNDIS:
+		case BCMLOG_OUTDEV_ACM:
 			//Using RNDIS causes work queue event/0 lock up so it needs its own thread
 			g_ipc_info.crash_dump_workqueue = create_singlethread_workqueue("dump-wq");
 			if (!g_ipc_info.crash_dump_workqueue)
@@ -440,7 +438,6 @@ static int __init ipcs_init(void *smbase, unsigned int size)
 }
 
 
-#if (CONFIG_BCM_MODEM_HEADER_SIZE > 0)
 static int CP_Boot(void)
 {
     int started = 0;
@@ -451,6 +448,7 @@ static int CP_Boot(void)
 
     #define BMODEM_SYSCFG_R4_CFG0  0x3a004000
     #define CP_SYSCFG_BASE_SIZE    0x8
+    #define CP_ITCM_BASE_SIZE      0x1000 // 1 4k page
 
     cp_bmodem_r4cfg = ioremap(BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
     if (!cp_bmodem_r4cfg) {
@@ -466,7 +464,7 @@ static int CP_Boot(void)
     /* check if the CP is already booted, and if not, then boot it */
     if ((0x5 != (r4init & 0x5)))
     {
-	IPC_DEBUG(KERN_TRACE, "boot (R4 COMMS) - init code 0x%x ...\n", r4init);
+	IPC_DEBUG(DBG_TRACE, "boot (R4 COMMS) - init code 0x%x ...\n", r4init);
 
         /* Set the CP jump to address.  CP must jump to DTCM offset 0x400 */
         cp_boot_itcm = ioremap(MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
@@ -477,7 +475,7 @@ static int CP_Boot(void)
 		IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_itcm failed\n");
             return 0;
         }
-        jump_instruction |= (0x00FFFFFFUL & (((0x10000 + CONFIG_BCM_MODEM_HEADER_SIZE) / 4) - 2));
+        jump_instruction |= (0x00FFFFFFUL & (((0x10000 + RESERVED_HEADER) / 4) - 2));
         *(unsigned int *)(cp_boot_itcm) = jump_instruction;
 
         iounmap(cp_boot_itcm);
@@ -485,7 +483,7 @@ static int CP_Boot(void)
         /* boot CP */
         *(unsigned int *)(cp_bmodem_r4cfg) = 0x5;
 	} else {
-	IPC_DEBUG(KERN_TRACE,
+	IPC_DEBUG(DBG_TRACE,
 		"(R4 COMMS) already started - init code 0x%x ...\n", r4init);
     }
 
@@ -493,7 +491,6 @@ static int CP_Boot(void)
 
     return started;
 }
-#endif
 
 
 void Comms_Start(void)
@@ -501,7 +498,7 @@ void Comms_Start(void)
     void __iomem *apcp_shmem;
     void __iomem *cp_boot_base;
 
-#if (CONFIG_BCM_MODEM_HEADER_SIZE > 0)
+#ifdef CONFIG_BCM_MODEM_DEFER_CP_START
     CP_Boot();
 #endif
 
@@ -516,13 +513,13 @@ void Comms_Start(void)
     memset(apcp_shmem, 0, IPC_SIZE);
     iounmap(apcp_shmem);
 
-    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS+CONFIG_BCM_MODEM_HEADER_SIZE, 
+    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS,
 	INIT_ADDRESS_OFFSET+RESERVED_HEADER);
 
     if (!cp_boot_base) {
 	IPC_DEBUG(DBG_ERROR,
-		"DTCM Addr=0x%x, Header Size=0x%x, length=0x%x",
-		MODEM_DTCM_ADDRESS, CONFIG_BCM_MODEM_HEADER_SIZE,
+		"DTCM Addr=0x%x, length=0x%x",
+		MODEM_DTCM_ADDRESS,
 		INIT_ADDRESS_OFFSET+RESERVED_HEADER);
 	IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_base error\n");
         return;

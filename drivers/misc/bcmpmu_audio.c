@@ -63,6 +63,7 @@ EXPORT_SYMBOL(bcmpmu_hs_power);
 
 void bcmpmu_ihf_power(bool on)
 {
+	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	struct bcmpmu_rw_data reg;
 
 	if(on) {
@@ -72,27 +73,41 @@ void bcmpmu_ihf_power(bool on)
 		}
 		bcmpmu_audio->IHF_On = true;
 
-		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,&reg.val,PMU_BITMASK_ALL);
-		reg.val &= ~BCMPMU_IHFTOP_IDDQ;  /*IHFTOP*/
-		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,reg.val,PMU_BITMASK_ALL);
+		/*Set i_IHF_IDDQ =0,*/
+		bcmpmu->write_dev(bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,
+			0,bcmpmu->regmap[PMU_REG_IHFTOP_IHF_IDDQ].mask);
 
-		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,&reg.val,PMU_BITMASK_ALL);
-		reg.val |= BCMPMU_IHFLDO_PUP;  /*IHFLDO*/
-		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,reg.val,PMU_BITMASK_ALL);
+		/*toggle i_IHFLDO_pup from 0 to 1.*/
+		bcmpmu->write_dev(bcmpmu,PMU_REG_IHFLDO_PUP,
+			0,bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
+		
+		bcmpmu->write_dev(bcmpmu,PMU_REG_IHFLDO_PUP,
+			bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask,
+			bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
 	} else {
 		if(!bcmpmu_audio->IHF_On) {
 			printk(KERN_INFO "%s: IHF is already off.\n", __func__);
 			return;
 		}
 		bcmpmu_audio->IHF_On = false;
+		
+		/*Toggle i_IHFpop_pup from 1 to 0.*/
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,&reg.val,PMU_BITMASK_ALL);
+		reg.val |= BCMPMU_IHFPOP_PUP;  /*IHFPOP*/
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,reg.val,PMU_BITMASK_ALL);
 
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,&reg.val,PMU_BITMASK_ALL);
 		reg.val &= ~BCMPMU_IHFPOP_PUP;  /*IHFPOP*/
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,reg.val,PMU_BITMASK_ALL);
-
-		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,&reg.val,PMU_BITMASK_ALL);
-		reg.val |= BCMPMU_IHFTOP_IDDQ;  /*IHFTOP*/
-		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,reg.val,PMU_BITMASK_ALL);
+		
+		/*Set i_IHFLDO_pup=0.*/
+		bcmpmu->write_dev(bcmpmu,PMU_REG_IHFLDO_PUP,
+			0,bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
+		
+		/*Set i_IHF_IDDQ =1.*/
+		bcmpmu->write_dev(bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,
+			bcmpmu->regmap[PMU_REG_IHFTOP_IHF_IDDQ].mask,
+			bcmpmu->regmap[PMU_REG_IHFTOP_IHF_IDDQ].mask);
 
 	}
 }

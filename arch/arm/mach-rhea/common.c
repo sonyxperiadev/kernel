@@ -31,6 +31,7 @@
 #include <linux/serial_8250.h>
 #include <linux/irq.h>
 #include <linux/dma-contiguous.h>
+#include <linux/dma-mapping.h>
 #include <linux/android_pmem.h>
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
@@ -49,11 +50,9 @@
 #include <plat/spi_kona.h>
 #include <plat/chal/chal_trace.h>
 #include <trace/stm.h>
-#include <linux/usb/android_composite.h>
-
 #ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
-#include "volt_tbl.h"
+#include "pm_params.h"
 #endif
 
 #if defined (CONFIG_KONA_CPU_FREQ_DRV)
@@ -61,7 +60,6 @@
 #include <linux/cpufreq.h>
 #include <mach/pi_mgr.h>
 #endif
-
 
 #ifdef CONFIG_UNICAM
 #include <plat/kona_unicam.h>
@@ -82,34 +80,6 @@
 #define KONA_UART0_PA	UARTB_BASE_ADDR
 #define KONA_UART1_PA	UARTB2_BASE_ADDR
 #define KONA_UART2_PA	UARTB3_BASE_ADDR
-
-
-
-#define PID_PLATFORM				0xE600
-#define FD_MASS_PRODUCT_ID			0x0001
-#define FD_SICD_PRODUCT_ID			0x0002
-#define FD_VIDEO_PRODUCT_ID			0x0004
-#define FD_DFU_PRODUCT_ID			0x0008
-#define FD_MTP_ID					0x000C
-#define FD_CDC_ACM_PRODUCT_ID		0x0020
-#define FD_CDC_RNDIS_PRODUCT_ID		0x0040
-#define FD_CDC_OBEX_PRODUCT_ID		0x0080
-
-
-#define	BRCM_VENDOR_ID				0x0a5c
-#define	BIG_ISLAND_PRODUCT_ID		0x2816
-
-/* FIXME borrow Google Nexus One ID to use windows driver */
-#define	GOOGLE_VENDOR_ID			0x18d1
-#define	NEXUS_ONE_PROD_ID			0x0d02
-
-#define	VENDOR_ID					GOOGLE_VENDOR_ID
-#define	PRODUCT_ID					NEXUS_ONE_PROD_ID
-
-/* use a seprate PID for RNDIS */
-#define RNDIS_PRODUCT_ID			0x4e13
-#define ACM_PRODUCT_ID				0x8888
-#define OBEX_PRODUCT_ID				0x685E
 
 
 #define KONA_8250PORT(name,clk)				\
@@ -140,147 +110,6 @@ static struct platform_device board_serial_device = {
 	.id		= PLAT8250_DEV_PLATFORM,
 	.dev		= {
 		.platform_data = uart_data,
-	},
-};
-
-static char *android_function_rndis[] = {
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	"rndis",
-#endif
-};
-
-static char *android_function_acm[] = {
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm",
-	"acm1",
-#endif
-};
-
-static char *android_function_msc_acm[] = {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
-#endif
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm",
-	"acm1",
-#endif
-};
-
-static char *android_function_obex[] = {
-#ifdef CONFIG_USB_ANDROID_OBEX
-	"obex",
-#endif
-};
-
-static char *android_function_adb_msc[] = {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
-#endif
-#ifdef CONFIG_USB_ANDROID_ADB
-	"adb",
-#endif
-};
-
-static char *android_functions_all[] = {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
-#endif
-#ifdef CONFIG_USB_ANDROID_ADB
-	"adb",
-#endif
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	"rndis",
-#endif
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm",
-#endif
-#ifdef CONFIG_USB_ANDROID_OBEX
-	"obex",
-#endif
-};
-
-
-static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
-#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
-	.nluns		=	2,
-#else
-	.nluns		=	1,
-#endif
-	.vendor		=	"Broadcom",
-	.product	=	"Rhea",
-	.release	=	0x0100
-};
-
-static struct platform_device android_mass_storage_device = {
-	.name	=	"usb_mass_storage",
-	.id	=	-1,
-	.dev	=	{
-		.platform_data	=	&android_mass_storage_pdata,
-	}
-};
-
-static struct usb_ether_platform_data android_rndis_pdata = {
-        /* ethaddr FIXME */
-        .vendorID       = __constant_cpu_to_le16(VENDOR_ID),
-        .vendorDescr    = "Broadcom RNDIS",
-};
-
-static struct platform_device android_rndis_device = {
-        .name   = "rndis",
-        .id     = -1,
-        .dev    = {
-                .platform_data = &android_rndis_pdata,
-        },
-};
-
-static struct android_usb_product android_products[] = {
-	{
-		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_adb_msc),
-		.functions	=	android_function_adb_msc,
-	},
-	{
-		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_RNDIS_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_rndis),
-		.functions	=	android_function_rndis,
-	},
-	{
-		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_acm),
-		.functions	=	android_function_acm,
-	},
-	{
-		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID | FD_MASS_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_msc_acm),
-		.functions	=	android_function_msc_acm,
-	},
-	{
-		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_OBEX_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_obex),
-		.functions	=	android_function_obex,
-	},
-};
-
-static struct android_usb_platform_data android_usb_data = {
-	.vendor_id		= 	__constant_cpu_to_le16(VENDOR_ID),
-	.product_id		=	__constant_cpu_to_le16(PRODUCT_ID),
-	.version		=	0,
-	.product_name		=	"Rhea",
-	.manufacturer_name	= 	"Broadcom",
-	.serial_number		=	"0123456789ABCDEF",
-
-	.num_products		=	ARRAY_SIZE(android_products),
-	.products		=	android_products,
-
-	.num_functions		=	ARRAY_SIZE(android_functions_all),
-	.functions		=	android_functions_all,
-};
-
-static struct platform_device android_usb = {
-	.name 	= "android_usb",
-	.id	= 1,
-	.dev	= {
-		.platform_data = &android_usb_data,
 	},
 };
 
@@ -336,7 +165,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",
 		.retries = 1,
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 		.is_pmu_i2c=false,
 #endif
 	},
@@ -346,7 +175,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
 		.retries = 3,
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 		.is_pmu_i2c=false,
 #endif
 	},
@@ -356,7 +185,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "pmu_bsc_clk",
 		.bsc_apb_clk = "pmu_bsc_apb",
 		.retries = 1,
-#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 		.is_pmu_i2c=true,
 #endif
 	},
@@ -568,7 +397,7 @@ struct kona_freq_tbl kona_freq_tbl[] =
 {
 /*JIRA HWRHEA-1199 : Enable Economy mode(156MHz) for B0 */
 #ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
-//    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+//    FTBL_INIT(156000, PI_OPP_ECONOMY),
 #endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
 
@@ -732,33 +561,66 @@ static struct platform_device board_unicam_device = {
 };
 #endif
 
-static u64 bralloc_dma_mask = DMA_BIT_MASK(32);
-static struct platform_device bralloc_device = {
-	.name 	= "bralloc",
-	.id	= 0,
-	.dev	= {
-		.dma_mask		= &bralloc_dma_mask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	},
-};
-
 /* Allocate the top 16M of the DRAM for the pmem. */
 static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
-	.start = 0x0,
-	.size = SZ_16M,
-	.no_allocator = 0,
+	.start = 0,
+	.size = 0,
+	.allocator = DEFAULT_ALLOC,
 	.cached = 1,
 	.buffered = 1,
 };
 
-static struct platform_device android_pmem = {
-	.name 	= "android_pmem",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &android_pmem_data,
+/* Allocate the top 16M of the DRAM for the pmem. */
+static struct android_pmem_platform_data android_pmem_cma_data = {
+	.name = "pmem_cma",
+	.start = 0,
+	.size = 0,
+	.allocator = CMA_ALLOC,
+	.cached = 1,
+	.buffered = 1,
+};
+
+static struct platform_device android_pmem[] = {
+	{
+		.name 	= "android_pmem",
+		.id	= 0,
+		.dev	= {
+			.platform_data = &android_pmem_data,
+		},
+	},
+	{
+		.name 	= "android_pmem",
+		.id	= 1,
+		.dev	= {
+			.platform_data = &android_pmem_cma_data,
+		},
 	},
 };
+
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+static u64 unicam_camera_dma_mask = DMA_BIT_MASK(32);
+
+static struct resource board_unicam_resource[] = {
+	[0] = 
+	{
+		.start	=	BCM_INT_ID_RESERVED156,
+		.end	=	BCM_INT_ID_RESERVED156,
+		.flags	=	IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device unicam_camera_device = {
+	.name		=	"unicam-camera",
+	.id			=	0,
+	.resource	=	board_unicam_resource,
+	.num_resources   = ARRAY_SIZE(board_unicam_resource),
+	.dev		= {
+		.dma_mask			= &unicam_camera_dma_mask,
+		.coherent_dma_mask	= 0xffffffff,
+	},
+};
+#endif
 
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
@@ -766,9 +628,6 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
-	&android_rndis_device,
-	&android_mass_storage_device,
-	&android_usb,
 	&pmu_device,
 	&kona_pwm_device,
 	&kona_sspi_spi0_device,
@@ -806,59 +665,102 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #ifdef CONFIG_UNICAM
 	&board_unicam_device,
 #endif
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+	&unicam_camera_device,
+#endif
 };
 
-static unsigned long bralloc_mem_size = 0;
-static int __init early_bralloc_mem(char *p)
+static int __init setup_pmem_alloc(char *p)
 {
-	bralloc_mem_size = memparse(p, &p);
+	if ((get_option(&p, &android_pmem_data.allocator) != 1) && !android_pmem_data.allocator) {
+		printk(KERN_WARNING"Invalid 'pmem_alloc=' option, using default PMEM allocation\n");
+		android_pmem_data.allocator = DEFAULT_ALLOC;
+		return 0;
+	}
+
 	return 0;
 }
-early_param("bralloc_mem", early_bralloc_mem);
+early_param("pmem_alloc", setup_pmem_alloc);
 
-static unsigned long pmem_base = 0;
-static unsigned int pmem_size = SZ_16M;
+static int __init setup_pmem_cma_alloc(char *p)
+{
+	if ((get_option(&p, &android_pmem_cma_data.allocator) != 1) && !android_pmem_cma_data.allocator) {
+		printk(KERN_WARNING"Invalid 'pmem_alloc=' option, using default PMEM allocation\n");
+		android_pmem_cma_data.allocator = CMA_ALLOC;
+		return 0;
+	}
+
+	return 0;
+}
+early_param("pmem_cma_alloc", setup_pmem_cma_alloc);
+
 static int __init setup_pmem_pages(char *str)
 {
-	char * endp = NULL;
-	if(str)	{
-		pmem_size = memparse((const char *)str, &endp);
-		printk(KERN_INFO "PMEM size is   0x%08x Bytes\n", pmem_size);
-		if (*endp == '@')
-			pmem_base =  memparse(endp + 1, NULL);
-			printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
-		} else	{
-			printk("\"pmem=\" option is not set!!!\n");
-			printk("Unable to determine the memory region for pmem!!!\n");
+	char *endp = NULL;
+	if (str) {
+		android_pmem_data.size = memparse((const char *)str, &endp);
+		printk(KERN_INFO "PMEM size is 0x%08x Bytes\n", (unsigned int)android_pmem_data.size);
+		if (*endp == '@') {
+			android_pmem_data.start =  memparse(endp + 1, NULL);
+			printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)android_pmem_data.start);
 		}
+	} else	{
+		printk("\"pmem=\" option is not set!!!\n");
+		printk("Unable to determine the memory region for pmem!!!\n");
+	}
 	return 0;
 }
 early_param("pmem", setup_pmem_pages);
 
+static int __init setup_pmem_cma_pages(char *str)
+{
+	char *endp = NULL;
+	if (str)	{
+		android_pmem_cma_data.size = memparse((const char *)str, &endp);
+		printk(KERN_INFO "PMEM_CMA size is 0x%08x Bytes\n", (unsigned int)android_pmem_cma_data.size);
+		if (*endp == '@') {
+			android_pmem_cma_data.start =  memparse(endp + 1, NULL);
+			printk(KERN_INFO "PMEM_CMA starts at 0x%08x\n", (unsigned int)android_pmem_cma_data.start);
+		}
+	} else {
+			printk("\"pmem_cma=\" option is not set!!!\n");
+			printk("Unable to determine the memory region for pmem!!!\n");
+	}
+	return 0;
+}
+early_param("pmem_cma", setup_pmem_cma_pages);
+
 void __init board_common_reserve(void)
 {
-	/* if bralloc_mem_size is set, then declare bralloc CMA area of the same
-	 * size from the end of memory
-	 */
-	if (bralloc_mem_size)
-		dma_declare_contiguous(&bralloc_device.dev, bralloc_mem_size, 0, 0);
+	if (android_pmem_data.allocator == CMA_ALLOC)
+		dma_declare_contiguous(&android_pmem[0].dev, android_pmem_data.size, 0, 0);
+
+	if (android_pmem_cma_data.allocator == CMA_ALLOC)
+		dma_declare_contiguous(&android_pmem[1].dev, android_pmem_cma_data.size, 0, 0);
+
 }
 
 void __init board_add_common_devices(void)
 {
 	platform_add_devices(board_common_plat_devices, ARRAY_SIZE(board_common_plat_devices));
 
-	if (pmem_base && pmem_size) {
-		android_pmem_data.start = (unsigned long)pmem_base;
-		android_pmem_data.size  = pmem_size;
-		platform_device_register(&android_pmem);
+	if (android_pmem_data.size) {
+		if (android_pmem_data.allocator == CMA_ALLOC) {
+			get_cma_area(&android_pmem[0].dev, (phys_addr_t *)&android_pmem_data.start,
+					&android_pmem_data.size);
+		}
+		platform_device_register(&android_pmem[0]);
+		printk(KERN_EMERG"PMEM : Areas start @ (0x%08lx) with size (%ld)\n",
+				android_pmem_data.start, android_pmem_data.size);
 	}
 
-	/*
-	 * add the bralloc device only iff we were given memory for
-	 * it's cma region
-	 */
-	if (bralloc_mem_size)
-		platform_device_register(&bralloc_device);
-
+	if (android_pmem_cma_data.size) {
+		if (android_pmem_cma_data.allocator == CMA_ALLOC) {
+			get_cma_area(&android_pmem[1].dev, (phys_addr_t *)&android_pmem_cma_data.start,
+					&android_pmem_cma_data.size);
+		}
+		platform_device_register(&android_pmem[1]);
+		printk(KERN_EMERG"PMEM_CMA : Areas start @ (0x%08lx) with size (%ld)\n",
+				android_pmem_cma_data.start, android_pmem_cma_data.size);
+	}
 }

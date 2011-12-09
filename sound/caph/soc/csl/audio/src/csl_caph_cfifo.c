@@ -67,7 +67,6 @@ CAPH_CFIFO_QUEUE_e cfifo_queue = CAPH_CFIFO_QUEUE1;
 //****************************************************************************
 static CHAL_HANDLE handle = 0;
 
-#if defined (_RHEA_)
 CSL_CFIFO_TABLE_t CSL_CFIFO_table[]=
 {
 // FIFO map, address, size, threshold, owner: 0=ARM, 1=DSP, status: 0=UNUSED, 1=USED
@@ -85,7 +84,7 @@ CSL_CFIFO_TABLE_t CSL_CFIFO_table[]=
     {CSL_CAPH_CFIFO_FIFO10, 0x0480, 0x200, 0x100,  CAPH_SSP, 0, CSL_CAPH_DMA_NONE},
     {CSL_CAPH_CFIFO_FIFO11, 0x0680, 0x200, 0x100,  CAPH_SSP, 0, CSL_CAPH_DMA_NONE},
 #if defined(ENABLE_DMA_VOICE)
-    {CSL_CAPH_CFIFO_FIFO12, 0x0880, 0x8, 0x1, CAPH_DSP, 0, CSL_CAPH_DMA_CH12},
+    {CSL_CAPH_CFIFO_FIFO12, 0x0880, 0x80, 0x1, CAPH_DSP, 0, CSL_CAPH_DMA_CH12},
     {CSL_CAPH_CFIFO_FIFO13, 0x0900, 0x8, 0x7, CAPH_DSP, 0, CSL_CAPH_DMA_CH13},
     {CSL_CAPH_CFIFO_FIFO14, 0x0980, 0x8, 0x7,  CAPH_DSP, 0, CSL_CAPH_DMA_CH14},
     {CSL_CAPH_CFIFO_FIFO15, 0x0A00, 0x80, 0x8,  CAPH_DSP, 0, CSL_CAPH_DMA_CH15},
@@ -98,30 +97,6 @@ CSL_CFIFO_TABLE_t CSL_CFIFO_table[]=
     {CSL_CAPH_CFIFO_FIFO16, 0x0C88, 0x4,    0x2,  CAPH_DSP, 0, CSL_CAPH_DMA_CH16}
 #endif
 };
-#elif defined (_SAMOA_)
-CSL_CFIFO_TABLE_t CSL_CFIFO_table[]=
-{
-// FIFO map, address, size in bytes, threshold, owner: 0=ARM, 1=DSP, status: 0=UNUSED, 1=USED
-// CFIFO/DMA 11-16 are reserved and connected for DSP
-    {CSL_CAPH_CFIFO_NONE,   0x0000, 0x0,     0x0,    CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO1,   0x0000, 0x200, 0x100, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO2,   0x0200, 0x200, 0x100, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO3,   0x0400, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO4,   0x0500, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO5,   0x0600, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO6,   0x0700, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO7,   0x0800, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO8,   0x0900, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO9,   0x0a00, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO10, 0x0b00, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO11, 0x0c00, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO12, 0x0d00, 0x100, 0x080, CAPH_DSP, 0, CSL_CAPH_DMA_CH12},
-    {CSL_CAPH_CFIFO_FIFO13, 0x0e00, 0x100, 0x080, CAPH_DSP, 0, CSL_CAPH_DMA_CH13},
-    {CSL_CAPH_CFIFO_FIFO14, 0x0f00, 0x20,    0x10,    CAPH_DSP, 0, CSL_CAPH_DMA_CH14},
-    {CSL_CAPH_CFIFO_FIFO15, 0x0f20, 0x20,    0x10,    CAPH_DSP, 0, CSL_CAPH_DMA_CH15},
-    {CSL_CAPH_CFIFO_FIFO16, 0x0f40, 0x20,    0x10,    CAPH_DSP, 0, CSL_CAPH_DMA_CH16}
-};
-#endif
 
 //****************************************************************************
 // local function declarations
@@ -392,7 +367,7 @@ void csl_caph_cfifo_release_fifo(CSL_CAPH_CFIFO_FIFO_e fifo)
 {
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_release_fifo:: \n"));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_release_fifo:: %d\n", fifo));
 	
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(fifo);
 
@@ -455,7 +430,7 @@ UInt32 csl_caph_cfifo_get_fifo_addr(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
     UInt32 cfifo_addr = 0;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_get_fifo_addr:: \n"));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_get_fifo_addr:: %d\n", csl_fifo));
 
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(csl_fifo);
 
@@ -476,7 +451,7 @@ void csl_caph_cfifo_start_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
 {
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_start_fifo:: \n"));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_start_fifo:: %d\n", csl_fifo));
 	
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(csl_fifo);
 	
@@ -499,7 +474,7 @@ void csl_caph_cfifo_stop_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
 {
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_stop_fifo:: \n"));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_stop_fifo:: %d\n", csl_fifo));
 
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(csl_fifo);
 	
@@ -522,8 +497,6 @@ UInt32 csl_caph_cfifo_read_fifo_status(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
     UInt32 status = 0x0;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_stop_fifo:: \n"));
-
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(csl_fifo);
 	
 	if (chal_fifo != CAPH_CFIFO_VOID)
@@ -545,8 +518,6 @@ UInt16 csl_caph_cfifo_read_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo, UInt32* data, UI
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
     UInt16 num = 0x0;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_stop_fifo:: \n"));
-
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(csl_fifo);
 	
 	if (chal_fifo != CAPH_CFIFO_VOID)
@@ -570,7 +541,7 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CHNL_e dmaCH)
 	
 	CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ch = CSL_CAPH_CFIFO_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_get_csl_cfifo:: \n");
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_get_fifo_by_dma:: %d\n", dmaCH);
 
 	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++)
 	{

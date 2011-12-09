@@ -43,6 +43,7 @@
 #include <linux/jiffies.h> 
 #include <asm/pgtable.h>
 #include <linux/io.h>
+#include <linux/proc_fs.h>
 
 #include "mobcom_types.h"
 #include "bcmlog.h"
@@ -220,6 +221,7 @@ int getNextReadIndex(mRingBuffer_t *p)
 	return cur_ri;
 }
 
+extern int gRpcLogToConsole;
 
 void kRpcDebugPrintf(char* fmt, ...)
 {
@@ -233,30 +235,36 @@ void kRpcDebugPrintf(char* fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(buf, (MAX_LOG_SIZE-1), fmt, ap);
 	va_end(ap);
-	//printk("Write: w:%d r:%d\n",gLogBuffer.wi,gLogBuffer.ri);
+
+	if(gRpcLogToConsole)
+		printk(KERN_INFO "k:%s\n",buf);
 }
 
 ssize_t kRpcReadLogData(char *destBuf, size_t len)
 {
+	size_t i = 0;
 	ssize_t ret = 0;
 	int index = 0;
 
 	index = peekNextReadIndex(&gLogBuffer);
 
-	if(index != -1)
+	if(index != -1 && len > 0)
 	{
-		size_t i;
 		char* logbuf;
 		int logsize;
 		logbuf = gLogData[index].logData;
 		logsize = strlen(logbuf);
-		i = min_t(size_t, len, logsize);
-		ret = copy_to_user(destBuf, logbuf, i) ? -EFAULT : i;
+		i = min_t(size_t, (len-1), logsize);
+		//ret = copy_to_user(destBuf, logbuf, i);
+		strncpy(destBuf, logbuf, i);
+		//destBuf[len-1] = '\0';
 		getNextReadIndex(&gLogBuffer);
-		//printk("Read: w:%d r:%d\n",gLogBuffer.wi,gLogBuffer.ri);
+		//printk(KERN_INFO "Read: ret=%d w:%d r:%d slen=%d dest=<%s> src=<%s> mlen=%d slen=%d\n",ret, gLogBuffer.wi,gLogBuffer.ri, logsize, destBuf, logbuf, i, len);
 	}
+	else
+		printk(KERN_INFO "No Data available\n");
 
-	return ret;
+	return i;
 }
 
 int RpcLog_DetailLogEnabled(void)

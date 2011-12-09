@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                                */
+Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.                                */
 
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -39,10 +39,17 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "csl_caph_cfifo.h"
 #include "csl_caph_switch.h"
 
+#if defined(CONFIG_ARCH_RHEA_B0)
+/* Total number of input channels */
+#define MAX_INCHNLS 0x9
+/* Total number of single input channels */
+#define MAX_SINGLE_INCHNLS 0xC
+#else
 /* Total number of input channels */
 #define MAX_INCHNLS 0x7
 /* Total number of single input channels */
 #define MAX_SINGLE_INCHNLS 0xA
+#endif
 /* Total number of output channels */
 #define OUTCHNL_MAX_NUM_CHNL 0x5
 /* Bit Selection for Mixer Spkr gain */
@@ -113,6 +120,12 @@ typedef enum
                                     |CSL_CAPH_SRCM_STEREO_PASS_CH2),    
 	CSL_CAPH_SRCM_STEREO_CH5 = (CSL_CAPH_SRCM_STEREO_CH5_L
                                 |CSL_CAPH_SRCM_STEREO_CH5_R),
+#if defined(CONFIG_ARCH_RHEA_B0)
+	CSL_CAPH_SRCM_MONO_PASS_CH3 = 0x0400,
+	CSL_CAPH_SRCM_MONO_PASS_CH4 = 0x0800,
+	CSL_CAPH_SRCM_MONO_PASS_CH = (CSL_CAPH_SRCM_MONO_PASS_CH3
+                                |CSL_CAPH_SRCM_MONO_PASS_CH4),	
+#endif	
 }CSL_CAPH_SRCM_INCHNL_e;
 
 /**
@@ -217,11 +230,12 @@ void csl_caph_srcmixer_deinit(void);
 *
 *  @param  dataFormat (in) dataformat of the data in the input channel
 *  @param  sampleRate (in) sample rate of the data in the input channel
+*  @param  srOut (in) output sample rate
 *
 *  @return CSL_CAPH_SRCM_INCHNL_e srcmixer input channel
 *****************************************************************************/
 CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dataFormat, 
-                              CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate);
+                              CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate, AUDIO_SAMPLING_RATE_t srOut);
 
 /**
 *
@@ -295,9 +309,23 @@ void csl_caph_srcmixer_config_src_route(CSL_CAPH_SRCM_ROUTE_t routeConfig);
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl, 
+void csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl, 
                                     CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                                    UInt16 gainL, UInt16 gainR);
+                                    int gainL_mB, int gainR_mB);
+
+/**
+*
+*  @brief  set the mixer input gain on all inputs
+*
+*  @param	outChnl  (in) caph srcmixer mixer output channel
+*  @param	gainL  (in) caph srcmixer mixer input Left channel gain
+*  @param	gainR  (in) caph srcmixer mixer input Right channel gain
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_srcmixer_set_mix_all_in_gain( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
+									int gainL_mB, int gainR_mB);
+
 
 /**
 *
@@ -308,8 +336,8 @@ void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                                     UInt16 gain);
+void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
+                                     int gain_mB);
 
 
 /**
@@ -321,9 +349,9 @@ void csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mixoutcoarsegain(
+void csl_caph_srcmixer_set_mix_out_bit_select(
 		CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                UInt16 gain);
+                unsigned int bit_shift);
 
 /**
 *
@@ -370,9 +398,9 @@ CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_tapoutchnl_fifo(
 *
 *  @param   fifo  (in) caph srcmixer in channel
 *
-*  @return CSL_CAPH_SWITCH_TRIGGER_e trigger
+*  @return CAPH_SWITCH_TRIGGER_e trigger
 *****************************************************************************/
-CSL_CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
+CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
                                                    CSL_CAPH_SRCM_INCHNL_e inChnl);
 /**
 *

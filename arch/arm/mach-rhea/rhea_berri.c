@@ -80,6 +80,18 @@
 #define _RHEA_
 #include <mach/comms/platform_mconfig.h>
 
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+#include <linux/broadcom/bcmbt_rfkill.h>
+#endif
+
+#ifdef CONFIG_BCM_BT_LPM
+#include <linux/broadcom/bcmbt_lpm.h
+#endif
+
+#ifdef CONFIG_BACKLIGHT_PWM
+#include <linux/pwm_backlight.h>
+#endif
+
 #ifdef CONFIG_FB_BRCM_RHEA
 #include <video/kona_fb.h>
 #endif
@@ -91,7 +103,13 @@
 #ifdef CONFIG_GPIO_PCA953X
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
 #else
+#ifdef CONFIG_MACH_RHEA_BERRI
+/* RheaBerri edn33: GPIO8 is card detect gpio */
+#define SD_CARDDET_GPIO_PIN      8
+#else
+/* RheaBerri edn40:  GPIO75 is card detect gpio */
 #define SD_CARDDET_GPIO_PIN      75
+#endif
 #endif
 
 
@@ -629,6 +647,52 @@ static struct platform_device pl330_dmac_device = {
 };
 #endif
 
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+
+#define BCMBT_VREG_GPIO       (10)
+#define BCMBT_N_RESET_GPIO    (70)
+#define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
+#define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
+
+static struct bcmbt_rfkill_platform_data board_bcmbt_rfkill_cfg = {
+        .vreg_gpio = BCMBT_VREG_GPIO,
+        .n_reset_gpio = BCMBT_N_RESET_GPIO,
+        .aux0_gpio = BCMBT_AUX0_GPIO,  /* CLK32 */
+        .aux1_gpio = BCMBT_AUX1_GPIO,  /* UARTB_SEL, probably not required */
+};
+
+static struct platform_device board_bcmbt_rfkill_device = {
+        .name = "bcmbt-rfkill",
+        .id = -1,
+        .dev =
+        {
+                .platform_data=&board_bcmbt_rfkill_cfg,
+        },
+};
+#endif
+
+#ifdef CONFIG_BCM_BT_LPM
+#define GPIO_BT_WAKE 02
+#define GPIO_HOST_WAKE 111
+
+static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
+        .gpio_bt_wake = GPIO_BT_WAKE,
+        .gpio_host_wake = GPIO_HOST_WAKE,
+};
+
+static struct platform_device board_bcmbt_lpm_device = {
+        .name = "bcmbt-lpm",
+        .id = -1,
+        .dev =
+        {
+                .platform_data=&brcm_bt_lpm_data,
+        },
+};
+#endif
+
+
+
+
 /*
  * SPI board info for the slaves
  */
@@ -799,13 +863,32 @@ void __init board_add_sdio_devices(void)
 
 #endif //Shri
 
+#ifdef CONFIG_BACKLIGHT_PWM
+
+static struct platform_pwm_backlight_data bcm_backlight_data = {
+/* backlight */
+	.pwm_name 	= "kona_pwmc:4",
+	.max_brightness = 32,   /* Android calibrates to 32 levels*/
+	.dft_brightness = 32,
+	.polarity       = 1,    /* Inverted polarity */
+	.pwm_period_ns 	=  5000000,
+};
+
+static struct platform_device bcm_backlight_devices = {
+	.name 	= "pwm-backlight",
+	.id 	= 0,
+	.dev 	= {
+		.platform_data  =       &bcm_backlight_data,
+	},
+};
+
+#endif /*CONFIG_BACKLIGHT_PWM */
 
 
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
-#if defined (CONFIG_MACH_RHEA_BERRI) || defined (CONFIG_MACH_RHEALC_BERRI) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
 #define GPIO_SIM2LDO_EN		99
-#endif
+
 #ifdef CONFIG_GPIO_PCA953X
 #define GPIO_SIM2LDOVSET	(KONA_MAX_GPIO + 7)
 #else
@@ -880,20 +963,100 @@ static struct platform_device tps728xx_vc_device_sim2 = {
 #endif /* CONFIG_REGULATOR_TPS728XX*/
 
 #ifdef CONFIG_FB_BRCM_RHEA
-static struct kona_fb_platform_data r61581_smi_display_fb_data = {
+static struct kona_fb_platform_data alex_dsi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_BCM91008_ALEX_GetFuncTable,
+	.screen_width		= 360,
+	.screen_height		= 640,
+	.bytes_per_pixel	= 4,
+	.gpio			= 41,
+	.pixel_format		= XRGB8888,
+};
+
+static struct platform_device alex_dsi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 0,
+	.dev = {
+		.platform_data		= &alex_dsi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data nt35582_smi16_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 16,
+};
+
+static struct platform_device nt35582_smi16_display_device = {
+	.name    = "rhea_fb",
+	.id      = 1,
+	.dev = {
+		.platform_data		= &nt35582_smi16_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data nt35582_smi8_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 8,
+};
+
+static struct platform_device nt35582_smi8_display_device = {
+	.name    = "rhea_fb",
+	.id      = 2,
+	.dev = {
+		.platform_data		= &nt35582_smi8_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
 	.screen_width		= 320,
 	.screen_height		= 480,
 	.bytes_per_pixel	= 2,
 	.gpio			= 41,
 	.pixel_format		= RGB565,
+	.bus_width		= 16,
 };
 
-static struct platform_device r61581_smi_display_device = {
+static struct platform_device r61581_smi16_display_device = {
 	.name    = "rhea_fb",
-	.id      = 2,
+	.id      = 3,
 	.dev = {
-		.platform_data		= &r61581_smi_display_fb_data,
+		.platform_data		= &r61581_smi16_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi8_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 8,
+};
+
+static struct platform_device r61581_smi8_display_device = {
+	.name    = "rhea_fb",
+	.id      = 4,
+	.dev = {
+		.platform_data		= &r61581_smi8_display_fb_data,
 		.dma_mask		= (u64 *) ~(u32)0,
 		.coherent_dma_mask	= ~(u32)0,
 	},
@@ -916,12 +1079,26 @@ static struct platform_device *rhea_berri_plat_devices[] __initdata = {
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
 #endif
+#ifdef CONFIG_BACKLIGHT_PWM
+	&bcm_backlight_devices,
+#endif
 /* TPS728XX device registration */
 #ifdef CONFIG_REGULATOR_TPS728XX
 	&tps728xx_device,
 #endif
 #ifdef CONFIG_FB_BRCM_RHEA
-	&r61581_smi_display_device,
+	&alex_dsi_display_device,
+	&nt35582_smi16_display_device,
+	&nt35582_smi8_display_device,
+	&r61581_smi8_display_device,
+	&r61581_smi16_display_device,
+#endif
+
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+	&board_bcmbt_rfkill_device,
+#endif
+#ifdef CONFIG_BCM_BT_LPM
+	&board_bcmbt_lpm_device,
 #endif
 
 };

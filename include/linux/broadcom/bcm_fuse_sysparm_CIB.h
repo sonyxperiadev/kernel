@@ -138,51 +138,22 @@ typedef struct
 {
 	Int16			echo_cng_bias;
 	UInt16			echo_cng_enable;
-	UInt16			echo_nlp_max_supp;
-	UInt16			echo_nlp_enable;
 	UInt16			echo_subband_nlp_enable;
 	UInt16			echo_nlp_gain;
-	UInt16			echo_nlp_ul_brk_in_thresh;
 	UInt16			echo_nlp_min_ul_brk_in_thresh;
-	UInt16			echo_nlp_ul_gain_table[NUM_OF_ECHO_NLP_GAIN];
-	UInt16			echo_nlp_dl_gain_table[NUM_OF_ECHO_NLP_GAIN];
-	UInt16			nlp_ul_energy_window;
-	UInt16			nlp_dl_energy_window;
-	UInt16			echo_nlp_dtalk_ul_gain;
 	UInt16			echo_nlp_dtalk_dl_agc_idx;// not used yet
 	UInt16			echo_nlp_idle_ul_gain;// not used yet
 	UInt16			echo_nlp_idle_dl_agc_idx;// not used yet
 	UInt16			echo_nlp_ul_active_dl_agc_idx;// not used yet
-	Int16			echo_nlp_relative_offset;
-	UInt16			echo_nlp_relative_dl_w_thresh;
-	UInt16			echo_nlp_relative_dl_energy_window;
-	UInt16			echo_nlp_relative_dl_energy_decay;
 	UInt16			echo_nlp_min_dl_pwr;
 	UInt16			echo_nlp_min_ul_pwr;
-	UInt16			echo_nlp_dtalk_dl_gain;
-	UInt16			echo_nlp_dl_idle_ul_gain;
-	UInt16			echo_nlp_ul_active_dl_gain;
-	UInt16			echo_nlp_ul_idle_dl_gain;
-	UInt16			echo_nlp_ul_idle_ul_gain;
-	Int16			echo_nlp_relative_offset_dtalk;
-	Int16			echo_nlp_relative_offset_dl_active;
-	Int16			echo_nlp_relative_offset_ul_active;
-	UInt16			echo_nlp_dtalk_hang_count;
-	UInt16			echo_nlp_ul_active_hang_count;
-	UInt16			echo_nlp_relative_ul_active_dl_loss;
-	UInt16			echo_nlp_relative_ul_idle_dl_loss;
-	UInt16			echo_nlp_relative_dl_idle_ul_loss;
-	UInt16			echo_nlp_dl_persistence_thresh;
-	UInt16			echo_nlp_dl_persistence_leak;
 	UInt16			echo_nlp_dl_loss_adjust_thld;
 	UInt16			echo_nlp_ul_active_dl_loss_adjust_step;
 	UInt16			echo_nlp_ul_idle_dl_loss_adjust_step;
 	UInt16			echo_nlp_ul_active_dl_loss_min_val;
 	UInt16			echo_nlp_ul_idle_dl_loss_min_val;
-	UInt16			echo_nlp_dl_idle_dl_gain;
 #ifdef DSP_FEATURE_SUBBAND_NLP
 	UInt16          echo_subband_nlp_distortion_thresh[DSP_SUBBAND_NLP_FREQ_BINS_WB];
-	UInt16 			echo_subband_nlp_dl_delay_adj;
 	UInt16 			echo_subband_nlp_ul_margin[DSP_SUBBAND_NLP_FREQ_BINS_WB];
 	UInt16          echo_subband_nlp_noise_margin[DSP_SUBBAND_NLP_FREQ_BINS_WB];
 	UInt16			echo_subband_nlp_erl_erle_adj_wb[DSP_SUBBAND_NLP_FREQ_BINS_WB];
@@ -241,21 +212,15 @@ typedef struct
 	UInt16 max_mic_gain;	
 	UInt16 sidetone;
 	UInt16 audio_dsp_sidetone;  //means dsp_sidetone_enable.
-	UInt16 audio_dl_idle_pga_adj;
-	UInt16 audio_ns_ul_idle_adj;	
 	UInt16	ty_mic_gain;
 	UInt16	sidetone_tty;
-	AudioAGC_t ul_agc;
-	AudioAGC_t dl_agc;
 	EchoNlp_t echoNlp_parms;
 	UInt16 echo_cancelling_enable;
 	UInt16 echo_dual_filter_mode;
 	UInt16 echo_nlp_cng_filter[NUM_OF_ECHO_NLP_CNG_FILTER];
-	UInt16 echo_far_in_filter[NUM_OF_ECHO_FAR_IN_FILTER_COEFF];
 	UInt16	comp_filter_coef[NUM_OF_BIQUAD_FILTER_COEF];
 	UInt16	comp_biquad_gain;
 	UInt16 echo_adapt_norm_factor;
-	UInt16 echo_stable_coef_thresh[NUM_OF_ECHO_STABLE_COEF_THRESH];
 	UInt16 echo_cancel_dtd_hang;
 	UInt16 echo_cancel_dtd_thresh;
 	UInt16 echo_cancel_hsec_step;
@@ -273,7 +238,6 @@ typedef struct
 	UInt16 echo_en_near_scale_factor;
 	UInt16 echo_en_far_scale_factor;
 	UInt16 echo_nlp_downlink_volume_ctrl;
-	UInt16 echo_nlp_timeout_val;
 	UInt16 ul_noise_suppression_enable;
 	UInt16 ul_noise_supp_input_gain;
 	UInt16 ul_noise_supp_output_gain;
@@ -324,9 +288,6 @@ typedef struct
 	UInt16 sidetone_biquad_scale_factor;
 	UInt16 sidetone_biquad_sys_gain;
 	UInt16 sidetone_filter[ NUM_OF_SIDETONE_FILTER_COEFF ];
-
-	Int16	ec_de_emp_filt_coef;
-	Int16	ec_pre_emp_filt_coef;
 
 	UInt16	audio_hpf_enable;
 	UInt16	audio_ul_hpf_coef_b;

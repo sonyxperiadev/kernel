@@ -78,8 +78,7 @@ CSL_HANDLE csl_i2s_init(cUInt32 baseAddr)
 
     handle = chal_sspi_init(baseAddr);
 	pDevice = (CSL_SSPI_HANDLE_T *)handle;
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "base address in csl 0x%x \r\n",
-					(unsigned int)pDevice->base);
+	if(pDevice) Log_DebugPrintf(LOGID_SOC_AUDIO, "base address in csl 0x%x \r\n", (unsigned int)pDevice->base);
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "-csl_i2s_init \r\n");
 
 	return handle;

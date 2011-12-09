@@ -140,14 +140,15 @@ CSL_PCM_OPSTATUS_t csl_pcm_enable_scheduler(CSL_PCM_HANDLE handle,
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
 
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_enable_scheduler:: handle %p enable %d.\r\n", handle, enable);
     if (!pDevice)
 		return CSL_PCM_ERR_HANDLE;
 	
     chal_sspi_enable_scheduler(pDevice, enable);
 
     return CSL_PCM_SUCCESS;
-}	
-	
+}
+
 //******************************************************************************
 //
 //  Function Name:	csl_pcm_start
@@ -160,6 +161,10 @@ CSL_PCM_OPSTATUS_t csl_pcm_start(CSL_PCM_HANDLE handle,
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
     CHAL_SSPI_STATUS_t status;
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start:: handle %p.\r\n", handle));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start:: cfgDev mode %d interleave %d protocol %d format %d size %d bits %d sr %d.\r\n", 
+		config->mode, config->interleave, config->protocol, config->format, config->xferSize, config->ext_bits, config->sample_rate));
 	
 //    pcm_config_dma(handle, config);
 		
@@ -220,24 +225,25 @@ CSL_PCM_OPSTATUS_t csl_pcm_start_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
 
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start_tx:: handle %p, channel %d.\r\n", handle, channel);
     if (!pDevice)
 		return CSL_PCM_ERR_HANDLE;
 
     if(channel == CSL_PCM_CHAN_TX0) {
-        chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX0);	
-        chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, 
-                                              SSPI_FIFO_ID_TX0, 
-                                              TRUE, 
-                                              TRUE); 		
+        chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX0);
+        chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+                                              SSPI_FIFO_ID_TX0,
+                                              TRUE,
+                                              TRUE);
     }
     else if(channel == CSL_PCM_CHAN_TX1) {
-        chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX1);	
-        chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, 
-                                              SSPI_FIFO_ID_TX1, 
-                                              TRUE, 
-                                              TRUE); 		
+        chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX1);
+        chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+                                              SSPI_FIFO_ID_TX1,
+                                              TRUE,
+                                              TRUE);
     }
-	
+
     return CSL_PCM_SUCCESS;
 }
 
@@ -251,23 +257,24 @@ CSL_PCM_OPSTATUS_t csl_pcm_start_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 CSL_PCM_OPSTATUS_t csl_pcm_start_rx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
-	
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start_rx:: handle %p, channel %d.\r\n", handle, channel);
     if (!pDevice)
 		return CSL_PCM_ERR_HANDLE;
-	
+
     if(channel == CSL_PCM_CHAN_RX0) {
         chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_RX0);
-        chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, 
-                                              SSPI_FIFO_ID_RX0, 
-                                              TRUE, 
-                                              TRUE); 		
+        chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+                                              SSPI_FIFO_ID_RX0,
+                                              TRUE,
+                                              TRUE);
     }
-    else if (channel == CSL_PCM_CHAN_RX1) {    
+    else if (channel == CSL_PCM_CHAN_RX1) {
         chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_RX1);
-        chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, 
-                                              SSPI_FIFO_ID_RX1, 
-                                              TRUE, 
-                                              TRUE); 		
+        chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+                                              SSPI_FIFO_ID_RX1,
+                                              TRUE,
+                                              TRUE);
     }
     return CSL_PCM_SUCCESS;
 }
@@ -456,10 +463,19 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
     chal_sspi_soft_reset(pDevice);
 
 	chal_sspi_get_intr_mask(pDevice, &intrMask);
-	intrMask |= (SSPIL_INTR_ENABLE_PIO_TX_START |
-				 SSPIL_INTR_ENABLE_PIO_TX_STOP |
-				 SSPIL_INTR_ENABLE_PIO_RX_START |
-				 SSPIL_INTR_ENABLE_PIO_RX_STOP);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: intrMask1 0x%x.\r\n", intrMask);
+
+	if(devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT)
+	{
+		/*intrMask |= (SSPIL_INTR_ENABLE_PIO_TX_START |
+					 SSPIL_INTR_ENABLE_PIO_TX_STOP |
+					 SSPIL_INTR_ENABLE_PIO_RX_START |
+					 SSPIL_INTR_ENABLE_PIO_RX_STOP);*/
+		intrMask |= (SSPIL_INTR_ENABLE_PIO_TX_START | SSPIL_INTR_ENABLE_PIO_RX_START);
+	} else { //for voice call only enable RX START
+		intrMask |= SSPIL_INTR_ENABLE_PIO_RX_START;
+	}
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: intrMask2 0x%x.\r\n", intrMask);
 	// need to disable all other interrupts to avoid confusing dsp 03-02-11
 	chal_sspi_enable_intr(pDevice, intrMask & 0x000000F0);
 
@@ -709,10 +725,18 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
     chal_sspi_enable(pDevice, 1);
 
     // setting from asic team
-    chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0x3, 0x1c); // chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0xf, 0x1);
+	if(devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT)
+	{	//config for audio mode, may divert from voice settings.
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0x1c, 0x3);
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x3, 0x1c);
+	} else { //voice mode
+		//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0xf, 0x1);
+		//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x1, 0x1); //this requires bigger CFIFO size, does not work well with SRC either.
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0x1f, 0x3);  // SSPI send out RX_Start interrupt when there is 1 sample in RX0 fifo and Rx_stop interrupt when there are 3 samples in the RX0 fifo.
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x3, 0x1c);  // SSPI send out TX_Start interrupt when there are less 3 samples in TX0 fifo and Tx_stop interrupt when there are 4 samples in the TX0 fifo.
+	}
+
     chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX1, 0x3, 0x3);
-	//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x1, 0x1); //this requires bigger CFIFO size, does not work well with SRC either.
-	chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x3, 0x1c); //audio quality from SRC is greatly improved.
     chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX1, 0x3, 0x3);
     
 	switch(protocol) {
@@ -725,6 +749,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
             task_conf.cs_sel = SSPI_CS_SEL_CS0;
 		task_conf.rx_sel = (configTx->loopback_enable)
 						   ? SSPI_RX_SEL_COPY_TX0 : SSPI_RX_SEL_RX0;
+		//task_conf.rx_sel = SSPI_RX_SEL_COPY_TX0; //loopback tx to rx
             task_conf.tx_sel = SSPI_TX_SEL_TX0;
             task_conf.div_sel = SSPI_CLK_DIVIDER0;
             task_conf.seq_ptr = 0;
@@ -1449,7 +1474,8 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 UInt32 csl_pcm_get_tx0_fifo_data_port(CSL_PCM_HANDLE handle)
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
-	return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0TX_OFFSET);
+	if(pDevice) return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0TX_OFFSET);
+	else return 0;
 }
 //******************************************************************************
 //
@@ -1475,7 +1501,8 @@ UInt32 csl_pcm_get_tx1_fifo_data_port(CSL_PCM_HANDLE handle)
 UInt32 csl_pcm_get_rx0_fifo_data_port(CSL_PCM_HANDLE handle)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
-	return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0RX_OFFSET);
+	if(pDevice) return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0RX_OFFSET);
+	else return 0;
 }
 //******************************************************************************
 //
@@ -1527,7 +1554,7 @@ void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_intc_enable_pcm_intr:: \n");
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_intc_disable_pcm_intr:: owner %d, ssp %d.\n", csl_owner, csl_sspid);
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
