@@ -30,6 +30,11 @@ struct bcmpmu_i2c {
 	int pagesize;
 };
 
+/* Return Error codes in i2c read/write interfaces
+ * -ENODEV = if wrong register has been passed
+ * -ENXIO = if register exists but no map found
+ * -EIO = i2c read/write error
+*/
 static int bcmpmu_i2c_read_device(struct bcmpmu *bcmpmu, int reg, unsigned int *val, unsigned int msk)
 {
 	struct bcmpmu_reg_map map;
@@ -38,14 +43,14 @@ static int bcmpmu_i2c_read_device(struct bcmpmu *bcmpmu, int reg, unsigned int *
 
 	if (reg >= PMU_REG_MAX) return -ENODEV;
 	map = bcmpmu->regmap[reg];
-	if ((map.addr == 0) && (map.mask == 0))  return -ENODEV;
+	if ((map.addr == 0) && (map.mask == 0))  return -ENXIO;
 
 	mutex_lock(&acc->i2c_mutex);
 	if (map.map == 0)
 		err = i2c_smbus_read_byte_data(acc->i2c_client, map.addr);
 	else if (map.map == 1)
 		err = i2c_smbus_read_byte_data(acc->i2c_client1, map.addr);
-	else err = -ENODEV;
+	else err = -EIO;
 	mutex_unlock(&acc->i2c_mutex);
 
 	if (err < 0) return err;
@@ -63,14 +68,14 @@ static int bcmpmu_i2c_write_device(struct bcmpmu *bcmpmu, int reg, unsigned int 
 
 	if (reg >= PMU_REG_MAX) return -ENODEV;
 	map = bcmpmu->regmap[reg];
-	if ((map.addr == 0) && (map.mask == 0))  return -ENODEV;
+	if ((map.addr == 0) && (map.mask == 0))  return -ENXIO;
 
 	mutex_lock(&acc->i2c_mutex);
 	if (map.map == 0)
 		err = i2c_smbus_read_byte_data(acc->i2c_client, map.addr);
 	else if (map.map == 1)
 		err = i2c_smbus_read_byte_data(acc->i2c_client1, map.addr);
-	else err = -ENODEV;
+	else err = -EIO;
 	if (err < 0) goto err;
 
 	err = err & ~msk;
@@ -98,7 +103,7 @@ static int bcmpmu_i2c_read_device_direct(struct bcmpmu *bcmpmu, int map, int add
 		err = i2c_smbus_read_byte_data(acc->i2c_client, addr);
 	else if (map == 1)
 		err = i2c_smbus_read_byte_data(acc->i2c_client1, addr);
-	else err = -ENODEV;
+	else err = -EIO;
 	mutex_unlock(&acc->i2c_mutex);
 
 	if (err < 0) return err;
@@ -119,7 +124,7 @@ static int bcmpmu_i2c_write_device_direct(struct bcmpmu *bcmpmu, int map, int ad
 		err = i2c_smbus_read_byte_data(acc->i2c_client, addr);
 	else if (map == 1)
 		err = i2c_smbus_read_byte_data(acc->i2c_client1, addr);
-	else err = -ENODEV;
+	else err = -EIO;
 	if (err < 0) goto err;
 
 	err = err & ~msk;
@@ -129,7 +134,7 @@ static int bcmpmu_i2c_write_device_direct(struct bcmpmu *bcmpmu, int map, int ad
 		err = i2c_smbus_write_byte_data(acc->i2c_client, addr, value);
 	else if (map == 1)
 		err = i2c_smbus_write_byte_data(acc->i2c_client1, addr, value);
-	else err = -ENODEV;
+	else err = -EIO;
 err:
 	mutex_unlock(&acc->i2c_mutex);
 	return err;
@@ -149,7 +154,7 @@ static int bcmpmu_i2c_read_device_direct_bulk(struct bcmpmu *bcmpmu, int map, in
 		err = i2c_smbus_read_i2c_block_data(acc->i2c_client, addr, len, uval);
 	else if (map == 1)
 		err = i2c_smbus_read_i2c_block_data(acc->i2c_client1, addr, len, uval);
-	else err = -ENODEV;
+	else err = -EIO;
 	mutex_unlock(&acc->i2c_mutex);
 
 	for (i = len; i > 0; i--)
@@ -176,7 +181,7 @@ static int bcmpmu_i2c_write_device_direct_bulk(struct bcmpmu *bcmpmu, int map, i
 		err = i2c_smbus_write_i2c_block_data(acc->i2c_client, addr, len, uval);
 	else if (map == 1)
 		err = i2c_smbus_write_i2c_block_data(acc->i2c_client1, addr, len, uval);
-	else err = -ENODEV;
+	else err = -EIO;
 	mutex_unlock(&acc->i2c_mutex);
 
 	if (err < 0) return err;
@@ -231,7 +236,7 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	clt->dev.platform_data = pdata;
 	bcmpmu_i2c->i2c_client1 = clt;
 	mutex_init(&bcmpmu_i2c->i2c_mutex);
-	
+
 	bcmpmu->read_dev = bcmpmu_i2c_read_device;
 	bcmpmu->write_dev = bcmpmu_i2c_write_device;
 	bcmpmu->read_dev_drct = bcmpmu_i2c_read_device_direct;

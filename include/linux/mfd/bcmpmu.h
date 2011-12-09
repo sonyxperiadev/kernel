@@ -272,6 +272,11 @@ enum bcmpmu_reg {
 	PMU_REG_ADP_STATUS_SNS_DET,
 	PMU_REG_ADP_STATUS_RISE_TIMES_LSB,
 	PMU_REG_ADP_STATUS_RISE_TIMES_MSB,
+	/* BC ctrl n status */
+	PMU_REG_BC_DET_EN,
+	PMU_REG_BC_SW_RST,
+	PMU_REG_BC_OVWR_KEY,		/* BC CTRL register Overwrite permission reg */
+
 	/* test */
 	PMU_REG_HSIST_I_HS_ENST,
 	PMU_REG_HSIST_I_HS_IST,

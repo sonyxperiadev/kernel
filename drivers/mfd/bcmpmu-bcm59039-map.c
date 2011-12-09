@@ -177,6 +177,12 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_ADP_STATUS_SNS_DET] =		{.map = 0, .addr = 0, .mask = 0x10, .ro = 0, .shift = 4},
 	[PMU_REG_ADP_STATUS_RISE_TIMES_LSB] =	{.map = 0, .addr = 0, .mask = 0xFF, .ro = 0, .shift = 0},
 	[PMU_REG_ADP_STATUS_RISE_TIMES_MSB] =	{.map = 0, .addr = 0, .mask = 0x30, .ro = 0, .shift = 4},
+
+	/* BC ctrl and status */
+	[PMU_REG_BC_DET_EN] = 		{.map = 0, .addr = 0x61, .mask = 0x02, .ro = 0, .shift = 1},
+	[PMU_REG_BC_SW_RST] = 		{.map = 0, .addr = 0x61, .mask = 0x01, .ro = 0, .shift = 0},
+	[PMU_REG_BC_OVWR_KEY] = 	{.map = 0, .addr = 0x61, .mask = 0xF0, .ro = 0, .shift = 4},
+
 	/* interrupt */
 	[PMU_REG_INT_START] =			{.map = 0, .addr = 0x30, .mask = 0xFF, .ro = 0, .shift = 0},
 	[PMU_REG_INT_MSK_START] =		{.map = 0, .addr = 0x40, .mask = 0xFF, .ro = 0, .shift = 0},

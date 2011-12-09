@@ -179,7 +179,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_IHFSTIN_I_IHFSTI] =		{.map = 1, .addr = 0x8F, .mask = 0x0C, .ro = 0, .shift = 2},
 	[PMU_REG_IHFSTIN_I_IHFSTO] =		{.map = 1, .addr = 0x8F, .mask = 0x30, .ro = 0, .shift = 4},
 	[PMU_REG_IHFSTO_O_IHFSTI] =		{.map = 1, .addr = 0x90, .mask = 0x03, .ro = 0, .shift = 0},
-	[PMU_REG_HSOUT1_O_HS_IST] =		{.map = 1, .addr = 0xA9, .mask = 0xF0, .ro = 0, .shift = 4},	
+	[PMU_REG_HSOUT1_O_HS_IST] =		{.map = 1, .addr = 0xA9, .mask = 0xF0, .ro = 0, .shift = 4},
 
 	/* interrupt */
 	[PMU_REG_INT_START] =			{.map = 0, .addr = 0x30, .mask = 0xFF, .ro = 0, .shift = 0},
