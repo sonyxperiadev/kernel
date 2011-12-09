@@ -45,8 +45,6 @@
 #ifdef __weak_alias
 __weak_alias(xdrmem_create,_xdrmem_create)
 #endif
-//coverity[unnecessary_header], need following header file to avoid link error for undefined lswap
-#include "util_lswap.h"
 static void xdrmem_destroy __P((XDR *));
 static bool_t xdrmem_getlong_aligned __P((XDR *, long *));
 static bool_t xdrmem_putlong_aligned __P((XDR *, const long *));
