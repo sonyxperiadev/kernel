@@ -563,11 +563,13 @@ static int pi_def_enable(struct pi *pi, int enable)
 	{
 		policy = pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy;
 		pi_dbg("%s: policy = %d -- PI to be enabled\n",__func__,policy);
+		pwr_mgr_pi_counter_enable(pi->id, 1);
 	}
 	else
 	{
 		policy = pi->pi_state[pi->state_allowed].state_policy;
 		pi_dbg("%s: policy = %d pi->state_allowed = %d\n",__func__,policy,pi->state_allowed);
+		pwr_mgr_pi_counter_enable(pi->id, 0);
 
 	}
 	pi_dbg("%s: calling pi_set_policy\n",__func__);
@@ -1680,11 +1682,44 @@ static struct file_operations all_req_fops =
 	.read =         read_file_all_req,
 };
 
+static ssize_t read_file_pi_count(struct file *file, char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	int i, counter;
+	u32 len = 0;
+	struct pi *pi;
+	bool overflow;
+	ktime_t _time;
+	s64 ms;
+
+	_time = ktime_get();
+	ms = ktime_to_ms(_time);
+	for (i = 0; i < PI_MGR_PI_ID_MAX; i++) {
+		pi = pi_mgr.pi_list[i];
+		if (pi == NULL)
+			continue;
+
+		counter = pwr_mgr_pi_counter_read(pi->id, &overflow);
+		len += snprintf(debug_fs_buf+len, sizeof(debug_fs_buf)-len,
+				"%8s(%1d): counter:0x%08X, overflow:%d, "
+				"systime:%16ld mS\n",
+				pi->name, pi->id, counter, overflow,
+				(long int)ms);
+	}
+
+	return simple_read_from_buffer(user_buf, count,
+				ppos, debug_fs_buf, len);
+}
+static const struct file_operations pi_debug_count_fops = {
+	.open =         pi_debugfs_open,
+	.read =         read_file_pi_count,
+};
 
 static struct dentry *dent_pi_root_dir;
 int __init pi_debug_init(void)
 {
     struct dentry *dent_all_requests = 0, *dent_chip_reset = 0;
+    struct dentry *dent_pi_count = 0;
     dent_pi_root_dir = debugfs_create_dir("power_domains", 0);
     if(!dent_pi_root_dir)
 		return -ENOMEM;
@@ -1698,6 +1733,11 @@ int __init pi_debug_init(void)
     dent_chip_reset = debugfs_create_file("chip_reset", S_IRUSR, dent_pi_root_dir, NULL, &chip_reset_fops);
     if(!dent_chip_reset)
 		pi_dbg("Erro registering all_requests with debugfs\n");
+
+	dent_pi_count = debugfs_create_file("pi_count", S_IRUSR,
+				dent_pi_root_dir, NULL, &pi_debug_count_fops);
+	if (!dent_pi_count)
+		pi_dbg("Error registering pi_count with debugfs\n");
 
     return 0;
 
