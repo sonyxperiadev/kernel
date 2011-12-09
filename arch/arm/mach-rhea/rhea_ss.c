@@ -112,7 +112,7 @@
 #ifdef CONFIG_GPIO_PCA953X
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
 #else
-#define SD_CARDDET_GPIO_PIN      75
+#define SD_CARDDET_GPIO_PIN      72
 #endif
 #define SD_CARDDET_GPIO_PIN      72
 
@@ -436,7 +436,7 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 #define SENSOR_0_GPIO_PWRDN		12
 #define SENSOR_0_GPIO_RST		33
 #define SENSOR_0_CLK			"dig_ch0_clk"
-#define SENSOR_0_CLK_FREQ		(13000000)
+#define SENSOR_0_CLK_FREQ		(13000000) //@HW, need to check how fast this meaning.
 
 #define SENSOR_1_GPIO_PWRDN		13
 #define SENSOR_1_CLK			"dig_ch0_clk"
@@ -1300,13 +1300,25 @@ static struct platform_device board_bcmbt_lpm_device = {
 };
 #endif
 
-#define OV5640_I2C_ADDRESS (0x3C)
+//@HW
+#define S5K4ECGX_I2C_ADDRESS (0x5A>>1)
 
 static struct i2c_board_info rhea_i2c_camera[] = {
 	{
-		I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
+		I2C_BOARD_INFO("s5k4ecgx", S5K4ECGX_I2C_ADDRESS),
 	},
 };
+
+//@HW
+static struct regulator *VCAM_IO_1_8_V;  //LDO_HV9
+static struct regulator *VCAM_A_2_8_V;   //LDO_CAM
+#define CAM_CORE_EN	   12
+#define	CAM_FLASH_MODE 13
+#define CAM0_RESET    33
+#define CAM_FLASH_EN  34
+#define CAM_AF_EN     25
+//VCAM_1.2V is controlled by GPIO12
+
 
 static int rhea_camera_power(struct device *dev, int on)
 {
@@ -1315,26 +1327,61 @@ static int rhea_camera_power(struct device *dev, int on)
 	unsigned int value;
 	struct clk *clock;
 	static int count  = 0;
+	int ret =0;
 
 	if (count)
 		return 0;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	value = ioread32(padctl_base + PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
-	iowrite32(value, padctl_base + PADCTRLREG_DCLK1_OFFSET);
-	clock = clk_get(NULL, SENSOR_0_CLK);
-	if (!clock) {
-		printk(KERN_ERR "%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
+	VCAM_A_2_8_V = regulator_get(NULL,"cam");
+	if(IS_ERR(VCAM_A_2_8_V))
+	{
+		printk("can not get VCAM_A_2_8_V.8V\n");
 		return -1;
 	}
-	if (on) {
-		count = 1;
-		/* enable clk */
+
+	VCAM_IO_1_8_V = regulator_get(NULL,"hv9");
+	if(IS_ERR(VCAM_IO_1_8_V))
+	{
+		printk("can not get VCAM_IO_1.8V\n");
+		return -1;
+	}	
+	regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);	
+
+	
+	regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);	
+	ret = regulator_enable(VCAM_A_2_8_V);
+	value = ioread32(padctl_base + PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
+		iowrite32(value, padctl_base + PADCTRLREG_DCLK1_OFFSET);
+	clock = clk_get(NULL, SENSOR_0_CLK);
+	if (!clock) {
+			printk(KERN_ERR "%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
+			return -1;
+	}
+
+	if(on)
+	{
+		printk("power on the sensor \n"); //@HW
+		regulator_enable(VCAM_A_2_8_V);
+		ret = regulator_enable(VCAM_IO_1_8_V);
+
+		gpio_request(CAM_CORE_EN, "cam_1_2v");
+		gpio_direction_output(CAM_CORE_EN,1); 
+		printk("power on the sensor's power supply\n"); //@HW
+
+		gpio_request(CAM0_RESET, "cam_rst");
+		gpio_direction_output(CAM0_RESET,0);
+		printk("pull cam_rst to low\n"); //@HW		
+		
+		clk_disable(clock);
+	
+		printk("disable camera clock\n");
+		msleep(5);
 		value = clk_enable(clock);
 		if (value) {
-			printk(KERN_ERR "%s: failed to enabled clock %s\n", __func__,
-					SENSOR_0_CLK);
+			printk(KERN_ERR "%s: failed to enable clock %s\n", __func__,
+				SENSOR_0_CLK);
 			return -1;
 		}
 		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
@@ -1343,33 +1390,21 @@ static int rhea_camera_power(struct device *dev, int on)
 					__func__, SENSOR_0_CLK, SENSOR_0_CLK_FREQ);
 			return -1;
 		}
-
-		/* Delay for clk to start */
-		msleep(10);
-
-		/* enable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 0);
-		msleep(10);
-
-		/* disable power down gpio */
-		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 		msleep(5);
-
-		/* disable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 1);
-
-		/* wait for sensor to come up */
-		msleep(30);
-
+		gpio_set_value(CAM0_RESET,1);
+		msleep(5);
 	}
-	else {
+	else
+	{
+
 		/* enable reset gpio */
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 		msleep(1);
 		/* enable power down gpio */
-		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
-
+		gpio_set_value(CAM_CORE_EN, 0);
+		gpio_direction_output(CAM0_RESET,0);
 		clk_disable(clock);
+		
 	}
 	return 0;
 }
@@ -1380,6 +1415,7 @@ static int rhea_camera_reset(struct device *dev)
 	printk(KERN_INFO"%s:camera reset\n", __func__);
 	return 0;
 }
+#if 0
 static struct soc_camera_link iclink_ov5640 = {
 	.bus_id		= 0,
 	.board_info	= &rhea_i2c_camera[0],
@@ -1396,7 +1432,24 @@ static struct platform_device rhea_camera = {
 		.platform_data = &iclink_ov5640,
 	},
 };
+#else
+static struct soc_camera_link iclink_s5k4ecgx = {
+	.bus_id		= 0,
+	.board_info	= &rhea_i2c_camera[0],
+	.i2c_adapter_id	= 0,
+	.module_name	= "s5k4ecgx",
+	.power		= &rhea_camera_power,
+	.reset		= &rhea_camera_reset,
+};
 
+static struct platform_device rhea_camera = {
+	.name	= "soc-camera-pdrv",
+	.id		= 0,
+	.dev	= {
+		.platform_data = &iclink_s5k4ecgx,
+	},
+};
+#endif
 
 
 /* Rhea Ray specific platform devices */
