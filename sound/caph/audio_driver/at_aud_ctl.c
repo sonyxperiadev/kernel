@@ -328,7 +328,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
     switch(Params[0])//P1
     {
 
-		case 25:
+	case 25:
 			AUDCTRL_SetPlayVolume(
                       AUDIO_SOURCE_MEM,
                       Params[1],  //	  //speaker channel
@@ -353,7 +353,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		//!	AUDIO_SINK_I2S,
 		//!	AUDIO_SINK_VIBRA,
 		//! -------------------------------------------------------------------------------------
-		case 26:
+	case 26:
 			AUDCTRL_SetPlayMute( AUDIO_SOURCE_UNDEFINED,
 				     Params[1],  //speaker channel
 				     Params[2],  // mute flag   1 - mute   0 - un-mute
@@ -375,12 +375,12 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			//! 				   1 - mute
 			//! 				   0 - un-mute
 			//! -------------------------------------------------------------------------------------
-		case 32:
+	case 32:
 			AUDCTRL_SetTelephonyMicMute( AUDIO_SOURCE_UNDEFINED, (Boolean) Params[2] );
 			break;
 
 
-		case 100:
+	case 100:
 			if(Params[1] == 1)
 			{
 				BCM_AUDIO_DEBUG( "Enable CAPH clock \n" );
@@ -393,12 +393,12 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			}
 			break;
 
-		case 101:
+	case 101:
 			Params[0] = (Int32)csl_caph_QueryHWClock();
 			BCM_AUDIO_DEBUG( "csl_caph_QueryHWClock %ld \n",Params[0] );
 			break;
 
-		case 121: //at*maudtst=121,x,y  // x=0: EXT_SPEAKER_PGA, x=1:EXT_SPEAKER_PREPGA, x=2: MIC_PGA, y: gain value register value(enum value)
+	case 121: //at*maudtst=121,x,y  // x=0: EXT_SPEAKER_PGA, x=1:EXT_SPEAKER_PREPGA, x=2: MIC_PGA, y: gain value register value(enum value)
             if (Params[1] == 0) // EXT_SPEAKER_PGA
             {
 #ifdef CONFIG_BCMPMU_AUDIO

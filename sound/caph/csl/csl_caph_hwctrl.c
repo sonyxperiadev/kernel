@@ -2006,7 +2006,13 @@ void csl_caph_ControlHWClock(Boolean enable)
             clk_disable(clkIDCAPH[0]);
         }
 #endif
-	    clk_set_rate(clkIDCAPH[0], 156000000);
+
+#if defined(CONFIG_ARCH_RHEA_B0) 
+       //Rhea B0 and above.
+        clk_set_rate(clkIDCAPH[0], 78000000);
+#else
+        clk_set_rate(clkIDCAPH[0], 156000000);
+#endif
 		clk_enable(clkIDCAPH[0]);
 
         clkIDCAPH[1] = clk_get(NULL, "audioh_2p4m_clk");

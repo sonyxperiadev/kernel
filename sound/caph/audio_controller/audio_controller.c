@@ -146,7 +146,6 @@ static AUDIO_SOURCE_Mapping_t MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] =
  static AUDIO_SINK_Enum_t voiceCallSpkr = AUDIO_SINK_UNDEFINED;
  static AUDIO_SOURCE_Enum_t voiceCallMic = AUDIO_SOURCE_UNDEFINED;
 
- static AudioMode_t stAudioMode = AUDIO_MODE_INVALID;
 #if defined(USE_NEW_AUDIO_PARAM)
  static AudioApp_t stAudioApp = AUDIO_APP_VOICE_CALL;
 #endif
@@ -234,6 +233,14 @@ void AUDCTRL_EnableTelephony(
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_EnableTelephony::  sink %d, mic %d \n",
                            sink, source );
 
+	if( AUDDRV_InVoiceCall() )
+	{      //already in voice call
+		if( (voiceCallSpkr != sink) || (voiceCallMic != source) )
+			AUDCTRL_SetTelephonyMicSpkr( source, sink );
+
+		return;
+	}
+
 	if((source == AUDIO_SOURCE_DIGI1)
 	   || (source == AUDIO_SOURCE_DIGI2)
 	   || (source == AUDIO_SOURCE_DIGI3)
@@ -299,7 +306,7 @@ void AUDCTRL_DisableTelephony( void )
 //============================================================================
 void AUDCTRL_Telephony_RateChange( unsigned int sample_rate )
 {
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_Telephony_RateChange::	stAudioMode %d \n",stAudioMode);
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_Telephony_RateChange::sample_rate %d \n",sample_rate);
 
 	// This function follows the sequence and enables DSP audio, HW input path and output path.
 	AUDDRV_Telephony_RateChange(sample_rate);  //need to load new audio mode
@@ -361,7 +368,7 @@ void AUDCTRL_SetTelephonyMicSpkr(
       return;
 
     if(voiceCallSpkr!=sink)
-	powerOnExternalAmp( voiceCallSpkr, TelephonyUseExtSpkr, FALSE );
+      powerOnExternalAmp( voiceCallSpkr, TelephonyUseExtSpkr, FALSE );
 
     if(voiceCallMic!=source)
     {
@@ -525,8 +532,6 @@ AudioMode_t AUDCTRL_GetAudioMode( void )
 void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode, AudioApp_t app )
 {
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SaveAudioModeFlag: mode = %d, app=%d\n",  mode, app);
-	stAudioMode = mode;
-	stAudioApp = app;
 	AUDDRV_SaveAudioMode( mode, app );
 }
 
@@ -553,7 +558,6 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode, AudioApp_t app)
 void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode )
 {
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SaveAudioModeFlag: mode = %d\n",  mode);
-	stAudioMode = mode;
 	AUDDRV_SaveAudioMode( mode );
 }
 
