@@ -567,7 +567,7 @@ int process_logmsg(void *data)
 	struct snd_pcm_runtime *runtime;
 	AUDIOLOG_HEADER_t log_header;
 	unsigned char *p_dma_area;
-//	UInt32 sig_code;
+	// UInt32 sig_code;
 
 	log_link_list_t link_list[2];
 

@@ -29,7 +29,7 @@ EXTRA_CFLAGS += -I./include/linux/
 # For pmu audio driver
 EXTRA_CFLAGS += -I./include/linux/broadcom
 EXTRA_CFLAGS += -I./drivers/misc/
-EXTRA_CFLAGS += -I"./drivers/char/broadcom/modem/public/soc/debug/public"
+EXTRA_CFLAGS += -I./drivers/char/broadcom/modem/public/soc/debug/public
 #Audio Controller header files
 EXTRA_CFLAGS += -I./sound/caph -I./sound/caph/include
 EXTRA_CFLAGS += -I./sound/caph/audio_controller
