@@ -173,15 +173,11 @@ static int pmu_gain_right[AUDIO_SINK_TOTAL_COUNT] = {0};
 //=============================================================================
 // Private function prototypes
 //=============================================================================
-
-static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
-{
-#ifdef BSP_ONLY_BUILD
-	return NULL;
+#ifdef CONFIG_BCM_MODEM
+extern SysAudioParm_t* AUDIO_GetParmAccessPtr(void);
 #else
-	return APSYSPARM_GetAudioParmAccessPtr();
+extern AudioSysParm_t* AUDIO_GetParmAccessPtr(void);
 #endif
-}
 
 #define AUDIOMODE_PARM_ACCESSOR(mode)	 AUDIO_GetParmAccessPtr()[mode]
 #define AUDIOMODE_PARM_MM_ACCESSOR(mode)	 AUDIO_GetParmMMAccessPtr()[mode]
@@ -277,7 +273,7 @@ void AUDCTRL_DisableTelephony( void )
 
 	// The following is the sequence we need to follow
 	AUDDRV_Telephony_Deinit ( );
-	
+
 	if((voiceCallMic == AUDIO_SOURCE_DIGI1)
 	   || (voiceCallMic == AUDIO_SOURCE_DIGI2)
 	   || (voiceCallMic == AUDIO_SOURCE_DIGI3)
@@ -306,7 +302,7 @@ void AUDCTRL_Telephony_RateChange( unsigned int sample_rate )
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_Telephony_RateChange::	stAudioMode %d \n",stAudioMode);
 
 	// This function follows the sequence and enables DSP audio, HW input path and output path.
-	AUDDRV_Telephony_RateChange(sample_rate);  //need to load new audio mode 
+	AUDDRV_Telephony_RateChange(sample_rate);  //need to load new audio mode
 }
 
 /**
@@ -322,12 +318,12 @@ void AUDCTRL_Telephony_RequestRateChange(UInt8 codecID)
     // 0x0A as per 3GPP 26.103 Sec 6.3 indicates AMR WB  AUDIO_ID_CALL16k
     // 0x06 indicates AMR NB
 	if ( codecID == 0x0A ) // AMR-WB
-	{   
+	{
 		AUDCTRL_Telephony_RateChange( AUDIO_SAMPLING_RATE_16000 );
 	}
 	else
 	if ( codecID == 0x06 ) // AMR-WB// AMR-NB
-	{   
+	{
 		AUDCTRL_Telephony_RateChange( AUDIO_SAMPLING_RATE_8000 );
 	}
 }
@@ -350,7 +346,7 @@ void AUDCTRL_SetTelephonyMicSpkr(
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonyMicSpkr:: sink %d, source %d \n",
 	             sink, source );
 
-    if( source==AUDIO_SOURCE_USB || sink==AUDIO_SINK_USB ) 
+    if( source==AUDIO_SOURCE_USB || sink==AUDIO_SINK_USB )
 	return;
 
     if( AUDDRV_InVoiceCall( ) == FALSE )
@@ -360,7 +356,7 @@ void AUDCTRL_SetTelephonyMicSpkr(
       AUDCTRL_SaveAudioModeFlag( AUDDRV_GetAudioModeBySink(sink) );
       return;
     }
-	
+
     if(voiceCallMic==source && voiceCallSpkr==sink)
       return;
 
@@ -574,7 +570,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
     AUDIO_SOURCE_Enum_t mic;
     AUDIO_SINK_Enum_t spk;
     Boolean bClk = csl_caph_QueryHWClock();
-	
+
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode: mode = %d\n",  mode);
 
     if( mode==AUDDRV_GetAudioMode() )
@@ -621,7 +617,7 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_p
     AUDIO_SOURCE_Enum_t mic;
     AUDIO_SINK_Enum_t spk;
     Boolean bClk = csl_caph_QueryHWClock();
-	
+
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode_ForMusicPlayback: mode = %d\n",  mode);
 
     //if( mode==AUDDRV_GetAudioMode() )
@@ -658,7 +654,7 @@ void AUDCTRL_SetAudioMode_ForMusicRecord( AudioMode_t mode, unsigned int arg_pat
     AUDIO_SOURCE_Enum_t mic;
     AUDIO_SINK_Enum_t spk;
     Boolean bClk = csl_caph_QueryHWClock();
-	
+
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode_ForMusicRecord: mode = %d\n",  mode);
 
     //if( mode==AUDDRV_GetAudioMode() )
@@ -902,7 +898,7 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 
 	audDrv = GetRenderDriverByType (streamID);
-	
+
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StartRender::streamID=0x%x\n", streamID);
 
 	if (audDrv == NULL)
@@ -938,7 +934,7 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 	AUDCTRL_SetAudioMode_ForMusicPlayback( mode, 0 );
 
 	//for multi-cast, also use path->sink[1]
-				
+
 	return RESULT_OK;
 }
 
@@ -956,7 +952,7 @@ Result_t AUDCTRL_StopRender(unsigned int streamID)
 
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StopRender::streamID=0x%x\n", streamID);
 	res = csl_audio_render_stop(streamID);
-	
+
 	return res;
 }
 
@@ -1159,16 +1155,16 @@ void AUDCTRL_SetPlayVolume(
 	if (pathID != 0)
     {
 		path = &HWConfig_Table[pathID-1];
-      
-        // find the sinkNo with the same sink of input speaker 
+
+        // find the sinkNo with the same sink of input speaker
         for(j = 0; j < MAX_SINK_NUM; j++)
         {
-            if (path->sink[j] == speaker) 
+            if (path->sink[j] == speaker)
             {
                 sinkNo = j;
                 break;
             }
-        }      
+        }
         outChnl = path->srcmRoute[sinkNo][0].outChnl;
     }
     else
@@ -1331,7 +1327,7 @@ void AUDCTRL_SwitchPlaySpk(
 
     if ((sink == AUDIO_SINK_LOUDSPK)||(sink == AUDIO_SINK_HEADSET))
         powerOnExternalAmp( sink, AudioUseExtSpkr, TRUE );
-    
+
 	AUDCTRL_SetAudioMode_ForMusicPlayback( AUDDRV_GetAudioModeBySink(sink), 0 );
 
     return;
@@ -1354,7 +1350,7 @@ void AUDCTRL_AddPlaySpk(
     CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
 
 	Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_AddPlaySpk: src = %d, sink = %d, pathID %d \n", source, sink, pathID);
-	
+
     //if(pathID == 0)
     //{
 	//    audio_xassert(0,pathID);
@@ -1373,7 +1369,7 @@ void AUDCTRL_AddPlaySpk(
     }
 
     AUDCTRL_SetAudioMode_ForMusicPlayback( AUDDRV_GetAudioModeBySink(sink), 0 );
-    	
+
     return;
 
 }
@@ -1657,7 +1653,7 @@ Result_t AUDCTRL_StartCapture(unsigned int streamID)
 	}
 
 	AUDCTRL_SetAudioMode_ForMusicRecord( mode, 0 );
-	
+
     return RESULT_OK;
 }
 

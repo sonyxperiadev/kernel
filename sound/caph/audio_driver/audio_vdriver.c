@@ -126,16 +126,46 @@ static UInt8 audio_codecID = 6; //default CODEC ID = AMR NB
 //=============================================================================
 // Private function prototypes
 //=============================================================================
+#ifndef CONFIG_BCM_MODEM
+/* this array initializes the system parameters with the values from param_audio_rhea.txt  for different modes(mic_pga - hw_sidetone_gain)*/
+static AudioSysParm_t audio_parm_table[AUDIO_MODE_NUMBER_VOICE] = {
+72,	  36,   1,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	1,	0, {0},
+	72,	  36,   0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	1,	0, {0},
+	72,	  36,   0, 	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0,	0, {0},
+	72,	  36,   0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0,	0, {0},
+	72,   36,   0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	16,	16,	0,	0,	0, {0},
+	72,	  36,	0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	0,	0, {0},
+	72,   36,	0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
+	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
+	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
+	72,   36,	1,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	16,	16,	0,	1, {0},
+	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	1,	0, {0},
+	72,   36,   0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
+	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
+	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	8,	8,	0,	0, {0},
+	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	0,	0, {0},
+	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
+	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
+	72,   36, 	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}
+};
+#endif
 
 //on AP:
-static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
-{
-#ifdef BSP_ONLY_BUILD
-	return NULL;
+#ifdef CONFIG_BCM_MODEM
+SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
 #else
+AudioSysParm_t* AUDIO_GetParmAccessPtr(void)
+#endif
+{
+#if defined(BSP_ONLY_BUILD)
+	return NULL;
+#elif defined(CONFIG_BCM_MODEM)
 	return APSYSPARM_GetAudioParmAccessPtr();
+#else
+	return &audio_parm_table[0];
 #endif
 }
+
 
 #define AUDIOMODE_PARM_ACCESSOR(mode)	 AUDIO_GetParmAccessPtr()[mode]
 #define AUDIOMODE_PARM_MM_ACCESSOR(mode)	 AUDIO_GetParmMMAccessPtr()[mode]
@@ -995,7 +1025,7 @@ void AUDDRV_SetAudioMode_ForMusicRecord( AudioMode_t audio_mode, unsigned int ar
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode_ForMusicRecord() audio_mode==%d\n\r", audio_mode );
 
 	auddrv_SetAudioMode_mic(audio_mode, 0);
-	
+
 	//for 48 KHz recording no DSP and 8KHz recording through DSP.
 	//AUDDRV_SetAudioMode( audio_mode );
 }
@@ -1479,7 +1509,7 @@ static void AUDDRV_Telephony_InitHW (AUDIO_SOURCE_Enum_t mic,
     telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
 
     Log_DebugPrintf(LOGID_AUDIO, "\n* AUDDRV_Telephony_InitHW bNeedDualMic=%d *\n\r", bNeedDualMic );
-    
+
     //If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used
     //Here Let us assume it is DMIC3. It can be changed.
     if(bNeedDualMic==TRUE)
@@ -1712,7 +1742,7 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 		//Load the speaker gains form sysparm.
 	/******
 		Int16 dspDLGain = 0;
-	
+
 		// Set DSP DL gain from sysparm.
 		if(isDSPNeeded == TRUE)
 		{
@@ -1721,9 +1751,9 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 							dspDLGain, 0, 0, 0, 0);
 		}
 		********/
-	
+
 		//determine which mixer output to apply the gains to
-	
+
 		switch ( arg_audio_mode )
 		{
 		case AUDIO_MODE_HANDSET:
@@ -1732,7 +1762,7 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 		case AUDIO_MODE_HAC_WB:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
 			break;
-	
+
 		case AUDIO_MODE_HEADSET:
 		case AUDIO_MODE_HEADSET_WB:
 		case AUDIO_MODE_TTY:
@@ -1740,36 +1770,36 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 			//outChnl = (CSL_CAPH_SRCM_STEREO_CH1_L | CSL_CAPH_SRCM_STEREO_CH1_R);
 			outChnl = CSL_CAPH_SRCM_STEREO_CH1;
 			break;
-	
+
 		case AUDIO_MODE_SPEAKERPHONE:
 		case AUDIO_MODE_SPEAKERPHONE_WB:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;
-			
+
 			//for the case of Stereo_IHF
 			outChnl = (CSL_CAPH_SRCM_STEREO_CH2_R | CSL_CAPH_SRCM_STEREO_CH2_L);
 			break;
-	
+
 		case AUDIO_MODE_BLUETOOTH:
 			outChnl = csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEV_BT_SPKR);
 			break;
-	
+
 		default:
 			break;
 		}
-	
-	
+
+
 		//Load HW Mixer gains from sysparm
-	
+
 		mixerInputGain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_input_gain_l; //Q13p2 dB
 		mixerInputGain = mixerInputGain*25; //into mB
 		//mixerInputGain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_input_gain_r;
 		//mixerInputGain = mixerInputGain*25; //into mB
-	
+
 		//determine which which mixer input to apply the gains to
-	
+
 		if( arg_pathID >= 1 )
 			path = &HWConfig_Table[ arg_pathID - 1 ];
-	
+
 		if (path != 0)
 		{
 			csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, mixerInputGain, mixerInputGain);
@@ -1778,21 +1808,21 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 		{
 			csl_caph_srcmixer_set_mix_all_in_gain( outChnl, mixerInputGain, mixerInputGain);
 		}
-	
+
 		mixerOutputFineGain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_fine_gain_l; //Q13p2 dB
 		mixerOutputFineGain = mixerOutputFineGain*25; //into mB
 		//mixerOutputFineGain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_fine_gain_r;
 		//mixerOutputFineGain = mixerOutputFineGain*25; //into mB
-	
-	
+
+
 		mixerOutputBitSelect = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_coarse_gain_l; //Q13p2 dB
 		mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
 		//mixerOutputBitSelect = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_coarse_gain_r;
 		//mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
-	
+
 		csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixerOutputBitSelect);
 		csl_caph_srcmixer_set_mix_out_gain( outChnl, mixerOutputFineGain );
-	
+
 		//Config sidetone
 		{
 		Int32 *coeff = NULL;
@@ -1800,7 +1830,7 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 		UInt16 enable = 0;
 		SysAudioParm_t* pAudioParm;
 		pAudioParm = AUDIO_GetParmAccessPtr();
-	
+
 		enable = AUDIO_GetParmAccessPtr()[arg_audio_mode].hw_sidetone_enable;
 		if (!enable)
 		{
@@ -1814,12 +1844,12 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 			//second step: set filter and gain.
 			coeff = &(AUDIO_GetParmAccessPtr()[arg_audio_mode].hw_sidetone_eq[0]);
 			AUDDRV_HWControl_SetFilter(AUDDRV_SIDETONE_FILTER, (void *)coeff);
-			
+
 			gain = AUDIO_GetParmAccessPtr()[arg_audio_mode].hw_sidetone_gain;
 			csl_caph_audioh_sidetone_set_gain(gain);
 		}
 		}
-	
+
 		//Load PMU gain from sysparm.
 		switch ( arg_audio_mode )
 		{
@@ -1828,7 +1858,7 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 		case AUDIO_MODE_HAC:
 		case AUDIO_MODE_HAC_WB:
 			break;
-	
+
 		case AUDIO_MODE_HEADSET:
 		case AUDIO_MODE_HEADSET_WB:
 		case AUDIO_MODE_TTY:
@@ -1838,21 +1868,21 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 			//		PMU_AUDIO_HS_LEFT,
 			//		PMU_AUDIO_HS_BOTH
 			//};
-	
+
 			pmu_gain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_l; //Q13p2 dB
 			SetGainOnExternalAmp_mB(AUDIO_SINK_HEADSET, pmu_gain*25, 1); //PMU_AUDIO_HS_LEFT);
-	
+
 			pmu_gain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_r; //Q13p2 dB
 			SetGainOnExternalAmp_mB(AUDIO_SINK_HEADSET, pmu_gain*25, 0); //PMU_AUDIO_HS_RIGHT);
 			break;
-	
+
 		case AUDIO_MODE_SPEAKERPHONE:
 		case AUDIO_MODE_SPEAKERPHONE_WB:
-	
+
 			pmu_gain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].ext_speaker_pga_l; //Q13p2 dB
 			SetGainOnExternalAmp_mB( AUDIO_SINK_LOUDSPK, pmu_gain*25, 0); //PMU_AUDIO_HS_BOTH);
 			break;
-	
+
 		default:
 			break;
 		}

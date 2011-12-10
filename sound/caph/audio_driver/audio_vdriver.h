@@ -168,6 +168,39 @@ typedef struct
 	EQUlCompfilter_t ul;
 } AudioCompfilter_t;
 
+#ifndef CONFIG_BCM_MODEM
+typedef struct
+{	UInt16 mic_pga;
+	UInt16 voice_volume_max;  //in dB.
+	UInt16 dual_mic_enable;
+	UInt16 amic_dga_coarse_gain;
+	UInt16 amic_dga_fine_gain;
+	UInt16 dmic1_dga_coarse_gain;
+	UInt16 dmic1_dga_fine_gain;
+	UInt16 dmic2_dga_coarse_gain;
+	UInt16 dmic2_dga_fine_gain;
+	UInt16 dmic3_dga_coarse_gain;
+	UInt16 dmic3_dga_fine_gain;
+	UInt16 dmic4_dga_coarse_gain;
+	UInt16 dmic4_dga_fine_gain;
+	UInt16 srcmixer_input_gain_l;
+	UInt16 srcmixer_output_coarse_gain_l;
+	UInt16 srcmixer_output_fine_gain_l;
+	UInt16 srcmixer_input_gain_r;
+	UInt16 srcmixer_output_coarse_gain_r;
+	UInt16 srcmixer_output_fine_gain_r;
+	UInt16 ext_speaker_pga_l;
+	UInt16 ext_speaker_pga_r;
+	UInt16 hw_sidetone_enable;
+	UInt16 hw_sidetone_gain;
+	//add new variables here
+	//#define COEF_NUM_OF_EACH_GROUP_HW_SIDETONE		8
+	//#define NUM_OF_GROUP_HW_SIDETONE		16
+	Int32 hw_sidetone_eq[8*16]; //not set as sidetone will be used only in case of voice call
+}AudioSysParm_t;
+
+#endif
+
 UInt32 audio_control_generic(
 				UInt32 param1,
 				UInt32 param2,
