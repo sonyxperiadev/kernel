@@ -480,7 +480,7 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1000*3600,
 	.support_fg = 1,
-	.bc = BCMPMU_BC_BB_BC12,
+	.bc = BCMPMU_BC_PMU_BC12,//BCMPMU_BC_BB_BC12  ,
 };
 
 static struct i2c_board_info __initdata pmu_info[] =
