@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Copyright 2011 Broadcom Corporation.  All rights reserved.
 *
-*             @file     drivers/video/broadcom/dispdrv_bcm91008_alex_dsi.c
+*             @file     drivers/video/broadcom/dispdrv_bcm91008_alex_dsi.c12/8/2011
 *
 * Unless you and Broadcom execute a separate written software license agreement
 * governing use of this software, this software is licensed to you under the
@@ -962,7 +962,7 @@ Int32 DISPDRV_PowerControl (
                         __FUNCTION__ );
                     break; 
                 case DISP_PWR_SLEEP_ON:
-                    DISPDRV_ExecCmndList(drvH, &enter_sleep_seq_AUO[0]); 
+                    DISPDRV_ExecCmndList(drvH, &exit_sleep_seq_AUO[0]); 
                     OSTASK_Sleep ( 120 );
                     pPanel->pwrState = DISP_PWR_SLEEP_OFF;
                     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-OUT\n\r",
