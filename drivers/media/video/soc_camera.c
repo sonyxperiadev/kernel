@@ -1064,7 +1064,6 @@ static int soc_camera_probe(struct device *dev)
 	int ret;
 
 	dev_info(dev, "Probing %s\n", dev_name(dev));
-	printk("soc_camera_probe \n"); //@HW
 
 	ret = regulator_bulk_get(icd->pdev, icl->num_regulators,
 				 icl->regulators);

@@ -26,7 +26,7 @@
 
 #define PMU_IRG_REG_MAX		8
 #define PMU_ENV_REG_MAX		7
-#define PMU_USB_ID_LVL_MAX	8
+#define PMU_USB_ID_LVL_MAX	2
 
 static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_SMPLCTRL] =		{.map = 0x00, .addr = 0x06, .mask = 0xFF, .ro = 0},
@@ -168,7 +168,7 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_ADP_SNS_COMP] =	{.map = 0, .addr = 0, .mask = 0x02, .ro = 0, .shift = 1},
 	[PMU_REG_ADP_SNS_AON] =		{.map = 0, .addr = 0, .mask = 0x04, .ro = 0, .shift = 2},
 	/* usb status */
-	[PMU_REG_USB_STATUS_ID_CODE] = 		{.map = 0, .addr = 0, .mask = 0x38, .ro = 0, .shift = 3},
+	[PMU_REG_USB_STATUS_ID_CODE] = 		{.map = 0, .addr = 0xE3, .mask = 0x10, .ro = 0, .shift = 4},
 	[PMU_REG_OTG_STATUS_VBUS] =		{.map = 0, .addr = 0xE3, .mask = 0x02, .ro = 0, .shift = 1},
 	[PMU_REG_OTG_STATUS_SESS] =		{.map = 0, .addr = 0xE3, .mask = 0x01, .ro = 0, .shift = 0},
 	[PMU_REG_OTG_STATUS_SESS_END] =		{.map = 0, .addr = 0, .mask = 0x04, .ro = 0, .shift = 2},
@@ -393,7 +393,8 @@ const unsigned int bcmpmu_chrgr_vfloat_settings[PMU_CHRGR_VOLT_MAX] = {
 	[PMU_CHRGR_VOLT_4375] = 0x07,
 };
 
-static const int bcm59039_usb_id_map[PMU_USB_ID_LVL_MAX] = {
+/*
+static const int bcm59055_usb_id_map[PMU_USB_ID_LVL_MAX] = {
 	[0] = 	PMU_USB_ID_GROUND,
 	[1] = 	PMU_USB_ID_NOT_SUPPORTED,
 	[2] = 	PMU_USB_ID_NOT_SUPPORTED,
@@ -402,6 +403,12 @@ static const int bcm59039_usb_id_map[PMU_USB_ID_LVL_MAX] = {
 	[5] = 	PMU_USB_ID_RID_C,
 	[6] = 	PMU_USB_ID_NOT_SUPPORTED,
 	[7] = 	PMU_USB_ID_FLOAT,
+};
+*/
+
+static const int bcm59039_usb_id_map[PMU_USB_ID_LVL_MAX] = {
+	[0] = 	PMU_USB_ID_NOT_SUPPORTED,
+	[1] = 	PMU_USB_ID_FLOAT,
 };
 
 const struct bcmpmu_reg_map *bcmpmu_get_regmap(void)
