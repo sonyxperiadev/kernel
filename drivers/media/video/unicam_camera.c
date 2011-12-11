@@ -28,7 +28,7 @@
 #define iprintk(format, arg...)	\
 	printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg)
 
-//#define UNICAM_DEBUG
+#define UNICAM_DEBUG
 
 #ifdef UNICAM_DEBUG
 #define dprintk(format,arg...) \
