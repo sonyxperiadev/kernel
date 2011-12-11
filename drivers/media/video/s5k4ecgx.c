@@ -1636,19 +1636,49 @@ static int s5k4ecgx_enum_framesizes(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int s5k4ecgx_enum_fmt(struct v4l2_subdev *sd,
-			struct v4l2_fmtdesc *fmtdesc)
-{
-	pr_debug("%s: index = %d\n", __func__, fmtdesc->index);
 
-	if (fmtdesc->index >= ARRAY_SIZE(capture_fmts))
+static int s5k4ecgx_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
+			    enum v4l2_mbus_pixelcode *code)
+{
+	if (index >= ARRAY_SIZE(capture_fmts))
 		return -EINVAL;
 
-	memcpy(fmtdesc, &capture_fmts[fmtdesc->index], sizeof(*fmtdesc));
-
+	*code = capture_fmts[index].pixelformat;
 	return 0;
 }
 
+/*
+static int s5k4ecgx_enum_fmt(struct v4l2_subdev *sd,
+			struct v4l2_fmtdesc *fmtdesc)
+{
+	if(fmtdesc == NULL)
+	{
+		printk("BILLA s5k4ecgx_enum_fmt :v4l2_fmtdesc = NULL \n");
+		return 0;
+	}
+
+	printk("BILLA s5k4ecgx_enum_fmt :after NULL check !!!\n");
+	pr_debug("%s: index = %d\n", __func__, fmtdesc->index);
+	printk("BILLA s5k4ecgx_enum_fmt :after NULL check 22 !!!\n");
+	
+
+	if (fmtdesc->index >= ARRAY_SIZE(capture_fmts))
+	{
+		printk("BILLA s5k4ecgx_enum_fmt FAIL %d %d  \n",fmtdesc->index ,ARRAY_SIZE(capture_fmts));
+		return -EINVAL;
+	}
+
+	printk("BILLA s5k4ecgx_enum_fmt  %d %d  \n",fmtdesc->index ,ARRAY_SIZE(capture_fmts));
+
+
+	memcpy(fmtdesc, &capture_fmts[fmtdesc->index], sizeof(fmtdesc));
+
+	
+	printk("BILLA s5k4ecgx_enum_fmt  succ \n");
+
+	return 0;
+}
+*/
 static int s5k4ecgx_try_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 {
 	int num_entries;
@@ -2817,23 +2847,27 @@ static int s5k4ecgx_probe(struct i2c_client *client,
 	struct s5k4ecgx_state *state;
 	struct s5k4ecgx_platform_data *pdata = client->dev.platform_data;
 
-	printk("s5k4ecgx_probe\n"); //@HW
+	printk("BILLA s5k4ecgx_probe\n"); //@HW
 
 	if ((pdata == NULL) || (pdata->flash_onoff == NULL)) {
 		dev_err(&client->dev, "%s: bad platform data\n", __func__);
+		printk("BILLA s5k4 bad data fail\n"); 
 		return -ENODEV;
 	}
 
 	state = kzalloc(sizeof(struct s5k4ecgx_state), GFP_KERNEL);
 	if (state == NULL)
+		{
+		printk("BILLA s5k4ecgx_probe2 fail\n"); 
 		return -ENOMEM;
+		}
 
 	mutex_init(&state->ctrl_lock);
 	init_completion(&state->af_complete);
 
 	state->runmode = S5K4ECGX_RUNMODE_NOTREADY;
 	sd = &state->sd;
-	strcpy(sd->name, S5K4ECGX_DRIVER_NAME);
+	strcpy(sd->name, "s5k4ecgx");//S5K4ECGX_DRIVER_NAME);
 
 	/* Registering subdev */
 	v4l2_i2c_subdev_init(sd, client, &s5k4ecgx_ops);
@@ -2860,13 +2894,11 @@ static int s5k4ecgx_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id s5k4ecgx_id[] = {
-	{ S5K4ECGX_DRIVER_NAME, 0 },
+	{ "s5k4ecgx",0},//S5K4ECGX_DRIVER_NAME, 0 },
 	{}
 };
 
 MODULE_DEVICE_TABLE(i2c, s5k4ecgx_id);
-
-
 
 static struct i2c_driver s5k4ecgx_i2c_driver = {
 	.driver = {
@@ -2880,6 +2912,7 @@ static struct i2c_driver s5k4ecgx_i2c_driver = {
 
 static int __init s5k4ecgx_mod_init(void)
 {
+	printk("BILLA s5k4 adding driver =  %s \n",S5K4ECGX_DRIVER_NAME);
 	return i2c_add_driver(&s5k4ecgx_i2c_driver);
 }
 
