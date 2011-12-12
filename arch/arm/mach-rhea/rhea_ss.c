@@ -1423,14 +1423,17 @@ static int rhea_camera_power(struct device *dev, int on)
 				SENSOR_0_CLK);
 			return -1;
 		}
+		printk("enable camera clock\n");
 		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
 		if (value) {
 			printk(KERN_ERR "%s: failed to set the clock %s to freq %d\n",
 					__func__, SENSOR_0_CLK, SENSOR_0_CLK_FREQ);
 			return -1;
 		}
+		printk("set rate\n");
 		msleep(5);
 		gpio_set_value(CAM0_RESET,1);
+		printk("set cam rst to high\n");
 		msleep(5);
 	}
 	else

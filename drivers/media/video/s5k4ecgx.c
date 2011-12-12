@@ -477,8 +477,8 @@ static int s5k4ecgx_i2c_write_twobyte(struct i2c_client *client,
 	buf[2] = w_data >> 8;
 	buf[3] = w_data & 0xff;
 
-	printk("%s : W(0x%02X%02X%02X%02X)\n",
-		__func__, buf[0], buf[1], buf[2], buf[3]);
+//	printk("%s : W(0x%02X%02X%02X%02X)\n",
+//		__func__, buf[0], buf[1], buf[2], buf[3]);
 
 	do {
 		ret = i2c_transfer(client->adapter, &msg, 1);
