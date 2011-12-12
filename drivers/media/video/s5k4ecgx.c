@@ -32,10 +32,25 @@
 #define S5K4ECGX_VERSION_1_1	0x11
 #endif
 
+
+//@HW Fixed me, temporary only. Copied from OV5640
+#if 1
+#define S5K4ECGX_BRIGHTNESS_MIN           0
+#define S5K4ECGX_BRIGHTNESS_MAX           200
+#define S5K4ECGX_BRIGHTNESS_STEP          100
+#define S5K4ECGX_BRIGHTNESS_DEF           100
+
+#define S5K4ECGX_CONTRAST_MIN				0
+#define S5K4ECGX_CONTRAST_MAX				200
+#define S5K4ECGX_CONTRAST_STEP            100
+#define S5K4ECGX_CONTRAST_DEF				100
+#endif
+
+
 #define FORMAT_FLAGS_COMPRESSED		0x3
 #define SENSOR_JPEG_SNAPSHOT_MEMSIZE	0x410580
-
-#define DEFAULT_PIX_FMT		V4L2_PIX_FMT_UYVY	/* YUV422 */
+//SREE
+#define DEFAULT_PIX_FMT		V4L2_PIX_FMT_YUYV//V4L2_PIX_FMT_UYVY	/* YUV422 */
 #define DEFAULT_MCLK		24000000
 #define POLL_TIME_MS		10
 #define CAPTURE_POLL_TIME_MS    1000
@@ -705,6 +720,7 @@ static int s5k4ecgx_i2c_write_twobyte(struct i2c_client *client,
 	unsigned char buf[4];
 	struct i2c_msg msg = {client->addr, 0, 4, buf};
 	int ret = 0;
+	printk("BILLA s5k4ecgx_i2c_write_twobyte E \n");
 
 	buf[0] = addr >> 8;
 	buf[1] = addr;
@@ -716,25 +732,62 @@ static int s5k4ecgx_i2c_write_twobyte(struct i2c_client *client,
 
 	do {
 		ret = i2c_transfer(client->adapter, &msg, 1);
+		
+		printk("BILLA s5k4ecgx_i2c_write_twobyte called i2c\n");
 		if (likely(ret == 1))
 			break;
+		
+		printk("BILLA s5k4ecgx_i2c_write_two byte i2c fail1 \n");
 		msleep(POLL_TIME_MS);
 		dev_err(&client->dev, "%s: I2C err %d, retry %d.\n",
 			__func__, ret, retry_count);
 	} while (retry_count-- > 0);
 	if (ret != 1) {
 		dev_err(&client->dev, "%s: I2C is not working.\n", __func__);
+		
+		printk("BILLA s5k4ecgx_i2c_write_twobyte fail 2 \n");
 		return -EIO;
 	}
 
 	return 0;
 }
 
+static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
+	{
+		.id      	= V4L2_CID_BRIGHTNESS,
+		.type    	= V4L2_CTRL_TYPE_INTEGER,
+		.name    	= "Brightness",
+		.minimum	= S5K4ECGX_BRIGHTNESS_MIN,
+		.maximum	= S5K4ECGX_BRIGHTNESS_MAX,
+		.step		= S5K4ECGX_BRIGHTNESS_STEP,
+		.default_value	= S5K4ECGX_BRIGHTNESS_DEF,
+	},
+	{
+		.id		= V4L2_CID_CONTRAST,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Contrast",
+		.minimum	= S5K4ECGX_CONTRAST_MIN,
+		.maximum	= S5K4ECGX_CONTRAST_MAX,
+		.step		= S5K4ECGX_CONTRAST_STEP,
+		.default_value	= S5K4ECGX_CONTRAST_DEF,
+	},
+	{
+		.id		= V4L2_CID_COLORFX,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Color Effects",
+		.minimum	= V4L2_COLORFX_NONE,
+		.maximum	= V4L2_COLORFX_NEGATIVE,
+		.step		= 1,
+		.default_value	= V4L2_COLORFX_NONE,
+	},
+};
 static int s5k4ecgx_write_regs(struct v4l2_subdev *sd, const u32 regs[],
 			     int size)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int i, err;
+
+	printk("BILLA s5k4ecgx_write_regs E \n");
 
 	for (i = 0; i < size; i++) {
 		err = s5k4ecgx_i2c_write_twobyte(client,
@@ -742,8 +795,11 @@ static int s5k4ecgx_write_regs(struct v4l2_subdev *sd, const u32 regs[],
 		if (unlikely(err != 0)) {
 			dev_err(&client->dev,
 				"%s: register write failed\n", __func__);
+			
+			printk("BILLA s5k4ecgx_write_regs fail \n");
 			return err;
 		}
+		printk("BILLA s5k4ecgx_write_regs success \n");
 	}
 
 	return 0;
@@ -755,17 +811,25 @@ static int s5k4ecgx_set_from_table(struct v4l2_subdev *sd,
 				int table_size, int index)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	printk("BILLA s5k4ecgx_set_from_table E \n");
 	dev_dbg(&client->dev, "%s: set %s index %d\n",
 		__func__, setting_name, index);
 	if ((index < 0) || (index >= table_size)) {
 		dev_err(&client->dev,
 			"%s: index(%d) out of range[0:%d] for table for %s\n",
 			__func__, index, table_size, setting_name);
+		
+		printk("BILLA s5k4ecgx_set_from_table fail 1 \n");
 		return -EINVAL;
 	}
 	table += index;
 	if (table->reg == NULL)
+		{
+		
+		printk("BILLA s5k4ecgx_set_from_table fail 2 \n");
 		return -EINVAL;
+		}
 	return s5k4ecgx_write_regs(sd, table->reg, table->array_size);
 }
 
@@ -802,7 +866,6 @@ static int s5k4ecgx_set_preview_stop(struct v4l2_subdev *sd)
 
 	return 0;
 }
-
 static int s5k4ecgx_set_preview_start(struct v4l2_subdev *sd)
 {
 	int err;
@@ -811,12 +874,18 @@ static int s5k4ecgx_set_preview_start(struct v4l2_subdev *sd)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	bool set_size = true;
 
+	printk("BILLA s5k4ecgx_set_preview_start E \n");
+
 	dev_dbg(&client->dev, "%s: runmode = %d\n",
 		__func__, state->runmode);
 
 	if (!state->pix.width || !state->pix.height ||
 		!state->strm.parm.capture.timeperframe.denominator)
+		{
+		
+		printk("BILLA s5k4ecgx_set_preview_start fail \n");
 		return -EINVAL;
+		}
 
 	if (state->runmode == S5K4ECGX_RUNMODE_CAPTURE) {
 		dev_dbg(&client->dev, "%s: sending Preview_Return cmd\n",
@@ -824,6 +893,8 @@ static int s5k4ecgx_set_preview_start(struct v4l2_subdev *sd)
 		err = s5k4ecgx_set_from_table(sd, "preview return",
 					&state->regs->preview_return, 1, 0);
 		if (err < 0) {
+			
+			printk("BILLA s5k4ecgx_set_preview_start fail1 \n");
 			dev_err(&client->dev,
 				"%s: failed: s5k4ecgx_Preview_Return\n",
 				__func__);
@@ -838,6 +909,8 @@ static int s5k4ecgx_set_preview_start(struct v4l2_subdev *sd)
 					ARRAY_SIZE(state->regs->preview_size),
 					state->preview_framesize_index);
 		if (err < 0) {
+			
+			printk("BILLA s5k4ecgx_set_preview_start E\fail 2 \n");
 			dev_err(&client->dev,
 				"%s: failed: Could not set preview size\n",
 				__func__);
@@ -860,6 +933,8 @@ static int s5k4ecgx_set_capture_size(struct v4l2_subdev *sd)
 
 	dev_dbg(&client->dev, "%s: index:%d\n", __func__,
 		state->capture_framesize_index);
+	
+	printk("BILLA s5k4ecgx_set_capture_size E \n");
 
 	err = s5k4ecgx_set_from_table(sd, "capture_size",
 				state->regs->capture_size,
@@ -1569,6 +1644,8 @@ static int s5k4ecgx_s_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 		container_of(sd, struct s5k4ecgx_state, sd);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	printk("BILLA s5k4ecgx_s_fmt E \n");
+
 	dev_dbg(&client->dev, "%s: pixelformat = 0x%x (%c%c%c%c),"
 		" colorspace = 0x%x, width = %d, height = %d\n",
 		__func__, fmt->fmt.pix.pixelformat,
@@ -1584,6 +1661,7 @@ static int s5k4ecgx_s_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 		dev_err(&client->dev,
 			"%s: mismatch in pixelformat and colorspace\n",
 			__func__);
+			printk("BILLA s5k4ecgx_s_fmt fail 1\n");
 		return -EINVAL;
 	}
 
@@ -1612,6 +1690,7 @@ static int s5k4ecgx_s_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 				ARRAY_SIZE(s5k4ecgx_preview_framesize_list),
 				true);
 	}
+	printk("BILLA s5k4ecgx_s_fmt succ \n");
 
 	state->jpeg.enable = state->pix.pixelformat == V4L2_PIX_FMT_JPEG;
 
@@ -1643,11 +1722,12 @@ static int s5k4ecgx_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 	if (index >= ARRAY_SIZE(capture_fmts))
 		return -EINVAL;
 
-	*code = capture_fmts[index].pixelformat;
+	*code = V4L2_MBUS_FMT_YUYV8_2X8;//capture_fmts[index].pixelformat;
+	printk("BILLA s5k4ecgx_enum_fmt = %x \n",*code);
 	return 0;
 }
 
-/*
+#if 0
 static int s5k4ecgx_enum_fmt(struct v4l2_subdev *sd,
 			struct v4l2_fmtdesc *fmtdesc)
 {
@@ -1678,12 +1758,28 @@ static int s5k4ecgx_enum_fmt(struct v4l2_subdev *sd,
 
 	return 0;
 }
-*/
+#endif
+
+
+static int s5k4ecgx_try_fmt(struct v4l2_subdev *sd,
+			   struct v4l2_mbus_framefmt *mf)
+{
+	int i_fmt;
+	int i_size;
+
+	mf->code = V4L2_MBUS_FMT_YUYV8_2X8;
+	mf->colorspace	= V4L2_COLORSPACE_JPEG;//ov5640_fmts[i_fmt].colorspace;
+	mf->field	= V4L2_FIELD_NONE;
+
+	return 0;
+}
+
+#if 0
 static int s5k4ecgx_try_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 {
 	int num_entries;
 	int i;
-
+	printk("BILLA s5k4ecgx_try_fmt E \n");
 	num_entries = ARRAY_SIZE(capture_fmts);
 
 	pr_debug("%s: pixelformat = 0x%x (%c%c%c%c), num_entries = %d\n",
@@ -1699,12 +1795,14 @@ static int s5k4ecgx_try_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 			pr_debug("%s: match found, returning 0\n", __func__);
 			return 0;
 		}
+		else
+			printk("BILLA s5k4ecgx_try_fmt failed %d %d %d \n",num_entries,capture_fmts[i].pixelformat,fmt->fmt.pix.pixelformat);
 	}
 
 	pr_debug("%s: no match found, returning -EINVAL\n", __func__);
 	return -EINVAL;
 }
-
+#endif
 static void s5k4ecgx_enable_torch(struct v4l2_subdev *sd)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1756,17 +1854,16 @@ static int s5k4ecgx_set_flash_mode(struct v4l2_subdev *sd, int value)
 		__func__, value);
 	return -EINVAL;
 }
-
 static int s5k4ecgx_g_parm(struct v4l2_subdev *sd,
 			struct v4l2_streamparm *param)
 {
 	struct s5k4ecgx_state *state =
 		container_of(sd, struct s5k4ecgx_state, sd);
+	printk("s5k4ecgx_g_parm \n");
 
 	memcpy(param, &state->strm, sizeof(param));
 	return 0;
 }
-
 static int s5k4ecgx_s_parm(struct v4l2_subdev *sd,
 			struct v4l2_streamparm *param)
 {
@@ -1778,6 +1875,7 @@ static int s5k4ecgx_s_parm(struct v4l2_subdev *sd,
 		(struct sec_cam_parm *)&param->parm.raw_data;
 	struct sec_cam_parm *parms =
 		(struct sec_cam_parm *)&state->strm.parm.raw_data;
+	printk("s5k4ecgx_s_parm\n");
 
 	dev_dbg(&client->dev, "%s: start\n", __func__);
 
@@ -1863,7 +1961,6 @@ static int s5k4ecgx_s_parm(struct v4l2_subdev *sd,
 	dev_dbg(&client->dev, "%s: returning %d\n", __func__, err);
 	return err;
 }
-
 /* This function is called from the g_ctrl api
  *
  * This function should be called only after the s_fmt call,
@@ -2058,6 +2155,26 @@ static int s5k4ecgx_get_shutterspeed(struct v4l2_subdev *sd,
 
 	return err;
 }
+static int s5k4ecgx_set_bus_param(struct soc_camera_device *icd,
+				 unsigned long flags)
+{
+	/* TODO: Do the right thing here, and validate bus params */
+	return 0;
+}
+
+static unsigned long s5k4ecgx_query_bus_param(struct soc_camera_device *icd)
+{
+	unsigned long flags = SOCAM_PCLK_SAMPLE_FALLING |
+		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
+		SOCAM_DATA_ACTIVE_HIGH | SOCAM_MASTER;
+
+	/* TODO: Do the right thing here, and validate bus params */
+
+	flags |= SOCAM_DATAWIDTH_10;
+
+	return flags;
+}
+
 
 static int s5k4ecgx_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
@@ -2167,6 +2284,7 @@ static int s5k4ecgx_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	return err;
 }
 
+
 static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -2177,6 +2295,7 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	int err = 0;
 	int value = ctrl->value;
 
+printk("BILLA s5k4ecgx_s_ctrl E %d \n",ctrl->id);
 	if (!state->initialized &&
 		(ctrl->id != V4L2_CID_CAMERA_CHECK_DATALINE)) {
 		dev_err(&client->dev,
@@ -2401,6 +2520,8 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			err = s5k4ecgx_return_focus(sd);
 		break;
 	default:
+
+		printk("BILLA s5k4ecgx_s_ctrl() DEFAULT !!!!!!!! \n");
 		dev_err(&client->dev, "%s: unknown set ctrl id 0x%x\n",
 			__func__, ctrl->id);
 		err = -ENOIOCTLCMD;
@@ -2418,6 +2539,25 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	return err;
 }
+
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+static int s5k4ecgx_g_register(struct v4l2_subdev *sd,
+			     struct v4l2_dbg_register *reg)
+{
+	printk("Error!!! s5k4ecgx_g_register is empty\n");
+
+	return 0;
+}
+
+static int s5k4ecgx_s_register(struct v4l2_subdev *sd,
+			     struct v4l2_dbg_register *reg)
+{
+	printk("Error!!! s5k4ecgx_s_register is empty\n");
+
+	return 0;
+}
+#endif
+
 
 static int s5k4ecgx_s_ext_ctrl(struct v4l2_subdev *sd,
 			      struct v4l2_ext_control *ctrl)
@@ -2810,6 +2950,18 @@ static int s5k4ecgx_s_config(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int s5k4ecgx_s_stream(struct v4l2_subdev *sd, int enable)
+{
+	printk("Error !!!!, s5k4ecgx_s_stream is empty\n");
+	return 0;
+}
+static struct soc_camera_ops s5k4ecgx_ops = {
+	.set_bus_param		= s5k4ecgx_set_bus_param,
+	.query_bus_param	= s5k4ecgx_query_bus_param,
+	.controls		= s5k4ecgx_controls,
+	.num_controls		= ARRAY_SIZE(s5k4ecgx_controls),
+};
+
 static const struct v4l2_subdev_core_ops s5k4ecgx_core_ops = {
 	.init = s5k4ecgx_init,	/* initializing API */
 //	.s_config = s5k4ecgx_s_config,	/* Fetch platform data */  //@HW Fixed me
@@ -2817,10 +2969,8 @@ static const struct v4l2_subdev_core_ops s5k4ecgx_core_ops = {
 	.s_ctrl = s5k4ecgx_s_ctrl,
 	.s_ext_ctrls = s5k4ecgx_s_ext_ctrls,
 };
-
-
-
 static const struct v4l2_subdev_video_ops s5k4ecgx_video_ops = {
+	.s_stream	= s5k4ecgx_s_stream,
 	.s_mbus_fmt = s5k4ecgx_s_fmt,
 	.enum_framesizes = s5k4ecgx_enum_framesizes,
 	.enum_mbus_fmt = s5k4ecgx_enum_fmt,
@@ -2829,11 +2979,10 @@ static const struct v4l2_subdev_video_ops s5k4ecgx_video_ops = {
 	.s_parm = s5k4ecgx_s_parm,
 };
 
-static const struct v4l2_subdev_ops s5k4ecgx_ops = {
+static const struct v4l2_subdev_ops s5k4ecgx_subdev_ops = {
 	.core = &s5k4ecgx_core_ops,
 	.video = &s5k4ecgx_video_ops,
 };
-
 
 /*
  * s5k4ecgx_probe
@@ -2846,8 +2995,20 @@ static int s5k4ecgx_probe(struct i2c_client *client,
 	struct v4l2_subdev *sd;
 	struct s5k4ecgx_state *state;
 	struct s5k4ecgx_platform_data *pdata = client->dev.platform_data;
+	struct soc_camera_device *icd = client->dev.platform_data;
+	struct soc_camera_link *icl;
 
-	printk("BILLA s5k4ecgx_probe\n"); //@HW
+	printk("s5k4ecgx_probe\n"); //@HW
+	if (!icd) {
+		printk("s5k4ecgx: missing soc-camera data!\n");
+		return -EINVAL;
+	}
+
+	icl = to_soc_camera_link(icd);
+	if (!icl) {
+		printk( "s5k4ecgx driver needs platform data\n");
+		return -EINVAL;
+	}
 
 	if ((pdata == NULL) || (pdata->flash_onoff == NULL)) {
 		dev_err(&client->dev, "%s: bad platform data\n", __func__);
@@ -2870,7 +3031,8 @@ static int s5k4ecgx_probe(struct i2c_client *client,
 	strcpy(sd->name, "s5k4ecgx");//S5K4ECGX_DRIVER_NAME);
 
 	/* Registering subdev */
-	v4l2_i2c_subdev_init(sd, client, &s5k4ecgx_ops);
+	v4l2_i2c_subdev_init(sd, client, &s5k4ecgx_subdev_ops);
+	icd->ops		= &s5k4ecgx_ops;
 
 	dev_dbg(&client->dev, "5MP camera S5K4ECGX loaded.\n");
 
@@ -2883,6 +3045,7 @@ static int s5k4ecgx_remove(struct i2c_client *client)
 	struct s5k4ecgx_state *state =
 		container_of(sd, struct s5k4ecgx_state, sd);
 	printk("s5k4ecgx_remove\n"); //@HW
+	client->driver = NULL;
 
 	v4l2_device_unregister_subdev(sd);
 	mutex_destroy(&state->ctrl_lock);
@@ -2892,6 +3055,10 @@ static int s5k4ecgx_remove(struct i2c_client *client)
 
 	return 0;
 }
+
+
+
+
 
 static const struct i2c_device_id s5k4ecgx_id[] = {
 	{ "s5k4ecgx",0},//S5K4ECGX_DRIVER_NAME, 0 },
