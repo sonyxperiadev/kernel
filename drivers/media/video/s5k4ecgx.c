@@ -2952,6 +2952,7 @@ static int s5k4ecgx_s_config(struct v4l2_subdev *sd,
 
 static int s5k4ecgx_s_stream(struct v4l2_subdev *sd, int enable)
 {
+	s5k4ecgx_set_preview_start(sd);
 	printk("Error !!!!, s5k4ecgx_s_stream is empty\n");
 	return 0;
 }
