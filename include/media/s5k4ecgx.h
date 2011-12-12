@@ -8,7 +8,7 @@
  * (at your option) any later version.
  */
 
-#define S5K4ECGX_DRIVER_NAME	"S5K4ECGX"
+#define S5K4ECGX_DRIVER_NAME	"s5k4ecgx"
 
 struct s5k4ecgx_platform_data {
 	unsigned int default_width;

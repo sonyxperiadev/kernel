@@ -64,6 +64,7 @@
 #include <linux/broadcom/bcm59055-power.h>
 #include <linux/clk.h>
 #include <linux/bootmem.h>
+#include <plat/pi_mgr.h>
 #include "common.h"
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
@@ -1326,7 +1327,7 @@ static struct i2c_board_info rhea_i2c_camera[] = {
 
 //@HW
 static struct regulator *VCAM_IO_1_8_V;  //LDO_HV9
-static struct regulator *VCAM_A_2_8_V;   //LDO_CAM
+static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
 #define CAM_CORE_EN	   12
 #define	CAM_FLASH_MODE 13
 #define CAM0_RESET    33
@@ -1341,14 +1342,26 @@ static int rhea_camera_power(struct device *dev, int on)
 	void __iomem* padctl_base = (void __iomem *)HW_IO_PHYS_TO_VIRT(PAD_CTRL_BASE_ADDR);
 	unsigned int value;
 	struct clk *clock;
+	struct clk *axi_clk;
 	static int count  = 0;
 	int ret =0;
-
-	if (count)
-		return 0;
+	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
+	if (NULL == unicam_dfs_node) {
+		unicam_dfs_node = pi_mgr_dfs_add_request("unicam", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+		if (NULL == unicam_dfs_node) {
+			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+			return -1;
+		}
+	}
+
+	axi_clk = clk_get(NULL, "csi0_axi_clk");
+	if (!axi_clk) {
+		printk(KERN_ERR "%s:unable to get clock csi0_axi_clk\n", __func__);
+		return -1;
+	}
 	VCAM_A_2_8_V = regulator_get(NULL,"cam");
 	if(IS_ERR(VCAM_A_2_8_V))
 	{
@@ -1378,6 +1391,16 @@ static int rhea_camera_power(struct device *dev, int on)
 	if(on)
 	{
 		printk("power on the sensor \n"); //@HW
+		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_OPP_TURBO)) {
+			printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
+			return -1;
+		}
+
+		value = clk_enable(axi_clk);
+		if (value) {
+			printk(KERN_ERR "%s:failed to enable csi2 axi clock\n", __func__);
+			return -1;
+		}
 		regulator_enable(VCAM_A_2_8_V);
 		ret = regulator_enable(VCAM_IO_1_8_V);
 
@@ -1419,7 +1442,12 @@ static int rhea_camera_power(struct device *dev, int on)
 		gpio_set_value(CAM_CORE_EN, 0);
 		gpio_direction_output(CAM0_RESET,0);
 		clk_disable(clock);
-		
+
+		clk_disable(axi_clk);
+
+		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
+		}
 	}
 	return 0;
 }
@@ -1434,6 +1462,7 @@ static int rhea_camera_reset(struct device *dev)
 static struct soc_camera_link iclink_ov5640 = {
 	.bus_id		= 0,
 	.board_info	= &rhea_i2c_camera[0],
+
 	.i2c_adapter_id	= 0,
 	.module_name	= "ov5640",
 	.power		= &rhea_camera_power,
@@ -1450,6 +1479,7 @@ static struct platform_device rhea_camera = {
 #else
 static struct soc_camera_link iclink_s5k4ecgx = {
 	.bus_id		= 0,
+	
 	.board_info	= &rhea_i2c_camera[0],
 	.i2c_adapter_id	= 0,
 	.module_name	= "s5k4ecgx",
