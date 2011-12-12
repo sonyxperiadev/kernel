@@ -39,6 +39,7 @@
 #include "csl_vpu.h"
 
 AP_SharedMem_t	*vp_shared_mem;
+extern AP_SharedMem_t   *DSPDRV_GetPhysicalSharedMemoryAddress( void);
 
 static VPUCaptureStatusCB_t VPUCaptureStatusHandler = NULL;
 static VPURenderStatusCB_t VPURenderStatusHandler = NULL;
@@ -492,6 +493,9 @@ void AP_ProcessStatus(void)
 /*******************************************************************************************/
 UInt32 *AUDIO_Return_IHF_48kHz_buffer_base_address(void)
 {
-   	return(&(vp_shared_mem->shared_aud_out_buf_48k[0][0]));
+     AP_SharedMem_t *ap_shared_mem_ptr;
+     ap_shared_mem_ptr  = DSPDRV_GetPhysicalSharedMemoryAddress();
+
+   	return(&(ap_shared_mem_ptr->shared_aadmac_spkr_low[0]));
 }
 

@@ -1938,7 +1938,7 @@ static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr (AUDIO_SINK_Enum_t spkr)
 
 static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void)
 {
-        // special path for IHF voice call
+/*        // special path for IHF voice call
         // need to use the physical address
 		// Linux only change
 		AP_SharedMem_t *ap_shared_mem_ptr = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
@@ -1948,6 +1948,8 @@ static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void)
 													- (UInt32)ap_shared_mem_ptr));
 
         return memAddr;
+*/
+    return (AUDIO_Return_IHF_48kHz_buffer_base_address());
 
 }
 
