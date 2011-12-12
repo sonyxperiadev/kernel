@@ -38,6 +38,8 @@
 #include <linux/workqueue.h>
 #include <linux/preempt.h>
 
+#ifndef CONFIG_APANIC_ON_MMC
+
 #ifdef CONFIG_APANIC_ON_MMC
 #include <linux/mmc-poll/mmc_poll_stack.h>
 
@@ -783,3 +785,5 @@ int __init apanic_init(void)
 }
 
 module_init(apanic_init);
+
+#endif

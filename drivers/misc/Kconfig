@@ -636,7 +636,7 @@ config APANIC_PLABEL
 
 config APANIC_ON_MMC
 	bool "Dump panic info on eMMC"
-	depends on APANIC && MMCPOLL
+	depends on MMCPOLL
 	default n
 	---help---
 	By default apanic works on MTD interface.
