@@ -24,6 +24,7 @@
 #include <linux/android_pmem.h>
 #include <linux/mempolicy.h>
 #include <linux/sched.h>
+#include <linux/rcupdate.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-contiguous.h>
 #include <asm/io.h>
@@ -801,7 +802,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		get_task_struct(current->group_leader);
 		data->task = current->group_leader;
 		data->vma = vma;
-		data->pid = current->pid;
+		data->pid = task_pid_nr(current->group_leader);
 		DLOG("submmapped file %p vma %p pid %u\n", file, vma,
 		     current->pid);
 	} else {
@@ -812,7 +813,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 			ret = -EAGAIN;
 			goto error;
 		}
-		data->pid = current->pid;
+		data->pid = task_pid_nr(current->group_leader);
 	}
 	vma->vm_ops = &vm_ops;
 error:
@@ -1487,6 +1488,7 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 	struct list_head *elt, *elt2;
 	struct pmem_data *data;
 	struct pmem_region_node *region_node;
+	struct task_struct *task;
 	int id = (int)file->private_data;
 	const int debug_bufmax = 8192;
 	char *buffer;
@@ -1497,24 +1499,39 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 		return -ENOMEM;
 
 	n = scnprintf(buffer, debug_bufmax,
-		      "pid #: flags | size | range | mapped regions (offset, len) (offset,len)...\n");
+		      "process (pid #) : flags | size | range | mapped regions (start, end) (start, end)...\n");
 
 	mutex_lock(&pmem[id].data_list_lock);
 	list_for_each(elt, &pmem[id].data_list) {
 		data = list_entry(elt, struct pmem_data, list);
 		down_read(&data->sem);
-		n += scnprintf(buffer + n, debug_bufmax - n, "pid %u: ",
-				data->pid);
-		n += scnprintf(buffer + n, debug_bufmax - n, "0x%08x ",
+		rcu_read_lock();
+		task = find_task_by_pid_ns(data->pid, &init_pid_ns);
+		if (task)
+			get_task_struct(task);
+		rcu_read_unlock();
+		if (!task) {
+			printk(KERN_WARNING"### pmem allocation found without associated task ####\n");
+			up_read(&data->sem);
+			continue;
+		}
+
+		task_lock(task);
+		n += scnprintf(buffer + n, debug_bufmax - n, "%-16s (%6u) :",
+				task->comm, data->pid);
+		task_unlock(task);
+		put_task_struct(task);
+
+		n += scnprintf(buffer + n, debug_bufmax - n, " 0x%08x",
 				data->flags);
-		n += scnprintf(buffer + n, debug_bufmax - n, "%ldkB ",
+		n += scnprintf(buffer + n, debug_bufmax - n, " %08ldkB",
 				pmem_len(id, data) / 1024);
 		if (pmem[id].allocator == CMA_ALLOC) {
-			n += scnprintf(buffer + n, debug_bufmax - n, "(0x%lx-0x%lx) ",
+			n += scnprintf(buffer + n, debug_bufmax - n, " (0x%08lx-0x%08lx)",
 					PMEM_CMA_START_ADDR(id, data->index),
 					PMEM_CMA_START_ADDR(id, data->index) + data->size);
 		} else {
-			n += scnprintf(buffer + n, debug_bufmax - n, "(0x%lx-0x%lx) ",
+			n += scnprintf(buffer + n, debug_bufmax - n, " (0x%08lx-0x%08lx)",
 					PMEM_START_ADDR(id, data->index),
 					PMEM_END_ADDR(id, data->index));
 		}
