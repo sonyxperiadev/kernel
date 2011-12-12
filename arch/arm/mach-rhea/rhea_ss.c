@@ -436,8 +436,7 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 
 #define SENSOR_0_GPIO_PWRDN		12
 #define SENSOR_0_GPIO_RST		33
-#define SENSOR_0_CLK			"dig_ch0_clk"
-#define SENSOR_0_CLK_FREQ		(13000000) //@HW, need to check how fast this meaning.
+
 
 #define SENSOR_1_GPIO_PWRDN		13
 #define SENSOR_1_CLK			"dig_ch0_clk"
@@ -1333,6 +1332,8 @@ static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
 #define CAM0_RESET    33
 #define CAM_FLASH_EN  34
 #define CAM_AF_EN     25
+#define SENSOR_0_CLK			"dig_ch0_clk"
+#define SENSOR_0_CLK_FREQ		(13000000) //@HW, need to check how fast this meaning.
 //VCAM_1.2V is controlled by GPIO12
 
 
@@ -1436,11 +1437,11 @@ static int rhea_camera_power(struct device *dev, int on)
 	{
 
 		/* enable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		gpio_direction_output(CAM0_RESET,0);
 		msleep(1);
 		/* enable power down gpio */
 		gpio_set_value(CAM_CORE_EN, 0);
-		gpio_direction_output(CAM0_RESET,0);
+		
 		clk_disable(clock);
 
 		clk_disable(axi_clk);
