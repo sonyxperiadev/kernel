@@ -621,15 +621,18 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_p
     AUDIO_SOURCE_Enum_t mic;
     AUDIO_SINK_Enum_t spk;
     Boolean bClk = csl_caph_QueryHWClock();
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
 
-    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode_ForMusicPlayback: mode = %d\n",  mode);
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode_ForMusicPlayback: mode = %d, pathID %d\n",  mode, arg_pathID);
 
+	if(arg_pathID) path = &HWConfig_Table[ arg_pathID - 1 ];
     //if( mode==AUDDRV_GetAudioMode() )
     //  return;
 
     if ( AUDDRV_InVoiceCall() )
     {
-      return;  //don't affect voice call audio mode
+		if(!path) return;  //don't affect voice call audio mode
+		if(!path->srcmRoute[0][0].outChnl) return; //if arm2sp does not use HW mixer, no need to set gain
     }
 
     if(!bClk) csl_caph_ControlHWClock(TRUE); //enable clock if it is not enabled.
@@ -640,7 +643,7 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_p
 
 //for multicast, need to find the other mode and reconcile on mixer gains. like BT + IHF
 
-    AUDDRV_SetAudioMode_ForMusicPlayback( mode, 0 );
+    AUDDRV_SetAudioMode_ForMusicPlayback( mode, arg_pathID );
 
 
     if(!bClk) csl_caph_ControlHWClock(FALSE); //disable clock if it is enabled by this function.
@@ -900,6 +903,7 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 	Result_t res;
 	CSL_CAPH_Render_Drv_t	*audDrv = NULL;
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	int pathID = 0;
 
 	audDrv = GetRenderDriverByType (streamID);
 
@@ -917,25 +921,36 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 
 	if ( path->status == PATH_OCCUPIED )
 	{
-		if( path->sink[0] == CSL_CAPH_DEV_EP)
-			mode=AUDIO_MODE_HANDSET;
-		else
-		if( path->sink[0] == CSL_CAPH_DEV_HS)
-			mode=AUDIO_MODE_HEADSET;
-		else
-		if( path->sink[0] == CSL_CAPH_DEV_IHF)
-			mode=AUDIO_MODE_SPEAKERPHONE;
-		else
-		if( path->sink[0] == CSL_CAPH_DEV_BT_SPKR)
-			mode= AUDIO_MODE_BLUETOOTH;
+		switch(path->sink[0])
+		{
+		case CSL_CAPH_DEV_EP:
+			mode = AUDIO_MODE_HANDSET;
+			break;
+		case CSL_CAPH_DEV_HS:
+			mode = AUDIO_MODE_HEADSET;
+			break;
+		case CSL_CAPH_DEV_IHF:
+			mode = AUDIO_MODE_SPEAKERPHONE;
+			break;
+		case CSL_CAPH_DEV_BT_SPKR:
+			mode = AUDIO_MODE_BLUETOOTH;
+			break;
+		case CSL_CAPH_DEV_FM_TX:
+			mode = AUDIO_MODE_RESERVE;
+			break;
+		default:
+			break;
+		}
 	}
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StartRender::audDrv->pathID=0x%x, path->status=%d, path->sink[0]=%d, mode=%d \n",
-		audDrv->pathID, path->status, path->sink[0], mode);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StartRender::audDrv->pathID=0x%x, path->status=%d, path->sink[0]=%d, mode=%d, mixer in 0x%x out: %d.\n",
+		audDrv->pathID, path->status, path->sink[0], mode, path->srcmRoute[0][0].inChnl, path->srcmRoute[0][0].outChnl);
 
+	if(mode == AUDIO_MODE_RESERVE) return RESULT_OK;  //no need to set HW gain for FM TX.
 	//also need to support audio profile/mode set from user space code to support multi-profile/app.
 
-	AUDCTRL_SetAudioMode_ForMusicPlayback( mode, 0 );
+	if ( AUDDRV_InVoiceCall() && path->srcmRoute[0][0].outChnl) pathID = audDrv->pathID; //arm2sp may use HW mixer, whose gain should be set
+	AUDCTRL_SetAudioMode_ForMusicPlayback( mode, pathID );
 
 	//for multi-cast, also use path->sink[1]
 
@@ -2031,7 +2046,10 @@ void AUDCTRL_SetAudioLoopback(
 		csl_caph_hwctrl_SetSidetoneGain(0); // Set sidetone gain to 0dB.
 #endif
 
-		AUDCTRL_SetAudioMode( audio_mode ); //this function also sets all HW gains.
+		//sets all HW gains.
+		//AUDCTRL_SetAudioMode is for telephony. But is AUDCTRL_SetAudioMode_ForMusicPlayback enough for both source and sink?
+		//AUDCTRL_SetAudioMode( audio_mode ); //this function also sets all HW gains.
+		AUDCTRL_SetAudioMode_ForMusicPlayback(audio_mode, pathID);
 
         // Enable Loopback ctrl
 	    //Enable PMU for headset/IHF

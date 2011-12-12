@@ -1083,7 +1083,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 
 			if(sink==CSL_CAPH_DEV_DSP_throughMEM)
 			{
-				sink = CSL_CAPH_DEV_IHF; //should be done in csl_caph_srcmixer_obtain_outchnl
+				sink = csl_caph_hwctrl_obtainMixerOutChannelSink();
 				dataFormat = CSL_CAPH_16BIT_MONO;
 			} else if(sink==CSL_CAPH_DEV_BT_SPKR) {
 				sink = csl_caph_hwctrl_obtainMixerOutChannelSink();
@@ -3795,39 +3795,23 @@ void csl_caph_hwctrl_SetBTMode(Boolean mode)
 *
 *  Function Name: csl_caph_hwctrl_obtainMixerOutChannelSink
 *
-*  Description: get mixer out channel sink
+*  Description: get mixer out channel sink IHF or EP, whichever is available
 *
 ****************************************************************************/
 CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void)
 {
-	int m,n,s;
-	CSL_CAPH_DEVICE_e mixer_sink;
-	Boolean isCH2RFree = TRUE;
-	Boolean isCH2LFree = TRUE;
+	CSL_CAPH_DEVICE_e mixer_sink = CSL_CAPH_DEV_NONE;
+	UInt16 inChnls;
 
-	for(m = 0; m < MAX_AUDIO_PATH; m++)
-	{
-        for (s = 0; s < MAX_SINK_NUM; s++)
-		for(n = 0; n < MAX_BLOCK_NUM; n++)
-		{
-			if(HWConfig_Table[m].srcmRoute[s][n].outChnl == CSL_CAPH_SRCM_STEREO_CH2_R)
-			{
-				isCH2RFree = FALSE;
-			}
-			if(HWConfig_Table[m].srcmRoute[s][n].outChnl == CSL_CAPH_SRCM_STEREO_CH2_L)
-			{
-				isCH2LFree = FALSE;
-			}
-		}
+	inChnls = csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_STEREO_CH2_R); //IHF mixer output
+	if(inChnls==0) mixer_sink = CSL_CAPH_DEV_IHF;
+	else {
+		inChnls = csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_STEREO_CH2_L); //EP mixer output
+		if(inChnls==0) mixer_sink = CSL_CAPH_DEV_EP;
 	}
 
-	if(isCH2RFree)         mixer_sink = CSL_CAPH_DEV_IHF;
-	else if(isCH2LFree)    mixer_sink = CSL_CAPH_DEV_EP;
-	else
-	{
-		mixer_sink = CSL_CAPH_DEV_NONE;
-		audio_xassert(0, mixer_sink);
-	}
+	if(!mixer_sink) audio_xassert(0, mixer_sink);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_obtainMixerOutChannelSink mixer output sink %d available\r\n", mixer_sink);
 	return mixer_sink;
 }
 
