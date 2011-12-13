@@ -185,6 +185,40 @@ extern CSL_CAPH_HWConfig_Table_t HWConfig_Table[MAX_AUDIO_PATH];
 // Functions
 //=============================================================================
 
+/****************************************************************************
+*
+*  Function Name: AUDCTRL_GetModeBySpeaker
+*
+*  Description: Get the mode via speaker
+*
+****************************************************************************/
+static AudioMode_t  AUDCTRL_GetModeBySpeaker(CSL_CAPH_DEVICE_e speaker)
+{
+	AudioMode_t mode=AUDIO_MODE_HANDSET;
+
+	switch(speaker)
+	{
+	case CSL_CAPH_DEV_EP:
+		mode = AUDIO_MODE_HANDSET;
+		break;
+	case CSL_CAPH_DEV_HS:
+		mode = AUDIO_MODE_HEADSET;
+		break;
+	case CSL_CAPH_DEV_IHF:
+		mode = AUDIO_MODE_SPEAKERPHONE;
+		break;
+	case CSL_CAPH_DEV_BT_SPKR:
+		mode = AUDIO_MODE_BLUETOOTH;
+		break;
+	case CSL_CAPH_DEV_FM_TX:
+		mode = AUDIO_MODE_RESERVE;
+		break;
+	default:
+		break;
+	}
+	return mode;
+}
+
 //============================================================================
 //
 // Function Name: AUDCTRL_Init
@@ -828,6 +862,7 @@ void AUDCTRL_EnablePlay(
 {
     CSL_CAPH_HWCTRL_CONFIG_t config;
     CSL_CAPH_PathID pathID;
+	AudioMode_t mode=AUDIO_MODE_HANDSET;
 
 	Log_DebugPrintf(LOGID_AUDIO,
                     "AUDCTRL_EnablePlay: src = %d, sink = %d \n",
@@ -881,6 +916,12 @@ void AUDCTRL_EnablePlay(
 	if(config.source == CSL_CAPH_DEV_DSP || config.sink == CSL_CAPH_DEV_DSP_throughMEM)
 	{
 		AUDDRV_EnableDSPOutput(sink, sr);
+	}
+
+	if (source == AUDIO_SOURCE_I2S && AUDDRV_InVoiceCall() == FALSE)
+	{	//to set HW mixer gain for FM
+		mode = AUDCTRL_GetModeBySpeaker(config.sink);
+		AUDCTRL_SetAudioMode_ForMusicPlayback( mode, pathID );
 	}
 	if(pPathID) *pPathID = pathID;
 	//Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %x, pathID %d\r\n", *pPathID, pathID);
@@ -992,29 +1033,7 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
     else
     	return 0;
 
-	if ( path->status == PATH_OCCUPIED )
-	{
-		switch(path->sink[0])
-		{
-		case CSL_CAPH_DEV_EP:
-			mode = AUDIO_MODE_HANDSET;
-			break;
-		case CSL_CAPH_DEV_HS:
-			mode = AUDIO_MODE_HEADSET;
-			break;
-		case CSL_CAPH_DEV_IHF:
-			mode = AUDIO_MODE_SPEAKERPHONE;
-			break;
-		case CSL_CAPH_DEV_BT_SPKR:
-			mode = AUDIO_MODE_BLUETOOTH;
-			break;
-		case CSL_CAPH_DEV_FM_TX:
-			mode = AUDIO_MODE_RESERVE;
-			break;
-		default:
-			break;
-		}
-	}
+	if ( path->status == PATH_OCCUPIED ) mode = AUDCTRL_GetModeBySpeaker(path->sink[0]);
 
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StartRender::audDrv->pathID=0x%x, path->status=%d, path->sink[0]=%d, mode=%d, mixer in 0x%x out: %d.\n",
 		audDrv->pathID, path->status, path->sink[0], mode, path->srcmRoute[0][0].inChnl, path->srcmRoute[0][0].outChnl);
