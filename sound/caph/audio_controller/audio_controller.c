@@ -146,10 +146,6 @@ static AUDIO_SOURCE_Mapping_t MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] =
  static AUDIO_SINK_Enum_t voiceCallSpkr = AUDIO_SINK_UNDEFINED;
  static AUDIO_SOURCE_Enum_t voiceCallMic = AUDIO_SOURCE_UNDEFINED;
 
-#if defined(USE_NEW_AUDIO_PARAM)
- static AudioApp_t stAudioApp = AUDIO_APP_VOICE_CALL;
-#endif
-
 static int telephony_digital_gain_dB = 12;  //dB
 static int telephony_ul_gain_mB = 0;  // 0 mB
 
@@ -360,7 +356,11 @@ void AUDCTRL_SetTelephonyMicSpkr(
     {
       voiceCallSpkr = sink;
       voiceCallMic = source;
+#if defined(USE_NEW_AUDIO_PARAM)
+      AUDCTRL_SaveAudioModeFlag( AUDDRV_GetAudioModeBySink(sink), AUDCTRL_GetAudioApp() );
+#else
       AUDCTRL_SaveAudioModeFlag( AUDDRV_GetAudioModeBySink(sink) );
+#endif
       return;
     }
 
@@ -523,16 +523,42 @@ AudioMode_t AUDCTRL_GetAudioMode( void )
 }
 
 #if defined(USE_NEW_AUDIO_PARAM)
+
+//=============================================================================
+//
+// Function Name: AUDCTRL_GetAudioApp
+//
+// Description:   get audio application.
+//
+//=============================================================================
+
+AudioApp_t AUDCTRL_GetAudioApp( void )
+{
+	return AUDDRV_GetAudioApp();
+}
+
+//=============================================================================
+//
+// Function Name: AUDCTRL_SetAudioApp
+//
+// Description:   set audio application.
+//			    should be called by upper layer
+//=============================================================================
+void AUDCTRL_SetAudioApp( AudioApp_t audio_app )
+{
+	return AUDDRV_SetAudioApp(audio_app);
+}
 //*********************************************************************
 //	Save audio mode before call AUDCTRL_SaveAudioModeFlag( )
 //	@param		mode		(voice call) audio mode
 //	@param		app 		(voice call) audio app
 //	@return 	none
 //**********************************************************************/
-void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode, AudioApp_t app )
+/* reused this api from athena, may split it later */
+void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode, AudioApp_t audio_app )
 {
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SaveAudioModeFlag: mode = %d, app=%d\n",  mode, app);
-	AUDDRV_SaveAudioMode( mode, app );
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SaveAudioModeFlag: mode = %d audio_app = %d\n",  mode, audio_app);
+	AUDDRV_SaveAudioMode( mode, audio_app );
 }
 
 //*********************************************************************
@@ -540,14 +566,55 @@ void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode, AudioApp_t app )
 //	@param		mode		(voice call) audio mode
 //	@param		app 	(voice call) audio app
 //	@return 	none
+//
+//      actual audio mode is determined by mode, network speech coder sample
+//      rate and BT headset support of WB.
 //**********************************************************************/
-void AUDCTRL_SetAudioMode( AudioMode_t mode, AudioApp_t app)
+/* reused this api from athena, may split it later */
+void AUDCTRL_SetAudioMode( AudioMode_t mode, AudioApp_t audio_app )
 {
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode: mode = %d, app=%d\n",  mode, app);
-	AUDCTRL_SaveAudioModeFlag( mode, app );
-	AUDDRV_SetAudioMode( mode, app );
+    AUDIO_SOURCE_Enum_t mic;
+    AUDIO_SINK_Enum_t spk;
+    Boolean bClk = csl_caph_QueryHWClock();
 
-//load PMU gain
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode: mode = %d audio_app = %d\n",  mode, audio_app);
+
+	// make sure audio app is the same before return
+    if( (mode==AUDDRV_GetAudioMode())&&(audio_app==AUDDRV_GetAudioApp()) )
+      return;
+
+    //if ( !AUDDRV_InVoiceCall() )
+    //{
+    //  AUDDRV_SaveAudioMode( mode );
+    //}
+
+	AUDCTRL_SaveAudioModeFlag( mode, audio_app );
+
+
+    if(!bClk) csl_caph_ControlHWClock(TRUE); //enable clock if it is not enabled.
+
+    AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
+
+    if( (voiceCallMic == mic) && (voiceCallSpkr == spk) )
+    {
+      // may need to consider for other apps like vt and voip etc
+      if( audio_app == AUDIO_APP_VOICE_CALL_WB )
+        AUDDRV_Telephony_RateChange( AUDIO_SAMPLING_RATE_16000 );
+      else
+        AUDDRV_Telephony_RateChange( AUDIO_SAMPLING_RATE_8000 );
+    }
+    else
+    {
+      if( audio_app == AUDIO_APP_VOICE_CALL_WB )
+        AUDDRV_Telephone_SaveSampleRate( AUDIO_SAMPLING_RATE_16000 );
+      else
+        AUDDRV_Telephone_SaveSampleRate( AUDIO_SAMPLING_RATE_8000 );
+
+      //the function below checks voiceCallSampleRate
+      AUDCTRL_SetTelephonyMicSpkr( mic, spk );
+    }
+
+    if(!bClk) csl_caph_ControlHWClock(FALSE); //disable clock if it is enabled by this function.
 }
 #else
 //*********************************************************************
@@ -609,7 +676,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 
     if(!bClk) csl_caph_ControlHWClock(FALSE); //disable clock if it is enabled by this function.
 }
-
+#endif
 //*********************************************************************
 //	 Set audio mode for music playback
 //	@param		mode		audio mode for music playback
@@ -685,8 +752,6 @@ void AUDCTRL_SetAudioMode_ForMusicRecord( AudioMode_t mode, unsigned int arg_pat
     if(!bClk) csl_caph_ControlHWClock(FALSE); //disable clock if it is enabled by this function.
 }
 
-#endif
-
 //*********************************************************************
 //Description:
 //	Get sink and source device by audio mode
@@ -701,29 +766,37 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic, AUDIO
     switch(mode)
     {
     case AUDIO_MODE_HANDSET:
-    case AUDIO_MODE_HANDSET_WB:
     case AUDIO_MODE_HAC:
+#if !defined(USE_NEW_AUDIO_PARAM)
+    case AUDIO_MODE_HANDSET_WB:
     case AUDIO_MODE_HAC_WB:
+#endif
         *pMic = AUDIO_SOURCE_ANALOG_MAIN;
         *pSpk = AUDIO_SINK_HANDSET;
         break;
 
     case AUDIO_MODE_HEADSET:
-    case AUDIO_MODE_HEADSET_WB:
     case AUDIO_MODE_TTY:
+#if !defined(USE_NEW_AUDIO_PARAM)
+    case AUDIO_MODE_HEADSET_WB:
     case AUDIO_MODE_TTY_WB:
+#endif
         *pMic = AUDIO_SOURCE_ANALOG_AUX;
         *pSpk = AUDIO_SINK_HEADSET;
         break;
 
     case AUDIO_MODE_BLUETOOTH:
+#if !defined(USE_NEW_AUDIO_PARAM)
     case AUDIO_MODE_BLUETOOTH_WB:
+#endif
         *pMic = AUDIO_SOURCE_BTM;
         *pSpk = AUDIO_SINK_BTM;
         break;
 
     case	AUDIO_MODE_SPEAKERPHONE:
+#if !defined(USE_NEW_AUDIO_PARAM)
     case	AUDIO_MODE_SPEAKERPHONE_WB:
+#endif
         *pMic = AUDIO_SOURCE_ANALOG_MAIN;
         *pSpk = AUDIO_SINK_LOUDSPK;
         break;
@@ -2030,9 +2103,11 @@ void AUDCTRL_SetAudioLoopback(
 		csl_caph_hwctrl_ConfigSidetoneFilter(coeff);
 		csl_caph_hwctrl_SetSidetoneGain(0); // Set sidetone gain to 0dB.
 #endif
-
+#if defined(USE_NEW_AUDIO_PARAM)
+		AUDCTRL_SetAudioMode( audio_mode, 0 /*AUDCTRL_GetAudioApp()*/); //this function also sets all HW gains.
+#else
 		AUDCTRL_SetAudioMode( audio_mode ); //this function also sets all HW gains.
-
+#endif
         // Enable Loopback ctrl
 	    //Enable PMU for headset/IHF
     	if ((speaker == AUDIO_SINK_LOUDSPK)

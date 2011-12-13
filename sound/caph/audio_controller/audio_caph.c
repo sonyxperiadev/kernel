@@ -379,9 +379,12 @@ void AUDIO_Ctrl_Process(
 			CAPH_ASSERT(param_start->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_start->stream<CTL_STREAM_PANEL_LAST);
 			if(param_start->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
-
+#if defined(USE_NEW_AUDIO_PARAM)
+				// need to fill the audio app, fill 0 for now
+	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->p[0].sink, 0 );
+#else
 	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->p[0].sink );
-
+#endif
             	// Enable the playback the path
             	AUDCTRL_EnablePlay(param_start->pdev_prop->p[0].source,
                                    param_start->pdev_prop->p[0].sink,
@@ -683,8 +686,11 @@ void AUDIO_Ctrl_Process(
       {
         BRCM_AUDIO_Param_Call_t *parm_call =  (BRCM_AUDIO_Param_Call_t *)arg_param;
         AudioMode_t tempMode = (AudioMode_t)parm_call->new_spkr;
-
+#if defined(USE_NEW_AUDIO_PARAM)
+        AUDCTRL_SetAudioMode(tempMode, AUDCTRL_GetAudioApp());
+#else
         AUDCTRL_SetAudioMode(tempMode);
+#endif
       }
       break;
 
@@ -698,8 +704,13 @@ void AUDIO_Ctrl_Process(
 		{
 			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
 			CAPH_ASSERT(parm_FM->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_FM->stream<CTL_STREAM_PANEL_LAST);
+#if defined(USE_NEW_AUDIO_PARAM)
+			//re-enable FM; need to fill audio app
+			AUDCTRL_SaveAudioModeFlag((AudioMode_t)parm_FM->sink, 0);
+#else
 			//re-enable FM
 			AUDCTRL_SaveAudioModeFlag((AudioMode_t)parm_FM->sink);
+#endif
 			AUDCTRL_EnablePlay(parm_FM->source,
 								parm_FM->sink,
 								AUDIO_CHANNEL_STEREO,

@@ -669,12 +669,14 @@ static int HandlePlayCommand()
         case 4: //Start the playback
             {
 				CSL_CAPH_DEVICE_e aud_dev = CSL_CAPH_DEV_EP; // EP is default now
-
                 BCM_AUDIO_DEBUG(" Start Playback\n");
                 spkr = sgBrcm_auddrv_TestValues[2];
-
+#if !defined(USE_NEW_AUDIO_PARAM)
                 AUDCTRL_SaveAudioModeFlag(spkr);
-
+#else
+				// need to fill audio app, fill 0 for now.
+                AUDCTRL_SaveAudioModeFlag(spkr, 0);
+#endif
                 AUDCTRL_EnablePlay(AUDIO_SOURCE_MEM,
                                    spkr,
 				                   drv_config.num_channel,
@@ -1110,8 +1112,13 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6
 	if((codecVal == 4) || (codecVal == 5))// VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k
 	{
 		mode = AUDCTRL_GetAudioMode();
+#if !defined(USE_NEW_AUDIO_PARAM)
 		//set the audio mode to WB
 		AUDCTRL_SetAudioMode((AudioMode_t)(mode + AUDIO_MODE_NUMBER));
+#else
+		//set the audio mode; need to update the audio app and mode. shared with voice call for now
+		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
+#endif
 	}
 
 	AUDCTRL_EnableTelephony (mic, spk);
@@ -1183,8 +1190,11 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6
 	AUDCTRL_DisableTelephony ( );
 
 	if((codecVal == 4) || (codecVal == 5))// VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k
+#if !defined(USE_NEW_AUDIO_PARAM)
 		AUDCTRL_SetAudioMode(mode); //setting it back the original mode
-
+#else
+		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL); //setting it back the original mode
+#endif
 	OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
 	OSSEMAPHORE_Destroy(sVtQueue_Sema);
 	AUDQUE_Destroy(sVtQueue);

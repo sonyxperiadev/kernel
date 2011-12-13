@@ -43,13 +43,12 @@ typedef enum AUDIO_GAIN_FORMAT_t
     AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN,      // CUSTOMER TABLE: DSP voice volume dB from sysparm
     AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE   // CUSTOMER TABLE: FM Radio audio gain table
 } AUDIO_GAIN_FORMAT_t;
-
+/* enable this flag when cp image is in lmp */
+//#define USE_NEW_AUDIO_PARAM
 #define	AUDIO_MODE_NUMBER		9	///< Up to 9 Audio Profiles (modes) after 213x1
-#define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*2)
+#define AUDIO_APP_NUMBER        2   // must be consistent with parm_audio.txt
 
-//#if defined(USE_NEW_AUDIO_PARAM)
-#define	AUDIO_APP_NUMBER		3	///< 3 applications, can be extended
-//#endif
+#define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*AUDIO_APP_NUMBER)
 
 #define NUM_OF_ENTRY_IN_DSP_VOICE_VOLUME_TABLE		15
 #define NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME		15
@@ -67,6 +66,15 @@ typedef enum {
 } AudioApp_t; // audio profiles (Audio applications)
 
 #define AudioProfile_t AudioApp_t
+//#define AUDIO_APP_VOIP_CALL AUDIO_APP_VOICE_CALL
+//#define AUDIO_APP_VOIP_CALL_WB AUDIO_APP_VOICE_CALL_WB
+//#define AUDIO_APP_VT_CALL AUDIO_APP_VOICE_CALL
+//#define AUDIO_APP_VT_CALL_WB AUDIO_APP_VOICE_CALL_WB
+//#define AUDIO_APP_MUSIC AUDIO_APP_VOICE_CALL
+//#define AUDIO_APP_FM AUDIO_APP_MUSIC
+//#define AUDIO_APP_VOICE_RECORDING_NB AUDIO_APP_VOICE_CALL
+//#define AUDIO_APP_VOICE_RECORDING_WB AUDIO_APP_VOICE_CALL_WB
+//#define AUDIO_APP_MUSIC_RECORDING AUDIO_APP_VOICE_CALL
 
 /**
 	audio modes (audio parameters profile)
@@ -81,6 +89,7 @@ typedef enum {
     AUDIO_MODE_HAC = 6,
     AUDIO_MODE_USB = 7,
     AUDIO_MODE_RESERVE = 8,
+#if !defined(USE_NEW_AUDIO_PARAM)
     AUDIO_MODE_HANDSET_WB =9,
     AUDIO_MODE_HEADSET_WB =10,
     AUDIO_MODE_HANDSFREE_WB =11,
@@ -90,6 +99,7 @@ typedef enum {
     AUDIO_MODE_HAC_WB =15,
     AUDIO_MODE_USB_WB =16,
     AUDIO_MODE_RESERVE_WB =17,
+#endif
     AUDIO_MODE_INVALID  // numbers of modes above this line has to be the same as the AUDIO_MODE_NUMBER
 } AudioMode_t;  // Audio Profiles
 

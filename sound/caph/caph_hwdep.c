@@ -503,9 +503,11 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				{
 					AUDCTRL_Telephony_RateChange( 16000 );
 				}
-
+#if !defined(USE_NEW_AUDIO_PARAM)
 				AUDCTRL_SetAudioMode( mode );
-
+#else
+				AUDCTRL_SetAudioMode( mode, AUDCTRL_GetAudioApp());
+#endif
 				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetMode mode %d, \n",mode);
 			}
 			break;

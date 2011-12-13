@@ -213,6 +213,26 @@ void AUDCTRL_SetTelephonyMicMute(
 AudioMode_t AUDCTRL_GetAudioMode( void );
 
 #if defined(USE_NEW_AUDIO_PARAM)
+/**
+*   Get current (voice call) audio app
+*
+*	@param		none
+*
+*	@return		AudioApp_t		audio app
+*
+****************************************************************************/
+AudioApp_t AUDCTRL_GetAudioApp( void );
+
+/**
+*   Set current (voice call) audio app
+*
+*	@param		AudioApp_t		audio app
+*
+*	@return		none
+*
+****************************************************************************/
+void AUDCTRL_SetAudioApp( AudioApp_t audio_app );
+
 //*********************************************************************
 //  Save audio mode before call AUDCTRL_SaveAudioModeFlag( )
 //	@param		mode		(voice call) audio mode
@@ -246,7 +266,7 @@ void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode );
 *	@return		none
 ****************************************************************************/
 void AUDCTRL_SetAudioMode( AudioMode_t mode );
-
+#endif
 /**
 *   Set audio mode for music playback. (no DSP voice)
 *
@@ -264,9 +284,6 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_p
 *	@return		none
 ****************************************************************************/
 void AUDCTRL_SetAudioMode_ForMusicRecord( AudioMode_t mode, unsigned int arg_pathID );
-
-
-#endif
 
 /**
 *   Get src and sink from audio mode

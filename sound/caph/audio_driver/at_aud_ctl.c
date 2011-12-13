@@ -123,8 +123,12 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             // Update 'VC-SEL' --
 			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0] = mic;
 			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1] = spk;
+#if !defined(USE_NEW_AUDIO_PARAM)
             AUDCTRL_SetAudioMode( Params[1] );
-
+#else
+			// need to fill in audio app (check with pcg) or keep the legacy here
+            AUDCTRL_SetAudioMode( Params[1], AUDCTRL_GetAudioApp());
+#endif
             BCM_AUDIO_DEBUG("%s mic %d spk %d mode %ld \n", __FUNCTION__, mic,spk,Params[1]);
             break;
 
@@ -211,8 +215,13 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			if (Params[1] == 3)
 			if( Params[2]==PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL || Params[2]==PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL ) // EXT_SPEAKER_PGA
 			{
+#if defined(USE_NEW_AUDIO_PARAM)
+				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET)
+					 || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY))
+#else
 				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB)
 					 || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )
+#endif
 				{
 					AUDIO_PMU_IHF_POWER(FALSE);
 					AUDIO_PMU_HS_POWER(TRUE);
@@ -227,7 +236,11 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 						AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_RIGHT, pmu_gain.PMU_gain_enum );
 
 				}
+#if defined(USE_NEW_AUDIO_PARAM)
+				else if (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE)
+#else
 				else if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE) || (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE_WB) )
+#endif
 				{
 					AUDIO_PMU_HS_POWER(FALSE);
 					AUDIO_PMU_IHF_POWER(TRUE);
@@ -327,8 +340,34 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
     switch(Params[0])//P1
     {
+#if defined(USE_NEW_AUDIO_PARAM)
+		{
+		Int32 pCurSel[2];
+		AUDIO_SOURCE_Enum_t mic = AUDIO_SOURCE_ANALOG_MAIN;
+		AUDIO_SINK_Enum_t spk = AUDIO_SINK_HANDSET;
 
-	case 25:
+		case 2:	//at*maudtst 2: return both mode and app for multi app test
+			Params[1] = AUDCTRL_GetAudioMode();
+			Params[2] = AUDCTRL_GetAudioApp();
+			BCM_AUDIO_DEBUG("%s mode %ld app %ld\n", __FUNCTION__, Params[1], Params[2]);
+			break;
+
+		case 3:	//at*maudtst 3 mode app: set mode and app for multi app test
+			AUDCTRL_GetSrcSinkByMode(Params[1], &mic, &spk);
+            pCurSel[0] = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0]; //save current setting
+            pCurSel[1] = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1];
+
+            // Update 'VC-SEL' --
+			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0] = mic;
+			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1] = spk;
+			// need to fill in audio app (check with pcg)
+            AUDCTRL_SetAudioMode( Params[1], Params[2]);
+
+            BCM_AUDIO_DEBUG("%s mic %d spk %d mode %ld app %ld\n", __FUNCTION__, mic,spk,Params[1], Params[2]);
+            break;
+		}
+#endif
+		case 25:
 			AUDCTRL_SetPlayVolume(
                       AUDIO_SOURCE_MEM,
                       Params[1],  //	  //speaker channel
@@ -403,8 +442,13 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             {
 #ifdef CONFIG_BCMPMU_AUDIO
 				int gain;
+#if defined(USE_NEW_AUDIO_PARAM)
+				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET)
+                     || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY))
+#else
 				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB)
                      || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )
+#endif
 				{
                     AUDIO_PMU_IHF_POWER(FALSE);
                     AUDIO_PMU_HS_POWER(TRUE);
@@ -412,7 +456,11 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
                     AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, gain);
                     BCM_AUDIO_DEBUG("%s ext headset speaker gain = %ld \n", __FUNCTION__, Params[2]);
 				}
+#if defined(USE_NEW_AUDIO_PARAM)
+				else if (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE)
+#else
 				else if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE) || (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE_WB) )
+#endif
 				{
                     AUDIO_PMU_HS_POWER(FALSE);
                     AUDIO_PMU_IHF_POWER(TRUE);
