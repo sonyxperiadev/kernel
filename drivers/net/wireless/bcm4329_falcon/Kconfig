@@ -1,32 +1,40 @@
-config BCMDHD
-	tristate "Broadcom bcm43xx wireless cards support"
+config BCM4329_FALCON
+	tristate "Broadcom 4329 (FALCON driver) wireless card support"
 	depends on MMC
 	select WIRELESS_EXT
 	select WEXT_PRIV
 	---help---
 	  This module adds support for wireless adapters based on
-	  Broadcom 43xx chipset.
+	  Broadcom 4329 chipset.
 	  This driver uses the kernel's wireless extensions subsystem.
-	  If you choose to build a module, it'll be called bcmdhd.ko. Say M if
+	  If you choose to build a module, it'll be called bcm4329_falcon. Say M if
 	  unsure.
 
 
-config BCMDHD_FW_PATH
-	depends on BCMDHD
-	string "Firmware path"
-	default "/system/vendor/firmware/fw_bcmdhd.bin"
+config BCM4330_FALCON
+	tristate "Broadcom 4330 (FALCON driver) wireless card support"
+	depends on MMC
+	select WIRELESS_EXT
+	select WEXT_PRIV
 	---help---
-	  Path to the firmware file.
+	  This module adds support for wireless adapters based on
+	  Broadcom 4330 chipset.
+	  This driver uses the kernel's wireless extensions subsystem.
+	  If you choose to build a module, it'll be called bcm4330_falcon. Say M if
+	  unsure.
 
-config BCMDHD_NVRAM_PATH
-	depends on BCMDHD
-	string "NVRAM path"
-	default "/system/vendor/firmware/nvram.txt"
+config BCM4329_FALCON_IF_PREFIX
+	depends on BCM4329_FALCON
+	string "Wireless interface prefix"
+	default ""
 	---help---
-	  Path to the calibration file.
+	 Name of wireless interface. The default value is "eth%d".
 
-#config BCM43362_KONA_SDIO
-#	bool "Broadcom 43362 KONA SDIO support"
-#	depends on BCM43362_FALCON && MMC_SDHCI_PLTFM_KONA
-#	---help---
-#	  This enables Broadcom KONA platform SDIO interface for the BCM43xx chip.
+
+
+config BCM4330_FALCON_IF_PREFIX
+	depends on BCM4330_FALCON
+	string "Wireless interface prefix"
+	default ""
+	---help---
+	 Name of wireless interface. The default value is "eth%d".
