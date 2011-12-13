@@ -125,7 +125,6 @@ static CAPH_DATA_FORMAT_e csl_caph_srcmixer_get_chal_dataformat(CHAL_HANDLE hand
                                                    CSL_CAPH_DATAFORMAT_e dataFmt);
 static void csl_caph_srcmixer_use_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
                                           CSL_CAPH_SRCM_INCHNL_e inChnl);
-static UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
 static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
 
 //******************************************************************************
@@ -789,7 +788,7 @@ void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 *  Description: Check the output channel usage table to read input channel
 *
 ****************************************************************************/
-static UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
+UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
 {
     UInt8 ch = 0;
     UInt16 inChnls = 0;
@@ -800,6 +799,7 @@ static UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e ou
             inChnls = chnlTable[ch].inChnl;
         }
     }
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_read_outchnltable:: outChnl 0x%x, inChnl 0x%x.\n", outChnl, inChnls));
     return inChnls;
 }
 
@@ -930,9 +930,6 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dat
 CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEVICE_e sink)
 {
     CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-          "csl_caph_srcmixer_obtain_outchnl:: sink = 0x%x\n",
-          sink));
 
     switch(sink)
     {
@@ -948,12 +945,11 @@ CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEVICE_e s
             break;
         case CSL_CAPH_DEV_FM_TX:
         case CSL_CAPH_DEV_BT_SPKR:
-            //To be defined.
-            ;
             break; 
         default:
-            ;
+            break;
     }
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_obtain_outchnl:: sink = 0x%x, outChnl %d\n", sink, outChnl));
     return outChnl;
 }
 
@@ -1906,7 +1902,7 @@ void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 	//-90 dB = -9000 mB = 9000*256/602 = 2304000 / 602 = (0x232800) / 256 = 3827 = 0xEF3.
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
-		"csl_caph_srcmixer_set_mixoutgain:: ch %x gain %d, scale 0x%x.\r\n", outChnl, gain_mB, scale));
+		"csl_caph_srcmixer_set_mix_out_gain:: ch %x gain %d, scale 0x%x.\r\n", outChnl, gain_mB, scale));
 		
     /* get the cHAL output channel from CSL output channel */
     chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);

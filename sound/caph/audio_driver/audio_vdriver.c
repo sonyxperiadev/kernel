@@ -1072,9 +1072,9 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, AudioApp_t audio_app )
 void AUDDRV_SetAudioMode_ForMusicPlayback( AudioMode_t audio_mode, unsigned int arg_pathID)
  //add a second audio_mode for broadcast case
 {
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode_ForMusicPlayback() audio_mode==%d\n\r", audio_mode );
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode_ForMusicPlayback() audio_mode==%d, pathID %d\n\r", audio_mode, arg_pathID);
 
-	auddrv_SetAudioMode_speaker(audio_mode, 0);
+	auddrv_SetAudioMode_speaker(audio_mode, arg_pathID);
 }
 
 
@@ -1859,7 +1859,7 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* auddrv_SetAudioMode_speaker() arg_audio_mode==%d\n\r", arg_audio_mode );
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* auddrv_SetAudioMode_speaker() arg_audio_mode==%d, pathID %d\n\r", arg_audio_mode, arg_pathID );
 
 		//Load the speaker gains form sysparm.
 	/******
@@ -1930,6 +1930,7 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 
 		if (path != 0)
 		{
+			if( path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) outChnl = path->srcmRoute[0][0].outChnl; //set HW mixer gain for arm2sp
 			csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, mixerInputGain, mixerInputGain);
 		}
 		else
@@ -1950,6 +1951,11 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 
 		csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixerOutputBitSelect);
 		csl_caph_srcmixer_set_mix_out_gain( outChnl, mixerOutputFineGain );
+
+		if (path != 0)
+		{
+			if( path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) return; //no need for anything other than HW mixer gain for arm2sp
+		}
 
 		//Config sidetone
 		{

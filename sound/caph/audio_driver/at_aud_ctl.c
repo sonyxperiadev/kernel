@@ -211,6 +211,9 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 #ifdef CONFIG_BCMPMU_AUDIO
             {
             PMU_AudioGainMapping_t pmu_gain;
+            short gain;
+            
+			gain = (short)Params[3];
 
 			if (Params[1] == 3)
 			if( Params[2]==PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL || Params[2]==PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL ) // EXT_SPEAKER_PGA
@@ -225,8 +228,8 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 				{
 					AUDIO_PMU_IHF_POWER(FALSE);
 					AUDIO_PMU_HS_POWER(TRUE);
-					BCM_AUDIO_DEBUG("%s ext headset speaker gain = %ld \n", __FUNCTION__, Params[3] );
-					pmu_gain = map2pmu_hs_gain( Params[3]*25 );
+					BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d \n", __FUNCTION__, gain );
+					pmu_gain = map2pmu_hs_gain( 25 * gain );
 					BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d after lookup \n", __FUNCTION__, pmu_gain.PMU_gain_enum );
 
 					if( Params[2]==PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL )
@@ -244,8 +247,8 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 				{
 					AUDIO_PMU_HS_POWER(FALSE);
 					AUDIO_PMU_IHF_POWER(TRUE);
-					BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %ld \n", __FUNCTION__, Params[3] );
-					pmu_gain = map2pmu_ihf_gain( Params[3]*25 );
+					BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d \n", __FUNCTION__, gain );
+					pmu_gain = map2pmu_ihf_gain( 25 * gain );
 					BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d after lookup \n", __FUNCTION__, pmu_gain.PMU_gain_enum );
 					AUDIO_PMU_IHF_SET_GAIN( pmu_gain.PMU_gain_enum );
 				}
@@ -477,6 +480,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
                 BCM_AUDIO_DEBUG("%s Not supported command \n", __FUNCTION__);
                 return -1;
             }
+			//PCG on Rhea platform uses at*maudmode=100,3, 
             break;
 
     case 500: //at*maudtst=500,

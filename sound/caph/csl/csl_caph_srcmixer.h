@@ -523,5 +523,15 @@ void csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_
 *****************************************************************************/
 void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
 
+/**
+*
+*  @brief  Check the output channel usage table to read input channel
+*
+*  @param   chnl  (in) caph mixer output channel
+*
+*  @return mixer input channel
+*****************************************************************************/
+UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
+
 #endif // _CSL_CAPH_SRCMIXER_
 
