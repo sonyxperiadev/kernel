@@ -63,6 +63,51 @@
 
 static int dwc_otg_setup_params(dwc_otg_core_if_t * core_if);
 
+void w_init_core(void *p)
+{
+	dwc_otg_core_if_t *core_if = p;
+
+	if (core_if) {
+#ifdef CONFIG_USB_OTG_UTILS
+			if (core_if->xceiver->init)
+				otg_init(core_if->xceiver);
+#endif
+		dwc_otg_disable_global_interrupts(core_if);
+		if (dwc_otg_is_host_mode(core_if))
+			core_if->op_state = A_HOST;
+		else
+			core_if->op_state = B_PERIPHERAL;
+
+		dwc_otg_core_init(core_if);
+		dwc_otg_enable_global_interrupts(core_if);
+
+		if (dwc_otg_is_host_mode(core_if))
+			cil_hcd_start(core_if);
+		else
+			cil_pcd_start(core_if);
+	}
+}
+
+static int dwc_otg_xceiv_nb_callback(struct notifier_block *nb, unsigned long val,
+			       void *priv)
+{
+	struct dwc_otg_core_if *core_if = container_of(nb, struct dwc_otg_core_if, otg_xceiv_nb);
+
+	switch (val) {
+		case USB_EVENT_VBUS:
+		case USB_EVENT_ID:
+			/* Schedule a work item to init the core */
+			DWC_WORKQ_SCHEDULE(core_if->wq_otg, w_init_core,
+			   core_if, "init core");
+			break;
+		default:
+			DWC_DEBUGPL(DBG_CIL, "Unhandled OTG notification\n");
+			break;
+	}
+
+	return NOTIFY_OK;
+}
+
 /**
  * This function is called to initialize the DWC_otg CSR data
  * structures. The register addresses in the device and host
@@ -268,6 +313,9 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t * reg_base_addr)
 		dwc_free(core_if);
 		return 0;
 	}
+
+	core_if->otg_xceiv_nb.notifier_call = dwc_otg_xceiv_nb_callback;
+	otg_register_notifier(core_if->xceiver, &core_if->otg_xceiv_nb);
 #endif
 
 	/** ADP initialization */
@@ -294,6 +342,7 @@ void dwc_otg_cil_remove(dwc_otg_core_if_t * core_if)
 
 #ifdef CONFIG_USB_OTG_UTILS
 	if (core_if->xceiver) {
+		otg_unregister_notifier(core_if->xceiver, &core_if->otg_xceiv_nb);
 		otg_put_transceiver(core_if->xceiver);
 	}
 #endif
@@ -1201,7 +1250,6 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 
 	DWC_DEBUGPL(DBG_CILV, "dwc_otg_core_init(%p)\n", core_if);
 
-
 	/* Common Initialization */
 	usbcfg.d32 = dwc_read_reg32(&global_regs->gusbcfg);
 
@@ -1258,7 +1306,6 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 	if ((core_if->core_params->speed == DWC_SPEED_PARAM_FULL) &&
 	    (core_if->core_params->phy_type == DWC_PHY_TYPE_PARAM_FS)) {
 		/* If FS mode with FS PHY */
-
 		/* core_init() is now called on every switch so only call the
 		 * following for the first time through. */
 		if (!core_if->phy_init_done) {
@@ -1501,7 +1548,6 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 		DWC_PRINTF("OTG VER PARAM: %d, OTG VER FLAG: %d\n", core_if->core_params->otg_ver, core_if->otg_ver);
 	}
 	
-
 	/* Enable common interrupts */
 	dwc_otg_enable_common_interrupts(core_if);
 
@@ -4478,7 +4524,6 @@ void dwc_otg_flush_tx_fifo(dwc_otg_core_if_t * core_if, const int num)
 	int count = 0;
 
 	DWC_DEBUGPL((DBG_CIL | DBG_PCDV), "Flush Tx FIFO %d\n", num);
-
 	greset.b.txfflsh = 1;
 	greset.b.txfnum = num;
 	dwc_write_reg32(&global_regs->grstctl, greset.d32);

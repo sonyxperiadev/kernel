@@ -946,8 +946,10 @@ struct dwc_otg_core_if {
 	uint8_t otg_sts;
 
 #ifdef CONFIG_USB_OTG_UTILS
-	/** OTG transceiver */
+	/* OTG transceiver */
 	struct otg_transceiver *xceiver;
+
+	struct notifier_block	otg_xceiv_nb;
 #endif
 };
 

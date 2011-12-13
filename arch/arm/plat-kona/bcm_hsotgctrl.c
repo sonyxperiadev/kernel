@@ -44,6 +44,7 @@
 
 #define HSOTGCTRL_INIT_DELAY_IN_MS 300
 #define HSOTGCTRL_STEP_DELAY_IN_MS 100
+#define HSOTGCTRL_ID_CHANGE_DELAY_IN_MS 200
 #define PHY_PM_DELAY_IN_MS 1
 
 struct bcm_hsotgctrl_drv_data {
@@ -99,7 +100,7 @@ int bcm_hsotgctrl_en_clock(bool on)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_en_clock);
 
-int bcm_hsotgctrl_phy_init(void)
+int bcm_hsotgctrl_phy_init(bool id_device)
 {
 	int val;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
@@ -108,9 +109,7 @@ int bcm_hsotgctrl_phy_init(void)
 		return -EIO;
 
 	bcm_hsotgctrl_en_clock(true);
-
-	/* Set Vbus status to valid */
-	bcm_hsotgctrl_phy_set_vbus_stat(true);
+	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* clear bit 15 RDB error */
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
@@ -119,18 +118,59 @@ int bcm_hsotgctrl_phy_init(void)
 
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
-	/* Clear IDDQ */
+	/* Enable software control of PHY-PM */
+	bcm_hsotgctrl_set_soft_ldo_pwrdn(true);
+
+	/* Put PHY in reset state */
+	bcm_hsotgctrl_set_phy_resetb(false);
+
+	/* Reset PHY and AHB clock domain */
+	bcm_hsotgctrl_reset_clk_domain();
+
+	/* Power up ALDO */
+	bcm_hsotgctrl_set_aldo_pdn(true);
+	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+
+	/* Enable pad, internal PLL etc */
 	bcm_hsotgctrl_set_phy_off(false);
+
+	bcm_hsotgctrl_set_ldo_suspend_mask();
+
+	/* Remove PHY isolation */
+	bcm_hsotgctrl_set_phy_iso(false);
+	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+
 
 	/* PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(true);
 	msleep_interruptible(PHY_PLL_DELAY_MS);
 
+	/* Bring Put PHY out of reset state */
+	bcm_hsotgctrl_set_phy_resetb(true);
+
+	/* Disable software control of PHY-PM */
+	bcm_hsotgctrl_set_soft_ldo_pwrdn(false);
+
+#ifndef CONFIG_ARCH_RHEA_B0
 	/* Do MDIO init values after PHY is up */
 	bcm_hsotgctrl_phy_mdio_init();
+#endif
+
+	if (id_device) {
+		/* Set correct ID value */
+		bcm_hsotgctrl_phy_set_id_stat(true);
+
+		/* Set Vbus valid state */
+		bcm_hsotgctrl_phy_set_vbus_stat(true);
+	} else {
+		/* Set correct ID value */
+		bcm_hsotgctrl_phy_set_id_stat(false);
+	}
 
 	/* Come up connected  */
 	bcm_hsotgctrl_phy_set_non_driving(false);
+
+	msleep_interruptible(HSOTGCTRL_ID_CHANGE_DELAY_IN_MS);
 
 	return (0);
 
@@ -147,10 +187,19 @@ int bcm_hsotgctrl_phy_deinit(void)
 	/* Stay disconnected */
 	bcm_hsotgctrl_phy_set_non_driving(true);
 
-	/* Set IDDQ */
+	/* Disable pad, internal PLL etc. */
 	bcm_hsotgctrl_set_phy_off(true);
 
-	/* Clear PHY clock request */
+	/* Enable software control of PHY-PM */
+	bcm_hsotgctrl_set_soft_ldo_pwrdn(true);
+
+	/* Isolate PHY */
+	bcm_hsotgctrl_set_phy_iso(true);
+
+	/* Power down ALDO */
+	bcm_hsotgctrl_set_aldo_pdn(false);
+
+	/* Clear PHY reference clock request */
 	bcm_hsotgctrl_set_phy_clk_request(false);
 
 	/* Clear Vbus valid state */
@@ -253,7 +302,7 @@ int bcm_hsotgctrl_bc_status(unsigned long *status)
 	unsigned int val;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev) || !status)
 		return -EIO;
 
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_STATUS_OFFSET);
@@ -266,7 +315,6 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_status);
 int bcm_hsotgctrl_bc_vdp_src_off(void)
 {
 	int val;
-
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
 
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
@@ -355,7 +403,6 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, hsotgctrl_drvdata);
 
 	/* Init the PHY */
-	dev_info(hsotgctrl_drvdata->dev, "\n%s: Setting up USB OTG PHY and Clock\n", __func__);
 	bcm_hsotgctrl_en_clock(true);
 
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
@@ -366,55 +413,38 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
-	/* set Phy to driving mode */
-	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-	val &= ~HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
-	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
-
-	/* S/W reset Phy, actively low */
+	/* S/W reset Phy, active low */
 	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	val &= ~HSOTG_CTRL_PHY_P1CTL_SOFT_RESET_MASK;
-	val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_MODE_MASK;
-	val |= PHY_MODE_OTG << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT; // use OTG mode
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* bring Phy out of reset */
 	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_MODE_MASK;
 	val |= HSOTG_CTRL_PHY_P1CTL_SOFT_RESET_MASK;
+	val |= PHY_MODE_OTG << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT; // use OTG mode
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
-	/* set the phy to functional state */
-	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
-	val &= ~HSOTG_CTRL_PHY_CFG_PHY_IDDQ_I_MASK;
-	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+	/* Enable pad, internal PLL etc */
+	bcm_hsotgctrl_set_phy_off(false);
+
 
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
-	val = HSOTG_CTRL_USBOTGCONTROL_OTGSTAT2_MASK |
-			HSOTG_CTRL_USBOTGCONTROL_OTGSTAT1_MASK |
-			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
-			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK |
-			HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
+	val =	HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK | //Come up as device until we check PMU ID status to avoid turning on Vbus before checking
 			HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_USB_ON_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_PRST_N_SW_MASK |
-			HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK |
-			HSOTG_CTRL_USBOTGCONTROL_SOFT_PHY_RESETB_MASK |
-			HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK |
-			HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
+			HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK;
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
 	msleep_interruptible(HSOTGCTRL_INIT_DELAY_IN_MS);
-
-	dev_info(hsotgctrl_drvdata->dev, "\n%s: Setup USB OTG PHY and Clock Completed\n", __func__);
 
 	error = device_create_file(&pdev->dev, &dev_attr_hsotgctrldump);
 
@@ -541,14 +571,14 @@ int bcm_hsotgctrl_reset_clk_domain(void)
 			HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK);
 	writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
-	/* Clear PHY/AHB clk domain reset */
 	val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
-	/* Reset PHY and AHB clock domains */
+	/* De-assert PHY and AHB clock domain reset */
 	val |= (HSOTG_CTRL_USBOTGCONTROL_PRST_N_SW_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK);
 	writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
+	msleep_interruptible(PHY_PM_DELAY_IN_MS);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_reset_clk_domain);
@@ -634,9 +664,9 @@ int bcm_hsotgctrl_set_aldo_pdn(bool on)
 	val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
 	if (on)
-		val |= HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
+		val |= (HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK | HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK);
 	else
-		val &= ~HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
+		val &= ~(HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK | HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK);
 
 	writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
@@ -700,6 +730,26 @@ int bcm_hsotgctrl_set_phy_clk_request(bool on)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_set_phy_clk_request);
+
+int bcm_hsotgctrl_set_ldo_suspend_mask(void)
+{
+	unsigned long val;
+	void *hsotg_ctrl_base;
+
+	if (NULL != local_hsotgctrl_handle)
+		hsotg_ctrl_base = local_hsotgctrl_handle->hsotg_ctrl_base;
+	else
+		return -ENODEV;
+
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CTRL_OFFSET);
+
+	val |= HSOTG_CTRL_PHY_CTRL_SUSPEND_MASK_MASK;
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_CTRL_OFFSET);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_set_ldo_suspend_mask);
+
 
 int bcm_hsotgctrl_phy_set_id_stat(bool floating)
 {
