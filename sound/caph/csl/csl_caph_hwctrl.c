@@ -1205,7 +1205,7 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
 
 		if ((path->source == CSL_CAPH_DEV_FM_RADIO) || (path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX))
 		{
-			if (fmRunning == TRUE)
+			if ((fmRunning == TRUE) && (path->sinkCount == 1))
 			{
 				csl_i2s_stop_tx(fmHandleSSP);
 				csl_i2s_stop_rx(fmHandleSSP);
