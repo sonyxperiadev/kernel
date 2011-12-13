@@ -680,7 +680,7 @@ static void pmem_vma_open(struct vm_area_struct *vma)
 	BUG_ON(!has_allocation(file));
 	down_write(&data->sem);
 	/* remap the garbage pages, forkers don't get access to the data */
-	if (data->pid != current->pid) {
+	if (data->pid != task_pid_nr(current->group_leader)) {
 		printk(KERN_ERR"Warning! unmapping the pfn range and remapping it with garbage page\n");
 		pmem_unmap_pfn_range(id, vma, data, 0, vma->vm_end - vma->vm_start);
 	}
