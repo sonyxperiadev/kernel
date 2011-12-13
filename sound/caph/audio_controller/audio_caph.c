@@ -376,7 +376,7 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
-			CAPH_ASSERT(param_start->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_start->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(param_start->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_start->stream<(CTL_STREAM_PANEL_LAST-1));
 			if(param_start->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 #if defined(USE_NEW_AUDIO_PARAM)
@@ -422,7 +422,7 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Stop_t* param_stop = (BRCM_AUDIO_Param_Stop_t*) arg_param;
 
-			CAPH_ASSERT(param_stop->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_stop->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(param_stop->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_stop->stream<(CTL_STREAM_PANEL_LAST-1));
 
 			AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
@@ -452,7 +452,7 @@ void AUDIO_Ctrl_Process(
         case ACTION_AUD_PausePlay:
         {
             BRCM_AUDIO_Param_Pause_t* param_pause = (BRCM_AUDIO_Param_Pause_t*) arg_param;
-			CAPH_ASSERT(param_pause->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_pause->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(param_pause->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_pause->stream<(CTL_STREAM_PANEL_LAST-1));
 
 			if(param_pause->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
@@ -471,7 +471,7 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Resume_t* param_resume = (BRCM_AUDIO_Param_Resume_t*) arg_param;
 
-			CAPH_ASSERT(param_resume->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_resume->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(param_resume->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_resume->stream<(CTL_STREAM_PANEL_LAST-1));
 
             AUDIO_DRIVER_Ctrl(param_resume->drv_handle,AUDIO_DRIVER_RESUME,NULL);
 
@@ -492,7 +492,7 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
-			CAPH_ASSERT(param_start->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_start->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(param_start->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_start->stream<(CTL_STREAM_PANEL_LAST-1));
 
 			if((param_start->callMode != 1) || (param_start->pdev_prop->c.source == AUDIO_SOURCE_I2S)) // allow FM recording in call mode
 			{
@@ -533,7 +533,7 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Stop_t* param_stop = (BRCM_AUDIO_Param_Stop_t*) arg_param;
 
-			CAPH_ASSERT(param_stop->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_stop->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(param_stop->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_stop->stream<(CTL_STREAM_PANEL_LAST-1));
 
             AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
@@ -568,7 +568,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_AddChannel:
 		{
 			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
-			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<(CTL_STREAM_PANEL_LAST-1));
 			AUDCTRL_AddPlaySpk(parm_spkr->src,
 									parm_spkr->sink,
 									pathID[parm_spkr->stream]);
@@ -577,7 +577,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_RemoveChannel:
 		{
 			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
-			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<(CTL_STREAM_PANEL_LAST-1));
 			AUDCTRL_RemovePlaySpk(parm_spkr->src,
 	                              parm_spkr->sink,
 								  pathID[parm_spkr->stream]
@@ -608,7 +608,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_MutePlayback:
 		{
 			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
-			CAPH_ASSERT(parm_mute->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_mute->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(parm_mute->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_mute->stream<(CTL_STREAM_PANEL_LAST-1));
 			AUDCTRL_SetPlayMute (parm_mute->source,
 									parm_mute->sink,
 									parm_mute->mute1,
@@ -618,7 +618,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_MuteRecord:
 		{
 			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
-			CAPH_ASSERT(parm_mute->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_mute->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(parm_mute->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_mute->stream<(CTL_STREAM_PANEL_LAST-1));
 			AUDCTRL_SetRecordMute (parm_mute->source,
 		 							parm_mute->mute1,
 		 							pathID[parm_mute->stream]);
@@ -643,7 +643,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_SetPlaybackVolume:
 		{
 			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
-			CAPH_ASSERT(parm_vol->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_vol->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(parm_vol->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_vol->stream<(CTL_STREAM_PANEL_LAST-1));
 			AUDCTRL_SetPlayVolume (parm_vol->source,
 								   parm_vol->sink,
 								   AUDIO_GAIN_FORMAT_mB,
@@ -656,7 +656,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_SetRecordGain:
 		{
 			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
-			CAPH_ASSERT(parm_vol->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_vol->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(parm_vol->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_vol->stream<(CTL_STREAM_PANEL_LAST-1));
 			AUDCTRL_SetRecordGain (parm_vol->source,
 								   AUDIO_GAIN_FORMAT_mB,
 								   parm_vol->volume1,
@@ -675,7 +675,7 @@ void AUDIO_Ctrl_Process(
       case ACTION_AUD_SwitchSpkr:
       {
         BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
-        CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<CTL_STREAM_PANEL_LAST);
+        CAPH_ASSERT(parm_spkr->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_spkr->stream<(CTL_STREAM_PANEL_LAST-1));
         AUDCTRL_SwitchPlaySpk( parm_spkr->src,
 							parm_spkr->sink,
 							pathID[parm_spkr->stream]);
@@ -703,7 +703,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_EnableFMPlay:
 		{
 			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
-			CAPH_ASSERT(parm_FM->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_FM->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(parm_FM->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_FM->stream<(CTL_STREAM_PANEL_LAST-1));
 #if defined(USE_NEW_AUDIO_PARAM)
 			//re-enable FM; need to fill audio app
 			AUDCTRL_SaveAudioModeFlag((AudioMode_t)parm_FM->sink, 0);
@@ -738,7 +738,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_DisableFMPlay:
 		{
 			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
-			CAPH_ASSERT(parm_FM->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_FM->stream<CTL_STREAM_PANEL_LAST);
+			CAPH_ASSERT(parm_FM->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_FM->stream<(CTL_STREAM_PANEL_LAST-1));
 			AUDCTRL_DisablePlay(parm_FM->source,
 								parm_FM->sink,
   							    pathID[parm_FM->stream]);

@@ -255,6 +255,7 @@ static int SelCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info 
 
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	stream--;
+	//coverity[OVERRUN_STATIC] - false alarm. stream is getting decremented by 1 and used
 	if(pChip->streamCtl[stream].iFlags & MIXER_STREAM_FLAGS_CAPTURE)
 	{
 		uinfo->value.integer.min = AUDIO_SOURCE_ANALOG_MAIN;
@@ -286,6 +287,7 @@ static int SelCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	s32	*pSel;
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	stream--;
+	//coverity[OVERRUN_STATIC] - false alarm. stream is getting decremented by 1 and used
 	pSel = pChip->streamCtl[stream].iLineSelect;
 
 	BCM_AUDIO_DEBUG("xnumid=%d xindex=%d", ucontrol->id.numid, ucontrol->id.index);
@@ -308,17 +310,19 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
-	s32	*pSel, pCurSel[2];
+	s32	*pSel, pCurSel[MAX_PLAYBACK_DEV];
 	struct snd_pcm_substream *pStream=NULL;
 	BRCM_AUDIO_Param_Spkr_t parm_spkr;
 	BRCM_AUDIO_Param_Call_t parm_call;
 	int i = 0,count=0;
 
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
+	//coverity[OVERRUN_STATIC] - false alarm. stream is getting decremented by 1 and used
 	pSel = pChip->streamCtl[stream-1].iLineSelect;
 
-	pCurSel[0] = pSel[0]; //save current setting
-	pCurSel[1] = pSel[1];
+	//save current setting
+	for(i=0; i<MAX_PLAYBACK_DEV;i++)
+		pCurSel[i] = pSel[i];
 
 	pSel[0] = ucontrol->value.integer.value[0];
 	pSel[1] = ucontrol->value.integer.value[1];
@@ -475,6 +479,7 @@ static int SwitchCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	s32	*pMute;
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	stream--;
+	//coverity[OVERRUN_STATIC] - false alarm. stream is getting decremented by 1 and used
 	pMute = pChip->streamCtl[stream].ctlLine[dev].iMute;
 
 	ucontrol->value.integer.value[0] = pMute[0];
@@ -499,6 +504,7 @@ static int SwitchCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	BRCM_AUDIO_Param_Mute_t parm_mute;
 
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
+	//coverity[OVERRUN_STATIC] - false alarm. stream is getting decremented by 1 and used
 	pMute = pChip->streamCtl[stream-1].ctlLine[dev].iMute;
 
 	pMute[0] = ucontrol->value.integer.value[0];
@@ -690,7 +696,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	int priv = kcontrol->private_value;
 	int function = FUNC_OF_CTL(priv);
 	int	stream = STREAM_OF_CTL(priv);
-    int rtn = 0;
+    int rtn = 0,chn=0;
 
 	switch(function)
 	{
@@ -740,7 +746,12 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			ucontrol->value.integer.value[0] = pChip->i32CfgSSP[kcontrol->id.index];
 			break;
 		case CTL_FUNCTION_VOL:
-			memcpy(ucontrol->value.integer.value, pChip->pi32LevelVolume[stream-1], CAPH_MAX_PCM_STREAMS*sizeof(s32));
+			//Need to copy the volume for the particular stream only
+			if(stream == CTL_STREAM_PANEL_VOICECALL)
+				chn = 1;
+			else
+				chn = 2;
+			memcpy(ucontrol->value.integer.value, pChip->pi32LevelVolume[stream-1], chn*sizeof(s32));
 			break;
 
 		default:
@@ -770,7 +781,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	BRCM_AUDIO_Param_Vibra_t parm_vibra;
 	BRCM_AUDIO_Param_FM_t parm_FM;
 	BRCM_AUDIO_Param_Spkr_t parm_spkr;
-    int rtn = 0,cmd,i,indexVal = -1,cnt=0;
+    int rtn = 0,cmd,i,indexVal = -1,cnt=0,chn=0;
 	struct snd_pcm_substream *pStream=NULL;
 	Int32 sink = 0;
 
@@ -927,7 +938,12 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			AUDCTRL_ConfigSSP(kcontrol->id.index+1, pChip->i32CfgSSP[kcontrol->id.index]);
 			break;
 		case CTL_FUNCTION_VOL:
-			memcpy(pChip->pi32LevelVolume[stream-1], ucontrol->value.integer.value, CAPH_MAX_PCM_STREAMS*sizeof(s32));
+			//Need to copy the volume for the particular stream only
+			if(stream == CTL_STREAM_PANEL_VOICECALL)
+				chn = 1;
+			else
+				chn = 2;
+			memcpy(pChip->pi32LevelVolume[stream-1], ucontrol->value.integer.value, chn*sizeof(s32));
 			break;
 			
 		case CTL_FUNCTION_SINK_CHG:

@@ -515,6 +515,8 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 						
 				if(pCtrlStruct != NULL)
 			    	dev = (AUDIO_SINK_Enum_t *)pCtrlStruct;
+				else
+					return RESULT_ERROR;
                 //check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
                     (aud_drv->interrupt_period == 0) ||
@@ -740,6 +742,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 num_blocks;
 				if(pCtrlStruct != NULL)
 					dev = (AUDIO_SOURCE_Enum_t *)pCtrlStruct;
+				else
+					return RESULT_ERROR;
                 //check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
                     (aud_drv->interrupt_period == 0) ||
@@ -836,6 +840,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 
 				if(pCtrlStruct != NULL)
 					  recordMode = (VOCAPTURE_RECORD_MODE_t *)pCtrlStruct;
+				else
+					return RESULT_ERROR;
 					  
 				//check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
