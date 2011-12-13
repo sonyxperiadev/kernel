@@ -257,7 +257,7 @@ int	pwr_mgr_pi_set_wakeup_override(int pi_id,bool value);
 int pwr_mgr_set_pc_sw_override(int pc_pin, bool enable, int value);
 int pwr_mgr_set_pc_clkreq_override(int pc_pin, bool enable, int value);
 int pm_get_pc_value(int pc_pin);
-
+int pm_mgr_pi_count_clear(bool clear);
 int pwr_mgr_pi_counter_enable(int pi_id, bool enable);
 int pwr_mgr_pi_counter_read(int pi_id,bool* over_flow);
 

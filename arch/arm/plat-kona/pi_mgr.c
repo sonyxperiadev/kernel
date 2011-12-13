@@ -563,13 +563,11 @@ static int pi_def_enable(struct pi *pi, int enable)
 	{
 		policy = pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy;
 		pi_dbg("%s: policy = %d -- PI to be enabled\n",__func__,policy);
-		pwr_mgr_pi_counter_enable(pi->id, 1);
 	}
 	else
 	{
 		policy = pi->pi_state[pi->state_allowed].state_policy;
 		pi_dbg("%s: policy = %d pi->state_allowed = %d\n",__func__,policy,pi->state_allowed);
-		pwr_mgr_pi_counter_enable(pi->id, 0);
 
 	}
 	pi_dbg("%s: calling pi_set_policy\n",__func__);

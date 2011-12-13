@@ -666,6 +666,34 @@ int pm_get_pc_value(int pc_pin)
 }
 EXPORT_SYMBOL(pm_get_pc_value);
 
+int pm_mgr_pi_count_clear(bool clear)
+{
+	u32 reg_val = 0;
+
+	if (unlikely(!pwr_mgr.info)) {
+		pr_err("%s:ERROR - pwr mgr not initialized\n", __func__);
+		return -EPERM;
+	}
+
+	spin_lock(&pwr_mgr_lock);
+	reg_val = readl(
+		PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
+
+	if (clear)
+		reg_val |=
+		PWRMGR_PC_PIN_OVERRIDE_CONTROL_CLEAR_PI_COUNTERS_MASK;
+	else
+		reg_val &=
+		~PWRMGR_PC_PIN_OVERRIDE_CONTROL_CLEAR_PI_COUNTERS_MASK;
+
+	writel(reg_val,
+		PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
+	spin_unlock(&pwr_mgr_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(pm_mgr_pi_count_clear);
+
 int pwr_mgr_pi_counter_enable(int pi_id, bool enable)
 {
 	u32 reg_val = 0;
@@ -702,7 +730,7 @@ EXPORT_SYMBOL(pwr_mgr_pi_counter_enable);
 
 int pwr_mgr_pi_counter_read(int pi_id,bool* over_flow)
 {
-	u32 reg_val = 0;
+	u32 reg_val;
 	const struct pi* pi;
 	pwr_dbg("%s : pi_id = %d\n",
 				__func__, pi_id);
@@ -720,22 +748,7 @@ int pwr_mgr_pi_counter_read(int pi_id,bool* over_flow)
 	}
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
-	spin_lock(&pwr_mgr_lock);
 	reg_val = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
-
-	if (reg_val&
-	   PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_ENABLE_MASK) {
-		reg_val &=
-	~PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_ENABLE_MASK;
-		writel(reg_val, PWR_MGR_PI_ADDR(counter_reg_offset));
-
-		reg_val = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
-
-		reg_val |=
-	PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_ENABLE_MASK;
-		writel(reg_val, PWR_MGR_PI_ADDR(counter_reg_offset));
-	}
-	spin_unlock(&pwr_mgr_lock);
 	pwr_dbg("%s:counter reg val = %x\n",__func__,reg_val);
 
 	if(over_flow)
