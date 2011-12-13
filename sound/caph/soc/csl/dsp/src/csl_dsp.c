@@ -152,7 +152,7 @@ static Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 		status_msg->arg2 = (UInt16)p->arg2;
 		status_msg->arg3 = (UInt16)p->arg3;
 #ifdef BRCM_RTOS
-#error
+#else
 		Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
 #endif
 		vp_shared_mem->vp_shared_statusq_out = ( status_out + 1 ) % VP_STATUSQ_SIZE;
