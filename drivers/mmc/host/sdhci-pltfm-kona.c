@@ -390,13 +390,11 @@ int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
 	BUG_ON (!dev);
 	if (enable) {
 		/* peripheral clock */
-		ret = clk_enable(dev->sleep_clk);//SHRI
 		ret = clk_enable(dev->peri_clk);
 		if(ret)
 			return ret;
-
 	} else {
-//		clk_disable(dev->peri_clk);
+		clk_disable(dev->peri_clk);
 	}
 	return ret;
 #endif
@@ -425,14 +423,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		ret = -EFAULT;
 		goto err;
 	}
-
-
-	printk(KERN_ERR "%s ID=%x devtype=%x \n", __FUNCTION__,(unsigned int)hw_cfg->id,(unsigned int)hw_cfg->devtype);
-	printk(KERN_ERR "%s PERI_NAME=%s AHB_NAME=%s \n", __FUNCTION__,hw_cfg->peri_clk_name,hw_cfg->ahb_clk_name);
-	printk(KERN_ERR "%s SLEEP_CLK=%s RATE=%ul \n", __FUNCTION__,hw_cfg->sleep_clk_name,(unsigned long)hw_cfg->peri_clk_rate);
-	printk(KERN_ERR "%s RESET=%d  \n", __FUNCTION__,(unsigned int)hw_cfg->wifi_gpio.reset);
-
-
 
 	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!iomem) {
@@ -643,7 +633,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 		dead = 1;
 	sdhci_remove_host(host, dead);
 
-	//	clk_disable(dev->sleep_clk); Shri
+	clk_disable(dev->sleep_clk);
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);
 	iounmap(host->ioaddr);
