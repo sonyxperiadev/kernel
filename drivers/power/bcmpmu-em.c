@@ -351,19 +351,14 @@ static const struct attribute_group bcmpmu_em_attr_group = {
 };
 #endif
 
-static int em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int curr)
+static int em_batt_get_capacity(struct bcmpmu_em *pem, int pvolt, int curr)
 {
 	int i = 0;
 	int cap = pem->bvcap[i].cap;
 	int index;
-	int comp = 1;
+	int volt = pvolt;
 	
-	if ((pem->chrgr_type != PMU_CHRGR_TYPE_NONE) ||
-		(pem->bcmpmu->get_env_bit_status(pem->bcmpmu, PMU_ENV_MBMC) == false))
-		comp = 0;
-
-	if (comp)
-		volt = volt - (pem->batt_impedence * curr)/1000;
+	volt = pvolt - (pem->batt_impedence * curr)/1000;
 
 	for (i = 0; i < pem->bvcap_len; i++) {
 		if ((volt <= pem->bvcap[i].volt) &&
@@ -375,8 +370,8 @@ static int em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int curr)
 			break;
 		}
 	}
-	pr_em(FLOW, "%s, cpcty=%d, vlt=%d, crr=%d, imp=%d\n",
-		__func__, cap, volt, curr, pem->batt_impedence);
+	pr_em(FLOW, "%s, cpcty=%d, pvlt=%d, crr=%d, vlt=%d, imp=%d\n",
+		__func__, cap, pvolt, curr, volt, pem->batt_impedence);
 	return cap;
 }
 
@@ -436,6 +431,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 			(pem->batt_volt < 3550))
 			calibration = 1;
 		else if ((pem->mode != MODE_TRANSITION) &&
+			(pem->mode != MODE_CHRG) &&
 			((capacity > (capacity_v + 30)) ||
 				((capacity + 30) < (capacity_v)))) {
 				pem->fg_cal = 0;
