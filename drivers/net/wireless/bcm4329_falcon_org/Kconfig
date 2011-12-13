@@ -1,0 +1,40 @@
+config BCM4329_FALCON
+	tristate "Broadcom 4329 (FALCON driver) wireless card support"
+	depends on MMC
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4329 chipset.
+	  This driver uses the kernel's wireless extensions subsystem.
+	  If you choose to build a module, it'll be called bcm4329_falcon. Say M if
+	  unsure.
+
+
+config BCM4330_FALCON
+	tristate "Broadcom 4330 (FALCON driver) wireless card support"
+	depends on MMC
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4330 chipset.
+	  This driver uses the kernel's wireless extensions subsystem.
+	  If you choose to build a module, it'll be called bcm4330_falcon. Say M if
+	  unsure.
+
+config BCM4329_FALCON_IF_PREFIX
+	depends on BCM4329_FALCON
+	string "Wireless interface prefix"
+	default ""
+	---help---
+	 Name of wireless interface. The default value is "eth%d".
+
+
+
+config BCM4330_FALCON_IF_PREFIX
+	depends on BCM4330_FALCON
+	string "Wireless interface prefix"
+	default ""
+	---help---
+	 Name of wireless interface. The default value is "eth%d".
