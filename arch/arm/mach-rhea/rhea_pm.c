@@ -32,7 +32,7 @@
 #include <linux/workqueue.h>
 #include <mach/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
-
+#include <linux/dma-mapping.h>
 
 extern void enter_wfi(void);
 extern void dormant_enter(void);
@@ -42,6 +42,12 @@ static u32 pm_debug = 2;
 #ifdef CONFIG_ARCH_RHEA_A0
 static u32 pm_en_self_refresh = 0;
 #endif
+
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+dma_addr_t noncache_buf_pa;
+char* noncache_buf_va;
+#endif
+
 
 #if defined(DEBUG)
 #define pm_dbg printk
@@ -375,6 +381,9 @@ int enter_suspend_state(struct kona_idle_state* state)
 int enter_dormant_state(struct kona_idle_state* state)
 {
 	struct pi* pi = NULL;
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+	int count =0;
+#endif
 #ifdef CONFIG_ARCH_RHEA_A0
 	u32 ddr_min_pwr_state_ap = 0;
 	u32 reg_val;
@@ -431,6 +440,38 @@ int enter_dormant_state(struct kona_idle_state* state)
 
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	pi_enable(pi,0);
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+	/*JIRA HWRHEA_2221 VAR_312M is_idle from MEMC unexpectedly stays
+	 * asserted for long periods of time - preventing deepsleep entry */
+
+	 /*reduce DDR PLL to 200M, 0x2 -> 0x3500814c;
+	 0x2: Memory controller can shut of local DDR pll & run off the
+	 system PLL clock */
+	 writel(0x2, KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET);
+	 /*Disable temperature polling, 0xC3500 -> 0x350080c0
+	 Disables periodic reading of the device temperature
+	 the period field contains the device temperature period. The timer
+	 operates in the XTAL clock domain. 0cC3500 is the default value,
+	 write it back. */
+	 writel(0xC3500, KONA_MEMC0_NS_VA + CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
+	 /*CORE0 semaphore locked ? */
+	 while (readl(KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_STATUS_OFFSET));
+	 /*lock CORE0 semaphore, 0x1 -> 0x35004184 */
+	 writel(0x1, KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_LOCK_OFFSET);
+	 /*disable other MEMC ports */
+	 for (count=0; count<5; count++)
+	     writel((CSR_AXI_PORT_CTRL_PORT3_DISABLE_MASK |
+	     CSR_AXI_PORT_CTRL_PORT2_DISABLE_MASK |
+	     CSR_AXI_PORT_CTRL_PORT0_DISABLE_MASK), KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
+	 /* reset all MEMC demesh entries */
+	 for (count=0; count<16; count++)
+	     *(volatile unsigned int *)noncache_buf_va = 0xf;
+	 /* re-enable all MEMC ports, 0x0 -> 0x3500801c; */
+	 writel(0x0, KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
+	 /* release CORE0 semaphore, 0x1 -> 0x35004188 */
+	 writel(0x1, KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_UNLOCK_OFFSET);
+
+#endif
 #ifdef CONFIG_RHEA_DORMANT_MODE
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 	/*Ignore dap power-up request and clear the bits that disallow dormant*/
@@ -446,13 +487,18 @@ int enter_dormant_state(struct kona_idle_state* state)
 	writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
 	enter_wfi();
 #endif
-
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+	/*restore DDR PLL to 400M, 0x3 -> 0x3500814c
+	0x3: This is the highest power state (or the run state) of the
+	Memory controller, where the local DDR pll is on & the system PLL
+	xtal clocks requests are asserted high. */
+	writel(0x3, KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET);
+#endif
 #if	defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
 	timer_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
 	while(timer_lsw == readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET));
 #endif
-
 	if(pm_debug != 2)
 		pr_info("SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
@@ -554,7 +600,9 @@ int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
 
 int __init rhea_pm_init(void)
 {
-
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+    noncache_buf_va = dma_alloc_coherent(NULL, 64, &noncache_buf_pa, GFP_ATOMIC);
+#endif
     pm_config_deep_sleep();
 	return kona_pm_init();
 }
