@@ -131,24 +131,24 @@ static AudioApp_t currAudioApp = AUDIO_APP_VOICE_CALL;
 #ifndef CONFIG_BCM_MODEM
 /* this array initializes the system parameters with the values from param_audio_rhea.txt  for different modes(mic_pga - hw_sidetone_gain)*/
 static AudioSysParm_t audio_parm_table[AUDIO_MODE_NUMBER_VOICE] = {
-72,	  36,   1,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	1,	0, {0},
-	72,	  36,   0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	1,	0, {0},
-	72,	  36,   0, 	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0,	0, {0},
-	72,	  36,   0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0,	0, {0},
-	72,   36,   0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	16,	16,	0,	0,	0, {0},
-	72,	  36,	0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	0,	0, {0},
-	72,   36,	0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
-	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
-	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
-	72,   36,	1,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	16,	16,	0,	1, {0},
-	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	1,	0, {0},
-	72,   36,   0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
-	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
-	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	8,	8,	0,	0, {0},
-	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	0,	0, {0},
-	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
-	72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0},
-	72,   36, 	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}
+{72,	  36,   1,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	1,	0, {0}}, 
+{72,	  36,   0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	1,	0, {0}}, 
+{72,	  36,   0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}}, 
+{72,	  36,   0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}}, 
+{72,      36,   0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	16,	16,	0,	0, {0}}, 
+{72,	  36,	0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	0,	0, {0}}, 
+{72,   36,	0,  0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}}, 
+{72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}}, 
+{72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}}, 
+{72,   36,	1,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	16,	16,	0,	1, {0}}, 
+{72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	1,	0, {0}}, 
+{72,   36,      0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}}, 
+{72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}}, 
+{72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	8,	8,	0,	0, {0}}, 
+{72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	65520,	65520,	0,	0, {0}}, 
+{72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}}, 
+{72,   36,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}}, 
+{72,   36, 	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	96,	0,	0,	96,	0,	0,	0,	0,	0, {0}}
 };
 #endif
 
@@ -1786,9 +1786,17 @@ static void auddrv_SetAudioMode_mic( AudioMode_t arg_audio_mode, unsigned int ar
 {
 	UInt16 gainTemp1=0, gainTemp2=0, gainTemp3=0, gainTemp4=0;
 #if !defined(USE_NEW_AUDIO_PARAM)
+#ifdef CONFIG_BCM_MODEM
 	SysAudioParm_t *p =&(AUDIO_GetParmAccessPtr()[arg_audio_mode]);
 #else
+	AudioSysParm_t *p =&(AUDIO_GetParmAccessPtr()[arg_audio_mode]);
+#endif
+#else
+#ifdef CONFIG_BCM_MODEM
 	SysAudioParm_t *p =&(AUDIO_GetParmAccessPtr()[arg_audio_mode+currAudioApp*AUDIO_MODE_NUMBER]);
+#else
+	AudioSysParm_t *p =&(AUDIO_GetParmAccessPtr()[arg_audio_mode+currAudioApp*AUDIO_MODE_NUMBER]);
+#endif	
 #endif
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* auddrv_SetAudioMode_mic() arg_audio_mode==%d\n\r", arg_audio_mode );
 
@@ -1851,11 +1859,21 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 	int mixerOutputFineGain;  // Bit12:0, Output Fine Gain
 	int mixerOutputBitSelect;
 	int pmu_gain = 0;
+
 #if !defined(USE_NEW_AUDIO_PARAM)
+#ifdef CONFIG_BCM_MODEM
 	SysAudioParm_t *p =&(AUDIO_GetParmAccessPtr()[arg_audio_mode]);
 #else
-	SysAudioParm_t *p =&(AUDIO_GetParmAccessPtr()[arg_audio_mode+currAudioApp*AUDIO_MODE_NUMBER]);
+	AudioSysParm_t *p =&(AUDIO_GetParmAccessPtr()[arg_audio_mode]);
 #endif
+#else
+#ifdef CONFIG_BCM_MODEM
+	SysAudioParm_t *p =&(AUDIO_GetParmAccessPtr()[arg_audio_mode+currAudioApp*AUDIO_MODE_NUMBER]);
+#else
+	AudioSysParm_t *p =&(AUDIO_GetParmAccessPtr()[arg_audio_mode+currAudioApp*AUDIO_MODE_NUMBER]);
+#endif	
+#endif
+
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
@@ -1962,6 +1980,7 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 		Int32 *coeff = NULL;
 		UInt16 gain = 0;
 		UInt16 enable = 0;
+
 
 		enable = p->hw_sidetone_enable;
 		if (!enable)

@@ -173,7 +173,7 @@ void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 
 	UInt16 size = 0;    //number of 16-bit words
 	UInt16 stream;  //the stream number: 1, 2, 3, 4
-	UInt16 sender;  //the capture point
+	UInt16 sender = 0;  //the capture point
 
 	for(n = 0; n < LOG_STREAM_NUMBER; n++)
 	{
@@ -330,7 +330,7 @@ Result_t AUDDRV_AudLog_Stop( UInt32 log_stream )
 		AUDDRV_AudLog_Shutdown();
 	}
 
-	return 0;
+	return res;
 }
 
 

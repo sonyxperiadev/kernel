@@ -247,6 +247,7 @@ static char *blockName[CAPH_TOTAL] = { //should match the order of CAPH_BLOCK_t
 
 static UInt8 arm2sp_start[2] = {FALSE};
 
+#if defined(CONFIG_BCM_MODEM)
 static void ARM2SP_DMA_Req(UInt16 bufferPosition)
 {
 	//Log_DebugPrintf(LOGID_AUDIO, "ARM2SP_DMA_Req:: render interrupt callback. arg1 = 0x%x\n", bufferPosition);
@@ -256,7 +257,7 @@ static void ARM2SP2_DMA_Req(UInt16 bufferPosition)
 {
 	//Log_DebugPrintf(LOGID_AUDIO, "ARM2SP2_DMA_Req:: render interrupt callback. arg1 = 0x%x\n", bufferPosition);
 }
-
+#endif
 // ==========================================================================
 //
 // Function Name: csl_caph_config_arm2sp
@@ -342,6 +343,7 @@ void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId)
 // Description: enable adcpath CB
 //
 // =========================================================================
+#if defined(CONFIG_BCM_MODEM) 
 static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 {
 	Log_DebugPrintf(LOGID_AUDIO, "csl_caph_enable_adcpath_by_dsp enabled_path=0x%x, pcmRunning %d.\r\n", enabled_path, pcmRunning);
@@ -369,7 +371,7 @@ static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 	}
 #endif
 }
-
+#endif
 // ==========================================================================
 //
 // Function Name: AUDIO_DMA_CB2
@@ -377,12 +379,13 @@ static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 // Description: The callback function when there is DMA request
 //
 // =========================================================================
+#if defined(CONFIG_BCM_MODEM) 
 static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 {
 	//when system is busy, dma cb may come after stop is issued.
 	if(!arm2sp_start[arm2spCfg.instanceID] && arm2spCfg.playbackMode!=CSL_ARM2SP_PLAYBACK_NONE)
 	{
-#if defined(CONFIG_BCM_MODEM) 
+
 		if(arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1)
 		{
 			CSL_ARM2SP_Init();
@@ -406,7 +409,7 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
         	}
 
 		arm2sp_start[arm2spCfg.instanceID] = TRUE;
-#endif
+
 	}
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_LOW) == CSL_CAPH_READY_NONE)
 	{
@@ -420,7 +423,7 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 		csl_caph_dma_set_ddrfifo_status( chnl, CSL_CAPH_READY_HIGH);
 	}
 }
-
+#endif
 // ==========================================================================
 //
 // Function Name: csl_caph_hwctrl_PrintPath
@@ -1136,6 +1139,7 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
 	}
 #endif
 
+#ifdef CONFIG_BCM_MODEM
 	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM) ||
         (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM))
 	{
@@ -1158,7 +1162,7 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
 		if(arm2sp_start[0] == FALSE && arm2sp_start[1] == FALSE)
 			memset(&arm2spCfg, 0, sizeof(arm2spCfg));
 	}
-
+#endif
     for (i = startOffset; i < MAX_PATH_LEN; i++)
     {
         if (path->block[sinkNo][i] == CAPH_DMA)
@@ -2691,9 +2695,9 @@ void csl_caph_hwctrl_init(void)
 
     csl_caph_ControlHWClock(FALSE);
 	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
-
+#if defined(ENABLE_DMA_VOICE) // also #ifndef CONFIG_BCM_MODEM
 	CSL_RegisterAudioEnableDoneHandler(&csl_caph_enable_adcpath_by_dsp);
-
+#endif
     return;
 }
 
