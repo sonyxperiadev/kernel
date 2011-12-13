@@ -36,7 +36,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/broadcom/vce.h>
 
-#define DRIVER_VERSION 10100
+#define DRIVER_VERSION 10101
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -91,8 +91,13 @@ static struct {
 typedef struct {
 	struct semaphore irq_sem;
 	int              vce_acquired;
-	int              mmap_clock_hold_count; /* hack! */
 } vce_t;
+
+/* Per mmap handle state: */
+typedef struct {
+	int       count;
+	vce_t     *vce;
+} vce_mmap_t;
 
 /***** Function Prototypes **************/
 static void reset_vce(void);
@@ -370,9 +375,6 @@ static int vce_open(struct inode *inode, struct file *filp)
 	dev->vce_acquired = 0;
 	sema_init(&dev->irq_sem, 0);
 
-	/* A hack */
-	dev->mmap_clock_hold_count = 0;
-
 	filp->private_data = dev;
 	return 0;
 }
@@ -422,28 +424,56 @@ static int vce_release(struct inode *inode, struct file *filp)
 		err_print("VCE driver closing with unacknowledged interrupts\n");
 	}
 
-	/* A hack */
-	/* We should be unclocking in munmap() call, but for now, we
-	 * defer to here and compensate.  Ugly.  Yes.  TODO: FIXME */
-	while (dev->mmap_clock_hold_count > 0) {
-		clock_off();
-		dev->mmap_clock_hold_count -= 1;
-	}
-
 	kfree(dev);
 
 	return 0;
 }
 
+static void vce_mmap_incref(struct vm_area_struct *vma)
+{
+	vce_mmap_t *vce_mmap_data;
+	vce_t *dev;
+
+	vce_mmap_data = (vce_mmap_t *)(vma->vm_private_data);
+	dev = vce_mmap_data->vce;
+	/* TODO: need this? */(void)dev;
+
+	clock_on();
+	vce_mmap_data->count += 1; /* TODO: need mutex?  or this count just for debug?  or both? */
+}
+
+static void vce_mmap_decref(struct vm_area_struct *vma)
+{
+	vce_mmap_t *vce_mmap_data;
+	vce_t *dev;
+
+	vce_mmap_data = (vce_mmap_t *)(vma->vm_private_data);
+	dev = vce_mmap_data->vce;
+	/* TODO: need this? */(void)dev;
+
+	vce_mmap_data->count -= 1; /* TODO: need mutex?  or this count just for debug?  or both? */
+	clock_off();
+
+	/* Actually -- yes -- we *do* need that mutex... -- TODO! FIXME!! */
+	if (vce_mmap_data->count == 0) {
+		kfree(vce_mmap_data);
+	}
+}
+
+static struct vm_operations_struct vce_vmops =
+{
+	.open           = vce_mmap_incref,
+	.close          = vce_mmap_decref
+};
+
 static int vce_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	unsigned long vma_size;
 	vce_t *dev;
+	vce_mmap_t *vce_mmap_data;
 
 	vma_size = vma->vm_end - vma->vm_start;
 	dev = (vce_t *)(filp->private_data);
-
-	/* TODO: FIXME */ (void)dev;
 
 	if (vma_size & (~PAGE_MASK)) {
 		err_print(KERN_ERR "vce_mmap: mmaps must be aligned to a multiple of pages_size.\n");
@@ -459,7 +489,16 @@ static int vce_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
-	clock_on();
+	vce_mmap_data = kmalloc(sizeof(vce_mmap_t), GFP_KERNEL);
+	if (vce_mmap_data == NULL) {
+		err_print("vce_mmap failed to allocate mmap data \n");
+		return -EINVAL;
+	}
+	vce_mmap_data->vce = dev;
+	vce_mmap_data->count = 0;
+	vma->vm_private_data = vce_mmap_data;
+	vma->vm_ops = &vce_vmops;
+	vce_mmap_incref(vma);
 
 	/* Remap-pfn-range will mark the range VM_IO and VM_RESERVED */
 	if (remap_pfn_range(vma,
@@ -470,11 +509,6 @@ static int vce_mmap(struct file *filp, struct vm_area_struct *vma)
 		err_print("%s(): remap_pfn_range() failed\n", __FUNCTION__);
 		return -EINVAL;
 	}
-	dev->mmap_clock_hold_count += 1; /* A Hack!  We should have a
-					  * way to unlock the clock
-					  * when munmap() is called --
-					  * TODO: FIXME */
-	/* TODO:  when unmapped?  need a clock_off()!! */
 
 	return 0;
 }

@@ -193,8 +193,10 @@ static void kill_urbs_in_qh_list(dwc_otg_hcd_t * hcd, dwc_list_link_t * qh_list)
 						    qtd->urb,
 						    -DWC_E_TIMEOUT);
 				dwc_otg_hcd_qtd_remove_and_free(hcd, qtd, qh);
+				/* remove_and_free would change the first in the queue but if it is same then avoid accessing freed element */
+				if (qtd == DWC_CIRCLEQ_FIRST(&qh->qtd_list))
+					break;
 			}
-
 		}
 	}
 }
@@ -2447,15 +2449,19 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t * dwc_otg_hcd,
 				dwc_mdelay(200);
 			}
 			
-			/** @todo - check how sw can wait for 1 sec to check asesvld??? */
+			/** sw can wait for 1 sec to check asesvld */
 			if (core_if->adp_enable) {
 				gotgctl_data_t gotgctl = { .d32 = 0 };
 				gpwrdn_data_t gpwrdn;
-				
-				while(gotgctl.b.asesvld == 1) {
+				unsigned int asessvld_count = 10; /* Following loop is using 100ms delay. Terminate if sessvld ==1 even after 10 iterations */
+
+				do {
 					gotgctl.d32 = dwc_read_reg32(&core_if->core_global_regs->gotgctl);
 					dwc_mdelay(100);
-				}
+				} while((gotgctl.b.asesvld == 1) && asessvld_count--);
+
+				if (gotgctl.b.asesvld == 1)
+					DWC_PRINTF("A session is still valid before starting ADP probe\n");
 				
 				/* Enable Power Down Logic */
 				gpwrdn.d32 = 0;

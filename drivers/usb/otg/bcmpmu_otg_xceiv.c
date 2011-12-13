@@ -235,9 +235,9 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	 ** link to remove these notifiers. Avoid an unnecessary remove notifer. Just check if it is already registered
 	*/
 	if (xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call == NULL) {
-		/* We would want to use A session invalid but that requires reading PMU reg for status. For now use insert/remove instead */
 		xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call = bcmpmu_otg_xceiv_vbus_notif_handler;
 		bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID, &xceiv_data->bcm_otg_vbus_validity_notifier);
+		bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_SESSION_INVALID, &xceiv_data->bcm_otg_vbus_validity_notifier);
 
 		xceiv_data->bcm_otg_id_chg_notifier.notifier_call = bcmpmu_otg_xceiv_id_chg_notif_handler;
 		bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_ID_CHANGE, &xceiv_data->bcm_otg_id_chg_notifier);
@@ -521,6 +521,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->bcm_otg_work_queue = create_workqueue("bcm_otg_events");
 	if (xceiv_data->bcm_otg_work_queue == NULL) {
 		dev_warn(&pdev->dev, "BCM OTG events work queue creation failed\n");
+		kfree(xceiv_data);
 		return -ENOMEM;
 	}
 

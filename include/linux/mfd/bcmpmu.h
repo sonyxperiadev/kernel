@@ -23,17 +23,13 @@
 #include <linux/power_supply.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/machine.h>
+#include <linux/i2c-kona.h>
 
 #define	PMU_BITMASK_ALL		0xFFFFFFFF
 
 struct bcmpmu;
 struct regulator_init_data;
 
-/* Register field values for regulator. */
-#define LDO_NORMAL              0   /* FOR LDO and Switchers it is NORMAL ( NM/NM1 for SRs).*/
-#define LDO_STANDBY             1   /* FOR LDO and Swtichers it is STANDBY( LPM for SRs ). */
-#define LDO_OFF                 2   /* OFF.*/
-#define LDO_RESERVED_SR_IDLE    3   /* For LDO it is reserved. For CSR, IOSR, SDSR this is NM2 for SRs */
 /* LDO or Switcher def */
 #define BCMPMU_LDO    0x10
 #define BCMPMU_SR     0x11
@@ -60,7 +56,6 @@ struct bcmpmu_reg_info
 	u32 vout_shift_t;	/* Bit shift in register */
 	u32 *v_table;		/* Map for converting register voltage to register value */
 	u32 num_voltages;	/* Size of register map */
-	u32 mode;
 	u32 mode_mask;
 	u8 ldo_or_sr;
 };
@@ -273,12 +268,19 @@ enum bcmpmu_reg {
 	/* interrupt */
 	PMU_REG_INT_START,
 	PMU_REG_INT_MSK_START,
+	/* bc */
+	PMU_REG_BC_STATUS_CODE,
+	PMU_REG_BC_STATUS_DONE,
+	PMU_REG_BC_STATUS_TO,
+	PMU_REG_BC_CTRL_DET_RST,
+	PMU_REG_BC_CTRL_DET_EN,
 	/* generic */
 	PMU_REG_SWUP,
 	PMU_REG_PMUID,
 	PMU_REG_PMUREV,
 	PMU_REG_PLLCTRL,
 	PMU_REG_HOSTCTRL1,
+	PMU_REG_SYS_WDT_CLR,
 	PMU_REG_MAX,
 };
 enum bcmpmu_irq_reg {
@@ -496,19 +498,21 @@ enum bcmpmu_chrgr_volt_t {
 
 enum bcmpmu_chrgr_type_t {
 	PMU_CHRGR_TYPE_NONE,
-	PMU_CHRGR_TYPE_USB,
-	PMU_CHRGR_TYPE_AC,
+	PMU_CHRGR_TYPE_SDP,
+	PMU_CHRGR_TYPE_CDP,
 	PMU_CHRGR_TYPE_DCP,
 	PMU_CHRGR_TYPE_TYPE1,
 	PMU_CHRGR_TYPE_TYPE2,
+	PMU_CHRGR_TYPE_PS2,
+	PMU_CHRGR_TYPE_ACA,
 	PMU_CHRGR_TYPE_MAX,
 };
 
 enum bcmpmu_usb_type_t {
 	PMU_USB_TYPE_NONE,
 	PMU_USB_TYPE_SDP,
-	PMU_USB_TYPE_CDP,
 	PMU_USB_TYPE_DCP,
+	PMU_USB_TYPE_CDP,
 	PMU_USB_TYPE_ACA,
 	PMU_USB_TYPE_MAX,
 };
@@ -691,6 +695,12 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_SW_UP,
 };
 
+enum bcmpmu_bc_t {
+	BCMPMU_BC_BB_BC11,
+	BCMPMU_BC_BB_BC12,
+	BCMPMU_BC_PMU_BC12,
+};
+
 #define	PMU_ENV_BITMASK_MBWV_DELTA		1<<0
 #define	PMU_ENV_BITMASK_CGPD_ENV		1<<1
 #define	PMU_ENV_BITMASK_UBPD_ENV		1<<2
@@ -809,6 +819,7 @@ struct bcmpmu {
  *        used by the platform to configure GPIO functions and similar.
  */
 struct bcmpmu_platform_data {
+	struct i2c_slave_platform_data i2c_pdata;
 	int (*init)(struct bcmpmu *bcmpmu);
 	int (*exit)(struct bcmpmu *bcmpmu);
 	struct i2c_board_info *i2c_board_info_map1;
@@ -828,6 +839,7 @@ struct bcmpmu_platform_data {
 	struct bcmpmu_charge_zone *chrg_zone_map;
 	int fg_capacity_full;
 	int support_fg;
+	enum bcmpmu_bc_t bc;
 };
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);

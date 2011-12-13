@@ -54,6 +54,7 @@
 #include <linux/videocore/vc_mem.h>
 
 #include "interface/vcos/vcos.h"
+#include "interface/vchiq_arm/vchiq_connected.h"
 #include "vc_vchi_fb.h"
 
 // ---- Private Constants and Types ------------------------------------------
@@ -129,6 +130,7 @@ typedef struct
 // ---- Private Variables ----------------------------------------------------
 
 static FB_STATE_T *fb_state;
+static int         fb_inited;
 
 // Constant strings for the proc entries
 static const char *fb_cfg_dir_name[VC_FB_SCRN_MAX] = {
@@ -1103,7 +1105,7 @@ out:
    return ret;
 }
 
-static int __init vc_fb_init( void )
+static void vc_fb_connected_init( void )
 {
    int ret;
    int i;
@@ -1183,6 +1185,7 @@ static int __init vc_fb_init( void )
 
    // Done!
 
+   fb_inited = 1;
    goto out;
 
 err_remove_framebuffer:
@@ -1201,8 +1204,14 @@ err_free_mem:
 
 out:
    LOG_INFO( "%s: end (ret=%d)", __func__, ret );
+}
 
-   return ret;
+static int __init vc_fb_init( void )
+{
+   printk( KERN_INFO "vc-fb: Videocore framebuffer driver\n" );
+
+   vchiq_add_connected_callback( vc_fb_connected_init );
+   return 0;
 }
 
 static void __exit vc_fb_exit( void )
@@ -1211,20 +1220,23 @@ static void __exit vc_fb_exit( void )
 
    LOG_INFO( "%s: start", __func__ );
 
-   // Remove framebuffer device for each screen
-   for ( i = 0; i < VC_FB_SCRN_MAX; i++ )
+   if ( fb_inited )
    {
-      vc_fb_remove_framebuffer( i );
+      // Remove framebuffer device for each screen
+      for ( i = 0; i < VC_FB_SCRN_MAX; i++ )
+      {
+         vc_fb_remove_framebuffer( i );
+      }
+
+      // Remove the proc directory entry
+      vcos_cfg_remove_entry( &fb_state->cfg_directory );
+
+      // Stop the framebuffer service
+      vc_vchi_fb_stop( &fb_state->fb_handle );
+
+      // Free the memory for the state structure
+      vcos_kfree( fb_state );
    }
-
-   // Remove the proc directory entry
-   vcos_cfg_remove_entry( &fb_state->cfg_directory );
-
-   // Stop the framebuffer service
-   vc_vchi_fb_stop( &fb_state->fb_handle );
-
-   // Free the memory for the state structure
-   vcos_kfree( fb_state );
 
    LOG_INFO( "%s: end", __func__ );
 }

@@ -267,8 +267,7 @@ int mpuirq_init(struct i2c_client *mpu_client, struct mldl_cfg *mldl_cfg)
 		else
 			flags = IRQF_TRIGGER_RISING;
 
-		res =
-		    request_irq(mpuirq_dev_data.irq, mpuirq_handler, flags,
+		res = request_threaded_irq(mpuirq_dev_data.irq, NULL, mpuirq_handler, flags,
 				interface, &mpuirq_dev_data.irq);
 		if (res) {
 			dev_err(&mpu_client->adapter->dev,

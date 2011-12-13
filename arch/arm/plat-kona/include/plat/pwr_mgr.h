@@ -102,8 +102,9 @@
 
 #define PM_POLICY_MASK	0x7
 
-#define CCU_POLICY(policy) ((policy) & 0x3)
-#define IS_ACTIVE_POLICY(policy)	((policy) & 0x4)
+#define CCU_POLICY(p) ((p) & 0x3)
+#define IS_ACTIVE_POLICY(p)	((p) & 0x4)
+#define IS_SHUTDOWN_POLICY(p) ((p) == 0)
 
 /*I2C commands - 4 bits*/
 
@@ -196,6 +197,11 @@ struct v0x_spec_i2c_cmd_ptr
 	u8 other_ptr;
 };
 
+struct pm_special_event_range {
+	u32 start;
+	u32 end;
+};
+
 struct pwr_mgr_info
 {
 	u32 flags;
@@ -206,6 +212,9 @@ struct pwr_mgr_info
 	u8* i2c_var_data;
 	u32 num_i2c_var_data;
 	struct v0x_spec_i2c_cmd_ptr* i2c_cmd_ptr[V_SET_MAX];
+
+	struct pm_special_event_range *special_event_list;
+	u32 num_special_event_range;
 
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 pwrmgr_intr;

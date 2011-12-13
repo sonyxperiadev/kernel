@@ -65,6 +65,7 @@ typedef enum
 
     DISPLAY_POWER_STATE_OFF,              ///<  Power Off
     DISPLAY_POWER_STATE_ON,               ///<  Power On
+    DISPLAY_POWER_STATE_BLANK_SCREEN,	  ///<  Screen blank
     DISPLAY_POWER_STATE_SLEEP,            ///<  Sleep State
 
     DISPLAY_POWER_STATE_MAX,              ///<  Max Number
@@ -262,6 +263,15 @@ typedef enum
 } DISPDRV_CB_RES_T;
 
 
+typedef struct {
+	u32	l;
+	u32	t;
+	u32	r;
+	u32	b;
+	u32	w;
+	u32	h;
+} DISPDRV_WIN_t;
+
 /**
 *
 *  API CallBack Function
@@ -284,7 +294,7 @@ typedef void (*DISPDRV_CB_API_1_1_T) ( DISPDRV_CB_RES_T res, void* pFb );
 *****************************************************************************/
 typedef struct
 {
-    Int32    (*init)(void);                                                                                                                ///< Routine to initialise the display driver
+    Int32    (*init)(unsigned int bus_width);                                                                                                                ///< Routine to initialise the display driver
     Int32    (*exit)(void);                                                                                                                ///< Routine to shutdown the display driver
     Int32    (*info)(const char **driverName, UInt32 *versionMajor, UInt32 *versionMinor, DISPDRV_SUPPORT_FEATURES_T *feature);            ///< Routine to return a drivers info (name, version etc..)
     Int32    (*open)(const void* params, DISPDRV_HANDLE_T *handle);                                                                        ///< Routine to open a driver
@@ -292,13 +302,14 @@ typedef struct
     Int32    (*core_freq_change)(const UInt32 core_freq_in_hz, const UInt32 pending);                                                      ///< Optional routine to handle clock change messages
     Int32    (*run_domain_change)(const UInt32 new_run_domain_active_state, const UInt32 pending);                                         ///< Optional routine to handle power domain requests
     const DISPDRV_INFO_T* (*get_info)(DISPDRV_HANDLE_T handle);                                                                            ///< Routine to get the display info
-    Int32    (*start)(DISPDRV_HANDLE_T handle);                                                                                            ///< Routine to start a display
-    Int32    (*stop)(DISPDRV_HANDLE_T handle);                                                                                             ///< Routine to stop a display
+    Int32    (*start)(struct pi_mgr_dfs_node* dfs_node);                                                                                            ///< Routine to start a display
+    Int32    (*stop)(struct pi_mgr_dfs_node* dfs_node);                                                                                             ///< Routine to stop a display
     Int32    (*power_control)(DISPDRV_HANDLE_T handle, DISPLAY_POWER_STATE_T powerState);                                                  ///< Routine to control a displays power
     Int32    (*update_no_os)(DISPDRV_HANDLE_T handle, void *fb );                                                                          ///< Routine to update a frame (EXT fb)
     Int32    (*update_dma_os)(DISPDRV_HANDLE_T handle, void *fb, DISPDRV_CB_API_1_1_T apiCb);                                              ///< Routine to update a frame (EXT fb)
     // !!! OCT 07 2010 update will become obsolete once transition to update_dma_os is complete                                                
-    Int32    (*update)(DISPDRV_HANDLE_T handle, int fb_idx, DISPDRV_CB_T apiCb);                                                                       ///< Routine to update a frame (INT fb)
+//    Int32    (*update)(DISPDRV_HANDLE_T handle, int fb_idx, DISPDRV_CB_T apiCb);                                                                       ///< Routine to update a frame (INT fb)
+    Int32    (*update)(DISPDRV_HANDLE_T handle, int fb_idx, DISPDRV_WIN_t *p_win, DISPDRV_CB_T apiCb);                                                                       ///< Routine to update a frame (INT fb)
     Int32    (*set_control)(DISPDRV_HANDLE_T handle, DISPDRV_CTRL_ID_T controlID, void* controlParams);                                    ///< Routine to set control for the display panel
     Int32    (*get_control)(DISPDRV_HANDLE_T handle, DISPDRV_CTRL_ID_T controlID, void* controlParams);                                    ///< Routine to get control for the display panel
 

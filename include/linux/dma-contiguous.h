@@ -71,7 +71,8 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 				       unsigned int order);
 int dma_release_from_contiguous(struct device *dev, struct page *pages,
 				int count);
-
+void get_cma_area(struct device *dev, phys_addr_t *start,
+			  unsigned long *size);
 #else
 
 #define MAX_CMA_AREAS	(0)
@@ -98,6 +99,9 @@ int dma_release_from_contiguous(struct device *dev, struct page *pages,
 {
 	return 0;
 }
+
+static inline void get_cma_area(struct device *dev, phys_addr_t *start,
+			  unsigned long *size) { }
 
 #endif
 

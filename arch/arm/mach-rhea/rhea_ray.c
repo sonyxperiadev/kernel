@@ -60,6 +60,7 @@
 #include <linux/broadcom/bcm59055-power.h>
 #include <linux/clk.h>
 #include <linux/bootmem.h>
+#include <plat/pi_mgr.h>
 #include "common.h"
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
@@ -79,7 +80,7 @@
 #if defined (CONFIG_AL3006)
 #include <linux/al3006.h>
 #endif
-#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
+#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU3050))
 #include <linux/mpu.h>
 #endif
 #define _RHEA_
@@ -111,6 +112,12 @@
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
+
+#include <media/soc_camera.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_padctrlreg.h>
+#include <linux/delay.h>
+
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
 
@@ -132,6 +139,10 @@
 #define BCM_KEY_COL_5  5
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
+
+#ifdef CONFIG_MFD_BCMPMU
+void __init board_pmu_init(void);
+#endif
 
 #ifdef CONFIG_MFD_BCM_PMU590XX
 static int bcm590xx_event_callback(int flag, int param)
@@ -288,12 +299,17 @@ static const char *pmu_clients[] = {
 };
 
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
+#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
 	/*
-	 * PMU in Fast mode. Once the Rhea clock changes are in place,
-	 * we will switch to HS mode 3.4Mbps (BSC_BUS_SPEED_HS)
+	 * PMU in High Speed (HS) mode. I2C CLK is 3.25MHz
+	 * derived from 26MHz input clock.
+	 *
+	 * Rhea: PMBSC is always in HS mode, i2c_pdata is not in use.
 	 */
-	/*.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),*/
-	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),
+#else
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
+#endif
 	.pmu_event_cb = bcm590xx_event_callback,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
@@ -331,10 +347,17 @@ struct platform_device bcm_kp_device = {
 	GPIO07, GPIO12, GPIO13, for now keypad can only be set as a 2x2 matrix
 	by using pin GPIO04, GPIO05, GPIO14 and GPIO15 */
 static struct bcm_keymap newKeymap[] = {
+#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Search Key", KEY_SEARCH},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Back Key", KEY_BACK},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Menu-Key", KEY_MENU},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "Home-Key", KEY_HOME},
+#else
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
+#endif
 	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
@@ -385,16 +408,26 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
+#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
+#else
+	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "Search Key", KEY_SEARCH},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "Back Key", KEY_BACK},
+#endif
 	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
+#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
+#else
+	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "Menu-Key", KEY_MENU},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "Home-Key", KEY_HOME},
+#endif
 };
 
 static struct bcm_keypad_platform_info bcm_keypad_data = {
@@ -415,6 +448,15 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 #define GPIO_PCA953X_GPIO_PIN      74 /* Configure pad MMC1DAT4 to GPIO74 */
 #endif
 
+#define SENSOR_0_GPIO_PWRDN		12
+#define SENSOR_0_GPIO_RST		(KONA_MAX_GPIO + 10)
+#define SENSOR_0_CLK			"dig_ch0_clk"
+#define SENSOR_0_CLK_FREQ		(13000000)
+
+#define SENSOR_1_GPIO_PWRDN		13
+#define SENSOR_1_CLK			"dig_ch0_clk"
+
+
 static int pca953x_platform_init_hw(struct i2c_client *client,
 		unsigned gpio, unsigned ngpio, void *context)
 {
@@ -426,6 +468,30 @@ static int pca953x_platform_init_hw(struct i2c_client *client,
 		return rc;
 	}
 	gpio_direction_input(GPIO_PCA953X_GPIO_PIN);
+
+	/*init sensor gpio here to be off */
+	rc = gpio_request(SENSOR_0_GPIO_PWRDN, "CAM_STANDBY0");
+	if (rc < 0)
+		printk(KERN_ERR "unable to request GPIO pin %d\n", SENSOR_0_GPIO_PWRDN);
+
+	gpio_direction_output(SENSOR_0_GPIO_PWRDN, 0);
+	gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
+
+	rc = gpio_request(SENSOR_0_GPIO_RST, "CAM_RESET0");
+	if (rc < 0)
+		printk(KERN_ERR "unable to request GPIO pin %d\n", SENSOR_0_GPIO_RST);
+
+	gpio_direction_output(SENSOR_0_GPIO_RST, 0);
+	gpio_set_value(SENSOR_0_GPIO_RST, 0);
+
+
+	rc = gpio_request(SENSOR_1_GPIO_PWRDN, "CAM_STANDBY1");
+	if (rc < 0)
+		printk(KERN_ERR "unable to request GPIO pin %d\n", SENSOR_1_GPIO_PWRDN);
+
+	gpio_direction_output(SENSOR_1_GPIO_PWRDN, 0);
+	gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+
 	return 0;
 }
 
@@ -593,44 +659,45 @@ static struct i2c_board_info __initdata al3006_info[] =
 	},
 };
 #endif
-#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
-static struct mpu_platform_data mpu6050_data={
-	.int_config = 0x10,
-	.orientation =
-		{ 0,1,0,
-		  1,0,0,
-		  0,0,-1},
-	.level_shifter = 0,
 
-	.accel = {
-		 /*.get_slave_descr = mpu_get_slave_descr,*/
-		.adapt_num = 2,
-		.bus = EXT_SLAVE_BUS_SECONDARY,
-		.address = 0x38,
-		.orientation = 
-			{ 0,1,0,
-			  1,0,0,
-			  0,0,-1},
-	},
-	.compass = {
-		 /*.get_slave_descr = compass_get_slave_descr,*/
-		.adapt_num = 2,
-		.bus = EXT_SLAVE_BUS_PRIMARY,
-		.address = (0x50>>1),
-		.orientation =
-			{ 0,1,0,
-			  1,0,0,
-			  0,0,-1},
-	},
+#ifdef CONFIG_GPIO_PCA953X
+	#define MPU_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 2)
+	#define ACCE_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 1)
+	#define COMP_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 4)
+#else
+	#define MPU_INT_GPIO_PIN		122	/*  skip expander chip */
+	#define ACCE_INT_GPIO_PIN		122 /*  skip expander chip */
+	#define COMP_INT_GPIO_PIN		122 /*  skip expander chip */
+#endif
+
+#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU3050))
+
+static struct mpu_platform_data mpu_data = {
+	.int_config  = 0x10,
+	.orientation = {  -1,  0,  0,
+			   0,  1,  0,
+			   0,  0, -1 },
 };
-static struct i2c_board_info __initdata mpu6050_info[] =
+
+#ifdef CONFIG_MPU_SENSORS_MPU3050
+	#define MPU_NAME "mpu3050"
+#endif
+#ifdef CONFIG_MPU_SENSORS_MPU6050B1
+	#define MPU_NAME "mpu6050B1"
+#endif
+#ifdef CONFIG_MPU_SENSORS_MPU6050A2
+	#define MPU_NAME "mpu6050a2"
+#endif
+
+static struct i2c_board_info __initdata mpu_i2c_info[] =
 {
 	{
-		I2C_BOARD_INFO("mpu6050", 0x68),
-		 /*.irq = */
-		.platform_data = &mpu6050_data,
+		I2C_BOARD_INFO(MPU_NAME, 0x68),
+		.irq = gpio_to_irq(MPU_INT_GPIO_PIN),
+		.platform_data = &mpu_data,
 	},
 };
+
 #endif
 
 #ifdef CONFIG_KONA_HEADSET
@@ -957,7 +1024,9 @@ static struct platform_device bcm_backlight_devices = {
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
 #if defined(CONFIG_MACH_RHEA_RAY) || defined(CONFIG_MACH_RHEA_RAY_EDN1X) \
-	|| defined(CONFIG_MACH_RHEA_FARADAY_EB10) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+	|| defined(CONFIG_MACH_RHEA_FARADAY_EB10) \
+	|| defined(CONFIG_MACH_RHEA_DALTON) || defined(CONFIG_MACH_RHEA_RAY_EDN2X) \
+	|| defined(CONFIG_MACH_RHEA_RAY_DEMO)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X
@@ -1051,39 +1120,81 @@ static struct platform_device alex_dsi_display_device = {
 	},
 };
 
-static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
+static struct kona_fb_platform_data nt35582_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
 	.screen_width		= 480,
 	.screen_height		= 800,
 	.bytes_per_pixel	= 2,
 	.gpio			= 41,
 	.pixel_format		= RGB565,
+	.bus_width		= 16,
 };
 
-static struct platform_device nt35582_smi_display_device = {
+static struct platform_device nt35582_smi16_display_device = {
 	.name    = "rhea_fb",
 	.id      = 1,
 	.dev = {
-		.platform_data		= &nt35582_smi_display_fb_data,
+		.platform_data		= &nt35582_smi16_display_fb_data,
 		.dma_mask		= (u64 *) ~(u32)0,
 		.coherent_dma_mask	= ~(u32)0,
 	},
 };
 
-static struct kona_fb_platform_data r61581_smi_display_fb_data = {
+static struct kona_fb_platform_data nt35582_smi8_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 8,
+};
+
+static struct platform_device nt35582_smi8_display_device = {
+	.name    = "rhea_fb",
+	.id      = 2,
+	.dev = {
+		.platform_data		= &nt35582_smi8_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
 	.screen_width		= 320,
 	.screen_height		= 480,
 	.bytes_per_pixel	= 2,
 	.gpio			= 41,
 	.pixel_format		= RGB565,
+	.bus_width		= 16,
 };
 
-static struct platform_device r61581_smi_display_device = {
+static struct platform_device r61581_smi16_display_device = {
 	.name    = "rhea_fb",
-	.id      = 2,
+	.id      = 3,
 	.dev = {
-		.platform_data		= &r61581_smi_display_fb_data,
+		.platform_data		= &r61581_smi16_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi8_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 8,
+};
+
+static struct platform_device r61581_smi8_display_device = {
+	.name    = "rhea_fb",
+	.id      = 4,
+	.dev = {
+		.platform_data		= &r61581_smi8_display_fb_data,
 		.dma_mask		= (u64 *) ~(u32)0,
 		.coherent_dma_mask	= ~(u32)0,
 	},
@@ -1134,6 +1245,133 @@ static struct platform_device board_bcmbt_lpm_device = {
 };
 #endif
 
+#define OV5640_I2C_ADDRESS (0x3C)
+
+static struct i2c_board_info rhea_i2c_camera[] = {
+	{
+		I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
+	},
+};
+
+static int rhea_camera_power(struct device *dev, int on)
+{
+	unsigned int value;
+	struct clk *clock;
+	struct clk *axi_clk;
+	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
+
+	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
+
+	if (NULL == unicam_dfs_node) {
+		unicam_dfs_node = pi_mgr_dfs_add_request("unicam", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+		if (NULL == unicam_dfs_node) {
+			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+			return -1;
+		}
+	}
+
+	clock = clk_get(NULL, SENSOR_0_CLK);
+	if (!clock) {
+		printk(KERN_ERR "%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
+		return -1;
+	}
+
+	axi_clk = clk_get(NULL, "csi0_axi_clk");
+	if (!axi_clk) {
+		printk(KERN_ERR "%s:unable to get clock csi0_axi_clk\n", __func__);
+		return -1;
+	}
+
+	if (on) {
+
+		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_OPP_TURBO)) {
+			printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
+			return -1;
+		}
+
+		value = clk_enable(axi_clk);
+		if (value) {
+			printk(KERN_ERR "%s:failed to enable csi2 axi clock\n", __func__);
+			return -1;
+		}
+
+		/* enable clk */
+		value = clk_enable(clock);
+		if (value) {
+			printk(KERN_ERR "%s: failed to enabled clock %s\n", __func__,
+					SENSOR_0_CLK);
+			return -1;
+		}
+		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
+		if (value) {
+			printk(KERN_ERR "%s: failed to set the clock %s to freq %d\n",
+					__func__, SENSOR_0_CLK, SENSOR_0_CLK_FREQ);
+			return -1;
+		}
+
+		/* Delay for clk to start */
+		msleep(10);
+
+		/* enable reset gpio */
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		msleep(10);
+
+		/* disable power down gpio */
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
+		msleep(5);
+
+		/* disable reset gpio */
+		gpio_set_value(SENSOR_0_GPIO_RST, 1);
+
+		/* wait for sensor to come up */
+		msleep(30);
+
+	}
+	else {
+		/* enable reset gpio */
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		msleep(1);
+		
+		/* enable power down gpio */
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
+
+		clk_disable(clock);
+
+		clk_disable(axi_clk);
+
+		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
+		}
+	}
+
+	return 0;
+}
+
+static int rhea_camera_reset(struct device *dev)
+{
+	/* reset the camera gpio */
+	printk(KERN_INFO"%s:camera reset\n", __func__);
+	return 0;
+}
+static struct soc_camera_link iclink_ov5640 = {
+	.bus_id		= 0,
+	.board_info	= &rhea_i2c_camera[0],
+	.i2c_adapter_id	= 0,
+	.module_name	= "ov5640",
+	.power		= &rhea_camera_power,
+	.reset		= &rhea_camera_reset,
+};
+
+static struct platform_device rhea_camera = {
+	.name	= "soc-camera-pdrv",
+	.id		= 0,
+	.dev	= {
+		.platform_data = &iclink_ov5640,
+	},
+};
+
+
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -1159,8 +1397,10 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #endif
 #ifdef CONFIG_FB_BRCM_RHEA
 	&alex_dsi_display_device,
-	&nt35582_smi_display_device,
-	&r61581_smi_display_device,
+	&nt35582_smi16_display_device,
+	&nt35582_smi8_display_device,
+	&r61581_smi8_display_device,
+	&r61581_smi16_display_device,
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
@@ -1169,6 +1409,7 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_BCM_BT_LPM
     &board_bcmbt_lpm_device,
 #endif
+	&rhea_camera,
 
 
 };
@@ -1207,6 +1448,9 @@ static void __init rhea_ray_add_i2c_devices (void)
 			pmu_info,
 			ARRAY_SIZE(pmu_info));
 #endif
+#ifdef CONFIG_MFD_BCMPMU
+	board_pmu_init();
+#endif
 #ifdef CONFIG_GPIO_PCA953X
 	i2c_register_board_info(1,
 			pca953x_info,
@@ -1232,10 +1476,10 @@ static void __init rhea_ray_add_i2c_devices (void)
 			al3006_info,
 			ARRAY_SIZE(al3006_info));
 #endif
-#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
+#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1)|| defined(CONFIG_MPU_SENSORS_MPU3050))
 	i2c_register_board_info(1,
-			mpu6050_info,
-			ARRAY_SIZE(mpu6050_info));
+			mpu_i2c_info,
+			ARRAY_SIZE(mpu_i2c_info));
 #endif
 }
 

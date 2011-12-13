@@ -34,6 +34,13 @@
  */
 #define PMEM_GET_TOTAL_SIZE	_IOW(PMEM_IOCTL_MAGIC, 7, unsigned int)
 #define PMEM_CACHE_FLUSH	_IOW(PMEM_IOCTL_MAGIC, 8, unsigned int)
+#define PMEM_CACHE_INVALIDATE	_IOW(PMEM_IOCTL_MAGIC, 9, unsigned int)
+
+enum {
+	NO_ALLOC = 0,
+	DEFAULT_ALLOC,
+	CMA_ALLOC
+};
 
 struct android_pmem_platform_data
 {
@@ -43,7 +50,7 @@ struct android_pmem_platform_data
 	/* size of memory region */
 	unsigned long size;
 	/* set to indicate the region should not be managed with an allocator */
-	unsigned no_allocator;
+	unsigned allocator;
 	/* set to indicate maps of this region should be cached, if a mix of
 	 * cached and uncached is desired, set this and open the device with
 	 * O_SYNC to get an uncached region */
@@ -65,7 +72,7 @@ int get_pmem_user_addr(struct file *file, unsigned long *start,
 		       unsigned long *end);
 void put_pmem_file(struct file* file);
 void flush_pmem_file(struct file *file, unsigned long start, unsigned long len);
-int pmem_setup(struct android_pmem_platform_data *pdata,
+int pmem_setup(struct platform_device *pdev, struct android_pmem_platform_data *pdata,
 	       long (*ioctl)(struct file *, unsigned int, unsigned long),
 	       int (*release)(struct inode *, struct file *));
 int pmem_remap(struct pmem_region *region, struct file *file,

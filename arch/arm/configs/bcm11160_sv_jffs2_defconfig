@@ -283,6 +283,7 @@ CONFIG_KONA_PI_MGR=y
 # CONFIG_KONA_PWRMGR_REV2 is not set
 # CONFIG_KONA_AVS is not set
 # CONFIG_KONA_ATAG_DT is not set
+# CONFIG_PROC_PINMUX_DUMP is not set
 
 #
 # Island SoC based Machine types
@@ -749,6 +750,8 @@ CONFIG_BT_HCIUART_LL=y
 # CONFIG_BT_HCIBFUSB is not set
 # CONFIG_BT_HCIVHCI is not set
 # CONFIG_BT_MRVL is not set
+# CONFIG_BCM_RFKILL is not set
+# CONFIG_BCM_BT_LPM is not set
 # CONFIG_AF_RXRPC is not set
 CONFIG_FIB_RULES=y
 CONFIG_WIRELESS=y
@@ -919,8 +922,6 @@ CONFIG_BTHID=y
 # CONFIG_INTER_PROCESSOR_COMM is not set
 # CONFIG_MONITOR_ADC121C021_I2C is not set
 # CONFIG_MONITOR_BQ27541_I2C is not set
-# CONFIG_BCM_RFKILL is not set
-# CONFIG_BCM_BT_LPM is not set
 # CONFIG_BRALLOC_MEM is not set
 # CONFIG_STM_TRACE is not set
 # CONFIG_C2PORT is not set
@@ -1278,6 +1279,7 @@ CONFIG_I2C_HELPER_AUTO=y
 #
 # CONFIG_I2C_STUB is not set
 CONFIG_I2C_BSC=y
+# CONFIG_KONA_PMU_BSC_HS_MODE is not set
 # CONFIG_I2C_BRCM_SSPI is not set
 # CONFIG_I2C_DAC6571 is not set
 # CONFIG_I2C_DEBUG_CORE is not set

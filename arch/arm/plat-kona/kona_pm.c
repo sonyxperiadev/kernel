@@ -31,7 +31,7 @@ enum
 };
 
 
-static int allow_suspend = 0;
+static int allow_suspend = 1;
 module_param_named(allow_suspend, allow_suspend, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 static int kona_pm_log_lvl = KONAL_PM_LOG_LVL_ERROR;

@@ -1343,7 +1343,7 @@ static inline void do_get_status(dwc_otg_pcd_t * pcd)
 
 	switch (UT_GET_RECIPIENT(ctrl.bmRequestType)) {
 	case UT_DEVICE:
-		*status = 0x1;	/* Self powered */
+		*status = pcd->self_powered;
 		*status |= pcd->remote_wakeup_enable << 1;
 		break;
 

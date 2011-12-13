@@ -26,10 +26,12 @@
 #include <linux/clk.h>
 #include <plat/pi_mgr.h>
  
-extern int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node** dfs_node);
+extern int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node);
 
 extern int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node);
 
-extern int brcm_enable_dsi_lcd_clocks(struct pi_mgr_dfs_node** dfs_node);
+extern int brcm_enable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node,
+	u32 dsi_bus, u32 dsi_pll_hz, u32 dsi_pll_ch_div, u32 esc_clk_hz );
 
-extern int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node);
+extern int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node,
+	u32 dsi_bus);

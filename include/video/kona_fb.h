@@ -26,6 +26,7 @@ struct kona_fb_platform_data {
 	u32	bytes_per_pixel;
 	u32	gpio;
 	pixel_format_t	pixel_format;
+	u32	bus_width;
 };
 
 extern void* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable(void);

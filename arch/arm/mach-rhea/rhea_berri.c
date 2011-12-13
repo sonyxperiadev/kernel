@@ -80,7 +80,6 @@
 #define _RHEA_
 #include <mach/comms/platform_mconfig.h>
 
-
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 #include <linux/broadcom/bcmbt_rfkill.h>
 #endif
@@ -288,12 +287,17 @@ static const char *pmu_clients[] = {
 };
 
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
-	/*
-	 * PMU in Fast mode. Once the Rhea clock changes are in place,
-	 * we will switch to HS mode 3.4Mbps (BSC_BUS_SPEED_HS)
-	 */
-	/*.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),*/
-	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), 
+#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
+    /*
+     * PMU in High Speed (HS) mode. I2C CLK is 3.25MHz
+     * derived from 26MHz input clock.
+     *
+     * Rhea: PMBSC is always in HS mode, i2c_pdata is not in use.
+     */
+    .i2c_pdata  = ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),
+#else
+    .i2c_pdata  = ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
+#endif
 	.pmu_event_cb = bcm590xx_event_callback,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
@@ -458,6 +462,7 @@ static struct lm8325_platform_data lm8325_pdata = {
 	/* This client supports both 100k and 400k, but we are setting it to
 	 * 100k */
 	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_230K),
+	.i2c_pdata	= ENABLE_AUTOSENSE_TIMEOUT(0),
 	.size_x = 8,
 	.size_y = 8,
 	.debounce_time = 0x80,
@@ -649,11 +654,18 @@ static struct platform_device pl330_dmac_device = {
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-
+#ifdef CONFIG_MACH_RHEA_BERRI_EDN40
+#define BCMBT_VREG_GPIO       (38)
+#define BCMBT_N_RESET_GPIO    (70)
+#define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
+#define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
+#else
 #define BCMBT_VREG_GPIO       (10)
 #define BCMBT_N_RESET_GPIO    (70)
 #define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
 #define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
+#endif
+
 
 static struct bcmbt_rfkill_platform_data board_bcmbt_rfkill_cfg = {
         .vreg_gpio = BCMBT_VREG_GPIO,
@@ -673,8 +685,13 @@ static struct platform_device board_bcmbt_rfkill_device = {
 #endif
 
 #ifdef CONFIG_BCM_BT_LPM
+#ifdef CONFIG_MACH_RHEA_BERRI_EDN40
+#define GPIO_BT_WAKE 122
+#define GPIO_HOST_WAKE 111
+#else
 #define GPIO_BT_WAKE 02
 #define GPIO_HOST_WAKE 111
+#endif
 
 static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
         .gpio_bt_wake = GPIO_BT_WAKE,
@@ -983,39 +1000,81 @@ static struct platform_device alex_dsi_display_device = {
 	},
 };
 
-static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
+static struct kona_fb_platform_data nt35582_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
 	.screen_width		= 480,
 	.screen_height		= 800,
 	.bytes_per_pixel	= 2,
 	.gpio			= 41,
 	.pixel_format		= RGB565,
+	.bus_width		= 16,
 };
 
-static struct platform_device nt35582_smi_display_device = {
+static struct platform_device nt35582_smi16_display_device = {
 	.name    = "rhea_fb",
 	.id      = 1,
 	.dev = {
-		.platform_data		= &nt35582_smi_display_fb_data,
+		.platform_data		= &nt35582_smi16_display_fb_data,
 		.dma_mask		= (u64 *) ~(u32)0,
 		.coherent_dma_mask	= ~(u32)0,
 	},
 };
 
-static struct kona_fb_platform_data r61581_smi_display_fb_data = {
+static struct kona_fb_platform_data nt35582_smi8_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 8,
+};
+
+static struct platform_device nt35582_smi8_display_device = {
+	.name    = "rhea_fb",
+	.id      = 2,
+	.dev = {
+		.platform_data		= &nt35582_smi8_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
 	.screen_width		= 320,
 	.screen_height		= 480,
 	.bytes_per_pixel	= 2,
 	.gpio			= 41,
 	.pixel_format		= RGB565,
+	.bus_width		= 16,
 };
 
-static struct platform_device r61581_smi_display_device = {
+static struct platform_device r61581_smi16_display_device = {
 	.name    = "rhea_fb",
-	.id      = 2,
+	.id      = 3,
 	.dev = {
-		.platform_data		= &r61581_smi_display_fb_data,
+		.platform_data		= &r61581_smi16_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi8_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 8,
+};
+
+static struct platform_device r61581_smi8_display_device = {
+	.name    = "rhea_fb",
+	.id      = 4,
+	.dev = {
+		.platform_data		= &r61581_smi8_display_fb_data,
 		.dma_mask		= (u64 *) ~(u32)0,
 		.coherent_dma_mask	= ~(u32)0,
 	},
@@ -1047,15 +1106,17 @@ static struct platform_device *rhea_berri_plat_devices[] __initdata = {
 #endif
 #ifdef CONFIG_FB_BRCM_RHEA
 	&alex_dsi_display_device,
-	&nt35582_smi_display_device,
-	&r61581_smi_display_device,
+	&nt35582_smi16_display_device,
+	&nt35582_smi8_display_device,
+	&r61581_smi8_display_device,
+	&r61581_smi16_display_device,
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-    &board_bcmbt_rfkill_device,
+	&board_bcmbt_rfkill_device,
 #endif
 #ifdef CONFIG_BCM_BT_LPM
-    &board_bcmbt_lpm_device,
+	&board_bcmbt_lpm_device,
 #endif
 
 };

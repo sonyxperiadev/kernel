@@ -1007,8 +1007,8 @@ INLINE static void cslSmiWaitProgDone ( pSMI_SPI_HANDLE pSmi )
 //
 // Function Name:   cslSmiSpiDmaStart
 //
-// Description:     Prepare & Start DMA Transfer
-//                  FOR NOW - ONLY WRITE & LINEAR MODE SUPPORTED
+// Description:     Prepare & Start Linear DMA Transfer
+//                  
 //*****************************************************************************
 static CSL_LCD_RES_T cslSmiSpiDmaStart ( 
     pSMI_SPI_HANDLE         smiSpiH,
@@ -1062,9 +1062,10 @@ static CSL_LCD_RES_T cslSmiSpiDmaStart (
         dmaChInfo.dstID     = DMA_VC4LITE_CLIENT_SPI_TX;
         dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_4;
     }    
+    
     dmaChInfo.xferMode       = DMA_VC4LITE_XFER_MODE_LINERA;
     dmaChInfo.dstStride      = 0;
-    dmaChInfo.srcStride      = 0;
+    dmaChInfo.srcStride      = dmaReq->xStrideBytes;
     dmaChInfo.waitResponse   = 0;    
     dmaChInfo.callback       = (DMA_VC4LITE_CALLBACK_t)cslSmiEofDma;    
 
@@ -1106,6 +1107,108 @@ static CSL_LCD_RES_T cslSmiSpiDmaStart (
     return ( result );
 }
 
+   
+//*****************************************************************************
+//
+// Function Name:   cslSmiSpiDmaStart_2D
+//
+// Description:     Prepare & Start 2D DMA Transfer
+//                  
+//*****************************************************************************
+static CSL_LCD_RES_T cslSmiSpiDmaStart_2D ( 
+    pSMI_SPI_HANDLE         smiSpiH,
+    pSMI_DMA_REQ            dmaReq, 
+    DMA_VC4LITE_CHANNEL_t*  pDmaCh )
+{
+    CSL_LCD_RES_T               result = CSL_LCD_OK;
+        
+    DMA_VC4LITE_CHANNEL_INFO_t  dmaChInfo; 
+    DMA_VC4LITE_XFER_2DDATA_t   dmaData;   
+    
+    Int32                       dmaCh;     
+        
+    // Reserve Channel
+    if( smiSpiH->ctrlType == CTRL_SMI )
+    {
+        dmaCh = csl_dma_vc4lite_obtain_channel ( 
+            DMA_VC4LITE_CLIENT_MEMORY, DMA_VC4LITE_CLIENT_SMI );
+    }
+    else
+    {
+        dmaCh = csl_dma_vc4lite_obtain_channel ( 
+            DMA_VC4LITE_CLIENT_MEMORY, DMA_VC4LITE_CLIENT_SPI_TX );
+    }        
+
+    if ( dmaCh == -1)
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[CSL SMI/SPI] %s: "
+            "ERR Getting DMA Ch\r\n ", __FUNCTION__ );
+        return CSL_LCD_DMA_ERR;
+    }
+    *pDmaCh = (DMA_VC4LITE_CHANNEL_t)dmaCh;
+
+#if defined( __SMI_SPI_ENABLE_TRACE_MSG__ )
+    LCD_DBG ( LCD_DBG_ID, "[CSL SMI/SPI] %s: "
+        "Got DmaCh[%d]\r\n ", __FUNCTION__, dmaCh );
+#endif
+
+    // Configure Channel
+    dmaChInfo.autoFreeChan   = 1;
+    dmaChInfo.srcID          = DMA_VC4LITE_CLIENT_MEMORY;
+    if( smiSpiH->ctrlType == CTRL_SMI )
+    {
+        dmaChInfo.dstID     = DMA_VC4LITE_CLIENT_SMI;
+        dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_8;  // FrameTime=20.8ms
+    }
+    else
+    {
+        dmaChInfo.dstID     = DMA_VC4LITE_CLIENT_SPI_TX;
+        dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_4;
+    }    
+    dmaChInfo.xferMode       = DMA_VC4LITE_XFER_MODE_2D;
+    dmaChInfo.dstStride      = 0;
+    dmaChInfo.srcStride      = dmaReq->xStrideBytes;
+    dmaChInfo.waitResponse   = 0;    
+    dmaChInfo.callback       = (DMA_VC4LITE_CALLBACK_t)cslSmiEofDma;    
+
+    if ( csl_dma_vc4lite_config_channel( *pDmaCh, &dmaChInfo) 
+        != DMA_VC4LITE_STATUS_SUCCESS)
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[CSL SMI/SPI] %s: "
+            "ERR DMA Ch Config\r\n ", __FUNCTION__ );
+        return CSL_LCD_DMA_ERR;
+    }
+
+    // Add the DMA transfer data
+    dmaData.srcAddr     = (UInt32)dmaReq->pBuff;
+    
+    if( smiSpiH->ctrlType == CTRL_SMI )
+        dmaData.dstAddr  =  chal_smi_get_dma_addr ( smiSpiH->chalH );
+    else
+        dmaData.dstAddr  =  chal_spivc4l_get_dma_addr (  smiSpiH->chalH );
+        
+    dmaData.xXferLength = dmaReq->xLenBytes;
+    dmaData.yXferLength = dmaReq->yLen-1;
+
+    if (csl_dma_vc4lite_add_data_ex ( *pDmaCh, &dmaData) 
+        != DMA_VC4LITE_STATUS_SUCCESS )
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[CSL SMI/SPI] %s: "
+            "ERR add DMA transfer data\r\n ", __FUNCTION__ );
+        return CSL_LCD_DMA_ERR;
+    }
+
+    // start DMA transfer
+    if ( csl_dma_vc4lite_start_transfer ( *pDmaCh ) 
+        != DMA_VC4LITE_STATUS_SUCCESS )
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[CSL SMI/SPI] %s: "
+            "ERR start DMA data transfer\r\n ", __FUNCTION__ );
+        return CSL_LCD_DMA_ERR;
+    }      
+    
+    return ( result );
+}
    
 //*****************************************************************************
 //
@@ -1617,8 +1720,11 @@ CSL_LCD_RES_T CSL_SMI_WrRdDataProg (
         chal_smi_fifo_acc ( pSmi->chalH, &fifoMode ); 
     
         // start DMA
-        if( (res = cslSmiSpiDmaStart ( pSmi, &dmaReq, &updMsg.dmaCh )) 
-            != CSL_LCD_OK )
+        if ( acc->xStrideInBytes == 0 )
+	     res = cslSmiSpiDmaStart ( pSmi, &dmaReq, &updMsg.dmaCh );
+        else
+	     res = cslSmiSpiDmaStart_2D ( pSmi, &dmaReq, &updMsg.dmaCh );
+        if( res != CSL_LCD_OK )
         {
             cslSmiDisInt ( pSmi );
             if ( !pSmi->hasLock ) OSSEMAPHORE_Release ( smiSema );
@@ -1718,7 +1824,7 @@ CSL_LCD_RES_T CSL_SMI_Update (
     pSMI_SPI_HANDLE     pSmi = (pSMI_SPI_HANDLE) smiH;
     
     acc.xLenInBytes     = req->lineLenP * req->buffBpp;
-    acc.xStrideInBytes  = 0;
+    acc.xStrideInBytes  = req->xStrideB;
     acc.yLen            = req->lineCount;      
     acc.pBuff           = (UInt32*)req->buff;
     acc.timeOutMsec     = req->timeOut_ms;
