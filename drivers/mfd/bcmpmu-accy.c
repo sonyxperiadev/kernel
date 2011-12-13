@@ -68,6 +68,9 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define PMU_BC_STS_PS2_MSK	1<<4
 #define PMU_BC_STS_BC_DONE_MSK	1<<8
 
+/* pattern to write before accessing PMU BC CTRL reg */
+#define PMU_BC_CTRL_OVWR_PATTERN       0x5
+
 struct accy_cb {
 	void (*callback)(struct bcmpmu *,
 		unsigned char event, void *, void *);
@@ -238,6 +241,26 @@ static void reset_bc(struct bcmpmu_accy *paccy)
 	if ((paccy->bc == BCMPMU_BC_BB_BC11) ||
 		(paccy->bc == BCMPMU_BC_BB_BC12))
 		bcm_hsotgctrl_bc_reset();
+}
+
+static void bc_det_sts_clear(struct bcmpmu_accy *paccy)
+{
+	struct bcmpmu *bcmpmu = paccy->bcmpmu;
+	u8 val;
+	u8 mask;
+	val = (PMU_BC_CTRL_OVWR_PATTERN <<
+			bcmpmu->regmap[PMU_REG_BC_OVWR_KEY].shift);
+	/* clear BC_DET_EN, statement not required
+	 * kept for readablity
+	*/
+	val &= ~(1 << bcmpmu->regmap[PMU_REG_BC_DET_EN].shift);
+	mask = bcmpmu->regmap[PMU_REG_BC_OVWR_KEY].mask |
+		bcmpmu->regmap[PMU_REG_BC_DET_EN].mask;
+
+	bcmpmu->write_dev(bcmpmu, PMU_REG_BC_OVWR_KEY, val, mask);
+	/* lock the register */
+	bcmpmu->write_dev(bcmpmu, PMU_REG_BC_OVWR_KEY,
+			0, bcmpmu->regmap[PMU_REG_BC_OVWR_KEY].mask);
 }
 
 int bcmpmu_usb_add_notifier(u32 event_id, struct notifier_block *notifier)
@@ -590,6 +613,7 @@ static void usb_det_work(struct work_struct *work)
 
 	if (paccy->clock_en != 0) {
 		enable_bc_clock(paccy, false);
+		bc_det_sts_clear(paccy);
 		pr_accy(FLOW, "%s, disable clock\n", __func__);
 	}
 	if ((usb_type < PMU_USB_TYPE_MAX) &&
