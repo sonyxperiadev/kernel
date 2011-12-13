@@ -92,12 +92,12 @@ typedef enum{
 } BSC_CMD_t;
 
 
-static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed);
+static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed, bool src_clk_26m);
 static inline void isl_bsc_init(uint32_t baseAddr);
 static inline void bsc_disable_intr(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_clear_intr_status(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_set_tx_fifo(uint32_t baseAddr, unsigned char enable);
-static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on);
+static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on, unsigned char timeout_enable);
 static inline unsigned char bsc_get_timeout(uint32_t baseAddr);
 static inline void bsc_enable_intr(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_deinit(uint32_t baseAddr);
@@ -246,12 +246,17 @@ static inline void bsc_reset(uint32_t baseAddr)
 #define BSCTIM_DIV_6500000HZ    (3 << I2C_MM_HS_TIM_DIV_SHIFT)
 
 #ifndef FPGA 
+/* HS Timings for 26MHz source:
+ * 	Hold=1, HighPhase=3, Setup=4,
+ * 	HS CLK = 26/(1+3+4) = 3.25MHz
+ */
+#define BSC_HS_HSMODE_TIMING_26MHZ        0x0000043
 #define BSC_HS_HSMODE_TIMING              0x00000513
 #else
 #define BSC_HS_HSMODE_TIMING              0x00000001
 #endif
 
-static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed)
+static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed, bool src_clk_26m)
 {
     uint8_t DIV = 0, M = 0, N = 0, P = 0,NO_DIV=0,PRESCALE=I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
     NO_DIV=0;
@@ -308,7 +313,10 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed)
             DIV = BSCTIM_DIV_6500000HZ;
             PRESCALE=I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
             P = 0x05;/*0x01;*/
-            BSC_WRITE_REG((baseAddr+I2C_MM_HS_HSTIM_OFFSET),BSC_HS_HSMODE_TIMING);
+            if(src_clk_26m)
+               BSC_WRITE_REG((baseAddr+I2C_MM_HS_HSTIM_OFFSET),BSC_HS_HSMODE_TIMING_26MHZ);
+            else
+               BSC_WRITE_REG((baseAddr+I2C_MM_HS_HSTIM_OFFSET),BSC_HS_HSMODE_TIMING);
             break;
         /* master clock is 26MHz for FPGA */
         case BSC_SPD_100K_FPGA:
@@ -714,7 +722,7 @@ static inline unsigned char bsc_get_autosense(uint32_t baseAddr)
 *
 *  @return none
 *****************************************************************************/
-static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on)
+static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on, unsigned char timeout_enable)
 {
     if (on)
     {
@@ -723,7 +731,7 @@ static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on)
 		   We use max timeout value (1023 6.5MHz cycles)*/
 		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET), I2C_MM_HS_TOUT_TOUT_LOW_MASK, I2C_MM_HS_TOUT_TOUT_LOW_SHIFT, 0x7F);
 		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET), I2C_MM_HS_TOUT_TOUT_HIGH_MASK,I2C_MM_HS_TOUT_TOUT_HIGH_SHIFT, 0x7);
-		bsc_set_timeout(baseAddr, 1);
+		bsc_set_timeout(baseAddr, timeout_enable);
     }
     else
     {

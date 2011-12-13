@@ -74,7 +74,7 @@ typedef enum VCOS_LOG_LEVEL_T
  * means that your logging category is not registered, so cannot be easily
  * changed at run-time.
  */
-#define VCOS_LOG_INIT(n,l) { .name = n, .level = l }
+#define VCOS_LOG_INIT(n,l) { l, n }
 
 /** A registered logging category.
   */

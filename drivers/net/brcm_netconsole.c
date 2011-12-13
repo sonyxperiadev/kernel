@@ -958,7 +958,6 @@ int brcm_klogging(char *data, int length)
 		if (nt->enabled && netif_running(nt->np.dev) && netif_carrier_ok(nt->np.dev)) {
 
 			if (netpoll_free_memory() == 0) {
-				pr_info("brcm_netconsole_klogging: out of memory.....\n");
 				brcm_netconsole_target_put(nt);
 				spin_unlock_irqrestore(&target_list_lock, flags);
 				return 0;
@@ -974,9 +973,7 @@ int brcm_klogging(char *data, int length)
 			for (left = length; left;) {
 				frag = min(left, MAX_PRINT_CHUNK);
 				if (frag > netpoll_free_memory()) {
-					pr_info("brcm_klogging not enough mem to send req:%d left:%d\n",
-						frag, netpoll_free_memory());
-						goto end_of_send;
+					goto end_of_send;
 				}
 				netpoll_send_udp(&nt->np, tmp, frag);
 				tmp += frag;

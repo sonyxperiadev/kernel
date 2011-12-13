@@ -1,7 +1,7 @@
 /*
  *  linux/drivers/misc/bcmbt_lpm
  *
- *  Driver for brcm bt wake handling
+ *  Driver for bcm bt wake handling
  *
  *  Based on drivers/char/serial.c, by Linus Torvalds, Theodore Ts'o.
  *
@@ -21,7 +21,7 @@
 /*******************************************************************************
 * Copyright 2010 Broadcom Corporation.  All rights reserved.
 *
-* 	@file	drivers/serial/brcm_bt_lpm.c
+* 	@file	drivers/serial/bcm_bt_lpm.c
 *
 * Unless you and Broadcom execute a separate written software license agreement
 * governing use of this software, this software is licensed to you under the
@@ -33,27 +33,18 @@
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
-#if defined(CONFIG_SERIAL_8250_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
-#define SUPPORT_SYSRQ
-#endif
-
 #include <linux/module.h>
-#include <linux/moduleparam.h>
-#include <linux/tty.h>
-#include <linux/ioport.h>
 #include <linux/init.h>
-#include <linux/console.h>
-#include <linux/sysrq.h>
-#include <linux/delay.h>
+#include <asm/gpio.h>
+#include <mach/gpio.h>
+#include <linux/broadcom/bcmbt_lpm.h>
 #include <linux/platform_device.h>
-#include <linux/tty.h>
-#include <linux/tty_flip.h>
-#include <linux/serial_reg.h>
+#include <linux/sched.h>
+
 #include <linux/serial_core.h>
-#include <linux/serial.h>
-#include <linux/serial_8250.h>
-#include <linux/nmi.h>
-#include <linux/mutex.h>
+#include <linux/tty.h>
+
+#include <asm/uaccess.h>
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
 #endif
@@ -63,26 +54,18 @@
 #include <asm/irq.h>
 #include <asm/uaccess.h>
 
-/*#include "8250.h"*/
-
-#include <mach/gpio.h>
-#include <linux/broadcom/bcmbt_lpm.h>
-
-
-/* pull up/down gpio depending on functionality */
-extern int bcm_gpio_pull_up(unsigned int gpio, bool up);
-extern int bcm_gpio_pull_up_down_enable(unsigned int gpio, bool enable);
 
 #ifdef CONFIG_BCM_BT_LPM
 
+static struct tty_ldisc_ops bcmbt_ldisc_ops;
 static struct bcm_bt_lpm_data bcm_bt_lpm_data = {
         0,
 };
 
 
-static int brcm_assert_bt_wake(struct uart_port *port)
+static int bcm_assert_bt_wake()
 {
-    /* struct tty_port *port = &state->port; */
+
 
     /* TODO: make gpio number depending on uart number in case multiple chips are connected to multiple ports! */
     gpio_set_value(bcm_bt_lpm_data.gpio_bt_wake, BT_WAKE_ASSERT);
@@ -93,12 +76,11 @@ static int brcm_assert_bt_wake(struct uart_port *port)
 #endif
 
     pr_debug("bt_wake assert: gpio: %d, %d\n", bcm_bt_lpm_data.gpio_bt_wake, BT_WAKE_ASSERT);
-    return 0;
 }
 
-static int brcm_deassert_bt_wake(struct uart_port *port)
+static int bcm_deassert_bt_wake()
 {
-    /* struct tty_port *port = &state->port; */
+
 
     /* TODO: make gpio number depending on uart number in case multiple chips are connected to multiple ports! */
     gpio_set_value(bcm_bt_lpm_data.gpio_bt_wake, BT_WAKE_DEASSERT);
@@ -112,7 +94,7 @@ static int brcm_deassert_bt_wake(struct uart_port *port)
     return 0;
 }
 
-static int brcm_get_bt_wake_state(struct uart_port *port,
+static int bcm_get_bt_wake_state(
 				  unsigned long __user *retinfo)
 {
 	/*struct tty_port *port = &state->port; */
@@ -120,61 +102,58 @@ static int brcm_get_bt_wake_state(struct uart_port *port,
 
 	tmp = gpio_get_value(bcm_bt_lpm_data.gpio_bt_wake);
 
-	pr_info("brcm_get_bt_wake_state(bt_wake:%d) \n",bcm_bt_lpm_data.gpio_bt_wake);
+	pr_info("bcm_get_bt_wake_state(bt_wake:%d) \n",bcm_bt_lpm_data.gpio_bt_wake);
 
 	if (copy_to_user(retinfo, &tmp, sizeof(*retinfo)))
 		return -EFAULT;
 	return 0;
 }
 
-int serial8250_ioctl(struct uart_port *port, unsigned int cmd,unsigned long arg)
+static int bcmbt_tty_ioctl(struct tty_struct *tty, struct file *file, unsigned int cmd, unsigned long arg)
 {
-	void __user *uarg = (void __user *)arg;
-	int ret = -ENOIOCTLCMD;
-
-	pr_debug("serial8250_ioctl(cmd: x%u)\n", cmd);
-	switch (cmd) {
+	int rc = -1;
+	switch(cmd) {
 	case TIO_ASSERT_BT_WAKE:
-		ret = brcm_assert_bt_wake(port);
-		break;
-
+		rc = bcm_assert_bt_wake();
+	break;
 	case TIO_DEASSERT_BT_WAKE:
-		ret = brcm_deassert_bt_wake(port);
-		break;
-
+		rc = bcm_deassert_bt_wake();
+	break;
 	case TIO_GET_BT_WAKE_STATE:
-		ret = brcm_get_bt_wake_state(port, uarg);
-		break;
-	}
+		rc = bcm_get_bt_wake_state(arg);
+	break;
+	default:
+		return n_tty_ioctl_helper(tty, file, cmd, arg);
 
-	return ret;
+	}
+	return rc;
 }
 
-
-int brcm_init_bt_wake(struct bcm_bt_lpm_platform_data *gpio_data)
+static int bcmbt_tty_init(void)
 {
+	int err;
+	/* Inherit the N_TTY's ops */
+	n_tty_inherit_ops(&bcmbt_ldisc_ops);
+	bcmbt_ldisc_ops.owner = THIS_MODULE;
+	bcmbt_ldisc_ops.name = "bcmbt_tty";
+	bcmbt_ldisc_ops.ioctl = bcmbt_tty_ioctl;
+	err = tty_register_ldisc(N_BRCM_HCI, &bcmbt_ldisc_ops);
+	if (err)
+		pr_err("can't register N_BRCM_HCI line discipline\n");
+	else
+		pr_info("N_BRCM_HCI line discipline registered\n");
 
-    if ( 0==bcm_bt_lpm_data.bt_wake_installed )
-    {
-        pr_info("brcm_init_bt_wake( gpio_bt_wake: %d )", gpio_data->gpio_bt_wake);
+	return err;
+}
 
-        bcm_bt_lpm_data.gpio_bt_wake = gpio_data->gpio_bt_wake;
-        bcm_bt_lpm_data.gpio_host_wake = gpio_data->gpio_host_wake;
-
-#ifdef CONFIG_HAS_WAKELOCK
-        wake_lock_init(&bcm_bt_lpm_data.bt_wake_lock, WAKE_LOCK_SUSPEND, "BTWAKE");
-#endif
-        bcm_bt_lpm_data.bt_wake_installed = 1;
-    }
-    else
-    {
-        pr_info("brcm_init_bt_wake( gpio_bt_wake: %d )::already installed", gpio_data->gpio_bt_wake);
-        return 0;
-    }
-	if (brcm_init_hostwake(gpio_data)) {
-	    pr_info("host_wake_isr installation failed \n");
-	}
-	return 0;
+static void bcmbt_tty_cleanup(void)
+{
+	int err;
+	err = tty_unregister_ldisc(N_BRCM_HCI);
+	if (err)
+		pr_err("can't unregister N_BRCM_HCI line discipline\n");
+	else
+		pr_info("N_BRCM_HCI line discipline removed\n");
 }
 
 static irqreturn_t host_wake_isr(int irq, void *dev)
@@ -183,9 +162,7 @@ static irqreturn_t host_wake_isr(int irq, void *dev)
 	/* unsigned long irqflags; */
 
 	/* spin_lock_irqsave(&bcm_bt_lpm_data.lock, irqflags); */
-
 	host_wake = gpio_get_value(bcm_bt_lpm_data.gpio_host_wake);
-
 	if (HOST_WAKE_ASSERT == host_wake)
 	{
         /* hold lock: disable deep sleep */
@@ -204,18 +181,13 @@ static irqreturn_t host_wake_isr(int irq, void *dev)
         pr_debug( "host_wake DEassert, release lock  at %lld\n",
                   ktime_to_ns(ktime_get()) );
 	}
-
-	/* spin_unlock_irqrestore(&bcm_bt_lpm_data.lock, irqflags); */
-
 	return IRQ_HANDLED;
 }
 
-
-int brcm_init_hostwake(struct bcm_bt_lpm_platform_data *gpio_data)
+int bcm_init_hostwake(struct bcm_bt_lpm_platform_data *gpio_data)
 {
 	unsigned int irq;
 	int ret;
-
 	if (bcm_bt_lpm_data.host_wake_installed) {
 		pr_info("host wake irq is already installed \n");
 		return 0;
@@ -229,16 +201,73 @@ int brcm_init_hostwake(struct bcm_bt_lpm_platform_data *gpio_data)
 	 * wake lock being blocked accidentally! The value of HOST_WAKE_DEASSERT gives the direction
 	 * to pull to. */
 	irq = gpio_to_irq(gpio_data->gpio_host_wake);
-
 	pr_info("host wake irq=%d \n", irq);
-
 	ret = request_irq(irq, host_wake_isr,
 			          ( IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND ),
 			          "bt_host_wake", NULL);
-
 	pr_info("request_irq returned value=%u \n", ret);
 
-		return ret;
+	return ret;
+}
+
+int bcm_init_bt_wake(struct bcm_bt_lpm_platform_data *gpio_data)
+{
+	int rc;
+    if ( 0==bcm_bt_lpm_data.bt_wake_installed )
+    {
+        pr_info("bcm_init_bt_wake( gpio_bt_wake: %d )", gpio_data->gpio_bt_wake);
+
+        bcm_bt_lpm_data.gpio_bt_wake = gpio_data->gpio_bt_wake;
+        bcm_bt_lpm_data.gpio_host_wake = gpio_data->gpio_host_wake;
+
+#ifdef CONFIG_HAS_WAKELOCK
+        wake_lock_init(&bcm_bt_lpm_data.bt_wake_lock, WAKE_LOCK_SUSPEND, "BTWAKE");
+#endif
+			/* register the tty line discipline driver */
+		if(rc = bcmbt_tty_init())
+		{
+			pr_err("%s: bcmbt_tty_init failed\n", __FUNCTION__);
+#ifdef CONFIG_HAS_WAKELOCK
+			wake_lock_destroy(&bcm_bt_lpm_data.host_wake_lock);
+#endif
+			return -1;
+		}
+        bcm_bt_lpm_data.bt_wake_installed = 1;
+    }
+    else
+    {
+        pr_info("bcm_init_bt_wake( gpio_bt_wake: %d )::already installed", gpio_data->gpio_bt_wake);
+        return 0;
+    }
+
+	if (bcm_init_hostwake(gpio_data)) {
+	    pr_info("host_wake_isr installation failed \n");
+	}
+	return 0;
+}
+
+
+static void clean_bt_wake(struct bcm_bt_lpm_platform_data *pdata)
+{
+	if(pdata->gpio_bt_wake == -1)
+	return;
+
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock_destroy(&bcm_bt_lpm_data.bt_wake_lock);
+#endif
+	gpio_free((unsigned) pdata->gpio_bt_wake);
+	
+	bcmbt_tty_cleanup();
+}
+
+static void clean_host_wake(struct bcm_bt_lpm_platform_data *pdata)
+{
+	if(pdata->gpio_host_wake == -1)
+	return;
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock_destroy(&bcm_bt_lpm_data.host_wake_lock);
+#endif
+	gpio_free((unsigned) pdata->gpio_host_wake);
 }
 
 static int bcmbt_lpm_probe(struct platform_device *pdev)
@@ -246,7 +275,7 @@ static int bcmbt_lpm_probe(struct platform_device *pdev)
      struct bcm_bt_lpm_platform_data *pdata;
 
 	pdata=pdev->dev.platform_data;
-    	brcm_init_bt_wake(pdata); 
+    bcm_init_bt_wake(pdata); 
 	return 0;
 }
 
@@ -254,10 +283,11 @@ static int bcmbt_lpm_remove(struct platform_device *pdev)
 {
         struct bcm_bt_lpm_platform_data *pdata = pdev->dev.platform_data;
 
-        /* Free the GPIO resources */
-        gpio_free(pdata->gpio_bt_wake);
-        gpio_free(pdata->gpio_host_wake);
-	//free_irq(irq,host_wake_isr);
+	if(pdata)
+	{
+		clean_bt_wake(pdata);
+		clean_host_wake(pdata);
+	}
         return 0;
 }
 

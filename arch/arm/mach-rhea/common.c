@@ -70,6 +70,10 @@
 
 #define VLT_LUT_SIZE 16
 #endif
+#ifdef CONFIG_SENSORS_KONA
+#include <linux/broadcom/kona-thermal.h>
+#include <linux/broadcom/bcm59055-adc.h>
+#endif
 
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
@@ -165,9 +169,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",
 		.retries = 1,
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 		.is_pmu_i2c=false,
-#endif
 	},
 	{ /* for BSC1*/
 		.speed = BSC_BUS_SPEED_50K,
@@ -175,19 +177,28 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
 		.retries = 3,
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 		.is_pmu_i2c=false,
-#endif
 	},
 	{ /* for PMU */
-		.speed = BSC_BUS_SPEED_50K,
-		.dynamic_speed = 1,
+#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
+        .speed = BSC_BUS_SPEED_HS,
+        /* No dynamic speed in HS mode */
+        .dynamic_speed = 0,
+		/*
+		 * PMU can NAK certain I2C read commands, while write is in progress;
+		 * and it takes a while to synchronise writes between HS clock domain(3.25MHz) and
+		 * and internal clock domains (32k). In such cases, we retry PMU reads until the writes
+		 * are through. PMU need more retry counts in HS mode to handle this.
+		 */
+		.retries = 5,
+#else
+        .speed = BSC_BUS_SPEED_50K,
+        .dynamic_speed = 1,
+		.retries = 3,
+#endif
 		.bsc_clk = "pmu_bsc_clk",
 		.bsc_apb_clk = "pmu_bsc_apb",
-		.retries = 1,
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 		.is_pmu_i2c=true,
-#endif
 	},
 };
 
@@ -301,6 +312,105 @@ struct platform_device tmon_device = {
 	.resource = board_tmon_resource,
 	.num_resources = ARRAY_SIZE(board_tmon_resource),
 };
+
+static struct resource board_thermal_resource[] = {
+	{	/* For Current Temperature */
+		.start = TMON_BASE_ADDR,
+		.end = TMON_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{	/* For Temperature IRQ */
+		.start = BCM_INT_ID_TEMP_MON,
+		.end = BCM_INT_ID_TEMP_MON,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct thermal_sensor_config sensor_data[] = {
+	{   /*TMON sensor*/
+		.thermal_id             = 1,
+		.thermal_name           = "tmon",
+		.thermal_type           = SENSOR_BB_TMON,
+		.thermal_mc             = 0,
+		.thermal_read           = SENSOR_READ_DIRECT,
+		.thermal_location       = 1, 
+		.thermal_warning_lvl_1  = 100000,
+		.thermal_warning_lvl_2  = 110000,
+		.thermal_fatal_lvl      = 120000,
+		.thermal_warning_action = THERM_ACTION_NOTIFY,
+		.thermal_fatal_action   = THERM_ACTION_NOTIFY_SHUTDOWN,
+		.thermal_sensor_param   = 0,
+		.thermal_control        = SENSOR_INTERRUPT,
+		.convert_callback       = NULL,
+	},
+	{   /*NTC (battery) sensor*/
+		.thermal_id             = 2,
+		.thermal_name           = "battery",
+		.thermal_type           = SENSOR_BATTERY,
+		.thermal_mc             = 0,
+		.thermal_read           = SENSOR_READ_PMU_I2C,
+		.thermal_location       = 2, 
+		.thermal_warning_lvl_1  = 105000,
+		.thermal_warning_lvl_2  = 115000,
+		.thermal_fatal_lvl      = 125000,
+		.thermal_warning_action = THERM_ACTION_NOTIFY,
+		.thermal_fatal_action   = THERM_ACTION_NOTIFY_SHUTDOWN,
+		.thermal_sensor_param   = ADC_NTC_CHANNEL,
+		.thermal_control        = SENSOR_PERIODIC_READ,
+		.convert_callback       = NULL,
+	},
+	{   /*32kHz crystal sensor*/
+		.thermal_id             = 3,
+		.thermal_name           = "32k",
+		.thermal_type           = SENSOR_CRYSTAL,
+		.thermal_mc             = 0,
+		.thermal_read           = SENSOR_READ_PMU_I2C,
+		.thermal_location       = 3, 
+		.thermal_warning_lvl_1  = 106000,
+		.thermal_warning_lvl_2  = 116000,
+		.thermal_fatal_lvl      = 126000,
+		.thermal_warning_action = THERM_ACTION_NOTIFY,
+		.thermal_fatal_action   = THERM_ACTION_NOTIFY_SHUTDOWN,
+		.thermal_sensor_param   = ADC_32KTEMP_CHANNEL,
+		.thermal_control        = SENSOR_PERIODIC_READ,
+		.convert_callback       = NULL,
+	},
+	{   /*PA sensor*/
+		.thermal_id             = 4,
+		.thermal_name           = "PA",
+		.thermal_type           = SENSOR_PA,
+		.thermal_mc             = 0,
+		.thermal_read           = SENSOR_READ_PMU_I2C,
+		.thermal_location       = 4, 
+		.thermal_warning_lvl_1  = 107000,
+		.thermal_warning_lvl_2  = 117000,
+		.thermal_fatal_lvl      = 127000,
+		.thermal_warning_action = THERM_ACTION_NOTIFY,
+		.thermal_fatal_action   = THERM_ACTION_NOTIFY_SHUTDOWN,
+		.thermal_sensor_param   = ADC_PATEMP_CHANNEL,
+		.thermal_control        = SENSOR_PERIODIC_READ,
+		.convert_callback       = NULL,
+	}
+};
+
+
+static struct therm_data thermal_pdata = {
+	.flags = 0,
+	.thermal_update_interval = 0,
+	.num_sensors = 4,
+	.sensors = sensor_data,
+};
+
+struct platform_device thermal_device = {
+	.name = "kona-thermal",
+	.id = -1,
+	.resource = board_thermal_resource,
+	.num_resources = ARRAY_SIZE(board_thermal_resource),
+	.dev = {
+		.platform_data = &thermal_pdata,
+	},
+};
+
 #endif
 
 #ifdef CONFIG_STM_TRACE
@@ -561,33 +671,66 @@ static struct platform_device board_unicam_device = {
 };
 #endif
 
-static u64 bralloc_dma_mask = DMA_BIT_MASK(32);
-static struct platform_device bralloc_device = {
-	.name 	= "bralloc",
-	.id	= 0,
-	.dev	= {
-		.dma_mask		= &bralloc_dma_mask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	},
-};
-
 /* Allocate the top 16M of the DRAM for the pmem. */
 static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
-	.start = 0x0,
-	.size = SZ_16M,
-	.no_allocator = 0,
+	.start = 0,
+	.size = 0,
+	.allocator = DEFAULT_ALLOC,
 	.cached = 1,
 	.buffered = 1,
 };
 
-static struct platform_device android_pmem = {
-	.name 	= "android_pmem",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &android_pmem_data,
+/* Allocate the top 16M of the DRAM for the pmem. */
+static struct android_pmem_platform_data android_pmem_cma_data = {
+	.name = "pmem_cma",
+	.start = 0,
+	.size = 0,
+	.allocator = CMA_ALLOC,
+	.cached = 1,
+	.buffered = 1,
+};
+
+static struct platform_device android_pmem[] = {
+	{
+		.name 	= "android_pmem",
+		.id	= 0,
+		.dev	= {
+			.platform_data = &android_pmem_data,
+		},
+	},
+	{
+		.name 	= "android_pmem",
+		.id	= 1,
+		.dev	= {
+			.platform_data = &android_pmem_cma_data,
+		},
 	},
 };
+
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+static u64 unicam_camera_dma_mask = DMA_BIT_MASK(32);
+
+static struct resource board_unicam_resource[] = {
+	[0] = 
+	{
+		.start	=	BCM_INT_ID_RESERVED156,
+		.end	=	BCM_INT_ID_RESERVED156,
+		.flags	=	IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device unicam_camera_device = {
+	.name		=	"unicam-camera",
+	.id			=	0,
+	.resource	=	board_unicam_resource,
+	.num_resources   = ARRAY_SIZE(board_unicam_resource),
+	.dev		= {
+		.dma_mask			= &unicam_camera_dma_mask,
+		.coherent_dma_mask	= 0xffffffff,
+	},
+};
+#endif
 
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
@@ -600,6 +743,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&kona_sspi_spi0_device,
 #ifdef CONFIG_SENSORS_KONA
 	&tmon_device,
+	&thermal_device,
 #endif
 #ifdef CONFIG_STM_TRACE
 	&kona_stm_device,
@@ -632,59 +776,102 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #ifdef CONFIG_UNICAM
 	&board_unicam_device,
 #endif
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+	&unicam_camera_device,
+#endif
 };
 
-static unsigned long bralloc_mem_size = 0;
-static int __init early_bralloc_mem(char *p)
+static int __init setup_pmem_alloc(char *p)
 {
-	bralloc_mem_size = memparse(p, &p);
+	if ((get_option(&p, &android_pmem_data.allocator) != 1) && !android_pmem_data.allocator) {
+		printk(KERN_WARNING"Invalid 'pmem_alloc=' option, using default PMEM allocation\n");
+		android_pmem_data.allocator = DEFAULT_ALLOC;
+		return 0;
+	}
+
 	return 0;
 }
-early_param("bralloc_mem", early_bralloc_mem);
+early_param("pmem_alloc", setup_pmem_alloc);
 
-static unsigned long pmem_base = 0;
-static unsigned int pmem_size = SZ_16M;
+static int __init setup_pmem_cma_alloc(char *p)
+{
+	if ((get_option(&p, &android_pmem_cma_data.allocator) != 1) && !android_pmem_cma_data.allocator) {
+		printk(KERN_WARNING"Invalid 'pmem_alloc=' option, using default PMEM allocation\n");
+		android_pmem_cma_data.allocator = CMA_ALLOC;
+		return 0;
+	}
+
+	return 0;
+}
+early_param("pmem_cma_alloc", setup_pmem_cma_alloc);
+
 static int __init setup_pmem_pages(char *str)
 {
-	char * endp = NULL;
-	if(str)	{
-		pmem_size = memparse((const char *)str, &endp);
-		printk(KERN_INFO "PMEM size is   0x%08x Bytes\n", pmem_size);
-		if (*endp == '@')
-			pmem_base =  memparse(endp + 1, NULL);
-			printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
-		} else	{
-			printk("\"pmem=\" option is not set!!!\n");
-			printk("Unable to determine the memory region for pmem!!!\n");
+	char *endp = NULL;
+	if (str) {
+		android_pmem_data.size = memparse((const char *)str, &endp);
+		printk(KERN_INFO "PMEM size is 0x%08x Bytes\n", (unsigned int)android_pmem_data.size);
+		if (*endp == '@') {
+			android_pmem_data.start =  memparse(endp + 1, NULL);
+			printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)android_pmem_data.start);
 		}
+	} else	{
+		printk("\"pmem=\" option is not set!!!\n");
+		printk("Unable to determine the memory region for pmem!!!\n");
+	}
 	return 0;
 }
 early_param("pmem", setup_pmem_pages);
 
+static int __init setup_pmem_cma_pages(char *str)
+{
+	char *endp = NULL;
+	if (str)	{
+		android_pmem_cma_data.size = memparse((const char *)str, &endp);
+		printk(KERN_INFO "PMEM_CMA size is 0x%08x Bytes\n", (unsigned int)android_pmem_cma_data.size);
+		if (*endp == '@') {
+			android_pmem_cma_data.start =  memparse(endp + 1, NULL);
+			printk(KERN_INFO "PMEM_CMA starts at 0x%08x\n", (unsigned int)android_pmem_cma_data.start);
+		}
+	} else {
+			printk("\"pmem_cma=\" option is not set!!!\n");
+			printk("Unable to determine the memory region for pmem!!!\n");
+	}
+	return 0;
+}
+early_param("pmem_cma", setup_pmem_cma_pages);
+
 void __init board_common_reserve(void)
 {
-	/* if bralloc_mem_size is set, then declare bralloc CMA area of the same
-	 * size from the end of memory
-	 */
-	if (bralloc_mem_size)
-		dma_declare_contiguous(&bralloc_device.dev, bralloc_mem_size, 0, 0);
+	if (android_pmem_data.allocator == CMA_ALLOC)
+		dma_declare_contiguous(&android_pmem[0].dev, android_pmem_data.size, 0, 0);
+
+	if (android_pmem_cma_data.allocator == CMA_ALLOC)
+		dma_declare_contiguous(&android_pmem[1].dev, android_pmem_cma_data.size, 0, 0);
+
 }
 
 void __init board_add_common_devices(void)
 {
 	platform_add_devices(board_common_plat_devices, ARRAY_SIZE(board_common_plat_devices));
 
-	if (pmem_base && pmem_size) {
-		android_pmem_data.start = (unsigned long)pmem_base;
-		android_pmem_data.size  = pmem_size;
-		platform_device_register(&android_pmem);
+	if (android_pmem_data.size) {
+		if (android_pmem_data.allocator == CMA_ALLOC) {
+			get_cma_area(&android_pmem[0].dev, (phys_addr_t *)&android_pmem_data.start,
+					&android_pmem_data.size);
+		}
+		platform_device_register(&android_pmem[0]);
+		printk(KERN_EMERG"PMEM : Areas start @ (0x%08lx) with size (%ld)\n",
+				android_pmem_data.start, android_pmem_data.size);
 	}
 
-	/*
-	 * add the bralloc device only iff we were given memory for
-	 * it's cma region
-	 */
-	if (bralloc_mem_size)
-		platform_device_register(&bralloc_device);
-
+	if (android_pmem_cma_data.size) {
+		if (android_pmem_cma_data.allocator == CMA_ALLOC) {
+			get_cma_area(&android_pmem[1].dev, (phys_addr_t *)&android_pmem_cma_data.start,
+					&android_pmem_cma_data.size);
+		}
+		platform_device_register(&android_pmem[1]);
+		printk(KERN_EMERG"PMEM_CMA : Areas start @ (0x%08lx) with size (%ld)\n",
+				android_pmem_cma_data.start, android_pmem_cma_data.size);
+	}
 }

@@ -19,8 +19,30 @@
 #include <linux/platform_device.h>
 #include <linux/vchiq_platform_data_memdrv_hana.h>
 
+#ifdef USE_VCEB
+#if defined( CONFIG_ARCH_BCMHANA )
+#include <csp/chal_ipc.h>
+#endif
+#endif 
+
 #include "vchiq_core.h"
 #include "vchiq_memdrv.h"
+#ifdef USE_VCEB
+void vceb_add_firmware_downloaded_callback( void (*callback)(void) );
+#endif
+/****************************************************************************
+*
+* firmware_downloaded_callback
+*
+*   This function will be called by vceb once the firmware is loaded.
+*
+***************************************************************************/
+
+static void firmware_downloaded_callback( void )
+{
+    printk( KERN_INFO "vchiq_memdrv_hana: firmware downloaded - connecting\n" );
+    vchiq_memdrv_initialise();
+}
 
 /****************************************************************************
 *
@@ -55,6 +77,11 @@ static int __devinit vchiq_memdrv_hana_interface_probe( struct platform_device *
 
         return -ENOMEM;
     }
+#ifdef USE_VCEB
+    vceb_add_firmware_downloaded_callback( firmware_downloaded_callback );
+#else
+    firmware_downloaded_callback();
+#endif
 
     return 0;
 }

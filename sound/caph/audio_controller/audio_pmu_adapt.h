@@ -44,7 +44,6 @@
 #define AUDIO_PMU_DEINIT() NULL
 
 #else
-
 #ifdef CONFIG_BCM59055_AUDIO 
 
 #include "linux/broadcom/bcm59055-audio.h"

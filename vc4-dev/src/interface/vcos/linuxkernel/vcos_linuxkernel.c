@@ -526,6 +526,18 @@ VCOS_STATUS_T vcos_once(VCOS_ONCE_T *once_control,
    return VCOS_SUCCESS;
 }
 
+/*****************************************************************************
+*
+*    String duplication routine.
+*
+*****************************************************************************/
+
+char *vcos_strdup(const char *str)
+{
+    return kstrdup(str, GFP_KERNEL);
+}
+
+
 /* Export functions for modules to use */
 EXPORT_SYMBOL( vcos_init );
 
@@ -599,3 +611,5 @@ EXPORT_SYMBOL( vcos_atomic_flags_or );
 EXPORT_SYMBOL( vcos_atomic_flags_get_and_clear );
 
 EXPORT_SYMBOL( vcos_verify_bkpts_enabled );
+
+EXPORT_SYMBOL( vcos_strdup );

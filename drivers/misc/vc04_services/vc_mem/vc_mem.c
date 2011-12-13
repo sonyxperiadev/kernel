@@ -46,6 +46,7 @@
 static dev_t         vc_mem_devnum = 0;
 static struct class *vc_mem_class = NULL;
 static struct cdev   vc_mem_cdev;
+static int           vc_mem_inited = 0;
 
 // Proc entry
 static struct proc_dir_entry *vc_mem_proc_entry;
@@ -122,23 +123,48 @@ static int vc_mem_release( struct inode *inode, struct file *file )
 static void vc_mem_get_size( void )
 {
    CHAL_IPC_HANDLE ipc_handle;
+   uint32_t wakeup_register;
 
-   // Get the videocore memory size from the IPC mailbox
+   // Get the videocore memory size from the IPC mailbox if not yet
+   // assigned.
    if ( mm_vc_mem_size == 0 )
    {
       ipc_handle = chal_ipc_config( NULL );
       if ( ipc_handle == NULL )
       {
          LOG_ERR( "%s: failed to get IPC handlle", __func__ );
+         return;
       }
-      else if ( chal_ipc_read_mailbox( ipc_handle, IPC_MAILBOX_ID_0,
-                                       &mm_vc_mem_size ) != BCM_SUCCESS )
+
+      chal_ipc_query_wakeup_vc( ipc_handle, &wakeup_register );
+      if (( wakeup_register & ~1 ) == 0 )
       {
-         LOG_ERR( "%s: failed to read from IPC mailbox", __func__ );
+         LOG_DBG( "%s: videocore not yet loaded, skipping...", __func__ );
+      }
+      else
+      {
+         if ( chal_ipc_read_mailbox( ipc_handle,
+                                     IPC_MAILBOX_ID_0,
+                                     &mm_vc_mem_size ) != BCM_SUCCESS )
+         {
+            LOG_ERR( "%s: failed to read from IPC mailbox", __func__ );
+         }
       }
    }
 }
 
+/****************************************************************************
+*
+*   vc_mem_get_current_size
+*
+***************************************************************************/
+
+int vc_mem_get_current_size( void )
+{
+   vc_mem_get_size();
+   return mm_vc_mem_size;
+}
+EXPORT_SYMBOL_GPL( vc_mem_get_current_size );
 
 /****************************************************************************
 *
@@ -313,7 +339,9 @@ out:
 
 /****************************************************************************
 *
-*   vc_mem_init
+*   vc_mem_connected_init
+*
+*   This function is called once the videocore has been connected.
 *
 ***************************************************************************/
 
@@ -322,11 +350,32 @@ static int __init vc_mem_init( void )
     int rc = -EFAULT;
     struct device *dev;
 
-    LOG_DBG( "%s: called", __func__ );
+    /*
+     * NOTE: vc_mem can't use vchiq_add_connected_callback, otherwise it will
+     *       create a module dependancy loop.
+     *
+     * As long as u-boot has initialized the videocore, then this doesn't
+     * cause any problems. The only corner case occurs when the vc_mem
+     * module is statically linked into the kernel and the kernel does the
+     * videocore firmware initialization. In that case we'll report that
+     * the memory size isn't available, and calls to retrieve the memory
+     * size will return zero until the videocore has been initialized.
+     */
+
+    printk( KERN_INFO "vc-mem: Videocore memory driver\n" );
 
     printk( "vc-mem: mm_vc_mem_phys_addr = 0x%08lx\n", mm_vc_mem_phys_addr );
-    printk( "vc-mem: mm_vc_mem_size      = 0x%08x (%u MiB)\n",
-            mm_vc_mem_size, mm_vc_mem_size / (1024 * 1024));
+
+    vc_mem_get_size();
+    if ( mm_vc_mem_size == 0 )
+    {
+       printk( "vc-mem: mm_vc_mem_size      = not available until videocore is booted\n" );
+    }
+    else
+    {
+       printk( "vc-mem: mm_vc_mem_size      = 0x%08x (%u MiB)\n",
+               mm_vc_mem_size, mm_vc_mem_size / (1024 * 1024));
+    }
 
     if (( rc = alloc_chrdev_region( &vc_mem_devnum, 0, 1, DRIVER_NAME )) < 0 )
     {
@@ -368,6 +417,7 @@ static int __init vc_mem_init( void )
     vc_mem_proc_entry->read_proc = vc_mem_proc_read;
     vc_mem_proc_entry->write_proc = vc_mem_proc_write;
 
+    vc_mem_inited = 1;
     return 0;
 
 out_device_destroy:
@@ -384,7 +434,7 @@ out_unregister:
     unregister_chrdev_region( vc_mem_devnum, 1 );
 
 out_err:
-    return rc;
+   return -1;
 }
 
 /****************************************************************************
@@ -397,11 +447,14 @@ static void __exit vc_mem_exit( void )
 {
     LOG_DBG( "%s: called", __func__ );
 
-    remove_proc_entry( vc_mem_proc_entry->name, NULL );
-    device_destroy( vc_mem_class, vc_mem_devnum );
-    class_destroy( vc_mem_class );
-    cdev_del( &vc_mem_cdev );
-    unregister_chrdev_region( vc_mem_devnum, 1 );
+    if ( vc_mem_inited )
+    {
+       remove_proc_entry( vc_mem_proc_entry->name, NULL );
+       device_destroy( vc_mem_class, vc_mem_devnum );
+       class_destroy( vc_mem_class );
+       cdev_del( &vc_mem_cdev );
+       unregister_chrdev_region( vc_mem_devnum, 1 );
+    }
 }
 
 module_init( vc_mem_init );

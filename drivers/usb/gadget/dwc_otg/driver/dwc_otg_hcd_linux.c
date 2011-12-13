@@ -417,6 +417,7 @@ int hcd_init(
 	}
 
 	hcd->regs = otg_dev->base;
+	hcd->has_tt = 1;
 
 	/* Initialize the DWC OTG HCD. */
 	dwc_otg_hcd = dwc_otg_hcd_alloc_hcd();

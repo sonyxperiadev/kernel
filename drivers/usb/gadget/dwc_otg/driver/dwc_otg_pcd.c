@@ -114,6 +114,10 @@ void dwc_otg_request_nuke(dwc_otg_pcd_ep_t * ep)
 	while (!DWC_CIRCLEQ_EMPTY(&ep->queue)) {
 		req = DWC_CIRCLEQ_FIRST(&ep->queue);
 		dwc_otg_request_done(ep, req, -DWC_E_SHUTDOWN);
+
+		/* done would change the first in the queue but if it is same then avoid accessing freed element */
+		if (req == DWC_CIRCLEQ_FIRST(&ep->queue))
+			break;
 	}
 }
 
@@ -1423,7 +1427,7 @@ int dwc_otg_pcd_ep_enable(dwc_otg_pcd_t * pcd,
 	num = UE_GET_ADDR(desc->bEndpointAddress);
 	dir = UE_GET_DIR(desc->bEndpointAddress);
 
-	if (!desc->wMaxPacketSize) {
+	if (UGETW(desc->wMaxPacketSize) == 0) {
 		DWC_WARN("bad maxpacketsize\n");
 		retval = -DWC_E_INVALID;
 		goto out;
@@ -2044,6 +2048,8 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 			default:
 				DWC_DEBUGPL(DBG_ANY, "ep0: odd state %d\n",
 					    pcd->ep0state);
+				if (req)
+					dwc_free(req);
 				DWC_SPINUNLOCK_IRQRESTORE(pcd->lock, flags);
 				return -DWC_E_SHUTDOWN;
 			}
@@ -2178,7 +2184,7 @@ int dwc_otg_pcd_ep_dequeue(dwc_otg_pcd_t * pcd, void *ep_handle,
 		}
 	}
 
-	if (req->priv != (void *)req_handle) {
+	if ((req->priv != (void *)req_handle) || (req == DWC_CIRCLEQ_END(&ep->queue))) {
 		DWC_SPINUNLOCK_IRQRESTORE(pcd->lock, flags);
 		return -DWC_E_INVALID;
 	}

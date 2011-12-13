@@ -175,6 +175,7 @@ typedef struct {
     UInt32                buffBpp;      ///< frame buffer BytesPerPixel
     UInt32                lineLenP;     ///< HOR length in pixels
     UInt32                lineCount;    ///< VER length in lines
+    UInt32                xStrideB;     ///< stride in bytes
     UInt32                timeOut_ms;   ///< msec to wait for the end of upd
     CSL_LCD_CB_T          cslLcdCb;     ///< CSL CallBack
     CSL_LCD_CB_REC_T      cslLcdCbRec;  ///< CSL CallBack Record

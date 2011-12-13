@@ -11,6 +11,7 @@ EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vcos/linuxkernel"
 EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vceb/host/linux"
 EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vceb/host/common"
 EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vceb/common"
+EXTRA_CFLAGS  += -I"vc4-dev/src/vcinclude"
 
 EXTRA_CFLAGS  += -Werror
 
@@ -38,16 +39,24 @@ EXTRA_CFLAGS  += -DVCHIQ_SLOT_PADDING=16
 EXTRA_CFLAGS  += -DVCHIQ_ARM_SIDE
 EXTRA_CFLAGS  += -DUSE_VCHIQ_ARM
 #EXTRA_CFLAGS  += -DUSE_VCEB
+ifeq ($(VCHIQ_SM_ALLOC),vcddr)
+EXTRA_CFLAGS  += -DVCHIQ_SM_ALLOC_VCDDR
+endif
 
 obj-$(CONFIG_VC_VCHIQ) += vc-vchiq.o
 
 vc-vchiq-objs := \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_arm.o \
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_connected.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_core.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_kern_lib.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_shim.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_util.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_$(VCHIQ_PLATFORM)_arm.o
+ifeq ($(VCHIQ_SM_ALLOC),vcddr)
+vc-vchiq-objs += \
+    ../../../../vc4-dev/src/host_applications/linux/libs/debug_sym/debug_sym.o
+endif
 
 obj-$(CONFIG_VC_VCHIQ) += vchiq-memdrv-hana.o
 

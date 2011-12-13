@@ -161,7 +161,7 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
             // set the channel control block address
             pdma->chan[i].pDmaChanCtrlBlkList = (UInt32*)((UInt32)dmaCtrlBlkList + i*DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE);
 #ifdef UNDER_LINUX
-			pdma->chan[i].pDmaChanCtrlBlkListPHYS = (UInt32*)((UInt32)dmaCtrlBlkListPhys + i*DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE);
+	    pdma->chan[i].pDmaChanCtrlBlkListPHYS = (UInt32*)((UInt32)dmaCtrlBlkListPhys + i*DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE);
 #endif
             pdma->chan[i].dmaChanCtrlBlkMemSize = DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE;
             pdma->chan[i].dmaChanCtrlBlkItemNum = 0;
@@ -613,7 +613,6 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(
         return DMA_VC4LITE_STATUS_FAILURE;   
 	}
 
-
     printk(KERN_ERR "ctl blk item num = %d, ctl blk info"
 		    "0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
 	 pdma->chan[chanID].dmaChanCtrlBlkItemNum,
@@ -685,14 +684,14 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data_ex(
     dmaCtrlBlkInfo.burstLength = pdma->chan[chanID].chanInfo.burstLen;
     
     if (pdma->chan[chanID].chanInfo.srcID == DMA_VC4LITE_CLIENT_MEMORY)
-        dmaCtrlBlkInfo.srcAddrIncrement = 0;
-	else
         dmaCtrlBlkInfo.srcAddrIncrement = 1;
+	else
+        dmaCtrlBlkInfo.srcAddrIncrement = 0;
 
     if (pdma->chan[chanID].chanInfo.dstID == DMA_VC4LITE_CLIENT_MEMORY)
-        dmaCtrlBlkInfo.dstAddrIncrement = 0;
-    else
         dmaCtrlBlkInfo.dstAddrIncrement = 1;
+    else
+        dmaCtrlBlkInfo.dstAddrIncrement = 0;
 
     // only 32bit width supported for both source and destination
     dmaCtrlBlkInfo.srcXferWidth = 0;
@@ -700,6 +699,8 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data_ex(
 
     dmaCtrlBlkInfo.srcAddr = (UInt32)pData->srcAddr;
     dmaCtrlBlkInfo.dstAddr = (UInt32)pData->dstAddr;    
+    
+    dmaCtrlBlkInfo.xferMode  = CHAL_DMA_VC4LITE_2D_MODE;
     
     dmaCtrlBlkInfo.srcStride = pdma->chan[chanID].chanInfo.srcStride;
     dmaCtrlBlkInfo.dstStride = pdma->chan[chanID].chanInfo.dstStride;
@@ -716,6 +717,17 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data_ex(
         dprintf(1, "%s: get control block list failure\n", __FUNCTION__);
         return DMA_VC4LITE_STATUS_FAILURE;   
     }
+
+    printk(KERN_ERR"DMA_Ex ctl blk item num = %d, ctl blk info"
+		   "0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
+	 pdma->chan[chanID].dmaChanCtrlBlkItemNum,
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[0],
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[1],
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[2],
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[3],
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[4],
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[5]
+	);
 
     pdma->chan[chanID].dmaChanCtrlBlkItemNum++;	
     return DMA_VC4LITE_STATUS_SUCCESS;

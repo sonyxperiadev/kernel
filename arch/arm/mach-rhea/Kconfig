@@ -22,6 +22,11 @@ config MACH_RHEA_RAY
 	help
 	  Support for the Broadcom Rhea Ray board.
 
+config MACH_RHEA_RAY_DEMO
+	bool "Support Broadcom Rhea Ray Demo board"
+	help
+	  Support for the Broadcom Rhea Ray Demo board.
+
 config MACH_RHEA_RAY_EDN1X
 	bool "Support Broadcom Rhea Ray EDN1X board"
 	help
@@ -55,7 +60,6 @@ config MACH_RHEA_BERRI_EDN40
         bool "Support Broadcom Rhea Berri EDN40 board"
         help
           Support for the Broadcom Rhea Berri EDN40 board.
-
 
 config MACH_RHEALC_BERRI
         bool "Support Broadcom RheaLC Berri board"

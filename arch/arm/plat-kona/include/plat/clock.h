@@ -357,6 +357,7 @@ struct ccu_clk_ops
 	int (*set_voltage)(struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
 	int (*set_active_policy)(struct ccu_clk * ccu_clk, u32 policy);
 	int (*get_active_policy)(struct ccu_clk * ccu_clk);
+	int (*save_state)(struct ccu_clk * ccu_clk, int save);
 };
 
 struct clk_div
@@ -379,7 +380,38 @@ struct clk_div
 };
 
 /**
- * struct clk_src - clock source
+ * struct reg_save - Structure to specify the set of consecutive CCU registers
+ * that needs to be saved when CCU is shutdown
+ * @offset_start: consecutive CCU register set start register offset
+ * @offset_end: consecutive CCU register set end register offset - can be same as offset_start
+ */
+struct reg_save
+{
+	u32 offset_start;
+	u32 offset_end;
+};
+
+/**
+ * struct ccu_state_save - This struct holds required info to save CCU
+ * context during CCU shutdown
+ * @reg_save: List of registers to be saved/restored
+ * @reg_set_count: Number of enteries in reg_save list
+ * @num_reg : Total no of registers to be saved. Clock manager initializes this.
+	No need to pass from mach
+ * @save_buf : Buffer to save the context - Can be NULL. Clock manager
+ * will allocate the buffer if NULL.save_buf size should be num_reg + 1
+ */
+
+struct ccu_state_save
+{
+	struct reg_save *reg_save;
+	u32 reg_set_count;
+	u32 num_reg;
+	u32* save_buf;
+};
+
+/**
+ * struct src_clk - clock source
  * @total: number of clock sources, 0 means root clock, no parent
  * @clk: array of source clocks
  */
@@ -473,6 +505,7 @@ struct ccu_clk {
 	struct ccu_clk_ops* ccu_ops;
 	u8 active_policy;
 	u32*	freq_tbl[MAX_CCU_FREQ_COUNT];
+	struct ccu_state_save *ccu_state_save;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_ccu_dir;
 	u32 policy_dbg_offset;
@@ -725,6 +758,7 @@ int ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage)
 int ccu_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
 int ccu_set_active_policy(struct ccu_clk * ccu_clk, u32 policy);
 int ccu_get_active_policy(struct ccu_clk * ccu_clk);
+int ccu_save_state(struct ccu_clk * ccu_clk, int save);
 
 #if defined(DEBUG)
 #define	clk_dbg printk
