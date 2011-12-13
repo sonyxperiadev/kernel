@@ -450,6 +450,12 @@ int __init rhea_pwr_mgr_init()
 	    pi_init_state(pi);
 	}
 
+	/* Enable PI counters */
+	for (i = 0; i < PI_MGR_PI_ID_MODEM; i++)
+		pwr_mgr_pi_counter_enable(i, 1);
+	pm_mgr_pi_count_clear(1);
+	pm_mgr_pi_count_clear(0);
+
 	return 0;
 }
 early_initcall(rhea_pwr_mgr_init);
