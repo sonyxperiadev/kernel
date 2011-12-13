@@ -1924,6 +1924,9 @@ int pl330_add(struct pl330_info *pi)
 		return -EINVAL;
 	}
 
+	/*clear interrupt status to avoid any spurious interrupts during bootup*/
+	writel(0xFFFFFFFF, regs + INTCLR);
+
 	pl330 = kzalloc(sizeof(*pl330), GFP_KERNEL);
 	if (!pl330) {
 		dev_err(pi->dev, "%s:%d Can't allocate memory!\n",

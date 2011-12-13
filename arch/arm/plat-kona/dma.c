@@ -1010,6 +1010,10 @@ static int pl330_probe(struct platform_device *pdev)
 #else
 	pl330_info->base = (void __iomem *)pl330_pdata->dmac_ns_base;
 #endif
+	ret = pl330_add(pl330_info);
+	if (ret)
+		goto probe_err2;
+
 	/*  Get the first IRQ line */
 	irq_start = pl330_pdata->irq_base;
 	irq = irq_start;
@@ -1020,26 +1024,22 @@ static int pl330_probe(struct platform_device *pdev)
 				  dev_name(&pdev->dev), pl330_info);
 		if (ret) {
 			irq--;
-			goto probe_err2;
+			goto probe_err3;
 		}
 	}
-
-	ret = pl330_add(pl330_info);
-	if (ret)
-		goto probe_err3;
 
 	/* Allocate DMAC descriptor */
 	pd = kmalloc(sizeof(*pd), GFP_KERNEL);
 	if (!pd) {
 		ret = -ENOMEM;
-		goto probe_err4;
+		goto probe_err3;
 	}
 
 	/* Get the clock struct */
 	pd->clk = clk_get(NULL, DMAC_MUX_APB_BUS_CLK_NAME_STR);
 	if (pd->clk == NULL) {
 	    ret = -ENOENT;
-	    goto probe_err5;
+	    goto probe_err4;
 	}
 
 	/* Hook the info */
@@ -1063,17 +1063,16 @@ static int pl330_probe(struct platform_device *pdev)
 
 	return 0;
 
-      probe_err5:
-	kfree(pd);
       probe_err4:
-	pl330_del(pl330_info);
+	kfree(pd);
       probe_err3:
-      probe_err2:
 	while (irq >= irq_start) {
 		free_irq(irq, pl330_info);
 		irq--;
 	}
+	pl330_del(pl330_info);
 
+      probe_err2:
 	kfree(pl330_info);
       probe_err1:
 	return ret;
