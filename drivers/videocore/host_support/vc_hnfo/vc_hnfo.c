@@ -157,6 +157,8 @@ static int vc_hnfo_proc_read( char *buf, char **start, off_t offset, int count, 
                   vc_hnfo_status.dis_detect ? "oui" : "non" );
     p += sprintf( p, "     \'resolution\'  : %d\n",
                   vc_hnfo_status.resolution );
+    p += sprintf( p, "     \'dis_clone\'   : %s\n",
+                  vc_hnfo_status.dis_clone ? "oui" : "non" );
 
     *eof = 1;
     return p - buf;
@@ -218,6 +220,10 @@ static int vc_hnfo_proc_write( struct file *file, const char __user *buffer, uns
    else if ( strcmp( name, "dis_detect" ) == 0 )
    {
       vc_hnfo_status.dis_detect = value;
+   }
+   else if ( strcmp( name, "dis_clone" ) == 0 )
+   {
+      vc_hnfo_status.dis_clone = value;
    }
    else if ( strcmp( name, "resolution" ) == 0 )
    {
@@ -295,6 +301,7 @@ static int __init vc_hnfo_init( void )
     vc_hnfo_status.dis_detect = 0;   // Don't disable action on detection.
     vc_hnfo_status.resolution = 19;  // 'HDMI_CEA_720p50' - Highest supported resolution preferred.
                                      // Can't ask for more at this time (ie 'HDMI_CEA_1080p60'=16).
+    vc_hnfo_status.dis_clone = 0;    // Don't disable GUI cloning.
 
     return 0;
 

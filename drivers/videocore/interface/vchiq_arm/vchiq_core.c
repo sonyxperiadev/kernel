@@ -421,9 +421,7 @@ queue_message(VCHIQ_STATE_T *state, VCHIQ_SERVICE_T *service,
 
    vcos_assert(stride <= VCHIQ_SLOT_SIZE);
 
-   /* coverity[constant_expression_result]
-
-      On platforms where vcos_mutex_lock cannot fail, the return will never
+   /* On platforms where vcos_mutex_lock cannot fail, the return will never
       be taken and the compiler may optimise out that code. Let Coverity
       know this is intentional.
    */
@@ -1433,7 +1431,7 @@ vchiq_init_state(VCHIQ_STATE_T *state, VCHIQ_SLOT_ZERO_T *slot_zero, int is_mast
    vcos_log_register("vchiq_core", &vchiq_core_log_category);
    vcos_log_register("vchiq_core_msg", &vchiq_core_msg_log_category);
 
-   vcos_log_warn( "%s: slot_zero = 0x%08lx, is_master = %d\n", __func__, (unsigned long)slot_zero, is_master );
+   vcos_log_warn( "%s: slot_zero = 0x%08lx, is_master = %d", __func__, (unsigned long)slot_zero, is_master );
 
    /* Check the input configuration */
 

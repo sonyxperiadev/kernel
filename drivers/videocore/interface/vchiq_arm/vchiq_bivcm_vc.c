@@ -214,7 +214,11 @@ vchiq_transfer_bulk(VCHIQ_BULK_T *bulk)
 VCHIQ_STATUS_T
 vchiq_copy_from_user(void *dst, const void *src, int size)
 {
+#if defined(VCHIQ_SM_ALLOC_VCDDR)
    VC_MEMCPY(dst, src, size);
+#else
+   memcpy(dst, src, size);
+#endif
    return VCHIQ_SUCCESS;
 }
 

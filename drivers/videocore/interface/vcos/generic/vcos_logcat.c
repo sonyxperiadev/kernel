@@ -19,7 +19,7 @@ static VCOS_VLOG_IMPL_FUNC_T vcos_vlog_impl_func = vcos_vlog_default_impl;
 
 #define  VCOS_LOG_CATEGORY (&dflt_log_category)
 static VCOS_LOG_CAT_T dflt_log_category;
-VCOS_LOG_CAT_T *vcos_logging_categories;
+VCOS_LOG_CAT_T *vcos_logging_categories = NULL;
 static int inited;
 
 #if VCOS_HAVE_CMD

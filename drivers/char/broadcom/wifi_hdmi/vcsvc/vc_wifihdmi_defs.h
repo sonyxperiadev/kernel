@@ -18,9 +18,11 @@
 typedef void* (*SOCKET_CALLBACK) (int socket_handle, void *data);
 
 // FourCC code used for VCHI connection
-#define VC_WIFIHDMI_SERVER_NAME      MAKE_FOURCC("WHSV")
-#define VC_WIFIHDMI_NOTIFY_CTRL_NAME MAKE_FOURCC("WHNS")
-#define VC_WIFIHDMI_NOTIFY_DATA_NAME MAKE_FOURCC("WHND")
+#define VC_WIFIHDMI_SERVER_NAME       MAKE_FOURCC("WHSV")
+#define VC_WIFIHDMI_SERVER_FAST_NAME  MAKE_FOURCC("WHSF")
+#define VC_WIFIHDMI_NOTIFY_CTRL_NAME  MAKE_FOURCC("WHNS")
+#define VC_WIFIHDMI_NOTIFY_DATA_NAME  MAKE_FOURCC("WHND")
+#define VC_WIFIHDMI_NOTIFY_AUDIN_NAME MAKE_FOURCC("WHAI")
 
 // Maximum message length
 #define VC_WIFIHDMI_MAX_MSG_LEN (sizeof( VC_WIFIHDMI_MSG_UNION_T ) + \
@@ -48,6 +50,7 @@ typedef enum
    VC_WIFIHDMI_MSG_TYPE_STOP,
 
    VC_WIFIHDMI_MSG_TYPE_AUDIO_STREAM_STAT,
+   VC_WIFIHDMI_MSG_TYPE_AUDIO_DATA,
 
    // VC->HOST
    VC_WIFIHDMI_MSG_TYPE_SKT_OPEN,
@@ -118,6 +121,14 @@ typedef struct
    uint32_t res_handle;             // Handle reference
 
 } VC_WIFIHDMI_REC_T;
+
+// Audio data available on specific handle (HOST->VC)
+typedef struct
+{
+   uint32_t res_handle;             // Handle reference
+   uint32_t res_payload;            // Size of payload data in handle
+
+} VC_WIFIHDMI_AUD_IN_T;
 
 // Request to process a notification (VC->HOST)
 typedef struct
@@ -193,6 +204,7 @@ typedef struct
    uint32_t tx_busy_cnt;    // Transmit busied counter
 
    uint32_t tx_aud_cnt;     // Transmit audio packet
+   uint32_t rx_aud_cnt;     // Received audio packet
    uint32_t tx_aud_ret_cnt; // Transmit audio packet retried
    uint32_t tx_vid_cnt;     // Transmit video packet
    uint32_t tx_vid_ret_cnt; // Transmit video packet retried
@@ -214,6 +226,7 @@ typedef union
    VC_WIFIHDMI_SKT_ACTION_T  skt_action;
    VC_WIFIHDMI_STREAM_T      stream;
    VC_WIFIHDMI_STR_STA_RES_T stream_res;
+   VC_WIFIHDMI_AUD_IN_T      audio_in;
 
 } VC_WIFIHDMI_MSG_UNION_T;
 

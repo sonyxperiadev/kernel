@@ -37,8 +37,6 @@ typedef enum
    VC_SM_MSG_TYPE_WALK_ALLOC,          // Walk the allocated shared memory block(s)
 
    VC_SM_MSG_TYPE_ACTION_CLEAN,        // A previously applied action will need to be reverted
-   VC_SM_MSG_TYPE_FREE_ALL,            // Immediate free of all allocated resources belonging to a given allocator
-   VC_SM_MSG_TYPE_FREE_POST_MORTEM,    // Post mortem free of all allocated resources belonging to a given allocator
    VC_SM_MSG_TYPE_MAX
 
 } VC_SM_MSG_TYPE;

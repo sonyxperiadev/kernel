@@ -175,10 +175,6 @@ typedef struct vcos_datestr
 /* for backward compatibility */
 #define countof(x) (sizeof((x)) / sizeof((x)[0]))
 
-/** Return the offset of a member in a structure type.
- */
-#define vcos_offsetof(st,m) ( (char *)&((st *)(0))->m - (char *)0 )
-
 #define VCOS_ALIGN_DOWN(p,n) (((ptrdiff_t)(p)) & ~((n)-1))
 #define VCOS_ALIGN_UP(p,n) VCOS_ALIGN_DOWN((ptrdiff_t)(p)+(n)-1,(n))
 

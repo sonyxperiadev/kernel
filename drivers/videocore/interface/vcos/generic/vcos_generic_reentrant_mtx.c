@@ -27,8 +27,8 @@ void vcos_generic_reentrant_mutex_delete(VCOS_REENTRANT_MUTEX_T *m)
 
 void vcos_generic_reentrant_mutex_lock(VCOS_REENTRANT_MUTEX_T *m)
 {
-   vcos_assert(m);
    VCOS_THREAD_T *thread = vcos_thread_current();
+   vcos_assert(m);
 
    vcos_assert(thread != 0);
 

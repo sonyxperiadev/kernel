@@ -32,8 +32,6 @@
 #define PAGE_SIZE 4096
 #endif
 
-#define VCOS_LOG_CATEGORY (&vchiq_test_log_category)
-
 static struct test_params g_params = { MSG_CONFIG, 64, 100, 1, 1 };
 static const char *g_servname = "echo";
 
@@ -52,6 +50,7 @@ static int fun2_error = 0;
 char *bulk_tx_data[NUM_BULK_BUFS];
 char *bulk_rx_data[NUM_BULK_BUFS];
 
+static int ctrl_received = 0;
 static int bulk_tx_sent = 0;
 static int bulk_rx_sent = 0;
 static int bulk_tx_received = 0;
@@ -64,6 +63,7 @@ static VCOS_LOG_CAT_T vchiq_test_log_category;
 
 static int vchiq_test(int argc, char **argv);
 static VCHIQ_STATUS_T vchiq_bulk_test(void);
+static VCHIQ_STATUS_T vchiq_ctrl_test(void);
 static VCHIQ_STATUS_T vchiq_functional_test(void);
 static VCHIQ_STATUS_T vchiq_ping_test(void);
 
@@ -95,6 +95,7 @@ static int vchiq_test(int argc, char **argv)
 {
    VCHIQ_STATUS_T status;
    int run_bulk_test = 0;
+   int run_ctrl_test = 0;
    int run_functional_test = 0;
    int run_ping_test = 0;
    int verbose = 0;
@@ -117,17 +118,22 @@ static int vchiq_test(int argc, char **argv)
          run_bulk_test = 1;
          g_params.blocksize = atoi(argv[argn++]);
       }
-      else if (strcmp(arg, "-h") == 0)
+      else if (strcmp(arg, "-c") == 0)
       {
-         usage();
+         run_ctrl_test = 1;
+         g_params.blocksize = atoi(argv[argn++]);
+      }
+      else if (strcmp(arg, "-e") == 0)
+      {
+         want_echo = 0;
       }
       else if (strcmp(arg, "-f") == 0)
       {
          run_functional_test = 1;
       }
-      else if (strcmp(arg, "-e") == 0)
+      else if (strcmp(arg, "-h") == 0)
       {
-         want_echo = 0;
+         usage();
       }
       else if (strcmp(arg, "-p") == 0)
       {
@@ -138,7 +144,7 @@ static int vchiq_test(int argc, char **argv)
       {
          g_params.verify = 0;
       }
-      else if (strcmp(arg, "-c") == 0)
+      else if (strcmp(arg, "-t") == 0)
       {
          check_timer();
          exit(0);
@@ -154,7 +160,7 @@ static int vchiq_test(int argc, char **argv)
       }
    }
 
-   if ((run_bulk_test + run_functional_test + run_ping_test) != 1)
+   if ((run_ctrl_test + run_bulk_test + run_functional_test + run_ping_test) != 1)
       usage();
 
    if (argn < argc)
@@ -188,12 +194,13 @@ static int vchiq_test(int argc, char **argv)
    vcos_event_create(&g_shutdown, "g_shutdown");
    vcos_mutex_create(&g_mutex, "g_mutex");
 
-   g_params.blocksize *= 1024;
 
    status = VCHIQ_ERROR;
 
    if (run_bulk_test)
       status = vchiq_bulk_test();
+   else if (run_ctrl_test)
+      status = vchiq_ctrl_test();
    else if (run_functional_test)
       status = vchiq_functional_test();
    else if (run_ping_test)
@@ -213,6 +220,8 @@ vchiq_bulk_test(void)
    int num_bulk_bufs = NUM_BULK_BUFS;
    uint32_t start, end;
    int i;
+
+   g_params.blocksize *= 1024;
 
    for (i = 0; i < NUM_BULK_BUFS; i++)
    {
@@ -315,6 +324,112 @@ vchiq_bulk_test(void)
    printf("Elapsed time: %dus per iteration\n", (end - start) / g_params.iters);
 
    return VCHIQ_SUCCESS;
+}
+
+static VCHIQ_STATUS_T
+vchiq_ctrl_test(void)
+{
+   VCHIQ_INSTANCE_T vchiq_instance;
+   VCHIQ_SERVICE_HANDLE_T vchiq_service;
+   VCHIQ_SERVICE_PARAMS_T service_params;
+   uint32_t start, end;
+   int i;
+
+   ctrl_received = 0;
+   if (g_params.blocksize < 4)
+      g_params.blocksize = 4;
+
+   for (i = 0; i < NUM_BULK_BUFS; i++)
+   {
+      int j;
+      bulk_tx_data[i] = malloc(g_params.blocksize);
+      if (!bulk_tx_data[i])
+      {
+         printf("* out of memory\n");
+         return VCHIQ_ERROR;
+      }
+      *(int *)bulk_tx_data[i] = MSG_ECHO;
+      for (j = 4; j < g_params.blocksize; j+=4)
+      {
+         *(unsigned int *)(bulk_tx_data[i] + j) = ((0x80 | i) << 24) + j;
+      }
+   }
+
+   if (vchiq_initialise(&vchiq_instance) != VCHIQ_SUCCESS)
+   {
+      printf("* failed to open vchiq instance\n");
+      return VCHIQ_ERROR;
+   }
+
+   vchiq_connect(vchiq_instance);
+
+   memset(&service_params, 0, sizeof(service_params));
+
+   service_params.fourcc = VCHIQ_MAKE_FOURCC(g_servname[0], g_servname[1], g_servname[2], g_servname[3]);
+   service_params.callback = clnt_callback;
+   service_params.userdata = "clnt userdata";
+   service_params.version = 0;
+   service_params.version_min = 0;
+
+   if (vchiq_open_service_params(vchiq_instance, &service_params, &vchiq_service) != VCHIQ_SUCCESS)
+   {
+      printf("* failed to open service - already in use?\n");
+      return VCHIQ_ERROR;
+   }
+
+   printf("Ctrl test - service:%s, block size:%d, iters:%d\n", g_servname, g_params.blocksize, g_params.iters);
+
+   start = vcos_getmicrosecs();
+
+   for (i = 0; i < g_params.iters; i++)
+   {
+      VCHIQ_ELEMENT_T element;
+      element.data = bulk_tx_data[i % NUM_BULK_BUFS];
+      element.size = g_params.blocksize;
+
+      if (vchiq_queue_message(vchiq_service, &element, 1) != VCHIQ_SUCCESS)
+      {
+         printf("* failed to send a message\n");
+         goto error_exit;
+      }
+      if (g_server_error)
+      {
+         printf("* error - %s\n", g_server_error);
+         goto error_exit;
+      }
+   }
+
+   vcos_log_trace("Sent all messages");
+
+   if (g_params.echo)
+   {
+      vcos_log_trace("vchiq_test: waiting for shutdown");
+
+      vcos_event_wait(&g_shutdown);
+   }
+
+   if (g_server_error)
+   {
+      printf("* error - %s\n", g_server_error);
+      goto error_exit;
+   }
+
+   end = vcos_getmicrosecs();
+
+   vchiq_remove_service(vchiq_service);
+
+   vcos_log_trace("vchiq_test: shutting down");
+
+   vchiq_shutdown(vchiq_instance);
+
+   printf("Elapsed time: %dus per iteration\n", (end - start) / g_params.iters);
+
+   return VCHIQ_SUCCESS;
+
+error_exit:
+   vchiq_remove_service(vchiq_service);
+   vchiq_shutdown(vchiq_instance);
+   return VCHIQ_ERROR;
 }
 
 static VCHIQ_STATUS_T
@@ -835,14 +950,14 @@ func_data_test(VCHIQ_SERVICE_HANDLE_T service, int datalen, int align)
    {
       if (prologue[i] != '\xff')
       {
-         vcos_log_error("Prologue corrupted at %d (datalen %d)", i, datalen);
+         vcos_log_error("Prologue corrupted at %d (datalen %d, align %d)", i, datalen, align);
          VCOS_BKPT;
          success = 0;
          break;
       }
       if (epilogue[i] != '\xff')
       {
-         vcos_log_trace("Epilogue corrupted at %d (datalen %d)", i, datalen);
+         vcos_log_trace("Epilogue corrupted at %d (datalen %d, align %d)", i, datalen, align);
          VCOS_BKPT;
          success = 0;
          break;
@@ -872,7 +987,7 @@ func_data_test(VCHIQ_SERVICE_HANDLE_T service, int datalen, int align)
 
       if (!success)
       {
-         vcos_log_error("Data corrupted at %d (datalen %d)", i, datalen);
+         vcos_log_error("Data corrupted at %d (datalen %d, align %d)", i, datalen, align);
          VCOS_BKPT;
       }
    }
@@ -909,9 +1024,21 @@ clnt_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *header,
       if (header->size <= 1)
          vchiq_release_message(service, header);
       else
-         g_server_error = header->data;
       /* Responses of length 0 are not sync points */
-      if (header->size != 0)
+      if ((header->size >= 4) && (*(int *)header->data == MSG_ECHO))
+      {
+         /* This is a complete echoed packet */
+         if (g_params.verify && (mem_check(header->data, bulk_tx_data[ctrl_received % NUM_BULK_BUFS], g_params.blocksize) != 0))
+            g_server_error = "corrupt data";
+         else
+            ctrl_received++;
+         if (g_server_error || (ctrl_received == g_params.iters))
+            vcos_event_signal(&g_shutdown);
+      }
+      else if (header->size != 0)
+         g_server_error = header->data;
+
+      if (g_server_error)
          vcos_event_signal(&g_server_reply);
    }
    else if (reason == VCHIQ_BULK_TRANSMIT_DONE)
@@ -939,7 +1066,7 @@ clnt_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *header,
       if (g_params.verify && (mem_check(bulk_tx_data[i % NUM_BULK_BUFS], bulk_rx_data[i % NUM_BULK_BUFS], g_params.blocksize) != 0))
       {
          vcos_log_error("* Data corruption - %d: %x, %x, %x", i, (unsigned int)bulk_tx_data[i % NUM_BULK_BUFS], (unsigned int)bulk_rx_data[i % NUM_BULK_BUFS], g_params.blocksize);
-         exit(1);
+         VCOS_BKPT;
       }
       bulk_rx_received++;
       if (bulk_rx_sent < g_params.iters)
@@ -1018,7 +1145,7 @@ vchi_clnt_callback(void *callback_param,
       if (g_params.verify && (mem_check(bulk_tx_data[i % NUM_BULK_BUFS], bulk_rx_data[i % NUM_BULK_BUFS], g_params.blocksize) != 0))
       {
          vcos_log_error("* Data corruption - %x, %x, %x", (unsigned int)bulk_tx_data[i % NUM_BULK_BUFS], (unsigned int)bulk_rx_data[i % NUM_BULK_BUFS], g_params.blocksize);
-         exit(1);
+         VCOS_BKPT;
       }
       bulk_rx_received++;
       if (bulk_rx_sent < g_params.iters)
@@ -1099,8 +1226,8 @@ func_clnt_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *header,
       END_CALLBACK(VCHIQ_SUCCESS)
 
       START_BULK_CALLBACK(VCHIQ_BULK_RECEIVE_DONE, 1, 0x1003)
-      EXPECT(mem_check(clnt_service1_data, clnt_service2_data, sizeof(clnt_service1_data)), 0);
-      EXPECT(mem_check(clnt_service1_data, clnt_service2_data + sizeof(clnt_service1_data), sizeof(clnt_service1_data)), 0);
+      (void)(mem_check(clnt_service1_data, clnt_service2_data, sizeof(clnt_service1_data)), 0);
+      (void)(mem_check(clnt_service1_data, clnt_service2_data + sizeof(clnt_service1_data), sizeof(clnt_service1_data)), 0);
       END_CALLBACK(VCHIQ_SUCCESS)
 
       START_BULK_CALLBACK(VCHIQ_BULK_RECEIVE_ABORTED, 1, 0x1004)
@@ -1155,6 +1282,7 @@ static int mem_check(const void *expected, const void *actual, int size)
          if (ca != ce)
             printf("%08x,%x: %02x <-> %02x\n", i + (unsigned int)actual, i, ce, ca);
       }
+      printf("mem_check failed - buffer %x, size %d\n", (unsigned int)actual, size);
       return 1;
    }
    return 0;
@@ -1169,9 +1297,11 @@ static void usage(void)
    printf("    -s ????     service (any 4 characters)\n");
    printf("    -v          enable more verbose output\n");
    printf("  and <mode> is one of:\n");
+   printf("    -c <size>   control test (size in bytes)\n");
    printf("    -b <size>   bulk test (size in kilobytes)\n");
    printf("    -f          functional test\n");
    printf("    -p          ping test\n");
+   printf("    -t          check the timer\n");
    printf("  and <iters> is the number of test iterations\n");
    exit(1);
 }
