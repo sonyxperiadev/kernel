@@ -1026,21 +1026,18 @@ Int32 DISPDRV_PowerControl (
     
     DISPDRV_CHECK_PTR_2_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
    
+	//@HW temorary code, turn on backlight
+	gpio_request(95,"BK_LIGHT");
     switch ( state )
     {
         case DISPLAY_POWER_STATE_ON:
             switch ( pPanel->pwrState )
             {
                 case DISP_PWR_OFF:
-					//@HW temorary code, turn on backlight
-					gpio_request(95,"BK_LIGHT");
-					gpio_direction_output(95, 1);
-				//	gpio_set_value_cansleep(95, 1);
-
-					
 					DISPDRV_ExecCmndList(drvH, &power_on_seq_s5d05a1x31_cooperve_AUO[0]);
                     
                     pPanel->pwrState = DISP_PWR_SLEEP_OFF;
+					gpio_direction_output(95, 1);
                     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: INIT-SEQ\n\r",
                         __FUNCTION__ );
                     break; 
@@ -1078,6 +1075,22 @@ Int32 DISPDRV_PowerControl (
                 res = -1;
             }   
             break;
+	case DISPLAY_POWER_STATE_BLANK_SCREEN:
+		if( pPanel->pwrState == DISP_PWR_SLEEP_OFF)
+		{
+				gpio_direction_output(95, 0);
+            
+				LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: Turn off backlight\n\r",
+                    		__FUNCTION__ );
+				
+		} 
+		else
+		{
+				gpio_direction_output(95, 1);
+			LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: Turn on backlight ",
+				__FUNCTION__ );
+		}   
+		break;
         
         default:
             LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Invalid Power State[%d] "
@@ -1085,6 +1098,9 @@ Int32 DISPDRV_PowerControl (
             res = -1;
             break;
     }
+	
+	gpio_free(95);
+	
     return ( res );
 }
 
