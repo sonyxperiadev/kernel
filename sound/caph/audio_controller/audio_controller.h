@@ -274,7 +274,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode );
 *
 *	@return		none
 ****************************************************************************/
-void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_pathID );
+void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_pathID, Boolean inHWlpbk );
 
 /**
 *   Set audio mode for music record. (no DSP voice)

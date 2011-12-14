@@ -316,7 +316,7 @@ void AUDDRV_SetAudioMode ( AudioMode_t  audio_mode, AudioApp_t audio_app );
 void AUDDRV_SaveAudioMode( AudioMode_t audio_mode );
 void AUDDRV_SetAudioMode ( AudioMode_t  audio_mode );
 #endif
-void AUDDRV_SetAudioMode_ForMusicPlayback( AudioMode_t  audio_mode, unsigned int arg_pathID);
+void AUDDRV_SetAudioMode_ForMusicPlayback( AudioMode_t  audio_mode, unsigned int arg_pathID, Boolean inHWlpbk);
 void AUDDRV_SetAudioMode_ForMusicRecord( AudioMode_t  audio_mode, unsigned int arg_pathID);
 AudioMode_t AUDDRV_GetAudioMode( void );
 

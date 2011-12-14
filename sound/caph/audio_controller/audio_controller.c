@@ -725,7 +725,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 //	@return 	none
 //
 //**********************************************************************/
-void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_pathID )
+void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_pathID, Boolean inHWlpbk )
 {
     AUDIO_SOURCE_Enum_t mic;
     AUDIO_SINK_Enum_t spk;
@@ -752,7 +752,7 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_p
 
 //for multicast, need to find the other mode and reconcile on mixer gains. like BT + IHF
 
-    AUDDRV_SetAudioMode_ForMusicPlayback( mode, arg_pathID );
+    AUDDRV_SetAudioMode_ForMusicPlayback( mode, arg_pathID, inHWlpbk );
 
 
     if(!bClk) csl_caph_ControlHWClock(FALSE); //disable clock if it is enabled by this function.
@@ -929,7 +929,7 @@ void AUDCTRL_EnablePlay(
 	if (source == AUDIO_SOURCE_I2S && AUDDRV_InVoiceCall() == FALSE)
 	{	//to set HW mixer gain for FM
 		mode = AUDCTRL_GetModeBySpeaker(config.sink);
-		AUDCTRL_SetAudioMode_ForMusicPlayback( mode, pathID );
+		AUDCTRL_SetAudioMode_ForMusicPlayback( mode, pathID, FALSE );
 	}
 	if(pPathID) *pPathID = pathID;
 	//Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %x, pathID %d\r\n", *pPathID, pathID);
@@ -1050,7 +1050,7 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 	//also need to support audio profile/mode set from user space code to support multi-profile/app.
 
 	if ( AUDDRV_InVoiceCall() && path->srcmRoute[0][0].outChnl) pathID = audDrv->pathID; //arm2sp may use HW mixer, whose gain should be set
-	AUDCTRL_SetAudioMode_ForMusicPlayback( mode, pathID );
+	AUDCTRL_SetAudioMode_ForMusicPlayback( mode, pathID, FALSE );
 
 	//for multi-cast, also use path->sink[1]
 
@@ -1447,7 +1447,7 @@ void AUDCTRL_SwitchPlaySpk(
     if ((sink == AUDIO_SINK_LOUDSPK)||(sink == AUDIO_SINK_HEADSET))
         powerOnExternalAmp( sink, AudioUseExtSpkr, TRUE );
 
-	AUDCTRL_SetAudioMode_ForMusicPlayback( AUDDRV_GetAudioModeBySink(sink), 0 );
+	AUDCTRL_SetAudioMode_ForMusicPlayback( AUDDRV_GetAudioModeBySink(sink), 0, FALSE );
 
     return;
 }
@@ -1487,7 +1487,7 @@ void AUDCTRL_AddPlaySpk(
         (void) csl_caph_hwctrl_AddPath(pathID, config);
     }
 
-    AUDCTRL_SetAudioMode_ForMusicPlayback( AUDDRV_GetAudioModeBySink(sink), 0 );
+    AUDCTRL_SetAudioMode_ForMusicPlayback( AUDDRV_GetAudioModeBySink(sink), 0, FALSE );
 
     return;
 
@@ -2157,7 +2157,7 @@ void AUDCTRL_SetAudioLoopback(
 		//sets all HW gains.
 		//AUDCTRL_SetAudioMode is for telephony. But is AUDCTRL_SetAudioMode_ForMusicPlayback enough for both source and sink?
 		//AUDCTRL_SetAudioMode( audio_mode ); //this function also sets all HW gains.
-		AUDCTRL_SetAudioMode_ForMusicPlayback(audio_mode, pathID);
+		AUDCTRL_SetAudioMode_ForMusicPlayback(audio_mode, pathID, TRUE);
 
         // Enable Loopback ctrl
 	    //Enable PMU for headset/IHF

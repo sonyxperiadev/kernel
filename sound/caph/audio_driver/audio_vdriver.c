@@ -188,7 +188,7 @@ static void AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode);
 static void AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode);
 
 static void auddrv_SetAudioMode_mic( AudioMode_t audio_mode, unsigned int arg_pathID );
-static void auddrv_SetAudioMode_speaker( AudioMode_t audio_mode, unsigned int arg_pathID );
+static void auddrv_SetAudioMode_speaker( AudioMode_t audio_mode, unsigned int arg_pathID, Boolean inHWlpbk );
 
 extern CSL_CAPH_HWConfig_Table_t HWConfig_Table[MAX_AUDIO_PATH];
 
@@ -1056,7 +1056,7 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, AudioApp_t audio_app )
 
 
 	auddrv_SetAudioMode_mic(audio_mode, 0);
-	auddrv_SetAudioMode_speaker(audio_mode, 0);
+	auddrv_SetAudioMode_speaker(audio_mode, 0, FALSE);
 
 }
 
@@ -1069,12 +1069,12 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, AudioApp_t audio_app )
 //
 //=============================================================================
 
-void AUDDRV_SetAudioMode_ForMusicPlayback( AudioMode_t audio_mode, unsigned int arg_pathID)
+void AUDDRV_SetAudioMode_ForMusicPlayback( AudioMode_t audio_mode, unsigned int arg_pathID, Boolean inHWlpbk)
  //add a second audio_mode for broadcast case
 {
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode_ForMusicPlayback() audio_mode==%d, pathID %d\n\r", audio_mode, arg_pathID);
 
-	auddrv_SetAudioMode_speaker(audio_mode, arg_pathID);
+	auddrv_SetAudioMode_speaker(audio_mode, arg_pathID, inHWlpbk);
 }
 
 
@@ -1853,7 +1853,7 @@ static void auddrv_SetAudioMode_mic( AudioMode_t arg_audio_mode, unsigned int ar
 //
 //=============================================================================
 
-static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned int arg_pathID )
+static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned int arg_pathID, Boolean inHWlpbk )
 {
 	int mixerInputGain; // Register value.
 	int mixerOutputFineGain;  // Bit12:0, Output Fine Gain
@@ -1975,8 +1975,10 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 			if( path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) return; //no need for anything other than HW mixer gain for arm2sp
 		}
 
-		//Config sidetone
+		// Do not enable/disable sidetone path based on sysparm when in HW loopback
+		if (!inHWlpbk)
 		{
+		//Config sidetone
 		Int32 *coeff = NULL;
 		UInt16 gain = 0;
 		UInt16 enable = 0;
