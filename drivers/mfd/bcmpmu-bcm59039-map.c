@@ -277,7 +277,8 @@ static const struct bcmpmu_env_info bcm59039_env_reg_map[PMU_ENV_MAX] = {
 	[PMU_ENV_P_UBPD_CHR] = 		{.regmap = {.addr = 0xE1, .mask = 0x04, .shift = 2, .ro = 1}, .bitmask = PMU_ENV_BITMASK_P_UBPD_CHR},
 	[PMU_ENV_PORT_DISABLE] = 	{.regmap = {.addr = 0x00, .mask = 0x00, .shift = 0, .ro = 1}, .bitmask = PMU_ENV_BITMASK_PORT_DISABLE},
 	[PMU_ENV_MBPD] = 		{.regmap = {.addr = 0xE4, .mask = 0x01, .shift = 0, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBPD},
-	[PMU_ENV_MBOV] = 		{.regmap = {.addr = 0xE0, .mask = 0x10, .shift = 3, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBOV},
+	[PMU_ENV_MBOV] = 		{.regmap = {.addr = 0xE0, .mask = 0x10, .shift = 4, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBOV},
+	[PMU_ENV_MBMC] = 		{.regmap = {.addr = 0xE0, .mask = 0x08, .shift = 3, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBMC},
 };
 
 static const struct bcmpmu_adc_map bcm59039_adc_map[PMU_ADC_MAX] = {

@@ -652,6 +652,7 @@ enum bcmpmu_env_bit_t {
 	PMU_ENV_PORT_DISABLE,
 	PMU_ENV_MBPD,
 	PMU_ENV_MBOV,
+	PMU_ENV_MBMC,
 	PMU_ENV_MAX,
 };
 
@@ -719,6 +720,7 @@ enum bcmpmu_bc_t {
 #define	PMU_ENV_BITMASK_PORT_DISABLE		1<<10
 #define	PMU_ENV_BITMASK_MBPD			1<<11
 #define	PMU_ENV_BITMASK_MBOV			1<<12
+#define PMU_ENV_BITMASK_MBMC			1<<13
 
 struct bcmpmu_env_info {
  	struct bcmpmu_reg_map regmap;

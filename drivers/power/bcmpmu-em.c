@@ -26,6 +26,7 @@
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 #include <linux/power_supply.h>
+#include <linux/time.h>
 
 #include <linux/mfd/bcmpmu.h>
 
@@ -97,6 +98,7 @@ struct bcmpmu_em {
 	unsigned char batt_capacity_lvl;
 	unsigned char batt_present;
 	unsigned char batt_capacity;
+	unsigned long time;
 };
 static struct bcmpmu_em *bcmpmu_em;
 
@@ -175,6 +177,8 @@ dbgmsk_set(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
+	int ret;
+	ret = get_fg_delta(bcmpmu, &data);
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_set);
 static struct attribute *bcmpmu_em_attrs[] = {
 	&dev_attr_dbgmsk.attr,
@@ -186,10 +190,16 @@ static const struct attribute_group bcmpmu_em_attr_group = {
 };
 #endif
 
-static unsigned char em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int curr, bool comp)
+static int em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int curr)
 {
 	int capacity;
 	int batt_volt;
+
+	int comp = 1;
+	
+	if ((pem->chrgr_type != PMU_CHRGR_TYPE_NONE) ||
+		(pem->bcmpmu->get_env_bit_status(pem->bcmpmu, PMU_ENV_MBMC) == false))
+		comp = 0;
 
 	if (comp)
 		batt_volt = volt - (pem->batt_impedence * curr)/1000;
@@ -241,7 +251,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem)
 
 	if (pem->support_fg == 0) {
 		capacity = em_batt_get_capacity(pem,
-			pem->batt_volt, pem->batt_curr, 1);
+			pem->batt_volt, pem->batt_curr);
 	} else {
 		ret = pem->bcmpmu->fg_acc_mas(pem->bcmpmu, &fg_result);
 		if (ret != 0) {
@@ -255,10 +265,13 @@ static int update_batt_capacity(struct bcmpmu_em *pem)
 			pem->fg_capacity = 0;
 		capacity = (pem->fg_capacity * 100)
 			/pem->fg_capacity_full;
+		if ((pem->chrgr_type != PMU_CHRGR_TYPE_NONE) &&
+			(pem->batt_capacity != 100) &&
+		if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
+			(capacity < 100))
+			capacity++;
 		capacity_v = em_batt_get_capacity(pem,
-			pem->batt_volt, pem->batt_curr, 0);
-		if (capacity < capacity_v)
-			capacity = capacity_v;
+				pem->batt_volt, pem->batt_curr);
 		pr_em(FLOW, "%s, fg_acc=%d, fg_cpcty=%d, cpcty=%d, vcpcty=%d, t=%d\n",
 			__func__, fg_result, pem->fg_capacity, capacity,
 			capacity_v, pem->batt_temp);
@@ -365,7 +378,7 @@ static void em_algorithm(struct work_struct *work)
 		} else {
 			pem->batt_volt = req.cnv;
 			capacity = em_batt_get_capacity(pem,
-				pem->batt_volt, 0, 0);
+				pem->batt_volt, 0);
 			pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
 			pem->batt_capacity = capacity;
 		}
@@ -393,7 +406,7 @@ static void em_algorithm(struct work_struct *work)
 		pem->batt_volt = vacc/8;
 		pem->batt_curr = iacc;
 		capacity = em_batt_get_capacity(pem,
-			pem->batt_volt, pem->batt_curr, 1);
+			pem->batt_volt, pem->batt_curr);
 		pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
 		pem->batt_capacity = capacity;
 		init_run = 0;
@@ -471,7 +484,7 @@ static void em_algorithm(struct work_struct *work)
 	propval.intval = pem->batt_volt;
 	ps->set_property(ps, POWER_SUPPLY_PROP_VOLTAGE_NOW, &propval);
 
-	if ((pem->charge_state != CHRG_STATE_CHRG) &&
+	if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
 		(capacity > pem->batt_capacity))
 		capacity = pem->batt_capacity;
 
@@ -526,6 +539,8 @@ static void em_algorithm(struct work_struct *work)
 	bcmpmu->write_dev(bcmpmu, PMU_REG_SYS_WDT_CLR,
 		bcmpmu->regmap[PMU_REG_SYS_WDT_CLR].mask,
 		bcmpmu->regmap[PMU_REG_SYS_WDT_CLR].mask);
+
+	pem->time = get_seconds();
 }
 
 static int em_charger_event_handler(struct notifier_block *nb,
@@ -544,6 +559,7 @@ static int em_charger_event_handler(struct notifier_block *nb,
 		pr_em(FLOW, "%s, chrgr curr=%d\n", __func__, pem->chrgr_curr);
 
 		break;
+		capacity_v = em_batt_get_capacity(pem, req.cnv, 0);
 	default:
 		break;
 	}
@@ -662,7 +678,13 @@ static int bcmpmu_em_resume(struct platform_device *pdev)
 {
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_em *pem = bcmpmu->eminfo;
-	schedule_delayed_work(&pem->work, 0);
+	unsigned long time;
+	time = get_seconds();
+
+	if ((time - pem->time)*1000 > get_update_rate(pem)) {
+		cancel_delayed_work_sync(&pem->work);
+		schedule_delayed_work(&pem->work, 0);
+	}
 	return 0;
 }
 

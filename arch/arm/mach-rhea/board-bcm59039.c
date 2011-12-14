@@ -377,6 +377,7 @@ static struct regulator_init_data bcm59039_sdsr_data = {
 };
 
 struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
+struct bcmpmu_regulator_init_data bcm59039_regulators[] = {
 	{BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data},
 	{BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data},
 	{BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data},
@@ -477,8 +478,15 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.fg_slp_rate = 32000,
 	.fg_slp_curr_ua = 1000,
 	.chrg_1c_rate = 1000,
+	.fg_sns_res = 10,
+	.batt_voltcap_map = &batt_voltcap_map[0],
+	.batt_voltcap_map_len = ARRAY_SIZE(batt_voltcap_map),
+	.batt_impedence = 238,
+	.chrg_1c_rate = 1500,
+	.chrg_eoc = 100,
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1000*3600,
+	.fg_capacity_full = 1500*3600,
 	.support_fg = 1,
 	.bc = BCMPMU_BC_PMU_BC12,//BCMPMU_BC_BB_BC12  ,
 };
