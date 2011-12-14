@@ -376,7 +376,6 @@ static struct regulator_init_data bcm59039_sdsr_data = {
 	.consumer_supplies = sdsr_supply,
 };
 
-struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 struct bcmpmu_regulator_init_data bcm59039_regulators[] = {
 	{BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data},
 	{BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data},
@@ -435,7 +434,6 @@ static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 {
 	int i;
 	printk(KERN_INFO "%s: called.\n", __func__);
-	bcmpmu_reg_dev_init(bcmpmu);
 
 	for (i = 0; i <ARRAY_SIZE(bcmpmu_client_devices); i++)
 		bcmpmu_client_devices[i]->dev.platform_data = bcmpmu;
@@ -447,7 +445,6 @@ static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 static int __init bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
 	printk("REG: pmu_init_platform_hw called \n");
-	bcmpmu_reg_dev_exit(bcmpmu);
 
 	return 0;
 }
@@ -472,6 +469,34 @@ static struct bcmpmu_charge_zone chrg_zone[] = {
 	{.tl = 253, .th = 333, .v = 0,    .fc = 0,  .qc = 0},/* Zone OUT */
 };
 
+static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
+/*	volt		capacity*/
+	{4150,		100},
+	{4115,		95},
+	{4070,		90},
+	{4030,		85},
+	{3978,		80},
+	{3953,		75},
+	{3925,		70},
+	{3893,		65},
+	{3855,		60},
+	{3826,		55},
+	{3807,		50},
+	{3791,		45},
+	{3780,		40},
+	{3770,		35},
+	{3763,		30},
+	{3755,		25},
+	{3737,		20},
+	{3700,		15},
+	{3680,		10},
+	{3676,		8},
+	{3668,		6},
+	{3628,		4},
+	{3510,		2},
+	{3250,		0},
+};
+
 static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
 	.init = bcmpmu_init_platform_hw,
@@ -484,11 +509,13 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
+	.num_of_regl = ARRAY_SIZE(bcm59039_regulators),
 	.regulator_init_data = &bcm59039_regulators,
+	.support_fg = 1,
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,
 	.fg_slp_curr_ua = 1000,
-	.chrg_1c_rate = 1000,
+	.fg_factor = 1000,
 	.fg_sns_res = 10,
 	.batt_voltcap_map = &batt_voltcap_map[0],
 	.batt_voltcap_map_len = ARRAY_SIZE(batt_voltcap_map),
@@ -496,10 +523,9 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.chrg_1c_rate = 1500,
 	.chrg_eoc = 100,
 	.chrg_zone_map = &chrg_zone[0],
-	.fg_capacity_full = 1000*3600,
 	.fg_capacity_full = 1500*3600,
 	.support_fg = 1,
-	.bc = BCMPMU_BC_PMU_BC12,//BCMPMU_BC_BB_BC12  ,
+	.bc = BCMPMU_BC_PMU_BC12,//BCMPMU_BC_BB_BC12,
 };
 
 static struct i2c_board_info __initdata pmu_info[] =

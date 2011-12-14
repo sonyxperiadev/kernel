@@ -150,6 +150,7 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_FG_RESET] =		{.map = 0x01, .addr = 0x41, .mask = 0x10, .ro = 0, .shift = 4},
 	[PMU_REG_FG_FRZREAD] =		{.map = 0x01, .addr = 0x41, .mask = 0x20, .ro = 0, .shift = 5},
 	[PMU_REG_FG_FRZSMPL] =		{.map = 0x01, .addr = 0x41, .mask = 0x40, .ro = 0, .shift = 6},
+	[PMU_REG_FG_DELTA] =		{.map = 0x01, .addr = 0x5A, .mask = 0xFF, .ro = 0, .shift = 0},
 	/* usb control */
 	[PMU_REG_OTG_VBUS_PULSE] =	{.map = 0, .addr = 0, .mask = 0x01, .ro = 0, .shift = 0},
 	[PMU_REG_OTG_VBUS_BOOST] =	{.map = 0, .addr = 0, .mask = 0x04, .ro = 0, .shift = 2},
@@ -178,9 +179,9 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_ADP_STATUS_RISE_TIMES_MSB] =	{.map = 0, .addr = 0, .mask = 0x30, .ro = 0, .shift = 4},
 
 	/* BC ctrl and status */
-	[PMU_REG_BC_DET_EN] =           {.map = 0, .addr = 0x61, .mask = 0x02, .ro = 0, .shift = 1},
-	[PMU_REG_BC_SW_RST] =           {.map = 0, .addr = 0x61, .mask = 0x01, .ro = 0, .shift = 0},
-	[PMU_REG_BC_OVWR_KEY] =         {.map = 0, .addr = 0x61, .mask = 0xF0, .ro = 0, .shift = 4},
+	[PMU_REG_BC_DET_EN] = 		{.map = 0, .addr = 0x61, .mask = 0x02, .ro = 0, .shift = 1},
+	[PMU_REG_BC_SW_RST] = 		{.map = 0, .addr = 0x61, .mask = 0x01, .ro = 0, .shift = 0},
+	[PMU_REG_BC_OVWR_KEY] = 	{.map = 0, .addr = 0x61, .mask = 0xF0, .ro = 0, .shift = 4},
 
 	/* interrupt */
 	[PMU_REG_INT_START] =			{.map = 0, .addr = 0x30, .mask = 0xFF, .ro = 0, .shift = 0},
@@ -245,6 +246,7 @@ static const struct bcmpmu_irq_map bcm59039_irq_map[PMU_IRQ_MAX] = {
 	[PMU_IRQ_SDSROVRI] =		{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x04},
 	[PMU_IRQ_ASROVRI] =		{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x08},
 	[PMU_IRQ_UBPD_CHG_F] =		{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x10},
+	[PMU_IRQ_FGC] =			{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x20},
 	[PMU_IRQ_ACD_INS] =		{.int_addr = 0x36, .mask_addr = 0x46, .bit_mask = 0x01},
 	[PMU_IRQ_ACD_RM] =		{.int_addr = 0x36, .mask_addr = 0x46, .bit_mask = 0x02},
 	[PMU_IRQ_PONKEYB_HOLD] =	{.int_addr = 0x36, .mask_addr = 0x46, .bit_mask = 0x04},
@@ -400,19 +402,6 @@ const unsigned int bcmpmu_chrgr_vfloat_settings[PMU_CHRGR_VOLT_MAX] = {
 	[PMU_CHRGR_VOLT_4350] = 0x07,
 	[PMU_CHRGR_VOLT_4375] = 0x07,
 };
-
-/*
-static const int bcm59055_usb_id_map[PMU_USB_ID_LVL_MAX] = {
-	[0] = 	PMU_USB_ID_GROUND,
-	[1] = 	PMU_USB_ID_NOT_SUPPORTED,
-	[2] = 	PMU_USB_ID_NOT_SUPPORTED,
-	[3] = 	PMU_USB_ID_RID_A,
-	[4] = 	PMU_USB_ID_RID_C,
-	[5] = 	PMU_USB_ID_RID_C,
-	[6] = 	PMU_USB_ID_NOT_SUPPORTED,
-	[7] = 	PMU_USB_ID_FLOAT,
-};
-*/
 
 static const int bcm59039_usb_id_map[PMU_USB_ID_LVL_MAX] = {
 	[0] = 	PMU_USB_ID_NOT_SUPPORTED,
