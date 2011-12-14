@@ -610,6 +610,9 @@ static void usb_det_work(struct work_struct *work)
 	if ((paccy->det_state == USB_DETECT) ||
 		(paccy->det_state == USB_RETRY))
 		return;
+	/*temp solution. move the BD_DET_EN clear out of the condition <(paccy->clock_en != 0)>, 
+	this condition sometimes not meet and the BC_DET_EN can not be cleared*/
+	bc_det_sts_clear(paccy);
 
 	if (paccy->clock_en != 0) {
 		enable_bc_clock(paccy, false);
