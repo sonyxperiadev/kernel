@@ -2123,6 +2123,9 @@ void AUDCTRL_SetAudioLoopback(
         hwCtrlConfig.sink = sink;
         hwCtrlConfig.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
         hwCtrlConfig.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
+        if(source == CSL_CAPH_DEV_BT_MIC) hwCtrlConfig.src_sampleRate = AUDIO_SAMPLING_RATE_8000; //how about WB?
+        if(sink == CSL_CAPH_DEV_BT_SPKR) hwCtrlConfig.snk_sampleRate = AUDIO_SAMPLING_RATE_8000; //how about WB?
+
         hwCtrlConfig.chnlNum = (speaker == AUDIO_SINK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
         hwCtrlConfig.bitPerSample = AUDIO_16_BIT_PER_SAMPLE;
 

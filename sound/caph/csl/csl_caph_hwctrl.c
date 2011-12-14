@@ -1641,14 +1641,14 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 			memset(&pcmCfg, 0, sizeof(pcmCfg));
 			pcmCfg.mode = CSL_PCM_MASTER_MODE;
 			pcmCfg.protocol = CSL_PCM_PROTOCOL_MONO;
-			pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT;
+			pcmCfg.format = CSL_PCM_WORD_LENGTH_PACK_16_BIT;
 			if (sspTDM_enabled)
 			{
 				pcmCfg.protocol   = CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL; //CSL_PCM_PROTOCOL_MONO;
 				pcmCfg.format     = CSL_PCM_WORD_LENGTH_24_BIT; //CSL_PCM_WORD_LENGTH_24_BIT;
 			}
-			if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC) pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
-			if(path->source == CSL_CAPH_DEV_MEMORY) pcmCfg.format = CSL_PCM_WORD_LENGTH_PACK_16_BIT;
+			if(path->source==CSL_CAPH_DEV_DSP || path->sink[sinkNo]==CSL_CAPH_DEV_DSP) pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT; //this is unpacked 16bit, 32bit per sample with msb = 0
+			else if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC) pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
 			pcmCfg.sample_rate = path->snk_sampleRate;
 			if (path->source == CSL_CAPH_DEV_DSP) pcmCfg.sample_rate = path->src_sampleRate;
 			pcmCfg.interleave = TRUE;
@@ -1799,7 +1799,12 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID, int sinkNo, int startO
 			//csl_pcm_start(pcmHandleSSP, &pcmCfg);
 #endif
 		} else {
-			if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && bBTTest) udelay(500); //without small delay, BT production test is not consistent.
+			//if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && bBTTest) udelay(500); //without small delay, BT production test is not consistent.
+			//For BT-to-EP HW loopback to work consistently, one of these options is required, need to find out the reason later:
+			//- use SRCMixer input trigger, instead of SSP RX trigger.
+			//- use internal SSP loopback, instead of external loopback via jumper.
+			//- this delay.
+			udelay(500);
 			csl_pcm_start(pcmHandleSSP, &pcmCfg);
 		}
 
