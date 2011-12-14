@@ -64,16 +64,16 @@ static ssize_t dump_hsotgctrl(struct device *dev,
 	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata = dev_get_drvdata(dev);
 	void __iomem *hsotg_ctrl_base = hsotgctrl_drvdata->hsotg_ctrl_base;
 
-	printk("\nusbotgcontrol: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
-	printk("\nphy_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET));
-	printk("\nphy_p1ctl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET));
-	printk("\nbc11_status: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC_STATUS_OFFSET));
-	printk("\nbc11_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET));
-	printk("\ntp_in: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_IN_OFFSET));
-	printk("\ntp_out: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_OUT_OFFSET));
-	printk("\nphy_ctrl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CTRL_OFFSET));
-	printk("\nusbreg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBREG_OFFSET));
-	printk("\nusbproben: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBPROBEN_OFFSET));
+	pr_info("\nusbotgcontrol: 0x%08X", readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
+	pr_info("\nphy_cfg: 0x%08X", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET));
+	pr_info("\nphy_p1ctl: 0x%08X", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET));
+	pr_info("\nbc11_status: 0x%08X", readl(hsotg_ctrl_base + HSOTG_CTRL_BC_STATUS_OFFSET));
+	pr_info("\nbc11_cfg: 0x%08X", readl(hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET));
+	pr_info("\ntp_in: 0x%08X", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_IN_OFFSET));
+	pr_info("\ntp_out: 0x%08X", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_OUT_OFFSET));
+	pr_info("\nphy_ctrl: 0x%08X", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CTRL_OFFSET));
+	pr_info("\nusbreg: 0x%08X", readl(hsotg_ctrl_base + HSOTG_CTRL_USBREG_OFFSET));
+	pr_info("\nusbproben: 0x%08X", readl(hsotg_ctrl_base + HSOTG_CTRL_USBPROBEN_OFFSET));
 
 	return sprintf(buf, "hsotgctrl register dump\n");
 }
