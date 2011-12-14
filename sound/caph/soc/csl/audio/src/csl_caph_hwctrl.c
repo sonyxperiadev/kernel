@@ -203,6 +203,8 @@ static void csl_caph_hwctrl_ACIControl(void);
 static Boolean csl_caph_hwctrl_allPathsDisabled(void);
 static CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void);
 
+static void csl_caph_hwctrl_set_srcmixer_filter(CSL_CAPH_HWConfig_Table_t *audioPath);
+
 //******************************************************************************
 // local function definitions
 //******************************************************************************
@@ -1290,6 +1292,7 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID pathID, int blockPathIdx)
 		pSrcmRoute->mixGain.mixOutCoarseGainR	= BIT_SELECT;
 	}
 	csl_caph_srcmixer_config_mix_route(path->srcmRoute[blockIdx]);
+    csl_caph_hwctrl_set_srcmixer_filter(path);
 }
 
 // ==========================================================================
@@ -1315,6 +1318,7 @@ static void csl_caph_config_src(CSL_CAPH_PathID pathID, int blockPathIdx)
 	//pSrcmRoute = &path->srcmRoute[blockIdx];
 
 	csl_caph_srcmixer_config_src_route(path->srcmRoute[blockIdx]);
+    csl_caph_hwctrl_set_srcmixer_filter(path);
 }
 
 
@@ -2747,6 +2751,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
         csl_caph_obtain_blocks(path->pathID, 0, OBTAIN_BLOCKS_NORMAL);
     }
 
+    csl_caph_hwctrl_set_srcmixer_filter(path);
+
     return path->pathID;
 }
 
@@ -2774,6 +2780,9 @@ CSL_CAPH_PathID csl_caph_hwctrl_StartPath(CSL_CAPH_PathID pathID)
 		csl_caph_config_blocks(path->pathID, path->block);
 		csl_caph_start_blocks(path->pathID);
 	}
+   
+    csl_caph_hwctrl_set_srcmixer_filter(path);
+    
     path->status = PATH_OCCUPIED;
 
     return path->pathID;
@@ -4097,3 +4106,25 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus)
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_ConfigSSP:: new fmHandleSSP %p, pcmHandleSSP %p.\r\n", fmHandleSSP, pcmHandleSSP));
 }
 
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_hwctrl_set_srcmixer_filter(
+*                                       CSL_CAPH_HWConfig_Table_t audioPath)
+*
+*  Description: Set the SRCMixer's SRC input filter type based on whether it
+*               is a voice call or not.
+*
+****************************************************************************/
+static void csl_caph_hwctrl_set_srcmixer_filter(CSL_CAPH_HWConfig_Table_t *audioPath)
+{
+    if(!audioPath) return;
+    if((audioPath->source == CSL_CAPH_DEV_DSP)
+        ||(audioPath->sink == CSL_CAPH_DEV_DSP))
+        //csl_caph_srcmixer_set_minimum_filter(audioPath->routeConfig.inChnl);
+        csl_caph_srcmixer_set_minimum_filter( audioPath->srcmRoute[0].inChnl );
+    else
+        //csl_caph_srcmixer_set_linear_filter(audioPath->routeConfig.inChnl);
+        csl_caph_srcmixer_set_linear_filter( audioPath->srcmRoute[0].inChnl );
+    return;
+}

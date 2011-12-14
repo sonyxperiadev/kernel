@@ -2212,3 +2212,32 @@ void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH
 	return;
 }
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_srcmixer_set_linear_filter
+*
+*  Description: Set the filter type to be Linear in SRC.
+*
+****************************************************************************/
+void csl_caph_srcmixer_set_linear_filter(CSL_CAPH_SRCM_INCHNL_e inChnl)
+{
+    CAPH_SRCMixer_CHNL_e chalChnl = CAPH_SRCM_CH_NONE; 
+    chalChnl = csl_caph_srcmixer_get_single_chal_inchnl(inChnl);
+    chal_caph_srcmixer_set_filter_type(handle, chalChnl, CAPH_SRCM_LINEAR_PHASE);
+	return;
+}
+/****************************************************************************
+*
+*  Function Name: csl_caph_srcmixer_set_minimum_filter
+*
+*  Description: Set the filter type to be Minimum in SRC.
+*
+****************************************************************************/
+void csl_caph_srcmixer_set_minimum_filter(CSL_CAPH_SRCM_INCHNL_e inChnl)
+{
+    CAPH_SRCMixer_CHNL_e chalChnl = CAPH_SRCM_CH_NONE; 
+    chalChnl = csl_caph_srcmixer_get_single_chal_inchnl(inChnl);
+    chal_caph_srcmixer_set_filter_type(handle, chalChnl, CAPH_SRCM_MINIMUM_PHASE);
+	return;
+}
+
