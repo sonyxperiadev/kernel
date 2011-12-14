@@ -190,19 +190,14 @@ static const struct attribute_group bcmpmu_em_attr_group = {
 };
 #endif
 
-static int em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int curr)
+static int em_batt_get_capacity(struct bcmpmu_em *pem, int pvolt, int curr)
 {
 	int capacity;
 	int batt_volt;
 
-	int comp = 1;
+	int volt = pvolt;
 	
-	if ((pem->chrgr_type != PMU_CHRGR_TYPE_NONE) ||
-		(pem->bcmpmu->get_env_bit_status(pem->bcmpmu, PMU_ENV_MBMC) == false))
-		comp = 0;
-
-	if (comp)
-		batt_volt = volt - (pem->batt_impedence * curr)/1000;
+	volt = pvolt - (pem->batt_impedence * curr)/1000;
 	else
 		batt_volt = volt;
 	
@@ -216,8 +211,8 @@ static int em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int curr)
 	else if (batt_volt > 3800) capacity = 55;
 	else if (batt_volt > 3750) capacity = 45;
 	else if (batt_volt > 3700) capacity = 25;
-	else if (batt_volt > 3650) capacity = 15;
-	else if (batt_volt > 3550) capacity = 5;
+	pr_em(FLOW, "%s, cpcty=%d, pvlt=%d, crr=%d, vlt=%d, imp=%d\n",
+		__func__, cap, pvolt, curr, volt, pem->batt_impedence);
 	else if (batt_volt > 3350) capacity = 2;
 	else capacity = 0;
 
@@ -272,6 +267,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem)
 			capacity++;
 		capacity_v = em_batt_get_capacity(pem,
 				pem->batt_volt, pem->batt_curr);
+			(pem->mode != MODE_CHRG) &&
 		pr_em(FLOW, "%s, fg_acc=%d, fg_cpcty=%d, cpcty=%d, vcpcty=%d, t=%d\n",
 			__func__, fg_result, pem->fg_capacity, capacity,
 			capacity_v, pem->batt_temp);
