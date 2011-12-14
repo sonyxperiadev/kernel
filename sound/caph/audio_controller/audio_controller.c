@@ -385,19 +385,25 @@ void AUDCTRL_SetTelephonyMicSpkr(
 
     if( source==AUDIO_SOURCE_USB || sink==AUDIO_SINK_USB )
 	return;
-/**
+
     if( AUDDRV_InVoiceCall( ) == FALSE )
     {
       voiceCallSpkr = sink;
       voiceCallMic = source;
+      //when phone is idle, if PCG changed audio mode, here need to save it on AP side.
 #if defined(USE_NEW_AUDIO_PARAM)
       AUDCTRL_SaveAudioModeFlag( AUDDRV_GetAudioModeBySink(sink), AUDCTRL_GetAudioApp() );
 #else
       AUDCTRL_SaveAudioModeFlag( AUDDRV_GetAudioModeBySink(sink) );
 #endif
+
+	  //if PCG changed audio mode when phone is idle, here need to pass audio mode to CP.
+	  //so that parameter read by AT*MAUDTUNE=2 will be for the new audio mode.
+	  audio_control_generic( AUDDRV_CPCMD_PassAudioMode, (UInt32)AUDDRV_GetAudioModeBySink(sink), 0, 0, 0, 0 );
+
       return;
     }
-**/
+
     if(voiceCallMic==source && voiceCallSpkr==sink)
       return;
 
@@ -681,10 +687,12 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
     if( mode==AUDDRV_GetAudioMode() )
       return;
 
-    //if ( !AUDDRV_InVoiceCall() )
-    //{
-    //  AUDDRV_SaveAudioMode( mode );
-    //}
+    if ( !AUDDRV_InVoiceCall() )
+    {
+        //for music tuning, if PCG changed audio mode when phone is in idle mode, here need to pass audio mode to CP.
+        //so that AT*MAUDTUNE=3 applies parameter change based on the new audio mode on CP side.
+        audio_control_generic( AUDDRV_CPCMD_PassAudioMode, (UInt32)mode, 0, 0, 0, 0 );
+    }
 
     if(!bClk) csl_caph_ControlHWClock(TRUE); //enable clock if it is not enabled.
 
