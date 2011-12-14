@@ -392,7 +392,7 @@ int tsp_i2c_read_melfas(u8 reg, unsigned char *rbuf, int buf_size) //same with t
 
 		if( i == (retry - 1) )
 		{
-			printk("[TSP] Error code : %d, %d\n", __LINE__, ret );
+			printk("[TSP] Error code : %d, %d, %d\n", __LINE__, ret, retry);
 		}
 	}
 
@@ -900,7 +900,7 @@ int melfas_ts_check(struct melfas_ts_data *ts)
 {
 	int ret, i;
 	uint8_t buf_tmp[3]={0,0,0};
-	int retry = 300;
+	int retry = 3;
 	uint8_t VenderID;
 
 	ret = tsp_i2c_read_melfas(0x1B, buf_tmp, sizeof(buf_tmp));		

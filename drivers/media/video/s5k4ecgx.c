@@ -104,8 +104,9 @@ static const struct s5k4ecgx_datafmt s5k4ecgx_fmts[] = {
 	 * Order important: first natively supported,
 	 * second supported with a GPIO extender
 	 */
-	{V4L2_MBUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_JPEG},
 	{V4L2_MBUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
+	{V4L2_MBUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
+	
 };
 
 enum s5k4ecgx_size {
@@ -743,7 +744,7 @@ static int s5k4ecgx_try_fmt(struct v4l2_subdev *sd,
 
 	mf->width = s5k4ecgx_frmsizes[i_size].width;
 	mf->height = s5k4ecgx_frmsizes[i_size].height;
-	printk("s5k4ecgx_try_fmt X\n");
+	printk("s5k4ecgx_try_fmt, mf->code = 0x%x, mf->colorspace = 0x%x X\n",mf->code,mf->colorspace);
 
 	return 0;
 }
@@ -763,6 +764,7 @@ static int s5k4ecgx_s_fmt(struct v4l2_subdev *sd,
 
 	s5k4ecgx->i_size = s5k4ecgx_find_framesize(mf->width, mf->height);
 	s5k4ecgx->i_fmt = s5k4ecgx_find_datafmt(mf->code);
+	printk("fmt = 0x%x\n",(u32)s5k4ecgx_fmts[s5k4ecgx->i_fmt].code);
 
 	switch ((u32)s5k4ecgx_fmts[s5k4ecgx->i_fmt].code) {
 	case V4L2_MBUS_FMT_UYVY8_2X8:
@@ -1122,7 +1124,8 @@ static int s5k4ecgx_enum_framesizes(struct v4l2_subdev *sd,
 		return -EINVAL;
 
 	fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-	fsize->pixel_format = V4L2_PIX_FMT_UYVY;
+	//fsize->pixel_format = V4L2_PIX_FMT_UYVY;
+	fsize->pixel_format = V4L2_PIX_FMT_YUYV; //@HW 
 
 	fsize->discrete = s5k4ecgx_frmsizes[fsize->index];
 	printk("s5k4ecgx_enum_framesizes E\n");

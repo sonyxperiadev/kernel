@@ -75,7 +75,7 @@
 #include <plat/csl/csl_tectl_vc4lite.h>
 #endif
 #endif
-#define LCD_DBG(id, fmt, args...)         printk(KERN_ERR fmt, ##args)
+#define LCD_DBG(id, fmt, args...)   //      printk(KERN_ERR fmt, ##args)
 #include "lcd_s6d05a1x31.h" 
 #define VC            (0)
 #define DISPDRV_CMND_IS_LP    TRUE  // display init comm LP or HS mode
@@ -105,6 +105,8 @@ typedef struct
     UInt32              busId;
     UInt32              teIn;
     UInt32              teOut;
+    Boolean             isTE;
+    Boolean             is_hw_TE;
     LCD_DRV_RECT_t      win;
     void*               pFb;
     void*               pFbA;
@@ -222,7 +224,7 @@ CSL_DSI_CM_VC_t DISPDRV_VcCmCfg =
     // TE configuration
     {
 #if defined(_HERA_)  || defined(_RHEA_)  
-        DSI_TE_NONE,//DSI_TE_CTRLR_INPUT_0, //DSI_TE_NONE,         // DSI Te Input Type
+       DSI_TE_NONE,//DSI_TE_CTRLR_INPUT_0, //DSI_TE_NONE,         // DSI Te Input Type
 #else
         DSI_TE_NONE, //DSI_TE_CTRLR_INPUT_0, //DSI_TE_NONE,         // DSI Te Input Type
         #if ( defined (_ATHENA_)&& (CHIP_REVISION >= 20) ) 
@@ -268,7 +270,7 @@ static CSL_DSI_CFG_t DISPDRV_dsiCfg = {
     FALSE,         // enaLpRxEotPkt        
 };    
 
-#define printk(format, arg...)	do {} while (0)
+//#define printk(format, arg...)	do {} while (0)
 
 static  DISPDRV_PANEL_T   panel[2];
 
@@ -323,6 +325,34 @@ static int DISPDRV_TeOff ( DISPDRV_PANEL_T *pPanel )
 }
 
 
+static void DISPDRV_WrCmndPn( 
+    DISPDRV_HANDLE_T    drvH, 
+    UInt32              Pn, 
+    UInt8*              Pdata
+    )
+{
+    DISPDRV_PANEL_T *pPanel = (DISPDRV_PANEL_T *)drvH;
+    CSL_DSI_CMND_t      msg;
+  //  UInt8               msgData[4];
+	UInt32 i;
+	
+    if(Pn <=2)
+	{
+		msg.dsiCmnd    = DSI_DT_SH_DCS_WR_P1;
+		msg.isLong = TRUE;
+	}
+	else
+	{
+		msg.dsiCmnd    = DSI_DT_LG_DCS_WR;
+		msg.isLong = FALSE;
+	}
+    msg.msg        = &Pdata[0];
+    msg.msgLen     = Pn;
+    msg.vc         = VC;
+    msg.isLP       = DISPDRV_CMND_IS_LP;   
+    msg.endWithBta = FALSE;	
+    CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
+}
 //*****************************************************************************
 //
 // Function Name:  bcm91008_alex_WrCmndP1
@@ -354,7 +384,7 @@ static void DISPDRV_WrCmndP1(
     msgData[0] = reg;                                  
     msgData[1] = value & 0x000000FF;   
     
-    CSL_DSI_SendPacket (pPanel->clientH, &msg);   
+    CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
 }
 
 //*****************************************************************************
@@ -377,7 +407,7 @@ static void DISPDRV_WrCmndP0(
     
     msg.dsiCmnd    = DSI_DT_SH_DCS_WR_P0;
     msg.msg        = &msgData[0];
-    msg.msgLen     = 2;
+    msg.msgLen     = 1;
     msg.vc         = VC;
     msg.isLP       = DISPDRV_CMND_IS_LP;
     msg.isLong     = FALSE;
@@ -386,7 +416,7 @@ static void DISPDRV_WrCmndP0(
     msgData[0] = reg;                                  
     msgData[1] = 0;   
     
-    CSL_DSI_SendPacket (pPanel->clientH, &msg);   
+    CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
 }
 
 //*****************************************************************************
@@ -461,7 +491,7 @@ static int DISPDRV_IoCtlRd(
     msg.reply      = &rxMsg;
 
     txData[0] = acc->cmnd;                                    
-    cslRes = CSL_DSI_SendPacket ( pPanel->clientH, &msg );
+    cslRes = CSL_DSI_SendPacket ( pPanel->clientH, &msg, FALSE );
     
     if( cslRes != CSL_LCD_OK )
     {
@@ -515,7 +545,53 @@ static int DISPDRV_IoCtlRd(
     return ( res );
 } // bcm91008_alex_IoCtlRd
 
+//*****************************************************************************
+//
+// Function Name:  DISPDRV_ReadID
+// 
+// Parameters:     
+//
+// Description:    
+//
+//*****************************************************************************
 
+static int DISPDRV_ReadID( DISPDRV_HANDLE_T drvH,UInt8 reg )
+{
+	DISPDRV_PANEL_T  *pPanel = (DISPDRV_PANEL_T *)drvH;
+	CSL_DSI_CMND_t      	msg;         
+	volatile CSL_DSI_REPLY_t 	rxMsg;	    // DSI RX message
+	UInt8               	txData[1];  // DCS Rd Command
+	volatile UInt8             	rxBuff[1];  // Read Buffer
+	Int32               	res = 0;
+	CSL_LCD_RES_T       	cslRes;
+	
+    
+    
+	msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
+	msg.msg        = &txData[0];
+	msg.msgLen     = 1;
+	msg.vc         = VC;
+	msg.isLP       = DISPDRV_CMND_IS_LP;
+	msg.isLong     = FALSE;
+	msg.endWithBta = TRUE;
+
+	rxMsg.pReadReply = (UInt8 *)&rxBuff[0];
+	msg.reply      = (CSL_DSI_REPLY_t *)&rxMsg;
+
+    	
+	txData[0] = reg;                                    
+	cslRes = CSL_DSI_SendPacket( pPanel->clientH, &msg, FALSE );
+	if( (cslRes != CSL_LCD_OK) || ((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0) )
+	{
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
+			"Reading From Reg[0x%08X]\n\r", 
+			__FUNCTION__, (unsigned int)RDID1 );
+		return -1;   
+		
+	}
+	return(rxBuff[0]);    
+    
+} // bcm91008_ale
 //*****************************************************************************
 //
 // Function Name:   bcm92416_hvga_ExecCmndList
@@ -525,7 +601,7 @@ static int DISPDRV_IoCtlRd(
 //*****************************************************************************
 static void DISPDRV_ExecCmndList( 
     DISPDRV_HANDLE_T     drvH, 
-    pDISPCTRL_REC_T      cmnd_lst 
+    pNEW_DISPCTRL_REC_T      cmnd_lst 
     )
 {
     UInt32  i = 0;
@@ -534,16 +610,18 @@ static void DISPDRV_ExecCmndList(
     {
         if (cmnd_lst[i].type == DISPCTRL_WR_CMND_DATA)
         {
-            DISPDRV_WrCmndP1 (drvH, cmnd_lst[i].cmnd, cmnd_lst[i].data);
+			
+            DISPDRV_WrCmndPn (drvH, cmnd_lst[i].number,cmnd_lst[i].data);
         }
         else if (cmnd_lst[i].type == DISPCTRL_WR_CMND)
         {	
-            DISPDRV_WrCmndP1 (drvH, cmnd_lst[i].cmnd, NULL);
+            DISPDRV_WrCmndP0 (drvH, cmnd_lst[i].data[0]);
         }
         else if (cmnd_lst[i].type == DISPCTRL_SLEEP_MS)
         {
-            OSTASK_Sleep ( TICKS_IN_MILLISECONDS(cmnd_lst[i].data) );
+            OSTASK_Sleep ( TICKS_IN_MILLISECONDS(cmnd_lst[i].data[0]) );
         }
+		
         i++;
     }
 } // bcm92416_hvga_ExecCmndList
@@ -653,14 +731,14 @@ static Int32 DISPDRV_Reset( Boolean force )
     
     if( !rst0present )
     {
-	printk(KERN_ERR "the main reset is not used");
+	
         LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
             "WARNING Only HAL_LCD_RESET B/C defined\n");
     }
 
     if( !rst1present )
     {
-	printk(KERN_ERR "the reset B is not used");
+	
         LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
             "WARNING Only HAL_LCD_RESET B/C defined\n");
     }
@@ -784,6 +862,9 @@ Int32 DISPDRV_Open (
     pPanel->pFb = pPanel->pFbA = (void*)&FrameBuff[busId];
 #endif
    
+    pPanel->isTE = DISPDRV_VcCmCfg.teCfg.teInType != DSI_TE_NONE;
+    pPanel->is_hw_TE = DISPDRV_VcCmCfg.teCfg.teInType != DSI_TE_CTRLR_TRIG;
+
 #if (defined (_HERA_) || defined(_RHEA_))
     if( busId == 0 )
     {
@@ -813,7 +894,7 @@ Int32 DISPDRV_Open (
     }
 #endif
 
-    if( DISPDRV_TeOn ( pPanel ) ==  -1 )
+    if(pPanel->is_hw_TE&&DISPDRV_TeOn ( pPanel ) ==  -1 )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
             "Failed To Configure TE Input\n", __FUNCTION__ ); 
@@ -863,6 +944,7 @@ Int32 DISPDRV_Open (
     pPanel->drvState   = DRV_STATE_OPEN;
     
     *drvH = (DISPDRV_HANDLE_T) pPanel;
+
     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
     
     return ( res );
@@ -907,7 +989,8 @@ Int32 DISPDRV_Close ( DISPDRV_HANDLE_T drvH )
     }
     
 #if (defined (_HERA_) || defined(_RHEA_))
-    DISPDRV_TeOff ( pPanel );
+    if (pPanel->is_hw_TE) 
+    	DISPDRV_TeOff ( pPanel );
 #endif
 
 #if 0
@@ -951,8 +1034,8 @@ Int32 DISPDRV_PowerControl (
                 case DISP_PWR_OFF:
 					//@HW temorary code, turn on backlight
 					gpio_request(95,"BK_LIGHT");
-					gpio_direction_output(95, 0);
-					gpio_set_value_cansleep(95, 1);
+					gpio_direction_output(95, 1);
+				//	gpio_set_value_cansleep(95, 1);
 
 					
 					DISPDRV_ExecCmndList(drvH, &power_on_seq_s5d05a1x31_cooperve_AUO[0]);
@@ -1174,7 +1257,8 @@ Int32 DISPDRV_Update_ExtFb (
     else
        req.cslLcdCb = NULL;
         
-    if ( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req ) != CSL_LCD_OK )
+ if ( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req, pPanel->isTE )
+		!= CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR ret by "
             "CSL_DSI_UpdateCmVc\n\r", __FUNCTION__ );
@@ -1227,7 +1311,7 @@ Int32 DISPDRV_Update (
     req.buffBpp        = 2; //2; //4;   //@HW 
     req.timeOut_ms     = 100;
    
-    printk(KERN_ERR "buf=%08x, linelenp = %d, linecnt =%d\n", (u32)req.buff, req.lineLenP, req.lineCount);
+    
     req.cslLcdCbRec.cslH            = pPanel->clientH;
     req.cslLcdCbRec.dispDrvApiCbRev = DISP_DRV_CB_API_REV_1_0;
     req.cslLcdCbRec.dispDrvApiCb    = (void*) apiCb;
@@ -1238,7 +1322,8 @@ Int32 DISPDRV_Update (
     else
        req.cslLcdCb = NULL;
     
-    if ( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req ) != CSL_LCD_OK )
+    if ( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req, pPanel->isTE )
+		!= CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR ret by "
             "CSL_DSI_UpdateCmVc\n\r", __FUNCTION__ );
