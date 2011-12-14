@@ -441,45 +441,6 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			break;
 
 	case 121: //at*maudtst=121,x,y  // x=0: EXT_SPEAKER_PGA, x=1:EXT_SPEAKER_PREPGA, x=2: MIC_PGA, y: gain value register value(enum value)
-            if (Params[1] == 0) // EXT_SPEAKER_PGA
-            {
-#ifdef CONFIG_BCMPMU_AUDIO
-				int gain;
-#if defined(USE_NEW_AUDIO_PARAM)
-				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET)
-                     || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY))
-#else
-				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB)
-                     || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )
-#endif
-				{
-                    AUDIO_PMU_IHF_POWER(FALSE);
-                    AUDIO_PMU_HS_POWER(TRUE);
-                    gain = Params[2]; // gain
-                    AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, gain);
-                    BCM_AUDIO_DEBUG("%s ext headset speaker gain = %ld \n", __FUNCTION__, Params[2]);
-				}
-#if defined(USE_NEW_AUDIO_PARAM)
-				else if (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE)
-#else
-				else if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE) || (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE_WB) )
-#endif
-				{
-                    AUDIO_PMU_HS_POWER(FALSE);
-                    AUDIO_PMU_IHF_POWER(TRUE);
-                    gain = Params[2]; // gain
-                    AUDIO_PMU_IHF_SET_GAIN(gain);
-                    BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %ld \n", __FUNCTION__, Params[2]);
-				}
-#endif
-
-                return 0;
-            }
-            else
-            {
-                BCM_AUDIO_DEBUG("%s Not supported command \n", __FUNCTION__);
-                return -1;
-            }
 			//PCG on Rhea platform uses at*maudmode=100,3, 
             break;
 

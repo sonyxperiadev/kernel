@@ -533,5 +533,25 @@ void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM
 *****************************************************************************/
 UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
 
+/**
+*
+*  @brief  Set the filter type to be Linear in SRC.
+*
+*  @param   inChnl  (in) csl SRC inchnl
+*
+*  @return void
+****************************************************************************/
+void csl_caph_srcmixer_set_linear_filter(CSL_CAPH_SRCM_INCHNL_e inChnl);
+
+/**
+*
+*  @brief  Set the filter type to be Minimum in SRC.
+*
+*  @param   inChnl  (in) csl SRC inchnl
+*
+*  @return void
+****************************************************************************/
+void csl_caph_srcmixer_set_minimum_filter(CSL_CAPH_SRCM_INCHNL_e inChnl);
+
 #endif // _CSL_CAPH_SRCMIXER_
 

@@ -385,7 +385,7 @@ void AUDCTRL_SetTelephonyMicSpkr(
 
     if( source==AUDIO_SOURCE_USB || sink==AUDIO_SINK_USB )
 	return;
-
+/**
     if( AUDDRV_InVoiceCall( ) == FALSE )
     {
       voiceCallSpkr = sink;
@@ -397,7 +397,7 @@ void AUDCTRL_SetTelephonyMicSpkr(
 #endif
       return;
     }
-
+**/
     if(voiceCallMic==source && voiceCallSpkr==sink)
       return;
 
