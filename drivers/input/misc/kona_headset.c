@@ -88,6 +88,7 @@ struct mic_t {
 	struct input_dev *headset_button_idev;
 	int hs_state;
 	int button_state;
+	int button_pressed;
 };
 
 static struct mic_t *mic_dev = NULL;
@@ -106,11 +107,48 @@ enum hs_type {
 	OPEN_CABLE_DETECTED
 };
 
+enum button_name {
+	BUTTON_SEND_END = 0,
+	BUTTON_VOLUME_UP = 1,
+	BUTTON_VOLUME_DOWN = 2,
+	BUTTON_NAME_MAX
+};
+
 enum button_state {
 	BUTTON_RELEASED = 0,
 	BUTTON_PRESSED
 };
+/* TODO: Move this table to board file and get the pointer to it */
+ 
+unsigned int button_adc_values_no_resistor [3][2] = 
+{
+	/* SEND/END Min, Max*/
+	{0,	104},
+	/* Volume Up  Min, Max*/
+	{139,	270},
+	/* Volue Down Min, Max*/
+	{330,	680},
+};
 
+unsigned int button_adc_values_1_point_35K [3][2] = 
+{
+	/* SEND/END Min, Max*/
+	{9,	83},
+	/* Volume Up  Min, Max*/
+	{117,	183},
+	/* Volue Down Min, Max*/
+	{202,	314},
+};
+
+unsigned int button_adc_values_1_point_25K [3][2] = 
+{
+	/* SEND/END Min, Max*/
+	{10,	88},
+	/* Volume Up  Min, Max*/
+	{127,	215},
+	/* Volue Down Min, Max*/
+	{242,	417},
+};
 /* 
  * API controllers
  */
@@ -447,6 +485,59 @@ int detect_hs_type(struct mic_t *mic_dev)
 	return type;
 }
 
+int detect_button_pressed (struct mic_t *mic_dev)
+{
+	int i;
+	int mic_level;
+
+	if (mic_dev == NULL) {
+		pr_err("mic_dev is empty \r\n");
+		return 0;
+	}
+
+	/*
+	 * What is phone_ref_offset?
+	 *
+	 * Because of the resistor in the MIC IN line the actual ground is not 0,
+	 * but a small offset is added to it. We call this as
+	 * phone_ref_offset.
+	 * This needs to be subtracted from the measured voltage to determine
+	 * the correct value. This will vary for different HW based on the
+	 * resistor values used. So by default this variable is 0, if no one
+	 * initializes it. For boards on which this resistor is present this
+	 * value should be passed from the board specific data structure
+	 *
+	 * In the below logic, if mic_level read is less than or equal to 0
+	 * then we don't do anything.
+	 * If the read value is greater than  phone_ref_offset then subtract this offset
+	 * from the value read, otherwise mic_level is zero
+	 */
+	mic_level = chal_aci_block_read(mic_dev->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ADC, CHAL_ACI_BLOCK_ADC_RAW);
+	pr_debug("%s(): mic_level before calc %d \r\n", __func__, mic_level);
+	mic_level = mic_level <= 0 ? mic_level :
+		((mic_level > mic_dev->headset_pd->phone_ref_offset) ?
+		(mic_level - mic_dev->headset_pd->phone_ref_offset) : 0);
+	pr_debug("%s():mic_level after calc %d \r\n", __func__, mic_level);
+
+
+	/* Find out what is the button pressed */
+
+	/* TODO: Take the table based on what is passed from the board */
+	for (i=BUTTON_SEND_END;i<BUTTON_NAME_MAX;i++) {
+		if((mic_level >= button_adc_values_no_resistor[i][0]) &&
+		   (mic_level <= button_adc_values_no_resistor[i][1])) 
+			//pr_info("\n button_adc_values_no_resistor i0=%d \n", button_adc_values_no_resistor[i][0]);
+			//pr_info("\n button_adc_values_no_resistor i1 =%d \n", button_adc_values_no_resistor[i][1]);
+			break;
+	}
+
+	return i; 
+}
+
+
+
+
 /*------------------------------------------------------------------------------
     Function name   : button_press_work_func
     Description     : Work function that will send the button press/release
@@ -458,6 +549,9 @@ static void button_press_work_func(struct work_struct *work)
 	struct mic_t *p = container_of(work, struct mic_t,
 						button_press_work.work);
 
+	
+	int err = 0;
+	int button_name;	
 	/* 
 	 * Just to be sure check whether this is happened when the
 	 * Headset accessory is inserted,
@@ -465,12 +559,53 @@ static void button_press_work_func(struct work_struct *work)
 	 * _OR_ when none of the accessory is conneceted its spurious
 	 *
 	 */
+#if 0
 	if ((p->hs_state == HEADSET) && (p->button_state == BUTTON_RELEASED)) {
 		p->button_state = BUTTON_PRESSED;
 		pr_info(" Sending Key Press\r\n");
 		input_report_key(p->headset_button_idev, KEY_SEND, 1);
 		input_sync(p->headset_button_idev);
 	}
+#endif
+
+	if (p->hs_state == HEADSET) {
+		/* Find out the type of button pressed by reading the ADC values */
+		button_name = detect_button_pressed(p);
+
+		/* 
+	 	 * Store which button is being pressed (KEY_VOLUMEUP, KEY_VOLUMEDOWN, KEY_SEND) 
+	 	 * in the context structure 
+	 	 */
+		pr_info("\n Button  Pressed=%d \n", button_name );	 	
+		switch (button_name) {
+			case BUTTON_SEND_END:
+				p->button_pressed = KEY_SEND;
+				break;
+			case BUTTON_VOLUME_UP:
+				p->button_pressed = KEY_VOLUMEUP;
+				break;
+			case BUTTON_VOLUME_DOWN:
+				p->button_pressed = KEY_VOLUMEDOWN;
+				break;
+			default:
+				pr_err("Button type not supported \r\n");
+			        err = 1;	
+				break;
+	 	}
+
+		if (err)
+			goto out;
+
+		/* Notify the same to input sub-system */
+		p->button_state = BUTTON_PRESSED;
+		pr_info(" Press =%d \r\n", p->button_pressed );
+		input_report_key(p->headset_button_idev, p->button_pressed, 1);
+		input_sync(p->headset_button_idev);
+	} else {
+		pr_err("Button press work scheduled when the accessory type is NOT Headset .. spurious \r\n");
+	}
+out:
+	return;
 }
 
 static void button_release_work_func (struct work_struct *work)
@@ -552,7 +687,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 
 		case HEADSET:
 			pr_debug("accessory_detect_work_func: Detected headset config for button press \r\n");
-
+			pr_info("\n HEADSET Detected \n");
 			/* Put back the aci interface to be able to detect the
 			 * button press. Especially this functions puts the
 			 * COMP2 and MIC BIAS values to be able to detect
@@ -595,8 +730,10 @@ static void accessory_detect_work_func(struct work_struct *work)
 				CHAL_ACI_BLOCK_COMP2_INV);
 
 			/* Fall through to send the update to userland */
+			break;	
 		case HEADPHONE:
-			pr_info("\n\n Case HEADPHONE \n");
+			
+			pr_info("\n HEADPHONE Detected \n");
 			/* Clear pending interrupts if any */
 			chal_aci_block_ctrl(p->aci_chal_hdl,	
 				CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
@@ -716,7 +853,9 @@ static int hs_inputdev(struct mic_t *p)
 	 * Since we have only one button on headset,value KEY_SEND is sent */
 	set_bit(EV_KEY, p->headset_button_idev->evbit);
 	set_bit(KEY_SEND, p->headset_button_idev->keybit);
-	p->headset_button_idev->name = "bcm_headset";
+	set_bit(KEY_VOLUMEDOWN, p->headset_button_idev->keybit);
+        set_bit(KEY_VOLUMEUP, p->headset_button_idev->keybit);
+        p->headset_button_idev->name = "bcm_headset";
 	p->headset_button_idev->phys = "headset/input0";
 	p->headset_button_idev->id.bustype = BUS_HOST;
 	p->headset_button_idev->id.vendor = 0x0001;
@@ -911,6 +1050,7 @@ static int aci_interface_init (struct mic_t *p)
 	 * Connect P_MIC_DATA_IN to P_MIC_OUT  and P_MIC_OUT to COMP2
 	 * Note that one API can do this.
 	 */
+	pr_info("\n\n Calling aci_interface_init for MIC bias \n");
 	chal_aci_set_mic_route (p->aci_chal_hdl, CHAL_ACI_MIC_ROUTE_MIC);
 
 	pr_debug ("=== aci_interface_init: Configured MIC route \r\n");
