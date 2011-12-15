@@ -181,6 +181,8 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(MMC1DAT6, GPIO72, 0, OFF, ON, 0, 0, 8MA),
     /*CAM PWDN*/
 	PIN_CFG(MMC1DAT5, GPIO73, 0, OFF, ON, 0, 0, 8MA),
+	/* camera - setup DCLK1 */
+	PIN_CFG(DCLK1, DCLK1, 0, ON, OFF, 0, 0, 12MA),
     /*WLAN HOST WAKE*/
 	PIN_CFG(MMC1DAT4, GPIO74, 0, OFF, ON, 0, 0, 8MA),
     /*SD DETECT*/
@@ -243,6 +245,7 @@ static struct __init pin_config board_pin_config[] = {
     PIN_CFG(GPS_PABLANK, GPEN10, 0, OFF, ON, 0, 0, 8MA),
 
 #endif
+
 };
 
 /* board level init */
