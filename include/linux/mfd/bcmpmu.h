@@ -826,6 +826,7 @@ struct bcmpmu_usb_accy_data {
 	enum bcmpmu_usb_type_t usb_type;
 	int max_curr_chrgr;
 	int batt_present;
+	int usb_dis;
 };
 
 struct bcmpmu_platform_data;

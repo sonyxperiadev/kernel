@@ -518,6 +518,12 @@ static void update_charge_zone(struct bcmpmu_em *pem)
 			pem->charge_zone--;
 		break;
 	}
+
+	/* Work around for PMU issue */
+	if (pem->bcmpmu->usb_accy_data.usb_dis == 1){
+		pem->bcmpmu->usb_accy_data.usb_dis = 0;
+		pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 1);
+	}
 	if ((zone != pem->charge_zone) ||
 		(pem->force_update != 0)) {
 		pem->icc_qc = pem->icc_qc = min(pem->zone[pem->charge_zone].qc, pem->chrgr_curr);
