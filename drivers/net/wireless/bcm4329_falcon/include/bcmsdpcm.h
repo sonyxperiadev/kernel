@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdpcm.h 275703 2011-08-04 20:20:27Z $
+ * $Id: bcmsdpcm.h,v 13.4.90.2 2010-05-12 04:14:25 Exp $
  */
 
 #ifndef	_bcmsdpcm_h_

@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dngl_stats.h,v 1.5 2008-06-02 16:56:20 $
+ * $Id: dngl_stats.h,v 1.5 2008-06-02 16:56:20 Exp $
  */
 
 #ifndef _dngl_stats_h_

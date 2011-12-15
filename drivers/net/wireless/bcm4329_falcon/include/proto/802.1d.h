@@ -21,7 +21,7 @@
  *
  * Fundamental types and constants relating to 802.1D
  *
- * $Id: 802.1d.h,v 9.3 2007-04-10 21:33:06 $
+ * $Id: 802.1d.h,v 9.3 2007-04-10 21:33:06 Exp $
  */
 
 

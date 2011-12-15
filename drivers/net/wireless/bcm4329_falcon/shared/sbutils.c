@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sbutils.c 275693 2011-08-04 19:59:34Z $
+ * $Id: sbutils.c,v 1.687.2.1 2010-11-29 20:21:56 Exp $
  */
 
 #include <typedefs.h>

@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: linuxver.h 275790 2011-08-04 23:02:47Z $
+ * $Id: linuxver.h,v 13.53.2.2 2010-12-22 23:47:26 Exp $
  */
 
 
@@ -70,9 +70,6 @@
 #include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <linux/netdevice.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
-#include <linux/semaphore.h>
-#endif 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28))
 #undef IP_TOS
 #endif 
@@ -126,8 +123,10 @@ typedef irqreturn_t(*FN_ISR) (int irq, void *dev_id, struct pt_regs *ptregs);
 #endif	
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 5, 67)
+#ifndef SANDGATE2G
 #define MOD_INC_USE_COUNT
 #define MOD_DEC_USE_COUNT
+#endif 
 #endif 
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
@@ -137,7 +136,7 @@ typedef irqreturn_t(*FN_ISR) (int irq, void *dev_id, struct pt_regs *ptregs);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
 #include <net/lib80211.h>
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
 #include <linux/ieee80211.h>
 #else
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)

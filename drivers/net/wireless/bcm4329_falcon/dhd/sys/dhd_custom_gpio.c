@@ -20,7 +20,7 @@
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *
-* $Id: dhd_custom_gpio.c 275786 2011-08-04 22:42:42Z $
+* $Id: dhd_custom_gpio.c,v 1.2.42.1 2010-10-19 00:41:09 Exp $
 */
 
 #include <typedefs.h>
@@ -33,10 +33,7 @@
 
 #include <wlioctl.h>
 #include <wl_iw.h>
-
 extern void bcm_sdiowl_reset_b(int onoff);
-extern int bcm_sdiowl_rescan(void);
-extern int bcm_sdiowl_init(void);
 
 #define WL_ERROR(x) printf x
 #define WL_TRACE(x)
@@ -45,19 +42,12 @@ extern int bcm_sdiowl_init(void);
 extern  void bcm_wlan_power_off(int);
 extern  void bcm_wlan_power_on(int);
 #endif /* CUSTOMER_HW */
-#if  defined(CUSTOMER_HW2)
-#ifdef CONFIG_WIFI_CONTROL_FUNC
+#if  defined(CONFIG_MACH_MAHIMAHI)
+int wifi_set_carddetect(int on);
 int wifi_set_power(int on, unsigned long msec);
 int wifi_get_irq_number(unsigned long *irq_flags_ptr);
 int wifi_get_mac_addr(unsigned char *buf);
-void *wifi_get_country_code(char *ccode);
-#else
-int wifi_set_power(int on, unsigned long msec) { return -1; }
-int wifi_get_irq_number(unsigned long *irq_flags_ptr) { return -1; }
-int wifi_get_mac_addr(unsigned char *buf) { return -1; }
-void *wifi_get_country_code(char *ccode) { return NULL; }
-#endif /* CONFIG_WIFI_CONTROL_FUNC */
-#endif /* CUSTOMER_HW2 */
+#endif
 
 #if defined(OOB_INTR_ONLY)
 
@@ -90,15 +80,15 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 {
 	int  host_oob_irq = 0;
 
-#ifdef CUSTOMER_HW2
+#ifdef CONFIG_MACH_MAHIMAHI
 	host_oob_irq = wifi_get_irq_number(irq_flags_ptr);
 
-#else
+#else /* for NOT  CONFIG_MACH_MAHIMAHI */
 #if defined(CUSTOM_OOB_GPIO_NUM)
 	if (dhd_oob_gpio_num < 0) {
 		dhd_oob_gpio_num = CUSTOM_OOB_GPIO_NUM;
 	}
-#endif /* CUSTOMER_HW2 */
+#endif
 
 	if (dhd_oob_gpio_num < 0) {
 		WL_ERROR(("%s: ERROR customer specific Host GPIO is NOT defined \n",
@@ -116,7 +106,7 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 	host_oob_irq = gpio_to_irq(dhd_oob_gpio_num);
 	gpio_direction_input(dhd_oob_gpio_num);
 #endif /* CUSTOMER_HW */
-#endif /* CUSTOMER_HW2 */
+#endif /* CONFIG_MACH_MAHIMAHI */
 
 	return (host_oob_irq);
 }
@@ -126,8 +116,6 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 void
 dhd_customer_gpio_wlan_ctrl(int onoff)
 {
-	int error=0;
-
 	switch (onoff) {
 		case WLAN_RESET_OFF:
 			WL_TRACE(("%s: call customer specific GPIO to insert WLAN RESET\n",
@@ -135,11 +123,10 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_off(2);
 #endif /* CUSTOMER_HW */
-#ifdef CUSTOMER_HW2
+#ifdef CONFIG_MACH_MAHIMAHI
 			wifi_set_power(0, 0);
 #endif
-//			bcm_sdiowl_reset_b(0);
-			printk("SHRI:WLAN_RESET_OFF CALLED\n");
+			bcm_sdiowl_reset_b(0);
 			WL_ERROR(("=========== WLAN placed in RESET ========\n"));
 		break;
 
@@ -149,16 +136,14 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_on(2);
 #endif /* CUSTOMER_HW */
-#ifdef CUSTOMER_HW2
+#ifdef CONFIG_MACH_MAHIMAHI
 			wifi_set_power(1, 0);
 #endif
-			printk("SHRI:WLAN_RESET_ON CALLED\n");
 			bcm_sdiowl_reset_b(1);
 			WL_ERROR(("=========== WLAN going back to live  ========\n"));
 		break;
 
 		case WLAN_POWER_OFF:
-			printk("SHRI:WLAN_POWER_OFF CALLED\n");
 			WL_TRACE(("%s: call customer specific GPIO to turn off WL_REG_ON\n",
 				__FUNCTION__));
 #ifdef CUSTOMER_HW
@@ -167,24 +152,13 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 		break;
 
 		case WLAN_POWER_ON:
-			printk("SHRI:WLAN_POWER_ON CALLED\n");
 			WL_TRACE(("%s: call customer specific GPIO to turn on WL_REG_ON\n",
 				__FUNCTION__));
-
-		error = bcm_sdiowl_init();
-			
-//			bcm_sdiowl_reset_b(0);
-
-//	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
-//	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
-	error = bcm_sdiowl_rescan();
-
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_on(1);
+#endif /* CUSTOMER_HW */
 			/* Lets customer power to get stable */
 			OSL_DELAY(200);
-#endif /* CUSTOMER_HW */
-
 		break;
 	}
 }
@@ -201,7 +175,7 @@ dhd_custom_get_mac_address(unsigned char *buf)
 		return -EINVAL;
 
 	/* Customer access to MAC address stored outside of DHD driver */
-#if defined(CUSTOMER_HW2) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
+#if defined(CONFIG_MACH_MAHIMAHI) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
 	ret = wifi_get_mac_addr(buf);
 #endif
 
@@ -221,48 +195,18 @@ dhd_custom_get_mac_address(unsigned char *buf)
 const struct cntry_locales_custom translate_custom_table[] = {
 /* Table should be filled out based on custom platform regulatory requirement */
 #ifdef EXAMPLE_TABLE
-	{"",   "XY", 4},  /* Universal if Country code is unknown or empty */
 	{"US", "US", 69}, /* input ISO "US" to : US regrev 69 */
 	{"CA", "US", 69}, /* input ISO "CA" to : US regrev 69 */
-	{"EU", "EU", 5},  /* European union countries to : EU regrev 05 */
-	{"AT", "EU", 5},
-	{"BE", "EU", 5},
-	{"BG", "EU", 5},
-	{"CY", "EU", 5},
-	{"CZ", "EU", 5},
-	{"DK", "EU", 5},
-	{"EE", "EU", 5},
-	{"FI", "EU", 5},
-	{"FR", "EU", 5},
-	{"DE", "EU", 5},
-	{"GR", "EU", 5},
-	{"HU", "EU", 5},
-	{"IE", "EU", 5},
-	{"IT", "EU", 5},
-	{"LV", "EU", 5},
-	{"LI", "EU", 5},
-	{"LT", "EU", 5},
-	{"LU", "EU", 5},
-	{"MT", "EU", 5},
-	{"NL", "EU", 5},
-	{"PL", "EU", 5},
-	{"PT", "EU", 5},
-	{"RO", "EU", 5},
-	{"SK", "EU", 5},
-	{"SI", "EU", 5},
-	{"ES", "EU", 5},
-	{"SE", "EU", 5},
-	{"GB", "EU", 5},
-	{"KR", "XY", 3},
-	{"AU", "XY", 3},
-	{"CN", "XY", 3}, /* input ISO "CN" to : XY regrev 03 */
-	{"TW", "XY", 3},
-	{"AR", "XY", 3},
-	{"MX", "XY", 3},
-	{"IL", "IL", 0},
-	{"CH", "CH", 0},
-	{"TR", "TR", 0},
-	{"NO", "NO", 0},
+	{"EU", "EU", 05}, /* input ISO "CA" to : US regrev 69 */
+	{"FR", "EU", 05},
+	{"DE", "EU", 05},
+	{"IR", "EU", 05},
+	{"UK", "EU", 05}, /* input ISO "UK" to : EU regrev 05 */
+	{"KR", "XY", 03},
+	{"AU", "XY", 03},
+	{"CN", "XY", 03}, /* input ISO "CN" to : XY regrev 03 */
+	{"TW", "XY", 03},
+	{"AR", "XY", 03}
 #endif /* EXMAPLE_TABLE */
 };
 
@@ -273,20 +217,6 @@ const struct cntry_locales_custom translate_custom_table[] = {
 */
 void get_customized_country_code(char *country_iso_code, wl_country_t *cspec)
 {
-#if defined(CUSTOMER_HW2) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39))
-
-	struct cntry_locales_custom *cloc_ptr;
-
-	if (!cspec)
-		return;
-
-	cloc_ptr = wifi_get_country_code(country_iso_code);
-	if (cloc_ptr) {
-		strlcpy(cspec->ccode, cloc_ptr->custom_locale, WLC_CNTRY_BUF_SZ);
-		cspec->rev = cloc_ptr->custom_locale_rev;
-	}
-	return;
-#else
 	int size, i;
 
 	size = ARRAYSIZE(translate_custom_table);
@@ -298,18 +228,11 @@ void get_customized_country_code(char *country_iso_code, wl_country_t *cspec)
 		 return;
 
 	for (i = 0; i < size; i++) {
-		if (strcmp(country_iso_code, translate_custom_table[i].iso_abbrev) == 0) {
-			memcpy(cspec->ccode,
-				translate_custom_table[i].custom_locale, WLC_CNTRY_BUF_SZ);
-			cspec->rev = translate_custom_table[i].custom_locale_rev;
-			return;
+	if (strcmp(country_iso_code, translate_custom_table[i].iso_abbrev) == 0) {
+		memcpy(cspec->ccode,  translate_custom_table[i].custom_locale, WLC_CNTRY_BUF_SZ);
+		cspec->rev = translate_custom_table[i].custom_locale_rev;
+			break;
 		}
 	}
-#ifdef EXAMPLE_TABLE
-	/* if no country code matched return first universal code from translate_custom_table */
-	memcpy(cspec->ccode, translate_custom_table[0].custom_locale, WLC_CNTRY_BUF_SZ);
-	cspec->rev = translate_custom_table[0].custom_locale_rev;
-#endif /* EXMAPLE_TABLE */
 	return;
-#endif /* defined(CUSTOMER_HW2) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)) */
 }

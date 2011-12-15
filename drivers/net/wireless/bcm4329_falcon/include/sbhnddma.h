@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sbhnddma.h 281450 2011-09-02 01:38:29Z $
+ * $Id: sbhnddma.h,v 13.20.2.3 2010-10-14 22:21:29 Exp $
  */
 
 
@@ -217,7 +217,7 @@ typedef volatile struct {
 #define D64_XC_BL_SHIFT		18
 
 
-#define	D64_XP_LD_MASK		0x00001fff	
+#define	D64_XP_LD_MASK		0x00000fff	
 
 
 #define	D64_XS0_CD_MASK		0x00001fff	
@@ -260,7 +260,7 @@ typedef volatile struct {
 #define DMA_CTRL_USB_BOUNDRY4KB_WAR (1 << 4)
 
 
-#define	D64_RP_LD_MASK		0x00001fff	
+#define	D64_RP_LD_MASK		0x00000fff	
 
 
 #define	D64_RS0_CD_MASK		0x00001fff	

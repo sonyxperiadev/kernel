@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: htsf.h 275703 2011-08-04 20:20:27Z $
+ * $Id: htsf.h,v 1.1.2.4 2011-01-21 08:27:03 Exp $
  */
 #ifndef _HTSF_H_
 #define _HTSF_H_

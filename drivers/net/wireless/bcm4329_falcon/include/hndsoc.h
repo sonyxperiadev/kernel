@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: hndsoc.h 275703 2011-08-04 20:20:27Z $
+ * $Id: hndsoc.h,v 13.11 2009-12-03 23:52:31 Exp $
  */
 
 #ifndef	_HNDSOC_H

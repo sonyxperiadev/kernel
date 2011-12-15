@@ -10,7 +10,7 @@
 #
 # Copyright 2005, Broadcom, Inc.
 #
-# $Id: Makefile 241702 2011-02-19 00:41:03Z $
+# $Id: Makefile 241702 2011-02-19 00:41:03Z automrgr $
 #
 
 SRCBASE := ..
@@ -21,7 +21,7 @@ ifdef VERBOSE
 export VERBOSE
 endif
 
-all release: epivers compvers
+all release: compvers
 
 # Generate epivers.h for native branch version
 epivers:

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: trxhdr.h 275703 2011-08-04 20:20:27Z $
+ * $Id: trxhdr.h,v 13.15.108.2 2010-11-15 17:57:30 Exp $
  */
 
 #ifndef	_TRX_HDR_H_

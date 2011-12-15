@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sbconfig.h 275703 2011-08-04 20:20:27Z $
+ * $Id: sbconfig.h,v 13.70 2008-03-28 19:17:04 Exp $
  */
 
 

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_sdmmc.c 300013 2011-12-01 19:55:54Z $
+ * $Id: bcmsdh_sdmmc.c,v 1.14.64.3 2010-12-23 01:13:15 Exp $
  */
 #include <typedefs.h>
 
@@ -30,11 +30,14 @@
 #include <bcmutils.h>
 #include <osl.h>
 #include <sdio.h>	/* SDIO Device and Protocol Specs */
-#include <sdioh.h>	/* Standard SDIO Host Controller Specification */
+#include <sdioh.h>	/* SDIO Host Controller Specification */
 #include <bcmsdbus.h>	/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>	/* ioctl/iovars */
 
 #include <linux/mmc/core.h>
+#include <linux/mmc/host.h>
+#include <linux/mmc/card.h>
+
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
 
@@ -198,14 +201,9 @@ sdioh_detach(osl_t *osh, sdioh_info_t *sd)
 		sdio_release_host(gInstance->func[2]);
 
 		/* Disable Function 1 */
-		if (gInstance->func[1]) {
-			sdio_claim_host(gInstance->func[1]);
-			sdio_disable_func(gInstance->func[1]);
-			sdio_release_host(gInstance->func[1]);
-		}
-
-		gInstance->func[1] = NULL;
-		gInstance->func[2] = NULL;
+		sdio_claim_host(gInstance->func[1]);
+		sdio_disable_func(gInstance->func[1]);
+		sdio_release_host(gInstance->func[1]);
 
 		/* deregister irq */
 		sdioh_sdmmc_osfree(sd);
@@ -448,7 +446,6 @@ sdioh_iovar_op(sdioh_info_t *si, const char *name,
 		bcopy(params, &int_val, sizeof(int_val));
 
 	bool_val = (int_val != 0) ? TRUE : FALSE;
-	BCM_REFERENCE(bool_val);
 
 	actionid = set ? IOV_SVAL(vi->varid) : IOV_GVAL(vi->varid);
 	switch (actionid) {
@@ -1106,6 +1103,14 @@ int sdioh_sdio_reset(sdioh_info_t *si)
 void
 sdioh_sdmmc_devintr_off(sdioh_info_t *sd)
 {
+
+#ifdef CONFIG_BCM_SDIOWL
+	struct mmc_card *card = gInstance->func[0]->card;
+	struct mmc_host *host = card->host;
+
+	host->ops->enable_sdio_irq(host, 0);
+#endif
+
 	sd_trace(("%s: %d\n", __FUNCTION__, sd->use_client_ints));
 	sd->intmask &= ~CLIENT_INTR;
 }
@@ -1114,6 +1119,12 @@ sdioh_sdmmc_devintr_off(sdioh_info_t *sd)
 void
 sdioh_sdmmc_devintr_on(sdioh_info_t *sd)
 {
+#ifdef CONFIG_BCM_SDIOWL
+	struct mmc_card *card = gInstance->func[0]->card;
+	struct mmc_host *host = card->host;
+	host->ops->enable_sdio_irq(host, 1);
+#endif
+
 	sd_trace(("%s: %d\n", __FUNCTION__, sd->use_client_ints));
 	sd->intmask |= CLIENT_INTR;
 }
@@ -1180,7 +1191,6 @@ static void IRQHandlerF2(struct sdio_func *func)
 	sd = gInstance->sd;
 
 	ASSERT(sd != NULL);
-	BCM_REFERENCE(sd);
 }
 #endif /* !defined(OOB_INTR_ONLY) */
 
@@ -1319,29 +1329,4 @@ int
 sdioh_waitlockfree(sdioh_info_t *sd)
 {
 	return (1);
-}
-
-
-SDIOH_API_RC
-sdioh_gpioouten(sdioh_info_t *sd, uint32 gpio)
-{
-	return SDIOH_API_RC_FAIL;
-}
-
-SDIOH_API_RC
-sdioh_gpioout(sdioh_info_t *sd, uint32 gpio, bool enab)
-{
-	return SDIOH_API_RC_FAIL;
-}
-
-bool
-sdioh_gpioin(sdioh_info_t *sd, uint32 gpio)
-{
-	return FALSE;
-}
-
-SDIOH_API_RC
-sdioh_gpio_init(sdioh_info_t *sd)
-{
-	return SDIOH_API_RC_FAIL;
 }

@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wlioctl.h 292924 2011-10-28 21:45:40Z $
+ * $Id: wlioctl.h,v 1.767.2.38 2011-02-01 23:04:28 Exp $
  */
 
 
@@ -62,12 +62,6 @@ typedef struct wl_action_frame {
 } wl_action_frame_t;
 
 #define WL_WIFI_ACTION_FRAME_SIZE sizeof(struct wl_action_frame)
-
-typedef struct ssid_info
-{
-	uint8		ssid_len;	
-	uint8		ssid[32];	
-} ssid_info_t;
 
 typedef struct wl_af_params {
 	uint32          channel;
@@ -189,8 +183,6 @@ typedef struct wlc_ssid {
 #define WL_SCANFLAGS_PASSIVE 0x01       
 #define WL_SCANFLAGS_RESERVED 0x02      
 #define WL_SCANFLAGS_PROHIBITED 0x04    
-
-#define WL_SCAN_PARAMS_SSID_MAX 	10
 
 typedef struct wl_scan_params {
 	wlc_ssid_t ssid;        
@@ -556,7 +548,6 @@ typedef enum sup_auth_status {
 #define CRYPTO_ALGO_AES_OCB_MSDU    5
 #define CRYPTO_ALGO_AES_OCB_MPDU    6
 #define CRYPTO_ALGO_NALG        7
-#define CRYPTO_ALGO_PMK			12	
 
 #define WSEC_GEN_MIC_ERROR  0x0001
 #define WSEC_GEN_REPLAY     0x0002
@@ -618,9 +609,6 @@ typedef struct {
 #define WPA2_AUTH_PSK       0x0080  
 #define BRCM_AUTH_PSK           0x0100  
 #define BRCM_AUTH_DPT       0x0200  
-#define WPA2_AUTH_MFP           0x1000  
-#define WPA2_AUTH_TPK		0x2000 	
-#define WPA2_AUTH_FT		0x4000 	
 
 
 #define MAXPMKID        16
@@ -645,61 +633,7 @@ typedef struct _pmkid_cand_list {
 	pmkid_cand_t    pmkid_cand[1];
 } pmkid_cand_list_t;
 
-typedef struct wl_assoc_info {
-	uint32      req_len;
-	uint32      resp_len;
-	uint32      flags;
-	struct dot11_assoc_req req;
-	struct ether_addr reassoc_bssid;	
-	struct dot11_assoc_resp resp;
-} wl_assoc_info_t;
 
-
-#define WLC_ASSOC_REQ_IS_REASSOC 0x01	
-
-
-typedef struct {
-	uint16          ver;        
-	uint16          len;        
-	uint16          cap;        
-	uint32          flags;      
-	uint32          idle;       
-	struct ether_addr   ea;     
-	wl_rateset_t        rateset;    
-	uint32          in;     
-	uint32          listen_interval_inms; 
-	uint32          tx_pkts;    
-	uint32          tx_failures;    
-	uint32          rx_ucast_pkts;  
-	uint32          rx_mcast_pkts;  
-	uint32          tx_rate;    
-	uint32          rx_rate;    
-	uint32          rx_decrypt_succeeds;    
-	uint32          rx_decrypt_failures;    
-} sta_info_t;
-
-#define WL_OLD_STAINFO_SIZE OFFSETOF(sta_info_t, tx_pkts)
-
-#define WL_STA_VER      3
-
-
-#define WL_STA_BRCM     0x1     
-#define WL_STA_WME      0x2     
-#define WL_STA_ABCAP        0x4
-#define WL_STA_AUTHE        0x8     
-#define WL_STA_ASSOC        0x10        
-#define WL_STA_AUTHO        0x20        
-#define WL_STA_WDS      0x40        
-#define WL_STA_WDS_LINKUP   0x80        
-#define WL_STA_PS       0x100       
-#define WL_STA_APSD_BE      0x200       
-#define WL_STA_APSD_BK      0x400       
-#define WL_STA_APSD_VI      0x800       
-#define WL_STA_APSD_VO      0x1000      
-#define WL_STA_N_CAP        0x2000      
-#define WL_STA_SCBSTATS     0x4000      
-
-#define WL_WDS_LINKUP       WL_STA_WDS_LINKUP   
 
 
 #define WLC_TXFILTER_OVERRIDE_DISABLED  0
@@ -1287,12 +1221,6 @@ typedef struct wl_po {
 #define WL_CHAN_FREQ_RANGE_5GMH_VER2    7
 #define WL_CHAN_FREQ_RANGE_5GH_VER2     8
 
-#define WL_CHAN_FREQ_RANGE_5GLL_5BAND    4
-#define WL_CHAN_FREQ_RANGE_5GLH_5BAND    5
-#define WL_CHAN_FREQ_RANGE_5GML_5BAND    6
-#define WL_CHAN_FREQ_RANGE_5GMH_5BAND    7
-#define WL_CHAN_FREQ_RANGE_5GH_5BAND     8
-
 
 #define WLC_PHY_TYPE_A      0
 #define WLC_PHY_TYPE_B      1
@@ -1364,7 +1292,7 @@ typedef struct wl_po {
 #define PM_MAX  1
 #define PM_FAST 2
 
-#define LISTEN_INTERVAL			10
+#define LISTEN_INTERVAL			20
 
 #define INTERFERE_OVRRIDE_OFF   -1  
 #define INTERFERE_NONE  0   
@@ -1547,7 +1475,6 @@ typedef struct wl_sampledata {
 #define WL_JOIN_PREF_WPA    2   
 #define WL_JOIN_PREF_BAND   3   
 #define WL_JOIN_PREF_RSSI_DELTA 4   
-#define WL_JOIN_PREF_TRANS_PREF	5	
 
 
 #define WLJP_BAND_ASSOC_PREF    255 
@@ -1797,19 +1724,6 @@ struct wl_msglevel2 {
 	uint32 high;
 };
 
-typedef struct wl_mkeep_alive_pkt {
-	uint16	version; 
-	uint16	length; 
-	uint32	period_msec;
-	uint16	len_bytes;
-	uint8	keep_alive_id; 
-	uint8	data[1];
-} wl_mkeep_alive_pkt_t;
-
-#define WL_MKEEP_ALIVE_VERSION		1
-#define WL_MKEEP_ALIVE_FIXED_LEN	OFFSETOF(wl_mkeep_alive_pkt_t, data)
-#define WL_MKEEP_ALIVE_PRECISION	500
-
 
 
 #define WLC_ROAM_TRIGGER_DEFAULT    0 
@@ -1834,8 +1748,7 @@ enum {
 enum {
 	OFF_ADAPT,
 	SMART_ADAPT,
-	STRICT_ADAPT,
-	SLOW_ADAPT
+	STRICT_ADAPT
 };
 
 #define SORT_CRITERIA_BIT		0
@@ -1845,16 +1758,14 @@ enum {
 #define	AUTO_CONNECT_BIT		4
 #define	ENABLE_BD_SCAN_BIT		5
 #define ENABLE_ADAPTSCAN_BIT	6
-#define IMMEDIATE_EVENT_BIT		8
 
-#define SORT_CRITERIA_MASK		0x0001
-#define AUTO_NET_SWITCH_MASK	0x0002
-#define ENABLE_BKGRD_SCAN_MASK	0x0004
-#define IMMEDIATE_SCAN_MASK		0x0008
-#define	AUTO_CONNECT_MASK		0x0010
-#define ENABLE_BD_SCAN_MASK		0x0020
-#define ENABLE_ADAPTSCAN_MASK	0x00c0
-#define IMMEDIATE_EVENT_MASK	0x0100
+#define SORT_CRITERIA_MASK		0x01
+#define AUTO_NET_SWITCH_MASK	0x02
+#define ENABLE_BKGRD_SCAN_MASK	0x04
+#define IMMEDIATE_SCAN_MASK		0x08
+#define	AUTO_CONNECT_MASK		0x10
+#define ENABLE_BD_SCAN_MASK		0x20
+#define ENABLE_ADAPTSCAN_MASK	0xc0
 
 #define PFN_VERSION				2
 #define PFN_SCANRESULT_VERSION	1
@@ -1900,7 +1811,6 @@ typedef struct wl_pfn_param {
 	uint8 mscan; 
 	uint8 repeat; 
 	uint8 exp; 
-	int32 slow_freq; 
 } wl_pfn_param_t;
 
 typedef struct wl_pfn_bssid {
