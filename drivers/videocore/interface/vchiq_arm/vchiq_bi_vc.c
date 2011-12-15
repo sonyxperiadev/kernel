@@ -57,7 +57,7 @@ vchiq_platform_init(void)
       int shared_memory_allocation;
 
       vchiq_ipc_shared_mem_size = 0;
-      shared_memory_allocation = (int) rtos_malloc_priority( VCHIQ_IPC_SHARED_MEM_SIZE,
+      shared_memory_allocation = (int) rtos_malloc_priority( VCHIQ_IPC_SHARED_MEM_SIZE + VCHIQ_IPC_SHARED_MEM_EXTRA,
                                                              RTOS_ALIGN_4KBYTE,
                                                              RTOS_PRIORITY_DIRECT,
                                                              "vchiq-ipc-smem" );

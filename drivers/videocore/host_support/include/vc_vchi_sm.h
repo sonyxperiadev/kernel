@@ -48,21 +48,7 @@ VCOS_STATUS_T vc_vchi_sm_alloc( VC_VCHI_SM_HANDLE_T handle,
 */
 VCOS_STATUS_T vc_vchi_sm_free( VC_VCHI_SM_HANDLE_T handle,
                                VC_SM_FREE_T *free,
-                               uint32_t *trans_id );
-
-/* Ask the shared memory service to free up all memory associated with a given
-** allocator identifier (used for emergency cleanup).  Free attempt is one shot
-** and immediate.
-*/
-VCOS_STATUS_T vc_vchi_sm_free_all( VC_VCHI_SM_HANDLE_T handle,
-                                   VC_SM_FREE_ALL_T *free_all );
-
-/* Ask the shared memory service to free up all memory associated with a given
-** allocator identifier (used for emergency cleanup).  Free attempt is progressive
-** until all resources are confirmed cleaned.
-*/
-VCOS_STATUS_T vc_vchi_sm_free_post_mortem( VC_VCHI_SM_HANDLE_T handle,
-                                           VC_SM_FREE_ALL_T *free_all );
+                               uint32_t *trans_id);
 
 /* Ask the shared memory service to lock up some memory that was previously
 ** allocated by the vc_vchi_sm_alloc function call.

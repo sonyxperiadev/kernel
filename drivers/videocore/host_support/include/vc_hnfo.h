@@ -22,8 +22,8 @@ struct vc_hnfo_usr_info
    int            power_on;      // Whether we want to power on explicit or power on
                                  // detection only.
    int            dis_detect;    // Disable action on detection, useful for debug.
-
    int            resolution;    // Preferred default resolution.
+   int            dis_clone;     // Disable cloning of the GUI explicitely.
 };
 
 #define VC_HNFO_IOC_MAGIC  'H'

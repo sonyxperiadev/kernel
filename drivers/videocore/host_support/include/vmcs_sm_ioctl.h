@@ -39,6 +39,7 @@
 enum vmcs_sm_cmd_e
 {
    VMCS_SM_CMD_ALLOC = 0x5A,  /* Start at 0x5A arbitrarily */
+   VMCS_SM_CMD_ALLOC_SHARE,
    VMCS_SM_CMD_LOCK,
    VMCS_SM_CMD_LOCK_CACHE,
    VMCS_SM_CMD_UNLOCK,
@@ -87,6 +88,13 @@ struct vmcs_sm_ioctl_alloc
    /* kernel -> user */
    unsigned int handle;
    /* unsigned int base_addr; */
+};
+
+struct vmcs_sm_ioctl_alloc_share
+{
+   /* user -> kernel */
+   unsigned int handle;
+   unsigned int size;
 };
 
 struct vmcs_sm_ioctl_free
@@ -170,6 +178,7 @@ struct vmcs_sm_ioctl_cache
 
 /* IOCTL numbers */
 #define VMCS_SM_IOCTL_MEM_ALLOC           _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_ALLOC, struct vmcs_sm_ioctl_alloc )
+#define VMCS_SM_IOCTL_MEM_ALLOC_SHARE     _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_ALLOC_SHARE, struct vmcs_sm_ioctl_alloc_share )
 #define VMCS_SM_IOCTL_MEM_LOCK            _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_LOCK, struct vmcs_sm_ioctl_lock_unlock )
 #define VMCS_SM_IOCTL_MEM_LOCK_CACHE      _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_LOCK_CACHE, struct vmcs_sm_ioctl_lock_cache )
 #define VMCS_SM_IOCTL_MEM_UNLOCK          _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_UNLOCK, struct vmcs_sm_ioctl_lock_unlock )

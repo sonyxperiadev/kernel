@@ -62,10 +62,6 @@
 #include "host_applications/linux/libs/debug_sym/debug_sym.h"
 #endif
 
-#if defined(VCHIQ_SM_ALLOC_VCDDR)
-#include "host_applications/linux/libs/debug_sym/debug_sym.h"
-#endif
-
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 #include <linux/earlysuspend.h>
 
@@ -524,7 +520,8 @@ static void vchiq_control_cfg_parse( VCOS_CFG_BUF_T buf, void *data )
    { /* direct control of suspend from vchiq_control.  Only available if not autosuspending */
       if (!g_use_autosuspend)
       {
-         if ( vchiq_arm_vcsuspend(g_vchiq_state) == VCHIQ_SUCCESS )
+         vcos_log_info("%s: calling vchiq_platform_suspend", __func__);
+         if ( vchiq_platform_suspend(g_vchiq_state) == VCHIQ_SUCCESS )
          {
             vcos_log_warn( "%s: suspended vchiq for '%s'", __func__,
                   kernState->instance_name );
@@ -545,7 +542,8 @@ static void vchiq_control_cfg_parse( VCOS_CFG_BUF_T buf, void *data )
    { /* direct control of resume from vchiq_control.  Only available if not autosuspending */
       if (!g_use_autosuspend)
       {
-         if ( vchiq_arm_vcresume(g_vchiq_state) == VCHIQ_SUCCESS )
+         vcos_log_info("%s: calling vchiq_platform_resume", __func__);
+         if ( vchiq_platform_resume(g_vchiq_state) == VCHIQ_SUCCESS )
          {
             vcos_log_warn( "%s: resumed vchiq for '%s'", __func__,
                   kernState->instance_name );

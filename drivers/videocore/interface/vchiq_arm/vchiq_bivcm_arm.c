@@ -68,10 +68,6 @@
 #include "host_applications/linux/libs/debug_sym/debug_sym.h"
 #endif
 
-#if defined(VCHIQ_SM_ALLOC_VCDDR)
-#include "host_applications/linux/libs/debug_sym/debug_sym.h"
-#endif
-
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 #include <linux/earlysuspend.h>
 
@@ -564,7 +560,8 @@ static void vchiq_control_cfg_parse( VCOS_CFG_BUF_T buf, void *data )
    { /* direct control of suspend from vchiq_control.  Only available if not autosuspending */
       if (!g_use_autosuspend)
       {
-         if ( vchiq_arm_vcsuspend(g_vchiq_state) == VCHIQ_SUCCESS )
+         vcos_log_info("%s: calling vchiq_platform_suspend", __func__);
+         if ( vchiq_platform_suspend(g_vchiq_state) == VCHIQ_SUCCESS )
          {
             vcos_log_warn( "%s: suspended vchiq for '%s'", __func__,
                   kernState->instance_name );
@@ -585,7 +582,8 @@ static void vchiq_control_cfg_parse( VCOS_CFG_BUF_T buf, void *data )
    { /* direct control of resume from vchiq_control.  Only available if not autosuspending */
       if (!g_use_autosuspend)
       {
-         if ( vchiq_arm_vcresume(g_vchiq_state) == VCHIQ_SUCCESS )
+         vcos_log_info("%s: calling vchiq_platform_resume", __func__);
+         if ( vchiq_platform_resume(g_vchiq_state) == VCHIQ_SUCCESS )
          {
             vcos_log_warn( "%s: resumed vchiq for '%s'", __func__,
                   kernState->instance_name );
@@ -1235,7 +1233,7 @@ create_pagelist(char __user *buf, size_t count, unsigned short type,
    unsigned long *addrs;
    unsigned int num_pages, offset, i;
    unsigned long addr, base_addr, next_addr;
-   void *base_kaddr;
+   void *kaddr;
    size_t size;
    int run, addridx;
    int actual_pages;
@@ -1285,57 +1283,63 @@ create_pagelist(char __user *buf, size_t count, unsigned short type,
 
    /* Group the pages into runs of contiguous pages */
 
-   base_addr = PFN_PHYS(page_to_pfn(pages[0]));
-   next_addr = base_addr + PAGE_SIZE;
-   base_addr += offset;
-   base_kaddr = (char *)page_address(pages[0]) + offset;
+   addr = PFN_PHYS(page_to_pfn(pages[0]));
+   kaddr = page_address(pages[0]);
+   next_addr = addr + PAGE_SIZE;
+   addr += offset;
    size = vcos_min(PAGE_SIZE - offset, count);
+
+   if (type == PAGELIST_READ)
+   {
+      outer_inv_range(addr, addr + size);
+      if (kaddr)
+         dmac_map_area(kaddr + offset, size, DMA_FROM_DEVICE);
+   }
+   else
+   {
+      if (kaddr)
+         dmac_map_area(kaddr + offset, size, DMA_TO_DEVICE);
+      outer_clean_range(addr, addr + size);
+   }
+
    addridx = 0;
    run = 0;
+   base_addr = addr;
 
    for (i = 1; i < num_pages; i++) {
+      int page_bytes = vcos_min(PAGE_SIZE, count);
       addr = PFN_PHYS(page_to_pfn(pages[i]));
+      kaddr = page_address(pages[i]);
+
+      if (type == PAGELIST_READ)
+      {
+         outer_inv_range(addr, addr + page_bytes);
+         if (kaddr)
+            dmac_map_area(kaddr, page_bytes, DMA_FROM_DEVICE);
+      }
+      else
+      {
+         if (kaddr)
+            dmac_map_area(kaddr, page_bytes, DMA_TO_DEVICE);
+         outer_clean_range(addr, addr + page_bytes);
+      }
+
       if ((addr == next_addr) && (run < (PAGE_SIZE - 1))) {
-         next_addr += PAGE_SIZE;
-         size = vcos_min(size + PAGE_SIZE, count);
+         size += page_bytes;
          run++;
       } else {
          addrs[addridx] = PHYS_TO_VC((base_addr & ~(PAGE_SIZE - 1)) + run);
          addridx++;
-         if (type == PAGELIST_READ)
-         {
-            dmac_map_area(base_kaddr, size, DMA_FROM_DEVICE);
-            outer_inv_range(base_addr, base_addr + size);
-         }
-         else
-         {
-            dmac_map_area(base_kaddr, size, DMA_TO_DEVICE);
-            outer_clean_range(base_addr, base_addr + size);
-         }
-
          base_addr = addr;
-         base_kaddr = page_address(pages[i]);
-         next_addr = addr + PAGE_SIZE;
-         count -= size;
-         size = vcos_min(PAGE_SIZE, count);
-         offset = 0;
+         size = page_bytes;
          run = 0;
       }
+      count -= page_bytes;
+      next_addr = addr + PAGE_SIZE;
    }
 
    addrs[addridx] = PHYS_TO_VC((base_addr & ~(PAGE_SIZE - 1)) + run);
    addridx++;
-
-   if (type == PAGELIST_READ)
-   {
-      dmac_map_area(base_kaddr, size, DMA_FROM_DEVICE);
-      outer_inv_range(base_addr, base_addr + size);
-   }
-   else
-   {
-      dmac_map_area(base_kaddr, size, DMA_TO_DEVICE);
-      outer_clean_range(base_addr, base_addr + size);
-   }
 
    /* Partial cache lines (fragments) require special measures */
    if ((type == PAGELIST_READ) &&
@@ -1373,6 +1377,33 @@ create_pagelist(char __user *buf, size_t count, unsigned short type,
 }
 
 static void
+memcpy_fragment_to_page(struct page *page, int offset,
+   void *fragbuf, int bytes)
+{
+   char *kaddr;
+   kaddr = page_address(page);
+   if (kaddr)
+   {
+      memcpy(kaddr + offset, fragbuf, bytes);
+   }
+   else
+   {
+      dma_addr_t paddr;
+
+      kaddr = kmap(page) + offset;
+      paddr = PFN_PHYS(page_to_pfn(page)) + offset;
+      /* Flush the cache */
+      dmac_map_area(kaddr, bytes, DMA_FROM_DEVICE);
+      outer_clean_range(paddr, paddr + bytes);
+      memcpy(kaddr, fragbuf, bytes);
+      /* Invalidate the cache */
+      outer_inv_range(paddr, paddr + bytes);
+      dmac_unmap_area(kaddr, bytes, DMA_FROM_DEVICE);
+      kunmap(page);
+   }
+}
+
+static void
 free_pagelist(PAGELIST_T *pagelist, int actual)
 {
    struct page **pages;
@@ -1382,13 +1413,13 @@ free_pagelist(PAGELIST_T *pagelist, int actual)
 
    vcos_log_trace("free_pagelist - %x, %d", (unsigned int)pagelist, actual);
 
-   num_pages =
-       (pagelist->length + pagelist->offset + PAGE_SIZE - 1) / PAGE_SIZE;
-
-   pages = (struct page **)(pagelist->addrs + num_pages);
-
    len = pagelist->length;
    offset = pagelist->offset;
+
+   num_pages =
+       (len + offset + PAGE_SIZE - 1) / PAGE_SIZE;
+
+   pages = (struct page **)(pagelist->addrs + num_pages);
 
    /* Deal with any partial cache lines (fragments) */
    if (pagelist->type >= PAGELIST_READ_WITH_FRAGMENTS) {
@@ -1402,10 +1433,7 @@ free_pagelist(PAGELIST_T *pagelist, int actual)
          if ((head_bytes = (CACHE_LINE_SIZE - pagelist->offset) & (CACHE_LINE_SIZE - 1)) != 0) {
             if (head_bytes > actual)
                head_bytes = actual;
-
-            memcpy((char *)page_address(pages[0]) +
-                   pagelist->offset, fragments->headbuf,
-                   head_bytes);
+            memcpy_fragment_to_page(pages[0], offset, fragments->headbuf, head_bytes);
             offset += head_bytes;
             len -= head_bytes;
          }
@@ -1413,10 +1441,10 @@ free_pagelist(PAGELIST_T *pagelist, int actual)
             (tail_bytes =
             (pagelist->offset + actual) & (CACHE_LINE_SIZE -
                               1)) != 0) {
-            memcpy((char *)page_address(pages[num_pages - 1]) +
-                   ((pagelist->offset + actual) & (PAGE_SIZE -
-                           1) & ~(CACHE_LINE_SIZE - 1)),
-                   fragments->tailbuf, tail_bytes);
+            memcpy_fragment_to_page(pages[num_pages - 1],
+               ((pagelist->offset + actual) & (PAGE_SIZE - 1) &
+                ~(CACHE_LINE_SIZE - 1)),
+               fragments->tailbuf, tail_bytes);
             len -= tail_bytes;
          }
       }
@@ -1444,9 +1472,10 @@ free_pagelist(PAGELIST_T *pagelist, int actual)
                block_bytes = len;
             if (block_bytes)
             {
-               void *base_kaddr = page_address(pages[i]) + offset;
+               void *base_kaddr = page_address(pages[i]);
                unsigned long base_addr = PFN_PHYS(page_to_pfn(pages[i])) + offset;
-               dmac_unmap_area(base_kaddr, block_bytes, DMA_FROM_DEVICE);
+               if (base_kaddr)
+                  dmac_unmap_area((char *)base_kaddr + offset, block_bytes, DMA_FROM_DEVICE);
                outer_inv_range(base_addr, base_addr + block_bytes);
             }
             offset = 0;
