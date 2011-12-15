@@ -1949,26 +1949,31 @@ static void auddrv_SetAudioMode_speaker( AudioMode_t arg_audio_mode, unsigned in
 		if (path != 0)
 		{
 			if( path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) outChnl = path->srcmRoute[0][0].outChnl; //set HW mixer gain for arm2sp
-			csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, mixerInputGain, mixerInputGain);
+			if(outChnl)
+				csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, mixerInputGain, mixerInputGain);
 		}
 		else
 		{
-			csl_caph_srcmixer_set_mix_all_in_gain( outChnl, mixerInputGain, mixerInputGain);
+			if(outChnl)
+				csl_caph_srcmixer_set_mix_all_in_gain( outChnl, mixerInputGain, mixerInputGain);
 		}
 
-		mixerOutputFineGain = (short) p->srcmixer_output_fine_gain_l; //Q13p2 dB
-		mixerOutputFineGain = mixerOutputFineGain*25; //into mB
-		//mixerOutputFineGain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_fine_gain_r;
-		//mixerOutputFineGain = mixerOutputFineGain*25; //into mB
+		if(outChnl)
+		{
+			mixerOutputFineGain = (short) p->srcmixer_output_fine_gain_l; //Q13p2 dB
+			mixerOutputFineGain = mixerOutputFineGain*25; //into mB
+			//mixerOutputFineGain = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_fine_gain_r;
+			//mixerOutputFineGain = mixerOutputFineGain*25; //into mB
 
 
-		mixerOutputBitSelect = (short) p->srcmixer_output_coarse_gain_l; //Q13p2 dB
-		mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
-		//mixerOutputBitSelect = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_coarse_gain_r;
-		//mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
+			mixerOutputBitSelect = (short) p->srcmixer_output_coarse_gain_l; //Q13p2 dB
+			mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
+			//mixerOutputBitSelect = (short) AUDIO_GetParmAccessPtr()[arg_audio_mode].srcmixer_output_coarse_gain_r;
+			//mixerOutputBitSelect = mixerOutputBitSelect / 24; //into bit_shift
 
-		csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixerOutputBitSelect);
-		csl_caph_srcmixer_set_mix_out_gain( outChnl, mixerOutputFineGain );
+			csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixerOutputBitSelect);
+			csl_caph_srcmixer_set_mix_out_gain( outChnl, mixerOutputFineGain );
+		}
 
 		if (path != 0)
 		{

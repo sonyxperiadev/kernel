@@ -2704,7 +2704,7 @@ void csl_caph_hwctrl_init(void)
 
     csl_caph_ControlHWClock(FALSE);
 	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
-#if defined(ENABLE_DMA_VOICE) // also #ifndef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM)
 	CSL_RegisterAudioEnableDoneHandler(&csl_caph_enable_adcpath_by_dsp);
 #endif
     return;
