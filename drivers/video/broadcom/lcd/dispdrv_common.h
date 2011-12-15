@@ -129,6 +129,11 @@ typedef struct {
     UInt32      data;       ///< geenric data field
 } DISPCTRL_REC_T, *pDISPCTRL_REC_T;
 
+typedef struct {
+    DISPCTRL_T  type;       ///< display access control type
+	UInt32		number;     ///< Parameter's number
+    UInt8       data[32];       ///< command data and geenric data field 
+} NEW_DISPCTRL_REC_T, *pNEW_DISPCTRL_REC_T;
 
 Int32 DISPDRV_AllocPhyAligned( 
     UInt32  size, 

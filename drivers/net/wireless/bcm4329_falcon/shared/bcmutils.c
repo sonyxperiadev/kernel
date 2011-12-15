@@ -20,7 +20,7 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * $Id: bcmutils.c 275693 2011-08-04 19:59:34Z $
+ * $Id: bcmutils.c,v 1.277.2.18 2011-01-26 02:32:08 Exp $
  */
 
 #include <typedefs.h>

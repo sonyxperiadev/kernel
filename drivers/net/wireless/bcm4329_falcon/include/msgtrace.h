@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: msgtrace.h 275703 2011-08-04 20:20:27Z $
+ * $Id: msgtrace.h,v 1.4 2009-04-10 04:15:32 Exp $
  */
 
 #ifndef	_MSGTRACE_H

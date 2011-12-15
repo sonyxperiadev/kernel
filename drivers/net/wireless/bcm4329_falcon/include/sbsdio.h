@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sbsdio.h 275703 2011-08-04 20:20:27Z $
+ * $Id: sbsdio.h,v 13.34 2009-03-11 20:27:16 Exp $
  */
 
 #ifndef	_SBSDIO_H

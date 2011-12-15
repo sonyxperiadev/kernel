@@ -23,7 +23,7 @@
  *
  * Dependencies: proto/bcmeth.h
  *
- * $Id: bcmevent.h,v 9.64.2.9 2011-02-01 06:24:21 $
+ * $Id: bcmevent.h,v 9.64.2.9 2011-02-01 06:24:21 Exp $
  *
  */
 
@@ -181,9 +181,7 @@ typedef BWL_PRE_PACKED_STRUCT struct bcm_event {
 #define WLC_E_EXCESS_PM_WAKE_EVENT	81	
 #define WLC_E_PFN_SCAN_NONE		82	
 #define WLC_E_PFN_SCAN_ALLGONE	83	
-#define WLC_E_GTK_PLUMBED 84
-#define WLC_E_LAST	85	
-
+#define WLC_E_LAST		84	
 
 
 typedef struct {
@@ -226,8 +224,6 @@ extern const int		bcmevent_names_size;
 #define WLC_E_REASON_DIRECTED_ROAM	6	
 #define WLC_E_REASON_TSPEC_REJECTED	7	
 #define WLC_E_REASON_BETTER_AP		8	
-
-#define WLC_E_REASON_REQUESTED_ROAM 11	
 
 
 #define WLC_E_PRUNE_ENCR_MISMATCH	1	

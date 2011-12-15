@@ -20,7 +20,7 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * $Id: bcmevent.c 275693 2011-08-04 19:59:34Z $
+ * $Id: bcmevent.c,v 1.8.2.7 2011-02-01 06:23:39 Exp $
  */
 
 #include <typedefs.h>
@@ -29,7 +29,7 @@
 #include <proto/bcmeth.h>
 #include <proto/bcmevent.h>
 
-#if WLC_E_LAST != 85
+#if WLC_E_LAST != 84
 #error "You need to add an entry to bcmevent_names[] for the new event"
 #endif
 
@@ -115,10 +115,7 @@ const bcmevent_name_t bcmevent_names[] = {
 	{ WLC_E_CSA_COMPLETE_IND, "WLC_E_CSA_COMPLETE_IND" },
 	{ WLC_E_EXCESS_PM_WAKE_EVENT, "EXCESS_PM_WAKE_EVENT" },
 	{ WLC_E_PFN_SCAN_NONE, "PFN_SCAN_NONE" },
-	{ WLC_E_PFN_SCAN_ALLGONE, "PFN_SCAN_ALLGONE" },
-#ifdef SOFTAP
-	{ WLC_E_GTK_PLUMBED, "GTK_PLUMBED" }
-#endif
+	{ WLC_E_PFN_SCAN_ALLGONE, "PFN_SCAN_ALLGONE" }
 };
 
 

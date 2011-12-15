@@ -21,12 +21,11 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_linux_sched.c 279742 2011-08-25 17:24:48Z $
+ * $Id: dhd_linux_sched.c,v 1.3 2009-04-10 04:14:49 Exp $
  */
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/sched.h>
-#include <typedefs.h>
 #include <linuxver.h>
 
 int setScheduler(struct task_struct *p, int policy, struct sched_param *param)

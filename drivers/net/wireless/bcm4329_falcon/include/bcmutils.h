@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmutils.h 295287 2011-11-10 01:19:44Z $
+ * $Id: bcmutils.h,v 13.236.2.16 2011-01-26 00:45:06 Exp $
  */
 
 
@@ -140,9 +140,7 @@ typedef bool (*ifpkt_cb_t)(void*, int);
 #define SHARED_POOL		((struct pktpool *)NULL)
 #endif 
 
-#ifndef PKTPOOL_LEN_MAX
 #define PKTPOOL_LEN_MAX		40
-#endif
 #define PKTPOOL_CB_MAX		3
 
 struct pktpool;
@@ -329,9 +327,6 @@ extern char *bcm_ip_ntoa(struct ipv4_addr *ia, char *buf);
 
 
 extern void bcm_mdelay(uint ms);
-
-#define NVRAM_RECLAIM_CHECK(name)
-
 
 extern char *getvar(char *vars, const char *name);
 extern int getintvar(char *vars, const char *name);

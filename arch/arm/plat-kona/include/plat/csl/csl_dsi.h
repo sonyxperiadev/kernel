@@ -54,8 +54,8 @@ extern "C" {
 *****************************************************************************/
 typedef struct
 {
-    UInt32              clkIn_MHz;      ///< input clock  
-    UInt32              clkInDiv;       ///< input clock divider value
+	UInt32		clkIn_MHz;	///< input clock  
+	UInt32		clkInDiv;	///< input clock divider value
 } DSI_CLK_T;
  
 /**
@@ -65,7 +65,7 @@ typedef struct
 *****************************************************************************/
 typedef enum
 {
-    DSI_DPHY_0_92 = 1,
+	DSI_DPHY_0_92 = 1,
 } DSI_DPHY_SPEC_T;
  
  
@@ -75,18 +75,18 @@ typedef enum
 *
 *****************************************************************************/
 typedef struct {
-    UInt32              bus;            ///< DSI controller(bus) number
-    UInt32              dlCount;        ///< Number of Data Lines
-    DSI_DPHY_SPEC_T     dPhySpecRev;    ///< D-PHY Spec Rev
-    DSI_CLK_T           escClk;         ///< ESC Clk Configuration
-    DSI_CLK_T           hsBitClk;       ///< HS  Clk Configuration 
-    UInt32              lpBitRate_Mbps; ///< LP Data Bit Rate, MAX=10[Mbps]
-    Boolean             enaContClock;   ///< enable Continous Clock         
-    Boolean             enaRxCrc;       ///< enable RX CRC         
-    Boolean             enaRxEcc;       ///< enable RX ECC        
-    Boolean             enaHsTxEotPkt;  ///< enable TX of EOT during HS mode         
-    Boolean             enaLpTxEotPkt;  ///< enable TX of EOT during LP mode      
-    Boolean             enaLpRxEotPkt;  ///< enable RX of EOT during LP mode      
+	UInt32		bus;		///< DSI controller(bus) number
+	UInt32		dlCount;	///< Number of Data Lines
+	DSI_DPHY_SPEC_T	dPhySpecRev;	///< D-PHY Spec Rev
+	DSI_CLK_T	escClk;		///< ESC Clk Configuration
+	DSI_CLK_T	hsBitClk;	///< HS  Clk Configuration 
+	UInt32		lpBitRate_Mbps; ///< LP Data Bit Rate, MAX=10[Mbps]
+	Boolean		enaContClock;	///< enable Continous Clock         
+	Boolean		enaRxCrc;	///< enable RX CRC         
+	Boolean		enaRxEcc;	///< enable RX ECC        
+	Boolean		enaHsTxEotPkt;	///< enable TX of EOT during HS mode         
+	Boolean		enaLpTxEotPkt;	///< enable TX of EOT during LP mode      
+	Boolean		enaLpRxEotPkt;	///< enable RX of EOT during LP mode      
 } CSL_DSI_CFG_t, *pCSL_DSI_CFG;
 
 
@@ -95,21 +95,21 @@ typedef struct {
 *  DSI Replay
 *
 *****************************************************************************/
-#define DSI_RX_TYPE_TRIG            1
-#define DSI_RX_TYPE_READ_REPLY      2   
-#define DSI_RX_TYPE_ERR_REPLY       4 
+#define DSI_RX_TYPE_TRIG		1
+#define DSI_RX_TYPE_READ_REPLY		2	
+#define DSI_RX_TYPE_ERR_REPLY		4 
   
 typedef struct
 {
-    UInt8               type;             ///< type of the reply - bit fields
-    UInt8               trigger;          ///< trigger message 
-    UInt8               readReplyDt;      ///< Reply DT
-    UInt8               readReplySize;    ///< Reply Size   [bytes]
-    UInt32              readReplyRxStat;  ///< Reply Status
-    UInt8*              pReadReply;       ///< Reply payload, MAX 8 [bytes]
-    UInt8               errReportDt;      ///< DsiErrRpt DT
-    UInt32              errReportRxStat;  ///< DsiErrRpt STAT
-    UInt16              errReport;        ///< DsiErrRpt data, bit-fields
+	UInt8		type;		  ///< type of the reply - bit fields
+	UInt8		trigger;	  ///< trigger message 
+	UInt8		readReplyDt;	  ///< Reply DT
+	UInt8		readReplySize;	  ///< Reply Size   [bytes]
+	UInt32		readReplyRxStat;  ///< Reply Status
+	UInt8*		pReadReply;	  ///< Reply payload
+	UInt8		errReportDt;	  ///< DsiErrRpt DT
+	UInt32		errReportRxStat;  ///< DsiErrRpt STAT
+	UInt16		errReport;	  ///< DsiErrRpt data, bit-fields
 } CSL_DSI_REPLY_t, *pCSL_DSI_REPLY; 
 
 /**
@@ -119,14 +119,14 @@ typedef struct
 *****************************************************************************/
 typedef struct
 {
-    UInt32              vc;            ///< Destination Virtual Channel
-    Boolean             isLP;          ///< LP(Low Power) | HS(High Speed)
-    Boolean             isLong;        ///< LONG | SHORT
-    UInt32              dsiCmnd;       ///< DSI command to send
-    UInt8*              msg;           ///< TX msg payload
-    UInt32              msgLen;        ///< SHORT=MAX 2[bytes],LONG=MAX 8[bytes]
-    Boolean             endWithBta;    ///< End command with BTA
-    pCSL_DSI_REPLY      reply;         ///< if endWithBta, otherwise NULL
+	UInt32		vc;	       ///< Destination Virtual Channel
+	Boolean		isLP;	       ///< LP(Low Power) | HS(High Speed)
+	Boolean		isLong;	       ///< LONG | SHORT
+	UInt32		dsiCmnd;       ///< DSI command to send
+	UInt8*		msg;	       ///< TX msg payload
+	UInt32		msgLen;	       ///< TX Msg Size  [bytes]
+	Boolean		endWithBta;    ///< End command with BTA
+	pCSL_DSI_REPLY	reply;	       ///< if endWithBta, otherwise NULL
 } CSL_DSI_CMND_t, *pCSL_DSI_CMND; 
 
 
@@ -142,34 +142,12 @@ typedef struct
 *****************************************************************************/
 typedef enum
 {
-    DSI_TE_NONE,                        ///< TE NotUsed
-    DSI_TE_CTRLR_TRIG,                  ///< TE BTA + TE TRIG Msg
-    DSI_TE_CTRLR_INPUT_0,               ///< TE Ctrlr Synced With EXT TE Sig
-    DSI_TE_CTRLR_INPUT_1,               ///< TE Ctrlr Synced With EXT TE Sig
+	DSI_TE_NONE,			///< TE NotUsed
+	DSI_TE_CTRLR_TRIG,		///< TE BTA + TE TRIG Msg
+	DSI_TE_CTRLR_INPUT_0,		///< TE Ctrlr Synced With EXT TE Sig
+	DSI_TE_CTRLR_INPUT_1,		///< TE Ctrlr Synced With EXT TE Sig
 } CSL_DSI_TE_IN_TYPE_T;
 
-#if ( defined (_ATHENA_)&& (CHIP_REVISION >= 20) ) 
-
-#define CSL_DSI_TE_MODE_VSYNC          (0)   ///< TE MODE vsync       (mode 1)    
-#define CSL_DSI_TE_MODE_VSYNC_HSYNC    (1)   ///< TE MODE vsync_hsync (mode 2)
-
-#define CSL_DSI_TE_ACT_POL_LO          (0)   ///< Active LO ( VSYNC & HSYNC )
-#define CSL_DSI_TE_ACT_POL_HI          (1)   ///< Active HI ( VSYNC & HSYNC )
-
-/**
-*
-* TE Input Config
-*
-*****************************************************************************/
-typedef struct 
-{
-    UInt32     te_mode;      ///< ATHENA B0 te mode ( VSYNC or VSYNC & HSYNC )
-    UInt32     sync_pol;     ///< ATHENA B0 sync polarity
-    UInt32     vsync_width;  ///< ATHENA B0 vsync_width [tectl_clk_count]
-    UInt32     hsync_line;   ///< ATHENA B0 hsync_line
-} CSL_DSI_TE_IN_CFG_t, *pCSL_DSI_TE_IN_CFG;
-
-#endif // #if ( defined (_ATHENA_)&& (CHIP_REVISION >= 20) ) 
 
 
 /**
@@ -179,10 +157,7 @@ typedef struct
 *****************************************************************************/
 typedef struct
 {
-    CSL_DSI_TE_IN_TYPE_T    teInType;   ///< DSI TE Input type
-    #if ( defined (_ATHENA_)&& (CHIP_REVISION >= 20) ) 
-    pCSL_DSI_TE_IN_CFG      teInCfg;    ///< DSI TE Input Configuration
-    #endif    
+	CSL_DSI_TE_IN_TYPE_T    teInType;	///< DSI TE Input type
 } CSL_DSI_TE_T;
 
 
@@ -193,31 +168,61 @@ typedef struct
 *
 *****************************************************************************/
 typedef struct {
-    UInt32              vc;             ///< Virtual Channel
-    UInt32              dsiCmnd;        ///< DSI Command DT
-    UInt32              dcsCmndStart;   ///< Display MEMWR Start    Command
-    UInt32              dcsCmndCont;    ///< Display MEMWR Continue Command
-    Boolean             isLP;           ///< LP(Low Power) / HS(High Speed)
-    CSL_LCD_CM_IN       cm_in;          ///< Color Mode In  (frame buffer)
-    CSL_LCD_CM_OUT      cm_out;         ///< Color Mode Out (display)
-    CSL_DSI_TE_T        teCfg;          ///< TE configuration
+	UInt32		vc;		///< Virtual Channel
+	UInt32		dsiCmnd;	///< DSI Command DT
+	UInt32		dcsCmndStart;	///< Display MEMWR Start    Command
+	UInt32		dcsCmndCont;	///< Display MEMWR Continue Command
+	Boolean		isLP;		///< LP(Low Power) / HS(High Speed)
+	CSL_LCD_CM_IN	cm_in;		///< Color Mode In  (frame buffer)
+	CSL_LCD_CM_OUT	cm_out;		///< Color Mode Out (display)
+	CSL_DSI_TE_T	teCfg;		///< TE configuration
 } CSL_DSI_CM_VC_t, *pCSL_DSI_CM_VC;
 
 
 
 /**
 *
-*  @brief    Send DSI Command  
+*  @brief	Get Max Data Packet Size[Bytes] we can send using 
+*		CSL_DSI_SendPacket API
 *
-*  @param	 clientH        (in)  CSL DSI Client handle
-*  @param	 cmnd           (in)  Command definition
+*  @return	UInt32		(out) result
 *
-*  @return	 CSL_LCD_RES_T  (out) result
+*  @note	
 *
-*  @note     R&W access with DSI status feedback capability
+*****************************************************************************/				 
+UInt32 CSL_DSI_GetMaxTxMsgSize( void );
+
+/**
 *
-*****************************************************************************/                           
-CSL_LCD_RES_T CSL_DSI_SendPacket ( CSL_LCD_HANDLE clientH, pCSL_DSI_CMND cmnd );
+*  @brief	Get Max Data Packet Size[Bytes] we can receive using 
+*		CSL_DSI_SendPacket(w BTA option set) API
+*
+*  @return	UInt32		(out) result
+*
+*  @note	'Peripheral' device must be configured not to send more than 
+*               value retrieved, by using DSI Set-Maximum-Return-Packet-Size
+*               DT. As per DSI Spec peripheral's default value is set to 1.
+*
+*****************************************************************************/				 
+UInt32 CSL_DSI_GetMaxRxMsgSize( void );
+
+/**
+*
+*  @brief	Send DSI Command  
+*
+*  @param	clientH		(in)  CSL DSI Client handle
+*  @param	cmnd		(in)  Command definition
+*  @param	isTE		(in)  Sync Tranfer to TE singal
+*
+*  @return	CSL_LCD_RES_T  (out) result
+*
+*  @note	R&W access with DSI status feedback capability
+*
+*****************************************************************************/				 
+CSL_LCD_RES_T CSL_DSI_SendPacket( 
+		CSL_LCD_HANDLE	clientH, 
+		pCSL_DSI_CMND	cmnd, 
+		Boolean		isTE );
 
 
 /**
@@ -232,11 +237,11 @@ CSL_LCD_RES_T CSL_DSI_SendPacket ( CSL_LCD_HANDLE clientH, pCSL_DSI_CMND cmnd );
 *
 *  @note     
 *
-*****************************************************************************/                           
-CSL_LCD_RES_T CSL_DSI_OpenCmVc ( 
-                CSL_LCD_HANDLE     clientH, 
-                pCSL_DSI_CM_VC     dsiCmVcCfg, 
-                CSL_LCD_HANDLE*    dsiCmVcH ); 
+*****************************************************************************/				 
+CSL_LCD_RES_T CSL_DSI_OpenCmVc( 
+		CSL_LCD_HANDLE		clientH, 
+		pCSL_DSI_CM_VC		dsiCmVcCfg, 
+		CSL_LCD_HANDLE*		dsiCmVcH ); 
 
 /**
 *
@@ -248,50 +253,52 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc (
 *
 *  @note     
 *
-*****************************************************************************/                           
+*****************************************************************************/				 
 CSL_LCD_RES_T CSL_DSI_CloseCmVc ( CSL_LCD_HANDLE dsiCmVcH );
-              
+	      
 /**
 *
 *  @brief    Update Command Mode Display 
 *
-*  @param	 dsiCmVcH       (in) Command Mode VC handle
-*  @param	 req            (in) Update Request
+*  @param    dsiCmVcH		(in) Command Mode VC handle
+*  @param    req		(in) Update Request
+*  @param    isTE(		(in) Sync Tranfer to TE signal
 *
-*  @return	 CSL_LCD_RES_T  (out) result
+*  @return   CSL_LCD_RES_T  	(out) result
 *
 *  @note     
 *
-*****************************************************************************/                           
-CSL_LCD_RES_T CSL_DSI_UpdateCmVc ( 
-                CSL_LCD_HANDLE      dsiCmVcH, 
-                pCSL_LCD_UPD_REQ    req );
+*****************************************************************************/				 
+CSL_LCD_RES_T CSL_DSI_UpdateCmVc( 
+		CSL_LCD_HANDLE		dsiCmVcH, 
+		pCSL_LCD_UPD_REQ	req,
+		Boolean			isTE  );
 
 
 /**
 *
 *  @brief    Lock DSI Interface for the Client
 *
-*  @param	 client         (in)  DSI Client Handle
+*  @param    client	(in)  DSI Client Handle
 *
-*  @return	 void
+*  @return   void
 *
 *  @note     
 *
-*****************************************************************************/                           
+*****************************************************************************/				 
 void CSL_DSI_Unlock ( CSL_LCD_HANDLE client );
 
 /**
 *
 *  @brief    Release Client's DSI Lock
 *
-*  @param	 client         (in)  DSI Client Handle
+*  @param    client	(in)  DSI Client Handle
 *
-*  @return	 void
+*  @return   void
 *
 *  @note     
 *
-*****************************************************************************/                           
+*****************************************************************************/				 
 void CSL_DSI_Lock ( CSL_LCD_HANDLE client );
 
 /**
@@ -305,9 +312,9 @@ void CSL_DSI_Lock ( CSL_LCD_HANDLE client );
 *
 *  @note     DSI Interface Must Be Open (configured)
 *
-*****************************************************************************/                           
+*****************************************************************************/				 
 CSL_LCD_RES_T CSL_DSI_OpenClient ( UInt32 bus, CSL_LCD_HANDLE* client );
-              
+	      
 
 /**
 *
@@ -319,8 +326,8 @@ CSL_LCD_RES_T CSL_DSI_OpenClient ( UInt32 bus, CSL_LCD_HANDLE* client );
 *
 *  @note     
 *
-*****************************************************************************/                           
-CSL_LCD_RES_T CSL_DSI_CloseClient ( CSL_LCD_HANDLE client );
+*****************************************************************************/				 
+CSL_LCD_RES_T CSL_DSI_CloseClient( CSL_LCD_HANDLE client );
 
 /**
 *
@@ -333,8 +340,8 @@ CSL_LCD_RES_T CSL_DSI_CloseClient ( CSL_LCD_HANDLE client );
 *
 *  @note     
 *
-*****************************************************************************/                           
-CSL_LCD_RES_T  CSL_DSI_Ulps ( CSL_LCD_HANDLE client, Boolean on );
+*****************************************************************************/				 
+CSL_LCD_RES_T  CSL_DSI_Ulps( CSL_LCD_HANDLE client, Boolean on );
 
 /**
 *
@@ -346,8 +353,8 @@ CSL_LCD_RES_T  CSL_DSI_Ulps ( CSL_LCD_HANDLE client, Boolean on );
 *
 *  @note     
 *
-*****************************************************************************/                           
-CSL_LCD_RES_T CSL_DSI_Init ( pCSL_DSI_CFG dsiCfg );
+*****************************************************************************/				 
+CSL_LCD_RES_T CSL_DSI_Init( pCSL_DSI_CFG dsiCfg );
 
 /**
 *
@@ -359,9 +366,9 @@ CSL_LCD_RES_T CSL_DSI_Init ( pCSL_DSI_CFG dsiCfg );
 *
 *  @note     
 *
-*****************************************************************************/                           
-CSL_LCD_RES_T  CSL_DSI_Close ( UInt32 bus );
-        
+*****************************************************************************/				 
+CSL_LCD_RES_T  CSL_DSI_Close( UInt32 bus );
+	
 /** @} */
 
 #ifdef __cplusplus

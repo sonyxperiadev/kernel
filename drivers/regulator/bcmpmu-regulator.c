@@ -41,7 +41,7 @@ static int bcmpmureg_get_status(struct regulator_dev *rdev);
 static int bcmpmureg_disable(struct regulator_dev *rdev);
 static int bcmpmureg_enable(struct regulator_dev *rdev);
 static int bcmpmureg_is_enabled(struct regulator_dev *rdev);
-
+static struct regulator_dev *regl[BCMPMU_REGULATOR_MAX];
 
 /** voltage regulator details.  */
 struct regulator_ops bcmpmuldo_ops = {
@@ -78,12 +78,12 @@ static int bcmpmureg_is_enabled(struct regulator_dev *rdev)
 
 	if ( ldo_or_sr == BCMPMU_LDO ) {
 		if ( rc < LDO_OFF ) return 1;
-		else return 0; 
+		else return 0;
 	}
 	else {
 		if ( rc == LDO_OFF ) return 0;
-		else return 1; 
-	}	
+		else return 1;
+	}
 }
 
 /* @enable: Configure the regulator as enabled. */
@@ -91,8 +91,6 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 {
 	struct bcmpmu	*bcmpmu = rdev_get_drvdata(rdev);
 	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
-	unsigned int ldo_or_sr = info->ldo_or_sr;
-	unsigned int val;
 
 	int rc = LDO_NORMAL << PM1_SHIFT | LDO_NORMAL << PM2_SHIFT | LDO_NORMAL << PM3_SHIFT;
 	return ( bcmpmu->write_dev(bcmpmu, info->reg_addr,
@@ -104,7 +102,6 @@ static int bcmpmureg_disable(struct regulator_dev *rdev)
 {
 	struct bcmpmu	*bcmpmu = rdev_get_drvdata(rdev);
 	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
-	unsigned int val;
 
 	int rc = LDO_OFF << PM1_SHIFT | LDO_OFF << PM2_SHIFT | LDO_OFF << PM3_SHIFT;
 	return ( bcmpmu->write_dev(bcmpmu, info->reg_addr,
@@ -155,7 +152,7 @@ static unsigned int bcmpmureg_get_mode (struct regulator_dev *rdev)
 
 	unsigned int ldo_or_sr = info->ldo_or_sr;
 	unsigned int val;
-	
+
 	int rc = bcmpmu->read_dev(bcmpmu,info->reg_addr, &val, info->mode_mask);
 
 	if (rc < 0) {
@@ -189,7 +186,6 @@ static int bcmpmureg_set_mode(struct regulator_dev *rdev, unsigned mode)
 	struct bcmpmu	*bcmpmu = rdev_get_drvdata(rdev);
 	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
 	unsigned int ldo_or_sr = info->ldo_or_sr;
-	unsigned int val;
 	int rc = 0;
 	
 	switch ( mode ) {
@@ -274,7 +270,7 @@ static int bcmpmuldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max
 static int bcmpmuldo_get_voltage(struct regulator_dev *rdev)
 {
 	struct bcmpmu	*bcmpmu = rdev_get_drvdata(rdev);
-	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev); 
+	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
 	unsigned int ldo_or_sr = info->ldo_or_sr;
 	unsigned int addr = 0 ;
 	unsigned int mode = 0 ;
@@ -310,95 +306,55 @@ static int bcmpmuldo_get_voltage(struct regulator_dev *rdev)
 
 static int bcmpmu_regulator_probe(struct platform_device *pdev)
 {
-	struct regulator_dev *rdev;
-	struct bcmpmu *bcmpmu = platform_get_drvdata(pdev);
+	int i;
+	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
+	struct bcmpmu_regulator_init_data *bcmpmu_regulators =
+		bcmpmu->pdata->regulator_init_data;
+	int num_of_regl = bcmpmu->pdata->num_of_regl;
+	int regl_id, ret = 0;
 
-	printk(KERN_INFO "%s: called. id = %d\n", __func__, pdev->id);
-
+	printk(KERN_INFO "%s: called\n", __func__);
 	/* register regulator */
+	bcmpmu->rgltr_desc = bcmpmu_rgltr_desc();
+	bcmpmu->rgltr_info = bcmpmu_rgltr_info();
 	if ( ( bcmpmu->rgltr_info == NULL ) ||
 		( bcmpmu->rgltr_desc == NULL ) ) {
 		printk(KERN_ERR "%s: regulator info and desc not avail.\n", __func__);
 	}
 
-	rdev = regulator_register( (bcmpmu->rgltr_desc + pdev->id), &pdev->dev,
-				  pdev->dev.platform_data,
-				  dev_get_drvdata(&pdev->dev));
-	if (IS_ERR(rdev)) {
-		dev_err(&pdev->dev, "failed to register %s\n",
-			 ( bcmpmu->rgltr_desc + pdev->id)->name);
-		return PTR_ERR(rdev);
+	for (i = 0; i < num_of_regl; i++) {
+		regl_id = (bcmpmu_regulators + i)->regulator;
+		printk("%s: REGULATOR name %s, ID %d\n", __func__, (bcmpmu->rgltr_desc + regl_id)->name, regl_id);
+		regl[i] = regulator_register(&bcmpmu->rgltr_desc[regl_id],
+				&pdev->dev, (bcmpmu_regulators + i)->initdata,
+				bcmpmu);
+		if (IS_ERR(regl[i])) {
+				dev_err(&pdev->dev, "failed to register %s\n",
+					(bcmpmu->rgltr_desc + regl_id)->name);
+				ret = PTR_ERR(regl[i]);
+				goto register_fail;
+		}
 	}
-
 	regulator_has_full_constraints();
-
-	return 0;
+	return ret;
+register_fail:
+	while (i >= 0)
+		regulator_unregister(regl[i]);
+	bcmpmu->rgltr_desc = NULL;
+	bcmpmu->rgltr_info = NULL;
+	kfree(regl);
+	return ret;
 }
 
 static int bcmpmu_regulator_remove(struct platform_device *pdev)
 {
-	struct regulator_dev *rdev = platform_get_drvdata(pdev);
-
-	regulator_unregister(rdev);
-
+	struct bcmpmu *bcmpmu = platform_get_drvdata(pdev);
+	int i=0;
+	while (i < bcmpmu->pdata->num_of_regl)
+		regulator_unregister (regl[i]);
+	kfree (regl);
 	return 0;
 }
-
-int bcmpmu_register_regulator(struct bcmpmu *bcmpmu, int reg,
-			      struct regulator_init_data *initdata)
-{
-	struct platform_device *pdev;
-	int ret = 0 ;
-
-	pdev = platform_device_alloc("bcmpmu-regulator", reg);
-	if (!pdev)
-		return -ENOMEM;
-
-	bcmpmu->pdev[reg] = pdev;
-	initdata->driver_data = bcmpmu;
-	pdev->dev.platform_data = initdata;
-	pdev->dev.parent = bcmpmu->dev;
-	platform_set_drvdata(pdev, bcmpmu);
-
-	ret = platform_device_add(pdev);
-
-	if (ret != 0) {
-		dev_err(bcmpmu->dev, "Failed to register regulator %d: %d\n",
-			reg, ret);
-		platform_device_del(pdev);
-		bcmpmu->pdev[reg] = NULL;
-	}
-
-	return ret;
-}
-
-void bcmpmu_reg_dev_init(struct bcmpmu *bcmpmu)
-{
-	int i = 0;
-	struct bcmpmu_regulator_init_data *bcmpmu_regulators =
-		bcmpmu->pdata->regulator_init_data;
-
-	bcmpmu->rgltr_desc = bcmpmu_rgltr_desc();
-	bcmpmu->rgltr_info = bcmpmu_rgltr_info();
-
-	for (i = 0; i < BCMPMU_REGULATOR_MAX; i++) {
-		bcmpmu->pdev[i] = NULL;
-		if ((bcmpmu_regulators + i)->initdata != NULL)
-			bcmpmu_register_regulator(bcmpmu,
-				(bcmpmu_regulators + i)->regulator,
-				(bcmpmu_regulators + i)->initdata);
-	}
-}
-
-void bcmpmu_reg_dev_exit(struct bcmpmu *bcmpmu)
-{
-	int i;
-	for (i = 0; i < BCMPMU_REGULATOR_MAX; i++)
-		if (bcmpmu->pdev[i] != NULL)
-			platform_device_unregister(bcmpmu->pdev[i]);
-}
-
-
 
 static struct platform_driver bcmpmu_regulator_driver = {
 	.probe = bcmpmu_regulator_probe,
@@ -413,7 +369,7 @@ static int __init bcmpmu_regulator_init(void)
 	return platform_driver_register(&bcmpmu_regulator_driver);
 }
 
-subsys_initcall(bcmpmu_regulator_init);
+module_init(bcmpmu_regulator_init);
 
 static void __exit bcmpmu_regulator_exit(void)
 {

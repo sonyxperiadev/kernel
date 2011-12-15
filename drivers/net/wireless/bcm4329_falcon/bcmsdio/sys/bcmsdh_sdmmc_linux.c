@@ -21,14 +21,16 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_sdmmc_linux.c 300908 2011-12-06 10:32:01Z $
+ * $Id: bcmsdh_sdmmc_linux.c,v 1.8.6.2 2011-02-01 18:38:36 Exp $
  */
 
 #include <typedefs.h>
 #include <bcmutils.h>
-#include <sdio.h>	/* SDIO Device and Protocol Specs */
+#include <sdio.h>	/* SDIO Specs */
 #include <bcmsdbus.h>	/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>	/* to get msglevel bit values */
+#include <dngl_stats.h>
+#include <dhd.h>
 
 #include <linux/sched.h>	/* request_irq() */
 
@@ -36,6 +38,7 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
+#include <linux/mmc/bcm_sdiowl.h>
 
 #if !defined(SDIO_VENDOR_ID_BROADCOM)
 #define SDIO_VENDOR_ID_BROADCOM		0x02d0
@@ -55,27 +58,18 @@
 #if !defined(SDIO_DEVICE_ID_BROADCOM_4319)
 #define SDIO_DEVICE_ID_BROADCOM_4319	0x4319
 #endif /* !defined(SDIO_DEVICE_ID_BROADCOM_4319) */
-#if !defined(SDIO_DEVICE_ID_BROADCOM_4330)
-#define SDIO_DEVICE_ID_BROADCOM_4330	0x4330
-#endif /* !defined(SDIO_DEVICE_ID_BROADCOM_4330) */
-#if !defined(SDIO_DEVICE_ID_BROADCOM_4334)
-#define SDIO_DEVICE_ID_BROADCOM_4334    0x4334
-#endif /* !defined(SDIO_DEVICE_ID_BROADCOM_4334) */
-#if !defined(SDIO_DEVICE_ID_BROADCOM_4324)
-#define SDIO_DEVICE_ID_BROADCOM_4324    0x4324
-#endif /* !defined(SDIO_DEVICE_ID_BROADCOM_4324) */
-
 
 #include <bcmsdh_sdmmc.h>
 
 #include <dhd_dbg.h>
 
 #ifdef WL_CFG80211
-extern void wl_cfg80211_set_parent_dev(void *dev);
+extern void wl_cfg80211_set_sdio_func(void *func);
 #endif
 
 extern void sdioh_sdmmc_devintr_off(sdioh_info_t *sd);
 extern void sdioh_sdmmc_devintr_on(sdioh_info_t *sd);
+extern int bcm_sdiowl_rescan(void);
 
 int sdio_function_init(void);
 void sdio_function_cleanup(void);
@@ -96,6 +90,7 @@ PBCMSDH_SDMMC_INSTANCE gInstance;
 
 extern int bcmsdh_probe(struct device *dev);
 extern int bcmsdh_remove(struct device *dev);
+struct device sdmmc_dev;
 
 static int bcmsdh_sdmmc_probe(struct sdio_func *func,
                               const struct sdio_device_id *id)
@@ -115,7 +110,7 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 		if(func->device == 0x4) { /* 4318 */
 			gInstance->func[2] = NULL;
 			sd_trace(("NIC found, calling bcmsdh_probe...\n"));
-			ret = bcmsdh_probe(&func->dev);
+			ret = bcmsdh_probe(&sdmmc_dev);
 		}
 	}
 
@@ -123,10 +118,10 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 
 	if (func->num == 2) {
 #ifdef WL_CFG80211
-		wl_cfg80211_set_parent_dev(&func->dev);
+		wl_cfg80211_set_sdio_func(func);
 #endif
 		sd_trace(("F2 found, calling bcmsdh_probe...\n"));
-		ret = bcmsdh_probe(&func->dev);
+		ret = bcmsdh_probe(&sdmmc_dev);
 	}
 
 	return ret;
@@ -142,12 +137,7 @@ static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 
 	if (func->num == 2) {
 		sd_trace(("F2 found, calling bcmsdh_remove...\n"));
-		bcmsdh_remove(&func->dev);
-	} else if (func->num == 1) {
-		sdio_claim_host(func);
-		sdio_disable_func(func);
-		sdio_release_host(func);
-		gInstance->func[1] = NULL;
+		bcmsdh_remove(&sdmmc_dev);
 	}
 }
 
@@ -158,12 +148,7 @@ static const struct sdio_device_id bcmsdh_sdmmc_ids[] = {
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4325) },
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4329) },
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4319) },
-	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4330) },
-	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4334) },
-	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4324) },
-#ifndef BOARD_PANDA
 	{ SDIO_DEVICE_CLASS(SDIO_CLASS_NONE)		},
-#endif
 	{ /* end: all zeroes */				},
 };
 
@@ -277,7 +262,27 @@ int sdio_function_init(void)
 	if (!gInstance)
 		return -ENOMEM;
 
+	error = bcm_sdiowl_init();
+	if (error) {
+		sd_err(("%s: bcm_sdiowl_start failed\n", __FUNCTION__));
+		kfree(gInstance);
+		return error;
+	}
+
+	/* Reset device and rescan so SDMMC does not get confused */
+	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
+	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
+	error = bcm_sdiowl_rescan();
+	if (error) {
+		sd_err(("%s: bcm_sdiowl_rescan failed\n", __FUNCTION__));
+		bcm_sdiowl_term();
+		kfree(gInstance);
+		return error;
+	}
+
+	bzero(&sdmmc_dev, sizeof(sdmmc_dev));
 	error = sdio_register_driver(&bcmsdh_sdmmc_driver);
+
 
 	return error;
 }
@@ -290,8 +295,13 @@ void sdio_function_cleanup(void)
 {
 	sd_trace(("%s Enter\n", __FUNCTION__));
 
-
 	sdio_unregister_driver(&bcmsdh_sdmmc_driver);
+
+	/* hold WiFi circuitry in reset to minimize power consumption when WiFi
+	   is disabled. */
+	bcm_sdiowl_reset_b(0);
+
+	bcm_sdiowl_term();
 
 	if (gInstance)
 		kfree(gInstance);

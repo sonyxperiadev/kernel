@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmperf.h 275703 2011-08-04 20:20:27Z $
+ * $Id: bcmperf.h,v 13.5 2007-09-14 22:00:59 Exp $
  */
 /* essai */
 #ifndef _BCMPERF_H_

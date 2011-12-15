@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: siutils.h 275703 2011-08-04 20:20:27Z $
+ * $Id: siutils.h,v 13.251.2.10 2011-02-04 05:06:32 Exp $
  */
 
 
@@ -213,33 +213,7 @@ extern int si_corepciid(si_t *sih, uint func, uint16 *pcivendor, uint16 *pcidevi
 #define si_eci(sih) 0
 #define si_eci_init(sih) (0)
 #define si_eci_notify_bt(sih, type, val)  (0)
-#define si_seci(sih) 0
-static INLINE void * si_seci_init(si_t *sih, uint8 use_seci) {return NULL;}
-#define si_seci_down(sih) do { } while (0)
 
-
-extern bool si_is_otp_disabled(si_t *sih);
-extern bool si_is_otp_powered(si_t *sih);
-extern void si_otp_power(si_t *sih, bool on);
-
-
-extern bool si_is_sprom_available(si_t *sih);
-extern bool si_is_sprom_enabled(si_t *sih);
-extern void si_sprom_enable(si_t *sih, bool enable);
-
-
-extern int si_cis_source(si_t *sih);
-#define CIS_DEFAULT	0
-#define CIS_SROM	1
-#define CIS_OTP		2
-
-
-#define	DEFAULT_FAB	0x0	
-#define	CSM_FAB7	0x1	
-#define	TSMC_FAB12	0x2	
-#define	SMIC_FAB4	0x3	
-extern int si_otp_fabid(si_t *sih, uint16 *fabid, bool rw);
-extern uint16 si_fabid(si_t *sih);
 
 
 extern int si_devpath(si_t *sih, char *path, int size);

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: siutils_priv.h 275693 2011-08-04 19:59:34Z $
+ * $Id: siutils_priv.h,v 1.17.4.3 2010-10-25 16:56:56 Exp $
  */
 
 #ifndef	_siutils_priv_h_

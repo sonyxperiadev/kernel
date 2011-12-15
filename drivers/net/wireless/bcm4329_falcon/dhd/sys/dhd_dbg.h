@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_dbg.h 285933 2011-09-23 21:45:31Z $
+ * $Id: dhd_dbg.h,v 1.9.6.1 2010-12-22 23:47:24 Exp $
  */
 
 #ifndef _dhd_dbg_
@@ -43,7 +43,6 @@
 #define DHD_EVENT(args)		do {if (dhd_msg_level & DHD_EVENT_VAL) printf args;} while (0)
 #define DHD_BTA(args)		do {if (dhd_msg_level & DHD_BTA_VAL) printf args;} while (0)
 #define DHD_ISCAN(args)		do {if (dhd_msg_level & DHD_ISCAN_VAL) printf args;} while (0)
-#define DHD_ARPOE(args)		do {if (dhd_msg_level & DHD_ARPOE_VAL) printf args;} while (0)
 
 #define DHD_ERROR_ON()		(dhd_msg_level & DHD_ERROR_VAL)
 #define DHD_TRACE_ON()		(dhd_msg_level & DHD_TRACE_VAL)
@@ -58,7 +57,6 @@
 #define DHD_EVENT_ON()		(dhd_msg_level & DHD_EVENT_VAL)
 #define DHD_BTA_ON()		(dhd_msg_level & DHD_BTA_VAL)
 #define DHD_ISCAN_ON()		(dhd_msg_level & DHD_ISCAN_VAL)
-#define DHD_ARPOE_ON()		(dhd_msg_level & DHD_ARPOE_VAL)
 
 #else /* defined(BCMDBG) || defined(DHD_DEBUG) */
 
@@ -75,7 +73,6 @@
 #define DHD_EVENT(args)
 #define DHD_BTA(args)
 #define DHD_ISCAN(args)
-#define DHD_ARPOE(args)
 
 #define DHD_ERROR_ON()		0
 #define DHD_TRACE_ON()		0
@@ -90,12 +87,10 @@
 #define DHD_EVENT_ON()		0
 #define DHD_BTA_ON()		0
 #define DHD_ISCAN_ON()		0
-#define DHD_ARPOE_ON()		0
 #endif 
 
 #define DHD_LOG(args)
 
-#define DHD_BLOG(cp, size)
 #define DHD_NONE(args)
 extern int dhd_msg_level;
 

@@ -285,6 +285,8 @@ static int disable_display(struct rhea_fb *fb)
 {
 	int ret = 0;
 
+	fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_SLEEP);
+	
 	fb->display_ops->close(fb->display_hdl);
 
 	fb->display_ops->exit();

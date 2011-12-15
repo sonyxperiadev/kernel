@@ -104,6 +104,8 @@ typedef struct
     UInt32              busId;
     UInt32              teIn;
     UInt32              teOut;
+    Boolean             isTE;
+    Boolean             is_hw_TE;
     LCD_DRV_RECT_t      win;
     void*               pFb;
     void*               pFbA;
@@ -365,7 +367,7 @@ static void bcm91008_alex_WrCmndP1(
     msgData[0] = reg;                                  
     msgData[1] = value & 0x000000FF;   
     
-    CSL_DSI_SendPacket (pPanel->clientH, &msg);   
+    CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
 }
 
 //*****************************************************************************
@@ -388,7 +390,7 @@ static void bcm91008_alex_WrCmndP0(
     
     msg.dsiCmnd    = DSI_DT_SH_DCS_WR_P0;
     msg.msg        = &msgData[0];
-    msg.msgLen     = 2;
+    msg.msgLen     = 1;
     msg.vc         = BCM91008_ALEX_VC;
     msg.isLP       = BCM91008_ALEX_CMND_IS_LP;
     msg.isLong     = FALSE;
@@ -397,7 +399,7 @@ static void bcm91008_alex_WrCmndP0(
     msgData[0] = reg;                                  
     msgData[1] = 0;   
     
-    CSL_DSI_SendPacket (pPanel->clientH, &msg);   
+    CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
 }
 
 //*****************************************************************************
@@ -472,7 +474,7 @@ static int bcm91008_alex_IoCtlRd(
     msg.reply      = &rxMsg;
 
     txData[0] = acc->cmnd;                                    
-    cslRes = CSL_DSI_SendPacket ( pPanel->clientH, &msg );
+    cslRes = CSL_DSI_SendPacket ( pPanel->clientH, &msg, FALSE );
     
     if( cslRes != CSL_LCD_OK )
     {
@@ -525,6 +527,102 @@ static int bcm91008_alex_IoCtlRd(
     }
     return ( res );
 } // bcm91008_alex_IoCtlRd
+
+
+//*****************************************************************************
+//
+// Function Name:  bcm91008_alex_ReadID
+// 
+// Parameters:     
+//
+// Description:    Verify ID 
+//
+//*****************************************************************************
+static int bcm91008_alex_ReadID( DISPDRV_HANDLE_T drvH )
+{
+	BCM91008_ALEX_PANEL_T  *pPanel = (BCM91008_ALEX_PANEL_T *)drvH;
+	CSL_DSI_CMND_t      	msg;         
+	volatile CSL_DSI_REPLY_t 	rxMsg;	    // DSI RX message
+	UInt8               	txData[1];  // DCS Rd Command
+	volatile UInt8             	rxBuff[1];  // Read Buffer
+	Int32               	res = 0;
+	CSL_LCD_RES_T       	cslRes;
+	UInt32              	ID = 0;
+    
+	#define   RDID1	(0xDA)
+	#define   RDID2	(0xDB)
+	#define   RDID3	(0xDC)
+    
+    
+	msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
+	msg.msg        = &txData[0];
+	msg.msgLen     = 1;
+	msg.vc         = BCM91008_ALEX_VC;
+	msg.isLP       = BCM91008_ALEX_CMND_IS_LP;
+	msg.isLong     = FALSE;
+	msg.endWithBta = TRUE;
+
+	rxMsg.pReadReply = (UInt8 *)&rxBuff[0];
+	msg.reply      = (CSL_DSI_REPLY_t *)&rxMsg;
+
+    	// 0xFE - OLED module’s manufacturer
+	txData[0] = RDID1;                                    
+	cslRes = CSL_DSI_SendPacket( pPanel->clientH, &msg, FALSE );
+	if( (cslRes != CSL_LCD_OK) || ((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0) )
+	{
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
+			"Reading From Reg[0x%08X]\n\r", 
+			__FUNCTION__, (unsigned int)RDID1 );
+		res = -1;    
+		goto failed;
+	}
+	ID |= (rxBuff[0] << 16);
+    
+    	// 0x86 - OLED module/driver version 
+    	// 	      Changes each time a revision is made to the display, 
+    	//        material or construction specifications
+    	txData[0] = RDID2;                                    
+    	cslRes = CSL_DSI_SendPacket( pPanel->clientH, &msg, FALSE );
+    	if( (cslRes != CSL_LCD_OK) || ((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0) )
+    	{
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
+			"Reading From Reg[0x%08X]\n\r", 
+			__FUNCTION__, (unsigned int)RDID2 );
+		res = -1; 
+		goto failed;
+    	}
+    	ID |= (rxBuff[0] <<  8);
+    
+    	// 0x80 This read byte identifies the OLED module/driver. 
+    	//      ALEX module project = 0x80
+    	txData[0] = RDID3;                                    
+    	cslRes = CSL_DSI_SendPacket( pPanel->clientH, &msg, FALSE );
+    	if( (cslRes != CSL_LCD_OK) || ((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0) )
+    	{
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
+		"Reading From Reg[0x%08X]\n\r", __FUNCTION__, (unsigned int)RDID3 );
+    	    	res = -1; 
+		goto failed;
+    	}
+    	ID |= (rxBuff[0]);
+    
+
+    	if((ID & 0x00FF00FF) != 0x00FE0080) {
+    		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
+    	        	"Display ID[0xXXFEXX80] Mismatch [0x%08X] \n\r",
+		     	__FUNCTION__, (unsigned int)RDID3 );
+    	    	res = -1; 
+		goto failed;
+    	}
+
+    	if( res == 0 )
+		LCD_DBG( LCD_DBG_INIT_ID,
+			"[DISPDRV] %s: Display ID OK[0x%08X]\n",
+			__FUNCTION__, (unsigned int)ID );
+		 
+failed:    
+    	return(res);	
+} // bcm91008_alex_ReadID
 
 
 //*****************************************************************************
@@ -762,6 +860,9 @@ Int32 BCM91008_ALEX_Open (
     pPanel->pFb = pPanel->pFbA = (void*)&FrameBuff[busId];
 #endif
    
+    pPanel->isTE = alexVcCmCfg.teCfg.teInType != DSI_TE_NONE;
+    pPanel->is_hw_TE = alexVcCmCfg.teCfg.teInType != DSI_TE_CTRLR_TRIG;
+
 #if (defined (_HERA_) || defined(_RHEA_))
     if( busId == 0 )
     {
@@ -791,7 +892,7 @@ Int32 BCM91008_ALEX_Open (
     }
 #endif
 
-    if( bcm91008_AlexTeOn ( pPanel ) ==  -1 )
+    if( pPanel->is_hw_TE && bcm91008_AlexTeOn ( pPanel ) ==  -1 )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
             "Failed To Configure TE Input\n", __FUNCTION__ ); 
@@ -841,6 +942,7 @@ Int32 BCM91008_ALEX_Open (
     pPanel->drvState   = DRV_STATE_OPEN;
     
     *drvH = (DISPDRV_HANDLE_T) pPanel;
+    
     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
     
     return ( res );
@@ -885,6 +987,7 @@ Int32 BCM91008_ALEX_Close ( DISPDRV_HANDLE_T drvH )
     }
     
 #if (defined (_HERA_) || defined(_RHEA_))
+    if (pPanel->is_hw_TE) 
     bcm91008_AlexTeOff ( pPanel );
 #endif
 
@@ -1161,7 +1264,8 @@ Int32 BCM91008_ALEX_Update_ExtFb (
     else
        req.cslLcdCb = NULL;
         
-    if ( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req ) != CSL_LCD_OK )
+    if ( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req, pPanel->isTE  ) 
+        != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR ret by "
             "CSL_DSI_UpdateCmVc\n\r", __FUNCTION__ );
@@ -1225,7 +1329,8 @@ Int32 BCM91008_ALEX_Update (
     else
        req.cslLcdCb = NULL;
     
-    if ( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req ) != CSL_LCD_OK )
+    if ( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req, pPanel->isTE ) 
+        != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR ret by "
             "CSL_DSI_UpdateCmVc\n\r", __FUNCTION__ );
