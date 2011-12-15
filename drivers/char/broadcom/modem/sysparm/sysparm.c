@@ -48,6 +48,7 @@ volatile static UInt32 *total_index_ptr;
 #define AUDIO_APP_NUMBER        2   // must be consistent with parm_audio.txt
 #define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*AUDIO_APP_NUMBER)
 static SysAudioParm_t audio_parm_table[AUDIO_MODE_NUMBER_VOICE];
+static SysIndMultimediaAudioParm_t mmaudio_parm_table[AUDIO_MODE_NUMBER];
 
 static UInt8 gpioInit_table[GPIO_INIT_REC_NUM][GPIO_INIT_FIELD_NUM];
 #endif // !SKELETON_DRIVER
@@ -375,6 +376,55 @@ SysAudioParm_t* APSYSPARM_GetAudioParmAccessPtr(void)
     iounmap(audio_parm_ptr);
 	loaded_audio_parm_table = 1;
     return &audio_parm_table[0];
+}
+
+//******************************************************************************
+//
+// Function Name: APSYSPARM_GetMultimediaAudioParmAccessPtr
+//
+// Description:   Get access pointer to root of MM audio sysparm structure 
+//
+// Notes:     This is only applicable to audio tuning parameters.
+//
+//******************************************************************************
+SysIndMultimediaAudioParm_t * APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
+{
+    UInt32 mmaudio_parm_addr;
+    SysIndMultimediaAudioParm_t *mmaudio_parm_ptr;
+	static int loaded_mmaudio_parm_table=0;
+
+	if(loaded_mmaudio_parm_table)
+	    return &mmaudio_parm_table[0];
+    
+    if(!fuse_sysparm_initialised)
+    {
+    	if(sysparm_init())
+    	{
+            pr_err("[sysparm]: Fuse sysparm is not yet initialised\n");
+            return 0;
+    	}
+    }
+    
+    mmaudio_parm_addr = SYSPARM_GePAtByIndex("mmaudio_parm", sizeof(mmaudio_parm_table), 1);
+    if(!mmaudio_parm_addr)
+    {
+        pr_err("[sysparm]: Get mmaudio_parm PA failed\n");
+        return 0;
+    }
+    
+    mmaudio_parm_ptr = (SysIndMultimediaAudioParm_t*)ioremap_nocache(mmaudio_parm_addr, sizeof(mmaudio_parm_table));
+
+    if(!mmaudio_parm_ptr)
+    {
+        pr_err("[sysparm]: audio_parm_addr ioremap failed\n");
+        return 0;
+    }
+    
+    memcpy(&mmaudio_parm_table[0], mmaudio_parm_ptr, sizeof(mmaudio_parm_table));
+    iounmap(mmaudio_parm_ptr);
+	loaded_mmaudio_parm_table = 1;
+
+    return &mmaudio_parm_table[0];
 }
 
 //******************************************************************************

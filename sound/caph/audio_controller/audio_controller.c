@@ -146,8 +146,8 @@ static AUDIO_SOURCE_Mapping_t MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] =
  static AUDIO_SINK_Enum_t voiceCallSpkr = AUDIO_SINK_UNDEFINED;
  static AUDIO_SOURCE_Enum_t voiceCallMic = AUDIO_SOURCE_UNDEFINED;
 
-static int telephony_digital_gain_dB = 12;  //dB
-static int telephony_ul_gain_mB = 0;  // 0 mB
+static int telephony_dl_gain_dB = 0;
+static int telephony_ul_gain_dB = 0;
 
 //left_channel in stereo, or mono:
 static int mixerInputGain[AUDIO_SINK_TOTAL_COUNT] = {0}; // Register value.
@@ -164,6 +164,11 @@ static int pmu_gain_right[AUDIO_SINK_TOTAL_COUNT] = {0};
 //static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 //static unsigned int recordGainR[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 
+static int path_user_set_gainL[MAX_AUDIO_PATH]={0};
+static int path_user_set_gainR[MAX_AUDIO_PATH]={0};
+static AUDIO_GAIN_FORMAT_t path_user_set_gainFormat[MAX_AUDIO_PATH]={AUDIO_GAIN_FORMAT_INVALID};
+
+static Boolean fmPlayStarted = FALSE;
 
 //=============================================================================
 // Private function prototypes
@@ -173,9 +178,6 @@ extern SysAudioParm_t* AUDIO_GetParmAccessPtr(void);
 #else
 extern AudioSysParm_t* AUDIO_GetParmAccessPtr(void);
 #endif
-
-#define AUDIOMODE_PARM_ACCESSOR(mode)	 AUDIO_GetParmAccessPtr()[mode]
-#define AUDIOMODE_PARM_MM_ACCESSOR(mode)	 AUDIO_GetParmMMAccessPtr()[mode]
 
 static void powerOnExternalAmp( AUDIO_SINK_Enum_t speaker, ExtSpkrUsage_en_t usage_flag, Boolean use );
 
@@ -233,6 +235,7 @@ void AUDCTRL_Init (void)
 	AUDDRV_Init ();
 	csl_caph_hwctrl_init();
 
+    //access sysparm here will cause system panic. sysparm is not initialzed when this fucniton is called.
 	//telephony_digital_gain_dB = 12;  //SYSPARM_GetAudioParamsFromFlash( cur_mode )->voice_volume_init;  //dB
 }
 
@@ -465,11 +468,16 @@ void AUDCTRL_SetTelephonySpkrVolume(
 
     if (gain_format == AUDIO_GAIN_FORMAT_mB)
     {
-      telephony_digital_gain_dB = (volume / 100) + 36;
-      if ( telephony_digital_gain_dB > AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max )	//dB
-         telephony_digital_gain_dB = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max; //dB
+      //volume is in range of -3600 mB ~ 0 mB from the API
+      telephony_dl_gain_dB = (volume / 100);
 
-      AUDDRV_SetTelephonySpkrVolume( speaker, volume, gain_format );
+      if ( telephony_dl_gain_dB > 0 )
+         telephony_dl_gain_dB = 0;
+
+      if ( telephony_dl_gain_dB < -(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max) )
+         telephony_dl_gain_dB = -(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max);
+
+      AUDDRV_SetTelephonySpkrVolume( speaker, telephony_dl_gain_dB*100, gain_format );
 
       /***
       voice call volume control does not use PMU gain
@@ -478,6 +486,18 @@ void AUDCTRL_SetTelephonySpkrVolume(
       SetGainOnExternalAmp_mB(speaker, pmuGain*25, PMU_AUDIO_HS_BOTH);
       ***/
       }
+    else
+    if (gain_format == AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN)
+    {
+      if(volume>14)  volume=14;  //15 entries: 0 ~ 14.
+
+      telephony_dl_gain_dB = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].dsp_voice_vol_tbl[volume];
+      //values in table are in range of 0 ~ 36 dB.
+      //shift to range of -36 ~ 0 dB in DSP
+      telephony_dl_gain_dB -= AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;
+
+      AUDDRV_SetTelephonySpkrVolume( speaker, telephony_dl_gain_dB*100, AUDIO_GAIN_FORMAT_mB );
+    }
 }
 
 //============================================================================
@@ -487,9 +507,14 @@ void AUDCTRL_SetTelephonySpkrVolume(
 // Description:   Set dl volume of telephony path
 //
 //============================================================================
-UInt32 AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format )
+int AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format )
 {
-    return telephony_digital_gain_dB;
+    if (gain_format == AUDIO_GAIN_FORMAT_mB)
+    {
+      return (telephony_dl_gain_dB*100);
+    }
+
+    return telephony_dl_gain_dB;
 }
 
 //============================================================================
@@ -527,8 +552,8 @@ void AUDCTRL_SetTelephonyMicGain(
 {
     if (gain_format == AUDIO_GAIN_FORMAT_mB)
     {
-      telephony_ul_gain_mB = gain;
       AUDDRV_SetTelephonyMicGain( mic, gain, gain_format);
+      telephony_ul_gain_dB = gain/100;
     }
 }
 
@@ -691,7 +716,12 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
     {
         //for music tuning, if PCG changed audio mode when phone is in idle mode, here need to pass audio mode to CP.
         //so that AT*MAUDTUNE=3 applies parameter change based on the new audio mode on CP side.
+
+        //this command only updates mode in audio_vdriver_caph.c, does not updat mode in audioapi.c.
+        // Therefore it is not useful for MP3 audio tuning purpose.
         audio_control_generic( AUDDRV_CPCMD_PassAudioMode, (UInt32)mode, 0, 0, 0, 0 );
+        //this command updates mode in audioapi.c. It is useful for MP3 audio tuning purpose.
+        audio_control_generic( AUDDRV_CPCMD_SetAudioMode, (UInt32)mode, 0, 0, 0, 0 );
     }
 
     if(!bClk) csl_caph_ControlHWClock(TRUE); //enable clock if it is not enabled.
@@ -930,6 +960,20 @@ void AUDCTRL_EnablePlay(
 	{	//to set HW mixer gain for FM
 		mode = AUDCTRL_GetModeBySpeaker(config.sink);
 		AUDCTRL_SetAudioMode_ForMusicPlayback( mode, pathID, FALSE );
+
+		fmPlayStarted = TRUE;
+	
+		/*** will test this when FM radio works.
+			if( path_user_set_gainFormat[pathID] != AUDIO_GAIN_FORMAT_INVALID )
+			{
+				AUDCTRL_SetPlayVolume( path->source[0],
+						path->sink[0],
+						path_user_set_gainL[pathID],
+						path_user_set_gainR[pathID],
+						path_user_set_gainFormat[pathID],
+						audDrv->pathID);
+			}
+		***/
 	}
 	if(pPathID) *pPathID = pathID;
 	//Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %x, pathID %d\r\n", *pPathID, pathID);
@@ -1102,6 +1146,13 @@ void AUDCTRL_SetPlayVolume(
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
+	//in idle mode, this command 
+	// alsa_amixer cset name=FM-VOL-LEVEL 12,12
+	// passes down the pathID==0.  I'm not sure the pathID is correct.
+	path_user_set_gainL[pathID]=vol_left;
+	path_user_set_gainR[pathID]=vol_right;
+	path_user_set_gainFormat[pathID]=gain_format;
+
 	if((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)|| sink == AUDIO_SINK_BTS)
 		return;
 
@@ -1123,6 +1174,12 @@ void AUDCTRL_SetPlayVolume(
 	MixerBitSelect:  SRC_SPK0_LT_GAIN_CTRL1 : SPK0_LT_BIT_SELECT
 	3-bit unsigned
 	***/
+
+	if (gain_format == AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE)
+	{
+		vol_left = APSYSPARM_GetMultimediaAudioParmAccessPtr()[AUDDRV_GetAudioModeBySink(sink)].fm_radio_digital_vol[vol_left]; //mB
+		gain_format = AUDIO_GAIN_FORMAT_mB;
+	}
 
 	if (gain_format == AUDIO_GAIN_FORMAT_mB)
 	{
@@ -1270,6 +1327,18 @@ void AUDCTRL_SetPlayVolume(
 	Log_DebugPrintf(LOGID_AUDIO,
 		"AUDCTRL_SetPlayVolume: pathID %d\n",
 		pathID);
+
+
+	//if ( path->status != PATH_OCCUPIED )
+	if( FALSE == csl_caph_QueryHWClock() )
+	{
+		Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_SetPlayVolume: clock is off\n");
+	
+		//the CAPH clock may be not turned on.
+		//defer setting the FM radio audio gain until start render.
+		return;
+	}
+
 
 	if (pathID != 0)
     {

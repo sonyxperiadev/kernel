@@ -379,12 +379,17 @@ void AUDIO_Ctrl_Process(
 			CAPH_ASSERT(param_start->stream>=(CTL_STREAM_PANEL_FIRST-1) && param_start->stream<(CTL_STREAM_PANEL_LAST-1));
 			if(param_start->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
+				//do not change voice call's audio mode. will delete the lines.
+//can set music app and mode
+				/***/
 #if defined(USE_NEW_AUDIO_PARAM)
 				// need to fill the audio app, fill 0 for now
 	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->p[0].sink, 0 );
 #else
 	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->p[0].sink );
 #endif
+		/***/
+		
             	// Enable the playback the path
             	AUDCTRL_EnablePlay(param_start->pdev_prop->p[0].source,
                                    param_start->pdev_prop->p[0].sink,
@@ -646,7 +651,7 @@ void AUDIO_Ctrl_Process(
 			CAPH_ASSERT(parm_vol->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_vol->stream<(CTL_STREAM_PANEL_LAST-1));
 			AUDCTRL_SetPlayVolume (parm_vol->source,
 								   parm_vol->sink,
-								   AUDIO_GAIN_FORMAT_mB,
+								   parm_vol->gain_format,
 								   parm_vol->volume1,
 								   parm_vol->volume2,
 								   pathID[parm_vol->stream]
@@ -668,7 +673,7 @@ void AUDIO_Ctrl_Process(
       case ACTION_AUD_SetTelephonySpkrVolume:
       {
         BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
-        AUDCTRL_SetTelephonySpkrVolume (parm_vol->sink, parm_vol->volume1, AUDIO_GAIN_FORMAT_mB);
+        AUDCTRL_SetTelephonySpkrVolume (parm_vol->sink, parm_vol->volume1, parm_vol->gain_format);
       }
       break;
 
@@ -704,6 +709,10 @@ void AUDIO_Ctrl_Process(
 		{
 			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
 			CAPH_ASSERT(parm_FM->stream>=(CTL_STREAM_PANEL_FIRST-1) && parm_FM->stream<(CTL_STREAM_PANEL_LAST-1));
+
+			//do not change voice call's audio mode. will delete the lines.
+//can set music app and mode
+			/***/
 #if defined(USE_NEW_AUDIO_PARAM)
 			//re-enable FM; need to fill audio app
 			AUDCTRL_SaveAudioModeFlag((AudioMode_t)parm_FM->sink, 0);
@@ -711,6 +720,8 @@ void AUDIO_Ctrl_Process(
 			//re-enable FM
 			AUDCTRL_SaveAudioModeFlag((AudioMode_t)parm_FM->sink);
 #endif
+		/**/
+		
 			AUDCTRL_EnablePlay(parm_FM->source,
 								parm_FM->sink,
 								AUDIO_CHANNEL_STEREO,

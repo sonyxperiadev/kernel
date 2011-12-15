@@ -41,7 +41,8 @@ typedef enum AUDIO_GAIN_FORMAT_t
 {
     AUDIO_GAIN_FORMAT_mB,     // gain in milli Bel = 1/100 dB
     AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN,      // CUSTOMER TABLE: DSP voice volume dB from sysparm
-    AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE   // CUSTOMER TABLE: FM Radio audio gain table
+    AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE,   // CUSTOMER TABLE: FM Radio audio gain table
+    AUDIO_GAIN_FORMAT_INVALID
 } AUDIO_GAIN_FORMAT_t;
 /* enable this flag when cp image is in lmp */
 //#define USE_NEW_AUDIO_PARAM

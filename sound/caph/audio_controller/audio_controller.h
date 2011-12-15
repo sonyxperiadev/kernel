@@ -155,7 +155,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 *  @return UInt32    dB
 *
 ****************************************************************************/
-UInt32 AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format );
+int AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format );
 
 /**
 *  @brief  Set telephony speaker (downlink) mute / un-mute

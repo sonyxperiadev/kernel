@@ -173,6 +173,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 					parm_vol.volume1 = pVolume[0];
 					parm_vol.volume2 = pVolume[1];
 					parm_vol.stream = (stream - 1);
+					parm_vol.gain_format = AUDIO_GAIN_FORMAT_mB;
 					AUDIO_Ctrl_Trigger(ACTION_AUD_SetPlaybackVolume,&parm_vol,NULL,0);
 				}
 			}
@@ -189,6 +190,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 				parm_vol.volume1 = pVolume[0];
 				parm_vol.volume2 = pVolume[1];
 				parm_vol.stream = (stream - 1);
+				parm_vol.gain_format = AUDIO_GAIN_FORMAT_mB;
 				AUDIO_Ctrl_Trigger(ACTION_AUD_SetPlaybackVolume,&parm_vol,NULL,0);
 			}
 		}
@@ -202,6 +204,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 			{
 				parm_vol.sink = pCurSel[1];
 				parm_vol.volume1 = pVolume[0];
+				parm_vol.gain_format = AUDIO_GAIN_FORMAT_mB;
 				AUDIO_Ctrl_Trigger(ACTION_AUD_SetTelephonySpkrVolume,&parm_vol,NULL,0);
 			}
 		}
@@ -664,11 +667,19 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			break;
 		case CTL_FUNCTION_VOL:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-			uinfo->count = 2;
 			if(CTL_STREAM_PANEL_VOICECALL==stream)
+			{
 				uinfo->count = 1;
-			uinfo->value.integer.min = 0;
-			uinfo->value.integer.max = 19; //volume level
+				uinfo->value.integer.min = 0;
+				uinfo->value.integer.max = 5; //volume level
+			}
+			else
+			if(stream == CTL_STREAM_PANEL_FM)
+			{
+				uinfo->count = 2;
+				uinfo->value.integer.min = 0;
+				uinfo->value.integer.max = 14; //volume level
+			}
 			break;
 		case CTL_FUNCTION_SINK_CHG:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -773,7 +784,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int function = priv&0xFF;
-	s32	*pSel, callMode;
+	int	*pSel, callMode;
 	int	stream = STREAM_OF_CTL(priv);
 	BRCM_AUDIO_Param_Call_t parm_call;
 	BRCM_AUDIO_Param_Loopback_t parm_loop;
@@ -781,9 +792,12 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	BRCM_AUDIO_Param_Vibra_t parm_vibra;
 	BRCM_AUDIO_Param_FM_t parm_FM;
 	BRCM_AUDIO_Param_Spkr_t parm_spkr;
-    int rtn = 0,cmd,i,indexVal = -1,cnt=0,chn=0;
+	BRCM_AUDIO_Param_Volume_t parm_vol;
+    int rtn = 0,cmd,i,indexVal = -1,cnt=0;
 	struct snd_pcm_substream *pStream=NULL;
-	Int32 sink = 0;
+	int sink = 0;
+
+	pSel = pChip->streamCtl[stream-1].iLineSelect;
 
 	switch(function)
 	{
@@ -937,13 +951,35 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			//Port is 1 base
 			AUDCTRL_ConfigSSP(kcontrol->id.index+1, pChip->i32CfgSSP[kcontrol->id.index]);
 			break;
+
 		case CTL_FUNCTION_VOL:
-			//Need to copy the volume for the particular stream only
+			BCM_AUDIO_DEBUG("CTL_FUNCTION_VOL stream=%d vol0=%d vol1=%d\n", stream, ucontrol->value.integer.value[0], ucontrol->value.integer.value[1]);		
+
+			parm_vol.stream = (stream - 1);
+				
 			if(stream == CTL_STREAM_PANEL_VOICECALL)
-				chn = 1;
+			{
+				memcpy(pChip->pi32LevelVolume[stream-1], ucontrol->value.integer.value, sizeof(s32));
+				//source and sink are set in function SelCtrlPut()
+				parm_vol.source = pSel[0];			
+				parm_vol.sink = pSel[1];
+				parm_vol.volume1 = pChip->pi32LevelVolume[CTL_STREAM_PANEL_VOICECALL - 1][0];
+				parm_vol.gain_format = AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN;
+				AUDIO_Ctrl_Trigger(ACTION_AUD_SetTelephonySpkrVolume,&parm_vol,NULL,0);
+			}
 			else
-				chn = 2;
-			memcpy(pChip->pi32LevelVolume[stream-1], ucontrol->value.integer.value, chn*sizeof(s32));
+			if(stream == CTL_STREAM_PANEL_FM)
+			{
+				memcpy(pChip->pi32LevelVolume[stream-1], ucontrol->value.integer.value, 2*sizeof(s32));
+				//source and sink are set in function SelCtrlPut()
+				parm_vol.source = pChip->streamCtl[stream-1].dev_prop.p[0].source; //AUDIO_SOURCE_I2S
+				parm_vol.sink = pSel[0];
+				parm_vol.volume1 = pChip->pi32LevelVolume[CTL_STREAM_PANEL_FM - 1][0]; //left vol
+				parm_vol.volume2 = pChip->pi32LevelVolume[CTL_STREAM_PANEL_FM - 1][1]; //right vol
+				parm_vol.gain_format = AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE;
+				AUDIO_Ctrl_Trigger(ACTION_AUD_SetPlaybackVolume,&parm_vol,NULL,0);
+			}
+			
 			break;
 			
 		case CTL_FUNCTION_SINK_CHG:

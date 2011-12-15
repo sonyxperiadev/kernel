@@ -102,9 +102,6 @@ static Boolean bInVoiceCall = FALSE;
 static Boolean bmuteVoiceCall = FALSE;
 static Boolean bDuringTelephonySwitchMicSpkr = FALSE;
 
-static int telephony_digital_gain_dB = 12;  //dB
-static int telephony_ul_gain_mB = 0;  // 0 mB
-
 static Boolean controlFlagForCustomGain = FALSE;
 
 typedef struct Audio_Driver_t
@@ -167,10 +164,6 @@ AudioSysParm_t* AUDIO_GetParmAccessPtr(void)
 	return &audio_parm_table[0];
 #endif
 }
-
-
-#define AUDIOMODE_PARM_ACCESSOR(mode)	 AUDIO_GetParmAccessPtr()[mode]
-#define AUDIOMODE_PARM_MM_ACCESSOR(mode)	 AUDIO_GetParmMMAccessPtr()[mode]
 
 static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void);
 
@@ -1060,6 +1053,10 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, AudioApp_t audio_app )
 
 }
 
+int AUDDRV_Get_CP_AudioMode(void)
+{
+  return audio_control_generic(AUDDRV_CPCMD_GET_CP_AUDIO_MODE, 0, 0, 0, 0, 0);
+}
 
 //=============================================================================
 //
@@ -1367,10 +1364,8 @@ void AUDDRV_SetTelephonyMicGain(
 
     if (gain_format == AUDIO_GAIN_FORMAT_mB)
     {
-      telephony_ul_gain_mB = gain;
+      audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, gain, 0, 0, 0, 0);
     }
-
-    audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, telephony_ul_gain_mB, 0, 0, 0, 0);
 
     //sysparm.c(4990):	pg1_mem->shared_echo_fast_NLP_gain[1] = SYSPARM_GetAudioParmAccessPtr()->audio_parm[currentAudioMode].echoNlp_parms.echo_nlp_gain;
     //should also load this parameter in SetAudioMode() in CP build.
@@ -1393,16 +1388,6 @@ void AUDDRV_SetTelephonySpkrVolume(
 
     if (gain_format == AUDIO_GAIN_FORMAT_mB)
     {
-      AudioMode_t mode = AUDDRV_GetAudioMode();
-#if defined(USE_NEW_AUDIO_PARAM)
-	  UInt16 temp_voice_volume_max = AUDIO_GetParmAccessPtr()[mode+currAudioApp*AUDIO_MODE_NUMBER].voice_volume_max;
-#else
-	  UInt16 temp_voice_volume_max = AUDIO_GetParmAccessPtr()[mode].voice_volume_max;
-#endif
-      telephony_digital_gain_dB = (volume / 100) + 36;
-      if ( telephony_digital_gain_dB > temp_voice_volume_max )	//dB
-        telephony_digital_gain_dB = temp_voice_volume_max; //dB
-
       if( volume <=-10000 )  //less than -100dB
       {  //mute
         audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkMute, 0, 0, 0, 0, 0);
@@ -1414,9 +1399,12 @@ void AUDDRV_SetTelephonySpkrVolume(
 
 	omega_voice_parms = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].omega_voice_parms;	//dB
 	audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam,
-				(UInt32)(&(omega_voice_parms[telephony_digital_gain_dB])),	//?
+				(UInt32)(&(omega_voice_parms[telephony_dl_gain_dB])),	//?
 				0, 0, 0, 0);
 ********/
+
+//can it pass negative number - volume?
+//at LMP int=>UInt32, then at CP UInt32=>int16
 
         //if parm4 (OV_volume_step) is zero, volumectrl.c will calculate OV volume step based on digital_gain_dB, VOICE_VOLUME_MAX and NUM_SUPPORTED_VOLUME_LEVELS.
         audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, volume,  //DSP accepts [-3600, 0] mB

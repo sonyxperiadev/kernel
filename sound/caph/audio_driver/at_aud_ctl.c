@@ -73,6 +73,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "audio_pmu_adapt.h"
 
+extern int AUDDRV_Get_CP_AudioMode(void);
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //Description:
@@ -421,6 +422,35 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			AUDCTRL_SetTelephonyMicMute( AUDIO_SOURCE_UNDEFINED, (Boolean) Params[2] );
 			break;
 
+	case 33:
+	  AUDCTRL_SetTelephonySpkrVolume( AUDIO_SINK_UNDEFINED,
+					Params[1],
+					AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN
+					);
+			break;
+	case 34:
+	  AUDCTRL_SetPlayVolume(
+				AUDIO_SOURCE_I2S,
+				AUDIO_SINK_LOUDSPK,
+				AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE,
+				Params[1],
+				0,
+				0
+				);
+			break;
+	case 35:
+	  AUDCTRL_SetPlayVolume(
+				AUDIO_SOURCE_I2S,
+				AUDIO_SINK_HEADSET,
+				AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE,
+				Params[1],
+				0,
+				0
+				);
+			break;
+	case 37:
+		BCM_AUDIO_DEBUG("CP audio mode %d\n", AUDDRV_Get_CP_AudioMode());
+		break;
 
 	case 100:
 			if(Params[1] == 1)
@@ -882,8 +912,8 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 //---------------------------------------------------------------------------
 int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
-	s32 *pVolume;
-	int mode;
+	int *pVolume;
+	int mode, vol;
 
 	BCM_AUDIO_DEBUG("%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);
 
@@ -892,27 +922,30 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 	switch(Params[0])//P1
 	{
 	case 6:	//at*maudvol=6
-		//Get volume from driver
+		//Get volume from driver. Range -36 ~ 0 dB in Driver and DSP:
 		Params[0] = AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_mB );
 		Params[0] = Params[0]/100;  //dB
+		Params[0] += 36;  //Range 0~36 dB shown in PCG
 		//or
 		//pVolume = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
 		//Params[0] = pVolume[0];
 		BCM_AUDIO_DEBUG("%s pVolume[0] %ld \n", __FUNCTION__, Params[0]);
 		return 0;
 
-	case 7: //at*maudvol=7,x
+	case 7: //at*maudvol=7,x    Range 0~36 dB in PCG
 		mode = AUDCTRL_GetAudioMode();
 		//mode = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1];
-		pVolume = (s32*) pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
+		pVolume = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
 		pVolume[0] = Params[1];
 		pVolume[1] = Params[1];
+		vol = Params[1];
+		vol -= 36;  //Range -36 ~ 0 dB in DSP
 		AUDCTRL_SetTelephonySpkrVolume(	AUDIO_SINK_UNDEFINED,
-							(Params[1]*100),   //Params[1] in dB
+							(vol*100),   //Params[1] in dB
 							AUDIO_GAIN_FORMAT_mB
 							);
 
-		BCM_AUDIO_DEBUG("%s pVolume[0] %d mode=%d \n", __FUNCTION__, pVolume[0],mode);
+		BCM_AUDIO_DEBUG("%s pVolume[0] %d mode=%d vol %d \n", __FUNCTION__, pVolume[0],mode, vol);
 		return 0;
 
 	default:

@@ -157,6 +157,7 @@ typedef struct
    Int32 volume1;
    Int32 volume2;
    int stream;
+   AUDIO_GAIN_FORMAT_t gain_format;
 }BRCM_AUDIO_Param_Volume_t;
 
 typedef struct
