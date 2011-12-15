@@ -75,8 +75,8 @@ extern Boolean RPC_GetProperty(UInt32 type, UInt32 *value);
 //#define RPC_TRACE(str) kRpcDebugPrintf str
 //#define RPC_TRACE(str) printk str
 #define RPC_TRACE(fmt,args...) BCMLOG_Printf( BCMLOG_RPC_KERNEL_BASIC, fmt, ##args )
-
 #else
+#define _DBG(a)
 #define RPC_TRACE(str) {}
 #endif
 
@@ -483,29 +483,48 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel
 	UInt8 clientId, k;
 	UInt16 msgId = 0;
 	RPC_Result_t ret = RPC_RESULT_ERROR;
+        int bFound = 0;
 
 	RPC_READ_LOCK;
 
-	if( interfaceType != INTERFACE_RPC_TELEPHONY ||	channel == 0)
-	{
-		ret = RPC_RESULT_ERROR;
-	}
-	else if( channel == 201)//Return Error for now Used for DRX sync
-	{
-		ret = RPC_RESULT_ERROR;
-	}
-	else
+	if (interfaceType == INTERFACE_RPC_TELEPHONY)
 	{
 		if(channel == 0xCD)
 		{
 			channel = 0;
 		}
 
-		clientId = channel;
+		clientId = channel;//All response from CP will pass clientID in channel
+	}
+	else //For non-telephony clients, match by interface type
+	{
+		clientId = 0;
+		for(k=0;k<0xFF;k++)
+		{
+			RpcClientInfo_t *cInfo;
+			cInfo = gRpcClientList[k];
+			if(cInfo && (cInfo->info.interfaceType == interfaceType))
+			{
+				clientId = k;
+				bFound = 1;
+				break;
+			}
+		}
+		}
+
+	_DBG(RPC_TRACE("k:RPC_ServerRxCbk if=%d bf=0x%x ch=%d clientId=%d found=%d numClients=%d\n", (int)interfaceType, (int)dataBufHandle, channel, (int)clientId, (int)bFound, gNumActiveClients));
+	
+	if( interfaceType != INTERFACE_RPC_TELEPHONY && !bFound)//Did not find client with registered interface type
+	{
+		ret = RPC_RESULT_ERROR;
+	}
+	else if( interfaceType == INTERFACE_RPC_TELEPHONY && channel == 201)//Return Error for now. Used for DRX sync
+	{
+		ret = RPC_RESULT_ERROR;
+	}
+	else
+	{
 		cInfo = gRpcClientList[clientId];
-
-
-		_DBG(RPC_TRACE("k:RPC_ServerRxCbk interfaceType=%d bf=0x%x channel=%d msgId=%x numClients=%d\n", (int)interfaceType, (int)dataBufHandle, channel, (int)msgId, gNumActiveClients));
 
 		if(clientId != 0 && cInfo)
 		{
@@ -523,7 +542,7 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel
 			RPC_PACKET_IncrementBufferRef(dataBufHandle, 0);//lock the buffer
 			for(k=0;k<0xFF;k++)
 			{
-				if(gRpcClientList[k])
+				if(gRpcClientList[k] && (gRpcClientList[k]->info.interfaceType == INTERFACE_RPC_TELEPHONY) )
 				{
 					ret2 = RPC_ServerDispatchMsg(interfaceType, k, channel, dataBufHandle, msgId);
 					if(ret2 == RPC_RESULT_PENDING)
