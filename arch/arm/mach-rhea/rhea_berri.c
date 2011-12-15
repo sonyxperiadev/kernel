@@ -1103,6 +1103,8 @@ static int rhea_camera_power(struct device *dev, int on)
 			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
 			return -1;
 		}
+		gpio_direction_output(SENSOR_0_GPIO_RST, 0);
+		gpio_direction_output(SENSOR_0_GPIO_PWRDN, 1);
 	}
 
 	clock = clk_get(NULL, SENSOR_0_CLK);
@@ -1148,15 +1150,15 @@ static int rhea_camera_power(struct device *dev, int on)
 		msleep(10);
 
 		/* enable reset gpio */
-		gpio_direction_output(SENSOR_0_GPIO_RST, 0);
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 		msleep(10);
 
 		/* disable power down gpio */
-		gpio_direction_output(SENSOR_0_GPIO_PWRDN, 0);
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 		msleep(5);
 
 		/* disable reset gpio */
-		gpio_direction_output(SENSOR_0_GPIO_RST, 1);
+		gpio_set_value(SENSOR_0_GPIO_RST, 1);
 
 		/* wait for sensor to come up */
 		msleep(30);
@@ -1164,11 +1166,11 @@ static int rhea_camera_power(struct device *dev, int on)
 	}
 	else {
 		/* enable reset gpio */
-		gpio_direction_output(SENSOR_0_GPIO_RST, 0);
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 		msleep(1);
 		
 		/* enable power down gpio */
-		gpio_direction_output(SENSOR_0_GPIO_PWRDN, 1);
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 
 		clk_disable(clock);
 
