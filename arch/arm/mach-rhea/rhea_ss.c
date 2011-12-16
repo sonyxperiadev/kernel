@@ -1317,6 +1317,7 @@ static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
 #define CAM0_RESET    33
 #define CAM_FLASH_EN  34
 #define CAM_AF_EN     25
+#define CAM_CS0 43
 #define SENSOR_0_CLK			"dig_ch0_clk"
 #define SENSOR_0_CLK_FREQ		(13000000) //@HW, need to check how fast this meaning.
 //VCAM_1.2V is controlled by GPIO12
@@ -1324,13 +1325,10 @@ static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
 
 static int rhea_camera_power(struct device *dev, int on)
 {
-
-	void __iomem* padctl_base = (void __iomem *)HW_IO_PHYS_TO_VIRT(PAD_CTRL_BASE_ADDR);
 	unsigned int value;
+	int ret;
 	struct clk *clock;
 	struct clk *axi_clk;
-	static int count  = 0;
-	int ret =0;
 	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
@@ -1343,6 +1341,11 @@ static int rhea_camera_power(struct device *dev, int on)
 		}
 	}
 
+	clock = clk_get(NULL, SENSOR_0_CLK);
+	if (!clock) {
+		printk(KERN_ERR "%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
+		return -1;
+	}
 	axi_clk = clk_get(NULL, "csi0_axi_clk");
 	if (!axi_clk) {
 		printk(KERN_ERR "%s:unable to get clock csi0_axi_clk\n", __func__);
@@ -1354,6 +1357,8 @@ static int rhea_camera_power(struct device *dev, int on)
 		printk("can not get VCAM_A_2_8_V.8V\n");
 		return -1;
 	}
+	regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);
+	//ret = regulator_disable(VCAM_A_2_8_V);
 
 	VCAM_IO_1_8_V = regulator_get(NULL,"hv9");
 	if(IS_ERR(VCAM_IO_1_8_V))
@@ -1362,17 +1367,22 @@ static int rhea_camera_power(struct device *dev, int on)
 		return -1;
 	}	
 	regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);	
+	//ret = regulator_disable(VCAM_IO_1_8_V);
 
 	
-	regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);	
-	ret = regulator_enable(VCAM_A_2_8_V);
-	value = ioread32(padctl_base + PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
-		iowrite32(value, padctl_base + PADCTRLREG_DCLK1_OFFSET);
-	clock = clk_get(NULL, SENSOR_0_CLK);
-	if (!clock) {
-			printk(KERN_ERR "%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
-			return -1;
-	}
+		
+
+
+	gpio_request(CAM_CORE_EN, "cam_1_2v");
+	gpio_direction_output(CAM_CORE_EN,0); 
+	gpio_request(CAM_CS0, "cam_cs0");
+	gpio_direction_output(CAM_CS0,0); 
+	printk("set cam_rst to low\n");
+	gpio_request(CAM0_RESET, "cam_rst");
+	gpio_direction_output(CAM0_RESET,0);
+//	value = ioread32(padctl_base + PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
+//		iowrite32(value, padctl_base + PADCTRLREG_DCLK1_OFFSET);
+
 
 	if(on)
 	{
@@ -1387,21 +1397,41 @@ static int rhea_camera_power(struct device *dev, int on)
 			printk(KERN_ERR "%s:failed to enable csi2 axi clock\n", __func__);
 			return -1;
 		}
-		regulator_enable(VCAM_A_2_8_V);
-		ret = regulator_enable(VCAM_IO_1_8_V);
 
-		gpio_request(CAM_CORE_EN, "cam_1_2v");
-		gpio_direction_output(CAM_CORE_EN,1); 
+			
+		
+		msleep(100);
 		printk("power on the sensor's power supply\n"); //@HW
 
-		gpio_request(CAM0_RESET, "cam_rst");
-		gpio_direction_output(CAM0_RESET,0);
-		printk("pull cam_rst to low\n"); //@HW		
-		
-		clk_disable(clock);
 	
-		printk("disable camera clock\n");
-		msleep(5);
+
+		gpio_request(CAM_CORE_EN, "cam_1_2v");
+		gpio_set_value(CAM_CORE_EN,1); 
+		msleep(10);
+
+		VCAM_A_2_8_V = regulator_get(NULL,"cam");
+		if(IS_ERR(VCAM_A_2_8_V))
+		{
+			printk("can not get VCAM_A_2_8_V.8V\n");
+			return -1;
+		}
+		regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);
+		
+		regulator_enable(VCAM_A_2_8_V);
+		msleep(10);
+		
+
+		VCAM_IO_1_8_V = regulator_get(NULL,"hv9");
+		if(IS_ERR(VCAM_IO_1_8_V))
+		{
+			printk("can not get VCAM_IO_1.8V\n");
+			return -1;
+		}	
+		regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);
+		regulator_enable(VCAM_IO_1_8_V);
+	
+		msleep(10);	
+	
 		value = clk_enable(clock);
 		if (value) {
 			printk(KERN_ERR "%s: failed to enable clock %s\n", __func__,
@@ -1417,22 +1447,30 @@ static int rhea_camera_power(struct device *dev, int on)
 		}
 		printk("set rate\n");
 		msleep(5);
+		gpio_request(CAM_CS0, "cam_cs0");
+		gpio_set_value(CAM_CS0,1); 
 		gpio_set_value(CAM0_RESET,1);
-		printk("set cam rst to high\n");
 		msleep(5);
+		printk("set cam rst to high\n");
+		msleep(50);
 	}
 	else
 	{
 
 		/* enable reset gpio */
-		gpio_direction_output(CAM0_RESET,0);
+		gpio_set_value(CAM0_RESET,0);
 		msleep(1);
 		/* enable power down gpio */
 		gpio_set_value(CAM_CORE_EN, 0);
+		gpio_request(CAM_CS0, "cam_cs0");
+		gpio_set_value(CAM_CS0,1); 
 		
 		clk_disable(clock);
 
 		clk_disable(axi_clk);
+		regulator_disable(VCAM_A_2_8_V);
+		regulator_disable(VCAM_IO_1_8_V);
+
 
 		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);

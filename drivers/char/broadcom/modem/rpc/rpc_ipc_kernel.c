@@ -946,6 +946,13 @@ static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 param
 	{
 		ioc_param.outParam = IPC_SIZE;
 	}
+	else if(ioc_param.type == RPC_PROXY_GET_PERSISTENT_OFFSET)
+	{
+		IPC_PersistentDataStore_t thePersistentData;
+		IPC_GetPersistentData(&thePersistentData);
+		ioc_param.outParam = IPC_SmOffset(thePersistentData.DataPtr);
+		ioc_param.result = thePersistentData.DataLength;
+	}
 	else if(ioc_param.type == RPC_PROXY_WAKEUP_USER_THREAD)
 	{
 		RpcClientInfo_t *cInfo;
@@ -964,6 +971,11 @@ static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 param
 			ioc_param.outParam = 0;
 		}
 	}
+	else
+    	{
+       	 	_DBG(RPC_TRACE( "k:handle_pkt_cmd_ioc ERROR: Invalid option=%d\n",ioc_param.type ));
+        	return -1;
+    	}
 
 	_DBG(RPC_TRACE("k:handle_pkt_cmd_ioc cmd=%d itype=%x handle=%x i1=%x i2=%x res=%x out=%x\n", (int)ioc_param.type, (int)ioc_param.interfaceType, (int)ioc_param.dataBufHandle, 
 																							(int)ioc_param.input1, (int)ioc_param.input2, (int)ioc_param.result, (int)ioc_param.outParam));
