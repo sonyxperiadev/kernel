@@ -84,6 +84,68 @@ the GPL, without Broadcom's express prior written consent.
 #define KLOG_V(x...) do {} while (0)
 #endif
 
+/*
+ *
+ * Deferred V3D Task Serializer
+ *
+ */
+
+/* TODO: consider separate file: dvts.c? */
+
+typedef atomic_t dvts_jobcount_t;
+typedef struct _dvts_object_ {
+	wait_queue_head_t wq;
+	dvts_jobcount_t finished;
+} *dvts_object_t;
+//typedef uint32_t dvts_target_t;
+/*
+ * Since the completion count is an atomic_t, which guarantees only
+ * 24-bits, we need to be careful when comparing with the target,
+ * which is 32-bits.  We need to do a 24-bit signed comparison, taking
+ * into account wrap-around.  This macro makes it safe by doing
+ * unsigned comparison with 23rd bit after masking.
+ */
+#define dvts_reached_target(obj, target) (((atomic_read(&(obj)->finished) - (target)) & 0xFFFFFF) < 0x800000)
+
+dvts_object_t dvts_create_serializer(void)
+{
+	struct _dvts_object_ *object;
+
+	object = kmalloc(sizeof(*object), GFP_KERNEL);
+	if (object == NULL) {
+		goto err_kmalloc;
+	}
+
+	init_waitqueue_head(&object->wq);
+	atomic_set(&object->finished, 0);
+
+	return object;
+
+/*
+ * error exit paths
+ */
+err_kmalloc:
+	return NULL;
+}
+
+void dvts_destroy_serializer(dvts_object_t obj)
+{
+	kfree(obj);
+}
+
+void dvts_finish(dvts_object_t obj)
+{
+	atomic_inc(&obj->finished);
+	wake_up_interruptible(&obj->wq);
+}
+
+void dvts_wait(dvts_object_t obj, dvts_target_t target)
+{
+	wait_event_interruptible(obj->wq, dvts_reached_target(obj, target));
+	/* TODO: handle interruption... */
+}
+
+
 /******************************************************************
 	END: V3D kernel prints
 *******************************************************************/
@@ -121,6 +183,8 @@ typedef struct {
 	volatile int	v3d_acquired;
 	u32 id;
 	bool uses_worklist;
+	dvts_object_t shared_dvts_object;
+	uint32_t shared_dvts_object_usecount;
 }
 v3d_t;
 
@@ -159,6 +223,8 @@ typedef struct v3d_job_t_ {
 	u32 job_intern_state;
 	u32	job_wait_state;
 	wait_queue_head_t v3d_job_done_q;
+	dvts_object_t dvts_object;
+	dvts_target_t dvts_target;
 	struct v3d_job_t_ *next;
 }
 v3d_job_t;
@@ -272,6 +338,18 @@ static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t *p_job_post)
 	}
 	p_v3d_job->dev_id = dev->id;
 	p_v3d_job->job_id = p_job_post->job_id;
+
+	/* eventually we may wish to generalize this sync stuff, but
+	 * for now, we hard-code it such that per open
+	 * file-descriptor, there can be at most *one* deferred v3d
+	 * task serializer */
+	if (p_job_post->dvts_id == 777) {
+		p_v3d_job->dvts_object = dev->shared_dvts_object;
+		p_v3d_job->dvts_target = p_job_post->dvts_target;
+	}
+	else {
+		p_v3d_job->dvts_object = NULL;
+	}
 
 	if (p_job_post->job_type != V3D_JOB_USER) {
 		//Ignore this job type as we'll determine it ourself
@@ -429,6 +507,18 @@ static int v3d_job_start(void)
 	v3d_job_t *p_v3d_job;
 
 	p_v3d_job = (v3d_job_t *)v3d_job_curr;
+
+	/*
+	 *
+	 * This should probably go into v3d_thread...  so that we can
+	 * skip jobs that are not ready, but that's a future
+	 * optimization.  For now, we simply stall here to wait for
+	 * the job dependencies to be met.
+	 *
+	 */
+	if (p_v3d_job->dvts_object != NULL) {
+		dvts_wait(p_v3d_job->dvts_object, p_v3d_job->dvts_target);
+	}
 
 	if (v3d_in_use != 0) {
 		KLOG_E("v3d not free for starting job[0x%08x]", (u32)p_v3d_job);
@@ -1164,6 +1254,13 @@ static int v3d_open(struct inode *inode, struct file *filp)
 
 	sema_init(&dev->irq_sem, 0);
 
+	dev->shared_dvts_object = dvts_create_serializer();
+	if (!dev->shared_dvts_object) {
+		kfree(dev);
+		return -ENOMEM;
+	}
+	dev->shared_dvts_object_usecount = 0;
+
 #ifdef SUPPORT_V3D_WORKLIST
 	dev->uses_worklist = true;
 	dev->id = 0;
@@ -1221,6 +1318,15 @@ static int v3d_release(struct inode *inode, struct file *filp)
 		//Enable the IRQ here if someone is waiting for IRQ
 		v3d_enable_irq();
 	}
+
+	if (dev->shared_dvts_object_usecount != 0) {
+		/* unfortunately most apps don't close cleanly, so it
+		   would be rude to pollute the log with this message
+		   as an error... so we demote it to a verbose
+		   warning.  TODO: can this be fixed? */
+		KLOG_V("\nShared Deferred V3D Task Serializer Use Count > 0\n");
+	}
+	dvts_destroy_serializer(dev->shared_dvts_object);
 
 	if (dev)
 		kfree(dev);
@@ -1393,6 +1499,68 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 		case V3D_IOCTL_ASSERT_IDLE: {
 			KLOG_V("v3d_ioctl :V3D_IOCTL_ASSERT_IDLE: Unsupported");
+		}
+		break;
+
+		case V3D_IOCTL_DVTS_CREATE: {
+			uint32_t id;
+
+			KLOG_V("v3d_ioctl :V3D_IOCTL_DVTS_CREATE");
+			/* theoretically we should create a new dvts
+			 * object here and place it in some table, and
+			 * return a handle or index to the caller.
+			 * Right now, we don't care about multiple
+			 * synchronization paths in parallel, so we
+			 * can get away with just one dvts object.
+			 * So, we just return a fake handle (777) and
+			 * when we later get that id back in a job
+			 * post we just use the shared one we already
+			 * created upon device open */
+			id = 777;
+			if (copy_to_user((void *)arg, &id, sizeof(id))) {
+				KLOG_E("V3D_IOCTL_DVTS_CREATE copy_to_user failed");
+				ret = -EPERM;
+			}
+			dev->shared_dvts_object_usecount += 1;
+		}
+		break;
+
+		case V3D_IOCTL_DVTS_DESTROY: {
+			uint32_t id;
+
+			KLOG_V("v3d_ioctl :V3D_IOCTL_DVTS_DESTROY");
+			if (copy_from_user(&id, (void *)arg, sizeof(id))) {
+				KLOG_E("V3D_IOCTL_DVTS_DESTROY copy_from_user failed");
+				ret = -EPERM;
+			}
+			if (id != 777) ret = -ENOENT;
+			dev->shared_dvts_object_usecount -= 1;
+		}
+		break;
+
+		case V3D_IOCTL_DVTS_FINISH_TASK: {
+			uint32_t id;
+
+			KLOG_V("v3d_ioctl :V3D_IOCTL_DVTS_FINISH_TASK");
+			if (copy_from_user(&id, (void *)arg, sizeof(id))) {
+				KLOG_E("V3D_IOCTL_DVTS_DESTROY copy_from_user failed");
+				ret = -EPERM;
+			}
+			if (id != 777) ret = -ENOENT;
+			dvts_finish(dev->shared_dvts_object);
+		}
+		break;
+
+		case V3D_IOCTL_DVTS_AWAIT_TASK: {
+			dvts_await_task_args_t await_task_args;
+
+			KLOG_V("v3d_ioctl :V3D_IOCTL_DVTS_AWAIT_TASK");
+			if (copy_from_user(&await_task_args, (void *)arg, sizeof(await_task_args))) {
+				KLOG_E("V3D_IOCTL_DVTS_AWAIT_TASK copy_from_user failed");
+				ret = -EPERM;
+			}
+			if (await_task_args.id != 777) ret = -ENOENT;
+			dvts_wait(dev->shared_dvts_object, await_task_args.target);
 		}
 		break;
 

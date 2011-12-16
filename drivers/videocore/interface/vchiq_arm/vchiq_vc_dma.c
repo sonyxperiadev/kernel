@@ -139,6 +139,7 @@ dma_memcpy_pagelist(char *vcptr, const PAGELIST_T *pagelist)
    unsigned long addr;
    int pre_size = 0, post_size = 0;
    char *block_start;
+   char *block_end;
    int block_bytes;
    int xfer_len;
    int type;
@@ -194,7 +195,8 @@ dma_memcpy_pagelist(char *vcptr, const PAGELIST_T *pagelist)
 
    addr = pagelist->addrs[i];
    block_start = (char *)(addr & ~(PAGE_SIZE - 1)) + offset;
-   block_bytes = PAGE_SIZE * (addr & (PAGE_SIZE - 1)) + PAGE_SIZE - offset;
+   block_bytes = PAGE_SIZE * ((addr & (PAGE_SIZE - 1)) + 1) - offset;
+   block_end = block_start + block_bytes;
    if (block_bytes > len)
       block_bytes = len;
 
@@ -212,6 +214,7 @@ dma_memcpy_pagelist(char *vcptr, const PAGELIST_T *pagelist)
       addr = pagelist->addrs[i];
       block_start = (char *)(addr & ~(PAGE_SIZE - 1));
       block_bytes = PAGE_SIZE * ((addr & (PAGE_SIZE - 1)) + 1);
+      block_end = block_start + block_bytes;
       if (block_bytes > len)
       {
          block_bytes = len;
@@ -249,6 +252,7 @@ dma_memcpy_pagelist(char *vcptr, const PAGELIST_T *pagelist)
             addr = pagelist->addrs[i];
             block_start = (char *)(addr & ~(PAGE_SIZE - 1));
             block_bytes = PAGE_SIZE * ((addr & (PAGE_SIZE - 1)) + 1);
+            block_end = block_start + block_bytes;
             if (block_bytes > len)
                block_bytes = len;
          }
@@ -319,6 +323,7 @@ dma_memcpy_pagelist(char *vcptr, const PAGELIST_T *pagelist)
          addr = pagelist->addrs[i];
          block_start = (char *)(addr & ~(PAGE_SIZE - 1));
          block_bytes = PAGE_SIZE * ((addr & (PAGE_SIZE - 1)) + 1);
+         block_end = block_start + block_bytes;
          if (block_bytes > len)
             block_bytes = len;
       }
@@ -330,7 +335,7 @@ dma_memcpy_pagelist(char *vcptr, const PAGELIST_T *pagelist)
       block_start += block_bytes;
       block_bytes = (-(int)block_start) & (PAGE_SIZE - 1); // space left on this page
       // memcpy these remaining bytes to populate the L1
-      if (post_size > block_bytes)
+      if ((block_start + post_size) > block_end)
       {
          if (block_bytes)
          {

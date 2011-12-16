@@ -18,6 +18,10 @@
 
 #include "vchiq_vc.h"
 
+#if defined( __VC4_CAPRI__ )
+#include "vcinclude/hardware.h"
+#endif
+
 int vchiq_num_instances;
 
 int mutex_initialised;
@@ -50,6 +54,11 @@ vchiq_initialise(VCHIQ_INSTANCE_T *instance)
       vcos_mutex_create(&initialise_mutex, "vchiq-init");
       vcos_log_set_level(VCOS_LOG_CATEGORY, vchiq_default_vc_log_level);
       vcos_log_register("vchiq_vc", VCOS_LOG_CATEGORY);
+
+#if defined( __VC4_CAPRI__ )
+      vcos_log_error( "VPU_AXI_SS_SDRAM_SPLIT_SEL = 0x%08x", VPU_AXI_SS_SDRAM_SPLIT_SEL );
+#endif
+
       mutex_initialised = 1;
    }
    vcos_global_unlock();

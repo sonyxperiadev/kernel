@@ -241,10 +241,10 @@ void *vcos_generic_blockpool_alloc(VCOS_BLOCKPOOL_T *pool)
 
    if (subpool)
    {
-      vcos_assert(subpool->free_list);
-
       /* Remove from free list */
       VCOS_BLOCKPOOL_HEADER_T* nb = subpool->free_list;
+
+      vcos_assert(subpool->free_list);
       subpool->free_list = nb->owner.next;
 
       /* Owner is pool so free can be called without passing pool

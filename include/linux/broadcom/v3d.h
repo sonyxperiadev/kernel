@@ -26,6 +26,21 @@ typedef struct {
 	unsigned int ioptr;	//relocatable heap kernel address
 } mem_t;
 
+/*******************************************/
+/*
+ * Deferred V3D Task Serializer:  TODO: move to dvts.h perhaps?
+ */
+
+/* A DVTS ID is a user-mode handle for a kernel-side DVTS object.  At
+ * the moment, we fake it, and use 777 as a magic number to mean the
+ * shared DVTS object that we get for free when we open the file
+ * descriptor */
+typedef uint32_t dvts_id_t;
+/* A DVTS target is a job completion count representing the job we are dependent upon */
+typedef uint32_t dvts_target_t;
+typedef struct { dvts_id_t id; dvts_target_t target; } dvts_await_task_args_t;
+/*******************************************/
+
 #ifdef SUPPORT_V3D_WORKLIST
 
 #define MAX_USER_JOBS 4 // Based on number of QPUs
@@ -65,6 +80,8 @@ typedef struct {
 	uint32_t v3d_srqpc[MAX_USER_JOBS];
 	uint32_t v3d_srqua[MAX_USER_JOBS];
 	uint32_t v3d_srqul[MAX_USER_JOBS];
+	dvts_id_t dvts_id;
+	dvts_target_t dvts_target;
 } v3d_job_post_t;
 
 typedef struct {
@@ -86,7 +103,22 @@ enum {
 #ifdef SUPPORT_V3D_WORKLIST
 	V3D_CMD_POST_JOB,
 	V3D_CMD_WAIT_JOB,
+#else
+	/* just so the enums don't jump around based on this ifdef */
+	V3D_CMD_WORKLIST_RESERVED_1,
+	V3D_CMD_WORKLIST_RESERVED_2,
 #endif
+	V3D_CMD_DVTS_CREATE,
+	V3D_CMD_DVTS_DESTROY,
+	V3D_CMD_DVTS_FINISH_TASK,
+	V3D_CMD_DVTS_AWAIT_TASK,
+	/* since there's likely going to be some more DVTS ioctls in
+	   the future, let's reserve a little of the ENUM space here
+	   so that future kernel changes don't have to be in perfect
+	   sync with the user-mode changes */
+	V3D_CMD_DVTS_RESERVED_1,
+	V3D_CMD_DVTS_RESERVED_2,
+	V3D_CMD_DVTS_RESERVED_3,
 	V3D_CMD_LAST
 };
 
@@ -103,5 +135,10 @@ enum {
 #define V3D_IOCTL_POST_JOB		_IOW(BCM_V3D_MAGIC, V3D_CMD_POST_JOB, v3d_job_post_t)
 #define V3D_IOCTL_WAIT_JOB		_IOWR(BCM_V3D_MAGIC, V3D_CMD_WAIT_JOB, v3d_job_status_t)
 #endif
+
+#define V3D_IOCTL_DVTS_CREATE        _IOR(BCM_V3D_MAGIC, V3D_CMD_DVTS_CREATE, uint32_t)
+#define V3D_IOCTL_DVTS_DESTROY       _IOW(BCM_V3D_MAGIC, V3D_CMD_DVTS_DESTROY, uint32_t)
+#define V3D_IOCTL_DVTS_FINISH_TASK   _IOW(BCM_V3D_MAGIC, V3D_CMD_DVTS_FINISH_TASK, uint32_t)
+#define V3D_IOCTL_DVTS_AWAIT_TASK    _IOWR(BCM_V3D_MAGIC, V3D_CMD_DVTS_AWAIT_TASK, dvts_await_task_args_t)
 
 #endif

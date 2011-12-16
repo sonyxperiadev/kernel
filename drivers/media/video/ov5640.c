@@ -1321,7 +1321,7 @@ static int ov5640_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 static int ov5640_enum_framesizes(struct v4l2_subdev *sd,
 				  struct v4l2_frmsizeenum *fsize)
 {
-	if (fsize->index > OV5640_SIZE_LAST)
+	if (fsize->index >= OV5640_SIZE_LAST)
 		return -EINVAL;
 
 	fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
@@ -1386,6 +1386,7 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 	.g_mbus_fmt	= ov5640_g_fmt,
 	.try_mbus_fmt	= ov5640_try_fmt,
 	.enum_mbus_fmt	= ov5640_enum_fmt,
+	.enum_mbus_fsizes = ov5640_enum_framesizes,
 	.enum_framesizes = ov5640_enum_framesizes,
 	.g_parm = ov5640_g_parm,
 	.s_parm = ov5640_s_parm,

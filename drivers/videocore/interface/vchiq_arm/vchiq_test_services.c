@@ -42,6 +42,8 @@ static VCHIQ_SERVICE_HANDLE_T fun2_service_handle;
 static char srvr_service1_data[SERVICE1_DATA_SIZE];
 static char srvr_service2_data[SERVICE2_DATA_SIZE];
 
+static VCOS_LOG_CAT_T vchiq_test_log_category;
+
 static VCHIQ_STATUS_T func_srvr_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *header,
                                         VCHIQ_SERVICE_HANDLE_T service, void *bulk_userdata);
 
@@ -72,10 +74,10 @@ static VCHIQ_STATUS_T srvr_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *heade
    switch (reason)
    {
    case VCHIQ_SERVICE_OPENED:
-      VCOS_TRACE("  Service '%s' opened", service->name);
+      vcos_log_trace("  Service '%s' opened", service->name);
       break;
    case VCHIQ_SERVICE_CLOSED:
-      VCOS_TRACE("  Service '%s' closed", service->name);
+      vcos_log_trace("  Service '%s' closed", service->name);
       free(service->bulk_data);
       service->bulk_data = NULL;
       break;
@@ -83,6 +85,7 @@ static VCHIQ_STATUS_T srvr_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *heade
       {
          VCHIQ_ELEMENT_T element;
          int send_response = 1;
+         const char *err_string = NULL;
 
          /* Read the memory, for more realistic timing */
          calc_sum(header->data, header->size);
@@ -97,7 +100,7 @@ static VCHIQ_STATUS_T srvr_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *heade
                /* Reconfiguring the server with a new size */
                if (header->size != sizeof(*params))
                {
-                  element.data = "Bad params size";
+                  err_string = "Bad params size";
                   break;
                }
                /* Ignore if no iterations */
@@ -112,14 +115,14 @@ static VCHIQ_STATUS_T srvr_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *heade
                service->echo = params->echo;
                service->bulk_data = malloc(service->bulk_size);
                if (!service->bulk_data)
-                  element.data = "Out of memory";
+                  err_string = "Out of memory";
                else
                {
                   if (service->verify)
                      memset(service->bulk_data, 0xff, service->bulk_size);
                   vchiq_queue_bulk_receive(handle, service->bulk_data, service->bulk_size, 0);
                   /* Return an empty string */
-                  element.data = "";
+                  err_string = "";
                }
                break;
             case MSG_ONEWAY:
@@ -129,24 +132,34 @@ static VCHIQ_STATUS_T srvr_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *heade
             case MSG_ASYNC:
                /* Return a zero-length packet (ignored) */
                element.data = NULL;
+               element.size = 0;
                break;
             case MSG_SYNC:
                /* Return an empty-string packet */
-               element.data = "";
+               err_string = "";
+               break;
+            case MSG_ECHO:
+               /* Return the whole message */
+               element.data = header->data;
+               element.size = header->size;
                break;
             default:
-               element.data = "Unexpected message type";
+               err_string = "Unexpected message type";
                break;
             }
          }
          else
          {
-            element.data = "message too short";
+            err_string = "message too short";
          }
 
          if (send_response)
          {
-            element.size = element.data ? (strlen(element.data) + 1) : 0;
+            if (err_string)
+            {
+               element.data = err_string;
+               element.size = strlen(err_string) + 1;
+            }
             vchiq_queue_message(handle, &element, 1);
          }
 
@@ -159,7 +172,7 @@ static VCHIQ_STATUS_T srvr_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *heade
       {
          if (vchiq_queue_bulk_transmit(handle, service->bulk_data, service->bulk_size, bulk_userdata) != VCHIQ_SUCCESS)
          {
-            VCOS_TRACE("    transmit failed - aborting");
+            vcos_log_trace("    transmit failed - aborting");
          }
          break;
       }
@@ -177,13 +190,13 @@ static VCHIQ_STATUS_T srvr_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *heade
       }
       break;
    case VCHIQ_BULK_RECEIVE_ABORTED:
-      VCOS_TRACE("  BULK_RECEIVE_ABORTED(%s,?)", service->name);
+      vcos_log_trace("  BULK_RECEIVE_ABORTED(%s,?)", service->name);
       break;
    case VCHIQ_BULK_TRANSMIT_ABORTED:
-      VCOS_TRACE("  BULK_TRANSMIT_ABORTED(%s,%s)", service->name, service->bulk_data);
+      vcos_log_trace("  BULK_TRANSMIT_ABORTED(%s,%s)", service->name, service->bulk_data);
       break;
    default:
-      VCOS_TRACE("  BULK_TRANSMIT_ABORTED(%s,%s)", service->name, service->bulk_data);
+      vcos_log_trace("  BULK_TRANSMIT_ABORTED(%s,%s)", service->name, service->bulk_data);
       break;
    }
 
@@ -334,14 +347,14 @@ static VCHIQ_STATUS_T fun2_srvr_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *
       {
          if (prologue[i] != '\xff')
          {
-            VCOS_TRACE("Prologue corrupted at %d (datalen %d)", i, datalen);
+            vcos_log_error("Prologue corrupted at %d (datalen %d)", i, datalen);
             VCOS_BKPT;
             success = 0;
             break;
          }
          if (epilogue[i] != '\xff')
          {
-            VCOS_TRACE("Epilogue corrupted at %d (datalen %d)", i, datalen);
+            vcos_log_error("Epilogue corrupted at %d (datalen %d)", i, datalen);
             VCOS_BKPT;
             success = 0;
             break;
@@ -372,7 +385,7 @@ static VCHIQ_STATUS_T fun2_srvr_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *
 
       if (!success)
       {
-         VCOS_TRACE("Data corrupted at %d (datalen %d)", i, datalen);
+         vcos_log_error("Data corrupted at %d (datalen %d)", i, datalen);
          VCOS_BKPT;
       }
 #ifdef USE_MEMMGR
@@ -399,6 +412,9 @@ void vchiq_test_start_services(VCHIQ_INSTANCE_T instance)
    int i;
 
    srvr_instance = instance;
+
+   vcos_log_set_level(VCOS_LOG_CATEGORY, VCOS_LOG_INFO);
+   vcos_log_register("vchiq_test", VCOS_LOG_CATEGORY);
 
    // Client set-up
    for (i = 0; i < MAX_SERVICES; i++)
