@@ -731,21 +731,12 @@ cVoid chal_audio_earpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable)
     }
     else
     {
-//On B0, multicast to IHF/EP, remove EP, then IHF no sound
-
-//the following note is from A0:
-// The following control will affect analog mic path.
-// Set either one of the two bits will shut down analog mic path
-// and may be any mic path. flat it out for now
-// Need more study on this.
-#if 0
         /* Set power down DAC */
         reg_value = BRCM_READ_REG(base, AUDIOH_EP_PWR);
         reg_value |= AUDIOH_EP_PWR_AUDIOTX_EP_RESET_MASK;
         reg_value |= AUDIOH_EP_PWR_AUDIOTX_EP_DAC_PD_MASK;
         reg_value |= AUDIOH_EP_PWR_AUDIOTX_EP_IHF_REF_PD_MASK;
         BRCM_WRITE_REG(base, AUDIOH_EP_PWR, reg_value);
-#endif
     }
 
     return;

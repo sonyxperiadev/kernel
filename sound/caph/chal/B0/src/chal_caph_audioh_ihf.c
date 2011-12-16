@@ -928,24 +928,12 @@ cVoid chal_audio_ihfpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable_chan)
 
     reg_value = BRCM_READ_REG(base, AUDIOH_EP_PWR);
 
+	// Only for power up, power down is controlled from upper layer.
     if(enable_chan)
     {
         reg_value &= ~AUDIOH_EP_PWR_AUDIOTX_EP_RESET_MASK;
         reg_value &= ~AUDIOH_EP_PWR_AUDIOTX_EP_DAC_PD_MASK;
         reg_value &= ~AUDIOH_EP_PWR_AUDIOTX_EP_IHF_REF_PD_MASK;
-    }
-    else
-    {
-//On B0, multicast to IHF/EP, remove IHF, then EP no sound
-
-//the following note is from A0:
-// This will affect Microphone path. Reason is unknown. For now flag this code out.
-#if 0
-        /* Need to check if EP is also running or not */
-        reg_value |= AUDIOH_EP_PWR_AUDIOTX_EP_RESET_MASK;
-        reg_value |= AUDIOH_EP_PWR_AUDIOTX_EP_DAC_PD_MASK;
-        reg_value |= AUDIOH_EP_PWR_AUDIOTX_EP_IHF_REF_PD_MASK;
-#endif
     }
 
     BRCM_WRITE_REG(base, AUDIOH_EP_PWR, reg_value);

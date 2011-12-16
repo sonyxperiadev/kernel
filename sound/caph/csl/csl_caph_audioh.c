@@ -60,6 +60,8 @@ CHAL_HANDLE lp_handle = 0x0;
 //****************************************************************************
 // local typedef declarations
 //****************************************************************************
+#define CSL_CAPH_AUDIOH_EP_ON 0x1
+#define CSL_CAPH_AUDIOH_IHF_ON 0x2
 
 
 //****************************************************************************
@@ -75,6 +77,7 @@ static CHAL_HANDLE handle = 0x0;
 //Bit 3: DMIC4
 //Bit 4-7: Reserved
 static UInt8 micStatus = 0x0;
+static UInt8 epIHFStatus = 0x0;
 
 
 #if defined(USE_SYSPARM_FILE)  
@@ -786,6 +789,7 @@ void csl_caph_audioh_start(int path_id)
 			chal_audio_ihfpath_set_dac_pwr(handle,chnl_enable);			
 			chal_audio_ihfpath_set_gain(handle, 0);
 			chal_audio_ihfpath_enable(handle, chnl_enable);	
+			epIHFStatus |= CSL_CAPH_AUDIOH_IHF_ON;
 
 			break;
 
@@ -801,6 +805,7 @@ void csl_caph_audioh_start(int path_id)
             chal_audio_earpath_set_drv_pwr(handle, CHAL_AUDIO_ENABLE);
 
 			chal_audio_earpath_enable(handle, CHAL_AUDIO_ENABLE);	// Enable the Earpiece path
+			epIHFStatus |= CSL_CAPH_AUDIOH_EP_ON;
 
             /* Cause a raising edge on SR_PUP_ED_DRV_TRIG */
             chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG);
@@ -934,12 +939,17 @@ static void csl_caph_audioh_stop_keep_config(int path_id)
 			chal_audio_ihfpath_int_enable(handle, FALSE, FALSE);
 			chal_audio_ihfpath_enable(handle, 0);
 			chal_audio_ihfpath_set_dac_pwr(handle, 0);				
+			epIHFStatus &= ~CSL_CAPH_AUDIOH_IHF_ON;
+			if (epIHFStatus == 0)
+				chal_audio_earpath_set_dac_pwr(handle, 0);
 			break;
 
 		case AUDDRV_PATH_EARPICEC_OUTPUT:
 			chal_audio_earpath_int_enable(handle, FALSE, FALSE);
 			chal_audio_earpath_enable(handle, 0);	// Disable the Earpiece path
-			chal_audio_earpath_set_dac_pwr(handle, 0);
+			epIHFStatus &= ~CSL_CAPH_AUDIOH_EP_ON;
+			if (epIHFStatus == 0)
+				chal_audio_earpath_set_dac_pwr(handle, 0);
             /* Cause a raising edge on SR_PUP_ED_DRV_TRIG */
             chal_audio_earpath_clear_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG);
 
