@@ -152,23 +152,52 @@ void csl_i2s_config(CSL_HANDLE handle,CSL_I2S_CONFIG_t *config)
 
 /****************************************************************************
 *
-*  Function Name: csl_i2s_start(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
+*  Function Name: csl_i2s_start_rx(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
 *
 *  Description: I2S/SSPI start
 *
 ****************************************************************************/
-void csl_i2s_start(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
+void csl_i2s_start_rx(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
 {
-//	UInt32 dma_trans_size=4096;
-
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "+csl_i2s_start \r\n");
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "config->trans_size 0x%x \r\n",
 					(unsigned int)config->trans_size);
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "handle 0x%x \r\n", (unsigned int)handle);
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "config 0x%x \r\n", (unsigned int)config);
 
-//	SSPI_hw_DMA_init(handle, config);
-	chal_sspi_enable_scheduler(handle, 1);
+    chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
+                                              SSPI_FIFO_ID_RX0, 
+                                              TRUE, 
+                                              TRUE); 
+    chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
+                                              SSPI_FIFO_ID_RX1, 
+                                              TRUE, 
+                                              TRUE); 
+    chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
+                                              SSPI_FIFO_ID_RX2, 
+                                              TRUE, 
+                                              TRUE); 
+    chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
+                                              SSPI_FIFO_ID_RX3, 
+                                              TRUE, 
+                                              TRUE); 
+	return;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_i2s_start_tx(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
+*
+*  Description: I2S/SSPI start
+*
+****************************************************************************/
+void csl_i2s_start_tx(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "+csl_i2s_start_tx \r\n");
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "config->trans_size 0x%x \r\n",
+					(unsigned int)config->trans_size);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "handle 0x%x \r\n", (unsigned int)handle);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "config 0x%x \r\n", (unsigned int)config);
 
     chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
                                               SSPI_FIFO_ID_TX0, 
@@ -186,23 +215,6 @@ void csl_i2s_start(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
                                               SSPI_FIFO_ID_TX3, 
                                               TRUE, 
                                               TRUE); 
-    chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
-                                              SSPI_FIFO_ID_RX0, 
-                                              TRUE, 
-                                              TRUE); 
-    chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
-                                              SSPI_FIFO_ID_RX1, 
-                                              TRUE, 
-                                              TRUE); 
-    chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
-                                              SSPI_FIFO_ID_RX2, 
-                                              TRUE, 
-                                              TRUE); 
-    chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
-                                              SSPI_FIFO_ID_RX3, 
-                                              TRUE, 
-                                              TRUE); 
-
 	return;
 }
 
@@ -215,15 +227,10 @@ void csl_i2s_start(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
 ****************************************************************************/
 void csl_i2s_stop_tx(CSL_HANDLE handle)
 {
-
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_TX0);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_TX1);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_TX0);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_TX1);
-
-	//disable  master
-	chal_sspi_enable_scheduler(handle, 0);
-
 
     chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
                                               SSPI_FIFO_ID_TX0, 
@@ -241,7 +248,6 @@ void csl_i2s_stop_tx(CSL_HANDLE handle)
                                               SSPI_FIFO_ID_TX3, 
                                               FALSE, 
                                               FALSE); 
-    
 	return;
 }
 
@@ -254,14 +260,10 @@ void csl_i2s_stop_tx(CSL_HANDLE handle)
 ****************************************************************************/
 void csl_i2s_stop_rx(CSL_HANDLE handle)
 {
-
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_RX0);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_RX1);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_RX0);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_RX1);
-
-	//disable  master
-	chal_sspi_enable_scheduler(handle, 0);
 
     chal_sspi_enable_fifo_pio_start_stop_intr(handle, 
                                               SSPI_FIFO_ID_RX0, 
@@ -279,8 +281,21 @@ void csl_i2s_stop_rx(CSL_HANDLE handle)
                                               SSPI_FIFO_ID_RX3, 
                                               FALSE, 
                                               FALSE); 
-
 	return;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_sspi_enable_scheduler( CSL_HANDLE handle,
+*                                            UInt32 on_off)
+*
+*  Description: Enable/Disable the SSPI scheduler to excute the configured tasks
+*
+****************************************************************************/
+void csl_sspi_enable_scheduler(CSL_HANDLE handle, UInt32 on_off)
+{
+	//enable/disable  master
+	chal_sspi_enable_scheduler(handle, on_off);
 }
 
 UInt32 csl_i2s_get_tx0_fifo_data_port(CSL_HANDLE handle)

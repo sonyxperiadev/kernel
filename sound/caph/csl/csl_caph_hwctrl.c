@@ -127,7 +127,7 @@ static CHAL_HANDLE caph_intc_handle = 0;
 static CSL_HANDLE fmHandleSSP = 0;
 static CSL_HANDLE pcmHandleSSP = 0;
 static Boolean fmRxRunning = FALSE; //This is only to indicate FM direct playback
-static Boolean fmRunning = FALSE;
+static Boolean fmTxRunning = FALSE;
 static Boolean pcmRunning = FALSE;
 static CAPH_SWITCH_TRIGGER_e fmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
 static CAPH_SWITCH_TRIGGER_e fmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
@@ -1209,16 +1209,21 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
             }
         }
 
-		if ((path->source == CSL_CAPH_DEV_FM_RADIO) || (path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX))
+		if (fmTxRunning == TRUE && path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX)
 		{
-			if ((fmRunning == TRUE) && (path->sinkCount == 1))
+			csl_i2s_stop_tx(fmHandleSSP);
+			fmTxRunning = FALSE;
+		}
+		else if (fmRxRunning == TRUE && path->source == CSL_CAPH_DEV_FM_RADIO)
+		{
+			if (path->sinkCount == 1)
 			{
-				csl_i2s_stop_tx(fmHandleSSP);
 				csl_i2s_stop_rx(fmHandleSSP);
-				fmRunning = FALSE;
-				if(path->source == CSL_CAPH_DEV_FM_RADIO && fmRxRunning) fmRxRunning = FALSE;
+				fmRxRunning = FALSE;
 			}
 		}
+		if (fmTxRunning == FALSE && fmRxRunning == FALSE)
+			csl_sspi_enable_scheduler(fmHandleSSP, 0);
 	}
 
     for (i = startOffset; i < MAX_PATH_LEN; i++)
@@ -1662,7 +1667,7 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 		}
 	}
 
-	if(!fmRunning && (path->sink[sinkNo]==CSL_CAPH_DEV_FM_TX || path->source==CSL_CAPH_DEV_FM_RADIO))
+	if(!fmTxRunning && !fmRxRunning && (path->sink[sinkNo]==CSL_CAPH_DEV_FM_TX || path->source==CSL_CAPH_DEV_FM_RADIO))
 	{
 		fmCfg.mode = CSL_I2S_MASTER_MODE;
 		fmCfg.tx_ena = 1;
@@ -1811,10 +1816,18 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID, int sinkNo, int startO
 		pcmRunning = TRUE;
 	}
 
-	if(!fmRunning && (path->sink[sinkNo]==CSL_CAPH_DEV_FM_TX || path->source==CSL_CAPH_DEV_FM_RADIO))
+	if(!fmTxRunning && (path->sink[sinkNo]==CSL_CAPH_DEV_FM_TX))
 	{
-		csl_i2s_start(fmHandleSSP, &fmCfg);
-		fmRunning = TRUE;
+		csl_sspi_enable_scheduler(fmHandleSSP, 1);
+		csl_i2s_start_tx(fmHandleSSP, &fmCfg);
+		fmTxRunning = TRUE;
+	}
+
+	if (!fmRxRunning && path->source==CSL_CAPH_DEV_FM_RADIO)
+	{
+		csl_sspi_enable_scheduler(fmHandleSSP, 1);
+		csl_i2s_start_rx(fmHandleSSP, &fmCfg);
+		fmRxRunning = TRUE;
 	}
 
 	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM) || 
@@ -2825,7 +2838,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
          (path->sink[sinkNo] == CSL_CAPH_DEV_HS)))
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback *****\r\n"));
-		fmRxRunning = TRUE;
 		list = LIST_SW_MIX_SW;
 		if(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) list = LIST_SW_MIX_SRC_SW;
     }   

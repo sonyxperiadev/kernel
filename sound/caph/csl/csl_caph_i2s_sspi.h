@@ -240,14 +240,24 @@ void csl_i2s_deinit(CSL_HANDLE hContext);
 void csl_i2s_config(CSL_HANDLE hContext,CSL_I2S_CONFIG_t *config); 
 
 /**
-*  @brief  Start I2S
+*  @brief  Start I2S Rx
 *
 *  @param    handle    (in) I2S CSL handle
 *  @param    CSL_I2S_CONFIG_t (in) I2S CSL config struct
 *
 *  @return none
 *****************************************************************************/
-void csl_i2s_start(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config);
+void csl_i2s_start_rx(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config);
+
+/**
+*  @brief  Start I2S Tx
+*
+*  @param    handle    (in) I2S CSL handle
+*  @param    CSL_I2S_CONFIG_t (in) I2S CSL config struct
+*
+*  @return none
+*****************************************************************************/
+void csl_i2s_start_tx(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config);
 /**
 *
 *  @brief  Stop I2S TX
@@ -266,6 +276,16 @@ void csl_i2s_stop_tx(CSL_HANDLE handle);
 *  @return none
 *****************************************************************************/
 void csl_i2s_stop_rx(CSL_HANDLE handle);
+/**
+*
+*  @brief  Enable/Disable SSPI scheduler
+*
+*  @param   handle    (in) I2S CSL handle
+*  @param   on_off    (in) Enable -1, Disable - 0
+*
+*  @return none
+*****************************************************************************/
+void csl_sspi_enable_scheduler(CSL_HANDLE handle, UInt32 on_off);
 /**
 *
 *  @brief  Get channel 0 TX port address
