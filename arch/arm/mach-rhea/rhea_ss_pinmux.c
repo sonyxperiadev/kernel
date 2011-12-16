@@ -229,6 +229,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SSPCK, GPIO87, 0, OFF, OFF, 0, 0, 16MA),
 	PIN_CFG(MMC1DAT6, GPIO72, 0, OFF, OFF, 0, 0, 16MA), //SD_DECTECT
 	PIN_CFG(DSI0TE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(CAMCS0, GPIO43, 0, OFF, OFF, 0, 0, 16MA),
 };
 
 /* board level init */

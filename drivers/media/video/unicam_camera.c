@@ -144,14 +144,14 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 			icd->current_fmt->host_fmt);
 	unsigned long size;
 
-	dprintk("-enter");
+//	dprintk("-enter");
 	if (bytes_per_line < 0)
 		return bytes_per_line;
 
 	buf = to_unicam_camera_vb(vb);
 
-	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p, size=%lu", vb, vb2_plane_vaddr(vb, 0),
-		(void *)vb2_dma_contig_plane_paddr(vb, 0), vb2_get_plane_payload(vb,0));
+//	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p, size=%lu", vb, vb2_plane_vaddr(vb, 0),
+//		(void *)vb2_dma_contig_plane_paddr(vb, 0), vb2_get_plane_payload(vb,0));
 
 	size = icd->user_height * bytes_per_line;
 
@@ -162,7 +162,7 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 	}
 	vb2_set_plane_payload(vb, 0, size);
 
-	dprintk("-exit");
+//	dprintk("-exit");
 	return 0;
 }
 
@@ -177,16 +177,16 @@ static int  unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 	dma_addr_t phys_addr;
 	unsigned int line_stride;
 
-	dprintk("-enter");
+//	dprintk("-enter");
 
 	if (!unicam_dev->active) {
-		dprintk("no active buffer found");
+//		dprintk("no active buffer found");
 		return -ENOMEM;
 	}
 
 	phys_addr = vb2_dma_contig_plane_paddr(unicam_dev->active, 0);
 
-	dprintk("updating buffer phys=0x%p", (void *)phys_addr);
+//	dprintk("updating buffer phys=0x%p", (void *)phys_addr);
 
 	/*TODO: fix resolution */
 	/* stride is in bytes */
@@ -233,7 +233,7 @@ static int  unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 			return -1;
 		}
 	}
-	dprintk("-exit");
+//	dprintk("-exit");
 	return 0;
 }
 
@@ -244,7 +244,7 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
     CSL_CAM_FRAME_st_t      cslCamFrame;
 	int bytes_per_line = soc_mbus_bytes_per_line(unicam_dev->icd->user_width,
 								unicam_dev->icd->current_fmt->host_fmt);
-	dprintk("-enter");
+//	dprintk("-enter");
 
 	if (!unicam_dev->active) {
 		dprintk("no active buffer");
@@ -265,7 +265,7 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 		dev_err(unicam_dev->dev, "error in triggering capture\n");
 		return -1;
 	}
-	dprintk("-exit()");
+//	dprintk("-exit()");
 	return ret;
 }
 
@@ -277,9 +277,9 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
 	unsigned long flags;
 
-	dprintk("-enter");
-	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,	vb2_plane_vaddr(vb, 0),
-			(void *)vb2_dma_contig_plane_paddr(vb, 0), vb2_get_plane_payload(vb, 0));
+//	dprintk("-enter");
+//	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,	vb2_plane_vaddr(vb, 0),
+//			(void *)vb2_dma_contig_plane_paddr(vb, 0), vb2_get_plane_payload(vb, 0));
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	list_add_tail(&buf->queue, &unicam_dev->capture);
@@ -291,7 +291,7 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 		unicam_camera_capture(unicam_dev);
 	}
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
-	dprintk("-exit");
+//	dprintk("-exit");
 }
 
 static void unicam_videobuf_release(struct vb2_buffer *vb)
@@ -720,8 +720,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
 	/* has the interrupt occured for Channel 0? */
     reg_status = csl_cam_get_rx_status(unicam_dev->cslCamHandle, (CSL_CAM_RX_STATUS_t *)&status);
-	dprintk("received unicam interrupt reg_status=0x%x status=0x%x\n",
-			reg_status, status);
+//	dprintk("received unicam interrupt reg_status=0x%x status=0x%x\n",
+//			reg_status, status);
 
     if (status & CSL_CAM_RX_INT) {
 
@@ -731,7 +731,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
         if (status & (CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT)) {
 			struct vb2_buffer *vb = unicam_dev->active;
 			int ret;
-			dprintk("frame received");
+			
+	//		dprintk("frame received");
 			if (!vb)
 				goto out;
 			/* mark  the buffer done */
@@ -763,11 +764,11 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			spin_unlock(&unicam_dev->lock);
 		}
 
-		else
-			dprintk("interrupt not handled reg_status=0x%x status=0x%x", reg_status, status);
+//		else
+	//		dprintk("interrupt not handled reg_status=0x%x status=0x%x", reg_status, status);
 	}
-	else
-			dprintk("interrupt not handled reg_status=0x%x status=0x%x", reg_status, status);
+//	else
+	//		dprintk("interrupt not handled reg_status=0x%x status=0x%x", reg_status, status);
 
 out:
 	return IRQ_HANDLED;
