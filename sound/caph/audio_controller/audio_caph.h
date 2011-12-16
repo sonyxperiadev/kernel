@@ -191,6 +191,7 @@ typedef struct
    Int32 parm;
    Int32 mic;
    Int32 spkr;
+   Int32 mode;
 }BRCM_AUDIO_Param_Loopback_t;
 
 typedef struct

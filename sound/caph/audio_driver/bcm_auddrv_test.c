@@ -279,7 +279,7 @@ static int HandleControlCommand()
             mic = sgBrcm_auddrv_TestValues[3];
 			spkr = sgBrcm_auddrv_TestValues[4];
 			BCM_AUDIO_DEBUG(" Audio Loopback onOff = %d, from %d to %d\n", onOff, mic, spkr);
-            AUDCTRL_SetAudioLoopback(onOff,mic,spkr);
+            AUDCTRL_SetAudioLoopback(onOff,mic,spkr,1);
         }
         break;
         case 3:// Dump registers

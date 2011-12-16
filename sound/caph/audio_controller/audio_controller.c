@@ -2054,7 +2054,8 @@ void AUDCTRL_RemoveRecordMic(
 void AUDCTRL_SetAudioLoopback(
                               Boolean enable_lpbk,
                               AUDIO_SOURCE_Enum_t mic,
-                              AUDIO_SINK_Enum_t	speaker
+                              AUDIO_SINK_Enum_t	speaker,
+			      Int32	sidetone_mode
                              )
 {
     //Sidetone FIR filter coeffs.
@@ -2077,8 +2078,7 @@ void AUDCTRL_SetAudioLoopback(
 	CSL_CAPH_DEVICE_e src_dev,sink_dev;
 	int i,j;
 
-    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: mic = %d\n", mic);
-    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: speaker = %d\n", speaker);
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: mic = %d, speaker = %d, mode = %d\n", mic, speaker, sidetone_mode);
 
     memset(&hwCtrlConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
     source = sink = CSL_CAPH_DEV_NONE;
@@ -2158,7 +2158,7 @@ void AUDCTRL_SetAudioLoopback(
             (UInt32)audio_mode, 0, 0, 0, 0);  //???
     if(enable_lpbk)
     {
-        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: Enable loopback \n");
+        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: Enable loopback with sidetone mode = %d \n", sidetone_mode);
 
 	// For I2S/PCM loopback
         if (((source == CSL_CAPH_DEV_FM_RADIO) && (sink == CSL_CAPH_DEV_FM_TX)) ||
@@ -2205,18 +2205,26 @@ void AUDCTRL_SetAudioLoopback(
 
         hwCtrlConfig.chnlNum = (speaker == AUDIO_SINK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
         hwCtrlConfig.bitPerSample = AUDIO_16_BIT_PER_SAMPLE;
+	hwCtrlConfig.sidetone_mode= sidetone_mode;
 
 
         pathID = csl_caph_hwctrl_EnablePath(hwCtrlConfig);
 
-#ifdef HW_SIDETONE_LOOPBACK
-        //Enable the sidetone path.
+//#ifdef HW_SIDETONE_LOOPBACK
+	if (sidetone_mode) //sidetone_mode = 1 to use sidetone path
+	{
+        	//Enable the sidetone path.
 		//first step: enable sidetone
 		csl_caph_hwctrl_EnableSidetone(sink);
 		//second step: set filter and gain
 		csl_caph_hwctrl_ConfigSidetoneFilter(coeff);
 		csl_caph_hwctrl_SetSidetoneGain(0); // Set sidetone gain to 0dB.
-#endif
+	}
+	else //loopback does not use sidetone path
+	{
+		Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback, sidetone path disabled.\n");
+	}
+//#endif
 #if defined(USE_NEW_AUDIO_PARAM)
 		AUDCTRL_SetAudioMode( audio_mode, 0 /*AUDCTRL_GetAudioApp()*/); //this function also sets all HW gains.
 #else
@@ -2319,10 +2327,10 @@ void AUDCTRL_SetAudioLoopback(
 #endif
 		}
 
-#ifdef HW_SIDETONE_LOOPBACK
+//#ifdef HW_SIDETONE_LOOPBACK
         //Disable Sidetone path.
-        csl_caph_hwctrl_DisableSidetone(sink);
-#endif
+	if (sidetone_mode)  csl_caph_hwctrl_DisableSidetone(sink);
+//#endif
 
 		(void) csl_caph_hwctrl_DisablePath(hwCtrlConfig); //clocks are disabled here, so no register access after this.
 

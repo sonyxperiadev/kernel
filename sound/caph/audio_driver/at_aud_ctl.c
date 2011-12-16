@@ -142,7 +142,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             loopback_status = Params[1];
             if (loopback_status > 1) loopback_status = 1;
 
-            AUDCTRL_SetAudioLoopback( loopback_status, loopback_input, loopback_output);
+            AUDCTRL_SetAudioLoopback( loopback_status, loopback_input, loopback_output,1);
             BCM_AUDIO_DEBUG("%s enable loopback from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output);
             break;
 
@@ -177,14 +177,14 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
             loopback_status = 1;
             //enable the HW loopback from loopback_input to loopback_output without DSP.
-            AUDCTRL_SetAudioLoopback( TRUE, loopback_input, loopback_output);
+            AUDCTRL_SetAudioLoopback( TRUE, loopback_input, loopback_output,1);
 
             BCM_AUDIO_DEBUG("%s enable loopback from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output);
             break;
 
         case 12: //at*maudmode=12  --> disable loopback path
             loopback_status = 0;
-            AUDCTRL_SetAudioLoopback( FALSE, loopback_input, loopback_output);
+            AUDCTRL_SetAudioLoopback( FALSE, loopback_input, loopback_output,1);
             //OSTASK_Sleep(100);
             BCM_AUDIO_DEBUG("%s disable loopback from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output);
             break;

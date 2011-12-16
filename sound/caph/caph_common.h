@@ -141,7 +141,7 @@ typedef struct brcm_alsa_chip
 	struct work_struct work_play;
     struct work_struct work_capt;
 
-	s32	pi32LoopBackTestParam[3];	//loopback test
+	s32	pi32LoopBackTestParam[4];	//loopback test
 	s32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	s32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
 	s32	pi32SpeechMixOption[CAPH_MAX_PCM_STREAMS];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both

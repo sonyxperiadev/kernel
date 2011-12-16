@@ -560,15 +560,17 @@ void AUDCTRL_RemoveRecordMic(
 *  @param  enable_lpbk (in)  the audio mode
 *  @param  mic         (in)  the input to loopback
 *  @param  speaker     (in)  the output from loopback
+*  @param  sidetone_mode     (in)  use sidetone loopback mode
 *
 *  @return none
 *
 ****************************************************************************/
 void AUDCTRL_SetAudioLoopback(
-							Boolean					enable_lpbk,
-							AUDIO_SOURCE_Enum_t		mic,
-							AUDIO_SINK_Enum_t		speaker
-							);
+				Boolean				enable_lpbk,
+				AUDIO_SOURCE_Enum_t		mic,
+				AUDIO_SINK_Enum_t		speaker,
+				Int32				sidetone_mode
+			);
 
 /********************************************************************
 *  @brief  Set Arm2Sp Parameter

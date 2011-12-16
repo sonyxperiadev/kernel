@@ -702,7 +702,7 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_SetHWLoopback:
 		{
 			BRCM_AUDIO_Param_Loopback_t *parm_loop = (BRCM_AUDIO_Param_Loopback_t *)arg_param;
-			AUDCTRL_SetAudioLoopback(parm_loop->parm,(AUDIO_SOURCE_Enum_t)parm_loop->mic,(AUDIO_SINK_Enum_t)parm_loop->spkr);
+			AUDCTRL_SetAudioLoopback(parm_loop->parm,(AUDIO_SOURCE_Enum_t)parm_loop->mic,(AUDIO_SINK_Enum_t)parm_loop->spkr, (int)parm_loop->mode);
 		}
 		break;
 		case ACTION_AUD_EnableFMPlay:

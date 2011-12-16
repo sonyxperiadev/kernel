@@ -595,7 +595,7 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 	{
 		case CTL_FUNCTION_LOOPBACK_TEST:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-			uinfo->count = 3;
+			uinfo->count = 4;
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = CAPH_MAX_CTRL_LINES;//FIXME
 			break;
@@ -715,6 +715,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			ucontrol->value.integer.value[0] = pChip->pi32LoopBackTestParam[0];
 			ucontrol->value.integer.value[1] = pChip->pi32LoopBackTestParam[1];
 			ucontrol->value.integer.value[2] = pChip->pi32LoopBackTestParam[2];
+			ucontrol->value.integer.value[3] = pChip->pi32LoopBackTestParam[3];
 			break;
 		case CTL_FUNCTION_PHONE_ENABLE:
 			ucontrol->value.integer.value[0] = pChip->iEnablePhoneCall;
@@ -805,6 +806,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			parm_loop.parm = pChip->pi32LoopBackTestParam[0] = ucontrol->value.integer.value[0];
 			parm_loop.mic = pChip->pi32LoopBackTestParam[1] = ucontrol->value.integer.value[1];
 			parm_loop.spkr = pChip->pi32LoopBackTestParam[2] = ucontrol->value.integer.value[2];
+			parm_loop.mode = pChip->pi32LoopBackTestParam[3] = ucontrol->value.integer.value[3];
 
 			//Do loopback test
 			AUDIO_Ctrl_Trigger(ACTION_AUD_SetHWLoopback,&parm_loop,NULL,0);

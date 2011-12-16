@@ -2901,7 +2901,17 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
             ||(path->sink[sinkNo] == CSL_CAPH_DEV_IHF) 
             ||(path->sink[sinkNo] == CSL_CAPH_DEV_HS)))
     {
-		list = LIST_NONE;
+		if (config.sidetone_mode) list = LIST_NONE;
+		else if (path->sink[sinkNo] != CSL_CAPH_DEV_HS) list = LIST_SW; 
+   		else 
+   		{ 
+#if defined(CAPH_48K_MONO_PASSTHRU) 
+		path->chnlNum = 1; //o.w. stereo passthru src is picked. 
+ 		list = LIST_SW_MIX_SW; 
+#else 
+ 		list = LIST_SW; 
+#endif 
+ 		} 
     }
     else // HW loopback only: AUDIOH-->SSASW->SRCMixer->AudioH, Digi Mic1/2/3/4 -> HS ear
     if (((path->source == CSL_CAPH_DEV_DIGI_MIC_L) ||

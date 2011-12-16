@@ -156,6 +156,7 @@ typedef struct
     AUDIO_SAMPLING_RATE_t snk_sampleRate;	
     AUDIO_NUM_OF_CHANNEL_t chnlNum;
     AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+    Int32   sidetone_mode;
 }CSL_CAPH_HWCTRL_CONFIG_t;
 
 //merge CSL_CAPH_HWCTRL_CONFIG_t and CSL_CAPH_HWCTRL_STREAM_REGISTER_t into CSL_CAPH_HWConfig_Table_t?
