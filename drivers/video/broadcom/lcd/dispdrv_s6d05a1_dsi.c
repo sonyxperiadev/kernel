@@ -1026,8 +1026,11 @@ Int32 DISPDRV_PowerControl (
     
     DISPDRV_CHECK_PTR_2_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
    
-	//@HW temorary code, turn on backlight
+#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
 	gpio_request(95,"BK_LIGHT");
+	gpio_direction_output(95, 0);
+#endif
+
     switch ( state )
     {
         case DISPLAY_POWER_STATE_ON:
@@ -1037,13 +1040,18 @@ Int32 DISPDRV_PowerControl (
 					DISPDRV_ExecCmndList(drvH, &power_on_seq_s5d05a1x31_cooperve_AUO[0]);
                     
                     pPanel->pwrState = DISP_PWR_SLEEP_OFF;
-					gpio_direction_output(95, 1);
+#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
+			gpio_set_value_cansleep(95, 1);
+#endif
                     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: INIT-SEQ\n\r",
                         __FUNCTION__ );
                     break; 
                 case DISP_PWR_SLEEP_ON:
                     DISPDRV_ExecCmndList(drvH, &exit_sleep_seq_AUO[0]); 
                     OSTASK_Sleep ( 120 );
+#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
+			gpio_set_value_cansleep(95, 1);
+#endif
                     pPanel->pwrState = DISP_PWR_SLEEP_OFF;
                     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-OUT\n\r",
                         __FUNCTION__ );
@@ -1062,7 +1070,7 @@ Int32 DISPDRV_PowerControl (
         case DISPLAY_POWER_STATE_SLEEP:
             if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
             {
-				DISPDRV_ExecCmndList(drvH, &enter_sleep_seq_AUO[0]);              
+		  DISPDRV_ExecCmndList(drvH, &enter_sleep_seq_AUO[0]);              
                 OSTASK_Sleep ( 120 );
                 pPanel->pwrState = DISP_PWR_SLEEP_ON;
                 LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-IN\n\r",
@@ -1078,18 +1086,25 @@ Int32 DISPDRV_PowerControl (
 	case DISPLAY_POWER_STATE_BLANK_SCREEN:
 		if( pPanel->pwrState == DISP_PWR_SLEEP_OFF)
 		{
-				gpio_direction_output(95, 0);
+#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
+			gpio_set_value_cansleep(95, 0);
+#endif
             
 				LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: Turn off backlight\n\r",
                     		__FUNCTION__ );
 				
 		} 
+/*
 		else
 		{
-				gpio_direction_output(95, 1);
+#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
+			//gpio_set_value_cansleep(95, 1);
+			gpio_direction_output(95, 1);
+#endif
 			LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: Turn on backlight ",
 				__FUNCTION__ );
 		}   
+*/
 		break;
         
         default:
@@ -1099,7 +1114,9 @@ Int32 DISPDRV_PowerControl (
             break;
     }
 	
+#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
 	gpio_free(95);
+#endif
 	
     return ( res );
 }
