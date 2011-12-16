@@ -28,7 +28,7 @@
 #define iprintk(format, arg...)	\
 	printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg)
 
-#define UNICAM_DEBUG
+//#define UNICAM_DEBUG
 
 #ifdef UNICAM_DEBUG
 #define dprintk(format,arg...) \
@@ -718,6 +718,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	unsigned int status;
 	unsigned int reg_status;
 
+	static unsigned int t1 =0,t2 =0 ,fps =0;
+
 	/* has the interrupt occured for Channel 0? */
     reg_status = csl_cam_get_rx_status(unicam_dev->cslCamHandle, (CSL_CAM_RX_STATUS_t *)&status);
 	dprintk("received unicam interrupt reg_status=0x%x status=0x%x\n",
@@ -730,7 +732,22 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
         if (status & (CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT)) {
 			struct vb2_buffer *vb = unicam_dev->active;
+			fps++;
 			int ret;
+
+			if(t1 == 0 && t2 == 0)
+					t1 = t2 = jiffies_to_msecs(jiffies);
+
+			t2 = jiffies_to_msecs(jiffies);
+			if(t2-t1 > 1000)
+			{
+				printk(" sensor fps = %d \n",fps);
+				fps = 0;
+			    t1 = t2;
+        	}
+			
+		
+			
 			dprintk("frame received");
 			if (!vb)
 				goto out;

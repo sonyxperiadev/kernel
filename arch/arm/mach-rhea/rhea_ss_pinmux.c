@@ -104,8 +104,8 @@ static struct __init pin_config board_pin_config[] = {
 #if defined(CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X) || defined (CONFIG_MACH_RHEA_RAY_EDN2X) \
 	|| defined(CONFIG_MACH_RHEA_RAY_DEMO) || defined(CONFIG_MACH_RHEA_SS)
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO93, SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
+//	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(DCLKREQ4, SSP1DI, 0, OFF,  ON, 0, 0, 8MA),
 #endif
 
@@ -229,6 +229,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SSPCK, GPIO87, 0, OFF, OFF, 0, 0, 16MA),
 	PIN_CFG(MMC1DAT6, GPIO72, 0, OFF, OFF, 0, 0, 16MA), //SD_DECTECT
 	PIN_CFG(DSI0TE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(CAMCS0, GPIO43, 0, OFF, OFF, 0, 0, 16MA),
 };
 
 /* board level init */
