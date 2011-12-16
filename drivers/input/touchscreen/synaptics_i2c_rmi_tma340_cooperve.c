@@ -193,13 +193,15 @@ void touch_ctrl_regulator(int on_off)
 		gpio_request(TOUCH_EN,"Touch_en");
 		gpio_direction_output(TOUCH_EN,1);
 		gpio_set_value(TOUCH_EN,1);
+		gpio_free(TOUCH_EN);
 	}
 	else
 	{
-		#if 0
+		#if 1
 		gpio_request(TOUCH_EN,"Touch_en");
 		gpio_direction_output(TOUCH_EN,0);
 		gpio_set_value(TOUCH_EN,0);
+		gpio_free(TOUCH_EN);
 		#endif
 	}
 	#endif

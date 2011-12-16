@@ -336,20 +336,22 @@ void touch_ctrl_regulator_mms128(int on_off)
 	}
 	#else
 
-	writel(0x5, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x35004894));
+//	writel(0x5, (volatile u32 *)HW_IO_PHYS_TO_VIRT(0x35004894));
 	if (on_off == TOUCH_ON)
 	{
 		
 		gpio_request(TOUCH_EN,"Touch_en");
 		gpio_direction_output(TOUCH_EN,1);
 		gpio_set_value(TOUCH_EN,1);
+		gpio_free(TOUCH_EN);
 	}
 	else
 	{
-		#if 0
+		#if 1
 		gpio_request(TOUCH_EN,"Touch_en");
 		gpio_direction_output(TOUCH_EN,0);
 		gpio_set_value(TOUCH_EN,0);
+		gpio_free(TOUCH_EN);
 		#endif
 	}
 	#endif
