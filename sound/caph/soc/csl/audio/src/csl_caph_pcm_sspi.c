@@ -463,10 +463,19 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
     chal_sspi_soft_reset(pDevice);
 
 	chal_sspi_get_intr_mask(pDevice, &intrMask);
-	intrMask |= (SSPIL_INTR_ENABLE_PIO_TX_START |
-				 SSPIL_INTR_ENABLE_PIO_TX_STOP |
-				 SSPIL_INTR_ENABLE_PIO_RX_START |
-				 SSPIL_INTR_ENABLE_PIO_RX_STOP);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: intrMask1 0x%x.\r\n", intrMask);
+
+	if(devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT)
+	{
+		/*intrMask |= (SSPIL_INTR_ENABLE_PIO_TX_START |
+					 SSPIL_INTR_ENABLE_PIO_TX_STOP |
+					 SSPIL_INTR_ENABLE_PIO_RX_START |
+					 SSPIL_INTR_ENABLE_PIO_RX_STOP);*/
+		intrMask |= (SSPIL_INTR_ENABLE_PIO_TX_START | SSPIL_INTR_ENABLE_PIO_RX_START);
+	} else { //for voice call only enable RX START
+		intrMask |= SSPIL_INTR_ENABLE_PIO_RX_START;
+	}
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: intrMask2 0x%x.\r\n", intrMask);
 	// need to disable all other interrupts to avoid confusing dsp 03-02-11
 	chal_sspi_enable_intr(pDevice, intrMask & 0x000000F0);
 
@@ -716,10 +725,18 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
     chal_sspi_enable(pDevice, 1);
 
     // setting from asic team
-    chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0x3, 0x1c); // chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0xf, 0x1);
+	if(devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT)
+	{	//config for audio mode, may divert from voice settings.
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0x1c, 0x3);
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x3, 0x1c);
+	} else { //voice mode
+		//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0xf, 0x1);
+		//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x1, 0x1); //this requires bigger CFIFO size, does not work well with SRC either.
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0x1f, 0x3);  // SSPI send out RX_Start interrupt when there is 1 sample in RX0 fifo and Rx_stop interrupt when there are 3 samples in the RX0 fifo.
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x3, 0x1c);  // SSPI send out TX_Start interrupt when there are less 3 samples in TX0 fifo and Tx_stop interrupt when there are 4 samples in the TX0 fifo.
+	}
+
     chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX1, 0x3, 0x3);
-	//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x1, 0x1); //this requires bigger CFIFO size, does not work well with SRC either.
-	chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x3, 0x1c); //audio quality from SRC is greatly improved.
     chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX1, 0x3, 0x3);
     
 	switch(protocol) {
