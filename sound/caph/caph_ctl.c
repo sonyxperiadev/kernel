@@ -688,6 +688,12 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->value.integer.max = AUDIO_SINK_TOTAL_COUNT;
 			break;
 
+		case CTL_FUNCTION_HW_CTL:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 4;
+			uinfo->value.integer.min = 0x80000000;
+			uinfo->value.integer.max = 0x7FFFFFFF; //get the correct range, keep it to MAX for now as it supports register address
+			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
 				break;
@@ -765,7 +771,6 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				chn = 2;
 			memcpy(ucontrol->value.integer.value, pChip->pi32LevelVolume[stream-1], chn*sizeof(s32));
 			break;
-
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
 			break;
@@ -1069,6 +1074,12 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				}
 			}
 			break;
+		case CTL_FUNCTION_HW_CTL:
+			BCM_AUDIO_DEBUG("CTL_FUNCTION_HW_CTL parm1=%d, parm2=%d, param3=%d,param4=%d\n", (int)ucontrol->value.integer.value[0],(int)ucontrol->value.integer.value[1], \
+												(int)ucontrol->value.integer.value[2],(int)ucontrol->value.integer.value[3]);
+
+			//call the controller API to read/write to HW register - AUDCTRL_HardwareControl(()
+			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
 			break;
@@ -1293,9 +1304,10 @@ static struct snd_kcontrol_new sgSndCtrls[] __initdata =
 	BRCM_MIXER_CTRL_MISC(0, 0, "FM-VOL-LEVEL", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_FM, 0, CTL_FUNCTION_VOL)),
 	BRCM_MIXER_CTRL_MISC_W(0, 0, "P1-CHG", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_SINK_CHG)),
 	BRCM_MIXER_CTRL_MISC_W(0, 0, "P2-CHG", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_SINK_CHG)),
+	BRCM_MIXER_CTRL_MISC_W(0, 0, "HW-CTL", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)), //write only command
 };
 
-#define	MAX_CTL_NUMS	160
+#define	MAX_CTL_NUMS	161
 #define	MAX_CTL_NAME_LENGTH	44
 static char gStrCtlNames[MAX_CTL_NUMS][MAX_CTL_NAME_LENGTH] __initdata; // MAX_CTL_NAME_LENGTH];
 static Int32 sgCaphSpeechMixCtrls[CAPH_MAX_PCM_STREAMS] __initdata = {1,1,0,3,3,0,0,1};
