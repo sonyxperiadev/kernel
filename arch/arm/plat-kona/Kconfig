@@ -158,6 +158,11 @@ config KONA_ATAG_DT_DTS_FILE
        depends on KONA_ATAG_DT
        help
          DeviceTree source file name
+         
+config PROC_PINMUX_DUMP
+       bool "Enable Pin-mux Dump"
+       help
+         Say Y if you want to enable pin-mix dump
 
 config KONA_WFI_WORKAROUND
        bool "Prevent both cores from doing cpu_do_idle calls when VCHIQ bulk transfers pending"

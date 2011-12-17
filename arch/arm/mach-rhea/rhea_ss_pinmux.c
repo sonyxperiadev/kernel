@@ -71,38 +71,25 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SDDAT0, SDDAT0, 0, OFF, ON, 0, 0, 8MA),
 
 #if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) 
+	
 	/* GPIO121 for TCA9539 IO expander */
 	PIN_CFG(ICUSBDP, GPIO121, 0, OFF, ON, 0, 0, 8MA),
 #else
 	/* GPIO74 for TCA9539 IO expander */
 	PIN_CFG(MMC1DAT4, GPIO74, 0, OFF, ON, 0, 0, 8MA),
 #endif
+
 	/*	Pinmux for keypad */
-#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO01, KEY_R1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO02, KEY_R2, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO03, KEY_R3, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO08, KEY_C0, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO09, KEY_C1, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO10, KEY_C2, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO11, KEY_C3, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
-#else
-	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
-#endif
 
 	/* SSP0 */
-	PIN_CFG(SPI0FSS, SSP0SYN, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(SPI0CLK,  SSP0CK, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(SPI0TXD,  SSP0DO, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(SPI0RXD,  SSP0DI, 0, OFF,  ON, 0, 0, 8MA),
+//	PIN_CFG(SPI0FSS, SSP0SYN, 0, OFF, OFF, 0, 0, 8MA),
+//	PIN_CFG(SPI0CLK,  SSP0CK, 0, OFF, OFF, 0, 0, 8MA),
+//	PIN_CFG(SPI0TXD,  SSP0DO, 0, OFF, OFF, 0, 0, 8MA),
+//	PIN_CFG(SPI0RXD,  SSP0DI, 0, OFF,  ON, 0, 0, 8MA),
 
 	/* SSP3 - PCM
 	   SSP3 pinmux is set since keypad also check the same pins currently */
@@ -117,13 +104,18 @@ static struct __init pin_config board_pin_config[] = {
 #if defined(CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X) || defined (CONFIG_MACH_RHEA_RAY_EDN2X) \
 	|| defined(CONFIG_MACH_RHEA_RAY_DEMO) || defined(CONFIG_MACH_RHEA_SS)
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO93, SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
+//	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(DCLKREQ4, SSP1DI, 0, OFF,  ON, 0, 0, 8MA),
 #endif
 
+	PIN_CFG(DCLK4,  GPIO95, 0, OFF, OFF, 0, 0, 8MA),
 	/* LCD */
+#if defined(CONFIG_MACH_RHEA_RAY)
+	PIN_CFG(DSI0TE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
+#else
 	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
+#endif
 	PIN_CFG(LCDRES, GPIO41, 0, OFF, ON, 0, 0, 8MA),
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	/* conflicts with SSP4 so comment it out.  Leave the code here for possible future change */
@@ -140,8 +132,10 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(TRACEDT03, PTI_DAT3, 0, OFF, ON, 0, 0, 8MA),
 		
 	/* Camera */
-	PIN_CFG(GPIO12, GPIO12, 0, ON, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO13, GPIO13, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO12, GPIO12, 0, ON, OFF, 0, 0, 8MA), //CAM_CORE_EN
+	PIN_CFG(GPIO13, GPIO13, 0, ON, OFF, 0, 0, 8MA), //CAM_FLASH_MODE
+	PIN_CFG(GPIO33, GPIO33, 0, OFF,OFF, 0, 0, 8MA), //CAM0_RESET
+	PIN_CFG(GPIO34, GPIO34, 0, OFF,OFF, 0, 0, 8MA), //CAM_FLASH_EN
 
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
@@ -153,17 +147,17 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO03, LCDD12, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO08, LCDD11, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO09, LCDD10, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO10, LCDD9, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO11, LCDD8, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO10, LCDD9, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO11, LCDD8, 0, OFF, ON, 0, 0, 8MA),
 #endif
-	PIN_CFG(GPIO18, LCDCS1, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO19, LCDWE, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO20, LCDRE, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO21, LCDD7, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO22, LCDD6, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO18, LCDCS1, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO19, LCDWE, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO20, LCDRE, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO21, LCDD7, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO22, GPIO22, 0, OFF, ON, 0, 0, 8MA), //TOUCH_EN
 	PIN_CFG(GPIO23, LCDD5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO24, LCDD4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO25, LCDD3, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO25, GPIO25, 0, OFF, ON, 0, 0, 8MA), //@CAM_AF_EN
 	PIN_CFG(GPIO26, LCDD2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO27, LCDD1, 0, OFF, ON, 0, 0, 8MA),
 
@@ -178,8 +172,20 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPS_CALREQ, GPIO99, 0, OFF, ON, 0, 0, 8MA),
 
 	/* Bluetooth related GPIOS */
-	PIN_CFG(GPIO04, GPIO4, 0, ON, OFF, 0, 0, 8MA),
-	PIN_CFG(DCLKREQ1, GPIO111, 0, OFF, ON, 0, 1, 8MA),
+	PIN_CFG(SPI0RXD, GPIO92, 0, OFF, ON, 0, 0, 8MA),      // BT_WAKE
+	PIN_CFG(SPI0TXD, GPIO91, 0, OFF, ON, 0, 0, 8MA),      // BT_HOST_WAKE
+	PIN_CFG(SPI0CLK, GPIO90, 0, OFF, ON, 0, 0, 8MA),      // BT_RESETN
+	PIN_CFG(GPS_HOSTREQ, GPIO100, 0, OFF, ON, 0, 0, 8MA), // BT_REG_ON	
+//	PIN_CFG(GPIO10, GPIO10, 0, OFF, ON, 0, 0, 8MA),       // BT_SEC
+
+	// for GPS
+	PIN_CFG(GPIO28, GPIO28, 0, OFF, ON, 0, 0, 8MA),   // GPS_EN
+//	PIN_CFG(GPIO11, GPIO11, 0, OFF, ON, 0, 0, 8MA),   // GPS_SEL
+
+	PIN_CFG(GPIO18, UB2TX, 0, OFF, OFF, 0, 0, 8MA),   // UART B2
+	PIN_CFG(GPIO19, UB2RX, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO20, UB2RTSN, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO21, UB2CTSN, 0, OFF, OFF, 0, 0, 8MA),
 
 	/*WLAN set SSPSYN as GPIO85 */
 	/*
@@ -210,13 +216,20 @@ static struct __init pin_config board_pin_config[] = {
 	/* TODO - This is not complete, connectivity team to
 	 * review and update if needed
 	 */
-	PIN_CFG(SPI0FSS, SD1DAT3, 0, OFF, ON, 0, 0, 16MA),
-	PIN_CFG(SPI0CLK, SD1CK, 0, OFF, ON, 0, 0, 16MA),
-	PIN_CFG(SPI0TXD, SD1CMD, 0, OFF, ON, 0, 0, 16MA),
-	PIN_CFG(SPI0RXD, SD1DAT0, 0, OFF, ON, 0, 0, 16MA),
-	PIN_CFG(GPIO93, SD1DAT1, 0, OFF, ON, 0, 0, 16MA),
-	PIN_CFG(GPIO94, SD1DAT2, 0, OFF, ON, 0, 0, 16MA),
+//	PIN_CFG(SPI0FSS, SD1DAT3, 0, OFF, ON, 0, 0, 16MA),
+//	PIN_CFG(SPI0CLK, SD1CK, 0, OFF, ON, 0, 0, 16MA),
+//	PIN_CFG(SPI0TXD, SD1CMD, 0, OFF, ON, 0, 0, 16MA),
+//	PIN_CFG(SPI0RXD, SD1DAT0, 0, OFF, ON, 0, 0, 16MA),
+//	PIN_CFG(GPIO93, SD1DAT1, 0, OFF, ON, 0, 0, 16MA),
+//	PIN_CFG(GPIO94, SD1DAT2, 0, OFF, ON, 0, 0, 16MA),
 #endif
+
+
+	PIN_CFG(SSPDO, GPIO86, 0, OFF, OFF, 0, 0, 16MA),
+	PIN_CFG(SSPCK, GPIO87, 0, OFF, OFF, 0, 0, 16MA),
+	PIN_CFG(MMC1DAT6, GPIO72, 0, OFF, OFF, 0, 0, 16MA), //SD_DECTECT
+	PIN_CFG(DSI0TE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(CAMCS0, GPIO43, 0, OFF, OFF, 0, 0, 16MA),
 };
 
 /* board level init */

@@ -204,6 +204,8 @@ static int bcm_kona_sd_reset(struct sdio_dev *dev)
    /* bring the host out of reset */
    val = sdhci_readl(host, KONA_SDHOST_CORECTRL);
    val &= ~KONA_SDHOST_RESET;
+   /* Back-to-Back register write needs a delay of 1ms at bootup (min 10uS) */
+   udelay(1000);
    sdhci_writel(host, val, KONA_SDHOST_CORECTRL);
 
    return 0;
@@ -225,6 +227,8 @@ static int bcm_kona_sd_init(struct sdio_dev *dev)
     */
    val = sdhci_readl(host, KONA_SDHOST_CORECTRL);
    val |= /*KONA_SDHOST_CD_PINCTRL | */KONA_SDHOST_EN;
+   /* Back-to-Back register write needs a delay of 1ms at bootup (min 10uS)*/
+   udelay(1000);
    sdhci_writel(host, val, KONA_SDHOST_CORECTRL);
 
    return 0;
@@ -243,8 +247,11 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
    /* this function can be called from various contexts including ISR */
    spin_lock_irqsave(&host->lock, flags);
 
+#ifndef CONFIG_ARCH_ISLAND
    sdhci_pltfm_clk_enable(host, 1);
-   
+#endif
+   /* Back-to-Back register write needs a delay of min 10uS. We keep 20uS */
+   udelay(20);
    val = sdhci_readl(host, KONA_SDHOST_CORESTAT);
 
    if (insert) {
@@ -558,16 +565,13 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			goto err_free_cd_gpio;
 		}
 
-		sdhci_writel(host, sdhci_readl(host, KONA_SDHOST_CORESTAT)
-				| KONA_SDHOST_CD_SW, KONA_SDHOST_CORESTAT);
 		/*
-		* Since the card detection GPIO interrupt is configured to be edge
-		* sensitive, check the initial GPIO value here
-		*/
+		 * Since the card detection GPIO interrupt is configured to be
+		 * edge sensitive, check the initial GPIO value here, emulate
+		 * only if the card is present
+		 */
 		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
 			bcm_kona_sd_card_emulate(dev, 1);
-		else
-			bcm_kona_sd_card_emulate(dev, 0);
 	}
 
 	atomic_set(&dev->initialized, 1);
@@ -708,14 +712,18 @@ static int sdhci_pltfm_resume(struct platform_device *pdev)
 #endif
 
 
-	/* card state might have been changed during system suspend. Need to sync up */
+#ifndef CONFIG_MMC_UNSAFE_RESUME
+	/*
+	 * card state might have been changed during system suspend.
+	 * Need to sync up only if MMC_UNSAFE_RESUME is not enabled
+	 */
 	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
 		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
 			bcm_kona_sd_card_emulate(dev, 1);
 		else
 			bcm_kona_sd_card_emulate(dev, 0);
 	}
-	
+#endif
 	return 0;
 }
 #else

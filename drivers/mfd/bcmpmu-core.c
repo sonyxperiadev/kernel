@@ -112,7 +112,10 @@ store_adc_req(struct device *dev, struct device_attribute *attr,
 	struct bcmpmu_adc_req adc;
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	sscanf(buf, "%x, %x", &adc.sig, &adc.tm);
-	bcmpmu->adc_req(bcmpmu, &adc);
+	if (bcmpmu->adc_req)
+		bcmpmu->adc_req(bcmpmu, &adc);
+	else
+		printk(KERN_INFO "%s: adc_req failed\n", __func__);
 	return count;
 }
 static ssize_t
@@ -142,7 +145,7 @@ static ssize_t store_regbulk(struct device *dev, struct device_attribute *attr,
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	unsigned int map, addr, len;
 	unsigned int val[16];
-	sscanf(buf, "%x, %x, %x", &map, &addr, &len);
+	sscanf(buf, "%x %x %x", &map, &addr, &len);
 	printk("BCMPMU map=0x%X, addr=0x%X, length=0x%X\n", map, addr, len);
 	if ((map<2) &&
 		((addr+len)<255) &&
@@ -324,9 +327,16 @@ static struct platform_device bcmpmu_ponkey_device = {
 	.dev.platform_data 	= NULL,
 };
 
+static struct platform_device bcmpmu_regulator = {
+	.name		= "bcmpmu-regulator",
+	.id			= -1,
+	.dev.platform_data	= NULL,
+};
+
 static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_irq_device,
 	&bcmpmu_hwmon_device,
+	&bcmpmu_regulator,
 	&bcmpmu_rtc_device,
 	&bcmpmu_batt_device,
 	&bcmpmu_chrgr_device,
@@ -348,7 +358,6 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 	bcmpmu->regmap = bcmpmu_get_regmap();
 	
 	printk(KERN_INFO "%s: called.\n", __func__);
-
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_PMUID, &val, 0xffffffff);
 	if (ret < 0) {
 		dev_err(bcmpmu->dev, "Failed to read ID: %d\n", ret);
@@ -358,7 +367,6 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 	{
 		printk(KERN_INFO "%s: Chip Version = 0x%0X.\n", __func__, val);
 	}
-
 	bcmpmu_register_init(bcmpmu);
 	misc_register(&bcmpmu_device);
 

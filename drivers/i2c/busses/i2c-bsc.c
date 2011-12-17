@@ -96,6 +96,9 @@ struct bsc_i2c_dev
 	/* the 8-bit master code (0000 1XXX, 0x08) used for high speed mode */
 	unsigned char mastercode;
 
+	/* If the transfer is master code */
+	bool is_mastercode;
+
 	/* to save the old BSC TIM register value */
 	volatile uint32_t tim_val;
 
@@ -192,7 +195,14 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 	if (status & I2C_MM_HS_ISR_NOACK_MASK) {
 		// TODO: check for TX NACK status here
 		// should not clear status until figure out what's going on
-		dev_err(dev->device, "no ack detected\n");
+
+		/*
+		 * For Mastercode, NAK is expected as per HS protocol, it's not error
+		 */
+		if(dev->high_speed_mode && dev->is_mastercode)
+			dev->is_mastercode = false;
+		else
+			dev_err(dev->device, "no ack detected\n");
 	}
 
 	if (status & I2C_MM_HS_ISR_TXFIFOEMPTY_MASK)
@@ -612,8 +622,10 @@ static int bsc_xfer_try_address(struct i2c_adapter *adapter,
    unsigned int i;
    int rc = 0, success = 0;
    struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
+   struct bsc_adap_cfg *hw_cfg = NULL;
 
    BSC_DBG(dev, "0x%02x, %d\n", addr, retries);
+   hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
    for (i = 0; i <= retries; i++)
    {
@@ -623,15 +635,23 @@ static int bsc_xfer_try_address(struct i2c_adapter *adapter,
          success = 1;
          break;
       }
-   
-      /* no luck, let's keep trying */
-      rc = bsc_xfer_stop(adapter);
-      if (rc < 0 || i >= retries)
-         break;
+ 
+      /* Send REPSTART in case of PMU, else STOP + START sequence */
+      if(dev->high_speed_mode && hw_cfg && hw_cfg->is_pmu_i2c)	{
+         rc = bsc_xfer_repstart(adapter);
+         if (rc < 0)
+            break;
+      } 
+      else {
+         /* no luck, let's keep trying */
+         rc = bsc_xfer_stop(adapter);
+         if (rc < 0 || i >= retries)
+            break;
 
-      rc = bsc_xfer_start(adapter);
-      if (rc < 0)
-         break;
+         rc = bsc_xfer_start(adapter);
+         if (rc < 0)
+            break;
+      }
    }
 
    /* unable to find a slave */
@@ -720,6 +740,86 @@ static struct device *bsc_i2c_get_client(struct i2c_adapter *adapter,
                  __bsc_i2c_get_client);
 }
 
+static int start_high_speed_mode(struct i2c_adapter *adapter)
+{
+    struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
+    int rc = 0;
+    struct bsc_adap_cfg *hw_cfg = NULL;
+
+	/*
+     * mastercode (0000 1000 + #id)
+     */
+    dev->mastercode = (MASTERCODE | (MASTERCODE_MASK & adapter->nr)) + 1;
+	dev->is_mastercode = true;
+
+	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
+
+    /* send the master code in F/S mode first */
+    rc = bsc_xfer_write_byte(dev, 1, &dev->mastercode);
+    if (rc < 0)
+    {
+        dev_err(dev->device, "high-speed master code failed\n");
+	    dev->is_mastercode = false;
+        return rc;
+    }
+
+    /* check to make sure no slave replied to the master code by accident */
+    if (bsc_get_ack((uint32_t)dev->virt_base))
+    {
+        dev_err(dev->device, "one of the slaves replied to the high-speed "
+             "master code unexpectedly\n");
+	    dev->is_mastercode = false;
+        return -EREMOTEIO;
+    }
+
+    /*
+    * Now save the BSC_TIM register value as it will be modified before the
+    * master going into high-speed mode. We need to restore the BSC_TIM
+    * value when the device switches back to fast speed
+    */
+    dev->tim_val = bsc_get_tim((uint32_t)dev->virt_base);
+
+    /* configure the bsc clock to 26MHz for HS mode */
+    if (dev->bsc_clk) {
+        clk_disable(dev->bsc_clk);
+        /* If PMU I2C, 26MHz source is used */
+        if (hw_cfg && hw_cfg->is_pmu_i2c)
+            clk_set_rate(dev->bsc_clk, 26000000);
+        else
+            clk_set_rate(dev->bsc_clk, 104000000);
+
+        clk_enable(dev->bsc_clk);
+        dev_err(dev->device, "HS mode clock rate is set to %ld\n",
+                   clk_get_rate(dev->bsc_clk));
+    }
+
+    /* Turn-off autosense and Tout interrupt for HS mode */
+    bsc_disable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
+    bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
+
+    /* configure the bus into high-speed mode */
+    bsc_start_highspeed((uint32_t)dev->virt_base);
+    dev_err(dev->device, "Adapter is switched to HS mode\n");
+
+    return 0;
+}
+
+static void stop_high_speed_mode(struct i2c_adapter *adapter)
+{
+    struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
+
+   /* Restore TIM register value */
+    bsc_set_tim((uint32_t)dev->virt_base, dev->tim_val);
+
+   /* stop hs clock and switch back to F/S clock source */
+   if (dev->bsc_clk) {
+      clk_disable(dev->bsc_clk);
+      clk_set_rate(dev->bsc_clk, 13000000);
+      clk_enable(dev->bsc_clk);
+   }
+   bsc_stop_highspeed((uint32_t)dev->virt_base);
+}
+
 /*
  * Set bus speed to what the client wants
  */
@@ -730,6 +830,7 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 	struct i2c_client *client = NULL;
 	struct i2c_slave_platform_data *pd = NULL;
 	enum bsc_bus_speed set_speed;
+	struct bsc_adap_cfg *hw_cfg = NULL;
 
 	/* Get slave speed configuration */
 	d = bsc_i2c_get_client(adapter, addr);
@@ -767,9 +868,17 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 	else
 		dev->high_speed_mode = 0;
 
+	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
+
 	/* configure the adapter bus speed */
 	if (set_speed != dev->current_speed) {
-		bsc_set_bus_speed((uint32_t)dev->virt_base, gBusSpeedTable[set_speed]);
+	    /* PMU I2C HSTIM is calculated based on 26MHz source */
+        if (hw_cfg->is_pmu_i2c)
+			bsc_set_bus_speed((uint32_t)dev->virt_base,
+				gBusSpeedTable[set_speed], true);
+		else
+			bsc_set_bus_speed((uint32_t)dev->virt_base,
+				gBusSpeedTable[set_speed], false);
 		dev->current_speed = set_speed;
 	}
 	
@@ -806,25 +915,23 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 {
    struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
    struct i2c_msg *pmsg;
-   int rc;
+   int rc = 0;
    unsigned short i, nak_ok;
-
-   down(&dev->dev_lock);
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
    struct bsc_adap_cfg *hw_cfg = NULL;
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
    bool rel_hw_sem = false ;
 #endif
 
+   down(&dev->dev_lock);
    bsc_enable_clk(dev);
-	
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
-   if (dev->device)
-	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
+   hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
    if (hw_cfg && hw_cfg->is_pmu_i2c) {
    	rc = pwr_mgr_pm_i2c_sem_lock();
 	if (rc) {
-      		bsc_disable_clk(dev);
+      	bsc_disable_clk(dev);
+        down(&dev->dev_lock);
 		return rc;
 	} else {
 		rel_hw_sem = true;
@@ -832,75 +939,28 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    }
 #endif
 
-
    /* set the bus speed dynamically if dynamic speed support is turned on */
    if (dev->dynamic_speed)
       client_speed_set(adapter, msgs[0].addr);   
 
-   /* send start command */
-   rc = bsc_xfer_start(adapter);
-   if (rc < 0)
-   {
-      dev_err(dev->device, "start command failed\n");
-      bsc_disable_clk(dev);
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
-      if(rel_hw_sem)
-          pwr_mgr_pm_i2c_sem_unlock();
-#endif
-      up(&dev->dev_lock);
-      return rc;
+   /* send start command, if its not PMU in HS mode */
+   if (!(dev->high_speed_mode && hw_cfg && hw_cfg->is_pmu_i2c))    {
+      rc = bsc_xfer_start(adapter);
+      if (rc < 0)	{
+         dev_err(dev->device, "start command failed\n");
+         goto err_ret;
+      }
    }
 
-   /* high-speed mode */
-   if (dev->high_speed_mode)
-   {
-      /*
-       * mastercode (0000 1000 + #id)
-       */
-      dev->mastercode = (MASTERCODE | (MASTERCODE_MASK & adapter->nr)) + 1;
+   /* high-speed mode handshake, if not PMU adapter */
+   if (dev->high_speed_mode && hw_cfg && !hw_cfg->is_pmu_i2c)        {
+      rc = start_high_speed_mode(adapter);
+      if(rc < 0)
+      goto err_ret;
+   }
 
-      /* send the master code in F/S mode first */
-      rc = bsc_xfer_write_byte(dev, 1, &dev->mastercode);
-      if (rc < 0)
-      {
-         dev_err(dev->device, "high-speed master code failed\n");
-         bsc_disable_clk(dev);
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
-      if(rel_hw_sem)
-          pwr_mgr_pm_i2c_sem_unlock();
-#endif
-         up(&dev->dev_lock);
-         return rc;
-      }
-
-      /* check to make sure no slave replied to the master code by accident */
-      if (bsc_get_ack((uint32_t)dev->virt_base))
-      {
-         dev_err(dev->device, "one of the slaves replied to the high-speed "
-               "master code unexpectedly\n");
-         bsc_disable_clk(dev);
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
-      if(rel_hw_sem)
-          pwr_mgr_pm_i2c_sem_unlock();
-#endif
-         up(&dev->dev_lock);
-         return -EREMOTEIO;
-      }
-
-      /* Backup timing register before switching to HS mode */
-      dev->tim_val = bsc_get_tim((uint32_t)dev->virt_base);
-
-      /* configure the bsc clock to 104MHz for HS mode */
-      if (dev->bsc_clk)	{
-         clk_disable(dev->bsc_clk);
-         clk_set_rate(dev->bsc_clk, 104000000);
-         clk_enable(dev->bsc_clk);
-      }
-
-      /* now configure the bus into high-speed mode */
-      bsc_start_highspeed((uint32_t)dev->virt_base);
-
-      /* now send the restart command in high-speed */
+   /* send the restart command in high-speed */
+   if (dev->high_speed_mode)		{
       rc = bsc_xfer_repstart(adapter);
       if (rc < 0)
       {
@@ -966,24 +1026,16 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       }
    }
 
-   /* send stop command */
-   rc = bsc_xfer_stop(adapter);
-   if (rc < 0)
-      dev_err(dev->device, "stop command failed\n");
+   /* send stop command, if not PMU in HS mode */
+   if (!(dev->high_speed_mode && hw_cfg && hw_cfg->is_pmu_i2c))    {
+      rc = bsc_xfer_stop(adapter);
+      if (rc < 0)
+         dev_err(dev->device, "stop command failed\n");
+	}
 
-   /* high-speed mode */
-   if (dev->high_speed_mode)
-   {
-      bsc_set_tim((uint32_t)dev->virt_base, dev->tim_val);
-
-      /* stop high-speed and switch back to fast-speed */
-      if (dev->bsc_clk)	{
-         clk_disable(dev->bsc_clk);
-         clk_set_rate(dev->bsc_clk, 13000000);
-         clk_enable(dev->bsc_clk);
-      }
-      bsc_stop_highspeed((uint32_t)dev->virt_base);
-   }
+   /* Switch back to F/S mode, if not PMU adapter */
+   if (dev->high_speed_mode && hw_cfg && !hw_cfg->is_pmu_i2c)
+      stop_high_speed_mode(adapter);
    else
    {
 	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
@@ -1002,30 +1054,24 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    /* Here we should not code such as rc = bsc_xfer_stop(), since it would
     * change the value of rc, which need to be passed to the caller */
    /* send stop command */
-   if(bsc_xfer_stop(adapter) < 0)
-      dev_err(dev->device, "stop command failed\n");
+   if (hw_cfg && !hw_cfg->is_pmu_i2c)
+      if(bsc_xfer_stop(adapter) < 0)
+         dev_err(dev->device, "stop command failed\n");
 
-   if (dev->high_speed_mode)
-   {
-      bsc_set_tim((uint32_t)dev->virt_base, dev->tim_val);
-
-      /* stop high-speed and switch back to fast-speed */
-      if (dev->bsc_clk)	{
-         clk_disable(dev->bsc_clk);
-         clk_set_rate(dev->bsc_clk, 13000000);
-         clk_enable(dev->bsc_clk);
-      }
-      bsc_stop_highspeed((uint32_t)dev->virt_base);
-   }
+   /* Switch back to F/S mode, if not PMU adapter */
+   if (dev->high_speed_mode && hw_cfg && !hw_cfg->is_pmu_i2c)
+      stop_high_speed_mode(adapter);
    else
    {
 	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
    }
 
+err_ret:
    bsc_disable_clk(dev);
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
-      if(rel_hw_sem)
+      if(rel_hw_sem) {
           pwr_mgr_pm_i2c_sem_unlock();
+	  }
 #endif
    up(&dev->dev_lock);
    return rc;
@@ -1454,9 +1500,10 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	}
 
 	/* high speed */
-	if (dev->speed == BSC_BUS_SPEED_HS || dev->speed == BSC_BUS_SPEED_HS_FPGA) {
+	if (dev->speed == BSC_BUS_SPEED_HS || dev->speed == BSC_BUS_SPEED_HS_FPGA)
 		dev->high_speed_mode = 1;
-	}
+	else
+		dev->high_speed_mode = 0;
 
 	dev->device = &pdev->dev;
 	sema_init(&dev->dev_lock, 1);
@@ -1477,10 +1524,15 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dev);
 
 	/*
-	* Configure the BSC bus speed. If it's a high-speed device, it will start
-	* off as fast speed
-	*/
-	bsc_set_bus_speed((uint32_t)dev->virt_base, gBusSpeedTable[dev->speed]);
+	 * Configure BSC timing registers 
+	 * If PMU I2C - hs timing is calculated based on 26MHz source, else 104MHz
+	 */
+	if(hw_cfg && hw_cfg->is_pmu_i2c)
+		bsc_set_bus_speed((uint32_t)dev->virt_base,
+			gBusSpeedTable[dev->speed], true);
+	else
+		bsc_set_bus_speed((uint32_t)dev->virt_base,
+			gBusSpeedTable[dev->speed], false);
 
 	/* curent speed configured */
 	dev->current_speed = dev->speed;
@@ -1547,13 +1599,6 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	adap->nr = pdev->id;
 	adap->retries = hw_cfg ? hw_cfg->retries : 0;
 
-	/*
-	* Enable error (timeout) interrupt if it's not in high-speed mode. The
-	* timeout counter does not work in high-speed mode
-	*/
-	if (!dev->high_speed_mode)
-		bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
-
 	rc = proc_init(pdev);
 	if (rc) {
 		dev_err(dev->device, "failed to install procfs\n");
@@ -1570,9 +1615,46 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		goto err_proc_term;
 	}
 
+	bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
+	/* Enable Auto-sense */
+    bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
+
+	/* PMU I2C: Switch to HS mode once. This is a workaround needed for 
+	 * Power manager sequencer to function properly.
+	 * 
+	 * PMU adapter will always be in HS, dont switch back F/S from now onwards.
+	 *
+	 */
+	if( dev->high_speed_mode && hw_cfg && hw_cfg->is_pmu_i2c)	{
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
+    rc = pwr_mgr_pm_i2c_sem_lock();
+    if (rc)	{
+		dev_err(dev->device, "Failed to acquire PMU HW semaphore!!!\n");
+	    goto err_proc_term;
+	}
+#endif
+		/* send start command */
+		if (bsc_xfer_start(adap) < 0)	{
+			dev_err(dev->device, "start command failed\n");
+			goto err_hw_sem;
+		}
+		/* HS mode handshake for PMU adapter */
+		if(start_high_speed_mode(adap) < 0)	{
+			dev_err(dev->device, "failed to switch HS mode\n");
+			goto err_hw_sem;
+		}
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
+		pwr_mgr_pm_i2c_sem_unlock();
+#endif
+	}
+
 	bsc_disable_clk(dev);
 	return 0;
 
+err_hw_sem:
+#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
+	pwr_mgr_pm_i2c_sem_unlock();
+#endif
 err_proc_term:
 	proc_term(pdev);
 

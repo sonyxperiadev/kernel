@@ -160,7 +160,7 @@ static PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM]=
     { -4200,             PMU_IHFGAIN_42DB_N},
     { -3900,             PMU_IHFGAIN_39DB_N},
     { -3600,             PMU_IHFGAIN_36DB_N},
-    { -3450,             PMU_IHFGAIN_34P5DB_N},
+    { -3450,             PMU_IHFGAIN_34P5DB_N},  //10
     { -3300,             PMU_IHFGAIN_33DB_N},
     { -3150,             PMU_IHFGAIN_31P5DB_N},
     { -3000,             PMU_IHFGAIN_30DB_N},
@@ -170,7 +170,7 @@ static PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM]=
     { -2400,             PMU_IHFGAIN_24DB_N},
     { -2250,             PMU_IHFGAIN_22P5DB_N},
     { -2100,             PMU_IHFGAIN_21DB_N},
-    { -1950,             PMU_IHFGAIN_19P5DB_N},
+    { -1950,             PMU_IHFGAIN_19P5DB_N}, //20
     { -1800,             PMU_IHFGAIN_18DB_N},
     { -1650,             PMU_IHFGAIN_16P5DB_N},
     { -1600,             PMU_IHFGAIN_16DB_N},
@@ -180,7 +180,7 @@ static PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM]=
     { -1400,             PMU_IHFGAIN_14DB_N},
     { -1350,             PMU_IHFGAIN_13P5DB_N},
     { -1300,             PMU_IHFGAIN_13DB_N},
-    { -1250,             PMU_IHFGAIN_12P5DB_N},
+    { -1250,             PMU_IHFGAIN_12P5DB_N}, //30
     { -1200,             PMU_IHFGAIN_12DB_N},
     { -1150,             PMU_IHFGAIN_11P5DB_N},
     { -1100,             PMU_IHFGAIN_11DB_N},
@@ -190,7 +190,7 @@ static PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM]=
     {  -900,             PMU_IHFGAIN_9DB_N},
     {  -850,             PMU_IHFGAIN_8P5DB_N},
     {  -800,             PMU_IHFGAIN_8DB_N},
-    {  -750,             PMU_IHFGAIN_7P5DB_N},
+    {  -750,             PMU_IHFGAIN_7P5DB_N}, //40
     {  -700,             PMU_IHFGAIN_7DB_N},
     {  -650,             PMU_IHFGAIN_6P5DB_N},
     {  -600,             PMU_IHFGAIN_6DB_N},
@@ -200,17 +200,17 @@ static PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM]=
     {  -400,             PMU_IHFGAIN_4DB_N},
     {  -350,             PMU_IHFGAIN_3P5DB_N},
     {  -300,             PMU_IHFGAIN_3DB_N},
-    {  -250,             PMU_IHFGAIN_2P5DB_N},
+    {  -250,             PMU_IHFGAIN_2P5DB_N}, //50
     {  -200,             PMU_IHFGAIN_2DB_N},
     {  -150,             PMU_IHFGAIN_1P5DB_N},
     {  -100,             PMU_IHFGAIN_1DB_N},
     {   -50,             PMU_IHFGAIN_P5DB_N},
-    {     0,             PMU_IHFGAIN_0DB},
+    {     0,             PMU_IHFGAIN_0DB},  //55
     {    50,             PMU_IHFGAIN_P5DB_P},
     {   100,             PMU_IHFGAIN_1DB_P},
     {   150,             PMU_IHFGAIN_1P5DB_P},
     {   200,             PMU_IHFGAIN_2DB_P},
-    {   250,             PMU_IHFGAIN_2P5DB_P},
+    {   250,             PMU_IHFGAIN_2P5DB_P}, //60
     {   300,             PMU_IHFGAIN_3DB_P},
     {   350,             PMU_IHFGAIN_3P5DB_P},
     {   400,             PMU_IHFGAIN_4DB_P}

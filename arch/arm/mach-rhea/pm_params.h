@@ -89,6 +89,15 @@
 						VLT_ID_ECO,VLT_ID_ECO,VLT_ID_ECO,VLT_ID_ECO
 #define KPM_CCU_FREQ_VOLT_TBL_SZ 	8
 
+#define BMDM_CCU_FREQ_VOLT_TBL		VLT_ID_ECO,VLT_ID_ECO,VLT_ID_NORMAL,VLT_ID_NORMAL,\
+						VLT_ID_NORMAL,VLT_ID_TURBO,VLT_ID_TURBO,VLT_ID_TURBO
+#define BMDM_CCU_FREQ_VOLT_TBL_SZ 	8 /* As per RDB there are only 6 valid freq_ids for bmdm. this count
+						is used only to initialize voltage table from AP */
+#define DSP_CCU_FREQ_VOLT_TBL		VLT_ID_ECO,VLT_ID_ECO,VLT_ID_NORMAL,VLT_ID_NORMAL,\
+						VLT_ID_TURBO,VLT_ID_TURBO,VLT_ID_TURBO,VLT_ID_TURBO
+#define DSP_CCU_FREQ_VOLT_TBL_SZ	8 /* As per RDB there are only 5 valid freq_ids for dsp. this count
+						is used only to initialize voltage table from AP */
+
 
 #define PROC_CCU_FREQ_POLICY_TBL	PROC_CCU_FREQ_ID_ECO,PROC_CCU_FREQ_ID_ECO, \
 						PROC_CCU_FREQ_ID_ECO,PROC_CCU_FREQ_ID_TURBO
@@ -108,6 +117,7 @@
 
 #define KPS_CCU_FREQ_POLICY_TBL		KPS_CCU_FREQ_ID_ECO,KPS_CCU_FREQ_ID_ECO, \
 						KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_NRML
+
 
 
 #define PMU_SCR_VLT_TBL_SS		CSR_REG_VAL_RETN_SS, \

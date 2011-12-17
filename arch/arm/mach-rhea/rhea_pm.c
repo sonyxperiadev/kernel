@@ -47,14 +47,21 @@
 #include <linux/workqueue.h>
 #include <mach/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
-
+#include <linux/dma-mapping.h>
 
 extern void enter_wfi(void);
 extern void dormant_enter(void);
 
 static u32 force_retention = 0;
 static u32 pm_debug = 2;
+#ifdef CONFIG_ARCH_RHEA_A0
 static u32 pm_en_self_refresh = 0;
+#endif
+
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+dma_addr_t noncache_buf_pa;
+char* noncache_buf_va;
+#endif
 
 
 #if defined(DEBUG)
@@ -204,8 +211,25 @@ static int pm_enable_scu_standby(bool enable)
 
     return 0;
 }
+#ifndef CONFIG_ARCH_RHEA_A0
+static int pm_enable_self_refresh(bool enable)
+{
+    u32 reg_val;
+    if (enable == true) {
+	writel(0, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
+	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+	reg_val |=CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
+	writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+    } else {
+	writel(1, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
+	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+	reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
+	writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+    }
 
-
+    return 0;
+}
+#endif
 static int pm_config_deep_sleep(void)
 {
 	u32 reg_val;
@@ -218,12 +242,17 @@ static int pm_config_deep_sleep(void)
     pm_enable_scu_standby(true);
 
 	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+#ifdef CONFIG_ARCH_RHEA_A0
 	reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
+#endif
 	reg_val |= CSR_HW_FREQ_CHANGE_CNTRL_HW_AUTO_PWR_TRANSITION_MASK;
 	writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-
+#ifdef CONFIG_ARCH_RHEA_A0
 	writel(1, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-
+#endif
+#ifndef CONFIG_ARCH_RHEA_A0
+	pm_enable_self_refresh(true);
+#endif
 
     return 0;
 }
@@ -367,11 +396,16 @@ int enter_suspend_state(struct kona_idle_state* state)
 int enter_dormant_state(struct kona_idle_state* state)
 {
 	struct pi* pi = NULL;
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+	int count =0;
+#endif
+#ifdef CONFIG_ARCH_RHEA_A0
+	u32 ddr_min_pwr_state_ap = 0;
 	u32 reg_val;
+#endif
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	static struct ccu_clk* ccu_clk = NULL;
 #endif
-	u32 ddr_min_pwr_state_ap = 0;
 #if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	u32 timer_lsw = 0;
 #endif
@@ -380,7 +414,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,MODEMBUS_ACTIVE_EVENT);
-
+#ifdef CONFIG_ARCH_RHEA_A0
 	if(pm_en_self_refresh)
 	{
 		ddr_min_pwr_state_ap = readl(KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
@@ -389,7 +423,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 		reg_val |=CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
 		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 	}
-
+#endif
 
 	/*Turn off XTAL only for deep sleep state*/
 	if(state->state == RHEA_STATE_C1)
@@ -421,6 +455,38 @@ int enter_dormant_state(struct kona_idle_state* state)
 
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	pi_enable(pi,0);
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+	/*JIRA HWRHEA_2221 VAR_312M is_idle from MEMC unexpectedly stays
+	 * asserted for long periods of time - preventing deepsleep entry */
+
+	 /*reduce DDR PLL to 200M, 0x2 -> 0x3500814c;
+	 0x2: Memory controller can shut of local DDR pll & run off the
+	 system PLL clock */
+	 writel(0x2, KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET);
+	 /*Disable temperature polling, 0xC3500 -> 0x350080c0
+	 Disables periodic reading of the device temperature
+	 the period field contains the device temperature period. The timer
+	 operates in the XTAL clock domain. 0cC3500 is the default value,
+	 write it back. */
+	 writel(0xC3500, KONA_MEMC0_NS_VA + CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
+	 /*CORE0 semaphore locked ? */
+	 while (readl(KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_STATUS_OFFSET));
+	 /*lock CORE0 semaphore, 0x1 -> 0x35004184 */
+	 writel(0x1, KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_LOCK_OFFSET);
+	 /*disable other MEMC ports */
+	 for (count=0; count<5; count++)
+	     writel((CSR_AXI_PORT_CTRL_PORT3_DISABLE_MASK |
+	     CSR_AXI_PORT_CTRL_PORT2_DISABLE_MASK |
+	     CSR_AXI_PORT_CTRL_PORT0_DISABLE_MASK), KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
+	 /* reset all MEMC demesh entries */
+	 for (count=0; count<16; count++)
+	     *(volatile unsigned int *)noncache_buf_va = 0xf;
+	 /* re-enable all MEMC ports, 0x0 -> 0x3500801c; */
+	 writel(0x0, KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
+	 /* release CORE0 semaphore, 0x1 -> 0x35004188 */
+	 writel(0x1, KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_UNLOCK_OFFSET);
+
+#endif
 #ifdef CONFIG_RHEA_DORMANT_MODE
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 	/*Ignore dap power-up request and clear the bits that disallow dormant*/
@@ -436,20 +502,25 @@ int enter_dormant_state(struct kona_idle_state* state)
 	writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
 	enter_wfi();
 #endif
-
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+	/*restore DDR PLL to 400M, 0x3 -> 0x3500814c
+	0x3: This is the highest power state (or the run state) of the
+	Memory controller, where the local DDR pll is on & the system PLL
+	xtal clocks requests are asserted high. */
+	writel(0x3, KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET);
+#endif
 #if	defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
 	timer_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
 	while(timer_lsw == readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET));
 #endif
-
 	if(pm_debug != 2)
 		pr_info("SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
 
 	pi_enable(pi,1);
 	writel(0, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
-
+#ifdef CONFIG_ARCH_RHEA_A0
 	if(pm_en_self_refresh)
 	{
 		writel(ddr_min_pwr_state_ap, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
@@ -457,6 +528,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 		reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
 		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 	}
+#endif
 #ifdef PM_DEBUG
 	if(pwr_mgr_is_event_active(COMMON_INT_TO_AC_EVENT))
 	{
@@ -543,7 +615,9 @@ int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
 
 int __init rhea_pm_init(void)
 {
-
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+    noncache_buf_va = dma_alloc_coherent(NULL, 64, &noncache_buf_pa, GFP_ATOMIC);
+#endif
     pm_config_deep_sleep();
 	return kona_pm_init();
 }
@@ -589,34 +663,46 @@ void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 	}
 }
 #endif
+static int enable_self_refresh(void *data, u64 val)
+{
+    if (val == 0) {
+#ifdef CONFIG_ARCH_RHEA_A0
+	pm_en_self_refresh = 0;
+#else
+	pm_enable_self_refresh(false);
+#endif
+    } else {
+#ifdef CONFIG_ARCH_RHEA_A0
+	pm_en_self_refresh = 1;
+#else
+	pm_enable_self_refresh(true);
+#endif
+    }
+    return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pm_en_self_refresh_fops, NULL, enable_self_refresh, "%llu\n");
 
 static struct dentry *dent_rhea_pm_root_dir;
 int __init rhea_pm_debug_init(void)
 {
-
-	INIT_DELAYED_WORK(&uartb_wq,
-		uartb_wq_handler);
-
+    INIT_DELAYED_WORK(&uartb_wq, uartb_wq_handler);
 #ifdef CONFIG_UART_FORCE_RETENTION_TST
-	pwr_mgr_register_event_handler(UBRX_EVENT, uartb_pwr_mgr_event_cb,
-											NULL);
+	pwr_mgr_register_event_handler(UBRX_EVENT, uartb_pwr_mgr_event_cb, NULL);
 #endif
-
-
 	/* create root clock dir /clock */
     dent_rhea_pm_root_dir = debugfs_create_dir("rhea_pm", 0);
     if(!dent_rhea_pm_root_dir)
-	 return -ENOMEM;
-	if (!debugfs_create_u32("pm_debug", 0644, dent_rhea_pm_root_dir, (int*)&pm_debug))
-		return -ENOMEM;
-
-	if (!debugfs_create_u32("pm_en_self_refresh", 0644, dent_rhea_pm_root_dir, (int*)&pm_en_self_refresh))
-		return -ENOMEM;
-
+	return -ENOMEM;
+    if (!debugfs_create_u32("pm_debug", 0644, dent_rhea_pm_root_dir, (int*)&pm_debug))
+	return -ENOMEM;
+    if (!debugfs_create_file("en_self_refresh", 0644,
+		dent_rhea_pm_root_dir, NULL, &pm_en_self_refresh_fops))
+	return -ENOMEM;
     if (!debugfs_create_u32("force_retention", 0644, dent_rhea_pm_root_dir, (int*)&force_retention))
-		return -ENOMEM;
+	return -ENOMEM;
 
-	    return 0;
+	return 0;
 }
 late_initcall(rhea_pm_debug_init);
 

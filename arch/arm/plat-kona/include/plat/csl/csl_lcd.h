@@ -98,6 +98,8 @@ typedef enum
     CSL_LCD_NOT_INIT,    ///< CSL not Init
     CSL_LCD_NOT_OPEN,    ///< CSL not Open
     CSL_LCD_IS_OPEN,     ///< CSL Already Open
+    CSL_LCD_MSG_SIZE,    ///< DSI msg size err
+    CSL_LCD_API_ERR,     ///< Wrong Use of API
     CSL_LCD_COL_MODE,    ///< Invalid Color Mode IN/OUT
     CSL_LCD_TE_TOUT,     ///< Timeout Waiting For Tearing 
     CSL_LCD_BUS_ERR,     ///< BUS Error Detected

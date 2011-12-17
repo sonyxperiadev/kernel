@@ -70,7 +70,7 @@
 #define ACI_T1  0xFE
 #define ACI_M1  0x500
 #define ACI_MT1 0x400
-
+#define HEADSET_DET_GPIO 74 /* Headset detection GPIO pin */
 struct mic_t {
 	int hsirq;
 	int hsbirq_press;
@@ -254,6 +254,7 @@ static int aci_hw_config(int hst)
 {
 	int time_to_settle = 0;
 
+	pr_debug("\n Detect acs type aci_hw_config \n");
 	if (mic_dev == NULL) {
 		pr_err("aci_adc_config: invalid mic_dev handle \r\n");
 		return  -EFAULT;
@@ -420,7 +421,8 @@ int detect_hs_type(struct mic_t *mic_dev)
 {
 	int i;
 	int type;
-
+	
+	pr_debug("\n Check detect_hs_type \n");
 	if (mic_dev == NULL) {
 		pr_err("mic_dev is empty \r\n");
 		return 0;
@@ -441,9 +443,7 @@ int detect_hs_type(struct mic_t *mic_dev)
 		if ( (type=aci_hw_read(i)) == i) {
 			break;
 		} 
-
 	} /* end of loop to check the devices */
-
 	return type;
 }
 
@@ -503,19 +503,19 @@ static void accessory_detect_work_func(struct work_struct *work)
 {
 	struct mic_t *p = container_of(work, struct mic_t,
 						accessory_detect_work.work);
-	unsigned headset_state = gpio_get_value(irq_to_gpio(p->hsirq));
-
+	unsigned headset_state = gpio_get_value(irq_to_gpio(p->hsirq)); 
 	pr_debug("SWITCH WORK GPIO STATE: 0x%x default state 0x%x \r\n", headset_state,  p->headset_pd->hs_default_state); 
-
 	headset_state = (headset_state ^ p->headset_pd->hs_default_state);
+	pr_debug("\n\n accessory_detect_work_func headset_state=%d \n",  headset_state);
 
 	if (headset_state == 1) {
-		pr_debug(" ACCESSORY INSERTED \r\n");
+
+		pr_info(" ACCESSORY INSERTED \r\n");
 		pr_debug("0. Interrupt status before detecting hs_type 0x%x \r\n",
 			readl(p->aci_base + ACI_INT_OFFSET));
 
 		p->hs_state = detect_hs_type(p);
-		
+		pr_debug("\n Headset inserted with hs_state=%d \n", p->hs_state);	
 		switch(p->hs_state) {
 
 		case OPEN_CABLE:
@@ -596,7 +596,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 
 			/* Fall through to send the update to userland */
 		case HEADPHONE:
-
+			pr_info("\n\n Case HEADPHONE \n");
 			/* Clear pending interrupts if any */
 			chal_aci_block_ctrl(p->aci_chal_hdl,	
 				CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
@@ -615,7 +615,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 #endif
 			break;
 		default:
-			pr_err("%s():Unknown accessory type %d \r\n",__func__, p->hs_state);
+			pr_info("%s():Unknown accessory type %d \r\n",__func__, p->hs_state);
 			break;
 		}
 
@@ -745,7 +745,6 @@ inputdev_err:
 irqreturn_t gpio_isr(int irq, void *dev_id)
 {
 	struct mic_t *p = (struct mic_t *)dev_id;
-
 	pr_debug("HS ISR GPIO STATE: 0x%x \r\n", gpio_get_value(irq_to_gpio(p->hsirq)));
 
 	schedule_delayed_work(&(p->accessory_detect_work), ACCESSORY_INSERTION_REMOVE_SETTLE_TIME);
@@ -960,7 +959,7 @@ static int headset_hw_init(struct mic_t *mic)
 
 	/* Initial settings for GPIO */
 	hs_gpio = irq_to_gpio(mic->hsirq);
-
+	pr_debug("\n headset_hw_init hs_gpio=%d \n", hs_gpio);
 	/* Request the gpio 
 	 * Note that this is an optional call for setting direction/debounce
 	 * values. But set debounce will throw out warning messages if we 
@@ -1153,7 +1152,7 @@ static int __init hs_probe(struct platform_device *pdev)
 	ret =
 	    request_irq(mic->hsirq, gpio_isr,
 			(IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING |
-			 IRQF_NO_SUSPEND), "aci_accessory_detect", mic);
+			 IRQF_NO_SUSPEND), "headset_detect", mic);
 	if (ret < 0) {
 		pr_err("%s(): request_irq() failed for headset %s: %d\n",
 			__func__, "irq", ret);
@@ -1264,6 +1263,7 @@ static struct platform_driver __refdata headset_driver = {
 ------------------------------------------------------------------------------*/
 int __init kona_aci_hs_module_init(void)
 {
+	pr_debug("\n\n kona_aci_hs_module_init \n");
  	return platform_driver_register(&headset_driver);
 }
 

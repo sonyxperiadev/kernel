@@ -40,7 +40,7 @@ struct regulator_init_data;
 int bcmpmu_register_regulator(struct bcmpmu *bcmpmu, int reg,
 			      struct regulator_init_data *initdata);
 
-struct bcmpmu_reg_info 
+struct bcmpmu_reg_info
 {
 	u8  reg_addr;		/* address of regulator control register for mode control */
 	u8  reg_addr_volt;	/* address of control register to change voltage */
@@ -217,6 +217,7 @@ enum bcmpmu_reg {
 	PMU_REG_HSPUP2_HS_PWRUP,
 	PMU_REG_HSPGA1_GAIN,
 	PMU_REG_HSPGA2_GAIN,
+	PMU_REG_HSPGA3_GAIN,
 	/* Charge */
 	PMU_REG_CHRGR_USB_EN,
 	PMU_REG_CHRGR_WAC_EN,
@@ -226,6 +227,7 @@ enum bcmpmu_reg {
 	PMU_REG_CHRGR_EOC,
 	PMU_REG_CHRGR_BCDLDO,
 	PMU_REG_CHRGR_BCDLDO_AON,
+	PMU_REG_CHP_TYP,
 	/* fuel gauge */
 	PMU_REG_FG_ACCM0,
 	PMU_REG_FG_ACCM1,
@@ -237,8 +239,13 @@ enum bcmpmu_reg {
 	PMU_REG_FG_SLEEPCNT1,
 	PMU_REG_FG_HOSTEN,
 	PMU_REG_FG_RESET,
+	PMU_REG_FG_CAL,
 	PMU_REG_FG_FRZREAD,
 	PMU_REG_FG_FRZSMPL,
+	PMU_REG_FG_OFFSET0,
+	PMU_REG_FG_OFFSET1,
+	PMU_REG_FG_GAINTRIM,
+	PMU_REG_FG_DELTA,
 	/* usb control */
 	PMU_REG_OTG_VBUS_PULSE,
 	PMU_REG_OTG_VBUS_BOOST,
@@ -265,6 +272,19 @@ enum bcmpmu_reg {
 	PMU_REG_ADP_STATUS_SNS_DET,
 	PMU_REG_ADP_STATUS_RISE_TIMES_LSB,
 	PMU_REG_ADP_STATUS_RISE_TIMES_MSB,
+	/* BC ctrl n status */
+	PMU_REG_BC_DET_EN,
+	PMU_REG_BC_SW_RST,
+	PMU_REG_BC_OVWR_KEY,		/* BC CTRL register Overwrite permission reg */
+
+	/* test */
+	PMU_REG_HSIST_I_HS_ENST,
+	PMU_REG_HSIST_I_HS_IST,
+	PMU_REG_IHFSTIN_I_IHFSELFTEST_EN,
+	PMU_REG_IHFSTIN_I_IHFSTI,
+	PMU_REG_IHFSTIN_I_IHFSTO,
+	PMU_REG_IHFSTO_O_IHFSTI,
+	PMU_REG_HSOUT1_O_HS_IST,
 	/* interrupt */
 	PMU_REG_INT_START,
 	PMU_REG_INT_MSK_START,
@@ -281,6 +301,9 @@ enum bcmpmu_reg {
 	PMU_REG_PLLCTRL,
 	PMU_REG_HOSTCTRL1,
 	PMU_REG_SYS_WDT_CLR,
+	PMU_REG_HOSTCTRL3,
+	PMU_REG_MBCCTRL5_USB_DET_LDO_EN,
+	PMU_REG_MBCCTRL5_CHARGE_DET,
 	PMU_REG_MAX,
 };
 enum bcmpmu_irq_reg {
@@ -363,6 +386,7 @@ enum bcmpmu_irq {
 	PMU_IRQ_SESSION_END_VLD,
 	PMU_IRQ_SESSION_END_INVLD,
 	PMU_IRQ_VBUS_OVERCURRENT,
+	PMU_IRQ_FGC,
 	PMU_IRQ_MAX,
 };
 
@@ -374,6 +398,7 @@ enum bcmpmu_adc_sig {
 	PMU_ADC_ID,
 	PMU_ADC_NTC,
 	PMU_ADC_BSI,
+	PMU_ADC_BOM,
 	PMU_ADC_32KTEMP,
 	PMU_ADC_PATEMP,
 	PMU_ADC_ALS,
@@ -591,6 +616,11 @@ struct bcmpmu_temp_map {
 	int temp;
 };
 
+struct bcmpmu_voltcap_map {
+	int volt;
+	int cap;
+};
+
 struct bcmpmu_charge_zone {
 	int tl;
 	int th;
@@ -647,10 +677,11 @@ enum bcmpmu_env_bit_t {
 	PMU_ENV_PORT_DISABLE,
 	PMU_ENV_MBPD,
 	PMU_ENV_MBOV,
+	PMU_ENV_MBMC,
 	PMU_ENV_MAX,
 };
 
-enum bcmpmu_usb_event_t {
+enum bcmpmu_event_t {
 	/* events for usb driver */
 	BCMPMU_USB_EVENT_USB_DETECTION,
 	BCMPMU_USB_EVENT_IN,
@@ -670,6 +701,9 @@ enum bcmpmu_usb_event_t {
 	/* events for battery charging */
 	BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
 	BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+	BCMPMU_USB_EVENT_CHGDET_LATCH,
+	/* events for fuel gauge */
+	BCMPMU_FG_EVENT_FGC,
 	BCMPMU_EVENT_MAX,
 };
 
@@ -692,6 +726,7 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_GET_SESSION_STATUS,
 	BCMPMU_USB_CTRL_GET_SESSION_END_STATUS,
 	BCMPMU_USB_CTRL_GET_ID_VALUE,
+	BCMPMU_USB_CTRL_GET_CHRGR_TYPE,
 	BCMPMU_USB_CTRL_SW_UP,
 };
 
@@ -714,6 +749,7 @@ enum bcmpmu_bc_t {
 #define	PMU_ENV_BITMASK_PORT_DISABLE		1<<10
 #define	PMU_ENV_BITMASK_MBPD			1<<11
 #define	PMU_ENV_BITMASK_MBOV			1<<12
+#define PMU_ENV_BITMASK_MBMC			1<<13
 
 struct bcmpmu_env_info {
  	struct bcmpmu_reg_map regmap;
@@ -751,6 +787,7 @@ struct bcmpmu {
 	void *accyinfo;
 	void *eminfo;
 	void *ponkeyinfo;
+	void *rpcinfo;
 
 	/* reg access */
 	int (*read_dev)(struct bcmpmu *bcmpmu, int reg, unsigned int *val, unsigned int mask);
@@ -760,7 +797,7 @@ struct bcmpmu {
 	int (*read_dev_bulk)(struct bcmpmu *bcmpmu, int map, int addr, unsigned int *val, int len);
 	int (*write_dev_bulk)(struct bcmpmu *bcmpmu, int map, int addr, unsigned int *val, int len);
 	const struct bcmpmu_reg_map *regmap;
-	/* irq */	
+	/* irq */
 	int (*register_irq)(struct bcmpmu *pmu, enum bcmpmu_irq irq,
 		void (*callback)(enum bcmpmu_irq irq, void *), void *data);
 	int (*unregister_irq)(struct bcmpmu *pmu, enum bcmpmu_irq irq);
@@ -782,14 +819,17 @@ struct bcmpmu {
 	int (*set_icc_qc)(struct bcmpmu *pmu, int curr);
 	int (*set_eoc)(struct bcmpmu *pmu, int curr);
 	int (*set_vfloat)(struct bcmpmu *pmu, int volt);
-	
+
 	/* fg */
 	int (*fg_currsmpl)(struct bcmpmu *pmu, int *data);
 	int (*fg_vmbatt)(struct bcmpmu *pmu, int *data);
 	int (*fg_acc_mas)(struct bcmpmu *pmu, int *data);
 	int (*fg_enable)(struct bcmpmu *pmu, int en);
 	int (*fg_reset)(struct bcmpmu *pmu);
-	
+	int (*fg_offset_cal)(struct bcmpmu *pmu);
+	int (*fg_offset_cal_read)(struct bcmpmu *pmu, int *data);
+	int (*fg_trim_write)(struct bcmpmu *pmu, int data);
+
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;
 	int (* register_usb_callback)(struct bcmpmu *pmu,
@@ -806,7 +846,7 @@ struct bcmpmu {
 	struct bcmpmu_reg_info *rgltr_info;
 
 	void *debugfs_root_dir;
-	
+
 	/* Client devices */
 	struct platform_device *pdev[BCMPMU_REGULATOR_MAX];
 };
@@ -828,18 +868,38 @@ struct bcmpmu_platform_data {
 	int irq;
 	struct bcmpmu_rw_data *init_data;
 	int init_max;
+	int num_of_regl;
 	struct bcmpmu_regulator_init_data *regulator_init_data;
 	struct bcmpmu_temp_map *batt_temp_map;
 	int batt_temp_map_len;
+	struct bcmpmu_voltcap_map *batt_voltcap_map;
+	int batt_voltcap_map_len;
 	struct bcmpmu_adc_setting *adc_setting;
 	int fg_smpl_rate;
 	int fg_slp_rate;
 	int fg_slp_curr_ua;
+	int fg_factor;
+	int fg_sns_res;
 	int chrg_1c_rate;
+	int chrg_eoc;
+	int batt_impedence;
 	struct bcmpmu_charge_zone *chrg_zone_map;
 	int fg_capacity_full;
 	int support_fg;
 	enum bcmpmu_bc_t bc;
+	int rpc_rate;
+};
+
+struct bcmpmu_fg {
+	struct bcmpmu *bcmpmu;
+	int fg_acc;
+	int fg_smpl_cnt;
+	int fg_slp_cnt;
+	int fg_smpl_cnt_tm;
+	int fg_slp_cnt_tm;
+	int fg_slp_curr_ua;
+	int fg_sns_res;
+	int fg_factor;
 };
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
@@ -858,10 +918,8 @@ struct bcmpmu_reg_info *bcmpmu_rgltr_info(void);
 
 void bcmpmu_reg_dev_init(struct bcmpmu *bcmpmu);
 void bcmpmu_reg_dev_exit(struct bcmpmu *bcmpmu);
-int bcmpmu_usb_add_notifier(u32, struct notifier_block *);
-int bcmpmu_usb_remove_notifier(u32, struct notifier_block *);
-int bcmpmu_batt_add_notifier(u32, struct notifier_block *);
-int bcmpmu_batt_remove_notifier(u32, struct notifier_block *);
+int bcmpmu_add_notifier(u32, struct notifier_block *);
+int bcmpmu_remove_notifier(u32, struct notifier_block *);
 
 void bcmpmu_client_power_off(void);
 

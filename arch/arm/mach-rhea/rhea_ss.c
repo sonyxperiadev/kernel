@@ -34,6 +34,7 @@
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
+#include <mach/memory.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
 #include <linux/gpio_keys.h>
@@ -45,6 +46,9 @@
 #endif
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 #include <linux/i2c/qt602240_ts.h>
+#endif
+#ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
+#include <linux/i2c/tma340_ts.h>
 #endif
 #ifdef CONFIG_REGULATOR_TPS728XX
 #include <linux/regulator/tps728xx.h>
@@ -60,6 +64,7 @@
 #include <linux/broadcom/bcm59055-power.h>
 #include <linux/clk.h>
 #include <linux/bootmem.h>
+#include <plat/pi_mgr.h>
 #include "common.h"
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
@@ -93,6 +98,10 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
+#ifdef CONFIG_I2C_GPIO
+
+#include <linux/i2c-gpio.h>
+#endif
 
 #include <video/kona_fb.h>
 #include <linux/pwm_backlight.h>
@@ -104,9 +113,9 @@
 #ifdef CONFIG_GPIO_PCA953X
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
 #else
-#define SD_CARDDET_GPIO_PIN      75
+#define SD_CARDDET_GPIO_PIN      72
 #endif
-
+#define SD_CARDDET_GPIO_PIN      72
 
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
@@ -341,22 +350,15 @@ struct platform_device bcm_kp_device = {
 	GPIO07, GPIO12, GPIO13, for now keypad can only be set as a 2x2 matrix
 	by using pin GPIO04, GPIO05, GPIO14 and GPIO15 */
 static struct bcm_keymap newKeymap[] = {
-#ifndef CONFIG_MACH_RHEA_RAY_DEMO
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Back Key", KEY_BACK},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "Home-Key", KEY_HOME},
-#else
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "VOL UP", KEY_VOLUMEUP},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
-#endif
 	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_0,  "VOL DOWN", KEY_VOLUMEDOWN},
 	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "unused", 0},
@@ -364,7 +366,7 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "unused", 0},
 	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "Home-Key", KEY_HOME},
 	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "unused", 0},
@@ -402,31 +404,21 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
-#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
-#else
-	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "Back Key", KEY_BACK},
-#endif
 	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
-#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
-#else
-	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "Home-Key", KEY_HOME},
-#endif
 };
 
 static struct bcm_keypad_platform_info bcm_keypad_data = {
-	.row_num = 8,
-	.col_num = 8,
+	.row_num = 3,
+	.col_num = 1,
 	.keymap = newKeymap,
 	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
 };
@@ -443,9 +435,8 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 #endif
 
 #define SENSOR_0_GPIO_PWRDN		12
-#define SENSOR_0_GPIO_RST		(KONA_MAX_GPIO + 10)
-#define SENSOR_0_CLK			"dig_ch0_clk"
-#define SENSOR_0_CLK_FREQ		(13000000)
+#define SENSOR_0_GPIO_RST		33
+
 
 #define SENSOR_1_GPIO_PWRDN		13
 #define SENSOR_1_CLK			"dig_ch0_clk"
@@ -498,8 +489,8 @@ static int pca953x_platform_exit_hw(struct i2c_client *client,
 
 static struct pca953x_platform_data board_expander_info = {
 	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
-	.gpio_base	= KONA_MAX_GPIO,
-	.irq_base	= gpio_to_irq(KONA_MAX_GPIO),
+	.gpio_base	= 33, //Temporay value KONA_MAX_GPIO,
+	.irq_base	= gpio_to_irq(33),
 	.setup		= pca953x_platform_init_hw,
 	.teardown	= pca953x_platform_exit_hw,
 };
@@ -536,8 +527,8 @@ static int pca953x_2_platform_exit_hw(struct i2c_client *client,
 
 static struct pca953x_platform_data board_expander_2_info = {
 	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
-	.gpio_base	= KONA_MAX_GPIO+16,
-	.irq_base	= gpio_to_irq(KONA_MAX_GPIO+16),
+	.gpio_base	= 33; //Temporay value  KONA_MAX_GPIO+16,
+	.irq_base	= gpio_to_irq(33),
 	.setup		= pca953x_2_platform_init_hw,
 	.teardown	= pca953x_2_platform_exit_hw,
 };
@@ -552,9 +543,78 @@ static struct i2c_board_info __initdata pca953x_2_info[] = {
 #endif
 #endif /* CONFIG_GPIO_PCA953X */
 
+#ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
+#define TSP_INT_GPIO_PIN      (121)
+
+
+static int tma340_platform_init_hw(void)
+{
+	int rc;
+	rc = gpio_request(TSP_INT_GPIO_PIN, "ts_tma340");
+
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", TSP_INT_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(TSP_INT_GPIO_PIN);
+
+	return 0;
+}
+
+static void tma340_platform_exit_hw(void)
+{
+	gpio_free(TSP_INT_GPIO_PIN);
+}
+
+static struct tma340_platform_data tma340_platform_data = {
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.x_line		= 15,
+	.y_line		= 11,
+	.x_size		= 1023,
+	.y_size		= 1023,
+	.x_min		= 90,
+	.y_min		= 90,
+	.x_max		= 0x3ff,
+	.y_max		= 0x3ff,
+	.max_area	= 0xff,
+	.blen		= 33,
+	.threshold	= 70,
+	.voltage	= 2700000,              /* 2.8V */
+	.orient		= TMA340_DIAGONAL_COUNTER,
+	.init_platform_hw = tma340_platform_init_hw,
+	.exit_platform_hw = tma340_platform_exit_hw,
+};
+
+
+
+#endif /* CONFIG_TOUCHSCREEN_TMA340_COOPERVE */
+
+static struct i2c_board_info __initdata rhea_ss_i2cgpio0_board_info[] = {
+
+#ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
+	{
+		I2C_BOARD_INFO("synaptics-rmi-ts", 0x20),
+		.platform_data = &tma340_platform_data,
+		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
+	},
+#endif
+	
+#if defined(CONFIG_TOUCHSCREEN_MMS128_TASSCOOPER)
+	{
+		I2C_BOARD_INFO("melfas-mms128", 0x48),
+		.platform_data = &tma340_platform_data,
+		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
+	},
+#endif
+
+};
+
+
+
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 #ifdef CONFIG_GPIO_PCA953X
-#define QT602240_INT_GPIO_PIN      (KONA_MAX_GPIO + 8)
+#define QT602240_INT_GPIO_PIN      (121)
 #else
 #define QT602240_INT_GPIO_PIN      74 /* skip expander chip */
 #endif
@@ -615,7 +675,7 @@ static struct i2c_board_info __initdata bmp18x_info[] =
 #endif
 #ifdef CONFIG_AL3006
 #ifdef CONFIG_GPIO_PCA953X
-	#define AL3006_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 6)
+	#define AL3006_INT_GPIO_PIN		(121) //@Fixed me Temporay value
 #else
 	#define AL3006_INT_GPIO_PIN		122	/*  skip expander chip */
 #endif
@@ -694,7 +754,7 @@ static struct i2c_board_info __initdata mpu6050_info[] =
 #endif
 
 #ifdef CONFIG_KONA_HEADSET
-#define HS_IRQ		gpio_to_irq(71)
+#define HS_IRQ		gpio_to_irq(74)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
 static struct kona_headset_pd headset_data = {
@@ -1094,24 +1154,26 @@ static struct platform_device tps728xx_vc_device_sim2 = {
 #endif /* CONFIG_REGULATOR_TPS728XX*/
 
 #ifdef CONFIG_FB_BRCM_RHEA
-static struct kona_fb_platform_data alex_dsi_display_fb_data = {
-	.get_dispdrv_func_tbl	= &DISP_DRV_BCM91008_ALEX_GetFuncTable,
-	.screen_width		= 360,
-	.screen_height		= 640,
-	.bytes_per_pixel	= 4,
-	.gpio			= (KONA_MAX_GPIO + 3),
-	.pixel_format		= XRGB8888,
+static struct kona_fb_platform_data rhea_ss_dsi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISPDRV_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 2,//2, //@HW
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	//.pixel_format		= XRGB8888,
 };
 
-static struct platform_device alex_dsi_display_device = {
+static struct platform_device rhea_ss_dsi_display_device = {
 	.name    = "rhea_fb",
 	.id      = 0,
 	.dev = {
-		.platform_data		= &alex_dsi_display_fb_data,
+		.platform_data		= &rhea_ss_dsi_display_fb_data,
 		.dma_mask		= (u64 *) ~(u32)0,
 		.coherent_dma_mask	= ~(u32)0,
 	},
 };
+
 
 static struct kona_fb_platform_data nt35582_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
@@ -1157,9 +1219,9 @@ static struct kona_fb_platform_data r61581_smi16_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
 	.screen_width		= 320,
 	.screen_height		= 480,
-	.bytes_per_pixel	= 2,
+	.bytes_per_pixel	= 4, 
 	.gpio			= 41,
-	.pixel_format		= RGB565,
+	.pixel_format		= RGB565, //XRGB8888, //RGB565, //@HW
 	.bus_width		= 16,
 };
 
@@ -1197,8 +1259,8 @@ static struct platform_device r61581_smi8_display_device = {
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 
-#define BCMBT_VREG_GPIO       (KONA_MAX_GPIO +4)
-#define BCMBT_N_RESET_GPIO    (KONA_MAX_GPIO + 14)
+#define BCMBT_VREG_GPIO       (100)
+#define BCMBT_N_RESET_GPIO    (90)
 #define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
 #define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
 
@@ -1220,8 +1282,8 @@ static struct platform_device board_bcmbt_rfkill_device = {
 #endif
 
 #ifdef CONFIG_BCM_BT_LPM
-#define GPIO_BT_WAKE 04
-#define GPIO_HOST_WAKE 111
+#define GPIO_BT_WAKE   92 
+#define GPIO_HOST_WAKE 91
 
 static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
         .gpio_bt_wake = GPIO_BT_WAKE,
@@ -1238,76 +1300,181 @@ static struct platform_device board_bcmbt_lpm_device = {
 };
 #endif
 
-#define OV5640_I2C_ADDRESS (0x3C)
+//@HW
+#define S5K4ECGX_I2C_ADDRESS (0x5A>>1)
 
 static struct i2c_board_info rhea_i2c_camera[] = {
 	{
-		I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
+		I2C_BOARD_INFO("s5k4ecgx", S5K4ECGX_I2C_ADDRESS),
 	},
 };
 
+//@HW
+static struct regulator *VCAM_IO_1_8_V;  //LDO_HV9
+static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
+#define CAM_CORE_EN	   12
+#define	CAM_FLASH_MODE 13
+#define CAM0_RESET    33
+#define CAM_FLASH_EN  34
+#define CAM_AF_EN     25
+#define CAM_CS0 43
+#define SENSOR_0_CLK			"dig_ch0_clk"
+#define SENSOR_0_CLK_FREQ		(13000000) //@HW, need to check how fast this meaning.
+//VCAM_1.2V is controlled by GPIO12
+
+
 static int rhea_camera_power(struct device *dev, int on)
 {
-
-	void __iomem* padctl_base = (void __iomem *)HW_IO_PHYS_TO_VIRT(PAD_CTRL_BASE_ADDR);
 	unsigned int value;
+	int ret;
 	struct clk *clock;
-	static int count  = 0;
-
-	if (count)
-		return 0;
+	struct clk *axi_clk;
+	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	value = ioread32(padctl_base + PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
-	iowrite32(value, padctl_base + PADCTRLREG_DCLK1_OFFSET);
+	if (NULL == unicam_dfs_node) {
+		unicam_dfs_node = pi_mgr_dfs_add_request("unicam", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+		if (NULL == unicam_dfs_node) {
+			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+			return -1;
+		}
+	}
+
 	clock = clk_get(NULL, SENSOR_0_CLK);
 	if (!clock) {
 		printk(KERN_ERR "%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
 		return -1;
 	}
-	if (on) {
-		count = 1;
-		/* enable clk */
-		value = clk_enable(clock);
-		if (value) {
-			printk(KERN_ERR "%s: failed to enabled clock %s\n", __func__,
-					SENSOR_0_CLK);
+	axi_clk = clk_get(NULL, "csi0_axi_clk");
+	if (!axi_clk) {
+		printk(KERN_ERR "%s:unable to get clock csi0_axi_clk\n", __func__);
+		return -1;
+	}
+	VCAM_A_2_8_V = regulator_get(NULL,"cam");
+	if(IS_ERR(VCAM_A_2_8_V))
+	{
+		printk("can not get VCAM_A_2_8_V.8V\n");
+		return -1;
+	}
+	regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);
+	//ret = regulator_disable(VCAM_A_2_8_V);
+
+	VCAM_IO_1_8_V = regulator_get(NULL,"hv9");
+	if(IS_ERR(VCAM_IO_1_8_V))
+	{
+		printk("can not get VCAM_IO_1.8V\n");
+		return -1;
+	}	
+	regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);	
+	//ret = regulator_disable(VCAM_IO_1_8_V);
+
+	
+		
+
+
+	gpio_request(CAM_CORE_EN, "cam_1_2v");
+	gpio_direction_output(CAM_CORE_EN,0); 
+	gpio_request(CAM_CS0, "cam_cs0");
+	gpio_direction_output(CAM_CS0,0); 
+	printk("set cam_rst to low\n");
+	gpio_request(CAM0_RESET, "cam_rst");
+	gpio_direction_output(CAM0_RESET,0);
+//	value = ioread32(padctl_base + PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
+//		iowrite32(value, padctl_base + PADCTRLREG_DCLK1_OFFSET);
+
+
+	if(on)
+	{
+		printk("power on the sensor \n"); //@HW
+		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_OPP_TURBO)) {
+			printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
 			return -1;
 		}
+
+		value = clk_enable(axi_clk);
+		if (value) {
+			printk(KERN_ERR "%s:failed to enable csi2 axi clock\n", __func__);
+			return -1;
+		}
+
+			
+		
+		msleep(100);
+		printk("power on the sensor's power supply\n"); //@HW
+
+	
+
+		gpio_request(CAM_CORE_EN, "cam_1_2v");
+		gpio_set_value(CAM_CORE_EN,1); 
+		msleep(10);
+
+		VCAM_A_2_8_V = regulator_get(NULL,"cam");
+		if(IS_ERR(VCAM_A_2_8_V))
+		{
+			printk("can not get VCAM_A_2_8_V.8V\n");
+			return -1;
+		}
+		regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);
+		
+		regulator_enable(VCAM_A_2_8_V);
+		msleep(10);
+		
+
+		VCAM_IO_1_8_V = regulator_get(NULL,"hv9");
+		if(IS_ERR(VCAM_IO_1_8_V))
+		{
+			printk("can not get VCAM_IO_1.8V\n");
+			return -1;
+		}	
+		regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);
+		regulator_enable(VCAM_IO_1_8_V);
+	
+		msleep(10);	
+	
+		value = clk_enable(clock);
+		if (value) {
+			printk(KERN_ERR "%s: failed to enable clock %s\n", __func__,
+				SENSOR_0_CLK);
+			return -1;
+		}
+		printk("enable camera clock\n");
 		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
 		if (value) {
 			printk(KERN_ERR "%s: failed to set the clock %s to freq %d\n",
 					__func__, SENSOR_0_CLK, SENSOR_0_CLK_FREQ);
 			return -1;
 		}
-
-		/* Delay for clk to start */
-		msleep(10);
-
-		/* enable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 0);
-		msleep(10);
-
-		/* disable power down gpio */
-		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
+		printk("set rate\n");
 		msleep(5);
-
-		/* disable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 1);
-
-		/* wait for sensor to come up */
-		msleep(30);
-
+		gpio_request(CAM_CS0, "cam_cs0");
+		gpio_set_value(CAM_CS0,1); 
+		gpio_set_value(CAM0_RESET,1);
+		msleep(5);
+		printk("set cam rst to high\n");
+		msleep(50);
 	}
-	else {
+	else
+	{
+
 		/* enable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		gpio_set_value(CAM0_RESET,0);
 		msleep(1);
 		/* enable power down gpio */
-		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
-
+		gpio_set_value(CAM_CORE_EN, 0);
+		gpio_request(CAM_CS0, "cam_cs0");
+		gpio_set_value(CAM_CS0,1); 
+		
 		clk_disable(clock);
+
+		clk_disable(axi_clk);
+		regulator_disable(VCAM_A_2_8_V);
+		regulator_disable(VCAM_IO_1_8_V);
+
+
+		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
+		}
 	}
 	return 0;
 }
@@ -1318,9 +1485,11 @@ static int rhea_camera_reset(struct device *dev)
 	printk(KERN_INFO"%s:camera reset\n", __func__);
 	return 0;
 }
+#if 0
 static struct soc_camera_link iclink_ov5640 = {
 	.bus_id		= 0,
 	.board_info	= &rhea_i2c_camera[0],
+
 	.i2c_adapter_id	= 0,
 	.module_name	= "ov5640",
 	.power		= &rhea_camera_power,
@@ -1334,7 +1503,25 @@ static struct platform_device rhea_camera = {
 		.platform_data = &iclink_ov5640,
 	},
 };
+#else
+static struct soc_camera_link iclink_s5k4ecgx = {
+	.bus_id		= 0,
+	
+	.board_info	= &rhea_i2c_camera[0],
+	.i2c_adapter_id	= 0,
+	.module_name	= "s5k4ecgx",
+	.power		= &rhea_camera_power,
+	.reset		= &rhea_camera_reset,
+};
 
+static struct platform_device rhea_camera = {
+	.name	= "soc-camera-pdrv",
+	.id		= 0,
+	.dev	= {
+		.platform_data = &iclink_s5k4ecgx,
+	},
+};
+#endif
 
 
 /* Rhea Ray specific platform devices */
@@ -1361,11 +1548,7 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 	&tps728xx_device,
 #endif
 #ifdef CONFIG_FB_BRCM_RHEA
-	&alex_dsi_display_device,
-	&nt35582_smi16_display_device,
-	&nt35582_smi8_display_device,
-	&r61581_smi8_display_device,
-	&r61581_smi16_display_device,
+	&rhea_ss_dsi_display_device,	
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
@@ -1446,6 +1629,9 @@ static void __init rhea_ray_add_i2c_devices (void)
 			mpu6050_info,
 			ARRAY_SIZE(mpu6050_info));
 #endif
+
+i2c_register_board_info(0x3, rhea_ss_i2cgpio0_board_info,
+				ARRAY_SIZE(rhea_ss_i2cgpio0_board_info));
 }
 
 static int __init rhea_ray_add_lateInit_devices (void)
@@ -1459,6 +1645,35 @@ static void __init rhea_ray_reserve(void)
 	board_common_reserve();
 }
 
+#define TSP_SDA 86
+#define TSP_SCL 87
+#if defined(CONFIG_I2C_GPIO)
+static struct i2c_gpio_platform_data touch_i2c_gpio_data = {
+        .sda_pin    = TSP_SDA,
+        .scl_pin    = TSP_SCL,
+		//.sda_is_open_drain = true,
+		//.scl_is_open_drain = true,
+        .udelay  = 3,  //// brian :3
+        .timeout = 100,
+};
+
+static struct platform_device touch_i2c_gpio_device = {
+        .name       = "i2c-gpio",
+        .id     = 0x3,
+        .dev        = {
+            .platform_data  = &touch_i2c_gpio_data,
+        },
+};
+
+static struct platform_device *gpio_i2c_devices[] __initdata = {
+
+#if defined(CONFIG_I2C_GPIO)
+	&touch_i2c_gpio_device,
+	
+#endif
+};
+
+#endif	
 /* All Rhea Ray specific devices */
 static void __init rhea_ray_add_devices(void)
 {
@@ -1475,6 +1690,13 @@ static void __init rhea_ray_add_devices(void)
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 	platform_add_devices(rhea_ray_virtual_consumer_devices, ARRAY_SIZE(rhea_ray_virtual_consumer_devices));
 #endif
+
+#if defined(CONFIG_I2C_GPIO)
+	
+	platform_add_devices(gpio_i2c_devices, ARRAY_SIZE(gpio_i2c_devices));
+	
+#endif
+
 
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
@@ -1496,7 +1718,7 @@ void __init board_map_io(void)
 
 late_initcall(rhea_ray_add_lateInit_devices);
 
-MACHINE_START(RHEA, "RheaRay")
+MACHINE_START(RHEA, "rhea_ss")
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,

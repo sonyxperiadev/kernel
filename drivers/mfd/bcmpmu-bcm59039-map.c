@@ -26,7 +26,7 @@
 
 #define PMU_IRG_REG_MAX		8
 #define PMU_ENV_REG_MAX		7
-#define PMU_USB_ID_LVL_MAX	8
+#define PMU_USB_ID_LVL_MAX	2
 
 static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_SMPLCTRL] =		{.map = 0x00, .addr = 0x06, .mask = 0xFF, .ro = 0},
@@ -150,6 +150,7 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_FG_RESET] =		{.map = 0x01, .addr = 0x41, .mask = 0x10, .ro = 0, .shift = 4},
 	[PMU_REG_FG_FRZREAD] =		{.map = 0x01, .addr = 0x41, .mask = 0x20, .ro = 0, .shift = 5},
 	[PMU_REG_FG_FRZSMPL] =		{.map = 0x01, .addr = 0x41, .mask = 0x40, .ro = 0, .shift = 6},
+	[PMU_REG_FG_DELTA] =		{.map = 0x01, .addr = 0x5A, .mask = 0xFF, .ro = 0, .shift = 0},
 	/* usb control */
 	[PMU_REG_OTG_VBUS_PULSE] =	{.map = 0, .addr = 0, .mask = 0x01, .ro = 0, .shift = 0},
 	[PMU_REG_OTG_VBUS_BOOST] =	{.map = 0, .addr = 0, .mask = 0x04, .ro = 0, .shift = 2},
@@ -168,7 +169,7 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_ADP_SNS_COMP] =	{.map = 0, .addr = 0, .mask = 0x02, .ro = 0, .shift = 1},
 	[PMU_REG_ADP_SNS_AON] =		{.map = 0, .addr = 0, .mask = 0x04, .ro = 0, .shift = 2},
 	/* usb status */
-	[PMU_REG_USB_STATUS_ID_CODE] = 		{.map = 0, .addr = 0, .mask = 0x38, .ro = 0, .shift = 3},
+	[PMU_REG_USB_STATUS_ID_CODE] = 		{.map = 0, .addr = 0xE3, .mask = 0x10, .ro = 0, .shift = 4},
 	[PMU_REG_OTG_STATUS_VBUS] =		{.map = 0, .addr = 0xE3, .mask = 0x02, .ro = 0, .shift = 1},
 	[PMU_REG_OTG_STATUS_SESS] =		{.map = 0, .addr = 0xE3, .mask = 0x01, .ro = 0, .shift = 0},
 	[PMU_REG_OTG_STATUS_SESS_END] =		{.map = 0, .addr = 0, .mask = 0x04, .ro = 0, .shift = 2},
@@ -176,6 +177,12 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_ADP_STATUS_SNS_DET] =		{.map = 0, .addr = 0, .mask = 0x10, .ro = 0, .shift = 4},
 	[PMU_REG_ADP_STATUS_RISE_TIMES_LSB] =	{.map = 0, .addr = 0, .mask = 0xFF, .ro = 0, .shift = 0},
 	[PMU_REG_ADP_STATUS_RISE_TIMES_MSB] =	{.map = 0, .addr = 0, .mask = 0x30, .ro = 0, .shift = 4},
+
+	/* BC ctrl and status */
+	[PMU_REG_BC_DET_EN] = 		{.map = 0, .addr = 0x61, .mask = 0x02, .ro = 0, .shift = 1},
+	[PMU_REG_BC_SW_RST] = 		{.map = 0, .addr = 0x61, .mask = 0x01, .ro = 0, .shift = 0},
+	[PMU_REG_BC_OVWR_KEY] = 	{.map = 0, .addr = 0x61, .mask = 0xF0, .ro = 0, .shift = 4},
+
 	/* interrupt */
 	[PMU_REG_INT_START] =			{.map = 0, .addr = 0x30, .mask = 0xFF, .ro = 0, .shift = 0},
 	[PMU_REG_INT_MSK_START] =		{.map = 0, .addr = 0x40, .mask = 0xFF, .ro = 0, .shift = 0},
@@ -239,6 +246,7 @@ static const struct bcmpmu_irq_map bcm59039_irq_map[PMU_IRQ_MAX] = {
 	[PMU_IRQ_SDSROVRI] =		{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x04},
 	[PMU_IRQ_ASROVRI] =		{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x08},
 	[PMU_IRQ_UBPD_CHG_F] =		{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x10},
+	[PMU_IRQ_FGC] =			{.int_addr = 0x35, .mask_addr = 0x45, .bit_mask = 0x20},
 	[PMU_IRQ_ACD_INS] =		{.int_addr = 0x36, .mask_addr = 0x46, .bit_mask = 0x01},
 	[PMU_IRQ_ACD_RM] =		{.int_addr = 0x36, .mask_addr = 0x46, .bit_mask = 0x02},
 	[PMU_IRQ_PONKEYB_HOLD] =	{.int_addr = 0x36, .mask_addr = 0x46, .bit_mask = 0x04},
@@ -271,7 +279,8 @@ static const struct bcmpmu_env_info bcm59039_env_reg_map[PMU_ENV_MAX] = {
 	[PMU_ENV_P_UBPD_CHR] = 		{.regmap = {.addr = 0xE1, .mask = 0x04, .shift = 2, .ro = 1}, .bitmask = PMU_ENV_BITMASK_P_UBPD_CHR},
 	[PMU_ENV_PORT_DISABLE] = 	{.regmap = {.addr = 0x00, .mask = 0x00, .shift = 0, .ro = 1}, .bitmask = PMU_ENV_BITMASK_PORT_DISABLE},
 	[PMU_ENV_MBPD] = 		{.regmap = {.addr = 0xE4, .mask = 0x01, .shift = 0, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBPD},
-	[PMU_ENV_MBOV] = 		{.regmap = {.addr = 0xE0, .mask = 0x10, .shift = 3, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBOV},
+	[PMU_ENV_MBOV] = 		{.regmap = {.addr = 0xE0, .mask = 0x10, .shift = 4, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBOV},
+	[PMU_ENV_MBMC] = 		{.regmap = {.addr = 0xE0, .mask = 0x08, .shift = 3, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBMC},
 };
 
 static const struct bcmpmu_adc_map bcm59039_adc_map[PMU_ADC_MAX] = {
@@ -281,7 +290,8 @@ static const struct bcmpmu_adc_map bcm59039_adc_map[PMU_ADC_MAX] = {
 	[PMU_ADC_ID] =			{.addr0 = 0x8B, .addr1 = 0x8A, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x04, .vrng = 1200},
 	[PMU_ADC_NTC] =			{.addr0 = 0x8D, .addr1 = 0x8C, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x05, .vrng = 1200},
 	[PMU_ADC_BSI] =			{.addr0 = 0x8F, .addr1 = 0x8E, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x06, .vrng = 1200},
-	[PMU_ADC_32KTEMP] =		{.addr0 = 0x93, .addr1 = 0x92, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x08, .vrng = 4800},
+	[PMU_ADC_32KTEMP] =		{.addr0 = 0x93, .addr1 = 0x92, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x08, .vrng = 1200},
+	[PMU_ADC_PATEMP] =		{.addr0 = 0x93, .addr1 = 0x92, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x09, .vrng = 1200},
 	[PMU_ADC_RTM] =			{.addr0 = 0x99, .addr1 = 0x98, .dmask = 0x3FF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
 	[PMU_ADC_FG_CURRSMPL] =		{.map = 1, .addr0 = 0x51, .addr1 = 0x50, .dmask = 0xFFFF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
 	[PMU_ADC_FG_VMBATT] =		{.map = 1, .addr0 = 0x57, .addr1 = 0x56, .dmask = 0x03FF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 4800},
@@ -394,14 +404,8 @@ const unsigned int bcmpmu_chrgr_vfloat_settings[PMU_CHRGR_VOLT_MAX] = {
 };
 
 static const int bcm59039_usb_id_map[PMU_USB_ID_LVL_MAX] = {
-	[0] = 	PMU_USB_ID_GROUND,
-	[1] = 	PMU_USB_ID_NOT_SUPPORTED,
-	[2] = 	PMU_USB_ID_NOT_SUPPORTED,
-	[3] = 	PMU_USB_ID_RID_A,
-	[4] = 	PMU_USB_ID_RID_C,
-	[5] = 	PMU_USB_ID_RID_C,
-	[6] = 	PMU_USB_ID_NOT_SUPPORTED,
-	[7] = 	PMU_USB_ID_FLOAT,
+	[0] = 	PMU_USB_ID_NOT_SUPPORTED,
+	[1] = 	PMU_USB_ID_FLOAT,
 };
 
 const struct bcmpmu_reg_map *bcmpmu_get_regmap(void)

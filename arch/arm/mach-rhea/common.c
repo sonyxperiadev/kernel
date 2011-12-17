@@ -165,9 +165,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",
 		.retries = 1,
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 		.is_pmu_i2c=false,
-#endif
 	},
 	{ /* for BSC1*/
 		.speed = BSC_BUS_SPEED_50K,
@@ -175,19 +173,28 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
 		.retries = 3,
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 		.is_pmu_i2c=false,
-#endif
 	},
 	{ /* for PMU */
-		.speed = BSC_BUS_SPEED_50K,
-		.dynamic_speed = 1,
+#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
+        .speed = BSC_BUS_SPEED_HS,
+        /* No dynamic speed in HS mode */
+        .dynamic_speed = 0,
+		/*
+		 * PMU can NAK certain I2C read commands, while write is in progress;
+		 * and it takes a while to synchronise writes between HS clock domain(3.25MHz) and
+		 * and internal clock domains (32k). In such cases, we retry PMU reads until the writes
+		 * are through. PMU need more retry counts in HS mode to handle this.
+		 */
+		.retries = 5,
+#else
+        .speed = BSC_BUS_SPEED_50K,
+        .dynamic_speed = 1,
+		.retries = 3,
+#endif
 		.bsc_clk = "pmu_bsc_clk",
 		.bsc_apb_clk = "pmu_bsc_apb",
-		.retries = 1,
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 		.is_pmu_i2c=true,
-#endif
 	},
 };
 

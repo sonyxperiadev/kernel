@@ -376,7 +376,7 @@ static struct regulator_init_data bcm59039_sdsr_data = {
 	.consumer_supplies = sdsr_supply,
 };
 
-struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
+struct bcmpmu_regulator_init_data bcm59039_regulators[] = {
 	{BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data},
 	{BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data},
 	{BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data},
@@ -413,17 +413,27 @@ static struct platform_device bcmpmu_otg_xceiv_device = {
 	.dev.platform_data 	= NULL,
 };
 
+#ifdef CONFIG_BCMPMU_RPC
+static struct platform_device bcmpmu_rpc = {
+	.name 			= "bcmpmu_rpc",
+	.id			= -1,
+	.dev.platform_data 	= NULL,
+};
+#endif
+
 static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_audio_device,
 	&bcmpmu_em_device,
 	&bcmpmu_otg_xceiv_device,
+#ifdef CONFIG_BCMPMU_RPC
+	&bcmpmu_rpc,
+#endif
 };
 
 static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 {
 	int i;
 	printk(KERN_INFO "%s: called.\n", __func__);
-	bcmpmu_reg_dev_init(bcmpmu);
 
 	for (i = 0; i <ARRAY_SIZE(bcmpmu_client_devices); i++)
 		bcmpmu_client_devices[i]->dev.platform_data = bcmpmu;
@@ -435,7 +445,6 @@ static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 static int __init bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
 	printk("REG: pmu_init_platform_hw called \n");
-	bcmpmu_reg_dev_exit(bcmpmu);
 
 	return 0;
 }
@@ -460,6 +469,35 @@ static struct bcmpmu_charge_zone chrg_zone[] = {
 	{.tl = 253, .th = 333, .v = 0,    .fc = 0,  .qc = 0},/* Zone OUT */
 };
 
+static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
+/* Battery data for 1350mAH */
+/*	volt		capacity*/
+	{4160,		100},
+	{4130,		95},
+	{4085,		90},
+	{4040,		85},
+	{3986,		80},
+	{3948,		75},
+	{3914,		70},
+	{3877,		65},
+	{3842,		60},
+	{3815,		55},
+	{3794,		50},
+	{3776,		45},
+	{3761,		40},
+	{3751,		35},
+	{3742,		30},
+	{3724,		25},
+	{3684,		20},
+	{3659,		15},
+	{3612,		10},
+	{3565,		8},
+	{3507,		6},
+	{3430,		4},
+	{3340,		2},
+	{3236,		0},
+};
+
 static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
 	.init = bcmpmu_init_platform_hw,
@@ -472,15 +510,23 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
+	.num_of_regl = ARRAY_SIZE(bcm59039_regulators),
 	.regulator_init_data = &bcm59039_regulators,
+	.support_fg = 1,
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,
 	.fg_slp_curr_ua = 1000,
-	.chrg_1c_rate = 1000,
+	.fg_factor = 1000,
+	.fg_sns_res = 10,
+	.batt_voltcap_map = &batt_voltcap_map[0],
+	.batt_voltcap_map_len = ARRAY_SIZE(batt_voltcap_map),
+	.batt_impedence = 238,
+	.chrg_1c_rate = 1350,
+	.chrg_eoc = 67,
 	.chrg_zone_map = &chrg_zone[0],
-	.fg_capacity_full = 1000*3600,
+	.fg_capacity_full = 1350*3600,
 	.support_fg = 1,
-	.bc = BCMPMU_BC_BB_BC12,
+	.bc = BCMPMU_BC_PMU_BC12,//BCMPMU_BC_BB_BC12,
 };
 
 static struct i2c_board_info __initdata pmu_info[] =

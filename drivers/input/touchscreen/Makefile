@@ -64,3 +64,7 @@ obj-$(CONFIG_TOUCHSCREEN_WM97XX_ZYLONITE)	+= zylonite-wm97xx.o
 obj-$(CONFIG_TOUCHSCREEN_W90X900)	+= w90p910_ts.o
 obj-$(CONFIG_TOUCHSCREEN_TPS6507X)	+= tps6507x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_EGALAX_I2C)	+= egalax_i2c_ts.o
+obj-$(CONFIG_TOUCHSCREEN_MMS128_COOPERVE)	+= melfas_ts_mms128_tasscooper.o
+obj-$(CONFIG_TOUCHSCREEN_MMS128_TASSCOOPER)	+= mcs8000_download_tasscooper.o mms100_ISC_download_tasscooper.o
+obj-$(CONFIG_TOUCHSCREEN_TMA340_COOPERVE)	+= synaptics_i2c_rmi_tma340_cooperve.o
+obj-$(CONFIG_TOUCHSCREEN_TMA340)	+= synaptics_i2c_rmi_tma340_tassve.o

@@ -221,11 +221,16 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 		[BCM59055_HV6LDO]	= 0x00,
 		[BCM59055_HV7LDO]	= 0x00,
 		[BCM59055_SIMLDO]	= 0x00,
-		[BCM59055_CSR]		= 0x00,
+		[BCM59055_CSR]		= 0x31,
 		[BCM59055_IOSR]		= 0x00,
 		[BCM59055_SDSR]		= 0x00,
 	},
+/*Set default values for SS silicon type*/
+	.csr_nm_volt = 0x14,
+	.csr_lpm_volt = 4,
+	.csr_turbo_volt = 0x14,
 };
+
 
 
 
@@ -299,12 +304,17 @@ static const char *pmu_clients[] = {
 };
 
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
+#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
 	/*
-	 * PMU in Fast mode. Once the Rhea clock changes are in place,
-	 * we will switch to HS mode 3.4Mbps (BSC_BUS_SPEED_HS)
+	 * PMU in High Speed (HS) mode. I2C CLK is 3.25MHz
+	 * derived from 26MHz input clock.
+	 *
+	 * Rhea: PMBSC is always in HS mode, i2c_pdata is not in use.
 	 */
-	/*.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),*/
-	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),
+#else
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
+#endif
 	.pmu_event_cb = bcm590xx_event_callback,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
@@ -668,7 +678,7 @@ static struct mpu_platform_data mpu6050_data={
 		.adapt_num = 2,
 		.bus = EXT_SLAVE_BUS_SECONDARY,
 		.address = 0x38,
-		.orientation = 
+		.orientation =
 			{ 0,1,0,
 			  1,0,0,
 			  0,0,-1},
@@ -868,6 +878,21 @@ static struct resource board_sdio3_resource[] = {
 #endif
 
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
+static struct resource board_sdio3_resource[] = {
+	[0] = {
+		.start = SDIO3_BASE_ADDR,
+		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_NAND,
+		.end = BCM_INT_ID_SDIO_NAND,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+#endif
+
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2XT
 static struct resource board_sdio4_resource[] = {
 	[0] = {
 		.start = SDIO4_BASE_ADDR,
@@ -913,7 +938,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.wifi_gpio = {
 			.reset		= 70,
 			.reg		= -1,
-			.host_wake	= 85,
+			.host_wake	= -1,
 			.shutdown	= -1,
 		},
 		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
@@ -924,25 +949,30 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	},
 #endif
 
+
+
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-	{ /* SDIO4 */
-		.id = 3,
+	{ /* SDIO3 */
+		.id = 2,
 		.data_pullup = 0,
 		.devtype = SDIO_DEV_TYPE_WIFI,
 		.wifi_gpio = {
 			.reset		= 70,
 			.reg		= -1,
-			.host_wake	= 85,
+			.host_wake	= -1,
 			.shutdown	= -1,
 		},
 		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-		.peri_clk_name = "sdio4_clk",
-		.ahb_clk_name = "sdio4_ahb_clk",
-		.sleep_clk_name = "sdio4_sleep_clk",
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 48000000,
 	},
 #endif
+
 };
+
+
 
 static struct platform_device board_sdio1_device = {
 	.name = "sdhci",
@@ -972,8 +1002,8 @@ static struct platform_device board_sdio3_device = {
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-	.resource = board_sdio4_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio4_resource),
+	.resource = board_sdio3_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
 	.dev      = {
 		.platform_data = &board_sdio_param[2],
@@ -1252,7 +1282,7 @@ static int rhea_camera_power(struct device *dev, int on)
 	unsigned int value;
 	struct clk *clock;
 	struct clk *axi_clk;
-	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
+	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -1325,7 +1355,7 @@ static int rhea_camera_power(struct device *dev, int on)
 		/* enable reset gpio */
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 		msleep(1);
-		
+
 		/* enable power down gpio */
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 
