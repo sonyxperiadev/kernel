@@ -1,54 +1,17 @@
-//*********************************************************************
-//
-//	Copyright © 2000-2008 Broadcom Corporation
-//
-//	This program is the proprietary software of Broadcom Corporation
-//	and/or its licensors, and may only be used, duplicated, modified
-//	or distributed pursuant to the terms and conditions of a separate,
-//	written license agreement executed between you and Broadcom (an
-//	"Authorized License").  Except as set forth in an Authorized
-//	License, Broadcom grants no license (express or implied), right
-//	to use, or waiver of any kind with respect to the Software, and
-//	Broadcom expressly reserves all rights in and to the Software and
-//	all intellectual property rights therein.  IF YOU HAVE NO
-//	AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE
-//	IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE
-//	ALL USE OF THE SOFTWARE.
-//
-//	Except as expressly set forth in the Authorized License,
-//
-//	1.	This program, including its structure, sequence and
-//		organization, constitutes the valuable trade secrets
-//		of Broadcom, and you shall use all reasonable efforts
-//		to protect the confidentiality thereof, and to use
-//		this information only in connection with your use
-//		of Broadcom integrated circuit products.
-//
-//	2.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE
-//		IS PROVIDED "AS IS" AND WITH ALL FAULTS AND BROADCOM
-//		MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES,
-//		EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE,
-//		WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY
-//		DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE,
-//		MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A
-//		PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR
-//		COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR
-//		CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE
-//		RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
-//
-//	3.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT
-//		SHALL BROADCOM OR ITS LICENSORS BE LIABLE FOR
-//		(i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR
-//		EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY
-//		WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE
-//		SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE
-//		POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN
-//		EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE
-//		ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE
-//		LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE
-//		OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-//
-//***************************************************************************
+/****************************************************************************
+*
+*     Copyright (c) 2007-2008 Broadcom Corporation
+*
+*   Unless you and Broadcom execute a separate written software license 
+*   agreement governing use of this software, this software is licensed to you 
+*   under the terms of the GNU General Public License version 2, available 
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*
+*   Notwithstanding the above, under no circumstances may you combine this 
+*   software in any way with any other Broadcom software provided under a license 
+*   other than the GPL, without Broadcom's express prior written consent.
+*
+****************************************************************************/
 /**
 *
 *   @file   taskmsgs.h
@@ -232,9 +195,9 @@ typedef enum
 	is ready to be re-powered up. During the modem power-cycle procedure for STK refresh of SIM reset type, the BRCM 
 	platform will automatically re-power up the modem.
 	**/
-//	MSG_POWER_OFF_IND			= MSG_GRP_SYS+0x02,	
+	MSG_POWER_OFF_IND			= MSG_GRP_SYS+0x02,	
 
-	MSG_ROAMING_STATUS			= MSG_GRP_SYS+0x02,
+	MSG_ROAMING_STATUS			= MSG_GRP_SYS+0x03,
 
 	// End of MSG_GRP_SYS (0x0000)
 
@@ -977,6 +940,7 @@ typedef enum
 	MSG_STK_REPORT_SUPP_SVC_STATUS		= MSG_GRP_STK+0x67,	///<Payload type {::StkReportSuppSvcStatus_t}
 	MSG_STK_REPORT_CALL_AOC_STATUS		= MSG_GRP_STK+0x68,
 	MSG_STK_REPORT_CALL_CCM				= MSG_GRP_STK+0x69,
+	MSG_STK_SEND_USER_CONFIRMATION_REQ	= MSG_GRP_STK+0x70,
 
 	// End of MSG_GRP_STK, (0x0800)
 
@@ -1680,6 +1644,9 @@ typedef enum
 
 	MSG_AT_LINE_STATE_IND		= MSG_GRP_INT_ATC+0x36,	///<Payload type {::Boolean}
 
+#ifdef CNEON_COMMON
+	MSG_AT_GLUE_INT_CH_CMD		= MSG_GRP_INT_ATC+0x37,
+#endif
 	MSG_MS_READY_IND			= MSG_GRP_INT_ATC+0x50,	///<Payload type {::MODULE_READY_STATUS_t}
 	MSG_CALL_MONITOR_STATUS		= MSG_GRP_INT_ATC+0x51,	///<Payload type {::UInt8}
 
@@ -2173,8 +2140,12 @@ typedef enum
 	MSG_AT_SETMIC_REQ			= MSG_GRP_INT_ATC+0x5c, 	///<payload type {::UInt32}
 	MSG_AT_GETMIC_REQ			= MSG_GRP_INT_ATC+0x5d, 	///<payload type {::void}
 	MSG_AT_GETMIC_RSP		= MSG_GRP_INT_ATC+0x5e, 	///<payload type {::UInt32}
-	MSG_AT_DUN_CONNECT_REQ		= MSG_GRP_INT_ATC+0x5f, 	///<payload type {::UInt8}
-	MSG_AT_DUN_DISCONNECT_REQ		= MSG_GRP_INT_ATC+0x60, 	///<payload type {::UInt8}
+	MSG_AT_DUN_CONNECT_REQ		= MSG_GRP_INT_ATC+0x5f, 	///<payload type {::AtDUNInfo_t}
+	MSG_AT_DUN_DISCONNECT_REQ		= MSG_GRP_INT_ATC+0x60, 	///<payload type {::AtDUNInfo_t}
+	MSG_AT_FLIGHT_MODE_REQ		= MSG_GRP_INT_ATC+0x61, 	///<payload type {::AtFlightMode_t}
+	MSG_AT_APCOMMAND_REQ			= MSG_GRP_INT_ATC+0x62,	///<Payload type {::AtCmdInfo_t}
+	MSG_AT_ADD_TERMINAL_REQ			= MSG_GRP_INT_ATC+0x63,	///<Payload type {::SerialDeviceID_t}
+	MSG_AT_REMOVE_TERMINAL_REQ			= MSG_GRP_INT_ATC+0x64,	///<Payload type {::SerialDeviceID_t}
 	
 //TASKMSGS_INCLUDE taskmsgs_usb.i
 	//---------------------------------------------------------------
@@ -2208,6 +2179,10 @@ typedef enum
 	MSG_AUDIO_COMP_FILTER_RSP			= MSG_GRP_DEV+0x2E,
 	MSG_AUDIO_CALL_STATUS_IND			= MSG_GRP_DEV+0x2F,
 
+#ifdef CNEON_COMMON
+	MSG_USB_DATA_IND                                = MSG_GRP_DEV+0x2D, /* for USB serial_write data */
+        MSG_NOS_CALLBACK_INJECT                 = MSG_GRP_DEV+0x2E, /* Internal message used for support of NOS callback inject */
+#endif
 	// End of MSG_GRP_DEV, (0x0700)
 
 
@@ -3766,10 +3741,6 @@ typedef enum
 	**/
 	MSG_SIM_RESTRICTED_ACCESS_REQ  = MSG_GRP_CAPI2_GEN_0 + 0xE2,	///<Payload type {CAPI2_SimApi_SubmitRestrictedAccessReq_Req_t}
 	 /** 
-	api is CAPI2_ADCMGR_Start 
-	**/
-	MSG_ADC_START_REQ  = MSG_GRP_CAPI2_GEN_0 + 0xF6,	///<Payload type {::CAPI2_ADCMGR_Start_Req_t}
-	 /** 
 	api is CAPI2_MS_GetSystemRAT 
 	**/
 	MSG_MS_GET_SYSTEM_RAT_REQ  = MSG_GRP_CAPI2_GEN_0 + 0xFA,
@@ -3973,18 +3944,6 @@ typedef enum
 	payload is ::Boolean 
 	**/
 	MSG_PBK_GET_FDN_CHECK_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x12F,	///<Payload type {::Boolean}
-	 /** 
-	api is CAPI2_PMU_Battery_Register 
-	**/
-	MSG_PMU_BATT_LEVEL_REGISTER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x130,	///<Payload type {::CAPI2_PMU_Battery_Register_Req_t}
-	 /** 
-	payload is ::HAL_EM_BATTMGR_ErrorCode_en_t 
-	**/
-	MSG_PMU_BATT_LEVEL_REGISTER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x131,	///<Payload type {::HAL_EM_BATTMGR_ErrorCode_en_t}
-	 /** 
-	payload is ::HAL_EM_BatteryLevel_t 
-	**/
-	MSG_PMU_BATT_LEVEL_IND  = MSG_GRP_CAPI2_GEN_0 + 0x133,	///<Payload type {::HAL_EM_BatteryLevel_t}
 	 /** 
 	api is CAPI2_SmsApi_SendMemAvailInd 
 	**/
@@ -4278,14 +4237,6 @@ typedef enum
 	**/
 	MSG_DIAG_MEASURE_REPORT_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x18D,
 	 /** 
-	api is CAPI2_PMU_BattChargingNotification 
-	**/
-	MSG_PMU_BATT_CHARGING_NOTIFICATION_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x18E,	///<Payload type {::CAPI2_PMU_BattChargingNotification_Req_t}
-	 /** 
-	payload is ::void 
-	**/
-	MSG_PMU_BATT_CHARGING_NOTIFICATION_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x18F,
-	 /** 
 	api is CAPI2_MsDbApi_InitCallCfg 
 	**/
 	MSG_MS_INITCALLCFG_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x190,
@@ -4360,8 +4311,7 @@ typedef enum
 	 /** 
 	api is CAPI2_SmsApi_StartCellBroadcastWithChnlReq 
 	**/
-	//MSG_SMS_CB_START_STOP_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1A6,	///<Payload type {CAPI2_SmsApi_StartCellBroadcastWithChnlReq_Req_t}
-	 MSG_SMS_START_CB_WITHCHNL_REQ = MSG_GRP_CAPI2_GEN_0 + 0x1A6,
+	MSG_SMS_START_CB_WITHCHNL_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1A6,	///<Payload type {CAPI2_SmsApi_StartCellBroadcastWithChnlReq_Req_t}
 	 /** 
 	payload is ::Result_t 
 	**/
@@ -4406,22 +4356,6 @@ typedef enum
 	payload is void 
 	**/
 	MSG_MS_SET_RUA_READY_TIMER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x1B3,
-	 /** 
-	api is CAPI2_LCS_RegisterRrlpDataHandler 
-	**/
-	MSG_LCS_REG_RRLP_HDL_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1B4,	///<Payload type {::CAPI2_LCS_RegisterRrlpDataHandler_Req_t}
-	 /** 
-	payload is ::Result_t 
-	**/
-	MSG_LCS_REG_RRLP_HDL_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x1B5,
-	 /** 
-	api is CAPI2_LCS_RegisterRrcDataHandler 
-	**/
-	MSG_LCS_REG_RRC_HDL_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1BA,	///<Payload type {::CAPI2_LCS_RegisterRrcDataHandler_Req_t}
-	 /** 
-	payload is ::Result_t 
-	**/
-	MSG_LCS_REG_RRC_HDL_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x1BB,
 	 /** 
 	api is CAPI2_CcApi_IsThereEmergencyCall 
 	**/
@@ -4479,9 +4413,9 @@ typedef enum
 	**/
 	MSG_SS_RESETSSALSFLAG_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x1DB,
 	 /** 
-	api is CAPI2_SIMLOCK_GetStatus 
+	api is CAPI2_SimLockApi_GetStatus 
 	**/
-	MSG_SIMLOCK_GET_STATUS_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1DC,	///<Payload type {CAPI2_SIMLOCK_GetStatus_Req_t}
+	MSG_SIMLOCK_GET_STATUS_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1DC,	///<Payload type {CAPI2_SimLockApi_GetStatus_Req_t}
 	 /** 
 	payload is void 
 	**/
@@ -6059,29 +5993,21 @@ typedef enum
 	**/
 	MSG_PDP_GETPDPCONTEXT_CID_LIST_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x393,	///<Payload type {::Result_t}
 	 /** 
-	api is CAPI2_UTIL_ExtractImei 
-	**/
-	MSG_UTIL_GET_IMEI_STR_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x394,
-	 /** 
-	payload is ::void 
-	**/
-	MSG_UTIL_GET_IMEI_STR_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x395,	///<Payload type {::void}
-	 /** 
 	api is CAPI2_SYS_GetBootLoaderVersion 
 	**/
-	MSG_SYSPARAM_BOOTLOADER_VER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x396,	///<Payload type {::CAPI2_SYS_GetBootLoaderVersion_Req_t}
+	MSG_SYSPARAM_BOOTLOADER_VER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x396,	///<Payload type {CAPI2_SYS_GetBootLoaderVersion_Req_t}
 	 /** 
-	payload is ::void 
+	payload is void 
 	**/
-	MSG_SYSPARAM_BOOTLOADER_VER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x397,	///<Payload type {::void}
+	MSG_SYSPARAM_BOOTLOADER_VER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x397,	///<Payload type {void}
 	 /** 
 	api is CAPI2_SYS_GetDSFVersion 
 	**/
-	MSG_SYSPARAM_DSF_VER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x398,	///<Payload type {::CAPI2_SYS_GetDSFVersion_Req_t}
+	MSG_SYSPARAM_DSF_VER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x398,	///<Payload type {CAPI2_SYS_GetDSFVersion_Req_t}
 	 /** 
-	payload is ::void 
+	payload is void 
 	**/
-	MSG_SYSPARAM_DSF_VER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x399,	///<Payload type {::void}
+	MSG_SYSPARAM_DSF_VER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x399,	///<Payload type {void}
 	 /** 
 	api is CAPI2_USimApi_GetUstData 
 	**/
@@ -6269,7 +6195,7 @@ typedef enum
 	**/
 	MSG_SS_RESETCLIENTID_RSP  = MSG_GRP_CAPI2_SS + 0x3D,
 
-	MSG_GRP_CAPI2_SS_END = MSG_GRP_CAPI2_SS + 0x2A,
+	MSG_GRP_CAPI2_SS_END = MSG_GRP_CAPI2_SS + 0xFF,
 
 	 /** 
 	api is CAPI2_SatkApi_GetCachedRootMenuPtr 
@@ -6447,38 +6373,6 @@ typedef enum
 	payload is ::int 
 	**/
 	MSG_LCS_ENCODEASSISTANCEREQ_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x3D5,	///<Payload type {::int}
-	 /** 
-	api is CAPI2_LCS_SendRrlpDataToNetwork 
-	**/
-	MSG_LCS_SEND_RRLP_DATA_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x3D6,	///<Payload type {::CAPI2_LCS_SendRrlpDataToNetwork_Req_t}
-	 /** 
-	payload is ::Result_t 
-	**/
-	MSG_LCS_SEND_RRLP_DATA_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x3D7,
-	 /** 
-	api is CAPI2_LCS_RrcMeasurementReport 
-	**/
-	MSG_LCS_RRC_MEAS_REPORT_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x3D8,	///<Payload type {::CAPI2_LCS_RrcMeasurementReport_Req_t}
-	 /** 
-	payload is ::Result_t 
-	**/
-	MSG_LCS_RRC_MEAS_REPORT_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x3D9,
-	 /** 
-	api is CAPI2_LCS_RrcMeasurementControlFailure 
-	**/
-	MSG_LCS_RRC_MEAS_FAILURE_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x3DA,	///<Payload type {::CAPI2_LCS_RrcMeasurementControlFailure_Req_t}
-	 /** 
-	payload is ::Result_t 
-	**/
-	MSG_LCS_RRC_MEAS_FAILURE_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x3DB,
-	 /** 
-	api is CAPI2_LCS_RrcStatus 
-	**/
-	MSG_LCS_RRC_STATUS_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x3DC,	///<Payload type {::CAPI2_LCS_RrcStatus_Req_t}
-	 /** 
-	payload is ::Result_t 
-	**/
-	MSG_LCS_RRC_STATUS_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x3DD,
 	 /** 
 	api is CAPI2_LCS_FttSyncReq 
 	**/
@@ -6997,7 +6891,15 @@ typedef enum
 	MSG_CAPI2_MSGIDS_END = 0x4FFF,
 //TASKMSGS_INCLUDE taskmsgs_sysrpc.i
 //TASKMSGS_INCLUDE taskmsgs_rtc.i
-
+	//---------------------------------------------------------------
+	// MSG_GRP_RTC, MESSAGE GROUP FOR RTC (0x5000)
+	//---------------------------------------------------------------
+#if defined (RTC_CAL_INCLUDED)
+	MSG_RTC_CAL_REQ						= MSG_GRP_RTC+0x00,
+	MSG_RTC_CAL_IND						= MSG_GRP_RTC+0x01,
+	MSG_RTC_CAL_RSP						= MSG_GRP_RTC+0x02,
+#endif
+	// End of MSG_GRP_RTC, (0x5000)
 	//------------------------------------------------
 	// end of list
 	//-------------------------------------------------
@@ -7270,6 +7172,7 @@ Boolean SYS_RegisterForRemoteClient(CallbackFunc_t* callback);
 void SYS_DefaultRemoteHandler(InterTaskMsg_t* inMsg);
 
 
+
 #ifdef VMF_INCLUDE
 
 //***************************************************************************************
@@ -7299,6 +7202,9 @@ void VccApi_ResetVmfCtx(ClientInfo_t* inClientInfoPtr, UInt8 origVmId);
 
 #define VccApi_ResetVmf(clientInfoPtr) VccApi_ResetVmfCtx(clientInfoPtr, orig_ctx_id);
 
+void VccApi_ResetDataVmf(ClientInfo_t* pClientInfo);
+
+
 //***************************************************************************************
 /**
     Function to Init SIM-Id in clientInfo based on global vm-id
@@ -7314,6 +7220,8 @@ void VccApi_InitSimId(ClientInfo_t* inClientInfoPtr);
 #define VccApi_ActivateVmf(p)
 #define VccApi_ResetVmf(p)
 #define VccApi_InitSimId(p)
+#define VccApi_ResetDataVmf(p)
+
 
 #endif
 

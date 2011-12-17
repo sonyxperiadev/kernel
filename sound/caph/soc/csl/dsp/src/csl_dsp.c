@@ -39,6 +39,7 @@
 #include "csl_vpu.h"
 
 AP_SharedMem_t	*vp_shared_mem;
+extern AP_SharedMem_t   *DSPDRV_GetPhysicalSharedMemoryAddress( void);
 
 static VPUCaptureStatusCB_t VPUCaptureStatusHandler = NULL;
 static VPURenderStatusCB_t VPURenderStatusHandler = NULL;
@@ -151,7 +152,7 @@ static Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 		status_msg->arg2 = (UInt16)p->arg2;
 		status_msg->arg3 = (UInt16)p->arg3;
 #ifdef BRCM_RTOS
-#error
+#else
 		Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
 #endif
 		vp_shared_mem->vp_shared_statusq_out = ( status_out + 1 ) % VP_STATUSQ_SIZE;
@@ -492,6 +493,9 @@ void AP_ProcessStatus(void)
 /*******************************************************************************************/
 UInt32 *AUDIO_Return_IHF_48kHz_buffer_base_address(void)
 {
-   	return(&(vp_shared_mem->shared_aud_out_buf_48k[0][0]));
+     AP_SharedMem_t *ap_shared_mem_ptr;
+     ap_shared_mem_ptr  = DSPDRV_GetPhysicalSharedMemoryAddress();
+
+   	return(&(ap_shared_mem_ptr->shared_aadmac_spkr_low[0]));
 }
 

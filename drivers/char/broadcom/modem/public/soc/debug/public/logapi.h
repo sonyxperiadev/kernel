@@ -136,9 +136,7 @@ FTDI driver needed).
 #define __LOGAPI_H__
 
 #include "mobcom_types.h"
-#ifndef UNDER_LINUX
 #include "string.h"
-#endif
 
 /**
  * @addtogroup LogAPIGroup
@@ -210,6 +208,22 @@ FTDI driver needed).
 #define	LOGID_MINDREADER		287
 #define LOGID_WLAN_GENERIC_DBG	288
 
+#ifdef CNEON_COMMON
+#define LOGID_GLUEAPI_ID1       301
+#define LOGID_GLUEAPI_ID2       302
+#define LOGID_GLUEAPI_ID3       303
+#define LOGID_GLUEAPI_ID4       304
+#define LOGID_GLUEAPI_ID5       305
+#define LOGID_GLUEAPI_ID6       306
+#define LOGID_GLUEAPI_ID7       307
+#define LOGID_GLUEAPI_ID8       308
+#define LOGID_GLUEAPI_ID9       309
+#define LOGID_GLUEAPI_MISC      310
+
+#define LOGID_CHIPSET_ASSERT_LVL0    311
+#define LOGID_CHIPSET_ASSERT_LVL1    312
+#define LOGID_CHIPSET_ASSERT_LVL2    313
+#else
 #define LOGID_GLUEAPI_ID1       301
 #define LOGID_GLUEAPI_ID2       302
 #define LOGID_GLUEAPI_ID3       303
@@ -220,6 +234,8 @@ FTDI driver needed).
 #define LOGID_GLUEAPI_ID8       308
 #define LOGID_GLUEAPI_ID9       309
 #define LOGID_GLUEAPI_ID10      310
+#endif
+
 
 #define	LOGID_ATC_HANDLERS						311
 #define	LOGID_ATC_PARSER						312
@@ -286,7 +302,6 @@ FTDI driver needed).
 #define	LOGID_PERIPHERALS_CAM					357
 #define	LOGID_SOC_CSL_CAM						358
 
-#define	LOGID_CRASH_LOG_DETAIL					512
 #define LOGID_STKAPP                            359
 
 #define	LOGID_SOC_PM_PRM						360
@@ -299,28 +314,177 @@ FTDI driver needed).
 
 #define	LOGID_V3D								366
 
+#define	LOGID_PMU		                		367
+
 #define	LOGID_WARNING							400
 
-#define	LOGID_RTOS				666
+#define LOGID_LTE_GENERAL						401
+#define LOGID_LTE_INIT							402
+#define LOGID_LTE_ASSERT						403
+#define LOGID_LTE_SKL							404
+#define LOGID_LTE_MIMO_MAIN						405
+#define LOGID_LTE_USER_CONTROLLER				406
+#define LOGID_LTE_CLI_MAIN						407
+#define LOGID_LTE_AT_PARSER						408
+#define LOGID_LTE_GEN_COMMAND_PARSER			409
+#define LOGID_LTE_NAS_UE_CLI_SUPPORT			410
+#define LOGID_LTE_CONFIQ_PARSER					411
+#define LOGID_LTE_MOB_CTRL_CLI_SUPP				412
+#define LOGID_LTE_USER_AL						413
+#define LOGID_LTE_NV_MEM_CONT					414
+#define LOGID_LTE_NAM_CAPI						415
+#define LOGID_LTE_EMM_SM						416
+#define LOGID_LTE_NAM							417
+#define LOGID_LTE_PLM							418
+#define LOGID_LTE_ADM							419
+#define LOGID_LTE_SCM							420
+#define LOGID_LTE_TAM							421
+#define LOGID_LTE_ESM							422
+#define LOGID_LTE_CDB							423
+#define LOGID_LTE_USIM_CONT						424
+#define LOGID_LTE_AS_AL							425
+#define LOGID_LTE_SEC_AL						426
+#define LOGID_LTE_CRYPTO						427
+#define LOGID_LTE_ASM							428
+#define LOGID_LTE_ASM_API						429
+#define LOGID_LTE_ASM_COMMON_RAT_API			430
+#define LOGID_LTE_ASM_DYNAMIC_CONFIGS			431
+#define LOGID_LTE_ASM_ENTRY_POINT				432
+#define LOGID_LTE_ASM_MSG_HANDLER				433
+#define LOGID_LTE_UE_ASM_ICM_STATS				434
+#define LOGID_LTE_UE_DYNAMIC_CONFIGS			435
+#define LOGID_LTE_AS_ENTRY_POINT				436
+#define LOGID_LTE_PERF_MEASURE					437
+#define LOGID_LTE_HO_MEASURE					438
+#define LOGID_LTE_CFG							439
+#define LOGID_LTE_RLM							440
+#define LOGID_LTE_RMH							441
+#define LOGID_LTE_SIH							442
+#define LOGID_LTE_ULA							443
+#define LOGID_LTE_ULA_API						444
+#define LOGID_LTE_TRAFFIC						445
+#define LOGID_LTE_PDCP_HEADER					446
+#define LOGID_LTE_PDCP_TX						447
+#define LOGID_LTE_PDCP_RX						448
+#define LOGID_LTE_RLC_HEADER					449
+#define LOGID_LTE_RLC_TX						450
+#define LOGID_LTE_RLC_RX						451
+#define LOGID_LTE_MAC_HH						452
+#define LOGID_LTE_MAC_TX						453
+#define LOGID_LTE_MAC_RX						454
+#define LOGID_LTE_RA							455
+#define LOGID_LTE_PAL							456
+#define LOGID_LTE_HAL							457
+#define LOGID_LTE_SAL							458
+#define LOGID_LTE_RSVL1							459
+#define LOGID_LTE_UE_AS_ICM_STATS				460
+
+/* 461-470 reserved for SCC modules */
+#define LOGID_IMS_SUE_APP						461
+#define LOGID_IMS_SAC_APP						462
+#define LOGID_IMS_SMS_APP						463
+#define LOGID_IMS_VOLTE_APP						464
+#define LOGID_IMS_SUE_ENGINE					465
+#define LOGID_IMS_SAC_ENGINE					466
+#define LOGID_IMS_SMS_ENGINE					467
+#define LOGID_IMS_VOLTE_ENGINE					468
+#define LOGID_IMS_PDN_MGR						469
+#define LOGID_KERNEL_PRINT						470
+
+#define LOGID_LTE_CFG_CRITICAL					501
+#define LOGID_LTE_CFG_MAJOR						502
+#define LOGID_LTE_CFG_MINOR						503
+#define LOGID_LTE_ASM_CRITICAL					504
+#define LOGID_LTE_ASM_MAJOR						505
+#define LOGID_LTE_ASM_MINOR						506
+#define LOGID_LTE_RLM_CRITICAL					507
+#define LOGID_LTE_RLM_MAJOR						508
+#define LOGID_LTE_RLM_MINOR						509
+#define LOGID_LTE_RMH_CRITICAL					510
+#define LOGID_LTE_RMH_MAJOR						511
+#define LOGID_LTE_RMH_MINOR						512
+#define LOGID_LTE_SIH_CRITICAL					513
+#define LOGID_LTE_SIH_MAJOR						514
+#define LOGID_LTE_SIH_MINOR						515
+
+#define LOGID_LTE_PDCP_TX_CRITICAL				516
+#define LOGID_LTE_PDCP_RX_CRITICAL				517
+#define LOGID_LTE_RLC_TX_CRITICAL				518
+#define LOGID_LTE_RLC_RX_CRITICAL				519
+#define LOGID_LTE_MAC_TX_CRITICAL				520
+#define LOGID_LTE_MAC_RX_CRITICAL				521
+#define LOGID_LTE_MAC_RA_CRITICAL				522
+#define LOGID_LTE_MAC_HH_CRITICAL				523
+#define LOGID_LTE_NAM_CRITICAL					524
+#define LOGID_LTE_PLM_CRITICAL					525
+#define LOGID_LTE_ADM_CRITICAL					526
+#define LOGID_LTE_TAM_CRITICAL					527
+#define LOGID_LTE_SCM_CRITICAL					528
+#define LOGID_LTE_ESM_CRITICAL					529
+#define LOGID_LTE_TCM_CRITICAL					530
+#define LOGID_LTE_ULA_CRITICAL					531
+#define LOGID_LTE_NAS_CRITICAL					532
+
+#define LOGID_LTE_PDCP_TX_MAJOR					543
+#define LOGID_LTE_PDCP_RX_MAJOR					544
+#define LOGID_LTE_RLC_TX_MAJOR					545
+#define LOGID_LTE_RLC_RX_MAJOR					546
+#define LOGID_LTE_MAC_TX_MAJOR					547
+#define LOGID_LTE_MAC_RX_MAJOR					548
+#define LOGID_LTE_MAC_RA_MAJOR					549
+#define LOGID_LTE_MAC_HH_MAJOR					550
+#define LOGID_LTE_NAM_MAJOR						551
+#define LOGID_LTE_PLM_MAJOR						552
+#define LOGID_LTE_ADM_MAJOR						553
+#define LOGID_LTE_TAM_MAJOR						554
+#define LOGID_LTE_SCM_MAJOR						555
+#define LOGID_LTE_ESM_MAJOR						556
+#define LOGID_LTE_TCM_MAJOR						557
+#define LOGID_LTE_ULA_MAJOR						558
+#define LOGID_LTE_NAS_MAJOR						559
+
+#define LOGID_LTE_PDCP_TX_MINOR					571
+#define LOGID_LTE_PDCP_RX_MINOR					572
+#define LOGID_LTE_RLC_TX_MINOR					573
+#define LOGID_LTE_RLC_RX_MINOR					574
+#define LOGID_LTE_MAC_TX_MINOR					575
+#define LOGID_LTE_MAC_RX_MINOR					576
+#define LOGID_LTE_MAC_RA_MINOR					577
+#define LOGID_LTE_MAC_HH_MINOR					578
+#define LOGID_LTE_NAM_MINOR						579
+#define LOGID_LTE_PLM_MINOR						580
+#define LOGID_LTE_ADM_MINOR						581
+#define LOGID_LTE_TAM_MINOR						582
+#define LOGID_LTE_SCM_MINOR						583
+#define LOGID_LTE_ESM_MINOR						584
+#define LOGID_LTE_TCM_MINOR						585
+#define LOGID_LTE_ULA_MINOR						586
+#define LOGID_LTE_NAS_MINOR						587
+
+#define	LOGID_LTE_GROUP250						650
+
+#define	LOGID_RTOS								666
 
 // This logging ID is used when it is needed to log only one kind of messages
 // No logging code should use this ID unconditionally, because it would void above purpose.
 // The logging code using this ID should be turned on/off by, e.g., an AT command (default off)
 // Hui Luo, 6/18/09
-#define	LOGID_EXCLUSIVE			777
+#define	LOGID_EXCLUSIVE							777
 
-#define	LOGID_PROFILING			888
+#define	LOGID_PROFILING							888
 
 /// last logging id that would be used by Broadcom platform
 /// the numbers after this are all for MMI/application use
-#define LAST_RESERVED_ID		1023
+#define LAST_RESERVED_ID						1023
 
-#define	PSEUDO_LOGID_OUTPUT		0xFFFF
-#define	PSEUDO_LOGID_CUSTOMER	0xFFFE
-#define	PSEUDO_LOGID_CP			0xFFFD
-#define	PSEUDO_LOGID_AP			0xFFFC
-#define	PSEUDO_LOGID_LOGCTRL	0xFFFB
+#define	PSEUDO_LOGID_OUTPUT						0xFFFF
+#define	PSEUDO_LOGID_CUSTOMER					0xFFFE
+#define	PSEUDO_LOGID_CP							0xFFFD
+#define	PSEUDO_LOGID_AP							0xFFFC
+#define	PSEUDO_LOGID_LOGCTRL					0xFFFB
 	
+#include "log_sig_code.h"
+
 //#ifdef WIN32
 //#else
 typedef struct
@@ -611,6 +775,33 @@ int	Log_DebugPrintf(UInt16 logID, char* fmt, ...);
 
 //***************************************************************************************
 /**
+    Function to log a binary logging message
+	@param		log_id (in) logic id controlling whether this binary logging is generated
+	@param		sig_code (in) binary logging code
+	@param		*ptr (in) starting address of the binary logging content
+	@param		*ptr_size (in) size of the binary logging content, in number of bytes
+	@note
+**/	
+
+void Log_BinaryLogging(UInt16 log_id, UInt32 sig_code, void *ptr, UInt32 ptr_size);
+void Log_BinaryLoggingUncompressed(UInt16 log_id, UInt32 sig_code, void *ptr, UInt32 ptr_size);
+
+//***************************************************************************************
+/**
+    Function to log a binary logging message described by a link list
+	@param		sig_code (in) binary logging code
+	@param		*link_list (in) starting address of a link list
+	@param		list_size_size (in) size of the link list, in number of list items
+	@note
+	This function is provided to assist Log_BinaryLogging() in case the binary logging is
+	assembled from different memories, where a link list can avoid unnecessary memcpy.
+**/	
+
+void Log_BinaryBlocks(UInt16 log_id, UInt32 sig_code, log_link_list_t* link_list, UInt32 list_size_size);
+void Log_BinaryBlocksUncompressed(UInt16 log_id, UInt32 sig_code, log_link_list_t* link_list, UInt32 list_size_size);
+
+//***************************************************************************************
+/**
     Function to log a binary signal
 	@param		sig_code (in) binary signal code, the high 16 bits are logging ID/receiver
 	@param		*ptr (in) starting address of the binary signal content
@@ -677,6 +868,71 @@ void Log_DebugLinkListUncompressed(UInt32 sig_code, log_link_list_t* link_list, 
 
 //***************************************************************************************
 /**
+    Function to log a low-level logging message in a binary signal
+	@note
+	This group of functions are provided to assist Log_DebugSignal() in case it is needed
+	to group many low-level, simple "Tag = Value/Array" logging messages inside a binary
+	signal in order to reduce MTT framing overhead.
+
+	In the group, a "Tag=Value/Array" logging message is packed as one of the following formats
+		TagType(4 bit) + TagID(11-12 bit) + Value(size determined by TagType)
+		TagType(4 bit) + TagTypeExt(4 bit) + TagID(15-16 bit) + Value/Array(size determined by TagTypeExt)
+
+	In details, the following TagType and TagTypeExt are supported
+		0001 + TagID(11 bit) + 1-bit Value							// carried out by Log_Grouped1bitValue()
+		0010 + TagID(12 bit) + 8-bit Value							// carried out by Log_Grouped8bitValue()
+		0100 + TagID(12 bit) + 16-bit Value							// carried out by Log_Grouped16bitValue()
+		1000 + TagID(12 bit) + 32-bit Value							// carried out by Log_Grouped32bitValue()
+		0011 + 0001 + TagID(15 bit) + 1-bit Value					// carried out by Log_Grouped1bitValue()
+		0011 + 0010 + TagID(16 bit) + 8-bit Value					// carried out by Log_Grouped8bitValue()
+		0011 + 0100 + TagID(16 bit) + 16-bit Value					// carried out by Log_Grouped16bitValue()
+		0011 + 1000 + TagID(16 bit) + 32-bit Value					// carried out by Log_Grouped32bitValue()
+		0011 + 0011 + TagID(16 bit) + Length(8 bit) + 8-bit Array	// carried out by Log_Grouped8bitArray()
+		0011 + 0101 + TagID(16 bit) + Length(8 bit) + 16-bit Array	// carried out by Log_Grouped16bitArray()
+		0011 + 1001 + TagID(16 bit) + Length(8 bit) + 32-bit Array	// carried out by Log_Grouped32bitArray()
+		0011 + 0111 + TagID(16 bit) + ASCIIZ string					// carried out by Log_GroupedString()
+
+	The accumulated logging messages are sent to logging circular buffer using Log_BinaryLogging() when any of
+	the following conditions is met
+	(1)	The accumulated size of "Tag=Value" logging messages exceeds 1kB
+	(2) The time threshold is no longer met (default 0, meaning time stamps must be identical, i.e., within 1ms)
+	(3) By Log_FlushGroup().
+**/	
+
+#define		LLG_LOG_TAG_TYPE_1BIT_VALUE			1
+#define		LLG_LOG_TAG_TYPE_8BIT_VALUE			2
+#define		LLG_LOG_TAG_TYPE_16BIT_VALUE		4
+#define		LLG_LOG_TAG_TYPE_32BIT_VALUE		8
+
+#define		LLG_LOG_TAG_TYPE_EXT_1BIT_VALUE		0x31
+#define		LLG_LOG_TAG_TYPE_EXT_8BIT_VALUE		0x32
+#define		LLG_LOG_TAG_TYPE_EXT_16BIT_VALUE	0x34
+#define		LLG_LOG_TAG_TYPE_EXT_32BIT_VALUE	0x38
+#define		LLG_LOG_TAG_TYPE_EXT_8BIT_ARRAY		0x33
+#define		LLG_LOG_TAG_TYPE_EXT_16BIT_ARRAY	0x35
+#define		LLG_LOG_TAG_TYPE_EXT_32BIT_ARRAY	0x39
+#define		LLG_LOG_TAG_TYPE_EXT_ASCIIZ			0x37
+
+#define		LLG_LOG_TAG_TIMESTAMP				0	// reserved tag ID for 32bit time stamp as first LLG log in a grouped binary logging
+
+void Log_Grouped1bitValue	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt8 value);
+void Log_Grouped8bitValue	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt8 value);
+void Log_Grouped16bitValue	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt16 value);
+void Log_Grouped32bitValue	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt32 value);
+void Log_Grouped8bitArray	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt8* array, UInt8 size);
+void Log_Grouped16bitArray	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt16* array, UInt8 size);
+void Log_Grouped32bitArray	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt32* array, UInt8 size);
+void Log_GroupedString		(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, char* asciiz);
+
+void Log_FlushGroup(UInt32 sig_code);
+void Log_SetGroupTimeThreshold(UInt32 sig_code, UInt32 time_threshold);
+UInt32 Log_GetGroupTimeThreshold(UInt32 sig_code);
+void Log_SetGroupSizeThreshold(UInt32 sig_code, UInt32 size_threshold);
+UInt32 Log_GetGroupSizeThreshold(UInt32 sig_code);
+
+
+//***************************************************************************************
+/**
     Function to select specified logging format
 	@param		logFormat (in) Format can be ASCII, MOBILE ANALYZER, or BINARY
 **/	
@@ -707,6 +963,17 @@ const char* Log_GetLogIdName(UInt16 logID);
 
 void Log_OutputStatistics(void);
 
+
+#ifdef CNEON_COMMON
+const char* Log_GetLogIdName(UInt16 logID);
+
+//***************************************************************************************
+/**
+    Function to output logging statistics in log file
+**/	
+
+void Log_OutputStatistics(void);
+#endif
 /** @} */
 
 #endif

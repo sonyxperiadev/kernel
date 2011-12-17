@@ -16,7 +16,12 @@
 #ifndef _BCM_FUSE_SYSPARM_CIB_H_
 #define _BCM_FUSE_SYSPARM_CIB_H_
 
+#include "audio_consts.h"  //to get the two constants.
+
+#ifndef _RHEA_
 #define _RHEA_
+#endif
+
 #define SYSPARM_INDEX_READY_INDICATOR   0x5059504D	
 #define MAX_SYSPARM_NAME_SIZE   128
 
@@ -86,6 +91,11 @@
 
 /** audio related defines */
 #define AUDIO_MAGIC_SIZE		16
+
+//#define	AUDIO_MODE_NUMBER		9	///< Up to 9 Audio Profiles (modes) after 213x1
+//#define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*2)
+
+#define	AUDIO_5BAND_EQ_MODE_NUMBER		6	///< Up to 6 Audio EQ Profiles (modes)
 
 #define DSP_SUBBAND_COMPANDER_FIR_TAP 11 ///<11 taps
 #define DSP_SUBBAND_NLP_FREQ_BINS_WB 24 ///<24 freq bins
@@ -206,6 +216,7 @@ typedef	struct
 typedef struct
 {
 	UInt8 audio_parm_magic[AUDIO_MAGIC_SIZE];
+	UInt32 audio_param_address;
 	UInt16 audio_channel;
 	UInt16 speaker_pga;  //level, index
 	UInt16 mic_pga;      //level, index
@@ -249,10 +260,6 @@ typedef struct
 	UInt16	expander_alpha;
 	UInt16	expander_beta;
 	UInt16	expander_upper_limit;
-	UInt16	expander_b;
-	UInt16	expander_c;
-	UInt16	expander_c_div_b;
-	UInt16	expander_inv_b;
 	UInt16	expander_flag_sidetone ;
 	UInt16	expander_alpha_sidetone;
 	UInt16	expander_beta_sidetone;
@@ -264,10 +271,6 @@ typedef struct
 	UInt16	expander_alpha_ul;
 	UInt16	expander_beta_ul;
 	UInt16	expander_upper_limit_ul;
-	UInt16	expander_b_ul;
-	UInt16	expander_c_ul;
-	UInt16	expander_c_div_b_ul;
-	UInt16	expander_inv_b_ul;
 	UInt16	compressor_gain_ul;
 	UInt16	compressor_alpha_ul;
 	UInt16	compressor_beta_ul;
@@ -283,6 +286,7 @@ typedef struct
 
 	UInt16 voice_volume_max;  //in dB.
 	UInt16 voice_volume_init; //in dB.
+	Int32 dsp_voice_vol_tbl[NUM_OF_ENTRY_IN_DSP_VOICE_VOLUME_TABLE]; //in dB.
 
 	UInt16 sidetone_output_gain;
 	UInt16 sidetone_biquad_scale_factor;
@@ -324,7 +328,7 @@ typedef struct
 	UInt16 echo_cancel_mic2_output_gain;
 	UInt16 echo_mic2_feed_forward_gain;
 
-#if defined(_RHEA_) || defined(_SAMOA_)	
+#if defined(_RHEA_)	
 	UInt16 amic_dga_coarse_gain;
 	UInt16 amic_dga_fine_gain;
 	UInt16 dmic1_dga_coarse_gain;
@@ -349,21 +353,21 @@ typedef struct
 
 	UInt16 voice_mic1_biquad_num;
 	Int16 voice_mic1_scale_input[NUM_OF_MIC_EQ_BIQUAD];
-	Int32 voice_mic1_scale_output;	
+	Int16 voice_mic1_scale_output;	
 	Int32 voice_mic1_eq[NUM_OF_MIC_EQ_BIQUAD*COEF_NUM_OF_EACH_EQ_BIQUAD];
 	UInt16 voice_mic1_hpf_enable;
 	UInt16 voice_mic1_hpf_cutoff_freq;
 	
 	UInt16 voice_mic2_biquad_num;
 	Int16 voice_mic2_scale_input[NUM_OF_MIC_EQ_BIQUAD];	
-	Int32 voice_mic2_scale_output;	
+	Int16 voice_mic2_scale_output;	
 	Int32 voice_mic2_eq[NUM_OF_MIC_EQ_BIQUAD*COEF_NUM_OF_EACH_EQ_BIQUAD];
 	UInt16 voice_mic2_hpf_enable;
 	UInt16 voice_mic2_hpf_cutoff_freq;
 	
 	UInt16 voice_speaker_biquad_num;
 	Int16 voice_speaker_scale_input[NUM_OF_SPEAKER_EQ_BIQUAD];	
-	Int32 voice_speaker_scale_output;	
+	Int16 voice_speaker_scale_output;	
 	Int32 voice_speaker_eq[NUM_OF_SPEAKER_EQ_BIQUAD*COEF_NUM_OF_EACH_EQ_BIQUAD];	
 	UInt16 voice_speaker_hpf_enable;
 	UInt16 voice_speaker_hpf_cutoff_freq;
@@ -382,10 +386,12 @@ typedef struct
 	UInt16 echo_path_change_detection_threshold;				//Used in echo path change detection
 	Smart_Compressor_t smart_compressor;    				//smart compressor
 } SysAudioParm_t;
+
 typedef struct
 {
 	UInt32 treq_biquad_num;
 	UInt32 treq_coef[12*10];	
+	Int32 fm_radio_digital_vol[NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME]; //in mB (0.01 dB).
 } SysIndMultimediaAudioParm_t;
 
 UInt16 SYSPARM_GetLogFormat(void);

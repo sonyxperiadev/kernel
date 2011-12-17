@@ -27,9 +27,9 @@
 /** @{ */
 #ifndef UNDER_LINUX
 #define _BSDTYPES_DEFINED
-typedef unsigned char u_char;
-typedef unsigned short u_short;
-typedef unsigned long u_long;
+typedef unsigned char      u_char;
+typedef unsigned short     u_short;
+typedef unsigned long      u_long;
 
 typedef unsigned char      UInt8;	    ///< Unsigned character(8 bits Wide)
 typedef unsigned short     UInt16;	    ///< Unsigned Short(16 bits wide)

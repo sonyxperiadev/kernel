@@ -484,6 +484,14 @@ typedef enum
     AMR_WB_TX_NO_DATA
 } VP_TXFrameType_AMR_WB_t;
 
+typedef enum
+{
+	ACQ_MODE_DISABLE = 0,
+    ACQ_MODE_BEST_SNR,
+    ACQ_MODE_FIX_BSIC,
+    ACQ_MODE_SNR_THR,
+    NUM_MODE_SCH_ACQ
+} SCH_ACQ_Mode_t;
 
 #ifdef MSP	// MSP
 #if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR))

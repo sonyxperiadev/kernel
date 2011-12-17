@@ -81,6 +81,11 @@
 
 #define NUM_OF_8K_SAMP_PER_INT0_INT     8       // Number of 8kHz samples per INT0 interrupt (for 16kHz * 2)
                                                 // Should be same as in hwregs.inc
+#define NUM_OF_48K_SAMP_PER_INT0_INT    (3*2*8)   // Number of 48kHz samples per INT0 interrupt (for 16kHz * 2)
+                                                // Should be same as in hwregs.inc
+#define NUM_OF_48K_SAMP_PER_LEG_INT0_INT (3)    // Number of 48kHz samples per INT0 interrupt (for 16kHz * 2)
+                                                // Should be same as in hwregs.inc
+
 #define DJB_BUFFER_SIZE     			600		// 600 words ~ 300ms
 
 #if defined(_RHEA_)||defined(_HERA_)||defined(_SAMOA_)
@@ -2394,8 +2399,8 @@ EXTERN UInt32 shared_aadmac_sec_mic_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]         
  * \note The order of the buffers below is important. First should be the low buffer followed by
  *       the high buffer.
  */
-EXTERN UInt32 shared_aadmac_spkr_low[NUM_OF_8K_SAMP_PER_INT0_INT*2]                   AP_SHARED_SEC_GEN_AUDIO;
-EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]                  AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_aadmac_spkr_low[NUM_OF_48K_SAMP_PER_INT0_INT*2]                   AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_48K_SAMP_PER_INT0_INT*2]                  AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
