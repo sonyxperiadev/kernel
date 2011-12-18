@@ -1231,31 +1231,9 @@ static void __init rhea_berri_reserve(void)
 	board_common_reserve();
 }
 
-static void enable_smi_display_clks(void)
-{
-	struct clk *smi_axi;
-	struct clk *mm_dma;
-	struct clk *smi;
-
-	smi_axi = clk_get (NULL, "smi_axi_clk");
-	mm_dma = clk_get (NULL, "mm_dma_axi_clk");
-
-	smi = clk_get (NULL, "smi_clk");
-	BUG_ON (!smi_axi || !smi || !mm_dma);
-
-
-	clk_set_rate (smi, 250000000);
-
-	clk_enable (smi_axi);
-	clk_enable (smi);
-	clk_enable(mm_dma);
-}
-
 /* All Rhea Ray specific devices */
 static void __init rhea_berri_add_devices(void)
 {
-	enable_smi_display_clks();
-
 #ifdef CONFIG_KEYBOARD_BCM
 	bcm_kp_device.dev.platform_data = &bcm_keypad_data;
 #endif
