@@ -53,6 +53,50 @@ typedef enum
   AUDCTRL_SSP_I2S
 } AUDCTRL_SSP_BUS_e;
 
+
+typedef enum
+{
+  AUDCTRL_HW_READ_GAIN,
+  AUDCTRL_HW_WRITE_GAIN,
+  AUDCTRL_HW_READ_REG,
+  AUDCTRL_HW_WRITE_REG
+} AUDCTRL_HW_ACCESS_TYPE_en_t;
+
+typedef enum
+{
+  AUDCTRL_EP_MIX_IN_GAIN,  //0
+  AUDCTRL_EP_MIX_BITSEL_GAIN,
+  AUDCTRL_EP_MIX_FINE_GAIN,
+  AUDCTRL_IHF_MIX_IN_GAIN,
+  AUDCTRL_IHF_MIX_BITSEL_GAIN,
+  AUDCTRL_IHF_MIX_FINE_GAIN,  //5
+  AUDCTRL_HS_LEFT_MIX_IN_GAIN,
+  AUDCTRL_HS_LEFT_MIX_BITSEL_GAIN,
+  AUDCTRL_HS_LEFT_MIX_FINE_GAIN,
+  AUDCTRL_HS_RIGHT_MIX_IN_GAIN,
+  AUDCTRL_HS_RIGHT_MIX_BITSEL_GAIN,  //10
+  AUDCTRL_HS_RIGHT_MIX_FINE_GAIN,
+
+  AUDCTRL_PMU_HS_RIGHT_GAIN,  //12
+  AUDCTRL_PMU_HS_LEFT_GAIN,
+  AUDCTRL_PMU_IHF_GAIN,
+  AUDCTRL_PMU_HIGH_GAIN_MODE,  //15
+
+  AUDCTRL_SIDETONE_ENABLE,
+  AUDCTRL_SIDETONE_GAIN,
+
+  AUDCTRL_ANA_MIC_PGA=100,
+  AUDCTRL_DIGI_MIC1_COARSE_GAIN,
+  AUDCTRL_DIGI_MIC1_FINE_GAIN,
+  AUDCTRL_DIGI_MIC2_COARSE_GAIN,
+  AUDCTRL_DIGI_MIC2_FINE_GAIN,
+  AUDCTRL_DIGI_MIC3_COARSE_GAIN,  //105
+  AUDCTRL_DIGI_MIC3_FINE_GAIN,
+  AUDCTRL_DIGI_MIC4_COARSE_GAIN,
+  AUDCTRL_DIGI_MIC4_FINE_GAIN,
+
+} AUDCTRL_GAIN_POINT_en_t;
+
 /**
 *  @brief  This function is the Init entry point for Audio Controller
 *
@@ -659,6 +703,19 @@ void AUDCTRL_SetIHFmode (Boolean stIHF);
 ****************************************************************************/
 void  AUDCTRL_SetBTMode(Boolean mode);
 
+/********************************************************************
+*  @brief  Hardware register access fucntion
+*
+*  @param  
+*
+*  @return  int
+*
+****************************************************************************/
+int AUDCTRL_HardwareControl( AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
+		int arg1,
+		int arg2,
+		int arg3
+		);
 
 void SetGainOnExternalAmp_mB(AUDIO_SINK_Enum_t speaker, int gain_mB, int left_right);
 
@@ -694,6 +751,5 @@ CSL_CAPH_DEVICE_e getDeviceFromSrc(AUDIO_SOURCE_Enum_t source);
 ****************************************************************************/
 
 CSL_CAPH_DEVICE_e getDeviceFromSink(AUDIO_SINK_Enum_t sink);
-
 
 #endif //#define __AUDIO_CONTROLLER_H__

@@ -960,7 +960,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			break;
 
 		case CTL_FUNCTION_VOL:
-			BCM_AUDIO_DEBUG("CTL_FUNCTION_VOL stream=%d vol0=%d vol1=%d\n", stream, ucontrol->value.integer.value[0], ucontrol->value.integer.value[1]);		
+			BCM_AUDIO_DEBUG("CTL_FUNCTION_VOL stream=%d vol0=%ld vol1=%ld\n", stream, ucontrol->value.integer.value[0], ucontrol->value.integer.value[1]);		
 
 			parm_vol.stream = (stream - 1);
 				
@@ -1074,12 +1074,18 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				}
 			}
 			break;
+
 		case CTL_FUNCTION_HW_CTL:
 			BCM_AUDIO_DEBUG("CTL_FUNCTION_HW_CTL parm1=%d, parm2=%d, param3=%d,param4=%d\n", (int)ucontrol->value.integer.value[0],(int)ucontrol->value.integer.value[1], \
 												(int)ucontrol->value.integer.value[2],(int)ucontrol->value.integer.value[3]);
 
-			//call the controller API to read/write to HW register - AUDCTRL_HardwareControl(()
+			AUDCTRL_HardwareControl( (int)ucontrol->value.integer.value[0],
+					(int)ucontrol->value.integer.value[1],
+					(int)ucontrol->value.integer.value[2],
+					(int)ucontrol->value.integer.value[3]
+					);
 			break;
+
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
 			break;

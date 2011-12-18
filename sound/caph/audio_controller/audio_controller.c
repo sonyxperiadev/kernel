@@ -2465,6 +2465,136 @@ void  AUDCTRL_SetBTMode(Boolean mode)
 	 csl_caph_hwctrl_SetBTMode(mode);
 }
 
+/********************************************************************
+*  @brief  Hardware register access fucntion
+*
+*  @param  
+*
+*  @return  int
+* note  alsa_amixer cset name=HW-CTL 1 0 100 0  (set EP_MIX_IN_GAIN to 100 mB, 1 dB)
+*         alsa_amixer cset name=HW-CTL 1 1 2400 0  (set EP_MIX_BITSEL_GAIN to 24 dB)
+*         alsa_amixer cset name=HW-CTL 1 2 -600 0  (set EP_MIX_FINE_GAIN to -6 dB)
+*
+****************************************************************************/
+int	AUDCTRL_HardwareControl( AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
+			int arg1,
+			int arg2,
+			int arg3
+			)
+{
+  PMU_AudioGainMapping_t pmu_gain;
+  CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
+  //CSL_CAPH_HWConfig_Table_t *path = NULL;
+  //path = &HWConfig_Table[ VOICECALL_pathID - 1 ]; 
+
+  csl_caph_ControlHWClock(TRUE);
+  
+  switch ( access_type )
+  {
+  case AUDCTRL_HW_WRITE_GAIN:
+  
+    //arg2 is gain in milli Bel
+    switch(arg1)
+    {
+    case AUDCTRL_EP_MIX_IN_GAIN:
+      outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
+      //csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, arg2, arg2);
+	  csl_caph_srcmixer_set_mix_all_in_gain( outChnl, arg2, arg2);
+      break;
+
+    case AUDCTRL_EP_MIX_BITSEL_GAIN:
+      outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
+	  csl_caph_srcmixer_set_mix_out_bit_select(outChnl, arg2/600);
+      break;
+
+    case AUDCTRL_EP_MIX_FINE_GAIN:
+      outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
+      csl_caph_srcmixer_set_mix_out_gain( outChnl, arg2 );
+      break;
+      
+    case AUDCTRL_IHF_MIX_IN_GAIN:
+      //outChnl = (CSL_CAPH_SRCM_STEREO_CH2_R | CSL_CAPH_SRCM_STEREO_CH2_L);
+      outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;
+      //csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, arg2, arg2);
+      csl_caph_srcmixer_set_mix_all_in_gain( outChnl, arg2, arg2);
+      break;
+      
+    case AUDCTRL_IHF_MIX_BITSEL_GAIN:
+      //outChnl = (CSL_CAPH_SRCM_STEREO_CH2_R | CSL_CAPH_SRCM_STEREO_CH2_L);
+      outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;
+      csl_caph_srcmixer_set_mix_out_bit_select(outChnl, arg2/600);
+      break;
+      
+    case AUDCTRL_IHF_MIX_FINE_GAIN:
+      //outChnl = (CSL_CAPH_SRCM_STEREO_CH2_R | CSL_CAPH_SRCM_STEREO_CH2_L);
+      outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;
+      csl_caph_srcmixer_set_mix_out_gain( outChnl, arg2 );
+      break;
+      
+    case AUDCTRL_HS_LEFT_MIX_IN_GAIN:
+      outChnl = CSL_CAPH_SRCM_STEREO_CH1_L;
+	  //csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, arg2, arg2);
+      csl_caph_srcmixer_set_mix_all_in_gain( outChnl, arg2, arg2);
+      break;
+      
+    case AUDCTRL_HS_LEFT_MIX_BITSEL_GAIN:
+      outChnl = CSL_CAPH_SRCM_STEREO_CH1_L;
+      csl_caph_srcmixer_set_mix_out_bit_select(outChnl, arg2/600);
+      break;
+      
+    case AUDCTRL_HS_LEFT_MIX_FINE_GAIN:
+      outChnl = CSL_CAPH_SRCM_STEREO_CH1_L;
+      csl_caph_srcmixer_set_mix_out_gain( outChnl, arg2 );
+      break;
+      
+    case AUDCTRL_HS_RIGHT_MIX_IN_GAIN:
+      outChnl = CSL_CAPH_SRCM_STEREO_CH1_R;
+      //csl_caph_srcmixer_set_mix_in_gain( path->srcmRoute[0][0].inChnl, outChnl, arg2, arg2);
+      csl_caph_srcmixer_set_mix_all_in_gain( outChnl, arg2, arg2);
+      break;
+      
+    case AUDCTRL_HS_RIGHT_MIX_BITSEL_GAIN:
+      outChnl = CSL_CAPH_SRCM_STEREO_CH1_R;
+      csl_caph_srcmixer_set_mix_out_bit_select(outChnl, arg2/600);
+      break;
+      
+    case AUDCTRL_HS_RIGHT_MIX_FINE_GAIN:
+      outChnl = CSL_CAPH_SRCM_STEREO_CH1_R;
+      csl_caph_srcmixer_set_mix_out_gain( outChnl, arg2 );
+	  break;
+	  
+    case AUDCTRL_PMU_HS_RIGHT_GAIN:
+      pmu_gain = map2pmu_hs_gain( arg2 );  //from mB to pmu gain enum
+      AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_RIGHT, pmu_gain.PMU_gain_enum );
+      break;
+      
+    case AUDCTRL_PMU_HS_LEFT_GAIN:
+      pmu_gain = map2pmu_hs_gain( arg2 );  //from mB to pmu gain enum
+      AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_LEFT, pmu_gain.PMU_gain_enum );
+      break;
+      
+    case AUDCTRL_PMU_IHF_GAIN:
+      pmu_gain = map2pmu_ihf_gain( arg2 );   //from mB to pmu gain enum
+      AUDIO_PMU_IHF_SET_GAIN( pmu_gain.PMU_gain_enum );
+      break;
+      
+    case AUDCTRL_PMU_HIGH_GAIN_MODE:
+      //bcmpmu_ihf_gain_shift( (Boolean)arg2 );
+      break;
+
+    default:
+      break;
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  return 0;
+}
+
+
 //============================================================================
 //
 // Function Name: SetGainOnExternalAmp_mB
