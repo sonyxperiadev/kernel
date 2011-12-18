@@ -71,6 +71,16 @@ int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 	smi = clk_get (NULL, "smi_clk");
 	BUG_ON (!smi_axi || !smi || !mm_dma_axi);
 
+	if (clk_set_rate(smi, 250000000)) {
+		printk(KERN_ERR "Failed to set the SMI peri clock to 250MHZ");
+		return -EIO;
+	}
+
+	if (clk_enable(smi)) {
+		printk(KERN_ERR "Failed to enable the SMI peri clock");
+		return -EIO;
+	}
+
 	if (clk_enable (smi_axi)) {
 		printk(KERN_ERR "Failed to enable the SMI bus clock");
 		return -EIO;
@@ -81,15 +91,6 @@ int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 		return -EIO;
 	}
 
-	if (clk_set_rate(smi, 250000000)) {
-		printk(KERN_ERR "Failed to set the SMI peri clock to 250MHZ");
-		return -EIO;
-	}
-
-	if (clk_enable(smi)) {
-		printk(KERN_ERR "Failed to enable the SMI peri clock");
-		return -EIO;
-	}
 	return 0;
 }
 

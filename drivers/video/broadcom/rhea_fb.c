@@ -157,7 +157,7 @@ static inline void rhea_clock_start(struct rhea_fb *fb)
 static inline void rhea_clock_stop(struct rhea_fb *fb)
 {
 #if (RHEA_FB_ENABLE_DYNAMIC_CLOCK == 1)
-//	fb->display_ops->stop(fb->dfs_node);
+	fb->display_ops->stop(fb->dfs_node);
 #endif
 }
 
@@ -329,8 +329,7 @@ static void rhea_fb_early_suspend(struct early_suspend *h)
 		down(&fb->update_sem);
 	 	rhea_clock_start(fb);
 		disable_display(fb);
-		// rhea_clock_stop(fb);
-		fb->display_ops->stop(fb->dfs_node);
+		rhea_clock_stop(fb);
 		up(&fb->update_sem);
 		/* Turn off the ldo */
 		break;
