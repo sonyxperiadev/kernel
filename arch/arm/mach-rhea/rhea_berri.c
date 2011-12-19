@@ -594,9 +594,8 @@ static struct i2c_board_info __initdata qt602240_info[] = {
 #endif /* CONFIG_TOUCHSCREEN_QT602240 */
 
 #ifdef CONFIG_KONA_HEADSET
-#define HS_IRQ	gpio_to_irq(76)
-#define HSB_IRQ	BCM_INT_ID_AUXMIC_COMP2
-#define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
+#define HS_IRQ	gpio_to_irq(71)
+#define HSB_IRQ	BCM_INT_ID_AUXMIC_COMP1
 static struct kona_headset_pd headset_data = {
 	.hs_default_state = 1, /* GPIO state read is 0 on HS insert and 1 for
 							* HS remove*/
@@ -623,15 +622,10 @@ static struct resource board_headset_resource[] = {
 		.end = HSB_IRQ,
 		.flags = IORESOURCE_IRQ,
 	},
-        {       /* For Headset button  release IRQ */
-                .start = HSB_REL_IRQ,
-                .end = HSB_REL_IRQ,
-                .flags = IORESOURCE_IRQ,
-        },
 };
 
 struct platform_device headset_device = {
-	.name = "konaaciheadset",
+	.name = "konaheadset",
 	.id = -1,
 	.resource = board_headset_resource,
 	.num_resources	= ARRAY_SIZE(board_headset_resource),
