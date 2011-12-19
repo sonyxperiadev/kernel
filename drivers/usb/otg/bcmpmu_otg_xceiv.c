@@ -111,8 +111,10 @@ static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
 
-	if (xceiv_data)
+	if (xceiv_data) {
 		bcm_hsotgctrl_phy_deinit(); /* De-initialize OTG core and PHY */
+		xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
+	}
 }
 
 static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
@@ -122,6 +124,10 @@ static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
 	if (xceiv_data) {
 		id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 		bcm_hsotgctrl_phy_init(!id_gnd); /* Initialize OTG core and PHY */
+		if (id_gnd)
+			xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_A_IDLE;
+		else
+			xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_B_IDLE;
 	} else
 		return -EINVAL;
 
@@ -272,6 +278,7 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 		if (!vbus_status) {
 			/* Non-ACA ID interpretation for now since RID_A is not tested yet on this platform */
 			bcm_hsotgctrl_phy_deinit(); /* Shutdown the core */
+			xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
 		} else {
 			/* Set Vbus valid state */
 			bcm_hsotgctrl_phy_set_vbus_stat(true);
@@ -478,6 +485,7 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 	bcm_hsotgctrl_phy_set_id_stat(!id_gnd);
 	msleep(HOST_TO_PERIPHERAL_DELAY_MS);
 	bcm_hsotgctrl_phy_deinit();
+	xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
 	if (id_gnd)
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.notifier, USB_EVENT_ID, NULL);
 }
@@ -552,6 +560,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	INIT_WORK(&xceiv_data->bcm_otg_chg_detect_work,
 		  bcmpmu_otg_xceiv_chg_detect_handler);
 
+	xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
 	xceiv_data->otg_xceiver.xceiver.set_vbus =
 		bcmpmu_otg_xceiv_set_vbus;
 	xceiv_data->otg_xceiver.xceiver.set_peripheral =
@@ -622,7 +631,7 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
 	kfree(xceiv_data);
 	bcm_hsotgctrl_phy_deinit();
-
+	xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
 	return 0;
 }
 
