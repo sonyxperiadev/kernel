@@ -411,6 +411,9 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 	case PMU_IRQ_VBUS_1V5_F:
 		schedule_delayed_work(&paccy->det_work, 0);
 		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_SESSION_INVALID, NULL);
+		/* Work around for PMU issue */
+		bcmpmu->usb_accy_data.usb_dis = 1;
+		bcmpmu->chrgr_usb_en(bcmpmu, 0);
 		break;
 
 	case PMU_IRQ_VBUS_4V5_R:
@@ -421,9 +424,6 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 
 	case PMU_IRQ_VBUS_4V5_F:
 		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_VBUS_INVALID, NULL);
-		/* Work around for PMU issue */
-		bcmpmu->usb_accy_data.usb_dis = 1;
-		bcmpmu->chrgr_usb_en(bcmpmu, 0);
 		break;
 
 	case PMU_IRQ_IDCHG:
