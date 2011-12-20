@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_cdc.c 285377 2011-09-21 17:57:59Z $
+ * $Id: dhd_cdc.c 294560 2011-11-07 22:26:37Z $
  *
  * BDC is like CDC, except it includes a header for data packets to convey
  * packet priority over the bus, and flags (e.g. to indicate checksum status
@@ -77,6 +77,7 @@ typedef struct dhd_prot {
 	cdc_ioctl_t msg;
 	unsigned char buf[WLC_IOCTL_MAXLEN + ROUND_UP_MARGIN];
 } dhd_prot_t;
+
 
 static int
 dhdcdc_msg(dhd_pub_t *dhd)
@@ -2515,9 +2516,10 @@ dhd_prot_init(dhd_pub_t *dhd)
 	ret = dhd_wlfc_init(dhd);
 #endif
 
-#if !defined(WL_CFG80211)
-	ret = dhd_preinit_ioctls(dhd);
-#endif 
+#if defined(WL_CFG80211)
+	if (dhd_download_fw_on_driverload)
+#endif /* defined(WL_CFG80211) */
+		ret = dhd_preinit_ioctls(dhd);
 
 	/* Always assumes wl for now */
 	dhd->iswl = TRUE;

@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd.h 285377 2011-09-21 17:57:59Z $
+ * $Id: dhd.h 294054 2011-11-04 02:01:13Z $
  */
 
 /****************
@@ -34,9 +34,6 @@
 #ifndef _dhd_h_
 #define _dhd_h_
 
-#if defined(CHROMIUMOS_COMPAT_WIRELESS)
-#include <linux/sched.h>
-#endif
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
@@ -84,6 +81,9 @@ enum dhd_bus_state {
 /* max sequential rxcntl timeouts to set HANG event */
 #define MAX_CNTL_TIMEOUT  2
 
+#define DHD_SCAN_ACTIVE_TIME	 40 /* ms : Embedded default Active setting from DHD Driver */
+#define DHD_SCAN_PASSIVE_TIME	130 /* ms: Embedded default Passive setting from DHD Driver */
+
 enum dhd_bus_wake_state {
 	WAKE_LOCK_OFF,
 	WAKE_LOCK_PRIV,
@@ -107,6 +107,15 @@ enum dhd_prealloc_index {
 	DHD_PREALLOC_DATABUF,
 	DHD_PREALLOC_OSL_BUF
 };
+
+typedef enum  {
+	DHD_IF_NONE = 0,
+	DHD_IF_ADD,
+	DHD_IF_DEL,
+	DHD_IF_CHANGE,
+	DHD_IF_DELETING
+} dhd_if_state_t;
+
 
 #if defined(DHD_USE_STATIC_BUF)
 
@@ -356,6 +365,11 @@ void dhd_osl_detach(osl_t *osh);
  * bus_hdrlen specifies required headroom for bus module header.
  */
 extern dhd_pub_t *dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen);
+#if defined(WLP2P) && defined(WL_CFG80211)
+/* To allow attach/detach calls corresponding to p2p0 interface  */
+extern int dhd_attach_p2p(dhd_pub_t *);
+extern int dhd_detach_p2p(dhd_pub_t *);
+#endif /* WLP2P && WL_CFG80211 */
 extern int dhd_net_attach(dhd_pub_t *dhdp, int idx);
 
 /* Indication from bus module regarding removal/absence of dongle */
@@ -402,6 +416,8 @@ extern int dhd_custom_get_mac_address(unsigned char *buf);
 extern void dhd_os_sdunlock_sndup_rxq(dhd_pub_t * pub);
 extern void dhd_os_sdlock_eventq(dhd_pub_t * pub);
 extern void dhd_os_sdunlock_eventq(dhd_pub_t * pub);
+
+#ifdef PNO_SUPPORT
 extern int dhd_pno_enable(dhd_pub_t *dhd, int pfn_enabled);
 extern int dhd_pno_clean(dhd_pub_t *dhd);
 extern int dhd_pno_set(dhd_pub_t *dhd, wlc_ssid_t* ssids_local, int nssid,
@@ -412,7 +428,7 @@ extern int dhd_dev_pno_set(struct net_device *dev, wlc_ssid_t* ssids_local,
                            int nssid, ushort  scan_fr, int pno_repeat, int pno_freq_expo_max);
 extern int dhd_dev_pno_enable(struct net_device *dev,  int pfn_enabled);
 extern int dhd_dev_get_pno_status(struct net_device *dev);
-extern int dhd_get_dtim_skip(dhd_pub_t *dhd);
+#endif /* PNO_SUPPORT */
 
 #define DHD_UNICAST_FILTER_NUM		0
 #define DHD_BROADCAST_FILTER_NUM	1
@@ -420,6 +436,10 @@ extern int dhd_get_dtim_skip(dhd_pub_t *dhd);
 #define DHD_MULTICAST6_FILTER_NUM	3
 extern int net_os_set_packet_filter(struct net_device *dev, int val);
 extern int net_os_rxfilter_add_remove(struct net_device *dev, int val, int num);
+
+extern int dhd_get_dtim_skip(dhd_pub_t *dhd);
+extern bool dhd_check_ap_wfd_mode_set(dhd_pub_t *dhd);
+extern bool dhd_os_check_hang(dhd_pub_t *dhdp, int ifidx, int ret);
 
 
 #ifdef DHD_DEBUG
@@ -443,7 +463,7 @@ extern int dhd_timeout_expired(dhd_timeout_t *tmo);
 
 extern int dhd_ifname2idx(struct dhd_info *dhd, char *name);
 extern int dhd_net2idx(struct dhd_info *dhd, struct net_device *net);
-extern struct net_device * dhd_idx2net(struct dhd_pub *dhd_pub, int ifidx);
+extern struct net_device * dhd_idx2net(void *pub, int ifidx);
 extern int wl_host_event(dhd_pub_t *dhd_pub, int *idx, void *pktdata,
                          wl_event_msg_t *, void **data_ptr);
 extern void wl_event_to_host_order(wl_event_msg_t * evt);
@@ -478,6 +498,7 @@ extern uint dhd_bus_status(dhd_pub_t *dhdp);
 extern int  dhd_bus_start(dhd_pub_t *dhdp);
 extern int dhd_bus_membytes(dhd_pub_t *dhdp, bool set, uint32 address, uint8 *data, uint size);
 extern void dhd_print_buf(void *pbuf, int len, int bytes_per_line);
+extern bool dhd_is_associated(dhd_pub_t *dhd, void *bss_buf);
 
 #if defined(KEEP_ALIVE)
 extern int dhd_keep_alive_onoff(dhd_pub_t *dhd);

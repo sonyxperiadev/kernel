@@ -385,8 +385,6 @@ int wl_android_wifi_off(struct net_device *dev)
 	if (g_wifi_on) {
 		dhd_dev_reset(dev, 1);
 		sdioh_stop(NULL);
-		/* clean up dtim_skip setting */
-		net_os_set_dtim_skip(dev, TRUE);
 		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 		g_wifi_on = 0;
 	}
@@ -608,28 +606,13 @@ int wl_android_exit(void)
 	return ret;
 }
 
-int wl_android_post_init(void)
+void wl_android_post_init(void)
 {
-	struct net_device *ndev;
-	int ret = 0;
-	char buf[IFNAMSIZ];
 	if (!dhd_download_fw_on_driverload) {
 		/* Call customer gpio to turn off power with WL_REG_ON signal */
 		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 		g_wifi_on = 0;
-	} else {
-		memset(buf, 0, IFNAMSIZ);
-#ifdef CUSTOMER_HW2
-		snprintf(buf, IFNAMSIZ, "%s%d", iface_name, 0);
-#else
-		snprintf(buf, IFNAMSIZ, "%s%d", "eth", 0);
-#endif
-		if ((ndev = dev_get_by_name (&init_net, buf)) != NULL) {
-			dhd_dev_init_ioctl(ndev);
-			dev_put(ndev);
-		}
 	}
-	return ret;
 }
 /**
  * Functions for Android WiFi card detection

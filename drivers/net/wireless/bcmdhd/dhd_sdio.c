@@ -1,5 +1,5 @@
 /*
- * DHD Bus Module for SDIO
+ * DHD Bus Module for SDIO (Linux)
  *
  * Copyright (C) 1999-2011, Broadcom Corporation
  * 
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_sdio.c 285933 2011-09-23 21:45:31Z $
+ * $Id: dhd_sdio.c 294560 2011-11-07 22:26:37Z $
  */
 
 #include <typedefs.h>
@@ -469,7 +469,7 @@ static void dhdsdio_sdtest_set(dhd_bus_t *bus, uint8 count);
 #endif
 
 #ifdef DHD_DEBUG
-static int dhdsdio_checkdied(dhd_bus_t *bus, uint8 *data, uint size);
+static int dhdsdio_checkdied(dhd_bus_t *bus, char *data, uint size);
 static int dhd_serialconsole(dhd_bus_t *bus, bool get, bool enable, int *bcmerror);
 #endif /* DHD_DEBUG */
 
@@ -1521,7 +1521,7 @@ enum {
 #ifdef DHD_DEBUG
 	IOV_CHECKDIED,
 	IOV_SERIALCONS,
-#endif
+#endif /* DHD_DEBUG */
 	IOV_DOWNLOAD,
 	IOV_SOCRAM_STATE,
 	IOV_FORCEEVEN,
@@ -1938,7 +1938,7 @@ break2:
 }
 
 static int
-dhdsdio_checkdied(dhd_bus_t *bus, uint8 *data, uint size)
+dhdsdio_checkdied(dhd_bus_t *bus, char *data, uint size)
 {
 	int bcmerror = 0;
 	uint msize = 512;
@@ -5370,6 +5370,7 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 		if (ret == BCME_NOTUP)
 			goto fail;
 	}
+
 	/* Ok, have the per-port tell the stack we're open for business */
 	if (dhd_net_attach(bus->dhd, 0) != 0) {
 		DHD_ERROR(("%s: Net attach failed!!\n", __FUNCTION__));

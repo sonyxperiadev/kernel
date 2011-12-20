@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_linux.c 281719 2011-09-02 23:50:57Z $
+ * $Id: bcmsdh_linux.c 290375 2011-10-18 09:28:42Z $
  */
 
 /**
@@ -688,6 +688,10 @@ module_param(sd_hiok, uint, 0);
 extern uint sd_f2_blocksize;
 module_param(sd_f2_blocksize, int, 0);
 
+#ifdef BCMSDIOH_STD
+extern int sd_uhsimode;
+module_param(sd_uhsimode, int, 0);
+#endif
 
 #ifdef BCMSDH_MODULE
 EXPORT_SYMBOL(bcmsdh_attach);

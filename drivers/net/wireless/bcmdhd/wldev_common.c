@@ -24,12 +24,13 @@
  * $Id: wldev_common.c,v 1.1.4.1.2.14 2011-02-09 01:40:07 $
  */
 
-#include <linux/module.h>
+#include <osl.h>
+#include <linux/kernel.h>
+#include <linux/kthread.h>
 #include <linux/netdevice.h>
 
 #include <wldev_common.h>
 #include <bcmutils.h>
-#include <dhd_dbg.h>
 
 #define htod32(i) i
 #define htod16(i) i
@@ -37,6 +38,9 @@
 #define dtoh16(i) i
 #define htodchanspec(i) i
 #define dtohchanspec(i) i
+
+#define WLDEV_ERROR(a) printk a
+
 extern int dhd_ioctl_entry_local(struct net_device *net, wl_ioctl_t *ioc, int cmd);
 
 s32 wldev_ioctl(
@@ -45,6 +49,7 @@ s32 wldev_ioctl(
 	s32 ret = 0;
 	struct wl_ioctl ioc;
 
+
 	memset(&ioc, 0, sizeof(ioc));
 	ioc.cmd = cmd;
 	ioc.buf = arg;
@@ -52,6 +57,8 @@ s32 wldev_ioctl(
 	ioc.set = set;
 
 	ret = dhd_ioctl_entry_local(dev, &ioc, cmd);
+
+
 	return ret;
 }
 
@@ -148,7 +155,7 @@ s32 wldev_mkiovar_bsscfg(
 
 	if (buflen < 0 || iolen > (u32)buflen)
 	{
-		DHD_ERROR(("%s: buffer is too short\n", __FUNCTION__));
+		WLDEV_ERROR(("%s: buffer is too short\n", __FUNCTION__));
 		return BCME_BUFTOOSHORT;
 	}
 
@@ -311,14 +318,14 @@ int wldev_set_country(
 	error = wldev_iovar_getbuf(dev, "country", &cspec, sizeof(cspec),
 		smbuf, sizeof(smbuf));
 	if (error < 0)
-		DHD_ERROR(("%s: get country failed = %d\n", __FUNCTION__, error));
+		WLDEV_ERROR(("%s: get country failed = %d\n", __FUNCTION__, error));
 
 	if ((error < 0) ||
 	    (strncmp(country_code, smbuf, WLC_CNTRY_BUF_SZ) != 0)) {
 		bzero(&scbval, sizeof(scb_val_t));
 		error = wldev_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t), 1);
 		if (error < 0) {
-			DHD_ERROR(("%s: set country failed due to Disassoc error %d\n",
+			WLDEV_ERROR(("%s: set country failed due to Disassoc error %d\n",
 				__FUNCTION__, error));
 			return error;
 		}
@@ -330,12 +337,12 @@ int wldev_set_country(
 	error = wldev_iovar_setbuf(dev, "country", &cspec, sizeof(cspec),
 		smbuf, sizeof(smbuf));
 	if (error < 0) {
-		DHD_ERROR(("%s: set country for %s as %s rev %d failed\n",
+		WLDEV_ERROR(("%s: set country for %s as %s rev %d failed\n",
 			__FUNCTION__, country_code, cspec.ccode, cspec.rev));
 		return error;
 	}
 	dhd_bus_country_set(dev, &cspec);
-	DHD_INFO(("%s: set country for %s as %s rev %d\n",
+	WLDEV_ERROR(("%s: set country for %s as %s rev %d\n",
 		__FUNCTION__, country_code, cspec.ccode, cspec.rev));
 	return 0;
 }
