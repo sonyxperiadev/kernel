@@ -18,7 +18,7 @@ ifeq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
 DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74
 endif
 
-ifeq ($(CONFIG_MACH_RHEA_BERRI_EDN40X),y)
+ifneq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
 DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
 endif
 

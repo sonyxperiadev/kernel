@@ -793,20 +793,7 @@ static struct resource board_sdio1_resource[] = {
 		.flags = IORESOURCE_IRQ,
 	},
 };
-#ifdef CONFIG_MACH_RHEA_BERRI_EDN40X
-static struct resource board_sdio2_resource[] = {
-	[0] = {
-		.start = SDIO3_BASE_ADDR,
-		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO_NAND,
-		.end = BCM_INT_ID_SDIO_NAND,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-#endif
+
 #ifdef CONFIG_MACH_RHEA_BERRI_EDN40
 static struct resource board_sdio4_resource[] = {
 	[0] = {
@@ -844,24 +831,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
-#ifdef CONFIG_MACH_RHEA_BERRI_EDN40X
-	{ /* SDIO2 */
-		.id = 2,
-		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_WIFI,
-		.wifi_gpio = {
-			.reset		= 38,
-			.reg		= -1,
-			.host_wake	= 1,
-			.shutdown	= -1,
-		},
-		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-		.peri_clk_name = "sdio3_clk",
-		.ahb_clk_name = "sdio3_ahb_clk",
-		.sleep_clk_name = "sdio3_sleep_clk",
-		.peri_clk_rate = 48000000,
-	},
-#endif
+
 #ifdef CONFIG_MACH_RHEA_BERRI_EDN40
 	{ /* SDIO4 */
 		.id = 3,
@@ -905,14 +875,15 @@ static struct platform_device board_sdio1_device = {
 static struct platform_device board_sdio2_device = {
 	.name = "sdhci",
 	.id = 2,
-#ifdef CONFIG_MACH_RHEA_BERRI_EDN40X
+
+#ifdef CONFIG_MACH_RHEA_BERRI_EDN40
+		.resource = board_sdio4_resource,
+		.num_resources	 = ARRAY_SIZE(board_sdio4_resource),
+#else
 	.resource = board_sdio2_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
 #endif
-#ifdef CONFIG_MACH_RHEA_BERRI_EDN40
-	.resource = board_sdio4_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio4_resource),
-#endif
+
 
 	.dev      = {
 		.platform_data = &board_sdio_param[2],
