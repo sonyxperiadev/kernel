@@ -1034,6 +1034,13 @@ config USB_G_ANDROID_2_6_SYSFS
 	help
 	  Provides 2.6 and 3.0 sysfs interface for Android Gingerbread UI.
 
+config USB_G_ANDROID_SYSFS_CLEANUP
+	boolean "Android gadget sysfs cleanup"
+	depends on USB_G_ANDROID=m
+	default y
+	help
+	  Provides additional sysfs cleanup.
+
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"
 	depends on NET

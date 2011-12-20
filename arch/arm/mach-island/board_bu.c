@@ -165,14 +165,19 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.speed = BSC_BUS_SPEED_50K,
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",
+		.retries = 1,
 	},
 	[1] = { /* for BSC1*/
 		.speed = BSC_BUS_SPEED_50K,
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
+		.retries = 3,
 	},
 	[2] = { /* for PMU */
 		.speed = BSC_BUS_SPEED_50K,
+		.bsc_clk = "pmu_bsc_clk",
+		.bsc_apb_clk = "pmu_bsc_apb",
+		.retries = 1,
 	},
 };
 
@@ -201,6 +206,9 @@ static struct platform_device board_i2c_adap_devices[] =
 		.id = 2,
 		.resource = board_pmu_bsc_resource,
 		.num_resources = ARRAY_SIZE(board_pmu_bsc_resource),
+		.dev = {
+			.platform_data = &bsc_i2c_cfg[2],
+		},
 	},
 	[3] = {	/* for SSPI i2c */
 		.name = "sspi-i2c",
@@ -258,13 +266,14 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
 		.wifi_gpio = {
 			.reset		= 179,
-			.reg		= 177,
+			.reg		= -1,
 			.host_wake	= 178,
+			.shutdown       = -1,
 		},
 		.peri_clk_name = "sdio1_clk",
 		.ahb_clk_name = "sdio1_ahb_clk",
 		.sleep_clk_name = "sdio1_sleep_clk",
-		.peri_clk_rate = 20000000,
+		.peri_clk_rate = 48000000,
 	},
 	{ /* SDIO1 */
 		.id = 1,

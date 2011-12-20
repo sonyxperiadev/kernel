@@ -43,6 +43,10 @@
 extern void md_autodetect_dev(dev_t dev);
 #endif
 
+#ifdef CONFIG_APANIC_ON_MMC
+extern void mmc_panic_copy_dev_name(char *dev_path);
+#endif
+
 int warn_no_part = 1; /*This is ugly: should make genhd removable media aware*/
 
 static int (*check_part[])(struct parsed_partitions *) = {
@@ -680,6 +684,29 @@ rescan:
 #ifdef CONFIG_BLK_DEV_MD
 		if (state->parts[p].flags & ADDPART_FLAG_RAID)
 			md_autodetect_dev(part_to_dev(part)->devt);
+#endif
+
+#ifdef CONFIG_APANIC_ON_MMC
+		if (strncmp(part->info->volname, CONFIG_APANIC_PLABEL,
+			    strlen(CONFIG_APANIC_PLABEL)) == 0) {
+			struct device *ddev = disk_to_dev(disk);
+			char *dname, *blk_name;
+
+			dname = (char *)dev_name(ddev);
+			blk_name = kzalloc(BDEVNAME_SIZE, GFP_KERNEL);
+
+			if (!blk_name)
+				continue;
+
+			if (isdigit(dname[strlen(dname) - 1]))
+				sprintf(blk_name, "%sp%d", dname, part->partno);
+			else
+				sprintf(blk_name, "%s%d", dname, part->partno);
+
+			mmc_panic_copy_dev_name(blk_name);
+
+			kfree(blk_name);
+		}
 #endif
 	}
 	kfree(state);

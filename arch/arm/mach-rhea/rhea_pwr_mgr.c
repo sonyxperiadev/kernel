@@ -39,8 +39,8 @@
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
-#ifdef CONFIG_DEBUG_FS
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#ifdef CONFIG_DEBUG_FS
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif
 #include "pm_params.h"
@@ -197,40 +197,40 @@ struct rhea_event_table
 };
 static const struct rhea_event_table event_table[] = {
 		/*event_id				trig_type			modem		arm_core 	arm_sub		aon		hub		mm*/
-	{	SOFTWARE_0_EVENT,			PM_TRIG_BOTH_EDGE,		PM_RET,		PM_RET, 	PM_DFS,		PM_DFS,		PM_DFS,		PM_RET, },
-	{	SOFTWARE_1_EVENT,			PM_TRIG_NONE,			PM_RET,		PM_RET,		PM_RET,		PM_RET,		PM_RET,		PM_RET,	},
+	{	SOFTWARE_0_EVENT,			PM_TRIG_BOTH_EDGE,		PM_RET,		PM_RET, 	PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF, },
+	{	SOFTWARE_1_EVENT,			PM_TRIG_NONE,			PM_RET,		PM_RET,		PM_RET,		PM_RET,		PM_RET,		PM_OFF,	},
 	/*JIRA HWRHEA-2093 : change HUB policy to 5 for all active events */
-	{	SOFTWARE_2_EVENT,			PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_ECO,		PM_ECO,		PM_DFS,		PM_RET,	},
+	{	SOFTWARE_2_EVENT,			PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_ECO,		PM_ECO,		PM_DFS,		PM_OFF,	},
 	// This is a SW workaround for A0. Configure MODEMBUS_ACTIVE_EVENT to wake up AP at ECONOMY so that
 	// AP stays awake long enough until all CP activities that could trigger MODEMBUS_ACTIVE_EVENT have completed.
 	// For A0 chip, MODEMBUS_ACTIVE_EVENT is enabled to work around the JIRA that VREQ_NONZERO_PI_MODEM_EVENT is not auto-cleared.
 	// JIRA HWRHEA-1253 : Remove MODEMBUS_ACTIVE_EVENT for B0
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	{	MODEMBUS_ACTIVE_EVENT, 			PM_TRIG_POS_EDGE,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	MODEMBUS_ACTIVE_EVENT, 			PM_TRIG_POS_EDGE,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
 #endif
-	{	VREQ_NONZERO_PI_MODEM_EVENT,		PM_TRIG_POS_EDGE,		PM_DFS,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	COMMON_INT_TO_AC_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	COMMON_TIMER_1_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	UBRX_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	UB2RX_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	SIMDET_EVENT,				PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	SIM2DET_EVENT,				PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	KEY_R0_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	KEY_R1_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	KEY_R2_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	KEY_R3_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	KEY_R4_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	KEY_R5_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	KEY_R6_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	KEY_R7_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	BATRM_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	GPIO29_A_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	GPIO71_A_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	MMC1D1_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	GPIO74_A_EVENT,				PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	GPIO111_A_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	DBR_IRQ_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
-	{	ACI_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	}
+	{	VREQ_NONZERO_PI_MODEM_EVENT,		PM_TRIG_POS_EDGE,		PM_DFS,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	COMMON_INT_TO_AC_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	COMMON_TIMER_1_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	UBRX_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	UB2RX_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	SIMDET_EVENT,				PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	SIM2DET_EVENT,				PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	KEY_R0_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	KEY_R1_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	KEY_R2_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	KEY_R3_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	KEY_R4_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	KEY_R5_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	KEY_R6_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	KEY_R7_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	BATRM_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	GPIO29_A_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	GPIO71_A_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	MMC1D1_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	GPIO74_A_EVENT,				PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	GPIO111_A_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	DBR_IRQ_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
+	{	ACI_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	}
 
 };
 
@@ -449,6 +449,12 @@ int __init rhea_pwr_mgr_init()
 	    BUG_ON(pi == NULL);
 	    pi_init_state(pi);
 	}
+
+	/* Enable PI counters */
+	for (i = 0; i < PI_MGR_PI_ID_MODEM; i++)
+		pwr_mgr_pi_counter_enable(i, 1);
+	pm_mgr_pi_count_clear(1);
+	pm_mgr_pi_count_clear(0);
 
 	return 0;
 }

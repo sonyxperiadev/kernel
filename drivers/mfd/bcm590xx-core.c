@@ -353,10 +353,11 @@ int bcm590xx_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int bcm590xx_ioctl(struct inode *inode, struct file *file,
+static long bcm590xx_ioctl(struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
 	/* TODO: */
+	pr_debug("inside %s\n", __func__);
 	return 0;
 }
 
@@ -665,6 +666,27 @@ void bcm590xx_shutdown(void)
 	bcm590xx_reg_write(info, BCM590XX_REG_HOSTCTRL1, (u8)host_ctrl1);
 }
 EXPORT_SYMBOL_GPL(bcm590xx_shutdown);
+
+int bcm590xx_wake_reason(void)
+{
+	int reason;
+	reason = bcm590xx_reg_read(info, BCM590XX_REG_WAKE_REASON);
+	if (reason < 0)
+		return reason;
+	if (reason & BCM590XX_POK_WAKE)
+		return BCM590XX_POK_WAKE;
+	if (reason & BCM590XX_CGPD_WAKE)
+		return BCM590XX_CGPD_WAKE;
+	if (reason & BCM590XX_UBPD_WAKE)
+		return BCM590XX_UBPD_WAKE;
+	if (reason & BCM590XX_RTC_ALARM_WAKE)
+		return BCM590XX_RTC_ALARM_WAKE;
+	if (reason & BCM590XX_AUXON_WAKE)
+		return BCM590XX_AUXON_WAKE;
+	if (reason & BCM590XX_GBAT_PLUGIN)
+		return BCM590XX_GBAT_PLUGIN;
+	return -EIO;
+}
 
 MODULE_DESCRIPTION("BCM590XX PMIC core driver");
 MODULE_LICENSE("GPL");

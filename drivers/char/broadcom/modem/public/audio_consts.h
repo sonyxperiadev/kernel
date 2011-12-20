@@ -635,7 +635,6 @@ typedef enum {
 	PARAM_VOICE_MIC1_HPF_CUTOFF_FREQ,           // 301
 	PARAM_VOICE_MIC2_HPF_ENABLE,                // 302	
 	PARAM_VOICE_MIC2_HPF_CUTOFF_FREQ,           // 303
-	
 	PARAM_EXT_SPEAKER_GENERIC_PARAM1 = 304,               // 304
 	PARAM_EXT_SPEAKER_GENERIC_PARAM2,                     // 305
 	PARAM_EXT_SPEAKER_GENERIC_PARAM3,                     // 306

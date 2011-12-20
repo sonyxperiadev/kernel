@@ -57,3 +57,9 @@ obj-$(CONFIG_BCM4330_FALCON) += bcm4330_falcon.o
 bcm4330_falcon-objs += $(DHDOFILES)
 EXTRA_CFLAGS = $(DHDCFLAGS)
 EXTRA_LDFLAGS += --strip-debug
+
+
+obj-$(CONFIG_BCM4330_FALCON) += bcm4330_falcon.o
+bcm4330_falcon-objs += $(DHDOFILES)
+EXTRA_CFLAGS = $(DHDCFLAGS)
+EXTRA_LDFLAGS += --strip-debug

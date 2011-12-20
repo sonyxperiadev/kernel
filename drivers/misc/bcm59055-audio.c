@@ -430,8 +430,9 @@ int bcm59055_audio_hs_selftest_stimulus(int stimulus)
 
 	data  =  (u8)bcm590xx_reg_read(bcm590xx,
 					   BCM59055_REG_HSIST);
-	bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSIST, (data & ~PMU_HSIST_MASK_I_HS_IST) | (stimulus << PMU_HSIST_OFFSET_I_HS_IST));
-	return 0;
+	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSIST,
+			(data & ~PMU_HSIST_MASK_I_HS_IST) | (stimulus << PMU_HSIST_OFFSET_I_HS_IST));
+
 }
 EXPORT_SYMBOL(bcm59055_audio_hs_selftest_stimulus);
 

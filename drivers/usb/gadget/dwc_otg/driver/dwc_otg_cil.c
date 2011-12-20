@@ -825,7 +825,7 @@ int dwc_otg_save_global_regs(dwc_otg_core_if_t *core_if)
 #endif
 	gr->gi2cctl_local = dwc_read_reg32(&core_if->core_global_regs->gi2cctl);
 	gr->pcgcctl_local = dwc_read_reg32(core_if->pcgcctl);
-	for (i = 0; i < MAX_EPS_CHANNELS; i++) {
+	for (i = 0; i < (MAX_EPS_CHANNELS - 1); i++) { /* Fifo number is 1 <= n <= 15 */
 		gr->dtxfsiz_local[i] = dwc_read_reg32(&(core_if->core_global_regs->dtxfsiz[i]));
 	}
 
@@ -963,7 +963,7 @@ int dwc_otg_restore_global_regs(dwc_otg_core_if_t *core_if)
 	dwc_write_reg32(&core_if->core_global_regs->grxfsiz, gr->grxfsiz_local);
 	dwc_write_reg32(&core_if->core_global_regs->gnptxfsiz, gr->gnptxfsiz_local);
 	dwc_write_reg32(&core_if->core_global_regs->hptxfsiz, gr->hptxfsiz_local);
-	for (i = 0; i < MAX_EPS_CHANNELS; i++) {
+	for (i = 0; i < (MAX_EPS_CHANNELS-1); i++) { /* Fifo number is 1 <= n <= 15 */
 		dwc_write_reg32(&core_if->core_global_regs->dtxfsiz[i], gr->dtxfsiz_local[i]);
 	}
 

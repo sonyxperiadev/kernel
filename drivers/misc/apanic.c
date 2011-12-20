@@ -38,7 +38,10 @@
 #include <linux/workqueue.h>
 #include <linux/preempt.h>
 
+#ifndef CONFIG_APANIC_ON_MMC
+
 #ifdef CONFIG_APANIC_ON_MMC
+#include <linux/mmc-poll/mmc_poll.h>
 #include <linux/mmc-poll/mmc_poll_stack.h>
 
 /* Enable this to debug some apanic code for MMC */
@@ -56,7 +59,6 @@ extern void ram_console_enable_console(int);
 
 #ifdef CONFIG_APANIC_ON_MMC
 extern unsigned long get_apanic_start_address(void);
-extern int mmc_poll_stack_init (struct mmc **mmc, int *dev_num); 
 #endif
 
 struct panic_header {
@@ -604,7 +606,7 @@ static int apanic(struct notifier_block *this, unsigned long event,
 		goto out;
 	}
 
-	if (mmc_poll_stack_init(&ctx->mmc, &ctx->dev_num) < 0) {
+	if (mmc_poll_stack_init((void **)&ctx->mmc, &ctx->dev_num) < 0) {
 		printk("apanic: Unable to init polling mode mmc stack \r\n");
 		goto out;
 	}
@@ -783,3 +785,5 @@ int __init apanic_init(void)
 }
 
 module_init(apanic_init);
+
+#endif

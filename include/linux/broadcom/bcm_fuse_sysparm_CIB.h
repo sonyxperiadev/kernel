@@ -73,7 +73,8 @@
 #define NUM_OF_BIQUAD_FILTER_COEF	10
 #define NUM_OF_ECHO_STABLE_COEF_THRESH 2
 #define NUM_OF_ECHO_NLP_GAIN		6
-
+#define NUM_OF_ENTRY_IN_DSP_VOICE_VOLUME_TABLE 15
+#define NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME		15 
 
 /** Number of byte of Terminal Profile data defined in Sysparm. If the number of bytes is larger
  * than the "MAX_PROFILE_ARRAY_SIZE" defined in USIMAP/SIMAP, the extra bytes are truncated
@@ -328,7 +329,7 @@ typedef struct
 	UInt16 echo_cancel_mic2_output_gain;
 	UInt16 echo_mic2_feed_forward_gain;
 
-#if defined(_RHEA_)	
+#if defined(_RHEA_)
 	UInt16 amic_dga_coarse_gain;
 	UInt16 amic_dga_fine_gain;
 	UInt16 dmic1_dga_coarse_gain;

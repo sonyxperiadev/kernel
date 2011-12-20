@@ -131,6 +131,11 @@ config ISLAND_PM_TEST
    help
       Say Y if you want to enable pm test command.
 
+config ISLAND_ESUB_ENABLE
+       bool "Enable ESUB CCU support for Island platform"
+       help
+	Say Y if you want to enable esub ccu support for Island platform
+
 endmenu
 
 source "arch/arm/mach-island/custom_boards/Kconfig"

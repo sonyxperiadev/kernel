@@ -445,7 +445,6 @@ static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 static int __init bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
 	printk("REG: pmu_init_platform_hw called \n");
-
 	return 0;
 }
 

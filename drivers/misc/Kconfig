@@ -628,7 +628,7 @@ config APANIC_PLABEL
 
 config APANIC_ON_MMC
 	bool "Dump panic info on eMMC"
-	depends on APANIC && MMCPOLL
+	depends on MMCPOLL
 	default n
 	---help---
 	By default apanic works on MTD interface.
@@ -692,19 +692,6 @@ config MONITOR_BQ27541_I2C
 	help
 	 Say Y here if you want to support BQ27541 battery monitor.
 	 If unsure, say N.
-
-config BCM_RFKILL
-        bool "BCM RFKILL driver support for Bluetooth"
-	depends on RFKILL
-        default n
-        ---help---
-        This driver adds RFKILL support for Broadcom bluetooth
-
-config BCM_BT_LPM
-        bool "BCM BT Low Power support"
-        default n
-        ---help---
-        This driver adds Low Power mode support for Broadcom bluetooth
 
 config BRALLOC_MEM
 	bool "Broadcom contiguous memory allocator based on CMA"

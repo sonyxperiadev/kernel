@@ -140,7 +140,6 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	bcm_hsotgctrl_set_phy_iso(false);
 	msleep_interruptible(PHY_PM_DELAY_IN_MS);
 
-
 	/* PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(true);
 	msleep_interruptible(PHY_PLL_DELAY_MS);

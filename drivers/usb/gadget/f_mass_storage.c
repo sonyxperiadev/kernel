@@ -2647,8 +2647,12 @@ static int fsg_main_thread(void *common_)
 		}
 
 		if (!common->running) {
-			sleep_thread(common);
-			continue;
+			if (sleep_thread(common)) {
+				DBG(common, "sleep_thread error\n");
+				continue;
+			} else {
+				continue;
+			}
 		}
 
 		if (get_next_command(common))
@@ -2835,17 +2839,19 @@ static struct fsg_common *fsg_common_init(struct fsg_common *common,
 	/* Data buffers cyclic list */
 	bh = common->buffhds;
 	i = FSG_NUM_BUFFERS;
-	goto buffhds_first_it;
+
 	do {
-		bh->next = bh + 1;
-		++bh;
-buffhds_first_it:
 		bh->buf = kmalloc(FSG_BUFLEN, GFP_KERNEL);
 		if (unlikely(!bh->buf)) {
 			rc = -ENOMEM;
 			goto error_release;
 		}
+		if (i > 1) {
+			bh->next = bh + 1;
+			++bh;
+		}
 	} while (--i);
+
 	bh->next = common->buffhds;
 
 	/* Prepare inquiryString */
