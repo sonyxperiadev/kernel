@@ -53,8 +53,12 @@ static void sdhci_tuning_timer(unsigned long data);
 
 #ifdef CONFIG_MMC_BCM_SD
 extern int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
+extern int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host);
+extern int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host);
 #else
 #define sdhci_pltfm_clk_enable(..)	do { }while(0)
+#define sdhci_pltfm_set_3v3_signalling(..)	do { }while(0)
+#define sdhci_pltfm_set_1v8_signalling(..)	do { }while(0)
 #endif
 
 static void sdhci_dumpregs(struct sdhci_host *host)
@@ -1566,20 +1570,28 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 	 */
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 	if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
-		/* Set 1.8V Signal Enable in the Host Control2 register to 0 */
-		ctrl &= ~SDHCI_CTRL_VDD_180;
-		sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);
+		/* Switch VDDO_SDC to 3.3V */
+		ret = sdhci_pltfm_set_3v3_signalling(host);
+		if(ret == 0) {
+			/* Set 1.8V Signal Enable in the Host Control2 register to 0 */
+			ctrl &= ~SDHCI_CTRL_VDD_180;
+			sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);
 
-		/* Wait for 5ms */
-		usleep_range(5000, 5500);
+			/* Wait for 5ms */
+			usleep_range(5000, 5500);
 
-		/* 3.3V regulator output should be stable within 5 ms */
-		ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
-		if (!(ctrl & SDHCI_CTRL_VDD_180))
-			ret = 0;
-		else {
-			printk(KERN_INFO DRIVER_NAME ": Switching to 3.3V "
-				"signalling voltage failed\n");
+			/* 3.3V regulator output should be stable within 5 ms */
+			ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
+			if (!(ctrl & SDHCI_CTRL_VDD_180))
+				ret = 0;
+			else {
+				printk(KERN_INFO DRIVER_NAME ": Switching to 3.3V "
+					"signalling voltage failed\n");
+				ret = -EIO;
+			}
+		} else	{
+			printk(KERN_INFO DRIVER_NAME ": Switching vddo Regulator "
+					"to 3.3V failed");
 			ret = -EIO;
 		}
 	} else if (!(ctrl & SDHCI_CTRL_VDD_180) &&
@@ -1593,35 +1605,49 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 		present_state = sdhci_readl(host, SDHCI_PRESENT_STATE);
 		if (!((present_state & SDHCI_DATA_LVL_MASK) >>
 		       SDHCI_DATA_LVL_SHIFT)) {
-			/*
-			 * Enable 1.8V Signal Enable in the Host Control2
-			 * register
-			 */
-			ctrl |= SDHCI_CTRL_VDD_180;
-			sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);
-
-			/* Wait for 5ms */
-			usleep_range(5000, 5500);
-
-			ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
-			if (ctrl & SDHCI_CTRL_VDD_180) {
-				/* Provide SDCLK again and wait for 1ms*/
-				clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
-				clk |= SDHCI_CLOCK_CARD_EN;
-				sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
-				usleep_range(1000, 1500);
-
+			/* Switch VDDO_SDC to 1.8V needed with UHS cards */
+			ret = sdhci_pltfm_set_1v8_signalling(host);
+			if(ret == 0)	{
 				/*
-				 * If DAT[3:0] level is 1111b, then the card
-				 * was successfully switched to 1.8V signaling.
+				 * Enable 1.8V Signal Enable in the Host Control2
+				 * register
 				 */
-				present_state = sdhci_readl(host,
-							SDHCI_PRESENT_STATE);
-				if ((present_state & SDHCI_DATA_LVL_MASK) ==
-				     SDHCI_DATA_LVL_MASK)	{
-					ret = 0;
-					goto clk_dis_ret;
+				ctrl |= SDHCI_CTRL_VDD_180;
+				sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);
+
+				/* Wait for 5ms */
+				usleep_range(5000, 5500);
+
+				ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
+				if (ctrl & SDHCI_CTRL_VDD_180) {
+					/* Provide SDCLK again and wait for 1ms*/
+					clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
+					clk |= SDHCI_CLOCK_CARD_EN;
+					sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
+					usleep_range(1000, 1500);
+
+					/*
+					 * If DAT[3:0] level is 1111b, then the card
+					 * was successfully switched to 1.8V signaling.
+					 */
+					present_state = sdhci_readl(host,
+								SDHCI_PRESENT_STATE);
+					if ((present_state & SDHCI_DATA_LVL_MASK) ==
+							SDHCI_DATA_LVL_MASK)	{
+						printk(KERN_INFO DRIVER_NAME
+								": SD core switched to 1.8V signalling\n");
+						ret = 0;
+						goto clk_dis_ret;
+					} else	{
+						printk(KERN_INFO DRIVER_NAME
+                                 ": SD core 1.8V switching failed!\n");
+						ret = -EAGAIN;
+					}
 				}
+			} else	{
+				printk(KERN_INFO DRIVER_NAME ": Switching vddo Regulator "
+						"to 1.8V signalling failed");
+					ret = -EAGAIN;
 			}
 		}
 

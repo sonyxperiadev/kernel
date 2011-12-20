@@ -33,6 +33,7 @@
 #include <linux/io.h>
 #include <linux/gpio.h>
 #include <linux/clk.h>
+#include <linux/regulator/consumer.h>
 
 #include <mach/sdio_platform.h>
 #include "sdhci.h"
@@ -84,6 +85,7 @@ struct sdio_dev {
 	struct procfs proc;
 	struct clk *peri_clk;
 	struct clk *sleep_clk;
+	struct regulator * vddo_sd_regulator;
 };
 
 #ifdef CONFIG_MACH_BCM2850_FPGA
@@ -100,6 +102,7 @@ int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable) { }
 #else
 int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
 #endif
+static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char * reg_name);
 
 #define DRIVER_NAME "sdio"
 /*
@@ -524,6 +527,12 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	dev->clk_hz = clk_get_rate(dev->peri_clk);
 #endif
 
+	if(hw_cfg->vddo_regulator_name)	{
+		ret = sdhci_pltfm_regulator_init(dev, hw_cfg->vddo_regulator_name);
+		if (ret < 0)
+			goto err_term_clk;
+	}
+
 	ret = bcm_kona_sd_reset(dev);
 	if (ret)
 		goto err_term_clk;
@@ -845,3 +854,64 @@ int sdio_card_emulate(enum sdio_devtype devtype, int insert)
    return bcm_kona_sd_card_emulate(dev, insert);
 }
 EXPORT_SYMBOL(sdio_card_emulate);
+
+
+static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char * reg_name)
+{
+	int ret;
+
+	dev->vddo_sd_regulator = regulator_get(NULL, reg_name);
+
+	if(dev->vddo_sd_regulator)	{
+		ret = regulator_enable(dev->vddo_sd_regulator);
+		if (ret < 0)	{
+			printk(KERN_ERR "%s: cant Enable regulator\n", reg_name);
+			ret = -1;
+		} else	{
+			/* Configure 3.3V default */
+			ret = regulator_set_voltage(dev->vddo_sd_regulator,
+                                               3300000, 3300000);
+			if (ret < 0)	{
+				printk(KERN_ERR "%s: cant set 3.3V\n",reg_name);
+				ret = -1;
+			} else	{
+				pr_info(KERN_INFO "%s: set to 3.3V\n", reg_name);
+				ret = 0;
+			}
+		}
+	} else {
+		printk(KERN_ERR "%s:could not get regulator\n", reg_name);
+		ret = -1;
+	}
+	return ret;
+}
+
+int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host)
+{
+	struct sdio_dev *dev = sdhci_priv(host);
+	int ret = 0;
+
+	if(dev->vddo_sd_regulator)	{
+		ret = regulator_set_voltage(dev->vddo_sd_regulator, 3300000, 3300000);
+		if(ret < 0)
+			dev_err(dev->dev, "cant set vddo regulator to 3.3V!\n");
+		else
+			dev_dbg(dev->dev, "vddo regulator is set to 3.3V\n");
+	}
+	return ret;
+}
+
+int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host)
+{
+	struct sdio_dev *dev = sdhci_priv(host);
+	int ret = 0;
+
+	if(dev->vddo_sd_regulator)	{
+		ret = regulator_set_voltage(dev->vddo_sd_regulator, 1800000, 1800000);
+		if(ret < 0)
+			dev_err(dev->dev, "Cant set vddo regulator to 1.8V!\n");
+		else
+			dev_dbg(dev->dev, "vddo regulator is set to 1.8V\n");
+	}
+	return ret;
+}
