@@ -700,6 +700,10 @@ static void eth_start(struct eth_dev *dev, gfp_t gfp_flags)
 	/* and open the tx floodgates */
 	atomic_set(&dev->tx_qlen, 0);
 	netif_wake_queue(dev->net);
+
+#ifdef CONFIG_BRCM_NETCONSOLE
+	defer_kevent(dev, WORK_BRCM_NETCONSOLE_ON);
+#endif
 }
 
 static int eth_open(struct net_device *net)
@@ -1035,9 +1039,6 @@ struct net_device *gether_connect(struct gether *link)
 		netif_carrier_on(dev->net);
 		if (netif_running(dev->net)){
 			eth_start(dev, GFP_ATOMIC);
-#ifdef CONFIG_BRCM_NETCONSOLE			
-			defer_kevent(dev, WORK_BRCM_NETCONSOLE_ON);
-#endif
 		} 
 
 	/* on error, disable any endpoints  */
