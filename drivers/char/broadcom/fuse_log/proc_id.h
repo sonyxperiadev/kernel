@@ -58,6 +58,69 @@
 /*
 ** Statically created processes (GPRS).
 */
+#ifdef DUAL_SIM_PHASE3
+#define P_l1u			0			// 0,1
+#define P_ubmc			2			// 2,3
+#define P_umacc			4			// 4,5
+#define P_umacdl		6			// 6,7
+#define P_umacul		8			// 8,9
+#define P_urabmupdcp	10			// 10
+#define P_urlcc			11		// 11,12
+#define P_urlcdl		13			// 13,14
+#define P_urlcul		15			// 15,16
+#define P_urrcbp		17			// 17,18
+#define P_urrcdc		19			// 19,20
+#define P_urrcm			21			// 21,22
+
+#define P_dll			23			// 23, 24
+#define P_gmm			25			// 25,26
+#define P_gmr			27			// 27
+#define P_grr			28			// 28,29
+#define P_llc			30			// 30
+#define P_mac			31			// 31,32
+#define P_mma			33			// 33,34
+#define P_mmc			35			// 35,36
+#define P_mme			37			// 37,38
+#define P_mmr			39			// 39,40
+#define P_rlc			41			// 41,42
+#define P_rrc			43			// 43,44
+#define P_smr			45			// 45
+#define P_snp			46			// 46
+
+#define P_gl1s			47			// 47
+#define P_mmreg			48			// 48,49
+#define P_mncc			50			// 50,51
+#define P_mns			52			// 52,53
+#define P_mnss			54			// 54,55
+#define P_oms			56			// 56,57
+
+#define P_dch			58			// 58
+#define P_dtt			59			// 59
+#define P_dtn			60			// 60
+#define P_drl			61			// 61		
+#define P_df2			62			// 62
+
+#define P_agps4urrc		63			// 63,64		/* AGPS */
+#define P_rrl			65			// 65		/* RRL  */    
+#define P_sim			66			// 66,67
+
+#define P_hucm          68			// 68		/* HUCM  */
+#define P_vmc           69 			// 69
+
+#define	P_last_static 	70			// 70 		/*VMC process will be created even for non-dual sim builds, but not used*/
+
+/*
+**  Dynamically created processes.
+*/
+#define P_cmc			77			// 77
+#define P_cmm			91			// 91
+#define P_cms			105			// 105
+#define P_gme			119			// 119
+#define P_sme			120			// 120
+#define P_mnr			121			// 121
+
+#define P_last			121			// 121
+#else
 #define P_l1u			0			// 0
 #define P_ubmc			1			// 1
 #define P_umacc			2			// 2
@@ -120,6 +183,7 @@
 
 #define P_last			108			// 108
 
+#endif
 #define P_dll_inst ( P_dll + Temp - 1 )
 
 #endif /* PROC_ID_H */

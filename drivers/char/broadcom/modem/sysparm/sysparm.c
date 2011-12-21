@@ -44,12 +44,11 @@ volatile static UInt32 *total_index_ptr;
 #if !SKELETON_DRIVER
   // need to match sysparm.h from RTOS
   // SysAudioParm_t	audio_parm[AUDIO_MODE_NUMBER_VOICE];  //(number of audio devices) X (modes per device)
-  // SysIndMultimediaAudioParm_t mmaudio_parm[AUDIO_MODE_NUMBER];  //(number of audio devices)
-#define	AUDIO_MODE_NUMBER		9	///< Up to 9 Audio Profiles (modes) after 213x1
-#define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*2)
+//#define	AUDIO_MODE_NUMBER		9	///< Up to 9 Audio Profiles (modes) after 213x1
+//#define AUDIO_APP_NUMBER        2   // must be consistent with parm_audio.txt
+//#define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*AUDIO_APP_NUMBER)
 static SysAudioParm_t audio_parm_table[AUDIO_MODE_NUMBER_VOICE];
-static SysIndMultimediaAudioParm_t mm_audio_parm_table[AUDIO_MODE_NUMBER];
-
+static SysIndMultimediaAudioParm_t mmaudio_parm_table[AUDIO_MODE_NUMBER];
 
 static UInt8 gpioInit_table[GPIO_INIT_REC_NUM][GPIO_INIT_FIELD_NUM];
 #endif // !SKELETON_DRIVER
@@ -366,6 +365,7 @@ SysAudioParm_t* APSYSPARM_GetAudioParmAccessPtr(void)
     }
     
     audio_parm_ptr = (SysAudioParm_t*)ioremap_nocache(audio_parm_addr, sizeof(audio_parm_table));
+
     if(!audio_parm_ptr)
     {
         pr_err("[sysparm]: audio_parm_addr ioremap failed\n");
@@ -382,23 +382,20 @@ SysAudioParm_t* APSYSPARM_GetAudioParmAccessPtr(void)
 //
 // Function Name: APSYSPARM_GetMultimediaAudioParmAccessPtr
 //
-// Description:    Get access pointer to root of mmaudio_parm structure 
+// Description:   Get access pointer to root of MM audio sysparm structure 
 //
 // Notes:     This is only applicable to audio tuning parameters.
 //
 //******************************************************************************
-SysIndMultimediaAudioParm_t* APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
+SysIndMultimediaAudioParm_t * APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
 {
     UInt32 mmaudio_parm_addr;
-    SysIndMultimediaAudioParm_t* mm_audio_parm_ptr;
-    static int mm_audioparm_inited = 0;
+    SysIndMultimediaAudioParm_t *mmaudio_parm_ptr;
+	static int loaded_mmaudio_parm_table=0;
 
-    // don't copy again if we've already populated our local cache
-    if ( mm_audioparm_inited )
-    {
-        return &mm_audio_parm_table[0];
-    }
-
+	if(loaded_mmaudio_parm_table)
+	    return &mmaudio_parm_table[0];
+    
     if(!fuse_sysparm_initialised)
     {
     	if(sysparm_init())
@@ -408,205 +405,26 @@ SysIndMultimediaAudioParm_t* APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
     	}
     }
     
-    mmaudio_parm_addr = SYSPARM_GePAtByIndex("mmaudio_parm", sizeof(mm_audio_parm_table), 1);
+    mmaudio_parm_addr = SYSPARM_GePAtByIndex("mmaudio_parm", sizeof(mmaudio_parm_table), 1);
     if(!mmaudio_parm_addr)
     {
         pr_err("[sysparm]: Get mmaudio_parm PA failed\n");
         return 0;
     }
     
-    mm_audio_parm_ptr = (SysIndMultimediaAudioParm_t*)ioremap_nocache(mmaudio_parm_addr, sizeof(mm_audio_parm_table));
-    if(!mm_audio_parm_ptr)
-    {
-        pr_err("[sysparm]: mmaudio_parm_addr ioremap failed\n");
-        return 0;
-    }
+    mmaudio_parm_ptr = (SysIndMultimediaAudioParm_t*)ioremap_nocache(mmaudio_parm_addr, sizeof(mmaudio_parm_table));
 
-    memcpy(&mm_audio_parm_table[0], mm_audio_parm_ptr, sizeof(mm_audio_parm_table));
-    iounmap(mm_audio_parm_ptr);
-    mm_audioparm_inited = 1;
-    return &mm_audio_parm_table[0];
-}
-
-//******************************************************************************
-//
-// Function Name: SYSPARM_GetExtAudioParmAccessPtr
-//
-// Description:   Get access pointer to sysparm structure 
-//                based on the audio tuning mode.
-//
-// Notes:     This api is deprecated. You should use
-//            APSYSPARM_GetAudioParmAccessPtr().
-//
-//******************************************************************************
-SysAudioParm_t* SYSPARM_GetExtAudioParmAccessPtr(UInt8 AudioApp)
-{
-/*****
-    UInt32 audio_parm_addr;
-    SysAudioParm_t *audio_parm_ptr;
-	static int loaded_audio_parm_table=0;
-
-	if(loaded_audio_parm_table)
-	    return &audio_parm_table[AudioApp][0];
-    
-    if(!fuse_sysparm_initialised)
-    {
-    	if(sysparm_init())
-    	{
-            pr_err("[sysparm]: Fuse sysparm is not yet initialised\n");
-            return 0;
-    	}
-    }
-    
-    audio_parm_addr = SYSPARM_GePAtByIndex("audio_parm", sizeof(audio_parm_table), 1);
-    if(!audio_parm_addr)
-    {
-        pr_err("[sysparm]: Get audio_parm PA failed\n");
-        return 0;
-    }
-    
-    audio_parm_ptr = (SysAudioParm_t*)ioremap_nocache(audio_parm_addr, sizeof(audio_parm_table));
-    if(!audio_parm_ptr)
+    if(!mmaudio_parm_ptr)
     {
         pr_err("[sysparm]: audio_parm_addr ioremap failed\n");
         return 0;
     }
     
-    memcpy(&audio_parm_table, &audio_parm_ptr, sizeof(audio_parm_table));
-    iounmap(audio_parm_ptr);
-	loaded_audio_parm_table = 1;
-    return &audio_parm_table[AudioApp][0];
-*****/
-    return (SysAudioParm_t*) NULL;
-}
+    memcpy(&mmaudio_parm_table[0], mmaudio_parm_ptr, sizeof(mmaudio_parm_table));
+    iounmap(mmaudio_parm_ptr);
+	loaded_mmaudio_parm_table = 1;
 
-//******************************************************************************
-//
-// Function Name: SYSPARM_Get_AUDVOC_ADAC_FIR_Ptr
-//
-// Description:   Get access pointer to AUDVOC_ADAC_FIR sysparm 
-//
-//******************************************************************************
-UInt16* SYSPARM_Get_AUDVOC_ADAC_FIR_Ptr( void )
-{
-/*****
-    UInt32 AUDVOC_ADAC_FIR_parm_addr;
-    UInt16* AUDVOC_ADAC_FIR_ptr;
-    
-    if(!fuse_sysparm_initialised)
-    {
-    	if(sysparm_init())
-    	{
-            pr_err("[sysparm]: Fuse sysparm is not yet initialised\n");
-            return 0;
-    	}
-    }
-    
-    AUDVOC_ADAC_FIR_parm_addr = SYSPARM_GePAtByIndex("AUDVOC_ADAC_FIR", sizeof(AUDVOC_ADAC_FIR), 1);
-    if(!AUDVOC_ADAC_FIR_parm_addr)
-    {
-        pr_err("[sysparm]: Get AUDVOC_ADAC_FIR PA failed\n");
-        return 0;
-    }
-
-    AUDVOC_ADAC_FIR_ptr = (UInt16*)ioremap_nocache(AUDVOC_ADAC_FIR_parm_addr, sizeof(AUDVOC_ADAC_FIR));
-    if(!AUDVOC_ADAC_FIR_ptr)
-    {
-        pr_err("[sysparm]: AUDVOC_ADAC_FIR_parm_addr ioremap failed\n");
-        return 0;
-    }
-    
-    memcpy(AUDVOC_ADAC_FIR, AUDVOC_ADAC_FIR_ptr, sizeof(AUDVOC_ADAC_FIR));
-    iounmap(AUDVOC_ADAC_FIR_ptr);
-    return (UInt16*)AUDVOC_ADAC_FIR;
-*****/
-    return (UInt16*)NULL;
-}
-
-//******************************************************************************
-//
-// Function Name: SYSPARM_Get_AUDVOC_PEQPATHGAIN_Ptr
-//
-// Description:   Get access pointer to AUDVOC_PEQPATHGAIN sysparm 
-//
-//******************************************************************************
-UInt16* SYSPARM_Get_AUDVOC_PEQPATHGAIN_Ptr( void )
-{
-/*****
-    UInt32 AUDVOC_PEQPATHGAIN_parm_addr;
-    UInt16* AUDVOC_PEQPATHGAIN_ptr;
-    
-    if(!fuse_sysparm_initialised)
-    {
-    	if(sysparm_init())
-    	{
-            pr_err("[sysparm]: Fuse sysparm is not yet initialised\n");
-            return 0;
-    	}
-    }
-    
-    AUDVOC_PEQPATHGAIN_parm_addr = SYSPARM_GePAtByIndex("AUDVOC_PEQPATHGAIN", sizeof(AUDVOC_PEQPATHGAIN), 1);
-    if(!AUDVOC_PEQPATHGAIN_parm_addr)
-    {
-        pr_err("[sysparm]: Get AUDVOC_PEQPATHGAIN PA failed\n");
-        return 0;
-    }
-    
-    AUDVOC_PEQPATHGAIN_ptr = (UInt16*)ioremap_nocache(AUDVOC_PEQPATHGAIN_parm_addr, sizeof(AUDVOC_PEQPATHGAIN));
-    if(!AUDVOC_PEQPATHGAIN_ptr)
-    {
-        pr_err("[sysparm]: AUDVOC_PEQPATHGAIN_parm_addr ioremap failed\n");
-        return 0;
-    }
-    
-    memcpy(AUDVOC_PEQPATHGAIN, AUDVOC_PEQPATHGAIN_ptr, sizeof(AUDVOC_PEQPATHGAIN));
-    iounmap(AUDVOC_PEQPATHGAIN_ptr);
-    return (UInt16*)AUDVOC_PEQPATHGAIN;
-*****/
-    return (UInt16*)NULL;
-}
-
-//******************************************************************************
-//
-// Function Name: SYSPARM_Get_AUDVOC_PEQCOF_Ptr
-//
-// Description:   Get access pointer to AUDVOC_PEQCOF sysparm 
-//
-//******************************************************************************
-UInt16* SYSPARM_Get_AUDVOC_PEQCOF_Ptr( void )
-{
-/*****
-    UInt32 AUDVOC_PEQCOF_parm_addr;
-    UInt16* AUDVOC_PEQCOF_ptr;
-    
-    if(!fuse_sysparm_initialised)
-    {
-    	if(sysparm_init())
-    	{
-            pr_err("[sysparm]: Fuse sysparm is not yet initialised\n");
-            return 0;
-    	}
-    }
-    
-    AUDVOC_PEQCOF_parm_addr = SYSPARM_GePAtByIndex("AUDVOC_PEQCOF", sizeof(AUDVOC_PEQCOF), 1);
-    if(!AUDVOC_PEQCOF_parm_addr)
-    {
-        pr_err("[sysparm]: Get AUDVOC_PEQCOF PA failed\n");
-        return 0;
-    }
-
-    AUDVOC_PEQCOF_ptr = (UInt16*)ioremap_nocache(AUDVOC_PEQCOF_parm_addr, sizeof(AUDVOC_PEQCOF));
-    if(!AUDVOC_PEQCOF_ptr)
-    {
-        pr_err("[sysparm]: AUDVOC_PEQCOF_parm_addr ioremap failed\n");
-        return 0;
-    }
-    
-    memcpy(AUDVOC_PEQCOF, AUDVOC_PEQCOF_ptr, sizeof(AUDVOC_PEQCOF));
-    iounmap(AUDVOC_PEQCOF_ptr);
-    return (UInt16*)AUDVOC_PEQCOF;
-*****/
-    return (UInt16*)NULL;
+    return &mmaudio_parm_table[0];
 }
 
 //******************************************************************************
@@ -1103,20 +921,12 @@ static int sysparm_init(void)
     {
         UInt16 tmp;
 
-        SysIndMultimediaAudioParm_t* pMMAudioTmp; 
         SysAudioParm_t* pAudioTmp;
         pr_info("[sysparm] audio parm table size: 0x%x bytes\n",sizeof(audio_parm_table) );
-        pr_info("[sysparm] mmaudio parm table size: 0x%x bytes\n",sizeof(mm_audio_parm_table) );
         pAudioTmp = APSYSPARM_GetAudioParmAccessPtr();
         if ( !pAudioTmp )
         {
             pr_err("[sysparm]: APSYSPARM_GetAudioParmAccessPtr failed\n");
-        }
-        
-        pMMAudioTmp = APSYSPARM_GetMultimediaAudioParmAccessPtr( );
-        if ( !pMMAudioTmp )
-        {
-            pr_err("[sysparm]: SYSPARM_GetMultimediaAudioParmAccessPtr failed\n");
         }
         
         pr_info("ext_speaker_pga_l 0x%x\n", pAudioTmp->ext_speaker_pga_l);

@@ -1,5 +1,5 @@
 /****************************************************************************
-*									      
+*
 * Copyright 2010 --2011 Broadcom Corporation.
 *
 * Unless you and Broadcom execute a separate written software license
@@ -95,9 +95,17 @@ struct pm_pi_info
 	u32 pd_reset_mask1;
 };
 
+/*PI state flags*/
+enum
+{
+	/* Save/restore CCUs context on enter/exit this tate*/
+	PI_STATE_SAVE_CONTEXT  = (1 << 0),
+};
+
 struct pi_state
 {
 	u32 id;
+	u32 flags;
 	u32 state_policy;
 	u32 hw_wakeup_latency;
 };
@@ -116,6 +124,7 @@ struct pi
 	struct clk* pi_ccu[MAX_CCU_PER_PI];
 	u32 id;
 	u32 state_allowed;
+	u32 state_saved;
 	int init;
 	u32 usg_cnt;
 	u32 opp_active;
@@ -139,13 +148,36 @@ struct pi
 	struct pi_ops* ops;
 };
 
+/*change_notify state*/
+enum
+{
+	PI_PRECHANGE,
+	PI_POSTCHANGE,
+};
+
+/*Struct to pass PI
+ notifier info*/
+struct pi_notify_param
+{
+	int pi_id;
+	u32 old_value;
+	u32 new_value;
+};
+
+/*Notifier types*/
+enum
+{
+	PI_NOTIFY_DFS_CHANGE,
+	PI_NOTIFY_QOS_CHANGE,
+	PI_NOTIFY_POLICY_CHANGE,
+};
+
 struct pi_ops
 {
 	int	(*init)(struct pi *pi);
 	int	(*init_state)(struct pi *pi);
 	int	(*reset)(struct pi *pi, int sub_domain);
 	int	(*enable)(struct pi *pi, int enable);
-	int (*change_notify)(struct pi *pi, int policy);
 };
 
 
@@ -156,8 +188,6 @@ struct pi* pi_mgr_get(int pi_id);
 struct pi_mgr_qos_node* pi_mgr_qos_add_request(char* client_name, u32 pi_id, u32 lat_value);
 int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32 lat_value);
 int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node);
-int pi_mgr_qos_add_notifier(u32 pi_id, struct notifier_block *notifier);
-int pi_mgr_qos_remove_notifier(u32 pi_id, struct notifier_block *notifier);
 int pi_set_policy(const struct pi *pi, u32 policy,int type);
 
 struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id, u32 opp);
@@ -165,8 +195,9 @@ int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp);
 struct pi_mgr_dfs_node* pi_mgr_dfs_add_request_ex(char* client_name, u32 pi_id, u32 opp,u32 opp_weightage);
 int pi_mgr_dfs_request_update_ex(struct pi_mgr_dfs_node* node, u32 opp, u32 opp_weightage);
 int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node);
-int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier);
-int pi_mgr_dfs_remove_notifier(u32 pi_id, struct notifier_block *notifier);
+
+int pi_mgr_register_notifier(u32 pi_id, struct notifier_block *notifier, u32 type);
+int pi_mgr_unregister_notifier(u32 pi_id, struct notifier_block *notifier, u32 type);
 
 int pi_state_allowed(int pi_id);
 int pi_mgr_register(struct pi* pi);
@@ -189,10 +220,6 @@ static inline struct pi_mgr_qos_node* pi_mgr_qos_add_request(char* client_name, 
 static inline int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32
 	lat_value) {return 0;}
 static inline int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node) {return 0;}
-static inline int pi_mgr_qos_add_notifier(u32 pi_id, struct notifier_block *notifier)
-	{return 0;}
-static inline int pi_mgr_qos_remove_notifier(u32 pi_id, struct notifier_block *notifier)
-	{return 0;}
 static inline int pi_set_policy(const struct pi *pi, u32 policy,int type) {return 0;}
 
 static inline struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id,
@@ -200,10 +227,10 @@ static inline struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, 
 static inline int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp)
 	{return	0;}
 static inline int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node) {return 0;}
-static inline int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier)
-	{return 0;}
-static inline int pi_mgr_dfs_remove_notifier(u32 pi_id, struct notifier_block *notifier)
-	{return 0;}
+static inline int pi_mgr_register_notifier(u32 pi_id, struct notifier_block *notifier, u32 type)
+	{return	0;}
+static inline int pi_mgr_unregister_notifier(u32 pi_id, struct notifier_block *notifier, u32 type)
+	{return	0;}
 
 #endif
 

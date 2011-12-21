@@ -301,7 +301,6 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 	bcm_caph_hwdep_voip_t	*pVoIP;
 	AUDIO_DRIVER_CallBackParams_t	cbParams;
 	int ret = 0;
-	AudioMode_t mode = AUDIO_MODE_HANDSET;
     Boolean enable = FALSE;
     Int32 size = 0;
     static UserCtrl_data_t *dataptr = NULL;
@@ -331,7 +330,6 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 					pVoIP->spk = voip_data.spk;
 					pVoIP->codec_type = voip_data.codec_type;
 
-					AUDCTRL_GetAudioModeBySink(pVoIP->spk,&mode);
 					pVoIP->buffer_handle = (audio_voip_driver_t*) kzalloc(sizeof(audio_voip_driver_t), GFP_KERNEL);
 
 					if ( pVoIP->buffer_handle )
@@ -386,12 +384,9 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 					
 					if((pVoIP->codec_type == 4) || (pVoIP->codec_type == 5))// VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k
 					{
-						mode = AUDCTRL_GetAudioMode();
-						//set the audio mode to WB
-						AUDCTRL_SaveAudioModeFlag((AudioMode_t)(mode + AUDIO_MODE_NUMBER));
+						AUDCTRL_Telephony_RateChange ( 16000 );
 					}
 
-	
 					AUDCTRL_EnableTelephony(pVoIP->mic,pVoIP->spk);
 					AUDCTRL_SetTelephonySpkrVolume(pVoIP->spk, 0, AUDIO_GAIN_FORMAT_mB);
 					AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,AUDIO_DRIVER_START,&voip_data);
@@ -416,10 +411,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				else if(voipInstCnt == 1)
 				{
 					AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,AUDIO_DRIVER_STOP,NULL);				
-					AUDCTRL_DisableTelephony(pVoIP->mic,pVoIP->spk);
-				
-					if((pVoIP->codec_type == 4) || (pVoIP->codec_type == 5))// VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k
-						AUDCTRL_SetAudioMode(mode); //setting it back the original mode
+					AUDCTRL_DisableTelephony( );
 
 					AUDIO_DRIVER_Close(pVoIP->buffer_handle->drv_handle);			
 					kfree(pVoIP->buffer_handle->voip_data_dl_buf_ptr);
@@ -437,7 +429,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				int data;
 				get_user(data,__user (int *)arg);
 				voip_data.mic = (AUDIO_SOURCE_Enum_t)data;
-				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSource mic %d, \n",voip_data.mic);
+				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSource mic %ld, \n",voip_data.mic);
 			}
 			break;
 			
@@ -446,7 +438,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				int data;
 				get_user(data,__user (int *)arg);
 				voip_data.spk = (AUDIO_SINK_Enum_t)data;				
-				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSink spk %d, \n",voip_data.spk);
+				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSink spk %ld, \n",voip_data.spk);
 			}
 			break;
 			
@@ -455,7 +447,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				int data;
 				get_user(data,__user (int *)arg);
 				voip_data.codec_type = (u32)data;				
-				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetCodecType codec_type %d, \n",voip_data.codec_type);
+				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetCodecType codec_type %ld, \n",voip_data.codec_type);
 			}
 			break;
 		case VoIP_Ioctl_SetBitrate:
@@ -463,7 +455,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 				int data;
 				get_user(data,__user (int *)arg);
 				voip_data.bitrate_index = (u32)data;
-				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetBitrate bitrate_index %d, \n",voip_data.bitrate_index);
+				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetBitrate bitrate_index %ld, \n",voip_data.bitrate_index);
 			}
 			break;
 		case VoIP_Ioctl_GetSource:
@@ -492,38 +484,30 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 			break;
 		case VoIP_Ioctl_GetMode:
 			{
-				AudioMode_t mode;
-				AUDCTRL_GetAudioModeBySink(pVoIP->spk,&mode);
+				AudioMode_t mode = AUDCTRL_GetAudioMode();
 				put_user((int)mode,__user (int *)arg);
 			}
 			break;
 		case VoIP_Ioctl_SetMode:
 			{
 				int mode;
-				AUDIO_SOURCE_Enum_t cur_mic,new_mic;
-				AUDIO_SINK_Enum_t cur_spk,new_spk;
+				AUDIO_SOURCE_Enum_t new_mic;
+				AUDIO_SINK_Enum_t new_spk;
 				get_user(mode,__user (int *)arg);
-				AUDCTRL_GetVoiceSrcSinkByMode((AudioMode_t)(mode), &new_mic, &new_spk);
-
-				cur_mic = voip_data.mic;
-				cur_spk = voip_data.spk;
+				AUDCTRL_GetSrcSinkByMode((AudioMode_t)(mode), &new_mic, &new_spk);
 
 				voip_data.mic = new_mic;
 				voip_data.spk = new_spk;
 
-				if(pVoIP->status == VoIP_Hwdep_Status_Started)
+				if((pVoIP->codec_type == 4) || (pVoIP->codec_type == 5))// VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k
 				{
-					//call the audio driver to switch to the new path
-				    AUDCTRL_DisableTelephony(cur_mic, cur_spk);
-
-					if((pVoIP->codec_type == 4) || (pVoIP->codec_type == 5))// VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k
-					{
-						mode = AUDCTRL_GetAudioMode();
-						//set the audio mode to WB
-						AUDCTRL_SetAudioMode((AudioMode_t)(mode + AUDIO_MODE_NUMBER));
-					}
-					AUDCTRL_EnableTelephony(voip_data.mic, voip_data.spk);
+					AUDCTRL_Telephony_RateChange( 16000 );
 				}
+#if !defined(USE_NEW_AUDIO_PARAM)
+				AUDCTRL_SetAudioMode( mode );
+#else
+				AUDCTRL_SetAudioMode( mode, AUDCTRL_GetAudioApp());
+#endif
 				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetMode mode %d, \n",mode);
 			}
 			break;

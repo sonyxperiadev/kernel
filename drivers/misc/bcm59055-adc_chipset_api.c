@@ -770,14 +770,11 @@ static int get_cal_vread (struct adc_channels_t *chan,  u32 raw)
 int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 {
 	struct adc_channels_t *chan;
-	int vread, temp_to_return=298, ibat_to_return, ibat, ibat_cal;
+	int vread, temp_to_return=298, ibat_to_return, ibat, ibat_cal, iread;
 	u32 u_iread, u_rread;
-	double vread_f, vpullup, iread, rread, rpullup;
 #ifdef MATHEMATICAL_TEMPERATURE_CALC
+	double vread_f, vpullup, f_iread, rread, rpullup;
 	double rr0, lnrr0, temperature, ft;
-#endif
-#ifdef DEBUGOUT_ADC_CHIPSET_API
-	int vread_32, intc, iread_32, rread_32, rr0_32, lnrr0_32;
 #endif
 
 	if (!bcm59055_adc_chipset_api) {
@@ -811,7 +808,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 
 	case adc_unit_amps:
 		iread = vread/chan->unit.data.amps.rshunt;	/* uV / ohms = uA */
-		return (int)(iread/1000);
+		return (iread/1000);
 
 	case adc_unit_ohms:
 		/* vread_f = vread; */
@@ -844,16 +841,16 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 		vread_f += vread;
 		vpullup = chan->unit.vmax - vread;
 		rpullup = chan->unit.data.kelvin.rpullup;
-		iread = vpullup/rpullup;
+		f_iread = vpullup/rpullup;
 		if (chan->unit.data.kelvin.rpar) {
-			iread -= vread_f/chan->unit.data.kelvin.rpar;
+			f_iread -= vread_f/chan->unit.data.kelvin.rpar;
 		}
 
-		if (!iread) {
+		if (!f_iread) {
 			/* No resistor is present. */
 			return -1;
 		}
-		rread = vread_f/iread;	/* Unit : Ohms */
+		rread = vread_f/f_iread;	/* Unit : Ohms */
 		rread -= chan->unit.data.kelvin.rseries;
 
 		ft = chan->unit.data.kelvin.r0;
@@ -868,18 +865,6 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 		lnrr0 += THERMISTOR_T0;	/* 1/298,15 == default Temperature for NTC */
 		temperature = 1/lnrr0;
 		temp_to_return = temperature;
-
-#ifdef DEBUGOUT_ADC_CHIPSET_API
-		vread_32 = vread_f;
-		iread_32 = (vpullup/rpullup)*1000;
-		intc = iread * 1000;
-		rread_32 = rread;
-		rr0_32 = rr0 * 1000,
-		lnrr0_32 = lnrr0 * 1000000;
-		GLUE_DBG(("hal_adc_unit_convert: temperature: vread_32, iread_32, intc, rread_32, rr0_32, lnrr0_32"));
-		GLUE_DBG(("hal_adc_unit_convert: temperature: %d, %d, %d, %d, %d, %d", vread_32, iread_32, intc, rread_32, rr0_32, lnrr0_32));
-
-#endif
 #else
 		return 0;
 #endif
@@ -887,37 +872,18 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 
 #ifdef VENDOR_ADC_KELVIN_DOWN_TABLE
 	case adc_unit_kelvin_down_table:					/* Temperature where NTC is connected to ground, using CSAPI supplied lookup table. */
-		vread_f = 0;
-		vread_f += vread;
-		vpullup = chan->unit.vmax - vread;
-		rpullup = chan->unit.data.kelvin.rpullup;
-		iread = vpullup/rpullup;
-		if (chan->unit.data.kelvin.rpar) {
-			iread -= vread_f/chan->unit.data.kelvin.rpar;
-		}
+		u_iread = ((chan->unit.vmax - vread)*1000) / (chan->unit.data.ohms.rpullup); /* nA */
+		if (chan->unit.data.kelvin.rpar)
+			u_iread -= (vread*1000)/chan->unit.data.kelvin.rpar;
 
-		if (!iread) {
-			/* No resistor is present. */
-			return -1;
-		}
-		rread = vread_f/iread;	/* Unit : Ohms */
-		rread -= chan->unit.data.kelvin.rseries;
+		u_rread = (vread*1000)/u_iread;	/* Ohm... */
 
 		temp_to_return =
 		VENDOR_ADC_KELVIN_DOWN_TABLE_BEGIN +
 		bsearch_descending_int_table(VENDOR_ADC_kelvin_down_table,
 									 sizeof(VENDOR_ADC_kelvin_down_table) / sizeof(*VENDOR_ADC_kelvin_down_table),
-									 rread);
+									 u_rread);
 
-#ifdef DEBUGOUT_ADC_CHIPSET_API
-		vread_32 = vread_f;
-		iread_32 = (vpullup/rpullup)*1000;
-		intc = iread * 1000;
-		rread_32 = rread;
-		GLUE_DBG(("hal_adc_unit_convert: temperature: vread_32, iread_32, intc, rread_32"));
-		GLUE_DBG(("hal_adc_unit_convert: temperature: %d, %d, %d, %d", vread_32, iread_32, intc, rread_32));
-
-#endif
 
 		return temp_to_return;
 #endif /* VENDOR_ADC_KELVIN_DOWN_TABLE */
@@ -926,12 +892,12 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 #ifdef MATHEMATICAL_TEMPERATURE_CALC
 		vread_f = vread;
 		vpullup = bcm59055_adc_chipset_api->adc_channels[channel].unit.vmax - vread;
-		iread = vpullup/chan->unit.data.kelvin.rpullup;
-		if (!iread) {
+		f_iread = vpullup/chan->unit.data.kelvin.rpullup;
+		if (!f_iread) {
 			/* No resistor is present. */
 			return -1;
 		}
-		rread = vread_f/iread;	/* Unit : Ohms */
+		rread = vread_f/f_iread;	/* Unit : Ohms */
 		rread -= chan->unit.data.kelvin.rseries;
 
 		rr0 = rread/chan->unit.data.kelvin.r0;

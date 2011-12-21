@@ -52,6 +52,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
+#include "auddrv_audlog.h"
 #include "audio_caph.h"
 #include "caph_common.h"
 
@@ -87,6 +88,10 @@ int audio_init_complete = 0;
 #define	PCM_MAX_VOICE_CAPTURE_PERIOD_BYTES    (PCM_MIN_VOICE_CAPTURE_PERIOD_BYTES * 2)
 
 #define	PCM_TOTAL_BUF_BYTES	(PCM_MAX_CAPTURE_BUF_BYTES+PCM_MAX_VOICE_PLAYBACK_BUF_BYTES)
+
+
+extern int logmsg_ready (struct snd_pcm_substream *substream, int log_point);
+
 
 void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate);
 void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate);
@@ -232,7 +237,7 @@ static int PcmPlaybackOpen(
 	param_open.drv_handle = NULL;
 	param_open.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
 
-    BCM_AUDIO_DEBUG("\n %lx:playback_open route the playback to CAPH\n");
+    BCM_AUDIO_DEBUG("\n %lx:playback_open route the playback to CAPH\n", jiffies);
     //route the playback to CAPH
     runtime->hw = brcm_playback_hw;
     chip->streamCtl[substream_number].dev_prop.p[0].drv_type = AUDIO_DRIVER_PLAY_AUDIO;
@@ -485,10 +490,11 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream * substream
 		dmaPointer = 0; //FIXME: remove this line after MEM PTR clarify by ASIC team
 	}
 	pos = chip->streamCtl[substream->number].stream_hw_ptr + bytes_to_frames(runtime, dmaPointer);
-	if(pos<0)
+	//pos is unsigned, comment out to avoid coverity error
+	/*if(pos<0)
 	{
 		pos += runtime->buffer_size;
-	}
+	}*/
 	pos %= runtime->buffer_size;
 
 	return pos;
@@ -557,9 +563,6 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
     }
 
     substream->runtime->private_data = drv_handle;
-
-	if (err<0)
-		return err;
 
 	BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d\n",jiffies, substream_number);
 
@@ -666,7 +669,7 @@ static int PcmCaptureTrigger(
 	}
 	else
 	{
-		BCM_AUDIO_DEBUG("Error!! No valid device selected by the user\n", pSel[0]);
+		BCM_AUDIO_DEBUG("Error!! No valid device selected by the user, pSel[0]=%d\n", pSel[0]);
 		return -EINVAL;
 	}
 	switch (cmd)
@@ -785,13 +788,14 @@ void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 	AUDIO_DRIVER_TYPE_t    drv_type;
 	struct snd_pcm_runtime *runtime;
 	brcm_alsa_chip_t *pChip = NULL;
-	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
+	int substream_number;
 
 	if(!substream)
 	{
     		BCM_AUDIO_DEBUG("Invalid substream 0x%p \n", substream);
 		return;
 	}
+	substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 	pChip = snd_pcm_substream_chip(substream);
 	runtime = substream->runtime;
     	if(!runtime)
@@ -809,13 +813,16 @@ void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 		case AUDIO_DRIVER_CAPT_HQ:
         case AUDIO_DRIVER_CAPT_VOICE:
             {
-                //update the PCM read pointer by period size
+				//update the PCM read pointer by period size
                 pChip->streamCtl[substream_number].stream_hw_ptr += runtime->period_size;
                 if(pChip->streamCtl[substream_number].stream_hw_ptr > runtime->boundary)
                     pChip->streamCtl[substream_number].stream_hw_ptr -= runtime->boundary;
                 // send the period elapsed
 	            snd_pcm_period_elapsed(substream);
-            }
+
+				logmsg_ready (substream, AUD_LOG_PCMIN);
+
+			}
             break;
         default:
             BCM_AUDIO_DEBUG("Invalid driver type\n");
@@ -869,6 +876,9 @@ void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 					pChip->streamCtl[substream->number].stream_hw_ptr -= runtime->boundary;
 				// send the period elapsed
 				snd_pcm_period_elapsed(substream);
+
+				logmsg_ready (substream, AUD_LOG_PCMOUT);
+
 			}
 			break;
 		default:
