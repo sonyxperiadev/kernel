@@ -424,6 +424,7 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 
 	case PMU_IRQ_VBUS_4V5_F:
 		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_VBUS_INVALID, NULL);
+		schedule_delayed_work(&paccy->det_work, 0);
 		break;
 
 	case PMU_IRQ_IDCHG:
@@ -459,6 +460,10 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		blocking_notifier_call_chain(&paccy->event[BCMPMU_FG_EVENT_FGC].
 					     notifiers, BCMPMU_FG_EVENT_FGC,
 					     NULL);
+		break;
+
+	case PMU_IRQ_EOC:
+		schedule_delayed_work(&paccy->det_work, 0);
 		break;
 
 	default:
@@ -630,10 +635,11 @@ static void usb_det_work(struct work_struct *work)
 		break;
 
 	case USB_CONNECTED:
-		if (vbus_status == 0) {
-			usb_type = PMU_USB_TYPE_NONE;
-			chrgr_type = PMU_CHRGR_TYPE_NONE;
-			paccy->det_state = USB_IDLE;
+		if (paccy->bcmpmu->get_env_bit_status(paccy->bcmpmu,
+				PMU_ENV_USB_VALID) != true) {
+				usb_type = PMU_USB_TYPE_NONE;
+				chrgr_type = PMU_CHRGR_TYPE_NONE;
+				paccy->det_state = USB_IDLE;
 		} else {
 			usb_type = bcmpmu->usb_accy_data.usb_type;
 			chrgr_type = bcmpmu->usb_accy_data.chrgr_type;
@@ -1177,6 +1183,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_VBUS_OVERCURRENT, bcmpmu_accy_isr,
 			     paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_FGC, bcmpmu_accy_isr, paccy);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_EOC, bcmpmu_accy_isr, paccy);
 
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBINS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBRM);
@@ -1193,6 +1200,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_SESSION_END_INVLD);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_VBUS_OVERCURRENT);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_FGC);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC);
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_accy_attr_group);
 #endif
@@ -1227,6 +1235,7 @@ static int __devexit bcmpmu_accy_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_SESSION_END_INVLD);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_VBUS_OVERCURRENT);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_FGC);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_EOC);
 	cancel_delayed_work_sync(&paccy->det_work);
 	cancel_delayed_work_sync(&paccy->adp_work);
 	wake_lock_destroy(&paccy->wake_lock);

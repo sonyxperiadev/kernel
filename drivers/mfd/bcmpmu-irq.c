@@ -71,6 +71,7 @@ static int bcmpmu_read_irq_regs(struct bcmpmu_irq_data *idata)
 	int i;
 	int count = 0;
 	
+/*
 	idata->bcmpmu->read_dev_bulk(idata->bcmpmu,
 			idata->bcmpmu->regmap[PMU_REG_INT_START].map,
 			idata->bcmpmu->regmap[PMU_REG_INT_START].addr,
@@ -81,6 +82,22 @@ static int bcmpmu_read_irq_regs(struct bcmpmu_irq_data *idata)
 			idata->bcmpmu->regmap[PMU_REG_INT_MSK_START].addr,
 			&idata->irq_msks[0],
 			idata->irqreg_size);
+*/
+	for (i=0; i<idata->irqreg_size; i++) {
+		idata->bcmpmu->read_dev_drct(idata->bcmpmu,
+			idata->bcmpmu->regmap[PMU_REG_INT_START].map,
+			idata->bcmpmu->regmap[PMU_REG_INT_START].addr + i,
+			&idata->irq_regs[i],
+			0xffffffff);
+	}
+	for (i=0; i<idata->irqreg_size; i++) {
+		idata->bcmpmu->read_dev_drct(idata->bcmpmu,
+			idata->bcmpmu->regmap[PMU_REG_INT_MSK_START].map,
+			idata->bcmpmu->regmap[PMU_REG_INT_MSK_START].addr + i,
+			&idata->irq_msks[i],
+			0xffffffff);
+	}
+
 	for (i=0; i<idata->irqreg_size; i++) {
 		pr_irq(DATA, "%s int=0x%X, mask=0x%X\n",
 			__func__, idata->irq_regs[i],idata->irq_msks[i]);
@@ -145,7 +162,6 @@ void bcmpmu_irq_handler(struct work_struct *work)
 		}
 	}
 	mutex_unlock(&idata->ilock);
-
 	count = bcmpmu_read_irq_regs(idata);
 	if (count > 0) {
 		idata->runagain = 1;
