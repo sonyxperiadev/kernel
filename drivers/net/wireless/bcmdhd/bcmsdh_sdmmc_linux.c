@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_sdmmc_linux.c 282820 2011-09-09 15:40:35Z $
+ * $Id: bcmsdh_sdmmc_linux.c 293424 2011-11-01 23:20:20Z $
  */
 
 #include <typedefs.h>
@@ -30,7 +30,7 @@
 #include <bcmsdbus.h>	/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>	/* to get msglevel bit values */
 
-#if defined(CONFIG_ARCH_ISLAND)
+#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 #include <dngl_stats.h>
 #include <dhd.h>
 #include <linux/mmc/bcm_sdiowl.h>
@@ -61,19 +61,22 @@
 #if !defined(SDIO_DEVICE_ID_BROADCOM_4319)
 #define SDIO_DEVICE_ID_BROADCOM_4319	0x4319
 #endif /* !defined(SDIO_DEVICE_ID_BROADCOM_4319) */
+#if !defined(SDIO_DEVICE_ID_BROADCOM_4330)
+#define SDIO_DEVICE_ID_BROADCOM_4330	0x4330
+#endif /* !defined(SDIO_DEVICE_ID_BROADCOM_4330) */
 
 #include <bcmsdh_sdmmc.h>
 
 #include <dhd_dbg.h>
 
 #ifdef WL_CFG80211
-extern void wl_cfg80211_set_sdio_func(void *func);
+extern void wl_cfg80211_set_parent_dev(void *dev);
 #endif
 
 extern void sdioh_sdmmc_devintr_off(sdioh_info_t *sd);
 extern void sdioh_sdmmc_devintr_on(sdioh_info_t *sd);
 
-#if defined(CONFIG_ARCH_ISLAND)
+#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 extern int bcm_sdiowl_rescan(void);
 struct device sdmmc_dev;
 #endif /* defined(CONFIG_ARCH_ISLAND) */
@@ -116,7 +119,7 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 		if(func->device == 0x4) { /* 4318 */
 			gInstance->func[2] = NULL;
 			sd_trace(("NIC found, calling bcmsdh_probe...\n"));
-#if !defined(CONFIG_ARCH_ISLAND)
+#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 			ret = bcmsdh_probe(&func->dev);
 #else
 			ret = bcmsdh_probe(&sdmmc_dev);
@@ -128,10 +131,10 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 
 	if (func->num == 2) {
 #ifdef WL_CFG80211
-		wl_cfg80211_set_sdio_func(func);
+		wl_cfg80211_set_parent_dev(&func->dev);
 #endif
 		sd_trace(("F2 found, calling bcmsdh_probe...\n"));
-#if !defined(CONFIG_ARCH_ISLAND)
+#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 		ret = bcmsdh_probe(&func->dev);
 #else
 		ret = bcmsdh_probe(&sdmmc_dev);
@@ -151,7 +154,7 @@ static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 
 	if (func->num == 2) {
 		sd_trace(("F2 found, calling bcmsdh_remove...\n"));
-#if !defined(CONFIG_ARCH_ISLAND)
+#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 		bcmsdh_remove(&func->dev);
 #else
 		bcmsdh_remove(&sdmmc_dev);
@@ -171,7 +174,10 @@ static const struct sdio_device_id bcmsdh_sdmmc_ids[] = {
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4325) },
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4329) },
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4319) },
+	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4330) },
+#ifndef BOARD_PANDA
 	{ SDIO_DEVICE_CLASS(SDIO_CLASS_NONE)		},
+#endif
 	{ /* end: all zeroes */				},
 };
 
@@ -285,7 +291,7 @@ int sdio_function_init(void)
 	if (!gInstance)
 		return -ENOMEM;
 
-#if defined(CONFIG_ARCH_ISLAND)
+#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 	error = bcm_sdiowl_init();
 	if (error) {
 		sd_err(("%s: bcm_sdiowl_start failed\n", __FUNCTION__));
@@ -322,7 +328,7 @@ void sdio_function_cleanup(void)
 
 	sdio_unregister_driver(&bcmsdh_sdmmc_driver);
 
-#if defined(CONFIG_ARCH_ISLAND)
+#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 	/* 
  	 * Minimize power consumption by placing WiFi in reset.
 	 */

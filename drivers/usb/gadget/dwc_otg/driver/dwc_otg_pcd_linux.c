@@ -708,7 +708,16 @@ static int pullup(struct usb_gadget *gadget, int is_on)
 	} else {
 		d = container_of(gadget, struct gadget_wrapper, gadget);
 	}
-	dwc_otg_pcd_disconnect(d->pcd, is_on ? false : true);
+
+	d->pcd->core_if->gadget_pullup_on = is_on;
+
+#ifdef CONFIG_USB_OTG_UTILS
+	/* Need a defined transceiver's state before controlling pullup */
+	if (gadget_wrapper->pcd->core_if->xceiver->state != OTG_STATE_UNDEFINED)
+#endif
+	{
+		dwc_otg_pcd_disconnect(d->pcd, is_on ? false : true);
+	}
 
 	return 0;
 }

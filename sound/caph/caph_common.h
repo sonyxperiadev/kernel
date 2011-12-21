@@ -42,7 +42,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/moduleparam.h>
 #include <linux/sched.h>
 #include <linux/kernel.h>
-
+#include <linux/printk.h>
 
 #include <sound/core.h>
 #include <sound/control.h>
@@ -62,13 +62,22 @@ the GPL, without Broadcom's express prior written consent.
 #endif
 
 #if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
-//#if 1
-void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
+//variables
+extern int gAudioDebugLevel;
+// use pr_debug for dynamic kernel logging
 #define BCM_AUDIO_DEBUG(format, args...) \
-	_bcm_snd_printk(2, __FILE__, __LINE__, format, ##args)
-
+		 do { \
+			if(!(gAudioDebugLevel & 2)) \
+			  break;\
+			pr_info(pr_fmt(format), ##args);\
+		  } while(0)
+ 
 #define DEBUG(format, args...) \
-	_bcm_snd_printk(2, __FILE__, __LINE__, format, ##args)
+	  do { \
+		if(!(gAudioDebugLevel & 2)) \
+		  break;\
+		pr_info(pr_fmt(format), ##args);\
+	  } while(0)
 
 #else
 #define BCM_AUDIO_DEBUG(format, args...)	do { } while (0)
@@ -82,7 +91,7 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 #define	MIXER_STREAM_FLAGS_FM		0x00000004
 
 #define	CAPH_MIXER_NAME_LENGTH		20	//Max length of a mixer name
-#define	MIC_TOTAL_COUNT_FOR_USER    (AUDIO_SOURCE_DIGI4+1)
+#define	MIC_TOTAL_COUNT_FOR_USER    (AUDIO_SOURCE_VALID_TOTAL)
 #define	CAPH_MAX_CTRL_LINES         ((MIC_TOTAL_COUNT_FOR_USER>AUDIO_SINK_TOTAL_COUNT)?MIC_TOTAL_COUNT_FOR_USER:AUDIO_SINK_TOTAL_COUNT)
 #define	CAPH_MAX_PCM_STREAMS		8
 #define MAX_USERCTRL_DATA_SIZE		300
@@ -132,7 +141,7 @@ typedef struct brcm_alsa_chip
 	struct work_struct work_play;
     struct work_struct work_capt;
 
-	s32	pi32LoopBackTestParam[3];	//loopback test
+	s32	pi32LoopBackTestParam[4];	//loopback test
 	s32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	s32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
 	s32	pi32SpeechMixOption[CAPH_MAX_PCM_STREAMS];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
@@ -182,7 +191,8 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_BT_TEST,
 	CTL_FUNCTION_CFG_SSP,
 	CTL_FUNCTION_CFG_IHF,
-	CTL_FUNCTION_SINK_CHG
+	CTL_FUNCTION_SINK_CHG,
+	CTL_FUNCTION_HW_CTL
 };
 
 enum	AT_AUD_Ctl_t
@@ -255,9 +265,6 @@ enum {
 #define	FUNC_OF_CTL(private)		((private)&0xFF)
 
 
-
-//variables
-extern int gAudioDebugLevel;
 
 //functions
 extern int __devinit PcmDeviceNew(struct snd_card *card);

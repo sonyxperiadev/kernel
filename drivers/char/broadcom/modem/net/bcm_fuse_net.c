@@ -69,6 +69,10 @@ extern unsigned char SYS_GenClientID(void);
 
 #define BCM_DUALSIM_SIMID_NETIOCTL (SIOCDEVPRIVATE + 1)
 
+//ip protocol header
+#define IPV6_PROTOCOL_HEADER 0x60
+#define PROTOCOL_HEADER_OFFSET 0xf0
+
 typedef enum
 {
     EFree = 0,
@@ -276,13 +280,26 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType, uns
     memcpy(skb_put(skb, data_len), data_ptr, data_len);
 
     skb->dev = ndrvr_info_ptr->dev_ptr;
-    skb->protocol=htons(ETH_P_IP);
     skb->ip_summed = CHECKSUM_UNNECESSARY; /* don't check it */
     skb->pkt_type = PACKET_HOST;
     ndrvr_info_ptr->dev_ptr->last_rx = jiffies;
 
     ndrvr_info_ptr->stats.rx_packets++;
     ndrvr_info_ptr->stats.rx_bytes += data_len; 
+
+    //check if ipv4 or ipv6
+    if((data_ptr[0] & PROTOCOL_HEADER_OFFSET) == IPV6_PROTOCOL_HEADER)
+    {
+        int i;
+
+        BNET_DEBUG(DBG_TRACE,"%s: packet received as of ipv6\n", __FUNCTION__);
+        skb->protocol=htons(ETH_P_IPV6);
+    }
+    else
+    {
+        BNET_DEBUG(DBG_TRACE,"%s: packet received as of ipv4\n", __FUNCTION__);
+        skb->protocol=htons(ETH_P_IP);
+    }
 
     BNET_DEBUG(DBG_TRACE,"%s: rx_bytes:%ld\n", __FUNCTION__,ndrvr_info_ptr->stats.rx_bytes);
 

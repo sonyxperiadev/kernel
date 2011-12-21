@@ -1219,7 +1219,7 @@ struct device *get_2_6_device(char *str)
 void set_enable_store(char *str, int value)
 {
 	struct android_dev *dev = _android_dev;
-	struct android_usb_function *f;
+	struct android_usb_function *f=NULL;
 	struct usb_composite_dev *cdev;
 	int err;
 	struct list_head *pos = NULL;
@@ -1408,7 +1408,7 @@ static int
 composite_uevent(struct device *dev, struct kobj_uevent_env *env)
 {
 	struct android_dev *adev = _android_dev;
-	struct android_usb_function *f;
+	struct android_usb_function *f=NULL;
 	char name[20] = "";
 	struct list_head *pos = NULL;
 	struct list_head *n;

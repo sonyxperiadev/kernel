@@ -8148,7 +8148,7 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 	case WLC_E_ROAM:
 		if (status == WLC_E_STATUS_SUCCESS) {
 			WL_ASSOC((" WLC_E_ROAM : success \n"));
-			return;
+			goto wl_iw_event_end;
 		}
 	break;
 
@@ -8287,6 +8287,12 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 
 	case WLC_E_SCAN_COMPLETE:
 #if defined(WL_IW_USE_ISCAN)
+		if (!g_iscan) {
+			
+			WL_ERROR(("Event WLC_E_SCAN_COMPLETE on g_iscan NULL!"));
+			goto wl_iw_event_end;
+		}
+
 		if ((g_iscan) && (g_iscan->tsk_ctl.thr_pid >= 0) &&
 			(g_iscan->iscan_state != ISCAN_STATE_IDLE))
 		{

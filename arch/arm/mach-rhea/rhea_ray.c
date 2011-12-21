@@ -80,7 +80,7 @@
 #if defined (CONFIG_AL3006)
 #include <linux/al3006.h>
 #endif
-#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU3050))
+#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
 #include <linux/mpu.h>
 #endif
 #define _RHEA_
@@ -664,45 +664,44 @@ static struct i2c_board_info __initdata al3006_info[] =
 	},
 };
 #endif
+#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
+static struct mpu_platform_data mpu6050_data={
+	.int_config = 0x10,
+	.orientation =
+		{ 0,1,0,
+		  1,0,0,
+		  0,0,-1},
+	.level_shifter = 0,
 
-#ifdef CONFIG_GPIO_PCA953X
-	#define MPU_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 2)
-	#define ACCE_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 1)
-	#define COMP_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 4)
-#else
-	#define MPU_INT_GPIO_PIN		122	/*  skip expander chip */
-	#define ACCE_INT_GPIO_PIN		122 /*  skip expander chip */
-	#define COMP_INT_GPIO_PIN		122 /*  skip expander chip */
-#endif
-
-#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU3050))
-
-static struct mpu_platform_data mpu_data = {
-	.int_config  = 0x10,
-	.orientation = {  -1,  0,  0,
-			   0,  1,  0,
-			   0,  0, -1 },
-};
-
-#ifdef CONFIG_MPU_SENSORS_MPU3050
-	#define MPU_NAME "mpu3050"
-#endif
-#ifdef CONFIG_MPU_SENSORS_MPU6050B1
-	#define MPU_NAME "mpu6050B1"
-#endif
-#ifdef CONFIG_MPU_SENSORS_MPU6050A2
-	#define MPU_NAME "mpu6050a2"
-#endif
-
-static struct i2c_board_info __initdata mpu_i2c_info[] =
-{
-	{
-		I2C_BOARD_INFO(MPU_NAME, 0x68),
-		.irq = gpio_to_irq(MPU_INT_GPIO_PIN),
-		.platform_data = &mpu_data,
+	.accel = {
+		 /*.get_slave_descr = mpu_get_slave_descr,*/
+		.adapt_num = 2,
+		.bus = EXT_SLAVE_BUS_SECONDARY,
+		.address = 0x38,
+		.orientation =
+			{ 0,1,0,
+			  1,0,0,
+			  0,0,-1},
+	},
+	.compass = {
+		 /*.get_slave_descr = compass_get_slave_descr,*/
+		.adapt_num = 2,
+		.bus = EXT_SLAVE_BUS_PRIMARY,
+		.address = (0x50>>1),
+		.orientation =
+			{ 0,1,0,
+			  1,0,0,
+			  0,0,-1},
 	},
 };
-
+static struct i2c_board_info __initdata mpu6050_info[] =
+{
+	{
+		I2C_BOARD_INFO("mpu6050", 0x68),
+		 /*.irq = */
+		.platform_data = &mpu6050_data,
+	},
+};
 #endif
 
 #ifdef CONFIG_KONA_HEADSET
@@ -1501,10 +1500,10 @@ static void __init rhea_ray_add_i2c_devices (void)
 			al3006_info,
 			ARRAY_SIZE(al3006_info));
 #endif
-#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1)|| defined(CONFIG_MPU_SENSORS_MPU3050))
+#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
 	i2c_register_board_info(1,
-			mpu_i2c_info,
-			ARRAY_SIZE(mpu_i2c_info));
+			mpu6050_info,
+			ARRAY_SIZE(mpu6050_info));
 #endif
 }
 

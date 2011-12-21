@@ -1065,6 +1065,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    {
 	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
    }
+
 err_ret:
    bsc_disable_clk(dev);
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM

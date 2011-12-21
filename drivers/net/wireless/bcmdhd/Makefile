@@ -6,15 +6,29 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Werror -Dlinux -DBCMDRIVER             \
 	-DMMC_SDIO_ABORT -DBCMSDIO -DBCMLXSDMMC -DBCMPLATFORM_BUS             \
 	-DNEW_COMPAT_WIRELESS -DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT          \
 	-DKEEP_ALIVE -DPKT_FILTER_SUPPORT                                     \
-	-DEMBEDDED_PLATFORM -DENABLE_INSMOD_NO_FW_LOAD -DPNO_SUPPORT          \
-	-DSDIO_ISR_THREAD                                                     \
+	-DEMBEDDED_PLATFORM -DPNO_SUPPORT                                     \
 	-DDHD_BCM_WIFI_HDMI                                                   \
+	-DOEMANDROID                                                          \
 	-Idrivers/net/wireless/bcmdhd -Idrivers/net/wireless/bcmdhd/include
+
+
+
+ifeq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
+# SW-OOB Interrupt
+DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74
+endif
+
+ifneq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
+DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
+endif
 
 DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o   \
 	dhd_linux_sched.o bcmwifi.o dhd_sdio.o bcmevent.o dhd_bta.o hndpmu.o  \
 	bcmsdh.o dhd_cdc.o bcmsdh_linux.o dhd_common.o linux_osl.o            \
 	bcmsdh_sdmmc.o dhd_custom_gpio.o sbutils.o wldev_common.o wl_android.o
+
+# Uncomment to enable firmware dongle debug messages.
+# DHDCFLAGS += -DDHD_DEBUG -DSRCBASE=\"$(SRCBASE)\"
 
 obj-$(CONFIG_BCMDHD) += bcmdhd.o
 bcmdhd-objs += $(DHDOFILES)
@@ -22,10 +36,16 @@ ifneq ($(CONFIG_WIRELESS_EXT),)
 bcmdhd-objs += wl_iw.o
 DHDCFLAGS += -DSOFTAP
 endif
+
+# Use CFG80211 for Android ICS only.
+### Until if fix bmake, this is on so ICS gets WiFi.
+###ifneq ($(CONFIG_ANDROID_CFG80211),)
 ifneq ($(CONFIG_CFG80211),)
 bcmdhd-objs += wl_cfg80211.o wl_cfgp2p.o dhd_linux_mon.o
-DHDCFLAGS += -DWL_CFG80211
+DHDCFLAGS += -DWL_CFG80211 -DWLP2P
 endif
+###endif 
+
 EXTRA_CFLAGS = $(DHDCFLAGS)
 
 # Android needs CSCAN to update AP list.

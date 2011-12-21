@@ -468,7 +468,7 @@ UInt32 RPC_GetUserData(UInt8 clientIndex)
 {
 	xassert(clientIndex < MAX_RPC_CLIENTS, clientIndex);
 	
-	//coverity[overrun-local], clientIndex has checked in above xassert function, so it will not overrun of array gClientMap.
+	//coverity[overrun-buffer-val], clientIndex has checked in above xassert function, so it will not overrun of array gClientMap.
 	return gClientMap[clientIndex].userData;
 }
 

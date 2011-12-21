@@ -73,8 +73,7 @@
 #define NUM_OF_BIQUAD_FILTER_COEF	10
 #define NUM_OF_ECHO_STABLE_COEF_THRESH 2
 #define NUM_OF_ECHO_NLP_GAIN		6
-#define NUM_OF_ENTRY_IN_DSP_VOICE_VOLUME_TABLE 15
-#define NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME		15 
+
 
 /** Number of byte of Terminal Profile data defined in Sysparm. If the number of bytes is larger
  * than the "MAX_PROFILE_ARRAY_SIZE" defined in USIMAP/SIMAP, the extra bytes are truncated

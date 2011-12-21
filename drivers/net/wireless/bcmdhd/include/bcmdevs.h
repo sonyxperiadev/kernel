@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmdevs.h 279768 2011-08-25 19:38:56Z $
+ * $Id: bcmdevs.h 292924 2011-10-28 21:45:40Z $
  */
 
 
@@ -135,7 +135,7 @@
 #define BCM43237_D11N5G_ID	0x4356		
 #define BCM43227_D11N2G_ID	0x4358		
 #define BCM43228_D11N_ID		0x4359		
-#define BCM43228_D11N5G_ID	0x435a		 
+#define BCM43228_D11N5G_ID	0x435a		
 #define BCM43362_D11N_ID	0x4363		
 #define BCM43239_D11N_ID	0x4370		
 
@@ -200,6 +200,7 @@
 #define	BCM4319_CHIP_ID		0x4319		
 #define	BCM4320_CHIP_ID		0x4320		
 #define	BCM4321_CHIP_ID		0x4321		
+#define	BCM43217_CHIP_ID	43217		
 #define	BCM4322_CHIP_ID		0x4322		
 #define	BCM43221_CHIP_ID	43221		
 #define	BCM43222_CHIP_ID	43222		
@@ -703,6 +704,7 @@
 
 #define BCM943236OLYMPICSULLEY_SSID 0x594
 #define BCM943236PREPROTOBLU2O3_SSID 0x5b9
+#define BCM943236USBELNA_SSID 0x5f8
 
 
 #define GPIO_NUMPINS		32
