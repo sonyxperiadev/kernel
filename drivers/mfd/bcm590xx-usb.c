@@ -115,7 +115,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 	int count = 0;
 	bcm_hsotgctrl_en_clock(true);
 	bcStatus = readl(BB_BC_STATUS);
-	pr_debug("%s: BC STATUS (0x%x) = 0x%x\n", __func__, BB_BC_STATUS, bcStatus);
+	pr_debug("%s: BC STATUS (0x%x) = 0x%x\n", __func__, (unsigned int)BB_BC_STATUS, bcStatus);
 	/* Check if error occured while BC detection happened */
 	if (bcStatus & BB_BC_ERROR_STS_BITS) {
 		pr_debug("%s: Error occured while BC detection\n", __func__);
@@ -153,7 +153,7 @@ static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 			msleep(10);
 			count++;
 			bcStatus = readl(BB_BC_STATUS);
-			pr_debug("%s: BC STATUS (0x%x) = 0x%x..Count %d\n", __func__, BB_BC_STATUS, bcStatus, count);
+			pr_debug("%s: BC STATUS (0x%x) = 0x%x..Count %d\n", __func__, (unsigned int)BB_BC_STATUS, bcStatus, count);
 		}
 	}
 	if (count == MAX_BC_STATUS_CHECK) {

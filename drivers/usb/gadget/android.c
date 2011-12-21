@@ -567,7 +567,9 @@ static int mass_storage_function_init(struct android_usb_function *f,
 				&common->luns[0].dev.kobj,
 				"lun0");
 	if (err) {
+#ifdef CONFIG_USB_G_ANDROID_SYSFS_CLEANUP
 		fsg_common_release(&common->ref);
+#endif
 		kfree(config);
 		return err;
 	}
@@ -579,7 +581,9 @@ static int mass_storage_function_init(struct android_usb_function *f,
 
 		if (err) {
 			sysfs_remove_link(&f->dev->kobj, "lun0"); /* Remove link to "lun0" before freeing config */
+#ifdef CONFIG_USB_G_ANDROID_SYSFS_CLEANUP
 			fsg_common_release(&common->ref);
+#endif
 			kfree(config);
 			return err;
 		}
@@ -592,11 +596,13 @@ static int mass_storage_function_init(struct android_usb_function *f,
 
 static void mass_storage_function_cleanup(struct android_usb_function *f)
 {
+#ifdef CONFIG_USB_G_ANDROID_SYSFS_CLEANUP
 	struct mass_storage_function_config *config;
 
 	config = f->config;
 	fsg_common_release(&config->common->ref);
-	kfree(config);
+#endif
+	kfree(f->config);
 	f->config = NULL;
 }
 
@@ -1213,7 +1219,7 @@ struct device *get_2_6_device(char *str)
 void set_enable_store(char *str, int value)
 {
 	struct android_dev *dev = _android_dev;
-	struct android_usb_function *f;
+	struct android_usb_function *f=NULL;
 	struct usb_composite_dev *cdev;
 	int err;
 	struct list_head *pos = NULL;
@@ -1402,7 +1408,7 @@ static int
 composite_uevent(struct device *dev, struct kobj_uevent_env *env)
 {
 	struct android_dev *adev = _android_dev;
-	struct android_usb_function *f;
+	struct android_usb_function *f=NULL;
 	char name[20] = "";
 	struct list_head *pos = NULL;
 	struct list_head *n;

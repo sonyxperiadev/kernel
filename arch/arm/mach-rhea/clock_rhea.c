@@ -5281,6 +5281,28 @@ static u32 mm_clk_freq_list3[] = DEFINE_ARRAY_ARGS(99840000,99840000);
 static u32 mm_clk_freq_list4[] = DEFINE_ARRAY_ARGS(166400000,166400000);
 static u32 mm_clk_freq_list5[] = DEFINE_ARRAY_ARGS(249600000,249600000);
 
+/*MM CCU state save register list*/
+static struct reg_save mm_reg_save[] =
+	{
+		{MM_CLK_MGR_REG_POLICY_FREQ_OFFSET, MM_CLK_MGR_REG_POLICY_FREQ_OFFSET},
+		{MM_CLK_MGR_REG_POLICY0_MASK_OFFSET, MM_CLK_MGR_REG_INTEN_OFFSET},
+		{MM_CLK_MGR_REG_VLT_PERI_OFFSET, MM_CLK_MGR_REG_VLT_PERI_OFFSET},
+		{MM_CLK_MGR_REG_VLT0_3_OFFSET, MM_CLK_MGR_REG_VLT4_7_OFFSET},
+		{MM_CLK_MGR_REG_AXI_DIV_OFFSET, MM_CLK_MGR_REG_CSI1_DIV_OFFSET},
+		{MM_CLK_MGR_REG_SMI_DIV_OFFSET, MM_CLK_MGR_REG_TESTDEBUG_DIV_OFFSET},
+		{MM_CLK_MGR_REG_PLLDSIA_OFFSET, MM_CLK_MGR_REG_PLLDSI_SSC1_OFFSET},
+		{MM_CLK_MGR_REG_PLLDSI_SSC2_OFFSET, MM_CLK_MGR_REG_PLLDSI_OFFSET_OFFSET},
+		{MM_CLK_MGR_REG_CLKMON_OFFSET, MM_CLK_MGR_REG_CLKMON_OFFSET},
+	};
+
+static struct ccu_state_save mm_state_save =
+	{
+		.reg_save = mm_reg_save,
+		.reg_set_count = ARRAY_SIZE(mm_reg_save),
+		.save_buf = NULL, /*Let clk mgr allocate this buf*/
+	};
+
+
 static struct ccu_clk CLK_NAME(mm) = {
 
 	.clk =	{
@@ -5291,6 +5313,7 @@ static struct ccu_clk CLK_NAME(mm) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &mm_ccu_ops,
+	.ccu_state_save = &mm_state_save,
 	.pi_id = PI_MGR_PI_ID_MM,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(MM_CLK_BASE_ADDR),
 	.wr_access_offset = MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -6417,12 +6440,14 @@ static int mm_ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u
 	else
 		return -EINVAL;
 
+	ccu_write_access_enable(ccu_clk,true);
 	reg_val = readl(CCU_VLT_PERI_REG(ccu_clk));
 
 	reg_val  = (reg_val & ~(CCU_PERI_VLT_MASK << shift)) |
 	           ((voltage & CCU_PERI_VLT_MASK) << shift);
 
 	 writel(reg_val,CCU_VLT_PERI_REG(ccu_clk));
+	 ccu_write_access_enable(ccu_clk,false);
 	return 0;
 }
 

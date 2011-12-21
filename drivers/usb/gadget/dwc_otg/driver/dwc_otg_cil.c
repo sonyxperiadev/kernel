@@ -63,6 +63,17 @@
 
 static int dwc_otg_setup_params(dwc_otg_core_if_t * core_if);
 
+static void dwc_otg_core_soft_disconnect(dwc_otg_core_if_t * core_if, bool en)
+{
+	dctl_data_t dctl = {.d32 = 0 };
+
+	if (dwc_otg_is_device_mode(core_if)) {
+		dctl.d32 = dwc_read_reg32(&core_if->dev_if->dev_global_regs->dctl);
+		dctl.b.sftdiscon = en ? 1 : 0;
+		dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl, dctl.d32);
+	}
+}
+
 void w_init_core(void *p)
 {
 	dwc_otg_core_if_t *core_if = p;
@@ -83,8 +94,13 @@ void w_init_core(void *p)
 
 		if (dwc_otg_is_host_mode(core_if))
 			cil_hcd_start(core_if);
-		else
+		else {
 			cil_pcd_start(core_if);
+
+#ifdef CONFIG_USB_OTG_UTILS
+			dwc_otg_core_soft_disconnect(core_if, core_if->gadget_pullup_on ? false : true);
+#endif
+		}
 	}
 }
 
@@ -825,7 +841,7 @@ int dwc_otg_save_global_regs(dwc_otg_core_if_t *core_if)
 #endif
 	gr->gi2cctl_local = dwc_read_reg32(&core_if->core_global_regs->gi2cctl);
 	gr->pcgcctl_local = dwc_read_reg32(core_if->pcgcctl);
-	for (i = 0; i < MAX_EPS_CHANNELS; i++) {
+	for (i = 0; i < (MAX_EPS_CHANNELS - 1); i++) { /* Fifo number is 1 <= n <= 15 */
 		gr->dtxfsiz_local[i] = dwc_read_reg32(&(core_if->core_global_regs->dtxfsiz[i]));
 	}
 
@@ -963,7 +979,7 @@ int dwc_otg_restore_global_regs(dwc_otg_core_if_t *core_if)
 	dwc_write_reg32(&core_if->core_global_regs->grxfsiz, gr->grxfsiz_local);
 	dwc_write_reg32(&core_if->core_global_regs->gnptxfsiz, gr->gnptxfsiz_local);
 	dwc_write_reg32(&core_if->core_global_regs->hptxfsiz, gr->hptxfsiz_local);
-	for (i = 0; i < MAX_EPS_CHANNELS; i++) {
+	for (i = 0; i < (MAX_EPS_CHANNELS-1); i++) { /* Fifo number is 1 <= n <= 15 */
 		dwc_write_reg32(&core_if->core_global_regs->dtxfsiz[i], gr->dtxfsiz_local[i]);
 	}
 
@@ -4605,6 +4621,12 @@ void dwc_otg_core_reset(dwc_otg_core_if_t * core_if)
 	greset.b.csftrst = 1;
 	dwc_write_reg32(&global_regs->grstctl, greset.d32);
 	do {
+#ifdef CONFIG_USB_OTG_UTILS
+		/* Core clears this bit by default upon reset or these versions of the core so we need to set it */
+		if (core_if->snpsid <= OTG_CORE_REV_2_93a) {
+			dwc_otg_core_soft_disconnect(core_if, true);
+		}
+#endif
 		greset.d32 = dwc_read_reg32(&global_regs->grstctl);
 		if (++count > 10000) {
 			DWC_WARN("%s() HANG! Soft Reset GRSTCTL=%0x\n",
@@ -4614,6 +4636,13 @@ void dwc_otg_core_reset(dwc_otg_core_if_t * core_if)
 		dwc_udelay(1);
 	}
 	while (greset.b.csftrst == 1);
+
+#ifdef CONFIG_USB_OTG_UTILS
+	/* Core clears this bit by default upon reset or these versions of the core so we need to set it */
+	if (core_if->snpsid <= OTG_CORE_REV_2_93a) {
+		dwc_otg_core_soft_disconnect(core_if, true);
+	}
+#endif
 
 	/* Wait for 3 PHY Clocks */
 	dwc_mdelay(100);

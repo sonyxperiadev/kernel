@@ -28,6 +28,7 @@ obj-$(CONFIG_MACH_RHEA_FARADAY_EB10) += rhea_ray.o rhea_faraday_eb10_pinmux.o
 obj-$(CONFIG_MACH_RHEA_BERRI) += rhea_berri.o rhea_berri_pinmux.o
 obj-$(CONFIG_MACH_RHEA_BERRI_EDN40) += rhea_berri.o rhea_berri_pinmux.o
 obj-$(CONFIG_MACH_RHEALC_BERRI) += rhea_berri.o rhea_berri_pinmux.o
+obj-$(CONFIG_MACH_RHEA_STONE) += rhea_stone.o
 obj-y += pm_params.o
 
 obj-$(CONFIG_ROM_SEC_DISPATCHER) += sec_bridge_tz.i

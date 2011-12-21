@@ -1,0 +1,742 @@
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2010  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
+#include <linux/version.h>
+#include <linux/init.h>
+#include <linux/device.h>
+#include <linux/platform_device.h>
+#include <linux/sysdev.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
+#include <linux/kernel_stat.h>
+#include <asm/mach/arch.h>
+#include <asm/mach-types.h>
+#include <mach/hardware.h>
+#include <linux/i2c.h>
+#include <linux/i2c-kona.h>
+#include <linux/gpio_keys.h>
+#include <linux/input.h>
+#include <asm/gpio.h>
+#include <mach/kona_headset_pd.h>
+#include <mach/kona.h>
+#include <mach/rhea.h>
+#include <asm/mach/map.h>
+#include <linux/power_supply.h>
+#include <linux/mfd/bcm590xx/core.h>
+#include <linux/mfd/bcm590xx/pmic.h>
+#include <linux/mfd/bcm590xx/bcm59055_A0.h>
+#include <linux/broadcom/bcm59055-power.h>
+#include <linux/clk.h>
+#include <linux/bootmem.h>
+#include "common.h"
+#include <mach/sdio_platform.h>
+#include <linux/i2c/tango_ts.h>
+
+#ifdef CONFIG_KEYBOARD_BCM
+#include <mach/bcm_keypad.h>
+#endif
+#ifdef CONFIG_DMAC_PL330
+#include <mach/irqs.h>
+#include <plat/pl330-pdata.h>
+#include <linux/dma-mapping.h>
+#endif
+#include <linux/spi/spi.h>
+#if defined (CONFIG_HAPTIC)
+#include <linux/haptic.h>
+#endif
+#if defined (CONFIG_AL3006)
+#include <linux/al3006.h>
+#endif
+#if defined (CONFIG_BMP18X)
+#include <linux/bmp18x.h>
+#endif
+
+#define _RHEA_
+#include <mach/comms/platform_mconfig.h>
+
+
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+#include <linux/broadcom/bcmbt_rfkill.h>
+#endif
+
+#ifdef CONFIG_BCM_BT_LPM
+#include <linux/broadcom/bcmbt_lpm.h
+#endif
+
+#ifdef CONFIG_BACKLIGHT_PWM
+#include <linux/pwm_backlight.h>
+#endif
+
+#ifdef CONFIG_FB_BRCM_RHEA
+#include <video/kona_fb.h>
+#endif
+
+#define PMU_DEVICE_I2C_ADDR_0   0x08
+#define PMU_IRQ_PIN           29
+
+
+#define SD_CARDDET_GPIO_PIN	38
+
+// keypad map
+#define BCM_KEY_ROW_0  0
+#define BCM_KEY_ROW_1  1
+#define BCM_KEY_ROW_2  2
+#define BCM_KEY_ROW_3  3
+#define BCM_KEY_ROW_4  4
+#define BCM_KEY_ROW_5  5
+#define BCM_KEY_ROW_6  6
+#define BCM_KEY_ROW_7  7
+
+#define BCM_KEY_COL_0  0
+#define BCM_KEY_COL_1  1
+#define BCM_KEY_COL_2  2
+#define BCM_KEY_COL_3  3
+#define BCM_KEY_COL_4  4
+#define BCM_KEY_COL_5  5
+#define BCM_KEY_COL_6  6
+#define BCM_KEY_COL_7  7
+
+#ifdef CONFIG_MFD_BCMPMU
+void __init board_pmu_init(void);
+#endif
+
+/*
+ * GPIO pin for Touch screen pen down interrupt
+ */
+#define TANGO_GPIO_IRQ_PIN			71
+#define TANGO_GPIO_RESET_PIN			70
+#define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ 	14
+
+#ifdef CONFIG_KEYBOARD_BCM
+/*!
+ * The keyboard definition structure.
+ */
+struct platform_device bcm_kp_device = {
+	.name = "bcm_keypad",
+	.id = -1,
+};
+
+static struct bcm_keymap newKeymap[] = {
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", 	KEY_VOLUMEDOWN},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Up Key", 	KEY_VOLUMEUP},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Back Key", 	KEY_BACK},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "Home-Key", 	KEY_HOME},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "Search Key", 	KEY_SEARCH},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "Menu-Key", 	KEY_MENU},
+};
+
+static struct bcm_keypad_platform_info bcm_keypad_data = {
+	.row_num = 2,
+	.col_num = 3,
+	.keymap = newKeymap,
+	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
+};
+
+#endif
+
+#ifdef CONFIG_KONA_HEADSET
+#define HS_IRQ		gpio_to_irq(39)
+#define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
+#define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
+static struct kona_headset_pd headset_data = {
+	.hs_default_state = 1, /* GPIO state read is 0 on HS insert and 1 for
+							* HS remove*/
+};
+
+static struct resource board_headset_resource[] = {
+	{	/* For AUXMIC */
+		.start = AUXMIC_BASE_ADDR,
+		.end = AUXMIC_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{	/* For ACI */
+		.start = ACI_BASE_ADDR,
+		.end = ACI_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{	/* For Headset IRQ */
+		.start = HS_IRQ,
+		.end = HS_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+	{	/* For Headset button IRQ */
+		.start = HSB_IRQ,
+		.end = HSB_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+        {       /* For Headset button  release IRQ */
+                .start = HSB_REL_IRQ,
+                .end = HSB_REL_IRQ,
+                .flags = IORESOURCE_IRQ,
+        },
+};
+
+struct platform_device headset_device = {
+	.name = "konaaciheadset",
+	.id = -1,
+	.resource = board_headset_resource,
+	.num_resources	= ARRAY_SIZE(board_headset_resource),
+	.dev	=	{
+		.platform_data = &headset_data,
+	},
+};
+#endif /* CONFIG_KONA_HEADSET */
+
+#ifdef CONFIG_DMAC_PL330
+static struct kona_pl330_data rhea_pl330_pdata =	{
+	/* Non Secure DMAC virtual base address */
+	.dmac_ns_base = KONA_DMAC_NS_VA,
+	/* Secure DMAC virtual base address */
+	.dmac_s_base = KONA_DMAC_S_VA,
+	/* # of PL330 dmac channels 'configurable' */
+	.num_pl330_chans = 8,
+	/* irq number to use */
+	.irq_base = BCM_INT_ID_RESERVED184,
+	/* # of PL330 Interrupt lines connected to GIC */
+	.irq_line_count = 8,
+};
+
+static struct platform_device pl330_dmac_device = {
+	.name = "kona-dmac-pl330",
+	.id = 0,
+	.dev = {
+		.platform_data = &rhea_pl330_pdata,
+		.coherent_dma_mask  = DMA_BIT_MASK(64),
+	},
+};
+#endif
+
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+#define BCMBT_VREG_GPIO       (38)
+#define BCMBT_N_RESET_GPIO    (40)
+#define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
+#define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
+
+static struct bcmbt_rfkill_platform_data board_bcmbt_rfkill_cfg = {
+        .vreg_gpio = BCMBT_VREG_GPIO,
+        .n_reset_gpio = BCMBT_N_RESET_GPIO,
+        .aux0_gpio = BCMBT_AUX0_GPIO,  /* CLK32 */
+        .aux1_gpio = BCMBT_AUX1_GPIO,  /* UARTB_SEL, probably not required */
+};
+
+static struct platform_device board_bcmbt_rfkill_device = {
+        .name = "bcmbt-rfkill",
+        .id = -1,
+        .dev =
+        {
+                .platform_data=&board_bcmbt_rfkill_cfg,
+        },
+};
+#endif
+
+#ifdef CONFIG_BCM_BT_LPM
+#define GPIO_BT_WAKE	27
+#define GPIO_HOST_WAKE 	72
+
+static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
+        .gpio_bt_wake = GPIO_BT_WAKE,
+        .gpio_host_wake = GPIO_HOST_WAKE,
+};
+
+static struct platform_device board_bcmbt_lpm_device = {
+        .name = "bcmbt-lpm",
+        .id = -1,
+        .dev =
+        {
+                .platform_data=&brcm_bt_lpm_data,
+        },
+};
+#endif
+
+/*
+ * SPI board info for the slaves
+ */
+static struct spi_board_info spi_slave_board_info[] __initdata = {
+#ifdef CONFIG_SPI_SPIDEV
+	{
+	 .modalias = "spidev",	/* use spidev generic driver */
+	 .max_speed_hz = 13000000,	/* use max speed */
+	 .bus_num = 0,		/* framework bus number */
+	 .chip_select = 0,	/* for each slave */
+	 .platform_data = NULL,	/* no spi_driver specific */
+	 .irq = 0,		/* IRQ for this device */
+	 .mode = SPI_LOOP,	/* SPI mode 0 */
+	 },
+#endif
+	/* TODO: adding more slaves here */
+};
+
+
+#if defined (CONFIG_HAPTIC_SAMSUNG_PWM)
+void haptic_gpio_setup(void)
+{
+	/* Board specific configuration like pin mux & GPIO */
+}
+
+static struct haptic_platform_data haptic_control_data = {
+	/* Haptic device name: can be device-specific name like ISA1000 */
+	.name = "pwm_vibra",
+	/* PWM interface name to request */
+	.pwm_name = "kona_pwmc:4",
+	/* Invalid gpio for now, pass valid gpio number if connected */
+	.gpio = ARCH_NR_GPIOS,
+	.setup_pin = haptic_gpio_setup,
+};
+
+struct platform_device haptic_pwm_device = {
+	.name   = "samsung_pwm_haptic",
+	.id     = -1,
+	.dev	=	 {	.platform_data = &haptic_control_data,}
+};
+
+#endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
+
+#if 1 //Shri
+
+static struct resource board_sdio0_resource[] = {
+	[0] = {
+		.start = SDIO1_BASE_ADDR,
+		.end = SDIO1_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO0,
+		.end = BCM_INT_ID_SDIO0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource board_sdio1_resource[] = {
+	[0] = {
+		.start = SDIO2_BASE_ADDR,
+		.end = SDIO2_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO1,
+		.end = BCM_INT_ID_SDIO1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource board_sdio2_resource[] = {
+	[0] = {
+		.start = SDIO3_BASE_ADDR,
+		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_NAND,
+		.end = BCM_INT_ID_SDIO_NAND,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+static struct sdio_platform_cfg board_sdio_param[] = {
+	{ /* SDIO0 */
+		.id = 0,
+		.data_pullup = 0,
+		.cd_gpio = SD_CARDDET_GPIO_PIN,
+		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+		.peri_clk_name = "sdio1_clk",
+		.ahb_clk_name = "sdio1_ahb_clk",
+		.sleep_clk_name = "sdio1_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+	{ /* SDIO1 */
+		.id = 1,
+		.data_pullup = 0,
+		.is_8bit = 1,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
+		.peri_clk_name = "sdio2_clk",
+		.ahb_clk_name = "sdio2_ahb_clk",
+		.sleep_clk_name = "sdio2_sleep_clk",
+		.peri_clk_rate = 52000000,
+	},
+	{ /* SDIO2 */
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 38,
+			.reg		= -1,
+			.host_wake	= 1,
+			.shutdown	= -1,
+		},
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+};
+
+static struct platform_device board_sdio0_device = {
+	.name = "sdhci",
+	.id = 0,
+	.resource = board_sdio0_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio0_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[0],
+	},
+};
+
+static struct platform_device board_sdio1_device = {
+	.name = "sdhci",
+	.id = 1,
+	.resource = board_sdio1_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[1],
+	},
+};
+
+static struct platform_device board_sdio2_device = {
+	.name = "sdhci",
+	.id = 2,
+	.resource = board_sdio2_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[2],
+	},
+};
+
+
+/* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
+static struct platform_device *board_sdio_plat_devices[] __initdata = {
+	&board_sdio1_device,
+	&board_sdio2_device,
+	&board_sdio0_device,
+};
+
+void __init board_add_sdio_devices(void)
+{
+	platform_add_devices(board_sdio_plat_devices, ARRAY_SIZE(board_sdio_plat_devices));
+}
+
+
+#endif //Shri
+
+#ifdef CONFIG_BACKLIGHT_PWM
+
+static struct platform_pwm_backlight_data bcm_backlight_data = {
+/* backlight */
+	.pwm_name 	= "kona_pwmc:4",
+	.max_brightness = 32,   /* Android calibrates to 32 levels*/
+	.dft_brightness = 32,
+	.polarity       = 1,    /* Inverted polarity */
+	.pwm_period_ns 	=  5000000,
+};
+
+static struct platform_device bcm_backlight_devices = {
+	.name 	= "pwm-backlight",
+	.id 	= 0,
+	.dev 	= {
+		.platform_data  =       &bcm_backlight_data,
+	},
+};
+
+#endif /*CONFIG_BACKLIGHT_PWM */
+
+#ifdef CONFIG_FB_BRCM_RHEA
+static struct kona_fb_platform_data alex_dsi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_BCM91008_ALEX_GetFuncTable,
+	.screen_width		= 360,
+	.screen_height		= 640,
+	.bytes_per_pixel	= 4,
+	.gpio			= 41,
+	.pixel_format		= XRGB8888,
+};
+
+static struct platform_device alex_dsi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 0,
+	.dev = {
+		.platform_data		= &alex_dsi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+};
+
+static struct platform_device nt35582_smi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 1,
+	.dev = {
+		.platform_data		= &nt35582_smi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+};
+
+static struct platform_device r61581_smi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 2,
+	.dev = {
+		.platform_data		= &r61581_smi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+#endif
+
+/* Rhea Ray specific platform devices */
+static struct platform_device *rhea_stone_plat_devices[] __initdata = {
+#ifdef CONFIG_KEYBOARD_BCM
+	&bcm_kp_device,
+#endif
+
+#ifdef CONFIG_KONA_HEADSET
+	&headset_device,
+#endif
+
+#ifdef CONFIG_DMAC_PL330
+	&pl330_dmac_device,
+#endif
+#ifdef CONFIG_HAPTIC_SAMSUNG_PWM
+	&haptic_pwm_device,
+#endif
+#ifdef CONFIG_BACKLIGHT_PWM
+	&bcm_backlight_devices,
+#endif
+#ifdef CONFIG_FB_BRCM_RHEA
+	&alex_dsi_display_device,
+	&nt35582_smi_display_device,
+	&r61581_smi_display_device,
+#endif
+
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+    &board_bcmbt_rfkill_device,
+#endif
+#ifdef CONFIG_BCM_BT_LPM
+    &board_bcmbt_lpm_device,
+#endif
+
+};
+
+#ifdef CONFIG_TOUCHSCREEN_TANGO
+static struct TANGO_I2C_TS_t tango_plat_data = {
+	.i2c_slave_address	= 0,
+	.gpio_irq_pin		= TANGO_GPIO_IRQ_PIN,
+	.gpio_reset_pin		= TANGO_GPIO_RESET_PIN,
+	.x_max_value		= 480,
+	.y_max_value		= 800,
+	.layout			= TANGO_S32_LAYOUT,
+	.num_bytes_to_read = TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ,
+	.is_multi_touch		= 1,
+	.is_resetable		= 1,
+	.num_fingers_idx	= 0,
+	.old_touching_idx	= 1,
+	.x1_lo_idx		= 2,
+	.x1_hi_idx		= 3,
+	.y1_lo_idx		= 4,
+	.y1_hi_idx		= 5,
+	.x2_lo_idx		= 6,
+	.x2_hi_idx		= 7,
+	.y2_lo_idx		= 8,
+	.y2_hi_idx		= 9,
+	.x1_width_idx		= 10,	// X1 coordinate touch area of the first finger
+	.y1_width_idx		= 11,	// Y1 coordinate touch area of the first finger
+	.x2_width_idx		= 12,	// X2 coordinate touch area of the first finger
+	.y2_width_idx		= 13,	// Y2 coordinate touch area of the first finger
+	.power_mode_idx		= 20,
+	.int_mode_idx		= 21,	// INT)mode register
+	.int_width_idx		= 22,	// Interrupt pulse width
+	.min_finger_val		= 0,
+	.max_finger_val		= 2,
+	.panel_width		= 56,
+};
+
+static struct i2c_board_info __initdata tango_info[] =
+{
+	{	/* New touch screen i2c slave address. */
+		I2C_BOARD_INFO(I2C_TS_DRIVER_NAME, TANGO_S32_SLAVE_ADDR),
+		.platform_data = &tango_plat_data,
+		.irq = gpio_to_irq(TANGO_GPIO_IRQ_PIN),
+	},
+};
+
+#endif
+
+#ifdef CONFIG_AL3006
+#define AL3006_INT_GPIO_PIN		31
+
+static int al3006_platform_init_hw(void)
+{
+	int rc;
+	rc = gpio_request(AL3006_INT_GPIO_PIN, "al3006");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", AL3006_INT_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(AL3006_INT_GPIO_PIN);
+
+	return 0;
+}
+
+static void al3006_platform_exit_hw(void)
+{
+	gpio_free(AL3006_INT_GPIO_PIN);
+}
+
+static struct al3006_platform_data al3006_platform_data = {
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.init_platform_hw = al3006_platform_init_hw,
+	.exit_platform_hw = al3006_platform_exit_hw,
+};
+
+static struct i2c_board_info __initdata al3006_info[] =
+{
+	{
+		I2C_BOARD_INFO("al3006", 0x1d ),
+		.platform_data = &al3006_platform_data,
+		.irq = gpio_to_irq(AL3006_INT_GPIO_PIN),
+	},
+};
+#endif
+
+#ifdef CONFIG_BMP18X
+static struct i2c_board_info __initdata bmp18x_info[] =
+{
+	{
+		I2C_BOARD_INFO("bmp18x", 0x77 ),
+		/*.irq = */
+	},
+};
+#endif
+
+
+/* Rhea Ray specific i2c devices */
+static void __init rhea_stone_add_i2c_devices (void)
+{
+#ifdef CONFIG_TOUCHSCREEN_TANGO
+	i2c_register_board_info(1,
+		tango_info,
+		ARRAY_SIZE(tango_info));
+#endif
+#ifdef CONFIG_AL3006
+	i2c_register_board_info(1,
+			al3006_info,
+			ARRAY_SIZE(al3006_info));
+#endif
+#ifdef CONFIG_BMP18X_I2C
+	i2c_register_board_info(1,
+			bmp18x_info,
+			ARRAY_SIZE(bmp18x_info));
+#endif
+
+
+}
+
+static int __init rhea_stone_add_lateInit_devices (void)
+{
+	board_add_sdio_devices();
+	return 0;
+}
+
+static void __init rhea_stone_reserve(void)
+{
+	board_common_reserve();
+}
+
+static void enable_smi_display_clks(void)
+{
+	struct clk *smi_axi;
+	struct clk *mm_dma;
+	struct clk *smi;
+
+	smi_axi = clk_get (NULL, "smi_axi_clk");
+	mm_dma = clk_get (NULL, "mm_dma_axi_clk");
+
+	smi = clk_get (NULL, "smi_clk");
+	BUG_ON (!smi_axi || !smi || !mm_dma);
+
+
+	clk_set_rate (smi, 250000000);
+
+	clk_enable (smi_axi);
+	clk_enable (smi);
+	clk_enable(mm_dma);
+}
+
+/* All Rhea Ray specific devices */
+static void __init rhea_stone_add_devices(void)
+{
+	enable_smi_display_clks();
+
+#ifdef CONFIG_KEYBOARD_BCM
+	bcm_kp_device.dev.platform_data = &bcm_keypad_data;
+#endif
+	platform_add_devices(rhea_stone_plat_devices, ARRAY_SIZE(rhea_stone_plat_devices));
+
+	rhea_stone_add_i2c_devices();
+#ifdef CONFIG_MFD_BCMPMU
+	board_pmu_init();
+#endif
+	spi_register_board_info(spi_slave_board_info,
+				ARRAY_SIZE(spi_slave_board_info));
+}
+
+void __init board_init(void)
+{
+	board_add_common_devices();
+	rhea_stone_add_devices();
+	return;
+}
+
+void __init board_map_io(void)
+{
+	/* Map machine specific iodesc here */
+
+	rhea_map_io();
+}
+
+late_initcall(rhea_stone_add_lateInit_devices);
+
+MACHINE_START(RHEA_STONE, "RheaStone")
+	.map_io = board_map_io,
+	.init_irq = kona_init_irq,
+	.timer  = &kona_timer,
+	.init_machine = board_init,
+	.reserve = rhea_stone_reserve
+MACHINE_END

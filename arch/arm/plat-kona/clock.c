@@ -62,6 +62,7 @@ static int peri_clk_set_voltage_lvl(struct peri_clk * peri_clk, int voltage_lvl)
 #ifdef CONFIG_KONA_PI_MGR
 static int clk_dfs_request_update(struct clk* clk, u32 action, u32 param);
 #endif
+static int ccu_init_state_save_buf(struct ccu_clk * ccu_clk);
 
 static int __ccu_clk_init(struct clk *clk)
 {
@@ -74,6 +75,13 @@ static int __ccu_clk_init(struct clk *clk)
 	CCU_PI_ENABLE(ccu_clk,1);
 
 	INIT_LIST_HEAD(&ccu_clk->clk_list);
+
+	/*
+	 Initilize CCU context save buf if CCU state save parameters
+	 are defined for this CCU.
+	*/
+	if(ccu_clk->ccu_state_save)
+		ccu_init_state_save_buf(ccu_clk);
 
 	if(clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
@@ -1464,6 +1472,44 @@ int clk_dfs_request_update(struct clk* clk, u32 action, u32 param)
 
 #endif /*CONFIG_KONA_PI_MGR*/
 
+int ccu_init_state_save_buf(struct ccu_clk * ccu_clk)
+{
+	int ret = 0;
+	int i;
+
+	struct ccu_state_save *ccu_state_save = ccu_clk->ccu_state_save;
+	if(!ccu_state_save)
+		return ret;
+
+	ccu_state_save->num_reg = 0;
+	for(i = 0; i < ccu_state_save->reg_set_count; i++)
+	{
+		BUG_ON(ccu_state_save->reg_save[i].offset_end <
+				ccu_state_save->reg_save[i].offset_start);
+		ccu_state_save->num_reg +=
+			(ccu_state_save->reg_save[i].offset_end -
+				ccu_state_save->reg_save[i].offset_start + sizeof(u32))/sizeof(u32);
+	}
+	clk_dbg("%s:num_reg = %d\n",__func__, ccu_state_save->num_reg);
+	/*Allocate memory for cotext save buf if a valid
+	buffer is not passed from mach
+	*/
+	if(!ccu_state_save->save_buf)
+	{
+		/*Add one byte to store save flag*/
+		ccu_state_save->save_buf = kzalloc(sizeof(u32)*(ccu_state_save->num_reg+1),
+					GFP_KERNEL);
+		if(!ccu_state_save->save_buf)
+			ret = -ENOMEM;
+	}
+
+	/*Set save flag to false by default*/
+	if(!ret)
+		ccu_state_save->save_buf[ccu_state_save->num_reg] = 0;
+	return ret;
+}
+
+
 int clk_register(struct clk_lookup *clk_lkup,int num_clks)
 {
     int ret = 0;
@@ -1664,6 +1710,18 @@ int ccu_get_active_policy(struct ccu_clk * ccu_clk)
 	return ret;
 }
 EXPORT_SYMBOL(ccu_get_active_policy);
+
+int ccu_save_state(struct ccu_clk * ccu_clk, int save)
+{
+	int ret;
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->save_state)
+		return -EINVAL;
+	CCU_PI_ENABLE(ccu_clk,1);
+	ret = ccu_clk->ccu_ops->save_state(ccu_clk, save);
+	CCU_PI_ENABLE(ccu_clk,0);
+	return ret;
+}
+EXPORT_SYMBOL(ccu_save_state);
 
 /*CCU access functions */
 static int ccu_clk_write_access_enable(struct ccu_clk* ccu_clk, int enable)
@@ -1994,6 +2052,75 @@ static int ccu_clk_get_active_policy(struct ccu_clk * ccu_clk)
 
 }
 
+/*Default function to save/restore CCU state
+Caller should make sure that PI is in enabled state */
+static int ccu_clk_save_state(struct ccu_clk * ccu_clk, int save)
+{
+	int ret = 0;
+	int i, j;
+	struct reg_save *reg_save;
+	u32 buf_inx = 0;
+	u32 reg_val;
+	struct clk* clk = &ccu_clk->clk;
+	struct ccu_state_save *ccu_state_save = ccu_clk->ccu_state_save;
+
+	clk_dbg("%s: CCU: %s save = %d\n",__func__,clk->name, save);
+	BUG_ON(!ccu_state_save);
+	reg_save = ccu_state_save->reg_save;
+
+	if(save)
+	{
+		for(i = 0; i < ccu_state_save->reg_set_count; i++, reg_save++)
+		{
+
+			for(j = reg_save->offset_start; j <= reg_save->offset_end; j += 4)
+			{
+				reg_val = readl(CCU_REG_ADDR(ccu_clk, j));
+				clk_dbg("%s:save - off = %x,val = %x\n",__func__,j,reg_val);
+				ccu_state_save->save_buf[buf_inx++] = reg_val;
+			}
+		}
+		BUG_ON(buf_inx != ccu_state_save->num_reg);
+		/*Set save_buf[num_reg] to 1 to indicate that buf entries are valid */
+		ccu_state_save->save_buf[buf_inx] = 1;
+	}
+	else /*Restore*/
+	{
+		/*Error if the contxt buffer is not having valid data */
+		BUG_ON(ccu_state_save->save_buf[ccu_state_save->num_reg] == 0);
+
+		/* enable write access*/
+		ccu_write_access_enable(ccu_clk,true);
+		/*stop policy engine */
+		ccu_policy_engine_stop(ccu_clk);
+
+		/*Re-init CCU*/
+		if(clk->ops && clk->ops->init)
+			ret = clk->ops->init(clk);
+
+		for(i = 0; i < ccu_state_save->reg_set_count; i++, reg_save++)
+		{
+			for(j = reg_save->offset_start; j <= reg_save->offset_end; j += 4)
+			{
+				reg_val = ccu_state_save->save_buf[buf_inx++];
+				clk_dbg("%s:restore - off = %x,val = %x\n",__func__,j,reg_val);
+				writel(reg_val,CCU_REG_ADDR(ccu_clk, j));
+				clk_dbg("%s:restore - off = %x,nweval = %x\n",__func__,j,readl(CCU_REG_ADDR(ccu_clk, j)));
+			}
+		}
+		BUG_ON(buf_inx != ccu_state_save->num_reg);
+		/*Set save_buf[num_reg] to 0 to indicate that buf entries are restored */
+		ccu_state_save->save_buf[buf_inx] = 0;
+		/*Resume polic engine */
+		ccu_policy_engine_resume(ccu_clk,
+	         ccu_clk->clk.flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
+		/* disable write access*/
+		ccu_write_access_enable(ccu_clk, false);
+	}
+	clk_dbg("%s: done\n",__func__);
+	return ret;
+}
+
 struct ccu_clk_ops gen_ccu_ops =
 {
 	.write_access = ccu_clk_write_access_enable,
@@ -2009,6 +2136,7 @@ struct ccu_clk_ops gen_ccu_ops =
 	.set_voltage = ccu_clk_set_voltage,
 	.set_active_policy = ccu_clk_set_active_policy,
 	.get_active_policy = ccu_clk_get_active_policy,
+	.save_state	= ccu_clk_save_state,
 };
 
 /*Generic ccu ops functions*/
@@ -2087,7 +2215,6 @@ static int ccu_clk_init(struct clk* clk)
 		ccu_policy_engine_resume(ccu_clk, CCU_LOAD_ACTIVE);
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
-	CCU_PI_ENABLE(ccu_clk,0);
 
 	return 0;
 }
@@ -3364,13 +3491,13 @@ static u32 compute_pll_vco_rate(u32 ndiv_int, u32 nfrac,u32 frac_div, u32 pdiv)
 		vco_rate = 26Mhz*(ndiv_int + ndiv_frac/frac_div)/pdiv
 		 = 26(*ndiv_int*frac_div + ndiv_frac)/(pdiv*frac_div)
 	*/
-	//pr_info("%s:pdiv = %x, nfrac = %x ndiv_int = %x\n", __func__, pdiv, nfrac, ndiv_int);
+	//clk_dbg("%s:pdiv = %x, nfrac = %x ndiv_int = %x\n", __func__, pdiv, nfrac, ndiv_int);
 	temp = ((u64)(ndiv_int*frac_div + nfrac)*xtal);
 
-	//pr_info("%s: temp = %llu\n",__func__,temp);
+	//clk_dbg("%s: temp = %llu\n",__func__,temp);
 	do_div(temp, pdiv*frac_div);
 
-	//pr_info("%s: after div temp = %llu\n",__func__,temp);
+	//clk_dbg("%s: after div temp = %llu\n",__func__,temp);
 	return (unsigned long)temp;
 }
 
@@ -4040,7 +4167,7 @@ static int core_clk_set_rate(struct clk* clk, u32 rate)
 		l_p_j_ref = loops_per_jiffy;
 #endif
 		l_p_j_ref_freq = clk->ops->get_rate(clk)/1000;
-		pr_info("l_p_j_ref = %d, l_p_j_ref_freq = %x\n",l_p_j_ref,l_p_j_ref_freq);
+		clk_dbg("l_p_j_ref = %d, l_p_j_ref_freq = %x\n",l_p_j_ref,l_p_j_ref_freq);
 	}
 
 	if(div < 2 || rate*div != vco_rate)
@@ -4066,7 +4193,7 @@ static int core_clk_set_rate(struct clk* clk, u32 rate)
 		loops_per_jiffy =  core_clk_freq_scale(l_p_j_ref,
 							l_p_j_ref_freq,
 							rate/1000);
-		pr_info("loops_per_jiffy = %lu, rate = %u\n",loops_per_jiffy,rate);
+		clk_dbg("loops_per_jiffy = %lu, rate = %u\n",loops_per_jiffy,rate);
 	}
 	return ret;
 }

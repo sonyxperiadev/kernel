@@ -945,6 +945,9 @@ struct dwc_otg_core_if {
 	/** OTG status flag used for HNP polling */
 	uint8_t otg_sts;
 
+	/** saved value of last request from stack to activate/deactivate pullup */
+	bool gadget_pullup_on;
+
 #ifdef CONFIG_USB_OTG_UTILS
 	/* OTG transceiver */
 	struct otg_transceiver *xceiver;

@@ -70,6 +70,10 @@
 
 #define VLT_LUT_SIZE 16
 #endif
+#ifdef CONFIG_SENSORS_KONA
+#include <linux/broadcom/kona-thermal.h>
+#include <linux/broadcom/bcm59055-adc.h>
+#endif
 
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
@@ -308,6 +312,105 @@ struct platform_device tmon_device = {
 	.resource = board_tmon_resource,
 	.num_resources = ARRAY_SIZE(board_tmon_resource),
 };
+
+static struct resource board_thermal_resource[] = {
+	{	/* For Current Temperature */
+		.start = TMON_BASE_ADDR,
+		.end = TMON_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{	/* For Temperature IRQ */
+		.start = BCM_INT_ID_TEMP_MON,
+		.end = BCM_INT_ID_TEMP_MON,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct thermal_sensor_config sensor_data[] = {
+	{   /*TMON sensor*/
+		.thermal_id             = 1,
+		.thermal_name           = "tmon",
+		.thermal_type           = SENSOR_BB_TMON,
+		.thermal_mc             = 0,
+		.thermal_read           = SENSOR_READ_DIRECT,
+		.thermal_location       = 1, 
+		.thermal_warning_lvl_1  = 100000,
+		.thermal_warning_lvl_2  = 110000,
+		.thermal_fatal_lvl      = 120000,
+		.thermal_warning_action = THERM_ACTION_NOTIFY,
+		.thermal_fatal_action   = THERM_ACTION_NOTIFY_SHUTDOWN,
+		.thermal_sensor_param   = 0,
+		.thermal_control        = SENSOR_INTERRUPT,
+		.convert_callback       = NULL,
+	},
+	{   /*NTC (battery) sensor*/
+		.thermal_id             = 2,
+		.thermal_name           = "battery",
+		.thermal_type           = SENSOR_BATTERY,
+		.thermal_mc             = 0,
+		.thermal_read           = SENSOR_READ_PMU_I2C,
+		.thermal_location       = 2, 
+		.thermal_warning_lvl_1  = 105000,
+		.thermal_warning_lvl_2  = 115000,
+		.thermal_fatal_lvl      = 125000,
+		.thermal_warning_action = THERM_ACTION_NOTIFY,
+		.thermal_fatal_action   = THERM_ACTION_NOTIFY_SHUTDOWN,
+		.thermal_sensor_param   = ADC_NTC_CHANNEL,
+		.thermal_control        = SENSOR_PERIODIC_READ,
+		.convert_callback       = NULL,
+	},
+	{   /*32kHz crystal sensor*/
+		.thermal_id             = 3,
+		.thermal_name           = "32k",
+		.thermal_type           = SENSOR_CRYSTAL,
+		.thermal_mc             = 0,
+		.thermal_read           = SENSOR_READ_PMU_I2C,
+		.thermal_location       = 3, 
+		.thermal_warning_lvl_1  = 106000,
+		.thermal_warning_lvl_2  = 116000,
+		.thermal_fatal_lvl      = 126000,
+		.thermal_warning_action = THERM_ACTION_NOTIFY,
+		.thermal_fatal_action   = THERM_ACTION_NOTIFY_SHUTDOWN,
+		.thermal_sensor_param   = ADC_32KTEMP_CHANNEL,
+		.thermal_control        = SENSOR_PERIODIC_READ,
+		.convert_callback       = NULL,
+	},
+	{   /*PA sensor*/
+		.thermal_id             = 4,
+		.thermal_name           = "PA",
+		.thermal_type           = SENSOR_PA,
+		.thermal_mc             = 0,
+		.thermal_read           = SENSOR_READ_PMU_I2C,
+		.thermal_location       = 4, 
+		.thermal_warning_lvl_1  = 107000,
+		.thermal_warning_lvl_2  = 117000,
+		.thermal_fatal_lvl      = 127000,
+		.thermal_warning_action = THERM_ACTION_NOTIFY,
+		.thermal_fatal_action   = THERM_ACTION_NOTIFY_SHUTDOWN,
+		.thermal_sensor_param   = ADC_PATEMP_CHANNEL,
+		.thermal_control        = SENSOR_PERIODIC_READ,
+		.convert_callback       = NULL,
+	}
+};
+
+
+static struct therm_data thermal_pdata = {
+	.flags = 0,
+	.thermal_update_interval = 0,
+	.num_sensors = 4,
+	.sensors = sensor_data,
+};
+
+struct platform_device thermal_device = {
+	.name = "kona-thermal",
+	.id = -1,
+	.resource = board_thermal_resource,
+	.num_resources = ARRAY_SIZE(board_thermal_resource),
+	.dev = {
+		.platform_data = &thermal_pdata,
+	},
+};
+
 #endif
 
 #ifdef CONFIG_STM_TRACE
@@ -640,6 +743,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&kona_sspi_spi0_device,
 #ifdef CONFIG_SENSORS_KONA
 	&tmon_device,
+	&thermal_device,
 #endif
 #ifdef CONFIG_STM_TRACE
 	&kona_stm_device,
