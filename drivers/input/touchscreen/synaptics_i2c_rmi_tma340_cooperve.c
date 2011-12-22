@@ -59,7 +59,7 @@ static const int touchkey_keycodes[] = {
 
 #define I2C_RETRY_CNT	2
 
-//#define __TOUCH_DEBUG__ 1
+#define __TOUCH_DEBUG__ 1
 #define USE_THREADED_IRQ	1
 
 #define __TOUCH_KEYLED__ 
@@ -373,6 +373,8 @@ static void synaptics_ts_work_func(struct work_struct *work)
     #endif
 	}
 
+	input_report_key(ts->input_dev, BTN_TOUCH, finger > 0);
+
 	input_sync(ts->input_dev);
 
 work_func_out:
@@ -627,6 +629,7 @@ static int synaptics_ts_probe(
 	set_bit(EV_KEY, ts->input_dev->evbit);
 	set_bit(BTN_TOUCH, ts->input_dev->keybit);
 	set_bit(EV_ABS, ts->input_dev->evbit);
+	set_bit(INPUT_PROP_DIRECT, &ts->input_dev->propbit);
 
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, MAX_X, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, MAX_Y, 0, 0);
