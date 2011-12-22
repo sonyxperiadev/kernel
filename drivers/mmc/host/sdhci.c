@@ -1519,16 +1519,23 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 
 	spin_lock_irqsave(&host->lock, flags);
 
+	sdhci_pltfm_clk_enable(host, 1);
 	if (host->flags & SDHCI_DEVICE_DEAD)
 		goto out;
 
-	if (enable)
+
+	if (enable)	{
 		sdhci_unmask_irqs(host, SDHCI_INT_CARD_INT);
-	else
+		sdhci_enable_irq_wakeups(host);
+	}
+	else	{
+		sdhci_disable_irq_wakeups(host);
 		sdhci_mask_irqs(host, SDHCI_INT_CARD_INT);
+	}
 out:
 	mmiowb();
 
+	sdhci_pltfm_clk_enable(host, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
@@ -1539,6 +1546,7 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 	u8 pwr;
 	u16 clk, ctrl;
 	u32 present_state;
+	int ret = -EAGAIN;
 
 	host = mmc_priv(mmc);
 
@@ -1548,6 +1556,9 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 	 */
 	if (host->version < SDHCI_SPEC_300)
 		return 0;
+
+   /* Enable platform clocks */
+   sdhci_pltfm_clk_enable(host, 1);
 
 	/*
 	 * We first check whether the request is to set signalling voltage
@@ -1565,11 +1576,11 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 		/* 3.3V regulator output should be stable within 5 ms */
 		ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 		if (!(ctrl & SDHCI_CTRL_VDD_180))
-			return 0;
+			ret = 0;
 		else {
 			printk(KERN_INFO DRIVER_NAME ": Switching to 3.3V "
 				"signalling voltage failed\n");
-			return -EIO;
+			ret = -EIO;
 		}
 	} else if (!(ctrl & SDHCI_CTRL_VDD_180) &&
 		  (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_180)) {
@@ -1607,8 +1618,10 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 				present_state = sdhci_readl(host,
 							SDHCI_PRESENT_STATE);
 				if ((present_state & SDHCI_DATA_LVL_MASK) ==
-				     SDHCI_DATA_LVL_MASK)
-					return 0;
+				     SDHCI_DATA_LVL_MASK)	{
+					ret = 0;
+					goto clk_dis_ret;
+				}
 			}
 		}
 
@@ -1628,10 +1641,15 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 
 		printk(KERN_INFO DRIVER_NAME ": Switching to 1.8V signalling "
 			"voltage failed, retrying with S18R set to 0\n");
-		return -EAGAIN;
+		ret = -EAGAIN;
 	} else
 		/* No signal voltage switch required */
-		return 0;
+		ret = 0;
+
+clk_dis_ret:
+    /* Disable platform clocks */
+    sdhci_pltfm_clk_enable(host, 0);
+    return ret;
 }
 
 static int sdhci_execute_tuning(struct mmc_host *mmc)
@@ -1648,6 +1666,7 @@ static int sdhci_execute_tuning(struct mmc_host *mmc)
 	disable_irq(host->irq);
 	spin_lock(&host->lock);
 
+	sdhci_pltfm_clk_enable(host, 1);
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 
 	/*
@@ -1660,6 +1679,7 @@ static int sdhci_execute_tuning(struct mmc_host *mmc)
 	    (host->flags & SDHCI_SDR50_NEEDS_TUNING)))
 		ctrl |= SDHCI_CTRL_EXEC_TUNING;
 	else {
+		sdhci_pltfm_clk_enable(host, 0);
 		spin_unlock(&host->lock);
 		enable_irq(host->irq);
 		return 0;
@@ -1803,6 +1823,7 @@ out:
 		err = 0;
 
 	sdhci_clear_set_irqs(host, SDHCI_INT_DATA_AVAIL, ier);
+	sdhci_pltfm_clk_enable(host, 0);
 	spin_unlock(&host->lock);
 	enable_irq(host->irq);
 
@@ -1823,6 +1844,7 @@ static void sdhci_enable_preset_value(struct mmc_host *mmc, bool enable)
 
 	spin_lock_irqsave(&host->lock, flags);
 
+	sdhci_pltfm_clk_enable(host, 1);
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 
 	/*
@@ -1837,6 +1859,7 @@ static void sdhci_enable_preset_value(struct mmc_host *mmc, bool enable)
 		sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);
 	}
 
+	sdhci_pltfm_clk_enable(host, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
@@ -2260,6 +2283,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 
 	spin_lock(&host->lock);
 
+	sdhci_pltfm_clk_enable(host, 1);
 	intmask = sdhci_readl(host, SDHCI_INT_STATUS);
 
 	if (!intmask || intmask == 0xffffffff) {
@@ -2319,6 +2343,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 
 	mmiowb();
 out:
+	sdhci_pltfm_clk_enable(host, 0);
 	spin_unlock(&host->lock);
 
 	/*
@@ -2340,8 +2365,9 @@ out:
 
 int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 {
-	int ret;
+	int ret = 0;
 
+	sdhci_pltfm_clk_enable(host, 1);
 	sdhci_disable_card_detection(host);
 
 	/* Disable tuning since we are suspending */
@@ -2356,13 +2382,15 @@ int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 
 	ret = mmc_suspend_host(host->mmc);
 	if (ret)
-		return ret;
+		goto suspend_ret;
 
 	free_irq(host->irq, host);
 
 	if (host->vmmc)
 		ret = regulator_disable(host->vmmc);
 
+suspend_ret:
+	sdhci_pltfm_clk_enable(host, 0);
 	return ret;
 }
 
@@ -2370,15 +2398,15 @@ EXPORT_SYMBOL_GPL(sdhci_suspend_host);
 
 int sdhci_resume_host(struct sdhci_host *host)
 {
-	int ret;
+	int ret = 0;
 
 	if (host->vmmc) {
 		int ret = regulator_enable(host->vmmc);
 		if (ret)
-			return ret;
+			goto retval;
 	}
 
-
+	sdhci_pltfm_clk_enable(host, 1);
 	if (host->flags & (SDHCI_USE_SDMA | SDHCI_USE_ADMA)) {
 		if (host->ops->enable_dma)
 			host->ops->enable_dma(host);
@@ -2387,7 +2415,7 @@ int sdhci_resume_host(struct sdhci_host *host)
 	ret = request_irq(host->irq, sdhci_irq, IRQF_SHARED,
 			  mmc_hostname(host->mmc), host);
 	if (ret)
-		return ret;
+		goto resume_ret;
 
 	sdhci_init(host, (host->mmc->pm_flags & MMC_PM_KEEP_POWER));
 	mmiowb();
@@ -2400,6 +2428,9 @@ int sdhci_resume_host(struct sdhci_host *host)
 	    (host->tuning_mode == SDHCI_TUNING_MODE_1))
 		host->flags |= SDHCI_NEEDS_RETUNING;
 
+resume_ret:
+	sdhci_pltfm_clk_enable(host, 0);
+retval:
 	return ret;
 }
 
@@ -2408,12 +2439,27 @@ EXPORT_SYMBOL_GPL(sdhci_resume_host);
 void sdhci_enable_irq_wakeups(struct sdhci_host *host)
 {
 	u8 val;
+	sdhci_pltfm_clk_enable(host, 1);
 	val = sdhci_readb(host, SDHCI_WAKE_UP_CONTROL);
 	val |= SDHCI_WAKE_ON_INT;
 	sdhci_writeb(host, val, SDHCI_WAKE_UP_CONTROL);
+	sdhci_pltfm_clk_enable(host, 0);
 }
 
 EXPORT_SYMBOL_GPL(sdhci_enable_irq_wakeups);
+
+void sdhci_disable_irq_wakeups(struct sdhci_host *host)
+{
+	u8 val;
+	sdhci_pltfm_clk_enable(host, 1);
+	val = sdhci_readb(host, SDHCI_WAKE_UP_CONTROL);
+	val &= ~SDHCI_WAKE_ON_INT;
+	sdhci_writeb(host, val, SDHCI_WAKE_UP_CONTROL);
+	sdhci_pltfm_clk_enable(host, 0);
+}
+
+EXPORT_SYMBOL_GPL(sdhci_disable_irq_wakeups);
+
 
 #endif /* CONFIG_PM */
 

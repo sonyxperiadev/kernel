@@ -383,6 +383,7 @@ extern void sdhci_remove_host(struct sdhci_host *host, int dead);
 extern int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state);
 extern int sdhci_resume_host(struct sdhci_host *host);
 extern void sdhci_enable_irq_wakeups(struct sdhci_host *host);
+extern void sdhci_disable_irq_wakeups(struct sdhci_host *host);
 #endif
 
 #endif /* __SDHCI_HW_H */

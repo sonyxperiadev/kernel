@@ -651,6 +651,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 
 	proc_term(pdev);
 
+	sdhci_pltfm_clk_enable(host, 1);
 	dead = 0;
 	scratch = readl(host->ioaddr + SDHCI_INT_STATUS);
 	if (scratch == (u32)-1)
