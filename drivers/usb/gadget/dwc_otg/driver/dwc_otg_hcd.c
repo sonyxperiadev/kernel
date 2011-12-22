@@ -310,7 +310,9 @@ static int32_t dwc_otg_hcd_disconnect_cb(void *p)
 	 * mode. If still in host mode, need to keep power on to detect a
 	 * reconnection.
 	 */
-	if (dwc_otg_is_device_mode(dwc_otg_hcd->core_if)) {
+	if (dwc_otg_is_device_mode(dwc_otg_hcd->core_if) ||
+		(dwc_otg_hcd->core_if->core_params->otg_cap < DWC_OTG_CAP_PARAM_NO_HNP_SRP_CAPABLE))
+	{
 		if (dwc_otg_hcd->core_if->op_state != A_SUSPEND) {
 			hprt0_data_t hprt0 = {.d32 = 0 };
 			DWC_PRINTF("Disconnect: PortPower off\n");

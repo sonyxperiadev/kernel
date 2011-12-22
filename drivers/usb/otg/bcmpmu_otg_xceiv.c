@@ -483,9 +483,17 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 
 	bcm_hsotgctrl_phy_set_id_stat(!id_gnd);
+
+	if (id_gnd) {
+		/* Need to turn on Vbus within 200ms */
+		bcmpmu_otg_xceiv_set_vbus(&xceiv_data->otg_xceiver.xceiver, true);
+	}
+
 	msleep(HOST_TO_PERIPHERAL_DELAY_MS);
+
 	bcm_hsotgctrl_phy_deinit();
 	xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
+
 	if (id_gnd)
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.notifier, USB_EVENT_ID, NULL);
 }
