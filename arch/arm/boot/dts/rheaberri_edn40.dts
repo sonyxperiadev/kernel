@@ -4,7 +4,7 @@
 / {
 	#address-cells = <1>;
 	#size-cells = <1>;
-	model = "Broadcom RheaRay EDN2x board";
+	model = "Broadcom RheaBerri EDN40 board";
 	compatible = "Broadcom,rhea";
 
 	chosen {
