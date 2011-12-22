@@ -401,7 +401,7 @@ static ssize_t store_enabled(struct brcm_netconsole_target *nt,
 	if (enabled < 0)
 		return enabled;
 
-	pr_info("%s enabled=%d\n", __func__, enabled);
+	pr_info("%s enabled=%d\n", __func__, (int)enabled);
 
 	if (enabled) {	/* 1 */
 

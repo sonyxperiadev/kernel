@@ -117,7 +117,7 @@ bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void* xdrs, CAPI2_FLASH_SaveImage_Rsp_t *
 {
 	XDR_LOG(xdrs,"CAPI2_FLASH_SaveImage_Rsp_t")
 
-	 return _xdr_Boolean(xdrs, &rsp->val,"val");
+	 return _xdr_Boolean(xdrs, (u_char *)&rsp->val,"val");
 }
 
 //***************** < 9 > **********************

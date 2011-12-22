@@ -240,7 +240,7 @@ void kRpcDebugPrintf(char* fmt, ...)
 ssize_t kRpcReadLogData(char *destBuf, size_t len)
 {
 	size_t i = 0;
-	ssize_t ret = 0;
+//	ssize_t ret = 0;
 	int index = 0;
 
 	index = peekNextReadIndex(&gLogBuffer);
