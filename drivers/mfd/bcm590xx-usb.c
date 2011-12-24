@@ -109,7 +109,8 @@ EXPORT_SYMBOL_GPL(bcmpmu_usb_remove_notifier);
 
 static int bcm_bc_detection(struct bcm590xx *bcm590xx)
 {
-	u8 regVal1, regVal2;
+	u8 regVal1;
+	u32 regVal2;
 	u32 bcStatus;
 	int usb_type = USB_CHARGER_UNKNOWN;
 	int count = 0;
@@ -424,14 +425,14 @@ static int __devinit bcmpmu_usb_probe(struct platform_device *pdev)
 	int ret = 0, i;
 	printk("BCMPMU USB Accy Driver\n");
 	handler = kzalloc(sizeof(struct bcmpmu_usb), GFP_KERNEL);
-	if (handler == NULL) {
+	if (!handler) {
 		pr_info("%s: failed to alloc mem.\n", __func__);
 		return -ENOMEM;
 	}
 	handler->bcm590xx = bcm590xx;
 	usb_evnt_hndlr = handler;
 	/* init all event notification heads */
-	for (i = 0; i <= BCMPMU_EVENT_MAX; i++) {
+	for (i = 0; i < BCMPMU_EVENT_MAX; i++) {
 		handler->event[i].event_id = i;
 		BLOCKING_INIT_NOTIFIER_HEAD(&handler->event[i].notifiers);
 	}

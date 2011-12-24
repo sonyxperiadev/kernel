@@ -47,6 +47,24 @@ struct bcmpmu_batt {
 
 static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
 {
+	struct bcmpmu_batt *pbatt = (struct bcmpmu_batt *)data;
+
+	switch (irq) {
+	case PMU_IRQ_BATRM:
+		pbatt->state.present = 0;
+		break;
+	case PMU_IRQ_BATINS:
+		pbatt->state.present = 1;
+		break;
+	case PMU_IRQ_MBOV:
+		pbatt->state.health = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
+		break;
+	case PMU_IRQ_MBOV_DIS:
+		pbatt->state.health = POWER_SUPPLY_HEALTH_GOOD;
+		break;
+	default:
+		break;
+	}
 }
 
 static enum power_supply_property bcmpmu_batt_props[] = {

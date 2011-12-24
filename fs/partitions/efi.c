@@ -662,7 +662,7 @@ int efi_partition(struct parsed_partitions *state)
 #ifdef CONFIG_APANIC_ON_MMC
 		if(strncmp(partition_name,CONFIG_APANIC_PLABEL,partition_name_len) == 0) {
 			apanic_partition_start = start * ssz;
-			pr_debug("apanic partition found starts at %d \r\n", apanic_partition_start);
+			pr_debug("apanic partition found starts at %lu \r\n", apanic_partition_start);
 		}
 #endif
 		put_partition(state, i+1, start * ssz, size * ssz);
@@ -695,7 +695,7 @@ int efi_partition(struct parsed_partitions *state)
 #ifdef CONFIG_APANIC_ON_MMC
 		if(strncmp(info->volname,CONFIG_APANIC_PLABEL,label_count) == 0) {
 			apanic_partition_start = start * ssz;
-			pr_debug("apanic partition found starts at %d \r\n", apanic_partition_start);
+			pr_debug("apanic partition found starts at %lu \r\n", apanic_partition_start);
 		}
 #endif
 	}

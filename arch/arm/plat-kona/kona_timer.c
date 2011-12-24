@@ -128,7 +128,7 @@ static struct kona_timer_module timer_module_list[NUM_OF_TIMER_MODULES] = {
 static struct kona_timer_module * __get_timer_module(char *name);
 static int __config_aon_hub_timer_clock(struct kona_timer_module *pktm,
 	unsigned int rate,
-	unsigned int reg_val);
+	unsigned int val);
 static int __config_slave_timer_clock(struct kona_timer_module *pktm,
 	unsigned int rate,
 	unsigned int reg_val);
@@ -849,7 +849,7 @@ local_clk_cfg:
 
 static int __config_aon_hub_timer_clock(struct kona_timer_module *pktm,
 	unsigned int rate,
-	unsigned int reg_val)
+	unsigned int val)
 {
 	/*
 	 * The source of all the 3 clocks 32KHz, 1MHz and 19.5MHz
@@ -858,7 +858,7 @@ static int __config_aon_hub_timer_clock(struct kona_timer_module *pktm,
 	 * so all are ON
 	 */
 	void __iomem *reg_base = IOMEM(KONA_AON_CLK_VA);
-	unsigned long val, old_enable;
+	unsigned long reg_val, old_enable;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
 #endif
@@ -931,10 +931,10 @@ local_clk_cfg:
 	writel(reg_val, KONA_AON_RST_VA);
 
 	reg_val = readl(reg_base + KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET);
-	writel(val | (1 << KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_HUB_TIMER_TRIGGER_SHIFT), 
+	writel(reg_val | (1 << KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_HUB_TIMER_TRIGGER_SHIFT),
 		reg_base + KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET);
 
-	while(readl(reg_base + KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET) & 
+	while(readl(reg_base + KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET) &
 			(1 << KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_HUB_TIMER_TRIGGER_SHIFT))
 		;
 
@@ -943,7 +943,7 @@ local_clk_cfg:
 	reg_val &= 0x80000000;
 	reg_val |= 0xA5A500;
 	reg_val |= old_enable & 0x1;
-	writel(val, reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	writel(reg_val, reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
 
 	spin_unlock_irqrestore (&pktm->lock, flags);
 	return 0;

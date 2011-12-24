@@ -17,7 +17,7 @@
 
 /*******************************************************************************************
 Copyright 2010 Broadcom Corporation.  All rights reserved.
-
+f
 Unless you and Broadcom execute a separate written software license agreement
 governing use of this software, this software is licensed to you under the
 terms of the GNU General Public License version 2, available at
@@ -32,6 +32,8 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef __BCMPMU_AUDIO_H__
 #define __BCMPMU_AUDIO_H__
 
+#define BCMPMU_IHFTOP_IDDQ		0x01
+#define BCMPMU_IHFLDO_PUP		0x01
 #define BCMPMU_IHFPOP_PUP		0x08
 #define BCMPMU_IHFPOP_AUTOSEQ	0x40
 #define BCMPMU_HSPUP1_IDDQ_PWRDN	0x10
@@ -40,6 +42,21 @@ the GPL, without Broadcom's express prior written consent.
 #define BCMPMU_IHF_GAIN_MASK	0x3F
 #define BCMPMU_PLL_EN			0x02
 #define BCMPMU_PLL_AUDIO_EN		0x20
+
+/* HSPGA1 */
+#define BCMPMU_HSPGA1_PGA_GAINR		0x80
+#define BCMPMU_HSPGA1_PGA_GAINL		0x40
+#define BCMPMU_PGA_CTL_MASK		0x3F
+/* HSPGA2 */
+#define BCMPMU_PGA_CPCTL_BIT		6
+#define BCMPMU_PGA_CPCTL_MASK		0x3
+
+/* HSPGA3 */
+#define BCMPMU_HSPGA3_PGA_INSHORT	0x40
+#define BCMPMU_HSPGA3_PGA_ACINADJ	0x20
+#define BCMPMU_HSPGA3_PGA_ENACCPL	0x04
+#define BCMPMU_HSPGA3_PGA_PULLDNSJ	0x02
+#define BCMPMU_HSPGA3_PGA_CMCTL		0x01
 
 typedef enum {
 	PMU_AUDIO_HS_LEFT,
@@ -183,11 +200,35 @@ typedef enum {
 	PMU_IHFGAIN_NUM
 } bcmpmu_ihf_gain_t;
 
+/* HS/IHF Test Mode */
+#define PMU_TEST_READ_AND_ENABLE  0x03
+#define PMU_TEST_READ_AND_DISABLE 0x02
+#define PMU_TEST_ENABLE_NO_READ   0x01
+#define PMU_TEST_DISABLE_NO_READ  0x00
+
+enum
+{
+	PMU_HS_DIFFERENTIAL_DC_COUPLED,
+	PMU_HS_DIFFERENTIAL_AC_COUPLED,
+	PMU_HS_SINGLE_ENDED_AC_COUPLED
+};
+
 extern void bcmpmu_audio_init(void);
 extern void bcmpmu_audio_deinit(void);
 extern void bcmpmu_hs_power(bool on);
 extern void bcmpmu_ihf_power(bool on);
 extern void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain);
 extern void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain);
+
+extern int bcmpmu_audio_ihf_selftest_stimulus_input(int stimulus);
+extern int bcmpmu_audio_ihf_selftest_stimulus_output(int stimulus);
+extern void bcmpmu_audio_ihf_selftest_result(u8 *result);
+extern int bcmpmu_audio_ihf_testmode(int Mode);
+extern int bcmpmu_audio_hs_selftest_stimulus(int stimulus);
+extern void bcmpmu_audio_hs_selftest_result(u8 *result);
+extern int bcmpmu_audio_hs_testmode(int Mode);
+extern int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode);
+void bcmpmu_audio_hs_selftest_backup(bool Enable);
+void bcmpmu_audio_ihf_selftest_backup(bool Enable);
 
 #endif

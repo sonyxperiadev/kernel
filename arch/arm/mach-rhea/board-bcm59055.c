@@ -40,7 +40,7 @@
 
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0C
-#define PMU_DEVICE_INT_GPIO	10
+#define PMU_DEVICE_INT_GPIO	29
 
 static struct bcmpmu_rw_data register_init_data[] = {
 	{.map=0, .addr=0x0c, .val=0x1b, .mask=0xFF},
@@ -58,7 +58,7 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map=0, .addr=0x4b, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x4c, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x4d, .val=0xFF, .mask=0xFF},
-	{.map=0, .addr=0x50, .val=0x6B, .mask=0xFF}, 
+	{.map=0, .addr=0x50, .val=0x6B, .mask=0xFF},
 	{.map=0, .addr=0x51, .val=0x03, .mask=0xFF},
 	{.map=0, .addr=0x52, .val=0x08, .mask=0xFF},
 	{.map=0, .addr=0x53, .val=0x00, .mask=0xFF},
@@ -125,7 +125,6 @@ static struct regulator_init_data bcm59055_rfldo_data =  {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
 	},
 	.num_consumer_supplies = ARRAY_SIZE(rf_supply),
@@ -142,7 +141,6 @@ static struct regulator_init_data bcm59055_camldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS |REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
 	},
 	.num_consumer_supplies = ARRAY_SIZE(cam_supply),
@@ -160,7 +158,6 @@ static struct regulator_init_data bcm59055_hv1ldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS |REGULATOR_CHANGE_MODE |  REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
 	},
 	.num_consumer_supplies = ARRAY_SIZE(hv1_supply),
@@ -177,7 +174,6 @@ static struct regulator_init_data bcm59055_hv2ldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
 	},
 	.num_consumer_supplies = ARRAY_SIZE(hv2_supply),
@@ -194,7 +190,6 @@ static struct regulator_init_data bcm59055_hv3ldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
 	},
 	.num_consumer_supplies = ARRAY_SIZE(hv3_supply),
@@ -211,7 +206,6 @@ static struct regulator_init_data bcm59055_hv4ldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
 	},
 	.num_consumer_supplies = ARRAY_SIZE(hv4_supply),
@@ -228,7 +222,6 @@ static struct regulator_init_data bcm59055_hv5ldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
 	},
 	.num_consumer_supplies = ARRAY_SIZE(hv5_supply),
@@ -245,7 +238,6 @@ static struct regulator_init_data bcm59055_hv6ldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
 	},
 	.num_consumer_supplies = ARRAY_SIZE(hv6_supply),
@@ -262,7 +254,6 @@ static struct regulator_init_data bcm59055_hv7ldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
 	},
 	.num_consumer_supplies = ARRAY_SIZE(hv7_supply),
@@ -279,32 +270,11 @@ static struct regulator_init_data bcm59055_simldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
 	},
 	.num_consumer_supplies = ARRAY_SIZE(sim_supply),
 	.consumer_supplies = sim_supply,
 };
-
-
-
-struct regulator_consumer_supply sim2_supply[] = {
-	{.supply = "sim2_vcc"},
-};
-static struct regulator_init_data bcm59055_sim2ldo_data = {
-	.constraints = {
-		.name = "sim2ldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
-	},
-	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
-	.consumer_supplies = sim2_supply,
-};
-
 
 
 struct regulator_consumer_supply csr_supply[] = {
@@ -317,7 +287,6 @@ static struct regulator_init_data bcm59055_csr_data = {
 		.max_uV = 1800000,
 		.valid_ops_mask = REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_FAST
 	},
 	.num_consumer_supplies = ARRAY_SIZE(csr_supply),
@@ -334,7 +303,6 @@ static struct regulator_init_data bcm59055_iosr_data = {
 		.max_uV = 1800000,
 		.valid_ops_mask = REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_FAST
 	},
 	.num_consumer_supplies = ARRAY_SIZE(iosr_supply),
@@ -351,7 +319,6 @@ static struct regulator_init_data bcm59055_sdsr_data = {
 		.max_uV = 1800000,
 		.valid_ops_mask = REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 		.always_on = 1,
-		.initial_mode = REGULATOR_MODE_NORMAL,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_FAST
 		},
 	.num_consumer_supplies = ARRAY_SIZE(sdsr_supply),
@@ -369,7 +336,6 @@ struct bcmpmu_regulator_init_data bcm59055_regulators[] = {
 	{BCMPMU_REGULATOR_HV6LDO, &bcm59055_hv6ldo_data},
 	{BCMPMU_REGULATOR_HV7LDO, &bcm59055_hv7ldo_data},
 	{BCMPMU_REGULATOR_SIMLDO, &bcm59055_simldo_data},
-	{BCMPMU_REGULATOR_SIM2LDO, &bcm59055_sim2ldo_data},
 	{BCMPMU_REGULATOR_CSR, &bcm59055_csr_data},
 	{BCMPMU_REGULATOR_IOSR, &bcm59055_iosr_data},
 	{BCMPMU_REGULATOR_SDSR, &bcm59055_sdsr_data}
@@ -387,16 +353,38 @@ static struct platform_device bcmpmu_em_device = {
 	.dev.platform_data 	= NULL,
 };
 
+#ifdef CONFIG_BCMPMU_CSAPI_ADC
+static struct platform_device bcmpmu_adc_chipset_api = {
+	.name 			= "bcmpmu_adc_chipset_api",
+	.id			= -1,
+	.dev.platform_data 	= NULL,
+};
+#endif
+
 static struct platform_device bcmpmu_otg_xceiv_device = {
 	.name 			= "bcmpmu_otg_xceiv",
 	.id			= -1,
 	.dev.platform_data 	= NULL,
 };
 
+#ifdef CONFIG_BCMPMU_SELFTEST
+static struct platform_device bcmpmu_selftest_device = {
+	.name 			= "bcmpmu_selftest",
+	.id			= -1,
+	.dev.platform_data 	= NULL,
+};
+#endif
+
 static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_audio_device,
 	&bcmpmu_em_device,
+#ifdef CONFIG_BCMPMU_CSAPI_ADC
+	&bcmpmu_adc_chipset_api,
+#endif
 	&bcmpmu_otg_xceiv_device,
+#ifdef CONFIG_BCMPMU_SELFTEST
+	&bcmpmu_selftest_device,
+#endif
 };
 
 static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
@@ -458,7 +446,6 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1000*3600,
 	.support_fg = 1,
-	.bc = BCMPMU_BC_BB_BC11,
 };
 
 static struct i2c_board_info __initdata pmu_info[] =

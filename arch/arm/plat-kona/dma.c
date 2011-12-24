@@ -318,6 +318,7 @@ int dma_free_chan(unsigned int chan)
 {
 	unsigned long flags;
 	struct pl330_chan_desc *cdesc;
+	int ret;
 
 	spin_lock_irqsave(&lock, flags);
 	cdesc = chan_id_to_cdesc(chan);
@@ -326,7 +327,9 @@ int dma_free_chan(unsigned int chan)
 
 #ifdef CONFIG_KONA_PI_MGR
 	/* Remove dfs request */
-	pi_mgr_dfs_request_remove(cdesc->dfs_node);
+	ret = pi_mgr_dfs_request_remove(cdesc->dfs_node);
+	if(ret)
+		pr_debug("PL330: Failed to remove dfs node!\n");
 #endif
 
 	_cleanup_req(&cdesc->req);
@@ -759,12 +762,15 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 		nxt->next = NULL;
 
 		if (!xfer_front) {
-			xfer_front = nxt;	/* First Item */
-			priv = nxt;
+			xfer_front = nxt;	/* This is the first Item */
+			priv = xfer_front;	/* On next iteration, attach to here  */
 		} else {
 			priv->next = nxt;	/* Add to the tail */
-			priv = nxt;
+			priv = priv->next;	/* On next iteration, attach to here  */
 		}
+
+		/* nxt is added to xfer list, make it NULL before next LLI */
+		nxt = NULL;
 	}
 
 	spin_lock_irqsave(&lock, flags);
@@ -789,14 +795,18 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 
       err2:
 	/* Free all allocated xfer items */
-	if (xfer_front) {
-		nxt = xfer_front;
-		while (nxt->next) {
-			priv = nxt;
-			nxt = nxt->next;
+	if(xfer_front)	{
+		priv = xfer_front;
+		do	{
+			/* Get nxt item */
+			nxt = priv->next;
+			/* free current item */
 			kfree(priv);
-		}
+			/* load nxt item to current */
+			priv = nxt;
+		} while(priv != NULL);
 	}
+	/* Free config struct */
 	kfree(config);
       err1:
 	return err;
@@ -1029,7 +1039,7 @@ static int pl330_probe(struct platform_device *pdev)
 	pd->clk = clk_get(NULL, DMAC_MUX_APB_BUS_CLK_NAME_STR);
 	if (pd->clk == NULL) {
 	    ret = -ENOENT;
-	    goto probe_err4;
+	    goto probe_err5;
 	}
 
 	/* Hook the info */
@@ -1053,6 +1063,8 @@ static int pl330_probe(struct platform_device *pdev)
 
 	return 0;
 
+      probe_err5:
+	kfree(pd);
       probe_err4:
 	pl330_del(pl330_info);
       probe_err3:

@@ -20,3 +20,9 @@ config BCM_ALSA_SOUND
         default y
         help
           Say Y here to activate an ALSA driver frontend to the BRCM endpoint
+config BCM_AUDIO_SELFTEST
+	boolean "Broadcom audio selftest driver"
+	depends on BCM_ALSA_SOUND && MFD_BCMPMU
+        default n
+        help
+          Say Y here to activate Brcm Audio selftest

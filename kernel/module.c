@@ -2477,7 +2477,12 @@ static void find_module_sections(struct module *mod, struct load_info *info)
 	mod->unused_gpl_crcs = section_addr(info, "__kcrctab_unused_gpl");
 #endif
 #ifdef CONFIG_CONSTRUCTORS
-	mod->ctors = section_objs(info, ".ctors",
+	mod->ctors = section_objs(info, 
+#ifdef CONFIG_GCOV_KERNEL	
+					CONFIG_GCOV_CTORS,
+#else
+					".ctors",
+#endif /*CONFIG_GCOV_KERNEL*/
 				  sizeof(*mod->ctors), &mod->num_ctors);
 #endif
 

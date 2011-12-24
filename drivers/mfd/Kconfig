@@ -37,13 +37,6 @@ config MFD_BCM_PMU590XX
 	help
 	  Support for the Broadcom PMIC.
 
-config MFD_BCMPMU
-	bool "MFD BCM PMU"
-	depends on MFD_CORE && I2C_BSC
-	default n
-	help
-	  Support for Broadcom PMUs.
-
 config MFD_BCMPMU_DBG
 	bool "MFD BCM PMU DEBUG"
 	depends on MFD_BCMPMU

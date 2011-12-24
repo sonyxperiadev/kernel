@@ -179,7 +179,7 @@
 	Default value: 	180000 for B1.2 and onwards, 174000 for prior
 */
 
-#define VENDOR_ADC_BTEMP_RPULLUP 150000
+#define VENDOR_ADC_BTEMP_RPULLUP 162000
 
 /*
 	VENDOR_ADC_BTEMP_RSERIES

@@ -15,7 +15,7 @@ MODULE_LICENSE ("GPL");
 
 static int dwc_common_port_init_module(void)
 {
-	printk( KERN_DEBUG "Module dwc_common_port init\n" );
+	pr_debug("Module dwc_common_port init\n" );
 #ifdef DEBUG_MEMORY
 	dwc_memory_debug_start();
 #endif
@@ -25,7 +25,7 @@ static int dwc_common_port_init_module(void)
 
 static void dwc_common_port_exit_module(void)
 {
-	printk( KERN_DEBUG "Module dwc_common_port exit\n" );
+	pr_debug("Module dwc_common_port exit\n" );
 	dwc_free_notification_manager();
 #ifdef DEBUG_MEMORY
 	dwc_memory_debug_stop();
@@ -86,6 +86,7 @@ EXPORT_SYMBOL(dwc_alloc_debug);
 EXPORT_SYMBOL(dwc_alloc_atomic_debug);
 EXPORT_SYMBOL(dwc_free_debug);
 EXPORT_SYMBOL(dwc_dma_alloc_debug);
+EXPORT_SYMBOL(dwc_dma_alloc_atomic_debug);
 EXPORT_SYMBOL(dwc_dma_free_debug);
 #endif
 
@@ -423,6 +424,17 @@ void *__DWC_DMA_ALLOC(uint32_t size, dwc_dma_t *dma_addr)
 }
 EXPORT_SYMBOL(__DWC_DMA_ALLOC);
 
+void *__DWC_DMA_ALLOC_ATOMIC(uint32_t size, dwc_dma_t *dma_addr)
+{
+	void *buf = dma_alloc_coherent(NULL, (size_t)size, dma_addr, GFP_ATOMIC);
+	if (!buf) {
+		return NULL;
+	}
+	memset(buf, 0, (size_t)size);
+	return buf;
+}
+EXPORT_SYMBOL(__DWC_DMA_ALLOC_ATOMIC);
+
 void __DWC_DMA_FREE(uint32_t size, void *virt_addr, dwc_dma_t dma_addr)
 {
 	dma_free_coherent(NULL, size, virt_addr, dma_addr);
@@ -464,7 +476,7 @@ int DWC_AES_CBC(uint8_t *message, uint32_t messagelen, uint8_t *key, uint32_t ke
 
 	tfm = crypto_alloc_blkcipher("cbc(aes)", 0, CRYPTO_ALG_ASYNC);
 	if (tfm == NULL) {
-		printk("failed to load transform for aes CBC\n");
+		pr_err("failed to load transform for aes CBC\n");
 		return -1;
 	}
 

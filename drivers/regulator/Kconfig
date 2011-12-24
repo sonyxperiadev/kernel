@@ -325,7 +325,7 @@ config REGULATOR_BCM59055
 	  PMU 59055.
 
 config REGULATOR_BCM59039
-	bool "BCM59055 Regulator"
+	bool "BCM59039 Regulator"
 	depends on MFD_BCMPMU && REGULATOR_BCMPMU
 	help
 	  This driver supports the voltage regulators provided by

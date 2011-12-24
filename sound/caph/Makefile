@@ -79,7 +79,6 @@ endif
 obj-$(CONFIG_BCM_ALSA_SOUND)	+= csl/
 obj-$(CONFIG_BCM_MODEM)    += dsp/
 
-
-
-
-
+ifdef CONFIG_BCM_AUDIO_SELFTEST
+obj-$(CONFIG_BCM_ALSA_SOUND) += bcm_auddrv_selftest.o
+endif

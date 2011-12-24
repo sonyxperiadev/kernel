@@ -193,3 +193,17 @@ int pinmux_set_pin_config(struct pin_config *config)
 	return ret;
 }
 
+int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio, enum PIN_FUNC *PF_gpio)
+{
+	int func;
+	for (func = 0 ; func < MAX_ALT_FUNC; func++) {
+		if ((g_chip_pin_desc.desc_tbl[name].f_tbl[func] >= PF_FIRST_GPIO) &&
+		     (g_chip_pin_desc.desc_tbl[name].f_tbl[func] <= PF_LAST_GPIO)) {
+			    *gpio = g_chip_pin_desc.desc_tbl[name].f_tbl[func] - PF_FIRST_GPIO;
+			    *PF_gpio = g_chip_pin_desc.desc_tbl[name].f_tbl[func];
+			    return 0;
+		}
+	}
+	return -ENOENT;
+}
+

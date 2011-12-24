@@ -350,6 +350,11 @@ config BCM59055_WATCHDOG
 	  Say Y here if to include support for the watchdog timer
 	  in BCM59055 PMU.
 
+config WD_TAPPER
+	tristate "Watchdog Petter Enable"
+	help
+	  Say Y here if to enable the WD petter for BCM59055
+
 # AVR32 Architecture
 
 config AT32AP700X_WDT

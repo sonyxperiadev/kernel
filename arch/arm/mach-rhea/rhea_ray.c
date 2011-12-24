@@ -141,7 +141,7 @@
 #define BCM_KEY_COL_7  7
 
 #ifdef CONFIG_MFD_BCMPMU
-void __init board_pmu_init(void);
+extern void __init board_pmu_init(void);
 #endif
 
 #ifdef CONFIG_MFD_BCM_PMU590XX
@@ -202,9 +202,28 @@ static struct regulator_init_data bcm59055_simldo_data = {
 	.consumer_supplies = sim_supply,
 };
 
+struct regulator_consumer_supply h6ldo_supply[] = {
+	{ .supply = "vdd_sdio" },
+};
+
+static struct regulator_init_data bcm59055_h6ldo_data = {
+	.constraints = {
+		.name = "h6ldo",
+		.min_uV = 1800000,
+		.max_uV = 3300000,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+			REGULATOR_CHANGE_VOLTAGE,
+		.always_on = 0,
+		.boot_on = 0,
+	},
+	.num_consumer_supplies = ARRAY_SIZE(h6ldo_supply),
+	.consumer_supplies = h6ldo_supply,
+};
+
 static struct bcm590xx_regulator_init_data bcm59055_regulators[] =
 {
 	{BCM59055_SIMLDO, &bcm59055_simldo_data, BCM590XX_REGL_LPM_IN_DSM},
+	{BCM59055_HV6LDO, &bcm59055_h6ldo_data, BCM590XX_REGL_OFF_IN_DSM},
 };
 
 static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
@@ -1534,7 +1553,6 @@ static void __init rhea_ray_add_devices(void)
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 	platform_add_devices(rhea_ray_virtual_consumer_devices, ARRAY_SIZE(rhea_ray_virtual_consumer_devices));
 #endif
-
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
 }

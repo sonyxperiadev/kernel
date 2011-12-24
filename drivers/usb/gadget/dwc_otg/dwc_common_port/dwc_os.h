@@ -433,6 +433,10 @@ extern void DWC_DMA_POOL_FREE(dwc_pool_t *pool, void *vaddr, void *daddr);
 /** Allocates a DMA capable buffer and zeroes its contents. */
 extern void *__DWC_DMA_ALLOC(uint32_t size, dwc_dma_t *dma_addr);
 
+/** Allocates a DMA capable buffer and zeroes its contents,
+    in an atomic manner */
+extern void *__DWC_DMA_ALLOC_ATOMIC(uint32_t size, dwc_dma_t *dma_addr);
+
 /** Frees a previosly allocated buffer. */
 extern void __DWC_DMA_FREE(uint32_t size, void *virt_addr, dwc_dma_t dma_addr);
 
@@ -454,6 +458,7 @@ extern void __DWC_FREE(void *addr);
 #define DWC_ALLOC_ATOMIC(_size_) __DWC_ALLOC_ATOMIC(_size_)
 #define DWC_FREE(_addr_) __DWC_FREE(_addr_)
 #define DWC_DMA_ALLOC(_size_,_dma_) __DWC_DMA_ALLOC(_size_,_dma_)
+#define DWC_DMA_ALLOC_ATOMIC(_size_,_dma_) __DWC_DMA_ALLOC_ATOMIC(_size_,_dma_)
 #define DWC_DMA_FREE(_size_,_virt_,_dma_) __DWC_DMA_FREE(_size_,_virt_,_dma_)
 
 #else
@@ -462,6 +467,7 @@ extern void *dwc_alloc_debug(uint32_t size, char const *func, int line);
 extern void *dwc_alloc_atomic_debug(uint32_t size, char const *func, int line);
 extern void dwc_free_debug(void *addr, char const *func, int line);
 extern void *dwc_dma_alloc_debug(uint32_t size, dwc_dma_t *dma_addr, char const *func, int line);
+extern void *dwc_dma_alloc_atomic_debug(uint32_t size, dwc_dma_t *dma_addr, char const *func, int line);
 extern void dwc_dma_free_debug(uint32_t size, void *virt_addr, dwc_dma_t dma_addr, char const *func, int line);
 
 extern void dwc_memory_debug_start(void);
@@ -472,6 +478,7 @@ extern void dwc_memory_debug_report(void);
 #define DWC_ALLOC_ATOMIC(_size_) (dwc_alloc_atomic_debug(_size_, __func__, __LINE__))
 #define DWC_FREE(_addr_) (dwc_free_debug(_addr_, __func__, __LINE__))
 #define DWC_DMA_ALLOC(_size_,_dma_) dwc_dma_alloc_debug(_size_, _dma_, __func__, __LINE__)
+#define DWC_DMA_ALLOC_ATOMIC(_size_,_dma_) dwc_dma_alloc_atomic_debug(_size_, _dma_, __func__, __LINE__)
 #define DWC_DMA_FREE(_size_,_virt_,_dma_) dwc_dma_free_debug(_size_, _virt_, _dma_, __func__, __LINE__)
 
 #endif /* DEBUG_MEMORY */
@@ -480,6 +487,7 @@ extern void dwc_memory_debug_report(void);
 #define dwc_alloc_atomic DWC_ALLOC_ATOMIC
 #define dwc_free DWC_FREE
 #define dwc_dma_alloc DWC_DMA_ALLOC
+#define dwc_dma_alloc_atomic DWC_DMA_ALLOC_ATOMIC
 #define dwc_dma_free DWC_DMA_FREE
 
 

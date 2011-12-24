@@ -676,6 +676,13 @@ config USB_DWC_OTG_LPM
 	help
 	   Enables LPM support.
 
+config USB_DWC_OTG_DEVICE_ONLY
+	boolean "DWC OTG Driver device only mode"
+	depends on USB_GADGET
+	default n
+	help
+	   Enables DWC OTG Driver device only mode
+
 #
 # USB Gadget Drivers
 #

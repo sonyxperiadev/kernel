@@ -990,25 +990,25 @@ static int __init dwc_otg_driver_init(void)
 	int retval = 0;
 	int error;
 
-	printk(KERN_INFO "%s: version %s\n", dwc_driver_name,
+	pr_info("%s: version %s\n", dwc_driver_name,
 		DWC_DRIVER_VERSION);
 
 #ifdef LM_INTERFACE
 	retval = lm_driver_register(&dwc_otg_driver);
 	if (retval < 0) {
-		printk(KERN_ERR "%s retval=%d\n", __func__, retval);
+		pr_err("%s retval=%d\n", __func__, retval);
 		return retval;
        }
 #elif defined (PCI_INTERFACE)
 	retval = pci_register_driver(&dwc_otg_driver);
 	if (retval < 0) {
-		printk(KERN_ERR "%s retval=%d\n", __func__, retval);
+		pr_err("%s retval=%d\n", __func__, retval);
 		return retval;
        }
 #else
 	retval = platform_driver_register(&dwc_otg_driver);
 	if (retval < 0) {
-		printk(KERN_ERR "%s retval=%d\n", __func__, retval);
+		pr_err("%s retval=%d\n", __func__, retval);
 		return retval;
        }
 #endif
@@ -1036,18 +1036,18 @@ module_init(dwc_otg_driver_init);
  */
 static void __exit dwc_otg_driver_cleanup(void)
 {
-	printk(KERN_DEBUG "dwc_otg_driver_cleanup()\n");
+	pr_debug("dwc_otg_driver_cleanup()\n");
 
 #ifdef LM_INTERFACE
 	driver_remove_file(&dwc_otg_driver.drv, &driver_attr_debuglevel);
 	driver_remove_file(&dwc_otg_driver.drv, &driver_attr_version);
 	lm_driver_unregister(&dwc_otg_driver);
-	printk(KERN_INFO "%s module removed\n", dwc_driver_name);
+	pr_info("%s module removed\n", dwc_driver_name);
 #elif defined (PCI_INTERFACE)
 	driver_remove_file(&dwc_otg_driver.driver, &driver_attr_debuglevel);
 	driver_remove_file(&dwc_otg_driver.driver, &driver_attr_version);
 	pci_unregister_driver(&dwc_otg_driver);
-	printk(KERN_INFO "%s module removed\n", dwc_driver_name);
+	pr_info("%s module removed\n", dwc_driver_name);
 #else
 	driver_remove_file(&dwc_otg_driver.driver, &driver_attr_debuglevel);
 	driver_remove_file(&dwc_otg_driver.driver, &driver_attr_version);

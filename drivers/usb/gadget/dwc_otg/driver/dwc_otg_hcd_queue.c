@@ -141,7 +141,7 @@ static uint32_t calc_bus_time(int speed, int is_in, int is_isoc,
 		break;
 	default:
 		DWC_WARN("Unknown device speed\n");
-		retval = -1;
+		return -1;
 	}
 	
 	return NS_TO_US(retval);
@@ -293,20 +293,21 @@ void qh_init(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh,
  *
  * @return Returns pointer to the newly allocated QH, or NULL on error. */
 dwc_otg_qh_t *dwc_otg_hcd_qh_create(dwc_otg_hcd_t * hcd,
-				    dwc_otg_hcd_urb_t * urb)
+				    dwc_otg_hcd_urb_t * urb,
+				    int atomic_alloc)
 {
 	dwc_otg_qh_t *qh = NULL;
 
 	/* Allocate memory */
-	/** @todo add memflags argument */
-	qh = dwc_otg_hcd_qh_alloc();
+	qh = dwc_otg_hcd_qh_alloc(atomic_alloc);
 	if (qh == NULL) {
 		return NULL;
 	}
 
 	qh_init(hcd, qh, urb);
 	
-	if (hcd->core_if->dma_desc_enable && (dwc_otg_hcd_qh_init_ddma(hcd, qh) < 0)) {
+	if (hcd->core_if->dma_desc_enable &&
+	    (dwc_otg_hcd_qh_init_ddma(hcd, qh, atomic_alloc) < 0)) {
 		dwc_otg_hcd_qh_free(hcd, qh);	
 		return NULL;
 	}
@@ -637,11 +638,12 @@ void dwc_otg_hcd_qh_deactivate(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh,
  * 	      pointing to each other so each pair should have a unique correlation.
  *
  * @return Returns pointer to the newly allocated QTD, or NULL on error. */
-dwc_otg_qtd_t *dwc_otg_hcd_qtd_create(dwc_otg_hcd_urb_t * urb)
+dwc_otg_qtd_t *dwc_otg_hcd_qtd_create(dwc_otg_hcd_urb_t * urb,
+				      int atomic_alloc)
 {
 	dwc_otg_qtd_t *qtd;
 
-	qtd = dwc_otg_hcd_qtd_alloc();
+	qtd = dwc_otg_hcd_qtd_alloc(atomic_alloc);
 	if (qtd == NULL) {
 		return NULL;
 	}
@@ -707,7 +709,7 @@ int dwc_otg_hcd_qtd_add(dwc_otg_qtd_t * qtd,
 	 * doesn't exist.
 	 */
 	if (*qh == NULL) {
-		*qh = dwc_otg_hcd_qh_create(hcd, urb);
+		*qh = dwc_otg_hcd_qh_create(hcd, urb, 1);
 		if (*qh == NULL) {
 			retval = -1;
 			goto done;

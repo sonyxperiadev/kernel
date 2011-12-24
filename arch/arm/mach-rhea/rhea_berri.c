@@ -138,6 +138,10 @@
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
 
+#ifdef CONFIG_MFD_BCMPMU
+extern void __init board_pmu_init(void);
+#endif
+
 #ifdef CONFIG_MFD_BCM_PMU590XX
 static int bcm590xx_event_callback(int flag, int param)
 {
@@ -196,9 +200,29 @@ static struct regulator_init_data bcm59055_simldo_data = {
 	.consumer_supplies = sim_supply,
 };
 
+struct regulator_consumer_supply h6ldo_supply[] = {
+	{ .supply = "vdd_sdio" },
+};
+
+static struct regulator_init_data bcm59055_h6ldo_data = {
+	.constraints = {
+		.name = "h6ldo",
+		.min_uV = 1800000,
+		.max_uV = 3300000,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+			REGULATOR_CHANGE_VOLTAGE,
+		.always_on = 0,
+		.boot_on = 0,
+	},
+	.num_consumer_supplies = ARRAY_SIZE(h6ldo_supply),
+	.consumer_supplies = h6ldo_supply,
+};
+
+
 static struct bcm590xx_regulator_init_data bcm59055_regulators[] =
 {
 	{BCM59055_SIMLDO, &bcm59055_simldo_data, BCM590XX_REGL_LPM_IN_DSM},
+	{BCM59055_HV6LDO, &bcm59055_h6ldo_data, BCM590XX_REGL_OFF_IN_DSM},
 };
 
 static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
@@ -1335,6 +1359,11 @@ static void __init rhea_berri_add_i2c_devices (void)
 			pmu_info,
 			ARRAY_SIZE(pmu_info));
 #endif
+
+#ifdef CONFIG_MFD_BCMPMU
+	board_pmu_init();
+#endif
+
 #ifdef CONFIG_GPIO_PCA953X
 	i2c_register_board_info(1,
 			pca953x_info,
