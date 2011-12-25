@@ -3748,9 +3748,9 @@ static int pll_clk_enable(struct clk* clk, int enable)
 	if (pll_clk->idle_pwrdwn_sw_ovrride_mask != 0) {
 	    reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
 	    clk_dbg("%s, Before change pll_ctrl reg value: %08x  \n",__func__, reg_val);
-	    /*Return if sw_override bit is set ?*/
-	    if(!GET_BIT_USING_MASK(reg_val,pll_clk->idle_pwrdwn_sw_ovrride_mask))
-		goto auto_gated;
+	    /*Return if sw_override bit is set */
+	    if(GET_BIT_USING_MASK(reg_val,pll_clk->idle_pwrdwn_sw_ovrride_mask))
+			goto auto_gated;
 	}
 	if(enable)
 	{

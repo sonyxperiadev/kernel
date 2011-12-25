@@ -783,7 +783,6 @@ int pwr_mgr_pm_i2c_sem_lock()
 	}
     spin_lock_irqsave(&pwr_mgr_lock,flgs);
 
-	mdelay(2);
     do
     {
 		udelay(1);
@@ -840,8 +839,6 @@ int pwr_mgr_pm_i2c_sem_lock()
 		else
 			pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
 	}
-	udelay(2);
-
 	spin_lock(&pwr_mgr_lock);
 
 	value = PWRMGR_SEM_VALUE;
