@@ -22,7 +22,7 @@
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
-#include <s5k4ecgx.h>
+#include "s5k4ecgx.h"
 
 //#define FPS_30_MODE		
 
