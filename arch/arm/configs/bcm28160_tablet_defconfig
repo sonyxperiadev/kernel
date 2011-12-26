@@ -1223,7 +1223,6 @@ CONFIG_INPUT_GPIO=y
 # CONFIG_INPUT_CMA3000 is not set
 # CONFIG_INPUT_SMB380 is not set
 # CONFIG_INPUT_BCM2850_MIC_DETECT is not set
-# CONFIG_KONA_HEADSET is not set
 
 #
 # Hardware I/O ports
