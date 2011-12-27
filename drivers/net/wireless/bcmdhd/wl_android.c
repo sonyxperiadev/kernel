@@ -128,7 +128,7 @@ int wl_cfg80211_set_p2p_ps(struct net_device *net, char* buf, int len)
 #endif
 
 extern bool ap_fw_loaded;
-#ifdef CUSTOMER_HW2
+#ifdef CUSTOMER_HW3
 extern char iface_name[IFNAMSIZ];
 #endif
 
@@ -590,10 +590,11 @@ int wl_android_init(void)
 #ifdef ENABLE_INSMOD_NO_FW_LOAD
 	dhd_download_fw_on_driverload = FALSE;
 #endif /* ENABLE_INSMOD_NO_FW_LOAD */
-#ifdef CUSTOMER_HW2
+#ifdef CUSTOMER_HW3
 	if (!iface_name[0]) {
 		memset(iface_name, 0, IFNAMSIZ);
 		bcm_strncpy_s(iface_name, IFNAMSIZ, "wlan", IFNAMSIZ);
+		DHD_INFO(("wl_android_init \n"));
 	}
 #endif /* CUSTOMER_HW2 */
 	return ret;

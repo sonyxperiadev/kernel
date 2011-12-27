@@ -8,6 +8,7 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Werror -Dlinux -DBCMDRIVER             \
 	-DKEEP_ALIVE -DPKT_FILTER_SUPPORT                                     \
 	-DEMBEDDED_PLATFORM -DPNO_SUPPORT                                     \
 	-DDHD_BCM_WIFI_HDMI                                                   \
+	-DCUSTOMER_HW3							      \
 	-DOEMANDROID                                                          \
 	-Idrivers/net/wireless/bcmdhd -Idrivers/net/wireless/bcmdhd/include
 
