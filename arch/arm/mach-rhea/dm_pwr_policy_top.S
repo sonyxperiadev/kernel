@@ -139,6 +139,7 @@
 #include <asm/assembler.h>
 #include <asm/asm-offsets.h>
 
+#include <mach/secure_api.h>
 
 @ IMPLEMENTATION DEFINED: presence and usage status of the Security Extensions
 @ NOTE: all current/planned ARM implementations of ARMv7-A support
@@ -224,7 +225,7 @@
 
     .extern dormant_base_va
     .extern dormant_base_pa
-
+    .extern dormant_count
 
 #include "dm_pwr_save_dfn.h"
 #include "dm_support_ops.S"
@@ -385,15 +386,17 @@ UpdatePwrStatus:
 
 	@ rom_sec_dormant_enter ( service, flags, start_addr, end_addr )
 	@ Enter Dormant
-	LDR r0,=0x01000000
+	LDR r0,=SEC_API_ENTER_DORMANT
 	@ Disable interrupts.. i.e do not pass interrupts to NS side.
-	LDR r1,=0xB
+	LDR r1,=SEC_FLAGS
 	@ Start of buffer
 	LDR r2, =DORMANT_BASE_PA  @ pointer to uniprocessor context save area
 	LDR r2, [r2]
 	@ End of buffer.. Note the actual buffer is larger but
 	@ secure side max is 0x280@
 	ADD   r3,r2,#0x80
+	MOV   r4,#SEC_DORMANT_MODE
+	PUSH  {r4}
 
 	@ invoke the dispatcher
 	bl hw_sec_pub_dispatcher
@@ -495,6 +498,11 @@ ContinueRestore:
 
 
 ContinueRestoreNoTEX:
+	ldr     r4,=dormant_count
+	ldr	r5,[r4]
+	add	r5,r5,#1
+	str	r5,[r4]
+
 	DORMANT_RESTORE2
 	MOV	pc,lr               @ execution returns to WarmStartContinue
 FullSystemReset:                   @ nothing to recover, execute a full reset
