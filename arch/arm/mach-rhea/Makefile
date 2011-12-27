@@ -32,6 +32,7 @@ obj-$(CONFIG_MACH_RHEA_STONE) += rhea_stone.o
 obj-$(CONFIG_CDEBUGGER) += crash_debugger.o
 obj-y += pm_params.o
 
-obj-$(CONFIG_ROM_SEC_DISPATCHER) += sec_bridge_tz.i
+obj-$(CONFIG_ROM_SEC_DISPATCHER_LIB) += sec_bridge_tz.i
+obj-$(CONFIG_ROM_SEC_DISPATCHER_SRC) += rhea_smc.o
 obj-$(CONFIG_MFD_BCM59055) += board-bcm59055.o
 obj-$(CONFIG_MFD_BCM59039) += board-bcm59039.o

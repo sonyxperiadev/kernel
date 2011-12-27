@@ -81,20 +81,34 @@ endchoice
 
 config RHEA_DORMANT_MODE
        bool "Enable dormant mode support for Rhea platform"
+       default n
        help
-	Say Y if you want to enable dormant mode support for Rhea platform
+         Say Y if you want to enable dormant mode support for Rhea platform
 
 config ROM_SEC_DISPATCHER
-	depends on RHEA_DORMANT_MODE
-	default n
-	bool "Enable calls to secure rom code"
+       bool "Enable secure calls to ROM"
+       default n
+       help
+         Say Y if you want to enable secure calls to boot ROM.
+
+choice
+	prompt "Choose secure dispatcher version"
+	depends on ROM_SEC_DISPATCHER
+	default ROM_SEC_DISPATCHER_SRC
+
+config ROM_SEC_DISPATCHER_LIB
+	bool "Secure API Library"
 	help
-		Say Y if rom code is present in the chip.  Enabling this flag
-		would either need the secure library or source code and the make file
-		change to use the .o instead of the the .i.  If only the parent flag
-		is enabled, based on not enabling this feature, the code would enter
-		retention instead of dormant even though most of the save restore
-		code gets executed.
+	  Say Y here to enable secure rom code dispatcher library
+	   (.i file) to enable secure calls to rom.
+
+config ROM_SEC_DISPATCHER_SRC
+	bool "Secure API Source"
+	help
+	  Say Y here to enable the build of secure rom code dispatcher
+	  source for secure calls to rom.
+
+endchoice
 
 config RHEA_A0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA
