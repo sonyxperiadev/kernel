@@ -629,10 +629,10 @@ config APANIC_PLABEL
 config APANIC_ON_MMC
 	bool "Dump panic info on eMMC"
 	depends on MMCPOLL
-	default n
+	default y
 	---help---
 	By default apanic works on MTD interface.
-	If your platform has only MMC (ex:- eMMC Flash) based storage and 
+	If your platform has only MMC (ex:- eMMC Flash) based storage and
 	if you want to enable panic to dump kernel panic info to MMC say yes here.
 
 config INTER_PROCESSOR_COMM
@@ -664,7 +664,7 @@ config BCM59055_ADC_CHIPSET_API
 	depends on BCM59055_SARADC && BCM59055_FUELGAUGE
 	default n
 	---help---
-	 BCM59055 ADC chispet API driver 
+	 BCM59055 ADC chispet API driver
 
 config BCMPMU_CSAPI_ADC
 	tristate "BCMPMU ADC chipset API driver"
@@ -685,14 +685,14 @@ config BCMPMU_AUDIO
         depends on MFD_BCMPMU
         help
           If you say Y to support Audio drive on BCM PMUs.
-	  
+
 config BCMPMU_SELFTEST
         bool "BCM PMU Selftest Driver"
         depends on MFD_BCMPMU
 	default n
         help
           If you say Y to support selftest drive on BCM PMUs.
-	  
+
 config MONITOR_ADC121C021_I2C
 	tristate "ADC121C021 Battery Monitor"
 	depends on I2C
