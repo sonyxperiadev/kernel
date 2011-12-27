@@ -167,7 +167,7 @@
 	/* gpio node must be consistent with pinmux node */
 	gpio {
 		compatible = "Broadcom,rhea-gpio";
-		reg = <0x35003000 39>;		/* base address and # of exposed GPIOs */
+		reg = <0x35003000 40>;		/* base address and # of exposed GPIOs */
 		data = <
 			43  0x00000001 /*Input*/
 			44  0x00000001 /*Input*/
@@ -205,6 +205,7 @@
 			71  0x00000001 /*Input*/
 			70  0x00000001 /*Input*/
 			29  0x00000001 /*Input*/
+			94  0x00000001 /*Input*/
 			105  0x00000001 /*Input*/
 			104  0x00000001 /*Input*/
 			103  0x00000001 /*Input*/

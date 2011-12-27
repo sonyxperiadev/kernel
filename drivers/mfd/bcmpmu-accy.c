@@ -159,7 +159,7 @@ static unsigned int get_bc_status(struct bcmpmu_accy *paccy)
 		status |= temp << PMU_BC_STATUS_DONE_SHIFT;
 		pr_accy(DATA,"%s: bc_status bc_done=0x%X, value=0x%X\n", __func__, temp, status);
 		return status;
-	} else 
+	} else
 		return 0;
 }
 
@@ -321,7 +321,7 @@ static void send_usb_event(struct bcmpmu *pmu,
 		ps->set_property(ps, POWER_SUPPLY_PROP_TYPE, &propval);
 		if (paccy->det_state == USB_CONNECTED)
 			propval.intval = 1;
-		else 
+		else
 			propval.intval = 0;
 		ps->set_property(ps, POWER_SUPPLY_PROP_ONLINE, &propval);
 		power_supply_changed(ps);
@@ -347,7 +347,7 @@ static void send_chrgr_event(struct bcmpmu *pmu,
 		ps->set_property(ps, POWER_SUPPLY_PROP_TYPE, &propval);
 		if (paccy->det_state == USB_CONNECTED)
 			propval.intval = 1;
-		else 
+		else
 			propval.intval = 0;
 		ps->set_property(ps, POWER_SUPPLY_PROP_ONLINE, &propval);
 	} else if (event == BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT) {
@@ -422,7 +422,7 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 
 	case PMU_IRQ_CHGDET_TO:
 		break;
-	
+
 	case PMU_IRQ_FGC:
 		blocking_notifier_call_chain(
 			&paccy->event[BCMPMU_FG_EVENT_FGC].notifiers,
@@ -668,7 +668,7 @@ int bcmpmu_usb_set(struct bcmpmu *bcmpmu,
 		send_chrgr_event(paccy->bcmpmu, BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
 			&paccy->bcmpmu->usb_accy_data.max_curr_chrgr);
 		break;
-		
+
 	case BCMPMU_USB_CTRL_VBUS_ON_OFF:
 		if (data == 0)
 		ret = bcmpmu->write_dev(bcmpmu, PMU_REG_OTG_VBUS_BOOST,

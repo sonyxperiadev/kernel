@@ -120,10 +120,8 @@ static struct __init pin_config board_pin_config[] = {
 	/* Camera */
 	PIN_CFG(GPIO12, GPIO12, 0, ON, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO13, GPIO13, 0, ON, OFF, 0, 0, 8MA),
-
 /* BT */
-	PIN_CFG(GPIO02, GPIO2, 0, ON, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO10, GPIO10, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(LCDCS0, GPIO38, 0, ON, OFF, 0, 0, 8MA),
 	PIN_CFG(MMC1RST, GPIO70, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(DCLKREQ1, GPIO111, 0, OFF, ON, 0, 1, 8MA),
 

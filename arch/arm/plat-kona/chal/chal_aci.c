@@ -89,18 +89,15 @@
 #define ACI_BIAS_PWRDN_POWERUP                                  0
 #define ACI_BIAS_PWRDN_POWERDOWN                                1
 
-#define ACI_BASE_ADDR 						(HW_IO_PHYS_TO_VIRT(0x3500E000))
-#define AUXMIC_BASE_ADDR 					(ACI_BASE_ADDR)
-#define AUDIOH_BASE_ADDR					(HW_IO_PHYS_TO_VIRT(0x35020000))
 /*
  * Write ACI Command Register
  */
 #define CHAL_ACI_WRITE_COMR(f,d)    do { \
                                         cUInt16  reg; \
-                                        reg = (cUInt16)(BRCM_READ_REG( ACI_BASE_ADDR, ACI_COMR ) & ~ACI_COMR_DBICMD_MASK); \
+                                        reg = (cUInt16)(BRCM_READ_REG( KONA_ACI_VA, ACI_COMR ) & ~ACI_COMR_DBICMD_MASK); \
                                         reg &= ~BRCM_FIELDMASK(ACI_COMR,f); \
                                         reg |= (((BRCM_REGTYPE(ACI_COMR))d) << BRCM_FIELDSHIFT(ACI_COMR,f)) & BRCM_FIELDMASK(ACI_COMR,f); \
-                                        BRCM_WRITE_REG( ACI_BASE_ADDR, ACI_COMR, reg ); \
+                                        BRCM_WRITE_REG( KONA_ACI_VA, ACI_COMR, reg ); \
                                     } while(0)
 
 /* 
@@ -115,9 +112,9 @@
 /* The loop below will take around 200us */
 #define HW_ACI_REGISTER_WRITE_SETTLE        do { \
                                                 cUInt32 i;  \
-                                                volatile cUInt32 j;  \
+                                                volatile cUInt32 j = 0;  \
                                                 for (i=0; i<1000; i++)  \
-                                                { j += BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_COMP_DOUT, COMP1_DOUT); }  \
+                                                { j += BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_COMP_DOUT, COMP1_DOUT); }  \
                                             } while (0)
 #endif
 
@@ -151,7 +148,7 @@ static volatile cUInt8*    base_addr = NULL;
 
 CHAL_HANDLE chal_aci_init( cUInt32 baseAddr_NotUsed )
 {
-    base_addr = (cUInt8*)ACI_BASE_ADDR;
+    base_addr = (cUInt8*)KONA_ACI_VA;
     chal_aci_init_aci( (cUInt32)base_addr );
     return (CHAL_HANDLE)base_addr;
 }
@@ -187,55 +184,55 @@ cVoid chal_aci_set_mic_route( CHAL_HANDLE handle, CHAL_ACI_mic_route_t route )
     switch (route)
     {
     case CHAL_ACI_MIC_ROUTE_TV:
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ECIDATA,    ECIDATA,            ACI_ECIDATA_ECIDATA_CMD_OFF);
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   SW_MIC_DATAB,       SW_MIC_DATAB_P_MIC_OUT);        // P_MIC_DATA_IN connected to P_MIC_OUT
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADCIN_SEL,  ADCIN_SEL,          COMP2_TO_P_MIC_OUT);            // COMP2 connected to P_MIC_OUT
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   SW_ACI,             SW_ACI_OFF);                    // ACI Pull-up OFF
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN,     ACI_BIAS_PWRDN_POWERUP);        // Power Up
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,   AUDIORX_BIAS_PWRUP, AUDIORX_BIAS_PWRUP_POWERUP);
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ECIDATA,    ECIDATA,            ACI_ECIDATA_ECIDATA_CMD_OFF);
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   SW_MIC_DATAB,       SW_MIC_DATAB_P_MIC_OUT);        // P_MIC_DATA_IN connected to P_MIC_OUT
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADCIN_SEL,  ADCIN_SEL,          COMP2_TO_P_MIC_OUT);            // COMP2 connected to P_MIC_OUT
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   SW_ACI,             SW_ACI_OFF);                    // ACI Pull-up OFF
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN,     ACI_BIAS_PWRDN_POWERUP);        // Power Up
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,   AUDIORX_BIAS_PWRUP, AUDIORX_BIAS_PWRUP_POWERUP);
         break;
     case CHAL_ACI_MIC_ROUTE_MIC:
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN,     ACI_BIAS_PWRDN_POWERUP);        // Power Up (No affect on Rhea)
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,   AUDIORX_BIAS_PWRUP, AUDIORX_BIAS_PWRUP_POWERUP);    // Power Up (No affect on Rhea)
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   SW_MIC_DATAB,       SW_MIC_DATAB_P_MIC_OUT);        // P_MIC_DATA_IN connected to P_MIC_OUT
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ECIDATA,    ECIDATA,            ACI_ECIDATA_ECIDATA_CMD_OFF);
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADCIN_SEL,  ADCIN_SEL,          COMP2_TO_P_MIC_OUT);            // COMP2 connected to P_MIC_OUT
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   SW_ACI,             SW_ACI_OFF);                    // ACI Pull-up OFF
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN,     ACI_BIAS_PWRDN_POWERUP);        // Power Up (No affect on Rhea)
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,   AUDIORX_BIAS_PWRUP, AUDIORX_BIAS_PWRUP_POWERUP);    // Power Up (No affect on Rhea)
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   SW_MIC_DATAB,       SW_MIC_DATAB_P_MIC_OUT);        // P_MIC_DATA_IN connected to P_MIC_OUT
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ECIDATA,    ECIDATA,            ACI_ECIDATA_ECIDATA_CMD_OFF);
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADCIN_SEL,  ADCIN_SEL,          COMP2_TO_P_MIC_OUT);            // COMP2 connected to P_MIC_OUT
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   SW_ACI,             SW_ACI_OFF);                    // ACI Pull-up OFF
         break;
     case CHAL_ACI_MIC_ROUTE_ACI_OPEN:
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN,     ACI_BIAS_PWRDN_POWERUP);        // Power Up (No affect on Rhea)
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,   AUDIORX_BIAS_PWRUP, AUDIORX_BIAS_PWRUP_POWERUP);    // Power Up (No affect on Rhea)
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   SW_ACI,             SW_ACI_ON);                     // ACI Pull-up ON
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ECIDATA,    ECIDATA,            ACI_ECIDATA_ECIDATA_CMD_OFF); 
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   SW_MIC_DATAB,       SW_MIC_DATAB_ACI_DATA);         // P_MIC_DATA_IN connected to ACI data
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADCIN_SEL,  ADCIN_SEL,          COMP2_TO_ACI_PULL);             // COMP2 connected to P_MIC_OUT
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN,     ACI_BIAS_PWRDN_POWERUP);        // Power Up (No affect on Rhea)
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,   AUDIORX_BIAS_PWRUP, AUDIORX_BIAS_PWRUP_POWERUP);    // Power Up (No affect on Rhea)
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   SW_ACI,             SW_ACI_ON);                     // ACI Pull-up ON
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ECIDATA,    ECIDATA,            ACI_ECIDATA_ECIDATA_CMD_OFF); 
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   SW_MIC_DATAB,       SW_MIC_DATAB_ACI_DATA);         // P_MIC_DATA_IN connected to ACI data
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADCIN_SEL,  ADCIN_SEL,          COMP2_TO_ACI_PULL);             // COMP2 connected to P_MIC_OUT
         chal_aci_disable_aci();
         break;
     case CHAL_ACI_MIC_ROUTE_ACI_CLOSED:
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN,     ACI_BIAS_PWRDN_POWERUP);        // Power Up (No affect on Rhea)
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,   AUDIORX_BIAS_PWRUP, AUDIORX_BIAS_PWRUP_POWERUP);    // Power Up (No affect on Rhea)
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   SW_ACI,             SW_ACI_ON);                     // ACI Pull-up ON
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ECIDATA,    ECIDATA,            ACI_ECIDATA_ECIDATA_CMD_ON); 
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   SW_MIC_DATAB,       SW_MIC_DATAB_ACI_DATA);         // P_MIC_DATA_IN connected to ACI data
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADCIN_SEL,  ADCIN_SEL,          COMP2_TO_ACI_PULL);             // COMP2 connected to P_MIC_OUT
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN,     ACI_BIAS_PWRDN_POWERUP);        // Power Up (No affect on Rhea)
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,   AUDIORX_BIAS_PWRUP, AUDIORX_BIAS_PWRUP_POWERUP);    // Power Up (No affect on Rhea)
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   SW_ACI,             SW_ACI_ON);                     // ACI Pull-up ON
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ECIDATA,    ECIDATA,            ACI_ECIDATA_ECIDATA_CMD_ON); 
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   SW_MIC_DATAB,       SW_MIC_DATAB_ACI_DATA);         // P_MIC_DATA_IN connected to ACI data
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADCIN_SEL,  ADCIN_SEL,          COMP2_TO_ACI_PULL);             // COMP2 connected to P_MIC_OUT
         chal_aci_disable_aci();
         break;
     case CHAL_ACI_MIC_ROUTE_ALL_OFF:
 #ifdef CONFIG_AUDIOH_REGS
-        BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC,    AUDIORX_VAUXMIC_CTRL,   AUDIORX_VAUXMIC_2_10V );
+        BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VMIC,    AUDIORX_VAUXMIC_CTRL,   AUDIORX_VAUXMIC_2_10V );
 #endif
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP_PWD,           COMP1_PWD,              ACI_COMP_PWD_COMP1_PWD_CMD_POWER_DOWN);
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP_PWD,           COMP2_PWD,              ACI_COMP_PWD_COMP2_PWD_CMD_POWER_DOWN);
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_PWD,            ADC1_PWD,               ACI_ADC_PWD_ADC1_PWD_CMD_POWER_DOWN);
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,           ACI_BIAS_PWRDN,         ACI_BIAS_PWRDN_POWERDOWN);     
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADCIN_SEL,          ADCIN_SEL,              COMP2_TO_P_MIC_OUT);
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,           AUDIORX_BIAS_PWRUP,     AUDIORX_BIAS_PWRUP_POWERDOWN);
-        BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR, AUXMIC_F_PWRDWN,        FORCE_PWR_DWN,          1 );
-        BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERDOWN);
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP_PWD,           COMP1_PWD,              ACI_COMP_PWD_COMP1_PWD_CMD_POWER_DOWN);
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP_PWD,           COMP2_PWD,              ACI_COMP_PWD_COMP2_PWD_CMD_POWER_DOWN);
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_PWD,            ADC1_PWD,               ACI_ADC_PWD_ADC1_PWD_CMD_POWER_DOWN);
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,           ACI_BIAS_PWRDN,         ACI_BIAS_PWRDN_POWERDOWN);     
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADCIN_SEL,          ADCIN_SEL,              COMP2_TO_P_MIC_OUT);
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,           AUDIORX_BIAS_PWRUP,     AUDIORX_BIAS_PWRUP_POWERDOWN);
+        BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA, AUXMIC_F_PWRDWN,        FORCE_PWR_DWN,          1 );
+        BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERDOWN);
 
 #ifdef CONFIG_AUDIOH_REGS
-        BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_NORMAL);
-        BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_NORMAL);
+        BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_NORMAL);
+        BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_NORMAL);
 #endif
         break;
     default:
@@ -264,24 +261,24 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         switch (id)
         {
         case CHAL_ACI_BLOCK_COMP:    /* The action applies to both Comperators */
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP_PWD,   COMP2_PWD,  ACI_COMP_PWD_COMP2_PWD_CMD_POWER_UP);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP_PWD,   COMP2_PWD,  ACI_COMP_PWD_COMP2_PWD_CMD_POWER_UP);
             /* Fall through */
         case CHAL_ACI_BLOCK_COMP1:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP_PWD,   COMP1_PWD,  ACI_COMP_PWD_COMP1_PWD_CMD_POWER_UP);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP_PWD,   COMP1_PWD,  ACI_COMP_PWD_COMP1_PWD_CMD_POWER_UP);
             break;
         case CHAL_ACI_BLOCK_COMP2:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP_PWD,   COMP2_PWD,  ACI_COMP_PWD_COMP2_PWD_CMD_POWER_UP);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP_PWD,   COMP2_PWD,  ACI_COMP_PWD_COMP2_PWD_CMD_POWER_UP);
             break;
         case CHAL_ACI_BLOCK_ADC: /* The action applies to both ADC's */
             /* Fall through */
         case CHAL_ACI_BLOCK_ADC1:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_PWD,    ADC1_PWD,   ACI_ADC_PWD_ADC1_PWD_CMD_POWER_UP);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_PWD,    ADC1_PWD,   ACI_ADC_PWD_ADC1_PWD_CMD_POWER_UP);
             break;
         case CHAL_ACI_BLOCK_ADC2:
             break;
         case CHAL_ACI_BLOCK_DIGITAL:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN, ACI_BIAS_PWRDN_POWERUP);
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_MIC_BIAS,   MIC_BIAS,   ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN, ACI_BIAS_PWRDN_POWERUP);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_MIC_BIAS,   MIC_BIAS,   ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
             break;
         default:
             CHAL_ASSERT(0);
@@ -292,24 +289,24 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         switch (id)
         {
         case CHAL_ACI_BLOCK_COMP:    /* The action applies to both Comperators */
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP_PWD,   COMP2_PWD,  ACI_COMP_PWD_COMP2_PWD_CMD_POWER_DOWN);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP_PWD,   COMP2_PWD,  ACI_COMP_PWD_COMP2_PWD_CMD_POWER_DOWN);
             /* Fall through */
         case CHAL_ACI_BLOCK_COMP1:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP_PWD,   COMP1_PWD,  ACI_COMP_PWD_COMP1_PWD_CMD_POWER_DOWN);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP_PWD,   COMP1_PWD,  ACI_COMP_PWD_COMP1_PWD_CMD_POWER_DOWN);
             break;
         case CHAL_ACI_BLOCK_COMP2:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP_PWD,   COMP2_PWD,  ACI_COMP_PWD_COMP2_PWD_CMD_POWER_DOWN);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP_PWD,   COMP2_PWD,  ACI_COMP_PWD_COMP2_PWD_CMD_POWER_DOWN);
             break;
         case CHAL_ACI_BLOCK_ADC: /* The action applies to both ADC's */
             /* Fall through */
         case CHAL_ACI_BLOCK_ADC1:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_PWD,    ADC1_PWD,   ACI_ADC_PWD_ADC1_PWD_CMD_POWER_DOWN);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_PWD,    ADC1_PWD,   ACI_ADC_PWD_ADC1_PWD_CMD_POWER_DOWN);
             break;
         case CHAL_ACI_BLOCK_ADC2:
             break;
         case CHAL_ACI_BLOCK_DIGITAL:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN, ACI_BIAS_PWRDN_POWERDOWN);
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_MIC_BIAS,   MIC_BIAS,   ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_EN);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ACI_CTRL,   ACI_BIAS_PWRDN, ACI_BIAS_PWRDN_POWERDOWN);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_MIC_BIAS,   MIC_BIAS,   ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_EN);
             break;
         default:
 	    CHAL_ASSERT(0);
@@ -323,12 +320,12 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
             chal_aci_block_ctrl_arg( handle, action, CHAL_ACI_BLOCK_COMP2, argp );
             /* Fall through */
         case CHAL_ACI_BLOCK_COMP1:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP1RESET, COMP1RESET, ACI_COMP1RESET_COMP1RESET_CMD_RST_SIGNAL_BY_FW );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP1RESET, COMP1RESET, ~ACI_COMP1RESET_COMP1RESET_CMD_RST_SIGNAL_BY_FW );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP1RESET, COMP1RESET, ACI_COMP1RESET_COMP1RESET_CMD_RST_SIGNAL_BY_FW );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP1RESET, COMP1RESET, ~ACI_COMP1RESET_COMP1RESET_CMD_RST_SIGNAL_BY_FW );
             break;
         case CHAL_ACI_BLOCK_COMP2:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP2RESET, COMP2RESET, ACI_COMP1RESET_COMP1RESET_CMD_RST_SIGNAL_BY_FW );      // Missing COMP2 defines in RDB
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP2RESET, COMP2RESET, ~ACI_COMP1RESET_COMP1RESET_CMD_RST_SIGNAL_BY_FW );     // Missing COMP2 defines in RDB
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP2RESET, COMP2RESET, ACI_COMP1RESET_COMP1RESET_CMD_RST_SIGNAL_BY_FW );      // Missing COMP2 defines in RDB
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP2RESET, COMP2RESET, ~ACI_COMP1RESET_COMP1RESET_CMD_RST_SIGNAL_BY_FW );     // Missing COMP2 defines in RDB
             break;
         default:
             CHAL_ASSERT(0);
@@ -345,48 +342,48 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
             CHAL_ACI_filter_config_comp_t* comp_config = (CHAL_ACI_filter_config_comp_t*)va_arg(argp, void*);
             if (comp_config->mode == CHAL_ACI_FILTER_MODE_INTEGRATE)
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP1MODE,  COMP1MODE,      ACI_COMP1MODE_COMP1MODE_CMD_INTEGRATE_AND_DUMP );
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP1MODE,  COMP1MODE,      ACI_COMP1MODE_COMP1MODE_CMD_INTEGRATE_AND_DUMP );
             }
             else
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP1MODE,  COMP1MODE,      ACI_COMP1MODE_COMP1MODE_CMD_DECIMATE_BY_M );
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP1MODE,  COMP1MODE,      ACI_COMP1MODE_COMP1MODE_CMD_DECIMATE_BY_M );
             }
             if (comp_config->reset_type == CHAL_ACI_FILTER_RESET_FIRMWARE)
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP1RESET, COMP1RESET_SW,  ACI_COMP1RESET_COMP1RESET_SW_CMD_FILTERS_CMP1OUT2_RST_BY_FW );
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP1RESET, COMP1RESET_SW,  ACI_COMP1RESET_COMP1RESET_SW_CMD_FILTERS_CMP1OUT2_RST_BY_FW );
             }
             else
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP1RESET, COMP1RESET_SW,  ACI_COMP1RESET_COMP1RESET_SW_CMD_FILTERS_CMP1OUT2_RST_BY_COMP1 );
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP1RESET, COMP1RESET_SW,  ACI_COMP1RESET_COMP1RESET_SW_CMD_FILTERS_CMP1OUT2_RST_BY_COMP1 );
              }
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_S1,     comp_config->s );
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_T1,     comp_config->t );
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_M1,     comp_config->m );
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_MT1,    comp_config->mt );
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_S1,     comp_config->s );
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_T1,     comp_config->t );
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_M1,     comp_config->m );
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_MT1,    comp_config->mt );
             chal_aci_block_ctrl( handle, CHAL_ACI_BLOCK_ACTION_RESET_FILTER, CHAL_ACI_BLOCK_COMP1 );
             break; }
         case CHAL_ACI_BLOCK_COMP2: {
             CHAL_ACI_filter_config_comp_t* comp_config = (CHAL_ACI_filter_config_comp_t*)va_arg(argp, void*);
             if (comp_config->mode == CHAL_ACI_FILTER_MODE_INTEGRATE)
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP2MODE,  COMP2MODE,      ACI_COMP2MODE_COMP2MODE_CMD_INTEGRATE_AND_DUMP );
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP2MODE,  COMP2MODE,      ACI_COMP2MODE_COMP2MODE_CMD_INTEGRATE_AND_DUMP );
             }
             else
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP2MODE,  COMP2MODE,      ACI_COMP2MODE_COMP2MODE_CMD_DECIMATE_BY_M );
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP2MODE,  COMP2MODE,      ACI_COMP2MODE_COMP2MODE_CMD_DECIMATE_BY_M );
             }
             if (comp_config->reset_type == CHAL_ACI_FILTER_RESET_FIRMWARE)
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP2RESET, COMP2RESET_SW,  ACI_COMP1RESET_COMP1RESET_SW_CMD_FILTERS_CMP1OUT2_RST_BY_FW );      // Missing COMP2 defines in RDB
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP2RESET, COMP2RESET_SW,  ACI_COMP1RESET_COMP1RESET_SW_CMD_FILTERS_CMP1OUT2_RST_BY_FW );      // Missing COMP2 defines in RDB
             }
             else
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP2RESET, COMP2RESET_SW,  ACI_COMP1RESET_COMP1RESET_SW_CMD_FILTERS_CMP1OUT2_RST_BY_COMP1 );   // Missing COMP2 defines in RDB
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMP2RESET, COMP2RESET_SW,  ACI_COMP1RESET_COMP1RESET_SW_CMD_FILTERS_CMP1OUT2_RST_BY_COMP1 );   // Missing COMP2 defines in RDB
              }
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_S2,     comp_config->s );
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_T2,     comp_config->t );
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_M2,     comp_config->m );
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_MT2,    comp_config->mt );
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_S2,     comp_config->s );
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_T2,     comp_config->t );
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_M2,     comp_config->m );
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_MT2,    comp_config->mt );
             chal_aci_block_ctrl( handle, CHAL_ACI_BLOCK_ACTION_RESET_FILTER, CHAL_ACI_BLOCK_COMP2 );
             break; }
         case CHAL_ACI_BLOCK_ADC: /* The action applies to both ADC's */
@@ -396,26 +393,26 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
             CHAL_ACI_filter_config_adc_t* adc_config = (CHAL_ACI_filter_config_adc_t*)va_arg(argp, void*);
             if ( adc_config->chopping_enable )
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_PWD,    ADC1_DIS_CHOP,  ACI_ADC_PWD_ADC1_DIS_CHOP_CMD_LOADING);
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_PWD,    ADC1_DIS_CHOP,  ACI_ADC_PWD_ADC1_DIS_CHOP_CMD_LOADING);
             }
             else
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_PWD,    ADC1_DIS_CHOP,  ACI_ADC_PWD_ADC1_DIS_CHOP_CMD_NOT_LOADING);
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_PWD,    ADC1_DIS_CHOP,  ACI_ADC_PWD_ADC1_DIS_CHOP_CMD_NOT_LOADING);
             }
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_N1, adc_config->n );
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_N1, adc_config->n );
             break; }
         case CHAL_ACI_BLOCK_ADC2: {
 #ifdef ACI_ADC_PWD_ADC2_DIS_CHOP_SHIFT
             CHAL_ACI_filter_config_adc_t* adc_config = (CHAL_ACI_filter_config_adc_t*)va_arg(argp, void*);
             if ( adc_config->chopping_enable )
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_PWD,    ADC2_DIS_CHOP,  ACI_ADC_PWD_ADC2_DIS_CHOP_CMD_LOADING);
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_PWD,    ADC2_DIS_CHOP,  ACI_ADC_PWD_ADC2_DIS_CHOP_CMD_LOADING);
             }
             else
             { 
-                BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_PWD,    ADC2_DIS_CHOP,  ACI_ADC_PWD_ADC2_DIS_CHOP_CMD_NOT_LOADING);
+                BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_PWD,    ADC2_DIS_CHOP,  ACI_ADC_PWD_ADC2_DIS_CHOP_CMD_NOT_LOADING);
             }
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_N2, adc_config->n );
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_N2, adc_config->n );
 #endif
             break; }
         default:
@@ -432,15 +429,15 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
             chal_aci_block_ctrl_arg( handle, action, CHAL_ACI_BLOCK_COMP2, argp );
             /* Fall through */
         case CHAL_ACI_BLOCK_COMP1:
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_COMP1TH,    threshold );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMPTH_SET,     COMPTH1_SET,    ACI_COMPTH_SET_COMPTH1_SET_CMD_LOADING);
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMPTH_SET,     COMPTH1_SET,    ACI_COMPTH_SET_COMPTH1_SET_CMD_NOT_LOADING);
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_COMP1TH,    threshold );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMPTH_SET,     COMPTH1_SET,    ACI_COMPTH_SET_COMPTH1_SET_CMD_LOADING);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMPTH_SET,     COMPTH1_SET,    ACI_COMPTH_SET_COMPTH1_SET_CMD_NOT_LOADING);
             chal_aci_block_ctrl( handle, CHAL_ACI_BLOCK_ACTION_RESET_FILTER, CHAL_ACI_BLOCK_COMP1 );
             break;
         case CHAL_ACI_BLOCK_COMP2:
-            BRCM_WRITE_REG( ACI_BASE_ADDR,  ACI_COMP2TH,    threshold );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMPTH_SET,     COMPTH2_SET,    ACI_COMPTH_SET_COMPTH2_SET_CMD_LOADING);
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMPTH_SET,     COMPTH2_SET,    ACI_COMPTH_SET_COMPTH2_SET_CMD_NOT_LOADING);
+            BRCM_WRITE_REG( KONA_ACI_VA,  ACI_COMP2TH,    threshold );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMPTH_SET,     COMPTH2_SET,    ACI_COMPTH_SET_COMPTH2_SET_CMD_LOADING);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_COMPTH_SET,     COMPTH2_SET,    ACI_COMPTH_SET_COMPTH2_SET_CMD_NOT_LOADING);
             chal_aci_block_ctrl( handle, CHAL_ACI_BLOCK_ACTION_RESET_FILTER, CHAL_ACI_BLOCK_COMP2 );
             break;
         default:
@@ -461,18 +458,18 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
             /* ADC can measure low voltages (0 - 0.3125v) with hig resolution */
             chal_aci_block_ctrl( handle, CHAL_ACI_BLOCK_ACTION_ENABLE, CHAL_ACI_BLOCK_ADC1 );
             chal_aci_block_ctrl( handle, CHAL_ACI_BLOCK_ACTION_DISABLE, CHAL_ACI_BLOCK_ADC2 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,   ADC_FS_BIG_SMALL_B,     ADC_FS_BIG_SMALL_B_LOW_RANGE); // Sets ADC low scale: 1 = 1150 mV
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,   ADC_ADAPTIVE_EN,        1); // 1 = enable adaptive step size
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,   ADC_ADAPTIVE_EN,        0);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,   ADC_FS_BIG_SMALL_B,     ADC_FS_BIG_SMALL_B_LOW_RANGE); // Sets ADC low scale: 1 = 1150 mV
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,   ADC_ADAPTIVE_EN,        1); // 1 = enable adaptive step size
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,   ADC_ADAPTIVE_EN,        0);
             break;
         case CHAL_ACI_BLOCK_ADC_FULL_RANGE:
         case CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE:
             /* ADC can measure full range voltages (0 - 2.5v) with low resolution */
             chal_aci_block_ctrl( handle, CHAL_ACI_BLOCK_ACTION_ENABLE, CHAL_ACI_BLOCK_ADC1 );
             chal_aci_block_ctrl( handle, CHAL_ACI_BLOCK_ACTION_DISABLE, CHAL_ACI_BLOCK_ADC2 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,   ADC_FS_BIG_SMALL_B,     ADC_FS_BIG_SMALL_B_FULL_RANGE); // Sets ADC full scale: 0= 2300 mV
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,   ADC_ADAPTIVE_EN,        1); // 1 = enable adaptive step size
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,   ADC_ADAPTIVE_EN,        0);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,   ADC_FS_BIG_SMALL_B,     ADC_FS_BIG_SMALL_B_FULL_RANGE); // Sets ADC full scale: 0= 2300 mV
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,   ADC_ADAPTIVE_EN,        1); // 1 = enable adaptive step size
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,   ADC_ADAPTIVE_EN,        0);
             break;
         default:
             CHAL_ASSERT(0);
@@ -482,18 +479,18 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         switch (id)
         {
         case CHAL_ACI_BLOCK_COMP:    /* The action applies to all Comperators */
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP1INT_EN,        1 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP2INT_EN,        1 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    INV_COMP2INT_EN,    1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_EN,        1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_EN,        1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_EN,    1 );
             break;
         case CHAL_ACI_BLOCK_COMP1:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP1INT_EN,        1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_EN,        1 );
             break;
         case CHAL_ACI_BLOCK_COMP2:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP2INT_EN,        1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_EN,        1 );
             break;
         case CHAL_ACI_BLOCK_COMP2_INV:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    INV_COMP2INT_EN,    1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_EN,    1 );
             break;
         default:
             CHAL_ASSERT(0);
@@ -503,18 +500,18 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         switch (id)
         {
         case CHAL_ACI_BLOCK_COMP:    /* The action applies to all Comperators */
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP1INT_EN,        0 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP2INT_EN,        0 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    INV_COMP2INT_EN,    0 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_EN,        0 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_EN,        0 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_EN,    0 );
             break;
         case CHAL_ACI_BLOCK_COMP1:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP1INT_EN,        0 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_EN,        0 );
             break;
         case CHAL_ACI_BLOCK_COMP2:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP2INT_EN,        0 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_EN,        0 );
             break;
         case CHAL_ACI_BLOCK_COMP2_INV:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    INV_COMP2INT_EN,    0 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_EN,    0 );
             break;
         default:
 	    CHAL_ASSERT(0);
@@ -524,18 +521,18 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         switch (id)
         {
         case CHAL_ACI_BLOCK_COMP:    /* The action applies to all Comperators */
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP1INT_STS,       1 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP2INT_STS,       1 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    INV_COMP2INT_STS,   1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_STS,       1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_STS,       1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_STS,   1 );
             break;
         case CHAL_ACI_BLOCK_COMP1:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP1INT_STS,       1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_STS,       1 );
             break;
         case CHAL_ACI_BLOCK_COMP2:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    COMP2INT_STS,       1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_STS,       1 );
             break;
         case CHAL_ACI_BLOCK_COMP2_INV:
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_INT,    INV_COMP2INT_STS,   1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_STS,   1 );
             break;
         default:
             CHAL_ASSERT(0);
@@ -548,33 +545,33 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         {
         case CHAL_ACI_MIC_BIAS_ON:
 	    /* Powerup generic detection block (including bias) */
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_F_PWRDWN,     FORCE_PWR_DWN,          0 );
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,    AUXMIC_F_PWRDWN,     FORCE_PWR_DWN,          0 );
 
             /* Configure Continuous measurement mode */
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_CMC,          CONT_MSR_CTRL,          1 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,       ACI_MIC_BIAS,        MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,    AUXMIC_CMC,          CONT_MSR_CTRL,          1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,       ACI_MIC_BIAS,        MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
 
             // Set Bias Voltage
             if (bias_config->voltage == CHAL_ACI_MIC_BIAS_0_45V)
             {   //disable, bias = 0.45V
 #ifdef CONFIG_AUDIOH_REGS
-                BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
+                BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
 #endif
-                BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              0 );
+                BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,    AUXMIC_AUXEN,    MICAUX_EN,              0 );
             }
             else if (bias_config->voltage == CHAL_ACI_MIC_BIAS_2_5V)
             {   //enable, bias = 2.5V
 #ifdef CONFIG_AUDIOH_REGS
-                BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_40V );
+                BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_40V );
 #endif
-                BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
+                BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
             }
             else
             {   //enable, bias = 2.1V
 #ifdef CONFIG_AUDIOH_REGS
-                BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
+                BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
 #endif
-                BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
+                BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
             }
             break;
         case CHAL_ACI_MIC_BIAS_DISCONTINUOUS:
@@ -582,60 +579,60 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
             if (bias_config->voltage == CHAL_ACI_MIC_BIAS_0_45V)
             {   //disable, bias = 0.45V
 #ifdef CONFIG_AUDIOH_REGS
-                BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
+                BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
 #endif
-                BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              0 );
+                BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,    AUXMIC_AUXEN,    MICAUX_EN,              0 );
             }
             else if (bias_config->voltage == CHAL_ACI_MIC_BIAS_2_5V)
             {   //enable, bias = 2.5V
 #ifdef CONFIG_AUDIOH_REGS
-                BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_40V ); 
+                BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_40V ); 
 #endif
-		BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
+		BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
             }
             else
             {   //enable, bias = 2.1V
 #ifdef CONFIG_AUDIOH_REGS
-                BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
+                BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
 #endif
-                BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
+                BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
             }
-            BRCM_WRITE_REG( AUXMIC_BASE_ADDR,           AUXMIC_PRB_CYC,     bias_config->probe_cycle );
-            BRCM_WRITE_REG( AUXMIC_BASE_ADDR,           AUXMIC_MSR_DLY,     bias_config->measure_delay );
-            BRCM_WRITE_REG( AUXMIC_BASE_ADDR,           AUXMIC_MSR_INTVL,   bias_config->measure_interval );
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,     AUXMIC_MIC,         MSR_INTVL_CTRL,         0 );
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,     AUXMIC_CMC,         CONT_MSR_CTRL,          0 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,        ACI_MIC_BIAS,       MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_EN);
+            BRCM_WRITE_REG( KONA_AUXMIC_VA,           AUXMIC_PRB_CYC,     bias_config->probe_cycle );
+            BRCM_WRITE_REG( KONA_AUXMIC_VA,           AUXMIC_MSR_DLY,     bias_config->measure_delay );
+            BRCM_WRITE_REG( KONA_AUXMIC_VA,           AUXMIC_MSR_INTVL,   bias_config->measure_interval );
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,     AUXMIC_MIC,         MSR_INTVL_CTRL,         0 );
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,     AUXMIC_CMC,         CONT_MSR_CTRL,          0 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,        ACI_MIC_BIAS,       MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_EN);
             /* Powerup generic detection block (including bias) */
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,     AUXMIC_F_PWRDWN,    FORCE_PWR_DWN,          0 );
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,     AUXMIC_F_PWRDWN,    FORCE_PWR_DWN,          0 );
             break;
         case CHAL_ACI_MIC_BIAS_OFF:
             /* MIC Bias can not turned full off in this state. MIC is also the supply for other internal blocks */
             /* Powerup generic detection block (including bias) */
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,     AUXMIC_F_PWRDWN,    FORCE_PWR_DWN,          0 );
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,     AUXMIC_F_PWRDWN,    FORCE_PWR_DWN,          0 );
             /* Configure Continuous measurement mode */
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,     AUXMIC_CMC,         CONT_MSR_CTRL,          1 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,        ACI_MIC_BIAS,       MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,     AUXMIC_CMC,         CONT_MSR_CTRL,          1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,        ACI_MIC_BIAS,       MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
             break;
         case CHAL_ACI_MIC_BIAS_GND:
             /* MIC Bias can not turned full off in this state. MIC is also the supply for other internal blocks */
             /* Configure Lo-Z (GND) impedance when MIC bias is powered down */
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_MIC_BIAS,           MIC_AUX_BIAS_GND,       ACI_MIC_BIAS_MIC_AUX_BIAS_GND_CMD_IMPEDANCE_CONTROL_LO_Z);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_MIC_BIAS,           MIC_AUX_BIAS_GND,       ACI_MIC_BIAS_MIC_AUX_BIAS_GND_CMD_IMPEDANCE_CONTROL_LO_Z);
             /* Powerdown generic detection block (including bias) */
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,     AUXMIC_F_PWRDWN,    FORCE_PWR_DWN,          1 );
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,     AUXMIC_F_PWRDWN,    FORCE_PWR_DWN,          1 );
             /* Configure Continuous measurement mode */
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,     AUXMIC_CMC,         CONT_MSR_CTRL,          1 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,        ACI_MIC_BIAS,       MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,     AUXMIC_CMC,         CONT_MSR_CTRL,          1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,        ACI_MIC_BIAS,       MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
             break;
         case CHAL_ACI_MIC_BIAS_HIZ:
             /* MIC Bias can not turned full off in this state. MIC is also the supply for other internal blocks */
             /* Configure Hi-Z impedance when MIC bias is powered down */
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_MIC_BIAS,           MIC_AUX_BIAS_GND,       ACI_MIC_BIAS_MIC_AUX_BIAS_GND_CMD_IMPEDANCE_CONTROL_HI_Z);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_MIC_BIAS,           MIC_AUX_BIAS_GND,       ACI_MIC_BIAS_MIC_AUX_BIAS_GND_CMD_IMPEDANCE_CONTROL_HI_Z);
             /* Powerdown generic detection block (including bias) */
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,     AUXMIC_F_PWRDWN,    FORCE_PWR_DWN,          1 );
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,     AUXMIC_F_PWRDWN,    FORCE_PWR_DWN,          1 );
             /* Configure Continuous measurement mode */
-            BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,     AUXMIC_CMC,         CONT_MSR_CTRL,          1 );
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,        ACI_MIC_BIAS,       MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
+            BRCM_WRITE_REG_FIELD( KONA_AUXMIC_VA,     AUXMIC_CMC,         CONT_MSR_CTRL,          1 );
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,        ACI_MIC_BIAS,       MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
             break;
         }
         break; }
@@ -644,11 +641,11 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         CHAL_ASSERT(id == CHAL_ACI_BLOCK_GENERIC);
         if (hiz == TRUE)
         {   /* Configure Hi-Z (21K) impedance when MIC bias is powered down */
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_MIC_BIAS,           MIC_AUX_BIAS_GND,       ACI_MIC_BIAS_MIC_AUX_BIAS_GND_CMD_IMPEDANCE_CONTROL_HI_Z);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_MIC_BIAS,           MIC_AUX_BIAS_GND,       ACI_MIC_BIAS_MIC_AUX_BIAS_GND_CMD_IMPEDANCE_CONTROL_HI_Z);
         }
         else
         {   /* Configure Lo-Z (GND) impedance when MIC bias is powered down */
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_MIC_BIAS,           MIC_AUX_BIAS_GND,       ACI_MIC_BIAS_MIC_AUX_BIAS_GND_CMD_IMPEDANCE_CONTROL_LO_Z);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_MIC_BIAS,           MIC_AUX_BIAS_GND,       ACI_MIC_BIAS_MIC_AUX_BIAS_GND_CMD_IMPEDANCE_CONTROL_LO_Z);
         }
         break; }
     case CHAL_ACI_BLOCK_ACTION_VREF: {
@@ -658,29 +655,29 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         case CHAL_ACI_VREF_FAST_ON:
             /* Vref Powerup */
 #ifdef CONFIG_AUDIOH_REGS
-            BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_FAST);
-            BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_FAST);
-            BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
+            BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_FAST);
+            BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_FAST);
+            BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
 #endif
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
             break;
         case CHAL_ACI_VREF_ON:
             /* Vref Powerup */
 #ifdef CONFIG_AUDIOH_REGS
-            BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_FAST);
-            BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_NORMAL);
-            BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
+            BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_FAST);
+            BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_NORMAL);
+            BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
 #endif
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
             break;
         case CHAL_ACI_VREF_OFF:
             /* Vref Poweroff */
 #ifdef CONFIG_AUDIOH_REGS
-            BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_NORMAL);
-            BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_NORMAL);
-            BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERDOWN);
+            BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_NORMAL);
+            BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_NORMAL);
+            BRCM_WRITE_REG_FIELD( KONA_AUDIOH_VA, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERDOWN);
 #endif
-            BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERDOWN);
+            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERDOWN);
             break;
         default:
             CHAL_ASSERT(0);
@@ -720,13 +717,13 @@ cInt32 chal_aci_block_read( CHAL_HANDLE handle, CHAL_ACI_block_id_t id, CHAL_ACI
         switch (output)
         {
         case CHAL_ACI_BLOCK_COMP_RAW:
-            return (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_COMP_DOUT, COMP1_DOUT) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
+            return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_COMP_DOUT, COMP1_DOUT) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
         case CHAL_ACI_BLOCK_COMP_FILTER1:
-            return (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_COMP_DOUT, COMP1_DOUT1) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
+            return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_COMP_DOUT, COMP1_DOUT1) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
         case CHAL_ACI_BLOCK_COMP_FILTER2:
-            return (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_COMP_DOUT, COMP1_DOUT2) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
+            return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_COMP_DOUT, COMP1_DOUT2) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
         case CHAL_ACI_BLOCK_COMP_INTERRUPT:
-            return (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_INT, COMP1INT_STS) ? CHAL_ACI_BLOCK_COMP_LINE_HIGH : CHAL_ACI_BLOCK_COMP_LINE_LOW );
+            return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_INT, COMP1INT_STS) ? CHAL_ACI_BLOCK_COMP_LINE_HIGH : CHAL_ACI_BLOCK_COMP_LINE_LOW );
         case 100:
             break;    /* to avoid compiler warning */
         default:
@@ -737,13 +734,13 @@ cInt32 chal_aci_block_read( CHAL_HANDLE handle, CHAL_ACI_block_id_t id, CHAL_ACI
         switch (output)
         {
         case CHAL_ACI_BLOCK_COMP_RAW:
-            return (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_COMP_DOUT, COMP2_DOUT) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
+            return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_COMP_DOUT, COMP2_DOUT) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
         case CHAL_ACI_BLOCK_COMP_FILTER1:
-            return (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_COMP_DOUT, COMP2_DOUT1) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
+            return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_COMP_DOUT, COMP2_DOUT1) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
         case CHAL_ACI_BLOCK_COMP_FILTER2:
-            return (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_COMP_DOUT, COMP2_DOUT2) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
+            return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_COMP_DOUT, COMP2_DOUT2) ? CHAL_ACI_BLOCK_COMP_LINE_LOW : CHAL_ACI_BLOCK_COMP_LINE_HIGH );
         case CHAL_ACI_BLOCK_COMP_INTERRUPT:
-            return (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_INT, COMP2INT_STS) ? CHAL_ACI_BLOCK_COMP_LINE_HIGH : CHAL_ACI_BLOCK_COMP_LINE_LOW );
+            return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_INT, COMP2INT_STS) ? CHAL_ACI_BLOCK_COMP_LINE_HIGH : CHAL_ACI_BLOCK_COMP_LINE_LOW );
         case 100:
             break;    /* to avoid compiler warning */
         default:
@@ -753,7 +750,7 @@ cInt32 chal_aci_block_read( CHAL_HANDLE handle, CHAL_ACI_block_id_t id, CHAL_ACI
     case CHAL_ACI_BLOCK_COMP2_INV:
         if (output == CHAL_ACI_BLOCK_COMP_INTERRUPT)
         {
-            return (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_INT, INV_COMP2INT_STS) ? CHAL_ACI_BLOCK_COMP_LINE_HIGH : CHAL_ACI_BLOCK_COMP_LINE_LOW );
+            return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_INT, INV_COMP2INT_STS) ? CHAL_ACI_BLOCK_COMP_LINE_HIGH : CHAL_ACI_BLOCK_COMP_LINE_LOW );
         }
         else
         {
@@ -765,7 +762,7 @@ cInt32 chal_aci_block_read( CHAL_HANDLE handle, CHAL_ACI_block_id_t id, CHAL_ACI
 
         if (output == CHAL_ACI_BLOCK_ADC_RAW)
         {
-            value = BRCM_READ_REG( ACI_BASE_ADDR, ACI_ADC1_DOUT );
+            value = BRCM_READ_REG( KONA_ACI_VA, ACI_ADC1_DOUT );
             if (value >= (ACI_ADC1_DOUT_ADC1_DOUT_MASK & (~0x3)))
             {   /* ADC overflow */
                 return -1;
@@ -773,7 +770,7 @@ cInt32 chal_aci_block_read( CHAL_HANDLE handle, CHAL_ACI_block_id_t id, CHAL_ACI
         }
         else
         {
-            value = BRCM_READ_REG( ACI_BASE_ADDR, ACI_ADC1_DOUTF );
+            value = BRCM_READ_REG( KONA_ACI_VA, ACI_ADC1_DOUTF );
             if (value >= (ACI_ADC1_DOUTF_ADC1_DOUTF_MASK & (~0x3)))
             {   /* ADC overflow */
                 return -1;
@@ -781,7 +778,7 @@ cInt32 chal_aci_block_read( CHAL_HANDLE handle, CHAL_ACI_block_id_t id, CHAL_ACI
         }
 
         /* Convert to mV */
-        if (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_ADC_CTRL, ADC_FS_BIG_SMALL_B) == ADC_FS_BIG_SMALL_B_LOW_RANGE)
+        if (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_ADC_CTRL, ADC_FS_BIG_SMALL_B) == ADC_FS_BIG_SMALL_B_LOW_RANGE)
         {   /*  ADC full scale: 1150 mV */
             ret = ((1150UL*(value))/0x3FC);     /* = Ref Voltage * Reading / Steps */
         }
@@ -819,14 +816,14 @@ cInt32 chal_aci_block_read( CHAL_HANDLE handle, CHAL_ACI_block_id_t id, CHAL_ACI
 static cVoid chal_aci_init_aci( cUInt32 baseAddr )
 {
     /* Disable all interrupts from ACI block */
-    BRCM_WRITE_REG(ACI_BASE_ADDR,   ACI_IMR,    ACI_IMR_ACIIMR_MASK);
+    BRCM_WRITE_REG(KONA_ACI_VA,   ACI_IMR,    ACI_IMR_ACIIMR_MASK);
     HW_ACI_REGISTER_WRITE_SETTLE;
 
     /* Clear all pending interrupts in ACI block */
-    BRCM_WRITE_REG(ACI_BASE_ADDR,   ACI_IIDR,   ACI_IIDR_ACIIIDR_MASK);
+    BRCM_WRITE_REG(KONA_ACI_VA,   ACI_IIDR,   ACI_IIDR_ACIIIDR_MASK);
     HW_ACI_REGISTER_WRITE_SETTLE;
 
-    BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR, ACI_ACI_TX_INV, ACI_TX_INV,     ACI_TX_INV_SETTING);
+    BRCM_WRITE_REG_FIELD( KONA_ACI_VA, ACI_ACI_TX_INV, ACI_TX_INV,     ACI_TX_INV_SETTING);
 
     if (ACI_TX_INV_SETTING == ACI_ACI_TX_INV_ACI_TX_INV_CMD_INVETED)
     {
@@ -852,7 +849,7 @@ static cVoid chal_aci_init_aci( cUInt32 baseAddr )
 */
 cVoid chal_aci_enable_aci( void )
 {
-    BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR, ACI_ACI_TX_INV, ACI_TX_INV,     ACI_TX_INV_SETTING);
+    BRCM_WRITE_REG_FIELD( KONA_ACI_VA, ACI_ACI_TX_INV, ACI_TX_INV,     ACI_TX_INV_SETTING);
     CHAL_ACI_WRITE_COMR(                                 DBIDOC,         ACI_COMR_DBIDOC_CMD_INUSE );
     HW_ACI_REGISTER_WRITE_SETTLE;
 }
@@ -870,7 +867,7 @@ cVoid chal_aci_enable_aci( void )
 */
 cVoid chal_aci_disable_aci( void )
 {
-    BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR, ACI_ACI_TX_INV,    ACI_TX_INV,     ACI_TX_INV_SETTING);
+    BRCM_WRITE_REG_FIELD( KONA_ACI_VA, ACI_ACI_TX_INV,    ACI_TX_INV,     ACI_TX_INV_SETTING);
     chal_aci_tx_output_high( TRUE );
     CHAL_ACI_WRITE_COMR(                                    DBIDOC,         ACI_COMR_DBIDOC_CMD_DISABLED );
     HW_ACI_REGISTER_WRITE_SETTLE;
@@ -889,7 +886,7 @@ cVoid chal_aci_disable_aci( void )
 */
 cBool chal_aci_is_aci_enabled( void )
 {
-    return (BRCM_READ_REG_FIELD( ACI_BASE_ADDR, ACI_COMR, DBIDOC ) == ACI_COMR_DBIDOC_CMD_INUSE ? TRUE : FALSE);
+    return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_COMR, DBIDOC ) == ACI_COMR_DBIDOC_CMD_INUSE ? TRUE : FALSE);
 }
 
 //***************************************************************************
@@ -954,7 +951,7 @@ cVoid chal_aci_start_pulse_set( cUInt8 start_pulse_length )
 {
     if (start_pulse_length <= ACI_SPLR_ACISPLR_MASK)
     {
-        BRCM_WRITE_REG( ACI_BASE_ADDR, ACI_SPLR, start_pulse_length);
+        BRCM_WRITE_REG( KONA_ACI_VA, ACI_SPLR, start_pulse_length);
         HW_ACI_REGISTER_WRITE_SETTLE;
     }
 }
@@ -1044,7 +1041,7 @@ cVoid chal_aci_tx_output_high( cBool high )
 */
 CHAL_ACI_INTERRUPT_MASK_t chal_aci_interrupt_read( void  )
 {
-    return (CHAL_ACI_INTERRUPT_MASK_t)(BRCM_READ_REG( ACI_BASE_ADDR, ACI_IIDR ));
+    return (CHAL_ACI_INTERRUPT_MASK_t)(BRCM_READ_REG( KONA_ACI_VA, ACI_IIDR ));
 }
 
 
@@ -1060,7 +1057,7 @@ CHAL_ACI_INTERRUPT_MASK_t chal_aci_interrupt_read( void  )
 */
 cUInt16 chal_aci_rx_read( void )
 {
-    return (cUInt16)(BRCM_READ_REG( ACI_BASE_ADDR, ACI_RXDAR ));
+    return (cUInt16)(BRCM_READ_REG( KONA_ACI_VA, ACI_RXDAR ));
 }
 
 
@@ -1076,7 +1073,7 @@ cUInt16 chal_aci_rx_read( void )
 */
 cVoid chal_aci_tx_write( cUInt16 data )
 {
-    BRCM_WRITE_REG( ACI_BASE_ADDR, ACI_TXDAR, data);
+    BRCM_WRITE_REG( KONA_ACI_VA, ACI_TXDAR, data);
     HW_ACI_REGISTER_WRITE_SETTLE;
 }
 
@@ -1096,10 +1093,10 @@ cVoid chal_aci_command( CHAL_ACI_COMMAND_t command )
     if (command <= CHAL_ACI_CMD_MAX)
     {
         cUInt16 reg;
-        reg = (cUInt16)BRCM_READ_REG( ACI_BASE_ADDR, ACI_COMR );
+        reg = (cUInt16)BRCM_READ_REG( KONA_ACI_VA, ACI_COMR );
         reg &= ~ACI_COMR_DBICMD_MASK;
         reg |= (command & ACI_COMR_DBICMD_MASK);
-        BRCM_WRITE_REG( ACI_BASE_ADDR, ACI_COMR, reg);
+        BRCM_WRITE_REG( KONA_ACI_VA, ACI_COMR, reg);
         HW_ACI_REGISTER_WRITE_SETTLE;
     }
 }
@@ -1119,9 +1116,9 @@ cVoid chal_aci_interrupt_enable( CHAL_ACI_INTERRUPT_SELECT_t mask )
 {
     cUInt16 reg;
 
-    reg = (cUInt16)BRCM_READ_REG( ACI_BASE_ADDR, ACI_IMR );
+    reg = (cUInt16)BRCM_READ_REG( KONA_ACI_VA, ACI_IMR );
     reg &= ~mask;
-    BRCM_WRITE_REG( ACI_BASE_ADDR, ACI_IMR, reg);
+    BRCM_WRITE_REG( KONA_ACI_VA, ACI_IMR, reg);
     HW_ACI_REGISTER_WRITE_SETTLE;
 }
 
@@ -1140,9 +1137,9 @@ cVoid chal_aci_interrupt_disable( CHAL_ACI_INTERRUPT_SELECT_t mask )
 {
     cUInt16 reg;
 
-    reg = (cUInt16)BRCM_READ_REG( ACI_BASE_ADDR, ACI_IMR );
+    reg = (cUInt16)BRCM_READ_REG( KONA_ACI_VA, ACI_IMR );
     reg |= mask;
-    BRCM_WRITE_REG( ACI_BASE_ADDR, ACI_IMR, reg);
+    BRCM_WRITE_REG( KONA_ACI_VA, ACI_IMR, reg);
     HW_ACI_REGISTER_WRITE_SETTLE;
 } 
 
@@ -1159,7 +1156,7 @@ cVoid chal_aci_interrupt_disable( CHAL_ACI_INTERRUPT_SELECT_t mask )
 */
 cVoid chal_aci_interrupt_acknowledge( CHAL_ACI_INTERRUPT_SELECT_t mask )
 {
-    BRCM_WRITE_REG( ACI_BASE_ADDR, ACI_IIDR, mask);
+    BRCM_WRITE_REG( KONA_ACI_VA, ACI_IIDR, mask);
     HW_ACI_REGISTER_WRITE_SETTLE;
 }
 

@@ -68,6 +68,7 @@ obj-$(CONFIG_BCM59055_AUDIO)	+= bcm59055-audio.o
 obj-$(CONFIG_BCM59055_SARADC)	+= bcm59055-adc.o
 obj-$(CONFIG_BCM59055_FUELGAUGE)+= bcm59055-fuelgauge.o
 obj-$(CONFIG_BCM59055_ADC_CHIPSET_API)+= bcm59055-adc_chipset_api.o
+obj-$(CONFIG_BCMPMU_CSAPI_ADC)	+= bcmpmu_csapi_adc.o
 obj-$(CONFIG_BCMPMU_AUDIO)	+= bcmpmu_audio.o
 obj-$(CONFIG_BTHID)		+= bthid.o
 obj-$(CONFIG_MACH_RHEA_SELFTEST)	+= bcm_selftest_bb.o
@@ -75,3 +76,5 @@ obj-$(CONFIG_MONITOR_BQ27541_I2C)	+= bq27541.o
 obj-$(CONFIG_BCM59055_SELFTEST)	+= bcm59055-selftest.o
 obj-$(CONFIG_BRALLOC_MEM)	+= bralloc_mem.o
 obj-$(CONFIG_MPU_SENSORS_MPU6050B1)	+= mpu3050/
+obj-$(CONFIG_BCMPMU_SELFTEST)	+= bcmpmu-selftest.o
+

@@ -1648,7 +1648,7 @@ static inline void pcd_setup(dwc_otg_pcd_t * pcd)
 #ifdef DWC_UTE_CFI
 		DWC_MEMCPY(&cfi_req, &ctrl, sizeof(usb_device_request_t));
 
-		//printk(KERN_ALERT "CFI: req_type=0x%02x; req=0x%02x\n", ctrl.bRequestType, ctrl.bRequest);
+		//pr_alert("CFI: req_type=0x%02x; req=0x%02x\n", ctrl.bRequestType, ctrl.bRequest);
 		if (UT_GET_TYPE(cfi_req.bRequestType) == UT_VENDOR) {
 			if (cfi_req.bRequest > 0xB0 && cfi_req.bRequest < 0xBF) {
 				retval = cfi_setup(pcd, &cfi_req);

@@ -546,6 +546,11 @@ static void *pmem_start_vaddr(int id, struct pmem_data *data)
 
 static unsigned long pmem_len(int id, struct pmem_data *data)
 {
+	if (unlikely(data->index < 0)) {
+		printk(KERN_WARNING"%s() called with negative pmem index\n", __func__);
+		return 0;
+	}
+
 	if (!pmem[id].allocator)
 		return data->index;
 	else if (pmem[id].allocator == CMA_ALLOC)

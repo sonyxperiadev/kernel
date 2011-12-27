@@ -762,7 +762,7 @@ static int get_cal_vread (struct adc_channels_t *chan,  u32 raw)
 #endif
 	vread = raw * chan->unit.uvperlsb;
 	vread += chan->unit.offset;
-
+	pr_debug ("%s: raw %d, vread %d", __func__, raw, vread);
 	return vread;
 }
 
@@ -884,6 +884,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 									 sizeof(VENDOR_ADC_kelvin_down_table) / sizeof(*VENDOR_ADC_kelvin_down_table),
 									 u_rread);
 
+		pr_debug ("%s: res - iread %d, rread %d, temperature lookup %d", __func__, u_iread, u_rread, temp_to_return);
 
 		return temp_to_return;
 #endif /* VENDOR_ADC_KELVIN_DOWN_TABLE */

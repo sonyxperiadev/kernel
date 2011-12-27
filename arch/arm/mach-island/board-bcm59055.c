@@ -358,7 +358,7 @@ static struct regulator_init_data bcm59055_sdsr_data = {
 	.consumer_supplies = sdsr_supply,
 };
 
-struct bcmpmu_regulator_init_data bcm59055_regulators[BCMPMU_REGULATOR_MAX] = {
+struct bcmpmu_regulator_init_data bcm59055_regulators[] = {
 	{BCMPMU_REGULATOR_RFLDO, &bcm59055_rfldo_data},
 	{BCMPMU_REGULATOR_CAMLDO, &bcm59055_camldo_data},
 	{BCMPMU_REGULATOR_HV1LDO, &bcm59055_hv1ldo_data},
@@ -403,7 +403,6 @@ static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 {
 	int i;
 	printk(KERN_INFO "%s: called.\n", __func__);
-	bcmpmu_reg_dev_init(bcmpmu);
 
 	for (i = 0; i <ARRAY_SIZE(bcmpmu_client_devices); i++)
 		bcmpmu_client_devices[i]->dev.platform_data = bcmpmu;
@@ -415,7 +414,6 @@ static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 static int __init bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
 	printk("REG: pmu_init_platform_hw called \n");
-	bcmpmu_reg_dev_exit(bcmpmu);
 
 	return 0;
 }
@@ -451,6 +449,7 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
+	.num_of_regl = ARRAY_SIZE(bcm59055_regulators),
 	.regulator_init_data = bcm59055_regulators,
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,

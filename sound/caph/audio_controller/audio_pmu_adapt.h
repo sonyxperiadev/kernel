@@ -26,7 +26,7 @@
 /**
 *
 * @file   audio_pmu_adapt.h
-* @brief  Audio PMU adaptation for various PMU devices 
+* @brief  Audio PMU adaptation for various PMU devices
 *
 ******************************************************************************/
 
@@ -35,7 +35,7 @@
 
 #if (!defined(CONFIG_BCMPMU_AUDIO)) 
 
-#include "bcmpmu_audio.h"
+#include <linux/broadcom/bcmpmu_audio.h>
 #define AUDIO_PMU_INIT() NULL
 #define AUDIO_PMU_HS_SET_GAIN(a, b) NULL
 #define AUDIO_PMU_HS_POWER(a) NULL
@@ -56,7 +56,7 @@
 
 #else
 
-#include "bcmpmu_audio.h"
+#include <linux/broadcom/bcmpmu_audio.h>
 #define AUDIO_PMU_INIT bcmpmu_audio_init
 #define AUDIO_PMU_HS_SET_GAIN bcmpmu_hs_set_gain
 #define AUDIO_PMU_HS_POWER bcmpmu_hs_power

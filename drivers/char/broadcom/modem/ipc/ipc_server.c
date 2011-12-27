@@ -438,6 +438,7 @@ static int __init ipcs_init(void *smbase, unsigned int size)
 }
 
 
+#ifdef CONFIG_BCM_MODEM_DEFER_CP_START
 static int CP_Boot(void)
 {
     int started = 0;
@@ -491,6 +492,7 @@ static int CP_Boot(void)
 
     return started;
 }
+#endif
 
 
 void Comms_Start(void)

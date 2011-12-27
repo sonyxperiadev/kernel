@@ -355,7 +355,7 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 ATC_KERNEL_ATResp_t atRespU;
                 struct list_head *entry;
                 AT_RespQueue_t *respItem = NULL;
-				UInt16 len = ATC_KERNEL_RESULT_BUFFER_LEN_MAX - 1;
+//				UInt16 len = ATC_KERNEL_RESULT_BUFFER_LEN_MAX - 1;
                 
 				ATC_KERNEL_TRACE(("cmd - ATC_KERNEL_Get_AT_RESP\n"));
 
@@ -390,7 +390,7 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                     break;
                 }
 
-                if (copy_to_user(arg,  &atRespU, sizeof(ATC_KERNEL_ATResp_t)) != 0)
+                if (copy_to_user((void *)arg,  &atRespU, sizeof(ATC_KERNEL_ATResp_t)) != 0)
                 {
                     ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl() - copy_to_user() had error\n" ));
                     spin_unlock(&sModule.mRespLock);
@@ -529,7 +529,7 @@ bool_t xdr_AtRegisterInfo_t( XDR* xdrs, AtRegisterInfo_t* data)
 	XDR_LOG(xdrs,"AtRegisterInfo_t")
 
 	return (_xdr_u_char(xdrs, &data->channel, "channel") &&
-			_xdr_u_char(xdrs, &data->unsolicited, "unsolicited") );
+			_xdr_u_char(xdrs, (u_char *)&data->unsolicited, "unsolicited") );
 }
 
 //***************************************************************************

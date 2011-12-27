@@ -39,7 +39,6 @@
 #else
 #define debug(a,b...)
 #endif
-#define printf(a,b...) printk(a,##b)
 
 /*
  * Note that this macro controls whether the SDIO transfers happen using
@@ -121,7 +120,7 @@ void kona_read_block_pio (struct mmc_host *host, struct mmc_data *data)
 	debug ("+kona_read_block_pio \r\n");
 
 	len = data->blocksize;
-	p = data->dest;
+	p = (unsigned long *)data->dest;
 
 	while (len)	
 	{
@@ -138,7 +137,7 @@ void kona_write_block_pio (struct mmc_host *host, struct mmc_data *data)
 	unsigned long *p;
 	
 	len = data->blocksize;
-	p = data->src;
+	p = (unsigned long *)data->src;
 
 	while (len)
 	{
@@ -522,32 +521,33 @@ static void kona_mmc_reset(struct mmc_host *host)
 	}
 }
 
-static void kona_dump_mmc_regs (unsigned long *base)
+#ifdef DEBUG
+static void kona_dump_mmc_regs (void __iomem *base)
 {
-	unsigned long *reg;
+	void __iomem *reg;
 	unsigned long offset;
 
-	printf("\r\n DUMPING MMC SD Registers \r\n");
+	dev_dbg("\r\n DUMPING MMC SD Registers \r\n");
 
-	for (reg=base, offset=0; offset <= (0x74/4); offset++) 
-		printf("reg 0x%x      val 0x%x \r\n", reg+offset,*(reg+offset));  
+	for (reg=base, offset=0; offset <= (0x74/4); offset++)
+		dev_debug("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg+offset, *((unsigned int *)reg+offset));
 
 	reg = base + (0xE0/4);
-	printf("reg 0x%x      val 0x%x \r\n", reg+offset,*(reg+offset));  
+	dev_debug("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg+offset,*((unsigned int *)reg+offset));
 
 	reg = base + (0xF0/4);
-	printf("reg 0x%x      val 0x%x \r\n", reg+offset,*(reg+offset));  
+	dev_debug("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg+offset,*((unsigned int *)reg+offset));  
 
 	reg = base + (0xFC/4);
-	printf("reg 0x%x      val 0x%x \r\n", reg+offset,*(reg+offset));  
+	dev_debug("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg+offset,*((unsigned int *)reg+offset));  
 
 	/* Core registers dump */
 	for (reg=base, offset=0x8000; offset <= (0x8018/4); offset++)
-		printf("reg 0x%x      val 0x%x \r\n", reg+offset,*(reg+offset));
+		dev_debug("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg+offset,*((unsigned int *)reg+offset));
 
-	return;		
+	return;
 }
-
+#endif
 
 static int kona_mmc_core_init(struct mmc *mmc)
 {
@@ -617,14 +617,16 @@ static int kona_mmc_core_init(struct mmc *mmc)
 	mask &= ~(0x1);
 	writel(mask,&host->reg_p3->coreimr);
 
-	/* debug("mmc core init done dumping SDIO2 base addr regs \r\n"); */
-	/* kona_dump_mmc_regs(KONA_SDIO2_VA); */
+#ifdef DEBUG
+	debug("mmc core init done dumping SDIO2 base addr regs \r\n"); 
+	kona_dump_mmc_regs(KONA_SDIO2_VA); 
+#endif
 
 	debug("- kona_mmc_core_init \r\n");
 	return 0;
 }
 
-void kona_mmc_clk_init(unsigned long *clk_base, unsigned long *clk_gate)
+void kona_mmc_clk_init(void __iomem *clk_base, void __iomem *clk_gate)
 {
 	unsigned long reg_val;
 
@@ -651,21 +653,21 @@ int kona_mmc_init(int dev_index)
 		case 1:
 			mmc_reg_base = (void*) KONA_SDIO1_VA;
 			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO1_DIV_OFFSET;
-			kona_mmc_clk_init(KONA_KPM_CLK_VA, KONA_KPM_CLK_VA +
-				KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET);
+			kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,(void *)( KONA_KPM_CLK_VA +
+				KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET));
 			break;
 		case 2:
 			mmc_reg_base = (void*) KONA_SDIO2_VA;
 			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO2_DIV_OFFSET;
-			kona_mmc_clk_init(KONA_KPM_CLK_VA, KONA_KPM_CLK_VA +
-				KPM_CLK_MGR_REG_SDIO2_CLKGATE_OFFSET);
+			kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,(void *)(KONA_KPM_CLK_VA +
+				KPM_CLK_MGR_REG_SDIO2_CLKGATE_OFFSET));
 			break;
 #ifdef SDIO3_BASE_ADDR
 		case 3:
 			mmc_reg_base = (void*) KONA_SDIO3_VA;
 			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO3_DIV_OFFSET;
-			kona_mmc_clk_init(KONA_KPM_CLK_VA, KONA_KPM_CLK_VA +
-				KPM_CLK_MGR_REG_SDIO3_CLKGATE_OFFSET);
+			kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,(void *)(KONA_KPM_CLK_VA +
+				KPM_CLK_MGR_REG_SDIO3_CLKGATE_OFFSET));
 			break;
 #endif			
 		default:

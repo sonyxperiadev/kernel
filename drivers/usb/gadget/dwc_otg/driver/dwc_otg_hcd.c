@@ -481,7 +481,8 @@ void dwc_otg_hcd_stop(dwc_otg_hcd_t * hcd)
 }
 
 int dwc_otg_hcd_urb_enqueue(dwc_otg_hcd_t * hcd,
-			    dwc_otg_hcd_urb_t * dwc_otg_urb, void **ep_handle)
+			    dwc_otg_hcd_urb_t * dwc_otg_urb, void **ep_handle,
+			    int atomic_alloc)
 {
 	uint64_t flags;
 	int retval = 0;
@@ -492,7 +493,7 @@ int dwc_otg_hcd_urb_enqueue(dwc_otg_hcd_t * hcd,
 		return -DWC_E_NO_DEVICE;
 	}
 
-	qtd = dwc_otg_hcd_qtd_create(dwc_otg_urb);
+	qtd = dwc_otg_hcd_qtd_create(dwc_otg_urb, atomic_alloc);
 	if (qtd == NULL) {
 		DWC_ERROR("DWC OTG HCD URB Enqueue failed creating QTD\n");
 		return -DWC_E_NO_MEMORY;
@@ -1126,8 +1127,8 @@ static void assign_and_init_hc(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 			buf_size = 4096;
 		}
 		if (!qh->dw_align_buf) {
-			qh->dw_align_buf = dwc_dma_alloc(buf_size,
-							 &qh->dw_align_buf_dma);
+			qh->dw_align_buf = dwc_dma_alloc_atomic(buf_size,
+								&qh->dw_align_buf_dma);
 			if (!qh->dw_align_buf) {
 				DWC_ERROR("%s: Failed to allocate memory to handle "
 					  "non-dword aligned buffer case\n", __func__);

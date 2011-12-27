@@ -75,6 +75,9 @@
 #include <linux/broadcom/bcm59055-adc.h>
 #endif
 
+#ifdef CONFIG_WD_TAPPER
+#include <linux/broadcom/wd-tapper.h>
+#endif
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
  * use FIXED type
@@ -505,9 +508,9 @@ static struct platform_device board_kona_otg_platform_device =
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] =
 {
-/*JIRA HWRHEA-1199 : Enable Economy mode(156MHz) for B0 */
-#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
-//    FTBL_INIT(156000, PI_OPP_ECONOMY),
+/*JIRA HWRHEA-1199 : Don't enable Economy mode(156MHz) for A0 */
+#ifndef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+    FTBL_INIT(156000, PI_OPP_ECONOMY),
 #endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
 
@@ -732,6 +735,25 @@ static struct platform_device unicam_camera_device = {
 };
 #endif
 
+#ifdef CONFIG_WD_TAPPER
+static struct wd_tapper_platform_data wd_tapper_data = {
+    /* Set the count to the time equivalent to the time-out in milliseconds
+     * required to pet the PMU watchdog to overcome the problem of reset in
+     * suspend*/
+    .count = 32000,
+    .ch_num = 1,
+    .name = "aon-timer",
+};
+
+static struct platform_device wd_tapper = {
+    .name = "wd_tapper",
+    .id = 0,
+    .dev    =   {
+        .platform_data = &wd_tapper_data,
+    },
+};
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -776,8 +798,13 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #ifdef CONFIG_UNICAM
 	&board_unicam_device,
 #endif
+
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 	&unicam_camera_device,
+#endif
+
+#ifdef CONFIG_WD_TAPPER
+	&wd_tapper,
 #endif
 };
 

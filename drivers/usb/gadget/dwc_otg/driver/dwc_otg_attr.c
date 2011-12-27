@@ -1092,7 +1092,7 @@ static ssize_t rd_reg_test_show(struct device *_dev,
 	int time;
 	int start_jiffies;
 
-	printk("HZ %d, MSEC_PER_JIFFIE %d, loops_per_jiffy %lu\n",
+	pr_info("HZ %d, MSEC_PER_JIFFIE %d, loops_per_jiffy %lu\n",
 	       HZ, MSEC_PER_JIFFIE, loops_per_jiffy);
 	start_jiffies = jiffies;
 	for (i = 0; i < RW_REG_COUNT; i++) {
@@ -1128,7 +1128,7 @@ static ssize_t wr_reg_test_show(struct device *_dev,
 	int time;
 	int start_jiffies;
 
-	printk("HZ %d, MSEC_PER_JIFFIE %d, loops_per_jiffy %lu\n",
+	pr_info("HZ %d, MSEC_PER_JIFFIE %d, loops_per_jiffy %lu\n",
 	       HZ, MSEC_PER_JIFFIE, loops_per_jiffy);
 	reg_val = dwc_otg_get_gnptxfsiz(otg_dev->core_if);
 	start_jiffies = jiffies;

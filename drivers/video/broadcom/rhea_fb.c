@@ -620,7 +620,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	rheafb_info("RHEA Framebuffer probe successfull\n");
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
 	register_vt_notifier(&vt_notifier_block);
 #endif
 

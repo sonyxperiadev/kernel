@@ -2545,7 +2545,15 @@ uart_fix_clock_rate(struct uart_port *port, struct ktermios *termios)
                 else
                    cbaud += 15;
         }
-        uart_clk = uartclk_table[cbaud];
+
+        if(cbaud <= ARRAY_SIZE(uartclk_table))	{
+            uart_clk = uartclk_table[cbaud];
+        }
+        else {
+            pr_info("clock rate not available for given baud, using 26MHz!\n");
+            /* Use default clock rate */
+            uart_clk = 26000000;
+        }
 
         round_clk = clk_round_rate(up->clk, uart_clk);
         if (port->uartclk != round_clk) {
@@ -3566,14 +3574,14 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
 #endif
 
 #ifdef CONFIG_ARCH_RHEA
-		uart->qos_tx_node = pi_mgr_qos_add_request(clk_name,
+		uart->qos_tx_node = pi_mgr_qos_add_request((char *)clk_name,
 			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
-		uart->qos_rx_node = pi_mgr_qos_add_request(clk_name,
+		uart->qos_rx_node = pi_mgr_qos_add_request((char *)clk_name,
 			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
 
 		init_timer(&uart->rx_shutoff_timer);
 		uart->rx_shutoff_timer.function = rx_timeout_handler;
-		uart->rx_shutoff_timer.data = uart;
+		uart->rx_shutoff_timer.data = (unsigned long)uart;
 		uart->rx_shutoff_timer.expires = 
 			jiffies + msecs_to_jiffies(RX_SHUTOFF_DELAY_MSECS);
 		add_timer(&uart->rx_shutoff_timer);

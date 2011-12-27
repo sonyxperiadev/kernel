@@ -265,8 +265,7 @@ static int __devexit bcm59055_wdog_remove(struct platform_device *pdev)
 	unregister_reboot_notifier(&bcm59055_wdog_notifier);
 	misc_deregister(&wddog->miscdev);
 	platform_set_drvdata(pdev, NULL);
-	if (wddog)
-		kfree(wddog);
+	kfree(wddog);
 	return 0;
 }
 

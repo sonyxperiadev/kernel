@@ -98,6 +98,7 @@ extern UInt16 *bcmlog_stream_area;
 
 
 extern int BrcmCreateAuddrv_testSysFs(struct snd_card *card); //brcm_auddrv_test.c
+extern int BrcmCreateAuddrv_selftestSysFs(struct snd_card *card); //brcm_auddrv_selftest.c
 
 //extern int BrcmCreateControlSysFs(struct snd_card *card); //brcm_alsa_ctl.c
 //--------------------------------------------------------------------
@@ -164,6 +165,11 @@ static int __devinit DriverProbe(struct platform_device *pdev)
       ret = BrcmCreateAuddrv_testSysFs(card);
       if(ret!=0)
  	  	BCM_AUDIO_DEBUG("ALSA DriverProbe Error to create sysfs for Auddrv test ret = %d\n", ret);
+#ifdef CONFIG_BCM_AUDIO_SELFTEST
+      ret = BrcmCreateAuddrv_selftestSysFs(card);
+      if(ret!=0)
+		BCM_AUDIO_DEBUG("ALSA DriverProbe Error to create sysfs for Auddrv selftest ret = %d\n", ret);
+#endif
       
 #if 0      
 	ret = BrcmCreateControlSysFs(card);

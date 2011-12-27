@@ -334,7 +334,7 @@ static int kona_pwmc_request(struct pwm_device *p)
 
 static void kona_pwmc_release(struct pwm_device *p)
 {
-    struct kona_pwmc *ap = pwm_get_drvdata(p);
+
 }
 
 static const struct pwm_device_ops kona_pwm_ops = {

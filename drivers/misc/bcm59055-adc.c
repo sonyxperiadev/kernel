@@ -549,8 +549,9 @@ static int __devinit bcm59055_saradc_probe(struct platform_device *pdev)
 static int __devexit bcm59055_saradc_remove(struct platform_device *pdev)
 {
 	struct bcm59055_saradc *saradc = platform_get_drvdata(pdev);
-	struct bcm590xx *bcm59055 = saradc->bcm59055;
+	struct bcm590xx *bcm59055;
 	if (saradc) {
+		bcm59055 = saradc->bcm59055;
 		bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DATA_RDY);
 		bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DURING_CON_MEAS);
 		bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT9_RTM_UPPER_BOUND);

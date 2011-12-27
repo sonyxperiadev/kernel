@@ -27,7 +27,7 @@
 #endif
 
 #include <linux/mfd/bcmpmu.h>
-#include "bcmpmu_audio.h"
+#include <linux/broadcom/bcmpmu_audio.h>
 
 struct bcmpmu_audio {
 	struct bcmpmu *bcmpmu;
@@ -156,6 +156,228 @@ void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain)
 EXPORT_SYMBOL(bcmpmu_ihf_set_gain);
 
 
+
+int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
+{
+	int data1, data2, data3;
+	int ret = 0;
+	int HSwasEn = 0;
+	pr_debug("Inside %s, HSgain %d, HSInputmode %d\n", __func__, HSgain, HSInputmode);
+
+	if (bcmpmu_audio->HS_On) {
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+					       PMU_REG_HSPUP2_HS_PWRUP,
+					       &data1,
+					       PMU_BITMASK_ALL);
+		data1 &= ~BCMPMU_HSPUP2_HS_PWRUP;   /*HSPUP2*/
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+						PMU_REG_HSPUP2_HS_PWRUP,
+						data1,
+						PMU_BITMASK_ALL);
+		bcmpmu_audio->HS_On = false;
+		HSwasEn = 1;
+	}
+
+	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+				       PMU_REG_HSPGA1_GAIN,
+				       &data1,
+				       PMU_BITMASK_ALL);
+	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+				       PMU_REG_HSPGA2_GAIN,
+				       &data2,
+				       PMU_BITMASK_ALL);
+	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+				       PMU_REG_HSPGA3_GAIN,
+				       &data3,
+				       PMU_BITMASK_ALL);
+
+	if (HSInputmode == PMU_HS_SINGLE_ENDED_AC_COUPLED) {
+		data1 &= ~BCMPMU_PGA_CTL_MASK;
+		data1 |= (BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
+			(HSgain & BCMPMU_PGA_CTL_MASK));
+
+		data2 &= ~BCMPMU_PGA_CTL_MASK;
+		data2 |= HSgain & BCMPMU_PGA_CTL_MASK;
+
+		data3 &= ~(BCMPMU_HSPGA3_PGA_ACINADJ | BCMPMU_HSPGA3_PGA_PULLDNSJ);
+		data3 |= BCMPMU_HSPGA3_PGA_ENACCPL;
+	} else if (HSInputmode == PMU_HS_DIFFERENTIAL_AC_COUPLED) {
+		data1 &= ~(BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
+			BCMPMU_PGA_CTL_MASK);
+		data1 |= HSgain & BCMPMU_PGA_CTL_MASK;
+
+		data2 &= ~BCMPMU_PGA_CTL_MASK;
+		data2 |= HSgain & BCMPMU_PGA_CTL_MASK;
+
+		data3 &= ~BCMPMU_HSPGA3_PGA_PULLDNSJ;
+		data3 |= (BCMPMU_HSPGA3_PGA_ENACCPL | BCMPMU_HSPGA3_PGA_ACINADJ);
+	} else if (HSInputmode == PMU_HS_DIFFERENTIAL_DC_COUPLED) {
+		data1 &= ~(BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
+			BCMPMU_PGA_CTL_MASK);
+		data1 |= HSgain & BCMPMU_PGA_CTL_MASK;
+
+		data2 &= ~BCMPMU_PGA_CTL_MASK;
+		data2 |= HSgain & BCMPMU_PGA_CTL_MASK;
+
+		data3 &= ~(BCMPMU_HSPGA3_PGA_PULLDNSJ | BCMPMU_HSPGA3_PGA_ENACCPL |
+			BCMPMU_HSPGA3_PGA_ACINADJ);
+	}
+
+	ret = bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+					      PMU_REG_HSPGA1_GAIN,
+					      data1,
+					      PMU_BITMASK_ALL);
+	ret |= bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+					       PMU_REG_HSPGA2_GAIN,
+					       data2,
+					       PMU_BITMASK_ALL);
+	ret |= bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+					       PMU_REG_HSPGA3_GAIN,
+					       data3,
+					       PMU_BITMASK_ALL);
+
+
+
+	/* Power Up HS */
+	if (HSwasEn) {
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+					       PMU_REG_HSPUP2_HS_PWRUP,
+					       &data1,
+					       PMU_BITMASK_ALL);
+		data1 |= BCMPMU_HSPUP2_HS_PWRUP;   /*HSPUP2*/
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+						PMU_REG_HSPUP2_HS_PWRUP,
+						data1,
+						PMU_BITMASK_ALL);
+		HSwasEn = 0;
+		bcmpmu_audio->HS_On = true;
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(bcmpmu_hs_set_input_mode);
+
+int bcmpmu_audio_ihf_selftest_stimulus_input(int stimulus)
+{
+	stimulus = stimulus<<bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTIN_I_IHFSTI].shift;
+	return bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+					       PMU_REG_IHFSTIN_I_IHFSTI,
+					       stimulus,
+					       bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTIN_I_IHFSTI].mask);
+}
+EXPORT_SYMBOL(bcmpmu_audio_ihf_selftest_stimulus_input);
+
+int bcmpmu_audio_ihf_selftest_stimulus_output(int stimulus)
+{
+	stimulus = stimulus<<bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTIN_I_IHFSTO].shift;
+	return bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+					       PMU_REG_IHFSTIN_I_IHFSTO,
+					       stimulus,
+					       bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTIN_I_IHFSTO].mask);
+}
+EXPORT_SYMBOL(bcmpmu_audio_ihf_selftest_stimulus_output);
+
+void bcmpmu_audio_ihf_selftest_result(u8 *result)
+{
+	unsigned int val;
+
+	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+				       PMU_REG_IHFSTO_O_IHFSTI,
+				       &val,
+				       bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTO_O_IHFSTI].mask);
+        val = val>>bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTO_O_IHFSTI].shift;
+	*result = val;
+
+}
+EXPORT_SYMBOL(bcmpmu_audio_ihf_selftest_result);
+
+int bcmpmu_audio_ihf_testmode(int Mode)
+{
+	Mode = Mode<<bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTIN_I_IHFSELFTEST_EN].shift;
+	return bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+					       PMU_REG_IHFSTIN_I_IHFSELFTEST_EN,
+					       Mode,
+					       bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTIN_I_IHFSELFTEST_EN].mask);
+}
+EXPORT_SYMBOL(bcmpmu_audio_ihf_testmode);
+
+int bcmpmu_audio_hs_selftest_stimulus(int stimulus)
+{
+	stimulus = stimulus<<bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSIST_I_HS_IST].shift;
+	return bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+					       PMU_REG_HSIST_I_HS_IST,
+					       stimulus,
+					       bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSIST_I_HS_IST].mask);
+}
+EXPORT_SYMBOL(bcmpmu_audio_hs_selftest_stimulus);
+
+void bcmpmu_audio_hs_selftest_result(u8 *result)
+{
+	unsigned int val;
+	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+				       PMU_REG_HSOUT1_O_HS_IST,
+				       &val,
+				       bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSOUT1_O_HS_IST].mask);
+	val = val>>bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSOUT1_O_HS_IST].shift;
+	*result = val;
+}
+EXPORT_SYMBOL(bcmpmu_audio_hs_selftest_result);
+
+int bcmpmu_audio_hs_testmode(int Mode)
+{
+	Mode = Mode<<bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSIST_I_HS_ENST].shift;
+	return bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+					       PMU_REG_HSIST_I_HS_ENST,
+					       Mode,
+					       bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSIST_I_HS_ENST].mask);
+}
+EXPORT_SYMBOL(bcmpmu_audio_hs_testmode);
+
+/* Backup registers used for headset selftest */
+void bcmpmu_audio_hs_selftest_backup(bool Enable)
+{
+	static unsigned int StoredRegValue[4];
+	if(Enable) {
+		/* Store PMU register Values */
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFSTIN_I_IHFSELFTEST_EN, &StoredRegValue[0], PMU_BITMASK_ALL );
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFSTIN_I_IHFSTI, &StoredRegValue[1], PMU_BITMASK_ALL );
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFSTIN_I_IHFSTO, &StoredRegValue[2], PMU_BITMASK_ALL );
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFSTO_O_IHFSTI, &StoredRegValue[3], PMU_BITMASK_ALL );
+	}else{
+		/* Restore PMU register values */
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFSTIN_I_IHFSELFTEST_EN, StoredRegValue[0], bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTIN_I_IHFSELFTEST_EN].mask );
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFSTIN_I_IHFSTI, StoredRegValue[1], bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTIN_I_IHFSTI].mask );
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFSTIN_I_IHFSTO, StoredRegValue[2], bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTIN_I_IHFSTO].mask );
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFSTO_O_IHFSTI, StoredRegValue[3], bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFSTO_O_IHFSTI].mask );
+
+	}
+}
+/* Backup registers used for ihf selftest */
+void bcmpmu_audio_ihf_selftest_backup(bool Enable)
+{
+	static unsigned int  StoredRegValue[8];
+	if(Enable) {
+		/* Store PMU register Values */
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPGA1_GAIN, &StoredRegValue[0], PMU_BITMASK_ALL );
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPGA2_GAIN, &StoredRegValue[1], PMU_BITMASK_ALL );
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPGA2_GAIN, &StoredRegValue[2], PMU_BITMASK_ALL );
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSIST_I_HS_ENST, &StoredRegValue[3], PMU_BITMASK_ALL );
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSIST_I_HS_IST, &StoredRegValue[4], PMU_BITMASK_ALL );
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPUP1_IDDQ_PWRDWN, &StoredRegValue[5], PMU_BITMASK_ALL );
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPUP2_HS_PWRUP, &StoredRegValue[6], PMU_BITMASK_ALL );
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL, &StoredRegValue[7], PMU_BITMASK_ALL );
+	}else{
+		/* Restore PMU register values */
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPGA1_GAIN, StoredRegValue[0], bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSPGA1_GAIN].mask );
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPGA2_GAIN, StoredRegValue[1], bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSPGA2_GAIN].mask );
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPGA2_GAIN, StoredRegValue[2], bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSPGA2_GAIN].mask );
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSIST_I_HS_ENST, StoredRegValue[3], bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSIST_I_HS_ENST].mask );
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSIST_I_HS_IST, StoredRegValue[4], bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSIST_I_HS_IST].mask );
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPUP1_IDDQ_PWRDWN, StoredRegValue[5], bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSPUP1_IDDQ_PWRDWN].mask );
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPUP2_HS_PWRUP, StoredRegValue[6], bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSPUP2_HS_PWRUP].mask );
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL, StoredRegValue[7], bcmpmu_audio->bcmpmu->regmap[PMU_REG_PLLCTRL].mask );
+	}
+}
 
 void bcmpmu_audio_init(void)
 {

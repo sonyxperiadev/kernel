@@ -591,7 +591,8 @@ extern int32_t dwc_otg_hcd_handle_wakeup_detected_intr(dwc_otg_hcd_t *
 
 /* Implemented in dwc_otg_hcd_queue.c */
 extern dwc_otg_qh_t *dwc_otg_hcd_qh_create(dwc_otg_hcd_t * hcd,
-					   dwc_otg_hcd_urb_t * urb);
+					   dwc_otg_hcd_urb_t * urb,
+					   int atomic_alloc);
 extern void dwc_otg_hcd_qh_free(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
 extern int dwc_otg_hcd_qh_add(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
 extern void dwc_otg_hcd_qh_remove(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
@@ -613,21 +614,28 @@ static inline void dwc_otg_hcd_qh_remove_and_free(dwc_otg_hcd_t * hcd,
 
 /** Allocates memory for a QH structure.
  * @return Returns the memory allocate or NULL on error. */
-static inline dwc_otg_qh_t *dwc_otg_hcd_qh_alloc(void)
+static inline dwc_otg_qh_t *dwc_otg_hcd_qh_alloc(int atomic_alloc)
 {
-	return (dwc_otg_qh_t *) dwc_alloc(sizeof(dwc_otg_qh_t));
+	if (atomic_alloc)
+		return (dwc_otg_qh_t *) dwc_alloc_atomic(sizeof(dwc_otg_qh_t));
+	else
+		return (dwc_otg_qh_t *) dwc_alloc(sizeof(dwc_otg_qh_t));
 }
 
-extern dwc_otg_qtd_t *dwc_otg_hcd_qtd_create(dwc_otg_hcd_urb_t * urb);
+extern dwc_otg_qtd_t *dwc_otg_hcd_qtd_create(dwc_otg_hcd_urb_t * urb,
+					     int atomic_alloc);
 extern void dwc_otg_hcd_qtd_init(dwc_otg_qtd_t * qtd, dwc_otg_hcd_urb_t * urb);
 extern int dwc_otg_hcd_qtd_add(dwc_otg_qtd_t * qtd, dwc_otg_hcd_t * dwc_otg_hcd,
 			       dwc_otg_qh_t ** qh);
 
 /** Allocates memory for a QTD structure.
  * @return Returns the memory allocate or NULL on error. */
-static inline dwc_otg_qtd_t *dwc_otg_hcd_qtd_alloc(void)
+static inline dwc_otg_qtd_t *dwc_otg_hcd_qtd_alloc(int atomic_alloc)
 {
-	return (dwc_otg_qtd_t *) dwc_alloc(sizeof(dwc_otg_qtd_t));
+	if (atomic_alloc)
+		return (dwc_otg_qtd_t *) dwc_alloc_atomic(sizeof(dwc_otg_qtd_t));
+	else
+		return (dwc_otg_qtd_t *) dwc_alloc(sizeof(dwc_otg_qtd_t));
 }
 
 /** Frees the memory for a QTD structure.  QTD should already be removed from
@@ -673,7 +681,8 @@ extern void dwc_otg_hcd_complete_xfer_ddma(dwc_otg_hcd_t * hcd,
 					   dwc_otg_hc_regs_t * hc_regs,
 					   dwc_otg_halt_status_e halt_status);
 
-extern int dwc_otg_hcd_qh_init_ddma(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
+extern int dwc_otg_hcd_qh_init_ddma(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh,
+				    int atomic_alloc);
 extern void dwc_otg_hcd_qh_free_ddma(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
 
 /** @} */
