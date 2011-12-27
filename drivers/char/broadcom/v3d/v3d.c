@@ -230,11 +230,12 @@ typedef struct v3d_job_t_ {
 v3d_job_t;
 
 #define MAX_BIN_BLOCKS  5
-#define BIN_MEM_SIZE    (1024*1024)
+#define BIN_MEM_SIZE    (2*1024*1024)
 static struct {
 	int oom_block;
 	void* oom_cpuaddr;
 	bool used;
+	bool ready;
 	u32	dev_id;
 } bin_mem[MAX_BIN_BLOCKS];
 
@@ -247,7 +248,7 @@ static int v3d_bin_oom_size = BIN_MEM_SIZE;
 static void* v3d_bin_oom_cpuaddr = NULL;
 static volatile int v3d_oom_block_used = 0;
 static void allocate_bin_mem(struct work_struct *work);
-static void free_bin_mem(void);
+static void free_bin_mem(uint32_t dev_id);
 static DECLARE_WORK(work, allocate_bin_mem);
 static struct workqueue_struct *oom_wq;
 
@@ -1102,7 +1103,7 @@ static void v3d_hw_release(void)
 {
 	free_irq(IRQ_GRAPHICS, NULL);
 	v3d_power(0);
-	free_bin_mem();
+	free_bin_mem(0);
 	up(&v3d_state.acquire_sem);		//V3D is up for grab
 }
 
@@ -1120,28 +1121,25 @@ static void allocate_bin_mem(struct work_struct *work)
 	if(i >= MAX_BIN_BLOCKS)
 		goto err1;
 
-	bin_mem[i].oom_cpuaddr = dma_alloc_coherent(v3d_state.v3d_device, v3d_bin_oom_size, &bin_mem[i].oom_block, GFP_DMA);
-	if (bin_mem[i].oom_cpuaddr != NULL) {
-		KLOG_D("v3d bin mem status bpoa[0x%08x] bpos[0x%08x] bpca[0x%08x] bpcs[0x%08x]",
-				v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET), v3d_read(V3D_BPCA_OFFSET), v3d_read(V3D_BPCS_OFFSET));
-		KLOG_V("v3d bin oom phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
-			   bin_mem[i].oom_block, v3d_bin_oom_size, (int)bin_mem[i].oom_cpuaddr);
+	if(bin_mem[i].ready == 0)
+	{
+		bin_mem[i].oom_cpuaddr = dma_alloc_coherent(v3d_state.v3d_device, v3d_bin_oom_size, &bin_mem[i].oom_block, GFP_DMA);
+		bin_mem[i].ready = 1;
+	}
 
+	if (bin_mem[i].oom_cpuaddr != NULL) {
 		down(&v3d_state.work_lock);
 		if(v3d_is_on)
 		{
 			uint32_t flags = v3d_read(V3D_INTENA_OFFSET);
+			v3d_job_t *p_v3d_job = (v3d_job_t *)v3d_job_curr;
 
 			bin_mem[i].used = 1;
+			bin_mem[i].dev_id = p_v3d_job->dev_id;
 			v3d_write(bin_mem[i].oom_block,  V3D_BPOA_OFFSET);
 			v3d_write(v3d_bin_oom_size,  V3D_BPOS_OFFSET);
 			v3d_write(1 << 2,  V3D_INTCTL_OFFSET);
 			v3d_write( flags | 1 << 2,  V3D_INTENA_OFFSET);
-		}
-		else
-		{
-			//Job got timed out or killed
-			dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size, bin_mem[i].oom_cpuaddr, bin_mem[i].oom_block);
 		}
 		up(&v3d_state.work_lock);
 	}
@@ -1153,14 +1151,19 @@ err1:
 	KLOG_E("Already allocated Max bin memory %d x %d\n", MAX_BIN_BLOCKS, v3d_bin_oom_size);
 }
 
-static void free_bin_mem(void)
+static void free_bin_mem(uint32_t dev_id)
 {
 	int i;
 
 	down(&v3d_state.work_lock);
 	for(i=0;i < MAX_BIN_BLOCKS; i++)
 	{
-		if(bin_mem[i].used){
+		if(dev_id == 0) //Memory is freed at end of work
+			bin_mem[i].used = 0;
+		else if(dev_id == bin_mem[i].dev_id)
+		{
+			//Memory is getting released as part of process closing
+			bin_mem[i].ready = 0;
 			bin_mem[i].used = 0;
 			dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size, bin_mem[i].oom_cpuaddr, bin_mem[i].oom_block);
 		}
@@ -1190,12 +1193,24 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 	 */
 	v3d_flags = (flags & 0x3) | (flags_qpu ? (1 << 4) : 0);
 
-	/* Handle oom case */
-	if (flags & (1 << 2)) {
+	/* Handle oom interrupt + overspill use interrupt*/
+	if (flags & (0x3 << 2))
+	{
 		irq_retval = 1;
-		KLOG_D("Bin OOM: starting workqueue with OOM interrupt disabled\n");
-		v3d_write(1 << 2,  V3D_INTDIS_OFFSET);
-		queue_work(oom_wq, &work);
+
+		if(v3d_oom_block_used == 0)
+		{
+			v3d_oom_block_used = 1;
+			v3d_write(v3d_bin_oom_block,  V3D_BPOA_OFFSET);
+			v3d_write(v3d_bin_oom_size,  V3D_BPOS_OFFSET);
+		}
+		else
+		{
+			//Statically allocated binning memory is used up: supply from work queue
+			KLOG_D("Bin using overspill: starting workqueue to allocate more memory 0X%x\n", flags);
+			v3d_write(1 << 2,  V3D_INTDIS_OFFSET);
+			queue_work(oom_wq, &work);
+		}
 	}
 
 	if (v3d_flags) {
@@ -1298,7 +1313,7 @@ static int v3d_release(struct inode *inode, struct file *filp)
 		v3d_job_free(filp, NULL);
 		KLOG_V("after free for id[%d]", dev->id);
 		v3d_print_all_jobs(0);
-
+		free_bin_mem(dev->id);
 		up(&v3d_sem);
 	}
 	else
