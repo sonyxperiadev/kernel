@@ -312,8 +312,6 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
-#if 1 //Shri
-
 static struct resource board_sdio0_resource[] = {
 	[0] = {
 		.start = SDIO1_BASE_ADDR,
@@ -435,9 +433,6 @@ void __init board_add_sdio_devices(void)
 {
 	platform_add_devices(board_sdio_plat_devices, ARRAY_SIZE(board_sdio_plat_devices));
 }
-
-
-#endif //Shri
 
 #ifdef CONFIG_BACKLIGHT_PWM
 
@@ -733,7 +728,7 @@ void __init board_map_io(void)
 
 late_initcall(rhea_stone_add_lateInit_devices);
 
-MACHINE_START(RHEA_STONE, "RheaStone")
+MACHINE_START(RHEA_STONE, "rheastone")
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
