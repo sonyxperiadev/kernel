@@ -27,5 +27,6 @@ struct kona_idle_state
 #endif /*CONFIG_CPU_IDLE*/
 
 int __init kona_pm_init(void);
-
+extern void instrument_idle_entry(void);
+extern void instrument_idle_exit(void);
 #endif /*__KONA_PM_H__*/

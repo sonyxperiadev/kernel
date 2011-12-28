@@ -1371,11 +1371,27 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	ret = __clk_set_rate(clk, rate);
 	spin_unlock_irqrestore(&clk_lock, flags);
 
-	return 0;
+	return ret;
 }
 EXPORT_SYMBOL(clk_set_rate);
 
-int clk_is_enabled(struct clk* clk)
+int clk_get_usage(struct clk *clk)
+{
+	unsigned long flags;
+	int ret;
+
+	if (IS_ERR_OR_NULL(clk))
+		return -EINVAL;
+
+	spin_lock_irqsave(&clk_lock, flags);
+	ret = clk->use_cnt;
+	spin_unlock_irqrestore(&clk_lock, flags);
+
+	return ret;
+}
+EXPORT_SYMBOL(clk_get_usage);
+
+static int clk_is_enabled(struct clk *clk)
 {
 	return (!!clk->use_cnt);
 }

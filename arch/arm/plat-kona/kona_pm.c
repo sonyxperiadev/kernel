@@ -20,8 +20,6 @@
 #include <plat/kona_pm.h>
 #include <plat/pwr_mgr.h>
 
-
-
 enum
 {
 	KONA_PM_LOG_LVL_NONE = 0,
@@ -41,7 +39,13 @@ static struct kona_idle_state* def_suspend_state = NULL;
 #define LOG_LEVEL_ENABLED(lvl) ((lvl) & kona_pm_log_lvl)
 #ifdef CONFIG_CPU_IDLE
 
+__weak void instrument_idle_entry(void)
+{
+}
 
+__weak void instrument_idle_exit(void)
+{
+}
 
 __weak int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
 {
@@ -54,28 +58,36 @@ __weak int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
 	return 1;
 }
 
+static int allow_idle = 1;
+module_param_named(allow_idle, allow_idle, int, S_IRUGO | S_IWUSR | S_IWGRP);
+
 __weak int kona_mach_enter_idle_state(struct cpuidle_device *dev,struct cpuidle_state *state)
 {
-	ktime_t	t1, t2;
+	ktime_t	t1 = {.tv64 = 0,}, t2 = {.tv64 = 0,};
 	s64 diff;
 	int ret;
 	int mach_ret = -1;
 	struct kona_idle_state* kona_state = cpuidle_get_statedata(state);
 	BUG_ON(kona_state == NULL);
 
-	t1 = ktime_get();
 	local_irq_disable();
 	local_fiq_disable();
 
-	if(kona_state && kona_state->enter)
-		mach_ret = kona_state->enter(kona_state);
-	else
-		cpu_do_idle();
+	if (allow_idle) {
+		instrument_idle_entry();
+		t1 = ktime_get();
+		if (kona_state && kona_state->enter)
+			mach_ret = kona_state->enter(kona_state);
+		else
+			cpu_do_idle();
+
+		t2 = ktime_get();
+		instrument_idle_exit();
+	}
 
 	local_irq_enable();
 	local_fiq_enable();
 
-	t2 = ktime_get();
 	diff = ktime_to_us(ktime_sub(t2, t1));
 	if (diff > INT_MAX)
 		diff = INT_MAX;
@@ -178,8 +190,6 @@ static struct platform_suspend_ops kona_pm_ops = {
  */
 int __init kona_pm_init()
 {
-
-
 #ifdef CONFIG_CPU_IDLE
 	int i,num_states;
 	struct cpuidle_device *dev;
