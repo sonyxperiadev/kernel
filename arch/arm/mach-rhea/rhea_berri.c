@@ -35,6 +35,7 @@
 #include <mach/hardware.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
+#include <linux/gpio.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
 #include <asm/gpio.h>
@@ -1169,6 +1170,7 @@ static int rhea_camera_power(struct device *dev, int on)
 	struct clk *clock;
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
+	int ret;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -1178,8 +1180,14 @@ static int rhea_camera_power(struct device *dev, int on)
 			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
 			return -1;
 		}
-		gpio_direction_output(SENSOR_0_GPIO_RST, 0);
-		gpio_direction_output(SENSOR_0_GPIO_PWRDN, 1);
+		if (gpio_request_one(SENSOR_0_GPIO_RST, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "CamRst")) {
+			printk(KERN_ERR"$s: failed to get (CamRst) gpio\n", __func__);
+			return -1;
+		}
+		if (gpio_request_one(SENSOR_0_GPIO_PWRDN, GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "CamPwr")) {
+			printk(KERN_ERR"$s: failed to get (CamPwr) gpio\n", __func__);
+			return -1;
+		}
 	}
 
 	clock = clk_get(NULL, SENSOR_0_CLK);
