@@ -28,9 +28,6 @@
 #include <linux/clk.h>
 #ifdef CONFIG_MFD_BCMPMU
 #include <linux/mfd/bcmpmu.h>
-#else
-#include <linux/mfd/bcm590xx/core.h>
-#include <linux/mfd/bcm590xx/bcm590xx-usb.h>
 #endif
 
 #include <asm/io.h>
@@ -63,11 +60,6 @@ static int bcmpmu_otg_xceiv_set_vbus(struct otg_transceiver *otg, bool enabled)
 		    xceiv_data->bcmpmu->usb_set(xceiv_data->bcmpmu,
 						BCMPMU_USB_CTRL_VBUS_ON_OFF,
 						1);
-#else
-		stat =
-		    bcm590xx_reg_write(xceiv_data->bcm590xx,
-				       BCM59055_REG_OTGCTRL1,
-				       OTGCTRL1_VBUS_ON);
 #endif
 	} else {
 		dev_info(xceiv_data->dev, "Turning off VBUS\n");
@@ -77,11 +69,6 @@ static int bcmpmu_otg_xceiv_set_vbus(struct otg_transceiver *otg, bool enabled)
 		    xceiv_data->bcmpmu->usb_set(xceiv_data->bcmpmu,
 						BCMPMU_USB_CTRL_VBUS_ON_OFF,
 						0);
-#else
-		stat =
-		    bcm590xx_reg_write(xceiv_data->bcm590xx,
-				       BCM59055_REG_OTGCTRL1,
-				       OTGCTRL1_VBUS_OFF);
 #endif
 	}
 
@@ -97,11 +84,8 @@ static bool bcmpmu_otg_xceiv_check_id_gnd(struct bcmpmu_otg_xceiv_data *xceiv_da
 	bool id_gnd = false;
 
 #ifdef CONFIG_MFD_BCMPMU
-	xceiv_data->bcmpmu->usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ID_VALUE, &data);
+	bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ID_VALUE, &data);
 	id_gnd = (data == PMU_USB_ID_GROUND);
-#else
-	data = bcmpmu_usb_get(BCMPMU_CTRL_GET_ID_VALUE, (void*)xceiv_data->bcm590xx);
-	id_gnd = !data; /* Non-ACA interpretation */
 #endif
 
 	return id_gnd;
@@ -154,39 +138,6 @@ static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data *xcei
 
 
 #ifdef CONFIG_MFD_BCMPMU
-static void bcmpmu_usb_event_notif_callback(struct bcmpmu * pmu_handle, unsigned char event, void *param1, void *otg_data)
-{
-	struct bcmpmu_otg_xceiv_data *xceiv_data = (struct bcmpmu_otg_xceiv_data *)otg_data;
-
-	if (!otg_data) {
-		dev_info(xceiv_data->dev, "ERROR: xceiver data not passed by PMU callback\n");
-		return;
-	}
-
-	switch (event) {
-		case BCMPMU_USB_EVENT_SESSION_VALID:
-			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_vbus_a_valid_work);
-			break;
-		case BCMPMU_USB_EVENT_SESSION_INVALID:
-			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_vbus_a_invalid_work);
-			break;
-		case BCMPMU_USB_EVENT_VBUS_VALID:
-			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_vbus_valid_work);
-			break;
-		case BCMPMU_USB_EVENT_IN:
-			break;
-		case BCMPMU_USB_EVENT_ID_CHANGE:
-			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_id_status_change_work);
-			break;
-		case BCMPMU_USB_EVENT_USB_DETECTION: /* Rhea PMU driver uses this event instead of CHGR_DETECTION. Revisit later */
-			if (*(unsigned int*)param1)
-				queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_chg_detect_work);
-			break;
-		default:
-			break;
-	}
-}
-#else
 static int bcmpmu_otg_xceiv_vbus_notif_handler(struct notifier_block *nb, unsigned long value, void *data)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
@@ -197,7 +148,7 @@ static int bcmpmu_otg_xceiv_vbus_notif_handler(struct notifier_block *nb, unsign
 	if (!xceiv_data)
 		return -EINVAL;
 
-	vbus_status = bcmpmu_usb_get(BCMPMU_CTRL_GET_VBUS_STATUS, xceiv_data->bcm590xx);
+	bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_VBUS_STATUS, &vbus_status);
 
 	queue_work(xceiv_data->bcm_otg_work_queue, vbus_status ? &xceiv_data->bcm_otg_vbus_valid_work : &xceiv_data->bcm_otg_vbus_a_invalid_work);
 
@@ -209,11 +160,15 @@ static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block *n
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 		container_of(nb, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_chg_detection_notifier);
+	bool usb_charger_type = false;
 
-	if (xceiv_data)
-		queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_chg_detect_work);
-	else
+	if (!xceiv_data || !data)
 		return -EINVAL;
+
+	usb_charger_type = *(unsigned int*)data ? true : false;
+
+	if (usb_charger_type)
+		queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_chg_detect_work);
 
 	return 0;
 }
@@ -245,24 +200,19 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	otg->gadget = gadget;
 
 #ifdef CONFIG_MFD_BCMPMU
-	if (xceiv_data->bcmpmu->register_usb_callback) {
-		/* Register callback functions for PMU events */
-		status = xceiv_data->bcmpmu->register_usb_callback(xceiv_data->bcmpmu, bcmpmu_usb_event_notif_callback, (void*)xceiv_data);
-	}
-#else
 	/* We want to register notifiers during probe but that is not possible right now and there is no direct
 	 ** link to remove these notifiers. Avoid an unnecessary remove notifer. Just check if it is already registered
 	*/
 	if (xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call == NULL) {
 		xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call = bcmpmu_otg_xceiv_vbus_notif_handler;
-		bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID, &xceiv_data->bcm_otg_vbus_validity_notifier);
-		bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_SESSION_INVALID, &xceiv_data->bcm_otg_vbus_validity_notifier);
+		bcmpmu_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID, &xceiv_data->bcm_otg_vbus_validity_notifier);
+		bcmpmu_add_notifier(BCMPMU_USB_EVENT_SESSION_INVALID, &xceiv_data->bcm_otg_vbus_validity_notifier);
 
 		xceiv_data->bcm_otg_id_chg_notifier.notifier_call = bcmpmu_otg_xceiv_id_chg_notif_handler;
-		bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_ID_CHANGE, &xceiv_data->bcm_otg_id_chg_notifier);
+		bcmpmu_add_notifier(BCMPMU_USB_EVENT_ID_CHANGE, &xceiv_data->bcm_otg_id_chg_notifier);
 
 		xceiv_data->bcm_otg_chg_detection_notifier.notifier_call = bcmpmu_otg_xceiv_chg_detection_notif_handler;
-		bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_CHGR_DETECTION, &xceiv_data->bcm_otg_chg_detection_notifier);
+		bcmpmu_add_notifier(BCMPMU_USB_EVENT_USB_DETECTION, &xceiv_data->bcm_otg_chg_detection_notifier);
 	}
 #endif
 
@@ -271,9 +221,7 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	if (!id_gnd) {
 		int vbus_status;
 #ifdef CONFIG_MFD_BCMPMU
-		xceiv_data->bcmpmu->usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_VBUS_STATUS, &vbus_status);
-#else
-		vbus_status = bcmpmu_usb_get(BCMPMU_CTRL_GET_VBUS_STATUS, xceiv_data->bcm590xx);
+		bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_VBUS_STATUS, &vbus_status);
 #endif
 		if (!vbus_status) {
 			/* Non-ACA ID interpretation for now since RID_A is not tested yet on this platform */
@@ -519,8 +467,6 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	struct bcmpmu_otg_xceiv_data *xceiv_data;
 #ifdef CONFIG_MFD_BCMPMU
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
-#else
-	struct bcm590xx *bcm590xx = dev_get_drvdata(pdev->dev.parent);
 #endif
 
 	dev_info(&pdev->dev, "Probing started...\n");
@@ -534,8 +480,6 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->dev = &pdev->dev;
 #ifdef CONFIG_MFD_BCMPMU
 	xceiv_data->bcmpmu = bcmpmu;
-#else
-	xceiv_data->bcm590xx = bcm590xx;
 #endif
 	xceiv_data->otg_xceiver.xceiver.dev = xceiv_data->dev;
 	xceiv_data->otg_xceiver.xceiver.label = "bcmpmu_otg_xceiv";

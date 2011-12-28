@@ -17,8 +17,6 @@
 #include <linux/platform_device.h>
 #ifdef CONFIG_MFD_BCMPMU
 #include <linux/mfd/bcmpmu.h>
-#else
-#include <linux/mfd/bcm590xx/core.h>
 #endif
 #include <linux/usb/otg.h>
 #include "bcmpmu_otg_xceiv.h"
@@ -26,71 +24,24 @@
 #ifdef CONFIG_MFD_BCMPMU
 int bcm_otg_do_adp_calibration_probe(struct bcmpmu *bcmpmu)
 {
-	/* Call PMU API */
-	/* Call controller wrapper API with otg_data->platform_priv passed as parameter */
-
-
-	return 0;
+	return (bcmpmu_usb_set(bcmpmu, BCMPMU_USB_CTRL_START_ADP_CAL_PRB, 1));
 }
 
 int bcm_otg_do_adp_probe(struct bcmpmu *bcmpmu)
 {
-	/* Call PMU API */
-	return 0;
+	return (bcmpmu_usb_set(bcmpmu, BCMPMU_USB_CTRL_START_STOP_ADP_PRB, 1));
 }
 
 int bcm_otg_do_adp_sense(struct bcmpmu *bcmpmu)
 {
-	/* Call PMU API */
-	return 0;
+	return (bcmpmu_usb_set(bcmpmu, BCMPMU_USB_CTRL_START_STOP_ADP_SENS_PRB, 1));
 }
 
 int bcm_otg_do_adp_sense_then_probe(struct bcmpmu *bcmpmu)
 {
-	/* Call PMU API */
+	/* PMU driver does not handle this request so we need to implement this here */
 	return 0;
 }
-
-#if 0 /* For future use */
-static int bcm_otg_adp_change_callback(struct bcmpmu *bcmpmu, void *cb_data)
-{
-	return 0;
-}
-#endif
-#else
-int bcm_otg_do_adp_calibration_probe(struct bcm590xx *bcm590xx)
-{
-	/* Call PMU API */
-	/* Call controller wrapper API with otg_data->platform_priv passed as parameter */
-
-
-	return 0;
-}
-
-int bcm_otg_do_adp_probe(struct bcm590xx *bcm590xx)
-{
-	/* Call PMU API */
-	return 0;
-}
-
-int bcm_otg_do_adp_sense(struct bcm590xx *bcm590xx)
-{
-	/* Call PMU API */
-	return 0;
-}
-
-int bcm_otg_do_adp_sense_then_probe(struct bcm590xx *bcm590xx)
-{
-	/* Call PMU API */
-	return 0;
-}
-
-#if 0 /* For future use */
-static int bcm_otg_adp_change_callback(struct bcm590xx *bcm590xx, void *cb_data)
-{
-	return 0;
-}
-#endif
 #endif
 
 MODULE_AUTHOR("Broadcom");

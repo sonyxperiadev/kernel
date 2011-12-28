@@ -920,7 +920,8 @@ void bcmpmu_reg_dev_init(struct bcmpmu *bcmpmu);
 void bcmpmu_reg_dev_exit(struct bcmpmu *bcmpmu);
 int bcmpmu_add_notifier(u32, struct notifier_block *);
 int bcmpmu_remove_notifier(u32, struct notifier_block *);
-
+int bcmpmu_usb_set(struct bcmpmu *bcmpmu, enum bcmpmu_usb_ctrl_t ctrl, unsigned long data);
+int bcmpmu_usb_get(struct bcmpmu *bcmpmu, enum bcmpmu_usb_ctrl_t ctrl, void *data);
 void bcmpmu_client_power_off(void);
 
 #endif

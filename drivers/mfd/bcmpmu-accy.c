@@ -76,12 +76,6 @@ struct accy_cb {
 	void *clientdata;
 };
 
-int bcmpmu_usb_set(struct bcmpmu *bcmpmu,
-			enum bcmpmu_usb_ctrl_t ctrl, unsigned long data);
-int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
-			enum bcmpmu_usb_ctrl_t ctrl, void *data);
-
-
 enum bcmpmu_usb_det_state_t {
 	USB_IDLE,
 	USB_CONNECTED,
@@ -832,6 +826,7 @@ int bcmpmu_usb_set(struct bcmpmu *bcmpmu,
 	}
 	return ret;
 }
+EXPORT_SYMBOL_GPL(bcmpmu_usb_set);
 
 int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
 			enum bcmpmu_usb_ctrl_t ctrl, void *data)
@@ -921,6 +916,7 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
 	pr_accy(FLOW, "%s, ctrl=%d, val=0x%X\n", __func__, ctrl, ((data)?(*(unsigned int*)data):0));
 	return ret;
 }
+EXPORT_SYMBOL_GPL(bcmpmu_usb_get);
 
 static int bcmpmu_register_usb_callback(struct bcmpmu *pmu,
 	void (*callback)(struct bcmpmu *pmu,
