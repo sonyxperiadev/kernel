@@ -323,10 +323,13 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 		kfree(kona_cpufreq);
 	    return -ENOMEM;
 	}
+	/*Invlide init callback function if valid*/
+	if (pdata->cpufreq_init)
+		pdata->cpufreq_init();
+
 	kona_cpufreq->pi_id = pdata->pi_id;
 	kona_cpufreq->no_of_opps = pdata->num_freqs;
-	for(i=0; i < kona_cpufreq->no_of_opps; i++)
-	{
+	for (i = 0; i < kona_cpufreq->no_of_opps; i++) {
 	    kona_cpufreq->freq_map[i].cpu_freq = pdata->freq_tbl[i].cpu_freq;
 	    kona_cpufreq->freq_map[i].opp = pdata->freq_tbl[i].opp;
 	}

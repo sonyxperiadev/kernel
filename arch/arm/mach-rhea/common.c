@@ -58,6 +58,8 @@
 #if defined (CONFIG_KONA_CPU_FREQ_DRV)
 #include <plat/kona_cpufreq_drv.h>
 #include <linux/cpufreq.h>
+#include <mach/clock.h>
+#include <linux/clk.h>
 #include <mach/pi_mgr.h>
 #endif
 
@@ -336,7 +338,7 @@ static struct thermal_sensor_config sensor_data[] = {
 		.thermal_type           = SENSOR_BB_TMON,
 		.thermal_mc             = 0,
 		.thermal_read           = SENSOR_READ_DIRECT,
-		.thermal_location       = 1, 
+		.thermal_location       = 1,
 		.thermal_warning_lvl_1  = 100000,
 		.thermal_warning_lvl_2  = 110000,
 		.thermal_fatal_lvl      = 120000,
@@ -352,7 +354,7 @@ static struct thermal_sensor_config sensor_data[] = {
 		.thermal_type           = SENSOR_BATTERY,
 		.thermal_mc             = 0,
 		.thermal_read           = SENSOR_READ_PMU_I2C,
-		.thermal_location       = 2, 
+		.thermal_location       = 2,
 		.thermal_warning_lvl_1  = 105000,
 		.thermal_warning_lvl_2  = 115000,
 		.thermal_fatal_lvl      = 125000,
@@ -368,7 +370,7 @@ static struct thermal_sensor_config sensor_data[] = {
 		.thermal_type           = SENSOR_CRYSTAL,
 		.thermal_mc             = 0,
 		.thermal_read           = SENSOR_READ_PMU_I2C,
-		.thermal_location       = 3, 
+		.thermal_location       = 3,
 		.thermal_warning_lvl_1  = 106000,
 		.thermal_warning_lvl_2  = 116000,
 		.thermal_fatal_lvl      = 126000,
@@ -384,7 +386,7 @@ static struct thermal_sensor_config sensor_data[] = {
 		.thermal_type           = SENSOR_PA,
 		.thermal_mc             = 0,
 		.thermal_read           = SENSOR_READ_PMU_I2C,
-		.thermal_location       = 4, 
+		.thermal_location       = 4,
 		.thermal_warning_lvl_1  = 107000,
 		.thermal_warning_lvl_2  = 117000,
 		.thermal_fatal_lvl      = 127000,
@@ -521,6 +523,24 @@ struct kona_freq_tbl kona_freq_tbl[] =
 #endif
 };
 
+void rhea_cpufreq_init(void)
+{
+	struct clk *a9_pll_chnl0;
+	struct clk *a9_pll_chnl1;
+	a9_pll_chnl0 = clk_get(NULL, A9_PLL_CHNL0_CLK_NAME_STR);
+	a9_pll_chnl1 = clk_get(NULL, A9_PLL_CHNL1_CLK_NAME_STR);
+
+	BUG_ON(IS_ERR_OR_NULL(a9_pll_chnl0) ||
+				IS_ERR_OR_NULL(a9_pll_chnl1));
+
+	/*Update DVFS freq table based on PLL settings done by the loader*/
+	kona_freq_tbl[1].cpu_freq = clk_get_rate(a9_pll_chnl0)/1000;
+	kona_freq_tbl[2].cpu_freq = clk_get_rate(a9_pll_chnl1)/1000;
+
+	pr_info("%s a9_pll_chnl0 freq = %dKhz a9_pll_chnl1 freq = %dKhz\n",
+		__func__, kona_freq_tbl[1].cpu_freq, kona_freq_tbl[2].cpu_freq);
+}
+
 struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
 
     .freq_tbl = kona_freq_tbl,
@@ -528,6 +548,7 @@ struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
 	/*FIX ME: To be changed according to the cpu latency*/
 	.latency = 10*1000,
 	.pi_id = PI_MGR_PI_ID_ARM_CORE,
+	.cpufreq_init = rhea_cpufreq_init,
 };
 
 static struct platform_device kona_cpufreq_device = {
@@ -715,7 +736,7 @@ static struct platform_device android_pmem[] = {
 static u64 unicam_camera_dma_mask = DMA_BIT_MASK(32);
 
 static struct resource board_unicam_resource[] = {
-	[0] = 
+	[0] =
 	{
 		.start	=	BCM_INT_ID_RESERVED156,
 		.end	=	BCM_INT_ID_RESERVED156,

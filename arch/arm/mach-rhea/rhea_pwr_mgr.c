@@ -341,6 +341,7 @@ int __init rhea_pwr_mgr_init()
 	struct pm_policy_cfg cfg;
 	cfg.ac = 1;
 	cfg.atl = 0;
+
 #ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ
 	rhea_pwr_mgr_info.i2c_cmds = i2c_dummy_seq_cmd ;
 	rhea_pwr_mgr_info.num_i2c_cmds = ARRAY_SIZE(i2c_dummy_seq_cmd);
@@ -442,20 +443,6 @@ int __init rhea_pwr_mgr_init()
 	/*init clks*/
 	rhea_clock_init();
 
-	/*All the initializations are done. Clear override bit here so that
-	 * appropriate policies take effect*/
-	for (i = 0; i < PI_MGR_PI_ID_MODEM;i++) {
-	    pi = pi_mgr_get(i);
-	    BUG_ON(pi == NULL);
-	    pi_init_state(pi);
-	}
-
-	/* Enable PI counters */
-	for (i = 0; i < PI_MGR_PI_ID_MODEM; i++)
-		pwr_mgr_pi_counter_enable(i, 1);
-	pm_mgr_pi_count_clear(1);
-	pm_mgr_pi_count_clear(0);
-
 	return 0;
 }
 early_initcall(rhea_pwr_mgr_init);
@@ -478,12 +465,37 @@ void pwr_mgr_mach_debug_fs_init(int type)
 	writel(reg_val,KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
 }
 
+#endif /*CONFIG_DEBUG_FS*/
+
 int __init rhea_pwr_mgr_late_init(void)
 {
-	u32 bmdm_pwr_mgr_base = (u32)ioremap_nocache(BMDM_PWRMGR_BASE_ADDR,SZ_1K);
+#ifdef CONFIG_DEBUG_FS
+	u32 bmdm_pwr_mgr_base =
+		(u32)ioremap_nocache(BMDM_PWRMGR_BASE_ADDR, SZ_1K);
+#endif
+	int i;
+	struct pi *pi;
+
+	/*All the initializations are done. Clear override bit here so that
+	 * appropriate policies take effect*/
+	for (i = 0; i < PI_MGR_PI_ID_MODEM; i++) {
+	    pi = pi_mgr_get(i);
+	    BUG_ON(pi == NULL);
+	    pi_init_state(pi);
+	}
+
+	/* Enable PI counters */
+	for (i = 0; i < PI_MGR_PI_ID_MODEM; i++)
+		pwr_mgr_pi_counter_enable(i, 1);
+	pm_mgr_pi_count_clear(1);
+	pm_mgr_pi_count_clear(0);
+#ifdef CONFIG_DEBUG_FS
 	return pwr_mgr_debug_init(bmdm_pwr_mgr_base);
+#else
+	return 0;
+#endif
 }
 
 late_initcall(rhea_pwr_mgr_late_init);
 
-#endif
+

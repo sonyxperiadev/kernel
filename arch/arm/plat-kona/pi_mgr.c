@@ -875,8 +875,16 @@ u32 pi_get_active_opp(int pi_id)
 {
 	int ret = -EINVAL;
 	struct pi* pi = pi_mgr_get(pi_id);
-	if(pi)
-		ret = pi->opp_active;
+	/*Before PI init is complete, PI policy is set to wake up ploicy, 7.
+	Policy 7 freq is initialized to turbo mode freq.
+	Hence, this function should return the max opp number if the init is
+	not complete.*/
+	if (pi) {
+		if (pi->init == PI_INIT_COMPLETE)
+			ret = pi->opp_active;
+		else
+			return pi->num_opp-1;
+	}
 	return ret;
 }
 EXPORT_SYMBOL(pi_get_active_opp);

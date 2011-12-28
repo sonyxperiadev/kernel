@@ -47,6 +47,9 @@ struct kona_cpufreq_drv_pdata
 	int pi_id;
 	/* CPU Frequency transition latency in ns */
 	u32 latency;
+
+	/*Init callback - can be NULL*/
+	void (*cpufreq_init)(void);
 };
 
 #endif /* BCM_CPUFREQ_DRV_H */
