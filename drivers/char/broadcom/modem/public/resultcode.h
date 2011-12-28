@@ -1,17 +1,12 @@
-/****************************************************************************
-*
-*     Copyright (c) 2007-2008 Broadcom Corporation
-*
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
-*
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
-*
-****************************************************************************/
+//***************************************************************************
+//
+// (c)1999-2011 Broadcom Corporation
+//
+// Unless you and Broadcom execute a separate written software license agreement governing use of this software,
+// this software is licensed to you under the terms of the GNU General Public License version 2,
+// available at http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+//
+//***************************************************************************
 /**
 *
 *   @file   resultcode.h
@@ -26,7 +21,7 @@
 
 #define SS_RESULT_START				50
 #define PDP_RESULT_START			70
-#define STK_RESULT_START			110
+#define STK_RESULT_START			115
 #define SMS_RESULT_STRRT			120
 #define VM_RESULT_START				160
 #define AUDIO_RESULT_START			170
@@ -118,10 +113,11 @@ typedef enum {
 	PDP_APN_INCOMPATIBLE_W_ACTIVE_PDP,		/// < 107
 	RESULT_PLMN_SELECT_OK,					/// <  108 MS_PlmnSelect succeed ( No network request sent )
 	PDP_BEARER_CTRL_MODE_VIOLATION, 		/// < 109 Bearer Control Mode Violation
+	PDP_LAST_PDN_DISCONNECTION_NOT_ALLOWED, /// < 110 PCH_LAST_PDN_DISCONNECTION_NOT_ALLOWED
 
 	//------ Result code for STK Data Service -----
-	STK_DATASVRC_BUSY = STK_RESULT_START,			///< 110	STK data service is busy and need to wait for it finish
-	RESULT_SIM_NOT_READY,							///< 111	SIM is not ready
+	STK_DATASVRC_BUSY = STK_RESULT_START,			///< 115	STK data service is busy and need to wait for it finish
+	RESULT_SIM_NOT_READY,							///< 116	SIM is not ready
 
 	//------ Result code for SMS -----
 	SMS_SIM_SMS_READY = SMS_RESULT_STRRT,			///< 120	SIM is ready for SMS access	

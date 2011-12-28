@@ -4357,6 +4357,14 @@ typedef enum
 	**/
 	MSG_MS_SET_RUA_READY_TIMER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x1B3,
 	 /** 
+	api is CAPI2_SmsApi_StartCellBroadcastForCMASReq 
+	**/
+	MSG_SMS_START_CB_FORCMAS_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1B4,	///<Payload type {CAPI2_SmsApi_StartCellBroadcastForCMASReq_Req_t}
+	 /** 
+	payload is ::Result_t 
+	**/
+	MSG_SMS_START_CB_FORCMAS_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x1B5,
+	 /** 
 	api is CAPI2_CcApi_IsThereEmergencyCall 
 	**/
 	MSG_CC_IS_THERE_EMERGENCY_CALL_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1C8,

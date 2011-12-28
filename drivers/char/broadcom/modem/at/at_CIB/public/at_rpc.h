@@ -1,18 +1,10 @@
 //***************************************************************************
 /****************************************************************************
+* (c)1999-2011 Broadcom Corporation
 *
-*     Copyright (c) 2010 Broadcom Corporation
-*           All Rights Reserved
-*
-*     No portions of this material may be reproduced in any form without the
-*     written permission of:
-*
-*           Broadcom Corporation
-*           5300 California Avenue (Buildings 1-8)
-*           Irvine, California 92617 
-*
-*     All information contained in this document is Broadcom Corporation
-*     company private, proprietary, and trade secret.
+* Unless you and Broadcom execute a separate written software license agreement governing use of this software,
+* this software is licensed to you under the terms of the GNU General Public License version 2,
+* available at http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
 *
 ****************************************************************************/
 /**
