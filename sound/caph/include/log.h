@@ -34,15 +34,11 @@
 #ifndef __LOG_H__
 #define __LOG_H__
 
-//#include <plat/osdal_os.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include <linux/delay.h>
 #include <linux/jiffies.h>
 #include <linux/printk.h>
-
-//#define Log_DebugPrintf dprintf
-
 
 //#define memset(x,y,z)  
 
@@ -63,17 +59,6 @@ extern int gAudioDebugLevel;
 #endif
 
 #define audio_xassert(a, b) {if((a)==0) Log_DebugPrintf(LOGID_AUDIO, "%s assert line %d, %d, 0x%lx.\r\n", __FUNCTION__, __LINE__, a, (UInt32)b);}
-
-
-#define OSTASK_Sleep(x)  \
-{\
-    /*unsigned long oldJiffies = jiffies;*/ \
-    mdelay(x);\
-    /*int delay = (jiffies-oldJiffies)*1000/HZ;*/   \
-    /*Log_DebugPrintf(LOGID_AUDIO,"richlu plan delay %dms, real deay = %dms\n", x, delay);*/    \
-}
-
-
 
 
 //

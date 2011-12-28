@@ -33,7 +33,7 @@
 //=============================================================================
 // Include directives
 //=============================================================================
-
+#include <linux/kernel.h>
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
@@ -42,7 +42,7 @@
 
 #include "bcm_fuse_sysparm_CIB.h"
 #include "ostask.h"
-#include "osheap.h"
+
 #include "log.h"
 #include "csl_caph.h"
 #include "csl_apcmd.h"
@@ -362,7 +362,7 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
 
 	// The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done since it is a command via CP.
-		OSTASK_Sleep(1);
+		mdelay(1);
 		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,FALSE,FALSE);)
 	}
 	else
@@ -374,7 +374,7 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
 
 		// The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done since it is a command via CP.
-		OSTASK_Sleep(1);
+		mdelay(1);
 	}
 
 	AUDDRV_SetVoiceCallFlag(TRUE);  //let HW control logic know.
@@ -384,7 +384,7 @@ void AUDDRV_Telephony_Init ( AUDIO_SOURCE_Enum_t	mic,
 #else
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0, 0 );
 #endif
-	OSTASK_Sleep( 40 );
+	mdelay( 40 );
 
 #if defined(ENABLE_DMA_VOICE)
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0 );
@@ -509,7 +509,7 @@ void AUDDRV_Telephony_RateChange( unsigned int sample_rate )
 
 	//AUDDRV_Enable_Input ( AUDDRV_VOICE_INPUT, mic, AUDIO_SAMPLING_RATE_8000);
 
-	OSTASK_Sleep( 40 );
+	mdelay( 40 );
 
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0 );
@@ -644,7 +644,7 @@ void AUDDRV_Telephony_Deinit (void)
 
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
 
-		OSTASK_Sleep( 3 ); //make sure audio is off, rtos does not have this.
+		mdelay( 3 ); //make sure audio is off, rtos does not have this.
 
 		AUDDRV_Telephony_DeinitHW( );
 	}
@@ -709,7 +709,7 @@ void AUDDRV_EnableDSPOutput (
 {
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_EnableDSPOutput mixer %d, bInVoiceCall %d, sample_rate %ld *\n\r", mixer_speaker_selection, bInVoiceCall, sample_rate);
 
-	OSTASK_Sleep( 5 );	//sometimes BBC video has no audio. This delay may help the mixer filter and mixer gain loading.
+	mdelay( 5 );	//sometimes BBC video has no audio. This delay may help the mixer filter and mixer gain loading.
 	currVoiceSpkr = mixer_speaker_selection;
 
 	if(bInVoiceCall != TRUE)

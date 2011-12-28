@@ -54,13 +54,13 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "osqueue.h"
 #include "ossemaphore.h"
-#include "osheap.h"
+
 #include "msconsts.h"
 #include "shared.h"
 #include "csl_aud_queue.h"
 #include "csl_vpu.h"
 #include "csl_arm2sp.h"
-#include "osdal_os.h"
+
 #include <mach/io_map.h>
 #include "linux/gpio.h"
 #include "linux/interrupt.h"

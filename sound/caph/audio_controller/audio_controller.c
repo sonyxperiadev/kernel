@@ -53,7 +53,6 @@
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "log.h"
-#include "osheap.h"
 
 #ifdef CONFIG_DIGI_MIC
 #ifdef CONFIG_BCMPMU_AUDIO
@@ -2816,7 +2815,7 @@ static void powerOnExternalAmp(
 
 			AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
 			AUDIO_PMU_HS_POWER(FALSE);
-			OSTASK_Sleep(20);
+			mdelay(20);
 		}
 		HS_IsOn = FALSE;
 	}
@@ -2830,7 +2829,7 @@ static void powerOnExternalAmp(
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu HS amp, gain %d\n", hs_gain);
 			AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
 			AUDIO_PMU_HS_POWER(TRUE);
-			OSTASK_Sleep(75);
+			mdelay(75);
 
 		}
 

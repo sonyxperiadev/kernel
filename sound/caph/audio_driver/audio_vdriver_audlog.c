@@ -34,12 +34,7 @@
 #include <linux/module.h>
 #include "mobcom_types.h"
 #include "resultcode.h"
-#include "ostask.h"
-#include "osqueue.h"
-#include "ossemaphore.h"
-#include "osheap.h"
 #include "msconsts.h"
-
 
 #include "audio_consts.h"
 #include "audio_ddriver.h"

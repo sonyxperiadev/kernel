@@ -38,12 +38,12 @@
 #include <linux/kernel.h>
 #include <linux/workqueue.h>
 #include <linux/slab.h>
-#include "plat/osdal_os.h"   
+   
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "audio_ddriver.h"
-#include "osdal_os.h"
+
 #include "log.h"
 #include "csl_caph.h"
 #include "audio_vdriver.h"

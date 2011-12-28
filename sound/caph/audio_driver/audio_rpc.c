@@ -24,6 +24,7 @@
 /************************************************************************************************/
 #include "mobcom_types.h"
 #include "resultcode.h"
+
 #include "taskmsgs.h"
 #include "ipcproperties.h"
 

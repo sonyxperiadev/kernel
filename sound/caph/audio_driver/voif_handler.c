@@ -62,7 +62,7 @@ static void VOIF_CB_Fxn (Int16 * ulData, Int16 *dlData, UInt32 sampleCount, UInt
         memset (dlData, 0, sampleCount * sizeof(Int16));
     }
 
-    OSTASK_Sleep (voifDelay);
+    mdelay (voifDelay);
 #endif
 	//To Be Filled by customer
     return;

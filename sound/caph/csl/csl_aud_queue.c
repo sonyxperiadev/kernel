@@ -38,10 +38,14 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 * @addtogroup AudioDriverGroup
 * @{
 */
+#include <linux/kernel.h>
+#include <linux/slab.h>
+#define OSHEAP_Alloc(s)	kzalloc((s), GFP_KERNEL)
+#define OSHEAP_Delete(a)	kfree((a))
 
 #include "mobcom_types.h"
 #include "audio_consts.h"
-#include "osheap.h"	
+	
 #include "log.h"
 #include "csl_aud_queue.h"
 

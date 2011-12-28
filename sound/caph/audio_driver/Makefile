@@ -65,6 +65,7 @@ endif
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/chal/
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/csl/
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/osabstract/
+EXTRA_CFLAGS += -I./drivers/char/broadcom/modem/public/
 
 #audio driver Source Files
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= at_aud_ctl.o 

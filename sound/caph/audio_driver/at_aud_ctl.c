@@ -185,7 +185,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
         case 12: //at*maudmode=12  --> disable loopback path
             loopback_status = 0;
             AUDCTRL_SetAudioLoopback( FALSE, loopback_input, loopback_output,1);
-            //OSTASK_Sleep(100);
+            //mdelay(100);
             BCM_AUDIO_DEBUG("%s disable loopback from src %d to sink %d \n", __FUNCTION__, loopback_input, loopback_output);
             break;
 
