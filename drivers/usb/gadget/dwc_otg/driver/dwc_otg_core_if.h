@@ -56,7 +56,7 @@ extern void dwc_otg_cil_remove(dwc_otg_core_if_t * _core_if);
 
 extern void dwc_otg_enable_global_interrupts(dwc_otg_core_if_t * _core_if);
 extern void dwc_otg_disable_global_interrupts(dwc_otg_core_if_t * _core_if);
-
+extern void dwc_otg_start_stop_phy_clk(dwc_otg_core_if_t* core_if, bool start);
 extern uint8_t dwc_otg_is_device_mode(dwc_otg_core_if_t * _core_if);
 extern uint8_t dwc_otg_is_host_mode(dwc_otg_core_if_t * _core_if);
 

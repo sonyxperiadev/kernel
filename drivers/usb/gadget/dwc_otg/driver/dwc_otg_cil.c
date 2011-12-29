@@ -104,6 +104,19 @@ void w_init_core(void *p)
 	}
 }
 
+void w_shutdown_core(void *p)
+{
+	dwc_otg_core_if_t *core_if = p;
+
+	if (core_if->op_state == B_PERIPHERAL) {
+		dwc_otg_start_stop_phy_clk(core_if, false);
+#ifdef CONFIG_USB_OTG_UTILS
+		if (core_if->xceiver->shutdown)
+			otg_shutdown(core_if->xceiver);
+#endif
+	}
+}
+
 #ifdef CONFIG_USB_OTG_UTILS
 static int dwc_otg_xceiv_nb_callback(struct notifier_block *nb, unsigned long val,
 			       void *priv)
@@ -116,6 +129,11 @@ static int dwc_otg_xceiv_nb_callback(struct notifier_block *nb, unsigned long va
 			/* Schedule a work item to init the core */
 			DWC_WORKQ_SCHEDULE(core_if->wq_otg, w_init_core,
 			   core_if, "init core");
+			break;
+		case USB_EVENT_NONE:
+			/* Schedule a work item to de-init the core */
+			DWC_WORKQ_SCHEDULE(core_if->wq_otg, w_shutdown_core,
+			   core_if, "shutdown core");
 			break;
 		default:
 			DWC_DEBUGPL(DBG_CIL, "Unhandled OTG notification\n");
@@ -1060,6 +1078,15 @@ int restore_lpm_i2c_regs(dwc_otg_core_if_t *core_if)
 	dwc_write_reg32(&core_if->core_global_regs->gi2cctl, gr->gi2cctl_local);
 	
 	return 0;
+}
+
+void dwc_otg_start_stop_phy_clk(dwc_otg_core_if_t* core_if, bool start)
+{
+	pcgcctl_data_t pcgcctl = {.d32 = 0 };
+
+	/* Start/Stop the Phy Clock */
+	pcgcctl.b.stoppclk = start ? 0 : 1;
+	dwc_modify_reg32(core_if->pcgcctl, 0, pcgcctl.d32);
 }
 
 int restore_essential_regs(dwc_otg_core_if_t *core_if, int rmode, int is_host)

@@ -242,18 +242,6 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t * core_if)
 	return 1;
 }
 
-void w_shutdown_core(void *p)
-{
-	dwc_otg_core_if_t *core_if = p;
-
-	if ((core_if->op_state == B_PERIPHERAL) && (core_if->lx_state == DWC_OTG_L0)) {
-#ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver->shutdown)
-			otg_shutdown(core_if->xceiver);
-#endif
-	}
-}
-
 void w_conn_id_status_change(void *p)
 {
 	dwc_otg_core_if_t *core_if = p;

@@ -224,9 +224,8 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 		bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_VBUS_STATUS, &vbus_status);
 #endif
 		if (!vbus_status) {
-			/* Non-ACA ID interpretation for now since RID_A is not tested yet on this platform */
-			bcm_hsotgctrl_phy_deinit(); /* Shutdown the core */
-			xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
+			/* Shutdown the core */
+			atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.notifier, USB_EVENT_NONE, NULL);
 		} else {
 			/* Set Vbus valid state */
 			bcm_hsotgctrl_phy_set_vbus_stat(true);
