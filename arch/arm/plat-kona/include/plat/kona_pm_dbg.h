@@ -29,6 +29,7 @@ struct snapshot {
 
 	/* Fields used internally */
 	u32 (*handler)(struct snapshot *);
+	struct list_head node;
 };
 
 /* Helpers for constructing the snapshot table */
