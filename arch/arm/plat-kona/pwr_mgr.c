@@ -58,6 +58,8 @@
 #define PWRMGR_SEM_VALUE 1
 #endif
 
+#define I2C_WRITE_ADDR(x)	((x) << 1)
+#define I2C_READ_ADDR(x)	(1 | ((x) << 1))
 
 #ifdef CONFIG_DEBUG_FS
 #ifndef PWRMGR_EVENT_ID_TO_STR
@@ -1295,17 +1297,19 @@ static irqreturn_t pwr_mgr_irq_handler(int irq, void *dev_id)
 {
 	u32 status, mask;
 
-	pr_info("%s\n",__func__);
+	pwr_dbg("%s\n", __func__);
 
 	BUG_ON(unlikely(!pwr_mgr.info));
 
 	status = readl(PWR_MGR_REG_ADDR(PWRMGR_INTR_STATUS_OFFSET));
 	mask = readl(PWR_MGR_REG_ADDR(PWRMGR_INTR_MASK_OFFSET));
-	pr_info("%s: status : %x, mask =%x\n", __func__,status, mask);
+
+	pwr_dbg("%s: status : %x, mask =%x\n", __func__, status, mask);
 	if(status & PWR_MGR_INTR_MASK(PWRMGR_INTR_I2C_SW_SEQ) &&
 			mask & PWR_MGR_INTR_MASK(PWRMGR_INTR_I2C_SW_SEQ))
 	{
-		pr_info("%s:PWRMGR_INTR_I2C_SW_SEQ\n",__func__);
+		/*Clear interrupts*/
+		pwr_mgr_clr_intr_status(PWRMGR_INTR_I2C_SW_SEQ);
 		complete(&pwr_mgr.i2c_seq_done);
 	}
 	if(pwr_mgr.info->flags & PROCESS_EVENTS_ON_INTR)
@@ -1313,7 +1317,10 @@ static irqreturn_t pwr_mgr_irq_handler(int irq, void *dev_id)
 		if(status & PWR_MGR_INTR_MASK(PWRMGR_INTR_EVENTS) &&
 				mask & PWR_MGR_INTR_MASK(PWRMGR_INTR_EVENTS))
 		{
-			pr_info("%s:PWRMGR_INTR_EVENTS\n",__func__);
+			/*Clear interrupts*/
+			pwr_mgr_clr_intr_status(PWRMGR_INTR_EVENTS);
+
+			pwr_dbg("%s:PWRMGR_INTR_EVENTS\n", __func__);
 			schedule_work(&pwr_mgr.pwrmgr_work);
 		}
 	}
@@ -1325,7 +1332,7 @@ static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 	u32 reg_val = 0;
 	u32 mask, shift;
 
-	pr_info("%s:cmd_offset = %d, cmd_data = %x reg_Addr = %x\n",__func__,
+	pwr_dbg("%s:cmd_offset = %d, cmd_data = %x reg_Addr = %x\n", __func__,
 						cmd_offset,cmd_data,
 						PWR_MGR_REG_ADDR(PWR_MGR_I2C_CMD_OFF_TO_REG_OFF(cmd_offset)));
 
@@ -1333,11 +1340,11 @@ static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 						PWR_MGR_I2C_CMD_OFF_TO_REG_OFF(cmd_offset)));
 	shift = PWR_MGR_I2C_CMD_OFF_TO_CMD_DATA_SHIFT(cmd_offset);
 	mask = PWR_MGR_I2C_CMD_OFF_TO_CMD_DATA_MASK(cmd_offset);
-	pr_info("%s:reg_val = %x, shift = %d, mask = %x\n",__func__,
+	pwr_dbg("%s:reg_val = %x, shift = %d, mask = %x\n", __func__,
 						reg_val,shift,mask);
 	reg_val &= ~mask;
 	reg_val |= cmd_data << shift;
-	pr_info("%s:new reg  = %x,\n",__func__, reg_val);
+	pwr_dbg("%s:new reg  = %x,\n", __func__, reg_val);
 	writel(reg_val,PWR_MGR_REG_ADDR(
 						PWR_MGR_I2C_CMD_OFF_TO_REG_OFF(cmd_offset)));
 
@@ -1349,13 +1356,21 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	int time;
 	int ret = 0;
 
-	pr_info("%s\n",__func__);
+	pwr_dbg("%s\n", __func__);
 	spin_lock(&pwr_mgr_lock);
 
 	reg_val = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 	reg_val &= ~(PWRMGR_I2C_REQ_TRG_MASK|PWRMGR_I2C_SW_START_ADDR_MASK);
-	BUG_ON(reg_val & PWRMGR_I2C_REQ_BUSY_MASK);
+	/**
+	 * Commented line below as this may not be necessarily cleared by the
+	 * pwr mgr block. Software will rely on completion interrupt from
+	 * i2c sequencer
+	 */
 
+	/* BUG_ON(reg_val & PWRMGR_I2C_REQ_BUSY_MASK); */
+
+	/*Make sure that interrupt bit is cleared*/
+	pwr_mgr_clr_intr_status(PWRMGR_INTR_I2C_SW_SEQ);
 	switch(action)
 	{
 	case I2C_SEQ_READ:
@@ -1397,12 +1412,14 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	return ret;
 }
 
-int pwr_mgr_pmu_reg_read(u8 reg_addr,u8 slave_addr, u8* reg_val)
+int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 {
+
+
 	int ret;
 	u32 reg;
 
-	pr_info("%s\n",__func__);
+	pwr_dbg("%s\n", __func__);
 	if(unlikely(!pwr_mgr.info))
 	{
 		pr_info("%s:ERROR - pwr mgr not initialized\n",__func__);
@@ -1411,10 +1428,19 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr,u8 slave_addr, u8* reg_val)
 
 	spin_lock(&pwr_mgr_lock);
 
-	pwr_mgr_update_i2c_cmd_data(pwr_mgr.info->i2c_rd_slv_addr_off,
-									(slave_addr << 1));
-	pwr_mgr_update_i2c_cmd_data(pwr_mgr.info->i2c_rd_reg_addr_off,
-									reg_addr);
+	if (pwr_mgr.info->i2c_rd_slv_id_off1 >= 0)
+		pwr_mgr_update_i2c_cmd_data(
+				(u32)pwr_mgr.info->i2c_rd_slv_id_off1,
+				I2C_WRITE_ADDR(slave_id));
+	if (pwr_mgr.info->i2c_rd_reg_addr_off >= 0)
+		pwr_mgr_update_i2c_cmd_data(
+				(u32)pwr_mgr.info->i2c_rd_reg_addr_off,
+				reg_addr);
+	if (pwr_mgr.info->i2c_rd_slv_id_off2 >= 0)
+		pwr_mgr_update_i2c_cmd_data(
+				(u32)pwr_mgr.info->i2c_rd_slv_id_off2,
+				I2C_READ_ADDR(slave_id));
+
 	spin_unlock(&pwr_mgr_lock);
 
 	ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ);
@@ -1431,10 +1457,13 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr,u8 slave_addr, u8* reg_val)
 }
 EXPORT_SYMBOL(pwr_mgr_pmu_reg_read);
 
-int pwr_mgr_pmu_reg_write(u8 reg_addr,u8 slave_addr, u8 reg_val)
+int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 {
+	int ret = 0;
+	u32 reg;
+	u8 i2c_data;
 
-	pr_info("%s\n",__func__);
+	pwr_dbg("%s\n", __func__);
 	if(unlikely(!pwr_mgr.info))
 	{
 		pr_info("%s:ERROR - pwr mgr not initialized\n",__func__);
@@ -1443,25 +1472,45 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr,u8 slave_addr, u8 reg_val)
 
 	spin_lock(&pwr_mgr_lock);
 
-	pwr_mgr_update_i2c_cmd_data(pwr_mgr.info->i2c_wr_slv_addr_off,
-									(slave_addr << 1));
-	pwr_mgr_update_i2c_cmd_data(pwr_mgr.info->i2c_wr_reg_addr_off,
-									reg_addr);
-	pwr_mgr_update_i2c_cmd_data(pwr_mgr.info->i2c_wr_val_addr_off,
-									reg_val);
+	if (pwr_mgr.info->i2c_wr_slv_id_off >= 0)
+		pwr_mgr_update_i2c_cmd_data(
+				(u32)pwr_mgr.info->i2c_wr_slv_id_off,
+				I2C_WRITE_ADDR(slave_id));
+	if (pwr_mgr.info->i2c_wr_reg_addr_off >= 0)
+		pwr_mgr_update_i2c_cmd_data(
+				(u32)pwr_mgr.info->i2c_wr_reg_addr_off,
+				reg_addr);
+	if (pwr_mgr.info->i2c_wr_val_addr_off >= 0)
+		pwr_mgr_update_i2c_cmd_data(
+				(u32)pwr_mgr.info->i2c_wr_val_addr_off,
+				reg_val);
 
 	spin_unlock(&pwr_mgr_lock);
 
-	return pwr_mgr_sw_i2c_seq_start(I2C_SEQ_WRITE);
+	ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_WRITE);
 
+	/**
+	 * This code check for the NACK from the PMU
+	 */
+	if (ret == 0) {
+		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
+		i2c_data = reg & PWRMGR_I2C_READ_DATA_MASK;
+		if (i2c_data & 0x1) {
+			pr_info("PWRMGR: I2C NACK from PMU\n");
+			ret = -EAGAIN;
+		}
+	}
+	return ret;
 }
 EXPORT_SYMBOL(pwr_mgr_pmu_reg_write);
 
-int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start,u8 slave_addr, u8 count, u8* reg_val)
+int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start, u8 slave_id, u8 count,
+			     u8 *reg_val)
 {
 	int i;
-	int ret = -EPERM;
-	pr_info("%s\n",__func__);
+	int ret = 0;
+	pwr_dbg("%s\n", __func__);
+
 	if(unlikely(!pwr_mgr.info))
 	{
 		pr_info("%s:ERROR - pwr mgr not initialized\n",__func__);
@@ -1471,7 +1520,9 @@ int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start,u8 slave_addr, u8 count, u8* reg_
 	{
 		for(i =0; i < count; i++)
 		{
-			ret = pwr_mgr_pmu_reg_read(reg_addr_start+i,slave_addr,&reg_val[i]);
+			ret = pwr_mgr_pmu_reg_read(reg_addr_start+i,
+					slave_id,
+					&reg_val[i]);
 			if(ret)
 				return ret;
 		}
@@ -1480,21 +1531,24 @@ int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start,u8 slave_addr, u8 count, u8* reg_
 }
 EXPORT_SYMBOL(pwr_mgr_pmu_reg_read_mul);
 
-int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start,u8 slave_addr, u8 count, u8* reg_val)
+int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start, u8 slave_id, u8 count,
+			      u8 *reg_val)
 {
 	int i;
-	int ret = -EPERM;
-	pr_info("%s\n",__func__);
-	if(unlikely(!pwr_mgr.info))
+	int ret = 0;
+	pwr_dbg("%s\n", __func__);
+	if (unlikely(!pwr_mgr.info))
 	{
-		pr_info("%s:ERROR - pwr mgr not initialized\n",__func__);
+		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
 		return -EPERM;
 	}
-	if(pwr_mgr.info->flags & I2C_SIMULATE_BURST_MODE)
+	if (pwr_mgr.info->flags & I2C_SIMULATE_BURST_MODE)
 	{
 		for(i =0; i < count; i++)
 		{
-			ret = pwr_mgr_pmu_reg_write(reg_addr_start+i,slave_addr,reg_val[i]);
+			ret = pwr_mgr_pmu_reg_write(reg_addr_start+i,
+					slave_id,
+					reg_val[i]);
 			if(ret)
 				return ret;
 		}
@@ -1508,8 +1562,8 @@ int pwr_mgr_mask_intr(u32 intr, bool mask)
 	u32 reg_val = 0;
 	unsigned long flgs;
 	u32 reg_mask = 0;
-	pr_info("%s\n",__func__);
-	if(unlikely(!pwr_mgr.info))
+	pwr_dbg("%s\n", __func__);
+	if (unlikely(!pwr_mgr.info))
 	{
 		pr_info("%s:ERROR - pwr mgr not initialized\n",__func__);
 		return -EPERM;
@@ -1539,7 +1593,7 @@ int pwr_mgr_get_intr_status(u32 intr)
 {
 	u32 reg_val = 0;
 	unsigned long flgs;
-	pr_info("%s\n",__func__);
+	pwr_dbg("%s\n", __func__);
 	if(unlikely(!pwr_mgr.info))
 	{
 		pr_info("%s:ERROR - pwr mgr not initialized\n",__func__);
@@ -1553,6 +1607,54 @@ int pwr_mgr_get_intr_status(u32 intr)
 	return !!(reg_val & (1 << intr));
 }
 EXPORT_SYMBOL(pwr_mgr_get_intr_status);
+
+int pwr_mgr_clr_intr_status(u32 intr)
+{
+	u32 mask = intr;
+	unsigned long flgs;
+	pwr_dbg("%s\n", __func__);
+	if (unlikely(!pwr_mgr.info)) {
+		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
+		return -EPERM;
+	}
+
+	BUG_ON(PWRMGR_INTR_ALL != intr &&
+					intr >= PWRMGR_INTR_MAX);
+	if (intr == PWRMGR_INTR_ALL)
+		mask = 0xFFFFFFFF >> (32 - PWRMGR_INTR_MAX);
+
+	/*Write 1 to clear */
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+	writel(PWR_MGR_INTR_MASK(mask),
+		PWR_MGR_REG_ADDR(PWRMGR_INTR_STATUS_OFFSET));
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+	return 0;
+}
+EXPORT_SYMBOL(pwr_mgr_clr_intr_status);
+
+/**
+ * Added for debugging purpose but not called
+ */
+
+static void pwr_mgr_dump_i2c_cmd_regs(void)
+{
+	int idx;
+	u32 reg_val;
+	int cmd0, cmd1, data0, data1;
+
+	for (idx = 0; idx < 31; idx++) {
+		reg_val = readl(PWR_MGR_REG_ADDR(
+			PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_OFFSET +
+			idx * 4));
+
+		cmd0 = (reg_val&(0xf<<8))>>8;
+		data0 = reg_val&0xFF;
+		cmd1 = (reg_val&(0xF<<20))>>20;
+		data1 = (reg_val&(0xFF<<12))>>12;
+		pr_info("[%d]\t%02x\t%02x\n[%d]\t%02x\t%02x\n", idx*2, cmd0,
+				data0, (idx*2)+1, cmd1, data1);
+	}
+}
 
 #endif
 
@@ -1596,14 +1698,9 @@ int pwr_mgr_init(struct pwr_mgr_info* info)
                                  "pwr_mgr",NULL);
 
 #endif
-
 	return ret;
 }
 EXPORT_SYMBOL(pwr_mgr_init);
-
-
-
-
 
 #ifdef CONFIG_DEBUG_FS
 

@@ -219,12 +219,13 @@ struct pwr_mgr_info
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 pwrmgr_intr;
 	u32 i2c_rd_off;
-	u32 i2c_rd_slv_addr_off;
-	u32 i2c_rd_reg_addr_off;
+	int i2c_rd_slv_id_off1;  /*slave id offset -  write reg address*/
+	int i2c_rd_slv_id_off2; /*slave id offset - read reg value*/
+	int i2c_rd_reg_addr_off;
 	u32 i2c_wr_off;
-	u32 i2c_wr_slv_addr_off;
-	u32 i2c_wr_reg_addr_off;
-	u32 i2c_wr_val_addr_off;
+	int i2c_wr_slv_id_off;
+	int i2c_wr_reg_addr_off;
+	int i2c_wr_val_addr_off;
 	u32 i2c_seq_timeout; /*timeout in ms*/
 #endif
 };
@@ -280,11 +281,14 @@ int pwr_mgr_init(struct pwr_mgr_info* info);
 
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 int pwr_mgr_mask_intr(u32 intr, bool mask);
+int pwr_mgr_clr_intr_status(u32 intr);
 int pwr_mgr_get_intr_status(u32 intr);
-int pwr_mgr_pmu_reg_read(u8 reg_addr,u8 slave_addr, u8* reg_val);
-int pwr_mgr_pmu_reg_write(u8 reg_addr,u8 slave_addr, u8 reg_val);
-int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start,u8 slave_addr, u8 count, u8* reg_val);
-int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start,u8 slave_addr, u8 count, u8* reg_val);
+int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val);
+int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val);
+int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start, u8 slave_id,
+		u8 count, u8 *reg_val);
+int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start, u8 slave_id,
+		u8 count, u8 *reg_val);
 #endif /*CONFIG_KONA_PWRMGR_REV2*/
 
 #ifdef CONFIG_DEBUG_FS

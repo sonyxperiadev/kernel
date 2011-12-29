@@ -187,13 +187,14 @@ struct pwrmgr_init_param
 	u32 vlt_tbl_size;
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 i2c_rd_off;
-	u32 i2c_rd_slv_addr_off;
-	u32 i2c_rd_reg_addr_off;
+	int i2c_rd_slv_id_off1;  /*slave id offset -  write reg address*/
+	int i2c_rd_slv_id_off2; /*slave id offset - read reg value*/
+	int i2c_rd_reg_addr_off;
 	u32 i2c_wr_off;
-	u32 i2c_wr_slv_addr_off;
-	u32 i2c_wr_reg_addr_off;
-	u32 i2c_wr_val_addr_off;
-	u32 i2c_seq_timeout;
+	int i2c_wr_slv_id_off;
+	int i2c_wr_reg_addr_off;
+	int i2c_wr_val_addr_off;
+	u32 i2c_seq_timeout; /*timeout in ms*/
 #endif
 };
 

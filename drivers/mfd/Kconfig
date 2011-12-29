@@ -58,6 +58,13 @@ config MFD_BCM59039
 	help
 	  This enables PMU driver to support BCM59039.
 
+config MFD_BCM_PWRMGR_SW_SEQUENCER
+	bool "MFD BCM POWER MANAGER I2C SEQUENCER Support"
+	depends on MFD_BCMPMU && KONA_PWRMGR_REV2 && RHEA_PWRMGR_USE_DUMMY_SEQ=n
+	default n
+	help
+	  This enables power manager i2c software sequencer support.
+
 config MFD_88PM860X
 	bool "Support Marvell 88PM8606/88PM8607"
 	depends on I2C=y && GENERIC_HARDIRQS

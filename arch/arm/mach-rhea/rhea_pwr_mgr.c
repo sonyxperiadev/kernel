@@ -356,13 +356,21 @@ int __init rhea_pwr_mgr_init()
 
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	rhea_pwr_mgr_info.i2c_rd_off = pwrmgr_init_param.i2c_rd_off;
-	rhea_pwr_mgr_info.i2c_rd_slv_addr_off = pwrmgr_init_param.i2c_rd_slv_addr_off;
-	rhea_pwr_mgr_info.i2c_rd_reg_addr_off = pwrmgr_init_param.i2c_rd_reg_addr_off;
+	rhea_pwr_mgr_info.i2c_rd_slv_id_off1 =
+		pwrmgr_init_param.i2c_rd_slv_id_off1;
+	rhea_pwr_mgr_info.i2c_rd_slv_id_off2 =
+		pwrmgr_init_param.i2c_rd_slv_id_off2;
+	rhea_pwr_mgr_info.i2c_rd_reg_addr_off =
+		pwrmgr_init_param.i2c_rd_reg_addr_off;
 	rhea_pwr_mgr_info.i2c_wr_off = pwrmgr_init_param.i2c_wr_off;
-	rhea_pwr_mgr_info.i2c_wr_slv_addr_off = pwrmgr_init_param.i2c_wr_slv_addr_off;
-	rhea_pwr_mgr_info.i2c_wr_reg_addr_off = pwrmgr_init_param.i2c_wr_reg_addr_off;
-	rhea_pwr_mgr_info.i2c_wr_val_addr_off = pwrmgr_init_param.i2c_wr_val_addr_off;
-	rhea_pwr_mgr_info.i2c_seq_timeout = pwrmgr_init_param.i2c_seq_timeout;
+	rhea_pwr_mgr_info.i2c_wr_slv_id_off =
+		pwrmgr_init_param.i2c_wr_slv_id_off;
+	rhea_pwr_mgr_info.i2c_wr_reg_addr_off =
+		pwrmgr_init_param.i2c_wr_reg_addr_off;
+	rhea_pwr_mgr_info.i2c_wr_val_addr_off =
+		pwrmgr_init_param.i2c_wr_val_addr_off;
+	rhea_pwr_mgr_info.i2c_seq_timeout =
+		pwrmgr_init_param.i2c_seq_timeout;
 #endif
 
 /*For B0, it was observed that if MM CCU is switched to and from shutdown
