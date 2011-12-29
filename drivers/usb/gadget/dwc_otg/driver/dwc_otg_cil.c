@@ -1084,7 +1084,7 @@ void dwc_otg_start_stop_phy_clk(dwc_otg_core_if_t* core_if, bool start)
 {
 	pcgcctl_data_t pcgcctl = {.d32 = 0 };
 
-	/* Start/Stop the Phy Clock */
+	/* Assert utmi_suspend_n for the PHY to turn off the Phy Clock. This is Synopsys register and based on the documentation is not on the AHB clock domain */
 	pcgcctl.b.stoppclk = start ? 0 : 1;
 	dwc_modify_reg32(core_if->pcgcctl, 0, pcgcctl.d32);
 }
