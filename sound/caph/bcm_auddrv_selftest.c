@@ -52,9 +52,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "csl_caph.h"
 
-#include "osqueue.h"
-#include "ossemaphore.h"
-
 #include "msconsts.h"
 #include "shared.h"
 #include "csl_aud_queue.h"

@@ -37,17 +37,9 @@
 //#define NO_DSP_TEST
 
 
-#include "chip_version.h"
-
-#if CHIPVERSION < CHIP_VERSION(BCM2153,40)
-#error	DO NOT SUPPORT 2153C0 and earlier in this file any more.
-#endif
 #define MULTIBAND_SEARCH
 
-
-
 #define NEW_FRAME_ENTRY
-
 
 #define RFIC_REGISTER_READ
 

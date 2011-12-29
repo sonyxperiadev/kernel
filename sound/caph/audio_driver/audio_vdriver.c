@@ -34,6 +34,7 @@
 // Include directives
 //=============================================================================
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
@@ -41,7 +42,6 @@
 #include "csl_apcmd.h"
 
 #include "bcm_fuse_sysparm_CIB.h"
-#include "ostask.h"
 
 #include "log.h"
 #include "csl_caph.h"
@@ -107,9 +107,7 @@ static Boolean controlFlagForCustomGain = FALSE;
 typedef struct Audio_Driver_t
 {
 	UInt8					isRunning;
-	Task_t					task;
 	UInt32					taskID;
-	Queue_t 				msgQueue;
 } Audio_Driver_t;
 
 static Audio_Driver_t sAudDrv = {0};

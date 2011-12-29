@@ -61,7 +61,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "brcm_rdb_sysmap.h"
 #include "brcm_rdb_khub_clk_mgr_reg.h"
-#include "osqueue.h"
+
 #include "ossemaphore.h"
 #define OSHEAP_Alloc(s)	kzalloc((s), GFP_KERNEL)
 #define OSHEAP_Delete(a)	kfree((a))
