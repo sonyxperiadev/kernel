@@ -1187,11 +1187,11 @@ static int rhea_camera_power(struct device *dev, int on)
 			return -1;
 		}
 		if (gpio_request_one(SENSOR_0_GPIO_RST, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "CamRst")) {
-			printk(KERN_ERR"$s: failed to get (CamRst) gpio\n", __func__);
+			printk(KERN_ERR"%s: failed to get (CamRst) gpio\n", __func__);
 			return -1;
 		}
 		if (gpio_request_one(SENSOR_0_GPIO_PWRDN, GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "CamPwr")) {
-			printk(KERN_ERR"$s: failed to get (CamPwr) gpio\n", __func__);
+			printk(KERN_ERR"%s: failed to get (CamPwr) gpio\n", __func__);
 			return -1;
 		}
 	}
