@@ -29,6 +29,8 @@
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/i2c-kona.h>
+#include <mach/chip_pinmux.h>
+#include <mach/pinmux.h>
 
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 #include <plat/pwr_mgr.h>
@@ -1427,6 +1429,51 @@ static void i2c_master_reset(struct work_struct *work)
 	bsc_disable_clk(dev);
 	up(&dev->dev_lock);
 }
+#define BSC1CLK_PAD_NAME	PN_BSC1CLK
+#define BSC1DAT_PAD_NAME	PN_BSC1DAT
+#define BSC2CLK_PAD_NAME	PN_GPIO16
+#define BSC2DAT_PAD_NAME	PN_GPIO17
+#define PMBBSCCLK_PAD_NAME	PN_PMBSCCLK
+#define PMBBSCDAT_PAD_NAME	PN_PMBSCDAT
+
+/*	Select slew rate ctrl
+ *	0 = unslewed output
+ *	1 = slewed output
+ */
+static void pin_set_slew(enum PIN_NAME name, unsigned char slewed)
+{
+	struct pin_config GPIOSetup;
+
+	GPIOSetup.name = name;
+	if(pinmux_get_pin_config(&GPIOSetup) < 0)
+		pr_err("%s cannot get pin config\n", __func__);
+	GPIOSetup.reg.b.slew_rate_ctrl = slewed;
+	if(pinmux_set_pin_config(&GPIOSetup) < 0)
+		pr_err("cannot set slew rate for bsc adaptor\n");
+}
+
+static void i2c_pin_cfg( int id, unsigned char slewed)
+{
+	if(id > 2){
+		pr_err("Invalid I2C adaptor id %d\n", id);
+		return;
+	}
+
+	switch (id){
+	case 0:
+		pin_set_slew(BSC1CLK_PAD_NAME, slewed);
+		pin_set_slew(BSC1DAT_PAD_NAME, slewed);
+		break;
+	case 1:
+		pin_set_slew(BSC2CLK_PAD_NAME, slewed);
+		pin_set_slew(BSC2DAT_PAD_NAME, slewed);
+		break;
+	case 2:
+		pin_set_slew(PMBBSCCLK_PAD_NAME, slewed);
+		pin_set_slew(PMBBSCDAT_PAD_NAME, slewed);
+		break;
+	}
+}
 
 static int __devinit bsc_probe(struct platform_device *pdev)
 {
@@ -1566,10 +1613,18 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		* value when the device switches back to fast speed
 		*/
 		dev->tim_val = bsc_get_tim((uint32_t)dev->virt_base);
+
+		pr_info("disable slew rate  for id = %d\n", pdev->id);
+		i2c_pin_cfg(pdev->id, 0);
+
 	}
 	else {
 		dev->high_speed_mode = 0;
 		bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
+
+		pr_info("enable slew rate  for id = %d\n", pdev->id);
+		i2c_pin_cfg(pdev->id, 1);
+
 	}
 
 	INIT_WORK(&dev->reset_work, i2c_master_reset);
