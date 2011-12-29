@@ -966,7 +966,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	paccy->usb_cb.callback = NULL;
 	paccy->usb_cb.clientdata = NULL;
 	paccy->adp_cal_done = 0;
-	paccy->det_state = USB_DETECT;
+	paccy->det_state = USB_IDLE;
 	paccy->usb_id_map = bcmpmu_get_usb_id_map(&paccy->usb_id_map_len);
 	paccy->otg_block_enabled = 0;
 	paccy->adp_block_enabled = 0;
