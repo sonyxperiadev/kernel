@@ -155,13 +155,55 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 
 #endif
 
-#ifdef CONFIG_KONA_HEADSET
+#ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
+
 #define HS_IRQ		gpio_to_irq(39)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
-#define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
+#define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
+
+static unsigned int rheass_button_adc_values [3][2] =
+{
+	/* SEND/END Min, Max*/
+	{0,	104},
+	/* Volume Up  Min, Max*/
+	{139,	270},
+	/* Volue Down Min, Max*/
+	{330,	680},
+};
+
 static struct kona_headset_pd headset_data = {
-	.hs_default_state = 1, /* GPIO state read is 0 on HS insert and 1 for
-							* HS remove*/
+	/* GPIO state read is 0 on HS insert and 1 for
+	 * HS remove
+	 */
+
+	.hs_default_state = 0,
+	/*
+	 * Because of the presence of the resistor in the MIC_IN line.
+	 * The actual ground is not 0, but a small offset is added to it.
+	 * This needs to be subtracted from the measured voltage to determine the
+	 * correct value. This will vary for different HW based on the resistor
+	 * values used.
+	 *
+	 * What this means to Rhearay?
+	 * From the schematics looks like there is no such resistor put on
+	 * Rhearay. That means technically there is no need to subtract any extra load
+	 * from the read Voltages. On other HW, if there is a resistor present
+	 * on this line, please measure the load value and put it here.
+	 */
+	.phone_ref_offset = 0,
+
+	/*
+	 * Inform the driver whether there is a GPIO present on the board to
+	 * detect accessory insertion/removal _OR_ should the driver use the
+	 * COMP1 for the same.
+	 */
+	.gpio_for_accessory_detection = 1,
+
+	/*
+	 * Pass the board specific button detection range 
+	 */
+	.button_adc_values = rheass_button_adc_values,
+
 };
 
 static struct resource board_headset_resource[] = {
@@ -180,16 +222,25 @@ static struct resource board_headset_resource[] = {
 		.end = HS_IRQ,
 		.flags = IORESOURCE_IRQ,
 	},
-	{	/* For Headset button IRQ */
+	{	/* For Headset button  press IRQ */
 		.start = HSB_IRQ,
 		.end = HSB_IRQ,
 		.flags = IORESOURCE_IRQ,
 	},
-        {       /* For Headset button  release IRQ */
-                .start = HSB_REL_IRQ,
-                .end = HSB_REL_IRQ,
-                .flags = IORESOURCE_IRQ,
-        },
+	{	/* For Headset button  release IRQ */
+		.start = HSB_REL_IRQ,
+		.end = HSB_REL_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+		/* For backward compatibility keep COMP1
+		 * as the last resource. The driver which
+		 * uses only GPIO and COMP2, might not use this at all
+		 */
+	{	/* COMP1 for type detection */
+		.start = BCM_INT_ID_AUXMIC_COMP1,
+		.end = HSB_REL_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
 };
 
 struct platform_device headset_device = {
@@ -201,7 +252,7 @@ struct platform_device headset_device = {
 		.platform_data = &headset_data,
 	},
 };
-#endif /* CONFIG_KONA_HEADSET */
+#endif /* CONFIG_KONA_HEADSET_MULTI_BUTTON */
 
 #ifdef CONFIG_DMAC_PL330
 static struct kona_pl330_data rhea_pl330_pdata =	{
@@ -519,8 +570,7 @@ static struct platform_device *rhea_stone_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
 	&bcm_kp_device,
 #endif
-
-#ifdef CONFIG_KONA_HEADSET
+#ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 	&headset_device,
 #endif
 
