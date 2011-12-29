@@ -49,6 +49,8 @@ the GPL, without Broadcom's express prior written consent.
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
+
+#include "bcm_fuse_sysparm_CIB.h"
 #include "audio_ddriver.h"
 
 #include "csl_caph.h"
@@ -922,10 +924,11 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 	switch(Params[0])//P1
 	{
 	case 6:	//at*maudvol=6
+		mode = AUDCTRL_GetAudioMode();
 		//Get volume from driver. Range -36 ~ 0 dB in Driver and DSP:
 		Params[0] = AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_mB );
 		Params[0] = Params[0]/100;  //dB
-		Params[0] += 36;  //Range 0~36 dB shown in PCG
+		Params[0] += AUDIO_GetParmAccessPtr()[mode].voice_volume_max;//Range 0~36 dB shown in PCG
 		//or
 		//pVolume = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
 		//Params[0] = pVolume[0];
@@ -939,7 +942,7 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		pVolume[0] = Params[1];
 		pVolume[1] = Params[1];
 		vol = Params[1];
-		vol -= 36;  //Range -36 ~ 0 dB in DSP
+		vol -= AUDIO_GetParmAccessPtr()[mode].voice_volume_max;//Range -36 ~ 0 dB in DSP
 		AUDCTRL_SetTelephonySpkrVolume(	AUDIO_SINK_UNDEFINED,
 							(vol*100),   //Params[1] in dB
 							AUDIO_GAIN_FORMAT_mB

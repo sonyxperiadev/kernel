@@ -42,6 +42,8 @@
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
+
+#include "bcm_fuse_sysparm_CIB.h"
 #include "audio_ddriver.h"
 
 #include "log.h"
