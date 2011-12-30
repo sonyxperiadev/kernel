@@ -351,14 +351,15 @@ static int __pi_init_state(struct pi *pi)
 			if(pi->flags & PI_ENABLE_ON_INIT)
 				pi->usg_cnt++;
 
-			if(pi->usg_cnt)
-				 pi->ops->enable(pi,1);
+			if (pi->usg_cnt && pi->ops && pi->ops->enable)
+				pi->ops->enable(pi, 1);
 			else
 			{
 			/*Save Context if state_allowed will cause the CCUs to shutdown*/
 				if(pi->pi_state[pi->state_allowed].flags & PI_STATE_SAVE_CONTEXT)
 					pi_save_state(pi, 1 /*save*/);
-				 pi->ops->enable(pi,0);
+				if (pi->ops && pi->ops->enable)
+					pi->ops->enable(pi, 0);
 			}
 		}
 		pwr_mgr_event_get_pi_policy(SOFTWARE_0_EVENT,pi->id,&cfg);

@@ -38,7 +38,7 @@ struct tps728xx {
 	unsigned int vout1;
 
 	unsigned int vset_gpio;
-	unsigned int enable_gpio;
+	int enable_gpio;
 	struct regulator_dev *regl;
 };
 

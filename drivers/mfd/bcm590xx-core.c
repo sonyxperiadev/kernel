@@ -214,7 +214,7 @@ int bcm590xx_enable_irq(struct bcm590xx *bcm590xx, int irq)
 	regInx = IRQ_TO_REG_INX(irq);
 
 	st = bcm590xx_reg_read(bcm590xx, regInx + BCM590XX_INT_MASK_REG_BASE);
-	if (reg_val < 0) {
+	if (st < 0) {
 		printk( "bcm590xx_enable_irq : PMU reg read error !!!\n");
 		return st;
 	}
