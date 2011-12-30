@@ -35,6 +35,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_isp.h>
+#include <plat/pi_mgr.h>
 #include <linux/delay.h>
 
 
@@ -64,6 +65,7 @@ static void __iomem *isp_base = NULL;
 static void __iomem *mmclk_base = NULL;
 static struct clk *isp_clk;
 static int interrupt_irq = 0;
+static struct pi_mgr_dfs_node *isp_dfs_node = NULL;
 
 typedef struct {
     unsigned int  status;
@@ -134,7 +136,12 @@ static int isp_release(struct inode *inode, struct file *filp)
     isp_t *dev = (isp_t *)filp->private_data;
 
     disable_isp_clock();
-    
+
+    if (isp_dfs_node) {
+        pi_mgr_dfs_request_remove(isp_dfs_node);
+        isp_dfs_node = NULL;
+    }
+
     free_irq(IRQ_ISP, dev);
     if (dev)
         kfree(dev);
@@ -276,27 +283,49 @@ static int enable_isp_clock(void)
     unsigned long rate;
     int ret;
 
+    if (NULL == isp_dfs_node) {   
+        isp_dfs_node = pi_mgr_dfs_add_request("isp", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+        if (NULL == isp_dfs_node) {
+            printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+            return -1;
+        }
+    }
+
     isp_clk = clk_get(NULL, "isp_axi_clk");
     if (!isp_clk) {
         err_print("%s: error get clock\n", __func__);
         return -EIO;
     }
-    
+
+    if (pi_mgr_dfs_request_update(isp_dfs_node, PI_OPP_TURBO)) {
+        printk(KERN_ERR "%s:failed to update dfs request for isp\n", __func__);
+        return -1;
+    }
+
     ret = clk_enable(isp_clk);
     if (ret) {
         err_print("%s: error enable ISP clock\n", __func__);
         return -EIO;
     }
-
+/*
     ret = clk_set_rate(isp_clk, 249600000);
     if (ret) {
         err_print("%s: error changing clock rate\n", __func__);
         //return -EIO;
     }
-    
+  */  
     rate = clk_get_rate(isp_clk);
     dbg_print("isp_clk_clk rate %lu\n", rate);
-    
+
+    dbg_print("mmclk policy status 08:%08x 0c:%08x 10:%08x 14:%08x 18:%08x 1c:%08x ec0:%08x\n",
+            reg_read(mmclk_base,0x08),
+            reg_read(mmclk_base,0x0c),
+            reg_read(mmclk_base,0x10),
+            reg_read(mmclk_base,0x14),
+            reg_read(mmclk_base,0x18),
+            reg_read(mmclk_base,0x1c),
+            reg_read(mmclk_base,0xec0));
+
     return (ret);    
 }
 
@@ -304,8 +333,15 @@ static void disable_isp_clock(void)
 {
     isp_clk = clk_get(NULL, "isp_axi_clk");
     if (!isp_clk) return;
-    
-    clk_disable(isp_clk);       
+
+    clk_disable(isp_clk);
+
+    if (isp_dfs_node) {
+        if (pi_mgr_dfs_request_update(isp_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+            printk(KERN_ERR "%s: failed to update dfs request for isp\n", __func__);
+        }
+    }
+
 }
 
 static inline unsigned int reg_read(void __iomem * base_addr, unsigned int reg)
