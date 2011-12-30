@@ -17,6 +17,7 @@
 typedef	enum {
 	RGB565,
 	XRGB8888,
+	RGB888,
 } pixel_format_t;
 
 struct kona_fb_platform_data {
@@ -29,6 +30,7 @@ struct kona_fb_platform_data {
 	u32	bus_width;
 };
 extern void* DISPDRV_GetFuncTable(void);
+extern void* DISP_DRV_LQ043Y1DX01_GetFuncTable(void);
 extern void* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable(void);
 extern void* DISP_DRV_BCM91008_ALEX_GetFuncTable(void);
 extern void* DISP_DRV_R61581_HVGA_SMI_GetFuncTable(void);

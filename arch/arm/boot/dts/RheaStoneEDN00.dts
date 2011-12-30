@@ -5,8 +5,9 @@
 	#size-cells = <1>;
 	model = "Broadcom_RheaStone_EDN00_assignments_board";
 	compatible = "21654B0";
-/*	version = 0.0,14:8:7, Tue Dec 13, 2011;*/
-	/*Initial Release
+/*	version = 1.0,16:53:20, Thu Dec 29, 2011;*/
+	/*Changed the assigments for SPI0 Interface to support bit-bang of LCD driver - Goran.
+	Initial Release
 	
 	*/
 
@@ -125,21 +126,21 @@
 			0x00000023   /* 0x3500_49A4: SDDAT2: SDDAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_49A8: SDDAT3: SDDAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000003   /* 0x3500_49AC: SIMCLK: SIMCLK: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_49B0: SIMDAT: SIMDAT: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000003   /* 0x3500_49B0: SIMDAT: SIMDAT: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000423   /* 0x3500_49B4: SIMDET: GPIO56: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000003   /* 0x3500_49B8: SIMRST: SIMRSTN: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000220   /* 0x3500_49BC: GPIO93: SSP1CK: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
 			0x00000220   /* 0x3500_49C0: GPIO94: SSP1SYN: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
-			0x00000043   /* 0x3500_49C4: SPI0CLK: SSP0CK: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_49C8: SPI0FSS: SSP0SYN: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_49CC: SPI0RXD: SSP0DI: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_49D0: SPI0TXD: SSP0DO: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000403   /* 0x3500_49C4: SPI0CLK: GPIO90: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000403   /* 0x3500_49C8: SPI0FSS: GPIO89: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000403   /* 0x3500_49CC: SPI0RXD: GPIO92: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000403   /* 0x3500_49D0: SPI0TXD: GPIO91: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000003   /* 0x3500_49D4: SRI_C: SRI_C: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_49D8: SRI_D: SRI_D: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_49DC: SRI_E: SRI_E: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000203   /* 0x3500_49E0: SSPCK: SIM2CLK: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000443   /* 0x3500_49E4: SSPDI: GPIO88: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000223   /* 0x3500_49E8: SSPDO: SIM2DAT: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000203   /* 0x3500_49E8: SSPDO: SIM2DAT: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000203   /* 0x3500_49EC: SSPSYN: SIM2RST: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000423   /* 0x3500_49F0: STAT1: GPIO31: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_49F4: STAT2: STAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
@@ -171,7 +172,7 @@
 	/* gpio node must be consistent with pinmux node */
 	gpio {
 		compatible = "Broadcom,RheaStone_EDN00_assignments-gpio";
-		reg = <0x35003000 36>;		/*base address and # of exposed GPIOs*/
+		reg = <0x35003000 40>;		/*base address and # of exposed GPIOs*/
 		data = <
 			2    0x00000002 /* 1: Input  0: Drive Low */
 			3    0x00000002 /* 1: Input  0: Drive Low */
@@ -203,6 +204,10 @@
 			73    0x00000000 /* 0: Output  0: Drive Low */
 			74    0x00000002 /* 1: Input  0: Drive Low */
 			88    0x00000002 /* 1: Input  0: Drive Low */
+			89    0x00000001 /* 0: Output  1: Drive High */
+			90    0x00000000 /* 0: Output  0: Drive Low */
+			91    0x00000000 /* 0: Output  0: Drive Low */
+			92    0x00000002 /* 1: Input  0: Drive Low */
 			97    0x00000000 /* 0: Output  0: Drive Low */
 			99    0x00000000 /* 0: Output  0: Drive Low */
 			100    0x00000000 /* 0: Output  0: Drive Low */

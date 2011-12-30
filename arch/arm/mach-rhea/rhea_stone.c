@@ -61,6 +61,11 @@
 #include <plat/pl330-pdata.h>
 #include <linux/dma-mapping.h>
 #endif
+
+#if defined(CONFIG_SPI_GPIO) 
+#include <linux/spi/spi_gpio.h>
+#endif
+
 #include <linux/spi/spi.h>
 #if defined (CONFIG_HAPTIC)
 #include <linux/haptic.h>
@@ -382,6 +387,52 @@ static struct platform_device board_bcmbt_lpm_device = {
 };
 #endif
 
+
+#if defined(CONFIG_SPI_GPIO) 
+/*
+ * SPI-BitBang For Sharp LCD 
+ */
+
+#define SPI_BB_MISO	(92)	
+#define SPI_BB_MOSI	(91)	
+#define SPI_BB_SCL	(90)	
+#define SPI_BB_CS       (89)	
+#define SPI_BB_BUS_NUM	(3)
+
+
+static struct spi_gpio_platform_data spi_gpio_pdata = {
+	.sck		= SPI_BB_SCL,
+	.mosi		= SPI_BB_MOSI,
+	.miso		= SPI_BB_MISO,
+	.num_chipselect	= 1,
+};
+
+static struct platform_device spi_gpio = {
+	.name		= "spi_gpio",
+	.id		= SPI_BB_BUS_NUM,
+	.dev		= {
+		.platform_data	= &spi_gpio_pdata,
+	},
+};
+			     
+static struct spi_board_info lq043y1dx01_spi_devices[] __initdata = {   
+	{
+		.modalias		= "lq043y1dx01_spi",  		
+		.max_speed_hz		= 1000000,
+		.bus_num		= SPI_BB_BUS_NUM,
+		.chip_select		= 0,
+		.controller_data	= (void *)SPI_BB_CS,            
+	},
+};
+
+static void __init rheastone_add_lcd_spi(void)
+{
+	spi_register_board_info(lq043y1dx01_spi_devices,        
+					ARRAY_SIZE(lq043y1dx01_spi_devices));
+	platform_device_register(&spi_gpio);                   
+}
+#endif
+
 /*
  * SPI board info for the slaves
  */
@@ -569,6 +620,26 @@ static struct platform_device bcm_backlight_devices = {
 #endif /*CONFIG_BACKLIGHT_PWM */
 
 #ifdef CONFIG_FB_BRCM_RHEA
+
+static struct kona_fb_platform_data lq043y1dx01_dsi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_LQ043Y1DX01_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+};
+
+static struct platform_device lq043y1dx01_dsi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 0,
+	.dev = {
+		.platform_data		= &lq043y1dx01_dsi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
 static struct kona_fb_platform_data alex_dsi_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_BCM91008_ALEX_GetFuncTable,
 	.screen_width		= 360,
@@ -645,15 +716,15 @@ static struct platform_device *rhea_stone_plat_devices[] __initdata = {
 #ifdef CONFIG_BACKLIGHT_PWM
 	&bcm_backlight_devices,
 #endif
+
 #ifdef CONFIG_FB_BRCM_RHEA
-	&alex_dsi_display_device,
-	&nt35582_smi_display_device,
-	&r61581_smi_display_device,
+	&lq043y1dx01_dsi_display_device,
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
     &board_bcmbt_rfkill_device,
 #endif
+
 #ifdef CONFIG_BCM_BT_LPM
     &board_bcmbt_lpm_device,
 #endif
@@ -810,6 +881,10 @@ static void enable_smi_display_clks(void)
 static void __init rhea_stone_add_devices(void)
 {
 	enable_smi_display_clks();
+
+#if defined(CONFIG_SPI_GPIO) 
+	rheastone_add_lcd_spi();
+#endif	
 
 #ifdef CONFIG_KEYBOARD_BCM
 	bcm_kp_device.dev.platform_data = &bcm_keypad_data;
