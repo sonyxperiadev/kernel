@@ -24,22 +24,25 @@
 #ifdef CONFIG_MFD_BCMPMU
 int bcm_otg_do_adp_calibration_probe(struct bcmpmu *bcmpmu)
 {
-	return (bcmpmu_usb_set(bcmpmu, BCMPMU_USB_CTRL_START_ADP_CAL_PRB, 1));
+	return bcmpmu_usb_set(bcmpmu, BCMPMU_USB_CTRL_START_ADP_CAL_PRB, 1);
 }
 
 int bcm_otg_do_adp_probe(struct bcmpmu *bcmpmu)
 {
-	return (bcmpmu_usb_set(bcmpmu, BCMPMU_USB_CTRL_START_STOP_ADP_PRB, 1));
+	return bcmpmu_usb_set(bcmpmu, BCMPMU_USB_CTRL_START_STOP_ADP_PRB, 1);
 }
 
 int bcm_otg_do_adp_sense(struct bcmpmu *bcmpmu)
 {
-	return (bcmpmu_usb_set(bcmpmu, BCMPMU_USB_CTRL_START_STOP_ADP_SENS_PRB, 1));
+	return
+		bcmpmu_usb_set(bcmpmu,
+		  BCMPMU_USB_CTRL_START_STOP_ADP_SENS_PRB, 1);
 }
 
 int bcm_otg_do_adp_sense_then_probe(struct bcmpmu *bcmpmu)
 {
-	/* PMU driver does not handle this request so we need to implement this here */
+	/* PMU driver does not handle this request so we
+	** need to implement this here */
 	return 0;
 }
 #endif
@@ -47,4 +50,3 @@ int bcm_otg_do_adp_sense_then_probe(struct bcmpmu *bcmpmu)
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("USB OTG ADP driver");
 MODULE_LICENSE("GPL");
-
