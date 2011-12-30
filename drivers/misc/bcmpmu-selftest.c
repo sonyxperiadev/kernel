@@ -519,6 +519,7 @@ static void std_selftest_irq(struct SelftestUserCmdData_t *cmddata)
 	do {
 		ReqData.sig = PMU_ADC_VMBATT;
 		ReqData.tm  = PMU_ADC_TM_RTM_SW;
+		ReqData.flags = PMU_ADC_RAW_ONLY;
 		bcmpmu_selftest->bcmpmu->adc_req(bcmpmu_selftest->bcmpmu, &ReqData);
 		reading = ReqData.raw;
 		if (reading  <  0) {
@@ -1208,6 +1209,7 @@ static void std_selftest_adc(struct SelftestUserCmdData_t *cmddata)
 	do {
 		ReqData.sig = PMU_ADC_VMBATT;
 		ReqData.tm  = PMU_ADC_TM_RTM_SW_TEST;
+		ReqData.flags = PMU_ADC_RAW_ONLY;
 		ret = bcmpmu_selftest->bcmpmu->adc_req(bcmpmu_selftest->bcmpmu, &ReqData);
 		reading = ReqData.raw;
 		if (reading  <  0) {

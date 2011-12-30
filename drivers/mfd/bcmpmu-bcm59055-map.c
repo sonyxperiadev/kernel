@@ -278,7 +278,7 @@ static const struct bcmpmu_env_info bcm59055_env_reg_map[PMU_ENV_MAX] = {//revis
 	[PMU_ENV_MBMC] = 		{.regmap = {.addr = 0xE0, .mask = 0x08, .shift = 3, .ro = 1}, .bitmask = PMU_ENV_BITMASK_MBMC},
 };
 
-static const struct bcmpmu_adc_map bcm59055_adc_map[PMU_ADC_MAX] = {//revisit
+static const struct bcmpmu_adc_map bcm59055_adc_map[PMU_ADC_MAX] = {
 	[PMU_ADC_VMBATT] =		{.map = 0, .addr0 = 0x83, .addr1 = 0x82, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x00, .vrng = 4800},
 	[PMU_ADC_VBBATT] =		{.map = 0, .addr0 = 0x85, .addr1 = 0x84, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x01, .vrng = 4800},
 	[PMU_ADC_VWALL] =		{.map = 0, .addr0 = 0x87, .addr1 = 0x86, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x02, .vrng = 14400},
@@ -292,12 +292,35 @@ static const struct bcmpmu_adc_map bcm59055_adc_map[PMU_ADC_MAX] = {//revisit
 	[PMU_ADC_ALS] =			{.map = 0, .addr0 = 0x97, .addr1 = 0x96, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x0a, .vrng = 1200},
 	[PMU_ADC_RTM] =			{.map = 0, .addr0 = 0x99, .addr1 = 0x98, .dmask = 0x3FF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
 	[PMU_ADC_FG_CURRSMPL] =		{.map = 1, .addr0 = 0xD1, .addr1 = 0xD0, .dmask = 0xFFFF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
-	[PMU_ADC_FG_RAW] =		{.map = 1, .addr0 = 0xD6, .addr1 = 0xD5, .dmask = 0xFFFF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
+	[PMU_ADC_FG_RAW] =		{.map = 1, .addr0 = 0xD3, .addr1 = 0xD2, .dmask = 0xFFFF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
 	[PMU_ADC_FG_VMBATT] =		{.map = 1, .addr0 = 0xD7, .addr1 = 0xD6, .dmask = 0x03FF, .vmask = 0x0400, .rtmsel = 0x00, .vrng = 4800},
 	[PMU_ADC_BSI_CAL_LO] = 		{.map = 0, .addr0 = 0x99, .addr1 = 0x98, .dmask = 0x3FF, .vmask = 0x0000, .rtmsel = 0x0b, .vrng = 0000},
 	[PMU_ADC_BSI_CAL_HI] =		{.map = 0, .addr0 = 0x99, .addr1 = 0x98, .dmask = 0x3FF, .vmask = 0x0000, .rtmsel = 0x0f, .vrng = 0000},
 	[PMU_ADC_NTC_CAL_LO] = 		{.map = 0, .addr0 = 0x99, .addr1 = 0x98, .dmask = 0x3FF, .vmask = 0x0000, .rtmsel = 0x0c, .vrng = 0000},
 	[PMU_ADC_NTC_CAL_HI] = 		{.map = 0, .addr0 = 0x99, .addr1 = 0x98, .dmask = 0x3FF, .vmask = 0x0000, .rtmsel = 0x0d, .vrng = 0000},
+};
+
+/* all voltages are in uV */
+static struct bcmpmu_adc_unit bcm59055_adc_unit[PMU_ADC_MAX] = {
+	[PMU_ADC_VMBATT] =		{.vstep = 4687, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 4800000},
+	[PMU_ADC_VBBATT] =		{.vstep = 4687, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 4800000},
+	[PMU_ADC_VWALL] =		{.vstep = 14063, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 14400000},
+	[PMU_ADC_VBUS] =		{.vstep = 14063, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 14400000},
+	[PMU_ADC_ID] =			{.vstep = 4687, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 4800000},
+	[PMU_ADC_NTC] =			{.vstep = 1172, .voffset = 0, .rpullup = 162000, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 1200000},
+	[PMU_ADC_BSI] =			{.vstep = 1172, .voffset = 0, .rpullup = 162000, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 1800000},
+	[PMU_ADC_BOM] =			{.vstep = 1172, .voffset = 0, .rpullup = 162000, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 1200000},
+	[PMU_ADC_32KTEMP] =		{.vstep = 1172, .voffset = 0, .rpullup = 162000, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 1200000},
+	[PMU_ADC_PATEMP] =		{.vstep = 1172, .voffset = 0, .rpullup = 162000, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 1200000},
+	[PMU_ADC_ALS] =			{.vstep = 1, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 1200000},
+	[PMU_ADC_RTM] =			{.vstep = 1, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 0000000},
+	[PMU_ADC_FG_CURRSMPL] =		{.vstep = 1, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 0000000},
+	[PMU_ADC_FG_RAW] =		{.vstep = 1, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 0000000},
+	[PMU_ADC_FG_VMBATT] =		{.vstep = 4687, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 4800000},
+	[PMU_ADC_BSI_CAL_LO] = 		{.vstep = 1, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 1200000},
+	[PMU_ADC_BSI_CAL_HI] =		{.vstep = 1, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 1200000},
+	[PMU_ADC_NTC_CAL_LO] = 		{.vstep = 1, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 1200000},
+	[PMU_ADC_NTC_CAL_HI] = 		{.vstep = 1, .voffset = 0, .rpullup = 0, .lut_ptr = NULL, .lut_len = 0, .fg_k = 0, .vmax = 1200000},
 };
 
 static const struct bcmpmu_reg_map bcm59055_adc_ctrl_map[PMU_ADC_CTRL_MAX] = {//revisit
@@ -436,6 +459,11 @@ const struct bcmpmu_irq_map *bcmpmu_get_irqmap(void)
 const struct bcmpmu_adc_map *bcmpmu_get_adcmap(void)
 {
 	return bcm59055_adc_map;
+}
+
+struct bcmpmu_adc_unit *bcmpmu_get_adcunit(void)
+{
+	return bcm59055_adc_unit;
 }
 
 const struct bcmpmu_reg_map *bcmpmu_get_irqregmap(int *len)

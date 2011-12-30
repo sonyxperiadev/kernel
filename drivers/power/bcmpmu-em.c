@@ -387,14 +387,17 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 
 	req.sig = PMU_ADC_NTC;
 	req.tm = PMU_ADC_TM_HK;
+	req.flags = PMU_ADC_RAW_AND_UNIT;
 	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
 	pem->batt_temp = req.cnv;
 	req.sig = PMU_ADC_VMBATT;
 	req.tm = PMU_ADC_TM_HK;
+	req.flags = PMU_ADC_RAW_AND_UNIT;
 	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
 	pem->batt_volt = req.cnv;
 	req.sig = PMU_ADC_FG_CURRSMPL;
 	req.tm = PMU_ADC_TM_HK;
+	req.flags = PMU_ADC_RAW_AND_UNIT;
 	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
 	pem->batt_curr = req.cnv;
 
@@ -586,6 +589,7 @@ static void em_algorithm(struct work_struct *work)
 		bcmpmu->fg_enable(bcmpmu, 1);
 		req.sig = PMU_ADC_FG_VMBATT;
 		req.tm = PMU_ADC_TM_HK;
+		req.flags = PMU_ADC_RAW_AND_UNIT;
 		bcmpmu->adc_req(bcmpmu, &req);
 		get_fg_delta(pem->bcmpmu, &pem->cap_delta);
 		pr_em(INIT, "%s, first fg delta =%d\n", __func__, pem->cap_delta);
@@ -610,6 +614,7 @@ static void em_algorithm(struct work_struct *work)
 	if (poll_count > 0) {
 		req.sig = PMU_ADC_VMBATT;
 		req.tm = PMU_ADC_TM_HK;
+		req.flags = PMU_ADC_RAW_AND_UNIT;
 		bcmpmu->adc_req(bcmpmu, &req);
 		vacc += req.cnv;
 		pem->mode = MODE_POLL;
@@ -621,6 +626,7 @@ static void em_algorithm(struct work_struct *work)
 		bcmpmu->fg_reset(bcmpmu);
 		req.sig = PMU_ADC_FG_CURRSMPL;
 		req.tm = PMU_ADC_TM_HK;
+		req.flags = PMU_ADC_RAW_AND_UNIT;
 		bcmpmu->adc_req(bcmpmu, &req);
 		iacc = req.cnv;
 		pem->batt_volt = vacc/POLL_SAMPLES;
@@ -825,6 +831,7 @@ static int em_event_handler(struct notifier_block *nb,
 	case BCMPMU_FG_EVENT_FGC:
 		req.sig = PMU_ADC_FG_VMBATT;
 		req.tm = PMU_ADC_TM_HK;
+		req.flags = PMU_ADC_RAW_AND_UNIT;
 		pem->bcmpmu->adc_req(pem->bcmpmu, &req);
 		
 		capacity_v = em_batt_get_capacity(pem, req.cnv, 0);

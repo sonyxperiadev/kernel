@@ -599,6 +599,16 @@ struct bcmpmu_adc_map {
 	unsigned int vrng;
 };
 
+struct bcmpmu_adc_unit {
+	unsigned int vstep;
+	int voffset;
+	unsigned int rpullup;
+	void *lut_ptr;
+	int lut_len;
+	unsigned int fg_k;
+	unsigned int vmax;
+};
+
 struct bcmpmu_adc_ctrl_map {
 	unsigned int addr;
 	unsigned int mask;
@@ -609,21 +619,40 @@ struct bcmpmu_adc_setting {
 	unsigned int tx_rx_sel_addr;
 	unsigned int tx_delay;
 	unsigned int rx_delay;
+	unsigned int sw_timeout;
+	unsigned int txrx_timeout;
+	unsigned int compensation_samples;
+	unsigned int compensation_volt_lo;
+	unsigned int compensation_volt_hi;
+	unsigned int compensation_interval;
+
+};
+
+enum bcmpmu_adc_flags {
+	PMU_ADC_RAW_ONLY = 1,
+	PMU_ADC_UNIT_ONLY,
+	PMU_ADC_RAW_AND_UNIT,
 };
 
 struct bcmpmu_adc_req {
 	enum bcmpmu_adc_sig sig;
 	enum bcmpmu_adc_timing_t tm;
+	enum bcmpmu_adc_flags flags;
 	unsigned int raw;
 	unsigned int cal;
-	unsigned int cnv;
+	int cnv;
 	bool ready;
-	struct list_head list;
 };
 
 struct bcmpmu_temp_map {
 	int adc;
 	int temp;
+};
+
+struct bcmpmu_bom_map {
+	int bom;
+	int low;
+	int high;
 };
 
 struct bcmpmu_voltcap_map {
@@ -822,7 +851,9 @@ struct bcmpmu {
 	int (*unmask_irq) (struct bcmpmu *pmu, enum bcmpmu_irq irq);
 
 	/* adc */
-	int (*adc_req) (struct bcmpmu *pmu, struct bcmpmu_adc_req * req);
+	int (*adc_req)(struct bcmpmu *pmu, struct bcmpmu_adc_req *req);
+	int (*unit_get)(struct bcmpmu *pmu, enum bcmpmu_adc_sig sig, struct bcmpmu_adc_unit *unit);
+	int (*unit_set)(struct bcmpmu *pmu, enum bcmpmu_adc_sig sig, struct bcmpmu_adc_unit *unit);
 
 	/* env */
 	void (*update_env_status) (struct bcmpmu *pmu, unsigned long *env);
@@ -889,8 +920,19 @@ struct bcmpmu_platform_data {
 	int init_max;
 	int num_of_regl;
 	struct bcmpmu_regulator_init_data *regulator_init_data;
+
 	struct bcmpmu_temp_map *batt_temp_map;
 	int batt_temp_map_len;
+
+	struct bcmpmu_temp_map *batt_temp_voltmap;
+	int batt_temp_voltmap_len;
+	struct bcmpmu_temp_map *pa_temp_voltmap;
+	int pa_temp_voltmap_len;
+	struct bcmpmu_temp_map *x32_temp_voltmap;
+	int x32_temp_voltmap_len;
+	struct bcmpmu_temp_map *bom_map;
+	int bom_map_len;
+
 	struct bcmpmu_voltcap_map *batt_voltcap_map;
 	int batt_voltcap_map_len;
 	struct bcmpmu_adc_setting *adc_setting;
@@ -919,6 +961,8 @@ struct bcmpmu_fg {
 	int fg_slp_curr_ua;
 	int fg_sns_res;
 	int fg_factor;
+	int fg_columb_cnt;
+	int fg_ibat_avg;
 };
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
@@ -927,6 +971,7 @@ int bcmpmu_sel_adcsync(enum bcmpmu_adc_timing_t timing);
 const struct bcmpmu_reg_map *bcmpmu_get_regmap(void);
 const struct bcmpmu_irq_map *bcmpmu_get_irqmap(void);
 const struct bcmpmu_adc_map *bcmpmu_get_adcmap(void);
+struct bcmpmu_adc_unit *bcmpmu_get_adcunit(void);
 const struct bcmpmu_reg_map *bcmpmu_get_irqregmap(int *len);
 const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(void);
 const struct bcmpmu_env_info *bcmpmu_get_envregmap(int *len);

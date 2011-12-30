@@ -115,6 +115,49 @@ static struct bcmpmu_temp_map batt_temp_map[] = {
 	{16,		373},/* 100 C */
 };
 
+static struct bcmpmu_temp_map batt_temp_volt_map[] = {
+/* This table is hardware dependent and need to get from platform team */
+/*	adc		temp*/
+	{1091,		233},/* -40 C */
+	{1056,		238},/* -35 C */
+	{1011,		243},/* -30 C */
+	{956,		248},/* -25 C */
+	{893,		253},/* -20 C */
+	{823,		258},/* -15 C */
+	{748,		263},/* -10 C */
+	{669,		268},/* -5 C */
+	{591,		273},/* 0 C */
+	{515,		278},/* 5 C */
+	{443,		283},/* 10 C */
+	{378,		288},/* 15 C */
+	{320,		293},/* 20 C */
+	{270,		298},/* 25 C */
+	{226,		303},/* 30 C */
+	{189,		308},/* 35 C */
+	{158,		313},/* 40 C */
+	{132,		318},/* 45 C */
+	{111,		323},/* 50 C */
+	{93,		328},/* 55 C */
+	{78,		333},/* 60 C */
+	{65,		338},/* 65 C */
+	{55,		343},/* 70 C */
+	{47,		348},/* 75 C */
+	{40,		353},/* 80 C */
+	{34,		358},/* 85 C */
+	{29,		363},/* 90 C */
+	{25,		368},/* 95 C */
+	{21,		373},/* 100 C */
+	{18,		378},/* 105 C */
+	{16,		383},/* 110 C */
+	{14,		388},/* 115 C */
+};
+
+static struct bcmpmu_bom_map bom_map[] = {
+/* This table is hardware dependent and need to get from platform team */
+/*	BOM 	low	high*/
+	{1,	0,	1200},
+};
+
 struct regulator_consumer_supply rf_supply[] = {
 	{ .supply = "rfldo_uc"},
 };
@@ -414,6 +457,12 @@ static struct bcmpmu_adc_setting adc_setting = {
 	.tx_rx_sel_addr = 0,
 	.tx_delay = 0,
 	.rx_delay = 0,
+	.sw_timeout = 10,		/* revisit */
+	.txrx_timeout = 2000,		/* revisit */
+	.compensation_samples = 8,	/* from experiments */
+	.compensation_volt_lo = 72,	/* 6% channel (of 1200 mV) */
+	.compensation_volt_hi = 1128,	/* 94% channel (of 1200 mV) */
+	.compensation_interval = 900,
 };
 
 static struct bcmpmu_charge_zone chrg_zone[] = {
@@ -426,6 +475,10 @@ static struct bcmpmu_charge_zone chrg_zone[] = {
 	{.tl = 253, .th = 333, .v = 0,    .fc = 0,  .qc = 0},/* Zone OUT */
 };
 
+/*
+Initialization:
+batt_temp, pa_temp and x32_temp could use different NTCs, but that is not the case so far
+*/
 static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.init = bcmpmu_init_platform_hw,
 	.exit = bcmpmu_exit_platform_hw,
@@ -434,14 +487,21 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.i2c_pagesize = 256,
 	.init_data = &register_init_data[0],
 	.init_max = ARRAY_SIZE(register_init_data),
-	.batt_temp_map = &batt_temp_map[0],
-	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
+	.batt_temp_voltmap = &batt_temp_volt_map[0],
+	.batt_temp_voltmap_len = ARRAY_SIZE(batt_temp_volt_map),
+	.pa_temp_voltmap = &batt_temp_volt_map[0],
+	.pa_temp_voltmap_len = ARRAY_SIZE(batt_temp_volt_map),
+	.x32_temp_voltmap = &batt_temp_volt_map[0],
+	.x32_temp_voltmap_len = ARRAY_SIZE(batt_temp_volt_map),
+	.bom_map = &bom_map[0],
+	.bom_map_len = ARRAY_SIZE(bom_map),
 	.adc_setting = &adc_setting,
 	.num_of_regl = ARRAY_SIZE(bcm59055_regulators),
 	.regulator_init_data = bcm59055_regulators,
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,
 	.fg_slp_curr_ua = 1000,
+	.fg_factor = 976,	/* 59055 specific */
 	.chrg_1c_rate = 1000,
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1000*3600,
