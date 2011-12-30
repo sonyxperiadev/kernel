@@ -927,11 +927,12 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 
 	st_audio_store_registers(SELFTEST_DMIC);
 
-	for (Mic = 0 ; Mic < MAX_DIGIMIC_IF_COUNT ; Mic++) {
-		pinmux_find_gpio(PMUX_DQ_CONNECTION[Mic], &find_gpio, &find_PF_gpio);
-		DQ_CONNECTION[Mic] = find_gpio;
-		PMUX_DMIC_DQ_MODE_GPIO[Mic] = find_PF_gpio;
-	}
+	for (i = 0 ; i < MAX_DIGIMIC_IF_COUNT ; i++) {
+ 		pinmux_find_gpio(PMUX_DQ_CONNECTION[i], &find_gpio, &find_PF_gpio);
+		ST_DBG("GLUE_SELFTEST::std_selftest_digimic() PMUX_DQ_CONNECTION[%u]=%u, gpio=%u, gpio_func=%u ", i,PMUX_DQ_CONNECTION[i], find_gpio, find_PF_gpio );
+ 		DQ_CONNECTION[i] = find_gpio;
+ 		PMUX_DMIC_DQ_MODE_GPIO[i] = find_PF_gpio;
+ 	}
 
 	switch (cmddata->parm1) {
 	default:

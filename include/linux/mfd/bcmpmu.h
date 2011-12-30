@@ -437,6 +437,7 @@ enum bcmpmu_adc_timing_t {
 	PMU_ADC_TM_RTM_TX,
 	PMU_ADC_TM_RTM_RX,
 	PMU_ADC_TM_RTM_SW,
+	PMU_ADC_TM_RTM_SW_TEST,
 	PMU_ADC_TM_HK,
 	PMU_ADC_TM_MAX,
 };

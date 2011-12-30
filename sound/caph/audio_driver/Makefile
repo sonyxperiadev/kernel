@@ -75,5 +75,5 @@ obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audio_vdriver.o
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audio_rpc.o
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audio_vdriver_audlog.o
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= voif_handler.o
-
+obj-$(CONFIG_BCM_AUDIO_SELFTEST) += bcm_auddrv_selftest.o
 

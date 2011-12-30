@@ -31,6 +31,10 @@
 
 #include <linux/mfd/bcmpmu.h>
 
+#include <mach/chip_pinmux.h>
+#include <mach/pinmux.h>
+#include <linux/gpio.h>
+
 #define BCMPMU_PRINT_ERROR (1U << 0)
 #define BCMPMU_PRINT_INIT (1U << 1)
 #define BCMPMU_PRINT_FLOW (1U << 2)
@@ -139,6 +143,7 @@ static int read_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 	case PMU_ADC_TM_RTM_TX:
 	case PMU_ADC_TM_RTM_RX:
 	case PMU_ADC_TM_RTM_SW:
+	case PMU_ADC_TM_RTM_SW_TEST:
 		adcmap = padc->adcmap[PMU_ADC_RTM];
 		break;
 	case PMU_ADC_TM_MAX:
@@ -455,11 +460,14 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 {
 	struct bcmpmu_adc *padc = bcmpmu->adcinfo;
 	int ret = -EINVAL, timeout;
+	struct pin_config StoredPinmux, TestPinMux;
+	unsigned adcsyngpio;
+	enum PIN_FUNC adcsyngpiomux;
 
 	pr_hwmon(FLOW, "%s: called: ->sig %d, tm %d, flags %d\n", __func__,
 		 req->sig, req->tm, req->flags);
 	if (req->flags == PMU_ADC_RAW_ONLY || req->flags == PMU_ADC_RAW_AND_UNIT) {
-		if (req->tm == PMU_ADC_TM_RTM_SW)
+		if ((req->tm == PMU_ADC_TM_RTM_SW) || (req->tm == PMU_ADC_TM_RTM_SW_TEST))
 			timeout = padc->adcsetting->sw_timeout;
 		else
 			timeout = padc->adcsetting->txrx_timeout;
@@ -471,8 +479,21 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 		case PMU_ADC_TM_RTM_TX:
 		case PMU_ADC_TM_RTM_RX:
 		case PMU_ADC_TM_RTM_SW:
+		case PMU_ADC_TM_RTM_SW_TEST:
 			mutex_lock(&padc->lock);
 			padc->rtmreq = req;
+			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
+				pinmux_find_gpio(PN_ADCSYN, &adcsyngpio, &adcsyngpiomux);
+				/* Setup test pinmuxing */
+				StoredPinmux.name  =  PN_ADCSYN;
+				pinmux_get_pin_config(&StoredPinmux);
+				TestPinMux.name  =  PN_ADCSYN;
+				pinmux_get_pin_config(&TestPinMux);
+				TestPinMux.func = adcsyngpiomux;
+				pinmux_set_pin_config(&TestPinMux);
+				gpio_request(adcsyngpio, "ADCSYN_GPIO");
+				gpio_direction_output(adcsyngpio, 1);
+			}
 			/* config hw for rtm adc */
 			if (req->tm == PMU_ADC_TM_RTM_TX) {
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
@@ -500,7 +521,8 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 						     padc->ctrlmap[PMU_ADC_RTM_MASK].addr,
 						     0,
 						     padc->ctrlmap[PMU_ADC_RTM_MASK].mask);
-			if (req->tm == PMU_ADC_TM_RTM_SW) {
+			if ((req->tm == PMU_ADC_TM_RTM_SW) ||
+			    (req->tm == PMU_ADC_TM_RTM_SW_TEST)) {
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
 							     padc->ctrlmap[PMU_ADC_RTM_MASK].map,
 							     padc->ctrlmap[PMU_ADC_RTM_START].addr,
@@ -508,6 +530,10 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 							     padc->ctrlmap[PMU_ADC_RTM_START].mask);
 			}
 			pr_hwmon(FLOW, "%s: start rtm adc\n", __func__);
+			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
+				/* Set ADC_SYNC to Low */
+				gpio_set_value(adcsyngpio, 0);
+			}		
 			if (wait_event_interruptible_timeout(padc->wait, req->ready, timeout) == 0) {
 				ret = -ETIMEDOUT;
 			} else
@@ -515,6 +541,14 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 			padc->rtmreq = NULL;
 			pr_hwmon(FLOW, "%s: Wait/update_adc_result returned %d",
 				 __func__, ret);
+			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
+				/* Set ADC_SYNC to High */
+				gpio_set_value(adcsyngpio, 1);
+
+				/* Restore */
+				gpio_free(adcsyngpio);
+				pinmux_set_pin_config(&StoredPinmux);
+			}
 			mutex_unlock(&padc->lock);
 			break;
 		case PMU_ADC_TM_MAX:

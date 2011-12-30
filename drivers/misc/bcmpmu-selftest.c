@@ -26,7 +26,7 @@
 /* Tests supported in this file */
 /*#define GPS_TEST_SUPPORTED*/
 #define USB_ST_SUPPORTED
-/*#define ADC_ST_SUPPORTED*/
+#define ADC_ST_SUPPORTED
 #define SIM_SHORT_ST_SUPPORTED
 #define SLEEPCLOCK_SUPPORTED
 #define I2C_ST_SUPPORTED
@@ -232,8 +232,6 @@ static  bool TestActive[SELFTEST_COUNT] = {false, false, false, false,
 #define ST_SIM2DAT_PAD	PF_GPIO86
 #define ST_SIM2CLK_PAD	PF_GPIO87
 #define ST_SIM2DET_PAD	PF_GPIO88
-#define ST_SIM2LDO_EN_PAD  PF_GPIO99
-#define ST_SIM2VDD2_SEL_PAD  PF_GPIO95
 
 #define ST_SIMRST_PAD_NAME	PN_SIMRST
 #define ST_SIMDAT_PAD_NAME	PN_SIMDAT
@@ -243,17 +241,12 @@ static  bool TestActive[SELFTEST_COUNT] = {false, false, false, false,
 #define ST_SIM2DAT_PAD_NAME	PN_SSPDO
 #define ST_SIM2CLK_PAD_NAME	PN_SSPCK
 #define ST_SIM2DET_PAD_NAME	PN_SSPDI
-#define ST_SIM2LDO_EN_PAD_NAME  PN_GPS_CALREQ
-#define ST_SIM2VDD2_SEL_PAD_NAME  PN_DCLK4
 
 #define SIMLDO_REGULATOR "sim_vcc"
 #define SIM2LDO_REGULATOR "sim2_vcc"
 #define ST_PAD_DRV_STRENGTH  1
 
 #endif
-
-#define GPIO_GPS_TMARK       97
-#define GPIO_GPS_PABLANK     98
 
 /**********************************************************/
 /** Stuff that should be defined in header files - End   **/
@@ -958,6 +951,8 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 	u8 name      = cmddata->parm1;
 	u8 direction = cmddata->parm2;
 	u8 *state    = (u8 *)&cmddata->parm3;
+	unsigned gpio;
+	enum PIN_FUNC PF_gpio;
 
 	ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () called -- ST_SELFTEST_GPS_READ/WRITE %x %x %x", name, direction, *state);
 
@@ -966,16 +961,17 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 
 	switch (name) {
 	case ST_SELFTEST_GPS_TXP:
+		pinmux_find_gpio(PN_GPS_PABLANK, &gpio, PF_gpio);
 		if (GPS_PABLANK_Setup_as_GPIO == false) {
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK_Setup_as_GPIO");
 			StoredValue_GPS_PABLANK.name = PN_GPS_PABLANK;
 			pinmux_get_pin_config(&StoredValue_GPS_PABLANK);
 			GPIOSetup.name = PN_GPS_PABLANK;
-			GPIOSetup.func = PF_GPIO98;
+			GPIOSetup.func = PF_gpio;
 			pinmux_set_pin_config(&GPIOSetup);
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () 0x%08X",
 				   StoredValue_GPS_PABLANK.reg.val);
-			ret = gpio_request(GPIO_GPS_PABLANK, "GPS PABLANK");
+			ret = gpio_request(gpio, "GPS PABLANK");
 			if (ret < 0) {
 				ST_DBG("GLUE_SELFTEST::gpio %u request failed",
 				       GPIO_GPS_PABLANK);
@@ -988,13 +984,13 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 		case ST_SELFTEST_GPS_WRITE:{
 			switch (*state) {
 			case ST_SELFTEST_GPS_HIGH:
-				 gpio_direction_output(GPIO_GPS_PABLANK, 1);
-				 gpio_set_value(GPIO_GPS_PABLANK, 1);
+				 gpio_direction_output(gpio, 1);
+				 gpio_set_value(gpio, 1);
 				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Write - High");
 				 break;
 			case ST_SELFTEST_GPS_LOW:
-				 gpio_direction_output(GPIO_GPS_PABLANK, 0);
-				 gpio_set_value(GPIO_GPS_PABLANK, 0);
+				 gpio_direction_output(gpio, 0);
+				 gpio_set_value(gpio, 0);
 				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Write - Low");
 				 break;
 			case ST_SELFTEST_GPS_RELEASE:
@@ -1003,7 +999,7 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 			if (GPS_PABLANK_Setup_as_GPIO == true) {
 				ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Restore");
 				pinmux_set_pin_config(&StoredValue_GPS_PABLANK);
-				gpio_free(GPIO_GPS_PABLANK);
+				gpio_free(gpio);
 				GPS_PABLANK_Setup_as_GPIO = false;
 			}
 			break;
@@ -1012,9 +1008,9 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 			break;
 			}
 		case ST_SELFTEST_GPS_READ:
-			 gpio_direction_input(GPIO_GPS_PABLANK);
+			 gpio_direction_input(gpio);
 			 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Read");
-			 if (gpio_get_value(GPIO_GPS_PABLANK) == 1) {
+			 if (gpio_get_value(gpio) == 1) {
 			     ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () >>>High");
 			     *state = ST_SELFTEST_GPS_HIGH;
 			 } else {
@@ -1029,16 +1025,17 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 		}
 		break;
 	case ST_SELFTEST_GPS_TIMESTAMP:
+		pinmux_find_gpio(PN_GPS_TMARK, &gpio, PF_gpio);
 		if (GPS_TMARK_Setup_as_GPIO == false) {
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK_Setup_as_GPIO");
 			StoredValue_GPS_TMARK.name = PN_GPS_TMARK;
 			pinmux_get_pin_config(&StoredValue_GPS_TMARK);
 			GPIOSetup.name = PN_GPS_TMARK;
-			GPIOSetup.func = PF_GPIO97;
+			GPIOSetup.func = PF_gpio;
 			pinmux_set_pin_config(&GPIOSetup);
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () 0x%08X",
 				   StoredValue_GPS_TMARK.reg.val);
-			ret = gpio_request(GPIO_GPS_TMARK, "GPS TMARK");
+			ret = gpio_request(gpio, "GPS TMARK");
 			if (ret < 0) {
 				ST_DBG("GLUE_SELFTEST::gpio %u request failed",
 				       GPIO_GPS_PABLANK);
@@ -1051,13 +1048,13 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 		case ST_SELFTEST_GPS_WRITE:{
 			switch (*state) {
 			case ST_SELFTEST_GPS_HIGH:
-				 gpio_direction_output(GPIO_GPS_TMARK, 1);
-				 gpio_set_value(GPIO_GPS_TMARK, 1);
+				 gpio_direction_output(gpio, 1);
+				 gpio_set_value(gpio, 1);
 				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Write - High");
 				 break;
 			case ST_SELFTEST_GPS_LOW:
-				 gpio_direction_output(GPIO_GPS_TMARK, 0);
-				 gpio_set_value(GPIO_GPS_TMARK, 0);
+				 gpio_direction_output(gpio, 0);
+				 gpio_set_value(gpio, 0);
 				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Write - Low");
 				 break;
 			case ST_SELFTEST_GPS_RELEASE:
@@ -1066,7 +1063,7 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 				 if (GPS_TMARK_Setup_as_GPIO == true) {
 					ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Restore");
 					pinmux_set_pin_config(&StoredValue_GPS_TMARK);
-					gpio_free(GPIO_GPS_TMARK);
+					gpio_free(gpio);
 					GPS_TMARK_Setup_as_GPIO = false;
 				 }
 				 break;
@@ -1077,8 +1074,8 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 
 		case ST_SELFTEST_GPS_READ:
 			 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Read");
-			 gpio_direction_input(GPIO_GPS_TMARK);
-			if (gpio_get_value(GPIO_GPS_TMARK) == 1) {
+			 gpio_direction_input(gpio);
+			if (gpio_get_value(gpio) == 1) {
 				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () >>>High");
 				*state = ST_SELFTEST_GPS_HIGH;
 			} else {
