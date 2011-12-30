@@ -21,6 +21,10 @@
 #include <linux/scatterlist.h>
 #include <linux/regulator/consumer.h>
 
+#ifdef CONFIG_SDHCI_THROUGHPUT
+#include <linux/debugfs.h>
+#endif
+
 #include <linux/leds.h>
 
 #include <linux/mmc/mmc.h>
@@ -43,6 +47,22 @@
 #define MAX_TUNING_LOOP 40
 
 static unsigned int debug_quirks = 0;
+
+#ifdef CONFIG_SDHCI_THROUGHPUT
+
+static struct dentry *sdhci_throughput;
+
+struct sdhci_throughput{
+	u8 enable;
+	u16 read;
+	struct dentry *dentry;
+	struct timeval t1;
+	struct timeval t2;
+	u32 blk_size;
+	u32 nm_of_blks;
+}*mmc_throughput;
+
+#endif
 
 static void sdhci_finish_data(struct sdhci_host *);
 
@@ -886,6 +906,15 @@ static void sdhci_set_transfer_mode(struct sdhci_host *host,
 		mode |= SDHCI_TRNS_READ;
 	if (host->flags & SDHCI_REQ_USE_DMA)
 		mode |= SDHCI_TRNS_DMA;
+
+#ifdef CONFIG_SDHCI_THROUGHPUT
+	if(unlikely((mmc_throughput[host->mmc->index]).enable)){
+		(mmc_throughput[host->mmc->index]).read = data->flags;
+		(mmc_throughput[host->mmc->index]).blk_size = data->blksz;
+		(mmc_throughput[host->mmc->index]).nm_of_blks = data->blocks;
+		do_gettimeofday(&((mmc_throughput[host->mmc->index]).t1));
+	}
+#endif
 
 	sdhci_writew(host, mode, SDHCI_TRANSFER_MODE);
 }
@@ -2294,6 +2323,22 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 				 */
 				host->data_early = 1;
 			} else {
+#ifdef CONFIG_SDHCI_THROUGHPUT
+				if(unlikely((mmc_throughput[host->mmc->index]).enable)){
+					u8* rw_str[2] = {"R:", "W:"};
+					u32 throughput;
+					do_gettimeofday(&((mmc_throughput[host->mmc->index]).t2));
+					throughput = ((mmc_throughput[host->mmc->index]).blk_size * (mmc_throughput[host->mmc->index]).nm_of_blks * 1000000) /\
+						     ((((mmc_throughput[host->mmc->index]).t2.tv_sec - (mmc_throughput[host->mmc->index]).t1.tv_sec) * 1000000) + \
+						      ((int)((mmc_throughput[host->mmc->index]).t2.tv_usec) - (int)((mmc_throughput[host->mmc->index]).t1.tv_usec)));
+					pr_info("%s(%s) %ld,%ld,%ld,%ld,%d,%d,%d\n", \
+						rw_str[!((mmc_throughput[host->mmc->index]).read & MMC_DATA_READ)], mmc_hostname(host->mmc),\
+						(mmc_throughput[host->mmc->index]).t2.tv_sec,(mmc_throughput[host->mmc->index]).t2.tv_usec, \
+						(mmc_throughput[host->mmc->index]).t1.tv_sec,(mmc_throughput[host->mmc->index]).t1.tv_usec, \
+						(mmc_throughput[host->mmc->index]).blk_size, (mmc_throughput[host->mmc->index]).nm_of_blks, throughput);
+
+				}
+#endif
 				sdhci_finish_data(host);
 			}
 		}
@@ -2993,6 +3038,17 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	sdhci_enable_card_detection(host);
 
+#ifdef CONFIG_SDHCI_THROUGHPUT
+	if(likely(mmc_throughput = krealloc(mmc_throughput,((host->mmc->index + 1) * sizeof(sdhci_throughput)), GFP_KERNEL)))
+		memset(&mmc_throughput[host->mmc->index],0,sizeof(sdhci_throughput));
+	else
+		printk(KERN_ERR "Error allocating memory for sdhci throughput debugfs inerface\n");
+
+	mmc_throughput[host->mmc->index].dentry = debugfs_create_u8(mmc_hostname(mmc), 0666, sdhci_throughput, &(mmc_throughput[host->mmc->index].enable));
+	if(unlikely(mmc_throughput[host->mmc->index].dentry == NULL)){
+		printk(KERN_ERR "could not create debugfs entry for %s\n", mmc_hostname(mmc));
+	}
+#endif
 	return 0;
 
 #ifdef SDHCI_USE_LEDS_CLASS
@@ -3030,6 +3086,10 @@ void sdhci_remove_host(struct sdhci_host *host, int dead)
 	}
 
 	sdhci_disable_card_detection(host);
+
+#ifdef CONFIG_SDHCI_THROUGHPUT
+	debugfs_remove(mmc_throughput[host->mmc->index].dentry);
+#endif
 
 	mmc_remove_host(host->mmc);
 
@@ -3087,11 +3147,22 @@ static int __init sdhci_drv_init(void)
 	printk(KERN_INFO DRIVER_NAME ": modified by Broadcom for SDIO Wireless purposes\n");
 #endif
 
+#ifdef CONFIG_SDHCI_THROUGHPUT
+	sdhci_throughput = debugfs_create_dir("sdhci-throughput", NULL);
+	if (!sdhci_throughput) {
+		printk(KERN_ERR "sdhci-throughput: creating root dir failed\n");
+	}
+#endif
+
 	return 0;
 }
 
 static void __exit sdhci_drv_exit(void)
 {
+#ifdef CONFIG_SDHCI_THROUGHPUT
+	kfree(mmc_throughput);
+	debugfs_remove_recursive(sdhci_throughput);
+#endif
 }
 
 module_init(sdhci_drv_init);

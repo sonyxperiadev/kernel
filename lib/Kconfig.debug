@@ -1254,6 +1254,28 @@ config ASYNC_RAID6_TEST
 
 	  If unsure, say N.
 
+config SDHCI_THROUGHPUT
+	bool "Enable sdhci throughput data dump over debugfs"
+	depends on DEBUG_FS
+	help
+		The interface is loacted at DEBUGFS/sdhci-throughput
+		A file is created inside the sdhci-throughput directory,
+		for each mmc interface. Wirte 1 to these files, to enable the
+		throuhput dump. Write 0 to disable them. The message dumped is
+		of the following format:
+
+		[access type]:[device] [time t2 sec],[time t2 usec],[time t1
+                   sec],[time t1 usec],[block size],[no of blocks],[access rate in bytes/sec]
+
+		eg: W:(mmc0) 946685911,510155,946685911,475456,512,1024,15109599
+
+		The above line can be interpreted as "A write of 1024 blocks,
+		each of size 512 bytes to mmc0, has taken ((946685911-946685910)*10^6 +
+		(510155-475456)) usecs i.e at a rate of 15109599 bytes/sec."
+
+		The speed dumped in bytes/sec need not be always accurate because of
+		the mismatch in resolution of timestamping and the speed of DMA access.
+
 source "samples/Kconfig"
 
 source "lib/Kconfig.kgdb"
