@@ -44,12 +44,6 @@ struct bcmpmu_reg_info {
 	u8 reg_addr;
 	/* address of control register to change voltage */
 	u8 reg_addr_volt;
-	u8 reg_addr_volt_l;
-	u8 reg_addr_volt_t;
-	/* Mask for enable/disable bits */
-	u32 en_dis_mask;
-	/* Shift for enable/disalbe bits */
-	u32 en_dis_shift;
 	/* Mask of bits in register */
 	u32 vout_mask;
 	/* Bit shift in register */
@@ -70,10 +64,21 @@ struct bcmpmu_reg_info {
 	u8 ldo_or_sr;
 };
 
+/*State of enabled regualtor in deep sleep
+Used to program PC2PC1 = 0b10 & 0b00 case
+when the regulator is enabled*/
+enum {
+	BCMPMU_REGL_ON_IN_DSM = 1,
+	BCMPMU_REGL_LPM_IN_DSM,
+	BCMPMU_REGL_OFF_IN_DSM
+};
+
 struct bcmpmu_regulator_init_data {
-	/* Regulator ID */
-	int regulator;
-	struct regulator_init_data *initdata;
+	int regulator ; /* Regulator ID */
+	struct regulator_init_data   *initdata;
+	/* Default opmode value.Pass 0xFF to skip opmoe setting for a ldo/sr */
+	u8 default_opmode;
+	u8 dsm_mode;
 };
 
 enum bcmpmu_rgr_id {
@@ -95,9 +100,15 @@ enum bcmpmu_rgr_id {
 	BCMPMU_REGULATOR_DVS1LDO,
 	BCMPMU_REGULATOR_DVS2LDO,
 	BCMPMU_REGULATOR_SIM2LDO,
-	BCMPMU_REGULATOR_CSR,
-	BCMPMU_REGULATOR_IOSR,
-	BCMPMU_REGULATOR_SDSR,
+	BCMPMU_REGULATOR_CSR_NM,
+	BCMPMU_REGULATOR_CSR_NM2,
+	BCMPMU_REGULATOR_CSR_LPM,
+	BCMPMU_REGULATOR_IOSR_NM,
+	BCMPMU_REGULATOR_IOSR_NM2,
+	BCMPMU_REGULATOR_IOSR_LPM,
+	BCMPMU_REGULATOR_SDSR_NM,
+	BCMPMU_REGULATOR_SDSR_NM2,
+	BCMPMU_REGULATOR_SDSR_LPM,
 	BCMPMU_REGULATOR_MAX,
 };
 

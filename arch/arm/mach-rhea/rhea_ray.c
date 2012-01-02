@@ -140,9 +140,6 @@
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
 
-#ifdef CONFIG_MFD_BCMPMU
-extern void __init board_pmu_init(void);
-#endif
 
 #ifdef CONFIG_MFD_BCM_PMU590XX
 static int bcm590xx_event_callback(int flag, int param)
@@ -1497,9 +1494,7 @@ static void __init rhea_ray_add_i2c_devices (void)
 			pmu_info,
 			ARRAY_SIZE(pmu_info));
 #endif
-#ifdef CONFIG_MFD_BCMPMU
-	board_pmu_init();
-#endif
+
 #ifdef CONFIG_GPIO_PCA953X
 	i2c_register_board_info(1,
 			pca953x_info,

@@ -62,7 +62,7 @@
 #include <linux/dma-mapping.h>
 #endif
 
-#if defined(CONFIG_SPI_GPIO) 
+#if defined(CONFIG_SPI_GPIO)
 #include <linux/spi/spi_gpio.h>
 #endif
 
@@ -122,9 +122,6 @@
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
 
-#ifdef CONFIG_MFD_BCMPMU
-void __init board_pmu_init(void);
-#endif
 
 /*
  * GPIO pin for Touch screen pen down interrupt
@@ -267,7 +264,7 @@ static struct kona_headset_pd headset_data = {
 	.gpio_for_accessory_detection = 1,
 
 	/*
-	 * Pass the board specific button detection range 
+	 * Pass the board specific button detection range
 	 */
 	.button_adc_values = rheass_button_adc_values,
 
@@ -388,15 +385,15 @@ static struct platform_device board_bcmbt_lpm_device = {
 #endif
 
 
-#if defined(CONFIG_SPI_GPIO) 
+#if defined(CONFIG_SPI_GPIO)
 /*
- * SPI-BitBang For Sharp LCD 
+ * SPI-BitBang For Sharp LCD
  */
 
-#define SPI_BB_MISO	(92)	
-#define SPI_BB_MOSI	(91)	
-#define SPI_BB_SCL	(90)	
-#define SPI_BB_CS       (89)	
+#define SPI_BB_MISO	(92)
+#define SPI_BB_MOSI	(91)
+#define SPI_BB_SCL	(90)
+#define SPI_BB_CS       (89)
 #define SPI_BB_BUS_NUM	(3)
 
 
@@ -414,22 +411,22 @@ static struct platform_device spi_gpio = {
 		.platform_data	= &spi_gpio_pdata,
 	},
 };
-			     
-static struct spi_board_info lq043y1dx01_spi_devices[] __initdata = {   
+
+static struct spi_board_info lq043y1dx01_spi_devices[] __initdata = {
 	{
-		.modalias		= "lq043y1dx01_spi",  		
+		.modalias		= "lq043y1dx01_spi",
 		.max_speed_hz		= 1000000,
 		.bus_num		= SPI_BB_BUS_NUM,
 		.chip_select		= 0,
-		.controller_data	= (void *)SPI_BB_CS,            
+		.controller_data	= (void *)SPI_BB_CS,
 	},
 };
 
 static void __init rheastone_add_lcd_spi(void)
 {
-	spi_register_board_info(lq043y1dx01_spi_devices,        
+	spi_register_board_info(lq043y1dx01_spi_devices,
 					ARRAY_SIZE(lq043y1dx01_spi_devices));
-	platform_device_register(&spi_gpio);                   
+	platform_device_register(&spi_gpio);
 }
 #endif
 
@@ -827,6 +824,7 @@ static struct i2c_board_info __initdata bmp18x_info[] =
 /* Rhea Ray specific i2c devices */
 static void __init rhea_stone_add_i2c_devices (void)
 {
+
 #ifdef CONFIG_TOUCHSCREEN_TANGO
 	i2c_register_board_info(1,
 		tango_info,
@@ -882,9 +880,9 @@ static void __init rhea_stone_add_devices(void)
 {
 	enable_smi_display_clks();
 
-#if defined(CONFIG_SPI_GPIO) 
+#if defined(CONFIG_SPI_GPIO)
 	rheastone_add_lcd_spi();
-#endif	
+#endif
 
 #ifdef CONFIG_KEYBOARD_BCM
 	bcm_kp_device.dev.platform_data = &bcm_keypad_data;
@@ -892,9 +890,7 @@ static void __init rhea_stone_add_devices(void)
 	platform_add_devices(rhea_stone_plat_devices, ARRAY_SIZE(rhea_stone_plat_devices));
 
 	rhea_stone_add_i2c_devices();
-#ifdef CONFIG_MFD_BCMPMU
-	board_pmu_init();
-#endif
+
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
 }

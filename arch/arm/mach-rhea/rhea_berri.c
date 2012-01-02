@@ -139,10 +139,6 @@
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
 
-#ifdef CONFIG_MFD_BCMPMU
-extern void __init board_pmu_init(void);
-#endif
-
 #ifdef CONFIG_MFD_BCM_PMU590XX
 static int bcm590xx_event_callback(int flag, int param)
 {
@@ -1175,8 +1171,7 @@ static int rhea_camera_power(struct device *dev, int on)
 	unsigned int value;
 	struct clk *clock;
 	struct clk *axi_clk;
-	static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
-	int ret;
+	static struct pi_mgr_dfs_node *unicam_dfs_node;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -1257,7 +1252,7 @@ static int rhea_camera_power(struct device *dev, int on)
 		/* enable reset gpio */
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 		msleep(1);
-		
+
 		/* enable power down gpio */
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 
@@ -1372,10 +1367,6 @@ static void __init rhea_berri_add_i2c_devices (void)
 	i2c_register_board_info(2,
 			pmu_info,
 			ARRAY_SIZE(pmu_info));
-#endif
-
-#ifdef CONFIG_MFD_BCMPMU
-	board_pmu_init();
 #endif
 
 #ifdef CONFIG_GPIO_PCA953X
