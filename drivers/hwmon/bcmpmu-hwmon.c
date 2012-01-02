@@ -1120,15 +1120,17 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	bcmpmu->unit_get = bcmpmu_get_adcunit_data;
 	bcmpmu->unit_set = bcmpmu_set_adcunit_data;
 
-	padc->adcunit[PMU_ADC_NTC].lut_ptr = pdata->batt_temp_voltmap;
-	padc->adcunit[PMU_ADC_PATEMP].lut_ptr = pdata->pa_temp_voltmap;
-	padc->adcunit[PMU_ADC_32KTEMP].lut_ptr = pdata->x32_temp_voltmap;
-	padc->adcunit[PMU_ADC_BOM].lut_ptr = pdata->bom_map;
+	if (padc->adcunit) {
+		padc->adcunit[PMU_ADC_NTC].lut_ptr = pdata->batt_temp_voltmap;
+		padc->adcunit[PMU_ADC_PATEMP].lut_ptr = pdata->pa_temp_voltmap;
+		padc->adcunit[PMU_ADC_32KTEMP].lut_ptr = pdata->x32_temp_voltmap;
+		padc->adcunit[PMU_ADC_BOM].lut_ptr = pdata->bom_map;
 
-	padc->adcunit[PMU_ADC_NTC].lut_len = pdata->batt_temp_voltmap_len;
-	padc->adcunit[PMU_ADC_PATEMP].lut_len = pdata->pa_temp_voltmap_len;
-	padc->adcunit[PMU_ADC_32KTEMP].lut_len = pdata->x32_temp_voltmap_len;
-	padc->adcunit[PMU_ADC_BOM].lut_len = pdata->bom_map_len;
+		padc->adcunit[PMU_ADC_NTC].lut_len = pdata->batt_temp_voltmap_len;
+		padc->adcunit[PMU_ADC_PATEMP].lut_len = pdata->pa_temp_voltmap_len;
+		padc->adcunit[PMU_ADC_32KTEMP].lut_len = pdata->x32_temp_voltmap_len;
+		padc->adcunit[PMU_ADC_BOM].lut_len = pdata->bom_map_len;
+	}
 
 	penv = kzalloc(sizeof(struct bcmpmu_env), GFP_KERNEL);
 	if (penv == NULL) {
