@@ -168,14 +168,23 @@ static int spum_cpu_xfer(struct brcm_spum_device *dd, u8 *in_buff, u32 length)
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
 	u32 i=0,status,tx_len, out_fifo[32];
 	static int k = 0;
-	u32 *buff = (u32 *)in_buff; 
+	u32 *buff = (u32 *)in_buff;
 
 	pr_debug("%s: entry\n",__func__);
 
 	spum_dma_init(dd->io_axi_base);
+
+	if(rctx->rx_len >= length) {
+		rctx->rx_len -= length;
+	}
+	else {
+		length -= rctx->rx_len;
+		rctx->partial -= length;
+		rctx->rx_len = 0;
+	}
+
 	length = ((length+3)/sizeof(u32));
 
-	rctx->rx_len -= length*4;
 	tx_len = rctx->tx_len/4;
 	i=0;k=0;
 	while(i<length) {
@@ -189,15 +198,21 @@ static int spum_cpu_xfer(struct brcm_spum_device *dd, u8 *in_buff, u32 length)
 	while((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) && tx_len) {
 		out_fifo[k] = readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
 		k++; tx_len--;
-		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);		
+		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 	}
 
-	rctx->tx_len -= k*4;	
+	rctx->tx_len -= k*4;
+
 	if(rctx->sg->length == rctx->offset) {
 		rctx->sg = scatterwalk_sg_next(rctx->sg);
 		if(rctx->sg)
 			rctx->offset = 0;
-	}	
+	}
+	else {
+		rctx->sg->offset += rctx->offset;
+		rctx->sg->length -= rctx->offset;
+		rctx->offset = 0;
+	}
 	return 0;
 }
 
@@ -207,7 +222,7 @@ static int spum_dma_xfer(struct brcm_spum_device *dd, u32 length)
 	u32 cfg_rx, cfg_tx, rx_fifo, tx_fifo, tx_len;
 	int err = -EINPROGRESS;
 
-	pr_debug("%s: entry \n",__func__);
+	pr_debug("%s: len %d entry \n",__func__,length);
 
 	/* Only this configuration works. */
 	cfg_rx = DMA_CFG_SRC_ADDR_INCREMENT | DMA_CFG_DST_ADDR_FIXED |
@@ -279,21 +294,12 @@ static int spum_hash_update_data(struct brcm_spum_device *dd)
 	struct scatterlist *sg;
 	int     err = 0;
 
-	pr_debug("%s: entry\n",__func__);
-
-	if(!(rctx->rx_len + rctx->total))
+	if(!(rctx->rx_len+ rctx->partial))
 		return 0;
 
 	sg = rctx->sg;
-	length = min(rctx->rx_len, sg->length);
-
+	length = min((rctx->rx_len+rctx->partial), sg->length);
 	rctx->offset = length;
-	
-	if (sg_is_last(sg)) { 
-		spum_append_sg(rctx);	
-		rctx->offset = length;
-		rctx->sg = sg;
-	}
 
 	if(!length)
 		return 0;
@@ -301,23 +307,67 @@ static int spum_hash_update_data(struct brcm_spum_device *dd)
 	/* Here check for DMA burst size alignment.
 	 * If not, Do length -= (length%dma_burst_size)
 	 * Seting rctx->offset = length should take care the remaining data tx.
-	 */  
-	if((length > SPUM_HASH_BLOCK_SIZE) && ((length - length%16) > SPUM_HASH_BLOCK_SIZE)) {
-		length -= length%16;
+	 */
+	if((length > SPUM_HASH_BLOCK_SIZE) && ((length - length%64) > SPUM_HASH_BLOCK_SIZE)) {
+		length -= length%64;
 		rctx->offset = length;
 
 		if (!dma_map_sg(dd->dev, rctx->sg, 1, DMA_TO_DEVICE)) {
 			pr_err("%s:dma map error\n",__func__);
 			return -EINVAL;
 		}
-		
+
 		return spum_dma_xfer(dd, length);
 	}
 	else {
+		if (sg_virt(sg) != rctx->buffer) { /* If it's not header. */
+			if(length%4) {
+				if(sg_virt(sg) == rctx->buff) {
+					rctx->sg = scatterwalk_sg_next(rctx->sg);
+					rctx->bufcnt = length;
+					if(rctx->sg)
+						return spum_hash_process_request(dd);
+					else
+						return 0;
+				}
+				else {
+					rctx->offset = 0;
+					spum_append_sg(rctx);
+					if(rctx->bufcnt==64) {
+						err = spum_cpu_xfer(dd, rctx->buff, rctx->bufcnt);
+						rctx->bufcnt = 0;
+					}
+					if(rctx->sg) 
+						return spum_hash_process_request(dd);
+					else
+						return 0;
+				}
+			}
+			else if(rctx->bufcnt) {
+				rctx->offset = 0;
+				spum_append_sg(rctx);
+				if(rctx->bufcnt==64) {
+					err = spum_cpu_xfer(dd, rctx->buff, rctx->bufcnt);
+					rctx->bufcnt = 0;
+				}
+				if(rctx->sg)
+					return spum_hash_process_request(dd);
+				else
+					return 0;
+			}
+			else if(sg_is_last(sg)) {
+				length -= rctx->partial;
+				rctx->offset = length;
+				spum_append_sg(rctx);
+				rctx->partial -= rctx->bufcnt;
+				rctx->sg = sg;
+				if (!length)
+					return 0;
+			}
+		}
 		err = spum_cpu_xfer(dd, sg_virt(sg), length);
 		return spum_hash_process_request(dd);
-	}	
-
+	}
 }
 
 static int spum_hash_update_final(struct brcm_spum_device *dd)
@@ -325,7 +375,7 @@ static int spum_hash_update_final(struct brcm_spum_device *dd)
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
 	u32 length;
 	int err = 0;
-	
+
 	if(!rctx->rx_len)
 		return 0;
 	length = min(rctx->rx_len, rctx->sg->length);
@@ -460,16 +510,15 @@ static int spum_hash_update(struct ahash_request *req)
 	if(!rctx->partial)
 		rctx->partial = SPUM_HASH_BLOCK_SIZE;
 	rctx->rx_len = (rctx->bufcnt + rctx->total) - rctx->partial;
-	rctx->total = rctx->partial;
 	rctx->blk_cnt += rctx->rx_len/SPUM_HASH_BLOCK_SIZE;
 
 	memset((void*)&spum_hw_hash_ctx, 0, sizeof(spum_hw_hash_ctx));
 
-        spum_hw_hash_ctx.operation      =       SPUM_CRYPTO_ENCRYPTION;
-        spum_hw_hash_ctx.crypto_algo    =       SPUM_CRYPTO_ALGO_NULL;
-        spum_hw_hash_ctx.auth_mode      =       SPUM_AUTH_MODE_HASH;
-        spum_hw_hash_ctx.auth_order     =       SPUM_CMD_AUTH_FIRST;
-        spum_hw_hash_ctx.key_type       =       SPUM_KEY_OPEN;
+	spum_hw_hash_ctx.operation      =       SPUM_CRYPTO_ENCRYPTION;
+	spum_hw_hash_ctx.crypto_algo    =       SPUM_CRYPTO_ALGO_NULL;
+	spum_hw_hash_ctx.auth_mode      =       SPUM_AUTH_MODE_HASH;
+	spum_hw_hash_ctx.auth_order     =       SPUM_CMD_AUTH_FIRST;
+	spum_hw_hash_ctx.key_type       =       SPUM_KEY_OPEN;
 
 	spum_hw_hash_ctx.data_attribute.mac_length  = rctx->rx_len;
 	spum_hw_hash_ctx.data_attribute.data_length = rctx->rx_len;
@@ -530,18 +579,19 @@ static int spum_hash_update(struct ahash_request *req)
 
 	if(rctx->bufcnt) {
 		sg_set_buf(&rctx->spum_hdr[1], &rctx->buff, rctx->bufcnt);
-        	scatterwalk_sg_chain(&rctx->spum_hdr[0], 3, req->src);
+		scatterwalk_sg_chain(&rctx->spum_hdr[0], 3, req->src);
 	}
 	else {
 		scatterwalk_sg_chain(&rctx->spum_hdr[0], 2, req->src);
 	}
 
-	rctx->rx_len += cmd_len_bytes;
-
 	rctx->tx_len = SPUM_OUTPUT_HEADER_LEN + 
 			spum_hw_hash_ctx.data_attribute.data_length +
 			(spum_hw_hash_ctx.icv_len * sizeof(u32)) +
 			SPUM_OUTPUT_STATUS_LEN;
+
+	rctx->rx_len += cmd_len_bytes;
+
 	rctx->bufcnt = 0;
 	rctx->sg = rctx->spum_hdr;
 
@@ -704,14 +754,14 @@ static int spum_hash_final(struct ahash_request *req)
 				spum_hw_hash_ctx.auth_key_len = 
 					ctx->hash_init? (MD5_DIGEST_SIZE/sizeof(u32)) : 0;
 				break;
-				
+
 		}
 
 		spum_hw_hash_ctx.data_attribute.prev_length = ctx->hash_init?rctx->blk_cnt:0;
 		spum_hw_hash_ctx.data_attribute.mac_offset  = 0;
 		spum_hw_hash_ctx.data_attribute.mac_length  = rctx->bufcnt;
 		spum_hw_hash_ctx.data_attribute.data_length = (((rctx->bufcnt + 3)/sizeof(u32))*sizeof(u32));
-			
+
 		cmd_len_bytes = spum_format_command(&spum_hw_hash_ctx, &rctx->buffer);
 
 		rctx->rx_len = cmd_len_bytes + spum_hw_hash_ctx.data_attribute.data_length;
@@ -722,7 +772,7 @@ static int spum_hash_final(struct ahash_request *req)
 
 		sg_init_table(rctx->spum_hdr,2);
 		sg_set_buf(rctx->spum_hdr, &rctx->buffer, cmd_len_bytes);
-		sg_set_buf(&rctx->spum_hdr[1], &rctx->buff, spum_hw_hash_ctx.data_attribute.data_length); //rctx->bufcnt);
+		sg_set_buf(&rctx->spum_hdr[1], &rctx->buff, spum_hw_hash_ctx.data_attribute.data_length);
 
 		rctx->sg = rctx->spum_hdr;
 		rctx->bufcnt = 0;			
@@ -822,7 +872,6 @@ static struct ahash_alg spum_algo[] = {
 		.cra_exit		= spum_hash_cra_exit,
 	},
 },
-
 {	
 	.init		= spum_hash_init,
 	.update		= spum_hash_update,
