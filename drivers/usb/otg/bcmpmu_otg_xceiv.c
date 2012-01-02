@@ -246,23 +246,10 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 
 	if (!id_gnd) {
-		int vbus_status;
-#ifdef CONFIG_MFD_BCMPMU
-		bcmpmu_usb_get(xceiv_data->bcmpmu,
-			       BCMPMU_USB_CTRL_GET_VBUS_STATUS, &vbus_status);
-#endif
-		if (!vbus_status) {
-			/* Shutdown the core */
-			atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
-						   xceiver.notifier,
-						   USB_EVENT_NONE, NULL);
-		} else {
-			/* Set Vbus valid state */
-			bcm_hsotgctrl_phy_set_vbus_stat(true);
+		/* Shutdown the core */
+		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
+					xceiver.notifier, USB_EVENT_NONE, NULL);
 
-			/* Come up connected  */
-			bcm_hsotgctrl_phy_set_non_driving(false);
-		}
 	} else {
 		bcm_hsotgctrl_phy_set_id_stat(false);
 		/* Come up connected  */
