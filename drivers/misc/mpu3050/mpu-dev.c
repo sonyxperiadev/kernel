@@ -1115,6 +1115,14 @@ static void mpu6050_read_accel(struct i2c_client*  client,
    coords->y = undo_twos_complement(coords->y);
    coords->z = undo_twos_complement(coords->z);
 
+   /* TODO: Tested on CapriStone and the x,y,z data are all 32 times larger than expected  */
+   /* from Android ICS. Temporary divide by 32 to reduce the value here. In the future, we */
+   /* need to find out how to config the accel sensor to reduce the data range. */
+   coords->x >>= 5;
+   coords->y >>= 5;
+   coords->z >>= 5;
+   
+
    if (p_mpu_pdata->accel.private_data != NULL)
    {
       p_sensors_axis_change = (struct t_brcm_sensors_axis_change *)p_mpu_pdata->accel.private_data;
@@ -1503,7 +1511,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 		if (res)
 			goto out_mpuirq_failed;
 	} else {
-		dev_WARN(&client->adapter->dev,
+		dev_warn(&client->adapter->dev,
 			 "Missing %s IRQ\n", MPU_NAME);
 	}
 
