@@ -89,7 +89,6 @@ struct lm8325_chip {
 	int 			err_flag;
 	int 			error_count;
 	int 			key_pressed;
-	int 			bckup_key_code;
 };
 
 struct lm8325_platform_data {

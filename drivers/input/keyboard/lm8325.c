@@ -32,7 +32,7 @@
 #include <linux/mutex.h>
 #include <linux/delay.h>
 #include <linux/input.h>
-#include<linux/slab.h>
+#include <linux/slab.h>
 #include <linux/i2c/lm8325.h>
 
 /* Enable this flag to see the extra debug messages */
@@ -361,9 +361,8 @@ static int lm8325_configure(struct lm8325_chip *lm)
  */
 static int lm8325_process_key(struct lm8325_chip *lm)
 {
-	int row, col, key_release, key_code, multi_key;
-	u8 ints, ints1;
-    static int code_count;
+	int row, col, key_code, code_count, event_count, event, press_release;
+	u8 key_code_list[4], event_code_list[15];
 
 	if (!lm->kp_enabled) {
 		dev_err(&lm->client->dev,
@@ -372,69 +371,44 @@ static int lm8325_process_key(struct lm8325_chip *lm)
 		return -1;
 	}
 
-    /* Read the appropriate KBDCODE */
-    lm8325_read(lm, (LM8325_CMD_KBDCODE0 + code_count), &ints, 1);
+	/* Reading the KBDCODE as long as there is key press info should clear
+	 * the RSINT interrupt. Scan upto 4 keys is supported. */
+	for (code_count = 0; code_count < 4; code_count++) {
+		/* Read the appropriate KBDCODE. */
+		lm8325_read(lm, (LM8325_CMD_KBDCODE0 + code_count),
+			    &key_code_list[code_count], 1);
+		/* If multi-key bit is not set, break. */
+		if ((key_code_list[code_count] & 0x80) != 0x80)
+			break;
+		/* If the content read is 0x7F, no need to read further break. */
+		if ((key_code_list[code_count] & 0x7F) == 0x7F)
+			break;
+	}
 
-    /* Read the EVTCODE */
-	lm8325_read(lm, LM8325_CMD_EVTCODE, &ints1, 1);
+	/* Read the EVT Code until you read 0x7f, this clears REVTINT interrupt. */
+	do {
+		lm8325_read(lm, LM8325_CMD_EVTCODE,
+			    &event_code_list[event_count], 1);
+		if (event_code_list[event_count] == 0x7f)
+			break;
+		++event_count;
+	} while (1);
 
-    /* Check if the key is pressed */
-    if ((ints & 0x7f) != 0x7f){
-        /* Get the row and column numbers of the key pressed/released */
-	    row = (ints & 0x70);
-	    col = (ints & 0xf);
+	for (event = 0; event < event_count; event++) {
+		row = event_code_list[event] & 0x70;
+		col = event_code_list[event] & 0xf;
+		key_code = row | col;
+		/* If Bit 7 is ON then the key is released otherwise the key
+		 * is pressed. */
+		if (event_code_list[event] & 0x80)
+			press_release = 0;
+		else
+			press_release = 1;
 
-	    key_code = (row | col);
-
-	    /* Check if the key was pressed or released */
-	    key_release = (ints1 & 0x80);
-
-        if (key_release == 0) {
-            if (code_count > 3) {
-                dev_err(&lm->client->dev, "%s: more then 4 keys pressed..error\n", __func__);
-                return -1;
-            }
-		    /* Handle the key press */
-		    input_report_key(lm->idev, lm->keymap[key_code], 1);
-		    input_sync(lm->idev);
-            code_count++;
-        } else {
-            if (code_count == 0) {
-                dev_err(&lm->client->dev, "%s: key release for now new key press..error\n", __func__);
-                return -1;
-            }
-		    /* Handle the key release */
-		    input_report_key(lm->idev, lm->keymap[key_code], 0);
-		    input_sync(lm->idev);
-            code_count--;
-        }
-    } else if ((ints1 & 0x80) == 0x80){
-        /* Key release */
-        /* Get the row and column numbers of the key pressed/released */
-	    row = (ints1 & 0x70);
-	    col = (ints1 & 0xf);
-
-	    key_code = (row | col);
-
-        if (code_count == 0) {
-            dev_err(&lm->client->dev, "%s: key release for now new key press..error\n", __func__);
-            return -1;
-        }
-		input_report_key(lm->idev, lm->keymap[key_code], 0);
+		input_report_key(lm->idev, lm->keymap[key_code], press_release);
 		input_sync(lm->idev);
-        code_count--;
-        goto ret;
-    } else {
-        dev_err(&lm->client->dev, "%s: no press or release\n", __func__);
-    }
+	}
 
-    /* Check if the multi-key scenario needs to be handled */
-    multi_key = (ints & 0x80);
-    if (multi_key)
-    {
-        lm8325_process_key(lm);
-    }
-ret:
 	return 0;
 }
 
@@ -451,8 +425,6 @@ static void lm8325_work(struct work_struct *work)
 	struct lm8325_chip *lm = container_of(work, struct lm8325_chip, work);
 	u8 ints = 0, ret = 0;
 	u8 buf[2];
-
-	disable_irq_nosync(lm->client->irq);
 
 	mutex_lock(&lm->lock);
 
@@ -471,20 +443,21 @@ static void lm8325_work(struct work_struct *work)
 			/* Process the data */
 			ret = lm8325_process_key(lm);
 
-            /* Error encountered if more tha 4 keys are pressed */
-            if (ret == -1)
-            {
-				dev_err(&lm->client->dev, "%s: Error encountered while processing the key pressed\n", __func__);
-			    /* clear any interrupts set */
-			    buf[0] = LM8325_CMD_KBDIC;
-			    buf[1] = 0x83;
-			    lm8325_write(lm, 2, buf);
+			/* Error encountered if more than 4 keys are pressed */
+			if (ret == -1) {
+				dev_err(&lm->client->dev,
+					"%s: Error encountered while processing the key pressed\n",
+					__func__);
+				/* clear any interrupts set */
+				buf[0] = LM8325_CMD_KBDIC;
+				buf[1] = 0x83;
+				lm8325_write(lm, 2, buf);
 
-			    /* Mask the required interrupts */
-			    buf[0] = LM8325_CMD_KBDMSK;
-			    buf[1] = 0x3;
-			    lm8325_write(lm, 2, buf);
-            }
+				/* Mask the required interrupts */
+				buf[0] = LM8325_CMD_KBDMSK;
+				buf[1] = 0x3;
+				lm8325_write(lm, 2, buf);
+			}
 		} else {
 			/* Check the bits set in the KBDMIS register and handle the
 			 * interrupt issued */
@@ -552,8 +525,6 @@ static void lm8325_work(struct work_struct *work)
 	}
 
 	mutex_unlock(&lm->lock);
-
-	enable_irq(lm->client->irq);
 }
 
 /**
