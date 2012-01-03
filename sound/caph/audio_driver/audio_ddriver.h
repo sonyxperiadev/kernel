@@ -282,5 +282,7 @@ typedef void (*VOIF_CB) (Int16 * ulData, Int16 *dlData, UInt32 sampleCount, UInt
 // voif interrupt handler, called by hw interrupt.
 void VOIF_Buffer_Request (UInt32 bufferIndex, UInt32 samplingRate);
 
+void AP_ProcessStatusMainAMRDone(UInt16 codecType);
+void VOIP_ProcessVOIPDLDone(void);
 
 #endif //#define __AUDIO_DDRIVER_H__

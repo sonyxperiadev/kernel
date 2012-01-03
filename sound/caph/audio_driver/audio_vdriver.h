@@ -362,5 +362,7 @@ Boolean AUDDRV_IsBTMWB(void);
 void AUDDRV_SetBTMTypeWB(Boolean isWB);
 
 int AUDDRV_Get_CP_AudioMode(void);
+void Audio_InitRpc(void);
+void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx);
 
 #endif				/* __AUDIO_VDRIVER_H__ */
