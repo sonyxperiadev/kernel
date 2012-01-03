@@ -51,6 +51,11 @@ static void hexdump(unsigned char *buf, unsigned int len)
 #define	FLAGS_BUSY	1
 #define SPUM_AES_QUEUE_LENGTH	10 
 
+#define AES_XTS_MIN_KEY_SIZE	32
+#define AES_XTS_MAX_KEY_SIZE	64
+#define AES_KEYSIZE_512		64
+
+
 static LIST_HEAD(spum_drv_list);
 static DEFINE_SPINLOCK(spum_drv_lock);
 
@@ -92,7 +97,7 @@ static int spum_aes_cpu_xfer(struct spum_aes_device *dd, u32 *in_buff,
 	struct spum_request_context *rctx = ablkcipher_request_ctx(dd->req);
 	u32 i = 0,k = 0,status, out_fifo[32];
 
-	pr_debug("%s \n",__func__);
+	pr_debug("%s entry\n",__func__);
 
 	length /= sizeof(u32);
 	if(!out_buff)
@@ -134,7 +139,7 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 	pr_debug("%s: entry \n",__func__);
 
 	if (!test_bit(FLAGS_BUSY, &dd->flags)) {
-		printk("Bug in driver!!!");
+		pr_err("%s: Device is busy!!!",__func__);
 		BUG();
 	}
 
@@ -244,12 +249,21 @@ static int spum_aes_process_req(struct ablkcipher_request *req)
 	struct spum_aes_context *aes_ctx = crypto_tfm_ctx(req->base.tfm);
 	struct spum_request_context *rctx = ablkcipher_request_ctx(req);
 	struct spum_aes_device *dd = aes_ctx->dd;
+	struct spum_hw_context *spum_cmd = 
+				(struct spum_hw_context *)rctx->spum_hdr;
 	int ret = 0;
 
 	pr_debug("%s : entry \n",__func__);
 
 	/* Do cpu_xfer(hdr) */
-	spum_aes_cpu_xfer(dd, (u32 *)rctx->spum_hdr, NULL, (rctx->rx_len-req->nbytes));
+	if((spum_cmd->crypto_mode&SPUM_CMD_CMODE_MASK) == SPUM_CRYPTO_MODE_XTS) {
+		spum_aes_cpu_xfer(dd, (u32 *)rctx->spum_hdr, NULL, (rctx->rx_len - 16 - req->nbytes));
+		spum_aes_cpu_xfer(dd, (u32 *)req->info,
+			NULL, crypto_ablkcipher_ivsize(crypto_ablkcipher_reqtfm(req)));
+	}
+	else {
+		spum_aes_cpu_xfer(dd, (u32 *)rctx->spum_hdr, NULL, (rctx->rx_len - req->nbytes));
+	}
 	rctx->tx_offset = 0;
 
 	ret = spum_aes_process_data(req);
@@ -316,6 +330,8 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 	struct spum_request_context *rctx = ablkcipher_request_ctx(req);
 	struct spum_hw_context  spum_hw_aes_ctx;
 	u32 cmd_len_bytes;
+	char *iv     = "\x00\x00\x00\x00\x00\x00\x00\x00"
+			"\x00\x00\x00\x00\x00\x00\x00\x00";
 
 	pr_debug("%s : entry \n",__func__);
 
@@ -325,9 +341,6 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 	spum_hw_aes_ctx.operation	=	op;
 	spum_hw_aes_ctx.crypto_algo	=	algo;
 	spum_hw_aes_ctx.crypto_mode	=	mode;
-	spum_hw_aes_ctx.init_vector	=	req->info;
-	spum_hw_aes_ctx.init_vector_len	=	crypto_ablkcipher_ivsize(
-						crypto_ablkcipher_reqtfm(req))/sizeof(u32);
 	spum_hw_aes_ctx.auth_algo	=	SPUM_AUTH_ALGO_NULL;
 	spum_hw_aes_ctx.key_type	=	SPUM_KEY_OPEN;
 
@@ -337,6 +350,24 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 					=	(((req->nbytes + 3)
 						/ sizeof(u32)) * sizeof(u32));
 	spum_hw_aes_ctx.data_attribute.crypto_offset  = 0;
+
+	spum_hw_aes_ctx.crypto_key = (void *)aes_ctx->key_enc;
+	spum_hw_aes_ctx.crypto_key_len = aes_ctx->key_len/sizeof(u32);
+
+	spum_hw_aes_ctx.init_vector_len	=	crypto_ablkcipher_ivsize(
+						crypto_ablkcipher_reqtfm(req))/sizeof(u32);
+
+	if(mode == SPUM_CRYPTO_MODE_XTS) {
+		spum_hw_aes_ctx.init_vector =	iv;
+		spum_hw_aes_ctx.data_attribute.crypto_length += 
+				spum_hw_aes_ctx.init_vector_len*sizeof(u32);
+		spum_hw_aes_ctx.data_attribute.data_length +=
+				spum_hw_aes_ctx.init_vector_len*sizeof(u32);
+		aes_ctx->key_len /= 2;
+	}
+	else {
+		spum_hw_aes_ctx.init_vector =	req->info;
+	}
 
 	switch (aes_ctx->key_len) {
 		case AES_KEYSIZE_128:
@@ -348,12 +379,13 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 		case AES_KEYSIZE_256:
 			spum_hw_aes_ctx.crypto_type = SPUM_CRYPTO_TYPE_AES_K256;         
 			break;
+		case AES_KEYSIZE_512:
+			spum_hw_aes_ctx.crypto_type = SPUM_CRYPTO_TYPE_AES_K256;
+ 			break;
 		default:
 			return -EPERM;
 	}
 
-	spum_hw_aes_ctx.crypto_key = (void *)aes_ctx->key_enc;
-	spum_hw_aes_ctx.crypto_key_len = aes_ctx->key_len/sizeof(u32);
 	cmd_len_bytes = spum_format_command(&spum_hw_aes_ctx, rctx->spum_hdr);
 
 	rctx->rx_len = cmd_len_bytes + spum_hw_aes_ctx.data_attribute.data_length;
@@ -368,13 +400,14 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 
 static int spum_aes_setkey(struct crypto_ablkcipher *tfm, const u8 *in_key, u32 key_len)
 {
-        struct spum_aes_context *aes_ctx = crypto_ablkcipher_ctx(tfm);
-        const __le32 *key = (const __le32 *)in_key;
-        int ret = 0;
+	struct spum_aes_context *aes_ctx = crypto_ablkcipher_ctx(tfm);
+	struct ablkcipher_alg *cipher = crypto_ablkcipher_alg(tfm);
+	const __le32 *key = (const __le32 *)in_key;
+	int ret = 0;
 
         pr_debug("%s:Entry.%d\n",__FUNCTION__,key_len);
 
-        if((key_len < AES_MIN_KEY_SIZE) || (key_len > AES_MAX_KEY_SIZE)) {
+	if((key_len < cipher->min_keysize) || (key_len > cipher->max_keysize)) {
                 crypto_ablkcipher_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
                 ret = -EINVAL;
         }
@@ -385,6 +418,29 @@ static int spum_aes_setkey(struct crypto_ablkcipher *tfm, const u8 *in_key, u32 
 
         pr_debug("%s:Exit.\n",__FUNCTION__);
         return ret;
+}
+
+static int spum_aes_xts_setkey(struct crypto_ablkcipher *tfm, const u8 *in_key, u32 key_len)
+{
+	struct spum_aes_context *aes_ctx = crypto_ablkcipher_ctx(tfm);
+	struct ablkcipher_alg *cipher = crypto_ablkcipher_alg(tfm);
+        const __le32 *key = (const __le32 *)in_key;
+        int ret = 0;
+
+	pr_debug("%s:Entry.%d\n",__FUNCTION__,key_len);
+
+	if((key_len < cipher->min_keysize) || (key_len > cipher->max_keysize)) {
+		crypto_ablkcipher_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
+		ret = -EINVAL;
+	}
+	else {
+		memcpy((u32 *)(aes_ctx->key_enc), ((u8 *)key + key_len/2), key_len/2);
+		memcpy((u32 *)((u8 *)aes_ctx->key_enc+key_len/2), key, key_len/2);
+		aes_ctx->key_len = key_len;
+	}
+
+	pr_debug("%s:Exit.\n",__FUNCTION__);
+	return ret;
 }
 
 static int spum_aes_ecb_encrypt(struct ablkcipher_request *req)
@@ -427,6 +483,20 @@ static int spum_aes_ctr_decrypt(struct ablkcipher_request *req)
 	pr_debug("%s : entry \n",__func__);
 	return spum_aes_crypt(req, SPUM_CRYPTO_ALGO_AES,
 			SPUM_CRYPTO_MODE_CTR, SPUM_CRYPTO_DECRYPTION);
+}
+
+static int spum_aes_xts_encrypt(struct ablkcipher_request *req)
+{
+	pr_debug("%s : entry \n",__func__);
+	return spum_aes_crypt(req, SPUM_CRYPTO_ALGO_AES,
+			SPUM_CRYPTO_MODE_XTS, SPUM_CRYPTO_ENCRYPTION);
+}
+
+static int spum_aes_xts_decrypt(struct ablkcipher_request *req)
+{
+	pr_debug("%s : entry \n",__func__);
+	return spum_aes_crypt(req, SPUM_CRYPTO_ALGO_AES,
+			SPUM_CRYPTO_MODE_XTS, SPUM_CRYPTO_DECRYPTION);
 }
 
 static int spum_aes_cra_init(struct crypto_tfm *tfm)
@@ -526,6 +596,27 @@ static struct crypto_alg spum_algos[] = {
 		.setkey         = spum_aes_setkey,
 		.encrypt        = spum_aes_ctr_encrypt,
 		.decrypt        = spum_aes_ctr_decrypt,
+	}
+},
+{
+	.cra_name               = "xts(aes)",
+	.cra_driver_name        = "spum-xts-aes",
+	.cra_priority           = 300,
+	.cra_flags              = (CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC),
+	.cra_blocksize          = AES_BLOCK_SIZE,
+	.cra_ctxsize            = sizeof(struct spum_aes_context),
+	.cra_alignmask          = 0,
+	.cra_type               = &crypto_ablkcipher_type,
+	.cra_module             = THIS_MODULE,
+	.cra_init               = spum_aes_cra_init,
+	.cra_exit               = spum_aes_cra_exit,
+	.cra_u.ablkcipher = {
+		.min_keysize    = AES_XTS_MIN_KEY_SIZE,
+		.max_keysize    = AES_XTS_MAX_KEY_SIZE,
+		.ivsize         = AES_BLOCK_SIZE,
+		.setkey         = spum_aes_xts_setkey,
+		.encrypt        = spum_aes_xts_encrypt,
+		.decrypt        = spum_aes_xts_decrypt,
 	}
 },
 };

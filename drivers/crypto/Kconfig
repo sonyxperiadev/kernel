@@ -293,7 +293,7 @@ config CRYPTO_DEV_S5P
 	  algorithms execution.
 
 config CRYPTO_DEV_BRCM_SPUM_HASH
-	tristate "Support for BRCM SPUM accelerator."
+	tristate "Support for BRCM SPUM HASH accelerator."
 	depends on ARCH_KONA
 	select CRYPTO_SHA1
 	select CRYPTO_SHA256
@@ -306,6 +306,7 @@ config CRYPTO_DEV_BRCM_SPUM_AES
 	depends on ARCH_KONA
 	select CRYPTO_AES
 	select CRYPTO_CTR
+	select CRYPTO_XTS
 	help
 	 Driver for Rhea SPUM crypto accelerator.
 
