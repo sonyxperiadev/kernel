@@ -78,7 +78,7 @@ static void dump_buff (unsigned char *ptr, unsigned long size)
 
 static int rhearay_mmc_init (void) 
 {
-	int status, ret;
+	int status;
 
 	mmc_initialize();
 
@@ -139,7 +139,8 @@ static ssize_t
 kona_mmc_poll_read(struct device *dev, struct device_attribute *attr,
 	  const char *buf, size_t n)
 {
-	unsigned long dev_num, blk, cnt;
+	unsigned long dev_num, blk;
+	int cnt;
 	int ret;
 
 	if (sscanf(buf,"%d", &cnt) != 1) {
@@ -150,7 +151,7 @@ kona_mmc_poll_read(struct device *dev, struct device_attribute *attr,
 	blk = APANIC_PARTITION_BLOCK_START_ADDRESS;
 	dev_num = 0;
 
-	printk("Reading %d blocks starting from block number %d \r\n", cnt, blk);
+	printk("Reading %d blocks starting from block number %ld \r\n", cnt, blk);
 
 	rd_buff = kmalloc(cnt * BLOCK_SIZE , GFP_KERNEL);
 	fill_buff ((unsigned char *)rd_buff, cnt * BLOCK_SIZE, (unsigned char)0xa5);
@@ -171,8 +172,9 @@ static ssize_t
 kona_mmc_poll_write(struct device *dev, struct device_attribute *attr,
 	  const char *buf, size_t n)
 {
-	unsigned long dev_num, blk, cnt, pattern;
+	unsigned long dev_num, blk;
 	int ret;
+	int cnt, pattern;
 
 	if (sscanf(buf,"%d %x", &cnt, &pattern) != 2) {
 		printk("Usage: echo [num_blks_to_write] [byte_pattern] > /sys/mmc_test/mmc_poll_write \r\n");
@@ -182,12 +184,12 @@ kona_mmc_poll_write(struct device *dev, struct device_attribute *attr,
 	blk = APANIC_PARTITION_BLOCK_START_ADDRESS;
 	dev_num = 0;
 
-	printk("Writing %d blocks starting from block nu %d with pattern 0x%x \r\n", cnt, blk, pattern); 
+	printk("Writing %d blocks starting from block nu %ld with pattern 0x%x \r\n", cnt, blk, pattern);
 
 	wr_buff = kmalloc(cnt * BLOCK_SIZE , GFP_KERNEL);
 	fill_buff ((unsigned char *)wr_buff, cnt * BLOCK_SIZE, (unsigned char)pattern);
 
-	mmc->block_dev.block_write(dev_num,blk,cnt,wr_buff);
+	ret = mmc->block_dev.block_write(dev_num,blk,cnt,wr_buff);
 	if (ret == 0)
 		printk("kona_mmc_poll_write: block_read returned 0 \r\n");
 	else

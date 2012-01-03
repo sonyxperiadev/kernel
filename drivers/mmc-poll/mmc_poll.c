@@ -48,7 +48,7 @@
  * To keep things simple, we are not using
  * multi block transfer cmds for data transfers
  */
-#define USE_ONLY_SINGLE_BLOCK_TRANSFERS
+/* #define USE_ONLY_SINGLE_BLOCK_TRANSFERS */
 
 static inline uint64_t lldiv(uint64_t dividend, uint32_t divisor)
 {
@@ -108,8 +108,10 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void*src)
 {
 	struct mmc_cmd cmd;
 	struct mmc_data data;
-	int i;
 
+#ifdef USE_ONLY_SINGLE_BLOCK_TRANSFERS
+	int i;
+#endif
 	if ((start + blkcnt) > mmc->block_dev.lba) {
 		printk("MMC: block number 0x%lx exceeds max(0x%lx)\n",
 			start + blkcnt, mmc->block_dev.lba);
@@ -237,7 +239,9 @@ int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start, lbaint_t blkcnt)
 {
 	struct mmc_cmd cmd;
 	struct mmc_data data;
+#ifdef USE_ONLY_SINGLE_BLOCK_TRANSFERS
 	int i;
+#endif
 
 #ifdef USE_ONLY_SINGLE_BLOCK_TRANSFERS
 	cmd.cmdidx = MMC_CMD_READ_SINGLE_BLOCK;
