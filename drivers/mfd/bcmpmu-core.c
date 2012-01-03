@@ -35,76 +35,6 @@
 static struct bcmpmu *bcmpmu_core;
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
-static unsigned int map, addr, value, mask;
-static ssize_t
-bcmpmu_show_map(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	return sprintf(buf, "%X\n", map);
-}
-
-static ssize_t
-bcmpmu_set_map(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
-{
-	unsigned long val = simple_strtoul(buf, NULL, 0);
-	if (val > 1)
-		return -EINVAL;
-	map = val;
-	return n;
-}
-
-static ssize_t
-bcmpmu_show_addr(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	return sprintf(buf, "%X\n", addr);
-}
-
-static ssize_t
-bcmpmu_set_addr(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
-{
-	unsigned long val = simple_strtoul(buf, NULL, 0);
-	addr = val;
-	return n;
-}
-
-static ssize_t
-bcmpmu_show_mask(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	return sprintf(buf, "%X\n", mask);
-}
-
-static ssize_t
-bcmpmu_set_mask(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
-{
-	unsigned long val = simple_strtoul(buf, NULL, 0);
-	mask = val;
-	return n;
-}
-
-static ssize_t
-show_reg_read(struct device *dev, struct device_attribute *attr,
-				char *buf)
-{
-	struct bcmpmu *bcmpmu = dev->platform_data;
-	bcmpmu->read_dev_drct(bcmpmu, map, addr, &value, mask);
-	return	snprintf(buf, PAGE_SIZE,
-		"Read register map=0x%X, addr=0x%X, value=0x%X, mask=0x%x\n",
-		map, addr, value, mask);
-}
-static ssize_t
-store_reg_write(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	struct bcmpmu *bcmpmu = dev->platform_data;
-	sscanf(buf, "%x", &value);
-	bcmpmu->write_dev_drct(bcmpmu, map, addr, value, mask);
-	return count;
-}
 static ssize_t
 store_adc_req(struct device *dev, struct device_attribute *attr,
 				const char *buf, size_t count)
@@ -117,6 +47,8 @@ store_adc_req(struct device *dev, struct device_attribute *attr,
 		bcmpmu->adc_req(bcmpmu, &adc);
 	else
 		printk(KERN_INFO "%s: adc_req failed\n", __func__);
+	printk("%s: ADC raw = %d, cal = %d, cnv = %d\n", __func__,
+			adc.raw, adc.cal, adc.cnv);
 	return count;
 }
 static ssize_t
@@ -139,7 +71,7 @@ store_rgltr(struct device *dev, struct device_attribute *attr,
 	regulator_put(rgltr);
 	return count;
 }
-static ssize_t store_regbulk(struct device *dev, struct device_attribute *attr,
+static ssize_t store_regread(struct device *dev, struct device_attribute *attr,
 				const char *buf, size_t count)
 {
 	int i;
@@ -157,25 +89,28 @@ static ssize_t store_regbulk(struct device *dev, struct device_attribute *attr,
 	}
 	return count;
 }
+static ssize_t store_regwrite(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	unsigned int map, addr, val;
+	sscanf(buf, "%x %x %x", &map, &addr, &val);
+	printk("BCMPMU map=0x%X, addr=0x%X, val=0x%X\n", map, addr, val);
+	if (map<2)
+		bcmpmu->write_dev_drct(bcmpmu, map, addr, val, 0xFF);
+	return count;
+}
 
-static DEVICE_ATTR(regread, 0644, show_reg_read, NULL);
-static DEVICE_ATTR(regwrite, 0644, NULL, store_reg_write);
 static DEVICE_ATTR(adcreq, 0644, NULL, store_adc_req);
 static DEVICE_ATTR(rgltr, 0644, NULL, store_rgltr);
-static DEVICE_ATTR(map, 0644, bcmpmu_show_map, bcmpmu_set_map);
-static DEVICE_ATTR(addr, 0644, bcmpmu_show_addr, bcmpmu_set_addr);
-static DEVICE_ATTR(mask, 0644, bcmpmu_show_mask, bcmpmu_set_mask);
-static DEVICE_ATTR(regbulk, 0644, NULL, store_regbulk);
+static DEVICE_ATTR(regread, 0644, NULL, store_regread);
+static DEVICE_ATTR(regwrite, 0644, NULL, store_regwrite);
 
 static struct attribute *bcmpmu_core_attrs[] = {
 	&dev_attr_regread.attr,
 	&dev_attr_regwrite.attr,
 	&dev_attr_adcreq.attr,
 	&dev_attr_rgltr.attr,
-	&dev_attr_map.attr,
-	&dev_attr_addr.attr,
-	&dev_attr_mask.attr,
-	&dev_attr_regbulk.attr,
 	NULL
 };
 
