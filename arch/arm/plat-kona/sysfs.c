@@ -30,6 +30,77 @@
 
 struct kobject *bcm_kobj;
 
+#define REG_EMU_AREA 0x3404BF90
+
+static char *str_reset_reason[] = {
+        "power_on_reset",
+        "soft_reset",
+        "charging",
+        "unknown"
+};
+
+static ssize_t
+reset_reason_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+        unsigned int index, *reset_reason, rst;
+
+       reset_reason = (unsigned int *)ioremap(REG_EMU_AREA, 0x4);
+       pr_debug("%s: reset_reason 0x%x\n",__func__,*reset_reason);
+       rst = *reset_reason;
+       rst &= 0xf;
+
+       switch (rst) {
+       case 0x1:
+               index = 0;
+               break;
+       case 0x3:
+               index = 2;
+               break;
+       default:
+               index = 0;
+       }
+
+        pr_debug("%s: reset reason index %d\n",__func__,index);
+        sprintf(buf, "%s\n", str_reset_reason[index]);
+
+        iounmap(reset_reason);
+        return strlen(str_reset_reason[index]) + 1;
+}
+
+static ssize_t
+reset_reason_store(struct device *dev, struct device_attribute *attr, char *buf,
+        size_t n)
+{
+        char    reset_reason[32];
+        int     i;
+        unsigned short soc0 = 0;
+        unsigned int *rst;
+
+        rst = (unsigned int *)ioremap(REG_EMU_AREA, 0x4);
+
+        if(sscanf(buf, "%s", reset_reason) == 1) {
+                pr_debug("%s: Reset reason: %s",__func__,reset_reason);
+
+                for(i=0; i < ARRAY_SIZE(str_reset_reason); i++){
+                        if(strcmp(reset_reason,str_reset_reason[i])==0)
+                                break;
+                }
+
+                soc0 = *rst;
+                soc0 &= ~(0xf); soc0 |= ((i+1));
+                *rst = soc0;
+
+                return n;
+        }
+
+        iounmap(rst);
+        return -EINVAL;
+}
+
+static DEVICE_ATTR(reset_reason, 0777, reset_reason_show, reset_reason_store);
+
+
+
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS
 static ssize_t
 kona_timer_module_cfg(struct device *dev, struct device_attribute *attr,
@@ -154,6 +225,7 @@ static struct attribute *bcm_attrs[] = {
 	&dev_attr_timer_start_test.attr,
 	&dev_attr_timer_stop_test.attr,
 #endif
+	&dev_attr_reset_reason.attr,
 	NULL,
 };
 
