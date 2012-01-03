@@ -23,7 +23,7 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 
-//#define FPS_30_MODE		
+#define FPS_30_MODE		
 
 #define OV5640_BRIGHTNESS_MIN           0
 #define OV5640_BRIGHTNESS_MAX           200
@@ -1394,7 +1394,7 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
-	*frames = 5;
+	*frames = 0;
 
 	return 0;
 }
