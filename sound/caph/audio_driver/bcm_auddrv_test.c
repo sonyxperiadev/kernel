@@ -325,84 +325,47 @@ static int HandleControlCommand()
 				csl_caph_ControlHWClock(TRUE);
 
 				sprintf(MsgBuf,
-					"0x35026800 =0x%08lx, 0x3502c910 =0x%08lx, 0x3502c990 =0x%08lx, 0x3502c900 =0x%08lx,0x3502cc20 =0x%08lx,0x35025800 =0x%08lx, 0x34000a34 =0x%08lx, 0x340004b0 =0x%08lx, 0x3400000c =0x%08lx, 0x3400047c =0x%08lx, 0x34000a40=0x%08lx\n",
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x35026800))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502c910))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502c990))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502c900))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502cc20))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x35025800))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x34000a34))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x340004b0))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3400000c))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3400047c))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x34000a40)))
-				    );
+"0x35026800 =0x%08lx, 0x3502c910 =0x%08lx, 0x3502c990 =0x%08lx, 0x3502c900 =0x%08lx,0x3502cc20 =0x%08lx,0x35025800 =0x%08lx, 0x34000a34 =0x%08lx, 0x340004b0 =0x%08lx, 0x3400000c =0x%08lx, 0x3400047c =0x%08lx, 0x34000a40=0x%08lx\n",
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x35026800))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502c910))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502c990))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502c900))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502cc20))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x35025800))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x34000a34))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x340004b0))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3400000c))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3400047c))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x34000a40))));
 
 				BCM_AUDIO_DEBUG("%s", MsgBuf);
 
 				sprintf(MsgBuf,
-					"0x3502f000 =0x%08lx, 04 =0x%08lx, 08 =0x%08lx, 0c =0x%08lx, 10 =0x%08lx, 14 =0x%08lx, 18 =0x%08lx, 1c =0x%08lx, 20 =0x%08lx, 24 =0x%08lx, 28 =0x%08lx, 2c =0x%08lx, 30 =0x%08lx, 34 =0x%08lx, 38 =0x%08lx, 3c =0x%08lx, 40 =0x%08lx, 44 =0x%08lx, 48 =0x%08lx, 4c =0x%08lx,50 =0x%08lx, 54 =0x%08lx, 58 =0x%08lx, 5c =0x%08lx\n",
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f000))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f004))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f008))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f00c))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f010))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f014))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f018))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f01c))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f020))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f024))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f028))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f02c))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f030))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f034))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f038))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f03c))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f040))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f044))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f048))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f04c))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f050))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f054))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f058))),
-					*((volatile UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(0x3502f05c)))
-				    );
+"0x3502f000 =0x%08lx, 04 =0x%08lx, 08 =0x%08lx, 0c =0x%08lx, 10 =0x%08lx, 14 =0x%08lx, 18 =0x%08lx, 1c =0x%08lx, 20 =0x%08lx, 24 =0x%08lx, 28 =0x%08lx, 2c =0x%08lx, 30 =0x%08lx, 34 =0x%08lx, 38 =0x%08lx, 3c =0x%08lx, 40 =0x%08lx, 44 =0x%08lx, 48 =0x%08lx, 4c =0x%08lx,50 =0x%08lx, 54 =0x%08lx, 58 =0x%08lx, 5c =0x%08lx\n",
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f000))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f004))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f008))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f00c))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f010))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f014))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f018))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f01c))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f020))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f024))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f028))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f02c))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f030))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f034))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f038))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f03c))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f040))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f044))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f048))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f04c))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f050))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f054))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f058))),
+				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f05c))));
 
 				BCM_AUDIO_DEBUG("%s", MsgBuf);
 
@@ -450,7 +413,7 @@ static int HandleControlCommand()
 			BCM_AUDIO_DEBUG(" peek a register, 0x%08lx\n", regAddr);
 			csl_caph_ControlHWClock(TRUE);
 			regVal =
-			    *((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(regAddr)));
+			    *((UInt32 *)(HW_IO_PHYS_TO_VIRT(regAddr)));
 			BCM_AUDIO_DEBUG("		value = 0x%08lx\n",
 					regVal);
 			csl_caph_ControlHWClock(FALSE);
@@ -462,11 +425,11 @@ static int HandleControlCommand()
 			UInt32 regAddr = sgBrcm_auddrv_TestValues[2];
 			UInt32 regVal = sgBrcm_auddrv_TestValues[3];
 			csl_caph_ControlHWClock(TRUE);
-			*((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(regAddr))) =
+			*((UInt32 *)(HW_IO_PHYS_TO_VIRT(regAddr))) =
 			    regVal;
 			BCM_AUDIO_DEBUG(" poke a register, 0x%08lx = 0x%08lx\n",
 					regAddr,
-					*((volatile UInt32
+					*((UInt32
 					   *)(HW_IO_PHYS_TO_VIRT(regAddr))));
 			csl_caph_ControlHWClock(FALSE);
 		}
@@ -480,42 +443,37 @@ static int HandleControlCommand()
 
 	BCM_AUDIO_DEBUG(" hard code caph clock register for debugging..\n");
 			csl_caph_ControlHWClock(TRUE);
-			regVal =
-			    (0x00A5A5 <<
+			regVal = (0x00A5A5 <<
 			     KHUB_CLK_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
 			regVal |= KHUB_CLK_MGR_REG_WR_ACCESS_CLKMGR_ACC_MASK;
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET),regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET))
 			 = (UInt32) regVal);
-			while (((*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			while (((*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 				KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET)))
 				& 0x01) == 1) {
 			}
 
 			/* Set the frequency policy */
-			regVal =
-			    (0x06 <<
+			regVal = (0x06 <<
 			     KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY0_FREQ_SHIFT);
-			regVal |=
-			    (0x06 <<
+			regVal |= (0x06 <<
 			     KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT);
-			regVal |=
-			    (0x06 <<
+			regVal |= (0x06 <<
 			     KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY2_FREQ_SHIFT);
-			regVal |=
-			    (0x06 <<
+			regVal |= (0x06 <<
 			     KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY3_FREQ_SHIFT);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY_FREQ_OFFSET) ,regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_POLICY_FREQ_OFFSET))
 			 = (UInt32) regVal);
 
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET))
 			 = (UInt32) 0x0000FFFF);
 
@@ -524,49 +482,49 @@ WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY_FREQ_OFFSET) ,regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET) ,regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY1_MASK1_OFFSET) ,regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_POLICY1_MASK1_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY2_MASK1_OFFSET) ,regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_POLICY2_MASK1_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY3_MASK1_OFFSET) ,regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_POLICY3_MASK1_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY0_MASK2_OFFSET) ,regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_POLICY0_MASK2_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY1_MASK2_OFFSET) ,regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_POLICY1_MASK2_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY2_MASK2_OFFSET) ,regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_POLICY2_MASK2_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY3_MASK2_OFFSET) ,regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_POLICY3_MASK2_OFFSET))
 			 = (UInt32) regVal);
 
@@ -577,35 +535,35 @@ WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY3_MASK2_OFFSET) ,regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET) ,regVal);
 */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET))
 			 = (UInt32) regVal);
-			while (((*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			while (((*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 				KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET)))
 				& 0x01) == 1) {
 			}
 
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET))
 			 = (UInt32) 0x0000FFFF);
 
 			/* mdelay(1000); */
 
 			/* srcMixer clock */
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET))
 			 = (UInt32) 0x00000011);
 /*
-while ( ((*((volatile UInt32 *)
+while ( ((*((UInt32 *)
 (KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET))) & 0x00100000)
 == 0x00100000) {}
 */
 
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET))
 			 = (UInt32) 0x00100000);
 /*
-while ( ((*((volatile UInt32 *)
+while ( ((*((UInt32 *)
 (KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET))) & 0x00100000)
 == 0x00100000) {}
 */
@@ -619,15 +577,15 @@ regVal |= KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_VAL_MASK;
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET) ,regVal);
 */
 #endif
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET))
 			 = (UInt32) 0x1030);
 
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_DAP_SWITCH_CLKGATE_OFFSET))
 			 = (UInt32) 0x1);
 
-			(*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_APB10_CLKGATE_OFFSET))
 			 = (UInt32) 0x1);
 
