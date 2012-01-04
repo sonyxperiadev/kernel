@@ -18,7 +18,7 @@
 #include <linux/module.h>
 #include <linux/io.h>
 #include <linux/workqueue.h>
-#include <linux/console.h>
+#include <linux/brcm_console.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/fs.h>
@@ -318,6 +318,7 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				kbuf_str = kmalloc(lcl->size + 1, GFP_ATOMIC);
 
 				if (!kbuf_str) {
+					BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
 					BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
 						      "allocation error\n");
 					rc = -1;
@@ -394,6 +395,8 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 						    GFP_ATOMIC);
 
 					if (!kernelSigBuf) {
+						BCMLOG_RecordLogError
+						    (MEMORY_FULL_ONCE);
 						BCMLOG_PRINTF
 						    (BCMLOG_CONSOLE_MSG_ERROR,
 						     "allocation error\n");
@@ -473,8 +476,6 @@ static int __init BCMLOG_ModuleInit(void)
 {
 	struct device *drvdata;
 	int ret = 0;
-#if 0				/* test */
-#endif
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP
 	mtd = NULL;
 	tot_size = 0;
@@ -580,6 +581,7 @@ static void LogString_Internal(const char *inLogString, unsigned short inSender)
 	kbuf_mtt = kmalloc(mttFrameSize, GFP_ATOMIC);
 
 	if (!kbuf_mtt) {
+		BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
 		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR, "allocation error\n");
 		return;
 	}
@@ -796,9 +798,7 @@ static void LogSignal_Internal(unsigned int inSigCode,
 		compressedBuffer = kmalloc((inSigBufSize * 2), GFP_ATOMIC);
 
 		if (compressedBuffer == NULL) {
-#ifdef BCMLOG_DEBUG_FLAG
-			g_malloc_sig_buf++;
-#endif
+			BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
 			BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
 				      "allocation error\n");
 			return;
@@ -883,12 +883,9 @@ static void LogSignal_Internal(unsigned int inSigCode,
 			 * (located on stack; do not free when done)
 			 **/
 			BCMLOG_Output(frame_end, frame_end_size, 0);
+		} else {
+			BCMLOG_RecordLogError(SIOBUF_FULL_ONCE);
 		}
-#ifdef BCMLOG_DEBUG_FLAG
-		else
-			pr_info("Warning: want %d, have %d", totallen,
-				availlen);
-#endif
 
 		ReleaseOutputLock(irql);
 	}
@@ -1429,9 +1426,7 @@ void BCMLOG_LogLinkList(unsigned int sig_code,
 			compressedBuffer = kmalloc((ptr_size * 2), GFP_ATOMIC);
 
 			if (compressedBuffer == NULL) {
-#ifdef BCMLOG_DEBUG_FLAG
-			g_malloc_sig_buf++;
-#endif
+				BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
 				BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
 					      "allocation error\n");
 				return;
@@ -1581,11 +1576,9 @@ static void BCMLOG_OutputLinkList(unsigned long ListSize,
 					      LinkList[i].size, 0);
 			}
 		}
+	} else {
+		BCMLOG_RecordLogError(SIOBUF_FULL_ONCE);
 	}
-#ifdef BCMLOG_DEBUG_FLAG
-	else
-		pr_info("Warning: want %d, have %d", totallen, availlen);
-#endif
 
 	ReleaseOutputLock(irql);
 }

@@ -20,8 +20,8 @@
  *
  *  @brief  Interface to the Broadcom logging driver.
  *
- *	@note	Use code will access driver through an API layer and typically should not
- *			require use of these symbols.
+ *  @note   Use code will access driver through an API layer and typically should not
+ *          require use of these symbols.
  *
  **/
 
@@ -255,6 +255,18 @@ extern "C" {
 				unsigned short state, unsigned short sender);
 
 /**
+ *	Acquire lock on output stream
+ *	@return irql value to be passed to ReleaseOutputLock()
+ **/
+	unsigned long AcquireOutputLock(void);
+
+/**
+ *	Release lock on output stream
+ *	@param irql (in) value returned by AcquireOutputLock()
+ **/
+	void ReleaseOutputLock(unsigned long irql);
+
+/**
  *	Logging output devices.
  **/
 #define BCMLOG_OUTDEV_NONE		0	/* undefined or disabled */
@@ -278,9 +290,6 @@ extern "C" {
 	extern int bcmlog_mtt_on;
 	extern unsigned short bcmlog_log_ulogging_id;
 	extern unsigned long BCMLOG_GetFreeSize(void);
-#ifdef BCMLOG_DEBUG_FLAG
-	extern unsigned int g_malloc_sig_buf;
-#endif
 
 #ifdef __cplusplus
 }
