@@ -315,8 +315,16 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	else
 		flags |= (2 << EMMCSDXC_CMD_RTSEL_SHIFT);
 
-	if (cmd->resp_type & MMC_RSP_CRC)
-		flags |= (1 << EMMCSDXC_CMD_CRC_EN_SHIFT);
+	if (cmd->resp_type & MMC_RSP_CRC) {
+		/* Skip CRC check of cmd2 and cmd10 to fix Hynix device.
+		 * Vendor comfirmed to have this workaround
+		 */
+		if (cmd->cmdidx != MMC_CMD_ALL_SEND_CID &&
+		    cmd->cmdidx != MMC_CMD_SEND_CID) {
+			flags |= (1 << EMMCSDXC_CMD_CRC_EN_SHIFT);
+		}
+	}
+
 	if (cmd->resp_type & MMC_RSP_OPCODE)
 		flags |= (1 << EMMCSDXC_CMD_CCHK_EN_SHIFT);
 	if (data)
