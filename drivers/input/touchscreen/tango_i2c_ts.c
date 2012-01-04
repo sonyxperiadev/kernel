@@ -802,6 +802,8 @@ int setup_gpio(void)
 		ret = rc;
 	}
 
+	gpio_direction_input(gp_i2c_ts->gpio_irq_pin);
+
 	if ((rc = request_irq(gpio_to_irq(gp_i2c_ts->gpio_irq_pin),
 								 i2c_ts_driver_isr,
 								 (IRQF_TRIGGER_FALLING),
@@ -832,7 +834,7 @@ static int i2c_ts_driver_reset_slave(void)
 
 	/* Rewrite these settings following reset. */
 	g_low_power_changed = 1;
-	mdelay(GPIO_I2C_RESET_DELAY_MSECS*20);
+	mdelay(GPIO_I2C_RESET_DELAY_MSECS*100);
 
 	rc = i2c_ts_driver_check_mod_params();
 
@@ -932,7 +934,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	p_tango_i2c_dev->dummy_client = 0;
 
 	p_tango_i2c_dev->client = p_i2c_client;
-
+#if 0
 	p_tango_i2c_dev->dummy_client = i2c_new_dummy(p_i2c_client->adapter,
 												  TANGO_M29_SLAVE_ADDR);
 	if (!p_tango_i2c_dev->dummy_client) {
@@ -950,6 +952,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		p_tango_i2c_dev->dummy_client = 0;
 	}
 	else
+#endif
 		gp_i2c_ts->layout = TANGO_M29_LAYOUT;
 
 	mutex_init(&p_tango_i2c_dev->mutex_wq);
