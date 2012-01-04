@@ -307,7 +307,14 @@ static struct regulator_init_data bcm59039_simldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+/*TODO: We observed that, on Rhearay HW, interrupt from GPIO expander
+is not detected by baseband if SIMLDO is disabled. As a temp. workaround
+we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
+#warning "Fix SIMLDO always_on setting on Rhearay"
+           .always_on = 1,
+#endif
+
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim_supply),
 	.consumer_supplies = sim_supply,
@@ -455,40 +462,81 @@ static struct regulator_init_data bcm59039_sdsr_lpm_data = {
 	.consumer_supplies = sdsr_lpm_supply,
 };
 
-struct bcmpmu_regulator_init_data bcm59039_regulators[] = {
-	{BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_HV6LDO, &bcm59039_hv6ldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_HV7LDO, &bcm59039_hv7ldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_HV8LDO, &bcm59039_hv8ldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0x00, 0},
-	{BCMPMU_REGULATOR_HV10LDO, &bcm59039_hv10ldo_data, 0x00, 0},
+struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
+	[BCMPMU_REGULATOR_RFLDO] = {
+		BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_CAMLDO] = {
+		BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_HV1LDO] =	{
+		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_HV2LDO] =	{
+		BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_HV3LDO] = {
+		BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_HV4LDO] =	{
+		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_HV5LDO] = {
+		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_HV6LDO] = {
+		BCMPMU_REGULATOR_HV6LDO, &bcm59039_hv6ldo_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_HV7LDO] = {
+		BCMPMU_REGULATOR_HV7LDO, &bcm59039_hv7ldo_data, 0x00, 0
+	},
+
 /*TODO: We observed that, on Rhearay HW, interrupt from GPIO expander
 is not detected by baseband if SIMLDO is disabled. As a temp. workaround
 we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
 #warning "Fix SIMLDO opmode setting on Rhearay"
-	{BCMPMU_REGULATOR_SIMLDO, &bcm59039_simldo_data, 0x00,
-			BCMPMU_REGL_LPM_IN_DSM},
+	[BCMPMU_REGULATOR_SIMLDO] = {
+		BCMPMU_REGULATOR_SIMLDO, &bcm59039_simldo_data, 0x00,
+			BCMPMU_REGL_LPM_IN_DSM
+	},
 #else
-	{BCMPMU_REGULATOR_SIMLDO, &bcm59039_simldo_data, 0xAA,
-			BCMPMU_REGL_LPM_IN_DSM},
+	[BCMPMU_REGULATOR_SIMLDO] = {
+		BCMPMU_REGULATOR_SIMLDO, &bcm59039_simldo_data, 0xAA,
+			BCMPMU_REGL_LPM_IN_DSM
+	},
 #endif
-	{BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x31, 0},
-	{BCMPMU_REGULATOR_CSR_NM2, &bcm59039_csr_nm2_data, 0xFF, 0},
-	{BCMPMU_REGULATOR_CSR_LPM, &bcm59039_csr_lpm_data, 0xFF, 0},
-	{BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0x00, 0},
-	{BCMPMU_REGULATOR_IOSR_NM2, &bcm59039_iosr_nm2_data, 0x00, 0},
-	{BCMPMU_REGULATOR_IOSR_LPM, &bcm59039_iosr_lpm_data, 0x00, 0},
-	{BCMPMU_REGULATOR_SDSR_NM, &bcm59039_sdsr_nm_data, 0x00, 0},
-	{BCMPMU_REGULATOR_SDSR_NM2, &bcm59039_sdsr_nm2_data, 0x00, 0},
-	{BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0x00, 0},
+	[BCMPMU_REGULATOR_CSR_NM] =	{
+		BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x31, 0
+	},
+	[BCMPMU_REGULATOR_CSR_NM2] = {
+		BCMPMU_REGULATOR_CSR_NM2, &bcm59039_csr_nm2_data, 0xFF, 0
+	},
+	[BCMPMU_REGULATOR_CSR_LPM] = {
+		BCMPMU_REGULATOR_CSR_LPM, &bcm59039_csr_lpm_data, 0xFF, 0
+	},
+	[BCMPMU_REGULATOR_IOSR_NM] = {
+		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_IOSR_NM2] = {
+		BCMPMU_REGULATOR_IOSR_NM2, &bcm59039_iosr_nm2_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_IOSR_LPM] = {
+		BCMPMU_REGULATOR_IOSR_LPM, &bcm59039_iosr_lpm_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_SDSR_NM] = {
+		BCMPMU_REGULATOR_SDSR_NM, &bcm59039_sdsr_nm_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_SDSR_NM2] = {
+		BCMPMU_REGULATOR_SDSR_NM2, &bcm59039_sdsr_nm2_data, 0x00, 0
+	},
+	[BCMPMU_REGULATOR_SDSR_LPM] = {
+		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0x00, 0
+	},
 };
+
+
+
 
 static struct platform_device bcmpmu_audio_device = {
 	.name = "bcmpmu_audio",

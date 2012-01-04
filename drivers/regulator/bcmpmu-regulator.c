@@ -82,10 +82,8 @@ static int bcmpmureg_is_enabled(struct regulator_dev *rdev)
 		__func__);
 		return rc;
 	}
-	val &= LDO_MODE_MASK << PM1_SHIFT;
-	val >>= LDO_MODE_MASK;
-
-	return (val != LDO_OFF);
+	val >>= PM1_SHIFT;
+	return ((val & LDO_MODE_MASK) != LDO_OFF);
 }
 
 /*
