@@ -327,9 +327,9 @@ static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	 *
 	 * Rhea: PMBSC is always in HS mode, i2c_pdata is not in use.
 	 */
-	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),
+	.i2c_pdata	= { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS), },
 #else
-	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
+	.i2c_pdata	= { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), },
 #endif
 	.pmu_event_cb = bcm590xx_event_callback,
 #ifdef CONFIG_BATTERY_BCM59055
@@ -524,7 +524,7 @@ static int pca953x_platform_exit_hw(struct i2c_client *client,
 }
 
 static struct pca953x_platform_data board_expander_info = {
-	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.i2c_pdata	= { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K), },
 	.gpio_base	= KONA_MAX_GPIO,
 	.irq_base	= gpio_to_irq(KONA_MAX_GPIO),
 	.setup		= pca953x_platform_init_hw,
@@ -562,7 +562,7 @@ static int pca953x_2_platform_exit_hw(struct i2c_client *client,
 }
 
 static struct pca953x_platform_data board_expander_2_info = {
-	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.i2c_pdata	= { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K), },
 	.gpio_base	= KONA_MAX_GPIO+16,
 	.irq_base	= gpio_to_irq(KONA_MAX_GPIO+16),
 	.setup		= pca953x_2_platform_init_hw,
@@ -605,7 +605,7 @@ static void qt602240_platform_exit_hw(void)
 }
 
 static struct qt602240_platform_data qt602240_platform_data = {
-	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.i2c_pdata	= { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K), },
 	.x_line		= 15,
 	.y_line		= 11,
 	.x_size		= 1023,
@@ -666,7 +666,7 @@ static void al3006_platform_exit_hw(void)
 }
 
 static struct al3006_platform_data al3006_platform_data = {
-	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.i2c_pdata	= { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K), },
 	.init_platform_hw = al3006_platform_init_hw,
 	.exit_platform_hw = al3006_platform_exit_hw,
 };
