@@ -89,6 +89,17 @@ CHAL_HANDLE chal_caph_dma_init(cUInt32 baseAddress)
     chal_caph_dma_funcs.set_hibuffer = chal_caph_dma_default_set_hibuffer;
     chal_caph_dma_platform_init(&chal_caph_dma_funcs);
 
+	/* Initialize AADMAC wrap size for all channels, any number greater than
+	   1 is fine */
+	{
+		CHAL_HANDLE handle = (CHAL_HANDLE)(&chal_caph_dma_cb);
+		CAPH_DMA_CHANNEL_e caph_aadmac_ch;
+		for (ch = 0; ch < CHAL_CAPH_DMA_MAX_CHANNELS; ch++) {
+			caph_aadmac_ch = (CAPH_DMA_CHANNEL_e)(1UL << ch);
+			chal_caph_dma_set_buffer(handle, caph_aadmac_ch, 0,
+				0x100);
+		}
+	}
 	return(CHAL_HANDLE)(&chal_caph_dma_cb);
 }
 

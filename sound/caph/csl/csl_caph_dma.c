@@ -920,8 +920,9 @@ Boolean csl_caph_dma_get_intr(CSL_CAPH_DMA_CHNL_e chnl,
 		owner = CAPH_DSP;
 
 	if (chnl != CSL_CAPH_DMA_NONE)
-		return csl_caph_dma_get_chal_chnl(chnl) &
-		    chal_caph_intc_read_dma_intr(intc_handle, owner);
+		return (csl_caph_dma_get_chal_chnl(chnl) &
+			chal_caph_intc_read_dma_intr(intc_handle, owner))
+				? TRUE : FALSE;
 	else
 		return FALSE;
 }
