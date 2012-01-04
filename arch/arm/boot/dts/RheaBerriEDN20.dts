@@ -137,7 +137,7 @@
 			0x00000223   /* 0x3500_49E4: SSPDI: SIM2DET: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000223   /* 0x3500_49E8: SSPDO: SIM2DAT: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000203   /* 0x3500_49EC: SSPSYN: SIM2RST: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_49F0: STAT1: STAT1: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000123   /* 0x3500_49F0: STAT1: SIMLDO: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000003   /* 0x3500_49F4: STAT2: STAT2: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000043   /* 0x3500_49F8: SWCLKTCK: SWCLKTCK: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_49FC: SWDIOTMS: SWDIOTMS: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
