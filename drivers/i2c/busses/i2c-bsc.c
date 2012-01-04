@@ -730,9 +730,9 @@ static int __bsc_i2c_get_client(struct device *dev, void *addrp)
     int addr = *(int *)addrp;
 
     if (client && client->addr == addr)
-        return true;
-
-    return 0;
+        return 1;
+    else
+        return 0;
 }
 
 static struct device *bsc_i2c_get_client(struct i2c_adapter *adapter,
@@ -822,6 +822,27 @@ static void stop_high_speed_mode(struct i2c_adapter *adapter)
    bsc_stop_highspeed((uint32_t)dev->virt_base);
 }
 
+static void shutdown_high_speed_mode_adap(struct bsc_i2c_dev *dev)
+{
+   int rc;
+   down(&dev->dev_lock);
+   bsc_enable_clk(dev);
+
+   /* PMU HS mode: switch adapter to F/S */
+   stop_high_speed_mode(&dev->adapter);
+
+   bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
+   /* Send STOP command to PMU, needed in case of reboot */
+   rc = bsc_xfer_stop(&dev->adapter);
+   if (rc < 0)
+      dev_err(dev->device, "STOP command failed for PMU!\n");
+   else
+      dev_info(dev->device, "STOP sent to PMU after switching to F/S mode\n");
+
+   bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
+   up(&dev->dev_lock);
+}
+
 /*
  * Set bus speed to what the client wants
  */
@@ -902,8 +923,8 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
          * by the BSC controller does not suffice the time for which it holds
          * the clk line low when busy resulting in bus errors. To overcome this
          * problem we need ot enable autosense with the timeout disabled */
-        if (pd && TIMEOUT_IS_VALID(pd))
-		    bsc_set_autosense((uint32_t)dev->virt_base, 1, pd->autosense_timeout_enable);
+        if (pd && TIMEOUT_IS_VALID(pd) && !pd->autosense_timeout_enable)
+		    bsc_set_autosense((uint32_t)dev->virt_base, 1, 0);
         else
 		    bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 	}
@@ -933,7 +954,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    	rc = pwr_mgr_pm_i2c_sem_lock();
 	if (rc) {
       	bsc_disable_clk(dev);
-        down(&dev->dev_lock);
+        up(&dev->dev_lock);
 		return rc;
 	} else {
 		rel_hw_sem = true;
@@ -941,9 +962,17 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    }
 #endif
 
-   /* set the bus speed dynamically if dynamic speed support is turned on */
+   /* set bus speed & autosense configuration if dynamic speed is set */
    if (dev->dynamic_speed)
-      client_speed_set(adapter, msgs[0].addr);   
+      client_speed_set(adapter, msgs[0].addr);
+   else
+      /* set only auto-sense configuration
+       *
+       * Enable autosense if adapter is not switched to HS
+       * during bootup & stay always in HS mode(PMU BSC)
+       */
+      if(hw_cfg && !(hw_cfg->speed != BSC_BUS_SPEED_HS))
+         bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 
    /* send start command, if its not PMU in HS mode */
    if (!(dev->high_speed_mode && hw_cfg && hw_cfg->is_pmu_i2c))    {
@@ -1039,9 +1068,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    if (dev->high_speed_mode && hw_cfg && !hw_cfg->is_pmu_i2c)
       stop_high_speed_mode(adapter);
    else
-   {
-	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
-   }
+      bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
    bsc_disable_clk(dev);
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
@@ -1064,9 +1091,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    if (dev->high_speed_mode && hw_cfg && !hw_cfg->is_pmu_i2c)
       stop_high_speed_mode(adapter);
    else
-   {
-	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
-   }
+      bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
 err_ret:
    bsc_disable_clk(dev);
@@ -1112,7 +1137,7 @@ proc_debug_write(struct file *file, const char __user *buffer,
 
    if (sscanf(kbuf, "%u", &debug) != 1)
    {
-      printk(KERN_ERR "echo <debug> > %s\n", PROC_ENTRY_DEBUG);
+      dev_info(dev->device, "echo <debug> > %s\n", PROC_ENTRY_DEBUG);
       return count;
    }
 
@@ -1159,7 +1184,7 @@ proc_reset_write(struct file *file, const char __user *buffer,
 	}
 
 	if (sscanf(kbuf, "%u", &reset) != 1) {
-		printk(KERN_ERR "echo <reset> > %s\n", PROC_ENTRY_DEBUG);
+		dev_info(dev->device, "echo <reset> > %s\n", PROC_ENTRY_DEBUG);
 		return count;
 	}
 
@@ -1191,7 +1216,7 @@ proc_tx_fifo_write(struct file *file, const char __user *buffer,
 	}
 
 	if (sscanf(kbuf, "%u", &enable) != 1) {
-		printk(KERN_ERR "echo <enable> > %s\n", PROC_ENTRY_TX_FIFO);
+		dev_info(dev->device, "echo <enable> > %s\n", PROC_ENTRY_TX_FIFO);
 		return count;
 	}
 
@@ -1238,7 +1263,7 @@ proc_rx_fifo_write(struct file *file, const char __user *buffer,
 	}
 
 	if (sscanf(kbuf, "%u", &enable) != 1) {
-		printk(KERN_ERR "echo <enable> > %s\n", PROC_ENTRY_RX_FIFO);
+		dev_info(dev->device, "echo <enable> > %s\n", PROC_ENTRY_RX_FIFO);
 		return count;
 	}
 
@@ -1590,37 +1615,18 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* disable and clear interrupts */
 	bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
 	bsc_clear_intr_status((uint32_t)dev->virt_base, 0xFF);
+	/* keep clock stretching disabled during probe */
+	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
 	/* high-speed mode */
 	if (dev->speed == BSC_BUS_SPEED_HS) {
 		dev->high_speed_mode = 1;
-
-		/*
-		* Since mastercode 0000 1000 is reserved for test and diagnostic
-		* purpose, we add 1 here
-		*/
-		dev->mastercode = (MASTERCODE | (MASTERCODE_MASK & pdev->id)) + 1;
-
-		/*
-		* Auto-sense allows the slave device to stretch the clock for a long
-		* time. Need to turn off auto-sense for high-speed mode
-		*/
-		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
-
-		/*
-		* Now save the BSC_TIM register value as it will be modified before the
-		* master going into high-speed mode. We need to restore the BSC_TIM
-		* value when the device switches back to fast speed
-		*/
-		dev->tim_val = bsc_get_tim((uint32_t)dev->virt_base);
-
 		pr_info("disable slew rate  for id = %d\n", pdev->id);
 		i2c_pin_cfg(pdev->id, 0);
 
 	}
 	else {
 		dev->high_speed_mode = 0;
-		bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 
 		pr_info("enable slew rate  for id = %d\n", pdev->id);
 		i2c_pin_cfg(pdev->id, 1);
@@ -1670,14 +1676,10 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		goto err_proc_term;
 	}
 
-	bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
-	/* Enable Auto-sense */
-    bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
-
 	/* PMU I2C: Switch to HS mode once. This is a workaround needed for 
 	 * Power manager sequencer to function properly.
 	 * 
-	 * PMU adapter will always be in HS, dont switch back F/S from now onwards.
+	 * PMU adapter will always be in HS, dont switch back to F/S until reboot
 	 *
 	 */
 	if( dev->high_speed_mode && hw_cfg && hw_cfg->is_pmu_i2c)	{
@@ -1688,6 +1690,9 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	    goto err_proc_term;
 	}
 #endif
+		/*Enable autosense, will be turned off on successful transition to HS*/
+		bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
+		bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 		/* send start command */
 		if (bsc_xfer_start(adap) < 0)	{
 			dev_err(dev->device, "start command failed\n");
@@ -1748,6 +1753,11 @@ static int bsc_remove(struct platform_device *pdev)
 {
    struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
    struct resource *iomem;
+   struct bsc_adap_cfg *hw_cfg = NULL;
+
+   /* If Adapter in HS(PMU BSC) Switch to f/s speed and send STOP */
+   if (dev->high_speed_mode && hw_cfg && (hw_cfg->speed == BSC_BUS_SPEED_HS))
+      shutdown_high_speed_mode_adap(dev);
 
    i2c_del_adapter(&dev->adapter);
 
@@ -1826,14 +1836,14 @@ static int __init bsc_init(void)
    gProcParent = proc_mkdir(PROC_GLOBAL_PARENT_DIR, NULL);
    if (gProcParent == NULL)
    {
-      printk(KERN_ERR "I2C driver procfs failed\n");
+      pr_err("I2C driver procfs failed\n");
       return -ENOMEM;
    }
 
    rc = platform_driver_register(&bsc_driver);
    if (rc < 0)
    {
-      printk(KERN_ERR "I2C driver init failed\n");
+      pr_err("I2C driver init failed\n");
       remove_proc_entry(PROC_GLOBAL_PARENT_DIR, NULL);
       return rc;
    }
