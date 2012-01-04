@@ -37,6 +37,10 @@
 extern void enter_wfi(void);
 extern void dormant_enter(void);
 
+static int jira_2221 = 0;
+module_param_named(jira_2221, jira_2221, int, S_IRUGO | S_IWUSR | S_IWGRP);
+
+
 static u32 force_retention = 0;
 static u32 pm_debug = 2;
 #ifdef CONFIG_ARCH_RHEA_A0
@@ -44,6 +48,9 @@ static u32 pm_en_self_refresh = 0;
 #endif
 
 #ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+
+#define MEMC_HW2221_SEMAPHORE 16
+
 dma_addr_t noncache_buf_pa;
 char* noncache_buf_va;
 #endif
@@ -441,36 +448,51 @@ int enter_dormant_state(struct kona_idle_state* state)
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	pi_enable(pi,0);
 #ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
-	/*JIRA HWRHEA_2221 VAR_312M is_idle from MEMC unexpectedly stays
-	 * asserted for long periods of time - preventing deepsleep entry */
+	if (jira_2221) {
+		int insurance = 0;
+		/*JIRA HWRHEA_2221 VAR_312M is_idle from MEMC unexpectedly stays
+		 * asserted for long periods of time - preventing deepsleep entry */
 
-	 /*reduce DDR PLL to 200M, 0x2 -> 0x3500814c;
-	 0x2: Memory controller can shut of local DDR pll & run off the
-	 system PLL clock */
-	 writel(0x2, KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET);
-	 /*Disable temperature polling, 0xC3500 -> 0x350080c0
-	 Disables periodic reading of the device temperature
-	 the period field contains the device temperature period. The timer
-	 operates in the XTAL clock domain. 0cC3500 is the default value,
-	 write it back. */
-	 writel(0xC3500, KONA_MEMC0_NS_VA + CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
-	 /*CORE0 semaphore locked ? */
-	 while (readl(KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_STATUS_OFFSET));
-	 /*lock CORE0 semaphore, 0x1 -> 0x35004184 */
-	 writel(0x1, KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_LOCK_OFFSET);
-	 /*disable other MEMC ports */
-	 for (count=0; count<5; count++)
-	     writel((CSR_AXI_PORT_CTRL_PORT3_DISABLE_MASK |
-	     CSR_AXI_PORT_CTRL_PORT2_DISABLE_MASK |
-	     CSR_AXI_PORT_CTRL_PORT0_DISABLE_MASK), KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
-	 /* reset all MEMC demesh entries */
-	 for (count=0; count<16; count++)
-	     *(volatile unsigned int *)noncache_buf_va = 0xf;
-	 /* re-enable all MEMC ports, 0x0 -> 0x3500801c; */
-	 writel(0x0, KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
-	 /* release CORE0 semaphore, 0x1 -> 0x35004188 */
-	 writel(0x1, KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_UNLOCK_OFFSET);
+		 /*reduce DDR PLL to 200M, 0x2 -> 0x3500814c;
+		 0x2: Memory controller can shut of local DDR pll & run off the
+		 system PLL clock */
+		 writel(0x2, KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET);
+		 /*Disable temperature polling, 0xC3500 -> 0x350080c0
+		 Disables periodic reading of the device temperature
+		 the period field contains the device temperature period. The timer
+		 operates in the XTAL clock domain. 0cC3500 is the default value,
+		 write it back. */
+		 writel(0xC3500, KONA_MEMC0_NS_VA + CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
+		 /*CORE0 semaphore locked ? */
+		 insurance = 0;
+		while((readl(KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_STATUS_OFFSET) &
+			(1 << MEMC_HW2221_SEMAPHORE)) == 0) {
+			/*lock CORE0 semaphore, 
+ 				 (1<<MEMC_HW2221_SEMAPHORE) -> 0x35004184 */
+			writel(1 << MEMC_HW2221_SEMAPHORE,
+			KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_LOCK_OFFSET);
 
+			/*play nice to other core*/
+			for (count = 0; count < 16; count++);
+			insurance++;
+			BUG_ON(insurance > 10000);
+		}
+
+		/*disable other MEMC ports */
+		 for (count = 0; count < 5; count++)
+			 writel((CSR_AXI_PORT_CTRL_PORT3_DISABLE_MASK |
+			 CSR_AXI_PORT_CTRL_PORT2_DISABLE_MASK |
+			 CSR_AXI_PORT_CTRL_PORT0_DISABLE_MASK),
+					 KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
+		 /* reset all MEMC demesh entries */
+		 for (count = 0; count < 16; count++)
+			 *(volatile unsigned int *)noncache_buf_va = 0xf;
+		 /* re-enable all MEMC ports, 0x0 -> 0x3500801c; */
+		 writel(0x0, KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
+		 /* release CORE0 semaphore, 1<<MEMC_HW2221_SEMAPHORE -> 0x35004188 */
+		 writel(1 << MEMC_HW2221_SEMAPHORE,
+			KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_UNLOCK_OFFSET);
+	}
 #endif
 #ifdef CONFIG_RHEA_DORMANT_MODE
 #ifdef CONFIG_ROM_SEC_DISPATCHER
@@ -492,7 +514,8 @@ int enter_dormant_state(struct kona_idle_state* state)
 	0x3: This is the highest power state (or the run state) of the
 	Memory controller, where the local DDR pll is on & the system PLL
 	xtal clocks requests are asserted high. */
-	writel(0x3, KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET);
+	if (jira_2221)
+		writel(0x3, KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET);
 #endif
 #if	defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
