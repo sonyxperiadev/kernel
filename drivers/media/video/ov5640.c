@@ -1394,7 +1394,7 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
-	*frames = 0;
+	*frames = 4;
 
 	return 0;
 }
