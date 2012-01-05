@@ -444,7 +444,7 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 
 #ifdef CONFIG_KEYBOARD_LM8325
 static s16 rheaberri_keymap[] = {
-	[0x40] = KEY_BACK,
+	[0x40] = KEY_MENU,
 	[0x50] = KEY_SEND,
 	[0x05] = KEY_Q,
 	[0x04] = KEY_W,
@@ -477,7 +477,7 @@ static s16 rheaberri_keymap[] = {
 	[0x63] = KEY_COMMA,
 	[0x62] = KEY_ENTER,
 	[0x35] = KEY_BACK,
-	[0x34] = KEY_MENU,
+	[0x34] = KEY_HOME,
 	[0x33] = KEY_OK,
 	[0x32] = KEY_TAB,
 	[0x31] = KEY_SPACE,
