@@ -131,6 +131,15 @@ config RHEA_UART_RX_FIX
 	  This fix modifies the serial driver to take decission to
 	  call receive_chars based on iir and not based on LSR
 
+config RHEA_PI_MGR_DISABLE_POLICY_CHANGE
+	bool "Enable debug flag to disable PI policy change by default"
+	depends on KONA_PI_MGR
+	default n
+	help
+	  Debug flag to diable PI policy change by default. All PI
+	  policy will be set to wakeup policy 7
+
+
 endmenu
 
 

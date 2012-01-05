@@ -98,6 +98,27 @@ config KONA_CPU_PM_HANDLER
 	help
 	  Say Y if you want to Enable Kona platform PM (idle/suspend) default handlers.
 
+config KONA_PM_DISABLE_WFI
+	bool "Enable debug flag to disable ARM WFI by default"
+	depends on KONA_CPU_PM_HANDLER
+	default n
+	help
+		Say Y to disable ARM WFI by default.
+
+config KONA_PM_DISABLE_SUSPEND
+	bool "Enable debug flag to disable platform suspend by default"
+	depends on KONA_CPU_PM_HANDLER
+	default n
+	help
+		Say Y to disable platform suspend by default.
+
+config KONA_PM_NO_CLK_DISABLE
+	bool "Enable debug flag to disable clk disable"
+	default n
+	help
+		Say Y to disable clk disable.
+
+
 config KONA_CPU_FREQ_DRV
        bool "Enable CPU frequency scaling for kona chips"
        depends on KONA_POWER_MGR && CPU_FREQ
@@ -115,26 +136,26 @@ config KONA_PI_MGR
        depends on KONA_POWER_MGR
        help
 	Say Y if you want to enable Kona PI manager driver
-	
+
 config KONA_PWRMGR_ENABLE_HW_SEM_WORKAROUND
        bool "Enable Kona PWRMGR HW sempaphore workaround"
        depends on KONA_POWER_MGR
        help
        	Say Y if you want to enable Kona PWRMGR HW sempaphore workaround
-	
+
 config KONA_PWRMGR_REV2
        bool "Enable Kona PWRMGR Revision-2 support"
        depends on KONA_POWER_MGR
        help
        	Say Y if you want to enable Kona PWRMGR Revision-2 support
-		
+
 config KONA_PMU_BSC_USE_PMGR_HW_SEM
 	bool "use HW sem to sync i2c between sw & sequencer"
 	depends on ARCH_RHEA && KONA_POWER_MGR
 	default y
 	help
 	  The HW sequencer can generate i2c transcations on the PMU i2c
-	  bus while SW driver can still generate the same. To sync 
+	  bus while SW driver can still generate the same. To sync
 	  between the two use HW semaphore.
 
 config KONA_AVS
@@ -158,7 +179,7 @@ config KONA_ATAG_DT_DTS_FILE
        depends on KONA_ATAG_DT
        help
          DeviceTree source file name
-         
+
 config PROC_PINMUX_DUMP
        bool "Enable Pin-mux Dump"
        help

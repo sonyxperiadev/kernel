@@ -1,5 +1,5 @@
 /****************************************************************************
-*									      
+*
 * Copyright 2010 --2011 Broadcom Corporation.
 *
 * Unless you and Broadcom execute a separate written software license
@@ -28,8 +28,12 @@ enum
 	KONAL_PM_LOG_LVL_TEST = (1 << 2)
 };
 
-
+#ifdef CONFIG_KONA_PM_DISABLE_SUSPEND
+static int allow_suspend = 0;
+#else
 static int allow_suspend = 1;
+#endif
+
 module_param_named(allow_suspend, allow_suspend, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 static int kona_pm_log_lvl = KONAL_PM_LOG_LVL_ERROR;
@@ -58,7 +62,12 @@ __weak int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
 	return 1;
 }
 
+#ifdef CONFIG_KONA_PM_DISABLE_WFI
+static int allow_idle = 0;
+#else
 static int allow_idle = 1;
+#endif
+
 module_param_named(allow_idle, allow_idle, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 __weak int kona_mach_enter_idle_state(struct cpuidle_device *dev,struct cpuidle_state *state)

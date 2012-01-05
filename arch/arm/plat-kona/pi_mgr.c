@@ -223,7 +223,8 @@ int __pi_enable(struct pi *pi)
 	/*increment usg_cnt. Return if already enabled */
 	if(pi->usg_cnt++ == 0)
 	{
-		if(pi->init == PI_INIT_COMPLETE && pi->ops && pi->ops->enable)
+		if(pi->init == PI_INIT_COMPLETE && pi->ops &&
+			((pi->flags & NO_POLICY_CHANGE) == 0) && pi->ops->enable)
 		{
 			ret = pi->ops->enable(pi,1);
 			/*Restore the context if state was saved*/
@@ -243,7 +244,8 @@ int __pi_disable(struct pi *pi)
 	/*decrement usg_cnt */
 	if(pi->usg_cnt && --pi->usg_cnt == 0)
 	{
-		if(pi->init == PI_INIT_COMPLETE && pi->ops && pi->ops->enable)
+		if(pi->init == PI_INIT_COMPLETE && pi->ops &&
+			((pi->flags & NO_POLICY_CHANGE) == 0) && pi->ops->enable)
 		{
 			/*Save Context if state_allowed will cause the CCUs to shutdown*/
 			if(pi->pi_state[pi->state_allowed].flags & PI_STATE_SAVE_CONTEXT)
@@ -322,7 +324,7 @@ static int __pi_init_state(struct pi *pi)
 {
 	int ret = 0;
 	int inx;
-	struct pm_policy_cfg cfg;
+
 	pi_dbg("%s:%s\n",__func__,pi->name);
 	BUG_ON(pi->init == PI_INIT_NONE);
 
@@ -356,15 +358,21 @@ static int __pi_init_state(struct pi *pi)
 			else
 			{
 			/*Save Context if state_allowed will cause the CCUs to shutdown*/
-				if(pi->pi_state[pi->state_allowed].flags & PI_STATE_SAVE_CONTEXT)
+				if (pi->pi_state[pi->state_allowed].flags &
+						PI_STATE_SAVE_CONTEXT)
 					pi_save_state(pi, 1 /*save*/);
 				if (pi->ops && pi->ops->enable)
 					pi->ops->enable(pi, 0);
 			}
 		}
-		pwr_mgr_event_get_pi_policy(SOFTWARE_0_EVENT,pi->id,&cfg);
-		pi_dbg("%s: pi-%s cnt = %d  policy =%d\n",__func__, pi->name,pi->usg_cnt,cfg.policy);
-		pwr_mgr_pi_set_wakeup_override(pi->id,true /*clear*/);
+		if((pi->flags & NO_POLICY_CHANGE) == 0)
+		{
+			struct pm_policy_cfg cfg;
+			pwr_mgr_event_get_pi_policy(SOFTWARE_0_EVENT,pi->id,&cfg);
+			pi_dbg("%s: pi-%s cnt = %d  policy =%d\n",__func__,
+					pi->name,pi->usg_cnt,cfg.policy);
+			pwr_mgr_pi_set_wakeup_override(pi->id,true /*clear*/);
+		}
 	}
 	return ret;
 }
@@ -726,7 +734,7 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node* node, u32 pi_id, int action
 	{
 		BUG_ON(new_val >= pi->num_opp);
 		pi->opp_active = new_val;
-		if(pi->init == PI_INIT_COMPLETE)
+		if(pi->init == PI_INIT_COMPLETE && ((pi->flags & NO_POLICY_CHANGE) == 0))
 		{
 			pi_change_notify(pi->id,PI_NOTIFY_DFS_CHANGE,
 					old_val, new_val, PI_PRECHANGE);
@@ -1137,6 +1145,51 @@ int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node)
 	return 0;
 }
 EXPORT_SYMBOL(pi_mgr_dfs_request_remove);
+
+/*Interface function to PI disable policy change
+ PI policy will be set to 7, and PI policies won't be updated
+*/
+int pi_mgr_disable_policy_change(int pi_id, int disable)
+{
+	struct pi* pi = pi_mgr_get(pi_id);
+	BUG_ON(pi == NULL);
+
+	if(disable && ((pi->flags & NO_POLICY_CHANGE) == 0))
+	{
+		pr_info("%s : dis pol change\n",__func__);
+		pi->flags |= NO_POLICY_CHANGE;
+		pwr_mgr_pi_set_wakeup_override(pi->id,false);
+	}
+	else if(!disable && (pi->flags & NO_POLICY_CHANGE))
+	{
+		pr_info("%s : enable pol change\n",__func__);
+		pi->flags &= ~NO_POLICY_CHANGE;
+
+		/*Update PI DFS freq based on opp_active value*/
+#ifdef CONFIG_CHANGE_POLICY_FOR_DFS
+		pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy =
+					pi->pi_opp[0].opp[pi->opp_active];
+		pi_set_policy(pi, pi->pi_opp[0].opp[pi->opp_active],POLICY_DFS);
+#else
+		pi_set_ccu_freq(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
+				pi->opp_active);
+#endif
+
+		if(pi->usg_cnt)
+			 pi->ops->enable(pi,1);
+		else
+		{
+		/*Save Context if state_allowed will cause the CCUs to shutdown*/
+			if(pi->pi_state[pi->state_allowed].flags & PI_STATE_SAVE_CONTEXT)
+				pi_save_state(pi, 1 /*save*/);
+			 pi->ops->enable(pi,0);
+		}
+
+		pwr_mgr_pi_set_wakeup_override(pi->id,true);
+	}
+	return 	0;
+}
+EXPORT_SYMBOL(pi_mgr_disable_policy_change);
 
 static int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier)
 {
@@ -1612,6 +1665,32 @@ static int pi_debug_set_enable(void *data, u64 val)
 
 DEFINE_SIMPLE_ATTRIBUTE(pi_enable_fops, NULL, pi_debug_set_enable, "%llu\n");
 
+static int pi_debug_pol_change_disable_set(void *data, u64 val)
+{
+    struct pi *pi = data;
+    BUG_ON(pi == NULL);
+	pr_info("%s: val = %d\n",__func__,(u32)val);
+	pi_mgr_disable_policy_change(pi->id, val != 0);
+    return 0;
+}
+
+static int pi_debug_pol_change_disable_get(void *data, u64 *val)
+{
+    struct pi *pi = data;
+    BUG_ON(pi == NULL);
+
+	if(pi->flags & NO_POLICY_CHANGE)
+		*val = 1;
+	else
+		*val = 0;
+
+    return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pi_pol_change_disable_fops, pi_debug_pol_change_disable_get,
+			pi_debug_pol_change_disable_set, "%llu\n");
+
+
 static int pi_debug_get_count(void *data, u64 *val)
 {
     struct pi *pi = data;
@@ -1756,7 +1835,7 @@ int __init pi_debug_add_pi(struct pi *pi)
     *dent_dfs_dir=0, *dent_dfs=0, *dent_register_qos_client=0,
     *dent_remove_qos_client=0, *dent_remove_dfs_client=0, *dent_register_dfs_client=0,
     *dent_request_dfs=0, *dent_qos_dir=0, *dent_qos=0, *dent_request_qos=0,
-    *dent_state=0, *dent_opp=0, *dent_reset=0, *dent_flags=0;
+    *dent_state=0, *dent_opp=0, *dent_reset=0, *dent_flags=0, *dent_pol_disable;
 
 
     BUG_ON(!dent_pi_root_dir);
@@ -1815,7 +1894,19 @@ int __init pi_debug_add_pi(struct pi *pi)
 	    goto err;
     }
 
+	if(((pi->flags & PI_NO_DFS) == 0) &&
+		((pi->flags & PI_NO_QOS) == 0)) {
+
+	dent_pol_disable = debugfs_create_file("no_policy_change", S_IWUSR|S_IRUSR,
+			dent_pi_dir, pi, &pi_pol_change_disable_fops);
+	if(!dent_pol_disable)
+		goto err;
+
+	}
+
     if (!(pi->flags & PI_NO_DFS)) {
+
+
 	dent_dfs_dir = debugfs_create_dir("dfs", dent_pi_dir);
 	if(!dent_dfs_dir)
 	    goto err;

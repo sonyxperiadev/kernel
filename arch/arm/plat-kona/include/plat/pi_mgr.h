@@ -71,8 +71,8 @@ enum
 	PI_ARM_CORE				= (1 << 1),
 	PI_NO_QOS				= (1 << 2),
 	PI_NO_DFS				= (1 << 3),
-	PI_NO_STATE_CHANGE		= (1 << 5),
 	UPDATE_PM_QOS			= (1 << 5),
+	NO_POLICY_CHANGE		= (1 << 6),
 };
 
 struct pm_pi_info
@@ -190,6 +190,8 @@ int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32 lat_value);
 int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node);
 int pi_set_policy(const struct pi *pi, u32 policy,int type);
 
+int pi_mgr_disable_policy_change(int pi_id, int disable);
+
 struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id, u32 opp);
 int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp);
 struct pi_mgr_dfs_node* pi_mgr_dfs_add_request_ex(char* client_name, u32 pi_id, u32 opp,u32 opp_weightage);
@@ -221,6 +223,7 @@ static inline int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32
 	lat_value) {return 0;}
 static inline int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node) {return 0;}
 static inline int pi_set_policy(const struct pi *pi, u32 policy,int type) {return 0;}
+static inline int pi_mgr_disable_policy_change(int pi_id, int disable) {return 0;}
 
 static inline struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id,
 	u32 opp) {return NULL;}

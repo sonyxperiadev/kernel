@@ -620,7 +620,10 @@ static int __ccu_clk_disable(struct clk *clk)
 	{
 		if(clk->ops && clk->ops->enable)
 		{
+/*Debug interface to avoid clk disable*/
+#ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 			ret = clk->ops->enable(clk,0);
+#endif
 		}
 	}
 	/*disable PI*/
@@ -656,9 +659,11 @@ static int __peri_clk_disable(struct clk *clk)
 	{
 		CCU_PI_ENABLE(peri_clk->ccu_clk,1);
 
+/*Debug interface to avoid clk disable*/
+#ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,0);
-
+#endif
 		if(clk->flags & ENABLE_HVT)
 			peri_clk_set_voltage_lvl(peri_clk,VLT_NORMAL);
 
@@ -716,9 +721,11 @@ static int __bus_clk_disable(struct clk *clk)
 	if(clk->use_cnt && --clk->use_cnt == 0)
 	{
 		CCU_PI_ENABLE(bus_clk->ccu_clk,1);
-
+/*Debug interface to avoid clk disable*/
+#ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,0);
+#endif
 
 		/*update DFS request*/
 #ifdef CONFIG_KONA_PI_MGR
@@ -765,8 +772,11 @@ static int __ref_clk_disable(struct clk *clk)
 	if(clk->use_cnt && --clk->use_cnt == 0)
 	{
 		CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+/*Debug interface to avoid clk disable*/
+#ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,0);
+#endif
 
 		CCU_PI_ENABLE(ref_clk->ccu_clk,0);
 	}
@@ -785,8 +795,11 @@ static int __pll_clk_disable(struct clk *clk)
 	if(clk->use_cnt && --clk->use_cnt == 0)
 	{
 		CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+/*Debug interface to avoid clk disable*/
+#ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,0);
+#endif
 
 		CCU_PI_ENABLE(pll_clk->ccu_clk,0);
 	}
@@ -804,8 +817,11 @@ static int __pll_chnl_clk_disable(struct clk *clk)
 	if(clk->use_cnt && --clk->use_cnt == 0)
 	{
 		CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
+/*Debug interface to avoid clk disable*/
+#ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,0);
+#endif
 
 		CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
 	}
@@ -820,6 +836,7 @@ static void __clk_disable(struct clk *clk)
 	/**Return if the clk is already in disabled state*/
 	if(clk->use_cnt == 0)
 		return;
+
 
 	switch(clk->clk_type)
 	{
@@ -849,12 +866,15 @@ static void __clk_disable(struct clk *clk)
 
 	default:
 		clk_dbg("%s - %s: unknown clk_type\n",__func__, clk->name);
+/*Debug interface to avoid clk disable*/
+#ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,0);
 		else
 		{
 			clk_dbg("%s - %s: unknown clk_type & func ptr == NULL \n",__func__, clk->name);
 		}
+#endif /*CONFIG_KONA_PM_NO_CLK_DISABLE*/
 		break;
 	}
 }
