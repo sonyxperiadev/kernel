@@ -795,7 +795,7 @@ static void al3006_platform_exit_hw(void)
 }
 
 static struct al3006_platform_data al3006_platform_data = {
-	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.i2c_pdata	= { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K), },
 	.init_platform_hw = al3006_platform_init_hw,
 	.exit_platform_hw = al3006_platform_exit_hw,
 };
