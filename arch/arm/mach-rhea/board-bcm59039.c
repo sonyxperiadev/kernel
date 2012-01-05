@@ -645,7 +645,7 @@ static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 	{3236, 0},
 };
 
-static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
+static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), },
 	.init = bcmpmu_init_platform_hw,
 	.exit = bcmpmu_exit_platform_hw,
