@@ -852,10 +852,10 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		uinfo->value.integer.max = 100;
 		break;
 	case CTL_FUNCTION_BT_TEST:
-		uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
+		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 		uinfo->count = 1;
 		uinfo->value.integer.min = 0;
-		uinfo->value.integer.max = 1;
+		uinfo->value.integer.max = 100;
 		break;
 	case CTL_FUNCTION_CFG_IHF:
 		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;

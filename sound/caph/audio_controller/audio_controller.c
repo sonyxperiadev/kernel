@@ -2489,7 +2489,7 @@ void AUDCTRL_SetIHFmode (Boolean stIHF)
 // Description:   Set BT mode
 //
 //============================================================================
-void  AUDCTRL_SetBTMode(Boolean mode)
+void  AUDCTRL_SetBTMode(int mode)
 {
 	 csl_caph_hwctrl_SetBTMode(mode);
 }
