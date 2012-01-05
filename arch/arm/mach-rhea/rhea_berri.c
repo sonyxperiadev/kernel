@@ -978,7 +978,11 @@ static struct platform_device bcm_backlight_devices = {
 #ifdef CONFIG_GPIO_PCA953X
 #define GPIO_SIM2LDOVSET	(KONA_MAX_GPIO + 7)
 #else
+#ifdef CONFIG_MACH_RHEA_BERRI_EDN40
+#define GPIO_SIM2LDOVSET	28
+#else
 #define GPIO_SIM2LDOVSET	37
+#endif
 #endif
 #define TPS728XX_REGL_ID        (BCM59055_MAX_LDO + 0)
 struct regulator_consumer_supply sim2_supply[] = {
