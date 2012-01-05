@@ -1065,7 +1065,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 						 g_blob_size, 0, 0);
 #endif
 
-    __set_bit(INPUT_PROP_DIRECT, &gp_input_dev->propbit);
+    __set_bit(INPUT_PROP_DIRECT, (volatile unsigned long *)&gp_input_dev->propbit);
 
 	rc = input_register_device(gp_input_dev);
 	if (rc < 0)
@@ -1092,7 +1092,7 @@ ERROR3:
 	{
 		gpio_free(gp_i2c_ts->gpio_reset_pin);
 	}
-ERROR2:
+//ERROR2:
 	kfree(gp_buffer);
 ERROR1:
 	device_remove_file(&p_i2c_client->dev, &dev_attr);

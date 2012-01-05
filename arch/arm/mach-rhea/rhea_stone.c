@@ -637,62 +637,6 @@ static struct platform_device lq043y1dx01_dsi_display_device = {
 	},
 };
 
-static struct kona_fb_platform_data alex_dsi_display_fb_data = {
-	.get_dispdrv_func_tbl	= &DISP_DRV_BCM91008_ALEX_GetFuncTable,
-	.screen_width		= 360,
-	.screen_height		= 640,
-	.bytes_per_pixel	= 4,
-	.gpio			= 41,
-	.pixel_format		= XRGB8888,
-};
-
-static struct platform_device alex_dsi_display_device = {
-	.name    = "rhea_fb",
-	.id      = 0,
-	.dev = {
-		.platform_data		= &alex_dsi_display_fb_data,
-		.dma_mask		= (u64 *) ~(u32)0,
-		.coherent_dma_mask	= ~(u32)0,
-	},
-};
-
-static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
-	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
-	.screen_width		= 480,
-	.screen_height		= 800,
-	.bytes_per_pixel	= 2,
-	.gpio			= 41,
-	.pixel_format		= RGB565,
-};
-
-static struct platform_device nt35582_smi_display_device = {
-	.name    = "rhea_fb",
-	.id      = 1,
-	.dev = {
-		.platform_data		= &nt35582_smi_display_fb_data,
-		.dma_mask		= (u64 *) ~(u32)0,
-		.coherent_dma_mask	= ~(u32)0,
-	},
-};
-
-static struct kona_fb_platform_data r61581_smi_display_fb_data = {
-	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
-	.screen_width		= 320,
-	.screen_height		= 480,
-	.bytes_per_pixel	= 2,
-	.gpio			= 41,
-	.pixel_format		= RGB565,
-};
-
-static struct platform_device r61581_smi_display_device = {
-	.name    = "rhea_fb",
-	.id      = 2,
-	.dev = {
-		.platform_data		= &r61581_smi_display_fb_data,
-		.dma_mask		= (u64 *) ~(u32)0,
-		.coherent_dma_mask	= ~(u32)0,
-	},
-};
 #endif
 
 /* Rhea Ray specific platform devices */
