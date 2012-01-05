@@ -126,8 +126,8 @@ static AUDIO_SOURCE_Mapping_t MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] =
 	{AUDIO_SOURCE_DIGI2,		        CSL_CAPH_DEV_DIGI_MIC_R},
 	{AUDIO_SOURCE_DIGI3,				CSL_CAPH_DEV_EANC_DIGI_MIC_L},
 	{AUDIO_SOURCE_DIGI4,				CSL_CAPH_DEV_EANC_DIGI_MIC_R},
-	{AUDIO_SOURCE_MIC_ARRAY1,		    CSL_CAPH_DEV_NONE},
-	{AUDIO_SOURCE_MIC_ARRAY2,		    CSL_CAPH_DEV_NONE},
+	{AUDIO_SOURCE_MIC_ARRAY1,		    CSL_CAPH_DEV_DIGI_MIC},
+	{AUDIO_SOURCE_MIC_ARRAY2,		    CSL_CAPH_DEV_EANC_DIGI_MIC},
 	{AUDIO_SOURCE_BTM,		        	CSL_CAPH_DEV_BT_MIC},
 	{AUDIO_SOURCE_USB,       			CSL_CAPH_DEV_MEMORY},
 	{AUDIO_SOURCE_I2S,		        	CSL_CAPH_DEV_FM_RADIO},
@@ -1703,6 +1703,10 @@ void AUDCTRL_EnableRecord(
 		/* Not supported - One stream - two paths use case for record. Will be supported with one path itself */
 		AUDCTRL_EnableRecordMono(AUDIO_SOURCE_DIGI1, sink, AUDIO_CHANNEL_MONO, sr, &pathID);
 		AUDCTRL_EnableRecordMono(AUDIO_SOURCE_DIGI2, sink, AUDIO_CHANNEL_MONO, sr, NULL);
+	} else if(source== AUDIO_SOURCE_MIC_ARRAY1) {
+		Log_DebugPrintf(LOGID_AUDIO, "Recording : src = 0x%x, sink = 0x%x, numCh = 0x%x, sr = 0x%x \n",source, sink, numCh, sr);
+		numCh = 2; /* stereo format */
+		AUDCTRL_EnableRecordMono(source, sink, numCh, sr, &pathID);
 	} else {
 		AUDCTRL_EnableRecordMono(source, sink, numCh, sr, &pathID);
 	}

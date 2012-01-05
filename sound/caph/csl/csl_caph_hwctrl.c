@@ -640,6 +640,12 @@ static AUDDRV_PATH_Enum_t csl_caph_get_audio_path(CSL_CAPH_DEVICE_e dev)
 	case CSL_CAPH_DEV_EANC_DIGI_MIC_R:
 		audioh_path = AUDDRV_PATH_NVIN_INPUT_R;
 		break;
+	case CSL_CAPH_DEV_DIGI_MIC:
+		audioh_path = AUDDRV_PATH_VIN_INPUT;
+		break;
+	case CSL_CAPH_DEV_EANC_DIGI_MIC:
+		audioh_path = AUDDRV_PATH_NVIN_INPUT;
+		break;
 	default:
 		//audio_xassert(0, dev );
 		break;
@@ -675,6 +681,8 @@ static CAPH_SWITCH_TRIGGER_e csl_caph_get_dev_trigger(CSL_CAPH_DEVICE_e dev)
 	case CSL_CAPH_DEV_ANALOG_MIC:
 	case CSL_CAPH_DEV_HS_MIC:
 	case CSL_CAPH_DEV_DIGI_MIC_L:
+	case CSL_CAPH_DEV_DIGI_MIC:
+	case CSL_CAPH_DEV_EANC_DIGI_MIC:
 		trigger = CAPH_ADC_VOICE_FIFOR_THR_MET;
 		break;
 	case CSL_CAPH_DEV_DIGI_MIC_R:
@@ -2800,6 +2808,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
 	    || (path->source == CSL_CAPH_DEV_HS_MIC)
 	    || (path->source == CSL_CAPH_DEV_DIGI_MIC_L)
 	    || (path->source == CSL_CAPH_DEV_DIGI_MIC_R)
+		|| (path->source == CSL_CAPH_DEV_DIGI_MIC)
+		|| (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC)
 	    || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
 	    || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
 	    && (path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY))
