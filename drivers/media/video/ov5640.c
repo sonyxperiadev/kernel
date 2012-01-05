@@ -23,7 +23,7 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 
-#define FPS_30_MODE		
+//#define FPS_30_MODE		
 
 #define OV5640_BRIGHTNESS_MIN           0
 #define OV5640_BRIGHTNESS_MAX           200
@@ -202,7 +202,7 @@ static const struct ov5640_reg configscript_common1[] = {
     {0x3002,0x1c},
     {0x3004,0xff},      //Clocks
     {0x3006,0xc3},
-    {0x300e,0x25},      //MIPI Control  Single Lane       ********************
+    {0x300e,0x25},      //MIPI Control  Single Lane/Powered down       ********************
 //????
     {0x302e,0x08},      //undocumented
     {0x3612,0x4b},
@@ -350,6 +350,7 @@ static const struct ov5640_reg configscript_common1[] = {
     {0x3503,0x00},
     
     {0x3008,0x42},      //stop sensor streaming
+    {0x300e,0x3d},      //MIPI Control  Single Lane/Powered down       ********************
 
    { 0xFFFF, 0x00 }
 };
@@ -910,6 +911,10 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		ret = ov5640_reg_write(client, 0x3008, tmpreg | 0x40);
 		if (ret)
 			goto out;
+
+		ret = ov5640_reg_write(client, 0x300e, 0x3d);   //MIPI Control  Powered down  
+		if (ret)
+			goto out;
 	}
 
 out:
@@ -1001,8 +1006,8 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 		return ret;
 	}
 
-// Configure common settings
-	ret = ov5640_reg_writes(client, configscript_common1);
+//stop sensor streaming
+	ret = ov5640_reg_write(client, 0x3008, 0x42);
 	if (ret)
 		return ret;
 
@@ -1394,7 +1399,7 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
-	*frames = 4;
+	*frames = 2;
 
 	return 0;
 }
