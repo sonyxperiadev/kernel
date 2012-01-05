@@ -85,6 +85,13 @@ typedef struct
 static CHAL_HANDLE handle = 0x0;
 static Boolean isSTIHF = FALSE;
 
+/* When pass through channel 3/4 are used, pass through channel 1/2 cannot be
+ * used as stereo, vice versa. Ch 1/2 not being used as mono pass through 
+ * for now, can be extended */
+#define SRCM_STEREO_PASS_CH1_INDEX 5
+#define SRCM_STEREO_PASS_CH2_INDEX 6
+#define SRCM_STEREO_PASS_CH3_INDEX 7
+#define SRCM_STEREO_PASS_CH4_INDEX 8
 /* SRCMixer input channel status table */
 static CSL_CAPH_SRCM_INCHNL_STATUS_t inChnlStatus[MAX_INCHNLS] =
 {
@@ -912,6 +919,16 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dat
             {
                 /* input channel is available */
                 inChnlStatus[ch].alloc_status = TRUE;
+#if defined(CAPH_48K_MONO_PASSTHRU)
+				if (inChnlStatus[ch].inChnl == CSL_CAPH_SRCM_STEREO_PASS_CH1)
+					inChnlStatus[SRCM_STEREO_PASS_CH3_INDEX].alloc_status = TRUE;
+				if (inChnlStatus[ch].inChnl == CSL_CAPH_SRCM_STEREO_PASS_CH2)
+					inChnlStatus[SRCM_STEREO_PASS_CH4_INDEX].alloc_status = TRUE;
+				if (inChnlStatus[ch].inChnl == CSL_CAPH_SRCM_MONO_PASS_CH3)
+					inChnlStatus[SRCM_STEREO_PASS_CH1_INDEX].alloc_status = TRUE;
+				if (inChnlStatus[ch].inChnl == CSL_CAPH_SRCM_MONO_PASS_CH4)
+					inChnlStatus[SRCM_STEREO_PASS_CH2_INDEX].alloc_status = TRUE;
+#endif	
                 return inChnlStatus[ch].inChnl;
             }
         }
@@ -985,6 +1002,16 @@ void csl_caph_srcmixer_release_inchnl(CSL_CAPH_SRCM_INCHNL_e chnl)
                 if (alreadyReleased == FALSE)
                 {
                     inChnlStatus[ch].alloc_status = FALSE;
+#if defined(CAPH_48K_MONO_PASSTHRU)
+					if (inChnlStatus[ch].inChnl == CSL_CAPH_SRCM_STEREO_PASS_CH1)
+						inChnlStatus[SRCM_STEREO_PASS_CH3_INDEX].alloc_status = FALSE;
+					if (inChnlStatus[ch].inChnl == CSL_CAPH_SRCM_STEREO_PASS_CH2)
+						inChnlStatus[SRCM_STEREO_PASS_CH4_INDEX].alloc_status = FALSE;
+					if (inChnlStatus[ch].inChnl == CSL_CAPH_SRCM_MONO_PASS_CH3)
+						inChnlStatus[SRCM_STEREO_PASS_CH1_INDEX].alloc_status = FALSE;
+					if (inChnlStatus[ch].inChnl == CSL_CAPH_SRCM_MONO_PASS_CH4)
+						inChnlStatus[SRCM_STEREO_PASS_CH2_INDEX].alloc_status = FALSE;
+#endif	
                     alreadyReleased = TRUE;
                 }
             }
