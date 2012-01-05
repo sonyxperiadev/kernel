@@ -1694,8 +1694,8 @@ int pwr_mgr_init(struct pwr_mgr_info* info)
 	pwr_mgr_mask_intr(PWRMGR_INTR_ALL,true);
 
 	ret = request_irq(info->pwrmgr_intr,pwr_mgr_irq_handler,
-                                 IRQF_TRIGGER_RISING,
-                                 "pwr_mgr",NULL);
+			IRQF_TRIGGER_RISING|IRQF_NO_SUSPEND,
+			"pwr_mgr", NULL);
 
 #endif
 	return ret;
