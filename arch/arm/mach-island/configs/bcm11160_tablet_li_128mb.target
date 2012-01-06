@@ -1,8 +1,0 @@
-arch   = arm
-family = island
-chip   = 11160
-board  = tablet
-board  = bcm4329
-option = li_128mb
-option = ext4 
-option = mmc 

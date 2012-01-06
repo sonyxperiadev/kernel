@@ -1,9 +1,0 @@
-menu	"Custom Island SoC based Machine types"
-	depends on MACH_ISLAND_CUSTOM_BOARDS_SUPPORT
-
-choice
-        prompt "Island SoC based custom board type"
-
-endchoice
-
-endmenu

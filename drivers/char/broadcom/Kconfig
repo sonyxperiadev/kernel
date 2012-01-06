@@ -218,6 +218,3 @@ config VC_TEST_WIFI_HDMI
     ---help---
       Select to build the Wifi-Hdmi Videocore Service test driver.
 
-source "drivers/char/broadcom/csx/Kconfig"
-
-

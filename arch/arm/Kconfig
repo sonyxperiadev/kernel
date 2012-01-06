@@ -948,7 +948,6 @@ source "arch/arm/mach-ixp23xx/Kconfig"
 source "arch/arm/mach-kirkwood/Kconfig"
 
 source "arch/arm/plat-kona/Kconfig"
-source "arch/arm/mach-island/Kconfig"
 source "arch/arm/mach-rhea/Kconfig"
 
 source "arch/arm/mach-ks8695/Kconfig"
