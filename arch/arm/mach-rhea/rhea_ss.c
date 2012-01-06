@@ -960,6 +960,21 @@ static struct resource board_sdio3_resource[] = {
 #endif
 
 #if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS)
+static struct resource board_sdio3_resource[] = {
+	[0] = {
+		.start = SDIO3_BASE_ADDR,
+		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_NAND,
+		.end = BCM_INT_ID_SDIO_NAND,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+#endif
+
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2XT
 static struct resource board_sdio4_resource[] = {
 	[0] = {
 		.start = SDIO4_BASE_ADDR,
@@ -1005,7 +1020,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.wifi_gpio = {
 			.reset		= 70,
 			.reg		= -1,
-			.host_wake	= 85,
+			.host_wake	= -1,
 			.shutdown	= -1,
 		},
 		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
@@ -1017,20 +1032,20 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 #endif
 
 #if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS)
-	{ /* SDIO4 */
-		.id = 3,
+	{ /* SDIO3 */
+		.id = 2,
 		.data_pullup = 0,
 		.devtype = SDIO_DEV_TYPE_WIFI,
 		.wifi_gpio = {
 			.reset		= 70,
 			.reg		= -1,
-			.host_wake	= 85,
+			.host_wake	= -1,
 			.shutdown	= -1,
 		},
 		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-		.peri_clk_name = "sdio4_clk",
-		.ahb_clk_name = "sdio4_ahb_clk",
-		.sleep_clk_name = "sdio4_sleep_clk",
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 48000000,
 	},
 #endif
@@ -1064,8 +1079,8 @@ static struct platform_device board_sdio3_device = {
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
 #if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS)
-	.resource = board_sdio4_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio4_resource),
+	.resource = board_sdio3_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
 	.dev      = {
 		.platform_data = &board_sdio_param[2],
