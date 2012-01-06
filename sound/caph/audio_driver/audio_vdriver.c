@@ -1138,11 +1138,12 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
 	audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
 	(UInt32) audio_mode, 0, 0, 0, 0);
 #else
-	audio_control_generic( AUDDRV_CPCMD_PassAudioMode,
-            (UInt32)audio_mode, (UInt32)audio_app, 0, 0, 0 );
-	audio_control_generic( AUDDRV_CPCMD_SetAudioMode,
-            (UInt32)(audio_mode+audio_app*AUDIO_MODE_NUMBER),
-            (UInt32)audio_app, 0, 0, 0 );
+	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+	(UInt32) (audio_mode + audio_app * AUDIO_MODE_NUMBER),
+	(UInt32) audio_app, 0, 0, 0);
+	audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
+	(UInt32) (audio_mode + audio_app * AUDIO_MODE_NUMBER),
+	(UInt32) audio_app, 0, 0, 0);
 #endif
 /*load speaker EQ filter and Mic EQ filter from sysparm to DSP*/
 /* 7 can be removed later on. It means mic1, mic2, speaker */

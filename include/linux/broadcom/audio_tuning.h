@@ -38,7 +38,7 @@
  * The following part shows all the constant values needed in audio baseband code.
  ****************************************************************/
 #define	AUDIO_MODE_NUMBER		9	///< Up to 9 Audio Profiles (modes) after 213x1
-#define AUDIO_APP_NUMBER        3   // must be consistent with parm_audio.txt
+#define AUDIO_APP_NUMBER        2   // must be consistent with parm_audio.txt
 
 #define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*AUDIO_APP_NUMBER)
 
