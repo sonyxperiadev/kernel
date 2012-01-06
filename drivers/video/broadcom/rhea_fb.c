@@ -41,6 +41,8 @@
 //#define PARTIAL_UPDATE_SUPPORT
 #define RHEA_FB_ENABLE_DYNAMIC_CLOCK	1
 
+#define RHEA_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
+
 struct rhea_fb {
 	dma_addr_t phys_fbbase;
 	spinlock_t lock;
@@ -217,7 +219,7 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 		}
 		down(&fb->prev_buf_done_sem);
 		rhea_clock_start(fb);
-		ret = fb->display_ops->update(fb->display_hdl, buff_idx, p_region, (DISPDRV_CB_T)rhea_display_done_cb);
+		ret = fb->display_ops->update(fb->display_hdl, buff_idx, 0, (DISPDRV_CB_T)rhea_display_done_cb);
 	}
 skip_drawing:
 	up(&fb->update_sem);
@@ -292,6 +294,44 @@ static int disable_display(struct rhea_fb *fb)
 	fb->display_ops->exit();
 
 	rheafb_info("RHEA display is disabled successfully\n");
+	return ret;
+}
+
+static int rhea_fb_ioctl(struct fb_info *info, unsigned int cmd,
+                        unsigned long arg)
+{   
+	void *ptr = NULL;
+	int ret = 0;
+	struct rhea_fb *fb = container_of(info, struct rhea_fb, fb);
+
+	rheafb_debug("RHEA ioctl called! Cmd %x, Arg %lx\n", cmd, arg);
+	switch (cmd) {
+        
+  	case RHEA_IOCTL_SET_BUFFER_AND_UPDATE:
+        
+		if (down_killable(&fb->update_sem)) {
+		    return -EINTR;
+		}
+		ptr = (void *)arg;
+
+		if (ptr == NULL)
+		{
+		    up(&fb->update_sem);
+		    return -EFAULT;
+		}
+
+		down(&fb->prev_buf_done_sem);
+		rhea_clock_start(fb);
+		ret = fb->display_ops->update(fb->display_hdl, (uint32_t)ptr, (DISPDRV_WIN_t *)1, (DISPDRV_CB_T)rhea_display_done_cb);
+		up(&fb->update_sem);
+		break;
+
+	default:
+	
+		rheafb_error("Wrong ioctl cmd\n");
+		break;
+	}
+
 	return ret;
 }
 
@@ -434,6 +474,7 @@ static struct fb_ops rhea_fb_ops = {
 	.fb_fillrect    = cfb_fillrect,
 	.fb_copyarea    = cfb_copyarea,
 	.fb_imageblit   = cfb_imageblit,
+	.fb_ioctl       = rhea_fb_ioctl,
 };
 
 static int rhea_fb_probe(struct platform_device *pdev)
