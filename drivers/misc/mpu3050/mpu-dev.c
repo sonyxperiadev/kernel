@@ -1515,25 +1515,25 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 			 "Missing %s IRQ\n", MPU_NAME);
 	}
 
-   /* Register with BRVSENS driver. */
-   brvsens_register(SENSOR_HANDLE_GYROSCOPE,       /* sensor UID */
-                    MPU_NAME,                      /* human readable name */
-                    (void*)client,                 /* context: passed back in activate/read callbacks */
-                    (PFNACTIVATE)mpu6050_set_power_mode,
-                    (PFNREAD)mpu6050_read_gyro);   /* read callback */
+	brvsens_register(SENSOR_HANDLE_ACCELEROMETER,   /* sensor UID */
+			MPU_NAME,                      /* human readable name */
+			(void*)client,                 /* context: passed back in activate/read callbacks */
+			(PFNACTIVATE)NULL,
+			(PFNREAD)mpu6050_read_accel);  /* read callback */
+	/* Register with BRVSENS driver. */
+	brvsens_register(SENSOR_HANDLE_GYROSCOPE,       /* sensor UID */
+			MPU_NAME,                      /* human readable name */
+			(void*)client,                 /* context: passed back in activate/read callbacks */
+			(PFNACTIVATE)mpu6050_set_power_mode,
+			(PFNREAD)mpu6050_read_gyro);   /* read callback */
 
-   brvsens_register(SENSOR_HANDLE_ACCELEROMETER,   /* sensor UID */
-                    MPU_NAME,                      /* human readable name */
-                    (void*)client,                 /* context: passed back in activate/read callbacks */
-                    (PFNACTIVATE)NULL,
-                    (PFNREAD)mpu6050_read_accel);  /* read callback */
-
-    brvsens_register(SENSOR_HANDLE_COMPASS,
-                     MPU_NAME,
-                     (void*)client,
-                     (PFNACTIVATE)mpu6050_set_compass_power_mode,
-                     (PFNREAD)mpu6050_read_compass);
-
+#if 0
+	brvsens_register(SENSOR_HANDLE_COMPASS,
+			MPU_NAME,
+			(void*)client,
+			(PFNACTIVATE)mpu6050_set_compass_power_mode,
+			(PFNREAD)mpu6050_read_compass);
+#endif
    res  = mpu6050_init(client);
 	return res;
 
