@@ -26,5 +26,13 @@ config PN544_NFC
 	  To compile this driver as a module, choose m here. The module will
 	  be called pn544.
 
+config BCMI2CNFC
+	bool "Broadcom 2079x NFC Controller Driver"
+	depends on I2C
+	default n
+	help
+		Broadcom 2079x Near Field Communication Controller Support.
+
+
 
 endif # NFC_DEVICES
