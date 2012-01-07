@@ -305,6 +305,5 @@ extern int BrcmCreateAuddrv_testSysFs(struct snd_card *card);
 extern int BrcmCreateAuddrv_selftestSysFs(struct snd_card *card);
 extern int LaunchAudioCtrlThread(void);
 extern int TerminateAudioHalThread(void);
-
 #endif /* __CAPH_COMMON_H__ */
 

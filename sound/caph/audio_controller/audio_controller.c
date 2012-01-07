@@ -142,8 +142,8 @@ static AUDIO_SOURCE_Mapping_t MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] =
  //=============================================================================
  // Private Variables
  //=============================================================================
- static AUDIO_SINK_Enum_t voiceCallSpkr = AUDIO_SINK_UNDEFINED;
- static AUDIO_SOURCE_Enum_t voiceCallMic = AUDIO_SOURCE_UNDEFINED;
+static AUDIO_SINK_Enum_t voiceCallSpkr = AUDIO_SINK_UNDEFINED;
+static AUDIO_SOURCE_Enum_t voiceCallMic = AUDIO_SOURCE_UNDEFINED;
 
 static int telephony_dl_gain_dB = 0;
 static int telephony_ul_gain_dB = 0;
@@ -168,7 +168,10 @@ static int path_user_set_gainR[MAX_AUDIO_PATH]={0};
 static AUDIO_GAIN_FORMAT_t path_user_set_gainFormat[MAX_AUDIO_PATH]={AUDIO_GAIN_FORMAT_INVALID};
 
 static Boolean fmPlayStarted = FALSE;
-
+/* pathID of the playback path */
+static unsigned int playbackPathID = 0;
+/* pathID of the recording path */
+static unsigned int recordPathID = 0;
 //=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -427,8 +430,12 @@ void AUDCTRL_SetTelephonyMicSpkr(
 
 	  //if PCG changed audio mode when phone is idle, here need to pass audio mode to CP.
 	  //so that parameter read by AT*MAUDTUNE=2 will be for the new audio mode.
-	  audio_control_generic( AUDDRV_CPCMD_PassAudioMode, (UInt32)AUDDRV_GetAudioModeBySink(sink), 0, 0, 0, 0 );
 
+#if defined(USE_NEW_AUDIO_PARAM)
+	  audio_control_generic( AUDDRV_CPCMD_PassAudioMode, (UInt32)AUDDRV_GetAudioModeBySink(sink), (UInt32)AUDCTRL_GetAudioApp(), 0, 0, 0 );
+#else
+	  audio_control_generic( AUDDRV_CPCMD_PassAudioMode, (UInt32)AUDDRV_GetAudioModeBySink(sink), 0, 0, 0, 0 );
+#endif
       return;
     }
 
@@ -685,26 +692,61 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode, AudioApp_t audio_app )
 
     AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 
-    if( (voiceCallMic == mic) && (voiceCallSpkr == spk) )
+    /* Here may need to consider for other apps like vt and voip etc */
+    if((audio_app == AUDIO_APP_VOICE_CALL)
+      ||(audio_app == AUDIO_APP_VOICE_CALL_WB))
     {
-      // may need to consider for other apps like vt and voip etc
-      if( audio_app == AUDIO_APP_VOICE_CALL_WB )
-        AUDDRV_Telephony_RateChange( AUDIO_SAMPLING_RATE_16000 );
-      else
-        AUDDRV_Telephony_RateChange( AUDIO_SAMPLING_RATE_8000 );
+        if( (voiceCallMic == mic) && (voiceCallSpkr == spk) )
+        {
+            if( audio_app == AUDIO_APP_VOICE_CALL_WB )
+            {
+                AUDDRV_Telephony_RateChange( 
+                        AUDIO_SAMPLING_RATE_16000 );
+            }
+            else
+            {
+                AUDDRV_Telephony_RateChange( 
+                        AUDIO_SAMPLING_RATE_8000 );
+            }
+        }
+        else
+        {
+            if( audio_app == AUDIO_APP_VOICE_CALL_WB )
+            {
+                AUDDRV_Telephone_SaveSampleRate(
+                        AUDIO_SAMPLING_RATE_16000 );
+            }
+            else
+            {
+                AUDDRV_Telephone_SaveSampleRate( 
+                        AUDIO_SAMPLING_RATE_8000 );
+            }
+
+            /* function below checks voiceCallSampleRate */
+            AUDCTRL_SetTelephonyMicSpkr( mic, spk );
+        }
     }
     else
+    if(audio_app == AUDIO_APP_MUSIC)
     {
-      if( audio_app == AUDIO_APP_VOICE_CALL_WB )
-        AUDDRV_Telephone_SaveSampleRate( AUDIO_SAMPLING_RATE_16000 );
-      else
-        AUDDRV_Telephone_SaveSampleRate( AUDIO_SAMPLING_RATE_8000 );
+        /*add code here to switch the mic or speaker when
+         *audio mode/app is changed.
+         */
+    }
+     if ( !AUDDRV_InVoiceCall() )
+    {
+        //for music tuning, if PCG changed audio mode when phone is in idle mode, here need to pass audio mode to CP.
+        //so that AT*MAUDTUNE=3 applies parameter change based on the new audio mode on CP side.
 
-      //the function below checks voiceCallSampleRate
-      AUDCTRL_SetTelephonyMicSpkr( mic, spk );
+        //this command only updates mode in audio_vdriver_caph.c, does not updat mode in audioapi.c.
+        // Therefore it is not useful for MP3 audio tuning purpose.
+        audio_control_generic( AUDDRV_CPCMD_PassAudioMode, (UInt32)mode, (UInt32)audio_app, 0, 0, 0 );
+        //this command updates mode in audioapi.c. It is useful for MP3 audio tuning purpose.
+        audio_control_generic( AUDDRV_CPCMD_SetAudioMode, (UInt32)(audio_app*AUDIO_MODE_NUMBER + mode), 0, 0, 0, 0 );
     }
 
-    if(!bClk) csl_caph_ControlHWClock(FALSE); //disable clock if it is enabled by this function.
+    /*disable clock if it is enabled by this function */
+    if(!bClk) csl_caph_ControlHWClock(FALSE); 
 }
 #else
 //*********************************************************************
@@ -1001,6 +1043,8 @@ void AUDCTRL_EnablePlay(
 		***/
 	}
 	if(pPathID) *pPathID = pathID;
+
+    playbackPathID = pathID;
 	//Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %x, pathID %d\r\n", *pPathID, pathID);
 }
 //============================================================================

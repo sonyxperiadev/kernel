@@ -97,10 +97,10 @@ static unsigned int pcm_voice_capture_period_bytes[] = {
 	PCM_MIN_VOICE_CAPTURE_PERIOD_BYTES, PCM_MAX_VOICE_CAPTURE_PERIOD_BYTES
 };
 static struct snd_pcm_hw_constraint_list
-	pcm_voice_capture_period_bytes_constraints_list = {
-	.count = ARRAY_SIZE(pcm_voice_capture_period_bytes),
-	.list = pcm_voice_capture_period_bytes,
-	.mask = 0,
+pcm_voice_capture_period_bytes_constraints_list = {
+.count = ARRAY_SIZE(pcm_voice_capture_period_bytes),
+.list = pcm_voice_capture_period_bytes,
+.mask = 0,
 };
 
 /* hardware definition */
@@ -262,10 +262,8 @@ static int PcmPlaybackOpen(struct snd_pcm_substream *substream)
 	}
 
 	substream->runtime->private_data = drv_handle;
-
 	BCM_AUDIO_DEBUG("chip-0x%lx substream-0x%lx drv_handle-0x%lx\n",
 			(UInt32) chip, (UInt32) substream, (UInt32) drv_handle);
-
 	return err;
 }
 
@@ -324,7 +322,7 @@ static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 	parm_prepare.period_bytes =
 	    frames_to_bytes(runtime, runtime->period_size);
 	parm_prepare.buf_param.buf_size = runtime->dma_bytes;
-    /*virtual address */
+	/*virtual address */
 	parm_prepare.buf_param.pBuf = runtime->dma_area;
 	/* physical address */
 	parm_prepare.buf_param.phy_addr = (UInt32) (runtime->dma_addr);
@@ -681,7 +679,7 @@ static int PcmCapturePrepare(struct snd_pcm_substream *substream)
 	    frames_to_bytes(runtime, runtime->period_size);
 
 	parm_prepare.buf_param.buf_size = runtime->dma_bytes;
-    /* virtual address */
+	/* virtual address */
 	parm_prepare.buf_param.pBuf = runtime->dma_area;
 	/* physical address */
 	parm_prepare.buf_param.phy_addr = (UInt32) (runtime->dma_addr);
