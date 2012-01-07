@@ -23,6 +23,8 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 
+#define ENABLE_COLOR_PATTERN 0
+//#define MIPI_2_LANES
 //#define FPS_30_MODE		
 
 #define OV5640_BRIGHTNESS_MIN           0
@@ -187,37 +189,30 @@ static const struct ov5640_reg configscript_common1[] = {
     {0x3601,0x22},
 //????
     {0x471c, 0x50},
-//AEC
-    {0x3a18,0x00},      //Real Gain
-    {0x3a19,0xf8},
-    {0x3503,0x07},
-    {0x3500,0x00},
-    {0x3501,0x01},
-    {0x3502,0x00},
-    {0x350a,0x00},
-    {0x350b,0x3f},
-
 //System/IO pad Control
     {0x3000,0x00},      //Resets
     {0x3002,0x1c},
     {0x3004,0xff},      //Clocks
     {0x3006,0xc3},
-    {0x300e,0x25},      //MIPI Control  Single Lane/Powered down       ********************
 //????
     {0x302e,0x08},      //undocumented
     {0x3612,0x4b},
     {0x3618,0x04},
-    
-// MIPI CLK = 300Mbps 8-bit    
-    {0x3034,0x18},      //MIPI BIT_Mode 3:0
-    {0x3035,0x12},      //SystemClkDiv 7:4, /1=364Mhz  MIPI Sclk Div 3:0, /1=364Mhz
-    {0x3036,0x7c},      //PLL Mult 4~252 0:7  0x7C=124=806Mhz
+// CLKS = Src=13Mhz:  300Mbps 8-bit    
     {0x3037,0x12},      //PLL Pre-Div [0:3], /2=6.5Mhz   PLL Root Div [4] /1=806Mhz
+    {0x3036,0x70},      //PLL Mult 4~252 0:7  0x70=112=728Mhz
     {0x3108,0x01},      //SclkDiv [1:0] 1=/2  Sclk2*Div [3:2] 0=/1 PclkDiv [5:4]0=/1   [1,2,4,8]
-    
+//MIPI Control    
+	{0x4800,0x24},
+    {0x3034,0x18},      //MIPI BIT_Mode 3:0
+#ifdef MIPI_2_LANES 
+    {0x3035,0x12},      //SystemClkDiv 7:4, /1=728Mhz  MIPI Sclk Div 3:0, /1=728Mhz
+#else
+    {0x3035,0x11},      //SystemClkDiv 7:4, /1=364Mhz  MIPI Sclk Div 3:0, /1=364Mhz
+#endif    
+//PLL ADCLK
     {0x303d,0x20},      //PreDivSp [5:4] /2=6.5Mhz 
-    {0x303b,0x20},      //DivCntsb [4:0] *35=195Mhz 
-
+    {0x303b,0x20},      //DivCntsb [4:0] *32=208Mhz 
 //????
     {0x3708,0x21},
     {0x3709,0x12},
@@ -236,60 +231,53 @@ static const struct ov5640_reg configscript_common1[] = {
     {0x3809,0x20},
     {0x380a,0x07},      //output Y  1944
     {0x380b,0x98},
+// Total size (+blanking)
     {0x380c,0x0b},      //Total X  2844
     {0x380d,0x1c},
     {0x380e,0x07},      //Total Y  1968
     {0x380f,0xb0},
+// ISP Windowing size
     {0x3810,0x00},      //ISP X offset = 16
     {0x3811,0x10},
     {0x3812,0x00},      //ISP Y offset = 6
     {0x3813,0x06},
+// Sensor Read
     {0x3814,0x11},      //X incr
     {0x3815,0x11},      //Y incr
     {0x3820,0x40},      //vflip
     {0x3821,0x06},      //mirror
     {0x3824,0x01},      //Scale Divider [4:0]
 //AEC/AGC
-    {0x3a02,0x07},
-    {0x3a03,0xb0},
+    {0x3a02,0x01},
+    {0x3a03,0xec},
     {0x3a08,0x01},
     {0x3a09,0x27},
     {0x3a0a,0x00},
     {0x3a0b,0xf6},
     {0x3a0e,0x06},
     {0x3a0d,0x08},
-    {0x3a14,0x07},
-    {0x3a15,0xb0},
+    {0x3a14,0x01},
+    {0x3a15,0xec},
 //BLC Control
     {0x4001,0x02},
     {0x4004,0x06},
 //Format control
-    {0x4300,0x32},      //Output Format[7:4] Sequence[3:0]
-    {0x460b,0x37},      //???
-    {0x460c,0x20},      //DVP PCLK Control (PCLK auto)
+    {0x4300,0x32},      //Output Format[7:4] Sequence[3:0] (UVYV)
+    {0x501f,0x00},      //ISP Format
 //JPG Control
     {0x4713,0x02},      //JPG Mode Select
+//????
+    {0x460b,0x37},      
     {0x4750,0x00},      //???
     {0x4751,0x00},      //???
 //ISP Control
     {0x5000,0x07},
-    {0x5001,0x03},
+    {0x5001,0xa7},      //isp scale down enabled  Special Effects
     {0x501d,0x00},      //ISP Misc
-    {0x501f,0x00},      //ISP Format
-//AVG Control
-    {0x5684,0x10},
-    {0x5685,0xa0},
-    {0x5686,0x0c},
-    {0x5687,0x78},
 //???   
     {0x5a00,0x08},
     {0x5a21,0x00},
     {0x5a24,0x00},
-//ISP Control
-    {0x5000,0x27},
-    {0x5001,0x83},
-
-    {0x3821,0x06},      //mirror
 //Gamma Control
     {0x5481,0x08},
     {0x5482,0x14},
@@ -329,9 +317,11 @@ static const struct ov5640_reg configscript_common1[] = {
     {0x5306,0x08},
     {0x5307,0x16},
 //SDE Control
-    {0x5580,0x02},
+    {0x5580,0x00},
     {0x5583,0x40},
     {0x5584,0x10},
+	{0x5587,0x00},
+	{0x5588,0x00},
     {0x5589,0x10},
     {0x558a,0x00},
     {0x558b,0xf8},
@@ -344,12 +334,21 @@ static const struct ov5640_reg configscript_common1[] = {
     {0x3a1f,0x18},
     {0x3a18,0x00},      //Real Gain
     {0x3a19,0xf8},
+
 //System Reset
-    {0x3003,0x03},
-    {0x3003,0x01},
-    {0x3503,0x00},
+	{0x3003,0x03},
+	{0x3003,0x01},
     
-    {0x3008,0x42},      //stop sensor streaming
+    #if ENABLE_COLOR_PATTERN
+        {0x503d,0x80},   // Solid Colour Bars
+        #if 0   
+            {0x503d,0x80},   // Solid Colour Bars
+            {0x503d,0x81},   // Gradual change @ vertical mode 1
+            {0x503d,0x82},   // Gradual change horizontal
+            {0x503d,0x83},   // Gradual change @ vertical mode 2
+        #endif
+    #endif
+	{0x3008,0x42},      //stop sensor streaming
     {0x300e,0x3d},      //MIPI Control  Single Lane/Powered down       ********************
 
    { 0xFFFF, 0x00 }
@@ -382,7 +381,11 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
     #endif		
     	.isp_scale_down = 0x23,
     	.clk_dividers = 0x01,
+    #ifdef MIPI_2_LANES 
+    	.mipi_lanes = 0x45,
+    #else
     	.mipi_lanes = 0x25,
+    #endif    	
 	},
 	[OV5640_SIZE_VGA] = {
 		.x_addr_start = 0,
@@ -410,7 +413,11 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
     #endif		
     	.isp_scale_down = 0x23,
     	.clk_dividers = 0x01,
+    #ifdef MIPI_2_LANES 
+    	.mipi_lanes = 0x45,
+    #else
     	.mipi_lanes = 0x25,
+    #endif    	
 	},
 	[OV5640_SIZE_XGA] = {
 		.x_addr_start = 0,
@@ -429,7 +436,11 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.v_even_ss_inc = 1,
     	.isp_scale_down = 0x23,
     	.clk_dividers = 0x01,
+    #ifdef MIPI_2_LANES 
+    	.mipi_lanes = 0x45,
+    #else
     	.mipi_lanes = 0x25,
+    #endif    	
 	},
 	[OV5640_SIZE_720P] = {
 		.x_addr_start = 336,
@@ -448,7 +459,11 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.v_even_ss_inc = 1,
     	.isp_scale_down = 0x23,
     	.clk_dividers = 0x01,
+    #ifdef MIPI_2_LANES 
+    	.mipi_lanes = 0x45,
+    #else
     	.mipi_lanes = 0x25,
+    #endif    	
 	},
 	[OV5640_SIZE_UXGA] = {
 		.x_addr_start = 0,
@@ -466,8 +481,12 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.v_odd_ss_inc = 1,
 		.v_even_ss_inc = 1,
     	.isp_scale_down = 0x23,
-    	.clk_dividers = 0x02,
+    	.clk_dividers = 0x01,
+    #ifdef MIPI_2_LANES 
+    	.mipi_lanes = 0x45,
+    #else
     	.mipi_lanes = 0x25,
+    #endif    	
 	},
 	[OV5640_SIZE_1080P] = {
 		.x_addr_start = 336,
@@ -486,7 +505,11 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.v_even_ss_inc = 1,
     	.isp_scale_down = 0x03,
     	.clk_dividers = 0x02,
+    #ifdef MIPI_2_LANES 
+    	.mipi_lanes = 0x45,
+    #else
     	.mipi_lanes = 0x25,
+    #endif    	
 	},
 	[OV5640_SIZE_QXGA] = {
 		.x_addr_start = 0,
@@ -505,7 +528,11 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.v_even_ss_inc = 1,
     	.isp_scale_down = 0x23,
     	.clk_dividers = 0x02,
+    #ifdef MIPI_2_LANES 
+    	.mipi_lanes = 0x45,
+    #else
     	.mipi_lanes = 0x25,
+    #endif    	
 	},
 	[OV5640_SIZE_5MP] = {
 		.x_addr_start = 0,
@@ -524,7 +551,11 @@ static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
 		.v_even_ss_inc = 1,
     	.isp_scale_down = 0x03,
     	.clk_dividers = 0x02,
+    #ifdef MIPI_2_LANES 
+    	.mipi_lanes = 0x45,
+    #else
     	.mipi_lanes = 0x25,
+    #endif    	
 	},
 };
 #if 0
@@ -1399,7 +1430,7 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
-	*frames = 2;
+	*frames = 5;
 
 	return 0;
 }
