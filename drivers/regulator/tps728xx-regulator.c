@@ -105,7 +105,8 @@ static int tps728xx_regulator_is_enabled(struct regulator_dev *rdev)
 }
 
 static int tps728xx_regulator_set_voltage(struct regulator_dev *rdev,
-						int min_uV, int max_uV)
+						int min_uV, int max_uV,
+						unsigned *selector)
 {
 	struct tps728xx *tps728xx = rdev_get_drvdata(rdev);
 	int val = -1;
@@ -135,6 +136,9 @@ static int tps728xx_regulator_get_voltage(struct regulator_dev *rdev)
 	int status;
 	pr_info("Inside %s\n", __func__);
 
+	status = gpio_get_value_cansleep(tps728xx->enable_gpio);
+	if (status == 0)
+		return status;
 	status = gpio_get_value_cansleep(tps728xx->vset_gpio);
 	if (status == 1)
 		return tps728xx->vout1;
