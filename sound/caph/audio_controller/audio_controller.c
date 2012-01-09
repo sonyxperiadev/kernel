@@ -367,6 +367,32 @@ void AUDCTRL_Telephony_RequestRateChange(UInt8 codecID)
 	}
 }
 
+/*=============================================================================
+*
+* Function Name: AUDCTRL_EC
+*
+* Description:   DSP Echo cancellation ON/OFF
+*
+*=============================================================================
+*/
+void AUDCTRL_EC(Boolean enable, UInt32 arg)
+{
+    AUDDRV_EC(enable, arg);
+}
+
+/*=============================================================================
+*
+* Function Name: AUDCTRL_NS
+*
+* Description:   DSP Noise Suppression ON/OFF
+*
+*=============================================================================
+*/
+void AUDCTRL_NS(Boolean enable)
+{
+    AUDDRV_NS(enable);
+}
+
 //============================================================================
 //
 // Function Name: AUDCTRL_SetTelephonyMicSpkr

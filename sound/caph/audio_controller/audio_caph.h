@@ -71,6 +71,8 @@ typedef enum
   ACTION_AUD_RemoveChannel,
   ACTION_AUD_EnableTelephony,
   ACTION_AUD_DisableTelephony,
+  ACTION_AUD_EnableECNSTelephony,
+  ACTION_AUD_DisableECNSTelephony,
   ACTION_AUD_SetTelephonyMicSpkr,
   ACTION_AUD_MutePlayback,
   ACTION_AUD_MuteRecord,
@@ -234,6 +236,10 @@ typedef union{
 	BRCM_AUDIO_Param_Prepare_t		parm_prepare;
 
 } BRCM_AUDIO_Control_Params_un_t;
+
+typedef struct {
+   Int32 ec_ns;
+} BRCM_AUDIO_Param_ECNS_t;
 
 void caph_audio_init(void);
 

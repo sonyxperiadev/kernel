@@ -144,6 +144,7 @@ typedef struct brcm_alsa_chip
 	s32	pi32LoopBackTestParam[4];	//loopback test
 	s32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	s32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
+        s32     iEnableECNSPhoneCall;   //Enable/Disable EC and NS for BT phone call
 	s32	pi32SpeechMixOption[CAPH_MAX_PCM_STREAMS];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
 	s32	pi32LevelVolume[CAPH_MAX_PCM_STREAMS][2]; //volume level of the stream, two channels. If the stream is mono, please channel 0 only.
 	//AT-AUD
@@ -183,6 +184,7 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_LOOPBACK_TEST,
 	CTL_FUNCTION_PHONE_ENABLE,
 	CTL_FUNCTION_PHONE_CALL_MIC_MUTE,
+        CTL_FUNCTION_PHONE_ECNS_ENABLE,
 	CTL_FUNCTION_SPEECH_MIXING_OPTION,
 	CTL_FUNCTION_FM_ENABLE,
 	CTL_FUNCTION_FM_FORMAT,
