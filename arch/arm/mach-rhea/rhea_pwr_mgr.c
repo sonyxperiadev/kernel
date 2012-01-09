@@ -307,6 +307,12 @@ static struct i2c_cmd i2c_dummy_seq_cmd[] =
 
 #endif /*CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ*/
 
+struct pm_special_event_range rhea_special_event_list[] = {
+        {GPIO29_A_EVENT, GPIO93_A_EVENT},
+        {GPIO18_B_EVENT, GPIO111_B_EVENT},
+        {KEY_R0_EVENT, KEY_R7_EVENT}
+	};
+
 struct pwr_mgr_info rhea_pwr_mgr_info = {
 	.num_pi = PI_MGR_PI_ID_MAX,
 	.base_addr = KONA_PWRMGR_VA,
@@ -316,7 +322,8 @@ struct pwr_mgr_info rhea_pwr_mgr_info = {
 #else
 	.flags = PM_PMU_I2C,
 #endif
-
+	.special_event_list = rhea_special_event_list,
+	.num_special_event_range = ARRAY_SIZE(rhea_special_event_list),
 };
 
 int __init rhea_pwr_mgr_init()
