@@ -141,6 +141,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_FG_OFFSET1] =		{.map = 0x01, .addr = 0xD5, .mask = 0xFF, .ro = 1, .shift = 6},
 	[PMU_REG_FG_GAINTRIM] =		{.map = 0x01, .addr = 0xC5, .mask = 0xFF, .ro = 0, .shift = 0},
 	[PMU_REG_FG_DELTA] =		{.map = 0x01, .addr = 0xDA, .mask = 0xFF, .ro = 0, .shift = 0},
+	[PMU_REG_FG_CAP] =		{.map = 0x01, .addr = 0xD9, .mask = 0xFF, .ro = 0, .shift = 0},
 	/* usb control */
 	[PMU_REG_OTG_VBUS_PULSE] =	{.map = 0, .addr = 0x70, .mask = 0x01, .ro = 0, .shift = 0},
 	[PMU_REG_OTG_VBUS_BOOST] =	{.map = 0, .addr = 0x70, .mask = 0x04, .ro = 0, .shift = 2},
