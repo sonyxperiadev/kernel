@@ -103,7 +103,8 @@ static AUDIO_SINK_Enum_t currVoiceSpkr = AUDIO_SINK_UNDEFINED;
 static Boolean bInVoiceCall = FALSE;
 static Boolean bmuteVoiceCall = FALSE;
 static Boolean bDuringTelephonySwitchMicSpkr = FALSE;
-
+static Boolean dspECEnable = TRUE;
+static Boolean dspNSEnable = TRUE;
 static Boolean controlFlagForCustomGain = FALSE;
 
 typedef struct Audio_Driver_t {
@@ -296,6 +297,8 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 #if defined(ENABLE_DMA_VOICE)
 	UInt16 dma_mic_spk;
 #endif
+	Boolean ec_enable_from_sysparm = dspECEnable;
+	Boolean ns_enable_from_sysparm = dspNSEnable;
 
 	telephonyPathID.ulPathID = 0;
 	telephonyPathID.ul2PathID = 0;
@@ -439,7 +442,9 @@ mode].dual_mic_enable != 0);	/* in parm_audio.txt, VOICE_DUALMIC_ENABLE */
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE,
 			  AUDDRV_IsCall16K(AUDDRV_GetAudioMode()), 0, 0, 0);
 #endif
-	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0);
+/*	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
+	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, ec_enable_from_sysparm,
+		ns_enable_from_sysparm, 0, 0, 0 );
 
 	if (bDualMic_IsNeeded == TRUE)
 		audio_control_dsp(DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0);
@@ -488,6 +493,8 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 	AudioApp_t audio_app;
 #endif
 	Boolean bDualMic_IsNeeded = FALSE;
+        Boolean ec_enable_from_sysparm = dspECEnable;
+        Boolean ns_enable_from_sysparm = dspNSEnable;
 
 	Log_DebugPrintf(LOGID_AUDIO,
 			"AUDDRV_Telephony_RateChange, sampleRate = %d\n\r",
@@ -570,7 +577,9 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0,
 				  0);
-		audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0);
+/*		audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
+                audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, ec_enable_from_sysparm, 
+				ns_enable_from_sysparm, 0, 0, 0 );
 #if !defined(USE_NEW_AUDIO_PARAM)
 		bDualMic_IsNeeded = (AUDIO_GetParmAccessPtr()[
 		mode].dual_mic_enable != 0);
@@ -613,6 +622,31 @@ void AUDDRV_RegisterRateChangeCallback(audio_codecId_handler_t codecId_cb)
 			"\n\r\t*  AUDDRV_RegisterRateChangeCallback, 0x%lx\n\r",
 			(long unsigned int)codecId_cb);
 	codecId_handler = codecId_cb;
+}
+
+
+/*********************************************************************
+//
+// Function Name: AUDDRV_EC
+//
+// Description:   DSP Echo cancellation ON/OFF
+//
+**********************************************************************/
+void AUDDRV_EC(Boolean enable, UInt32 arg)
+{
+    dspECEnable = enable;
+}
+
+/*********************************************************************
+//
+// Function Name: AUDDRV_NS
+//
+// Description:   DSP Noise Suppression ON/OFF
+//
+**********************************************************************/
+void AUDDRV_NS(Boolean enable)
+{
+    dspNSEnable = enable;
 }
 
 /*********************************************************************

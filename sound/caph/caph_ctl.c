@@ -612,6 +612,12 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->value.integer.min = 0;
 			uinfo->value.integer.max = 1;
 			break;
+                case CTL_FUNCTION_PHONE_ECNS_ENABLE:
+                        uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
+                        uinfo->count = 1;
+                        uinfo->value.integer.min = 0;
+                        uinfo->value.integer.max = 1;
+                        break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 			uinfo->count = 1;
@@ -731,6 +737,9 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[0];
 			ucontrol->value.integer.value[1] = pChip->iMutePhoneCall[1];
 			break;
+                case CTL_FUNCTION_PHONE_ECNS_ENABLE:
+                        ucontrol->value.integer.value[0] = pChip->iEnableECNSPhoneCall;
+                        break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
 				ucontrol->value.integer.value[0] = pChip->pi32SpeechMixOption[stream-1];
 			break;
@@ -801,6 +810,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	BRCM_AUDIO_Param_Spkr_t parm_spkr;
 	BRCM_AUDIO_Param_Volume_t parm_vol;
     int rtn = 0,cmd,i,indexVal = -1,cnt=0;
+        BRCM_AUDIO_Param_ECNS_t parm_ecns;
 	struct snd_pcm_substream *pStream=NULL;
 	int sink = 0;
 
@@ -854,6 +864,15 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				}
 			}
 			break;
+                case CTL_FUNCTION_PHONE_ECNS_ENABLE:
+                        pChip->iEnableECNSPhoneCall = ucontrol->value.integer.value[0];
+                        BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ECNS_ENABLE pChip->iEnableECNSPhoneCall = %ld\n", pChip->iEnableECNSPhoneCall);
+                        parm_ecns.ec_ns = pChip->iEnableECNSPhoneCall;
+                        if(!pChip->iEnableECNSPhoneCall) //disable EC NS
+                                AUDIO_Ctrl_Trigger(ACTION_AUD_DisableECNSTelephony,&parm_ecns,NULL,0);
+                        else //enable EC NS
+                                AUDIO_Ctrl_Trigger(ACTION_AUD_EnableECNSTelephony,&parm_ecns,NULL,0);
+                        break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
 			pChip->pi32SpeechMixOption[stream-1] = ucontrol->value.integer.value[0];
 			BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_SPEECH_MIXING_OPTION stream = %d, option = %d\n", stream, pChip->pi32SpeechMixOption[stream-1]);
@@ -1296,6 +1315,7 @@ static struct snd_kcontrol_new sgSndCtrls[] __initdata =
 	BRCM_MIXER_CTRL_MISC(0, 0, "AT-AUD", AT_AUD_CTL_HANDLER, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_AT_AUDIO) ),
 	BRCM_MIXER_CTRL_MISC(0, 0, "VC-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_ENABLE)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "VC-MUT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_CALL_MIC_MUTE)),
+        BRCM_MIXER_CTRL_MISC(0, 0, "VC-ENC", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_ECNS_ENABLE)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "P1-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "P2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "C2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_SPEECHIN, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION)),	//CTL_STREAM_PANEL_SPEECHIN

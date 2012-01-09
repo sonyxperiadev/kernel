@@ -241,6 +241,10 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 		case ACTION_AUD_MuteTelephony:
 			size = sizeof(BRCM_AUDIO_Param_Mute_t);
 			break;
+		case ACTION_AUD_EnableECNSTelephony:
+		case ACTION_AUD_DisableECNSTelephony:
+			size = sizeof(BRCM_AUDIO_Param_ECNS_t);
+			break;
 		case ACTION_AUD_EnableByPassVibra:
 		case ACTION_AUD_DisableByPassVibra:
 			size = 0;
@@ -785,6 +789,20 @@ void AUDIO_Ctrl_Process(
         }
         break;
 
+	case ACTION_AUD_DisableECNSTelephony:
+	{
+		BCM_AUDIO_DEBUG("Telephony : Turning Off EC and NS \n");
+		AUDCTRL_EC(FALSE, 0);
+		AUDCTRL_NS(FALSE);
+	}
+        break;
+	case ACTION_AUD_EnableECNSTelephony:
+	{
+		BCM_AUDIO_DEBUG("Telephony : Turning On EC and NS \n");
+		AUDCTRL_EC(TRUE, 0);
+		AUDCTRL_NS(TRUE);
+	}
+	break;
       case ACTION_AUD_RateChange:
         {
         BRCM_AUDIO_Param_RateChange_t *param_rate_change = (BRCM_AUDIO_Param_RateChange_t *)arg_param;
