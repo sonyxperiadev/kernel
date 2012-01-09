@@ -50,17 +50,18 @@ static unsigned int debug_quirks = 0;
 
 #ifdef CONFIG_SDHCI_THROUGHPUT
 
-static struct dentry *sdhci_throughput;
+static struct dentry *sdhci_throughput_dentry;
 
-struct sdhci_throughput{
-	u8 enable;
+typedef struct sdhci_throughput {
 	u16 read;
 	struct dentry *dentry;
 	struct timeval t1;
 	struct timeval t2;
 	u32 blk_size;
 	u32 nm_of_blks;
-}*mmc_throughput;
+} sdhci_throughput_t;
+
+struct sdhci_throughput *mmc_throughput;
 
 #endif
 
@@ -908,7 +909,7 @@ static void sdhci_set_transfer_mode(struct sdhci_host *host,
 		mode |= SDHCI_TRNS_DMA;
 
 #ifdef CONFIG_SDHCI_THROUGHPUT
-	if(unlikely((mmc_throughput[host->mmc->index]).enable)){
+	if (unlikely(host->thrpt_dbgfs_enable)) {
 		(mmc_throughput[host->mmc->index]).read = data->flags;
 		(mmc_throughput[host->mmc->index]).blk_size = data->blksz;
 		(mmc_throughput[host->mmc->index]).nm_of_blks = data->blocks;
@@ -2324,7 +2325,7 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 				host->data_early = 1;
 			} else {
 #ifdef CONFIG_SDHCI_THROUGHPUT
-				if(unlikely((mmc_throughput[host->mmc->index]).enable)){
+				if (unlikely(host->thrpt_dbgfs_enable)) {
 					u8* rw_str[2] = {"R:", "W:"};
 					u32 throughput;
 					do_gettimeofday(&((mmc_throughput[host->mmc->index]).t2));
@@ -3039,15 +3040,19 @@ int sdhci_add_host(struct sdhci_host *host)
 	sdhci_enable_card_detection(host);
 
 #ifdef CONFIG_SDHCI_THROUGHPUT
-	if(likely(mmc_throughput = krealloc(mmc_throughput,((host->mmc->index + 1) * sizeof(sdhci_throughput)), GFP_KERNEL)))
-		memset(&mmc_throughput[host->mmc->index],0,sizeof(sdhci_throughput));
+	mmc_throughput = krealloc(mmc_throughput, ((host->mmc->index + 1) \
+				* sizeof(sdhci_throughput_t)), GFP_KERNEL);
+	 if (likely(mmc_throughput)) {
+		memset(&mmc_throughput[host->mmc->index], 0, sizeof(sdhci_throughput_t));
+		host->thrpt_dbgfs_enable = 0;
+		mmc_throughput[host->mmc->index].dentry = \
+			debugfs_create_u8(mmc_hostname(mmc), 0666, \
+					sdhci_throughput_dentry, &(host->thrpt_dbgfs_enable));
+		if (unlikely(mmc_throughput[host->mmc->index].dentry == NULL))
+			printk(KERN_ERR "could not create debugfs entry for %s\n", mmc_hostname(mmc));
+	}
 	else
 		printk(KERN_ERR "Error allocating memory for sdhci throughput debugfs inerface\n");
-
-	mmc_throughput[host->mmc->index].dentry = debugfs_create_u8(mmc_hostname(mmc), 0666, sdhci_throughput, &(mmc_throughput[host->mmc->index].enable));
-	if(unlikely(mmc_throughput[host->mmc->index].dentry == NULL)){
-		printk(KERN_ERR "could not create debugfs entry for %s\n", mmc_hostname(mmc));
-	}
 #endif
 	return 0;
 
@@ -3148,10 +3153,9 @@ static int __init sdhci_drv_init(void)
 #endif
 
 #ifdef CONFIG_SDHCI_THROUGHPUT
-	sdhci_throughput = debugfs_create_dir("sdhci-throughput", NULL);
-	if (!sdhci_throughput) {
+	sdhci_throughput_dentry = debugfs_create_dir("sdhci-throughput", NULL);
+	if (!sdhci_throughput_dentry)
 		printk(KERN_ERR "sdhci-throughput: creating root dir failed\n");
-	}
 #endif
 
 	return 0;
@@ -3161,7 +3165,7 @@ static void __exit sdhci_drv_exit(void)
 {
 #ifdef CONFIG_SDHCI_THROUGHPUT
 	kfree(mmc_throughput);
-	debugfs_remove_recursive(sdhci_throughput);
+	debugfs_remove_recursive(sdhci_throughput_dentry);
 #endif
 }
 
