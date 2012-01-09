@@ -77,6 +77,13 @@ enum {
 	MODE_IDLE,
 };
 
+enum {
+	CAL_MODE_NONE,
+	CAL_MODE_LOWBAT,
+	CAL_MODE_HIGHBAT,
+	CAL_MODE_FORCE,
+};
+
 static struct bcmpmu_charge_zone chrg_zone[] = {
 /* This table is default data, the reak data is from board file*/
 	{.tl = 253, .th = 333, .v = 3000, .fc = 10,  .qc = 100},/* Zone QC */
@@ -132,7 +139,10 @@ struct bcmpmu_em {
 	int fg_capacity_full;
 	int support_fg;
 	int fg_capacity;
-	int fg_cal;
+	int fg_cap_cal;
+	int fg_force_cal;
+	int fg_lowbatt_cal;
+	int cal_mode;
 	int cap_delta;
 	int cap_init;
 	int mode;
@@ -159,8 +169,6 @@ struct bcmpmu_em {
 static struct bcmpmu_em *bcmpmu_em;
 
 static unsigned int em_poll(struct file *file, poll_table *wait);
-static int em_ioctl(struct inode *inode, struct file *file,
-			unsigned int cmd, unsigned long arg);
 static int em_open(struct inode *inode, struct file *file);
 static int em_release(struct inode *inode, struct file *file);
 
@@ -174,27 +182,6 @@ static const struct file_operations em_fops = {
 static struct miscdevice bcmpmu_em_device = {
 	MISC_DYNAMIC_MINOR, "bcmpmu_em", &em_fops
 };
-
-static int em_ioctl(struct inode *inode, struct file *file,
-			unsigned int cmd, unsigned long arg)
-{
-	int ret = 0;
-	struct bcmpmu_em *data = file->private_data;
-
-	if (data == NULL) {
-		printk("bcmpmu em_ioctl, no platform data.\n");
-		return -EINVAL;
-	}
-	switch (cmd) {
-	case PMU_EM_ADC_LOAD_CAL:
-		/* TBD */
-		break;
-	
-	default:
-		return -ENOIOCTLCMD;
-	}
-	return ret;
-}
 
 static int em_open(struct inode *inode, struct file *file)
 {
@@ -348,7 +335,7 @@ fgcal_show(struct device *dev, struct device_attribute *attr,
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	struct bcmpmu_em *pem = bcmpmu->eminfo;
-	return sprintf(buf, "fg_cal is %x\n", pem->fg_cal);
+	return sprintf(buf, "fg_cap_cal is %x\n", pem->fg_cap_cal);
 }
 
 static ssize_t
@@ -360,7 +347,7 @@ fgcal_set(struct device *dev, struct device_attribute *attr,
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	if (val > 1)
 		return -EINVAL;
-	pem->fg_cal = val;
+	pem->fg_cap_cal = val;
 	return count;
 }
 
@@ -440,6 +427,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 	int ret;
 	int calibration = 0;
 	static int eoc_count = 0;
+	int volt;
 
 	req.sig = PMU_ADC_NTC;
 	req.tm = PMU_ADC_TM_HK;
@@ -485,16 +473,24 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 		capacity_v = em_batt_get_capacity(pem,
 				pem->batt_volt, pem->batt_curr);
 
-		if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
-			(pem->fg_cal == 1) &&
-			(pem->batt_volt < 3550))
+		volt = pem->batt_volt - (pem->batt_impedence * pem->batt_curr)/1000;
+
+		if (pem->fg_force_cal != 0) {
+			pem->fg_cap_cal = 0;
+			pem->cal_mode = CAL_MODE_FORCE,
 			calibration = 1;
-		else if ((pem->mode != MODE_TRANSITION) &&
-			(pem->mode != MODE_CHRG) &&
-			((capacity > (capacity_v + 30)) ||
-				((capacity + 30) < (capacity_v)))) {
-				pem->fg_cal = 0;
-				calibration = 1;
+		} else if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
+		    (pem->fg_lowbatt_cal != 0) &&
+		    (volt < 3550)) {
+			pem->cal_mode = CAL_MODE_LOWBAT,
+			calibration = 1;
+		} else if ((pem->mode != MODE_TRANSITION) &&
+			   (pem->mode != MODE_CHRG) &&
+			   ((capacity > (capacity_v + 30)) ||
+			    ((capacity + 30) < (capacity_v)))) {
+			pem->fg_cap_cal = 0;
+			pem->cal_mode = CAL_MODE_HIGHBAT,
+			calibration = 1;
 		}
 	}
 	if ((pem->chrgr_type != PMU_CHRGR_TYPE_NONE) &&
@@ -503,7 +499,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 		eoc_count++;
 		if (eoc_count > 5) {
 			capacity = 100;
-			pem->fg_cal = 1;
+			pem->fg_cap_cal = 1;
 			pem->fg_capacity = pem->fg_capacity_full;
 		}
 	} else eoc_count = 0;
@@ -555,12 +551,11 @@ static void update_charge_zone(struct bcmpmu_em *pem)
 			pem->charge_zone = CHRG_ZONE_N;
 		break;
 	case CHRG_ZONE_OUT:
-		if (pem->batt_volt < pem->zone[pem->charge_zone].v)
+		if (pem->batt_volt < pem->zone[CHRG_ZONE_QC].v)
 			pem->charge_zone = CHRG_ZONE_QC;
-		else if (pem->batt_temp < pem->zone[pem->charge_zone].th)
-			pem->charge_zone = CHRG_ZONE_HH;
-		else if (pem->batt_temp > pem->zone[pem->charge_zone].tl)
-			pem->charge_zone = CHRG_ZONE_LL;
+		else if ((pem->batt_temp < pem->zone[CHRG_ZONE_N].th) &&
+			 (pem->batt_temp > pem->zone[CHRG_ZONE_N].tl))
+			pem->charge_zone = CHRG_ZONE_N;
 		break;
 	default:
 		if ((pem->batt_temp > pem->zone[pem->charge_zone].th) &&
@@ -620,6 +615,20 @@ static int get_update_rate(struct bcmpmu_em *pem)
 			break;
 	}
 	return rate;
+}
+
+static void em_reset(struct bcmpmu *bcmpmu)
+{
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	pem->fg_force_cal = 1;
+	cancel_delayed_work_sync(&pem->work);
+	schedule_delayed_work(&pem->work, 0);
+}
+
+static int em_reset_status(struct bcmpmu *bcmpmu)
+{
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	return pem->fg_force_cal;
 }
 
 static void em_algorithm(struct work_struct *work)
@@ -701,28 +710,38 @@ static void em_algorithm(struct work_struct *work)
 		pem->batt_curr = iacc;
 		capacity = em_batt_get_capacity(pem,
 			pem->batt_volt, pem->batt_curr);
-		if (pem->fg_cal == 1) {
-			pem->cap_delta += capacity - pem->batt_capacity;
-			ret = save_fg_delta(pem->bcmpmu, pem->cap_delta);
-			if (ret != 0) pem->cap_delta = 0;
-			update_fg_delta(pem);
-			pr_em(FLOW, "%s, Low Volt calibratrion, v=%d, c=%d, cap_o=%d, cap_n=%d\n",
-				__func__, pem->batt_volt, pem->batt_curr,
-				pem->batt_capacity, capacity);
-			pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
-			pem->batt_capacity = capacity;
-			pem->fg_cal = 0;
-		} else {
-			if (init_poll == 1) {
-				if (((capacity - pem->cap_init) > 20) ||
-					((capacity - pem->cap_init) < -20))
+
+		if (init_poll == 1) {
+			if (((capacity - pem->cap_init) > 20) ||
+			    ((capacity - pem->cap_init) < -20)) {
 				capacity = pem->cap_init;
+				pr_em(FLOW, "%s, Init calibratrion.\n", __func__);
 			}
-			pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
-			pem->batt_capacity = capacity;
-			pr_em(FLOW, "%s, Init or High Volt calibratrion, v=%d, c=%d, cap=%d\n",
-				__func__, pem->batt_volt, pem->batt_curr, capacity);
+			if (capacity >= 30)
+				pem->fg_lowbatt_cal = 1;
+		} else {
+			if (pem->cal_mode == CAL_MODE_FORCE) {
+					pem->fg_force_cal = 0;
+					pr_em(FLOW, "%s, Force calibratrion\n", __func__);
+			} else if (pem->cal_mode == CAL_MODE_LOWBAT) {
+				if (pem->fg_cap_cal == 1) {
+					pem->cap_delta += capacity - pem->batt_capacity;
+					ret = save_fg_delta(pem->bcmpmu, pem->cap_delta);
+					if (ret != 0) pem->cap_delta = 0;
+					update_fg_delta(pem);
+					pem->fg_cap_cal = 0;
+				}
+				pem->fg_lowbatt_cal = 0;
+				pr_em(FLOW, "%s, Low Volt calibratrion.\n", __func__);
+			} else
+				pr_em(FLOW, "%s, High Volt calibratrion.\n", __func__);
+			pem->cal_mode = CAL_MODE_NONE;
 		}
+		pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
+		pem->batt_capacity = capacity;
+		pr_em(FLOW, "%s, cap thr volt map, v=%d, c=%d, cap_o=%d, cap_n=%d\n",
+			__func__, pem->batt_volt, pem->batt_curr,
+			pem->batt_capacity, capacity);
 		pem->mode = MODE_IDLE;
 		poll_count = 0;
 		init_poll = 0;
@@ -890,7 +909,9 @@ static int em_event_handler(struct notifier_block *nb,
 	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
 		pem->chrgr_type = *(enum bcmpmu_chrgr_type_t *)para;
 		if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE)
-			pem->fg_cal = 0;
+			pem->fg_cap_cal = 0;
+		else if (pem->batt_capacity >= 30)
+			pem->fg_lowbatt_cal = 1;
 		pem->force_update = 1;
 		pem->transition = 1;
 		pr_em(FLOW, "%s, chrgr type=%d\n", __func__, pem->chrgr_type);
@@ -914,7 +935,7 @@ static int em_event_handler(struct notifier_block *nb,
 			((pem->batt_capacity + 10) < (capacity_v))) {
 			pem->batt_capacity = capacity_v;
 			pem->fg_capacity = (pem->fg_capacity_full * capacity_v)/100;
-			pem->fg_cal = 0;
+			pem->fg_cap_cal = 0;
 		}
 		pr_em(FLOW, "%s, fgc event\n", __func__);
 
@@ -957,7 +978,10 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	pem->batt_capacity_lvl = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 	pem->batt_present = 1;
 	pem->batt_capacity = 50;
-	pem->fg_cal = 0;
+	pem->fg_cap_cal = 0;
+	pem->fg_force_cal = 0;
+	pem->fg_lowbatt_cal = 0;
+	pem->cal_mode = CAL_MODE_NONE;
 	pem->pollrate = POLLRATE_HIGHBAT;
 
 	pem->support_fg = pdata->support_fg;
@@ -991,7 +1015,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	else
 		pem->batt_impedence = 250;;
 
-	pem->charge_zone = CHRG_ZONE_OUT;
+	pem->charge_zone = CHRG_ZONE_QC;
 	
 	INIT_DELAYED_WORK(&pem->work, em_algorithm);
 	misc_register(&bcmpmu_em_device);
@@ -1017,6 +1041,8 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	}
 	pem->chrgr_type = bcmpmu->usb_accy_data.chrgr_type;
 	pem->chrgr_curr = bcmpmu->usb_accy_data.max_curr_chrgr;
+	bcmpmu->em_reset = em_reset;
+	bcmpmu->em_reset_status = em_reset_status;
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_em_attr_group);

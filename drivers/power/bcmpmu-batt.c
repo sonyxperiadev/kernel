@@ -188,14 +188,45 @@ dbgmsk_set(struct device *dev, struct device_attribute *attr,
 }
 
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_set);
-static struct attribute *bcmpmu_batt_attrs[] = {
+static struct attribute *bcmpmu_batt_dbg_attrs[] = {
 	&dev_attr_dbgmsk.attr,
+	NULL
+};
+static const struct attribute_group bcmpmu_batt_dbg_attr_group = {
+	.attrs = bcmpmu_batt_dbg_attrs,
+};
+#endif
+
+static ssize_t
+reset_store(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	unsigned long val = simple_strtoul(buf, NULL, 0);
+	if ((val == 0) && (bcmpmu->em_reset))
+		bcmpmu->em_reset(bcmpmu);	
+	return count;
+}
+
+static ssize_t
+reset_show(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	int status = 0;
+	if (bcmpmu->em_reset_status)
+		status = bcmpmu->em_reset_status(bcmpmu);
+	return sprintf(buf, "%d\n", status);
+}
+
+static DEVICE_ATTR(reset, 0644, reset_show, reset_store);
+static struct attribute *bcmpmu_batt_attrs[] = {
+	&dev_attr_reset.attr,
 	NULL
 };
 static const struct attribute_group bcmpmu_batt_attr_group = {
 	.attrs = bcmpmu_batt_attrs,
 };
-#endif
 
 
 static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
@@ -234,8 +265,6 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBTEMPLOW, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBTEMPHIGH, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBOV, bcmpmu_batt_isr, pbatt);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBTEMPLOW, bcmpmu_batt_isr, pbatt);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBTEMPLOW, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBOV_DIS, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBWV_R_10S_WAIT, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_BBLOW, bcmpmu_batt_isr, pbatt);
@@ -248,8 +277,9 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBOV_DIS);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
-	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_batt_attr_group);
+	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_batt_dbg_attr_group);
 #endif
+	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_batt_attr_group);
 	return 0;
 
 err:
@@ -270,14 +300,16 @@ static int __devexit bcmpmu_batt_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBTEMPLOW);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBTEMPHIGH);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBOV);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBTEMPLOW);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBTEMPLOW);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBOV_DIS);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBWV_R_10S_WAIT);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_BBLOW);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_LOWBAT);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_VERYLOWBAT);
-	
+#ifdef CONFIG_MFD_BCMPMU_DBG
+	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_batt_attr_group);
+#endif
+	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_batt_attr_group);
+
 	return 0;
 }
 

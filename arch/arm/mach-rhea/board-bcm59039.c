@@ -613,8 +613,8 @@ static struct bcmpmu_adc_setting adc_setting = {
 };
 
 static struct bcmpmu_charge_zone chrg_zone[] = {
-	{.tl = 253, .th = 333, .v = 3000, .fc = 10, .qc = 100},	/* Zone QC */
-	{.tl = 253, .th = 272, .v = 4100, .fc = 50, .qc = 0},	/* Zone LL */
+	{.tl = 268, .th = 333, .v = 3000, .fc = 10, .qc = 100},	/* Zone QC */
+	{.tl = 268, .th = 272, .v = 3800, .fc = 50, .qc = 0},	/* Zone LL */
 	{.tl = 273, .th = 282, .v = 4200, .fc = 50, .qc = 0},	/* Zone L */
 	{.tl = 283, .th = 318, .v = 4200, .fc = 100, .qc = 0},	/* Zone N */
 	{.tl = 319, .th = 323, .v = 4200, .fc = 50, .qc = 0},	/* Zone H */
@@ -668,7 +668,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
 	.num_of_regl = ARRAY_SIZE(bcm59039_regulators),
-	.regulator_init_data = &bcm59039_regulators,
+	.regulator_init_data = &bcm59039_regulators[0],
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,
 	.fg_slp_curr_ua = 1000,

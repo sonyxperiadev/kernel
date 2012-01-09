@@ -943,6 +943,8 @@ struct bcmpmu {
 	int (*fg_offset_cal) (struct bcmpmu *pmu);
 	int (*fg_offset_cal_read) (struct bcmpmu *pmu, int *data);
 	int (*fg_trim_write) (struct bcmpmu *pmu, int data);
+	void (*em_reset) (struct bcmpmu *pmu);
+	int (*em_reset_status) (struct bcmpmu *pmu);
 
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;
