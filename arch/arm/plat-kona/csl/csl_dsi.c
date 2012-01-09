@@ -121,11 +121,11 @@ extern void *videomemory;
 
 // DSI Core clk tree configuration / settings
 typedef	struct {
-	float			hsPllReq_MHz;	// in:  PLL freq requested
+	UInt32			hsPllReq_MHz;	// in:  PLL freq requested
 	UInt32			escClkIn_MHz;	// in:  ESC clk in requested
-	float			hsPllSet_MHz;	// out: PLL freq set
-	float			hsBitClk_MHz;	// out: end HS bit clock
-	float			escClk_MHz;	// out: ESC clk after req inDIV
+	UInt32			hsPllSet_MHz;	// out: PLL freq set
+	UInt32			hsBitClk_MHz;	// out: end HS bit clock
+	UInt32			escClk_MHz;	// out: ESC clk after req inDIV
 	UInt32			hsClkDiv;	// out: HS  CLK Div Reg value 
 	UInt32			escClkDiv;	// out: ESC CLK Div Reg value
 	UInt32			hsPll_P1;	// out: PLL setting
@@ -804,14 +804,14 @@ static Boolean cslDsiClkTreeInit(
 	}    
 	// RHEA, for now increments of HS by 26[Mbps]
 	dsiH->clkCfg.hsPll_P1	    = 1;  
-	dsiH->clkCfg.hsPll_N_int    = (UInt32)((float) hsClk.clkIn_MHz / 26);
-	dsiH->clkCfg.hsPll_N_frac   = (UInt32)((( (float)hsClk.clkIn_MHz / 26 )	
+	dsiH->clkCfg.hsPll_N_int    = (UInt32)( hsClk.clkIn_MHz / 26);
+	dsiH->clkCfg.hsPll_N_frac   = (UInt32)( hsClk.clkIn_MHz / 26 )
 	    - dsiH->clkCfg.hsPll_N_int)	* (1<<20));
    
-	hsClkSet = (float)26 * ((float)dsiH->clkCfg.hsPll_N_int	
-	    + (float)dsiH->clkCfg.hsPll_N_frac/(1<<20));
+	hsClkSet = 26 * (dsiH->clkCfg.hsPll_N_int
+	    + dsiH->clkCfg.hsPll_N_frac/(1<<20));
     
-	dsiH->clkCfg.hsPllReq_MHz = (float)hsClk.clkIn_MHz;
+	dsiH->clkCfg.hsPllReq_MHz = hsClk.clkIn_MHz;
 	dsiH->clkCfg.hsPllSet_MHz = hsClkSet;
 	
 	// check for valid HS clk divider value ( PLL CH )   
@@ -830,8 +830,8 @@ static Boolean cslDsiClkTreeInit(
 		dsiH->clkCfg.hsClkDiv =	hsClk.clkInDiv;
     
 	LCD_DBG	( LCD_DBG_INIT_ID, "[CSL DSI] %s: HS-CLK: "
-		"InPll[%6.1f] InPllDiv[%d], PllSetTo[%6.1f] => %6.1f[Mhz]\n",
-		__FUNCTION__, (float)hsClk.clkIn_MHz, hsClk.clkInDiv, 
+		"InPll[%d] InPllDiv[%d], PllSetTo[%6.1f] => %6.1f[Mhz]\n",
+		__FUNCTION__, hsClk.clkIn_MHz, hsClk.clkInDiv,
 		hsClkSet, dsiH->clkCfg.hsBitClk_MHz ); 
     
 	//--- E S C  clock -----------------------------------------------------
@@ -858,11 +858,11 @@ static Boolean cslDsiClkTreeInit(
 	else
 		dsiH->clkCfg.escClkDiv = escClk.clkInDiv; 
 	
-	dsiH->clkCfg.escClk_MHz	= (float)escClk.clkIn_MHz / escClk.clkInDiv;
+	dsiH->clkCfg.escClk_MHz	= escClk.clkIn_MHz / escClk.clkInDiv;
 
 	LCD_DBG	( LCD_DBG_INIT_ID, "[CSL DSI] %s: ESC-CLK: "
-		"InEsc[%6.1f] InEscDiv[%d] => %6.1f[Mhz]\n", __FUNCTION__,
-		(float)escClk.clkIn_MHz, escClk.clkInDiv, 
+		"InEsc[%d] InEscDiv[%d] => %6.1f[Mhz]\n", __FUNCTION__,
+		escClk.clkIn_MHz, escClk.clkInDiv,
 		dsiH->clkCfg.escClk_MHz	); 
 
 	return ( TRUE );
@@ -965,7 +965,7 @@ static Boolean cslDsiClkTreeEna(DSI_HANDLE dsiH)
 		((volatile UInt32*) HW_IO_PHYS_TO_VIRT(0x3c000000))
 								    
 	static Boolean	dsiPllOn = FALSE;
-	static float	dsiPllFreq;
+	static UInt32	dsiPllFreq;
 	UInt32		pllReg;
 	UInt32		dsiCoreClkSel;
 	UInt32		escClkInSel;  

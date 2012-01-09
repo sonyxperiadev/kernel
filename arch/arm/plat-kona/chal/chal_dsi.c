@@ -97,7 +97,7 @@ typedef	struct
     UInt32  counter_step;
     UInt32  counter_offs;
     UInt32  counter;	    // calculated value of the register
-    float   period;	    // dbg
+    UInt32  period;	    // dbg
 } DSI_COUNTER;
 
 //--- Counter Mode Flags
@@ -424,17 +424,17 @@ cVoid chal_dsi_phy_afe_on ( CHAL_HANDLE	handle,	pCHAL_DSI_AFE_CFG afeCfg )
 static Boolean chalDsiTimingDivAndRoundUp ( 
     DSI_COUNTER	*	pDsiC,
     cUInt32		i,	   // DSI counter index
-    float		dividend, 
-    float		divisor	
+    cUInt32		dividend,
+    cUInt32		divisor
     )
 {
-	float	 counter_f;
 	cUInt32	counter;
+	cUInt32	counter_remaindor;
 	
-	counter_f	= dividend / divisor;
-	counter	= (UInt32)counter_f;
-	
-	if( counter_f != (float)counter	) 
+	counter		  = dividend / divisor;
+	counter_remaindor = dividend % divisor;
+
+	if(counter_remaindor)
 		 counter++;
 	 
 	if ( (counter %	pDsiC[i].counter_step) != 0 )
@@ -474,21 +474,21 @@ cBool chal_dsi_set_timing (
     CHAL_HANDLE		handle,
     cUInt32		DPHY_SpecRev,
     CHAL_DSI_CLK_SEL_t	coreClkSel,
-    float		escClk_MHz,		 
-    float		hsBitRate_Mbps,	 
-    float		lpBitRate_Mbps	
+    cUInt32		escClk_MHz,
+    cUInt32		hsBitRate_Mbps,
+    cUInt32		lpBitRate_Mbps
     )
 {
     Boolean res	= FALSE;
     
-    float	    time_min;
-    float	    time_min1;
-    float	    time_min2;
-    float	    time_max;
-    float	    period;
-    float	    ui_ns;
-    float	    escClk_ns;
-    float	    lp_clk_mhz;
+    cUInt32	    scaled_time_min;
+    cUInt32	    scaled_time_min1;
+    cUInt32	    scaled_time_min2;
+    cUInt32	    scaled_time_max;
+    cUInt32	    scaled_period;
+    cUInt32	    scaled_ui_ns;
+    cUInt32         scaled_escClk_ns;
+    cUInt32         lp_clk_khz;
     cUInt32	    i;
     DSI_COUNTER	*   pDsiC;
     CHAL_DSI_HANDLE pDev;
@@ -497,8 +497,9 @@ cBool chal_dsi_set_timing (
     cUInt32	    lp_lpx_ns;
     
     pDev	= (CHAL_DSI_HANDLE) handle;
-    ui_ns	= 1 / hsBitRate_Mbps  *	1000;
-    escClk_ns	= 1 / escClk_MHz * 1000;
+    scaled_ui_ns = (1000 * 1000) / hsBitRate_Mbps;
+
+    scaled_escClk_ns = (1000 * 1000) /  escClk_MHz;
 
     switch ( DPHY_SpecRev )
     {
@@ -541,18 +542,18 @@ cBool chal_dsi_set_timing (
     // LP clk (LP Symbol Data Rate) = esc_clk / esc2lp_ratio
     // calculate esc2lp_ratio
     if(	! chalDsiTimingDivAndRoundUp( pDsiC, DSI_C_ESC2LP_RATIO, 
-	(float)escClk_MHz, (float)lpBitRate_Mbps * 2) )
+        escClk_MHz, lpBitRate_Mbps * 2) )
     {
 	return ( FALSE );
     }		 
     
     // actual lp clock 
-    lp_clk_mhz =   escClk_MHz 
+    lp_clk_khz =   1000 * escClk_MHz
 		/ (   pDsiC [ DSI_C_ESC2LP_RATIO ].counter 
 		    + pDsiC [ DSI_C_ESC2LP_RATIO ].counter_offs	); 
     
     // lp_esc_clk == lp_data_clock
-    lp_lpx_ns =	(UInt32)( 1000 / lp_clk_mhz );
+    lp_lpx_ns = ( 1000 * 1000 / lp_clk_khz );
     // set LP LPX to be equal to LP bit rate
     
     // set time_min_ns for LP esc_clk counters
@@ -570,49 +571,49 @@ cBool chal_dsi_set_timing (
     for( i=1; i	< DSI_C_MAX; i++ )
     {
 	// Period_min1 [ns]
-	time_min1 =  (float)pDsiC[i].time_min1_ns 
-		   + (float)pDsiC[i].time_min1_ui * ui_ns;
+        scaled_time_min1 =  pDsiC[i].time_min1_ns * 1000
+                   + pDsiC[i].time_min1_ui * scaled_ui_ns;
 
 	// Period_min2 [ns]
 	if( pDsiC[i].mode & DSI_C_MIN_MAX_OF_2 )
-	    time_min2 =	(float)pDsiC[i].time_min2_ns 
-		      +	(float)pDsiC[i].time_min2_ui * ui_ns;
+            scaled_time_min2 = pDsiC[i].time_min2_ns * 1000
+                      + pDsiC[i].time_min2_ui * scaled_ui_ns;
 	else
-	    time_min2 =	0;
+            scaled_time_min2 = 0;
 	
 	// Period_min [ns] = max(min1, min2)       
-	if( time_min1 >= time_min2 )
-	    time_min = time_min1;
+        if( scaled_time_min1 >= scaled_time_min2 )
+            scaled_time_min = scaled_time_min1;
 	else
-	    time_min = time_min2;    
+            scaled_time_min = scaled_time_min2;
 
 	// Period_max [ns]
 	if( pDsiC[i].mode & DSI_C_HAS_MAX )
-	    time_max = (float)pDsiC[i].time_max_ns 
-		     + (float)pDsiC[i].time_max_ui * ui_ns;
+            scaled_time_max = pDsiC[i].time_max_ns * 1000
+                     + pDsiC[i].time_max_ui * scaled_ui_ns;
 	else
-	    time_max = 0;
+            scaled_time_max = 0;
 	
 	// Period_units [ns]
 	if ( pDsiC[i].timeBase & DSI_C_TIME_HS )
-	    period = ui_ns;
+            scaled_period = scaled_ui_ns;
 	else if	( pDsiC[i].timeBase & DSI_C_TIME_ESC )
-	    period = escClk_ns;
+            scaled_period = scaled_escClk_ns;
 	else 
-	    period = 0;
+            scaled_period = 0;
 	
 	
-	pDsiC[i].period	= period;
+        pDsiC[i].period = scaled_period;
 	
-	if( period != 0	)
+        if( scaled_period != 0 )
 	{
-	    res	= chalDsiTimingDivAndRoundUp ( pDsiC, i, time_min, period );
+            res = chalDsiTimingDivAndRoundUp ( pDsiC, i, scaled_time_min, scaled_period );
 	    if(	!res )
 		return ( res );
 		
 	    if(	pDsiC[i].mode &	DSI_C_HAS_MAX )
 	    {
-		if( ((float)pDsiC[i].counter * period )	> time_max )
+                if( (pDsiC[i].counter * scaled_period ) > scaled_time_max )
 		{
 		    chal_dprintf ( CDBG_ERRO, "[cHAL DSI] chal_dsi_set_timing: "
 			"%s violates MAX D-PHY Spec allowed value\n\r",	
@@ -629,26 +630,26 @@ cBool chal_dsi_set_timing (
 	if ( pDsiC[i].timeBase == DSI_C_TIME_ESC2LPDT )
 	{
 	    chal_dprintf ( CDBG_ERRO, "[cHAL DSI] chal_dsi_set_timing: "
-		"%14s %7d => LP clk %5.2f[Mhz]\n\r", 
+                "%14s %7d => LP clk %u[Mhz]\n\r",
 		pDsiC[i].name, pDsiC[i].counter,
 		escClk_MHz / (pDsiC[i].counter + pDsiC[i].counter_offs));
 	} 
 	else
 	{
 	    chal_dprintf ( CDBG_ERRO, "[cHAL DSI] chal_dsi_set_timing: "
-		"%14s %7d => %10.2f[ns]\n\r", 
+                "%14s %7d => %u[ns]\n\r",
 		pDsiC[i].name, 
 		pDsiC[i].counter, 
-		((float)pDsiC[i].counter + pDsiC[i].counter_offs) 
-		* pDsiC[i].period );
+                (pDsiC[i].counter + pDsiC[i].counter_offs)
+                * pDsiC[i].period / 1000 );
 	}
     }
 
     chal_dprintf (CDBG_ERRO, "\r\n[cHAL DSI] chal_dsi_set_timing: "
-	"HS_DATA_RATE %6.2f[Mbps]\r\n",	 hsBitRate_Mbps	);
+        "HS_DATA_RATE %u[Mbps]\r\n",  hsBitRate_Mbps );
 
     chal_dprintf (CDBG_ERRO, "[cHAL DSI] chal_dsi_set_timing: "
-	"LP_DATA_RATE %6.2f[Mbps]\n\r",	lp_clk_mhz / 2 );
+        "LP_DATA_RATE %u[kbps]\n\r", lp_clk_khz / 2 );
 
     // set ESC 2 LPDT ratio
     BRCM_WRITE_REG_FIELD ( pDev->baseAddr, DSI1_PHYC	 , 

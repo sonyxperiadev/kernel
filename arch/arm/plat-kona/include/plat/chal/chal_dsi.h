@@ -702,9 +702,9 @@ cBool chal_dsi_set_timing (
     CHAL_HANDLE         handle,
     cUInt32             DPHY_SpecRev,
     CHAL_DSI_CLK_SEL_t  coreClkSel,
-    float               escClk_MHz,              
-    float               hsBitRate_Mbps,  
-    float               lpBitRate_Mbps  
+    cUInt32             escClk_MHz,
+    cUInt32             hsBitRate_Mbps,
+    cUInt32             lpBitRate_Mbps
     );
 
 /**

@@ -182,7 +182,7 @@ typedef struct
     Boolean                 usesTE;
     Boolean                 usesMemWrTiming; 
     Boolean                 isRegWrTiming; 
-    float                   smi_clk_ns;  
+    UInt32                  smi_clk_ns;
     UInt32                  buffBpp;
     UInt32                  bank;
     UInt8                   addr_c;
@@ -425,7 +425,7 @@ static int cslSmiSetSmiClk ( pSMI_SPI_HANDLE pSmi, pCSL_SMI_CLK pSmiClkCfg )
     pSmi->cfg.smiCfg.smi_clk_ns = 1000000000/smiFreqSet_Hz;
     
     LCD_DBG ( LCD_DBG_INIT_ID, "[CSL SMI] %s: "
-        "INFO SMI Clk: REQ_Hz[%d] SET_Hz[%d] SET_ns[%6.2f]\n\r", __FUNCTION__, 
+        "INFO SMI Clk: REQ_Hz[%d] SET_Hz[%d] SET_ns[%u]\n\r", __FUNCTION__,
         smiFreqReq_Hz, smiFreqSet_Hz, pSmi->cfg.smiCfg.smi_clk_ns );
         
     return ( 0 );
@@ -465,7 +465,7 @@ static int cslSmiSetSmiClk ( pSMI_SPI_HANDLE pSmi, pCSL_SMI_CLK pSmiClkCfg )
     pSmi->cfg.smiCfg.smi_clk_ns = 1000 / (smiPllMHz /pSmiClkCfg->smiClkDiv);
     
     LCD_DBG ( LCD_DBG_INIT_ID, "[CSL SMI] cslSmiSetSmiClk: "
-        "INFO SMI Clk: InMhz[%d] DivBy[%d] => Period %6.2f[ns]!\n\r", 
+        "INFO SMI Clk: InMhz[%d] DivBy[%d] => Period %u[ns]!\n\r",
         smiPllMHz, pSmiClkCfg->smiClkDiv, pSmi->cfg.smiCfg.smi_clk_ns );
     
     #ifndef FPGA_VERSION        
@@ -1262,13 +1262,13 @@ static int cslSmiCalcTiming (
     
     smi_clk_ns = pSmi->cfg.smiCfg.smi_clk_ns;
     
-    pChalTiming->strobe = (UInt32)((float)(pCslTiming->strobe_ns + smi_clk_ns) 
+    pChalTiming->strobe = ((pCslTiming->strobe_ns + smi_clk_ns)
         / smi_clk_ns);
-    pChalTiming->pace   = (UInt32)((float)(pCslTiming->pace_ns   + smi_clk_ns) 
+    pChalTiming->pace   = ((pCslTiming->pace_ns   + smi_clk_ns)
         / smi_clk_ns);
-    pChalTiming->hold   = (UInt32)((float)(pCslTiming->hold_ns   + smi_clk_ns) 
+    pChalTiming->hold   = ((pCslTiming->hold_ns   + smi_clk_ns)
         / smi_clk_ns);
-    pChalTiming->setup  = (UInt32)((float)(pCslTiming->setup_ns  + smi_clk_ns) 
+    pChalTiming->setup  = ((pCslTiming->setup_ns  + smi_clk_ns)
         / smi_clk_ns);
 
 
