@@ -322,7 +322,9 @@ static int rhea_fb_ioctl(struct fb_info *info, unsigned int cmd,
 
 		down(&fb->prev_buf_done_sem);
 		rhea_clock_start(fb);
-		ret = fb->display_ops->update(fb->display_hdl, (uint32_t)ptr, (DISPDRV_WIN_t *)1, (DISPDRV_CB_T)rhea_display_done_cb);
+		ret = fb->display_ops->update(fb->display_hdl, (uint32_t)ptr, (DISPDRV_WIN_t *)1, NULL/*(DISPDRV_CB_T)rhea_display_done_cb*/);
+		rhea_clock_stop(fb);
+		up(&fb->prev_buf_done_sem);
 		up(&fb->update_sem);
 		break;
 
