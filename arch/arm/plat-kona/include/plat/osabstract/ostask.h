@@ -73,8 +73,8 @@
 
 #include <plat/types.h>
 #include <plat/osabstract/ostypes.h>
-#include <linux/workqueue.h> 
-#include <linux/slab.h> 
+#include <linux/kthread.h>
+#include <linux/slab.h>
 #include <linux/time.h>
 #include <linux/delay.h>
 
@@ -142,12 +142,6 @@ typedef void (*TEntryWArg_t)( TArgc_t, TArgv_t );
 
 typedef UInt32 TStackSize_t;
 
-/* The Task Structure */
-struct TaskStruct_t {
-	struct workqueue_struct *wrk_q;
-	struct work_struct wrk;
-};
-
 //******************************************************************************
 // Global Function Prototypes
 //******************************************************************************
@@ -169,14 +163,9 @@ static inline Task_t OSTASK_Create(					// returns the newly-created task
 	TStackSize_t stack_size				// task stack size (in UInt8)
 	)
 {
-	struct TaskStruct_t *new_task = kzalloc(sizeof(struct TaskStruct_t), GFP_KERNEL);
-	if(new_task)
-	{
-		new_task->wrk_q = create_workqueue(task_name);
-		INIT_WORK(&new_task->wrk, (work_func_t)entry);
-		queue_work(new_task->wrk_q, &new_task->wrk);
-	}
-	return (Task_t *)new_task;
+	struct task_struct *t;
+	t = kthread_run((void *)entry, NULL, "%s", task_name);
+	return IS_ERR(t) ? NULL : t;
 }
 
 /**	
@@ -235,16 +224,7 @@ static inline void OSTASK_Destroy(					// Terminate and destroy all the
 	Task_t	t							// task pointer
 	)
 {
-	if (t) {
-		struct TaskStruct_t *task= t;
-		struct work_struct *work = &task->wrk;
-		struct workqueue_struct *wqueue = task->wrk_q;
-
-		cancel_work_sync(work);
-		destroy_workqueue(wqueue);
-		kfree(t);
-	}
-
+	BUG();
 }
 
 /**
@@ -256,11 +236,7 @@ static inline void OSTASK_Terminate(					// Terminate task
 	Task_t	t							// task pointer
 	)
 {
-	if (t) {
-		struct TaskStruct_t *task= t;
-		struct work_struct *work = &task->wrk;
-		cancel_work_sync(work);
-	}
+	BUG();
 }
 
 /**
