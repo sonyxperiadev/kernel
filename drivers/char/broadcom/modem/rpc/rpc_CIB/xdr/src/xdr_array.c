@@ -31,10 +31,9 @@
 
 #include "xdr.h"
 #ifdef __weak_alias
-__weak_alias(xdr_array,_xdr_array)
-__weak_alias(xdr_vector,_xdr_vector)
+__weak_alias(xdr_array, _xdr_array)
+    __weak_alias(xdr_vector, _xdr_vector)
 #endif
-
 /*
  * XDR an array of arbitrary elements
  * *addrp is a pointer to the array, *sizep is the number of elements.
@@ -43,16 +42,13 @@ __weak_alias(xdr_vector,_xdr_vector)
  * xdr procedure to call to handle each element of the array.
  */
 bool_t
-xdr_array(XDR *xdrs, 
-          caddr_t *addrp, 
-          u_int *sizep, 
-          u_int maxsize, 
-          u_int elsize, 
-          xdrproc_t elproc)
+xdr_array(XDR * xdrs,
+	  caddr_t * addrp,
+	  u_int * sizep, u_int maxsize, u_int elsize, xdrproc_t elproc)
 {
 	u_int i;
 	caddr_t target = *addrp;
-	u_int c;  /* the actual element count */
+	u_int c;		/* the actual element count */
 	bool_t stat = TRUE;
 	u_int nodesize;
 
@@ -61,8 +57,7 @@ xdr_array(XDR *xdrs,
 		return (FALSE);
 
 	c = *sizep;
-	if ((c > maxsize || UINT_MAX/elsize < c) &&
-	    (xdrs->x_op != XDR_FREE))
+	if ((c > maxsize || UINT_MAX / elsize < c) && (xdrs->x_op != XDR_FREE))
 		return (FALSE);
 	nodesize = c * elsize;
 
@@ -75,9 +70,9 @@ xdr_array(XDR *xdrs,
 		case XDR_DECODE:
 			if (c == 0)
 				return (TRUE);
-			*addrp = target = (caddr_t)XDR_ALLOC(xdrs, nodesize);
+			*addrp = target = (caddr_t) XDR_ALLOC(xdrs, nodesize);
 			if (target == NULL) {
-//				warnx("xdr_array: out of memory");
+//                              warnx("xdr_array: out of memory");
 				return (FALSE);
 			}
 			memset(target, 0, nodesize);
@@ -88,13 +83,13 @@ xdr_array(XDR *xdrs,
 
 		case XDR_ENCODE:
 			break;
-	}
-	
+		}
+
 	/*
 	 * now we xdr each element of array
 	 */
 	for (i = 0; (i < c) && stat; i++) {
-		stat = (*elproc)(xdrs, target);
+		stat = (*elproc) (xdrs, target);
 		target += elsize;
 	}
 
@@ -119,20 +114,18 @@ xdr_array(XDR *xdrs,
  * > xdr_elem: routine to XDR each element
  */
 bool_t
-xdr_vector(XDR *xdrs, 
-           char *basep, 
-           u_int nelem,u_int elemsize, 
-           xdrproc_t xdr_elem)
+xdr_vector(XDR * xdrs,
+	   char *basep, u_int nelem, u_int elemsize, xdrproc_t xdr_elem)
 {
 	u_int i;
 	char *elptr;
 
 	elptr = basep;
 	for (i = 0; i < nelem; i++) {
-		if (!(*xdr_elem)(xdrs, elptr)) {
-			return(FALSE);
+		if (!(*xdr_elem) (xdrs, elptr)) {
+			return (FALSE);
 		}
 		elptr += elemsize;
 	}
-	return(TRUE);	
+	return (TRUE);
 }

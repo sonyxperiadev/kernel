@@ -22,13 +22,12 @@
 #define _RPC_TRACE_DEF
 
 //undefine this in local source file to disable log
-#define _DBG_(a) a	//by default logs are enabled
-void Rpc_DebugOutputString(char* pStr);
+#define _DBG_(a) a		//by default logs are enabled
+void Rpc_DebugOutputString(char *pStr);
 
 #if defined(UNDER_CE) || defined(WIN32)
 #define snprintf _snprintf
 #endif
-
 
 #ifdef WIN32
 #define __LINENUM__ __LINE__
@@ -98,7 +97,7 @@ extern void RPC_Assert(char *expr, char *file, int line, int value);
 #include "osheap.h"
 
 extern int Log_DebugPrintf(UInt16 logID, char *fmt, ...);
-extern void	Log_DebugOutputString(UInt16 logID, char* dbgString);
+extern void Log_DebugOutputString(UInt16 logID, char *dbgString);
 extern Boolean Log_IsLoggingEnable(UInt16 logID);
 
 #define RPC_TRACE(...) Log_DebugPrintf(LOGID_CAPI2_BASIC, __VA_ARGS__)
@@ -113,7 +112,5 @@ extern Boolean Log_IsLoggingEnable(UInt16 logID);
 
 #endif
 #endif
-
-
 
 #endif

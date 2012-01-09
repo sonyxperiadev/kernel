@@ -6,7 +6,6 @@
 	under the terms of the GNU General Public License version 2, available
 	at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 
-
    Notwithstanding the above, under no circumstances may you combine this
    software in any way with any other Broadcom software provided under a license
    other than the GPL, without Broadcom's express prior written consent.
@@ -53,14 +52,14 @@
 #include "mti_trace.h"
 
 #ifdef FUSE_COMMS_PROCESSOR
-#include "chip_version.h"//HFA
+#include "chip_version.h"	//HFA
 #if !defined(UNDER_CE) && !defined(UNDER_LINUX)
 #include "dump.h"
 #endif
 #endif
 
 #if defined(FUSE_APPS_PROCESSOR)
-#include "chip_version.h"//HFA
+#include "chip_version.h"	//HFA
 #if !defined(UNDER_CE) && !defined(UNDER_LINUX)
 #include "dump.h"
 #endif
@@ -68,13 +67,11 @@
 #endif
 #endif
 
-
 //============================================================
 // Constants
 //============================================================
 
-const char * const ChannelNames [IPC_Channel_All] =
-{
+const char *const ChannelNames[IPC_Channel_All] = {
 	"Data",
 	"Buffer",
 	"Pool",
@@ -93,18 +90,17 @@ const char * const ChannelNames [IPC_Channel_All] =
 
 #define MAX_DEBUG_STRING 80
 
-IPC_Boolean TraceChannel [IPC_Channel_All] =
-{
-	IPC_FALSE, // Data
-	IPC_FALSE, // Buffer
-	IPC_FALSE, // Pool
-	IPC_FALSE, // Queue
-	IPC_TRUE, // General
-	IPC_TRUE, // Error
-	IPC_FALSE, // Hisr
-	IPC_FALSE, // Sm
-	IPC_TRUE, // FlowControl
-	IPC_FALSE  // Debug
+IPC_Boolean TraceChannel[IPC_Channel_All] = {
+	IPC_FALSE,		// Data
+	IPC_FALSE,		// Buffer
+	IPC_FALSE,		// Pool
+	IPC_FALSE,		// Queue
+	IPC_TRUE,		// General
+	IPC_TRUE,		// Error
+	IPC_FALSE,		// Hisr
+	IPC_FALSE,		// Sm
+	IPC_TRUE,		// FlowControl
+	IPC_FALSE		// Debug
 };
 
 IPC_Boolean TraceToAt = IPC_FALSE;
@@ -115,133 +111,115 @@ IPC_Boolean TraceToAt = IPC_FALSE;
 
 //**************************************************
 
-void IPC_TraceToAt (IPC_Boolean Setting)
+void IPC_TraceToAt(IPC_Boolean Setting)
 {
 	TraceToAt = Setting;
 }
 
 //**************************************************
 #ifdef FUSE_APPS_PROCESSOR
-void IPC_TraceApps (IPC_U32 Channel, char * Text, IPC_U32 P1, IPC_U32 P2, IPC_U32 P3, IPC_U32 P4)
+void IPC_TraceApps(IPC_U32 Channel, char *Text, IPC_U32 P1, IPC_U32 P2,
+		   IPC_U32 P3, IPC_U32 P4)
 {
 #ifdef HOST_TEST
-	char	Buffer [MAX_DEBUG_STRING];
+	char Buffer[MAX_DEBUG_STRING];
 
 	strcpy(Buffer, "\n<%04X> %s:\t");
 	strcpy(Buffer, Text);
-	(void) printf (Text, GetCurrentThreadId(), ChannelNames [Channel], P1, P2, P3, P4);
+	(void)printf(Text, GetCurrentThreadId(), ChannelNames[Channel], P1, P2,
+		     P3, P4);
 #elif defined(UNDER_LINUX)
 	//printk(KERN_INFO Text, P1, P2, P3, P4);
 #else
-#if 0 // Legacy code. Keep for information purpose. Hui Luo, 11/4/09
-	if (TraceToAt)
-	{
+#if 0				// Legacy code. Keep for information purpose. Hui Luo, 11/4/09
+	if (TraceToAt) {
 		// Trace to AT UART
-		char	OutBuf [MAX_DEBUG_STRING];
-		IPC_U32	OutLength;
+		char OutBuf[MAX_DEBUG_STRING];
+		IPC_U32 OutLength;
 
-		(void) snprintf (Buffer, MAX_DEBUG_STRING, Text, P1, P2, P3, P4);
+		(void)snprintf(Buffer, MAX_DEBUG_STRING, Text, P1, P2, P3, P4);
 
-		OutLength =  snprintf (OutBuf, MAX_DEBUG_STRING, "\n%s:\t%-20.20s\t%s",
-			ChannelNames [Channel],
-			Function,
-			Buffer);
-		AT_OutputUnsolicitedStr(OutBuf);  //REMOVE_MPX
-	} else 
-
+		OutLength =
+		    snprintf(OutBuf, MAX_DEBUG_STRING, "\n%s:\t%-20.20s\t%s",
+			     ChannelNames[Channel], Function, Buffer);
+		AT_OutputUnsolicitedStr(OutBuf);	//REMOVE_MPX
+	} else
 	{
 
-		(void) snprintf( Buffer, MAX_DEBUG_STRING, Text, P1, P2, P3, P4);
+		(void)snprintf(Buffer, MAX_DEBUG_STRING, Text, P1, P2, P3, P4);
 
-		Dbgprintf (0, "%-15.15s %s",
-			Function,
-			Buffer);
+		Dbgprintf(0, "%-15.15s %s", Function, Buffer);
 	}
 #endif // Legacy code. Keep for information purpose. Hui Luo, 11/4/09 */
-	if (asserted == 0xCA)
-	{
+	if (asserted == 0xCA) {
 		snprintf(assert_buf, ASSERT_BUF_SIZE, Text, P1, P2, P3, P4);
 		DUMP_String(assert_buf);
-	}
-	else
-	{
+	} else {
 		Log_DebugPrintf(LOGID_IPC, Text, P1, P2, P3, P4);
 	}
 #endif
 }
 #endif
 
-
 //**************************************************
 #ifdef FUSE_COMMS_PROCESSOR
-void IPC_TraceComms (char * Text, IPC_U32 P1, IPC_U32 P2, IPC_U32 P3, IPC_U32 P4)
+void IPC_TraceComms(char *Text, IPC_U32 P1, IPC_U32 P2, IPC_U32 P3, IPC_U32 P4)
 {
-	if (asserted == 0xCA)
-	{
+	if (asserted == 0xCA) {
 		snprintf(assert_buf, ASSERT_BUF_SIZE, Text, P1, P2, P3, P4);
 		DUMP_String(assert_buf);
-	}
-	else
-	{
+	} else {
 		// cannot do any logging because CP logging uses IPC. Hui Luo, 11/5/09
 	}
 }
 #endif
 
-
 #ifdef UNDER_CE
 
-void IPC_TraceWin (IPC_U32 Channel, char *Function, char * Text, IPC_U32 P1, IPC_U32 P2, IPC_U32 P3, IPC_U32 P4)
+void IPC_TraceWin(IPC_U32 Channel, char *Function, char *Text, IPC_U32 P1,
+		  IPC_U32 P2, IPC_U32 P3, IPC_U32 P4)
 {
 
-   char	Buffer [MAX_DEBUG_STRING];
-	 sprintf( Buffer, Text, P1, P2, P3, P4);
+	char Buffer[MAX_DEBUG_STRING];
+	sprintf(Buffer, Text, P1, P2, P3, P4);
 
-	 RETAILMSG(1,(TEXT("IPC_TRACE- %S: %S %S\r\n"),ChannelNames [Channel],
-			Function,
-			Buffer));
+	RETAILMSG(1, (TEXT("IPC_TRACE- %S: %S %S\r\n"), ChannelNames[Channel],
+		      Function, Buffer));
 }
 #endif
-
 
 //**************************************************
 #ifdef UNDER_LINUX
-void IPC_TraceLinux (IPC_U32 Channel, char *Function, char * Text, IPC_U32 P1, IPC_U32 P2, IPC_U32 P3, IPC_U32 P4)
+void IPC_TraceLinux(IPC_U32 Channel, char *Function, char *Text, IPC_U32 P1,
+		    IPC_U32 P2, IPC_U32 P3, IPC_U32 P4)
 {
-	char	Buffer [MAX_DEBUG_STRING];
+	char Buffer[MAX_DEBUG_STRING];
 
-    (void) snprintf( Buffer, MAX_DEBUG_STRING, Text, P1, P2, P3, P4);
+	(void)snprintf(Buffer, MAX_DEBUG_STRING, Text, P1, P2, P3, P4);
 
-    printk(KERN_INFO "%-15s %s\n",
-		Function,
-		Buffer);
+	printk(KERN_INFO "%-15s %s\n", Function, Buffer);
 }
 #endif
 
-
 //**************************************************
-IPC_Boolean IPC_SetTraceChannel (IPC_Channel_E Channel, IPC_Boolean Setting)
+IPC_Boolean IPC_SetTraceChannel(IPC_Channel_E Channel, IPC_Boolean Setting)
 {
-	if (Channel == IPC_Channel_All)
-	{
+	if (Channel == IPC_Channel_All) {
 		IPC_U32 i;
-		for (i = 0; i < IPC_Channel_All; i++)
-		{
-			TraceChannel [i] = Setting;
+		for (i = 0; i < IPC_Channel_All; i++) {
+			TraceChannel[i] = Setting;
 		}
 		return IPC_TRUE;
 	}
 
-	if (Channel < IPC_Channel_All)
-	{
-		IPC_Boolean OldSetting = TraceChannel [Channel];
-		TraceChannel [Channel] = Setting;
+	if (Channel < IPC_Channel_All) {
+		IPC_Boolean OldSetting = TraceChannel[Channel];
+		TraceChannel[Channel] = Setting;
 		return OldSetting;
 	}
 
 	return IPC_FALSE;
 }
-
 
 //**************************************************
 /*
@@ -309,8 +287,7 @@ IPC_Boolean IPC_SetTraceChannel (IPC_Channel_E Channel, IPC_Boolean Setting)
 #endif
 */
 
-static const char* EndPointName[] =
-{
+static const char *EndPointName[] = {
 	"IpcEpNone",
 	"IpcEpCapi2Ap",
 	"IpcEpCapi2Cp",
@@ -328,7 +305,7 @@ static const char* EndPointName[] =
 	"IpcEpSerialCp"
 };
 
-const char* IPC_GetEndPointName(IPC_EndpointId_T ep)
+const char *IPC_GetEndPointName(IPC_EndpointId_T ep)
 {
 	if (ep < IPC_EndpointId_Count)
 		return EndPointName[ep];
@@ -337,14 +314,13 @@ const char* IPC_GetEndPointName(IPC_EndpointId_T ep)
 }
 
 //**************************************************
-static const char* CpuName[] =
-{
+static const char *CpuName[] = {
 	"No",
 	"CP",
 	"AP"
 };
 
-const char* IPC_GetCpuName(IPC_CPU_ID_T CpuId)
+const char *IPC_GetCpuName(IPC_CPU_ID_T CpuId)
 {
 	if (CpuId < IPC_CPU_ID_Count)
 		return CpuName[CpuId];

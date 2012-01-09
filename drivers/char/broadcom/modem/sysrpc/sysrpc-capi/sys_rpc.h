@@ -13,60 +13,54 @@
 *
 ****************************************************************************/
 
-#ifndef _SYS_RPC_H 
+#ifndef _SYS_RPC_H
 #define _SYS_RPC_H
 
-
-
-XDR_ENUM_DECLARE(PMU_SIMLDO_t)
-XDR_ENUM_DECLARE(PMU_SIMVolt_t)
-XDR_ENUM_DECLARE(Result_t)
-
-
+ XDR_ENUM_DECLARE(PMU_SIMLDO_t)
+    XDR_ENUM_DECLARE(PMU_SIMVolt_t)
+    XDR_ENUM_DECLARE(Result_t)
 
 #define xdr_Int16	xdr_int16_t
-
 #ifndef UNDER_LINUX
-typedef UInt8* CAPI2_SYSPARM_IMEI_PTR_t;
+typedef UInt8 *CAPI2_SYSPARM_IMEI_PTR_t;
 #endif
-
 
 #define DEVELOPMENT_SYSRPC_UNION_DECLARE
 
-typedef struct tag_SYS_ReqRep_t
-{
-	MsgType_t	respId;
+typedef struct tag_SYS_ReqRep_t {
+	MsgType_t respId;
 	Result_t result;
-	union
-	{
+	union {
 		UInt8 data;
 /*** _SYSRPC_CODE_GEN_BEGIN_ ***/
 #ifdef DEVELOPMENT_SYSRPC_UNION_DECLARE
-	CAPI2_SYSRPC_PMU_IsSIMReady_Req_t   CAPI2_SYSRPC_PMU_IsSIMReady_Req;
-	CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t   CAPI2_SYSRPC_PMU_IsSIMReady_Rsp;
-	CAPI2_SYSRPC_PMU_ActivateSIM_Req_t   CAPI2_SYSRPC_PMU_ActivateSIM_Req;
-	CAPI2_CPPS_Control_Req_t   CAPI2_CPPS_Control_Req;
-	CAPI2_CPPS_Control_Rsp_t   CAPI2_CPPS_Control_Rsp;
-	CAPI2_FLASH_SaveImage_Req_t   CAPI2_FLASH_SaveImage_Req;
-	CAPI2_FLASH_SaveImage_Rsp_t   CAPI2_FLASH_SaveImage_Rsp;
+		CAPI2_SYSRPC_PMU_IsSIMReady_Req_t
+		    CAPI2_SYSRPC_PMU_IsSIMReady_Req;
+		CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t
+		    CAPI2_SYSRPC_PMU_IsSIMReady_Rsp;
+		CAPI2_SYSRPC_PMU_ActivateSIM_Req_t
+		    CAPI2_SYSRPC_PMU_ActivateSIM_Req;
+		CAPI2_CPPS_Control_Req_t CAPI2_CPPS_Control_Req;
+		CAPI2_CPPS_Control_Rsp_t CAPI2_CPPS_Control_Rsp;
+		CAPI2_FLASH_SaveImage_Req_t CAPI2_FLASH_SaveImage_Req;
+		CAPI2_FLASH_SaveImage_Rsp_t CAPI2_FLASH_SaveImage_Rsp;
 
-#endif //DEVELOPMENT_SYSRPC_UNION_DECLARE
+#endif				//DEVELOPMENT_SYSRPC_UNION_DECLARE
 /*** _SYSRPC_CODE_GEN_END_ ***/
 
-	}req_rep_u;
-}SYS_ReqRep_t;
+	} req_rep_u;
+} SYS_ReqRep_t;
 
-Result_t Send_SYS_RspForRequest(RPC_Msg_t* req, MsgType_t msgType, SYS_ReqRep_t* payload);
+Result_t Send_SYS_RspForRequest(RPC_Msg_t * req, MsgType_t msgType,
+				SYS_ReqRep_t * payload);
 
-Result_t SYS_SendRsp(UInt32 tid, UInt8 clientId, MsgType_t msgType, void* payload);
+Result_t SYS_SendRsp(UInt32 tid, UInt8 clientId, MsgType_t msgType,
+		     void *payload);
 
+Result_t SYS_GenCommsMsgHnd(RPC_Msg_t * pReqMsg, SYS_ReqRep_t * req);
 
-Result_t SYS_GenCommsMsgHnd(RPC_Msg_t* pReqMsg, SYS_ReqRep_t* req);
-
-bool_t xdr_SYS_ReqRep_t( XDR* xdrs, SYS_ReqRep_t* req, xdrproc_t proc);
+bool_t xdr_SYS_ReqRep_t(XDR * xdrs, SYS_ReqRep_t * req, xdrproc_t proc);
 
 #undef DEVELOPMENT_SYSRPC_UNION_DECLARE
 
-
 #endif
-

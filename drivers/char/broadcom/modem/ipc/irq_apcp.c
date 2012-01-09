@@ -131,18 +131,18 @@ static int intc_set_type(struct irq_data *d, unsigned int flow_type)
 
 void intc_trigger_softirq(unsigned int irq)
 {
-    void __iomem* base = (void __iomem *)( KONA_BINTC_BASE_ADDR);  
-    // convert to BModem IRQ
-    unsigned int birq = IRQ_TO_BMIRQ(irq);
-    unsigned long flags;
+	void __iomem *base = (void __iomem *)(KONA_BINTC_BASE_ADDR);
+	// convert to BModem IRQ
+	unsigned int birq = IRQ_TO_BMIRQ(irq);
+	unsigned long flags;
 	//removed printouts
 	//printk("intc_trigger_softirq\n");
-    spin_lock_irqsave(&intc_lock, flags);
-    if ( birq >= 32 )
-        writel(1 << (birq - 32), base + BINTC_ISWIR1_OFFSET);
-    else
-        writel(1 << birq, base + BINTC_ISWIR0_OFFSET);
-    spin_unlock_irqrestore(&intc_lock, flags);
+	spin_lock_irqsave(&intc_lock, flags);
+	if (birq >= 32)
+		writel(1 << (birq - 32), base + BINTC_ISWIR1_OFFSET);
+	else
+		writel(1 << birq, base + BINTC_ISWIR0_OFFSET);
+	spin_unlock_irqrestore(&intc_lock, flags);
 }
 
 EXPORT_SYMBOL(intc_trigger_softirq);
@@ -229,8 +229,7 @@ static void __init intc_pm_register(void __iomem * base, unsigned int irq,
 	struct intc_device *v;
 
 	if (intc_id >= ARRAY_SIZE(intc_devices))
-		pr_err(
-		       "%s: too few INTCs, increase CONFIG_ARM_INTC_NR\n",
+		pr_err("%s: too few INTCs, increase CONFIG_ARM_INTC_NR\n",
 		       __func__);
 	else {
 		v = &intc_devices[intc_id];
@@ -269,8 +268,7 @@ static int __init intc_pm_init(void)
 
 		err = sysdev_register(&dev->sysdev);
 		if (err) {
-			pr_err("%s: failed to register device\n",
-			       __func__);
+			pr_err("%s: failed to register device\n", __func__);
 			return err;
 		}
 	}
@@ -315,7 +313,7 @@ static int intc_set_wake(unsigned int irq, unsigned int on)
 }
 
 #else
-static inline void intc_pm_register(void __iomem *base, unsigned int irq,
+static inline void intc_pm_register(void __iomem * base, unsigned int irq,
 				    u32 arg1)
 {
 }

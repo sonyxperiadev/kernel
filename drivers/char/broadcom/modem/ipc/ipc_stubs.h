@@ -24,7 +24,6 @@
 
 #include <linux/broadcom/csl_types.h>
 
-
 // ******************************************************************************
 /**	
 *   Retrieve the current value of the system timer tick counter

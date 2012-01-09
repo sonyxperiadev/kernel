@@ -45,11 +45,10 @@ __RCSID("$NetBSD: xdr_float.c,v 1.32 2003/12/08 06:18:16 matt Exp $");
 #ifdef __BIG_ENDIAN
 #define BYTE_ORDER	BIG_ENDIAN
 
-#else	
+#else
 #define BYTE_ORDER	LITTLE_ENDIAN
 #endif
 #define IEEEFP
-
 
 /*
  * xdr_float.c, Generic XDR routines impelmentation.
@@ -61,40 +60,34 @@ __RCSID("$NetBSD: xdr_float.c,v 1.32 2003/12/08 06:18:16 matt Exp $");
  * xdr.
  */
 
-
 #ifdef __weak_alias
-__weak_alias(xdr_double,_xdr_double)
-__weak_alias(xdr_float,_xdr_float)
+__weak_alias(xdr_double, _xdr_double)
+    __weak_alias(xdr_float, _xdr_float)
 #endif
-
 /*
  * NB: Not portable.
  * This routine works on machines with IEEE754 FP and Vaxen.
  */
-
 #if defined(__m68k__) || defined(__sparc__) || defined(__i386__) || \
     defined(__mips__) || defined(__ns32k__) || defined(__alpha__) || \
     defined(__arm__) || defined(__powerpc__) || defined(__sh__) || \
     defined(__x86_64__) || defined(__hppa__)
- 
 #define IEEEFP
 #endif
-
 #if defined(__vax__)
-
 /* What IEEE single precision floating point looks like on a Vax */
-struct	ieee_single {
-	unsigned int	mantissa: 23;
-	unsigned int	exp     : 8;
-	unsigned int	sign    : 1;
+struct ieee_single {
+	unsigned int mantissa:23;
+	unsigned int exp:8;
+	unsigned int sign:1;
 };
 
 /* Vax single precision floating point */
-struct	vax_single {
-	unsigned int	mantissa1 : 7;
-	unsigned int	exp       : 8;
-	unsigned int	sign      : 1;
-	unsigned int	mantissa2 : 16;
+struct vax_single {
+	unsigned int mantissa1:7;
+	unsigned int exp:8;
+	unsigned int sign:1;
+	unsigned int mantissa2:16;
 };
 
 #define VAX_SNG_BIAS	0x81
@@ -103,16 +96,20 @@ struct	vax_single {
 static struct sgl_limits {
 	struct vax_single s;
 	struct ieee_single ieee;
-} sgl_limits[2] = {
-	{{ 0x7f, 0xff, 0x0, 0xffff },	/* Max Vax */
-	{ 0x0, 0xff, 0x0 }},		/* Max IEEE */
-	{{ 0x0, 0x0, 0x0, 0x0 },	/* Min Vax */
-	{ 0x0, 0x0, 0x0 }}		/* Min IEEE */
+} sgl_limits[2] =
+{
+	{ {
+	0x7f, 0xff, 0x0, 0xffff},	/* Max Vax */
+	{
+	0x0, 0xff, 0x0}},	/* Max IEEE */
+	{ {
+	0x0, 0x0, 0x0, 0x0},	/* Min Vax */
+	{
+	0x0, 0x0, 0x0}}		/* Min IEEE */
 };
 #endif /* vax */
 
-bool_t
-xdr_float(XDR *xdrs, float *fp)
+bool_t xdr_float(XDR * xdrs, float *fp)
 {
 #ifndef IEEEFP
 	struct ieee_single is;
@@ -124,38 +121,38 @@ xdr_float(XDR *xdrs, float *fp)
 
 	case XDR_ENCODE:
 #ifdef IEEEFP
-		return (XDR_PUTINT32(xdrs, (int32_t *)(void *)fp));
+		return (XDR_PUTINT32(xdrs, (int32_t *) (void *)fp));
 #else
 		vs = *((struct vax_single *)fp);
 		for (i = 0, lim = sgl_limits;
-			i < sizeof(sgl_limits)/sizeof(struct sgl_limits);
-			i++, lim++) {
+		     i < sizeof(sgl_limits) / sizeof(struct sgl_limits);
+		     i++, lim++) {
 			if ((vs.mantissa2 == lim->s.mantissa2) &&
-				(vs.exp == lim->s.exp) &&
-				(vs.mantissa1 == lim->s.mantissa1)) {
+			    (vs.exp == lim->s.exp) &&
+			    (vs.mantissa1 == lim->s.mantissa1)) {
 				is = lim->ieee;
 				goto shipit;
 			}
 		}
 		is.exp = vs.exp - VAX_SNG_BIAS + IEEE_SNG_BIAS;
 		is.mantissa = (vs.mantissa1 << 16) | vs.mantissa2;
-	shipit:
+	      shipit:
 		is.sign = vs.sign;
-		return (XDR_PUTINT32(xdrs, (int32_t *)(void *)&is));
+		return (XDR_PUTINT32(xdrs, (int32_t *) (void *)&is));
 #endif
 
 	case XDR_DECODE:
 #ifdef IEEEFP
-		return (XDR_GETINT32(xdrs, (int32_t *)(void *)fp));
+		return (XDR_GETINT32(xdrs, (int32_t *) (void *)fp));
 #else
 		vsp = (struct vax_single *)fp;
-		if (!XDR_GETINT32(xdrs, (int32_t *)(void *)&is))
+		if (!XDR_GETINT32(xdrs, (int32_t *) (void *)&is))
 			return (FALSE);
 		for (i = 0, lim = sgl_limits;
-			i < sizeof(sgl_limits)/sizeof(struct sgl_limits);
-			i++, lim++) {
+		     i < sizeof(sgl_limits) / sizeof(struct sgl_limits);
+		     i++, lim++) {
 			if ((is.exp == lim->ieee.exp) &&
-				(is.mantissa == lim->ieee.mantissa)) {
+			    (is.mantissa == lim->ieee.mantissa)) {
 				*vsp = lim->s;
 				goto doneit;
 			}
@@ -163,7 +160,7 @@ xdr_float(XDR *xdrs, float *fp)
 		vsp->exp = is.exp - IEEE_SNG_BIAS + VAX_SNG_BIAS;
 		vsp->mantissa2 = is.mantissa;
 		vsp->mantissa1 = (is.mantissa >> 16);
-	doneit:
+	      doneit:
 		vsp->sign = is.sign;
 		return (TRUE);
 #endif
@@ -177,21 +174,21 @@ xdr_float(XDR *xdrs, float *fp)
 
 #if defined(__vax__)
 /* What IEEE double precision floating point looks like on a Vax */
-struct	ieee_double {
-	unsigned int	mantissa1 : 20;
-	unsigned int	exp       : 11;
-	unsigned int	sign      : 1;
-	unsigned int	mantissa2 : 32;
+struct ieee_double {
+	unsigned int mantissa1:20;
+	unsigned int exp:11;
+	unsigned int sign:1;
+	unsigned int mantissa2:32;
 };
 
 /* Vax double precision floating point */
-struct  vax_double {
-	unsigned int	mantissa1 : 7;
-	unsigned int	exp       : 8;
-	unsigned int	sign      : 1;
-	unsigned int	mantissa2 : 16;
-	unsigned int	mantissa3 : 16;
-	unsigned int	mantissa4 : 16;
+struct vax_double {
+	unsigned int mantissa1:7;
+	unsigned int exp:8;
+	unsigned int sign:1;
+	unsigned int mantissa2:16;
+	unsigned int mantissa3:16;
+	unsigned int mantissa4:16;
 };
 
 #define VAX_DBL_BIAS	0x81
@@ -199,28 +196,30 @@ struct  vax_double {
 #define MASK(nbits)	((1 << nbits) - 1)
 
 static struct dbl_limits {
-	struct	vax_double d;
-	struct	ieee_double ieee;
+	struct vax_double d;
+	struct ieee_double ieee;
 } dbl_limits[2] = {
-	{{ 0x7f, 0xff, 0x0, 0xffff, 0xffff, 0xffff },	/* Max Vax */
-	{ 0x0, 0x7ff, 0x0, 0x0 }},			/* Max IEEE */
-	{{ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},		/* Min Vax */
-	{ 0x0, 0x0, 0x0, 0x0 }}				/* Min IEEE */
+	{ {
+	0x7f, 0xff, 0x0, 0xffff, 0xffff, 0xffff},	/* Max Vax */
+	{
+	0x0, 0x7ff, 0x0, 0x0}},	/* Max IEEE */
+	{ {
+	0x0, 0x0, 0x0, 0x0, 0x0, 0x0},	/* Min Vax */
+	{
+	0x0, 0x0, 0x0, 0x0}}	/* Min IEEE */
 };
 
 #endif /* vax */
 
-
-bool_t
-xdr_double(XDR *xdrs, double *dp)
+bool_t xdr_double(XDR * xdrs, double *dp)
 {
 #ifdef IEEEFP
 	int32_t *i32p;
 	bool_t rv;
 #else
 	int32_t *lp;
-	struct	ieee_double id;
-	struct	vax_double vd;
+	struct ieee_double id;
+	struct vax_double vd;
 	struct dbl_limits *lim;
 	int i;
 #endif
@@ -229,14 +228,14 @@ xdr_double(XDR *xdrs, double *dp)
 
 	case XDR_ENCODE:
 #ifdef IEEEFP
-		i32p = (int32_t *)(void *)dp;
+		i32p = (int32_t *) (void *)dp;
 #if (BYTE_ORDER == BIG_ENDIAN)
 		rv = XDR_PUTINT32(xdrs, i32p);
 		if (!rv)
 			return (rv);
-		rv = XDR_PUTINT32(xdrs, i32p+1);
+		rv = XDR_PUTINT32(xdrs, i32p + 1);
 #else
-		rv = XDR_PUTINT32(xdrs, i32p+1);
+		rv = XDR_PUTINT32(xdrs, i32p + 1);
 		if (!rv)
 			return (rv);
 		rv = XDR_PUTINT32(xdrs, i32p);
@@ -245,13 +244,13 @@ xdr_double(XDR *xdrs, double *dp)
 #else
 		vd = *((struct vax_double *)dp);
 		for (i = 0, lim = dbl_limits;
-			i < sizeof(dbl_limits)/sizeof(struct dbl_limits);
-			i++, lim++) {
+		     i < sizeof(dbl_limits) / sizeof(struct dbl_limits);
+		     i++, lim++) {
 			if ((vd.mantissa4 == lim->d.mantissa4) &&
-				(vd.mantissa3 == lim->d.mantissa3) &&
-				(vd.mantissa2 == lim->d.mantissa2) &&
-				(vd.mantissa1 == lim->d.mantissa1) &&
-				(vd.exp == lim->d.exp)) {
+			    (vd.mantissa3 == lim->d.mantissa3) &&
+			    (vd.mantissa2 == lim->d.mantissa2) &&
+			    (vd.mantissa1 == lim->d.mantissa1) &&
+			    (vd.exp == lim->d.exp)) {
 				id = lim->ieee;
 				goto shipit;
 			}
@@ -259,39 +258,38 @@ xdr_double(XDR *xdrs, double *dp)
 		id.exp = vd.exp - VAX_DBL_BIAS + IEEE_DBL_BIAS;
 		id.mantissa1 = (vd.mantissa1 << 13) | (vd.mantissa2 >> 3);
 		id.mantissa2 = ((vd.mantissa2 & MASK(3)) << 29) |
-				(vd.mantissa3 << 13) |
-				((vd.mantissa4 >> 3) & MASK(13));
-	shipit:
+		    (vd.mantissa3 << 13) | ((vd.mantissa4 >> 3) & MASK(13));
+	      shipit:
 		id.sign = vd.sign;
-		lp = (int32_t *)(void *)&id;
+		lp = (int32_t *) (void *)&id;
 		return (XDR_PUTINT32(xdrs, lp++) && XDR_PUTINT32(xdrs, lp));
 #endif
 
 	case XDR_DECODE:
 #ifdef IEEEFP
-		i32p = (int32_t *)(void *)dp;
+		i32p = (int32_t *) (void *)dp;
 #if BYTE_ORDER == BIG_ENDIAN
 		rv = XDR_GETINT32(xdrs, i32p);
 		if (!rv)
 			return (rv);
-		rv = XDR_GETINT32(xdrs, i32p+1);
+		rv = XDR_GETINT32(xdrs, i32p + 1);
 #else
-		rv = XDR_GETINT32(xdrs, i32p+1);
+		rv = XDR_GETINT32(xdrs, i32p + 1);
 		if (!rv)
 			return (rv);
 		rv = XDR_GETINT32(xdrs, i32p);
 #endif
 		return (rv);
 #else
-		lp = (int32_t *)(void *)&id;
+		lp = (int32_t *) (void *)&id;
 		if (!XDR_GETINT32(xdrs, lp++) || !XDR_GETINT32(xdrs, lp))
 			return (FALSE);
 		for (i = 0, lim = dbl_limits;
-			i < sizeof(dbl_limits)/sizeof(struct dbl_limits);
-			i++, lim++) {
+		     i < sizeof(dbl_limits) / sizeof(struct dbl_limits);
+		     i++, lim++) {
 			if ((id.mantissa2 == lim->ieee.mantissa2) &&
-				(id.mantissa1 == lim->ieee.mantissa1) &&
-				(id.exp == lim->ieee.exp)) {
+			    (id.mantissa1 == lim->ieee.mantissa1) &&
+			    (id.exp == lim->ieee.exp)) {
 				vd = lim->d;
 				goto doneit;
 			}
@@ -299,10 +297,10 @@ xdr_double(XDR *xdrs, double *dp)
 		vd.exp = id.exp - IEEE_DBL_BIAS + VAX_DBL_BIAS;
 		vd.mantissa1 = (id.mantissa1 >> 13);
 		vd.mantissa2 = ((id.mantissa1 & MASK(13)) << 3) |
-				(id.mantissa2 >> 29);
+		    (id.mantissa2 >> 29);
 		vd.mantissa3 = (id.mantissa2 >> 13);
 		vd.mantissa4 = (id.mantissa2 << 3);
-	doneit:
+	      doneit:
 		vd.sign = id.sign;
 		*dp = *((double *)(void *)&vd);
 		return (TRUE);

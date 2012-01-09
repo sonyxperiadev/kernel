@@ -31,10 +31,9 @@
 
 #include "xdr.h"
 #ifdef __weak_alias
-__weak_alias(xdr_pointer,_xdr_pointer)
-__weak_alias(xdr_reference,_xdr_reference)
+__weak_alias(xdr_pointer, _xdr_pointer)
+    __weak_alias(xdr_reference, _xdr_reference)
 #endif
-
 /*
  * XDR an indirect pointer
  * xdr_reference is for recursively translating a structure that is
@@ -44,13 +43,10 @@ __weak_alias(xdr_reference,_xdr_reference)
  * size is the sizeof the referneced structure.
  * proc is the routine to handle the referenced structure.
  */
-bool_t
-xdr_referenceEx(XDR *xdrs,
-	          caddr_t *pp,		/* the pointer to work on */
-	          u_int size,		/* size of the object pointed to */
-	          xdrproc_t proc,
-			  xdrproc_t xdr_user_obj)		/* xdr routine to handle the object */
-{
+bool_t xdr_referenceEx(XDR * xdrs, caddr_t * pp,	/* the pointer to work on */
+		       u_int size,	/* size of the object pointed to */
+		       xdrproc_t proc, xdrproc_t xdr_user_obj)
+{				/* xdr routine to handle the object */
 	caddr_t loc = *pp;
 	bool_t stat;
 
@@ -72,7 +68,7 @@ xdr_referenceEx(XDR *xdrs,
 			break;
 		}
 
-	stat = (*proc)(xdrs, loc, xdr_user_obj);
+	stat = (*proc) (xdrs, loc, xdr_user_obj);
 
 	if (xdrs->x_op == XDR_FREE) {
 		XDR_DEALLOC(xdrs, loc, size);
@@ -81,12 +77,10 @@ xdr_referenceEx(XDR *xdrs,
 	return (stat);
 }
 
-bool_t
-xdr_reference(XDR *xdrs,
-	          caddr_t *pp,		/* the pointer to work on */
-	          u_int size,		/* size of the object pointed to */
-	          xdrproc_t proc)		/* xdr routine to handle the object */
-{
+bool_t xdr_reference(XDR * xdrs, caddr_t * pp,	/* the pointer to work on */
+		     u_int size,	/* size of the object pointed to */
+		     xdrproc_t proc)
+{				/* xdr routine to handle the object */
 	return xdr_referenceEx(xdrs, pp, size, proc, NULL);
 }
 
@@ -110,25 +104,24 @@ xdr_reference(XDR *xdrs,
  *
  */
 bool_t
-xdr_pointerEx(XDR *xdrs, char **objpp, u_int obj_size, xdrproc_t xdr_obj, xdrproc_t xdr_user_obj)
+xdr_pointerEx(XDR * xdrs, char **objpp, u_int obj_size, xdrproc_t xdr_obj,
+	      xdrproc_t xdr_user_obj)
 {
 
 	bool_t more_data;
 
 	more_data = (*objpp != NULL);
-	if (! xdr_bool(xdrs,&more_data)) {
+	if (!xdr_bool(xdrs, &more_data)) {
 		return (FALSE);
 	}
-	if (! more_data) {
+	if (!more_data) {
 		*objpp = NULL;
 		return (TRUE);
 	}
-	return (xdr_referenceEx(xdrs,objpp,obj_size,xdr_obj, xdr_user_obj));
+	return (xdr_referenceEx(xdrs, objpp, obj_size, xdr_obj, xdr_user_obj));
 }
 
-bool_t
-xdr_pointer(XDR *xdrs, char **objpp, u_int obj_size, xdrproc_t xdr_obj)
+bool_t xdr_pointer(XDR * xdrs, char **objpp, u_int obj_size, xdrproc_t xdr_obj)
 {
 	return xdr_pointerEx(xdrs, objpp, obj_size, xdr_obj, NULL);
 }
-

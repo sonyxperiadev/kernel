@@ -17,13 +17,14 @@
 extern "C" {
 #endif
 
-extern int IpcCPCrashCheck(void);
-extern void ProcessCPCrashedDump(struct work_struct *work);
-extern int IPC_IsCpIpcInit(void *pSmBase, IPC_CPU_ID_T Cpu);
-extern void abort(void);
+	extern int IpcCPCrashCheck(void);
+	extern void ProcessCPCrashedDump(struct work_struct *work);
+	extern int IPC_IsCpIpcInit(void *pSmBase, IPC_CPU_ID_T Cpu);
+	extern void abort(void);
 
 #if defined(CONFIG_BCM215X_PM) && defined(CONFIG_ARCH_BCM2153)
-extern void pm_ipc_power_saving_init(IPC_PlatformSpecificPowerSavingInfo_T *
+	extern void
+	    pm_ipc_power_saving_init(IPC_PlatformSpecificPowerSavingInfo_T *
 				     ipc_ps);
 #endif
 

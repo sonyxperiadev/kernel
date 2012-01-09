@@ -29,21 +29,20 @@
 #else
 #ifndef _NODEBUG
 
-extern void __xassert( char *,char *, int, int );
+extern void __xassert(char *, char *, int, int);
 #define xassert(e,v) ((e) ? (void)0 : __xassert(#e, __FILE__, __LINENUM__, (int)v))
 
 #else
 //Send a UART-A Break character on assertion
 #define xassert(e,v) {if(e) { (void)0; } else {(*((unsigned char *) (SERIAL_PORT_A + 0x0C + 3)) |= (unsigned char)0x40);}}
 
-#endif	/* _NODEBUG */
+#endif /* _NODEBUG */
 
-#endif	/* WIN32 */
+#endif /* WIN32 */
 
 #ifdef SDTENV
 #undef xassert
 #define xassert(e,v)
 #endif // SDTENV
 
-#endif	/* _xassert_h */
-
+#endif /* _xassert_h */

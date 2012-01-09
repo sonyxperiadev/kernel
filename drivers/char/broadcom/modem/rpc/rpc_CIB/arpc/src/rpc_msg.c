@@ -35,35 +35,35 @@
 #include "rpc_internal_api.h"
 #include "xassert.h"
 
-
 XDR_ENUM_FUNC(Result_t)
-XDR_ENUM_FUNC(MsgType_t)
-XDR_ENUM_FUNC(RPC_MsgType_t)
-XDR_ENUM_FUNC(RPC_Direction_t)
-XDR_ENUM_FUNC(RPC_ACK_Result_t)
+    XDR_ENUM_FUNC(MsgType_t)
+    XDR_ENUM_FUNC(RPC_MsgType_t)
+    XDR_ENUM_FUNC(RPC_Direction_t)
+    XDR_ENUM_FUNC(RPC_ACK_Result_t)
 
-XDR_STRUCT_DECLARE(RPC_SimpleMsg_t)
-
+    XDR_STRUCT_DECLARE(RPC_SimpleMsg_t)
 #define _T(a) a
-
-static RPC_XdrInfo_t ACK_dscrm[] = 
-{
+static RPC_XdrInfo_t ACK_dscrm[] = {
 	/* Add phonebook message serialize/deserialize routine map */
-	{ MSG_CAPI2_ACK_RSP,_T("MSG_CAPI2_ACK_RSP"), (xdrproc_t)xdr_RPC_Ack_t, sizeof(RPC_Ack_t), 0 },
-	{ MSG_RPC_SIMPLE_REQ_RSP,_T("MSG_RPC_SIMPLE_REQ_RSP"), (xdrproc_t)xdr_RPC_SimpleMsg_t, sizeof(RPC_SimpleMsg_t), 0 },
+	{MSG_CAPI2_ACK_RSP, _T("MSG_CAPI2_ACK_RSP"), (xdrproc_t) xdr_RPC_Ack_t,
+	 sizeof(RPC_Ack_t), 0}
+	,
+	{MSG_RPC_SIMPLE_REQ_RSP, _T("MSG_RPC_SIMPLE_REQ_RSP"),
+	 (xdrproc_t) xdr_RPC_SimpleMsg_t, sizeof(RPC_SimpleMsg_t), 0}
+	,
 	/* Add other modules message to serialize/deserialize routine map */
-	{ (MsgType_t)__dontcare__, "",NULL_xdrproc_t, 0,0 } 
+	{(MsgType_t) __dontcare__, "", NULL_xdrproc_t, 0, 0}
 };
 
-bool_t xdr_RPC_SimpleMsg_t(XDR *xdrs, RPC_SimpleMsg_t* msg)
+bool_t xdr_RPC_SimpleMsg_t(XDR * xdrs, RPC_SimpleMsg_t * msg)
 {
-	return (    _xdr_u_long(xdrs, &msg->type,"type") &&
-				_xdr_u_long(xdrs, &msg->param1,"param1") &&
-				_xdr_u_long(xdrs, &msg->param2,"param2")
-				);
+	return (_xdr_u_long(xdrs, &msg->type, "type") &&
+		_xdr_u_long(xdrs, &msg->param1, "param1") &&
+		_xdr_u_long(xdrs, &msg->param2, "param2")
+	    );
 }
 
-static bool_t xdr_RPC_Msg_t(XDR *xdrs, RPC_Msg_t* rpcMsg)
+static bool_t xdr_RPC_Msg_t(XDR * xdrs, RPC_Msg_t * rpcMsg)
 {
 	Boolean ret;
 	//coverity[var_decl], "entry" will be inited in function rpc_fast_lookup()
@@ -74,139 +74,138 @@ static bool_t xdr_RPC_Msg_t(XDR *xdrs, RPC_Msg_t* rpcMsg)
 
 	xdrs->x_basiclogbuffer = tempBuf;
 
-	if(     xdr_u_long(xdrs, &rpcMsg->tid) &&
-			xdr_u_char(xdrs, &rpcMsg->clientID) &&
-			XDR_ENUM(xdrs, &rpcMsg->msgId, MsgType_t)
-			)
-	{
+	if (xdr_u_long(xdrs, &rpcMsg->tid) &&
+	    xdr_u_char(xdrs, &rpcMsg->clientID) &&
+	    XDR_ENUM(xdrs, &rpcMsg->msgId, MsgType_t)
+	    ) {
 		XDR_LOG_RESET(xdrs, "[RPC] { msgId=");
 
-		ret = rpc_fast_lookup((UInt16)rpcMsg->msgId, &entry);
+		ret = rpc_fast_lookup((UInt16) rpcMsg->msgId, &entry);
 
-		if(!ret || entry.xdrInfo == NULL)
+		if (!ret || entry.xdrInfo == NULL)
 			return FALSE;
 
-		if( entry.mainProc != NULL)
-		{
-//			entry.mainProc(xdrs, (char**)&(rpcMsg->dataBuf), rpcMsg->msgId, entry.xdrInfo->xdr_proc);
-			xdr_pointerEx(xdrs, (char**)&(rpcMsg->dataBuf), entry.maxDataBufSize, entry.mainProc, entry.xdrInfo->xdr_proc);
-		}
-		else
-		{
-			xdr_pointer(xdrs, (char**)&(rpcMsg->dataBuf), entry.xdrInfo->xdr_size, entry.xdrInfo->xdr_proc);
-		}
-
-		if(BASIC_LOG_ENABLED && (xdrs->x_op == XDR_ENCODE || xdrs->x_op == XDR_DECODE))
-		{
-			_DBG_(RPC_TRACE("%s[RPC %s] msgid=0x%x str=%s tid %d cid %d %s\r\n", 
-				RPC_GetProcessorType() == RPC_COMMS?"[CP]":"[AP]",
-				(xdrs->x_op == XDR_DECODE)?"DE":"EN",rpcMsg->msgId, (entry.xdrInfo->msgTypeStr)?entry.xdrInfo->msgTypeStr:"<>", 
-				rpcMsg->tid, rpcMsg->clientID,
-				(strlen(xdrs->x_basiclogbuffer)?xdrs->x_basiclogbuffer:"")));
+		if (entry.mainProc != NULL) {
+//                      entry.mainProc(xdrs, (char**)&(rpcMsg->dataBuf), rpcMsg->msgId, entry.xdrInfo->xdr_proc);
+			xdr_pointerEx(xdrs, (char **)&(rpcMsg->dataBuf),
+				      entry.maxDataBufSize, entry.mainProc,
+				      entry.xdrInfo->xdr_proc);
+		} else {
+			xdr_pointer(xdrs, (char **)&(rpcMsg->dataBuf),
+				    entry.xdrInfo->xdr_size,
+				    entry.xdrInfo->xdr_proc);
 		}
 
-		if(rpcMsg->dataLen == 0)
-		{
+		if (BASIC_LOG_ENABLED
+		    && (xdrs->x_op == XDR_ENCODE || xdrs->x_op == XDR_DECODE)) {
+			_DBG_(RPC_TRACE
+			      ("%s[RPC %s] msgid=0x%x str=%s tid %d cid %d %s\r\n",
+			       RPC_GetProcessorType() ==
+			       RPC_COMMS ? "[CP]" : "[AP]",
+			       (xdrs->x_op == XDR_DECODE) ? "DE" : "EN",
+			       rpcMsg->msgId,
+			       (entry.xdrInfo->msgTypeStr) ? entry.xdrInfo->
+			       msgTypeStr : "<>", rpcMsg->tid, rpcMsg->clientID,
+			       (strlen(xdrs->x_basiclogbuffer) ? xdrs->
+				x_basiclogbuffer : "")));
+		}
+
+		if (rpcMsg->dataLen == 0) {
 			rpcMsg->dataLen = entry.xdrInfo->xdr_size;
 		}
 
-		return(TRUE);
+		return (TRUE);
 	}
-	
-	return(FALSE);
+
+	return (FALSE);
 }
 
-bool_t xdr_RPC_InternalMsg_t(XDR *xdrs, RPC_InternalMsg_t* val)
+bool_t xdr_RPC_InternalMsg_t(XDR * xdrs, RPC_InternalMsg_t * val)
 {
-	if(XDR_ENUM(xdrs, &val->msgType, RPC_MsgType_t) &&
-		xdr_u_char(xdrs, &val->clientIndex) &&
-		xdr_RPC_Msg_t(xdrs, &val->rootMsg))
-	{
+	if (XDR_ENUM(xdrs, &val->msgType, RPC_MsgType_t) &&
+	    xdr_u_char(xdrs, &val->clientIndex) &&
+	    xdr_RPC_Msg_t(xdrs, &val->rootMsg)) {
 		xdr_u_char(xdrs, &val->reqXdrClientId);
 		return TRUE;
 	}
-	_DBG_(RPC_TRACE("RPC: FAIL !!!! Message (%x)  fail to %s\n", val->msgType, (xdrs->x_op == XDR_DECODE)?"DECODE":"ENCODE"));
-//	xassert(0,val->rootMsg.msgId);
+	_DBG_(RPC_TRACE
+	      ("RPC: FAIL !!!! Message (%x)  fail to %s\n", val->msgType,
+	       (xdrs->x_op == XDR_DECODE) ? "DECODE" : "ENCODE"));
+//      xassert(0,val->rootMsg.msgId);
 	return FALSE;
 }
 
-
-bool_t xdr_RPC_Ack_t(XDR *xdrs, RPC_Ack_t* data)
+bool_t xdr_RPC_Ack_t(XDR * xdrs, RPC_Ack_t * data)
 {
-	if( _xdr_u_long(xdrs, &data->ackUsrData,"ackUsrData") &&
-		XDR_ENUM(xdrs,  &data->ackResult, RPC_ACK_Result_t)
-		)
-		return(TRUE);
+	if (_xdr_u_long(xdrs, &data->ackUsrData, "ackUsrData") &&
+	    XDR_ENUM(xdrs, &data->ackResult, RPC_ACK_Result_t)
+	    )
+		return (TRUE);
 	else
-		return(FALSE);
+		return (FALSE);
 }
 
-
-bool_t xdr_uchar_ptr_t(XDR *xdrs, unsigned char** ptr)
+bool_t xdr_uchar_ptr_t(XDR * xdrs, unsigned char **ptr)
 {
-	u_int len = (*ptr)?(strlen((char*)(*ptr))+1) : 0;
-	return xdr_bytes(xdrs, (char**)ptr, &len, 512);
+	u_int len = (*ptr) ? (strlen((char *)(*ptr)) + 1) : 0;
+	return xdr_bytes(xdrs, (char **)ptr, &len, 512);
 }
 
-bool_t xdr_char_ptr_t(XDR *xdrs, char** ptr)
+bool_t xdr_char_ptr_t(XDR * xdrs, char **ptr)
 {
-	u_int len = (*ptr)?(strlen(*ptr)+1) : 0;
+	u_int len = (*ptr) ? (strlen(*ptr) + 1) : 0;
 	return xdr_bytes(xdrs, ptr, &len, 512);
 }
 
-
 #ifdef DEVELOPMENT_RPC_XDR_DETAIL_LOG
-bool_t	xdr_u_char_dbg(XDR* xdrs, u_char *p, u_char *s)
+bool_t xdr_u_char_dbg(XDR * xdrs, u_char * p, u_char * s)
 {
-	XDR_LOG(xdrs,(char*)s)
-	return xdr_u_char(xdrs, p);
+	XDR_LOG(xdrs, (char *)s)
+	    return xdr_u_char(xdrs, p);
 }
 
-bool_t	xdr_u_int16_dbg(XDR* xdrs, u_int16_t *p, u_char *s)
+bool_t xdr_u_int16_dbg(XDR * xdrs, u_int16_t * p, u_char * s)
 {
-	XDR_LOG(xdrs,(char *)s)
-	return xdr_u_int16_t(xdrs, p);
+	XDR_LOG(xdrs, (char *)s)
+	    return xdr_u_int16_t(xdrs, p);
 }
 
-bool_t	xdr_u_long_dbg(XDR* xdrs, u_long *p, u_char *s)
+bool_t xdr_u_long_dbg(XDR * xdrs, u_long * p, u_char * s)
 {
-	XDR_LOG(xdrs,(char *)s)
-	return xdr_u_long(xdrs, p);
+	XDR_LOG(xdrs, (char *)s)
+	    return xdr_u_long(xdrs, p);
 }
-
 
 #define	MAX_LOG_STRING_LENGTH	78
-void Rpc_DebugOutputString(char* pStr)
+void Rpc_DebugOutputString(char *pStr)
 {
 	char endChar;
-	char* tempStr = pStr;
+	char *tempStr = pStr;
 	int strLen = strlen(pStr);
 	pStr += strLen;
 
-	while(strLen > MAX_LOG_STRING_LENGTH)
-	{
+	while (strLen > MAX_LOG_STRING_LENGTH) {
 		endChar = tempStr[MAX_LOG_STRING_LENGTH];
-		
-		tempStr[MAX_LOG_STRING_LENGTH]='\0';
+
+		tempStr[MAX_LOG_STRING_LENGTH] = '\0';
 		RPC_TRACE_DETAIL(tempStr);
-		tempStr[MAX_LOG_STRING_LENGTH]=endChar;
-		
+		tempStr[MAX_LOG_STRING_LENGTH] = endChar;
+
 		tempStr += MAX_LOG_STRING_LENGTH;
 		strLen = strlen(tempStr);
 	}
 
-	if(tempStr < pStr )
-	{
+	if (tempStr < pStr) {
 		RPC_TRACE_DETAIL(tempStr);
 	}
 }
 #endif
 
-bool_t
-xdr_default_proc(XDR *xdrs, void *unp)
+bool_t xdr_default_proc(XDR * xdrs, void *unp)
 {
-	if (xdrs || unp) { }  //fixes compiler warnings
-	return(TRUE);
+	if (xdrs || unp) {
+	}			//fixes compiler warnings
+	return (TRUE);
 }
 
 /*
@@ -217,20 +216,19 @@ bool_t xdr_xdr_string_t(XDR *xdrs, xdr_string_t* str)
 
 Boolean rpc_internal_xdr_init(void)
 {
-	return rpc_build_lookup(ACK_dscrm, sizeof(ACK_dscrm)/sizeof(RPC_XdrInfo_t), 0);
+	return rpc_build_lookup(ACK_dscrm,
+				sizeof(ACK_dscrm) / sizeof(RPC_XdrInfo_t), 0);
 }
 
-RPC_XdrInfo_t* RPC_InternalXdr(UInt16 index)
+RPC_XdrInfo_t *RPC_InternalXdr(UInt16 index)
 {
-	if(index >= sizeof(ACK_dscrm)/sizeof(RPC_XdrInfo_t))
+	if (index >= sizeof(ACK_dscrm) / sizeof(RPC_XdrInfo_t))
 		return NULL;
 
 	return &ACK_dscrm[index];
 }
 
-
-bool_t 
-xdr_xdr_string_t(XDR *xdrs, xdr_string_t* str)
+bool_t xdr_xdr_string_t(XDR * xdrs, xdr_string_t * str)
 {
 	return xdr_bytes(xdrs, &str->str, &str->len, 1024);
 }

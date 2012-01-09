@@ -77,9 +77,9 @@
  * request.
  */
 enum xdr_op {
-	XDR_ENCODE=0,
-	XDR_DECODE=1,
-	XDR_FREE=2
+	XDR_ENCODE = 0,
+	XDR_DECODE = 1,
+	XDR_FREE = 2
 };
 
 /*
@@ -96,41 +96,41 @@ enum xdr_op {
  * and two private fields for the use of the particular impelementation.
  */
 typedef struct __rpc_xdr {
-	enum xdr_op	x_op;		/* operation; fast additional param */
+	enum xdr_op x_op;	/* operation; fast additional param */
 	const struct xdr_ops {
 		/* get a long from underlying stream */
-		bool_t	(*x_getlong)(struct __rpc_xdr *, long *);
+		bool_t(*x_getlong) (struct __rpc_xdr *, long *);
 		/* put a long to " */
-		bool_t	(*x_putlong)(struct __rpc_xdr *, const long *);
+		bool_t(*x_putlong) (struct __rpc_xdr *, const long *);
 		/* get some bytes from " */
-		bool_t	(*x_getbytes)(struct __rpc_xdr *, char *, u_int);
+		bool_t(*x_getbytes) (struct __rpc_xdr *, char *, u_int);
 		/* put some bytes to " */
-		bool_t	(*x_putbytes)(struct __rpc_xdr *, const char *, u_int);
+		bool_t(*x_putbytes) (struct __rpc_xdr *, const char *, u_int);
 		/* returns bytes off from beginning */
-		u_int	(*x_getpostn)(struct __rpc_xdr *);
+		u_int(*x_getpostn) (struct __rpc_xdr *);
 		/* lets you reposition the stream */
-		bool_t  (*x_setpostn)(struct __rpc_xdr *, u_int);
+		bool_t(*x_setpostn) (struct __rpc_xdr *, u_int);
 		/* buf quick ptr to buffered data */
-		int32_t	*(*x_inline)(struct __rpc_xdr *, u_int);
+		int32_t *(*x_inline) (struct __rpc_xdr *, u_int);
 		/* free privates of this xdr_stream */
-		void	(*x_destroy)(struct __rpc_xdr *);
-		bool_t	(*x_control)(struct __rpc_xdr *, int, void *);
+		void (*x_destroy) (struct __rpc_xdr *);
+		 bool_t(*x_control) (struct __rpc_xdr *, int, void *);
 
-		void*	(*x_alloc)(struct __rpc_xdr *, int);
-		void	(*x_free)(struct __rpc_xdr *, void*, int);
-	
+		void *(*x_alloc) (struct __rpc_xdr *, int);
+		void (*x_free) (struct __rpc_xdr *, void *, int);
+
 	} *x_ops;
-	char *	 	x_public;	/* users' data */
-	void *		x_private;	/* pointer to private data */
-	char * 		x_base;		/* private used for position info */
-	u_int		x_handy;	/* extra private word */
-	char *	 	x_logbuffer;	/* Log buffer*/
-	u_int		x_logsize;	/* Log buffer size*/
-	char *	 	x_basiclogbuffer;	/* Log buffer*/
-	char *	 	x_decodebuffer;	/* Log buffer*/
-	u_int		x_decodeBufsize;	/* Log buffer size*/
-	char *	 	x_decodeCurbuffer;	/* Log buffer*/
-	u_int		x_decodeCurBufsize;	/* Log buffer size*/
+	char *x_public;		/* users' data */
+	void *x_private;	/* pointer to private data */
+	char *x_base;		/* private used for position info */
+	u_int x_handy;		/* extra private word */
+	char *x_logbuffer;	/* Log buffer */
+	u_int x_logsize;	/* Log buffer size */
+	char *x_basiclogbuffer;	/* Log buffer */
+	char *x_decodebuffer;	/* Log buffer */
+	u_int x_decodeBufsize;	/* Log buffer size */
+	char *x_decodeCurbuffer;	/* Log buffer */
+	u_int x_decodeCurBufsize;	/* Log buffer size */
 } XDR;
 
 /*
@@ -143,11 +143,11 @@ typedef struct __rpc_xdr {
  *
  * XXX can't actually prototype it, because some take three args!!!
  */
-typedef	bool_t (*xdrproc_t)(XDR *, void *,.../* XDR *, void *, u_int */);
+typedef bool_t(*xdrproc_t) (XDR *, void *, ... /* XDR *, void *, u_int */ );
 
-typedef u_int (*capi2_proc_t)(void* reqRep, void* rsp);
+typedef u_int(*capi2_proc_t) (void *reqRep, void *rsp);
 
-typedef struct xdr_discrim* (*xdr_lookup)(enum_t dscm);  
+typedef struct xdr_discrim *(*xdr_lookup) (enum_t dscm);
 
 /*
  * Operations defined on a XDR handle
@@ -174,20 +174,17 @@ typedef struct xdr_discrim* (*xdr_lookup)(enum_t dscm);
 #define XDR_DEALLOC(xdrs, buf, sz)			\
 	(xdrs->x_ops->x_free)?(*(xdrs)->x_ops->x_free)(xdrs, buf, sz):mem_free(buf, sz)
 
-
-static __inline int
-xdr_getint32(XDR *xdrs, int32_t *ip)
+static __inline int xdr_getint32(XDR * xdrs, int32_t * ip)
 {
 	long l;
 
 	if (!xdr_getlong(xdrs, &l))
 		return 0;
-	*ip = (int32_t)l;
+	*ip = (int32_t) l;
 	return 1;
 }
 
-static __inline int
-xdr_putint32(XDR *xdrs, int32_t *ip)
+static __inline int xdr_putint32(XDR * xdrs, int32_t * ip)
 {
 	long l;
 
@@ -257,11 +254,11 @@ xdr_putint32(XDR *xdrs, int32_t *ip)
  */
 #define NULL_xdrproc_t ((xdrproc_t)0)
 struct xdr_discrim {
-	int	value;
-	const char* debugStr;
+	int value;
+	const char *debugStr;
 	xdrproc_t proc;
-	u_int	unsize;
-	capi2_proc_t	capi2_proc;
+	u_int unsize;
+	capi2_proc_t capi2_proc;
 	xdrproc_t ptr_proc;
 	u_int32_t maxMsgSize;
 };
@@ -305,14 +302,13 @@ struct xdr_discrim {
 
 #define MAX_XDR_BASIC_LOG	128
 
-
 #ifdef DEVELOPMENT_RPC_XDR_DETAIL_LOG
 /*argument logging*/
-bool_t	xdr_u_char_dbg(XDR* xdrs, u_char *p, u_char *s);
-bool_t	xdr_u_int16_dbg(XDR* xdrs, u_int16_t *p, u_char *s);
-bool_t	xdr_u_long_dbg(XDR* xdrs, u_long *p, u_char *s);
-extern void xdrmem_log(XDR* xdrs, char* str);
-extern void xdrmem_log_start(XDR* xdrs, char* str);
+bool_t xdr_u_char_dbg(XDR * xdrs, u_char * p, u_char * s);
+bool_t xdr_u_int16_dbg(XDR * xdrs, u_int16_t * p, u_char * s);
+bool_t xdr_u_long_dbg(XDR * xdrs, u_long * p, u_char * s);
+extern void xdrmem_log(XDR * xdrs, char *str);
+extern void xdrmem_log_start(XDR * xdrs, char *str);
 
 #define _xdr_u_char(a,b,c)		xdr_u_char_dbg(a,b,(u_char*)c)
 #define _xdr_u_int16_t(a,b,c)	xdr_u_int16_dbg(a,b,(u_char*)c)
@@ -329,14 +325,12 @@ extern void xdrmem_log_start(XDR* xdrs, char* str);
 #define XDR_LOG(x,y)
 #endif
 
-typedef struct
-{
+typedef struct {
 	unsigned int len;
-	char* str;
+	char *str;
 } xdr_string_t;
 
-bool_t xdr_xdr_string_t(XDR *xdrs, xdr_string_t* str);
-
+bool_t xdr_xdr_string_t(XDR * xdrs, xdr_string_t * str);
 
 /*
  * xdr_enum expects fixed enum_t and would not work for compiler optimised enums.
@@ -395,65 +389,65 @@ bool_t xdr ## _ ## en(XDR *x, en *v);
 /* This macros expands to enum xdr function call */
 #define XDR_ENUM(x, v, en) xdr ## _ ## en(x , v)
 
-extern bool_t	xdr_default_proc(XDR *, void *);
+extern bool_t xdr_default_proc(XDR *, void *);
 
 /*
  * These are the "generic" xdr routines.
  */
-__BEGIN_DECLS
-extern bool_t	xdr_void(void);
-extern bool_t	xdr_int(XDR *, int *);
-extern bool_t	xdr_u_int(XDR *, u_int *);
-extern bool_t	xdr_long(XDR *, long *);
-extern bool_t	xdr_u_long(XDR *, u_long *);
-extern bool_t	xdr_short(XDR *, short *);
-extern bool_t	xdr_u_short(XDR *, u_short *);
-extern bool_t	xdr_int16_t(XDR *, int16_t *);
-extern bool_t	xdr_u_int16_t(XDR *, u_int16_t *);
-extern bool_t	xdr_int32_t(XDR *, int32_t *);
-extern bool_t	xdr_u_int32_t(XDR *, u_int32_t *);
+__BEGIN_DECLS extern bool_t xdr_void(void);
+extern bool_t xdr_int(XDR *, int *);
+extern bool_t xdr_u_int(XDR *, u_int *);
+extern bool_t xdr_long(XDR *, long *);
+extern bool_t xdr_u_long(XDR *, u_long *);
+extern bool_t xdr_short(XDR *, short *);
+extern bool_t xdr_u_short(XDR *, u_short *);
+extern bool_t xdr_int16_t(XDR *, int16_t *);
+extern bool_t xdr_u_int16_t(XDR *, u_int16_t *);
+extern bool_t xdr_int32_t(XDR *, int32_t *);
+extern bool_t xdr_u_int32_t(XDR *, u_int32_t *);
 #ifdef _LONG_LONG_
-extern bool_t	xdr_int64_t(XDR *, int64_t *);
-extern bool_t	xdr_u_int64_t(XDR *, u_int64_t *);
+extern bool_t xdr_int64_t(XDR *, int64_t *);
+extern bool_t xdr_u_int64_t(XDR *, u_int64_t *);
 #endif
-extern bool_t	xdr_bool(XDR *, bool_t *);
-extern bool_t	xdr_enum(XDR *, enum_t *);
-extern bool_t	xdr_array(XDR *, char **, u_int *, u_int, u_int, xdrproc_t);
-extern bool_t	xdr_bytes(XDR *, char **, u_int *, u_int);
-extern bool_t	xdr_opaque(XDR *, char *, u_int);
-extern bool_t	xdr_string(XDR *, char **, u_int);
-extern bool_t	xdr_union(XDR *, enum_t *, char *, const struct xdr_discrim *, xdrproc_t,  struct xdr_discrim**, xdr_lookup);
-extern bool_t	xdr_char(XDR *, char *);
-extern bool_t	xdr_u_char(XDR *, u_char *);
-extern bool_t	xdr_vector(XDR *, char *, u_int, u_int, xdrproc_t);
-extern bool_t	xdr_float(XDR *, float *);
-extern bool_t	xdr_double(XDR *, double *);
-extern bool_t	xdr_quadruple(XDR *, long double *);
-extern bool_t	xdr_reference(XDR *, char **, u_int, xdrproc_t);
-extern bool_t	xdr_pointer(XDR *, char **, u_int, xdrproc_t);
+extern bool_t xdr_bool(XDR *, bool_t *);
+extern bool_t xdr_enum(XDR *, enum_t *);
+extern bool_t xdr_array(XDR *, char **, u_int *, u_int, u_int, xdrproc_t);
+extern bool_t xdr_bytes(XDR *, char **, u_int *, u_int);
+extern bool_t xdr_opaque(XDR *, char *, u_int);
+extern bool_t xdr_string(XDR *, char **, u_int);
+extern bool_t xdr_union(XDR *, enum_t *, char *, const struct xdr_discrim *,
+			xdrproc_t, struct xdr_discrim **, xdr_lookup);
+extern bool_t xdr_char(XDR *, char *);
+extern bool_t xdr_u_char(XDR *, u_char *);
+extern bool_t xdr_vector(XDR *, char *, u_int, u_int, xdrproc_t);
+extern bool_t xdr_float(XDR *, float *);
+extern bool_t xdr_double(XDR *, double *);
+extern bool_t xdr_quadruple(XDR *, long double *);
+extern bool_t xdr_reference(XDR *, char **, u_int, xdrproc_t);
+extern bool_t xdr_pointer(XDR *, char **, u_int, xdrproc_t);
 
-extern bool_t	xdr_referenceEx(XDR *, char **, u_int, xdrproc_t, xdrproc_t);
-extern bool_t	xdr_pointerEx(XDR *, char **, u_int, xdrproc_t, xdrproc_t);
+extern bool_t xdr_referenceEx(XDR *, char **, u_int, xdrproc_t, xdrproc_t);
+extern bool_t xdr_pointerEx(XDR *, char **, u_int, xdrproc_t, xdrproc_t);
 
-extern bool_t	xdr_wrapstring(XDR *, char **);
-extern void	xdr_free(xdrproc_t, char *);
+extern bool_t xdr_wrapstring(XDR *, char **);
+extern void xdr_free(xdrproc_t, char *);
 #ifdef _LONG_LONG_
-extern bool_t	xdr_hyper(XDR *, longlong_t *);
-extern bool_t	xdr_u_hyper(XDR *, u_longlong_t *);
-extern bool_t	xdr_longlong_t(XDR *, longlong_t *);
-extern bool_t	xdr_u_longlong_t(XDR *, u_longlong_t *);
+extern bool_t xdr_hyper(XDR *, longlong_t *);
+extern bool_t xdr_u_hyper(XDR *, u_longlong_t *);
+extern bool_t xdr_longlong_t(XDR *, longlong_t *);
+extern bool_t xdr_u_longlong_t(XDR *, u_longlong_t *);
 #endif
 
-typedef char * char_ptr_t;
-typedef unsigned char* uchar_ptr_t;
-bool_t xdr_uchar_ptr_t(XDR *xdrs, unsigned char** ptr);
-bool_t xdr_char_ptr_t(XDR *xdrs, char** ptr);
+typedef char *char_ptr_t;
+typedef unsigned char *uchar_ptr_t;
+bool_t xdr_uchar_ptr_t(XDR * xdrs, unsigned char **ptr);
+bool_t xdr_char_ptr_t(XDR * xdrs, char **ptr);
 
 #define xdr_Boolean		xdr_u_char
 #define _xdr_Boolean	_xdr_u_char
 
-#define xdr_u_int8_t	xdr_u_char	
-#define _xdr_u_int8_t	_xdr_u_char	
+#define xdr_u_int8_t	xdr_u_char
+#define _xdr_u_int8_t	_xdr_u_char
 
 #define xdr_UInt32	xdr_u_long
 #define _xdr_UInt32	_xdr_u_long
@@ -469,29 +463,23 @@ bool_t xdr_char_ptr_t(XDR *xdrs, char** ptr);
 #define xdr_UInt16	xdr_u_int16_t
 #define _xdr_UInt16	_xdr_u_int16_t
 
-
-bool_t
-xdr_bitfields(
-
-	register XDR *xdrs,     /* XDR stream pointer   */
-	u_int  num_fields,     /* Number of bit fields */
-	u_char    *widths,     /* Bit field widths     */
-	u_long    *values      /* Bit field values     */
-
-           );
+bool_t xdr_bitfields(register XDR * xdrs,	/* XDR stream pointer   */
+		     u_int num_fields,	/* Number of bit fields */
+		     u_char * widths,	/* Bit field widths     */
+		     u_long * values	/* Bit field values     */
+    );
 __END_DECLS
-
 /*
  * Common opaque bytes objects used by many rpc protocols;
  * declared here due to commonality.
  */
-#define MAX_NETOBJ_SZ 1024 
-struct netobj {
-	u_int	n_len;
-	char	*n_bytes;
+#define MAX_NETOBJ_SZ 1024
+    struct netobj {
+	u_int n_len;
+	char *n_bytes;
 };
 typedef struct netobj netobj;
-extern bool_t   xdr_netobj(XDR *, struct netobj *);
+extern bool_t xdr_netobj(XDR *, struct netobj *);
 
 /*
  * These are the public routines for the various implementations of
@@ -499,17 +487,17 @@ extern bool_t   xdr_netobj(XDR *, struct netobj *);
  */
 __BEGIN_DECLS
 /* XDR using memory buffers */
-extern void   xdrmem_create(XDR *, char *,u_int, char* ,u_int, enum xdr_op);
+extern void xdrmem_create(XDR *, char *, u_int, char *, u_int, enum xdr_op);
 
 /* XDR using stdio library */
 #ifdef _STDIO_H_
-extern void   xdrstdio_create(XDR *, FILE *, enum xdr_op);
+extern void xdrstdio_create(XDR *, FILE *, enum xdr_op);
 #endif
 
 /* XDR pseudo records for tcp */
-extern void   xdrrec_create(XDR *, u_int, u_int, char *,
-				int (*)(char *, char *, int),
-				int (*)(char *, char *, int));
+extern void xdrrec_create(XDR *, u_int, u_int, char *,
+			  int (*)(char *, char *, int),
+			  int (*)(char *, char *, int));
 
 /* make end of xdr record */
 extern bool_t xdrrec_endofrecord(XDR *, int);
@@ -521,5 +509,4 @@ extern bool_t xdrrec_skiprecord(XDR *);
 extern bool_t xdrrec_eof(XDR *);
 extern u_int xdrrec_readbytes(XDR *, caddr_t, u_int);
 __END_DECLS
-
 #endif /* !_RPC_XDR_H_ */

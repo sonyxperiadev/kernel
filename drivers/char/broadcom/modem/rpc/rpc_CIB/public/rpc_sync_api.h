@@ -54,7 +54,7 @@
 #define _RPC_SYNC_H_
 
 //******************************************************************************
-//	 			include block
+//                              include block
 //******************************************************************************
 
 #ifdef __cplusplus
@@ -72,8 +72,7 @@ extern "C" {
 	@return		\n RESULT_OK for success, 
 				\n RESULT_ERROR for failure, 
 **/
-Result_t RPC_SyncInitialize(void);
-
+	Result_t RPC_SyncInitialize(void);
 
 //**************************************************************************************
 /**
@@ -88,21 +87,19 @@ Result_t RPC_SyncInitialize(void);
 	@note
 		The callback is called when we receive the response from remote processor
 **/
-typedef Boolean (RPC_CopyPayLoad_t)( MsgType_t msgType, 
-									 void* srcDataBuf, 
-									 UInt32 destBufSize,
-									 void* destDataBuf, 
-									 UInt32* outDestDataSize, 
-									 Result_t* outResult);
-
+	typedef Boolean(RPC_CopyPayLoad_t) (MsgType_t msgType,
+					    void *srcDataBuf,
+					    UInt32 destBufSize,
+					    void *destDataBuf,
+					    UInt32 * outDestDataSize,
+					    Result_t * outResult);
 
 /**
 	RPC Sync Init Params
 **/
-typedef struct
-{
-	RPC_CopyPayLoad_t* copyCb;	///< Pointer to callbak function for deep copy.
-}RPC_SyncInitParams_t;
+	typedef struct {
+		RPC_CopyPayLoad_t *copyCb;	///< Pointer to callbak function for deep copy.
+	} RPC_SyncInitParams_t;
 
 //**************************************************************************************
 /**
@@ -113,8 +110,9 @@ typedef struct
 	@note
 	The RPC_SyncRegisterClient() calls RPC_SYS_RegisterClient() internally.
 **/
-RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t*	initParams, RPC_SyncInitParams_t* syncInitParams);
-
+	RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t * initParams,
+					    RPC_SyncInitParams_t *
+					    syncInitParams);
 
 //**************************************************************************************
 /**
@@ -129,7 +127,7 @@ RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t*	initParams, RPC_SyncInitPa
 	of RPC_SyncGetResponse
 
 **/
-UInt32 RPC_SyncCreateTID( void* data, Int32 size );
+	UInt32 RPC_SyncCreateTID(void *data, Int32 size);
 
 //**************************************************************************************
 /**
@@ -144,7 +142,10 @@ UInt32 RPC_SyncCreateTID( void* data, Int32 size );
 	@note
 		Note that this includes the ack result as well.
 **/
-Result_t RPC_SyncWaitForResponse( UInt32 tid, UInt8 cid, RPC_ACK_Result_t* ack, MsgType_t* msgType, UInt32* dataSize );
+	Result_t RPC_SyncWaitForResponse(UInt32 tid, UInt8 cid,
+					 RPC_ACK_Result_t * ack,
+					 MsgType_t * msgType,
+					 UInt32 * dataSize);
 
 //**************************************************************************************
 /**
@@ -159,7 +160,11 @@ Result_t RPC_SyncWaitForResponse( UInt32 tid, UInt8 cid, RPC_ACK_Result_t* ack, 
 	@return Result code of response.
 	
 **/
-Result_t RPC_SyncWaitForResponseTimer( UInt32 tid, UInt8 cid, RPC_ACK_Result_t* ack, MsgType_t* msgType, UInt32* dataSize, UInt32 timeout);
+	Result_t RPC_SyncWaitForResponseTimer(UInt32 tid, UInt8 cid,
+					      RPC_ACK_Result_t * ack,
+					      MsgType_t * msgType,
+					      UInt32 * dataSize,
+					      UInt32 timeout);
 
 //**************************************************************************************
 /**
@@ -171,8 +176,7 @@ Result_t RPC_SyncWaitForResponseTimer( UInt32 tid, UInt8 cid, RPC_ACK_Result_t* 
  	@note
 		RPC Sync creates a TID from heap and client MUST call RPC_SyncDeleteCbkFromTid() later to avoid memory leak.
 **/
-UInt32 RPC_SyncAddCbkToTid( UInt32 val);
-
+	UInt32 RPC_SyncAddCbkToTid(UInt32 val);
 
 //**************************************************************************************
 /**
@@ -182,7 +186,7 @@ UInt32 RPC_SyncAddCbkToTid( UInt32 val);
 	@return Function pointer ( or any data ) that is part of tid
 
 **/
-UInt32 RPC_SyncGetCbkFromTid(UInt32 tid);
+	UInt32 RPC_SyncGetCbkFromTid(UInt32 tid);
 
 //**************************************************************************************
 /**
@@ -193,8 +197,7 @@ UInt32 RPC_SyncGetCbkFromTid(UInt32 tid);
 	@return None
 
 **/
-void RPC_SyncDeleteCbkFromTid(UInt32 tid);
-
+	void RPC_SyncDeleteCbkFromTid(UInt32 tid);
 
 //**************************************************************************************
 /**
@@ -205,30 +208,28 @@ void RPC_SyncDeleteCbkFromTid(UInt32 tid);
 	Note: response buffer for a given rpc call must be released before another rpc
 		  call is made from the same task
 **/
-void RPC_SyncLockResponseBuffer(void);
+	void RPC_SyncLockResponseBuffer(void);
 
 //**************************************************************************************
 /**
 	Release the response buffer associated with the current task.
 **/
-void RPC_SyncReleaseResponseBuffer(void);
+	void RPC_SyncReleaseResponseBuffer(void);
 /** @} */
 
 /** \cond  */
 
-
 // retrieve "main" client id
-UInt8 RPC_SyncGetClientId(void);
+	UInt8 RPC_SyncGetClientId(void);
 
 //Obsolete
-UInt32 RPC_SyncSetTID(UInt32 tid, void* data, Int32 size );
+	UInt32 RPC_SyncSetTID(UInt32 tid, void *data, Int32 size);
 
-void RPC_SyncDeregisterClient( UInt8 inClientId );
+	void RPC_SyncDeregisterClient(UInt8 inClientId);
 
 /** \endcond   */
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif

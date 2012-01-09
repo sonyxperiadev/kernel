@@ -8,7 +8,6 @@
 	under the terms of the GNU General Public License version 2, available
 	at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 
-
    Notwithstanding the above, under no circumstances may you combine this
    software in any way with any other Broadcom software provided under a license
    other than the GPL, without Broadcom's express prior written consent.
@@ -44,9 +43,9 @@ extern "C" {
 // References to Shared Memory data is via offsets from SmBase.
 // The following macros assist this
 
-extern char * SmBase;
+	extern char *SmBase;
 
-typedef IPC_U32 IPC_SmPtr; // "Pointer" in Shared Memory
+	typedef IPC_U32 IPC_SmPtr;	// "Pointer" in Shared Memory
 
 // Convert a C pointer into a Shared Memory offset
 #define IPC_SmOffset(Object)	((IPC_SmPtr)((char *) Object - SmBase))
@@ -85,16 +84,15 @@ typedef IPC_U32 IPC_SmPtr; // "Pointer" in Shared Memory
 
 //**************************************************
 // FIFOs
-typedef volatile struct IPC_Fifo_S
-{
-	volatile IPC_U32	ReadIndex;
-	volatile IPC_U32	WriteIndex;
-	volatile IPC_U32	WriteCount;
-	volatile IPC_U32	HighWaterMark;
-	volatile IPC_Buffer	Buffer [IPC_SM_MAX_BUFFERS];
-} IPC_Fifo_T;
+	typedef volatile struct IPC_Fifo_S {
+		volatile IPC_U32 ReadIndex;
+		volatile IPC_U32 WriteIndex;
+		volatile IPC_U32 WriteCount;
+		volatile IPC_U32 HighWaterMark;
+		volatile IPC_Buffer Buffer[IPC_SM_MAX_BUFFERS];
+	} IPC_Fifo_T;
 
-typedef IPC_Fifo_T *	IPC_Fifo;
+	typedef IPC_Fifo_T *IPC_Fifo;
 
 #define IPC_FIFOINCREMENT(Index)	((Index + 1) &(~IPC_SM_MAX_BUFFERS))
 
@@ -102,60 +100,57 @@ typedef IPC_Fifo_T *	IPC_Fifo;
 	((Fifo->WriteIndex - Fifo->ReadIndex + IPC_SM_MAX_BUFFERS) & ~IPC_SM_MAX_BUFFERS)
 
 //**************************************************
-typedef struct IPC_SmFifoPair_S
-{
-	IPC_Fifo_T	SendFifo;
-	IPC_Fifo_T	FreeFifo;
-} IPC_SmFifoPair_T;
+	typedef struct IPC_SmFifoPair_S {
+		IPC_Fifo_T SendFifo;
+		IPC_Fifo_T FreeFifo;
+	} IPC_SmFifoPair_T;
 
 //**************************************************
 // Structure containing control information for Shared Memory
-typedef volatile struct IPC_SmControl_S
-{
-	//The PS element must be the first item in this structure
-	volatile IPC_PowerSavingInfo_T	PS;
-	volatile IPC_U32				Initialised		[IPC_CPU_ARRAY_SIZE];
+	typedef volatile struct IPC_SmControl_S {
+		//The PS element must be the first item in this structure
+		volatile IPC_PowerSavingInfo_T PS;
+		volatile IPC_U32 Initialised[IPC_CPU_ARRAY_SIZE];
 #ifdef FUSE_IPC_CRASH_SUPPORT
-	volatile IPC_CrashCode_T		CrashCode;
-	volatile void   				*CrashDump;
-#endif //FUSE_IPC_CRASH_SUPPORT
-	volatile IPC_U32				Allocated		[IPC_CPU_ARRAY_SIZE];
-	volatile IPC_U32				CurrentBuffers	[IPC_CPU_ARRAY_SIZE];
-	volatile IPC_SmFifoPair_T		Fifos			[IPC_CPU_ARRAY_SIZE];
-	volatile IPC_EP_T				Endpoints		[IPC_EndpointId_Count];
-	volatile IPC_SmPtr				FirstPool;
-	volatile IPC_SmPtr				LastPool;
-	volatile IPC_U32				PersistentData	[IPC_PERSISTENT_DATA_SIZE];
-	volatile IPC_U32				Properties		[IPC_NUM_OF_PROPERTIES];
-	volatile IPC_U32				Size;
-} IPC_SmControl_T;
+		volatile IPC_CrashCode_T CrashCode;
+		volatile void *CrashDump;
+#endif				//FUSE_IPC_CRASH_SUPPORT
+		volatile IPC_U32 Allocated[IPC_CPU_ARRAY_SIZE];
+		volatile IPC_U32 CurrentBuffers[IPC_CPU_ARRAY_SIZE];
+		volatile IPC_SmFifoPair_T Fifos[IPC_CPU_ARRAY_SIZE];
+		volatile IPC_EP_T Endpoints[IPC_EndpointId_Count];
+		volatile IPC_SmPtr FirstPool;
+		volatile IPC_SmPtr LastPool;
+		volatile IPC_U32 PersistentData[IPC_PERSISTENT_DATA_SIZE];
+		volatile IPC_U32 Properties[IPC_NUM_OF_PROPERTIES];
+		volatile IPC_U32 Size;
+	} IPC_SmControl_T;
 
-typedef IPC_SmControl_T * IPC_SmControl;
+	typedef IPC_SmControl_T *IPC_SmControl;
 
 //**************************************************
 // Control structure in local memory - CPU specific data
 
-typedef struct IPC_SmLocalControl_S
-{
-	IPC_CPU_ID_T				CpuId;
-	IPC_SmControl 				SmControl;
-	IPC_RaiseInterruptFPtr_T	RaiseInterrupt;
-	IPC_EnableReEntrancyFPtr_T	EnableReentrancy;
-	IPC_DisableReEntrancyFPtr_T	DisableReentrancy;
-	IPC_PhyAddrToOSAddrFPtr_T	PhyToOSAddress;
-	IPC_OSAddrToPhyAddrFPtr_T	OsToPhyAddress;
-	IPC_EventFunctions_T		Event;
-	IPCConfiguredFPtr_T			IPCInitialisedFunction;
-	IPCResetFPtr_T				IPCReset;
+	typedef struct IPC_SmLocalControl_S {
+		IPC_CPU_ID_T CpuId;
+		IPC_SmControl SmControl;
+		IPC_RaiseInterruptFPtr_T RaiseInterrupt;
+		IPC_EnableReEntrancyFPtr_T EnableReentrancy;
+		IPC_DisableReEntrancyFPtr_T DisableReentrancy;
+		IPC_PhyAddrToOSAddrFPtr_T PhyToOSAddress;
+		IPC_OSAddrToPhyAddrFPtr_T OsToPhyAddress;
+		IPC_EventFunctions_T Event;
+		IPCConfiguredFPtr_T IPCInitialisedFunction;
+		IPCResetFPtr_T IPCReset;
 #ifdef FUSE_IPC_CRASH_SUPPORT
-	IPCCPCrashCbFptr_T			IPCCPCrashed;
-#endif //FUSE_IPC_CRASH_SUPPORT
-	Boolean						ConfiguredReported;
-	IPC_Fifo					SendFifo;
-	IPC_Fifo					FreeFifo;
-} IPC_SmLocalControl_T;
+		IPCCPCrashCbFptr_T IPCCPCrashed;
+#endif				//FUSE_IPC_CRASH_SUPPORT
+		Boolean ConfiguredReported;
+		IPC_Fifo SendFifo;
+		IPC_Fifo FreeFifo;
+	} IPC_SmLocalControl_T;
 
-extern IPC_SmLocalControl_T SmLocalControl;
+	extern IPC_SmLocalControl_T SmLocalControl;
 
 //============================================================
 // Function call Defines
@@ -178,16 +173,12 @@ extern IPC_SmLocalControl_T SmLocalControl;
 
 //**************************************************
 // Basic initialisation of Shared Memory
-IPC_Boolean IPC_SmInitialise
-(
-	IPC_CPU_ID_T				Cpu,
-	IPC_RaiseInterruptFPtr_T	RaiseInterrupt
-);
-
+	IPC_Boolean IPC_SmInitialise
+	    (IPC_CPU_ID_T Cpu, IPC_RaiseInterruptFPtr_T RaiseInterrupt);
 
 //**************************************************
 // Returns the ID of the CPU on which the code is executing
-IPC_CPU_ID_T IPC_SmCurrentCpu (void);
+	IPC_CPU_ID_T IPC_SmCurrentCpu(void);
 
 #ifdef IPC_DEBUG
 
@@ -195,16 +186,15 @@ IPC_CPU_ID_T IPC_SmCurrentCpu (void);
 
 //**************************************************
 // Returns a pointer to the Endpoint structure for a given Endpoint ID
-IPC_Endpoint IPC_SmEndpointInfo (IPC_EndpointId_T EndpointId);
-
+	IPC_Endpoint IPC_SmEndpointInfo(IPC_EndpointId_T EndpointId);
 
 //**************************************************
 // Sends a Buffer free request to the other CPU
-void IPC_SmFreeBuffer (IPC_Buffer Buffer, IPC_CPU_ID_T OwningCpu);
+	void IPC_SmFreeBuffer(IPC_Buffer Buffer, IPC_CPU_ID_T OwningCpu);
 
 #else
 
-void IPC_SmFifoWrite (IPC_Fifo Fifo, IPC_Buffer Message);
+	void IPC_SmFifoWrite(IPC_Fifo Fifo, IPC_Buffer Message);
 
 #define IPC_SM_CURRENT_CPU SmLocalControl.CpuId
 
@@ -212,27 +202,21 @@ void IPC_SmFifoWrite (IPC_Fifo Fifo, IPC_Buffer Message);
 
 #define IPC_SmFreeBuffer(Buffer, OwningCpu) IPC_SmFifoWrite (&SmLocalControl.SmControl->Fifos [IPC_CPU_ID_INDEX (OwningCpu)].FreeFifo, Buffer);
 
-
 #endif
 
 //**************************************************
 // Allocates an area of shared memory
-IPC_SmPtr IPC_SmAlloc (IPC_U32 Size);
+	IPC_SmPtr IPC_SmAlloc(IPC_U32 Size);
 
 //**************************************************
 // Allocates Shared Memory for a Buffer Pool
-IPC_SmPtr	IPC_SmPoolAlloc
-(
-	IPC_U32 PoolOverhead,
-	IPC_U32 HeaderSize,
-	IPC_U32 DataSize,
-	IPC_U32 BufferCount
-);
+	IPC_SmPtr IPC_SmPoolAlloc
+	    (IPC_U32 PoolOverhead,
+	     IPC_U32 HeaderSize, IPC_U32 DataSize, IPC_U32 BufferCount);
 
 //**************************************************
 // Sends a Buffer to the other CPU
-void IPC_SmSendBuffer (IPC_Buffer Buffer);
-
+	void IPC_SmSendBuffer(IPC_Buffer Buffer);
 
 #ifdef  __cplusplus
 }

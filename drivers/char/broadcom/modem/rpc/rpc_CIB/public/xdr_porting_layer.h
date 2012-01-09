@@ -36,18 +36,18 @@ typedef unsigned short u_int16_t;
 typedef int int32_t;
 typedef unsigned int u_int32_t;
 
-typedef unsigned int	u_int;
+typedef unsigned int u_int;
 typedef int32_t bool_t;
 typedef int32_t enum_t;
 typedef unsigned long u_long;
 typedef unsigned short u_short;
 typedef unsigned char u_char;
-typedef char* caddr_t;
+typedef char *caddr_t;
 #endif
 
 #ifdef _LONG_LONG_
 typedef long double int64_t;
-typedef unsigned long double     u_int64_t;
+typedef unsigned long double u_int64_t;
 typedef long double longlong_t;
 typedef unsigned long double u_longlong_t;
 #endif
@@ -83,19 +83,19 @@ typedef unsigned long double u_longlong_t;
 #define __dontcare__	-1
 
 #ifndef UNDER_LINUX_MODEM
-#ifdef __BIG_ENDIAN                                                               
-#define lswap()								// Not needed on big-endian machines */
-#define      htonl(l) (l)                                                         
-#define      ntohl(l) (l)                                                         
-#define      htons(s) (s)                                                         
-#define      ntohs(s) (s)                                                         
-#else                                                                             
-extern unsigned long lswap(unsigned long l); /* swap bytes in 32 bit long */    
-#define      htonl(l) lswap(l)                                                    
-#define      ntohl(l) lswap(l)                                                    
-#define      htons(s) ((u_short)(((u_short)(s) >> 8) | ((u_short)(s) << 8)))      
-#define      ntohs(s) htons(s)                                                    
-#endif                               
+#ifdef __BIG_ENDIAN
+#define lswap()			// Not needed on big-endian machines */
+#define      htonl(l) (l)
+#define      ntohl(l) (l)
+#define      htons(s) (s)
+#define      ntohs(s) (s)
+#else
+extern unsigned long lswap(unsigned long l);	/* swap bytes in 32 bit long */
+#define      htonl(l) lswap(l)
+#define      ntohl(l) lswap(l)
+#define      htons(s) ((u_short)(((u_short)(s) >> 8) | ((u_short)(s) << 8)))
+#define      ntohs(s) htons(s)
+#endif
 #endif
 
 #if defined(UNDER_CE) || defined(WIN32)
@@ -120,17 +120,16 @@ extern unsigned long lswap(unsigned long l); /* swap bytes in 32 bit long */
 #endif
 
 #if defined(UNDER_LINUX) || defined(LINUX_RPC_KERNEL)
-	#ifndef NULL
-	#define NULL 0
-	#endif
+#ifndef NULL
+#define NULL 0
 #endif
-
+#endif
 
 #ifdef WIN32
-#include <malloc.h> /* for malloc/free */
-#include <memory.h> /* for memmove */
+#include <malloc.h>		/* for malloc/free */
+#include <memory.h>		/* for memmove */
 #endif
 #ifndef LINUX_RPC_KERNEL
-#include <string.h> /* for strlen */
+#include <string.h>		/* for strlen */
 #endif
 #endif /*  __XDR_PORTING_LAYER_H__ */

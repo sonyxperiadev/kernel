@@ -20,14 +20,11 @@
 #ifndef SYS_COMMON_RPC_H
 #define SYS_COMMON_RPC_H
 
-
-
-#define _DBG_(a) a	//by default logs are enabled
+#define _DBG_(a) a		//by default logs are enabled
 
 #if defined(UNDER_CE) || defined(WIN32)
 #define snprintf _snprintf
 #endif
-
 
 #ifdef WIN32
 //Windows
@@ -37,35 +34,30 @@ extern UInt32 g_dwLogLEVEL;
 #else
 //Target
 extern int Log_DebugPrintf(UInt16 logID, char *fmt, ...);
-extern void	Log_DebugOutputString(UInt16 logID, char* dbgString);
+extern void Log_DebugOutputString(UInt16 logID, char *dbgString);
 extern Boolean Log_IsLoggingEnable(UInt16 logID);
 
 #define SYS_TRACE(...) Log_DebugPrintf(LOGID_MISC, __VA_ARGS__)
 
 #endif
 
-void SYS_GenGetPayloadInfo(void* dataBuf, MsgType_t msgType, void** ppBuf, UInt32* len);
-
-
-
+void SYS_GenGetPayloadInfo(void *dataBuf, MsgType_t msgType, void **ppBuf,
+			   UInt32 * len);
 
 UInt8 SYS_GetClientId(void);
-void sysGetXdrStruct(RPC_XdrInfo_t** ptr, UInt16* size);
+void sysGetXdrStruct(RPC_XdrInfo_t ** ptr, UInt16 * size);
 
-typedef enum 
-{
-    SIMLDO1,
-    SIMLDO2
+typedef enum {
+	SIMLDO1,
+	SIMLDO2
 } PMU_SIMLDO_t;
 
 typedef enum {
-      PMU_SIM3P0Volt = 0,
-      PMU_SIM1P8Volt,
-      PMU_SIM0P0Volt
+	PMU_SIM3P0Volt = 0,
+	PMU_SIM1P8Volt,
+	PMU_SIM0P0Volt
 } PMU_SIMVolt_t;
 
 //***************** < 1 > **********************
-
-
 
 #endif

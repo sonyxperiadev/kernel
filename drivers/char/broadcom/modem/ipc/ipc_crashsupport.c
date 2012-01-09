@@ -43,7 +43,6 @@
 #define   RECOVERY_ACTION_SYSRESET_USERCONFIRM      2
 #define   RECOVERY_ACTION_TBD                       3
 
-
 /* following structs must match definition for CP from dump.h
  * **FIXME** MAG - add dump.h to headers imported from CP when doing
  * header cleanup...
@@ -53,7 +52,7 @@ struct T_RAMDUMP_BLOCK {
 	unsigned int mem_size;
 	/* 0xFFFFFFFF means stand-alone ramdump block */
 	unsigned int buffer_in_main;
-	char name[8]; /* one of names must be "MAIN" */
+	char name[8];		/* one of names must be "MAIN" */
 };
 
 struct T_CRASH_SUMMARY {
@@ -74,7 +73,6 @@ struct T_CRASH_SUMMARY {
 	char *func_trace;
 	struct T_RAMDUMP_BLOCK *mem_dump;
 };
-
 
 /* also from dump.h*/
 
@@ -136,8 +134,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	void __iomem *DumpVAddr;
 
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP
-	while (SmLocalControl.SmControl->CrashDump == NULL)
-		;
+	while (SmLocalControl.SmControl->CrashDump == NULL) ;
 #endif
 
 	/* **NOTE** for now, continue doing simple dump out IPC_DEBUG so there
@@ -147,7 +144,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 
 	IPC_DEBUG(DBG_ERROR, "ioremap_nocache\n");
 	DumpVAddr = ioremap_nocache((UInt32) Dump,
-		sizeof(struct T_CRASH_SUMMARY));
+				    sizeof(struct T_CRASH_SUMMARY));
 	if (NULL == DumpVAddr) {
 		IPC_DEBUG(DBG_ERROR, "VirtualAlloc failed\n");
 		goto cleanUp;
@@ -156,7 +153,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	IPC_DEBUG(DBG_ERROR, "Crash Summary Virtual Addr: 0x%08X\n",
 		  (unsigned int)DumpVAddr);
 
-	dumped_crash_summary_ptr = (struct T_CRASH_SUMMARY *) DumpVAddr;
+	dumped_crash_summary_ptr = (struct T_CRASH_SUMMARY *)DumpVAddr;
 
 	IPC_DEBUG(DBG_ERROR, "===== COMMS_PROCESSOR crash summary =====\r\n");
 
@@ -210,7 +207,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	 * log from CP and dump out to MTT */
 	DUMP_CP_assert_log();
 
-cleanUp:
+      cleanUp:
 
 	if (NULL != DumpVAddr)
 		iounmap(DumpVAddr);
@@ -292,18 +289,16 @@ void DUMP_CP_assert_log(void)
 		SmLocalControl.SmControl->CrashCode = IPC_AP_CLEAR_TO_SEND;
 
 		/* wait for CP to "dump"; CrashCode field will be
-		* set to physical address of current assert buf */
+		 * set to physical address of current assert buf */
 		while (SmLocalControl.SmControl->CrashCode ==
 		       IPC_AP_CLEAR_TO_SEND) {
-			for (i = 0; i < 256; i++)
-				;
+			for (i = 0; i < 256; i++) ;
 			if (TIMER_GetValue() - t1 > TICKS_ONE_SECOND * 20)
 				break;
 		}
 
 		/* check for time out */
-		if (SmLocalControl.SmControl->CrashCode
-				== IPC_AP_CLEAR_TO_SEND) {
+		if (SmLocalControl.SmControl->CrashCode == IPC_AP_CLEAR_TO_SEND) {
 			if (retryCount < MAX_CP_DUMP_RETRIES) {
 				retryCount++;
 				IPC_DEBUG(DBG_TRACE,
@@ -322,10 +317,9 @@ void DUMP_CP_assert_log(void)
 		retryCount = 0;
 
 		/* get virtual address of CP assert buffer */
-		AssertLogVAddr =
-		    ioremap_nocache((UInt32)
-				    (SmLocalControl.SmControl->CrashCode),
-				    ASSERT_BUF_SIZE);
+		AssertLogVAddr = ioremap_nocache((UInt32)
+						 (SmLocalControl.SmControl->
+						  CrashCode), ASSERT_BUF_SIZE);
 		if (NULL == AssertLogVAddr) {
 			IPC_DEBUG(DBG_ERROR,
 				  "ioremap_nocache failed in DUMP_CP_assert_log\n");
@@ -410,13 +404,14 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 
 	RamDumpBlockVAddr =
 	    ioremap_nocache((UInt32) (mem_dump),
-		(MAX_RAMDUMP_BLOCKS * sizeof(struct T_RAMDUMP_BLOCK)));
+			    (MAX_RAMDUMP_BLOCKS *
+			     sizeof(struct T_RAMDUMP_BLOCK)));
 	if (NULL == RamDumpBlockVAddr) {
 		IPC_DEBUG(DBG_ERROR, "failed to remap RAM dump block addr\n");
 		return;
 	}
 
-	pBlockVAddr = (struct T_RAMDUMP_BLOCK *) RamDumpBlockVAddr;
+	pBlockVAddr = (struct T_RAMDUMP_BLOCK *)RamDumpBlockVAddr;
 
 	BCMLOG_LogCPCrashDumpString("===== COMMS PROCESSOR memory dump =====");
 
@@ -430,10 +425,9 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 			    (pBlockVAddr[i].name[6] << 8) +
 			    pBlockVAddr[i].name[7];
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
-			"FLASH DUMP: %8s, start=0x%08x, size=0x%08x, image_start=0x%08x, offset_in_image=0x%08x",
-			 pBlockVAddr[i].name, pBlockVAddr[i].mem_start,
-			 pBlockVAddr[i].mem_size, 0,
-			(int)offset);
+				 "FLASH DUMP: %8s, start=0x%08x, size=0x%08x, image_start=0x%08x, offset_in_image=0x%08x",
+				 pBlockVAddr[i].name, pBlockVAddr[i].mem_start,
+				 pBlockVAddr[i].mem_size, 0, (int)offset);
 		} else if (pBlockVAddr[i].mem_start == SIM_AP_DEBUG_DATA) {
 			offset =
 			    (pBlockVAddr[i].name[4] << 24) +
@@ -441,10 +435,9 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 			    (pBlockVAddr[i].name[6] << 8) +
 			    pBlockVAddr[i].name[7];
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
-			"FLASH DUMP: %8s, start=0x%08x, size=0x%08x, image_start=0x%08x, offset_in_image=0x%08x",
-			 pBlockVAddr[i].name, pBlockVAddr[i].mem_start,
-			 pBlockVAddr[i].mem_size, 0,
-			(int)offset);
+				 "FLASH DUMP: %8s, start=0x%08x, size=0x%08x, image_start=0x%08x, offset_in_image=0x%08x",
+				 pBlockVAddr[i].name, pBlockVAddr[i].mem_start,
+				 pBlockVAddr[i].mem_size, 0, (int)offset);
 		} else {
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
 				 "RAM   DUMP: %8s, start=0x%08x, size=0x%08x, buffer_in_main=0x%08x",
@@ -473,7 +466,7 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 			BCMLOG_LogCPCrashDumpString(assert_buf);
 			/* **FIXME** MAG - flash dump not supported yet... */
 			/* DUMP_CompressedFlash(cpu, pBlockVAddr[i].mem_start,
-			pBlockVAddr[i].mem_size, MSP_IMAGE_ADDR, offset); */
+			   pBlockVAddr[i].mem_size, MSP_IMAGE_ADDR, offset); */
 			BCMLOG_LogCPCrashDumpString
 			    ("*** FLASH DUMP NOT SUPPORTED YET ***");
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
@@ -497,7 +490,7 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 			BCMLOG_LogCPCrashDumpString
 			    ("*** FLASH DUMP NOT SUPPORTED YET ***");
 			/* DUMP_CompressedFlash(cpu, pBlockVAddr[i].mem_start,
-			pBlockVAddr[i].mem_size, AP_IMAGE_ADDR, offset); */
+			   pBlockVAddr[i].mem_size, AP_IMAGE_ADDR, offset); */
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
 				 "FLASH DUMP End: 0x%08x, 0x%08x",
 				 pBlockVAddr[i].mem_start,
@@ -512,7 +505,7 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 			BCMLOG_LogCPCrashDumpString(assert_buf);
 
 			/* BCMLOG_HandleCpCrashMemDumpData takes
-				physical address...*/
+			   physical address... */
 			BCMLOG_HandleCpCrashMemDumpData((const char *)
 							pBlockVAddr[i].
 							mem_start,

@@ -32,7 +32,6 @@
 #include "xdr.h"
 #include "rpc_api.h"
 
-
 #define BCMPMU_PRINT_ERROR (1U << 0)
 #define BCMPMU_PRINT_INIT (1U << 1)
 #define BCMPMU_PRINT_FLOW (1U << 2)
@@ -55,15 +54,14 @@ struct bcmpmu_rpc {
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 static ssize_t
-dbgmsk_show(struct device *dev, struct device_attribute *attr,
-				char *buf)
+dbgmsk_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "debug_mask is %x\n", debug_mask);
 }
 
 static ssize_t
 dbgmsk_set(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
+	   const char *buf, size_t count)
 {
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	if (val > 0xFF || val == 0)
@@ -73,8 +71,7 @@ dbgmsk_set(struct device *dev, struct device_attribute *attr,
 }
 
 static ssize_t
-rate_show(struct device *dev, struct device_attribute *attr,
-				char *buf)
+rate_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	struct bcmpmu_rpc *prpc = bcmpmu->rpcinfo;
@@ -83,7 +80,7 @@ rate_show(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 rate_set(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
+	 const char *buf, size_t count)
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	struct bcmpmu_rpc *prpc = bcmpmu->rpcinfo;
@@ -110,7 +107,7 @@ static const struct attribute_group bcmpmu_rpc_attr_group = {
 static void rpc_work(struct work_struct *work)
 {
 	struct bcmpmu_rpc *prpc =
-		container_of(work, struct bcmpmu_rpc, work.work);
+	    container_of(work, struct bcmpmu_rpc, work.work);
 	struct bcmpmu *bcmpmu = prpc->bcmpmu;
 	struct bcmpmu_adc_req req;
 	unsigned int volt = 0;
@@ -136,11 +133,11 @@ static void rpc_work(struct work_struct *work)
 		pr_rpc(ERROR, "%s, bcmpmu adc driver not ready\n", __func__);
 
 	result = ((volt & 0x3FF) << 20) |
-		((t_pa & 0x3FF) << 10) |
-		(t_32k & 0x3FF);
+	    ((t_pa & 0x3FF) << 10) | (t_32k & 0x3FF);
 	RPC_SetProperty(RPC_PROP_ADC_MEASUREMENT, result);
-	pr_rpc(DATA, "%s, ADC readings result = 0x%X, volt=0x%X, t_pa=0x%X, t_32k=0x%X\n",
-		__func__, result, volt, t_pa, t_32k);
+	pr_rpc(DATA,
+	       "%s, ADC readings result = 0x%X, volt=0x%X, t_pa=0x%X, t_32k=0x%X\n",
+	       __func__, result, volt, t_pa, t_32k);
 
 	schedule_delayed_work(&prpc->work, msecs_to_jiffies(prpc->rate * 1000));
 	prpc->time = get_seconds();
@@ -153,7 +150,7 @@ static int bcmpmu_rpc_resume(struct platform_device *pdev)
 	unsigned long time;
 	time = get_seconds();
 
-	if ((time - prpc->time)> prpc->rate) {
+	if ((time - prpc->time) > prpc->rate) {
 		cancel_delayed_work_sync(&prpc->work);
 		schedule_delayed_work(&prpc->work, 0);
 	}
@@ -182,9 +179,9 @@ static int __devinit bcmpmu_rpc_probe(struct platform_device *pdev)
 		prpc->rate = pdata->rpc_rate;
 	else
 		/* This value in sec shall be defined in pmu board file
-		as part of platform data, we keep a default value here
-		to ensure ADC data available to CP for the new platforms
-		where the data not yet finalized */
+		   as part of platform data, we keep a default value here
+		   to ensure ADC data available to CP for the new platforms
+		   where the data not yet finalized */
 		prpc->rate = 10;
 
 	INIT_DELAYED_WORK(&prpc->work, rpc_work);
@@ -195,7 +192,7 @@ static int __devinit bcmpmu_rpc_probe(struct platform_device *pdev)
 	schedule_delayed_work(&prpc->work, msecs_to_jiffies(prpc->rate * 1000));
 	return 0;
 
-err:
+      err:
 	return ret;
 }
 
@@ -215,8 +212,8 @@ static int __devexit bcmpmu_rpc_remove(struct platform_device *pdev)
 
 static struct platform_driver bcmpmu_rpc_driver = {
 	.driver = {
-		.name = "bcmpmu_rpc",
-	},
+		   .name = "bcmpmu_rpc",
+		   },
 	.probe = bcmpmu_rpc_probe,
 	.remove = __devexit_p(bcmpmu_rpc_remove),
 	.resume = bcmpmu_rpc_resume,
@@ -226,12 +223,14 @@ static int __init bcmpmu_rpc_init(void)
 {
 	return platform_driver_register(&bcmpmu_rpc_driver);
 }
+
 module_init(bcmpmu_rpc_init);
 
 static void __exit bcmpmu_rpc_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_rpc_driver);
 }
+
 module_exit(bcmpmu_rpc_exit);
 
 MODULE_DESCRIPTION("BCM PMIC rpc driver");

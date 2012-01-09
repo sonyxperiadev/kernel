@@ -111,7 +111,7 @@ static void *EventCreate(void)
 
 static IPC_ReturnCode_T EventSet(void *Event)
 {
-	struct IPC_Evt_t *ipcEvt = (struct IPC_Evt_t *) Event;
+	struct IPC_Evt_t *ipcEvt = (struct IPC_Evt_t *)Event;
 
 	/* **FIXME** need to protect access to this? */
 	ipcEvt->evt = 1;
@@ -122,7 +122,7 @@ static IPC_ReturnCode_T EventSet(void *Event)
 static IPC_ReturnCode_T EventClear(void *Event)
 {
 
-	struct IPC_Evt_t *ipcEvt = (struct IPC_Evt_t *) Event;
+	struct IPC_Evt_t *ipcEvt = (struct IPC_Evt_t *)Event;
 
 	/* **FIXME** need to protect access to this? */
 	ipcEvt->evt = 0;
@@ -132,7 +132,7 @@ static IPC_ReturnCode_T EventClear(void *Event)
 
 static IPC_ReturnCode_T EventWait(void *Event, IPC_U32 MilliSeconds)
 {
-	struct IPC_Evt_t *ipcEvt = (struct IPC_Evt_t *) Event;
+	struct IPC_Evt_t *ipcEvt = (struct IPC_Evt_t *)Event;
 
 	if (MilliSeconds == IPC_WAIT_FOREVER)
 		wait_event((ipcEvt->evt_wait), (ipcEvt->evt == 1));
@@ -158,8 +158,8 @@ static int ipcs_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-ssize_t ipcs_read(struct file *filep, char __user *buf, size_t size,
-		  loff_t *off)
+ssize_t ipcs_read(struct file * filep, char __user * buf, size_t size,
+		  loff_t * off)
 {
 	ssize_t rc = 0;
 
@@ -168,8 +168,8 @@ ssize_t ipcs_read(struct file *filep, char __user *buf, size_t size,
 	return rc;
 }
 
-ssize_t ipcs_write(struct file *filep, const char __user *buf, size_t size,
-		   loff_t *off)
+ssize_t ipcs_write(struct file * filep, const char __user * buf, size_t size,
+		   loff_t * off)
 {
 	return -EPERM;
 }
@@ -257,8 +257,8 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 #endif /* 0 */
 		case BCMLOG_OUTDEV_RNDIS:
 		case BCMLOG_OUTDEV_ACM:
-	/* Using RNDIS causes work queue event/0 lock
-		up so it needs its own thread */
+			/* Using RNDIS causes work queue event/0 lock
+			   up so it needs its own thread */
 			g_ipc_info.crash_dump_workqueue =
 			    create_singlethread_workqueue("dump-wq");
 			if (!g_ipc_info.crash_dump_workqueue) {
@@ -302,15 +302,15 @@ static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 
 	{
 		/* on Rhea/BI, we need to "manually" clear
-			the CP->AP softint here */
+		   the CP->AP softint here */
 		void __iomem *base = (void __iomem *)(KONA_BINTC_BASE_ADDR);
 		int birq = IRQ_TO_BMIRQ(IRQ_IPC_C2A_BINTC);	/* 55; */
 		if (birq >= 32)
 			writel(1 << (birq - 32),
-			       base + BINTC_ISWIR1_CLR_OFFSET /*0x34 */);
+			       base + BINTC_ISWIR1_CLR_OFFSET /*0x34 */ );
 		else
 			writel(1 << (birq),
-			       base + BINTC_ISWIR0_CLR_OFFSET /*0x24 */);
+			       base + BINTC_ISWIR0_CLR_OFFSET /*0x24 */ );
 	}
 
 	return IRQ_HANDLED;
@@ -454,7 +454,7 @@ static int CP_Boot(void)
 			  r4init);
 
 		/* Set the CP jump to address.
-			CP must jump to DTCM offset 0x400 */
+		   CP must jump to DTCM offset 0x400 */
 		cp_boot_itcm = ioremap(MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
 		if (!cp_boot_itcm) {
 			IPC_DEBUG(DBG_ERROR,
@@ -614,11 +614,11 @@ static int __init ipcs_module_init(void)
 
 	return 0;
 
-out_del:
+      out_del:
 	cdev_del(&g_ipc_info.cdev);
-out_unregister:
+      out_unregister:
 	unregister_chrdev_region(g_ipc_info.devnum, 1);
-out:
+      out:
 	IPC_DEBUG(DBG_ERROR, "IPC Driver Failed to initialise!\n");
 	return rc;
 }

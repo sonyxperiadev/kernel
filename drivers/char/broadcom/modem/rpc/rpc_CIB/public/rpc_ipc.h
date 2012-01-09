@@ -51,55 +51,47 @@
 	\endmsc
 ****************************************************************************/
 
-
 /**
  * @addtogroup RPC_IPCApi
  * @{
 */
 
-
 //********************************************************************
 //!
 //!
 
-
-
 #ifndef __RPC_IPC
 #define __RPC_IPC
-
 
 /**
 	RPC Packet Buffer Handle
 **/
-typedef void* PACKET_BufHandle_t;
+typedef void *PACKET_BufHandle_t;
 
 /**
 	RPC Interface Types
 **/
-typedef enum
-{
-	INTERFACE_RPC_TELEPHONY = 0,		///< Telephony related 
-	INTERFACE_RPC_DEFAULT = INTERFACE_RPC_TELEPHONY,		///<  Default interface 
-	INTERFACE_RPC_PMU,				///<  PMU related
-	INTERFACE_RPC_AUDIO,				///<  Audio related
-	INTERFACE_RPC_TOTAL,			///<  Number of rpc interface
-}RPC_InterfaceType_t;
-
+typedef enum {
+	INTERFACE_RPC_TELEPHONY = 0,	///< Telephony related 
+	INTERFACE_RPC_DEFAULT = INTERFACE_RPC_TELEPHONY,	///<  Default interface 
+	INTERFACE_RPC_PMU,	///<  PMU related
+	INTERFACE_RPC_AUDIO,	///<  Audio related
+	INTERFACE_RPC_TOTAL,	///<  Number of rpc interface
+} RPC_InterfaceType_t;
 
 /**
 	Packet Interface Types
 **/
-typedef enum
-{
+typedef enum {
 	INTERFACE_START = 0,
-	INTERFACE_CAPI2 = INTERFACE_START,		///< for internal use
-	INTERFACE_PACKET = INTERFACE_RPC_TOTAL,			///< for packet data
-	INTERFACE_CSD,				///< for csd data
-	INTERFACE_LOGGING,			///< for logging
-	INTERFACE_USB_EEM,				///< for usb EEM interface
-	INTERFACE_SERIAL,				///< for serial interface
-	INTERFACE_TOTAL				///< total interfaces
-}PACKET_InterfaceType_t;
+	INTERFACE_CAPI2 = INTERFACE_START,	///< for internal use
+	INTERFACE_PACKET = INTERFACE_RPC_TOTAL,	///< for packet data
+	INTERFACE_CSD,		///< for csd data
+	INTERFACE_LOGGING,	///< for logging
+	INTERFACE_USB_EEM,	///< for usb EEM interface
+	INTERFACE_SERIAL,	///< for serial interface
+	INTERFACE_TOTAL		///< total interfaces
+} PACKET_InterfaceType_t;
 
 /**
 	Use this macro to wait forever on IPC buffer allocation
@@ -116,46 +108,41 @@ typedef enum
 /**
 RPC Flow Control Events
 **/
-typedef enum
-{
-	RPC_FLOW_START,	///< flow control resume
+typedef enum {
+	RPC_FLOW_START,		///< flow control resume
 	RPC_FLOW_STOP		///< flow control stop
 } RPC_FlowCtrlEvent_t;
-
 
 /**
 RPC Error codes
 **/
-typedef enum
-{
+typedef enum {
 	RPC_RESULT_OK,
 	RPC_RESULT_ERROR,
 	RPC_RESULT_PENDING
-}RPC_Result_t;
+} RPC_Result_t;
 
 /**
 	RPC property types
 **/
-typedef enum
-{
-	RPC_PROP_START_AP = IPC_PROPERTY_START_AP,			///< ( AP is Read/Write, CP is Read only )
- 	RPC_PROP_BACKLIGHT_LEVEL,		///< 0 is off, 1 is low, 2 is high
- 	RPC_PROP_CHARGER_PRESENT,		///< 1 is present, 0 is not present
- 	RPC_PROP_AP_IN_DEEPSLEEP,		///< 1 is deepsleep, 0 otherwise
-	RPC_PROP_ADC_MEASUREMENT,		///< 32bit measurement value
-	RPC_PROP_AP_TASKMSGS_READY,		///< 
-	RPC_PROP_AP_VERSION,		///< 
+typedef enum {
+	RPC_PROP_START_AP = IPC_PROPERTY_START_AP,	///< ( AP is Read/Write, CP is Read only )
+	RPC_PROP_BACKLIGHT_LEVEL,	///< 0 is off, 1 is low, 2 is high
+	RPC_PROP_CHARGER_PRESENT,	///< 1 is present, 0 is not present
+	RPC_PROP_AP_IN_DEEPSLEEP,	///< 1 is deepsleep, 0 otherwise
+	RPC_PROP_ADC_MEASUREMENT,	///< 32bit measurement value
+	RPC_PROP_AP_TASKMSGS_READY,	///< 
+	RPC_PROP_AP_VERSION,	///< 
 	RPC_PROP_END_AP = IPC_PROPERTY_END_AP,
 
-	RPC_PROP_START_CP = IPC_PROPERTY_START_CP,			///< ( CP is Read/Write, AP is Read only )
- 	RPC_PROP_CP_IN_DEEPSLEEP,		///< 1 is deepsleep, 0 otherwise
-	RPC_PROP_CP_TASKMSGS_READY,		///< 
-	RPC_PROP_CP_VERSION,		///< 
+	RPC_PROP_START_CP = IPC_PROPERTY_START_CP,	///< ( CP is Read/Write, AP is Read only )
+	RPC_PROP_CP_IN_DEEPSLEEP,	///< 1 is deepsleep, 0 otherwise
+	RPC_PROP_CP_TASKMSGS_READY,	///< 
+	RPC_PROP_CP_VERSION,	///< 
 	RPC_PROP_END_CP = IPC_PROPERTY_END_CP,
 
 	RPC_MAX_PROP_TYPE = IPC_NUM_OF_PROPERTIES,
 } RPC_PropType_t;
-
 
 //***************************************************************************************
 /**
@@ -168,7 +155,8 @@ typedef enum
 		RPC_PACKET_RegisterDataInd for Packet Data.
 
 **/
-typedef void (RPC_FlowControlCallbackFunc_t) (RPC_FlowCtrlEvent_t event, UInt8 channel);
+typedef void (RPC_FlowControlCallbackFunc_t) (RPC_FlowCtrlEvent_t event,
+					      UInt8 channel);
 
 //***************************************************************************************
 /**
@@ -190,8 +178,11 @@ typedef void (RPC_FlowControlCallbackFunc_t) (RPC_FlowCtrlEvent_t event, UInt8 c
 		The data buffer is already mapped to calling thread process space ( virtual / kernal address space )
 
 **/
-typedef RPC_Result_t (RPC_PACKET_DataIndCallBackFunc_t) (PACKET_InterfaceType_t interfaceType, UInt8 channel, PACKET_BufHandle_t dataBufHandle);
-
+typedef RPC_Result_t(RPC_PACKET_DataIndCallBackFunc_t) (PACKET_InterfaceType_t
+							interfaceType,
+							UInt8 channel,
+							PACKET_BufHandle_t
+							dataBufHandle);
 
 //***************************************************************************************
 /**
@@ -205,11 +196,12 @@ typedef RPC_Result_t (RPC_PACKET_DataIndCallBackFunc_t) (PACKET_InterfaceType_t 
 		The RPC currently supports parallem primary PDP data connections. The cid is used
 		to distinguish between different Primary PDP context sessions.
 **/
-RPC_Result_t RPC_PACKET_RegisterDataInd (UInt8 rpcClientID,
-									PACKET_InterfaceType_t interfaceType,
-									RPC_PACKET_DataIndCallBackFunc_t dataIndFunc,
-									RPC_FlowControlCallbackFunc_t	flowControlCb);
-
+RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
+					PACKET_InterfaceType_t interfaceType,
+					RPC_PACKET_DataIndCallBackFunc_t
+					dataIndFunc,
+					RPC_FlowControlCallbackFunc_t
+					flowControlCb);
 
 //***************************************************************************************
 /**
@@ -221,8 +213,10 @@ RPC_Result_t RPC_PACKET_RegisterDataInd (UInt8 rpcClientID,
 	@return		RPC_RESULT_OK if the packet is copied to FIFO, RPC_RESULT_ERROR if FIFO is full
 	@note
 **/
-RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID, PACKET_InterfaceType_t interfaceType, UInt8 channel, PACKET_BufHandle_t dataBufHandle);
-
+RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID,
+				 PACKET_InterfaceType_t interfaceType,
+				 UInt8 channel,
+				 PACKET_BufHandle_t dataBufHandle);
 
 //***************************************************************************************
 /**
@@ -235,7 +229,9 @@ RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID, PACKET_InterfaceType_t inter
 	@note
 				Client need to call RPC_PACKET_GetBufferData to get the actual buffer pointer
 **/
-PACKET_BufHandle_t RPC_PACKET_AllocateBuffer(PACKET_InterfaceType_t interfaceType, UInt32 requiredSize, UInt8 channel);
+PACKET_BufHandle_t RPC_PACKET_AllocateBuffer(PACKET_InterfaceType_t
+					     interfaceType, UInt32 requiredSize,
+					     UInt8 channel);
 
 //***************************************************************************************
 /**
@@ -249,7 +245,10 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBuffer(PACKET_InterfaceType_t interfaceTyp
 	@note
 				Client need to call RPC_PACKET_GetBufferData to get the actual buffer pointer
 **/
-PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t interfaceType, UInt32 requiredSize, UInt8 channel, UInt32 waitTime);
+PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
+					       interfaceType,
+					       UInt32 requiredSize,
+					       UInt8 channel, UInt32 waitTime);
 
 //***************************************************************************************
 /**
@@ -264,7 +263,12 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t interfaceT
 	@note
 				Client need to call RPC_PACKET_GetBufferData to get the actual buffer pointer
 **/
-PACKET_BufHandle_t RPC_PACKET_AllocateBufferCacheAlign(PACKET_InterfaceType_t interfaceType, UInt32 requiredSize, UInt8 channel, UInt32 waitTime, UInt8 cacheAlign);
+PACKET_BufHandle_t RPC_PACKET_AllocateBufferCacheAlign(PACKET_InterfaceType_t
+						       interfaceType,
+						       UInt32 requiredSize,
+						       UInt8 channel,
+						       UInt32 waitTime,
+						       UInt8 cacheAlign);
 
 //***************************************************************************************
 /**
@@ -290,7 +294,7 @@ RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle);
 
 	@return		valid memory location
 **/
-void* RPC_PACKET_GetBufferData(PACKET_BufHandle_t dataBufHandle);
+void *RPC_PACKET_GetBufferData(PACKET_BufHandle_t dataBufHandle);
 
 //***************************************************************************************
 /**
@@ -311,7 +315,8 @@ UInt32 RPC_PACKET_GetBufferLength(PACKET_BufHandle_t dataBufHandle);
 
 	@return		None
 **/
-void RPC_PACKET_SetBufferLength(PACKET_BufHandle_t dataBufHandle, UInt32 bufferSize);
+void RPC_PACKET_SetBufferLength(PACKET_BufHandle_t dataBufHandle,
+				UInt32 bufferSize);
 
 //***************************************************************************************
 /**
@@ -322,8 +327,8 @@ void RPC_PACKET_SetBufferLength(PACKET_BufHandle_t dataBufHandle, UInt32 bufferS
 	@return		Number of free buffers for the interface type.
 			
 **/
-UInt32 RPC_PACKET_Get_Num_FreeBuffers(PACKET_InterfaceType_t interfaceType, UInt8 index);
-
+UInt32 RPC_PACKET_Get_Num_FreeBuffers(PACKET_InterfaceType_t interfaceType,
+				      UInt8 index);
 
 //***************************************************************************************
 /**
@@ -336,7 +341,9 @@ UInt32 RPC_PACKET_Get_Num_FreeBuffers(PACKET_InterfaceType_t interfaceType, UInt
 	@return	Return RPC_RESULT_OK if buffer is valid. Otherwise RPC_RESULT_ERROR
 			
 **/
-RPC_Result_t RPC_PACKET_SetContext(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle, UInt8 context);
+RPC_Result_t RPC_PACKET_SetContext(PACKET_InterfaceType_t interfaceType,
+				   PACKET_BufHandle_t dataBufHandle,
+				   UInt8 context);
 
 //***************************************************************************************
 /**
@@ -348,17 +355,16 @@ RPC_Result_t RPC_PACKET_SetContext(PACKET_InterfaceType_t interfaceType, PACKET_
 	@return	Return context ( 0,1,2 )
 			
 **/
-UInt8 RPC_PACKET_GetContext(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle);
+UInt8 RPC_PACKET_GetContext(PACKET_InterfaceType_t interfaceType,
+			    PACKET_BufHandle_t dataBufHandle);
 
 /**
 	Processor Identifier
 **/
-typedef enum
-{
-   RPC_APPS,
-   RPC_COMMS
-}RpcProcessorType_t;
-
+typedef enum {
+	RPC_APPS,
+	RPC_COMMS
+} RpcProcessorType_t;
 
 //***************************************************************************************
 /**
@@ -375,28 +381,29 @@ RPC_Result_t RPC_SYS_EndPointRegister(RpcProcessorType_t processorType);
 
 #define MAX_CHANNELS	10
 
-
-
-
-
 RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t ptype);
 
 RPC_Result_t RPC_IPC_Init(RpcProcessorType_t ptype);
 
 RpcProcessorType_t RPC_GetProcessorType(void);
 
-RPC_Result_t RPC_PACKET_SetContextEx(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle, UInt16 context);
+RPC_Result_t RPC_PACKET_SetContextEx(PACKET_InterfaceType_t interfaceType,
+				     PACKET_BufHandle_t dataBufHandle,
+				     UInt16 context);
 
-UInt16 RPC_PACKET_GetContextEx(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle);
+UInt16 RPC_PACKET_GetContextEx(PACKET_InterfaceType_t interfaceType,
+			       PACKET_BufHandle_t dataBufHandle);
 
 RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
-									PACKET_InterfaceType_t interfaceType,
-									RPC_PACKET_DataIndCallBackFunc_t dataIndFunc);
+					  PACKET_InterfaceType_t interfaceType,
+					  RPC_PACKET_DataIndCallBackFunc_t
+					  dataIndFunc);
 
+RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
+				     UInt8 rpcClientID);
 
-RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle, UInt8 rpcClientID);
-
-UInt32 RPC_PACKET_IncrementBufferRef(PACKET_BufHandle_t dataBufHandle, UInt8 rpcClientID);
+UInt32 RPC_PACKET_IncrementBufferRef(PACKET_BufHandle_t dataBufHandle,
+				     UInt8 rpcClientID);
 
 /** \endcond   */
 

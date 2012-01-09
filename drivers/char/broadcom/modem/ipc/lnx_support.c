@@ -1,4 +1,4 @@
-                                                               /*****************************************************************************
+							       /*****************************************************************************
 *  Copyright 2003 - 2007 Broadcom Corporation.  All rights reserved.
 *
 *  Unless you and Broadcom execute a separate written software license
@@ -31,7 +31,7 @@ struct tasklet_struct *intr_tasklet_ptr_g = NULL;
 */
 void bcm_lnx_init(struct tasklet_struct *tsklet_ptr)
 {
-   intr_tasklet_ptr_g = tsklet_ptr;
+	intr_tasklet_ptr_g = tsklet_ptr;
 }
 
 /**
@@ -51,11 +51,11 @@ void bcm_lnx_init(struct tasklet_struct *tsklet_ptr)
 */
 unsigned int bcm_map_virt_to_phys(void *virt_addr)
 {
-   //Note: since shared-mem is io-mem, these kernel call to map virt to phys does not work
-   //return((unsigned int)virt_to_phys(virt_addr));
+	//Note: since shared-mem is io-mem, these kernel call to map virt to phys does not work
+	//return((unsigned int)virt_to_phys(virt_addr));
 
 	IPC_DEBUG(DBG_TRACE, "should not be used on this address\n");
-   return(0);
+	return (0);
 }
 
 /**
@@ -63,11 +63,11 @@ unsigned int bcm_map_virt_to_phys(void *virt_addr)
 */
 void *bcm_map_phys_to_virt(unsigned int physical_addr)
 {
-   //Note: since shared-mem is io-mem, these kernel call to map phys to virt does not work
-   //return((void *)phys_to_virt((unsigned long)physical_addr));
+	//Note: since shared-mem is io-mem, these kernel call to map phys to virt does not work
+	//return((void *)phys_to_virt((unsigned long)physical_addr));
 
 	IPC_DEBUG(DBG_TRACE, "should not be used on this address\n");
-   return(NULL);
+	return (NULL);
 }
 
 /**
@@ -83,7 +83,7 @@ void bcm_raise_cp_int(void)
    void bcm_enable_reentrancy(void);
 */
 void bcm_enable_reentrancy(void)
-{ 
+{
    /**
       should we use a spinlock??
       we can't use spinlocks here because this is a function call from the IPC lib
@@ -92,13 +92,12 @@ void bcm_enable_reentrancy(void)
       Also, spinlocks is not required here as long as we can provide reentrancy just
       for the IPC calls, i.e. no need to disable interrupts etc.
    */
-   preempt_enable();   
+	preempt_enable();
 
-   local_irq_enable();
-   if (intr_tasklet_ptr_g)
-   {
-      tasklet_enable(intr_tasklet_ptr_g);
-   }
+	local_irq_enable();
+	if (intr_tasklet_ptr_g) {
+		tasklet_enable(intr_tasklet_ptr_g);
+	}
 }
 
 /**
@@ -106,19 +105,12 @@ void bcm_enable_reentrancy(void)
 */
 void bcm_disable_reentrancy(void)
 {
-   preempt_disable();
-   local_irq_disable();
+	preempt_disable();
+	local_irq_disable();
 
-   if (intr_tasklet_ptr_g)
-   {
-      tasklet_disable(intr_tasklet_ptr_g);
-   }
+	if (intr_tasklet_ptr_g) {
+		tasklet_disable(intr_tasklet_ptr_g);
+	}
 
-   return;
+	return;
 }
-
-
-
-
-
-

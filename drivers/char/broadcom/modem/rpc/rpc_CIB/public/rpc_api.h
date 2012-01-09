@@ -25,7 +25,6 @@
 extern "C" {
 #endif
 
-
 /****************************************************************************/
 /**
 
@@ -52,7 +51,6 @@ extern "C" {
 \endmsc
 ****************************************************************************/
 
-
 /**
  * @addtogroup RPC_SysApi
  * @{
@@ -61,62 +59,55 @@ extern "C" {
 /**
 	XDR table record field
 **/
-typedef struct 
-{
-	MsgType_t	msgType;	///< Message ID for the message
-	const char* msgTypeStr;	///< string for Message ID
-	xdrproc_t	xdr_proc;	///< XDR proc for this message id
-	UInt32		xdr_size;	///< actual size for this message
-	u_int32_t	maxMsgSize;	///< max size for this message
-//	u_int32_t	unsolicited;///< message type ( solicited or unsolcited ) 
-}RPC_XdrInfo_t;
+	typedef struct {
+		MsgType_t msgType;	///< Message ID for the message
+		const char *msgTypeStr;	///< string for Message ID
+		xdrproc_t xdr_proc;	///< XDR proc for this message id
+		UInt32 xdr_size;	///< actual size for this message
+		u_int32_t maxMsgSize;	///< max size for this message
+//      u_int32_t       unsolicited;///< message type ( solicited or unsolcited ) 
+	} RPC_XdrInfo_t;
 
 /**
 	RPC Message
 **/
-typedef struct tag_XDR_Msg_t
-{
-	MsgType_t	msgId;	///< Message ID for the message
-	UInt32		tid;	///< Transaction ID
-	UInt8		clientID;	///< Client ID
-	void*		dataBuf;	///< Payload
-	UInt32		dataLen;	///< Payload len
-} RPC_Msg_t;
-
+	typedef struct tag_XDR_Msg_t {
+		MsgType_t msgId;	///< Message ID for the message
+		UInt32 tid;	///< Transaction ID
+		UInt8 clientID;	///< Client ID
+		void *dataBuf;	///< Payload
+		UInt32 dataLen;	///< Payload len
+	} RPC_Msg_t;
 
 /**
 	RPC Simple Message
 **/
-typedef struct
-{
-	UInt32		type;
-	UInt32		param1;
-	UInt32		param2;
-} RPC_SimpleMsg_t;
+	typedef struct {
+		UInt32 type;
+		UInt32 param1;
+		UInt32 param2;
+	} RPC_SimpleMsg_t;
 
 /**
 	Ack result types
 **/
-typedef enum{
+	typedef enum {
 
-	ACK_SUCCESS,	///< request ack succeed
-	ACK_FAILED,		///< ack fail for unknown reasons
-	ACK_TRANSMIT_FAIL,	///< ack fail due to fifo full, fifo mem full etc.
-	ACK_CRITICAL_ERROR	///< ack fail due to comms processor reset
-} RPC_ACK_Result_t;
-
-
+		ACK_SUCCESS,	///< request ack succeed
+		ACK_FAILED,	///< ack fail for unknown reasons
+		ACK_TRANSMIT_FAIL,	///< ack fail due to fifo full, fifo mem full etc.
+		ACK_CRITICAL_ERROR	///< ack fail due to comms processor reset
+	} RPC_ACK_Result_t;
 
 /**
 Result data buffer handle.
 **/
-typedef void* ResultDataBufHandle_t;
+	typedef void *ResultDataBufHandle_t;
 
 /**
 Client RPC handle
 **/
-typedef UInt8 RPC_Handle_t;
-
+	typedef UInt8 RPC_Handle_t;
 
 //***************************************************************************************
 /**
@@ -129,7 +120,10 @@ typedef UInt8 RPC_Handle_t;
 	Call RPC_SYSFreeResultDataBuffer(dataBufHandle) to free the result data memory.
 
 **/
-typedef void (RPC_ResponseCallbackFunc_t) (RPC_Msg_t* inMsg, ResultDataBufHandle_t dataBufHandle, UInt32 userContextData);
+	typedef void (RPC_ResponseCallbackFunc_t) (RPC_Msg_t * inMsg,
+						   ResultDataBufHandle_t
+						   dataBufHandle,
+						   UInt32 userContextData);
 
 //***************************************************************************************
 /**
@@ -142,7 +136,9 @@ typedef void (RPC_ResponseCallbackFunc_t) (RPC_Msg_t* inMsg, ResultDataBufHandle
 	@note
 
 **/
-typedef void (RPC_AckCallbackFunc_t) (UInt32 tid, UInt8 rpcClientID, RPC_ACK_Result_t ackResult, UInt32 ackUsrData);
+	typedef void (RPC_AckCallbackFunc_t) (UInt32 tid, UInt8 rpcClientID,
+					      RPC_ACK_Result_t ackResult,
+					      UInt32 ackUsrData);
 
 //***************************************************************************************
 /**
@@ -155,8 +151,10 @@ typedef void (RPC_AckCallbackFunc_t) (UInt32 tid, UInt8 rpcClientID, RPC_ACK_Res
 	Call RPC_SYSFreeResultDataBuffer(dataBufHandle) to free the result data memory.
 
 **/
-typedef void (RPC_RequestCallbackFunc_t) (RPC_Msg_t* inMsg, ResultDataBufHandle_t dataBufHandle, UInt32 userContextData);
-
+	typedef void (RPC_RequestCallbackFunc_t) (RPC_Msg_t * inMsg,
+						  ResultDataBufHandle_t
+						  dataBufHandle,
+						  UInt32 userContextData);
 
 //***************************************************************************************
 /**
@@ -170,7 +168,9 @@ typedef void (RPC_RequestCallbackFunc_t) (RPC_Msg_t* inMsg, ResultDataBufHandle_
 	@note
 
 **/
-typedef Boolean (RPC_MainXDRCallback_t) (XDR *xdrs, void** data, MsgType_t msgId, xdrproc_t proc);
+	typedef Boolean(RPC_MainXDRCallback_t) (XDR * xdrs, void **data,
+						MsgType_t msgId,
+						xdrproc_t proc);
 
 //***************************************************************************************
 /**
@@ -181,25 +181,23 @@ typedef Boolean (RPC_MainXDRCallback_t) (XDR *xdrs, void** data, MsgType_t msgId
 	@note
 
 **/
-typedef void (RPC_EventCallbackFunc_t) (void* eventHandle);
+	typedef void (RPC_EventCallbackFunc_t) (void *eventHandle);
 
 /**
 RPC Init params
 **/
-typedef struct
-{
-	RPC_RequestCallbackFunc_t*		reqCb;	///< Request callback
-	RPC_ResponseCallbackFunc_t*		respCb; ///< Response callback
-	RPC_AckCallbackFunc_t*			ackCb;	///< Ack calback
-	RPC_FlowControlCallbackFunc_t*	flowCb;	///< Flow control event callback
-	RPC_InterfaceType_t				iType;	///< Interface type
-	RPC_XdrInfo_t					*xdrtbl;	///< Pointer XDR map table
-	UInt16							table_size;	///< The size of the table
-	UInt32							userData;	///< User context data
-	xdrproc_t						mainProc;	///< Optional Pre-Header XDR proc
-	UInt32							maxDataBufSize; 	///< Max size of the recv message
-}RPC_InitParams_t;
-
+	typedef struct {
+		RPC_RequestCallbackFunc_t *reqCb;	///< Request callback
+		RPC_ResponseCallbackFunc_t *respCb;	///< Response callback
+		RPC_AckCallbackFunc_t *ackCb;	///< Ack calback
+		RPC_FlowControlCallbackFunc_t *flowCb;	///< Flow control event callback
+		RPC_InterfaceType_t iType;	///< Interface type
+		RPC_XdrInfo_t *xdrtbl;	///< Pointer XDR map table
+		UInt16 table_size;	///< The size of the table
+		UInt32 userData;	///< User context data
+		xdrproc_t mainProc;	///< Optional Pre-Header XDR proc
+		UInt32 maxDataBufSize;	///< Max size of the recv message
+	} RPC_InitParams_t;
 
 //***************************************************************************************
 /**
@@ -208,8 +206,7 @@ typedef struct
 	@return		\n RESULT_OK for success,
 				\n RESULT_ERROR for failure
 **/
-Result_t RPC_SYS_Init(RPC_EventCallbackFunc_t eventCb);
-
+	Result_t RPC_SYS_Init(RPC_EventCallbackFunc_t eventCb);
 
 //***************************************************************************************
 /**
@@ -217,7 +214,7 @@ Result_t RPC_SYS_Init(RPC_EventCallbackFunc_t eventCb);
 	@return		\n RESULT_OK for success,
 				\n RESULT_ERROR for failure
 **/
-void RPC_HandleEvent(void* eventHandle);
+	void RPC_HandleEvent(void *eventHandle);
 
 //***************************************************************************************
 /**
@@ -226,8 +223,7 @@ void RPC_HandleEvent(void* eventHandle);
 	@return		None
 	@note
 **/
-void RPC_SYSFreeResultDataBuffer(ResultDataBufHandle_t dataBufHandle);
-
+	void RPC_SYSFreeResultDataBuffer(ResultDataBufHandle_t dataBufHandle);
 
 //***************************************************************************************
 /**
@@ -238,8 +234,7 @@ void RPC_SYSFreeResultDataBuffer(ResultDataBufHandle_t dataBufHandle);
 	@note
 	The RPC_SYS_Init() is to be called before calling this function
 **/
-RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params); 
-
+	RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t * params);
 
 //***************************************************************************************
 /**
@@ -247,7 +242,7 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params);
 	@param		handle (in) RPC Handle
 	@return		TRUE if the client handle is valid
 **/
-Boolean RPC_SYS_DeregisterClient(RPC_Handle_t handle);
+	Boolean RPC_SYS_DeregisterClient(RPC_Handle_t handle);
 
 //***************************************************************************************
 /**
@@ -257,7 +252,7 @@ Boolean RPC_SYS_DeregisterClient(RPC_Handle_t handle);
 	@return	TRUE on success or FALSE
 	@note
 **/
-Boolean RPC_SetProperty(RPC_PropType_t type, UInt32 value);
+	Boolean RPC_SetProperty(RPC_PropType_t type, UInt32 value);
 
 //***************************************************************************************
 /**
@@ -267,7 +262,7 @@ Boolean RPC_SetProperty(RPC_PropType_t type, UInt32 value);
 	@return	TRUE on success or FALSE
 	@note
 **/
-Boolean RPC_GetProperty(RPC_PropType_t type, UInt32 *value);
+	Boolean RPC_GetProperty(RPC_PropType_t type, UInt32 * value);
 
 //***************************************************************************************
 /**
@@ -277,7 +272,7 @@ Boolean RPC_GetProperty(RPC_PropType_t type, UInt32 *value);
 				\n RESULT_ERROR for failure
 	@note
 **/
-Result_t RPC_SerializeReq(RPC_Msg_t* rpcMsg);
+	Result_t RPC_SerializeReq(RPC_Msg_t * rpcMsg);
 
 //***************************************************************************************
 /**
@@ -287,7 +282,7 @@ Result_t RPC_SerializeReq(RPC_Msg_t* rpcMsg);
 				\n RESULT_ERROR for failure
 	@note
 **/
-Result_t RPC_SerializeRsp(RPC_Msg_t* rpcMsg);
+	Result_t RPC_SerializeRsp(RPC_Msg_t * rpcMsg);
 
 //***************************************************************************************
 /**
@@ -298,7 +293,8 @@ Result_t RPC_SerializeRsp(RPC_Msg_t* rpcMsg);
 				\n RESULT_ERROR for failure
 	@note
 **/
-Result_t RPC_SendAckForRequest(ResultDataBufHandle_t handle, UInt32 ackUsrData);
+	Result_t RPC_SendAckForRequest(ResultDataBufHandle_t handle,
+				       UInt32 ackUsrData);
 
 //***************************************************************************************
 /**
@@ -308,7 +304,7 @@ Result_t RPC_SendAckForRequest(ResultDataBufHandle_t handle, UInt32 ackUsrData);
 	@return	TRUE on success or FALSE
 	@note
 **/
-Boolean RPC_IsValidMsg(MsgType_t msgID);
+	Boolean RPC_IsValidMsg(MsgType_t msgID);
 
 //***************************************************************************************
 /**
@@ -317,8 +313,7 @@ Boolean RPC_IsValidMsg(MsgType_t msgID);
 	@return	size of the payload
 	@note
 **/
-UInt32 RPC_GetMsgPayloadSize(MsgType_t msgID);
-
+	UInt32 RPC_GetMsgPayloadSize(MsgType_t msgID);
 
 //***************************************************************************************
 /**
@@ -330,7 +325,8 @@ UInt32 RPC_GetMsgPayloadSize(MsgType_t msgID);
 	@return	TRUE on success or FALSE
 	@note
 **/
-Result_t RPC_SendSimpleMsg(UInt32 tid, UInt8 clientID, RPC_SimpleMsg_t* pMsg);
+	Result_t RPC_SendSimpleMsg(UInt32 tid, UInt8 clientID,
+				   RPC_SimpleMsg_t * pMsg);
 
 //***************************************************************************************
 /**
@@ -340,7 +336,7 @@ Result_t RPC_SendSimpleMsg(UInt32 tid, UInt8 clientID, RPC_SimpleMsg_t* pMsg);
 	@return	client ID
 	@note
 **/
-UInt8 RPC_SYS_GetClientID(RPC_Handle_t handle);
+	UInt8 RPC_SYS_GetClientID(RPC_Handle_t handle);
 
 //***************************************************************************************
 /**
@@ -350,7 +346,9 @@ UInt8 RPC_SYS_GetClientID(RPC_Handle_t handle);
 	@param	listSize (in) size of msgIds ( Array size )
 	@return	TRUE on success or FALSE
 **/
-Boolean RPC_RegisterUnsolicitedMsgs(RPC_Handle_t handle, const UInt16 *msgIds, UInt8 listSize);
+	Boolean RPC_RegisterUnsolicitedMsgs(RPC_Handle_t handle,
+					    const UInt16 * msgIds,
+					    UInt8 listSize);
 
 //***************************************************************************************
 /**
@@ -359,28 +357,27 @@ Boolean RPC_RegisterUnsolicitedMsgs(RPC_Handle_t handle, const UInt16 *msgIds, U
 	@param	bSet (in) TRUE means the notfications are sent client, FALSE otherwise.
 	@return	TRUE on success or FALSE
 **/
-Boolean RPC_EnableUnsolicitedMsgs(RPC_Handle_t handle, Boolean bSet);
+	Boolean RPC_EnableUnsolicitedMsgs(RPC_Handle_t handle, Boolean bSet);
 
 /** @} */
 
 /** \cond  */
 
-void test_rpc(int input1, int input2);
+	void test_rpc(int input1, int input2);
 
-XDR_ENUM_DECLARE(MsgType_t)
+	 XDR_ENUM_DECLARE(MsgType_t)
 
-UInt8 RPC_SYS_GetClientHandle(UInt8 userClientID);
-Boolean RPC_SYS_isValidClientID(UInt8 userClientID);
+	UInt8 RPC_SYS_GetClientHandle(UInt8 userClientID);
+	Boolean RPC_SYS_isValidClientID(UInt8 userClientID);
 
 //Obsolete
-Boolean RPC_SYS_BindClientID(RPC_Handle_t handle, UInt8 userClientID);
+	Boolean RPC_SYS_BindClientID(RPC_Handle_t handle, UInt8 userClientID);
 
 /** \endcond   */
-Boolean RPC_IsRegisteredClient(UInt8 channel, PACKET_BufHandle_t dataBufHandle);
+	Boolean RPC_IsRegisteredClient(UInt8 channel,
+				       PACKET_BufHandle_t dataBufHandle);
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif
-

@@ -6,7 +6,6 @@
 	under the terms of the GNU General Public License version 2, available
 	at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 
-
    Notwithstanding the above, under no circumstances may you combine this
    software in any way with any other Broadcom software provided under a license
    other than the GPL, without Broadcom's express prior written consent.
@@ -32,27 +31,27 @@
 // Create / delete
 //============================================================
 //**************************************************
-IPC_SmQ IPC_QCreate (void)
+IPC_SmQ IPC_QCreate(void)
 {
-	IPC_SmQ Queue = IPC_SmAlloc (sizeof (IPC_QHead_T));
+	IPC_SmQ Queue = IPC_SmAlloc(sizeof(IPC_QHead_T));
 
-	if (Queue == 0)
-	{
-		IPC_TRACE (IPC_Channel_Error, "IPC_QCreate", "IPC_SmAlloc failed", 0, 0, 0, 0);
+	if (Queue == 0) {
+		IPC_TRACE(IPC_Channel_Error, "IPC_QCreate",
+			  "IPC_SmAlloc failed", 0, 0, 0, 0);
 		return 0;
 	}
 
-	return IPC_QInitialise (Queue, Queue);
+	return IPC_QInitialise(Queue, Queue);
 }
 
 //**************************************************
-IPC_SmQ IPC_QInitialise (IPC_SmQ Queue, IPC_SmPtr Item)
+IPC_SmQ IPC_QInitialise(IPC_SmQ Queue, IPC_SmPtr Item)
 {
-	IPC_QHead	QPtr	= IPC_QHeadPtr(Queue);
+	IPC_QHead QPtr = IPC_QHeadPtr(Queue);
 
-	QPtr->Link.Next		= Queue;
-	QPtr->Link.Previous	= Queue;
-	QPtr->Link.Item		= Item;
+	QPtr->Link.Next = Queue;
+	QPtr->Link.Previous = Queue;
+	QPtr->Link.Item = Item;
 
 	return Queue;
 }
@@ -61,120 +60,122 @@ IPC_SmQ IPC_QInitialise (IPC_SmQ Queue, IPC_SmPtr Item)
 // Queue adds
 //============================================================
 //**************************************************
-IPC_SmQEntry IPC_QAddBefore	(IPC_SmQEntry Entry, IPC_SmQEntry Before)
+IPC_SmQEntry IPC_QAddBefore(IPC_SmQEntry Entry, IPC_SmQEntry Before)
 {
-	IPC_QEntry	EntryPtr	= IPC_QEntryPtr (Entry);
-	IPC_QEntry	BeforePtr	= IPC_QEntryPtr (Before);
-	IPC_QEntry	AfterPtr	= IPC_QEntryPtr (BeforePtr->Previous);
+	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
+	IPC_QEntry BeforePtr = IPC_QEntryPtr(Before);
+	IPC_QEntry AfterPtr = IPC_QEntryPtr(BeforePtr->Previous);
 
-	EntryPtr->Next		= Before;
-	EntryPtr->Previous	= BeforePtr->Previous;
+	EntryPtr->Next = Before;
+	EntryPtr->Previous = BeforePtr->Previous;
 
-	AfterPtr->Next		= Entry;
-	BeforePtr->Previous	= Entry;
+	AfterPtr->Next = Entry;
+	BeforePtr->Previous = Entry;
 
 	return Entry;
 }
 
 //**************************************************
-IPC_SmQEntry IPC_QAddAfter		(IPC_SmQEntry Entry, IPC_SmQEntry After)
+IPC_SmQEntry IPC_QAddAfter(IPC_SmQEntry Entry, IPC_SmQEntry After)
 {
-	IPC_QEntry	EntryPtr	= IPC_QEntryPtr (Entry);
-	IPC_QEntry	AfterPtr	= IPC_QEntryPtr (After);
-	IPC_QEntry	BeforePtr	= IPC_QEntryPtr (AfterPtr->Next);
+	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
+	IPC_QEntry AfterPtr = IPC_QEntryPtr(After);
+	IPC_QEntry BeforePtr = IPC_QEntryPtr(AfterPtr->Next);
 
-	EntryPtr->Next		= AfterPtr->Next;
-	EntryPtr->Previous	= After;
+	EntryPtr->Next = AfterPtr->Next;
+	EntryPtr->Previous = After;
 
-	BeforePtr->Previous	= Entry;
-	AfterPtr->Next		= Entry;
+	BeforePtr->Previous = Entry;
+	AfterPtr->Next = Entry;
 
 	return Entry;
 }
 
 //**************************************************
-IPC_SmQEntry IPC_QAddFront	(IPC_SmQEntry Entry, IPC_SmQ Queue)
+IPC_SmQEntry IPC_QAddFront(IPC_SmQEntry Entry, IPC_SmQ Queue)
 {
-	IPC_QEntry	EntryPtr	= IPC_QEntryPtr (Entry);
-	IPC_QHead	HeadPtr		= IPC_QHeadPtr (Queue);
-	IPC_QEntry	FrontPtr	= IPC_QEntryPtr (HeadPtr->Link.Next);
+	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
+	IPC_QHead HeadPtr = IPC_QHeadPtr(Queue);
+	IPC_QEntry FrontPtr = IPC_QEntryPtr(HeadPtr->Link.Next);
 
-	EntryPtr->Next		= HeadPtr->Link.Next;
-	EntryPtr->Previous	= Queue;
+	EntryPtr->Next = HeadPtr->Link.Next;
+	EntryPtr->Previous = Queue;
 
-	FrontPtr->Previous	= Entry;
-	HeadPtr->Link.Next	= Entry;
+	FrontPtr->Previous = Entry;
+	HeadPtr->Link.Next = Entry;
 
 	return Entry;
 }
 
 //**************************************************
 #ifdef IPC_DEBUG
-void IPC_QAddBack		(IPC_SmQEntry Entry, IPC_SmQ Queue)
+void IPC_QAddBack(IPC_SmQEntry Entry, IPC_SmQ Queue)
 {
-	IPC_QEntry	EntryPtr	= IPC_QEntryPtr(Entry);
-	IPC_QHead	HeadPtr		= IPC_QHeadPtr (Queue);
-	IPC_QEntry	PreviousPtr	= IPC_QEntryPtr(HeadPtr->Link.Previous);
+	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
+	IPC_QHead HeadPtr = IPC_QHeadPtr(Queue);
+	IPC_QEntry PreviousPtr = IPC_QEntryPtr(HeadPtr->Link.Previous);
 
-	EntryPtr->Next			= Queue;
-	EntryPtr->Previous		= HeadPtr->Link.Previous;
+	EntryPtr->Next = Queue;
+	EntryPtr->Previous = HeadPtr->Link.Previous;
 
-	PreviousPtr->Next		= Entry;
-	HeadPtr->Link.Previous	= Entry;
+	PreviousPtr->Next = Entry;
+	HeadPtr->Link.Previous = Entry;
 }
 
 //============================================================
 // Queue Removes
 //============================================================
 //**************************************************
-void	IPC_QRemove		(IPC_SmQEntry Entry)
+void IPC_QRemove(IPC_SmQEntry Entry)
 {
-	IPC_QEntry	EntryPtr	= IPC_QEntryPtr(Entry);
-	IPC_QEntry	NextPtr		= IPC_QEntryPtr(EntryPtr->Next);
-	IPC_QEntry	PreviousPtr	= IPC_QEntryPtr(EntryPtr->Previous);
+	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
+	IPC_QEntry NextPtr = IPC_QEntryPtr(EntryPtr->Next);
+	IPC_QEntry PreviousPtr = IPC_QEntryPtr(EntryPtr->Previous);
 
-	NextPtr->Previous	= EntryPtr->Previous;
-	PreviousPtr->Next	= EntryPtr->Next;
+	NextPtr->Previous = EntryPtr->Previous;
+	PreviousPtr->Next = EntryPtr->Next;
 
-	EntryPtr->Next		= Entry;
-	EntryPtr->Previous	= Entry;
+	EntryPtr->Next = Entry;
+	EntryPtr->Previous = Entry;
 }
 #endif
 
 //**************************************************
-IPC_SmQEntry IPC_QGetFirst		(IPC_SmQ Queue)
+IPC_SmQEntry IPC_QGetFirst(IPC_SmQ Queue)
 {
-	IPC_QHead		HeadPtr		= IPC_QHeadPtr (Queue);
-	IPC_SmQEntry	Entry		= HeadPtr->Link.Next;
-	IPC_QEntry		EntryPtr	= IPC_QEntryPtr(Entry);
-	IPC_QEntry		NextPtr		= IPC_QEntryPtr(EntryPtr->Next);
+	IPC_QHead HeadPtr = IPC_QHeadPtr(Queue);
+	IPC_SmQEntry Entry = HeadPtr->Link.Next;
+	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
+	IPC_QEntry NextPtr = IPC_QEntryPtr(EntryPtr->Next);
 
-	if  (Entry == Queue) return 0;
+	if (Entry == Queue)
+		return 0;
 
-	HeadPtr->Link.Next		= EntryPtr->Next;
-	NextPtr->Previous		= Queue;
+	HeadPtr->Link.Next = EntryPtr->Next;
+	NextPtr->Previous = Queue;
 
-	EntryPtr->Next			= Entry;
-	EntryPtr->Previous		= Entry;
+	EntryPtr->Next = Entry;
+	EntryPtr->Previous = Entry;
 
 	return Entry;
 }
 
 //**************************************************
-IPC_SmQEntry IPC_QGetLast		(IPC_SmQ Queue)
+IPC_SmQEntry IPC_QGetLast(IPC_SmQ Queue)
 {
-	IPC_QHead		HeadPtr		= IPC_QHeadPtr (Queue);
-	IPC_SmQEntry	Entry		= HeadPtr->Link.Previous;
-	IPC_QEntry		EntryPtr	= IPC_QEntryPtr(Entry);
-	IPC_QEntry		PreviousPtr	= IPC_QEntryPtr(EntryPtr->Previous);
+	IPC_QHead HeadPtr = IPC_QHeadPtr(Queue);
+	IPC_SmQEntry Entry = HeadPtr->Link.Previous;
+	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
+	IPC_QEntry PreviousPtr = IPC_QEntryPtr(EntryPtr->Previous);
 
-	if  (Entry == Queue) return 0;
+	if (Entry == Queue)
+		return 0;
 
-	HeadPtr->Link.Previous	= EntryPtr->Previous;
-	PreviousPtr->Next		= Queue;
+	HeadPtr->Link.Previous = EntryPtr->Previous;
+	PreviousPtr->Next = Queue;
 
-	EntryPtr->Next		= Entry;
-	EntryPtr->Previous	= Entry;
+	EntryPtr->Next = Entry;
+	EntryPtr->Previous = Entry;
 
 	return Entry;
 }
@@ -183,17 +184,17 @@ IPC_SmQEntry IPC_QGetLast		(IPC_SmQ Queue)
 // Queue walking
 //============================================================
 //**************************************************
-IPC_SmQEntry IPC_QNext			(IPC_SmQEntry Entry)
+IPC_SmQEntry IPC_QNext(IPC_SmQEntry Entry)
 {
-	IPC_QEntry	EntryPtr	= IPC_QEntryPtr(Entry);
+	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
 
 	return EntryPtr->Next;
 }
 
 //**************************************************
-IPC_SmQEntry IPC_QPrevious		(IPC_SmQEntry Entry)
+IPC_SmQEntry IPC_QPrevious(IPC_SmQEntry Entry)
 {
-	IPC_QEntry	EntryPtr	= IPC_QEntryPtr(Entry);
+	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
 
 	return EntryPtr->Previous;
 }
