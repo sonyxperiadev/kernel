@@ -7,7 +7,7 @@
 	compatible = "21654B0";
 	version = "0.0,18:9:13, Wed Dec 21, 2011";
 	/*Initial Release
-	
+
 	*/
 
 	chosen {
@@ -149,22 +149,22 @@
 			0x00000020   /* 0x3500_4A04: TDI: TDI: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
 			0x00000043   /* 0x3500_4A08: TDO: TDO: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000040   /* 0x3500_4A0C: TESTMODE: TESTMODE: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
-			0x00000040   /* 0x3500_4A10: TRACECLK: TRACECLK: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
-			0x00000040   /* 0x3500_4A14: TRACEDT00: TRACEDT00: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
-			0x00000040   /* 0x3500_4A18: TRACEDT01: TRACEDT01: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
-			0x00000040   /* 0x3500_4A1C: TRACEDT02: TRACEDT02: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
-			0x00000040   /* 0x3500_4A20: TRACEDT03: TRACEDT03: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
+			0x00000123   /* 0x3500_4A10: TRACECLK: TRACECLK: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
+			0x00000123   /* 0x3500_4A14: TRACEDT00: TRACEDT00: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
+			0x00000123   /* 0x3500_4A18: TRACEDT01: TRACEDT01: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
+			0x00000123   /* 0x3500_4A1C: TRACEDT02: TRACEDT02: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
+			0x00000123   /* 0x3500_4A20: TRACEDT03: TRACEDT03: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
 			0x00000040   /* 0x3500_4A24: TRACEDT04: TRACEDT04: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
 			0x00000040   /* 0x3500_4A28: TRACEDT05: TRACEDT05: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
 			0x00000040   /* 0x3500_4A2C: TRACEDT06: TRACEDT06: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
-			0x00000040   /* 0x3500_4A30: TRACEDT07: TRACEDT07: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
+			0x00000123   /* 0x3500_4A30: TRACEDT07: TRACEDT07: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
 			0x00000040   /* 0x3500_4A34: TRSTB: TRSTB: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
 			0x00000003   /* 0x3500_4A38: TXDATA3G0: TXDATA3G0: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_4A3C: UBCTSN: UBCTSN: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_4A40: UBRTSN: UBRTSN: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_4A44: UBRX: UBRX: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_4A48: UBTX: UBTX: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			
+
 			>;
 	};
 
