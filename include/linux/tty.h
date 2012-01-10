@@ -295,7 +295,7 @@ struct tty_struct {
 	void *driver_data;
 	struct list_head tty_files;
 
-#define N_TTY_BUF_SIZE 4096
+#define N_TTY_BUF_SIZE (4096 * 8)
 
 	/*
 	 * The following is data for the N_TTY line discipline.  For
