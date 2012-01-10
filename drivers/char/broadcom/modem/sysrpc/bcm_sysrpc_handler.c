@@ -84,7 +84,6 @@ void KRIL_SysRpc_Init(void)
 
 void SysRpc_OpenRegulator(PMU_SIMLDO_t ldo)
 {
-	int ret;
 	RegulatorInfo_t *curReg = &gRegulatorList[REG_INDEX(ldo)];
 
 	curReg->handle = regulator_get(NULL, curReg->devName);
@@ -92,13 +91,9 @@ void SysRpc_OpenRegulator(PMU_SIMLDO_t ldo)
 		KRIL_DEBUG(DBG_ERROR, " **regulator_get (dev=%s) FAILED h=%p\n",
 			   curReg->devName, curReg->handle);
 	} else {
-		// **FIXME** workaround for SIM LDO being enabled on startup by the driver; this 
-		// just bumps up our ref count in the sim_regulator struct, so that the 
-		// regulator_disable() call below doesn't fail
-		ret = regulator_enable(curReg->handle);
 		KRIL_DEBUG(DBG_INFO,
-			   " **regulator_get (dev=%s) PASS handle=%p ret=%d\n",
-			   curReg->devName, curReg->handle, ret);
+			   " **regulator_get (dev=%s) PASS handle=%p\n",
+			   curReg->devName, curReg->handle);
 	}
 }
 
