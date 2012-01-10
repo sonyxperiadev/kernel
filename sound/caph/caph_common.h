@@ -177,6 +177,7 @@ struct brcm_alsa_chip {
 	 * integer[1] -- 0 for PCM, 1 I2S.
 	 */
 	s32	i32CfgSSP[2];
+	s32	i32CurApp;
 };
 
 #define	brcm_alsa_chip_t struct brcm_alsa_chip
@@ -215,7 +216,8 @@ enum	CTL_FUNCTION_t {
 	CTL_FUNCTION_CFG_SSP,
 	CTL_FUNCTION_CFG_IHF,
 	CTL_FUNCTION_SINK_CHG,
-	CTL_FUNCTION_HW_CTL
+	CTL_FUNCTION_HW_CTL,
+	CTL_FUNCTION_APP_SEL
 };
 
 enum	AT_AUD_Ctl_t {

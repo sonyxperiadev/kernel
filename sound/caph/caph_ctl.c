@@ -902,6 +902,12 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		 */
 		uinfo->value.integer.max = 0x7FFFFFFF;
 		break;
+	case CTL_FUNCTION_APP_SEL:
+		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+		uinfo->count = 1;
+		uinfo->value.integer.min = 0;
+		uinfo->value.integer.max = 15;
+		break;
 	default:
 		BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
 		break;
@@ -1005,7 +1011,11 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		memcpy(ucontrol->value.integer.value,
 		       pChip->pi32LevelVolume[stream - 1], chn * sizeof(s32));
 		break;
-
+	case CTL_FUNCTION_APP_SEL:
+		BCM_AUDIO_DEBUG("CTL_FUNCTION_APP_SEL, current app =%d\n",
+				pChip->i32CurApp);
+		ucontrol->value.integer.value[0] = pChip->i32CurApp;
+		break;
 	default:
 		BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
 		break;
@@ -1421,6 +1431,13 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		   (int)ucontrol->value.integer.value[3]
 		);
 	break;
+	case CTL_FUNCTION_APP_SEL:
+		BCM_AUDIO_DEBUG("CTL_FUNCTION_APP_SEL curApp=%d, newApp=%d",
+		   (int)pChip->i32CurApp, (int)ucontrol->value.integer.value[0]);
+
+		pChip->i32CurApp = ucontrol->value.integer.value[0];
+		/* Make the call to Audio Controller here */
+		break;
 	default:
 		BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
 		break;
@@ -1713,6 +1730,8 @@ static struct snd_kcontrol_new sgSndCtrls[] __initdata = {
 		CTL_FUNCTION_SINK_CHG)),
 	BRCM_MIXER_CTRL_MISC_W(0, 0, "HW-CTL", 0,
 		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "APP-SEL", 0, CAPH_CTL_PRIVATE(1, 1,
+		CTL_FUNCTION_APP_SEL)),
 };
 
 #define	MAX_CTL_NUMS	161
