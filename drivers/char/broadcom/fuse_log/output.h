@@ -48,5 +48,9 @@ int BCMLOG_OutputInit(void);
 extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks
 					       *_cb);
 #endif
+extern void stm_trace_buffer_start(int channel);
+extern void stm_trace_buffer_end(int channel);
+extern int stm_trace_buffer_data(int channel,
+			const void *data_ptr, size_t length);
 
 #endif /* __BCMLOG_OUTPUT_H__ */

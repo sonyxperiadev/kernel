@@ -53,6 +53,7 @@ static char g_acm_on = 1;
 
 #define BCMLOG_OUTPUT_FIFO_MAX_BYTES 65536
 static BCMLOG_Fifo_t g_fifo;	/* output fifo */
+#define FUSE_LOG_CHANNEL	8
 
 /**
  *	frame counter
@@ -209,18 +210,26 @@ static void WriteToLogDev_STM(void)
 
 	nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
 
-	if (nFifo > MAX_FS_WRITE_SIZE)
-		nFifo = MAX_FS_WRITE_SIZE;
-
 	if (nFifo > 0) {
-#if defined(CONFIG_STM_TRACE)
-#define FUSE_LOG_CHANNEL	8
-		nWrite = stm_trace_buffer_onchannel(FUSE_LOG_CHANNEL,
-						    BCMLOG_FifoGetData(&g_fifo),
-						    nFifo);
-#endif
-		BCMLOG_FifoRemove(&g_fifo, nWrite);
+		if (nFifo < BCMLOG_FifoGetDataSize(&g_fifo)) {
+			stm_trace_buffer_start(FUSE_LOG_CHANNEL);
+			nWrite = stm_trace_buffer_data(FUSE_LOG_CHANNEL,
+						       BCMLOG_FifoGetData
+						       (&g_fifo), nFifo);
+			BCMLOG_FifoRemove(&g_fifo, nWrite);
+			nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
+			nWrite = stm_trace_buffer_data(FUSE_LOG_CHANNEL,
+						       BCMLOG_FifoGetData
+						       (&g_fifo), nFifo);
+			BCMLOG_FifoRemove(&g_fifo, nWrite);
 
+			stm_trace_buffer_end(FUSE_LOG_CHANNEL);
+		} else {
+			nWrite = stm_trace_buffer_onchannel(FUSE_LOG_CHANNEL,
+							    BCMLOG_FifoGetData
+							    (&g_fifo), nFifo);
+			BCMLOG_FifoRemove(&g_fifo, nWrite);
+		}
 	}
 }
 
@@ -422,7 +431,9 @@ static void WriteToLogDev(struct work_struct *work)
 		break;
 
 	case BCMLOG_OUTDEV_STM:
+		irql = AcquireOutputLock();
 		WriteToLogDev_STM();
+		ReleaseOutputLock(irql);
 		break;
 
 	default:
