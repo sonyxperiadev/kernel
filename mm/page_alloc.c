@@ -2574,10 +2574,20 @@ out:
  * Suppresses nodes that are not allowed by current's cpuset if
  * SHOW_MEM_FILTER_NODES is passed.
  */
+
+static char * const migratetype_names[MIGRATE_TYPES] = {
+	"Unmovable",
+	"Reclaimable",
+	"Movable",
+	"Reserve",
+	"Cma",
+	"Isolate",
+};
 void show_free_areas(unsigned int filter)
 {
 	int cpu;
 	struct zone *zone;
+	int mtype;
 
 	for_each_populated_zone(zone) {
 		if (skip_free_areas_node(filter, zone_to_nid(zone)))
@@ -2701,6 +2711,27 @@ void show_free_areas(unsigned int filter)
 		for (order = 0; order < MAX_ORDER; order++) {
 			nr[order] = zone->free_area[order].nr_free;
 			total += nr[order] << order;
+		}
+
+		printk("%-43s ", "Free pages count per migrate type at order");
+		for (order = 0; order < MAX_ORDER; ++order)
+			printk("%6d ", order);
+		printk("\n");
+		for (mtype = 0; mtype < MIGRATE_TYPES; mtype++) {
+			printk("zone %8s, type %12s ",
+					zone->name,
+					migratetype_names[mtype]);
+			for (order = 0; order < MAX_ORDER; order++) {
+				unsigned long freecount = 0;
+				struct free_area *area;
+				struct list_head *curr;
+				area = &(zone->free_area[order]);
+
+				list_for_each(curr, &area->free_list[mtype])
+					freecount++;
+				printk("%6lu ", freecount);
+			}
+			printk("\n");
 		}
 		spin_unlock_irqrestore(&zone->lock, flags);
 		for (order = 0; order < MAX_ORDER; order++)

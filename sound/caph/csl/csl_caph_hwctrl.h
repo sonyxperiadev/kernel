@@ -628,7 +628,7 @@ void csl_caph_hwctrl_SetIHFmode(Boolean stIHF);
 *  Description: Set BT mode
 *
 ****************************************************************************/
-void csl_caph_hwctrl_SetBTMode(Boolean mode);
+void csl_caph_hwctrl_SetBTMode(int mode);
 
 
 /****************************************************************************

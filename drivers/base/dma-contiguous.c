@@ -535,11 +535,14 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 				(1 << align) - 1);
 		if (pageno >= cma->count) {
 			printk(KERN_ERR"%s:%d #### CMA ALLOCATION FAILED ####\n", __func__, __LINE__);
-			printk(KERN_ERR"%s : could not find %d/%d in this cma region bitmap\n", __func__, count, align);
+			printk(KERN_ERR"%s:%d # Could not find %d pages with %d alignment in this cma region bitmap\n",
+					__func__, __LINE__, count, align);
 #ifdef CONFIG_CMA_STATS
-			printk(KERN_ERR"%s:%d ### Total allocation(%lukB), Largest free block(%lukB)\n",
-					__func__, __LINE__, cma->total_alloc, cma->largest_free_block);
+			printk(KERN_ERR"%s:%d # Total allocation(%lukB, %d pages), Largest free block(%lukB, %d pages)\n",
+					__func__, __LINE__, (cma->total_alloc * PAGE_SIZE / SZ_1K), cma->total_alloc,
+					(cma->largest_free_block * PAGE_SIZE/SZ_1K), cma->largest_free_block);
 #endif
+			printk(KERN_ERR"%s:%d ###############################\n",__func__, __LINE__);
 			ret = -ENOMEM;
 			goto error;
 		}
@@ -550,7 +553,7 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 		pfn = cma->base_pfn + pageno;
 		ret = alloc_contig_range(pfn, pfn + count, 0, MIGRATE_CMA);
 		if (ret) {
-			printk(KERN_ERR"%s:%d #### CMA ALLOCATION FAILED #### with ret = %d for range(%08x-%08x)\n",
+			printk(KERN_ERR"%s:%d #### CMA MIGRATION FAILED, BUT RETRYING #### ret = %d for range(%08x-%08x)\n",
 					__func__, __LINE__, ret, __pfn_to_phys(pfn), __pfn_to_phys(pfn + count));
 
 			/* Always retry from a new pageblock, that wasn't used before.
@@ -565,7 +568,9 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 				printk(KERN_ERR"#### Retry(%u) with new start pfn/phys(%08lx/0x%08x) ####\n",
 						retries, cma->base_pfn + start_from, __pfn_to_phys(cma->base_pfn + start_from));
 			} else {
+				printk(KERN_ERR"##############################################################\n");
 				printk(KERN_ERR"#### Not enough memory left in the CMA region for retries ####\n");
+				printk(KERN_ERR"##############################################################\n");
 				goto free;
 			}
 		}

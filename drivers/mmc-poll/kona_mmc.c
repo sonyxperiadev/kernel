@@ -31,8 +31,10 @@
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
 #include <mach/io_map.h>
+#include <mach/irqs.h>
 #include <linux/mmc-poll/mmc_poll.h>
 #include <linux/dma-mapping.h>
+#include <linux/interrupt.h>
 #include "kona_mmc.h"
 
 #ifdef DEBUG
@@ -680,12 +682,14 @@ int kona_mmc_init(int dev_index)
 
 	switch (dev_index) {
 		case 1:
+			disable_irq(BCM_INT_ID_SDIO0);
 			mmc_reg_base = (void*) KONA_SDIO1_VA;
 			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO1_DIV_OFFSET;
 			kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,(void *)( KONA_KPM_CLK_VA +
 				KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET));
 			break;
 		case 2:
+			disable_irq(BCM_INT_ID_SDIO1);
 			mmc_reg_base = (void*) KONA_SDIO2_VA;
 			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO2_DIV_OFFSET;
 			kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,(void *)(KONA_KPM_CLK_VA +
@@ -693,6 +697,7 @@ int kona_mmc_init(int dev_index)
 			break;
 #ifdef SDIO3_BASE_ADDR
 		case 3:
+			disable_irq(BCM_INT_ID_SDIO_NAND);
 			mmc_reg_base = (void*) KONA_SDIO3_VA;
 			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO3_DIV_OFFSET;
 			kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,(void *)(KONA_KPM_CLK_VA +

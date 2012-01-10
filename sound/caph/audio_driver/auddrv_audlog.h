@@ -84,23 +84,23 @@ typedef enum
 **/
 typedef enum
 {
-	LOG_TO_PC = 0,		//< Log message to PC/MTT 
+	LOG_TO_PC = 0,		//< Log message to PC/MTT
 	LOG_TO_FLASH,		//< Save log message to local flash
 } AUDLOG_DEST_en_t;
 
 
 typedef enum
 {
-	AUDIO_LOG_PATH_1 = 17, 
-	AUDIO_LOG_PATH_2 = 18, 
-	AUDIO_LOG_PATH_3 = 19, 
-	AUDIO_LOG_PATH_4 = 20, 
+	AUDIO_LOG_PATH_1 = 17,
+	AUDIO_LOG_PATH_2 = 18,
+	AUDIO_LOG_PATH_3 = 19,
+	AUDIO_LOG_PATH_4 = 20,
 } AUDLOG_MUSIC_STREAM_INDEX_t;
 
 
-typedef struct AUDIOLOG_HEADER_t 
-{	
-	UInt32  magicID;                        //unique ID for audio header: 0xA0D10106		
+typedef struct AUDIOLOG_HEADER_t
+{
+	UInt32  magicID;                        //unique ID for audio header: 0xA0D10106
     UInt32  logPointID;                     //in case need to support multi logging points simultaneously.
 	Media_t audioFormat;                    // PCM, AMR, AAC etc.
 	AUDIO_SAMPLING_RATE_t	samplingRate;   // 8000 ¨C 48000 Hz
@@ -113,7 +113,7 @@ typedef struct AUDIOLOG_HEADER_t
 **/
 typedef struct audlog_cb_info_t
 {
-	spinlock_t audio_log_lock;	
+	spinlock_t audio_log_lock;
 	Boolean capture_ready;
 	UInt16 *p_LogRead;	    //< shared memory read pointer
     UInt32 size_to_read;	//< read size
@@ -137,7 +137,7 @@ typedef void (*AUDLOG_CB_FUNC)( AUDLOG_CB_INFO *);
 typedef struct audvoc_log_t
 {
 	AUDLOG_CB_FUNC	LogMessageCallback;	//< call back function to save stream frame to flash
-	AUDLOG_DEST_en_t	log_consumer[4];	//< log message consumer 0 : MTT  1 : file system 
+	AUDLOG_DEST_en_t	log_consumer[4];	//< log message consumer 0 : MTT  1 : file system
 } AUDLOG_INFO;
 
 
@@ -148,7 +148,7 @@ typedef struct audvoc_audio_buffer_t
 	Int32	length;				///< buffer length
 	UInt32	bits_per_sample;	///< number of bits per audio sample
 	Int32	flag;				///< flag = 0, buffer this block, flag = 1, start to play immediately.
-	Int32	buffer_type;		///< buffer_type = 0,	buffer mode one buffer, buffer_type = 1, stream mode, use queues. 
+	Int32	buffer_type;		///< buffer_type = 0,	buffer mode one buffer, buffer_type = 1, stream mode, use queues.
 	UInt32	buffer_serial_index; ///< buffer serial ID
 } AUDVOC_BUFFER_INFO;
 
@@ -158,12 +158,12 @@ typedef struct
 	AUDVOC_BUFFER_INFO	block_info;
 } AUDIO_PLAY_MSG_t;
 
-typedef	struct 
+typedef	struct
 {
 	UInt16	stream_index;
 	UInt16	log_capture_control;
 	UInt16	log_msg[LOG_FRAME_SIZE/2];	// VR_Lin_PCM_t log_msg;
-} LOG_FRAME_t;	
+} LOG_FRAME_t;
 
 typedef struct
 {
@@ -171,15 +171,15 @@ typedef struct
 	UInt32	i_LogMsgSize;
 } LOG_MSG_SAVE_t;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+
+extern wait_queue_head_t bcmlogreadq;
+extern int *bcmlog_stream_area;
 
 
-//Initialize driver internal variables and task queue. 
+//Initialize driver internal variables and task queue.
 Result_t AUDDRV_AudLog_Init( void );
 
-//Shut down driver internal variables and task queue. 
+//Shut down driver internal variables and task queue.
 Result_t AUDDRV_AudLog_Shutdown( void );
 
 //when driver finished the data in the buffer, driver generates this callback to let client use the buffer.
@@ -211,9 +211,6 @@ Result_t AUDDRV_AudLog_StopRetrieveFile( void );
 
 void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx);
 
-#ifdef __cplusplus
-}
-#endif
 
 /** @} */
 

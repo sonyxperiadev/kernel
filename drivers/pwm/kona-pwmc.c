@@ -293,8 +293,7 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
     if (test_bit(PWM_CONFIG_DUTY_TICKS, &c->config_mask))
         kona_pwmc_config_duty_ticks(ap, chan, c);
 
-    if (test_bit(PWM_CONFIG_START, &c->config_mask)
-        || (!test_bit(PWM_CONFIG_STOP, &c->config_mask))) {
+    if (test_bit(PWM_CONFIG_START, &c->config_mask)) {
         /* Restore duty ticks cater for STOP case. */
         struct pwm_config d = {
             .config_mask = PWM_CONFIG_DUTY_TICKS,
@@ -325,7 +324,6 @@ static int kona_pwmc_request(struct pwm_device *p)
 {
     struct kona_pwmc *ap = pwm_get_drvdata(p);
     int chan = kona_get_chan(ap, p);
-
     clk_enable(ap->clk);
     p->tick_hz = clk_get_rate(ap->clk);
     kona_pwmc_stop(ap, chan);

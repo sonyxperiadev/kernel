@@ -192,7 +192,7 @@ static struct __init pin_config board_pin_config[] = {
 	 * On Rhearay EDN1x the MMC1 i.e SDIO3 is used for 
 	 * WLAN connectivity
 	 */
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+#if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_SS)
 	PIN_CFG(MMC1DAT0, MMC1DAT0, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(MMC1DAT1, MMC1DAT1, 0, OFF, ON, 0, 0, 16MA),
 	PIN_CFG(MMC1DAT2, MMC1DAT2, 0, OFF, ON, 0, 0, 16MA),
@@ -211,7 +211,7 @@ static struct __init pin_config board_pin_config[] = {
 	 * On Rhearay EDN2x the MMC1 i.e SDIO3 is used for 
 	 * WLAN connectivity
 	 */
-#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS)
+#if defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 	/* WLAN - SDIO4 - 4 bit interface */
 	/* TODO - This is not complete, connectivity team to
 	 * review and update if needed

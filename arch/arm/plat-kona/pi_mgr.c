@@ -96,7 +96,6 @@ enum
 };
 
 static DEFINE_SPINLOCK(pi_mgr_lock);
-static DEFINE_SPINLOCK(pi_mgr_list_lock);
 
 struct pi_mgr_qos_node
 {
@@ -268,12 +267,14 @@ int __pi_disable(struct pi *pi)
 int pi_enable(struct pi *pi, int enable)
 {
 	int ret;
-	spin_lock(&pi_mgr_lock);
+	unsigned long flgs;
+
+	spin_lock_irqsave(&pi_mgr_lock, flgs);
 	if(enable)
 		ret = __pi_enable(pi);
 	else
 		ret = __pi_disable(pi);
-	spin_unlock(&pi_mgr_lock);
+	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 	return ret;
 }
 EXPORT_SYMBOL(pi_enable);
@@ -312,9 +313,12 @@ static int __pi_init(struct pi *pi)
 int pi_init(struct pi *pi)
 {
 	int ret;
-	spin_lock(&pi_mgr_lock);
+	unsigned long flgs;
+
+	spin_lock_irqsave(&pi_mgr_lock, flgs);
+
 	ret = __pi_init(pi);
-	spin_unlock(&pi_mgr_lock);
+	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 	return ret;
 }
 EXPORT_SYMBOL(pi_init);
@@ -380,9 +384,11 @@ static int __pi_init_state(struct pi *pi)
 int pi_init_state(struct pi *pi)
 {
 	int ret;
-	spin_lock(&pi_mgr_lock);
+	unsigned long flgs;
+
+	spin_lock_irqsave(&pi_mgr_lock, flgs);
 	ret = __pi_init_state(pi);
-	spin_unlock(&pi_mgr_lock);
+	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 	return ret;
 }
 EXPORT_SYMBOL(pi_init_state);
@@ -588,6 +594,7 @@ static int pi_reset(struct pi *pi, int sub_domain)
 	u32 reg_val;
 	struct clk* clk;
 	struct ccu_clk *ccu_clk;
+	unsigned long flgs;
 
 	pi_dbg("%s: pi_name:%s, usageCount:%d\n",__func__,pi->name, pi->usg_cnt);
 	if(pi->pi_info.reset_mgr_ccu_name == NULL || !pi->pi_info.pd_soft_reset_offset)
@@ -597,7 +604,7 @@ static int pi_reset(struct pi *pi, int sub_domain)
 	    (sub_domain == SUB_DOMAIN_BOTH && (!pi->pi_info.pd_reset_mask0 || !pi->pi_info.pd_reset_mask1)))
 	    return -EPERM;
 
-	spin_lock(&pi_mgr_lock);
+	spin_lock_irqsave(&pi_mgr_lock, flgs);
 	pi_dbg("%s:pi:%s reset ccu str:%s\n",__func__,pi->name,	pi->pi_info.reset_mgr_ccu_name);
 	clk = clk_get(NULL,pi->pi_info.reset_mgr_ccu_name);
 	BUG_ON(clk == 0 || IS_ERR(clk));
@@ -620,6 +627,7 @@ static int pi_reset(struct pi *pi, int sub_domain)
 	    reg_val = reg_val & ~pi->pi_info.pd_reset_mask1;
 	    break;
 	default:
+		spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 		return -EINVAL;
 	}
 	pi_dbg("writing reset value: %08x\n", reg_val);
@@ -638,13 +646,14 @@ static int pi_reset(struct pi *pi, int sub_domain)
 	    reg_val = reg_val | pi->pi_info.pd_reset_mask1;
 	    break;
 	default:
+		spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 		return -EINVAL;
 	}
 	pi_dbg("writing reset release value: %08x\n", reg_val);
 	writel(reg_val, ccu_clk->ccu_reset_mgr_base + pi->pi_info.pd_soft_reset_offset);
 
 	ccu_reset_write_access_enable(ccu_clk , false);
-	spin_unlock(&pi_mgr_lock);
+	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 	return 0;
 }
 
@@ -702,8 +711,10 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node* node, u32 pi_id, int action
 	u32 old_val, new_val;
 	struct pi_mgr_dfs_object* dfs = &pi_mgr.dfs[pi_id];
 	struct pi *pi = pi_mgr.pi_list[pi_id];
+	unsigned long flgs;
 
-	spin_lock(&pi_mgr_list_lock);
+	spin_lock_irqsave(&pi_mgr_lock, flgs);
+
 	old_val = pi->opp_active;
 	switch(action)
 	{
@@ -728,7 +739,6 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node* node, u32 pi_id, int action
 	}
 	new_val = pi_mgr_dfs_get_opp(dfs);
 	pi_dbg("%s:pi_id= %d oldval = %d new val = %d\n",__func__,pi_id,old_val,new_val);
-	spin_unlock(&pi_mgr_list_lock);
 
 	if(old_val != new_val)
 	{
@@ -752,6 +762,7 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node* node, u32 pi_id, int action
 					old_val, new_val, PI_POSTCHANGE);
 		}
 	}
+	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 
 	return new_val;
 }
@@ -769,10 +780,11 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 	u32 old_state;
 	int i;
 	int found = 0;
+	unsigned long flgs;
 	struct pi_mgr_qos_object* qos = &pi_mgr.qos[pi_id];
 	struct pi *pi = pi_mgr.pi_list[pi_id];
 
-	spin_lock(&pi_mgr_list_lock);
+	spin_lock_irqsave(&pi_mgr_lock, flgs);
 	old_val = pi_mgr_qos_get_value(qos);
 
 	switch(action)
@@ -798,7 +810,6 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 	}
 	new_val = pi_mgr_qos_get_value(qos);
 	pi_dbg("%s:pi_id= %d oldval = %d new val = %d\n",__func__,pi_id,old_val,new_val);
-	spin_unlock(&pi_mgr_list_lock);
 
 	if(old_val != new_val)
 	{
@@ -835,8 +846,8 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 				/*Do pi_enable and pi_disable call to switch to the right state
 				Also needed to handle state save/restore properly
 				*/
-				pi_enable(pi,1);
-				pi_enable(pi,0);
+				__pi_enable(pi);
+				__pi_disable(pi);
 			}
 
 		}
@@ -856,7 +867,7 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 
 	}
 	pi_dbg("%s:%s state allowed = %d\n",__func__,pi->name,pi->state_allowed);
-
+	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 	return new_val;
 }
 int pi_state_allowed(int pi_id)
@@ -903,6 +914,8 @@ EXPORT_SYMBOL(pi_get_active_opp);
 
 int pi_mgr_register(struct pi* pi)
 {
+	unsigned long flgs;
+
 	pi_dbg("%s:name:%s id:%d\n",__func__,pi->name,pi->id);
 	if(!pi_mgr.init)
 	{
@@ -914,11 +927,11 @@ int pi_mgr_register(struct pi* pi)
 		pi_dbg("%s:pi already registered or invalid id \n",__func__);
 		return -EPERM;
 	}
-	spin_lock(&pi_mgr_lock);
+	spin_lock_irqsave(&pi_mgr_lock, flgs);
 	pi_mgr.pi_list[pi->id] = pi;
 	pi_mgr.pi_count++;
 
-	spin_unlock(&pi_mgr_lock);
+	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 
 	return 0;
 }

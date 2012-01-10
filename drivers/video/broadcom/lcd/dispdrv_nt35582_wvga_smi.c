@@ -181,6 +181,8 @@ Int32   NT35582_WVGA_SMI_Update_ExtFb (
 
 static unsigned int g_bus_width = 16;
 
+static int g_rotation_enabled = 0;
+
 static DISPDRV_T NT35582_WVGA_SMI_Drv =
 {
    &NT35582_WVGA_SMI_Init,                  // init
@@ -1246,15 +1248,28 @@ Int32 NT35582_WVGA_SMI_Update (
 
     if (0 == fb_idx)
     	req.buff           = lcdDrv->frameBuffer;
-     else
+     else if (1 == fb_idx)
 	req.buff 	   = (void *)((UInt32)lcdDrv->frameBuffer  + 
 		lcdDrv->panelData->width * lcdDrv->panelData->height * lcdDrv->bpp);
+    else
+	req.buff = fb_idx;
 
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s fb phys = 0x%08x\n", __FUNCTION__,  (unsigned int)req.buff);
 
+    if (p_win) {
+	nt35582wvgaSmi_WrCmndP1( dispH, 1, NT35582_SET_ADDR_MODE_0, 0x60);
+    }
+    else {
+       	nt35582wvgaSmi_WrCmndP1( dispH, 1, NT35582_SET_ADDR_MODE_0, 0x0);
+    }
+
+    p_win = &lcdDrv->win_dim;
+ 
+#if 0
     // update the whole screen 
     if ( p_win == NULL ) 
     	p_win = &lcdDrv->win_dim;
+#endif
 
     nt35582wvgaSmi_SetWindow( dispH, TRUE, TRUE,  p_win );
     nt35582wvgaSmi_WrCmndP0 ( dispH, TRUE, NT35582_WR_MEM_START );

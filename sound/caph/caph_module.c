@@ -14,18 +14,18 @@
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
  *
  */
-/*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.                                
+/*****************************************************************************
+Copyright 2010 Broadcom Corporation.  All rights reserved.
 
-Unless you and Broadcom execute a separate written software license agreement 
-governing use of this software, this software is licensed to you under the 
-terms of the GNU General Public License version 2, available at 
-http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+Unless you and Broadcom execute a separate written software license agreement
+governing use of this software, this software is licensed to you under the
+terms of the GNU General Public License version 2, available at
+http://www.gnu.org/copyleft/gpl.html (the "GPL").
 
-Notwithstanding the above, under no circumstances may you combine this software 
-in any way with any other Broadcom software provided under a license other than 
+Notwithstanding the above, under no circumstances may you combine this software
+in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
-*******************************************************************************************/
+*****************************************************************************/
 
 #include <linux/platform_device.h>
 #include <linux/init.h>
@@ -61,271 +61,221 @@ the GPL, without Broadcom's express prior written consent.
 #include "caph_common.h"
 #include "bcm_audio.h"
 
-extern int LaunchAudioCtrlThread(void);
 
-extern int TerminateAudioHalThread(void);
-
-
-//  Module declarations.
-//
+/*  Module declarations. */
 MODULE_AUTHOR("Broadcom MPS-Audio");
 MODULE_DESCRIPTION("Broadcom CAPH sound interface");
 MODULE_LICENSE("GPL");
 
-//global
-int gAudioDebugLevel = 0; 
-static brcm_alsa_chip_t *sgpCaph_chip=NULL;
+/* global */
+int gAudioDebugLevel;
+module_param(gAudioDebugLevel, int, 0);
 
-// AUDIO LOGGING
+static brcm_alsa_chip_t *sgpCaph_chip;
+
+/* AUDIO LOGGING */
 
 #define DATA_TO_READ 4
-int logging_link[LOG_STREAM_NUMBER] = {0,0,0,0};
+int logging_link[LOG_STREAM_NUMBER] = { 0, 0, 0, 0 };
 
-static int dev_use_count = 0;
+static int dev_use_count;
 static int process_logmsg(void *data);
-static struct task_struct *audio_log_thread = NULL;
+static struct task_struct *audio_log_thread;
 AUDLOG_CB_INFO audio_log_cbinfo[LOG_STREAM_NUMBER];
 wait_queue_head_t audio_log_queue;
 static AUDLOG_CB_INFO audio_log_writecb;
 
-static int read_count = 0; 
+static int read_count;
 
+/* wait queues */
+int audio_data_arrived;
 
-// wait queues
-extern wait_queue_head_t bcmlogreadq;
-int audio_data_arrived = 0;
-
-extern UInt16 *bcmlog_stream_area;
-
-
-extern int BrcmCreateAuddrv_testSysFs(struct snd_card *card); //brcm_auddrv_test.c
-extern int BrcmCreateAuddrv_selftestSysFs(struct snd_card *card); //brcm_auddrv_selftest.c
-
-//extern int BrcmCreateControlSysFs(struct snd_card *card); //brcm_alsa_ctl.c
-//--------------------------------------------------------------------
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//  Function Name: DriverProbe
-//
-//  Description: 'probe' call back function
-//
-//------------------------------------------------------------
+/**
+ *  DriverProbe: 'probe' call back function
+ * @pdev: platform device
+ *
+ * Returns 0 for success.
+ */
 static int __devinit DriverProbe(struct platform_device *pdev)
 {
 	struct snd_card *card;
 	int err;
-	
+
 	pr_info("ALSA:In Driver Probe:\n");
-	
-	BCM_AUDIO_DEBUG("\n %lx:DriverProbe \n",jiffies);
-		
+
+	BCM_AUDIO_DEBUG("\n %lx:DriverProbe\n", jiffies);
+
 	err = -ENODEV;
-    
-    err = -ENOMEM;  
-	err  = snd_card_create(SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1, 
-		THIS_MODULE, sizeof(brcm_alsa_chip_t), &card);
-		
+
+	err = -ENOMEM;
+	err = snd_card_create(SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1,
+			      THIS_MODULE, sizeof(brcm_alsa_chip_t), &card);
+
 	if (!card)
-      goto err;
-            
-	sgpCaph_chip = (brcm_alsa_chip_t*)card->private_data;
+		goto err;
+
+	sgpCaph_chip = (brcm_alsa_chip_t *) card->private_data;
 	sgpCaph_chip->card = card;
-	
+
 	card->dev = &pdev->dev;
-	strncpy(card->driver, pdev->dev.driver->name, sizeof(card->driver)-1);
-	//add Null terminating character
-	card->driver[sizeof(card->driver)-1]='\0';
-	//PCM interface	
+	strncpy(card->driver, pdev->dev.driver->name, sizeof(card->driver) - 1);
+	/* add Null terminating character */
+	card->driver[sizeof(card->driver) - 1] = '\0';
+	/* PCM interface */
 	err = PcmDeviceNew(card);
 	if (err)
-    	goto err;
-    //CTRL interface	
+		goto err;
+	/* CTRL interface */
 	err = ControlDeviceNew(card);
 	if (err)
-    	goto err;
-	//HWDEP interface
+		goto err;
+	/* HWDEP interface */
 	err = HwdepDeviceNew(card);
 	if (err)
-    	goto err;
+		goto err;
 
-	//TODO: other interface
-	
-	
 	strcpy(card->driver, "Broadcom");
 	strcpy(card->shortname, "Broadcom ALSA");
 	sprintf(card->longname, "Broadcom ALSA PCM %i", 0);
-	
-	
-	err = snd_card_register(card);
-	if (err==0)
-	{
-      int ret;
-      platform_set_drvdata(pdev, card);
 
-      ret = BrcmCreateAuddrv_testSysFs(card);
-      if(ret!=0)
- 	  	BCM_AUDIO_DEBUG("ALSA DriverProbe Error to create sysfs for Auddrv test ret = %d\n", ret);
+	err = snd_card_register(card);
+	if (err == 0) {
+		int ret;
+		platform_set_drvdata(pdev, card);
+
+		ret = BrcmCreateAuddrv_testSysFs(card);
+		if (ret != 0)
+			BCM_AUDIO_DEBUG("ALSA DriverProbe Error to create "
+			"sysfs for Auddrv test ret = %d\n", ret);
 #ifdef CONFIG_BCM_AUDIO_SELFTEST
-      ret = BrcmCreateAuddrv_selftestSysFs(card);
-      if(ret!=0)
-		BCM_AUDIO_DEBUG("ALSA DriverProbe Error to create sysfs for Auddrv selftest ret = %d\n", ret);
+		ret = BrcmCreateAuddrv_selftestSysFs(card);
+		if (ret != 0)
+			BCM_AUDIO_DEBUG("ALSA DriverProbe Error to create sysfs"
+			" for Auddrv selftest ret = %d\n", ret);
 #endif
-      
-#if 0      
-	ret = BrcmCreateControlSysFs(card);
-	if(ret!=0)
-		BCM_AUDIO_DEBUG("ALSA DriverProbe Error to create sysfs for FMDirectPlay ret = %d\n", ret);
-#endif
-      return 0;
+
+		return 0;
 	}
 
 err:
-	BCM_AUDIO_DEBUG("\n probe failed =%d\n",err);
+	BCM_AUDIO_DEBUG("\n probe failed =%d\n", err);
 	if (card)
 		snd_card_free(card);
-	
-	sgpCaph_chip=NULL;
+
+	sgpCaph_chip = NULL;
 	return err;
 }
 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//  Function Name: DriverRemove
-//
-//  Description: 'remove' call back function
-//
-//------------------------------------------------------------
+/**
+ *  DriverRemove: 'remove' call back function
+ * @pdev: platform device
+ *
+ * Returns 0 for success.
+ */
 static int DriverRemove(struct platform_device *pdev)
 {
 	return 0;
 }
-
 
 static int DriverSuspend(struct platform_device *pdev, pm_message_t state)
 {
 	return 0;
 }
 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//  Function Name: DriverResume
-//
-//  Description: 'resume' call back function
-//
-//------------------------------------------------------------
+/**
+ *  DriverResume: 'resume' call back function
+ * @pdev: platform device
+ *
+ * Returns 0 for success.
+ */
 static int DriverResume(struct platform_device *pdev)
 {
 	return 0;
 }
 
-//---------------------------------------------------------------------------
-// File operations for audio logging
+/*
+ * File operations for audio logging
+ */
 
-static int
-BCMAudLOG_open(struct inode *inode, struct file *file)
+static int BCMAudLOG_open(struct inode *inode, struct file *file)
 {
 
-	BCM_AUDIO_DEBUG("\n BCMLOG_open \n");
+	BCM_AUDIO_DEBUG("\n BCMLOG_open\n");
 
 	dev_use_count++;
-	if(dev_use_count > 1)
-	{
+	if (dev_use_count > 1)
 		return 0;
-	}
 
 	init_waitqueue_head(&audio_log_queue);
 
-	if(!audio_log_thread)
-	{
-		audio_log_thread = kthread_run(process_logmsg, 0 ,"process_logmsg");
+	if (!audio_log_thread) {
+		audio_log_thread =
+		    kthread_run(process_logmsg, 0, "process_logmsg");
 	}
-
-
-    return 0;
-} 
-
-
-/****************************************************************************
-*
-*  BCMLOG_read
-*
-***************************************************************************/
+	audio_data_arrived = 0;
+	return 0;
+}
 
 static int
-BCMAudLOG_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
+BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
+	       loff_t *ppos)
 {
 	int ret;
-	BCM_AUDIO_DEBUG("\n BCMLOG_read \n");
+	BCM_AUDIO_DEBUG("\n BCMLOG_read\n");
 
-    if ( wait_event_interruptible(bcmlogreadq, (audio_data_arrived != 0)))
-    {   
-        //(" Wait for read  ...\n");
-        return -ERESTARTSYS;
-    }   
-    
-	
-	if(audio_data_arrived == 2)
-	{
-		BCM_AUDIO_DEBUG("\n BCMLOG_read : dummy reading\n");    
+	if (wait_event_interruptible(bcmlogreadq, (audio_data_arrived != 0))) {
+		/*  Wait for read  ... */
+		return -ERESTARTSYS;
+	}
+
+	if (audio_data_arrived == 2) {
+		BCM_AUDIO_DEBUG("\n BCMLOG_read : dummy reading\n");
 		audio_data_arrived = 0;
 		return 0;
 	}
 
-	audio_data_arrived = 0;  
+	audio_data_arrived = 0;
 
-	if(count != 4)
-	{
+	if (count != 4) {
 		ret = count;
 
-		if(audio_log_writecb.pPrivate != NULL)
-		{
-			if(count >= audio_log_writecb.size_to_read)
-			{
+		if (audio_log_writecb.pPrivate != NULL) {
+			if (count >= audio_log_writecb.size_to_read) {
 				count = audio_log_writecb.size_to_read;
-				ret = copy_to_user(buf, audio_log_writecb.p_LogRead, count); 
-			}
-			else
-			{
+				ret =
+				    copy_to_user(buf,
+						 audio_log_writecb.p_LogRead,
+						 count);
+			} else {
 				ret = count;
 			}
 
 		}
 
-		return (count - ret);
-	
+		return count - ret;
+
+	} else {
+		ret = copy_to_user(buf, "read", 4);
+		return DATA_TO_READ;
 	}
-	else
-	{
-		ret = copy_to_user(buf, "read", 4); 
-	    return DATA_TO_READ;
-	}     
 }
 
-/****************************************************************************
-*
-*  BCMLOG_release
-*
-***************************************************************************/
-
-static int
-BCMAudLOG_release(struct inode *inode, struct file *file)
+static int BCMAudLOG_release(struct inode *inode, struct file *file)
 {
-	BCM_AUDIO_DEBUG("\n BCMLOG_release \n");
-	
+	BCM_AUDIO_DEBUG("\n BCMLOG_release\n");
+
 	dev_use_count--;
-	if(dev_use_count > 0) 
-	{
-		BCM_AUDIO_DEBUG("\n BCMLOG_release : 1 dev_use_count = %d \n", dev_use_count);
+	if (dev_use_count > 0) {
+		BCM_AUDIO_DEBUG("\n BCMLOG_release : 1 dev_use_count = %d\n",
+				dev_use_count);
 		return -1;
 	}
 
-	BCM_AUDIO_DEBUG("\n BCMLOG_release : 2 dev_use_count = %d \n", dev_use_count);
+	BCM_AUDIO_DEBUG("\n BCMLOG_release : 2 dev_use_count = %d\n",
+			dev_use_count);
 
-
-	if(audio_log_thread)
-	{
-//		kthread_stop(audio_log_thread);
+	if (audio_log_thread) {
+		/* kthread_stop(audio_log_thread); */
 		audio_log_cbinfo[0].capture_ready = 1;
 		wake_up_interruptible(&audio_log_queue);
 		audio_log_thread = 0;
@@ -333,228 +283,232 @@ BCMAudLOG_release(struct inode *inode, struct file *file)
 		audio_data_arrived = 0;
 	}
 
+	BCM_AUDIO_DEBUG("\n BCMLOG_release : 3 dev_use_count = %d\n",
+			dev_use_count);
 
-	BCM_AUDIO_DEBUG("\n BCMLOG_release : 3 dev_use_count = %d \n", dev_use_count);
+	return 0;
 
-    return 0;
-
-} /* BCMLOG_release */
-
-/****************************************************************************
-*
-*  BCMLOG_mmap
-*
-***************************************************************************/
+}				/* BCMLOG_release */
 
 static int BCMAudLOG_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-    int ret;
-    long length = vma->vm_end - vma->vm_start;
+	int ret;
+	long length = vma->vm_end - vma->vm_start;
 
-    BCM_AUDIO_DEBUG("\n BCMLOG_mmap \n");
+	BCM_AUDIO_DEBUG("\n BCMLOG_mmap\n");
 
-   // check length - do not allow larger mappings than the number of pages allocated 
-    if (length > (PAGE_SIZE + (sizeof(LOG_FRAME_t)*4)) )
-    {
-        DEBUG("\n Failed at page boundary \n\r");
-        return -EIO;
-    }
+	/* check length - do not allow larger mappings than the number of
+	 * pages allocated
+	 */
+	if (length > (PAGE_SIZE + (sizeof(LOG_FRAME_t) * 4))) {
+		DEBUG("\n Failed at page boundary\n\r");
+		return -EIO;
+	}
 
+	/* map the whole physically contiguous area in one piece */
+	ret = remap_pfn_range(vma, vma->vm_start,
+			      virt_to_phys((void *)bcmlog_stream_area) >>
+			      PAGE_SHIFT, length, vma->vm_page_prot);
 
-   // map the whole physically contiguous area in one piece
-    ret = remap_pfn_range(vma, vma->vm_start,
-                    virt_to_phys((void *)bcmlog_stream_area) >> PAGE_SHIFT,
-                    length, vma->vm_page_prot);
+	if (ret != 0) {
+		DEBUG("\n BCMLOG_mmap_kmem -EAGAIN \r\n");
+		return -EAGAIN;
+	}
 
-    if(ret != 0) {
-            DEBUG("\n BCMLOG_mmap_kmem -EAGAIN \r\n");
-            return -EAGAIN;
-   	   }
-
-	 return 0;
+	return 0;
 }
 
-
-/****************************************************************************
-*
-*  BCMLOG_ioctl - IOCTL to set switch to kernel mode for
-                1. Audio logging setup
-                2. Dump Audio data to MTT &  Copy audio data to user space
-                3. Stop and reset audio logging
-*
-***************************************************************************/
-
-static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+/**
+ *  BCMLOG_ioctl - IOCTL to set switch to kernel mode for
+ *               1. Audio logging setup
+ *               2. Dump Audio data to MTT &  Copy audio data to user space
+ *               3. Stop and reset audio logging
+ *
+ */
+static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
+			    unsigned long arg)
 {
 
-    AUDDRV_CFG_LOG_INFO *p_log_info = (AUDDRV_CFG_LOG_INFO *) (arg) ; 
+	AUDDRV_CFG_LOG_INFO *p_log_info = (AUDDRV_CFG_LOG_INFO *) (arg);
 	int index;
-    int rtn = 0;
-	BCM_AUDIO_DEBUG("\n BCMLOG_ioctl cmd=0x%x\n",cmd);
+	int rtn = 0;
+	BCM_AUDIO_DEBUG("\n BCMLOG_ioctl cmd=0x%x\n", cmd);
 
-    switch (cmd)
-    {
-        case BCM_LOG_IOCTL_CONFIG_CHANNEL:
-			
-			if((p_log_info->log_link >= AUDIO_LOG_PATH_1) && (p_log_info->log_link <= AUDIO_LOG_PATH_4))
-			{
-				index = p_log_info->log_link - AUDIO_LOG_PATH_1;
+	switch (cmd) {
+	case BCM_LOG_IOCTL_CONFIG_CHANNEL:
 
-				if((index >= 0) && (index <= 3)) 
-				{
-					audio_log_cbinfo[index].capture_ready = TRUE;
-					audio_log_cbinfo[index].stream_index  = index;
-					audio_log_cbinfo[index].capture_point = p_log_info->log_capture_point;
-					audio_log_cbinfo[index].consumer      = p_log_info->log_consumer;
-					spin_lock_init(&audio_log_cbinfo[index].audio_log_lock);
+		if ((p_log_info->log_link >= AUDIO_LOG_PATH_1)
+		    && (p_log_info->log_link <= AUDIO_LOG_PATH_4)) {
+			index = p_log_info->log_link - AUDIO_LOG_PATH_1;
 
-					read_count = 0;
-					audio_log_cbinfo[index].dma_count = 0;
-				}
+			if ((index >= 0) && (index <= 3)) {
+				audio_log_cbinfo[index].capture_ready = TRUE;
+				audio_log_cbinfo[index].stream_index = index;
+				audio_log_cbinfo[index].capture_point =
+				    p_log_info->log_capture_point;
+				audio_log_cbinfo[index].consumer =
+				    p_log_info->log_consumer;
+				spin_lock_init(&audio_log_cbinfo[index].
+					       audio_log_lock);
+
+				read_count = 0;
+				audio_log_cbinfo[index].dma_count = 0;
 			}
-			break;
- 		
-		case BCM_LOG_IOCTL_FLUSH_CHANNEL:
+		}
+		break;
 
-			audio_data_arrived = 2;
-			wake_up_interruptible(&bcmlogreadq);
-			break;
+	case BCM_LOG_IOCTL_FLUSH_CHANNEL:
 
-		case BCM_LOG_IOCTL_GETMSG_CHANNEL:
-			{
-				STREAM_INFO *p = (STREAM_INFO *)arg;
-				STREAM_INFO info;
-		
-				BCM_AUDIO_DEBUG("\n BCMLOG_ioctl : BCM_LOG_IOCTL_GETMSG_CHANNEL\n");
-				BCM_AUDIO_DEBUG("\n p->stream_index = %d\n", p->stream_index);
+		audio_data_arrived = 2;
+		wake_up_interruptible(&bcmlogreadq);
+		break;
 
-
-				index = p->stream_index - AUDIO_LOG_PATH_1;
-				if((index >= 0) && (index <= 3)) 	
-				{
-					info.stream_index           = p->stream_index;
-					info.wav_info.NumOfChan     = audio_log_cbinfo[index].audlog_header.stereoType;
-					info.wav_info.bitsPerSample = audio_log_cbinfo[index].audlog_header.bitsPerSample;
-					info.wav_info.SamplesPerSec = audio_log_cbinfo[index].audlog_header.samplingRate;	
-
-					if(copy_to_user(p, &info, sizeof(info)))
-					{
-						return -EFAULT;
-					}
-				}
-				else
-				{
-			       rtn = -1;
-				}
-			}
-			break;
-
-		case BCM_LOG_IOCTL_START_CHANNEL:
-        {             
-			logging_link[p_log_info->log_link-1] = 1;
-            rtn= AUDDRV_AudLog_Start(p_log_info->log_link,p_log_info->log_capture_point,p_log_info->log_consumer,(char *) NULL);
-            if (rtn < 0 )
-            {
-                BCM_AUDIO_DEBUG("\n Couldnt setup channel \n");
-                rtn = -1;
-            }
-         }		       
-    	 break;
-		
-		case BCM_LOG_IOCTL_STOP:
-        {
-			if((p_log_info->log_link >= AUDIO_LOG_PATH_1) && (p_log_info->log_link <= AUDIO_LOG_PATH_4))
-			{
-				index = p_log_info->log_link - AUDIO_LOG_PATH_1;
-
-				if((index >= 0) && (index <= 3)) 
-				{
-					audio_log_cbinfo[index].capture_ready = 0;
-					audio_log_cbinfo[index].stream_index  = index;
-					audio_log_cbinfo[index].capture_point = AUD_LOG_NONE;
-					audio_log_cbinfo[index].pPrivate      = NULL;
-				}
-			}
-			else
-			{
-				logging_link[p_log_info->log_link-1] = 0;
-				rtn = AUDDRV_AudLog_Stop(p_log_info->log_link);
-				if (rtn < 0 )
-				{
-					rtn = -1;
-				}
-			}
-        }
-        break;
-		default:
+	case BCM_LOG_IOCTL_GETMSG_CHANNEL:
 		{
-			BCM_AUDIO_DEBUG("\n Wrong IOCTL cmd \n");
+			STREAM_INFO *p = (STREAM_INFO *) arg;
+			STREAM_INFO info;
+
+			BCM_AUDIO_DEBUG
+			    ("BCMLOG_ioctl : BCM_LOG_IOCTL_GETMSG_CHANNEL\n");
+			BCM_AUDIO_DEBUG("\n p->stream_index = %d\n",
+					p->stream_index);
+
+			index = p->stream_index - AUDIO_LOG_PATH_1;
+			if ((index >= 0) && (index <= 3)) {
+				info.stream_index = p->stream_index;
+				info.wav_info.NumOfChan =
+				    audio_log_cbinfo[index].audlog_header.
+				    stereoType;
+				info.wav_info.bitsPerSample =
+				    audio_log_cbinfo[index].audlog_header.
+				    bitsPerSample;
+				info.wav_info.SamplesPerSec =
+				    audio_log_cbinfo[index].audlog_header.
+				    samplingRate;
+
+				if (copy_to_user(p, &info, sizeof(info)))
+					return -EFAULT;
+			} else {
+				rtn = -1;
+			}
+		}
+		break;
+
+	case BCM_LOG_IOCTL_START_CHANNEL:
+		{
+			logging_link[p_log_info->log_link - 1] = 1;
+			rtn =
+			    AUDDRV_AudLog_Start(p_log_info->log_link,
+						p_log_info->log_capture_point,
+						p_log_info->log_consumer,
+						(char *)NULL);
+			if (rtn < 0) {
+				BCM_AUDIO_DEBUG("\n Couldnt setup channel\n");
+				rtn = -1;
+			}
+		}
+		break;
+
+	case BCM_LOG_IOCTL_STOP:
+		{
+			if ((p_log_info->log_link >= AUDIO_LOG_PATH_1)
+			    && (p_log_info->log_link <= AUDIO_LOG_PATH_4)) {
+				index = p_log_info->log_link - AUDIO_LOG_PATH_1;
+
+				if ((index >= 0) && (index <= 3)) {
+					audio_log_cbinfo[index].capture_ready =
+					    0;
+					audio_log_cbinfo[index].stream_index =
+					    index;
+					audio_log_cbinfo[index].capture_point =
+					    AUD_LOG_NONE;
+					audio_log_cbinfo[index].pPrivate = NULL;
+				}
+			} else {
+				logging_link[p_log_info->log_link - 1] = 0;
+				rtn = AUDDRV_AudLog_Stop(p_log_info->log_link);
+				if (rtn < 0)
+					rtn = -1;
+			}
+		}
+		break;
+	default:
+		{
+			BCM_AUDIO_DEBUG("\n Wrong IOCTL cmd\n");
 			rtn = -1;
 		}
 		break;
-    }	
+	}
 	return rtn;
 }
 
-
-int logmsg_ready (struct snd_pcm_substream *substream, int log_point)
+int logmsg_ready(struct snd_pcm_substream *substream, int log_point)
 {
 
 	int i;
 	unsigned char *p_read;
 	struct snd_pcm_runtime *runtime;
 
-	for(i = 0; i < LOG_STREAM_NUMBER; i++)
-	{
+	for (i = 0; i < LOG_STREAM_NUMBER; i++) {
 
-//		BCM_AUDIO_DEBUG("\n capture_point = %d \n",audio_log_cbinfo[i].capture_point);
-//		BCM_AUDIO_DEBUG("\n capture_ready = %d \n",audio_log_cbinfo[i].capture_ready);
+		/* BCM_AUDIO_DEBUG("capture_point = %d\n",
+		* audio_log_cbinfo[i].capture_point);
+		* BCM_AUDIO_DEBUG("capture_ready = %d\n",
+		* audio_log_cbinfo[i].capture_ready);
+		*/
 
-		if(audio_log_cbinfo[i].capture_point == log_point)
-		{
-			if(substream)
-			{
-				audio_log_cbinfo[i].pPrivate = (struct snd_pcm_substream *) substream;
+		if (audio_log_cbinfo[i].capture_point == log_point) {
+			if (substream) {
+				audio_log_cbinfo[i].pPrivate =
+				    (struct snd_pcm_substream *)substream;
 			}
 
 			spin_lock(&audio_log_cbinfo[i].audio_log_lock);
 			audio_log_cbinfo[i].capture_ready = 1;
 			spin_unlock(&audio_log_cbinfo[i].audio_log_lock);
 
-			if(audio_log_cbinfo[i].consumer == LOG_TO_PC)
-			{
-				BCM_AUDIO_DEBUG("\n Trigger MTT writeing now \n");
+			if (audio_log_cbinfo[i].consumer == LOG_TO_PC) {
+				BCM_AUDIO_DEBUG
+				    ("\n Trigger MTT writeing now\n");
 				wake_up_interruptible(&audio_log_queue);
-			}
-			else
-			{
-				BCM_AUDIO_DEBUG("\n Trigger file writeing now \n");
-				
-				if(substream)
-				{
+			} else {
+				BCM_AUDIO_DEBUG
+				    ("\n Trigger file writeing now\n");
+
+				if (substream) {
 					runtime = substream->runtime;
-					audio_data_arrived = 1;	
-					
-					audio_log_cbinfo[i].audlog_header.magicID       = 0xA0D10106;
-					audio_log_cbinfo[i].audlog_header.logPointID    = audio_log_cbinfo[i].stream_index;
-					audio_log_cbinfo[i].audlog_header.audioFormat   = PCM_TYPE;
-					audio_log_cbinfo[i].audlog_header.samplingRate  = runtime->rate;
-					audio_log_cbinfo[i].audlog_header.stereoType    = runtime->channels;
-					audio_log_cbinfo[i].audlog_header.bitsPerSample = runtime->sample_bits;
+					audio_data_arrived = 1;
 
+					audio_log_cbinfo[i].audlog_header.
+					    magicID = 0xA0D10106;
+					audio_log_cbinfo[i].audlog_header.
+					    logPointID =
+					    audio_log_cbinfo[i].stream_index;
+					audio_log_cbinfo[i].audlog_header.
+					    audioFormat = PCM_TYPE;
+					audio_log_cbinfo[i].audlog_header.
+					    samplingRate = runtime->rate;
+					audio_log_cbinfo[i].audlog_header.
+					    stereoType = runtime->channels;
+					audio_log_cbinfo[i].audlog_header.
+					    bitsPerSample =
+					    runtime->sample_bits;
 
-					p_read = (void *)audio_log_cbinfo[i].p_LogRead;
-					if( p_read != runtime->dma_area)
-					{
+					p_read =
+					    (void *)audio_log_cbinfo[i].
+					    p_LogRead;
+					if (p_read != runtime->dma_area) {
 						p_read = runtime->dma_area;
-					}
-					else
-					{
-						p_read = runtime->dma_area + runtime->dma_bytes/2;
+					} else {
+						p_read =
+						    runtime->dma_area +
+						    runtime->dma_bytes / 2;
 					}
 
-					audio_log_cbinfo[i].p_LogRead = (void *) p_read;
-					audio_log_cbinfo[i].size_to_read = runtime->dma_bytes/2;
+					audio_log_cbinfo[i].p_LogRead =
+					    (void *)p_read;
+					audio_log_cbinfo[i].size_to_read =
+					    runtime->dma_bytes / 2;
 					audio_log_writecb = audio_log_cbinfo[i];
 					wake_up_interruptible(&bcmlogreadq);
 				}
@@ -563,93 +517,107 @@ int logmsg_ready (struct snd_pcm_substream *substream, int log_point)
 		}
 	}
 
-	return	0;
+	return 0;
 }
-
 
 int process_logmsg(void *data)
 {
 	int i;
-  	struct snd_pcm_substream *substream;
+	struct snd_pcm_substream *substream;
 	struct snd_pcm_runtime *runtime;
 	AUDIOLOG_HEADER_t log_header;
 	unsigned char *p_dma_area;
-	// UInt32 sig_code;
 
 	log_link_list_t link_list[2];
 
-	while(1)
-	{
-		wait_event_interruptible(audio_log_queue, audio_log_cbinfo[0].capture_ready | audio_log_cbinfo[1].capture_ready | audio_log_cbinfo[2].capture_ready | audio_log_cbinfo[3].capture_ready );
+	while (1) {
+		wait_event_interruptible(audio_log_queue,
+					 audio_log_cbinfo[0].
+					 capture_ready | audio_log_cbinfo[1].
+					 capture_ready | audio_log_cbinfo[2].
+					 capture_ready | audio_log_cbinfo[3].
+					 capture_ready);
 
-		// BCM_AUDIO_DEBUG("\n Capture thread running now \n");
- 
-		if (dev_use_count ==0)	
-		{
-			BCM_AUDIO_DEBUG("\n Stop process_logmsg thread \n");	
+		/* BCM_AUDIO_DEBUG("\n Capture thread running now\n"); */
+
+		if (dev_use_count == 0) {
+			BCM_AUDIO_DEBUG("\n Stop process_logmsg thread\n");
 			audio_log_writecb.pPrivate = NULL;
 			break;
 		}
 
-		for(i = 0; i < LOG_STREAM_NUMBER; i++)
-		{
-			if(audio_log_cbinfo[i].capture_ready)
-			{
-				// BCM_AUDIO_DEBUG("\n Capture stream at capture point %d, stream memory at 0x%x \n",audio_log_cbinfo[i].capture_point,audio_log_cbinfo[i].p_LogRead);
-		
-				// Preapre audio log messssage header
+		for (i = 0; i < LOG_STREAM_NUMBER; i++) {
+			if (audio_log_cbinfo[i].capture_ready) {
+				/* BCM_AUDIO_DEBUG("\n Capture stream at
+				* capture point %d, stream memory at 0x%x \n",
+				* audio_log_cbinfo[i].capture_point,
+				* audio_log_cbinfo[i].p_LogRead);
+				*/
 
-				if((audio_log_cbinfo[i].capture_point == AUD_LOG_PCMOUT) || (audio_log_cbinfo[i].capture_point == AUD_LOG_PCMOUT))
-				{
-					substream = (struct snd_pcm_substream *)audio_log_cbinfo[i].pPrivate;
-					runtime = substream->runtime;				
+				/* Preapre audio log messssage header */
 
-					log_header.magicID       = 0xA0D10106;
-					log_header.logPointID    = audio_log_cbinfo[i].stream_index;
-					log_header.audioFormat   = PCM_TYPE;
-					log_header.samplingRate  = runtime->rate;
-					log_header.stereoType    = runtime->channels;
-					log_header.bitsPerSample = runtime->sample_bits;
+				if ((audio_log_cbinfo[i].capture_point ==
+				     AUD_LOG_PCMOUT)
+				    || (audio_log_cbinfo[i].capture_point ==
+					AUD_LOG_PCMOUT)) {
+					substream =
+					    (struct snd_pcm_substream *)
+					    audio_log_cbinfo[i].pPrivate;
+					runtime = substream->runtime;
+
+					log_header.magicID = 0xA0D10106;
+					log_header.logPointID =
+					    audio_log_cbinfo[i].stream_index;
+					log_header.audioFormat = PCM_TYPE;
+					log_header.samplingRate = runtime->rate;
+					log_header.stereoType =
+					    runtime->channels;
+					log_header.bitsPerSample =
+					    runtime->sample_bits;
+				} else {
+					/* Prepare other format header */
 				}
-				else
-				{
-					// Prepare other format header
-				}
-
 
 				link_list[0].byte_array = (void *)&log_header;
-				link_list[0].size  = sizeof(log_header);
+				link_list[0].size = sizeof(log_header);
 
+				/* Preapre audio messssage stream */
 
-				// Preapre audio messssage stream
-				
-				if((audio_log_cbinfo[i].capture_point == AUD_LOG_PCMOUT) || (audio_log_cbinfo[i].capture_point == AUD_LOG_PCMOUT))
-				{
-					p_dma_area = (void *)audio_log_cbinfo[i].p_LogRead;
+				if ((audio_log_cbinfo[i].capture_point ==
+				     AUD_LOG_PCMOUT)
+				    || (audio_log_cbinfo[i].capture_point ==
+					AUD_LOG_PCMOUT)) {
+					p_dma_area =
+					    (void *)audio_log_cbinfo[i].
+					    p_LogRead;
 
-					if(p_dma_area == runtime->dma_area)
-					{
-						p_dma_area = runtime->dma_area + runtime->dma_bytes/2;
+					if (p_dma_area == runtime->dma_area) {
+						p_dma_area =
+						    runtime->dma_area +
+						    runtime->dma_bytes / 2;
 
-					}
-					else
-					{
+					} else {
 						p_dma_area = runtime->dma_area;
 					}
 
-					audio_log_cbinfo[i].p_LogRead = (void *) p_dma_area;
+					audio_log_cbinfo[i].p_LogRead =
+					    (void *)p_dma_area;
 
 				}
 
-
 				link_list[1].byte_array = p_dma_area;
-				link_list[1].size  = runtime->dma_bytes/2;
+				link_list[1].size = runtime->dma_bytes / 2;
 
-				// void Log_DebugLinkList(UInt32 sig_code, log_link_list_t* link_list, UInt32 list_size_size, UInt16 state, UInt16 sender);
+				/* void Log_DebugLinkList(UInt32 sig_code,
+				 * log_link_list_t* link_list,
+				 *UInt32 list_size_size, UInt16 state,
+				 * UInt16 sender);
+				 */
 
 				spin_lock(&audio_log_cbinfo[i].audio_log_lock);
 				audio_log_cbinfo[i].capture_ready = 0;
-				spin_unlock(&audio_log_cbinfo[i].audio_log_lock);
+				spin_unlock(&audio_log_cbinfo[i].
+					    audio_log_lock);
 
 			}
 		}
@@ -659,113 +627,95 @@ int process_logmsg(void *data)
 	return 0;
 }
 
-
-//Platform device structure
-static struct platform_device sgPlatformDevice =
-{
-       .name           = "brcm_caph_device",
-       .id             = -1,
+/* Platform device structure */
+static struct platform_device sgPlatformDevice = {
+	.name = "brcm_caph_device",
+	.id = -1,
 };
 
-
-//Platfoorm driver structure
-static struct platform_driver sgPlatformDriver =
-{
-	.probe		= DriverProbe,
-	.remove 	= DriverRemove,
-	.suspend	= DriverSuspend,
-	.resume		= DriverResume,
-	.driver		= 
-		{
-		.name	= "brcm_caph_device",
-		.owner	= THIS_MODULE,
-		},
+/* Platfoorm driver structure */
+static struct platform_driver sgPlatformDriver = {
+	.probe = DriverProbe,
+	.remove = DriverRemove,
+	.suspend = DriverSuspend,
+	.resume = DriverResume,
+	.driver = {
+		   .name = "brcm_caph_device",
+		   .owner = THIS_MODULE,
+		   },
 };
-
 
 static struct class *audlog_class;
-//--------------------------------------------------------------------
-// File operations for audio logging
-static struct file_operations bcmlog_fops =
-{
-    .owner =    THIS_MODULE,
-    .open =    BCMAudLOG_open,
-    .read =    BCMAudLOG_read,
-    .unlocked_ioctl =   BCMAudLOG_ioctl,
-    .mmap =    BCMAudLOG_mmap,
-    .release = BCMAudLOG_release,
+/* File operations for audio logging */
+static const struct file_operations bcmlog_fops = {
+	.owner = THIS_MODULE,
+	.open = BCMAudLOG_open,
+	.read = BCMAudLOG_read,
+	.unlocked_ioctl = BCMAudLOG_ioctl,
+	.mmap = BCMAudLOG_mmap,
+	.release = BCMAudLOG_release,
 };
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//  Function Name: ModuleInit
-//
-//  Description: Module initialization
-//
-//------------------------------------------------------------
+
+/**
+ * ModuleInit: Module initialization
+ *
+*/
 static int __devinit ALSAModuleInit(void)
 {
 	int err = 0;
-	
-	
+
 	BCM_AUDIO_DEBUG(KERN_INFO "ALSA Module init called:\n");
 
-
-	err =  platform_device_register(&sgPlatformDevice);
-    BCM_AUDIO_DEBUG("\n %lx:device register done %d\n",jiffies,err);
+	err = platform_device_register(&sgPlatformDevice);
+	BCM_AUDIO_DEBUG("\n %lx:device register done %d\n", jiffies, err);
 	if (err)
-	   return err;
-			
-	err = platform_driver_register(&sgPlatformDriver);
-	BCM_AUDIO_DEBUG("\n %lx:driver register done %d\n",jiffies,err);
-	if(err) 
 		return err;
-		
+
+	err = platform_driver_register(&sgPlatformDriver);
+	BCM_AUDIO_DEBUG("\n %lx:driver register done %d\n", jiffies, err);
+	if (err)
+		return err;
+
 	LaunchAudioCtrlThread();
-        
-    // Device for audio logging
 
-    if ((err = register_chrdev(BCM_ALSA_LOG_MAJOR, "bcm_audio_log", &bcmlog_fops)) < 0)
-    {
-        return err;
-    }  
-    audlog_class = class_create(THIS_MODULE, "bcm_audio_log");
-    if (IS_ERR(audlog_class))
-    {
-        return PTR_ERR(audlog_class);
-    }
+	/* Device for audio logging */
 
-    device_create(audlog_class, NULL, MKDEV(BCM_ALSA_LOG_MAJOR, 0),NULL, "bcm_audio_log");
-    init_waitqueue_head(&bcmlogreadq);
+	err = register_chrdev(BCM_ALSA_LOG_MAJOR, "bcm_audio_log",
+		&bcmlog_fops);
+	if (err < 0)
+		return err;
+	audlog_class = class_create(THIS_MODULE, "bcm_audio_log");
+	if (IS_ERR(audlog_class))
+		return PTR_ERR(audlog_class);
+
+	device_create(audlog_class, NULL, MKDEV(BCM_ALSA_LOG_MAJOR, 0), NULL,
+		      "bcm_audio_log");
+	init_waitqueue_head(&bcmlogreadq);
 	memset(audio_log_cbinfo, 0, sizeof(audio_log_cbinfo));
 
 	return err;
 }
 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//  Function Name: ModuleExit
-//
-//  Description: Module de-initialization
-//
-//------------------------------------------------------------
+/**
+ * ModuleExit: Module de-initialization
+*
+*/
 static void __devexit ALSAModuleExit(void)
 {
-	//int err;
-	
-	BCM_AUDIO_DEBUG("\n %lx:ModuleExit\n",jiffies);
+
+	BCM_AUDIO_DEBUG("\n %lx:ModuleExit\n", jiffies);
 
 	snd_card_free(sgpCaph_chip->card);
-	
+
 	platform_driver_unregister(&sgPlatformDriver);
 
 	platform_device_unregister(&sgPlatformDevice);
-    TerminateAudioHalThread();
-	
-	BCM_AUDIO_DEBUG("\n %lx:exit done \n",jiffies);
+	TerminateAudioHalThread();
+
+	BCM_AUDIO_DEBUG("\n %lx:exit done\n", jiffies);
 }
 
-// lower down the CAPH module init priority, so it can be done after RPC init.
+/* lower down the CAPH module init priority, so it can be done after RPC init*/
 module_init(ALSAModuleInit);
-//late_initcall(ALSAModuleInit);
+/* late_initcall(ALSAModuleInit); */
 module_exit(ALSAModuleExit);
-

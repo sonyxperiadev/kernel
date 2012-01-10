@@ -111,7 +111,11 @@ static struct i2c_cmd i2c_cmd[] = {
 	{WAIT_TIMER, WRITE_DELAY},	/* 50:Wait.. */
 	{I2C_DATA, 0xC0},		/* 51:PMU write register data offset */
 	{WAIT_TIMER, WRITE_DELAY},	/* 52:Wait.. */
+#ifdef CONFIG_KONA_PWRMGR_REV2
 	{SET_READ_DATA, 0x48}, /* 53:copy NACK bit to PWRMGR I2C_READ_DATA[0]*/
+#else
+	{REG_ADDR, 0}, /* 53: NOP */
+#endif
 	{REG_ADDR, PMU_BSC_INT_STATUS_REG}, /* 54:PMU BSC INT status reg */
 	{REG_DATA, PMU_BSC_INT_STATUS_MASK},/* 55:Clear INT status register */
 	{END, 0},			/* 56:NOP- write seq end */
