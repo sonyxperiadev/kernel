@@ -23,6 +23,9 @@
 #include <asm/system.h>
 #include <asm/pgtable.h>
 #include <asm/tlbflush.h>
+#if defined(CONFIG_CDEBUGGER)
+#include <mach/cdebugger.h>
+#endif
 
 #include "fault.h"
 
@@ -146,6 +149,11 @@ __do_kernel_fault(struct mm_struct *mm, unsigned long addr, unsigned int fsr,
 	 */
 	if (fixup_exception(regs))
 		return;
+
+#if defined(CONFIG_CDEBUGGER)
+	/* For saving Fault status . */
+	cdebugger_save_pte((void *)regs, (int )current);
+#endif	
 
 	/*
 	 * No handler, we'll have to terminate things with extreme prejudice.

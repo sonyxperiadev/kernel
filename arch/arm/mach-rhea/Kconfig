@@ -140,6 +140,11 @@ config RHEA_PI_MGR_DISABLE_POLICY_CHANGE
 	  policy will be set to wakeup policy 7
 
 
+config CDEBUGGER
+	depends on ARCH_RHEA
+	bool "Enable Ramdump dump Feature on Rhea"
+	default n
+
 endmenu
 
 
