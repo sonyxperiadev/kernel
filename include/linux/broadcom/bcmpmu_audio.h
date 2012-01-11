@@ -219,7 +219,7 @@ extern void bcmpmu_hs_power(bool on);
 extern void bcmpmu_ihf_power(bool on);
 extern void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain);
 extern void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain);
-
+extern void bcmpmu_hi_gain_mode_en(bool en);
 extern int bcmpmu_audio_ihf_selftest_stimulus_input(int stimulus);
 extern int bcmpmu_audio_ihf_selftest_stimulus_output(int stimulus);
 extern void bcmpmu_audio_ihf_selftest_result(u8 *result);
