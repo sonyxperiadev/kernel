@@ -1397,8 +1397,13 @@ static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int sinkNo, int blockPat
 	}
 
 #if !defined(ENABLE_DMA_LOOPBACK)
-	if ((dmaCfg.dma_ch >= CSL_CAPH_DMA_CH12) && (dmaCfg.dma_ch <= CSL_CAPH_DMA_CH14))
-		owner = CSL_CAPH_DSP; //Unless it is for test purpose, DMA 12 - 14 belong to DSP
+	if ((dmaCfg.dma_ch >= CSL_CAPH_DMA_CH12) && (dmaCfg.dma_ch <= CSL_CAPH_DMA_CH14)) {
+		if( (path->source==CSL_CAPH_DEV_DSP_throughMEM)
+		 || (path->source==CSL_CAPH_DEV_DSP)
+		 || (path->sink[sinkNo]==CSL_CAPH_DEV_DSP_throughMEM)
+		 || (path->sink[sinkNo]==CSL_CAPH_DEV_DSP) )
+			owner = CSL_CAPH_DSP; //Unless it is for test purpose, DMA 12 - 14 belong to DSP
+	}
 #endif
 	if(owner == CSL_CAPH_ARM)
 		csl_caph_dma_config_channel(dmaCfg);
@@ -2288,27 +2293,26 @@ static Boolean csl_caph_hwctrl_readHWResource(UInt32 fifoAddr,
 static void csl_caph_hwctrl_closeDMA(CSL_CAPH_DMA_CHNL_e dmaCH,
                                           CSL_CAPH_PathID pathID)
 {
-    CSL_CAPH_CFIFO_FIFO_e fifo = CSL_CAPH_CFIFO_NONE;
 	CSL_CAPH_ARM_DSP_e owner = CSL_CAPH_ARM;
-    UInt32 fifoAddr = 0;
+	CSL_CAPH_HWConfig_Table_t *path;
 
     if ((dmaCH == CSL_CAPH_DMA_NONE)||(pathID == 0)) return;
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeDMA path %d, dma %d.\r\n", pathID, dmaCH);
+	path = &HWConfig_Table[pathID-1];
 
-    fifo = csl_caph_cfifo_get_fifo_by_dma(dmaCH);
-    fifoAddr = csl_caph_cfifo_get_fifo_addr(fifo);
-    csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
-
-    if (FALSE == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
-    {
 #if !defined(ENABLE_DMA_LOOPBACK)
-		if(dmaCH>=CSL_CAPH_DMA_CH12 && dmaCH<=CSL_CAPH_DMA_CH14) owner = CSL_CAPH_DSP;
+	if(dmaCH>=CSL_CAPH_DMA_CH12 && dmaCH<=CSL_CAPH_DMA_CH14) {
+		if( (path->source==CSL_CAPH_DEV_DSP_throughMEM)
+		 || (path->source==CSL_CAPH_DEV_DSP)
+		 || (path->sink[0]==CSL_CAPH_DEV_DSP_throughMEM)
+		 || (path->sink[0]==CSL_CAPH_DEV_DSP) )
+			owner = CSL_CAPH_DSP;
+	}
 #endif
-        csl_caph_dma_clear_intr(dmaCH, owner);
-        csl_caph_dma_disable_intr(dmaCH, owner);
-        csl_caph_dma_stop_transfer(dmaCH);
-        csl_caph_dma_release_channel(dmaCH);
-    }
+    csl_caph_dma_clear_intr(dmaCH, owner);
+    csl_caph_dma_disable_intr(dmaCH, owner);
+    csl_caph_dma_stop_transfer(dmaCH);
+    csl_caph_dma_release_channel(dmaCH);
     return;
 }
 
