@@ -722,6 +722,11 @@ config BRALLOC_MEM_STATS
 	  This option enables statistics for Bralloc memory driver to be
 	  shown in /proc/brallocstat file
 
+config RECOVERY
+	bool "Android Recovery Support"
+	depends on ARCH_KONA
+	default y
+
 source "drivers/misc/Kconfig.stm"
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
