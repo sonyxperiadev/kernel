@@ -740,7 +740,7 @@ void AUDDRV_Telephony_Deinit(void)
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff,
 				  FALSE, 0, 0, 0, 0);
 
-		if (currVoiceSpkr == AUDIO_SINK_LOUDSPK) {
+		/* if (currVoiceSpkr == AUDIO_SINK_LOUDSPK) */ {
 			AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
 				    (FALSE, FALSE, FALSE);
 			    )
