@@ -34,6 +34,25 @@
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <linux/dma-mapping.h>
 
+
+#if defined(DEBUG)
+#define pm_dbg printk
+#else
+#define pm_dbg(format...)              \
+	do {                            \
+	    if (pm_debug && pm_debug!=2)          	\
+		printk(format); 	\
+	} while(0)
+#endif
+
+/*SCU power status values*/
+enum
+{
+	SCU_STATUS_NORMAL 	= 0,
+	SCU_STATUS_DORMANT 	= 2, /*used to force A9 to retention*/
+	SCU_STATUS_OFF 		= 3, /*used to force A9 to dormant*/
+};
+
 extern void enter_wfi(void);
 extern void dormant_enter(void);
 
@@ -53,17 +72,6 @@ static u32 pm_en_self_refresh = 0;
 
 dma_addr_t noncache_buf_pa;
 char* noncache_buf_va;
-#endif
-
-
-#if defined(DEBUG)
-#define pm_dbg printk
-#else
-#define pm_dbg(format...)              \
-	do {                            \
-	    if (pm_debug && pm_debug!=2)          	\
-		printk(format); 	\
-	} while(0)
 #endif
 
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
@@ -189,6 +197,17 @@ static int enable_sleep_prevention_clock(int enable)
 }
 #endif
 
+static int pm_set_scu_power_mode(u32 mode)
+{
+	u32 reg_val = 0;
+	BUG_ON(mode > SCU_STATUS_OFF || mode == 1);
+	reg_val = readl(KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+	reg_val &= ~SCU_POWER_STATUS_CPU0_STATUS_MASK;
+	reg_val |= mode & SCU_POWER_STATUS_CPU0_STATUS_MASK;
+	writel(reg_val, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+
+	return 0;
+}
 
 static int pm_enable_scu_standby(bool enable)
 {
@@ -467,7 +486,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 		 insurance = 0;
 		while((readl(KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_STATUS_OFFSET) &
 			(1 << MEMC_HW2221_SEMAPHORE)) == 0) {
-			/*lock CORE0 semaphore, 
+			/*lock CORE0 semaphore,
  				 (1<<MEMC_HW2221_SEMAPHORE) -> 0x35004184 */
 			writel(1 << MEMC_HW2221_SEMAPHORE,
 			KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_LOCK_OFFSET);
@@ -500,13 +519,10 @@ int enter_dormant_state(struct kona_idle_state* state)
 	/*TBD - Change pwrmgr interface function*/
 	writel(0x06600000,
 		KONA_PWRMGR_VA+PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
-#else
-	/* If no rom dispatcher, enter retention instead of dormant */
-	writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
 #endif /* CONFIG_ROM_SEC_DISPATCHER*/
 	dormant_enter();
 #else
-	writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+	pm_set_scu_power_mode(SCU_STATUS_DORMANT);
 	enter_wfi();
 #endif
 #ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
@@ -527,7 +543,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
 
 	pi_enable(pi,1);
-	writel(0, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+	pm_set_scu_power_mode(SCU_STATUS_NORMAL);
 #ifdef CONFIG_ARCH_RHEA_A0
 	if(pm_en_self_refresh)
 	{

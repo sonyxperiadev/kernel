@@ -8,12 +8,6 @@ ENTRY(enter_wfi)
 
 	stmfd   sp!,{r0-r5, lr}
 
-	wait_for_self_refresh:
-	ldr	r4, = (KONA_MEMC0_NS_VA + CSR_DDR_POWER_DOWN_STATUS_OFFSET)
-	ldr	r0, [r4]
-	cmp	r0, #03
-	@bne	wait_for_self_refresh
-
 	mov	r0, r0
 	mov	r0, r0
 	mov	r0, r0
