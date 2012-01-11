@@ -35,7 +35,6 @@
 #define _INC_AUDIO_CONSTS_H_
 
 
-#include "audio_tuning.h"
 /****************************************************************
  * The following part shows all the constant values needed in audio baseband code.
  ****************************************************************/
@@ -48,7 +47,7 @@ typedef enum AUDIO_GAIN_FORMAT_t
 } AUDIO_GAIN_FORMAT_t;
 
 /* enable this flag when cp image is in lmp */
-//#define USE_NEW_AUDIO_PARAM
+#define USE_NEW_AUDIO_PARAM
 
 /**
 	audio application (2-D audio parameters profile)
@@ -56,7 +55,7 @@ typedef enum AUDIO_GAIN_FORMAT_t
 typedef enum {
     AUDIO_APP_VOICE_CALL = 0,
     AUDIO_APP_VOICE_CALL_WB,
-    AUDIO_APP_RESERVED1,
+    AUDIO_APP_MUSIC,
     AUDIO_APP_RESERVED2,
     AUDIO_APP_RESERVED3,
     AUDIO_APP_RESERVED4

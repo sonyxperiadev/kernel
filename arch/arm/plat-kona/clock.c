@@ -360,7 +360,7 @@ static int __ccu_clk_enable(struct clk *clk)
 		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
 
 		BUG_ON(!pi);
-		pi_enable(pi,1);
+		__pi_enable(pi);
 	}
 #endif
 
@@ -633,7 +633,7 @@ static int __ccu_clk_disable(struct clk *clk)
 		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
 
 		BUG_ON(!pi);
-		pi_enable(pi,0);
+		__pi_disable(pi);
 	}
 #endif
 
@@ -1783,6 +1783,7 @@ static int ccu_clk_write_access_enable(struct ccu_clk* ccu_clk, int enable)
 static int ccu_clk_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type)
 {
 	u32 reg_val = 0;
+	u32 insurance = 10000;
 
 	if(ccu_clk->pol_engine_dis_cnt == 0)
 		return 0; /*Already in running state ??*/
@@ -1799,7 +1800,14 @@ static int ccu_clk_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type)
 	reg_val |= CCU_POLICY_CTL_GO_TRIG << CCU_POLICY_CTL_GO_SHIFT;
 
 	writel(reg_val,CCU_POLICY_CTRL_REG(ccu_clk));
-	while(readl(CCU_POLICY_CTRL_REG(ccu_clk)) & CCU_POLICY_CTL_GO_MASK) ;
+
+	while((readl(CCU_POLICY_CTRL_REG(ccu_clk)) & CCU_POLICY_CTL_GO_MASK)
+			&& insurance)
+	{
+		udelay(1);
+		insurance--;
+	}
+	BUG_ON(insurance == 0);
 
 	reg_val = readl(CCU_POLICY_CTRL_REG(ccu_clk));
 	if((load_type == CCU_LOAD_TARGET) && (reg_val & CCU_POLICY_CTL_TGT_VLD_MASK))
@@ -1814,13 +1822,20 @@ static int ccu_clk_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type)
 static int ccu_clk_policy_engine_stop(struct ccu_clk* ccu_clk)
 {
 	u32 reg_val = 0;
+	u32 insurance = 10000;
 
 	if(ccu_clk->pol_engine_dis_cnt++ != 0)
 		return 0; /*Already in disabled state */
 
 	reg_val = (CCU_POLICY_OP_EN << CCU_POLICY_CONFIG_EN_SHIFT);
 	writel(reg_val,CCU_LVM_EN_REG(ccu_clk));
-	while(readl(CCU_LVM_EN_REG(ccu_clk)) & CCU_POLICY_CONFIG_EN_MASK) ;
+	while((readl(CCU_LVM_EN_REG(ccu_clk)) & CCU_POLICY_CONFIG_EN_MASK) &&
+			insurance)
+	{
+		udelay(1);
+		insurance--;
+	}
+	BUG_ON(insurance == 0);
 
 	return 0;
 }

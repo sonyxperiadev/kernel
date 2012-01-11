@@ -42,6 +42,7 @@
 #define AUDIO_PMU_IHF_SET_GAIN(a) NULL
 #define AUDIO_PMU_IHF_POWER(a) NULL
 #define AUDIO_PMU_DEINIT() NULL
+#define AUDIO_PMU_HI_GAIN_MODE_EN(a) NULL
 
 #else
 #ifdef CONFIG_BCM59055_AUDIO 
@@ -53,6 +54,7 @@
 #define AUDIO_PMU_IHF_SET_GAIN bcm59055_ihf_set_gain
 #define AUDIO_PMU_IHF_POWER bcm59055_ihf_power
 #define AUDIO_PMU_DEINIT bcm59055_audio_deinit
+#define AUDIO_PMU_HI_GAIN_MODE_EN NULL
 
 #else
 
@@ -63,6 +65,7 @@
 #define AUDIO_PMU_IHF_SET_GAIN bcmpmu_ihf_set_gain
 #define AUDIO_PMU_IHF_POWER bcmpmu_ihf_power
 #define AUDIO_PMU_DEINIT bcmpmu_audio_deinit
+#define AUDIO_PMU_HI_GAIN_MODE_EN bcmpmu_hi_gain_mode_en
 
 #endif
 

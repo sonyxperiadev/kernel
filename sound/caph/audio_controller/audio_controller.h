@@ -701,7 +701,7 @@ void AUDCTRL_SetIHFmode (Boolean stIHF);
 *  @return  none
 *
 ****************************************************************************/
-void  AUDCTRL_SetBTMode(Boolean mode);
+void  AUDCTRL_SetBTMode(int mode);
 
 /********************************************************************
 *  @brief  Hardware register access fucntion

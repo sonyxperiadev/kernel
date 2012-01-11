@@ -534,13 +534,11 @@ choice
 
 config KONA_HEADSET
 	tristate "Kona headset driver"
-	default y
         help
           Activate Kona headset driver
 
 config KONA_HEADSET_MULTI_BUTTON
 	tristate "Kona headset driver with multi button support"
-	default n
         help
           Activate Kona headset driver with multi button support
 endchoice

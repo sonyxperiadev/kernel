@@ -80,7 +80,7 @@ void bcmpmu_ihf_power(bool on)
 		/*toggle i_IHFLDO_pup from 0 to 1.*/
 		bcmpmu->write_dev(bcmpmu,PMU_REG_IHFLDO_PUP,
 			0,bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
-		
+
 		bcmpmu->write_dev(bcmpmu,PMU_REG_IHFLDO_PUP,
 			bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask,
 			bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
@@ -90,7 +90,7 @@ void bcmpmu_ihf_power(bool on)
 			return;
 		}
 		bcmpmu_audio->IHF_On = false;
-		
+
 		/*Toggle i_IHFpop_pup from 1 to 0.*/
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,&reg.val,PMU_BITMASK_ALL);
 		reg.val |= BCMPMU_IHFPOP_PUP;  /*IHFPOP*/
@@ -99,11 +99,11 @@ void bcmpmu_ihf_power(bool on)
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,&reg.val,PMU_BITMASK_ALL);
 		reg.val &= ~BCMPMU_IHFPOP_PUP;  /*IHFPOP*/
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,reg.val,PMU_BITMASK_ALL);
-		
+
 		/*Set i_IHFLDO_pup=0.*/
 		bcmpmu->write_dev(bcmpmu,PMU_REG_IHFLDO_PUP,
 			0,bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
-		
+
 		/*Set i_IHF_IDDQ =1.*/
 		bcmpmu->write_dev(bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,
 			bcmpmu->regmap[PMU_REG_IHFTOP_IHF_IDDQ].mask,
@@ -146,16 +146,25 @@ EXPORT_SYMBOL(bcmpmu_hs_set_gain);
 
 void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain)
 {
-	struct bcmpmu_rw_data reg;
+	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
+	u8 val;
+	val = (gain & bcmpmu->regmap[PMU_REG_IHFPGA2_GAIN].mask) <<
+		bcmpmu->regmap[PMU_REG_IHFPGA2_GAIN].shift;
 
-	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPGA2_GAIN,&reg.val,PMU_BITMASK_ALL);
-	reg.val &= ~BCMPMU_IHF_GAIN_MASK;
-	reg.val |= (gain & BCMPMU_IHF_GAIN_MASK);
-	bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPGA2_GAIN,reg.val,PMU_BITMASK_ALL);
+	bcmpmu->write_dev(bcmpmu, PMU_REG_IHFPGA2_GAIN,
+			val, bcmpmu->regmap[PMU_REG_IHFPGA2_GAIN].mask);
 }
 EXPORT_SYMBOL(bcmpmu_ihf_set_gain);
 
+void bcmpmu_hi_gain_mode_en(bool en)
+{
+	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
+	u8 val = en << bcmpmu->regmap[PMU_REG_HIGH_GAIN_MODE].shift;
 
+	bcmpmu->write_dev(bcmpmu, PMU_REG_HIGH_GAIN_MODE,
+			val, bcmpmu->regmap[PMU_REG_HIGH_GAIN_MODE].mask);
+}
+EXPORT_SYMBOL(bcmpmu_hi_gain_mode_en);
 
 int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 {
@@ -433,11 +442,11 @@ DEFINE_SIMPLE_ATTRIBUTE(dbg_hs_on, NULL,
 
 static int audio_ihf_on(void *data, u64 val)
 {
-	if (val) 
+	if (val)
 		bcmpmu_ihf_power(true);
 	else
 		bcmpmu_ihf_power(false);
-	
+
 	return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(dbg_ihf_on, NULL,
@@ -452,7 +461,7 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *audio_dir = NULL, *hs_gain = NULL, *ihf_gain = NULL, *hs_on = NULL, *ihf_on = NULL;
 #endif
-		
+
 	printk(KERN_INFO "%s: called.\n", __func__);
 
 	pdata = kzalloc(sizeof(struct bcmpmu_audio), GFP_KERNEL);

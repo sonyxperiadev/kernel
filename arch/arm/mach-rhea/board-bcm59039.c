@@ -217,7 +217,7 @@ static struct regulator_init_data bcm59039_hv5ldo_data = {
 };
 
 struct regulator_consumer_supply hv6_supply[] = {
-	{.supply = "hv6"},
+	{.supply = "vdd_sdio"},
 };
 static struct regulator_init_data bcm59039_hv6ldo_data = {
 	.constraints = {

@@ -102,11 +102,14 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 	switch (Params[0]) {
 
 	case 0:		/* at*maudmode 0 */
+#if !defined(USE_NEW_AUDIO_PARAM)
 		Params[0] = AUDCTRL_GetAudioMode();
 		BCM_AUDIO_DEBUG(" %s mode %ld\n", __func__, Params[0]);
+#endif
 		break;
 
 	case 1:		/* at*maudmode 1 mode */
+#if !defined(USE_NEW_AUDIO_PARAM)
 		AUDCTRL_GetSrcSinkByMode(Params[1], &mic, &spk);
 		pCurSel[0] =
 	pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].iLineSelect[0];
@@ -119,13 +122,10 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				 1].iLineSelect[0] = mic;
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
 				 1].iLineSelect[1] = spk;
-#if !defined(USE_NEW_AUDIO_PARAM)
 		AUDCTRL_SetAudioMode(Params[1]);
-#else
-		AUDCTRL_SetAudioMode(Params[1], AUDCTRL_GetAudioApp());
-#endif
 		BCM_AUDIO_DEBUG(" %s mic %d spk %d mode %ld\n", __func__,
 		mic, spk, Params[1]);
+#endif
 		break;
 
 	case 8:		/* at*maudmode=8 */
@@ -198,17 +198,34 @@ if (((loopback_input > 4) && (loopback_input != 11)) ||
 		break;
 
 	case 14:	/* at*maudmode=14  --> read current mode and app */
-		BCM_AUDIO_DEBUG(
-		"%s read current mode and operation is not supported\n",
-		 __func__);
-		rtn = -1;
+#if defined(USE_NEW_AUDIO_PARAM)
+        Params[0] = AUDCTRL_GetAudioApp();
+		Params[1] = AUDCTRL_GetAudioMode();
+		BCM_AUDIO_DEBUG("%s app %ld mode %ld\n", 
+                __FUNCTION__, Params[0], Params[1]);
+#endif
 		break;
 
 	case 15:	/* at*maudmode=15  --> set current mode and app */
-		BCM_AUDIO_DEBUG(
-		"%s set current mode and operation is not supported\n",
-		 __func__);
-		rtn = -1;
+#if defined(USE_NEW_AUDIO_PARAM)
+		AUDCTRL_GetSrcSinkByMode(Params[2], &mic, &spk);
+        pCurSel[0] = pChip->
+            streamCtl[CTL_STREAM_PANEL_VOICECALL-1].
+            iLineSelect[0]; /*save current setting*/
+        pCurSel[1] = pChip->
+            streamCtl[CTL_STREAM_PANEL_VOICECALL-1].
+            iLineSelect[1];
+
+        /* Update 'VC-SEL' -- */
+		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].
+            iLineSelect[0] = mic;
+		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].
+            iLineSelect[1] = spk;
+        AUDCTRL_SetAudioApp(Params[1]);
+        AUDCTRL_SetAudioMode( Params[2], Params[1]);
+        BCM_AUDIO_DEBUG("%s mic %d spk %d mode %ld app %ld\n", 
+                __FUNCTION__, mic,spk,Params[2], Params[1]);
+#endif    
 		break;
 
 	case 99:		/* at*maudmode=99  --> stop tuning */
@@ -375,10 +392,10 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			AUDIO_SINK_Enum_t spk = AUDIO_SINK_HANDSET;
 
 	case 2:		/*at*maudtst 2: return both mode and app */
-			Params[1] = AUDCTRL_GetAudioMode();
-			Params[2] = AUDCTRL_GetAudioApp();
+			Params[2] = AUDCTRL_GetAudioMode();
+			Params[1] = AUDCTRL_GetAudioApp();
 			BCM_AUDIO_DEBUG("%s mode %ld app %ld\n", __func__,
-					Params[1], Params[2]);
+					Params[2], Params[1]);
 			break;
 
 	case 3:		/*at*maudtst 3 mode app: set mode and app*/
@@ -469,11 +486,24 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE,
 			Params[1], 0, 0);
 		break;
+/*
+ * There is errors in this case. XXX_Get_CP_AudioMode() does not
+ * work. It cannot read audio mode from CP image.
+ * I this this is not needed.
+ * Comment it out for now. And it may be removed.
 	case 37:
+#if defined(USE_NEW_AUDIO_PARAM)
+        Params[1] = AUDDRV_Get_CP_AudioMode() / AUDIO_MODE_NUMBER;
+        Params[2] = AUDDRV_Get_CP_AudioMode() % AUDIO_MODE_NUMBER;
+		BCM_AUDIO_DEBUG("CP audio app %d, mode %d\n",
+				Params[1], Params[2]);
+#else
+        Params[1] = AUDDRV_Get_CP_AudioMode();
 		BCM_AUDIO_DEBUG("CP audio mode %d\n",
-				AUDDRV_Get_CP_AudioMode());
+				Params[1]);
+#endif
 		break;
-
+*/
 	case 100:
 		if (Params[1] == 1) {
 			BCM_AUDIO_DEBUG("Enable CAPH clock\n");

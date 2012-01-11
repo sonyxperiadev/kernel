@@ -141,7 +141,7 @@ static UInt32 dspSharedMemAddr = 0;
 static CSL_CAPH_SWITCH_CONFIG_t fm_sw_config;
 static int ssp_pcm_usecount = 0;
 static Boolean isSTIHF = FALSE;
-static Boolean bBTTest = FALSE;
+static int bBTTest = 0;
 static Boolean sClkCurEnabled = FALSE;
 static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 
@@ -801,7 +801,10 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 	if(path->source==CSL_CAPH_DEV_DSP) dataFormat = CSL_CAPH_24BIT_MONO; //dsp data is 24bit mono
 	if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR)
 	{
-		path->snk_sampleRate = AUDIO_SAMPLING_RATE_8000;
+		if(bBTTest == 2)
+			path->snk_sampleRate = AUDIO_SAMPLING_RATE_16000; /*- BT-WB -*/
+		else
+			path->snk_sampleRate = AUDIO_SAMPLING_RATE_8000;  /*- NB-BT -*/
 	} else if (path->snk_sampleRate==0) {
 		path->snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
 	}
@@ -1222,6 +1225,8 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
 		{
 			csl_i2s_stop_tx(fmHandleSSP);
 			fmTxRunning = FALSE;
+			if (fmTxRunning == FALSE && fmRxRunning == FALSE)
+				csl_sspi_enable_scheduler(fmHandleSSP, 0);
 		}
 		else if (fmRxRunning == TRUE && path->source == CSL_CAPH_DEV_FM_RADIO)
 		{
@@ -1230,9 +1235,9 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
 				csl_i2s_stop_rx(fmHandleSSP);
 				fmRxRunning = FALSE;
 			}
+			if (fmTxRunning == FALSE && fmRxRunning == FALSE)
+				csl_sspi_enable_scheduler(fmHandleSSP, 0);
 		}
-		if (fmTxRunning == FALSE && fmRxRunning == FALSE)
-			csl_sspi_enable_scheduler(fmHandleSSP, 0);
 	}
 
     for (i = startOffset; i < MAX_PATH_LEN; i++)
@@ -2426,10 +2431,6 @@ static void csl_caph_hwctrl_closeSwitchCH(CSL_CAPH_SWITCH_CONFIG_t switchCH,
 
     if (FALSE == csl_caph_hwctrl_readHWResource(switchCH.FIFO_srcAddr, pathID))
     {
-        csl_caph_switch_remove_dst(switchCH.chnl, switchCH.FIFO_dstAddr);
-        csl_caph_switch_remove_dst(switchCH.chnl, switchCH.FIFO_dst2Addr);
-        csl_caph_switch_remove_dst(switchCH.chnl, switchCH.FIFO_dst3Addr);
-        csl_caph_switch_remove_dst(switchCH.chnl, switchCH.FIFO_dst4Addr);
         csl_caph_switch_stop_transfer(switchCH.chnl);
         csl_caph_switch_release_channel(switchCH.chnl);
     }
@@ -2861,7 +2862,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
     if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR))
     {
 		list = LIST_DMA_MIX_SRC_SW;
-		if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && bBTTest) list = LIST_DMA_SW; //avoid SRC for production test.
+		if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && (bBTTest == 1)) list = LIST_DMA_SW; //avoid SRC for production test.
 		ssp_pcm_usecount++;
     }
     else
@@ -3826,7 +3827,7 @@ void csl_caph_hwctrl_SetIHFmode(Boolean stIHF)
 *  Description: Set BT mode
 *
 ****************************************************************************/
-void csl_caph_hwctrl_SetBTMode(Boolean mode)
+void csl_caph_hwctrl_SetBTMode(int mode)
 {
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_SetBTMode from %d to %d\r\n", bBTTest, mode);
 	bBTTest = mode;

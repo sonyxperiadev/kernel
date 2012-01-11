@@ -1062,7 +1062,6 @@ headers_install: __headers
 	$(error Headers not exportable for the $(SRCARCH) architecture))
 	$(Q)$(MAKE) $(hdr-inst)=include
 	$(Q)$(MAKE) $(hdr-inst)=arch/$(hdr-arch)/include/asm $(hdr-dst)
-	$(Q)$(MAKE) $(hdr-inst)=drivers/videocore/host_support/include
 
 PHONY += headers_check_all
 headers_check_all: headers_install_all

@@ -93,8 +93,20 @@
 #include <linux/broadcom/bcmbt_lpm.h
 #endif
 
+#if defined(CONFIG_BCMI2CNFC)
+#include <linux/bcmi2cnfc.h>
+#endif
+
+
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
+#endif
+
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#include <linux/mpu.h>
+#include <linux/mpu6050b1.h>
+#include <linux/brcm_axis_change.h>
+#include <mach/mpu6050_settings.h>
 #endif
 
 #ifdef CONFIG_FB_BRCM_RHEA
@@ -617,6 +629,70 @@ static struct i2c_board_info __initdata qt602240_info[] = {
 };
 #endif /* CONFIG_TOUCHSCREEN_QT602240 */
 
+#if defined(CONFIG_BCMI2CNFC)
+
+static int bcmi2cnfc_gpio_setup(void *);
+static int bcmi2cnfc_gpio_clear(void *);
+static struct bcmi2cnfc_i2c_platform_data bcmi2cnfc_pdata = {
+	.irq_gpio = 69,
+	.en_gpio = 72,
+	.wake_gpio = 73,
+	.init = bcmi2cnfc_gpio_setup,
+	.reset = bcmi2cnfc_gpio_clear,
+	.i2c_pdata	= {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),},
+};
+
+
+static int bcmi2cnfc_gpio_setup(void *this)
+{
+	struct bcmi2cnfc_i2c_platform_data *p;
+	p = (struct bcmi2cnfc_i2c_platform_data *) this;
+	if (!p)
+		return -1;
+	pr_info("bcmi2cnfc_gpio_setup nfc en %d, wake %d, irq %d\n",
+		p->en_gpio, p->wake_gpio, p->irq_gpio);
+
+	gpio_request(p->irq_gpio, "nfc_irq");
+	gpio_direction_input(p->irq_gpio);
+
+	gpio_request(p->en_gpio, "nfc_en");
+	gpio_direction_output(p->en_gpio, 1);
+
+	gpio_request(p->wake_gpio, "nfc_wake");
+	gpio_direction_output(p->wake_gpio, 0);
+
+	return 0;
+}
+static int bcmi2cnfc_gpio_clear(void *this)
+{
+	struct bcmi2cnfc_i2c_platform_data *p;
+	p = (struct bcmi2cnfc_i2c_platform_data *) this;
+	if (!p)
+		return -1;
+
+	pr_info("bcmi2cnfc_gpio_clear nfc en %d, wake %d, irq %d\n",
+		p->en_gpio, p->wake_gpio, p->irq_gpio);
+
+	gpio_direction_output(p->en_gpio, 0);
+	gpio_direction_output(p->wake_gpio, 1);
+	gpio_free(p->en_gpio);
+	gpio_free(p->wake_gpio);
+	gpio_free(p->irq_gpio);
+
+	return 0;
+}
+
+static struct i2c_board_info __initdata bcmi2cnfc[] = {
+	{
+	 I2C_BOARD_INFO("bcmi2cnfc", 0x1FA),
+	 .flags = I2C_CLIENT_TEN,
+	 .platform_data = (void *)&bcmi2cnfc_pdata,
+	 .irq = gpio_to_irq(69),
+	 },
+
+};
+#endif
+
 #ifdef CONFIG_KONA_HEADSET
 #define HS_IRQ	gpio_to_irq(76)
 #define HSB_IRQ	BCM_INT_ID_AUXMIC_COMP2
@@ -688,6 +764,103 @@ static struct platform_device pl330_dmac_device = {
 		},
 };
 #endif
+
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+
+#ifdef MPU6050_DRIVER_ACCEL_GYRO_SETTINGS
+static struct t_brcm_axis_change board_mpu6050_accel_gyro_change = MPU6050_DRIVER_ACCEL_GYRO_SETTINGS;
+#endif
+
+#ifdef MPU6050_DRIVER_COMPASS_SETTINGS
+static struct t_brcm_axis_change board_mpu6050_compass_change = MPU6050_DRIVER_COMPASS_SETTINGS;
+#endif
+
+#ifdef MPU6050_DRIVER_REG_VALUES
+static int mpu6050_reg_vals[] = MPU6050_DRIVER_REG_VALUES;
+#endif
+
+static struct t_brcm_sensors_axis_change board_mpu6050_sensors_change =
+{
+	/* The MPU6050 is an accelerometer and a gyro. */
+#ifdef MPU6050_DRIVER_ACCEL_GYRO_SETTINGS
+	.p_accel_axis_change   = &board_mpu6050_accel_gyro_change,
+	.p_gyro_axis_change    = &board_mpu6050_accel_gyro_change,
+#else
+	.p_accel_axis_change   = NULL,
+	.p_gyro_axis_change    = NULL,
+#endif
+
+#ifdef MPU6050_DRIVER_COMPASS_SETTINGS
+	.p_compass_axis_change = &board_mpu6050_compass_change,
+#else
+	.p_compass_axis_change = NULL,
+#endif
+
+#ifdef MPU6050_DRIVER_REG_VALUES
+	.p_data = (void *) &mpu6050_reg_vals,
+#else
+	.p_data = NULL;
+#endif
+};
+
+static struct mpu_platform_data mpu6050_platform_data =
+{
+	.int_config  = MPU6050_INIT_CFG,
+#if defined CONFIG_MPU_SENSORS_MPU6050_GYRO
+	/* gyro settings */
+	.orientation = {  0,  -1,  0,
+		-1,  0,  0,
+		0,  0, -1 },
+#endif
+#if defined CONFIG_MPU_SENSORS_MPU6050_ACCEL
+	/* accel settings */
+	.accel = {
+#if defined CONFIG_INV_SENSORS_MODULE
+		.get_slave_descr = NULL,
+#else
+		.get_slave_descr = get_accel_slave_descr,
+#endif
+		/*		.irq         not used */
+		.adapt_num   = MPU6050_I2C_BUS_ID,
+		.bus         = EXT_SLAVE_BUS_PRIMARY,
+		.address     = DEFAULT_MPU_SLAVEADDR,
+		.orientation = {  0,  -1,  0,
+			-1,  0,  0,
+			0,  0, -1 },
+		.private_data = (void *)&board_mpu6050_sensors_change,
+	},
+#endif
+#if defined CONFIG_MPU_SENSORS_AMI306
+	/* compass settings */
+	.compass =
+	{
+
+#if defined CONFIG_INV_SENSORS_MODULE
+		.get_slave_descr = NULL,
+#else
+		.get_slave_descr = get_compass_slave_descr,
+#endif
+		/*		.irq         not used */
+		.adapt_num   = MPU6050_I2C_BUS_ID,
+		.bus         = EXT_SLAVE_BUS_SECONDARY,
+		.address     = MPU6050_COMPASS_SLAVE_ADDR,
+		.orientation = { 1, 0, 0,
+			0, 1, 0,
+			0, 0, 1 },
+	},
+#endif
+};
+
+static struct i2c_board_info __initdata i2c_mpu6050_info[] =
+{
+	{
+		I2C_BOARD_INFO(MPU_NAME, MPU6050_SLAVE_ADDR),
+		.irq = gpio_to_irq(MPU_INT_GPIO_PIN),
+		.platform_data  = &mpu6050_platform_data,
+	},
+};
+#endif /* CONFIG_MPU_SENSORS_MPU6050B1 */
+
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 #ifdef CONFIG_MACH_RHEA_BERRI_EDN40
@@ -849,12 +1022,8 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	 .ahb_clk_name = "sdio1_ahb_clk",
 	 .sleep_clk_name = "sdio1_sleep_clk",
 	 .peri_clk_rate = 48000000,
-	 /* VDD_SDC regulator: we enable it once PMU regulator
-	  * code is in-place.
-	  */
-	 /*
-	    .vddo_regulator_name = "vdd_sdio",
-	  */
+	 /* vdd_sdc regulator: needed to support UHS SD cards */
+	 .vddo_regulator_name = "vdd_sdio",
 	 },
 	{			/* SDIO1 */
 	 .id = 1,
@@ -1163,6 +1332,7 @@ static int rhea_camera_power(struct device *dev, int on)
 	struct clk *clock;
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node *unicam_dfs_node;
+	static int do_cam_reset = 1;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -1240,23 +1410,28 @@ static int rhea_camera_power(struct device *dev, int on)
 		msleep(10);
 
 		/* enable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 0);
-		msleep(10);
+		if (do_cam_reset) {
+			gpio_set_value(SENSOR_0_GPIO_RST, 0);
+			msleep(10);
+		}
 
 		/* disable power down gpio */
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 		msleep(5);
 
 		/* disable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 1);
+		if (do_cam_reset) {
+			gpio_set_value(SENSOR_0_GPIO_RST, 1);
+			do_cam_reset = 0;
+		}
 
 		/* wait for sensor to come up */
 		msleep(30);
 
 	} else {
 		/* enable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 0);
-		msleep(1);
+	//	gpio_set_value(SENSOR_0_GPIO_RST, 0);
+	//	msleep(1);
 
 		/* enable power down gpio */
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
@@ -1377,9 +1552,20 @@ static void __init rhea_berri_add_i2c_devices(void)
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 	i2c_register_board_info(1, qt602240_info, ARRAY_SIZE(qt602240_info));
 #endif
+
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+	i2c_register_board_info(MPU6050_I2C_BUS_ID,
+			i2c_mpu6050_info, ARRAY_SIZE(i2c_mpu6050_info));
+#endif
+
 #ifdef CONFIG_KEYBOARD_LM8325
 	i2c_register_board_info(1, lm8325_info, ARRAY_SIZE(lm8325_info));
 #endif
+#if defined(CONFIG_BCMI2CNFC)
+	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
+#endif
+
+
 }
 
 static int __init rhea_berri_add_lateInit_devices(void)

@@ -45,20 +45,18 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_util.h>
 #include <plat/pi_mgr.h>
 
-#if (1) //(defined (_RHEA_) && (CHIP_REVISION == 10))   
-    #include <mach/rdb/brcm_rdb_csr.h>
+#if (1) //(defined (_RHEA_) && (CHIP_REVISION == 10))
+#include <mach/rdb/brcm_rdb_csr.h>
 #endif
 
-
 //TODO - define the major device ID
-#define UNICAM_DEV_MAJOR    0
+#define UNICAM_DEV_MAJOR	0
 
-#define RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS       MM_CSI0_BASE_ADDR
-#define RHEA_MM_CFG_BASE_ADDRESS               MM_CFG_BASE_ADDR
-#define RHEA_MM_CLK_BASE_ADDRESS               MM_CLK_BASE_ADDR
-#define RHEA_PAD_CTRL_BASE_ADDRESS             PAD_CTRL_BASE_ADDR
-#define RHEA_CSR_BASE_ADDRESS                  MEMC0_OPEN_BASE_ADDR
-
+#define RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS	MM_CSI0_BASE_ADDR
+#define RHEA_MM_CFG_BASE_ADDRESS		MM_CFG_BASE_ADDR
+#define RHEA_MM_CLK_BASE_ADDRESS		MM_CLK_BASE_ADDR
+#define RHEA_PAD_CTRL_BASE_ADDRESS		PAD_CTRL_BASE_ADDR
+#define RHEA_CSR_BASE_ADDRESS			MEMC0_OPEN_BASE_ADDR
 
 #define IRQ_UNICAM         (156+32)
 
@@ -72,14 +70,14 @@ the GPL, without Broadcom's express prior written consent.
 
 //#define UNICAM_DEBUG
 #ifdef UNICAM_DEBUG
-    #define dbg_print(fmt, arg...) \
-    printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
+#define dbg_print(fmt, arg...) \
+printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
 #else
-    #define dbg_print(fmt, arg...)   do { } while (0)
+#define dbg_print(fmt, arg...)   do { } while (0)
 #endif
 
 #define err_print(fmt, arg...) \
-    printk(KERN_ERR "%s():" fmt, __func__, ##arg)
+	printk(KERN_ERR "%s():" fmt, __func__, ##arg)
 
 static int unicam_major = UNICAM_DEV_MAJOR;
 static struct class *unicam_class;
@@ -91,24 +89,24 @@ static void __iomem *csr_base = NULL;
 static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
 
 typedef struct {
-    struct semaphore irq_sem;
-    cam_isr_reg_status_st_t unicam_isr_reg_status;
-    unsigned int irq_pending;
-    unsigned int irq_start;
+	struct semaphore irq_sem;
+	cam_isr_reg_status_st_t unicam_isr_reg_status;
+	unsigned int irq_pending;
+	unsigned int irq_start;
 } unicam_t;
 
 typedef struct {
-    unsigned int csi0_unicam_gpio; 
-    unsigned int csi1_unicam_gpio;
-} unicam_info_t; 
+	unsigned int csi0_unicam_gpio;
+	unsigned int csi1_unicam_gpio;
+} unicam_info_t;
 
-static unicam_info_t  unicam_info;
+static unicam_info_t unicam_info;
 
 // Rhea A0, Need to disable DDR PLL PWRDN mode to prevent data errors when capturing camera data
-#if (1) //(defined (_RHEA_) && (CHIP_REVISION == 10))   
-    #define CSR_DDR_PLL_REG_UNSET_FLAG  0x000000FFFF
-    static unsigned int  RegCsrDdrPllPwrdnBit = CSR_DDR_PLL_REG_UNSET_FLAG;
-#endif    
+#if (1) //(defined (_RHEA_) && (CHIP_REVISION == 10))
+#define CSR_DDR_PLL_REG_UNSET_FLAG  0x000000FFFF
+static unsigned int RegCsrDdrPllPwrdnBit = CSR_DDR_PLL_REG_UNSET_FLAG;
+#endif
 
 static int enable_unicam_clock(void);
 static void disable_unicam_clock(void);
@@ -122,58 +120,55 @@ static inline void reg_write(void __iomem *, unsigned int reg, unsigned int valu
 
 static irqreturn_t unicam_isr(int irq, void *dev_id)
 {
-    unicam_t *dev;
-    unsigned int rx_status, image_intr;
-    dev = (unicam_t *)dev_id;  
-	
-    rx_status = reg_read(unicam_base, CAM_STA_OFFSET);
-    image_intr = reg_read(unicam_base, CAM_ISTA_OFFSET);
-    reg_write(unicam_base, CAM_ISTA_OFFSET, image_intr);	// enable access		
-    reg_write(unicam_base, CAM_STA_OFFSET, rx_status);	    
-            
-    if (dev->irq_start == 1)
-    {	
-        if (dev->irq_pending == 0)
-        {	
-            dev->unicam_isr_reg_status.rx_status = rx_status;
-            dev->unicam_isr_reg_status.image_intr = image_intr;
-            up(&dev->irq_sem);
-        }
-        dev->irq_pending++;
-    }
+	unicam_t *dev;
+	unsigned int rx_status, image_intr;
+	dev = (unicam_t *)dev_id;
 
-    return IRQ_RETVAL(1);
+	rx_status = reg_read(unicam_base, CAM_STA_OFFSET);
+	image_intr = reg_read(unicam_base, CAM_ISTA_OFFSET);
+	reg_write(unicam_base, CAM_ISTA_OFFSET, image_intr); // enable access
+	reg_write(unicam_base, CAM_STA_OFFSET, rx_status);
+
+	if (dev->irq_start == 1) {
+		if (dev->irq_pending == 0) {
+			dev->unicam_isr_reg_status.rx_status = rx_status;
+			dev->unicam_isr_reg_status.image_intr = image_intr;
+			up(&dev->irq_sem);
+		}
+		dev->irq_pending++;
+	}
+
+	return IRQ_RETVAL(1);
 }
 
 static int unicam_open(struct inode *inode, struct file *filp)
 {
-    int ret = 0;
+	int ret = 0;
 
-    unicam_t *dev = kmalloc(sizeof(unicam_t), GFP_KERNEL);
-    if (!dev)
-        return -ENOMEM;
+	unicam_t *dev = kmalloc(sizeof(unicam_t), GFP_KERNEL);
+	if (!dev)
+		return -ENOMEM;
 
-    filp->private_data = dev;
-    
+	filp->private_data = dev;
 
-    sema_init(&dev->irq_sem, 0);
-    dev->irq_pending = 0;
-    dev->irq_start = 0;
-    
-    unicam_init_camera_intf();
+	sema_init(&dev->irq_sem, 0);
+	dev->irq_pending = 0;
+	dev->irq_start = 0;
 
-    ret = request_irq(IRQ_UNICAM, unicam_isr, IRQF_DISABLED | IRQF_SHARED, UNICAM_DEV_NAME, dev);
-    if (ret){
-        err_print("request_irq failed ret = %d\n", ret);
-        goto err;
-    }
+	unicam_init_camera_intf();
 
-    return 0;
+	ret = request_irq(IRQ_UNICAM, unicam_isr, IRQF_DISABLED | IRQF_SHARED, UNICAM_DEV_NAME, dev);
+	if (ret) {
+		err_print("request_irq failed ret = %d\n", ret);
+		goto err;
+	}
+
+	return 0;
 
 err:
-    if (dev)
-        kfree(dev);
-    return ret;
+	if (dev)
+		kfree(dev);
+	return ret;
 }
 
 static int unicam_release(struct inode *inode, struct file *filp)
@@ -191,187 +186,166 @@ static int unicam_release(struct inode *inode, struct file *filp)
 
 static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-    unsigned long vma_size = vma->vm_end - vma->vm_start;
+	unsigned long vma_size = vma->vm_end - vma->vm_start;
 
-    if (vma_size & (~PAGE_MASK)) {
-        pr_err(KERN_ERR "unicam_mmap: mmaps must be aligned to a multiple of pages_size.\n");
-        return -EINVAL;
-    }
+	if (vma_size & (~PAGE_MASK)) {
+		pr_err(KERN_ERR "unicam_mmap: mmaps must be aligned to a multiple of pages_size.\n");
+		return -EINVAL;
+	}
 
-    if (!vma->vm_pgoff) {
-        vma->vm_pgoff = RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
-    }
+	if (!vma->vm_pgoff) {
+		vma->vm_pgoff = RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
+	}
 
-    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
-    /* Remap-pfn-range will mark the range VM_IO and VM_RESERVED */
-    if (remap_pfn_range(vma,
-                       vma->vm_start,
-                       vma->vm_pgoff,
-                       vma_size,
-                       vma->vm_page_prot)) {
-        pr_err("%s(): remap_pfn_range() failed\n", __FUNCTION__);
-        return -EINVAL;
-    }
+	/* Remap-pfn-range will mark the range VM_IO and VM_RESERVED */
+	if (remap_pfn_range(vma,
+				vma->vm_start,
+				vma->vm_pgoff,
+				vma_size,
+				vma->vm_page_prot)) {
+		pr_err("%s(): remap_pfn_range() failed\n", __FUNCTION__);
+		return -EINVAL;
+	}
 
-    return 0;
+	return 0;
 }
 
 static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-    unicam_t *dev;
-    int ret = 0;
-    static int interrupt_irq = 0;
+	unicam_t *dev;
+	int ret = 0;
+	static int interrupt_irq = 0;
+	sensor_ctrl_t sensor_ctrl;
 
-    if(_IOC_TYPE(cmd) != BCM_UNICAM_MAGIC)
-        return -ENOTTY;
+	if(_IOC_TYPE(cmd) != BCM_UNICAM_MAGIC)
+		return -ENOTTY;
 
-    if(_IOC_NR(cmd) > UNICAM_CMD_LAST)
-        return -ENOTTY;
+	if(_IOC_NR(cmd) > UNICAM_CMD_LAST)
+		return -ENOTTY;
 
-    if(_IOC_DIR(cmd) & _IOC_READ)
-        ret = !access_ok(VERIFY_WRITE, (void *) arg, _IOC_SIZE(cmd));
+	if(_IOC_DIR(cmd) & _IOC_READ)
+		ret = !access_ok(VERIFY_WRITE, (void *) arg, _IOC_SIZE(cmd));
 
-    if(_IOC_DIR(cmd) & _IOC_WRITE)
-        ret |= !access_ok(VERIFY_READ, (void *) arg, _IOC_SIZE(cmd));
+	if(_IOC_DIR(cmd) & _IOC_WRITE)
+		ret |= !access_ok(VERIFY_READ, (void *) arg, _IOC_SIZE(cmd));
 
-    if(ret)
-        return -EFAULT;
+	if(ret)
+		return -EFAULT;
 
-    dev = (unicam_t *)(filp->private_data);
+	dev = (unicam_t *)(filp->private_data);
 
-    switch (cmd)
-    {
-    case UNICAM_IOCTL_WAIT_IRQ:
-    {        
-        interrupt_irq = 0;
-	    dev->irq_start = 1;
-        dbg_print("UNICAM: Waiting for interrupt\n");
-        if (down_interruptible(&dev->irq_sem))
-        {
-            disable_irq(IRQ_UNICAM);
-            return -ERESTARTSYS;
-        }
-        if (interrupt_irq) {
-            printk(KERN_ERR"interrupted irq ioctl\n");
-            return -EIO;
-        }
-        dev->unicam_isr_reg_status.dropped_frames = dev->irq_pending-1;
-        if (copy_to_user((cam_isr_reg_status_st_t*)arg, &dev->unicam_isr_reg_status, sizeof(cam_isr_reg_status_st_t)))
-            ret = -EPERM;
-        dbg_print("UNICAM: Frame Received: dropped=%d\n", dev->unicam_isr_reg_status.dropped_frames);
-        dev->irq_pending = 0;       // allow a new frame
-    }
-    break;
-    case UNICAM_IOCTL_RETURN_IRQ:
-    {
-        interrupt_irq = 1;
-        printk(KERN_ERR"Interrupting irq ioctl\n");
-        if (dev->irq_pending == 0)
-        {	
-            up(&dev->irq_sem);
-            dev->irq_pending = 1;
-        }
-    }
-    break;
+	switch (cmd) {
+	case UNICAM_IOCTL_WAIT_IRQ:
+		interrupt_irq = 0;
+		dev->irq_start = 1;
+		dbg_print("UNICAM: Waiting for interrupt\n");
+		if (down_interruptible(&dev->irq_sem)) {
+			disable_irq(IRQ_UNICAM);
+			return -ERESTARTSYS;
+		}
+		if (interrupt_irq) {
+			printk(KERN_ERR"interrupted irq ioctl\n");
+			return -EIO;
+		}
+		dev->unicam_isr_reg_status.dropped_frames = dev->irq_pending - 1;
+		if (copy_to_user((cam_isr_reg_status_st_t*)arg, &dev->unicam_isr_reg_status, sizeof(cam_isr_reg_status_st_t)))
+			ret = -EPERM;
+		dbg_print("UNICAM: Frame Received: dropped=%d\n", dev->unicam_isr_reg_status.dropped_frames);
+		dev->irq_pending = 0; // allow a new frame
+		break;
+	case UNICAM_IOCTL_RETURN_IRQ:
+		interrupt_irq = 1;
+		printk(KERN_ERR"Interrupting irq ioctl\n");
+		if (dev->irq_pending == 0) {
+			up(&dev->irq_sem);
+			dev->irq_pending = 1;
+		}
+		break;
 
-    case UNICAM_IOCTL_OPEN_CSI0:
-    {        
-        dbg_print("Open unicam CSI0 port \n");
-        unicam_open_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
-    }
-    break;
+	case UNICAM_IOCTL_OPEN_CSI0:
+		dbg_print("Open unicam CSI0 port \n");
+		unicam_open_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
+		break;
 
-    case UNICAM_IOCTL_CLOSE_CSI0:
-    {        
-        dbg_print("Close unicam CSI0 port \n");
-        unicam_close_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
-    }
-    break;
+	case UNICAM_IOCTL_CLOSE_CSI0:
+		dbg_print("Close unicam CSI0 port \n");
+		unicam_close_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
+		break;
 
-    case UNICAM_IOCTL_OPEN_CSI1:
-    {        
-        dbg_print("Open unicam CSI1 port \n");
-        unicam_open_csi(CSI1_UNICAM_PORT, CSI1_UNICAM_CLK);
-    }
-    break;
+	case UNICAM_IOCTL_OPEN_CSI1:
+		dbg_print("Open unicam CSI1 port \n");
+		unicam_open_csi(CSI1_UNICAM_PORT, CSI1_UNICAM_CLK);
+		break;
 
-    case UNICAM_IOCTL_CLOSE_CSI1:
-    {        
-        dbg_print("close unicam CSI1 port \n");
-        unicam_close_csi(CSI1_UNICAM_PORT, CSI1_UNICAM_CLK);
-    }
-    break;
+	case UNICAM_IOCTL_CLOSE_CSI1:
+		dbg_print("close unicam CSI1 port \n");
+		unicam_close_csi(CSI1_UNICAM_PORT, CSI1_UNICAM_CLK);
+		break;
 
-    case UNICAM_IOCTL_CONFIG_SENSOR:
-    {
-        sensor_ctrl_t sensor_ctrl;
-        
-        dbg_print("Config Sensor \n");
-        if (copy_from_user(&sensor_ctrl, (sensor_ctrl_t*)arg,  sizeof(sensor_ctrl_t)))
-            ret = -EPERM;
-  
-        unicam_sensor_control(sensor_ctrl.sensor_id, sensor_ctrl.enable);
-    }
-    break;
-    
-    default:
-    break;
-   }
-   
-    return ret;
+	case UNICAM_IOCTL_CONFIG_SENSOR:
+		dbg_print("Config Sensor \n");
+		if (copy_from_user(&sensor_ctrl, (sensor_ctrl_t*)arg,  sizeof(sensor_ctrl_t)))
+			ret = -EPERM;
+
+		unicam_sensor_control(sensor_ctrl.sensor_id, sensor_ctrl.enable);
+		break;
+	default:
+		break;
+	}
+	return ret;
 }
 
 static struct file_operations unicam_fops =
 {
-    .open      = unicam_open,
-    .release   = unicam_release,
-    .mmap      = unicam_mmap,
-    .unlocked_ioctl     = unicam_ioctl,
+	.open		= unicam_open,
+	.release	= unicam_release,
+	.mmap		= unicam_mmap,
+	.unlocked_ioctl	= unicam_ioctl,
 };
-
 
 static inline unsigned int reg_read(void __iomem * base_addr, unsigned int reg)
 {
-    unsigned int flags;
+	unsigned int flags;
 
-    flags = ioread32(base_addr + reg);
-    return flags;
+	flags = ioread32(base_addr + reg);
+	return flags;
 }
 
 static inline void reg_write(void __iomem * base_addr, unsigned int reg, unsigned int value)
 {
-    iowrite32(value, base_addr + reg);
+	iowrite32(value, base_addr + reg);
 }
 
 static void unicam_init_camera_intf(void)
-{   
-    // Init GPIO's to off
-    if (unicam_info.csi0_unicam_gpio != 0xffffffff) {
-        gpio_request(unicam_info.csi0_unicam_gpio, "CAM_STNDBY0");
-        gpio_direction_output(unicam_info.csi0_unicam_gpio, 0);
-        gpio_set_value(unicam_info.csi0_unicam_gpio, 0);
-    }
+{
+	// Init GPIO's to off
+	if (unicam_info.csi0_unicam_gpio != 0xffffffff) {
+		gpio_request(unicam_info.csi0_unicam_gpio, "CAM_STNDBY0");
+		gpio_direction_output(unicam_info.csi0_unicam_gpio, 0);
+		gpio_set_value(unicam_info.csi0_unicam_gpio, 0);
+	}
 
-    if (unicam_info.csi1_unicam_gpio != 0xffffffff) {
-        gpio_request(unicam_info.csi1_unicam_gpio, "CAM_STNDBY1");
-        gpio_direction_output(unicam_info.csi1_unicam_gpio, 0);
-        gpio_set_value(unicam_info.csi1_unicam_gpio, 0);
-    }
-    msleep(10);
+	if (unicam_info.csi1_unicam_gpio != 0xffffffff) {
+		gpio_request(unicam_info.csi1_unicam_gpio, "CAM_STNDBY1");
+		gpio_direction_output(unicam_info.csi1_unicam_gpio, 0);
+		gpio_set_value(unicam_info.csi1_unicam_gpio, 0);
+	}
+	msleep(10);
 }
 
 static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
 {
-    // primary sensor 
-    if ((sensor_id == 0) && (unicam_info.csi0_unicam_gpio != 0xffffffff)) {
-        gpio_set_value(unicam_info.csi0_unicam_gpio, enable);
-    }
-    // secondary sensor
-    else if ((sensor_id == 1) && (unicam_info.csi0_unicam_gpio != 0xffffffff)) {
-        gpio_set_value(unicam_info.csi1_unicam_gpio, enable);    
-    }
-    msleep(10);
+	// primary sensor
+	if ((sensor_id == 0) && (unicam_info.csi0_unicam_gpio != 0xffffffff)) {
+		gpio_set_value(unicam_info.csi0_unicam_gpio, enable);
+	}
+	// secondary sensor
+	else if ((sensor_id == 1) && (unicam_info.csi0_unicam_gpio != 0xffffffff)) {
+		gpio_set_value(unicam_info.csi1_unicam_gpio, enable);
+	}
+	msleep(10);
 }
 
 static void unicam_open_csi(unsigned int port, unsigned int clk_src)
@@ -520,7 +494,6 @@ static void unicam_close_csi(unsigned int port, unsigned int clk_src)
 	disable_unicam_clock();
 }
 
-
 static int enable_unicam_clock(void)
 {
 	unsigned long rate;
@@ -570,24 +543,24 @@ static void disable_unicam_clock(void)
 
 static int __devexit unicam_drv_remove(struct platform_device *pdev)
 {
-    return 0;
+	return 0;
 }
 
 static int unicam_drv_probe(struct platform_device *pdev)
 {
-    int ret = 0;
-    struct kona_unicam_platform_data *pdata = pdev->dev.platform_data;
+	int ret = 0;
+	struct kona_unicam_platform_data *pdata = pdev->dev.platform_data;
 
-    dbg_print("%s\n", __func__);
+	dbg_print("%s\n", __func__);
 
-    if(!pdata) {
-        dbg_print("%s : invalid paltform data !!\n", __func__);
-        ret = -EPERM;
-        goto error;
-    }
+	if(!pdata) {
+		dbg_print("%s : invalid paltform data !!\n", __func__);
+		ret = -EPERM;
+		goto error;
+	}
 
-    unicam_info.csi0_unicam_gpio = pdata->csi0_gpio;
-    unicam_info.csi1_unicam_gpio = pdata->csi1_gpio;
+	unicam_info.csi0_unicam_gpio = pdata->csi0_gpio;
+	unicam_info.csi1_unicam_gpio = pdata->csi1_gpio;
 
 	unicam_dfs_node = pi_mgr_dfs_add_request("unicam", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
 	if (NULL == unicam_dfs_node) {
@@ -596,14 +569,14 @@ static int unicam_drv_probe(struct platform_device *pdev)
 	}
 
 error:
-    return ret;
+	return ret;
 }
 
 static struct platform_driver unicam_drv =
 {
-    .probe  =  unicam_drv_probe,
-    .remove = __devexit_p(unicam_drv_remove),
-    .driver = { .name =     "kona-unicam",},
+	.probe  =  unicam_drv_probe,
+	.remove = __devexit_p(unicam_drv_remove),
+	.driver = { .name = "kona-unicam",},
 };
 
 int __init unicam_init(void)
@@ -645,40 +618,40 @@ int __init unicam_init(void)
 		goto err;
 
 #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
-    csr_base = (void __iomem *)ioremap_nocache(RHEA_CSR_BASE_ADDRESS, SZ_4K);
-    if (csr_base == NULL)
-        goto err;        
+	csr_base = (void __iomem *)ioremap_nocache(RHEA_CSR_BASE_ADDRESS, SZ_4K);
+	if (csr_base == NULL)
+		goto err;
 #endif
 
-    ret = platform_driver_register(&unicam_drv);
+	ret = platform_driver_register(&unicam_drv);
 
-    return ret;
+	return ret;
 
 err:
-    err_print("Failed to MAP the unicam IO space\n");
-    unregister_chrdev(unicam_major, UNICAM_DEV_NAME);
-    return ret;
+	err_print("Failed to MAP the unicam IO space\n");
+	unregister_chrdev(unicam_major, UNICAM_DEV_NAME);
+	return ret;
 }
 
 void __exit unicam_exit(void)
 {
-    dbg_print("unicam driver Exit\n");
-    if (unicam_base)
-        iounmap(unicam_base);
-        
-    if (mmcfg_base)
-        iounmap(mmcfg_base);
+	dbg_print("unicam driver Exit\n");
+	if (unicam_base)
+		iounmap(unicam_base);
 
-    if (mmclk_base)
-        iounmap(mmclk_base);
+	if (mmcfg_base)
+		iounmap(mmcfg_base);
 
-    if (padctl_base)
-        iounmap(padctl_base);
-    
+	if (mmclk_base)
+		iounmap(mmclk_base);
+
+	if (padctl_base)
+		iounmap(padctl_base);
+
 
 #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
-    if (csr_base)
-        iounmap(csr_base);    
+	if (csr_base)
+		iounmap(csr_base);
 #endif
 
 	device_destroy(unicam_class, MKDEV(unicam_major, 0));

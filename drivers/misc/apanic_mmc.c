@@ -131,9 +131,21 @@ static int apanic_proc_read(char *buffer, char **start, off_t offset,
 		return -EINVAL;
 	}
 
-	if ((offset + count) > file_length) {
+	/*
+	 * If the requested offset is greater than or is equal to the file
+	 * size, we have already reached the end of file.
+	 */
+	if (offset >= file_length) {
 		mutex_unlock(&drv_mutex);
 		return 0;
+	}
+
+	/*
+	 * The bytes to read request is greater than the actual file size,
+	 * so trim the request.
+	 */
+	if ((offset + count) > file_length) {
+		count = file_length - offset;
 	}
 
 	bdev = blkdev_get_by_path(ctx->dev_path,
@@ -460,7 +472,7 @@ static int apanic(struct notifier_block *this, unsigned long event,
 
 	pr_debug("kona_mmc_poll_write: bock_read returned %d \r\n", rc);
 
-	pr_info("apanic: Panic dump sucessfully written to flash\n");
+	pr_info("apanic: Panic dump successfully written to flash \r\n");
 
  out:
 #ifdef CONFIG_PREEMPT
@@ -499,11 +511,50 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 	struct completion complete;
 	struct page *page;
 	char *copy_devpath;
+	char *user_dev_path = NULL;
+	int ret;
 
-	if (!strcmp(devpath, "auto"))
+	/* Allocate memory to store the path name passed from user */
+	user_dev_path = kmalloc(count, GFP_KERNEL);
+	if (NULL == user_dev_path) {
+		printk(KERN_ERR DRVNAME "Unable to allocate memory \r\n");
+		ret = -1;
+		goto out;
+	}
+
+	if (copy_from_user((void *)user_dev_path, devpath, count)) {
+		printk(KERN_ERR DRVNAME "Unable to copy from user space \r\n");
+		ret = -EFAULT;
+		goto out;
+	}
+
+	*(user_dev_path + count) = 0;
+
+	/*
+	 * The logic is written in such a way that if the user passes "auto"
+	 * the apanic driver should pickup the device file name from
+	 * ctx->dev_path.
+	 * Note that ctx->dev_path gets populated from function
+	 * mmc_panic_copy_dev_name. In this fucntion to the device name "dev/block" is
+	 * hardcoded. Note that for Android based systems its OK. The Android
+	 * udev creates the device node for mmcblkxx under /dev/block.
+	 * But for systems where mdev (reduced udev) is used the node gets
+	 * created as /dev/mmcblxxx.
+	 *
+	 * So because of this the android init scripts can pass "auto" to get
+	 * the correct file name, but if the same option is passed on systems
+	 * where mdev is used, apanic driver will not be able to find the
+	 * device node. For mdev based systems lets pass the device node name
+	 * from the script. And in that case we'll update ctx->dev_path as
+	 * well, so from else where when the device node file name is accessed
+	 * we'll get the correct one.
+	 */
+	if (!strcmp(user_dev_path,"auto"))
 		copy_devpath = ctx->dev_path;
-	else
-		copy_devpath = (char *)devpath;
+	else {
+		copy_devpath = (char *)user_dev_path;
+		strncpy(ctx->dev_path, copy_devpath, sizeof(ctx->dev_path));
+	}
 
 	bdev = blkdev_get_by_path(copy_devpath,
 				  FMODE_READ, apanic_trigger_check);
@@ -512,7 +563,8 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 		printk(KERN_ERR DRVNAME
 		      "failed to get block device %s (%ld)\n",
 		      copy_devpath, PTR_ERR(bdev));
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
 	if (!strlen(ctx->dev_path))
@@ -541,13 +593,15 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 
 	if (hdr->magic != PANIC_MAGIC) {
 		printk(KERN_INFO DRVNAME "no panic data available\n");
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
 	if (hdr->version != PHDR_VERSION) {
 		printk(KERN_INFO DRVNAME "version mismatch (%d != %d)\n",
 		       hdr->version, PHDR_VERSION);
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
 	memcpy(&ctx->curr, hdr, sizeof(struct panic_header));
@@ -582,7 +636,11 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 		}
 	}
 
-	return 0;
+	ret = count;
+out:
+	if (user_dev_path != NULL)
+		kfree(user_dev_path);
+	return ret;
 }
 
 int __init apanic_init(void)

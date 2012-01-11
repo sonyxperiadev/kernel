@@ -371,12 +371,12 @@ static struct prod_rev_map_t prod_rev_map[] = {
 	{MPL_PROD_KEY(4, 31), MPU_SILICON_REV_B1, 131,  8192},	/* (B2/F1)   */
 	{MPL_PROD_KEY(4,  1), MPU_SILICON_REV_B1, 131,  8192},	/* (B3/F1)   */
 	{MPL_PROD_KEY(4,  3), MPU_SILICON_REV_B1, 131,  8192},	/* (B4/F1)   */
-	/* prod_ver = 5 */
-	{MPL_PROD_KEY(6, 19), MPU_SILICON_REV_B1, 131, 16384},	/* (B5/E2)   */
-	/* prod_ver = 7 */
-	{MPL_PROD_KEY(7, 19), MPU_SILICON_REV_B1, 131, 16384},	/* (B5/E2)   */
-	/* prod_ver = 8 */
-	{MPL_PROD_KEY(8, 19), MPU_SILICON_REV_B1, 131, 16384}	/* (B5/E2)   */
+        /* prod_ver = 5 */
+        {MPL_PROD_KEY(6, 19), MPU_SILICON_REV_B1, 131, 16384},  /* (B5/E2)   */
+        /* prod_ver = 7 */
+        {MPL_PROD_KEY(7, 19), MPU_SILICON_REV_B1, 131, 16384},  /* (B5/E2)   */
+        /* prod_ver = 8 */
+        {MPL_PROD_KEY(8, 19), MPU_SILICON_REV_B1, 131, 16384}   /* (B5/E2)   */
 };
 
 /**
@@ -427,15 +427,23 @@ static int inv_get_silicon_rev_mpu6050(
 #if defined CONFIG_MPU_SENSORS_MPU6050B1
 	result = inv_serial_read(mlsl_handle, mldl_cfg->addr,
 				 MPUREG_PRODUCT_ID, 1, &prod_ver);
+        MPL_LOGE("INFO: read prod_ver %d from register %d\n", 
+                 prod_ver, MPUREG_PRODUCT_ID);
 	ERROR_CHECK(result);
 #else
 	/* MPU6050 A2 does not have an equivalent PRODUCT_ID register */
 	prod_ver = 0;
 #endif
+        /* leave only less significant 4 bits in version */
+        prod_ver &= 0xF;
 
 	result = inv_serial_read_mem(mlsl_handle, mldl_cfg->addr,
 				     memAddr, 1, &prod_rev);
+        MPL_LOGE("INFO: read prod_rev %d memAddr %d mldl_cfg->addr %d\n", 
+                 prod_rev, memAddr, mldl_cfg->addr);
+
 	ERROR_CHECK(result);
+        MPL_LOGE("INFO: prod_ver %d prod_rev %d\n", prod_ver, prod_rev);
 
 	prod_rev >>= 2;
 
@@ -445,6 +453,8 @@ static int inv_get_silicon_rev_mpu6050(
 	ERROR_CHECK(result);
 
 	key = MPL_PROD_KEY(prod_ver, prod_rev);
+        MPL_LOGE("INFO: calculated key %d\n", key);
+
 	if (key == 0) {
 		MPL_LOGE("Product key 0 "
 			 "indicates device is either "
@@ -452,6 +462,7 @@ static int inv_get_silicon_rev_mpu6050(
 		return INV_ERROR_INVALID_MODULE;
 	}
 	index = index_of_key(key);
+        MPL_LOGE("INFO: calculated index %d\n", index);
 	if (index == -1 || index >= NUM_OF_PROD_REVS) {
 		MPL_LOGE("Unsupported product key %d in MPL\n", key);
 		return INV_ERROR_INVALID_MODULE;
