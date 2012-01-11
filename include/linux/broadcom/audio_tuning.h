@@ -25,10 +25,6 @@
 #define AUDIO_APP_NUMBER        3   // must be consistent with parm_audio.txt
 
 #define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*AUDIO_APP_NUMBER)
-/* Total audio modes supported by DSP
- * Used in parsing parm_dsp.txt.
- */
-#define DSP_AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*2)
 
 #define NUM_OF_ENTRY_IN_DSP_VOICE_VOLUME_TABLE		15
 #define NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME		15

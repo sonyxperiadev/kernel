@@ -198,7 +198,6 @@ typedef enum
    L1DATA_AMR,
    L1DATA_SACCH,
    L1DATA_FACCH,
-
    /* End of log_gl1s */
 
 #if defined(STACK_wedge) && defined(UMTS)

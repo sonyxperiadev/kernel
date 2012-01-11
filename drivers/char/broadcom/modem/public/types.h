@@ -21,6 +21,7 @@
 
 /** @{ */
 
-#include "mobcom_types.h"	//Changed so that types.h file does not conflict with Windows CE Open OS
+#include "mobcom_types.h" //Changed so that types.h file does not conflict with Windows CE Open OS
 
 #endif
+
