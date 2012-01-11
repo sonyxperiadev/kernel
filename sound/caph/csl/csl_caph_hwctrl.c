@@ -2431,10 +2431,6 @@ static void csl_caph_hwctrl_closeSwitchCH(CSL_CAPH_SWITCH_CONFIG_t switchCH,
 
     if (FALSE == csl_caph_hwctrl_readHWResource(switchCH.FIFO_srcAddr, pathID))
     {
-        csl_caph_switch_remove_dst(switchCH.chnl, switchCH.FIFO_dstAddr);
-        csl_caph_switch_remove_dst(switchCH.chnl, switchCH.FIFO_dst2Addr);
-        csl_caph_switch_remove_dst(switchCH.chnl, switchCH.FIFO_dst3Addr);
-        csl_caph_switch_remove_dst(switchCH.chnl, switchCH.FIFO_dst4Addr);
         csl_caph_switch_stop_transfer(switchCH.chnl);
         csl_caph_switch_release_channel(switchCH.chnl);
     }

@@ -260,7 +260,7 @@ cVoid chal_caph_switch_remove_dst(CHAL_HANDLE handle,
     cUInt16     reg_idx;
     cUInt8      dst;
     cUInt32     reg_val;
-
+	register cUInt32 loopCount;
 
     address &= CPH_SSASW_CH01_DST1_CH01_DST1_ADDR_MASK;
 
@@ -278,6 +278,18 @@ cVoid chal_caph_switch_remove_dst(CHAL_HANDLE handle,
                 {
                     /* Clear destination information */
                     reg_val &= ~CPH_SSASW_CH01_DST1_CH01_DST1_EN_MASK;
+                    BRCM_WRITE_REG_IDX(base, CPH_SSASW_CH01_DST1, reg_idx,reg_val);
+
+					/* ASIC team:
+					When there are more than one destination, first disable
+					the destination without changing the destination address
+					in CHxx_DST register(only change the destination enable
+					to 0, dest_addr unchanged). Then read back this CHxx_DST
+					register five times. This is to insert some delay to
+					make sure the source had stopped sending transfer to the
+					old address. */
+					for (loopCount = 5; loopCount != 0; loopCount--)
+						reg_val = BRCM_READ_REG_IDX(base, CPH_SSASW_CH01_DST1, reg_idx);
                     reg_val &= ~CPH_SSASW_CH01_DST1_CH01_DST1_ADDR_MASK;
                     BRCM_WRITE_REG_IDX(base, CPH_SSASW_CH01_DST1, reg_idx,reg_val);
                     break;
