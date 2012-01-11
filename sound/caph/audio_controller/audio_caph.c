@@ -89,12 +89,23 @@ static TAudioControlThreadData	sgThreadData;
 #define	KFIFO_SIZE		(9*sizeof(TMsgAudioCtrl))
 
 
+static struct timer_list gTimerVib;
+static struct timer_list *gpVibratorTimer;
+
 void AUDIO_Ctrl_Process(
 	BRCM_AUDIO_ACTION_en_t action_code,
 	void *arg_param,
 	void *callback,
     int block
 	);
+
+
+void TimerCbStopVibrator(unsigned long priv)
+{
+	AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra, NULL, NULL, 0);
+	/* AUDCTRL_DisableBypassVibra(); */
+	BCM_AUDIO_DEBUG("Disable Vib from timer cb\n");
+}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //AudioCtrlWorkThread
@@ -171,8 +182,8 @@ int LaunchAudioCtrlThread(void)
 	sgThreadData.pWorkqueue_AudioControl = create_workqueue("AudioCtrlWq");
 	if(!sgThreadData.pWorkqueue_AudioControl)
 		DEBUG("\n Error : Can not create work queue:AudioCtrlWq\n");
-    sgThreadData.action_complete = OSSEMAPHORE_Create(0,0);
-
+	sgThreadData.action_complete = OSSEMAPHORE_Create(0,0);
+	gpVibratorTimer = NULL;
 	return ret;
 }
 
@@ -193,8 +204,8 @@ int TerminateAudioHalThread(void)
 	return 0;
 }
 
-//this is to avoid coverity error: CID 17571: 
-//Out-of-bounds access (OVERRUN_STATIC)Overrunning struct type BRCM_AUDIO_Param_Close_t (and other structures) of size 16 bytes by passing it as an argument to a function which indexes it at byte position 103. 
+//this is to avoid coverity error: CID 17571:
+//Out-of-bounds access (OVERRUN_STATIC)Overrunning struct type BRCM_AUDIO_Param_Close_t (and other structures) of size 16 bytes by passing it as an argument to a function which indexes it at byte position 103.
 static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 {
 	int size = 0;
@@ -395,7 +406,7 @@ void AUDIO_Ctrl_Process(
 	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->p[0].sink );
 #endif
 		/***/
-		
+
             	// Enable the playback the path
             	AUDCTRL_EnablePlay(param_start->pdev_prop->p[0].source,
                                    param_start->pdev_prop->p[0].sink,
@@ -615,7 +626,7 @@ void AUDIO_Ctrl_Process(
         AUDCTRL_SetTelephonyMicSpkr(parm_call->new_mic, parm_call->new_spkr);
         }
         break;
-		
+
 		case ACTION_AUD_MutePlayback:
 		{
 			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
@@ -642,15 +653,36 @@ void AUDIO_Ctrl_Process(
 		break;
 		case ACTION_AUD_SetVibraStrength:
 		{
-			BRCM_AUDIO_Param_Vibra_t *parm_vibra = (BRCM_AUDIO_Param_Vibra_t *)arg_param;
-			AUDCTRL_SetBypassVibraStrength(parm_vibra->strength, parm_vibra->direction);
+			BRCM_AUDIO_Param_Vibra_t *parm_vibra =
+				(BRCM_AUDIO_Param_Vibra_t *)arg_param;
+			BCM_AUDIO_DEBUG("ACTION_AUD_SetVibraStrength\n");
+			AUDCTRL_SetBypassVibraStrength(parm_vibra->strength,
+				parm_vibra->direction);
+			if(gpVibratorTimer) {
+				del_timer_sync(gpVibratorTimer);
+				gpVibratorTimer = NULL;
+			}
+			if(parm_vibra->duration!=0){
+				gpVibratorTimer = &gTimerVib;
+				init_timer(gpVibratorTimer);
+				gpVibratorTimer->function =
+					TimerCbStopVibrator;
+				gpVibratorTimer->data = 0;
+				gpVibratorTimer->expires = jiffies +
+					msecs_to_jiffies(parm_vibra->duration);
+				add_timer(gpVibratorTimer);
+			}
 		}
-		break;
+			break;
 		case ACTION_AUD_DisableByPassVibra:
-		{
+			BCM_AUDIO_DEBUG("ACTION_AUD_DisableByPassVibra\n");
+			if(gpVibratorTimer) {
+				del_timer_sync(gpVibratorTimer);
+				gpVibratorTimer = NULL;
+			}
+			/* stop it */
 			AUDCTRL_DisableBypassVibra();
-		}
-		break;
+			break;
 		case ACTION_AUD_SetPlaybackVolume:
 		{
 			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
@@ -727,7 +759,7 @@ void AUDIO_Ctrl_Process(
 			AUDCTRL_SaveAudioModeFlag((AudioMode_t)parm_FM->sink);
 #endif
 		/**/
-		
+
 			AUDCTRL_EnablePlay(parm_FM->source,
 								parm_FM->sink,
 								AUDIO_CHANNEL_STEREO,

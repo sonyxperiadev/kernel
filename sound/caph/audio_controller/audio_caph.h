@@ -196,11 +196,11 @@ typedef struct
    Int32 mode;
 }BRCM_AUDIO_Param_Loopback_t;
 
-typedef struct
-{
-   Int32 strength;
-   Int32 direction;
-}BRCM_AUDIO_Param_Vibra_t;
+typedef struct {
+	Int32 strength;
+	Int32 direction;
+	Int32 duration;
+} BRCM_AUDIO_Param_Vibra_t;
 
 typedef struct
 {
