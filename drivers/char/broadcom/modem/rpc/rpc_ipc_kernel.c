@@ -134,14 +134,13 @@ typedef struct {
 	UInt8 clientId;
 	rpc_pkt_reg_ind_t info;
 	struct file *filep;
-
+	int availData;
 	RpcCbkElement_t mQ;
 	spinlock_t mLock;
 	wait_queue_head_t mWaitQ;
 } RpcClientInfo_t;
 
 RpcClientInfo_t *gRpcClientList[0xFF] = { 0 };
-static int gAvailData = 0;
 static int gNumActiveClients = 0;
 static int gEnableKprint = 0;
 
@@ -470,7 +469,7 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 	list_add_tail(&elem->mList, &cInfo->mQ.mList);
 	spin_unlock(&cInfo->mLock);
 
-	gAvailData = 1;
+	cInfo->availData = 1;
 	wake_up_interruptible(&cInfo->mWaitQ);
 
 	return RPC_RESULT_PENDING;
@@ -563,56 +562,7 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 
 static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 {
-	UInt32 mask = 0;
-	RpcClientInfo_t *cInfo;
-	RpcIpc_PrivData_t *priv = filp->private_data;
-
-	if (!is_CP_running()) {
-		_DBG(RPC_TRACE("rpcipc_poll: Error - CP is not running\n"));
-		return POLLERR;
-	}
-
-	BUG_ON(!priv);
-
-	cInfo = gRpcClientList[priv->clientId];
-
-	if (!cInfo) {
-		_DBG(RPC_TRACE
-		     ("k:rpcipc_poll invalid clientID %d\n", priv->clientId));
-		return POLLERR;
-	}
-	//_DBG(RPC_TRACE("k:rpcipc_poll() start client=%d\n", priv->clientId));
-
-	//if data exist already, just return
-	spin_lock(&cInfo->mLock);
-	if (!list_empty(&cInfo->mQ.mList)) {
-		_DBG(RPC_TRACE("k:rpcipc_poll() precheck list not empty\n"));
-		mask |= (POLLIN | POLLRDNORM);
-		spin_unlock(&cInfo->mLock);
-		return mask;
-	}
-	spin_unlock(&cInfo->mLock);
-
-	//wait till data is ready
-	//_DBG(RPC_TRACE("k:rpcipc_poll() begin wait %x\n", (int)jiffies));
-	poll_wait(filp, &cInfo->mWaitQ, wait);
-	//wait_event_interruptible(&cInfo->mWaitQ, gAvailData);
-
-	gAvailData = 0;
-//      wait_event_interruptible_timeout(cInfo->mWaitQ, gAvailData, 10000);
-
-	//_DBG(RPC_TRACE("k:rpcipc_poll() end wait %x\n", (int)jiffies));
-
-	spin_lock(&cInfo->mLock);
-	if (!list_empty(&cInfo->mQ.mList)) {
-		_DBG(RPC_TRACE("rpcipc_poll() list not empty\n"));
-		mask |= (POLLIN | POLLRDNORM);
-	}
-	spin_unlock(&cInfo->mLock);
-
-	//_DBG(RPC_TRACE("k:rpcipc_poll() mask=%x avail=%d\n", (int)mask, (int)(mask & (POLLIN | POLLRDNORM))?1:0 ));
-
-	return mask;
+	return -EFAULT;
 }
 
 static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
@@ -642,30 +592,34 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 	spin_unlock(&cInfo->mLock);
 
 	if (ioc_param.waitTime > 0 && ioc_param.isEmpty) {
-		gAvailData = 0;
-
+		int jiffyBefore = jiffies;	
 		RPC_READ_UNLOCK;
 
 		_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ioc() before wait %x\n",
-		      (int)jiffies));
-		wait_event_interruptible_timeout(cInfo->mWaitQ, gAvailData,
+		     ("k:handle_pkt_poll_ioc() before clientID %d\n",
+		      (int)ioc_param.clientId));
+		wait_event_interruptible_timeout(cInfo->mWaitQ, 
+						cInfo->availData,
 						 msecs_to_jiffies(ioc_param.
 								  waitTime));
 		_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ioc() after wait %x\n", (int)jiffies));
+		     ("k:handle_pkt_poll_ioc() after clientID %d wait %d\n", 
+			(int)ioc_param.clientId,
+			jiffies_to_msecs(jiffies - jiffyBefore)));
+
 
 		RPC_READ_LOCK;
+
+		cInfo->availData = 0;
 
 		spin_lock(&cInfo->mLock);
 		ioc_param.isEmpty = (Boolean) list_empty(&cInfo->mQ.mList);
 		spin_unlock(&cInfo->mLock);
 	}
-
-	_DBG(RPC_TRACE
-	     ("k:handle_pkt_poll_ioc clientId=%d empty=%d wait=%d\n",
-	      (int)ioc_param.clientId, (int)ioc_param.isEmpty,
-	      (int)ioc_param.waitTime));
+    
+ 	_DBG(RPC_TRACE
+	     ("k:handle_pkt_poll_ioc clientId=%d empty=%d\n",
+	      (int)ioc_param.clientId, (int)ioc_param.isEmpty));
 
 	if (copy_to_user
 	    ((rpc_pkt_avail_t *) param, &ioc_param,
@@ -1001,7 +955,7 @@ static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd,
 		cInfo = gRpcClientList[cid];
 
 		if (cInfo) {
-			gAvailData = 1;
+			cInfo->availData = 1;
 			wake_up_interruptible(&cInfo->mWaitQ);
 			ioc_param.outParam = 1;
 		} else {
