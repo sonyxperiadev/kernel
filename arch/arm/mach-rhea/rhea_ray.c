@@ -934,12 +934,8 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.ahb_clk_name = "sdio1_ahb_clk",
 		.sleep_clk_name = "sdio1_sleep_clk",
 		.peri_clk_rate = 48000000,
-		/* VDD_SDC regulator: we enable it once PMU regulator
-		 * code is in-place.
-		 */
-		/*
+		/* vdd_sdc regulator:needed to support UHS SD cards */
 		.vddo_regulator_name = "vdd_sdio",
-		*/
 	},
 	{ /* SDIO2 */
 		.id = 1,
