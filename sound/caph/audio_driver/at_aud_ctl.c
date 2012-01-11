@@ -90,7 +90,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 	AUDIO_SINK_Enum_t spk = AUDIO_SINK_HANDSET;
 	int rtn = 0;		/* 0 means Ok */
 	static UInt8 loopback_status = 0, loopback_input = 0, loopback_output =
-	    0;
+	    0, sidetone_mode = 0;
 	Int32 pCurSel[2];
 
 	BCM_AUDIO_DEBUG("%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld\n",
@@ -139,10 +139,8 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		if (loopback_status > 1)
 			loopback_status = 1;
 
-		AUDCTRL_SetAudioLoopback(loopback_status, loopback_input,
-					 loopback_output, 1);
-		BCM_AUDIO_DEBUG(" %s enable loopback from src %d to sink %d\n",
-				__func__, loopback_input, loopback_output);
+		BCM_AUDIO_DEBUG(" %s set loopback status %d (1:ena 0:dis)\n",
+				__func__, loopback_status);
 		break;
 
 	case 10:		/* at*maudmode=10  --> get loopback path */
@@ -161,9 +159,11 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 	case 11:
 		loopback_input = Params[1];
 		loopback_output = Params[2];
+		sidetone_mode = Params[3];
 
-if (((loopback_input > 4) && (loopback_input != 11)) ||
-((loopback_output > 2) && (loopback_output != 9) && (loopback_output != 4))) {
+		if (((loopback_input > 6) && (loopback_input != 11)) ||
+			((loopback_output > 2) && (loopback_output != 9) && 
+			(loopback_output != 4))) {
 		BCM_AUDIO_DEBUG("%s srr/sink exceeds its range.\n", __func__);
 			rtn = -1;
 			break;
@@ -176,19 +176,21 @@ if (((loopback_input > 4) && (loopback_input != 11)) ||
 		loopback_status = 1;
 		/* enable the HW loopback without DSP. */
 		AUDCTRL_SetAudioLoopback(TRUE, loopback_input, loopback_output,
-					 1);
+					 sidetone_mode);
 
-		BCM_AUDIO_DEBUG("%s enable loopback from src %d to sink %d\n",
-				__func__, loopback_input, loopback_output);
+		BCM_AUDIO_DEBUG("%s ena lpback: src %d sink %d sidetone %d\n",
+				__func__, loopback_input, loopback_output,
+				sidetone_mode);
 		break;
 
 	case 12:	/* at*maudmode=12  --> disable loopback path*/
 		loopback_status = 0;
 		AUDCTRL_SetAudioLoopback(FALSE, loopback_input, loopback_output,
-					 1);
+					 sidetone_mode);
 		/* mdelay(100); */
-		BCM_AUDIO_DEBUG("%s disable loopback from src %d to sink %d.\n",
-				__func__, loopback_input, loopback_output);
+		BCM_AUDIO_DEBUG("%s dis lpback: src %d sink %d sidetone %d\n",
+				__func__, loopback_input, loopback_output,
+				sidetone_mode);
 		break;
 
 	case 13:		/* at*maudmode=13  --> Get call ID */
