@@ -244,6 +244,11 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 	gain = (short)Params[3];
 
 	if (Params[1] == 3) {
+
+	BCM_AUDIO_DEBUG("Params[2] = %d, Params[3] %d, audio mode %d \n",
+		(int)Params[3], (int)Params[2], AUDDRV_GetAudioMode());
+
+		
 	   if ((Params[2] == PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL) ||
 		(Params[2] == PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
 #if defined(USE_NEW_AUDIO_PARAM)
@@ -287,7 +292,25 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				__func__, pmu_gain.PMU_gain_enum);
 			AUDIO_PMU_IHF_SET_GAIN(pmu_gain.PMU_gain_enum);
 		}
+
 	   } /* Params[2] checking */
+
+		 BCM_AUDIO_DEBUG("Params[2] = %d, Params[3] %d, audio mode %d \n",
+			 (int)Params[3], (int)Params[2], AUDDRV_GetAudioMode());
+	
+		 if (Params[2] == PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
+#if defined(USE_NEW_AUDIO_PARAM)
+			  if (AUDDRV_GetAudioMode() == AUDIO_MODE_SPEAKERPHONE) {
+#else
+			  if ((AUDDRV_GetAudioMode() == AUDIO_MODE_SPEAKERPHONE) ||
+			  (AUDDRV_GetAudioMode() == AUDIO_MODE_SPEAKERPHONE_WB)) {
+#endif
+				  BCM_AUDIO_DEBUG("ext IHF high gain mode = %d\n",
+					  (int)Params[3]);
+				  AUDIO_PMU_HI_GAIN_MODE_EN((int)Params[3]);
+			  }
+		  }
+
 	} /* if (Params[1] == 3) */
 } /* case 100 */
 #endif

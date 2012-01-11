@@ -2652,7 +2652,7 @@ int	AUDCTRL_HardwareControl( AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
       break;
       
     case AUDCTRL_PMU_HIGH_GAIN_MODE:
-      //bcmpmu_ihf_gain_shift( (Boolean)arg2 );
+      AUDIO_PMU_HI_GAIN_MODE_EN( arg2 );  //arg2: TRUE or FALSE
       break;
 
     default:
@@ -2943,6 +2943,9 @@ static void powerOnExternalAmp(
 		//the ext_speaker_pga_l is in q13.2 format
 		ihf_gain = (short) AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 		SetGainOnExternalAmp_mB( AUDIO_SINK_LOUDSPK, ihf_gain, PMU_AUDIO_HS_BOTH);
+
+		ihf_gain = (int) AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_high_gain_mode_enable;
+		AUDIO_PMU_HI_GAIN_MODE_EN(ihf_gain);
 
 		IHF_IsOn = TRUE;
 	}

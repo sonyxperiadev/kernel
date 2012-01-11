@@ -2189,6 +2189,10 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
 		SetGainOnExternalAmp_mB(AUDIO_SINK_LOUDSPK,
 		pmu_gain * 25, 0);	/* PMU_AUDIO_HS_BOTH); */
+
+		pmu_gain = (int) p->ext_speaker_high_gain_mode_enable;
+		AUDIO_PMU_HI_GAIN_MODE_EN(pmu_gain);
+		
 		break;
 
 	default:

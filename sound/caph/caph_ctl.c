@@ -1051,6 +1051,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	BRCM_AUDIO_Param_FM_t parm_FM;
 	BRCM_AUDIO_Param_Spkr_t parm_spkr;
 	BRCM_AUDIO_Param_Volume_t parm_vol;
+	BRCM_AUDIO_Param_SetApp_t parm_setapp;
 	int rtn = 0, cmd, i, indexVal = -1, cnt = 0;
 	BRCM_AUDIO_Param_ECNS_t parm_ecns;
 	struct snd_pcm_substream *pStream = NULL;
@@ -1444,6 +1445,9 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 
 		pChip->i32CurApp = ucontrol->value.integer.value[0];
 		/* Make the call to Audio Controller here */
+		parm_setapp.aud_app = (int)ucontrol->value.integer.value[0]; /* new app */
+		AUDIO_Ctrl_Trigger(ACTION_AUD_SetAudioApp, &parm_setapp,
+				   NULL, 0);
 		break;
 	default:
 		BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);

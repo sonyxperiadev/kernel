@@ -87,6 +87,7 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_SwitchSpkr,
 	ACTION_AUD_SetHWLoopback,
 	ACTION_AUD_SetAudioMode,
+	ACTION_AUD_SetAudioApp, /*set audio profile*/
 	ACTION_AUD_EnableFMPlay,
 	ACTION_AUD_DisableFMPlay,
 	ACTION_AUD_SetARM2SPInst,
@@ -220,6 +221,14 @@ struct __BRCM_AUDIO_Param_RateChange_t {
 	UInt8 codecID;
 
 };
+
+typedef struct
+{
+	int aud_app;
+	int aud_mode;
+
+}BRCM_AUDIO_Param_SetApp_t;
+
 #define BRCM_AUDIO_Param_RateChange_t struct __BRCM_AUDIO_Param_RateChange_t
 union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_Start_t param_start;
@@ -237,6 +246,7 @@ union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_Vibra_t parm_vibra;
 	BRCM_AUDIO_Param_FM_t parm_FM;
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
+	BRCM_AUDIO_Param_SetApp_t parm_setapp;
 
 };
 #define BRCM_AUDIO_Control_Params_un_t union __BRCM_AUDIO_Control_Params_un_t

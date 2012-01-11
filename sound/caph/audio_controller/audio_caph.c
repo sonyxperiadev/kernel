@@ -303,6 +303,9 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 	case ACTION_AUD_RateChange:
 		size = sizeof(BRCM_AUDIO_Param_RateChange_t);
 		break;
+	case ACTION_AUD_SetAudioApp:
+		size = sizeof(BRCM_AUDIO_Param_SetApp_t);
+		break;
 	default:
 		break;
 	}
@@ -1021,11 +1024,19 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		}
 		break;
 
+	case ACTION_AUD_SetAudioApp:
+		{
+			BRCM_AUDIO_Param_SetApp_t *parm_setapp =
+ 			    (BRCM_AUDIO_Param_SetApp_t *)arg_param;
+			//AUDCTRL_SetAudioApp (parm_setapp->aud_app);
+		}
+		break;
+
 	default:
 		BCM_AUDIO_DEBUG
 		    ("Error AUDIO_Ctrl_Process Invalid acction command\n");
 		break;
-	}
+    }
 
 	if (block) {
 		/* put the message in output fifo if waiting */
