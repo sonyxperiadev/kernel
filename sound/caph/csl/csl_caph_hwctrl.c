@@ -1225,6 +1225,8 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
 		{
 			csl_i2s_stop_tx(fmHandleSSP);
 			fmTxRunning = FALSE;
+			if (fmTxRunning == FALSE && fmRxRunning == FALSE)
+				csl_sspi_enable_scheduler(fmHandleSSP, 0);
 		}
 		else if (fmRxRunning == TRUE && path->source == CSL_CAPH_DEV_FM_RADIO)
 		{
@@ -1233,9 +1235,9 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
 				csl_i2s_stop_rx(fmHandleSSP);
 				fmRxRunning = FALSE;
 			}
+			if (fmTxRunning == FALSE && fmRxRunning == FALSE)
+				csl_sspi_enable_scheduler(fmHandleSSP, 0);
 		}
-		if (fmTxRunning == FALSE && fmRxRunning == FALSE)
-			csl_sspi_enable_scheduler(fmHandleSSP, 0);
 	}
 
     for (i = startOffset; i < MAX_PATH_LEN; i++)
