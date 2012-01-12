@@ -59,7 +59,7 @@ static const int touchkey_keycodes[] = {
 
 #define I2C_RETRY_CNT	2
 
-#define __TOUCH_DEBUG__ 1
+//#define __TOUCH_DEBUG__ 1
 #define USE_THREADED_IRQ	1
 
 #define __TOUCH_KEYLED__ 
@@ -249,12 +249,16 @@ static void process_key_event(uint8_t tsk_msg)
 	int keycode= 0;
 	int st_new;
 
+#if defined(__TOUCH_DEBUG__)
         printk("[TSP] process_key_event : %d\n", tsk_msg);
+#endif
 
 	if(	tsk_msg	== 0)
 	{
 		input_report_key(ts_global->input_dev, st_old, 0);
+#if defined(__TOUCH_DEBUG__)
 		printk("[TSP] release keycode: %4d, keypress: %4d\n", st_old, 0);
+#endif
 	}
 	else{
 	//check each key status
@@ -266,7 +270,9 @@ static void process_key_event(uint8_t tsk_msg)
 		{
 		keycode = touchkey_keycodes[i];
 		input_report_key(ts_global->input_dev, keycode, 1);
+#if defined(__TOUCH_DEBUG__)
 		printk("[TSP] press keycode: %4d, keypress: %4d\n", keycode, 1);
+#endif
 		}
 
 		st_old = keycode;
