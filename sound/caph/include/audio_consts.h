@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2007 - 2011  Broadcom Corporation                                                        */
+/*  Copyright 2007 - 2012  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -53,24 +53,25 @@ typedef enum AUDIO_GAIN_FORMAT_t
 	audio application (2-D audio parameters profile)
 **/
 typedef enum {
-    AUDIO_APP_VOICE_CALL = 0,
+    AUDIO_APP_VOICE_CALL = 0, /*AUDIO_APP_VOICE_CALL_NB*/
     AUDIO_APP_VOICE_CALL_WB,
     AUDIO_APP_MUSIC,
-    AUDIO_APP_RESERVED2,
-    AUDIO_APP_RESERVED3,
-    AUDIO_APP_RESERVED4
+    AUDIO_APP_RECORDING_HQ,
+    AUDIO_APP_RECORDING, /* AUDIO_APP_RECORDING_LQ */
+    AUDIO_APP_RECORDING_GVS,
+    AUDIO_APP_FM,/*AUDIO_APP_FM_RADIO*/
+    AUDIO_APP_VOIP,
+    AUDIO_APP_VOIP_INCOMM,
+    AUDIO_APP_VT_CALL, /*AUDIO_APP_VT_NB*/
+    AUDIO_APP_VT_CALL_WB, /*AUDIO_APP_VT_WB*/
+    AUDIO_APP_LOOPBACK,
+    AUDIO_APP_RESERVED12 = 12,
+    AUDIO_APP_RESERVED13 = 13,
+    AUDIO_APP_RESERVED14 = 14,
+    AUDIO_APP_RESERVED15 = 15
 } AudioApp_t; // audio profiles (Audio applications)
 
 #define AudioProfile_t AudioApp_t
-//#define AUDIO_APP_VOIP_CALL AUDIO_APP_VOICE_CALL
-//#define AUDIO_APP_VOIP_CALL_WB AUDIO_APP_VOICE_CALL_WB
-//#define AUDIO_APP_VT_CALL AUDIO_APP_VOICE_CALL
-//#define AUDIO_APP_VT_CALL_WB AUDIO_APP_VOICE_CALL_WB
-//#define AUDIO_APP_MUSIC AUDIO_APP_VOICE_CALL
-//#define AUDIO_APP_FM AUDIO_APP_MUSIC
-//#define AUDIO_APP_VOICE_RECORDING_NB AUDIO_APP_VOICE_CALL
-//#define AUDIO_APP_VOICE_RECORDING_WB AUDIO_APP_VOICE_CALL_WB
-//#define AUDIO_APP_MUSIC_RECORDING AUDIO_APP_VOICE_CALL
 
 /**
 	audio modes (audio parameters profile)
