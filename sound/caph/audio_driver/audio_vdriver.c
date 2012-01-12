@@ -1253,6 +1253,9 @@ void AUDDRV_SetAudioMode_ForMusicRecord(AudioMode_t audio_mode,
 */
 AudioMode_t AUDDRV_GetAudioMode(void)
 {
+    Log_DebugPrintf(LOGID_AUDIO,
+	"\n\r\t* AUDDRV_GetAudioMode() audio_mode=%d\n\r",
+		currAudioMode);
 	return currAudioMode;
 }
 
@@ -1270,7 +1273,6 @@ AudioApp_t AUDDRV_GetAudioApp(void)
 	Log_DebugPrintf(LOGID_AUDIO,
 	"\n\r\t* AUDDRV_GetAudioApp() audio_app=%d\n\r",
 		currAudioApp);
-
 	return currAudioApp;
 }
 
