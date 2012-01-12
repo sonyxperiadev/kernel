@@ -377,8 +377,11 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 			pr_hwmon(DATA,
 				 "%s: req->cal before %d, ibat_req.cnv %d",
 				 __func__, req->cal, ibat_req.cnv);
-			req->cal -= ((ibat_req.cnv + 20) / 40) * 1000;	/* compensate reading with the 25 mOhm in the FG and battery terminal */
-			/* Calculate the current in the BSI resistor. Unit is 10 nA */
+			/* compensate reading with the 25 mOhm in the
+			   FG and battery terminal */
+			req->cal -= ((ibat_req.cnv + 20) / 40) * 1000;	
+			/* Calculate the current in the BSI resistor.
+			   Unit is 10 nA */
 			iread =
 			    ((padc->adcunit[req->sig].vmax -
 			      req->cal) * 100) /
@@ -391,13 +394,15 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 			pr_hwmon(DATA, "%s: req->cal adjusted %d, iread %d",
 				 __func__, req->cal, iread);
 			/* Calculate the resistor */
-			req->cnv = req->cal / iread;	/* Hecto ohm - iread>>1 is for rounding */
+			/* Hecto ohm - iread>>1 is for rounding */
+			req->cnv = req->cal / iread;	
 		}
 		break;
 	case PMU_ADC_BOM:
 		if (padc->adcunit[req->sig].lut_ptr) {
 			/* Lookup it up in the look-up table... */
-			req->cnv = adc_map_bom(padc, req->cal / 1000);	/* We have voltages in uV */
+			/* We have voltages in uV */
+			req->cnv = adc_map_bom(padc, req->cal / 1000);	
 		} else
 			req->cnv = 0;
 	default:
@@ -423,7 +428,7 @@ static int update_adc_result(struct bcmpmu_adc *padc,
 			return ret;
 	}
 	while (req->raw == -EINVAL) {
-		ret = read_adc_result(padc, req);	/* Here we get the raw value */
+		ret = read_adc_result(padc, req);/* Here we get the raw value */
 		if (ret != 0)
 			return ret;
 	};
@@ -466,8 +471,10 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 
 	pr_hwmon(FLOW, "%s: called: ->sig %d, tm %d, flags %d\n", __func__,
 		 req->sig, req->tm, req->flags);
-	if (req->flags == PMU_ADC_RAW_ONLY || req->flags == PMU_ADC_RAW_AND_UNIT) {
-		if ((req->tm == PMU_ADC_TM_RTM_SW) || (req->tm == PMU_ADC_TM_RTM_SW_TEST))
+	if (req->flags == PMU_ADC_RAW_ONLY || 
+	    req->flags == PMU_ADC_RAW_AND_UNIT) {
+		if ((req->tm == PMU_ADC_TM_RTM_SW) || 
+		    (req->tm == PMU_ADC_TM_RTM_SW_TEST))
 			timeout = padc->adcsetting->sw_timeout;
 		else
 			timeout = padc->adcsetting->txrx_timeout;
@@ -483,7 +490,12 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 			mutex_lock(&padc->lock);
 			padc->rtmreq = req;
 			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
-				pinmux_find_gpio(PN_ADCSYN, &adcsyngpio, &adcsyngpiomux);
+				pinmux_find_gpio(PN_ADCSYN, &adcsyngpio, 
+						 &adcsyngpiomux);
+				pr_hwmon(FLOW, "%s: SW_TEST: Pin:%u, " \
+					"Gpio:%u, Mux:%u\n", __func__,
+					PN_ADCSYN, 
+					adcsyngpio, adcsyngpiomux );
 				/* Setup test pinmuxing */
 				StoredPinmux.name  =  PN_ADCSYN;
 				pinmux_get_pin_config(&StoredPinmux);
@@ -492,7 +504,14 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 				TestPinMux.func = adcsyngpiomux;
 				pinmux_set_pin_config(&TestPinMux);
 				gpio_request(adcsyngpio, "ADCSYN_GPIO");
-				gpio_direction_output(adcsyngpio, 1);
+				gpio_direction_output(adcsyngpio, 0);
+				/* Use TX for test */
+				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
+							     padc->ctrlmap[PMU_ADC_RTM_DLY].map,
+							     padc->ctrlmap[PMU_ADC_RTM_DLY].addr,
+							     0,
+							     padc->ctrlmap[PMU_ADC_RTM_DLY].mask);
+				bcmpmu_sel_adcsync(PMU_ADC_TM_RTM_TX);
 			}
 			/* config hw for rtm adc */
 			if (req->tm == PMU_ADC_TM_RTM_TX) {
@@ -502,7 +521,8 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 							     padc->adcsetting->tx_delay << padc->ctrlmap[PMU_ADC_RTM_DLY].shift,
 							     padc->ctrlmap[PMU_ADC_RTM_DLY].mask);
 				bcmpmu_sel_adcsync(PMU_ADC_TM_RTM_TX);
-			} else {
+			}
+			if (req->tm == PMU_ADC_TM_RTM_RX) {
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
 							     padc->ctrlmap[PMU_ADC_RTM_DLY].map,
 							     padc->ctrlmap[PMU_ADC_RTM_DLY].addr,
@@ -521,8 +541,12 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 						     padc->ctrlmap[PMU_ADC_RTM_MASK].addr,
 						     0,
 						     padc->ctrlmap[PMU_ADC_RTM_MASK].mask);
-			if ((req->tm == PMU_ADC_TM_RTM_SW) ||
-			    (req->tm == PMU_ADC_TM_RTM_SW_TEST)) {
+			if (req->tm == PMU_ADC_TM_RTM_SW) {
+				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
+							     padc->ctrlmap[PMU_ADC_RTM_DLY].map,
+							     padc->ctrlmap[PMU_ADC_RTM_DLY].addr,
+							     0,
+							     padc->ctrlmap[PMU_ADC_RTM_DLY].mask);
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
 							     padc->ctrlmap[PMU_ADC_RTM_MASK].map,
 							     padc->ctrlmap[PMU_ADC_RTM_START].addr,
@@ -532,9 +556,11 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 			pr_hwmon(FLOW, "%s: start rtm adc\n", __func__);
 			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
 				/* Set ADC_SYNC to Low */
-				gpio_set_value(adcsyngpio, 0);
+				gpio_set_value(adcsyngpio, 1);
 			}		
-			if (wait_event_interruptible_timeout(padc->wait, req->ready, timeout) == 0) {
+			if (wait_event_interruptible_timeout(padc->wait, 
+							     req->ready, 
+							     timeout) == 0) {
 				ret = -ETIMEDOUT;
 			} else
 				ret = update_adc_result(padc, req);
@@ -543,12 +569,19 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 				 __func__, ret);
 			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
 				/* Set ADC_SYNC to High */
-				gpio_set_value(adcsyngpio, 1);
+				gpio_set_value(adcsyngpio, 0);
 
 				/* Restore */
 				gpio_free(adcsyngpio);
 				pinmux_set_pin_config(&StoredPinmux);
 			}
+			/* Need to disable RTM to avoid interrrupts from
+			   ADC_SYN activated RTM reads */
+			padc->bcmpmu->write_dev_drct(padc->bcmpmu,
+						     padc->ctrlmap[PMU_ADC_RTM_MASK].map,
+						     padc->ctrlmap[PMU_ADC_RTM_MASK].addr,
+						     padc->ctrlmap[PMU_ADC_RTM_MASK].mask,
+						     padc->ctrlmap[PMU_ADC_RTM_MASK].mask);
 			mutex_unlock(&padc->lock);
 			break;
 		case PMU_ADC_TM_MAX:
@@ -562,8 +595,10 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 	if ((req->flags == PMU_ADC_UNIT_ONLY ||
 	     req->flags == PMU_ADC_RAW_AND_UNIT)) {
 
-		cal_adc_result(padc, req);	/* This gives us a voltage in req->cal */
-		cnv_adc_result(padc, req);	/* This updates the req->cnv with the value */
+		/* This gives us a voltage in req->cal */
+		cal_adc_result(padc, req);	
+		/* This updates the req->cnv with the value */
+		cnv_adc_result(padc, req);	
 	} else {
 		req->cal = req->raw;
 		req->cnv = req->raw;
@@ -1073,7 +1108,10 @@ static ssize_t fg_status_show(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "Fuel Gauge Status\n \
 	fg_acc=%d\n fg_smpl_cnt=%d\n fg_slp_cnt=%d\n \
 	fg_smpl_cnt_tm=%d\n fg_slp_cnt_tm=%d\n \
-	fg_slp_curr_ua=%d\n fg_sns_res=%d\n fg_factor=%d\n", pfg->fg_acc, pfg->fg_smpl_cnt, pfg->fg_slp_cnt, pfg->fg_smpl_cnt_tm, pfg->fg_slp_cnt_tm, pfg->fg_slp_curr_ua, pfg->fg_sns_res, pfg->fg_factor);
+	fg_slp_curr_ua=%d\n fg_sns_res=%d\n fg_factor=%d\n", pfg->fg_acc, 
+		       pfg->fg_smpl_cnt, pfg->fg_slp_cnt, 
+		       pfg->fg_smpl_cnt_tm, pfg->fg_slp_cnt_tm, 
+		       pfg->fg_slp_curr_ua, pfg->fg_sns_res, pfg->fg_factor);
 }
 
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_store);
@@ -1204,9 +1242,9 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY, adc_isr, padc);
 	/*bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS, adc_isr, padc);
-	   bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_UPPER, adc_isr, padc);
-	   bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IGNORE, adc_isr, padc);
-	   bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN, adc_isr, padc); */
+	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_UPPER, adc_isr, padc);
+	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IGNORE, adc_isr, padc);
+	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN, adc_isr, padc); */
 
 	/*bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC); */
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
