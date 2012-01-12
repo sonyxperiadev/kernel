@@ -1,3 +1,15 @@
+/* arch/arm/mach-rhea/crash_debugger.c
+ *
+ * Derived from sec_debug.c by Samsung Electronics Co.Ltd.
+ * Copyright (c) 2010 Samsung Electronics Co., Ltd.
+ *      http://www.samsung.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ */
+
 #include <linux/errno.h>
 #include <linux/ctype.h>
 #include <linux/notifier.h>
@@ -25,7 +37,6 @@ enum cdebugger_upload_cause_t {
     UPLOAD_CAUSE_FORCED_UPLOAD = 0x00000022,
     UPLOAD_CAUSE_CP_ERROR_FATAL = 0x000000CC,
     UPLOAD_CAUSE_USER_FAULT = 0x0000002F,
-    UPLOAD_CAUSE_HSIC_DISCONNECTED = 0x000000DD,
 };
 
 struct cdebugger_mmu_reg_t {
@@ -129,6 +140,7 @@ struct cdebugger_fault_status_t {
 
 /* enable cdebugger feature */
 static unsigned enable = 1;
+/*SRAM base address*/
 void __iomem *cdebugger_mem_base;
 module_param_named(enable, enable, uint, 0644);
 
@@ -138,50 +150,6 @@ static const char *gkernel_cdebugger_build_info_date_time[] = {
 };
 
 static char gkernel_cdebugger_build_info[100];
-
-#ifdef CONFIG_CDEBUGGER_DEBUG_SCHED_LOG
-
-
-static struct sched_log gExcpTaskLog[2][SCHED_LOG_MAX] __cacheline_aligned;
-static atomic_t gExcpTaskLogIdx[2] = { ATOMIC_INIT(-1), ATOMIC_INIT(-1) };
-static unsigned long long gExcpIrqExitTime[2];
-
-
-static int checksum_sched_log()
-{
-	int sum = 0, i;
-	for (i = 0; i < sizeof(gExcpTaskLog); i++)
-		sum += *((char *)gExcpTaskLog + i);
-
-	return sum;
-}
-
-#else
-static int checksum_sched_log(void)
-{
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_CDEBUGGER_DEBUG_SEMAPHORE_LOG
-
-struct sem_debug sem_debug_free_head;
-struct sem_debug sem_debug_done_head;
-int sem_debug_free_head_cnt;
-int sem_debug_done_head_cnt;
-int sem_debug_init = 0;
-spinlock_t sem_debug_lock;
-
-/* rwsemaphore logging */
-struct rwsem_debug rwsem_debug_free_head;
-struct rwsem_debug rwsem_debug_done_head;
-int rwsem_debug_free_head_cnt;
-int rwsem_debug_done_head_cnt;
-int rwsem_debug_init = 0;
-spinlock_t rwsem_debug_lock;
-
-#endif /* CONFIG_CDEBUGGER_DEBUG_SEMAPHORE_LOG */
-
 
 struct cdebugger_core_t cdebugger_core_reg;
 struct cdebugger_mmu_reg_t cdebugger_mmu_reg;
@@ -355,11 +323,11 @@ static void cdebugger_set_upload_cause(enum cdebugger_upload_cause_t type)
 {
 	cdebugger_upload_cause = type;
 
-	/* to check VDD_ALIVE / XnRESET issue */
+	/*
+	 * Store the cause of crash.
+	 * This can be read from the bootloader later on
+	 */
 	iowrite32(type,cdebugger_mem_base + 0x4);
-	iowrite32(type,cdebugger_mem_base + 0x8);
-	iowrite32(type,cdebugger_mem_base + 0xC);
-
 }
 
 static void cdebugger_hw_reset(void)
@@ -375,14 +343,10 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 
 	cdebugger_set_upload_magic(0x66262564);
 
-	if (!strcmp(buf, "User Fault"))
-		cdebugger_set_upload_cause(UPLOAD_CAUSE_USER_FAULT);
-	else if (!strcmp(buf, "Forced Ramdump !!\n"))
+	if (!strcmp(buf, "Forced Ramdump !!\n"))
 		cdebugger_set_upload_cause(UPLOAD_CAUSE_FORCED_UPLOAD);
 	else if (!strcmp(buf, "CP Crash"))
 		cdebugger_set_upload_cause(UPLOAD_CAUSE_CP_ERROR_FATAL);
-	else if (!strcmp(buf, "HSIC Disconnected"))
-		cdebugger_set_upload_cause(UPLOAD_CAUSE_HSIC_DISCONNECTED);
 	else
 		cdebugger_set_upload_cause(UPLOAD_CAUSE_KERNEL_PANIC);
 
@@ -449,193 +413,6 @@ __init int cdebugger_init(void)
 	return 0;
 }
 
-#ifdef CONFIG_CDEBUGGER_SCHED_LOG
-void cdebugger_task_sched_log(int cpu, struct task_struct *task)
-{
-	unsigned i =
-	    atomic_inc_return(&gExcpTaskLogIdx[cpu]) & (SCHED_LOG_MAX - 1);
-	gExcpTaskLog[cpu][i].time = cpu_clock(cpu);
-	strcpy(gExcpTaskLog[cpu][i].log.task.comm, task->comm);
-	gExcpTaskLog[cpu][i].log.task.pid = task->pid;
-	gExcpTaskLog[cpu][i].log.task.cpu = cpu;
-}
-
-void cdebugger_irq_sched_log(unsigned int irq, void *fn, int en)
-{
-	int cpu = smp_processor_id();
-	unsigned i =
-	    atomic_inc_return(&gExcpTaskLogIdx[cpu]) & (SCHED_LOG_MAX - 1);
-	gExcpTaskLog[cpu][i].time = cpu_clock(cpu);
-	gExcpTaskLog[cpu][i].log.irq.cpu = cpu;
-	gExcpTaskLog[cpu][i].log.irq.irq = irq;
-	gExcpTaskLog[cpu][i].log.irq.fn = (void *)fn;
-	gExcpTaskLog[cpu][i].log.irq.en = en;
-}
-
-#ifdef CONFIG_CDEBUGGER_IRQ_EXIT_LOG
-
-void cdebugger_irq_last_exit_log(void)
-{
-	int cpu = smp_processor_id();
-    gExcpIrqExitTime[cpu] = cpu_clock(cpu);
-}
-
-#endif
-#endif /* CONFIG_CDEBUGGER_SCHED_LOG */
-
-#ifdef CONFIG_CDEBUGGER_SEMAPHORE_LOG
-
-/* klaatu - semaphore log */
-void debug_semaphore_init(void)
-{
-	int i = 0;
-	struct sem_debug *sem_debug = NULL;
-
-	spin_lock_init(&sem_debug_lock);
-	sem_debug_free_head_cnt = 0;
-	sem_debug_done_head_cnt = 0;
-
-	/* initialize list head of sem_debug */
-	INIT_LIST_HEAD(&sem_debug_free_head.list);
-	INIT_LIST_HEAD(&sem_debug_done_head.list);
-
-	for (i = 0; i < SEMAPHORE_LOG_MAX; i++) {
-		/* malloc semaphore */
-		sem_debug = kmalloc(sizeof(struct sem_debug), GFP_KERNEL);
-		/* add list */
-		list_add(&sem_debug->list, &sem_debug_free_head.list);
-		sem_debug_free_head_cnt++;
-	}
-
-	sem_debug_init = 1;
-}
-
-void debug_semaphore_down_log(struct semaphore *sem)
-{
-	struct list_head *tmp;
-	struct sem_debug *sem_dbg;
-	unsigned long flags;
-
-	if (!sem_debug_init)
-		return;
-
-	spin_lock_irqsave(&sem_debug_lock, flags);
-	list_for_each(tmp, &sem_debug_free_head.list) {
-		sem_dbg = list_entry(tmp, struct sem_debug, list);
-		sem_dbg->task = current;
-		sem_dbg->sem = sem;
-		/* strcpy(sem_dbg->comm,current->group_leader->comm); */
-		sem_dbg->pid = current->pid;
-		sem_dbg->cpu = smp_processor_id();
-		list_del(&sem_dbg->list);
-		list_add(&sem_dbg->list, &sem_debug_done_head.list);
-		sem_debug_free_head_cnt--;
-		sem_debug_done_head_cnt++;
-		break;
-	}
-	spin_unlock_irqrestore(&sem_debug_lock, flags);
-}
-
-void debug_semaphore_up_log(struct semaphore *sem)
-{
-	struct list_head *tmp;
-	struct sem_debug *sem_dbg;
-	unsigned long flags;
-
-	if (!sem_debug_init)
-		return;
-
-	spin_lock_irqsave(&sem_debug_lock, flags);
-	list_for_each(tmp, &sem_debug_done_head.list) {
-		sem_dbg = list_entry(tmp, struct sem_debug, list);
-		if (sem_dbg->sem == sem && sem_dbg->pid == current->pid) {
-			list_del(&sem_dbg->list);
-			list_add(&sem_dbg->list, &sem_debug_free_head.list);
-			sem_debug_free_head_cnt++;
-			sem_debug_done_head_cnt--;
-			break;
-		}
-	}
-	spin_unlock_irqrestore(&sem_debug_lock, flags);
-}
-
-/* rwsemaphore logging */
-void debug_rwsemaphore_init(void)
-{
-	int i = 0;
-	struct rwsem_debug *rwsem_debug = NULL;
-
-	spin_lock_init(&rwsem_debug_lock);
-	rwsem_debug_free_head_cnt = 0;
-	rwsem_debug_done_head_cnt = 0;
-
-	/* initialize list head of sem_debug */
-	INIT_LIST_HEAD(&rwsem_debug_free_head.list);
-	INIT_LIST_HEAD(&rwsem_debug_done_head.list);
-
-	for (i = 0; i < RWSEMAPHORE_LOG_MAX; i++) {
-		/* malloc semaphore */
-		rwsem_debug = kmalloc(sizeof(struct rwsem_debug), GFP_KERNEL);
-		/* add list */
-		list_add(&rwsem_debug->list, &rwsem_debug_free_head.list);
-		rwsem_debug_free_head_cnt++;
-	}
-
-	rwsem_debug_init = 1;
-}
-
-void debug_rwsemaphore_down_log(struct rw_semaphore *sem, int dir)
-{
-	struct list_head *tmp;
-	struct rwsem_debug *sem_dbg;
-	unsigned long flags;
-
-	if (!rwsem_debug_init)
-		return;
-
-	spin_lock_irqsave(&rwsem_debug_lock, flags);
-	list_for_each(tmp, &rwsem_debug_free_head.list) {
-		sem_dbg = list_entry(tmp, struct rwsem_debug, list);
-		sem_dbg->task = current;
-		sem_dbg->sem = sem;
-		/* strcpy(sem_dbg->comm,current->group_leader->comm); */
-		sem_dbg->pid = current->pid;
-		sem_dbg->cpu = smp_processor_id();
-		sem_dbg->direction = dir;
-		list_del(&sem_dbg->list);
-		list_add(&sem_dbg->list, &rwsem_debug_done_head.list);
-		rwsem_debug_free_head_cnt--;
-		rwsem_debug_done_head_cnt++;
-		break;
-	}
-	spin_unlock_irqrestore(&rwsem_debug_lock, flags);
-}
-
-void debug_rwsemaphore_up_log(struct rw_semaphore *sem)
-{
-	struct list_head *tmp;
-	struct rwsem_debug *sem_dbg;
-	unsigned long flags;
-
-	if (!rwsem_debug_init)
-		return;
-
-	spin_lock_irqsave(&rwsem_debug_lock, flags);
-	list_for_each(tmp, &rwsem_debug_done_head.list) {
-		sem_dbg = list_entry(tmp, struct rwsem_debug, list);
-		if (sem_dbg->sem == sem && sem_dbg->pid == current->pid) {
-			list_del(&sem_dbg->list);
-			list_add(&sem_dbg->list, &rwsem_debug_free_head.list);
-			rwsem_debug_free_head_cnt++;
-			rwsem_debug_done_head_cnt--;
-			break;
-		}
-	}
-	spin_unlock_irqrestore(&rwsem_debug_lock, flags);
-}
-
-#endif /* CONFIG_CDEBUGGER_SEMAPHORE_LOG */
-
 #define CDEBUGGER_SRAM_MEM_OFFSET 	0xBF9C
 #define INTERNAL_SRAM_BASE_ADDR         0x34040000
 #define SCRATCHRAM_BASE 		INTERNAL_SRAM_BASE_ADDR
@@ -673,13 +450,12 @@ static int __init crash_debugger_init(void)
 	/*Initialize MAGIC*/
 	iowrite32(UPLOAD_CAUSE_INIT,cdebugger_mem_base);
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_block);
-	/*TODO Any other relevant init*/
+	/* Any other relevant init */
+	return 0;
 }
 
 static void crash_debugger_exit(void)
 {
-
-
 
 }
 
