@@ -323,7 +323,6 @@ enum bcmpmu_reg {
 	PMU_REG_PMUREV,
 	PMU_REG_PLLCTRL,
 	PMU_REG_HOSTCTRL1,
-	PMU_REG_SYS_WDT_CLR,
 	PMU_REG_HOSTCTRL3,
 	PMU_REG_MBCCTRL5_USB_DET_LDO_EN,
 	PMU_REG_MBCCTRL5_CHARGE_DET,
@@ -331,6 +330,12 @@ enum bcmpmu_reg {
 	/* PMU Bus */
 	PMU_REG_BUS_STATUS_WRITE_FIFO,
 	PMU_REG_BUS_STATUS_READ_FIFO,
+
+	/* Watchdog */
+	PMU_REG_SYS_WDT_CLR,
+	PMU_REG_SYS_WDT_EN,
+	PMU_REG_SYS_WDT_TIME,
+
 	PMU_REG_MAX,
 };
 enum bcmpmu_irq_reg {
@@ -830,6 +835,16 @@ struct bcmpmu_usb_accy_data {
 	int batt_present;
 	int usb_dis;
 };
+/**
+ * watchdog platform data
+ */
+
+#define WATCHDOG_OTP_ENABLED	(0x00000001)
+
+struct bcmpmu_wd_setting {
+	unsigned int flags;
+	unsigned int watchdog_timeout;
+};
 
 struct bcmpmu_platform_data;
 struct bcmpmu {
@@ -968,6 +983,7 @@ struct bcmpmu_platform_data {
 	int support_fg;
 	enum bcmpmu_bc_t bc;
 	int rpc_rate;
+	struct bcmpmu_wd_setting *wd_setting;
 };
 
 struct bcmpmu_fg {

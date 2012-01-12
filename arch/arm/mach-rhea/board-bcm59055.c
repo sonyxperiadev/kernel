@@ -553,6 +553,11 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	},
 };
 
+static struct bcmpmu_wd_setting bcm59055_wd_setting = {
+	.flags = WATCHDOG_OTP_ENABLED,
+	.watchdog_timeout = 32,
+};
+
 static struct platform_device bcmpmu_audio_device = {
 	.name = "bcmpmu_audio",
 	.id = -1,
@@ -688,6 +693,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.fg_capacity_full = 1500 * 3600,
 	.support_fg = 1,
 	.bc = BCMPMU_BC_BB_BC12,
+	.wd_setting = &bcm59055_wd_setting,
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {

@@ -194,11 +194,16 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_HOSTCTRL3] =		{.map = 0x00, .addr = 0x03, .mask = 0xFF, .ro = 0},
 	[PMU_REG_MBCCTRL5_USB_DET_LDO_EN] =	{.map = 0x00, .addr = 0x54, .mask = 0x04, .ro = 0, .shift = 2},
 	[PMU_REG_MBCCTRL5_CHARGE_DET] =	{.map = 0x00, .addr = 0x54, .mask = 0x07, .ro = 0, .shift = 0},
-	[PMU_REG_SYS_WDT_CLR] = 	{.map = 0x00, .addr = 0x01, .mask = 0x02, .ro = 0},
 
 	/* PMU BUS */
 	[PMU_REG_BUS_STATUS_WRITE_FIFO] =	{.map = 0x00, .addr = 0x00, .mask = 0x2, .ro = 1, .shift = 1},
 	[PMU_REG_BUS_STATUS_READ_FIFO] =	{.map = 0x00, .addr = 0x00, .mask = 0x1, .ro = 1, .shift = 0},
+
+	/* Watchdog */
+	[PMU_REG_SYS_WDT_EN] =		{.map = 0x00, .addr = 0x01, .mask = 0x01, .ro = 0, .shift = 0},
+	[PMU_REG_SYS_WDT_CLR] =		{.map = 0x00, .addr = 0x01, .mask = 0x02, .ro = 0, .shift = 1},
+	[PMU_REG_SYS_WDT_TIME] =	{.map = 0x00, .addr = 0x02, .mask = 0x7F, .ro = 0, .shift = 0},
+
 };
 
 static const struct bcmpmu_irq_map bcm59055_irq_map[PMU_IRQ_MAX] = {//revisit

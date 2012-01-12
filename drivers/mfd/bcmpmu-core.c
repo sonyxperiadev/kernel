@@ -269,6 +269,12 @@ static struct platform_device bcmpmu_regulator = {
 	.dev.platform_data	= NULL,
 };
 
+static struct platform_device bcmpmu_watchdog = {
+	.name			= "bcmpmu-wdog",
+	.id			= -1,
+	.dev.platform_data	= NULL,
+};
+
 static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_irq_device,
 	&bcmpmu_hwmon_device,
@@ -278,6 +284,7 @@ static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_chrgr_device,
 	&bcmpmu_accy_device,
 	&bcmpmu_ponkey_device,
+	&bcmpmu_watchdog,
 };
 
 static int __devinit bcmpmu_probe(struct platform_device *pdev)

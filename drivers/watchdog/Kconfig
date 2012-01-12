@@ -350,6 +350,13 @@ config BCM59055_WATCHDOG
 	  Say Y here if to include support for the watchdog timer
 	  in BCM59055 PMU.
 
+config BCMPMU_WATCHDOG
+	tristate "BCMPMU Watchdog"
+	depends on MFD_BCMPMU
+	help
+	  Say Y here if to include support for the watchdog timer
+	  in BCM PMU.
+
 config WD_TAPPER
 	tristate "Watchdog Petter Enable"
 	help
