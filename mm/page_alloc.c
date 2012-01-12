@@ -5836,6 +5836,7 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 		       gfp_t flags, unsigned migratetype)
 {
 	unsigned long outer_start, outer_end;
+	unsigned int count = end - start;
 	int ret;
 
 	/*
@@ -5864,7 +5865,10 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	ret = __start_isolate_page_range(pfn_to_maxpage(start),
 					 pfn_to_maxpage_up(end), migratetype);
 	if (ret)
-		goto done;
+		return ret;
+
+	min_free_kbytes += count * PAGE_SIZE / 1024;
+	setup_per_zone_wmarks();
 
 	ret = __alloc_contig_migrate_range(start, end);
 	if (ret)
@@ -5886,8 +5890,10 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 
 	ret = 0;
 	while (!PageBuddy(pfn_to_page(start & (~0UL << ret))))
-		if (WARN_ON(++ret >= MAX_ORDER))
-			return -EINVAL;
+		if (WARN_ON(++ret >= MAX_ORDER)) {
+			ret = -EINVAL;
+			goto done;
+		}
 
 	outer_start = start & (~0UL << ret);
 	outer_end   = alloc_contig_freed_pages(outer_start, end, flags);
@@ -5900,6 +5906,9 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 
 	ret = 0;
 done:
+	min_free_kbytes -= count * PAGE_SIZE / 1024;
+	setup_per_zone_wmarks();
+
 	__undo_isolate_page_range(pfn_to_maxpage(start), pfn_to_maxpage_up(end),
 				  migratetype);
 	return ret;
