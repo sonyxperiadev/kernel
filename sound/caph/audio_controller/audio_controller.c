@@ -163,9 +163,17 @@ static int pmu_gain_right[AUDIO_SINK_TOTAL_COUNT] = {0};
 //static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 //static unsigned int recordGainR[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 
-static int path_user_set_gainL[MAX_AUDIO_PATH]={0};
-static int path_user_set_gainR[MAX_AUDIO_PATH]={0};
-static AUDIO_GAIN_FORMAT_t path_user_set_gainFormat[MAX_AUDIO_PATH]={AUDIO_GAIN_FORMAT_INVALID};
+typedef struct {
+	int path_gainL;
+	int path_gainR;
+	/*AUDIO_SINK_Enum_t sink1;*/
+	/*AUDIO_SINK_Enum_t sink2;*/
+	/*int path2_gainL;*/
+	/*int path2_gainR;*/
+	AUDIO_GAIN_FORMAT_t gainFormat;
+} USER_SET_GAIN_t;
+
+static USER_SET_GAIN_t path_user_set_gain[AUDCTRL_PATH_TOTAL_NUM];
 
 static Boolean fmPlayStarted = FALSE;
 /* pathID of the playback path */
@@ -173,6 +181,7 @@ static unsigned int playbackPathID = 0;
 /* pathID of the recording path */
 static unsigned int recordPathID = 0;
 static unsigned int pathIDTuning; /* init to 0, for tuning purpose only */
+
 //=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -233,6 +242,7 @@ static AudioMode_t  AUDCTRL_GetModeBySpeaker(CSL_CAPH_DEVICE_e speaker)
 //============================================================================
 void AUDCTRL_Init (void)
 {
+    int i;
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_Init::  \n"  );
 
 	AUDDRV_Init ();
@@ -240,6 +250,11 @@ void AUDCTRL_Init (void)
 
     //access sysparm here will cause system panic. sysparm is not initialzed when this fucniton is called.
 	//telephony_digital_gain_dB = 12;  //SYSPARM_GetAudioParamsFromFlash( cur_mode )->voice_volume_init;  //dB
+
+    for ( i=0; i<AUDCTRL_PATH_TOTAL_NUM; i++)
+    {
+      path_user_set_gain[i].gainFormat = AUDIO_GAIN_FORMAT_INVALID;
+    }
 }
 
 //============================================================================
@@ -498,6 +513,10 @@ void AUDCTRL_SetTelephonySpkrVolume(
     //int pmuGain = 0;
     //pmuGain = (short) AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = %d \n", volume );
+
+	path_user_set_gain[AUDCTRL_PATH_VOICECALL].gainFormat = gain_format;
+	path_user_set_gain[AUDCTRL_PATH_VOICECALL].path_gainL = volume;
+	path_user_set_gain[AUDCTRL_PATH_VOICECALL].path_gainR = volume;
 
     if (gain_format == AUDIO_GAIN_FORMAT_mB)
     {
@@ -1047,17 +1066,16 @@ void AUDCTRL_EnablePlay(
 
 		fmPlayStarted = TRUE;
 	
-		/*** will test this when FM radio works.
-			if( path_user_set_gainFormat[pathID] != AUDIO_GAIN_FORMAT_INVALID )
-			{
-				AUDCTRL_SetPlayVolume( path->source[0],
-						path->sink[0],
-						path_user_set_gainL[pathID],
-						path_user_set_gainR[pathID],
-						path_user_set_gainFormat[pathID],
-						audDrv->pathID);
-			}
-		***/
+		if( path_user_set_gain[AUDCTRL_PATH_FM_LISTENING].gainFormat != AUDIO_GAIN_FORMAT_INVALID )
+		{
+			/*if user set FM radio listening gain before start FM radio, use the gain */
+			AUDCTRL_SetPlayVolume( source,
+					sink,
+					path_user_set_gain[AUDCTRL_PATH_FM_LISTENING].path_gainL,
+					path_user_set_gain[AUDCTRL_PATH_FM_LISTENING].path_gainR,
+					path_user_set_gain[AUDCTRL_PATH_FM_LISTENING].gainFormat,
+					pathID);
+		}
 	}
 	if(pPathID) *pPathID = pathID;
 
@@ -1244,13 +1262,6 @@ void AUDCTRL_SetPlayVolume(
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
-	//in idle mode, this command 
-	// alsa_amixer cset name=FM-VOL-LEVEL 12,12
-	// passes down the pathID==0.  I'm not sure the pathID is correct.
-	path_user_set_gainL[pathID]=vol_left;
-	path_user_set_gainR[pathID]=vol_right;
-	path_user_set_gainFormat[pathID]=gain_format;
-
 	if((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)|| sink == AUDIO_SINK_BTS)
 		return;
 
@@ -1275,8 +1286,31 @@ void AUDCTRL_SetPlayVolume(
 
 	if (gain_format == AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE)
 	{
+		/*in idle mode, this command 
+		 alsa_amixer cset name=FM-VOL-LEVEL 12,12
+		 passes down the pathID==0.
+  the FM's actual pathID is alloc'ed when enable FM, and could be non 0.*/
+	
+		path_user_set_gain[AUDCTRL_PATH_FM_LISTENING].gainFormat = gain_format;
+		path_user_set_gain[AUDCTRL_PATH_FM_LISTENING].path_gainL = vol_left;
+		path_user_set_gain[AUDCTRL_PATH_FM_LISTENING].path_gainR = vol_right;
+	
 		vol_left = APSYSPARM_GetMultimediaAudioParmAccessPtr()[AUDDRV_GetAudioModeBySink(sink)].fm_radio_digital_vol[vol_left]; //mB
 		gain_format = AUDIO_GAIN_FORMAT_mB;
+
+		Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_SetPlayVolume: fmPlayStarted==%d .\n", fmPlayStarted);
+
+		/*if( fmPlayStarted == FALSE )*/
+		/*if ( path->status != PATH_OCCUPIED )*/
+		if( FALSE == csl_caph_QueryHWClock() )
+		{
+			Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_SetPlayVolume: clock is off\n");
+		
+			//the CAPH clock may be not turned on.
+			//defer setting the FM radio audio gain until start render.
+			return;
+		}
+		
 	}
 
 	if (gain_format == AUDIO_GAIN_FORMAT_mB)
@@ -1425,17 +1459,6 @@ void AUDCTRL_SetPlayVolume(
 	Log_DebugPrintf(LOGID_AUDIO,
 		"AUDCTRL_SetPlayVolume: pathID %d\n",
 		pathID);
-
-
-	//if ( path->status != PATH_OCCUPIED )
-	if( FALSE == csl_caph_QueryHWClock() )
-	{
-		Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_SetPlayVolume: clock is off\n");
-	
-		//the CAPH clock may be not turned on.
-		//defer setting the FM radio audio gain until start render.
-		return;
-	}
 
 
 	if (pathID != 0)
@@ -2939,7 +2962,7 @@ static void powerOnExternalAmp(
 	else
 	{
 		int hs_gain = 0;
-		Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp (HS on), telephonyUseHS = %d, audioUseHS= %d\n", telephonyUseHS, audioUseHS);
+		Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp (HS on), telephonyUseHS = %d, audioUseHS= %d, FMRadioUseHS=%d\n", telephonyUseHS, audioUseHS, FMRadioUseHS);
 
 		if ( HS_IsOn != TRUE )
 		{
@@ -2974,7 +2997,7 @@ static void powerOnExternalAmp(
 	{
 		int ihf_gain = 0;
 
-		Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp (IHF on), telephonyUseIHF = %d, audioUseIHF= %d\n", telephonyUseIHF, audioUseIHF);
+		Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp (IHF on), telephonyUseIHF = %d, audioUseIHF= %d, FMRadioUseIHF=%d\n", telephonyUseIHF, audioUseIHF, FMRadioUseIHF);
 
 		if ( IHF_IsOn != TRUE )
 		{
