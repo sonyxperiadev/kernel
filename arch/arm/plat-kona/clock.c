@@ -3471,6 +3471,38 @@ static int ref_clk_set_gating_ctrl(struct ref_clk * ref_clk, int gating_ctrl)
 EXPORT_SYMBOL(ref_clk_set_gating_ctrl);
 
 
+int ref_clk_hyst_enable(struct ref_clk * ref_clk, int enable, int delay)
+{
+	u32 reg_val;
+
+	if(!ref_clk->clk_gate_offset || !ref_clk->hyst_val_mask || !ref_clk->hyst_en_mask)
+		return -EINVAL;
+
+	if(enable)
+	{
+		if(delay != CLK_HYST_LOW && delay != CLK_HYST_HIGH)
+			return -EINVAL;
+	}
+
+	reg_val = readl(CCU_REG_ADDR(ref_clk->ccu_clk, ref_clk->clk_gate_offset));
+
+	if(enable)
+	{
+		reg_val = SET_BIT_USING_MASK(reg_val, ref_clk->hyst_en_mask);
+		if(delay == CLK_HYST_HIGH)
+			reg_val = SET_BIT_USING_MASK(reg_val, ref_clk->hyst_val_mask);
+		else
+			reg_val = RESET_BIT_USING_MASK(reg_val, ref_clk->hyst_val_mask);
+	}
+	else
+		reg_val = RESET_BIT_USING_MASK(reg_val, ref_clk->hyst_en_mask);
+
+	writel(reg_val, CCU_REG_ADDR(ref_clk->ccu_clk, ref_clk->clk_gate_offset));
+	return 0;
+}
+EXPORT_SYMBOL(ref_clk_hyst_enable);
+
+
 /* reference clocks */
 unsigned long ref_clk_get_rate(struct clk *clk)
 {
@@ -3493,6 +3525,9 @@ static int ref_clk_init(struct clk* clk)
 	ccu_write_access_enable(ref_clk->ccu_clk, true);
 	if(ref_clk_get_gating_status(ref_clk) == 1)
 		clk->use_cnt = 1;
+
+	ref_clk_hyst_enable(ref_clk, HYST_ENABLE & clk->flags,
+			(clk->flags & HYST_HIGH) ? CLK_HYST_HIGH : CLK_HYST_LOW);
 
 	if(clk->flags & AUTO_GATE)
 		ref_clk_set_gating_ctrl(ref_clk, CLK_GATING_AUTO);
