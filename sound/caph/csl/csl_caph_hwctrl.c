@@ -141,7 +141,7 @@ static UInt32 dspSharedMemAddr = 0;
 static CSL_CAPH_SWITCH_CONFIG_t fm_sw_config;
 static int ssp_pcm_usecount = 0;
 static Boolean isSTIHF = FALSE;
-static int bBTTest = 0;
+static BT_MODE_t bt_mode = BT_MODE_NB;
 static Boolean sClkCurEnabled = FALSE;
 static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 
@@ -165,6 +165,7 @@ static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] =
 	{CAPH_SW, CAPH_NONE}, //LIST_SW
 	{CAPH_MIXER, CAPH_SW, CAPH_NONE}, //LIST_MIX_SW
 	{CAPH_MIXER, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE}, //LIST_MIX_DMA
+	{CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE}, //LIST_SW_MIX_SW_DMA
 };
 
 //****************************************************************************
@@ -801,7 +802,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 	if(path->source==CSL_CAPH_DEV_DSP) dataFormat = CSL_CAPH_24BIT_MONO; //dsp data is 24bit mono
 	if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR)
 	{
-		if(bBTTest == 2)
+		if((bt_mode == BT_MODE_WB) || (bt_mode = BT_MODE_WB_TEST))
 			path->snk_sampleRate = AUDIO_SAMPLING_RATE_16000; /*- BT-WB -*/
 		else
 			path->snk_sampleRate = AUDIO_SAMPLING_RATE_8000;  /*- NB-BT -*/
@@ -1030,6 +1031,12 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 			}
 			pSrcmRoute = &path->srcmRoute[sinkNo][blockIdx];
 
+			if(path->source == CSL_CAPH_DEV_BT_MIC) {
+				if(bt_mode == BT_MODE_WB)
+					srOut = AUDIO_SAMPLING_RATE_16000; /*- WB BT -*/
+				else
+					srOut = AUDIO_SAMPLING_RATE_8000;  /*- NB BT -*/
+			}
 			pSrcmRoute->inThres = 3;
 			pSrcmRoute->outThres = 3;
 			pSrcmRoute->inDataFmt = dataFormat;
@@ -1102,7 +1109,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 			{
 				sink = csl_caph_hwctrl_obtainMixerOutChannelSink();
 				dataFormat = CSL_CAPH_16BIT_MONO;
-			} else if(sink==CSL_CAPH_DEV_BT_SPKR) {
+			} else if((sink==CSL_CAPH_DEV_BT_SPKR) || (path->source == CSL_CAPH_DEV_BT_MIC)) {
 				sink = csl_caph_hwctrl_obtainMixerOutChannelSink();
 				bt_spk_mixer_sink = sink;
 				dataFormat = CSL_CAPH_16BIT_MONO;
@@ -1571,6 +1578,10 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID pathID, int sinkNo, int blockP
 
 	csl_caph_srcmixer_config_mix_route(path->srcmRoute[sinkNo][blockIdx]);
     csl_caph_hwctrl_set_srcmixer_filter(path);
+
+	if(path->source == CSL_CAPH_DEV_BT_MIC){
+		csl_caph_srcmixer_set_mix_all_in_gain(pSrcmRoute->outChnl, 0, 0);
+	}
 }
 
 // ==========================================================================
@@ -1673,7 +1684,10 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 			}
 			if(path->source==CSL_CAPH_DEV_DSP || path->sink[sinkNo]==CSL_CAPH_DEV_DSP) pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT; //this is unpacked 16bit, 32bit per sample with msb = 0
 			else if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC) pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
-			pcmCfg.sample_rate = path->snk_sampleRate;
+			if((bt_mode == BT_MODE_NB) || (bt_mode == BT_MODE_NB_TEST))
+				pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_8000;
+			else
+				pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_16000;
 			if (path->source == CSL_CAPH_DEV_DSP) pcmCfg.sample_rate = path->src_sampleRate;
 			pcmCfg.interleave = TRUE;
 			pcmCfg.ext_bits = 0;
@@ -2859,14 +2873,18 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
     else
     if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY))
     {
-		list = LIST_SW_DMA;
+		if(path->snk_sampleRate == AUDIO_SAMPLING_RATE_8000 || path->snk_sampleRate == AUDIO_SAMPLING_RATE_16000)
+			list = LIST_SW_DMA;
+		else{
+			list = LIST_SW_MIX_SW_DMA;
+		}
 		ssp_pcm_usecount++;
     }
     else
     if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR))
     {
 		list = LIST_DMA_MIX_SRC_SW;
-		if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && (bBTTest == 1)) list = LIST_DMA_SW; //avoid SRC for production test.
+		if((path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000) && ((bt_mode == BT_MODE_NB_TEST) || (bt_mode == BT_MODE_WB_TEST))) list = LIST_DMA_SW; //avoid SRC for production test.
 		ssp_pcm_usecount++;
     }
     else
@@ -3833,8 +3851,8 @@ void csl_caph_hwctrl_SetIHFmode(Boolean stIHF)
 ****************************************************************************/
 void csl_caph_hwctrl_SetBTMode(int mode)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_SetBTMode from %d to %d\r\n", bBTTest, mode);
-	bBTTest = mode;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_SetBTMode from %d to %d\r\n", bt_mode, mode);
+	bt_mode = mode;
 }
 
 /****************************************************************************

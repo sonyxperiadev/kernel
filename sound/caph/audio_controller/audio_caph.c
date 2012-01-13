@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright 2010-2011 Broadcom Corporation.  All rights reserved.
+Copyright 2010-2012 Broadcom Corporation.  All rights reserved.
 
 Unless you and Broadcom execute a separate written software license agreement
 governing use of this software, this software is licensed to you under the
@@ -1028,7 +1028,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_SetApp_t *parm_setapp =
  			    (BRCM_AUDIO_Param_SetApp_t *)arg_param;
-			//AUDCTRL_SetAudioApp (parm_setapp->aud_app);
+			AUDCTRL_SetAudioApp (parm_setapp->aud_app);
 		}
 		break;
 

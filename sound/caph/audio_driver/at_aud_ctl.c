@@ -223,7 +223,6 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
             iLineSelect[0] = mic;
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].
             iLineSelect[1] = spk;
-        AUDCTRL_SetAudioApp(Params[1]);
         AUDCTRL_SetAudioMode( Params[2], Params[1]);
         BCM_AUDIO_DEBUG("%s mic %d spk %d mode %ld app %ld\n", 
                 __FUNCTION__, mic,spk,Params[2], Params[1]);

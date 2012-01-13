@@ -256,6 +256,7 @@ typedef enum //the naming does not count CFIFO and SW in the middle of the path.
 	LIST_SW,
 	LIST_MIX_SW,
 	LIST_MIX_DMA,
+	LIST_SW_MIX_SW_DMA,
 	LIST_NUM,
 } CAPH_LIST_t; //the order must match caph_block_list[]
 
@@ -318,6 +319,16 @@ typedef enum
 	AUDIOH_156M_CLOCK,
 }CAPH_Clock_t;
 
+/*
+* BT mode definition
+*********************************************************************************/
+typedef enum
+{
+	BT_MODE_NB,
+	BT_MODE_NB_TEST,
+	BT_MODE_WB,
+	BT_MODE_WB_TEST,
+} BT_MODE_t;
 /**
 *
 *  @brief  initialize the caph HW control CSL
