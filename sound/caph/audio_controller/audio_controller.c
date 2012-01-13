@@ -172,6 +172,7 @@ static Boolean fmPlayStarted = FALSE;
 static unsigned int playbackPathID = 0;
 /* pathID of the recording path */
 static unsigned int recordPathID = 0;
+static unsigned int pathIDTuning; /* init to 0, for tuning purpose only */
 //=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -729,9 +730,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode, AudioApp_t audio_app )
     else
     if(audio_app == AUDIO_APP_MUSIC)
     {
-        /*add code here to switch the mic or speaker when
-         *audio mode/app is changed.
-         */
+		AUDCTRL_SwitchPlaySpk(mic, spk, pathIDTuning);
     }
      if ( !AUDDRV_InVoiceCall() )
     {
@@ -748,6 +747,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode, AudioApp_t audio_app )
     /*disable clock if it is enabled by this function */
     if(!bClk) csl_caph_ControlHWClock(FALSE); 
 }
+
 #else
 //*********************************************************************
 //	Save audio mode before call AUDCTRL_SaveAudioModeFlag( )
@@ -1062,6 +1062,7 @@ void AUDCTRL_EnablePlay(
 	if(pPathID) *pPathID = pathID;
 
     playbackPathID = pathID;
+	pathIDTuning = pathID;
 	//Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %x, pathID %d\r\n", *pPathID, pathID);
 }
 //============================================================================
@@ -1150,6 +1151,7 @@ void AUDCTRL_DisablePlay(
 			powerOnExternalAmp( sink, AudioUseExtSpkr, FALSE );
 		}
 	}
+	pathIDTuning = 0;
 }
 
 /****************************************************************************
