@@ -347,7 +347,7 @@ static struct platform_device pl330_dmac_device = {
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-#define BCMBT_VREG_GPIO       (38)
+#define BCMBT_VREG_GPIO       (41)
 #define BCMBT_N_RESET_GPIO    (40)
 #define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
 #define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
