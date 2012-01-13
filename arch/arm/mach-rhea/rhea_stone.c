@@ -93,6 +93,11 @@
 #include <linux/broadcom/bcmbt_lpm.h
 #endif
 
+#if defined(CONFIG_BCMI2CNFC)
+#include <linux/bcmi2cnfc.h>
+#endif
+
+
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
 #endif
@@ -225,6 +230,73 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
 };
 
+#endif
+
+
+
+
+#if defined(CONFIG_BCMI2CNFC)
+
+static int bcmi2cnfc_gpio_setup(void *);
+static int bcmi2cnfc_gpio_clear(void *);
+static struct bcmi2cnfc_i2c_platform_data bcmi2cnfc_pdata = {
+	.irq_gpio = 4,
+	.en_gpio = 100,
+	.wake_gpio = 73,
+	.init = bcmi2cnfc_gpio_setup,
+	.reset = bcmi2cnfc_gpio_clear,
+	.i2c_pdata	= {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),},
+};
+
+
+static int bcmi2cnfc_gpio_setup(void *this)
+{
+	struct bcmi2cnfc_i2c_platform_data *p;
+	p = (struct bcmi2cnfc_i2c_platform_data *) this;
+	if (!p)
+		return -1;
+	pr_info("bcmi2cnfc_gpio_setup nfc en %d, wake %d, irq %d\n",
+		p->en_gpio, p->wake_gpio, p->irq_gpio);
+
+	gpio_request(p->irq_gpio, "nfc_irq");
+	gpio_direction_input(p->irq_gpio);
+
+	gpio_request(p->en_gpio, "nfc_en");
+	gpio_direction_output(p->en_gpio, 1);
+
+	gpio_request(p->wake_gpio, "nfc_wake");
+	gpio_direction_output(p->wake_gpio, 0);
+
+	return 0;
+}
+static int bcmi2cnfc_gpio_clear(void *this)
+{
+	struct bcmi2cnfc_i2c_platform_data *p;
+	p = (struct bcmi2cnfc_i2c_platform_data *) this;
+	if (!p)
+		return -1;
+
+	pr_info("bcmi2cnfc_gpio_clear nfc en %d, wake %d, irq %d\n",
+		p->en_gpio, p->wake_gpio, p->irq_gpio);
+
+	gpio_direction_output(p->en_gpio, 0);
+	gpio_direction_output(p->wake_gpio, 1);
+	gpio_free(p->en_gpio);
+	gpio_free(p->wake_gpio);
+	gpio_free(p->irq_gpio);
+
+	return 0;
+}
+
+static struct i2c_board_info __initdata bcmi2cnfc[] = {
+	{
+	 I2C_BOARD_INFO("bcmi2cnfc", 0x1FA),
+	 .flags = I2C_CLIENT_TEN,
+	 .platform_data = (void *)&bcmi2cnfc_pdata,
+	 .irq = gpio_to_irq(4),
+	 },
+
+};
 #endif
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
@@ -981,6 +1053,9 @@ static void __init rhea_stone_add_i2c_devices (void)
 	i2c_register_board_info(1,
 			bmp18x_info,
 			ARRAY_SIZE(bmp18x_info));
+#endif
+#if defined(CONFIG_BCMI2CNFC)
+	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
 #endif
 
 }
