@@ -131,6 +131,9 @@ enum __VOCAPTURE_VOICE_MIX_MODE_t {
 };
 #define VOCAPTURE_VOICE_MIX_MODE_t enum __VOCAPTURE_VOICE_MIX_MODE_t
 
+extern UInt32 audio_control_dsp(UInt32 param1, UInt32 param2,
+	UInt32 param3, UInt32 param4, UInt32 param5, UInt32 param6);
+
 /**
 *  @brief  This function is used to open the audio data driver
 *
