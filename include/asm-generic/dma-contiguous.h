@@ -8,17 +8,22 @@
 
 #ifdef CONFIG_CMA
 
-static inline struct cma *get_dev_cma_area(struct device *dev)
+static inline struct cma *dev_get_cma_area(struct device *dev)
 {
 	if (dev && dev->cma_area)
 		return dev->cma_area;
 	return dma_contiguous_default_area;
 }
 
-static inline void set_dev_cma_area(struct device *dev, struct cma *cma)
+static inline void dev_set_cma_area(struct device *dev, struct cma *cma)
 {
-	if (dev)
+	if (dev) {
 		dev->cma_area = cma;
+		return;
+	}
+
+	WARN_ON(dma_contiguous_default_area);
+	dma_contiguous_default_area = cma;
 }
 
 #endif

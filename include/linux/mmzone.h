@@ -59,7 +59,7 @@ enum {
 	MIGRATE_TYPES
 };
 
-#ifdef CONFIG_CMA_MIGRATE_TYPE
+#ifdef CONFIG_CMA
 #  define is_migrate_cma(migratetype) unlikely((migratetype) == MIGRATE_CMA)
 #else
 #  define is_migrate_cma(migratetype) false
@@ -1173,22 +1173,6 @@ static inline int memmap_valid_within(unsigned long pfn,
 	return 1;
 }
 #endif /* CONFIG_ARCH_HAS_HOLES_MEMORYMODEL */
-
-#if defined(CONFIG_SPARSEMEM) && !defined(CONFIG_SPARSEMEM_VMEMMAP)
-/*
- * Both PFNs must be from the same zone!  If this function returns
- * true, pfn_to_page(pfn1) + (pfn2 - pfn1) == pfn_to_page(pfn2).
- */
-static inline bool zone_pfn_same_memmap(unsigned long pfn1, unsigned long pfn2)
-{
-	return pfn_to_section_nr(pfn1) == pfn_to_section_nr(pfn2);
-}
-
-#else
-
-#define zone_pfn_same_memmap(pfn1, pfn2) (true)
-
-#endif
 
 #endif /* !__GENERATING_BOUNDS.H */
 #endif /* !__ASSEMBLY__ */

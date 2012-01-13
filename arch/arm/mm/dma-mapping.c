@@ -33,8 +33,6 @@
 
 #include "mm.h"
 
-#include "mm.h"
-
 static u64 get_coherent_dma_mask(struct device *dev)
 {
 	u64 mask = (u64)arm_dma_limit;
@@ -170,6 +168,9 @@ static int __init consistent_init(void)
 	unsigned long base = consistent_base;
 	unsigned long num_ptes = (CONSISTENT_END - base) >> PGDIR_SHIFT;
 
+	if (cpu_architecture() >= CPU_ARCH_ARMv6)
+		return 0;
+
 	consistent_pte = kmalloc(num_ptes * sizeof(pte_t), GFP_KERNEL);
 	if (!consistent_pte) {
 		pr_err("%s: no memory\n", __func__);
@@ -178,9 +179,6 @@ static int __init consistent_init(void)
 
 	pr_debug("DMA memory: 0x%08lx - 0x%08lx:\n", base, CONSISTENT_END);
 	consistent_head.vm_start = base;
-
-	if (cpu_architecture() >= CPU_ARCH_ARMv6)
-		return 0;
 
 	do {
 		pgd = pgd_offset(&init_mm, base);
@@ -223,7 +221,7 @@ static struct arm_vmregion_head coherent_head = {
 	.vm_list	= LIST_HEAD_INIT(coherent_head.vm_list),
 };
 
-size_t coherent_pool_size = CONSISTENT_DMA_SIZE / 8;
+size_t coherent_pool_size = DEFAULT_CONSISTENT_DMA_SIZE / 8;
 
 static int __init early_coherent_pool(char *p)
 {
@@ -262,13 +260,12 @@ static int __init coherent_init(void)
  */
 postcore_initcall(coherent_init);
 
-struct dma_contiguous_early_reserve {
+struct dma_contig_early_reserve {
 	phys_addr_t base;
 	unsigned long size;
 };
 
-static struct dma_contiguous_early_reserve
-dma_mmu_remap[MAX_CMA_AREAS] __initdata;
+static struct dma_contig_early_reserve dma_mmu_remap[MAX_CMA_AREAS] __initdata;
 
 static int dma_mmu_remap_num __initdata;
 
@@ -466,7 +463,12 @@ static void *__alloc_from_pool(struct device *dev, size_t size,
 		return NULL;
 	}
 
-	align = 1 << fls(size - 1);
+	/*
+	 * Align the region allocation - allocations from pool are rather
+	 * small, so align them to their order in pages, minimum is a page
+	 * size. This helps reduce fragmentation of the DMA space.
+	 */
+	align = PAGE_SIZE << get_order(size);
 	c = arm_vmregion_alloc(&coherent_head, align, size, 0);
 	if (c) {
 		void *ptr = (void *)c->vm_start;
@@ -557,7 +559,7 @@ static void *__dma_alloc(struct device *dev, size_t size, dma_addr_t *handle,
 			 gfp_t gfp, pgprot_t prot)
 {
 	u64 mask = get_coherent_dma_mask(dev);
-	struct page *page = NULL;
+	struct page *page;
 	void *addr;
 
 #ifdef CONFIG_DMA_API_DEBUG

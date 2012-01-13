@@ -1775,7 +1775,7 @@ int __init v3d_init(void)
 	}
 
 	v3d_state.v3d_device = device_create(v3d_state.v3d_class, NULL, MKDEV(v3d_major, 0), NULL, V3D_DEV_NAME);
-	v3d_state.v3d_device->coherent_dma_mask = ISA_DMA_THRESHOLD;
+	v3d_state.v3d_device->coherent_dma_mask = ((u64)~0);
 
 	v3d_power(1);
 	v3d_print_info();
