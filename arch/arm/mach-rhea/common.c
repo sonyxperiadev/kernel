@@ -169,7 +169,7 @@ static struct resource board_pmu_bsc_resource[] = {
 
 static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	{ /* for BSC0 */
-		.speed = BSC_BUS_SPEED_50K,
+		.speed = BSC_BUS_SPEED_400K,
 		.dynamic_speed = 1,
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",

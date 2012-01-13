@@ -85,6 +85,10 @@
 #include <linux/broadcom/bcmbt_rfkill.h>
 #endif
 
+#ifdef CONFIG_GPS_IRQ
+#include <linux/broadcom/gps.h>
+#endif
+
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h
 #endif
@@ -388,6 +392,25 @@ static struct platform_device board_bcmbt_lpm_device = {
 };
 #endif
 
+
+
+#ifdef CONFIG_GPS_IRQ 
+
+#define GPIO_GPS_HOST_WAKE 88
+
+static struct gps_platform_data gps_hostwake_data= {
+        .gpio_interrupt = GPIO_GPS_HOST_WAKE,
+};
+
+static struct platform_device gps_hostwake= {
+        .name = "gps-hostwake",
+        .id = -1,
+        .dev =
+        {
+                .platform_data=&gps_hostwake_data,
+        },
+};
+#endif
 
 #if defined(CONFIG_SPI_GPIO)
 /*
@@ -840,8 +863,11 @@ static struct platform_device *rhea_stone_plat_devices[] __initdata = {
 #ifdef CONFIG_BCM_BT_LPM
     &board_bcmbt_lpm_device,
 #endif
-	&rhea_camera
+	&rhea_camera,
 
+#ifdef CONFIG_GPS_IRQ
+	&gps_hostwake
+#endif
 };
 
 #ifdef CONFIG_TOUCHSCREEN_TANGO

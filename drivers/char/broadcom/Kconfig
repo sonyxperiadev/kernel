@@ -218,3 +218,9 @@ config VC_TEST_WIFI_HDMI
     ---help---
       Select to build the Wifi-Hdmi Videocore Service test driver.
 
+config GPS_IRQ
+	bool "GPS I2C HOSTWAKE"	
+	default n
+	--help---
+		If GPS I2C-HOSTWAKE is used
+

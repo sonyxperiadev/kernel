@@ -1286,6 +1286,7 @@ CONFIG_BCM_HEADSET_SW=y
 # CONFIG_BCM_HDMI_DET is not set
 # CONFIG_BCM_WIFI_HDMI is not set
 # CONFIG_VC_TEST_WIFI_HDMI is not set
+# CONFIG_GPS_IRQ is not set
 # CONFIG_RAMOOPS is not set
 # CONFIG_BCM_GPS is not set
 CONFIG_I2C=y

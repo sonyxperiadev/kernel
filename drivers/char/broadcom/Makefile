@@ -7,6 +7,7 @@ obj-y += fuse_log/
 obj-$(CONFIG_BCM_MODEM) += modem/
 obj-y += isp/
 obj-y += unicam/
+obj-$(CONFIG_GPS_IRQ)		 += brcm_gps_irq.o
 obj-$(CONFIG_BCM_FRAME_PROFILER_SUPPORT)   += frame_profiler.o
 obj-$(CONFIG_BCM_IDLE_PROFILER)		       += idle_profiler/
 obj-$(CONFIG_BCM_BSC)                      += bsc.o
