@@ -1,22 +1,22 @@
-/*******************************************************************************************
+/*******************************************************************************
 Copyright 2010 Broadcom Corporation.  All rights reserved.
 
-Unless you and Broadcom execute a separate written software license agreement 
-governing use of this software, this software is licensed to you under the 
-terms of the GNU General Public License version 2, available at 
-http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+Unless you and Broadcom execute a separate written software license agreement
+governing use of this software, this software is licensed to you under the
+terms of the GNU General Public License version 2, available at
+http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
 
-Notwithstanding the above, under no circumstances may you combine this software 
-in any way with any other Broadcom software provided under a license other than 
+Notwithstanding the above, under no circumstances may you combine this software
+in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
-*******************************************************************************************/
+*******************************************************************************/
 
-//***************************************************************************
+/******************************************************************************/
 /**
 *
 *   @file   atc_kernel.c
 *
-*   @brief  This driver is used to route AT commands to CP 
+*   @brief  This driver is used to route AT commands to CP
 *           via the RPC interface.
 *
 *
@@ -88,9 +88,9 @@ typedef struct {
  *  module data
  */
 typedef struct {
-	struct class *mDriverClass;	///< driver class 
+	struct class *mDriverClass;	///< driver class
 
-	//in cmd related 
+	//in cmd related
 	AT_CmdQueue_t mCmdQueue;	///<in cmd queue
 	struct work_struct mCmdWorker;	///<in cmd worker
 	spinlock_t mCmdLock;	///<in cmd queue spinlock
@@ -119,18 +119,18 @@ typedef struct {
 
 //local function protos
 
-//forward declarations used in 'struct file_operations' 
+//forward declarations used in 'struct file_operations'
 static int ATC_KERNEL_Open(struct inode *inode, struct file *filp);
 static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg);
 static int ATC_KERNEL_Release(struct inode *inode, struct file *filp);
-static unsigned int ATC_KERNEL_Poll(struct file *filp, poll_table * wait);
+static unsigned int ATC_KERNEL_Poll(struct file *filp, poll_table *wait);
 static void ATC_Cleanup(void);
 static void ATC_ATRPCInit(void);
-static bool_t xdr_AtCmdInfo_t(XDR * xdrs, AtCmdInfo_t * data);
-static bool_t xdr_AtRegisterInfo_t(XDR * xdrs, AtRegisterInfo_t * data);
-static void ATC_SendRPCATCmd(UInt8 inChannel, UInt8 * inCmdStr,
+static bool_t xdr_AtCmdInfo_t(XDR *xdrs, AtCmdInfo_t *data);
+static bool_t xdr_AtRegisterInfo_t(XDR *xdrs, AtRegisterInfo_t *data);
+static void ATC_SendRPCATCmd(UInt8 inChannel, UInt8 *inCmdStr,
 			     SimNumber_t inSimID);
-static void ATC_HandleAtcEventRspCb(RPC_Msg_t * pMsg,
+static void ATC_HandleAtcEventRspCb(RPC_Msg_t *pMsg,
 				    ResultDataBufHandle_t dataBufHandle,
 				    UInt32 userContextData);
 static Result_t ATC_RegisterCPTerminal(UInt8 chan, Boolean unsolicited);
@@ -157,7 +157,7 @@ static RPC_XdrInfo_t ATC_Prim_dscrm[] = {
 };
 
 /**
- *  file ops 
+ *  file ops
  */
 static struct file_operations sFileOperations = {
 	.owner = THIS_MODULE,
@@ -183,12 +183,12 @@ static int gRegulatorOpen = 0;
 static struct regulator *sim_regulator = NULL;
 #endif
 
-//======================================File operations==================================================
-//***************************************************************************
+//=============================File operations==================================
+//******************************************************************************
 /**
- *  Called by Linux I/O system to handle open() call.   
+ *  Called by Linux I/O system to handle open() call.
  *  @param  (in)    not used
- *  @param  (io)    file pointer    
+ *  @param  (io)    file pointer
  *  @return int     0 if success, -1 if error
  *  @note
  *      API is defined by struct file_operations 'open' member.
@@ -254,7 +254,7 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
 
 //***************************************************************************
 /**
- *  Called by Linux I/O system to handle ioctl() call.   
+ *  Called by Linux I/O system to handle ioctl() call.
  *  @param  (in)    not used
  *  @param  (in)    not used
  *  @param  (in)    ioctl command (see note)
@@ -262,7 +262,7 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
  *  @return int     0 if success, -1 if error
  *  @note
  *      API is defined by struct file_operations 'ioctl' member.
- *  
+ *
  *      cmd is one following (for now, just one)
  *
  *          ATC_KERNEL_SEND_AT_CMD    - send at command to cp side
@@ -357,7 +357,7 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg)
 			/* Get one resp from the queue */
 			spin_lock(&sModule.mRespLock);
 			if (list_empty(&sModule.mRespQueue.mList)) {
-				ATC_KERNEL_TRACE(("ERROR: AT Resp queue is empty \n"));
+				ATC_KERNEL_TRACE(("ERROR: AT Resp queue is empty\n"));
 				spin_unlock(&sModule.mRespLock);
 				retVal = -1;
 				break;
@@ -428,7 +428,7 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg)
 
 //***************************************************************************
 /**
- *  Called by Linux I/O system to handle poll() call.   
+ *  Called by Linux I/O system to handle poll() call.
  *  @param  (in)    not used
  *  @param  wait (in)    wait time
  *  @return int  -1 if error, POLLIN bit set if data is available.
@@ -470,7 +470,7 @@ static unsigned int ATC_KERNEL_Poll(struct file *filp, poll_table * wait)
 
 //***************************************************************************
 /**
- *  Called by Linux I/O system to handle release() call.   
+ *  Called by Linux I/O system to handle release() call.
  *  @param  (in)    not used
  *  @param  (in)    not used
  *  @return int     0 if success, -1 if error
@@ -488,12 +488,12 @@ static int ATC_KERNEL_Release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-//====================== Local functions ==========================================================
+//============================ Local functions =================================
 //***************************************************************************
 /**
- *  Note that this function is copied verbatim from at_rpc.c on CP side   
+ *  Note that this function is copied verbatim from at_rpc.c on CP side
  */
-static bool_t xdr_AtCmdInfo_t(XDR * xdrs, AtCmdInfo_t * data)
+static bool_t xdr_AtCmdInfo_t(XDR *xdrs, AtCmdInfo_t *data)
 {
 	if (xdr_int16_t(xdrs, &data->len)) {
 		u_int len = (u_int) data->len;
@@ -511,7 +511,7 @@ static bool_t xdr_AtCmdInfo_t(XDR * xdrs, AtCmdInfo_t * data)
 /**
  *  Note that this function is copied verbatim from at_rpc.c on CP side
  */
-bool_t xdr_AtRegisterInfo_t(XDR * xdrs, AtRegisterInfo_t * data)
+bool_t xdr_AtRegisterInfo_t(XDR *xdrs, AtRegisterInfo_t *data)
 {
 	XDR_LOG(xdrs, "AtRegisterInfo_t")
 
@@ -522,7 +522,7 @@ bool_t xdr_AtRegisterInfo_t(XDR * xdrs, AtRegisterInfo_t * data)
 
 //***************************************************************************
 /**
- *  Initialize AT RPC interface.   
+ *  Initialize AT RPC interface.
  */
 static void ATC_ATRPCInit(void)
 {
@@ -578,12 +578,12 @@ Result_t ATC_SendRpcMsg(UInt32 msgId, void *val)
 
 //***************************************************************************
 /**
- *  Send AT command to CP via RPC.   
+ *  Send AT command to CP via RPC.
  *  @param  inChannel (in)  AT channel
  *  @param  inCmdStr  (in)  Null terminated AT command string to be passed to CP
  *  @param  inSimID   (in)  ID of SIM that AT command is to be directed to
  */
-static void ATC_SendRPCATCmd(UInt8 inChannel, UInt8 * inCmdStr,
+static void ATC_SendRPCATCmd(UInt8 inChannel, UInt8 *inCmdStr,
 			     SimNumber_t inSimID)
 {
 	AtCmdInfo_t cmdInfo;
@@ -606,13 +606,13 @@ static void ATC_SendRPCATCmd(UInt8 inChannel, UInt8 * inCmdStr,
 
 //***************************************************************************
 /**
- *  Response callback from RPC.   
+ *  Response callback from RPC.
  *  @param  pMsg            (in)  Response message from CP
  *  @param  dataBufHandle   (in)  Handle to response data buffer
  *  @param  userContextData (in)  Optional user context data from request
  *                                  (not used here)
 */
-static void ATC_HandleAtcEventRspCb(RPC_Msg_t * pMsg,
+static void ATC_HandleAtcEventRspCb(RPC_Msg_t *pMsg,
 				    ResultDataBufHandle_t dataBufHandle,
 				    UInt32 userContextData)
 {
@@ -625,7 +625,7 @@ static void ATC_HandleAtcEventRspCb(RPC_Msg_t * pMsg,
 		{
 			AtCmdInfo_t *atResponse = (AtCmdInfo_t *) pMsg->dataBuf;
 
-			ATC_KERNEL_TRACE((" AT Response chnl:%d %s \n",
+			ATC_KERNEL_TRACE(("AT Response chnl:%d %s\n",
 					  atResponse->channel,
 					  atResponse->buffer));
 
@@ -638,7 +638,7 @@ static void ATC_HandleAtcEventRspCb(RPC_Msg_t * pMsg,
 		{
 			Boolean *atResponse = (Boolean *) pMsg->dataBuf;
 
-			ATC_KERNEL_TRACE((" MSG_AT_AUDIO_REQ on/off:%d  \n",
+			ATC_KERNEL_TRACE(("MSG_AT_AUDIO_REQ on/off:%d\n",
 					  *atResponse));
 
 			ATC_AddRespToQueue(0, pMsg->msgId, atResponse,
@@ -681,7 +681,7 @@ static Result_t ATC_RegisterCPTerminal(UInt8 chan, Boolean unsolicited)
 //***************************************************************************
 /**
  *  Add AT response to the response queue
- *  
+ *
  *  @param atResp (in)  at response item
  */
 static void ATC_AddRespToQueue(UInt8 chan, UInt32 msgId, void *atResp,
@@ -721,7 +721,7 @@ static void ATC_AddRespToQueue(UInt8 chan, UInt32 msgId, void *atResp,
 //***************************************************************************
 /**
  *  Memory cleaning during module destroy or error exit cases.
- *  
+ *
  */
 static void ATC_Cleanup(void)
 {
@@ -759,7 +759,7 @@ static void ATC_Cleanup(void)
 	return;
 }
 
-//============ Module ===================================================================================
+//========================== Module ============================================
 
 //***************************************************************************
 /**
@@ -784,7 +784,7 @@ static void ATC_KERNEL_CommandThread(struct work_struct *inCmdWorker)
 		spin_unlock(&sModule.mCmdLock);
 
 		//pass to capi2
-		ATC_KERNEL_TRACE(("Sending to RPC \n"));
+		ATC_KERNEL_TRACE(("Sending to RPC\n"));
 
 		ATC_SendRPCATCmd(cmdEntry->mATCmd.fChan,
 				 cmdEntry->mATCmd.fATCmdStr,
@@ -801,7 +801,7 @@ static void ATC_KERNEL_CommandThread(struct work_struct *inCmdWorker)
 
 //***************************************************************************
 /**
- *  Called by Linux I/O system to initialize module.   
+ *  Called by Linux I/O system to initialize module.
  *  @return int     0 if success, -1 if error
  *  @note
  *      API is defined by module_init macro
@@ -857,7 +857,7 @@ static int __init ATC_KERNEL_ModuleInit(void)
 
 //***************************************************************************
 /**
- *  Called by Linux I/O system to exit module.   
+ *  Called by Linux I/O system to exit module.
  *  @return int     0 if success, -1 if error
  *  @note
  *      API is defined by module_exit macro
