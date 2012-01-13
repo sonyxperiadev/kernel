@@ -1172,12 +1172,11 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
 	audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
 	(UInt32) audio_mode, 0, 0, 0, 0);
 #else
-	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
-	(UInt32) (audio_mode + audio_app * AUDIO_MODE_NUMBER),
-	(UInt32) audio_app, 0, 0, 0);
-	audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
-	(UInt32) (audio_mode + audio_app * AUDIO_MODE_NUMBER),
-	(UInt32) audio_app, 0, 0, 0);
+	audio_control_generic( AUDDRV_CPCMD_PassAudioMode,
+            (UInt32)audio_mode, (UInt32)audio_app, 0, 0, 0 );
+	audio_control_generic( AUDDRV_CPCMD_SetAudioMode,
+            (UInt32)(audio_mode+audio_app*AUDIO_MODE_NUMBER),
+            (UInt32)audio_app, 0, 0, 0 );
 #endif
 /*load speaker EQ filter and Mic EQ filter from sysparm to DSP*/
 /* 7 can be removed later on. It means mic1, mic2, speaker */
@@ -1254,6 +1253,9 @@ void AUDDRV_SetAudioMode_ForMusicRecord(AudioMode_t audio_mode,
 */
 AudioMode_t AUDDRV_GetAudioMode(void)
 {
+    Log_DebugPrintf(LOGID_AUDIO,
+	"\n\r\t* AUDDRV_GetAudioMode() audio_mode=%d\n\r",
+		currAudioMode);
 	return currAudioMode;
 }
 
@@ -1271,7 +1273,6 @@ AudioApp_t AUDDRV_GetAudioApp(void)
 	Log_DebugPrintf(LOGID_AUDIO,
 	"\n\r\t* AUDDRV_GetAudioApp() audio_app=%d\n\r",
 		currAudioApp);
-
 	return currAudioApp;
 }
 
@@ -2190,6 +2191,10 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
 		SetGainOnExternalAmp_mB(AUDIO_SINK_LOUDSPK,
 		pmu_gain * 25, 0);	/* PMU_AUDIO_HS_BOTH); */
+
+		pmu_gain = (int) p->ext_speaker_high_gain_mode_enable;
+		AUDIO_PMU_HI_GAIN_MODE_EN(pmu_gain);
+		
 		break;
 
 	default:

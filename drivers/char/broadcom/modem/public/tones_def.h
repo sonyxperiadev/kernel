@@ -22,15 +22,18 @@
  * The following part configures the audio baseband code..
  ****************************************************************/
 
+
 /****************************************************************
  * The following part shows all the constant values needed in audio baseband code.
  ****************************************************************/
+
 
 /**
 	tone types
  users of this enum could be CAPI, modem, csl driver, peripheral driver.
 **/
-typedef enum {
+typedef enum
+{
 // DTMF Tones
 	SPEAKERTONE_ZERO = 0,
 	SPEAKERTONE_ONE,
@@ -59,7 +62,8 @@ typedef enum {
 /**
 	tone types
 **/
-typedef enum {
+typedef enum
+{
 // DTMF Tones
 	AUDIO_TONE_ZERO = 0,
 	AUDIO_TONE_ONE,
@@ -94,3 +98,4 @@ typedef enum {
 } AudioToneType_en_t;
 
 #endif
+

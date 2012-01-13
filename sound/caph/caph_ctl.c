@@ -847,9 +847,9 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		break;
 	case CTL_FUNCTION_BYPASS_VIBRA:
 		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-		uinfo->count = 3;
+		uinfo->count = 4;
 		uinfo->value.integer.min = 0;
-		uinfo->value.integer.max = 100;
+		uinfo->value.integer.max = 6000;
 		break;
 	case CTL_FUNCTION_BT_TEST:
 		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -989,6 +989,8 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		    pChip->pi32BypassVibraParam[1];
 		ucontrol->value.integer.value[2] =
 		    pChip->pi32BypassVibraParam[2];
+		ucontrol->value.integer.value[3] =
+		    pChip->pi32BypassVibraParam[3];
 		break;
 	case CTL_FUNCTION_BT_TEST:
 		ucontrol->value.integer.value[0] = pChip->iEnableBTTest;
@@ -1049,6 +1051,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	BRCM_AUDIO_Param_FM_t parm_FM;
 	BRCM_AUDIO_Param_Spkr_t parm_spkr;
 	BRCM_AUDIO_Param_Volume_t parm_vol;
+	BRCM_AUDIO_Param_SetApp_t parm_setapp;
 	int rtn = 0, cmd, i, indexVal = -1, cnt = 0;
 	BRCM_AUDIO_Param_ECNS_t parm_ecns;
 	struct snd_pcm_substream *pStream = NULL;
@@ -1221,10 +1224,15 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	case CTL_FUNCTION_BYPASS_VIBRA:
 		pChip->pi32BypassVibraParam[0] =
 		    ucontrol->value.integer.value[0];
-		parm_vibra.strength = pChip->pi32BypassVibraParam[1] =
-		    ucontrol->value.integer.value[1];
-		parm_vibra.direction = pChip->pi32BypassVibraParam[2] =
-		    ucontrol->value.integer.value[2];
+		parm_vibra.strength =
+			pChip->pi32BypassVibraParam[1] =
+			ucontrol->value.integer.value[1];
+		parm_vibra.direction =
+			pChip->pi32BypassVibraParam[2] =
+			ucontrol->value.integer.value[2];
+		parm_vibra.duration =
+			pChip->pi32BypassVibraParam[3] =
+			ucontrol->value.integer.value[3];
 
 		if (pChip->pi32BypassVibraParam[0] == 1) {	/* Enable */
 			AUDIO_Ctrl_Trigger(ACTION_AUD_EnableByPassVibra, NULL,
@@ -1437,6 +1445,9 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 
 		pChip->i32CurApp = ucontrol->value.integer.value[0];
 		/* Make the call to Audio Controller here */
+		parm_setapp.aud_app = (int)ucontrol->value.integer.value[0]; /* new app */
+		AUDIO_Ctrl_Trigger(ACTION_AUD_SetAudioApp, &parm_setapp,
+				   NULL, 0);
 		break;
 	default:
 		BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);

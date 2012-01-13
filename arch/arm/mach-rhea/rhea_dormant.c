@@ -46,6 +46,10 @@
 static int enable_dormant = 1;
 module_param_named(enable_dormant, enable_dormant, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
+int dormant_count;
+EXPORT_SYMBOL(dormant_count);
+module_param_named(dormant_count, dormant_count, int,
+		   S_IRUGO | S_IWUSR | S_IWGRP);
 
 u32 dormant_base_va;
 u32 dormant_base_pa;
@@ -449,7 +453,7 @@ static u32 addnl_save_reg_list[][2] =
 	{ (KONA_GICDIST_VA+GICDIST_INT_CONFIG15_OFFSET), 0} //0x3FF01C3C - INT_CONFIG15
 };
 
-#ifdef CONFIG_ROM_SEC_DISPATCHER
+#ifdef CONFIG_ROM_SEC_DISPATCHER_LIB
 
 void *hw_mmu_physical_address_get(void *x)
 {
@@ -484,8 +488,10 @@ static void dormant_save_addnl_reg(void)
 	 * running at 156 MHZ
 	 */
 #ifdef CONFIG_ROM_SEC_DISPATCHER
+#ifdef CONFIG_CACHE_L2X0
 	hw_sec_pub_dispatcher(SEC_API_DISABLE_L2_CACHE,
 		SEC_FLAGS);
+#endif
 #endif
 }
 
@@ -541,8 +547,10 @@ static void dormant_restore_addnl_reg(void)
 	 * L2 cache now
 	 */
 #ifdef CONFIG_ROM_SEC_DISPATCHER
+#ifdef CONFIG_CACHE_L2X0
 	hw_sec_pub_dispatcher(SEC_API_ENABLE_L2_CACHE,
 		SEC_FLAGS);
+#endif
 #endif
 }
 

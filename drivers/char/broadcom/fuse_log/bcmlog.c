@@ -739,6 +739,7 @@ static void LogSignal_Internal(unsigned int inSigCode,
 	unsigned char *bufToSend = NULL;
 	unsigned long bufToSendSize = 0;
 	unsigned short chksum;
+	unsigned long irql;
 
 	if (inSigBufSize == 0) {
 		/* signal with no data */
@@ -840,6 +841,11 @@ static void LogSignal_Internal(unsigned int inSigCode,
 	}
 
 	if (CpCrashDumpInProgress()) {
+		if ((BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM) ||
+			(BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) ||
+			(BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM))
+			irql = AcquireOutputLock();
+
 		/* crash log, so send directly to SDCARD/MTT */
 
 		/* write out frame header... */
@@ -851,13 +857,18 @@ static void LogSignal_Internal(unsigned int inSigCode,
 			BCMLOG_HandleCpCrashDumpData(bufToSend, bufToSendSize);
 		/* then frame end */
 		BCMLOG_HandleCpCrashDumpData(frame_end, frame_end_size);
+
+		if ((BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM) ||
+		(BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) ||
+		(BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM))
+			ReleaseOutputLock(irql);
 	} else {
 		unsigned long totallen, availlen;
 
 		/* regular logging -- multiple blocks */
 		/* must be output contiguously */
 		/* so keep the 'output lock' until all are processedd */
-		unsigned long irql = AcquireOutputLock();
+		irql = AcquireOutputLock();
 
 		totallen =
 		    frame_head_size + mtt_payload_size + frame_end_size +
@@ -1147,9 +1158,7 @@ void BCMLOG_HandleCpCrashDumpData(const char *buf, int size)
 	case BCMLOG_OUTDEV_RNDIS:
 	case BCMLOG_OUTDEV_ACM:
 	case BCMLOG_OUTDEV_STM:
-		irql = AcquireOutputLock();
 		BCMLOG_Output((unsigned char *)buf, size, 0);
-		ReleaseOutputLock(irql);
 		break;
 	case BCMLOG_OUTDEV_NONE:
 		break;
@@ -1330,7 +1339,8 @@ void BCMLOG_HandleCpCrashMemDumpData(const char *inPhysAddr, int size)
 		/**
 		 * A small sleep to let slower drivers like RNDIS time to dump
 		 **/
-		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) {
+		if ((BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) ||
+			(BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM)) {
 			set_current_state(TASK_INTERRUPTIBLE);
 			schedule_timeout(1);
 		}

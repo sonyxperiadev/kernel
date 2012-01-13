@@ -146,11 +146,12 @@ config BCMPMU_OTG_XCEIV
          Enable this to support Broadcom USB OTG transceiver
 
 config USB_BCM_OTG
-	tristate "Broadcom USB OTG Driver"
-	depends on USB_OTG
-	depends on USB_OTG_UTILS
-	default n
-	help
+       tristate "Broadcom USB OTG Driver"
+       select USB_OTG
+       select USB_SUSPEND
+       depends on BCMPMU_OTG_XCEIV
+       default n
+       help
 	  Enable this to support Broadcom USB OTG driver
 
 config KONA_OTG_CP
@@ -168,7 +169,7 @@ config MAX3353
 	 If you say yes here you get support for the Maxim MAX3353 USB OTG
 	 charge pump with Switchable pullup/pulldown registers under the Kona
 	 OTG framework.
- 
+
 	 This driver can also be built as a module. If so, the module
 	 will be called max3353.
 

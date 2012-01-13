@@ -1,21 +1,21 @@
-#/*******************************************************************************************
-#Copyright 2010 Broadcom Corporation.  All rights reserved.                                */
+#/****************************************************************************
+#Copyright 2010-2012 Broadcom Corporation.  All rights reserved.
 #
-#Unless you and Broadcom execute a separate written software license agreement 
-#governing use of this software, this software is licensed to you under the 
-#terms of the GNU General Public License version 2, available at 
-#http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+#Unless you and Broadcom execute a separate written software license agreement
+#governing use of this software, this software is licensed to you under the
+#terms of the GNU General Public License version 2, available at
+#http://www.gnu.org/copyleft/gpl.html (the "GPL").
 #
-#Notwithstanding the above, under no circumstances may you combine this software 
-#in any way with any other Broadcom software provided under a license other than 
+#Notwithstanding the above, under no circumstances may you combine this software
+#in any way with any other Broadcom software provided under a license other than
 #the GPL, without Broadcom's express prior written consent.
-#*******************************************************************************************/
+#*****************************************************************************/
 
 # Makefile for the audio caph driver
-# use $(srctree) for kernel top (see below) and 
+# use $(srctree) for kernel top (see below) and
 # use $(src) in a relative path which points to the directory
 
-EXTRA_CFLAGS +=  -DMSP -DFUSE_DUAL_PROCESSOR_ARCHITECTURE -DFUSE_APPS_PROCESSOR -DDEVELOPMENT_ONLY -D_RHEA_ -DUNDER_LINUX -DUNDER_LINUX_MODEM -DLINUX_RPC_KERNEL 
+EXTRA_CFLAGS +=  -DMSP -DFUSE_DUAL_PROCESSOR_ARCHITECTURE -DFUSE_APPS_PROCESSOR -DDEVELOPMENT_ONLY -D_RHEA_ -DUNDER_LINUX -DUNDER_LINUX_MODEM -DLINUX_RPC_KERNEL
 #EXTRA_CFLAGS += -DENABLE_DMA_VOICE
 #EXTRA_CFLAGS += -DVOLTE_SUPPORT
 EXTRA_CFLAGS += -DINTERNAL_VOIF_TEST
@@ -67,8 +67,9 @@ EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/csl/
 EXTRA_CFLAGS += -I./arch/arm/plat-kona/include/plat/osabstract/
 
 
-obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audio_caph.o 
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audio_caph.o
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audio_controller.o
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audctrl_policy.o
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audio_pmu_adapt.o
 
 

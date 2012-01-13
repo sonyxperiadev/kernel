@@ -162,8 +162,8 @@ struct brcm_alsa_chip {
 	s32	pi32LevelVolume[CAPH_MAX_PCM_STREAMS][2];
 	/* AT-AUD */
 	s32	i32AtAudHandlerParms[7];
-	/* Bypass Vibra: bEnable, strength, direction */
-	s32	pi32BypassVibraParam[3];
+	/* Bypass Vibra: bEnable, strength, direction, duration */
+	s32	pi32BypassVibraParam[4];
 	s32   iEnableFM;       /* Enable/disable FM radio receiving */
 	s32	iEnableBTTest;	/* Enable/disable BT production test */
 	/*
@@ -305,6 +305,5 @@ extern int BrcmCreateAuddrv_testSysFs(struct snd_card *card);
 extern int BrcmCreateAuddrv_selftestSysFs(struct snd_card *card);
 extern int LaunchAudioCtrlThread(void);
 extern int TerminateAudioHalThread(void);
-
 #endif /* __CAPH_COMMON_H__ */
 

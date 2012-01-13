@@ -9170,6 +9170,50 @@ static const u32 s5k4ecgx_176_Preview[] =
 
 };
 
+static const u32 s5k4ecgx_zoom_0[] =
+{
+	0x002A048E,
+	0x0F120100
+};
+static const u32 s5k4ecgx_zoom_1[]=
+{
+	0x002A048E,
+	0x0F120120
+};
+
+static const u32 s5k4ecgx_zoom_2[]=
+{
+	0x002A048E,
+	0x0F120140
+};
+static const u32 s5k4ecgx_zoom_3[] =
+{
+	0x002A048E,
+	0x0F120160
+};
+static const u32 s5k4ecgx_zoom_4[] =
+{
+	0x002A048E,
+	0x0F120180
+};
+
+static const u32 s5k4ecgx_zoom_5[] = 
+{
+	0x002A048E,
+	0x0F1201A0
+};
+static const u32 s5k4ecgx_zoom_6[] =
+{
+	0x002A048E,
+	0x0F1201A0
+};
+static const u32 s5k4ecgx_zoom_7[] =
+{
+	0x002A048E,
+	0x0F1201C0
+};
+
+
 static const u32 s5k4ecgx_Preview_flip[] =
 {
   0xFCFCD000,

@@ -11,6 +11,8 @@
 #include <linux/module.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <linux/list.h>
+#include <linux/mutex.h>
 #include <plat/clock.h>
 #include <plat/kona_pm_dbg.h>
 
@@ -18,6 +20,9 @@
 static u32 handle_simple_parm(struct snapshot *s);
 static u32 handle_clk_parm(struct snapshot *s);
 static u32 handle_ahb_reg_parm(struct snapshot *s);
+static void snapshot_add_reg(u32 reg, u32 mask, u32 good);
+static void snapshot_del_reg(u32 reg);
+static void snapshot_show_list(void);
 
 /*****************************************************************************
  *                        SLEEP STATE DEBUG INTERFACE                        *
@@ -59,12 +64,36 @@ static void cmd_show_usage(void)
 	  "'cmd string' is constructed as follows:\n"
 	  "Enable snapshot: s e\n"
 	  "Disable snapshot: s d\n"
-	  "Take shapshot: s t\n"
-	  "Show shapshot: s s\n"
+	  "Take snapshot: s t\n"
+	  "Show snapshot: s s\n"
+	  "Add register to snapshot list: s a <reg> <mask> <good> (in hex)\n"
+	  "Remove register from snapshot list: s r <reg>\n"
+	  "Display snapshot list: s l\n"
 	  "Display help: h\n"
 	  "\n";
 
 	pr_info("%s", usage);
+}
+
+void handle_snapshot_list(const char *p)
+{
+	u32 reg = 0, mask = 0, good = 0;
+	int cmd = *p;
+
+	/* Skip past white spaces for reg address */
+	p++;
+	while (*p == ' ' || *p == '\t')
+		p++;
+
+	if (cmd == 'a') {
+		sscanf(p, "%x %x %x", &reg, &mask, &good);
+		snapshot_add_reg(reg, mask, good);
+	} else if (cmd == 'r') {
+		sscanf(p, "%x", &reg);
+		snapshot_del_reg(reg);
+	} else {
+		snapshot_show_list();
+	}
 }
 
 static void cmd_snapshot(const char *p)
@@ -85,6 +114,11 @@ static void cmd_snapshot(const char *p)
 		break;
 	case 'd':
 		debug.snapshot_enable = 0;
+		break;
+	case 'a': /* Fall through */
+	case 'r':
+	case 'l':
+		handle_snapshot_list(p);
 		break;
 	default:
 		pr_err("Unsupported option\n");
@@ -129,20 +163,92 @@ static int param_get_debug(char *buffer, const struct kernel_param *kp)
 }
 
 /*****************************************************************************
- *               INTERFACE TO TAKE REGISTER SNAPSHOT BEFORE SLEEP            *
+ *                            SNAPSHOT DATA                                  *
  *****************************************************************************/
 
-
-/* Table of registers to be sampled before entering low power
- * state for debugging.
+/* Static snapshot table:
+ * ---------------------
+ * Table of registers to be sampled for debugging (for example before entering
+ * low power state).
  */
 static struct snapshot *snapshot;
 static size_t snapshot_len;
 
-/*
- * Snapshot handlers
+/* Dynamic snapshot table:
+ * ---------------------
+ * Table of registers to be sampled that are added at runtime.
  */
+static LIST_HEAD(snapshot_list);
+static DEFINE_MUTEX(snapshot_list_lck);
 
+/*****************************************************************************
+ *                        DYNAMIC SNAPSHOT LIST HANDLING                     *
+ *****************************************************************************/
+
+static void snapshot_add_reg(u32 reg, u32 mask, u32 good)
+{
+	struct snapshot *s = NULL;
+
+	pr_info("Adding: reg:0x%x mask:0x%x good:0x%x\n", reg, mask, good);
+
+	mutex_lock(&snapshot_list_lck);
+	list_for_each_entry(s, &snapshot_list, node) {
+		if (s->reg == reg)
+			break;
+	}
+
+	if (&s->node == &snapshot_list) { /* reg not already added */
+		struct snapshot *new = kmalloc(sizeof(struct snapshot),
+					       GFP_KERNEL);
+		if (new) {
+			new->data = NULL;
+			new->type = SNAPSHOT_SIMPLE;
+			new->reg = reg;
+			new->mask = mask;
+			new->good = good;
+			new->name = NULL;
+			new->handler = handle_simple_parm;
+			list_add(&new->node, &snapshot_list);
+		} else {
+			pr_err("%s: out of memory\n", __func__);
+		}
+	}
+	mutex_unlock(&snapshot_list_lck);
+}
+
+static void snapshot_del_reg(u32 reg)
+{
+	struct snapshot *s = NULL;
+	pr_info("Removing: 0x%x\n", reg);
+
+	mutex_lock(&snapshot_list_lck);
+	list_for_each_entry(s, &snapshot_list, node) {
+		if (s->reg == reg) {
+			list_del(&s->node);
+			kfree(s);
+			break;
+		}
+	}
+	mutex_unlock(&snapshot_list_lck);
+}
+
+static void snapshot_show_list(void)
+{
+	struct snapshot *s = NULL;
+	int i;
+
+	for (i = 0; i < snapshot_len; i++)
+		pr_info("0x%08x\n", snapshot[i].reg);
+
+	mutex_lock(&snapshot_list_lck);
+	list_for_each_entry(s, &snapshot_list, node)
+		pr_info("0x%08x\n", s->reg);
+	mutex_unlock(&snapshot_list_lck);
+}
+
+/*****************************************************************************
+ *                             SNAPSHOT HANDLERS                             *
+ *****************************************************************************/
 
 /* Returns the current masked value of the specified register */
 static u32 handle_simple_parm(struct snapshot *s)
@@ -205,14 +311,28 @@ err:
 /* Take the snapshot */
 void snapshot_get(void)
 {
+	struct snapshot *s;
 	int i;
 
-	if (is_snapshot_enabled == 0 || (!snapshot))
+	if (is_snapshot_enabled == 0)
 		return;
 
-	for (i = 0; i < snapshot_len; i++) {
-		struct snapshot *s = &snapshot[i];
+	if (!snapshot)
+		snapshot_len = 0;
 
+	for (i = 0; i < snapshot_len; i++) {
+		s = &snapshot[i];
+
+		if (s->handler) {
+			s->curr = s->handler(s);
+			/* If the read value is different from the
+			 * expected value, we get a mismatch (non-zero).
+			 */
+			s->curr ^= s->good;
+		}
+	}
+
+	list_for_each_entry(s, &snapshot_list, node) {
 		if (s->handler) {
 			s->curr = s->handler(s);
 			/* If the read value is different from the
@@ -230,17 +350,28 @@ EXPORT_SYMBOL(snapshot_get);
  */
 void snapshot_show(void)
 {
+	struct snapshot *s;
 	int i;
 
-	if (is_snapshot_enabled == 0 || (!snapshot))
+	if (is_snapshot_enabled == 0)
 		return;
 
+	if (!snapshot)
+		snapshot_len = 0;
+
 	for (i = 0; i < snapshot_len; i++) {
-		struct snapshot *s = &snapshot[i];
+		s = &snapshot[i];
 
 		if (s->curr) {
 			pr_info("[%s]: expected:0x%08x mismatch:0x%08x\n",
 				s->name, s->good, s->curr);
+		}
+	}
+
+	list_for_each_entry(s, &snapshot_list, node) {
+		if (s->curr == 0) {
+			pr_info("[%d]: expected:0x%08x mismatch:0x%08x\n",
+				s->reg, s->good, s->curr);
 		}
 	}
 }

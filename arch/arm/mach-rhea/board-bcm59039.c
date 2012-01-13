@@ -682,7 +682,13 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1350 * 3600,
 	.support_fg = 1,
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X	
+
+	.bc = BCMPMU_BC_BB_BC12,	
+#else
 	.bc = BCMPMU_BC_PMU_BC12,	/* BCMPMU_BC_BB_BC12 */
+
+#endif
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {

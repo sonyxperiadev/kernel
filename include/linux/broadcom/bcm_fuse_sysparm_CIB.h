@@ -53,6 +53,7 @@
 
 #endif // UNDER_LINUX
 
+#include "audio_tuning.h"
 #include "sysparm_shared.h"
 
 #define GPIO_INIT_FIELD_NUM 5

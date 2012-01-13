@@ -135,11 +135,11 @@ FTDI driver needed).
  * @{
  */
 
-#define		LOGFORMAT_BINARY			2	///< Logging format for the MTT.
-#define		LOGFORMAT_MOBILE_ANALYZER	1	///< Logging Format for the Mobile Analyzer.
-#define		LOGFORMAT_ASCII				0	///< Logging format in ASCII, use a text terminal program to read (like Hyperterm)
+#define		LOGFORMAT_BINARY			2 ///< Logging format for the MTT.
+#define		LOGFORMAT_MOBILE_ANALYZER	1 ///< Logging Format for the Mobile Analyzer.
+#define		LOGFORMAT_ASCII				0 ///< Logging format in ASCII, use a text terminal program to read (like Hyperterm)
 
-#define	MAX_CLIENT_STRING_LENGTH	128	///< maximum string length that can be logged
+#define	MAX_CLIENT_STRING_LENGTH	128		///< maximum string length that can be logged
 #define	MAX_CLIENT_SIGNAL_SIZE		0x4000	///< maximum signal size that can be logged
 
 //Pre-reserve the space for  the stack process ID defined in proc_id.h
@@ -196,7 +196,7 @@ FTDI driver needed).
 #define	LOGID_WLAN_ERR			283
 #define	LOGID_WLAN_INFO			284
 #define	LOGID_SDIO_INFO			285
-#define	LOGID_PPP_DETAIL	    286	/* for dlink_multi detailed traces, e.g. to debug TCP memory usage, NET_RESOURCE, and more. */
+#define	LOGID_PPP_DETAIL	    286  /* for dlink_multi detailed traces, e.g. to debug TCP memory usage, NET_RESOURCE, and more. */
 #define	LOGID_MINDREADER		287
 #define LOGID_WLAN_GENERIC_DBG	288
 
@@ -228,6 +228,7 @@ FTDI driver needed).
 #define LOGID_GLUEAPI_ID10      310
 #endif
 
+
 #define	LOGID_ATC_HANDLERS						311
 #define	LOGID_ATC_PARSER						312
 #define	LOGID_ATC_TOOL							313
@@ -239,12 +240,12 @@ FTDI driver needed).
 #define	LOGID_MODEM_CAPI_CC						317
 #define	LOGID_MODEM_CAPI_DATAACCT				318
 #define	LOGID_MODEM_CAPI_DS						319
-#define	LOGID_MODEM_CAPI_ECDC					264	// same as LOGID_ECDC
+#define	LOGID_MODEM_CAPI_ECDC					264		// same as LOGID_ECDC
 #define	LOGID_MODEM_CAPI_LCS					320
-#define	LOGID_MODEM_CAPI_PCH					261	// same as LOGID_PCH
+#define	LOGID_MODEM_CAPI_PCH					261		// same as LOGID_PCH
 #define	LOGID_MODEM_CAPI_PHONEBK				321
 #define	LOGID_MODEM_CAPI_PHONECTRL				322
-#define	LOGID_MODEM_CAPI_SIM					268	// same as LOGID_SIM
+#define	LOGID_MODEM_CAPI_SIM					268		// same as LOGID_SIM
 #define	LOGID_MODEM_CAPI_SIMLOCK				323
 #define	LOGID_MODEM_CAPI_SMS					324
 #define	LOGID_MODEM_CAPI_SS						325
@@ -261,9 +262,9 @@ FTDI driver needed).
 #define LOGID_CONNECTIVITY_AGPS_LCS_GLL			334
 #define LOGID_CONNECTIVITY_AGPS_LCS_API			335
 
-#define	LOGID_CONNECTIVITY_BLUETOOTH			279	// same as LOGID_BLUETOOTH
+#define	LOGID_CONNECTIVITY_BLUETOOTH			279		// same as LOGID_BLUETOOTH
 
-#define LOGID_CONNECTIVITY_WLAN					285	// same as LOGID_WLAN_INFO
+#define LOGID_CONNECTIVITY_WLAN					285		// same as LOGID_WLAN_INFO
 
 #define LOGID_SOC_CSL_KEYPAD					336
 #define LOGID_SOC_CSL_PWM						337
@@ -282,7 +283,7 @@ FTDI driver needed).
 #define	LOGID_PERIPHERALS_LCD					348
 #define	LOGID_PERIPHERALS_TVOUT					349
 
-#define LOGID_DAG								350	// (display and graphics)
+#define LOGID_DAG								350		// (display and graphics)
 #define LOGID_MULTIMEIDA						351
 #define LOGID_MULTIMEDIA_CODEC					352
 #define LOGID_OMX								353
@@ -473,13 +474,14 @@ FTDI driver needed).
 #define	PSEUDO_LOGID_CP							0xFFFD
 #define	PSEUDO_LOGID_AP							0xFFFC
 #define	PSEUDO_LOGID_LOGCTRL					0xFFFB
-
+	
 #include "log_sig_code.h"
 
 //#ifdef WIN32
 //#else
-typedef struct {
-	UInt8 *byte_array;
+typedef struct
+{
+	UInt8* byte_array;
 	UInt32 size;
 } log_link_list_t;
 //#endif //WIN32
@@ -490,7 +492,7 @@ typedef struct {
 	@param		logID (in) Module log ID
 	@param		isEnable (in) Boolean value to turn ON/OFF logging
 	@return		Boolean  TRUE/FALSE indicating if the operation was successful
-**/
+**/	
 
 Boolean Log_EnableLogging(UInt16 logID, Boolean isEnable);
 
@@ -499,9 +501,9 @@ Boolean Log_EnableLogging(UInt16 logID, Boolean isEnable);
     Function to register a callback function that is called by Log_EnableRange()
 	@param		f (in) the callback function pointer
 	@return		-1 registration failed; other = successful registration function order
-**/
+**/	
 
-typedef void (*T_FUNC_LOG_CTRL_CALLBACK) (UInt16, UInt16, Boolean);
+typedef	void(*T_FUNC_LOG_CTRL_CALLBACK)(UInt16, UInt16, Boolean);
 
 int Log_RegisterCallbackToLogControl(T_FUNC_LOG_CTRL_CALLBACK f);
 
@@ -512,14 +514,14 @@ int Log_RegisterCallbackToLogControl(T_FUNC_LOG_CTRL_CALLBACK f);
 	@param		toLogId (in) ending value of module range
 	@param		isEnable (in) Boolean value to turn ON/OFF logging
 	@return		Boolean  TRUE/FALSE indicating if the operation was successful
-**/
+**/	
 
 Boolean Log_EnableRange(UInt16 fromLogID, UInt16 toLogId, Boolean isEnable);
 
 //***************************************************************************************
 /**
     Function to enable /disable default logging
-**/
+**/	
 
 void Log_EnableDefaultRange(void);
 
@@ -528,7 +530,7 @@ void Log_EnableDefaultRange(void);
     Function to enable /disable logging for specified group of inter-task messages
 	@param		msgID (in) inter-task message group ID (0-255)
 	@param		isEnabled (in) Boolean value to turn ON/OFF logging of such inter-task message group
-**/
+**/	
 
 void Log_EnableTaskMsgLogging(UInt16 msgID, Boolean isEnabled);
 
@@ -538,17 +540,16 @@ void Log_EnableTaskMsgLogging(UInt16 msgID, Boolean isEnabled);
 	@param		fromMsgID (in) Starting inter-task message group ID
 	@param		toMsgId (in) Ending inter-task message group ID
 	@param		isEnabled (in) Boolean value to turn ON/OFF logging of the inter-task message groups
-**/
+**/	
 
-void Log_EnableTaskMsgRange(UInt16 fromMsgID, UInt16 toMsgId,
-			    Boolean isEnabled);
+void Log_EnableTaskMsgRange(UInt16 fromMsgID, UInt16 toMsgId, Boolean isEnabled);
 
 //***************************************************************************************
 /**
     Function to enable /disable stack ASCII logging based on sub logging ID
 	@param		subID (in) stack task IDs serve as sub logging IDs (0-255)
 	@param		isEnabled (in) Boolean value to turn ON/OFF such sub logging ID
-**/
+**/	
 
 void Log_EnableStackLogging(UInt16 subID, Boolean isEnabled);
 
@@ -558,7 +559,7 @@ void Log_EnableStackLogging(UInt16 subID, Boolean isEnabled);
 	@param		fromSubID (in) Starting stack task ID
 	@param		toSubId (in) Ending stack task ID
 	@param		isEnabled (in) Boolean value to turn ON/OFF such sub logging ID range
-**/
+**/	
 
 void Log_EnableStackRange(UInt16 fromSubID, UInt16 toSubId, Boolean isEnabled);
 
@@ -567,7 +568,7 @@ void Log_EnableStackRange(UInt16 fromSubID, UInt16 toSubId, Boolean isEnabled);
     Function to set logging to be limited (L3 only) or unlimited
 	@param		isLimited (in) Boolean value to turn ON/OFF the limitation
 	@return		Boolean  TRUE/FALSE indicating if the operation was successful
-**/
+**/	
 
 Boolean Log_LimitedLogging(Boolean isLimited);
 
@@ -576,7 +577,7 @@ Boolean Log_LimitedLogging(Boolean isLimited);
     Function to check if logging is enabled for a specified ID
 	@param		logID (in) ID of the module to be checked
 	@return		Boolean  TRUE if logging is enabled
-**/
+**/	
 
 Boolean Log_IsLoggingEnable(UInt16 logID);
 
@@ -584,7 +585,7 @@ Boolean Log_IsLoggingEnable(UInt16 logID);
 /**
     Function to check if logging is limited
 	@return		Boolean  TRUE if logging is limited
-**/
+**/	
 
 Boolean Log_IsLoggingLimited(void);
 
@@ -592,7 +593,7 @@ Boolean Log_IsLoggingLimited(void);
 /**
     Function to check if logging is allowed
 	@return		Boolean  TRUE if logging is allowed
-**/
+**/	
 
 Boolean Log_IsLoggingAllowed(void);
 
@@ -600,17 +601,17 @@ Boolean Log_IsLoggingAllowed(void);
 /**
     Function to check if logging of an inter-task message group is allowed
 	@return		Boolean  TRUE if logging is allowed
-**/
+**/	
 
-Boolean Log_IsTaskMsgLoggingEnabled(UInt16 msgID);
+Boolean  Log_IsTaskMsgLoggingEnabled(UInt16 msgID);
 
 //***************************************************************************************
 /**
     Function to check if logging of stack ASCII sub logging ID is allowed
 	@return		Boolean  TRUE if logging is allowed
-**/
+**/	
 
-Boolean Log_IsStackLoggingEnabled(UInt16 subID);
+Boolean  Log_IsStackLoggingEnabled(UInt16 subID);
 
 //***************************************************************************************
 /**
@@ -621,9 +622,9 @@ Boolean Log_IsStackLoggingEnabled(UInt16 subID);
 	This function can be used when strings need to be traced
 	during debugging operation. The debug string passed in will be buffered into a
 	string of up to MAX_CLIENT_STRING_LEN bytes.
-**/
+**/	
 
-void Log_DebugOutputString(UInt16 logID, char *dbgString);
+void	Log_DebugOutputString(UInt16 logID, char* dbgString);
 
 //***************************************************************************************
 /**
@@ -634,9 +635,9 @@ void Log_DebugOutputString(UInt16 logID, char *dbgString);
 	This function can be used when strings need to be traced
 	during debugging operation. The debug string passed in will be buffered into a
 	string. Up to MAX_MULTILINE_NUM lines will be logged.
-**/
+**/	
 
-void Log_DebugOutputMultiLine(UInt16 logID, char *dbgString);
+void	Log_DebugOutputMultiLine(UInt16 logID, char* dbgString);
 
 //***************************************************************************************
 /**
@@ -648,9 +649,9 @@ void Log_DebugOutputMultiLine(UInt16 logID, char *dbgString);
 	This function can be used when strings and integral values need to be traced
 	during debugging operation. The debug string passed in will be buffered into a
 	string of up to MAX_CLIENT_STRING_LEN bytes.
-**/
+**/	
 
-void Log_DebugOutputValue(UInt16 logID, char *dbgString, UInt32 dbgValue);
+void	Log_DebugOutputValue(UInt16 logID, char* dbgString, UInt32 dbgValue);
 
 //***************************************************************************************
 /**
@@ -662,9 +663,9 @@ void Log_DebugOutputValue(UInt16 logID, char *dbgString, UInt32 dbgValue);
 	This function can be used when strings and integral values need to be traced
 	during debugging operation. The debug string passed in will be buffered into a
 	string of up to MAX_CLIENT_STRING_LEN bytes.
-**/
+**/	
 
-void Log_DebugOutputValue2(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2);
+void	Log_DebugOutputValue2(UInt16 logID, char* dbgString, UInt32 v1, UInt32 v2);
 
 //***************************************************************************************
 /**
@@ -676,10 +677,9 @@ void Log_DebugOutputValue2(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2);
 	This function can be used when strings and integral values need to be traced
 	during debugging operation. The debug string passed in will be buffered into a
 	string of up to MAX_CLIENT_STRING_LEN bytes.
-**/
+**/	
 
-void Log_DebugOutputValue3(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2,
-			   UInt32 v3);
+void	Log_DebugOutputValue3(UInt16 logID, char* dbgString, UInt32 v1, UInt32 v2, UInt32 v3);
 
 //***************************************************************************************
 /**
@@ -691,10 +691,9 @@ void Log_DebugOutputValue3(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2,
 	This function can be used when strings and integral values need to be traced
 	during debugging operation. The debug string passed in will be buffered into a
 	string of up to MAX_CLIENT_STRING_LEN bytes.
-**/
+**/	
 
-void Log_DebugOutputValue4(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2,
-			   UInt32 v3, UInt32 v4);
+void	Log_DebugOutputValue4(UInt16 logID, char* dbgString, UInt32 v1, UInt32 v2, UInt32 v3, UInt32 v4);
 
 //***************************************************************************************
 /**
@@ -706,10 +705,9 @@ void Log_DebugOutputValue4(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2,
 	This function can be used when strings and integral values need to be traced
 	during debugging operation. The debug string passed in will be buffered into a
 	string of up to MAX_CLIENT_STRING_LEN bytes.
-**/
+**/	
 
-void Log_DebugOutputValue5(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2,
-			   UInt32 v3, UInt32 v4, UInt32 v5);
+void	Log_DebugOutputValue5(UInt16 logID, char* dbgString, UInt32 v1, UInt32 v2, UInt32 v3, UInt32 v4, UInt32 v5);
 
 //***************************************************************************************
 /**
@@ -721,10 +719,9 @@ void Log_DebugOutputValue5(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2,
 	This function can be used when strings and integral values need to be traced
 	during debugging operation. The debug string passed in will be buffered into a
 	string of up to MAX_CLIENT_STRING_LEN bytes.
-**/
+**/	
 
-void Log_DebugOutputValue6(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2,
-			   UInt32 v3, UInt32 v4, UInt32 v5, UInt32 v6);
+void	Log_DebugOutputValue6(UInt16 logID, char* dbgString, UInt32 v1, UInt32 v2, UInt32 v3, UInt32 v4, UInt32 v5, UInt32 v6);
 
 //***************************************************************************************
 /**
@@ -736,11 +733,9 @@ void Log_DebugOutputValue6(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2,
 	This function can be used when strings and integral values need to be traced
 	during debugging operation. The debug string passed in will be buffered into a
 	string of up to MAX_CLIENT_STRING_LEN bytes.
-**/
+**/	
 
-void Log_DebugOutputValue7(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2,
-			   UInt32 v3, UInt32 v4, UInt32 v5, UInt32 v6,
-			   UInt32 v7);
+void	Log_DebugOutputValue7(UInt16 logID, char* dbgString, UInt32 v1, UInt32 v2, UInt32 v3, UInt32 v4, UInt32 v5, UInt32 v6, UInt32 v7);
 
 //***************************************************************************************
 /**
@@ -754,10 +749,9 @@ void Log_DebugOutputValue7(UInt16 logID, char *dbgString, UInt32 v1, UInt32 v2,
 	This function can be used when strings and integral values need to be traced
 	during debugging operation. The debug string passed in will be buffered into a
 	string of up to MAX_CLIENT_STRING_LEN bytes.
-**/
+**/	
 
-void Log_DebugOutputArray(UInt16 logID, char *dbgString, void *array,
-			  UInt32 unit_size, UInt32 nof_units);
+void	Log_DebugOutputArray(UInt16 logID, char* dbgString, void* array, UInt32 unit_size, UInt32 nof_units);
 
 //***************************************************************************************
 /**
@@ -767,9 +761,9 @@ void Log_DebugOutputArray(UInt16 logID, char *dbgString, void *array,
 	...			(in) a variable number of arguments as printf()
 	@note
 	This "printed" string will be buffered into a string of up to MAX_CLIENT_STRING_LEN bytes.
-**/
+**/	
 
-int Log_DebugPrintf(UInt16 logID, char *fmt, ...);
+int	Log_DebugPrintf(UInt16 logID, char* fmt, ...);
 
 //***************************************************************************************
 /**
@@ -779,12 +773,25 @@ int Log_DebugPrintf(UInt16 logID, char *fmt, ...);
 	@param		*ptr (in) starting address of the binary logging content
 	@param		*ptr_size (in) size of the binary logging content, in number of bytes
 	@note
-**/
+**/	
 
-void Log_BinaryLogging(UInt16 log_id, UInt32 sig_code, void *ptr,
-		       UInt32 ptr_size);
-void Log_BinaryLoggingUncompressed(UInt16 log_id, UInt32 sig_code, void *ptr,
-				   UInt32 ptr_size);
+void Log_BinaryLogging(UInt16 log_id, UInt32 sig_code, void *ptr, UInt32 ptr_size);
+void Log_BinaryLoggingUncompressed(UInt16 log_id, UInt32 sig_code, void *ptr, UInt32 ptr_size);
+
+//***************************************************************************************
+/**
+    Function to log a binary logging message with a pointer dereference
+	@param		log_id (in) logic id controlling whether this binary logging is generated
+	@param		sig_code (in) binary logging code
+	@param		*ptr (in) starting address of the binary logging content
+	@param		*ptr_size (in) size of the binary logging content, in number of bytes
+	@param		*ptr2 (in) starting address of the pointer dereference content
+	@param		*ptr2_size (in) size of the pointer dereference content, in number of bytes
+	@note
+**/	
+
+void Log_BinaryLoggingWithDeref(UInt16 log_id, UInt32 sig_code, void *ptr, UInt32 ptr_size, void *ptr2, UInt32 ptr2_size);
+void Log_BinaryLoggingUncompressedWithDeref(UInt16 log_id, UInt32 sig_code, void *ptr, UInt32 ptr_size, void *ptr2, UInt32 ptr2_size);
 
 //***************************************************************************************
 /**
@@ -795,13 +802,26 @@ void Log_BinaryLoggingUncompressed(UInt16 log_id, UInt32 sig_code, void *ptr,
 	@note
 	This function is provided to assist Log_BinaryLogging() in case the binary logging is
 	assembled from different memories, where a link list can avoid unnecessary memcpy.
-**/
+**/	
 
-void Log_BinaryBlocks(UInt16 log_id, UInt32 sig_code,
-		      log_link_list_t * link_list, UInt32 list_size_size);
-void Log_BinaryBlocksUncompressed(UInt16 log_id, UInt32 sig_code,
-				  log_link_list_t * link_list,
-				  UInt32 list_size_size);
+void Log_BinaryBlocks(UInt16 log_id, UInt32 sig_code, log_link_list_t* link_list, UInt32 list_size_size);
+void Log_BinaryBlocksUncompressed(UInt16 log_id, UInt32 sig_code, log_link_list_t* link_list, UInt32 list_size_size);
+
+//***************************************************************************************
+/**
+    Function to log a binary logging message described by a link list with a dereference link list
+	@param		sig_code (in) binary logging code
+	@param		*link_list (in) starting address of a link list
+	@param		list_size_size (in) size of the link list, in number of list items
+	@param		*link_list2 (in) starting address of a dereference link list
+	@param		list2_size_size (in) size of the dereference link list, in number of list items
+	@note
+	This function is provided to assist Log_BinaryLogging() in case the binary logging is
+	assembled from different memories, where a link list can avoid unnecessary memcpy.
+**/	
+
+void Log_BinaryBlocksWithDerefBlocks(UInt16 log_id, UInt32 sig_code, log_link_list_t* link_list, UInt32 list_size, log_link_list_t *link_list2, UInt32 list2_size);
+void Log_BinaryBlocksUncompressedWithDerefBlocks(UInt16 log_id, UInt32 sig_code, log_link_list_t* link_list, UInt32 list_size, log_link_list_t *link_list2, UInt32 list2_size);
 
 //***************************************************************************************
 /**
@@ -848,12 +868,10 @@ void Log_BinaryBlocksUncompressed(UInt16 log_id, UInt32 sig_code,
 		End Signals
 	End Process
 	\endverbatim
-**/
+**/	
 
-void Log_DebugSignal(UInt32 sig_code, void *ptr, UInt32 ptr_size, UInt16 state,
-		     UInt16 sender);
-void Log_DebugSignalUncompressed(UInt32 sig_code, void *ptr, UInt32 ptr_size,
-				 UInt16 state, UInt16 sender);
+void Log_DebugSignal(UInt32 sig_code, void *ptr, UInt32 ptr_size, UInt16 state, UInt16 sender);
+void Log_DebugSignalUncompressed(UInt32 sig_code, void *ptr, UInt32 ptr_size, UInt16 state, UInt16 sender);
 
 //***************************************************************************************
 /**
@@ -866,13 +884,10 @@ void Log_DebugSignalUncompressed(UInt32 sig_code, void *ptr, UInt32 ptr_size,
 	@note
 	This function is provided to assist Log_DebugSignal() in case the binary signal is
 	assembled from different memories, where a link list can avoid unnecessary memory.
-**/
+**/	
 
-void Log_DebugLinkList(UInt32 sig_code, log_link_list_t * link_list,
-		       UInt32 list_size_size, UInt16 state, UInt16 sender);
-void Log_DebugLinkListUncompressed(UInt32 sig_code, log_link_list_t * link_list,
-				   UInt32 list_size_size, UInt16 state,
-				   UInt16 sender);
+void Log_DebugLinkList(UInt32 sig_code, log_link_list_t* link_list, UInt32 list_size_size, UInt16 state, UInt16 sender);
+void Log_DebugLinkListUncompressed(UInt32 sig_code, log_link_list_t* link_list, UInt32 list_size_size, UInt16 state, UInt16 sender);
 
 //***************************************************************************************
 /**
@@ -905,7 +920,7 @@ void Log_DebugLinkListUncompressed(UInt32 sig_code, log_link_list_t * link_list,
 	(1)	The accumulated size of "Tag=Value" logging messages exceeds 1kB
 	(2) The time threshold is no longer met (default 0, meaning time stamps must be identical, i.e., within 1ms)
 	(3) By Log_FlushGroup().
-**/
+**/	
 
 #define		LLG_LOG_TAG_TYPE_1BIT_VALUE			1
 #define		LLG_LOG_TAG_TYPE_8BIT_VALUE			2
@@ -923,22 +938,14 @@ void Log_DebugLinkListUncompressed(UInt32 sig_code, log_link_list_t * link_list,
 
 #define		LLG_LOG_TAG_TIMESTAMP				0	// reserved tag ID for 32bit time stamp as first LLG log in a grouped binary logging
 
-void Log_Grouped1bitValue(UInt16 log_id, UInt32 sig_code, UInt32 tag_id,
-			  UInt8 value);
-void Log_Grouped8bitValue(UInt16 log_id, UInt32 sig_code, UInt32 tag_id,
-			  UInt8 value);
-void Log_Grouped16bitValue(UInt16 log_id, UInt32 sig_code, UInt32 tag_id,
-			   UInt16 value);
-void Log_Grouped32bitValue(UInt16 log_id, UInt32 sig_code, UInt32 tag_id,
-			   UInt32 value);
-void Log_Grouped8bitArray(UInt16 log_id, UInt32 sig_code, UInt32 tag_id,
-			  UInt8 * array, UInt8 size);
-void Log_Grouped16bitArray(UInt16 log_id, UInt32 sig_code, UInt32 tag_id,
-			   UInt16 * array, UInt8 size);
-void Log_Grouped32bitArray(UInt16 log_id, UInt32 sig_code, UInt32 tag_id,
-			   UInt32 * array, UInt8 size);
-void Log_GroupedString(UInt16 log_id, UInt32 sig_code, UInt32 tag_id,
-		       char *asciiz);
+void Log_Grouped1bitValue	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt8 value);
+void Log_Grouped8bitValue	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt8 value);
+void Log_Grouped16bitValue	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt16 value);
+void Log_Grouped32bitValue	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt32 value);
+void Log_Grouped8bitArray	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt8* array, UInt8 size);
+void Log_Grouped16bitArray	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt16* array, UInt8 size);
+void Log_Grouped32bitArray	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt32* array, UInt8 size);
+void Log_GroupedString		(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, char* asciiz);
 
 void Log_FlushGroup(UInt32 sig_code);
 void Log_SetGroupTimeThreshold(UInt32 sig_code, UInt32 time_threshold);
@@ -946,11 +953,12 @@ UInt32 Log_GetGroupTimeThreshold(UInt32 sig_code);
 void Log_SetGroupSizeThreshold(UInt32 sig_code, UInt32 size_threshold);
 UInt32 Log_GetGroupSizeThreshold(UInt32 sig_code);
 
+
 //***************************************************************************************
 /**
     Function to select specified logging format
 	@param		logFormat (in) Format can be ASCII, MOBILE ANALYZER, or BINARY
-**/
+**/	
 
 void Log_SelectLoggingFormat(UInt16 logFormat);
 
@@ -958,36 +966,38 @@ void Log_SelectLoggingFormat(UInt16 logFormat);
 /**
     Function to return the current logging format
 	@return		Format can be ASCII, MOBILE ANALYZER, or BINARY
-**/
+**/	
 
-UInt16 Log_GetLoggingFormat(void);
+UInt16	Log_GetLoggingFormat(void);
 
 //***************************************************************************************
 /**
     Function to get the text name of a log ID
 	@param		logID (in) ID
 	@return		text string of the name
-**/
+**/	
 
-const char *Log_GetLogIdName(UInt16 logID);
+const char* Log_GetLogIdName(UInt16 logID);
 
 //***************************************************************************************
 /**
     Function to output logging statistics in log file
-**/
+**/	
 
 void Log_OutputStatistics(void);
 
+
 #ifdef CNEON_COMMON
-const char *Log_GetLogIdName(UInt16 logID);
+const char* Log_GetLogIdName(UInt16 logID);
 
 //***************************************************************************************
 /**
     Function to output logging statistics in log file
-**/
+**/	
 
 void Log_OutputStatistics(void);
 #endif
 /** @} */
 
 #endif
+

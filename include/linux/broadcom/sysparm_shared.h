@@ -34,10 +34,6 @@
 *   @brief      This group defines the software interface to the audio system parameters
 ****************************************************************************/
 
-// **MAG** this header needed by both SPML and non-SPML build, so must be kept up here
-// in the "common" section of sysparm.h
-#include "audio_tuning.h"  //to get the two constants.
-
 #define NUM_OF_VOICE_COEFF			35
 #define NUM_OF_MIC_EQ_BIQUAD			12
 #define NUM_OF_SPEAKER_EQ_BIQUAD			12

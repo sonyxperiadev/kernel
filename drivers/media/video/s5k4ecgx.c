@@ -149,6 +149,19 @@ enum s5k4ecgx_capture_frame_size {
 	S5K4ECGX_CAPTURE_MAX,
 };
 
+enum s5k4ecgx_zoom {
+	ZOOM_0 = 0,	
+	ZOOM_1,		
+	ZOOM_2,		
+	ZOOM_3,		
+	ZOOM_4,		
+	ZOOM_5,		
+	ZOOM_6,		
+	ZOOM_7,		
+	ZOOM_MAX,
+};
+
+
 struct s5k4ecgx_framesize {
 	u32 index;
 	u32 width;
@@ -315,6 +328,7 @@ struct sec_cam_parm {
 	int sharpness;
 	int white_balance;
 	int fps;
+	int zoom;
 };
 
 static const struct s5k4ecgx_framesize s5k4ecgx_preview_framesize_list[] = {
@@ -462,6 +476,7 @@ struct s5k4ecgx_regs {
 	struct s5k4ecgx_regset_table get_esd_status;
 	struct s5k4ecgx_regset_table get_iso;
 	struct s5k4ecgx_regset_table get_shutterspeed;
+	struct s5k4ecgx_regset_table zoom[ZOOM_MAX];
 };
 
 #ifdef CONFIG_VIDEO_S5K4ECGX_V_1_0
@@ -795,6 +810,16 @@ static const struct s5k4ecgx_regs regs_for_fw_version_1_1 = {
 	.get_iso = S5K4ECGX_REGSET_TABLE(s5k4ecgx_get_iso_reg),
 	.get_shutterspeed =
 		S5K4ECGX_REGSET_TABLE(s5k4ecgx_get_shutterspeed_reg),
+	.zoom ={
+		S5K4ECGX_REGSET(ZOOM_0, s5k4ecgx_zoom_0),
+		S5K4ECGX_REGSET(ZOOM_1, s5k4ecgx_zoom_1),
+		S5K4ECGX_REGSET(ZOOM_2, s5k4ecgx_zoom_2),
+		S5K4ECGX_REGSET(ZOOM_3, s5k4ecgx_zoom_3),
+		S5K4ECGX_REGSET(ZOOM_4, s5k4ecgx_zoom_4),
+		S5K4ECGX_REGSET(ZOOM_5, s5k4ecgx_zoom_5),
+		S5K4ECGX_REGSET(ZOOM_6, s5k4ecgx_zoom_6),
+		S5K4ECGX_REGSET(ZOOM_7, s5k4ecgx_zoom_7),
+	},
 };
 #endif
 
@@ -1799,6 +1824,7 @@ static void s5k4ecgx_init_parameters(struct v4l2_subdev *sd)
 	parms->scene_mode = SCENE_MODE_NONE;
 	parms->sharpness = SHARPNESS_DEFAULT;
 	parms->white_balance = WHITE_BALANCE_AUTO;
+	parms->zoom = ZOOM_0;
 
 	state->jpeg.enable = 0;
 	state->jpeg.quality = 100;
@@ -2610,6 +2636,23 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			err = -EINVAL;
 		}
 		break;
+
+	case V4L2_CID_ZOOM_ABSOLUTE:
+
+		if (state->runmode == S5K4ECGX_RUNMODE_RUNNING) {
+				err = s5k4ecgx_set_parameter(sd, &parms->zoom,
+				value, "zoom",
+				state->regs->zoom,
+				ARRAY_SIZE(state->regs->zoom));
+		} else {
+			dev_err(&client->dev,
+				"%s: trying to set ZOOM when not "
+				"in preview mode\n",
+				__func__);
+			err = -EINVAL;
+		}
+
+		
 	case V4L2_CID_EFFECT:
 		if (state->runmode == S5K4ECGX_RUNMODE_RUNNING) {
 			err = s5k4ecgx_set_parameter(sd, &parms->effects,

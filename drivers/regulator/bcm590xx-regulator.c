@@ -306,6 +306,9 @@ static int bcm590xxldo_set_voltage(struct regulator_dev *rdev, int min_uv, int m
 		pr_info("bcm590xxldo_set_voltage : error reading regulator control register.\n");
 		return ret;
 	}
+
+	*selector = rc;
+
 	rc = (ret & ~info->vout_mask) | (rc << info->vout_shift);
 	return bcm590xx_reg_write(bcm590xx, addr, rc);
 }
