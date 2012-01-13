@@ -571,6 +571,7 @@ static void button_press_work_func(struct work_struct *work)
 		/* Notify the same to input sub-system */
 		p->button_state = BUTTON_PRESSED;
 		pr_info(" Sending Key Press\r\n");
+		pr_info("\n Button pressed =%d \n", button_name);
 		input_report_key(p->headset_button_idev, p->button_pressed, 1);
 		input_sync(p->headset_button_idev);
 	} else {
@@ -654,7 +655,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 	}
 
 	if (accessory_inserted == 1) {
-		pr_debug(" ACCESSORY INSERTED \r\n");
+		pr_info(" ACCESSORY INSERTED \r\n");
 		pr_debug("0. Interrupt status before detecting hs_type 0x%x \r\n",
 			readl(p->aci_base + ACI_INT_OFFSET));
 
