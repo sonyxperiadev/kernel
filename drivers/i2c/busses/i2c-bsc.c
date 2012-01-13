@@ -112,7 +112,7 @@ struct bsc_i2c_dev {
 	struct i2c_adapter adapter;
 
 	/* lock for the I2C device */
-	struct semaphore dev_lock;
+	struct mutex dev_lock;
 
 	/* to signal the command completion */
 	struct completion ses_done;
@@ -822,7 +822,7 @@ static void stop_high_speed_mode(struct i2c_adapter *adapter)
 static void shutdown_high_speed_mode_adap(struct bsc_i2c_dev *dev)
 {
 	int rc;
-	down(&dev->dev_lock);
+	mutex_lock(&dev->dev_lock);
 	bsc_enable_clk(dev);
 
 	/* PMU HS mode: switch adapter to F/S */
@@ -838,7 +838,7 @@ static void shutdown_high_speed_mode_adap(struct bsc_i2c_dev *dev)
 			 "STOP sent to PMU after switching to F/S mode\n");
 
 	bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
-	up(&dev->dev_lock);
+	mutex_unlock(&dev->dev_lock);
 }
 
 /*
@@ -948,7 +948,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	bool rel_hw_sem = false;
 #endif
 
-	down(&dev->dev_lock);
+	mutex_lock(&dev->dev_lock);
 	bsc_enable_clk(dev);
 	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
@@ -957,7 +957,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 		rc = pwr_mgr_pm_i2c_sem_lock();
 		if (rc) {
 			bsc_disable_clk(dev);
-			up(&dev->dev_lock);
+			mutex_lock(&dev->dev_lock);
 			return rc;
 		} else {
 			rel_hw_sem = true;
@@ -1072,7 +1072,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	if (rel_hw_sem)
 		pwr_mgr_pm_i2c_sem_unlock();
 #endif
-	up(&dev->dev_lock);
+	mutex_unlock(&dev->dev_lock);
 	return (rc < 0) ? rc : num;
 
       hs_ret:
@@ -1097,7 +1097,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 		pwr_mgr_pm_i2c_sem_unlock();
 	}
 #endif
-	up(&dev->dev_lock);
+	mutex_unlock(&dev->dev_lock);
 	return rc;
 }
 
@@ -1431,7 +1431,7 @@ static void i2c_master_reset(struct work_struct *work)
 					       reset_work);
 	struct i2c_adapter *adap = &dev->adapter;
 
-	down(&dev->dev_lock);
+	mutex_lock(&dev->dev_lock);
 	bsc_enable_clk(dev);
 
 	dev_info(dev->device, "resetting i2c bus...\n");
@@ -1454,7 +1454,7 @@ static void i2c_master_reset(struct work_struct *work)
 				I2C_MM_HS_IER_ERR_INT_EN_MASK);
 
 	bsc_disable_clk(dev);
-	up(&dev->dev_lock);
+	mutex_unlock(&dev->dev_lock);
 }
 
 #define BSC1CLK_PAD_NAME	PN_BSC1CLK
@@ -1582,7 +1582,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		dev->high_speed_mode = 0;
 
 	dev->device = &pdev->dev;
-	sema_init(&dev->dev_lock, 1);
+	mutex_init(&dev->dev_lock);
 	init_completion(&dev->ses_done);
 	init_completion(&dev->rx_ready);
 	init_completion(&dev->tx_fifo_empty);
@@ -1800,7 +1800,7 @@ static int bsc_suspend(struct platform_device *pdev, pm_message_t state)
 	flush_workqueue(dev->reset_wq);
 
 	/* grab lock to prevent further I2C transactions */
-	down(&dev->dev_lock);
+	mutex_lock(&dev->dev_lock);
 
 	/*
 	 * Don't need to disable BSC clocks here since they are now only
@@ -1813,7 +1813,7 @@ static int bsc_resume(struct platform_device *pdev)
 {
 	struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
 
-	up(&dev->dev_lock);
+	mutex_unlock(&dev->dev_lock);
 
 	return 0;
 }

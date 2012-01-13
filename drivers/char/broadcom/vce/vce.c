@@ -71,11 +71,11 @@ static struct clk *vce_clk;
 /* Per VCE state: (actually, some global state mixed in here too --
  * TODO: separate this out in order to support multiple VCEs) */
 static struct {
-	struct semaphore       clockctl_sem;
+	struct mutex           clockctl_sem;
 	uint32_t               clock_enable_count;
-	struct semaphore       *g_irq_sem;
-	struct semaphore       acquire_sem;
-	struct semaphore       work_lock;
+	struct completion       *g_irq_sem;
+	struct completion       acquire_sem;
+	struct mutex           work_lock;
 	struct proc_dir_entry  *proc_vcedir;
 	struct proc_dir_entry  *proc_version;
 	struct proc_dir_entry  *proc_status;
@@ -89,7 +89,7 @@ static struct {
 
 /* Per open handle state: */
 typedef struct {
-	struct semaphore irq_sem;
+	struct completion irq_sem;
 	int              vce_acquired;
 } vce_t;
 
@@ -146,16 +146,16 @@ static void assert_idle_nolock(void)
 
 static void assert_vce_is_idle(void)
 {
-	down(&vce_state.work_lock);
+	mutex_lock(&vce_state.work_lock);
 	if (vce_state.clock_enable_count) assert_idle_nolock();
-	up(&vce_state.work_lock);
+	mutex_unlock(&vce_state.work_lock);
 }
 
 static void reset_vce(void)
 {
 	uint32_t value;
 
-	down(&vce_state.work_lock);
+	mutex_lock(&vce_state.work_lock);
 
 #ifdef VCE_RESET_IMPLIES_ASSERT_IDLE
 	assert_idle_nolock();
@@ -181,7 +181,7 @@ static void reset_vce(void)
 
 	clk_enable(vce_clk);
 
-	up(&vce_state.work_lock);
+	mutex_unlock(&vce_state.work_lock);
 }
 
 static irqreturn_t vce_isr(int irq, void *unused)
@@ -208,7 +208,7 @@ static irqreturn_t vce_isr(int irq, void *unused)
 	(void)vce_reg_peek(STATUS);
 
 	if( vce_state.g_irq_sem )
-		up(vce_state.g_irq_sem);
+		complete(vce_state.g_irq_sem);
 	else
 		err_print("Got VCE interrupt but noone wants it\n");
 
@@ -314,22 +314,22 @@ static void stop_clock_and_power_off(void)
 
 static void clock_on(void)
 {
-	down(&vce_state.clockctl_sem);
+	mutex_lock(&vce_state.clockctl_sem);
 	if (vce_state.clock_enable_count == 0) {
 		power_on_and_start_clock();
 	}
 	vce_state.clock_enable_count += 1;
-	up(&vce_state.clockctl_sem);
+	mutex_unlock(&vce_state.clockctl_sem);
 }
 
 static void clock_off(void)
 {
-	down(&vce_state.clockctl_sem);
+	mutex_lock(&vce_state.clockctl_sem);
 	vce_state.clock_enable_count -= 1;
 	if (vce_state.clock_enable_count == 0) {
 		stop_clock_and_power_off();
 	}
-	up(&vce_state.clockctl_sem);
+	mutex_unlock(&vce_state.clockctl_sem);
 }
 
 static void cpu_keepawake_dec(void)
@@ -373,7 +373,7 @@ static int vce_open(struct inode *inode, struct file *filp)
 		return -ENOMEM;
 
 	dev->vce_acquired = 0;
-	sema_init(&dev->irq_sem, 0);
+	init_completion(&dev->irq_sem);
 
 	filp->private_data = dev;
 	return 0;
@@ -397,7 +397,7 @@ static int vce_release(struct inode *inode, struct file *filp)
 		/* Above comment is stale - it was for V3D --
 		   copy/paste alert!  TODO: figure out what VCE needs
 		   to do here... FIXME */
-		down(&vce_state.work_lock);
+		mutex_lock(&vce_state.work_lock);
 		/* poke a reg, writes 0 to surrounding fields */
 		vce_reg_poke_1field(CONTROL, RUN_BIT_CMD, 0);
 
@@ -406,7 +406,7 @@ static int vce_release(struct inode *inode, struct file *filp)
 			while(!vce_is_idle() && (uglyctr++ < 10000))
 				udelay(100);
 		}
-		up(&vce_state.work_lock);
+		mutex_unlock(&vce_state.work_lock);
 		if (vce_is_idle())
 			err_print("VCE HW idle\n");
 		else
@@ -415,11 +415,11 @@ static int vce_release(struct inode *inode, struct file *filp)
 
 		//Just free up the VCE HW
 		vce_state.g_irq_sem = NULL;
-		up(&vce_state.acquire_sem);
+		complete(&vce_state.acquire_sem);
 		clock_off();
 	}
 
-	if (!down_trylock(&dev->irq_sem))
+	if (!try_wait_for_completion(&dev->irq_sem))
 	{
 		err_print("VCE driver closing with unacknowledged interrupts\n");
 	}
@@ -540,7 +540,7 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case VCE_IOCTL_WAIT_IRQ:
 		{
 			dbg_print("Waiting for interrupt\n");
-			if (down_interruptible(&dev->irq_sem))
+			if (wait_for_completion_interruptible(&dev->irq_sem))
 			{
 				err_print("Wait for IRQ failed\n");
 				return -ERESTARTSYS;
@@ -550,7 +550,7 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 		case VCE_IOCTL_EXIT_IRQ_WAIT:
 			//Up the semaphore to release the thread that's waiting for irq
-			up(&dev->irq_sem);
+			complete(&dev->irq_sem);
 		break;
 
 		case VCE_IOCTL_RESET:
@@ -573,7 +573,7 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			clock_on();
 
 			//Wait for the VCE HW to become available
-			if (down_interruptible(&vce_state.acquire_sem))
+			if (wait_for_completion_interruptible(&vce_state.acquire_sem))
 			{
 				err_print("Wait for VCE HW failed\n");
 				clock_off();
@@ -588,7 +588,7 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		{
 			vce_state.g_irq_sem = NULL;		//Free up the g_irq_sem
 			dev->vce_acquired = 0;	//Not acquired anymore
-			up(&vce_state.acquire_sem);		//VCE is up for grab
+			complete(&vce_state.acquire_sem);		//VCE is up for grab
 			clock_off();
 		}
 		break;
@@ -783,7 +783,7 @@ int __init vce_init(void)
 	}
 
 	/* For the power management */
-	sema_init(&vce_state.clockctl_sem, 1);
+	mutex_init(&vce_state.clockctl_sem);
 	sema_init(&vce_state.armctl_sem, 1);
 
 	/* We map the registers -- even though the power to the domain
@@ -815,10 +815,9 @@ int __init vce_init(void)
 	}
 
 	/* Initialize the VCE acquire_sem and work_lock*/
-	sema_init(&vce_state.acquire_sem, 1); //First request should succeed
-	sema_init(&vce_state.work_lock, 1); //First request should succeed
-
-	vce_state.proc_vcedir = proc_mkdir(VCE_DEV_NAME, NULL);
+	init_completion(&vce_state.acquire_sem);
+	complete(&vce_state.acquire_sem); //First request should succeed
+	mutex_init(&vce_state.work_lock); //First request should succeed
 	if (vce_state.proc_vcedir == NULL) {
 		err_print("Failed to create vce proc dir\n");
 		ret = -ENOENT;
@@ -896,8 +895,8 @@ void __exit vce_exit(void)
 {
 	dbg_print("VCE driver Exit\n");
 
-	down(&vce_state.work_lock);
-	down(&vce_state.clockctl_sem);
+	mutex_lock(&vce_state.work_lock);
+	mutex_lock(&vce_state.clockctl_sem);
 	down(&vce_state.armctl_sem);
 	BUG_ON(vce_state.clock_enable_count != 0);
 

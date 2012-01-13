@@ -47,12 +47,12 @@ struct rhea_fb {
 	dma_addr_t phys_fbbase;
 	spinlock_t lock;
 	struct task_struct *thread;
-	struct semaphore thread_sem;
-	struct semaphore update_sem;
-	struct semaphore prev_buf_done_sem;
+	struct completion thread_sem;
+	struct mutex update_sem;
+	struct completion prev_buf_done_sem;
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
 	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
-	struct semaphore refresh_wait_sem;
+	struct completion refresh_wait_sem;
 #endif
 	atomic_t buff_idx;
 	atomic_t is_fb_registered;
@@ -167,7 +167,7 @@ static void rhea_display_done_cb(int status)
 {	
 	(void)status;
 	rhea_clock_stop(g_rhea_fb);
-	up(&g_rhea_fb->prev_buf_done_sem);
+	complete(&g_rhea_fb->prev_buf_done_sem);
 }
 
 static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
@@ -184,7 +184,7 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 
 	rheafb_debug("RHEA %s with buff_idx =%d \n", __func__, buff_idx);
 
-	if (down_killable(&fb->update_sem))
+	if (mutex_lock_killable(&fb->update_sem))
 		return -EINTR;
 
 	if (1 == fb->g_stop_drawing) {
@@ -217,12 +217,12 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 		} else {
 			p_region = NULL;	
 		}
-		down(&fb->prev_buf_done_sem);
+		wait_for_completion(&fb->prev_buf_done_sem);
 		rhea_clock_start(fb);
 		ret = fb->display_ops->update(fb->display_hdl, buff_idx, 0, (DISPDRV_CB_T)rhea_display_done_cb);
 	}
 skip_drawing:
-	up(&fb->update_sem);
+	mutex_unlock(&fb->update_sem);
 
 	rheafb_debug("RHEA Display is updated once at %d time with yoffset=%d\n", fb->base_update_count, var->yoffset);
 	return ret;
@@ -309,23 +309,23 @@ static int rhea_fb_ioctl(struct fb_info *info, unsigned int cmd,
         
   	case RHEA_IOCTL_SET_BUFFER_AND_UPDATE:
         
-		if (down_killable(&fb->update_sem)) {
+		if (mutex_lock_killable(&fb->update_sem)) {
 		    return -EINTR;
 		}
 		ptr = (void *)arg;
 
 		if (ptr == NULL)
 		{
-		    up(&fb->update_sem);
+		    mutex_unlock(&fb->update_sem);
 		    return -EFAULT;
 		}
 
-		down(&fb->prev_buf_done_sem);
+		wait_for_completion(&fb->prev_buf_done_sem);
 		rhea_clock_start(fb);
 		ret = fb->display_ops->update(fb->display_hdl, (uint32_t)ptr, (DISPDRV_WIN_t *)1, NULL/*(DISPDRV_CB_T)rhea_display_done_cb*/);
 		rhea_clock_stop(fb);
-		up(&fb->prev_buf_done_sem);
-		up(&fb->update_sem);
+		complete(&g_rhea_fb->prev_buf_done_sem);
+		mutex_unlock(&fb->update_sem);
 		break;
 
 	default:
@@ -349,34 +349,34 @@ static void rhea_fb_early_suspend(struct early_suspend *h)
 	case EARLY_SUSPEND_LEVEL_BLANK_SCREEN:
 		/* Turn off the backlight */
 		fb = container_of(h, struct rhea_fb, early_suspend_level1);
-		down(&fb->update_sem);
-		down(&fb->prev_buf_done_sem);
+		mutex_lock(&fb->update_sem);
+		wait_for_completion(&fb->prev_buf_done_sem);
 	 	rhea_clock_start(fb);
 		if (fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_BLANK_SCREEN))
 			rheafb_error("Failed to blank this display device!\n");
 		rhea_clock_stop(fb);
-		up(&fb->prev_buf_done_sem);
-		up(&fb->update_sem);
+		complete(&g_rhea_fb->prev_buf_done_sem);
+		mutex_unlock(&fb->update_sem);
 
 		break;
 
 	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
 		fb = container_of(h, struct rhea_fb, early_suspend_level2);
-		down(&fb->update_sem);
-		down(&fb->prev_buf_done_sem);
+		mutex_lock(&fb->update_sem);
+		wait_for_completion(&fb->prev_buf_done_sem);
 		fb->g_stop_drawing = 1;
-		up(&fb->prev_buf_done_sem);
-		up(&fb->update_sem);
+		complete(&g_rhea_fb->prev_buf_done_sem);
+		mutex_unlock(&fb->update_sem);
 		break;
 
 	case EARLY_SUSPEND_LEVEL_DISABLE_FB:
 		fb = container_of(h, struct rhea_fb, early_suspend_level3);
 		/* screen goes to sleep mode*/
-		down(&fb->update_sem);
+		mutex_lock(&fb->update_sem);
 	 	rhea_clock_start(fb);
 		disable_display(fb);
 		rhea_clock_stop(fb);
-		up(&fb->update_sem);
+		mutex_unlock(&fb->update_sem);
 		/* Turn off the ldo */
 		break;
 
@@ -401,9 +401,9 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 
 	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
 		fb = container_of(h, struct rhea_fb, early_suspend_level2);
-		down(&fb->update_sem);
+		mutex_lock(&fb->update_sem);
 		fb->g_stop_drawing = 0;
-		up(&fb->update_sem);
+		mutex_unlock(&fb->update_sem);
 		break;
 
 	case EARLY_SUSPEND_LEVEL_DISABLE_FB:
@@ -431,18 +431,18 @@ static int rhea_refresh_thread(void *arg)
 {
 	struct rhea_fb *fb = arg;
 
-	down(&fb->thread_sem);
+	wait_for_completion(&fb->thread_sem);
 
 	do {
-		down(&fb->refresh_wait_sem);
-		down(&fb->update_sem);
+		wait_for_completion(&fb->refresh_wait_sem);
+		mutex_lock(&fb->update_sem);
 		if (0 == fb->g_stop_drawing) {
 			rhea_clock_start(fb);
 			fb->display_ops->update(fb->display_hdl, 0, NULL, NULL);
 			rhea_clock_stop(fb);
 			fb->base_update_count++;
 		}
-		up(&fb->update_sem);
+		mutex_unlock(&fb->update_sem);
 	} while (1);
 
 	rheafb_debug("RHEA refresh thread is exiting!\n");
@@ -454,7 +454,7 @@ static int vt_notifier_call(struct notifier_block *blk,
 {	
 	switch (code) {
 	case VT_UPDATE:
-		up(&g_rhea_fb->refresh_wait_sem);
+		complete(&g_rhea_fb->refresh_wait_sem);
 		break;
 	}
 
@@ -521,12 +521,13 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	spin_lock_init(&fb->lock);
 	platform_set_drvdata(pdev, fb);
 
-	sema_init(&fb->update_sem, 1);
+	mutex_init(&fb->update_sem);
 	atomic_set(&fb->buff_idx, 0);
 	atomic_set(&fb->is_fb_registered, 0);
-	sema_init(&fb->prev_buf_done_sem, 1);
+	init_completion(&fb->prev_buf_done_sem);
+	complete(&fb->prev_buf_done_sem); // First attmept should pass
 	atomic_set(&fb->is_graphics_started, 0);
-	sema_init(&fb->thread_sem, 0);
+	init_completion(&fb->thread_sem);
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
 	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
@@ -657,7 +658,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	if (NULL == fb->fps_info )
 		printk(KERN_ERR "No fps display");
 #endif
-	up(&fb->thread_sem);
+	complete(&fb->thread_sem);
 
 	atomic_set(&fb->is_fb_registered, 1);
 	rheafb_info("RHEA Framebuffer probe successfull\n");
@@ -671,11 +672,11 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb_prepare_logo(&fb->fb, 0);
 	fb_show_logo(&fb->fb, 0);
 
-	down(&fb->update_sem);
+	mutex_lock(&fb->update_sem);
 	rhea_clock_start(fb);
 	fb->display_ops->update(fb->display_hdl, 0, NULL, NULL /* Callback */);
 	rhea_clock_stop(fb);
-	up(&fb->update_sem);
+	mutex_unlock(&fb->update_sem);
 #endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
