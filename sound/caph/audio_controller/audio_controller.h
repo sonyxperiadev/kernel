@@ -39,6 +39,8 @@
 typedef enum {
    TelephonyUseExtSpkr,
    AudioUseExtSpkr,
+   Audio2UseExtSpkr, /* for 2nd audio playback */
+   FMRadioUseExtSpkr
 } ExtSpkrUsage_en_t;
 
 typedef enum
@@ -613,7 +615,7 @@ void AUDCTRL_SetAudioLoopback(
 				Boolean				enable_lpbk,
 				AUDIO_SOURCE_Enum_t		mic,
 				AUDIO_SINK_Enum_t		speaker,
-				Int32				sidetone_mode
+				int				sidetone_mode
 			);
 
 /********************************************************************

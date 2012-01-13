@@ -990,6 +990,23 @@ void AUDCTRL_EnablePlay(
     //Enable the PMU for HS/IHF.
     if ((sink == AUDIO_SINK_HEADSET)||(sink == AUDIO_SINK_LOUDSPK))
     {
+	//save audio for powerOnExternalAmp() to use.
+	mode = AUDDRV_GetAudioModeBySink(sink);
+#if defined(USE_NEW_AUDIO_PARAM)
+	AUDCTRL_SaveAudioModeFlag(mode, AUDCTRL_GetAudioApp() );
+#else
+	AUDCTRL_SaveAudioModeFlag(mode);
+#endif
+
+	if (source == AUDIO_SOURCE_I2S && AUDDRV_InVoiceCall() == FALSE)
+	{
+		Log_DebugPrintf(LOGID_AUDIO,
+			"AUDCTRL_EnablePlay: FM source src = %d, sink = %d \n",
+			source, sink);
+
+		powerOnExternalAmp( sink, FMRadioUseExtSpkr, TRUE );
+	}
+	else
 		powerOnExternalAmp( sink, AudioUseExtSpkr, TRUE );
     }
 
@@ -1118,6 +1135,16 @@ void AUDCTRL_DisablePlay(
 	{
 		Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_DisablePlay: pathID %d using the same path still remains, do not turn off PMU.\r\n", path);
 	} else {
+		if (source == AUDIO_SOURCE_I2S && AUDDRV_InVoiceCall() == FALSE)
+		{
+			Log_DebugPrintf(LOGID_AUDIO,
+	                    "AUDCTRL_DisablePlay: FM source src = %d, sink = %d \n",
+	                    source, sink);
+
+			powerOnExternalAmp( sink, FMRadioUseExtSpkr, FALSE );
+			fmPlayStarted = FALSE;
+		}
+		else
 		if ((sink == AUDIO_SINK_HEADSET)||(sink == AUDIO_SINK_LOUDSPK))
 		{
 			powerOnExternalAmp( sink, AudioUseExtSpkr, FALSE );
@@ -2128,7 +2155,7 @@ void AUDCTRL_SetAudioLoopback(
                               Boolean enable_lpbk,
                               AUDIO_SOURCE_Enum_t mic,
                               AUDIO_SINK_Enum_t	speaker,
-			      Int32	sidetone_mode
+			      int sidetone_mode
                              )
 {
     //Sidetone FIR filter coeffs.
@@ -2795,9 +2822,13 @@ static void powerOnExternalAmp(
 #ifdef CONFIG_BCMPMU_AUDIO
 	static Boolean telephonyUseHS = FALSE;
 	static Boolean audioUseHS = FALSE;
+	static int audio2UseHS = FALSE;
+	static int FMRadioUseHS = FALSE;
 
 	static Boolean telephonyUseIHF = FALSE;
 	static Boolean audioUseIHF = FALSE;
+	static int audio2UseIHF = FALSE;
+	static int FMRadioUseIHF = FALSE;
 
 	static Boolean IHF_IsOn = FALSE;
 	static Boolean HS_IsOn = FALSE;
@@ -2835,6 +2866,10 @@ static void powerOnExternalAmp(
 					audioUseHS = use;
 					break;
 
+				case FMRadioUseExtSpkr:
+					FMRadioUseHS = use;
+					break;
+
 				default:
 					break;
 			}
@@ -2854,6 +2889,10 @@ static void powerOnExternalAmp(
 
 				case AudioUseExtSpkr:
 					audioUseIHF = use;
+					break;
+
+				case FMRadioUseExtSpkr:
+					FMRadioUseIHF = use;
 					break;
 
 				default:
@@ -2881,7 +2920,9 @@ static void powerOnExternalAmp(
 			break;
 	}
 
-	if ((telephonyUseHS==FALSE) && (audioUseHS==FALSE))
+	//pr_err("powerOnExternalAmp, speaker = %d, IHF_IsOn= %d, HS_IsOn = %d, Boolean_Use=%d, FMRadioUseHS=%d\n", speaker, IHF_IsOn, HS_IsOn, use, FMRadioUseHS);
+
+	if ((telephonyUseHS==FALSE) && (audioUseHS==FALSE) && (FMRadioUseHS==FALSE))
 	{
 		if ( HS_IsOn != FALSE )
 		{
@@ -2917,7 +2958,7 @@ static void powerOnExternalAmp(
 		HS_IsOn = TRUE;
 	}
 
-	if ((telephonyUseIHF==FALSE) && (audioUseIHF==FALSE))
+	if ((telephonyUseIHF==FALSE) && (audioUseIHF==FALSE) && (FMRadioUseIHF==FALSE))
 	{
 		if ( IHF_IsOn != FALSE )
 		{

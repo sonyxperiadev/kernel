@@ -13,7 +13,7 @@ the GPL, without Broadcom's express prior written consent.
 
 /***
 *
-*  brcm_audio_policy.c
+*  audctrl_policy.c
 *
 *  PURPOSE:
 *

@@ -11,12 +11,12 @@ in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 ****************************************************************************/
 /**
-*    @file   brcm_audio_policy.h
+*    @file   audctrl_policy.h
 *    @brief  API declaration of audio  policy.
 ****************************************************************************/
 
-#ifndef _BRCM_AUDIO_POLICY_H__
-#define _BRCM_AUDIO_POLICY_H__
+#ifndef _AUDCTRL_POLICY_H__
+#define _AUDCTRL_POLICY_H__
 
 typedef enum {
 	BRCM_STATE_NORMAL,
@@ -36,4 +36,4 @@ int AUDIO_Policy_GetState(void);
 int AUDIO_Policy_Get_Profile(int app);
 int AUDIO_Policy_Get_Mode(int mode);
 
-#endif /* _BRCM_AUDIO_POLICY_H__ */
+#endif /* _AUDCTRL_POLICY_H__ */
