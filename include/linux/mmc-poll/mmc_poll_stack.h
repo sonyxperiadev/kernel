@@ -26,7 +26,6 @@
 #ifndef __MMC_POLL_STACK_H
 #define __MMC_POLL_STACK_H
 
-void mmc_poll_stack_device(unsigned dev_num);
-int mmc_poll_stack_init(void **mmc_p, int *dev_num);
+int mmc_poll_stack_init(void **mmc_p, int dev_num, int *mmc_poll_dev_num);
 
 #endif /* __MMC_POLL_STACK_H */

@@ -29,92 +29,77 @@
 #include <mach/sdio_platform.h>
 #include "kona_mmc.h"
 
-/* #define __MMC_POLL_INIT_DEBUG */
-
-#ifdef __MMC_POLL_INIT_DEBUG
-#define debug_print(a,b...) printk(a,##b)
-#else
-#define debug_print(a,b...)
+#ifdef DEBUG
+static void print_mmcinfo(struct mmc *mmc);
 #endif
 
-static int mmc_poll_panic_device[SDIO_DEV_TYPE_MAX+1];
-
-int mmc_poll_stack_init(void **mmc_p, int *dev_num)
+int mmc_poll_stack_init(void **mmc_p, int dev_num, int *mmc_poll_dev_num)
 {
 	int status;
-	int kona_dev_num, log_dev_num;
+	int kona_dev_num;
 	struct mmc **mmc = (struct mmc **)mmc_p;
 
-	if ((mmc == NULL) || (dev_num == NULL))
+	if (mmc == NULL || mmc_poll_dev_num == NULL || dev_num < 0)
 		return -1;
 
 	mmc_initialize();
 
-	for (log_dev_num = 0, kona_dev_num = 2;
-	     kona_dev_num <= SDIO_DEV_TYPE_MAX;
-	     log_dev_num++, kona_dev_num++) {
-		if (!mmc_poll_panic_device[kona_dev_num-1])
-			continue;
+	/* dev_num = 0 must be mmc0 and SDIO2
+	 *           1 must be mmc1 and SDIO3
+	 */
+	kona_dev_num = dev_num + 2;
 
-		/* e.g) eMMC instance number 2 and for SD Card use 1 */
-		status = kona_mmc_init(kona_dev_num);
-		if (status  < 0) {
-			pr_err("kona_mmc_init failed %d\n", kona_dev_num);
-			return -1;
-		}
-
-		pr_debug("kona_mmc_init done %d\n", kona_dev_num);
-
-		/* Use 0 for first device registered via kona_mmc_init etc */
-		*mmc = find_mmc_device(log_dev_num);
-		if (*mmc == NULL) {
-			pr_err("No mmc device found\n");
-			return -1;
-		}
-
-		if (mmc_init(*mmc) < 0) {
-			pr_err("mmc init failed kona_dev:%d\n", kona_dev_num);
-			continue;
-		}
-		pr_debug("mmc_init done kona_dev:%d\n", kona_dev_num);
-
-		break;
-	}
-
-	if (kona_dev_num > SDIO_DEV_TYPE_MAX) {
-		pr_err("No mmc device available\n");
+	/* e.g) eMMC instance number 2 and for SD Card use 1 */
+	status = kona_mmc_init(kona_dev_num);
+	if (status  < 0) {
+		pr_err("kona_mmc_init failed kona_dev:%d\n", kona_dev_num);
 		return -1;
 	}
 
+	pr_debug("kona_mmc_init done %d\n", kona_dev_num);
+
+	/* Use 0 for first device registered via kona_mmc_init etc */
+	*mmc = find_mmc_device(0);
+	if (*mmc == NULL) {
+		pr_err("No mmc device found\n");
+		return -1;
+	}
+
+	if (mmc_init(*mmc) < 0) {
+		pr_err("mmc init failed kona_dev:%d\n", kona_dev_num);
+		return -1;
+	}
+	pr_debug("mmc_init done kona_dev:%d\n", kona_dev_num);
+
+#ifdef DEBUG
+	print_mmcinfo(*mmc);
+#endif
+
 	/* Use 0 for the first device registered via kona_mmc_init etc */
-	*dev_num = log_dev_num;
+	*mmc_poll_dev_num = 0;
 
 	return 0;
 }
 
-void mmc_poll_stack_device(unsigned dev_num)
-{
-	if (dev_num < SDIO_DEV_TYPE_MAX)
-		mmc_poll_panic_device[dev_num] = 1;
-}
-
+#ifdef DEBUG
 static void print_mmcinfo(struct mmc *mmc)
 {
-	printk("Device: %s\n", mmc->name);
-	printk("Manufacturer ID: %x\n", mmc->cid[0] >> 24);
-	printk("OEM: %x\n", (mmc->cid[0] >> 8) & 0xffff);
-	printk("Name: %c%c%c%c%c \n", mmc->cid[0] & 0xff,
+	pr_info("Device: %s\n", mmc->name);
+	pr_info("Manufacturer ID: %x\n", mmc->cid[0] >> 24);
+	pr_info("OEM: %x\n", (mmc->cid[0] >> 8) & 0xffff);
+	pr_info("Name: %c%c%c%c%c\n", mmc->cid[0] & 0xff,
 			(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
 			(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
 
-	printk("Tran Speed: %d\n", mmc->tran_speed);
-	printk("Rd Block Len: %d\n", mmc->read_bl_len);
+	pr_info("Tran Speed: %d\n", mmc->tran_speed);
+	pr_info("Rd Block Len: %d\n", mmc->read_bl_len);
 
-	printk("%s version %d.%d\n", IS_SD(mmc) ? "SD" : "MMC",
+	pr_info("%s version %d.%d\n", IS_SD(mmc) ? "SD" : "MMC",
 			(mmc->version >> 4) & 0xf, mmc->version & 0xf);
 
-	printk("High Capacity: %s\n", mmc->high_capacity ? "Yes" : "No");
-	printk("Capacity: %lld\n", mmc->capacity);
+	pr_info("High Capacity: %s\n", mmc->high_capacity ? "Yes" : "No");
+	pr_info("Capacity: %lld\n", mmc->capacity);
 
-	printk("Bus Width: %d-bit\n", mmc->bus_width);
+	pr_info("Bus Width: %d-bit\n", mmc->bus_width);
 }
+#endif

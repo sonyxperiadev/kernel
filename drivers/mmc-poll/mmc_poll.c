@@ -548,9 +548,6 @@ int mmc_change_freq(struct mmc *mmc)
 	if (err)
 		return err;
 
-	if (ext_csd[212] || ext_csd[213] || ext_csd[214] || ext_csd[215])
-		mmc->high_capacity = 1;
-
 	cardtype = ext_csd[196] & 0xf;
 
 #ifndef ISLAND_MMC_FPGA_NO_HIGH_SPEED
