@@ -1,27 +1,30 @@
-/************************************************************************************************/
-/*                                                                                              */
-/*  Copyright 2009 - 2011  Broadcom Corporation                                                        */
-/*                                                                                              */
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
+/******************************************************************************
+*
+* Copyright 2009 - 2012  Broadcom Corporation
+*
+*  Unless you and Broadcom execute a separate written software license
+*  agreement governing use of this software, this software is licensed to you
+*  under the terms of the GNU General Public License version 2 (the GPL),
+*  available at
+*
+*      http://www.broadcom.com/licenses/GPLv2.php
+*
+*  with the following added to such license:
+*
+*  As a special exception, the copyright holders of this software give you
+*  permission to link this software with independent modules, and to copy and
+*  distribute the resulting executable under terms of your choice, provided
+*  that you also meet, for each linked independent module, the terms and
+*  conditions of the license of that module.
+*  An independent module is a module which is not derived from this software.
+*  The special exception does not apply to any modifications of the software.
+*
+*  Notwithstanding the above, under no circumstances may you combine this
+*  software in any way with any other Broadcom software provided under a
+*  license other than the GPL, without Broadcom's express prior written
+*  consent.
+*
+******************************************************************************/
 
 /**
 *
@@ -37,65 +40,60 @@
  * @{
  */
 typedef enum {
-   TelephonyUseExtSpkr,
-   AudioUseExtSpkr,
-   Audio2UseExtSpkr, /* for 2nd audio playback */
-   FMRadioUseExtSpkr
+	TelephonyUseExtSpkr,
+	AudioUseExtSpkr,
+	Audio2UseExtSpkr,	/* for 2nd audio playback */
+	FMRadioUseExtSpkr
 } ExtSpkrUsage_en_t;
 
-typedef enum
-{
-  AUDCTRL_SSP_4 = 1, //SSPI1 --- ASIC SSPI4, SSPI2 --- ASIC SSPI3
-  AUDCTRL_SSP_3
+typedef enum {
+	AUDCTRL_SSP_4 = 1,	/*SSPI1 --- ASIC SSPI4, SSPI2 --- ASIC SSPI3 */
+	AUDCTRL_SSP_3
 } AUDCTRL_SSP_PORT_e;
 
-typedef enum
-{
-  AUDCTRL_SSP_PCM,
-  AUDCTRL_SSP_I2S
+typedef enum {
+	AUDCTRL_SSP_PCM,
+	AUDCTRL_SSP_I2S
 } AUDCTRL_SSP_BUS_e;
 
-
-typedef enum
-{
-  AUDCTRL_HW_READ_GAIN,
-  AUDCTRL_HW_WRITE_GAIN,
-  AUDCTRL_HW_READ_REG,
-  AUDCTRL_HW_WRITE_REG
+typedef enum {
+	AUDCTRL_HW_READ_GAIN,
+	AUDCTRL_HW_WRITE_GAIN,
+	AUDCTRL_HW_READ_REG,
+	AUDCTRL_HW_WRITE_REG
 } AUDCTRL_HW_ACCESS_TYPE_en_t;
 
-typedef enum
-{
-  AUDCTRL_EP_MIX_IN_GAIN,  //0
-  AUDCTRL_EP_MIX_BITSEL_GAIN,
-  AUDCTRL_EP_MIX_FINE_GAIN,
-  AUDCTRL_IHF_MIX_IN_GAIN,
-  AUDCTRL_IHF_MIX_BITSEL_GAIN,
-  AUDCTRL_IHF_MIX_FINE_GAIN,  //5
-  AUDCTRL_HS_LEFT_MIX_IN_GAIN,
-  AUDCTRL_HS_LEFT_MIX_BITSEL_GAIN,
-  AUDCTRL_HS_LEFT_MIX_FINE_GAIN,
-  AUDCTRL_HS_RIGHT_MIX_IN_GAIN,
-  AUDCTRL_HS_RIGHT_MIX_BITSEL_GAIN,  //10
-  AUDCTRL_HS_RIGHT_MIX_FINE_GAIN,
+typedef enum {
+	AUDCTRL_EP_MIX_IN_GAIN,	/*0*/
+	AUDCTRL_EP_MIX_BITSEL_GAIN,
+	AUDCTRL_EP_MIX_FINE_GAIN,
+	AUDCTRL_IHF_MIX_IN_GAIN,
+	AUDCTRL_IHF_MIX_BITSEL_GAIN,
+	AUDCTRL_IHF_MIX_FINE_GAIN,	/*5*/
+	AUDCTRL_HS_LEFT_MIX_IN_GAIN,
+	AUDCTRL_HS_LEFT_MIX_BITSEL_GAIN,
+	AUDCTRL_HS_LEFT_MIX_FINE_GAIN,
+	AUDCTRL_HS_RIGHT_MIX_IN_GAIN,
+	AUDCTRL_HS_RIGHT_MIX_BITSEL_GAIN,	/*10*/
+	AUDCTRL_HS_RIGHT_MIX_FINE_GAIN,
 
-  AUDCTRL_PMU_HS_RIGHT_GAIN,  //12
-  AUDCTRL_PMU_HS_LEFT_GAIN,
-  AUDCTRL_PMU_IHF_GAIN,
-  AUDCTRL_PMU_HIGH_GAIN_MODE,  //15
+	AUDCTRL_PMU_HS_RIGHT_GAIN,	/*12*/
+	AUDCTRL_PMU_HS_LEFT_GAIN,
+	AUDCTRL_PMU_IHF_GAIN,
+	AUDCTRL_PMU_HIGH_GAIN_MODE,	/*15*/
 
-  AUDCTRL_SIDETONE_ENABLE,
-  AUDCTRL_SIDETONE_GAIN,
+	AUDCTRL_SIDETONE_ENABLE,
+	AUDCTRL_SIDETONE_GAIN,
 
-  AUDCTRL_ANA_MIC_PGA=100,
-  AUDCTRL_DIGI_MIC1_COARSE_GAIN,
-  AUDCTRL_DIGI_MIC1_FINE_GAIN,
-  AUDCTRL_DIGI_MIC2_COARSE_GAIN,
-  AUDCTRL_DIGI_MIC2_FINE_GAIN,
-  AUDCTRL_DIGI_MIC3_COARSE_GAIN,  //105
-  AUDCTRL_DIGI_MIC3_FINE_GAIN,
-  AUDCTRL_DIGI_MIC4_COARSE_GAIN,
-  AUDCTRL_DIGI_MIC4_FINE_GAIN,
+	AUDCTRL_ANA_MIC_PGA = 100,
+	AUDCTRL_DIGI_MIC1_COARSE_GAIN,
+	AUDCTRL_DIGI_MIC1_FINE_GAIN,
+	AUDCTRL_DIGI_MIC2_COARSE_GAIN,
+	AUDCTRL_DIGI_MIC2_FINE_GAIN,
+	AUDCTRL_DIGI_MIC3_COARSE_GAIN,	/*105*/
+	AUDCTRL_DIGI_MIC3_FINE_GAIN,
+	AUDCTRL_DIGI_MIC4_COARSE_GAIN,
+	AUDCTRL_DIGI_MIC4_FINE_GAIN,
 
 } AUDCTRL_GAIN_POINT_en_t;
 
@@ -122,7 +120,7 @@ typedef enum {
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_Init (void);
+void AUDCTRL_Init(void);
 
 /**
 *  @brief  This function is to shut down Audio Controller
@@ -132,7 +130,7 @@ void AUDCTRL_Init (void);
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_Shutdown (void);
+void AUDCTRL_Shutdown(void);
 
 /**
 *  @brief  Enable telephony audio path in HW and DSP
@@ -143,10 +141,8 @@ void AUDCTRL_Shutdown (void);
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_EnableTelephony(
-           AUDIO_SOURCE_Enum_t	 source,
-           AUDIO_SINK_Enum_t	 sink
-           );
+void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source,
+			     AUDIO_SINK_Enum_t sink);
 
 /**
 *  @brief  Disable telephony audio path in HW and DSP
@@ -156,7 +152,7 @@ void AUDCTRL_EnableTelephony(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_DisableTelephony( void );
+void AUDCTRL_DisableTelephony(void);
 
 /**
 *  @brief  Rate change telephony audio for DSP
@@ -165,7 +161,7 @@ void AUDCTRL_DisableTelephony( void );
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_Telephony_RateChange( unsigned int sample_rate );
+void AUDCTRL_Telephony_RateChange(unsigned int sample_rate);
 
 /**
 *  @brief  the rate change request function called by CAPI message listener
@@ -177,7 +173,6 @@ void AUDCTRL_Telephony_RateChange( unsigned int sample_rate );
 ****************************************************************************/
 void AUDCTRL_Telephony_RequestRateChange(UInt8 codecID);
 
-
 /**
 *  @brief  Change telephony audio path in HW and DSP
 *
@@ -187,10 +182,8 @@ void AUDCTRL_Telephony_RequestRateChange(UInt8 codecID);
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetTelephonyMicSpkr(
-            AUDIO_SOURCE_Enum_t  source,
-            AUDIO_SINK_Enum_t	 sink
-            );
+void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
+				 AUDIO_SINK_Enum_t sink);
 
 /**
 *  @brief  Set telephony speaker (downlink) volume
@@ -202,11 +195,9 @@ void AUDCTRL_SetTelephonyMicSpkr(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetTelephonySpkrVolume(
-				AUDIO_SINK_Enum_t		speaker,
-				int						volume,
-				AUDIO_GAIN_FORMAT_t		gain_format
-				);
+void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
+				    int volume,
+				    AUDIO_GAIN_FORMAT_t gain_format);
 
 /**
 *  @brief  Get telephony speaker (downlink) volume
@@ -216,7 +207,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 *  @return UInt32    dB
 *
 ****************************************************************************/
-int AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format );
+int AUDCTRL_GetTelephonySpkrVolume(AUDIO_GAIN_FORMAT_t gain_format);
 
 /**
 *  @brief  Set telephony speaker (downlink) mute / un-mute
@@ -227,10 +218,7 @@ int AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format );
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetTelephonySpkrMute(
-				AUDIO_SINK_Enum_t		speaker,
-				Boolean					mute
-				);
+void AUDCTRL_SetTelephonySpkrMute(AUDIO_SINK_Enum_t speaker, Boolean mute);
 
 /**
 *  @brief  Set telephony microphone (uplink) gain
@@ -242,11 +230,8 @@ void AUDCTRL_SetTelephonySpkrMute(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetTelephonyMicGain(
-				AUDIO_SOURCE_Enum_t		mic,
-				Int16					gain,
-                AUDIO_GAIN_FORMAT_t     gain_format
-				);
+void AUDCTRL_SetTelephonyMicGain(AUDIO_SOURCE_Enum_t mic,
+				 Int16 gain, AUDIO_GAIN_FORMAT_t gain_format);
 
 /**
 *  @brief  Set telephony mic (uplink) mute /un-mute
@@ -257,11 +242,7 @@ void AUDCTRL_SetTelephonyMicGain(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetTelephonyMicMute(
-				AUDIO_SOURCE_Enum_t		mic,
-				Boolean					mute
-				);
-
+void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute);
 
 /**
 *   Get current (voice call) audio mode
@@ -271,7 +252,7 @@ void AUDCTRL_SetTelephonyMicMute(
 *	@return		AudioMode_t		(voice call) audio mode
 *
 ****************************************************************************/
-AudioMode_t AUDCTRL_GetAudioMode( void );
+AudioMode_t AUDCTRL_GetAudioMode(void);
 
 #if defined(USE_NEW_AUDIO_PARAM)
 /**
@@ -282,7 +263,7 @@ AudioMode_t AUDCTRL_GetAudioMode( void );
 *	@return		AudioApp_t		audio app
 *
 ****************************************************************************/
-AudioApp_t AUDCTRL_GetAudioApp( void );
+AudioApp_t AUDCTRL_GetAudioApp(void);
 
 /**
 *   Set current (voice call) audio app
@@ -292,24 +273,23 @@ AudioApp_t AUDCTRL_GetAudioApp( void );
 *	@return		none
 *
 ****************************************************************************/
-void AUDCTRL_SetAudioApp( AudioApp_t audio_app );
+void AUDCTRL_SetAudioApp(AudioApp_t audio_app);
 
-//*********************************************************************
-//  Save audio mode before call AUDCTRL_SaveAudioModeFlag( )
-//	@param		mode		(voice call) audio mode
-//	@param		app			(voice call) audio app
-//	@return		none
-//**********************************************************************/
-void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode, AudioApp_t app );
+/*********************************************************************
+*  Save audio mode before call AUDCTRL_SaveAudioModeFlag( )
+*      @param          mode            (voice call) audio mode
+*      @param          app                     (voice call) audio app
+*      @return         none
+**********************************************************************/
+void AUDCTRL_SaveAudioModeFlag(AudioMode_t mode, AudioApp_t app);
 
-
-//*********************************************************************
-//   Set (voice call) audio mode
-//	@param		mode		(voice call) audio mode
-//	@param		app		(voice call) audio app
-//	@return		none
-//**********************************************************************/
-void AUDCTRL_SetAudioMode( AudioMode_t mode, AudioApp_t app);
+/*********************************************************************
+*   Set (voice call) audio mode
+*      @param          mode            (voice call) audio mode
+*      @param          app             (voice call) audio app
+*      @return         none
+**********************************************************************/
+void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app);
 
 #else
 /**
@@ -317,7 +297,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode, AudioApp_t app);
 *	@param		mode		(voice call) audio mode
 *	@return		none
 ****************************************************************************/
-void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode );
+void AUDCTRL_SaveAudioModeFlag(AudioMode_t mode);
 
 /**
 *   Set (voice call) audio mode
@@ -326,7 +306,7 @@ void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode );
 *
 *	@return		none
 ****************************************************************************/
-void AUDCTRL_SetAudioMode( AudioMode_t mode );
+void AUDCTRL_SetAudioMode(AudioMode_t mode);
 #endif
 /**
 *   Set audio mode for music playback. (no DSP voice)
@@ -335,7 +315,9 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode );
 *
 *	@return		none
 ****************************************************************************/
-void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_pathID, Boolean inHWlpbk );
+void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
+					   unsigned int arg_pathID,
+					   Boolean inHWlpbk);
 
 /**
 *   Set audio mode for music record. (no DSP voice)
@@ -344,7 +326,8 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback( AudioMode_t mode, unsigned int arg_p
 *
 *	@return		none
 ****************************************************************************/
-void AUDCTRL_SetAudioMode_ForMusicRecord( AudioMode_t mode, unsigned int arg_pathID );
+void AUDCTRL_SetAudioMode_ForMusicRecord(AudioMode_t mode,
+					 unsigned int arg_pathID);
 
 /**
 *   Get src and sink from audio mode
@@ -355,7 +338,8 @@ void AUDCTRL_SetAudioMode_ForMusicRecord( AudioMode_t mode, unsigned int arg_pat
 *
 *	@return		none
 ****************************************************************************/
-void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic, AUDIO_SINK_Enum_t *pSpk);
+void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
+			      AUDIO_SINK_Enum_t *pSpk);
 
 /**
 *  @brief  Enable a playback path
@@ -370,13 +354,10 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic, AUDIO
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_EnablePlay(
-				AUDIO_SOURCE_Enum_t 	source,
-				AUDIO_SINK_Enum_t		sink,
-				AUDIO_NUM_OF_CHANNEL_t	numCh,
-				AUDIO_SAMPLING_RATE_t	sr,
-				unsigned int			*pPathID
-				);
+void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
+			AUDIO_SINK_Enum_t sink,
+			AUDIO_NUM_OF_CHANNEL_t numCh,
+			AUDIO_SAMPLING_RATE_t sr, unsigned int *pPathID);
 
 /********************************************************************
 *  @brief  Disable a playback path
@@ -388,11 +369,8 @@ void AUDCTRL_EnablePlay(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_DisablePlay(
-				AUDIO_SOURCE_Enum_t 	source,
-				AUDIO_SINK_Enum_t		sink,
-				unsigned int			pathID
-				);
+void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
+			 AUDIO_SINK_Enum_t sink, unsigned int pathID);
 
 /********************************************************************
 *  @brief  start the stream for audio render
@@ -401,7 +379,7 @@ void AUDCTRL_DisablePlay(
 *
 *  @return Result_t status
 *****************************************************************************/
-Result_t AUDCTRL_StartRender (unsigned int streamID);
+Result_t AUDCTRL_StartRender(unsigned int streamID);
 
 /********************************************************************
 *  @brief  stop the stream for audio render
@@ -410,7 +388,7 @@ Result_t AUDCTRL_StartRender (unsigned int streamID);
 *
 *  @return Result_t status
 *****************************************************************************/
-Result_t AUDCTRL_StopRender (unsigned int streamID);
+Result_t AUDCTRL_StopRender(unsigned int streamID);
 
 /********************************************************************
 *  @brief  Set playback volume
@@ -423,14 +401,10 @@ Result_t AUDCTRL_StopRender (unsigned int streamID);
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetPlayVolume(
-				AUDIO_SOURCE_Enum_t		source,
-				AUDIO_SINK_Enum_t		sink,
-				AUDIO_GAIN_FORMAT_t     gainF,
-				int						vol_left,
-				int						vol_right,
-				unsigned int			pathID
-				);
+void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
+			   AUDIO_SINK_Enum_t sink,
+			   AUDIO_GAIN_FORMAT_t gainF,
+			   int vol_left, int vol_right, unsigned int pathID);
 
 /********************************************************************
 *  @brief  mute/unmute playback
@@ -443,12 +417,9 @@ void AUDCTRL_SetPlayVolume(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetPlayMute(
-				AUDIO_SOURCE_Enum_t 	source,
-				AUDIO_SINK_Enum_t		sink,
-				Boolean					mute,
-				unsigned int			pathID
-				);
+void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
+			 AUDIO_SINK_Enum_t sink,
+			 Boolean mute, unsigned int pathID);
 
 /********************************************************************
 *  @brief  switch speaker of playback
@@ -459,11 +430,8 @@ void AUDCTRL_SetPlayMute(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SwitchPlaySpk(
-				AUDIO_SOURCE_Enum_t 	source,
-				AUDIO_SINK_Enum_t		sink,
-				unsigned int			pathID
-				);
+void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
+			   AUDIO_SINK_Enum_t sink, unsigned int pathID);
 
 /********************************************************************
 *  @brief  Add a speaker to a playback path
@@ -475,11 +443,8 @@ void AUDCTRL_SwitchPlaySpk(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_AddPlaySpk(
-				AUDIO_SOURCE_Enum_t		source,
-				AUDIO_SINK_Enum_t		sink,
-				unsigned int			pathID
-				);
+void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
+			AUDIO_SINK_Enum_t sink, unsigned int pathID);
 
 /********************************************************************
 *  @brief  Remove a speaker to a playback path
@@ -491,12 +456,8 @@ void AUDCTRL_AddPlaySpk(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_RemovePlaySpk(
-                AUDIO_SOURCE_Enum_t     source,
-				AUDIO_SINK_Enum_t		sink,
-				unsigned int			pathID
-				);
-
+void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
+			   AUDIO_SINK_Enum_t sink, unsigned int pathID);
 
 /********************************************************************
 *  @brief  enable a record path
@@ -510,13 +471,10 @@ void AUDCTRL_RemovePlaySpk(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_EnableRecord(
-				AUDIO_SOURCE_Enum_t			source,
-				AUDIO_SINK_Enum_t			sink,
-				AUDIO_NUM_OF_CHANNEL_t		numCh,
-				AUDIO_SAMPLING_RATE_t		sr,
-				unsigned int				*pPathID
-				);
+void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
+			  AUDIO_SINK_Enum_t sink,
+			  AUDIO_NUM_OF_CHANNEL_t numCh,
+			  AUDIO_SAMPLING_RATE_t sr, unsigned int *pPathID);
 
 /********************************************************************
 *  @brief  disable a record path
@@ -528,11 +486,8 @@ void AUDCTRL_EnableRecord(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_DisableRecord(
-				AUDIO_SOURCE_Enum_t		source,
-				AUDIO_SINK_Enum_t		sink,
-				unsigned int			pathID
-				);
+void AUDCTRL_DisableRecord(AUDIO_SOURCE_Enum_t source,
+			   AUDIO_SINK_Enum_t sink, unsigned int pathID);
 
 /**
 *
@@ -542,7 +497,7 @@ void AUDCTRL_DisableRecord(
 *
 *  @return Result_t status
 *****************************************************************************/
-Result_t AUDCTRL_StartCapture (unsigned int streamID);
+Result_t AUDCTRL_StartCapture(unsigned int streamID);
 
 /**
 *
@@ -552,7 +507,7 @@ Result_t AUDCTRL_StartCapture (unsigned int streamID);
 *
 *  @return Result_t status
 *****************************************************************************/
-Result_t AUDCTRL_StopCapture (unsigned int streamID);
+Result_t AUDCTRL_StopCapture(unsigned int streamID);
 
 /********************************************************************
 *  @brief  Set gain of a record path
@@ -566,13 +521,9 @@ s*
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetRecordGain(
-				AUDIO_SOURCE_Enum_t		source,
-                AUDIO_GAIN_FORMAT_t     gainFormat,
-				UInt32					gainL,
-				UInt32					gainR,
-				unsigned int			pathID
-				);
+void AUDCTRL_SetRecordGain(AUDIO_SOURCE_Enum_t source,
+			   AUDIO_GAIN_FORMAT_t gainFormat,
+			   UInt32 gainL, UInt32 gainR, unsigned int pathID);
 
 /********************************************************************
 *  @brief  mute/unmute a record path
@@ -584,11 +535,8 @@ void AUDCTRL_SetRecordGain(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetRecordMute(
-				AUDIO_SOURCE_Enum_t		source,
-				Boolean					mute,
-				unsigned int			pathID
-				);
+void AUDCTRL_SetRecordMute(AUDIO_SOURCE_Enum_t source,
+			   Boolean mute, unsigned int pathID);
 
 /********************************************************************
 *  @brief  add a micophone to a record path
@@ -598,9 +546,7 @@ void AUDCTRL_SetRecordMute(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_AddRecordMic(
-				AUDIO_SOURCE_Enum_t		source
-				);
+void AUDCTRL_AddRecordMic(AUDIO_SOURCE_Enum_t source);
 
 /********************************************************************
 *  @brief  remove a micophone from a record path
@@ -610,10 +556,7 @@ void AUDCTRL_AddRecordMic(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_RemoveRecordMic(
-				AUDIO_SOURCE_Enum_t	source
-				);
-
+void AUDCTRL_RemoveRecordMic(AUDIO_SOURCE_Enum_t source);
 
 /********************************************************************
 *  @brief  enable or disable audio HW loopback
@@ -626,12 +569,9 @@ void AUDCTRL_RemoveRecordMic(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetAudioLoopback(
-				Boolean				enable_lpbk,
-				AUDIO_SOURCE_Enum_t		mic,
-				AUDIO_SINK_Enum_t		speaker,
-				int				sidetone_mode
-			);
+void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
+			      AUDIO_SOURCE_Enum_t mic,
+			      AUDIO_SINK_Enum_t speaker, int sidetone_mode);
 
 /********************************************************************
 *  @brief  Set Arm2Sp Parameter
@@ -642,7 +582,7 @@ void AUDCTRL_SetAudioLoopback(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetArm2spParam( UInt32 mixMode, UInt32 instanceId );
+void AUDCTRL_SetArm2spParam(UInt32 mixMode, UInt32 instanceId);
 
 /********************************************************************
 *  @brief  Configure fm/pcm port
@@ -674,8 +614,7 @@ void AUDCTRL_SetSspTdmMode(Boolean status);
 *  @return none
 *
 ****************************************************************************/
-void  AUDCTRL_EnableBypassVibra(void);
-
+void AUDCTRL_EnableBypassVibra(void);
 
 /********************************************************************
 *  @brief  Disable vibrator in bypass mode
@@ -685,8 +624,7 @@ void  AUDCTRL_EnableBypassVibra(void);
 *  @return none
 *
 ****************************************************************************/
-void  AUDCTRL_DisableBypassVibra(void);
-
+void AUDCTRL_DisableBypassVibra(void);
 
 /********************************************************************
 *  @brief  Set the strength to vibrator in bypass mode
@@ -698,7 +636,7 @@ void  AUDCTRL_DisableBypassVibra(void);
 *  @return none
 *
 ****************************************************************************/
-void  AUDCTRL_SetBypassVibraStrength(UInt32 Strength, int direction);
+void AUDCTRL_SetBypassVibraStrength(UInt32 Strength, int direction);
 
 /********************************************************************
 *  @brief  Set IHF mode
@@ -708,7 +646,7 @@ void  AUDCTRL_SetBypassVibraStrength(UInt32 Strength, int direction);
 *  @return  none
 *
 ****************************************************************************/
-void AUDCTRL_SetIHFmode (Boolean stIHF);
+void AUDCTRL_SetIHFmode(Boolean stIHF);
 
 /********************************************************************
 *  @brief  Set BT mode
@@ -718,34 +656,32 @@ void AUDCTRL_SetIHFmode (Boolean stIHF);
 *  @return  none
 *
 ****************************************************************************/
-void  AUDCTRL_SetBTMode(int mode);
+void AUDCTRL_SetBTMode(int mode);
 
 /********************************************************************
 *  @brief  Hardware register access fucntion
 *
-*  @param  
+*  @param
 *
 *  @return  int
 *
 ****************************************************************************/
-int AUDCTRL_HardwareControl( AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
-		int arg1,
-		int arg2,
-		int arg3
-		);
+int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
+			    int arg1, int arg2, int arg3);
 
-void SetGainOnExternalAmp_mB(AUDIO_SINK_Enum_t speaker, int gain_mB, int left_right);
+void SetGainOnExternalAmp_mB(AUDIO_SINK_Enum_t speaker, int gain_mB,
+			     int left_right);
 
 /**
 *  @brief  This function controls the power on/off the power supply for
-*  		digital mics.
+*	digital mics.
 *
 *  @param  powerOn	(in) TRUE: Power on, FALSE: Power off
 *
 *  @return void
 *
 ****************************************************************************/
-void powerOnDigitalMic( Boolean powerOn );
+void powerOnDigitalMic(Boolean powerOn);
 
 /**
 *  @brief  This function gets the device enum mapping value from source
@@ -772,4 +708,4 @@ CSL_CAPH_DEVICE_e getDeviceFromSink(AUDIO_SINK_Enum_t sink);
 void AUDCTRL_EC(Boolean enable, UInt32 arg);
 void AUDCTRL_NS(Boolean enable);
 
-#endif //#define __AUDIO_CONTROLLER_H__
+#endif /* #define __AUDIO_CONTROLLER_H__ */
