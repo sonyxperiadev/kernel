@@ -88,7 +88,6 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
 {
     struct wd_tapper_platform_data *pltfm_data;
     struct timer_ch_cfg cfg;
-    char name[255];
     unsigned int ch_num;
 
     wd_tapper_data = vmalloc(sizeof(struct wd_tapper_data));
@@ -116,18 +115,21 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
         goto out;
     }
 
-    /* Get the name of the timer */
-    strncpy(name, pltfm_data->name, strlen(pltfm_data->name));
+    if (pltfm_data->name == NULL){
+        dev_err(&pdev->dev, "Timer name passed is NULL.\n");
+        goto out;
+    }
 
     /* Request the timer context */
-	if ( (wd_tapper_data->kt=kona_timer_request (name, ch_num)) < 0) {
+    wd_tapper_data->kt = kona_timer_request (pltfm_data->name, ch_num);
+    if (wd_tapper_data->kt == NULL) {
 		dev_err(&pdev->dev, "kona_timer_request returned error \r\n");
 		goto out;
 	}
 
     /* Populate the timer config */
     cfg.mode = MODE_ONESHOT;
-	cfg.arg  = wd_tapper_data->kt;;
+	cfg.arg  = wd_tapper_data->kt;
 	cfg.cb	 = wd_tapper_callback;
 	cfg.reload = wd_tapper_data->count;
 
@@ -140,6 +142,8 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
     dev_info(&pdev->dev, "Probe Success\n");
     return 0;
 out:
+    dev_err(&pdev->dev, "Probe failed\n");
+    vfree(wd_tapper_data);
     return -1;
 }
 

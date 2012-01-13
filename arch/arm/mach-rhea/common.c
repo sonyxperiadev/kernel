@@ -768,7 +768,7 @@ static struct wd_tapper_platform_data wd_tapper_data = {
     /* Set the count to the time equivalent to the time-out in milliseconds
      * required to pet the PMU watchdog to overcome the problem of reset in
      * suspend*/
-    .count = 32000,
+    .count = 27000,
     .ch_num = 1,
     .name = "aon-timer",
 };
