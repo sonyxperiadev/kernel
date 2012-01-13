@@ -1013,6 +1013,16 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		memcpy(ucontrol->value.integer.value,
 		       pChip->pi32LevelVolume[stream - 1], chn * sizeof(s32));
 		break;
+	case CTL_FUNCTION_SINK_CHG:
+		ucontrol->value.integer.value[0] = 0;
+		ucontrol->value.integer.value[1] = 0;
+		break;
+	case CTL_FUNCTION_HW_CTL:
+		ucontrol->value.integer.value[0] = 0;
+		ucontrol->value.integer.value[1] = 0;
+		ucontrol->value.integer.value[2] = 0;
+		ucontrol->value.integer.value[3] = 0;
+		break;
 	case CTL_FUNCTION_APP_SEL:
 		BCM_AUDIO_DEBUG("CTL_FUNCTION_APP_SEL, current app =%d\n",
 				pChip->i32CurApp);
@@ -1733,13 +1743,13 @@ static struct snd_kcontrol_new sgSndCtrls[] __initdata = {
 	BRCM_MIXER_CTRL_MISC(0, 0, "FM-VOL-LEVEL", 0,
 		CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_FM, 0,
 		CTL_FUNCTION_VOL)),
-	BRCM_MIXER_CTRL_MISC_W(0, 0, "P1-CHG", 0,
+	BRCM_MIXER_CTRL_MISC(0, 0, "P1-CHG", 0,
 		CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0,
 		CTL_FUNCTION_SINK_CHG)),
-	BRCM_MIXER_CTRL_MISC_W(0, 0, "P2-CHG", 0,
+	BRCM_MIXER_CTRL_MISC(0, 0, "P2-CHG", 0,
 		CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0,
 		CTL_FUNCTION_SINK_CHG)),
-	BRCM_MIXER_CTRL_MISC_W(0, 0, "HW-CTL", 0,
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", 0,
 		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "APP-SEL", 0, CAPH_CTL_PRIVATE(1, 1,
 		CTL_FUNCTION_APP_SEL)),
