@@ -90,14 +90,40 @@ void __init early_init_dt_setup_initrd_arch(unsigned long start, unsigned long e
  */
 struct meminfo meminfo;
 
+#define K(x) ((x) << (PAGE_SHIFT-10))
+#ifdef CONFIG_ANDROID_PMEM
+extern void pmem_dump(void);
+#endif
 void show_mem(unsigned int filter)
 {
-	int free = 0, total = 0, reserved = 0;
+	int free = 0, cma_free = 0, non_cma_free = 0, total = 0, reserved = 0;
 	int shared = 0, cached = 0, slab = 0, i;
 	struct meminfo * mi = &meminfo;
+	struct task_struct *p;
+	int tasksize, total_rss = 0;
 
 	printk("Mem-info:\n");
 	show_free_areas(filter);
+
+	printk("Pid      :  Task Name     :   RSS   \n");
+	/* Print each task RSS */
+	read_lock(&tasklist_lock);
+	for_each_process(p) {
+		task_lock(p);
+		if (!p->mm) {
+			task_unlock(p);
+			continue;
+		}
+		tasksize = get_mm_rss(p->mm);
+		task_unlock(p);
+		if (tasksize) {
+			total_rss += tasksize;
+			printk("%08d  %16s   %dkB\n", p->pid, p->comm, K(tasksize));
+		}
+	}
+	read_unlock(&tasklist_lock);
+
+	printk("### Total RSS  : %dkB\n", K(total_rss));
 
 	for_each_bank (i, mi) {
 		struct membank *bank = &mi->bank[i];
@@ -118,8 +144,13 @@ void show_mem(unsigned int filter)
 				cached++;
 			else if (PageSlab(page))
 				slab++;
-			else if (!page_count(page))
+			else if (!page_count(page)) {
 				free++;
+				if (is_migrate_cma(get_pageblock_migratetype(page)))
+					cma_free++;
+				else
+					non_cma_free++;
+			}
 			else
 				shared += page_count(page) - 1;
 			page++;
@@ -128,10 +159,16 @@ void show_mem(unsigned int filter)
 
 	printk("%d pages of RAM\n", total);
 	printk("%d free pages\n", free);
+	printk("%d free CMA pages\n", cma_free);
+	printk("%d free non-CMA pages\n", non_cma_free);
 	printk("%d reserved pages\n", reserved);
 	printk("%d slab pages\n", slab);
 	printk("%d pages shared\n", shared);
 	printk("%d pages swap cached\n", cached);
+
+#ifdef CONFIG_ANDROID_PMEM
+	pmem_dump();
+#endif
 }
 
 #ifdef CONFIG_MEMORY_HOTPLUG

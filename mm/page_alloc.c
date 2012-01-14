@@ -2752,10 +2752,10 @@ void show_free_areas(unsigned int filter)
 
 		printk("%-43s ", "Free pages count per migrate type at order");
 		for (order = 0; order < MAX_ORDER; ++order)
-			printk("%6d ", order);
+			printk("%6lu ", order);
 		printk("\n");
 		for (mtype = 0; mtype < MIGRATE_TYPES; mtype++) {
-			printk("zone %8s, type %12s ",
+			printk("                   zone %8s, type %12s ",
 					zone->name,
 					migratetype_names[mtype]);
 			for (order = 0; order < MAX_ORDER; order++) {

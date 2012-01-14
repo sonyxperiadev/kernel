@@ -1480,6 +1480,70 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	return 0;
 }
 
+void pmem_dump(void)
+{
+	struct list_head *elt, *elt2;
+	struct pmem_data *data;
+	struct pmem_region_node *region_node;
+	struct task_struct *task;
+	int id;
+	unsigned int total = 0;
+
+#if 0
+	if (in_atomic() || in_atomic_preempt_off()) {
+		printk("## Can't dump pmem stats in atomic context !!\n");
+		return;
+	}
+#endif
+	for (id = 0; id < id_count; id++) {
+
+		printk("$$$$$$ For PMEM id (%d) $$$$$$\n", id);
+		printk("process (pid #) : flags | size | range | mapped regions (start, end) (start, end)...\n");
+
+		mutex_lock(&pmem[id].data_list_lock);
+		list_for_each(elt, &pmem[id].data_list) {
+			data = list_entry(elt, struct pmem_data, list);
+			rcu_read_lock();
+			task = find_task_by_pid_ns(data->pid, &init_pid_ns);
+			if (task)
+				get_task_struct(task);
+			rcu_read_unlock();
+			if (!task) {
+				continue;
+			}
+
+			task_lock(task);
+			printk("%-16s (%6u) :", task->comm, data->pid);
+			task_unlock(task);
+			put_task_struct(task);
+
+			printk(" 0x%08x", data->flags);
+			printk(" %08ldkB", pmem_len(id, data) / SZ_1K);
+			total += pmem_len(id, data) / SZ_1K;
+			if (pmem[id].allocator == CMA_ALLOC) {
+				printk(" (0x%08lx-0x%08lx)",
+						PMEM_CMA_START_ADDR(id, data->index),
+						PMEM_CMA_START_ADDR(id, data->index) + data->size);
+			} else {
+				printk(" (0x%08lx-0x%08lx)",
+						PMEM_START_ADDR(id, data->index),
+						PMEM_END_ADDR(id, data->index));
+			}
+			list_for_each(elt2, &data->region_list) {
+				region_node = list_entry(elt2, struct pmem_region_node,
+						list);
+				printk("(%lx,%lx) ", region_node->region.offset,
+						region_node->region.len);
+			}
+			printk("\n");
+		}
+		mutex_unlock(&pmem[id].data_list_lock);
+
+		printk("Total Allocation : %08ldkB\n", total);
+	}
+}
+EXPORT_SYMBOL(pmem_dump);
+
 #if PMEM_DEBUG
 static ssize_t debug_open(struct inode *inode, struct file *file)
 {
@@ -1495,65 +1559,82 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 	struct pmem_region_node *region_node;
 	struct task_struct *task;
 	int id = (int)file->private_data;
-	const int debug_bufmax = 8192;
+	int buf_order = 1;
+	int debug_bufmax;
 	char *buffer;
-	int n = 0, ret;
+	int n, ret;
 
-	buffer = kmalloc(debug_bufmax, GFP_KERNEL);
-	if (!buffer)
-		return -ENOMEM;
 
-	n = scnprintf(buffer, debug_bufmax,
-		      "process (pid #) : flags | size | range | mapped regions (start, end) (start, end)...\n");
+	for (;;) {
+		n = 0;
+		debug_bufmax = PAGE_SIZE * (1 << buf_order);
+		buffer = kmalloc(debug_bufmax, GFP_KERNEL);
+		if (!buffer)
+			return -ENOMEM;
 
-	mutex_lock(&pmem[id].data_list_lock);
-	list_for_each(elt, &pmem[id].data_list) {
-		data = list_entry(elt, struct pmem_data, list);
-		down_read(&data->sem);
-		rcu_read_lock();
-		task = find_task_by_pid_ns(data->pid, &init_pid_ns);
-		if (task)
-			get_task_struct(task);
-		rcu_read_unlock();
-		if (!task) {
-			printk(KERN_WARNING"### pmem allocation found without associated task ####\n");
+		n = scnprintf(buffer, debug_bufmax,
+				"process (pid #) : flags | size | range | mapped regions (start, end) (start, end)...\n");
+
+		mutex_lock(&pmem[id].data_list_lock);
+		list_for_each(elt, &pmem[id].data_list) {
+			data = list_entry(elt, struct pmem_data, list);
+			down_read(&data->sem);
+			rcu_read_lock();
+			task = find_task_by_pid_ns(data->pid, &init_pid_ns);
+			if (task)
+				get_task_struct(task);
+			rcu_read_unlock();
+			if (!task) {
+				printk(KERN_WARNING"### pmem allocation found without associated task ####\n");
+				up_read(&data->sem);
+				continue;
+			}
+
+			task_lock(task);
+			n += scnprintf(buffer + n, debug_bufmax - n, "%-16s (%6u) :",
+					task->comm, data->pid);
+			task_unlock(task);
+			put_task_struct(task);
+
+			n += scnprintf(buffer + n, debug_bufmax - n, " 0x%08x",
+					data->flags);
+			n += scnprintf(buffer + n, debug_bufmax - n, " %08ldkB",
+					pmem_len(id, data) / 1024);
+			if (pmem[id].allocator == CMA_ALLOC) {
+				n += scnprintf(buffer + n, debug_bufmax - n, " (0x%08lx-0x%08lx)",
+						PMEM_CMA_START_ADDR(id, data->index),
+						PMEM_CMA_START_ADDR(id, data->index) + data->size);
+			} else {
+				n += scnprintf(buffer + n, debug_bufmax - n, " (0x%08lx-0x%08lx)",
+						PMEM_START_ADDR(id, data->index),
+						PMEM_END_ADDR(id, data->index));
+			}
+			list_for_each(elt2, &data->region_list) {
+				region_node = list_entry(elt2, struct pmem_region_node,
+						list);
+				n += scnprintf(buffer + n, debug_bufmax - n,
+						"(%lx,%lx) ",
+						region_node->region.offset,
+						region_node->region.len);
+			}
+			n += scnprintf(buffer + n, debug_bufmax - n, "\n");
 			up_read(&data->sem);
+		}
+		mutex_unlock(&pmem[id].data_list_lock);
+		n++;
+		if (n >= debug_bufmax) {
+			buf_order++;
+			if (buf_order > 3) {
+				printk(KERN_WARNING"pmem allocation list is too long, and doesn't fit in 8 pages\n");
+				break;
+			}
+			kfree(buffer);
 			continue;
 		}
 
-		task_lock(task);
-		n += scnprintf(buffer + n, debug_bufmax - n, "%-16s (%6u) :",
-				task->comm, data->pid);
-		task_unlock(task);
-		put_task_struct(task);
-
-		n += scnprintf(buffer + n, debug_bufmax - n, " 0x%08x",
-				data->flags);
-		n += scnprintf(buffer + n, debug_bufmax - n, " %08ldkB",
-				pmem_len(id, data) / 1024);
-		if (pmem[id].allocator == CMA_ALLOC) {
-			n += scnprintf(buffer + n, debug_bufmax - n, " (0x%08lx-0x%08lx)",
-					PMEM_CMA_START_ADDR(id, data->index),
-					PMEM_CMA_START_ADDR(id, data->index) + data->size);
-		} else {
-			n += scnprintf(buffer + n, debug_bufmax - n, " (0x%08lx-0x%08lx)",
-					PMEM_START_ADDR(id, data->index),
-					PMEM_END_ADDR(id, data->index));
-		}
-		list_for_each(elt2, &data->region_list) {
-			region_node = list_entry(elt2, struct pmem_region_node,
-				      list);
-			n += scnprintf(buffer + n, debug_bufmax - n,
-					"(%lx,%lx) ",
-					region_node->region.offset,
-					region_node->region.len);
-		}
-		n += scnprintf(buffer + n, debug_bufmax - n, "\n");
-		up_read(&data->sem);
+		break;
 	}
-	mutex_unlock(&pmem[id].data_list_lock);
 
-	n++;
 	buffer[n] = 0;
 	ret = simple_read_from_buffer(buf, count, ppos, buffer, n);
 	kfree(buffer);
