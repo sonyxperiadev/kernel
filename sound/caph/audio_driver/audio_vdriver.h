@@ -52,7 +52,7 @@ typedef void (*audio_codecId_handler_t) (int codecId);
 	It is product-dependent. */
 #define MIC_NOISE_CANCEL CSL_CAPH_DEV_EANC_DIGI_MIC_R
 
-typedef enum {
+enum _AUDDRV_CP_CMD_en_t {
 		/**
 		AP->CP->DSP cmd to reuse the enum in dspcmd.h
 		AP->CP cmd to be listed here including filter loading.
@@ -78,37 +78,46 @@ typedef enum {
 		AUDDRV_CPCMD_ENABLE_DSP_DTX,
 		AUDDRV_CPCMD_SetULSpeechRecordGain,
 		AUDDRV_CPCMD_PassAudioMode
-} AUDDRV_CP_CMD_en_t;
+};
+#define AUDDRV_CP_CMD_en_t enum _AUDDRV_CP_CMD_en_t
 
-typedef enum AUDDRV_REQUEST_ID_t {
+
+enum _AUDDRV_REQUEST_ID_t {
 		AUDDRV_RATE_CHANGE_REQ,	/* 0x00 */
 		AUDDRV_REQUEST_ID_TOTAL_COUNT
-} AUDDRV_REQUEST_ID_t;
+};
+#define AUDDRV_REQUEST_ID_t enum _AUDDRV_REQUEST_ID_t
+
 
 /**
 * CAPH HW filters
 ***********************************************************************/
-typedef enum {
+enum _AUDDRV_HWCTRL_FILTER_e {
 		AUDDRV_EANC_FILTER1,
 		AUDDRV_EANC_FILTER2,
 		AUDDRV_SIDETONE_FILTER,
-} AUDDRV_HWCTRL_FILTER_e;
+};
+#define AUDDRV_HWCTRL_FILTER_e enum _AUDDRV_HWCTRL_FILTER_e
+
 
 /* audio controller request message structure */
-typedef struct AUDDRV_REQUEST_MSG_t {
+struct _AUDDRV_REQUEST_MSG_t {
 		AUDDRV_REQUEST_ID_t reqID;
 		UInt32 param1;
 		UInt32 param2;
 		UInt32 param3;
-} AUDDRV_REQUEST_MSG_t;
+};
+#define AUDDRV_REQUEST_MSG_t struct _ AUDDRV_REQUEST_MSG_t
 
-typedef enum {
+enum _AudioDrvUserCtrl_t {
 		AUDDRV_USER_NONE,
 		AUDDRV_USER_SP_CTRL,
 		AUDDRV_USER_SP_QUERY,
 		AUDDRV_USER_SP_VAR,
 		AUDDRV_USER_EQ_CTRL,
-} AudioDrvUserCtrl_t;
+};
+#define AudioDrvUserCtrl_t enum _AudioDrvUserCtrl_t
+
 
 #ifndef MAX_NO_OF_BIQUADS
 #define MAX_NO_OF_BIQUADS	12
@@ -117,7 +126,7 @@ typedef enum {
 #define EQ_COEFF_FW_NUM		3
 #define EQ_COEFF_BW_NUM		2
 
-typedef struct {
+struct _EQDlCompfilter_t {
 		Int32 dl_coef_fw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_FW_NUM];
 		Int32 dl_coef_bw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_BW_NUM];
 		Int16 dl_comp_filter_gain_8k[MAX_NO_OF_BIQUADS];
@@ -128,9 +137,11 @@ typedef struct {
 		Int32 dl_output_bit_select_16k;
 		UInt16 dl_nstage_filter;
 		UInt16 reserved;
-} EQDlCompfilter_t;
+};
+#define EQDlCompfilter_t struct _EQDlCompfilter_t
 
-typedef struct {
+
+struct _EQUlCompfilter_t {
 		Int32 ul_coef_fw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_FW_NUM];
 		Int32 ul_coef_bw_8k[MAX_NO_OF_BIQUADS][EQ_COEFF_BW_NUM];
 		Int16 ul_comp_filter_gain_8k[MAX_NO_OF_BIQUADS];
@@ -141,15 +152,18 @@ typedef struct {
 		Int32 ul_output_bit_select_16k;
 		UInt16 ul_nstage_filter;
 		UInt16 reserved;
-} EQUlCompfilter_t;
+};
+#define EQUlCompfilter_t struct _EQUlCompfilter_t
 
-typedef struct {
+
+struct _AudioCompfilter_t {
 		EQDlCompfilter_t dl;
 		EQUlCompfilter_t ul;
-} AudioCompfilter_t;
+};
+#define AudioCompfilter_t struct _AudioCompfilter_t
 
 #ifndef CONFIG_BCM_MODEM
-typedef struct {
+struct _AudioSysParm_t {
 		UInt16 mic_pga;
 		UInt16 voice_volume_max;	/* in dB. */
 		UInt16 dual_mic_enable;
@@ -177,7 +191,8 @@ typedef struct {
 		/* #define COEF_NUM_OF_EACH_GROUP_HW_SIDETONE            8 */
 		/* #define NUM_OF_GROUP_HW_SIDETONE              16	*/
 		Int32 hw_sidetone_eq[8 * 16];
-} AudioSysParm_t;
+};
+#define AudioSysParm_t struct _AudioSysParm_t
 
 #endif
 

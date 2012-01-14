@@ -111,14 +111,15 @@ UInt8 playback_audiotest_srcmixer[165856] = {
 #define TEST_BUF_SIZE   (512 * 1024)
 
 static int sgBrcm_auddrv_TestValues[BRCM_AUDDRV_TESTVAL];
-static char *sgBrcm_auddrv_TestName[] = {"Aud_play", "Aud_Rec", "Aud_control"};
+static char *sgBrcm_auddrv_TestName[] = { "Aud_play",
+		"Aud_Rec", "Aud_control" };
 
 /* SysFS interface to test the Audio driver level API */
 ssize_t Brcm_auddrv_TestSysfs_show(struct device *dev,
-		struct device_attribute *attr, char *buf);
+				   struct device_attribute *attr, char *buf);
 ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count);
+				    struct device_attribute *attr,
+				    const char *buf, size_t count);
 static struct device_attribute Brcm_auddrv_Test_attrib =
 __ATTR(BrcmAud_DrvTest, 0644, Brcm_auddrv_TestSysfs_show,
 	Brcm_auddrv_TestSysfs_store);
@@ -144,7 +145,7 @@ static Boolean AUDDRV_BUFFER_DONE_CB(UInt8 *buf, UInt32 size, UInt32 streamID)
 
 #ifdef CONFIG_VOIP_DRIVER_TEST
 static void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
-	UInt32 Val6);
+			UInt32 Val6);
 #endif
 
 static Semaphore_t AUDDRV_BufDoneSema;
@@ -193,7 +194,7 @@ static void AudDrv_VOIP_FillDL_CB(void *pPrivate, u8 * pDst, u32 nSize)
 //---------------------------------------------------*/
 
 ssize_t Brcm_auddrv_TestSysfs_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
+				   struct device_attribute *attr, char *buf)
 {
 	int i;
 	char sbuf[256];
@@ -202,8 +203,8 @@ ssize_t Brcm_auddrv_TestSysfs_show(struct device *dev,
 		 sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]]);
 
 	for (i = 0; i < (sizeof(sgBrcm_auddrv_TestValues) /
-	     sizeof(sgBrcm_auddrv_TestValues[0])); i++) {
-	snprintf(sbuf, sizeof(sbuf), "%d", sgBrcm_auddrv_TestValues[i]);
+			 sizeof(sgBrcm_auddrv_TestValues[0])); i++) {
+		snprintf(sbuf, sizeof(sbuf), "%d", sgBrcm_auddrv_TestValues[i]);
 		strcat(buf, sbuf);
 	}
 	return strlen(buf);
@@ -222,25 +223,30 @@ ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev,
 				    const char *buf, size_t count)
 {
 
-if (5 != sscanf(buf, "%d %d %d %d %d", &sgBrcm_auddrv_TestValues[0],
-		   &sgBrcm_auddrv_TestValues[1], &sgBrcm_auddrv_TestValues[2],
-		   &sgBrcm_auddrv_TestValues[3],
-		   &sgBrcm_auddrv_TestValues[4])) {
-			BCM_AUDIO_DEBUG(
-"\nBcm_AudDrv_test SysFS :type=%s arg1=%d, arg2=%d, arg3=%d, arg4=%d\n",
-		     sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]],
-		     sgBrcm_auddrv_TestValues[1], sgBrcm_auddrv_TestValues[2],
-		     sgBrcm_auddrv_TestValues[3], sgBrcm_auddrv_TestValues[4]);
-		BCM_AUDIO_DEBUG("error reading buf=%s count=%d\n", buf, count);
+	if (5 != sscanf(buf, "%d %d %d %d %d", &sgBrcm_auddrv_TestValues[0],
+			&sgBrcm_auddrv_TestValues[1],
+			&sgBrcm_auddrv_TestValues[2],
+			&sgBrcm_auddrv_TestValues[3],
+			&sgBrcm_auddrv_TestValues[4])) {
+			BCM_AUDIO_DEBUG("\nBcm_AudDrv_test SysFS :type=%s"
+			" arg1=%d, arg2=%d, arg3=%d, arg4=%d\n",
+			sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]],
+			sgBrcm_auddrv_TestValues[1],
+			sgBrcm_auddrv_TestValues[2],
+			sgBrcm_auddrv_TestValues[3],
+			sgBrcm_auddrv_TestValues[4]);
+			BCM_AUDIO_DEBUG("error reading buf=%s count=%d\n",
+			buf, count);
 		return count;
 	}
 
 	switch (sgBrcm_auddrv_TestValues[0]) {
 	case 1:		/* Aud_play */
 		{
-	BCM_AUDIO_DEBUG
-	("Case 1 (Aud_play): type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d\n",
-		sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0] - 1],
+			BCM_AUDIO_DEBUG("Case 1 (Aud_play): type =%s"
+			" arg1=%d, arg2=%d, arg3=%d, arg4=%d\n",
+			     sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]
+						    - 1],
 			     sgBrcm_auddrv_TestValues[1],
 			     sgBrcm_auddrv_TestValues[2],
 			     sgBrcm_auddrv_TestValues[3],
@@ -250,9 +256,10 @@ if (5 != sscanf(buf, "%d %d %d %d %d", &sgBrcm_auddrv_TestValues[0],
 		}
 	case 2:		/* Aud_rec */
 		{
-	BCM_AUDIO_DEBUG
-	("Case 2 (Aud_Rec): type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d\n",
-		sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0] - 1],
+			BCM_AUDIO_DEBUG("Case 2 (Aud_Rec): type ="
+				"%s arg1=%d, arg2=%d, arg3=%d, arg4=%d\n",
+			     sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]
+						    - 1],
 			     sgBrcm_auddrv_TestValues[1],
 			     sgBrcm_auddrv_TestValues[2],
 			     sgBrcm_auddrv_TestValues[3],
@@ -262,9 +269,10 @@ if (5 != sscanf(buf, "%d %d %d %d %d", &sgBrcm_auddrv_TestValues[0],
 		}
 	case 3:		/* Aud_control */
 		{
-	BCM_AUDIO_DEBUG
-	("case 3 (Aud_Ctrl):type =%s arg1=%d, arg2=%d, arg3=%d, arg4=%d\n",
-		sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0] - 1],
+			BCM_AUDIO_DEBUG("case 3 (Aud_Ctrl):type ="
+				"%s arg1=%d, arg2=%d, arg3=%d, arg4=%d\n",
+			     sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]
+						    - 1],
 			     sgBrcm_auddrv_TestValues[1],
 			     sgBrcm_auddrv_TestValues[2],
 			     sgBrcm_auddrv_TestValues[3],
@@ -325,47 +333,84 @@ static int HandleControlCommand()
 				csl_caph_ControlHWClock(TRUE);
 
 				sprintf(MsgBuf,
-"0x35026800 =0x%08lx, 0x3502c910 =0x%08lx, 0x3502c990 =0x%08lx, 0x3502c900 =0x%08lx,0x3502cc20 =0x%08lx,0x35025800 =0x%08lx, 0x34000a34 =0x%08lx, 0x340004b0 =0x%08lx, 0x3400000c =0x%08lx, 0x3400047c =0x%08lx, 0x34000a40=0x%08lx\n",
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x35026800))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502c910))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502c990))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502c900))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502cc20))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x35025800))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x34000a34))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x340004b0))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3400000c))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3400047c))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x34000a40))));
+					"0x35026800 =0x%08lx, 0x3502c910 =0x%08lx, 0x3502c990 =0x%08lx, 0x3502c900 =0x%08lx,0x3502cc20 =0x%08lx,0x35025800 =0x%08lx, 0x34000a34 =0x%08lx, 0x340004b0 =0x%08lx, 0x3400000c =0x%08lx, 0x3400047c =0x%08lx, 0x34000a40=0x%08lx\n",
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x35026800))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502c910))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502c990))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502c900))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502cc20))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x35025800))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x34000a34))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x340004b0))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3400000c))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3400047c))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT
+					       (0x34000a40))));
 
 				BCM_AUDIO_DEBUG("%s", MsgBuf);
 
 				sprintf(MsgBuf,
-"0x3502f000 =0x%08lx, 04 =0x%08lx, 08 =0x%08lx, 0c =0x%08lx, 10 =0x%08lx, 14 =0x%08lx, 18 =0x%08lx, 1c =0x%08lx, 20 =0x%08lx, 24 =0x%08lx, 28 =0x%08lx, 2c =0x%08lx, 30 =0x%08lx, 34 =0x%08lx, 38 =0x%08lx, 3c =0x%08lx, 40 =0x%08lx, 44 =0x%08lx, 48 =0x%08lx, 4c =0x%08lx,50 =0x%08lx, 54 =0x%08lx, 58 =0x%08lx, 5c =0x%08lx\n",
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f000))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f004))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f008))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f00c))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f010))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f014))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f018))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f01c))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f020))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f024))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f028))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f02c))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f030))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f034))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f038))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f03c))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f040))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f044))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f048))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f04c))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f050))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f054))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f058))),
-				*((UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3502f05c))));
+					"0x3502f000 =0x%08lx, 04 =0x%08lx, 08 =0x%08lx, 0c =0x%08lx, 10 =0x%08lx, 14 =0x%08lx, 18 =0x%08lx, 1c =0x%08lx, 20 =0x%08lx, 24 =0x%08lx, 28 =0x%08lx, 2c =0x%08lx, 30 =0x%08lx, 34 =0x%08lx, 38 =0x%08lx, 3c =0x%08lx, 40 =0x%08lx, 44 =0x%08lx, 48 =0x%08lx, 4c =0x%08lx,50 =0x%08lx, 54 =0x%08lx, 58 =0x%08lx, 5c =0x%08lx\n",
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f000))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f004))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f008))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f00c))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f010))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f014))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f018))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f01c))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f020))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f024))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f028))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f02c))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f030))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f034))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f038))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f03c))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f040))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f044))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f048))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f04c))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f050))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f054))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT(0x3502f058))),
+					*((UInt32
+					   *) (HW_IO_PHYS_TO_VIRT
+					       (0x3502f05c))));
 
 				BCM_AUDIO_DEBUG("%s", MsgBuf);
 
@@ -380,7 +425,7 @@ static int HandleControlCommand()
 		{
 			BCM_AUDIO_DEBUG(" Enable telephony\n");
 			AUDCTRL_EnableTelephony(AUDIO_SOURCE_ANALOG_MAIN,
-					AUDIO_SINK_HANDSET);
+						AUDIO_SINK_HANDSET);
 
 			BCM_AUDIO_DEBUG(" Telephony enabled\n");
 		}
@@ -392,13 +437,13 @@ static int HandleControlCommand()
 			BCM_AUDIO_DEBUG(" Telephony disabled\n");
 		}
 		break;
-#ifdef CONFIG_VOIP_DRIVER_TEST /* VoIP loopback test */
+#ifdef CONFIG_VOIP_DRIVER_TEST	/* VoIP loopback test */
 	case 6:
 		{
 			/* Val2 - Mic
-			//Val3 - speaker
-			//Val4 - Delay
-			//Val5 - Codectype */
+			   //Val3 - speaker
+			   //Val4 - Delay
+			   //Val5 - Codectype */
 
 			AUDTST_VoIP(sgBrcm_auddrv_TestValues[2],
 				    sgBrcm_auddrv_TestValues[3], 2000,
@@ -412,8 +457,7 @@ static int HandleControlCommand()
 			UInt32 regVal = 0;
 			BCM_AUDIO_DEBUG(" peek a register, 0x%08lx\n", regAddr);
 			csl_caph_ControlHWClock(TRUE);
-			regVal =
-			    *((UInt32 *)(HW_IO_PHYS_TO_VIRT(regAddr)));
+			regVal = *((UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)));
 			BCM_AUDIO_DEBUG("		value = 0x%08lx\n",
 					regVal);
 			csl_caph_ControlHWClock(FALSE);
@@ -425,12 +469,11 @@ static int HandleControlCommand()
 			UInt32 regAddr = sgBrcm_auddrv_TestValues[2];
 			UInt32 regVal = sgBrcm_auddrv_TestValues[3];
 			csl_caph_ControlHWClock(TRUE);
-			*((UInt32 *)(HW_IO_PHYS_TO_VIRT(regAddr))) =
-			    regVal;
+			*((UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))) = regVal;
 			BCM_AUDIO_DEBUG(" poke a register, 0x%08lx = 0x%08lx\n",
 					regAddr,
 					*((UInt32
-					   *)(HW_IO_PHYS_TO_VIRT(regAddr))));
+					   *) (HW_IO_PHYS_TO_VIRT(regAddr))));
 			csl_caph_ControlHWClock(FALSE);
 		}
 		break;
@@ -441,40 +484,42 @@ static int HandleControlCommand()
 		{
 			UInt32 regVal;
 
-	BCM_AUDIO_DEBUG(" hard code caph clock register for debugging..\n");
+			BCM_AUDIO_DEBUG(" hard code caph clock register"
+				" for debugging..\n");
 			csl_caph_ControlHWClock(TRUE);
 			regVal = (0x00A5A5 <<
-			     KHUB_CLK_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
+				  KHUB_CLK_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
 			regVal |= KHUB_CLK_MGR_REG_WR_ACCESS_CLKMGR_ACC_MASK;
 /*
-WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET),regVal);
+		WRITE_REG32((HUB_CLK_BASE_ADDR+
+		KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET),regVal);
 */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET))
 			 = (UInt32) regVal);
-			while (((*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			while (((*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
 				KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET)))
 				& 0x01) == 1) {
 			}
 
 			/* Set the frequency policy */
 			regVal = (0x06 <<
-			     KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY0_FREQ_SHIFT);
+			KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY0_FREQ_SHIFT);
 			regVal |= (0x06 <<
-			     KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT);
+			KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT);
 			regVal |= (0x06 <<
-			     KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY2_FREQ_SHIFT);
+			KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY2_FREQ_SHIFT);
 			regVal |= (0x06 <<
-			     KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY3_FREQ_SHIFT);
+			KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY3_FREQ_SHIFT);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY_FREQ_OFFSET) ,regVal);
 */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_POLICY_FREQ_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_POLICY_FREQ_OFFSET))
 			 = (UInt32) regVal);
 
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET))
 			 = (UInt32) 0x0000FFFF);
 
 			/* Set the frequency policy */
@@ -482,76 +527,77 @@ WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY_FREQ_OFFSET) ,regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET) ,regVal);
 */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY1_MASK1_OFFSET) ,regVal);
 */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_POLICY1_MASK1_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_POLICY1_MASK1_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY2_MASK1_OFFSET) ,regVal);
 */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_POLICY2_MASK1_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_POLICY2_MASK1_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY3_MASK1_OFFSET) ,regVal);
 */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_POLICY3_MASK1_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_POLICY3_MASK1_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY0_MASK2_OFFSET) ,regVal);
 */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_POLICY0_MASK2_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_POLICY0_MASK2_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY1_MASK2_OFFSET) ,regVal);
 */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_POLICY1_MASK2_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_POLICY1_MASK2_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY2_MASK2_OFFSET) ,regVal);
 */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_POLICY2_MASK2_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_POLICY2_MASK2_OFFSET))
 			 = (UInt32) regVal);
 /*
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY3_MASK2_OFFSET) ,regVal);
 */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_POLICY3_MASK2_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_POLICY3_MASK2_OFFSET))
 			 = (UInt32) regVal);
 
 			/* start the frequency policy */
-		/* KHUB_CLK_MGR_REG_POLICY_CTL_GO_MASK
-		| KHUB_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK; */
+			/* KHUB_CLK_MGR_REG_POLICY_CTL_GO_MASK
+			   | KHUB_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK; */
 			regVal = 0x00000003;
-/*
-WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET) ,regVal);
-*/
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET))
+
+			/* WRITE_REG32((HUB_CLK_BASE_ADDR+
+		KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET) ,regVal); */
+
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET))
 			 = (UInt32) regVal);
-			while (((*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			while (((*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
 				KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET)))
 				& 0x01) == 1) {
 			}
 
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET))
 			 = (UInt32) 0x0000FFFF);
 
 			/* mdelay(1000); */
 
 			/* srcMixer clock */
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET))
 			 = (UInt32) 0x00000011);
 /*
 while ( ((*((UInt32 *)
@@ -559,8 +605,8 @@ while ( ((*((UInt32 *)
 == 0x00100000) {}
 */
 
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET))
 			 = (UInt32) 0x00100000);
 /*
 while ( ((*((UInt32 *)
@@ -577,16 +623,16 @@ regVal |= KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_VAL_MASK;
 WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET) ,regVal);
 */
 #endif
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET))
 			 = (UInt32) 0x1030);
 
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
 			KHUB_CLK_MGR_REG_DAP_SWITCH_CLKGATE_OFFSET))
 			 = (UInt32) 0x1);
 
-			(*((UInt32 *)(KONA_HUB_CLK_BASE_VA +
-			KHUB_CLK_MGR_REG_APB10_CLKGATE_OFFSET))
+			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
+				       KHUB_CLK_MGR_REG_APB10_CLKGATE_OFFSET))
 			 = (UInt32) 0x1);
 
 			csl_caph_ControlHWClock(FALSE);
@@ -653,12 +699,14 @@ static int HandlePlayCommand()
 		{
 			src_used = 0;
 			if (sgBrcm_auddrv_TestValues[2] == 0) {
-				if (sgBrcm_auddrv_TestValues[3] == 0)	{
-			BCM_AUDIO_DEBUG(" Playback of sample 48KHz Mono\n");
+				if (sgBrcm_auddrv_TestValues[3] == 0) {
+					BCM_AUDIO_DEBUG(" Playback of sample"
+					" 48KHz Mono\n");
 					samplePCM16_inaudiotest =
-						(char *)playback_audiotest;
+					    (char *)playback_audiotest;
 				} else if (sgBrcm_auddrv_TestValues[3] == 1) {
-	BCM_AUDIO_DEBUG(" Playback of sample 8KHz Mono : use HW SRC mixer\n");
+					BCM_AUDIO_DEBUG(" Playback of sample"
+					" 8KHz Mono : use HW SRC mixer\n");
 					samplePCM16_inaudiotest =
 					    (char *)playback_audiotest_srcmixer;
 					src_used = 1;
@@ -670,8 +718,8 @@ static int HandlePlayCommand()
 					samplePCM16_inaudiotest =
 					    (char *)record_test_buf;
 				} else
-				BCM_AUDIO_DEBUG
-				(" record buffer freed: record data to play\n");
+					BCM_AUDIO_DEBUG(" record buffer freed:"
+					" record data to play\n");
 			}
 		}
 		break;
@@ -680,7 +728,7 @@ static int HandlePlayCommand()
 			BCM_AUDIO_DEBUG(" Audio DDRIVER Config\n");
 			/* set the callback */
 			/* AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,
-			(void*)AUDIO_DRIVER_TEST_InterruptPeriodCB); */
+			   (void*)AUDIO_DRIVER_TEST_InterruptPeriodCB); */
 			cbParams.pfCallBack =
 			    AUDIO_DRIVER_TEST_InterruptPeriodCB;
 			cbParams.pPrivateData = (void *)drv_handle;
@@ -785,8 +833,9 @@ static int HandlePlayCommand()
 					   drv_config.sample_rate, &testint);
 
 			AUDCTRL_SetPlayVolume(AUDIO_SOURCE_MEM, spkr,
-			AUDIO_GAIN_FORMAT_mB, 0x00, 0x00, 0);
-			/* 0 db for both L and R channels.*/
+					      AUDIO_GAIN_FORMAT_mB, 0x00, 0x00,
+					      0);
+			/* 0 db for both L and R channels. */
 
 			AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_START,
 					  &aud_dev);
@@ -808,16 +857,18 @@ static int HandlePlayCommand()
 #ifdef CONFIG_ARM2SP_PLAYBACK_TEST
 	case 5:
 		{
-		/* val2 -> 0  ,
-		val3 -> VORENDER_TYPE  0- EP_OUT (ARM2SP) , 1 - HS, 2 - IHF
-		Val4 -   0 - playback
-		Val5 - Sampling rate  0 -> playback of 8K PCM
-		Val6  - Mix mode CSL_ARM2SP_VOICE_MIX_MODE_t
-		*/
+			/* val2 -> 0  ,
+			   val3 -> VORENDER_TYPE  0- EP_OUT (ARM2SP) ,
+				1 - HS, 2 - IHF
+			   Val4 -   0 - playback
+			   Val5 - Sampling rate  0 -> playback of 8K PCM
+			   Val6  - Mix mode CSL_ARM2SP_VOICE_MIX_MODE_t
+			 */
 
-	/* AUDTST_VoicePlayback(AUDIO_SINK_HANDSET,0, 0 , VORENDER_PLAYBACK_DL,
-	VORENDER_VOICE_MIX_NONE ); */
-		AUDTST_VoicePlayback(0, sgBrcm_auddrv_TestValues[2],
+			/* AUDTST_VoicePlayback(AUDIO_SINK_HANDSET,
+			0, 0 , VORENDER_PLAYBACK_DL,
+			   VORENDER_VOICE_MIX_NONE ); */
+			AUDTST_VoicePlayback(0, sgBrcm_auddrv_TestValues[2],
 			sgBrcm_auddrv_TestValues[3], VORENDER_PLAYBACK_DL,
 			sgBrcm_auddrv_TestValues[4]);	/* play to DL */
 		}
@@ -885,7 +936,7 @@ static int HandleCaptCommand()
 
 		}
 		break;
-	/* configure capture device */
+		/* configure capture device */
 	case 2:
 		{
 			BCM_AUDIO_DEBUG(" Audio Capture DDRIVER Config\n");
@@ -972,7 +1023,7 @@ static int HandleCaptCommand()
 			BCM_AUDIO_DEBUG(" Audio DDRIVER Config Complete\n");
 		}
 		break;
-	/* Start the capture */
+		/* Start the capture */
 	case 3:
 		{
 
@@ -1028,7 +1079,7 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate)
 	char *src;
 	char *dest;
 
-	/* BCM_AUDIO_DEBUG(" %lx: capture Interrupt- %d\n",jiffies);*/
+	/* BCM_AUDIO_DEBUG(" %lx: capture Interrupt- %d\n",jiffies); */
 
 	if ((current_capt_buffer_index + capt_period_bytes) >= TEST_BUF_SIZE)
 		current_capt_buffer_index = 0;
@@ -1045,8 +1096,8 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate)
 		capt_dma_buffer_read_index = 0;
 
 	/* BCM_AUDIO_DEBUG(
-	" current_capt_buffer_index %d: capt_dma_buffer_read_index- %d\n",
-		current_capt_buffer_index,capt_dma_buffer_read_index); */
+	   " current_capt_buffer_index %d: capt_dma_buffer_read_index- %d\n",
+	   current_capt_buffer_index,capt_dma_buffer_read_index); */
 
 	return;
 }
@@ -1073,15 +1124,15 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 		AUDIO_NUM_OF_CHANNEL_t stereo = AUDIO_CHANNEL_MONO;
 
 		/* for rhea from here */
-		if (Val3 == 0)	{
+		if (Val3 == 0) {
 			drvtype = VORENDER_TYPE_PCM_ARM2SP;
 			/* earpiece */
 			speaker = AUDIO_SINK_HANDSET;
-		} else if (Val3 == 1)	{
+		} else if (Val3 == 1) {
 			drvtype = VORENDER_TYPE_PCM_ARM2SP;
 			/* headset */
 			speaker = AUDIO_SINK_HEADSET;
-		} else if (Val3 == 2)	{
+		} else if (Val3 == 2) {
 			drvtype = VORENDER_TYPE_PCM_ARM2SP;
 			/* ihf */
 			speaker = AUDIO_SINK_LOUDSPK;
@@ -1093,7 +1144,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 				"\n debug 1, stereo =%d drvtype =%d\n", stereo,
 				drvtype);
 		AUDCTRL_EnableTelephony(AUDIO_SOURCE_ANALOG_MAIN,
-			AUDIO_SINK_HANDSET);
+					AUDIO_SINK_HANDSET);
 
 		AUDCTRL_SetPlayVolume(AUDIO_SOURCE_MEM,
 				      speaker, AUDIO_GAIN_FORMAT_mB, 0, 0, 0);
@@ -1103,24 +1154,25 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 
 		AUDDRV_VoiceRender_SetBufDoneCB(drvtype, AUDDRV_BUFFER_DONE_CB);
 		/* 1= dl, 2 = ul, 3 =both
-		0 = none, 1= dl, 2 = ul, 3 =both */
+		   0 = none, 1= dl, 2 = ul, 3 =both */
 		playbackMode = VORENDER_PLAYBACK_DL;
 		mixMode = (CSL_ARM2SP_VOICE_MIX_MODE_t) Val6;
 
 		if (Val6 == 10)
-			setTransfer = TRUE; /* set buffer transfer */
+			setTransfer = TRUE;	/* set buffer transfer */
 
 		if (Val4 == 0) {
-			if (sr == AUDIO_SAMPLING_RATE_8000)	{
+			if (sr == AUDIO_SAMPLING_RATE_8000) {
 				dataSrc = &playback_audiotest_srcmixer[0];
 				totalSize = sizeof(playback_audiotest_srcmixer);
 				frameSize = (sr * 2 * 2) / 50;	/* 20 msec */
 
 				/* start writing data */
 				AUDDRV_VoiceRender_SetConfig(drvtype,
-					playbackMode,
-					mixMode, sr,
-					VP_SPEECH_MODE_LINEAR_PCM_8K, 0, 0);
+						playbackMode,
+						mixMode, sr,
+						VP_SPEECH_MODE_LINEAR_PCM_8K,
+						0, 0);
 			} else if (sr == AUDIO_SAMPLING_RATE_16000) {
 				dataSrc = &playback_audiotest_srcmixer[0];
 				totalSize = sizeof(playback_audiotest_srcmixer);
@@ -1130,7 +1182,8 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 				AUDDRV_VoiceRender_SetConfig(drvtype,
 					playbackMode,
 					mixMode, sr,
-					VP_SPEECH_MODE_LINEAR_PCM_16K, 0, 0);
+					VP_SPEECH_MODE_LINEAR_PCM_16K,
+					0, 0);
 			}
 		}
 		finishedSize = 0;
@@ -1145,7 +1198,8 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 		writeSize = frameSize;
 		AUDDRV_VoiceRender_Write(drvtype, dataSrc, writeSize);
 
-	/* The AUDDRV_BUFFER_DONE_CB callback will release the buffer size. */
+		/* The AUDDRV_BUFFER_DONE_CB callback will release
+		 the buffer size. */
 		while (OSSEMAPHORE_Obtain(AUDDRV_BufDoneSema, 2 * 1000) ==
 		       OSSTATUS_SUCCESS) {
 
@@ -1163,20 +1217,20 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 			AUDDRV_VoiceRender_Write(drvtype, dataSrc, writeSize);
 
 			Log_DebugPrintf(LOGID_AUDIO,
-			"\n debug 2: writeSize = 0x%x, finishedSize = 0x%x\n",
-				(unsigned int)writeSize,
-				(unsigned int)finishedSize);
+					"\n debug 2: writeSize = 0x%x, finishedSize = 0x%x\n",
+					(unsigned int)writeSize,
+					(unsigned int)finishedSize);
 
 		}
 
 		Log_DebugPrintf(LOGID_AUDIO,
-		"\n debug 7: writeSize = 0x%x, finishedSize = 0x%x\n",
-			(unsigned int)writeSize,
-			(unsigned int)finishedSize);
+				"\n debug 7: writeSize = 0x%x, finishedSize = 0x%x\n",
+				(unsigned int)writeSize,
+				(unsigned int)finishedSize);
 
 		/* finish all the data
-		// stop the driver
-		// TRUE= immediately stop */
+		   // stop the driver
+		   // TRUE= immediately stop */
 		AUDDRV_VoiceRender_Stop(drvtype, TRUE);
 
 		/* need to give time to dsp to stop. */
@@ -1199,13 +1253,13 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 		 UInt32 Val6)
 {
 	/* Val2 : mic
-	// Val3: speaker
-	// Val4: delay in miliseconds
-	// Val5: codec value, i.e. 4096 (0x1000, PCM), 8192 (0x2000, FR),
-	12288 (0x3000, AMR475), 20480 (0x5000, PCM_16K),
-	24576 (0x6000 AMR_16K), etc
-	// val6: n/a
-	*/
+	   // Val3: speaker
+	   // Val4: delay in miliseconds
+	   // Val5: codec value, i.e. 4096 (0x1000, PCM), 8192 (0x2000, FR),
+	   12288 (0x3000, AMR475), 20480 (0x5000, PCM_16K),
+	   24576 (0x6000 AMR_16K), etc
+	   // val6: n/a
+	 */
 	UInt8 *dataDest = NULL;
 	UInt32 vol = 0;
 	AudioMode_t mode = AUDIO_MODE_HANDSET;
@@ -1232,7 +1286,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 		AUDCTRL_SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
 #else
 		/* set the audio mode; need to update the audio app and mode.
-		shared with voice call for now */
+		   shared with voice call for now */
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
 #endif
 	}
@@ -1265,24 +1319,26 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 
 	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_START, &codecVal);
 
-	/* Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: debug 1\n");*/
+	/* Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: debug 1\n"); */
 
 	count = delayMs / 20;
 
-	/* Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: debug 2\n");*/
-	/* Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: Test loopback\n");*/
+	/* Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: debug 2\n"); */
+	/* Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: Test loopback\n"); */
 	/* test with loopback UL to DL */
 	while (1) {
 		if (count1++ == 1000) {
 			count1 = 0;
 			break;
 		}
-	/*Log_DebugPrintf(LOGID_AUDIO, "\n VoIP:debug 3,count1 %d\n", count1);*/
+		/*Log_DebugPrintf(LOGID_AUDIO, "\n VoIP:debug 3,count1 %d\n",
+		count1); */
 
 		OSSEMAPHORE_Obtain(sVtQueue_Sema, TICKS_FOREVER);
 		if (count) {
 			count--;
-	/* Log_DebugPrintf(LOGID_AUDIO, "\n VoIP:debug 4 count %d\n", count);*/
+		/* Log_DebugPrintf(LOGID_AUDIO,
+		 "\n VoIP:debug 4 count %d\n", count); */
 			continue;
 		}
 		OSSEMAPHORE_Obtain(AUDDRV_BufDoneSema, 2 * 1000);
@@ -1292,7 +1348,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	pr_info("\n VoIP: Finished\n");
 
 	/* finish all the data
-	// stop the driver */
+	   // stop the driver */
 	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_STOP, NULL);
 
 	pr_info("\n VoIP: Stop\n");

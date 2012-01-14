@@ -112,7 +112,8 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 #if !defined(USE_NEW_AUDIO_PARAM)
 		AUDCTRL_GetSrcSinkByMode(Params[1], &mic, &spk);
 		pCurSel[0] =
-	pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].iLineSelect[0];
+		    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
+				     1].iLineSelect[0];
 		pCurSel[1] =
 		    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
 				     1].iLineSelect[1];
@@ -124,7 +125,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				 1].iLineSelect[1] = spk;
 		AUDCTRL_SetAudioMode(Params[1]);
 		BCM_AUDIO_DEBUG(" %s mic %d spk %d mode %ld\n", __func__,
-		mic, spk, Params[1]);
+				mic, spk, Params[1]);
 #endif
 		break;
 
@@ -145,7 +146,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 
 	case 10:		/* at*maudmode=10  --> get loopback path */
 		/* Per PCG request
-		if (loopback_output > 2) loopback_output = 2; */
+		   if (loopback_output > 2) loopback_output = 2; */
 
 		Params[0] = loopback_input;
 		Params[1] = loopback_output;
@@ -153,18 +154,19 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				__func__, loopback_input, loopback_output);
 		break;
 
-	/* at*maudmode=11,x,y  --> set loopback path. */
-	/* mic: 0 = default mic, 1 = main mic */
-	/* spk: 0 = handset, 1 = headset, 2 = loud speaker */
+		/* at*maudmode=11,x,y  --> set loopback path. */
+		/* mic: 0 = default mic, 1 = main mic */
+		/* spk: 0 = handset, 1 = headset, 2 = loud speaker */
 	case 11:
 		loopback_input = Params[1];
 		loopback_output = Params[2];
 		sidetone_mode = Params[3];
 
 		if (((loopback_input > 6) && (loopback_input != 11)) ||
-			((loopback_output > 2) && (loopback_output != 9) && 
-			(loopback_output != 4))) {
-		BCM_AUDIO_DEBUG("%s srr/sink exceeds its range.\n", __func__);
+		    ((loopback_output > 2) && (loopback_output != 9) &&
+		     (loopback_output != 4))) {
+			BCM_AUDIO_DEBUG("%s srr/sink exceeds its range.\n",
+					__func__);
 			rtn = -1;
 			break;
 		}
@@ -183,7 +185,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				sidetone_mode);
 		break;
 
-	case 12:	/* at*maudmode=12  --> disable loopback path*/
+	case 12:		/* at*maudmode=12  --> disable loopback path */
 		loopback_status = 0;
 		AUDCTRL_SetAudioLoopback(FALSE, loopback_input, loopback_output,
 					 sidetone_mode);
@@ -194,124 +196,163 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		break;
 
 	case 13:		/* at*maudmode=13  --> Get call ID */
-		BCM_AUDIO_DEBUG("%s get call ID is not supported\n",
-				__func__);
+		BCM_AUDIO_DEBUG("%s get call ID is not supported\n", __func__);
 		rtn = -1;
 		break;
-
-	case 14:	/* at*maudmode=14  --> read current mode and app */
+	/* at*maudmode=14  --> read current mode and app */
+	case 14:
 #if defined(USE_NEW_AUDIO_PARAM)
-        Params[0] = AUDCTRL_GetAudioApp();
+		Params[0] = AUDCTRL_GetAudioApp();
 		Params[1] = AUDCTRL_GetAudioMode();
-		BCM_AUDIO_DEBUG("%s app %ld mode %ld\n", 
-                __FUNCTION__, Params[0], Params[1]);
+		BCM_AUDIO_DEBUG("%s app %ld mode %ld\n",
+				__func__, Params[0], Params[1]);
 #endif
 		break;
-
-	case 15:	/* at*maudmode=15  --> set current mode and app */
+	/* at*maudmode=15  --> set current mode and app */
+	case 15:
 #if defined(USE_NEW_AUDIO_PARAM)
 		AUDCTRL_GetSrcSinkByMode(Params[2], &mic, &spk);
-        pCurSel[0] = pChip->
-            streamCtl[CTL_STREAM_PANEL_VOICECALL-1].
-            iLineSelect[0]; /*save current setting*/
-        pCurSel[1] = pChip->
-            streamCtl[CTL_STREAM_PANEL_VOICECALL-1].
-            iLineSelect[1];
+		pCurSel[0] = pChip->streamCtl[
+			CTL_STREAM_PANEL_VOICECALL - 1].iLineSelect[0];
+		/* save current setting */
+		pCurSel[1] = pChip->
+		    streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].iLineSelect[1];
 
-        /* Update 'VC-SEL' -- */
-		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].
-            iLineSelect[0] = mic;
-		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].
-            iLineSelect[1] = spk;
-        AUDCTRL_SetAudioMode( Params[2], Params[1]);
-        BCM_AUDIO_DEBUG("%s mic %d spk %d mode %ld app %ld\n", 
-                __FUNCTION__, mic,spk,Params[2], Params[1]);
-#endif    
+		/* Update 'VC-SEL' -- */
+		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].
+		    iLineSelect[0] = mic;
+		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].
+		    iLineSelect[1] = spk;
+		AUDCTRL_SetAudioMode(Params[2], Params[1]);
+		BCM_AUDIO_DEBUG("%s mic %d spk %d mode %ld app %ld\n",
+				__func__, mic, spk, Params[2],
+				Params[1]);
+#endif
 		break;
 
 	case 99:		/* at*maudmode=99  --> stop tuning */
 		break;
 
-	/* at*maudmode=100  --> set external audio amplifer gain in PMU */
-	/* PCG and loadcal currently use Q13p2 gain format */
+		/* at*maudmode=100  --> set external audio
+		 amplifer gain in PMU */
+		/* PCG and loadcal currently use Q13p2 gain format */
 	case 100:
 #ifdef CONFIG_BCMPMU_AUDIO
-{
-	PMU_AudioGainMapping_t pmu_gain;
-	short gain;
+		{
+			PMU_AudioGainMapping_t pmu_gain;
+			short gain;
 
-	gain = (short)Params[3];
+			gain = (short)Params[3];
 
-	if (Params[1] == 3) {
+			if (Params[1] == 3) {
 
-	BCM_AUDIO_DEBUG("Params[2] = %d, Params[3] %d, audio mode %d \n",
-		(int)Params[3], (int)Params[2], AUDDRV_GetAudioMode());
+				BCM_AUDIO_DEBUG("Params[2] = %d, "
+					"Params[3] %d, audio mode %d\n",
+				     (int)Params[3], (int)Params[2],
+				     AUDDRV_GetAudioMode());
 
-		
-	   if ((Params[2] == PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL) ||
-		(Params[2] == PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
+				if ((Params[2] ==
+				     PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+				    || (Params[2] ==
+					PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
 #if defined(USE_NEW_AUDIO_PARAM)
-		if ((AUDDRV_GetAudioMode() == AUDIO_MODE_HEADSET) ||
-		(AUDDRV_GetAudioMode() == AUDIO_MODE_TTY)) {
+					if ((AUDDRV_GetAudioMode() ==
+					     AUDIO_MODE_HEADSET)
+					    || (AUDDRV_GetAudioMode() ==
+						AUDIO_MODE_TTY)) {
 #else
-		if ((AUDDRV_GetAudioMode() == AUDIO_MODE_HEADSET) ||
-		(AUDDRV_GetAudioMode() == AUDIO_MODE_HEADSET_WB) ||
-		(AUDDRV_GetAudioMode() == AUDIO_MODE_TTY) ||
-		(AUDDRV_GetAudioMode() == AUDIO_MODE_TTY_WB)) {
+					if ((AUDDRV_GetAudioMode() ==
+					     AUDIO_MODE_HEADSET)
+					    || (AUDDRV_GetAudioMode() ==
+						AUDIO_MODE_HEADSET_WB)
+					    || (AUDDRV_GetAudioMode() ==
+						AUDIO_MODE_TTY)
+					    || (AUDDRV_GetAudioMode() ==
+						AUDIO_MODE_TTY_WB)) {
 #endif
-			AUDIO_PMU_IHF_POWER(FALSE);
-			AUDIO_PMU_HS_POWER(TRUE);
-			BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d\n",
-				__func__, gain);
-			pmu_gain = map2pmu_hs_gain(25 * gain);
-			BCM_AUDIO_DEBUG
-			("%s ext headset speaker gain = %d after lookup\n",
-				__func__, pmu_gain.PMU_gain_enum);
+						AUDIO_PMU_IHF_POWER(FALSE);
+						AUDIO_PMU_HS_POWER(TRUE);
+						BCM_AUDIO_DEBUG
+						    ("%s ext headset "
+						"speaker gain = %d\n",
+						     __func__, gain);
+						pmu_gain =
+						    map2pmu_hs_gain(25 * gain);
+						BCM_AUDIO_DEBUG("%s ext headset"
+						" speaker gain = %d "
+						"after lookup\n",
+						     __func__,
+						     pmu_gain.PMU_gain_enum);
 
-			if (Params[2] == PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
-				AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_LEFT,
-					pmu_gain.PMU_gain_enum);
-		    else if (Params[2] == PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)
-				AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_RIGHT,
-					pmu_gain.PMU_gain_enum);
-		}
+						if (Params[2] ==
+					PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+							AUDIO_PMU_HS_SET_GAIN
+							    (PMU_AUDIO_HS_LEFT,
+							     pmu_gain.
+							     PMU_gain_enum);
+						else if (Params[2] ==
+					PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)
+							AUDIO_PMU_HS_SET_GAIN
+							    (PMU_AUDIO_HS_RIGHT,
+							     pmu_gain.
+							     PMU_gain_enum);
+					}
 #if defined(USE_NEW_AUDIO_PARAM)
-		else if (AUDDRV_GetAudioMode() == AUDIO_MODE_SPEAKERPHONE) {
+					else if (AUDDRV_GetAudioMode() ==
+						 AUDIO_MODE_SPEAKERPHONE) {
 #else
-		else if ((AUDDRV_GetAudioMode() == AUDIO_MODE_SPEAKERPHONE) ||
-		(AUDDRV_GetAudioMode() == AUDIO_MODE_SPEAKERPHONE_WB)) {
+					else if ((AUDDRV_GetAudioMode() ==
+						  AUDIO_MODE_SPEAKERPHONE)
+						 || (AUDDRV_GetAudioMode()
+						== AUDIO_MODE_SPEAKERPHONE_WB)
+						){
 #endif
-			AUDIO_PMU_HS_POWER(FALSE);
-			AUDIO_PMU_IHF_POWER(TRUE);
-			BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d\n",
-				__func__, gain);
-			pmu_gain = map2pmu_ihf_gain(25 * gain);
+						AUDIO_PMU_HS_POWER(FALSE);
+						AUDIO_PMU_IHF_POWER(TRUE);
+						BCM_AUDIO_DEBUG("%s ext IHF "
+						"speaker gain = %d\n",
+						     __func__, gain);
+						pmu_gain =
+						    map2pmu_ihf_gain(25 * gain);
 
-			BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d\n",
-				__func__, pmu_gain.PMU_gain_enum);
-			AUDIO_PMU_IHF_SET_GAIN(pmu_gain.PMU_gain_enum);
-		}
+						BCM_AUDIO_DEBUG("%s ext IHF "
+						"speaker gain = %d\n",
+						     __func__,
+						     pmu_gain.PMU_gain_enum);
+						AUDIO_PMU_IHF_SET_GAIN(pmu_gain.
+							PMU_gain_enum);
+					}
 
-	   } /* Params[2] checking */
+				}
+				/* Params[2] checking */
+				BCM_AUDIO_DEBUG
+				    ("Params[2] = %d, Params[3] %d,"
+					" audio mode %d\n",
+				     (int)Params[3], (int)Params[2],
+				     AUDDRV_GetAudioMode());
 
-		 BCM_AUDIO_DEBUG("Params[2] = %d, Params[3] %d, audio mode %d \n",
-			 (int)Params[3], (int)Params[2], AUDDRV_GetAudioMode());
-	
-		 if (Params[2] == PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
+				if (Params[2]
+					== PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
 #if defined(USE_NEW_AUDIO_PARAM)
-			  if (AUDDRV_GetAudioMode() == AUDIO_MODE_SPEAKERPHONE) {
+					if (AUDDRV_GetAudioMode() ==
+					    AUDIO_MODE_SPEAKERPHONE) {
 #else
-			  if ((AUDDRV_GetAudioMode() == AUDIO_MODE_SPEAKERPHONE) ||
-			  (AUDDRV_GetAudioMode() == AUDIO_MODE_SPEAKERPHONE_WB)) {
+					if ((AUDDRV_GetAudioMode() ==
+					     AUDIO_MODE_SPEAKERPHONE)
+					    || (AUDDRV_GetAudioMode() ==
+						AUDIO_MODE_SPEAKERPHONE_WB)) {
 #endif
-				  BCM_AUDIO_DEBUG("ext IHF high gain mode = %d\n",
-					  (int)Params[3]);
-				  AUDIO_PMU_HI_GAIN_MODE_EN((int)Params[3]);
-			  }
-		  }
+						BCM_AUDIO_DEBUG
+						("ext IHF high gain "
+						"mode = %d\n",
+						 (int)Params[3]);
+						AUDIO_PMU_HI_GAIN_MODE_EN(
+							(int)Params[3]);
+					}
+				}
 
-	} /* if (Params[1] == 3) */
-} /* case 100 */
+			}	/* if (Params[1] == 3) */
+		}		/* case 100 */
 #endif
 
 		break;
@@ -368,8 +409,8 @@ int AtMaudLog(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			BCM_AUDIO_DEBUG("\n Couldnt setup channel\n");
 			rtn = -1;
 		}
-		BCM_AUDIO_DEBUG(
-"%s start log on stream %ld, capture pt %ld, consumer %ld.\n",
+		BCM_AUDIO_DEBUG("%s start log on stream %ld, "
+				"capture pt %ld, consumer %ld.\n",
 		     __func__, Params[1], Params[2], Params[3]);
 		break;
 
@@ -404,7 +445,7 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			Params[3], Params[4], Params[5], ParamCount);
 
 	/* test command 100/101 is to control the HW clock.
-	In this case, dont enable the clock */
+	   In this case, dont enable the clock */
 	if (Params[0] != 100 && Params[0] != 101)
 		csl_caph_ControlHWClock(TRUE);
 
@@ -422,14 +463,14 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 					Params[2], Params[1]);
 			break;
 
-	case 3:		/*at*maudtst 3 mode app: set mode and app*/
+	case 3:		/*at*maudtst 3 mode app: set mode and app */
 			AUDCTRL_GetSrcSinkByMode(Params[1], &mic, &spk);
 			pCurSel[0] =
-			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
-					1].iLineSelect[0];
+			    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
+					     1].iLineSelect[0];
 			pCurSel[1] =
-			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
-					1].iLineSelect[1];
+			    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
+					     1].iLineSelect[1];
 
 			/* Update 'VC-SEL' -- */
 			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
@@ -446,32 +487,32 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		}
 #endif
 	case 25:
-		AUDCTRL_SetPlayVolume(AUDIO_SOURCE_MEM, Params[1], /* spk */
-					AUDIO_GAIN_FORMAT_mB,
-					Params[2],	/* left volume */
-					Params[3],	/* right volume */
-					0);
+		AUDCTRL_SetPlayVolume(AUDIO_SOURCE_MEM, Params[1],/* spk */
+			AUDIO_GAIN_FORMAT_mB, Params[2],/* left volume */
+				      Params[3],	/* right volume */
+				      0);
 
 		BCM_AUDIO_DEBUG("Set speaker volume left %ld right %ld\n",
 				Params[2], Params[3]);
 		break;
 
 		/* typedef enum AUDIO_SINK_Enum_t {
-		!     AUDIO_SINK_HANDSET,
-		!     AUDIO_SINK_HEADSET,
-		!     AUDIO_SINK_HANDSFREE,
-		!     AUDIO_SINK_BTM,  //Bluetooth HFP
-		!     AUDIO_SINK_LOUDSPK,
-		!     AUDIO_SINK_TTY,
-		!     AUDIO_SINK_HAC,
-		!     AUDIO_SINK_USB,
-		!     AUDIO_SINK_BTS,  //Bluetooth A2DP
-		!     AUDIO_SINK_I2S,
-		!     AUDIO_SINK_VIBRA,
-		**/
+		   !     AUDIO_SINK_HANDSET,
+		   !     AUDIO_SINK_HEADSET,
+		   !     AUDIO_SINK_HANDSFREE,
+		   !     AUDIO_SINK_BTM,  //Bluetooth HFP
+		   !     AUDIO_SINK_LOUDSPK,
+		   !     AUDIO_SINK_TTY,
+		   !     AUDIO_SINK_HAC,
+		   !     AUDIO_SINK_USB,
+		   !     AUDIO_SINK_BTS,  //Bluetooth A2DP
+		   !     AUDIO_SINK_I2S,
+		   !     AUDIO_SINK_VIBRA,
+		   * */
 	case 26:
-		AUDCTRL_SetPlayMute(AUDIO_SOURCE_UNDEFINED,
-			Params[1], Params[2], 0); /* spk, mute flag 1 - mute */
+		AUDCTRL_SetPlayMute(
+		AUDIO_SOURCE_UNDEFINED, Params[1], Params[2], 0);
+		/* spk, mute flag 1 - mute */
 
 		if (Params[2] == 0)
 			BCM_AUDIO_DEBUG("Set speaker un-mute\n");
@@ -481,34 +522,35 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		break;
 
 		/* AT*MAUDTST=32, p2, p3
-		!
-		! Function:    Mute / un-mute microphone of an operation.
-		!
-		! Params:      p2 : operation
-		!                      p3 = mute flag
-		!                                1 - mute
-		!                                0 - un-mute
-		**/
+		   !
+		   ! Function:    Mute / un-mute microphone of an operation.
+		   !
+		   ! Params:      p2 : operation
+		   !                      p3 = mute flag
+		   !                                1 - mute
+		   !                                0 - un-mute
+		   * */
 	case 32:
 		AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_UNDEFINED,
-			(Boolean) Params[2]);
+					    (Boolean) Params[2]);
 		break;
 
 	case 33:
 		AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_UNDEFINED,
-			Params[1], AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN);
+					       Params[1],
+				AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN);
 		break;
 	case 34:
 		AUDCTRL_SetPlayVolume(AUDIO_SOURCE_I2S,
-			AUDIO_SINK_LOUDSPK,
+				      AUDIO_SINK_LOUDSPK,
 			AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE,
-			Params[1], 0, 0);
+				      Params[1], 0, 0);
 		break;
 	case 35:
 		AUDCTRL_SetPlayVolume(AUDIO_SOURCE_I2S,
-			AUDIO_SINK_HEADSET,
+				      AUDIO_SINK_HEADSET,
 			AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE,
-			Params[1], 0, 0);
+				      Params[1], 0, 0);
 		break;
 /*
  * There is errors in this case. XXX_Get_CP_AudioMode() does not
@@ -517,14 +559,14 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
  * Comment it out for now. And it may be removed.
 	case 37:
 #if defined(USE_NEW_AUDIO_PARAM)
-        Params[1] = AUDDRV_Get_CP_AudioMode() / AUDIO_MODE_NUMBER;
-        Params[2] = AUDDRV_Get_CP_AudioMode() % AUDIO_MODE_NUMBER;
-		BCM_AUDIO_DEBUG("CP audio app %d, mode %d\n",
-				Params[1], Params[2]);
+	Params[1] = AUDDRV_Get_CP_AudioMode() / AUDIO_MODE_NUMBER;
+	Params[2] = AUDDRV_Get_CP_AudioMode() % AUDIO_MODE_NUMBER;
+	BCM_AUDIO_DEBUG("CP audio app %d, mode %d\n",
+			Params[1], Params[2]);
 #else
-        Params[1] = AUDDRV_Get_CP_AudioMode();
-		BCM_AUDIO_DEBUG("CP audio mode %d\n",
-				Params[1]);
+	Params[1] = AUDDRV_Get_CP_AudioMode();
+	BCM_AUDIO_DEBUG("CP audio mode %d\n",
+			Params[1]);
 #endif
 		break;
 */
@@ -544,17 +586,19 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		break;
 
 	case 121:
-	/*at*maudtst=121,x,y  x=0: EXT_SPEAKER_PGA, x=1:EXT_SPEAKER_PREPGA,
+		/*
+		at*maudtst=121,x,y  x=0: EXT_SPEAKER_PGA,
+		x=1:EXT_SPEAKER_PREPGA,
 		x=2: MIC_PGA, y: gain value register value(enum value) */
-	/*PCG on Rhea platform uses at*maudmode=100,3, */
+		/* PCG on Rhea platform uses at*maudmode=100,3, */
 		break;
 
-	case 500:		/*at*maudtst=500,*/
-	   {
-		char *address;
-		unsigned int value = 0, gain1 = 0, gain2 = 0,
-			gain3 = 0, gain4 = 0;
-		unsigned int index;
+	case 500:		/*at*maudtst=500, */
+		{
+			char *address;
+			unsigned int value = 0, gain1 = 0, gain2 = 0,
+			    gain3 = 0, gain4 = 0;
+			unsigned int index;
 
 #define CHAL_CAPH_SRCM_MAX_FIFOS      15
 #define SRCMIXER_A	SRCMIXER_SRC_M1D1_CH1M_GAIN_CTRL_OFFSET
@@ -562,575 +606,605 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 /* 4 bytes */
 #define SRCMIXER_MIX_CH_GAIN_CTRL_OFFSET  ((SRCMIXER_A - SRCMIXER_B)/4)
 
-		address = (char *)ioremap_nocache(
-		(UInt32)(AUDIOH_BASE_ADDR + AUDIOH_AUDIORX_VRX1_OFFSET),
-			sizeof(UInt32));
-		if (!address) {
-			pr_err(" address ioremap failed\n");
-			return 0;
-		}
-
-		value = ioread32(address);
-
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &= (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_GAINCTRL_MASK);
-		gain1 >>= (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_GAINCTRL_SHIFT);
-
-		pr_err("AUDIOH_AUDIORX_VRX1=0x%x, AMIC_PGA=0x%x\n",
-			value, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(AUDIOH_BASE_ADDR + AUDIOH_VIN_FILTER_CTRL_OFFSET),
-			sizeof(UInt32));
-		if (!address) {
-			pr_err(" address ioremap failed\n");
-			return 0;
-		}
-
-		value = ioread32(address);
-
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &= (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_BIT_SEL_MASK);
-		gain1 >>= (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_BIT_SEL_SHIFT);
-
-		gain2 = value;
-		gain2 &= (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_MASK);
-		gain2 >>= (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_SHIFT);
-
-		gain3 = value;
-		gain3 &= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_BIT_SEL_MASK);
-		gain3 >>= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_BIT_SEL_SHIFT);
-
-		gain4 = value;
-		gain4 &= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_MASK);
-		gain4 >>= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_SHIFT);
-
-		pr_err(" AUDIOH_VIN_FILTER_CTRL=0x%x\n", value);
-		pr_err("DMIC1_CIC_BIT_SEL=0x%x, DMIC1_CIC_FINE=0x%x\n",
-			gain1, gain2);
-		pr_err("DMIC2_CIC_BIT_SEL=0x%x, DMIC2_CIC_FINE_SCL=0x%x\n",
-			gain3, gain4);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(AUDIOH_BASE_ADDR + AUDIOH_NVIN_FILTER_CTRL_OFFSET),
-			sizeof(UInt32));
-		if (!address) {
-			pr_err(" address ioremap failed\n");
-			return 0;
-		}
-
-		value = ioread32(address);
-
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &= (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_BIT_SEL_MASK);
-		gain1 >>= (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_BIT_SEL_SHIFT);
-
-		gain2 = value;
-		gain2 &= (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_MASK);
-		gain2 >>= (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_SHIFT);
-
-		gain3 = value;
-		gain3 &= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_BIT_SEL_MASK);
-		gain3 >>= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_BIT_SEL_SHIFT);
-
-		gain4 = value;
-		gain4 &= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_MASK);
-		gain4 >>= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_SHIFT);
-
-		pr_err(" AUDIOH_VIN_FILTER_CTRL=0x%x\n", value);
-		pr_err("DMIC3_CIC_BIT_SEL=0x%x, DMIC3_CIC_FINE=0x%x\n",
-		gain1, gain2);
-		pr_err("DMIC4_CIC_BIT_SEL=0x%x, DMIC4_CIC_FINE_SCL=0x%x\n",
-		gain3, gain4);
-
-		address = (char *)ioremap_nocache((UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		if (!address) {
-			pr_err(" address ioremap failed\n");
-			return 0;
-		}
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-		"MIXER 1 D0, channel 1, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-			(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D0, channel 2, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D0_CH3M_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D0, channel 3, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D0_CH4M_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D0, channel 4, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D0_CH5L_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D0, channel 5 left, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D0_CH5R_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D0, channel 5 right, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-			gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D0_CH6L_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D0, channel 6 left, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-			gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D0_CH6R_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D0, channel 6 right, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D0_CH7L_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D0, channel 7 left, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-			gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D0_CH7R_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D0, channel 7 right, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-			gain2, gain1);
-
-		/********/
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D1_CH1M_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D1, channel 1, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-			gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D1_CH2M_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D1, channel 2, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-			gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D1_CH3M_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D1, channel 3, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-			gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D1_CH4M_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D1, channel 4, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-			gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D1_CH5L_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D1, channel 5 left, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D1_CH5R_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D1, channel 5 right, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D1_CH6L_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D1, channel 6 left, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D1_CH6R_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D1, channel 6 right, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D1_CH7L_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D1, channel 7 left, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		address = (char *)ioremap_nocache(
-		(UInt32)(SRCMIXER_BASE_ADDR +
-			SRCMIXER_SRC_M1D1_CH7R_GAIN_CTRL_OFFSET),
-			sizeof(UInt32));
-		value = ioread32(address);
-		iounmap(address);
-
-		gain1 = value;
-		gain1 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
-		gain1 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
-
-		gain2 = value;
-		gain2 &=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
-		gain2 >>=
-	(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
-
-		pr_err(
-	"MIXER 1 D1, channel 7 right, Target_Gain=0x%x, Gain_RampStep=0x%x\n",
-		gain2, gain1);
-
-		/**********/
-	for (index = 0x00000160; index <= 0x00000270; index = index + 4) {
-			address = (char *)ioremap_nocache(
-				(UInt32)(SRCMIXER_BASE_ADDR + index),
+			address = (char *)ioremap_nocache((UInt32)
+						(AUDIOH_BASE_ADDR +
+						AUDIOH_AUDIORX_VRX1_OFFSET),
+						sizeof(UInt32));
+			if (!address) {
+				pr_err(" address ioremap failed\n");
+				return 0;
+			}
+
+			value = ioread32(address);
+
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+			    (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_GAINCTRL_MASK);
+			gain1 >>=
+			    (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_GAINCTRL_SHIFT);
+
+			pr_err("AUDIOH_AUDIORX_VRX1=0x%x, AMIC_PGA=0x%x\n",
+			       value, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+						(AUDIOH_BASE_ADDR +
+						AUDIOH_VIN_FILTER_CTRL_OFFSET),
+						sizeof(UInt32));
+			if (!address) {
+				pr_err(" address ioremap failed\n");
+				return 0;
+			}
+
+			value = ioread32(address);
+
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+			    (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_BIT_SEL_MASK);
+			gain1 >>=
+			    (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_BIT_SEL_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+			    (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_MASK);
+			gain2 >>=
+			    (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_SHIFT);
+
+			gain3 = value;
+			gain3 &=
+			    (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_BIT_SEL_MASK);
+			gain3 >>=
+			    (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_BIT_SEL_SHIFT);
+
+			gain4 = value;
+			gain4 &=
+			    (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_MASK);
+			gain4 >>=
+			    (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_SHIFT);
+
+			pr_err(" AUDIOH_VIN_FILTER_CTRL=0x%x\n", value);
+			pr_err("DMIC1_CIC_BIT_SEL=0x%x, DMIC1_CIC_FINE=0x%x\n",
+			       gain1, gain2);
+			pr_err("DMIC2_CIC_BIT_SEL=0x%x, "
+				"DMIC2_CIC_FINE_SCL=0x%x\n",
+			     gain3, gain4);
+
+			address = (char *)ioremap_nocache((UInt32)
+						(AUDIOH_BASE_ADDR +
+						AUDIOH_NVIN_FILTER_CTRL_OFFSET),
+						sizeof(UInt32));
+			if (!address) {
+				pr_err(" address ioremap failed\n");
+				return 0;
+			}
+
+			value = ioread32(address);
+
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+			    (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_BIT_SEL_MASK);
+			gain1 >>=
+			    (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_BIT_SEL_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+			    (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_MASK);
+			gain2 >>=
+			    (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_SHIFT);
+
+			gain3 = value;
+			gain3 &=
+			    (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_BIT_SEL_MASK);
+			gain3 >>=
+			    (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_BIT_SEL_SHIFT);
+
+			gain4 = value;
+			gain4 &=
+			    (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_MASK);
+			gain4 >>=
+			    (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_SHIFT);
+
+			pr_err(" AUDIOH_VIN_FILTER_CTRL=0x%x\n", value);
+			pr_err("DMIC3_CIC_BIT_SEL=0x%x, DMIC3_CIC_FINE=0x%x\n",
+			       gain1, gain2);
+			pr_err("DMIC4_CIC_BIT_SEL=0x%x, "
+				"DMIC4_CIC_FINE_SCL=0x%x\n",
+			     gain3, gain4);
+
+			address =
+			    (char *)
+			    ioremap_nocache((UInt32)
+					    (SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_OFFSET),
+					    sizeof(UInt32));
+			if (!address) {
+				pr_err(" address ioremap failed\n");
+				return 0;
+			}
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D0, channel 1, Target_Gain"
+				"=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_OFFSET),
 				sizeof(UInt32));
 			value = ioread32(address);
 			iounmap(address);
-			pr_err(
-			"SRCMIXER_BASE_ADDR + offset 0x%x, value = 0x%x\n",
-				index, value);
-		}
 
-		} /* 500 cmd */
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D0, channel 2, Target_Gain"
+				"=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D0_CH3M_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D0, channel 3, Target_Gain"
+				"=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D0_CH4M_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D0, channel 4, Target_Gain"
+				"=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D0_CH5L_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D0, channel 5 left, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D0_CH5R_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D0, channel 5 right, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D0_CH6L_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D0, channel 6 left, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D0_CH6R_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D0, channel 6 right, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D0_CH7L_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D0, channel 7 left, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D0_CH7R_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D0, channel 7 right, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+		/********/
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D1_CH1M_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_SRC_M1D0_CH1M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D1, channel 1, Target_Gain"
+				"=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D1_CH2M_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D1, channel 2, Target_Gain"
+				"=0x%x, Gain_RampStep=0x%x\n",
+				gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D1_CH3M_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D1, channel 3, Target_Gain"
+				"=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D1_CH4M_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D1, channel 4, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D1_CH5L_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D1, channel 5 left, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+				(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D1_CH5R_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D1, channel 5 right, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+					(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D1_CH6L_GAIN_CTRL_OFFSET),
+					sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D1, channel 6 left, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+					(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D1_CH6R_GAIN_CTRL_OFFSET),
+					sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D1, channel 6 right, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+					(SRCMIXER_BASE_ADDR +
+				   SRCMIXER_SRC_M1D1_CH7L_GAIN_CTRL_OFFSET),
+					sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D1, channel 7 left, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+			address = (char *)ioremap_nocache((UInt32)
+					(SRCMIXER_BASE_ADDR +
+				SRCMIXER_SRC_M1D1_CH7R_GAIN_CTRL_OFFSET),
+				sizeof(UInt32));
+			value = ioread32(address);
+			iounmap(address);
+
+			gain1 = value;
+			gain1 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_MASK);
+			gain1 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_GAIN_RAMPSTEP_SHIFT);
+
+			gain2 = value;
+			gain2 &=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_MASK);
+
+			gain2 >>=
+(SRCMIXER_SRC_M1D0_CH2M_GAIN_CTRL_SRC_M1D0_CH2M_TARGET_GAIN_SHIFT);
+
+			pr_err("MIXER 1 D1, channel 7 right, "
+				"Target_Gain=0x%x, Gain_RampStep=0x%x\n",
+			     gain2, gain1);
+
+		/**********/
+			for (index = 0x00000160; index <= 0x00000270;
+			     index = index + 4) {
+				address =
+				    (char *)
+				    ioremap_nocache((UInt32)
+						    (SRCMIXER_BASE_ADDR +
+						     index), sizeof(UInt32));
+				value = ioread32(address);
+				iounmap(address);
+				pr_err("SRCMIXER_BASE_ADDR + offset 0x%x, "
+					"value = 0x%x\n",
+				     index, value);
+			}
+
+		}		/* 500 cmd */
 		break;
 	case 1000:		/*at*maudtst=1000,addr,len */
 		{
-		u32 value, index, phy_addr, size;
-		char *addr;
+			u32 value, index, phy_addr, size;
+			char *addr;
 
 			if (Params[2] == 0)
 				size = 1;
@@ -1145,9 +1219,9 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				return 0;
 			}
 
-			pr_err(
-		"Read phy_addr 0x%08x (virtual %p), size = 0x%08x bytes\n",
-				phy_addr, addr, size << 2);
+			pr_err("Read phy_addr 0x%08x (virtual %p), "
+				"size = 0x%08x bytes\n",
+			     phy_addr, addr, size << 2);
 			iounmap(addr);
 
 			for (index = 0; index < size; index++) {
@@ -1155,7 +1229,8 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				if (addr) {
 					value = ioread32(addr);
 					iounmap(addr);
-				pr_err("[%08x] = %08x\n", phy_addr, value);
+					pr_err("[%08x] = %08x\n", phy_addr,
+					       value);
 				}
 				phy_addr += 4;
 			}
@@ -1196,19 +1271,21 @@ int AtMaudVol(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		    AUDCTRL_GetTelephonySpkrVolume(AUDIO_GAIN_FORMAT_mB);
 		Params[0] = Params[0] / 100;	/* dB */
 		Params[0] += AUDIO_GetParmAccessPtr()[mode].voice_volume_max;
-/* Range 0~36 dB shown in PCG */
-/*
-pVolume = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
-Params[0] = pVolume[0];
-*/
+		/* Range 0~36 dB shown in PCG */
+		/*
+		pVolume = pChip->streamCtl[
+		CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
+		Params[0] = pVolume[0];
+		*/
 		BCM_AUDIO_DEBUG("%s pVolume[0] %ld\n", __func__, Params[0]);
 		return 0;
 
 	case 7:		/* at*maudvol=7,x    Range 0~36 dB in PCG */
 		mode = AUDCTRL_GetAudioMode();
-	/*
-	mode = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1];
-	*/
+		/*
+		   mode = pChip->streamCtl[
+			CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1];
+		 */
 		pVolume =
 		    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
 				     1].ctlLine[mode].iVolume;
@@ -1218,7 +1295,8 @@ Params[0] = pVolume[0];
 		vol -= AUDIO_GetParmAccessPtr()[mode].voice_volume_max;
 		/* Range -36 ~ 0 dB in DSP */
 		AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_UNDEFINED,
-		(vol * 100), AUDIO_GAIN_FORMAT_mB);
+					       (vol * 100),
+					       AUDIO_GAIN_FORMAT_mB);
 
 		BCM_AUDIO_DEBUG("%s pVolume[0] %d mode=%d vol %d\n",
 				__func__, pVolume[0], mode, vol);
@@ -1247,8 +1325,8 @@ int AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t *pChip,
 {
 	int rtn = 0;
 
-	BCM_AUDIO_DEBUG(
-	"AT-AUD-put ctl=%ld ParamCount= %ld [%ld %ld %ld %ld %ld %ld %ld]\n",
+	BCM_AUDIO_DEBUG("AT-AUD-put ctl=%ld ParamCount= %ld "
+		"[%ld %ld %ld %ld %ld %ld %ld]\n",
 	     cmdIndex, ParamCount, Params[0], Params[1], Params[2], Params[3],
 	     Params[4], Params[5], Params[6]);
 
@@ -1319,8 +1397,8 @@ int AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t *pChip,
 	    sizeof(pChip->i32AtAudHandlerParms[0]);
 	int rtn = 0;
 
-	BCM_AUDIO_DEBUG(
-"AT-AUD-get ctl=%ld ParamCount= %ld [%ld %ld %ld %ld %ld %ld %ld]\n",
+	BCM_AUDIO_DEBUG("AT-AUD-get ctl=%ld ParamCount= %ld "
+		"[%ld %ld %ld %ld %ld %ld %ld]\n",
 	     cmdIndex, ParamCount, Params[0], Params[1], Params[2], Params[3],
 	     Params[4], Params[5], Params[6]);
 

@@ -39,14 +39,16 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "log.h"
 
 /* If this struct is changed then please change xdr_Audio_Params_t() also. */
-typedef struct {
+struct _Audio_Params_t {
 	UInt32 param1;
 	UInt32 param2;
 	UInt32 param3;
 	UInt32 param4;
 	UInt32 param5;
 	UInt32 param6;
-} Audio_Params_t;
+};
+#define Audio_Params_t struct _Audio_Params_t
+
 
 /* FRAMEWORK CODE */
 #if defined(CONFIG_BCM_MODEM)	/* for AP only without MODEM (CP, DSP) */
