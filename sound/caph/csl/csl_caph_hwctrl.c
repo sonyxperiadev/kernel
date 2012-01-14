@@ -3706,13 +3706,13 @@ void csl_caph_hwctrl_setDSPSharedMemForIHF(UInt32 addr)
 
 void csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_MODE_Enum_t mode, Boolean enable_vibrator)
 {
-
+	Boolean bClk = csl_caph_QueryHWClock();
 	UInt32 strength = 0;
 
 	// Bypass mode
 	if(mode == 0)
 	{
-		if(enable_vibrator) csl_caph_ControlHWClock(TRUE);
+		if(!bClk) csl_caph_ControlHWClock(TRUE); /* enable clock if it is not enabled. */
 		chal_audio_vibra_set_bypass(lp_handle, enable_vibrator);
 		chal_audio_vibra_write_fifo(lp_handle, &strength, 1, TRUE);
 		chal_audio_vibra_set_dac_pwr(lp_handle, enable_vibrator);
@@ -3962,7 +3962,7 @@ static void csl_caph_hwctrl_set_srcmixer_filter(CSL_CAPH_HWConfig_Table_t *audio
 {
     if(!audioPath) return;
     if((audioPath->source == CSL_CAPH_DEV_DSP)
-        ||(audioPath->sink == CSL_CAPH_DEV_DSP))
+        ||(audioPath->sink[0] == CSL_CAPH_DEV_DSP))
         //csl_caph_srcmixer_set_minimum_filter(audioPath->routeConfig.inChnl);
         csl_caph_srcmixer_set_minimum_filter( audioPath->srcmRoute[0][0].inChnl );
     else
