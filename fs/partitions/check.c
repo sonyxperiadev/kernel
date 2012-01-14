@@ -44,7 +44,7 @@ extern void md_autodetect_dev(dev_t dev);
 #endif
 
 #ifdef CONFIG_APANIC_ON_MMC
-extern void mmc_panic_copy_dev_name(char *dev_path);
+extern void mmc_panic_copy_dev_name(char *dev_path, int dev_num);
 #endif
 
 int warn_no_part = 1; /*This is ugly: should make genhd removable media aware*/
@@ -691,6 +691,7 @@ rescan:
 			    strlen(CONFIG_APANIC_PLABEL)) == 0) {
 			struct device *ddev = disk_to_dev(disk);
 			char *dname, *blk_name;
+			int dev_num = -1;
 
 			dname = (char *)dev_name(ddev);
 			blk_name = kzalloc(BDEVNAME_SIZE, GFP_KERNEL);
@@ -698,12 +699,13 @@ rescan:
 			if (!blk_name)
 				continue;
 
-			if (isdigit(dname[strlen(dname) - 1]))
+			if (isdigit(dname[strlen(dname) - 1])) {
 				sprintf(blk_name, "%sp%d", dname, part->partno);
-			else
+				dev_num = dname[strlen(dname) - 1] - '0';
+			} else
 				sprintf(blk_name, "%s%d", dname, part->partno);
 
-			mmc_panic_copy_dev_name(blk_name);
+			mmc_panic_copy_dev_name(blk_name, dev_num);
 
 			kfree(blk_name);
 		}

@@ -431,11 +431,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-#ifdef CONFIG_APANIC_ON_MMC
-	if (hw_cfg->devtype == SDIO_DEV_TYPE_EMMC)
-		mmc_poll_stack_device(hw_cfg->id);
-#endif
-
 	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!iomem) {
 		ret = -ENOMEM;

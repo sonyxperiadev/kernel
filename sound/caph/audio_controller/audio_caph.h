@@ -222,12 +222,11 @@ struct __BRCM_AUDIO_Param_RateChange_t {
 
 };
 
-typedef struct
-{
+typedef struct {
 	int aud_app;
 	int aud_mode;
 
-}BRCM_AUDIO_Param_SetApp_t;
+} BRCM_AUDIO_Param_SetApp_t;
 
 #define BRCM_AUDIO_Param_RateChange_t struct __BRCM_AUDIO_Param_RateChange_t
 union __BRCM_AUDIO_Control_Params_un_t {

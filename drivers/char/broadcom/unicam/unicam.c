@@ -89,7 +89,7 @@ static void __iomem *csr_base = NULL;
 static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
 
 typedef struct {
-	struct semaphore irq_sem;
+    struct completion irq_sem;
 	cam_isr_reg_status_st_t unicam_isr_reg_status;
 	unsigned int irq_pending;
 	unsigned int irq_start;
@@ -133,7 +133,7 @@ static irqreturn_t unicam_isr(int irq, void *dev_id)
 		if (dev->irq_pending == 0) {
 			dev->unicam_isr_reg_status.rx_status = rx_status;
 			dev->unicam_isr_reg_status.image_intr = image_intr;
-			up(&dev->irq_sem);
+            complete(&dev->irq_sem);
 		}
 		dev->irq_pending++;
 	}
@@ -151,7 +151,7 @@ static int unicam_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = dev;
 
-	sema_init(&dev->irq_sem, 0);
+    init_completion(&dev->irq_sem);
 	dev->irq_pending = 0;
 	dev->irq_start = 0;
 
@@ -241,7 +241,8 @@ static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		interrupt_irq = 0;
 		dev->irq_start = 1;
 		dbg_print("UNICAM: Waiting for interrupt\n");
-		if (down_interruptible(&dev->irq_sem)) {
+        if (wait_for_completion_interruptible(&dev->irq_sem))
+        {
 			disable_irq(IRQ_UNICAM);
 			return -ERESTARTSYS;
 		}
@@ -259,7 +260,7 @@ static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		interrupt_irq = 1;
 		printk(KERN_ERR"Interrupting irq ioctl\n");
 		if (dev->irq_pending == 0) {
-			up(&dev->irq_sem);
+            complete(&dev->irq_sem);
 			dev->irq_pending = 1;
 		}
 		break;

@@ -90,20 +90,31 @@ static struct bcmpmu_charge_zone chrg_zone[] = {
 
 static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 /* This table is default data, the reak data is from board file*/
-/*	volt		capacity*/
-	{4150,		100},
-	{4100,		95},
-	{4050,		90},
-	{4000,		85},
-	{3950,		80},
-	{3900,		75},
-	{3850,		65},
-	{3800,		55},
-	{3750,		45},
-	{3700,		25},
-	{3650,		15},
-	{3550,		5},
-	{3350,		2},
+/*	volt	capacity*/
+	{4160, 100},
+	{4130, 95},
+	{4085, 90},
+	{4040, 85},
+	{3986, 80},
+	{3948, 75},
+	{3914, 70},
+	{3877, 65},
+	{3842, 60},
+	{3815, 55},
+	{3794, 50},
+	{3776, 45},
+	{3761, 40},
+	{3751, 35},
+	{3742, 30},
+	{3724, 25},
+	{3684, 20},
+	{3659, 15},
+	{3612, 10},
+	{3565, 8},
+	{3507, 6},
+	{3430, 4},
+	{3340, 2},
+	{3236, 0},
 };
 
 struct bcmpmu_em {
@@ -123,6 +134,7 @@ struct bcmpmu_em {
 	int fg_capacity;
 	int fg_cal;
 	int cap_delta;
+	int cap_init;
 	int mode;
 	int pollrate;
 	int chrgr_curr;
@@ -242,6 +254,50 @@ static int get_fg_delta(struct bcmpmu *bcmpmu, int *delta)
 	}
 	*delta = (int)temp;
 	pr_em(FLOW, "%s, fg delta read: %d, 0x%X\n", __func__, *delta, data);
+	return ret;
+}
+
+static void update_fg_delta(struct bcmpmu_em *pem)
+{
+	int cap = 100 + pem->cap_delta;
+	pem->fg_capacity_full  = (pem->fg_capacity_full * cap)/100;
+	pr_em(FLOW, "%s, delta=%d, fg_capacity_full = %d\n",
+		__func__, pem->cap_delta, pem->fg_capacity_full);
+}
+
+static int save_fg_cap(struct bcmpmu *bcmpmu, int data)
+{
+	int ret = 0;
+	ret = bcmpmu->write_dev(bcmpmu,
+		PMU_REG_FG_CAP,
+		data,
+		bcmpmu->regmap[PMU_REG_FG_CAP].mask);
+	pr_em(FLOW, "%s, fg cap write: ret=%d, data=0x%X\n", __func__, ret, data);
+	return ret;
+}
+
+static int get_fg_cap(struct bcmpmu *bcmpmu, int *cap)
+{
+	int ret = 0;
+	int data;
+	unsigned char temp;
+	ret = bcmpmu->read_dev(bcmpmu,
+			PMU_REG_FG_CAP,
+			&data,
+			bcmpmu->regmap[PMU_REG_FG_CAP].mask);
+	if (ret != 0) {
+		pr_em(ERROR, "%s failed to read fg cap.\n", __func__);
+		temp = 0;
+	} else {
+		temp = (signed char)data;
+		if (temp > 100) {
+			pr_em(ERROR, "%s, fg cap abnormal: %d\n",
+				__func__, temp);
+			temp = 0;
+		}
+	}
+	*cap = (int)temp;
+	pr_em(FLOW, "%s, fg cap read: %d, 0x%X\n", __func__, *cap, data);
 	return ret;
 }
 
@@ -440,9 +496,6 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 				pem->fg_cal = 0;
 				calibration = 1;
 		}
-		pr_em(FLOW, "%s, fg_acc=%d, fg_cpcty=%d, cpcty=%d, vcpcty=%d, t=%d\n",
-			__func__, fg_result, pem->fg_capacity, capacity,
-			capacity_v, pem->batt_temp);
 	}
 	if ((pem->chrgr_type != PMU_CHRGR_TYPE_NONE) &&
 		(pem->batt_volt > 4150) &&
@@ -586,6 +639,7 @@ static void em_algorithm(struct work_struct *work)
 	static int poll_count = 0;
 	static int vacc = 0;
 	static int iacc = 0;
+	static int init_poll = 0;
 	int ret;
 
 	pr_em(FLOW, "%s, first_run=%d, poll_count=%d, vacc=%d, iacc=%d\n",
@@ -598,16 +652,24 @@ static void em_algorithm(struct work_struct *work)
 		req.flags = PMU_ADC_RAW_AND_UNIT;
 		bcmpmu->adc_req(bcmpmu, &req);
 		get_fg_delta(pem->bcmpmu, &pem->cap_delta);
-		pr_em(INIT, "%s, first fg delta =%d\n", __func__, pem->cap_delta);
+		update_fg_delta(pem);
+		get_fg_cap(pem->bcmpmu, &pem->cap_init);
+		pr_em(INIT, "%s, first fg delta =%d, cap init =%d\n", __func__,
+			pem->cap_delta, pem->cap_init);
 		
 		if (req.cnv == 0) {
 			poll_count = POLL_SAMPLES;
 			pem->mode = MODE_POLL;
+			init_poll = 1;
 			vacc = 0;
 		} else {
 			pem->batt_volt = req.cnv;
 			capacity = em_batt_get_capacity(pem,
 				pem->batt_volt, 0);
+			if ((pem->cap_init != 0) &&
+				(((capacity - pem->cap_init) > 10) ||
+				((capacity - pem->cap_init) < -10)))
+				capacity = pem->cap_init;
 			pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
 			pem->batt_capacity = capacity;
 			pem->mode = MODE_IDLE;
@@ -640,11 +702,10 @@ static void em_algorithm(struct work_struct *work)
 		capacity = em_batt_get_capacity(pem,
 			pem->batt_volt, pem->batt_curr);
 		if (pem->fg_cal == 1) {
-			pem->cap_delta = capacity - pem->batt_capacity;
+			pem->cap_delta += capacity - pem->batt_capacity;
 			ret = save_fg_delta(pem->bcmpmu, pem->cap_delta);
 			if (ret != 0) pem->cap_delta = 0;
-			pem->fg_capacity_full = pem->fg_capacity_full *
-				(pem->cap_delta + 100)/100;
+			update_fg_delta(pem);
 			pr_em(FLOW, "%s, Low Volt calibratrion, v=%d, c=%d, cap_o=%d, cap_n=%d\n",
 				__func__, pem->batt_volt, pem->batt_curr,
 				pem->batt_capacity, capacity);
@@ -652,6 +713,11 @@ static void em_algorithm(struct work_struct *work)
 			pem->batt_capacity = capacity;
 			pem->fg_cal = 0;
 		} else {
+			if (init_poll == 1) {
+				if (((capacity - pem->cap_init) > 20) ||
+					((capacity - pem->cap_init) < -20))
+				capacity = pem->cap_init;
+			}
 			pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
 			pem->batt_capacity = capacity;
 			pr_em(FLOW, "%s, Init or High Volt calibratrion, v=%d, c=%d, cap=%d\n",
@@ -659,6 +725,7 @@ static void em_algorithm(struct work_struct *work)
 		}
 		pem->mode = MODE_IDLE;
 		poll_count = 0;
+		init_poll = 0;
 		pr_em(FLOW, "%s, poll run complete.\n", __func__);
 		schedule_delayed_work(&pem->work,
 			msecs_to_jiffies(get_update_rate(pem)));
@@ -762,7 +829,9 @@ static void em_algorithm(struct work_struct *work)
 	if (pem->batt_capacity != capacity)
 		psy_changed = 1;
 	pem->batt_capacity = capacity;
-	pr_em(REPORT, "%s, update capacity=%d\n", __func__, capacity);
+	pr_em(REPORT, "%s, update capacity=%d, volt=%d, curr=%d\n",
+		__func__, capacity, pem->batt_volt, pem->batt_curr);
+	save_fg_cap(pem->bcmpmu, capacity);
 
 	propval.intval = pem->batt_temp;
 	ps->set_property(ps, POWER_SUPPLY_PROP_TEMP, &propval);

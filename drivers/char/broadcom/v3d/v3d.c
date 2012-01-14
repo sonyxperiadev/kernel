@@ -160,9 +160,9 @@ static int v3d_is_on = 0;
 static volatile int v3d_in_use = 0;
 
 static struct {
-	struct semaphore *g_irq_sem;
-	struct semaphore acquire_sem;
-	struct semaphore work_lock;
+	struct completion *g_irq_sem;
+	struct completion acquire_sem;
+	struct mutex work_lock;
 	struct proc_dir_entry *proc_info;
 	struct class *v3d_class;
 	struct device *v3d_device;
@@ -179,7 +179,7 @@ v3d_state;
 
 typedef struct {
 	mem_t mempool;
-	struct semaphore irq_sem;
+	struct completion irq_sem;
 	volatile int	v3d_acquired;
 	u32 id;
 	bool uses_worklist;
@@ -263,7 +263,7 @@ volatile v3d_job_t *v3d_job_curr = NULL;
 /* Semaphore to lock between ioctl and thread for shared variable access
  * WaitQue on which thread will block for job post or isr_completion or timeout
  */
-struct semaphore v3d_sem;
+struct mutex v3d_sem;
 wait_queue_head_t v3d_start_q, v3d_isr_done_q;
 
 /* Debug count variables for job activities */
@@ -633,7 +633,7 @@ static int v3d_thread(void *data)
 	static int timout_min = 1000;
 
 	KLOG_D("v3d_thread launched");
-	if (down_interruptible(&v3d_sem)) {
+	if (mutex_lock_interruptible(&v3d_sem)) {
 		KLOG_E("lock acquire failed");
 		do_exit( -1);
 	}
@@ -648,12 +648,12 @@ static int v3d_thread(void *data)
 				inited = 1;
 
 			while (v3d_job_curr == NULL) {
-				up(&v3d_sem);
+				mutex_unlock(&v3d_sem);
 				if (wait_event_interruptible(v3d_start_q, (v3d_job_curr != NULL))) {
 					KLOG_E("wait interrupted");
 					do_exit( -1);
 				}
-				if (down_interruptible(&v3d_sem)) {
+				if (mutex_lock_interruptible(&v3d_sem)) {
 					KLOG_E("lock acquire failed");
 					do_exit( -1);
 				}
@@ -668,7 +668,7 @@ static int v3d_thread(void *data)
 			/* Job in progress - wait with timeout for completion */
 			KLOG_V("v3d_thread going to sleep till job[0x%08x] status[%d] intern[%d]generates interrupt",
 				   (u32)v3d_job_curr, v3d_job_curr->job_status, v3d_job_curr->job_intern_state);
-			up(&v3d_sem);
+			mutex_unlock(&v3d_sem);
 
 			timeout = wait_event_interruptible_timeout(v3d_isr_done_q, (v3d_in_use == 0), msecs_to_jiffies(V3D_ISR_TIMEOUT_IN_MS));
 
@@ -683,7 +683,7 @@ static int v3d_thread(void *data)
 				KLOG_E("wait interrupted, v3d_in_use[%d], timeout[%d]", v3d_in_use, timeout);
 				do_exit( -1);
 			}
-			if (down_interruptible(&v3d_sem)) {
+			if (mutex_lock_interruptible(&v3d_sem)) {
 				KLOG_E("lock acquire failed");
 				do_exit( -1);
 			}
@@ -777,7 +777,7 @@ static int v3d_job_post(struct file *filp, v3d_job_post_t *p_job_post)
 	}
 
 	/* Lock the code */
-	if (down_interruptible(&v3d_sem)) {
+	if (mutex_lock_interruptible(&v3d_sem)) {
 		KLOG_E("lock acquire failed");
 		ret = -ERESTARTSYS;
 		goto err;
@@ -805,7 +805,7 @@ static int v3d_job_post(struct file *filp, v3d_job_post_t *p_job_post)
 	}
 
 	/* Unlock the code */
-	up(&v3d_sem);
+	mutex_unlock(&v3d_sem);
 
 	return ret;
 
@@ -824,7 +824,7 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 	dev = (v3d_t *)(filp->private_data);
 
 	/* Lock the code */
-	if (down_interruptible(&v3d_sem)) {
+	if (mutex_lock_interruptible(&v3d_sem)) {
 		KLOG_E("lock acquire failed");
 		p_job_status->job_status = V3D_JOB_STATUS_ERROR;
 		return -ERESTARTSYS;
@@ -842,13 +842,13 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 		p_v3d_wait_job->job_wait_state = 1;
 		while ((p_v3d_wait_job->job_status == V3D_JOB_STATUS_READY)
 				|| (p_v3d_wait_job->job_status == V3D_JOB_STATUS_RUNNING)) {
-			up(&v3d_sem);
+			mutex_unlock(&v3d_sem);
 			if (wait_event_interruptible(p_v3d_wait_job->v3d_job_done_q, ((p_v3d_wait_job->job_status != V3D_JOB_STATUS_READY) && (p_v3d_wait_job->job_status != V3D_JOB_STATUS_RUNNING)))) {
 				KLOG_E("wait interrupted");
 				p_job_status->job_status = V3D_JOB_STATUS_ERROR;
 				return -ERESTARTSYS;
 			}
-			if (down_interruptible(&v3d_sem)) {
+			if (mutex_lock_interruptible(&v3d_sem)) {
 				KLOG_E("lock acquire failed");
 				p_job_status->job_status = V3D_JOB_STATUS_ERROR;
 				return -ERESTARTSYS;
@@ -870,7 +870,7 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 		p_job_status->job_status = V3D_JOB_STATUS_NOT_FOUND;
 	}
 
-	up(&v3d_sem);
+	mutex_unlock(&v3d_sem);
 
 	return 0;
 }
@@ -945,7 +945,7 @@ static void v3d_power(int flag)
 {
 	uint32_t value;
 
-	down(&v3d_state.work_lock);
+	mutex_lock(&v3d_state.work_lock);
 	KLOG_D("v3d_power [%d] v3d_inuse[%d]", flag, v3d_in_use);
 
 	if (flag) {
@@ -994,7 +994,7 @@ static void v3d_power(int flag)
 		disable_v3d_clock();
 	}
 
-	up(&v3d_state.work_lock);
+	mutex_unlock(&v3d_state.work_lock);
 }
 
 static void v3d_print_status(void)
@@ -1007,7 +1007,7 @@ static void v3d_print_status(void)
 		printk("Current render job 0x%x : 0x%x\n", p_v3d_job->v3d_ct1ca , p_v3d_job->v3d_ct1ea);
 	}
 
-	down(&v3d_state.work_lock);
+	mutex_lock(&v3d_state.work_lock);
 	if(v3d_is_on)
 	{
 		printk("v3d reg: ct0_ca[0x%x] ct0_ea[0x%x] ct1_ca[0x%x] ct1_ea[0x%x]",
@@ -1031,7 +1031,7 @@ static void v3d_print_status(void)
 		printk("v3d bin mem status bpoa[0x%08x] bpos[0x%08x] bpca[0x%08x] bpcs[0x%08x]",
 				v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET), v3d_read(V3D_BPCA_OFFSET), v3d_read(V3D_BPCS_OFFSET));
 	}
-	up(&v3d_state.work_lock);
+	mutex_unlock(&v3d_state.work_lock);
 }
 
 static void v3d_reg_init(void)
@@ -1074,7 +1074,7 @@ static int v3d_hw_acquire(bool for_worklist)
 	int ret = 0;
 
 	//Wait for the V3D HW to become available
-	if (down_interruptible(&v3d_state.acquire_sem)) {
+	if (wait_for_completion_interruptible(&v3d_state.acquire_sem)) {
 		KLOG_E("Wait for V3D HW failed\n");
 		return -ERESTARTSYS;
 	}
@@ -1082,7 +1082,7 @@ static int v3d_hw_acquire(bool for_worklist)
 	v3d_power(1);
 	v3d_reg_init();
 
-	down(&v3d_state.work_lock);
+	mutex_lock(&v3d_state.work_lock);
 	/* Request the V3D IRQ */
 	if(!for_worklist){
 		ret = request_irq(IRQ_GRAPHICS, v3d_isr_no_worklist,
@@ -1095,7 +1095,7 @@ static int v3d_hw_acquire(bool for_worklist)
 			IRQF_TRIGGER_HIGH, V3D_DEV_NAME, NULL);
 	}
 #endif
-	up(&v3d_state.work_lock);
+	mutex_unlock(&v3d_state.work_lock);
 	return ret;
 }
 
@@ -1104,7 +1104,7 @@ static void v3d_hw_release(void)
 	free_irq(IRQ_GRAPHICS, NULL);
 	v3d_power(0);
 	free_bin_mem(0);
-	up(&v3d_state.acquire_sem);		//V3D is up for grab
+	complete(&v3d_state.acquire_sem);		//V3D is up for grab
 }
 
 #ifdef SUPPORT_V3D_WORKLIST
@@ -1128,7 +1128,7 @@ static void allocate_bin_mem(struct work_struct *work)
 	}
 
 	if (bin_mem[i].oom_cpuaddr != NULL) {
-		down(&v3d_state.work_lock);
+		mutex_lock(&v3d_state.work_lock);
 		if(v3d_is_on)
 		{
 			uint32_t flags = v3d_read(V3D_INTENA_OFFSET);
@@ -1141,7 +1141,7 @@ static void allocate_bin_mem(struct work_struct *work)
 			v3d_write(1 << 2,  V3D_INTCTL_OFFSET);
 			v3d_write( flags | 1 << 2,  V3D_INTENA_OFFSET);
 		}
-		up(&v3d_state.work_lock);
+		mutex_unlock(&v3d_state.work_lock);
 	}
 	else
 		KLOG_E("dma_alloc_coherent failed for v3d oom block size[0x%x]", v3d_bin_oom_size);
@@ -1155,7 +1155,7 @@ static void free_bin_mem(uint32_t dev_id)
 {
 	int i;
 
-	down(&v3d_state.work_lock);
+	mutex_lock(&v3d_state.work_lock);
 	for(i=0;i < MAX_BIN_BLOCKS; i++)
 	{
 		if(dev_id == 0) //Memory is freed at end of work
@@ -1168,7 +1168,7 @@ static void free_bin_mem(uint32_t dev_id)
 			dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size, bin_mem[i].oom_cpuaddr, bin_mem[i].oom_block);
 		}
 	}
-	up(&v3d_state.work_lock);
+	mutex_unlock(&v3d_state.work_lock);
 }
 
 static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
@@ -1235,7 +1235,7 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 static irqreturn_t v3d_isr_no_worklist(int irq, void *unused)
 {
 	if ( v3d_state.g_irq_sem )
-		up(v3d_state.g_irq_sem);
+		complete(v3d_state.g_irq_sem);
 
 	v3d_state.irq_enabled = 0;
 	disable_irq_nosync(IRQ_GRAPHICS);
@@ -1244,13 +1244,13 @@ static irqreturn_t v3d_isr_no_worklist(int irq, void *unused)
 
 static void v3d_enable_irq(void)
 {
-	down(&v3d_state.work_lock);
+	mutex_lock(&v3d_state.work_lock);
 	//Don't enable irq if it's already enabled
 	if ( !v3d_state.irq_enabled ) {
 		v3d_state.irq_enabled = 1;
 		enable_irq(IRQ_GRAPHICS);
 	}
-	up(&v3d_state.work_lock);
+	mutex_unlock(&v3d_state.work_lock);
 }
 
 /******************************************************************
@@ -1267,7 +1267,7 @@ static int v3d_open(struct inode *inode, struct file *filp)
 
 	dev->v3d_acquired = 0;
 
-	sema_init(&dev->irq_sem, 0);
+	init_completion(&dev->irq_sem);
 
 	dev->shared_dvts_object = dvts_create_serializer();
 	if (!dev->shared_dvts_object) {
@@ -1279,7 +1279,7 @@ static int v3d_open(struct inode *inode, struct file *filp)
 #ifdef SUPPORT_V3D_WORKLIST
 	dev->uses_worklist = true;
 	dev->id = 0;
-	if (down_interruptible(&v3d_sem)) {
+	if (mutex_lock_interruptible(&v3d_sem)) {
 		KLOG_E("lock acquire failed");
 		ret = -ERESTARTSYS;
 		goto err;
@@ -1289,7 +1289,7 @@ static int v3d_open(struct inode *inode, struct file *filp)
 	}
 	dev->id = v3d_id++;
 	KLOG_V("in open for id[%d]", dev->id);
-	up(&v3d_sem);
+	mutex_unlock(&v3d_sem);
 err:
 #endif
 	return ret;
@@ -1303,7 +1303,7 @@ static int v3d_release(struct inode *inode, struct file *filp)
 	if(dev->uses_worklist == true)
 	{
 		KLOG_V("close: id[%d]", dev->id);
-		if (down_interruptible(&v3d_sem)) {
+		if (mutex_lock_interruptible(&v3d_sem)) {
 			KLOG_E("lock acquire failed");
 			return -ERESTARTSYS;
 		}
@@ -1314,16 +1314,16 @@ static int v3d_release(struct inode *inode, struct file *filp)
 		KLOG_V("after free for id[%d]", dev->id);
 		v3d_print_all_jobs(0);
 		free_bin_mem(dev->id);
-		up(&v3d_sem);
+		mutex_unlock(&v3d_sem);
 	}
 	else
 #endif
 	{
 		if (dev->v3d_acquired) {
 			KLOG_E("\n\nUser dying with V3D acquired\n");
-			down(&v3d_state.work_lock);
+			mutex_lock(&v3d_state.work_lock);
 			v3d_state.g_irq_sem = NULL;		//Free up the g_irq_sem
-			up(&v3d_state.work_lock);
+			mutex_unlock(&v3d_state.work_lock);
 			KLOG_E("V3D HW idle\n");
 
 			//Just free up the V3D HW
@@ -1472,7 +1472,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			v3d_enable_irq();
 
 			KLOG_D("Waiting for interrupt\n");
-			if (down_interruptible(&dev->irq_sem)) {
+			if (wait_for_completion_interruptible(&dev->irq_sem)) {
 				KLOG_E("Wait for IRQ failed\n");
 				return -ERESTARTSYS;
 			}
@@ -1482,7 +1482,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case V3D_IOCTL_EXIT_IRQ_WAIT: {
 			KLOG_V("v3d_ioctl :V3D_IOCTL_EXIT_IRQ_WAIT");
 			//Up the semaphore to release the thread that's waiting for irq
-			up(&dev->irq_sem);
+			complete(&dev->irq_sem);
 		}
 		break;
 
@@ -1611,7 +1611,7 @@ int proc_v3d_write(struct file *file, const char __user *buffer, unsigned long c
 
 	KLOG_E("v3d: %s\n", v3d_req);
 
-	down(&v3d_state.work_lock);
+	mutex_lock(&v3d_state.work_lock);
 
 	if (!strncmp("print_usage=on", v3d_req, 14)) {
 		v3d_state.show_v3d_usage = 1;
@@ -1622,7 +1622,7 @@ int proc_v3d_write(struct file *file, const char __user *buffer, unsigned long c
 	else
 		KLOG_E("Invalid command\n");
 
-	up(&v3d_state.work_lock);
+	mutex_unlock(&v3d_state.work_lock);
 
 	if ( ret > 0)
 		KLOG_E(KERN_ERR"response: %s\n", v3d_resp);
@@ -1676,8 +1676,9 @@ int __init v3d_init(void)
 	printk("V3D register base address (remaped) = 0X%p\n", v3d_base);
 
 	/* Initialize the V3D acquire_sem and work_lock*/
-	sema_init(&v3d_state.acquire_sem, 1); //First request should succeed
-	sema_init(&v3d_state.work_lock, 1); //First request should succeed
+	init_completion(&v3d_state.acquire_sem); 
+	complete(&v3d_state.acquire_sem); //First request should succeed
+	mutex_init(&v3d_state.work_lock); //First request should succeed
 
 	v3d_state.show_v3d_usage = 0;
 
@@ -1725,7 +1726,7 @@ int __init v3d_init(void)
 
 	v3d_id = 1;
 	v3d_in_use = 0;
-	sema_init(&v3d_sem, 1);
+	mutex_init(&v3d_sem);
 
 	init_waitqueue_head(&v3d_isr_done_q);
 	init_waitqueue_head(&v3d_start_q);

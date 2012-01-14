@@ -67,7 +67,6 @@
 struct ipcs_info_t {
 	dev_t devnum;
 	int ipc_state;
-	struct semaphore ipc_sem;
 	struct cdev cdev;
 	struct work_struct cp_crash_dump_wq;
 	struct work_struct intr_work;
@@ -533,8 +532,6 @@ static int __init ipcs_module_init(void)
 	IPC_DEBUG(DBG_TRACE, "start ...\n");
 
 	Comms_Start();
-
-	sema_init(&g_ipc_info.ipc_sem, 0);
 
 	g_ipc_info.ipc_state = 0;
 

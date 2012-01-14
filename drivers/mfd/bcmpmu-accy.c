@@ -83,7 +83,7 @@ enum bcmpmu_usb_det_state_t {
 /* Values in this table need to be revisited */
 static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_NONE] = 0,
-	[PMU_CHRGR_TYPE_SDP] = 500,
+	[PMU_CHRGR_TYPE_SDP] = 100,
 	[PMU_CHRGR_TYPE_CDP] = 500,
 	[PMU_CHRGR_TYPE_DCP] = 1500,
 	[PMU_CHRGR_TYPE_TYPE1] = 1000,
@@ -579,16 +579,16 @@ static void usb_det_work(struct work_struct *work)
 				if (chrgr_type != PMU_CHRGR_TYPE_NONE) {
 					paccy->det_state = USB_CONNECTED;
 					switch (chrgr_type) {
-					case PMU_USB_TYPE_SDP:
+					case PMU_CHRGR_TYPE_SDP:
 						usb_type = PMU_USB_TYPE_SDP;
 						break;
-					case PMU_USB_TYPE_CDP:
+					case PMU_CHRGR_TYPE_CDP:
 						usb_type = PMU_USB_TYPE_CDP;
 						break;
-					case PMU_USB_TYPE_DCP:
+					case PMU_CHRGR_TYPE_DCP:
 						usb_type = PMU_USB_TYPE_DCP;
 						break;
-					case PMU_USB_TYPE_ACA:
+					case PMU_CHRGR_TYPE_ACA:
 						usb_type = PMU_USB_TYPE_ACA;
 						break;
 					default:

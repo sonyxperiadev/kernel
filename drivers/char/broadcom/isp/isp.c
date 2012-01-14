@@ -72,7 +72,7 @@ typedef struct {
 } isp_status_t;
 
 typedef struct {
-    struct semaphore irq_sem;
+    struct completion irq_sem;
     spinlock_t lock;
     isp_status_t isp_status;     
 } isp_t;
@@ -95,7 +95,7 @@ static irqreturn_t isp_isr(int irq, void *dev_id)
     
     reg_write(isp_base,ISP_STATUS_OFFSET, dev->isp_status.status);
         
-    up(&dev->irq_sem);
+    complete(&dev->irq_sem);
 
     return IRQ_RETVAL(1);
 }
@@ -112,7 +112,7 @@ static int isp_open(struct inode *inode, struct file *filp)
 	dev->lock = __SPIN_LOCK_UNLOCKED();
     dev->isp_status.status = 0;
     
-    sema_init(&dev->irq_sem, 0);
+    init_completion(&dev->irq_sem);
     
     enable_isp_clock();
 
@@ -209,7 +209,7 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
         interrupt_irq = 0;
         enable_irq(IRQ_ISP);
         dbg_print("Waiting for interrupt\n");
-        if (down_interruptible(&dev->irq_sem))
+        if (wait_for_completion_interruptible(&dev->irq_sem))
         {
             disable_irq(IRQ_ISP);
             return -ERESTARTSYS;
@@ -233,7 +233,7 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     {
         interrupt_irq = 1;
         dbg_print("Interrupting irq ioctl\n");
-	 up(&dev->irq_sem);
+        complete(&dev->irq_sem);
     }
     break;	
 	

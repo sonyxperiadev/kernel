@@ -685,8 +685,9 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.fg_factor = 976,		/* 59055 specific */
 	.chrg_1c_rate = 1000,
 	.chrg_zone_map = &chrg_zone[0],
-	.fg_capacity_full = 1000 * 3600,
+	.fg_capacity_full = 1500 * 3600,
 	.support_fg = 1,
+	.bc = BCMPMU_BC_BB_BC12,
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {

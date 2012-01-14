@@ -47,7 +47,7 @@
 
 extern void ram_console_enable_console(int);
 extern unsigned long get_apanic_start_address(void);
-extern int mmc_poll_stack_init(void **mmc, int *dev_num);
+extern int mmc_poll_stack_init(void **mmc, int dev_num, int *mmc_poll_dev_num);
 
 struct panic_header {
 	u32 magic;
@@ -65,6 +65,7 @@ struct panic_header {
 
 struct apanic_data {
 	int    dev_num;
+	int    mmc_poll_dev_num;
 	char   dev_path[256];
 	struct mmc *mmc;
 	struct panic_header	curr;
@@ -78,7 +79,7 @@ static struct apanic_data drv_ctx;
 static struct work_struct proc_removal_work;
 static DEFINE_MUTEX(drv_mutex);
 
-void mmc_panic_copy_dev_name(char *dev_name)
+void mmc_panic_copy_dev_name(char *dev_name, int dev_num)
 {
 	struct apanic_data *ctx = &drv_ctx;
 
@@ -87,6 +88,12 @@ void mmc_panic_copy_dev_name(char *dev_name)
 		sprintf(ctx->dev_path, "%s/%s", APANIC_BLK_PATH, dev_name);
 	else
 		printk(KERN_ERR DRVNAME "block dev name is too long\n");
+
+	if (dev_num >= 0)
+		ctx->dev_num = dev_num;
+	else
+		printk(KERN_ERR DRVNAME "Couldn't find block dev number:%d\n",
+		       dev_num);
 }
 EXPORT_SYMBOL(mmc_panic_copy_dev_name);
 
@@ -144,9 +151,8 @@ static int apanic_proc_read(char *buffer, char **start, off_t offset,
 	 * The bytes to read request is greater than the actual file size,
 	 * so trim the request.
 	 */
-	if ((offset + count) > file_length) {
+	if ((offset + count) > file_length)
 		count = file_length - offset;
-	}
 
 	bdev = blkdev_get_by_path(ctx->dev_path,
 				  FMODE_READ, apanic_proc_read);
@@ -338,8 +344,8 @@ static int apanic_write_console_mmc(unsigned long off)
 			       ctx->mmc->write_bl_len - rc);
 
 		/* Write the bounce buffer to eMMC */
-		rc2 = ctx->mmc->block_dev.block_write(ctx->dev_num, off, 1,
-						      ctx->bounce);
+		rc2 = ctx->mmc->block_dev.block_write(ctx->mmc_poll_dev_num,
+						      off, 1, ctx->bounce);
 		if (rc2 <= 0) {
 			printk(KERN_EMERG
 			       "apanic: MMC write failed (%d)\n", rc2);
@@ -396,7 +402,9 @@ static int apanic(struct notifier_block *this, unsigned long event,
 		goto out;
 	}
 
-	if (mmc_poll_stack_init((void **)&ctx->mmc, &ctx->dev_num) < 0) {
+	if (mmc_poll_stack_init((void **)&ctx->mmc,
+				ctx->dev_num,
+				&ctx->mmc_poll_dev_num) < 0) {
 		pr_err("apanic: Unable to init polling mode mmc stack\n");
 		goto out;
 	}
@@ -464,7 +472,8 @@ static int apanic(struct notifier_block *this, unsigned long event,
 
 	pr_debug("apanic: writing the header at block %ld\n", blk);
 
-	rc = ctx->mmc->block_dev.block_write(ctx->dev_num, blk, 1, ctx->bounce);
+	rc = ctx->mmc->block_dev.block_write(ctx->mmc_poll_dev_num,
+					     blk, 1, ctx->bounce);
 	if (rc == 0) {
 		printk(KERN_EMERG "apanic: Header write failed (%d)\n", rc);
 		goto out;
@@ -535,7 +544,8 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 	 * the apanic driver should pickup the device file name from
 	 * ctx->dev_path.
 	 * Note that ctx->dev_path gets populated from function
-	 * mmc_panic_copy_dev_name. In this fucntion to the device name "dev/block" is
+	 * mmc_panic_copy_dev_name. In this fucntion to the device name
+	 * "dev/block" is
 	 * hardcoded. Note that for Android based systems its OK. The Android
 	 * udev creates the device node for mmcblkxx under /dev/block.
 	 * But for systems where mdev (reduced udev) is used the node gets
@@ -549,7 +559,7 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 	 * well, so from else where when the device node file name is accessed
 	 * we'll get the correct one.
 	 */
-	if (!strcmp(user_dev_path,"auto"))
+	if (!strcmp(user_dev_path, "auto"))
 		copy_devpath = ctx->dev_path;
 	else {
 		copy_devpath = (char *)user_dev_path;
