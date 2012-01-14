@@ -12,7 +12,7 @@
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
-
+//#define DEBUG 1
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/init.h>
@@ -23,6 +23,7 @@
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <asm/cacheflush.h>
+#include <plat/clock.h>
 #include <plat/mobcom_types.h>
 #include <mach/hardware.h>
 #include <mach/dma.h>
@@ -98,8 +99,7 @@ static int spum_hash_process_request(struct brcm_spum_device *dd);
 static void spum_hash_finish(struct brcm_spum_device *dd, int err);
 static int spum_hash_final(struct ahash_request *req);
 
-struct tasklet_struct	tasklet_rx;
-struct tasklet_struct	tasklet_tx;
+struct tasklet_struct	dma_tasklet;
 
 struct spum_hash_context {
 	u32	hash_init;
@@ -174,15 +174,6 @@ static int spum_cpu_xfer(struct brcm_spum_device *dd, u8 *in_buff, u32 length)
 
 	spum_dma_init(dd->io_axi_base);
 
-	if(rctx->rx_len >= length) {
-		rctx->rx_len -= length;
-	}
-	else {
-		length -= rctx->rx_len;
-		rctx->partial -= length;
-		rctx->rx_len = 0;
-	}
-
 	length = ((length+3)/sizeof(u32));
 
 	tx_len = rctx->tx_len/4;
@@ -200,6 +191,21 @@ static int spum_cpu_xfer(struct brcm_spum_device *dd, u8 *in_buff, u32 length)
 		k++; tx_len--;
 		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 	}
+
+	length *= sizeof(u32);
+        if(rctx->rx_len >= length) {
+                rctx->rx_len -= length;
+        }
+        else {
+                length -= rctx->rx_len;
+
+                if(rctx->partial > length)
+                        rctx->partial -= length;
+                else
+                        rctx->partial = 0;
+
+                rctx->rx_len = 0;
+        }
 
 	rctx->tx_len -= k*4;
 
@@ -222,7 +228,7 @@ static int spum_dma_xfer(struct brcm_spum_device *dd, u32 length)
 	u32 cfg_rx, cfg_tx, rx_fifo, tx_fifo, tx_len;
 	int err = -EINPROGRESS;
 
-	pr_debug("%s: len %d entry \n",__func__,length);
+	pr_debug("%s: entry \n",__func__);
 
 	/* Only this configuration works. */
 	cfg_rx = DMA_CFG_SRC_ADDR_INCREMENT | DMA_CFG_DST_ADDR_FIXED |
@@ -262,7 +268,18 @@ static int spum_dma_xfer(struct brcm_spum_device *dd, u32 length)
 
 	set_bit(FLAGS_RBUSY, &dd->flags);
 
-	rctx->rx_len -= length;
+	if(rctx->rx_len > length) {
+		rctx->rx_len -= length;
+	}
+	else {
+		length -= rctx->rx_len;
+		if(rctx->partial > length)
+			rctx->partial -= length;
+		else
+			rctx->partial = 0;
+		rctx->rx_len = 0;
+	}
+
 	if(tx_len >= 64)
 		rctx->tx_len -= tx_len;
 
@@ -282,7 +299,11 @@ static int spum_dma_xfer(struct brcm_spum_device *dd, u32 length)
 		}
 	}
 
+	if(tx_len < 64)
+		err = 0;
+
 	pr_debug("%s: exit \n",__func__);
+
 	err:
 		return err;
 }
@@ -293,6 +314,8 @@ static int spum_hash_update_data(struct brcm_spum_device *dd)
 	u32     length;
 	struct scatterlist *sg;
 	int     err = 0;
+
+	pr_debug("%s: entry\n",__func__);
 
 	if(!(rctx->rx_len+ rctx->partial))
 		return 0;
@@ -311,6 +334,16 @@ static int spum_hash_update_data(struct brcm_spum_device *dd)
 	if((length > SPUM_HASH_BLOCK_SIZE) && ((length - length%64) > SPUM_HASH_BLOCK_SIZE)) {
 		length -= length%64;
 		rctx->offset = length;
+
+		if(sg_is_last(sg)) {
+			length -= rctx->partial;
+			rctx->offset = length;
+			spum_append_sg(rctx);
+			rctx->partial -= rctx->bufcnt;
+			rctx->sg = sg;
+			if (!length)
+				return 0;
+                }
 
 		if (!dma_map_sg(dd->dev, rctx->sg, 1, DMA_TO_DEVICE)) {
 			pr_err("%s:dma map error\n",__func__);
@@ -390,7 +423,6 @@ static int spum_hash_update_final(struct brcm_spum_device *dd)
 			pr_err("%s:dma map error\n",__func__);
 			return -EINVAL;
 		}
-
 		err = spum_dma_xfer(dd, length);
 	}
 
@@ -431,6 +463,7 @@ static int spum_hash_handle_queue(struct brcm_spum_device *dd,
 	}
 
 	backlog = crypto_get_backlog(&dd->queue);
+	pr_debug("%s: Q Length %d\n",__func__,dd->queue.qlen);
 	async_req = crypto_dequeue_request(&dd->queue);
 	if (async_req)
 		set_bit(FLAGS_BUSY, &dd->flags);
@@ -460,7 +493,7 @@ static int spum_hash_handle_queue(struct brcm_spum_device *dd,
 		if(rctx->flags&FLAGS_FINUP)
 			ret = spum_hash_final(dd->req);
 		tasklet_schedule(&dd->queue_task);
-	}	
+	}
 
 	return ret;
 }
@@ -474,6 +507,7 @@ static int spum_hash_enqueue(struct ahash_request *req, u32 op)
 	int ret;
 
 	pr_debug("%s: entry\n",__func__);
+
 	rctx->op = op;
 
 	spin_lock_irqsave(&ctx->dd->lock, flags);
@@ -492,7 +526,7 @@ static int spum_hash_update(struct ahash_request *req)
 	struct spum_hw_context  spum_hw_hash_ctx;
 	u32 cmd_len_bytes;
 
-	pr_debug("%s: entry\n",__func__);
+	pr_debug("%s: entry req->nbytes %d req->result 0x%x\n",__func__,req->nbytes,req->result);
 
 	if(!req->nbytes)
 		return 0;
@@ -528,30 +562,30 @@ static int spum_hash_update(struct ahash_request *req)
 		case SHA1_DIGEST_SIZE:
 			spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA1;
 			spum_hw_hash_ctx.icv_len   = (SHA1_DIGEST_SIZE/sizeof(u32));
-			spum_hw_hash_ctx.auth_type = 
+			spum_hw_hash_ctx.auth_type =
 			ctx->hash_init? SPUM_AUTH_TYPE_SHA1_UPDATE : SPUM_AUTH_TYPE_SHA1_INIT;
-			 spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
-			spum_hw_hash_ctx.auth_key_len = 
+			spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
+			spum_hw_hash_ctx.auth_key_len =
 					ctx->hash_init? (SHA1_DIGEST_SIZE/sizeof(u32)) : 0;
 			break;
 
 		case SHA224_DIGEST_SIZE:
 			spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA224;
 			spum_hw_hash_ctx.icv_len   = (SHA224_DIGEST_SIZE/sizeof(u32));
-			spum_hw_hash_ctx.auth_type = 
+			spum_hw_hash_ctx.auth_type =
 			ctx->hash_init? SPUM_AUTH_TYPE_SHA1_UPDATE : SPUM_AUTH_TYPE_SHA1_INIT;
-			 spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
-			spum_hw_hash_ctx.auth_key_len = 
+			spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
+			spum_hw_hash_ctx.auth_key_len =
 					ctx->hash_init? (SHA224_DIGEST_SIZE/sizeof(u32)) : 0;
 			break;
-		
+
 		case SHA256_DIGEST_SIZE:
 			spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA256;
 			spum_hw_hash_ctx.icv_len   = (SHA256_DIGEST_SIZE/sizeof(u32));
-			spum_hw_hash_ctx.auth_type = 
+			spum_hw_hash_ctx.auth_type =
 			ctx->hash_init? SPUM_AUTH_TYPE_SHA1_UPDATE : SPUM_AUTH_TYPE_SHA1_INIT;
-			 spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
-			spum_hw_hash_ctx.auth_key_len = 
+			spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
+			spum_hw_hash_ctx.auth_key_len =
 					ctx->hash_init? (SHA256_DIGEST_SIZE/sizeof(u32)) : 0;
 			break;
 
@@ -560,7 +594,7 @@ static int spum_hash_update(struct ahash_request *req)
 			spum_hw_hash_ctx.icv_len   = (MD5_DIGEST_SIZE/sizeof(u32));
 			spum_hw_hash_ctx.auth_type =
 			ctx->hash_init? SPUM_AUTH_TYPE_MD5_UPDATE : SPUM_AUTH_TYPE_MD5_INIT;
-			 spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
+			spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
 			spum_hw_hash_ctx.auth_key_len =
 					ctx->hash_init? (MD5_DIGEST_SIZE/sizeof(u32)) : 0;
 			break;
@@ -585,7 +619,7 @@ static int spum_hash_update(struct ahash_request *req)
 		scatterwalk_sg_chain(&rctx->spum_hdr[0], 2, req->src);
 	}
 
-	rctx->tx_len = SPUM_OUTPUT_HEADER_LEN + 
+	rctx->tx_len = SPUM_OUTPUT_HEADER_LEN +
 			spum_hw_hash_ctx.data_attribute.data_length +
 			(spum_hw_hash_ctx.icv_len * sizeof(u32)) +
 			SPUM_OUTPUT_STATUS_LEN;
@@ -606,7 +640,7 @@ static int spum_hash_init(struct ahash_request *req)
 	struct brcm_spum_device	*dd;
 	int    err = 0;
 
-	pr_debug("%s: entry\n",__func__);
+	pr_debug("%s: entry req->result 0x%x\n",__func__,req->result);
 
 	spin_lock_bh(&spum_drv.lock);
 	if (!ctx->dd) {
@@ -651,19 +685,26 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 	while(i<count) {
 		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 		if(  status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK ) {
-                        tx_fifo[i] = readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET );
+			tx_fifo[i] = readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET );
 			i++;
                 }
         }
-	rctx->tx_len -= i*4; 
+	rctx->tx_len -= i*4;
 	/* rctx->tx_len should be <= 0 here. */
 
-	/* Copy back the digest value into request. */ 
+	pr_debug("%s: count %d i %d\n",__func__,count,i);
+	pr_debug("%s: rctx->result 0x%x\n",__func__,rctx->result);
+
+	/* Copy back the digest value into request. */
 	memcpy(rctx->result, (u8 *)&tx_fifo[tx_len], rctx->digestsize);
 
-	if((rctx->op&OP_FINAL) || ((rctx->op&OP_UPDATE) && (!rctx->flags&FLAGS_FINUP))) {
+	status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
+
+	if((rctx->op&OP_FINAL) || ((rctx->op&OP_UPDATE) && (!rctx->flags&FLAGS_FINUP)) ||
+		((rctx->flags&FLAGS_FINUP) && (rctx->bufcnt == 0))) {
 		if (dd->req->base.complete)
 			dd->req->base.complete(&dd->req->base, err);
+		pr_debug("%s: ACK to client\n",__func__);
 	}
 
 	clear_bit(FLAGS_BUSY, &dd->flags);
@@ -673,7 +714,7 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 }
 
 static int spum_shash_digest(struct crypto_shash *shash, u32 flags,
-				  const u8 *data, unsigned int len, u8 *out)
+				const u8 *data, unsigned int len, u8 *out)
 {
 	struct {
 		struct shash_desc shash;
@@ -692,19 +733,21 @@ static int spum_hash_final_shash(struct ahash_request *req)
 	struct spum_request_context *rctx = ahash_request_ctx(req);
 
 	return spum_shash_digest(ctx->fallback, req->base.flags,
-				      rctx->buff, rctx->bufcnt, req->result);
+				rctx->buff, rctx->bufcnt, req->result);
 }
 
 static int spum_hash_final(struct ahash_request *req)
 {
-        struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-        struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
-        struct spum_request_context *rctx = ahash_request_ctx(req);
+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
+	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
+	struct spum_request_context *rctx = ahash_request_ctx(req);
 	struct spum_hw_context  spum_hw_hash_ctx;
 	u32 cmd_len_bytes;
 	int err = 0;
 
-	pr_debug("%s: entry\n",__func__);
+	rctx->result = req->result;
+
+	pr_debug("%s: entry bufcnt %d req->result 0x%x\n",__func__,rctx->bufcnt,req->result);
 
 	if(rctx->bufcnt) {
 
@@ -781,8 +824,9 @@ static int spum_hash_final(struct ahash_request *req)
 
 	}
 	else {
-		if(!req->nbytes)
+		if(!req->nbytes) {
 			err = spum_hash_final_shash(req);
+		}
 	}
 
 	pr_debug("%s: exit\n",__func__);
@@ -802,6 +846,8 @@ static int spum_hash_finup(struct ahash_request *req)
         err1 = spum_hash_update(req);
         if(err1 == -EINPROGRESS)
                 return err1;
+
+	rctx->flags &= ~FLAGS_FINUP;
 
         err2 = spum_hash_final(req);
 
@@ -949,62 +995,7 @@ static void spum_queue_task(unsigned long data)
 	spum_hash_handle_queue(dd, NULL);
 }
 
-static void spum_rx_dma_tasklet(unsigned long data)
-{
-	struct brcm_spum_device *dd = (struct brcm_spum_device *)data;
-	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
-	u32     tx_fifo[64] = {0, }, status;
-	int 	k=0,err = -EINPROGRESS;
-
-	pr_debug("%s: entry\n",__func__);
-
-	err = dma_stop_transfer(dd->rx_dma_chan);
-	if(err) {
-		pr_err("%s: Rx transfer stop failed %d\n",__func__,err);
-	}
-
-	clear_bit(FLAGS_RBUSY, &dd->flags);
-
-	dma_unmap_sg(dd->dev, rctx->sg, 1, DMA_TO_DEVICE);
-
-	if(rctx->sg->length == rctx->offset) {
-		rctx->sg = scatterwalk_sg_next(rctx->sg);
-		if (rctx->sg) {
-			rctx->offset = 0;
-		}
-	}
-
-	if((!test_bit(FLAGS_TBUSY, &dd->flags)) && (!test_bit(FLAGS_RBUSY, &dd->flags))) {
-		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
-		k=0;
-		while((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) && (rctx->tx_len/4)) {
-			tx_fifo[k] = readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
-			rctx->tx_len-=4;
-			status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);		
-		}
-
-		err = spum_hash_process_request(dd);
-	}
-
-	if((err != -EINPROGRESS) && (!test_bit(FLAGS_TBUSY, &dd->flags)) && (!test_bit(FLAGS_RBUSY, &dd->flags))) {
-		spum_hash_finish(dd, err);
-		if(rctx->flags&FLAGS_FINUP) {
-			err = spum_hash_final(dd->req);
-		}
-		tasklet_schedule(&dd->queue_task);
-	}
-}
-
-static void spum_rx_dma_callback(void *data, enum pl330_xfer_status status)
-{
-	if (status == DMA_PL330_XFER_OK) {
-		tasklet_schedule(&tasklet_rx);
-	}
-	else
-		pr_err("%s: DMA failed.",__func__);
-}
-
-static void spum_tx_dma_tasklet(unsigned long data)
+static void spum_dma_tasklet(unsigned long data)
 {
 	struct brcm_spum_device *dd = (struct brcm_spum_device *)data;
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
@@ -1026,9 +1017,11 @@ static void spum_tx_dma_tasklet(unsigned long data)
 		while((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) && (rctx->tx_len/4)) {
 			tx_fifo[k] = readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
 			rctx->tx_len-=4;
-			status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);		
+			status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 		}
 
+		if(rctx->offset == rctx->sg->length)
+			rctx->sg = scatterwalk_sg_next(rctx->sg);
 
 		err = spum_hash_process_request(dd);
 	}
@@ -1037,17 +1030,37 @@ static void spum_tx_dma_tasklet(unsigned long data)
 		spum_hash_finish(dd, err);
 		if(rctx->flags&FLAGS_FINUP)
 			err = spum_hash_final(dd->req);
-		tasklet_schedule(&dd->queue_task);
+		if(err != -EINPROGRESS)
+			tasklet_schedule(&dd->queue_task);
 	}
 }
 
-static void spum_tx_dma_callback(void *data, enum pl330_xfer_status status)
+static void spum_dma_callback(void *data, enum pl330_xfer_status status)
 {
-	if (status == DMA_PL330_XFER_OK) {
-		tasklet_schedule(&tasklet_tx);
-	}
-	else
+	struct brcm_spum_device *dd;
+	u32 *dma_chan = (u32 *)data;
+	int err = 0;
+
+	if (status != DMA_PL330_XFER_OK)
 		pr_err("%s: DMA failed.",__func__);
+
+	list_for_each_entry(dd, &spum_drv.dev_list, list) {
+		break;
+	}
+
+	if(*dma_chan == dd->rx_dma_chan) {
+		pr_debug("%s: Rx DMA completes!!! %d\n",__func__,*dma_chan);
+		err = dma_stop_transfer(dd->rx_dma_chan);
+		if(err) {
+			pr_err("%s: Rx transfer stop failed %d\n",__func__,err);
+		}
+		clear_bit(FLAGS_RBUSY, &dd->flags);
+		return;
+	}
+
+	pr_debug("%s: Tx DMA completes!!! %d\n",__func__,*dma_chan);
+
+	tasklet_schedule(&dma_tasklet);
 }
 
 static int spum_dma_setup(struct brcm_spum_device *dd)
@@ -1067,13 +1080,13 @@ static int spum_dma_setup(struct brcm_spum_device *dd)
 	pr_debug("DMA channel aquired rx %d tx %d\n",dd->rx_dma_chan,dd->tx_dma_chan);
 
 	/* Register DMA callback */
-	if (dma_register_callback(dd->tx_dma_chan, spum_tx_dma_callback,
-			      dd) != 0) {
+	if (dma_register_callback(dd->tx_dma_chan, spum_dma_callback,
+				&dd->tx_dma_chan) != 0) {
 		pr_debug("%s: Tx dma_register_callback failed\n", __func__);
 		goto err1;
 	}
-	if (dma_register_callback(dd->rx_dma_chan, spum_rx_dma_callback,
-			      dd) != 0) {
+	if (dma_register_callback(dd->rx_dma_chan, spum_dma_callback,
+				&dd->rx_dma_chan) != 0) {
 		pr_debug("%s: Rx dma_register_callback failed\n", __func__);
 		goto err2;
 	}
@@ -1096,9 +1109,9 @@ static int __devinit brcm_spum_probe(struct platform_device *pdev)
 
 	pr_debug("%s: entry\n",__func__);
 
-        dd = (struct brcm_spum_device *)
+	dd = (struct brcm_spum_device *)
 			kzalloc(sizeof(struct brcm_spum_device), GFP_KERNEL);
-        if(dd == NULL) {
+	if(dd == NULL) {
 		pr_err("%s:Failed to allocate spum structure.\n",__func__);
 		return -ENOMEM;
 	}
@@ -1114,11 +1127,14 @@ static int __devinit brcm_spum_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	if(clk_set_rate(dd->spum_open_clk, FREQ_MHZ(156)))
+		pr_debug("%s: Clock set failed!!!\n",__func__);
+
 	page = (u32 *)__get_free_page(GFP_KERNEL);
 	dd->dma_addr = dma_map_single(dd->dev, page, PAGE_SIZE,
 					DMA_FROM_DEVICE);
 	dd->dma_virt = page;
-	
+
 	if (dma_mapping_error(dd->dev, dd->dma_addr)) {
 		pr_err("Failed to get dma addresses\n");
 		free_page((unsigned long)page);
@@ -1171,8 +1187,7 @@ static int __devinit brcm_spum_probe(struct platform_device *pdev)
 	list_add_tail(&dd->list, &spum_drv.dev_list);
 	spin_unlock(&spum_drv.lock);
 
-	tasklet_init(&tasklet_rx, spum_rx_dma_tasklet, (unsigned long)dd);
-	tasklet_init(&tasklet_tx, spum_tx_dma_tasklet, (unsigned long)dd);
+	tasklet_init(&dma_tasklet, spum_dma_tasklet, (unsigned long)dd);
 	tasklet_init(&dd->queue_task, spum_queue_task, (unsigned long)dd);
 
 	for(i = 0; i < ARRAY_SIZE(spum_algo); i++) {
@@ -1217,8 +1232,7 @@ static int __devexit brcm_spum_remove(struct platform_device *pdev)
 	for(i = 0; i < ARRAY_SIZE(spum_algo); i++)
 		crypto_unregister_ahash(&spum_algo[i]);
 
-	tasklet_kill(&tasklet_rx);
-	tasklet_kill(&tasklet_tx);
+	tasklet_kill(&dma_tasklet);
 	tasklet_kill(&dd->queue_task);
 
 	dma_unmap_single(dd->dev, dd->dma_addr, PAGE_SIZE, DMA_FROM_DEVICE);
