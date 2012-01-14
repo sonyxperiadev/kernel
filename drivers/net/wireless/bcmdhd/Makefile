@@ -19,9 +19,14 @@ ifeq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
 DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74
 endif
 
-ifneq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
-DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
+ifeq ($(CONFIG_MACH_RHEA_STONE),y)
+# SW-OOB Interrupt
+DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74
 endif
+
+#ifneq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
+#DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
+#endif
 
 DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o   \
 	dhd_linux_sched.o bcmwifi.o dhd_sdio.o bcmevent.o dhd_bta.o hndpmu.o  \

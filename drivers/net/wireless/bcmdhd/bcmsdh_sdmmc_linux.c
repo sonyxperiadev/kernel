@@ -30,7 +30,7 @@
 #include <bcmsdbus.h>	/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>	/* to get msglevel bit values */
 
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE)
 #include <dngl_stats.h>
 #include <dhd.h>
 #include <linux/mmc/bcm_sdiowl.h>
@@ -76,7 +76,7 @@ extern void wl_cfg80211_set_parent_dev(void *dev);
 extern void sdioh_sdmmc_devintr_off(sdioh_info_t *sd);
 extern void sdioh_sdmmc_devintr_on(sdioh_info_t *sd);
 
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE)
 extern int bcm_sdiowl_rescan(void);
 struct device sdmmc_dev;
 #endif /* defined(CONFIG_ARCH_ISLAND) */
@@ -119,7 +119,7 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 		if(func->device == 0x4) { /* 4318 */
 			gInstance->func[2] = NULL;
 			sd_trace(("NIC found, calling bcmsdh_probe...\n"));
-#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
 			ret = bcmsdh_probe(&func->dev);
 #else
 			ret = bcmsdh_probe(&sdmmc_dev);
@@ -134,7 +134,7 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 		wl_cfg80211_set_parent_dev(&func->dev);
 #endif
 		sd_trace(("F2 found, calling bcmsdh_probe...\n"));
-#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
 		ret = bcmsdh_probe(&func->dev);
 #else
 		ret = bcmsdh_probe(&sdmmc_dev);
@@ -154,7 +154,7 @@ static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 
 	if (func->num == 2) {
 		sd_trace(("F2 found, calling bcmsdh_remove...\n"));
-#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
 		bcmsdh_remove(&func->dev);
 #else
 		bcmsdh_remove(&sdmmc_dev);
@@ -291,7 +291,7 @@ int sdio_function_init(void)
 	if (!gInstance)
 		return -ENOMEM;
 
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE)
 	error = bcm_sdiowl_init();
 	if (error) {
 		sd_err(("%s: bcm_sdiowl_start failed\n", __FUNCTION__));
@@ -328,7 +328,7 @@ void sdio_function_cleanup(void)
 
 	sdio_unregister_driver(&bcmsdh_sdmmc_driver);
 
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE)
 	/* 
  	 * Minimize power consumption by placing WiFi in reset.
 	 */
