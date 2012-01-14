@@ -6394,6 +6394,14 @@ int root_ccu_clk_init(struct clk* clk)
     /* MobC00173104 : change the settling time to 4 ms */
     writel (0x82, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTAL_STRTDLY_OFFSET);
 
+	/*Temp patch for JIRA 2490*/
+	reg_val = readl(KONA_ROOT_CLK_VA + 
+				ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+	reg_val |= 
+		ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
+	writel(reg_val,
+		KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
 
