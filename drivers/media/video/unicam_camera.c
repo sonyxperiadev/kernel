@@ -63,6 +63,7 @@ struct unicam_camera_dev {
 	struct list_head			capture;
 	u8							streaming;
 	u32							skip_frames;
+	struct v4l2_subdev_sensor_interface_parms if_params;
 
 };
 
@@ -326,6 +327,9 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	struct soc_camera_device *icd = soc_camera_from_vb2q(q);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
+	struct v4l2_subdev_sensor_interface_parms if_params;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	int ret;
 
 	CSL_CAM_INTF_CFG_st_t csl_cam_intf_cfg_st;
 	CSL_CAM_LANE_CONTROL_st_t cslCamLaneCtrl_st;
@@ -336,20 +340,58 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 
 	dprintk("-enter");
 	iprintk("enabling csi");
+
 	if (csl_cam_init()) {
 		dev_err(unicam_dev->dev, "error initializing csl camera\n");
 		return -1;
 	}
 
+	/* get the sensor interface information */
+	ret = v4l2_subdev_call(sd, sensor, g_interface_parms, &if_params);
+	if (ret < 0) {
+		dev_err(unicam_dev->dev, "error on g_inferface_params(%d)\n",
+				ret);
+		return ret;
+	}
+
+	unicam_dev->if_params = if_params;
 
 	/* set camera interface parameters */
-	csl_cam_intf_cfg_st.intf = CSL_CAM_INTF_CSI;
-	csl_cam_intf_cfg_st.afe_port = CSL_CAM_PORT_AFE_0;
+
+	/* we only support serial and csi2 sensor */
+	if ( (unicam_dev->if_params.if_type == V4L2_SUBDEV_SENSOR_SERIAL)
+			&& (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2))
+		csl_cam_intf_cfg_st.intf = CSL_CAM_INTF_CSI;
+	else {
+		dev_err(unicam_dev->dev, "CSI2 iface only supported,requested iface %d mode=%d\n",
+				unicam_dev->if_params.if_type, unicam_dev->if_params.if_mode);
+		return -EINVAL;
+	}
+
+	if (unicam_dev->if_params.parms.serial.channel == 0)
+		csl_cam_intf_cfg_st.afe_port = CSL_CAM_PORT_AFE_0;
+	else if (unicam_dev->if_params.parms.serial.channel == 1)
+		csl_cam_intf_cfg_st.afe_port = CSL_CAM_PORT_AFE_1;
+	else {
+		dev_err(unicam_dev->dev, "receiver only supports two channels, request channel=%d\n",
+				unicam_dev->if_params.parms.serial.channel);
+		return -EINVAL;
+	}
+
 	csl_cam_intf_cfg_st.frame_time_out = 1000;
 
 	/* open camera interface */
 	csl_cam_intf_cfg_st.p_cpi_intf_st  = NULL;
-	csl_cam_intf_cfg_st.input_mode = CSL_CAM_INPUT_SINGLE_LANE;
+
+	if (unicam_dev->if_params.parms.serial.lanes == 1)
+		csl_cam_intf_cfg_st.input_mode = CSL_CAM_INPUT_SINGLE_LANE;
+	else if(unicam_dev->if_params.parms.serial.lanes == 2)
+		csl_cam_intf_cfg_st.input_mode = CSL_CAM_INPUT_DUAL_LANE;
+	else {
+		dev_err(unicam_dev->dev, "receiver only supports max 2 lanes, requested lanes(%d)\n",
+				unicam_dev-if_params.parms.serial.lanes);
+		return -EINVAL;
+	}
 
 	if (csl_cam_open(&csl_cam_intf_cfg_st, &unicam_dev->cslCamHandle)) 	{
 		dev_err(unicam_dev->dev, "%s: csl_cam_open(): ERROR\n", __func__);
