@@ -322,6 +322,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0);
 
 	mode = AUDDRV_GetAudioModeBySink(speaker);
+
 	/* check to see the network speech coder's sampling rate and determine
 	   our HW sampling rate (and audio mode). */
 #if !defined(USE_NEW_AUDIO_PARAM)
@@ -473,6 +474,53 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 	return;
 }
 
+static Result_t AUDDRV_HWControl_ChangeSampleRate(CSL_CAPH_PathID pathID, AUDIO_SAMPLING_RATE_t sampleRate)
+{
+	CSL_CAPH_SRCM_INSAMPLERATE_e cslSampleRate = CSL_CAPH_SRCMIN_8KHZ;
+	switch(sampleRate)
+	{
+		case AUDIO_SAMPLING_RATE_8000:
+			cslSampleRate = CSL_CAPH_SRCMIN_8KHZ;
+			break;
+
+		case AUDIO_SAMPLING_RATE_16000:
+			cslSampleRate = CSL_CAPH_SRCMIN_16KHZ;
+			break;
+
+		default:
+			cslSampleRate = CSL_CAPH_SRCMIN_8KHZ;
+	}
+	csl_caph_hwctrl_ChangeSampleRate((CSL_CAPH_PathID)pathID, cslSampleRate);	
+	return RESULT_OK;
+}
+
+static void AUDDRV_Telephony_ChangeSampleRate( unsigned int sampleRate )
+{
+	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_ChangeSampleRate, sampleRate = %d\n\r", sampleRate);
+
+	if ( AUDDRV_InVoiceCall() )
+	{
+		//Change the sample rate for UL
+		if(telephonyPathID.ulPathID)
+		{
+			(void)AUDDRV_HWControl_ChangeSampleRate(telephonyPathID.ulPathID, sampleRate);
+		}
+
+		//Change the sample rate for UL secondary mic path
+		if(telephonyPathID.ul2PathID)
+		{
+			AUDDRV_HWControl_ChangeSampleRate(telephonyPathID.ul2PathID, sampleRate);
+		}
+
+		//Change the sample rate for DL
+		if(telephonyPathID.dlPathID)
+		{
+			AUDDRV_HWControl_ChangeSampleRate(telephonyPathID.dlPathID, sampleRate);
+		}
+
+	}
+}
+
 /*=============================================================================
 //
 // Function Name: AUDDRV_Telephony_RateChange
@@ -495,6 +543,10 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 			"AUDDRV_Telephony_RateChange, sampleRate = %d\n\r",
 			sample_rate);
 
+	Log_DebugPrintf(LOGID_AUDIO,
+			"AUDDRV_Telephony_RateChange a1, sampleRate = %d\n\r",
+			sample_rate);
+
 #if defined(FUSE_APPS_PROCESSOR) && !defined(BSP_ONLY_BUILD)
 	Log_DebugPrintf(LOGID_AUDIO,
 			"\n\r\t* AUDDRV_Telephony_RateChange AP  *\n\r");
@@ -511,6 +563,10 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
  (or for the incoming call in ring state.)*/
 
 	if (AUDDRV_InVoiceCall()) {
+
+	Log_DebugPrintf(LOGID_AUDIO,
+			"AUDDRV_Telephony_RateChange b, sampleRate = %d\n\r",
+			sample_rate);
 
 		audio_control_dsp(DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0);
 		audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, FALSE, FALSE, 0, 0, 0);
@@ -541,6 +597,13 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 			audio_app = AUDIO_APP_VOICE_CALL_WB;
 #endif
 		}
+
+	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_RateChange, Change HW Sample Rate\n\r");
+	if (AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ))
+        AUDDRV_Telephony_ChangeSampleRate(AUDIO_SAMPLING_RATE_16000);
+    else
+        AUDDRV_Telephony_ChangeSampleRate(AUDIO_SAMPLING_RATE_8000);
+
 #if !defined(USE_NEW_AUDIO_PARAM)
 		AUDDRV_SetAudioMode(mode);
 #else
@@ -564,7 +627,7 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 				  AUDDRV_IsCall16K(AUDDRV_GetAudioMode()), 0,
 				  0);
 #endif
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0,
+		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, AUDDRV_IsCall16K(AUDDRV_GetAudioMode()), 0, 0,
 				  0);
 
 		/* AUDDRV_Enable_Input ( AUDDRV_VOICE_INPUT, mic,
@@ -572,7 +635,7 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 
 		mdelay(40);
 
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0,
+		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, AUDDRV_IsCall16K(AUDDRV_GetAudioMode()), 0, 0,
 				  0);
 /*		audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
 		audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, ec_enable_from_sysparm,
@@ -1057,6 +1120,10 @@ Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode)
 		break;
 	}
 #else
+
+/* BT headset needs to consider NB or WB too */
+	if(voiceMode==AUDIO_MODE_BLUETOOTH)
+		is_call16k = IsBTM_WB;
 
 	if (currAudioApp == AUDIO_APP_VOICE_CALL_WB)
 		is_call16k = TRUE;
