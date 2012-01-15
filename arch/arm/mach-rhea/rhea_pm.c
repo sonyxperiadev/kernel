@@ -244,13 +244,12 @@ static int pm_enable_self_refresh(bool enable)
 static int pm_config_deep_sleep(void)
 {
 	u32 reg_val;
-	pwr_mgr_ignore_power_ok_signal(true);
-    clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
-    clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
-    clk_set_crystal_pwr_on_idle(true);
+	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
+	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
+	clk_set_crystal_pwr_on_idle(true);
 
 	pwr_mgr_arm_core_dormant_enable(false /*disallow dormant*/);
-    pm_enable_scu_standby(true);
+	pm_enable_scu_standby(true);
 
 	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 #ifdef CONFIG_ARCH_RHEA_A0
