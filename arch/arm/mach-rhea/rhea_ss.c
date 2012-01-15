@@ -1552,6 +1552,19 @@ static struct platform_device rhea_camera = {
 	},
 };
 #else
+
+static struct v4l2_subdev_sensor_interface_parms s5k4ecgx_if_params = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
+	.parms.serial = {
+		.lanes = 1,
+		.channel = 0,
+		.phy_rate = 0,
+		.pix_clk = 0
+	},
+};
+
+
 static struct soc_camera_link iclink_s5k4ecgx = {
 	.bus_id		= 0,
 	
@@ -1560,6 +1573,7 @@ static struct soc_camera_link iclink_s5k4ecgx = {
 	.module_name	= "s5k4ecgx",
 	.power		= &rhea_camera_power,
 	.reset		= &rhea_camera_reset,
+	.priv		= &s5k4ecgx_if_params,
 };
 
 static struct platform_device rhea_camera = {
