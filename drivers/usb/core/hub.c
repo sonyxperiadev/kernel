@@ -431,6 +431,7 @@ static void hub_irq(struct urb *urb)
 		dev_dbg (hub->intfdev, "transfer --> %d\n", status);
 		if ((++hub->nerrors < 10) || hub->error)
 			goto resubmit;
+
 		hub->error = status;
 		/* FALL THROUGH */
 
@@ -1660,6 +1661,7 @@ void usb_disconnect(struct usb_device **pdev)
 #ifdef CONFIG_USB_OTG
 	if (udev->bus->hnp_support && udev->portnum == udev->bus->otg_port) {
 		cancel_delayed_work_sync(&udev->bus->hnp_polling);
+		cancel_delayed_work_sync(&udev->bus->maint_conf_session_for_td);
 		udev->bus->hnp_support = 0;
 	}
 #endif
@@ -1817,7 +1819,7 @@ static int usb_enumerate_device_otg(struct usb_device *udev)
 					dev_info(&udev->dev,
 						"HNP Not Supported\n");
 				}
-                        }
+			}
 		}
 	}
 
@@ -3252,9 +3254,9 @@ static void hub_port_connect_change(struct usb_hub *hub, int port1,
 			status = usb_remote_wakeup(udev);
 #endif
 
-		} else {
+		} else
 			status = -ENODEV;	/* Don't resuscitate */
-		}
+
 		usb_unlock_device(udev);
 
 		if (status == 0) {

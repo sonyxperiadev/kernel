@@ -322,7 +322,9 @@ struct usb_bus {
 	unsigned is_b_host:1;		/* true during some HNP roleswitches */
 	unsigned b_hnp_enable:1;	/* OTG: did A-Host enable HNP? */
 	unsigned hnp_support:1; 	/* OTG: HNP is supported on OTG port */
+	bool otg_vbus_off; /* OTG: A-host must turn off Vbus within 5 seconds if B-device disconnects */
 	struct delayed_work hnp_polling; /* OTG: HNP polling work */
+	struct delayed_work maint_conf_session_for_td; /* OTG: Maintain configured session n test device */
 	unsigned sg_tablesize;		/* 0 or largest number of sg list entries */
 
 	int devnum_next;		/* Next open device number in

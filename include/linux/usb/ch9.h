@@ -155,6 +155,11 @@
 #define OTG_STATUS_SELECTOR		0xF000
 #define THOST_REQ_POLL				1500
 #define HOST_REQUEST_FLAG			0
+/* TTST_VBOFF max is 5000 */
+#define TTST_VBOFF					1000
+
+/* Default timeout for turning off Vbus if no connect */
+#define HOST_VBOFF					10000
 
 /**
  * struct usb_ctrlrequest - SETUP data for a USB device control request

@@ -1298,23 +1298,36 @@ void usb_hnp_polling_work(struct work_struct *work)
 	struct usb_bus *bus =
 			container_of(work, struct usb_bus, hnp_polling.work);
 	struct usb_device *udev = bus->root_hub->children[bus->otg_port - 1];
+	struct usb_otg_descriptor	*desc = NULL;
 	u8 *status = kmalloc(sizeof(*status), GFP_KERNEL);
 
 	if (!status)
 		return;
 
-	ret = usb_control_msg(udev, usb_rcvctrlpipe(udev, 0),
-			USB_REQ_GET_STATUS, USB_DIR_IN | USB_RECIP_DEVICE,
-			0, OTG_STATUS_SELECTOR, status, sizeof(*status),
-			USB_CTRL_GET_TIMEOUT);
-	if (ret < 0) {
-		/* Peripheral may not be supporting HNP polling */
-		dev_vdbg(&udev->dev, "HNP polling failed. status %d\n", ret);
-		goto out;
+	if (__usb_get_extra_descriptor (udev->rawdescriptors[0],
+					le16_to_cpu(udev->config[0].desc.wTotalLength),
+					USB_DT_OTG, (void **) &desc) == 0) {
+		if (desc->bLength == sizeof(*desc) &&
+				le16_to_cpu(desc->bcdOTG) >= 0x200) {
+			ret = usb_control_msg(udev, usb_rcvctrlpipe(udev, 0),
+				USB_REQ_GET_STATUS, USB_DIR_IN | USB_RECIP_DEVICE,
+				0, OTG_STATUS_SELECTOR, status, sizeof(*status),
+				USB_CTRL_GET_TIMEOUT);
+			if (ret < 0) {
+				/* Peripheral may not be supporting HNP polling */
+				dev_vdbg(&udev->dev, "HNP polling failed. status %d\n", ret);
+				goto out;
+			}
+		} else {
+			 /* No flag for OTG1.3 so set it anyway to suspend the
+			 * bus and let B-device start HNP */
+			*status = 1 << HOST_REQUEST_FLAG;
+		}
 	}
 
-	/* Spec says host must suspend the bus with in 2 sec. */
 	if (*status & (1 << HOST_REQUEST_FLAG)) {
+		/* Suspend the bus so B-device
+		* can initiate role switch */
 		do_unbind_rebind(udev, DO_UNBIND);
 		ret = usb_suspend_both(udev, PMSG_USER_SUSPEND);
 		if (ret)
@@ -1325,6 +1338,20 @@ void usb_hnp_polling_work(struct work_struct *work)
 	}
 out:
 		kfree(status);
+}
+
+void usb_host_test_device_sessend_work(struct work_struct *work)
+{
+	struct usb_bus *bus =
+			container_of(work, struct usb_bus, maint_conf_session_for_td.work);
+	struct usb_hcd *hcd = bus_to_hcd(bus);
+
+	/* Stop HNP polling */
+	cancel_delayed_work_sync(&bus->hnp_polling);
+
+	/* Revisit cleaning up the device before ending the session */
+	if (hcd->driver && hcd->driver->stop)
+		hcd->driver->stop(hcd);
 }
 #endif
 

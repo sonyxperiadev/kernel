@@ -1911,6 +1911,24 @@ free_interfaces:
 					usb_control_msg(hdev, usb_sndctrlpipe(hdev, 0),
 							USB_REQ_SET_FEATURE, USB_RT_PORT,
 							USB_PORT_FEAT_TEST, 0x800, NULL, 0, 40 * HZ);
+					break;
+
+#ifdef CONFIG_USB_OTG
+				case 0x0200: /* TEST DEVICE REQUIRED BY COMPLIANCE TEST */
+					dev_warn(&dev->dev, "TEST DEVICE REQUIRED BY COMPLIANCE TEST\n");
+					hcd->self.otg_vbus_off = dev->descriptor.bcdDevice & 0x01;
+					if (hcd->self.otg_vbus_off)
+						usb_control_msg(hdev, usb_sndctrlpipe(hdev, 0),
+							USB_REQ_SET_FEATURE, USB_RT_PORT, USB_PORT_FEAT_TEST, 0x1000,
+							NULL, 0, 1000);
+					else
+						schedule_delayed_work(&dev->bus->maint_conf_session_for_td,
+							msecs_to_jiffies(HOST_VBOFF));
+					break;
+#endif
+				default:
+					dev_warn(&dev->dev, "UNKNOWN PID from test fixture\n");
+					break;
 				}
 			}
 		}
