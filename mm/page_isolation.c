@@ -100,13 +100,17 @@ __test_page_isolated_in_pageblock(unsigned long pfn, unsigned long end_pfn)
 			continue;
 		}
 		page = pfn_to_page(pfn);
-		if (PageBuddy(page))
+		if (PageBuddy(page)) {
 			pfn += 1 << page_order(page);
-		else if (page_count(page) == 0 &&
-				page_private(page) == MIGRATE_ISOLATE)
+		} else if (page_count(page) == 0 &&
+				page_private(page) == MIGRATE_ISOLATE) {
 			pfn += 1;
-		else
+		} else {
+			printk(KERN_WARNING"!!! Found orphan page(pfn=%lx), (count=%d), (isBuddy=%s), (private=0x%08lx), (flags=0x%08lx), (_mapcount=%d) !!!\n",
+					pfn, page_count(page), PageBuddy(page)?"yes":"no",
+					page_private(page), page->flags, page_mapcount(page));
 			break;
+		}
 	}
 	if (pfn < end_pfn)
 		return 0;
