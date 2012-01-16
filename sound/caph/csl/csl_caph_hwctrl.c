@@ -1837,12 +1837,6 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID, int sinkNo, int startO
 			//csl_pcm_start(pcmHandleSSP, &pcmCfg);
 #endif
 		} else {
-			//if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && bBTTest) udelay(500); //without small delay, BT production test is not consistent.
-			//For BT-to-EP HW loopback to work consistently, one of these options is required, need to find out the reason later:
-			//- use SRCMixer input trigger, instead of SSP RX trigger.
-			//- use internal SSP loopback, instead of external loopback via jumper.
-			//- this delay.
-			udelay(500);
 			csl_pcm_start(pcmHandleSSP, &pcmCfg);
 		}
 
