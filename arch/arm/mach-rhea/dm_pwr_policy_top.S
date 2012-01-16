@@ -225,7 +225,6 @@
 
     .extern dormant_base_va
     .extern dormant_base_pa
-    .extern dormant_count
 
 #include "dm_pwr_save_dfn.h"
 #include "dm_support_ops.S"
@@ -242,20 +241,21 @@
 #include "dm_pwr_dbg_mcrs.S"
 
 
+@ bool dormant_start(void);
 ENTRY(dormant_start)
 @    BL PWRMGMT_test_a9DeepSleep
     PUSH {LR}           @ ASSUMPTION: valid stack exists, save LR
                         @ 2x PUSH to emphasise the hierarchy in this example
-    PUSH {r0-r2}        @ create temporary storage for the CPSR
+    PUSH {r1-r2}        @ create temporary storage for the CPSR
                         @ and local variables
-    MRS r0, CPSR
+    MRS r1, CPSR
 
 @@ The power save routine in the example then assumes a transition to Supervisor
 @@ mode is required before calling a function to save all state.
 
     CPSID aif , #MODE_SVC   @ disable interrupts
                             @ (and change mode if necessary)
-    PUSH {r0,LR}            @ save LR and the return CPSR on the SVC stack
+    PUSH {r1,LR}            @ save LR and the return CPSR on the SVC stack
     .if(CA9_SCU_PRESENT)       @ if an MP system, calculate context save pointer
         MRC	p15,0,r2,c0,c0,5	@ read the MPIDR, MP affinity register
 	    UBFX r2, r2, #0, #2		@ extract the CPUID field
@@ -273,11 +273,14 @@ ENTRY(dormant_start)
                             @ r0 and r1 are arguments (can be VAs)
     BL DormantSave
                        @@ DormantSave => WFI => powerdown
+@ At this point r0 must contain:
+@ 0x0 - dormant entry failed (SMC returned without dormant entry)
+@ 0x1 - returned via dormant boot
 WarmStartContinue:      @ return here on exit from DORMANT_RESTORE2
-    POP {r0,LR}        @ recover LR and the CPSR value
-    MSR CPSR_fsxc, r0  @ restore the CPSR incl. mode change if necessary
+    POP {r1,LR}        @ recover LR and the CPSR value
+    MSR CPSR_fsxc, r1  @ restore the CPSR incl. mode change if necessary
     ISB
-    POP {r0-r2}        @ restore 'temporary storage' from the correct stack
+    POP {r1-r2}        @ restore 'temporary storage' from the correct stack
 PowerRestored:          @ return to the calling code
     POP {PC}           @ callee entry point: DormantStart
 
@@ -424,7 +427,7 @@ LateWakeupEventHandler: @ Secure routine returned without entering dormant here
     LDR	SP, [r0], #4  @ restore the stack pointer
     LDM	r0,{r1-r12,r14}	  @ restore other ARM registers
                           @ (except r0 and PC)
-    SUB	r0,r0,#(DM_BLOCK + 4) @ restore r0.
+    MOV r0,#0             @ Indicate dormant entry failed
     MOV	pc,lr		          @ execution returns to WarmStartContinue
 
     .align 5
@@ -498,12 +501,8 @@ ContinueRestore:
 
 
 ContinueRestoreNoTEX:
-	ldr     r4,=dormant_count
-	ldr	r5,[r4]
-	add	r5,r5,#1
-	str	r5,[r4]
-
 	DORMANT_RESTORE2
+	MOV     r0,#1              @ Indicate dormant entry succeeded
 	MOV	pc,lr               @ execution returns to WarmStartContinue
 FullSystemReset:                   @ nothing to recover, execute a full reset
     @@ B SystemBoot

@@ -38,29 +38,19 @@
 #include <mach/rdb/brcm_rdb_a9pmu.h>
 #include <mach/rdb/brcm_rdb_a9ptm.h>
 #include <mach/rdb/brcm_rdb_glbtmr.h>
+#include <mach/pm.h>
 
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 #include <mach/secure_api.h>
 #endif
 
-static int enable_dormant = 1;
-module_param_named(enable_dormant, enable_dormant, int, S_IRUGO | S_IWUSR | S_IWGRP);
-
-int dormant_count;
-EXPORT_SYMBOL(dormant_count);
-module_param_named(dormant_count, dormant_count, int,
-		   S_IRUGO | S_IWUSR | S_IWGRP);
-
 u32 dormant_base_va;
 u32 dormant_base_pa;
-
-extern void dormant_start(void);
 
 /* Array of registers that needs to be saved and restored.  Please add to the end if new data
  * needs to be added.  Note that PLL DIV and TRIGGER registers are moved to the top of the list
  * to minimize issues at 156 mhz.
  */
-
 static u32 addnl_save_reg_list[][2] =
 {
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PL310_DIV_OFFSET), 0}, //0x3FE00A00 - PL310_DIV
@@ -478,29 +468,15 @@ u32 hw_sec_pub_dispatcher(u32 service_id, u32 flags, ...)
 static void dormant_save_addnl_reg(void)
 {
 	int i;
-	for ( i=0; i < ARRAY_SIZE(addnl_save_reg_list); i++ )
-	{
-		addnl_save_reg_list[i][1] = readl(addnl_save_reg_list[i][0]);
-	}
-	/* Finished saving all additional registers.  Disable L2 before entering dormant */
-	/* HWRHEA-1199 - Disable L2 before entering dormant so that when
-	 * we exit dormant, we have L2 disabled not causing an issue dur to
-	 * running at 156 MHZ
-	 */
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-#ifdef CONFIG_CACHE_L2X0
-	hw_sec_pub_dispatcher(SEC_API_DISABLE_L2_CACHE,
-		SEC_FLAGS);
-#endif
-#endif
-}
 
+	for (i = 0; i < ARRAY_SIZE(addnl_save_reg_list); i++)
+		addnl_save_reg_list[i][1] = readl(addnl_save_reg_list[i][0]);
+}
 
 static void dormant_restore_addnl_reg(void)
 {
 	int i;
 	u32 val1,val2;
-
 
 	/* Allow write access to the CCU registers */
 	writel(0xA5A501,
@@ -541,47 +517,77 @@ static void dormant_restore_addnl_reg(void)
 			val2 =  readl(KONA_PROC_CLK_VA + KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET) &
 				KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
 	} while ( val1 | val2 ) ;
-
-	/* Finished restoring all the registers, enable the L2 CACHE now*/
-	/* HWRHEA-1199 - New frequency should now be in effect enable
-	 * L2 cache now
-	 */
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-#ifdef CONFIG_CACHE_L2X0
-	hw_sec_pub_dispatcher(SEC_API_ENABLE_L2_CACHE,
-		SEC_FLAGS);
-#endif
-#endif
 }
 
-int loop = 1;
+static int dormant_pass;
+module_param_named(dormant_pass, dormant_pass, int,
+		   S_IRUGO | S_IWUSR | S_IWGRP);
+
+static int dormant_fail;
+module_param_named(dormant_fail, dormant_fail, int,
+		   S_IRUGO | S_IWUSR | S_IWGRP);
+
+static int dormant_attempt;
+module_param_named(dormant_attempt, dormant_attempt, int,
+		   S_IRUGO | S_IWUSR | S_IWGRP);
+
+static int enable_dormant;
+module_param_named(enable_dormant, enable_dormant, int,
+		   S_IRUGO | S_IWUSR | S_IWGRP);
+
 void dormant_enter(void)
 {
+	bool ret = false;
 
-	if(enable_dormant)
-	{
+	if (enable_dormant) {
+		/* Count of total number of times dormant entry was
+		 * attempted.
+		 */
+		dormant_attempt++;
 		dormant_save_addnl_reg();
-		dormant_start();
-		dormant_restore_addnl_reg();
+
+		ret = dormant_start();
+
+		if (ret == true) {
+			/* Dormant entry succeeded */
+			dormant_pass++;
+			dormant_restore_addnl_reg();
+		} else {
+			dormant_fail++;
+		}
 	}
 }
 
-
-int __init rhea_dormant_init(void)
+static int __init rhea_dormant_init(void)
 {
+	void *vptr = NULL;
+
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 	dma_addr_t drmt_buf_phy;
-	dormant_base_va = (u32)dma_alloc_coherent(NULL, SZ_4K,
-					      &drmt_buf_phy,
-					      GFP_ATOMIC);
 
-	dormant_base_pa = (u32)drmt_buf_phy;
+	vptr = dma_alloc_coherent(NULL, SZ_4K, &drmt_buf_phy, GFP_ATOMIC);
+	if (vptr == NULL) {
+		pr_info("%s: dormant dma buffer alloc failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	dormant_base_va = (u32) vptr;
+	dormant_base_pa = (u32) drmt_buf_phy;
 #else
-	dormant_base_va = dormant_base_pa =
-	     (u32)kmalloc(SZ_4K, GFP_ATOMIC);
+	vptr = kmalloc(SZ_4K, GFP_ATOMIC);
+	if (vptr == NULL) {
+		pr_info("%s: dormant buffer alloc failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	dormant_base_va = (u32) vptr;
+	dormant_base_pa = (u32) vptr;
 #endif
+
+	pr_info("dormant base @ va: 0x%08x, pa: 0x%08x\n", dormant_base_va,
+		dormant_base_pa);
+	enable_dormant = 1;
 
 	return 0;
 }
-
 module_init(rhea_dormant_init);
