@@ -148,6 +148,27 @@ struct pi
 	struct pi_ops* ops;
 };
 
+struct pi_mgr_qos_node
+{
+	char* name;
+	struct plist_node list;
+	u32 latency;
+	u32 pi_id;
+	bool valid;
+};
+
+struct pi_mgr_dfs_node
+{
+	char* name;
+	struct plist_node list;
+	u32 opp;
+	u32 weightage;
+	u32 req_active;
+	u32 pi_id;
+	bool valid;
+};
+
+
 /*change_notify state*/
 enum
 {
@@ -185,16 +206,16 @@ extern struct pi_ops gen_pi_ops;
 
 #ifdef CONFIG_KONA_PI_MGR
 struct pi* pi_mgr_get(int pi_id);
-struct pi_mgr_qos_node* pi_mgr_qos_add_request(char* client_name, u32 pi_id, u32 lat_value);
+int pi_mgr_qos_add_request(struct pi_mgr_qos_node *node, char* client_name, u32 pi_id, u32 lat_value);
 int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32 lat_value);
 int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node);
 int pi_set_policy(const struct pi *pi, u32 policy,int type);
 
 int pi_mgr_disable_policy_change(int pi_id, int disable);
 
-struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id, u32 opp);
+int pi_mgr_dfs_add_request(struct pi_mgr_dfs_node* node, char* client_name, u32 pi_id, u32 opp);
 int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp);
-struct pi_mgr_dfs_node* pi_mgr_dfs_add_request_ex(char* client_name, u32 pi_id, u32 opp,u32 opp_weightage);
+int pi_mgr_dfs_add_request_ex(struct pi_mgr_dfs_node* node,char* client_name, u32 pi_id, u32 opp,u32 opp_weightage);
 int pi_mgr_dfs_request_update_ex(struct pi_mgr_dfs_node* node, u32 opp, u32 opp_weightage);
 int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node);
 
@@ -217,7 +238,7 @@ int pi_init_state(struct pi *pi);
 #define pi_get_name(pi)	(pi)->name
 #else
 static inline struct pi* pi_mgr_get(int pi_id) {return NULL;}
-static inline struct pi_mgr_qos_node* pi_mgr_qos_add_request(char* client_name, u32 pi_id,
+static inline int pi_mgr_qos_add_request(struct pi_mgr_qos_node *node, char* client_name, u32 pi_id,
 	u32 lat_value) {return NULL;}
 static inline int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32
 	lat_value) {return 0;}
@@ -225,7 +246,7 @@ static inline int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node) {retur
 static inline int pi_set_policy(const struct pi *pi, u32 policy,int type) {return 0;}
 static inline int pi_mgr_disable_policy_change(int pi_id, int disable) {return 0;}
 
-static inline struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id,
+static inline int pi_mgr_dfs_add_request(struct pi_mgr_qos_node* node,char* client_name, u32 pi_id,
 	u32 opp) {return NULL;}
 static inline int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp)
 	{return	0;}

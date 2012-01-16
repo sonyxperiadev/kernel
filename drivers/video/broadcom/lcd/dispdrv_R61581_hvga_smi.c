@@ -24,27 +24,27 @@
 /************************************************************************************************/
 
 /**
- *                          
+ *
  * LCD Module:   HVGA Display Driver (R61581) for HERA/RHEA
  *               Supports Only 8/16/18 bit SMI bus.
  *
  * DISPLAY:      RHEA Display Board
  *
  */
- 
+
 /**
  *
- *  REV    Date         Comment         
- *  --------------------------------------------------------------------------   
- *  0.10   13th JULY 2011  - Initial HERA Release 
+ *  REV    Date         Comment
+ *  --------------------------------------------------------------------------
+ *  0.10   13th JULY 2011  - Initial HERA Release
  */
 
-#ifndef __KERNEL__ 
+#ifndef __KERNEL__
 #include <stdio.h>
 #include "mobcom_types.h"
 #include "chip_version.h"
-#include "gpio.h"                   
-#include "gpio_drv.h"               
+#include "gpio.h"
+#include "gpio_drv.h"
 #include "platform_config.h"
 #include "irqctrl.h"
 #include "osinterrupt.h"
@@ -56,15 +56,15 @@
 #include "logapi.h"
 #include "csl_lcd.h"                // CSL LCD Layer commons
 #include "dispdrv_common.h"         // DISPLAY DRIVER Commons
-#include "csl_smi.h"                // Combined CSL for MM SMI&SPI(LOSSI)   
+#include "csl_smi.h"                // Combined CSL for MM SMI&SPI(LOSSI)
 #include "dispdrv_mipi_dcs.h"       // DISPLAY DRIVER Commons
 
 #include "csl_tectl_vc4lite.h"      // TE Input Control
 
 
-#include "display_drv.h"            // DISPLAY DRIVER Interface   
+#include "display_drv.h"            // DISPLAY DRIVER Interface
 
-#else  /* __KERNEL__ */ 
+#else  /* __KERNEL__ */
 
 #include <linux/string.h>
 #include <plat/mobcom_types.h>
@@ -77,14 +77,14 @@
 #include <plat/csl/csl_dma_vc4lite.h>
 
 #include <plat/dma_drv.h>
-#include <plat/csl/csl_lcd.h>  
-#include <plat/csl/csl_smi.h> 
-#include <plat/csl/csl_tectl_vc4lite.h> 
+#include <plat/csl/csl_lcd.h>
+#include <plat/csl/csl_smi.h>
+#include <plat/csl/csl_tectl_vc4lite.h>
 #include <plat/pi_mgr.h>
 
 #include "dispdrv_mipi_dcs.h"
-#include "dispdrv_common.h" 
-#include "display_drv.h" 
+#include "dispdrv_common.h"
+#include "display_drv.h"
 #include "lcd_clock.h"
 
 #endif /*  __KERNEL__ */
@@ -92,7 +92,7 @@
 #define __HVGA_MODE_565__
 
 // output color mdoe must be defined before including EC .H
-#include "dispdrv_ec_par_r61581.h"    
+#include "dispdrv_ec_par_r61581.h"
 
 #define GPIODRV_Set_Bit(pin, val) gpio_set_value(pin, val)
 
@@ -100,7 +100,7 @@
 //#define HAL_LCD_RESET_B  95
 //#define HAL_LCD_RESET_C  96
 
-typedef struct   
+typedef struct
 {
     CSL_LCD_HANDLE       cslH;
     DISPDRV_INFO_T*      panelData;
@@ -110,73 +110,73 @@ typedef struct
     void*                frameBuffer;
     DISP_DRV_STATE       drvState;
     DISP_PWR_STATE       pwrState;
-    struct pi_mgr_dfs_node* dfs_node;
+    struct pi_mgr_dfs_node dfs_node;
     volatile int	 is_clock_gated;
-} R61581_HVGA_SMI_PANEL_T;   
+} R61581_HVGA_SMI_PANEL_T;
 
 
 static void r61581hvgaSmi_WrCmndP0  ( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 cmnd );
 static void r61581hvgaSmi_WrCmndP1  ( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 cmnd, UInt32 data );
 static void r61581hvgaSmi_WrCmndP2  ( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 data1);
 
-static void r61581hvgaSmi_IoCtlRd ( 
-                DISPDRV_HANDLE_T        dispH, 
-                DISPDRV_CTRL_RW_REG*    acc 
+static void r61581hvgaSmi_IoCtlRd (
+                DISPDRV_HANDLE_T        dispH,
+                DISPDRV_CTRL_RW_REG*    acc
                 );
-                
-static void r61581hvgaSmi_IoCtlWr( 
-                DISPDRV_HANDLE_T        dispH, 
-                DISPDRV_CTRL_RW_REG*    acc 
+
+static void r61581hvgaSmi_IoCtlWr(
+                DISPDRV_HANDLE_T        dispH,
+                DISPDRV_CTRL_RW_REG*    acc
                 );
 
 //--- GEN DRIVER --------------------------------------------------------------
-Int32   R61581_HVGA_SMI_Init (  unsigned int bus_width ); 
+Int32   R61581_HVGA_SMI_Init (  unsigned int bus_width );
 Int32   R61581_HVGA_SMI_Exit ( void );
 
-Int32   R61581_HVGA_SMI_Open ( 
-            const void*         params, 
-            DISPDRV_HANDLE_T*   dispH ); 
+Int32   R61581_HVGA_SMI_Open (
+            const void*         params,
+            DISPDRV_HANDLE_T*   dispH );
 
 Int32   R61581_HVGA_SMI_GetCtl (
-            DISPDRV_HANDLE_T    dispH, 
-            DISPDRV_CTRL_ID_T   ctrlID, 
+            DISPDRV_HANDLE_T    dispH,
+            DISPDRV_CTRL_ID_T   ctrlID,
             void*               ctrlParams );
 
 Int32   R61581_HVGA_SMI_SetCtl (
-            DISPDRV_HANDLE_T    dispH, 
-            DISPDRV_CTRL_ID_T   ctrlID, 
+            DISPDRV_HANDLE_T    dispH,
+            DISPDRV_CTRL_ID_T   ctrlID,
             void*               ctrlParams );
 
-Int32   R61581_HVGA_SMI_Close ( DISPDRV_HANDLE_T dispH ); 
+Int32   R61581_HVGA_SMI_Close ( DISPDRV_HANDLE_T dispH );
 
-const DISPDRV_INFO_T* R61581_HVGA_SMI_GetDispDrvData ( DISPDRV_HANDLE_T dispH ); 
+const DISPDRV_INFO_T* R61581_HVGA_SMI_GetDispDrvData ( DISPDRV_HANDLE_T dispH );
 
-Int32   R61581_HVGA_SMI_GetDispDrvFeatures ( 
+Int32   R61581_HVGA_SMI_GetDispDrvFeatures (
             const char**                driver_name,
             UInt32*                     version_major,
             UInt32*                     version_minor,
             DISPDRV_SUPPORT_FEATURES_T* flags );
 
-Int32   R61581_HVGA_SMI_Start ( struct pi_mgr_dfs_node* dfs_node ); 
+Int32   R61581_HVGA_SMI_Start ( struct pi_mgr_dfs_node* dfs_node );
 
-Int32   R61581_HVGA_SMI_Stop  ( struct pi_mgr_dfs_node* dfs_node ); 
+Int32   R61581_HVGA_SMI_Stop  ( struct pi_mgr_dfs_node* dfs_node );
 
-Int32   R61581_HVGA_SMI_PowerControl ( 
-            DISPDRV_HANDLE_T        dispH, 
-            DISPLAY_POWER_STATE_T   state ); 
+Int32   R61581_HVGA_SMI_PowerControl (
+            DISPDRV_HANDLE_T        dispH,
+            DISPLAY_POWER_STATE_T   state );
 
-Int32   R61581_HVGA_SMI_SetWindow ( DISPDRV_HANDLE_T dispH ); 
+Int32   R61581_HVGA_SMI_SetWindow ( DISPDRV_HANDLE_T dispH );
 
-Int32   R61581_HVGA_SMI_Update ( 
-            DISPDRV_HANDLE_T    dispH, 
+Int32   R61581_HVGA_SMI_Update (
+            DISPDRV_HANDLE_T    dispH,
 	    int			fb_idx,
             DISPDRV_WIN_t*	p_win,
-            DISPDRV_CB_T        apiCb ); 
+            DISPDRV_CB_T        apiCb );
 
-Int32   R61581_HVGA_SMI_Update_ExtFb ( 
-            DISPDRV_HANDLE_T        dispH, 
+Int32   R61581_HVGA_SMI_Update_ExtFb (
+            DISPDRV_HANDLE_T        dispH,
             void                    *pFb,
-            DISPDRV_CB_API_1_1_T    apiCb ); 
+            DISPDRV_CB_API_1_1_T    apiCb );
 
 static DISPDRV_T R61581_HVGA_SMI_Drv =
 {
@@ -201,51 +201,51 @@ static DISPDRV_T R61581_HVGA_SMI_Drv =
 
 static DISPDRV_INFO_T R61581_HVGA_SMI_Info =
 {
-    DISPLAY_TYPE_LCD_STD,       // DISPLAY_TYPE_T          type;          
-    320,                        // UInt32                  width;         
-    480,                        // UInt32                  height;        
-#if defined(__HVGA_MODE_888__) 
-    DISPDRV_FB_FORMAT_RGB888_U, // DISPDRV_FB_FORMAT_T     input_format;  
+    DISPLAY_TYPE_LCD_STD,       // DISPLAY_TYPE_T          type;
+    320,                        // UInt32                  width;
+    480,                        // UInt32                  height;
+#if defined(__HVGA_MODE_888__)
+    DISPDRV_FB_FORMAT_RGB888_U, // DISPDRV_FB_FORMAT_T     input_format;
 #else
-    DISPDRV_FB_FORMAT_RGB565,   // DISPDRV_FB_FORMAT_T     input_format;  
-#endif    
+    DISPDRV_FB_FORMAT_RGB565,   // DISPDRV_FB_FORMAT_T     input_format;
+#endif
     DISPLAY_BUS_SMI,            // DISPLAY_BUS_T           bus_type;
-    0,                          // UInt32                  interlaced;    
-    DISPDRV_DITHER_NONE,        // DISPDRV_DITHER_T        output_dither; 
-    0,                          // UInt32                  pixel_freq;    
-    0,                          // UInt32                  line_rate;     
+    0,                          // UInt32                  interlaced;
+    DISPDRV_DITHER_NONE,        // DISPDRV_DITHER_T        output_dither;
+    0,                          // UInt32                  pixel_freq;
+    0,                          // UInt32                  line_rate;
 };
-    
-            
+
+
 static CSL_SMI_CTRL_T  R61581_HVGA_SMI_SmiCtrlCfg =
 {
-    8,                      //  UInt8             busWidth;         
+    8,                      //  UInt8             busWidth;
     {SMI_PLL_500MHz, 2  },  //  div range 1-16 (1 unusable), 2=4ns timing step
-    0,                      //  UInt8             addr_c, init by open          
-    0,                      //  UInt8             addr_d, init by open          
-    FALSE,                  //  Boolean           m68;              
-    FALSE,                  //  Boolean           swap;             
-    FALSE,                  //  Boolean           setupFirstTrOnly; 
-#if defined(__HVGA_MODE_888__) 
-    LCD_IF_CM_I_RGB888U,    //  CSL_LCD_CM_IN     colModeIn;    xRGB     
+    0,                      //  UInt8             addr_c, init by open
+    0,                      //  UInt8             addr_d, init by open
+    FALSE,                  //  Boolean           m68;
+    FALSE,                  //  Boolean           swap;
+    FALSE,                  //  Boolean           setupFirstTrOnly;
+#if defined(__HVGA_MODE_888__)
+    LCD_IF_CM_I_RGB888U,    //  CSL_LCD_CM_IN     colModeIn;    xRGB
     LCD_IF_CM_O_RGB888,     //  CSL_LCD_CM_OUT    colModeOut;
 #elif defined(__HVGA_MODE_666__)
-    LCD_IF_CM_I_RGB565P,    //  CSL_LCD_CM_IN     colModeIn;         
+    LCD_IF_CM_I_RGB565P,    //  CSL_LCD_CM_IN     colModeIn;
     LCD_IF_CM_O_RGB666,     //  CSL_LCD_CM_OUT    colModeOut;
 #else
-    LCD_IF_CM_I_RGB565P,    //  CSL_LCD_CM_IN     colModeIn;         
+    LCD_IF_CM_I_RGB565P,    //  CSL_LCD_CM_IN     colModeIn;
     LCD_IF_CM_O_RGB565,     //  CSL_LCD_CM_OUT    colModeOut;
-#endif    
+#endif
     // setup_ns, hold_ns, pace_ns, strobe_ns
     // TODO: Plug-In Real Timing For The Display
     { 0, 90, 10, 360, },    //  CSL_SMI_TIMIMG_T  rdTiming;
     { 0, 30, 10, 30 , },    //  CSL_SMI_TIMIMG_T  wrTiming;       //  1-8-3-8 => BB 68ns
-//   { 0,  15, 10, 15 , },    //  CSL_SMI_TIMIMG_T  wrTiming_m;     //  1-4-3-4 => BB 36ns  
-    { 0, 8, 4, 8, }, 
-//  { 0,  8, 10,  8 , },    //  CSL_SMI_TIMIMG_T  wrTiming_m;     //  1-3-3-3 => BB 28ns  
-//  { 0,  4, 10,  4 , },    //  CSL_SMI_TIMIMG_T  wrTiming_m;     //  1-2-3-2 => BB 20ns  
+//   { 0,  15, 10, 15 , },    //  CSL_SMI_TIMIMG_T  wrTiming_m;     //  1-4-3-4 => BB 36ns
+    { 0, 8, 4, 8, },
+//  { 0,  8, 10,  8 , },    //  CSL_SMI_TIMIMG_T  wrTiming_m;     //  1-3-3-3 => BB 28ns
+//  { 0,  4, 10,  4 , },    //  CSL_SMI_TIMIMG_T  wrTiming_m;     //  1-2-3-2 => BB 20ns
     TRUE,                   //  usesTE
-};                                                   
+};
 
 
 static R61581_HVGA_SMI_PANEL_T panel[1];
@@ -254,7 +254,7 @@ static R61581_HVGA_SMI_PANEL_T panel[1];
 //*****************************************************************************
 //
 // Function Name:  r61581hvgaSmi_WrCmndP2
-// 
+//
 // Description:    Write To LCD register, 0 Parms
 //
 //*****************************************************************************
@@ -268,18 +268,18 @@ void r61581hvgaSmi_WrCmndP2( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 data1
 //*****************************************************************************
 //
 // Function Name: r61581hvgaSmi_WrCmndP1
-// 
+//
 // Description:   Write To LCD register, 1 Parms
 //
 //*****************************************************************************
-void r61581hvgaSmi_WrCmndP1( 
-    DISPDRV_HANDLE_T    dispH, 
+void r61581hvgaSmi_WrCmndP1(
+    DISPDRV_HANDLE_T    dispH,
     Boolean             useOs,
-    UInt32              cmnd, 
+    UInt32              cmnd,
     UInt32              data )
 {
     R61581_HVGA_SMI_PANEL_T* lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
-   
+
     CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
     CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
 }
@@ -287,14 +287,14 @@ void r61581hvgaSmi_WrCmndP1(
 //*****************************************************************************
 //
 // Function Name:  r61581hvgaSmi_WrCmndP0
-// 
+//
 // Description:    Write To LCD register, 0 Parms
 //
 //*****************************************************************************
 void r61581hvgaSmi_WrCmndP0( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 cmnd )
 {
     R61581_HVGA_SMI_PANEL_T* lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
-   
+
     CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
 }
 
@@ -302,20 +302,20 @@ void r61581hvgaSmi_WrCmndP0( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 cmnd 
 //*****************************************************************************
 //
 // Function Name:  r61581hvgaSmi_IoCtlWr
-// 
-// Description:    
+//
+// Description:
 //
 //*****************************************************************************
-static void r61581hvgaSmi_IoCtlWr( 
-    DISPDRV_HANDLE_T     dispH, 
-    DISPDRV_CTRL_RW_REG* acc 
+static void r61581hvgaSmi_IoCtlWr(
+    DISPDRV_HANDLE_T     dispH,
+    DISPDRV_CTRL_RW_REG* acc
     )
 {
     R61581_HVGA_SMI_PANEL_T* lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
     UInt32 i;
-    
+
     CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  acc->cmnd );
-    
+
     for(i=0; i < acc->parmCount; i++ )
     {
         // Write MSB byte, since all regs are 8-bit write 0 for MSB
@@ -323,27 +323,27 @@ static void r61581hvgaSmi_IoCtlWr(
         if( acc->verbose )
         {
             LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] r61581hvgaSmi_IoCtlWr: "
-                "WR REG[0x%04X] DATA[0x%04X]\n", 
+                "WR REG[0x%04X] DATA[0x%04X]\n",
                 (unsigned int)acc->cmnd, (unsigned int)((UInt32*)acc->pBuff)[i] );
-        }                                                      
+        }
     }
 }
 
 //*****************************************************************************
 //
 // Function Name:  r61581hvgaSmi_IoCtlRd
-// 
-// Description:    
+//
+// Description:
 //
 //*****************************************************************************
-static void r61581hvgaSmi_IoCtlRd( 
-    DISPDRV_HANDLE_T     dispH, 
-    DISPDRV_CTRL_RW_REG* acc 
+static void r61581hvgaSmi_IoCtlRd(
+    DISPDRV_HANDLE_T     dispH,
+    DISPDRV_CTRL_RW_REG* acc
     )
 {
     R61581_HVGA_SMI_PANEL_T* lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
     UInt32 i;
-    
+
     CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  acc->cmnd );
     for(i=0; i<acc->parmCount; i++)
     {
@@ -351,23 +351,23 @@ static void r61581hvgaSmi_IoCtlRd(
         if( acc->verbose )
         {
             LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: "
-                "RD REG[0x%04X] DATA[0x%04X]\n\r", 
+                "RD REG[0x%04X] DATA[0x%04X]\n\r",
                 __FUNCTION__, (unsigned int)acc->cmnd, (unsigned int)((UInt32*)acc->pBuff)[i] );
         }
-    }                                                      
+    }
 }
 
 //*****************************************************************************
 //
 // Function Name:   r61581hvgaSmi_ExecCmndList
 //
-// Description:     
-//                   
+// Description:
+//
 //*****************************************************************************
-void r61581hvgaSmi_ExecCmndList( 
+void r61581hvgaSmi_ExecCmndList(
     DISPDRV_HANDLE_T     dispH,
-    Boolean              useOs,  
-    pDISPCTRL_REC_T      cmnd_lst 
+    Boolean              useOs,
+    pDISPCTRL_REC_T      cmnd_lst
     )
 {
     UInt32  i = 0;
@@ -376,7 +376,7 @@ void r61581hvgaSmi_ExecCmndList(
     {
         if (cmnd_lst[i].type == DISPCTRL_WR_CMND_DATA)
         {
-            r61581hvgaSmi_WrCmndP1 (dispH, useOs, cmnd_lst[i].cmnd, 
+            r61581hvgaSmi_WrCmndP1 (dispH, useOs, cmnd_lst[i].cmnd,
                 cmnd_lst[i].data);
         }
         else if (cmnd_lst[i].type == DISPCTRL_WR_CMND)
@@ -392,7 +392,7 @@ void r61581hvgaSmi_ExecCmndList(
             if ( useOs )
             {
                 OSTASK_Sleep ( TICKS_IN_MILLISECONDS(cmnd_lst[i].data) );
-            }    
+            }
             else
             {
 #ifndef __KERNEL__
@@ -400,7 +400,7 @@ void r61581hvgaSmi_ExecCmndList(
 #else
 		mdelay( cmnd_lst[i].data );
 #endif
-            }    
+            }
         }
         i++;
     }
@@ -409,27 +409,27 @@ void r61581hvgaSmi_ExecCmndList(
 //*****************************************************************************
 //
 // Function Name: r61581hvgaSmi_SetWindow
-// 
-// Description:   Set Window 
+//
+// Description:   Set Window
 //
 //*****************************************************************************
-Int32 r61581hvgaSmi_SetWindow ( 
+Int32 r61581hvgaSmi_SetWindow (
     DISPDRV_HANDLE_T 	dispH,
     Boolean 		useOs,
     Boolean 		update,
-    DISPDRV_WIN_t* 	p_win ) 
+    DISPDRV_WIN_t* 	p_win )
 {
     	Int32                     res = 0;
     	R61581_HVGA_SMI_PANEL_T*  lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
 
-    	if(    (lcdDrv->win_cur.l != p_win->l) 
+    	if(    (lcdDrv->win_cur.l != p_win->l)
     	    || (lcdDrv->win_cur.r != p_win->r)
     	    || (lcdDrv->win_cur.t != p_win->t)
-    	    || (lcdDrv->win_cur.b != p_win->b) ) 
+    	    || (lcdDrv->win_cur.b != p_win->b) )
     	{
-    		lcdDrv->win_cur = *p_win;		
-                
-		if ( update ) {    
+    		lcdDrv->win_cur = *p_win;
+
+		if ( update ) {
     			CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  MIPI_DCS_SET_COLUMN_ADDRESS );
     			CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, (p_win->l & 0x100) >> 8 );
     			CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, (p_win->l & 0x0FF)      );
@@ -440,7 +440,7 @@ Int32 r61581hvgaSmi_SetWindow (
     			CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, (p_win->t & 0x0FF)      );
     			CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, (p_win->b & 0x100) >> 8 );
     			CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, (p_win->b & 0x0FF)      );
-   		}     
+   		}
     	}
 
     	return ( res );
@@ -449,7 +449,7 @@ Int32 r61581hvgaSmi_SetWindow (
 //*****************************************************************************
 //
 // Function Name: LCD_DRV_R61581_HVGA_SMI_GetDrvInfo
-// 
+//
 // Description:   Get Driver Funtion Table
 //
 //*****************************************************************************
@@ -462,27 +462,27 @@ DISPDRV_T* DISP_DRV_R61581_HVGA_SMI_GetFuncTable ( void )
 //*****************************************************************************
 //
 // Function Name: R61581_HVGA_SMI_GetDispDrvFeatures
-// 
-// Description:   
+//
+// Description:
 //
 //*****************************************************************************
-Int32 R61581_HVGA_SMI_GetDispDrvFeatures ( 
+Int32 R61581_HVGA_SMI_GetDispDrvFeatures (
     const char**                driver_name,
     UInt32*                     version_major,
     UInt32*                     version_minor,
-    DISPDRV_SUPPORT_FEATURES_T* flags 
+    DISPDRV_SUPPORT_FEATURES_T* flags
     )
 {
-    Int32 res = -1; 
-   
-    if (   ( NULL != driver_name )   && ( NULL != version_major ) 
+    Int32 res = -1;
+
+    if (   ( NULL != driver_name )   && ( NULL != version_major )
         && ( NULL != version_minor ) && (NULL != flags) )
     {
-#if defined(__HVGA_MODE_888__) 
+#if defined(__HVGA_MODE_888__)
         *driver_name   = "r61581hvgaSmi_ (OUT=RGB888)";
 #else
         *driver_name   = "r61581hvgaSmi_ (OUT=RGB565)";
-#endif        
+#endif
         *version_major = 0;
         *version_minor = 10;
         *flags         = DISPDRV_SUPPORT_NONE;
@@ -494,20 +494,20 @@ Int32 R61581_HVGA_SMI_GetDispDrvFeatures (
 //*****************************************************************************
 //
 // Function Name: R61581_HVGA_SMI_Init
-// 
+//
 // Description:   Reset Driver Info
 //
 //*****************************************************************************
 Int32 R61581_HVGA_SMI_Init (  unsigned int bus_width )
 {
     Int32   res = 0;
-   
+
     panel[0].is_clock_gated = 1;
-    panel[0].dfs_node = NULL;
+    panel[0].dfs_node.name = NULL;
 
     R61581_HVGA_SMI_SmiCtrlCfg.busWidth = (unsigned char)bus_width;
 
-    if(     panel[0].drvState != DRV_STATE_INIT 
+    if(     panel[0].drvState != DRV_STATE_INIT
          && panel[0].drvState != DRV_STATE_OPEN  )
     {
         if( CSL_SMI_Init() != CSL_LCD_OK )
@@ -515,29 +515,29 @@ Int32 R61581_HVGA_SMI_Init (  unsigned int bus_width )
             LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: CSL_SMI_Init Failed\n\r",
                 __FUNCTION__);
             res = -1;
-        } 
+        }
         else
         {
             LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__);
             panel[0].drvState = DRV_STATE_INIT;
             res = 0;
         }
-    }    
+    }
     return ( res );
 }
 
 //*****************************************************************************
 //
 // Function Name: R61581_HVGA_SMI_Exit
-// 
-// Description:   
+//
+// Description:
 //
 //*****************************************************************************
 Int32 R61581_HVGA_SMI_Exit ( void )
 {
-    LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Not Implemented\n\r", 
+    LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Not Implemented\n\r",
         __FUNCTION__ );
-    
+
     return ( -1 );
 }
 
@@ -545,7 +545,7 @@ Int32 R61581_HVGA_SMI_Exit ( void )
 //*****************************************************************************
 //
 // Function Name: r61581hvgaSmi_TeOn
-// 
+//
 // Description:   Configure TE Input Pin & Route it to SMI module
 //
 //*****************************************************************************
@@ -553,8 +553,8 @@ static int r61581hvgaSmi_TeOn ( void )
 {
     Int32       res;
     TECTL_CFG_t teCfg;
-    
-    teCfg.te_mode     = TE_VC4L_MODE_VSYNC;       
+
+    teCfg.te_mode     = TE_VC4L_MODE_VSYNC;
     teCfg.sync_pol    = TE_VC4L_ACT_POL_LO;
     teCfg.vsync_width = 0;
     teCfg.hsync_line  = 0;
@@ -566,7 +566,7 @@ static int r61581hvgaSmi_TeOn ( void )
 //*****************************************************************************
 //
 // Function Name: r61581hvgaSmi_TeOff
-// 
+//
 // Description:   Release TE Input Pin Used
 //
 //*****************************************************************************
@@ -579,43 +579,43 @@ static int r61581hvgaSmi_TeOff ( void )
 //*****************************************************************************
 //
 // Function Name: R61581_HVGA_SMI_Close
-// 
+//
 // Description:   Close The Driver
 //
 //*****************************************************************************
-Int32 R61581_HVGA_SMI_Close ( DISPDRV_HANDLE_T dispH ) 
+Int32 R61581_HVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
 {
     Int32           res;
     CSL_LCD_RES_T   cslRes;
-    
+
     R61581_HVGA_SMI_PANEL_T*  lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
-    
+
     DISPDRV_CHECK_PTR_RET( dispH, &panel[0], __FUNCTION__ );
-        
+
     cslRes = CSL_SMI_Close ( lcdDrv->cslH );
     if( cslRes == CSL_LCD_OK )
     {
         lcdDrv->drvState = DRV_STATE_INIT;
         lcdDrv->pwrState = DISP_PWR_OFF;
         lcdDrv->cslH = NULL;
-        res = 0;    
+        res = 0;
     }
     else
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR CLosing SMI Handle\n\r",
             __FUNCTION__ );
-        res = -1;    
+        res = -1;
     }
-    
-    if ( R61581_HVGA_SMI_SmiCtrlCfg.usesTE ) 
+
+    if ( R61581_HVGA_SMI_SmiCtrlCfg.usesTE )
     {
         if ( r61581hvgaSmi_TeOff() == -1 )
         {
             LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR Failed To Close "
                 "TE Input\n\r", __FUNCTION__ );
-            res = -1;    
-        }        
-    }    
+            res = -1;
+        }
+    }
 
 #if 0
     if (R61581_HVGA_SMI_Stop (dispH))
@@ -630,16 +630,16 @@ Int32 R61581_HVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
     {
         LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
     }
-    
+
     return ( res );
 }
 
 //*****************************************************************************
 //
 // Function Name: DISPDRV_Reset
-// 
+//
 // Description:   Generic Reset To All DISPLAY Modules
-//                
+//
 //*****************************************************************************
 #if 0
 static Int32 DISPDRV_Reset( Boolean force )
@@ -651,12 +651,12 @@ static Int32 DISPDRV_Reset( Boolean force )
     Boolean         rst1present = FALSE;
     Boolean         rst2present = FALSE;
     static Boolean  resetDone   = FALSE;
-    
+
     #ifdef HAL_LCD_RESET
     rst0present = TRUE;
     rst0pin     = HAL_LCD_RESET;
     #endif
-    
+
     #ifdef HAL_LCD_RESET_B
     rst1present = TRUE;
     rst1pin     = HAL_LCD_RESET_B;
@@ -680,7 +680,7 @@ static Int32 DISPDRV_Reset( Boolean force )
             "Reset Pin(s) Not Defined\n");
         return ( -1 );
     }
-    
+
     if( !rst0present )
     {
 	printk(KERN_ERR "the reset 0 is not used");
@@ -735,7 +735,7 @@ static Int32 DISPDRV_Reset( Boolean force )
         if (rst1present) GPIODRV_Set_Bit (rst1pin, 0);
         if (rst2present) GPIODRV_Set_Bit (rst2pin, 0);
         OSTASK_Sleep ( TICKS_IN_MILLISECONDS(RST_DURATION_MS) );
-    
+
         // LCD reset High
         if (rst0present) GPIODRV_Set_Bit (rst0pin, 1);
         if (rst1present) GPIODRV_Set_Bit (rst1pin, 1);
@@ -743,7 +743,7 @@ static Int32 DISPDRV_Reset( Boolean force )
 
         OSTASK_Sleep ( TICKS_IN_MILLISECONDS(RST_HOLD_MS) );
         resetDone = TRUE;
-    } 
+    }
 
     return ( 0 );
 } // DISPDRV_Reset
@@ -752,24 +752,24 @@ static Int32 DISPDRV_Reset( Boolean force )
 //*****************************************************************************
 //
 // Function Name: BCM92416_QVGA_Open
-// 
+//
 // Description:   Open Drivers
 //
 //*****************************************************************************
-Int32 R61581_HVGA_SMI_Open ( 
-    const void*         params, 
+Int32 R61581_HVGA_SMI_Open (
+    const void*         params,
     DISPDRV_HANDLE_T*   dispH )
 {
     Int32                           res = 0;
     CSL_LCD_RES_T                   cslRes;
     CSL_SMI_CTRL_T*                 pSmiCfg;
     DISPDRV_INFO_T*                 panelData;
-    UInt32                          busCh; 
+    UInt32                          busCh;
     const DISPDRV_OPEN_PARM_T*      pOpenParm;
     R61581_HVGA_SMI_PANEL_T*        pPanel;
-    
+
     pOpenParm = (DISPDRV_OPEN_PARM_T*) params;
-    
+
     // busId => NOT USED BY LCDC CSL
     busCh  = pOpenParm->busCh;
     pPanel = &panel[0];
@@ -783,14 +783,14 @@ Int32 R61581_HVGA_SMI_Open (
             "Already Open\r\n", __FUNCTION__ );
         *dispH = (DISPDRV_HANDLE_T)pPanel;
         return ( 0 );
-    } 
+    }
 
     if ( pPanel->drvState != DRV_STATE_INIT )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR Not Initialized\r\n",
             __FUNCTION__  );
         return ( -1 );
-    }   
+    }
 
 #if 0
     if (R61581_HVGA_SMI_Start((DISPDRV_HANDLE_T)pPanel))
@@ -803,46 +803,46 @@ Int32 R61581_HVGA_SMI_Open (
 
     pSmiCfg  = &R61581_HVGA_SMI_SmiCtrlCfg;
 
-    if ( pSmiCfg->usesTE ) 
-    {  
+    if ( pSmiCfg->usesTE )
+    {
         res = r61581hvgaSmi_TeOn ();
         if ( res == -1 )
         {
             LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Failed To Configure "
-                "TE Input\n\r", __FUNCTION__ ); 
+                "TE Input\n\r", __FUNCTION__ );
             return ( res );
-        }    
+        }
     }
 
     // HERA HAS HARDCODED SMI ADDRESS LINES A1=SMI_CS(LCD_CS1) A0=SMI_nCD
     pSmiCfg->addr_c = 0xFC;
     pSmiCfg->addr_d = 0xFD;
-    
+
     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] R61581_HVGA_SMI_Open: "
-        "BUSCH[0x%04X] => ADDR_CMND[0x%02X] ADDR_DATA[0x%02X]\n", 
+        "BUSCH[0x%04X] => ADDR_CMND[0x%02X] ADDR_DATA[0x%02X]\n",
         (unsigned int)busCh, pSmiCfg->addr_c, pSmiCfg->addr_d );
-    
+
     panelData = &R61581_HVGA_SMI_Info;
-    
+
 
     //DISPDRV_Reset( FALSE );
 
-#if defined(__HVGA_MODE_888__) 
+#if defined(__HVGA_MODE_888__)
     pPanel->bpp         = 4;
-#else    
+#else
     pPanel->bpp         = 2;
-#endif    
+#endif
     pPanel->panelData   = panelData;
-    pPanel->win_dim.l   = 0;  
-    pPanel->win_dim.r   = 320-1; 
-    pPanel->win_dim.t   = 0;  
+    pPanel->win_dim.l   = 0;
+    pPanel->win_dim.r   = 320-1;
+    pPanel->win_dim.t   = 0;
     pPanel->win_dim.b   = 480-1;
-    pPanel->win_dim.w   = 320; 
+    pPanel->win_dim.w   = 320;
     pPanel->win_dim.h   = 480;
-    
+
     pPanel->frameBuffer = (void *)pOpenParm->busId ;
-    
-    if( (cslRes = CSL_SMI_Open ( pSmiCfg, &pPanel->cslH )) 
+
+    if( (cslRes = CSL_SMI_Open ( pSmiCfg, &pPanel->cslH ))
         != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR Failed To Open CSL "
@@ -861,26 +861,26 @@ Int32 R61581_HVGA_SMI_Open (
 
     *dispH = (DISPDRV_HANDLE_T) pPanel;
     pPanel->drvState = DRV_STATE_OPEN;
-    
+
     return ( res );
 }
 
 //*****************************************************************************
 //
 // Function Name: R61581_HVGA_SMI_PowerControl
-// 
+//
 // Description:   Display Module Power Control
 //
 //*****************************************************************************
-Int32 R61581_HVGA_SMI_PowerControl ( 
-    DISPDRV_HANDLE_T        dispH, 
+Int32 R61581_HVGA_SMI_PowerControl (
+    DISPDRV_HANDLE_T        dispH,
     DISPLAY_POWER_STATE_T   state )
 {
     Int32  res = 0;
     R61581_HVGA_SMI_PANEL_T* pPanel = (R61581_HVGA_SMI_PANEL_T*)dispH;
-    
+
     DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "R61581_HVGA_SMI_PowerControl");
-    
+
     switch ( state )
     {
         case DISPLAY_POWER_STATE_ON:
@@ -894,7 +894,7 @@ Int32 R61581_HVGA_SMI_PowerControl (
                     pPanel->pwrState = DISP_PWR_SLEEP_OFF;
                     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: INIT-SEQ\n\r",
                         __FUNCTION__ );
-                    break; 
+                    break;
                 case DISP_PWR_SLEEP_ON:
                     r61581hvgaSmi_WrCmndP0( dispH, TRUE, MIPI_DCS_SET_DISPLAY_OFF );
 		    r61581hvgaSmi_WrCmndP0( dispH, TRUE, MIPI_DCS_ENTER_SLEEP_MODE );
@@ -904,10 +904,10 @@ Int32 R61581_HVGA_SMI_PowerControl (
                         __FUNCTION__ );
                     break;
                 default:
-                    break;    
-            }        
+                    break;
+            }
             break;
-           
+
 	case DISPLAY_POWER_STATE_BLANK_SCREEN:
             if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
             {
@@ -915,13 +915,13 @@ Int32 R61581_HVGA_SMI_PowerControl (
                 OSTASK_Sleep ( TICKS_IN_MILLISECONDS ( 10 ) );
                 pPanel->pwrState = DISP_PWR_SLEEP_ON;
                 LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP-IN\n", __FUNCTION__ );
-            } 
+            }
             else
             {
                 LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP Requested, But Not "
                     "In POWER-ON State\n", __FUNCTION__ );
                 res = -1;
-            }   
+            }
             break;
 
         case DISPLAY_POWER_STATE_SLEEP:
@@ -931,21 +931,21 @@ Int32 R61581_HVGA_SMI_PowerControl (
                 OSTASK_Sleep ( TICKS_IN_MILLISECONDS ( 10 ) );
                 pPanel->pwrState = DISP_PWR_SLEEP_ON;
                 LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP-IN\n", __FUNCTION__ );
-            } 
+            }
             else
             {
                 LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP Requested, But Not "
                     "In POWER-ON State\n", __FUNCTION__ );
                 res = -1;
-            }   
+            }
             break;
-            
+
         case DISPLAY_POWER_STATE_OFF:
             LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: POWER-OFF State "
                 "Not Supported\n\r", __FUNCTION__ );
             res = -1;
             break;
-            
+
         default:
             LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: Invalid Power State[%d] "
                 "Requested\n\r", __FUNCTION__, state );
@@ -958,7 +958,7 @@ Int32 R61581_HVGA_SMI_PowerControl (
 //*****************************************************************************
 //
 // Function Name: R61581_HVGA_SMI_Start
-// 
+//
 // Description:   Configure For Updates
 //
 //*****************************************************************************
@@ -986,8 +986,8 @@ Int32 R61581_HVGA_SMI_Start (struct pi_mgr_dfs_node* dfs_node)
 //*****************************************************************************
 //
 // Function Name: R61581_HVGA_SMI_Stop
-// 
-// Description:   
+//
+// Description:
 //
 //*****************************************************************************
 Int32 R61581_HVGA_SMI_Stop (struct pi_mgr_dfs_node* dfs_node )
@@ -1015,17 +1015,17 @@ Int32 R61581_HVGA_SMI_Stop (struct pi_mgr_dfs_node* dfs_node )
 //*****************************************************************************
 //
 // Function Name: R61581_HVGA_SMI_GetInfo
-// 
-// Description:   
+//
+// Description:
 //
 //*****************************************************************************
 const DISPDRV_INFO_T* R61581_HVGA_SMI_GetDispDrvData ( DISPDRV_HANDLE_T dispH )
 {
    R61581_HVGA_SMI_PANEL_T* lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
-   
-    DISPDRV_CHECK_PTR_NO_RET( dispH, &panel[0], 
+
+    DISPDRV_CHECK_PTR_NO_RET( dispH, &panel[0],
         "R61581_HVGA_SMI_GetDispDrvData");
-   
+
    return ( lcdDrv->panelData );
 }
 
@@ -1033,7 +1033,7 @@ const DISPDRV_INFO_T* R61581_HVGA_SMI_GetDispDrvData ( DISPDRV_HANDLE_T dispH )
 //*****************************************************************************
 //
 // Function Name: r61581hvgaSmi_Cb
-//                                  
+//
 // Description:   CSL callback
 //
 //*****************************************************************************
@@ -1051,7 +1051,7 @@ static void r61581hvgaSmi_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
               apiRes = DISPDRV_CB_RES_OK;
               break;
             default:
-              apiRes = DISPDRV_CB_RES_ERR;         
+              apiRes = DISPDRV_CB_RES_ERR;
               break;
         }
 
@@ -1065,7 +1065,7 @@ static void r61581hvgaSmi_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
 
         CSL_SMI_Unlock ( pCbRec->cslH );
 
-        if ( pCbRec->dispDrvApiCbRev == DISP_DRV_CB_API_REV_1_0 ) 
+        if ( pCbRec->dispDrvApiCbRev == DISP_DRV_CB_API_REV_1_0 )
         {
             ((DISPDRV_CB_T)pCbRec->dispDrvApiCb)( apiRes );
         }
@@ -1073,9 +1073,9 @@ static void r61581hvgaSmi_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
         {
             ((DISPDRV_CB_API_1_1_T)pCbRec->dispDrvApiCb)
                 ( apiRes, pCbRec->dispDrvApiCbP1 );
-        }    
+        }
     }
-        
+
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
 }
 
@@ -1083,13 +1083,13 @@ static void r61581hvgaSmi_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
 //*****************************************************************************
 //
 // Function Name: R61581_HVGA_SMI_Update_ExtFb
-// 
+//
 // Description:   DMA/OS Update using EXT frame buffer
 //
 //*****************************************************************************
-Int32 R61581_HVGA_SMI_Update_ExtFb ( 
+Int32 R61581_HVGA_SMI_Update_ExtFb (
     DISPDRV_HANDLE_T        dispH,
-    void                    *pFb, 
+    void                    *pFb,
     DISPDRV_CB_API_1_1_T    apiCb
     )
 {
@@ -1097,63 +1097,63 @@ Int32 R61581_HVGA_SMI_Update_ExtFb (
     CSL_LCD_RES_T           cslRes;
     Int32                   res    = 0;
     R61581_HVGA_SMI_PANEL_T*  lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
-        
+
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
-        
+
     DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "R61581_HVGA_SMI_Update");
-    
+
     if ( lcdDrv->pwrState != DISP_PWR_SLEEP_OFF )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] +%s: Skip Due To Power "
             "State\n\r", __FUNCTION__ );
         return ( -1 );
     }
-    
+
     CSL_SMI_Lock ( lcdDrv->cslH );
     r61581hvgaSmi_WrCmndP0 ( dispH, TRUE, MIPI_DCS_WRITE_MEMORY_START );
-    
+
     req.buff           = pFb;
     req.lineLenP       = lcdDrv->panelData->width;
     req.lineCount      = lcdDrv->panelData->height;
     req.timeOut_ms     = 100;
     req.buffBpp        = lcdDrv->bpp;
-    
+
     req.cslLcdCbRec.cslH            = lcdDrv->cslH;
     req.cslLcdCbRec.dispDrvApiCbRev = DISP_DRV_CB_API_REV_1_1;
     req.cslLcdCbRec.dispDrvApiCb    = (void*) apiCb;
     req.cslLcdCbRec.dispDrvApiCbP1  = pFb;
-    
+
     if( apiCb != NULL )
        req.cslLcdCb = r61581hvgaSmi_Cb;
     else
        req.cslLcdCb = NULL;
-    
-    if ( (cslRes = CSL_SMI_Update ( lcdDrv->cslH, &req ) ) != CSL_LCD_OK ) 
+
+    if ( (cslRes = CSL_SMI_Update ( lcdDrv->cslH, &req ) ) != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR[%d] returned by "
             "CSL SMI Layer\n", __FUNCTION__, cslRes );
-        res = -1;    
+        res = -1;
     }
-    
+
     if( (res==-1) || (apiCb == NULL) )
     {
         CSL_SMI_Unlock ( lcdDrv->cslH );
     }
-        
+
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
-    
+
     return ( res );
 }
 
 //*****************************************************************************
 //
 // Function Name: R61581_HVGA_SMI_Update
-// 
+//
 // Description:   DMA/OS Update using INT frame buffer
 //
 //*****************************************************************************
-Int32 R61581_HVGA_SMI_Update ( 
-    DISPDRV_HANDLE_T    dispH, 
+Int32 R61581_HVGA_SMI_Update (
+    DISPDRV_HANDLE_T    dispH,
     int			fb_idx,
     DISPDRV_WIN_t*	p_win,
     DISPDRV_CB_T        apiCb
@@ -1163,14 +1163,14 @@ Int32 R61581_HVGA_SMI_Update (
     CSL_LCD_RES_T           cslRes;
     Int32                   res    = 0;
     R61581_HVGA_SMI_PANEL_T*  lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
-        
+
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
-        
+
     DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "R61581_HVGA_SMI_Update");
-    
+
     if ( lcdDrv->pwrState != DISP_PWR_SLEEP_OFF )
     {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] +%s: Skip Due To Power State\r\n", 
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] +%s: Skip Due To Power State\r\n",
             __FUNCTION__ );
         return ( -1 );
     }
@@ -1189,42 +1189,42 @@ Int32 R61581_HVGA_SMI_Update (
     if (0 == fb_idx)
     	req.buff           = lcdDrv->frameBuffer;
      else
-	req.buff 	   = (void *)((UInt32)lcdDrv->frameBuffer  + 
+	req.buff 	   = (void *)((UInt32)lcdDrv->frameBuffer  +
 		lcdDrv->panelData->width * lcdDrv->panelData->height * lcdDrv->bpp);
 
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s fb phys = 0x%08x\n", __FUNCTION__,  (unsigned int)req.buff);
 
-    // update the whole screen 
-    if ( p_win == NULL ) 
+    // update the whole screen
+    if ( p_win == NULL )
     	p_win = &lcdDrv->win_dim;
 
     r61581hvgaSmi_SetWindow( dispH, TRUE, TRUE,  p_win );
     r61581hvgaSmi_WrCmndP0 ( dispH, TRUE, MIPI_DCS_WRITE_MEMORY_START );
-    
+
     req.timeOut_ms     	 = 100;
     req.buffBpp        	 = lcdDrv->bpp;
     req.lineLenP 	 = p_win->w;
     req.lineCount	 = p_win->h;
     req.xStrideB 	 = (lcdDrv->panelData->width - req.lineLenP       ) * lcdDrv->bpp;
     req.buff     	+= (lcdDrv->panelData->width * p_win->t + p_win->l) * lcdDrv->bpp;
-    
+
     req.cslLcdCbRec.cslH            = lcdDrv->cslH;
     req.cslLcdCbRec.dispDrvApiCbRev = DISP_DRV_CB_API_REV_1_0;
     req.cslLcdCbRec.dispDrvApiCb    = (void*) apiCb;
     req.cslLcdCbRec.dispDrvApiCbP1  = NULL;
-    
+
     if( apiCb != NULL )
        req.cslLcdCb = r61581hvgaSmi_Cb;
     else
        req.cslLcdCb = NULL;
-    
-    if ( (cslRes = CSL_SMI_Update ( lcdDrv->cslH, &req ) ) != CSL_LCD_OK ) 
+
+    if ( (cslRes = CSL_SMI_Update ( lcdDrv->cslH, &req ) ) != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR[%d] returned by "
             "CSL SMI Layer\n\r", __FUNCTION__, cslRes );
-        res = -1;    
+        res = -1;
     }
-        
+
     if( (res==-1) || (apiCb == NULL) )
     {
 #if 0
@@ -1236,28 +1236,28 @@ Int32 R61581_HVGA_SMI_Update (
 #endif
         CSL_SMI_Unlock ( lcdDrv->cslH );
     }
-        
+
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
-    
+
     return ( res );
 }
 
-                                        
+
 //*****************************************************************************
 //
 // Function Name: BCM92416_QVGA_SetCtl
-// 
-// Description:   
+//
+// Description:
 //
 //*****************************************************************************
-Int32 R61581_HVGA_SMI_SetCtl ( 
-            DISPDRV_HANDLE_T    dispH, 
-            DISPDRV_CTRL_ID_T   ctrlID, 
-            void*               ctrlParams 
+Int32 R61581_HVGA_SMI_SetCtl (
+            DISPDRV_HANDLE_T    dispH,
+            DISPDRV_CTRL_ID_T   ctrlID,
+            void*               ctrlParams
             )
 {
     Int32  res = -1;
-    
+
     DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "R61581_HVGA_SMI_SetCtl");
 
     switch ( ctrlID )
@@ -1274,44 +1274,44 @@ Int32 R61581_HVGA_SMI_SetCtl (
 
     return ( res );
 }
-                    
+
 //*****************************************************************************
 //
 // Function Name: BCM92416_QVGA_GetCtl
-// 
-// Description:   
+//
+// Description:
 //
 //*****************************************************************************
 Int32 R61581_HVGA_SMI_GetCtl (
-    DISPDRV_HANDLE_T    dispH, 
-    DISPDRV_CTRL_ID_T   ctrlID, 
-    void*               ctrlParams 
+    DISPDRV_HANDLE_T    dispH,
+    DISPDRV_CTRL_ID_T   ctrlID,
+    void*               ctrlParams
     )
 {
     Int32                       res     = -1;
     R61581_HVGA_SMI_PANEL_T*   dispDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
-    
+
     DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "R61581_HVGA_SMI_GetCtl");
-    
+
     switch ( ctrlID )
     {
         case DISPDRV_CTRL_ID_GET_FB_ADDR:
-            ((DISPDRV_CTL_GET_FB_ADDR *)ctrlParams)->frame_buffer = 
+            ((DISPDRV_CTL_GET_FB_ADDR *)ctrlParams)->frame_buffer =
                 dispDrv->frameBuffer;
             res = 0;
             break;
-            
+
         case DISPDRV_CTRL_ID_GET_REG:
             r61581hvgaSmi_IoCtlRd( dispH, (DISPDRV_CTRL_RW_REG*)ctrlParams );
             res = 0;
             break;
-            
+
         default:
             LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: CtrlId[%d] Not "
                 "Implemented\n\r", __FUNCTION__, ctrlID );
             break;
     }
-    
+
     return ( res );
-}            
+}
 

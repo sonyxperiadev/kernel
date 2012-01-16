@@ -169,8 +169,8 @@ static struct {
 	struct class *v3d_class;
 	struct device *v3d_device;
 	volatile uint32_t	irq_enabled;
-	struct pi_mgr_dfs_node* dfs_node;
-	struct pi_mgr_qos_node* qos_node;
+	struct pi_mgr_dfs_node dfs_node;
+	struct pi_mgr_qos_node qos_node;
 	unsigned long j1;  //jiffies of acquire
 	unsigned long j2;  //jiffies of release
 	unsigned long acquired_time;
@@ -915,7 +915,7 @@ static int enable_v3d_clock(void)
 {
 	int rc = 0;
 
-	if (pi_mgr_dfs_request_update(v3d_state.dfs_node, PI_OPP_TURBO)) {
+	if (pi_mgr_dfs_request_update(&v3d_state.dfs_node, PI_OPP_TURBO)) {
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 		return  -EIO;
 	}
@@ -947,7 +947,7 @@ static int disable_v3d_clock(void)
 
 	clk_disable(v3d_clk);
 
-	if (pi_mgr_dfs_request_update(v3d_state.dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+	if (pi_mgr_dfs_request_update(&v3d_state.dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 		return  -EIO;
 	}
@@ -980,8 +980,7 @@ static void v3d_power(int flag)
 		enable_v3d_clock();
 
 		/* Request for SIMPLE wfi */
-		if (v3d_state.qos_node)
-			pi_mgr_qos_request_update(v3d_state.qos_node, 0);
+		pi_mgr_qos_request_update(&v3d_state.qos_node, 0);
 
 		pm_enable_scu_standby(0);
 		mb();
@@ -1014,8 +1013,7 @@ static void v3d_power(int flag)
 		/* Disable V3D clock */
 		v3d_is_on = 0;
 
-		if (v3d_state.qos_node)
-			pi_mgr_qos_request_update(v3d_state.qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+		pi_mgr_qos_request_update(&v3d_state.qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 		pm_enable_scu_standby(1);
 
 		disable_v3d_clock();
@@ -1764,12 +1762,12 @@ int __init v3d_init(void)
 	}
 
 	/* reigster qos client */
-	v3d_state.qos_node = pi_mgr_qos_add_request("v3d", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
-	if (NULL == v3d_state.qos_node)
+	ret = pi_mgr_qos_add_request(&v3d_state.qos_node,"v3d", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+	if (ret)
 		KLOG_E("failed to register qos client. ACP wont work\n");
 
-	v3d_state.dfs_node = pi_mgr_dfs_add_request("v3d", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
-	if (NULL == v3d_state.dfs_node)
+	ret = pi_mgr_dfs_add_request(&v3d_state.dfs_node,"v3d", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+	if (ret)
 		KLOG_E("failed to register PI DFS request\n");
 
 #ifdef SUPPORT_V3D_WORKLIST
@@ -1856,11 +1854,13 @@ void __exit v3d_exit(void)
 {
 	KLOG_D("V3D driver Exit\n");
 
-	if (pi_mgr_qos_request_remove(v3d_state.qos_node))
+	if (pi_mgr_qos_request_remove(&v3d_state.qos_node))
 		KLOG_E("failed to unregister qos client\n");
+	v3d_state.qos_node.name = NULL;
 
-	if (pi_mgr_dfs_request_remove(v3d_state.dfs_node))
+	if (pi_mgr_dfs_request_remove(&v3d_state.dfs_node))
 		KLOG_E("failed to unregister PI DFS request\n");
+	v3d_state.dfs_node.name = NULL;
 
 	/* remove proc entry */
 	remove_proc_entry("v3d", NULL);

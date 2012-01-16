@@ -3706,15 +3706,15 @@ static struct bus_clk CLK_NAME(usb_ic_ahb) = {
 
 /*DFS def for SDIO */
 #ifdef CONFIG_KONA_PI_MGR
-static struct dfs_rate_thold sdio_rate_thold[2] =
+static struct dfs_rate_thold sdio2_rate_thold[2] =
 			{
 				{FREQ_MHZ(26), PI_OPP_ECONOMY},
 				{-1, PI_OPP_NORMAL},
 			};
-static struct clk_dfs sdio_clk_dfs =
+static struct clk_dfs sdio2_clk_dfs =
 	{
 		.dfs_policy = CLK_DFS_POLICY_RATE,
-		. policy_param = (u32)&sdio_rate_thold,
+		. policy_param = (u32)&sdio2_rate_thold,
 		.opp_weightage = {
 							[PI_OPP_ECONOMY] = 25,
 							[PI_OPP_NORMAL] = 0,
@@ -3741,7 +3741,7 @@ static struct peri_clk CLK_NAME(sdio2) = {
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
 #ifdef CONFIG_KONA_PI_MGR
-	.clk_dfs = &sdio_clk_dfs,
+	.clk_dfs = &sdio2_clk_dfs,
 #endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO2_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
@@ -3801,6 +3801,25 @@ static struct peri_clk CLK_NAME(sdio2_sleep) = {
     .clk_sel_val = 28,
 };
 
+#ifdef CONFIG_KONA_PI_MGR
+static struct dfs_rate_thold sdio3_rate_thold[2] =
+			{
+				{FREQ_MHZ(26), PI_OPP_ECONOMY},
+				{-1, PI_OPP_NORMAL},
+			};
+static struct clk_dfs sdio3_clk_dfs =
+	{
+		.dfs_policy = CLK_DFS_POLICY_RATE,
+		. policy_param = (u32)&sdio3_rate_thold,
+		.opp_weightage = {
+							[PI_OPP_ECONOMY] = 25,
+							[PI_OPP_NORMAL] = 0,
+						},
+
+	};
+#endif
+
+
 /*
 Peri clock name SDIO3
 */
@@ -3819,7 +3838,7 @@ static struct peri_clk CLK_NAME(sdio3) = {
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
 #ifdef CONFIG_KONA_PI_MGR
-	.clk_dfs = &sdio_clk_dfs,
+	.clk_dfs = &sdio3_clk_dfs,
 #endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO3_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
@@ -3878,6 +3897,23 @@ static struct peri_clk CLK_NAME(sdio3_sleep) = {
 .volt_lvl_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_VOLTAGE_LEVEL_MASK,
     .clk_sel_val = 29,
 };
+#ifdef CONFIG_KONA_PI_MGR
+static struct dfs_rate_thold sdio1_rate_thold[2] =
+			{
+				{FREQ_MHZ(26), PI_OPP_ECONOMY},
+				{-1, PI_OPP_NORMAL},
+			};
+static struct clk_dfs sdio1_clk_dfs =
+	{
+		.dfs_policy = CLK_DFS_POLICY_RATE,
+		. policy_param = (u32)&sdio1_rate_thold,
+		.opp_weightage = {
+							[PI_OPP_ECONOMY] = 25,
+							[PI_OPP_NORMAL] = 0,
+						},
+
+	};
+#endif
 
 /*
 Peri clock name SDIO1
@@ -3897,7 +3933,7 @@ static struct peri_clk CLK_NAME(sdio1) = {
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
 #ifdef CONFIG_KONA_PI_MGR
-	.clk_dfs = &sdio_clk_dfs,
+	.clk_dfs = &sdio1_clk_dfs,
 #endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO1_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
@@ -3925,6 +3961,23 @@ static struct peri_clk CLK_NAME(sdio1) = {
     .soft_reset_offset	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_OFFSET,
     .clk_reset_mask	= KPM_RST_MGR_REG_AHB_MST_SOFTRST_SDIO1_SOFT_RSTN_MASK,
 };
+#ifdef CONFIG_KONA_PI_MGR
+static struct dfs_rate_thold sdio4_rate_thold[2] =
+			{
+				{FREQ_MHZ(26), PI_OPP_ECONOMY},
+				{-1, PI_OPP_NORMAL},
+			};
+static struct clk_dfs sdio4_clk_dfs =
+	{
+		.dfs_policy = CLK_DFS_POLICY_RATE,
+		. policy_param = (u32)&sdio4_rate_thold,
+		.opp_weightage = {
+							[PI_OPP_ECONOMY] = 25,
+							[PI_OPP_NORMAL] = 0,
+						},
+
+	};
+#endif
 
 /*
 Peri clock name SDIO4
@@ -3943,7 +3996,7 @@ static struct peri_clk CLK_NAME(sdio4) = {
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
 #ifdef CONFIG_KONA_PI_MGR
-	.clk_dfs = &sdio_clk_dfs,
+	.clk_dfs = &sdio4_clk_dfs,
 #endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO4_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
@@ -5142,7 +5195,7 @@ Peri clock name SPUM_OPEN
 */
 
 #ifdef CONFIG_KONA_PI_MGR
-static struct clk_dfs spum_dfs =
+static struct clk_dfs spum_open_dfs =
 	{
 		.dfs_policy = CLK_DFS_POLICY_STATE,
 		. policy_param = PI_OPP_NORMAL,
@@ -5164,7 +5217,7 @@ static struct peri_clk CLK_NAME(spum_open) = {
     .ccu_clk = &CLK_NAME(kps),
     .mask_set = 0,
 #ifdef CONFIG_KONA_PI_MGR
-	.clk_dfs =  &spum_dfs,
+	.clk_dfs =  &spum_open_dfs,
 #endif
     .policy_bit_mask = KPS_CLK_MGR_REG_POLICY0_MASK_SPUM_OPEN_POLICY0_MASK_MASK,
     .policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
@@ -5194,6 +5247,13 @@ static struct peri_clk CLK_NAME(spum_open) = {
     .soft_reset_offset	= KPS_RST_MGR_REG_HSM_SOFTRST_OFFSET,
     .clk_reset_mask	= KPS_RST_MGR_REG_HSM_SOFTRST_SPUM_OPEN_SOFT_RSTN_MASK,
 };
+#ifdef CONFIG_KONA_PI_MGR
+static struct clk_dfs spum_sec_dfs =
+	{
+		.dfs_policy = CLK_DFS_POLICY_STATE,
+		. policy_param = PI_OPP_NORMAL,
+	};
+#endif
 
 /*
 Peri clock name SPUM_SEC
@@ -5212,7 +5272,7 @@ static struct peri_clk CLK_NAME(spum_sec) = {
     },
     .ccu_clk = &CLK_NAME(kps),
 #ifdef CONFIG_KONA_PI_MGR
-	.clk_dfs =  &spum_dfs,
+	.clk_dfs =  &spum_sec_dfs,
 #endif
     .mask_set = 0,
     .policy_bit_mask = KPS_CLK_MGR_REG_POLICY0_MASK_SPUM_SEC_POLICY0_MASK_MASK,

@@ -762,18 +762,19 @@ static struct i2c_board_info rhea_i2c_camera[] = {
 static int rhea_camera_power(struct device *dev, int on)
 {
 	unsigned int value;
+	int ret = -1;
 	struct clk *clock;
 	struct clk *axi_clk;
-	static struct pi_mgr_dfs_node *unicam_dfs_node;
+	static struct pi_mgr_dfs_node unicam_dfs_node;
 	static int do_cam_reset = 1;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	if (NULL == unicam_dfs_node) {
-		unicam_dfs_node =
-		    pi_mgr_dfs_add_request("unicam", PI_MGR_PI_ID_MM,
+	if (!unicam_dfs_node.valid) {
+		ret =
+		    pi_mgr_dfs_add_request(&unicam_dfs_node,"unicam", PI_MGR_PI_ID_MM,
 					   PI_MGR_DFS_MIN_VALUE);
-		if (NULL == unicam_dfs_node) {
+		if (ret) {
 			printk(KERN_ERR
 			       "%s: failed to register PI DFS request\n",
 			       __func__);
@@ -810,7 +811,7 @@ static int rhea_camera_power(struct device *dev, int on)
 
 	if (on) {
 
-		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_OPP_TURBO)) {
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
 			printk(KERN_ERR
 			       "%s:failed to update dfs request for unicam\n",
 			       __func__);
@@ -873,7 +874,7 @@ static int rhea_camera_power(struct device *dev, int on)
 
 		clk_disable(axi_clk);
 
-		if (pi_mgr_dfs_request_update(unicam_dfs_node,
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 					      PI_MGR_DFS_MIN_VALUE)) {
 			printk(KERN_ERR "%s: failed to update dfs request for unicam\n",
 				 __func__);

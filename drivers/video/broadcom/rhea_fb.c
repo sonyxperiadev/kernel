@@ -91,7 +91,7 @@ struct rhea_fb {
 	DISPDRV_T *display_ops;
 	const DISPDRV_INFO_T *display_info;
 	DISPDRV_HANDLE_T display_hdl; 
-	struct pi_mgr_dfs_node* dfs_node;
+	struct pi_mgr_dfs_node dfs_node;
 	int g_stop_drawing; 
 	u32 gpio;
 	u32 bus_width;
@@ -175,14 +175,14 @@ static int rhea_fb_set_par(struct fb_info *info)
 static inline void rhea_clock_start(struct rhea_fb *fb)
 {
 #if (RHEA_FB_ENABLE_DYNAMIC_CLOCK == 1)
-	fb->display_ops->start(fb->dfs_node);
+	fb->display_ops->start(&fb->dfs_node);
 #endif
 }
 
 static inline void rhea_clock_stop(struct rhea_fb *fb)
 {
 #if (RHEA_FB_ENABLE_DYNAMIC_CLOCK == 1)
-	fb->display_ops->stop(fb->dfs_node);
+	fb->display_ops->stop(&fb->dfs_node);
 #endif
 }
 
@@ -508,6 +508,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	struct rhea_fb *fb;
 	size_t framesize;
 	uint32_t width, height;
+	int ret_val = -1;
 
 	struct kona_fb_platform_data *fb_data;
 
@@ -525,8 +526,8 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->g_stop_drawing = 0;
 
 	g_rhea_fb = fb;
- 	g_rhea_fb->dfs_node = pi_mgr_dfs_add_request("lcd", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
-	if (!g_rhea_fb->dfs_node)
+ 	ret_val = pi_mgr_dfs_add_request(&g_rhea_fb->dfs_node,"lcd", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+	if (ret_val)
 	{
 		printk(KERN_ERR "Failed to add dfs request for LCD\n");
 		ret = -EIO;
@@ -576,7 +577,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	}
 
 #if (RHEA_FB_ENABLE_DYNAMIC_CLOCK != 1)
-	fb->display_ops->start(fb->dfs_node);
+	fb->display_ops->start(&fb->dfs_node);
 #endif
 
 	fb->gpio = fb_data->gpio;
@@ -738,7 +739,7 @@ err_set_var_failed:
 	rhea_clock_stop(fb);
 
 #if (RHEA_FB_ENABLE_DYNAMIC_CLOCK != 1)
-	fb->display_ops->stop(fb->dfs_node);
+	fb->display_ops->stop(&fb->dfs_node);
 #endif
 
 err_enable_display_failed:
@@ -747,7 +748,7 @@ err_fbmem_alloc_failed:
 	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 thread_create_failed:
 #endif
-	if (pi_mgr_dfs_request_remove(fb->dfs_node))
+	if (pi_mgr_dfs_request_remove(&fb->dfs_node))
 	{
 	    printk(KERN_ERR "Failed to remove dfs request for LCD\n");
 	}

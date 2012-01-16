@@ -112,7 +112,7 @@ typedef struct
     void*                frameBuffer;
     DISP_DRV_STATE       drvState;
     DISP_PWR_STATE       pwrState;
-    struct pi_mgr_dfs_node* dfs_node;
+    struct pi_mgr_dfs_node dfs_node;
     volatile int	 is_clock_gated;
 } NT35582_WVGA_SMI_PANEL_T;   
 
@@ -560,7 +560,7 @@ Int32 NT35582_WVGA_SMI_Init ( unsigned int bus_width )
     Int32   res = 0;
    
     panel[0].is_clock_gated = 1;
-    panel[0].dfs_node = NULL;
+    panel[0].dfs_node.name = NULL;
 
     NT35582_WVGA_SMI_SmiCtrlCfg.busWidth = (unsigned char)bus_width;
     g_bus_width = bus_width;

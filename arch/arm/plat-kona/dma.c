@@ -61,7 +61,7 @@ struct pl330_chan_desc {
 	bool is_setup;		/* Is 'pl330_req' having valid transfer setup */
 	struct pl330_req req;	/* A DMA request item */
 #ifdef CONFIG_KONA_PI_MGR
-	struct pi_mgr_dfs_node *dfs_node; /* dfs node for DMA */
+	struct pi_mgr_dfs_node dfs_node; /* dfs node for DMA */
 #endif
 };
 
@@ -202,7 +202,7 @@ int dma_change_bus_speed(int chan, u32 opp)
     }
 
     /* Request for a update on the bus speed */
-    err = pi_mgr_dfs_request_update(cdesc->dfs_node, opp);
+    err = pi_mgr_dfs_request_update(&cdesc->dfs_node, opp);
 
     /* Check if the request was handled or not */
     if(err) {
@@ -289,10 +289,10 @@ int dma_request_chan(unsigned int *chan, const char *name)
 
 #ifdef CONFIG_KONA_PI_MGR
 	/* Add dfs request */
-	cdesc->dfs_node = pi_mgr_dfs_add_request(dma_chan[ch],
+	err = pi_mgr_dfs_add_request(&cdesc->dfs_node, dma_chan[ch],
 		PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_DFS_MIN_VALUE);
 
-	if (!cdesc->dfs_node)
+	if (err)
 	    goto err_4;
 #endif
 
@@ -327,7 +327,7 @@ int dma_free_chan(unsigned int chan)
 
 #ifdef CONFIG_KONA_PI_MGR
 	/* Remove dfs request */
-	ret = pi_mgr_dfs_request_remove(cdesc->dfs_node);
+	ret = pi_mgr_dfs_request_remove(&cdesc->dfs_node);
 	if(ret)
 		pr_debug("PL330: Failed to remove dfs node!\n");
 #endif
@@ -827,7 +827,7 @@ int dma_start_transfer(unsigned int chan)
 
 #ifdef CONFIG_KONA_PI_MGR
 	/* Request for a update on the bus speed */
-	ret = pi_mgr_dfs_request_update(c->dfs_node, PI_OPP_ECONOMY);
+	ret = pi_mgr_dfs_request_update(&c->dfs_node, PI_OPP_ECONOMY);
 
 	/* Check if the request was handled or not */
 	if(ret) {
@@ -864,7 +864,7 @@ int dma_start_transfer(unsigned int chan)
 	clk_disable(dmac->clk);
       err1:
 #ifdef CONFIG_KONA_PI_MGR
-	pi_mgr_dfs_request_update(c->dfs_node, PI_MGR_DFS_MIN_VALUE);
+	pi_mgr_dfs_request_update(&c->dfs_node, PI_MGR_DFS_MIN_VALUE);
 #endif
       err:
 	spin_unlock_irqrestore(&lock, flags);
@@ -898,7 +898,7 @@ int dma_stop_transfer(unsigned int chan)
 
 #ifdef CONFIG_KONA_PI_MGR
 	/* Request for a update on the bus speed */
-	ret = pi_mgr_dfs_request_update(c->dfs_node, PI_MGR_DFS_MIN_VALUE);
+	ret = pi_mgr_dfs_request_update(&c->dfs_node, PI_MGR_DFS_MIN_VALUE);
 
 	/* Check if the request was handled or not */
 	if(ret) {
@@ -978,8 +978,8 @@ static int pl330_probe(struct platform_device *pdev)
 
 	pl330_pdata = pdev->dev.platform_data;
 
-	/* Only One Pl330 device is supported, 
-	 * since PL330 is closely bound to DMUX logic 
+	/* Only One Pl330 device is supported,
+	 * since PL330 is closely bound to DMUX logic
 	 */
 	if (dmac) {
 		dev_err(&pdev->dev, "Multiple devices are not supported!!!\n");

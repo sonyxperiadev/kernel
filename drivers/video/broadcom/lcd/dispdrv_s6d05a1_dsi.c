@@ -111,7 +111,7 @@ typedef struct
     LCD_DRV_RECT_t      win;
     void*               pFb;
     void*               pFbA;
-    struct pi_mgr_dfs_node* dfs_node;
+    struct pi_mgr_dfs_node dfs_node;
 } DISPDRV_PANEL_T;   
 
 // LOCAL FUNCTIONs

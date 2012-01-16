@@ -52,6 +52,7 @@ struct debug_qos_client
     int req;
     struct dentry *dent_client;
     struct pi_mgr_qos_node* debugfs_qos_node;
+    struct pi_mgr_qos_node qos_node;
 };
 
 struct debug_dfs_client
@@ -60,7 +61,7 @@ struct debug_dfs_client
     char client_name[20];
     int req;
     struct dentry *dent_client;
-    struct pi_mgr_dfs_node* debugfs_dfs_node;
+    struct pi_mgr_dfs_node debugfs_dfs_node;
 };
 
 struct debug_dfs_client debug_dfs_client[PI_MGR_DEBUG_CLIENT_MAX];
@@ -97,23 +98,6 @@ enum
 
 static DEFINE_SPINLOCK(pi_mgr_lock);
 
-struct pi_mgr_qos_node
-{
-	char* name;
-	struct plist_node list;
-	u32 latency;
-	u32 pi_id;
-};
-
-struct pi_mgr_dfs_node
-{
-	char* name;
-	struct plist_node list;
-	u32 opp;
-	u32 weightage;
-	u32 req_active;
-	u32 pi_id;
-};
 
 struct pi_mgr_dfs_object
 {
@@ -937,33 +921,35 @@ int pi_mgr_register(struct pi* pi)
 }
 EXPORT_SYMBOL(pi_mgr_register);
 
-struct pi_mgr_qos_node* pi_mgr_qos_add_request(char* client_name, u32 pi_id, u32 lat_value)
+int pi_mgr_qos_add_request(struct pi_mgr_qos_node *node, char* client_name, u32 pi_id, u32 lat_value)
 {
-	struct pi_mgr_qos_node* node;
 	pi_dbg("%s:client = %s,pi_id = %d, lat_val = %d\n",__func__, client_name,
 			pi_id,lat_value);
 	if(unlikely(!pi_mgr.init))
 	{
 		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
-		return NULL;
+		return -EPERM;
+	}
+	if(node == NULL)
+	{
+	    pi_dbg("%s:ERROR Invalid node\n",__func__);
+	    return -EINVAL;
+	}
+	if(node->valid)
+	{
+	    pi_dbg("%s:ERROR node already added\n",__func__);
+	    return -EINVAL;
 	}
 	if(unlikely(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL))
 	{
 		pi_dbg("%s:ERROR - invalid pid\n",__func__);
-		return NULL;
+		return -EINVAL;
 	}
 
 	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))
 	{
 		pi_dbg("%s:ERROR - QOS not supported for this PI\n",__func__);
-		return NULL;
-	}
-
-	node = kzalloc(sizeof(struct pi_mgr_qos_node), GFP_KERNEL);
-	if(!node)
-	{
-		pi_dbg("%s:ERROR - kzalloc failed\n",__func__);
-		return NULL;
+		return -EPERM;
 	}
 	if(lat_value == PI_MGR_QOS_DEFAULT_VALUE)
 	{
@@ -975,7 +961,8 @@ struct pi_mgr_qos_node* pi_mgr_qos_add_request(char* client_name, u32 pi_id, u32
 	node->latency = lat_value;
 	node->pi_id = pi_id;
 	pi_mgr_qos_update(node,pi_id,NODE_ADD);
-	return node;
+	node->valid = 1;
+	return 0;
 }
 EXPORT_SYMBOL(pi_mgr_qos_add_request);
 
@@ -986,6 +973,7 @@ int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32 lat_value)
 		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
+	BUG_ON(node->valid == 0);
 	pi_dbg("%s: exisiting req = %d new_req = %d\n",__func__,node->latency,lat_value);
 	if(lat_value == PI_MGR_QOS_DEFAULT_VALUE)
 		lat_value = pi_mgr.qos[node->pi_id].default_latency;
@@ -1003,20 +991,22 @@ EXPORT_SYMBOL(pi_mgr_qos_request_update);
 int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node)
 {
 	pi_dbg("%s:name = %s, req = %d\n",__func__,node->name,node->latency);
+	BUG_ON(node->valid == 0);
 	if(!pi_mgr.init)
 	{
 		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
 	pi_mgr_qos_update(node,node->pi_id,NODE_DELETE);
-	kfree(node);
+	node->name = NULL;
+	node->valid = 0;
 	return 0;
 }
 EXPORT_SYMBOL(pi_mgr_qos_request_remove);
 
-struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id, u32 opp)
+int pi_mgr_dfs_add_request(struct pi_mgr_dfs_node *node, char* client_name, u32 pi_id, u32 opp)
 {
-	return pi_mgr_dfs_add_request_ex(client_name, pi_id, opp, PI_MGR_DFS_WIEGHTAGE_DEFAULT);
+	return pi_mgr_dfs_add_request_ex(node, client_name, pi_id, opp, PI_MGR_DFS_WIEGHTAGE_DEFAULT);
 }
 EXPORT_SYMBOL(pi_mgr_dfs_add_request);
 
@@ -1026,46 +1016,43 @@ int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp)
 }
 EXPORT_SYMBOL(pi_mgr_dfs_request_update);
 
-struct pi_mgr_dfs_node* pi_mgr_dfs_add_request_ex(char* client_name, u32 pi_id, u32 opp, u32 weightage)
+int pi_mgr_dfs_add_request_ex(struct pi_mgr_dfs_node *node, char* client_name, u32 pi_id, u32 opp, u32 weightage)
 {
-	struct pi_mgr_dfs_node* node;
 	struct pi* pi;
 	pi_dbg("%s:client = %s pi = %d opp = %d\n",__func__,client_name, pi_id, opp);
 	if(!pi_mgr.init)
 	{
 		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
-		return NULL;
+		return -EPERM;
+	}
+	if(node == NULL)
+	{
+	    pi_dbg("%s:ERROR Invalid node\n",__func__);
+	    return -EINVAL;
 	}
 	if(pi_id >= PI_MGR_PI_ID_MAX || (pi = pi_mgr.pi_list[pi_id]) == NULL)
 	{
 		pi_dbg("%s:ERROR - invalid pid\n",__func__);
-		return NULL;
+		return -EINVAL;
 	}
 	if(unlikely(pi->flags & PI_NO_DFS))
 	{
 		pi_dbg("%s:ERROR - DFS not supported for this PI\n",__func__);
-		return NULL;
+		return -EPERM;
 	}
 
 	if(opp >= pi->num_opp && opp != PI_MGR_DFS_MIN_VALUE)
 	{
 		__WARN();
 		pi_dbg("%s:ERROR - %d:unsupported opp \n",__func__,opp);
-		return NULL;
+		return -EINVAL;
 	}
 
 	if(PI_MGR_DFS_WIEGHTAGE_DEFAULT != weightage && weightage >= PI_MGR_DFS_WEIGHTAGE_BASE)
 	{
 		__WARN();
 		pi_dbg("%s:ERROR - %d:unsupported weightage \n",__func__,weightage);
-		return NULL;
-	}
-
-	node = kzalloc(sizeof(struct pi_mgr_dfs_node), GFP_KERNEL);
-	if(!node)
-	{
-		pi_dbg("%s:ERROR - kzalloc failed\n",__func__);
-		return NULL;
+		return -EINVAL;
 	}
 
 	node->name = client_name;
@@ -1089,7 +1076,8 @@ struct pi_mgr_dfs_node* pi_mgr_dfs_add_request_ex(char* client_name, u32 pi_id, 
 	BUG_ON(node->weightage >= PI_MGR_DFS_WEIGHTAGE_BASE);
 
 	pi_mgr_dfs_update(node,pi_id,NODE_ADD);
-	return node;
+	node->valid = 1;
+	return 0;
 }
 EXPORT_SYMBOL(pi_mgr_dfs_add_request_ex);
 
@@ -1102,6 +1090,7 @@ int pi_mgr_dfs_request_update_ex(struct pi_mgr_dfs_node* node, u32 opp, u32 weig
 		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
+	BUG_ON(node->valid == 0);
 	if(opp >= pi->num_opp && opp != PI_MGR_DFS_MIN_VALUE)
 	{
 		__WARN();
@@ -1148,13 +1137,15 @@ EXPORT_SYMBOL(pi_mgr_dfs_request_update_ex);
 int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node)
 {
 	pi_dbg("%s:name = %s, req = %d\n",__func__,node->name,node->opp);
+	BUG_ON(node->valid == 0);
 	if(!pi_mgr.init)
 	{
 		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
 	pi_mgr_dfs_update(node,node->pi_id,NODE_DELETE);
-	kfree(node);
+	node->name = NULL;
+	node->valid = 0;
 	return 0;
 }
 EXPORT_SYMBOL(pi_mgr_dfs_request_remove);
@@ -1384,6 +1375,7 @@ static int pi_debug_register_qos_client(void *data, u64 value)
     struct pi *pi = data;
 	u32 val = (u32)value;
     struct dentry *qos_dir=0, *dent_client=0;
+    int ret = 0;
 
     if(val >= PI_MGR_DEBUG_CLIENT_MAX)
 		return -EINVAL;
@@ -1404,8 +1396,10 @@ static int pi_debug_register_qos_client(void *data, u64 value)
     if(!dent_client)
 		goto err;
 
-    debug_qos_client[val].debugfs_qos_node =
-	pi_mgr_qos_add_request(debug_qos_client[val].client_name, pi->id, PI_MGR_QOS_DEFAULT_VALUE);
+    ret =
+	pi_mgr_qos_add_request(&debug_qos_client[val].qos_node, debug_qos_client[val].client_name, pi->id, PI_MGR_QOS_DEFAULT_VALUE);
+	if (ret)
+	    goto err;
 
     debug_qos_client[val].dent_client = dent_client;
 	debug_qos_client[val].pi = pi;
@@ -1413,7 +1407,6 @@ static int pi_debug_register_qos_client(void *data, u64 value)
 
     return 0;
 err:
-    debug_qos_client[val].debugfs_qos_node = NULL;
     debug_qos_client[val].dent_client = NULL;
     return -ENOMEM;
 }
@@ -1485,7 +1478,6 @@ static ssize_t pi_debug_set_dfs_client_opp(struct file *file, char const __user 
 	u32 weightage = PI_MGR_DFS_WIEGHTAGE_DEFAULT;
 	char input_str[100];
     u32 inx = (u32)file->private_data;
-	BUG_ON(debug_dfs_client[inx].debugfs_dfs_node == NULL);
 	if (count > 100)
 		len = 100;
 	else
@@ -1494,7 +1486,7 @@ static ssize_t pi_debug_set_dfs_client_opp(struct file *file, char const __user 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
     sscanf(input_str, "%u%u", &opp, &weightage);
-	pi_mgr_dfs_request_update_ex(debug_dfs_client[inx].debugfs_dfs_node,opp,weightage);
+	pi_mgr_dfs_request_update_ex(&debug_dfs_client[inx].debugfs_dfs_node,opp,weightage);
 	return count;
 }
 
@@ -1503,13 +1495,12 @@ static ssize_t pi_debug_get_dfs_client_opp(struct file *file, char __user *user_
 {
 	u32 len = 0;
     u32 inx = (u32)file->private_data;
-	BUG_ON(debug_dfs_client[inx].debugfs_dfs_node == NULL);
 
     len += snprintf(debug_fs_buf+len, sizeof(debug_fs_buf)-len,
 		"DFS Req:%u Request active:%u Request Weightage:%u \n",
-			debug_dfs_client[inx].debugfs_dfs_node->opp,
-			debug_dfs_client[inx].debugfs_dfs_node->req_active,
-			debug_dfs_client[inx].debugfs_dfs_node->weightage);
+			debug_dfs_client[inx].debugfs_dfs_node.opp,
+			debug_dfs_client[inx].debugfs_dfs_node.req_active,
+			debug_dfs_client[inx].debugfs_dfs_node.weightage);
     return simple_read_from_buffer(user_buf, count, ppos, debug_fs_buf, len);
 }
 
@@ -1535,6 +1526,7 @@ DEFINE_SIMPLE_ATTRIBUTE(pi_dfs_fops, pi_debug_get_active_dfs, NULL, "%llu\n");
 static int pi_debug_register_dfs_client(void *data, u64 value)
 {
     struct pi *pi = data;
+    int ret = -1;
 	u32 val = (u32)value;
     struct dentry *dfs_dir=0, *dent_client=0;
 
@@ -1552,8 +1544,9 @@ static int pi_debug_register_dfs_client(void *data, u64 value)
     dfs_dir = debugfs_info[pi->id].dfs_dir;
     sprintf(debug_dfs_client[val].client_name, "%s_%d", DEBUGFS_PM_CLIENT_NAME, val);
 
-    debug_dfs_client[val].debugfs_dfs_node =
-		pi_mgr_dfs_add_request(debug_dfs_client[val].client_name, pi->id, PI_MGR_DFS_MIN_VALUE);
+    ret = pi_mgr_dfs_add_request(&debug_dfs_client[val].debugfs_dfs_node, debug_dfs_client[val].client_name, pi->id, PI_MGR_DFS_MIN_VALUE);
+    if (ret)
+	pi_dbg("%s: DFS add request failed for %s\n",__func__,pi->name);
 
     dent_client = debugfs_create_file(debug_dfs_client[val].client_name, S_IWUSR|S_IRUSR, dfs_dir,
 	    (void*)val, &pi_dfs_client_fops);
@@ -1565,7 +1558,7 @@ static int pi_debug_register_dfs_client(void *data, u64 value)
 
     return 0;
 err:
-    debug_dfs_client[val].debugfs_dfs_node = NULL;
+    debug_dfs_client[val].debugfs_dfs_node.name = NULL;
     debug_dfs_client[val].dent_client = NULL;
 	debug_dfs_client[val].pi = NULL;
     return -ENOMEM;
@@ -1586,9 +1579,8 @@ static int pi_debug_remove_dfs_client(void *data, u64 value)
     if(debug_dfs_client[val].pi &&
 		debug_dfs_client[val].pi->id == pi->id)
 	{
-		BUG_ON(!debug_dfs_client[val].debugfs_dfs_node ||
-				!debug_dfs_client[val].dent_client );
-	    ret = pi_mgr_dfs_request_remove(debug_dfs_client[val].debugfs_dfs_node);
+		BUG_ON(!debug_dfs_client[val].dent_client );
+	    ret = pi_mgr_dfs_request_remove(&debug_dfs_client[val].debugfs_dfs_node);
 	    if(ret)
 			pi_dbg("Failed to remove node\n");
 	    debugfs_remove(debug_dfs_client[val].dent_client);
@@ -1596,7 +1588,7 @@ static int pi_debug_remove_dfs_client(void *data, u64 value)
 	    debug_dfs_client[val].pi = NULL;
 	    debug_dfs_client[val].client_name[0] = '\0';
 	    debug_dfs_client[val].dent_client = NULL;
-	    debug_dfs_client[val].debugfs_dfs_node = NULL;
+	    debug_dfs_client[val].debugfs_dfs_node.name = NULL;
 	    pi_dbg("This client registration removed for this PI\n");
 	}
 	else

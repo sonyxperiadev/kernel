@@ -109,7 +109,7 @@ typedef struct
     LCD_DRV_RECT_t      win;
     void*               pFb;
     void*               pFbA;
-    struct pi_mgr_dfs_node* dfs_node;
+    struct pi_mgr_dfs_node dfs_node;
 } BCM91008_ALEX_PANEL_T;   
 
 

@@ -86,7 +86,9 @@ static void __iomem *mmcfg_base = NULL;
 static void __iomem *mmclk_base = NULL;
 static void __iomem *padctl_base = NULL;
 static void __iomem *csr_base = NULL;
-static struct pi_mgr_dfs_node *unicam_dfs_node = NULL; 
+static struct pi_mgr_dfs_node unicam_dfs_node = {
+	.valid = 0,
+    };
 
 typedef struct {
     struct completion irq_sem;
@@ -501,7 +503,7 @@ static int enable_unicam_clock(void)
 	int ret;
 	struct clk *unicam_clk;
 
-	if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_OPP_TURBO)) {
+	if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
 		printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
 		return -EIO;
 	}
@@ -538,13 +540,15 @@ static void disable_unicam_clock(void)
 	if (!unicam_clk) return;
 	clk_disable(unicam_clk);
 
-	if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_MGR_DFS_MIN_VALUE))
+	if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_MGR_DFS_MIN_VALUE))
 		printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
 }
 
 static int __devexit unicam_drv_remove(struct platform_device *pdev)
 {
-	return 0;
+    pi_mgr_dfs_request_remove(&unicam_dfs_node);
+    unicam_dfs_node.name = NULL;
+    return 0;
 }
 
 static int unicam_drv_probe(struct platform_device *pdev)
@@ -563,8 +567,8 @@ static int unicam_drv_probe(struct platform_device *pdev)
 	unicam_info.csi0_unicam_gpio = pdata->csi0_gpio;
 	unicam_info.csi1_unicam_gpio = pdata->csi1_gpio;
 
-	unicam_dfs_node = pi_mgr_dfs_add_request("unicam", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
-	if (NULL == unicam_dfs_node) {
+	ret = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+	if (ret) {
 		printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
 		return -EIO;
 	}

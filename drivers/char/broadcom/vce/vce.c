@@ -81,8 +81,8 @@ static struct {
 	struct proc_dir_entry  *proc_status;
 	struct class           *vce_class;
 	uint32_t               irq_enabled;
-	struct pi_mgr_dfs_node* dfs_node;
-	struct pi_mgr_qos_node *cpu_qos_node;
+	struct pi_mgr_dfs_node dfs_node;
+	struct pi_mgr_qos_node cpu_qos_node;
 	struct semaphore       armctl_sem;
 	uint32_t               arm_keepawake_count;
 } vce_state;
@@ -217,18 +217,17 @@ static irqreturn_t vce_isr(int irq, void *unused)
 
 static int _power_on(void)
 {
-	BUG_ON(vce_state.dfs_node != NULL);
+	int ret;
 
 	/* Platform specific power-on procedure.  May be that this
 	 * should be in a separate file?  TODO: REVIEWME */
-	vce_state.dfs_node = pi_mgr_dfs_add_request("vce", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
-	if (!vce_state.dfs_node)
+	ret = pi_mgr_dfs_add_request(&vce_state.dfs_node, "vce", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
+	if (ret)
 	{
 	    err_print("Failed to add dfs request for VCE\n");
 	    return  -EIO;
 	}
 
-	BUG_ON(vce_state.dfs_node == NULL);
 	return 0;
 }
 
@@ -236,15 +235,13 @@ static void _power_off(void)
 {
 	int s;
 
-	BUG_ON(vce_state.dfs_node == NULL);
 
 	/* Platform specific power-off procedure.  May be that this
 	 * should be in a separate file?  TODO: REVIEWME */
-	s = pi_mgr_dfs_request_remove(vce_state.dfs_node);
+	s = pi_mgr_dfs_request_remove(&vce_state.dfs_node);
 	BUG_ON(s!=0);
-	vce_state.dfs_node = NULL;
+	vce_state.dfs_node.name = NULL;
 
-	BUG_ON(vce_state.dfs_node != NULL);
 }
 
 static int _clock_on(void)
@@ -252,7 +249,6 @@ static int _clock_on(void)
 	int s;
 
 	BUG_ON(vce_clk != NULL);
-	BUG_ON(vce_state.dfs_node == NULL);
 
 	vce_clk = clk_get(NULL, "vce_axi_clk");
 	if (!vce_clk) {
@@ -337,7 +333,7 @@ static void cpu_keepawake_dec(void)
 	down(&vce_state.armctl_sem);
 	vce_state.arm_keepawake_count -= 1;
 	if (vce_state.arm_keepawake_count == 0) {
-		pi_mgr_qos_request_update(vce_state.cpu_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+		pi_mgr_qos_request_update(&vce_state.cpu_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 	}
 	up(&vce_state.armctl_sem);
 }
@@ -346,7 +342,7 @@ static void cpu_keepawake_inc(void)
 {
 	down(&vce_state.armctl_sem);
 	if (vce_state.arm_keepawake_count == 0) {
-		pi_mgr_qos_request_update(vce_state.cpu_qos_node, 0);
+		pi_mgr_qos_request_update(&vce_state.cpu_qos_node, 0);
 	}
 	vce_state.arm_keepawake_count += 1;
 	up(&vce_state.armctl_sem);
@@ -845,8 +841,8 @@ int __init vce_init(void)
 	vce_state.proc_status->read_proc = proc_status_read;
 
 	/* We need a QOS node for the CPU in order to do the ACP keep alive thing (simple wfi) */
-	vce_state.cpu_qos_node = pi_mgr_qos_add_request("vce", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
-	if (vce_state.cpu_qos_node == NULL) {
+	ret = pi_mgr_qos_add_request(&vce_state.cpu_qos_node,"vce", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+	if (ret) {
 		err_print("Failed to get QOS node for ARM core\n");
 		ret = -ENOENT;
 		goto err5;
@@ -917,7 +913,7 @@ void __exit vce_exit(void)
 	if (mm_rst_base)
 		iounmap(mm_rst_base);
 
-	pi_mgr_qos_request_remove(vce_state.cpu_qos_node);
+	pi_mgr_qos_request_remove(&vce_state.cpu_qos_node);
 
 	device_destroy(vce_state.vce_class, MKDEV(vce_major, 0));
 	class_destroy(vce_state.vce_class);

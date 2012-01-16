@@ -443,6 +443,7 @@ struct clk_dfs
 	u32 dfs_policy;
 	u32 policy_param;
 	u32 opp_weightage[PI_OPP_MAX];
+	struct pi_mgr_dfs_node dfs_node;
 
 };
 
@@ -541,7 +542,6 @@ struct peri_clk {
 
 #ifdef CONFIG_KONA_PI_MGR
 	struct clk_dfs* clk_dfs;
-	struct pi_mgr_dfs_node* dfs_node;
 #endif
 
 };
@@ -562,7 +562,6 @@ struct bus_clk {
 	struct bus_clk_ops* bus_ops;
 #ifdef CONFIG_KONA_PI_MGR
 	struct clk_dfs* clk_dfs;
-	struct pi_mgr_dfs_node* dfs_node;
 #endif
 
 	/*Reset offset and bit fields*/

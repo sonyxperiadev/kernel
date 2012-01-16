@@ -145,7 +145,7 @@ struct pwr_mgr
 {
 	struct pwr_mgr_info* info;
 	struct pwr_mgr_event event_cb[PWR_MGR_NUM_EVENTS];
-	struct pi_mgr_dfs_node* sem_dfs_client;
+	struct pi_mgr_dfs_node sem_dfs_client;
 	bool sem_locked;
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 i2c_seq_trg;
@@ -782,6 +782,7 @@ int pwr_mgr_pm_i2c_sem_lock()
 {
     int pc_val;
     int ins = 0;
+    int ret = -1;
 	const int max_wait_count = 10000;
 	unsigned long flgs;
 
@@ -793,10 +794,10 @@ int pwr_mgr_pm_i2c_sem_lock()
 	BUG_ON(pwr_mgr.sem_locked);
 	if((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
 	{
-		if(!pwr_mgr.sem_dfs_client)
-			pwr_mgr.sem_dfs_client = pi_mgr_dfs_add_request("sem_wa",PWRMGR_HW_SEM_WA_PI_ID, PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+		if(!pwr_mgr.sem_dfs_client.valid)
+			ret = pi_mgr_dfs_add_request(&pwr_mgr.sem_dfs_client, "sem_wa",PWRMGR_HW_SEM_WA_PI_ID, PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
 		else
-			pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+			pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
 	}
     spin_lock_irqsave(&pwr_mgr_lock,flgs);
 
@@ -830,7 +831,7 @@ int pwr_mgr_pm_i2c_sem_unlock()
 	pwr_mgr.sem_locked = false;
 	spin_unlock_irqrestore(&pwr_mgr_lock,flgs);
 	if((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
-		pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
+		pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
 	return 0;
 }
 EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);
@@ -853,10 +854,11 @@ int pwr_mgr_pm_i2c_sem_lock()
 
 	if((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
 	{
-		if(!pwr_mgr.sem_dfs_client)
-			pwr_mgr.sem_dfs_client = pi_mgr_dfs_add_request("sem_wa",PWRMGR_HW_SEM_WA_PI_ID, PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+		if(!pwr_mgr.sem_dfs_client.valid)
+			ret = pi_mgr_dfs_add_request(&pwr_mgr.sem_dfs_client,"sem_wa",
+						PWRMGR_HW_SEM_WA_PI_ID, PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
 		else
-			pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+			pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 
@@ -902,7 +904,7 @@ int pwr_mgr_pm_i2c_sem_unlock()
 	pwr_mgr.sem_locked = false;
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	if((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
-		pi_mgr_dfs_request_update(pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
+		pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
 	return 0;
 }
 EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);
@@ -1696,7 +1698,7 @@ int pwr_mgr_init(struct pwr_mgr_info* info)
 	int ret = 0;
 	u32 v_set;
 	pwr_mgr.info = info;
-	pwr_mgr.sem_dfs_client = NULL;
+	pwr_mgr.sem_dfs_client.name = NULL;
 	pwr_mgr.sem_locked = false;
 
 	/*I2C seq is disabled by default*/

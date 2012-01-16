@@ -52,7 +52,7 @@ struct kona_freq_map
 struct kona_cpufreq
 {
 	int pi_id;
-	struct pi_mgr_dfs_node* dfs_node;
+	struct pi_mgr_dfs_node dfs_node;
 	struct cpufreq_frequency_table *kona_freqs_table;
 	struct kona_freq_map *freq_map;
 	int no_of_opps;
@@ -176,7 +176,7 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 			break;
 	    }
 	}
-	ret = pi_mgr_dfs_request_update(kona_cpufreq->dfs_node, opp);
+	ret = pi_mgr_dfs_request_update(&kona_cpufreq->dfs_node, opp);
 
 	if(unlikely(ret))
 	{
@@ -294,6 +294,7 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 {
 	struct kona_cpufreq_drv_pdata *pdata =  pdev->dev.platform_data;
 	int i;
+	int ret = -1;
 
 	kcf_dbg("%s\n", __func__);
 	BUG_ON(pdata == NULL);
@@ -336,9 +337,9 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 
 	/*Add a DFS client for ARM CCU. this client will be used later
 	  for changinf ARM freq via cpu-freq.*/
-	kona_cpufreq->dfs_node = pi_mgr_dfs_add_request("cpu_freq", kona_cpufreq->pi_id,
+	ret = pi_mgr_dfs_add_request(&kona_cpufreq->dfs_node,"cpu_freq", kona_cpufreq->pi_id,
 				pi_get_active_opp(kona_cpufreq->pi_id));
-	if (!kona_cpufreq->dfs_node)
+	if (ret)
 	{
 	    kcf_dbg("Failed add dfs request for CPU\n");
 	    kfree(kona_cpufreq->kona_freqs_table);
@@ -359,7 +360,7 @@ static int __devexit cpufreq_drv_remove(struct platform_device *pdev)
     if (cpufreq_unregister_driver(&kona_cpufreq_driver) != 0)
 		kcf_dbg("%s: cpufreq unregister failed\n", __func__);
 
-	ret = pi_mgr_dfs_request_remove(kona_cpufreq->dfs_node);
+	ret = pi_mgr_dfs_request_remove(&kona_cpufreq->dfs_node);
 	if(ret)
 	    kcf_dbg("%s: dfs remove request failed\n", __func__);
 

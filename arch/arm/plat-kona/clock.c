@@ -108,8 +108,10 @@ static int __peri_clk_init(struct clk *clk)
 	if(peri_clk->clk_dfs)
 	{
 		BUG_ON(peri_clk->ccu_clk->pi_id == -1);
-		peri_clk->dfs_node = pi_mgr_dfs_add_request_ex((char*)clk->name,
-					peri_clk->ccu_clk->pi_id,PI_MGR_DFS_MIN_VALUE,PI_MGR_DFS_WIEGHTAGE_NONE);
+		ret = pi_mgr_dfs_add_request_ex(&peri_clk->clk_dfs->dfs_node,
+			(char*)clk->name, peri_clk->ccu_clk->pi_id,PI_MGR_DFS_MIN_VALUE,PI_MGR_DFS_WIEGHTAGE_NONE);
+		if(ret)
+		    clk_dbg("%s: failed to add dfs node for the clock: %s\n",__func__, clk->name);
 	}
 #endif
 
@@ -142,8 +144,10 @@ static int __bus_clk_init(struct clk *clk)
 	if(bus_clk->clk_dfs)
 	{
 		BUG_ON(bus_clk->ccu_clk->pi_id == -1);
-		bus_clk->dfs_node = pi_mgr_dfs_add_request_ex((char*)clk->name,
-					bus_clk->ccu_clk->pi_id,PI_MGR_DFS_MIN_VALUE,PI_MGR_DFS_WIEGHTAGE_NONE);
+		ret = pi_mgr_dfs_add_request_ex(&bus_clk->clk_dfs->dfs_node,
+			(char*)clk->name, bus_clk->ccu_clk->pi_id,PI_MGR_DFS_MIN_VALUE,PI_MGR_DFS_WIEGHTAGE_NONE);
+		if (ret)
+		    clk_dbg("%s: failed to add dfs node for the clock: %s\n",__func__, clk->name);
 	}
 #endif
 
@@ -419,7 +423,7 @@ static int __peri_clk_enable(struct clk *clk)
 		CCU_PI_ENABLE(peri_clk->ccu_clk,1);
 		/*Update DFS request before enabling the clock */
 #ifdef CONFIG_KONA_PI_MGR
-		if(peri_clk->clk_dfs && peri_clk->dfs_node)
+		if(peri_clk->clk_dfs)
 		{
 			clk_dfs_request_update(clk, CLK_STATE_CHANGE,1);
 		}
@@ -476,7 +480,7 @@ static int __bus_clk_enable(struct clk *clk)
 		CCU_PI_ENABLE(bus_clk->ccu_clk,1);
 		/*Update DFS request before enabling the clock */
 #ifdef CONFIG_KONA_PI_MGR
-		if(bus_clk->clk_dfs && bus_clk->dfs_node)
+		if(bus_clk->clk_dfs)
 		{
 			clk_dfs_request_update(clk, CLK_STATE_CHANGE,1);
 		}
@@ -670,7 +674,7 @@ static int __peri_clk_disable(struct clk *clk)
 		/*update DFS request*/
 
 #ifdef CONFIG_KONA_PI_MGR
-		if(peri_clk->clk_dfs && peri_clk->dfs_node)
+		if(peri_clk->clk_dfs)
 		{
 			clk_dfs_request_update(clk, CLK_STATE_CHANGE,0);
 		}
@@ -729,7 +733,7 @@ static int __bus_clk_disable(struct clk *clk)
 
 		/*update DFS request*/
 #ifdef CONFIG_KONA_PI_MGR
-		if(bus_clk->clk_dfs && bus_clk->dfs_node)
+		if(bus_clk->clk_dfs)
 		{
 			clk_dfs_request_update(clk, CLK_STATE_CHANGE,0);
 		}
@@ -1253,7 +1257,7 @@ static long __peri_clk_set_rate(struct clk *clk, unsigned long rate)
 		ret = clk->ops->set_rate(clk, rate);
 
 #ifdef CONFIG_KONA_PI_MGR
-		if(peri_clk->clk_dfs && peri_clk->dfs_node)
+		if(peri_clk->clk_dfs)
 		{
 		    clk_dfs_request_update(clk, CLK_RATE_CHANGE,__clk_get_rate(clk));
 		}
@@ -1420,7 +1424,7 @@ static int clk_is_enabled(struct clk *clk)
 int clk_dfs_request_update(struct clk* clk, u32 action, u32 param)
 {
 	struct clk_dfs* clk_dfs;
-	struct pi_mgr_dfs_node* dfs_node;
+	struct pi_mgr_dfs_node* dfs_node = NULL;
 	struct dfs_rate_thold* thold = NULL;
 
 	if(clk->clk_type == CLK_TYPE_PERI)
@@ -1428,14 +1432,16 @@ int clk_dfs_request_update(struct clk* clk, u32 action, u32 param)
 		struct peri_clk* peri_clk;
 		peri_clk = to_peri_clk(clk);
 		clk_dfs = peri_clk->clk_dfs;
-		dfs_node = peri_clk->dfs_node;
+		if (clk_dfs)
+		    dfs_node = &peri_clk->clk_dfs->dfs_node;
 	}
 	else if(clk->clk_type == CLK_TYPE_BUS)
 	{
 		struct bus_clk* bus_clk;
 		bus_clk = to_bus_clk(clk);
 		clk_dfs = bus_clk->clk_dfs;
-		dfs_node = bus_clk->dfs_node;
+		if (clk_dfs)
+		    dfs_node = &bus_clk->clk_dfs->dfs_node;
 	}
 	else
 		BUG();

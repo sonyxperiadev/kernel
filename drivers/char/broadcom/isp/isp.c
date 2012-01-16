@@ -65,7 +65,7 @@ static void __iomem *isp_base = NULL;
 static void __iomem *mmclk_base = NULL;
 static struct clk *isp_clk;
 static int interrupt_irq = 0;
-static struct pi_mgr_dfs_node *isp_dfs_node = NULL;
+static struct pi_mgr_dfs_node isp_dfs_node;
 
 typedef struct {
     unsigned int  status;
@@ -74,7 +74,7 @@ typedef struct {
 typedef struct {
     struct completion irq_sem;
     spinlock_t lock;
-    isp_status_t isp_status;     
+    isp_status_t isp_status;
 } isp_t;
 
 static int enable_isp_clock(void);
@@ -90,9 +90,9 @@ static irqreturn_t isp_isr(int irq, void *dev_id)
     dev = (isp_t *)dev_id;
 
     spin_lock_irqsave(&dev->lock, flags);
-    dev->isp_status.status = reg_read(isp_base, ISP_STATUS_OFFSET);        
+    dev->isp_status.status = reg_read(isp_base, ISP_STATUS_OFFSET);
     spin_unlock_irqrestore(&dev->lock, flags);
-    
+
     reg_write(isp_base,ISP_STATUS_OFFSET, dev->isp_status.status);
         
     complete(&dev->irq_sem);
@@ -115,6 +115,11 @@ static int isp_open(struct inode *inode, struct file *filp)
     init_completion(&dev->irq_sem);
     
     enable_isp_clock();
+    ret = pi_mgr_dfs_add_request(&isp_dfs_node, "isp", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+    if (ret) {
+	printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+	goto err;
+    }
 
     ret = request_irq(IRQ_ISP, isp_isr, IRQF_DISABLED | IRQF_SHARED, ISP_DEV_NAME, dev);
     if (ret){
@@ -137,10 +142,8 @@ static int isp_release(struct inode *inode, struct file *filp)
 
     disable_isp_clock();
 
-    if (isp_dfs_node) {
-        pi_mgr_dfs_request_remove(isp_dfs_node);
-        isp_dfs_node = NULL;
-    }
+    pi_mgr_dfs_request_remove(&isp_dfs_node);
+    isp_dfs_node.name = NULL;
 
     free_irq(IRQ_ISP, dev);
     if (dev)
@@ -160,7 +163,7 @@ static int isp_mmap(struct file *filp, struct vm_area_struct *vma)
 
     if (!vma->vm_pgoff) {
         vma->vm_pgoff = RHEA_ISP_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
-    } 
+    }
     else {
         return -EINVAL;
     }
@@ -214,18 +217,18 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
             disable_irq(IRQ_ISP);
             return -ERESTARTSYS;
         }
-        
+
         if (copy_to_user((u32 *)arg, &dev->isp_status, sizeof(dev->isp_status))) {
             err_print("ISP_IOCTL_WAIT_IRQ copy_to_user failed\n");
             ret = -EFAULT;
-        }        
-        
+        }
+
         dbg_print("Disabling ISP interrupt\n");
         disable_irq(IRQ_ISP);
         if (interrupt_irq) {
             err_print("interrupted irq ioctl\n");
             return -EIO;
-        }		
+        }
     }
     break;
 
@@ -235,28 +238,28 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
         dbg_print("Interrupting irq ioctl\n");
         complete(&dev->irq_sem);
     }
-    break;	
-	
+    break;
+
     case ISP_IOCTL_CLK_RESET:
     {
-        unsigned int reg_val;	
+        unsigned int reg_val;
         dbg_print("reset ISP clock\n");
-        reg_write( mmclk_base, 
-		           (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_WR_ACCESS_OFFSET), 
+        reg_write( mmclk_base,
+		           (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_WR_ACCESS_OFFSET),
 				   0xA5A501 );
-		
-        reg_val = reg_read( mmclk_base, (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET) ) & 
-                  (~MM_RST_MGR_REG_SOFT_RSTN0_ISP_SOFT_RSTN_MASK); 
-				  
-        reg_write( mmclk_base, 
-		           (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET), 
+
+        reg_val = reg_read( mmclk_base, (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET) ) &
+                  (~MM_RST_MGR_REG_SOFT_RSTN0_ISP_SOFT_RSTN_MASK);
+
+        reg_write( mmclk_base,
+		           (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET),
 				   reg_val );
-				   
+
         reg_val = reg_read( mmclk_base, (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET) ) |
                   MM_RST_MGR_REG_SOFT_RSTN0_ISP_SOFT_RSTN_MASK;
-				  
-        reg_write( mmclk_base, 
-		           (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET), 
+
+        reg_write( mmclk_base,
+		           (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET),
 				   reg_val );
 
         // sleep for 1ms
@@ -266,7 +269,7 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     default:
     break;
    }
-   
+
     return ret;
 }
 
@@ -283,13 +286,6 @@ static int enable_isp_clock(void)
     unsigned long rate;
     int ret;
 
-    if (NULL == isp_dfs_node) {   
-        isp_dfs_node = pi_mgr_dfs_add_request("isp", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
-        if (NULL == isp_dfs_node) {
-            printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
-            return -1;
-        }
-    }
 
     isp_clk = clk_get(NULL, "isp_axi_clk");
     if (!isp_clk) {
@@ -297,7 +293,7 @@ static int enable_isp_clock(void)
         return -EIO;
     }
 
-    if (pi_mgr_dfs_request_update(isp_dfs_node, PI_OPP_TURBO)) {
+    if (pi_mgr_dfs_request_update(&isp_dfs_node, PI_OPP_TURBO)) {
         printk(KERN_ERR "%s:failed to update dfs request for isp\n", __func__);
         return -1;
     }
@@ -313,7 +309,7 @@ static int enable_isp_clock(void)
         err_print("%s: error changing clock rate\n", __func__);
         //return -EIO;
     }
-  */  
+  */
     rate = clk_get_rate(isp_clk);
     dbg_print("isp_clk_clk rate %lu\n", rate);
 
@@ -326,7 +322,7 @@ static int enable_isp_clock(void)
             reg_read(mmclk_base,0x1c),
             reg_read(mmclk_base,0xec0));
 
-    return (ret);    
+    return (ret);
 }
 
 static void disable_isp_clock(void)
@@ -336,10 +332,8 @@ static void disable_isp_clock(void)
 
     clk_disable(isp_clk);
 
-    if (isp_dfs_node) {
-        if (pi_mgr_dfs_request_update(isp_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
-            printk(KERN_ERR "%s: failed to update dfs request for isp\n", __func__);
-        }
+    if (pi_mgr_dfs_request_update(&isp_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+	printk(KERN_ERR "%s: failed to update dfs request for isp\n", __func__);
     }
 
 }
@@ -377,16 +371,16 @@ int __init isp_init(void)
     }
 
     device_create(isp_class, NULL, MKDEV(isp_major, 0), NULL, ISP_DEV_NAME);
-    
+
     /* Map the ISP registers */
     isp_base = (void __iomem *)ioremap_nocache(RHEA_ISP_BASE_PERIPHERAL_ADDRESS, SZ_512K);
     if (isp_base == NULL)
         goto err;
-		
+
     /* Map the MM CLK registers */
     mmclk_base = (void __iomem *)ioremap_nocache(RHEA_MM_CLK_BASE_ADDRESS, SZ_4K);
     if (mmclk_base == NULL)
-        goto err;		
+        goto err;
 
     return 0;
 
@@ -401,10 +395,10 @@ void __exit isp_exit(void)
     dbg_print("ISP driver Exit\n");
     if (isp_base)
         iounmap(isp_base);
-		
+
     if (mmclk_base)
-        iounmap(mmclk_base);		
-   
+        iounmap(mmclk_base);
+
     device_destroy(isp_class, MKDEV(isp_major, 0));
     class_destroy(isp_class);
     unregister_chrdev(isp_major, ISP_DEV_NAME);
