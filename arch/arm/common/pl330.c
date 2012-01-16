@@ -1025,6 +1025,9 @@ static inline int _ldst_devtomem(unsigned dry_run, u8 buf[],
 	while (cyc--) {
 		off += _emit_WFP(dry_run, &buf[off], c, pxs->r->peri);
 		off += _emit_LDP(dry_run, &buf[off], c, pxs->r->peri);
+#ifdef CONFIG_ARM_PL330_FIX_ERRATA_716336
+		off += _emit_RMB(dry_run, &buf[off]);
+#endif
 		off += _emit_ST(dry_run, &buf[off], ALWAYS);
 		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
 	}
@@ -1044,6 +1047,9 @@ static inline int _ldst_memtodev(unsigned dry_run, u8 buf[],
 	while (cyc--) {
 		off += _emit_WFP(dry_run, &buf[off], c, pxs->r->peri);
 		off += _emit_LD(dry_run, &buf[off], ALWAYS);
+#ifdef CONFIG_ARM_PL330_FIX_ERRATA_716336
+		off += _emit_RMB(dry_run, &buf[off]);
+#endif
 		off += _emit_STP(dry_run, &buf[off], c, pxs->r->peri);
 		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
 	}

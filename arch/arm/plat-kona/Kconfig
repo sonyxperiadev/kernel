@@ -64,8 +64,15 @@ config DMAC_PL330
 	bool "PL330 DMAC driver support for Kona architecture"
 	depends on ARCH_RHEA
 	select PL330
+	select ARM_PL330_FIX_ERRATA_716336
 	help
 	 Support for PL330 DMA Controller driver for Rhea SOC/KONA architecture
+
+config ARM_PL330_FIX_ERRATA_716336
+	bool "PL330: BRCM fix for ARM ERRATA 716336"
+	depends on DMAC_PL330
+	help
+		Enable BRCM fixes for PL330 ARM ERRATA 716336
 
 config DMAC_KONA_PL330_SECURE_MODE
 	bool "PL330 DMAC Secure Mode Support"
