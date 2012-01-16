@@ -1622,6 +1622,7 @@ static int bam_init(void)
 	int ret;
 	void *a2_virt_addr;
 	int i;
+	int skip_iounmap = 0;
 
 	vote_dfab();
 	/* init BAM */
@@ -1769,7 +1770,15 @@ tx_get_config_failed:
 	sps_free_endpoint(bam_tx_pipe);
 tx_mem_failed:
 	sps_deregister_bam_device(h);
+	/*
+	 * sps_deregister_bam_device() calls iounmap.  calling iounmap on the
+	 * same handle below will cause a crash, so skip it if we've freed
+	 * the handle here.
+	 */
+	skip_iounmap = 1;
 register_bam_failed:
+	if (!skip_iounmap)
+		iounmap(a2_virt_addr);
 ioremap_failed:
 	/*destroy_workqueue(bam_mux_workqueue);*/
 	return ret;
@@ -1808,6 +1817,7 @@ static int bam_init_fallback(void)
 	return 0;
 
 register_bam_failed:
+	iounmap(a2_virt_addr);
 ioremap_failed:
 	return ret;
 }
