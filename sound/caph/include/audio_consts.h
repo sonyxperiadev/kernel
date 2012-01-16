@@ -48,6 +48,7 @@ typedef enum AUDIO_GAIN_FORMAT_t
 
 /* enable this flag when cp image is in lmp */
 #define USE_NEW_AUDIO_PARAM
+//#undef USE_NEW_AUDIO_PARAM
 
 /**
 	audio application (2-D audio parameters profile)

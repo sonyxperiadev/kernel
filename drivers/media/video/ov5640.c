@@ -132,7 +132,7 @@ static int ov5640_find_framesize(u32 width, u32 height)
 
 struct ov5640 {
 	struct v4l2_subdev subdev;
-//	struct v4l2_subdev_sensor_interface_parms *plat_parms;
+	struct v4l2_subdev_sensor_interface_parms *plat_parms;
 	int i_size;
 	int i_fmt;
 	int brightness;
@@ -1435,7 +1435,6 @@ static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 	return 0;
 }
 
-#if 0
 static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 			struct v4l2_subdev_sensor_interface_parms *parms)
 {
@@ -1445,16 +1444,19 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 	if (!parms)
 		return -EINVAL;
 
+
 	parms->if_type = ov5640->plat_parms->if_type;
 	parms->if_mode = ov5640->plat_parms->if_mode;
-	parms->parms.serial = mipi_cfgs[ov5640->i_size];
+	parms->parms = ov5640->plat_parms->parms;
+	//parms->parms.serial = mipi_cfgs[ov5640->i_size];
+
 
 	return 0;
 }
-#endif
+
 static struct v4l2_subdev_sensor_ops ov5640_subdev_sensor_ops = {
 	.g_skip_frames	= ov5640_g_skip_frames,
-//	.g_interface_parms = ov5640_g_interface_parms,
+	.g_interface_parms = ov5640_g_interface_parms,
 };
 
 static struct v4l2_subdev_ops ov5640_subdev_ops = {
@@ -1482,11 +1484,11 @@ static int ov5640_probe(struct i2c_client *client,
 		return -EINVAL;
 	}
 
-/*	if (!icl->priv) {
+	if (!icl->priv) {
 		dev_err(&client->dev,
 			"OV5640 driver needs i/f platform data\n");
 		return -EINVAL;
-	}*/
+	}
 
 	ov5640 = kzalloc(sizeof(struct ov5640), GFP_KERNEL);
 	if (!ov5640)
@@ -1499,7 +1501,7 @@ static int ov5640_probe(struct i2c_client *client,
 
 	ov5640->i_size = OV5640_SIZE_VGA;
 	ov5640->i_fmt = 0; /* First format in the list */
-//	ov5640->plat_parms = icl->priv;
+	ov5640->plat_parms = icl->priv;
 
 	ret = ov5640_video_probe(icd, client);
 	if (ret) {

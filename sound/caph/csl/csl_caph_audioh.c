@@ -639,7 +639,7 @@ void csl_caph_audioh_config(int path_id, void *p)
 						       CHAL_AUDIO_ENABLE);
 		}
 		if (pcfg->sidetone_output == AUDDRV_PATH_IHF_OUTPUT) {
-			chal_audio_hspath_sidetone_in(handle,
+			chal_audio_ihfpath_sidetone_in(handle,
 						      CHAL_AUDIO_ENABLE);
 		}
 		if (pcfg->sidetone_output == AUDDRV_PATH_HEADSET_OUTPUT) {

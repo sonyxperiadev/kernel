@@ -475,6 +475,18 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID);
 
 /**
 *
+*  @brief  Change the sample rate
+*
+*  @param  pathID  (in) Source of HW path
+*  @param  sampleRate  (in) Sample rate
+*
+*  @return
+*****************************************************************************/
+void csl_caph_hwctrl_ChangeSampleRate(CSL_CAPH_PathID pathID,
+				CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate);
+
+/**
+*
 *  @brief  Disable the Sidetone path
 *
 *  @param    sink (in)  HW path Sink info

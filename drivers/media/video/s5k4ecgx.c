@@ -828,6 +828,7 @@ struct s5k4ecgx_state {
 	struct v4l2_subdev sd;
 	struct v4l2_pix_format pix;
 	struct v4l2_fract timeperframe;
+	struct v4l2_subdev_sensor_interface_parms *plat_parms;
 	struct s5k4ecgx_jpeg_param jpeg;
 	struct s5k4ecgx_version fw;
 	struct s5k4ecgx_version prm;
@@ -3308,6 +3309,9 @@ static int s5k4ecgx_s_stream(struct v4l2_subdev *sd, int enable)
 	//printk("Error !!!!, s5k4ecgx_s_stream is empty\n");
 	return 0;
 }
+
+
+
 static struct soc_camera_ops s5k4ecgx_ops = {
 	.set_bus_param		= s5k4ecgx_set_bus_param,
 	.query_bus_param	= s5k4ecgx_query_bus_param,
@@ -3333,9 +3337,44 @@ static const struct v4l2_subdev_video_ops s5k4ecgx_video_ops = {
 	.s_parm = s5k4ecgx_s_parm,
 };
 
+static int s5k4ecgx_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
+{
+	/* Quantity of initial bad frames to skip. Revisit. */
+	*frames = 0;
+
+	return 0;
+}
+
+static int s5k4ecgx_g_interface_parms(struct v4l2_subdev *sd,
+			struct v4l2_subdev_sensor_interface_parms *parms)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct s5k4ecgx_state *state =
+		container_of(sd, struct s5k4ecgx_state, sd);
+
+	if (!parms)
+		return -EINVAL;
+
+
+	parms->if_type = state->plat_parms->if_type;
+	parms->if_mode = state->plat_parms->if_mode;
+	parms->parms = state->plat_parms->parms;
+	//parms->parms.serial = mipi_cfgs[ov5640->i_size];
+
+
+	return 0;
+}
+
+
+static const struct v4l2_subdev_sensor_ops s5k4ecgx_sensor_ops = {
+	.g_skip_frames = s5k4ecgx_g_skip_frames,
+	.g_interface_parms = s5k4ecgx_g_interface_parms,
+};
+
 static const struct v4l2_subdev_ops s5k4ecgx_subdev_ops = {
 	.core = &s5k4ecgx_core_ops,
 	.video = &s5k4ecgx_video_ops,
+	.sensor = &s5k4ecgx_sensor_ops,
 };
 
 /*
@@ -3364,6 +3403,13 @@ static int s5k4ecgx_probe(struct i2c_client *client,
 		return -EINVAL;
 	}
 
+	if (!icl->priv) {
+		dev_err(&client->dev,
+			"s5k4ecgx driver needs i/f platform data\n");
+		return -EINVAL;
+	}
+
+
 	if ((pdata == NULL) || (pdata->flash_onoff == NULL)) {
 		dev_err(&client->dev, "%s: bad platform data\n", __func__);
 		printk("BILLA s5k4 bad data fail\n"); 
@@ -3384,6 +3430,7 @@ static int s5k4ecgx_probe(struct i2c_client *client,
 	sd = &state->sd;
 	strcpy(sd->name, "s5k4ecgx");//S5K4ECGX_DRIVER_NAME);
 
+	state->plat_parms = icl->priv;
 	/* Registering subdev */
 	v4l2_i2c_subdev_init(sd, client, &s5k4ecgx_subdev_ops);
 	icd->ops		= &s5k4ecgx_ops;

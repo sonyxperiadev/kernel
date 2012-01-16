@@ -18,13 +18,15 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _AUDCTRL_POLICY_H__
 #define _AUDCTRL_POLICY_H__
 
-typedef enum {
+enum __BRCM_STATE_ENUM {
 	BRCM_STATE_NORMAL,
 	BRCM_STATE_INCALL,
 	BRCM_STATE_FM,
 	BRCM_STATE_RECORD,
 	BRCM_STATE_END
-} BRCM_STATE_ENUM;
+};
+
+#define BRCM_STATE_ENUM enum __BRCM_STATE_ENUM
 
 #define AUDIO_STATE_NUM 4
 

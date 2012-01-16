@@ -297,6 +297,27 @@ void csl_caph_srcmixer_config_src_route(CSL_CAPH_SRCM_ROUTE_t routeConfig);
 
 /**
 *
+*  @brief  change the sample ratge of the caph srcmixer src 
+*
+*  @param   chnl_config  (in) caph srcmixer src configuration parameter
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_srcmixer_change_samplerate(CSL_CAPH_SRCM_ROUTE_t routeConfig);
+
+/**
+*
+*  @brief  get the output sample rate from the same input sample rate value
+*
+*  @param   inSampleRate  (in) input chnl sample rate of caph srcmixer src
+*
+*  @return CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate
+*****************************************************************************/
+CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcmixer_samplerate_mapping(CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate); 
+
+
+/**
+*
 *  @brief  set the mixer input gain
 *
 *  @param   inChnl  (in) caph srcmixer mixer input channel

@@ -221,14 +221,15 @@ struct __BRCM_AUDIO_Param_RateChange_t {
 	UInt8 codecID;
 
 };
+#define BRCM_AUDIO_Param_RateChange_t struct __BRCM_AUDIO_Param_RateChange_t
 
-typedef struct {
+struct __BRCM_AUDIO_Param_SetApp_t {
 	int aud_app;
 	int aud_mode;
 
-} BRCM_AUDIO_Param_SetApp_t;
+};
+#define BRCM_AUDIO_Param_SetApp_t struct __BRCM_AUDIO_Param_SetApp_t
 
-#define BRCM_AUDIO_Param_RateChange_t struct __BRCM_AUDIO_Param_RateChange_t
 union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_Start_t param_start;
 	BRCM_AUDIO_Param_Stop_t param_stop;
