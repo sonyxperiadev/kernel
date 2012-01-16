@@ -54,6 +54,15 @@ inline const char *op_state_str(dwc_otg_core_if_t *core_if)
 }
 #endif
 
+static void dwc_otg_set_device_soft_disconnect(dwc_otg_core_if_t *core_if, bool en)
+{
+	dctl_data_t dctl = {.d32 = 0 };
+	dctl.d32 = dwc_read_reg32(&core_if->dev_if->dev_global_regs->dctl);
+	dctl.b.sftdiscon = en ? 1 : 0;
+	dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl,
+		dctl.d32);
+}
+
 /** This function will log a debug message
  *
  * @param core_if Programming view of DWC_otg controller.
@@ -146,7 +155,6 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t *core_if)
 			    "Session Reqeust Success Status Change++\n");
 		gotgctl.d32 = dwc_read_reg32(&global_regs->gotgctl);
 		if (gotgctl.b.sesreqscs) {
-
 			if ((core_if->core_params->phy_type ==
 			     DWC_PHY_TYPE_PARAM_FS)
 			    && (core_if->core_params->i2c_enable)) {
@@ -213,6 +221,9 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t *core_if)
 				    core_if->op_state);
 			cil_hcd_disconnect(core_if);
 			cil_pcd_start(core_if);
+#ifdef CONFIG_USB_OTG
+			dwc_otg_set_device_soft_disconnect(core_if, false);
+#endif
 			core_if->op_state = A_PERIPHERAL;
 		} else {
 			/*
@@ -232,10 +243,9 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t *core_if)
 			core_if->op_state = A_HOST;
 		}
 	}
-	if (gotgint.b.adevtoutchng) {
+	if (gotgint.b.adevtoutchng)
 		DWC_DEBUGPL(DBG_ANY, " ++OTG Interrupt: "
 			    "A-Device Timeout Change++\n");
-	}
 
 	if (gotgint.b.debdone)
 		DWC_DEBUGPL(DBG_ANY, " ++OTG Interrupt: " "Debounce Done++\n");
@@ -364,15 +374,20 @@ int32_t dwc_otg_handle_session_req_intr(dwc_otg_core_if_t *core_if)
 		DWC_PRINTF("SRP: Device mode\n");
 	} else {
 		DWC_PRINTF("SRP: Host mode\n");
-
 		/* Turn on the port power bit. */
 		hprt0.d32 = dwc_otg_read_hprt0(core_if);
 		hprt0.b.prtpwr = 1;
 		dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
 
+#ifdef CONFIG_USB_OTG
+		/* Schedule a work item to init the core */
+		DWC_WORKQ_SCHEDULE(core_if->wq_otg, w_init_core,
+				   core_if, "SRP detected");
+#else
 		/* Start the Connection timer. So a message can be displayed
 		 * if connect does not occur within 10 seconds. */
 		cil_hcd_session_start(core_if);
+#endif
 	}
 #endif
 
@@ -412,6 +427,20 @@ void w_wakeup_detected(void *p)
 	/** Change to L0 state*/
 	core_if->lx_state = DWC_OTG_L0;
 }
+
+void w_a_periph_done(void *p)
+{
+	dwc_otg_core_if_t *core_if = (dwc_otg_core_if_t *) p;
+
+	if (core_if->op_state == A_PERIPHERAL) {
+		/* Clear the a_peripheral flag, back to a_host. */
+		cil_pcd_stop(core_if);
+		cil_hcd_start(core_if);
+		core_if->op_state = A_HOST;
+	}
+}
+
+
 
 /**
  * This interrupt indicates that the DWC_otg controller has detected a
@@ -1005,6 +1034,12 @@ int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
 #endif
 		/* PCD callback for suspend. */
 		cil_pcd_suspend(core_if);
+
+#ifdef CONFIG_USB_OTG
+		if (core_if->op_state == A_PERIPHERAL)
+			DWC_TIMER_SCHEDULE(core_if->bidl_adisconn_timer, TA_BIDL_ADIS_IN_MS);
+#endif
+
 		if (core_if->power_down == 2) {
 			dcfg.d32 =
 			    dwc_read_reg32(&core_if->dev_if->dev_global_regs->
@@ -1189,6 +1224,7 @@ static inline uint32_t dwc_otg_read_common_intr(dwc_otg_core_if_t *core_if)
 
 	gintsts.d32 = dwc_read_reg32(&core_if->core_global_regs->gintsts);
 	gintmsk.d32 = dwc_read_reg32(&core_if->core_global_regs->gintmsk);
+
 
 #ifdef DEBUG
 	/* if any common interrupts set */

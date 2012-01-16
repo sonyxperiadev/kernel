@@ -82,7 +82,7 @@ void w_init_core(void *p)
 
 	if (core_if) {
 #ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver->init)
+		if (core_if->xceiver->init && (core_if->xceiver->state == OTG_STATE_UNDEFINED))
 			otg_init(core_if->xceiver);
 #endif
 		dwc_otg_disable_global_interrupts(core_if);
@@ -335,6 +335,20 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t * reg_base_addr)
 		return 0;
 	}
 
+#ifdef CONFIG_USB_OTG
+	core_if->bidl_adisconn_timer = DWC_TIMER_ALLOC("A_PERIPHERAL disconnect timer",
+					     w_a_periph_done, core_if);
+	if (core_if->bidl_adisconn_timer == 0) {
+		DWC_WARN("DWC_TIMER_ALLOC failed\n");
+		dwc_free(host_if);
+		dwc_free(dev_if);
+		DWC_WORKQ_FREE(core_if->wq_otg);
+		DWC_TIMER_FREE(core_if->wkp_timer);
+		dwc_free(core_if);
+		return 0;
+	}
+#endif
+
 	if (dwc_otg_setup_params(core_if))
 		DWC_WARN("Error while setting core params\n");
 
@@ -351,6 +365,9 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t * reg_base_addr)
 		dwc_free(dev_if);
 		DWC_WORKQ_FREE(core_if->wq_otg);
 		DWC_TIMER_FREE(core_if->wkp_timer);
+#ifdef CONFIG_USB_OTG
+		DWC_TIMER_FREE(core_if->bidl_adisconn_timer);
+#endif
 		dwc_free(core_if);
 		return 0;
 	}
@@ -406,6 +423,11 @@ void dwc_otg_cil_remove(dwc_otg_core_if_t *core_if)
 
 	if (core_if->wkp_timer)
 		DWC_TIMER_FREE(core_if->wkp_timer);
+
+#ifdef CONFIG_USB_OTG
+	if (core_if->bidl_adisconn_timer)
+		DWC_TIMER_FREE(core_if->bidl_adisconn_timer);
+#endif
 
 	if (core_if->srp_timer)
 		DWC_TIMER_FREE(core_if->srp_timer);

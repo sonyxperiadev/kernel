@@ -790,6 +790,10 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t * pcd)
 	gintsts_data_t gintsts;
 	pcgcctl_data_t power = {.d32 = 0 };
 
+#ifdef CONFIG_USB_OTG
+	DWC_TIMER_CANCEL(core_if->bidl_adisconn_timer);
+#endif
+
 	power.d32 = dwc_read_reg32(core_if->pcgcctl);
 	if (power.b.stoppclk) {
 		power.d32 = 0;

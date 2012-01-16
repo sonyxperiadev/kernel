@@ -890,6 +890,18 @@ struct dwc_otg_core_if {
 	/** Timer object used for handling "Wakeup Detected" Interrupt */
 	dwc_timer_t *wkp_timer;
 
+#ifdef CONFIG_USB_OTG
+	/* TA_BIDL_ADIS range is 155ms to 200ms.
+	* Used to determine when to disconnect in
+	* A_PERIPHERAL state. Synopsys core disconnects
+	* automatically and mentions to use 200ms timer
+	* before checking for host mode */
+#define TA_BIDL_ADIS_IN_MS	200
+
+	/** Timer object used for handling "TA_BIDL_ADIS" during A_PERIPHERAL state */
+	dwc_timer_t *bidl_adisconn_timer;
+#endif
+
 #ifdef DEBUG
 	uint32_t start_hcchar_val[MAX_EPS_CHANNELS];
 
@@ -969,8 +981,9 @@ extern void hc_xfer_timeout(void *ptr);
  */
 extern void w_conn_id_status_change(void *p);
 extern void w_shutdown_core(void *p);
-
 extern void w_wakeup_detected(void *p);
+extern void w_a_periph_done(void *p);
+extern void w_init_core(void *p);
 
 /** Saves global register values into system memory. */
 extern int dwc_otg_save_global_regs(dwc_otg_core_if_t * core_if);
@@ -1302,9 +1315,8 @@ void dwc_otg_initiate_srp(dwc_otg_core_if_t * core_if);
  */
 static inline void cil_hcd_start(dwc_otg_core_if_t * core_if)
 {
-	if (core_if->hcd_cb && core_if->hcd_cb->start) {
+	if (core_if->hcd_cb && core_if->hcd_cb->start)
 		core_if->hcd_cb->start(core_if->hcd_cb->p);
-	}
 }
 
 /** Stop the HCD.  Helper function for using the HCD callbacks.
@@ -1313,9 +1325,8 @@ static inline void cil_hcd_start(dwc_otg_core_if_t * core_if)
  */
 static inline void cil_hcd_stop(dwc_otg_core_if_t * core_if)
 {
-	if (core_if->hcd_cb && core_if->hcd_cb->stop) {
+	if (core_if->hcd_cb && core_if->hcd_cb->stop)
 		core_if->hcd_cb->stop(core_if->hcd_cb->p);
-	}
 }
 
 /** Disconnect the HCD.  Helper function for using the HCD callbacks.
@@ -1324,9 +1335,8 @@ static inline void cil_hcd_stop(dwc_otg_core_if_t * core_if)
  */
 static inline void cil_hcd_disconnect(dwc_otg_core_if_t * core_if)
 {
-	if (core_if->hcd_cb && core_if->hcd_cb->disconnect) {
+	if (core_if->hcd_cb && core_if->hcd_cb->disconnect)
 		core_if->hcd_cb->disconnect(core_if->hcd_cb->p);
-	}
 }
 
 /** Inform the HCD the a New Session has begun.  Helper function for
@@ -1336,9 +1346,8 @@ static inline void cil_hcd_disconnect(dwc_otg_core_if_t * core_if)
  */
 static inline void cil_hcd_session_start(dwc_otg_core_if_t * core_if)
 {
-	if (core_if->hcd_cb && core_if->hcd_cb->session_start) {
+	if (core_if->hcd_cb && core_if->hcd_cb->session_start)
 		core_if->hcd_cb->session_start(core_if->hcd_cb->p);
-	}
 }
 
 #ifdef CONFIG_USB_DWC_OTG_LPM
@@ -1373,9 +1382,8 @@ static inline void cil_hcd_resume(dwc_otg_core_if_t * core_if)
  */
 static inline void cil_pcd_start(dwc_otg_core_if_t * core_if)
 {
-	if (core_if->pcd_cb && core_if->pcd_cb->start) {
+	if (core_if->pcd_cb && core_if->pcd_cb->start)
 		core_if->pcd_cb->start(core_if->pcd_cb->p);
-	}
 }
 
 /** Stop the PCD.  Helper function for using the PCD callbacks.
@@ -1384,9 +1392,8 @@ static inline void cil_pcd_start(dwc_otg_core_if_t * core_if)
  */
 static inline void cil_pcd_stop(dwc_otg_core_if_t * core_if)
 {
-	if (core_if->pcd_cb && core_if->pcd_cb->stop) {
+	if (core_if->pcd_cb && core_if->pcd_cb->stop)
 		core_if->pcd_cb->stop(core_if->pcd_cb->p);
-	}
 }
 
 /** Suspend the PCD.  Helper function for using the PCD callbacks.
@@ -1395,9 +1402,8 @@ static inline void cil_pcd_stop(dwc_otg_core_if_t * core_if)
  */
 static inline void cil_pcd_suspend(dwc_otg_core_if_t * core_if)
 {
-	if (core_if->pcd_cb && core_if->pcd_cb->suspend) {
+	if (core_if->pcd_cb && core_if->pcd_cb->suspend)
 		core_if->pcd_cb->suspend(core_if->pcd_cb->p);
-	}
 }
 
 /** Resume the PCD.  Helper function for using the PCD callbacks.
@@ -1406,9 +1412,8 @@ static inline void cil_pcd_suspend(dwc_otg_core_if_t * core_if)
  */
 static inline void cil_pcd_resume(dwc_otg_core_if_t * core_if)
 {
-	if (core_if->pcd_cb && core_if->pcd_cb->resume_wakeup) {
+	if (core_if->pcd_cb && core_if->pcd_cb->resume_wakeup)
 		core_if->pcd_cb->resume_wakeup(core_if->pcd_cb->p);
-	}
 }
 
 //////////////////////////////////////////////////////////////////////
