@@ -1339,10 +1339,10 @@ static ssize_t store_selftest_dmic(struct device *dev,
 				   struct device_attribute *attr,
 				   const char *buf, size_t count)
 {
-	uint format, mic;
+	int format, mic;
 	int parms;
 
-	parms = sscanf(buf, "%u %u", &format, &mic);
+	parms = sscanf(buf, "%d %d", &format, &mic);
 	if ((parms == 0) || (parms > 2))
 		return -EINVAL;
 	if (parms >= 1)
@@ -1374,9 +1374,9 @@ static ssize_t store_selftest_ihf(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
-	uint format;
+	int format;
 
-	if ((sscanf(buf, "%u", &format)) != 1)
+	if ((sscanf(buf, "%d", &format)) != 1)
 		return -EINVAL;
 
 	SelftestData.ihf.rf = format;
@@ -1406,9 +1406,9 @@ static ssize_t store_selftest_hs(struct device *dev,
 				 struct device_attribute *attr,
 				 const char *buf, size_t count)
 {
-	uint format;
+	int format;
 
-	if ((sscanf(buf, "%u", &format)) != 1)
+	if ((sscanf(buf, "%d", &format)) != 1)
 		return -EINVAL;
 
 	SelftestData.hs.rf = format;
