@@ -10,6 +10,7 @@ EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/public/
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/public/sysinterface/util/public/
 
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/fuse_log/
+EXTRA_CFLAGS += -I$(srctree)/include/linux/broadcom/
 
 EXTRA_CFLAGS += -Ifs/cifs/
 EXTRA_CFLAGS += -DUNDER_LINUX

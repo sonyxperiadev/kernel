@@ -14,6 +14,7 @@ EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/sysrpc/sysrpc-capi/gen/
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/sysrpc/sysrpc-capi/
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/sysrpc/
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/fuse_log/
+EXTRA_CFLAGS += -I$(srctree)/include/linux/broadcom/
 
 
 EXTRA_CFLAGS += -D_BSDTYPES_DEFINED -DTYPEDEF_U_CHAR -DTYPEDEF_U_SHORT

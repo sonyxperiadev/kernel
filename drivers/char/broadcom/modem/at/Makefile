@@ -8,6 +8,7 @@ EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/CAPI2_CIB/capi2/gen/
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/at/at_CIB/public
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/public/
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/public/
+EXTRA_CFLAGS += -I$(srctree)/include/linux/broadcom/
 
 EXTRA_CFLAGS += -DRPC_INCLUDED
 EXTRA_CFLAGS += -DUNDER_LINUX_MODEM
