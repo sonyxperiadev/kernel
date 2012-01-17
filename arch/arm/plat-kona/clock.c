@@ -1522,28 +1522,13 @@ int ccu_init_state_save_buf(struct ccu_clk * ccu_clk)
 	struct ccu_state_save *ccu_state_save = ccu_clk->ccu_state_save;
 	if(!ccu_state_save)
 		return ret;
-
 	ccu_state_save->num_reg = 0;
-	for(i = 0; i < ccu_state_save->reg_set_count; i++)
-	{
-		BUG_ON(ccu_state_save->reg_save[i].offset_end <
-				ccu_state_save->reg_save[i].offset_start);
-		ccu_state_save->num_reg +=
-			(ccu_state_save->reg_save[i].offset_end -
-				ccu_state_save->reg_save[i].offset_start + sizeof(u32))/sizeof(u32);
+	for(i = 0; i < ccu_state_save->reg_set_count; i++) {
+	    BUG_ON(ccu_state_save->reg_save[i].offset_end < ccu_state_save->reg_save[i].offset_start);
+	    ccu_state_save->num_reg += (ccu_state_save->reg_save[i].offset_end -
+			ccu_state_save->reg_save[i].offset_start + sizeof(u32))/sizeof(u32);
 	}
 	clk_dbg("%s:num_reg = %d\n",__func__, ccu_state_save->num_reg);
-	/*Allocate memory for cotext save buf if a valid
-	buffer is not passed from mach
-	*/
-	if(!ccu_state_save->save_buf)
-	{
-		/*Add one byte to store save flag*/
-		ccu_state_save->save_buf = kzalloc(sizeof(u32)*(ccu_state_save->num_reg+1),
-					GFP_KERNEL);
-		if(!ccu_state_save->save_buf)
-			ret = -ENOMEM;
-	}
 
 	/*Set save flag to false by default*/
 	if(!ret)
