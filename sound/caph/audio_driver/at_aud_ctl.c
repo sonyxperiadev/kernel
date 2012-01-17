@@ -66,6 +66,9 @@ Copyright 2009 - 2011  Broadcom Corporation
 
 #include "audio_pmu_adapt.h"
 
+void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
+			UInt32 Val6);
+void AUDTST_VoIP_Stop(void);
 /**
 	Description:
 	AT command handler, handle command AT commands at*maudmode=P1,P2,P3
@@ -438,15 +441,16 @@ int AtMaudLog(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 	ParamCount -- Count of parameter array
 	Params  --- P1,P2,...,P6
 **/
+static Boolean voip_running = FALSE;
 int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 {
 	BCM_AUDIO_DEBUG("%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld.\n",
 			__func__, Params[0], Params[1], Params[2],
 			Params[3], Params[4], Params[5], ParamCount);
 
-	/* test command 100/101 is to control the HW clock.
+	/* test command 110/101 is to control the HW clock.
 	   In this case, dont enable the clock */
-	if (Params[0] != 100 && Params[0] != 101)
+	if (Params[0] != 110 && Params[0] != 101)
 		csl_caph_ControlHWClock(TRUE);
 
 	switch (Params[0]) {
@@ -570,7 +574,35 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 #endif
 		break;
 */
+	case 99:
+		if (voip_running) {
+			AUDTST_VoIP_Stop();
+			voip_running = FALSE;
+		}
+		break;
+
 	case 100:
+		if (!voip_running) {
+			/* Params[1] - Mic
+			   Params[2] - speaker
+			   Params[3] - Delay (msec)
+			   Params[4] - Codectype:
+			   Params[5] - Codec bit rate: */
+
+			AUDTST_VoIP(Params[1],
+				Params[2],
+				Params[3],
+				Params[4], Params[5]);
+			voip_running = TRUE;
+		}
+		break;
+
+	case 101:
+		Params[0] = (Int32) csl_caph_QueryHWClock();
+		BCM_AUDIO_DEBUG("csl_caph_QueryHWClock %ld.\n", Params[0]);
+		break;
+
+	case 110:
 		if (Params[1] == 1) {
 			BCM_AUDIO_DEBUG("Enable CAPH clock\n");
 			csl_caph_ControlHWClock(TRUE);
@@ -578,11 +610,6 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			BCM_AUDIO_DEBUG("Disable CAPH clock\n");
 			csl_caph_ControlHWClock(FALSE);
 		}
-		break;
-
-	case 101:
-		Params[0] = (Int32) csl_caph_QueryHWClock();
-		BCM_AUDIO_DEBUG("csl_caph_QueryHWClock %ld.\n", Params[0]);
 		break;
 
 	case 121:
