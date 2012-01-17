@@ -1368,6 +1368,45 @@ static int ov5640_enum_framesizes(struct v4l2_subdev *sd,
 	return 0;
 }
 
+
+/* we only support fixed frame rate */
+static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
+		struct v4l2_frmivalenum *interval)
+{
+	int size;
+
+	if (interval->index >= 1)
+		return -EINVAL;
+
+	interval->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+
+	size = ov5640_find_framesize(interval->width, interval->height);
+
+	switch (size) {
+	case OV5640_SIZE_5MP:
+		interval->discrete.numerator = 2;
+		interval->discrete.denominator = 15;
+		break;
+	case OV5640_SIZE_QXGA:
+	case OV5640_SIZE_1080P:
+	case OV5640_SIZE_UXGA:
+		interval->discrete.numerator = 1;
+		interval->discrete.denominator = 15;
+		break;
+	case OV5640_SIZE_720P:
+	case OV5640_SIZE_XGA:
+	case OV5640_SIZE_VGA:
+	case OV5640_SIZE_QVGA:
+	default:
+		interval->discrete.numerator = 1;
+		interval->discrete.denominator = 24;
+		break;
+	}
+	printk(KERN_ERR"%s: width=%d height=%d fi=%d/%d\n", __func__, interval->width,
+			interval->height, interval->discrete.numerator, interval->discrete.denominator);
+	return 0;
+}
+
 static int ov5640_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1424,6 +1463,7 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 	.enum_mbus_fmt	= ov5640_enum_fmt,
 	.enum_mbus_fsizes = ov5640_enum_framesizes,
 	.enum_framesizes = ov5640_enum_framesizes,
+	.enum_frameintervals = ov5640_enum_frameintervals,
 	.g_parm = ov5640_g_parm,
 	.s_parm = ov5640_s_parm,
 };
