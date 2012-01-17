@@ -226,6 +226,8 @@
     .extern dormant_base_va
     .extern dormant_base_pa
 
+    .global dormant_gpio_data
+
 #include "dm_pwr_save_dfn.h"
 #include "dm_support_ops.S"
 #include "dm_ca9_gic_mcrs.S"
@@ -240,6 +242,63 @@
 #include "dm_pwr_restore_mcrs.S"        /* top level power restore macros */
 #include "dm_pwr_dbg_mcrs.S"
 
+
+/*
+ * Offsets of members of struct dormant_gpio_data
+ */
+#define OFFSET_GPIO_ENABLE    0
+#define OFFSET_GPIO_SET_P     4
+#define OFFSET_GPIO_SET_V     8
+#define OFFSET_GPIO_CLR_P     12
+#define OFFSET_GPIO_CLR_V     16
+#define OFFSET_GPIO_BIT       20
+
+    @ Set clear dormant gpios from virtual and physical
+    @ spaces.
+    @ Arguments:
+    @ ==========
+    @ scratch1,scratch2: scratch registers destroyed by the macro
+    @ Expects struct dormant_gpio_data to be defined
+    .macro dormant_gpio_set_v scratch1, scratch2
+        ldr      \scratch1,=dormant_gpio_data
+        ldr      \scratch2,[\scratch1,#OFFSET_GPIO_ENABLE]
+        cmp      \scratch2,#0
+        ldrne    \scratch2,[\scratch1,#OFFSET_GPIO_BIT]
+        ldrne    \scratch1,[\scratch1,#OFFSET_GPIO_SET_V]
+        strne    \scratch2,[\scratch1]
+    .endm
+    .macro dormant_gpio_set_p scratch1, scratch2
+        ldr      \scratch1,=dormant_gpio_data
+        ldr      \scratch2,=CONFIG_PAGE_OFFSET
+        sub      \scratch1,\scratch1,\scratch2
+        ldr      \scratch2,=PHYS_OFFSET
+        add      \scratch1,\scratch1,\scratch2
+        ldr      \scratch2,[\scratch1,#OFFSET_GPIO_ENABLE]
+        cmp      \scratch2,#0
+        ldrne    \scratch2,[\scratch1,#OFFSET_GPIO_BIT]
+        ldrne    \scratch1,[\scratch1,#OFFSET_GPIO_SET_P]
+        strne    \scratch2,[\scratch1]
+    .endm
+    .macro dormant_gpio_clr_v scratch1, scratch2
+        ldr      \scratch1,=dormant_gpio_data
+        ldr      \scratch2,[\scratch1,#OFFSET_GPIO_ENABLE]
+        cmp      \scratch2,#0
+        ldrne    \scratch2,[\scratch1,#OFFSET_GPIO_BIT]
+        ldrne    \scratch1,[\scratch1,#OFFSET_GPIO_CLR_V]
+        strne    \scratch2,[\scratch1]
+    .endm
+    .macro dormant_gpio_clr_p scratch1, scratch2
+        ldr      \scratch1,=dormant_gpio_data
+        ldr      \scratch2,=CONFIG_PAGE_OFFSET
+        sub      \scratch1,\scratch1,\scratch2
+        ldr      \scratch2,=PHYS_OFFSET
+        add      \scratch1,\scratch1,\scratch2
+        ldr      \scratch2,[\scratch1,#OFFSET_GPIO_ENABLE]
+        cmp      \scratch2,#0
+        ldrne    \scratch2,[\scratch1,#OFFSET_GPIO_BIT]
+        ldrne    \scratch1,[\scratch1,#OFFSET_GPIO_CLR_P]
+        strne    \scratch2,[\scratch1]
+    .endm
 
 @ bool dormant_start(void);
 ENTRY(dormant_start)
@@ -401,6 +460,8 @@ UpdatePwrStatus:
 	MOV   r4,#SEC_DORMANT_MODE
 	PUSH  {r4}
 
+	dormant_gpio_clr_v r5, r6
+
 	@ invoke the dispatcher
 	bl hw_sec_pub_dispatcher
 #else
@@ -432,6 +493,7 @@ LateWakeupEventHandler: @ Secure routine returned without entering dormant here
 
     .align 5
 EnterResetHandler:
+	dormant_gpio_set_p r0, r1
 
 DormantRestoreStart:
    	@ copy of DORMANT_BASE => r0 as an 'argument' for DORMANT_RESTORE1
@@ -508,4 +570,16 @@ FullSystemReset:                   @ nothing to recover, execute a full reset
     @@ B SystemBoot
     B FullSystemReset             @ lockup stub for now
     @...
-
+/*
+ * Definition of struct dormant_gpio_data. This structure
+ * data will be initialized in C.
+ */
+    .type dormant_gpio_data, #object
+dormant_gpio_data:
+    .long    0x00000000    @ enable
+    .long    0x00000000    @ gpio_set_p
+    .long    0x00000000    @ gpio_set_v
+    .long    0x00000000    @ gpio_clr_p
+    .long    0x00000000    @ gpio_clr_v
+    .long    0x00000000    @ gpio_bit
+    .size dormant_gpio_data, . - dormant_gpio_data
