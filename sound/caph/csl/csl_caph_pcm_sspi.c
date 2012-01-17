@@ -1448,7 +1448,23 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		default:
 			break;
     }
-    
+
+    chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+                                              SSPI_FIFO_ID_TX0,
+                                              TRUE,
+                                              TRUE);
+    chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+                                              SSPI_FIFO_ID_TX1,
+                                              TRUE,
+                                              TRUE);
+    chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+                                              SSPI_FIFO_ID_TX2,
+                                              TRUE,
+                                              TRUE);
+    chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+                                              SSPI_FIFO_ID_TX3,
+                                              TRUE,
+                                              TRUE);
     return CSL_PCM_SUCCESS;
 }
 
