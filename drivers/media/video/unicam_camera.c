@@ -389,7 +389,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 		csl_cam_intf_cfg_st.input_mode = CSL_CAM_INPUT_DUAL_LANE;
 	else {
 		dev_err(unicam_dev->dev, "receiver only supports max 2 lanes, requested lanes(%d)\n",
-				unicam_dev-if_params.parms.serial.lanes);
+				unicam_dev->if_params.parms.serial.lanes);
 		return -EINVAL;
 	}
 
@@ -769,7 +769,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	struct unicam_camera_dev *unicam_dev = (struct unicam_camera_dev *)arg;
 	unsigned int status;
 	unsigned int reg_status;
-
+	int ret;
 	static unsigned int t1 =0,t2 =0 ,fps =0;
 
 	/* has the interrupt occured for Channel 0? */
@@ -785,7 +785,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
         if (status & (CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT)) {
 			struct vb2_buffer *vb = unicam_dev->active;
 			fps++;
-			int ret;
 
 			if(t1 == 0 && t2 == 0)
 					t1 = t2 = jiffies_to_msecs(jiffies);
