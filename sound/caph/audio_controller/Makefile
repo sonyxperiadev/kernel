@@ -15,6 +15,8 @@
 # use $(srctree) for kernel top (see below) and
 # use $(src) in a relative path which points to the directory
 
+KBUILD_CFLAGS += -Werror
+
 EXTRA_CFLAGS +=  -DMSP -DFUSE_DUAL_PROCESSOR_ARCHITECTURE -DFUSE_APPS_PROCESSOR -DDEVELOPMENT_ONLY -D_RHEA_ -DUNDER_LINUX -DUNDER_LINUX_MODEM -DLINUX_RPC_KERNEL
 #EXTRA_CFLAGS += -DENABLE_DMA_VOICE
 #EXTRA_CFLAGS += -DVOLTE_SUPPORT

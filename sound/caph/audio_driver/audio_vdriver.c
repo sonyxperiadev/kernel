@@ -210,7 +210,7 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t audio_mode,
 					unsigned int arg_pathID,
 					Boolean inHWlpbk);
 
-extern CSL_CAPH_HWConfig_Table_t HWConfig_Table[MAX_AUDIO_PATH];
+static CSL_CAPH_HWConfig_Table_t *ptrToHWConfig_Table;
 
 /*=============================================================================
 // Functions
@@ -231,6 +231,9 @@ void AUDDRV_Init(void)
 
 	if (sAudDrv.isRunning == TRUE)
 		return;
+
+	ptrToHWConfig_Table = csl_caph_hwctrl_GetHWConfigTable();
+
 	/* register DSP VPU status processing handlers */
 
 	AUDIO_MODEM(CSL_RegisterVPUCaptureStatusHandler
@@ -477,49 +480,52 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 	return;
 }
 
-static Result_t AUDDRV_HWControl_ChangeSampleRate(CSL_CAPH_PathID pathID, AUDIO_SAMPLING_RATE_t sampleRate)
+static void AUDDRV_HWControl_ChangeSampleRate(
+	CSL_CAPH_PathID pathID, AUDIO_SAMPLING_RATE_t sampleRate)
 {
 	CSL_CAPH_SRCM_INSAMPLERATE_e cslSampleRate = CSL_CAPH_SRCMIN_8KHZ;
-	switch(sampleRate)
-	{
-		case AUDIO_SAMPLING_RATE_8000:
-			cslSampleRate = CSL_CAPH_SRCMIN_8KHZ;
-			break;
+	switch (sampleRate) {
+	case AUDIO_SAMPLING_RATE_8000:
+		cslSampleRate = CSL_CAPH_SRCMIN_8KHZ;
+		break;
 
-		case AUDIO_SAMPLING_RATE_16000:
-			cslSampleRate = CSL_CAPH_SRCMIN_16KHZ;
-			break;
+	case AUDIO_SAMPLING_RATE_16000:
+		cslSampleRate = CSL_CAPH_SRCMIN_16KHZ;
+		break;
 
-		default:
-			cslSampleRate = CSL_CAPH_SRCMIN_8KHZ;
+	default:
+		cslSampleRate = CSL_CAPH_SRCMIN_8KHZ;
 	}
-	csl_caph_hwctrl_ChangeSampleRate((CSL_CAPH_PathID)pathID, cslSampleRate);	
-	return RESULT_OK;
+	csl_caph_hwctrl_ChangeSampleRate((CSL_CAPH_PathID)pathID,
+			cslSampleRate);
+
+	return;
 }
 
-static void AUDDRV_Telephony_ChangeSampleRate( unsigned int sampleRate )
+static void AUDDRV_Telephony_ChangeSampleRate(unsigned int sampleRate)
 {
-	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_ChangeSampleRate, sampleRate = %d\n\r", sampleRate);
+	Log_DebugPrintf(LOGID_AUDIO,
+		"AUDDRV_Telephony_ChangeSampleRate, sampleRate = %d\n\r",
+		sampleRate);
 
-	if ( AUDDRV_InVoiceCall() )
-	{
-		//Change the sample rate for UL
-		if(telephonyPathID.ulPathID)
-		{
-			(void)AUDDRV_HWControl_ChangeSampleRate(telephonyPathID.ulPathID, sampleRate);
-		}
+	if (AUDDRV_InVoiceCall()) {
+		/*Change the sample rate for UL*/
+		if (telephonyPathID.ulPathID)
+			AUDDRV_HWControl_ChangeSampleRate(
+				telephonyPathID.ulPathID,
+				sampleRate);
 
-		//Change the sample rate for UL secondary mic path
-		if(telephonyPathID.ul2PathID)
-		{
-			AUDDRV_HWControl_ChangeSampleRate(telephonyPathID.ul2PathID, sampleRate);
-		}
+		/*Change the sample rate for UL secondary mic path*/
+		if (telephonyPathID.ul2PathID)
+			AUDDRV_HWControl_ChangeSampleRate(
+				telephonyPathID.ul2PathID,
+				sampleRate);
 
-		//Change the sample rate for DL
-		if(telephonyPathID.dlPathID)
-		{
-			AUDDRV_HWControl_ChangeSampleRate(telephonyPathID.dlPathID, sampleRate);
-		}
+		/*Change the sample rate for DL*/
+		if (telephonyPathID.dlPathID)
+			AUDDRV_HWControl_ChangeSampleRate(
+				telephonyPathID.dlPathID,
+				sampleRate);
 
 	}
 }
@@ -567,7 +573,7 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 
 	if (AUDDRV_InVoiceCall()) {
 
-	Log_DebugPrintf(LOGID_AUDIO,
+		Log_DebugPrintf(LOGID_AUDIO,
 			"AUDDRV_Telephony_RateChange b, sampleRate = %d\n\r",
 			sample_rate);
 
@@ -601,11 +607,15 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 #endif
 		}
 
-	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_RateChange, Change HW Sample Rate\n\r");
-	if (AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ))
-        AUDDRV_Telephony_ChangeSampleRate(AUDIO_SAMPLING_RATE_16000);
-    else
-        AUDDRV_Telephony_ChangeSampleRate(AUDIO_SAMPLING_RATE_8000);
+		Log_DebugPrintf(LOGID_AUDIO,
+			"AUDDRV_Telephony_RateChange, Change HW Sample Rate\n\r");
+
+		if (AUDDRV_IsCall16K(AUDDRV_GetAudioMode()))
+			AUDDRV_Telephony_ChangeSampleRate(
+				AUDIO_SAMPLING_RATE_16000);
+	    else
+			AUDDRV_Telephony_ChangeSampleRate(
+				AUDIO_SAMPLING_RATE_8000);
 
 #if !defined(USE_NEW_AUDIO_PARAM)
 		AUDDRV_SetAudioMode(mode);
@@ -630,16 +640,18 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 				  AUDDRV_IsCall16K(AUDDRV_GetAudioMode()), 0,
 				  0);
 #endif
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, AUDDRV_IsCall16K(AUDDRV_GetAudioMode()), 0, 0,
-				  0);
+		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL,
+				TRUE, AUDDRV_IsCall16K(AUDDRV_GetAudioMode()),
+				0, 0, 0);
 
 		/* AUDDRV_Enable_Input ( AUDDRV_VOICE_INPUT, mic,
 		   AUDIO_SAMPLING_RATE_8000); */
 
 		mdelay(40);
 
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, AUDDRV_IsCall16K(AUDDRV_GetAudioMode()), 0, 0,
-				  0);
+		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL,
+				TRUE, AUDDRV_IsCall16K(AUDDRV_GetAudioMode()),
+				0, 0, 0);
 /*		audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
 		audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, ec_enable_from_sysparm,
 				  ns_enable_from_sysparm, 0, 0, 0);
@@ -724,7 +736,7 @@ void AUDDRV_NS(Boolean enable)
 void AUDDRV_Telephone_RequestRateChange(int codecID)
 {
 	/* if((audio_codecID != codecID) && (codecId_handler != NULL)) */
-/* if current codecID is same as new, ignore the request */
+	/* if current codecID is same as new, ignore the request */
 	if (codecId_handler != NULL) {
 		audio_codecID = codecID;
 		codecId_handler(codecID);
@@ -1114,7 +1126,7 @@ Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode)
 	case AUDIO_MODE_RESERVE_WB:
 		is_call16k = TRUE;
 		break;
-/* BT headset needs to consider NB or WB too */
+	/* BT headset needs to consider NB or WB too */
 	case AUDIO_MODE_BLUETOOTH:
 	case AUDIO_MODE_BLUETOOTH_WB:
 		is_call16k = IsBTM_WB;
@@ -1125,8 +1137,8 @@ Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode)
 	}
 #else
 
-/* BT headset needs to consider NB or WB too */
-	if(voiceMode==AUDIO_MODE_BLUETOOTH)
+	/* BT headset needs to consider NB or WB too */
+	if (voiceMode == AUDIO_MODE_BLUETOOTH)
 		is_call16k = IsBTM_WB;
 
 	if (currAudioApp == AUDIO_APP_VOICE_CALL_WB)
@@ -2157,7 +2169,7 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 	/*determine which which mixer input to apply the gains to */
 
 	if (arg_pathID >= 1)
-		path = &HWConfig_Table[arg_pathID - 1];
+		path = ptrToHWConfig_Table + (arg_pathID - 1);
 
 	if (path != 0) {
 		if (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM)

@@ -2664,7 +2664,7 @@ static Boolean csl_caph_hwctrl_allPathsDisabled(void)
 
 /****************************************************************************
 *
-*  Function Name: void csl_caph_hwctrl_init(CSL_CAPH_HWCTRL_BASE_ADDR_t addr)
+*  Function Name: void csl_caph_hwctrl_init(void)
 *
 *  Description: init CAPH HW control driver
 *
@@ -2672,11 +2672,11 @@ static Boolean csl_caph_hwctrl_allPathsDisabled(void)
 void csl_caph_hwctrl_init(void)
 {
 
-	CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
+	struct CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
 
     csl_caph_ControlHWClock(TRUE);
 
-    memset(&addr, 0, sizeof(CSL_CAPH_HWCTRL_BASE_ADDR_t));
+    memset(&addr, 0, sizeof(addr));
     addr.cfifo_baseAddr = CFIFO_BASE_ADDR1;
     addr.aadmac_baseAddr = AADMAC_BASE_ADDR1;
     addr.ahintc_baseAddr = AHINTC_BASE_ADDR1;
@@ -4011,6 +4011,19 @@ CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEVICE_e
 		else if(bt_spk_mixer_sink==CSL_CAPH_DEV_EP) rtn = CSL_CAPH_SRCM_STEREO_CH2_L;
 	}
 	return rtn;
+}
+
+/****************************************************************************
+*  @brief  Get the pointer to caph HW configuration table
+*
+*  @param   none
+*
+*  @return CSL_CAPH_HWConfig_Table_t * point to caph HW configuration table
+*
+*****************************************************************************/
+CSL_CAPH_HWConfig_Table_t *csl_caph_hwctrl_GetHWConfigTable(void)
+{
+	return &HWConfig_Table[0];
 }
 
 /****************************************************************************

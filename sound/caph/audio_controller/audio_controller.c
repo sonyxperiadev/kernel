@@ -196,7 +196,7 @@ static unsigned int pathIDTuning;	/* init to 0, for tuning purpose only */
 static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 			       ExtSpkrUsage_en_t usage_flag, Boolean use);
 
-extern CSL_CAPH_HWConfig_Table_t HWConfig_Table[MAX_AUDIO_PATH];
+static CSL_CAPH_HWConfig_Table_t *ptrToHWConfig_Table;
 
 /** Functions */
 
@@ -247,6 +247,8 @@ void AUDCTRL_Init(void)
 
 	AUDDRV_Init();
 	csl_caph_hwctrl_init();
+
+	ptrToHWConfig_Table = csl_caph_hwctrl_GetHWConfigTable();
 
 	/*access sysparm here will cause system panic.
  sysparm is not initialzed when this fucniton is called.*/
@@ -869,7 +871,7 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 			mode, arg_pathID);
 
 	if (arg_pathID)
-		path = &HWConfig_Table[arg_pathID - 1];
+		path = ptrToHWConfig_Table + (arg_pathID - 1);
 	/*if( mode==AUDDRV_GetAudioMode() )
 	  return;*/
 
@@ -1173,9 +1175,11 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 
 	for (i = 0; i < MAX_AUDIO_PATH; i++) {
 		for (j = 0; j < MAX_SINK_NUM; j++) {
-			if ((HWConfig_Table[i].sink[j] == sink_dev)
-			    && (HWConfig_Table[i].source == src_dev)) {
-				path = HWConfig_Table[i].pathID;
+			if (((*(ptrToHWConfig_Table + i)).sink[j] == sink_dev)
+			    &&
+			    ((*(ptrToHWConfig_Table + i)).source == src_dev)
+			    ) {
+				path = (*(ptrToHWConfig_Table + i)).pathID;
 				break;
 			}
 		}
@@ -1230,7 +1234,7 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 	res = csl_audio_render_start(streamID);
 
 	if (audDrv->pathID)
-		path = &HWConfig_Table[audDrv->pathID - 1];
+		path = ptrToHWConfig_Table + (audDrv->pathID - 1);
 	else
 		return 0;
 
@@ -1511,7 +1515,7 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 			"AUDCTRL_SetPlayVolume: pathID %d\n", pathID);
 
 	if (pathID != 0) {
-		path = &HWConfig_Table[pathID - 1];
+		path = ptrToHWConfig_Table + (pathID - 1);
 
 		/* find the sinkNo with the same sink of input speaker*/
 		for (j = 0; j < MAX_SINK_NUM; j++) {
@@ -1626,11 +1630,15 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 	}
 	/*get the current speaker from pathID - need CSL API */
 	for (i = 0; i < MAX_AUDIO_PATH; i++) {
-		if (HWConfig_Table[i].pathID == pathID) {
+		if ((*(ptrToHWConfig_Table + i)).pathID == pathID) {
 			for (j = 0; j < MAX_SINK_NUM; j++) {
-				if (HWConfig_Table[i].sink[j] !=
-				    CSL_CAPH_DEV_NONE) {
-					curr_spk = HWConfig_Table[i].sink[j];
+				if ((*(ptrToHWConfig_Table + i)).sink[j] !=
+				    CSL_CAPH_DEV_NONE
+				    ) {
+					curr_spk =
+						(*(ptrToHWConfig_Table + i)).\
+						sink[j];
+
 					break;
 				}
 
@@ -1839,7 +1847,7 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 {
 	unsigned int pathID;
 	Log_DebugPrintf(LOGID_AUDIO,
-			"AUDCTRL_EnableRecord: src = 0x%x, sink = 0x%x,sr %ld\n",
+			"AUDCTRL_EnableRecord: src = 0x%x, sink = 0x%x,sr %d\n",
 			source, sink, sr);
 
 	if ((source == AUDIO_SOURCE_DIGI1)
@@ -1981,7 +1989,7 @@ Result_t AUDCTRL_StartCapture(unsigned int streamID)
 		return RESULT_ERROR;
 
 	if (audDrv->pathID)
-		path = &HWConfig_Table[audDrv->pathID - 1];
+		path = ptrToHWConfig_Table + (audDrv->pathID - 1);
 	else
 		return 0;
 
@@ -2043,7 +2051,7 @@ void AUDCTRL_SetRecordGain(AUDIO_SOURCE_Enum_t source,
 
 	if (!pathID)
 		return;
-	path = &HWConfig_Table[pathID - 1];
+	path = ptrToHWConfig_Table + (pathID - 1);
 
 	if (gainFormat == AUDIO_GAIN_FORMAT_mB) {
 		/*switch( mic )  why not this. simply see mic.
@@ -2496,9 +2504,16 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		/*Need CSL API to obtain the info */
 		for (i = 0; i < MAX_AUDIO_PATH; i++) {
 			for (j = 0; j < MAX_SINK_NUM; j++) {
-				if ((HWConfig_Table[i].sink[j] == sink_dev)
-				    && (HWConfig_Table[i].source == src_dev)) {
-					pathID = HWConfig_Table[i].pathID;
+				if (
+					((*(ptrToHWConfig_Table + i)).sink[j]
+					== sink_dev)
+				    &&
+				    ((*(ptrToHWConfig_Table + i)).source
+				    == src_dev)
+				    ) {
+					pathID =
+						(*(ptrToHWConfig_Table + i)).\
+						pathID;
 					break;
 				}
 			}
