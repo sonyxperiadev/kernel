@@ -556,6 +556,7 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 					(cma->largest_free_block * PAGE_SIZE/SZ_1K), cma->largest_free_block);
 #endif
 			ret = -ENOMEM;
+			show_mem(SHOW_MEM_FILTER_NODES);
 			goto error;
 		}
 
