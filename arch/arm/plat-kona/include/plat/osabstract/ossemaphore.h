@@ -51,6 +51,10 @@ static inline Semaphore_t OSSEMAPHORE_Create(			// returns newly-created semapho
 	)
 {
 	Semaphore_t *sem_ptr = (Semaphore_t *) kzalloc(sizeof(struct semaphore), GFP_KERNEL);
+	if (sem_ptr == NULL) {
+		pr_err("%s cannot create semaphore at %d\n", __func__, __LINE__);
+		return sem_ptr;
+	}
 	sema_init((struct semaphore *)sem_ptr, count);
 	return sem_ptr;
 }
@@ -64,7 +68,10 @@ static inline void OSSEMAPHORE_Destroy( 				// Destroy a semaphore
 	Semaphore_t s						// Semaphore to destroy
 	)
 {
-	kfree(s);
+	if (s)
+		kfree(s);
+	else
+		pr_err("%s cannot destroy semapthore(%p) at line %d\n", __func__, s, __LINE__);
 }
 
 /**
@@ -122,6 +129,10 @@ static inline Semaphore_t OSSEMAPHORE_createMutex(	// returns newly-created "mut
 	)
 {
 	Semaphore_t *mutex_ptr = (Semaphore_t) kzalloc(sizeof(struct mutex), GFP_KERNEL);
+	if (mutex_ptr == NULL) {
+		pr_err("%s cannot create mutext at line %d\n", __func__, __LINE__);
+		return mutex_ptr;
+	}
 	mutex_init((struct mutex *)mutex_ptr);
 	return mutex_ptr;
 }
@@ -135,7 +146,10 @@ static inline void OSSEMAPHORE_destroyMutex( 			// Destroy a "mutex"
 	Semaphore_t s						// "Mutex" to destroy
 	)
 {
-	kfree(s);
+	if (s)
+		kfree(s);
+	else
+		pr_err("%s cannot destroy mutex(%p) at line %d\n", __func__, s, __LINE__);
 }
 
 /**
