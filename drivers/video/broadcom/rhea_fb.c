@@ -43,6 +43,29 @@
 
 #define RHEA_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
 
+#ifdef CONFIG_CDEBUGGER
+struct struct_frame_buf_mark {
+	u32 special_mark_1;
+	u32 special_mark_2;
+	u32 special_mark_3;
+	u32 special_mark_4;
+	void *p_fb; /* it must be physical address */
+	u32 resX;
+	u32 resY;
+	u32 bpp;    /* color depth : 16 or 24 */
+	u32 frames; /* frame buffer count : 2 */
+};
+
+static struct struct_frame_buf_mark  frame_buf_mark = {
+	.special_mark_1 = (('*' << 24) | ('^' << 16) | ('^' << 8) | ('*' << 0)),
+	.special_mark_2 = (('I' << 24) | ('n' << 16) | ('f' << 8) | ('o' << 0)),
+	.special_mark_3 = (('H' << 24) | ('e' << 16) | ('r' << 8) | ('e' << 0)),
+	.special_mark_4 = (('f' << 24) | ('b' << 16) | ('u' << 8) | ('f' << 0)),
+	.p_fb   = 0,
+	.frames = 1
+};
+#endif
+
 struct rhea_fb {
 	dma_addr_t phys_fbbase;
 	spinlock_t lock;
@@ -598,6 +621,13 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.var.activate	= FB_ACTIVATE_NOW;
 	fb->fb.var.height	= height;
 	fb->fb.var.width	= width;
+#ifdef CONFIG_CDEBUGGER
+	/* it has dependency on h/w */
+	frame_buf_mark.p_fb = (void *)(fb->phys_fbbase - PHYS_OFFSET);
+	frame_buf_mark.resX = fb->fb.var.xres;
+	frame_buf_mark.resY = fb->fb.var.yres;
+	frame_buf_mark.bpp = fb->fb.var.bits_per_pixel;
+#endif
 
 	switch (fb_data->pixel_format) {
 	case RGB565:

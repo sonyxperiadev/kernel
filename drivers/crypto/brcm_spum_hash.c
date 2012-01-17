@@ -234,7 +234,7 @@ static int spum_dma_xfer(struct brcm_spum_device *dd, u32 length)
 	cfg_rx = DMA_CFG_SRC_ADDR_INCREMENT | DMA_CFG_DST_ADDR_FIXED |
             DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
 	cfg_tx = DMA_CFG_SRC_ADDR_FIXED | DMA_CFG_DST_ADDR_INCREMENT |
-	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_4;
+	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
 	
 	rx_fifo = (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_IN_OFFSET;
 	tx_fifo = (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_OUT_OFFSET;
@@ -247,7 +247,7 @@ static int spum_dma_xfer(struct brcm_spum_device *dd, u32 length)
 		goto err;
 	}
 
-	tx_len = min(length, rctx->tx_len) - 64; /* Don't know why ????*/
+	tx_len = min(length, rctx->tx_len);
 	tx_len -=(tx_len%64); /* hash block size aligned */
 	/* If tx_len is zero!! then don't set tx dma. */
 
@@ -526,7 +526,7 @@ static int spum_hash_update(struct ahash_request *req)
 	struct spum_hw_context  spum_hw_hash_ctx;
 	u32 cmd_len_bytes;
 
-	pr_debug("%s: entry req->nbytes %d req->result 0x%x\n",__func__,req->nbytes,req->result);
+	pr_debug("%s: entry req->nbytes %d\n",__func__,req->nbytes);
 
 	if(!req->nbytes)
 		return 0;
@@ -640,7 +640,7 @@ static int spum_hash_init(struct ahash_request *req)
 	struct brcm_spum_device	*dd;
 	int    err = 0;
 
-	pr_debug("%s: entry req->result 0x%x\n",__func__,req->result);
+	pr_debug("%s: entry\n",__func__);
 
 	spin_lock_bh(&spum_drv.lock);
 	if (!ctx->dd) {
@@ -693,7 +693,6 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 	/* rctx->tx_len should be <= 0 here. */
 
 	pr_debug("%s: count %d i %d\n",__func__,count,i);
-	pr_debug("%s: rctx->result 0x%x\n",__func__,rctx->result);
 
 	/* Copy back the digest value into request. */
 	memcpy(rctx->result, (u8 *)&tx_fifo[tx_len], rctx->digestsize);
@@ -747,7 +746,7 @@ static int spum_hash_final(struct ahash_request *req)
 
 	rctx->result = req->result;
 
-	pr_debug("%s: entry bufcnt %d req->result 0x%x\n",__func__,rctx->bufcnt,req->result);
+	pr_debug("%s: entry bufcnt %d\n",__func__,rctx->bufcnt);
 
 	if(rctx->bufcnt) {
 
@@ -999,8 +998,7 @@ static void spum_dma_tasklet(unsigned long data)
 {
 	struct brcm_spum_device *dd = (struct brcm_spum_device *)data;
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
-	u32     tx_fifo[64] = {0, }, status;
-	int 	k = 0,err = -EINPROGRESS;
+	int 	err = -EINPROGRESS;
 
 	pr_debug("%s: entry\n",__func__);
 
@@ -1012,13 +1010,6 @@ static void spum_dma_tasklet(unsigned long data)
 	clear_bit(FLAGS_TBUSY, &dd->flags);
 
 	if((!test_bit(FLAGS_RBUSY, &dd->flags)) && (!test_bit(FLAGS_TBUSY, &dd->flags))) {
-
-		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
-		while((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) && (rctx->tx_len/4)) {
-			tx_fifo[k] = readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
-			rctx->tx_len-=4;
-			status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
-		}
 
 		if(rctx->offset == rctx->sg->length)
 			rctx->sg = scatterwalk_sg_next(rctx->sg);

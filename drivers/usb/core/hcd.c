@@ -649,6 +649,7 @@ error:
 	 */
 	spin_unlock(&hcd_root_hub_lock);
 	usb_hcd_giveback_urb(hcd, urb, status);
+
 	spin_lock(&hcd_root_hub_lock);
 
 	spin_unlock_irq(&hcd_root_hub_lock);
@@ -877,6 +878,7 @@ static void usb_bus_init (struct usb_bus *bus)
 	INIT_LIST_HEAD (&bus->bus_list);
 #ifdef CONFIG_USB_OTG
 	INIT_DELAYED_WORK(&bus->hnp_polling, usb_hnp_polling_work);
+	INIT_DELAYED_WORK(&bus->maint_conf_session_for_td, usb_host_test_device_sessend_work);
 #endif
 }
 
@@ -1470,9 +1472,9 @@ int usb_hcd_submit_urb (struct urb *urb, gfp_t mem_flags)
 	 * enabled.
 	 */
 
-	if (is_root_hub(urb->dev)) {
+	if (is_root_hub(urb->dev))
 		status = rh_urb_enqueue(hcd, urb);
-	} else {
+	 else {
 		status = map_urb_for_dma(hcd, urb, mem_flags);
 		if (likely(status == 0)) {
 			status = hcd->driver->urb_enqueue(hcd, urb, mem_flags);
@@ -2098,6 +2100,7 @@ int usb_bus_start_enum(struct usb_bus *bus, unsigned port_num)
 	 */
 	if (status == 0)
 		mod_timer(&hcd->rh_timer, jiffies + msecs_to_jiffies(10));
+
 	return status;
 }
 EXPORT_SYMBOL_GPL(usb_bus_start_enum);

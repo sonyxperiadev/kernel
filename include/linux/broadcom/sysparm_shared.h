@@ -311,8 +311,26 @@ typedef struct
 	Int32 hw_sidetone_eq[COEF_NUM_OF_EACH_GROUP_HW_SIDETONE*NUM_OF_GROUP_HW_SIDETONE];
 #endif	
 
-	UInt16 echo_path_change_detection_threshold;				//Used in echo path change detection
+	UInt16 echo_path_change_detection_threshold;			//Used in echo path change detection
 	Smart_Compressor_t smart_compressor;    				//smart compressor
+
+	//Multi-Band Compressor parameters
+	UInt16 multiband_comp_g_low;
+	UInt16 multiband_comp_g_mid;
+	UInt16 multiband_comp_g_high;
+
+	UInt16 multiband_comp_p_low;
+	UInt16 multiband_comp_p_mid;
+	UInt16 multiband_comp_p_high;
+
+	UInt16 multiband_comp_alpha_low;
+	UInt16 multiband_comp_alpha_mid;
+	UInt16 multiband_comp_alpha_high;
+
+	UInt16 multiband_comp_beta_low;
+	UInt16 multiband_comp_beta_mid;
+	UInt16 multiband_comp_beta_high;
+
 } SysAudioParm_t;
 
 typedef struct

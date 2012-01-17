@@ -42,19 +42,19 @@
 #include "dwc_otg_hcd.h"
 #include "dwc_otg_regs.h"
 
-#ifdef CONFIG_USB_OTG_UTILS
 /**
  * Work queue function for disabling VBUS.
  * otg_set_vbus() must be called in a process context.
  */
 static void disable_vbus_func(void *_vp)
 {
+#ifdef CONFIG_USB_OTG_UTILS
 	dwc_otg_core_if_t *core_if = _vp;
 
 	if (core_if->xceiver->set_vbus)
 		core_if->xceiver->set_vbus(core_if->xceiver, false);
-}
 #endif
+}
 
 dwc_otg_hcd_t *dwc_otg_hcd_alloc_hcd(void)
 {
@@ -151,9 +151,8 @@ static void hcd_start_func(void *_vp)
 	dwc_otg_hcd_t *hcd = (dwc_otg_hcd_t *) _vp;
 
 	DWC_DEBUGPL(DBG_HCDV, "%s() %p\n", __func__, hcd);
-	if (hcd) {
+	if (hcd)
 		hcd->fops->start(hcd);
-	}
 }
 
 static void del_xfer_timers(dwc_otg_hcd_t * hcd)
@@ -225,7 +224,7 @@ static void kill_all_urbs(dwc_otg_hcd_t * hcd)
  */
 static void dwc_otg_hcd_start_connect_timer(dwc_otg_hcd_t * hcd)
 {
-	DWC_TIMER_SCHEDULE(hcd->conn_timer, 10000 /* 10 secs */ );
+	DWC_TIMER_SCHEDULE(hcd->conn_timer, 10000 /* 10 seconds */);
 }
 
 /**
@@ -266,6 +265,7 @@ static int32_t dwc_otg_hcd_start_cb(void *p)
 		hprt0.b.prtrst = 1;
 		dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
 	}
+
 	DWC_WORKQ_SCHEDULE_DELAYED(core_if->wq_otg,
 				   hcd_start_func, dwc_otg_hcd, 50,
 				   "start hcd");
@@ -310,8 +310,7 @@ static int32_t dwc_otg_hcd_disconnect_cb(void *p)
 	 * mode. If still in host mode, need to keep power on to detect a
 	 * reconnection.
 	 */
-	if (dwc_otg_is_device_mode(dwc_otg_hcd->core_if) ||
-		(dwc_otg_hcd->core_if->core_params->otg_cap < DWC_OTG_CAP_PARAM_NO_HNP_SRP_CAPABLE))
+	if (dwc_otg_is_device_mode(dwc_otg_hcd->core_if))
 	{
 		if (dwc_otg_hcd->core_if->op_state != A_SUSPEND) {
 			hprt0_data_t hprt0 = {.d32 = 0 };
@@ -1572,6 +1571,10 @@ void dwc_otg_hcd_queue_transactions(dwc_otg_hcd_t * hcd,
 	}
 }
 
+#ifdef CONFIG_USB_OTG
+#define DWC_HS_ELECT_TST 1
+#endif
+
 #ifdef DWC_HS_ELECT_TST
 /*
  * Quick and dirty hack to implement the HS Electrical Test
@@ -2681,6 +2684,14 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t * dwc_otg_hcd,
 								gintmsk,
 								gintmsk.d32);
 					}
+#ifdef CONFIG_USB_OTG
+					else if (t == 16) {
+#ifdef CONFIG_USB_OTG_UTILS
+						if (core_if->xceiver->set_delayed_adp)
+							core_if->xceiver->set_delayed_adp(core_if->xceiver);
+#endif
+					}
+#endif
 				}
 				break;
 			}
@@ -2909,9 +2920,8 @@ int dwc_otg_hcd_is_status_changed(dwc_otg_hcd_t * hcd, int port)
 {
 	int retval;
 
-	if (port != 1) {
+	if (port != 1)
 		return -DWC_E_INVALID;
-	}
 
 	retval = (hcd->flags.b.port_connect_status_change ||
 		  hcd->flags.b.port_reset_change ||
@@ -2956,11 +2966,10 @@ int dwc_otg_hcd_start(dwc_otg_hcd_t * hcd,
 	int retval = 0;
 
 	hcd->fops = fops;
-	if (!dwc_otg_is_device_mode(hcd->core_if)) {
+	if (!dwc_otg_is_device_mode(hcd->core_if))
 		dwc_otg_hcd_reinit(hcd);
-	} else {
+	else
 		retval = -DWC_E_NO_DEVICE;
-	}
 
 	return retval;
 }

@@ -387,6 +387,10 @@ extern int dwc_otg_hcd_is_bandwidth_freed(dwc_otg_hcd_t * hcd, void *ep_handle);
 extern uint8_t dwc_otg_hcd_get_ep_bandwidth(dwc_otg_hcd_t * hcd,
 					    void *ep_handle);
 
+/** Call this function to handle time out waiting for connection
+ * @param ptr The HCD
+ */
+extern void dwc_otg_hcd_connect_timeout(void *ptr);
 /** @} */
 
 #endif				/* __DWC_HCD_IF_H__ */

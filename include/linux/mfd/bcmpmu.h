@@ -706,6 +706,36 @@ enum bcmpmu_ioctl {
 #define PMU_EM_ADC_LOAD_CAL _IOW(0, PMU_EM_IOCTL_ADC_LOAD_CAL, u8*)
 #define PMU_EM_ENV_STATUS _IOR(0, PMU_EM_IOCTL_ENV_STATUS, unsigned long*)
 
+struct bcmpmu_rw_data_ltp{
+	unsigned int map;
+	unsigned int addr;
+	unsigned int val;
+	unsigned int mask;	
+	unsigned int len;
+};
+
+struct bcmpmu_adc_ltp{
+	enum bcmpmu_adc_sig sig;
+	enum bcmpmu_adc_timing_t tm;
+	unsigned int raw;
+	unsigned int cal;
+	unsigned int cnv;
+};
+
+
+#define BCM_PMU_MAGIC   'P'
+#define BCM_PMU_CMD_READ_REG            0x83
+#define BCM_PMU_CMD_WRITE_REG           0x84
+#define BCM_PMU_CMD_BULK_READ_REG       0x85
+#define BCM_PMU_CMD_ADC_READ_REG        0x86
+
+
+#define BCM_PMU_IOCTL_READ_REG          _IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_READ_REG,  struct bcmpmu_rw_data_ltp )
+#define BCM_PMU_IOCTL_BULK_READ_REG     _IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_BULK_READ_REG, struct bcmpmu_rw_data_ltp)
+#define BCM_PMU_IOCTL_ADC_READ_REG     _IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_ADC_READ_REG, struct bcmpmu_adc_ltp)
+#define BCM_PMU_IOCTL_WRITE_REG         _IOW( BCM_PMU_MAGIC, BCM_PMU_CMD_WRITE_REG, struct bcmpmu_rw_data_ltp)
+
+
 enum bcmpmu_batt_event_t {
 	BCMPMU_BATT_EVENT_PRESENT,
 	BCMPMU_BATT_EVENT_MBOV,

@@ -859,6 +859,7 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 			   p_v3d_wait_job->job_status, (u32)p_v3d_wait_job);
 		/* Return the status recorded by v3d */
 		p_job_status->job_status = p_v3d_wait_job->job_status;
+		p_job_status->job_id = p_v3d_wait_job->job_id;
 
 		/* Remove all jobs from queue from head till the job (inclusive) on which wait was happening */
 		v3d_job_free(filp, p_v3d_wait_job);
@@ -995,6 +996,38 @@ static void v3d_power(int flag)
 	}
 
 	mutex_unlock(&v3d_state.work_lock);
+}
+
+static void v3d_print_info(void)
+{
+	uint32_t ident1, ident2;
+
+	//This needs to be called with V3D powered on
+	if(v3d_is_on)
+	{
+		ident1 = v3d_read(V3D_IDENT1_OFFSET);
+		ident2 = v3d_read(V3D_IDENT2_OFFSET);
+
+	   printk("V3D Rev.=%d, NSLC=%d, QPUs=%d, TUPs=%d, NSEM=%d, HDRT=%d, VPMSZ=%d \n",
+				(ident1 & V3D_IDENT1_REV_MASK) >> V3D_IDENT1_REV_SHIFT,
+				(ident1 & V3D_IDENT1_NSLC_MASK) >> V3D_IDENT1_NSLC_SHIFT,
+				(ident1 & V3D_IDENT1_QUPS_MASK) >> V3D_IDENT1_QUPS_SHIFT,
+				(ident1 & V3D_IDENT1_TUPS_MASK) >> V3D_IDENT1_TUPS_SHIFT,
+				(ident1 & V3D_IDENT1_NSEM_MASK) >> V3D_IDENT1_NSEM_SHIFT,
+				(ident1 & V3D_IDENT1_HDRT_MASK) >> V3D_IDENT1_HDRT_SHIFT,
+				(ident1 & V3D_IDENT1_VPMSZ_MASK) >> V3D_IDENT1_VPMSZ_SHIFT);
+
+	   printk("V3D VRISZ=%d, TLBSZ=%d, TLBDB=%d, QICSZ=%d, QUCSZ=%d, BIGEND=%d, ENDSWP=%d, AXI_RW_REORDER=%d, NOEARLYZ=%d\n",
+				(ident2 & V3D_IDENT2_VRISZ_MASK) >> V3D_IDENT2_VRISZ_SHIFT,
+				(ident2 & V3D_IDENT2_TLBSZ_MASK) >> V3D_IDENT2_TLBSZ_SHIFT,
+				(ident2 & V3D_IDENT2_TLBDB_MASK) >> V3D_IDENT2_TLBDB_SHIFT,
+				(ident2 & V3D_IDENT2_QICSZ_MASK) >> V3D_IDENT2_QICSZ_SHIFT,
+				(ident2 & V3D_IDENT2_QUCSZ_MASK) >> V3D_IDENT2_QUCSZ_SHIFT,
+				(ident2 & V3D_IDENT2_BIGEND_MASK) >> V3D_IDENT2_BIGEND_SHIFT,
+				(ident2 & V3D_IDENT2_ENDSWP_MASK) >> V3D_IDENT2_ENDSWP_SHIFT,
+				(ident2 & V3D_IDENT2_AXI_RW_REORDER_MASK) >> V3D_IDENT2_AXI_RW_REORDER_SHIFT,
+				(ident2 & V3D_IDENT2_NOEARLYZ_MASK) >> V3D_IDENT2_NOEARLYZ_SHIFT);
+	}
 }
 
 static void v3d_print_status(void)
@@ -1639,29 +1672,13 @@ static int proc_v3d_read( char *buffer, char **start, off_t offset, int bytes, i
 
 int __init v3d_init(void)
 {
-	int ret;
+	int ret = -1;
 
 	KLOG_D("V3D driver Init\n");
 
 	/* initialize the V3D struct */
 	memset(&v3d_state, 0, sizeof(v3d_state));
 	memset(&bin_mem, 0, sizeof(bin_mem));
-
-	ret = register_chrdev(v3d_major, V3D_DEV_NAME, &v3d_fops);
-	if (ret < 0)
-		return -EINVAL;
-	else
-		v3d_major = ret;
-
-	v3d_state.v3d_class = class_create(THIS_MODULE, V3D_DEV_NAME);
-	if (IS_ERR(v3d_state.v3d_class)) {
-		KLOG_E("Failed to create V3D class\n");
-		unregister_chrdev(v3d_major, V3D_DEV_NAME);
-		return PTR_ERR(v3d_state.v3d_class);
-	}
-
-	v3d_state.v3d_device = device_create(v3d_state.v3d_class, NULL, MKDEV(v3d_major, 0), NULL, V3D_DEV_NAME);
-	v3d_state.v3d_device->coherent_dma_mask = ISA_DMA_THRESHOLD;
 
 	/* Map the V3D registers */
 	v3d_base = (void __iomem *)ioremap_nocache(RHEA_V3D_BASE_PERIPHERAL_ADDRESS, SZ_4K);
@@ -1741,8 +1758,33 @@ int __init v3d_init(void)
 		goto err2;
 	}
 #endif
+
+	ret = register_chrdev(v3d_major, V3D_DEV_NAME, &v3d_fops);
+	if (ret < 0){
+		ret = -EINVAL;
+		goto err2;
+	}
+	else
+		v3d_major = ret;
+
+	v3d_state.v3d_class = class_create(THIS_MODULE, V3D_DEV_NAME);
+	if (IS_ERR(v3d_state.v3d_class)) {
+		KLOG_E("Failed to create V3D class\n");
+		ret = PTR_ERR(v3d_state.v3d_class);
+		goto err3;
+	}
+
+	v3d_state.v3d_device = device_create(v3d_state.v3d_class, NULL, MKDEV(v3d_major, 0), NULL, V3D_DEV_NAME);
+	v3d_state.v3d_device->coherent_dma_mask = ISA_DMA_THRESHOLD;
+
+	v3d_power(1);
+	v3d_print_info();
+	v3d_power(0);
+
 	return 0;
 
+err3:
+	unregister_chrdev(v3d_major, V3D_DEV_NAME);
 err2:
 #ifdef SUPPORT_V3D_WORKLIST
 	if ((int)v3d_thread_task != -ENOMEM)
@@ -1756,7 +1798,7 @@ err2:
 err1:
 	iounmap(v3d_base);
 err:
-	unregister_chrdev(v3d_major, V3D_DEV_NAME);
+	KLOG_E("V3D init error\n");
 	return ret;
 }
 

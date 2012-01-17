@@ -1837,12 +1837,6 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID, int sinkNo, int startO
 			//csl_pcm_start(pcmHandleSSP, &pcmCfg);
 #endif
 		} else {
-			//if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && bBTTest) udelay(500); //without small delay, BT production test is not consistent.
-			//For BT-to-EP HW loopback to work consistently, one of these options is required, need to find out the reason later:
-			//- use SRCMixer input trigger, instead of SSP RX trigger.
-			//- use internal SSP loopback, instead of external loopback via jumper.
-			//- this delay.
-			udelay(500);
 			csl_pcm_start(pcmHandleSSP, &pcmCfg);
 		}
 
@@ -3491,6 +3485,76 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID)
 	csl_caph_audioh_mute(path_id, 0);
 	return;
 }
+
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_hwctrl_ChangeSampleRate(CSL_CAPH_PathID pathID, CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate)
+*
+*  Description: Change the sample rate between 8KHz and 16KHz in SRCmixer
+*
+****************************************************************************/
+void csl_caph_hwctrl_ChangeSampleRate(CSL_CAPH_PathID pathID, CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate)
+{
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+
+    if(pathID)
+    	path = &HWConfig_Table[pathID-1];
+    else
+    	return;
+
+    // For Rhea A0, to change the sample rate SRC, there is the 
+    // need to disable all otheh input channels
+    // to avoid missing audio data frames. This may need to 
+    // be implemented later.
+    //
+    //Only support MONO CH1/2/3/4
+    if ((path->srcmRoute[0][0].inChnl != CSL_CAPH_SRCM_MONO_CH1) 
+        &&(path->srcmRoute[0][0].inChnl != CSL_CAPH_SRCM_MONO_CH2) 
+        &&(path->srcmRoute[0][0].inChnl != CSL_CAPH_SRCM_MONO_CH3) 
+        &&(path->srcmRoute[0][0].inChnl != CSL_CAPH_SRCM_MONO_CH4)) 
+    {
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_ChangeSampleRate:: input channel wrong\r\n"));
+        return;
+    }
+    // Check the SRC input sample rate and out sample rate.
+    // Only change the sample rate for 8/16KHz ->48KHZ or
+    // 48KHz -> 8/16KHz.
+    if (((path->srcmRoute[0][0].inSampleRate == CSL_CAPH_SRCMIN_8KHZ)
+         ||(path->srcmRoute[0][0].inSampleRate == CSL_CAPH_SRCMIN_16KHZ))
+        && (path->srcmRoute[0][0].outSampleRate == CSL_CAPH_SRCMIN_48KHZ))
+    {
+        if (path->srcmRoute[0][0].inSampleRate != sampleRate)
+        {
+            _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
+                "csl_caph_hwctrl_ChangeSampleRate:: inChnl: %d\r\n",
+            path->srcmRoute[0][0].inChnl));
+ 
+            path->srcmRoute[0][0].inSampleRate = sampleRate;
+            csl_caph_srcmixer_change_samplerate(path->srcmRoute[0][0]);
+        }
+    }
+    else
+    if (((path->srcmRoute[0][0].outSampleRate == CSL_CAPH_SRCMIN_8KHZ)
+         ||(path->srcmRoute[0][0].outSampleRate == CSL_CAPH_SRCMIN_16KHZ))
+        && (path->srcmRoute[0][0].inSampleRate == CSL_CAPH_SRCMIN_48KHZ))
+    {
+        if (path->srcmRoute[0][0].outSampleRate != csl_caph_srcmixer_samplerate_mapping(sampleRate))
+        {
+            _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
+                "csl_caph_hwctrl_ChangeSampleRate:: inChnl: %d\r\n",
+            path->srcmRoute[0][0].inChnl));
+ 
+            path->srcmRoute[0][0].outSampleRate = csl_caph_srcmixer_samplerate_mapping(sampleRate);
+            csl_caph_srcmixer_change_samplerate(path->srcmRoute[0][0]);
+        }
+    }
+    //Save the new routeConfig into the path table.
+    // already done, can remove???? csl_caph_hwctrl_SetPathRouteConfig(pathID, path->srcmRoute[0][0]);
+ 
+    return;
+}
+
 
 /****************************************************************************
 *

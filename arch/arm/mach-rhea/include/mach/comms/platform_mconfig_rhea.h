@@ -69,25 +69,25 @@ extern "C" {
 #define CUSTOM_CERT_SIZE                                       0x00020000
 
 #ifndef ISLANDRAY
-#define PARM_IND_ROM_ADDR      0x00080000
+#define PARM_IND_ROM_ADDR      0x00060000
 #else
 #define PARM_IND_ROM_ADDR      0x00300000
 #endif
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define PARM_IND_RAM_OFFSET                    0xC0000
 #else
-#define PARM_IND_RAM_OFFSET                    0x140000
+#define PARM_IND_RAM_OFFSET                    0x100000
 #endif
 #define PARM_IND_RAM_ADDR                      (EXT_RAM_BASE_ADDR + PARM_IND_RAM_OFFSET)
-#define PARM_IND_SIZE                                          0x00040000
+#define PARM_IND_SIZE                                          0x00080000
 
 #ifndef ISLANDRAY
-#define PARM_DEP_ROM_ADDR      0x000C0000
+#define PARM_DEP_ROM_ADDR      0x000E0000
 #else
 #define PARM_DEP_ROM_ADDR      0x00380000
 #endif
    
-#define PARM_SPML_IND_ROM_ADDR 0x000D0000
+#define PARM_SPML_IND_ROM_ADDR 0x000F0000
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define PARM_SPML_IND_RAM_OFFSET               0x170000 
 #else
@@ -96,7 +96,7 @@ extern "C" {
 #define PARM_SPML_IND_RAM_ADDR                 (EXT_RAM_BASE_ADDR + PARM_SPML_IND_RAM_OFFSET)
 #define PARM_SPML_IND_SIZE                                     0x00040000
 
-#define PARM_SPML_DEP_ROM_ADDR 0x00110000
+#define PARM_SPML_DEP_ROM_ADDR 0x00130000
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define PARM_SPML_DEP_RAM_OFFSET               0x1B0000 
 #else
@@ -142,7 +142,7 @@ extern "C" {
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define UMTS_CAL_RAM_OFFSET                    0x1C0000
 #else
-#define UMTS_CAL_RAM_OFFSET                    0x110000
+#define UMTS_CAL_RAM_OFFSET                    0xE0000
 #endif   
 #define UMTS_CAL_RAM_ADDR                      (EXT_RAM_BASE_ADDR + UMTS_CAL_RAM_OFFSET)
 #define UMTS_CAL_SIZE                                          0x00020000
@@ -283,7 +283,7 @@ extern "C" {
 // Shared memory defines; commonly used by RTOS and Linux builds
 
 #define DSP_SH_BASE                            EXT_RAM_BASE_ADDR     // DSP sharedmem
-#define DSP_SH_SIZE                                            0x00064000
+#define DSP_SH_SIZE                                            (CP_SH_SIZE + AP_SH_SIZE)
 
 #define CP_SH_BASE                             DSP_SH_BASE
 #define CP_SH_SIZE                                             0x00020000    // 128k CP/DSP sharedmem

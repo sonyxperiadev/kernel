@@ -111,6 +111,9 @@ struct otg_transceiver {
 	/* start or continue HNP role switch */
 	int	(*start_hnp)(struct otg_transceiver *otg);
 
+	/* set_delayed_adp */
+	int	(*set_delayed_adp)(struct otg_transceiver *otg);
+
 };
 
 

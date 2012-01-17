@@ -29,6 +29,63 @@
 
 #include <asm/ioctls.h>
 
+#ifdef CONFIG_CDEBUGGER
+#include <asm/setup.h>
+extern struct meminfo meminfo;
+static char klog_buf[256];
+
+struct struct_plat_log_mark  {
+	u32 special_mark_1;
+	u32 special_mark_2;
+	u32 special_mark_3;
+	u32 special_mark_4;
+	void *p_main;
+	void *p_radio;
+	void *p_events;
+	void *p_system;
+};
+
+static struct struct_plat_log_mark plat_log_mark =  {
+	.special_mark_1 = (('*' << 24) | ('^' << 16) | ('^' << 8) | ('*' << 0)),
+	.special_mark_2 = (('I' << 24) | ('n' << 16) | ('f' << 8) | ('o' << 0)),
+	.special_mark_3 = (('H' << 24) | ('e' << 16) | ('r' << 8) | ('e' << 0)),
+	.special_mark_4 = (('p' << 24) | ('l' << 16) | ('o' << 8) | ('g' << 0)),
+	.p_main = 0,
+	.p_radio = 0,
+	.p_events = 0,
+	.p_system = 0,
+};
+
+struct struct_marks_ver_mark {
+	u32 special_mark_1;
+	u32 special_mark_2;
+	u32 special_mark_3;
+	u32 special_mark_4;
+	u32 log_mark_version;
+	u32 framebuffer_mark_version;
+	/* this is used for addressing log buffer in 2 dump files*/
+	void *this;
+	u32 first_size;		/* first memory block's  size */
+	u32 first_start_addr;	/* first memory  block's Physical address */
+	u32 second_size;	/* second memory block's  size */
+	u32 second_start_addr;	/* second memory  block's Physical address */
+};
+
+static struct struct_marks_ver_mark marks_ver_mark = {
+	.special_mark_1 = (('*' << 24) | ('^' << 16) | ('^' << 8) | ('*' << 0)),
+	.special_mark_2 = (('I' << 24) | ('n' << 16) | ('f' << 8) | ('o' << 0)),
+	.special_mark_3 = (('H' << 24) | ('e' << 16) | ('r' << 8) | ('e' << 0)),
+	.special_mark_4 = (('v' << 24) | ('e' << 16) | ('r' << 8) | ('s' << 0)),
+	.log_mark_version = 1,
+	.framebuffer_mark_version = 1,
+	.this = &marks_ver_mark,
+	/* It has dependency on h/w */
+	.first_start_addr = PHYS_OFFSET,
+	.second_size = 0,		/* it has dependency on h/w */
+	.second_start_addr = 0x0	/* it has dependency on h/w */
+};
+#endif
+
 /*
  * struct logger_log - represents a specific log, such as 'main' or 'radio'
  *
@@ -310,7 +367,17 @@ static ssize_t do_write_log_from_user(struct logger_log *log,
 	if (count != len)
 		if (copy_from_user(log->buffer, buf + len, count - len))
 			return -EFAULT;
+#ifdef CONFIG_CDEBUGGER
+	memset(klog_buf, 0, 255);
 
+	if(strncmp (log->buffer  + log->w_off,  "!@", 2) == 0) {
+		if (count < 255)
+			memcpy(klog_buf, log->buffer  + log->w_off, count);
+		else
+			memcpy(klog_buf, log->buffer  + log->w_off, 255);
+		klog_buf[255] = 0;
+	}
+#endif
 	log->w_off = logger_offset(log->w_off + count);
 
 	return count;
@@ -377,7 +444,12 @@ ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 
 	/* wake up any blocked readers */
 	wake_up_interruptible(&log->wq);
-
+#ifdef CONFIG_CDEBUGGER
+	if(strncmp(klog_buf, "!@", 2) == 0)
+	{
+		printk("%s\n", klog_buf);
+	}
+#endif
 	return ret;
 }
 
@@ -555,7 +627,7 @@ static struct logger_log VAR = { \
 	.size = SIZE, \
 };
 
-DEFINE_LOGGER_DEVICE(log_main, LOGGER_LOG_MAIN, 256*1024)
+DEFINE_LOGGER_DEVICE(log_main, LOGGER_LOG_MAIN, 512*1024)
 DEFINE_LOGGER_DEVICE(log_events, LOGGER_LOG_EVENTS, 256*1024)
 DEFINE_LOGGER_DEVICE(log_radio, LOGGER_LOG_RADIO, 256*1024)
 DEFINE_LOGGER_DEVICE(log_system, LOGGER_LOG_SYSTEM, 256*1024)
@@ -593,7 +665,17 @@ static int __init init_log(struct logger_log *log)
 static int __init logger_init(void)
 {
 	int ret;
+#ifdef CONFIG_CDEBUGGER
+	/* TODO: If there are more than one bank we need to take care.
+	 * As of today we have only one bank in all the boards */
+	marks_ver_mark.first_size = meminfo.bank[0].size;
 
+	plat_log_mark.p_main   = _buf_log_main;
+	plat_log_mark.p_radio  = _buf_log_radio;
+	plat_log_mark.p_events = _buf_log_events;
+	plat_log_mark.p_system = _buf_log_system;
+	marks_ver_mark.log_mark_version = 1;
+#endif
 	ret = init_log(&log_main);
 	if (unlikely(ret))
 		goto out;

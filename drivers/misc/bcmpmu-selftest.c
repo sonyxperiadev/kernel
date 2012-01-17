@@ -741,7 +741,7 @@ static bool PowerOnSIM(int slot)
 static void std_selftest_sim(struct SelftestUserCmdData_t *cmddata)
 {
 	struct pin_config StoredSIMPMuxGpioValue[ST_SIM_GPIO_CNT];
-	int StoredPowerValue[2];
+	int StoredPowerValue[2] = {0,0};
 	struct pin_config GPIOSetup;
 	bool TestSIM1, TestSIM2;
 	static int ST_GPIOList[ST_SIM_GPIO_CNT] = {
@@ -1402,7 +1402,7 @@ static void std_selftest_usb_event_notif_callback(struct bcmpmu *pmu_handle,
 static void std_selftest_usb_charger(struct SelftestUserCmdData_t *cmddata)
 {
 	unsigned int mbc5_cdet_orig, mbc5_usb_det_ldo_en, i;
-	u8 status;
+	u8 status = 0;
 
 	if (!hal_selftest_usb_charger_called) {
 		hal_selftest_usb_charger_latch_ok = 0;
@@ -1607,9 +1607,9 @@ static ssize_t store_selftest_usb(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
-	uint format;
+	int format;
 
-	if ((sscanf(buf, "%u", &format)) != 1)
+	if ((sscanf(buf, "%d", &format)) != 1)
 		return -EINVAL;
 
 	SelftestData.usb.rf = format;
@@ -1640,9 +1640,9 @@ static ssize_t store_selftest_adcif(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
 {
-	uint format;
+	int format;
 
-	if ((sscanf(buf, "%u", &format)) != 1)
+	if ((sscanf(buf, "%d", &format)) != 1)
 		return -EINVAL;
 
 	SelftestData.adc.rf = format;
@@ -1673,9 +1673,9 @@ static ssize_t store_selftest_i2c(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
-	uint format;
+	int format;
 
-	if ((sscanf(buf, "%u", &format)) != 1)
+	if ((sscanf(buf, "%d", &format)) != 1)
 		return -EINVAL;
 
 	SelftestData.sc.rf = format;
@@ -1706,9 +1706,9 @@ static ssize_t store_selftest_irq(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
-	uint format;
+	int format;
 
-	if ((sscanf(buf, "%u", &format)) != 1)
+	if ((sscanf(buf, "%d", &format)) != 1)
 		return -EINVAL;
 
 	SelftestData.irq.rf = format;
@@ -1738,9 +1738,9 @@ static ssize_t store_selftest_batrm(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
 {
-	uint format;
+	int format;
 
-	if ((sscanf(buf, "%u", &format)) != 1)
+	if ((sscanf(buf, "%d", &format)) != 1)
 		return -EINVAL;
 
 	SelftestData.batrm.rf = format;
@@ -1771,9 +1771,9 @@ static ssize_t store_selftest_sc(struct device *dev,
 				 struct device_attribute *attr, const char *buf,
 				 size_t count)
 {
-	uint format;
+	int format;
 
-	if ((sscanf(buf, "%u", &format)) != 1)
+	if ((sscanf(buf, "%d", &format)) != 1)
 		return -EINVAL;
 
 	SelftestData.sc.rf = format;
@@ -1805,10 +1805,10 @@ static ssize_t store_selftest_sim(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
-	uint format, slot;
+	int format, slot;
 	int parms;
 
-	parms = sscanf(buf, "%u %u", &format, &slot);
+	parms = sscanf(buf, "%d %d", &format, &slot);
 	if ((parms == 0) || (parms > 2))
 		return -EINVAL;
 	if (parms >= 1)

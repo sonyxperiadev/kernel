@@ -174,6 +174,16 @@ static int _disconnect(dwc_otg_hcd_t * hcd)
 	struct usb_hcd *usb_hcd = dwc_otg_hcd_to_hcd(hcd);
 
 	usb_hcd->self.is_b_host = 0;
+
+	if (dwc_otg_is_host_mode(hcd->core_if)) {
+#ifdef CONFIG_USB_OTG
+		if (usb_hcd->self.otg_vbus_off)
+			DWC_TIMER_SCHEDULE(hcd->conn_timer, TTST_VBOFF);
+		else
+#endif
+			DWC_TIMER_SCHEDULE(hcd->conn_timer, HOST_VBOFF);
+	}
+
 	return 0;
 }
 

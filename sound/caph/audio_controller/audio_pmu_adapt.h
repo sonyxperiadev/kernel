@@ -72,10 +72,12 @@
 
 #endif
 
-typedef struct {
+struct __PMU_AudioGainMapping_t {
 	int gain_mB;
 	unsigned int PMU_gain_enum;
-} PMU_AudioGainMapping_t;
+};
+
+#define PMU_AudioGainMapping_t struct __PMU_AudioGainMapping_t
 
 /********************************************************************
 *  @brief  Convert Headset gain mB value to PMU gain enum

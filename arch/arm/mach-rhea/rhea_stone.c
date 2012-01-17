@@ -621,6 +621,8 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.ahb_clk_name = "sdio1_ahb_clk",
 		.sleep_clk_name = "sdio1_sleep_clk",
 		.peri_clk_rate = 48000000,
+		/* vdd_sdc regulator: needed to support UHS SD cards */
+		.vddo_regulator_name = "vdd_sdio",
 	},
 	{ /* SDIO1 */
 		.id = 1,
@@ -887,6 +889,18 @@ static int rhea_camera_reset(struct device *dev)
 	printk(KERN_INFO "%s:camera reset\n", __func__);
 	return 0;
 }
+
+static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
+	.parms.serial = {
+		.lanes = 1,
+		.channel = 0,
+		.phy_rate = 0,
+		.pix_clk = 0
+	},
+};
+
 static struct soc_camera_link iclink_ov5640 = {
 	.bus_id = 0,
 	.board_info = &rhea_i2c_camera[0],
@@ -894,6 +908,7 @@ static struct soc_camera_link iclink_ov5640 = {
 	.module_name = "ov5640",
 	.power = &rhea_camera_power,
 	.reset = &rhea_camera_reset,
+	.priv =  &ov5640_if_params,
 };
 
 static struct platform_device rhea_camera = {

@@ -79,11 +79,31 @@ typedef struct
     UInt16 inChnl;  /* input channel connected to the above output channel */
 } CSL_CAPH_SRCM_CHNL_TABLE_t;
 
+// The mapping between input sample rate and output sample rate.
+// This is used as a type-cast. Just try to get the output
+// sample rate from input sample rate
+typedef struct
+{
+    CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate;
+    CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate;
+} cSL_CAPH_SRCM_SAMPLERATE_MAPPING_t;
+
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
 static CHAL_HANDLE handle = 0x0;
 static Boolean isSTIHF = FALSE;
+
+// The mapping between input sample rate and output sample rate.
+// This is used as a type-cast. Just try to get the output
+// sample rate from input sample rate
+#define SAMPLERATE_TABLE_SIZE 3
+static cSL_CAPH_SRCM_SAMPLERATE_MAPPING_t sampleRateTable[SAMPLERATE_TABLE_SIZE]=
+{
+    {CSL_CAPH_SRCMIN_8KHZ, CSL_CAPH_SRCMOUT_8KHZ},
+    {CSL_CAPH_SRCMIN_16KHZ, CSL_CAPH_SRCMOUT_16KHZ},
+    {CSL_CAPH_SRCMIN_48KHZ, CSL_CAPH_SRCMOUT_48KHZ}
+};
 
 /* When pass through channel 3/4 are used, pass through channel 1/2 cannot be
  * used as stereo, vice versa. Ch 1/2 not being used as mono pass through 
@@ -327,6 +347,29 @@ static void csl_caph_srcmixer_enable_all_spkrgain_slope(CHAL_HANDLE handle)
     return;
 }
 #endif
+
+/****************************************************************************
+*
+*  Function Name: CSL_CAPH_SRCM_INSAMPLERATE_e
+* csl_caph_srcmixer_samplerate_mapping(
+* CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate)    
+*
+*  Description: Find the same output channel sample rate from the
+*  input sample rate
+*
+****************************************************************************/
+CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcmixer_samplerate_mapping(
+                                     CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate)
+{
+    UInt8 i = 0;
+    for(i=0; i<SAMPLERATE_TABLE_SIZE; i++)
+    {
+        if(sampleRateTable[i].inSampleRate == inSampleRate)
+            return sampleRateTable[i].outSampleRate;
+    }
+    return CSL_CAPH_SRCMOUT_8KHZ;
+}
+
 
 /****************************************************************************
 *
@@ -1476,6 +1519,82 @@ void csl_caph_srcmixer_config_src_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	return;
 }
 
+/****************************************************************************
+*
+*  Function Name: void csl_caph_srcmixer_change_samplerate(CSL_SRCMixer_ROUTE_t routeConfig)
+*
+*  Description: change the input or output sample rate of CAPH srcmixer SRC
+*
+****************************************************************************/
+void csl_caph_srcmixer_change_samplerate(CSL_CAPH_SRCM_ROUTE_t routeConfig)
+{
+    CAPH_SRCMixer_CHNL_e chalInChnl = CAPH_SRCM_CH_NONE;
+    CAPH_SRCMixer_SRC_e srcSampleRate = CAPH_8KHz_48KHz;
+    CAPH_SRCMixer_FIFO_e fifo = CAPH_CH_INFIFO_NONE;
+
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_chang_sampletate:: ch %x:%x dataFmt %d:%d sr %d:%d tapCh %d.\r\n", 
+                    routeConfig.inChnl, routeConfig.outChnl, routeConfig.inDataFmt, routeConfig.outDataFmt, routeConfig.inSampleRate, routeConfig.outSampleRate, routeConfig.tapOutChnl));
+
+    //Disable all of the current input channels
+    //
+    //Set the new inSampleRate
+    if ((routeConfig.inSampleRate == CSL_CAPH_SRCMIN_8KHZ)
+        &(routeConfig.outSampleRate == CSL_CAPH_SRCMOUT_48KHZ))
+    {
+        /* 8KHz -> 48KHz */
+        srcSampleRate = CAPH_8KHz_48KHz;
+    }
+    else
+    if ((routeConfig.inSampleRate == CSL_CAPH_SRCMIN_16KHZ)
+        &(routeConfig.outSampleRate == CSL_CAPH_SRCMOUT_48KHZ))
+    {
+        /* 16KHz -> 48KHz */
+        srcSampleRate = CAPH_16KHz_48KHz;
+    }
+    else
+    if ((routeConfig.inSampleRate == CSL_CAPH_SRCMIN_44_1KHZ)
+        &(routeConfig.outSampleRate == CSL_CAPH_SRCMOUT_48KHZ))
+    {
+        /* 44.1KHz -> 48KHz */
+        srcSampleRate = CAPH_44_1KHz_48KHz;
+    }
+    else
+    if ((routeConfig.inSampleRate == CSL_CAPH_SRCMIN_48KHZ)
+        &(routeConfig.outSampleRate == CSL_CAPH_SRCMOUT_8KHZ))
+    {
+        /* 48KHz -> 8KHz */
+        srcSampleRate = CAPH_48KHz_8KHz;
+    }
+    else
+    if ((routeConfig.inSampleRate == CSL_CAPH_SRCMIN_48KHZ)
+        &(routeConfig.outSampleRate == CSL_CAPH_SRCMOUT_16KHZ))
+    {
+        /* 48KHz -> 16KHz */
+        srcSampleRate = CAPH_48KHz_16KHz;
+    }
+    else
+    {
+        audio_xassert(0, ((routeConfig.inSampleRate)||((routeConfig.outSampleRate)<<16)));
+    }
+
+
+    /* Map CSL SRCM input channel to cHAL SRC Input channel */
+    chalInChnl = csl_caph_srcmixer_get_single_chal_inchnl(routeConfig.inChnl);
+    /* Disable the mixer input channel in case this channel is being used */
+    chal_caph_srcmixer_disable_chnl(handle, (UInt16)chalInChnl);
+
+    /* Configure SRC block */
+    chal_caph_srcmixer_set_SRC(handle, chalInChnl, srcSampleRate);
+    /* Get Input Channel FIFO */
+    fifo = csl_caph_srcmixer_get_inchnl_fifo(routeConfig.inChnl);
+    /* Clear Input FIFO */
+    chal_caph_srcmixer_clr_fifo(handle, fifo);
+
+    /* Enable the mixer input channel */
+    chal_caph_srcmixer_enable_chnl(handle,(UInt16)chalInChnl);
+
+	return;
+}
 
 /****************************************************************************
 *

@@ -380,14 +380,14 @@ int __init rhea_pwr_mgr_init()
 		pwrmgr_init_param.i2c_seq_timeout;
 #endif
 
+	pwr_mgr_init(&rhea_pwr_mgr_info);
+	rhea_pi_mgr_init();
 /*For B0, it was observed that if MM CCU is switched to and from shutdown
  * state, it would break the DDR self refresh. work around for this from ASIC
  * team is to set the POWER_OK_MASK bit to 0 */
 #ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
 	pwr_mgr_ignore_power_ok_signal(false);
 #endif
-	pwr_mgr_init(&rhea_pwr_mgr_info);
-	rhea_pi_mgr_init();
 
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	// JIRA HWRHEA-1689, HWRHEA-1739 we confirmed that there is a bug in Rhea A0 where wrong control signal
@@ -504,6 +504,7 @@ int __init rhea_pwr_mgr_late_init(void)
 		pwr_mgr_pi_counter_enable(i, 1);
 	pm_mgr_pi_count_clear(1);
 	pm_mgr_pi_count_clear(0);
+
 #ifdef CONFIG_DEBUG_FS
 	return pwr_mgr_debug_init(bmdm_pwr_mgr_base);
 #else
