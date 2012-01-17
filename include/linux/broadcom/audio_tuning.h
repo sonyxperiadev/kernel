@@ -22,7 +22,7 @@
  * The following part shows all the constant values needed in audio baseband code.
  ****************************************************************/
 #define	AUDIO_MODE_NUMBER		9	///< Up to 9 Audio Profiles (modes) after 213x1
-#define AUDIO_APP_NUMBER        3   // must be consistent with parm_audio.txt
+#define AUDIO_APP_NUMBER        16   // must be consistent with parm_audio.txt
 
 #define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*AUDIO_APP_NUMBER)
 
@@ -377,7 +377,23 @@ typedef enum {
     PARAM_VOICE_MIC2_HPF_ENABLE,                // 302
     PARAM_VOICE_MIC2_HPF_CUTOFF_FREQ,           // 303
 
-    AUDIO_PARM_NUMBER   						// 304
+	PARAM_MULTIBAND_COMP_G_LOW = 308, 			//308 
+	PARAM_MULTIBAND_COMP_G_MID, 				//309  
+	PARAM_MULTIBAND_COMP_G_HIGH, 				//310  
+	
+	PARAM_MULTIBAND_COMP_P_LOW, 				//311  
+	PARAM_MULTIBAND_COMP_P_MID, 				//312  
+	PARAM_MULTIBAND_COMP_P_HIGH, 				//313
+	
+	PARAM_MULTIBAND_COMP_ALPHA_LOW,				//314
+	PARAM_MULTIBAND_COMP_ALPHA_MID,				//315
+	PARAM_MULTIBAND_COMP_ALPHA_HIGH,			//316
+	
+	PARAM_MULTIBAND_COMP_BETA_LOW,               //317
+	PARAM_MULTIBAND_COMP_BETA_MID,				//318
+	PARAM_MULTIBAND_COMP_BETA_HIGH,		    	//319
+    
+    AUDIO_PARM_NUMBER   						// 320
 
 } AudioParam_t;
 
