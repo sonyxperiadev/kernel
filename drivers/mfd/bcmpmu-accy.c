@@ -553,8 +553,9 @@ static void usb_det_work(struct work_struct *work)
 	struct bcmpmu *bcmpmu = paccy->bcmpmu;
 
 	ret = bcmpmu_usb_get(bcmpmu,
-			     BCMPMU_USB_CTRL_GET_VBUS_STATUS,
+			     BCMPMU_USB_CTRL_GET_SESSION_STATUS,
 			     (void *)&vbus_status);
+
 	pr_accy(FLOW, "%s, enter state=%d, vbus=0x%X\n", __func__,
 		paccy->det_state, vbus_status);
 
@@ -611,6 +612,7 @@ static void usb_det_work(struct work_struct *work)
 					msecs_to_jiffies(100));
 			}
 		} else {
+			enable_bc_clock(paccy, false);
 			usb_type = PMU_USB_TYPE_NONE;
 			chrgr_type = PMU_CHRGR_TYPE_NONE;
 			paccy->det_state = USB_IDLE;
