@@ -874,7 +874,6 @@ static UInt8 CalculateCheckDigit(UInt8 * inImeiStrPtr)
 //******************************************************************************
 static int sysparm_init(void)
 {
-	int rc;
 	int sysparm_ready_count = 0;
 
 	pr_info
@@ -888,9 +887,8 @@ static int sysparm_init(void)
 
 	sys_data_dep = ioremap_nocache(PARM_DEP_RAM_ADDR, PARM_DEP_SIZE);
 	if (!sys_data_dep) {
-		rc = -ENOMEM;
 		pr_err("[sysparm]: PARM_DEP_RAM_ADDR ioremap failed\n");
-		goto out;
+		BUG();
 	}
 
 	sysparm_ready_ind_ptr = (UInt32 *) (sys_data_dep + 0x4000);
@@ -909,7 +907,7 @@ static int sysparm_init(void)
 			pr_err
 			    ("[sysparm]: timeout waiting for ready indicator\n");
 
-			goto out_unmap;
+			BUG();
 		}
 
 		mdelay(25);
@@ -938,6 +936,7 @@ static int sysparm_init(void)
 		if (!pAudioTmp) {
 			pr_err
 			    ("[sysparm]: APSYSPARM_GetAudioParmAccessPtr failed\n");
+			BUG();
 		}
 
 		pr_info("ext_speaker_pga_l 0x%x\n",
@@ -960,13 +959,6 @@ static int sysparm_init(void)
 #endif // !SKELETON_DRIVER
 
 	return 0;
-
-      out_unmap:
-	iounmap(sys_data_dep);
-
-      out:
-	pr_err("[sysparm]: Failed to initialise!\n");
-	return rc;
 }
 
 //******************************************************************************
