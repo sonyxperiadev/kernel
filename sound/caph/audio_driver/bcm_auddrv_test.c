@@ -639,9 +639,10 @@ WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET) ,regVal);
 		}
 		break;
 #endif
-#ifdef INTERNAL_VOIF_TEST
+#ifndef ENABLE_VOIF
 	case 11:
 		{
+			/* Internal VoIF test */
 			Boolean onOff = sgBrcm_auddrv_TestValues[2];
 			AudioMode_t audMode = AUDIO_MODE_HANDSET;
 			BCM_AUDIO_DEBUG(" VoIF test.\n");

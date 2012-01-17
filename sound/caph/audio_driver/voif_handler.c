@@ -1,22 +1,29 @@
-/*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+/****************************************************************************
+Copyright 2009 - 2011  Broadcom Corporation
+ Unless you and Broadcom execute a separate written software license agreement
+ governing use of this software, this software is licensed to you under the
+ terms of the GNU General Public License version 2 (the GPL), available at
+    http://www.broadcom.com/licenses/GPLv2.php
 
-Unless you and Broadcom execute a separate written software license agreement
-governing use of this software, this software is licensed to you under the
-terms of the GNU General Public License version 2, available at
-http://www.gnu.org/copyleft/gpl.html (the "GPL").
-
-Notwithstanding the above, under no circumstances may you combine this software
-in any way with any other Broadcom software provided under a license other than
-the GPL, without Broadcom's express prior written consent.
-*******************************************************************************************/
+ with the following added to such license:
+ As a special exception, the copyright holders of this software give you
+ permission to link this software with independent modules, and to copy and
+ distribute the resulting executable under terms of your choice, provided
+ that you also meet, for each linked independent module, the terms and
+ conditions of the license of that module.
+ An independent module is a module which is not derived from this software.
+ The special exception does not apply to any modifications of the software.
+ Notwithstanding the above, under no circumstances may you combine this software
+ in any way with any other Broadcom software provided under a license other than
+ the GPL, without Broadcom's express prior written consent.
+***************************************************************************/
 /**
 *
 *   @file   voif_handler.c
 *
-*   @brief  PCM data interface to DSP. 
-*           It is used to hook with customer's downlink voice processing module. 
-*           Customer will implement this.
+*   @brief  PCM data interface to DSP.
+*           It is used to hook with customer's downlink voice processing
+*			module. Customer will implement this.
 *
 ****************************************************************************/
 #include <linux/string.h>
@@ -27,73 +34,71 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_ddriver.h"
 #include "log.h"
 
-//
-// APIs 
-//
+/* APIs */
 
-#ifdef INTERNAL_VOIF_TEST
-static int voifDelay = 0;
-static int voifGain = 0x4000; // In Q14 format, 0x4000 in Q14 == 1.0
+#ifndef ENABLE_VOIF
+static int voifDelay; /* init to 0 */
+static int voifGain = 0x4000; /* In Q14 format, 0x4000 in Q14 == 1.0 */
 #endif
-static void *drv_handle = NULL;
+static void *drv_handle; /* init to NULL */
 
-static void VOIF_CB_Fxn (Int16 * ulData, Int16 *dlData, UInt32 sampleCount, UInt8 isCall16K)
+static void VOIF_CB_Fxn(
+	Int16 *ulData,
+	Int16 *dlData,
+	UInt32 sampleCount,
+	UInt8 isCall16K)
 {
 
 #ifdef ENABLE_VOIF
-/* The flag "ENABLE_VOIF" will be enabled by customer.  custormer will hook up their voice solution in callback */
+
+/* The flag "ENABLE_VOIF" will be enabled by customer.  custormer will hook
+up their voice solution in callback */
+
 #else
 
-#ifdef INTERNAL_VOIF_TEST
-    if (voifDelay == 0)
-    {
-        // copy the ulData to dlData without delay, hear own voice loopback.
-        memcpy(dlData, ulData, sampleCount * sizeof(Int16));
-    }
-    else if (voifDelay == 1)
-    {
-        Int32 t, i;
-		// Gain test, change the gain of the downlink, should hear volume difference
-        for( i=0; i<sampleCount; i++ )
-        {
-            t = (Int32) *dlData;
-            t = (t * voifGain)>>14;
-            *dlData++ = (Int16)(t&0xffff);
-        }
-    }
-    else
-    {
-        // delay test, mute the downlink
-        memset (dlData, 0, sampleCount * sizeof(Int16));
-    }
+	if (voifDelay == 0) {
+		/* copy ulData to dlData without delay, hear own voice lpbk. */
+		memcpy(dlData, ulData, sampleCount * sizeof(Int16));
+	} else if (voifDelay == 1) {
+		Int32 t, i;
+		/* Gain test, change gain of downlink, should hear volume
+		difference */
+		for (i = 0; i < sampleCount; i++) {
+			t = (Int32) *dlData;
+			t = (t * voifGain)>>14;
+			*dlData++ = (Int16)(t&0xffff);
+		}
+	} else {
+		/* delay test, mute the downlink */
+		memset(dlData, 0, sampleCount * sizeof(Int16));
+	}
 
-    mdelay (voifDelay);
+	mdelay(voifDelay);
 #endif
-#endif
-
-	//To Be Filled by customer
-    return;
+	return;
 }
 
-// Start voif 
+/* Start voif */
 void VoIF_init(AudioMode_t mode)
 {
 	drv_handle = AUDIO_DRIVER_Open(AUDIO_DRIVER_VOIF);
-	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_VOIF_CB,(void*)VOIF_CB_Fxn);
-	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_START,NULL);
-    return;
+	AUDIO_DRIVER_Ctrl(drv_handle,
+					AUDIO_DRIVER_SET_VOIF_CB,
+					(void *)VOIF_CB_Fxn);
+	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_START, NULL);
+	return;
 }
 
 void VoIF_Deinit()
 {
-	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_STOP,NULL);
+	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_STOP, NULL);
 	AUDIO_DRIVER_Close(drv_handle);
 	drv_handle = NULL;
-	
-    return;
+
+	return;
 }
- 
-#ifdef INTERNAL_VOIF_TEST
+
+#ifndef ENABLE_VOIF
 void VoIF_SetDelay(int delay)
 {
 	voifDelay = delay;

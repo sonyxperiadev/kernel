@@ -43,10 +43,6 @@ Copyright 2009 - 2011  Broadcom Corporation
 * @{
 */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
 * Start the VOIF processing.
 *
@@ -66,16 +62,9 @@ extern "C" {
 **************************************************************************/
 	void VoIF_Deinit(void);
 
-#ifdef INTERNAL_VOIF_TEST
+#ifndef ENABLE_VOIF
 	void VoIF_SetDelay(int delay);	/* For test purpose only */
 	void VoIF_SetGain(int gain);	/* For test purpose only */
 #endif
 
-/* The flag "ENABLE_VOIF" will be enabled by customer.  customer will hook up their voice solution in callback */
-/*
-#define ENABLE_VOIF
-*/
-#ifdef __cplusplus
-}
-#endif
 #endif	/* __AUDIO_VOIF_HANDLER_H__ */
