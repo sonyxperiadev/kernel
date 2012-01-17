@@ -754,10 +754,14 @@ static void em_algorithm(struct work_struct *work)
 	if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE) {
 		if (pem->charge_state != CHRG_STATE_CHRG) {
 			if (bcmpmu->get_env_bit_status(bcmpmu, PMU_ENV_USB_VALID) == true) {
+#ifndef CONFIG_USB_OTG /* Temp fix for OTG Iuncfg limit */
 				bcmpmu->chrgr_usb_en(bcmpmu, 1);
 				pem->charge_state = CHRG_STATE_CHRG;
+#endif
 			} else {
+#ifndef CONFIG_USB_OTG /* Temp fix for OTG Iuncfg limit */
 				bcmpmu->chrgr_usb_en(bcmpmu, 1);
+#endif
 				pr_em(FLOW, "%s, charger not ready yet.\n", __func__);
 				pem->mode = MODE_IDLE;
 				schedule_delayed_work(&pem->work,
