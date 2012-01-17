@@ -101,6 +101,8 @@ UInt8 playback_audiotest_srcmixer[165856] = {
 #endif
 };
 
+#define USE_LOOPBACK_SYSPARM
+
 #define BRCM_AUDDRV_NAME_MAX (15)	/* max 15 char for test name */
 #define BRCM_AUDDRV_TESTVAL  (5)	/* max no of arg for each test */
 
@@ -1269,7 +1271,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	if (record_test_buf == NULL)
 		record_test_buf = OSHEAP_Alloc(1024 * 1024);
 
-	codecVal = Val5;	/* 0; */
+	codecVal = Val5;	/* 0 for 8k PCM */
 	voip_codec.codec_type = cur_codecVal = codecVal;
 
 	if (codecVal == 0 || codecVal == 1 || codecVal == 4)
@@ -1277,20 +1279,51 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 
 	voip_codec.bitrate_index = Val6; /* bitrate only for AMR */
 
+	if (Val3 == 0 || Val3 == 1 || Val3 == 2 || Val3 == 4)
+		mode = (AudioMode_t) Val3;
+	cur_mode = mode;
+
 	Log_DebugPrintf(LOGID_AUDIO, "\n AUDTST_VoIP codecVal %ld\n", codecVal);
-	/* VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k */
+	/* VOIP_PCM_16K or VOIP_AMR_WB */
 	if ((codecVal == 4) || (codecVal == 5)) {
-		mode = AUDCTRL_GetAudioMode();
-		cur_mode = mode;
-#if !defined(USE_NEW_AUDIO_PARAM)
-		/* set the audio mode to WB */
-		AUDCTRL_SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
-#else
-		/* set the audio mode; need to update the audio app and mode.
-		   shared with voice call for now */
+#if defined(USE_NEW_AUDIO_PARAM)
+		/* WB has to use AUDIO_APP_VOICE_CALL_WB */
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
+#else
+		AUDCTRL_SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
 #endif
 	}
+	else { /* NB VoIP case */
+#if defined(USE_NEW_AUDIO_PARAM)
+		AUDCTRL_SetAudioMode(mode, AUDIO_APP_LOOPBACK);
+#else
+		AUDCTRL_SetAudioMode(mode);
+#endif
+	}
+	/* configure EC and NS for the loopback test */
+#if defined(USE_LOOPBACK_SYSPARM)
+#if defined(USE_NEW_AUDIO_PARAM)
+	/* use sysparm to configure EC */
+	AUDCTRL_EC((Boolean)(AUDIO_GetParmAccessPtr()[mode +
+	AUDIO_APP_LOOPBACK * AUDIO_MODE_NUMBER].echo_cancelling_enable),
+	0);
+	/* use sysparm to configure NS */
+	AUDCTRL_NS((Boolean)(AUDIO_GetParmAccessPtr()[mode +
+	AUDIO_APP_LOOPBACK * AUDIO_MODE_NUMBER
+	].ul_noise_suppression_enable));
+#else
+	/* use sysparm to configure EC */
+	AUDCTRL_EC((Boolean)(AUDIO_GetParmAccessPtr()[
+	mode].echo_cancelling_enable),
+	0);
+	/* use sysparm to configure NS */
+	AUDCTRL_NS((Boolean)(AUDIO_GetParmAccessPtr()[
+	mode].ul_noise_suppression_enable));
+#endif
+#else	/* USE_LOOPBACK_SYSPARM */
+	AUDCTRL_EC(FALSE,0);
+	AUDCTRL_NS(FALSE);
+#endif
 
 	AUDCTRL_EnableTelephony(mic, spk);
 	AUDCTRL_SetTelephonySpkrVolume(spk, vol, AUDIO_GAIN_FORMAT_mB);
@@ -1319,16 +1352,10 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	AUDDRV_BufDoneSema = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
 	sVtQueue_Sema = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
 
+	delay_count = delayMs / 20;
 	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_START, &voip_codec);
 
-	/* Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: debug 1\n"); */
-
-	delay_count = delayMs / 20;
-
-	/* Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: debug 2\n"); */
-	/* Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: Test loopback\n"); */
 	/* test with loopback UL to DL */
-
 	pr_info("\n VoIP loopback running\n");
 }
 
@@ -1346,7 +1373,7 @@ void AUDTST_VoIP_Stop(void)
 #if !defined(USE_NEW_AUDIO_PARAM)
 			AUDCTRL_SetAudioMode(cur_mode);
 #else
-			AUDCTRL_SetAudioMode(cur_mode, AUDIO_APP_VOICE_CALL);
+			AUDCTRL_SetAudioMode(cur_mode, AUDIO_APP_LOOPBACK);
 #endif
 		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
 		OSSEMAPHORE_Destroy(sVtQueue_Sema);
