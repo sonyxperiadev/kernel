@@ -71,6 +71,10 @@ extern "C" {
 	void VoIF_SetGain(int gain);	/* For test purpose only */
 #endif
 
+/* The flag "ENABLE_VOIF" will be enabled by customer.  customer will hook up their voice solution in callback */
+/*
+#define ENABLE_VOIF
+*/
 #ifdef __cplusplus
 }
 #endif

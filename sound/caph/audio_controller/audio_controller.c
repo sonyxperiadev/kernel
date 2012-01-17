@@ -64,6 +64,8 @@
 #endif
 
 #include "audio_pmu_adapt.h"
+#include "voif_handler.h"
+
 
 /**There are two loopback paths available in AudioH.
 One is 6.5MHz analog microphone loopback path. It does not support digital mics.
@@ -280,6 +282,10 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 			"AUDCTRL_EnableTelephony::  sink %d, mic %d\n", sink,
 			source);
 
+#ifdef ENABLE_VOIF
+    AudioMode_t mode;
+#endif
+
 	if (AUDDRV_InVoiceCall()) {	/*already in voice call */
 		if ((voiceCallSpkr != sink) || (voiceCallMic != source))
 			AUDCTRL_SetTelephonyMicSpkr(source, sink);
@@ -303,6 +309,13 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 
 	powerOnExternalAmp(sink, TelephonyUseExtSpkr, TRUE);
 
+#ifdef ENABLE_VOIF
+    mode = AUDDRV_GetAudioMode();
+
+    if ( mode >= AUDIO_MODE_NUMBER )
+        mode = (AudioMode_t) (mode - AUDIO_MODE_NUMBER);
+	VoIF_init(mode);
+#endif
 	return;
 }
 
@@ -322,6 +335,10 @@ void AUDCTRL_DisableTelephony(void)
       if ( FALSE==vopath_enabled && FALSE==DspVoiceIfActive_DL()\
  && FALSE==vipath_enabled )
       {*/
+
+#ifdef ENABLE_VOIF
+    VoIF_Deinit();
+#endif
 
 	powerOnExternalAmp(voiceCallSpkr, TelephonyUseExtSpkr, FALSE);
 

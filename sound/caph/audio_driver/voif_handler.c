@@ -39,6 +39,11 @@ static void *drv_handle = NULL;
 
 static void VOIF_CB_Fxn (Int16 * ulData, Int16 *dlData, UInt32 sampleCount, UInt8 isCall16K)
 {
+
+#ifdef ENABLE_VOIF
+/* The flag "ENABLE_VOIF" will be enabled by customer.  custormer will hook up their voice solution in callback */
+#else
+
 #ifdef INTERNAL_VOIF_TEST
     if (voifDelay == 0)
     {
@@ -64,6 +69,8 @@ static void VOIF_CB_Fxn (Int16 * ulData, Int16 *dlData, UInt32 sampleCount, UInt
 
     mdelay (voifDelay);
 #endif
+#endif
+
 	//To Be Filled by customer
     return;
 }
