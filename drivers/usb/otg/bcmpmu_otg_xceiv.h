@@ -16,9 +16,11 @@
 #define _BCMPMU_OTG_XCEIV_H
 
 #define T_NO_ADP_DELAY_MIN_IN_MS	5000
+#define T_SRP_FAILURE_MAX_IN_MS 6000
 
 struct bcm_otg_xceiver {
 	struct otg_transceiver xceiver;
+	struct timer_list srp_failure_timer;
 	bool otg_vbus_off;
 	/* For future expansion */
 };

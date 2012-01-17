@@ -243,6 +243,20 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 
 	if (!id_gnd) {
+#ifdef CONFIG_USB_OTG
+		bcm_hsotgctrl_phy_set_non_driving(false);
+
+		if (otg->gadget && otg->gadget->ops &&
+			  otg->gadget->ops->wakeup) {
+			/* Do SRP required in ADP startup for B-device */
+			otg->gadget->ops->wakeup(otg->gadget);
+			/* Start SRP failure timer to do ADP probes if it expires */
+			xceiv_data->otg_xceiver.srp_failure_timer.expires =
+				  jiffies +
+				  msecs_to_jiffies(T_SRP_FAILURE_MAX_IN_MS);
+			add_timer(&xceiv_data->otg_xceiver.srp_failure_timer);
+		}
+#endif
 		/* Shutdown the core */
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
 					xceiver.notifier, USB_EVENT_NONE, NULL);
@@ -439,12 +453,22 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 #endif
 }
 
+static void bcmpmu_otg_xceiv_srp_failure_handler(unsigned long param)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data = (struct bcmpmu_otg_xceiv_data *)param;
+	schedule_delayed_work(&xceiv_data->bcm_otg_delayed_adp_work, msecs_to_jiffies(100));
+}
+
 static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(work, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_vbus_a_valid_work);
 	dev_info(xceiv_data->dev, "A session valid\n");
+
+#ifdef CONFIG_USB_OTG
+	del_timer_sync(&xceiv_data->otg_xceiver.srp_failure_timer);
+#endif
 }
 
 static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
@@ -548,6 +572,9 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->otg_xceiver.xceiver.set_delayed_adp = bcmpmu_otg_xceiv_set_delayed_adp;
 
 	ATOMIC_INIT_NOTIFIER_HEAD(&xceiv_data->otg_xceiver.xceiver.notifier);
+	init_timer(&xceiv_data->otg_xceiver.srp_failure_timer);
+	xceiv_data->otg_xceiver.srp_failure_timer.data = (unsigned long)xceiv_data;
+	xceiv_data->otg_xceiver.srp_failure_timer.function = bcmpmu_otg_xceiv_srp_failure_handler;
 
 #ifdef CONFIG_USB_OTG
 	error = bcm_otg_adp_init(xceiv_data);
