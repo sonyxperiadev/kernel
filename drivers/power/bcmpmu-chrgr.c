@@ -184,10 +184,6 @@ static int bcmpmu_usb_get_property(struct power_supply *ps,
 	return ret;
 }
 
-static void bcmpmu_chrgr_isr(enum bcmpmu_irq irq, void *data)
-{
-}
-
 
 static int bcmpmu_set_icc_qc(struct bcmpmu *bcmpmu, int curr)
 {
@@ -434,7 +430,7 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_chrgr *pchrgr;
-	
+
 	printk("bcmpmu_chrgr: chrgr_probe called \n") ;
 
 	pchrgr = kzalloc(sizeof(struct bcmpmu_chrgr), GFP_KERNEL);
@@ -455,7 +451,7 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	bcmpmu->set_vfloat = bcmpmu_set_vfloat;
 
 	pchrgr->eoc = 0;
-	
+
 	pchrgr->chrgr.properties = bcmpmu_chrgr_props;
 	pchrgr->chrgr.num_properties = ARRAY_SIZE(bcmpmu_chrgr_props);
 	pchrgr->chrgr.get_property = bcmpmu_chrgr_get_property;
@@ -476,15 +472,6 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	ret = power_supply_register(&pdev->dev, &pchrgr->usb);
 	if (ret)
 		goto err;
-
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_EOC, bcmpmu_chrgr_isr, pchrgr);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBOV_DIS, bcmpmu_chrgr_isr, pchrgr);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHGERRDIS, bcmpmu_chrgr_isr, pchrgr);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBOV, bcmpmu_chrgr_isr, pchrgr);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RESUME_VBUS, bcmpmu_chrgr_isr, pchrgr);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHG_HW_TTR_EXP, bcmpmu_chrgr_isr, pchrgr);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHG_HW_TCH_EXP, bcmpmu_chrgr_isr, pchrgr);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHG_SW_TMR_EXP, bcmpmu_chrgr_isr, pchrgr);
 
 	pchrgr->chrgrcurr_max = bcmpmu->usb_accy_data.max_curr_chrgr;
 	pchrgr->chrgrtype = bcmpmu->usb_accy_data.chrgr_type;
@@ -518,14 +505,6 @@ static int __devexit bcmpmu_chrgr_remove(struct platform_device *pdev)
 	power_supply_unregister(&pchrgr->chrgr);
 	power_supply_unregister(&pchrgr->usb);
 
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_EOC);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV_DIS);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHGERRDIS);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHG_HW_TTR_EXP);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHG_HW_TCH_EXP);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHG_SW_TMR_EXP);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_chrgr_attr_group);
