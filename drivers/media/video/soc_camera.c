@@ -249,6 +249,32 @@ static int soc_camera_enum_fsizes(struct file *file, void *fh,
 	return ici->ops->enum_fsizes(icd, fsize);
 }
 
+static int soc_camera_enum_finterval(struct file *file, void *fh,
+			  struct v4l2_frmivalenum *finterval)
+{
+	int ret;
+	struct soc_camera_device *icd = file->private_data;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	const struct soc_camera_format_xlate *xlate;
+	__u32 pixfmt = finterval->pixel_format;
+	struct v4l2_frmivalenum finterval_mbus = *finterval;
+
+	xlate = soc_camera_xlate_by_fourcc(icd, pixfmt);
+	if (!xlate)
+		return -EINVAL;
+	/* map xlate-code to pixel_format, sensor only handle xlate-code*/
+	finterval_mbus.pixel_format = xlate->code;
+
+	ret = v4l2_subdev_call(sd, video, enum_frameintervals, &finterval_mbus);
+	if (ret < 0)
+		return ret;
+
+	*finterval = finterval_mbus;
+	finterval->pixel_format = pixfmt;
+	return 0;
+}
+
+
 static int soc_camera_reqbufs(struct file *file, void *priv,
 			      struct v4l2_requestbuffers *p)
 {
@@ -1464,6 +1490,7 @@ static const struct v4l2_ioctl_ops soc_camera_ioctl_ops = {
 	.vidioc_s_input		 = soc_camera_s_input,
 	.vidioc_s_std		 = soc_camera_s_std,
 	.vidioc_enum_framesizes  = soc_camera_enum_fsizes,
+	.vidioc_enum_frameintervals = soc_camera_enum_finterval,
 	.vidioc_reqbufs		 = soc_camera_reqbufs,
 	.vidioc_try_fmt_vid_cap  = soc_camera_try_fmt_vid_cap,
 	.vidioc_querybuf	 = soc_camera_querybuf,
