@@ -753,12 +753,6 @@ static struct platform_device lq043y1dx01_dsi_display_device = {
 
 #define OV5640_I2C_ADDRESS (0x3C)
 
-static struct i2c_board_info rhea_i2c_camera[] = {
-	{
-	 I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
-	 },
-};
-
 static int rhea_camera_power(struct device *dev, int on)
 {
 	unsigned int value;
