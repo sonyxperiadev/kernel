@@ -367,6 +367,19 @@ static int config_desc(struct usb_composite_dev *cdev, unsigned w_value)
 	return -EINVAL;
 }
 
+static int fill_otg_desc(struct usb_composite_dev *cdev)
+{
+	struct usb_configuration	*c = list_first_entry(&cdev->configs,
+				struct usb_configuration, list);
+
+	if (c->descriptors && cdev->req && cdev->req->buf) {
+		memcpy(cdev->req->buf, *c->descriptors, USB_BUFSIZ);
+		return (*c->descriptors)->bLength;
+	}
+
+	return -EINVAL;
+}
+
 static int count_configs(struct usb_composite_dev *cdev, unsigned type)
 {
 	struct usb_gadget		*gadget = cdev->gadget;
@@ -960,6 +973,16 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			if (value >= 0)
 				value = min(w_length, (u16) value);
 			break;
+#ifdef CONFIG_USB_OTG
+		case USB_DT_OTG:
+			if (!gadget_is_otg(gadget))
+				break;
+
+			value = fill_otg_desc(cdev);
+			if (value >= 0)
+				value = min(w_length, (u16) value);
+			break;
+#endif
 		}
 		break;
 
