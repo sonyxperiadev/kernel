@@ -19,6 +19,9 @@
 
 #include <plat/kona_pm.h>
 #include <plat/pwr_mgr.h>
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+#endif /*CONFIG_HAS_WAKELOCK*/
 
 enum
 {
@@ -149,6 +152,15 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 	{
 	case PM_SUSPEND_STANDBY:
 	case PM_SUSPEND_MEM:
+
+#ifdef CONFIG_HAS_WAKELOCK
+		/*Don't enter WFI if any wake lock is active
+		Added to take care of wake locks that gets activiated
+		just before interrupts are dsiabled during suspend*/
+		if (has_wake_lock(WAKE_LOCK_SUSPEND) ||
+			has_wake_lock(WAKE_LOCK_IDLE))
+			break;
+#endif /*CONFIG_HAS_WAKELOCK*/
 		if(def_suspend_state && def_suspend_state->enter)
 		{
 			if(LOG_LEVEL_ENABLED(KONAL_PM_LOG_LVL_FLOW))
