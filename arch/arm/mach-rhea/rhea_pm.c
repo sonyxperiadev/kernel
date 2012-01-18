@@ -408,6 +408,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 	struct pi* pi = NULL;
 #ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
 	int count =0;
+	u32 lpddr2_temp_period;
 #endif
 #ifdef CONFIG_ARCH_RHEA_A0
 	u32 ddr_min_pwr_state_ap = 0;
@@ -466,21 +467,27 @@ int enter_dormant_state(struct kona_idle_state* state)
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	pi_enable(pi,0);
 #ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+
+	/*
+	Workaround for JIRA CRMEMC-919(Periodic device temperature polling will prevent
+		 entering deep sleep in Rhea B0)
+	- Disable temp. polling when A9 enters LPM & re-enable on exit from LPM
+	*/
+	lpddr2_temp_period = readl(KONA_MEMC0_NS_VA +
+			CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
+	/*Disable temperature polling, 0xC3500 -> 0x350080c0
+	Disables periodic reading of the device temperature
+	the period field contains the device temperature period. The timer
+	operates in the XTAL clock domain. 0cC3500 is the default value,
+	write it back. */
+	 writel(0xC3500, KONA_MEMC0_NS_VA + CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
+
 	if (jira_2221) {
 		int insurance = 0;
+		u32 temp_val;
 		/*JIRA HWRHEA_2221 VAR_312M is_idle from MEMC unexpectedly stays
 		 * asserted for long periods of time - preventing deepsleep entry */
 
-		 /*reduce DDR PLL to 200M, 0x2 -> 0x3500814c;
-		 0x2: Memory controller can shut of local DDR pll & run off the
-		 system PLL clock */
-		 writel(0x2, KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET);
-		 /*Disable temperature polling, 0xC3500 -> 0x350080c0
-		 Disables periodic reading of the device temperature
-		 the period field contains the device temperature period. The timer
-		 operates in the XTAL clock domain. 0cC3500 is the default value,
-		 write it back. */
-		 writel(0xC3500, KONA_MEMC0_NS_VA + CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
 		 /*CORE0 semaphore locked ? */
 		 insurance = 0;
 		while((readl(KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_STATUS_OFFSET) &
@@ -497,14 +504,14 @@ int enter_dormant_state(struct kona_idle_state* state)
 		}
 
 		/*disable other MEMC ports */
-		 for (count = 0; count < 5; count++)
-			 writel((CSR_AXI_PORT_CTRL_PORT3_DISABLE_MASK |
+		writel((CSR_AXI_PORT_CTRL_PORT3_DISABLE_MASK |
 			 CSR_AXI_PORT_CTRL_PORT2_DISABLE_MASK |
 			 CSR_AXI_PORT_CTRL_PORT0_DISABLE_MASK),
-					 KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
+				 KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
+		udelay(1);
 		 /* reset all MEMC demesh entries */
-		 for (count = 0; count < 16; count++)
-			 *(volatile unsigned int *)noncache_buf_va = 0xf;
+		 for (count = 0; count < 16; count++, noncache_buf_va += 64)
+			temp_val = *(volatile u32 *)noncache_buf_va;
 		 /* re-enable all MEMC ports, 0x0 -> 0x3500801c; */
 		 writel(0x0, KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
 		 /* release CORE0 semaphore, 1<<MEMC_HW2221_SEMAPHORE -> 0x35004188 */
@@ -525,12 +532,14 @@ int enter_dormant_state(struct kona_idle_state* state)
 	enter_wfi();
 #endif
 #ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
-	/*restore DDR PLL to 400M, 0x3 -> 0x3500814c
-	0x3: This is the highest power state (or the run state) of the
-	Memory controller, where the local DDR pll is on & the system PLL
-	xtal clocks requests are asserted high. */
-	if (jira_2221)
-		writel(0x3, KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET);
+ /*
+	Workaround for JIRA CRMEMC-919(Periodic device temperature polling will
+	prevent entering deep sleep in Rhea B0)
+	- Disable temp. polling when A9 enters LPM & re-enable on exit from LPM
+ */
+	writel(lpddr2_temp_period, KONA_MEMC0_NS_VA +
+                        CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
+
 #endif
 #if	defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
@@ -639,7 +648,7 @@ int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
 int __init rhea_pm_init(void)
 {
 #ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
-    noncache_buf_va = dma_alloc_coherent(NULL, 64, &noncache_buf_pa, GFP_ATOMIC);
+    noncache_buf_va = dma_alloc_coherent(NULL, 64*16, &noncache_buf_pa, GFP_ATOMIC);
 #endif
     pm_config_deep_sleep();
 	return kona_pm_init();
