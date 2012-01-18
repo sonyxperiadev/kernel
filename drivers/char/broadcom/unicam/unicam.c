@@ -517,13 +517,13 @@ static int enable_unicam_clock(void)
 		err_print("%s: error enable unicam clock\n", __func__);
 		return -EIO;
 	}
-
+#if 0
 	ret = clk_set_rate(unicam_clk, 250000000);
 	if (ret) {
 		err_print("%s: error changing clock rate\n", __func__);
 		//return -EIO;
 	}
-
+#endif
 	rate = clk_get_rate(unicam_clk);
 	dbg_print("unicam_clk_clk rate %lu\n", rate);
 
