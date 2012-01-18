@@ -17,11 +17,14 @@
 
 #define T_NO_ADP_DELAY_MIN_IN_MS	5000
 #define T_SRP_FAILURE_MAX_IN_MS 6000
+#define T_SESS_END_SRP_START_IN_MS 1600
 
 struct bcm_otg_xceiver {
 	struct otg_transceiver xceiver;
 	struct timer_list srp_failure_timer;
+	struct timer_list sess_end_srp_timer;
 	bool otg_vbus_off;
+	bool otg_srp_reqd;
 	/* For future expansion */
 };
 
@@ -41,6 +44,7 @@ struct bcmpmu_otg_xceiv_data {
 	struct work_struct bcm_otg_adp_change_work;
 	struct work_struct bcm_otg_id_status_change_work;
 	struct work_struct bcm_otg_chg_detect_work;
+	struct work_struct bcm_otg_sess_end_srp_work;
 	struct delayed_work bcm_otg_delayed_adp_work;
 
 	/* OTG notifier blocks for each event */

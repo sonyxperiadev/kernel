@@ -1323,6 +1323,12 @@ void do_test_mode(void *data)
 	case 5:		// TEST_FORCE_ENABLE
 		dctl.b.tstctl = 5;
 		break;
+	case 6: /* Set otg_srp_reqd */
+#ifdef CONFIG_USB_OTG_UTILS
+		if (core_if->xceiver->set_srp_reqd)
+			core_if->xceiver->set_srp_reqd(core_if->xceiver);
+#endif
+		break;
 	}
 	dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl, dctl.d32);
 }
@@ -1607,7 +1613,7 @@ static inline void pcd_setup(dwc_otg_pcd_t * pcd)
 	dwc_otg_pcd_ep_t *ep0 = &pcd->ep0;
 
 	deptsiz0_data_t doeptsize0 = {.d32 = 0 };
-	
+
 #ifdef DWC_UTE_CFI
 	int retval = 0;
 	struct cfi_usb_ctrlrequest cfi_req;

@@ -114,6 +114,9 @@ struct otg_transceiver {
 	/* set_delayed_adp */
 	int	(*set_delayed_adp)(struct otg_transceiver *otg);
 
+	/* set SRP required after Vbus goes off */
+	int	(*set_srp_reqd)(struct otg_transceiver *otg);
+
 };
 
 

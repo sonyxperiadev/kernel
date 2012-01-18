@@ -367,6 +367,7 @@ static int config_desc(struct usb_composite_dev *cdev, unsigned w_value)
 	return -EINVAL;
 }
 
+#ifdef CONFIG_USB_OTG
 static int fill_otg_desc(struct usb_composite_dev *cdev)
 {
 	struct usb_configuration	*c = list_first_entry(&cdev->configs,
@@ -379,6 +380,7 @@ static int fill_otg_desc(struct usb_composite_dev *cdev)
 
 	return -EINVAL;
 }
+#endif
 
 static int count_configs(struct usb_composite_dev *cdev, unsigned type)
 {

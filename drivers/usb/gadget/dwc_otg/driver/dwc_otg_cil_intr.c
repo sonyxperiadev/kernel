@@ -54,6 +54,7 @@ inline const char *op_state_str(dwc_otg_core_if_t *core_if)
 }
 #endif
 
+#ifdef CONFIG_USB_OTG
 static void dwc_otg_set_device_soft_disconnect(dwc_otg_core_if_t *core_if, bool en)
 {
 	dctl_data_t dctl = {.d32 = 0 };
@@ -62,6 +63,7 @@ static void dwc_otg_set_device_soft_disconnect(dwc_otg_core_if_t *core_if, bool 
 	dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl,
 		dctl.d32);
 }
+#endif
 
 /** This function will log a debug message
  *
@@ -123,10 +125,14 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t *core_if)
 			 * clean state. */
 			core_if->lx_state = DWC_OTG_L0;
 			cil_pcd_stop(core_if);
+			/* This shutdown uses lowest power sequence.
+			* Disable it for OTG for now */
+#ifndef CONFIG_USB_OTG
 			/* Schedule a delayed work item to shutdown the core */
 			DWC_WORKQ_SCHEDULE_DELAYED(core_if->wq_otg,
 						   w_shutdown_core, core_if,
 						   100, "shutdown core");
+#endif
 
 			if (core_if->adp_enable) {
 				if (core_if->power_down == 2) {

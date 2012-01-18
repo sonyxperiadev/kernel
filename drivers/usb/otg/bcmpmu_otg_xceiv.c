@@ -121,6 +121,14 @@ static int bcmpmu_otg_xceiv_set_delayed_adp(struct otg_transceiver *otg)
 	return 0;
 }
 
+static int bcmpmu_otg_xceiv_set_srp_reqd_handler(struct otg_transceiver *otg)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
+	xceiv_data->otg_xceiver.otg_srp_reqd = true;
+
+	return 0;
+}
+
 static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data
 					      *xceiv_data, bool enable)
 {
@@ -243,6 +251,9 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 
 	if (!id_gnd) {
 #ifdef CONFIG_USB_OTG
+		/* REVISIT. Shutdown uses sequence for lowest power
+		* and does not meet timing so don't do that in OTG mode
+		* for now. Just do SRP for ADP startup */
 		bcm_hsotgctrl_phy_set_non_driving(false);
 
 		if (otg->gadget && otg->gadget->ops &&
@@ -396,12 +407,26 @@ static ssize_t bcmpmu_otg_xceiv_host_store(struct device *dev,
 static DEVICE_ATTR(host, S_IRUGO | S_IWUSR, bcmpmu_otg_xceiv_host_show,
 		   bcmpmu_otg_xceiv_host_store);
 
+#ifdef CONFIG_USB_OTG
+static void bcmpmu_otg_xceiv_srp_failure_handler(unsigned long param)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data = (struct bcmpmu_otg_xceiv_data *)param;
+	schedule_delayed_work(&xceiv_data->bcm_otg_delayed_adp_work, msecs_to_jiffies(100));
+}
+
+static void bcmpmu_otg_xceiv_sess_end_srp_timer_handler(unsigned long param)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data = (struct bcmpmu_otg_xceiv_data *)param;
+	schedule_work(&xceiv_data->bcm_otg_sess_end_srp_work);
+}
+#endif
+
 static void bcmpmu_otg_xceiv_delayed_adp_handler(struct work_struct *work)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(work, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_delayed_adp_work.work);
-	dev_info(xceiv_data->dev, "Do delayed ADP probe\n");
+	dev_info(xceiv_data->dev, "Do ADP probe\n");
 
 	bcm_otg_do_adp_probe(xceiv_data);
 	xceiv_data->otg_xceiver.otg_vbus_off = false;
@@ -447,16 +472,40 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 			schedule_delayed_work(&xceiv_data->bcm_otg_delayed_adp_work, msecs_to_jiffies(T_NO_ADP_DELAY_MIN_IN_MS));
 		else
 			bcm_otg_do_adp_probe(xceiv_data);
+	} else {
+		if (xceiv_data->otg_xceiver.otg_srp_reqd) {
+			/* Start Session End SRP timer */
+			xceiv_data->otg_xceiver.sess_end_srp_timer.expires =
+				  jiffies +
+				  msecs_to_jiffies(T_SESS_END_SRP_START_IN_MS);
+			add_timer(&xceiv_data->otg_xceiver.sess_end_srp_timer);
+		}
+		else
+			bcm_otg_do_adp_sense(xceiv_data);
 	}
-	else
-		bcm_otg_do_adp_sense(xceiv_data);
 #endif
 }
 
-static void bcmpmu_otg_xceiv_srp_failure_handler(unsigned long param)
+static void bcmpmu_otg_xceiv_sess_end_srp_handler(struct work_struct *work)
 {
-	struct bcmpmu_otg_xceiv_data *xceiv_data = (struct bcmpmu_otg_xceiv_data *)param;
-	schedule_delayed_work(&xceiv_data->bcm_otg_delayed_adp_work, msecs_to_jiffies(100));
+	struct bcmpmu_otg_xceiv_data *xceiv_data =
+	    container_of(work, struct bcmpmu_otg_xceiv_data,
+			 bcm_otg_sess_end_srp_work);
+	bcm_hsotgctrl_phy_set_non_driving(false);
+
+	if (xceiv_data->otg_xceiver.xceiver.gadget && xceiv_data->otg_xceiver.xceiver.gadget->ops &&
+		  xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup) {
+		/* Do SRP */
+		xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup(xceiv_data->otg_xceiver.xceiver.gadget);
+		/* Start SRP failure timer to do ADP probes if it expires */
+		xceiv_data->otg_xceiver.srp_failure_timer.expires =
+			  jiffies +
+			  msecs_to_jiffies(T_SRP_FAILURE_MAX_IN_MS);
+		add_timer(&xceiv_data->otg_xceiver.srp_failure_timer);
+
+		/* SRP initiated. Clear the flag */
+		xceiv_data->otg_xceiver.otg_srp_reqd = false;
+	}
 }
 
 static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
@@ -468,6 +517,7 @@ static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
 
 #ifdef CONFIG_USB_OTG
 	del_timer_sync(&xceiv_data->otg_xceiver.srp_failure_timer);
+	del_timer_sync(&xceiv_data->otg_xceiver.sess_end_srp_timer);
 #endif
 }
 
@@ -564,6 +614,8 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 		  bcmpmu_otg_xceiv_id_change_handler);
 	INIT_WORK(&xceiv_data->bcm_otg_chg_detect_work,
 		  bcmpmu_otg_xceiv_chg_detect_handler);
+	INIT_WORK(&xceiv_data->bcm_otg_sess_end_srp_work,
+		  bcmpmu_otg_xceiv_sess_end_srp_handler);
 	INIT_DELAYED_WORK(&xceiv_data->bcm_otg_delayed_adp_work,
 		  bcmpmu_otg_xceiv_delayed_adp_handler);
 
@@ -575,13 +627,19 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->otg_xceiver.xceiver.shutdown = bcmpmu_otg_xceiv_shutdown;
 	xceiv_data->otg_xceiver.xceiver.init = bcmpmu_otg_xceiv_start;
 	xceiv_data->otg_xceiver.xceiver.set_delayed_adp = bcmpmu_otg_xceiv_set_delayed_adp;
+	xceiv_data->otg_xceiver.xceiver.set_srp_reqd = bcmpmu_otg_xceiv_set_srp_reqd_handler;
 
 	ATOMIC_INIT_NOTIFIER_HEAD(&xceiv_data->otg_xceiver.xceiver.notifier);
+
+#ifdef CONFIG_USB_OTG
 	init_timer(&xceiv_data->otg_xceiver.srp_failure_timer);
 	xceiv_data->otg_xceiver.srp_failure_timer.data = (unsigned long)xceiv_data;
 	xceiv_data->otg_xceiver.srp_failure_timer.function = bcmpmu_otg_xceiv_srp_failure_handler;
 
-#ifdef CONFIG_USB_OTG
+	init_timer(&xceiv_data->otg_xceiver.sess_end_srp_timer);
+	xceiv_data->otg_xceiver.sess_end_srp_timer.data = (unsigned long)xceiv_data;
+	xceiv_data->otg_xceiver.sess_end_srp_timer.function = bcmpmu_otg_xceiv_sess_end_srp_timer_handler;
+
 	error = bcm_otg_adp_init(xceiv_data);
 	if (error)
 		goto error_attr_host;
