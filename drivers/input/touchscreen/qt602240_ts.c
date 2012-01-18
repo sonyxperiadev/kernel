@@ -1434,7 +1434,7 @@ static int __devinit qt602240_probe(struct i2c_client *client,
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y,
 			     0, data->pdata->y_max, 0, 0);
 
-	__set_bit(INPUT_PROP_DIRECT, &input_dev->propbit);
+	__set_bit(INPUT_PROP_DIRECT, (unsigned long *)&input_dev->propbit);
 #endif
 
 	error = request_threaded_irq(client->irq, NULL, qt602240_interrupt,

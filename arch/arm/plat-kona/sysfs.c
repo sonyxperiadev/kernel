@@ -68,7 +68,7 @@ reset_reason_show(struct device *dev, struct device_attribute *attr, char *buf)
 }
 
 static ssize_t
-reset_reason_store(struct device *dev, struct device_attribute *attr, char *buf,
+reset_reason_store(struct device *dev, struct device_attribute *attr, const char *buf,
         size_t n)
 {
         char    reset_reason[32];
