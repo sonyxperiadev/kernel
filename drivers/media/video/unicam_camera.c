@@ -37,6 +37,9 @@
 #define dprintk(format,arg...)
 #endif
 
+#define pixfmtstr(x) (x) & 0xff, ((x) >> 8) & 0xff, ((x) >> 16) & 0xff, \
+	((x) >> 24) & 0xff
+
 enum unicam_cam_memresource {
 	UNICAM_NUM_RSRC,
 };
@@ -191,8 +194,11 @@ static int  unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 
 	/*TODO: fix resolution */
 	/* stride is in bytes */
-	line_stride = soc_mbus_bytes_per_line(unicam_dev->icd->user_width, 
-							unicam_dev->icd->current_fmt->host_fmt);
+	if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8)
+		line_stride = soc_mbus_bytes_per_line(unicam_dev->icd->user_width,
+								unicam_dev->icd->current_fmt->host_fmt);
+	else
+		line_stride = unicam_dev->icd->user_width;
 
 	/* image 0 */
 	cslCamBuffer0.start_addr = (UInt32)phys_addr;
@@ -209,11 +215,19 @@ static int  unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 	cslCamBuffer1.mem_type = cslCamBuffer0.mem_type;
 	
 	/* set date buffer 0 */
-	cslCamBufferData0.start_addr = (UInt32)0;
-	cslCamBufferData0.line_stride = 0;
-	cslCamBufferData0.buffer_wrap_en = 0;
-	cslCamBufferData0.size = 0;
-	cslCamBufferData0.mem_type = cslCamBuffer0.mem_type;
+	if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8) {
+		cslCamBufferData0.start_addr = (UInt32)0;
+		cslCamBufferData0.line_stride = 0;
+		cslCamBufferData0.buffer_wrap_en = 0;
+		cslCamBufferData0.size = 0;
+		cslCamBufferData0.mem_type = cslCamBuffer0.mem_type;
+	} else {
+		cslCamBufferData0.start_addr = (UInt32)phys_addr;
+		cslCamBufferData0.line_stride = (UInt32)line_stride;
+		cslCamBufferData0.size = line_stride *unicam_dev->icd->user_height;
+		cslCamBufferData0.buffer_wrap_en = 1;
+		cslCamBufferData0.mem_type = CSL_CAM_MEM_TYPE_NONE;
+	}
 
 	/* set data buffer 1 */
 	cslCamBufferData1.start_addr = 0;
@@ -447,7 +461,11 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 
 	/* set image identifier (CSI mode only) */
 	memset( &cslCamImageCtrl, 0, sizeof(CSL_CAM_IMAGE_ID_st_t) );
-	cslCamImageCtrl.image_data_id0 = 0x1E;
+
+	if (icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8)
+		cslCamImageCtrl.image_data_id0 = 0x30;
+	else
+		cslCamImageCtrl.image_data_id0 = 0x1E;
 
 	if (csl_cam_set_image_type_control(unicam_dev->cslCamHandle, &cslCamImageCtrl)) {
 		dev_err(unicam_dev->dev, "csl_cam_set_image_type_control(): FAILED\n");
@@ -647,7 +665,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 		return -EINVAL;
 	}
 
-	iprintk("trying format=%d res=%dx%d success=%d", pixfmt,
+	iprintk("trying format=%c%c%c%c res=%dx%d success=%d", pixfmtstr(pixfmt),
 			mf.width, mf.height, ret);
 	dprintk("-exit");
 	return ret;
@@ -707,7 +725,7 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	pix->colorspace = mf.colorspace;
 	icd->current_fmt = xlate;
 
-	iprintk("format set to %d res=%dx%d success=%d", pix->pixelformat,
+	iprintk("format set to %c%c%c%c res=%dx%d success=%d", pixfmtstr(pix->pixelformat),
 			pix->width, pix->height, ret);
 	dprintk("-exit");
 	return ret;
