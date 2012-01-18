@@ -82,6 +82,14 @@ config BCM_MODEM_DEFER_CP_START
           Causes the main image to release the CP from reset in the case
           where this is not done already from the loader.
 
+config BRCM_FUSE_VSP
+	#tristate "Broadcom FUSE VSP drivers"
+	boolean "Broadcom FUSE VSP drivers"
+	depends on BRCM_CHAR_DRIVERS && BCM_MODEM
+	default N
+	---help---
+	  Broadcom FUSE VSP drivers
+
 config BCM_IDLE_PROFILER
 	bool "Broadcom Idle Profiler Support"
 	depends on BRCM_CHAR_DRIVERS && ARCH_KONA
