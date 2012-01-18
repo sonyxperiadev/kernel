@@ -243,6 +243,7 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 {
 	int ret = 0;
     CSL_CAM_FRAME_st_t      cslCamFrame;
+	CSL_CAM_DATA_st_t		cslCamDataCtrl;
 	int bytes_per_line = soc_mbus_bytes_per_line(unicam_dev->icd->user_width,
 								unicam_dev->icd->current_fmt->host_fmt);
 	dprintk("-enter");
@@ -252,8 +253,19 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 		return ret;
 	}
 	
+	cslCamDataCtrl.int_enable = (CSL_CAM_INTERRUPT_t) (CSL_CAM_INT_DISABLE);
+	cslCamDataCtrl.line_count = (unicam_dev->icd->user_height - 1);
+	cslCamDataCtrl.data_id = 0x00;
+	cslCamDataCtrl.data_size = CSL_CAM_PIXEL_8BIT;
+	cslCamDataCtrl.fsp_decode_enable = FALSE;
 
-	cslCamFrame.int_enable      = (CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT) ;
+	if(csl_cam_set_data_type_control(unicam_dev->cslCamHandle, &cslCamDataCtrl)) {
+		dev_err(unicam_dev->dev, "error in csl_cam_set_data_type_control()\n");
+		return -1;
+	}
+
+
+	cslCamFrame.int_enable      = (CSL_CAM_INT_FRAME_END) ;
 	/* for testing enable frame start interrupt */
 	cslCamFrame.int_enable      |= CSL_CAM_INT_FRAME_START ;
 	cslCamFrame.int_line_count  = (unicam_dev->icd->user_height - 1);
@@ -261,6 +273,7 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 
 	/*TODO: fix resolution */
 	cslCamFrame.capture_size    = unicam_dev->icd->user_height * bytes_per_line;
+
 	
 	if (csl_cam_trigger_capture(unicam_dev->cslCamHandle) != 0)	{
 		dev_err(unicam_dev->dev, "error in triggering capture\n");
@@ -448,7 +461,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	}
 
 	/* enable frame Interrupts */
-	cslCamFrame.int_enable      = CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT;
+	cslCamFrame.int_enable      = CSL_CAM_INT_FRAME_END;
 	/* for testing enabled frame start interrupt */
 	cslCamFrame.int_enable      |= CSL_CAM_INT_FRAME_START; 
 	cslCamFrame.int_line_count  = (unicam_dev->icd->user_height - 1);
@@ -783,7 +796,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		/* get and clear interrupt status */
         reg_status = csl_cam_get_intr_status(unicam_dev->cslCamHandle, (CSL_CAM_INTERRUPT_t *)&status );
 
-        if (status & (CSL_CAM_INT_FRAME_END | CSL_CAM_INT_LINE_COUNT)) {
+        if (status & CSL_CAM_INT_FRAME_END) {
 			struct vb2_buffer *vb = unicam_dev->active;
 			fps++;
 
