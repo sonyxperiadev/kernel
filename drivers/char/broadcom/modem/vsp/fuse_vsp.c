@@ -48,7 +48,7 @@
 #include "vsp_debug.h"
 
 #include "mobcom_types.h"
-#include "resultcode.h"
+#include <linux/broadcom/resultcode.h>
 #include "taskmsgs.h"
 
 #include <linux/broadcom/ipcproperties.h>
