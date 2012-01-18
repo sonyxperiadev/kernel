@@ -972,6 +972,24 @@ static unsigned long ov5640_query_bus_param(struct soc_camera_device *icd)
 	return flags;
 }
 
+static int ov5640_enum_input(struct soc_camera_device *icd, struct v4l2_input *inp)
+{
+	struct soc_camera_link *icl = to_soc_camera_link(icd);
+	struct v4l2_subdev_sensor_interface_parms *plat_parms;
+
+	inp->type = V4L2_INPUT_TYPE_CAMERA;
+	inp->std  = V4L2_STD_UNKNOWN;
+	strcpy(inp->name, "Camera");
+	if (icl && icl->priv) {
+		plat_parms = icl->priv;
+		if (plat_parms->orientation == V4L2_SUBDEV_SENSOR_PORTRAIT)
+			inp->status = V4L2_IN_ST_HFLIP;
+		else
+			inp->status = 0;
+	}
+	return 0;
+}
+
 static int ov5640_g_fmt(struct v4l2_subdev *sd,
 			 struct v4l2_mbus_framefmt *mf)
 {
@@ -1265,6 +1283,7 @@ static int ov5640_s_register(struct v4l2_subdev *sd,
 static struct soc_camera_ops ov5640_ops = {
 	.set_bus_param		= ov5640_set_bus_param,
 	.query_bus_param	= ov5640_query_bus_param,
+	.enum_input			= ov5640_enum_input,
 	.controls		= ov5640_controls,
 	.num_controls		= ARRAY_SIZE(ov5640_controls),
 };
