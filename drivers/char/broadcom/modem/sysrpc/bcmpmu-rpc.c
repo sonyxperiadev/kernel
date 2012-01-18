@@ -116,6 +116,7 @@ static void rpc_work(struct work_struct *work)
 	unsigned int result = 0;
 
 	pr_rpc(FLOW, "%s, called\n", __func__);
+	req.flags = PMU_ADC_RAW_ONLY;
 	if (bcmpmu->adc_req) {
 		req.sig = PMU_ADC_PATEMP;
 		req.tm = PMU_ADC_TM_HK;
