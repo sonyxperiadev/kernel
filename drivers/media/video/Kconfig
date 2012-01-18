@@ -851,6 +851,13 @@ config SOC_CAMERA_S5K4ECGX
 	depends on SOC_CAMERA && I2C
 	help
 	  This is a s5k4ecgx camera driver
+
+config SOC_CAMERA_SR030PC50
+	tristate "sr030pc50 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr030pc50 camera driver
+	  
 config SOC_CAMERA_OV5640
 	tristate "ov5640 camera support"
 	depends on SOC_CAMERA && I2C

@@ -128,7 +128,7 @@
 
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
-
+extern bool gCameraInitialized;
 // keypad map
 #define BCM_KEY_ROW_0  0
 #define BCM_KEY_ROW_1  1
@@ -1352,13 +1352,23 @@ static struct platform_device board_bcmbt_lpm_device = {
 
 //@HW
 #define S5K4ECGX_I2C_ADDRESS (0x5A>>1)
+#define SR030PC50_I2C_ADDRESS (0x60>>1)
+
+
+//struct i2c_slave_platform_data rhea_cam_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), };
+
 
 static struct i2c_board_info rhea_i2c_camera[] = {
 	{
-		I2C_BOARD_INFO("s5k4ecgx", S5K4ECGX_I2C_ADDRESS),
+		I2C_BOARD_INFO("s5k4ecgx", S5K4ECGX_I2C_ADDRESS),		
 	},
 };
 
+static struct i2c_board_info rhea_i2c_camera_sub[] = {
+	{
+		I2C_BOARD_INFO("sr030pc50", SR030PC50_I2C_ADDRESS),
+	},
+};
 //@HW
 static struct regulator *VCAM_IO_1_8_V;  //LDO_HV9
 static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
@@ -1372,6 +1382,10 @@ static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
 #define SENSOR_0_CLK_FREQ		(13000000) //@HW, need to check how fast this meaning.
 //VCAM_1.2V is controlled by GPIO12
 
+static int rhea_camera_power_sub(struct device *dev, int on)
+{
+	printk(" %s \n",__func__);
+}
 
 static int rhea_camera_power(struct device *dev, int on)
 {
@@ -1525,6 +1539,8 @@ static int rhea_camera_power(struct device *dev, int on)
 		if (pi_mgr_dfs_request_update(unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
 		}
+
+		gCameraInitialized = false;
 	}
 	return 0;
 }
@@ -1533,6 +1549,12 @@ static int rhea_camera_reset(struct device *dev)
 {
 	/* reset the camera gpio */
 	printk(KERN_INFO"%s:camera reset\n", __func__);
+	return 0;
+}
+static int rhea_camera_reset_sub(struct device *dev)
+{
+	/* reset the camera gpio */
+	printk(KERN_INFO" %s:camera reset\n", __func__);
 	return 0;
 }
 #if 0
@@ -1585,6 +1607,24 @@ static struct platform_device rhea_camera = {
 		.platform_data = &iclink_s5k4ecgx,
 	},
 };
+
+static struct soc_camera_link iclink_sr030pc50 = {
+	.bus_id		= 0,
+	
+	.board_info	= &rhea_i2c_camera_sub[0],
+	.i2c_adapter_id	= 0,
+	.module_name	= "sr030pc50",
+	.power		= &rhea_camera_power_sub,
+	.reset		= &rhea_camera_reset_sub,
+};
+
+static struct platform_device rhea_camera_sub = {
+	.name	= "soc-camera-pdrv",
+	.id		= 1,
+	.dev	= {
+		.platform_data = &iclink_sr030pc50,
+	},
+};
 #endif
 
 
@@ -1622,6 +1662,7 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
     &board_bcmbt_lpm_device,
 #endif
 	&rhea_camera,
+	&rhea_camera_sub,
 
 
 };

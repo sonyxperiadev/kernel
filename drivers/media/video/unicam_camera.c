@@ -625,6 +625,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	switch (mf.code) {
 	case V4L2_MBUS_FMT_YUYV8_2X8:
 	case V4L2_MBUS_FMT_UYVY8_2X8:
+	case V4L2_MBUS_FMT_JPEG_1X8:
 		/* Above formats are supported */
 		break;
 	default:

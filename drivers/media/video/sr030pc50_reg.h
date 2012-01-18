@@ -1,6 +1,6 @@
-/* drivers/media/video/s5k4ecgx_regs_1_1.h
+/* drivers/media/video/sr030pc50_regs_1_1.h
  *
- * Driver for s5k4ecgx (5MP Camera) from SEC(LSI), firmware EVT1.1
+ * Driver for sr030pc50 (VGA Camera) from Siliconfile
  *
  * Copyright (C) 2010, SAMSUNG ELECTRONICS
  *
@@ -10,14 +10,9 @@
  * (at your option) any later version.
  */
 
-
-#ifndef __S5K4ECGX_REGS_1_1_H__
-#define __S5K4ECGX_REGS_1_1_H__
-
-
 #if 0 //Not working 
 
-static const u32 s5k4ecgx_init_reg1[] =
+static const u32 sr030pc50_init_reg1[] =
 {
 	// ARM Initiation
 	  0xFCFCD000,
@@ -27,7 +22,7 @@ static const u32 s5k4ecgx_init_reg1[] =
 	  0xFFFFFFFF,
 };
 #else  // haipeng's : works.
-static const u32 s5k4ecgx_init_reg1[]
+static const u32 sr030pc50_init_reg1[]
 ={
 /******************************/
   0xFCFCD000,          
@@ -2902,7 +2897,7 @@ static const u32 s5k4ecgx_init_reg1[]
 
 
 
-static const u32 s5k4ecgx_init_reg2[] =
+static const u32 sr030pc50_init_reg2[] =
 {
 // Driving Current Setting - MIPI Do not care about Data Pin - SEHF_CHECK_IT
 // 00 - 2mA, 01 - 4mA, 10 - 8mA, 11 - 12mA
@@ -6186,7 +6181,7 @@ static const u32 s5k4ecgx_init_reg2[] =
 
 };
 
-static const u32 s5k4ecgx_DTP_init[] =
+static const u32 sr030pc50_DTP_init[] =
 {
 	  0xFFFE01F4,	//p500
 	  0xFCFCD000,
@@ -6236,7 +6231,7 @@ static const u32 s5k4ecgx_DTP_init[] =
 };
 
 
-static const u32 s5k4ecgx_DTP_stop[] = {
+static const u32 sr030pc50_DTP_stop[] = {
 	  0x0028D000,
 	  0x002AB054,
 	  0x0F120000,
@@ -6247,7 +6242,7 @@ static const u32 s5k4ecgx_DTP_stop[] = {
 //FPS()
 //==========================================================
 
-static const u32 s5k4ecgx_FPS_Auto[] =
+static const u32 sr030pc50_FPS_Auto[] =
 {
   0xFCFCD000,
   0x0028D000,
@@ -6278,11 +6273,11 @@ static const u32 s5k4ecgx_FPS_Auto[] =
 };
 
 
-static const u32 s5k4ecgx_FPS_5[] = {
+static const u32 sr030pc50_FPS_5[] = {
 
 };
 
-static const u32 s5k4ecgx_FPS_7[] =
+static const u32 sr030pc50_FPS_7[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6310,11 +6305,11 @@ static const u32 s5k4ecgx_FPS_7[] =
 
 
 
-static const u32 s5k4ecgx_FPS_10[] = {
+static const u32 sr030pc50_FPS_10[] = {
 
 };
 
-static const u32 s5k4ecgx_FPS_15[] =
+static const u32 sr030pc50_FPS_15[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6340,7 +6335,7 @@ static const u32 s5k4ecgx_FPS_15[] =
 };
 
 
-static const u32 s5k4ecgx_FPS_20[] =
+static const u32 sr030pc50_FPS_20[] =
 {
   0xFCFCD000,     
   0x00287000,
@@ -6365,7 +6360,7 @@ static const u32 s5k4ecgx_FPS_20[] =
 
 };
 
-static const u32 s5k4ecgx_FPS_30[] =
+static const u32 sr030pc50_FPS_30[] =
 {
   0xFCFCD000,
   0x0028D000,
@@ -6396,11 +6391,11 @@ static const u32 s5k4ecgx_FPS_30[] =
 };
 
 
-static const u32 s5k4ecgx_FPS_60[] = {
+static const u32 sr030pc50_FPS_60[] = {
 
 };
 
-static const u32 s5k4ecgx_FPS_120[] = {
+static const u32 sr030pc50_FPS_120[] = {
 
 };
 
@@ -6409,7 +6404,7 @@ static const u32 s5k4ecgx_FPS_120[] = {
 //  EFFECT(6)
 //==========================================================
 
-static const u32 s5k4ecgx_Effect_Normal[] =
+static const u32 sr030pc50_Effect_Normal[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6420,7 +6415,7 @@ static const u32 s5k4ecgx_Effect_Normal[] =
 
 };
 
-static const u32 s5k4ecgx_Effect_Black_White[] =
+static const u32 sr030pc50_Effect_Black_White[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6431,7 +6426,7 @@ static const u32 s5k4ecgx_Effect_Black_White[] =
 
 };
 
-static const u32 s5k4ecgx_Effect_Solarization[] =
+static const u32 sr030pc50_Effect_Solarization[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6442,7 +6437,7 @@ static const u32 s5k4ecgx_Effect_Solarization[] =
 
 };
 
-static const u32 s5k4ecgx_Effect_Negative[] =
+static const u32 sr030pc50_Effect_Negative[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6453,7 +6448,7 @@ static const u32 s5k4ecgx_Effect_Negative[] =
 
 };
 
-static const u32 s5k4ecgx_Effect_Sepia[] =
+static const u32 sr030pc50_Effect_Sepia[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6473,14 +6468,14 @@ static const u32 s5k4ecgx_Effect_Sepia[] =
 //==========================================================
 
 
-static const u32 s5k4ecgx_WB_Auto[] =
+static const u32 sr030pc50_WB_Auto[] =
 {
 
   0xFFFFFFFF,
 
 };
 
-static const u32 s5k4ecgx_WB_Sunny[] =
+static const u32 sr030pc50_WB_Sunny[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6501,7 +6496,7 @@ static const u32 s5k4ecgx_WB_Sunny[] =
 
 };
 
-static const u32 s5k4ecgx_WB_Cloudy[] =
+static const u32 sr030pc50_WB_Cloudy[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6522,7 +6517,7 @@ static const u32 s5k4ecgx_WB_Cloudy[] =
 
 };
 
-static const u32 s5k4ecgx_WB_Fluorescent[] =
+static const u32 sr030pc50_WB_Fluorescent[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6541,7 +6536,7 @@ static const u32 s5k4ecgx_WB_Fluorescent[] =
 
 };
 
-static const u32 s5k4ecgx_WB_Tungsten[] =
+static const u32 sr030pc50_WB_Tungsten[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6561,7 +6556,7 @@ static const u32 s5k4ecgx_WB_Tungsten[] =
 };
 
 
-static const u32 s5k4ecgx_WB_CWF[] =  // DO NOT USE IT SEHF_CHECK_IT
+static const u32 sr030pc50_WB_CWF[] =  // DO NOT USE IT SEHF_CHECK_IT
 {
 
   0xFFFFFFFF,
@@ -6573,7 +6568,7 @@ static const u32 s5k4ecgx_WB_CWF[] =  // DO NOT USE IT SEHF_CHECK_IT
 //ISO()
 //==========================================================
 
-static const u32 s5k4ecgx_ISO_Auto[] =
+static const u32 sr030pc50_ISO_Auto[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6601,7 +6596,7 @@ static const u32 s5k4ecgx_ISO_Auto[] =
 
 };
 
-static const u32 s5k4ecgx_ISO_Sport[] =
+static const u32 sr030pc50_ISO_Sport[] =
 {
 // DO NOT USE IT SEHF_CHECK_IT
 
@@ -6609,7 +6604,7 @@ static const u32 s5k4ecgx_ISO_Sport[] =
 
 };
 
-static const u32 s5k4ecgx_ISO_Night[] =
+static const u32 sr030pc50_ISO_Night[] =
 {
 // DO NOT USE IT SEHF_CHECK_IT
 
@@ -6617,7 +6612,7 @@ static const u32 s5k4ecgx_ISO_Night[] =
 
 };
 
-static const u32 s5k4ecgx_ISO_50[] =
+static const u32 sr030pc50_ISO_50[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6644,7 +6639,7 @@ static const u32 s5k4ecgx_ISO_50[] =
 
 };
 
-static const u32 s5k4ecgx_ISO_100[] =
+static const u32 sr030pc50_ISO_100[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6671,7 +6666,7 @@ static const u32 s5k4ecgx_ISO_100[] =
 
 };
 
-static const u32 s5k4ecgx_ISO_200[] =
+static const u32 sr030pc50_ISO_200[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6698,7 +6693,7 @@ static const u32 s5k4ecgx_ISO_200[] =
 
 };
 
-static const u32 s5k4ecgx_ISO_400[]  ={
+static const u32 sr030pc50_ISO_400[]  ={
   0xFCFCD000,
   0x00287000,
   0x002A0938,
@@ -6726,12 +6721,12 @@ static const u32 s5k4ecgx_ISO_400[]  ={
 
 
 
-static const u32 s5k4ecgx_WDR_on[] = {
+static const u32 sr030pc50_WDR_on[] = {
 	  0x002A1BEA,
 	  0x0F120000,
 };
 
-static const u32 s5k4ecgx_WDR_off[] = {
+static const u32 sr030pc50_WDR_off[] = {
 	  0x002A1BEA,
 	  0x0F120001,
 };
@@ -6747,7 +6742,7 @@ static const u32 s5k4ecgx_WDR_off[] = {
 //METERING()
 //==========================================================
 
-static const u32 s5k4ecgx_Metering_Matrix[] =
+static const u32 sr030pc50_Metering_Matrix[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6791,7 +6786,7 @@ static const u32 s5k4ecgx_Metering_Matrix[] =
 
 };
 
-static const u32 s5k4ecgx_Metering_Center[] =
+static const u32 sr030pc50_Metering_Center[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6836,7 +6831,7 @@ static const u32 s5k4ecgx_Metering_Center[] =
 
 };
 
-static const u32 s5k4ecgx_Metering_Spot[] =
+static const u32 sr030pc50_Metering_Spot[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6892,7 +6887,7 @@ static const u32 s5k4ecgx_Metering_Spot[] =
 // BRIGHTNES(9)
 //==========================================================
 
-static const u32 s5k4ecgx_EV_Minus_4[] =
+static const u32 sr030pc50_EV_Minus_4[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6903,7 +6898,7 @@ static const u32 s5k4ecgx_EV_Minus_4[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Minus_3[] =
+static const u32 sr030pc50_EV_Minus_3[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6914,7 +6909,7 @@ static const u32 s5k4ecgx_EV_Minus_3[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Minus_2[] =
+static const u32 sr030pc50_EV_Minus_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6925,7 +6920,7 @@ static const u32 s5k4ecgx_EV_Minus_2[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Minus_1[] =
+static const u32 sr030pc50_EV_Minus_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6936,7 +6931,7 @@ static const u32 s5k4ecgx_EV_Minus_1[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Default[] =
+static const u32 sr030pc50_EV_Default[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6947,7 +6942,7 @@ static const u32 s5k4ecgx_EV_Default[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Plus_1[] =
+static const u32 sr030pc50_EV_Plus_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6958,7 +6953,7 @@ static const u32 s5k4ecgx_EV_Plus_1[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Plus_2[] =
+static const u32 sr030pc50_EV_Plus_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6969,7 +6964,7 @@ static const u32 s5k4ecgx_EV_Plus_2[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Plus_3[] =
+static const u32 sr030pc50_EV_Plus_3[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6980,7 +6975,7 @@ static const u32 s5k4ecgx_EV_Plus_3[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Plus_4[] =
+static const u32 sr030pc50_EV_Plus_4[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -6998,7 +6993,7 @@ static const u32 s5k4ecgx_EV_Plus_4[] =
 // BRIGHTNES(9) Camcorder
 //==========================================================
 
-static const u32 s5k4ecgx_EV_Camcorder_Minus_4[] =
+static const u32 sr030pc50_EV_Camcorder_Minus_4[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7009,7 +7004,7 @@ static const u32 s5k4ecgx_EV_Camcorder_Minus_4[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Camcorder_Minus_3[] =
+static const u32 sr030pc50_EV_Camcorder_Minus_3[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7020,7 +7015,7 @@ static const u32 s5k4ecgx_EV_Camcorder_Minus_3[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Camcorder_Minus_2[] =
+static const u32 sr030pc50_EV_Camcorder_Minus_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7031,7 +7026,7 @@ static const u32 s5k4ecgx_EV_Camcorder_Minus_2[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Camcorder_Minus_1[] =
+static const u32 sr030pc50_EV_Camcorder_Minus_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7042,7 +7037,7 @@ static const u32 s5k4ecgx_EV_Camcorder_Minus_1[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Camcorder_Default[] =
+static const u32 sr030pc50_EV_Camcorder_Default[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7053,7 +7048,7 @@ static const u32 s5k4ecgx_EV_Camcorder_Default[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Camcorder_Plus_1[] =
+static const u32 sr030pc50_EV_Camcorder_Plus_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7064,7 +7059,7 @@ static const u32 s5k4ecgx_EV_Camcorder_Plus_1[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Camcorder_Plus_2[] =
+static const u32 sr030pc50_EV_Camcorder_Plus_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7075,7 +7070,7 @@ static const u32 s5k4ecgx_EV_Camcorder_Plus_2[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Camcorder_Plus_3[] =
+static const u32 sr030pc50_EV_Camcorder_Plus_3[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7086,7 +7081,7 @@ static const u32 s5k4ecgx_EV_Camcorder_Plus_3[] =
 
 };
 
-static const u32 s5k4ecgx_EV_Camcorder_Plus_4[] =
+static const u32 sr030pc50_EV_Camcorder_Plus_4[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7105,7 +7100,7 @@ static const u32 s5k4ecgx_EV_Camcorder_Plus_4[] =
 // contrast(5) - // DO NOT USE IT SEHF_CHECK_IT
 //==========================================================
 
-static const u32 s5k4ecgx_Contrast_Minus_4[] =
+static const u32 sr030pc50_Contrast_Minus_4[] =
 { 
   0xFCFCD000,
   0x00287000,
@@ -7116,7 +7111,7 @@ static const u32 s5k4ecgx_Contrast_Minus_4[] =
 
 };
 
-static const u32 s5k4ecgx_Contrast_Minus_3[] =
+static const u32 sr030pc50_Contrast_Minus_3[] =
 { 
   0xFCFCD000,
   0x00287000,
@@ -7127,7 +7122,7 @@ static const u32 s5k4ecgx_Contrast_Minus_3[] =
 
 };
 
-static const u32 s5k4ecgx_Contrast_Minus_2[] =
+static const u32 sr030pc50_Contrast_Minus_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7138,7 +7133,7 @@ static const u32 s5k4ecgx_Contrast_Minus_2[] =
 
 };
 
-static const u32 s5k4ecgx_Contrast_Minus_1[] =
+static const u32 sr030pc50_Contrast_Minus_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7149,7 +7144,7 @@ static const u32 s5k4ecgx_Contrast_Minus_1[] =
 
 };
 
-static const u32 s5k4ecgx_Contrast_Default[] =
+static const u32 sr030pc50_Contrast_Default[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7160,7 +7155,7 @@ static const u32 s5k4ecgx_Contrast_Default[] =
 
 };
 
-static const u32 s5k4ecgx_Contrast_Plus_1[] =
+static const u32 sr030pc50_Contrast_Plus_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7171,7 +7166,7 @@ static const u32 s5k4ecgx_Contrast_Plus_1[] =
 
 };
 
-static const u32 s5k4ecgx_Contrast_Plus_2[] =
+static const u32 sr030pc50_Contrast_Plus_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7188,7 +7183,7 @@ static const u32 s5k4ecgx_Contrast_Plus_2[] =
 // sharpness(5) - // DO NOT USE IT SEHF_CHECK_IT
 //==========================================================
 
-static const u32 s5k4ecgx_Sharpness_Minus_2[] =
+static const u32 sr030pc50_Sharpness_Minus_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7207,7 +7202,7 @@ static const u32 s5k4ecgx_Sharpness_Minus_2[] =
 
 };
 
-static const u32 s5k4ecgx_Sharpness_Minus_1[] =
+static const u32 sr030pc50_Sharpness_Minus_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7226,7 +7221,7 @@ static const u32 s5k4ecgx_Sharpness_Minus_1[] =
 
 };
 
-static const u32 s5k4ecgx_Sharpness_Default[] =
+static const u32 sr030pc50_Sharpness_Default[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7245,7 +7240,7 @@ static const u32 s5k4ecgx_Sharpness_Default[] =
 
 };
 
-static const u32 s5k4ecgx_Sharpness_Plus_1[] =
+static const u32 sr030pc50_Sharpness_Plus_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7264,7 +7259,7 @@ static const u32 s5k4ecgx_Sharpness_Plus_1[] =
 
 };
 
-static const u32 s5k4ecgx_Sharpness_Plus_2[] =
+static const u32 sr030pc50_Sharpness_Plus_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7293,7 +7288,7 @@ static const u32 s5k4ecgx_Sharpness_Plus_2[] =
 // saturation(5) - // DO NOT USE IT SEHF_CHECK_IT
 //==========================================================
 
-static const u32 s5k4ecgx_Saturation_Minus_2[] =
+static const u32 sr030pc50_Saturation_Minus_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7304,7 +7299,7 @@ static const u32 s5k4ecgx_Saturation_Minus_2[] =
 
 };
 
-static const u32 s5k4ecgx_Saturation_Minus_1[] =
+static const u32 sr030pc50_Saturation_Minus_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7315,7 +7310,7 @@ static const u32 s5k4ecgx_Saturation_Minus_1[] =
 
 };
 
-static const u32 s5k4ecgx_Saturation_Default[] =
+static const u32 sr030pc50_Saturation_Default[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7326,7 +7321,7 @@ static const u32 s5k4ecgx_Saturation_Default[] =
 
 };
 
-static const u32 s5k4ecgx_Saturation_Plus_1[] =
+static const u32 sr030pc50_Saturation_Plus_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7337,7 +7332,7 @@ static const u32 s5k4ecgx_Saturation_Plus_1[] =
 
 };
 
-static const u32 s5k4ecgx_Saturation_Plus_2[] =
+static const u32 sr030pc50_Saturation_Plus_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7357,7 +7352,7 @@ static const u32 s5k4ecgx_Saturation_Plus_2[] =
 // WDR Auto Contrast
 //==========================================================
 
-static const u32 s5k4ecgx_Auto_Contrast_ON[] =
+static const u32 sr030pc50_Auto_Contrast_ON[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7380,7 +7375,7 @@ static const u32 s5k4ecgx_Auto_Contrast_ON[] =
 
 };
 
-static const u32 s5k4ecgx_Auto_Contrast_OFF[] =
+static const u32 sr030pc50_Auto_Contrast_OFF[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7415,7 +7410,7 @@ static const u32 s5k4ecgx_Auto_Contrast_OFF[] =
 // JPEG QUALITY - // DO NOT USE IT SEHF_CHECK_IT
 //==========================================================
 
-static const u32 s5k4ecgx_Jpeg_Quality_High[] =
+static const u32 sr030pc50_Jpeg_Quality_High[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7427,7 +7422,7 @@ static const u32 s5k4ecgx_Jpeg_Quality_High[] =
 
 };
 
-static const u32 s5k4ecgx_Jpeg_Quality_Normal[] =
+static const u32 sr030pc50_Jpeg_Quality_Normal[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7439,7 +7434,7 @@ static const u32 s5k4ecgx_Jpeg_Quality_Normal[] =
 
 };
 
-static const u32 s5k4ecgx_Jpeg_Quality_Low[] =
+static const u32 sr030pc50_Jpeg_Quality_Low[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7455,7 +7450,7 @@ static const u32 s5k4ecgx_Jpeg_Quality_Low[] =
 //SCENE()
 //==========================================================
 
-static const u32 s5k4ecgx_Scene_Default[] =
+static const u32 sr030pc50_Scene_Default[] =
 {
 	//scene Backlight landscape
   0x00287000,
@@ -7661,7 +7656,7 @@ static const u32 s5k4ecgx_Scene_Default[] =
 // ==========================================================
 // 	CAMERA_SCENE_PORTRAIT (Auto/Center/Br0/Auto/Sharp-1/Sat0)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Portrait[] =
+static const u32 sr030pc50_Scene_Portrait[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7683,7 +7678,7 @@ static const u32 s5k4ecgx_Scene_Portrait[] =
 // ==========================================================
 // 	CAMERA_SCENE_NIGHT (Night/Center/Br0/Auto/Sharp0/Sat0)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Nightshot[] =
+static const u32 sr030pc50_Scene_Nightshot[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7751,7 +7746,7 @@ static const u32 s5k4ecgx_Scene_Nightshot[] =
 // ==========================================================
 // 	CAMERA_SCENE_AGAINSTLIGHT (Auto/Spot(flash) or Center(no flash)/Br0/Auto/Sharp0/Sat0)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Backlight[] =
+static const u32 sr030pc50_Scene_Backlight[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7796,7 +7791,7 @@ static const u32 s5k4ecgx_Scene_Backlight[] =
 // ==========================================================
 // 	CAMERA_SCENE_LANDSCAPE (Auto/Matrix/Br0/Auto/Sharp+1/Sat+1)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Landscape[] =
+static const u32 sr030pc50_Scene_Landscape[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7855,7 +7850,7 @@ static const u32 s5k4ecgx_Scene_Landscape[] =
 // ==========================================================
 // 	CAMERA_SCENE_SPORTS (Sport/Center/Br0/Auto/Sharp0/Sat0)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Sports[] =
+static const u32 sr030pc50_Scene_Sports[] =
 {
     0xFCFCD000,
     0x00287000,
@@ -7898,7 +7893,7 @@ static const u32 s5k4ecgx_Scene_Sports[] =
 // ==========================================================
 // 	CAMERA_SCENE_PARTYINDOOR (ISO200/Center/Br0/Auto/Sharp0/Sat+1)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Party_Indoor[] =
+static const u32 sr030pc50_Scene_Party_Indoor[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7926,7 +7921,7 @@ static const u32 s5k4ecgx_Scene_Party_Indoor[] =
 // ==========================================================
 // 	CAMERA_SCENE_BEACHSNOW (ISO50/Center/Br+1/Auto/Sharp0/Sat+1)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Beach_Snow[] =
+static const u32 sr030pc50_Scene_Beach_Snow[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7957,7 +7952,7 @@ static const u32 s5k4ecgx_Scene_Beach_Snow[] =
 // ==========================================================
 // 	CAMERA_SCENE_SUNSET (Auto/Center/Br0/Daylight/Sharp0/Sat0)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Sunset[] =
+static const u32 sr030pc50_Scene_Sunset[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -7980,7 +7975,7 @@ static const u32 s5k4ecgx_Scene_Sunset[] =
 // ==========================================================
 // 	CAMERA_SCENE_DAWN (Auto/Center/Br0/CWF/Sharp0/Sat0)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Duskdawn[] =
+static const u32 sr030pc50_Scene_Duskdawn[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8003,7 +7998,7 @@ static const u32 s5k4ecgx_Scene_Duskdawn[] =
 // ==========================================================
 // 	CAMERA_SCENE_FALLCOLOR (Auto/Center/Br0/Auto/Sharp0/Sat+2)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Fall_Color[] =
+static const u32 sr030pc50_Scene_Fall_Color[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8017,7 +8012,7 @@ static const u32 s5k4ecgx_Scene_Fall_Color[] =
 // ==========================================================
 // 	CAMERA_SCENE_FIREWORK (ISO50/Center/Br0/Auto/Sharp0/Sat0)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Fireworks[] =
+static const u32 sr030pc50_Scene_Fireworks[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8077,7 +8072,7 @@ static const u32 s5k4ecgx_Scene_Fireworks[] =
 // ==========================================================
 // 	CAMERA_SCENE_TEXT (Auto/Center/Br0/Auto/Sharp+2/Sat0)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Text[] =
+static const u32 sr030pc50_Scene_Text[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8101,7 +8096,7 @@ static const u32 s5k4ecgx_Scene_Text[] =
 // ==========================================================
 // 	CAMERA_SCEBE_CANDLELIGHT (Auto/Center/Br0/Daylight/Sharp0/Sat0)
 // ==========================================================
-static const u32 s5k4ecgx_Scene_Candle_Light[] =
+static const u32 sr030pc50_Scene_Candle_Light[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8125,7 +8120,7 @@ static const u32 s5k4ecgx_Scene_Candle_Light[] =
 //AF() - SEHF_AF_CHECK
 //==========================================================
 
-static const u32 s5k4ecgx_AF_Return_Inf_pos[] =
+static const u32 sr030pc50_AF_Return_Inf_pos[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8136,7 +8131,7 @@ static const u32 s5k4ecgx_AF_Return_Inf_pos[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Return_Macro_pos[] =
+static const u32 sr030pc50_AF_Return_Macro_pos[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8172,7 +8167,7 @@ static const u32 s5k4ecgx_AF_Return_Macro_pos[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Normal_mode_1[] =
+static const u32 sr030pc50_AF_Normal_mode_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8195,7 +8190,7 @@ static const u32 s5k4ecgx_AF_Normal_mode_1[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Normal_mode_2[] =
+static const u32 sr030pc50_AF_Normal_mode_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8206,7 +8201,7 @@ static const u32 s5k4ecgx_AF_Normal_mode_2[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Normal_mode_3[] =
+static const u32 sr030pc50_AF_Normal_mode_3[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8245,7 +8240,7 @@ static const u32 s5k4ecgx_AF_Normal_mode_3[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Macro_mode_1[] =
+static const u32 sr030pc50_AF_Macro_mode_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8267,7 +8262,7 @@ static const u32 s5k4ecgx_AF_Macro_mode_1[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Macro_mode_2[] =
+static const u32 sr030pc50_AF_Macro_mode_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8278,7 +8273,7 @@ static const u32 s5k4ecgx_AF_Macro_mode_2[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Macro_mode_3[] =
+static const u32 sr030pc50_AF_Macro_mode_3[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8320,7 +8315,7 @@ static const u32 s5k4ecgx_AF_Macro_mode_3[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Low_Light_normal_mode_1[] =
+static const u32 sr030pc50_AF_Low_Light_normal_mode_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8343,7 +8338,7 @@ static const u32 s5k4ecgx_AF_Low_Light_normal_mode_1[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Low_Light_normal_mode_2[] =
+static const u32 sr030pc50_AF_Low_Light_normal_mode_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8353,7 +8348,7 @@ static const u32 s5k4ecgx_AF_Low_Light_normal_mode_2[] =
   0xFFFFFFFF,
 
 };
-static const u32 s5k4ecgx_AF_Low_Light_normal_mode_3[] =
+static const u32 sr030pc50_AF_Low_Light_normal_mode_3[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8364,7 +8359,7 @@ static const u32 s5k4ecgx_AF_Low_Light_normal_mode_3[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Low_Light_Macro_mode_1[] =
+static const u32 sr030pc50_AF_Low_Light_Macro_mode_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8386,7 +8381,7 @@ static const u32 s5k4ecgx_AF_Low_Light_Macro_mode_1[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Low_Light_Macro_mode_2[] =
+static const u32 sr030pc50_AF_Low_Light_Macro_mode_2[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8397,7 +8392,7 @@ static const u32 s5k4ecgx_AF_Low_Light_Macro_mode_2[] =
 
 };
 
-static const u32 s5k4ecgx_AF_Low_Light_Macro_mode_3[] =
+static const u32 sr030pc50_AF_Low_Light_Macro_mode_3[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8410,7 +8405,7 @@ static const u32 s5k4ecgx_AF_Low_Light_Macro_mode_3[] =
 
 };
 
-static const u32 s5k4ecgx_Single_AF_Start[] =
+static const u32 sr030pc50_Single_AF_Start[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8421,7 +8416,7 @@ static const u32 s5k4ecgx_Single_AF_Start[] =
 
 };
 
-static const u32 s5k4ecgx_Single_AF_Off_1[] =
+static const u32 sr030pc50_Single_AF_Off_1[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8434,21 +8429,21 @@ static const u32 s5k4ecgx_Single_AF_Off_1[] =
 
 };
 
-static const u32 s5k4ecgx_Low_Cap_On[] =
+static const u32 sr030pc50_Low_Cap_On[] =
 {
 
   0xFFFFFFFF,
 
 };
 
-static const u32 s5k4ecgx_Low_Cap_Off[] =
+static const u32 sr030pc50_Low_Cap_Off[] =
 {
 
   0xFFFFFFFF,
 
 };
 
-static const u32 s5k4ecgx_Capture_Start[] =
+static const u32 sr030pc50_Capture_Start[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8463,7 +8458,7 @@ static const u32 s5k4ecgx_Capture_Start[] =
 
 };
 
-static const u32 s5k4ecgx_Preview_Return[] =
+static const u32 sr030pc50_Preview_Return[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8498,7 +8493,7 @@ static const u32 s5k4ecgx_Preview_Return[] =
 
 };
 
-static const u32 s5k4ecgx_Flash_init[] =
+static const u32 sr030pc50_Flash_init[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8584,7 +8579,7 @@ static const u32 s5k4ecgx_Flash_init[] =
 
 };
 
-static const u32 s5k4ecgx_Pre_Flash_On[] =
+static const u32 sr030pc50_Pre_Flash_On[] =
 {         
   0xFCFCD000,
   0x00287000,
@@ -8595,7 +8590,7 @@ static const u32 s5k4ecgx_Pre_Flash_On[] =
 
 };
 
-static const u32 s5k4ecgx_Pre_Flash_Off[] =
+static const u32 sr030pc50_Pre_Flash_Off[] =
 {
   0xFCFCD000,
   0x00287000, 
@@ -8624,7 +8619,7 @@ static const u32 s5k4ecgx_Pre_Flash_Off[] =
 
 };
 
-static const u32 s5k4ecgx_Main_Flash_On[] =
+static const u32 sr030pc50_Main_Flash_On[] =
 {
   0xFCFCD000,
   0x00287000, 
@@ -8637,7 +8632,7 @@ static const u32 s5k4ecgx_Main_Flash_On[] =
 
 };
 
-static const u32 s5k4ecgx_Main_Flash_Off[] =
+static const u32 sr030pc50_Main_Flash_Off[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -8671,7 +8666,7 @@ static const u32 s5k4ecgx_Main_Flash_Off[] =
 //Capture size(Width_Height)
 //==========================================================
 
-static const u32 s5k4ecgx_5M_Capture[] =
+static const u32 sr030pc50_5M_Capture[] =
 {	// 256  0x1920
   0xFCFCD000,
   0x00287000,
@@ -8708,7 +8703,7 @@ static const u32 s5k4ecgx_5M_Capture[] =
 
 };
 
-static const u32 s5k4ecgx_W4M_Capture[] =
+static const u32 sr030pc50_W4M_Capture[] =
 {	//256  0x1536
   0xFCFCD000,
   0x00287000,
@@ -8745,7 +8740,7 @@ static const u32 s5k4ecgx_W4M_Capture[] =
 
 };
 
-static const u32 s5k4ecgx_3M_Capture[] =
+static const u32 sr030pc50_3M_Capture[] =
 {	//2048x1536
   0xFCFCD000,
   0x00287000,
@@ -8782,7 +8777,7 @@ static const u32 s5k4ecgx_3M_Capture[] =
 
 };
 
-static const u32 s5k4ecgx_W2M_Capture[] =
+static const u32 sr030pc50_W2M_Capture[] =
 {	//2048x1232
   0xFCFCD000,
   0x00287000,
@@ -8819,7 +8814,7 @@ static const u32 s5k4ecgx_W2M_Capture[] =
 
 };
 
-static const u32 s5k4ecgx_VGA_Capture[] =
+static const u32 sr030pc50_VGA_Capture[] =
 {	//64  0x480
   0xFCFCD000,
   0x00287000,
@@ -8856,7 +8851,7 @@ static const u32 s5k4ecgx_VGA_Capture[] =
 
 };
 
-static const u32 s5k4ecgx_WVGA_Capture[] =
+static const u32 sr030pc50_WVGA_Capture[] =
 {	//800x480
   0xFCFCD000,
   0x00287000,
@@ -8897,7 +8892,7 @@ static const u32 s5k4ecgx_WVGA_Capture[] =
 //preivew size()
 //==========================================================
 
-static const u32 s5k4ecgx_800_Preview[] =
+static const u32 sr030pc50_800_Preview[] =
 {	//80  0x480
   0xFCFCD000,
   0x00287000,
@@ -8940,7 +8935,7 @@ static const u32 s5k4ecgx_800_Preview[] =
 
 };
 
-static const u32 s5k4ecgx_720_Preview[] =
+static const u32 sr030pc50_720_Preview[] =
 {	//72  0x480
   0xFCFCD000,
   0x00287000,
@@ -8983,7 +8978,7 @@ static const u32 s5k4ecgx_720_Preview[] =
 
 };
 
-static const u32 s5k4ecgx_640_Preview[] =
+static const u32 sr030pc50_640_Preview[] =
 {
 
 
@@ -9031,7 +9026,7 @@ static const u32 s5k4ecgx_640_Preview[] =
 
 };
 
-static const u32 s5k4ecgx_352_Preview[] =
+static const u32 sr030pc50_352_Preview[] =
 {	//352x288
   0xFCFCD000,
   0x00287000,
@@ -9076,7 +9071,7 @@ static const u32 s5k4ecgx_352_Preview[] =
 
 
 
-static const u32 s5k4ecgx_320_Preview[]
+static const u32 sr030pc50_320_Preview[]
 ={
 
 	  //320x240
@@ -9127,7 +9122,7 @@ static const u32 s5k4ecgx_320_Preview[]
 
 
 
-static const u32 s5k4ecgx_176_Preview[] =
+static const u32 sr030pc50_176_Preview[] =
 {	//176x144
   0xFCFCD000,
   0x00287000,
@@ -9170,283 +9165,7 @@ static const u32 s5k4ecgx_176_Preview[] =
 
 };
 
-static const u32 s5k4ecgx_x_1_25_zoom_0[] =
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120100,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_25_zoom_1[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120108,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-
-static const u32 s5k4ecgx_x_1_25_zoom_2[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120110,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-
-static const u32 s5k4ecgx_x_1_25_zoom_3[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120118,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_25_zoom_4[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120120,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_25_zoom_5[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120128,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_25_zoom_6[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120130,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_25_zoom_7[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120138,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_25_zoom_8[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120140,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-
-static const u32 s5k4ecgx_x_1_6_zoom_0[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120100,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_6_zoom_1[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120113,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_6_zoom_2[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120126,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_6_zoom_3[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120139,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_6_zoom_4[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F12014C,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_6_zoom_5[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F12015F,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_6_zoom_6[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120172,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_6_zoom_7[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120185,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_1_6_zoom_8[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F12019A,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-
-static const u32 s5k4ecgx_x_2_0_zoom_0[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120100,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_2_0_zoom_1[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120120,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_2_0_zoom_2[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120140,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_2_0_zoom_3[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120160,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_2_0_zoom_4[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120180,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_2_0_zoom_5[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F1201A0,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_2_0_zoom_6[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F1201C0,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_2_0_zoom_7[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F1201E0,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF,
-};
-static const u32 s5k4ecgx_x_2_0_zoom_8[]=
-{
-	0xFCFCD000,
-	0x00287000,
-	0x002A048E,
-	0x0F120200,
-	0x002A04A4,
-	0x0F120005,
-	0xFFFFFFFF, 
-};
-
-
-static const u32 s5k4ecgx_Preview_flip[] =
+static const u32 sr030pc50_Preview_flip[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -9475,7 +9194,7 @@ static const u32 s5k4ecgx_Preview_flip[] =
 
 };
 
-static const u32 s5k4ecgx_Preview_Mirror[] =
+static const u32 sr030pc50_Preview_Mirror[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -9506,7 +9225,7 @@ static const u32 s5k4ecgx_Preview_Mirror[] =
 
 
 
-static const u32 s5k4ecgx_recording_720p[] =
+static const u32 sr030pc50_recording_720p[] =
 {
   0x0028D000,
   0x002AE410,
@@ -10343,7 +10062,7 @@ static const u32 s5k4ecgx_recording_720p[] =
 
 };
 
-static const u32 s5k4ecgx_recording_720x480[] =
+static const u32 sr030pc50_recording_720x480[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -11156,7 +10875,7 @@ static const u32 s5k4ecgx_recording_720x480[] =
 	
 };
 
-static const u32 s5k4ecgx_recording_640x480[] =
+static const u32 sr030pc50_recording_640x480[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -11969,7 +11688,7 @@ static const u32 s5k4ecgx_recording_640x480[] =
 
 
 
-static const u32 s5k4ecgx_recording_320x240[] =
+static const u32 sr030pc50_recording_320x240[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -12779,7 +12498,7 @@ static const u32 s5k4ecgx_recording_320x240[] =
   0x0F120001,	/* #REG_TC_GP_CapConfigChanged */	
 };
 
-static const u32 s5k4ecgx_recording_176x144[] =
+static const u32 sr030pc50_recording_176x144[] =
 {
   0xFCFCD000,
   0x00287000,
@@ -13592,7 +13311,7 @@ static const u32 s5k4ecgx_recording_176x144[] =
 	
 };
 
-static const u32 s5k4ecgx_recording_720p_return[] =
+static const u32 sr030pc50_recording_720p_return[] =
 {
  // DO NOT USE IT SEHF_CHECK_IT
 
@@ -13603,7 +13322,7 @@ static const u32 s5k4ecgx_recording_720p_return[] =
 //==========================================================
 //AE_AWE_LOCK(2)
 //==========================================================
-static const u32 s5k4ecgx_ae_lock[] =
+static const u32 sr030pc50_ae_lock[] =
 {
   0x00287000,
   0x002A2C5E,
@@ -13612,7 +13331,7 @@ static const u32 s5k4ecgx_ae_lock[] =
 };
 
 // AE unLock
-static const u32 s5k4ecgx_ae_unlock[] =
+static const u32 sr030pc50_ae_unlock[] =
 {
   0x00287000,
   0x002A2C5E,
@@ -13621,7 +13340,7 @@ static const u32 s5k4ecgx_ae_unlock[] =
 };
 
 // AWB Lock
-static const u32 s5k4ecgx_awb_lock[] =
+static const u32 sr030pc50_awb_lock[] =
 {
   0x00287000,
   0x002A2C66,
@@ -13630,7 +13349,7 @@ static const u32 s5k4ecgx_awb_lock[] =
 };
 
 // AWB unLock
-static const u32 s5k4ecgx_awb_unlock[] =
+static const u32 sr030pc50_awb_unlock[] =
 {
   0x00287000,
   0x002A2C66,
@@ -13639,7 +13358,7 @@ static const u32 s5k4ecgx_awb_unlock[] =
 };
 
 // TOUCH AF
-static u32 s5k4ecgx_touchaf[] = 
+static u32 sr030pc50_touchaf[] = 
 {
   0x00287000,
   0x002A0294,
@@ -13675,13 +13394,13 @@ NEED TO CHECK IN FUTURE
 	******************************************/
 
 
-static const u32 s5k4ecgx_Night_Capture[] = {
+static const u32 sr030pc50_Night_Capture[] = {
 	  0x002A0608,
 	  0x0F120000,	/*#lt_ExpGain_uSubsamplingmode*/
 	  0x0F120000,	/*#lt_ExpGain_uNonSubsampling*/
 };
 
-static const u32 s5k4ecgx_AF_Low_Light_Mode_On[] = {
+static const u32 sr030pc50_AF_Low_Light_Mode_On[] = {
 	  0x002A15DA,
 	  0x0F120C00,
 
@@ -13702,7 +13421,7 @@ static const u32 s5k4ecgx_AF_Low_Light_Mode_On[] = {
 	  0x0F1200B1,
 };
 
-static const u32 s5k4ecgx_AF_Low_Light_Mode_Off[] = {
+static const u32 sr030pc50_AF_Low_Light_Mode_Off[] = {
 	  0x002A15DA,
 	  0x0F121800,
 
@@ -13734,17 +13453,17 @@ static const u32 s5k4ecgx_AF_Low_Light_Mode_Off[] = {
 	  0x0F1200B4,
 	  0x0F1200BA,
 };
-static const u32 s5k4ecgx_Single_AF_Off_2[] = {
+static const u32 sr030pc50_Single_AF_Off_2[] = {
 	  0x002A028C,
 	  0x0F120004,
 };
 
-static const u32 s5k4ecgx_Single_AF_Off_3[] = {
+static const u32 sr030pc50_Single_AF_Off_3[] = {
 
 };
 
 
-static const u32 s5k4ecgx_Face_Detection_On[] = {
+static const u32 sr030pc50_Face_Detection_On[] = {
 	  0x002A0294,
 	  0x0F120100,
 	  0x0F1200E3,
@@ -13757,7 +13476,7 @@ static const u32 s5k4ecgx_Face_Detection_On[] = {
 	  0x0F120001,
 };
 
-static const u32 s5k4ecgx_Face_Detection_Off[] = {
+static const u32 sr030pc50_Face_Detection_Off[] = {
 	  0x002A0294,
 	  0x0F120100,
 	  0x0F1200E3,
@@ -13771,7 +13490,7 @@ static const u32 s5k4ecgx_Face_Detection_Off[] = {
 };
 
 
-static const u32 s5k4ecgx_Pre_Flash_Start[] = {
+static const u32 sr030pc50_Pre_Flash_Start[] = {
 	  0x002A0588, /* set AE speed to fast */
 	  0x0F120000,
 
@@ -13779,7 +13498,7 @@ static const u32 s5k4ecgx_Pre_Flash_Start[] = {
 	  0x0F120001,
 };
 
-static const u32 s5k4ecgx_Pre_Flash_End[] = {
+static const u32 sr030pc50_Pre_Flash_End[] = {
 	  0x002A0588, /* set AE speed to normal */
 	  0x0F120002,
 
@@ -13787,7 +13506,7 @@ static const u32 s5k4ecgx_Pre_Flash_End[] = {
 	  0x0F120001,
 };
 
-static const u32 s5k4ecgx_Flash_Start[] = {
+static const u32 sr030pc50_Flash_Start[] = {
 	  0x002A17E8,	/* fls_afl_FlashMode : Flash alg start */
 	  0x0F120001,
 
@@ -13795,14 +13514,14 @@ static const u32 s5k4ecgx_Flash_Start[] = {
 	  0x0F120027,
 };
 
-static const u32 s5k4ecgx_Flash_End[] = {
+static const u32 sr030pc50_Flash_End[] = {
 	  0x002A17E8,	/* fls_afl_FlashMode  Flash alg end */
 	  0x0F120000,
 };
 
 
 /* 1600 x 1200 */
-static const u32 s5k4ecgx_2M_Capture[] = {
+static const u32 sr030pc50_2M_Capture[] = {
 	  0x002A0398,
 	  0x0F120640,
 	  0x0F1204B0,
@@ -13817,7 +13536,7 @@ static const u32 s5k4ecgx_2M_Capture[] = {
 	  0x0F120001,
 };
 /* 1280 x 960 */
-static const u32 s5k4ecgx_1M_Capture[] = {
+static const u32 sr030pc50_1M_Capture[] = {
 	  0x002A0398,
 	  0x0F120500,
 	  0x0F1203C0,
@@ -13831,55 +13550,55 @@ static const u32 s5k4ecgx_1M_Capture[] = {
 	  0x002A0270,
 	  0x0F120001,
 };
-static const u32 s5k4ecgx_AE_AWB_Lock_On[] = {
+static const u32 sr030pc50_AE_AWB_Lock_On[] = {
 	  0x002A2C5E,
 	  0x0F120000,
 };
 
-static const u32 s5k4ecgx_AE_AWB_Lock_Off[] = {
+static const u32 sr030pc50_AE_AWB_Lock_Off[] = {
 	  0x002A2C5E,
 	  0x0F120001,
 };
 
-static const u32 s5k4ecgx_Get_AE_Stable_Status[] = {
+static const u32 sr030pc50_Get_AE_Stable_Status[] = {
 	  0x002E2C74,
 };
 
-static const u32 s5k4ecgx_Get_Light_Level[] = {
+static const u32 sr030pc50_Get_Light_Level[] = {
 	  0x002C7000,
 	  0x002E2C18,
 };
 
-static const u32 s5k4ecgx_get_1st_af_search_status[] = {
+static const u32 sr030pc50_get_1st_af_search_status[] = {
 	  0x002E2EEE,
 };
 
-static const u32 s5k4ecgx_get_2nd_af_search_status[] = {
+static const u32 sr030pc50_get_2nd_af_search_status[] = {
 	  0x002E2207,
 };
 
-static const u32 s5k4ecgx_get_capture_status[] = {
+static const u32 sr030pc50_get_capture_status[] = {
 	  0x002E0530,
 };
 
-static const u32 s5k4ecgx_get_esd_status[] = {
+static const u32 sr030pc50_get_esd_status[] = {
 	  0xFCFCD000,
 	  0x002CD000,
 	  0x002E0060,
 };
 
-static const u32 s5k4ecgx_get_iso_reg[] = {
+static const u32 sr030pc50_get_iso_reg[] = {
 	  0x002C7000,
 	  0x002E2BC4,
 };
 
-static const u32 s5k4ecgx_get_shutterspeed_reg[] = {
+static const u32 sr030pc50_get_shutterspeed_reg[] = {
 	  0x002C7000,
 	  0x002E2BC0,
 };
 
 
-static const u32 s5k4ecgx_Sharpness_Minus_3[] = {
+static const u32 sr030pc50_Sharpness_Minus_3[] = {
 	  0x002A0A28,
 	  0x0F120000,
 	  0x002A0ADE,
@@ -13892,7 +13611,7 @@ static const u32 s5k4ecgx_Sharpness_Minus_3[] = {
 	  0x0F120000,
 };
 
-static const u32 s5k4ecgx_Sharpness_Plus_3[] = {
+static const u32 sr030pc50_Sharpness_Plus_3[] = {
 	  0x002A0A28,
 	  0x0F12C080,
 	  0x002A0ADE,
@@ -13905,7 +13624,7 @@ static const u32 s5k4ecgx_Sharpness_Plus_3[] = {
 	  0x0F12C080,
 };
 /* restores crop settings to full resolution */
-static const u32 s5k4ecgx_Reset_Crop[] = {
+static const u32 sr030pc50_Reset_Crop[] = {
 	0x002A0250,
 	0x0F120A00,
 	0x0F120780,
@@ -13939,5 +13658,3 @@ THE ABOVE ARE NOT DEFINED IN THE FILE THAT WE RECIEVED FROM SAMSUNG
 NEED TO CHECK IN FUTURE
 ******************************************/
 
-
-#endif /* __S5K4ECGX_REGS_1_0_H__ */
