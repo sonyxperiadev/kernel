@@ -26,6 +26,7 @@
 #include <linux/sched.h>
 #include <linux/rcupdate.h>
 #include <linux/dma-mapping.h>
+#include <linux/wait.h>
 #include <linux/dma-contiguous.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -106,6 +107,8 @@ struct pmem_region_node {
 #define DLOG(x...) do {} while (0)
 #endif
 
+DECLARE_WAIT_QUEUE_HEAD(cleaners);
+
 struct pmem_info {
 	struct miscdevice dev;
 	/* Platform device for the driver, used in CMA allocations */
@@ -114,6 +117,12 @@ struct pmem_info {
 	unsigned long base;
 	/* vitual start address of the remaped pmem space */
 	unsigned char __iomem *vbase;
+	/* high water mark in pages for this pmem space */
+	unsigned short hwm;
+	/* Total allocation done in no. of pages from this pmem space */
+	unsigned short total_allocation;
+	/* mutex to protect total_allocation */
+	struct mutex alloc_stat_lock;
 	/* total size of the pmem space */
 	unsigned long size;
 	/* number of entries in the pmem space */
@@ -199,6 +208,7 @@ static int pmem_release(struct inode *, struct file *);
 static int pmem_mmap(struct file *, struct vm_area_struct *);
 static int pmem_open(struct inode *, struct file *);
 static long pmem_ioctl(struct file *, unsigned int, unsigned long);
+static unsigned long pmem_len(int, struct pmem_data *);
 
 struct file_operations pmem_fops = {
 	.release = pmem_release,
@@ -310,6 +320,7 @@ static int pmem_release(struct inode *inode, struct file *file)
 	struct pmem_region_node *region_node;
 	struct list_head *elt, *elt2;
 	int id = get_id(file), ret = 0;
+	unsigned long len;
 
 
 	mutex_lock(&pmem[id].data_list_lock);
@@ -336,6 +347,12 @@ static int pmem_release(struct inode *inode, struct file *file)
 
 	/* if its not a conencted file and it has an allocation, free it */
 	if (!(PMEM_FLAGS_CONNECTED & data->flags) && has_allocation(file)) {
+		len = pmem_len(id, data) / PAGE_SIZE;
+
+		mutex_lock(&pmem[id].alloc_stat_lock);
+		BUG_ON(pmem[id].total_allocation < len);
+		pmem[id].total_allocation -= len;
+
 		if (pmem[id].allocator == CMA_ALLOC) {
 			ret = pmem_cma_free(id, data);
 		} else {
@@ -344,8 +361,12 @@ static int pmem_release(struct inode *inode, struct file *file)
 			up_write(&pmem[id].bitmap_sem);
 		}
 
-		if (ret)
+		if (ret) {
 			printk(KERN_ERR"pmem: freeing pages failed\n");
+			pmem[id].total_allocation += len;
+		}
+		mutex_unlock(&pmem[id].alloc_stat_lock);
+
 	}
 
 
@@ -778,6 +799,12 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		ret = -EINVAL;
 		goto error;
 	}
+
+	mutex_lock(&pmem[id].alloc_stat_lock);
+	pmem[id].total_allocation += pmem_len(id, data) / PAGE_SIZE;
+	if (pmem[id].total_allocation >= pmem[id].hwm)
+		wake_up_all(&cleaners);
+	mutex_unlock(&pmem[id].alloc_stat_lock);
 
 	vma->vm_pgoff = pmem_start_addr(id, data) >> PAGE_SHIFT;
 	vma->vm_page_prot = pmem_access_prot(file, vma->vm_page_prot);
@@ -1322,6 +1349,7 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct pmem_data *data;
 	int id = get_id(file);
+	int ret = 0;
 
 	switch (cmd) {
 	case PMEM_GET_PHYS:
@@ -1424,9 +1452,9 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			break;	
 		}
 	case PMEM_CONNECT:
-		DLOG("connect\n");
-		return pmem_connect(arg, file);
-		break;
+			DLOG("connect\n");
+			return pmem_connect(arg, file);
+			break;
 	case PMEM_CACHE_FLUSH:
 		{
 			struct pmem_region region;
@@ -1471,13 +1499,30 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #endif
 			break;
 		}
+	case PMEM_CLEANER_WAIT:
+		{
+			data = (struct pmem_data *)file->private_data;
+
+			mutex_lock(&pmem[id].alloc_stat_lock);
+			if (pmem[id].total_allocation >= pmem[id].hwm) {
+				mutex_unlock(&pmem[id].alloc_stat_lock);
+				goto done_waiting;
+
+			} else {
+				mutex_unlock(&pmem[id].alloc_stat_lock);
+				ret = wait_event_interruptible(cleaners, pmem[id].total_allocation >= pmem[id].hwm);
+			}
+done_waiting:
+			break;
+		}
+
 
 	default:
 		if (pmem[id].ioctl)
 			return pmem[id].ioctl(file, cmd, arg);
 		return -EINVAL;
 	}
-	return 0;
+	return ret;
 }
 
 void pmem_dump(void)
@@ -1539,7 +1584,7 @@ void pmem_dump(void)
 		}
 		mutex_unlock(&pmem[id].data_list_lock);
 
-		printk("Total Allocation : %08ldkB\n", total);
+		printk("Total Allocation : %08ukB\n", total);
 	}
 }
 EXPORT_SYMBOL(pmem_dump);
@@ -1693,6 +1738,7 @@ int pmem_setup(struct platform_device *pdev,
 	pmem[id].release = release;
 	init_rwsem(&pmem[id].bitmap_sem);
 	mutex_init(&pmem[id].data_list_lock);
+	mutex_init(&pmem[id].alloc_stat_lock);
 	INIT_LIST_HEAD(&pmem[id].data_list);
 	pmem[id].dev.name = pdata->name;
 	pmem[id].dev.minor = id;
@@ -1706,7 +1752,7 @@ int pmem_setup(struct platform_device *pdev,
 	}
 
 	if (pmem[id].allocator == CMA_ALLOC) {
-		pmem[id].num_entries = pmem[id].size / CONFIG_CMA_ALIGNMENT;
+		pmem[id].num_entries = pmem[id].size / PAGE_SIZE;
 		pmem[id].vbase = phys_to_virt(pmem[id].base);
 	} else {
 		pmem[id].num_entries = pmem[id].size / PMEM_MIN_ALLOC;
@@ -1746,14 +1792,24 @@ int pmem_setup(struct platform_device *pdev,
 
 	}
 
+	if ((pmem[id].size/PAGE_SIZE) > USHRT_MAX) {
+		printk(KERN_ERR"[pmem] region size of (%lukB) is not supported,	maximum pmem region can be (%lukB)\n",
+				pmem[id].size / SZ_1K,
+				USHRT_MAX * PAGE_SIZE / SZ_1K);
+		goto error_cant_remap;
+	}
+
+	pmem[id].total_allocation = 0;
+	/* Current high water mark is set to 90% of total pmem space */
+	pmem[id].hwm = 9 * (pmem[id].size / PAGE_SIZE)/ 10;
 	pmem[id].garbage_pfn = page_to_pfn(alloc_page(GFP_KERNEL));
 
 #if PMEM_DEBUG
 	debugfs_create_file(pdata->name, S_IFREG | S_IRUGO, NULL, (void *)id,
 			    &debug_fops);
 #endif
-	printk(KERN_INFO"Pmem driver initialised with (%s) allocator\n",
-			pmem[id].allocator == CMA_ALLOC ? "CMA" : "Buddy");
+	printk(KERN_INFO"Pmem driver initialised with (%s) allocator with size = %lu pages, hwm = %u pages\n",
+			pmem[id].allocator == CMA_ALLOC ? "CMA" : "Buddy", pmem[id].size/PAGE_SIZE, pmem[id].hwm);
 	return 0;
 error_cant_remap:
 	kfree(pmem[id].bitmap);

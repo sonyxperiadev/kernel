@@ -35,6 +35,7 @@
 #define PMEM_GET_TOTAL_SIZE	_IOW(PMEM_IOCTL_MAGIC, 7, unsigned int)
 #define PMEM_CACHE_FLUSH	_IOW(PMEM_IOCTL_MAGIC, 8, unsigned int)
 #define PMEM_CACHE_INVALIDATE	_IOW(PMEM_IOCTL_MAGIC, 9, unsigned int)
+#define PMEM_CLEANER_WAIT	_IO(PMEM_IOCTL_MAGIC, 10)
 
 enum {
 	NO_ALLOC = 0,
