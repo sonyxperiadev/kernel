@@ -345,6 +345,11 @@ enum v4l2_subdev_sensor_iface {
 	V4L2_SUBDEV_SENSOR_SERIAL,
 };
 
+enum v4l2_subdev_sensor_orient {
+	V4L2_SUBDEV_SENSOR_PORTRAIT,
+	V4L2_SUBDEV_SENSOR_LANDSCAPE
+};
+
 /* Each interface could use the following modes */
 /* Image sensor provides horizontal and vertical sync signals */
 #define V4L2_SUBDEV_SENSOR_MODE_PARALLEL_SYNC	0
@@ -369,6 +374,7 @@ struct v4l2_subdev_sensor_parallel_parms {
 struct v4l2_subdev_sensor_interface_parms {
 	enum v4l2_subdev_sensor_iface if_type;
 	unsigned int if_mode;
+	enum v4l2_subdev_sensor_orient orientation;
 	union {
 		struct v4l2_subdev_sensor_serial_parms serial;
 		struct v4l2_subdev_sensor_parallel_parms parallel;
