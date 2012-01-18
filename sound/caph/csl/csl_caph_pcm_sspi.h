@@ -49,6 +49,7 @@
  *  device CSL handle definition
  *
  */
+
 #define CSL_PCM_HANDLE CHAL_HANDLE
 
 /*According to PCM/I2S SSP CSL design, the transfer size for pcm and
