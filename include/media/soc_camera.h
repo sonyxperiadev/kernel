@@ -19,6 +19,7 @@
 #include <media/videobuf-core.h>
 #include <media/videobuf2-core.h>
 #include <media/v4l2-device.h>
+#include <linux/i2c-kona.h>
 
 extern struct bus_type soc_camera_bus_type;
 
@@ -126,6 +127,7 @@ struct soc_camera_link {
 	unsigned long flags;
 	int i2c_adapter_id;
 	struct i2c_board_info *board_info;
+	struct i2c_slave_platform_data i2c_pdata;
 	const char *module_name;
 	void *priv;
 
