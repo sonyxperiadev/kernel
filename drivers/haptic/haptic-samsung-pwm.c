@@ -302,13 +302,12 @@ static int samsung_pwm_haptic_probe(struct platform_device *pdev)
 	return 0;
 
 error_gpio:
-	gpio_free(pdata->gpio);
-error_enable:
 	sysfs_remove_group(&haptic->cdev.dev->kobj, &haptic_group);
-err_pwm:
+error_enable:
 	pwm_release(haptic->pwm);
-error_classdev:
+err_pwm:
 	haptic_classdev_unregister(&haptic->cdev);
+error_classdev:
 	kfree(haptic);
 	return ret;
 }
