@@ -35,6 +35,9 @@
 #include <linux/slab.h>
 #include <linux/i2c/lm8325.h>
 
+/* Enable this macro to use soft reset feature. Currently unused */
+/* #define LM8325_SOFT_RESET */
+
 /* Enable this flag to see the extra debug messages */
 /* #define DEBUG_ENABLE */
 
@@ -200,6 +203,7 @@ static void lm8325_reg_dump(struct lm8325_chip *lm)
  * datasheet. Need to check its functionality by further testing. The
  * controller registers can not be written too once it has been reset thus.
  */
+#ifdef LM8325_SOFT_RESET
 static void lm8325_soft_reset(struct lm8325_chip *lm)
 {
 	u8 buf[LM8325_MAX_DATA];
@@ -217,6 +221,7 @@ static void lm8325_soft_reset(struct lm8325_chip *lm)
 	lm8325_write(lm, 2, buf);
 
 }
+#endif
 
 #if 0
 /* This part of the code has been implemented from the RTOS driver. This
@@ -572,7 +577,7 @@ static DEVICE_ATTR(disable_kp, 0644, lm8325_show_disable, lm8325_set_disable);
 /**
  * lm8325_probe - LM8325 keyboard controller probe.
  */
-static int lm8325_probe(struct i2c_client *client, struct i2c_device_id *id)
+static int lm8325_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct lm8325_platform_data *lm8325_pdata;
 	struct input_dev *idev;
