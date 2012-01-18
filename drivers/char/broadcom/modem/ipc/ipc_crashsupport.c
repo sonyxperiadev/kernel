@@ -218,7 +218,6 @@ void ProcessCPCrashedDump(struct work_struct *work)
 }
 
 /****************************************************************
-/**
 *   Called from the IPC interrupt service thread in ipc_server.c
 *   to check if CP has crashed.
 *
@@ -257,7 +256,6 @@ int IpcCPCrashCheck(void)
 }
 
 /******************************************************************
-/**
 *   Utility function to retrieve full crash log from CP via simple
 *   handshake protocol.
 *

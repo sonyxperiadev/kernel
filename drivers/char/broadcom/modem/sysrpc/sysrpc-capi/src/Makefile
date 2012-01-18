@@ -1,3 +1,4 @@
+EXTRA_CFLAGS += -Werror
 EXTRA_CFLAGS += -DPMU_BCM59055
 
 include ./drivers/char/broadcom/modem/public/msp_include_paths.gmk

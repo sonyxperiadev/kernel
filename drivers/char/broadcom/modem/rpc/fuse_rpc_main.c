@@ -76,7 +76,7 @@ typedef struct {
 static spinlock_t mLock;
 static wait_queue_head_t mWaitQ;
 
-SysRpcMsgInfo_t gSysRpcMsgInfo = { 0 };
+SysRpcMsgInfo_t gSysRpcMsgInfo = { LIST_HEAD_INIT(gSysRpcMsgInfo.mList), NULL };
 
 /***************************************************************************/
 /**

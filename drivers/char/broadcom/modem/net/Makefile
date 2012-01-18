@@ -1,5 +1,5 @@
 #Makefile for KRIL & CAPI2
-#EXTRA_CFLAGS := -Werror
+EXTRA_CFLAGS += -Werror
 
 # common definitons for all capi2 related include paths
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/ipc/ipc_CIB/public/

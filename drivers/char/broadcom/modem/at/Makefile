@@ -1,5 +1,5 @@
 #Makefile for at kernel
-#EXTRA_CFLAGS := -Werror
+EXTRA_CFLAGS += -Werror
 
 # for capi2_phonectrl_api.h
 # common definitons for all capi2 related include paths

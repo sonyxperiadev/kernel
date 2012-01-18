@@ -1,5 +1,5 @@
 #Makefile for IPC sources
-#EXTRA_CFLAGS := -Werror
+EXTRA_CFLAGS += -Werror
 
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/ipc/
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/public

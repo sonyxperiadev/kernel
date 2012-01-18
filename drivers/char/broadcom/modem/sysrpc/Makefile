@@ -1,4 +1,4 @@
-#EXTRA_CFLAGS := -Werror
+EXTRA_CFLAGS += -Werror
 
 EXTRA_CFLAGS += -DPMU_BCM59055
 
