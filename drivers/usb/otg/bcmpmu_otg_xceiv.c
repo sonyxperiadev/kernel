@@ -27,7 +27,6 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <linux/mfd/bcmpmu.h>
-
 #include <linux/io.h>
 #include <mach/io_map.h>
 #include <linux/usb/bcm_hsotgctrl.h>
@@ -256,10 +255,11 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 				  msecs_to_jiffies(T_SRP_FAILURE_MAX_IN_MS);
 			add_timer(&xceiv_data->otg_xceiver.srp_failure_timer);
 		}
-#endif
+#else
 		/* Shutdown the core */
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
 					xceiver.notifier, USB_EVENT_NONE, NULL);
+#endif
 
 	} else {
 		bcm_hsotgctrl_phy_set_id_stat(false);
@@ -502,6 +502,7 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 
 static void bcmpmu_otg_xceiv_chg_detect_handler(struct work_struct *work)
 {
+#ifndef CONFIG_USB_OTG
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(work, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_chg_detect_work);
@@ -514,6 +515,10 @@ static void bcmpmu_otg_xceiv_chg_detect_handler(struct work_struct *work)
 	if (!id_gnd)		/* Non-ACA interpretation for now */
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.
 					   notifier, USB_EVENT_VBUS, NULL);
+#else
+	/* Core is already up so just set the Vbus status */
+	bcm_hsotgctrl_phy_set_vbus_stat(true);
+#endif
 }
 
 static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
