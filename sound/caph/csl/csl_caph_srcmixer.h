@@ -1,28 +1,30 @@
-/*******************************************************************************************
-Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.                                */
-
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
-
-
+/**************************************************************************
+ * Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.          */
+/*                                                                        */
+/*     Unless you and Broadcom execute a separate written software license*/
+/*     agreement governing use of this software, this software is licensed*/
+/*     to you under the terms of the GNU General Public License version 2 */
+/*     (the GPL), available at                                            */
+/*                                                                        */
+/*     http://www.broadcom.com/licenses/GPLv2.php                         */
+/*                                                                        */
+/*     with the following added to such license:                          */
+/*                                                                        */
+/*     As a special exception, the copyright holders of this software give*/
+/*     you permission to link this software with independent modules, and */
+/*     to copy and distribute the resulting executable under terms of your*/
+/*     choice, provided that you also meet, for each linked             */
+/*     independent module, the terms and conditions of the license of that*/
+/*     module.An independent module is a module which is not derived from */
+/*     this software.  The special exception does not apply to any        */
+/*     modifications of the software.                                     */
+/*                                                                        */
+/*     Notwithstanding the above, under no circumstances may you combine  */
+/*     this software in any way with any other Broadcom software provided */
+/*     under a license other than the GPL,                                */
+/*     without Broadcom's express prior written consent.                  */
+/*                                                                        */
+/**************************************************************************/
 /**
 *
 *   @file   csl_caph_srcmixer.h
@@ -30,7 +32,6 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 *   @brief  This file contains the definition for csl SRCMixer layer
 *
 ****************************************************************************/
-
 
 #ifndef _CSL_CAPH_SRCMIXER_
 #define _CSL_CAPH_SRCMIXER_
@@ -71,34 +72,35 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 /**
 * CAPH SRCMixer Mixer gains
 ******************************************************************************/
-typedef struct CSL_CAPH_SRCM_MIX_GAIN_t
-{
+struct CSL_CAPH_SRCM_MIX_GAIN_t {
 	UInt16 mixInGainL;
 	UInt16 mixInGainR;
 	UInt16 mixOutGainL;
 	UInt16 mixOutGainR;
 	UInt16 mixOutCoarseGainL;
 	UInt16 mixOutCoarseGainR;
-}CSL_CAPH_SRCM_MIX_GAIN_t;
+};
+
+#define CSL_CAPH_SRCM_MIX_GAIN_t struct CSL_CAPH_SRCM_MIX_GAIN_t
 
 /**
 * CAPH SRCMixer input channel sample rate
 ******************************************************************************/
-typedef enum
-{
+enum CSL_CAPH_SRCM_INSAMPLERATE_e {
 	CSL_CAPH_SRCMIN_8KHZ,
 	CSL_CAPH_SRCMIN_16KHZ,
 	CSL_CAPH_SRCMIN_44_1KHZ,
 	CSL_CAPH_SRCMIN_48KHZ,
-}CSL_CAPH_SRCM_INSAMPLERATE_e;
+};
+
+#define CSL_CAPH_SRCM_INSAMPLERATE_e enum CSL_CAPH_SRCM_INSAMPLERATE_e
 
 /**
 * CAPH SRCMixer input channel
 ******************************************************************************/
-typedef enum
-{
+enum CSL_CAPH_SRCM_INCHNL_e {
 	CSL_CAPH_SRCM_INCHNL_NONE = 0x0000,
-    CSL_CAPH_SRCM_MONO_CH1 = 0x0001,
+	CSL_CAPH_SRCM_MONO_CH1 = 0x0001,
 	CSL_CAPH_SRCM_MONO_CH2 = 0x0002,
 	CSL_CAPH_SRCM_MONO_CH3 = 0x0004,
 	CSL_CAPH_SRCM_MONO_CH4 = 0x0008,
@@ -107,66 +109,71 @@ typedef enum
 	CSL_CAPH_SRCM_STEREO_PASS_CH2_L = 0x0040,
 	CSL_CAPH_SRCM_STEREO_PASS_CH2_R = 0x0080,
 	CSL_CAPH_SRCM_STEREO_CH5_L = 0x0100,
-	CSL_CAPH_SRCM_STEREO_CH5_R = 0x0200,    
-    CSL_CAPH_SRCM_MONO_CH = (CSL_CAPH_SRCM_MONO_CH1
-                            |CSL_CAPH_SRCM_MONO_CH2
-                            |CSL_CAPH_SRCM_MONO_CH3
-                            |CSL_CAPH_SRCM_MONO_CH4),
-    CSL_CAPH_SRCM_STEREO_PASS_CH1 = (CSL_CAPH_SRCM_STEREO_PASS_CH1_L
-                                    |CSL_CAPH_SRCM_STEREO_PASS_CH1_R),
+	CSL_CAPH_SRCM_STEREO_CH5_R = 0x0200,
+	CSL_CAPH_SRCM_MONO_CH = (CSL_CAPH_SRCM_MONO_CH1
+				 | CSL_CAPH_SRCM_MONO_CH2
+				 | CSL_CAPH_SRCM_MONO_CH3
+				 | CSL_CAPH_SRCM_MONO_CH4),
+	CSL_CAPH_SRCM_STEREO_PASS_CH1 = (CSL_CAPH_SRCM_STEREO_PASS_CH1_L
+					 | CSL_CAPH_SRCM_STEREO_PASS_CH1_R),
 	CSL_CAPH_SRCM_STEREO_PASS_CH2 = (CSL_CAPH_SRCM_STEREO_PASS_CH2_L
-                                    |CSL_CAPH_SRCM_STEREO_PASS_CH2_R),
+					 | CSL_CAPH_SRCM_STEREO_PASS_CH2_R),
 	CSL_CAPH_SRCM_STEREO_PASS_CH = (CSL_CAPH_SRCM_STEREO_PASS_CH1
-                                    |CSL_CAPH_SRCM_STEREO_PASS_CH2),    
+					| CSL_CAPH_SRCM_STEREO_PASS_CH2),
 	CSL_CAPH_SRCM_STEREO_CH5 = (CSL_CAPH_SRCM_STEREO_CH5_L
-                                |CSL_CAPH_SRCM_STEREO_CH5_R),
+				    | CSL_CAPH_SRCM_STEREO_CH5_R),
 	CSL_CAPH_SRCM_MONO_PASS_CH3 = 0x0400,
 	CSL_CAPH_SRCM_MONO_PASS_CH4 = 0x0800,
 	CSL_CAPH_SRCM_MONO_PASS_CH = (CSL_CAPH_SRCM_MONO_PASS_CH3
-                                |CSL_CAPH_SRCM_MONO_PASS_CH4),	
-}CSL_CAPH_SRCM_INCHNL_e;
+				      | CSL_CAPH_SRCM_MONO_PASS_CH4),
+};
+
+#define CSL_CAPH_SRCM_INCHNL_e enum CSL_CAPH_SRCM_INCHNL_e
 
 /**
 * CAPH SRCMixer TAP outnput channel
 ******************************************************************************/
-typedef enum
-{
+enum CSL_CAPH_SRCM_SRC_OUTCHNL_e {
 	CSL_CAPH_SRCM_TAP_CH_NONE,
 	CSL_CAPH_SRCM_TAP_MONO_CH1,
 	CSL_CAPH_SRCM_TAP_MONO_CH2,
 	CSL_CAPH_SRCM_TAP_MONO_CH3,
 	CSL_CAPH_SRCM_TAP_MONO_CH4,
 	CSL_CAPH_SRCM_TAP_STEREO_CH5,
-}CSL_CAPH_SRCM_SRC_OUTCHNL_e;
+};
+
+#define CSL_CAPH_SRCM_SRC_OUTCHNL_e enum CSL_CAPH_SRCM_SRC_OUTCHNL_e
 
 /**
 * CAPH SRCMixer output channel
 ******************************************************************************/
-typedef enum
-{
-    CSL_CAPH_SRCM_CH_NONE = 0x00,
+enum CSL_CAPH_SRCM_MIX_OUTCHNL_e {
+	CSL_CAPH_SRCM_CH_NONE = 0x00,
 	CSL_CAPH_SRCM_STEREO_CH1_L = 0x01,
-    CSL_CAPH_SRCM_STEREO_CH1_R = 0x02,
-	CSL_CAPH_SRCM_STEREO_CH1 = (CSL_CAPH_SRCM_STEREO_CH1_L|CSL_CAPH_SRCM_STEREO_CH1_R),
-    CSL_CAPH_SRCM_STEREO_CH2_L = 0x04,
+	CSL_CAPH_SRCM_STEREO_CH1_R = 0x02,
+	CSL_CAPH_SRCM_STEREO_CH1 =
+	    (CSL_CAPH_SRCM_STEREO_CH1_L | CSL_CAPH_SRCM_STEREO_CH1_R),
+	CSL_CAPH_SRCM_STEREO_CH2_L = 0x04,
 	CSL_CAPH_SRCM_STEREO_CH2_R = 0x08,
-}CSL_CAPH_SRCM_MIX_OUTCHNL_e;
+};
+
+#define CSL_CAPH_SRCM_MIX_OUTCHNL_e enum CSL_CAPH_SRCM_MIX_OUTCHNL_e
 
 /**
 * CAPH SRCMixer output channel sample rate
 ******************************************************************************/
-typedef enum
-{
+enum CSL_CAPH_SRCM_OUTSAMPLERATE_e {
 	CSL_CAPH_SRCMOUT_8KHZ,
 	CSL_CAPH_SRCMOUT_16KHZ,
 	CSL_CAPH_SRCMOUT_48KHZ,
-}CSL_CAPH_SRCM_OUTSAMPLERATE_e;
+};
+
+#define CSL_CAPH_SRCM_OUTSAMPLERATE_e enum CSL_CAPH_SRCM_OUTSAMPLERATE_e
 
 /**
 * CAPH SRCMixer SRC/Mixing Route Configuration Parameters
 ******************************************************************************/
-typedef struct 
-{
+struct CSL_CAPH_SRCM_ROUTE_t {
 	CSL_CAPH_SRCM_INCHNL_e inChnl;
 	UInt8 inThres;
 	CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate;
@@ -176,32 +183,34 @@ typedef struct
 	UInt8 outThres;
 	CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate;
 	CSL_CAPH_DATAFORMAT_e outDataFmt;
-    CSL_CAPH_DEVICE_e sink;
-}CSL_CAPH_SRCM_ROUTE_t;
+	CSL_CAPH_DEVICE_e sink;
+};
+
+#define CSL_CAPH_SRCM_ROUTE_t struct CSL_CAPH_SRCM_ROUTE_t
 
 /**
 * CAPH SRCMixer FIFO buffer
 ******************************************************************************/
-typedef enum
-{
-    CSL_CAPH_SRCM_FIFO_NONE,
-    CSL_CAPH_SRCM_MONO_CH1_FIFO,
-    CSL_CAPH_SRCM_MONO_CH2_FIFO,
-    CSL_CAPH_SRCM_MONO_CH3_FIFO,
-    CSL_CAPH_SRCM_MONO_CH4_FIFO,
-    CSL_CAPH_SRCM_STEREO_PASS_CH1_FIFO,
-    CSL_CAPH_SRCM_STEREO_PASS_CH2_FIFO,
-    CSL_CAPH_SRCM_STEREO_CH5_FIFO,
-    CSL_CAPH_SRCM_TAP_MONO_CH1_FIFO,
-    CSL_CAPH_SRCM_TAP_MONO_CH2_FIFO,
-    CSL_CAPH_SRCM_TAP_MONO_CH3_FIFO,
-    CSL_CAPH_SRCM_TAP_MONO_CH4_FIFO,
-    CSL_CAPH_SRCM_TAP_STEREO_CH5_FIFO,
-    CSL_CAPH_SRCM_STEREO_CH1_FIFO,
-    CSL_CAPH_SRCM_STEREO_CH2_L_FIFO,
-    CSL_CAPH_SRCM_STEREO_CH2_R_FIFO,
-}CSL_CAPH_SRCM_FIFO_e;
+enum CSL_CAPH_SRCM_FIFO_e {
+	CSL_CAPH_SRCM_FIFO_NONE,
+	CSL_CAPH_SRCM_MONO_CH1_FIFO,
+	CSL_CAPH_SRCM_MONO_CH2_FIFO,
+	CSL_CAPH_SRCM_MONO_CH3_FIFO,
+	CSL_CAPH_SRCM_MONO_CH4_FIFO,
+	CSL_CAPH_SRCM_STEREO_PASS_CH1_FIFO,
+	CSL_CAPH_SRCM_STEREO_PASS_CH2_FIFO,
+	CSL_CAPH_SRCM_STEREO_CH5_FIFO,
+	CSL_CAPH_SRCM_TAP_MONO_CH1_FIFO,
+	CSL_CAPH_SRCM_TAP_MONO_CH2_FIFO,
+	CSL_CAPH_SRCM_TAP_MONO_CH3_FIFO,
+	CSL_CAPH_SRCM_TAP_MONO_CH4_FIFO,
+	CSL_CAPH_SRCM_TAP_STEREO_CH5_FIFO,
+	CSL_CAPH_SRCM_STEREO_CH1_FIFO,
+	CSL_CAPH_SRCM_STEREO_CH2_L_FIFO,
+	CSL_CAPH_SRCM_STEREO_CH2_R_FIFO,
+};
 
+#define CSL_CAPH_SRCM_FIFO_e enum CSL_CAPH_SRCM_FIFO_e
 
 /**
 *
@@ -209,12 +218,12 @@ typedef enum
 *
 *  @param   baseAddress  (in) mapped address of the caph srcmixer block to be initialized
 *
-*  @return 
+*  @return
 *****************************************************************************/
 void csl_caph_srcmixer_init(UInt32 baseAddress, UInt32 caphIntcHandle);
 /**
 *
-*  @brief  deinitialize the caph srcmixer 
+*  @brief  deinitialize the caph srcmixer
 *
 *  @param  void
 *
@@ -231,8 +240,12 @@ void csl_caph_srcmixer_deinit(void);
 *
 *  @return CSL_CAPH_SRCM_INCHNL_e srcmixer input channel
 *****************************************************************************/
-CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dataFormat, 
-                              CSL_CAPH_SRCM_INSAMPLERATE_e sampleRate, AUDIO_SAMPLING_RATE_t srOut);
+CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
+		dataFormat,
+		CSL_CAPH_SRCM_INSAMPLERATE_e
+		sampleRate,
+		AUDIO_SAMPLING_RATE_t
+		srOut);
 
 /**
 *
@@ -242,7 +255,8 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e dat
 *
 *  @return CSL_CAPH_SRCM_MIX_OUTCHNL_e srcmixer output channel
 *****************************************************************************/
-CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEVICE_e sink);
+CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEVICE_e
+							     sink);
 
 /**
 *
@@ -264,7 +278,6 @@ void csl_caph_srcmixer_release_inchnl(CSL_CAPH_SRCM_INCHNL_e chnl);
 *****************************************************************************/
 void csl_caph_srcmixer_release_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e chnl);
 
-
 /**
 *
 *  @brief  release a caph srcmixer tap output channel
@@ -277,7 +290,7 @@ void csl_caph_srcmixer_release_tapoutchnl(CSL_CAPH_SRCM_SRC_OUTCHNL_e chnl);
 
 /**
 *
-*  @brief  configure the caph srcmixer mixer route 
+*  @brief  configure the caph srcmixer mixer route
 *
 *  @param   chnl_config  (in) caph srcmixer mixer configuration parameter
 *
@@ -287,7 +300,7 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig);
 
 /**
 *
-*  @brief  configure the caph srcmixer src route 
+*  @brief  configure the caph srcmixer src route
 *
 *  @param   chnl_config  (in) caph srcmixer src configuration parameter
 *
@@ -297,7 +310,7 @@ void csl_caph_srcmixer_config_src_route(CSL_CAPH_SRCM_ROUTE_t routeConfig);
 
 /**
 *
-*  @brief  change the sample ratge of the caph srcmixer src 
+*  @brief  change the sample ratge of the caph srcmixer src
 *
 *  @param   chnl_config  (in) caph srcmixer src configuration parameter
 *
@@ -313,7 +326,8 @@ void csl_caph_srcmixer_change_samplerate(CSL_CAPH_SRCM_ROUTE_t routeConfig);
 *
 *  @return CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate
 *****************************************************************************/
-CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcmixer_samplerate_mapping(CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate); 
+CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcmixer_samplerate_mapping(
+		CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate);
 
 
 /**
@@ -327,9 +341,9 @@ CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcmixer_samplerate_mapping(CSL_CAPH_SRCM
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl, 
-                                    CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                                    int gainL_mB, int gainR_mB);
+void csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl,
+		CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+		int gainL_mB, int gainR_mB);
 
 /**
 *
@@ -341,8 +355,8 @@ void csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mix_all_in_gain( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-									int gainL_mB, int gainR_mB);
+void csl_caph_srcmixer_set_mix_all_in_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+		int gainL_mB, int gainR_mB);
 
 
 /**
@@ -354,8 +368,8 @@ void csl_caph_srcmixer_set_mix_all_in_gain( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                                     int gain_mB);
+void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+		int gain_mB);
 
 
 /**
@@ -367,13 +381,12 @@ void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mix_out_bit_select(
-		CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, 
-                unsigned int bit_shift);
+void csl_caph_srcmixer_set_mix_out_bit_select(CSL_CAPH_SRCM_MIX_OUTCHNL_e
+		outChnl, unsigned int bit_shift);
 
 /**
 *
-*  @brief  get the SRCMixer FIFO buffer address 
+*  @brief  get the SRCMixer FIFO buffer address
 *
 *  @param   fifo  (in) caph srcmixer FIFO buffer
 *
@@ -382,24 +395,24 @@ void csl_caph_srcmixer_set_mix_out_bit_select(
 UInt32 csl_caph_srcmixer_get_fifo_addr(CAPH_SRCMixer_FIFO_e fifo);
 /**
 *
-*  @brief  get the SRCMixer in channle FIFO 
+*  @brief  get the SRCMixer in channle FIFO
 *
 *  @param   inChnl  (in) caph srcmixer in channel
 *
 *  @return CAPH_SRCMixer_FIFO_e fifo
 *****************************************************************************/
-CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_inchnl_fifo(
-                                                   CSL_CAPH_SRCM_INCHNL_e inChnl);
+CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_inchnl_fifo(CSL_CAPH_SRCM_INCHNL_e
+		inChnl);
 /**
 *
-*  @brief  get the SRCMixer out channel FIFO 
+*  @brief  get the SRCMixer out channel FIFO
 *
 *  @param   outChnl  (in) caph srcmixer out channel
 *
 *  @return CAPH_SRCMixer_FIFO_e fifo
 *****************************************************************************/
-CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_outchnl_fifo(
-                                                   CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
+CAPH_SRCMixer_FIFO_e
+csl_caph_srcmixer_get_outchnl_fifo(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
 /**
 *
 *  @brief  get the SRCMixer Tap Out channel FIFO
@@ -408,51 +421,51 @@ CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_outchnl_fifo(
 *
 *  @return CAPH_SRCMixer_FIFO_e fifo
 *****************************************************************************/
-CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_tapoutchnl_fifo(
-                                                   CSL_CAPH_SRCM_SRC_OUTCHNL_e outChnl);
+CAPH_SRCMixer_FIFO_e
+csl_caph_srcmixer_get_tapoutchnl_fifo(CSL_CAPH_SRCM_SRC_OUTCHNL_e outChnl);
 /**
 *
-*  @brief  get the SRCMixer in channel trigger 
+*  @brief  get the SRCMixer in channel trigger
 *
 *  @param   fifo  (in) caph srcmixer in channel
 *
 *  @return CAPH_SWITCH_TRIGGER_e trigger
 *****************************************************************************/
-CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_inchnl_trigger(
-                                                   CSL_CAPH_SRCM_INCHNL_e inChnl);
+CAPH_SWITCH_TRIGGER_e
+csl_caph_srcmixer_get_inchnl_trigger(CSL_CAPH_SRCM_INCHNL_e inChnl);
 /**
 *
-*  @brief  get the SRCMixer in sample rate 
+*  @brief  get the SRCMixer in sample rate
 *
 *  @param   sampleRate  (in) audio sample rate
 *
 *  @return CSL_CAPH_SRCM_INSAMPLERATE_e
 *****************************************************************************/
-CSL_CAPH_SRCM_INSAMPLERATE_e csl_caph_srcmixer_get_srcm_insamplerate(
-								AUDIO_SAMPLING_RATE_t sampleRate);
+CSL_CAPH_SRCM_INSAMPLERATE_e
+csl_caph_srcmixer_get_srcm_insamplerate(AUDIO_SAMPLING_RATE_t sampleRate);
 /**
 *
-*  @brief  get the SRCMixer out sample rate 
+*  @brief  get the SRCMixer out sample rate
 *
 *  @param   sampleRate  (in) audio sample rate
 *
 *  @return CSL_CAPH_SRCM_OUTSAMPLERATE_e
 *****************************************************************************/
-CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcmixer_get_srcm_outsamplerate(
-								AUDIO_SAMPLING_RATE_t sampleRate);
+CSL_CAPH_SRCM_OUTSAMPLERATE_e
+csl_caph_srcmixer_get_srcm_outsamplerate(AUDIO_SAMPLING_RATE_t sampleRate);
 /**
 *
-*  @brief  get one SRCMixer chal inchnl 
+*  @brief  get one SRCMixer chal inchnl
 *
 *  @param   sampleRate  (in) csl inchnl
 *
 *  @return CAPH_SRCMixer_CHNL_e
 *****************************************************************************/
-CAPH_SRCMixer_CHNL_e csl_caph_srcmixer_get_single_chal_inchnl(
-                                            CSL_CAPH_SRCM_INCHNL_e inChnl);
+CAPH_SRCMixer_CHNL_e
+csl_caph_srcmixer_get_single_chal_inchnl(CSL_CAPH_SRCM_INCHNL_e inChnl);
 /**
 *
-*  @brief  get the multiple SRCMixer chal inchnls 
+*  @brief  get the multiple SRCMixer chal inchnls
 *
 *  @param   inChnl  (in) multiple csl inchnl
 *
@@ -481,7 +494,7 @@ void csl_caph_srcmixer_set_inchnl_status(CSL_CAPH_SRCM_INCHNL_e chnl);
 *  @return void
 *****************************************************************************/
 void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
-                                          CSL_CAPH_SRCM_INCHNL_e inChnl);
+				     CSL_CAPH_SRCM_INCHNL_e inChnl);
 
 /**
 *
@@ -491,13 +504,14 @@ void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 *
 *  @return CSL_CAPH_SRCM_SRC_OUTCHNL_e SRC TAP output channel
 ****************************************************************************/
-CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAPH_SRCM_INCHNL_e inChnl);
+CSL_CAPH_SRCM_SRC_OUTCHNL_e
+csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAPH_SRCM_INCHNL_e inChnl);
 
 /**
 *
 *  @brief	Set isSTIHF flag. TRUE: stereo; FALSE: mono
 *
-*  @param   stIHF : TRUE-stereo, FALSE-mono 
+*  @param   stIHF : TRUE-stereo, FALSE-mono
 *
 *  @return void
 ****************************************************************************/
@@ -505,44 +519,48 @@ void csl_caph_srcmixer_SetSTIHF(Boolean stIHF);
 
 /**
 *
-*  @brief  enable caph tapin intr 
+*  @brief  enable caph tapin intr
 *
 *  @param   chnl  (in) caph src channel
 *  @param   csl_owner  (in) owner of this caph src channel
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_intc_enable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
+void csl_caph_intc_enable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e chnl,
+		CSL_CAPH_ARM_DSP_e csl_owner);
 /**
 *
-*  @brief  disable caph tapin intr  
+*  @brief  disable caph tapin intr
 *
 *  @param   chnl  (in) caph src channel
 *  @param   csl_owner  (in) owner of this caph src channel
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_intc_disable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
+void csl_caph_intc_disable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e chnl,
+		CSL_CAPH_ARM_DSP_e csl_owner);
 /**
 *
-*  @brief  enable caph tapout intr 
+*  @brief  enable caph tapout intr
 *
 *  @param   chnl  (in) caph src channel
 *  @param   csl_owner  (in) owner of this caph src channel
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
+void csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl,
+		CSL_CAPH_ARM_DSP_e csl_owner);
 /**
 *
-*  @brief  disable caph tapout intr  
+*  @brief  disable caph tapout intr
 *
 *  @param   chnl  (in) caph src channel
 *  @param   csl_owner  (in) owner of this caph src channel
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
+void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl,
+		CSL_CAPH_ARM_DSP_e csl_owner);
 
 /**
 *
@@ -574,5 +592,4 @@ void csl_caph_srcmixer_set_linear_filter(CSL_CAPH_SRCM_INCHNL_e inChnl);
 ****************************************************************************/
 void csl_caph_srcmixer_set_minimum_filter(CSL_CAPH_SRCM_INCHNL_e inChnl);
 
-#endif // _CSL_CAPH_SRCMIXER_
-
+#endif /* _CSL_CAPH_SRCMIXER_ */
