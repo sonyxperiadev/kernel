@@ -330,8 +330,10 @@ static ssize_t brvsens_read(struct file* file, char* buf, size_t count, loff_t* 
     wait_event_interruptible((brvsens_data.esig), (kfifo_len(&(brvsens_data.ebuff) ) > 0) );
 	
     // transfer to user land
-    kfifo_to_user( &(brvsens_data.ebuff), buf, count, &iRead);
-
+    if(kfifo_to_user( &(brvsens_data.ebuff), buf, count, &iRead) < 0) {
+        printk(KERN_ERR "[%s]: failed to copy data to user\n", __FUNCTION__);	
+        return -EFAULT;
+    }
     return iRead;
 }
 
