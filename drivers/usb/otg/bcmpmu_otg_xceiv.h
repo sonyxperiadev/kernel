@@ -15,29 +15,17 @@
 #ifndef _BCMPMU_OTG_XCEIV_H
 #define _BCMPMU_OTG_XCEIV_H
 
+#define T_NO_ADP_DELAY_MIN_IN_MS	5000
+
 struct bcm_otg_xceiver {
 	struct otg_transceiver xceiver;
-	/* ADP functions and associated data structures */
-#ifdef CONFIG_MFD_BCMPMU
-	int (*do_adp_calibration_probe)(struct bcmpmu *bcmpmu);
-	int (*do_adp_probe)(struct bcmpmu *bcmpmu);
-	int (*do_adp_sense)(struct bcmpmu *bcmpmu);
-	int (*do_adp_sense_then_probe)(struct bcmpmu *bcmpmu);
-#else
-	int (*do_adp_calibration_probe)(struct bcm590xx *bcm590xx);
-	int (*do_adp_probe)(struct bcm590xx *bcm590xx);
-	int (*do_adp_sense)(struct bcm590xx *bcm590xx);
-	int (*do_adp_sense_then_probe)(struct bcm590xx *bcm590xx);
-#endif	
+	bool otg_vbus_off;
+	/* For future expansion */
 };
 
 struct bcmpmu_otg_xceiv_data {
 	struct device *dev;
-#ifdef CONFIG_MFD_BCMPMU
 	struct bcmpmu *bcmpmu;
-#else
-	struct bcm590xx *bcm590xx;
-#endif
 
 	struct bcm_otg_xceiver otg_xceiver;
 
@@ -51,12 +39,16 @@ struct bcmpmu_otg_xceiv_data {
 	struct work_struct bcm_otg_adp_change_work;
 	struct work_struct bcm_otg_id_status_change_work;
 	struct work_struct bcm_otg_chg_detect_work;
+	struct delayed_work bcm_otg_delayed_adp_work;
 
 	/* OTG notifier blocks for each event */
 	struct notifier_block bcm_otg_id_chg_notifier;
 	struct notifier_block bcm_otg_vbus_validity_notifier;
 	struct notifier_block bcm_otg_vbus_a_invalid_notifier;
 	struct notifier_block bcm_otg_chg_detection_notifier;
+	struct notifier_block bcm_otg_adp_calib_done_notifier;
+	struct notifier_block bcm_otg_adp_change_done_notifier;
+	struct notifier_block bcm_otg_adp_sns_end_notifier;
 
 	bool host;
 	bool vbus_enabled;
