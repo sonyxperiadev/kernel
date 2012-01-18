@@ -652,9 +652,9 @@ struct bcmpmu_adc_setting {
 };
 
 enum bcmpmu_adc_flags {
-	PMU_ADC_RAW_ONLY = 1,
-	PMU_ADC_UNIT_ONLY,
 	PMU_ADC_RAW_AND_UNIT,
+	PMU_ADC_RAW_ONLY,
+	PMU_ADC_UNIT_ONLY,
 };
 
 struct bcmpmu_adc_req {
