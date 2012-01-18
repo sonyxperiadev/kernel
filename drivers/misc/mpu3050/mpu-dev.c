@@ -1527,7 +1527,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 			(PFNACTIVATE)mpu6050_set_power_mode,
 			(PFNREAD)mpu6050_read_gyro);   /* read callback */
 
-#if 0
+#ifndef CONFIG_MPU_SENSORS_COMPASS_NONE
 	brvsens_register(SENSOR_HANDLE_COMPASS,
 			MPU_NAME,
 			(void*)client,
