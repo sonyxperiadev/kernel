@@ -181,8 +181,6 @@ Int32   NT35582_WVGA_SMI_Update_ExtFb (
 
 static unsigned int g_bus_width = 16;
 
-static int g_rotation_enabled = 0;
-
 static DISPDRV_T NT35582_WVGA_SMI_Drv =
 {
    &NT35582_WVGA_SMI_Init,                  // init
@@ -1252,7 +1250,7 @@ Int32 NT35582_WVGA_SMI_Update (
 	req.buff 	   = (void *)((UInt32)lcdDrv->frameBuffer  + 
 		lcdDrv->panelData->width * lcdDrv->panelData->height * lcdDrv->bpp);
     else
-	req.buff = fb_idx;
+	req.buff = (void*)fb_idx;
 
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s fb phys = 0x%08x\n", __FUNCTION__,  (unsigned int)req.buff);
 

@@ -75,6 +75,7 @@
 #include <plat/csl/csl_tectl_vc4lite.h>
 #endif
 #endif
+#undef LCD_DBG
 #define LCD_DBG(id, fmt, args...)   //      printk(KERN_ERR fmt, ##args)
 #include "lcd_s6d05a1x31.h" 
 #define VC            (0)
@@ -334,7 +335,6 @@ static void DISPDRV_WrCmndPn(
     DISPDRV_PANEL_T *pPanel = (DISPDRV_PANEL_T *)drvH;
     CSL_DSI_CMND_t      msg;
   //  UInt8               msgData[4];
-	UInt32 i;
 	
     if(Pn <=2)
 	{
@@ -545,53 +545,6 @@ static int DISPDRV_IoCtlRd(
     return ( res );
 } // bcm91008_alex_IoCtlRd
 
-//*****************************************************************************
-//
-// Function Name:  DISPDRV_ReadID
-// 
-// Parameters:     
-//
-// Description:    
-//
-//*****************************************************************************
-
-static int DISPDRV_ReadID( DISPDRV_HANDLE_T drvH,UInt8 reg )
-{
-	DISPDRV_PANEL_T  *pPanel = (DISPDRV_PANEL_T *)drvH;
-	CSL_DSI_CMND_t      	msg;         
-	volatile CSL_DSI_REPLY_t 	rxMsg;	    // DSI RX message
-	UInt8               	txData[1];  // DCS Rd Command
-	volatile UInt8             	rxBuff[1];  // Read Buffer
-	Int32               	res = 0;
-	CSL_LCD_RES_T       	cslRes;
-	
-    
-    
-	msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
-	msg.msg        = &txData[0];
-	msg.msgLen     = 1;
-	msg.vc         = VC;
-	msg.isLP       = DISPDRV_CMND_IS_LP;
-	msg.isLong     = FALSE;
-	msg.endWithBta = TRUE;
-
-	rxMsg.pReadReply = (UInt8 *)&rxBuff[0];
-	msg.reply      = (CSL_DSI_REPLY_t *)&rxMsg;
-
-    	
-	txData[0] = reg;                                    
-	cslRes = CSL_DSI_SendPacket( pPanel->clientH, &msg, FALSE );
-	if( (cslRes != CSL_LCD_OK) || ((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0) )
-	{
-		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
-			"Reading From Reg[0x%08X]\n\r", 
-			__FUNCTION__, (unsigned int)RDID1 );
-		return -1;   
-		
-	}
-	return(rxBuff[0]);    
-    
-} // bcm91008_ale
 //*****************************************************************************
 //
 // Function Name:   bcm92416_hvga_ExecCmndList
@@ -1047,7 +1000,7 @@ Int32 DISPDRV_PowerControl (
                         __FUNCTION__ );
                     break; 
                 case DISP_PWR_SLEEP_ON:
-                    DISPDRV_ExecCmndList(drvH, &exit_sleep_seq_AUO[0]); 
+			DISPDRV_ExecCmndList(drvH, (pNEW_DISPCTRL_REC_T)&exit_sleep_seq_AUO[0]);
                     OSTASK_Sleep ( 120 );
 #ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
 			gpio_set_value_cansleep(95, 1);
@@ -1070,7 +1023,7 @@ Int32 DISPDRV_PowerControl (
         case DISPLAY_POWER_STATE_SLEEP:
             if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
             {
-		  DISPDRV_ExecCmndList(drvH, &enter_sleep_seq_AUO[0]);              
+		DISPDRV_ExecCmndList(drvH, (pNEW_DISPCTRL_REC_T)&enter_sleep_seq_AUO[0]);
                 OSTASK_Sleep ( 120 );
                 pPanel->pwrState = DISP_PWR_SLEEP_ON;
                 LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-IN\n\r",

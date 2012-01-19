@@ -126,22 +126,9 @@ typedef struct
 } LQ043Y1DX01_PANEL_t;   
 
 // LOCAL FUNCTIONs
-static int      lq043y1dx01_IoCtlRd( 
-                    DISPDRV_HANDLE_T        drvH, 
-                    DISPDRV_CTRL_RW_REG*   acc );
-                    
-static void     lq043y1dx01_IoCtlWr( 
-                    DISPDRV_HANDLE_T        drvH, 
-                    DISPDRV_CTRL_RW_REG*   acc );
-
 static void     lq043y1dx01_WrCmndP0  ( 
                     DISPDRV_HANDLE_T        drvH, 
                     UInt32                  reg );
-                    
-static void     lq043y1dx01_WrCmndP1  ( 
-                    DISPDRV_HANDLE_T        drvH, 
-                    UInt32                  reg,
-                    UInt32                  val );
 
 // DRV INTERFACE FUNCTIONs
 Int32           LQ043Y1DX01_Init          ( unsigned int bus_width ); 
@@ -406,20 +393,14 @@ static void lq043y1dx01_panel_on(LQ043Y1DX01_PANEL_t *pPanel) {
 	lq043y1dx01_send_cmd( pPanel->spi, sharp_disp_on  , 	ARRAY_SIZE(sharp_disp_on  )*sizeof(u16));
 }
 
-static void lq043y1dx01_panel_off(LQ043Y1DX01_PANEL_t *pPanel)  {
-	lq043y1dx01_send_cmd( pPanel->spi, sharp_disp_off  , 	ARRAY_SIZE(sharp_disp_on  )*sizeof(u16));
-	lq043y1dx01_send_cmd( pPanel->spi, sharp_sleep_in,	ARRAY_SIZE(sharp_sleep_out)*sizeof(u16));
-	msleep(60);
-}
-
-static int lq043y1dx01_reset(u32 gpio)
+static void lq043y1dx01_reset(u32 gpio)
 {
 	int res1;
 	
 	res1=gpio_request(gpio, "lcd_reset");
 	if( res1 != 0 )  {
 		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR(%d) Req GPIO(%d)\n", __func__, res1, gpio );
-		return(-1);
+		return;
 	}
 	gpio_direction_output(gpio, 0);
 	gpio_set_value_cansleep(gpio, 1);
@@ -471,40 +452,6 @@ static int lq043y1dx01_TeOff ( LQ043Y1DX01_PANEL_t *pPanel )
 	return( res );
 }
 
-
-//*****************************************************************************
-//
-// Function Name:  lq043y1dx01_WrCmndP1
-// 
-// Parameters:     reg   = 08-bit register address (DCS command)
-//                 value = 08-bit register data    (DCS command parm)
-//
-// Description:    Register Write - DCS command byte, 1 parm
-//
-//*****************************************************************************
-static void lq043y1dx01_WrCmndP1( 
-	DISPDRV_HANDLE_T    drvH, 
-	UInt32              reg, 
-	UInt32              value 
-	)
-{
-	LQ043Y1DX01_PANEL_t	*pPanel = (LQ043Y1DX01_PANEL_t *)drvH;
-	CSL_DSI_CMND_t		msg;
-	UInt8			msgData[4];
-
-	msg.dsiCmnd    = DSI_DT_SH_DCS_WR_P1;
-	msg.msg        = &msgData[0];
-	msg.msgLen     = 2;
-	msg.vc         = LQ043Y1DX01_VC;
-	msg.isLP       = LQ043Y1DX01_CMND_IS_LP;
-	msg.isLong     = FALSE;
-	msg.endWithBta = FALSE;
-
-	msgData[0] = reg;                                  
-	msgData[1] = value & 0x000000FF;   
-
-	CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
-}
 
 //*****************************************************************************
 //
@@ -586,104 +533,6 @@ static int lq043y1dx01_ReadReg( DISPDRV_HANDLE_T drvH, UInt8 reg )
 
 	return(res);	
 }
-//*****************************************************************************
-//
-// Function Name:  lq043y1dx01_ReadID
-// 
-// Parameters:     
-//
-// Description:    Verify ID 
-//
-//*****************************************************************************
-static int lq043y1dx01_ReadID( DISPDRV_HANDLE_T drvH )
-{
-	LQ043Y1DX01_PANEL_t  *pPanel = (LQ043Y1DX01_PANEL_t *)drvH;
-	CSL_DSI_CMND_t      	msg;         
-	volatile CSL_DSI_REPLY_t 	rxMsg;	    // DSI RX message
-	UInt8               	txData[1];  // DCS Rd Command
-	volatile UInt8             	rxBuff[1];  // Read Buffer
-	Int32               	res = 0;
-	CSL_LCD_RES_T       	cslRes;
-	UInt32              	ID = 0;
-    
-//	#define   RDID1	(0xDA)
-//	#define   RDID2	(0xDB)
-//	#define   RDID3	(0xDC)
-	#define   RDID1	(0x0A)
-	#define   RDID2	(0x0B)
-	#define   RDID3	(0x0C)
-    
-    
-	msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
-	msg.msg        = &txData[0];
-	msg.msgLen     = 1;
-	msg.vc         = LQ043Y1DX01_VC;
-//	msg.isLP       = LQ043Y1DX01_CMND_IS_LP;
-	msg.isLP       = FALSE;
-	msg.isLong     = FALSE;
-	msg.endWithBta = TRUE;
-
-	rxMsg.pReadReply = (UInt8 *)&rxBuff[0];
-	msg.reply      = (CSL_DSI_REPLY_t *)&rxMsg;
-
-    	// 0xFE - OLED module’s manufacturer
-	txData[0] = RDID1;                                    
-	cslRes = CSL_DSI_SendPacket( pPanel->clientH, &msg, FALSE );
-	if( (cslRes != CSL_LCD_OK) || ((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0) )
-	{
-		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
-			"Reading From Reg[0x%08X]\n\r", 
-			__FUNCTION__, (unsigned int)RDID1 );
-		res = -1;    
-		goto failed;
-	}
-	ID |= (rxBuff[0] << 16);
-    
-    	// 0x86 - OLED module/driver version 
-    	// 	      Changes each time a revision is made to the display, 
-    	//        material or construction specifications
-    	txData[0] = RDID2;                                    
-    	cslRes = CSL_DSI_SendPacket( pPanel->clientH, &msg, FALSE );
-    	if( (cslRes != CSL_LCD_OK) || ((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0) )
-    	{
-		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
-			"Reading From Reg[0x%08X]\n\r", 
-			__FUNCTION__, (unsigned int)RDID2 );
-		res = -1; 
-		goto failed;
-    	}
-    	ID |= (rxBuff[0] <<  8);
-    
-    	// 0x80 This read byte identifies the OLED module/driver. 
-    	//      ALEX module project = 0x80
-    	txData[0] = RDID3;                                    
-    	cslRes = CSL_DSI_SendPacket( pPanel->clientH, &msg, FALSE );
-    	if( (cslRes != CSL_LCD_OK) || ((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0) )
-    	{
-		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
-		"Reading From Reg[0x%08X]\n\r", __FUNCTION__, (unsigned int)RDID3 );
-    	    	res = -1; 
-		goto failed;
-    	}
-    	ID |= (rxBuff[0]);
-    
-/*
-    	if((ID & 0x00FF00FF) != 0x00FE0080) {
-    		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
-    	        	"Display ID[0xXXFEXX80] Mismatch [0x%08X] \n\r",
-		     	__FUNCTION__, (unsigned int)RDID3 );
-    	    	res = -1; 
-		goto failed;
-    	}
-*/
-    	if( res == 0 )
-		LCD_DBG( LCD_DBG_INIT_ID,
-			"[DISPDRV] %s: Display ID OK[0x%08X]\n",
-			__FUNCTION__, (unsigned int)ID );
-		 
-failed:    
-    	return(res);	
-} // lq043y1dx01_ReadID
 
 
 //*****************************************************************************
@@ -947,7 +796,6 @@ static int lq043y1dx01_WrSendCmnd(
 {
 	LQ043Y1DX01_PANEL_t*	pPanel = (LQ043Y1DX01_PANEL_t*)drvH;
 	CSL_DSI_CMND_t		msg;
-	UInt8			msgData[4];
 	int			res = 0;
 
 	switch(msg_size){
@@ -978,7 +826,7 @@ static int lq043y1dx01_WrSendCmnd(
 		msg.endWithBta = FALSE;
 
 		CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
-		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: DT[0x%02X] SIZE[%d]\n",
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: DT[0x%02lX] SIZE[%lu]\n",
 			__func__, msg.dsiCmnd, msg_size );
 		
 	}    
@@ -1336,7 +1184,7 @@ Int32 LQ043Y1DX01_Update (
 	req.buffBpp	= pPanel->bpp;    
 	req.timeOut_ms	= 100;
    
-	LCD_DBG( LCD_DBG_ID, "%s: buf=%08x, linelenp = %d, linecnt =%d\n",
+	LCD_DBG( LCD_DBG_ID, "%s: buf=%08x, linelenp = %lu, linecnt =%lu\n",
 		__func__, (u32)req.buff, req.lineLenP, req.lineCount);
 		
 	req.cslLcdCbRec.cslH		= pPanel->clientH;
@@ -1364,7 +1212,7 @@ Int32 LQ043Y1DX01_Update (
 
 static int __devinit lq043y1dx01_spi_probe(struct spi_device *spi)
 {
-	int err;
+	int err, res1;
 
 
 	LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s\n", __func__ );
@@ -1386,7 +1234,6 @@ static int __devinit lq043y1dx01_spi_probe(struct spi_device *spi)
 	// Reset SHARP DPI display
 	lq043y1dx01_reset(SHARP_RESET);
 	
-	int res1;
 	/* DSI BRIDGE P-ON */
 	res1=gpio_request(DSI_BRIDGE_PON, "dsi_bridge_pon");
 	if( res1 != 0 ) LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR(%d) Req GPIO(%d)\n", __func__, res1, DSI_BRIDGE_PON );

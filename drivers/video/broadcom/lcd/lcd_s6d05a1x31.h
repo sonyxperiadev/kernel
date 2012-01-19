@@ -120,14 +120,14 @@ NEW_DISPCTRL_REC_T power_on_seq_s5d05a1x31_cooperve_AUO[] =
 
 DISPCTRL_REC_T enter_sleep_seq_AUO[] =
 {
-	{DISPCTRL_WR_CMND, 0, {0x10}}, // (SLPIN)
+	{DISPCTRL_WR_CMND, 0, 0x10}, // (SLPIN)
 	{DISPCTRL_SLEEP_MS, 0, 120},
 	{DISPCTRL_LIST_END, 0, 0}
 };
 
 DISPCTRL_REC_T exit_sleep_seq_AUO[] =
 {
-	{DISPCTRL_WR_CMND, 0,{0x11}}, // (SLPIN)
+	{DISPCTRL_WR_CMND, 0, 0x11}, // (SLPIN)
 	{DISPCTRL_SLEEP_MS, 0, 120},
 	{DISPCTRL_LIST_END, 0, 0}
 };
