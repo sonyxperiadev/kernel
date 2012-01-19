@@ -69,7 +69,7 @@ static int bcmpmu_otg_xceiv_set_vbus(struct otg_transceiver *otg, bool enabled)
 	return stat;
 }
 
-static bool bcmpmu_otg_xceiv_check_id_gnd(struct bcmpmu_otg_xceiv_data
+bool bcmpmu_otg_xceiv_check_id_gnd(struct bcmpmu_otg_xceiv_data
 					  *xceiv_data)
 {
 	unsigned int data = 0;
@@ -254,18 +254,7 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 		/* REVISIT. Shutdown uses sequence for lowest power
 		* and does not meet timing so don't do that in OTG mode
 		* for now. Just do SRP for ADP startup */
-		bcm_hsotgctrl_phy_set_non_driving(false);
-
-		if (otg->gadget && otg->gadget->ops &&
-			  otg->gadget->ops->wakeup) {
-			/* Do SRP required in ADP startup for B-device */
-			otg->gadget->ops->wakeup(otg->gadget);
-			/* Start SRP failure timer to do ADP probes if it expires */
-			xceiv_data->otg_xceiver.srp_failure_timer.expires =
-				  jiffies +
-				  msecs_to_jiffies(T_SRP_FAILURE_MAX_IN_MS);
-			add_timer(&xceiv_data->otg_xceiver.srp_failure_timer);
-		}
+		bcmpmu_otg_xceiv_do_srp(xceiv_data);
 #else
 		/* Shutdown the core */
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
@@ -486,15 +475,11 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 #endif
 }
 
-static void bcmpmu_otg_xceiv_sess_end_srp_handler(struct work_struct *work)
+void bcmpmu_otg_xceiv_do_srp(struct bcmpmu_otg_xceiv_data *xceiv_data)
 {
-	struct bcmpmu_otg_xceiv_data *xceiv_data =
-	    container_of(work, struct bcmpmu_otg_xceiv_data,
-			 bcm_otg_sess_end_srp_work);
-	bcm_hsotgctrl_phy_set_non_driving(false);
-
 	if (xceiv_data->otg_xceiver.xceiver.gadget && xceiv_data->otg_xceiver.xceiver.gadget->ops &&
 		  xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup) {
+		bcm_hsotgctrl_phy_set_non_driving(false);
 		/* Do SRP */
 		xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup(xceiv_data->otg_xceiver.xceiver.gadget);
 		/* Start SRP failure timer to do ADP probes if it expires */
@@ -506,6 +491,15 @@ static void bcmpmu_otg_xceiv_sess_end_srp_handler(struct work_struct *work)
 		/* SRP initiated. Clear the flag */
 		xceiv_data->otg_xceiver.otg_srp_reqd = false;
 	}
+}
+
+static void bcmpmu_otg_xceiv_sess_end_srp_handler(struct work_struct *work)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data =
+	    container_of(work, struct bcmpmu_otg_xceiv_data,
+			 bcm_otg_sess_end_srp_work);
+
+	bcmpmu_otg_xceiv_do_srp(xceiv_data);
 }
 
 static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
