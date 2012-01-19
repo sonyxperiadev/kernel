@@ -1451,11 +1451,13 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	break;
 	case CTL_FUNCTION_APP_SEL:
 		BCM_AUDIO_DEBUG("CTL_FUNCTION_APP_SEL curApp=%d, newApp=%d",
-		   (int)pChip->i32CurApp, (int)ucontrol->value.integer.value[0]);
+		   (int)pChip->i32CurApp,
+		   (int)ucontrol->value.integer.value[0]);
 
 		pChip->i32CurApp = ucontrol->value.integer.value[0];
 		/* Make the call to Audio Controller here */
-		parm_setapp.aud_app = (int)ucontrol->value.integer.value[0]; /* new app */
+		parm_setapp.aud_app =
+			(int)ucontrol->value.integer.value[0]; /* new app */
 		AUDIO_Ctrl_Trigger(ACTION_AUD_SetAudioApp, &parm_setapp,
 				   NULL, 0);
 		break;
@@ -1599,7 +1601,8 @@ static const DECLARE_TLV_DB_SCALE(caph_db_scale_volume, -5000, 1, 0);
 /*
  * Initial data of controls, runtime data is in 'chip' data structure
  */
-static TPcm_Stream_Ctrls sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata = {
+static TPcm_Stream_Ctrls
+	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __devinitdata = {
 	/*
 	 * PCMOut1
 	 */
@@ -1690,7 +1693,7 @@ static TPcm_Stream_Ctrls sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata = {
 /*
   * Misc controls
   */
-static struct snd_kcontrol_new sgSndCtrls[] __initdata = {
+static struct snd_kcontrol_new sgSndCtrls[] __devinitdata = {
 	BRCM_MIXER_CTRL_MISC(0, 0, "LPT", 0,
 		CAPH_CTL_PRIVATE(1, 1,
 		CTL_FUNCTION_LOOPBACK_TEST)),
@@ -1757,8 +1760,8 @@ static struct snd_kcontrol_new sgSndCtrls[] __initdata = {
 
 #define	MAX_CTL_NUMS	161
 #define	MAX_CTL_NAME_LENGTH	44
-static char gStrCtlNames[MAX_CTL_NUMS][MAX_CTL_NAME_LENGTH] __initdata;
-static Int32 sgCaphSpeechMixCtrls[CAPH_MAX_PCM_STREAMS] __initdata = { 1, 1,
+static char gStrCtlNames[MAX_CTL_NUMS][MAX_CTL_NAME_LENGTH] __devinitdata;
+static Int32 sgCaphSpeechMixCtrls[CAPH_MAX_PCM_STREAMS] __devinitdata = { 1, 1,
 	0, 3, 3, 0, 0, 1
 	};
 

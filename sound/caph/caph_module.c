@@ -635,8 +635,12 @@ static struct platform_device sgPlatformDevice = {
 
 /* Platfoorm driver structure */
 static struct platform_driver sgPlatformDriver = {
-	.probe = DriverProbe,
-	.remove = DriverRemove,
+	/*
+	 * probe is assigned in ALSAModuleInit
+	 * because of "section mismatch" warning.
+	 */
+	/*	.probe = DriverProbe, */
+	.remove = __devexit_p(DriverRemove),
 	.suspend = DriverSuspend,
 	.resume = DriverResume,
 	.driver = {
@@ -671,6 +675,7 @@ static int __devinit ALSAModuleInit(void)
 	if (err)
 		return err;
 
+	sgPlatformDriver.probe = DriverProbe;
 	err = platform_driver_register(&sgPlatformDriver);
 	BCM_AUDIO_DEBUG("\n %lx:driver register done %d\n", jiffies, err);
 	if (err)
