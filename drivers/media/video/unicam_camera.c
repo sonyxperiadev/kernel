@@ -268,7 +268,7 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 	}
 	
 	cslCamDataCtrl.int_enable = (CSL_CAM_INTERRUPT_t) (CSL_CAM_INT_DISABLE);
-	cslCamDataCtrl.line_count = (unicam_dev->icd->user_height - 1);
+	cslCamDataCtrl.line_count = 2;//(unicam_dev->icd->user_height - 1);
 	cslCamDataCtrl.data_id = 0x00;
 	cslCamDataCtrl.data_size = CSL_CAM_PIXEL_8BIT;
 	cslCamDataCtrl.fsp_decode_enable = FALSE;
