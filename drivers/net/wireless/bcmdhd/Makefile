@@ -24,6 +24,11 @@ ifeq ($(CONFIG_MACH_RHEA_STONE),y)
 DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74
 endif
 
+ifeq ($(CONFIG_MACH_RHEA_SS),y)
+# SW-OOB Interrupt
+DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=89
+endif
+
 #ifneq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
 #DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
 #endif
