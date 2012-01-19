@@ -126,9 +126,10 @@ CSL_CAPH_HWResource_Table_t HWResource_Table[CSL_CAPH_FIFO_MAX_NUM];
 static CHAL_HANDLE caph_intc_handle = 0;
 static CSL_HANDLE fmHandleSSP = 0;
 static CSL_HANDLE pcmHandleSSP = 0;
-static Boolean fmRxRunning = FALSE; //This is only to indicate FM direct playback
+static Boolean fmRxRunning = FALSE;
 static Boolean fmTxRunning = FALSE;
-static Boolean pcmRunning = FALSE;
+static Boolean pcmRxRunning = FALSE;
+static Boolean pcmTxRunning = FALSE;
 static CAPH_SWITCH_TRIGGER_e fmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
 static CAPH_SWITCH_TRIGGER_e fmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
 static CAPH_SWITCH_TRIGGER_e pcmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
@@ -139,7 +140,6 @@ static Boolean sspTDM_enabled = FALSE;
 //static void *bmintc_handle = NULL;
 static UInt32 dspSharedMemAddr = 0;
 static CSL_CAPH_SWITCH_CONFIG_t fm_sw_config;
-static int ssp_pcm_usecount = 0;
 static Boolean isSTIHF = FALSE;
 static BT_MODE_t bt_mode = BT_MODE_NB;
 static Boolean sClkCurEnabled = FALSE;
@@ -349,10 +349,10 @@ void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId)
 #if defined(CONFIG_BCM_MODEM) 
 static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 {
-	Log_DebugPrintf(LOGID_AUDIO, "csl_caph_enable_adcpath_by_dsp enabled_path=0x%x, pcmRunning %d.\r\n", enabled_path, pcmRunning);
+	Log_DebugPrintf(LOGID_AUDIO, "csl_caph_enable_adcpath_by_dsp enabled_path=0x%x, pcmRxRunning %d.\r\n", enabled_path, pcmRxRunning);
 
 #if !defined(ENABLE_DMA_VOICE)
-	if(pcmRunning)
+	if(pcmRxRunning)
 	{	//workaround for bt call, dsp callback always comes at pair, once when call starts, another when call drops.
 		//without the workaround, at the second call, rx fifo may be full and dsp does not get interrupt.
 		static Boolean bStartPcm = FALSE;
@@ -361,7 +361,7 @@ static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 		if(bStartPcm) csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 	}
 #else
-	if(pcmRunning && enabled_path)
+	if(pcmRxRunning && enabled_path)
 	{
 		//if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
 		//csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
@@ -802,7 +802,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 	if(path->source==CSL_CAPH_DEV_DSP) dataFormat = CSL_CAPH_24BIT_MONO; //dsp data is 24bit mono
 	if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR)
 	{
-		if((bt_mode == BT_MODE_WB) || (bt_mode = BT_MODE_WB_TEST))
+		if((bt_mode == BT_MODE_WB) || (bt_mode == BT_MODE_WB_TEST))
 			path->snk_sampleRate = AUDIO_SAMPLING_RATE_16000; /*- BT-WB -*/
 		else
 			path->snk_sampleRate = AUDIO_SAMPLING_RATE_8000;  /*- NB-BT -*/
@@ -920,8 +920,6 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 #endif
 			if (path->source == CSL_CAPH_DEV_DSP_throughMEM && path->sink[sinkNo] == CSL_CAPH_DEV_IHF) {
 				fifo = csl_caph_cfifo_get_fifo_by_dma(path->dma[sinkNo][0]);
-			} else 	if (path->source == CSL_CAPH_DEV_FM_RADIO || path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX) {
-				fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
 			} else {
 				fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
 			}
@@ -1232,7 +1230,7 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
 		{
 			csl_i2s_stop_tx(fmHandleSSP);
 			fmTxRunning = FALSE;
-			if (fmTxRunning == FALSE && fmRxRunning == FALSE)
+			if (fmRxRunning == FALSE)
 				csl_sspi_enable_scheduler(fmHandleSSP, 0);
 		}
 		else if (fmRxRunning == TRUE && path->source == CSL_CAPH_DEV_FM_RADIO)
@@ -1241,9 +1239,9 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
 			{
 				csl_i2s_stop_rx(fmHandleSSP);
 				fmRxRunning = FALSE;
+				if (fmTxRunning == FALSE)
+					csl_sspi_enable_scheduler(fmHandleSSP, 0);
 			}
-			if (fmTxRunning == FALSE && fmRxRunning == FALSE)
-				csl_sspi_enable_scheduler(fmHandleSSP, 0);
 		}
 	}
 
@@ -1310,28 +1308,30 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID, int sinkNo, in
     }
 
 	if (((path->source == CSL_CAPH_DEV_DSP)&&(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR)) ||
-		((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_DSP)))	
+		((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_DSP)))
 	{
-		if (pcmRunning)
+		if (pcmRxRunning && pcmTxRunning)
 		{
 			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 #if !defined(ENABLE_DMA_VOICE)
 			csl_caph_intc_disable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
 #endif
-			pcmRunning = FALSE;
+			csl_pcm_enable_scheduler(pcmHandleSSP, FALSE); /*this is required to turn off ssp clock after bt call is switched to ep*/
+			pcmRxRunning = FALSE;
+			pcmTxRunning = FALSE;
 		}
 	} else if(path->source == CSL_CAPH_DEV_BT_MIC || path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) {
-		ssp_pcm_usecount--;
-		if ((pcmRunning == TRUE) && (ssp_pcm_usecount <= 0))
-		{
+		if(path->source == CSL_CAPH_DEV_BT_MIC)
+			pcmRxRunning = FALSE;
+		if(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR)
+			pcmTxRunning = FALSE;
+		if (!pcmRxRunning && !pcmTxRunning) {
 			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
 		    csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
-			pcmRunning = FALSE;
-			ssp_pcm_usecount = 0;
 		}
 	}
   
@@ -1671,7 +1671,7 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, int sinkNo, int start
 
 	if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR || path->source==CSL_CAPH_DEV_BT_MIC)
 	{
-		if(!pcmRunning && !sspTDM_enabled)
+		if(!pcmRxRunning && !pcmTxRunning && !sspTDM_enabled)
 		{
 			memset(&pcmCfg, 0, sizeof(pcmCfg));
 			pcmCfg.mode = CSL_PCM_MASTER_MODE;
@@ -1814,33 +1814,33 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID, int sinkNo, int startO
 		}
 	}
 
-	if(!pcmRunning && (path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR || path->source==CSL_CAPH_DEV_BT_MIC))
-	{
+	if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR || path->source==CSL_CAPH_DEV_BT_MIC) {
+		if(!pcmRxRunning && !pcmTxRunning) {
 #if !defined(ENABLE_DMA_VOICE)
-		if((path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC) 
-			|| (path->source == CSL_CAPH_DEV_DSP) 
-			|| (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) 
-			|| sspTDM_enabled)
-			csl_caph_intc_enable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
+			if((path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC)
+				|| (path->source == CSL_CAPH_DEV_DSP)
+				|| (path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
+				|| sspTDM_enabled)
+				csl_caph_intc_enable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
 #endif
-		if((path->source == CSL_CAPH_DEV_DSP) || (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) || sspTDM_enabled)
-		{
+			if((path->source == CSL_CAPH_DEV_DSP) || (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) || sspTDM_enabled) {
 #if defined(ENABLE_DMA_VOICE)
-			//dma sequence will divert from non-dma eventually, hence make 2 copies.
-			if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
-			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-			//csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+				//dma sequence will divert from non-dma eventually, hence make 2 copies.
+				if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
+				csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+				//csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 #else
-			if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
-			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-			//csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-			//csl_pcm_start(pcmHandleSSP, &pcmCfg);
+				if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
+				csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+				//csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+				//csl_pcm_start(pcmHandleSSP, &pcmCfg);
 #endif
-		} else {
-			csl_pcm_start(pcmHandleSSP, &pcmCfg);
+			} else {
+				csl_pcm_start(pcmHandleSSP, &pcmCfg);
+			}
 		}
-
-		pcmRunning = TRUE;
+		if(path->sink[sinkNo]==CSL_CAPH_DEV_BT_SPKR) pcmTxRunning = TRUE;
+		if(path->source==CSL_CAPH_DEV_BT_MIC) pcmRxRunning = TRUE;
 	}
 
 	if(!fmTxRunning && (path->sink[sinkNo]==CSL_CAPH_DEV_FM_TX))
@@ -2872,14 +2872,12 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config, int s
 		else{
 			list = LIST_SW_MIX_SW_DMA;
 		}
-		ssp_pcm_usecount++;
     }
     else
     if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR))
     {
 		list = LIST_DMA_MIX_SRC_SW;
 		if((path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000) && ((bt_mode == BT_MODE_NB_TEST) || (bt_mode == BT_MODE_WB_TEST))) list = LIST_DMA_SW; //avoid SRC for production test.
-		ssp_pcm_usecount++;
     }
     else
     if ((path->source == CSL_CAPH_DEV_ANALOG_MIC)&&(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR))
@@ -4040,10 +4038,8 @@ static void csl_caph_hwctrl_set_srcmixer_filter(CSL_CAPH_HWConfig_Table_t *audio
     if(!audioPath) return;
     if((audioPath->source == CSL_CAPH_DEV_DSP)
         ||(audioPath->sink[0] == CSL_CAPH_DEV_DSP))
-        //csl_caph_srcmixer_set_minimum_filter(audioPath->routeConfig.inChnl);
         csl_caph_srcmixer_set_minimum_filter( audioPath->srcmRoute[0][0].inChnl );
     else
-        //csl_caph_srcmixer_set_linear_filter(audioPath->routeConfig.inChnl);
         csl_caph_srcmixer_set_linear_filter( audioPath->srcmRoute[0][0].inChnl );
     return;
 }
