@@ -887,12 +887,6 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 		set_speed = dev->speed;
 	}
 
-	//@HW temporay hardcode for camera's i2c
-	if(client->addr == 0x2d)
-	{
-		set_speed = 4;
-	}
-
 	/* check for high speed */
 	if (set_speed == BSC_BUS_SPEED_HS || set_speed == BSC_BUS_SPEED_HS_FPGA)
 		dev->high_speed_mode = 1;
