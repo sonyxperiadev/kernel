@@ -1,0 +1,38 @@
+config BCMDHD_43362_LINUX
+	tristate "Broadcom 43362_LINUX DRIVE wireless cards support"
+	depends on MMC
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 43362_LINUX DRIVER chipset.
+	  This driver uses the kernel's wireless extensions subsystem.
+	  If you choose to build a module, it'll be called dhd. Say M if
+	  unsure.
+
+config BCMDHD_FW_PATH
+	depends on BCMDHD_43362_LINUX
+	string "Firmware path"
+	default "/system/vendor/firmware/fw_bcmdhd.bin.a2"
+	---help---
+	  Path to the firmware file.
+
+config BCMDHD_NVRAM_PATH
+	depends on BCMDHD_43362_LINUX
+	string "NVRAM path"
+	default "/system/vendor/firmware/fw_wifi_nvram.txt"
+	---help---
+	  Path to the calibration file.
+
+config BCMDHD_IF_PREFIX
+	depends on BCMDHD_43362_LINUX
+	string "Wireless interface prefix"
+	default ""
+	---help---
+	  Name of wireless interface. The default value is "eth%d".
+
+config BCMDHD_WEXT
+	bool "Enable WEXT support"
+	depends on BCMDHD_43362_LINUX && CFG80211 = n
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	help
+	  Enables WEXT support

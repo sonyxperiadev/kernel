@@ -987,6 +987,25 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.peri_clk_rate = 48000000,
 	},
 #endif
+#ifdef CONFIG_BCMDHD_43362_LINUX
+	{ /* SDIO3 */
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 70,
+			.reg		= -1,
+			.host_wake	= 85,
+			.shutdown	= -1,
+		},
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+#endif
+
 
 };
 

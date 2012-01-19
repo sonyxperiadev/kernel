@@ -95,17 +95,17 @@
 			0x00000023   /* 0x3500_492C: MMC0DAT6: MMC0DAT6: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_4930: MMC0DAT7: MMC0DAT7: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000043   /* 0x3500_4934: MMC0RST: MMC0RSTN: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000043   /* 0x3500_4938: MMC1CK: MMC1CK: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_493C: MMC1CMD: MMC1CMD: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4940: MMC1DAT0: MMC1DAT0: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4944: MMC1DAT1: MMC1DAT1: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4948: MMC1DAT2: MMC1DAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_494C: MMC1DAT3: MMC1DAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000027   /* 0x3500_4938: MMC1CK: MMC1CK: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000027   /* 0x3500_493C: MMC1CMD: MMC1CMD: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000027   /* 0x3500_4940: MMC1DAT0: MMC1DAT0: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000027   /* 0x3500_4944: MMC1DAT1: MMC1DAT1: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000027   /* 0x3500_4948: MMC1DAT2: MMC1DAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000027   /* 0x3500_494C: MMC1DAT3: MMC1DAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000303   /* 0x3500_4950: MMC1DAT4: ANA_SYS_REQ2: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000303   /* 0x3500_4954: MMC1DAT5: ANA_SYS_REQ1: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000403   /* 0x3500_4958: MMC1DAT6: GPIO72: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000403   /* 0x3500_495C: MMC1DAT7: GPIO71: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000043   /* 0x3500_4960: MMC1RST: MMC1RSTN: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000427   /* 0x3500_4960: MMC1RST: GPIO70: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000003   /* 0x3500_4964: PC1: PC1: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000003   /* 0x3500_4968: PC2: PC2: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000020   /* 0x3500_496C: PMBSCCLK: PMBSCCLK: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 000: xmA */
@@ -171,10 +171,11 @@
 	/* gpio node must be consistent with pinmux node */
 	gpio {
 		compatible = "Broadcom,RheaRay_EDN20_assignments-gpio";
-		reg = <0x35003000 19>;		/*base address and # of exposed GPIOs*/
+		reg = <0x35003000 20>;		/*base address and # of exposed GPIOs*/
 		data = <
 			29    0x00000002 /* 1: Input  0: Drive Low */
 			41    0x00000000 /* 0: Output  0: Drive Low */
+			70    0x00000000 /* 0: Output  0: Drive High */
 			71    0x00000002 /* 1: Input  0: Drive Low */
 			72    0x00000002 /* 1: Input  0: Drive Low */
 			97    0x00000000 /* 0: Output  0: Drive Low */
