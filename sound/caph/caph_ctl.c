@@ -1456,8 +1456,8 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 
 		pChip->i32CurApp = ucontrol->value.integer.value[0];
 		/* Make the call to Audio Controller here */
-		parm_setapp.aud_app =
-			(int)ucontrol->value.integer.value[0]; /* new app */
+		parm_setapp.aud_app = (int)ucontrol->value.\
+			integer.value[0]; /* new app */
 		AUDIO_Ctrl_Trigger(ACTION_AUD_SetAudioApp, &parm_setapp,
 				   NULL, 0);
 		break;

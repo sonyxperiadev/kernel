@@ -260,6 +260,13 @@ void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute);
 ****************************************************************************/
 AudioMode_t AUDCTRL_GetAudioMode(void);
 
+/**
+*  Save audio mode before call AUDCTRL_SetAudioMode( )
+*	@param		mode		(voice call) audio mode
+*	@return		none
+****************************************************************************/
+void AUDCTRL_SaveAudioModeFlag(AudioMode_t mode);
+
 #if defined(USE_NEW_AUDIO_PARAM)
 /**
 *   Get current (voice call) audio app
@@ -282,12 +289,20 @@ AudioApp_t AUDCTRL_GetAudioApp(void);
 void AUDCTRL_SetAudioApp(AudioApp_t audio_app);
 
 /*********************************************************************
-*  Save audio mode before call AUDCTRL_SaveAudioModeFlag( )
-*      @param          mode            (voice call) audio mode
-*      @param          app                     (voice call) audio app
+*   Save audio app
+*
+*	@param		AudioApp_t		audio app
+*	@return		none
+**********************************************************************/
+void AUDCTRL_SaveAudioApp(AudioApp_t audio_app);
+
+/*********************************************************************
+*   Do not need this audio app
+*
+*	@param		AudioApp_t		audio app
 *      @return         none
 **********************************************************************/
-void AUDCTRL_SaveAudioModeFlag(AudioMode_t mode, AudioApp_t app);
+void AUDCTRL_RemoveAudioApp(AudioApp_t audio_app);
 
 /*********************************************************************
 *   Set (voice call) audio mode
@@ -298,12 +313,6 @@ void AUDCTRL_SaveAudioModeFlag(AudioMode_t mode, AudioApp_t app);
 void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app);
 
 #else
-/**
-*  Save audio mode before call AUDCTRL_SetAudioMode( )
-*	@param		mode		(voice call) audio mode
-*	@return		none
-****************************************************************************/
-void AUDCTRL_SaveAudioModeFlag(AudioMode_t mode);
 
 /**
 *   Set (voice call) audio mode

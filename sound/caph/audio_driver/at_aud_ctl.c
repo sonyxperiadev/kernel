@@ -252,25 +252,25 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				BCM_AUDIO_DEBUG("Params[2] = %d, "
 					"Params[3] %d, audio mode %d\n",
 				     (int)Params[3], (int)Params[2],
-				     AUDDRV_GetAudioMode());
+				     AUDCTRL_GetAudioMode());
 
 				if ((Params[2] ==
 				     PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
 				    || (Params[2] ==
 					PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
 #if defined(USE_NEW_AUDIO_PARAM)
-					if ((AUDDRV_GetAudioMode() ==
+					if ((AUDCTRL_GetAudioMode() ==
 					     AUDIO_MODE_HEADSET)
-					    || (AUDDRV_GetAudioMode() ==
+					    || (AUDCTRL_GetAudioMode() ==
 						AUDIO_MODE_TTY)) {
 #else
-					if ((AUDDRV_GetAudioMode() ==
+					if ((AUDCTRL_GetAudioMode() ==
 					     AUDIO_MODE_HEADSET)
-					    || (AUDDRV_GetAudioMode() ==
+					    || (AUDCTRL_GetAudioMode() ==
 						AUDIO_MODE_HEADSET_WB)
-					    || (AUDDRV_GetAudioMode() ==
+					    || (AUDCTRL_GetAudioMode() ==
 						AUDIO_MODE_TTY)
-					    || (AUDDRV_GetAudioMode() ==
+					    || (AUDCTRL_GetAudioMode() ==
 						AUDIO_MODE_TTY_WB)) {
 #endif
 						AUDIO_PMU_IHF_POWER(FALSE);
@@ -301,12 +301,12 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 							     PMU_gain_enum);
 					}
 #if defined(USE_NEW_AUDIO_PARAM)
-					else if (AUDDRV_GetAudioMode() ==
+					else if (AUDCTRL_GetAudioMode() ==
 						 AUDIO_MODE_SPEAKERPHONE) {
 #else
-					else if ((AUDDRV_GetAudioMode() ==
+					else if ((AUDCTRL_GetAudioMode() ==
 						  AUDIO_MODE_SPEAKERPHONE)
-						 || (AUDDRV_GetAudioMode()
+						 || (AUDCTRL_GetAudioMode()
 						== AUDIO_MODE_SPEAKERPHONE_WB)
 						){
 #endif
@@ -332,17 +332,17 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				    ("Params[2] = %d, Params[3] %d,"
 					" audio mode %d\n",
 				     (int)Params[3], (int)Params[2],
-				     AUDDRV_GetAudioMode());
+				     AUDCTRL_GetAudioMode());
 
 				if (Params[2]
 					== PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
 #if defined(USE_NEW_AUDIO_PARAM)
-					if (AUDDRV_GetAudioMode() ==
+					if (AUDCTRL_GetAudioMode() ==
 					    AUDIO_MODE_SPEAKERPHONE) {
 #else
-					if ((AUDDRV_GetAudioMode() ==
+					if ((AUDCTRL_GetAudioMode() ==
 					     AUDIO_MODE_SPEAKERPHONE)
-					    || (AUDDRV_GetAudioMode() ==
+					    || (AUDCTRL_GetAudioMode() ==
 						AUDIO_MODE_SPEAKERPHONE_WB)) {
 #endif
 						BCM_AUDIO_DEBUG

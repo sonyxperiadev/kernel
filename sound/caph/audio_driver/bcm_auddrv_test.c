@@ -818,12 +818,12 @@ static int HandlePlayCommand()
 			CSL_CAPH_DEVICE_e aud_dev = CSL_CAPH_DEV_EP;
 			BCM_AUDIO_DEBUG(" Start Playback\n");
 			spkr = sgBrcm_auddrv_TestValues[2];
-#if !defined(USE_NEW_AUDIO_PARAM)
-			AUDCTRL_SaveAudioModeFlag(spkr);
-#else
-			/* need to fill audio app, fill 0 for now. */
-			AUDCTRL_SaveAudioModeFlag(spkr, 0);
+#if defined(USE_NEW_AUDIO_PARAM)
+			AUDCTRL_SaveAudioApp(AUDIO_APP_MUSIC);
 #endif
+
+			AUDCTRL_SaveAudioModeFlag(spkr);
+
 			AUDCTRL_EnablePlay(AUDIO_SOURCE_MEM,
 					   spkr,
 					   drv_config.num_channel,
@@ -1307,7 +1307,8 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	0);
 	/* use sysparm to configure NS */
 	AUDCTRL_NS((Boolean)(AUDIO_GetParmAccessPtr()[mode +
-	AUDIO_APP_LOOPBACK * AUDIO_MODE_NUMBER].ul_noise_suppression_enable));
+	AUDIO_APP_LOOPBACK * AUDIO_MODE_NUMBER].\
+	ul_noise_suppression_enable));
 #else
 	/* use sysparm to configure EC */
 	AUDCTRL_EC((Boolean)(AUDIO_GetParmAccessPtr()[

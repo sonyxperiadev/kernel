@@ -438,13 +438,11 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				 */
 #if defined(USE_NEW_AUDIO_PARAM)
 				/* need to fill the audio app, fill 0 for now */
-				AUDCTRL_SaveAudioModeFlag(param_start->
-							  pdev_prop->p[0].sink,
-							  0);
-#else
+				AUDCTRL_SaveAudioApp(AUDIO_APP_MUSIC);
+#endif
 				AUDCTRL_SaveAudioModeFlag(param_start->
 							  pdev_prop->p[0].sink);
-#endif
+
 				/* Enable the playback the path */
 				AUDCTRL_EnablePlay(param_start->pdev_prop->p[0]
 						   .source,
@@ -912,12 +910,9 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 */
 #if defined(USE_NEW_AUDIO_PARAM)
 			/* re-enable FM; need to fill audio app */
-			AUDCTRL_SaveAudioModeFlag((AudioMode_t) parm_FM->sink,
-						  0);
-#else
-			/* re-enable FM */
-			AUDCTRL_SaveAudioModeFlag((AudioMode_t) parm_FM->sink);
+			AUDCTRL_SaveAudioApp(AUDIO_APP_FM);
 #endif
+			AUDCTRL_SaveAudioModeFlag((AudioMode_t) parm_FM->sink);
 
 			AUDCTRL_EnablePlay(parm_FM->source,
 					   parm_FM->sink,
