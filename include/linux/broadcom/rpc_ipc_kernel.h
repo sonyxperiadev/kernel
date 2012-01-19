@@ -41,9 +41,9 @@ extern "C"
  *  ioctl commands
  *
  **/
-#define RPC_PKT_REGISTER_DATA_IND_IOC	_IOWR(RPC_SERVER_IOC_MAGIC, 1, rpc_pkt_reg_ind_t)
-#define RPC_PKT_ALLOC_BUFFER_IOC		_IOWR(RPC_SERVER_IOC_MAGIC, 2, rpc_pkt_alloc_buf_t)
-#define RPC_PKT_FREE_BUFFER_IOC			_IOWR(RPC_SERVER_IOC_MAGIC, 3, rpc_pkt_free_buf_t)
+#define RPC_PKT_REGISTER_DATA_IND_IOC			_IOWR(RPC_SERVER_IOC_MAGIC, 1, rpc_pkt_reg_ind_t)
+#define RPC_PKT_ALLOC_BUFFER_IOC			_IOWR(RPC_SERVER_IOC_MAGIC, 2, rpc_pkt_alloc_buf_t)
+#define RPC_PKT_FREE_BUFFER_IOC				_IOWR(RPC_SERVER_IOC_MAGIC, 3, rpc_pkt_free_buf_t)
 #define RPC_RX_BUFFER_IOC				_IOWR(RPC_SERVER_IOC_MAGIC, 4, rpc_pkt_rx_buf_t)
 #define RPC_READ_BUFFER_IOC				_IOWR(RPC_SERVER_IOC_MAGIC, 5, rpc_pkt_user_buf_t)
 #define RPC_SEND_BUFFER_IOC				_IOWR(RPC_SERVER_IOC_MAGIC, 6, rpc_pkt_user_buf_t)
@@ -51,6 +51,7 @@ extern "C"
 #define RPC_BUFF_INFO_IOC				_IOWR(RPC_SERVER_IOC_MAGIC, 8, rpc_pkt_buf_info_t)
 #define RPC_PKT_CMD_IOC					_IOWR(RPC_SERVER_IOC_MAGIC, 9, rpc_pkt_cmd_t)
 #define RPC_PKT_POLL_IOC				_IOWR(RPC_SERVER_IOC_MAGIC, 10, rpc_pkt_avail_t)
+#define RPC_PKT_DEREGISTER_DATA_IND_IOC			_IOWR(RPC_SERVER_IOC_MAGIC, 11, rpc_pkt_dereg_ind_t)
 #define RPC_SERVER_IOC_MAXNR			20
 
 typedef enum
@@ -79,6 +80,12 @@ typedef struct
 	RPC_PACKET_DataIndCallBackFunc_t* dataIndFunc;
 	RPC_FlowControlCallbackFunc_t*	flowIndFunc;
 }rpc_pkt_reg_ind_t;
+
+typedef struct
+{
+	UInt8 rpcClientID;
+	PACKET_InterfaceType_t interfaceType;
+}rpc_pkt_dereg_ind_t;
 
 typedef struct
 {

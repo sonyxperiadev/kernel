@@ -203,6 +203,8 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 				UInt32 param);
 static void RpcListCleanup(UInt8 clientId);
 
+static long handle_pkt_deregister_data_ind_ioc(struct file *filp,
+					     unsigned int cmd, UInt32 param);
 /*****************************************************************/
 extern Boolean is_CP_running(void);
 extern UInt32 RPC_GetMaxPktSize(PACKET_InterfaceType_t interfaceType,
@@ -300,10 +302,9 @@ static int rpcipc_release(struct inode *inode, struct file *file)
 
 		if (cInfo && (cInfo->filep == file)) {
 			RpcListCleanup(cInfo->clientId);
+			SYS_ReleaseClientID(cInfo->clientId);
 		}
 	}
-
-	SYS_ReleaseClientID(priv->clientId);
 
 	_DBG(RPC_TRACE("rpcipc_release ok\n"));
 
@@ -348,6 +349,14 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg)
 			RPC_WRITE_LOCK;
 			retVal =
 			    handle_pkt_register_data_ind_ioc(filp, cmd, arg);
+			RPC_WRITE_UNLOCK;
+			break;
+		}
+	case RPC_PKT_DEREGISTER_DATA_IND_IOC:
+		{
+			RPC_WRITE_LOCK;
+			retVal =
+			    handle_pkt_deregister_data_ind_ioc(filp, cmd, arg);
 			RPC_WRITE_UNLOCK;
 			break;
 		}
@@ -1047,6 +1056,50 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 
 	RPC_PACKET_RegisterFilterCbk(ioc_param.rpcClientID,
 				     ioc_param.interfaceType, RPC_ServerRxCbk);
+
+	return 0;
+}
+
+static long handle_pkt_deregister_data_ind_ioc(struct file *filp,
+					     unsigned int cmd, UInt32 param)
+{
+	RpcClientInfo_t *cInfo;
+	UInt8 clientId = 0;
+	rpc_pkt_dereg_ind_t ioc_param = { 0 };
+	RpcIpc_PrivData_t *priv = filp->private_data;
+
+	BUG_ON(!priv);
+
+	if (copy_from_user
+	    (&ioc_param, (rpc_pkt_dereg_ind_t *) param,
+	     sizeof(rpc_pkt_dereg_ind_t)) != 0) {
+		_DBG(RPC_TRACE
+		     ("k:handle_pkt_deregister_data_ind_ioc - copy_from_user() had error\n"));
+		return -EFAULT;
+	}
+
+	clientId = ioc_param.rpcClientID;
+
+	if (clientId == 0) {
+		_DBG(RPC_TRACE
+		     ("handle_pkt_deregister_data_ind_ioc - clientId is zero\n"));
+		return -EINVAL;
+	}
+
+	cInfo = gRpcClientList[clientId];
+
+	if (! cInfo ) {
+		_DBG(RPC_TRACE
+		     ("handle_pkt_deregister_data_ind_ioc - Invalid clientId\n"));
+		return -EINVAL;
+	}
+
+	RpcListCleanup(cInfo->clientId);
+	SYS_ReleaseClientID(cInfo->clientId);
+
+	_DBG(RPC_TRACE
+	     ("k:handle_pkt_deregister_data_ind_ioc client=%d numclients=%d\n",
+	      ioc_param.rpcClientID, gNumActiveClients));
 
 	return 0;
 }
