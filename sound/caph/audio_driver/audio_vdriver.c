@@ -386,7 +386,10 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 
 	/* Set new filter coef, sidetone filters, gains. */
 #if defined(USE_NEW_AUDIO_PARAM)
-	AUDDRV_SetAudioMode(mode, currAudioApp);
+	if (voiceCallSampleRate == AUDIO_SAMPLING_RATE_16000)
+		AUDDRV_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
+	else
+		AUDDRV_SetAudioMode(mode, AUDIO_APP_VOICE_CALL);
 #else
 	AUDDRV_SetAudioMode(mode);
 #endif
@@ -1263,8 +1266,12 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
 /*load speaker EQ filter and Mic EQ filter from sysparm to DSP*/
 /* 7 can be removed later on. It means mic1, mic2, speaker */
 	if (userEQOn == FALSE) {
-		audio_control_generic(AUDDRV_CPCMD_SetFilter,
-				      audio_mode, 7, 0, 0, 0);
+		if (voiceCallSampleRate == AUDIO_SAMPLING_RATE_16000)
+			audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				      audio_mode + AUDIO_MODE_NUMBER, 7, 0, 0, 0);
+		else
+			audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				      audio_mode % AUDIO_MODE_NUMBER, 7, 0, 0, 0);
 	}
 	/* else */
 	/*There is no need for this function to load the ECI-headset-provided
