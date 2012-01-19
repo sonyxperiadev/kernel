@@ -27,6 +27,7 @@
 
 static int logLevel = DBG_DEFAULT_LEVEL;
 
-#define VSP_DEBUG(level,fmt,args...) if (level & logLevel) printk( "%s:: " fmt, __FUNCTION__, ##args )
+#define VSP_DEBUG(level, fmt, args...) if (level & logLevel) \
+		printk(KERN_ERR "%s:: " fmt, __func__, ##args)
 
-#endif //_BCM_VSP_DEBUG_H
+#endif /*_BCM_VSP_DEBUG_H*/
