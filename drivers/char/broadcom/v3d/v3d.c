@@ -281,6 +281,7 @@ static void v3d_enable_irq(void);
 static inline uint32_t v3d_read(uint32_t reg);
 static inline void v3d_write(uint32_t val, uint32_t reg);
 static void v3d_power(int flag);
+static void v3d_soft_reset(void);
 static int v3d_hw_acquire(bool for_worklist);
 static void v3d_hw_release(void);
 static void v3d_print_status(void);
@@ -540,7 +541,7 @@ static int v3d_job_start(void)
 	p_v3d_job->job_status = V3D_JOB_STATUS_RUNNING;
 	v3d_in_use = 1;
 	if ((p_v3d_job->job_type == V3D_JOB_REND) && (p_v3d_job->job_intern_state == 0)) {
-		KLOG_V("V3D_JOB_REND RENDERER launching...");
+		KLOG_D("Submitting render job %x : %x\n", p_v3d_job->v3d_ct1ca , p_v3d_job->v3d_ct1ea);
 		p_v3d_job->job_intern_state = 2;
 		v3d_write(p_v3d_job->v3d_ct1ca,  V3D_CT1CA_OFFSET);
 		v3d_write(p_v3d_job->v3d_ct1ea,  V3D_CT1EA_OFFSET);
@@ -564,7 +565,7 @@ static int v3d_job_start(void)
 
 		//Submit rendering
 		if ( p_v3d_job->v3d_ct1ca != p_v3d_job->v3d_ct1ea ) {
-			KLOG_V("Submitting render job %x : %x\n", p_v3d_job->v3d_ct1ca , p_v3d_job->v3d_ct1ea);
+			KLOG_D("Submitting render job %x : %x\n", p_v3d_job->v3d_ct1ca , p_v3d_job->v3d_ct1ea);
 			v3d_write(p_v3d_job->v3d_ct1ca,  V3D_CT1CA_OFFSET);
 			v3d_write(p_v3d_job->v3d_ct1ea,  V3D_CT1EA_OFFSET);
 		}
@@ -942,22 +943,33 @@ static int disable_v3d_clock(void)
 	return (rc);
 }
 
-static void v3d_power(int flag)
+static void v3d_soft_reset(void)
 {
 	uint32_t value;
+	//Write the password to enable accessing other registers
+	writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
+			( 0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT), mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
 
+	// Put V3D in reset state
+	value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
+	value = value & ~( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
+	writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+
+	udelay(10);
+
+	value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
+	value = value | ( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
+	writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+}
+
+static void v3d_power(int flag)
+{
 	mutex_lock(&v3d_state.work_lock);
 	KLOG_D("v3d_power [%d] v3d_inuse[%d]", flag, v3d_in_use);
 
 	if (flag) {
 		// Enable V3D
 		enable_v3d_clock();
-		value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
-		value = value | ( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
-		writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
-
-		//Write the password to disable accessing other registers
-		writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT), mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
 
 		/* Request for SIMPLE wfi */
 		if (v3d_state.qos_node)
@@ -982,14 +994,6 @@ static void v3d_power(int flag)
 		if (v3d_state.qos_node)
 			pi_mgr_qos_request_update(v3d_state.qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 
-		//Write the password to enable accessing other registers
-		writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
-				( 0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT), mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
-
-		// Put V3D in reset state
-		value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
-		value = value & ~( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
-		writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
 		/* Disable V3D clock */
 		v3d_is_on = 0;
 		disable_v3d_clock();
@@ -1043,8 +1047,6 @@ static void v3d_print_status(void)
 	mutex_lock(&v3d_state.work_lock);
 	if(v3d_is_on)
 	{
-		printk("v3d reg: ct0_ca[0x%x] ct0_ea[0x%x] ct1_ca[0x%x] ct1_ea[0x%x]",
-			v3d_read(V3D_CT0CA_OFFSET), v3d_read(V3D_CT0EA_OFFSET), v3d_read(V3D_CT1CA_OFFSET), v3d_read(V3D_CT1EA_OFFSET));
 		printk("v3d reg: intctl[%x] pcs[%x] bfc[%d] rfc[%d] bpoa[0x%08x] bpos[0x%08x]",
 			v3d_read(V3D_INTCTL_OFFSET), v3d_read(V3D_PCS_OFFSET), v3d_read(V3D_BFC_OFFSET), v3d_read(V3D_RFC_OFFSET),
 			v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET));
@@ -1061,9 +1063,12 @@ static void v3d_print_status(void)
 			v3d_read(0xf20),
 			v3d_read(0xf00),
 			v3d_read(0xf04));
-		printk("v3d bin mem status bpoa[0x%08x] bpos[0x%08x] bpca[0x%08x] bpcs[0x%08x]",
+		printk("v3d bin mem status bpoa[0x%08x] bpos[0x%08x] bpca[0x%08x] bpcs[0x%08x]\n",
 				v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET), v3d_read(V3D_BPCA_OFFSET), v3d_read(V3D_BPCS_OFFSET));
 	}
+	else
+		printk("V3D is powered down\n");
+
 	mutex_unlock(&v3d_state.work_lock);
 }
 
@@ -1091,10 +1096,10 @@ static void v3d_reg_init(void)
 
 static void v3d_reset(void)
 {
-	//Power cycle v3d
-	v3d_power(0);
-	v3d_power(1);
+	//Soft-reset v3d
+	v3d_soft_reset();
 	v3d_reg_init();
+	free_bin_mem(0);
 	v3d_in_use = 0;
 #ifdef SUPPORT_V3D_WORKLIST
 	v3d_flags = 0;
@@ -1113,7 +1118,6 @@ static int v3d_hw_acquire(bool for_worklist)
 	}
 
 	v3d_power(1);
-	v3d_reg_init();
 
 	mutex_lock(&v3d_state.work_lock);
 	/* Request the V3D IRQ */
@@ -1136,7 +1140,6 @@ static void v3d_hw_release(void)
 {
 	free_irq(IRQ_GRAPHICS, NULL);
 	v3d_power(0);
-	free_bin_mem(0);
 	complete(&v3d_state.acquire_sem);		//V3D is up for grab
 }
 
@@ -1215,7 +1218,6 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 
 	/* Clear interrupts isr is going to handle */
 	tmp = flags & v3d_read(V3D_INTENA_OFFSET);
-
 	v3d_write(tmp,  V3D_INTCTL_OFFSET);
 	if (flags_qpu) {
 		v3d_write(flags_qpu,  V3D_DBQITC_OFFSET);
@@ -1226,21 +1228,23 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 	 */
 	v3d_flags = (flags & 0x3) | (flags_qpu ? (1 << 4) : 0);
 
-	/* Handle oom interrupt + overspill use interrupt*/
-	if (flags & (0x3 << 2))
+	/* Handle oom interrupt interrupt and binning is not yet done */
+	if ((flags & (0x1 << 2)) && !(v3d_flags & 0x2))
 	{
 		irq_retval = 1;
 
 		if(v3d_oom_block_used == 0)
 		{
 			v3d_oom_block_used = 1;
+			KLOG_D("Bin OOM: give out static memory 0X%x\n", flags);
 			v3d_write(v3d_bin_oom_block,  V3D_BPOA_OFFSET);
 			v3d_write(v3d_bin_oom_size,  V3D_BPOS_OFFSET);
+			v3d_write(tmp,  V3D_INTCTL_OFFSET); //Clear interrupt
 		}
 		else
 		{
 			//Statically allocated binning memory is used up: supply from work queue
-			KLOG_D("Bin using overspill: starting workqueue to allocate more memory 0X%x\n", flags);
+			KLOG_D("Bin OOM: starting workqueue to allocate more memory 0X%x\n", flags);
 			v3d_write(1 << 2,  V3D_INTDIS_OFFSET);
 			queue_work(oom_wq, &work);
 		}
@@ -1261,6 +1265,7 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 			wake_up_interruptible(&v3d_isr_done_q);
 		}
 	}
+
 	return IRQ_RETVAL(irq_retval);
 }
 #endif
