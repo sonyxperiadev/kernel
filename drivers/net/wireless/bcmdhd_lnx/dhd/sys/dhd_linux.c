@@ -115,6 +115,13 @@ static struct notifier_block dhd_notifier = {
 };
 #endif /* ARP_OFFLOAD_SUPPORT */
 
+/* wlan device type */
+static struct device_type wlan_type = {
+	.name   = "wlan",
+};
+
+
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP)
 #include <linux/suspend.h>
 volatile bool dhd_mmc_suspend = FALSE;
@@ -2403,8 +2410,10 @@ dhd_add_if(dhd_info_t *dhd, int ifidx, void *handle, char *name,
 		ifp->bssidx = bssidx;
 		ASSERT(&dhd->thr_sysioc_ctl.thr_pid >= 0);
 		up(&dhd->thr_sysioc_ctl.sema);
-	} else
-		ifp->net = (struct net_device *)handle;
+	} else {
+ 		ifp->net = (struct net_device *)handle;
+		SET_NETDEV_DEVTYPE(ifp->net, &wlan_type);
+	}
 
 	return 0;
 }
