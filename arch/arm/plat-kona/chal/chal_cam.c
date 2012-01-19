@@ -1810,7 +1810,7 @@ cUInt32 chal_cam_get_rx_status(CHAL_HANDLE handle, CHAL_CAM_PARAM_st_t* param)
  ***********************************************************/
 UInt32 chalCamRawIntrStatus( CHAL_HANDLE handle, UInt32 reg )
 {
-    chal_cam_t *pCamDevice = (chal_cam_t *)handle;
+    (void)handle;
     UInt32 status = 0;
     
         if (reg & CAM_ISTA_FSI_MASK)
@@ -1841,7 +1841,7 @@ UInt32 chalCamRawIntrStatus( CHAL_HANDLE handle, UInt32 reg )
  ***********************************************************/
 UInt32 chalCamRawRxStatus( CHAL_HANDLE handle, UInt32 reg )
 {
-    chal_cam_t *pCamDevice = (chal_cam_t *)handle;
+    (void)handle;
     UInt32 rx_status = 0;
     
  // Packet 1
