@@ -77,6 +77,7 @@ struct unicam_camera_buffer {
 
 static irqreturn_t unicam_camera_isr(int irq, void *arg);
 
+#ifdef UNICAM_DEBUG
 /* for debugging purpose */
 static void dump_file(char *filename, void *src, int size)
 {
@@ -100,7 +101,7 @@ static void dump_file(char *filename, void *src, int size)
 out:
 	set_fs(old_fs);
 }
-
+#endif
 
 static struct unicam_camera_buffer *to_unicam_camera_vb(struct vb2_buffer *vb)
 {
