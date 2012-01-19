@@ -500,7 +500,7 @@ int __init rhea_pwr_mgr_late_init(void)
 	}
 
 	/* Enable PI counters */
-	for (i = 0; i < PI_MGR_PI_ID_MODEM; i++)
+	for (i = 0; i < PI_MGR_PI_ID_MAX; i++)
 		pwr_mgr_pi_counter_enable(i, 1);
 	pm_mgr_pi_count_clear(1);
 	pm_mgr_pi_count_clear(0);
