@@ -37,6 +37,7 @@
 #define BCMPMU_PRINT_REPORT (1U << 4)
 
 static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
+
 #define POLL_SAMPLES		8
 #define POLLRATE_TRANSITION	3000
 #define POLLRATE_CHRG		5000
@@ -403,14 +404,20 @@ static int em_batt_get_capacity(struct bcmpmu_em *pem, int pvolt, int curr)
 	
 	volt = pvolt - (pem->batt_impedence * curr)/1000;
 
-	for (i = 0; i < pem->bvcap_len; i++) {
-		if ((volt <= pem->bvcap[i].volt) &&
-			(volt > pem->bvcap[i+1].volt)) {
-			index = ((pem->bvcap[i].volt - volt) * 1000)/
-				(pem->bvcap[i].volt - pem->bvcap[i+1].volt);
-			cap = pem->bvcap[i].cap +
-				((pem->bvcap[i+1].cap - pem->bvcap[i].cap) * index)/1000;
-			break;
+	if (volt >= pem->bvcap[0].volt)
+		cap = pem->bvcap[0].cap;
+	else if (volt <= pem->bvcap[pem->bvcap_len - 1].volt)
+		cap = pem->bvcap[pem->bvcap_len - 1].cap;
+	else {
+		for (i = 0; i < pem->bvcap_len - 1; i++) {
+			if ((volt <= pem->bvcap[i].volt) &&
+			    (volt > pem->bvcap[i+1].volt)) {
+				index = ((pem->bvcap[i].volt - volt) * 1000)/
+					 (pem->bvcap[i].volt - pem->bvcap[i+1].volt);
+				cap = pem->bvcap[i].cap +
+					((pem->bvcap[i+1].cap - pem->bvcap[i].cap) * index)/1000;
+				break;
+			}
 		}
 	}
 	pr_em(FLOW, "%s, cpcty=%d, pvlt=%d, crr=%d, vlt=%d, imp=%d\n",
@@ -453,6 +460,9 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 		if (ret != 0) {
 			pr_em(DATA, "%s, fg data invalid\n", __func__);
 			fg_result = 0;
+			capacity = pem->batt_capacity;
+			calibration = 0;
+			goto err;
 		}
 		pem->fg_capacity += fg_result;
 		if (pem->fg_capacity >= pem->fg_capacity_full)
@@ -504,9 +514,10 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 		}
 	} else eoc_count = 0;
 
-	pr_em(FLOW, "%s, fg_acc=%d, fg_cpcty=%d, cpcty=%d, vcpcty=%d, t=%d\n",
+err:
+	pr_em(FLOW, "%s, fg_acc=%d, fg_cpcty=%d, cpcty=%d, vcpcty=%d, t=%d, cal=%d, calm=%d\n",
 		__func__, fg_result, pem->fg_capacity, capacity,
-		capacity_v, pem->batt_temp);
+		capacity_v, pem->batt_temp, calibration, pem->cal_mode);
 
 	*cap = capacity;
 	return calibration;
@@ -643,16 +654,13 @@ static void em_algorithm(struct work_struct *work)
 	int psy_changed = 0;
 	int charge_zone;
 	int calibration;
+	int fg_result;
 
 	static int first_run = 0;
 	static int poll_count = 0;
 	static int vacc = 0;
-	static int iacc = 0;
 	static int init_poll = 0;
 	int ret;
-
-	pr_em(FLOW, "%s, first_run=%d, poll_count=%d, vacc=%d, iacc=%d\n",
-		__func__, first_run, poll_count, vacc, iacc);
 
 	if (first_run == 0) {
 		bcmpmu->fg_enable(bcmpmu, 1);
@@ -682,6 +690,8 @@ static void em_algorithm(struct work_struct *work)
 			pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
 			pem->batt_capacity = capacity;
 			pem->mode = MODE_IDLE;
+			if (capacity >= 30)
+				pem->fg_lowbatt_cal = 1;
 		}
 		first_run = 1;
 		schedule_delayed_work(&pem->work, msecs_to_jiffies(get_update_rate(pem)));
@@ -696,24 +706,36 @@ static void em_algorithm(struct work_struct *work)
 		vacc += req.cnv;
 		pem->mode = MODE_POLL;
 		poll_count--;
+		pr_em(FLOW, "%s, first_run=%d, poll_count=%d, vacc=%d\n",
+			__func__, first_run, poll_count, vacc);
 		schedule_delayed_work(&pem->work, msecs_to_jiffies(get_update_rate(pem)));
 		return;
 	}
 	if (pem->mode == MODE_POLL) {
+		ret = pem->bcmpmu->fg_acc_mas(pem->bcmpmu, &fg_result);
+		if (ret != 0) {
+			pem->mode = MODE_IDLE;
+			poll_count = POLL_SAMPLES;
+			vacc = 0;
+			pr_em(FLOW, "%s, restart poll.\n", __func__);
+			schedule_delayed_work(&pem->work,
+				msecs_to_jiffies(get_update_rate(pem)));
+			return;
+		}
 		bcmpmu->fg_reset(bcmpmu);
 		req.sig = PMU_ADC_FG_CURRSMPL;
 		req.tm = PMU_ADC_TM_HK;
 		req.flags = PMU_ADC_RAW_AND_UNIT;
 		bcmpmu->adc_req(bcmpmu, &req);
-		iacc = req.cnv;
+		pem->batt_curr = req.cnv;
 		pem->batt_volt = vacc/POLL_SAMPLES;
-		pem->batt_curr = iacc;
 		capacity = em_batt_get_capacity(pem,
 			pem->batt_volt, pem->batt_curr);
 
 		if (init_poll == 1) {
-			if (((capacity - pem->cap_init) > 20) ||
-			    ((capacity - pem->cap_init) < -20)) {
+			if ((pem->cap_init != 0) &&
+			    (((capacity - pem->cap_init) > 20) ||
+			     ((capacity - pem->cap_init) < -20))) {
 				capacity = pem->cap_init;
 				pr_em(FLOW, "%s, Init calibratrion.\n", __func__);
 			}
