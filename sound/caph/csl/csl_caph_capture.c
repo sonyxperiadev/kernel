@@ -180,8 +180,9 @@ Result_t csl_audio_capture_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 	if (audDrv->source == CSL_CAPH_DEV_DSP
 	    && audDrv->sink == CSL_CAPH_DEV_MEMORY) {
 		Log_DebugPrintf(LOGID_SOC_AUDIO,
-				"csl_audio_capture_configure::USB call? reset src_sampleRate from %ld to 8000.\r\n",
-				stream.src_sampleRate);
+			"csl_audio_capture_configure::USB call?"
+			"reset src_sampleRate from %u to 8000.\r\n",
+			stream.src_sampleRate);
 		stream.src_sampleRate = AUDIO_SAMPLING_RATE_8000;
 	}
 

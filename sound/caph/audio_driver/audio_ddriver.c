@@ -1303,7 +1303,7 @@ static Result_t ARM2SP_play_start(AUDIO_DDRIVER_t *aud_drv,
 	Log_DebugPrintf(LOGID_AUDIO, "playbackMode = %d, mixMode = %d,",
 		aud_drv->arm2sp_config.playbackMode,
 		aud_drv->arm2sp_config.mixMode);
-	Log_DebugPrintf(LOGID_AUDIO, "instanceID=0x%lx, samplingRate = %ld\n",
+	Log_DebugPrintf(LOGID_AUDIO, "instanceID=0x%lx, samplingRate = %u\n",
 		aud_drv->arm2sp_config.instanceID,
 		aud_drv->sample_rate);
 

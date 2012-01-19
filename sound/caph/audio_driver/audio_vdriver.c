@@ -401,7 +401,8 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 		csl_dsp_caph_control_aadmac_disable_path((UInt16)
 							 (DSP_AADMAC_SPKR_EN));
 		/* dma_mic_spk = (UInt16) DSP_AADMAC_PRI_MIC_EN;*/
-        dma_mic_spk = ((UInt16)(DSP_AADMAC_PRI_MIC_EN))|((UInt16)(DSP_AADMAC_IHF_SPKR_EN));
+		dma_mic_spk = ((UInt16)(DSP_AADMAC_PRI_MIC_EN)) | ((UInt16)
+		(DSP_AADMAC_IHF_SPKR_EN));
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0,
@@ -825,9 +826,9 @@ void AUDDRV_Telephony_Deinit(void)
 		}
 #if defined(ENABLE_DMA_VOICE)
 		dma_mic_spk =
-		    (UInt16) (DSP_AADMAC_PRI_MIC_EN) |
-            ((UInt16)(DSP_AADMAC_IHF_SPKR_EN)) |
-		    (UInt16) (DSP_AADMAC_SPKR_EN);
+			(UInt16)(DSP_AADMAC_PRI_MIC_EN) |
+			((UInt16)(DSP_AADMAC_IHF_SPKR_EN)) |
+			(UInt16)(DSP_AADMAC_SPKR_EN);
 		csl_dsp_caph_control_aadmac_disable_path(dma_mic_spk);
 #endif
 		audio_control_dsp(DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0);
@@ -893,8 +894,9 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t mixer_speaker_selection,
 			    AUDIO_SAMPLING_RATE_t sample_rate)
 {
 	Log_DebugPrintf(LOGID_AUDIO,
-			"\n* AUDDRV_EnableDSPOutput mixer %d, bInVoiceCall %d, sample_rate %ld *\n",
-			mixer_speaker_selection, bInVoiceCall, sample_rate);
+		"\n AUDDRV_EnableDSPOutput mixer %d, bInVoiceCall %d,"
+		"sample_rate %u *\n",
+		mixer_speaker_selection, bInVoiceCall, sample_rate);
 
 	mdelay(5);
 	/* sometimes BBC video has no audio.
@@ -938,8 +940,9 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t mixer_speaker_selection,
 		voicePlayOutpathEnabled = TRUE;
 
 		Log_DebugPrintf(LOGID_AUDIO,
-				"\n* AUDDRV_Enable_Output: bInVoiceCall = %d, voicePlayOutpathEnabled = %d\n",
-				bInVoiceCall, voicePlayOutpathEnabled);
+			"\n* AUDDRV_Enable_Output: bInVoiceCall = %d,"
+			"voicePlayOutpathEnabled = %d\n",
+			bInVoiceCall, voicePlayOutpathEnabled);
 
 #if 0
 		if (currVoiceSpkr == AUDIO_SINK_BTM)
@@ -974,8 +977,8 @@ void AUDDRV_DisableDSPOutput(void)
 				  0);
 
 #if defined(ENABLE_DMA_VOICE)
-		csl_dsp_caph_control_aadmac_disable_path( ((UInt16)
-				DSP_AADMAC_SPKR_EN) | ((UInt16)(DSP_AADMAC_IHF_SPKR_EN)) );
+		csl_dsp_caph_control_aadmac_disable_path(((UInt16)
+		DSP_AADMAC_SPKR_EN) | ((UInt16)(DSP_AADMAC_IHF_SPKR_EN)));
 #endif
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
 
@@ -1776,8 +1779,8 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	UInt32 *memAddr = 0;
 
 	Log_DebugPrintf(LOGID_AUDIO,
-			"\n* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%ld*\n",
-			mic, speaker, sample_rate);
+	"\n* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%u*\n",
+		mic, speaker, sample_rate);
 
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
