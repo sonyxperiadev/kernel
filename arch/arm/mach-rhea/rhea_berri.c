@@ -1320,6 +1320,12 @@ static struct platform_device r61581_smi8_display_device = {
 
 #define OV5640_I2C_ADDRESS (0x3C)
 
+static struct i2c_board_info rhea_i2c_camera[] = {
+	{
+	 I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
+	 },
+};
+
 static int rhea_camera_power(struct device *dev, int on)
 {
 	unsigned int value;
@@ -1462,12 +1468,11 @@ static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
 		.pix_clk = 0
 	},
 };
-static struct i2c_board_info rhea_i2c_camera[];
+
 static struct soc_camera_link iclink_ov5640 = {
 	.bus_id = 0,
-	.i2c_adapter_id = 0,
 	.board_info = &rhea_i2c_camera[0],
-	.i2c_pdata = {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_380K),},
+	.i2c_adapter_id = 0,
 	.module_name = "ov5640",
 	.power = &rhea_camera_power,
 	.reset = &rhea_camera_reset,
@@ -1480,13 +1485,6 @@ static struct platform_device rhea_camera = {
 	.dev = {
 		.platform_data = &iclink_ov5640,
 		},
-};
-
-static struct i2c_board_info rhea_i2c_camera[] = {
-	{
-	 I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
-	 .platform_data = &iclink_ov5640,
-	 },
 };
 
 /* Rhea Ray specific platform devices */
