@@ -709,7 +709,7 @@ enum bcmpmu_ioctl {
 struct bcmpmu_rw_data_ltp{
 	unsigned int map;
 	unsigned int addr;
-	unsigned int val;
+	char val[16];
 	unsigned int mask;	
 	unsigned int len;
 };
