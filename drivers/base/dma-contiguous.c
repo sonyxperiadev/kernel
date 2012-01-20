@@ -33,6 +33,9 @@
 #include <linux/dma-contiguous.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 
 #ifndef SZ_1M
 #define SZ_1M (1 << 20)
@@ -72,6 +75,8 @@ struct cma {
 
 struct cma *dma_contiguous_default_area;
 
+static DEFINE_MUTEX(cma_mutex);
+
 #ifdef CONFIG_CMA_SIZE_MBYTES
 #define CMA_SIZE_MBYTES CONFIG_CMA_SIZE_MBYTES
 #else
@@ -83,6 +88,79 @@ struct cma *dma_contiguous_default_area;
 #else
 #define CMA_SIZE_PERCENTAGE 0
 #endif
+
+/* debugfs related functions */
+#ifdef CONFIG_DEBUG_FS
+/* when using debugfs_create_file private data field is set on inode
+ * copy data pointer to file private data */
+static int cma_debugfs_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+static ssize_t cma_debugfs_read(struct file *file, char __user *user_buf,
+			 size_t size, loff_t *ppos)
+{
+	struct cma *cma = file->private_data;
+	char *buf;
+	unsigned int len = 0, count = 0;
+	/* bitmap_scnprintf() produces one hex-digit per 4 bits of the
+	 * bitmap and one comma per every 8 hex-digits meaning par every
+	 * 32 bits, add 64 bytes for the additional characters
+	 */
+	unsigned int buffer_size = (cma->count/4) + (cma->count/32) + 64;
+
+	buf = kmalloc(buffer_size, GFP_KERNEL);
+	if (!buf)
+		return 0;
+
+	len +=
+	    snprintf(buf + len, buffer_size - len,
+		     "CMA base 0x%08lx, count %lx\n", cma->base_pfn,
+		     cma->count);
+
+	len += snprintf(buf + len, buffer_size - len, "CMA bitmap : ");
+
+	mutex_lock(&cma_mutex);
+	len +=
+	    bitmap_scnprintf(buf + len, buffer_size - len, cma->bitmap,
+			     cma->count);
+	mutex_unlock(&cma_mutex);
+
+	len += snprintf(buf + len, buffer_size - len, "\n");
+
+	if (len > buffer_size)
+		len = buffer_size;
+
+	count = simple_read_from_buffer(user_buf, size, ppos, buf, len);
+	kfree(buf);
+
+	return count;
+}
+
+static const struct file_operations cma_debugfs_fops = {
+	.open = cma_debugfs_open,
+	.read = cma_debugfs_read,
+	.llseek = default_llseek,
+	.owner = THIS_MODULE,
+};
+
+static int region_count = 0;
+
+static char debugfs_cma_file[MAX_CMA_AREAS][6];
+static void cma_debugfs_create_file(struct cma *cma)
+{
+
+	sprintf(&debugfs_cma_file[region_count][0], "cma%d", region_count);
+	debugfs_create_file(&debugfs_cma_file[region_count][0], S_IRUSR, NULL, cma, &cma_debugfs_fops);
+	region_count++;
+}
+#else
+static inline void cma_debugfs_create_file(struct cma *cma) { }
+#endif
+
+
 
 /*
  * Default global CMA area size can be defined in kernel's .config.
@@ -167,8 +245,6 @@ void __init dma_contiguous_reserve(phys_addr_t limit)
 
 	dma_declare_contiguous(NULL, selected_size, 0, limit);
 };
-
-static DEFINE_MUTEX(cma_mutex);
 
 #ifdef CONFIG_CMA_STATS
 
@@ -341,6 +417,9 @@ static struct cma *cma_create_area(unsigned long base_pfn, unsigned long count)
 	cma->total_alloc = cma->highest_alloc = 0UL;
 	cma->largest_free_block = cma->count;
 #endif
+
+	cma_debugfs_create_file(cma);
+
 	pr_debug("%s: returned %p\n", __func__, (void *)cma);
 	return cma;
 
