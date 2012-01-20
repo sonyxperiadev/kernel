@@ -194,6 +194,10 @@ struct dwc_otg_pcd {
 	unsigned a_hnp_support:1;
 	/** The state of the A-Device Alt HNP support. */
 	unsigned a_alt_hnp_support:1;
+	/** The state of host role request */
+	unsigned host_request_flag:1;
+	/** otg_hnp_reqd test mode feature bit */
+	unsigned otg_hnp_reqd:1;
 	/** Count of pending Requests */
 	unsigned request_pending;
 

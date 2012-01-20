@@ -256,7 +256,11 @@ static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.ahb_thr_ratio = -1,
 	.power_down = -1,
 	.stop_phy_clk = -1,
-	.otg_ver = -1,
+#ifdef CONFIG_USB_OTG
+	.otg_ver = 1,
+#else
+	.otg_ver = 0,
+#endif
 	.adp_enable = -1,
 };
 

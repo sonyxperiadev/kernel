@@ -318,13 +318,14 @@ static int32_t dwc_otg_hcd_disconnect_cb(void *p)
 			hprt0.b.prtpwr = 0;
 			dwc_write_reg32(dwc_otg_hcd->core_if->host_if->hprt0,
 					hprt0.d32);
+
 #ifdef CONFIG_USB_OTG_UTILS
-			DWC_WORKQ_SCHEDULE(dwc_otg_hcd->core_if->wq_otg,
+			if (dwc_otg_hcd->core_if->op_state != B_HOST)
+				DWC_WORKQ_SCHEDULE(dwc_otg_hcd->core_if->wq_otg,
 					   disable_vbus_func,
 					   dwc_otg_hcd->core_if, "disconnect");
-#endif
 		}
-
+#endif
 		dwc_otg_disable_host_interrupts(dwc_otg_hcd->core_if);
 	}
 

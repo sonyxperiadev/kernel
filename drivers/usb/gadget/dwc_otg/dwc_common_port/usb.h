@@ -392,6 +392,7 @@ typedef struct {
 /* Endpoint status flags */
 #define UES_HALT			0x0001
 } UPACKED usb_status_t;
+#define UDS_OTG_FEATURE_SELECTOR	0xF000
 
 typedef struct {
 	uWord		wHubStatus;

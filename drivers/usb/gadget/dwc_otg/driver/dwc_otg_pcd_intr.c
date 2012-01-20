@@ -52,9 +52,14 @@ static void dwc_otg_pcd_update_otg(dwc_otg_pcd_t * pcd, const unsigned reset)
 {
 
 	if (reset) {
+		gotgctl_data_t gotgctl = {.d32 = 0 };
 		pcd->b_hnp_enable = 0;
 		pcd->a_hnp_support = 0;
 		pcd->a_alt_hnp_support = 0;
+		pcd->host_request_flag = 0;
+		gotgctl.d32 = 0;
+		gotgctl.b.devhnpen = 1;
+		dwc_modify_reg32(&pcd->core_if->core_global_regs->gotgctl, gotgctl.d32, 0);
 	}
 
 	if (pcd->fops->hnp_changed) {
@@ -1329,6 +1334,10 @@ void do_test_mode(void *data)
 			core_if->xceiver->set_srp_reqd(core_if->xceiver);
 #endif
 		break;
+	case 7: /* Set otg_hnp_reqd */
+		pcd->otg_hnp_reqd = 1;
+		pcd->host_request_flag = pcd->otg_hnp_reqd;
+		break;
 	}
 	dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl, dctl.d32);
 }
@@ -1353,8 +1362,12 @@ static inline void do_get_status(dwc_otg_pcd_t * pcd)
 
 	switch (UT_GET_RECIPIENT(ctrl.bmRequestType)) {
 	case UT_DEVICE:
-		*status = pcd->self_powered;
-		*status |= pcd->remote_wakeup_enable << 1;
+		if (UGETW(ctrl.wIndex) == UDS_OTG_FEATURE_SELECTOR)
+			*status = pcd->host_request_flag;
+		else {
+			*status = pcd->self_powered;
+			*status |= pcd->remote_wakeup_enable << 1;
+		}
 		break;
 
 	case UT_INTERFACE:
@@ -1421,21 +1434,23 @@ static inline void do_set_feature(dwc_otg_pcd_t * pcd)
 		case UF_DEVICE_B_HNP_ENABLE:
 			DWC_DEBUGPL(DBG_PCDV,
 				    "SET_FEATURE: USB_DEVICE_B_HNP_ENABLE\n");
-
+			gotgctl.d32 = dwc_read_reg32(&global_regs->gotgctl);
 			/* dev may initiate HNP */
 			if (otg_cap_param == DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE) {
 				pcd->b_hnp_enable = 1;
 				dwc_otg_pcd_update_otg(pcd, 0);
 				DWC_DEBUGPL(DBG_PCD, "Request B HNP\n");
+
 				/**@todo Is the gotgctl.devhnpen cleared
 				 * by a USB Reset? */
 				gotgctl.b.devhnpen = 1;
 				gotgctl.b.hnpreq = 1;
 				dwc_write_reg32(&global_regs->gotgctl,
 						gotgctl.d32);
-			} else {
+				/* Clear hnp test mode */
+				pcd->otg_hnp_reqd = 0;
+			} else
 				ep0_do_stall(pcd, -DWC_E_NOT_SUPPORTED);
-			}
 			break;
 
 		case UF_DEVICE_A_HNP_SUPPORT:
@@ -1457,9 +1472,8 @@ static inline void do_set_feature(dwc_otg_pcd_t * pcd)
 			if (otg_cap_param == DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE) {
 				pcd->a_alt_hnp_support = 1;
 				dwc_otg_pcd_update_otg(pcd, 0);
-			} else {
+			} else
 				ep0_do_stall(pcd, -DWC_E_NOT_SUPPORTED);
-			}
 			break;
 
 		default:
