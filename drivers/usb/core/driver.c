@@ -1340,6 +1340,13 @@ out:
 		kfree(status);
 }
 
+void usb_host_suspend_test_device(struct usb_device *udev)
+{
+		do_unbind_rebind(udev, DO_UNBIND);
+		usb_suspend_both(udev, PMSG_USER_SUSPEND);
+}
+
+
 void usb_host_test_device_sessend_work(struct work_struct *work)
 {
 	struct usb_bus *bus =

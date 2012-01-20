@@ -75,6 +75,7 @@ static inline int usb_port_resume(struct usb_device *udev, pm_message_t msg)
 #ifdef CONFIG_USB_OTG
 extern void usb_hnp_polling_work(struct work_struct *work);
 extern void usb_host_test_device_sessend_work(struct work_struct *work);
+extern void usb_host_suspend_test_device(struct usb_device *udev);
 #endif
 
 #ifdef CONFIG_USB_SUSPEND

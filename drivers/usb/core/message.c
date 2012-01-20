@@ -1921,7 +1921,10 @@ free_interfaces:
 						usb_control_msg(hdev, usb_sndctrlpipe(hdev, 0),
 							USB_REQ_SET_FEATURE, USB_RT_PORT, USB_PORT_FEAT_TEST, 0x1000,
 							NULL, 0, 1000);
-					else
+					else if (hcd->self.is_b_host) {
+						/* Suspend within TTST_SUSP after HNP */
+						usb_host_suspend_test_device(dev);
+					} else
 						schedule_delayed_work(&dev->bus->maint_conf_session_for_td,
 							msecs_to_jiffies(HOST_VBOFF));
 					break;
