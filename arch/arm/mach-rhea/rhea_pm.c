@@ -72,6 +72,7 @@ static u32 pm_en_self_refresh = 0;
 
 dma_addr_t noncache_buf_pa;
 char* noncache_buf_va;
+char* noncache_buf_tmp_va;
 #endif
 
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
@@ -509,9 +510,11 @@ int enter_dormant_state(struct kona_idle_state* state)
 			 CSR_AXI_PORT_CTRL_PORT0_DISABLE_MASK),
 				 KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
 		udelay(1);
+
 		 /* reset all MEMC demesh entries */
-		 for (count = 0; count < 16; count++, noncache_buf_va += 64)
-			temp_val = *(volatile u32 *)noncache_buf_va;
+		 noncache_buf_tmp_va = noncache_buf_va;
+		 for (count = 0; count < 16; count++, noncache_buf_tmp_va += 64)
+			temp_val = *(volatile u32 *)noncache_buf_tmp_va;
 		 /* re-enable all MEMC ports, 0x0 -> 0x3500801c; */
 		 writel(0x0, KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
 		 /* release CORE0 semaphore, 1<<MEMC_HW2221_SEMAPHORE -> 0x35004188 */
