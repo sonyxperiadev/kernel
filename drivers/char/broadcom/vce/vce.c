@@ -36,7 +36,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/broadcom/vce.h>
 
-#define DRIVER_VERSION 10101
+#define DRIVER_VERSION 10102
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -818,6 +818,8 @@ int __init vce_init(void)
 	init_completion(&vce_state.acquire_sem);
 	complete(&vce_state.acquire_sem); //First request should succeed
 	mutex_init(&vce_state.work_lock); //First request should succeed
+
+        vce_state.proc_vcedir = proc_mkdir(VCE_DEV_NAME, NULL);
 	if (vce_state.proc_vcedir == NULL) {
 		err_print("Failed to create vce proc dir\n");
 		ret = -ENOENT;
