@@ -561,12 +561,9 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 			"AUDDRV_Telephony_RateChange a1, sampleRate = %d\n\r",
 			sample_rate);
 
-#if defined(FUSE_APPS_PROCESSOR) && !defined(BSP_ONLY_BUILD)
+#if !defined(BSP_ONLY_BUILD)
 	Log_DebugPrintf(LOGID_AUDIO,
 			"\n\r\t* AUDDRV_Telephony_RateChange AP  *\n\r");
-#else
-	Log_DebugPrintf(LOGID_AUDIO,
-			"\n\r\t* AUDDRV_Telephony_RateChange CP *\n\r");
 #endif
 
 	if (voiceCallSampleRate == sample_rate)

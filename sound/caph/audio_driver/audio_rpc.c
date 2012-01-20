@@ -226,11 +226,7 @@ void Audio_InitRpc(void)
 		params.table_size =
 		    (sizeof(AUDIO_Prim_dscrm) / sizeof(RPC_XdrInfo_t));
 		params.xdrtbl = AUDIO_Prim_dscrm;
-#if defined(FUSE_APPS_PROCESSOR)
 		params.respCb = HandleAudioEventrespCb;
-#else
-		params.respCb = NULL;
-#endif
 		params.reqCb = HandleAudioEventReqCb;
 		syncParams.copyCb = AudioCopyPayload;
 
@@ -409,7 +405,6 @@ bool_t xdr_AudioCompfilter_t(void *xdrs, AudioCompfilter_t *rsp)
 }
 #endif
 
-#if defined(FUSE_APPS_PROCESSOR)
 #if defined(CONFIG_BCM_MODEM)
 UInt32 audio_control_generic(UInt32 param1, UInt32 param2, UInt32 param3,
 			     UInt32 param4, UInt32 param5, UInt32 param6)
@@ -564,4 +559,3 @@ UInt32 audio_cmf_filter(AudioCompfilter_t *cf)
 	return val;
 }
 #endif
-#endif /* #if defined(FUSE_APPS_PROCESSOR) */
