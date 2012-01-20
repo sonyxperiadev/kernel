@@ -103,6 +103,7 @@ struct tasklet_struct	dma_tasklet;
 
 struct spum_hash_context {
 	u32	hash_init;
+	u8	digest[SHA512_DIGEST_SIZE]; /* Max. digest size in bytes*/
 	struct brcm_spum_device	*dd;
 	struct crypto_shash	*fallback;
 };
@@ -557,6 +558,7 @@ static int spum_hash_update(struct ahash_request *req)
 	spum_hw_hash_ctx.data_attribute.mac_length  = rctx->rx_len;
 	spum_hw_hash_ctx.data_attribute.data_length = rctx->rx_len;
 	spum_hw_hash_ctx.data_attribute.mac_offset  = 0;
+	spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)(&ctx->digest) : 0;
 
 	switch(rctx->digestsize) {
 		case SHA1_DIGEST_SIZE:
@@ -564,7 +566,6 @@ static int spum_hash_update(struct ahash_request *req)
 			spum_hw_hash_ctx.icv_len   = (SHA1_DIGEST_SIZE/sizeof(u32));
 			spum_hw_hash_ctx.auth_type =
 			ctx->hash_init? SPUM_AUTH_TYPE_SHA1_UPDATE : SPUM_AUTH_TYPE_SHA1_INIT;
-			spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
 			spum_hw_hash_ctx.auth_key_len =
 					ctx->hash_init? (SHA1_DIGEST_SIZE/sizeof(u32)) : 0;
 			break;
@@ -574,7 +575,6 @@ static int spum_hash_update(struct ahash_request *req)
 			spum_hw_hash_ctx.icv_len   = (SHA224_DIGEST_SIZE/sizeof(u32));
 			spum_hw_hash_ctx.auth_type =
 			ctx->hash_init? SPUM_AUTH_TYPE_SHA1_UPDATE : SPUM_AUTH_TYPE_SHA1_INIT;
-			spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
 			spum_hw_hash_ctx.auth_key_len =
 					ctx->hash_init? (SHA224_DIGEST_SIZE/sizeof(u32)) : 0;
 			break;
@@ -584,7 +584,6 @@ static int spum_hash_update(struct ahash_request *req)
 			spum_hw_hash_ctx.icv_len   = (SHA256_DIGEST_SIZE/sizeof(u32));
 			spum_hw_hash_ctx.auth_type =
 			ctx->hash_init? SPUM_AUTH_TYPE_SHA1_UPDATE : SPUM_AUTH_TYPE_SHA1_INIT;
-			spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
 			spum_hw_hash_ctx.auth_key_len =
 					ctx->hash_init? (SHA256_DIGEST_SIZE/sizeof(u32)) : 0;
 			break;
@@ -594,7 +593,6 @@ static int spum_hash_update(struct ahash_request *req)
 			spum_hw_hash_ctx.icv_len   = (MD5_DIGEST_SIZE/sizeof(u32));
 			spum_hw_hash_ctx.auth_type =
 			ctx->hash_init? SPUM_AUTH_TYPE_MD5_UPDATE : SPUM_AUTH_TYPE_MD5_INIT;
-			spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
 			spum_hw_hash_ctx.auth_key_len =
 					ctx->hash_init? (MD5_DIGEST_SIZE/sizeof(u32)) : 0;
 			break;
@@ -668,6 +666,8 @@ static int spum_hash_init(struct ahash_request *req)
 
 static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 {
+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(dd->req);
+	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
         struct spum_request_context *rctx = ahash_request_ctx(dd->req);
         u32     tx_fifo[64] = {0, }, status, count, tx_len;
         int     i;
@@ -694,13 +694,18 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 
 	pr_debug("%s: count %d i %d\n",__func__,count,i);
 
-	/* Copy back the digest value into request. */
-	memcpy(rctx->result, (u8 *)&tx_fifo[tx_len], rctx->digestsize);
+	/* Make a local copy of the intemediate hash value. */
+	memcpy(&ctx->digest, (u8 *)&tx_fifo[tx_len], rctx->digestsize);
 
 	status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 
 	if((rctx->op&OP_FINAL) || ((rctx->op&OP_UPDATE) && (!rctx->flags&FLAGS_FINUP)) ||
 		((rctx->flags&FLAGS_FINUP) && (rctx->bufcnt == 0))) {
+
+		/* Copy back hash value to request if buffer pointer provided. */
+		if(rctx->result)
+			memcpy(rctx->result, &ctx->digest, rctx->digestsize);
+
 		if (dd->req->base.complete)
 			dd->req->base.complete(&dd->req->base, err);
 		pr_debug("%s: ACK to client\n",__func__);
@@ -758,7 +763,7 @@ static int spum_hash_final(struct ahash_request *req)
 		spum_hw_hash_ctx.auth_order     =       SPUM_CMD_AUTH_FIRST;
 		spum_hw_hash_ctx.key_type       =       SPUM_KEY_OPEN;
 
-		spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)rctx->result : 0;
+		spum_hw_hash_ctx.auth_key = ctx->hash_init? (void *)(&ctx->digest) : 0;
 
 		switch(rctx->digestsize) {
 			case SHA1_DIGEST_SIZE:
@@ -1033,7 +1038,7 @@ static void spum_dma_callback(void *data, enum pl330_xfer_status status)
 	int err = 0;
 
 	if (status != DMA_PL330_XFER_OK)
-		pr_err("%s: DMA failed.",__func__);
+		pr_err("%s: DMA failed. err %d",__func__,status);
 
 	list_for_each_entry(dd, &spum_drv.dev_list, list) {
 		break;
