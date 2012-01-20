@@ -957,7 +957,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 		rc = pwr_mgr_pm_i2c_sem_lock();
 		if (rc) {
 			bsc_disable_clk(dev);
-			mutex_lock(&dev->dev_lock);
+			mutex_unlock(&dev->dev_lock);
 			return rc;
 		} else {
 			rel_hw_sem = true;
