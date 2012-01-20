@@ -54,17 +54,6 @@ inline const char *op_state_str(dwc_otg_core_if_t *core_if)
 }
 #endif
 
-#ifdef CONFIG_USB_OTG
-static void dwc_otg_set_device_soft_disconnect(dwc_otg_core_if_t *core_if, bool en)
-{
-	dctl_data_t dctl = {.d32 = 0 };
-	dctl.d32 = dwc_read_reg32(&core_if->dev_if->dev_global_regs->dctl);
-	dctl.b.sftdiscon = en ? 1 : 0;
-	dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl,
-		dctl.d32);
-}
-#endif
-
 /** This function will log a debug message
  *
  * @param core_if Programming view of DWC_otg controller.
@@ -227,9 +216,6 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t *core_if)
 				    core_if->op_state);
 			cil_hcd_disconnect(core_if);
 			cil_pcd_start(core_if);
-#ifdef CONFIG_USB_OTG
-			dwc_otg_set_device_soft_disconnect(core_if, false);
-#endif
 			core_if->op_state = A_PERIPHERAL;
 		} else {
 			/*

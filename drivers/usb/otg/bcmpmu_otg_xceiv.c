@@ -528,20 +528,18 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 
 	bcm_hsotgctrl_phy_set_id_stat(!id_gnd);
 
-	if (id_gnd) {
-		/* Need to turn on Vbus within 200ms */
+	if (id_gnd)
 		bcmpmu_otg_xceiv_set_vbus(&xceiv_data->otg_xceiver.xceiver,
-					  true);
-	}
+					  true); /* Need to turn on Vbus within 200ms */
 
 	msleep(HOST_TO_PERIPHERAL_DELAY_MS);
 
-	bcm_hsotgctrl_phy_deinit();
-	xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
-
-	if (id_gnd)
+	if (id_gnd) {
+		bcm_hsotgctrl_phy_deinit();
+		xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.
 					   notifier, USB_EVENT_ID, NULL);
+	}
 }
 
 static void bcmpmu_otg_xceiv_chg_detect_handler(struct work_struct *work)

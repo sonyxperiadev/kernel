@@ -143,6 +143,11 @@ static int32_t dwc_otg_pcd_start_cb(void *p)
 	if (dwc_otg_is_device_mode(GET_CORE_IF(pcd))) {
 		dwc_otg_core_dev_init(GET_CORE_IF(pcd));
 	}
+
+#ifdef CONFIG_USB_OTG
+	/* Now we it is okay to connect */
+	dwc_otg_pcd_disconnect(pcd, false);
+#endif
 	return 1;
 }
 
@@ -199,6 +204,25 @@ static int32_t dwc_otg_pcd_resume_cb(void *p)
 static int32_t dwc_otg_pcd_suspend_cb(void *p)
 {
 	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *) p;
+#ifdef CONFIG_USB_OTG
+	gotgctl_data_t gotgctl = {.d32 = 0 };
+
+	if (pcd->b_hnp_enable && (pcd->core_if->op_state == B_PERIPHERAL)) {
+		/* Do HNP */
+		DWC_DEBUGPL(DBG_PCD, "Request B HNP\n");
+		gotgctl.d32 = dwc_read_reg32(&pcd->core_if->core_global_regs->gotgctl);
+		gotgctl.b.devhnpen = 1;
+		gotgctl.b.hnpreq = 1;
+		dwc_write_reg32(&pcd->core_if->core_global_regs->gotgctl,
+				gotgctl.d32);
+		/* Clear hnp test mode */
+		pcd->otg_hnp_reqd = 0;
+		/* Remain soft disconnected
+		* so we don't miss reset after reverting
+		* back to B_PERIPHERAL */
+		dwc_otg_pcd_disconnect(pcd, true);
+	}
+#endif
 
 	if (pcd->fops->suspend) {
 		pcd->fops->suspend(pcd);

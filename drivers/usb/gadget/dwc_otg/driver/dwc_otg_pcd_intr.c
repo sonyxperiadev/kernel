@@ -1439,16 +1439,6 @@ static inline void do_set_feature(dwc_otg_pcd_t * pcd)
 			if (otg_cap_param == DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE) {
 				pcd->b_hnp_enable = 1;
 				dwc_otg_pcd_update_otg(pcd, 0);
-				DWC_DEBUGPL(DBG_PCD, "Request B HNP\n");
-
-				/**@todo Is the gotgctl.devhnpen cleared
-				 * by a USB Reset? */
-				gotgctl.b.devhnpen = 1;
-				gotgctl.b.hnpreq = 1;
-				dwc_write_reg32(&global_regs->gotgctl,
-						gotgctl.d32);
-				/* Clear hnp test mode */
-				pcd->otg_hnp_reqd = 0;
 			} else
 				ep0_do_stall(pcd, -DWC_E_NOT_SUPPORTED);
 			break;
