@@ -1793,8 +1793,9 @@ static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.denominator = 24;
 		break;
 	}
-	printk(KERN_ERR"%s: width=%d height=%d fi=%d/%d\n", __func__, interval->width,
+/*	printk(KERN_ERR"%s: width=%d height=%d fi=%d/%d\n", __func__, interval->width,
 			interval->height, interval->discrete.numerator, interval->discrete.denominator);
+			*/
 	return 0;
 }
 
