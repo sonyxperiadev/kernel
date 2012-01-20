@@ -733,8 +733,9 @@ static void spi_kona_work(struct work_struct *work)
 	unsigned long flags;
 	int do_setup = -1;
 
-	spin_lock_irqsave(&spi_kona->lock, flags);
+	spin_lock(&spi_kona->lock);
 	spi_kona->busy = 1;
+	spin_unlock(&spi_kona->lock);
 	while (!list_empty(&spi_kona->queue)) {
 		struct spi_message *m;
 		struct spi_device *spi;
@@ -744,6 +745,8 @@ static void spi_kona_work(struct work_struct *work)
 
 		m = container_of(spi_kona->queue.next, struct spi_message,
 				 queue);
+
+		spin_lock_irqsave(&spi_kona->lock, flags);
 		list_del_init(&m->queue);
 		spin_unlock_irqrestore(&spi_kona->lock, flags);
 
@@ -823,10 +826,10 @@ static void spi_kona_work(struct work_struct *work)
 
 		clk_disable(spi_kona->ssp_clk);
 
-		spin_lock_irqsave(&spi_kona->lock, flags);
 	}
+	spin_lock(&spi_kona->lock);
 	spi_kona->busy = 0;
-	spin_unlock_irqrestore(&spi_kona->lock, flags);
+	spin_unlock(&spi_kona->lock);
 }
 
 static int spi_kona_transfer(struct spi_device *spi, struct spi_message *m)
