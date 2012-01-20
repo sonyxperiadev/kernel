@@ -144,7 +144,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO00, LCDD15, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO01, LCDD14, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO02, LCDD13, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO03, LCDD12, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO03, LCDD12, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO08, LCDD11, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO09, LCDD10, 0, OFF, ON, 0, 0, 8MA),
 //	PIN_CFG(GPIO10, LCDD9, 0, OFF, ON, 0, 0, 8MA),
@@ -181,7 +181,7 @@ static struct __init pin_config board_pin_config[] = {
 
 	// for GPS
 	PIN_CFG(GPIO28, GPIO28, 0, OFF, ON, 0, 0, 8MA),   // GPS_EN
-//	PIN_CFG(GPIO11, GPIO11, 0, OFF, ON, 0, 0, 8MA),   // GPS_SEL
+	PIN_CFG(GPIO11, GPIO11, 0, OFF, ON, 0, 0, 8MA),   // GPS_SEL
 
 	PIN_CFG(GPIO18, UB2TX, 0, OFF, OFF, 0, 0, 8MA),   // UART B2
 	PIN_CFG(GPIO19, UB2RX, 0, OFF, OFF, 0, 0, 8MA),

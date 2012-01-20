@@ -94,6 +94,10 @@
 #include <linux/broadcom/bcmbt_rfkill.h>
 #endif
 
+#ifdef CONFIG_GPS_IRQ
+#include <linux/broadcom/gps.h>
+#endif
+
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
@@ -1355,6 +1359,24 @@ static struct platform_device board_bcmbt_lpm_device = {
 };
 #endif
 
+#ifdef CONFIG_GPS_IRQ
+
+#define GPIO_GPS_HOST_WAKE 03 
+
+static struct gps_platform_data gps_hostwake_data= {
+        .gpio_interrupt = GPIO_GPS_HOST_WAKE,
+};
+
+static struct platform_device gps_hostwake= {
+        .name = "gps-hostwake",
+        .id = -1,
+        .dev =
+        {
+                .platform_data=&gps_hostwake_data,
+        },
+};
+#endif
+
 //@HW
 #define S5K4ECGX_I2C_ADDRESS (0x5A>>1)
 #define SR030PC50_I2C_ADDRESS (0x60>>1)
@@ -1671,7 +1693,9 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 	&rhea_camera,
 	&rhea_camera_sub,
 
-
+#ifdef CONFIG_GPS_IRQ
+        &gps_hostwake
+#endif
 };
 
 /* Add all userspace regulator consumer devices here */
