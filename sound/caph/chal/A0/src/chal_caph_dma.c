@@ -30,7 +30,6 @@ Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.               
 *  @brief  chal layer driver for caph dma block
 *
 ****************************************************************************/
-#include "chip_version.h"
 #include "chal_caph_dma.h"
 #include "brcm_rdb_cph_aadmac.h"
 #include "brcm_rdb_util.h"

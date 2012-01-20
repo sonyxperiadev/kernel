@@ -31,7 +31,6 @@ Copyright 2009 - 2010 Broadcom Corporation.  All rights reserved.               
 *
 ****************************************************************************/
 
-#include "chip_version.h"
 #include "io_map.h"
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"

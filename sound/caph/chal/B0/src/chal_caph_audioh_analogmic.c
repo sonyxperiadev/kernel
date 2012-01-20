@@ -18,7 +18,6 @@ Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
-#include "chip_version.h"
 #include "io_map.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
