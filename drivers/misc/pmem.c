@@ -37,6 +37,7 @@
 #define PMEM_MIN_ALLOC PAGE_SIZE
 
 #define PMEM_DEBUG 1
+#define PMEM_SORTED_LIST
 
 /* indicates that a refernce to this file has been taken via get_pmem_file,
  * the file should not be released until put_pmem_file is called */
@@ -760,6 +761,9 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	unsigned long vma_size =  vma->vm_end - vma->vm_start;
 	int ret = 0, id = get_id(file);
 	unsigned short total_allocation;
+#ifdef PMEM_SORTED_LIST
+	struct pmem_data *itr;
+#endif
 
 	if (vma->vm_pgoff || !PMEM_IS_PAGE_ALIGNED(vma_size)) {
 		printk(KERN_ERR "pmem: mmaps must be at offset zero, aligned"
@@ -862,6 +866,33 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		}
 		data->pid = task_pid_nr(current->group_leader);
 	}
+
+#ifdef PMEM_SORTED_LIST
+	mutex_lock(&pmem[id].data_list_lock);
+	list_del(&data->list);
+	if (list_empty(&pmem[id].data_list)) {
+		list_add_tail(&data->list, &pmem[id].data_list);
+	} else {
+
+		list_for_each_entry(itr, &pmem[id].data_list, list) {
+			down_read(&itr->sem);
+			if ((itr->pid <= data->pid) &&
+					!list_is_last(&itr->list, &pmem[id].data_list)) {
+				up_read(&itr->sem);
+				continue;
+			}
+
+			up_read(&itr->sem);
+			if (list_is_last(&itr->list, &pmem[id].data_list))
+				itr = list_entry(itr->list.next, struct pmem_data, list);
+
+			break;
+		}
+
+		list_add_tail(&data->list, &itr->list);
+	}
+	mutex_unlock(&pmem[id].data_list_lock);
+#endif
 	vma->vm_ops = &vm_ops;
 
 	up_write(&data->sem);
@@ -1474,11 +1505,14 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 void pmem_dump(void)
 {
 	struct list_head *elt, *elt2;
-	struct pmem_data *data;
+	struct pmem_data *data, *next_data;
 	struct pmem_region_node *region_node;
 	struct task_struct *task;
 	int id;
 	unsigned int total = 0;
+#ifdef PMEM_SORTED_LIST
+	unsigned long per_process_alloc = 0;
+#endif
 
 	for (id = 0; id < id_count; id++) {
 
@@ -1504,7 +1538,12 @@ void pmem_dump(void)
 
 			printk(" 0x%08x", data->flags);
 			printk(" %08ldkB", pmem_len(id, data) / SZ_1K);
-			total += pmem_len(id, data) / SZ_1K;
+			if (data->flags & PMEM_FLAGS_MASTERMAP) {
+				total += pmem_len(id, data) / SZ_1K;
+#ifdef PMEM_SORTED_LIST
+				per_process_alloc += pmem_len(id, data);
+#endif
+			}
 			if (pmem[id].allocator == CMA_ALLOC) {
 				printk(" (0x%08lx-0x%08lx)",
 						PMEM_CMA_START_ADDR(id, data->index),
@@ -1521,9 +1560,24 @@ void pmem_dump(void)
 						region_node->region.len);
 			}
 			printk("\n");
+#ifdef PMEM_SORTED_LIST
+			if (!list_is_last(elt, &pmem[id].data_list)) {
+				next_data = list_entry(elt->next, struct pmem_data, list);
+				if (next_data->pid != data->pid) {
+					printk(	"Total : %lukB\n",
+							per_process_alloc/SZ_1K);
+					per_process_alloc = 0;
+				}
+			} else {
+				printk(	"Total : %lukB\n",
+						per_process_alloc/SZ_1K);
+				per_process_alloc = 0;
+			}
+#endif
 		}
 		mutex_unlock(&pmem[id].data_list_lock);
 
+		printk("==============================================\n");
 		printk("Total Allocation : %08ukB\n", total);
 	}
 }
@@ -1540,7 +1594,7 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 			  loff_t *ppos)
 {
 	struct list_head *elt, *elt2;
-	struct pmem_data *data;
+	struct pmem_data *data, *next_data;
 	struct pmem_region_node *region_node;
 	struct task_struct *task;
 	int id = (int)file->private_data;
@@ -1548,6 +1602,9 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 	int debug_bufmax;
 	char *buffer;
 	int n, ret;
+#ifdef PMEM_SORTED_LIST
+	unsigned long per_process_alloc = 0;
+#endif
 
 
 	for (;;) {
@@ -1592,7 +1649,12 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 			n += scnprintf(buffer + n, debug_bufmax - n, " 0x%08x",
 					data->flags);
 			n += scnprintf(buffer + n, debug_bufmax - n, " %08ldkB",
-					pmem_len(id, data) / 1024);
+					pmem_len(id, data) / SZ_1K);
+
+#ifdef PMEM_SORTED_LIST
+			if (data->flags & PMEM_FLAGS_MASTERMAP)
+				per_process_alloc += pmem_len(id, data);
+#endif
 			if (pmem[id].allocator == CMA_ALLOC) {
 				n += scnprintf(buffer + n, debug_bufmax - n, " (0x%08lx-0x%08lx)",
 						PMEM_CMA_START_ADDR(id, data->index),
@@ -1610,17 +1672,39 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 						region_node->region.offset,
 						region_node->region.len);
 			}
+
 			n += scnprintf(buffer + n, debug_bufmax - n, "\n");
+
+#ifdef PMEM_SORTED_LIST
+			if (!list_is_last(elt, &pmem[id].data_list)) {
+				next_data = list_entry(elt->next, struct pmem_data, list);
+				down_read(&next_data->sem);
+				if (next_data->pid != data->pid) {
+					n += scnprintf(buffer + n, debug_bufmax - n,
+							"Total : %lukB\n",
+							per_process_alloc/SZ_1K);
+					per_process_alloc = 0;
+				}
+				up_read(&next_data->sem);
+			} else {
+				n += scnprintf(buffer + n, debug_bufmax - n,
+						"Total : %lukB\n",
+						per_process_alloc/SZ_1K);
+				per_process_alloc = 0;
+			}
+#endif
 			up_read(&data->sem);
 		}
 		mutex_unlock(&pmem[id].data_list_lock);
 		mutex_lock(&pmem[id].alloc_stat_lock);
+		n += scnprintf(buffer + n, debug_bufmax - n, "=========================================================\n");
 		n += scnprintf(buffer + n, debug_bufmax - n, "Total Allocation : %u pages, %08ukB\n", pmem[id].total_allocation,
 										(pmem[id].total_allocation << PAGE_SHIFT)/SZ_1K);
 		mutex_unlock(&pmem[id].alloc_stat_lock);
 		n += scnprintf(buffer + n, debug_bufmax - n, "High Watermark : %u pages, %08ukB\n", pmem[id].hwm,
 										(pmem[id].hwm << PAGE_SHIFT)/SZ_1K);
 		n++;
+
 		if (n >= debug_bufmax) {
 			buf_order++;
 			if (buf_order > 3) {
@@ -1628,6 +1712,9 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 				break;
 			}
 			kfree(buffer);
+#ifdef PMEM_SORTED_LIST
+			per_process_alloc = 0;
+#endif
 			continue;
 		}
 
