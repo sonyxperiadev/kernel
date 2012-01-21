@@ -65,19 +65,12 @@ the GPL, without Broadcom's express prior written consent.
 /* variables */
 extern int gAudioDebugLevel;
 /* use pr_debug for dynamic kernel logging */
-#define BCM_AUDIO_DEBUG(format, args...) \
+#define DEBUG(format, args...) \
 		 do { \
 			if (!(gAudioDebugLevel & 2)) \
 				break;\
 			pr_info(pr_fmt(format), ##args);\
 		  } while (0)
-
-#define DEBUG(format, args...) \
-	  do { \
-		if (!(gAudioDebugLevel & 2)) \
-			break;\
-		pr_info(pr_fmt(format), ##args);\
-	  } while (0)
 
 #else
 #define BCM_AUDIO_DEBUG(format, args...)	do { } while (0)
