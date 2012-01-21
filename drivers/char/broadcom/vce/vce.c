@@ -36,7 +36,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/broadcom/vce.h>
 
-#define DRIVER_VERSION 10102
+#define DRIVER_VERSION 10103
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -419,7 +419,7 @@ static int vce_release(struct inode *inode, struct file *filp)
 		clock_off();
 	}
 
-	if (!try_wait_for_completion(&dev->irq_sem))
+	if (try_wait_for_completion(&dev->irq_sem))
 	{
 		err_print("VCE driver closing with unacknowledged interrupts\n");
 	}
