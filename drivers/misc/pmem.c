@@ -867,6 +867,10 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		data->pid = task_pid_nr(current->group_leader);
 	}
 
+	vma->vm_ops = &vm_ops;
+
+	up_write(&data->sem);
+
 #ifdef PMEM_SORTED_LIST
 	mutex_lock(&pmem[id].data_list_lock);
 	list_del(&data->list);
@@ -893,9 +897,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	}
 	mutex_unlock(&pmem[id].data_list_lock);
 #endif
-	vma->vm_ops = &vm_ops;
 
-	up_write(&data->sem);
 	return ret;
 
 error_free_mem:
