@@ -5910,6 +5910,11 @@ err:
 }
 #endif /* BCMEMBEDIMAGE */
 
+#ifdef DHD_SELECTIVE_FW_43362
+static char sel_fw_path[MOD_PARAM_PATHLEN+3];	/* path+".ax" */
+#endif /* DHD_SELECTIVE_FW_43362 */
+
+
 static int
 dhdsdio_download_code_file(struct dhd_bus *bus, char *pfw_path)
 {
@@ -5921,7 +5926,37 @@ dhdsdio_download_code_file(struct dhd_bus *bus, char *pfw_path)
 
 	DHD_INFO(("%s: download firmware %s\n", __FUNCTION__, pfw_path));
 
-	image = dhd_os_open_image(pfw_path);
+#ifdef DHD_SELECTIVE_FW_43362
+		DHD_ERROR(("%s: chip = 0x%x, chiprev = 0x%x\n", __FUNCTION__, bus->sih->chip, bus->sih->chiprev));
+	
+		if (bus->sih->chip == 43362) {
+			switch (bus->sih->chiprev)
+			{
+			 case 1: /* 43362a2 */
+				strncpy(sel_fw_path, pfw_path, MOD_PARAM_PATHLEN+3);
+				strcat(sel_fw_path, ".a2");
+				break;
+			case 0: /* 43362a0 */
+				strncpy(sel_fw_path, pfw_path, MOD_PARAM_PATHLEN+3);
+				strcat(sel_fw_path, ".a0");
+				break;
+			default:
+				DHD_ERROR(("%s: Unknown revision of 43362 detected\n", __FUNCTION__));
+				return -1;
+			}
+	
+			DHD_INFO(("%s: download firmware %s\n", __FUNCTION__, sel_fw_path));
+			image = dhd_os_open_image(sel_fw_path);
+		} else {
+			DHD_INFO(("%s: download firmware %s\n", __FUNCTION__, pfw_path));
+			image = dhd_os_open_image(pfw_path);
+		}
+#else
+		DHD_INFO(("%s: download firmware %s\n", __FUNCTION__, pfw_path));
+	
+		image = dhd_os_open_image(pfw_path);
+#endif /* DHD_SELECTIVE_FW_43362 */
+
 	if (image == NULL)
 		goto err;
 

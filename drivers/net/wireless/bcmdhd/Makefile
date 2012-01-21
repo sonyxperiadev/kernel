@@ -13,10 +13,10 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Werror -Dlinux -DBCMDRIVER             \
 	-Idrivers/net/wireless/bcmdhd -Idrivers/net/wireless/bcmdhd/include
 
 
-
 ifeq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
 # SW-OOB Interrupt
 DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74
+DHDCFLAGS += -DDHD_SELECTIVE_FW_43362
 endif
 
 ifeq ($(CONFIG_MACH_RHEA_STONE),y)
