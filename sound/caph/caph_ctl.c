@@ -192,7 +192,7 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 			else
 				break;
 
-			BCM_AUDIO_DEBUG("VolumeCtrlPut stream state = %d\n",
+			DEBUG("VolumeCtrlPut stream state = %d\n",
 					pStream->runtime->status->state);
 
 			if (pStream->runtime->status->state ==
@@ -202,7 +202,7 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 				/*
 				 * call audio driver to set volume
 				 */
-				BCM_AUDIO_DEBUG("VolumeCtrlPut caling "
+				DEBUG("VolumeCtrlPut caling "
 				"AUDCTRL_SetPlayVolume pVolume[0] =%d (0.25dB)"
 				", pVolume[1]=%d\n", pVolume[0], pVolume[1]);
 				parm_vol.source =
@@ -230,7 +230,7 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 			 * call audio driver to set volume
 			 */
 
-			BCM_AUDIO_DEBUG("VolumeCtrlPut caling "
+			DEBUG("VolumeCtrlPut caling "
 			"AUDCTRL_SetPlayVolume pVolume[0] =%d (0.25dB), "
 			"pVolume[1]=%d\n", pVolume[0], pVolume[1]);
 			parm_vol.source =
@@ -246,7 +246,7 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 		}
 		break;
 	case CTL_STREAM_PANEL_VOICECALL:
-		BCM_AUDIO_DEBUG
+		DEBUG
 		    ("VolumeCtrlPut pCurSel[1] = %d, pVolume[0] =%d, dev =%d\n",
 		     pCurSel[1], pVolume[0], dev);
 
@@ -275,7 +275,7 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 			else
 				break;
 
-			BCM_AUDIO_DEBUG("VolumeCtrlPut stream state = %d\n",
+			DEBUG("VolumeCtrlPut stream state = %d\n",
 					pStream->runtime->status->state);
 			if (pStream->runtime->status->state ==
 				SNDRV_PCM_STATE_RUNNING ||
@@ -284,7 +284,7 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 				/*
 				 * call audio driver to set volume
 				 */
-				BCM_AUDIO_DEBUG("VolumeCtrlPut caling "
+				DEBUG("VolumeCtrlPut caling "
 				"AUDCTRL_SetRecordGain pVolume[0] =%d"
 				", pVolume[1]=%d\n",
 				pVolume[0], pVolume[1]);
@@ -375,7 +375,7 @@ static int SelCtrlGet(struct snd_kcontrol *kcontrol,
 	 */
 	pSel = pChip->streamCtl[stream].iLineSelect;
 
-	BCM_AUDIO_DEBUG("xnumid=%d xindex=%d", ucontrol->id.numid,
+	DEBUG("xnumid=%d xindex=%d", ucontrol->id.numid,
 			ucontrol->id.index);
 
 	/*
@@ -440,7 +440,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 			pSel[2] = AUDIO_SINK_HANDSET;
 	}
 
-	BCM_AUDIO_DEBUG
+	DEBUG
 	    ("SelCtrlPut stream =%d, pSel[0]=%d, pSel[1]=%d, pSel[2]=%d,\n",
 	     stream, pSel[0], pSel[1], pSel[2]);
 
@@ -456,7 +456,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 		else
 			break;	/* stream is not running, return */
 
-		BCM_AUDIO_DEBUG("SetCtrlput stream state = %d\n",
+		DEBUG("SetCtrlput stream state = %d\n",
 				pStream->runtime->status->state);
 
 		if (pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING
@@ -486,7 +486,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 						 */
 						if (++count ==
 							MAX_PLAYBACK_DEV) {
-							BCM_AUDIO_DEBUG("No "
+							DEBUG("No "
 							"device selected by "
 							"the user ?\n");
 							return -EINVAL;
@@ -506,7 +506,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 					    && (pChip->streamCtl[stream - 1].
 						dev_prop.p[i + 1].sink ==
 						AUDIO_SINK_HANDSET)) {
-						BCM_AUDIO_DEBUG("Stereo IHF, "
+						DEBUG("Stereo IHF, "
 							"remove EP path first.\n");
 						parm_spkr.src =
 						    pChip->streamCtl[stream -
@@ -594,7 +594,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 						 1].dev_prop.p[0].sink =
 				    pSel[0];
 			} else {
-				BCM_AUDIO_DEBUG
+				DEBUG
 				    ("No device selected by the user ?\n");
 				return -EINVAL;
 			}
@@ -696,9 +696,9 @@ static int SwitchCtrlPut(struct snd_kcontrol *kcontrol,
 		else
 			break;
 
-		BCM_AUDIO_DEBUG("SwitchCtrlPut stream state = %d\n",
+		DEBUG("SwitchCtrlPut stream state = %d\n",
 				pStream->runtime->status->state);
-		BCM_AUDIO_DEBUG("SwitchCtrlPut sink = %d, pMute[0] = %d\n",
+		DEBUG("SwitchCtrlPut sink = %d, pMute[0] = %d\n",
 				pChip->streamCtl[stream - 1].dev_prop.p[0].sink,
 				pMute[0]);
 
@@ -740,7 +740,7 @@ static int SwitchCtrlPut(struct snd_kcontrol *kcontrol,
 		else
 			break;
 
-		BCM_AUDIO_DEBUG("SwitchCtrlPut stream state = %d\n",
+		DEBUG("SwitchCtrlPut stream state = %d\n",
 				pStream->runtime->status->state);
 
 		if (pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING
@@ -909,7 +909,7 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		uinfo->value.integer.max = 15;
 		break;
 	default:
-		BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
+		DEBUG("Unexpected function code %d\n", function);
 		break;
 	}
 
@@ -962,7 +962,7 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		    pChip->pi32SpeechMixOption[stream - 1];
 		break;
 	case CTL_FUNCTION_FM_ENABLE:
-		BCM_AUDIO_DEBUG("CTL_FUNCTION_FM_ENABLE, status=%d\n",
+		DEBUG("CTL_FUNCTION_FM_ENABLE, status=%d\n",
 				pChip->iEnableFM);
 		ucontrol->value.integer.value[0] = pChip->iEnableFM;
 		break;
@@ -973,7 +973,7 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		rtn =
 		    AtAudCtlHandler_get(kcontrol->id.index, pChip, info.count,
 					ucontrol->value.integer.value);
-		BCM_AUDIO_DEBUG("%s values [%ld %ld %ld %ld %ld %ld %ld]",
+		DEBUG("%s values [%ld %ld %ld %ld %ld %ld %ld]",
 				__func__, ucontrol->value.integer.value[0],
 				ucontrol->value.integer.value[1],
 				ucontrol->value.integer.value[2],
@@ -1024,12 +1024,12 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[3] = 0;
 		break;
 	case CTL_FUNCTION_APP_SEL:
-		BCM_AUDIO_DEBUG("CTL_FUNCTION_APP_SEL, current app =%d\n",
+		DEBUG("CTL_FUNCTION_APP_SEL, current app =%d\n",
 				pChip->i32CurApp);
 		ucontrol->value.integer.value[0] = pChip->i32CurApp;
 		break;
 	default:
-		BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
+		DEBUG("Unexpected function code %d\n", function);
 		break;
 	}
 
@@ -1093,7 +1093,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
 				     1].iLineSelect;
 
-		BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ENABLE"
+		DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ENABLE"
 			"pSel[0] = %d-%d, EnablePhoneCall %d\n",
 			pSel[0], pSel[1], pChip->iEnablePhoneCall);
 		parm_call.new_mic = parm_call.cur_mic = pSel[0];
@@ -1119,7 +1119,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				    streamCtl[CTL_STREAM_PANEL_VOICECALL -
 					      1].iLineSelect;
 
-				BCM_AUDIO_DEBUG("MiscCtrlPut pSel[0] = %d "
+				DEBUG("MiscCtrlPut pSel[0] = %d "
 					"pMute[0] =%d pMute[1] =%d\n",
 					pSel[0], pChip->iMutePhoneCall[0],
 					pChip->iMutePhoneCall[1]);
@@ -1136,7 +1136,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		break;
 	case CTL_FUNCTION_PHONE_ECNS_ENABLE:
 		pChip->iEnableECNSPhoneCall = ucontrol->value.integer.value[0];
-		BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ECNS_ENABLE "
+		DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ECNS_ENABLE "
 			"pChip->iEnableECNSPhoneCall = %d\n",
 			pChip->iEnableECNSPhoneCall);
 		parm_ecns.ec_ns = pChip->iEnableECNSPhoneCall;
@@ -1150,7 +1150,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	case CTL_FUNCTION_SPEECH_MIXING_OPTION:
 		pChip->pi32SpeechMixOption[stream - 1] =
 		    ucontrol->value.integer.value[0];
-		BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_SPEECH_MIXING_OPTION "
+		DEBUG("MiscCtrlPut CTL_FUNCTION_SPEECH_MIXING_OPTION "
 			"stream = %d, option = %d\n",
 			stream, pChip->pi32SpeechMixOption[stream - 1]);
 		break;
@@ -1160,7 +1160,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		pChip->streamCtl[stream - 1].dev_prop.p[0].source =
 		    AUDIO_SOURCE_I2S;
 		pSel = pChip->streamCtl[stream - 1].iLineSelect;
-		BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_FM_ENABLE"
+		DEBUG("MiscCtrlPut CTL_FUNCTION_FM_ENABLE"
 			"stream = %d, status = %d, pSel[0] = %d-%d\n",
 			stream, pChip->iEnableFM, pSel[0], pSel[1]);
 
@@ -1193,7 +1193,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 							 1].dev_prop.p[0].sink =
 					    pSel[0];
 				} else {
-					BCM_AUDIO_DEBUG("No device selected "
+					DEBUG("No device selected "
 						"by the user ?\n");
 					return -EINVAL;
 				}
@@ -1252,7 +1252,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		} else
 			AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra, NULL,
 					   NULL, 0);
-		BCM_AUDIO_DEBUG("MiscCtrlPut BypassVibra enable %d, "
+		DEBUG("MiscCtrlPut BypassVibra enable %d, "
 			"strength %d, direction %d.\n",
 			pChip->pi32BypassVibraParam[0],
 			pChip->pi32BypassVibraParam[1],
@@ -1272,7 +1272,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 			isSTIHF = TRUE;/* stereo IHF */
 			AUDCTRL_SetIHFmode(isSTIHF);
 		} else {
-			BCM_AUDIO_DEBUG("%s, Invalid value for"
+			DEBUG("%s, Invalid value for"
 				"setting IHF mode: %ld, 1-mono, 2-stereo.",
 				__func__, ucontrol->value.integer.value[0]);
 		}
@@ -1288,7 +1288,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		break;
 
 	case CTL_FUNCTION_VOL:
-		BCM_AUDIO_DEBUG("CTL_FUNCTION_VOL stream=%d vol0=%ld"
+		DEBUG("CTL_FUNCTION_VOL stream=%d vol0=%ld"
 				" vol1=%ld\n",	stream,
 				ucontrol->value.integer.value[0],
 				ucontrol->value.integer.value[1]);
@@ -1332,7 +1332,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		break;
 
 	case CTL_FUNCTION_SINK_CHG:
-		BCM_AUDIO_DEBUG
+		DEBUG
 		    ("Change sink device stream=%d cmd=%ld sink=%ld\n", stream,
 		     ucontrol->value.integer.value[0],
 		     ucontrol->value.integer.value[1]);
@@ -1347,11 +1347,11 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				} else if (pSel[i] ==
 					   ucontrol->value.integer.value[1]) {
 					indexVal = -1;
-					BCM_AUDIO_DEBUG("Device already added "
+					DEBUG("Device already added "
 					"in the list\n");
 					break;
 				} else if (++cnt == MAX_PLAYBACK_DEV) {
-					BCM_AUDIO_DEBUG("Max devices count "
+					DEBUG("Max devices count "
 					"reached. Cannot add more device\n");
 					return -1;
 				}
@@ -1436,7 +1436,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		}
 		break;
 	case CTL_FUNCTION_HW_CTL:
-		BCM_AUDIO_DEBUG("CTL_FUNCTION_HW_CTL parm1=%d, "
+		DEBUG("CTL_FUNCTION_HW_CTL parm1=%d, "
 		   "parm2=%d, param3=%d,param4=%d\n",
 		   (int)ucontrol->value.integer.value[0],
 		   (int)ucontrol->value.integer.value[1],
@@ -1450,7 +1450,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		);
 	break;
 	case CTL_FUNCTION_APP_SEL:
-		BCM_AUDIO_DEBUG("CTL_FUNCTION_APP_SEL curApp=%d, newApp=%d",
+		DEBUG("CTL_FUNCTION_APP_SEL curApp=%d, newApp=%d",
 		   (int)pChip->i32CurApp,
 		   (int)ucontrol->value.integer.value[0]);
 
@@ -1462,7 +1462,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				   NULL, 0);
 		break;
 	default:
-		BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);
+		DEBUG("Unexpected function code %d\n", function);
 		break;
 	}
 
@@ -1803,7 +1803,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		CAPH_ASSERT(strlen(devSelect.name) < MAX_CTL_NAME_LENGTH);
 		err = snd_ctl_add(card, snd_ctl_new1(&devSelect, pChip));
 		if (err < 0) {
-			BCM_AUDIO_DEBUG("Error to add devselect idx=%d\n", idx);
+			DEBUG("Error to add devselect idx=%d\n", idx);
 			return err;
 		}
 
@@ -1847,7 +1847,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 			err =
 			    snd_ctl_add(card, snd_ctl_new1(&kctlVolume, pChip));
 			if (err < 0) {
-				BCM_AUDIO_DEBUG("error to add volume for " \
+				DEBUG("error to add volume for " \
 					"idx=%d j=%d err=%d\n", idx, j, err);
 				return err;
 			}
@@ -1869,7 +1869,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 				    snd_ctl_add(card,
 						snd_ctl_new1(&kctlMute, pChip));
 				if (err < 0) {
-					BCM_AUDIO_DEBUG("error to add mute for"
+					DEBUG("error to add mute for"
 					" idx=%d j=%d err=%d\n", idx, j, err);
 					return err;
 				}
@@ -1884,7 +1884,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	for (j = 0; j < (sizeof((sgSndCtrls)) / sizeof(sgSndCtrls[0])); j++) {
 		err = snd_ctl_add(card, snd_ctl_new1(&sgSndCtrls[j], pChip));
 		if (err < 0) {
-			BCM_AUDIO_DEBUG("error (err=%d) when adding control "
+			DEBUG("error (err=%d) when adding control "
 				"name=%s  index=%d\n", err,
 				sgSndCtrls[j].name, sgSndCtrls[j].index);
 			return err;

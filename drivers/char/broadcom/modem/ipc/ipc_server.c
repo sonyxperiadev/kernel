@@ -67,22 +67,16 @@
 struct ipcs_info_t {
 	dev_t devnum;
 	int ipc_state;
-	struct cdev cdev;
+	struct semaphore ipc_sem;
+	struct cdev cdev;               
+	struct tasklet_struct intr_tasklet;
 	struct work_struct cp_crash_dump_wq;
-	struct work_struct intr_work;
-	struct workqueue_struct *intr_workqueue;
 	struct workqueue_struct *crash_dump_workqueue;
 	void __iomem *apcp_shmem;
 };
 
-static Boolean cp_running;	/* FALSE; */
-
-/* flag used to track occurence of early CP interrupt;
-* CP interrupt before IPC configured indicates early CP
-* crash, so we'll do crash dump as soon as IPC is set up */
-static int sEarlyCPInterrupt;
-
 static struct ipcs_info_t g_ipc_info = { 0 };
+static Boolean cp_running = 0;//FALSE;
 
 #ifdef CONFIG_HAS_WAKELOCK
 struct wake_lock ipc_wake_lock;
@@ -234,43 +228,16 @@ void ipcs_ipc_reset(void)
 
 int cp_crashed;
 
-void ipcs_intr_workqueue_process(struct work_struct *work)
+void ipcs_intr_tasklet_handler(unsigned long data)
 {
-	static int first = 1;
 	cp_crashed = 0;
 
-	if (first) {
-		first = 0;
-		set_user_nice(current, -16);
-	}
-
-	if (IpcCPCrashCheck()) {
+	if(IpcCPCrashCheck())
+	{
 		cp_crashed = 1;
-		switch (BCMLOG_GetCpCrashLogDevice()) {
-#if 0				/* MTD (flash/panic partition) not supported */
-		case BCMLOG_CPCRASH_MTD:
-			/* we kill AP when CP crashes */
-			IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
-			BUG_ON(1);
-			break;
-#endif /* 0 */
-		case BCMLOG_OUTDEV_RNDIS:
-		case BCMLOG_OUTDEV_ACM:
-			/* Using RNDIS causes work queue event/0 lock
-			   up so it needs its own thread */
-			g_ipc_info.crash_dump_workqueue =
-			    create_singlethread_workqueue("dump-wq");
-			if (!g_ipc_info.crash_dump_workqueue) {
-				IPC_DEBUG(DBG_ERROR,
-					  "cannot create cp crash dump workqueue\n");
-			}
-			queue_work(g_ipc_info.crash_dump_workqueue,
-				   &g_ipc_info.cp_crash_dump_wq);
-			break;
-		default:
-			schedule_work(&g_ipc_info.cp_crash_dump_wq);
-		}
 
+		/* schedule the work on the decidated CP crash dump work queue */
+		queue_work(g_ipc_info.crash_dump_workqueue, &g_ipc_info.cp_crash_dump_wq);
 		IPC_ProcessEvents();
 	} else {
 		IPC_ProcessEvents();
@@ -282,35 +249,16 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 
 static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 {
-	/* IPC_DEBUG(DBG_TRACE, "%x %x\n",
-	   BINTC_ISWIR1_CLR_OFFSET, BINTC_ISWIR0_CLR_OFFSET);
-	 */
-	if ((&g_ipc_info.intr_work)->func) {
-#ifdef CONFIG_HAS_WAKELOCK
-		wake_lock(&ipc_wake_lock);
-#endif
-		queue_work(g_ipc_info.intr_workqueue, &g_ipc_info.intr_work);
-	}
+	void __iomem* base = (void __iomem *)( KONA_BINTC_BASE_ADDR);
+	int birq = IRQ_TO_BMIRQ(IRQ_IPC_C2A_BINTC); //55;
 
-	else {
-		/* if we're interrupted before IPC is setup, that
-		 * means CP has had an early crash.... */
-		IPC_DEBUG(DBG_ERROR, "abnormal CP interrupt\n");
-		sEarlyCPInterrupt = 1;
-	}
+	/* Clear the interrupt */
+	if ( birq >= 32 )
+		writel(1 << (birq-32), base + BINTC_ISWIR1_CLR_OFFSET/*0x34*/);
+	else
+		writel(1 << (birq), base + BINTC_ISWIR0_CLR_OFFSET /*0x24*/);
 
-	{
-		/* on Rhea/BI, we need to "manually" clear
-		   the CP->AP softint here */
-		void __iomem *base = (void __iomem *)(KONA_BINTC_BASE_ADDR);
-		int birq = IRQ_TO_BMIRQ(IRQ_IPC_C2A_BINTC);	/* 55; */
-		if (birq >= 32)
-			writel(1 << (birq - 32),
-			       base + BINTC_ISWIR1_CLR_OFFSET /*0x34 */ );
-		else
-			writel(1 << (birq),
-			       base + BINTC_ISWIR0_CLR_OFFSET /*0x24 */ );
-	}
+	tasklet_schedule(&g_ipc_info.intr_tasklet);
 
 	return IRQ_HANDLED;
 }
@@ -486,6 +434,7 @@ void Comms_Start(void)
 {
 	void __iomem *apcp_shmem;
 	void __iomem *cp_boot_base;
+	u32 reg_val;
 
 #ifdef CONFIG_BCM_MODEM_DEFER_CP_START
 	CP_Boot();
@@ -494,7 +443,7 @@ void Comms_Start(void)
 	apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
 	if (!apcp_shmem) {
 		IPC_DEBUG(DBG_ERROR, "IPC_BASE=0x%x, IPC_SIZE=0x%x\n",
-			  IPC_BASE, IPC_SIZE);
+		IPC_BASE, IPC_SIZE);
 		IPC_DEBUG(DBG_ERROR, "ioremap shmem failed\n");
 		return;
 	}
@@ -502,23 +451,21 @@ void Comms_Start(void)
 	memset(apcp_shmem, 0, IPC_SIZE);
 	iounmap(apcp_shmem);
 
-	cp_boot_base = ioremap(MODEM_DTCM_ADDRESS,
-			       INIT_ADDRESS_OFFSET + RESERVED_HEADER);
+	cp_boot_base = ioremap_nocache(MODEM_DTCM_ADDRESS,
+	INIT_ADDRESS_OFFSET+RESERVED_HEADER);
 
 	if (!cp_boot_base) {
 		IPC_DEBUG(DBG_ERROR,
-			  "DTCM Addr=0x%x, length=0x%x",
-			  MODEM_DTCM_ADDRESS,
-			  INIT_ADDRESS_OFFSET + RESERVED_HEADER);
+		"DTCM Addr=0x%x, length=0x%x",
+		MODEM_DTCM_ADDRESS,
+		INIT_ADDRESS_OFFSET+RESERVED_HEADER);
 		IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_base error\n");
 		return;
 	}
 
-	/* Start the CP, Code taken from Nucleus BSP */
-	*(unsigned int *)(cp_boot_base + INIT_ADDRESS_OFFSET +
-			  RESERVED_HEADER) =
-	    *(unsigned int *)(cp_boot_base + MAIN_ADDRESS_OFFSET +
-			      RESERVED_HEADER);
+	/* Start the CP */
+	reg_val = readl(cp_boot_base+MAIN_ADDRESS_OFFSET+RESERVED_HEADER);
+	writel(reg_val, cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER);
 
 	iounmap(cp_boot_base);
 	IPC_DEBUG(DBG_TRACE, "modem (R4 COMMS) started ...\n");
@@ -527,7 +474,6 @@ void Comms_Start(void)
 static int __init ipcs_module_init(void)
 {
 	int rc;
-	sEarlyCPInterrupt = 0;
 
 	IPC_DEBUG(DBG_TRACE, "start ...\n");
 
@@ -553,21 +499,22 @@ static int __init ipcs_module_init(void)
 		goto out_unregister;
 	}
 
-	IPC_DEBUG(DBG_TRACE, "create workqueue\n");
+	IPC_DEBUG(DBG_TRACE, "create CP crash dump workqueue\n");
+	g_ipc_info.crash_dump_workqueue = create_workqueue("dump-wq"); 
+
+	if (!g_ipc_info.crash_dump_workqueue) {
+		IPC_DEBUG(DBG_ERROR, "cannot create CP crash dump workqueue\n");
+		goto out_unregister;
+	} 
 
 	INIT_WORK(&g_ipc_info.cp_crash_dump_wq, ProcessCPCrashedDump);
-	INIT_WORK(&g_ipc_info.intr_work, ipcs_intr_workqueue_process);
 
-	g_ipc_info.intr_workqueue = create_singlethread_workqueue("ipc-wq");
-	if (!g_ipc_info.intr_workqueue) {
-		IPC_DEBUG(DBG_ERROR, "cannot create workqueue\n");
-		goto out_unregister;
-	}
+	tasklet_init(&g_ipc_info.intr_tasklet, ipcs_intr_tasklet_handler, 0);
 
-  /**
-     Make sure this is not cache'd because CP has to know about any changes
-     we write to this memory immediately.
-   */
+	/**
+	 Make sure this is not cache'd because CP has to know about any changes
+	 we write to this memory immediately.
+	*/
 	IPC_DEBUG(DBG_TRACE, "ioremap_nocache IPC_BASE\n");
 	g_ipc_info.apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
 	if (!g_ipc_info.apcp_shmem) {
@@ -600,30 +547,22 @@ static int __init ipcs_module_init(void)
 
 	IPC_DEBUG(DBG_TRACE, "IRQ Clear and Enable\n");
 
-	if (sEarlyCPInterrupt) {
-		IPC_DEBUG(DBG_ERROR,
-			  "early CP interrupt - doing crash dump ...\n");
-#ifdef CONFIG_HAS_WAKELOCK
-		wake_lock(&ipc_wake_lock);
-#endif
-		schedule_work(&g_ipc_info.cp_crash_dump_wq);
-	}
-
 	return 0;
 
-      out_del:
+out_del:
 	cdev_del(&g_ipc_info.cdev);
-      out_unregister:
+out_unregister:
 	unregister_chrdev_region(g_ipc_info.devnum, 1);
-      out:
+out:
 	IPC_DEBUG(DBG_ERROR, "IPC Driver Failed to initialise!\n");
 	return rc;
 }
 
 static void __exit ipcs_module_exit(void)
 {
-	flush_workqueue(g_ipc_info.intr_workqueue);
-	destroy_workqueue(g_ipc_info.intr_workqueue);
+	tasklet_kill(&g_ipc_info.intr_tasklet);
+	flush_workqueue(g_ipc_info.crash_dump_workqueue);
+	destroy_workqueue(g_ipc_info.crash_dump_workqueue);
 
 	iounmap(g_ipc_info.apcp_shmem);
 

@@ -78,9 +78,9 @@ static void AUDQUE_MemCpyInterleave(UInt8 *dest,
 	UInt32 j = 0;
 	UInt32 step = 0;
 
-	if (bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
+	if (bitPerSample == 16)
 		step = 2;
-	else if (bitPerSample == AUDIO_32_BIT_PER_SAMPLE)
+	else if (bitPerSample == 32)
 		step = 4;
 	else
 		audio_xassert(0, bitPerSample);
@@ -104,7 +104,7 @@ static void AUDQUE_MemCpyInterleave(UInt8 *dest,
 
 #else
 
-	if (bitPerSample == AUDIO_16_BIT_PER_SAMPLE) {
+	if (bitPerSample == 16) {
 		UInt16 *dest16 = (void *)dest;
 		UInt16 *src_16 = (void *)source;
 		UInt16 *src2_16 = (void *)source2;
@@ -113,8 +113,8 @@ static void AUDQUE_MemCpyInterleave(UInt8 *dest,
 			*dest16++ = *src2_16++;
 		}
 	} else
-	    if (bitPerSample > AUDIO_16_BIT_PER_SAMPLE
-		&& bitPerSample <= AUDIO_32_BIT_PER_SAMPLE) {
+	    if (bitPerSample > 16
+		&& bitPerSample <= 32) {
 		UInt32 *dest32 = (void *)dest;
 		UInt32 *src_32 = (void *)source;
 		UInt32 *src2_32 = (void *)source2;

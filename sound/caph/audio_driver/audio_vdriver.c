@@ -171,11 +171,10 @@ static AudioSysParm_t audio_parm_table[AUDIO_MODE_NUMBER_VOICE] = {
 };
 #endif
 
-/*on AP:*/
 #ifdef CONFIG_BCM_MODEM
-SysAudioParm_t *AUDIO_GetParmAccessPtr(void)
+SysAudioParm_t *AudParmP(void)
 #else
-AudioSysParm_t *AUDIO_GetParmAccessPtr(void)
+AudioSysParm_t *AudParmP(void)
 #endif
 {
 #if defined(BSP_ONLY_BUILD)
@@ -335,11 +334,11 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 #endif
 
 #if defined(USE_NEW_AUDIO_PARAM)
-	bDualMic_IsNeeded = (AUDIO_GetParmAccessPtr()[
-	mode + AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER].dual_mic_enable != 0);
+	bDualMic_IsNeeded = (AudParmP()[
+	mode + GetAudioApp() * AUDIO_MODE_NUMBER].dual_mic_enable != 0);
 	/* VOICE_DUALMIC_ENABLE */
 #else
-	bDualMic_IsNeeded = (AUDIO_GetParmAccessPtr()[
+	bDualMic_IsNeeded = (AudParmP()[
 		mode].dual_mic_enable != 0);
 	/* in parm_audio.txt, VOICE_DUALMIC_ENABLE */
 #endif
@@ -407,7 +406,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0,
-				  AUDDRV_IsCall16K(AUDCTRL_GetAudioMode()), 0,
+				  AUDDRV_IsCall16K(GetAudioMode()), 0,
 				  0);
 
 /* The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done
@@ -425,7 +424,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0,
-				  AUDDRV_IsCall16K(AUDCTRL_GetAudioMode()), 0,
+				  AUDDRV_IsCall16K(GetAudioMode()), 0,
 				  0);
 
 /* The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done
@@ -439,7 +438,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
 #else
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE,
-			  AUDDRV_IsCall16K(AUDCTRL_GetAudioMode()), 0, 0, 0);
+			  AUDDRV_IsCall16K(GetAudioMode()), 0, 0, 0);
 #endif
 	mdelay(40);
 
@@ -447,7 +446,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0);
 #else
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE,
-			  AUDDRV_IsCall16K(AUDCTRL_GetAudioMode()), 0, 0, 0);
+			  AUDDRV_IsCall16K(GetAudioMode()), 0, 0, 0);
 #endif
 /*	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
 	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, ec_enable_from_sysparm,
@@ -546,9 +545,7 @@ static void AUDDRV_Telephony_ChangeSampleRate(unsigned int sampleRate)
 void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 {
 	AudioMode_t mode;
-#if defined(USE_NEW_AUDIO_PARAM)
 	AudioApp_t audio_app;
-#endif
 	Boolean bDualMic_IsNeeded = FALSE;
 	Boolean ec_enable_from_sysparm = dspECEnable;
 	Boolean ns_enable_from_sysparm = dspNSEnable;
@@ -556,15 +553,6 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 	Log_DebugPrintf(LOGID_AUDIO,
 			"AUDDRV_Telephony_RateChange, sampleRate = %d\n\r",
 			sample_rate);
-
-	Log_DebugPrintf(LOGID_AUDIO,
-			"AUDDRV_Telephony_RateChange a1, sampleRate = %d\n\r",
-			sample_rate);
-
-#if !defined(BSP_ONLY_BUILD)
-	Log_DebugPrintf(LOGID_AUDIO,
-			"\n\r\t* AUDDRV_Telephony_RateChange AP  *\n\r");
-#endif
 
 	if (voiceCallSampleRate == sample_rate)
 		return;
@@ -591,7 +579,7 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 
 		if (voiceCallSampleRate == AUDIO_SAMPLING_RATE_8000) {
 #if !defined(USE_NEW_AUDIO_PARAM)
-			mode = AUDCTRL_GetAudioMode() % AUDIO_MODE_NUMBER;
+			mode = GetAudioMode() % AUDIO_MODE_NUMBER;
 #else
 			/* assume AUDDRV_Telephony_RateChange
 			only called for voice call */
@@ -600,7 +588,7 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 		} else {
 #if !defined(USE_NEW_AUDIO_PARAM)
 			mode =
-			    (AUDCTRL_GetAudioMode() % AUDIO_MODE_NUMBER) +
+			    (GetAudioMode() % AUDIO_MODE_NUMBER) +
 			    AUDIO_MODE_NUMBER;
 #else
 			/* assume AUDDRV_Telephony_RateChange only
@@ -612,7 +600,7 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 		Log_DebugPrintf(LOGID_AUDIO,
 			"AUDDRV_Telephony_RateChange, Change HW Sample Rate\n\r");
 
-		if (AUDDRV_IsCall16K(AUDCTRL_GetAudioMode()))
+		if (AUDDRV_IsCall16K(GetAudioMode()))
 			AUDDRV_Telephony_ChangeSampleRate(
 				AUDIO_SAMPLING_RATE_16000);
 	    else
@@ -622,28 +610,28 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 #if !defined(USE_NEW_AUDIO_PARAM)
 		AUDDRV_SetAudioMode(mode);
 #else
-		mode = AUDCTRL_GetAudioMode();
+		mode = GetAudioMode();
 		AUDDRV_SetAudioMode(mode, audio_app);
 #endif
 		/* AUDDRV_Enable_Output (AUDDRV_VOICE_OUTPUT, speaker, TRUE,
 		   AUDIO_SAMPLING_RATE_8000); */
 #if defined(ENABLE_DMA_VOICE)
-		if (AUDDRV_IsCall16K(AUDCTRL_GetAudioMode()))
+		if (AUDDRV_IsCall16K(GetAudioMode()))
 			csl_dsp_caph_control_aadmac_set_samp_rate
 			    (AUDIO_SAMPLING_RATE_16000);
 		else
 			csl_dsp_caph_control_aadmac_set_samp_rate
 			    (AUDIO_SAMPLING_RATE_8000);
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0,
-				  AUDDRV_IsCall16K(AUDCTRL_GetAudioMode()), 0,
+				  AUDDRV_IsCall16K(GetAudioMode()), 0,
 				  0);
 #else
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0,
-				  AUDDRV_IsCall16K(AUDCTRL_GetAudioMode()), 0,
+				  AUDDRV_IsCall16K(GetAudioMode()), 0,
 				  0);
 #endif
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL,
-				TRUE, AUDDRV_IsCall16K(AUDCTRL_GetAudioMode()),
+				TRUE, AUDDRV_IsCall16K(GetAudioMode()),
 				0, 0, 0);
 
 		/* AUDDRV_Enable_Input ( AUDDRV_VOICE_INPUT, mic,
@@ -652,18 +640,18 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 		mdelay(40);
 
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL,
-				TRUE, AUDDRV_IsCall16K(AUDCTRL_GetAudioMode()),
+				TRUE, AUDDRV_IsCall16K(GetAudioMode()),
 				0, 0, 0);
 /*		audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
 		audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, ec_enable_from_sysparm,
 				  ns_enable_from_sysparm, 0, 0, 0);
 #if !defined(USE_NEW_AUDIO_PARAM)
 		bDualMic_IsNeeded =
-		    (AUDIO_GetParmAccessPtr()[mode].dual_mic_enable != 0);
+		    (AudParmP()[mode].dual_mic_enable != 0);
 /* in parm_audio.txt, VOICE_DUALMIC_ENABLE */
 #else
 		bDualMic_IsNeeded =
-		    (AUDIO_GetParmAccessPtr()
+		    (AudParmP()
 		     [mode + audio_app * AUDIO_MODE_NUMBER].dual_mic_enable !=
 		     0);
 /* in parm_audio.txt, VOICE_DUALMIC_ENABLE */
@@ -838,7 +826,7 @@ void AUDDRV_Telephony_Deinit(void)
 		AUDDRV_Telephony_DeinitHW();
 	}
 
-	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode())
+	if (AUDIO_MODE_BLUETOOTH == GetAudioMode())
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0);
 
 	bInVoiceCall = FALSE;
@@ -1141,7 +1129,7 @@ Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode)
 	}
 #else
 
-	if (AUDCTRL_GetAudioApp() == AUDIO_APP_VOICE_CALL_WB)
+	if (GetAudioApp() == AUDIO_APP_VOICE_CALL_WB)
 		is_call16k = TRUE;
 
 	/* BT headset needs to consider NB or WB too */
@@ -1224,8 +1212,8 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
 	}
 #endif
 
-	AUDCTRL_SaveAudioApp(audio_app);
-	AUDCTRL_SaveAudioModeFlag(audio_mode);	/* update mode */
+	SaveAudioApp(audio_app);
+	SaveAudioMode(audio_mode);	/* update mode */
 	/* currMusicAudioMode = currAudioMode; */
 #if !defined(USE_NEW_AUDIO_PARAM)
 	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
@@ -1260,9 +1248,9 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
 /* audio_cmf_filter((AudioCompfilter_t *) &copy_of_AudioCompfilter ); */
 
 	auddrv_SetAudioMode_mic(audio_mode,
-		AUDCTRL_GetAudioApp(), 0);
+		GetAudioApp(), 0);
 	auddrv_SetAudioMode_speaker(audio_mode,
-		AUDCTRL_GetAudioApp(), 0, FALSE);
+		GetAudioApp(), 0, FALSE);
 
 }
 
@@ -1291,7 +1279,7 @@ void AUDDRV_SetAudioMode_ForMusicPlayback(AudioMode_t audio_mode,
 			audio_mode, app, arg_pathID);
 
 	auddrv_SetAudioMode_speaker(audio_mode,
-		AUDCTRL_GetAudioApp(), arg_pathID, inHWlpbk);
+		GetAudioApp(), arg_pathID, inHWlpbk);
 }
 
 /*=============================================================================
@@ -1310,7 +1298,7 @@ void AUDDRV_SetAudioMode_ForMusicRecord(AudioMode_t audio_mode,
 			"\n\r\t* AUDDRV_SetAudioMode_ForMusicRecord() audio_mode==%d\n\r",
 			audio_mode);
 
-	auddrv_SetAudioMode_mic(audio_mode, AUDCTRL_GetAudioApp(), 0);
+	auddrv_SetAudioMode_mic(audio_mode, GetAudioApp(), 0);
 
 	/* for 48 KHz recording no DSP and 8KHz recording through DSP. */
 	/* AUDDRV_SetAudioMode( audio_mode ); */
@@ -1570,8 +1558,8 @@ void AUDDRV_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 /*********
 	OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
 
-	omega_voice_parms = AUDIO_GetParmAccessPtr()[
-		AUDCTRL_GetAudioMode()].omega_voice_parms;
+	omega_voice_parms = AudParmP()[
+		GetAudioMode()].omega_voice_parms;
 	audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam,
 		(UInt32)(&(omega_voice_parms[telephony_dl_gain_dB])),
 		0, 0, 0, 0);
@@ -1735,7 +1723,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	else
 		config.chnlNum = AUDIO_CHANNEL_MONO;
 
-	config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
+	config.bitPerSample = 24;
 
 	sink = config.sink;
 	if (sink == CSL_CAPH_DEV_IHF) {
@@ -1762,7 +1750,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 	config.snk_sampleRate = sample_rate;
 	config.chnlNum = AUDIO_CHANNEL_MONO;
-	config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
+	config.bitPerSample = 24;
 
 	telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
 
@@ -1781,7 +1769,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 		config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 		config.snk_sampleRate = sample_rate;
 		config.chnlNum = AUDIO_CHANNEL_MONO;
-		config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
+		config.bitPerSample = 24;
 
 		telephonyPathID.ul2PathID = csl_caph_hwctrl_EnablePath(config);
 	}
@@ -1804,7 +1792,7 @@ static void AUDDRV_Telephony_DeinitHW(void)
 
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
-	AUDDRV_HWControl_DisableSideTone(AUDCTRL_GetAudioMode());
+	AUDDRV_HWControl_DisableSideTone(GetAudioMode());
 
 	config.streamID = CSL_CAPH_STREAM_NONE;
 	config.pathID = telephonyPathID.ulPathID;
@@ -1937,19 +1925,19 @@ static void auddrv_SetAudioMode_mic(AudioMode_t arg_audio_mode,
 	UInt16 gainTemp1 = 0, gainTemp2 = 0, gainTemp3 = 0, gainTemp4 = 0;
 #if !defined(USE_NEW_AUDIO_PARAM)
 #ifdef CONFIG_BCM_MODEM
-	SysAudioParm_t *p = &(AUDIO_GetParmAccessPtr()[arg_audio_mode]);
+	SysAudioParm_t *p = &(AudParmP()[arg_audio_mode]);
 #else
-	AudioSysParm_t *p = &(AUDIO_GetParmAccessPtr()[arg_audio_mode]);
+	AudioSysParm_t *p = &(AudParmP()[arg_audio_mode]);
 #endif
 #else
 #ifdef CONFIG_BCM_MODEM
-	SysAudioParm_t *p = &(AUDIO_GetParmAccessPtr()
+	SysAudioParm_t *p = &(AudParmP()
 			      [arg_audio_mode +
-			       AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER]);
+			       GetAudioApp() * AUDIO_MODE_NUMBER]);
 #else
-	AudioSysParm_t *p = &(AUDIO_GetParmAccessPtr()
+	AudioSysParm_t *p = &(AudParmP()
 			      [arg_audio_mode +
-			       AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER]);
+			       GetAudioApp() * AUDIO_MODE_NUMBER]);
 #endif
 #endif
 	Log_DebugPrintf(LOGID_AUDIO,
@@ -1963,7 +1951,7 @@ static void auddrv_SetAudioMode_mic(AudioMode_t arg_audio_mode,
 	if(isDSPNeeded == TRUE)
 	{
 		dspULGain = 64;
-		//AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;
+		//AudParmP()[mode].echoNlp_parms.echo_nlp_gain;
 		audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain,
 				dspULGain, 0, 0, 0, 0);
 	}
@@ -2020,19 +2008,19 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 
 #if !defined(USE_NEW_AUDIO_PARAM)
 #ifdef CONFIG_BCM_MODEM
-	SysAudioParm_t *p = &(AUDIO_GetParmAccessPtr()[arg_audio_mode]);
+	SysAudioParm_t *p = &(AudParmP()[arg_audio_mode]);
 #else
-	AudioSysParm_t *p = &(AUDIO_GetParmAccessPtr()[arg_audio_mode]);
+	AudioSysParm_t *p = &(AudParmP()[arg_audio_mode]);
 #endif
 #else
 #ifdef CONFIG_BCM_MODEM
-	SysAudioParm_t *p = &(AUDIO_GetParmAccessPtr()
+	SysAudioParm_t *p = &(AudParmP()
 			      [arg_audio_mode +
-			       AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER]);
+			       GetAudioApp() * AUDIO_MODE_NUMBER]);
 #else
-	AudioSysParm_t *p = &(AUDIO_GetParmAccessPtr()
+	AudioSysParm_t *p = &(AudParmP()
 			      [arg_audio_mode +
-			       AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER]);
+			       GetAudioApp() * AUDIO_MODE_NUMBER]);
 #endif
 #endif
 
@@ -2051,7 +2039,7 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 		if(isDSPNeeded == TRUE)
 		{
 			dspDLGain = 64;
-		//AUDIO_GetParmAccessPtr()[mode].echo_nlp_downlink_volume_ctrl;
+		//AudParmP()[mode].echo_nlp_downlink_volume_ctrl;
 		audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain,
 					dspDLGain, 0, 0, 0, 0);
 		}
@@ -2103,7 +2091,7 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 
 	mixerInputGain = (short)p->srcmixer_input_gain_l;	/* Q13p2 dB */
 	mixerInputGain = mixerInputGain * 25;	/* into mB */
-/*	mixerInputGain = (short) AUDIO_GetParmAccessPtr()[
+/*	mixerInputGain = (short) AudParmP()[
 	arg_audio_mode].srcmixer_input_gain_r;
 	mixerInputGain = mixerInputGain*25; //into mB
 */
@@ -2133,7 +2121,7 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 		/* Q13p2 dB */
 		mixerOutputFineGain = (short)p->srcmixer_output_fine_gain_l;
 		mixerOutputFineGain = mixerOutputFineGain * 25;	/*into mB */
-		/* mixerOutputFineGain = (short) AUDIO_GetParmAccessPtr()[
+		/* mixerOutputFineGain = (short) AudParmP()[
 		   arg_audio_mode].srcmixer_output_fine_gain_r; */
 		/* mixerOutputFineGain = mixerOutputFineGain*25; //into mB */
 
@@ -2142,7 +2130,7 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 		mixerOutputBitSelect = mixerOutputBitSelect / 24;
 		/* bit_shift */
 
-		/* mixerOutputBitSelect = (short) AUDIO_GetParmAccessPtr()
+		/* mixerOutputBitSelect = (short) AudParmP()
 		   [arg_audio_mode].srcmixer_output_coarse_gain_r; */
 		/* mixerOutputBitSelect = mixerOutputBitSelect / 24; */
 		/* bit_shift */
