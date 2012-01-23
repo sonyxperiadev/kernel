@@ -39,6 +39,9 @@
 #include <mach/kona.h>
 #include <mach/timer.h>
 #include <mach/profile_timer.h>
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+#include <mach/secure_api.h>
+#endif
 
 static void rhea_poweroff(void)
 {
@@ -64,6 +67,18 @@ static void rhea_restart(char mode, const char *cmd)
 static void __init rhea_l2x0_init(void)
 {
 	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
+
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+	u32 val;
+
+	/*
+	 * Enable L2 if it is not already enabled by the ROM code.
+	 */
+	val = readl(l2cache_base + L2X0_CTRL);
+	val = val & 0x1;
+	if (val == 0)
+		hw_sec_pub_dispatcher(SEC_API_ENABLE_L2_CACHE, SEC_FLAGS);
+#endif
 
 	/*
 	 * 32KB way size, 8-way associativity
