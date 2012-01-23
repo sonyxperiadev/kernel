@@ -36,6 +36,7 @@
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
+#include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/completion.h>
 #include <linux/pwm/pwm.h>
@@ -224,6 +225,10 @@ static void kona_pwmc_config_duty_ticks(struct kona_pwmc *ap, int chan,
     // disable channel
     kona_pwmc_stop(ap, chan) ;
 
+    /* Workaround suggested by ASIC team */
+    if(pre_scaler >= 2)
+	ndelay(310);
+
     // enable channel.
     kona_pwmc_start(ap, chan) ;
 
@@ -257,6 +262,10 @@ static int kona_pwmc_config_period_ticks(struct kona_pwmc *ap, int chan,
 
     // disable channel
     kona_pwmc_stop(ap, chan) ;
+
+    /* Workaround suggested by ASIC team */
+    if(pre_scaler >= 2)
+	ndelay(310);
 
     // enable channel.
     kona_pwmc_start(ap, chan) ;
