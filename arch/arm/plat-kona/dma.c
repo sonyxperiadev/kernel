@@ -61,7 +61,7 @@ struct pl330_chan_desc {
 	bool is_setup;		/* Is 'pl330_req' having valid transfer setup */
 	struct pl330_req req;	/* A DMA request item */
 #ifdef CONFIG_KONA_PI_MGR
-	struct pi_mgr_dfs_node dfs_node; /* dfs node for DMA */
+	struct pi_mgr_dfs_node dfs_node;	/* dfs node for DMA */
 #endif
 };
 
@@ -74,13 +74,14 @@ struct pl330_dmac_desc {
 	int irq_end;		/* Last Irq number mapped */
 	struct list_head chan_list;	/* List of channel descriptors */
 	int chan_count;		/* channel descriptors count */
-	struct clk *clk; /* clock struct for DMAC */
+	struct clk *clk;	/* clock struct for DMAC */
 };
 
 #ifdef CONFIG_KONA_PI_MGR
 /* Array storing the names all the channels */
-char *dma_chan[9] = {"dma_chan_0", "dma_chan_1", "dma_chan_2", "dma_chan_3",
-"dma_chan_4", "dma_chan_5", "dma_chan_6", "dma_chan_7", "dma_chan_8"};
+char *dma_chan[9] = { "dma_chan_0", "dma_chan_1", "dma_chan_2", "dma_chan_3",
+	"dma_chan_4", "dma_chan_5", "dma_chan_6", "dma_chan_7", "dma_chan_8"
+};
 #endif
 
 /* PL330 DMAC Descriptor structure */
@@ -181,36 +182,41 @@ static void pl330_req_callback(void *token, enum pl330_op_err err)
 #ifdef CONFIG_KONA_PI_MGR
 int dma_change_bus_speed(int chan, u32 opp)
 {
-    struct pl330_chan_desc *cdesc = NULL;
-    int err = 0;
+	struct pl330_chan_desc *cdesc = NULL;
+	int err = 0;
 
-    /* Check if the mode of operation asked for is valid. DMA supports only
-     * normal and economy modes */
-    if (opp != PI_OPP_ECONOMY && opp != PI_OPP_NORMAL) {
-	err = -1;
-	pr_err("%s : Error: invalid operation mode or mode not supported\n", __func__);
+	/* Check if the mode of operation asked for is valid. DMA supports only
+	 * normal and economy modes */
+	if (opp != PI_OPP_ECONOMY && opp != PI_OPP_NORMAL) {
+		err = -1;
+		pr_err
+		    ("%s : Error: invalid operation mode or mode not supported\n",
+		     __func__);
+		return err;
+	}
+
+	/* Get the channel descriptor for the requested channel number and check
+	 * if its valid */
+	cdesc = chan_id_to_cdesc(chan);
+	if (cdesc == NULL) {
+		err = -1;
+		pr_err
+		    ("%s : Error: invalid channel number. request not granted\n",
+		     __func__);
+		return err;
+	}
+
+	/* Request for a update on the bus speed */
+	err = pi_mgr_dfs_request_update(&cdesc->dfs_node, opp);
+
+	/* Check if the request was handled or not */
+	if (err) {
+		pr_err("%s : Error: could not change the bus speed\n",
+		       __func__);
+		return err;
+	}
+
 	return err;
-    }
-
-    /* Get the channel descriptor for the requested channel number and check
-     * if its valid */
-    cdesc = chan_id_to_cdesc(chan);
-    if (cdesc == NULL){
-	err = -1;
-	pr_err("%s : Error: invalid channel number. request not granted\n", __func__);
-	return err;
-    }
-
-    /* Request for a update on the bus speed */
-    err = pi_mgr_dfs_request_update(&cdesc->dfs_node, opp);
-
-    /* Check if the request was handled or not */
-    if(err) {
-	pr_err("%s : Error: could not change the bus speed\n", __func__);
-	return err;
-    }
-
-    return err;
 }
 #endif
 
@@ -290,10 +296,11 @@ int dma_request_chan(unsigned int *chan, const char *name)
 #ifdef CONFIG_KONA_PI_MGR
 	/* Add dfs request */
 	err = pi_mgr_dfs_add_request(&cdesc->dfs_node, dma_chan[ch],
-		PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_DFS_MIN_VALUE);
+				     PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+				     PI_MGR_DFS_MIN_VALUE);
 
 	if (err)
-	    goto err_4;
+		goto err_4;
 #endif
 
 	spin_unlock_irqrestore(&lock, flags);
@@ -328,7 +335,7 @@ int dma_free_chan(unsigned int chan)
 #ifdef CONFIG_KONA_PI_MGR
 	/* Remove dfs request */
 	ret = pi_mgr_dfs_request_remove(&cdesc->dfs_node);
-	if(ret)
+	if (ret)
 		pr_debug("PL330: Failed to remove dfs node!\n");
 #endif
 
@@ -795,16 +802,16 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 
       err2:
 	/* Free all allocated xfer items */
-	if(xfer_front)	{
+	if (xfer_front) {
 		priv = xfer_front;
-		do	{
+		do {
 			/* Get nxt item */
 			nxt = priv->next;
 			/* free current item */
 			kfree(priv);
 			/* load nxt item to current */
 			priv = nxt;
-		} while(priv != NULL);
+		} while (priv != NULL);
 	}
 	/* Free config struct */
 	kfree(config);
@@ -830,8 +837,9 @@ int dma_start_transfer(unsigned int chan)
 	ret = pi_mgr_dfs_request_update(&c->dfs_node, PI_OPP_ECONOMY);
 
 	/* Check if the request was handled or not */
-	if(ret) {
-		pr_err("%s : Error: could not change the bus speed\n", __func__);
+	if (ret) {
+		pr_err("%s : Error: could not change the bus speed\n",
+		       __func__);
 		goto err;
 	}
 #endif
@@ -839,7 +847,7 @@ int dma_start_transfer(unsigned int chan)
 	/* Enable the clock before the transfer */
 	ret = clk_enable(dmac->clk);
 	if (ret)
-	    goto err1;
+		goto err1;
 
 	/* Acquire DMUX semaphore while microcode loading
 	 * This call always success because protect(unprotect) happen
@@ -901,8 +909,9 @@ int dma_stop_transfer(unsigned int chan)
 	ret = pi_mgr_dfs_request_update(&c->dfs_node, PI_MGR_DFS_MIN_VALUE);
 
 	/* Check if the request was handled or not */
-	if(ret) {
-		pr_err("%s : Error: could not change the bus speed\n", __func__);
+	if (ret) {
+		pr_err("%s : Error: could not change the bus speed\n",
+		       __func__);
 		goto err;
 	}
 #endif
@@ -1038,8 +1047,8 @@ static int pl330_probe(struct platform_device *pdev)
 	/* Get the clock struct */
 	pd->clk = clk_get(NULL, DMAC_MUX_APB_BUS_CLK_NAME_STR);
 	if (pd->clk == NULL) {
-	    ret = -ENOENT;
-	    goto probe_err4;
+		ret = -ENOENT;
+		goto probe_err4;
 	}
 
 	/* Hook the info */
