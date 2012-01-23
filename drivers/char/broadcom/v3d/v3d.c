@@ -41,6 +41,8 @@ the GPL, without Broadcom's express prior written consent.
 #include <plat/pi_mgr.h>
 #include <linux/dma-mapping.h>
 #include <linux/kthread.h>
+#include <mach/io_map.h>
+#include <mach/rdb/brcm_rdb_scu.h>
 
 #define V3D_DEV_NAME	"v3d"
 
@@ -192,7 +194,7 @@ v3d_t;
 	Imported stuff
 ********************************************************/
 /* Job Error Handling variables */
-#define V3D_ISR_TIMEOUT_IN_MS	(2000)
+#define V3D_ISR_TIMEOUT_IN_MS	(5000)
 #define V3D_JOB_TIMEOUT_IN_MS	(V3D_ISR_TIMEOUT_IN_MS)
 
 /* Enable the macro to retry the job on timeout, else will skip the job */
@@ -281,7 +283,6 @@ static void v3d_enable_irq(void);
 static inline uint32_t v3d_read(uint32_t reg);
 static inline void v3d_write(uint32_t val, uint32_t reg);
 static void v3d_power(int flag);
-static void v3d_soft_reset(void);
 static int v3d_hw_acquire(bool for_worklist);
 static void v3d_hw_release(void);
 static void v3d_print_status(void);
@@ -536,8 +537,6 @@ static int v3d_job_start(void)
 		}
 	}
 
-	v3d_reset();
-
 	p_v3d_job->job_status = V3D_JOB_STATUS_RUNNING;
 	v3d_in_use = 1;
 	if ((p_v3d_job->job_type == V3D_JOB_REND) && (p_v3d_job->job_intern_state == 0)) {
@@ -604,8 +603,6 @@ static void v3d_job_kill(v3d_job_t *p_v3d_job, v3d_job_status_e job_status)
 {
 	KLOG_V("Kill job[0x%08x]: ", (u32)p_v3d_job);
 
-	v3d_reset();
-
 	p_v3d_job->job_intern_state = 3;
 	p_v3d_job->job_status = job_status;
 	if (p_v3d_job->job_wait_state) {
@@ -663,17 +660,18 @@ static int v3d_thread(void *data)
 			KLOG_V("Signal received to launch job");
 			if(v3d_hw_acquire(true))
 				KLOG_E("v3d_hw_acquire failed.");
-			ret = v3d_job_start();
 		}
-		else {
+
+		v3d_reset();
+		ret = v3d_job_start();
+
+		{
 			/* Job in progress - wait with timeout for completion */
 			KLOG_V("v3d_thread going to sleep till job[0x%08x] status[%d] intern[%d]generates interrupt",
 				   (u32)v3d_job_curr, v3d_job_curr->job_status, v3d_job_curr->job_intern_state);
 			mutex_unlock(&v3d_sem);
 
 			timeout = wait_event_interruptible_timeout(v3d_isr_done_q, (v3d_in_use == 0), msecs_to_jiffies(V3D_ISR_TIMEOUT_IN_MS));
-
-			KLOG_V("wait exit, v3d_in_use[%d], timeout[%d]", v3d_in_use, timeout);
 			if (timeout && (timeout < timout_min)) {
 				timout_min = timeout;
 				KLOG_V("Minimum jiffies before timeout[%d]. Actual timeout set in jiffies[%d]",
@@ -688,9 +686,11 @@ static int v3d_thread(void *data)
 				KLOG_E("lock acquire failed");
 				do_exit( -1);
 			}
+#if 0
 			if (v3d_job_curr == NULL) {
 				continue;
 			}
+#endif
 			if (v3d_in_use == 0) {
 				/* Job completed or fatal oom happened or current job was killed as part of app close */
 				if ((v3d_job_curr->job_type == V3D_JOB_BIN) && (v3d_job_curr->job_intern_state == 1)) {
@@ -706,9 +706,11 @@ static int v3d_thread(void *data)
 						wake_up_interruptible(&(((v3d_job_t *)v3d_job_curr)->v3d_job_done_q));
 					}
 					v3d_job_curr = v3d_job_curr->next;
+#if 0
 					if (v3d_job_curr != NULL) {
 						ret = v3d_job_start();
 					}
+#endif
 				}
 				else if ( ((v3d_job_curr->job_type == V3D_JOB_BIN_REND) && (v3d_job_curr->job_intern_state == 2)) ||
 						((v3d_job_curr->job_type == V3D_JOB_REND) && (v3d_job_curr->job_intern_state == 2)) ||
@@ -724,12 +726,18 @@ static int v3d_thread(void *data)
 
 					v3d_job_curr = v3d_job_curr->next;
 
+#if 0
 					if (v3d_job_curr != NULL) {
 						ret = v3d_job_start();
 					}
+#endif
 				}
 				else if (v3d_job_curr->job_intern_state == 0) {
+#if 0
 					ret = v3d_job_start(); //What is this?
+#else
+					continue;
+#endif
 				}
 				else {
 					KLOG_E("Assert: v3d thread wait exited as 'done' or 'killed' but job state not valid");
@@ -752,12 +760,16 @@ static int v3d_thread(void *data)
 					ret = v3d_job_start();
 					continue;
 				}
+#else
+				BUG();
 #endif
 				v3d_job_kill((v3d_job_t *)v3d_job_curr, V3D_JOB_STATUS_TIMED_OUT);
 				v3d_job_curr = v3d_job_curr->next;
+#if 0
 				if (v3d_job_curr != NULL) {
 					ret = v3d_job_start();
 				}
+#endif
 			}
 		}
 	}
@@ -943,41 +955,40 @@ static int disable_v3d_clock(void)
 	return (rc);
 }
 
-static void v3d_soft_reset(void)
+static int pm_enable_scu_standby(bool enable)
 {
-	uint32_t value;
-	//Write the password to enable accessing other registers
-	writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
-			( 0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT), mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
+    u32 reg_val = 0;
+    reg_val = readl(KONA_SCU_VA + SCU_CONTROL_OFFSET);
+    if(enable)
+		reg_val |= SCU_CONTROL_SCU_STANDBY_EN_MASK;
+    else
+		reg_val &= ~SCU_CONTROL_SCU_STANDBY_EN_MASK;
 
-	// Put V3D in reset state
-	value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
-	value = value & ~( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
-	writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+    writel(reg_val, KONA_SCU_VA + SCU_CONTROL_OFFSET);
 
-	udelay(10);
-
-	value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
-	value = value | ( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
-	writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+    return 0;
 }
 
 static void v3d_power(int flag)
 {
+	u32 value;
+
 	mutex_lock(&v3d_state.work_lock);
 	KLOG_D("v3d_power [%d] v3d_inuse[%d]", flag, v3d_in_use);
 
 	if (flag) {
-		// Enable V3D
 		enable_v3d_clock();
 
 		/* Request for SIMPLE wfi */
 		if (v3d_state.qos_node)
 			pi_mgr_qos_request_update(v3d_state.qos_node, 0);
 
+		pm_enable_scu_standby(0);
+		mb();
+
 		v3d_is_on = 1;
 
-		//Update counters
+		/* Update counters */
 		v3d_state.j1 = jiffies;
 		v3d_state.free_time += v3d_state.j1 - v3d_state.j2;
 		if ( (v3d_state.show_v3d_usage) && jiffies_to_msecs(v3d_state.free_time + v3d_state.acquired_time) > 5000) {
@@ -987,15 +998,26 @@ static void v3d_power(int flag)
 		}
 	}
 	else {
-		//Update counters
 		v3d_state.j2 = jiffies;
 		v3d_state.acquired_time += v3d_state.j2 - v3d_state.j1;
 
-		if (v3d_state.qos_node)
-			pi_mgr_qos_request_update(v3d_state.qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+		//Write the password to enable accessing other registers
+		writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
+				( 0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT), mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
+
+		/* Put V3D in reset state */
+		value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
+		value = value & ~( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
+		writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+		mb();
 
 		/* Disable V3D clock */
 		v3d_is_on = 0;
+
+		if (v3d_state.qos_node)
+			pi_mgr_qos_request_update(v3d_state.qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+		pm_enable_scu_standby(1);
+
 		disable_v3d_clock();
 	}
 
@@ -1065,6 +1087,7 @@ static void v3d_print_status(void)
 			v3d_read(0xf04));
 		printk("v3d bin mem status bpoa[0x%08x] bpos[0x%08x] bpca[0x%08x] bpcs[0x%08x]\n",
 				v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET), v3d_read(V3D_BPCA_OFFSET), v3d_read(V3D_BPCS_OFFSET));
+		printk("the SCU control = 0x%08x\n", readl(KONA_SCU_VA + SCU_CONTROL_OFFSET));
 	}
 	else
 		printk("V3D is powered down\n");
@@ -1096,10 +1119,31 @@ static void v3d_reg_init(void)
 
 static void v3d_reset(void)
 {
-	//Soft-reset v3d
-	v3d_soft_reset();
+	u32 value;
+
+	//Write the password to enable accessing other registers
+	writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
+			( 0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT), mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
+
+	// Put V3D in reset state
+	value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
+	value = value & ~( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
+	writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+
+	//udelay(10);
+
+	value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
+	value = value | ( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
+	writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+
+	mb();
+
 	v3d_reg_init();
+
+	mb();
+
 	free_bin_mem(0);
+
 	v3d_in_use = 0;
 #ifdef SUPPORT_V3D_WORKLIST
 	v3d_flags = 0;
@@ -1133,6 +1177,7 @@ static int v3d_hw_acquire(bool for_worklist)
 	}
 #endif
 	mutex_unlock(&v3d_state.work_lock);
+
 	return ret;
 }
 
