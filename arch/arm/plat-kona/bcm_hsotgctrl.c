@@ -42,8 +42,7 @@
 #define PHY_MDIO_CURR_REF_ADJUST_VALUE 0x18
 #define PHY_MDIO_LDO_REF_VOLTAGE_ADJUST_VALUE 0x80
 
-#define HSOTGCTRL_INIT_DELAY_IN_MS 300
-#define HSOTGCTRL_STEP_DELAY_IN_MS 100
+#define HSOTGCTRL_STEP_DELAY_IN_MS 2
 #define HSOTGCTRL_ID_CHANGE_DELAY_IN_MS 200
 #define PHY_PM_DELAY_IN_MS 1
 
@@ -444,7 +443,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 			HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK;
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
-	msleep_interruptible(HSOTGCTRL_INIT_DELAY_IN_MS);
+	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	error = device_create_file(&pdev->dev, &dev_attr_hsotgctrldump);
 
