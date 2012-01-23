@@ -437,10 +437,10 @@ int dma_setup_transfer(unsigned int chan,
 	struct pl330_reqcfg *config;
 	struct pl330_xfer *xfer;
 	struct pl330_chan_desc *c;
-	int err = -1, bl, bs, w;
+	int err = -EINVAL, bl, bs, w;
 
 	if (!xfer_size)
-		goto err1;
+		goto err;
 
 	/* DMA transfer direction */
 	switch (control & DMA_DIRECTION_MASK) {
@@ -466,7 +466,7 @@ int dma_setup_transfer(unsigned int chan,
 	};
 
 	if (rqtype == DEVTODEV)
-		goto err1;
+		goto err;
 
 	/* Burst size */
 	bs = cfg & DMA_CFG_BURST_SIZE_MASK;
@@ -474,7 +474,7 @@ int dma_setup_transfer(unsigned int chan,
 	if (bs > DMA_CFG_BURST_SIZE_8) {
 		dev_err(dmac->pi->dev,
 			"Burst Length > 64 bits not supported\n");
-		goto err1;
+		goto err;
 	}
 
 	switch (bs) {
@@ -501,19 +501,19 @@ int dma_setup_transfer(unsigned int chan,
 	if (xfer_size % (bl * w)) {
 		dev_err(dmac->pi->dev,
 			"xfer size not aligned to burst size x burst len\n");
-		goto err1;
+		goto err;
 	}
 
 	/* check buffer address alignment */
 	if (src_addr % w) {
 		dev_err(dmac->pi->dev,
 			"src buffer is not aligned to brst size\n");
-		goto err1;
+		goto err;
 	}
 	if (dst_addr % w) {
 		dev_err(dmac->pi->dev,
 			"dst buffer is not aligned to brst size\n");
-		goto err1;
+		goto err;
 	}
 
 	spin_lock_irqsave(&lock, flags);
@@ -522,7 +522,7 @@ int dma_setup_transfer(unsigned int chan,
 	c = chan_id_to_cdesc(chan);
 	if (!c) {
 		spin_unlock_irqrestore(&lock, flags);
-		goto err1;
+		goto err;
 	}
 
 	if (c->in_use || c->is_setup) {
@@ -604,6 +604,229 @@ int dma_setup_transfer(unsigned int chan,
       err2:
 	kfree(config);
       err1:
+	c->is_setup = false;
+      err:
+	return err;
+}
+
+int dma_setup_transfer_sg(unsigned int chan,
+			  struct scatterlist *sgl,
+			  unsigned int sg_len,
+			  dma_addr_t hw_addr, int control, int cfg)
+{
+	unsigned long flags;
+	enum pl330_reqtype rqtype;
+	struct pl330_reqcfg *config;
+	struct pl330_xfer *xfer_front, *nxt = NULL, *priv = NULL;
+	struct pl330_chan_desc *c;
+	struct scatterlist *sg;
+	int err = -EINVAL, i, bl, bs, w;
+
+	if (unlikely(!sgl || !sg_len) || (control == DMA_DIRECTION_MEM_TO_MEM))
+		goto err;
+
+	/* DMA transfer direction */
+	switch (control & DMA_DIRECTION_MASK) {
+		/* Peripheral transfers are always handled with DMAC flow control.
+		 * Peripheral flow control is not supported at PL330 microcode level
+		 * in low-level PL330 driver.
+		 */
+	case DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_DMAC:
+	case DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI:	/*fall back to DMAC FCTRL */
+		rqtype = MEMTODEV;
+		break;
+	case DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_DMAC:
+	case DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI:	/*fall back to DMAC FCTRL */
+		rqtype = DEVTOMEM;
+		break;
+	case DMA_DIRECTION_DEV_TO_DEV:
+	default:
+		rqtype = DEVTODEV;	/*Unsupported */
+		break;
+	};
+
+	if (rqtype == DEVTODEV)
+		goto err;
+
+	/* Burst size */
+	bs = cfg & DMA_CFG_BURST_SIZE_MASK;
+
+	if (bs > DMA_CFG_BURST_SIZE_8) {
+		dev_err(dmac->pi->dev,
+			"Burst Length > 64 bits not supported\n");
+		goto err;
+	}
+
+	switch (bs) {
+	case DMA_CFG_BURST_SIZE_1:
+		w = 1;
+		break;
+	case DMA_CFG_BURST_SIZE_2:
+		w = 2;
+		break;
+	case DMA_CFG_BURST_SIZE_4:
+		w = 4;
+		break;
+	case DMA_CFG_BURST_SIZE_8:
+	default:
+		w = 8;
+		break;
+	};
+
+	/* Burst Length */
+	bl = (((cfg & DMA_CFG_BURST_LENGTH_MASK) >> DMA_CFG_BURST_LENGTH_SHIFT)
+	      + 1);
+
+	/* check buffer address alignment */
+	if (hw_addr % w) {
+		dev_err(dmac->pi->dev,
+			"hw address is not aligned to brst size\n");
+		goto err;
+	}
+
+	spin_lock_irqsave(&lock, flags);
+
+	/* Get channel descriptor */
+	c = chan_id_to_cdesc(chan);
+	if (!c) {
+		spin_unlock_irqrestore(&lock, flags);
+		goto err;
+	}
+
+	if (c->in_use || c->is_setup) {
+		dev_info(dmac->pi->dev,
+			 "Cant setup transfer, already setup/running\n");
+		spin_unlock_irqrestore(&lock, flags);
+		goto err1;
+	};
+
+	if ((rqtype != DMA_DIRECTION_MEM_TO_MEM) && (!c->is_peri_mapped)) {
+		spin_unlock_irqrestore(&lock, flags);
+		goto err1;
+	}
+
+	c->is_setup = true;	/* Mark it now, for setup */
+
+	spin_unlock_irqrestore(&lock, flags);
+
+	/* Allocate  config strcuture */
+	config = (struct pl330_reqcfg *)kzalloc(sizeof(*config), GFP_KERNEL);
+	if (!config) {
+		err = -ENOMEM;
+		goto err1;
+	}
+
+	/* configuration options */
+	config->src_inc = (cfg & DMA_CFG_SRC_ADDR_INCREMENT) ? 1 : 0;
+	config->dst_inc = (cfg & DMA_CFG_DST_ADDR_INCREMENT) ? 1 : 0;
+
+	/* Burst size */
+	config->brst_size = bs >> DMA_CFG_BURST_SIZE_SHIFT;
+	/* Burst Length */
+	config->brst_len = bl;
+
+	/* default settings:  Noncacheable, nonbufferable, no swapping */
+	config->scctl = SCCTRL0;
+	config->dcctl = DCCTRL0;
+	config->swap = SWAP_NO;
+
+	/* TrustZone Security level for DMA transactions: AXPROT[2:0] */
+	config->insnaccess = false;
+	config->privileged = false;
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
+	config->nonsecure = false;	/* Secure Mode */
+#else
+	config->nonsecure = true;	/* Open Mode */
+#endif
+
+	/* Generate xfer list based on scatterlist passed */
+	xfer_front = NULL;
+
+	for_each_sg(sgl, sg, sg_len, i) {
+
+		if (!sg_dma_len(sg))
+			continue;
+
+		/* checking xfer size alignment */
+		if (sg_dma_len(sg) % (bl * w)) {
+			dev_err(dmac->pi->dev,
+				"LLI xfer size not aligned to burst size x burst len\n");
+			goto err2;
+		}
+
+		/* check buffer address alignment */
+		if (sg_dma_address(sg) % w) {
+			dev_err(dmac->pi->dev,
+				"sg buffer address not aligned to brst size\n");
+			goto err2;
+		}
+
+		nxt = (struct pl330_xfer *)kzalloc(sizeof(*nxt), GFP_KERNEL);
+		if (!nxt) {
+			err = -ENOMEM;
+			goto err2;
+		}
+
+		if (rqtype == MEMTODEV) {
+			nxt->src_addr = sg_dma_address(sg);
+			nxt->dst_addr = hw_addr;
+		} else {
+			nxt->src_addr = hw_addr;
+			nxt->dst_addr = sg_dma_address(sg);
+		}
+
+		nxt->bytes = sg_dma_len(sg);
+		nxt->next = NULL;
+
+		if (!xfer_front) {
+			xfer_front = nxt;	/* This is the first Item */
+			priv = xfer_front;	/* On next iteration, attach to here  */
+		} else {
+			priv->next = nxt;	/* Add to the tail */
+			priv = priv->next;	/* On next iteration, attach to here  */
+		}
+
+		/* nxt is added to xfer list, make it NULL before next LLI */
+		nxt = NULL;
+	}
+
+	spin_lock_irqsave(&lock, flags);
+
+	/* Attach the request */
+	c->req.rqtype = rqtype;
+
+	if (rqtype != MEMTOMEM)
+		c->req.peri = c->peri_req_id;
+
+	/* callback function */
+	c->req.xfer_cb = pl330_req_callback;
+	c->req.token = &c->req;	/* callback data */
+	/* attach configuration */
+	c->req.cfg = config;
+	/* attach xfer item list */
+	c->req.x = xfer_front;
+
+	spin_unlock_irqrestore(&lock, flags);
+	return 0;
+
+      err2:
+	/* Free all allocated xfer items */
+	if (xfer_front) {
+		priv = xfer_front;
+		do {
+			/* Get nxt item */
+			nxt = priv->next;
+			/* free current item */
+			kfree(priv);
+			/* load nxt item to current */
+			priv = nxt;
+		} while (priv != NULL);
+	}
+	/* Free config struct */
+	kfree(config);
+      err1:
+	c->is_setup = false;
+      err:
 	return err;
 }
 
@@ -616,10 +839,10 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	struct pl330_xfer *xfer_front, *nxt = NULL, *priv = NULL;
 	struct pl330_chan_desc *c;
 	struct dma_transfer_list *lli;
-	int err = -1, bl, bs, w;
+	int err = -EINVAL, bl, bs, w;
 
 	if (!head)
-		return -1;
+		goto err;
 
 	/* DMA transfer direction */
 	switch (control & DMA_DIRECTION_MASK) {
@@ -645,7 +868,7 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	};
 
 	if (rqtype == DEVTODEV)
-		goto err1;
+		goto err;
 
 	/* Burst size */
 	bs = cfg & DMA_CFG_BURST_SIZE_MASK;
@@ -653,7 +876,7 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	if (bs > DMA_CFG_BURST_SIZE_8) {
 		dev_err(dmac->pi->dev,
 			"Burst Length > 64 bits not supported\n");
-		goto err1;
+		goto err;
 	}
 
 	switch (bs) {
@@ -682,7 +905,7 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	c = chan_id_to_cdesc(chan);
 	if (!c) {
 		spin_unlock_irqrestore(&lock, flags);
-		goto err1;
+		goto err;
 	}
 
 	if (c->in_use || c->is_setup) {
@@ -816,6 +1039,8 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	/* Free config struct */
 	kfree(config);
       err1:
+	c->is_setup = false;
+      err:
 	return err;
 }
 
@@ -971,7 +1196,6 @@ int dma_free_callback(unsigned int chan)
 
 static irqreturn_t pl330_irq_handler(int irq, void *data)
 {
-	//printk("\nPL330 IRQ #%d\n",irq);
 	if (pl330_update(data))
 		return IRQ_HANDLED;
 	else
@@ -1146,6 +1370,7 @@ EXPORT_SYMBOL(dma_free_chan);
 EXPORT_SYMBOL(dma_map_peripheral);
 EXPORT_SYMBOL(dma_unmap_peripheral);
 EXPORT_SYMBOL(dma_setup_transfer);
+EXPORT_SYMBOL(dma_setup_transfer_sg);
 EXPORT_SYMBOL(dma_setup_transfer_list);
 EXPORT_SYMBOL(dma_start_transfer);
 EXPORT_SYMBOL(dma_stop_transfer);
