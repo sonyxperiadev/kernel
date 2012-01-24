@@ -894,6 +894,7 @@ static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
 	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+	.facing = V4L2_SUBDEV_SENSOR_BACK,
 	.parms.serial = {
 		.lanes = 1,
 		.channel = 0,
