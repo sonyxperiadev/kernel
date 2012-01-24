@@ -49,6 +49,20 @@ config BCMPMU_RPC
 	---help---
 	Select to support PMU ADC info to Modem.
 
+config BCM_HW_PCM
+    tristate "HW_PCM Driver"
+    depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+    default n
+    ---help---
+       Select to build the hw_pcm driver.
+
+config BCM_MDMGPIO
+    tristate "MDMGPIO Driver"
+    depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+    default n
+    ---help---
+    Select to build the mdmgpio driver.
+
 config BCM_AAA
     tristate "Android Amxr Audio ('AAA grade-beef') driver"
     default n

@@ -13,3 +13,9 @@ obj-$(CONFIG_BCM_IDLE_PROFILER)		       += idle_profiler/
 obj-$(CONFIG_BCM_BSC)                      += bsc.o
 obj-$(CONFIG_BCM_HEADSET_SW)               += headset.o
 
+ifdef CONFIG_RHEA_PANDA
+obj-$(CONFIG_BCM_MDMGPIO)              += mdmgpio/
+
+obj-$(CONFIG_BCM_HW_PCM)               += pcm/
+endif
+

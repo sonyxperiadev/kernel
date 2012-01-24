@@ -186,6 +186,12 @@ config CDEBUGGER
 	bool "Enable Ramdump dump Feature on Rhea"
 	default n
 
+config RHEA_PANDA
+        bool "Enable PANDA features"
+        default n
+        help
+           For Nokia Panda project.
+
 endmenu
 
 
