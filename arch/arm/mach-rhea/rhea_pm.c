@@ -220,6 +220,7 @@ static int pm_enable_scu_standby(bool enable)
 
     return 0;
 }
+
 #ifndef CONFIG_ARCH_RHEA_A0
 static int pm_enable_self_refresh(bool enable)
 {
@@ -474,7 +475,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	pi_enable(pi,0);
 #ifdef CONFIG_RHEA_WA_CRMEMC_919
-	if (!JIRA_WA_ENABLED(919)) {
+	if (JIRA_WA_ENABLED(919)) {
 		/*
 		Workaround for JIRA CRMEMC-919(Periodic device temp. polling will
 		prevent entering deep sleep in Rhea B0)
@@ -494,7 +495,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 #endif /*CONFIG_RHEA_WA_CRMEMC_919*/
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
-	if (!JIRA_WA_ENABLED(2221)) {
+	if (JIRA_WA_ENABLED(2221)) {
 
 		u32 count;
 		int insurance = 0;
@@ -556,7 +557,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 	prevent entering deep sleep in Rhea B0)
 	- Disable temp. polling when A9 enters LPM & re-enable on exit from LPM
  */
-	if (!JIRA_WA_ENABLED(919))
+	if (JIRA_WA_ENABLED(919))
 		writel(lpddr2_temp_period, KONA_MEMC0_NS_VA +
                         CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
 
