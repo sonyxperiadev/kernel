@@ -292,9 +292,9 @@ Boolean AUDDRV_InVoiceCall(void);
 void AUDDRV_SetVoiceCallFlag(Boolean inVoiceCall);
 
 #ifdef CONFIG_BCM_MODEM
-SysAudioParm_t *AUDIO_GetParmAccessPtr(void);
+SysAudioParm_t *AudParmP(void);
 #else
-AudioSysParm_t *AUDIO_GetParmAccessPtr(void);
+AudioSysParm_t *AudParmP(void);
 #endif
 
 #if defined(USE_NEW_AUDIO_PARAM)

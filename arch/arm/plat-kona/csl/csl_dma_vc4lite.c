@@ -195,23 +195,6 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
                    __FUNCTION__, __FILE__, __LINE__, BCM_INT_ID_MM_DMA_CHAN1);
             return DMA_VC4LITE_STATUS_FAILURE;
         }
-        
-        if( request_irq(BCM_INT_ID_MM_DMA_CHAN2, bcm_vc4l_dma_interrupt, IRQF_DISABLED |
-            IRQF_NO_SUSPEND, "BRCM VC4L DMA2", NULL) <0)
-        {
-            pr_err("%s(%s:%u)::request_irq failed IRQ %d\n",
-                   __FUNCTION__, __FILE__, __LINE__, BCM_INT_ID_MM_DMA_CHAN2);
-            return DMA_VC4LITE_STATUS_FAILURE;
-        }
-        
-        if( request_irq(BCM_INT_ID_MM_DMA_CHAN3, bcm_vc4l_dma_interrupt, IRQF_DISABLED |
-            IRQF_NO_SUSPEND, "BRCM VC4L DMA3", NULL) <0)
-        {
-            pr_err("%s(%s:%u)::request_irq failed IRQ %d\n",
-                   __FUNCTION__, __FILE__, __LINE__, BCM_INT_ID_MM_DMA_CHAN3);
-            return DMA_VC4LITE_STATUS_FAILURE;
-        }
-        
 #endif
         pdma->initialized = 1;
     }
@@ -296,8 +279,8 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_config_channel(
 
     if (!pdma->chan[chanID].used)
     {
-        dprintf(1, "%s: obtain channel needs to be called first\n", __FUNCTION__);
-        return DMA_VC4LITE_STATUS_FAILURE;
+	/* The channel is allocate statically for B0 workaround. */	
+	pdma->chan[chanID].used = 1;
     }
 
     if ( ((pChanInfo->srcID != DMA_VC4LITE_CLIENT_MEMORY)   && 
@@ -432,6 +415,38 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_release_channel(DMA_VC4LITE_CHANNEL_t chanID)
     return DMA_VC4LITE_STATUS_SUCCESS;
 }
 
+void csl_dma_poll_int(int chanID)
+{
+    CslDmaVc4lite_t *pdma = (CslDmaVc4lite_t *)&dmac;
+
+	int chanNum = chanID;
+
+	do {
+		printk(KERN_ERR "chan %d CS reg is 0x%08x\n", chanNum, readl(HW_IO_PHYS_TO_VIRT(DMA_VC4LITE_BASE_ADDR) + chanNum * 0x100));
+	 	chal_dma_vc4lite_get_int_status(pdma->handle, chanNum, &pdma->chan[chanNum].irqStatus);
+	} while (pdma->chan[chanNum].irqStatus == 0);
+	printk(KERN_ERR "chan %d CS reg is 0x%08x\n", chanNum, readl(HW_IO_PHYS_TO_VIRT(DMA_VC4LITE_BASE_ADDR) + chanNum * 0x100));
+
+	chal_dma_vc4lite_clear_int_status(pdma->handle, chanNum);
+	pdma->chan[chanNum].dmaChanCtrlBlkItemNum = 0;
+	dma_unmap_single(NULL, 
+			(dma_addr_t)pdma->chan[chanNum].pDmaChanCtrlBlkListPHYS,
+			DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE,
+			DMA_TO_DEVICE);
+
+            if (pdma->chan[chanNum].chanInfo.autoFreeChan)
+            {
+                if (chal_dma_vc4lite_reset_channel(pdma->handle, chanNum) != CHAL_DMA_VC4LITE_STATUS_SUCCESS)
+                {
+                    dprintf(1, "%s: reset DMA channel error\n", __FUNCTION__);          
+                }        
+
+                pdma->chan[chanNum].used = FALSE;
+                pdma->chan[chanNum].dmaChanCtrlBlkItemNum = 0;
+                memset(&pdma->chan[chanNum].chanInfo, 0, sizeof(DMA_VC4LITE_CHANNEL_INFO_t));
+            }
+
+}
 
 //******************************************************************************
 //
@@ -587,9 +602,16 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(
     else
         dmaCtrlBlkInfo.dstAddrIncrement = 0;
 
-    // only 32bit width supported for both source and destination    
-    dmaCtrlBlkInfo.srcXferWidth = 0;
-    dmaCtrlBlkInfo.dstXferWidth = 0;
+    // only 32bit width supported for both source and destination 
+    if (chanID == 0) {
+    	dmaCtrlBlkInfo.srcXferWidth = 0;
+    	dmaCtrlBlkInfo.dstXferWidth = 0;
+    } else {
+	    if ((pData->dstAddr & 0xc0000000) == 0x40000000) {
+    			dmaCtrlBlkInfo.srcXferWidth = 0;
+    			dmaCtrlBlkInfo.dstXferWidth = 1;
+	    }
+    }
 
     dmaCtrlBlkInfo.srcAddr = pData->srcAddr;
     dmaCtrlBlkInfo.dstAddr = pData->dstAddr;    
@@ -750,7 +772,7 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
     CslDmaVc4lite_t *pdma = (CslDmaVc4lite_t *)&dmac;
     UInt8  chanNum;    
 
-    printk(KERN_ERR "DMA int hapened\n");
+    printk(KERN_ERR "DMA int hapened for irq =%d\n", irq);
 #ifndef UNDER_LINUX
 	// disable the dma channel 1 interrupt
     IRQ_Disable(MM_DMA_CHAN1_IRQ);
@@ -780,22 +802,29 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
     }
 
     // check the interrupt status
-    for (chanNum=0; chanNum<DMA_VC4LITE_TOTAL_CHANNELS; chanNum++)
+    for (chanNum=0; chanNum<1; chanNum++)
     {
         pdma->chan[chanNum].chanState = chal_dma_vc4lite_get_channel_state(pdma->handle, chanNum);
+	printk(KERN_ERR "chan %d CS reg is 0x%08x\n", chanNum, readl(HW_IO_PHYS_TO_VIRT(DMA_VC4LITE_BASE_ADDR) + chanNum * 0x100));
         if (chal_dma_vc4lite_get_int_status(pdma->handle, chanNum, &pdma->chan[chanNum].irqStatus) == CHAL_DMA_VC4LITE_STATUS_SUCCESS)
         {
             if (pdma->chan[chanNum].irqStatus != 0)
             {
+	  	printk(KERN_ERR "ISR is happening for channel = %d", chanNum);
+
                 chal_dma_vc4lite_clear_int_status(pdma->handle, chanNum);
                 pdma->chan[chanNum].dmaChanCtrlBlkItemNum = 0;
 		dma_unmap_single(NULL, 
 				(dma_addr_t)pdma->chan[chanNum].pDmaChanCtrlBlkListPHYS,
 				DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE,
 				DMA_TO_DEVICE);
-            }
+            } else
+		printk(KERN_ERR "channel = %d has no irq status", chanNum);
 
-        }
+
+        } else
+		printk(KERN_ERR "failed to read irq status for channel = %d", chanNum);
+
     }
 
     OSINTERRUPT_Trigger(pdma->hisr);
@@ -819,10 +848,11 @@ static void dma_vc4lite_hisr(void)
     UInt8  chanNum;
     
     // process the callback function
-    for (chanNum=0; chanNum<DMA_VC4LITE_TOTAL_CHANNELS; chanNum++)
+    for (chanNum=0; chanNum<1; chanNum++)
     {
         if (pdma->chan[chanNum].irqStatus != 0)
         {
+	    printk(KERN_ERR "callback for channel = %d", chanNum);
             if (pdma->chan[chanNum].chanInfo.callback)
             {
                 if ((pdma->chan[chanNum].chanState != CHAL_DMA_VC4LITE_STATE_INVALID) && 
@@ -844,6 +874,8 @@ static void dma_vc4lite_hisr(void)
                 pdma->chan[chanNum].dmaChanCtrlBlkItemNum = 0;
                 memset(&pdma->chan[chanNum].chanInfo, 0, sizeof(DMA_VC4LITE_CHANNEL_INFO_t));
             }
+
+	    pdma->chan[chanNum].irqStatus = 0;
         }
     }
 

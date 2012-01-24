@@ -30,6 +30,27 @@
 #include<plat/pwr_mgr.h>
 #include "pm_params.h"
 
+
+/*JIRA workaround flag and sysfs definitions
+These flags can be used to enable/disable JIRA workaround at runtime
+*/
+#ifdef CONFIG_RHEA_WA_HWJIRA_2531
+DEFINE_JIRA_WA_RO_FLG(2531, 1);
+#endif
+
+#ifdef CONFIG_RHEA_WA_CRMEMC_919
+DEFINE_JIRA_WA_FLG(919, 1);
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2221
+DEFINE_JIRA_WA_FLG(2221, 0); /*Disable by default*/
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+DEFINE_JIRA_WA_RO_FLG(2490, 1);
+#endif
+
+
 #ifdef CONFIG_KONA_POWER_MGR
 
 #ifdef CONFIG_KONA_PMU_BSC_HS_MODE

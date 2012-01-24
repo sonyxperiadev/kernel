@@ -6394,14 +6394,22 @@ int root_ccu_clk_init(struct clk* clk)
     /* MobC00173104 : change the settling time to 4 ms */
     writel (0x82, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTAL_STRTDLY_OFFSET);
 
-	/*Temp patch for JIRA 2490*/
-	reg_val = readl(KONA_ROOT_CLK_VA + 
-				ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
-	reg_val |= 
-		ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
-	writel(reg_val,
-		KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+/* We observed some glitch with root PLL1 8 phase output
+and this was causing A9 to freeze when MM wakes up from retention
+Temp. workaround is to keep 96Mhz var vdd clock always on to avoid
+possible glitch on 8phase enable. This clock will be forcefully disabled
+by HW during deep sleep */
+	if (JIRA_WA_ENABLED(2490)) {
 
+		reg_val = readl(KONA_ROOT_CLK_VA +
+				ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+		reg_val |=
+			ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_96M_VARVDD_SW_EN_MASK;
+		writel(reg_val,
+			KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+	}
+#endif /*CONFIG_RHEA_WA_HWJIRA_2490*/
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
 
@@ -6841,6 +6849,12 @@ int __init rhea_clock_init(void)
 
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
 	dig_ch_peri_clk_ops.init = dig_clk_init;
+
+/*Update arm_switch flag based on runtime settings*/
+#ifdef CONFIG_RHEA_WA_HWJIRA_2531
+	if (!JIRA_WA_ENABLED(2531))
+		CLK_NAME(arm_switch).clk.flags |= AUTO_GATE;
+#endif
 
 	printk(KERN_INFO "%s registering clocks.\n", __func__);
 

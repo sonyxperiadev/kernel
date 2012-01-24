@@ -47,18 +47,24 @@
 #define _DBG_(a) a
 extern int gAudioDebugLevel;
 #define Log_DebugPrintf(logID, format, args...) \
-		 do { \
-			if(!(gAudioDebugLevel & 1)) \
-			  break;\
+		do { \
+			if (!(gAudioDebugLevel & 1)) \
+				break;\
 			pr_info(pr_fmt(format), ##args);\
-		  } while(0)
+		} while (0)
+
+#define log(log_level, format, args...) \
+	do { \
+		if (log_level & gAudioDebugLevel) \
+			pr_info(pr_fmt(format), ##args);\
+	} while (0)
 
 #else
 #define _DBG_(a)
-#define Log_DebugPrintf(logID,args...)
+#define Log_DebugPrintf(logID, args...)
 #endif
 
-#define audio_xassert(a, b) {if((a)==0) Log_DebugPrintf(LOGID_AUDIO, "%s assert line %d, %d, 0x%lx.\r\n", __FUNCTION__, __LINE__, a, (UInt32)b);}
+#define audio_xassert(a, b) {if ((a) == 0) Log_DebugPrintf(LOGID_AUDIO, "%s assert line %d, %d, 0x%lx.\r\n", __func__, __LINE__, a, (UInt32)b); }
 
 #define LOGID_MISC 0
 #define LOGID_SOC_AUDIO 1

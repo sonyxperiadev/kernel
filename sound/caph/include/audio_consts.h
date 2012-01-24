@@ -198,12 +198,6 @@ enum __AUDIO_NUM_OF_CHANNEL_t {
 };
 #define AUDIO_NUM_OF_CHANNEL_t enum __AUDIO_NUM_OF_CHANNEL_t
 
-#define AUDIO_BITS_PER_SAMPLE_t unsigned int
-
-#define AUDIO_8_BIT_PER_SAMPLE  8
-#define AUDIO_16_BIT_PER_SAMPLE 16
-#define AUDIO_18_BIT_PER_SAMPLE 18
-#define AUDIO_24_BIT_PER_SAMPLE 24
-#define AUDIO_32_BIT_PER_SAMPLE 32
+#define AUDIO_BITS_PER_SAMPLE_t unsigned char
 
 #endif

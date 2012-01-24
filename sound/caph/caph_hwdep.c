@@ -156,7 +156,7 @@ static void HWDEP_VOIP_DumpUL_CB(void *pPrivate, u8 * pSrc, u32 nSize)
 	bcm_caph_hwdep_voip_t *pVoIP;
 	pVoIP = (bcm_caph_hwdep_voip_t *) pPrivate;
 
-	/* BCM_AUDIO_DEBUG("HWDEP_VOIP_DumpUL_CB nSize %d pVoIP 0x%x\n",
+	/* DEBUG("HWDEP_VOIP_DumpUL_CB nSize %d pVoIP 0x%x\n",
 	 * nSize,pVoIP);
 	 */
 
@@ -186,7 +186,7 @@ static void HWDEP_VOIP_FillDL_CB(void *pPrivate, u8 * pDst, u32 nSize)
 	pVoIP = (bcm_caph_hwdep_voip_t *) pPrivate;
 
 	if (pVoIP->buffer_handle->voip_data_dl_buf_ptr) {
-		/*BCM_AUDIO_DEBUG("HWDEP_VOIP_FillDL_CB pVoIP->"
+		/*DEBUG("HWDEP_VOIP_FillDL_CB pVoIP->"
 		 *"frames_available_to_write %d\n", pVoIP->
 		 * frames_available_to_write);
 		 */
@@ -220,7 +220,7 @@ static long hwdep_read(struct snd_hwdep *hw, char __user * buf, long count,
 	long ret = 0;
 
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
-	/* BCM_AUDIO_DEBUG("voip_read count %ld\n",count); */
+	/* DEBUG("voip_read count %ld\n",count); */
 
 	if ((pVoIP->status == VoIP_Hwdep_Status_Started)
 	    && (pVoIP->frames_available_to_read > 0)) {
@@ -261,7 +261,7 @@ static long hwdep_write(struct snd_hwdep *hw, const char __user * buf,
 	long ret;
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
 
-	/* BCM_AUDIO_DEBUG("voip_write pVoIP->frame_size %d,pVoIP->"
+	/* DEBUG("voip_write pVoIP->frame_size %d,pVoIP->"
 	 * "writecount %d\n",pVoIP->frame_size,pVoIP->writecount);
 	 */
 
@@ -294,7 +294,7 @@ static long hwdep_write(struct snd_hwdep *hw, const char __user * buf,
 
 static int hwdep_open(struct snd_hwdep *hw, struct file *file)
 {
-	BCM_AUDIO_DEBUG("VoIP_Ioctl_Open\n");
+	DEBUG("VoIP_Ioctl_Open\n");
 
 	/*set the default parameters only once */
 	if (!setdefault) {
@@ -311,7 +311,7 @@ static int hwdep_release(struct snd_hwdep *hw, struct file *file)
 	bcm_caph_hwdep_voip_t *pVoIP;
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
 
-	BCM_AUDIO_DEBUG("VoIP_Ioctl_Release\n");
+	DEBUG("VoIP_Ioctl_Release\n");
 	return 0;
 }
 
@@ -328,14 +328,14 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
 
-	BCM_AUDIO_DEBUG("hwdep_ioctl cmd=%d\n", cmd);
+	DEBUG("hwdep_ioctl cmd=%d\n", cmd);
 
 	switch (cmd) {
 	case VoIP_Ioctl_GetVersion:
 		/* ret = put_user(BrcmAACEncVersion, (int __user *)arg); */
 		break;
 	case VoIP_Ioctl_Start:
-		BCM_AUDIO_DEBUG("VoIP_Ioctl_Start\n");
+		DEBUG("VoIP_Ioctl_Start\n");
 		if (voipInstCnt == 0) {	/* start VoIP only once */
 			voipInstCnt++;
 			hw->private_data =
@@ -429,13 +429,13 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			pVoIP->status = VoIP_Hwdep_Status_Started;
 		} else {
 			voipInstCnt++;
-			BCM_AUDIO_DEBUG("VoIP_Ioctl_Start -> just increment "
+			DEBUG("VoIP_Ioctl_Start -> just increment "
 				"the count, voip already started\n");
 		}
 
 		break;
 	case VoIP_Ioctl_Stop:
-		BCM_AUDIO_DEBUG("VoIP_Ioctl_Stop\n");
+		DEBUG("VoIP_Ioctl_Stop\n");
 
 		if (voipInstCnt == 2)
 			voipInstCnt--;
@@ -457,27 +457,27 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 	case VoIP_Ioctl_SetSource:
 		get_user(data, __user(int *)arg);
 		voip_data.mic = (AUDIO_SOURCE_Enum_t) data;
-		BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSource mic %ld,\n",
+		DEBUG(" VoIP_Ioctl_SetSource mic %ld,\n",
 				voip_data.mic);
 		break;
 
 	case VoIP_Ioctl_SetSink:
 		get_user(data, __user(int *)arg);
 		voip_data.spk = (AUDIO_SINK_Enum_t) data;
-		BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetSink spk %ld,\n",
+		DEBUG(" VoIP_Ioctl_SetSink spk %ld,\n",
 				voip_data.spk);
 		break;
 
 	case VoIP_Ioctl_SetCodecType:
 		get_user(data, __user(int *)arg);
 		voip_data.codec_type = (u32) data;
-		BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
+		DEBUG(" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
 				voip_data.codec_type);
 		break;
 	case VoIP_Ioctl_SetBitrate:
 		get_user(data, __user(int *)arg);
 		voip_data.bitrate_index = (u32) data;
-		BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetBitrate bitrate_index %ld,\n",
+		DEBUG(" VoIP_Ioctl_SetBitrate bitrate_index %ld,\n",
 				voip_data.bitrate_index);
 		break;
 	case VoIP_Ioctl_GetSource:
@@ -498,7 +498,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		break;
 	case VoIP_Ioctl_GetMode:
 		{
-			AudioMode_t mode = AUDCTRL_GetAudioMode();
+			AudioMode_t mode = GetAudioMode();
 			put_user((int)mode, __user(int *)arg);
 		}
 		break;
@@ -520,18 +520,18 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 				AUDCTRL_Telephony_RateChange(16000);
 			}
 #if !defined(USE_NEW_AUDIO_PARAM)
-			AUDCTRL_SetAudioMode(mode);
+			SetAudioMode(mode);
 #else
-			AUDCTRL_SetAudioMode(mode, AUDCTRL_GetAudioApp());
+			SetAudioMode(mode, GetAudioApp());
 #endif
-			BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetMode mode %d,\n",
+			DEBUG(" VoIP_Ioctl_SetMode mode %d,\n",
 					mode);
 		}
 		break;
 	case VoIP_Ioctl_SetVoLTEFlag:
 		get_user(data, __user(int *)arg);
 		voip_data.isVoLTE = (u8) data;
-		BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetFlag isVoLTE %d,\n",
+		DEBUG(" VoIP_Ioctl_SetFlag isVoLTE %d,\n",
 				voip_data.isVoLTE);
 		break;
 	case VoIP_Ioctl_GetVoLTEFlag:
@@ -664,7 +664,7 @@ static unsigned int hwdep_poll(struct snd_hwdep *hw, struct file *file,
 			mask |= POLLOUT | POLLWRNORM;
 	}
 
-	/* BCM_AUDIO_DEBUG("voip_poll mask %ld\n",mask); */
+	/* DEBUG("voip_poll mask %ld\n",mask); */
 
 	return mask;
 }
@@ -681,7 +681,7 @@ int __devinit HwdepDeviceNew(struct snd_card *card)
 
 	err = snd_hwdep_new(card, "Broadcom CAPH VOIP", 0, &pHwdep);
 	if (err < 0) {
-		BCM_AUDIO_DEBUG("error create hwdep device\n");
+		DEBUG("error create hwdep device\n");
 		return err;
 	}
 	pHwdep->iface = SNDRV_HWDEP_IFACE_OPL4;

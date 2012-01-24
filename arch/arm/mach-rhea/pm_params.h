@@ -202,5 +202,44 @@ extern struct pwrmgr_init_param pwrmgr_init_param;
 
 #endif /*CONFIG_KONA_POWER_MGR*/
 
+/*Helper macros for HW JIRA workarounds*/
+/*Macro to check if the workaround enable flag is enabled
+*/
+#define JIRA_WA_ENABLED(x) (jira_##x##_enable)
+
+/*Macro to define the JIRA workaround flag. R/W sysfs
+interface is also added to control the flag from console*/
+#define DEFINE_JIRA_WA_FLG(x, def_val)	\
+						int jira_##x##_enable = def_val;\
+						module_param_named(jira_##x##_enable, \
+						jira_##x##_enable, int, S_IRUGO | S_IWUSR \
+								| S_IWGRP)
+/*Macro to define the JIRA workaround flag. Read only sysfs
+interface is also added to read the flag from console*/
+#define DEFINE_JIRA_WA_RO_FLG(x, def_val)	\
+						int jira_##x##_enable = def_val;\
+						module_param_named(jira_##x##_enable, \
+						jira_##x##_enable, int, S_IRUGO)
+
+#define DECLARE_JIRA_WA_FLG(x)	extern int jira_##x##_enable
+
+/*JIRA workaround flag declarations*/
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2531
+DECLARE_JIRA_WA_FLG(2531);
+#endif
+
+#ifdef CONFIG_RHEA_WA_CRMEMC_919
+DECLARE_JIRA_WA_FLG(919);
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2221
+DECLARE_JIRA_WA_FLG(2221);
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+DECLARE_JIRA_WA_FLG(2490);
+#endif
+
 #endif /*__PM_PARAMS_H__*/
 

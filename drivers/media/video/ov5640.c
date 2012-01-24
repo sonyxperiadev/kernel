@@ -83,9 +83,10 @@ enum ov5640_size {
 	OV5640_SIZE_1080P,
 	OV5640_SIZE_QXGA,       // 2048 x 1536 (3M)
 	OV5640_SIZE_5MP,
+	OV5640_SIZE_LAST,
 	OV5640_SIZE_QXGA_JPEG,
 	OV5640_SIZE_5MP_JPEG,
-	OV5640_SIZE_LAST,
+	OV5640_SIZE_MAX
 };
 
 static const struct v4l2_frmsize_discrete ov5640_frmsizes[OV5640_SIZE_LAST] = {
@@ -679,7 +680,7 @@ static const struct ov5640_reg jpeg_init_common[] =
 
 
 
-static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
+static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_MAX] = {
 	[OV5640_SIZE_QVGA] = {
 		.x_addr_start = 0,
 		.y_addr_start = 0,

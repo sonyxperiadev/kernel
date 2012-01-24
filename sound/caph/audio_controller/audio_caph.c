@@ -102,7 +102,7 @@ void TimerCbStopVibrator(unsigned long priv)
 {
 	AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra, NULL, NULL, 0);
 	/* AUDCTRL_DisableBypassVibra(); */
-	BCM_AUDIO_DEBUG("Disable Vib from timer cb\n");
+	DEBUG("Disable Vib from timer cb\n");
 }
 
 /**
@@ -129,7 +129,7 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 
 		/*
 		 *  if( (len != sizeof(TMsgAudioCtrl)) && (len!=0) )
-		 *      BCM_AUDIO_DEBUG("Error AUDIO_Ctrl len=%d expected %d
+		 *      DEBUG("Error AUDIO_Ctrl len=%d expected %d
 		 *      in=%d, out=%d\n", len, sizeof(TMsgAudioCtrl),
 		 *      sgThreadData.m_pkfifo.in, sgThreadData.m_pkfifo.out);
 		 */
@@ -152,7 +152,7 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 static void AudioCodecIdHander(int codecID)
 {
 	BRCM_AUDIO_Param_RateChange_t param_rate_change;
-	BCM_AUDIO_DEBUG("AudioCodeCIdHander : CodecId = %d \r\n", codecID);
+	DEBUG("AudioCodeCIdHander : CodecId = %d \r\n", codecID);
 	param_rate_change.codecID = codecID;
 	AUDIO_Ctrl_Trigger(ACTION_AUD_RateChange, &param_rate_change, NULL, 0);
 }
@@ -183,7 +183,7 @@ int LaunchAudioCtrlThread(void)
 	 * member access
 	 */
 	/*
-	 * BCM_AUDIO_DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n",
+	 * DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n",
 	 * KFIFO_SIZE,sgThreadData.m_pkfifo.size);
 	 */
 	ret = kfifo_alloc(&sgThreadData.m_pkfifo_out, KFIFO_SIZE, GFP_KERNEL);
@@ -192,7 +192,7 @@ int LaunchAudioCtrlThread(void)
 	 * member access
 	 */
 	/*
-	 * BCM_AUDIO_DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n",
+	 * DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n",
 	 * KFIFO_SIZE,sgThreadData.m_pkfifo_out.size);
 	 */
 	INIT_WORK(&sgThreadData.mwork, AudioCtrlWorkThread);
@@ -324,7 +324,7 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	OSStatus_t osStatus;
 	int params_size = AUDIO_Ctrl_Trigger_GetParamsSize(action_code);
 
-	BCM_AUDIO_DEBUG("AudioHalThread action=%d\r\n", action_code);
+	DEBUG("AudioHalThread action=%d\r\n", action_code);
 
 	msgAudioCtrl.action_code = action_code;
 	if (arg_param)
@@ -339,7 +339,7 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 			    (unsigned char *)&msgAudioCtrl,
 			    sizeof(TMsgAudioCtrl), &sgThreadData.m_lock);
 	if (len != sizeof(TMsgAudioCtrl))
-		BCM_AUDIO_DEBUG
+		DEBUG
 		    ("Error AUDIO_Ctrl_Trigger len=%d expected %d\n", len,
 		     sizeof(TMsgAudioCtrl));
 
@@ -349,7 +349,7 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 		osStatus =
 		    OSSEMAPHORE_Obtain(sgThreadData.action_complete, 1280);
 		if (osStatus != OSSTATUS_SUCCESS) {
-			BCM_AUDIO_DEBUG("AUDIO_Ctrl_Trigger Timeout=%d\r\n",
+			DEBUG("AUDIO_Ctrl_Trigger Timeout=%d\r\n",
 					osStatus);
 			status = RESULT_ERROR;
 			return status;
@@ -368,7 +368,7 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 			 */
 			/*
 			 *   if( (len != sizeof(TMsgAudioCtrl)) && (len!=0) )
-			 *      BCM_AUDIO_DEBUG("Error AUDIO_Ctrl_Trigger
+			 *      DEBUG("Error AUDIO_Ctrl_Trigger
 			 *      len=%d expected %d in=%d, out=%d\n", len,
 			 *      sizeof(TMsgAudioCtrl),
 			 *      sgThreadData.m_pkfifo_out.in,
@@ -393,7 +393,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 	int i;
 	unsigned int path;
 
-	BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process action_code=%d\r\n", action_code);
+	DEBUG("AUDIO_Ctrl_Process action_code=%d\r\n", action_code);
 
 	switch (action_code) {
 	case ACTION_AUD_OpenPlay:
@@ -405,7 +405,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    AUDIO_DRIVER_Open(param_open->pdev_prop->p[0].
 					      drv_type);
 			if (param_open->drv_handle == NULL)
-				BCM_AUDIO_DEBUG("\n %lx:AUDIO_Ctrl_Process-"
+				DEBUG("\n %lx:AUDIO_Ctrl_Process-"
 						"AUDIO_DRIVER_Open  failed\n",
 						jiffies);
 		}
@@ -438,9 +438,9 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				 */
 #if defined(USE_NEW_AUDIO_PARAM)
 				/* need to fill the audio app, fill 0 for now */
-				AUDCTRL_SaveAudioApp(AUDIO_APP_MUSIC);
+				SaveAudioApp(AUDIO_APP_MUSIC);
 #endif
-				AUDCTRL_SaveAudioModeFlag(param_start->
+				SaveAudioMode(param_start->
 							  pdev_prop->p[0].sink);
 
 				/* Enable the playback the path */
@@ -533,7 +533,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 				pathID[param_stop->stream] = 0;
 			}
-			BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process Stop Playback"
+			DEBUG("AUDIO_Ctrl_Process Stop Playback"
 					" completed\n");
 		}
 		break;
@@ -688,7 +688,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    AUDIO_DRIVER_Open(param_open->pdev_prop->c.
 					      drv_type);
 
-			BCM_AUDIO_DEBUG("param_open->drv_handle -  0x%lx\n",
+			DEBUG("param_open->drv_handle -  0x%lx\n",
 					(UInt32) param_open->drv_handle);
 
 		}
@@ -786,7 +786,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_Vibra_t *parm_vibra =
 				(BRCM_AUDIO_Param_Vibra_t *)arg_param;
-			BCM_AUDIO_DEBUG("ACTION_AUD_SetVibraStrength\n");
+			DEBUG("ACTION_AUD_SetVibraStrength\n");
 			AUDCTRL_SetBypassVibraStrength(parm_vibra->strength,
 				parm_vibra->direction);
 			if (gpVibratorTimer) {
@@ -806,7 +806,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		}
 		break;
 	case ACTION_AUD_DisableByPassVibra:
-		BCM_AUDIO_DEBUG("ACTION_AUD_DisableByPassVibra\n");
+		DEBUG("ACTION_AUD_DisableByPassVibra\n");
 		if (gpVibratorTimer) {
 			del_timer_sync(gpVibratorTimer);
 			gpVibratorTimer = NULL;
@@ -875,9 +875,9 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AudioMode_t tempMode =
 			    (AudioMode_t) parm_call->new_spkr;
 #if defined(USE_NEW_AUDIO_PARAM)
-			AUDCTRL_SetAudioMode(tempMode, AUDCTRL_GetAudioApp());
+			SetAudioMode(tempMode, GetAudioApp());
 #else
-			AUDCTRL_SetAudioMode(tempMode);
+			SetAudioMode(tempMode);
 #endif
 		}
 		break;
@@ -910,9 +910,9 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 */
 #if defined(USE_NEW_AUDIO_PARAM)
 			/* re-enable FM; need to fill audio app */
-			AUDCTRL_SaveAudioApp(AUDIO_APP_FM);
+			SaveAudioApp(AUDIO_APP_FM);
 #endif
-			AUDCTRL_SaveAudioModeFlag((AudioMode_t) parm_FM->sink);
+			SaveAudioMode((AudioMode_t) parm_FM->sink);
 
 			AUDCTRL_EnablePlay(parm_FM->source,
 					   parm_FM->sink,
@@ -996,12 +996,12 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		break;
 
 	case ACTION_AUD_DisableECNSTelephony:
-		BCM_AUDIO_DEBUG("Telephony : Turning Off EC and NS\n");
+		DEBUG("Telephony : Turning Off EC and NS\n");
 		AUDCTRL_EC(FALSE, 0);
 		AUDCTRL_NS(FALSE);
 		break;
 	case ACTION_AUD_EnableECNSTelephony:
-		BCM_AUDIO_DEBUG("Telephony : Turning On EC and NS\n");
+		DEBUG("Telephony : Turning On EC and NS\n");
 		AUDCTRL_EC(TRUE, 0);
 		AUDCTRL_NS(TRUE);
 		break;
@@ -1023,12 +1023,12 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_SetApp_t *parm_setapp =
 				(BRCM_AUDIO_Param_SetApp_t *)arg_param;
-			AUDCTRL_SetAudioApp(parm_setapp->aud_app);
+			SetAudioApp(parm_setapp->aud_app);
 		}
 		break;
 
 	default:
-		BCM_AUDIO_DEBUG
+		DEBUG
 		    ("Error AUDIO_Ctrl_Process Invalid acction command\n");
 		break;
 	}
@@ -1050,7 +1050,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				      sizeof(TMsgAudioCtrl),
 				      &sgThreadData.m_lock_out);
 		if (len != sizeof(TMsgAudioCtrl))
-			BCM_AUDIO_DEBUG("Error AUDIO_Ctrl_Process "
+			DEBUG("Error AUDIO_Ctrl_Process "
 					"len=%d expected %d\n", len,
 					sizeof(TMsgAudioCtrl));
 		/* release the semaphore */

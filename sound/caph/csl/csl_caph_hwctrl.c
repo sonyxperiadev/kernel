@@ -323,8 +323,7 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 			arm2spCfg.dmaBytes = csl_dsp_arm2sp_get_size
 				(AUDIO_SAMPLING_RATE_48000);
 			if (path->chnlNum == AUDIO_CHANNEL_MONO &&
-					path->bitPerSample ==
-					AUDIO_16_BIT_PER_SAMPLE) {
+					path->bitPerSample == 16) {
 				/*switch does not differentiate 16bit mono from
 				 * 16bit stereo, hence reduce the clock.
 				 */
@@ -338,16 +337,14 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 			arm2spCfg.numFramesPerInterrupt = 2;
 			arm2spCfg.trigger = CAPH_16KHZ;
 			if (path->chnlNum == AUDIO_CHANNEL_MONO &&
-					path->bitPerSample ==
-					AUDIO_16_BIT_PER_SAMPLE)
+					path->bitPerSample == 16)
 				arm2spCfg.trigger = CAPH_8KHZ;
 		} else if (path->src_sampleRate == AUDIO_SAMPLING_RATE_8000) {
 			arm2spCfg.numFramesPerInterrupt = 4;
 			arm2spCfg.trigger = CAPH_8KHZ;
 
 			if (path->chnlNum == AUDIO_CHANNEL_MONO &&
-					path->bitPerSample ==
-					AUDIO_16_BIT_PER_SAMPLE)
+					path->bitPerSample == 16)
 
 				arm2spCfg.trigger = CAPH_4KHZ;
 		}
@@ -615,12 +612,12 @@ static CSL_CAPH_DATAFORMAT_e csl_caph_get_dataformat
 {
 	CSL_CAPH_DATAFORMAT_e dataFormat = CSL_CAPH_16BIT_MONO;
 
-	if (bitPerSample == AUDIO_16_BIT_PER_SAMPLE) {
+	if (bitPerSample == 16) {
 		if (chnlNum == AUDIO_CHANNEL_MONO)
 			dataFormat = CSL_CAPH_16BIT_MONO;
 		else
 			dataFormat = CSL_CAPH_16BIT_STEREO;
-	} else if (bitPerSample == AUDIO_24_BIT_PER_SAMPLE) {
+	} else if (bitPerSample == 24) {
 		if (chnlNum == AUDIO_CHANNEL_MONO)
 			dataFormat = CSL_CAPH_24BIT_MONO;
 		else

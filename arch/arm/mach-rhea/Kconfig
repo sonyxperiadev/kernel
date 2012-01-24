@@ -130,6 +130,33 @@ config RHEA_PWRMGR_USE_DUMMY_SEQ
        help
        Say Y if you want to use dummy PWRMGR HW I2C sequencer
 
+config RHEA_WA_HWJIRA_2531
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2531"
+	default n
+	help
+	 Say Y to enable RHEA JIRA 2531 workaround
+
+config RHEA_WA_CRMEMC_919
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA CRMEMC-919"
+	default n
+	help
+	 Say Y to enable RHEA JIRA CRMEMC-919 workaround
+
+config RHEA_WA_HWJIRA_2221
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2221"
+	default n
+	help
+	 Say Y to enable RHEA JIRA 2221 workaround
+
+config RHEA_WA_HWJIRA_2490
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2490"
+	default n
+	help
+	 Say Y to enable RHEA JIRA 2490 workaround
 
 config RHEALC_2093
 	bool "Enable RheaLC&2093"

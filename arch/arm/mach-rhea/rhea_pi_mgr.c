@@ -33,11 +33,15 @@
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_scu.h>
 #include <linux/io.h>
-#include<mach/clock.h>
-#include<mach/pi_mgr.h>
-#include<plat/pwr_mgr.h>
-#include<plat/pi_mgr.h>
+#include <linux/clk.h>
+#include <plat/clock.h>
+#include <mach/clock.h>
+#include <mach/pi_mgr.h>
+#include <plat/pwr_mgr.h>
+
 #include "pm_params.h"
 
 #define RUN_POLICY PM_POLICY_5
@@ -48,6 +52,11 @@
 		{.id = state_id,.state_policy = policy,\
 		.hw_wakeup_latency = latency,.flags = flg}
 
+
+#if defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
+extern void rhea_acp_workaround(void);
+extern void rhea_mm_shutdown_workaround(void);
+#endif
 
 char* armc_core_ccu[] = {KPROC_CCU_CLK_NAME_STR};
 struct pi_opp arm_opp = {
@@ -387,7 +396,23 @@ struct pi* pi_list[] = {
 
 };
 
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+#if defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
+static int pm_enable_scu_standby(bool enable)
+{
+    u32 reg_val = 0;
+    reg_val = readl(KONA_SCU_VA + SCU_CONTROL_OFFSET);
+    if(enable)
+		reg_val |= SCU_CONTROL_SCU_STANDBY_EN_MASK;
+    else
+		reg_val &= ~SCU_CONTROL_SCU_STANDBY_EN_MASK;
+
+    writel(reg_val, KONA_SCU_VA + SCU_CONTROL_OFFSET);
+
+    return 0;
+}
+#endif
+
+#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 /* JIRA HWRHEA-1689, HWRHEA-1739 we confirmed that there is a bug in Rhea A0 where wrong control signal
 is used to turn on mm power switches which results in mm clamps getting released before mm subsystem
  has powered up. This results in glitches on mm outputs which in some parts causes fake write
@@ -403,7 +428,7 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 	u32 reg_val;
 
 	BUG_ON(p->pi_id != PI_MGR_PI_ID_MM);
-
+#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND)
 	/*Is MM PI waking up from shutdown state ?*/
 	if(IS_SHUTDOWN_POLICY(p->old_value) && !IS_SHUTDOWN_POLICY(p->new_value))
 	{
@@ -427,6 +452,47 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 					CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET));
 		}
 	}
+#else
+	if(event == PI_PRECHANGE)
+	{
+		if((IS_RETN_POLICY(p->new_value) || IS_SHUTDOWN_POLICY(p->new_value))
+					&& IS_ACTIVE_POLICY(p->old_value))
+		{
+			if (IS_RETN_POLICY(p->new_value)) {
+
+				pm_enable_scu_standby(0);
+				writel(0xA5A501, KONA_MM_CLK_VA+MM_CLK_MGR_REG_WR_ACCESS_OFFSET);
+				reg_val = readl(KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
+				writel(reg_val|MM_CLK_MGR_REG_MM_DMA_CLKGATE_MM_DMA_AXI_CLK_EN_MASK,
+						 KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
+				
+				rhea_acp_workaround();
+				mb();
+
+				writel(reg_val, KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
+				pm_enable_scu_standby(1);
+			} 
+
+#if 0
+			if (IS_SHUTDOWN_POLICY(p->new_value)) {
+
+				printk(KERN_ERR "%s:MM shutdown workaround\n",__func__);
+				pm_enable_scu_standby(0);
+				writel(0xA5A501, KONA_MM_CLK_VA+MM_CLK_MGR_REG_WR_ACCESS_OFFSET);
+				reg_val = readl(KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
+				writel(reg_val|MM_CLK_MGR_REG_MM_DMA_CLKGATE_MM_DMA_AXI_CLK_EN_MASK,
+						 KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
+				
+				rhea_mm_shutdown_workaround();
+				mb();
+
+				writel(reg_val, KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
+				pm_enable_scu_standby(1);
+			}
+#endif
+		}	
+	}
+#endif	
 	return 0;
 }
 
@@ -465,7 +531,7 @@ int __init pi_mgr_late_init(void)
 	    pi_debug_add_pi(pi_list[i]);
     }
 #endif /* CONFIG_DEBUG_FS */
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 	pi_mgr_register_notifier(PI_MGR_PI_ID_MM,
 					&mm_policy_notifier,
 					PI_NOTIFY_POLICY_CHANGE);
@@ -474,5 +540,4 @@ int __init pi_mgr_late_init(void)
     return 0;
 }
 
-late_initcall(pi_mgr_late_init);
-
+late_initcall_sync(pi_mgr_late_init);
