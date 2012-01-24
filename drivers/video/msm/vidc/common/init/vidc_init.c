@@ -505,7 +505,7 @@ u32 vidc_insert_addr_table(struct video_client_ctx *client_ctx,
 			if (IS_ERR_OR_NULL(buff_ion_handle)) {
 				ERR("%s(): get_ION_handle failed\n",
 				 __func__);
-				goto ion_error;
+				goto bail_out_add;
 			}
 			*kernel_vaddr = (unsigned long)
 				ion_map_kernel(
