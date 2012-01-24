@@ -20,6 +20,5 @@ KBUILD_CFLAGS += -Werror
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audio_caph.o
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audio_controller.o
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audctrl_policy.o
-obj-$(CONFIG_BCM_ALSA_SOUND) 	+= audio_pmu_adapt.o
-
+obj-$(CONFIG_BCM_ALSA_SOUND) 	+= extern_audio.o
 

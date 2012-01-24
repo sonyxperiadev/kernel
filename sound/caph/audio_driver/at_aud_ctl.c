@@ -64,7 +64,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 
 #include "csl_caph_hwctrl.h"
 
-#include "audio_pmu_adapt.h"
+#include "extern_audio.h"
 
 void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 			UInt32 Val6);
@@ -240,123 +240,97 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		 amplifer gain in PMU */
 		/* PCG and loadcal currently use Q13p2 gain format */
 	case 100:
-#ifdef CONFIG_BCMPMU_AUDIO
 		{
-			PMU_AudioGainMapping_t pmu_gain;
-			short gain;
+		short gain;
 
-			gain = (short)Params[3];
+		gain = (short)Params[3];
 
-			if (Params[1] == 3) {
+		if (Params[1] == 3) {
 
-				DEBUG("Params[2] = %d, "
-					"Params[3] %d, audio mode %d\n",
-				     (int)Params[3], (int)Params[2],
-				     GetAudioMode());
+			DEBUG("Params[2] = %d, "
+				"Params[3] %d, audio mode %d\n",
+			     (int)Params[3], (int)Params[2],
+			     GetAudioMode());
 
-				if ((Params[2] ==
-				     PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
-				    || (Params[2] ==
-					PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
+			if ((Params[2] ==
+			     PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+			    || (Params[2] ==
+				PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
 #if defined(USE_NEW_AUDIO_PARAM)
-					if ((GetAudioMode() ==
-					     AUDIO_MODE_HEADSET)
-					    || (GetAudioMode() ==
-						AUDIO_MODE_TTY)) {
+				if (GetAudioMode() == AUDIO_MODE_HEADSET
+				    || GetAudioMode() == AUDIO_MODE_TTY) {
 #else
-					if ((GetAudioMode() ==
-					     AUDIO_MODE_HEADSET)
-					    || (GetAudioMode() ==
-						AUDIO_MODE_HEADSET_WB)
-					    || (GetAudioMode() ==
-						AUDIO_MODE_TTY)
-					    || (GetAudioMode() ==
-						AUDIO_MODE_TTY_WB)) {
+				if ((GetAudioMode() ==
+				     AUDIO_MODE_HEADSET)
+				    || (GetAudioMode() ==
+					AUDIO_MODE_HEADSET_WB)
+				    || (GetAudioMode() ==
+					AUDIO_MODE_TTY)
+				    || (GetAudioMode() ==
+					AUDIO_MODE_TTY_WB)) {
 #endif
-						AUDIO_PMU_IHF_POWER(FALSE);
-						AUDIO_PMU_HS_POWER(TRUE);
-						DEBUG
-						    ("%s ext headset "
-						"speaker gain = %d\n",
-						     __func__, gain);
-						pmu_gain =
-						    map2pmu_hs_gain(25 * gain);
-						DEBUG("%s ext headset"
-						" speaker gain = %d "
-						"after lookup\n",
-						     __func__,
-						     pmu_gain.PMU_gain_enum);
+					extern_ihf_off();
+					extern_hs_on();
+					DEBUG("%s ext headset "
+					"speaker gain = %d\n",
+					     __func__, gain);
 
-						if (Params[2] ==
-					PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
-							AUDIO_PMU_HS_SET_GAIN
-							    (PMU_AUDIO_HS_LEFT,
-							     pmu_gain.
-							     PMU_gain_enum);
-						else if (Params[2] ==
-					PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)
-							AUDIO_PMU_HS_SET_GAIN
-							    (PMU_AUDIO_HS_RIGHT,
-							     pmu_gain.
-							     PMU_gain_enum);
-					}
-#if defined(USE_NEW_AUDIO_PARAM)
-					else if (GetAudioMode() ==
-						 AUDIO_MODE_SPEAKERPHONE) {
-#else
-					else if ((GetAudioMode() ==
-						  AUDIO_MODE_SPEAKERPHONE)
-						 || (GetAudioMode()
-						== AUDIO_MODE_SPEAKERPHONE_WB)
-						){
-#endif
-						AUDIO_PMU_HS_POWER(FALSE);
-						AUDIO_PMU_IHF_POWER(TRUE);
-						DEBUG("%s ext IHF "
-						"speaker gain = %d\n",
-						     __func__, gain);
-						pmu_gain =
-						    map2pmu_ihf_gain(25 * gain);
-
-						DEBUG("%s ext IHF "
-						"speaker gain = %d\n",
-						     __func__,
-						     pmu_gain.PMU_gain_enum);
-						AUDIO_PMU_IHF_SET_GAIN(pmu_gain.
-							PMU_gain_enum);
-					}
-
+					if (Params[2] ==
+				PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+						extern_hs_set_gain(gain,
+						AUDIO_HS_LEFT);
+					else if (Params[2] ==
+				PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)
+						extern_hs_set_gain(gain,
+						AUDIO_HS_RIGHT);
 				}
-				/* Params[2] checking */
-				DEBUG
-				    ("Params[2] = %d, Params[3] %d,"
-					" audio mode %d\n",
-				     (int)Params[3], (int)Params[2],
-				     GetAudioMode());
-
-				if (Params[2]
-					== PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
 #if defined(USE_NEW_AUDIO_PARAM)
-					if (GetAudioMode() ==
-					    AUDIO_MODE_SPEAKERPHONE) {
+				else if (GetAudioMode() ==
+					 AUDIO_MODE_SPEAKERPHONE) {
 #else
-					if ((GetAudioMode() ==
-					     AUDIO_MODE_SPEAKERPHONE)
-					    || (GetAudioMode() ==
-						AUDIO_MODE_SPEAKERPHONE_WB)) {
+				else if ((GetAudioMode() ==
+					  AUDIO_MODE_SPEAKERPHONE)
+					 || (GetAudioMode()
+					== AUDIO_MODE_SPEAKERPHONE_WB)
+					){
 #endif
-						DEBUG
-						("ext IHF high gain "
-						"mode = %d\n",
-						 (int)Params[3]);
-						AUDIO_PMU_HI_GAIN_MODE_EN(
-							(int)Params[3]);
-					}
+					extern_hs_off();
+					extern_ihf_on();
+					DEBUG("%s ext IHF "
+					"speaker gain = %d\n",
+					     __func__, gain);
+					extern_ihf_set_gain(gain);
 				}
 
-			}	/* if (Params[1] == 3) */
+			}
+			/* Params[2] checking */
+			DEBUG
+			    ("Params[2] = %d, Params[3] %d,"
+				" audio mode %d\n",
+			     (int)Params[3], (int)Params[2],
+			     GetAudioMode());
+
+			if (Params[2]
+				== PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
+#if defined(USE_NEW_AUDIO_PARAM)
+				if (GetAudioMode() ==
+				    AUDIO_MODE_SPEAKERPHONE) {
+#else
+				if ((GetAudioMode() ==
+				     AUDIO_MODE_SPEAKERPHONE)
+				    || (GetAudioMode() ==
+					AUDIO_MODE_SPEAKERPHONE_WB)) {
+#endif
+					DEBUG("ext IHF high gain "
+					"mode = %d\n",
+					 (int)Params[3]);
+					extern_ihf_en_hi_gain_mode(
+						(int)Params[3]);
+				}
+			}
+
+		}	/* if (Params[1] == 3) */
 		}		/* case 100 */
-#endif
 
 		break;
 

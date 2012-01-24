@@ -672,9 +672,6 @@ void AUDCTRL_SetBTMode(int mode);
 int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 			    int arg1, int arg2, int arg3);
 
-void SetGainOnExternalAmp_mB(AUDIO_SINK_Enum_t speaker, int gain_mB,
-			     int left_right);
-
 /**
 *  @brief  This function controls the power on/off the power supply for
 *	digital mics.
