@@ -33,7 +33,7 @@ endif
 #DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
 #endif
 
-ifneq ($(CONFIG_MACH_RHEA_RAY_EDN2X),y)
+ifeq ($(CONFIG_MACH_RHEA_RAY_EDN2X),y)
 DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
 endif
 
