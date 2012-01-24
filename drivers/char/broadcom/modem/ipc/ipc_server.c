@@ -67,8 +67,7 @@
 struct ipcs_info_t {
 	dev_t devnum;
 	int ipc_state;
-	struct semaphore ipc_sem;
-	struct cdev cdev;               
+	struct cdev cdev;
 	struct tasklet_struct intr_tasklet;
 	struct work_struct cp_crash_dump_wq;
 	struct workqueue_struct *crash_dump_workqueue;
@@ -443,8 +442,8 @@ void Comms_Start(void)
 	apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
 	if (!apcp_shmem) {
 		IPC_DEBUG(DBG_ERROR, "IPC_BASE=0x%x, IPC_SIZE=0x%x\n",
-		IPC_BASE, IPC_SIZE);
-		IPC_DEBUG(DBG_ERROR, "ioremap shmem failed\n");
+			IPC_BASE, IPC_SIZE);
+			IPC_DEBUG(DBG_ERROR, "ioremap shmem failed\n");
 		return;
 	}
 	/* clear first (9) 32-bit words in shared memory */
@@ -456,9 +455,9 @@ void Comms_Start(void)
 
 	if (!cp_boot_base) {
 		IPC_DEBUG(DBG_ERROR,
-		"DTCM Addr=0x%x, length=0x%x",
-		MODEM_DTCM_ADDRESS,
-		INIT_ADDRESS_OFFSET+RESERVED_HEADER);
+			"DTCM Addr=0x%x, length=0x%x",
+			MODEM_DTCM_ADDRESS,
+			INIT_ADDRESS_OFFSET+RESERVED_HEADER);
 		IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_base error\n");
 		return;
 	}
@@ -499,13 +498,14 @@ static int __init ipcs_module_init(void)
 		goto out_unregister;
 	}
 
-	IPC_DEBUG(DBG_TRACE, "create CP crash dump workqueue\n");
-	g_ipc_info.crash_dump_workqueue = create_workqueue("dump-wq"); 
+	IPC_DEBUG(DBG_TRACE, "Allocate CP crash dump workqueue\n");
+	g_ipc_info.crash_dump_workqueue = alloc_workqueue("dump-wq",
+			WQ_FREEZABLE | WQ_MEM_RECLAIM, 0);
 
 	if (!g_ipc_info.crash_dump_workqueue) {
-		IPC_DEBUG(DBG_ERROR, "cannot create CP crash dump workqueue\n");
+		IPC_DEBUG(DBG_ERROR, "Cannot allocate CP crash dump workqueue\n");
 		goto out_unregister;
-	} 
+	}
 
 	INIT_WORK(&g_ipc_info.cp_crash_dump_wq, ProcessCPCrashedDump);
 
