@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
+#include <linux/dma-mapping.h>
 
 #include "clock.h"
 
@@ -127,6 +128,39 @@ static void unvote_rate_vdd(struct clk *clk, unsigned long rate)
 	unvote_vdd_level(clk->vdd_class, level);
 }
 
+#ifdef CONFIG_CLOCK_MAP
+static unsigned clock_count;
+unsigned long *clock_enable_map;
+
+static void clk_log_map_init(size_t count)
+{
+	dma_addr_t addr;
+	clock_enable_map = dma_alloc_coherent(NULL, BITS_TO_LONGS(count), &addr,
+					      GFP_KERNEL);
+}
+
+static void clk_log_map_register(struct clk *clk)
+{
+	if (!clk->id)
+		clk->id = clock_count++;
+}
+
+static void clk_log_map_enable(struct clk *clk)
+{
+	__set_bit(clk->id, clock_enable_map);
+}
+
+static void clk_log_map_disable(struct clk *clk)
+{
+	__clear_bit(clk->id, clock_enable_map);
+}
+#else
+static void clk_log_map_init(size_t count) { }
+static void clk_log_map_register(struct clk *clk) { }
+static void clk_log_map_enable(struct clk *clk) { }
+static void clk_log_map_disable(struct clk *clk) { }
+#endif
+
 /*
  * Standard clock functions defined in include/linux/clk.h
  */
@@ -153,8 +187,10 @@ int clk_enable(struct clk *clk)
 		ret = vote_rate_vdd(clk, clk->rate);
 		if (ret)
 			goto err_vote_vdd;
-		if (clk->ops->enable)
+		if (clk->ops->enable) {
 			ret = clk->ops->enable(clk);
+			clk_log_map_enable(clk);
+		}
 		if (ret)
 			goto err_enable_clock;
 	} else if (clk->flags & CLKFLAG_HANDOFF_RATE) {
@@ -198,8 +234,10 @@ void clk_disable(struct clk *clk)
 	if (clk->count == 1) {
 		struct clk *parent = clk_get_parent(clk);
 
-		if (clk->ops->disable)
+		if (clk->ops->disable) {
 			clk->ops->disable(clk);
+			clk_log_map_disable(clk);
+		}
 		unvote_rate_vdd(clk, clk->rate);
 		clk_disable(clk->depends);
 		clk_disable(parent);
@@ -321,6 +359,7 @@ void __init msm_clock_init(struct clock_init_data *data)
 	struct clk_lookup *clock_tbl;
 	size_t num_clocks;
 
+	clk_log_map_init(500);
 	clk_init_data = data;
 	if (clk_init_data->init)
 		clk_init_data->init();
@@ -331,6 +370,7 @@ void __init msm_clock_init(struct clock_init_data *data)
 	for (n = 0; n < num_clocks; n++) {
 		struct clk *clk = clock_tbl[n].clk;
 		struct clk *parent = clk_get_parent(clk);
+		clk_log_map_register(clk);
 		clk_set_parent(clk, parent);
 		if (clk->ops->handoff && !(clk->flags & CLKFLAG_HANDOFF_RATE)) {
 			if (clk->ops->handoff(clk)) {
