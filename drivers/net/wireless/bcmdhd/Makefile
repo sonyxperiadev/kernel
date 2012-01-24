@@ -33,6 +33,10 @@ endif
 #DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
 #endif
 
+ifneq ($(CONFIG_MACH_RHEA_RAY_EDN2X),y)
+DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
+endif
+
 DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o   \
 	dhd_linux_sched.o bcmwifi.o dhd_sdio.o bcmevent.o dhd_bta.o hndpmu.o  \
 	bcmsdh.o dhd_cdc.o bcmsdh_linux.o dhd_common.o linux_osl.o            \
