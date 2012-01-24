@@ -190,7 +190,7 @@ config RHEA_PANDA
         bool "Enable PANDA features"
         default n
         help
-           For Nokia Panda project.
+           For Rhea Panda Project.
 
 endmenu
 
