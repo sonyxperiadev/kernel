@@ -633,7 +633,12 @@ CHAL_DMA_VC4LITE_STATUS_t chal_dma_vc4lite_build_ctrlblk_list(
 #ifndef ACP_ENABLE
     pCurCtrlBlk->srcAddr      = (cUInt32)curCtrlBlkInfo->srcAddr;
 	#ifdef UNDER_LINUX
+
+if  (curCtrlBlkInfo->dstDreqID  != CHAL_DMA_VC4LITE_DREQ_NONE)
 	pCurCtrlBlk->dstAddr      = (cUInt32)HW_IO_VIRT_TO_PHYS(curCtrlBlkInfo->dstAddr);
+else
+	pCurCtrlBlk->dstAddr =	(cUInt32)curCtrlBlkInfo->dstAddr;
+
 	#else
     pCurCtrlBlk->dstAddr      = (cUInt32)curCtrlBlkInfo->dstAddr;
 	#endif

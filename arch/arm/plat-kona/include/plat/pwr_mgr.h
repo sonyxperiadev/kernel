@@ -105,6 +105,7 @@
 #define CCU_POLICY(p) ((p) & 0x3)
 #define IS_ACTIVE_POLICY(p)	((p) & 0x4)
 #define IS_SHUTDOWN_POLICY(p) ((p) == 0)
+#define IS_RETN_POLICY(p) ((p) == 1)   
 
 /*I2C commands - 4 bits*/
 

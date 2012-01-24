@@ -334,6 +334,12 @@ int __init rhea_pwr_mgr_init()
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	u32 reg_val = 0;
 #endif
+
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+	writel(0x5551, KONA_AXITRACE16_VA + 0x0);
+	writel(0x2, KONA_AXITRACE16_VA + 0xC);
+#endif
+
 #ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ
 	struct v0x_spec_i2c_cmd_ptr dummy_seq_v0_ptr =
 		{
@@ -457,6 +463,12 @@ int __init rhea_pwr_mgr_init()
 
 	/*init clks*/
 	rhea_clock_init();
+
+#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
+	writel(0x5551, KONA_AXITRACE17_VA + 0x0);
+	writel(0x0, KONA_AXITRACE17_VA + 0xC);
+	writel(0x2, KONA_AXITRACE17_VA + 0xC);
+#endif
 
 	return 0;
 }

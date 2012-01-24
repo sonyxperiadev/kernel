@@ -397,9 +397,7 @@ static void config_wakeup_interrupts(void)
 
 int enter_suspend_state(struct kona_idle_state* state)
 {
-	pm_enable_scu_standby(false);
 	enter_wfi();
-	pm_enable_scu_standby(true);
 	return -1;
 }
 
