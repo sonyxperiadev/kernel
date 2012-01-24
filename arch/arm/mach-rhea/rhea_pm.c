@@ -262,6 +262,18 @@ static int pm_config_deep_sleep(void)
 	pm_enable_self_refresh(true);
 #endif
 
+#ifndef CONFIG_ARCH_RHEA_A0
+/*In rentetion mode A9 cache memory PM togling pin should be disabled
+otherwise the memory periphary will be powered down in retention
+which may cause system to hang - This bit was added in B0*/
+	reg_val = readl(KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
+#ifdef CONFIG_RHEA_DORMANT_MODE
+	reg_val &= ~CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
+#else /*A9 retnetion*/
+	reg_val |= CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
+#endif
+	writel(reg_val, KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
+#endif /*CONFIG_ARCH_RHEA_A0*/
     return 0;
 }
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
@@ -403,7 +415,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 {
 	struct pi* pi = NULL;
 #ifdef CONFIG_RHEA_WA_CRMEMC_919
-	u32 lpddr2_temp_period;
+	u32 lpddr2_temp_period = 0;
 #endif
 #ifdef CONFIG_ARCH_RHEA_A0
 	u32 ddr_min_pwr_state_ap = 0;
