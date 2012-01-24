@@ -1339,13 +1339,19 @@ static int ov5640_enum_input(struct soc_camera_device *icd, struct v4l2_input *i
 
 	inp->type = V4L2_INPUT_TYPE_CAMERA;
 	inp->std  = V4L2_STD_UNKNOWN;
-	strcpy(inp->name, "Camera");
+	strcpy(inp->name, "ov5640");
+
 	if (icl && icl->priv) {
+
 		plat_parms = icl->priv;
+		inp->status = 0;
+
 		if (plat_parms->orientation == V4L2_SUBDEV_SENSOR_PORTRAIT)
-			inp->status = V4L2_IN_ST_HFLIP;
-		else
-			inp->status = 0;
+			inp->status |= V4L2_IN_ST_HFLIP;
+
+		if (plat_parms->facing == V4L2_SUBDEV_SENSOR_BACK)
+			inp->status |= V4L2_IN_ST_BACK;
+
 	}
 	return 0;
 }
