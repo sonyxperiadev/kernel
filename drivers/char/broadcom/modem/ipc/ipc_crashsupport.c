@@ -78,7 +78,7 @@ struct T_CRASH_SUMMARY {
 
 #define	SIM_DEBUG_DATA		0x18000000
 #define	SIM_AP_DEBUG_DATA	0x19000000
-#define	ASSERT_BUF_SIZE	    240
+#define	ASSERT_BUF_SIZE	    512
 #define MAX_RAMDUMP_BLOCKS  16
 static char assert_buf[ASSERT_BUF_SIZE];
 static int crashCount;
