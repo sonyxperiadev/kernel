@@ -172,12 +172,6 @@
 #define	ARM2SP_FRAME_NUM		0x7000				//8K:1/2/3/4, 16K:1/2; if 0 (or other): 8K:4, 16K:2
 #define	ARM2SP_FRAME_NUM_BIT_SHIFT	12				//Number of bits to shift to get the frame number
 
-//pg_aud_btnb_enable bit field definition
-#define	BTNB_STATUS_ENABLE		0x4000				//pg_aud_btnb_enable.b14, [1/0]=[enable/disable] STUTUS_BT_NB_BUFFER_DONE every 20ms
-#define	BTNB_CHANNEL_USE		0x8000				//pg_aud_btnb_enable.b15, [1/0]=[BTNB Left/BTNB Right]
-
-//for "PROUTDir_t pr_outdir;
-#define	PROUTDIR_MASK			0x0003
 
 //for COMMAND_VIBRA_ENABLE			// 0x89	( )
 #define	VIBRA_CTRL_MASK			0xC000	//[b15|b14]=[11/01/10/00]=[ENABLE/DGAINONLY/DUPONLY/DISABLE]

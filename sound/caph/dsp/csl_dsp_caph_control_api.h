@@ -38,8 +38,6 @@ typedef enum
     DSP_AADMAC_PRI_MIC_EN = 0x10,
     DSP_AADMAC_SEC_MIC_EN = 0x20,
     DSP_AADMAC_SPKR_EN = 0x40,
-    DSP_AADMAC_IHF_SPKR_EN = 0x80,
-    DSP_AADMAC_LEG_IHF_SPKR_EN = 0x100
 } DSP_AADMAC_Audio_Connections_t;
 
 // ---- Function Declarations -----------------------------------------

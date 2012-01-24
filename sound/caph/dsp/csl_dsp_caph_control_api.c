@@ -117,8 +117,7 @@ void csl_dsp_caph_control_aadmac_set_samp_rate(UInt16 value)
 /*******************************************************************************************/
 void csl_dsp_caph_control_aadmac_enable_path(UInt16 path)
 {
-/*    if ( path & (UInt16)(~(DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN|DSP_AADMAC_SPKR_EN)) ) */
-    if ( path & (UInt16)(~(DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN|DSP_AADMAC_SPKR_EN|DSP_AADMAC_IHF_SPKR_EN)) )
+    if ( path & (UInt16)(~(DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN|DSP_AADMAC_SPKR_EN)) )
     {
         //Assert
         assert(0);
@@ -151,8 +150,7 @@ void csl_dsp_caph_control_aadmac_enable_path(UInt16 path)
 /*******************************************************************************************/
 void csl_dsp_caph_control_aadmac_disable_path(UInt16 path)
 {
-/*    if ( path & (UInt16)(~(DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN|DSP_AADMAC_SPKR_EN)) ) */
-    if ( path & (UInt16)(~(DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN|DSP_AADMAC_SPKR_EN|DSP_AADMAC_IHF_SPKR_EN)) )
+    if ( path & (UInt16)(~(DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN|DSP_AADMAC_SPKR_EN)) )
     {
         //Assert
         assert(0);

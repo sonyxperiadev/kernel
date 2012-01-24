@@ -1355,9 +1355,17 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 		path_user_set_gain[AUDCTRL_PATH_FM_LISTENING].path_gainR =
 		    vol_right;
 
-		vol_left = APSYSPARM_GetMultimediaAudioParmAccessPtr()\
-		[AUDDRV_GetAudioModeBySink(sink)].\
-		fm_radio_digital_vol[vol_left];
+#if defined(USE_NEW_AUDIO_PARAM)
+        vol_left = APSYSPARM_GetAudioParmAccessPtr()\
+        [(GetAudioApp() * AUDIO_MODE_NUMBER) +
+        AUDDRV_GetAudioModeBySink(sink)].\
+        fm_radio_digital_vol[vol_left];
+#else
+        vol_left = APSYSPARM_GetMultimediaAudioParmAccessPtr()\
+        [AUDDRV_GetAudioModeBySink(sink)].\
+        fm_radio_digital_vol[vol_left];
+#endif
+
 		gain_format = AUDIO_GAIN_FORMAT_mB;
 
 		log(1, "AUDCTRL_SetPlayVolume: fmPlayStarted==%d .\n",

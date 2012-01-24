@@ -330,6 +330,7 @@ typedef struct
 	UInt16 multiband_comp_beta_low;
 	UInt16 multiband_comp_beta_mid;
 	UInt16 multiband_comp_beta_high;
+	Int32 fm_radio_digital_vol[NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME]; //in mB (0.01 dB).
 
 } SysAudioParm_t;
 
@@ -337,7 +338,6 @@ typedef struct
 {
 	UInt32 treq_biquad_num;
 	UInt32 treq_coef[12*10];	
-	Int32 fm_radio_digital_vol[NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME]; //in mB (0.01 dB).
 } SysIndMultimediaAudioParm_t;
 
 #endif //_SYSPARM_SHARED_H_

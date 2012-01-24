@@ -711,7 +711,7 @@ typedef enum
     *
     */    	
 	VP_COMMAND_SET_ARM2SP,					// 0x11		
-	VP_COMMAND_SET_BT_NB,					// 0x12		( check interface doc )
+	VP_COMMAND_SET_BT_NB,					// 0x12		( not used for Rhea )
    /** \HR */
    /** \par Module
     *                    Audio 
@@ -973,7 +973,87 @@ typedef enum
     *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
     *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
     */    
-    VP_COMMAND_VOLTE_PUT_FRAME	// 0x22
+    VP_COMMAND_VOLTE_PUT_FRAME,	// 0x22
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x23
+    *  \par Description 
+    *       This command starts PTT recording.
+    *
+    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
+    *              
+    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
+    *                             
+    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
+    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
+    */    
+    VP_COMMAND_PTT_START_RECORDING,	// 0x23
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x24
+    *  \par Description 
+    *       This command stops PTT recording.
+    *
+    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
+    *              
+    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
+    *                             
+    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
+    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
+    */    
+    VP_COMMAND_PTT_STOP_RECORDING,	// 0x24
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x25
+    *  \par Description 
+    *       This command starts PTT playback to UL.
+    *
+    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
+    *              
+    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
+    *                             
+    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
+    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
+    */    
+    VP_COMMAND_PTT_START_PLAYBACK,	// 0x25
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x26
+    *  \par Description 
+    *       This command stops PTT playback to UL.
+    *
+    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
+    *              
+    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
+    *                             
+    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
+    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
+    */    
+    VP_COMMAND_PTT_STOP_PLAYBACK,	// 0x26
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x27
+    *  \par Description 
+    *       This command stops PTT playback to UL.
+    *
+    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
+    *              
+    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
+    *                             
+    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
+    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
+    */    
+    VP_COMMAND_PTT_RESET	    // 0x27
 } VPCommand_t;                                 
 /**
  * @}
@@ -1429,7 +1509,121 @@ typedef enum
 	    *        would be sent in the vp_status queue.
 	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
 	    */
-	VP_STATUS_AUDIO_ENABLE_DONE                 // 0x20 ( )
+	VP_STATUS_AUDIO_ENABLE_DONE,                 // 0x20 ( )
+	   /** \HR */
+	   /** \par Module
+	    *                    Audio
+	    *  \par Command Code
+	    *                    0x21
+	    *  \par Description
+	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
+	    *
+	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
+	    *              @param  None
+	    *              @param  None
+	    *              @param  None
+	    *
+	    *   \par Associated Command
+	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
+	    *        would be sent in the vp_status queue.
+	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
+	    */
+	VP_STATUS_PTT_RECORDED_STARTED,                 // 0x21 ( )
+	   /** \HR */
+	   /** \par Module
+	    *                    Audio
+	    *  \par Command Code
+	    *                    0x22
+	    *  \par Description
+	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
+	    *
+	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
+	    *              @param  None
+	    *              @param  None
+	    *              @param  None
+	    *
+	    *   \par Associated Command
+	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
+	    *        would be sent in the vp_status queue.
+	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
+	    */
+	VP_STATUS_PTT_RECORDED_STOPPED,                 // 0x22 ( )
+	   /** \HR */
+	   /** \par Module
+	    *                    Audio
+	    *  \par Command Code
+	    *                    0x23
+	    *  \par Description
+	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
+	    *
+	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
+	    *              @param  None
+	    *              @param  None
+	    *              @param  None
+	    *
+	    *   \par Associated Command
+	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
+	    *        would be sent in the vp_status queue.
+	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
+	    */
+	VP_STATUS_PTT_PLAYBACK_STARTED,                 // 0x23 ( )
+	   /** \HR */
+	   /** \par Module
+	    *                    Audio
+	    *  \par Command Code
+	    *                    0x24
+	    *  \par Description
+	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
+	    *
+	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
+	    *              @param  None
+	    *              @param  None
+	    *              @param  None
+	    *
+	    *   \par Associated Command
+	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
+	    *        would be sent in the vp_status queue.
+	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
+	    */
+	VP_STATUS_PTT_PLAYBACK_STOPPED,                 // 0x24 ( )
+	   /** \HR */
+	   /** \par Module
+	    *                    Audio
+	    *  \par Command Code
+	    *                    0x25
+	    *  \par Description
+	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
+	    *
+	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
+	    *              @param  None
+	    *              @param  None
+	    *              @param  None
+	    *
+	    *   \par Associated Command
+	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
+	    *        would be sent in the vp_status queue.
+	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
+	    */
+	VP_STATUS_PTT_RECORD_RATE_CHANGE,                 // 0x25 ( )
+	   /** \HR */
+	   /** \par Module
+	    *                    Audio
+	    *  \par Command Code
+	    *                    0x26
+	    *  \par Description
+	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
+	    *
+	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
+	    *              @param  None
+	    *              @param  None
+	    *              @param  None
+	    *
+	    *   \par Associated Command
+	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
+	    *        would be sent in the vp_status queue.
+	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
+	    */
+	VP_STATUS_PTT_PLAYBACK_RATE_CHANGE                 // 0x26 ( )
 } VPStatus_t;
 /**
  * @}
@@ -1901,7 +2095,7 @@ EXTERN UInt16 shared_usb_headset_audio_out_buf_48k1[960]     AP_SHARED_SEC_GEN_A
  */
 EXTERN UInt16 shared_BTnbdinLR[2][640]					     AP_SHARED_SEC_GEN_AUDIO;
 /** 
- * @addtogroup VPU_Shared_Memory_Interface 
+ * @addtogroup VPU_Shared_Memory_Interface NOT_USED 
  *
  * This frame-aware interface is provided for transfer of both data and control 
  * information between the ARM and DSP during NB-AMR or 8k PCM record and 
@@ -2399,12 +2593,13 @@ EXTERN UInt32 shared_aadmac_sec_mic_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]         
  * \note The order of the buffers below is important. First should be the low buffer followed by
  *       the high buffer.
  */
-EXTERN UInt32 shared_aadmac_spkr_low[NUM_OF_48K_SAMP_PER_INT0_INT*2]                   AP_SHARED_SEC_GEN_AUDIO;
-EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_48K_SAMP_PER_INT0_INT*2]                  AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_aadmac_spkr_low[NUM_OF_48K_SAMP_PER_INT0_INT]                   AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_48K_SAMP_PER_INT0_INT]                  AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
 
+EXTERN UInt32 shared_UNUSED[NUM_OF_48K_SAMP_PER_INT0_INT*2]                  AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
@@ -2613,6 +2808,17 @@ EXTERN UInt16 shared_usb_status_option				           				AP_SHARED_SEC_DIAGNOS; 
 #if defined(_RHEA_)||defined(_HERA_)||defined(_SAMOA_)
 EXTERN UInt16 shared_rhea_audio_test_select			           				AP_SHARED_SEC_DIAGNOS;                        // STATUS_USB_HEADSET_BUFFER ptr option 0 or 1                                                                          
 #endif
+
+//#ifdef PTT_SUPPORT	
+EXTERN UInt16 shared_PTT_buffer_size		           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
+EXTERN UInt16 shared_PTT_buffer_base_high			           				AP_SHARED_SEC_DIAGNOS;                                                                                                  
+EXTERN UInt16 shared_PTT_buffer_base_low			           				AP_SHARED_SEC_DIAGNOS;                                                                                                  
+EXTERN UInt16 shared_PTT_buffer_in			           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
+EXTERN UInt16 shared_PTT_buffer_out			           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
+EXTERN UInt16 shared_PTT_frame  			           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
+EXTERN UInt16 shared_PTT_frame_to_play		           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
+//#endif
+
 EXTERN UInt32 NOT_USE_shared_memory_end                                     AP_SHARED_SEC_DIAGNOS;
 
 #ifdef MSP

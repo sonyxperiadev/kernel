@@ -51,12 +51,6 @@ Result_t AT_RegisterCPTerminal(UInt8 chan, Boolean unsolicited);
 
 Result_t AT_RPCTone(UInt8 chan, Boolean turn_on, UInt8 tone, UInt32 duration);
 Result_t AT_RPCAudioPath(UInt8 chan, Boolean turn_on);
-Result_t AT_RPCMicMute(Boolean mute_on);
-Result_t AT_RPCSpeakerMute(Boolean mute_on);
-Result_t AT_RPCSetSpeakerGain(UInt32 val);
-UInt32 AT_RPCGetSpeakerGain(void);
-Result_t AT_RPCSetMicGain(UInt32 val);
-UInt32 AT_RPCGetMicGain(void);
 
 Result_t AT_RPC_DUNConnect(UInt8 chan, UInt8 contextId);
 Result_t AT_RPC_DUNDisconnect(UInt8 chan, UInt8 contextId);

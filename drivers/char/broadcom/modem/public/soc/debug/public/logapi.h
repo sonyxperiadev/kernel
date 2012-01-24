@@ -200,22 +200,6 @@ FTDI driver needed).
 #define	LOGID_MINDREADER		287
 #define LOGID_WLAN_GENERIC_DBG	288
 
-#ifdef CNEON_COMMON
-#define LOGID_GLUEAPI_ID1       301
-#define LOGID_GLUEAPI_ID2       302
-#define LOGID_GLUEAPI_ID3       303
-#define LOGID_GLUEAPI_ID4       304
-#define LOGID_GLUEAPI_ID5       305
-#define LOGID_GLUEAPI_ID6       306
-#define LOGID_GLUEAPI_ID7       307
-#define LOGID_GLUEAPI_ID8       308
-#define LOGID_GLUEAPI_ID9       309
-#define LOGID_GLUEAPI_MISC      310
-
-#define LOGID_CHIPSET_ASSERT_LVL0    311
-#define LOGID_CHIPSET_ASSERT_LVL1    312
-#define LOGID_CHIPSET_ASSERT_LVL2    313
-#else
 #define LOGID_GLUEAPI_ID1       301
 #define LOGID_GLUEAPI_ID2       302
 #define LOGID_GLUEAPI_ID3       303
@@ -226,8 +210,6 @@ FTDI driver needed).
 #define LOGID_GLUEAPI_ID8       308
 #define LOGID_GLUEAPI_ID9       309
 #define LOGID_GLUEAPI_ID10      310
-#endif
-
 
 #define	LOGID_ATC_HANDLERS						311
 #define	LOGID_ATC_PARSER						312
@@ -307,6 +289,8 @@ FTDI driver needed).
 #define	LOGID_V3D								366
 
 #define	LOGID_PMU		                		367
+
+#define	LOGID_SOC_CSL_DSP						368
 
 #define	LOGID_WARNING							400
 
@@ -986,17 +970,6 @@ const char* Log_GetLogIdName(UInt16 logID);
 
 void Log_OutputStatistics(void);
 
-
-#ifdef CNEON_COMMON
-const char* Log_GetLogIdName(UInt16 logID);
-
-//***************************************************************************************
-/**
-    Function to output logging statistics in log file
-**/	
-
-void Log_OutputStatistics(void);
-#endif
 /** @} */
 
 #endif

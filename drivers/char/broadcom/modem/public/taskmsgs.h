@@ -1644,9 +1644,6 @@ typedef enum
 
 	MSG_AT_LINE_STATE_IND		= MSG_GRP_INT_ATC+0x36,	///<Payload type {::Boolean}
 
-#ifdef CNEON_COMMON
-	MSG_AT_GLUE_INT_CH_CMD		= MSG_GRP_INT_ATC+0x37,
-#endif
 	MSG_MS_READY_IND			= MSG_GRP_INT_ATC+0x50,	///<Payload type {::MODULE_READY_STATUS_t}
 	MSG_CALL_MONITOR_STATUS		= MSG_GRP_INT_ATC+0x51,	///<Payload type {::UInt8}
 
@@ -2180,10 +2177,6 @@ typedef enum
 	MSG_AUDIO_COMP_FILTER_RSP			= MSG_GRP_DEV+0x2E,
 	MSG_AUDIO_CALL_STATUS_IND			= MSG_GRP_DEV+0x2F,
 
-#ifdef CNEON_COMMON
-	MSG_USB_DATA_IND                                = MSG_GRP_DEV+0x2D, /* for USB serial_write data */
-        MSG_NOS_CALLBACK_INJECT                 = MSG_GRP_DEV+0x2E, /* Internal message used for support of NOS callback inject */
-#endif
 	// End of MSG_GRP_DEV, (0x0700)
 
 

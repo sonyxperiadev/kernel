@@ -179,15 +179,6 @@
 #define TASKPRI_VCC						NORMAL
 #define TASKPRI_SECMODEM                NORMAL
 
-#ifdef CNEON_COMMON
-#define TASKPRI_NEON_ACC                NORMAL
-#if defined (_HERA_) || defined (_RHEA_)
-#define TASKPRI_BRCMDCA                 NORMAL
-#define TASKPRI_BRCMCCA                 (NORMAL+1)
-#endif
-#endif
-#define TASKPRI_SECMODEM                NORMAL
-
 //*************
 // Task Names
 //*************
@@ -315,15 +306,6 @@
 #define HISRNAME_WLANSPIGPIO			(IName_t)"WLANSPIGPIO"
 #define TASKNAME_STKAPP		(TName_t)"STKAPP"
 #define TASKNAME_VCC					(TName_t)"VCC"
-#define TASKNAME_SECMODEM               (TName_t)"SECMODEM"
-
-#ifdef CNEON_COMMON
-#define TASKNAME_NEON_ACC               (TName_t)"NEON_ACC"
-#if defined (_HERA_) || defined (_RHEA_)
-#define TASKNAME_BRCMDCA                (TName_t)"BRCMDCA"
-#define TASKNAME_BRCMCCA                (TName_t)"BRCMCCA"
-#endif
-#endif
 #define TASKNAME_SECMODEM               (TName_t)"SECMODEM"
 
 //*************
@@ -474,14 +456,6 @@
 
 #define STACKSIZE_STKAPP                (STACKSIZE_BASIC + 2048)
 #define STACKSIZE_SECMODEM              (STACKSIZE_BASIC + 1024)
-#ifdef CNEON_COMMON
-#define STACKSIZE_NEON_ACC              1024
-#if defined (_HERA_) || defined (_RHEA_)
-#define STACKSIZE_BRCMDCA               5120
-#define STACKSIZE_BRCMCCA               5120
-#endif
-#endif
-#define STACKSIZE_SECMODEM              (STACKSIZE_BASIC + 1024)
 
 //*************************
 // Number of Queue Entries
@@ -563,9 +537,6 @@
 #define QUEUESIZE_GPS_RX_CHIP_DATA		400 //This queue is used by GPS RxData task.
 #define QUEUESIZE_IPRELAYTX				350
 #define QUEUESIZE_VCC					30
-#ifdef CNEON_COMMON
-#define QUEUESIZE_NEON_ACC              16
-#endif
 
 #ifdef	ARM_HS_VOCODER
 #define QUEUESIZE_HSCODEC				6
@@ -624,12 +595,6 @@
 #define HISRNAME_I2CIO			(IName_t)"IOEXPANDER_H"
 #define HISRNAME_KPEX			(IName_t)"KPEXPANDER_H"
 #define HISRNAME_VMS			(IName_t)"VMS_H"
-#ifdef CNEON_COMMON
-#define HISRNAME_NEON_ACC_PLUG  (IName_t)"ACCPD_H"
-#define HISRNAME_NEON_ACC_ACI   (IName_t)"ACCACI_H"
-#define HISRNAME_NEON_ACC_COMP1 (IName_t)"ACCC1_H"
-#define HISRNAME_NEON_ACC_COMP2 (IName_t)"ACCC2_H"
-#endif
 
 #if defined(_TCH_DRV_TSC200X_)
 #define HISRNAME_TCH_SCRN		(IName_t)"HTSCRN"
@@ -680,12 +645,6 @@
 #define HISRSTACKSIZE_SDIO2 		(512 + RESERVED_STACK_FOR_LISR)	
 #define HISRSTACKSIZE_GPSINT		(512 + RESERVED_STACK_FOR_LISR)	
 #define HISRSTACKSIZE_LOG			512	
-#ifdef CNEON_COMMON
-#define HISRSTACKSIZE_NEON_ACC_ACI      (256 + RESERVED_STACK_FOR_LISR)
-#define HISRSTACKSIZE_NEON_ACC_PLUG     (256 + RESERVED_STACK_FOR_LISR)
-#define HISRSTACKSIZE_NEON_ACC_COMP1    (256 + RESERVED_STACK_FOR_LISR)
-#define HISRSTACKSIZE_NEON_ACC_COMP2    (256 + RESERVED_STACK_FOR_LISR)
-#endif
 
 //*************************
 // Logging related Constants
