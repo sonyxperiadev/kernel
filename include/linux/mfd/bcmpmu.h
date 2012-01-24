@@ -26,6 +26,7 @@
 #include <linux/i2c-kona.h>
 
 #define	PMU_BITMASK_ALL		0xFFFFFFFF
+#define	PMU_REG_INIT_MAX	100
 
 struct bcmpmu;
 struct regulator_init_data;
@@ -1018,6 +1019,8 @@ struct bcmpmu_platform_data {
 	enum bcmpmu_bc_t bc;
 	int rpc_rate;
 	struct bcmpmu_wd_setting *wd_setting;
+	char *batt_model;
+	int cutoff_volt;
 };
 
 struct bcmpmu_fg {
@@ -1058,5 +1061,7 @@ int bcmpmu_usb_set(struct bcmpmu *bcmpmu, enum bcmpmu_usb_ctrl_t ctrl,
 int bcmpmu_usb_get(struct bcmpmu *bcmpmu, enum bcmpmu_usb_ctrl_t ctrl,
 		   void *data);
 void bcmpmu_client_power_off(void);
+void bcmpmu_update_pdata_dt_batt(struct bcmpmu_platform_data *pdata);
+void bcmpmu_update_pdata_dt_pmu(struct bcmpmu_platform_data *pdata);
 
 #endif

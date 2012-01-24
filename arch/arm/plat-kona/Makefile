@@ -52,6 +52,7 @@ obj-$(CONFIG_KONA_AVS) += kona_avs.o
 obj-$(CONFIG_KONA_ATAG_DT) += atag_dt.o
 obj-$(CONFIG_USB_DWC_OTG) += bcm_hsotgctrl.o
 obj-$(CONFIG_PROC_PINMUX_DUMP)	+= pindump.o
+obj-$(CONFIG_KONA_DT_BCMPMU)	+= bcmpmu-dt.o
 
 # wfi_count.o is required for SW-7022.
 obj-$(CONFIG_KONA_WFI_WORKAROUND) += wfi_count.o

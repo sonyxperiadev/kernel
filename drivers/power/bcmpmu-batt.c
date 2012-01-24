@@ -43,6 +43,7 @@ struct bcmpmu_batt {
 	struct bcmpmu_batt_state state;
 	wait_queue_head_t wait;
 	struct mutex lock;
+	char model[20];
 };
 
 static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
@@ -76,6 +77,7 @@ static enum power_supply_property bcmpmu_batt_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_HEALTH,
+	POWER_SUPPLY_PROP_MODEL_NAME,
 };
 
 static int bcmpmu_get_batt_property(struct power_supply *battery,
@@ -118,6 +120,11 @@ static int bcmpmu_get_batt_property(struct power_supply *battery,
 	case POWER_SUPPLY_PROP_PRESENT:
 		propval->intval = pbatt->state.present;
 		break;
+
+	case POWER_SUPPLY_PROP_MODEL_NAME:
+		propval->strval = pbatt->model;
+		break;
+
 	default:
 		ret = -EINVAL;
 		break;
@@ -160,6 +167,10 @@ static int bcmpmu_set_batt_property(struct power_supply *ps,
 
 	case POWER_SUPPLY_PROP_PRESENT:
 		pbatt->state.present = propval->intval;
+		break;
+
+	case POWER_SUPPLY_PROP_MODEL_NAME:
+		strcpy(pbatt->model, propval->strval);
 		break;
 
 	default:
@@ -235,6 +246,7 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_batt *pbatt;
+	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
 	
 	printk("bcmpmu_batt: batt_probe called \n") ;
 
@@ -254,6 +266,7 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	pbatt->batt.set_property = bcmpmu_set_batt_property;
 	pbatt->batt.name = "battery";
 	pbatt->batt.type = POWER_SUPPLY_TYPE_BATTERY;
+	strcpy(pbatt->model, pdata->batt_model);
 	ret = power_supply_register(&pdev->dev, &pbatt->batt);
 	if (ret)
 		goto err;

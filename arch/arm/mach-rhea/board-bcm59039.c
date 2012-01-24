@@ -34,7 +34,7 @@
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 2
 
-static struct bcmpmu_rw_data register_init_data[] = {
+static struct bcmpmu_rw_data __initdata register_init_data[PMU_REG_INIT_MAX] = {
 	{.map = 0, .addr = 0x01, .val = 0x00, .mask = 0x01},
 	{.map = 0, .addr = 0x0c, .val = 0x1b, .mask = 0xFF},
 	{.map = 0, .addr = 0x40, .val = 0xFF, .mask = 0xFF},
@@ -664,7 +664,9 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.i2c_adapter_id = PMU_DEVICE_I2C_BUSNO,
 	.i2c_pagesize = 256,
 	.init_data = &register_init_data[0],
-	.init_max = ARRAY_SIZE(register_init_data),
+	/* # of registers defined in register_init_data.
+	   This value will come from device tree */
+	.init_max = 22,
 	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
@@ -683,13 +685,9 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1350 * 3600,
 	.support_fg = 1,
-#ifdef CONFIG_MACH_RHEA_RAY_EDN2X	
-
-	.bc = BCMPMU_BC_BB_BC12,	
-#else
 	.bc = BCMPMU_BC_PMU_BC12,	/* BCMPMU_BC_BB_BC12 */
-
-#endif
+	.batt_model = "Unknown",
+	.cutoff_volt = 3200,
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {
@@ -705,6 +703,11 @@ __init int board_pmu_init(void)
 {
 	int             ret;
 	int             irq;
+
+#ifdef CONFIG_KONA_DT_BCMPMU
+	bcmpmu_update_pdata_dt_batt(&bcmpmu_plat_data);
+	bcmpmu_update_pdata_dt_pmu(&bcmpmu_plat_data);
+#endif
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu-irq");
 	if (ret < 0) {
 

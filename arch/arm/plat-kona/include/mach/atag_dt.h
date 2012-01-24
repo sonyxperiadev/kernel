@@ -39,4 +39,11 @@ extern int early_init_dt_scan_pinmux(unsigned long node, const
 extern int early_init_dt_scan_gpio(unsigned long node, const
 				char *uname,int depth, void *data);
 
+#ifdef CONFIG_KONA_DT_BCMPMU
+extern int early_init_dt_scan_pmu(unsigned long node, const
+				char *uname,int depth, void *data);
+extern int early_init_dt_scan_batt(unsigned long node, const
+				char *uname,int depth, void *data);
+#endif
+
 #endif /* __ATAGDT_H_ */

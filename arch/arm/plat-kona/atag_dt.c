@@ -71,6 +71,10 @@ static int __init parse_tag_dt(const struct tag *tag)
 	/* Retrieve info from the /gpio node */
 	of_scan_flat_dt(early_init_dt_scan_gpio, NULL);
 
+#ifdef CONFIG_KONA_DT_BCMPMU
+	of_scan_flat_dt(early_init_dt_scan_pmu, NULL);
+	of_scan_flat_dt(early_init_dt_scan_batt, NULL);
+#endif
 	/* Retrieve info from other nodes ... */
 
 	/* clear DT base address */

@@ -200,5 +200,13 @@ config KONA_WFI_WORKAROUND
 	 type of low power mode which causes videocore accesses to the DDR3 to slow down
 	 dramatically. This enables a workaround which prevents this from happening.
 
+config KONA_DT_BCMPMU
+	bool "Support DT for bcmpmu drivers"
+	depends on KONA_ATAG_DT
+	depends on MFD_BCMPMU
+	default 0
+	help
+	  Say Y if you support BCMPMU nodes in DeviceTree
+
 endmenu
 
