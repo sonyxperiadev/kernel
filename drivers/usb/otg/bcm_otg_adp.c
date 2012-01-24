@@ -48,6 +48,7 @@ static void bcmpmu_otg_xceiv_adp_change_handler(struct work_struct *work)
 
 static void bcmpmu_otg_xceiv_adp_sense_end_handler(struct work_struct *work)
 {
+#ifdef CONFIG_USB_OTG
 	uint32_t adp_sns_status = 0;
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(work, struct bcmpmu_otg_xceiv_data,
@@ -62,6 +63,7 @@ static void bcmpmu_otg_xceiv_adp_sense_end_handler(struct work_struct *work)
 		schedule_delayed_work(&xceiv_data->bcm_otg_delayed_adp_work, msecs_to_jiffies(T_B_ADP_DETACH));
 	else
 		bcm_otg_do_adp_probe(xceiv_data);
+#endif
 }
 
 static int bcmpmu_otg_xceiv_adp_change_notif_handler(struct notifier_block *nb,
@@ -98,25 +100,33 @@ static int bcmpmu_otg_xceiv_adp_sns_end_notif_handler(struct notifier_block *nb,
 
 int bcm_otg_do_adp_calibration_probe(struct bcmpmu_otg_xceiv_data *xceiv_data)
 {
+#ifdef CONFIG_USB_OTG
 	return bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_START_ADP_CAL_PRB, 1);
+#else
+	return 0;
+#endif
 }
 
 int bcm_otg_do_adp_probe(struct bcmpmu_otg_xceiv_data *xceiv_data)
 {
 	int status = 0;
-
+#ifdef CONFIG_USB_OTG
 	status = bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_SET_ADP_PRB_MOD, PMU_USB_ADP_MODE_REPEAT);
 	if (!status)
 		status = bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_START_STOP_ADP_PRB, 1);
-
+#endif
 	return status;
 }
 
 int bcm_otg_do_adp_sense(struct bcmpmu_otg_xceiv_data *xceiv_data)
 {
+#ifdef CONFIG_USB_OTG
 	return
 		bcmpmu_usb_set(xceiv_data->bcmpmu,
 		  BCMPMU_USB_CTRL_START_STOP_ADP_SENS_PRB, 1);
+#else
+	return 0;
+#endif
 }
 
 int bcm_otg_do_adp_sense_then_probe(struct bcmpmu_otg_xceiv_data *xceiv_data)

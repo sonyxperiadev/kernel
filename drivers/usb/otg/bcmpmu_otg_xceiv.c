@@ -428,8 +428,10 @@ static void bcmpmu_otg_xceiv_vbus_invalid_handler(struct work_struct *work)
 			 bcm_otg_vbus_invalid_work);
 	dev_info(xceiv_data->dev, "Vbus invalid\n");
 
+#ifdef CONFIG_USB_OTG
 	/* Need to discharge Vbus quickly to session invalid level */
 	bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_DISCHRG_VBUS, 1);
+#endif
 }
 
 static void bcmpmu_otg_xceiv_vbus_valid_handler(struct work_struct *work)
@@ -477,6 +479,7 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 
 void bcmpmu_otg_xceiv_do_srp(struct bcmpmu_otg_xceiv_data *xceiv_data)
 {
+#ifdef CONFIG_USB_OTG
 	if (xceiv_data->otg_xceiver.xceiver.gadget && xceiv_data->otg_xceiver.xceiver.gadget->ops &&
 		  xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup) {
 		bcm_hsotgctrl_phy_set_non_driving(false);
@@ -491,6 +494,7 @@ void bcmpmu_otg_xceiv_do_srp(struct bcmpmu_otg_xceiv_data *xceiv_data)
 		/* SRP initiated. Clear the flag */
 		xceiv_data->otg_xceiver.otg_srp_reqd = false;
 	}
+#endif
 }
 
 static void bcmpmu_otg_xceiv_sess_end_srp_handler(struct work_struct *work)
