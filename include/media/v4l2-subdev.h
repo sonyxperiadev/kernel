@@ -347,7 +347,12 @@ enum v4l2_subdev_sensor_iface {
 
 enum v4l2_subdev_sensor_orient {
 	V4L2_SUBDEV_SENSOR_PORTRAIT,
-	V4L2_SUBDEV_SENSOR_LANDSCAPE
+	V4L2_SUBDEV_SENSOR_LANDSCAPE,
+};
+
+enum v4l2_subdev_sensor_facing {
+	V4L2_SUBDEV_SENSOR_FRONT,
+	V4L2_SUBDEV_SENSOR_BACK,
 };
 
 /* Each interface could use the following modes */
@@ -375,6 +380,7 @@ struct v4l2_subdev_sensor_interface_parms {
 	enum v4l2_subdev_sensor_iface if_type;
 	unsigned int if_mode;
 	enum v4l2_subdev_sensor_orient orientation;
+	enum v4l2_subdev_sensor_facing	facing;
 	union {
 		struct v4l2_subdev_sensor_serial_parms serial;
 		struct v4l2_subdev_sensor_parallel_parms parallel;
