@@ -254,6 +254,8 @@ cVoid chal_aci_set_mic_route( CHAL_HANDLE handle, CHAL_ACI_mic_route_t route )
 */
 static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t action, CHAL_ACI_block_id_t id, va_list argp )
 {
+    unsigned long reg_val;
+    unsigned long mask;
 
     switch (action)
     {
@@ -476,67 +478,101 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         }
         break; }
     case CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE:
-        switch (id)
+	/*
+	 * Note the defn of status bit in the rdb, writing 1 clears the
+	 * interrupt. So we should mask them to be zero and not touch the
+	 * status bits. Writing status bits as is would ack an interrupt so
+	 * just mask and take only the upper nibble and zero the lower nibble.
+	 *
+	 * The existing CHAL code was retainging the status bits also as it
+	 * is. This was causing the interrupts to be cleared un-intentionally.
+	 * So re-implementing this part as needed.
+	 */
+	reg_val = BRCM_READ_REG(KONA_ACI_VA, ACI_INT) & 0x70;
+
+	switch (id)
         {
         case CHAL_ACI_BLOCK_COMP:    /* The action applies to all Comperators */
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_EN,        1 );
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_EN,        1 );
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_EN,    1 );
+            mask = ACI_INT_INV_COMP2INT_EN_MASK |
+		   ACI_INT_COMP2INT_EN_MASK |
+	           ACI_INT_COMP1INT_EN_MASK;
             break;
         case CHAL_ACI_BLOCK_COMP1:
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_EN,        1 );
+	    mask = ACI_INT_COMP1INT_EN_MASK;
             break;
         case CHAL_ACI_BLOCK_COMP2:
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_EN,        1 );
+	    mask = ACI_INT_COMP2INT_EN_MASK;
             break;
         case CHAL_ACI_BLOCK_COMP2_INV:
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_EN,    1 );
+            mask = ACI_INT_INV_COMP2INT_EN_MASK;
             break;
         default:
             CHAL_ASSERT(0);
         }
+	reg_val = reg_val | mask;
+	BRCM_WRITE_REG(KONA_ACI_VA, ACI_INT, reg_val);
         break;
     case CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE:
-        switch (id)
+
+	/*
+	 * Note the defn of status bit in the rdb, writing 1 clears the
+	 * interrupt. So we should mask them to be zero and not touch the
+	 * status bits. Writing status bits as is would ack an interrupt so
+	 * just mask and take only the upper nibble and zero the lower nibble.
+	 */
+	reg_val = BRCM_READ_REG(KONA_ACI_VA, ACI_INT) & 0x70;
+
+	switch (id)
         {
         case CHAL_ACI_BLOCK_COMP:    /* The action applies to all Comperators */
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_EN,        0 );
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_EN,        0 );
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_EN,    0 );
+            mask = ACI_INT_INV_COMP2INT_EN_MASK |
+		   ACI_INT_COMP2INT_EN_MASK |
+	           ACI_INT_COMP1INT_EN_MASK;
             break;
         case CHAL_ACI_BLOCK_COMP1:
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_EN,        0 );
+	    mask = ACI_INT_COMP1INT_EN_MASK;
             break;
         case CHAL_ACI_BLOCK_COMP2:
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_EN,        0 );
+	    mask = ACI_INT_COMP2INT_EN_MASK;
             break;
         case CHAL_ACI_BLOCK_COMP2_INV:
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_EN,    0 );
-            break;
-        default:
-	    CHAL_ASSERT(0);
-        }
-        break;
-    case CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE:
-        switch (id)
-        {
-        case CHAL_ACI_BLOCK_COMP:    /* The action applies to all Comperators */
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_STS,       1 );
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_STS,       1 );
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_STS,   1 );
-            break;
-        case CHAL_ACI_BLOCK_COMP1:
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP1INT_STS,       1 );
-            break;
-        case CHAL_ACI_BLOCK_COMP2:
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    COMP2INT_STS,       1 );
-            break;
-        case CHAL_ACI_BLOCK_COMP2_INV:
-            BRCM_WRITE_REG_FIELD( KONA_ACI_VA,    ACI_INT,    INV_COMP2INT_STS,   1 );
+            mask = ACI_INT_INV_COMP2INT_EN_MASK;
             break;
         default:
             CHAL_ASSERT(0);
         }
+	reg_val = reg_val & ~mask;
+	BRCM_WRITE_REG(KONA_ACI_VA, ACI_INT, reg_val);
+        break;
+    case CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE:
+	/*
+	 * Note the defn of status bit in the rdb, writing 1 clears the
+	 * interrupt. So we should mask them to be zero and not touch the
+	 * status bits. Writing status bits as is would ack an interrupt so
+	 * just mask and take only the upper nibble and zero the lower nibble.
+	 */
+	reg_val = BRCM_READ_REG(KONA_ACI_VA, ACI_INT) & 0x70;
+	switch (id)
+        {
+        case CHAL_ACI_BLOCK_COMP:    /* The action applies to all Comperators */
+            mask = ACI_INT_INV_COMP2INT_STS_MASK |
+		   ACI_INT_COMP2INT_STS_MASK |
+	           ACI_INT_COMP1INT_STS_MASK;
+            break;
+        case CHAL_ACI_BLOCK_COMP1:
+	    mask = ACI_INT_COMP1INT_STS_MASK;
+            break;
+        case CHAL_ACI_BLOCK_COMP2:
+	    mask = ACI_INT_COMP2INT_STS_MASK;
+            break;
+        case CHAL_ACI_BLOCK_COMP2_INV:
+            mask = ACI_INT_INV_COMP2INT_STS_MASK;
+            break;
+        default:
+            CHAL_ASSERT(0);
+        }
+	reg_val = reg_val | mask;
+	BRCM_WRITE_REG(KONA_ACI_VA, ACI_INT, reg_val);
         break;
     case CHAL_ACI_BLOCK_ACTION_MIC_BIAS: {
         CHAL_ACI_micbias_config_t* bias_config = (CHAL_ACI_micbias_config_t*)va_arg(argp, void*);
