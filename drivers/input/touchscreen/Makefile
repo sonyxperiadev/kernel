@@ -69,3 +69,5 @@ obj-$(CONFIG_TOUCHSCREEN_MMS128_COOPERVE)	+= melfas_ts_mms128_tasscooper.o
 obj-$(CONFIG_TOUCHSCREEN_MMS128_TASSCOOPER)	+= mcs8000_download_tasscooper.o mms100_ISC_download_tasscooper.o
 obj-$(CONFIG_TOUCHSCREEN_TMA340_COOPERVE)	+= synaptics_i2c_rmi_tma340_cooperve.o
 obj-$(CONFIG_TOUCHSCREEN_TMA340)	+= synaptics_i2c_rmi_tma340_tassve.o
+obj-$(CONFIG_TOUCHSCREEN_BT403_AMAZING)	+= zinitix_tsp_bt403_amazing.o
+

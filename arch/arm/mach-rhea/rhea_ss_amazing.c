@@ -1212,7 +1212,7 @@ static struct platform_device tps728xx_vc_device_sim2 = {
 
 #ifdef CONFIG_FB_BRCM_RHEA
 static struct kona_fb_platform_data rhea_ss_dsi_display_fb_data = {
-	.get_dispdrv_func_tbl	= &DISPDRV_GetFuncTable,
+	.get_dispdrv_func_tbl	= &DISPDRV_ili9486_GetFuncTable,
 	.screen_width		= 320,
 	.screen_height		= 480,
 	.bytes_per_pixel	= 2,//2, //@HW

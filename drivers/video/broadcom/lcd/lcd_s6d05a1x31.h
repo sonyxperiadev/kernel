@@ -48,7 +48,7 @@
 #define PANEL_SHARP	0x6b1c10 
 
 //const char *LCD_panel_name = "S6D04H0X20 LCD";
-const char *LCD_panel_name = "S6D05A1X31 LCD";
+//const char *LCD_panel_name = "S6D05A1X31 LCD";
 
 
 
