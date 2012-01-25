@@ -257,6 +257,9 @@ static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 	else
 		writel(1 << (birq), base + BINTC_ISWIR0_CLR_OFFSET /*0x24*/);
 
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&ipc_wake_lock);
+#endif
 	tasklet_schedule(&g_ipc_info.intr_tasklet);
 
 	return IRQ_HANDLED;
