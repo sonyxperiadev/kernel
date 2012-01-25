@@ -169,6 +169,8 @@ struct USER_SET_GAIN_t {
 	AUDIO_GAIN_FORMAT_t gainFormat;
 };
 
+static unsigned hw_control[AUDCTRL_HW_ACCESS_TYPE_TOTAL][4] = { { 0 } };
+
 static struct USER_SET_GAIN_t path_user_set_gain[AUDCTRL_PATH_TOTAL_NUM];
 
 static Boolean fmPlayStarted = FALSE;
@@ -2686,6 +2688,22 @@ void AUDCTRL_SetBTMode(int mode)
 	csl_caph_hwctrl_SetBTMode(mode);
 }
 
+/****************************************************************************
+*
+* Function Name: AUDCTRL_GetHardwareControl
+*
+* Description:   Get hardware control parameters
+*
+****************************************************************************/
+void AUDCTRL_GetHardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
+							unsigned *buf)
+{
+	if (access_type >= AUDCTRL_HW_ACCESS_TYPE_TOTAL || !buf)
+		return;
+
+	memcpy(buf, hw_control[access_type], sizeof(hw_control[access_type]));
+}
+
 /********************************************************************
 *  @brief  Hardware register access fucntion
 *
@@ -2699,15 +2717,30 @@ void AUDCTRL_SetBTMode(int mode)
 *
 ****************************************************************************/
 int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
-			    int arg1, int arg2, int arg3)
+			    int arg1, int arg2, int arg3, int arg4)
 {
 	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 	/*CSL_CAPH_HWConfig_Table_t *path = NULL;*/
 	/*path = &HWConfig_Table[ VOICECALL_pathID - 1 ]; */
 
+	Log_DebugPrintf(LOGID_SOC_AUDIO,
+			"AUDCTRL_HardwareControl::type %d, arg 0x%x %x %x %x.\n",
+			access_type, arg1, arg2, arg3, arg4);
+
+	if (access_type >= AUDCTRL_HW_ACCESS_TYPE_TOTAL)
+		return -1;
+
+	hw_control[access_type][0] = arg1;
+	hw_control[access_type][1] = arg2;
+	hw_control[access_type][2] = arg3;
+	hw_control[access_type][3] = arg4;
+
 	csl_caph_ControlHWClock(TRUE);
 
 	switch (access_type) {
+	case AUDCTRL_HW_CFG_HEADSET:
+		csl_caph_hwctrl_SetHeadsetMode(arg1);
+		break;
 	case AUDCTRL_HW_WRITE_GAIN:
 
 		/*arg2 is gain in milli Bel */

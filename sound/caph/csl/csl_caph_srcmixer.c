@@ -102,6 +102,7 @@ struct cSL_CAPH_SRCM_SAMPLERATE_MAPPING_t {
  ****************************************************************************/
 static CHAL_HANDLE handle;
 static Boolean isSTIHF = FALSE;
+static Boolean bDMHeadset = FALSE; /* stereo or dualmono */
 
 /*
  * The mapping between input sample rate and output sample rate.
@@ -965,7 +966,7 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
 		AUDIO_SAMPLING_RATE_t
 		srOut)
 {
-	Int8 ch = 0;
+	int ch = 0;
 	CSL_CAPH_SRCM_INCHNL_e neededChnl = CSL_CAPH_SRCM_INCHNL_NONE;
 
 	_DBG_(Log_DebugPrintf
@@ -1435,6 +1436,8 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 				chalInChnlMono =
 					csl_caph_srcmixer_get_mono_inchnl
 					(chalInChnl, CAPH_M0_Left);
+				if (bDMHeadset)
+					chalInChnlMono = chalInChnl;
 				chal_caph_srcmixer_enable_mixing(handle,
 						chalInChnlMono,
 						CAPH_M0_Left);
@@ -1448,6 +1451,8 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 				chalInChnlMono =
 					csl_caph_srcmixer_get_mono_inchnl
 					(chalInChnl, CAPH_M0_Right);
+				if (bDMHeadset)
+					chalInChnlMono = chalInChnl;
 				chal_caph_srcmixer_enable_mixing(handle,
 						chalInChnlMono,
 						CAPH_M0_Right);
@@ -2383,6 +2388,18 @@ csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAPH_SRCM_INCHNL_e inChnl)
 void csl_caph_srcmixer_SetSTIHF(Boolean stIHF)
 {
 	isSTIHF = stIHF;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_srcmixer_set_headset
+*
+*  Description: Set headset mode
+*
+****************************************************************************/
+void csl_caph_srcmixer_set_headset(Boolean mode)
+{
+	 bDMHeadset = mode;
 }
 
 /****************************************************************************

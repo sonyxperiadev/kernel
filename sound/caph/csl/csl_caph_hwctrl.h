@@ -631,6 +631,15 @@ void csl_caph_hwctrl_SetIHFmode(Boolean stIHF);
 
 /****************************************************************************
 *
+*  Function Name: csl_caph_hwctrl_SetHeadsetMode
+*
+*  Description: Set headset mode (stereo/dualmono)
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetHeadsetMode(Boolean mode);
+
+/****************************************************************************
+*
 *  Function Name: csl_caph_hwctrl_SetBTMode
 *
 *  Description: Set BT mode

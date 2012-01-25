@@ -102,7 +102,7 @@ static CAPH_SWITCH_CHNL_e csl_caph_switch_get_chalchnl(CSL_CAPH_SWITCH_CHNL_e
 ****************************************************************************/
 static void csl_caph_switch_initDSTStatus(void)
 {
-	Int8 i = 0;
+	int i = 0;
 	memset(&dstStatusTable, 0,
 	       sizeof(CSL_CAPH_SWITCH_DST_STATUS_t) * CAPH_SWITCH_CHNL_NUM);
 	for (i = 0; i < (Int8) CAPH_SWITCH_CHNL_NUM; i++) {
@@ -123,7 +123,7 @@ static void csl_caph_switch_initDSTStatus(void)
 static void csl_caph_switch_setDSTStatus(CAPH_SWITCH_CHNL_e chal_chnl,
 					 CAPH_DST_STATUS_e dstStatus)
 {
-	Int8 i = 0;
+	int i = 0;
 	for (i = 0; i < (Int8) CAPH_SWITCH_CHNL_NUM; i++) {
 		if (dstStatusTable[i].chal_chnl == chal_chnl) {
 			dstStatusTable[i].dstStatus = dstStatus;
@@ -145,7 +145,7 @@ static void csl_caph_switch_setDSTStatus(CAPH_SWITCH_CHNL_e chal_chnl,
 static CAPH_DST_STATUS_e csl_caph_switch_getDSTStatus(CAPH_SWITCH_CHNL_e
 						      chal_chnl)
 {
-	Int8 i = 0;
+	int i = 0;
 	for (i = 0; i < (Int8) CAPH_SWITCH_CHNL_NUM; i++) {
 		if (dstStatusTable[i].chal_chnl == chal_chnl)
 			return dstStatusTable[i].dstStatus;

@@ -60,10 +60,15 @@ enum __AUDCTRL_SSP_BUS_e {
 #define AUDCTRL_SSP_BUS_e enum __AUDCTRL_SSP_BUS_e
 
 enum __AUDCTRL_HW_ACCESS_TYPE_en_t {
-	AUDCTRL_HW_READ_GAIN,
+	AUDCTRL_HW_CFG_HEADSET,
+	AUDCTRL_HW_CFG_IHF,
+	AUDCTRL_HW_CFG_SSP,
+	/* below are for internal purposes */
+	AUDCTRL_HW_READ_GAIN = 20,
 	AUDCTRL_HW_WRITE_GAIN,
 	AUDCTRL_HW_READ_REG,
-	AUDCTRL_HW_WRITE_REG
+	AUDCTRL_HW_WRITE_REG,
+	AUDCTRL_HW_ACCESS_TYPE_TOTAL
 };
 #define AUDCTRL_HW_ACCESS_TYPE_en_t enum __AUDCTRL_HW_ACCESS_TYPE_en_t
 
@@ -670,7 +675,18 @@ void AUDCTRL_SetBTMode(int mode);
 *
 ****************************************************************************/
 int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
-			    int arg1, int arg2, int arg3);
+			    int arg1, int arg2, int arg3, int arg4);
+
+/********************************************************************
+*  @brief  Get the parameters of hardware control
+*
+*  @param
+*
+*  @return  none
+*
+****************************************************************************/
+void AUDCTRL_GetHardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
+				unsigned *buf);
 
 /**
 *  @brief  This function controls the power on/off the power supply for

@@ -1018,10 +1018,8 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[1] = 0;
 		break;
 	case CTL_FUNCTION_HW_CTL:
-		ucontrol->value.integer.value[0] = 0;
-		ucontrol->value.integer.value[1] = 0;
-		ucontrol->value.integer.value[2] = 0;
-		ucontrol->value.integer.value[3] = 0;
+		AUDCTRL_GetHardwareControl(kcontrol->id.index,
+			(void *)ucontrol->value.integer.value);
 		break;
 	case CTL_FUNCTION_APP_SEL:
 		DEBUG("CTL_FUNCTION_APP_SEL, current app =%d\n",
@@ -1436,18 +1434,18 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		}
 		break;
 	case CTL_FUNCTION_HW_CTL:
-		DEBUG("CTL_FUNCTION_HW_CTL parm1=%d, "
-		   "parm2=%d, param3=%d,param4=%d\n",
+		DEBUG("CTL_FUNCTION_HW_CTL index %d,parm1=%d,"
+		   "parm2=%d,param3=%d,param4=%d\n",
+		   kcontrol->id.index,
 		   (int)ucontrol->value.integer.value[0],
 		   (int)ucontrol->value.integer.value[1],
 		   (int)ucontrol->value.integer.value[2],
 		   (int)ucontrol->value.integer.value[3]);
-		AUDCTRL_HardwareControl(
+		AUDCTRL_HardwareControl(kcontrol->id.index,
 		   (int)ucontrol->value.integer.value[0],
 		   (int)ucontrol->value.integer.value[1],
 		   (int)ucontrol->value.integer.value[2],
-		   (int)ucontrol->value.integer.value[3]
-		);
+		   (int)ucontrol->value.integer.value[3]);
 	break;
 	case CTL_FUNCTION_APP_SEL:
 		DEBUG("CTL_FUNCTION_APP_SEL curApp=%d, newApp=%d",
@@ -1752,10 +1750,22 @@ static struct snd_kcontrol_new sgSndCtrls[] __devinitdata = {
 	BRCM_MIXER_CTRL_MISC(0, 0, "P2-CHG", 0,
 		CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0,
 		CTL_FUNCTION_SINK_CHG)),
-	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", 0,
-		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "APP-SEL", 0, CAPH_CTL_PRIVATE(1, 1,
 		CTL_FUNCTION_APP_SEL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_HEADSET,
+		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_IHF,
+		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_SSP,
+		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_READ_GAIN,
+		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_WRITE_GAIN,
+		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_READ_REG,
+		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_WRITE_REG,
+		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
 };
 
 #define	MAX_CTL_NUMS	161

@@ -519,6 +519,16 @@ void csl_caph_srcmixer_SetSTIHF(Boolean stIHF);
 
 /**
 *
+*  @brief	Set headset mode.
+*
+*  @param   mode: TRUE-dualmono, FALSE-stereo
+*
+*  @return void
+****************************************************************************/
+void csl_caph_srcmixer_set_headset(Boolean mode);
+
+/**
+*
 *  @brief  enable caph tapin intr
 *
 *  @param   chnl  (in) caph src channel
