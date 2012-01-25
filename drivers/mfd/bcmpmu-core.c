@@ -131,9 +131,15 @@ EXPORT_SYMBOL(bcmpmu_client_power_off);
 static int bcmpmu_open(struct inode *inode, struct file *file);
 static int bcmpmu_release(struct inode *inode, struct file *file);
 static ssize_t bcmpmu_read(struct file *file, char *data, size_t len,
+<<<<<<< HEAD
 			   loff_t *p);
 static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
 			    loff_t *p);
+=======
+			   loff_t * p);
+static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
+			    loff_t * p);
+>>>>>>> Add suspend/resume logic, update per new PMU methodology, clean up per checkpatch.
 static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 				unsigned long arg);
 
@@ -163,7 +169,11 @@ static int bcmpmu_release(struct inode *inode, struct file *file)
 }
 
 static ssize_t bcmpmu_read(struct file *file, char *data, size_t len,
+<<<<<<< HEAD
 			   loff_t *p)
+=======
+			   loff_t * p)
+>>>>>>> Add suspend/resume logic, update per new PMU methodology, clean up per checkpatch.
 {
 	struct bcmpmu *bcmpmu = file->private_data;
 	struct bcmpmu_rw_data reg;
@@ -330,7 +340,11 @@ static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 }
 
 static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
+<<<<<<< HEAD
 			    loff_t *p)
+=======
+			    loff_t * p)
+>>>>>>> Add suspend/resume logic, update per new PMU methodology, clean up per checkpatch.
 {
 	struct bcmpmu *bcmpmu = file->private_data;
 	struct bcmpmu_rw_data reg;
@@ -423,6 +437,15 @@ static struct platform_device bcmpmu_watchdog = {
 	.name = "bcmpmu-wdog",
 	.id = -1,
 	.dev.platform_data = NULL,
+<<<<<<< HEAD
+=======
+};
+
+static struct platform_device bcmpmu_thermal_device = {
+	.name = "bcmpmu_thermal",
+	.id = -1,
+	.dev.platform_data = NULL,
+>>>>>>> Add suspend/resume logic, update per new PMU methodology, clean up per checkpatch.
 };
 
 static struct platform_device *bcmpmu_fellow_devices[] = {
@@ -435,6 +458,7 @@ static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_accy_device,
 	&bcmpmu_ponkey_device,
 	&bcmpmu_watchdog,
+	&bcmpmu_thermal_device,
 };
 
 static int __devinit bcmpmu_probe(struct platform_device *pdev)
