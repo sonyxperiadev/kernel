@@ -94,6 +94,7 @@ static inline u32 smc(u32 service, u32 flags, va_list *list)
 	/* Flush caches */
 	writel(0xFF, KONA_SCU_VA + SCU_INVALIDATE_ALL_OFFSET);
 	flush_cache_all();
+	outer_flush_all();
 
 	ret = __smc(service, flags, args);
 
