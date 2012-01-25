@@ -3365,10 +3365,36 @@ static int s5k4ecgx_s_stream(struct v4l2_subdev *sd, int enable)
 }
 
 
+static int s5k4ecgx_enum_input(struct soc_camera_device *icd, struct v4l2_input *inp)
+{
+	struct soc_camera_link *icl = to_soc_camera_link(icd);
+	struct v4l2_subdev_sensor_interface_parms *plat_parms;
+
+	inp->type = V4L2_INPUT_TYPE_CAMERA;
+	inp->std  = V4L2_STD_UNKNOWN;
+	strcpy(inp->name, "s5k4ecgx");//S5K4ECGX_DRIVER_NAME);
+
+	if (icl && icl->priv) {
+
+		plat_parms = icl->priv;
+		inp->status = 0;
+
+		if (plat_parms->orientation == V4L2_SUBDEV_SENSOR_PORTRAIT)
+			inp->status |= V4L2_IN_ST_HFLIP;
+
+		if (plat_parms->facing == V4L2_SUBDEV_SENSOR_BACK)
+			inp->status |= V4L2_IN_ST_BACK;
+
+	}
+	return 0;
+}
+
+
 
 static struct soc_camera_ops s5k4ecgx_ops = {
 	.set_bus_param		= s5k4ecgx_set_bus_param,
 	.query_bus_param	= s5k4ecgx_query_bus_param,
+	.enum_input			= s5k4ecgx_enum_input,
 	.controls		= s5k4ecgx_controls,
 	.num_controls		= ARRAY_SIZE(s5k4ecgx_controls),
 };
