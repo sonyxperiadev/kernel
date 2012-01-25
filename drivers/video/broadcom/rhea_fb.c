@@ -77,8 +77,8 @@ struct rhea_fb {
 	struct completion thread_sem;
 	struct mutex update_sem;
 	struct completion prev_buf_done_sem;
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS)  \
+	&& !defined(CONFIG_MACH_RHEA_SS_AMAZING) && !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 	struct completion refresh_wait_sem;
 #endif
 	atomic_t buff_idx;
@@ -483,7 +483,7 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 #endif
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+	&& !defined(CONFIG_MACH_RHEA_SS_AMAZING) && !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 static int rhea_refresh_thread(void *arg)
 {
 	struct rhea_fb *fb = arg;
@@ -522,7 +522,7 @@ static struct notifier_block vt_notifier_block = {
 	.notifier_call = vt_notifier_call,
 };
 
-#endif /* !CONFIG_MACH_RHEA_RAY_EDN1X  && !CONFIG_MACH_RHEA_RAY_EDN2X && !CONFIG_MACH_RHEA_SS */
+#endif /* !CONFIG_MACH_RHEA_RAY_EDN1X  && !CONFIG_MACH_RHEA_RAY_EDN2X && !CONFIG_MACH_RHEA_SS && !CONFIG_MACH_RHEA_SS_AMAZING */
 
 static struct fb_ops rhea_fb_ops = {
 	.owner          = THIS_MODULE,
@@ -588,7 +588,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	init_completion(&fb->thread_sem);
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+	&& !defined(CONFIG_MACH_RHEA_SS_AMAZING) && !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 
 	sema_init(&fb->refresh_wait_sem, 0);
 
@@ -729,7 +729,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	rheafb_info("RHEA Framebuffer probe successfull\n");
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
+	&& !defined(CONFIG_MACH_RHEA_SS_AMAZING) && !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
 	register_vt_notifier(&vt_notifier_block);
 #endif
 
@@ -779,7 +779,7 @@ err_set_var_failed:
 err_enable_display_failed:
 err_fbmem_alloc_failed:
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+	&& !defined(CONFIG_MACH_RHEA_SS_AMAZING) && !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
 thread_create_failed:
 #endif
 	if (pi_mgr_dfs_request_remove(&fb->dfs_node))
