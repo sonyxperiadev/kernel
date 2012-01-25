@@ -224,6 +224,9 @@ static CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void);
 
 static void csl_caph_hwctrl_set_srcmixer_filter(
 		CSL_CAPH_HWConfig_Table_t *audioPath);
+static Boolean csl_caph_hwctrl_ssp_running(void);
+static void csl_caph_hwctrl_tdm_config(
+			CSL_CAPH_HWConfig_Table_t *path, int sinkNo);
 
 /******************************************************************************
  * local function definitions
@@ -1375,18 +1378,34 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 
 		if (fmTxRunning == TRUE &&
 				path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX) {
-			csl_i2s_stop_tx(fmHandleSSP);
+			if (sspTDM_enabled)
+				csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
+			else
+				csl_i2s_stop_tx(fmHandleSSP);
 			fmTxRunning = FALSE;
+			if (sspTDM_enabled) {
+				if (!csl_caph_hwctrl_ssp_running())
+					csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
+			} else {
 			if (fmRxRunning == FALSE)
 				csl_sspi_enable_scheduler(fmHandleSSP, 0);
+			}
 		} else if (fmRxRunning == TRUE &&
 				path->source == CSL_CAPH_DEV_FM_RADIO) {
 			if (path->sinkCount == 1) {
-				csl_i2s_stop_rx(fmHandleSSP);
+				if (sspTDM_enabled)
+					csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
+				else
+					csl_i2s_stop_rx(fmHandleSSP);
 				fmRxRunning = FALSE;
+			if (sspTDM_enabled) {
+				if (!csl_caph_hwctrl_ssp_running())
+					csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
+			} else {
 				if (fmTxRunning == FALSE)
 					csl_sspi_enable_scheduler
 						(fmHandleSSP, 0);
+			}
 			}
 		}
 	}
@@ -1477,10 +1496,13 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 			 *clock after bt call is switched to ep
 			 */
 #endif
-			csl_pcm_enable_scheduler
-				(pcmHandleSSP, FALSE);
 			pcmRxRunning = FALSE;
 			pcmTxRunning = FALSE;
+			if (sspTDM_enabled) {
+				if (!csl_caph_hwctrl_ssp_running())
+					csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
+			} else
+				csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
 		}
 	} else if (path->source == CSL_CAPH_DEV_BT_MIC ||
 			path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) {
@@ -1490,10 +1512,14 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 			pcmTxRunning = FALSE;
 		if (!pcmRxRunning && !pcmTxRunning) {
 			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
+			/* csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1); */
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
-		    csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
+			/* csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1); */
+			if (sspTDM_enabled) {
+				if (!csl_caph_hwctrl_ssp_running())
+					csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
+			} else
+				csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
 		}
 	}
 
@@ -1692,6 +1718,10 @@ static void csl_caph_config_sw
 			swCfg->FIFO_srcAddr = csl_pcm_get_rx0_fifo_data_port
 				(pcmHandleSSP);
 		} else if (path->source == CSL_CAPH_DEV_FM_RADIO) {
+			if (sspTDM_enabled)
+				swCfg->FIFO_srcAddr =
+					csl_pcm_get_rx1_fifo_data_port(pcmHandleSSP);
+			else
 			swCfg->FIFO_srcAddr = csl_i2s_get_rx0_fifo_data_port
 				(fmHandleSSP);
 		} else {
@@ -1717,8 +1747,12 @@ static void csl_caph_config_sw
 		} else if (sink == CSL_CAPH_DEV_FM_TX) {
 			if (!swCfg->trigger)
 				swCfg->trigger = fmTxTrigger;
-			swCfg->FIFO_dstAddr =
-				csl_i2s_get_tx0_fifo_data_port(fmHandleSSP);
+			if (sspTDM_enabled)
+				swCfg->FIFO_dstAddr =
+					csl_pcm_get_tx1_fifo_data_port(pcmHandleSSP);
+			else
+				swCfg->FIFO_dstAddr =
+					csl_i2s_get_tx0_fifo_data_port(fmHandleSSP);
 		} else {
 			audio_xassert(0, pathID);
 		}
@@ -1888,6 +1922,14 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 		csl_caph_audioh_config(path->audiohPath[sinkNo+1],
 		 (void *)&path->audiohCfg[sinkNo+1]);
 
+	if (sspTDM_enabled &&
+		(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
+		|| path->source == CSL_CAPH_DEV_BT_MIC ||
+		path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX
+		|| path->source == CSL_CAPH_DEV_FM_RADIO)) {
+		csl_caph_hwctrl_tdm_config(path, sinkNo);
+	}
+
 	if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
 			|| path->source == CSL_CAPH_DEV_BT_MIC) {
 		if (!pcmRxRunning && !pcmTxRunning && !sspTDM_enabled) {
@@ -1896,14 +1938,6 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 			pcmCfg.protocol = CSL_PCM_PROTOCOL_MONO;
 			pcmCfg.format = CSL_PCM_WORD_LENGTH_PACK_16_BIT;
 
-			if (sspTDM_enabled) {
-				/*CSL_PCM_PROTOCOL_MONO*/
-				pcmCfg.protocol   =
-					CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL;
-				/*CSL_PCM_WORD_LENGTH_24_BIT;*/
-				pcmCfg.format     =
-					CSL_PCM_WORD_LENGTH_24_BIT;
-			}
 
 			/*this is unpacked 16bit, 32bit per sample with msb =0*/
 			if (path->source == CSL_CAPH_DEV_DSP ||
@@ -1933,7 +1967,7 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 
 	if (!fmTxRunning && !fmRxRunning && (path->sink[sinkNo] ==
 		CSL_CAPH_DEV_FM_TX || path->source ==
-		CSL_CAPH_DEV_FM_RADIO)) {
+		CSL_CAPH_DEV_FM_RADIO) && !sspTDM_enabled) {
 		fmCfg.mode = CSL_I2S_MASTER_MODE;
 		fmCfg.tx_ena = 1;
 		fmCfg.rx_ena = 1;
@@ -2059,6 +2093,15 @@ static void csl_caph_start_blocks
 		}
 	}
 
+	if (sspTDM_enabled
+		&& !csl_caph_hwctrl_ssp_running() &&
+		(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
+			|| path->source == CSL_CAPH_DEV_BT_MIC ||
+		path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX
+			|| path->source == CSL_CAPH_DEV_FM_RADIO)) {
+		csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
+	}
+
 	if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
 		|| path->source == CSL_CAPH_DEV_BT_MIC) {
 		if (!pcmRxRunning && !pcmTxRunning) {
@@ -2066,14 +2109,12 @@ static void csl_caph_start_blocks
 		if ((path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
 			&& path->source == CSL_CAPH_DEV_BT_MIC)
 			|| (path->source == CSL_CAPH_DEV_DSP)
-			|| (path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
-			|| sspTDM_enabled)
+			|| (path->sink[sinkNo] == CSL_CAPH_DEV_DSP))
 			csl_caph_intc_enable_pcm_intr
 				(CSL_CAPH_DSP, sspidPcmUse);
 #endif
 			if ((path->source == CSL_CAPH_DEV_DSP) ||
-				(path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
-				|| sspTDM_enabled) {
+				(path->sink[sinkNo] == CSL_CAPH_DEV_DSP)) {
 #if defined(ENABLE_DMA_VOICE)
 				/*dma sequence will divert from non-dma
 				 * eventually, hence make 2 copies.
@@ -2099,7 +2140,12 @@ static void csl_caph_start_blocks
 				 * &pcmCfg);
 				 */
 #endif
-			} else {
+			} else { /* non dsp case */
+			if (sspTDM_enabled) {
+				/* should seperate later */
+				csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+				csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+			} else
 				csl_pcm_start(pcmHandleSSP, &pcmCfg);
 			}
 		}
@@ -2111,15 +2157,23 @@ static void csl_caph_start_blocks
 
 	if (!fmTxRunning &&
 		(path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX)) {
-		csl_sspi_enable_scheduler(fmHandleSSP, 1);
-		csl_i2s_start_tx(fmHandleSSP, &fmCfg);
+		if (sspTDM_enabled)
+			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
+		else {
+			csl_sspi_enable_scheduler(fmHandleSSP, 1);
+			csl_i2s_start_tx(fmHandleSSP, &fmCfg);
+		}
 		fmTxRunning = TRUE;
 	}
 
 	if (!fmRxRunning && path->source ==
 			CSL_CAPH_DEV_FM_RADIO) {
-		csl_sspi_enable_scheduler(fmHandleSSP, 1);
-		csl_i2s_start_rx(fmHandleSSP, &fmCfg);
+		if (sspTDM_enabled)
+			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
+		else {
+			csl_sspi_enable_scheduler(fmHandleSSP, 1);
+			csl_i2s_start_rx(fmHandleSSP, &fmCfg);
+		}
 		fmRxRunning = TRUE;
 	}
 
@@ -2987,25 +3041,43 @@ void csl_caph_hwctrl_init(void)
 	csl_caph_dma_init(addr.aadmac_baseAddr, (UInt32)caph_intc_handle);
 
 #if defined(SSP3_FOR_FM)
-	fmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
-	fmRxTrigger = CAPH_SSP3_RX0_TRIGGER;
+	/* if TDM enabled, run both bt and fm on SSP4.
+	   this should be configurable through
+	   csl_caph_hwctrl_ConfigSSP() */
+	if (sspTDM_enabled) {
+		fmTxTrigger = CAPH_SSP4_TX1_TRIGGER;
+		fmRxTrigger = CAPH_SSP4_RX1_TRIGGER;
+		sspidI2SUse = CSL_CAPH_SSP_4;
+	} else {
+		fmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
+		fmRxTrigger = CAPH_SSP3_RX0_TRIGGER;
+		sspidI2SUse = CSL_CAPH_SSP_3;
+		fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp3_baseAddr);
+	}
+
 	pcmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
 	pcmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
 	sspidPcmUse = CSL_CAPH_SSP_4;
-	sspidI2SUse = CSL_CAPH_SSP_3;
-
-	fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp3_baseAddr);
 	pcmHandleSSP = (CSL_HANDLE)csl_pcm_init
 		(addr.ssp4_baseAddr, (UInt32)caph_intc_handle);
 #else
-	fmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
-	fmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
+	/* if TDM enabled, run both bt and fm on SSP3.
+	   this should be configurable through
+	   csl_caph_hwctrl_ConfigSSP() */
+	if (sspTDM_enabled) {
+		fmTxTrigger = CAPH_SSP3_TX1_TRIGGER;
+		fmRxTrigger = CAPH_SSP3_RX1_TRIGGER;
+		sspidI2SUse = CSL_CAPH_SSP_3;
+	} else {
+		fmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
+		fmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
+		sspidI2SUse = CSL_CAPH_SSP_4;
+		/*Initialize SSP4 port for FM.*/
+		fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp4_baseAddr);
+	}
 	pcmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
 	pcmRxTrigger = CAPH_SSP3_RX0_TRIGGER;
 	sspidPcmUse = CSL_CAPH_SSP_3;
-	sspidI2SUse = CSL_CAPH_SSP_4;
-	/*Initialize SSP4 port for FM.*/
-	fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp4_baseAddr);
 	/*Initialize SSP3 port for PCM.*/
 	pcmHandleSSP = (CSL_HANDLE)csl_pcm_init
 		(addr.ssp3_baseAddr, (UInt32)caph_intc_handle);
@@ -4235,6 +4307,21 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus)
 			sspidPcmUse = CSL_CAPH_SSP_4;
 		pcmHandleSSP = (CSL_HANDLE)csl_pcm_init
 			(addr, (UInt32)caph_intc_handle);
+	} else if (bus == CSL_SSP_TDM) {
+	/* may need to extend to more sspis */
+		if (pcmHandleSSP)
+			csl_pcm_deinit(pcmHandleSSP);
+		if (fmHandleSSP && fmHandleSSP != pcmHandleSSP)
+			/* deinit only if other bus is not using the same port */
+			csl_i2s_deinit(fmHandleSSP);
+		pcmTxTrigger = fmTxTrigger = tx_trigger;
+		pcmRxTrigger = fmRxTrigger = rx_trigger;
+		if (port == CSL_SSP_3)
+			sspidPcmUse = sspidI2SUse = CSL_CAPH_SSP_3;
+		else if (port == CSL_SSP_4)
+			sspidPcmUse = sspidI2SUse = CSL_CAPH_SSP_4;
+		pcmHandleSSP = (CSL_HANDLE)csl_pcm_init(addr, (UInt32)caph_intc_handle);
+		fmHandleSSP = pcmHandleSSP;
 	}
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_ConfigSSP::"
 			       "new fmHandleSSP %p, pcmHandleSSP %p.\r\n",
@@ -4297,5 +4384,58 @@ static void csl_caph_hwctrl_set_srcmixer_filter
 		csl_caph_srcmixer_set_linear_filter
 			(audioPath->srcmRoute[0][0].inChnl);
 	return;
+}
+
+/****************************************************************************
+*
+*  Function Name: Boolean csl_caph_hwctrl_ssp_running(void)
+*
+*
+*  Description: check if the ssp is running when it is enabled
+*
+*
+****************************************************************************/
+static Boolean csl_caph_hwctrl_ssp_running(void)
+{
+	return pcmRxRunning || pcmTxRunning || fmTxRunning || fmRxRunning;
+}
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_hwctrl_tdm_config(
+*						CSL_CAPH_HWConfig_Table_t *path, int sinkNo)
+*
+*
+*  Description: config the tdm when it is enabled.
+*
+*
+****************************************************************************/
+static void csl_caph_hwctrl_tdm_config(
+	CSL_CAPH_HWConfig_Table_t *path, int sinkNo)
+{
+	if (!csl_caph_hwctrl_ssp_running()) {
+			memset(&pcmCfg, 0, sizeof(pcmCfg));
+			pcmCfg.mode = CSL_PCM_MASTER_MODE;
+			pcmCfg.protocol   = CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL;
+			pcmCfg.format	  = CSL_PCM_WORD_LENGTH_16_BIT;
+			if (path->source == CSL_CAPH_DEV_DSP
+				|| path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
+				/* this is unpacked 16bit, 32bit per sample with msb = 0 */
+				pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT;
+			else if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
+				&& path->source == CSL_CAPH_DEV_BT_MIC)
+				pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
+			pcmCfg.sample_rate = path->snk_sampleRate;
+			if (path->source == CSL_CAPH_DEV_DSP)
+				pcmCfg.sample_rate = path->src_sampleRate;
+			pcmCfg.interleave = TRUE;
+			pcmCfg.ext_bits = 0;
+			pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
+			pcmTxCfg.enable = 1;
+			pcmTxCfg.loopback_enable = 0;
+			pcmRxCfg.enable = 1;
+			pcmRxCfg.loopback_enable = 0;
+			csl_pcm_config(pcmHandleSSP, &pcmCfg, &pcmTxCfg, &pcmRxCfg);
+	}
 }
 

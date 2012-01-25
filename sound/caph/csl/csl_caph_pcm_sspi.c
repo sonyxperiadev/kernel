@@ -45,7 +45,6 @@
 #include "brcm_rdb_sspil.h"
 #include "log.h"
 
-
 #define SSPI_HW_WORD_LEN_32Bit					32
 #define SSPI_HW_WORD_LEN_25Bit					25
 #define SSPI_HW_WORD_LEN_24Bit					24
@@ -127,7 +126,6 @@ CSL_PCM_OPSTATUS_t csl_pcm_deinit(CSL_PCM_HANDLE handle)
 	return CSL_PCM_SUCCESS;
 }
 
-
 /*
  *  Function Name:      csl_pcm_enable_scheduler
  *
@@ -135,7 +133,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_deinit(CSL_PCM_HANDLE handle)
  *
  */
 CSL_PCM_OPSTATUS_t csl_pcm_enable_scheduler(CSL_PCM_HANDLE handle,
-		Boolean enable)
+					    Boolean enable)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 
@@ -164,16 +162,17 @@ CSL_PCM_OPSTATUS_t csl_pcm_start(CSL_PCM_HANDLE handle,
 	CHAL_SSPI_STATUS_t status;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start::"
-				"handle %p.\r\n", handle));
+			      "handle %p.\r\n", handle));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
-	       "csl_pcm_start:: cfgDev mode %d interleave %d protocol %d"
-	       "format %d size %ld bits %ld sr %ld.\r\n",
-	       config->mode, config->interleave, config->protocol,
-	       config->format, config->xferSize, config->ext_bits,
-	       config->sample_rate));
+			      "csl_pcm_start:: cfgDev mode %d interleave %d protocol %d"
+			      "format %d size %ld bits %ld sr %ld.\r\n",
+			      config->mode, config->interleave,
+			      config->protocol, config->format,
+			      config->xferSize, config->ext_bits,
+			      config->sample_rate));
 
-	/*pcm_config_dma(handle, config);*/
-	/*enable scheduler operation*/
+	/*pcm_config_dma(handle, config); */
+	/*enable scheduler operation */
 	status = chal_sspi_enable_scheduler(pDevice, 1);
 
 	chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
@@ -220,13 +219,13 @@ CSL_PCM_OPSTATUS_t csl_pcm_start_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 	if (channel == CSL_PCM_CHAN_TX0) {
 		chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX0);
 		chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
-				SSPI_FIFO_ID_TX0,
-				TRUE, TRUE);
+							  SSPI_FIFO_ID_TX0,
+							  TRUE, TRUE);
 	} else if (channel == CSL_PCM_CHAN_TX1) {
 		chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX1);
 		chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
-				SSPI_FIFO_ID_TX1,
-				TRUE, TRUE);
+							  SSPI_FIFO_ID_TX1,
+							  TRUE, TRUE);
 	}
 
 	return CSL_PCM_SUCCESS;
@@ -325,7 +324,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_pause(CSL_PCM_HANDLE handle)
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 	CHAL_SSPI_STATUS_t status;
 
-	/*disable scheduler operation*/
+	/*disable scheduler operation */
 	status = chal_sspi_enable_scheduler(pDevice, 0);
 
 	if (status == CHAL_SSPI_STATUS_SUCCESS)
@@ -340,7 +339,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_resume(CSL_PCM_HANDLE handle)
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 	CHAL_SSPI_STATUS_t status;
 
-	/*enable scheduler operation*/
+	/*enable scheduler operation */
 	status = chal_sspi_enable_scheduler(pDevice, 1);
 
 	if (status == CHAL_SSPI_STATUS_SUCCESS)
@@ -415,7 +414,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		protocol = SSPI_PROT_4CHAN_16B_TDM_PCM;
 		frmMask = SSPI_HW_FRAME0_MASK | SSPI_HW_FRAME1_MASK;
 	}
-	/*only 16B case was tested for the following 2 protocols*/
+	/*only 16B case was tested for the following 2 protocols */
 	else if ((devCfg->protocol == CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL) &&
 		 (devCfg->format == CSL_PCM_WORD_LENGTH_16_BIT)) {
 		protocol = SSPI_PROT_STEREO_16B_PCM;
@@ -434,10 +433,10 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		frmMask = SSPI_HW_FRAME0_MASK | SSPI_HW_FRAME1_MASK;
 	} else
 		return CSL_PCM_ERR_PROT;
-	/*task_conf struct initialization*/
+	/*task_conf struct initialization */
 	memset(&task_conf, 0, sizeof(task_conf));
 
-	/*soft reset sspi instance*/
+	/*soft reset sspi instance */
 	chal_sspi_soft_reset(pDevice);
 
 	chal_sspi_get_intr_mask(pDevice, &intrMask);
@@ -452,15 +451,16 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		intrMask |=
 		    (SSPIL_INTR_ENABLE_PIO_TX_START |
 		     SSPIL_INTR_ENABLE_PIO_RX_START);
-	} else {		/*for voice call only enable RX START*/
+	} else {		/*for voice call only enable RX START */
 		intrMask |= SSPIL_INTR_ENABLE_PIO_RX_START;
 	}
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: intrMask2 0x%x.\r\n",
 			intrMask);
-	/*need to disable all other interrupts to avoid confusing dsp 03-02-11*/
+	/*need to disable all other interrupts to avoid confusing
+	  dsp 03-02-11 */
 	chal_sspi_enable_intr(pDevice, intrMask & 0x000000F0);
 
-	/*set sspi at idle state*/
+	/*set sspi at idle state */
 	if (chal_sspi_set_idle_state(pDevice, protocol)) {
 		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config failed \r\n");
 		return CSL_PCM_ERROR;
@@ -469,29 +469,33 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	chal_sspi_set_clk_divider(handle, SSPI_CLK_DIVIDER0, 0);
 	chal_sspi_set_clk_divider(handle, SSPI_CLK_REF_DIVIDER, 0);
 	chal_sspi_set_clk_src_select(handle, SSPI_CLK_SRC_CAPHCLK);
-#ifdef SSPI_TDM_MODE		/*SSPI_TDM_TEST*/
-	/*to be used with new chal code*/
-	chal_sspi_set_caph_clk(handle, SSPI_CAPH_CLK_TRIG_48KHZ_3CH_16B_24B,
-			       SSPI_HW_WORD_LEN_16Bit, 3);
-	if (configDev->sample_rate == 8000) {
-		chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_RX0, 5);
-		chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_TX0, 5);
-	} else if (configDev->sample_rate == 16000) {
-		chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_RX0, 2);
-		chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_TX0, 2);
+
+	if (devCfg->protocol == CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL) {
+		chal_sspi_set_caph_clk(handle, SSPI_CAPH_CLK_TRIG_48kHz,
+				       SSPI_HW_WORD_LEN_16Bit, 3);
+		if (configDev->sample_rate == 8000) {
+			chal_sspi_set_fifo_repeat_count(handle,
+							SSPI_FIFO_ID_RX0, 5);
+			chal_sspi_set_fifo_repeat_count(handle,
+							SSPI_FIFO_ID_TX0, 5);
+		} else if (configDev->sample_rate == 16000) {
+			chal_sspi_set_fifo_repeat_count(handle,
+							SSPI_FIFO_ID_RX0, 2);
+			chal_sspi_set_fifo_repeat_count(handle,
+							SSPI_FIFO_ID_TX0, 2);
+		}
+	} else {
+		/*standard PCM */
+		if (configDev->sample_rate == 8000) {
+			chal_sspi_set_caph_clk(handle, SSPI_CAPH_CLK_TRIG_8kHz,
+					       SSPI_HW_WORD_LEN_16Bit, 1);
+		} else if (configDev->sample_rate == 16000) {
+			chal_sspi_set_caph_clk(handle, SSPI_CAPH_CLK_TRIG_16kHz,
+					       SSPI_HW_WORD_LEN_16Bit, 1);
+		}
+		chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_RX0, 0);
+		chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_TX0, 0);
 	}
-#else
-	/*standard PCM*/
-	if (configDev->sample_rate == 8000) {
-		chal_sspi_set_caph_clk(handle, SSPI_CAPH_CLK_TRIG_8kHz,
-				       SSPI_HW_WORD_LEN_16Bit, 1);
-	} else if (configDev->sample_rate == 16000) {
-		chal_sspi_set_caph_clk(handle, SSPI_CAPH_CLK_TRIG_16kHz,
-				       SSPI_HW_WORD_LEN_16Bit, 1);
-	}
-	chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_RX0, 0);
-	chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_TX0, 0);
-#endif
 
 	/*to avoid both coverity and compiler warnings,
 	 * can not use switch here.
@@ -688,20 +692,20 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_TX3,
 					SSPI_FIFO_DATA_PACK_16BIT);
 	}
-	/*SSPI mode configuration*/
+	/*SSPI mode configuration */
 	chal_sspi_set_mode(pDevice, (CHAL_SSPI_MODE_t) (devCfg->mode));
 
-	/*enable sspi operation*/
+	/*enable sspi operation */
 	chal_sspi_enable(pDevice, 1);
 
-	/* setting from asic team*/
-	/*config for audio mode, may divert from voice settings.*/
+	/* setting from asic team */
+	/*config for audio mode, may divert from voice settings. */
 	if (devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT) {
 		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0,
 						  0x1c, 0x3);
 		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0,
 						  0x3, 0x1c);
-	} else {	/*voice mode*/
+	} else {		/*voice mode */
 		/*chal_sspi_set_fifo_pio_threshhold
 		 * (pDevice, SSPI_FIFO_ID_RX0, 0xf, 0x1);
 		 */
@@ -717,18 +721,25 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		 * interrupt when there is 1 sample in RX0 fifo and Rx_stop
 		 * interrupt when there are 3 samples in the RX0 fifo.
 		 */
-	       /*SSPI send out RX_Start interrupt when there is 4 sample in RX0
-		* fifo and Rx_stop interrupt when there are 3 samples in the
-		* RX0 fifo.
-		*/
+		/*SSPI send out RX_Start interrupt when there is 4 sample in RX0
+		 * fifo and Rx_stop interrupt when there are 3 samples in the
+		 * RX0 fifo.
+		 */
 		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0,
-				0x1c, 0x3);
+						  0x1c, 0x3);
 		/*SSPI send out TX_Start interrupt when there are less 3
 		 * samples in TX0 fifo and Tx_stop interrupt when there
 		 * are 4 samples in the TX0 fifo.
 		 */
 		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0,
-				0x3, 0x1c);
+						  0x3, 0x1c);
+	}
+
+	if (devCfg->protocol == CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL) {
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0,
+						  0xc, 0x3);
+		chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0,
+						  0x3, 0xc);
 	}
 
 	chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX1, 0x3, 0x3);
@@ -748,7 +759,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		task_conf.rx_sel = (configTx->loopback_enable)
 		    ? SSPI_RX_SEL_COPY_TX0 : SSPI_RX_SEL_RX0;
 		/*task_conf.rx_sel = SSPI_RX_SEL_COPY_TX0; */
-		/*loopback tx to rx*/
+		/*loopback tx to rx */
 		task_conf.tx_sel = SSPI_TX_SEL_TX0;
 		task_conf.div_sel = SSPI_CLK_DIVIDER0;
 		task_conf.seq_ptr = 0;
@@ -815,31 +826,10 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	case SSPI_PROT_STEREO_16B_PCM:
 	case SSPI_PROT_STEREO_25B_PCM:
 		if (configTx->enable) {
-#ifdef SSPI_TDM_MODE
-			/*chal_sspi_set_fifo_threshold(pDevice,
-			 * SSPI_FIFO_ID_TX0, 0x08);
-			 */
-			chal_sspi_set_fifo_threshold(pDevice, SSPI_FIFO_ID_TX0,
-						     0x0);
-
-			chal_sspi_set_fifo_threshold(pDevice, SSPI_FIFO_ID_TX1,
-						     0x0);
-#else
-			/*use default value per suggestion from asic team*/
-#if 0
-
-			chal_sspi_set_fifo_threshold(pDevice, SSPI_FIFO_ID_TX0,
-						     0x10);
-			chal_sspi_set_fifo_threshold(pDevice, SSPI_FIFO_ID_TX1,
-						     0x0);
-#else
-
 			chal_sspi_set_fifo_threshold(pDevice, SSPI_FIFO_ID_TX0,
 						     0x0);
 			chal_sspi_set_fifo_threshold(pDevice, SSPI_FIFO_ID_TX1,
 						     0x0);
-#endif
-#endif
 		}
 
 		task_conf.chan_sel = SSPI_CHAN_SEL_CHAN0;
@@ -881,7 +871,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 			seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
 			seq_conf.rx_fifo_sel = 0;
 			seq_conf.tx_fifo_sel = 0;
-			/*seq_conf.frm_sel = 0;*/
+			/*seq_conf.frm_sel = 0; */
 			seq_conf.frm_sel = 1;
 			seq_conf.rx_sidetone_on = 0;
 			seq_conf.tx_sidetone_on = 0;
@@ -942,7 +932,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 			seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
 			seq_conf.rx_fifo_sel = 0;
 			seq_conf.tx_fifo_sel = 0;
-			seq_conf.frm_sel = 1;
+			seq_conf.frm_sel = 0;
 			seq_conf.rx_sidetone_on = 0;
 			seq_conf.tx_sidetone_on = 0;
 			seq_conf.next_pc = 0;
@@ -1008,9 +998,10 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 			if (chal_sspi_set_sequence
 			    (handle, 3, protocol, &seq_conf))
 				return CSL_PCM_ERR_SEQUENCE;
-		/* pCore->prot == SSPI_HW_INTERLEAVE_NOKIA_PCM_4CHANNEL*/
+			/* pCore->prot ==
+			   SSPI_HW_INTERLEAVE_NOKIA_PCM_4CHANNEL */
 		} else if (devCfg->protocol ==
-				CSL_PCM_PROTOCOL_INTERLEAVE_4CHANNEL) {
+			   CSL_PCM_PROTOCOL_INTERLEAVE_4CHANNEL) {
 			seq_conf.tx_enable = (configTx->enable
 					      || configRx->loopback_enable)
 			    ? 1 : 0;
@@ -1113,8 +1104,8 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 				return CSL_PCM_ERR_SEQUENCE;
 		}
 
-		/* should we use 25bit here???*/
-		if (0/*devCfg->format == CSL_PCM_WORD_LENGTH_24_BIT*/) {
+		/* should we use 25bit here??? */
+		if (0 /*devCfg->format == CSL_PCM_WORD_LENGTH_24_BIT */) {
 			/*if(chal_sspi_set_frame(pDevice, &frmMask, protocol,
 			 * SSPI_HW_WORD_LEN_16Bit, SSPI_HW_DUMMY_BITS_9))
 			 */
@@ -1127,18 +1118,12 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 			 */
 			if (devCfg->protocol ==
 			    CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL)
-#ifndef SSPI_TDM_MODE
+				/*to be used with new chal code */
 			{
 				protocol = SSPI_PROT_3CHAN_16B_TDM_PCM;
-				devCfg->ext_bits = 2;
-			}
-#else
-			/*to be used with new chal code*/
-			{
-				protocol = SSPI_PROT_3CHAN_16B_24B_TDM_PCM;
 				devCfg->ext_bits = 0;
 			}
-#endif
+
 			else if (devCfg->protocol ==
 				 CSL_PCM_PROTOCOL_INTERLEAVE_4CHANNEL) {
 				protocol = SSPI_PROT_4CHAN_16B_TDM_PCM;
@@ -1536,13 +1521,13 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	}
 
 	chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, SSPI_FIFO_ID_TX0,
-			TRUE, TRUE);
+						  TRUE, TRUE);
 	chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, SSPI_FIFO_ID_TX1,
-			TRUE, TRUE);
+						  TRUE, TRUE);
 	chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, SSPI_FIFO_ID_TX2,
-			TRUE, TRUE);
+						  TRUE, TRUE);
 	chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, SSPI_FIFO_ID_TX3,
-			TRUE, TRUE);
+						  TRUE, TRUE);
 	return CSL_PCM_SUCCESS;
 }
 
@@ -1591,7 +1576,6 @@ UInt32 csl_pcm_get_rx0_fifo_data_port(CSL_PCM_HANDLE handle)
 		return 0;
 }
 
-
 /*
 *  Function Name:      csl_pcm_get_rx1_fifo_data_port
 *
@@ -1629,7 +1613,7 @@ void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner,
 	else if (csl_sspid == CSL_CAPH_SSP_4)
 		chal_caph_intc_enable_ssp_intr(intc_handle, 2, owner);
 	else
-		/*should not get here.*/
+		/*should not get here. */
 		audio_xassert(0, csl_sspid);
 }
 

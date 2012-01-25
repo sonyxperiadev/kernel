@@ -300,7 +300,8 @@ enum __CSL_SSP_PORT_e {
 
 enum __CSL_SSP_BUS_e {
 	CSL_SSP_PCM,
-	CSL_SSP_I2S
+	CSL_SSP_I2S,
+	CSL_SSP_TDM /* 1st slot: PCM/BTM, 2nd slot: I2S/FM */
 };
 #define CSL_SSP_BUS_e enum __CSL_SSP_BUS_e
 

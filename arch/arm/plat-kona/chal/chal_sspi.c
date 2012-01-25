@@ -799,6 +799,7 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
         break;
 
     case SSPI_PROT_3CHAN_16B_TDM_PCM:
+    case SSPI_PROT_3CHAN_16B_24B_TDM_PCM:
     case SSPI_PROT_4CHAN_16B_TDM_PCM:
         frm_idx0 = frm_idx;
         *frm_bitmap &= ~(1<<frm_idx++);
@@ -865,8 +866,18 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
         CHAL_REG_WRITE32(REG_FRAME_ADDR(frm_idx0, 
                             pDevice->base + SSPIL_FRAME0_RX_DEF_OFFSET), 
                          val);
-        if(!ext_bits)
-            break;
+
+        if(prot != SSPI_PROT_3CHAN_16B_24B_TDM_PCM) {
+            /* If prot is not SSPI_PROT_3CHAN_16B_24B_TDM_PCM,
+             ext_bits must have non-zero value */
+            if(!ext_bits)
+                break;
+        }
+        else {
+            /* For SSPI_PROT_3CHAN_16B_24B_TDM_PCM, the 2nd frame is used
+             to rx/tx 24-bit BT mono data*/
+            word_len = 24;
+        }
 
         /*
          *  Setup one more frame if need to add the dummy bits at the end of frame
@@ -1119,7 +1130,8 @@ CHAL_SSPI_STATUS_t chal_sspi_set_idle_state(CHAL_HANDLE handle,
     case SSPI_PROT_STEREO_25B_PCM:
     case SSPI_PROT_3CHAN_16B_TDM_PCM:
     case SSPI_PROT_4CHAN_16B_TDM_PCM:
-        /*
+    case SSPI_PROT_3CHAN_16B_24B_TDM_PCM:
+	/*
          *  Default set for I2S_MODE0:
          *  STATE_MACHINE_CONTROL: 
          *  MASTER_CS0_IDLE  - low, MASTER_CS1_IDLE - low, 
@@ -1209,6 +1221,7 @@ CHAL_SSPI_STATUS_t chal_sspi_set_sequence(CHAL_HANDLE handle,
     case SSPI_PROT_STEREO_25B_PCM:
     case SSPI_PROT_3CHAN_16B_TDM_PCM:
     case SSPI_PROT_4CHAN_16B_TDM_PCM:        
+    case SSPI_PROT_3CHAN_16B_24B_TDM_PCM:
         /*
          *  Default sequence setup for SPI_MODE0:
          *  SEQ0_CLK_IDLE: 0, SEQ0_TXOEN_ACTIVE: 0
@@ -1303,8 +1316,10 @@ CHAL_SSPI_STATUS_t chal_sspi_set_task(CHAL_HANDLE handle,
     case SSPI_PROT_STEREO_25B_PCM:
     case SSPI_PROT_3CHAN_16B_TDM_PCM:
     case SSPI_PROT_4CHAN_16B_TDM_PCM:
+    case SSPI_PROT_3CHAN_16B_24B_TDM_PCM:
         // TX_TXOEN: 0, SCLK_SCLKOEN: 0
-        msb_val |= SSPIL_TASK0_DESC_MSB_TASK0_RESET_REPEATCOUNTER_MASK |
+        msb_val |= SSPIL_TASK0_DESC_MSB_TASK0_DO_ONCE_ONLY_MASK |
+			SSPIL_TASK0_DESC_MSB_TASK0_RESET_REPEATCOUNTER_MASK |
                    SSPIL_TASK0_DESC_MSB_TASK0_ENABLE_MASK;
 
         break;
@@ -1662,12 +1677,24 @@ CHAL_SSPI_STATUS_t chal_sspi_set_caph_clk(CHAL_HANDLE handle,
         num_cycle = CHAL_SSPI_CAPH_CLOCK_RATE / (11025 * word_len * num_chan);
         break;
 
+
+    case SSPI_CAPH_CLK_TRIG_48kHz_3CH_16B_24B:
+        /* It's used for 3channel TDM with 2 16-bit channels and 1 24-bit channel */
+        num_cycle = CHAL_SSPI_CAPH_CLOCK_RATE / (48000 * (word_len * 2 + 24));
+        break;
+
     default:
         return CHAL_SSPI_STATUS_ILLEGAL_PARA;
     }
 
-    chal_sspi_set_caph_clk_gen(handle, trig,
+    if(trig == SSPI_CAPH_CLK_TRIG_48kHz_3CH_16B_24B) {
+        chal_sspi_set_caph_clk_gen(handle, SSPI_CAPH_CLK_TRIG_48kHz,
+                       num_cycle/2-1, (word_len * 2 + 24) * 2 -1, 1);
+    }
+    else {
+        chal_sspi_set_caph_clk_gen(handle, trig,
                        num_cycle/2-1, word_len * 2 * num_chan-1, 1);
+    }
 
     return(CHAL_SSPI_STATUS_SUCCESS);
 }
@@ -2912,6 +2939,7 @@ uint32_t chal_sspi_read_data(CHAL_HANDLE handle,
     case SSPI_PROT_STEREO_25B_PCM:
     case SSPI_PROT_3CHAN_16B_TDM_PCM:
     case SSPI_PROT_4CHAN_16B_TDM_PCM:
+    case SSPI_PROT_3CHAN_16B_24B_TDM_PCM:
         while(tmp > 3) {
             if(width != SPI_FIFO_DATA_RWSIZE_32) {
                 val = CHAL_REG_READ32(ctlbase);
@@ -3084,6 +3112,7 @@ uint32_t chal_sspi_write_data(CHAL_HANDLE handle,
     case SSPI_PROT_STEREO_25B_PCM:
     case SSPI_PROT_3CHAN_16B_TDM_PCM:
     case SSPI_PROT_4CHAN_16B_TDM_PCM:
+    case SSPI_PROT_3CHAN_16B_24B_TDM_PCM:
         while(tmp > 3) {
             if(width != SPI_FIFO_DATA_RWSIZE_32) {
                 val = CHAL_REG_READ32(ctlbase);
