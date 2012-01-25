@@ -15,6 +15,8 @@
 # use $(srctree) for kernel top (see below) and 
 # use $(src) in a relative path which points to the directory
 
+KBUILD_CFLAGS += -Werror
+
 #audio driver Source Files
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= at_aud_ctl.o 
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= bcm_auddrv_test.o

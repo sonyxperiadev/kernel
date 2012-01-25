@@ -66,9 +66,6 @@ Copyright 2009 - 2011  Broadcom Corporation
 
 #include "extern_audio.h"
 
-void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
-			UInt32 Val6);
-void AUDTST_VoIP_Stop(void);
 /**
 	Description:
 	AT command handler, handle command AT commands at*maudmode=P1,P2,P3

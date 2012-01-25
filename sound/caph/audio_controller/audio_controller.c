@@ -1340,14 +1340,12 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 		    vol_right;
 
 #if defined(USE_NEW_AUDIO_PARAM)
-        vol_left = APSYSPARM_GetAudioParmAccessPtr()\
-        [(GetAudioApp() * AUDIO_MODE_NUMBER) +
-        AUDDRV_GetAudioModeBySink(sink)].\
-        fm_radio_digital_vol[vol_left];
+		vol_left = AudParmP()[(GetAudioApp() * AUDIO_MODE_NUMBER) +
+			AUDDRV_GetAudioModeBySink(sink)].\
+			fm_radio_digital_vol[vol_left];
 #else
-        vol_left = APSYSPARM_GetMultimediaAudioParmAccessPtr()\
-        [AUDDRV_GetAudioModeBySink(sink)].\
-        fm_radio_digital_vol[vol_left];
+		vol_left = AudParmP()[AUDDRV_GetAudioModeBySink(sink)].\
+			fm_radio_digital_vol[vol_left];
 #endif
 
 		gain_format = AUDIO_GAIN_FORMAT_mB;

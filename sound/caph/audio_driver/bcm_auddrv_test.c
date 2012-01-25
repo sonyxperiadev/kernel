@@ -115,9 +115,9 @@ static char *sgBrcm_auddrv_TestName[] = { "Aud_play",
 		"Aud_Rec", "Aud_control" };
 
 /* SysFS interface to test the Audio driver level API */
-ssize_t Brcm_auddrv_TestSysfs_show(struct device *dev,
+static ssize_t Brcm_auddrv_TestSysfs_show(struct device *dev,
 				   struct device_attribute *attr, char *buf);
-ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev,
+static ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count);
 static struct device_attribute Brcm_auddrv_Test_attrib =
@@ -142,9 +142,6 @@ static Boolean AUDDRV_BUFFER_DONE_CB(UInt8 *buf, UInt32 size, UInt32 streamID)
 	return TRUE;
 }
 #endif
-
-void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
-		UInt32 Val6);
 
 static Semaphore_t AUDDRV_BufDoneSema;
 
@@ -189,7 +186,7 @@ static void AudDrv_VOIP_FillDL_CB(void *pPrivate, u8 * pDst, u32 nSize)
 //
 //---------------------------------------------------*/
 
-ssize_t Brcm_auddrv_TestSysfs_show(struct device *dev,
+static ssize_t Brcm_auddrv_TestSysfs_show(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
 	int i;
@@ -214,7 +211,7 @@ Buffer values syntax -
 	3 - channel, 4 -volume,
 ---------------------------------------------------*/
 
-ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev,
+static ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
 {
@@ -496,6 +493,7 @@ static int HandleControlCommand()
 			while (((*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
 				KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET)))
 				& 0x01) == 1) {
+				continue;
 			}
 
 			/* Set the frequency policy */
@@ -583,6 +581,7 @@ WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY3_MASK2_OFFSET) ,regVal);
 			while (((*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
 				KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET)))
 				& 0x01) == 1) {
+				continue;
 			}
 
 			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
@@ -751,7 +750,7 @@ static int HandlePlayCommand()
 				drv_config.num_channel =
 				    sgBrcm_auddrv_TestValues[3];
 
-			DEBUG("Config:sr=%u nc=%d bs=%ld\n",
+			DEBUG("Config:sr=%u nc=%d bs=%d\n",
 					drv_config.sample_rate,
 					drv_config.num_channel,
 					drv_config.bits_per_sample);
@@ -966,7 +965,7 @@ static int HandleCaptCommand()
 				drv_config.num_channel =
 				    sgBrcm_auddrv_TestValues[3];
 
-			DEBUG("Config:sr=%u nc=%d bs=%ld\n",
+			DEBUG("Config:sr=%u nc=%d bs=%d\n",
 					drv_config.sample_rate,
 					drv_config.num_channel,
 					drv_config.bits_per_sample);

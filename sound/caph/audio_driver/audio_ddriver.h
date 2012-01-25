@@ -267,4 +267,10 @@ void VOIF_Buffer_Request(UInt32 bufferIndex, UInt32 samplingRate);
 void AP_ProcessStatusMainAMRDone(UInt16 codecType);
 void VOIP_ProcessVOIPDLDone(void);
 
+
+void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
+		UInt32 Val6);
+void AUDTST_VoIP_Stop(void);
+
+
 #endif /* #define __AUDIO_DDRIVER_H__ */

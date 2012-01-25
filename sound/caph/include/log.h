@@ -64,7 +64,11 @@ extern int gAudioDebugLevel;
 #define Log_DebugPrintf(logID, args...)
 #endif
 
-#define audio_xassert(a, b) {if ((a) == 0) Log_DebugPrintf(LOGID_AUDIO, "%s assert line %d, %d, 0x%lx.\r\n", __func__, __LINE__, a, (UInt32)b); }
+#define audio_xassert(a, b) \
+	{if ((a) == 0)\
+		pr_info("%s assert line %d, %d, 0x%x.",\
+		__func__, __LINE__, a, b);\
+	}
 
 #define LOGID_MISC 0
 #define LOGID_SOC_AUDIO 1
