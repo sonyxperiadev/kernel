@@ -721,6 +721,9 @@ CSL_CAPH_DEVICE_e getDeviceFromSrc(AUDIO_SOURCE_Enum_t source);
 
 CSL_CAPH_DEVICE_e getDeviceFromSink(AUDIO_SINK_Enum_t sink);
 
+AudioMode_t GetAudioModeBySink(AUDIO_SINK_Enum_t sink);
+
+
 void AUDCTRL_EC(Boolean enable, UInt32 arg);
 void AUDCTRL_NS(Boolean enable);
 

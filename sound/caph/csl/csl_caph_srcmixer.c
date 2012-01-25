@@ -76,7 +76,7 @@ struct CSL_CAPH_SRCM_INCHNL_STATUS_t {
 #define CSL_CAPH_SRCM_INCHNL_STATUS_t struct CSL_CAPH_SRCM_INCHNL_STATUS_t
 
 struct CSL_CAPH_SRCM_CHNL_TABLE_t {
-	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl;	/* output channel */
+	CSL_CAPH_MIXER_e outChnl;	/* output channel */
 	UInt16 inChnl;		/* input channel connected
 				 * to the above output channel
 				 */
@@ -171,9 +171,9 @@ static CAPH_DATA_FORMAT_e csl_caph_srcmixer_get_chal_dataformat(CHAL_HANDLE
 		handle,
 		CSL_CAPH_DATAFORMAT_e
 		dataFmt);
-static void csl_caph_srcmixer_use_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+static void csl_caph_srcmixer_use_outchnl(CSL_CAPH_MIXER_e outChnl,
 		CSL_CAPH_SRCM_INCHNL_e inChnl);
-static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e
+static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_MIXER_e
 		outChnl);
 
 /******************************************************************************
@@ -562,13 +562,13 @@ CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_inchnl_fifo(CSL_CAPH_SRCM_INCHNL_e
 /****************************************************************************
  *
  *  Function Name: CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_outchnl_fifo(
- *                                      CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
+ *                                      CSL_CAPH_MIXER_e outChnl)
  *
  *  Description: Get the cHAL Mixer Output Channel FIFO
  *
  ****************************************************************************/
 CAPH_SRCMixer_FIFO_e
-csl_caph_srcmixer_get_outchnl_fifo(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
+csl_caph_srcmixer_get_outchnl_fifo(CSL_CAPH_MIXER_e outChnl)
 {
 	CAPH_SRCMixer_FIFO_e outChnlFIFO = CAPH_CH_INFIFO_NONE;
 	switch (outChnl) {
@@ -592,7 +592,7 @@ csl_caph_srcmixer_get_outchnl_fifo(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
 /****************************************************************************
  *
  *  Function Name: CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_tapoutchnl_fifo(
- *                                      CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
+ *                                      CSL_CAPH_MIXER_e outChnl)
  *
  *  Description: Get the cHAL Mixer Tap Output Channel FIFO
  *
@@ -679,12 +679,12 @@ csl_caph_srcmixer_get_inchnl_trigger(CSL_CAPH_SRCM_INCHNL_e inChnl)
 /****************************************************************************
  *
  *  Function Name: CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_chaloutchnl(
- *                                      CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
+ *                                      CSL_CAPH_MIXER_e outChnl)
  *
  *  Description: Get the cHAL Mixer Output Channel
  *
  ****************************************************************************/
-static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e
+static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_MIXER_e
 					       outChnl)
 {
 	UInt8 chalOutChnl = CAPH_M_NONE;
@@ -765,13 +765,13 @@ static CAPH_DATA_FORMAT_e csl_caph_srcmixer_get_chal_dataformat(CHAL_HANDLE
 /****************************************************************************
  *
  *  Function Name:CAPH_DATA_FORMAT_e csl_caph_srcmixer_use_outchnl(
- *                                         CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+ *                                         CSL_CAPH_MIXER_e outChnl,
  *                                          CSL_CAPH_SRCM_INCHNL_e inChnl)
  *
  *  Description: Check the output channel usage table to add input channel
  *
  ****************************************************************************/
-static void csl_caph_srcmixer_use_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+static void csl_caph_srcmixer_use_outchnl(CSL_CAPH_MIXER_e outChnl,
 		CSL_CAPH_SRCM_INCHNL_e inChnl)
 {
 	UInt8 ch = 0;
@@ -786,13 +786,13 @@ static void csl_caph_srcmixer_use_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 /****************************************************************************
  *
  *  Function Name:CAPH_DATA_FORMAT_e csl_caph_srcmixer_unuse_outchnl(
- *                                      CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+ *                                      CSL_CAPH_MIXER_e outChnl,
  *					CSL_CAPH_SRCM_INCHNL_e inChnl)
  *
  *  Description: Check the output channel usage table to remove input channel
  *
  ****************************************************************************/
-void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_MIXER_e outChnl,
 		CSL_CAPH_SRCM_INCHNL_e inChnl)
 {
 	UInt8 ch = 0;
@@ -866,12 +866,12 @@ void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 /****************************************************************************
  *
  *  Function Name:UInt16 csl_caph_srcmixer_read_outchnltable(
- *                          CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
+ *                          CSL_CAPH_MIXER_e outChnl)
  *
  *  Description: Check the output channel usage table to read input channel
  *
  ****************************************************************************/
-UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
+UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_MIXER_e outChnl)
 {
 	UInt8 ch = 0;
 	UInt16 inChnls = 0;
@@ -1036,16 +1036,16 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
 
 /****************************************************************************
  *
- *  Function Name: CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_srcmixer_obtain_outchnl
+ *  Function Name: CSL_CAPH_MIXER_e csl_caph_srcmixer_obtain_outchnl
  *					(CSL_CAPH_DEVICE_e sink)
  *
  *  Description: obtain a CAPH srcmixer output channel
  *
  ****************************************************************************/
-CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEVICE_e
+CSL_CAPH_MIXER_e csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEVICE_e
 		sink)
 {
-	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
+	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
 	switch (sink) {
 	case CSL_CAPH_DEV_EP:
@@ -1156,12 +1156,12 @@ void csl_caph_srcmixer_release_inchnl(CSL_CAPH_SRCM_INCHNL_e chnl)
 /****************************************************************************
  *
  *  Function Name: void csl_caph_srcmixer_release_outchnl
- *  (CSL_CAPH_SRCM_MIX_OUTCHNL_e chnl)
+ *  (CSL_CAPH_MIXER_e chnl)
  *
  *  Description: release CAPH srcmixer output channel
  *
  ****************************************************************************/
-void csl_caph_srcmixer_release_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e chnl)
+void csl_caph_srcmixer_release_outchnl(CSL_CAPH_MIXER_e chnl)
 {
 	UInt8 ch = 0;
 	UInt8 chalOutChnl = 0x0;
@@ -1718,16 +1718,16 @@ void csl_caph_srcmixer_change_samplerate(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 
 /****************************************************************************
  *
- *  Function Name:  csl_caph_srcmixer_set_mix_in_gain
+ *  Function Name:  csl_srcmixer_setMixInGain
  *			(CSL_CAPH_SRCM_INCHNL_e inChnl,
- *			CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+ *			CSL_CAPH_MIXER_e outChnl,
  *			int gainL_mB, int gainR_mB)
  *
  *  Description: Set the mixer input gain
  *
  ****************************************************************************/
-void csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl,
-		CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+void csl_srcmixer_setMixInGain(CSL_CAPH_SRCM_INCHNL_e inChnl,
+		CSL_CAPH_MIXER_e outChnl,
 		int gainL_mB, int gainR_mB)
 {
 	CAPH_SRCMixer_CHNL_e chalInChnl = CAPH_SRCM_CH_NONE;
@@ -1965,13 +1965,13 @@ void csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 
 /****************************************************************************
  *
- *  Function Name:  csl_caph_srcmixer_set_mix_all_in_gain
- *  ( CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, int gainL_mB, int gainR_mB)
+ *  Function Name:  csl_srcmixer_setMixAllInGain
+ *  ( CSL_CAPH_MIXER_e outChnl, int gainL_mB, int gainR_mB)
  *
  *  Description: set the mixer input gain on all inputs
  *
  ****************************************************************************/
-void csl_caph_srcmixer_set_mix_all_in_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+void csl_srcmixer_setMixAllInGain(CSL_CAPH_MIXER_e outChnl,
 					   int gainL_mB, int gainR_mB)
 {
 	UInt8 chalOutChnl = 0x0;
@@ -2161,13 +2161,13 @@ void csl_caph_srcmixer_set_mix_all_in_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 
 /****************************************************************************
  *
- *  Function Name: csl_caph_srcmixer_set_mix_out_gain
- *  (CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl, int gain_mB)
+ *  Function Name: csl_srcmixer_setMixOutGain
+ *  (CSL_CAPH_MIXER_e outChnl, int gain_mB)
  *
  *  Description: Set the SRCMixer mixer output gain
  *
  ****************************************************************************/
-void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
 					int gain_mB)
 {
 	UInt8 chalOutChnl = 0x0;
@@ -2193,7 +2193,7 @@ void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 	 */
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
-			      "csl_caph_srcmixer_set_mix_out_gain:: ch %x"
+			      "csl_srcmixer_setMixOutGain:: ch %x"
 			      "gain %d, scale 0x%x.\r\n",
 			      outChnl, gain_mB, scale));
 
@@ -2214,15 +2214,15 @@ void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 
 /****************************************************************************
  *
- *  Function Name: csl_caph_srcmixer_set_mix_out_bit_select(
- *			CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+ *  Function Name: csl_srcmixer_setMixBitSel(
+ *			CSL_CAPH_MIXER_e outChnl,
  *					unsigned int bit_shift)
  *
  *  Description: Set the SRCMixer mixer output coarse gain
  *
  ****************************************************************************/
-void csl_caph_srcmixer_set_mix_out_bit_select(CSL_CAPH_SRCM_MIX_OUTCHNL_e
-					      outChnl, unsigned int bit_shift)
+void csl_srcmixer_setMixBitSel(CSL_CAPH_MIXER_e outChnl,
+		unsigned int bit_shift)
 {
 	UInt8 chalOutChnl = 0x0;
 

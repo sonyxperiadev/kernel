@@ -70,20 +70,6 @@
 #define INFIFO_NO_THRES	0x0
 
 /**
-* CAPH SRCMixer Mixer gains
-******************************************************************************/
-struct CSL_CAPH_SRCM_MIX_GAIN_t {
-	UInt16 mixInGainL;
-	UInt16 mixInGainR;
-	UInt16 mixOutGainL;
-	UInt16 mixOutGainR;
-	UInt16 mixOutCoarseGainL;
-	UInt16 mixOutCoarseGainR;
-};
-
-#define CSL_CAPH_SRCM_MIX_GAIN_t struct CSL_CAPH_SRCM_MIX_GAIN_t
-
-/**
 * CAPH SRCMixer input channel sample rate
 ******************************************************************************/
 enum CSL_CAPH_SRCM_INSAMPLERATE_e {
@@ -147,7 +133,7 @@ enum CSL_CAPH_SRCM_SRC_OUTCHNL_e {
 /**
 * CAPH SRCMixer output channel
 ******************************************************************************/
-enum CSL_CAPH_SRCM_MIX_OUTCHNL_e {
+enum CSL_CAPH_MIXER_e {
 	CSL_CAPH_SRCM_CH_NONE = 0x00,
 	CSL_CAPH_SRCM_STEREO_CH1_L = 0x01,
 	CSL_CAPH_SRCM_STEREO_CH1_R = 0x02,
@@ -157,7 +143,7 @@ enum CSL_CAPH_SRCM_MIX_OUTCHNL_e {
 	CSL_CAPH_SRCM_STEREO_CH2_R = 0x08,
 };
 
-#define CSL_CAPH_SRCM_MIX_OUTCHNL_e enum CSL_CAPH_SRCM_MIX_OUTCHNL_e
+#define CSL_CAPH_MIXER_e enum CSL_CAPH_MIXER_e
 
 /**
 * CAPH SRCMixer output channel sample rate
@@ -178,7 +164,7 @@ struct CSL_CAPH_SRCM_ROUTE_t {
 	UInt8 inThres;
 	CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate;
 	CSL_CAPH_DATAFORMAT_e inDataFmt;
-	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl;
+	CSL_CAPH_MIXER_e outChnl;
 	CSL_CAPH_SRCM_SRC_OUTCHNL_e tapOutChnl;
 	UInt8 outThres;
 	CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate;
@@ -253,9 +239,9 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
 *
 *  @param  sink (in) Device to output audio.
 *
-*  @return CSL_CAPH_SRCM_MIX_OUTCHNL_e srcmixer output channel
+*  @return CSL_CAPH_MIXER_e srcmixer output channel
 *****************************************************************************/
-CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEVICE_e
+CSL_CAPH_MIXER_e csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEVICE_e
 							     sink);
 
 /**
@@ -276,7 +262,7 @@ void csl_caph_srcmixer_release_inchnl(CSL_CAPH_SRCM_INCHNL_e chnl);
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_release_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e chnl);
+void csl_caph_srcmixer_release_outchnl(CSL_CAPH_MIXER_e chnl);
 
 /**
 *
@@ -341,8 +327,8 @@ CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcmixer_samplerate_mapping(
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl,
-		CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+void csl_srcmixer_setMixInGain(CSL_CAPH_SRCM_INCHNL_e inChnl,
+		CSL_CAPH_MIXER_e outChnl,
 		int gainL_mB, int gainR_mB);
 
 /**
@@ -355,7 +341,7 @@ void csl_caph_srcmixer_set_mix_in_gain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mix_all_in_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+void csl_srcmixer_setMixAllInGain(CSL_CAPH_MIXER_e outChnl,
 		int gainL_mB, int gainR_mB);
 
 
@@ -368,7 +354,7 @@ void csl_caph_srcmixer_set_mix_all_in_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
 		int gain_mB);
 
 
@@ -381,8 +367,8 @@ void csl_caph_srcmixer_set_mix_out_gain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_set_mix_out_bit_select(CSL_CAPH_SRCM_MIX_OUTCHNL_e
-		outChnl, unsigned int bit_shift);
+void csl_srcmixer_setMixBitSel(CSL_CAPH_MIXER_e outChnl,
+		unsigned int bit_shift);
 
 /**
 *
@@ -412,7 +398,7 @@ CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_inchnl_fifo(CSL_CAPH_SRCM_INCHNL_e
 *  @return CAPH_SRCMixer_FIFO_e fifo
 *****************************************************************************/
 CAPH_SRCMixer_FIFO_e
-csl_caph_srcmixer_get_outchnl_fifo(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
+csl_caph_srcmixer_get_outchnl_fifo(CSL_CAPH_MIXER_e outChnl);
 /**
 *
 *  @brief  get the SRCMixer Tap Out channel FIFO
@@ -493,7 +479,7 @@ void csl_caph_srcmixer_set_inchnl_status(CSL_CAPH_SRCM_INCHNL_e chnl);
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_MIXER_e outChnl,
 				     CSL_CAPH_SRCM_INCHNL_e inChnl);
 
 /**
@@ -580,7 +566,7 @@ void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl,
 *
 *  @return mixer input channel
 *****************************************************************************/
-UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
+UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_MIXER_e outChnl);
 
 /**
 *

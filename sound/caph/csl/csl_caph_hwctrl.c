@@ -51,6 +51,10 @@
 #include "csl_caph_pcm_sspi.h"
 
 #include "csl_caph_hwctrl.h"
+
+#include "csl_audio_render.h"
+#include "csl_audio_capture.h"
+
 #include <mach/io_map.h>
 #include "clock.h"
 #include "clk.h"
@@ -658,7 +662,7 @@ static CSL_CAPH_DATAFORMAT_e csl_caph_get_sink_dataformat
  * moved to mixer file.
  */
 static CAPH_SWITCH_TRIGGER_e
-csl_caph_srcmixer_get_outchnl_trigger(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
+csl_caph_srcmixer_get_outchnl_trigger(CSL_CAPH_MIXER_e outChnl)
 {
 	CAPH_SWITCH_TRIGGER_e trigger = CAPH_VOID;
 
@@ -862,7 +866,7 @@ static void csl_caph_obtain_blocks
 	CSL_CAPH_CFIFO_FIFO_e fifo;
 	CSL_CAPH_SWITCH_CHNL_e sw;
 	CSL_CAPH_SRCM_INCHNL_e srcmIn;
-	CSL_CAPH_SRCM_MIX_OUTCHNL_e srcmOut;
+	CSL_CAPH_MIXER_e srcmOut;
 	CSL_CAPH_SRCM_SRC_OUTCHNL_e srcmTap;
 	CSL_CAPH_DATAFORMAT_e dataFormat;
 	CSL_CAPH_DEVICE_e sink;
@@ -1829,8 +1833,7 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID
 	csl_caph_hwctrl_set_srcmixer_filter(path);
 
 	if (path->source == CSL_CAPH_DEV_BT_MIC) {
-		csl_caph_srcmixer_set_mix_all_in_gain
-			(pSrcmRoute->outChnl, 0, 0);
+		csl_srcmixer_setMixAllInGain(pSrcmRoute->outChnl, 0, 0);
 	}
 }
 
@@ -4335,10 +4338,10 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus)
 *  Description: get mixer out channel for BT speaker path
 *
 ****************************************************************************/
-CSL_CAPH_SRCM_MIX_OUTCHNL_e
+CSL_CAPH_MIXER_e
 csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEVICE_e sink)
 {
-	CSL_CAPH_SRCM_MIX_OUTCHNL_e rtn = CSL_CAPH_SRCM_CH_NONE;
+	CSL_CAPH_MIXER_e rtn = CSL_CAPH_SRCM_CH_NONE;
 
 	if (sink == CSL_CAPH_DEV_BT_SPKR) {
 		if (bt_spk_mixer_sink == CSL_CAPH_DEV_IHF)
@@ -4388,54 +4391,139 @@ static void csl_caph_hwctrl_set_srcmixer_filter
 
 /****************************************************************************
 *
-*  Function Name: Boolean csl_caph_hwctrl_ssp_running(void)
+*  Function Name: csl_caph_FindMixInCh
 *
+*  Description: Find mixer input channel
 *
-*  Description: check if the ssp is running when it is enabled
-*
-*
-****************************************************************************/
-static Boolean csl_caph_hwctrl_ssp_running(void)
+*****************************************************************************/
+CSL_CAPH_SRCM_INCHNL_e csl_caph_FindMixInCh(CSL_CAPH_DEVICE_e speaker,
+	unsigned int pathID)
 {
-	return pcmRxRunning || pcmTxRunning || fmTxRunning || fmRxRunning;
+	int i = 0, sinkNo = 0;
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+
+	if (pathID != 0) {
+		path = &HWConfig_Table[pathID-1];
+
+		/* find the sinkNo with the same sink of input speaker*/
+		for (i = 0; i < MAX_SINK_NUM; i++) {
+			if (path->sink[i] == speaker) {
+				sinkNo = i;
+				break;
+			}
+		}
+		return path->srcmRoute[sinkNo][0].inChnl;
+	} else {
+		return CSL_CAPH_SRCM_INCHNL_NONE;
+	}
 }
 
 /****************************************************************************
 *
-*  Function Name: void csl_caph_hwctrl_tdm_config(
-*						CSL_CAPH_HWConfig_Table_t *path, int sinkNo)
+*  Function Name: csl_caph_FindMixer
 *
+*  Description: Find mixer
 *
-*  Description: config the tdm when it is enabled.
-*
-*
-****************************************************************************/
-static void csl_caph_hwctrl_tdm_config(
-	CSL_CAPH_HWConfig_Table_t *path, int sinkNo)
+*****************************************************************************/
+CSL_CAPH_MIXER_e csl_caph_FindMixer(CSL_CAPH_DEVICE_e speaker,
+	unsigned int pathID)
 {
-	if (!csl_caph_hwctrl_ssp_running()) {
-			memset(&pcmCfg, 0, sizeof(pcmCfg));
-			pcmCfg.mode = CSL_PCM_MASTER_MODE;
-			pcmCfg.protocol   = CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL;
-			pcmCfg.format	  = CSL_PCM_WORD_LENGTH_16_BIT;
-			if (path->source == CSL_CAPH_DEV_DSP
-				|| path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
-				/* this is unpacked 16bit, 32bit per sample with msb = 0 */
-				pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT;
-			else if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
-				&& path->source == CSL_CAPH_DEV_BT_MIC)
-				pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
-			pcmCfg.sample_rate = path->snk_sampleRate;
-			if (path->source == CSL_CAPH_DEV_DSP)
-				pcmCfg.sample_rate = path->src_sampleRate;
-			pcmCfg.interleave = TRUE;
-			pcmCfg.ext_bits = 0;
-			pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
-			pcmTxCfg.enable = 1;
-			pcmTxCfg.loopback_enable = 0;
-			pcmRxCfg.enable = 1;
-			pcmRxCfg.loopback_enable = 0;
-			csl_pcm_config(pcmHandleSSP, &pcmCfg, &pcmTxCfg, &pcmRxCfg);
+	int i = 0, sinkNo = 0;
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	CSL_CAPH_MIXER_e mixer = CSL_CAPH_SRCM_STEREO_CH2_L;
+
+	if (pathID != 0) {
+		path = &HWConfig_Table[pathID-1];
+
+		/* find the sinkNo with the same sink of input speaker*/
+		for (i = 0; i < MAX_SINK_NUM; i++) {
+			if (path->sink[i] == speaker) {
+				sinkNo = i;
+				break;
+			}
+		}
+		mixer = path->srcmRoute[sinkNo][0].outChnl;
+	} else {
+		if (speaker == CSL_CAPH_DEV_EP) {
+			mixer = CSL_CAPH_SRCM_STEREO_CH2_L;
+		} else if (speaker == CSL_CAPH_DEV_IHF) {
+			mixer = CSL_CAPH_SRCM_STEREO_CH2_R;
+			/*for the case of Stereo_IHF*/
+			mixer = (CSL_CAPH_SRCM_STEREO_CH2_R |
+				 CSL_CAPH_SRCM_STEREO_CH2_L);
+		} else if (speaker == CSL_CAPH_DEV_HS) {
+			mixer = CSL_CAPH_SRCM_STEREO_CH1;
+		}
 	}
+
+	return mixer;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_FindRenderPath
+*
+*  Description: return pointer to path table
+*
+*****************************************************************************/
+CSL_CAPH_HWConfig_Table_t *csl_caph_FindRenderPath(unsigned int streamID)
+{
+	CSL_CAPH_Render_Drv_t *audDrv = NULL;
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+
+	audDrv = GetRenderDriverByType(streamID);
+
+	if (audDrv != NULL)
+		if (audDrv->pathID)
+			path = &HWConfig_Table[audDrv->pathID - 1];
+
+	return path;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_FindCapturePath
+*
+*  Description: return pointer to path table
+*
+*****************************************************************************/
+CSL_CAPH_HWConfig_Table_t *csl_caph_FindCapturePath(unsigned int streamID)
+{
+	CSL_CAPH_Capture_Drv_t *audDrv = NULL;
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+
+	audDrv = GetCaptureDriverByType(streamID);
+
+	if (audDrv != NULL)
+		if (audDrv->pathID)
+			path = &HWConfig_Table[audDrv->pathID - 1];
+
+	return path;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_FindRenderPathID
+*
+*  Description: Find render path ID
+*
+*****************************************************************************/
+CSL_CAPH_PathID csl_caph_FindRenderPathID(CSL_CAPH_DEVICE_e sink_dev,
+	CSL_CAPH_DEVICE_e src_dev)
+{
+	int i, j;
+	CSL_CAPH_PathID path = 0;
+
+	for (i = 0; i < MAX_AUDIO_PATH; i++) {
+		for (j = 0; j < MAX_SINK_NUM; j++) {
+			if (HWConfig_Table[i].sink[j] == sink_dev
+			    && HWConfig_Table[i].source == src_dev) {
+				path = HWConfig_Table[i].pathID;
+				break;
+			}
+		}
+	}
+
+	return path;
 }
 

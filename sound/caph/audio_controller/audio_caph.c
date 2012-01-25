@@ -431,55 +431,19 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_LAST - 1));
 			if (param_start->pdev_prop->p[0].drv_type ==
 			    AUDIO_DRIVER_PLAY_AUDIO) {
-				/*
-				 * do not change voice call's audio mode. will
-				 * delete the lines.
-				 * can set music app and mode
-				 */
-#if defined(USE_NEW_AUDIO_PARAM)
-				/* need to fill the audio app, fill 0 for now */
-				SaveAudioApp(AUDIO_APP_MUSIC);
-#endif
-				SaveAudioMode(param_start->
-							  pdev_prop->p[0].sink);
 
 				/* Enable the playback the path */
-				AUDCTRL_EnablePlay(param_start->pdev_prop->p[0]
-						   .source,
-						   param_start->pdev_prop->p[0].
-						   sink, param_start->channels,
-						   param_start->rate, &path);
+				AUDCTRL_EnablePlay(
+					param_start->pdev_prop->p[0].source,
+					param_start->pdev_prop->p[0].sink,
+					param_start->channels,
+					param_start->rate, &path);
 				pathID[param_start->stream] = path;
 
 				/*
 				 * AUDCTRL_EnablePlay enables HW path, reads
 				 * SYSPARM and sets HW gains as defined in
 				 * SYSPARM.
-				 */
-
-				/*
-				 * when playback / recording starts audio
-				 * driver sets HW gains from SYSPARM
-				 * (default gain)
-				 * amixer command to change volume /gain is
-				 * only effective AFTER playback / recording
-				 * has started.
-				 * When HW team uses amixer command to change
-				 * volume / gain after playback/recording has
-				 * started, audio driver sets HW to achieve the
-				 * user required gain.
-				 * HW team can use AT command (at*mdsptst=201,
-				 * addr, value ) to directly poke HW gain
-				 * registers for their test purpose.
-				 *
-				 * AUDCTRL_SetPlayVolume (param_start->
-				 * pdev_prop->p[0].hw_id,
-				 * param_start->pdev_prop->p[0].speaker,
-				 * AUDIO_GAIN_FORMAT_mB,
-				 * param_start->vol[0],
-				 * param_start->vol[1],
-				 * pathID[param_start->stream]
-				 * );
 				 */
 
 				AUDIO_DRIVER_Ctrl(param_start->drv_handle,
@@ -614,28 +578,6 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			/*
 			 * AUDCTRL_EnableRecord enables HW path, reads SYSPARM
 			 * and sets HW gains as defined in SYSPARM.
-			 */
-
-			/*
-			 * when playback / recording starts audio driver sets
-			 * HW gains from SYSPARM. (default gain)
-			 * amixer command to change volume /gain is only
-			 * effective AFTER playback / recording has started.
-			 * When HW team uses amixer command to change volume /
-			 * gain after playback/recording has started, audio
-			 * driver
-			 * sets HW to achieve the user required gain.
-			 * HW team can use AT command (at*mdsptst=201, addr,
-			 * value ) to directly poke HW gain registers for their
-			 * test purpose.
-			 *
-			 * AUDCTRL_SetRecordGain(param_start->pdev_prop->
-			 * c.hw_id,
-			 * param_start->pdev_prop->c.mic,
-			 * AUDIO_GAIN_FORMAT_mB,
-			 * param_start->vol[0],
-			 * param_start->vol[1],
-			 * pathID[param_start->stream]);
 			 */
 
 			}
@@ -920,25 +862,6 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					   AUDIO_SAMPLING_RATE_48000, &path);
 
 			pathID[parm_FM->stream] = path;
-
-		/*
-		 * when playback / recording starts audio driver sets HW gains
-		 * from SYSPARM. (default gain)
-		 * amixer command to change volume /gain is only effective
-		 * AFTER playback / recording has started.
-		 * When HW team uses amixer command to change volume / gain
-		 * after playback/recording has started, audio driver sets HW
-		 * to achieve the user required gain.
-		 * HW team can use AT command (at*mdsptst=201, addr, value )
-		 * to directly poke HW gain registers for their test purpose.
-		 *
-		 * AUDCTRL_SetPlayVolume (parm_FM->hw_id,
-		 *	parm_FM->device,
-		 *	AUDIO_GAIN_FORMAT_mB,
-		 *	parm_FM->volume1,
-		 *	parm_FM->volume2,
-		 *	pathID[parm_FM->stream]);
-		 */
 		}
 		break;
 	case ACTION_AUD_DisableFMPlay:

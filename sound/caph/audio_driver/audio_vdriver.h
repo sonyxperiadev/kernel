@@ -310,8 +310,6 @@ void AUDDRV_SetAudioMode_ForMusicRecord(AudioMode_t audio_mode,
 				AudioApp_t audio_app,
 				unsigned int arg_pathID);
 
-AudioMode_t AUDDRV_GetAudioModeBySink(AUDIO_SINK_Enum_t sink);
-
 int AUDDRV_User_CtrlDSP(AudioDrvUserCtrl_t UserCtrlType,
 				Boolean enable, Int32 size, void *param);
 
@@ -345,8 +343,7 @@ void AUDDRV_SetTelephonyMicGain(AUDIO_SOURCE_Enum_t mic,
 *
 ****************************************************************************/
 void AUDDRV_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
-		int volume,
-		AUDIO_GAIN_FORMAT_t gain_format);
+		int volume_mB);
 
 void AUDDRV_Telephony_MuteMic(AUDIO_SOURCE_Enum_t mic);
 void AUDDRV_Telephony_UnmuteMic(AUDIO_SOURCE_Enum_t mic);

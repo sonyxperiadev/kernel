@@ -324,7 +324,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0);
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0);
 
-	mode = AUDDRV_GetAudioModeBySink(speaker);
+	mode = GetAudioModeBySink(speaker);
 
 	/* check to see the network speech coder's sampling rate and determine
 	   our HW sampling rate (and audio mode). */
@@ -1274,50 +1274,6 @@ void AUDDRV_SetAudioMode_ForMusicRecord(AudioMode_t audio_mode,
 	/* AUDDRV_SetAudioMode( audio_mode ); */
 }
 
-/*********************************************************************
-//Description:
-//      Get audio mode from sink
-//Parameters
-//      mode -- audio mode
-//      sink -- Sink device coresponding to audio mode
-//Return        none
-**********************************************************************/
-AudioMode_t AUDDRV_GetAudioModeBySink(AUDIO_SINK_Enum_t sink)
-{
-	switch (sink) {
-	case AUDIO_SINK_HANDSET:
-		return AUDIO_MODE_HANDSET;
-
-	case AUDIO_SINK_HEADSET:
-		return AUDIO_MODE_HEADSET;
-
-	case AUDIO_SINK_HANDSFREE:
-		return AUDIO_MODE_HANDSFREE;
-
-	case AUDIO_SINK_BTM:
-	case AUDIO_SINK_BTS:
-		return AUDIO_MODE_BLUETOOTH;
-
-	case AUDIO_SINK_LOUDSPK:
-		return AUDIO_MODE_SPEAKERPHONE;
-
-	case AUDIO_SINK_TTY:
-		return AUDIO_MODE_TTY;
-
-	case AUDIO_SINK_HAC:
-		return AUDIO_MODE_HAC;
-
-	case AUDIO_SINK_USB:
-		return AUDIO_MODE_USB;
-
-	case AUDIO_SINK_I2S:
-	case AUDIO_SINK_VIBRA:
-	default:
-		log(1, "%s can not find mode %d\n", __func__, sink);
-		return AUDIO_MODE_INVALID;
-	}
-}
-
 /*=============================================================================
 //
 // Function Name: AUDDRV_User_CtrlDSP
@@ -1505,37 +1461,33 @@ echoNlp_parms.echo_nlp_gain; */
 //============================================================================
 */
 void AUDDRV_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
-				   int volume, AUDIO_GAIN_FORMAT_t gain_format)
+				   int vol_mB)
 {
-	log(1, "%s volume = %d\n", __func__, volume);
+	log(1, "%s volume = %d\n", __func__, vol_mB);
 
-	if (gain_format == AUDIO_GAIN_FORMAT_mB) {
-		if (volume <= -10000) {	/* less than -100dB */
-			audio_control_generic(
-			AUDDRV_CPCMD_SetBasebandDownlinkMute,
-			 0, 0, 0, 0, 0);	/* mute */
-		} else {
-/*********
-	OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
+	if (vol_mB <= -10000) {	/* less than -100dB */
+		audio_control_generic(AUDDRV_CPCMD_SetBasebandDownlinkMute,
+			0, 0, 0, 0, 0);	/* mute */
+	} else {
 
-	omega_voice_parms = AudParmP()[
-		GetAudioMode()].omega_voice_parms;
-	audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam,
-		(UInt32)(&(omega_voice_parms[telephony_dl_gain_dB])),
-		0, 0, 0, 0);
-********/
+/***
+OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
 
-/* can it pass negative number - volume?
-//at LMP int=>UInt32, then at CP UInt32=>int16 */
+omega_voice_parms = AudParmP()[
+	GetAudioMode()].omega_voice_parms;
+audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam,
+	(UInt32)(&(omega_voice_parms[telephony_dl_gain_dB])),
+	0, 0, 0, 0);
+***/
 
-/* if parm4 (OV_volume_step) is zero, volumectrl.c will calculate OV volume
- step based on digital_gain_dB, VOICE_VOLUME_MAX and
- NUM_SUPPORTED_VOLUME_LEVELS.*/
+/* can it pass negative number - vol_mB?
+at LMP int=>UInt32, then at CP UInt32=>int16 */
+
+/* if parm4 (OV_volume_step) is zero, volumectrl.c will calculate OV volume step
+based on digital_gain_dB, VOICE_VOLUME_MAX and NUM_SUPPORTED_VOLUME_LEVELS.*/
 /* DSP accepts [-3600, 0] mB */
-			audio_control_generic
-			    (AUDDRV_CPCMD_SetBasebandDownlinkGain, volume, 0, 0,
-			     0, 0);
-		}
+		audio_control_generic(AUDDRV_CPCMD_SetBasebandDownlinkGain,
+			vol_mB, 0, 0, 0, 0);
 	}
 }
 
@@ -1960,44 +1912,25 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 	int mixOutGain;	/* Bit12:0, Output Fine Gain */
 	int mixBitSel;
 	int pmu_gain = 0;
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
+
+#ifdef CONFIG_BCM_MODEM
+	SysAudioParm_t *p;
+#else
+	AudioSysParm_t *p;
+#endif
 
 #if !defined(USE_NEW_AUDIO_PARAM)
-#ifdef CONFIG_BCM_MODEM
-	SysAudioParm_t *p = &(AudParmP()[arg_audio_mode]);
+	p = &(AudParmP()[arg_audio_mode]);
 #else
-	AudioSysParm_t *p = &(AudParmP()[arg_audio_mode]);
+	p = &(AudParmP()[arg_audio_mode + GetAudioApp() * AUDIO_MODE_NUMBER]);
 #endif
-#else
-#ifdef CONFIG_BCM_MODEM
-	SysAudioParm_t *p = &(AudParmP()
-			      [arg_audio_mode +
-			       GetAudioApp() * AUDIO_MODE_NUMBER]);
-#else
-	AudioSysParm_t *p = &(AudParmP()
-			      [arg_audio_mode +
-			       GetAudioApp() * AUDIO_MODE_NUMBER]);
-#endif
-#endif
-
-	CSL_CAPH_HWConfig_Table_t *path = NULL;
-	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
 	log(1, "%s mode=%d, app %d, pathID %d\n",
 			__func__, arg_audio_mode, audio_app, arg_pathID);
 
 	/* Load the speaker gains form sysparm. */
-	/******
-		Int16 dspDLGain = 0;
-
-		// Set DSP DL gain from sysparm.
-		if(isDSPNeeded == TRUE)
-		{
-			dspDLGain = 64;
-		//AudParmP()[mode].echo_nlp_downlink_volume_ctrl;
-		audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain,
-					dspDLGain, 0, 0, 0, 0);
-		}
-	********/
 
 	/*determine which mixer output to apply the gains to */
 
@@ -2060,12 +1993,12 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 			outChnl = path->srcmRoute[0][0].outChnl;
 		/*set HW mixer gain for arm2sp */
 		if (outChnl)
-			csl_caph_srcmixer_set_mix_in_gain(path->srcmRoute[0][0].
+			csl_srcmixer_setMixInGain(path->srcmRoute[0][0].
 				  inChnl, outChnl, mixInGain, mixInGain);
 	} else {
 		if (outChnl)
-			csl_caph_srcmixer_set_mix_all_in_gain(outChnl,
-			      mixInGain, mixInGain);
+			csl_srcmixer_setMixAllInGain(outChnl,
+				mixInGain, mixInGain);
 	}
 
 	if (outChnl) {
@@ -2086,8 +2019,8 @@ static void auddrv_SetAudioMode_speaker(AudioMode_t arg_audio_mode,
 		/* mixBitSel = mixBitSel / 24; */
 		/* bit_shift */
 
-		csl_caph_srcmixer_set_mix_out_bit_select(outChnl, mixBitSel);
-		csl_caph_srcmixer_set_mix_out_gain(outChnl, mixOutGain);
+		csl_srcmixer_setMixBitSel(outChnl, mixBitSel);
+		csl_srcmixer_setMixOutGain(outChnl, mixOutGain);
 	}
 
 	if (path != 0) {

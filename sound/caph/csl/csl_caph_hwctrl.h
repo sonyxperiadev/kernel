@@ -666,7 +666,7 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus);
 *  Description: get mixer out channel for speaker path
 *
 ****************************************************************************/
-CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEVICE_e
+CSL_CAPH_MIXER_e csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEVICE_e
 							       sink);
 
 /****************************************************************************
@@ -678,5 +678,63 @@ CSL_CAPH_SRCM_MIX_OUTCHNL_e csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEVICE_e
 *
 *****************************************************************************/
 CSL_CAPH_HWConfig_Table_t *csl_caph_hwctrl_GetHWConfigTable(void);
+
+/****************************************************************************
+*  @brief  Find mixer input channel
+*
+*  @param   speaker
+*  @param   pathID
+*
+*  @return CSL_CAPH_SRCM_INCHNL_e mixer input channel
+*
+*****************************************************************************/
+CSL_CAPH_SRCM_INCHNL_e csl_caph_FindMixInCh(CSL_CAPH_DEVICE_e speaker,
+	unsigned int pathID);
+
+/****************************************************************************
+*
+*  @brief  Find mixer
+*
+*  @param   speaker
+*  @param   pathID
+*
+*  @return CSL_CAPH_SRCM_INCHNL_e mixer input channel
+*
+*****************************************************************************/
+CSL_CAPH_MIXER_e csl_caph_FindMixer(CSL_CAPH_DEVICE_e speaker,
+	unsigned int pathID);
+
+/****************************************************************************
+*  @brief  Find render path
+*
+*  @param   streamID
+*
+*  @return CSL_CAPH_HWConfig_Table_t * pointer to path table
+*
+*****************************************************************************/
+CSL_CAPH_HWConfig_Table_t *csl_caph_FindRenderPath(unsigned int streamID);
+
+/****************************************************************************
+*  @brief  Find capture path
+*
+*  @param   streamID
+*
+*  @return CSL_CAPH_HWConfig_Table_t * pointer to path table
+*
+*****************************************************************************/
+CSL_CAPH_HWConfig_Table_t *csl_caph_FindCapturePath(unsigned int streamID);
+
+/****************************************************************************
+*  @brief  Find path (render path) ID
+*
+*  @param   sink_dev
+*  @param   src_dev
+*
+*  @return CSL_CAPH_PathID render path ID
+*
+*****************************************************************************/
+CSL_CAPH_PathID csl_caph_FindRenderPathID(CSL_CAPH_DEVICE_e sink_dev,
+	CSL_CAPH_DEVICE_e src_dev);
+
 
 #endif
