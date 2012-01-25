@@ -3084,8 +3084,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config,
 		|| (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000
 		&& path->chnlNum == AUDIO_CHANNEL_MONO)
 #endif
-		   )
-		{
+		) {
 			list = LIST_DMA_SW;
 		}
 	} else if (((path->source == CSL_CAPH_DEV_ANALOG_MIC)
@@ -3152,7 +3151,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config,
 		&& (path->sink[sinkNo] == CSL_CAPH_DEV_IHF)) {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
 			"Voice DL: DDR->AUDIOH(IHF)\r\n"));
-		list = LIST_DMA_SW;
+		/*to support MFD, IHF DL goes thru mixer*/
+		list = LIST_DMA_MIX_SW;
 	} else if ((path->source == CSL_CAPH_DEV_DSP)/*DSP-->SRC-->SW-->AUDIOH*/
 		&& ((path->sink[sinkNo] == CSL_CAPH_DEV_EP)
 		|| (path->sink[sinkNo] == CSL_CAPH_DEV_HS))) {

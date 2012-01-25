@@ -1811,8 +1811,15 @@ volume/gain, then set to HW, DSP.
 	AUDCTRL_SetRecordMute(src, mic, FALSE);
 #endif
 	/* Enable DSP UL for Voice Call. */
-	if (config.sink == CSL_CAPH_DEV_DSP)
+	if (config.sink == CSL_CAPH_DEV_DSP) {
+		if (!AUDDRV_InVoiceCall()) {
+			/* without setting mic gains (such as PGA),
+			idle mode recording gives low volume */
+			AUDDRV_SetAudioMode_ForMusicRecord(GetAudioMode(),
+				GetAudioApp(), 0);
+		}
 		AUDDRV_EnableDSPInput(source, sr);
+	}
 
 }
 
@@ -1886,8 +1893,7 @@ void AUDCTRL_DisableRecord(AUDIO_SOURCE_Enum_t source,
 	else
 		return;
 
-	if (path->src_sampleRate/*or snk_sampleRate?*/ ==
-		AUDIO_SAMPLING_RATE_48000)
+	if (path->snk_sampleRate == AUDIO_SAMPLING_RATE_48000)
 		RemoveAudioApp(AUDIO_APP_RECORDING_HQ);
 	else
 		RemoveAudioApp(AUDIO_APP_RECORDING);
@@ -1997,8 +2003,7 @@ Result_t AUDCTRL_StartCapture(unsigned int streamID)
 			mode = AUDIO_MODE_BLUETOOTH;
 	}
 
-	if (path->src_sampleRate/*or snk_sampleRate?*/ ==
-		AUDIO_SAMPLING_RATE_48000)
+	if (path->snk_sampleRate == AUDIO_SAMPLING_RATE_48000)
 		SetAudioApp(AUDIO_APP_RECORDING_HQ);
 	else
 		SetAudioApp(AUDIO_APP_RECORDING);
@@ -2034,8 +2039,7 @@ Result_t AUDCTRL_StopCapture(unsigned int streamID)
 	else
 		return 0;
 
-	if (path->src_sampleRate/*or snk_sampleRate?*/ ==
-		AUDIO_SAMPLING_RATE_48000)
+	if (path->snk_sampleRate == AUDIO_SAMPLING_RATE_48000)
 		RemoveAudioApp(AUDIO_APP_RECORDING_HQ);
 	else
 		RemoveAudioApp(AUDIO_APP_RECORDING);
