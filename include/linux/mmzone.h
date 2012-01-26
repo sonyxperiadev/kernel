@@ -41,6 +41,7 @@ enum {
 	MIGRATE_MOVABLE,
 	MIGRATE_PCPTYPES,	/* the number of types on the pcp lists */
 	MIGRATE_RESERVE = MIGRATE_PCPTYPES,
+#ifdef CONFIG_CMA
 	/*
 	 * MIGRATE_CMA migration type is designed to mimic the way
 	 * ZONE_MOVABLE works.  Only movable pages can be allocated
@@ -55,6 +56,7 @@ enum {
 	 * a single pageblock.
 	 */
 	MIGRATE_CMA,
+#endif
 	MIGRATE_ISOLATE,	/* can't allocate from here */
 	MIGRATE_TYPES
 };
