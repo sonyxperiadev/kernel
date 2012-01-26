@@ -1792,8 +1792,8 @@ static void __init rhea_ray_reserve(void)
 	board_common_reserve();
 }
 
-#define TSP_SDA 86
-#define TSP_SCL 87
+#define TSP_SDA 27
+#define TSP_SCL 26
 #if defined(CONFIG_I2C_GPIO)
 static struct i2c_gpio_platform_data touch_i2c_gpio_data = {
         .sda_pin    = TSP_SDA,
