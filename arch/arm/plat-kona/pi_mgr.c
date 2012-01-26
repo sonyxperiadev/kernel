@@ -237,7 +237,7 @@ int __pi_disable(struct pi *pi)
 			ret = pi->ops->enable(pi,0);
 		}
 	}
-	/*disable dependent PIs, if any*/
+	/*disable dependent PIs, if any, only state_allowed*/
 	for(inx =0; inx < pi->num_dep_pi;inx++)
 	{
 		dep_pi = pi_mgr_get(pi->dep_pi[inx]);
@@ -765,6 +765,7 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 	int i;
 	int found = 0;
 	unsigned long flgs;
+	struct pi* dep_pi;
 	struct pi_mgr_qos_object* qos = &pi_mgr.qos[pi_id];
 	struct pi *pi = pi_mgr.pi_list[pi_id];
 
@@ -821,6 +822,32 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 			BUG_ON(i == PI_MGR_MAX_STATE_ALLOWED);
 			if(!found)
 				pi->state_allowed = i-1;
+		}
+		/*Disabling LPM through QoS ?*/
+		if(!IS_ACTIVE_POLICY(pi->pi_state[old_state].state_policy) &&
+			IS_ACTIVE_POLICY(pi->pi_state[pi->state_allowed].state_policy))
+		{
+				/*Enable dependent PIs, if any*/
+			for(i =0; i < pi->num_dep_pi;i++)
+			{
+				dep_pi = pi_mgr_get(pi->dep_pi[i]);
+				BUG_ON(dep_pi == NULL);
+				__pi_enable(dep_pi);
+			}
+
+		}
+		/*re-enabling LPM PI through QoS ?*/
+		else if(IS_ACTIVE_POLICY(pi->pi_state[old_state].state_policy) &&
+			!IS_ACTIVE_POLICY(pi->pi_state[pi->state_allowed].state_policy))
+		{
+				/*disable dependent PIs, if any*/
+			for(i =0; i < pi->num_dep_pi;i++)
+			{
+				dep_pi = pi_mgr_get(pi->dep_pi[i]);
+				BUG_ON(dep_pi == NULL);
+				__pi_disable(dep_pi);
+			}
+
 		}
 
 		if(pi->init == PI_INIT_COMPLETE)

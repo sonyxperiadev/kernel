@@ -307,6 +307,11 @@ static struct pi_state sub_sys_states[] =
 
 		};
 
+static u32 sub_sys_dep_pi[] = {
+#ifdef CONFIG_RHEA_DORMANT_MODE
+	PI_MGR_PI_ID_ARM_CORE,
+#endif
+};
 
 static struct pi sub_sys_pi =
 	{
@@ -318,6 +323,8 @@ static struct pi sub_sys_pi =
 #endif
 		.num_ccu_id = ARRAY_SIZE(sub_sys_ccu),
 		.state_allowed = PI_STATE_RETENTION,
+		.dep_pi = sub_sys_dep_pi,
+		.num_dep_pi = ARRAY_SIZE(sub_sys_dep_pi),
 		.pi_state = sub_sys_states,
 		.num_states = ARRAY_SIZE(sub_sys_states),
 		.opp_active = 0,
