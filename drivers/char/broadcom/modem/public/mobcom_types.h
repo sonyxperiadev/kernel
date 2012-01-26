@@ -19,6 +19,10 @@
 #ifndef _INC_MS_BASIC_TYPES_H_
 #define _INC_MS_BASIC_TYPES_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** @{ */
 #ifndef UNDER_LINUX
 #define _BSDTYPES_DEFINED
@@ -112,5 +116,9 @@ typedef enum
 #define WORD_2_OFFSET 2 
 #endif
 
+
+#ifdef __cplusplus
+}
 #endif
 
+#endif  // _INC_MS_BASIC_TYPES_H_

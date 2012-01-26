@@ -18,6 +18,11 @@
 #ifndef _INC_AUDIO_TONES_DEF_H_
 #define _INC_AUDIO_TONES_DEF_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /****************************************************************
  * The following part configures the audio baseband code..
  ****************************************************************/
@@ -97,5 +102,9 @@ typedef enum {
 	TONE_TYPE_ALL
 } AudioToneType_en_t;
 
+
+#ifdef __cplusplus
+}
 #endif
 
+#endif  // _INC_AUDIO_TONES_DEF_H_

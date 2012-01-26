@@ -18,6 +18,9 @@
 #ifndef _RESULTCODE
 #define _RESULTCODE
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define SS_RESULT_START				50
 #define PDP_RESULT_START			70
@@ -316,4 +319,9 @@ typedef enum {
 
 /** @} */
 
+
+#ifdef __cplusplus
+}
 #endif
+
+#endif  // _RESULTCODE

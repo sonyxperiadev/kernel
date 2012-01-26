@@ -11,6 +11,10 @@
 #ifndef UELBS_API_H
 #define UELBS_API_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
 ** =================================================================================================
 **
@@ -220,5 +224,8 @@ extern T_UE_LBS_PARAMS ue_lbs_params[2];
 /* this Macro is used by URRC to write SCELL Params into the data-structure */
 #define WRITE_UE_LBS_PARAMS_PTR  (&ue_lbs_params[ue_lbs_index++ % 2])
 
-#endif   /* UELBS_API_H */
+#ifdef __cplusplus
+}
+#endif
 
+#endif   /* UELBS_API_H */

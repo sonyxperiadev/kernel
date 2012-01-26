@@ -23,6 +23,10 @@
 #ifndef _INC_CONSTS_H_
 #define _INC_CONSTS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define ADAP_FIR_ARRAY_LENGTH 15
 
 #define NOT_AVAIL		0xff
@@ -42,7 +46,7 @@
 
 extern	UInt32			isTestPointEnabled;
 #define _TP_OUTPUT(mask, x)	if(isTestPointEnabled & mask) { x ; }
-#endif
+#endif      
 
 #ifndef WIN32
 
@@ -442,9 +446,6 @@ extern UInt16 dummy_buff[1024];
 #endif
 #endif
 
-#endif
-
-
 #define	BIT00			0
 #define	BIT01			1
 #define	BIT02			2
@@ -551,3 +552,9 @@ extern UInt16 dummy_buff[1024];
 // rx FACCH buffer address = 0x100 + 68 = 0x6000144
 // rx DATA buffer address = 0x100 + 68 * 4  = 0x6000210	( actual data starts from 
 
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif    // _INC_CONSTS_H_
