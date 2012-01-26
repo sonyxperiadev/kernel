@@ -4391,6 +4391,59 @@ static void csl_caph_hwctrl_set_srcmixer_filter
 
 /****************************************************************************
 *
+*  Function Name: Boolean csl_caph_hwctrl_ssp_running(void)
+*
+*
+*  Description: check if the ssp is running when it is enabled
+*
+*
+****************************************************************************/
+static Boolean csl_caph_hwctrl_ssp_running(void)
+{
+	return pcmRxRunning || pcmTxRunning || fmTxRunning || fmRxRunning;
+}
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_hwctrl_tdm_config(
+*						CSL_CAPH_HWConfig_Table_t *path, int sinkNo)
+*
+*
+*  Description: config the tdm when it is enabled.
+*
+*
+****************************************************************************/
+static void csl_caph_hwctrl_tdm_config(
+	CSL_CAPH_HWConfig_Table_t *path, int sinkNo)
+{
+	if (!csl_caph_hwctrl_ssp_running()) {
+			memset(&pcmCfg, 0, sizeof(pcmCfg));
+			pcmCfg.mode = CSL_PCM_MASTER_MODE;
+			pcmCfg.protocol   = CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL;
+			pcmCfg.format	  = CSL_PCM_WORD_LENGTH_16_BIT;
+			if (path->source == CSL_CAPH_DEV_DSP
+				|| path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
+				/* this is unpacked 16bit, 32bit per sample with msb = 0 */
+				pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT;
+			else if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
+				&& path->source == CSL_CAPH_DEV_BT_MIC)
+				pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
+			pcmCfg.sample_rate = path->snk_sampleRate;
+			if (path->source == CSL_CAPH_DEV_DSP)
+				pcmCfg.sample_rate = path->src_sampleRate;
+			pcmCfg.interleave = TRUE;
+			pcmCfg.ext_bits = 0;
+			pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
+			pcmTxCfg.enable = 1;
+			pcmTxCfg.loopback_enable = 0;
+			pcmRxCfg.enable = 1;
+			pcmRxCfg.loopback_enable = 0;
+			csl_pcm_config(pcmHandleSSP, &pcmCfg, &pcmTxCfg, &pcmRxCfg);
+	}
+}
+
+/****************************************************************************
+*
 *  Function Name: csl_caph_FindMixInCh
 *
 *  Description: Find mixer input channel
