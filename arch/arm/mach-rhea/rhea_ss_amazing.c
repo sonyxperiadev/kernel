@@ -781,7 +781,7 @@ static struct i2c_board_info __initdata mpu6050_info[] =
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 
-#define HS_IRQ		gpio_to_irq(74)
+#define HS_IRQ		gpio_to_irq(31)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
 
