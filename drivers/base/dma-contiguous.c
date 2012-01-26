@@ -36,6 +36,7 @@
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #endif
+#include "dma-contiguous-trace.h"
 
 #ifndef SZ_1M
 #define SZ_1M (1 << 20)
@@ -633,6 +634,8 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 	if (!count)
 		return NULL;
 
+	trace_cma_alloc_start(cma, count, align);
+
 	mutex_lock(&cma_mutex);
 
 	for (;;) {
@@ -680,11 +683,16 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 	}
 
 	add_cma_stats(dev, cma, pfn, count, align, 1);
+
 	mutex_unlock(&cma_mutex);
 
 	pr_debug("%s(): returned %p\n", __func__, pfn_to_page(pfn));
+
+	trace_cma_alloc_end_success(cma, pfn, count);
+
 	return pfn_to_page(pfn);
-      error:
+error:
+	trace_cma_alloc_end_failed(cma, count);
 	mutex_unlock(&cma_mutex);
 	return NULL;
 
@@ -803,6 +811,8 @@ int dma_release_from_contiguous(struct device *dev, struct page *pages,
 	if (pfn < cma->base_pfn || pfn >= cma->base_pfn + cma->count)
 		return 0;
 
+	trace_cma_release_start(cma, pfn, count);
+
 	mutex_lock(&cma_mutex);
 
 	bitmap_clear(cma->bitmap, pfn - cma->base_pfn, count);
@@ -811,6 +821,9 @@ int dma_release_from_contiguous(struct device *dev, struct page *pages,
 	add_cma_stats(dev, cma, pfn, count, 0, 0);
 
 	mutex_unlock(&cma_mutex);
+
+	trace_cma_release_end(cma, pfn, count);
+
 	return 1;
 }
 
