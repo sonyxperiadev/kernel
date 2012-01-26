@@ -552,6 +552,10 @@ static struct i2c_board_info __initdata pca953x_2_info[] = {
 #endif
 #endif /* CONFIG_GPIO_PCA953X */
 
+#ifdef CONFIG_TOUCHSCREEN_BT403_AMAZING
+#define TSP_INT_GPIO_PIN      (121)
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
 #define TSP_INT_GPIO_PIN      (121)
 
@@ -598,7 +602,7 @@ static struct tma340_platform_data tma340_platform_data = {
 
 
 #endif /* CONFIG_TOUCHSCREEN_TMA340_COOPERVE */
-
+#if 0
 static struct i2c_board_info __initdata rhea_ss_i2cgpio0_board_info[] = {
 
 #ifdef CONFIG_TOUCHSCREEN_TMA340_COOPERVE
@@ -618,6 +622,19 @@ static struct i2c_board_info __initdata rhea_ss_i2cgpio0_board_info[] = {
 #endif
 
 };
+#endif
+
+#if defined(CONFIG_TOUCHSCREEN_BT403_AMAZING)
+static struct i2c_board_info __initdata zinitix_i2c_devices[] = {
+	{
+		I2C_BOARD_INFO("zinitix_isp", 0x50),
+	},
+	{
+		I2C_BOARD_INFO("Zinitix_tsp", 0x20),
+		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
+	},
+};
+#endif
 
 
 
@@ -1777,8 +1794,13 @@ static void __init rhea_ray_add_i2c_devices (void)
 			ARRAY_SIZE(mpu6050_info));
 #endif
 
+#if 0
 i2c_register_board_info(0x3, rhea_ss_i2cgpio0_board_info,
 				ARRAY_SIZE(rhea_ss_i2cgpio0_board_info));
+#endif //PSJ
+
+     i2c_register_board_info(0x3, zinitix_i2c_devices,
+				ARRAY_SIZE(zinitix_i2c_devices)); //PSJ
 }
 
 static int __init rhea_ray_add_lateInit_devices (void)

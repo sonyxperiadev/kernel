@@ -73,7 +73,7 @@ static struct __init pin_config board_pin_config[] = {
 #if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING) 
 	
 	/* GPIO121 for TCA9539 IO expander */
-	PIN_CFG(ICUSBDP, GPIO121, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(ICUSBDP, GPIO121, 0, OFF, OFF, 0, 0, 8MA),
 #else
 	/* GPIO74 for TCA9539 IO expander */
 	PIN_CFG(MMC1DAT4, GPIO74, 0, OFF, ON, 0, 0, 8MA),
@@ -94,10 +94,10 @@ static struct __init pin_config board_pin_config[] = {
 	/* SSP3 - PCM
 	   SSP3 pinmux is set since keypad also check the same pins currently */
 #ifndef CONFIG_MACH_RHEA_RAY_DEMO
-	PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO14, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO07, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
+	PIN_CFG(GPIO15, GPIO15, 0, OFF, OFF, 0, 0, 8MA), // SENSOR_SDA
+	PIN_CFG(GPIO14, GPIO14, 0, OFF, OFF, 0, 0, 8MA), // TP
+	PIN_CFG(GPIO07, GPIO7, 0, OFF, OFF, 0, 0, 8MA), //TP
+	PIN_CFG(GPIO06, GPIO6, 0, OFF,  ON, 0, 0, 8MA), //NC
 #endif
 
 	/* SSP4 - I2S */
@@ -157,9 +157,9 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO22, GPIO22, 0, OFF, ON, 0, 0, 8MA), //TOUCH_EN
 	PIN_CFG(GPIO23, LCDD5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO24, LCDD4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO25, GPIO25, 0, OFF, ON, 0, 0, 8MA), //@CAM_AF_EN
-	PIN_CFG(GPIO26, LCDD2, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO27, LCDD1, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO25, GPIO25, 0, OFF, ON, 0, 0, 8MA), //@CAM_AF_EN -> NFC_EN
+	PIN_CFG(GPIO26, GPIO26, 0, OFF, OFF, 0, 0, 16MA), // TSP_SCL
+	PIN_CFG(GPIO27, GPIO27, 0, OFF, OFF, 0, 0, 16MA), // TSP_SDA
 
 	/* PWM config - PWM4, PWM5*/
 	PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
@@ -193,7 +193,7 @@ static struct __init pin_config board_pin_config[] = {
 	 * On Rhearay EDN1x the MMC1 i.e SDIO3 is used for 
 	 * WLAN connectivity
 	 */
-#if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_SS)
+#if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING)
 	PIN_CFG(MMC1DAT0, MMC1DAT0, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(MMC1DAT1, MMC1DAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(MMC1DAT2, MMC1DAT2, 0, OFF, ON, 0, 0, 8MA),
@@ -226,11 +226,9 @@ static struct __init pin_config board_pin_config[] = {
 #endif
 
 
-	PIN_CFG(SSPDO, GPIO86, 0, OFF, OFF, 0, 0, 16MA),
-	PIN_CFG(SSPCK, GPIO87, 0, OFF, OFF, 0, 0, 16MA),
-	PIN_CFG(GPIO26, GPIO26, 0, OFF, OFF, 0, 0, 16MA),
-	PIN_CFG(GPIO27, GPIO27, 0, OFF, OFF, 0, 0, 16MA),
-	PIN_CFG(MMC1DAT6, GPIO72, 0, OFF, OFF, 0, 0, 16MA), //SD_DECTECT
+	PIN_CFG(SSPDO, SIM2DAT, 0, OFF, OFF, 0, 0, 16MA),
+	PIN_CFG(SSPCK, SIM2CLK, 0, OFF, OFF, 0, 0, 16MA),
+	PIN_CFG(DMIC0CLK, GPIO123, 0, OFF, OFF, 0, 0, 16MA), //SD_DECTECT
 	PIN_CFG(DSI0TE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(CAMCS0, GPIO43, 0, OFF, OFF, 0, 0, 16MA),
 };
