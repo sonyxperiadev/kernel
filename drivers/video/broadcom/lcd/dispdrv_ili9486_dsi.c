@@ -1034,8 +1034,9 @@ Int32 DISPDRV_PowerControl (
 
                     pPanel->pwrState = DISP_PWR_SLEEP_OFF;
 
-					gpio_direction_output(95, 1);
+//					gpio_direction_output(95, 1);
 					#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
+					gpio_direction_output(95, 1);
 					
 //					gpio_set_value_cansleep(BACKLIGHT_GPIO, 1);
 					#endif
