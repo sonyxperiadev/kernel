@@ -20,6 +20,7 @@
 #include <linux/videodev2.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
+#include <linux/videodev2_brcm.h>
 
 #undef dev_dbg
 #define dev_dbg(dev, format, arg...)   dev_printk(KERN_ERR , dev , format , ## arg)
@@ -2918,6 +2919,54 @@ static int s5k4ecgx_s_ext_ctrls(struct v4l2_subdev *sd,
 	return ret;
 }
 
+static long s5k4ecgx_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct s5k4ecgx_state *state =
+		container_of(sd, struct s5k4ecgx_state, sd);
+	int ret = 0;
+
+	switch(cmd) {
+
+		case VIDIOC_THUMB_SUPPORTED:
+		{
+			int *p = arg;
+			*p = 1; /* yes */
+			break;
+		}
+
+		case VIDIOC_THUMB_G_FMT:
+		{
+			struct v4l2_format *p = arg;
+			struct v4l2_pix_format *pix = &p->fmt.pix;
+			p->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+			/* fixed thumbnail resolution and format */
+			pix->width = 640;
+			pix->height = 480;
+			pix->bytesperline = 640 * 2;
+			pix->sizeimage = 640 * 480 * 2;
+			pix->field = V4L2_FIELD_ANY;
+			pix->colorspace = V4L2_COLORSPACE_JPEG,
+			pix->pixelformat = V4L2_PIX_FMT_UYVY;
+			break;
+		}
+
+		case VIDIOC_THUMB_S_FMT:
+		{
+			struct v4l2_format *p = arg;
+			/* for now we don't support setting thumbnail fmt and res */
+			ret = -EINVAL;
+			break;
+		}
+
+		default:
+			ret = -ENOIOCTLCMD;
+			break;
+	}
+
+	return ret;
+}
+
 #ifdef CONFIG_VIDEO_S5K4ECGX_DEBUG
 static void s5k4ecgx_dump_regset(struct s5k4ecgx_regset *regset)
 {
@@ -3330,6 +3379,7 @@ static const struct v4l2_subdev_core_ops s5k4ecgx_core_ops = {
 	.g_ctrl = s5k4ecgx_g_ctrl,
 	.s_ctrl = s5k4ecgx_s_ctrl,
 	.s_ext_ctrls = s5k4ecgx_s_ext_ctrls,
+	.ioctl	= s5k4ecgx_ioctl,
 };
 static const struct v4l2_subdev_video_ops s5k4ecgx_video_ops = {
 	.s_stream	= s5k4ecgx_s_stream,

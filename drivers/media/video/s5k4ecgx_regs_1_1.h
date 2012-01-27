@@ -14,7 +14,7 @@
 #ifndef __S5K4ECGX_REGS_1_1_H__
 #define __S5K4ECGX_REGS_1_1_H__
 
-
+#define JPEG_THUMB_ACTIVE
 #if 0 //Not working 
 
 static const u32 s5k4ecgx_init_reg1[] =
