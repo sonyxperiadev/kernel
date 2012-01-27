@@ -261,7 +261,7 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 			    adc_req(bcmpmu_adc_chipset_api->bcmpmu, &ar);
 			ibat = ar.raw;
 			*val = ibat;
-			pr_info("hal_adc_raw_read: IBAT reading returns %d",
+			pr_debug("hal_adc_raw_read: IBAT reading returns %d",
 				ibat);
 			return CSAPI_ADC_ERR_SUCCESS;
 		}
@@ -896,7 +896,7 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 								      [i + 1],
 								      NULL, 0),
 							&adc_raw, NULL, NULL);
-				printk(KERN_INFO "%s: Status %d, Raw %d\n",
+				printk(KERN_INFO "%s: Status %d, Unit %d\n",
 				       __func__, status, adc_raw);
 				i++;	/* since we are using two arguments here, add one extra to i */
 			} else {
