@@ -274,11 +274,12 @@ void AUDCTRL_Shutdown(void)
 ****************************************************************************/
 void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 {
-	log(1, "%s sink %d, mic %d\n", __func__, sink, source);
 
 #ifdef ENABLE_VOIF
 	AudioMode_t mode;
 #endif
+
+	log(1, "%s sink %d, mic %d\n", __func__, sink, source);
 
 	if (AUDDRV_Telephone_GetSampleRate() == AUDIO_SAMPLING_RATE_8000)
 		SetAudioApp(AUDIO_APP_VOICE_CALL);
