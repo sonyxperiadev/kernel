@@ -10,7 +10,7 @@
  *	2 of the License, or (at your option) any later version.
  *
  * Authors:	Alan Cox, <alan@lxorguk.ukuu.org.uk> (version 1)
- *              Mauro Carvalho Chehab <mchehab@infradead.org> (version 2)
+ *             Mauro Carvalho Chehab <mchehab@infradead.org> (version 2)
  *
  * Fixes:	20000516  Claudio Matsuoka <claudio@conectiva.com>
  *		- Added procfs support
@@ -40,7 +40,7 @@
  */
 
 static ssize_t show_index(struct device *cd,
-			 struct device_attribute *attr, char *buf)
+			  struct device_attribute *attr, char *buf)
 {
 	struct video_device *vdev = to_video_device(cd);
 
@@ -114,12 +114,14 @@ struct video_device *video_device_alloc(void)
 {
 	return kzalloc(sizeof(struct video_device), GFP_KERNEL);
 }
+
 EXPORT_SYMBOL(video_device_alloc);
 
 void video_device_release(struct video_device *vdev)
 {
 	kfree(vdev);
 }
+
 EXPORT_SYMBOL(video_device_release);
 
 void video_device_release_empty(struct video_device *vdev)
@@ -127,6 +129,7 @@ void video_device_release_empty(struct video_device *vdev)
 	/* Do nothing */
 	/* Only valid when the video_device struct is a static. */
 }
+
 EXPORT_SYMBOL(video_device_release_empty);
 
 static inline void video_get(struct video_device *vdev)
@@ -191,22 +194,22 @@ struct video_device *video_devdata(struct file *file)
 {
 	return video_device[iminor(file->f_path.dentry->d_inode)];
 }
-EXPORT_SYMBOL(video_devdata);
 
+EXPORT_SYMBOL(video_devdata);
 
 /* Priority handling */
 
 static inline bool prio_is_valid(enum v4l2_priority prio)
 {
 	return prio == V4L2_PRIORITY_BACKGROUND ||
-	       prio == V4L2_PRIORITY_INTERACTIVE ||
-	       prio == V4L2_PRIORITY_RECORD;
+	    prio == V4L2_PRIORITY_INTERACTIVE || prio == V4L2_PRIORITY_RECORD;
 }
 
 void v4l2_prio_init(struct v4l2_prio_state *global)
 {
 	memset(global, 0, sizeof(*global));
 }
+
 EXPORT_SYMBOL(v4l2_prio_init);
 
 int v4l2_prio_change(struct v4l2_prio_state *global, enum v4l2_priority *local,
@@ -223,12 +226,14 @@ int v4l2_prio_change(struct v4l2_prio_state *global, enum v4l2_priority *local,
 	*local = new;
 	return 0;
 }
+
 EXPORT_SYMBOL(v4l2_prio_change);
 
 void v4l2_prio_open(struct v4l2_prio_state *global, enum v4l2_priority *local)
 {
 	v4l2_prio_change(global, local, V4L2_PRIORITY_DEFAULT);
 }
+
 EXPORT_SYMBOL(v4l2_prio_open);
 
 void v4l2_prio_close(struct v4l2_prio_state *global, enum v4l2_priority local)
@@ -236,29 +241,31 @@ void v4l2_prio_close(struct v4l2_prio_state *global, enum v4l2_priority local)
 	if (prio_is_valid(local))
 		atomic_dec(&global->prios[local]);
 }
+
 EXPORT_SYMBOL(v4l2_prio_close);
 
 enum v4l2_priority v4l2_prio_max(struct v4l2_prio_state *global)
 {
 	if (atomic_read(&global->prios[V4L2_PRIORITY_RECORD]) > 0)
-		return V4L2_PRIORITY_RECORD;
+		 return V4L2_PRIORITY_RECORD;
 	if (atomic_read(&global->prios[V4L2_PRIORITY_INTERACTIVE]) > 0)
-		return V4L2_PRIORITY_INTERACTIVE;
+		 return V4L2_PRIORITY_INTERACTIVE;
 	if (atomic_read(&global->prios[V4L2_PRIORITY_BACKGROUND]) > 0)
-		return V4L2_PRIORITY_BACKGROUND;
+		 return V4L2_PRIORITY_BACKGROUND;
 	return V4L2_PRIORITY_UNSET;
 }
+
 EXPORT_SYMBOL(v4l2_prio_max);
 
 int v4l2_prio_check(struct v4l2_prio_state *global, enum v4l2_priority local)
 {
 	return (local < v4l2_prio_max(global)) ? -EBUSY : 0;
 }
+
 EXPORT_SYMBOL(v4l2_prio_check);
 
-
 static ssize_t v4l2_read(struct file *filp, char __user *buf,
-		size_t sz, loff_t *off)
+			 size_t sz, loff_t *off)
 {
 	struct video_device *vdev = video_devdata(filp);
 	int ret = -ENODEV;
@@ -275,7 +282,7 @@ static ssize_t v4l2_read(struct file *filp, char __user *buf,
 }
 
 static ssize_t v4l2_write(struct file *filp, const char __user *buf,
-		size_t sz, loff_t *off)
+			  size_t sz, loff_t *off)
 {
 	struct video_device *vdev = video_devdata(filp);
 	int ret = -ENODEV;
@@ -321,30 +328,30 @@ static long v4l2_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			mutex_unlock(vdev->lock);
 	} else if (vdev->fops->ioctl) {
 		/* This code path is a replacement for the BKL. It is a major
-		 * hack but it will have to do for those drivers that are not
-		 * yet converted to use unlocked_ioctl.
+		 *hack but it will have to do for those drivers that are not
+		 *yet converted to use unlocked_ioctl.
 		 *
 		 * There are two options: if the driver implements struct
-		 * v4l2_device, then the lock defined there is used to
-		 * serialize the ioctls. Otherwise the v4l2 core lock defined
-		 * below is used. This lock is really bad since it serializes
-		 * completely independent devices.
+		 *v4l2_device, then the lock defined there is used to
+		 *serialize the ioctls. Otherwise the v4l2 core lock defined
+		 *below is used. This lock is really bad since it serializes
+		 *completely independent devices.
 		 *
 		 * Both variants suffer from the same problem: if the driver
-		 * sleeps, then it blocks all ioctls since the lock is still
-		 * held. This is very common for VIDIOC_DQBUF since that
-		 * normally waits for a frame to arrive. As a result any other
-		 * ioctl calls will proceed very, very slowly since each call
-		 * will have to wait for the VIDIOC_QBUF to finish. Things that
-		 * should take 0.01s may now take 10-20 seconds.
+		 *sleeps, then it blocks all ioctls since the lock is still
+		 *held. This is very common for VIDIOC_DQBUF since that
+		 *normally waits for a frame to arrive. As a result any other
+		 *ioctl calls will proceed very, very slowly since each call
+		 *will have to wait for the VIDIOC_QBUF to finish. Things that
+		 *should take 0.01s may now take 10-20 seconds.
 		 *
 		 * The workaround is to *not* take the lock for VIDIOC_DQBUF.
 		 * This actually works OK for videobuf-based drivers, since
-		 * videobuf will take its own internal lock.
+		 *videobuf will take its own internal lock.
 		 */
 		static DEFINE_MUTEX(v4l2_ioctl_mutex);
 		struct mutex *m = vdev->v4l2_dev ?
-			&vdev->v4l2_dev->ioctl_lock : &v4l2_ioctl_mutex;
+		    &vdev->v4l2_dev->ioctl_lock : &v4l2_ioctl_mutex;
 
 		if (cmd != VIDIOC_DQBUF && mutex_lock_interruptible(m))
 			return -ERESTARTSYS;
@@ -362,8 +369,10 @@ static long v4l2_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #define v4l2_get_unmapped_area NULL
 #else
 static unsigned long v4l2_get_unmapped_area(struct file *filp,
-		unsigned long addr, unsigned long len, unsigned long pgoff,
-		unsigned long flags)
+					    unsigned long addr,
+					    unsigned long len,
+					    unsigned long pgoff,
+					    unsigned long flags)
 {
 	struct video_device *vdev = video_devdata(filp);
 
@@ -421,7 +430,7 @@ static int v4l2_open(struct inode *inode, struct file *filp)
 			mutex_unlock(vdev->lock);
 	}
 
-err:
+      err:
 	/* decrease the refcount in case of an error */
 	if (ret)
 		video_put(vdev);
@@ -464,15 +473,15 @@ static const struct file_operations v4l2_fops = {
 };
 
 /**
- * get_index - assign stream index number based on parent device
- * @vdev: video_device to assign index number to, vdev->parent should be assigned
+ *get_index - assign stream index number based on parent device
+ *@vdev: video_device to assign index number to, vdev->parent should be assigned
  *
  * Note that when this is called the new device has not yet been registered
- * in the video_device array, but it was able to obtain a minor number.
+ *in the video_device array, but it was able to obtain a minor number.
  *
  * This means that we can always obtain a free stream index number since
- * the worst case scenario is that there are VIDEO_NUM_DEVICES - 1 slots in
- * use of the video_device array.
+ *the worst case scenario is that there are VIDEO_NUM_DEVICES - 1 slots in
+ *use of the video_device array.
  *
  * Returns a free index number.
  */
@@ -504,7 +513,7 @@ static int get_index(struct video_device *vdev)
  *	@vdev: video device structure we want to register
  *	@type: type of device to register
  *	@nr:   which device node number (0 == /dev/video0, 1 == /dev/video1, ...
- *             -1 == first free)
+ *            -1 == first free)
  *	@warn_if_nr_in_use: warn if the desired device node number
  *	       was already in use and another number was chosen instead.
  *	@owner: module that owns the video device node
@@ -532,14 +541,14 @@ static int get_index(struct video_device *vdev)
  *	%VFL_TYPE_SUBDEV - A subdevice
  */
 int __video_register_device(struct video_device *vdev, int type, int nr,
-		int warn_if_nr_in_use, struct module *owner)
+			    int warn_if_nr_in_use, struct module *owner)
 {
 	int i = 0;
 	int ret;
 	int minor_offset = 0;
 	int minor_cnt = VIDEO_NUM_DEVICES;
 	const char *name_base;
-	printk("haipeng, __video_register_device\n"); //@HW
+	printk("haipeng, __video_register_device\n");	/* @HW */
 
 	/* A minor value of -1 marks this video device as never
 	   having been registered */
@@ -590,10 +599,10 @@ int __video_register_device(struct video_device *vdev, int type, int nr,
 	/* Part 2: find a free minor, device node number and device index. */
 #ifdef CONFIG_VIDEO_FIXED_MINOR_RANGES
 	/* Keep the ranges for the first four types for historical
-	 * reasons.
+	 *reasons.
 	 * Newer devices (not yet in place) should use the range
-	 * of 128-191 and just pick the first free minor there
-	 * (new style). */
+	 *of 128-191 and just pick the first free minor there
+	 *(new style). */
 	switch (type) {
 	case VFL_TYPE_GRABBER:
 		minor_offset = 0;
@@ -681,7 +690,7 @@ int __video_register_device(struct video_device *vdev, int type, int nr,
 
 	if (nr != -1 && nr != vdev->num && warn_if_nr_in_use)
 		printk(KERN_WARNING "%s: requested %s%d, got %s\n", __func__,
-			name_base, nr, video_device_node_name(vdev));
+		       name_base, nr, video_device_node_name(vdev));
 
 	/* Increase v4l2_device refcount */
 	if (vdev->v4l2_dev)
@@ -696,7 +705,7 @@ int __video_register_device(struct video_device *vdev, int type, int nr,
 		vdev->entity.v4l.major = VIDEO_MAJOR;
 		vdev->entity.v4l.minor = vdev->minor;
 		ret = media_device_register_entity(vdev->v4l2_dev->mdev,
-			&vdev->entity);
+						   &vdev->entity);
 		if (ret < 0)
 			printk(KERN_WARNING
 			       "%s: media_device_register_entity failed\n",
@@ -711,7 +720,7 @@ int __video_register_device(struct video_device *vdev, int type, int nr,
 
 	return 0;
 
-cleanup:
+      cleanup:
 	mutex_lock(&videodev_lock);
 	if (vdev->cdev)
 		cdev_del(vdev->cdev);
@@ -721,6 +730,7 @@ cleanup:
 	vdev->minor = -1;
 	return ret;
 }
+
 EXPORT_SYMBOL(__video_register_device);
 
 /**
@@ -744,6 +754,7 @@ void video_unregister_device(struct video_device *vdev)
 	mutex_unlock(&videodev_lock);
 	device_unregister(&vdev->dev);
 }
+
 EXPORT_SYMBOL(video_unregister_device);
 
 /*
@@ -758,7 +769,7 @@ static int __init videodev_init(void)
 	ret = register_chrdev_region(dev, VIDEO_NUM_DEVICES, VIDEO_NAME);
 	if (ret < 0) {
 		printk(KERN_WARNING "videodev: unable to get major %d\n",
-				VIDEO_MAJOR);
+		       VIDEO_MAJOR);
 		return ret;
 	}
 
@@ -781,16 +792,15 @@ static void __exit videodev_exit(void)
 }
 
 module_init(videodev_init)
-module_exit(videodev_exit)
+    module_exit(videodev_exit)
 
-MODULE_AUTHOR("Alan Cox, Mauro Carvalho Chehab <mchehab@infradead.org>");
+    MODULE_AUTHOR("Alan Cox, Mauro Carvalho Chehab <mchehab@infradead.org>");
 MODULE_DESCRIPTION("Device registrar for Video4Linux drivers v2");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS_CHARDEV_MAJOR(VIDEO_MAJOR);
 
-
 /*
  * Local variables:
- * c-basic-offset: 8
+ *c-basic-offset: 8
  * End:
  */

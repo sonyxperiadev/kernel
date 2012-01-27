@@ -15,7 +15,7 @@
 
 /*
  * Broadcom Bluetooth rfkill power control via GPIO. This file is
- * board dependent!
+ *board dependent!
  */
 
 #include <linux/kernel.h>
@@ -32,14 +32,11 @@
 
 static int bcmbt_rfkill_set_power(void *data, bool blocked)
 {
-	int vreg_gpio =
-		((struct bcmbt_rfkill_platform_data *)data)->vreg_gpio;
+	int vreg_gpio = ((struct bcmbt_rfkill_platform_data *)data)->vreg_gpio;
 	int n_reset_gpio =
 	    ((struct bcmbt_rfkill_platform_data *)data)->n_reset_gpio;
-	int aux0_gpio =
-		((struct bcmbt_rfkill_platform_data *)data)->aux0_gpio;
-	int aux1_gpio =
-		((struct bcmbt_rfkill_platform_data *)data)->aux1_gpio;
+	int aux0_gpio = ((struct bcmbt_rfkill_platform_data *)data)->aux0_gpio;
+	int aux1_gpio = ((struct bcmbt_rfkill_platform_data *)data)->aux1_gpio;
 
 /*	pr_info("bcm_bt_rfkill_setpower(): vreg_gpio: %d, n_reset_gpio: %d, aux0_gpio: %d, aux1_gpio: %d\n", vreg_gpio, n_reset_gpio, aux0_gpio, aux1_gpio);*/
 
@@ -84,7 +81,7 @@ static int bcmbt_rfkill_probe(struct platform_device *pdev)
 	pr_err("bcmbt_rfkill_probe:  Set vreg_gpio: %d, level: %s\n",
 	       pdata->vreg_gpio,
 	       gpio_get_value(pdata->vreg_gpio) ? "High" : "Low");
-    gpio_export(pdata->vreg_gpio, false);
+	gpio_export(pdata->vreg_gpio, false);
 	gpio_direction_output(pdata->vreg_gpio, BCMBT_VREG_OFF);
 
 	if (BCMBT_UNUSED_GPIO != pdata->n_reset_gpio) {
@@ -92,7 +89,7 @@ static int bcmbt_rfkill_probe(struct platform_device *pdev)
 		gpio_direction_output(pdata->n_reset_gpio, BCMBT_N_RESET_ON);
 		pr_err("bcmblt_probe: n_reset: %s\n",
 		       gpio_get_value(pdata->
-			      n_reset_gpio) ? "High [chip out of reset]"
+				      n_reset_gpio) ? "High [chip out of reset]"
 		       : "Low [put into reset]");
 	}
 	if (BCMBT_UNUSED_GPIO != pdata->aux0_gpio) {	/* CLK32 */
@@ -126,7 +123,6 @@ static int bcmbt_rfkill_probe(struct platform_device *pdev)
 
 	return 0;
 }
-
 
 static int bcmbt_rfkill_remove(struct platform_device *pdev)
 {

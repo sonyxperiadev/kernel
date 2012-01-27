@@ -23,7 +23,6 @@
 /*                                                                                              */
 /************************************************************************************************/
 
-
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/init.h>
@@ -34,30 +33,29 @@
 
 #include <linux/mfd/bcmpmu.h>
 
-
 struct bcmpmu_ponkey {
-	struct input_dev	*idev;
-	struct bcmpmu		*bcmpmu;
+	struct input_dev *idev;
+	struct bcmpmu *bcmpmu;
 };
 
 static void bcmpmu_ponkey_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu_ponkey *ponkey = data;
 	int val = 0;
-	
-	switch(irq) {
-		case PMU_IRQ_PONKEYB_F:
-			val = 1;
-			break;
 
-		case PMU_IRQ_PONKEYB_R:
-			val = 0;
-			break;
+	switch (irq) {
+	case PMU_IRQ_PONKEYB_F:
+		val = 1;
+		break;
 
-		default:
-			printk("Invalid IRQ %d\n", irq);
-			return;
-			break;
+	case PMU_IRQ_PONKEYB_R:
+		val = 0;
+		break;
+
+	default:
+		printk("Invalid IRQ %d\n", irq);
+		return;
+		break;
 	}
 
 	input_report_key(ponkey->idev, KEY_POWER, val);
@@ -69,8 +67,8 @@ static int __devinit bcmpmu_ponkey_probe(struct platform_device *pdev)
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_ponkey *ponkey;
 	int error;
-	
-	printk("bcmpmu_ponkey: ponkey_probe called \n") ;
+
+	printk("bcmpmu_ponkey: ponkey_probe called \n");
 
 	ponkey = kzalloc(sizeof(struct bcmpmu_ponkey), GFP_KERNEL);
 	if (!ponkey) {
@@ -84,9 +82,9 @@ static int __devinit bcmpmu_ponkey_probe(struct platform_device *pdev)
 		error = -ENOMEM;
 		goto out_input;
 	}
-	
+
 	ponkey->bcmpmu = bcmpmu;
-	bcmpmu->ponkeyinfo= (void *)ponkey;
+	bcmpmu->ponkeyinfo = (void *)ponkey;
 
 	ponkey->idev->name = "bcmpmu_on";
 	ponkey->idev->phys = "bcmpmu_on/input0";
@@ -94,27 +92,28 @@ static int __devinit bcmpmu_ponkey_probe(struct platform_device *pdev)
 	ponkey->idev->evbit[0] = BIT_MASK(EV_KEY);
 	ponkey->idev->keybit[BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER);
 
-
 	/* Request PRESSED and RELEASED interrupts.
 	 */
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_PONKEYB_F, bcmpmu_ponkey_isr, ponkey);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_PONKEYB_R, bcmpmu_ponkey_isr, ponkey);
-	
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_PONKEYB_F, bcmpmu_ponkey_isr,
+			     ponkey);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_PONKEYB_R, bcmpmu_ponkey_isr,
+			     ponkey);
+
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_PONKEYB_F);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_PONKEYB_R);
 
 	error = input_register_device(ponkey->idev);
 	if (error) {
-		dev_err(bcmpmu->dev, "Can't register input device: %d\n", error);
+		dev_err(bcmpmu->dev, "Can't register input device: %d\n",
+			error);
 		goto out;
 	}
 
-
 	return 0;
 
-out:
+      out:
 	input_free_device(ponkey->idev);
-out_input:
+      out_input:
 	kfree(ponkey);
 	return error;
 }
@@ -123,7 +122,7 @@ static int __devexit bcmpmu_ponkey_remove(struct platform_device *pdev)
 {
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_ponkey *ponkey = bcmpmu->ponkeyinfo;
-	
+
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_PONKEYB_F);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_PONKEYB_R);
 
@@ -134,26 +133,27 @@ static int __devexit bcmpmu_ponkey_remove(struct platform_device *pdev)
 }
 
 static struct platform_driver bcmpmu_ponkey_driver = {
-	.driver		= {
-		.name	= "bcmpmu_ponkey",
-		.owner	= THIS_MODULE,
-	},
-	.probe		= bcmpmu_ponkey_probe,
-	.remove		= __devexit_p(bcmpmu_ponkey_remove),
+	.driver = {
+		   .name = "bcmpmu_ponkey",
+		   .owner = THIS_MODULE,
+		   },
+	.probe = bcmpmu_ponkey_probe,
+	.remove = __devexit_p(bcmpmu_ponkey_remove),
 };
 
 static int __init bcmpmu_ponkey_init(void)
 {
 	return platform_driver_register(&bcmpmu_ponkey_driver);
 }
+
 module_init(bcmpmu_ponkey_init);
 
 static void __exit bcmpmu_ponkey_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_ponkey_driver);
 }
-module_exit(bcmpmu_ponkey_exit);
 
+module_exit(bcmpmu_ponkey_exit);
 
 MODULE_DESCRIPTION("BCMPMU PowOnKey driver");
 MODULE_LICENSE("GPL");

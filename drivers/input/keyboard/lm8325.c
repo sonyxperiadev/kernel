@@ -14,12 +14,12 @@
 *******************************************************************************/
 
 /**
- * @file
- * driver/input/keyboard/lm8325.c 
+ *@file
+ *driver/input/keyboard/lm8325.c
  *
- * LM8325 Keypad Controller - A dedicated device to unburden a host processor 
- * from scanning a matrix-addressed keypad and to provide flexible and general 
- * purpose, host programmable input/output functions.
+ * LM8325 Keypad Controller - A dedicated device to unburden a host processor
+ *from scanning a matrix-addressed keypad and to provide flexible and general
+ *purpose, host programmable input/output functions.
  *
  * Version 2
  */
@@ -42,23 +42,23 @@
 /* #define DEBUG_ENABLE */
 
 /**
- * lm8325_write - I2C host write functionality for lm8325
+ *lm8325_write - I2C host write functionality for lm8325
  *
  * Function used to write a value into a given lm8325 controller register.
  * This takes care of the condition when the controller is in HALT mode by
- * calling the write API again on a fail.
+ *calling the write API again on a fail.
  *
- * @param lm8325_chip *lm
- *   The lm8325 chip data.
- * @param len
- *   Length of the data to be written.
- * @param *data
- *   8-bit buffer from which the data is taken.
+ *@param lm8325_chip *lm
+ *  The lm8325 chip data.
+ *@param len
+ *  Length of the data to be written.
+ *@param *data
+ *  8-bit buffer from which the data is taken.
  *
- * @return 0 on wrong length param passed or negative error value on error 
- * or the length of data read on success
+ *@return 0 on wrong length param passed or negative error value on error
+ *or the length of data read on success
  */
-static int lm8325_write(struct lm8325_chip *lm, int len, u8 * data)
+static int lm8325_write(struct lm8325_chip *lm, int len, u8 *data)
 {
 	int ret;
 	if (len > LM8325_MAX_DATA) {
@@ -79,31 +79,31 @@ static int lm8325_write(struct lm8325_chip *lm, int len, u8 * data)
 }
 
 /**
- * lm8325_read - I2C host read functionality for lm8325
+ *lm8325_read - I2C host read functionality for lm8325
  *
  * Function used to read a 8-bit value from a given lm8325 controller register.
  * This takes care of the condition when the controller is in HALT mode by
- * calling the read API again on a fail.
+ *calling the read API again on a fail.
  *
- * @param lm8325_chip *lm
- *   The lm8325 chip data.
- * @param cmd
- *   8-bit physical address of thr controller register.
- * @param *buf
- *   8-bit buffer to which the data is read.
- * @param len
- *   length of the data to be read
+ *@param lm8325_chip *lm
+ *  The lm8325 chip data.
+ *@param cmd
+ *  8-bit physical address of thr controller register.
+ *@param *buf
+ *  8-bit buffer to which the data is read.
+ *@param len
+ *  length of the data to be read
  *
- * @return 0 if the controller does not resume from HALT mode or the length of
- * the data read on success.
+ *@return 0 if the controller does not resume from HALT mode or the length of
+ *the data read on success.
  */
-static int lm8325_read(struct lm8325_chip *lm, u8 cmd, u8 * buf, int len)
+static int lm8325_read(struct lm8325_chip *lm, u8 cmd, u8 *buf, int len)
 {
 	int ret;
 
 	/*
 	 * If the host is asleep while we send the byte, we can get a NACK
-	 * back while it wakes up, so try again, once.
+	 *back while it wakes up, so try again, once.
 	 */
 	ret = i2c_master_send(lm->client, &cmd, 1);
 	if (ret == -EREMOTEIO)
@@ -124,13 +124,13 @@ static int lm8325_read(struct lm8325_chip *lm, u8 cmd, u8 * buf, int len)
 
 #ifdef DEBUG_ENABLE
 /**
- * lm8325_reg_dump - Dump the values of all the registers on lm8325
+ *lm8325_reg_dump - Dump the values of all the registers on lm8325
  *
  * Function used to read all the registers on lm8325 controller and dump them
- * for debugging purposes only
+ *for debugging purposes only
  *
- * @param lm8325_chip *lm
- *   The lm8325 chip data.
+ *@param lm8325_chip *lm
+ *  The lm8325 chip data.
  */
 static void lm8325_reg_dump(struct lm8325_chip *lm)
 {
@@ -190,18 +190,18 @@ static void lm8325_reg_dump(struct lm8325_chip *lm)
 #endif
 
 /**
- * lm8325_soft_reset - LM8325 soft reset sequence
+ *lm8325_soft_reset - LM8325 soft reset sequence
  *
  * Function used to reset all the registers oon the LM8325 controller. This
- * mainly invovles reading the value from the SWREV regsiter and writing back
- * the invert of the read value.
+ *mainly invovles reading the value from the SWREV regsiter and writing back
+ *the invert of the read value.
  *
- * @param lm8325_chip *lm
- *   The lm8325 chip data.
+ *@param lm8325_chip *lm
+ *  The lm8325 chip data.
  */
 /* TODO : This functionality is not working as defined in the controller
- * datasheet. Need to check its functionality by further testing. The
- * controller registers can not be written too once it has been reset thus.
+ *datasheet. Need to check its functionality by further testing. The
+ *controller registers can not be written too once it has been reset thus.
  */
 #ifdef LM8325_SOFT_RESET
 static void lm8325_soft_reset(struct lm8325_chip *lm)
@@ -225,8 +225,8 @@ static void lm8325_soft_reset(struct lm8325_chip *lm)
 
 #if 0
 /* This part of the code has been implemented from the RTOS driver. This
- * sequence is supposed to clear the EVTCODE and KDBCODE buffers and needs to
- * be called as a part of the initial configuration code */
+ *sequence is supposed to clear the EVTCODE and KDBCODE buffers and needs to
+ *be called as a part of the initial configuration code */
 static void clean_buffer_overflow(struct lm8325_chip *lm)
 {
 	u8 temp;
@@ -246,17 +246,17 @@ static void clean_buffer_overflow(struct lm8325_chip *lm)
 #endif
 
 /**
- * lm8325_configure - Set the initial values for the LM8325 controller
- * configuration
+ *lm8325_configure - Set the initial values for the LM8325 controller
+ *configuration
  *
  * Function used to configure the LM8325 controller for the required
- * functionality. Most of the parameters are passed as a part of the board
- * specific platform data.
+ *functionality. Most of the parameters are passed as a part of the board
+ *specific platform data.
  *
- * @param lm8325_chip *lm
- *   The lm8325 chip data.
+ *@param lm8325_chip *lm
+ *  The lm8325 chip data.
  *
- * @return 0 on success and -1 on failure of any of the write commands.
+ *@return 0 on success and -1 on failure of any of the write commands.
  */
 static int lm8325_configure(struct lm8325_chip *lm)
 {
@@ -346,23 +346,23 @@ static int lm8325_configure(struct lm8325_chip *lm)
 	lm8325_write(lm, 2, buf);
 
 	/*clean_buffer_overflow(lm); - This call is not really necessary as i
-	 * find no need for this at this instance of time */
+	 *find no need for this at this instance of time */
 
 	return 0;
 }
 
 /**
- * lm8325_process_key - Process the key pressed or released.
- * 
+ *lm8325_process_key - Process the key pressed or released.
+ *
  *
  * Function where the actual processing of the key press/release is done. The
- * row and column of the key pressed are computed and then the corresponding
- * key code is reported to the input subsystem.
+ *row and column of the key pressed are computed and then the corresponding
+ *key code is reported to the input subsystem.
  *
- * @param lm8325_chip *lm
- *   The lm8325 chip data.
+ *@param lm8325_chip *lm
+ *  The lm8325 chip data.
  *
- * @return 0 on success and -1 on failure.
+ *@return 0 on success and -1 on failure.
  */
 static int lm8325_process_key(struct lm8325_chip *lm)
 {
@@ -377,7 +377,7 @@ static int lm8325_process_key(struct lm8325_chip *lm)
 	}
 
 	/* Reading the KBDCODE as long as there is key press info should clear
-	 * the RSINT interrupt. Scan upto 4 keys is supported. */
+	 *the RSINT interrupt. Scan upto 4 keys is supported. */
 	for (code_count = 0; code_count < 4; code_count++) {
 		/* Read the appropriate KBDCODE. */
 		lm8325_read(lm, (LM8325_CMD_KBDCODE0 + code_count),
@@ -404,7 +404,7 @@ static int lm8325_process_key(struct lm8325_chip *lm)
 		col = event_code_list[event] & 0xf;
 		key_code = row | col;
 		/* If Bit 7 is ON then the key is released otherwise the key
-		 * is pressed. */
+		 *is pressed. */
 		if (event_code_list[event] & 0x80)
 			press_release = 0;
 		else
@@ -418,12 +418,12 @@ static int lm8325_process_key(struct lm8325_chip *lm)
 }
 
 /**
- * lm8325_work - Work function to handle the keyboard interrupts
- * 
- * @param lm8325_chip *lm
- *   The lm8325 chip data.
+ *lm8325_work - Work function to handle the keyboard interrupts
  *
- * @return void.
+ *@param lm8325_chip *lm
+ *  The lm8325 chip data.
+ *
+ *@return void.
  */
 static void lm8325_work(struct work_struct *work)
 {
@@ -434,7 +434,7 @@ static void lm8325_work(struct work_struct *work)
 	mutex_lock(&lm->lock);
 
 	/* Read the interrupt status register and check if the interrupt
-	 * issued was for the key press*/
+	 *issued was for the key press*/
 	lm8325_read(lm, LM8325_CMD_IRQST, &ints, 1);
 
 	if (ints & 0x40) {
@@ -443,7 +443,7 @@ static void lm8325_work(struct work_struct *work)
 		lm8325_read(lm, LM8325_CMD_KBDMIS, &ints, 1);
 		if (ints & 0x04) {
 			/* MEVINT is set. Hence the interrupt was for a
-			 * key-press/release */
+			 *key-press/release */
 
 			/* Process the data */
 			ret = lm8325_process_key(lm);
@@ -465,7 +465,7 @@ static void lm8325_work(struct work_struct *work)
 			}
 		} else {
 			/* Check the bits set in the KBDMIS register and handle the
-			 * interrupt issued */
+			 *interrupt issued */
 			if (ints & 0x02) {
 				/* MKLINT set - Indicates a lost key-code */
 
@@ -474,20 +474,20 @@ static void lm8325_work(struct work_struct *work)
 					__func__);
 
 				/* Clear the pending interrupts to get back to
-				 * the right state */
+				 *the right state */
 				buf[0] = LM8325_CMD_KBDIC;
 				buf[1] = 0x81;
 				lm8325_write(lm, 2, buf);
 			} else if (ints & 0x08) {
 				/* MELINT set - Event buffer overflow. May
-				 * have been caused by sudden occurence of
-				 * more than 8 keyboard events */
+				 *have been caused by sudden occurence of
+				 *more than 8 keyboard events */
 				dev_err(&lm->client->dev,
 					"%s: MELINT set. Event buffer overflow interrupt. Handled by clearing all pending interrupts\n",
 					__func__);
 
 				/* Clear the pending interrupts to get back to
-				 * the right state */
+				 *the right state */
 				buf[0] = LM8325_CMD_KBDIC;
 				buf[1] = 0x82;
 				lm8325_write(lm, 2, buf);
@@ -533,7 +533,7 @@ static void lm8325_work(struct work_struct *work)
 }
 
 /**
- * lm8325_irq - Interrupt service routine for keyboard interrupt.
+ *lm8325_irq - Interrupt service routine for keyboard interrupt.
  */
 static irqreturn_t lm8325_irq(int irq, void *data)
 {
@@ -545,7 +545,7 @@ static irqreturn_t lm8325_irq(int irq, void *data)
 }
 
 /**
- * sysfs implementation for the keyboard device to enable and disable it.
+ *sysfs implementation for the keyboard device to enable and disable it.
  */
 static ssize_t lm8325_show_disable(struct device *dev,
 				   struct device_attribute *attr, char *buf)
@@ -575,9 +575,10 @@ static ssize_t lm8325_set_disable(struct device *dev,
 static DEVICE_ATTR(disable_kp, 0644, lm8325_show_disable, lm8325_set_disable);
 
 /**
- * lm8325_probe - LM8325 keyboard controller probe.
+ *lm8325_probe - LM8325 keyboard controller probe.
  */
-static int lm8325_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int lm8325_probe(struct i2c_client *client,
+			const struct i2c_device_id *id)
 {
 	struct lm8325_platform_data *lm8325_pdata;
 	struct input_dev *idev;
@@ -600,7 +601,7 @@ static int lm8325_probe(struct i2c_client *client, const struct i2c_device_id *i
 		goto err1;
 	}
 
-	/* 4. Set the number of rows and columns as specified 
+	/* 4. Set the number of rows and columns as specified
 	   in the platform data */
 	lm->size_x = lm8325_pdata->size_x;
 	if (lm->size_x == 0) {
@@ -637,7 +638,7 @@ static int lm8325_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	/* 6. Reset the controller and wait till its done - This is done by
 	   reading the controller register */
-	//lm8325_reset(lm);
+	/* lm8325_reset(lm); */
 
 #ifdef DEBUG_ENABLE
 	lm8325_reg_dump(lm);
@@ -720,17 +721,17 @@ static int lm8325_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	return 0;
 
-err3:
+      err3:
 	device_remove_file(&client->dev, &dev_attr_disable_kp);
-err2:
+      err2:
 	free_irq(client->irq, lm);
-err1:
+      err1:
 	kfree(lm);
 	return err;
 }
 
 /**
- * lm8325_remove - LM8325 keyboard controller remove.
+ *lm8325_remove - LM8325 keyboard controller remove.
  */
 static int lm8325_remove(struct i2c_client *client)
 {

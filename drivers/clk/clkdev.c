@@ -1,11 +1,11 @@
 /*
- * drivers/clk/clkdev.c
+ *drivers/clk/clkdev.c
  *
- *  Copyright (C) 2008 Russell King.
+ * Copyright (C) 2008 Russell King.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ *it under the terms of the GNU General Public License version 2 as
+ *published by the Free Software Foundation.
  *
  * Helper for the clk API to assist looking up a struct clk.
  */
@@ -26,11 +26,11 @@ static DEFINE_MUTEX(clocks_mutex);
 /*
  * Find the correct struct clk for the device and connection ID.
  * We do slightly fuzzy matching here:
- *  An entry with a NULL ID is assumed to be a wildcard.
- *  If an entry has a device ID, it must match
- *  If an entry has a connection ID, it must match
+ * An entry with a NULL ID is assumed to be a wildcard.
+ * If an entry has a device ID, it must match
+ * If an entry has a connection ID, it must match
  * Then we take the most specific entry - with the following
- * order of precedence: dev+con > dev only > con only.
+ *order of precedence: dev+con > dev only > con only.
  */
 static struct clk_lookup *clk_find(const char *dev_id, const char *con_id)
 {
@@ -73,6 +73,7 @@ struct clk *clk_get_sys(const char *dev_id, const char *con_id)
 
 	return cl ? cl->clk : ERR_PTR(-ENOENT);
 }
+
 EXPORT_SYMBOL(clk_get_sys);
 
 struct clk *clk_get(struct device *dev, const char *con_id)
@@ -81,12 +82,14 @@ struct clk *clk_get(struct device *dev, const char *con_id)
 
 	return clk_get_sys(dev_id, con_id);
 }
+
 EXPORT_SYMBOL(clk_get);
 
 void clk_put(struct clk *clk)
 {
 	__clk_put(clk);
 }
+
 EXPORT_SYMBOL(clk_put);
 
 void clkdev_add(struct clk_lookup *cl)
@@ -95,6 +98,7 @@ void clkdev_add(struct clk_lookup *cl)
 	list_add_tail(&cl->node, &clocks);
 	mutex_unlock(&clocks_mutex);
 }
+
 EXPORT_SYMBOL(clkdev_add);
 
 void __init clkdev_add_table(struct clk_lookup *cl, size_t num)
@@ -112,11 +116,11 @@ void __init clkdev_add_table(struct clk_lookup *cl, size_t num)
 
 struct clk_lookup_alloc {
 	struct clk_lookup cl;
-	char	dev_id[MAX_DEV_ID];
-	char	con_id[MAX_CON_ID];
+	char dev_id[MAX_DEV_ID];
+	char con_id[MAX_CON_ID];
 };
 
-struct clk_lookup * __init_refok
+struct clk_lookup *__init_refok
 clkdev_alloc(struct clk *clk, const char *con_id, const char *dev_fmt, ...)
 {
 	struct clk_lookup_alloc *cla;
@@ -142,10 +146,11 @@ clkdev_alloc(struct clk *clk, const char *con_id, const char *dev_fmt, ...)
 
 	return &cla->cl;
 }
+
 EXPORT_SYMBOL(clkdev_alloc);
 
 int clk_add_alias(const char *alias, const char *alias_dev_name, char *id,
-	struct device *dev)
+		  struct device *dev)
 {
 	struct clk *r = clk_get(dev, id);
 	struct clk_lookup *l;
@@ -160,10 +165,11 @@ int clk_add_alias(const char *alias, const char *alias_dev_name, char *id,
 	clkdev_add(l);
 	return 0;
 }
+
 EXPORT_SYMBOL(clk_add_alias);
 
 /*
- * clkdev_drop - remove a clock dynamically allocated
+ *clkdev_drop - remove a clock dynamically allocated
  */
 void clkdev_drop(struct clk_lookup *cl)
 {
@@ -172,4 +178,5 @@ void clkdev_drop(struct clk_lookup *cl)
 	mutex_unlock(&clocks_mutex);
 	kfree(container_of(cl, struct clk_lookup_alloc, cl));
 }
+
 EXPORT_SYMBOL(clkdev_drop);

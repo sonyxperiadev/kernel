@@ -9,9 +9,8 @@
 * Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a
 * license
-* * other than the GPL, without Broadcom's express prior written consent.
+* *other than the GPL, without Broadcom's express prior written consent.
 * *****************************************************************************/
-
 
 /* Tests supported in this file */
 /*#define GPS_TEST_SUPPORTED*/
@@ -67,8 +66,8 @@
 #endif
 
 enum Selftest_Results_t {
-	ST_PASS,	/* Test succeded */
-	ST_FAIL,	/* Test Failed */
+	ST_PASS,		/* Test succeded */
+	ST_FAIL,		/* Test Failed */
 	ST_BUSY,
 	ST_NOT_TESTED,
 /* SIM */
@@ -77,7 +76,7 @@ enum Selftest_Results_t {
 	ST_SIM_SHORT_INTERCONNECT
 };
 
-static const char * const Selftest_ResultString[] = {
+static const char *const Selftest_ResultString[] = {
 	"PASS",			/* Test succeded */
 	"FAIL",			/* Test Failed */
 	"EBUSY",
@@ -190,7 +189,7 @@ static struct pin_config StoredValue_GPS_TMARK;
 #endif
 
 /* Sleep Clock Defines */
-#define SLEEP_CLOCK_FREQUENCY_SPECIFIED 32768	/*32KHz */
+#define SLEEP_CLOCK_FREQUENCY_SPECIFIED 32768	/* 32KHz */
 #define SLEEP_CLOCK_FREQUENCY_MAXIMUM (SLEEP_CLOCK_FREQUENCY_SPECIFIED + 2)
 #define SLEEP_CLOCK_FREQUENCY_MINIMUM (SLEEP_CLOCK_FREQUENCY_SPECIFIED - 11)
 
@@ -286,15 +285,13 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 
 	ST_DBG("GLUE_SELFTEST::std_selftest_sleepclk");
 
-	/*Save the original CMP value and set it to 50, */
+	/* Save the original CMP value and set it to 50, */
 	originalCompareRegisterData = BRCM_READ_REG(KONA_SCLKCAL_VA,
 						    SCLKCAL_CACMP);
-	original32kClockRegisterData = \
-		BRCM_READ_REG(KONA_BMDM_CCU_VA,
-			      BMDM_CLK_MGR_REG_WCDMA_32K_CLKGATE);
-	originalSCLKCALClockRegisterData = \
-		BRCM_READ_REG(KONA_BMDM_CCU_VA,
-			      BMDM_CLK_MGR_REG_SCLKCAL_CLKGATE);
+	original32kClockRegisterData =
+	    BRCM_READ_REG(KONA_BMDM_CCU_VA, BMDM_CLK_MGR_REG_WCDMA_32K_CLKGATE);
+	originalSCLKCALClockRegisterData =
+	    BRCM_READ_REG(KONA_BMDM_CCU_VA, BMDM_CLK_MGR_REG_SCLKCAL_CLKGATE);
 
 	ST_DBG
 	    ("GLUE_SELFTEST::std_selftest_sleepclk() SCLKCAL_CACMP  =  0x%08X",
@@ -304,17 +301,17 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 	     (unsigned int)BRCM_READ_REG(KONA_SCLKCAL_VA, SCLKCAL_CACTRL));
 
 	ST_DBG
-	    ("GLUE_SELFTEST::std_selftest_sleepclk() " \
-		"WCDMA_32K_CLKGATE  =  0x%08X",
+	    ("GLUE_SELFTEST::std_selftest_sleepclk() "
+	     "WCDMA_32K_CLKGATE  =  0x%08X",
 	     (unsigned int)BRCM_READ_REG(KONA_BMDM_CCU_VA,
 					 BMDM_CLK_MGR_REG_WCDMA_32K_CLKGATE));
 	ST_DBG
-	    ("GLUE_SELFTEST::std_selftest_sleepclk() " \
-		"SCLKCAL_CLKGATE    =  0x%08X",
+	    ("GLUE_SELFTEST::std_selftest_sleepclk() "
+	     "SCLKCAL_CLKGATE    =  0x%08X",
 	     (unsigned int)BRCM_READ_REG(KONA_BMDM_CCU_VA,
 					 BMDM_CLK_MGR_REG_SCLKCAL_CLKGATE));
 	ST_DBG
-	    ("GLUE_SELFTEST::std_selftest_sleepclk() " \
+	    ("GLUE_SELFTEST::std_selftest_sleepclk() "
 	     "ACTIVITY_MON1	  =  0x%08X",
 	     (unsigned int)BRCM_READ_REG(KONA_BMDM_CCU_VA,
 					 BMDM_CLK_MGR_REG_ACTIVITY_MON1));
@@ -335,28 +332,28 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 		BRCM_WRITE_REG_FIELD(KONA_SCLKCAL_VA,
 				     SCLKCAL_CACMP, MODE13MHZ, 0);
 
-		/*Start the calibration */
+		/* Start the calibration */
 		BRCM_WRITE_REG_FIELD(KONA_SCLKCAL_VA, SCLKCAL_CACTRL, CAINIT,
 				     1);
 
 		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_sleepclk() " \
-			"WCDMA_32K_CLKGATE  =  0x%08X",
+		    ("GLUE_SELFTEST::std_selftest_sleepclk() "
+		     "WCDMA_32K_CLKGATE  =  0x%08X",
 		     (unsigned int)BRCM_READ_REG(KONA_BMDM_CCU_VA,
-					 BMDM_CLK_MGR_REG_WCDMA_32K_CLKGATE));
+						 BMDM_CLK_MGR_REG_WCDMA_32K_CLKGATE));
 		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_sleepclk() " \
-			"SCLKCAL_CLKGATE    =  0x%08X",
+		    ("GLUE_SELFTEST::std_selftest_sleepclk() "
+		     "SCLKCAL_CLKGATE    =  0x%08X",
 		     (unsigned int)BRCM_READ_REG(KONA_BMDM_CCU_VA,
-					 BMDM_CLK_MGR_REG_SCLKCAL_CLKGATE));
+						 BMDM_CLK_MGR_REG_SCLKCAL_CLKGATE));
 		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_sleepclk() " \
-			"ACTIVITY_MON1	  =  0x%08X",
+		    ("GLUE_SELFTEST::std_selftest_sleepclk() "
+		     "ACTIVITY_MON1	  =  0x%08X",
 		     (unsigned int)BRCM_READ_REG(KONA_BMDM_CCU_VA,
-					 BMDM_CLK_MGR_REG_ACTIVITY_MON1));
+						 BMDM_CLK_MGR_REG_ACTIVITY_MON1));
 
 		/* make sure the 9th bit is set to 1, which is the CASTAT
-			field of Calibration Control/Status Register */
+		   field of Calibration Control/Status Register */
 		do {
 			if (0 !=
 			    (BRCM_READ_REG_FIELD
@@ -369,13 +366,13 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 		} while (!isCalibrationStarted && (i < 10));
 
 		if (isCalibrationStarted) {
-			ST_DBG("GLUE_SELFTEST::std_selftest_sleepclk()" \
+			ST_DBG("GLUE_SELFTEST::std_selftest_sleepclk()"
 			       " isCalibrationStarted");
 			mdelay(45);
 			i = 0;
 
 			/*verify if calibration has finished, by checking
-			  if the CASTAT field is reset to 0 */
+			   if the CASTAT field is reset to 0 */
 			do {
 				if (0 ==
 				    (BRCM_READ_REG_FIELD
@@ -384,9 +381,8 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 					isCalibrationFinished = true;
 				} else {
 					ST_DBG
-					    ("GLUE_SELFTEST:: " \
-					     "Waiting for Calibration#%02u",
-					     i);
+					    ("GLUE_SELFTEST:: "
+					     "Waiting for Calibration#%02u", i);
 					mdelay(5);
 					i++;
 				}
@@ -394,13 +390,13 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 		}
 
 		if (isCalibrationFinished) {
-			/*Read CAFR and CASR */
+			/* Read CAFR and CASR */
 			calibrationCounterFastRegister =
 			    BRCM_READ_REG(KONA_SCLKCAL_VA, SCLKCAL_CAFR);
 			calibrationCounterSlowRegister =
 			    BRCM_READ_REG(KONA_SCLKCAL_VA, SCLKCAL_CASR);
 			ST_DBG
-			    ("GLUE_SELFTEST::calibrationCounterFastRegister  ="\
+			    ("GLUE_SELFTEST::calibrationCounterFastRegister  ="
 			     "  %u, calibrationCounterSlowRegister  =  %u.",
 			     calibrationCounterFastRegister,
 			     calibrationCounterSlowRegister);
@@ -412,8 +408,8 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 				continue;
 			}
 
-			/*Calculate the frequency and check if it is in the
-			  range. */
+			/* Calculate the frequency and check if it is in the
+			   range. */
 			calibratedClockFrequency =
 			    13000000.0 / 12 * calibrationCounterSlowRegister /
 			    calibrationCounterFastRegister;
@@ -431,8 +427,8 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 			calibrationCounterSlowRegister =
 			    BRCM_READ_REG(KONA_SCLKCAL_VA, SCLKCAL_CASR);
 			ST_DBG
-			    ("GLUE_SELFTEST:: Calibration failed: " \
-			     "calibrationCounterFastRegister  =  %u, " \
+			    ("GLUE_SELFTEST:: Calibration failed: "
+			     "calibrationCounterFastRegister  =  %u, "
 			     "calibrationCounterSlowRegister  =  %u.",
 			     calibrationCounterFastRegister,
 			     calibrationCounterSlowRegister);
@@ -462,12 +458,12 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 
 	if (ST_PASS == result) {
 		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_sleepclk() returned " \
-			"-----> ST_PASS");
+		    ("GLUE_SELFTEST::std_selftest_sleepclk() returned "
+		     "-----> ST_PASS");
 	} else {
 		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_sleepclk() returned " \
-			"-----> ST_FAILED");
+		    ("GLUE_SELFTEST::std_selftest_sleepclk() returned "
+		     "-----> ST_FAILED");
 	}
 	cmddata->testStatus = result;
 }
@@ -605,7 +601,7 @@ static void std_selftest_irq(struct SelftestUserCmdData_t *cmddata)
 		if (reading < 0)
 			mdelay(20);
 
-		} while ((reading < 0) && (i++ < 5) && (reading != -EIO));
+	} while ((reading < 0) && (i++ < 5) && (reading != -EIO));
 	if (reading > 0 || reading == -EIO)
 		result = true;
 
@@ -649,8 +645,8 @@ static void std_selftest_i2c(struct SelftestUserCmdData_t *cmddata)
 						       PMU_BITMASK_ALL);
 		if (rc >= 0) {
 			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_i2c() " \
-				"Value Read Back");
+			    ("GLUE_SELFTEST::std_selftest_i2c() "
+			     "Value Read Back");
 			testResult =
 			    (valueToWrite == valueToRead) ? true : false;
 		}
@@ -692,16 +688,15 @@ static bool PowerOnSIM(int slot)
 				       "%s: regulator_get failed(0x%X)\n",
 				       __func__, (unsigned int)regl_sim);
 				ST_DBG
-				    ("GLUE_SELFTEST::PowerOnSIM(%u) " \
+				    ("GLUE_SELFTEST::PowerOnSIM(%u) "
 				     "SIM1 Power failed", slot);
 				return false;
 			} else {
 				/* Enable SIM1 power via PMU driver / PMU HAL */
 				regulator_enable(regl_sim);
 				ST_DBG
-				    ("GLUE_SELFTEST::PowerOnSIM(%u) " \
-					"SIM1 supported",
-				     slot);
+				    ("GLUE_SELFTEST::PowerOnSIM(%u) "
+				     "SIM1 supported", slot);
 				mdelay(10);
 
 				regulator_put(regl_sim);
@@ -741,7 +736,7 @@ static bool PowerOnSIM(int slot)
 static void std_selftest_sim(struct SelftestUserCmdData_t *cmddata)
 {
 	struct pin_config StoredSIMPMuxGpioValue[ST_SIM_GPIO_CNT];
-	int StoredPowerValue[2] = {0,0};
+	int StoredPowerValue[2] = { 0, 0 };
 	struct pin_config GPIOSetup;
 	bool TestSIM1, TestSIM2;
 	static int ST_GPIOList[ST_SIM_GPIO_CNT] = {
@@ -750,9 +745,9 @@ static void std_selftest_sim(struct SelftestUserCmdData_t *cmddata)
 	};
 	static enum PIN_NAME ST_PMUXListn[ST_SIM_GPIO_CNT] = {
 		ST_SIMCLK_PAD_NAME, ST_SIMDAT_PAD_NAME, ST_SIMDET_PAD_NAME,
-ST_SIMRST_PAD_NAME,
+		ST_SIMRST_PAD_NAME,
 		ST_SIM2CLK_PAD_NAME, ST_SIM2DAT_PAD_NAME, ST_SIM2DET_PAD_NAME,
-		    ST_SIM2RST_PAD_NAME
+		ST_SIM2RST_PAD_NAME
 	};
 	static enum PIN_FUNC ST_PMUXListf[ST_SIM_GPIO_CNT] = {
 		ST_SIMCLK_PAD, ST_SIMDAT_PAD, ST_SIMDET_PAD, ST_SIMRST_PAD,
@@ -861,8 +856,8 @@ ST_SIMRST_PAD_NAME,
 		ST_DBG("GLUE_SELFTEST::hal_selftest_sim() Initialize SIM1");
 		for (st = SIM1_FIRST; st <= SIM1_LAST; st++) {
 			ST_DBG
-			    ("GLUE_SELFTEST::hal_selftest_sim() " \
-				"Init GPIO%u(%u,%u)",
+			    ("GLUE_SELFTEST::hal_selftest_sim() "
+			     "Init GPIO%u(%u,%u)",
 			     ST_GPIOList[st], ST_PMUXListn[st],
 			     ST_PMUXListf[st]);
 			GPIOSetup.name = ST_PMUXListn[st];
@@ -871,8 +866,8 @@ ST_SIMRST_PAD_NAME,
 			gpio_request(ST_GPIOList[st], "SIM1_GPIO");
 		}
 		ST_DBG
-		    ("GLUE_SELFTEST::hal_selftest_sim() " \
-			"SIM1 Initialized to GPIO");
+		    ("GLUE_SELFTEST::hal_selftest_sim() "
+		     "SIM1 Initialized to GPIO");
 	}
 
 	/* Setup SIM 2 */
@@ -880,8 +875,8 @@ ST_SIMRST_PAD_NAME,
 		ST_DBG("GLUE_SELFTEST::hal_selftest_sim() Initialize SIM2");
 		for (st = SIM2_FIRST; st <= SIM2_LAST; st++) {
 			ST_DBG
-			    ("GLUE_SELFTEST::hal_selftest_sim() " \
-				"Init GPIO%u(%u,%u)",
+			    ("GLUE_SELFTEST::hal_selftest_sim() "
+			     "Init GPIO%u(%u,%u)",
 			     ST_GPIOList[st], ST_PMUXListn[st],
 			     ST_PMUXListf[st]);
 			GPIOSetup.name = ST_PMUXListn[st];
@@ -890,8 +885,8 @@ ST_SIMRST_PAD_NAME,
 			gpio_request(ST_GPIOList[st], "SIM2_GPIO");
 		}
 		ST_DBG
-		    ("GLUE_SELFTEST::hal_selftest_sim() " \
-			"SIM2 Initialized to GPIO");
+		    ("GLUE_SELFTEST::hal_selftest_sim() "
+		     "SIM2 Initialized to GPIO");
 	}
 
 	if (TestSIM1 || TestSIM2) {
@@ -908,24 +903,21 @@ ST_SIMRST_PAD_NAME,
 		mdelay(SETTLING_TIME);
 		for (st = FirstPin; st <= LastPin; st++) {
 			ST_DBG
-			    ("GLUE_SELFTEST::hal_selftest_sim() " \
-				"Ground test[%u]",
-			     st);
+			    ("GLUE_SELFTEST::hal_selftest_sim() "
+			     "Ground test[%u]", st);
 			if (gpio_get_value(ST_GPIOList[st]) == 0) {
 				/*  Shorted to ground */
 				ST_DBG
-				    ("GLUE_SELFTEST::hal_selftest_sim() " \
-					"Ground test[%u](%u) = 0 -> Error",
+				    ("GLUE_SELFTEST::hal_selftest_sim() "
+				     "Ground test[%u](%u) = 0 -> Error",
 				     st, ST_GPIOList[st]);
 
 				if (Status_List[st] == ST_PASS) {
-					ST_DBG("GLUE_SELFTEST::"\
-					       "hal_selftest_sim() " \
-					       "Ground test[%u] = " \
-					       "ST_SIM_SHORT_GROUND",
-					       st);
-					Status_List[st] =
-					    ST_SIM_SHORT_GROUND;
+					ST_DBG("GLUE_SELFTEST::"
+					       "hal_selftest_sim() "
+					       "Ground test[%u] = "
+					       "ST_SIM_SHORT_GROUND", st);
+					Status_List[st] = ST_SIM_SHORT_GROUND;
 				}
 			}
 		}
@@ -953,17 +945,15 @@ ST_SIMRST_PAD_NAME,
 			if (gpio_get_value(ST_GPIOList_Power[st]) == 1) {
 				/*  Shorted to Power */
 				ST_DBG
-				    ("GLUE_SELFTEST::hal_selftest_sim() " \
+				    ("GLUE_SELFTEST::hal_selftest_sim() "
 				     "Power test[%u](%u) = 1 -> Error",
 				     st, ST_GPIOList_Power[st]);
 				if (Status_List[st] == ST_PASS) {
-					ST_DBG("GLUE_SELFTEST::" \
+					ST_DBG("GLUE_SELFTEST::"
 					       "hal_selftest_sim()"
-					       "Power test[%u] = " \
-					       "ST_SIM_SHORT_POWER",
-					       st);
-					Status_List[st] =
-					    ST_SIM_SHORT_POWER;
+					       "Power test[%u] = "
+					       "ST_SIM_SHORT_POWER", st);
+					Status_List[st] = ST_SIM_SHORT_POWER;
 				}
 			}
 		}
@@ -1002,28 +992,26 @@ ST_SIMRST_PAD_NAME,
 					/* This pin failed in High/Low test */
 					continue;
 				ST_DBG
-				    ("GLUE_SELFTEST::hal_selftest_sim() " \
+				    ("GLUE_SELFTEST::hal_selftest_sim() "
 				     "Interconnect test - Low[%u->%i](%u) ",
 				     st, i, ST_GPIOList_Inter[st][i]);
 				if (gpio_get_value(ST_GPIOList_Inter[st][i]) ==
 				    0) {
 					/* Interconnect problem found */
-					ST_DBG("GLUE_SELFTEST::" \
-					       "hal_selftest_sim() " \
-					       "Interconnect test - " \
+					ST_DBG("GLUE_SELFTEST::"
+					       "hal_selftest_sim() "
+					       "Interconnect test - "
 					       "Low[%u->%u]= Low -> Error",
 					       st, i);
-					if (Status_List[st] == \
-					    ST_PASS) {
+					if (Status_List[st] == ST_PASS) {
 						Status_List[st] =
 						    ST_SIM_SHORT_INTERCONNECT;
-						ST_DBG("GLUE_SELFTEST::" \
-						       "hal_selftest_sim() " \
-						       "Interconnect test - " \
-						       "Low[%u->%u] = ST_" \
-						       "SELFTEST_SIM_SHORT_" \
-						       "INTERCONNECT",
-						       st, i);
+						ST_DBG("GLUE_SELFTEST::"
+						       "hal_selftest_sim() "
+						       "Interconnect test - "
+						       "Low[%u->%u] = ST_"
+						       "SELFTEST_SIM_SHORT_"
+						       "INTERCONNECT", st, i);
 					}
 				}
 			}
@@ -1060,34 +1048,32 @@ ST_SIMRST_PAD_NAME,
 				}
 				if ((Status_List[i] != ST_PASS)
 				    && (Status_List[i] !=
-					ST_SIM_SHORT_INTERCONNECT)){
+					ST_SIM_SHORT_INTERCONNECT)) {
 					/* This pin failed in High/Low test */
 					continue;
 				}
 
 				ST_DBG
-				    ("GLUE_SELFTEST::hal_selftest_sim() " \
+				    ("GLUE_SELFTEST::hal_selftest_sim() "
 				     "Interconnect test - High[%u->%i](%u)",
 				     st, i, ST_GPIOList_Inter[st][i]);
-				if (gpio_get_value(\
-					ST_GPIOList_Inter_High[st][i]) == 1) {
+				if (gpio_get_value
+				    (ST_GPIOList_Inter_High[st][i]) == 1) {
 					/* Interconnect problem found */
-					ST_DBG("GLUE_SELFTEST::" \
-					       "hal_selftest_sim() " \
-					       "Interconnect test - " \
+					ST_DBG("GLUE_SELFTEST::"
+					       "hal_selftest_sim() "
+					       "Interconnect test - "
 					       "High[%u->%u] = High -> Error",
 					       st, i);
-					if (Status_List[st] == \
-						ST_PASS) {
+					if (Status_List[st] == ST_PASS) {
 						Status_List[st] =
 						    ST_SIM_SHORT_INTERCONNECT;
-						ST_DBG("GLUE_SELFTEST::" \
-						       "hal_selftest_sim() " \
-						       "Interconnect test - " \
-						       "High[%u->%u] = ST_" \
-						       "SELFTEST_SIM_SHORT_" \
-						       "INTERCONNECT",
-						       st, i);
+						ST_DBG("GLUE_SELFTEST::"
+						       "hal_selftest_sim() "
+						       "Interconnect test - "
+						       "High[%u->%u] = ST_"
+						       "SELFTEST_SIM_SHORT_"
+						       "INTERCONNECT", st, i);
 					}
 				}
 			}
@@ -1136,10 +1122,9 @@ ST_SIMRST_PAD_NAME,
 		    || Status_List[3] != ST_PASS
 		    || Status_List[4] != ST_PASS
 		    || Status_List[5] != ST_PASS
-		    || Status_List[6] != ST_PASS
-		    || Status_List[7] != ST_PASS) {
+		    || Status_List[6] != ST_PASS || Status_List[7] != ST_PASS) {
 			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_irq() "\
+			    ("GLUE_SELFTEST::std_selftest_irq() "
 			     "Connection is bad");
 			cmddata->testStatus = ST_FAIL;
 			cmddata->subtestCount = 8;
@@ -1147,7 +1132,7 @@ ST_SIMRST_PAD_NAME,
 				cmddata->subtestStatus[st] = Status_List[st];
 		} else {
 			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_irq()"\
+			    ("GLUE_SELFTEST::std_selftest_irq()"
 			     " Connection is good");
 			cmddata->testStatus = ST_PASS;
 			cmddata->subtestCount = 0;
@@ -1182,9 +1167,8 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 	enum PIN_FUNC PF_gpio;
 
 	ST_DBG
-	    ("GLUE_SELFTEST::std_selftest_control_gps_io () " \
-	     "called -- ST_GPS_READ/WRITE %x %x %x",
-	     name, direction, *state);
+	    ("GLUE_SELFTEST::std_selftest_control_gps_io () "
+	     "called -- ST_GPS_READ/WRITE %x %x %x", name, direction, *state);
 
 	GPIOSetup.reg.val = 0;
 	GPIOSetup.reg.b.drv_sth = DRIVE_STRENGTH_2MA;
@@ -1194,7 +1178,7 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 		pinmux_find_gpio(PN_GPS_PABLANK, &gpio, PF_gpio);
 		if (GPS_PABLANK_Setup_as_GPIO == false) {
 			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()"\
+			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()"
 			     " GPS_PABLANK_Setup_as_GPIO");
 			StoredValue_GPS_PABLANK.name = PN_GPS_PABLANK;
 			pinmux_get_pin_config(&StoredValue_GPS_PABLANK);
@@ -1202,9 +1186,8 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 			GPIOSetup.func = PF_gpio;
 			pinmux_set_pin_config(&GPIOSetup);
 			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()"\
-			     " 0x%08X",
-			     StoredValue_GPS_PABLANK.reg.val);
+			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()"
+			     " 0x%08X", StoredValue_GPS_PABLANK.reg.val);
 			ret = gpio_request(gpio, "GPS PABLANK");
 			if (ret < 0) {
 				ST_DBG("GLUE_SELFTEST::gpio %u request failed",
@@ -1220,24 +1203,24 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 					gpio_direction_output(gpio, 1);
 					gpio_set_value(gpio, 1);
 					ST_DBG("GLUE_SELFTEST::"
-					     "std_selftest_control_gps_io ()"
-					     " GPS_PABLANK - Write - High");
+					       "std_selftest_control_gps_io ()"
+					       " GPS_PABLANK - Write - High");
 					break;
 				case ST_GPS_LOW:
 					gpio_direction_output(gpio, 0);
 					gpio_set_value(gpio, 0);
 					ST_DBG("GLUE_SELFTEST::"
-					     "std_selftest_control_gps_io ()"
-					     " GPS_PABLANK - Write - Low");
+					       "std_selftest_control_gps_io ()"
+					       " GPS_PABLANK - Write - Low");
 					break;
 				case ST_GPS_RELEASE:
 				default:
 					/* assume release state,
 					   defined in ISI */
 					if (GPS_PABLANK_Setup_as_GPIO == true) {
-						ST_DBG("GLUE_SELFTEST::"\
-						       "std_selftest_control"\
-						       "_gps_io () GPS_PABLANK"\
+						ST_DBG("GLUE_SELFTEST::"
+						       "std_selftest_control"
+						       "_gps_io () GPS_PABLANK"
 						       " - Restore");
 						pinmux_set_pin_config
 						    (&StoredValue_GPS_PABLANK);
@@ -1253,14 +1236,14 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 		case ST_GPS_READ:
 			gpio_direction_input(gpio);
 			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()" \
+			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()"
 			     " GPS_PABLANK - Read");
 			if (gpio_get_value(gpio) == 1) {
-				ST_DBG("GLUE_SELFTEST::" \
+				ST_DBG("GLUE_SELFTEST::"
 				       "std_selftest_control_gps_io ()>>>High");
 				*state = ST_GPS_HIGH;
 			} else {
-				ST_DBG("GLUE_SELFTEST::" \
+				ST_DBG("GLUE_SELFTEST::"
 				       "std_selftest_control_gps_io ()>>>Low");
 				*state = ST_GPS_LOW;
 			}
@@ -1275,7 +1258,7 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 		pinmux_find_gpio(PN_GPS_TMARK, &gpio, PF_gpio);
 		if (GPS_TMARK_Setup_as_GPIO == false) {
 			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()" \
+			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()"
 			     " GPS_TMARK_Setup_as_GPIO");
 			StoredValue_GPS_TMARK.name = PN_GPS_TMARK;
 			pinmux_get_pin_config(&StoredValue_GPS_TMARK);
@@ -1283,9 +1266,8 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 			GPIOSetup.func = PF_gpio;
 			pinmux_set_pin_config(&GPIOSetup);
 			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()" \
-			     " 0x%08X",
-			     StoredValue_GPS_TMARK.reg.val);
+			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()"
+			     " 0x%08X", StoredValue_GPS_TMARK.reg.val);
 			ret = gpio_request(gpio, "GPS TMARK");
 			if (ret < 0) {
 				ST_DBG("GLUE_SELFTEST::gpio %u request failed",
@@ -1300,15 +1282,15 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 				case ST_GPS_HIGH:
 					gpio_direction_output(gpio, 1);
 					gpio_set_value(gpio, 1);
-					ST_DBG("GLUE_SELFTEST::" \
-					       "std_selftest_control_gps_io ()"\
+					ST_DBG("GLUE_SELFTEST::"
+					       "std_selftest_control_gps_io ()"
 					       " GPS_TMARK - Write - High");
 					break;
 				case ST_GPS_LOW:
 					gpio_direction_output(gpio, 0);
 					gpio_set_value(gpio, 0);
-					ST_DBG("GLUE_SELFTEST::" \
-					       "std_selftest_control_gps_io ()"\
+					ST_DBG("GLUE_SELFTEST::"
+					       "std_selftest_control_gps_io ()"
 					       " GPS_TMARK - Write - Low");
 					break;
 				case ST_GPS_RELEASE:
@@ -1316,9 +1298,9 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 					/* assume release state,
 					   defined in ISI */
 					if (GPS_TMARK_Setup_as_GPIO == true) {
-						ST_DBG("GLUE_SELFTEST::" \
-						       "std_selftest_control_" \
-						       "gps_io () GPS_TMARK" \
+						ST_DBG("GLUE_SELFTEST::"
+						       "std_selftest_control_"
+						       "gps_io () GPS_TMARK"
 						       " - Restore");
 						pinmux_set_pin_config
 						    (&StoredValue_GPS_TMARK);
@@ -1333,12 +1315,12 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 
 		case ST_GPS_READ:
 			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()" \
+			    ("GLUE_SELFTEST::std_selftest_control_gps_io ()"
 			     " GPS_TMARK - Read");
 			gpio_direction_input(gpio);
 			if (gpio_get_value(gpio) == 1) {
 				ST_DBG("GLUE_SELFTEST::"
-				      "std_selftest_control_gps_io () >>>High");
+				       "std_selftest_control_gps_io () >>>High");
 				*state = ST_GPS_HIGH;
 			} else {
 				ST_DBG("GLUE_SELFTEST::"
@@ -1359,11 +1341,11 @@ static void std_selftest_control_gps_io(struct SelftestUserCmdData_t *cmddata)
 
 	if (ST_PASS == result) {
 		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_control_gps_io () returned " \
+		    ("GLUE_SELFTEST::std_selftest_control_gps_io () returned "
 		     "-----> ST_PASS");
 	} else {
 		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_control_gps_io () returned " \
+		    ("GLUE_SELFTEST::std_selftest_control_gps_io () returned "
 		     "-----> ST_FAIL");
 	}
 
@@ -1411,7 +1393,7 @@ static void std_selftest_usb_charger(struct SelftestUserCmdData_t *cmddata)
 			status =
 			    bcmpmu_selftest->bcmpmu->
 			    register_usb_callback(bcmpmu_selftest->bcmpmu,
-				std_selftest_usb_event_notif_callback,
+						  std_selftest_usb_event_notif_callback,
 						  (void *)bcmpmu_selftest);
 		}
 		ST_DBG("GLUE_SELFTEST::hal_selftest_usb_charger() Status: %d",
@@ -1438,23 +1420,23 @@ static void std_selftest_usb_charger(struct SelftestUserCmdData_t *cmddata)
 		bcmpmu_selftest->bcmpmu->read_dev_drct(bcmpmu_selftest->bcmpmu,
 						       0, 0x54, &val,
 						       PMU_BITMASK_ALL);
-		ST_DBG("GLUE_SELFTEST::hal_selftest_usb_charger()" \
+		ST_DBG("GLUE_SELFTEST::hal_selftest_usb_charger()"
 		       " MBCCTRL5 val: %u", val);
 	}
 
 	if (mbc5_usb_det_ldo_en) {
 		/* LDO is already on. */
 		ST_DBG
-		    ("GLUE_SELFTEST::hal_selftest_usb_charger(); " \
+		    ("GLUE_SELFTEST::hal_selftest_usb_charger(); "
 		     "USB_DET_LDO is already on, orig = %x aon = %x",
 		     mbc5_cdet_orig, 0);
 		bcmpmu_selftest->bcmpmu->write_dev(bcmpmu_selftest->bcmpmu,
-					PMU_REG_MBCCTRL5_USB_DET_LDO_EN,
-					0,
-					bcmpmu_selftest->bcmpmu->
-					regmap
-					[PMU_REG_MBCCTRL5_USB_DET_LDO_EN].
-					mask);
+						   PMU_REG_MBCCTRL5_USB_DET_LDO_EN,
+						   0,
+						   bcmpmu_selftest->bcmpmu->
+						   regmap
+						   [PMU_REG_MBCCTRL5_USB_DET_LDO_EN].
+						   mask);
 		mdelay(5);
 	}
 
@@ -1473,7 +1455,7 @@ static void std_selftest_usb_charger(struct SelftestUserCmdData_t *cmddata)
 						       0, 0x54, &val,
 						       PMU_BITMASK_ALL);
 		ST_DBG("GLUE_SELFTEST::hal_selftest_usb_charger()"
-		     " MBCCTRL5 val: %u", val);
+		       " MBCCTRL5 val: %u", val);
 	}
 
 	ST_DBG("GLUE_SELFTEST::hal_selftest_usb_charger() "
@@ -1499,13 +1481,13 @@ static void std_selftest_usb_charger(struct SelftestUserCmdData_t *cmddata)
 
 	if (hal_selftest_usb_charger_latch_ok) {
 		ST_DBG
-		    ("GLUE_SELFTEST::hal_selftest_usb_charger() "\
+		    ("GLUE_SELFTEST::hal_selftest_usb_charger() "
 		     "Connection is good");
 		cmddata->testStatus = ST_PASS;
 		cmddata->subtestCount = 0;
 	} else {
 		ST_DBG
-		    ("GLUE_SELFTEST::hal_selftest_usb_charger() " \
+		    ("GLUE_SELFTEST::hal_selftest_usb_charger() "
 		     "Connection is bad");
 		cmddata->testStatus = ST_FAIL;
 		cmddata->subtestCount = 1;
@@ -1566,8 +1548,7 @@ static ssize_t FormatTestResult(struct SelftestUserCmdData_t cmddata, char *buf)
 	sprintf(cbuf, "%s\n", Selftest_ResultString[cmddata.testStatus]);
 	/* Detailed result */
 	if ((cmddata.ResultFormat == ST_RESULT_FORMAT_DETAILED) &&
-	    (cmddata.testStatus == ST_FAIL) &&
-	    (cmddata.subtestCount != 0)) {
+	    (cmddata.testStatus == ST_FAIL) && (cmddata.subtestCount != 0)) {
 		cbuf += strlen(cbuf);
 		sprintf(cbuf, "%i\n", cmddata.subtestCount);
 		cbuf += strlen(cbuf);

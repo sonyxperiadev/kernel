@@ -39,7 +39,7 @@ module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 	} while (0)
 
 struct irq_cb {
-	void (*callback)(enum bcmpmu_irq, void *);
+	void (*callback) (enum bcmpmu_irq, void *);
 	void *idata;
 	bool masked;
 };
@@ -70,7 +70,7 @@ static int bcmpmu_read_irq_regs(struct bcmpmu_irq_data *idata)
 {
 	int i;
 	int count = 0;
-	
+
 /*
 	idata->bcmpmu->read_dev_bulk(idata->bcmpmu,
 			idata->bcmpmu->regmap[PMU_REG_INT_START].map,
@@ -83,31 +83,36 @@ static int bcmpmu_read_irq_regs(struct bcmpmu_irq_data *idata)
 			&idata->irq_msks[0],
 			idata->irqreg_size);
 */
-	for (i=0; i<idata->irqreg_size; i++) {
+	for (i = 0; i < idata->irqreg_size; i++) {
 		idata->bcmpmu->read_dev_drct(idata->bcmpmu,
-			idata->bcmpmu->regmap[PMU_REG_INT_START].map,
-			idata->bcmpmu->regmap[PMU_REG_INT_START].addr + i,
-			&idata->irq_regs[i],
-			0xffffffff);
+					     idata->bcmpmu->
+					     regmap[PMU_REG_INT_START].map,
+					     idata->bcmpmu->
+					     regmap[PMU_REG_INT_START].addr + i,
+					     &idata->irq_regs[i], 0xffffffff);
 	}
-	for (i=0; i<idata->irqreg_size; i++) {
+	for (i = 0; i < idata->irqreg_size; i++) {
 		idata->bcmpmu->read_dev_drct(idata->bcmpmu,
-			idata->bcmpmu->regmap[PMU_REG_INT_MSK_START].map,
-			idata->bcmpmu->regmap[PMU_REG_INT_MSK_START].addr + i,
-			&idata->irq_msks[i],
-			0xffffffff);
+					     idata->bcmpmu->
+					     regmap[PMU_REG_INT_MSK_START].map,
+					     idata->bcmpmu->
+					     regmap[PMU_REG_INT_MSK_START].
+					     addr + i, &idata->irq_msks[i],
+					     0xffffffff);
 	}
 
-	for (i=0; i<idata->irqreg_size; i++) {
+	for (i = 0; i < idata->irqreg_size; i++) {
 		pr_irq(DATA, "%s int=0x%X, mask=0x%X\n",
-			__func__, idata->irq_regs[i],idata->irq_msks[i]);
-		if (idata->irq_regs[i] & ~idata->irq_msks[i]) count++;
+		       __func__, idata->irq_regs[i], idata->irq_msks[i]);
+		if (idata->irq_regs[i] & ~idata->irq_msks[i])
+			count++;
 	}
-	pr_irq(FLOW, "%s count=%d, callback\n",__func__, count);
+	pr_irq(FLOW, "%s count=%d, callback\n", __func__, count);
 	return count;
 }
 
-static bool bcmpmu_get_irq_index(struct bcmpmu_irq_data *idata, enum bcmpmu_irq *index)
+static bool bcmpmu_get_irq_index(struct bcmpmu_irq_data *idata,
+				 enum bcmpmu_irq *index)
 {
 	static u8 reg_index = 0;
 	int i;
@@ -116,9 +121,12 @@ static bool bcmpmu_get_irq_index(struct bcmpmu_irq_data *idata, enum bcmpmu_irq 
 	for (i = reg_index; i < idata->irqreg_size; i++) {
 		if (idata->irq_regs[i] != 0) {
 			for (j = 0; j < PMU_IRQ_MAX; j++) {
-				if ((idata->irqregmap[i].addr == idata->irqmap[j].int_addr) &&
-					(idata->irqmap[j].bit_mask & idata->irq_regs[i])) {
-					idata->irq_regs[i] &= ~(idata->irqmap[j].bit_mask);
+				if ((idata->irqregmap[i].addr ==
+				     idata->irqmap[j].int_addr)
+				    && (idata->irqmap[j].bit_mask & idata->
+					irq_regs[i])) {
+					idata->irq_regs[i] &=
+					    ~(idata->irqmap[j].bit_mask);
 					goto int_found;
 				}
 			}
@@ -128,12 +136,11 @@ static bool bcmpmu_get_irq_index(struct bcmpmu_irq_data *idata, enum bcmpmu_irq 
 	reg_index = 0;
 	return false;
 
-int_found:
+      int_found:
 	*index = j;
 	reg_index = i;
 	return true;
 }
-
 
 void bcmpmu_irq_handler(struct work_struct *work)
 {
@@ -154,10 +161,13 @@ void bcmpmu_irq_handler(struct work_struct *work)
 		ret = bcmpmu_get_irq_index(idata, &index);
 		if (index < PMU_IRQ_MAX) {
 			if ((idata->irq_cb[index].callback != NULL) &&
-				(idata->irq_cb[index].masked == 0)){
+			    (idata->irq_cb[index].masked == 0)) {
 				idata->irq_cb[index].callback(index,
-						idata->irq_cb[index].idata);
-				pr_irq(FLOW, "%s index=%d, callback\n",__func__, index);
+							      idata->
+							      irq_cb[index].
+							      idata);
+				pr_irq(FLOW, "%s index=%d, callback\n",
+				       __func__, index);
 			}
 		}
 	}
@@ -166,23 +176,26 @@ void bcmpmu_irq_handler(struct work_struct *work)
 	if (count > 0) {
 		idata->runagain = 1;
 		queue_work(idata->workq, &idata->work);
-	} else idata->runagain = 0;
+	} else
+		idata->runagain = 0;
 }
 
 int bcmpmu_register_irq(struct bcmpmu *pmu, enum bcmpmu_irq irq,
-	void (*callback)(enum bcmpmu_irq irq, void *), void *data)
+			void (*callback) (enum bcmpmu_irq irq, void *),
+			void *data)
 {
 	struct bcmpmu_irq_data *idata = (struct bcmpmu_irq_data *)pmu->irqinfo;
 	int ret;
 
-	if (irq >= PMU_IRQ_MAX) return -ENODEV;
+	if (irq >= PMU_IRQ_MAX)
+		return -ENODEV;
 	mutex_lock(&idata->ilock);
 	if (idata->irq_cb[irq].callback == NULL) {
 		idata->irq_cb[irq].callback = callback;
 		idata->irq_cb[irq].idata = data;
 		ret = 0;
-	}
-	else ret = -EINVAL;
+	} else
+		ret = -EINVAL;
 	mutex_unlock(&idata->ilock);
 	return ret;
 }
@@ -191,14 +204,15 @@ int bcmpmu_unregister_irq(struct bcmpmu *pmu, enum bcmpmu_irq irq)
 {
 	struct bcmpmu_irq_data *idata = (struct bcmpmu_irq_data *)pmu->irqinfo;
 	int ret;
-	if (irq >= PMU_IRQ_MAX) return -ENODEV;
+	if (irq >= PMU_IRQ_MAX)
+		return -ENODEV;
 	mutex_lock(&idata->ilock);
 	if (idata->irq_cb[irq].callback == NULL) {
 		idata->irq_cb[irq].callback = NULL;
 		idata->irq_cb[irq].idata = NULL;
 		ret = 0;
-	}
-	else ret = -EINVAL;
+	} else
+		ret = -EINVAL;
 	mutex_unlock(&idata->ilock);
 	return ret;
 }
@@ -208,11 +222,15 @@ int bcmpmu_mask_irq(struct bcmpmu *pmu, enum bcmpmu_irq irq)
 	struct bcmpmu_irq_data *idata = (struct bcmpmu_irq_data *)pmu->irqinfo;
 	struct bcmpmu_irq_map map;
 	int ret = 0;
-	if (irq >= PMU_IRQ_MAX) return -ENODEV; 
+	if (irq >= PMU_IRQ_MAX)
+		return -ENODEV;
 	map = idata->irqmap[irq];
-	if ((map.int_addr == 0) && (map.mask_addr == 0)) return -ENODEV;
+	if ((map.int_addr == 0) && (map.mask_addr == 0))
+		return -ENODEV;
 
-	ret = pmu->write_dev_drct(pmu, map.map, map.mask_addr, map.bit_mask, map.bit_mask);
+	ret =
+	    pmu->write_dev_drct(pmu, map.map, map.mask_addr, map.bit_mask,
+				map.bit_mask);
 	if (ret == 0)
 		idata->irq_cb[irq].masked = 1;
 	return ret;
@@ -224,9 +242,11 @@ int bcmpmu_unmask_irq(struct bcmpmu *pmu, enum bcmpmu_irq irq)
 	struct bcmpmu_irq_data *idata = (struct bcmpmu_irq_data *)pmu->irqinfo;
 	struct bcmpmu_irq_map map;
 	int ret = 0;
-	if (irq >= PMU_IRQ_MAX) return -ENODEV; 
+	if (irq >= PMU_IRQ_MAX)
+		return -ENODEV;
 	map = idata->irqmap[irq];
-	if ((map.int_addr == 0) && (map.mask_addr == 0)) return -ENODEV;
+	if ((map.int_addr == 0) && (map.mask_addr == 0))
+		return -ENODEV;
 
 	ret = pmu->write_dev_drct(pmu, map.map, map.mask_addr, 0, map.bit_mask);
 	if (ret == 0)
@@ -236,12 +256,12 @@ int bcmpmu_unmask_irq(struct bcmpmu *pmu, enum bcmpmu_irq irq)
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 static ssize_t dbgmsk_show(struct device *dev, struct device_attribute *attr,
-				char *buf)
+			   char *buf)
 {
 	return sprintf(buf, "debug_mask is %x\n", debug_mask);
 }
 static ssize_t dbgmsk_store(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
+			    const char *buf, size_t count)
 {
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	if (val > 0xFF || val == 0)
@@ -250,7 +270,7 @@ static ssize_t dbgmsk_store(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 static ssize_t unmask_store(struct device *dev, struct device_attribute *attr,
-				 const char *buf, size_t count)
+			    const char *buf, size_t count)
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	unsigned long val = simple_strtoul(buf, NULL, 0);
@@ -260,7 +280,7 @@ static ssize_t unmask_store(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 static ssize_t mask_store(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
+			  const char *buf, size_t count)
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	unsigned long val = simple_strtoul(buf, NULL, 0);
@@ -269,6 +289,7 @@ static ssize_t mask_store(struct device *dev, struct device_attribute *attr,
 	bcmpmu->mask_irq(bcmpmu, val);
 	return count;
 }
+
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_store);
 static DEVICE_ATTR(unmask, 0644, NULL, unmask_store);
 static DEVICE_ATTR(mask, 0644, NULL, mask_store);
@@ -298,7 +319,7 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 		dev_err(bcmpmu->dev, "%s: kzalloc failed: %d\n", __func__, ret);
 		return ret;
 	}
-	pr_irq(INIT, "%s, called.\n",__func__);
+	pr_irq(INIT, "%s, called.\n", __func__);
 
 	bcmpmu->register_irq = bcmpmu_register_irq;
 	bcmpmu->unregister_irq = bcmpmu_unregister_irq;
@@ -333,16 +354,15 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	INIT_WORK(&idata->work, bcmpmu_irq_handler);
 	idata->irq = pdata->irq;
 	idata->runagain = 0;
-	
+
 	bcmpmu->irqinfo = idata;
 	ret = request_irq(pdata->irq, bcmpmu_isr,
-		IRQF_DISABLED | IRQF_TRIGGER_FALLING | IRQF_NO_SUSPEND,
-		"bcmpmu-irq", idata);
+			  IRQF_DISABLED | IRQF_TRIGGER_FALLING |
+			  IRQF_NO_SUSPEND, "bcmpmu-irq", idata);
 	if (ret) {
-		pr_irq(ERROR, "%s, failed request irq.\n",__func__);
+		pr_irq(ERROR, "%s, failed request irq.\n", __func__);
 		goto err;
 	}
-
 
 	disable_irq(pdata->irq);
 	bcmpmu_read_irq_regs(idata);
@@ -354,14 +374,15 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 #endif
 	return 0;
 
-err:
+      err:
 	return ret;
 }
 
 static int __devexit bcmpmu_irq_remove(struct platform_device *pdev)
 {
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
-	struct bcmpmu_irq_data *idata = (struct bcmpmu_irq_data *)bcmpmu->irqinfo;
+	struct bcmpmu_irq_data *idata =
+	    (struct bcmpmu_irq_data *)bcmpmu->irqinfo;
 	if (idata->irq)
 		free_irq(bcmpmu->pdata->irq, bcmpmu);
 	if (idata->irq_regs)
@@ -375,8 +396,8 @@ static int __devexit bcmpmu_irq_remove(struct platform_device *pdev)
 
 static struct platform_driver bcmpmu_irq_driver = {
 	.driver = {
-		.name = "bcmpmu_irq",
-	},
+		   .name = "bcmpmu_irq",
+		   },
 	.probe = bcmpmu_irq_probe,
 	.remove = __devexit_p(bcmpmu_irq_remove),
 };
@@ -385,12 +406,14 @@ static int __init bcmpmu_irq_init(void)
 {
 	return platform_driver_register(&bcmpmu_irq_driver);
 }
+
 subsys_initcall(bcmpmu_irq_init);
 
 static void __exit bcmpmu_irq_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_irq_driver);
 }
+
 module_exit(bcmpmu_irq_exit);
 
 MODULE_DESCRIPTION("BCM PMIC irq driver");

@@ -36,7 +36,7 @@
 #include <plat/pwr_mgr.h>
 #endif
 
-// #include <linux/broadcom/timer.h>
+/*  #include <linux/broadcom/timer.h> */
 
 #include <linux/timer.h>
 #include "i2c-bsc.h"
@@ -118,14 +118,14 @@ struct bsc_i2c_dev {
 	struct completion ses_done;
 
 	/*
-	 * to signal the BSC controller has finished reading and all RX data has
-	 * been stored in the RX FIFO
+	 *to signal the BSC controller has finished reading and all RX data has
+	 *been stored in the RX FIFO
 	 */
 	struct completion rx_ready;
 
 	/*
-	 * to signal the TX FIFO is empty, which means all pending TX data has been
-	 * sent out and received by the slave 
+	 *to signal the TX FIFO is empty, which means all pending TX data has been
+	 *sent out and received by the slave
 	 */
 	struct completion tx_fifo_empty;
 
@@ -193,8 +193,8 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 		complete(&dev->ses_done);
 
 	if (status & I2C_MM_HS_ISR_NOACK_MASK) {
-		// TODO: check for TX NACK status here
-		// should not clear status until figure out what's going on
+		/*  TODO: check for TX NACK status here */
+		/*  should not clear status until figure out what's going on */
 
 		/*
 		 * For Mastercode, NAK is expected as per HS protocol, it's not error
@@ -213,7 +213,7 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 
 	/*
 	 * I2C bus timeout, schedule a workqueue work item to reset the
-	 * master
+	 *master
 	 */
 	if (status & I2C_MM_HS_ISR_ERR_MASK) {
 		dev->err_flag = 1;
@@ -231,22 +231,22 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 
 /*
  * We should not need to do this in software, but this is how the hardware was
- * designed and that leaves us with no choice but SUCK it
+ *designed and that leaves us with no choice but SUCK it
  *
  * When the CPU writes to the control, data, or CRC registers the CMDBUSY bit
- * will be set to high. It will be cleared after the writing action has been
- * transferred from APB clock domain to BSC clock domain and then the status
- * has transfered from BSC clock domain back to APB clock domain
- * 
+ *will be set to high. It will be cleared after the writing action has been
+ *transferred from APB clock domain to BSC clock domain and then the status
+ *has transfered from BSC clock domain back to APB clock domain
+ *
  * We need to wait for the CMDBUSY to clear because the hardware does not have
  * CMD pipeline registers. This wait is to avoid a previous written CMD/data
- * to be overwritten by the following writing before the previous written
+ *to be overwritten by the following writing before the previous written
  * CMD/data was executed/synchronized by the hardware
- * 
+ *
  * We shouldn't set up an interrupt for this since the context switch overhead
- * is too expensive for this type of action and in fact 99% of time we will
- * experience no wait anyway
- * 
+ *is too expensive for this type of action and in fact 99% of time we will
+ *experience no wait anyway
+ *
  */
 static int bsc_wait_cmdbusy(struct bsc_i2c_dev *dev)
 {
@@ -287,7 +287,7 @@ static int bsc_send_cmd(struct bsc_i2c_dev *dev, BSC_CMD_t cmd)
 
 	/*
 	 * Block waiting for the transaction to finish. When it's finished we'll
-	 * be signaled by the interrupt
+	 *be signaled by the interrupt
 	 */
 	time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
 	bsc_disable_intr((uint32_t) dev->virt_base,
@@ -352,7 +352,7 @@ static int bsc_xfer_stop(struct i2c_adapter *adapter)
 }
 
 static int bsc_xfer_read_byte(struct bsc_i2c_dev *dev, unsigned int no_ack,
-			      uint8_t * data)
+			      uint8_t *data)
 {
 	int rc;
 	BSC_CMD_t cmd;
@@ -369,7 +369,7 @@ static int bsc_xfer_read_byte(struct bsc_i2c_dev *dev, unsigned int no_ack,
 
 	/*
 	 * Now read the data from the BSC DATA register. Since BSC does not have
-	 * an RX FIFO, we can only read one byte at a time
+	 *an RX FIFO, we can only read one byte at a time
 	 */
 	bsc_read_data((uint32_t) dev->virt_base, data, 1);
 
@@ -380,7 +380,7 @@ static int bsc_xfer_read_byte(struct bsc_i2c_dev *dev, unsigned int no_ack,
  * Read byte-by-byte through the BSC data register
  */
 static unsigned int bsc_xfer_read_data(struct bsc_i2c_dev *dev,
-				       unsigned int nak, uint8_t * buf,
+				       unsigned int nak, uint8_t *buf,
 				       unsigned int len)
 {
 	int i, rc;
@@ -403,7 +403,7 @@ static unsigned int bsc_xfer_read_data(struct bsc_i2c_dev *dev,
 }
 
 static unsigned int bsc_xfer_read_fifo_single(struct bsc_i2c_dev *dev,
-					      uint8_t * buf,
+					      uint8_t *buf,
 					      unsigned int last_byte_nak,
 					      unsigned int len)
 {
@@ -423,7 +423,7 @@ static unsigned int bsc_xfer_read_fifo_single(struct bsc_i2c_dev *dev,
 
 	/*
 	 * Block waiting for the transaction to finish. When it's finished
-	 * we'll be signaled by the interrupt
+	 *we'll be signaled by the interrupt
 	 */
 	time_left = wait_for_completion_timeout(&dev->rx_ready, SES_TIMEOUT);
 	bsc_disable_intr((uint32_t) dev->virt_base,
@@ -448,7 +448,7 @@ static unsigned int bsc_xfer_read_fifo_single(struct bsc_i2c_dev *dev,
 	return len;
 }
 
-static unsigned int bsc_xfer_read_fifo(struct bsc_i2c_dev *dev, uint8_t * buf,
+static unsigned int bsc_xfer_read_fifo(struct bsc_i2c_dev *dev, uint8_t *buf,
 				       unsigned int len)
 {
 	unsigned int i, rc, last_byte_nak = 0, bytes_read = 0;
@@ -499,7 +499,7 @@ static unsigned int bsc_xfer_read(struct i2c_adapter *adapter,
 }
 
 static int bsc_xfer_write_byte(struct bsc_i2c_dev *dev, unsigned int nak_ok,
-			       uint8_t * data)
+			       uint8_t *data)
 {
 	int rc;
 	unsigned long time_left;
@@ -521,7 +521,7 @@ static int bsc_xfer_write_byte(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 
 	/*
 	 * Block waiting for the transaction to finish. When it's finished we'll
-	 * be signaled by the interrupt
+	 *be signaled by the interrupt
 	 */
 	time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
 	bsc_disable_intr((uint32_t) dev->virt_base,
@@ -545,7 +545,7 @@ static int bsc_xfer_write_byte(struct bsc_i2c_dev *dev, unsigned int nak_ok,
  * Write data byte-by-byte into the BSC data register
  */
 static int bsc_xfer_write_data(struct bsc_i2c_dev *dev, unsigned int nak_ok,
-			       uint8_t * buf, unsigned int len)
+			       uint8_t *buf, unsigned int len)
 {
 	int i, rc;
 	unsigned int bytes_written = 0;
@@ -564,7 +564,7 @@ static int bsc_xfer_write_data(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 }
 
 static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
-			       uint8_t * buf, unsigned int len)
+			       uint8_t *buf, unsigned int len)
 {
 	unsigned long time_left;
 
@@ -584,7 +584,7 @@ static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 
 	/*
 	 * Block waiting for the transaction to finish. When it's finished
-	 * we'll be signaled by the interrupt
+	 *we'll be signaled by the interrupt
 	 */
 	time_left =
 	    wait_for_completion_timeout(&dev->tx_fifo_empty, SES_TIMEOUT);
@@ -746,7 +746,7 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 	struct bsc_adap_cfg *hw_cfg = NULL;
 
 	/*
-	 * mastercode (0000 1000 + #id)
+	 *mastercode (0000 1000 + #id)
 	 */
 	dev->mastercode = (MASTERCODE | (MASTERCODE_MASK & adapter->nr)) + 1;
 	dev->is_mastercode = true;
@@ -772,8 +772,8 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 
 	/*
 	 * Now save the BSC_TIM register value as it will be modified before the
-	 * master going into high-speed mode. We need to restore the BSC_TIM
-	 * value when the device switches back to fast speed
+	 *master going into high-speed mode. We need to restore the BSC_TIM
+	 *value when the device switches back to fast speed
 	 */
 	dev->tim_val = bsc_get_tim((uint32_t) dev->virt_base);
 
@@ -915,7 +915,7 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 
 		/*
 		 * Auto-sense allows the slave device to stretch the clock for a long
-		 * time. Need to turn off auto-sense for high-speed mode
+		 *time. Need to turn off auto-sense for high-speed mode
 		 */
 		bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
 	} else {
@@ -924,9 +924,9 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 				I2C_MM_HS_IER_ERR_INT_EN_MASK);
 
 		/* In case of the Keypad controller LM8325, the maximum timeout set
-		 * by the BSC controller does not suffice the time for which it holds
-		 * the clk line low when busy resulting in bus errors. To overcome this
-		 * problem we need ot enable autosense with the timeout disabled */
+		 *by the BSC controller does not suffice the time for which it holds
+		 *the clk line low when busy resulting in bus errors. To overcome this
+		 *problem we need ot enable autosense with the timeout disabled */
 		if (pd && TIMEOUT_IS_VALID(pd) && !pd->autosense_timeout_enable)
 			bsc_set_autosense((uint32_t) dev->virt_base, 1, 0);
 		else
@@ -972,7 +972,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 		/* set only auto-sense configuration
 		 *
 		 * Enable autosense if adapter is not switched to HS
-		 * during bootup & stay always in HS mode(PMU BSC)
+		 *during bootup & stay always in HS mode(PMU BSC)
 		 */
 	if (hw_cfg && !(hw_cfg->speed != BSC_BUS_SPEED_HS))
 		bsc_set_autosense((uint32_t) dev->virt_base, 1, 1);
@@ -1078,7 +1078,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
       hs_ret:
 
 	/* Here we should not code such as rc = bsc_xfer_stop(), since it would
-	 * change the value of rc, which need to be passed to the caller */
+	 *change the value of rc, which need to be passed to the caller */
 	/* send stop command */
 	if (hw_cfg && !hw_cfg->is_pmu_i2c)
 		if (bsc_xfer_stop(adapter) < 0)
@@ -1113,7 +1113,7 @@ static struct i2c_algorithm bsc_algo = {
 };
 
 static int
-proc_debug_write(struct file *file, const char __user * buffer,
+proc_debug_write(struct file *file, const char __user *buffer,
 		 unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1160,7 +1160,7 @@ proc_debug_read(char *buffer, char **start, off_t off, int count,
 }
 
 static int
-proc_reset_write(struct file *file, const char __user * buffer,
+proc_reset_write(struct file *file, const char __user *buffer,
 		 unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1192,7 +1192,7 @@ proc_reset_write(struct file *file, const char __user * buffer,
 }
 
 static int
-proc_tx_fifo_write(struct file *file, const char __user * buffer,
+proc_tx_fifo_write(struct file *file, const char __user *buffer,
 		   unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1241,7 +1241,7 @@ proc_tx_fifo_read(char *buffer, char **start, off_t off, int count,
 }
 
 static int
-proc_rx_fifo_write(struct file *file, const char __user * buffer,
+proc_rx_fifo_write(struct file *file, const char __user *buffer,
 		   unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1600,7 +1600,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dev);
 
 	/*
-	 * Configure BSC timing registers 
+	 * Configure BSC timing registers
 	 * If PMU I2C - hs timing is calculated based on 26MHz source, else 104MHz
 	 */
 	if (hw_cfg && hw_cfg->is_pmu_i2c)
@@ -1671,7 +1671,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
 	/*
 	 * I2C device drivers may be active on return from
-	 * i2c_add_numbered_adapter()
+	 *i2c_add_numbered_adapter()
 	 */
 	rc = i2c_add_numbered_adapter(adap);
 	if (rc) {
@@ -1679,9 +1679,9 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		goto err_proc_term;
 	}
 
-	/* PMU I2C: Switch to HS mode once. This is a workaround needed for 
+	/* PMU I2C: Switch to HS mode once. This is a workaround needed for
 	 * Power manager sequencer to function properly.
-	 * 
+	 *
 	 * PMU adapter will always be in HS, dont switch back to F/S until reboot
 	 *
 	 */
@@ -1694,7 +1694,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 			goto err_proc_term;
 		}
 #endif
-		/*Enable autosense, will be turned off on successful transition to HS */
+		/* Enable autosense, will be turned off on successful transition to HS */
 		bsc_enable_intr((uint32_t) dev->virt_base,
 				I2C_MM_HS_IER_ERR_INT_EN_MASK);
 		bsc_set_autosense((uint32_t) dev->virt_base, 1, 1);
@@ -1804,7 +1804,7 @@ static int bsc_suspend(struct platform_device *pdev, pm_message_t state)
 
 	/*
 	 * Don't need to disable BSC clocks here since they are now only
-	 * turned on for each transaction
+	 *turned on for each transaction
 	 */
 	return 0;
 }

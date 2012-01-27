@@ -37,7 +37,7 @@ static struct bcmpmu *bcmpmu_core;
 #ifdef CONFIG_MFD_BCMPMU_DBG
 static ssize_t
 store_adc_req(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
+	      const char *buf, size_t count)
 {
 	struct bcmpmu_adc_req adc;
 	struct bcmpmu *bcmpmu = dev->platform_data;
@@ -48,12 +48,12 @@ store_adc_req(struct device *dev, struct device_attribute *attr,
 	else
 		printk(KERN_INFO "%s: adc_req failed\n", __func__);
 	printk("%s: ADC raw = %d, cal = %d, cnv = %d\n", __func__,
-			adc.raw, adc.cal, adc.cnv);
+	       adc.raw, adc.cal, adc.cnv);
 	return count;
 }
 static ssize_t
 store_rgltr(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
+	    const char *buf, size_t count)
 {
 	int volt, mode, enable;
 	char name[10];
@@ -63,16 +63,18 @@ store_rgltr(struct device *dev, struct device_attribute *attr,
 	if (IS_ERR(rgltr))
 		printk(KERN_INFO "%s: regulator_get failed\n", __func__);
 	else {
-		if (enable != 0)regulator_enable(rgltr);
-		else regulator_disable(rgltr);
+		if (enable != 0)
+			regulator_enable(rgltr);
+		else
+			regulator_disable(rgltr);
 		regulator_set_mode(rgltr, mode);
-		regulator_set_voltage(rgltr, volt*1000, volt*1000);
+		regulator_set_voltage(rgltr, volt * 1000, volt * 1000);
 	}
 	regulator_put(rgltr);
 	return count;
 }
 static ssize_t store_regread(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
+			     const char *buf, size_t count)
 {
 	int i;
 	struct bcmpmu *bcmpmu = dev->platform_data;
@@ -80,23 +82,22 @@ static ssize_t store_regread(struct device *dev, struct device_attribute *attr,
 	unsigned int val[16];
 	sscanf(buf, "%x %x %x", &map, &addr, &len);
 	printk("BCMPMU map=0x%X, addr=0x%X, length=0x%X\n", map, addr, len);
-	if ((map<2) &&
-		((addr+len)<255) &&
-		(len < 16)) {
+	if ((map < 2) && ((addr + len) < 255) && (len < 16)) {
 		bcmpmu->read_dev_bulk(bcmpmu, map, addr, &val[0], len);
 		for (i = 0; i < len; i++)
-			printk("BCMPMU register=0x%X, value=0x%X\n", addr+i, val[i]);
+			printk("BCMPMU register=0x%X, value=0x%X\n", addr + i,
+			       val[i]);
 	}
 	return count;
 }
 static ssize_t store_regwrite(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
+			      const char *buf, size_t count)
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	unsigned int map, addr, val;
 	sscanf(buf, "%x %x %x", &map, &addr, &val);
 	printk("BCMPMU map=0x%X, addr=0x%X, val=0x%X\n", map, addr, val);
-	if (map<2)
+	if (map < 2)
 		bcmpmu->write_dev_drct(bcmpmu, map, addr, val, 0xFF);
 	return count;
 }
@@ -121,30 +122,33 @@ static const struct attribute_group bcmpmu_core_attr_group = {
 
 void bcmpmu_client_power_off(void)
 {
-        bcmpmu_core->write_dev(bcmpmu_core,PMU_REG_HOSTCTRL1,BCMPMU_SW_SHDWN,BCMPMU_SW_SHDWN);
+	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_HOSTCTRL1, BCMPMU_SW_SHDWN,
+			       BCMPMU_SW_SHDWN);
 }
-EXPORT_SYMBOL(bcmpmu_client_power_off);
 
+EXPORT_SYMBOL(bcmpmu_client_power_off);
 
 static int bcmpmu_open(struct inode *inode, struct file *file);
 static int bcmpmu_release(struct inode *inode, struct file *file);
-static ssize_t bcmpmu_read(struct file *file, char *data, size_t len, loff_t *p);
-static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len, loff_t *p);
-static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd, unsigned long arg);
+static ssize_t bcmpmu_read(struct file *file, char *data, size_t len,
+			   loff_t *p);
+static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
+			    loff_t *p);
+static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
+				unsigned long arg);
 
 static const struct file_operations bcmpmu_fops = {
-	.owner		= THIS_MODULE,
-	.open		= bcmpmu_open,
-	.read		= bcmpmu_read,
+	.owner = THIS_MODULE,
+	.open = bcmpmu_open,
+	.read = bcmpmu_read,
 	.unlocked_ioctl = bcmpmu_ioctl_ltp,
-	.write		= bcmpmu_write,
-	.release	= bcmpmu_release,
+	.write = bcmpmu_write,
+	.release = bcmpmu_release,
 };
 
 static struct miscdevice bcmpmu_device = {
 	MISC_DYNAMIC_MINOR, "bcmpmu", &bcmpmu_fops
 };
-
 
 static int bcmpmu_open(struct inode *inode, struct file *file)
 {
@@ -158,154 +162,200 @@ static int bcmpmu_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static ssize_t bcmpmu_read(struct file *file, char *data, size_t len, loff_t *p)
+static ssize_t bcmpmu_read(struct file *file, char *data, size_t len,
+			   loff_t *p)
 {
 	struct bcmpmu *bcmpmu = file->private_data;
 	struct bcmpmu_rw_data reg;
 	ssize_t ret = 0;
 
 	if (data != NULL) {
-		if (copy_from_user((void *)&reg, (void *)data, sizeof(struct bcmpmu_rw_data)) == 0) {
-			ret = bcmpmu->read_dev(bcmpmu, reg.addr, &reg.val, reg.mask);
+		if (copy_from_user
+		    ((void *)&reg, (void *)data,
+		     sizeof(struct bcmpmu_rw_data)) == 0) {
+			ret =
+			    bcmpmu->read_dev(bcmpmu, reg.addr, &reg.val,
+					     reg.mask);
 			if (ret != 0) {
-				printk(KERN_ERR "%s: read_dev failed.\n", __func__);
-				return  0;
+				printk(KERN_ERR "%s: read_dev failed.\n",
+				       __func__);
+				return 0;
 			}
-			if (copy_to_user((void *)data, (void *)&reg, sizeof(struct bcmpmu_rw_data)) == 0)
+			if (copy_to_user
+			    ((void *)data, (void *)&reg,
+			     sizeof(struct bcmpmu_rw_data)) == 0)
 				return sizeof(struct bcmpmu_rw_data);
 			else {
-				printk(KERN_ERR "%s: failed to copy to user.\n", __func__);
+				printk(KERN_ERR "%s: failed to copy to user.\n",
+				       __func__);
 				return 0;
-			}	
-		}
-		else {
-			printk(KERN_ERR "%s: failed to copy from user.\n", __func__);
+			}
+		} else {
+			printk(KERN_ERR "%s: failed to copy from user.\n",
+			       __func__);
 		}
 	}
 	return ret;
 }
 
-static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd, unsigned long arg)
+static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
+				unsigned long arg)
 {
 	struct bcmpmu *bcmpmu = file->private_data;
 	struct bcmpmu_rw_data_ltp reg;
 	struct bcmpmu_adc_ltp adc;
 	int i;
-	void __user *argp = (void __user *) arg;
+	void __user *argp = (void __user *)arg;
 
 	ssize_t ret = 0;
 
 	switch (cmd) {
 	case BCM_PMU_IOCTL_READ_REG:
-		if (copy_from_user((void *)&reg, argp, sizeof(struct bcmpmu_rw_data_ltp)) == 0) {
-		   ret = bcmpmu->read_dev_drct(bcmpmu, reg.map, reg.addr, &reg.val[0], reg.mask);
-			printk("BCMPMU register=0x%X, val=0x%X, map=0x%X\n", reg.addr, reg.val, reg.map);
+		if (copy_from_user
+		    ((void *)&reg, argp,
+		     sizeof(struct bcmpmu_rw_data_ltp)) == 0) {
+			ret =
+			    bcmpmu->read_dev_drct(bcmpmu, reg.map, reg.addr,
+						  &reg.val[0], reg.mask);
+			printk("BCMPMU register=0x%X, val=0x%X, map=0x%X\n",
+			       reg.addr, reg.val, reg.map);
 			if (ret != 0) {
-				printk(KERN_ERR "%s: read_dev_drct failed.\n", __func__);
-				return  0;
+				printk(KERN_ERR "%s: read_dev_drct failed.\n",
+				       __func__);
+				return 0;
 			}
+		} else {
+			printk(KERN_ERR "%s: failed to copy from user.\n",
+			       __func__);
 		}
-		else {
-			printk(KERN_ERR "%s: failed to copy from user.\n", __func__);
-		}
-		if (copy_to_user(argp, (void *)&reg, sizeof(struct bcmpmu_rw_data_ltp)) != 0) {
+		if (copy_to_user
+		    (argp, (void *)&reg,
+		     sizeof(struct bcmpmu_rw_data_ltp)) != 0) {
 			return -EFAULT;
 		}
 
 		break;
 
 	case BCM_PMU_IOCTL_BULK_READ_REG:
-		if (copy_from_user((void *)&reg, argp, sizeof(struct bcmpmu_rw_data_ltp)) == 0) {
-			printk("BCMPMU bulk map=0x%X, addr=0x%X, len=0x%X\n", reg.map, reg.addr, reg.len);
-			if ((reg.map<2) &&
-				((reg.addr+reg.len)<255) &&
-				(reg.len < 16)) {
-			   ret = bcmpmu->read_dev_bulk(bcmpmu, reg.map, reg.addr, &reg.val[0], reg.len);			   
+		if (copy_from_user
+		    ((void *)&reg, argp,
+		     sizeof(struct bcmpmu_rw_data_ltp)) == 0) {
+			printk("BCMPMU bulk map=0x%X, addr=0x%X, len=0x%X\n",
+			       reg.map, reg.addr, reg.len);
+			if ((reg.map < 2) && ((reg.addr + reg.len) < 255)
+			    && (reg.len < 16)) {
+				ret =
+				    bcmpmu->read_dev_bulk(bcmpmu, reg.map,
+							  reg.addr, &reg.val[0],
+							  reg.len);
 				if (ret != 0) {
-					printk(KERN_ERR "%s: read_dev_bulk failed.\n", __func__);
-					return  0;
+					printk(KERN_ERR
+					       "%s: read_dev_bulk failed.\n",
+					       __func__);
+					return 0;
 				}
 				for (i = 0; i < reg.len; i++)
-				   printk("BCMPMU register=0x%X, value=0x%X\n", reg.addr+i, reg.val[i]);
+					printk
+					    ("BCMPMU register=0x%X, value=0x%X\n",
+					     reg.addr + i, reg.val[i]);
 			}
+		} else {
+			printk(KERN_ERR "%s: failed to copy from user.\n",
+			       __func__);
 		}
-		else {
-			printk(KERN_ERR "%s: failed to copy from user.\n", __func__);
-		}
-		if (copy_to_user(argp, (void *)&reg, sizeof(struct bcmpmu_rw_data_ltp)) != 0) {
+		if (copy_to_user
+		    (argp, (void *)&reg,
+		     sizeof(struct bcmpmu_rw_data_ltp)) != 0) {
 			return -EFAULT;
 		}
-		
+
 		break;
 
 	case BCM_PMU_IOCTL_ADC_READ_REG:
-		if (copy_from_user((void *)&adc, argp, sizeof(struct bcmpmu_adc_ltp)) == 0) {
-			printk("BCMPMU ADC CH=0x%X, ADC TM=0x%X\n", adc.sig, adc.tm);
+		if (copy_from_user
+		    ((void *)&adc, argp, sizeof(struct bcmpmu_adc_ltp)) == 0) {
+			printk("BCMPMU ADC CH=0x%X, ADC TM=0x%X\n", adc.sig,
+			       adc.tm);
 			if (bcmpmu->adc_req)
 				bcmpmu->adc_req(bcmpmu, &adc);
 			else
-				printk(KERN_INFO "%s: adc_req failed\n", __func__);
+				printk(KERN_INFO "%s: adc_req failed\n",
+				       __func__);
 
-			printk("BCMPMU ADC CH=0x%X, ADC TM=0x%X, ACD CNV=%d\n", adc.sig, adc.tm, adc.cnv);
+			printk("BCMPMU ADC CH=0x%X, ADC TM=0x%X, ACD CNV=%d\n",
+			       adc.sig, adc.tm, adc.cnv);
+		} else {
+			printk(KERN_ERR "%s: failed to copy from user.\n",
+			       __func__);
 		}
-		else {
-			printk(KERN_ERR "%s: failed to copy from user.\n", __func__);
-		}
-		if (copy_to_user(argp, (void *)&adc, sizeof(struct bcmpmu_adc_ltp)) != 0) {
+		if (copy_to_user
+		    (argp, (void *)&adc, sizeof(struct bcmpmu_adc_ltp)) != 0) {
 			return -EFAULT;
 		}
-		
+
 		break;
 
 	case BCM_PMU_IOCTL_WRITE_REG:
-		if (copy_from_user((void *)&reg, argp, sizeof(struct bcmpmu_rw_data_ltp)) == 0) {
-			ret = bcmpmu->write_dev_drct(bcmpmu, reg.map, reg.addr, reg.val[0], reg.mask);			
-			printk("BCMPMU register=0x%X, val=0x%X, map=0x%X\n", reg.addr, reg.val[0], reg.map);	
+		if (copy_from_user
+		    ((void *)&reg, argp,
+		     sizeof(struct bcmpmu_rw_data_ltp)) == 0) {
+			ret =
+			    bcmpmu->write_dev_drct(bcmpmu, reg.map, reg.addr,
+						   reg.val[0], reg.mask);
+			printk("BCMPMU register=0x%X, val=0x%X, map=0x%X\n",
+			       reg.addr, reg.val[0], reg.map);
 			if (ret != 0) {
-				printk(KERN_ERR "%s: write_dev_drct failed.\n", __func__);
+				printk(KERN_ERR "%s: write_dev_drct failed.\n",
+				       __func__);
 				return 0;
 			}
+		} else {
+			printk(KERN_ERR "%s: failed to copy from user.\n",
+			       __func__);
 		}
-		else {
-			printk(KERN_ERR "%s: failed to copy from user.\n", __func__);
-		}
-		if (copy_to_user(argp, (void *)&reg, sizeof(struct bcmpmu_rw_data_ltp)) != 0) {
+		if (copy_to_user
+		    (argp, (void *)&reg,
+		     sizeof(struct bcmpmu_rw_data_ltp)) != 0) {
 			return -EFAULT;
 		}
 
 		break;
 
 	default:
-		printk(KERN_ERR "%s: bcmpmu_ioctltest: UNSUPPORTED CMD\n", __func__);
+		printk(KERN_ERR "%s: bcmpmu_ioctltest: UNSUPPORTED CMD\n",
+		       __func__);
 		ret = -ENOTTY;
 	}
 	return ret;
 }
 
-
-static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len, loff_t *p)
+static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
+			    loff_t *p)
 {
 	struct bcmpmu *bcmpmu = file->private_data;
 	struct bcmpmu_rw_data reg;
 	ssize_t ret = 0;
 
 	if (data != NULL) {
-		if (copy_from_user((void *)&reg, (void *)data, sizeof(struct bcmpmu_rw_data)) == 0) {
-			ret = bcmpmu->write_dev(bcmpmu, reg.addr, reg.val, reg.mask);
+		if (copy_from_user
+		    ((void *)&reg, (void *)data,
+		     sizeof(struct bcmpmu_rw_data)) == 0) {
+			ret =
+			    bcmpmu->write_dev(bcmpmu, reg.addr, reg.val,
+					      reg.mask);
 			if (ret != 0) {
-				printk(KERN_ERR "%s: write_dev failed.\n", __func__);
+				printk(KERN_ERR "%s: write_dev failed.\n",
+				       __func__);
 				return 0;
-			}
-			else
+			} else
 				return sizeof(struct bcmpmu_rw_data);
-		}
-		else {
-			printk(KERN_ERR "%s: failed to copy from user.\n", __func__);
+		} else {
+			printk(KERN_ERR "%s: failed to copy from user.\n",
+			       __func__);
 		}
 	}
 	return ret;
 }
-
 
 static void bcmpmu_register_init(struct bcmpmu *pmu)
 {
@@ -314,65 +364,65 @@ static void bcmpmu_register_init(struct bcmpmu *pmu)
 	printk(KERN_INFO "%s: register init\n", __func__);
 	for (i = 0; i < pmu->pdata->init_max; i++) {
 		pmu->write_dev_drct(pmu,
-			pdata->init_data[i].map,
-			pdata->init_data[i].addr,
-			pdata->init_data[i].val,
-			pdata->init_data[i].mask);
+				    pdata->init_data[i].map,
+				    pdata->init_data[i].addr,
+				    pdata->init_data[i].val,
+				    pdata->init_data[i].mask);
 	}
 }
 
 static struct platform_device bcmpmu_irq_device = {
-	.name 			= "bcmpmu_irq",
-	.id			= -1,
-	.dev.platform_data 	= NULL,
+	.name = "bcmpmu_irq",
+	.id = -1,
+	.dev.platform_data = NULL,
 };
 
 static struct platform_device bcmpmu_hwmon_device = {
-	.name 			= "bcmpmu_hwmon",
-	.id			= -1,
-	.dev.platform_data 	= NULL,
+	.name = "bcmpmu_hwmon",
+	.id = -1,
+	.dev.platform_data = NULL,
 };
 
 static struct platform_device bcmpmu_accy_device = {
-	.name 			= "bcmpmu_accy",
-	.id			= -1,
-	.dev.platform_data 	= NULL,
+	.name = "bcmpmu_accy",
+	.id = -1,
+	.dev.platform_data = NULL,
 };
 
 static struct platform_device bcmpmu_batt_device = {
-	.name 			= "bcmpmu_batt",
-	.id			= -1,
-	.dev.platform_data 	= NULL,
+	.name = "bcmpmu_batt",
+	.id = -1,
+	.dev.platform_data = NULL,
 };
 
 static struct platform_device bcmpmu_chrgr_device = {
-	.name 			= "bcmpmu_chrgr",
-	.id			= -1,
-	.dev.platform_data 	= NULL,
+	.name = "bcmpmu_chrgr",
+	.id = -1,
+	.dev.platform_data = NULL,
 };
 
 static struct platform_device bcmpmu_rtc_device = {
-	.name 			= "bcmpmu_rtc",
-	.id			= -1,
-	.dev.platform_data 	= NULL,
+	.name = "bcmpmu_rtc",
+	.id = -1,
+	.dev.platform_data = NULL,
 };
 
 static struct platform_device bcmpmu_ponkey_device = {
-	.name 			= "bcmpmu_ponkey",
-	.id			= -1,
-	.dev.platform_data 	= NULL,
+	.name = "bcmpmu_ponkey",
+	.id = -1,
+	.dev.platform_data = NULL,
 };
 
 static struct platform_device bcmpmu_regulator = {
-	.name		= "bcmpmu-regulator",
-	.id			= -1,
-	.dev.platform_data	= NULL,
+	.name = "bcmpmu-regulator",
+	.id = -1,
+	.dev.platform_data = NULL,
 };
 
 static struct platform_device bcmpmu_watchdog = {
-	.name			= "bcmpmu-wdog",
-	.id			= -1,
-	.dev.platform_data	= NULL,
+	.name = "bcmpmu-wdog",
+	.id = -1,
+	.dev.platform_data = NULL,
 };
 
 static struct platform_device *bcmpmu_fellow_devices[] = {
@@ -399,15 +449,13 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 	struct dentry *root_dir = NULL;
 #endif
 	bcmpmu->regmap = bcmpmu_get_regmap();
-	
+
 	printk(KERN_INFO "%s: called.\n", __func__);
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_PMUID, &val, 0xffffffff);
 	if (ret < 0) {
 		dev_err(bcmpmu->dev, "Failed to read ID: %d\n", ret);
 		goto err;
-	}
-	else
-	{
+	} else {
 		printk(KERN_INFO "%s: Chip Version = 0x%0X.\n", __func__, val);
 	}
 	bcmpmu_register_init(bcmpmu);
@@ -417,18 +465,20 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 	root_dir = debugfs_create_dir("bcmpmu", 0);
 	if (!root_dir) {
 		bcmpmu->debugfs_root_dir = NULL;
-		printk(KERN_INFO "%s: failed to create debugfs dir.\n", __func__);
+		printk(KERN_INFO "%s: failed to create debugfs dir.\n",
+		       __func__);
 	} else
 		bcmpmu->debugfs_root_dir = root_dir;
 #endif
 	/* Make device data accessible */
 	bcmpmu_core = bcmpmu;
-	
-	for (i = 0; i <ARRAY_SIZE(bcmpmu_fellow_devices); i++)
+
+	for (i = 0; i < ARRAY_SIZE(bcmpmu_fellow_devices); i++)
 		bcmpmu_fellow_devices[i]->dev.platform_data = bcmpmu;
 
-	platform_add_devices(bcmpmu_fellow_devices, ARRAY_SIZE(bcmpmu_fellow_devices));
-	
+	platform_add_devices(bcmpmu_fellow_devices,
+			     ARRAY_SIZE(bcmpmu_fellow_devices));
+
 	/* Init other platform devices under framework */
 	if (pdata && pdata->init) {
 		ret = pdata->init(bcmpmu);
@@ -438,13 +488,12 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 			goto err;
 		}
 	}
-
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_core_attr_group);
 #endif
 	return 0;
 
-err:
+      err:
 	return ret;
 }
 
@@ -455,14 +504,15 @@ static int __devexit bcmpmu_remove(struct platform_device *pdev)
 
 	misc_deregister(&bcmpmu_device);
 
-	if (pdata && pdata->exit) pdata->exit(bcmpmu);
+	if (pdata && pdata->exit)
+		pdata->exit(bcmpmu);
 	return 0;
 }
 
 static struct platform_driver bcmpmu_driver = {
 	.driver = {
-		.name = "bcmpmu_core",
-	},
+		   .name = "bcmpmu_core",
+		   },
 	.probe = bcmpmu_probe,
 	.remove = __devexit_p(bcmpmu_remove),
 };
@@ -471,12 +521,14 @@ static int __init bcmpmu_init(void)
 {
 	return platform_driver_register(&bcmpmu_driver);
 }
+
 subsys_initcall(bcmpmu_init);
 
 static void __exit bcmpmu_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_driver);
 }
+
 module_exit(bcmpmu_exit);
 
 MODULE_DESCRIPTION("BCM PMIC core driver");

@@ -213,7 +213,7 @@ static int adc_adjust_curr(struct bcmpmu_adc *padc, int raw_curr)
 /* cal_adc_result
  * Input: request structure
  * Descripton: if adcunit is defined, req->cal will set to the calibrated
- * voltage in uV.
+ *voltage in uV.
  * Else req->cal will be set to the raw value.
 */
 static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
@@ -243,7 +243,8 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 			mutex_lock(&padc->cal_lock);
 			now = get_seconds();
 			if ((!read1)
-			    || (last_time + padc->adcsetting->compensation_interval < now)
+			    || (last_time +
+				padc->adcsetting->compensation_interval < now)
 			    || (abs(last_temperature - new_temperature) > 16)) {
 				pr_hwmon(DATA,
 					 "%s: Reading calibration channels: last_time %d, now %d, last_temp %d, new_temp %d",
@@ -254,9 +255,12 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 				cal_req.tm = PMU_ADC_TM_RTM_SW;
 				cal_req.flags = PMU_ADC_RAW_ONLY;
 				read1 = 0;
-				for (i = 0; i < padc->adcsetting->compensation_samples;) {
+				for (i = 0;
+				     i <
+				     padc->adcsetting->compensation_samples;) {
 					cal_req.sig = PMU_ADC_NTC_CAL_LO;
-					padc->bcmpmu->adc_req(padc->bcmpmu, &cal_req);
+					padc->bcmpmu->adc_req(padc->bcmpmu,
+							      &cal_req);
 					if (cal_req.raw != 0x3ff) {
 						read1 += cal_req.raw;
 						i++;
@@ -280,9 +284,16 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 				read2 /= padc->adcsetting->compensation_samples;	/* Divide to get average */
 				/* Calculate uvperbit and offset */
 				if (read1 != read2) {
-					gain = ((padc->adcsetting->compensation_volt_hi - padc->adcsetting->compensation_volt_lo) * 1000) /
-						(read2 - read1);
-					offset = padc->adcsetting->compensation_volt_hi * 1000 - (read2 * gain);
+					gain =
+					    ((padc->adcsetting->
+					      compensation_volt_hi -
+					      padc->adcsetting->
+					      compensation_volt_lo) * 1000) /
+					    (read2 - read1);
+					offset =
+					    padc->adcsetting->
+					    compensation_volt_hi * 1000 -
+					    (read2 * gain);
 				}
 				pr_hwmon(DATA,
 					 "%s: Value %d, read1 %d, read2 %d, gain %d, offset %d, vmax %d",
@@ -307,7 +318,7 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
  * Input: request structure
  * Descripton: Converts the calibrated value (uV or raw copy) to the appropiate channel unit.
  * Voltage channels will return mV, temperature channels K, current channels mA and resitive
- * channels HOhm.
+ *channels HOhm.
 */
 static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 {
@@ -321,7 +332,8 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 		if (padc->adcunit)
 			req->cnv = (req->cal + 500) / 1000;	/* uV to mV, include rounding */
 		else
-			req->cnv = (req->cal * padc->adcmap[req->sig].vrng) / 1024;
+			req->cnv =
+			    (req->cal * padc->adcmap[req->sig].vrng) / 1024;
 		break;
 	case PMU_ADC_NTC:
 	case PMU_ADC_PATEMP:
@@ -379,7 +391,7 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 				 __func__, req->cal, ibat_req.cnv);
 			/* compensate reading with the 25 mOhm in the
 			   FG and battery terminal */
-			req->cal -= ((ibat_req.cnv + 20) / 40) * 1000;	
+			req->cal -= ((ibat_req.cnv + 20) / 40) * 1000;
 			/* Calculate the current in the BSI resistor.
 			   Unit is 10 nA */
 			iread =
@@ -395,14 +407,14 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 				 __func__, req->cal, iread);
 			/* Calculate the resistor */
 			/* Hecto ohm - iread>>1 is for rounding */
-			req->cnv = req->cal / iread;	
+			req->cnv = req->cal / iread;
 		}
 		break;
 	case PMU_ADC_BOM:
 		if (padc->adcunit[req->sig].lut_ptr) {
 			/* Lookup it up in the look-up table... */
 			/* We have voltages in uV */
-			req->cnv = adc_map_bom(padc, req->cal / 1000);	
+			req->cnv = adc_map_bom(padc, req->cal / 1000);
 		} else
 			req->cnv = 0;
 	default:
@@ -428,7 +440,7 @@ static int update_adc_result(struct bcmpmu_adc *padc,
 			return ret;
 	}
 	while (req->raw == -EINVAL) {
-		ret = read_adc_result(padc, req);/* Here we get the raw value */
+		ret = read_adc_result(padc, req);	/* Here we get the raw value */
 		if (ret != 0)
 			return ret;
 	};
@@ -471,9 +483,9 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 
 	pr_hwmon(FLOW, "%s: called: ->sig %d, tm %d, flags %d\n", __func__,
 		 req->sig, req->tm, req->flags);
-	if (req->flags == PMU_ADC_RAW_ONLY || 
+	if (req->flags == PMU_ADC_RAW_ONLY ||
 	    req->flags == PMU_ADC_RAW_AND_UNIT) {
-		if ((req->tm == PMU_ADC_TM_RTM_SW) || 
+		if ((req->tm == PMU_ADC_TM_RTM_SW) ||
 		    (req->tm == PMU_ADC_TM_RTM_SW_TEST))
 			timeout = padc->adcsetting->sw_timeout;
 		else
@@ -490,16 +502,15 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 			mutex_lock(&padc->lock);
 			padc->rtmreq = req;
 			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
-				pinmux_find_gpio(PN_ADCSYN, &adcsyngpio, 
+				pinmux_find_gpio(PN_ADCSYN, &adcsyngpio,
 						 &adcsyngpiomux);
-				pr_hwmon(FLOW, "%s: SW_TEST: Pin:%u, " \
-					"Gpio:%u, Mux:%u\n", __func__,
-					PN_ADCSYN, 
-					adcsyngpio, adcsyngpiomux );
+				pr_hwmon(FLOW, "%s: SW_TEST: Pin:%u, "
+					 "Gpio:%u, Mux:%u\n", __func__,
+					 PN_ADCSYN, adcsyngpio, adcsyngpiomux);
 				/* Setup test pinmuxing */
-				StoredPinmux.name  =  PN_ADCSYN;
+				StoredPinmux.name = PN_ADCSYN;
 				pinmux_get_pin_config(&StoredPinmux);
-				TestPinMux.name  =  PN_ADCSYN;
+				TestPinMux.name = PN_ADCSYN;
 				pinmux_get_pin_config(&TestPinMux);
 				TestPinMux.func = adcsyngpiomux;
 				pinmux_set_pin_config(&TestPinMux);
@@ -507,59 +518,127 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 				gpio_direction_output(adcsyngpio, 0);
 				/* Use TX for test */
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].map,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].addr,
-							     0,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].mask);
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     map,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     addr, 0,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     mask);
 				bcmpmu_sel_adcsync(PMU_ADC_TM_RTM_TX);
 			}
 			/* config hw for rtm adc */
 			if (req->tm == PMU_ADC_TM_RTM_TX) {
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].map,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].addr,
-							     padc->adcsetting->tx_delay << padc->ctrlmap[PMU_ADC_RTM_DLY].shift,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].mask);
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     map,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     addr,
+							     padc->adcsetting->
+							     tx_delay << padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     shift,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     mask);
 				bcmpmu_sel_adcsync(PMU_ADC_TM_RTM_TX);
 			}
 			if (req->tm == PMU_ADC_TM_RTM_RX) {
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].map,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].addr,
-							     padc->adcsetting->rx_delay << padc->ctrlmap[PMU_ADC_RTM_DLY].shift,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].mask);
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     map,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     addr,
+							     padc->adcsetting->
+							     rx_delay << padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     shift,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     mask);
 				bcmpmu_sel_adcsync(PMU_ADC_TM_RTM_RX);
 			}
 			req->ready = 0;
 			padc->bcmpmu->write_dev_drct(padc->bcmpmu,
-						     padc->ctrlmap[PMU_ADC_RTM_SEL].map,
-						     padc->ctrlmap[PMU_ADC_RTM_SEL].addr,
-						     padc->adcmap[req->sig].rtmsel << padc->ctrlmap[PMU_ADC_RTM_SEL].shift,
-						     padc->ctrlmap[PMU_ADC_RTM_SEL].mask);
+						     padc->
+						     ctrlmap[PMU_ADC_RTM_SEL].
+						     map,
+						     padc->
+						     ctrlmap[PMU_ADC_RTM_SEL].
+						     addr,
+						     padc->adcmap[req->sig].
+						     rtmsel << padc->
+						     ctrlmap[PMU_ADC_RTM_SEL].
+						     shift,
+						     padc->
+						     ctrlmap[PMU_ADC_RTM_SEL].
+						     mask);
 			padc->bcmpmu->write_dev_drct(padc->bcmpmu,
-						     padc->ctrlmap[PMU_ADC_RTM_MASK].map,
-						     padc->ctrlmap[PMU_ADC_RTM_MASK].addr,
-						     0,
-						     padc->ctrlmap[PMU_ADC_RTM_MASK].mask);
+						     padc->
+						     ctrlmap[PMU_ADC_RTM_MASK].
+						     map,
+						     padc->
+						     ctrlmap[PMU_ADC_RTM_MASK].
+						     addr, 0,
+						     padc->
+						     ctrlmap[PMU_ADC_RTM_MASK].
+						     mask);
 			if (req->tm == PMU_ADC_TM_RTM_SW) {
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].map,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].addr,
-							     0,
-							     padc->ctrlmap[PMU_ADC_RTM_DLY].mask);
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     map,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     addr, 0,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_DLY].
+							     mask);
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
-							     padc->ctrlmap[PMU_ADC_RTM_MASK].map,
-							     padc->ctrlmap[PMU_ADC_RTM_START].addr,
-							     padc->ctrlmap[PMU_ADC_RTM_START].mask,
-							     padc->ctrlmap[PMU_ADC_RTM_START].mask);
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_MASK].
+							     map,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_START].
+							     addr,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_START].
+							     mask,
+							     padc->
+							     ctrlmap
+							     [PMU_ADC_RTM_START].
+							     mask);
 			}
 			pr_hwmon(FLOW, "%s: start rtm adc\n", __func__);
 			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
 				/* Set ADC_SYNC to Low */
 				gpio_set_value(adcsyngpio, 1);
-			}		
-			if (wait_event_interruptible_timeout(padc->wait, 
-							     req->ready, 
+			}
+			if (wait_event_interruptible_timeout(padc->wait,
+							     req->ready,
 							     timeout) == 0) {
 				ret = -ETIMEDOUT;
 			} else
@@ -578,10 +657,18 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 			/* Need to disable RTM to avoid interrrupts from
 			   ADC_SYN activated RTM reads */
 			padc->bcmpmu->write_dev_drct(padc->bcmpmu,
-						     padc->ctrlmap[PMU_ADC_RTM_MASK].map,
-						     padc->ctrlmap[PMU_ADC_RTM_MASK].addr,
-						     padc->ctrlmap[PMU_ADC_RTM_MASK].mask,
-						     padc->ctrlmap[PMU_ADC_RTM_MASK].mask);
+						     padc->
+						     ctrlmap[PMU_ADC_RTM_MASK].
+						     map,
+						     padc->
+						     ctrlmap[PMU_ADC_RTM_MASK].
+						     addr,
+						     padc->
+						     ctrlmap[PMU_ADC_RTM_MASK].
+						     mask,
+						     padc->
+						     ctrlmap[PMU_ADC_RTM_MASK].
+						     mask);
 			mutex_unlock(&padc->lock);
 			break;
 		case PMU_ADC_TM_MAX:
@@ -596,9 +683,9 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 	     req->flags == PMU_ADC_RAW_AND_UNIT)) {
 
 		/* This gives us a voltage in req->cal */
-		cal_adc_result(padc, req);	
+		cal_adc_result(padc, req);
 		/* This updates the req->cnv with the value */
-		cnv_adc_result(padc, req);	
+		cnv_adc_result(padc, req);
 	} else {
 		req->cal = req->raw;
 		req->cnv = req->raw;
@@ -612,7 +699,7 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 /* bcmpmu_get_adcunit_data
  * Input: signal number, pointer to where data should go
  * Descripton: Copies the adc_unit data from main structure to supplied
- * pointer
+ *pointer
 */
 static int bcmpmu_get_adcunit_data(struct bcmpmu *bcmpmu,
 				   enum bcmpmu_adc_sig sig,
@@ -641,7 +728,7 @@ static int bcmpmu_get_adcunit_data(struct bcmpmu *bcmpmu,
 /* bcmpmu_set_adcunit_data
  * Input: signal number, pointer to adc_unit data to use
  * Descripton: Copies the adc_unit data from supplied pointer
- * to main structure
+ *to main structure
 */
 static int bcmpmu_set_adcunit_data(struct bcmpmu *bcmpmu,
 				   enum bcmpmu_adc_sig sig,
@@ -1108,10 +1195,7 @@ static ssize_t fg_status_show(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "Fuel Gauge Status\n \
 	fg_acc=%d\n fg_smpl_cnt=%d\n fg_slp_cnt=%d\n \
 	fg_smpl_cnt_tm=%d\n fg_slp_cnt_tm=%d\n \
-	fg_slp_curr_ua=%d\n fg_sns_res=%d\n fg_factor=%d\n", pfg->fg_acc, 
-		       pfg->fg_smpl_cnt, pfg->fg_slp_cnt, 
-		       pfg->fg_smpl_cnt_tm, pfg->fg_slp_cnt_tm, 
-		       pfg->fg_slp_curr_ua, pfg->fg_sns_res, pfg->fg_factor);
+	fg_slp_curr_ua=%d\n fg_sns_res=%d\n fg_factor=%d\n", pfg->fg_acc, pfg->fg_smpl_cnt, pfg->fg_slp_cnt, pfg->fg_smpl_cnt_tm, pfg->fg_slp_cnt_tm, pfg->fg_slp_curr_ua, pfg->fg_sns_res, pfg->fg_factor);
 }
 
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_store);
@@ -1161,12 +1245,16 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	if (padc->adcunit) {
 		padc->adcunit[PMU_ADC_NTC].lut_ptr = pdata->batt_temp_voltmap;
 		padc->adcunit[PMU_ADC_PATEMP].lut_ptr = pdata->pa_temp_voltmap;
-		padc->adcunit[PMU_ADC_32KTEMP].lut_ptr = pdata->x32_temp_voltmap;
+		padc->adcunit[PMU_ADC_32KTEMP].lut_ptr =
+		    pdata->x32_temp_voltmap;
 		padc->adcunit[PMU_ADC_BOM].lut_ptr = pdata->bom_map;
 
-		padc->adcunit[PMU_ADC_NTC].lut_len = pdata->batt_temp_voltmap_len;
-		padc->adcunit[PMU_ADC_PATEMP].lut_len = pdata->pa_temp_voltmap_len;
-		padc->adcunit[PMU_ADC_32KTEMP].lut_len = pdata->x32_temp_voltmap_len;
+		padc->adcunit[PMU_ADC_NTC].lut_len =
+		    pdata->batt_temp_voltmap_len;
+		padc->adcunit[PMU_ADC_PATEMP].lut_len =
+		    pdata->pa_temp_voltmap_len;
+		padc->adcunit[PMU_ADC_32KTEMP].lut_len =
+		    pdata->x32_temp_voltmap_len;
 		padc->adcunit[PMU_ADC_BOM].lut_len = pdata->bom_map_len;
 	}
 
@@ -1242,9 +1330,9 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY, adc_isr, padc);
 	/*bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS, adc_isr, padc);
-	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_UPPER, adc_isr, padc);
-	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IGNORE, adc_isr, padc);
-	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN, adc_isr, padc); */
+	   bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_UPPER, adc_isr, padc);
+	   bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IGNORE, adc_isr, padc);
+	   bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN, adc_isr, padc); */
 
 	/*bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC); */
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
