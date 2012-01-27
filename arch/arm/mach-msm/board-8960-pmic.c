@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -421,6 +421,7 @@ static struct pm8921_charger_platform_data pm8921_chg_pdata __devinitdata = {
 	.warm_bat_voltage	= 4100,
 	.thermal_mitigation	= pm8921_therm_mitigation,
 	.thermal_levels		= ARRAY_SIZE(pm8921_therm_mitigation),
+	.max_current_dcp	= 700,
 };
 
 static struct pm8xxx_misc_platform_data pm8xxx_misc_pdata = {

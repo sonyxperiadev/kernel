@@ -261,6 +261,7 @@ struct pm8921_chg_chip {
 	struct wake_lock		eoc_wake_lock;
 	enum pm8921_chg_cold_thr	cold_thr;
 	enum pm8921_chg_hot_thr		hot_thr;
+	int				max_current_dcp;
 };
 
 static int charging_disabled;
@@ -1229,6 +1230,9 @@ static struct usb_ma_limit_entry usb_ma_table[] = {
 static void __pm8921_charger_vbus_draw(unsigned int mA)
 {
 	int i, rc;
+
+	if (the_chip->max_current_dcp && mA > the_chip->max_current_dcp)
+		mA = the_chip->max_current_dcp;
 
 	if (mA > 0 && mA <= 2) {
 		usb_chg_current = 0;
@@ -2343,6 +2347,27 @@ static int set_disable_status_param(const char *val, struct kernel_param *kp)
 module_param_call(disabled, set_disable_status_param, param_get_uint,
 					&charging_disabled, 0644);
 
+static int max_current_dcp;
+static int set_max_current_dcp(const char *val, struct kernel_param *kp)
+{
+	int ret;
+	struct pm8921_chg_chip *chip = the_chip;
+
+	if (chip) {
+		ret = param_set_int(val, kp);
+		if (ret) {
+			pr_err("error setting value %d\n", ret);
+			return ret;
+		}
+		pr_warn("Increasing mA drawn from charger source to %d\n",
+							max_current_dcp);
+		chip->max_current_dcp = max_current_dcp;
+		return 0;
+	}
+	return -EINVAL;
+}
+module_param_call(max_current_dcp, set_max_current_dcp, param_get_uint,
+					&max_current_dcp, 0644);
 /**
  * set_thermal_mitigation_level -
  *
@@ -3009,6 +3034,7 @@ static int __devinit pm8921_charger_probe(struct platform_device *pdev)
 
 	chip->cold_thr = pdata->cold_thr;
 	chip->hot_thr = pdata->hot_thr;
+	chip->max_current_dcp = pdata->max_current_dcp;
 
 	rc = pm8921_chg_hw_init(chip);
 	if (rc) {
@@ -3064,6 +3090,7 @@ static int __devinit pm8921_charger_probe(struct platform_device *pdev)
 	enable_irq_wake(chip->pmic_chg_irq[USBIN_UV_IRQ]);
 	enable_irq_wake(chip->pmic_chg_irq[BAT_TEMP_OK_IRQ]);
 	enable_irq_wake(chip->pmic_chg_irq[VBATDET_LOW_IRQ]);
+	enable_irq_wake(chip->pmic_chg_irq[FASTCHG_IRQ]);
 	/*
 	 * if both the cool_temp_dc and warm_temp_dc are zero the device doesnt
 	 * care for jeita compliance
