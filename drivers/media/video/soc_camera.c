@@ -990,6 +990,16 @@ static int soc_camera_g_chip_ident(struct file *file, void *fh,
 	return v4l2_subdev_call(sd, core, g_chip_ident, id);
 }
 
+static long soc_camera_default_ioctl(struct file *file, void *fh,
+					bool valid_prio, int cmd, void *arg)
+{
+	struct soc_camera_device *icd = file->private_data;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+
+	return v4l2_subdev_call(sd, core, ioctl, cmd, arg);
+
+}
+
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 static int soc_camera_g_register(struct file *file, void *fh,
 				 struct v4l2_dbg_register *reg)
@@ -1499,22 +1509,23 @@ static const struct v4l2_ioctl_ops soc_camera_ioctl_ops = {
 	.vidioc_s_std = soc_camera_s_std,
 	.vidioc_enum_framesizes = soc_camera_enum_fsizes,
 	.vidioc_enum_frameintervals = soc_camera_enum_finterval,
-	.vidioc_reqbufs = soc_camera_reqbufs,
-	.vidioc_try_fmt_vid_cap = soc_camera_try_fmt_vid_cap,
-	.vidioc_querybuf = soc_camera_querybuf,
-	.vidioc_qbuf = soc_camera_qbuf,
-	.vidioc_dqbuf = soc_camera_dqbuf,
-	.vidioc_streamon = soc_camera_streamon,
-	.vidioc_streamoff = soc_camera_streamoff,
-	.vidioc_queryctrl = soc_camera_queryctrl,
-	.vidioc_g_ctrl = soc_camera_g_ctrl,
-	.vidioc_s_ctrl = soc_camera_s_ctrl,
-	.vidioc_cropcap = soc_camera_cropcap,
-	.vidioc_g_crop = soc_camera_g_crop,
-	.vidioc_s_crop = soc_camera_s_crop,
-	.vidioc_g_parm = soc_camera_g_parm,
-	.vidioc_s_parm = soc_camera_s_parm,
-	.vidioc_g_chip_ident = soc_camera_g_chip_ident,
+	.vidioc_reqbufs		 = soc_camera_reqbufs,
+	.vidioc_try_fmt_vid_cap  = soc_camera_try_fmt_vid_cap,
+	.vidioc_querybuf	 = soc_camera_querybuf,
+	.vidioc_qbuf		 = soc_camera_qbuf,
+	.vidioc_dqbuf		 = soc_camera_dqbuf,
+	.vidioc_streamon	 = soc_camera_streamon,
+	.vidioc_streamoff	 = soc_camera_streamoff,
+	.vidioc_queryctrl	 = soc_camera_queryctrl,
+	.vidioc_g_ctrl		 = soc_camera_g_ctrl,
+	.vidioc_s_ctrl		 = soc_camera_s_ctrl,
+	.vidioc_cropcap		 = soc_camera_cropcap,
+	.vidioc_g_crop		 = soc_camera_g_crop,
+	.vidioc_s_crop		 = soc_camera_s_crop,
+	.vidioc_g_parm		 = soc_camera_g_parm,
+	.vidioc_s_parm		 = soc_camera_s_parm,
+	.vidioc_g_chip_ident     = soc_camera_g_chip_ident,
+	.vidioc_default	= soc_camera_default_ioctl,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.vidioc_g_register = soc_camera_g_register,
 	.vidioc_s_register = soc_camera_s_register,
