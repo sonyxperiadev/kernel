@@ -22,6 +22,7 @@
 
 #include <plat/mobcom_types.h>
 #include <plat/csl/csl_cam.h>
+#include <linux/videodev2_brcm.h>
 
 #define UNICAM_CAM_DRV_NAME		"unicam-camera"
 
@@ -174,13 +175,17 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 /* should be called with unicam_dev->lock held */
 static int  unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 {
-    
+
+	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
 	CSL_CAM_BUFFER_st_t     cslCamBuffer0;
     CSL_CAM_BUFFER_st_t     cslCamBuffer1;
     CSL_CAM_BUFFER_st_t     cslCamBufferData0;
     CSL_CAM_BUFFER_st_t     cslCamBufferData1;
 	dma_addr_t phys_addr;
 	unsigned int line_stride;
+	struct v4l2_format thumb_fmt;
+	struct v4l2_pix_format *pix;
+	int thumb = 0, ret;
 
 	dprintk("-enter");
 
@@ -193,21 +198,50 @@ static int  unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 
 	dprintk("updating buffer phys=0x%p", (void *)phys_addr);
 
-	/*TODO: fix resolution */
 	/* stride is in bytes */
-	if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8)
+	if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8) {
 		line_stride = soc_mbus_bytes_per_line(unicam_dev->icd->user_width,
 								unicam_dev->icd->current_fmt->host_fmt);
-	else
-		line_stride = unicam_dev->icd->user_width;
+		/* image 0 */
+		cslCamBuffer0.start_addr = (UInt32)phys_addr;
+		cslCamBuffer0.line_stride = (UInt32)line_stride;
+		cslCamBuffer0.size = line_stride * unicam_dev->icd->user_height;
+		cslCamBuffer0.buffer_wrap_en = 1;
+		cslCamBuffer0.mem_type = CSL_CAM_MEM_TYPE_NONE;
 
-	/* image 0 */
-	cslCamBuffer0.start_addr = (UInt32)phys_addr;
-	cslCamBuffer0.line_stride = (UInt32)line_stride; 
-	cslCamBuffer0.size = line_stride * unicam_dev->icd->user_height;
-	cslCamBuffer0.buffer_wrap_en = 1;
-	cslCamBuffer0.mem_type = CSL_CAM_MEM_TYPE_NONE;
-	
+		dprintk("cslCamBuffer0 start_addr = 0x%x, line_stride = %d, size = %d \n",cslCamBuffer0.start_addr,cslCamBuffer0.line_stride,cslCamBuffer0.size);
+	}
+	else {
+		/* check whether sensor supports thumbnail */
+		ret = v4l2_subdev_call(sd, core, ioctl, VIDIOC_THUMB_SUPPORTED, (void *)&thumb);
+
+		if ((!ret) && thumb) {
+
+			ret = v4l2_subdev_call(sd, core, ioctl, VIDIOC_THUMB_G_FMT, (void *)&thumb_fmt);
+			if (ret < 0) {
+				dev_err(unicam_dev->dev, "sensor driver should report thumbnail format\n");
+				return -1;
+			}
+			/* image 0 */
+			pix = &thumb_fmt.fmt.pix;
+			cslCamBuffer0.start_addr = (UInt32)phys_addr;
+			cslCamBuffer0.line_stride = (UInt32)pix->bytesperline;
+			cslCamBuffer0.size = pix->sizeimage;
+			cslCamBuffer0.buffer_wrap_en = 1;
+			cslCamBuffer0.mem_type = CSL_CAM_MEM_TYPE_NONE;
+		}else {
+			/* no thumbnail supported */
+			/* don't set image0 since we are expecting data0
+			 * to contain jpeg data
+			 */
+			cslCamBuffer0.start_addr = 0;
+			cslCamBuffer0.line_stride = 0;
+			cslCamBuffer0.size = 0;
+			cslCamBuffer0.buffer_wrap_en = 0;
+			cslCamBuffer0.mem_type = CSL_CAM_MEM_TYPE_NONE;
+		}
+	}
+
 	/* image 1 */
 	cslCamBuffer1.start_addr = 0;
 	cslCamBuffer1.line_stride = cslCamBuffer0.line_stride;
@@ -223,11 +257,22 @@ static int  unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 		cslCamBufferData0.size = 0;
 		cslCamBufferData0.mem_type = cslCamBuffer0.mem_type;
 	} else {
-		cslCamBufferData0.start_addr = (UInt32)phys_addr;
-		cslCamBufferData0.line_stride = (UInt32)line_stride;
-		cslCamBufferData0.size = line_stride *unicam_dev->icd->user_height;
-		cslCamBufferData0.buffer_wrap_en = 1;
-		cslCamBufferData0.mem_type = CSL_CAM_MEM_TYPE_NONE;
+
+		pix = &thumb_fmt.fmt.pix;
+		line_stride = unicam_dev->icd->user_width;
+		/* check if thumbnail is supported */
+		if (thumb)
+			cslCamBufferData0.start_addr = (UInt32)((char *)phys_addr + pix->sizeimage);
+		 else
+			cslCamBufferData0.start_addr = (UInt32)phys_addr;
+
+			cslCamBufferData0.line_stride = (UInt32)line_stride;
+			/* assume 12bpp */
+			cslCamBufferData0.size = (line_stride *unicam_dev->icd->user_height * 3/2);
+			cslCamBufferData0.buffer_wrap_en = 1;
+			cslCamBufferData0.mem_type = CSL_CAM_MEM_TYPE_NONE;
+			dprintk("cslCamBufferData0 start_addr = 0x%x, line_stride = %d, size = %d\n",
+				cslCamBufferData0.start_addr,cslCamBufferData0.line_stride,cslCamBufferData0.size);
 	}
 
 	/* set data buffer 1 */
@@ -833,6 +878,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		
 			
 			dprintk("frame received");
+			//csl_cam_register_display(unicam_dev->cslCamHandle);
 			if (!vb)
 				goto out;
 			/* mark  the buffer done */
