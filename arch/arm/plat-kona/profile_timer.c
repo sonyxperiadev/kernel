@@ -8,7 +8,7 @@
 #include <mach/profile_timer.h>
 #include <mach/rdb/brcm_rdb_glbtmr.h>
 
-static void __iomem*	proftmr_regbase = NULL;
+static void __iomem *proftmr_regbase = NULL;
 
 void __init profile_timer_init(void __iomem *base)
 {
@@ -26,7 +26,7 @@ void __init profile_timer_init(void __iomem *base)
 	writel(reg, base + GLBTMR_GLOB_STATUS_OFFSET);
 
 	/* Enable profile timer now with
-	 * prescaler = 0, so timer freq = A9 PERIPHCLK 
+	 *prescaler = 0, so timer freq = A9 PERIPHCLK
 	 * IRQ disabled
 	 * Comapre disabled
 	 */
@@ -44,11 +44,11 @@ profile_timer_get_counter(void __iomem *base, uint32_t *msw, uint32_t *lsw)
 	 * 1. Read hi-word
 	 * 2. Read low-word
 	 * 3. Read hi-word again
-	 * 4.1 
-	 * 	if new hi-word is not equal to previously read hi-word, then
-	 * 	start from #1
+	 * 4.1
+	 *     if new hi-word is not equal to previously read hi-word, then
+	 *     start from #1
 	 * 4.2
-	 * 	if new hi-word is equal to previously read hi-word then stop.
+	 *     if new hi-word is equal to previously read hi-word then stop.
 	 */
 
 	while (1) {
@@ -69,7 +69,8 @@ timer_tick_rate_t timer_get_tick_rate(void)
 	prescaler &= GLBTMR_GLOB_CTRL_PRESCALER_G_MASK;
 	prescaler >>= GLBTMR_GLOB_CTRL_PRESCALER_G_SHIFT;
 
-	return ((clk_get_rate(clk_get( NULL, "arm_clk" ))) / ((1 + prescaler) * 2));
+	return ((clk_get_rate(clk_get(NULL, "arm_clk"))) /
+		((1 + prescaler) * 2));
 }
 
 timer_tick_count_t timer_get_tick_count(void)
@@ -79,9 +80,9 @@ timer_tick_count_t timer_get_tick_count(void)
 
 	profile_timer_get_counter(proftmr_regbase, &msw, &lsw);
 
-	tick = (((uint64_t)msw << 32) | ((uint64_t)lsw));
+	tick = (((uint64_t) msw << 32) | ((uint64_t) lsw));
 
-	return (*(uint32_t *)(&tick));
+	return (*(uint32_t *) (&tick));
 }
 
 timer_msec_t timer_ticks_to_msec(timer_tick_count_t ticks)

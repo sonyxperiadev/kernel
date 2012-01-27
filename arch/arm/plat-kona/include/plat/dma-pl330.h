@@ -105,6 +105,8 @@ int dma_map_peripheral(unsigned int chan, const char *peri_name);
 int dma_unmap_peripheral(unsigned int chan);
 int dma_setup_transfer(unsigned int chan, dma_addr_t s, dma_addr_t d,
 		       unsigned int xfer_size, int ctrl, int cfg);
+int dma_setup_transfer_sg(unsigned int chan, struct scatterlist *sgl,
+              unsigned int sg_len, dma_addr_t hw_addr, int control, int cfg);
 int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 			    int ctrl, int cfg);
 int dma_start_transfer(unsigned int chan);

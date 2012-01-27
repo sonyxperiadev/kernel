@@ -46,7 +46,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #define V3D_DEV_NAME	"v3d"
 
-//TODO - define the major device ID
+/* TODO - define the major device ID */
 #define V3D_DEV_MAJOR	0
 
 #define RHEA_V3D_BASE_PERIPHERAL_ADDRESS	MM_V3D_BASE_ADDR
@@ -60,7 +60,7 @@ the GPL, without Broadcom's express prior written consent.
 
 /* Error Logs */
 #if 1
-#define KLOG_E(fmt,args...) \
+#define KLOG_E(fmt, args...) \
 					do { printk(KERN_ERR "Error: [%s:%s:%d] "fmt"\n", KLOG_TAG, __func__, __LINE__, \
 			##args); } \
 					while (0)
@@ -69,7 +69,7 @@ the GPL, without Broadcom's express prior written consent.
 #endif
 /* Debug Logs */
 #if 0
-#define KLOG_D(fmt,args...) \
+#define KLOG_D(fmt, args...) \
 		do { printk(KERN_INFO KLOG_TAG "[%s:%d] "fmt"\n", __func__, __LINE__, \
 			##args); } \
 		while (0)
@@ -78,7 +78,7 @@ the GPL, without Broadcom's express prior written consent.
 #endif
 /* Verbose Logs */
 #if 0
-#define KLOG_V(fmt,args...) \
+#define KLOG_V(fmt, args...) \
 					do { printk(KERN_INFO KLOG_TAG "[%s:%d] "fmt"\n", __func__, __LINE__, \
 			##args); } \
 					while (0)
@@ -99,7 +99,7 @@ typedef struct _dvts_object_ {
 	wait_queue_head_t wq;
 	dvts_jobcount_t finished;
 } *dvts_object_t;
-//typedef uint32_t dvts_target_t;
+/* typedef uint32_t dvts_target_t; */
 /*
  * Since the completion count is an atomic_t, which guarantees only
  * 24-bits, we need to be careful when comparing with the target,
@@ -126,7 +126,7 @@ dvts_object_t dvts_create_serializer(void)
 /*
  * error exit paths
  */
-err_kmalloc:
+      err_kmalloc:
 	return NULL;
 }
 
@@ -146,7 +146,6 @@ void dvts_wait(dvts_object_t obj, dvts_target_t target)
 	wait_event_interruptible(obj->wq, dvts_reached_target(obj, target));
 	/* TODO: handle interruption... */
 }
-
 
 /******************************************************************
 	END: V3D kernel prints
@@ -168,27 +167,25 @@ static struct {
 	struct proc_dir_entry *proc_info;
 	struct class *v3d_class;
 	struct device *v3d_device;
-	volatile uint32_t	irq_enabled;
+	volatile uint32_t irq_enabled;
 	struct pi_mgr_dfs_node dfs_node;
 	struct pi_mgr_qos_node qos_node;
-	unsigned long j1;  //jiffies of acquire
-	unsigned long j2;  //jiffies of release
+	unsigned long j1;	/* jiffies of acquire */
+	unsigned long j2;	/* jiffies of release */
 	unsigned long acquired_time;
 	unsigned long free_time;
 	bool show_v3d_usage;
-}
-v3d_state;
+} v3d_state;
 
 typedef struct {
 	mem_t mempool;
 	struct completion irq_sem;
-	volatile int	v3d_acquired;
+	volatile int v3d_acquired;
 	u32 id;
 	bool uses_worklist;
 	dvts_object_t shared_dvts_object;
 	uint32_t shared_dvts_object_usecount;
-}
-v3d_t;
+} v3d_t;
 
 /********************************************************
 	Imported stuff
@@ -198,7 +195,7 @@ v3d_t;
 #define V3D_JOB_TIMEOUT_IN_MS	(V3D_ISR_TIMEOUT_IN_MS)
 
 /* Enable the macro to retry the job on timeout, else will skip the job */
-//#define V3D_JOB_RETRY_ON_TIMEOUT
+/* #define V3D_JOB_RETRY_ON_TIMEOUT */
 #ifdef V3D_JOB_RETRY_ON_TIMEOUT
 #define V3D_JOB_MAX_RETRIES (1)
 #endif
@@ -208,7 +205,7 @@ v3d_t *v3d_dev;
 #ifdef SUPPORT_V3D_WORKLIST
 typedef struct v3d_job_t_ {
 	uint32_t job_type;
-	u32	dev_id;
+	u32 dev_id;
 	uint32_t job_id;
 	uint32_t v3d_ct0ca;
 	uint32_t v3d_ct0ea;
@@ -223,31 +220,30 @@ typedef struct v3d_job_t_ {
 	u32 retry_cnt;
 	volatile v3d_job_status_e job_status;
 	u32 job_intern_state;
-	u32	job_wait_state;
+	u32 job_wait_state;
 	wait_queue_head_t v3d_job_done_q;
 	dvts_object_t dvts_object;
 	dvts_target_t dvts_target;
 	struct v3d_job_t_ *next;
-}
-v3d_job_t;
+} v3d_job_t;
 
 #define MAX_BIN_BLOCKS  5
-#define BIN_MEM_SIZE    (2*1024*1024)
+#define BIN_MEM_SIZE    (2* 1024* 1024)
 static struct {
 	int oom_block;
-	void* oom_cpuaddr;
+	void *oom_cpuaddr;
 	bool used;
 	bool ready;
-	u32	dev_id;
+	u32 dev_id;
 } bin_mem[MAX_BIN_BLOCKS];
 
 /* Driver module init variables */
-struct task_struct *v3d_thread_task = (struct task_struct *) - ENOMEM;
+struct task_struct *v3d_thread_task = (struct task_struct *)-ENOMEM;
 
 /* Stuff to supply more bin memory */
 static int v3d_bin_oom_block;
 static int v3d_bin_oom_size = BIN_MEM_SIZE;
-static void* v3d_bin_oom_cpuaddr = NULL;
+static void *v3d_bin_oom_cpuaddr = NULL;
 static volatile int v3d_oom_block_used = 0;
 static void allocate_bin_mem(struct work_struct *work);
 static void free_bin_mem(uint32_t dev_id);
@@ -274,7 +270,7 @@ static int dbg_job_post_bin_rend_cnt = 0;
 static int dbg_job_post_other_cnt = 0;
 static int dbg_job_wait_cnt = 0;
 static int dbg_job_timeout_cnt = 0;
-#endif //SUPPORT_V3D_WORKLIST
+#endif /* SUPPORT_V3D_WORKLIST */
 
 /***** Function Prototypes **************/
 static int enable_v3d_clock(void);
@@ -303,25 +299,29 @@ static void v3d_print_all_jobs(int bp)
 	v3d_job_t *tmp_job;
 	u32 n = 0;
 
-	KLOG_V("Job post count rend[%d] bin_rend[%d] other[%d] Job wait count[%d] job timeout count[%d]",
-		   dbg_job_post_rend_cnt, dbg_job_post_bin_rend_cnt, dbg_job_post_other_cnt,
-		   dbg_job_wait_cnt, dbg_job_timeout_cnt);
+	KLOG_V
+	    ("Job post count rend[%d] bin_rend[%d] other[%d] Job wait count[%d] job timeout count[%d]",
+	     dbg_job_post_rend_cnt, dbg_job_post_bin_rend_cnt,
+	     dbg_job_post_other_cnt, dbg_job_wait_cnt, dbg_job_timeout_cnt);
 	switch (bp) {
-		case 0:
+	case 0:
 		KLOG_V("Job queue Status after post...");
 		break;
-		case 1:
+	case 1:
 		KLOG_V("Job queue Status after wait...");
 		break;
 	}
 	if (bp > 1) {
-		KLOG_D("head[0x%08x] curr[0x%08x]", (u32)v3d_job_head, (u32)v3d_job_curr);
+		KLOG_D("head[0x%08x] curr[0x%08x]", (u32) v3d_job_head,
+		       (u32) v3d_job_curr);
 		tmp_job = v3d_job_head;
-		while (tmp_job != NULL ) {
-			KLOG_D("\t job[%d] : [0x%08x] dev_id[%d] job_id[%d] type[%d] status[%d] intern[%d] wait[%d] retry[%d][%d]",
-				   n, (u32)tmp_job, tmp_job->dev_id, tmp_job->job_id, tmp_job->job_type,
-				   tmp_job->job_status, tmp_job->job_intern_state, tmp_job->job_wait_state,
-				   tmp_job->cache_retry_cnt, tmp_job->retry_cnt);
+		while (tmp_job != NULL) {
+			KLOG_D
+			    ("\t job[%d] : [0x%08x] dev_id[%d] job_id[%d] type[%d] status[%d] intern[%d] wait[%d] retry[%d][%d]",
+			     n, (u32) tmp_job, tmp_job->dev_id, tmp_job->job_id,
+			     tmp_job->job_type, tmp_job->job_status,
+			     tmp_job->job_intern_state, tmp_job->job_wait_state,
+			     tmp_job->cache_retry_cnt, tmp_job->retry_cnt);
 			tmp_job = tmp_job->next;
 			n++;
 		}
@@ -333,7 +333,7 @@ static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t *p_job_post)
 	v3d_t *dev;
 	v3d_job_t *p_v3d_job;
 
-	dev = (v3d_t *)(filp->private_data);
+	dev = (v3d_t *) (filp->private_data);
 	p_v3d_job = kmalloc(sizeof(v3d_job_t), GFP_KERNEL);
 	if (!p_v3d_job) {
 		KLOG_E("kmalloc failed in v3d_job_post");
@@ -349,29 +349,31 @@ static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t *p_job_post)
 	if (p_job_post->dvts_id == 777) {
 		p_v3d_job->dvts_object = dev->shared_dvts_object;
 		p_v3d_job->dvts_target = p_job_post->dvts_target;
-	}
-	else {
+	} else {
 		p_v3d_job->dvts_object = NULL;
 	}
 
 	if (p_job_post->job_type != V3D_JOB_USER) {
-		//Ignore this job type as we'll determine it ourself
-		p_v3d_job->job_type = V3D_JOB_BIN_REND; //p_job_post->job_type;
+		/* Ignore this job type as we'll determine it ourself */
+		p_v3d_job->job_type = V3D_JOB_BIN_REND;	/* p_job_post->job_type; */
 
 		/* Figure out job type */
-		if ( p_job_post->v3d_ct0ca == p_job_post->v3d_ct0ea ) {
+		if (p_job_post->v3d_ct0ca == p_job_post->v3d_ct0ea) {
 			p_v3d_job->job_type &= ~V3D_JOB_BIN;
 		}
-		if ( p_job_post->v3d_ct1ca == p_job_post->v3d_ct1ea ) {
+		if (p_job_post->v3d_ct1ca == p_job_post->v3d_ct1ea) {
 			p_v3d_job->job_type &= ~V3D_JOB_REND;
 		}
 	} else {
 		p_v3d_job->job_type = V3D_JOB_USER;
 		p_v3d_job->user_cnt = p_job_post->user_cnt;
 		if (p_v3d_job->user_cnt) {
-			memcpy(p_v3d_job->v3d_srqpc, p_job_post->v3d_srqpc, sizeof(p_job_post->v3d_srqpc));
-			memcpy(p_v3d_job->v3d_srqua, p_job_post->v3d_srqua, sizeof(p_job_post->v3d_srqua));
-			memcpy(p_v3d_job->v3d_srqul, p_job_post->v3d_srqul, sizeof(p_job_post->v3d_srqul));
+			memcpy(p_v3d_job->v3d_srqpc, p_job_post->v3d_srqpc,
+			       sizeof(p_job_post->v3d_srqpc));
+			memcpy(p_v3d_job->v3d_srqua, p_job_post->v3d_srqua,
+			       sizeof(p_job_post->v3d_srqua));
+			memcpy(p_v3d_job->v3d_srqul, p_job_post->v3d_srqul,
+			       sizeof(p_job_post->v3d_srqul));
 		}
 
 	}
@@ -388,9 +390,13 @@ static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t *p_job_post)
 	p_v3d_job->retry_cnt = 0;
 	p_v3d_job->next = NULL;
 
-	KLOG_V("job[0x%08x] dev_id[%d] job_id[%d] job_type[%d] ct0_ca[0x%x] ct0_ea[0x%x] ct1_ca[0x%x] ct1_ea[0x%x] srqpc[0x%x] srqua[0x%x] srqul[0x%x]",
-		   (u32)p_v3d_job, dev->id, p_job_post->job_id, p_job_post->job_type, p_job_post->v3d_ct0ca, p_job_post->v3d_ct0ea,
-		   p_job_post->v3d_ct1ca, p_job_post->v3d_ct1ea, p_job_post->v3d_srqpc[0], p_job_post->v3d_srqua[0], p_job_post->v3d_srqul[0]);
+	KLOG_V
+	    ("job[0x%08x] dev_id[%d] job_id[%d] job_type[%d] ct0_ca[0x%x] ct0_ea[0x%x] ct1_ca[0x%x] ct1_ea[0x%x] srqpc[0x%x] srqua[0x%x] srqul[0x%x]",
+	     (u32) p_v3d_job, dev->id, p_job_post->job_id, p_job_post->job_type,
+	     p_job_post->v3d_ct0ca, p_job_post->v3d_ct0ea,
+	     p_job_post->v3d_ct1ca, p_job_post->v3d_ct1ea,
+	     p_job_post->v3d_srqpc[0], p_job_post->v3d_srqua[0],
+	     p_job_post->v3d_srqul[0]);
 
 	return p_v3d_job;
 }
@@ -400,37 +406,39 @@ static void v3d_job_add(struct file *filp, v3d_job_t *p_v3d_job, int pos)
 	v3d_t *dev;
 	v3d_job_t *tmp_job;
 
-	dev = (v3d_t *)(filp->private_data);
+	dev = (v3d_t *) (filp->private_data);
 	if (NULL == v3d_job_head) {
-		KLOG_V("Adding job[0x%08x] to head[NULL]", (u32)p_v3d_job);
+		KLOG_V("Adding job[0x%08x] to head[NULL]", (u32) p_v3d_job);
 		v3d_job_head = p_v3d_job;
-	}
-	else {
+	} else {
 		tmp_job = v3d_job_head;
-		while (tmp_job->next != NULL ) {
+		while (tmp_job->next != NULL) {
 			tmp_job = tmp_job->next;
 		}
-		KLOG_V("Adding job[0x%08x] to tail[0x%08x]", (u32)p_v3d_job, (u32)tmp_job);
+		KLOG_V("Adding job[0x%08x] to tail[0x%08x]", (u32) p_v3d_job,
+		       (u32) tmp_job);
 		tmp_job->next = p_v3d_job;
 	}
 }
 
-static v3d_job_t *v3d_job_search(struct file *filp, v3d_job_status_t *p_job_status)
+static v3d_job_t *v3d_job_search(struct file *filp,
+				 v3d_job_status_t *p_job_status)
 {
 	v3d_t *dev;
 	v3d_job_t *tmp_job;
 	v3d_job_t *last_match_job = NULL;
 
-	dev = (v3d_t *)(filp->private_data);
+	dev = (v3d_t *) (filp->private_data);
 	tmp_job = v3d_job_head;
-	while (tmp_job != NULL ) {
-		if (tmp_job->dev_id == dev->id) { // && (tmp_job->job_id == p_job_status->job_id)
+	while (tmp_job != NULL) {
+		if (tmp_job->dev_id == dev->id) {	/*  && (tmp_job->job_id == p_job_status->job_id) */
 			last_match_job = tmp_job;
 		}
 		tmp_job = tmp_job->next;
 	}
 
-	KLOG_V("Last job to wait for hdl[%d]: [0x%08x]", dev->id, (u32)last_match_job);
+	KLOG_V("Last job to wait for hdl[%d]: [0x%08x]", dev->id,
+	       (u32) last_match_job);
 	return last_match_job;
 }
 
@@ -441,14 +449,16 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 	v3d_job_t *last_match_job = NULL;
 	int curr_job_killed = 0;
 
-	dev = (v3d_t *)(filp->private_data);
+	dev = (v3d_t *) (filp->private_data);
 
-	KLOG_V("Free upto job[0x%08x] for hdl[%d]: ", (u32)p_v3d_wait_job, dev->id);
+	KLOG_V("Free upto job[0x%08x] for hdl[%d]: ", (u32) p_v3d_wait_job,
+	       dev->id);
 	if (p_v3d_wait_job == NULL) {
-		KLOG_V("Free upto job[0x%08x] for hdl[%d]: ", (u32)p_v3d_wait_job, dev->id);
+		KLOG_V("Free upto job[0x%08x] for hdl[%d]: ",
+		       (u32) p_v3d_wait_job, dev->id);
 	}
 
-	if ((v3d_job_head != NULL) && (v3d_job_head != p_v3d_wait_job) ) {
+	if ((v3d_job_head != NULL) && (v3d_job_head != p_v3d_wait_job)) {
 		parent_job = v3d_job_head;
 		tmp_job = v3d_job_head->next;
 		while (tmp_job != NULL) {
@@ -458,21 +468,25 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 				parent_job->next = tmp_job;
 				if (last_match_job == v3d_job_curr) {
 					/* Kill the job, free the job, return error if waiting ?? */
-					KLOG_V("Trying to free current job[0x%08x]", (u32)last_match_job);
-					v3d_job_kill((v3d_job_t *)v3d_job_curr, V3D_JOB_STATUS_ERROR);
+					KLOG_V
+					    ("Trying to free current job[0x%08x]",
+					     (u32) last_match_job);
+					v3d_job_kill((v3d_job_t *) v3d_job_curr,
+						     V3D_JOB_STATUS_ERROR);
 					curr_job_killed = 1;
 					v3d_job_curr = v3d_job_curr->next;
 				}
-				KLOG_V("Free job[0x%08x] for hdl[%d]: ", (u32)last_match_job, dev->id);
+				KLOG_V("Free job[0x%08x] for hdl[%d]: ",
+				       (u32) last_match_job, dev->id);
 				if (p_v3d_wait_job == NULL) {
-					KLOG_V("Free job[0x%08x] for hdl[%d]: ", (u32)last_match_job, dev->id);
+					KLOG_V("Free job[0x%08x] for hdl[%d]: ",
+					       (u32) last_match_job, dev->id);
 				}
 				kfree(last_match_job);
 				if (last_match_job == p_v3d_wait_job) {
 					break;
 				}
-			}
-			else {
+			} else {
 				parent_job = tmp_job;
 				tmp_job = tmp_job->next;
 			}
@@ -483,23 +497,31 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 			last_match_job = v3d_job_head;
 			if (last_match_job == v3d_job_curr) {
 				/* Kill the job, free the job, return error if waiting ?? */
-				KLOG_V("Trying to free current job - head[0x%08x]", (u32)last_match_job);
-				v3d_job_kill((v3d_job_t *)v3d_job_curr, V3D_JOB_STATUS_ERROR);
+				KLOG_V
+				    ("Trying to free current job - head[0x%08x]",
+				     (u32) last_match_job);
+				v3d_job_kill((v3d_job_t *) v3d_job_curr,
+					     V3D_JOB_STATUS_ERROR);
 				curr_job_killed = 1;
 				v3d_job_curr = v3d_job_curr->next;
 			}
 			v3d_job_head = v3d_job_head->next;
-			KLOG_V("Update head to [0x%08x] and free [0x%08x] for hdl[%d]",
-				   (u32)v3d_job_head, (u32)last_match_job, dev->id);
+			KLOG_V
+			    ("Update head to [0x%08x] and free [0x%08x] for hdl[%d]",
+			     (u32) v3d_job_head, (u32) last_match_job, dev->id);
 			if (p_v3d_wait_job == NULL) {
-				KLOG_V("Update head to [0x%08x] and free [0x%08x] for hdl[%d]",
-					   (u32)v3d_job_head, (u32)last_match_job, dev->id);
+				KLOG_V
+				    ("Update head to [0x%08x] and free [0x%08x] for hdl[%d]",
+				     (u32) v3d_job_head, (u32) last_match_job,
+				     dev->id);
 			}
 			kfree(last_match_job);
 		}
 	}
 	if (curr_job_killed) {
-		KLOG_D("v3d activity reset as part of freeing jobs for dev_id[%d]", dev->id);
+		KLOG_D
+		    ("v3d activity reset as part of freeing jobs for dev_id[%d]",
+		     dev->id);
 		wake_up_interruptible(&v3d_isr_done_q);
 		v3d_print_all_jobs(0);
 	}
@@ -509,7 +531,7 @@ static int v3d_job_start(void)
 {
 	v3d_job_t *p_v3d_job;
 
-	p_v3d_job = (v3d_job_t *)v3d_job_curr;
+	p_v3d_job = (v3d_job_t *) v3d_job_curr;
 
 	/*
 	 *
@@ -524,14 +546,19 @@ static int v3d_job_start(void)
 	}
 
 	if (v3d_in_use != 0) {
-		KLOG_E("v3d not free for starting job[0x%08x]", (u32)p_v3d_job);
+		KLOG_E("v3d not free for starting job[0x%08x]",
+		       (u32) p_v3d_job);
 		v3d_print_all_jobs(2);
 		return -1;
 	}
 	if (p_v3d_job->job_status != V3D_JOB_STATUS_READY) {
-		if ((p_v3d_job->job_status != V3D_JOB_STATUS_RUNNING) || (p_v3d_job->job_type != V3D_JOB_BIN_REND) || (p_v3d_job->job_intern_state != 1)) {
-			KLOG_E("Status not right for starting job[0x%08x] status[%d] type[%d], intern[%d]",
-				   (u32)p_v3d_job, p_v3d_job->job_status, p_v3d_job->job_type, p_v3d_job->job_intern_state);
+		if ((p_v3d_job->job_status != V3D_JOB_STATUS_RUNNING)
+		    || (p_v3d_job->job_type != V3D_JOB_BIN_REND)
+		    || (p_v3d_job->job_intern_state != 1)) {
+			KLOG_E
+			    ("Status not right for starting job[0x%08x] status[%d] type[%d], intern[%d]",
+			     (u32) p_v3d_job, p_v3d_job->job_status,
+			     p_v3d_job->job_type, p_v3d_job->job_intern_state);
 			v3d_print_all_jobs(2);
 			return -1;
 		}
@@ -539,58 +566,67 @@ static int v3d_job_start(void)
 
 	p_v3d_job->job_status = V3D_JOB_STATUS_RUNNING;
 	v3d_in_use = 1;
-	if ((p_v3d_job->job_type == V3D_JOB_REND) && (p_v3d_job->job_intern_state == 0)) {
-		KLOG_D("Submitting render job %x : %x\n", p_v3d_job->v3d_ct1ca , p_v3d_job->v3d_ct1ea);
+	if ((p_v3d_job->job_type == V3D_JOB_REND)
+	    && (p_v3d_job->job_intern_state == 0)) {
+		KLOG_D("Submitting render job %x : %x\n", p_v3d_job->v3d_ct1ca,
+		       p_v3d_job->v3d_ct1ea);
 		p_v3d_job->job_intern_state = 2;
-		v3d_write(p_v3d_job->v3d_ct1ca,  V3D_CT1CA_OFFSET);
-		v3d_write(p_v3d_job->v3d_ct1ea,  V3D_CT1EA_OFFSET);
-	}
-	else if ((p_v3d_job->job_type == V3D_JOB_BIN) && (p_v3d_job->job_intern_state == 0)) {
+		v3d_write(p_v3d_job->v3d_ct1ca, V3D_CT1CA_OFFSET);
+		v3d_write(p_v3d_job->v3d_ct1ea, V3D_CT1EA_OFFSET);
+	} else if ((p_v3d_job->job_type == V3D_JOB_BIN)
+		   && (p_v3d_job->job_intern_state == 0)) {
 		KLOG_E("\n\n\n\nBinning only JOB\n\n\n\n");
 		p_v3d_job->job_intern_state = 1;
-		KLOG_V("Submitting binner job %x : %x\n", p_v3d_job->v3d_ct0ca , p_v3d_job->v3d_ct0ea);
-		v3d_write(p_v3d_job->v3d_ct0ca,  V3D_CT0CA_OFFSET);
-		v3d_write(p_v3d_job->v3d_ct0ea,  V3D_CT0EA_OFFSET);
-	}
-	else if ((p_v3d_job->job_type == V3D_JOB_BIN_REND) && (p_v3d_job->job_intern_state == 0)) {
+		KLOG_V("Submitting binner job %x : %x\n", p_v3d_job->v3d_ct0ca,
+		       p_v3d_job->v3d_ct0ea);
+		v3d_write(p_v3d_job->v3d_ct0ca, V3D_CT0CA_OFFSET);
+		v3d_write(p_v3d_job->v3d_ct0ea, V3D_CT0EA_OFFSET);
+	} else if ((p_v3d_job->job_type == V3D_JOB_BIN_REND)
+		   && (p_v3d_job->job_intern_state == 0)) {
 		p_v3d_job->job_intern_state = 2;
 
-		//Submit binning first
+		/* Submit binning first */
 		{
-			KLOG_V("Submitting binner job %x : %x\n", p_v3d_job->v3d_ct0ca , p_v3d_job->v3d_ct0ea);
-			v3d_write(p_v3d_job->v3d_ct0ca,  V3D_CT0CA_OFFSET);
-			v3d_write(p_v3d_job->v3d_ct0ea,  V3D_CT0EA_OFFSET);
+			KLOG_V("Submitting binner job %x : %x\n",
+			       p_v3d_job->v3d_ct0ca, p_v3d_job->v3d_ct0ea);
+			v3d_write(p_v3d_job->v3d_ct0ca, V3D_CT0CA_OFFSET);
+			v3d_write(p_v3d_job->v3d_ct0ea, V3D_CT0EA_OFFSET);
 		}
 
-		//Submit rendering
-		if ( p_v3d_job->v3d_ct1ca != p_v3d_job->v3d_ct1ea ) {
-			KLOG_D("Submitting render job %x : %x\n", p_v3d_job->v3d_ct1ca , p_v3d_job->v3d_ct1ea);
-			v3d_write(p_v3d_job->v3d_ct1ca,  V3D_CT1CA_OFFSET);
-			v3d_write(p_v3d_job->v3d_ct1ea,  V3D_CT1EA_OFFSET);
+		/* Submit rendering */
+		if (p_v3d_job->v3d_ct1ca != p_v3d_job->v3d_ct1ea) {
+			KLOG_D("Submitting render job %x : %x\n",
+			       p_v3d_job->v3d_ct1ca, p_v3d_job->v3d_ct1ea);
+			v3d_write(p_v3d_job->v3d_ct1ca, V3D_CT1CA_OFFSET);
+			v3d_write(p_v3d_job->v3d_ct1ea, V3D_CT1EA_OFFSET);
 		}
 
-	}
-	else if ((p_v3d_job->job_type == V3D_JOB_USER) && (p_v3d_job->job_intern_state == 0)) {
+	} else if ((p_v3d_job->job_type == V3D_JOB_USER)
+		   && (p_v3d_job->job_intern_state == 0)) {
 		int i;
 		p_v3d_job->job_intern_state = p_v3d_job->user_cnt;
 
 		if ((v3d_read(V3D_SRQCS_OFFSET) & 0x3F) > 12) {
-			KLOG_E("User job queue is full %08x", v3d_read(V3D_SRQCS_OFFSET));
+			KLOG_E("User job queue is full %08x",
+			       v3d_read(V3D_SRQCS_OFFSET));
 			return -1;
 		}
 
-		v3d_write(p_v3d_job->v3d_vpm_size,  V3D_VPMBASE_OFFSET);
+		v3d_write(p_v3d_job->v3d_vpm_size, V3D_VPMBASE_OFFSET);
 
 		for (i = 0; i < p_v3d_job->user_cnt; i++) {
-			KLOG_V("Submitting user job %x : %x (%x)\n", p_v3d_job->v3d_srqpc[i], p_v3d_job->v3d_srqua[i], p_v3d_job->v3d_srqul[i]);
-			v3d_write(p_v3d_job->v3d_srqul[i],  V3D_SRQUL_OFFSET);
-			v3d_write(p_v3d_job->v3d_srqua[i],  V3D_SRQUA_OFFSET);
-			v3d_write(p_v3d_job->v3d_srqpc[i],  V3D_SRQPC_OFFSET);
+			KLOG_V("Submitting user job %x : %x (%x)\n",
+			       p_v3d_job->v3d_srqpc[i], p_v3d_job->v3d_srqua[i],
+			       p_v3d_job->v3d_srqul[i]);
+			v3d_write(p_v3d_job->v3d_srqul[i], V3D_SRQUL_OFFSET);
+			v3d_write(p_v3d_job->v3d_srqua[i], V3D_SRQUA_OFFSET);
+			v3d_write(p_v3d_job->v3d_srqpc[i], V3D_SRQPC_OFFSET);
 		}
-	}
-	else {
-		KLOG_E("Invalid internal state for starting job[0x%08x] type[%d] intern[%d]",
-			   (u32)p_v3d_job, p_v3d_job->job_type, p_v3d_job->job_intern_state);
+	} else {
+		KLOG_E
+		    ("Invalid internal state for starting job[0x%08x] type[%d] intern[%d]",
+		     (u32) p_v3d_job, p_v3d_job->job_type,
+		     p_v3d_job->job_intern_state);
 		v3d_in_use = 0;
 		v3d_print_all_jobs(2);
 		return -1;
@@ -601,7 +637,7 @@ static int v3d_job_start(void)
 
 static void v3d_job_kill(v3d_job_t *p_v3d_job, v3d_job_status_e job_status)
 {
-	KLOG_V("Kill job[0x%08x]: ", (u32)p_v3d_job);
+	KLOG_V("Kill job[0x%08x]: ", (u32) p_v3d_job);
 
 	p_v3d_job->job_intern_state = 3;
 	p_v3d_job->job_status = job_status;
@@ -613,7 +649,7 @@ static void v3d_job_kill(v3d_job_t *p_v3d_job, v3d_job_status_e job_status)
 #ifdef V3D_JOB_RETRY_ON_TIMEOUT
 static void v3d_job_reset(v3d_job_t *p_v3d_job)
 {
-	KLOG_V("Reset job[0x%08x]: ", (u32)p_v3d_job);
+	KLOG_V("Reset job[0x%08x]: ", (u32) p_v3d_job);
 
 	v3d_reset();
 
@@ -633,32 +669,33 @@ static int v3d_thread(void *data)
 	KLOG_D("v3d_thread launched");
 	if (mutex_lock_interruptible(&v3d_sem)) {
 		KLOG_E("lock acquire failed");
-		do_exit( -1);
+		do_exit(-1);
 	}
 
 	while (1) {
 		if (v3d_job_curr == NULL) {
 			/* No jobs pending - wait till a job gets posted */
 			KLOG_V("v3d_thread going to sleep till a post happens");
-			if( inited )
+			if (inited)
 				v3d_hw_release();
 			else
 				inited = 1;
 
 			while (v3d_job_curr == NULL) {
 				mutex_unlock(&v3d_sem);
-				if (wait_event_interruptible(v3d_start_q, (v3d_job_curr != NULL))) {
+				if (wait_event_interruptible
+				    (v3d_start_q, (v3d_job_curr != NULL))) {
 					KLOG_E("wait interrupted");
-					do_exit( -1);
+					do_exit(-1);
 				}
 				if (mutex_lock_interruptible(&v3d_sem)) {
 					KLOG_E("lock acquire failed");
-					do_exit( -1);
+					do_exit(-1);
 				}
 			}
 			/* Launch the job pointed by v3d_job_curr */
 			KLOG_V("Signal received to launch job");
-			if(v3d_hw_acquire(true))
+			if (v3d_hw_acquire(true))
 				KLOG_E("v3d_hw_acquire failed.");
 		}
 
@@ -667,24 +704,35 @@ static int v3d_thread(void *data)
 
 		{
 			/* Job in progress - wait with timeout for completion */
-			KLOG_V("v3d_thread going to sleep till job[0x%08x] status[%d] intern[%d]generates interrupt",
-				   (u32)v3d_job_curr, v3d_job_curr->job_status, v3d_job_curr->job_intern_state);
+			KLOG_V
+			    ("v3d_thread going to sleep till job[0x%08x] status[%d] intern[%d]generates interrupt",
+			     (u32) v3d_job_curr, v3d_job_curr->job_status,
+			     v3d_job_curr->job_intern_state);
 			mutex_unlock(&v3d_sem);
 
-			timeout = wait_event_interruptible_timeout(v3d_isr_done_q, (v3d_in_use == 0), msecs_to_jiffies(V3D_ISR_TIMEOUT_IN_MS));
+			timeout =
+			    wait_event_interruptible_timeout(v3d_isr_done_q,
+							     (v3d_in_use == 0),
+							     msecs_to_jiffies
+							     (V3D_ISR_TIMEOUT_IN_MS));
 			if (timeout && (timeout < timout_min)) {
 				timout_min = timeout;
-				KLOG_V("Minimum jiffies before timeout[%d]. Actual timeout set in jiffies[%d]",
-					   timout_min, (u32)msecs_to_jiffies(V3D_ISR_TIMEOUT_IN_MS));
+				KLOG_V
+				    ("Minimum jiffies before timeout[%d]. Actual timeout set in jiffies[%d]",
+				     timout_min,
+				     (u32)
+				     msecs_to_jiffies(V3D_ISR_TIMEOUT_IN_MS));
 			}
 
 			if ((timeout != 0) && (v3d_in_use != 0)) {
-				KLOG_E("wait interrupted, v3d_in_use[%d], timeout[%d]", v3d_in_use, timeout);
-				do_exit( -1);
+				KLOG_E
+				    ("wait interrupted, v3d_in_use[%d], timeout[%d]",
+				     v3d_in_use, timeout);
+				do_exit(-1);
 			}
 			if (mutex_lock_interruptible(&v3d_sem)) {
 				KLOG_E("lock acquire failed");
-				do_exit( -1);
+				do_exit(-1);
 			}
 #if 0
 			if (v3d_job_curr == NULL) {
@@ -693,17 +741,23 @@ static int v3d_thread(void *data)
 #endif
 			if (v3d_in_use == 0) {
 				/* Job completed or fatal oom happened or current job was killed as part of app close */
-				if ((v3d_job_curr->job_type == V3D_JOB_BIN) && (v3d_job_curr->job_intern_state == 1)) {
+				if ((v3d_job_curr->job_type == V3D_JOB_BIN)
+				    && (v3d_job_curr->job_intern_state == 1)) {
 					if (v3d_flags & (1 << 5)) {
 						/* 2 blocks of oom insufficient - kill the job and move ahead */
-						KLOG_E("Extra oom blocks also not sufficient for job[0x%08x]", (u32)v3d_job_curr);
+						KLOG_E
+						    ("Extra oom blocks also not sufficient for job[0x%08x]",
+						     (u32) v3d_job_curr);
 						v3d_print_status();
 						v3d_flags &= ~(1 << 5);
-						v3d_job_kill((v3d_job_t *)v3d_job_curr, V3D_JOB_STATUS_ERROR);
+						v3d_job_kill((v3d_job_t *)
+							     v3d_job_curr,
+							     V3D_JOB_STATUS_ERROR);
 					}
 					/* Binning only (job) complete. Launch next job if available, else sleep till next post */
 					if (v3d_job_curr->job_wait_state) {
-						wake_up_interruptible(&(((v3d_job_t *)v3d_job_curr)->v3d_job_done_q));
+						wake_up_interruptible(&
+								      (((v3d_job_t *) v3d_job_curr)->v3d_job_done_q));
 					}
 					v3d_job_curr = v3d_job_curr->next;
 #if 0
@@ -711,17 +765,30 @@ static int v3d_thread(void *data)
 						ret = v3d_job_start();
 					}
 #endif
-				}
-				else if ( ((v3d_job_curr->job_type == V3D_JOB_BIN_REND) && (v3d_job_curr->job_intern_state == 2)) ||
-						((v3d_job_curr->job_type == V3D_JOB_REND) && (v3d_job_curr->job_intern_state == 2)) ||
-						((v3d_job_curr->job_type == V3D_JOB_USER) && (v3d_job_curr->job_intern_state == v3d_job_curr->user_cnt)) ) {
+				} else
+				    if (((v3d_job_curr->job_type ==
+					  V3D_JOB_BIN_REND)
+					 && (v3d_job_curr->job_intern_state ==
+					     2))
+					||
+					((v3d_job_curr->job_type ==
+					  V3D_JOB_REND)
+					 && (v3d_job_curr->job_intern_state ==
+					     2))
+					||
+					((v3d_job_curr->job_type ==
+					  V3D_JOB_USER)
+					 && (v3d_job_curr->job_intern_state ==
+					     v3d_job_curr->user_cnt))) {
 					/* Rendering or bin_rand (job) complete. Launch next job if available, else sleep till next post */
 					v3d_flags &= ~(1 << 0);
 					v3d_job_curr->job_intern_state = 3;
-					v3d_job_curr->job_status = V3D_JOB_STATUS_SUCCESS;
+					v3d_job_curr->job_status =
+					    V3D_JOB_STATUS_SUCCESS;
 
 					if (v3d_job_curr->job_wait_state) {
-						wake_up_interruptible(&(((v3d_job_t *)v3d_job_curr)->v3d_job_done_q));
+						wake_up_interruptible(&
+								      (((v3d_job_t *) v3d_job_curr)->v3d_job_done_q));
 					}
 
 					v3d_job_curr = v3d_job_curr->next;
@@ -731,39 +798,42 @@ static int v3d_thread(void *data)
 						ret = v3d_job_start();
 					}
 #endif
-				}
-				else if (v3d_job_curr->job_intern_state == 0) {
+				} else if (v3d_job_curr->job_intern_state == 0) {
 #if 0
-					ret = v3d_job_start(); //What is this?
+					ret = v3d_job_start();	/* What is this? */
 #else
 					continue;
 #endif
+				} else {
+					KLOG_E
+					    ("Assert: v3d thread wait exited as 'done' or 'killed' but job state not valid");
 				}
-				else {
-					KLOG_E("Assert: v3d thread wait exited as 'done' or 'killed' but job state not valid");
-				}
-			}
-			else {
+			} else {
 				/* V3D timed out */
-				if (timeout != 0 ) {
-					KLOG_E("Assert: v3d thread wait exited as timeout but timeout value[%d] is non-zero", timeout);
+				if (timeout != 0) {
+					KLOG_E
+					    ("Assert: v3d thread wait exited as timeout but timeout value[%d] is non-zero",
+					     timeout);
 				}
 				/* Timeout of job happend */
 				dbg_job_timeout_cnt++;
-				KLOG_E("wait timed out [%d]ms", V3D_JOB_TIMEOUT_IN_MS);
+				KLOG_E("wait timed out [%d]ms",
+				       V3D_JOB_TIMEOUT_IN_MS);
 				v3d_print_status();
 #ifdef V3D_JOB_RETRY_ON_TIMEOUT
 				KLOG_E("Resumbit job\n");
-				v3d_job_reset((v3d_job_t *)v3d_job_curr);
+				v3d_job_reset((v3d_job_t *) v3d_job_curr);
 				v3d_job_curr->retry_cnt++;
-				if (v3d_job_curr->retry_cnt <= V3D_JOB_MAX_RETRIES) {
+				if (v3d_job_curr->retry_cnt <=
+				    V3D_JOB_MAX_RETRIES) {
 					ret = v3d_job_start();
 					continue;
 				}
 #else
 				BUG();
 #endif
-				v3d_job_kill((v3d_job_t *)v3d_job_curr, V3D_JOB_STATUS_TIMED_OUT);
+				v3d_job_kill((v3d_job_t *) v3d_job_curr,
+					     V3D_JOB_STATUS_TIMED_OUT);
 				v3d_job_curr = v3d_job_curr->next;
 #if 0
 				if (v3d_job_curr != NULL) {
@@ -781,7 +851,7 @@ static int v3d_job_post(struct file *filp, v3d_job_post_t *p_job_post)
 	int ret = 0;
 	v3d_job_t *p_v3d_job = NULL;
 
-	dev = (v3d_t *)(filp->private_data);
+	dev = (v3d_t *) (filp->private_data);
 
 	/* Allocate new job, copy params from user, init other data */
 	if ((p_v3d_job = v3d_job_create(filp, p_job_post)) == NULL) {
@@ -801,11 +871,9 @@ static int v3d_job_post(struct file *filp, v3d_job_post_t *p_job_post)
 
 	if (p_v3d_job->job_type == V3D_JOB_REND) {
 		dbg_job_post_rend_cnt++;
-	}
-	else if (p_v3d_job->job_type == V3D_JOB_BIN_REND) {
+	} else if (p_v3d_job->job_type == V3D_JOB_BIN_REND) {
 		dbg_job_post_bin_rend_cnt++;
-	}
-	else {
+	} else {
 		dbg_job_post_other_cnt++;
 	}
 	v3d_print_all_jobs(0);
@@ -822,7 +890,7 @@ static int v3d_job_post(struct file *filp, v3d_job_post_t *p_job_post)
 
 	return ret;
 
-err:
+      err:
 	if (p_v3d_job) {
 		kfree(p_v3d_job);
 	}
@@ -834,7 +902,7 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 	v3d_t *dev;
 	v3d_job_t *p_v3d_wait_job;
 
-	dev = (v3d_t *)(filp->private_data);
+	dev = (v3d_t *) (filp->private_data);
 
 	/* Lock the code */
 	if (mutex_lock_interruptible(&v3d_sem)) {
@@ -850,13 +918,21 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 
 	if (p_v3d_wait_job != NULL) {
 		/* Wait for the job to complete if not yet complete */
-		KLOG_V("Wait ioctl going to sleep for job[0x%08x] dev_id[%d]to complete", (u32)p_v3d_wait_job, p_v3d_wait_job->dev_id);
+		KLOG_V
+		    ("Wait ioctl going to sleep for job[0x%08x] dev_id[%d]to complete",
+		     (u32) p_v3d_wait_job, p_v3d_wait_job->dev_id);
 		init_waitqueue_head(&p_v3d_wait_job->v3d_job_done_q);
 		p_v3d_wait_job->job_wait_state = 1;
 		while ((p_v3d_wait_job->job_status == V3D_JOB_STATUS_READY)
-				|| (p_v3d_wait_job->job_status == V3D_JOB_STATUS_RUNNING)) {
+		       || (p_v3d_wait_job->job_status ==
+			   V3D_JOB_STATUS_RUNNING)) {
 			mutex_unlock(&v3d_sem);
-			if (wait_event_interruptible(p_v3d_wait_job->v3d_job_done_q, ((p_v3d_wait_job->job_status != V3D_JOB_STATUS_READY) && (p_v3d_wait_job->job_status != V3D_JOB_STATUS_RUNNING)))) {
+			if (wait_event_interruptible
+			    (p_v3d_wait_job->v3d_job_done_q,
+			     ((p_v3d_wait_job->job_status !=
+			       V3D_JOB_STATUS_READY)
+			      && (p_v3d_wait_job->job_status !=
+				  V3D_JOB_STATUS_RUNNING)))) {
 				KLOG_E("wait interrupted");
 				p_job_status->job_status = V3D_JOB_STATUS_ERROR;
 				return -ERESTARTSYS;
@@ -869,7 +945,7 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 		}
 
 		KLOG_V("Wait ioctl to return status[%d] for job[0x%08x]",
-			   p_v3d_wait_job->job_status, (u32)p_v3d_wait_job);
+		       p_v3d_wait_job->job_status, (u32) p_v3d_wait_job);
 		/* Return the status recorded by v3d */
 		p_job_status->job_status = p_v3d_wait_job->job_status;
 		p_job_status->job_id = p_v3d_wait_job->job_id;
@@ -888,7 +964,7 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 
 	return 0;
 }
-#endif // SUPPORT_V3D_WORKLIST
+#endif /*  SUPPORT_V3D_WORKLIST */
 
 /******************************************************************
 	V3D HW RW functions
@@ -905,7 +981,7 @@ static inline u32 v3d_read(u32 reg)
 static inline void v3d_write(uint32_t val, uint32_t reg)
 {
 	BUG_ON(!v3d_is_on);
-	iowrite32( val, v3d_base + reg);
+	iowrite32(val, v3d_base + reg);
 }
 
 /******************************************************************
@@ -917,7 +993,7 @@ static int enable_v3d_clock(void)
 
 	if (pi_mgr_dfs_request_update(&v3d_state.dfs_node, PI_OPP_TURBO)) {
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
-		return  -EIO;
+		return -EIO;
 	}
 
 	v3d_clk = clk_get(NULL, "v3d_axi_clk");
@@ -932,7 +1008,7 @@ static int enable_v3d_clock(void)
 		return -EIO;
 	}
 
-	return (rc);
+	return rc;
 }
 
 static int disable_v3d_clock(void)
@@ -947,26 +1023,27 @@ static int disable_v3d_clock(void)
 
 	clk_disable(v3d_clk);
 
-	if (pi_mgr_dfs_request_update(&v3d_state.dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+	if (pi_mgr_dfs_request_update
+	    (&v3d_state.dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
-		return  -EIO;
+		return -EIO;
 	}
 
-	return (rc);
+	return rc;
 }
 
 static int pm_enable_scu_standby(bool enable)
 {
-    u32 reg_val = 0;
-    reg_val = readl(KONA_SCU_VA + SCU_CONTROL_OFFSET);
-    if(enable)
+	u32 reg_val = 0;
+	reg_val = readl(KONA_SCU_VA + SCU_CONTROL_OFFSET);
+	if (enable)
 		reg_val |= SCU_CONTROL_SCU_STANDBY_EN_MASK;
-    else
+	else
 		reg_val &= ~SCU_CONTROL_SCU_STANDBY_EN_MASK;
 
-    writel(reg_val, KONA_SCU_VA + SCU_CONTROL_OFFSET);
+	writel(reg_val, KONA_SCU_VA + SCU_CONTROL_OFFSET);
 
-    return 0;
+	return 0;
 }
 
 static void v3d_power(int flag)
@@ -990,30 +1067,37 @@ static void v3d_power(int flag)
 		/* Update counters */
 		v3d_state.j1 = jiffies;
 		v3d_state.free_time += v3d_state.j1 - v3d_state.j2;
-		if ( (v3d_state.show_v3d_usage) && jiffies_to_msecs(v3d_state.free_time + v3d_state.acquired_time) > 5000) {
-			printk("V3D usage = %lu \n", (uint32_t) (v3d_state.acquired_time * 100 ) / (v3d_state.free_time + v3d_state.acquired_time) );
+		if ((v3d_state.show_v3d_usage)
+		    && jiffies_to_msecs(v3d_state.free_time +
+					v3d_state.acquired_time) > 5000) {
+			printk("V3D usage = %lu \n",
+			       (uint32_t) (v3d_state.acquired_time * 100) /
+			       (v3d_state.free_time + v3d_state.acquired_time));
 			v3d_state.free_time = 0;
 			v3d_state.acquired_time = 0;
 		}
-	}
-	else {
+	} else {
 		v3d_state.j2 = jiffies;
 		v3d_state.acquired_time += v3d_state.j2 - v3d_state.j1;
 
-		//Write the password to enable accessing other registers
-		writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
-				( 0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT), mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
+		/* Write the password to enable accessing other registers */
+		writel((0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
+		       (0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT),
+		       mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
 
 		/* Put V3D in reset state */
-		value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
-		value = value & ~( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
-		writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+		value = readl(mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+		value =
+		    value & ~(0x1 <<
+			      MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
+		writel(value, mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
 		mb();
 
 		/* Disable V3D clock */
 		v3d_is_on = 0;
 
-		pi_mgr_qos_request_update(&v3d_state.qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+		pi_mgr_qos_request_update(&v3d_state.qos_node,
+					  PI_MGR_QOS_DEFAULT_VALUE);
 		pm_enable_scu_standby(1);
 
 		disable_v3d_clock();
@@ -1026,68 +1110,76 @@ static void v3d_print_info(void)
 {
 	uint32_t ident1, ident2;
 
-	//This needs to be called with V3D powered on
-	if(v3d_is_on)
-	{
+	/* This needs to be called with V3D powered on */
+	if (v3d_is_on) {
 		ident1 = v3d_read(V3D_IDENT1_OFFSET);
 		ident2 = v3d_read(V3D_IDENT2_OFFSET);
 
-	   printk("V3D Rev.=%d, NSLC=%d, QPUs=%d, TUPs=%d, NSEM=%d, HDRT=%d, VPMSZ=%d \n",
-				(ident1 & V3D_IDENT1_REV_MASK) >> V3D_IDENT1_REV_SHIFT,
-				(ident1 & V3D_IDENT1_NSLC_MASK) >> V3D_IDENT1_NSLC_SHIFT,
-				(ident1 & V3D_IDENT1_QUPS_MASK) >> V3D_IDENT1_QUPS_SHIFT,
-				(ident1 & V3D_IDENT1_TUPS_MASK) >> V3D_IDENT1_TUPS_SHIFT,
-				(ident1 & V3D_IDENT1_NSEM_MASK) >> V3D_IDENT1_NSEM_SHIFT,
-				(ident1 & V3D_IDENT1_HDRT_MASK) >> V3D_IDENT1_HDRT_SHIFT,
-				(ident1 & V3D_IDENT1_VPMSZ_MASK) >> V3D_IDENT1_VPMSZ_SHIFT);
+		printk
+		    ("V3D Rev.=%d, NSLC=%d, QPUs=%d, TUPs=%d, NSEM=%d, HDRT=%d, VPMSZ=%d \n",
+		     (ident1 & V3D_IDENT1_REV_MASK) >> V3D_IDENT1_REV_SHIFT,
+		     (ident1 & V3D_IDENT1_NSLC_MASK) >> V3D_IDENT1_NSLC_SHIFT,
+		     (ident1 & V3D_IDENT1_QUPS_MASK) >> V3D_IDENT1_QUPS_SHIFT,
+		     (ident1 & V3D_IDENT1_TUPS_MASK) >> V3D_IDENT1_TUPS_SHIFT,
+		     (ident1 & V3D_IDENT1_NSEM_MASK) >> V3D_IDENT1_NSEM_SHIFT,
+		     (ident1 & V3D_IDENT1_HDRT_MASK) >> V3D_IDENT1_HDRT_SHIFT,
+		     (ident1 & V3D_IDENT1_VPMSZ_MASK) >>
+		     V3D_IDENT1_VPMSZ_SHIFT);
 
-	   printk("V3D VRISZ=%d, TLBSZ=%d, TLBDB=%d, QICSZ=%d, QUCSZ=%d, BIGEND=%d, ENDSWP=%d, AXI_RW_REORDER=%d, NOEARLYZ=%d\n",
-				(ident2 & V3D_IDENT2_VRISZ_MASK) >> V3D_IDENT2_VRISZ_SHIFT,
-				(ident2 & V3D_IDENT2_TLBSZ_MASK) >> V3D_IDENT2_TLBSZ_SHIFT,
-				(ident2 & V3D_IDENT2_TLBDB_MASK) >> V3D_IDENT2_TLBDB_SHIFT,
-				(ident2 & V3D_IDENT2_QICSZ_MASK) >> V3D_IDENT2_QICSZ_SHIFT,
-				(ident2 & V3D_IDENT2_QUCSZ_MASK) >> V3D_IDENT2_QUCSZ_SHIFT,
-				(ident2 & V3D_IDENT2_BIGEND_MASK) >> V3D_IDENT2_BIGEND_SHIFT,
-				(ident2 & V3D_IDENT2_ENDSWP_MASK) >> V3D_IDENT2_ENDSWP_SHIFT,
-				(ident2 & V3D_IDENT2_AXI_RW_REORDER_MASK) >> V3D_IDENT2_AXI_RW_REORDER_SHIFT,
-				(ident2 & V3D_IDENT2_NOEARLYZ_MASK) >> V3D_IDENT2_NOEARLYZ_SHIFT);
+		printk
+		    ("V3D VRISZ=%d, TLBSZ=%d, TLBDB=%d, QICSZ=%d, QUCSZ=%d, BIGEND=%d, ENDSWP=%d, AXI_RW_REORDER=%d, NOEARLYZ=%d\n",
+		     (ident2 & V3D_IDENT2_VRISZ_MASK) >> V3D_IDENT2_VRISZ_SHIFT,
+		     (ident2 & V3D_IDENT2_TLBSZ_MASK) >> V3D_IDENT2_TLBSZ_SHIFT,
+		     (ident2 & V3D_IDENT2_TLBDB_MASK) >> V3D_IDENT2_TLBDB_SHIFT,
+		     (ident2 & V3D_IDENT2_QICSZ_MASK) >> V3D_IDENT2_QICSZ_SHIFT,
+		     (ident2 & V3D_IDENT2_QUCSZ_MASK) >> V3D_IDENT2_QUCSZ_SHIFT,
+		     (ident2 & V3D_IDENT2_BIGEND_MASK) >>
+		     V3D_IDENT2_BIGEND_SHIFT,
+		     (ident2 & V3D_IDENT2_ENDSWP_MASK) >>
+		     V3D_IDENT2_ENDSWP_SHIFT,
+		     (ident2 & V3D_IDENT2_AXI_RW_REORDER_MASK) >>
+		     V3D_IDENT2_AXI_RW_REORDER_SHIFT,
+		     (ident2 & V3D_IDENT2_NOEARLYZ_MASK) >>
+		     V3D_IDENT2_NOEARLYZ_SHIFT);
 	}
 }
 
 static void v3d_print_status(void)
 {
-	v3d_job_t *p_v3d_job = (v3d_job_t *)v3d_job_curr;
+	v3d_job_t *p_v3d_job = (v3d_job_t *) v3d_job_curr;
 
-	if( p_v3d_job != NULL )
-	{
-		printk("Current binner job 0x%x : 0x%x\n", p_v3d_job->v3d_ct0ca , p_v3d_job->v3d_ct0ea);
-		printk("Current render job 0x%x : 0x%x\n", p_v3d_job->v3d_ct1ca , p_v3d_job->v3d_ct1ea);
+	if (p_v3d_job != NULL) {
+		printk("Current binner job 0x%x : 0x%x\n", p_v3d_job->v3d_ct0ca,
+		       p_v3d_job->v3d_ct0ea);
+		printk("Current render job 0x%x : 0x%x\n", p_v3d_job->v3d_ct1ca,
+		       p_v3d_job->v3d_ct1ea);
 	}
 
 	mutex_lock(&v3d_state.work_lock);
-	if(v3d_is_on)
-	{
-		printk("v3d reg: intctl[%x] pcs[%x] bfc[%d] rfc[%d] bpoa[0x%08x] bpos[0x%08x]",
-			v3d_read(V3D_INTCTL_OFFSET), v3d_read(V3D_PCS_OFFSET), v3d_read(V3D_BFC_OFFSET), v3d_read(V3D_RFC_OFFSET),
-			v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET));
-		printk("v3d reg: ct0cs[0x%08x] ct1cs[0x%08x] bpca[0x%08x] bpcs[0x%08x] \n",
-			v3d_read(V3D_CT0CS_OFFSET), v3d_read(V3D_CT1CS_OFFSET), v3d_read(V3D_BPCA_OFFSET), v3d_read(V3D_BPCS_OFFSET));
-		printk("CT0CA = 0X%x \tCT0EA = 0X%x\nCT1CA = 0X%x \tCT1EA = 0X%x SRQPC = 0x%08x\t SRQUA = 0x%08x\t SRQCS = 0x%08x \tERRSTAT = 0x%08x %08x %08x\n",
-			v3d_read(V3D_CT0CA_OFFSET),
-			v3d_read(V3D_CT0EA_OFFSET),
-			v3d_read(V3D_CT1CA_OFFSET),
-			v3d_read(V3D_CT1EA_OFFSET),
-			v3d_read(V3D_SRQPC_OFFSET),
-			v3d_read(V3D_SRQUA_OFFSET),
-			v3d_read(V3D_SRQCS_OFFSET),
-			v3d_read(0xf20),
-			v3d_read(0xf00),
-			v3d_read(0xf04));
-		printk("v3d bin mem status bpoa[0x%08x] bpos[0x%08x] bpca[0x%08x] bpcs[0x%08x]\n",
-				v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET), v3d_read(V3D_BPCA_OFFSET), v3d_read(V3D_BPCS_OFFSET));
-		printk("the SCU control = 0x%08x\n", readl(KONA_SCU_VA + SCU_CONTROL_OFFSET));
-	}
-	else
+	if (v3d_is_on) {
+		printk
+		    ("v3d reg: intctl[%x] pcs[%x] bfc[%d] rfc[%d] bpoa[0x%08x] bpos[0x%08x]",
+		     v3d_read(V3D_INTCTL_OFFSET), v3d_read(V3D_PCS_OFFSET),
+		     v3d_read(V3D_BFC_OFFSET), v3d_read(V3D_RFC_OFFSET),
+		     v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET));
+		printk
+		    ("v3d reg: ct0cs[0x%08x] ct1cs[0x%08x] bpca[0x%08x] bpcs[0x%08x] \n",
+		     v3d_read(V3D_CT0CS_OFFSET), v3d_read(V3D_CT1CS_OFFSET),
+		     v3d_read(V3D_BPCA_OFFSET), v3d_read(V3D_BPCS_OFFSET));
+		printk
+		    ("CT0CA = 0X%x \tCT0EA = 0X%x\nCT1CA = 0X%x \tCT1EA = 0X%x SRQPC = 0x%08x\t SRQUA = 0x%08x\t SRQCS = 0x%08x \tERRSTAT = 0x%08x %08x %08x\n",
+		     v3d_read(V3D_CT0CA_OFFSET), v3d_read(V3D_CT0EA_OFFSET),
+		     v3d_read(V3D_CT1CA_OFFSET), v3d_read(V3D_CT1EA_OFFSET),
+		     v3d_read(V3D_SRQPC_OFFSET), v3d_read(V3D_SRQUA_OFFSET),
+		     v3d_read(V3D_SRQCS_OFFSET), v3d_read(0xf20),
+		     v3d_read(0xf00), v3d_read(0xf04));
+		printk
+		    ("v3d bin mem status bpoa[0x%08x] bpos[0x%08x] bpca[0x%08x] bpcs[0x%08x]\n",
+		     v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET),
+		     v3d_read(V3D_BPCA_OFFSET), v3d_read(V3D_BPCS_OFFSET));
+		printk("the SCU control = 0x%08x\n",
+		       readl(KONA_SCU_VA + SCU_CONTROL_OFFSET));
+	} else
 		printk("V3D is powered down\n");
 
 	mutex_unlock(&v3d_state.work_lock);
@@ -1095,44 +1187,45 @@ static void v3d_print_status(void)
 
 static void v3d_reg_init(void)
 {
-	v3d_write(2,  			V3D_L2CACTL_OFFSET);
-	v3d_write(0x8000,  	V3D_CT0CS_OFFSET);
-	v3d_write(0x8000,  	V3D_CT1CS_OFFSET);
-	v3d_write(1,  			V3D_RFC_OFFSET);
-	v3d_write(1,  			V3D_BFC_OFFSET);
-	v3d_write(0x0f0f0f0f,  	V3D_SLCACTL_OFFSET);
+	v3d_write(2, V3D_L2CACTL_OFFSET);
+	v3d_write(0x8000, V3D_CT0CS_OFFSET);
+	v3d_write(0x8000, V3D_CT1CS_OFFSET);
+	v3d_write(1, V3D_RFC_OFFSET);
+	v3d_write(1, V3D_BFC_OFFSET);
+	v3d_write(0x0f0f0f0f, V3D_SLCACTL_OFFSET);
 #ifdef SUPPORT_V3D_WORKLIST
-	v3d_write(v3d_bin_oom_block,  V3D_BPOA_OFFSET);
-	v3d_write(v3d_bin_oom_size,  V3D_BPOS_OFFSET);
+	v3d_write(v3d_bin_oom_block, V3D_BPOA_OFFSET);
+	v3d_write(v3d_bin_oom_size, V3D_BPOS_OFFSET);
 #endif
-	v3d_write(0,  			V3D_VPMBASE_OFFSET);
-	v3d_write(0, 			 V3D_VPACNTL_OFFSET);
-	v3d_write(1,  			V3D_DBCFG_OFFSET);
-	v3d_write(0xF, 		V3D_INTCTL_OFFSET);
-	v3d_write(0x7,  		V3D_INTENA_OFFSET);
-	v3d_write((1 << 8) | (1 << 16),  V3D_SRQCS_OFFSET);
-	v3d_write(0xffff,  		V3D_DBQITC_OFFSET);
-	v3d_write(0xffff,  		V3D_DBQITE_OFFSET);
+	v3d_write(0, V3D_VPMBASE_OFFSET);
+	v3d_write(0, V3D_VPACNTL_OFFSET);
+	v3d_write(1, V3D_DBCFG_OFFSET);
+	v3d_write(0xF, V3D_INTCTL_OFFSET);
+	v3d_write(0x7, V3D_INTENA_OFFSET);
+	v3d_write((1 << 8) | (1 << 16), V3D_SRQCS_OFFSET);
+	v3d_write(0xffff, V3D_DBQITC_OFFSET);
+	v3d_write(0xffff, V3D_DBQITE_OFFSET);
 }
 
 static void v3d_reset(void)
 {
 	u32 value;
 
-	//Write the password to enable accessing other registers
-	writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
-			( 0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT), mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
+	/* Write the password to enable accessing other registers */
+	writel((0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
+	       (0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT),
+	       mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
 
-	// Put V3D in reset state
-	value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
-	value = value & ~( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
-	writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+	/*  Put V3D in reset state */
+	value = readl(mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+	value = value & ~(0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
+	writel(value, mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
 
-	//udelay(10);
+	/* udelay(10); */
 
-	value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
-	value = value | ( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
-	writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+	value = readl(mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+	value = value | (0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
+	writel(value, mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
 
 	mb();
 
@@ -1153,7 +1246,7 @@ static int v3d_hw_acquire(bool for_worklist)
 {
 	int ret = 0;
 
-	//Wait for the V3D HW to become available
+	/* Wait for the V3D HW to become available */
 	if (wait_for_completion_interruptible(&v3d_state.acquire_sem)) {
 		KLOG_E("Wait for V3D HW failed\n");
 		return -ERESTARTSYS;
@@ -1163,15 +1256,16 @@ static int v3d_hw_acquire(bool for_worklist)
 
 	mutex_lock(&v3d_state.work_lock);
 	/* Request the V3D IRQ */
-	if(!for_worklist){
+	if (!for_worklist) {
 		ret = request_irq(IRQ_GRAPHICS, v3d_isr_no_worklist,
-				IRQF_ONESHOT | IRQF_TRIGGER_HIGH, V3D_DEV_NAME, NULL);
+				  IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
+				  V3D_DEV_NAME, NULL);
 		v3d_state.irq_enabled = 1;
 	}
 #ifdef SUPPORT_V3D_WORKLIST
-	else{
+	else {
 		ret = request_irq(IRQ_GRAPHICS, v3d_isr_worklist,
-			IRQF_TRIGGER_HIGH, V3D_DEV_NAME, NULL);
+				  IRQF_TRIGGER_HIGH, V3D_DEV_NAME, NULL);
 	}
 #endif
 	mutex_unlock(&v3d_state.work_lock);
@@ -1183,7 +1277,7 @@ static void v3d_hw_release(void)
 {
 	free_irq(IRQ_GRAPHICS, NULL);
 	v3d_power(0);
-	complete(&v3d_state.acquire_sem);		//V3D is up for grab
+	complete(&v3d_state.acquire_sem);	/* V3D is up for grab */
 }
 
 #ifdef SUPPORT_V3D_WORKLIST
@@ -1191,43 +1285,43 @@ static void allocate_bin_mem(struct work_struct *work)
 {
 	int i;
 
-	for(i=0;i < MAX_BIN_BLOCKS; i++)
-	{
-		if(bin_mem[i].used == 0)
+	for (i = 0; i < MAX_BIN_BLOCKS; i++) {
+		if (bin_mem[i].used == 0)
 			break;
 	}
 
-	if(i >= MAX_BIN_BLOCKS)
+	if (i >= MAX_BIN_BLOCKS)
 		goto err1;
 
-	if(bin_mem[i].ready == 0)
-	{
-		bin_mem[i].oom_cpuaddr = dma_alloc_coherent(v3d_state.v3d_device, v3d_bin_oom_size, &bin_mem[i].oom_block, GFP_DMA);
+	if (bin_mem[i].ready == 0) {
+		bin_mem[i].oom_cpuaddr =
+		    dma_alloc_coherent(v3d_state.v3d_device, v3d_bin_oom_size,
+				       &bin_mem[i].oom_block, GFP_DMA);
 		bin_mem[i].ready = 1;
 	}
 
 	if (bin_mem[i].oom_cpuaddr != NULL) {
 		mutex_lock(&v3d_state.work_lock);
-		if(v3d_is_on)
-		{
+		if (v3d_is_on) {
 			uint32_t flags = v3d_read(V3D_INTENA_OFFSET);
-			v3d_job_t *p_v3d_job = (v3d_job_t *)v3d_job_curr;
+			v3d_job_t *p_v3d_job = (v3d_job_t *) v3d_job_curr;
 
 			bin_mem[i].used = 1;
 			bin_mem[i].dev_id = p_v3d_job->dev_id;
-			v3d_write(bin_mem[i].oom_block,  V3D_BPOA_OFFSET);
-			v3d_write(v3d_bin_oom_size,  V3D_BPOS_OFFSET);
-			v3d_write(1 << 2,  V3D_INTCTL_OFFSET);
-			v3d_write( flags | 1 << 2,  V3D_INTENA_OFFSET);
+			v3d_write(bin_mem[i].oom_block, V3D_BPOA_OFFSET);
+			v3d_write(v3d_bin_oom_size, V3D_BPOS_OFFSET);
+			v3d_write(1 << 2, V3D_INTCTL_OFFSET);
+			v3d_write(flags | 1 << 2, V3D_INTENA_OFFSET);
 		}
 		mutex_unlock(&v3d_state.work_lock);
-	}
-	else
-		KLOG_E("dma_alloc_coherent failed for v3d oom block size[0x%x]", v3d_bin_oom_size);
+	} else
+		KLOG_E("dma_alloc_coherent failed for v3d oom block size[0x%x]",
+		       v3d_bin_oom_size);
 
 	return;
-err1:
-	KLOG_E("Already allocated Max bin memory %d x %d\n", MAX_BIN_BLOCKS, v3d_bin_oom_size);
+      err1:
+	KLOG_E("Already allocated Max bin memory %d x %d\n", MAX_BIN_BLOCKS,
+	       v3d_bin_oom_size);
 }
 
 static void free_bin_mem(uint32_t dev_id)
@@ -1235,16 +1329,17 @@ static void free_bin_mem(uint32_t dev_id)
 	int i;
 
 	mutex_lock(&v3d_state.work_lock);
-	for(i=0;i < MAX_BIN_BLOCKS; i++)
-	{
-		if(dev_id == 0) //Memory is freed at end of work
+	for (i = 0; i < MAX_BIN_BLOCKS; i++) {
+		if (dev_id == 0)	/* Memory is freed at end of work */
 			bin_mem[i].used = 0;
-		else if(dev_id == bin_mem[i].dev_id)
-		{
-			//Memory is getting released as part of process closing
+		else if (dev_id == bin_mem[i].dev_id) {
+			/* Memory is getting released as part of process closing */
 			bin_mem[i].ready = 0;
 			bin_mem[i].used = 0;
-			dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size, bin_mem[i].oom_cpuaddr, bin_mem[i].oom_block);
+			dma_free_coherent(v3d_state.v3d_device,
+					  v3d_bin_oom_size,
+					  bin_mem[i].oom_cpuaddr,
+					  bin_mem[i].oom_block);
 		}
 	}
 	mutex_unlock(&v3d_state.work_lock);
@@ -1261,47 +1356,45 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 
 	/* Clear interrupts isr is going to handle */
 	tmp = flags & v3d_read(V3D_INTENA_OFFSET);
-	v3d_write(tmp,  V3D_INTCTL_OFFSET);
+	v3d_write(tmp, V3D_INTCTL_OFFSET);
 	if (flags_qpu) {
-		v3d_write(flags_qpu,  V3D_DBQITC_OFFSET);
+		v3d_write(flags_qpu, V3D_DBQITC_OFFSET);
 	}
 
 	/* Set the bits in shared var for interrupts to be handled outside
-	 * bits 0:rend_done, 1:bin_done, 4:qpu_done, 5:oom_fatal
+	 *bits 0:rend_done, 1:bin_done, 4:qpu_done, 5:oom_fatal
 	 */
 	v3d_flags = (flags & 0x3) | (flags_qpu ? (1 << 4) : 0);
 
 	/* Handle oom interrupt interrupt and binning is not yet done */
-	if ((flags & (0x1 << 2)) && !(v3d_flags & 0x2))
-	{
+	if ((flags & (0x1 << 2)) && !(v3d_flags & 0x2)) {
 		irq_retval = 1;
 
-		if(v3d_oom_block_used == 0)
-		{
+		if (v3d_oom_block_used == 0) {
 			v3d_oom_block_used = 1;
 			KLOG_D("Bin OOM: give out static memory 0X%x\n", flags);
-			v3d_write(v3d_bin_oom_block,  V3D_BPOA_OFFSET);
-			v3d_write(v3d_bin_oom_size,  V3D_BPOS_OFFSET);
-			v3d_write(tmp,  V3D_INTCTL_OFFSET); //Clear interrupt
-		}
-		else
-		{
-			//Statically allocated binning memory is used up: supply from work queue
-			KLOG_D("Bin OOM: starting workqueue to allocate more memory 0X%x\n", flags);
-			v3d_write(1 << 2,  V3D_INTDIS_OFFSET);
+			v3d_write(v3d_bin_oom_block, V3D_BPOA_OFFSET);
+			v3d_write(v3d_bin_oom_size, V3D_BPOS_OFFSET);
+			v3d_write(tmp, V3D_INTCTL_OFFSET);	/* Clear interrupt */
+		} else {
+			/* Statically allocated binning memory is used up: supply from work queue */
+			KLOG_D
+			    ("Bin OOM: starting workqueue to allocate more memory 0X%x\n",
+			     flags);
+			v3d_write(1 << 2, V3D_INTDIS_OFFSET);
 			queue_work(oom_wq, &work);
 		}
 	}
 
 	if (v3d_flags) {
-		v3d_job_t *p_v3d_job = (v3d_job_t *)v3d_job_curr;
+		v3d_job_t *p_v3d_job = (v3d_job_t *) v3d_job_curr;
 
 		irq_retval = 1;
 		tmp = v3d_read(V3D_SRQCS_OFFSET);
-		if ( ( (p_v3d_job->job_type == V3D_JOB_BIN_REND || p_v3d_job->job_type == V3D_JOB_REND) && ( v3d_flags & 0x1) ) //Render requested - Render done
-				||
-				( (p_v3d_job->job_type == V3D_JOB_BIN) && (v3d_flags & 0x2) ) //Bin requested - Bin Done
-				|| ((p_v3d_job->job_type == V3D_JOB_USER) && (((tmp >> 16) & 0xFF) == p_v3d_job->user_cnt))
+		if (((p_v3d_job->job_type == V3D_JOB_BIN_REND || p_v3d_job->job_type == V3D_JOB_REND) && (v3d_flags & 0x1))	/* Render requested - Render done */
+		    || ((p_v3d_job->job_type == V3D_JOB_BIN) && (v3d_flags & 0x2))	/* Bin requested - Bin Done */
+		    || ((p_v3d_job->job_type == V3D_JOB_USER)
+			&& (((tmp >> 16) & 0xFF) == p_v3d_job->user_cnt))
 		   ) {
 			v3d_in_use = 0;
 			v3d_oom_block_used = 0;
@@ -1315,7 +1408,7 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 
 static irqreturn_t v3d_isr_no_worklist(int irq, void *unused)
 {
-	if ( v3d_state.g_irq_sem )
+	if (v3d_state.g_irq_sem)
 		complete(v3d_state.g_irq_sem);
 
 	v3d_state.irq_enabled = 0;
@@ -1326,8 +1419,8 @@ static irqreturn_t v3d_isr_no_worklist(int irq, void *unused)
 static void v3d_enable_irq(void)
 {
 	mutex_lock(&v3d_state.work_lock);
-	//Don't enable irq if it's already enabled
-	if ( !v3d_state.irq_enabled ) {
+	/* Don't enable irq if it's already enabled */
+	if (!v3d_state.irq_enabled) {
 		v3d_state.irq_enabled = 1;
 		enable_irq(IRQ_GRAPHICS);
 	}
@@ -1371,18 +1464,17 @@ static int v3d_open(struct inode *inode, struct file *filp)
 	dev->id = v3d_id++;
 	KLOG_V("in open for id[%d]", dev->id);
 	mutex_unlock(&v3d_sem);
-err:
+      err:
 #endif
 	return ret;
 }
 
 static int v3d_release(struct inode *inode, struct file *filp)
 {
-	v3d_t *dev = (v3d_t *)filp->private_data;
+	v3d_t *dev = (v3d_t *) filp->private_data;
 
 #ifdef SUPPORT_V3D_WORKLIST
-	if(dev->uses_worklist == true)
-	{
+	if (dev->uses_worklist == true) {
 		KLOG_V("close: id[%d]", dev->id);
 		if (mutex_lock_interruptible(&v3d_sem)) {
 			KLOG_E("lock acquire failed");
@@ -1396,22 +1488,20 @@ static int v3d_release(struct inode *inode, struct file *filp)
 		v3d_print_all_jobs(0);
 		free_bin_mem(dev->id);
 		mutex_unlock(&v3d_sem);
-	}
-	else
+	} else
 #endif
 	{
 		if (dev->v3d_acquired) {
 			KLOG_E("\n\nUser dying with V3D acquired\n");
 			mutex_lock(&v3d_state.work_lock);
-			v3d_state.g_irq_sem = NULL;		//Free up the g_irq_sem
+			v3d_state.g_irq_sem = NULL;	/* Free up the g_irq_sem */
 			mutex_unlock(&v3d_state.work_lock);
 			KLOG_E("V3D HW idle\n");
 
-			//Just free up the V3D HW
+			/* Just free up the V3D HW */
 			v3d_hw_release();
 		}
-
-		//Enable the IRQ here if someone is waiting for IRQ
+		/* Enable the IRQ here if someone is waiting for IRQ */
 		v3d_enable_irq();
 	}
 
@@ -1436,33 +1526,31 @@ __pgprot((pgprot_val(prot) & ~L_PTE_MT_MASK) | L_PTE_MT_WRITEBACK | L_PTE_SHARED
 static int v3d_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	unsigned long vma_size = vma->vm_end - vma->vm_start;
-	v3d_t *dev = (v3d_t *)(filp->private_data);
+	v3d_t *dev = (v3d_t *) (filp->private_data);
 
 	if (vma_size & (~PAGE_MASK)) {
-		KLOG_E(KERN_ERR "v3d_mmap: mmaps must be aligned to a multiple of pages_size.\n");
+		KLOG_E(KERN_ERR
+		       "v3d_mmap: mmaps must be aligned to a multiple of pages_size.\n");
 		return -EINVAL;
 	}
 
 	if (!vma->vm_pgoff) {
 		vma->vm_pgoff = RHEA_V3D_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
 		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-	}
-	else if (vma->vm_pgoff != (dev->mempool.addr >> PAGE_SHIFT)) {
+	} else if (vma->vm_pgoff != (dev->mempool.addr >> PAGE_SHIFT)) {
 		KLOG_E("v3d_mmap failed\n");
 		return -EINVAL;
-	}
-	else {
-		vma->vm_pgoff = (((dev->mempool.addr & (~0x40000000)) | 0x80000000) >> PAGE_SHIFT);
+	} else {
+		vma->vm_pgoff =
+		    (((dev->mempool.
+		       addr & (~0x40000000)) | 0x80000000) >> PAGE_SHIFT);
 		vma->vm_page_prot = pgprot_cached(vma->vm_page_prot);
 	}
 
-
 	/* Remap-pfn-range will mark the range VM_IO and VM_RESERVED */
 	if (remap_pfn_range(vma,
-			vma->vm_start,
-			vma->vm_pgoff,
-			vma_size,
-			vma->vm_page_prot)) {
+			    vma->vm_start,
+			    vma->vm_pgoff, vma_size, vma->vm_page_prot)) {
 		KLOG_E("%s(): remap_pfn_range() failed\n", __FUNCTION__);
 		return -EINVAL;
 	}
@@ -1482,49 +1570,64 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return -ENOTTY;
 
 	if (_IOC_DIR(cmd) & _IOC_READ)
-		ret = !access_ok(VERIFY_WRITE, (void *) arg, _IOC_SIZE(cmd));
+		ret = !access_ok(VERIFY_WRITE, (void *)arg, _IOC_SIZE(cmd));
 
 	if (_IOC_DIR(cmd) & _IOC_WRITE)
-		ret |= !access_ok(VERIFY_READ, (void *) arg, _IOC_SIZE(cmd));
+		ret |= !access_ok(VERIFY_READ, (void *)arg, _IOC_SIZE(cmd));
 
 	if (ret)
 		return -EFAULT;
 
-	dev = (v3d_t *)(filp->private_data);
+	dev = (v3d_t *) (filp->private_data);
 
 	switch (cmd) {
-		case V3D_IOCTL_SYNCTRACE: {
+	case V3D_IOCTL_SYNCTRACE:{
 			KLOG_V("v3d_ioctl :V3D_IOCTL_TRACE: Unsupported");
 		}
 		break;
 
-		case V3D_IOCTL_GET_MEMPOOL: {
+	case V3D_IOCTL_GET_MEMPOOL:{
 			KLOG_E("v3d_ioctl :V3D_IOCTL_GET_MEMPOOL: Unsupported");
 		}
 		break;
 #ifdef SUPPORT_V3D_WORKLIST
-		case V3D_IOCTL_POST_JOB: {
+	case V3D_IOCTL_POST_JOB:{
 			v3d_job_post_t job_post;
 			KLOG_V("v3d_ioctl :V3D_IOCTL_POST_JOB");
-			if (copy_from_user(&job_post, (v3d_job_post_t *)arg, sizeof(job_post))) {
-				KLOG_E("V3D_IOCTL_POST_JOB copy_from_user failed");
+			if (copy_from_user
+			    (&job_post, (v3d_job_post_t *) arg,
+			     sizeof(job_post))) {
+				KLOG_E
+				    ("V3D_IOCTL_POST_JOB copy_from_user failed");
 				ret = -EPERM;
 				break;
 			}
 
 			if (job_post.user_cnt > 0) {
-				if (copy_from_user(job_post.v3d_srqpc, ((v3d_job_post_t *)arg)->v3d_srqpc, sizeof(job_post.v3d_srqpc))) {
-					KLOG_E("V3D_IOCTL_POST_JOB copy_from_user failed");
+				if (copy_from_user
+				    (job_post.v3d_srqpc,
+				     ((v3d_job_post_t *) arg)->v3d_srqpc,
+				     sizeof(job_post.v3d_srqpc))) {
+					KLOG_E
+					    ("V3D_IOCTL_POST_JOB copy_from_user failed");
 					ret = -EPERM;
 					break;
 				}
-				if (copy_from_user(job_post.v3d_srqua, ((v3d_job_post_t *)arg)->v3d_srqua, sizeof(job_post.v3d_srqua))) {
-					KLOG_E("V3D_IOCTL_POST_JOB copy_from_user failed");
+				if (copy_from_user
+				    (job_post.v3d_srqua,
+				     ((v3d_job_post_t *) arg)->v3d_srqua,
+				     sizeof(job_post.v3d_srqua))) {
+					KLOG_E
+					    ("V3D_IOCTL_POST_JOB copy_from_user failed");
 					ret = -EPERM;
 					break;
 				}
-				if (copy_from_user(job_post.v3d_srqul, ((v3d_job_post_t *)arg)->v3d_srqul, sizeof(job_post.v3d_srqul))) {
-					KLOG_E("V3D_IOCTL_POST_JOB copy_from_user failed");
+				if (copy_from_user
+				    (job_post.v3d_srqul,
+				     ((v3d_job_post_t *) arg)->v3d_srqul,
+				     sizeof(job_post.v3d_srqul))) {
+					KLOG_E
+					    ("V3D_IOCTL_POST_JOB copy_from_user failed");
 					ret = -EPERM;
 					break;
 				}
@@ -1534,20 +1637,23 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
-		case V3D_IOCTL_WAIT_JOB: {
+	case V3D_IOCTL_WAIT_JOB:{
 			v3d_job_status_t job_status;
 			KLOG_V("v3d_ioctl :V3D_IOCTL_WAIT_JOB");
 			ret = v3d_job_wait(filp, &job_status);
-			if (copy_to_user((v3d_job_status_t *)arg, &job_status, sizeof(job_status))) {
-				KLOG_E("V3D_IOCTL_WAIT_JOB copy_to_user failed");
+			if (copy_to_user
+			    ((v3d_job_status_t *) arg, &job_status,
+			     sizeof(job_status))) {
+				KLOG_E
+				    ("V3D_IOCTL_WAIT_JOB copy_to_user failed");
 				ret = -EPERM;
 			}
 			KLOG_V("v3d_ioctl done :V3D_IOCTL_WAIT_JOB");
 		}
 		break;
 #endif
-		case V3D_IOCTL_WAIT_IRQ: {
-			//Enable V3D block to generate interrupt
+	case V3D_IOCTL_WAIT_IRQ:{
+			/* Enable V3D block to generate interrupt */
 			KLOG_D("Enabling v3d interrupt\n");
 			KLOG_V("v3d_ioctl :V3D_IOCTL_WAIT_IRQ");
 			v3d_enable_irq();
@@ -1560,45 +1666,45 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
-		case V3D_IOCTL_EXIT_IRQ_WAIT: {
+	case V3D_IOCTL_EXIT_IRQ_WAIT:{
 			KLOG_V("v3d_ioctl :V3D_IOCTL_EXIT_IRQ_WAIT");
-			//Up the semaphore to release the thread that's waiting for irq
+			/* Up the semaphore to release the thread that's waiting for irq */
 			complete(&dev->irq_sem);
 		}
 		break;
 
-		case V3D_IOCTL_RESET: {
+	case V3D_IOCTL_RESET:{
 			KLOG_V("v3d_ioctl :V3D_IOCTL_RESET");
 			v3d_reset();
 		}
 		break;
 
-		case V3D_IOCTL_HW_ACQUIRE: {
+	case V3D_IOCTL_HW_ACQUIRE:{
 			KLOG_V("v3d_ioctl :V3D_IOCTL_HW_ACQUIRE");
 			dev->uses_worklist = false;
-			//Wait for the V3D HW to become available
-			if(v3d_hw_acquire(false))
+			/* Wait for the V3D HW to become available */
+			if (v3d_hw_acquire(false))
 				return -ERESTARTSYS;
 
-			v3d_state.g_irq_sem = &dev->irq_sem;	//Replace the irq sem with current process sem
-			dev->v3d_acquired = 1;		//Mark acquired: will come handy in cleanup process
+			v3d_state.g_irq_sem = &dev->irq_sem;	/* Replace the irq sem with current process sem */
+			dev->v3d_acquired = 1;	/* Mark acquired: will come handy in cleanup process */
 		}
 		break;
 
-		case V3D_IOCTL_HW_RELEASE: {
+	case V3D_IOCTL_HW_RELEASE:{
 			KLOG_V("v3d_ioctl :V3D_IOCTL_HW_RELEASE");
-			v3d_state.g_irq_sem = NULL;		//Free up the g_irq_sem
-			dev->v3d_acquired = 0;	//Not acquired anymore
+			v3d_state.g_irq_sem = NULL;	/* Free up the g_irq_sem */
+			dev->v3d_acquired = 0;	/* Not acquired anymore */
 			v3d_hw_release();
 		}
 		break;
 
-		case V3D_IOCTL_ASSERT_IDLE: {
+	case V3D_IOCTL_ASSERT_IDLE:{
 			KLOG_V("v3d_ioctl :V3D_IOCTL_ASSERT_IDLE: Unsupported");
 		}
 		break;
 
-		case V3D_IOCTL_DVTS_CREATE: {
+	case V3D_IOCTL_DVTS_CREATE:{
 			uint32_t id;
 
 			KLOG_V("v3d_ioctl :V3D_IOCTL_DVTS_CREATE");
@@ -1614,53 +1720,63 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			 * created upon device open */
 			id = 777;
 			if (copy_to_user((void *)arg, &id, sizeof(id))) {
-				KLOG_E("V3D_IOCTL_DVTS_CREATE copy_to_user failed");
+				KLOG_E
+				    ("V3D_IOCTL_DVTS_CREATE copy_to_user failed");
 				ret = -EPERM;
 			}
 			dev->shared_dvts_object_usecount += 1;
 		}
 		break;
 
-		case V3D_IOCTL_DVTS_DESTROY: {
+	case V3D_IOCTL_DVTS_DESTROY:{
 			uint32_t id;
 
 			KLOG_V("v3d_ioctl :V3D_IOCTL_DVTS_DESTROY");
 			if (copy_from_user(&id, (void *)arg, sizeof(id))) {
-				KLOG_E("V3D_IOCTL_DVTS_DESTROY copy_from_user failed");
+				KLOG_E
+				    ("V3D_IOCTL_DVTS_DESTROY copy_from_user failed");
 				ret = -EPERM;
 			}
-			if (id != 777) ret = -ENOENT;
+			if (id != 777)
+				ret = -ENOENT;
 			dev->shared_dvts_object_usecount -= 1;
 		}
 		break;
 
-		case V3D_IOCTL_DVTS_FINISH_TASK: {
+	case V3D_IOCTL_DVTS_FINISH_TASK:{
 			uint32_t id;
 
 			KLOG_V("v3d_ioctl :V3D_IOCTL_DVTS_FINISH_TASK");
 			if (copy_from_user(&id, (void *)arg, sizeof(id))) {
-				KLOG_E("V3D_IOCTL_DVTS_DESTROY copy_from_user failed");
+				KLOG_E
+				    ("V3D_IOCTL_DVTS_DESTROY copy_from_user failed");
 				ret = -EPERM;
 			}
-			if (id != 777) ret = -ENOENT;
+			if (id != 777)
+				ret = -ENOENT;
 			dvts_finish(dev->shared_dvts_object);
 		}
 		break;
 
-		case V3D_IOCTL_DVTS_AWAIT_TASK: {
+	case V3D_IOCTL_DVTS_AWAIT_TASK:{
 			dvts_await_task_args_t await_task_args;
 
 			KLOG_V("v3d_ioctl :V3D_IOCTL_DVTS_AWAIT_TASK");
-			if (copy_from_user(&await_task_args, (void *)arg, sizeof(await_task_args))) {
-				KLOG_E("V3D_IOCTL_DVTS_AWAIT_TASK copy_from_user failed");
+			if (copy_from_user
+			    (&await_task_args, (void *)arg,
+			     sizeof(await_task_args))) {
+				KLOG_E
+				    ("V3D_IOCTL_DVTS_AWAIT_TASK copy_from_user failed");
 				ret = -EPERM;
 			}
-			if (await_task_args.id != 777) ret = -ENOENT;
-			dvts_wait(dev->shared_dvts_object, await_task_args.target);
+			if (await_task_args.id != 777)
+				ret = -ENOENT;
+			dvts_wait(dev->shared_dvts_object,
+				  await_task_args.target);
 		}
 		break;
 
-		default:
+	default:
 		KLOG_E("v3d_ioctl :default");
 		break;
 	}
@@ -1668,25 +1784,26 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	return ret;
 }
 
-static struct file_operations v3d_fops =
-{
-	.open	= v3d_open,
-	.release	= v3d_release,
-	.mmap	= v3d_mmap,
-	.unlocked_ioctl	= v3d_ioctl,
+static struct file_operations v3d_fops = {
+	.open = v3d_open,
+	.release = v3d_release,
+	.mmap = v3d_mmap,
+	.unlocked_ioctl = v3d_ioctl,
 };
 
-int proc_v3d_write(struct file *file, const char __user *buffer, unsigned long count, void *data)
+int proc_v3d_write(struct file *file, const char __user *buffer,
+		   unsigned long count, void *data)
 {
 	char v3d_req[200], v3d_resp[100];
 	int ret = 0;
 
-	if ( count > (sizeof(v3d_req) - 1) ) {
-		KLOG_E(KERN_ERR"%s:v3d max length=%d\n", __func__, sizeof(v3d_req));
+	if (count > (sizeof(v3d_req) - 1)) {
+		KLOG_E(KERN_ERR "%s:v3d max length=%d\n", __func__,
+		       sizeof(v3d_req));
 		return -ENOMEM;
 	}
 	/* write data to buffer */
-	if ( copy_from_user( v3d_req, buffer, count) )
+	if (copy_from_user(v3d_req, buffer, count))
 		return -EFAULT;
 	v3d_req[count] = '\0';
 
@@ -1696,22 +1813,21 @@ int proc_v3d_write(struct file *file, const char __user *buffer, unsigned long c
 
 	if (!strncmp("print_usage=on", v3d_req, 14)) {
 		v3d_state.show_v3d_usage = 1;
-	}
-	else if (!strncmp("print_usage=off", v3d_req, 15)) {
+	} else if (!strncmp("print_usage=off", v3d_req, 15)) {
 		v3d_state.show_v3d_usage = 0;
-	}
-	else
+	} else
 		KLOG_E("Invalid command\n");
 
 	mutex_unlock(&v3d_state.work_lock);
 
-	if ( ret > 0)
-		KLOG_E(KERN_ERR"response: %s\n", v3d_resp);
+	if (ret > 0)
+		KLOG_E(KERN_ERR "response: %s\n", v3d_resp);
 
 	return count;
 }
 
-static int proc_v3d_read( char *buffer, char **start, off_t offset, int bytes, int *eof, void *context )
+static int proc_v3d_read(char *buffer, char **start, off_t offset, int bytes,
+			 int *eof, void *context)
 {
 	int ret = 0;
 	v3d_print_status();
@@ -1729,7 +1845,9 @@ int __init v3d_init(void)
 	memset(&bin_mem, 0, sizeof(bin_mem));
 
 	/* Map the V3D registers */
-	v3d_base = (void __iomem *)ioremap_nocache(RHEA_V3D_BASE_PERIPHERAL_ADDRESS, SZ_4K);
+	v3d_base =
+	    (void __iomem *)ioremap_nocache(RHEA_V3D_BASE_PERIPHERAL_ADDRESS,
+					    SZ_4K);
 	if (v3d_base == NULL)
 		goto err;
 
@@ -1740,48 +1858,56 @@ int __init v3d_init(void)
 
 	printk("V3D register base address (remaped) = 0X%p\n", v3d_base);
 
-	/* Initialize the V3D acquire_sem and work_lock*/
-	init_completion(&v3d_state.acquire_sem); 
-	complete(&v3d_state.acquire_sem); //First request should succeed
-	mutex_init(&v3d_state.work_lock); //First request should succeed
+	/* Initialize the V3D acquire_sem and work_lock */
+	init_completion(&v3d_state.acquire_sem);
+	complete(&v3d_state.acquire_sem);	/* First request should succeed */
+	mutex_init(&v3d_state.work_lock);	/* First request should succeed */
 
 	v3d_state.show_v3d_usage = 0;
 
 	/* create a proc entry */
 	v3d_state.proc_info = create_proc_entry("v3d",
-			(S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP ), NULL);
+						(S_IWUSR | S_IWGRP | S_IRUSR |
+						 S_IRGRP), NULL);
 
-	if ( !v3d_state.proc_info ) {
+	if (!v3d_state.proc_info) {
 		KLOG_E("failed to create v3d proc entry\n");
 		ret = -ENOENT;
 		goto err2;
-	}
-	else {
+	} else {
 		v3d_state.proc_info->write_proc = proc_v3d_write;
 		v3d_state.proc_info->read_proc = proc_v3d_read;
 	}
 
 	/* reigster qos client */
-	ret = pi_mgr_qos_add_request(&v3d_state.qos_node,"v3d", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+	ret =
+	    pi_mgr_qos_add_request(&v3d_state.qos_node, "v3d",
+				   PI_MGR_PI_ID_ARM_CORE,
+				   PI_MGR_QOS_DEFAULT_VALUE);
 	if (ret)
 		KLOG_E("failed to register qos client. ACP wont work\n");
 
-	ret = pi_mgr_dfs_add_request(&v3d_state.dfs_node,"v3d", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+	ret =
+	    pi_mgr_dfs_add_request(&v3d_state.dfs_node, "v3d", PI_MGR_PI_ID_MM,
+				   PI_MGR_DFS_MIN_VALUE);
 	if (ret)
 		KLOG_E("failed to register PI DFS request\n");
 
 #ifdef SUPPORT_V3D_WORKLIST
 	/* Allocate the binning overspill memory upfront */
-	v3d_bin_oom_cpuaddr = dma_alloc_coherent(v3d_state.v3d_device, v3d_bin_oom_size, &v3d_bin_oom_block, GFP_DMA);
+	v3d_bin_oom_cpuaddr =
+	    dma_alloc_coherent(v3d_state.v3d_device, v3d_bin_oom_size,
+			       &v3d_bin_oom_block, GFP_DMA);
 	if (v3d_bin_oom_cpuaddr == NULL) {
-		KLOG_E("dma_alloc_coherent failed for v3d oom block size[0x%x]", v3d_bin_oom_size);
+		KLOG_E("dma_alloc_coherent failed for v3d oom block size[0x%x]",
+		       v3d_bin_oom_size);
 		v3d_bin_oom_block = 0;
 		v3d_bin_oom_size = 0;
 		ret = -ENOMEM;
 		goto err2;
 	}
 	KLOG_D("v3d bin oom phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
-		   v3d_bin_oom_block, v3d_bin_oom_size, (int)v3d_bin_oom_cpuaddr);
+	       v3d_bin_oom_block, v3d_bin_oom_size, (int)v3d_bin_oom_cpuaddr);
 
 	oom_wq = create_singlethread_workqueue("oom_work");
 	if (!oom_wq) {
@@ -1801,18 +1927,18 @@ int __init v3d_init(void)
 	/* Start the thread to process work queue */
 	v3d_thread_task = kthread_run(&v3d_thread, v3d_dev, "v3d_thread");
 	if ((int)v3d_thread_task == -ENOMEM) {
-		KLOG_E("Kernel Thread did not start [0x%08x]", (int)v3d_thread_task);
+		KLOG_E("Kernel Thread did not start [0x%08x]",
+		       (int)v3d_thread_task);
 		ret = -ENOMEM;
 		goto err2;
 	}
 #endif
 
 	ret = register_chrdev(v3d_major, V3D_DEV_NAME, &v3d_fops);
-	if (ret < 0){
+	if (ret < 0) {
 		ret = -EINVAL;
 		goto err2;
-	}
-	else
+	} else
 		v3d_major = ret;
 
 	v3d_state.v3d_class = class_create(THIS_MODULE, V3D_DEV_NAME);
@@ -1822,8 +1948,10 @@ int __init v3d_init(void)
 		goto err3;
 	}
 
-	v3d_state.v3d_device = device_create(v3d_state.v3d_class, NULL, MKDEV(v3d_major, 0), NULL, V3D_DEV_NAME);
-	v3d_state.v3d_device->coherent_dma_mask = ((u64)~0);
+	v3d_state.v3d_device =
+	    device_create(v3d_state.v3d_class, NULL, MKDEV(v3d_major, 0), NULL,
+			  V3D_DEV_NAME);
+	v3d_state.v3d_device->coherent_dma_mask = ((u64) ~ 0);
 
 	v3d_power(1);
 	v3d_print_info();
@@ -1831,21 +1959,22 @@ int __init v3d_init(void)
 
 	return 0;
 
-err3:
+      err3:
 	unregister_chrdev(v3d_major, V3D_DEV_NAME);
-err2:
+      err2:
 #ifdef SUPPORT_V3D_WORKLIST
 	if ((int)v3d_thread_task != -ENOMEM)
 		kthread_stop(v3d_thread_task);
 	if (v3d_bin_oom_cpuaddr)
-		dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size, v3d_bin_oom_cpuaddr, v3d_bin_oom_block);
+		dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size,
+				  v3d_bin_oom_cpuaddr, v3d_bin_oom_block);
 #endif
 	/* remove proc entry */
 	remove_proc_entry("v3d", NULL);
 	iounmap(mm_rst_base);
-err1:
+      err1:
 	iounmap(v3d_base);
-err:
+      err:
 	KLOG_E("V3D init error\n");
 	return ret;
 }
@@ -1869,7 +1998,8 @@ void __exit v3d_exit(void)
 	if ((int)v3d_thread_task != -ENOMEM)
 		kthread_stop(v3d_thread_task);
 	if (v3d_bin_oom_cpuaddr)
-		dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size, v3d_bin_oom_cpuaddr, v3d_bin_oom_block);
+		dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size,
+				  v3d_bin_oom_cpuaddr, v3d_bin_oom_block);
 #endif
 
 	/* Unmap addresses */

@@ -130,30 +130,33 @@ static unsigned int get_bc_status(struct bcmpmu_accy *paccy)
 
 	if ((paccy->bc == BCMPMU_BC_BB_BC11) ||
 	    (paccy->bc == BCMPMU_BC_BB_BC12)) {
-		if (bcm_hsotgctrl_bc_status((unsigned long*)&status) == 0)
+		if (bcm_hsotgctrl_bc_status((unsigned long *)&status) == 0)
 			return status;
 		else
 			return 0;
 	} else if (paccy->bc == BCMPMU_BC_PMU_BC12) {
 		ret = bcmpmu->read_dev(bcmpmu,
-			PMU_REG_BC_STATUS_DONE,
-			&temp,
-			bcmpmu->regmap[PMU_REG_BC_STATUS_DONE].mask);
-		pr_accy(DATA,"%s: bc_done=0x%X\n", __func__, temp);
+				       PMU_REG_BC_STATUS_DONE,
+				       &temp,
+				       bcmpmu->regmap[PMU_REG_BC_STATUS_DONE].
+				       mask);
+		pr_accy(DATA, "%s: bc_done=0x%X\n", __func__, temp);
 
 		temp = temp >> bcmpmu->regmap[PMU_REG_BC_STATUS_DONE].shift;
 		status |= temp << PMU_BC_STATUS_DONE_SHIFT;
-		pr_accy(DATA,"%s: bc_status bc_done=0x%X, value=0x%X\n", __func__, temp, status);
+		pr_accy(DATA, "%s: bc_status bc_done=0x%X, value=0x%X\n",
+			__func__, temp, status);
 
 		ret = bcmpmu->read_dev(bcmpmu,
-			PMU_REG_BC_STATUS_CODE,
-			&temp,
-			bcmpmu->regmap[PMU_REG_BC_STATUS_CODE].mask);
-		pr_accy(DATA,"%s: bc_code=0x%X\n", __func__, temp);
+				       PMU_REG_BC_STATUS_CODE,
+				       &temp,
+				       bcmpmu->regmap[PMU_REG_BC_STATUS_CODE].
+				       mask);
+		pr_accy(DATA, "%s: bc_code=0x%X\n", __func__, temp);
 
 		temp = temp >> bcmpmu->regmap[PMU_REG_BC_STATUS_CODE].shift;
 		status |= temp << PMU_BC_STATUS_CODE_SHIFT;
-		pr_accy(DATA,"%s: bc_status=0x%X\n", __func__, status);
+		pr_accy(DATA, "%s: bc_status=0x%X\n", __func__, status);
 		return status;
 	} else
 		return 0;
@@ -218,9 +221,9 @@ static int is_detection_done(struct bcmpmu_accy *paccy, unsigned int status)
 	    (paccy->bc == BCMPMU_BC_BB_BC12))
 		ret_status = (status & BB_BC_STS_BC_DONE_MSK);
 	else if (paccy->bc == BCMPMU_BC_PMU_BC12)
-		ret_status =  (status & PMU_BC_STS_BC_DONE_MSK);
+		ret_status = (status & PMU_BC_STS_BC_DONE_MSK);
 	else
-		ret_status =  0;
+		ret_status = 0;
 
 	return ret_status;
 }
@@ -247,13 +250,13 @@ static void bc_det_sts_clear(struct bcmpmu_accy *paccy)
 	u8 val;
 	u8 mask;
 	if ((paccy->bc == BCMPMU_BC_BB_BC11) ||
-		(paccy->bc == BCMPMU_BC_BB_BC12))
+	    (paccy->bc == BCMPMU_BC_BB_BC12))
 		return;
 
 	val = (PMU_BC_CTRL_OVWR_PATTERN <<
 	       bcmpmu->regmap[PMU_REG_BC_OVWR_KEY].shift);
 	/* clear BC_DET_EN, statement not required
-	 * kept for readablity
+	 *kept for readablity
 	 */
 	val &= ~(1 << bcmpmu->regmap[PMU_REG_BC_DET_EN].shift);
 	mask = bcmpmu->regmap[PMU_REG_BC_OVWR_KEY].mask |
@@ -272,19 +275,19 @@ static void bc_det_restart(struct bcmpmu_accy *paccy)
 	u8 val;
 	u8 mask;
 	if ((paccy->bc == BCMPMU_BC_BB_BC11) ||
-		(paccy->bc == BCMPMU_BC_BB_BC12))
+	    (paccy->bc == BCMPMU_BC_BB_BC12))
 		return;
 
 	val = (PMU_BC_CTRL_OVWR_PATTERN <<
-			bcmpmu->regmap[PMU_REG_BC_OVWR_KEY].shift);
+	       bcmpmu->regmap[PMU_REG_BC_OVWR_KEY].shift);
 	val |= (1 << bcmpmu->regmap[PMU_REG_BC_DET_EN].shift);
 	mask = bcmpmu->regmap[PMU_REG_BC_OVWR_KEY].mask |
-		bcmpmu->regmap[PMU_REG_BC_DET_EN].mask;
+	    bcmpmu->regmap[PMU_REG_BC_DET_EN].mask;
 
 	bcmpmu->write_dev(bcmpmu, PMU_REG_BC_OVWR_KEY, val, mask);
 	/* lock the register */
 	bcmpmu->write_dev(bcmpmu, PMU_REG_BC_OVWR_KEY,
-			0, bcmpmu->regmap[PMU_REG_BC_OVWR_KEY].mask);
+			  0, bcmpmu->regmap[PMU_REG_BC_OVWR_KEY].mask);
 
 }
 
@@ -302,6 +305,7 @@ int bcmpmu_add_notifier(u32 event_id, struct notifier_block *notifier)
 	return blocking_notifier_chain_register(&bcmpmu_accy->event[event_id].
 						notifiers, notifier);
 }
+
 EXPORT_SYMBOL_GPL(bcmpmu_add_notifier);
 
 int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier)
@@ -319,6 +323,7 @@ int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier)
 	return blocking_notifier_chain_unregister(&bcmpmu_accy->event[event_id].
 						  notifiers, notifier);
 }
+
 EXPORT_SYMBOL_GPL(bcmpmu_remove_notifier);
 
 static void send_usb_event(struct bcmpmu *pmu,
@@ -609,7 +614,7 @@ static void usb_det_work(struct work_struct *work)
 					paccy->poll_cnt = 0;
 				}
 				schedule_delayed_work(&paccy->det_work,
-					msecs_to_jiffies(100));
+						      msecs_to_jiffies(100));
 			}
 		} else {
 			enable_bc_clock(paccy, false);
@@ -638,10 +643,11 @@ static void usb_det_work(struct work_struct *work)
 
 	case USB_CONNECTED:
 		if (paccy->bcmpmu->get_env_bit_status(paccy->bcmpmu,
-				PMU_ENV_USB_VALID) != true) {
-				usb_type = PMU_USB_TYPE_NONE;
-				chrgr_type = PMU_CHRGR_TYPE_NONE;
-				paccy->det_state = USB_IDLE;
+						      PMU_ENV_USB_VALID) !=
+		    true) {
+			usb_type = PMU_USB_TYPE_NONE;
+			chrgr_type = PMU_CHRGR_TYPE_NONE;
+			paccy->det_state = USB_IDLE;
 		} else {
 			usb_type = bcmpmu->usb_accy_data.usb_type;
 			chrgr_type = bcmpmu->usb_accy_data.chrgr_type;
@@ -666,9 +672,9 @@ static void usb_det_work(struct work_struct *work)
 		return;
 
 	/* temp solution. move the BD_DET_EN clear out
-	* of the condition <(paccy->clock_en != 0)>,
-	* this condition not meet and the BC_DET_EN
-	* never get called */
+	 *of the condition <(paccy->clock_en != 0)>,
+	 *this condition not meet and the BC_DET_EN
+	 *never get called */
 	bc_det_sts_clear(paccy);
 
 	if (paccy->clock_en != 0) {
@@ -981,6 +987,7 @@ int bcmpmu_usb_set(struct bcmpmu *bcmpmu,
 	}
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(bcmpmu_usb_set);
 
 int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
@@ -1069,11 +1076,11 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
 			val = paccy->usb_id_map[val];
 		break;
 		/* client for bcmpmu-accy notification can not register
-		* before accy driver get probed if, USB/Charger is
-		* plugged while system boot up, em driver
-		* will miss the first notification. So,
-		* BCMPMU_USB_CTRL_GET_CHRGR_TYPE is required
-		* to know the type explicitly
+		 *before accy driver get probed if, USB/Charger is
+		 *plugged while system boot up, em driver
+		 *will miss the first notification. So,
+		 * BCMPMU_USB_CTRL_GET_CHRGR_TYPE is required
+		 *to know the type explicitly
 		 */
 	case BCMPMU_USB_CTRL_GET_CHRGR_TYPE:
 		ret = bcmpmu->read_dev(bcmpmu,
@@ -1093,6 +1100,7 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
 		((data) ? (*(unsigned int *)data) : 0));
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(bcmpmu_usb_get);
 
 static int bcmpmu_register_usb_callback(struct bcmpmu *pmu,
@@ -1212,7 +1220,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	schedule_delayed_work(&paccy->det_work, 500);
 	return 0;
 
-err:
+      err:
 	kfree(paccy);
 	return ret;
 }

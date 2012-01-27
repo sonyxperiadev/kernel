@@ -4,12 +4,12 @@
  * Copyright (C) 2011 Texas Instruments Incorporated - http://www.ti.com/
  *
  * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation version 2.
+ *modify it under the terms of the GNU General Public License as
+ *published by the Free Software Foundation version 2.
  *
  * This program is distributed "as is" WITHOUT ANY WARRANTY of any
- * kind, whether express or implied; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *kind, whether express or implied; without even the implied warranty
+ *of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
 
@@ -24,8 +24,8 @@
 #include <media/soc_camera.h>
 
 #define ENABLE_COLOR_PATTERN 0
-//#define MIPI_2_LANES
-//#define FPS_30_MODE		
+/* #define MIPI_2_LANES */
+/* #define FPS_30_MODE            */
 
 #define OV5640_BRIGHTNESS_MIN           0
 #define OV5640_BRIGHTNESS_MAX           200
@@ -39,8 +39,8 @@
 
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
-	enum v4l2_mbus_pixelcode	code;
-	enum v4l2_colorspace		colorspace;
+	enum v4l2_mbus_pixelcode code;
+	enum v4l2_colorspace colorspace;
 };
 
 struct ov5640_timing_cfg {
@@ -61,13 +61,13 @@ struct ov5640_timing_cfg {
 	u8 isp_scale_down;
 	u8 clk_dividers;
 	u8 mipi_lanes;
-	
+
 };
 
 static const struct ov5640_datafmt ov5640_fmts[] = {
 	/*
 	 * Order important: first natively supported,
-	 * second supported with a GPIO extender
+	 *second supported with a GPIO extender
 	 */
 	{V4L2_MBUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_JPEG},
 	{V4L2_MBUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
@@ -75,13 +75,13 @@ static const struct ov5640_datafmt ov5640_fmts[] = {
 };
 
 enum ov5640_size {
-	OV5640_SIZE_QVGA,       // 320 x 240
-	OV5640_SIZE_VGA,        // 640 x 480
-	OV5640_SIZE_XGA,        // 1024 x 768 
+	OV5640_SIZE_QVGA,	/*  320 x 240 */
+	OV5640_SIZE_VGA,	/*  640 x 480 */
+	OV5640_SIZE_XGA,	/*  1024 x 768  */
 	OV5640_SIZE_720P,
-	OV5640_SIZE_UXGA,       // 1600 x 1200 (2M)
+	OV5640_SIZE_UXGA,	/*  1600 x 1200 (2M) */
 	OV5640_SIZE_1080P,
-	OV5640_SIZE_QXGA,       // 2048 x 1536 (3M)
+	OV5640_SIZE_QXGA,	/*  2048 x 1536 (3M) */
 	OV5640_SIZE_5MP,
 	OV5640_SIZE_LAST,
 	OV5640_SIZE_QXGA_JPEG,
@@ -90,14 +90,14 @@ enum ov5640_size {
 };
 
 static const struct v4l2_frmsize_discrete ov5640_frmsizes[OV5640_SIZE_LAST] = {
-	{  320,  240 },
-	{  640,  480 },
-	{ 1024,  768 },
-	{ 1280,  720 },
-	{ 1600, 1200 },
-	{ 1920, 1080 },
-	{ 2048, 1536 },
-	{ 2592, 1944 },
+	{320, 240},
+	{640, 480},
+	{1024, 768},
+	{1280, 720},
+	{1600, 1200},
+	{1920, 1080},
+	{2048, 1536},
+	{2592, 1944},
 };
 
 /* Find a data format by a pixel code in an array */
@@ -150,848 +150,843 @@ static struct ov5640 *to_ov5640(const struct i2c_client *client)
 }
 
 /**
- * struct ov5640_reg - ov5640 register format
- * @reg: 16-bit offset to register
- * @val: 8/16/32-bit register value
- * @length: length of the register
+ *struct ov5640_reg - ov5640 register format
+ *@reg: 16-bit offset to register
+ *@val: 8/16/32-bit register value
+ *@length: length of the register
  *
  * Define a structure for OV5640 register initialization values
  */
 struct ov5640_reg {
-	u16	reg;
-	u8	val;
+	u16 reg;
+	u8 val;
 };
 
 /* TODO: Divide this properly */
 static const struct ov5640_reg configscript_common1[] = {
-//System Control
-    {0x3008,0x82},      // Reset [7] PowerDn [6]
-    {0xFFFF,  3 },      // Sleep 3ms
-    {0x3008,0x42},
-    {0x3103,0x03},      //PLL Clock Select    
-//IO Config
-    {0x3017,0x00},      //IO [3:0] D9-D6 (MIPI MD1-D9:D8 MC-D7:D6)
-    {0x3018,0x00},      //IO [7:2] D5-D0 (MIPI MD0-D5:D4) [1]GPIO1 [0]GPIO0 (MIPI MD2/MC/MD1)
-//????
-    {0x3630,0x2e},
-    {0x3632,0xe2},
-    {0x3633,0x23},
-    {0x3634,0x44},
-    {0x3621,0xe0},
-    {0x3704,0xa0},
-    {0x3703,0x5a},
-    {0x3715,0x78},
-    {0x3717,0x01},
-    {0x370b,0x60},
-    {0x3705,0x1a},
-    {0x3905,0x02},
-    {0x3906,0x10},
-    {0x3901,0x0a},
-    {0x3731,0x12},
-//VCM Control
-    {0x3600,0x04},      //VCM Control
-    {0x3601,0x22},
-//????
-    {0x471c, 0x50},
-//System/IO pad Control
-    {0x3000,0x00},      //Resets
-    {0x3002,0x1c},
-    {0x3004,0xff},      //Clocks
-    {0x3006,0xc3},
-//????
-    {0x302e,0x08},      //undocumented
-    {0x3612,0x4b},
-    {0x3618,0x04},
-// CLKS = Src=13Mhz:  300Mbps 8-bit    
-    {0x3037,0x12},      //PLL Pre-Div [0:3], /2=6.5Mhz   PLL Root Div [4] /1=806Mhz
-    {0x3036,0x70},      //PLL Mult 4~252 0:7  0x70=112=728Mhz
-    {0x3108,0x01},      //SclkDiv [1:0] 1=/2  Sclk2*Div [3:2] 0=/1 PclkDiv [5:4]0=/1   [1,2,4,8]
-//MIPI Control    
-	{0x4800,0x24},
-    {0x3034,0x18},      //MIPI BIT_Mode 3:0
-#ifdef MIPI_2_LANES 
-    {0x3035,0x12},      //SystemClkDiv 7:4, /1=728Mhz  MIPI Sclk Div 3:0, /1=728Mhz
+/* System Control */
+	{0x3008, 0x82},		/*  Reset [7] PowerDn [6] */
+	{0xFFFF, 3},		/*  Sleep 3ms */
+	{0x3008, 0x42},
+	{0x3103, 0x03},		/* PLL Clock Select     */
+/* IO Config */
+	{0x3017, 0x00},		/* IO [3:0] D9-D6 (MIPI MD1-D9:D8 MC-D7:D6) */
+	{0x3018, 0x00},		/* IO [7:2] D5-D0 (MIPI MD0-D5:D4) [1]GPIO1 [0]GPIO0 (MIPI MD2/MC/MD1) */
+/* ???? */
+	{0x3630, 0x2e},
+	{0x3632, 0xe2},
+	{0x3633, 0x23},
+	{0x3634, 0x44},
+	{0x3621, 0xe0},
+	{0x3704, 0xa0},
+	{0x3703, 0x5a},
+	{0x3715, 0x78},
+	{0x3717, 0x01},
+	{0x370b, 0x60},
+	{0x3705, 0x1a},
+	{0x3905, 0x02},
+	{0x3906, 0x10},
+	{0x3901, 0x0a},
+	{0x3731, 0x12},
+/* VCM Control */
+	{0x3600, 0x04},		/* VCM Control */
+	{0x3601, 0x22},
+/* ???? */
+	{0x471c, 0x50},
+/* System/IO pad Control */
+	{0x3000, 0x00},		/* Resets */
+	{0x3002, 0x1c},
+	{0x3004, 0xff},		/* Clocks */
+	{0x3006, 0xc3},
+/* ???? */
+	{0x302e, 0x08},		/* undocumented */
+	{0x3612, 0x4b},
+	{0x3618, 0x04},
+/*  CLKS = Src=13Mhz:  300Mbps 8-bit     */
+	{0x3037, 0x12},		/* PLL Pre-Div [0:3], /2=6.5Mhz   PLL Root Div [4] /1=806Mhz */
+	{0x3036, 0x70},		/* PLL Mult 4~252 0:7  0x70=112=728Mhz */
+	{0x3108, 0x01},		/* SclkDiv [1:0] 1=/2  Sclk2* Div [3:2] 0=/1 PclkDiv [5:4]0=/1   [1, 2, 4, 8] */
+/* MIPI Control     */
+	{0x4800, 0x24},
+	{0x3034, 0x18},		/* MIPI BIT_Mode 3:0 */
+#ifdef MIPI_2_LANES
+	{0x3035, 0x12},		/* SystemClkDiv 7:4, /1=728Mhz  MIPI Sclk Div 3:0, /1=728Mhz */
 #else
-    {0x3035,0x11},      //SystemClkDiv 7:4, /1=364Mhz  MIPI Sclk Div 3:0, /1=364Mhz
-#endif    
-//PLL ADCLK
-    {0x303d,0x20},      //PreDivSp [5:4] /2=6.5Mhz 
-    {0x303b,0x20},      //DivCntsb [4:0] *32=208Mhz 
-//????
-    {0x3708,0x21},
-    {0x3709,0x12},
-    {0x370c,0x00},
-// Sensor Timing control
-    {0x3800,0x00},      //X start
-    {0x3801,0x00},
-    {0x3802,0x00},      //Y start
-    {0x3803,0x00},
-    {0x3804,0x0a},      //X end
-    {0x3805,0x3f},
-    {0x3806,0x07},      //Y end
-    {0x3807,0x9f},
-// Output size
-    {0x3808,0x0a},      //output X  2592
-    {0x3809,0x20},
-    {0x380a,0x07},      //output Y  1944
-    {0x380b,0x98},
-// Total size (+blanking)
-    {0x380c,0x0b},      //Total X  2844
-    {0x380d,0x1c},
-    {0x380e,0x07},      //Total Y  1968
-    {0x380f,0xb0},
-// ISP Windowing size
-    {0x3810,0x00},      //ISP X offset = 16
-    {0x3811,0x10},
-    {0x3812,0x00},      //ISP Y offset = 6
-    {0x3813,0x06},
-// Sensor Read
-    {0x3814,0x11},      //X incr
-    {0x3815,0x11},      //Y incr
-    {0x3820,0x40},      //vflip
-    {0x3821,0x06},      //mirror
-    {0x3824,0x01},      //Scale Divider [4:0]
-//AEC/AGC
-    {0x3a02,0x01},
-    {0x3a03,0xec},
-    {0x3a08,0x01},
-    {0x3a09,0x27},
-    {0x3a0a,0x00},
-    {0x3a0b,0xf6},
-    {0x3a0e,0x06},
-    {0x3a0d,0x08},
-    {0x3a14,0x01},
-    {0x3a15,0xec},
-//BLC Control
-    {0x4001,0x02},
-    {0x4004,0x06},
-//Format control
-    {0x4300,0x32},      //Output Format[7:4] Sequence[3:0] (UVYV)
-    {0x501f,0x00},      //ISP Format
-//JPG Control
-    {0x4713,0x02},      //JPG Mode Select
-//????
-    {0x460b,0x37},      
-    {0x4750,0x00},      //???
-    {0x4751,0x00},      //???
-//ISP Control
-    {0x5000,0x07},
-    {0x5001,0xa7},      //isp scale down enabled  Special Effects
-    {0x501d,0x00},      //ISP Misc
-//???   
-    {0x5a00,0x08},
-    {0x5a21,0x00},
-    {0x5a24,0x00},
-//Gamma Control
-    {0x5481,0x08},
-    {0x5482,0x14},
-    {0x5483,0x28},
-    {0x5484,0x51},
-    {0x5485,0x65},
-    {0x5486,0x71},
-    {0x5487,0x7d},
-    {0x5488,0x87},
-    {0x5489,0x91},
-    {0x548a,0x9a},
-    {0x548b,0xaa},
-    {0x548c,0xb8},
-    {0x548d,0xcd},
-    {0x548e,0xdd},
-    {0x548f,0xea},
-    {0x5490,0x1d},
-//CMX Control
-    {0x5381,0x20},
-    {0x5382,0x64},
-    {0x5383,0x08},
-    {0x5384,0x20},
-    {0x5385,0x80},
-    {0x5386,0xa0},
-    {0x5387,0xa2},
-    {0x5388,0xa0},
-    {0x5389,0x02},
-    {0x538a,0x01},
-    {0x538b,0x98},
-//CIP Control
-    {0x5300,0x08},
-    {0x5301,0x30},
-    {0x5302,0x10},
-    {0x5303,0x00},
-    {0x5304,0x08},
-    {0x5305,0x30},
-    {0x5306,0x08},
-    {0x5307,0x16},
-//SDE Control
-    {0x5580,0x00},
-    {0x5583,0x40},
-    {0x5584,0x10},
-	{0x5587,0x00},
-	{0x5588,0x00},
-    {0x5589,0x10},
-    {0x558a,0x00},
-    {0x558b,0xf8},
-//AEC Controls
-    {0x3a0f,0x36},
-    {0x3a10,0x2e},
-    {0x3a1b,0x38},
-    {0x3a1e,0x2c},
-    {0x3a11,0x70},
-    {0x3a1f,0x18},
-    {0x3a18,0x00},      //Real Gain
-    {0x3a19,0xf8},
+	{0x3035, 0x11},		/* SystemClkDiv 7:4, /1=364Mhz  MIPI Sclk Div 3:0, /1=364Mhz */
+#endif
+/* PLL ADCLK */
+	{0x303d, 0x20},		/* PreDivSp [5:4] /2=6.5Mhz  */
+	{0x303b, 0x20},		/* DivCntsb [4:0] * 32=208Mhz  */
+/* ???? */
+	{0x3708, 0x21},
+	{0x3709, 0x12},
+	{0x370c, 0x00},
+/*  Sensor Timing control */
+	{0x3800, 0x00},		/* X start */
+	{0x3801, 0x00},
+	{0x3802, 0x00},		/* Y start */
+	{0x3803, 0x00},
+	{0x3804, 0x0a},		/* X end */
+	{0x3805, 0x3f},
+	{0x3806, 0x07},		/* Y end */
+	{0x3807, 0x9f},
+/*  Output size */
+	{0x3808, 0x0a},		/* output X  2592 */
+	{0x3809, 0x20},
+	{0x380a, 0x07},		/* output Y  1944 */
+	{0x380b, 0x98},
+/*  Total size (+blanking) */
+	{0x380c, 0x0b},		/* Total X  2844 */
+	{0x380d, 0x1c},
+	{0x380e, 0x07},		/* Total Y  1968 */
+	{0x380f, 0xb0},
+/*  ISP Windowing size */
+	{0x3810, 0x00},		/* ISP X offset = 16 */
+	{0x3811, 0x10},
+	{0x3812, 0x00},		/* ISP Y offset = 6 */
+	{0x3813, 0x06},
+/*  Sensor Read */
+	{0x3814, 0x11},		/* X incr */
+	{0x3815, 0x11},		/* Y incr */
+	{0x3820, 0x40},		/* vflip */
+	{0x3821, 0x06},		/* mirror */
+	{0x3824, 0x01},		/* Scale Divider [4:0] */
+/* AEC/AGC */
+	{0x3a02, 0x01},
+	{0x3a03, 0xec},
+	{0x3a08, 0x01},
+	{0x3a09, 0x27},
+	{0x3a0a, 0x00},
+	{0x3a0b, 0xf6},
+	{0x3a0e, 0x06},
+	{0x3a0d, 0x08},
+	{0x3a14, 0x01},
+	{0x3a15, 0xec},
+/* BLC Control */
+	{0x4001, 0x02},
+	{0x4004, 0x06},
+/* Format control */
+	{0x4300, 0x32},		/* Output Format[7:4] Sequence[3:0] (UVYV) */
+	{0x501f, 0x00},		/* ISP Format */
+/* JPG Control */
+	{0x4713, 0x02},		/* JPG Mode Select */
+/* ???? */
+	{0x460b, 0x37},
+	{0x4750, 0x00},		/* ??? */
+	{0x4751, 0x00},		/* ??? */
+/* ISP Control */
+	{0x5000, 0x07},
+	{0x5001, 0xa7},		/* isp scale down enabled  Special Effects */
+	{0x501d, 0x00},		/* ISP Misc */
+/* ???    */
+	{0x5a00, 0x08},
+	{0x5a21, 0x00},
+	{0x5a24, 0x00},
+/* Gamma Control */
+	{0x5481, 0x08},
+	{0x5482, 0x14},
+	{0x5483, 0x28},
+	{0x5484, 0x51},
+	{0x5485, 0x65},
+	{0x5486, 0x71},
+	{0x5487, 0x7d},
+	{0x5488, 0x87},
+	{0x5489, 0x91},
+	{0x548a, 0x9a},
+	{0x548b, 0xaa},
+	{0x548c, 0xb8},
+	{0x548d, 0xcd},
+	{0x548e, 0xdd},
+	{0x548f, 0xea},
+	{0x5490, 0x1d},
+/* CMX Control */
+	{0x5381, 0x20},
+	{0x5382, 0x64},
+	{0x5383, 0x08},
+	{0x5384, 0x20},
+	{0x5385, 0x80},
+	{0x5386, 0xa0},
+	{0x5387, 0xa2},
+	{0x5388, 0xa0},
+	{0x5389, 0x02},
+	{0x538a, 0x01},
+	{0x538b, 0x98},
+/* CIP Control */
+	{0x5300, 0x08},
+	{0x5301, 0x30},
+	{0x5302, 0x10},
+	{0x5303, 0x00},
+	{0x5304, 0x08},
+	{0x5305, 0x30},
+	{0x5306, 0x08},
+	{0x5307, 0x16},
+/* SDE Control */
+	{0x5580, 0x00},
+	{0x5583, 0x40},
+	{0x5584, 0x10},
+	{0x5587, 0x00},
+	{0x5588, 0x00},
+	{0x5589, 0x10},
+	{0x558a, 0x00},
+	{0x558b, 0xf8},
+/* AEC Controls */
+	{0x3a0f, 0x36},
+	{0x3a10, 0x2e},
+	{0x3a1b, 0x38},
+	{0x3a1e, 0x2c},
+	{0x3a11, 0x70},
+	{0x3a1f, 0x18},
+	{0x3a18, 0x00},		/* Real Gain */
+	{0x3a19, 0xf8},
 
-//System Reset
-	{0x3003,0x03},
-	{0x3003,0x01},
-    
-    #if ENABLE_COLOR_PATTERN
-        {0x503d,0x80},   // Solid Colour Bars
-        #if 0   
-            {0x503d,0x80},   // Solid Colour Bars
-            {0x503d,0x81},   // Gradual change @ vertical mode 1
-            {0x503d,0x82},   // Gradual change horizontal
-            {0x503d,0x83},   // Gradual change @ vertical mode 2
-        #endif
-    #endif
-	{0x3008,0x42},      //stop sensor streaming
-    {0x300e,0x3d},      //MIPI Control  Single Lane/Powered down       ********************
+/* System Reset */
+	{0x3003, 0x03},
+	{0x3003, 0x01},
 
-   { 0xFFFF, 0x00 }
+#if ENABLE_COLOR_PATTERN
+	{0x503d, 0x80},		/*  Solid Colour Bars */
+#if 0
+	{0x503d, 0x80},		/*  Solid Colour Bars */
+	{0x503d, 0x81},		/*  Gradual change @ vertical mode 1 */
+	{0x503d, 0x82},		/*  Gradual change horizontal */
+	{0x503d, 0x83},		/*  Gradual change @ vertical mode 2 */
+#endif
+#endif
+	{0x3008, 0x42},		/* stop sensor streaming */
+	{0x300e, 0x3d},		/* MIPI Control  Single Lane/Powered down       ******************** */
+
+	{0xFFFF, 0x00}
 };
 
-static const struct ov5640_reg jpeg_init_common[] =
-{     
-//System Control
-    {0x3103,0x11},
-    {0x3008,0x82},      // Reset [7] PowerDn [6]
-    {0xFFFF,  3 },      // Sleep 3ms
-    {0x3008,0x42},
-    {0x3103,0x03},      //PLL Clock Select    
-//IO Config
-    {0x3017,0x00},      //IO [3:0] D9-D6 (MIPI MD1-D9:D8 MC-D7:D6)
-    {0x3018,0x00},      //IO [7:2] D5-D0 (MIPI MD0-D5:D4) [1]GPIO1 [0]GPIO0 (MIPI MD2/MC/MD1)
-    
-    //MIPI Control    
-    	{0x4800,0x04},
-        {0x3034,0x18},
-#ifdef MIPI_2_LANES 
-    {0x3035,0x12},      //SystemClkDiv 7:4, /1=728Mhz  MIPI Sclk Div 3:0, /1=728Mhz
-    {0x300e,0x45},      //MIPI Control  Dual Lane       ********************
+static const struct ov5640_reg jpeg_init_common[] = {
+/* System Control */
+	{0x3103, 0x11},
+	{0x3008, 0x82},		/*  Reset [7] PowerDn [6] */
+	{0xFFFF, 3},		/*  Sleep 3ms */
+	{0x3008, 0x42},
+	{0x3103, 0x03},		/* PLL Clock Select     */
+/* IO Config */
+	{0x3017, 0x00},		/* IO [3:0] D9-D6 (MIPI MD1-D9:D8 MC-D7:D6) */
+	{0x3018, 0x00},		/* IO [7:2] D5-D0 (MIPI MD0-D5:D4) [1]GPIO1 [0]GPIO0 (MIPI MD2/MC/MD1) */
+
+	/* MIPI Control     */
+	{0x4800, 0x04},
+	{0x3034, 0x18},
+#ifdef MIPI_2_LANES
+	{0x3035, 0x12},		/* SystemClkDiv 7:4, /1=728Mhz  MIPI Sclk Div 3:0, /1=728Mhz */
+	{0x300e, 0x45},		/* MIPI Control  Dual Lane       ******************** */
 #else
-    {0x3035,0x11},      //SystemClkDiv 7:4, /1=364Mhz  MIPI Sclk Div 3:0, /1=364Mhz
-    {0x300e,0x25},      //MIPI Control  single Lane       ********************
-#endif    
+	{0x3035, 0x11},		/* SystemClkDiv 7:4, /1=364Mhz  MIPI Sclk Div 3:0, /1=364Mhz */
+	{0x300e, 0x25},		/* MIPI Control  single Lane       ******************** */
+#endif
 
-    //????
-        {0x3630,0x36},
-        {0x3631,0x0e},
-        {0x3632,0xe2},
-        {0x3633,0x12},
-        {0x3621,0xe0},
-        {0x3704,0xa0},
-        {0x3703,0x5a},
-        {0x3715,0x78},
-        {0x3717,0x01},
-        {0x370b,0x60},
-        {0x3705,0x1a},
-        {0x3905,0x02},
-        {0x3906,0x10},
-        {0x3901,0x0a},
-        {0x3731,0x12},
-    //VCM Control
-        {0x3600,0x08},
-        {0x3601,0x33},
-    //????
-        {0x302d,0x60},
-        {0x3620,0x52},
-        {0x371b,0x20},
-        {0x471c,0x50},
-    //AEC Controls
-        {0x3a13,0x43},
-        {0x3a18,0x00},
-        {0x3a19,0xf8},
-    //????
-        {0x3635,0x13},
-        {0x3636,0x03},
-        {0x3634,0x40},
-        {0x3622,0x01},
-        {0x3c01,0x34},
-        {0x3c04,0x28},
-        {0x3c05,0x98},
-        {0x3c06,0x00},
-        {0x3c07,0x07},
-        {0x3c08,0x00},
-        {0x3c09,0x1c},
-        {0x3c0a,0x9c},
-        {0x3c0b,0x40},
+	/* ???? */
+	{0x3630, 0x36},
+	{0x3631, 0x0e},
+	{0x3632, 0xe2},
+	{0x3633, 0x12},
+	{0x3621, 0xe0},
+	{0x3704, 0xa0},
+	{0x3703, 0x5a},
+	{0x3715, 0x78},
+	{0x3717, 0x01},
+	{0x370b, 0x60},
+	{0x3705, 0x1a},
+	{0x3905, 0x02},
+	{0x3906, 0x10},
+	{0x3901, 0x0a},
+	{0x3731, 0x12},
+	/* VCM Control */
+	{0x3600, 0x08},
+	{0x3601, 0x33},
+	/* ???? */
+	{0x302d, 0x60},
+	{0x3620, 0x52},
+	{0x371b, 0x20},
+	{0x471c, 0x50},
+	/* AEC Controls */
+	{0x3a13, 0x43},
+	{0x3a18, 0x00},
+	{0x3a19, 0xf8},
+	/* ???? */
+	{0x3635, 0x13},
+	{0x3636, 0x03},
+	{0x3634, 0x40},
+	{0x3622, 0x01},
+	{0x3c01, 0x34},
+	{0x3c04, 0x28},
+	{0x3c05, 0x98},
+	{0x3c06, 0x00},
+	{0x3c07, 0x07},
+	{0x3c08, 0x00},
+	{0x3c09, 0x1c},
+	{0x3c0a, 0x9c},
+	{0x3c0b, 0x40},
 
-    // Sensor Read
-        {0x3820,0x40},      //vflip
+	/*  Sensor Read */
+	{0x3820, 0x40},		/* vflip */
 
-        {0x3814,0x11},      //X incr
-        {0x3815,0x11},      //Y incr
-// Sensor Timing control  2624 x 1952 --> 2624 x 1952
-    {0x3800,0x00},      //X start
-    {0x3801,0x00},
-    {0x3802,0x00},      //Y start
-    {0x3803,0x00},
-    {0x3804,0x0a},      //X end
-    {0x3805,0x3f},
-    {0x3806,0x07},      //Y end
-    {0x3807,0x9f},
-// Output size
-    {0x3808,0x0a},      //output X  2592
-    {0x3809,0x20},
-    {0x380a,0x07},      //output Y  1944
-    {0x380b,0x98},
-// Total size (+blanking)
-    {0x380c,0x0b},      //Total X  2844
-    {0x380d,0x1c},
-    {0x380e,0x07},      //Total Y  1968
-    {0x380f,0xb0},
-// ISP Windowing size  2624 x 1952 --> 2592 x 1944
-    {0x3810,0x00},      //ISP X offset = 16
-    {0x3811,0x10},
-    {0x3812,0x00},      //ISP Y offset = 4
-    {0x3813,0x04},
-    //????
-        {0x3618,0x04},
-        {0x3612,0x2b},
-        {0x3708,0x64},
-        {0x3709,0x12},
-        {0x370c,0x00},
-    //AEC/AGC
-        {0x3a02,0x07},
-        {0x3a03,0xb0},
-        {0x3a08,0x01},
-        {0x3a09,0x27},
-        {0x3a0a,0x00},
-        {0x3a0b,0xf6},
-        {0x3a0e,0x06},
-        {0x3a0d,0x08},
-        {0x3a14,0x07},
-        {0x3a15,0xb0},
-    //BLC Control
-        {0x4001,0x02},
-        {0x4004,0x06},
-    // CLKS = Src=13Mhz:  300Mbps 8-bit    
-        {0x3037,0x12},      //PLL Pre-Div [0:3], /2=6.5Mhz   PLL Root Div [4] /1=806Mhz
-        {0x3036,0x68},      //PLL Mult 4~252 0:7  0x70=112=728Mhz
-//        {0x3036,0x70},      //PLL Mult 4~252 0:7  0x70=112=728Mhz
-        {0x3108,0x01},      //SclkDiv [1:0] 1=/2  Sclk2*Div [3:2] 0=/1 PclkDiv [5:4]0=/1   [1,2,4,8]
-//PLL ADCLK
-//    {0x303d,0x20},      //PreDivSp [5:4] /2=6.5Mhz 
-//    {0x303b,0x20},      //DivCntsb [4:0] *32=208Mhz 
-    //System/IO pad Control
-        {0x3000,0x00},      //Resets
-        {0x3002,0x00},
-        {0x3004,0xff},      //Clocks
-        {0x3006,0xff},
-    //????
-        {0x302e,0x08},      //undocumented
-    //Format control
-        {0x3821,0x26},      //JPEG, mirror
-        {0x4300,0x30},      //Output Format[7:4] Sequence[3:0] (UVYV)
-        {0x501f,0x00},      //ISP Format
-    //JPG Control
-        {0x4713,0x02},      //JPG Mode Select
-    //????
-        {0x4407,0x04},
-        {0x440e,0x00},
-        {0x460b,0x35},
-        {0x460c,0x22},
-        {0x4837,0x16},
-    
-        {0x3824,0x04},      //Scale Divider [4:0]
-        
-    //ISP Control
-        {0x5000,0xa7},
-        {0x5001,0xa3},      //isp scale down  Special Effects
-    //AWB Control
-        {0x5180,0xff},
-        {0x5181,0xf2},
-        {0x5182,0x00},
-        {0x5183,0x14},
-        {0x5184,0x25},
-        {0x5185,0x24},
-        {0x5186,0x09},
-        {0x5187,0x09},
-        {0x5188,0x09},
-        {0x5189,0x75},
-        {0x518a,0x54},
-        {0x518b,0xe0},
-        {0x518c,0xb2},
-        {0x518d,0x42},
-        {0x518e,0x3d},
-        {0x518f,0x56},
-        {0x5190,0x46},
-        {0x5191,0xf8},
-        {0x5192,0x04},
-        {0x5193,0x70},
-        {0x5194,0xf0},
-        {0x5195,0xf0},
-        {0x5196,0x03},
-        {0x5197,0x01},
-        {0x5198,0x04},
-        {0x5199,0x12},
-        {0x519a,0x04},
-        {0x519b,0x00},
-        {0x519c,0x06},
-        {0x519d,0x82},
-        {0x519e,0x38},
-    //CMX Control
-        {0x5381,0x1e},
-        {0x5382,0x5b},
-        {0x5383,0x08},
-        {0x5384,0x0a},
-        {0x5385,0x7e},
-        {0x5386,0x88},
-        {0x5387,0x7c},
-        {0x5388,0x6c},
-        {0x5389,0x10},
-        {0x538a,0x01},
-        {0x538b,0x98},
-    //CIP Control
-        {0x5300,0x08},
-        {0x5301,0x30},
-        {0x5302,0x10},
-        {0x5303,0x00},
-        {0x5304,0x08},
-        {0x5305,0x30},
-        {0x5306,0x08},
-        {0x5307,0x16},
-        {0x5309,0x08},
-        {0x530a,0x30},
-        {0x530b,0x04},
-        {0x530c,0x06},
-    //Gamma Control
-        {0x5480,0x01},
-        {0x5481,0x08},
-        {0x5482,0x14},
-        {0x5483,0x28},
-        {0x5484,0x51},
-        {0x5485,0x65},
-        {0x5486,0x71},
-        {0x5487,0x7d},
-        {0x5488,0x87},
-        {0x5489,0x91},
-        {0x548a,0x9a},
-        {0x548b,0xaa},
-        {0x548c,0xb8},
-        {0x548d,0xcd},
-        {0x548e,0xdd},
-        {0x548f,0xea},
-        {0x5490,0x1d},
-    //SDE Control
-        {0x5580,0x02},
-        {0x5583,0x40},
-        {0x5584,0x10},
-        {0x5589,0x10},
-        {0x558a,0x00},
-        {0x558b,0xf8},
-    //LENC Control
-        {0x5800,0x23},
-        {0x5801,0x14},
-        {0x5802,0x0f},
-        {0x5803,0x0f},
-        {0x5804,0x12},
-        {0x5805,0x26},
-        {0x5806,0x0c},
-        {0x5807,0x08},
-        {0x5808,0x05},
-        {0x5809,0x05},
-        {0x580a,0x08},
-        {0x580b,0x0d},
-        {0x580c,0x08},
-        {0x580d,0x03},
-        {0x580e,0x00},
-        {0x580f,0x00},
-        {0x5810,0x03},
-        {0x5811,0x09},
-        {0x5812,0x07},
-        {0x5813,0x03},
-        {0x5814,0x00},
-        {0x5815,0x01},
-        {0x5816,0x03},
-        {0x5817,0x08},
-        {0x5818,0x0d},
-        {0x5819,0x08},
-        {0x581a,0x05},
-        {0x581b,0x06},
-        {0x581c,0x08},
-        {0x581d,0x0e},
-        {0x581e,0x29},
-        {0x581f,0x17},
-        {0x5820,0x11},
-        {0x5821,0x11},
-        {0x5822,0x15},
-        {0x5823,0x28},
-        {0x5824,0x46},
-        {0x5825,0x26},
-        {0x5826,0x08},
-        {0x5827,0x26},
-        {0x5828,0x64},
-        {0x5829,0x26},
-        {0x582a,0x24},
-        {0x582b,0x22},
-        {0x582c,0x24},
-        {0x582d,0x24},
-        {0x582e,0x06},
-        {0x582f,0x22},
-        {0x5830,0x40},
-        {0x5831,0x42},
-        {0x5832,0x24},
-        {0x5833,0x26},
-        {0x5834,0x24},
-        {0x5835,0x22},
-        {0x5836,0x22},
-        {0x5837,0x26},
-        {0x5838,0x44},
-        {0x5839,0x24},
-        {0x583a,0x26},
-        {0x583b,0x28},
-        {0x583c,0x42},
-        {0x583d,0xce},
-    
-        {0x5025,0x00},
-    //AEC Controls
-        {0x3a0f,0x30},
-        {0x3a10,0x28},
-        {0x3a1b,0x30},
-        {0x3a1e,0x26},
-        {0x3a11,0x60},
-        {0x3a1f,0x14},
-    
-    	{0x3008,0x42},      //stop sensor streaming
-    
-    #if ENABLE_COLOR_PATTERN
-        {0x503d,0x80},   // Solid Colour Bars
-        #if 0   
-            {0x503d,0x80},   // Solid Colour Bars
-            {0x503d,0x81},   // Gradual change @ vertical mode 1
-            {0x503d,0x82},   // Gradual change horizontal
-            {0x503d,0x83},   // Gradual change @ vertical mode 2
-        #endif
-    #endif
-    
-   { 0xFFFF, 0x00 }
+	{0x3814, 0x11},		/* X incr */
+	{0x3815, 0x11},		/* Y incr */
+/*  Sensor Timing control  2624 x 1952 --> 2624 x 1952 */
+	{0x3800, 0x00},		/* X start */
+	{0x3801, 0x00},
+	{0x3802, 0x00},		/* Y start */
+	{0x3803, 0x00},
+	{0x3804, 0x0a},		/* X end */
+	{0x3805, 0x3f},
+	{0x3806, 0x07},		/* Y end */
+	{0x3807, 0x9f},
+/*  Output size */
+	{0x3808, 0x0a},		/* output X  2592 */
+	{0x3809, 0x20},
+	{0x380a, 0x07},		/* output Y  1944 */
+	{0x380b, 0x98},
+/*  Total size (+blanking) */
+	{0x380c, 0x0b},		/* Total X  2844 */
+	{0x380d, 0x1c},
+	{0x380e, 0x07},		/* Total Y  1968 */
+	{0x380f, 0xb0},
+/*  ISP Windowing size  2624 x 1952 --> 2592 x 1944 */
+	{0x3810, 0x00},		/* ISP X offset = 16 */
+	{0x3811, 0x10},
+	{0x3812, 0x00},		/* ISP Y offset = 4 */
+	{0x3813, 0x04},
+	/* ???? */
+	{0x3618, 0x04},
+	{0x3612, 0x2b},
+	{0x3708, 0x64},
+	{0x3709, 0x12},
+	{0x370c, 0x00},
+	/* AEC/AGC */
+	{0x3a02, 0x07},
+	{0x3a03, 0xb0},
+	{0x3a08, 0x01},
+	{0x3a09, 0x27},
+	{0x3a0a, 0x00},
+	{0x3a0b, 0xf6},
+	{0x3a0e, 0x06},
+	{0x3a0d, 0x08},
+	{0x3a14, 0x07},
+	{0x3a15, 0xb0},
+	/* BLC Control */
+	{0x4001, 0x02},
+	{0x4004, 0x06},
+	/*  CLKS = Src=13Mhz:  300Mbps 8-bit     */
+	{0x3037, 0x12},		/* PLL Pre-Div [0:3], /2=6.5Mhz   PLL Root Div [4] /1=806Mhz */
+	{0x3036, 0x68},		/* PLL Mult 4~252 0:7  0x70=112=728Mhz */
+/*         {0x3036, 0x70},    */  /* PLL Mult 4~252 0:7  0x70=112=728Mhz  */
+	{0x3108, 0x01},		/* SclkDiv [1:0] 1=/2  Sclk2* Div [3:2] 0=/1 PclkDiv [5:4]0=/1   [1, 2, 4, 8] */
+/* PLL ADCLK */
+/*     {0x303d, 0x20},   */   /* PreDivSp [5:4] /2=6.5Mhz   */
+/*     {0x303b, 0x20},   */   /* DivCntsb [4:0] * 32=208Mhz  */
+	/* System/IO pad Control */
+	{0x3000, 0x00},		/* Resets */
+	{0x3002, 0x00},
+	{0x3004, 0xff},		/* Clocks */
+	{0x3006, 0xff},
+	/* ???? */
+	{0x302e, 0x08},		/* undocumented */
+	/* Format control */
+	{0x3821, 0x26},		/* JPEG, mirror */
+	{0x4300, 0x30},		/* Output Format[7:4] Sequence[3:0] (UVYV) */
+	{0x501f, 0x00},		/* ISP Format */
+	/* JPG Control */
+	{0x4713, 0x02},		/* JPG Mode Select */
+	/* ???? */
+	{0x4407, 0x04},
+	{0x440e, 0x00},
+	{0x460b, 0x35},
+	{0x460c, 0x22},
+	{0x4837, 0x16},
+
+	{0x3824, 0x04},		/* Scale Divider [4:0] */
+
+	/* ISP Control */
+	{0x5000, 0xa7},
+	{0x5001, 0xa3},		/* isp scale down  Special Effects */
+	/* AWB Control */
+	{0x5180, 0xff},
+	{0x5181, 0xf2},
+	{0x5182, 0x00},
+	{0x5183, 0x14},
+	{0x5184, 0x25},
+	{0x5185, 0x24},
+	{0x5186, 0x09},
+	{0x5187, 0x09},
+	{0x5188, 0x09},
+	{0x5189, 0x75},
+	{0x518a, 0x54},
+	{0x518b, 0xe0},
+	{0x518c, 0xb2},
+	{0x518d, 0x42},
+	{0x518e, 0x3d},
+	{0x518f, 0x56},
+	{0x5190, 0x46},
+	{0x5191, 0xf8},
+	{0x5192, 0x04},
+	{0x5193, 0x70},
+	{0x5194, 0xf0},
+	{0x5195, 0xf0},
+	{0x5196, 0x03},
+	{0x5197, 0x01},
+	{0x5198, 0x04},
+	{0x5199, 0x12},
+	{0x519a, 0x04},
+	{0x519b, 0x00},
+	{0x519c, 0x06},
+	{0x519d, 0x82},
+	{0x519e, 0x38},
+	/* CMX Control */
+	{0x5381, 0x1e},
+	{0x5382, 0x5b},
+	{0x5383, 0x08},
+	{0x5384, 0x0a},
+	{0x5385, 0x7e},
+	{0x5386, 0x88},
+	{0x5387, 0x7c},
+	{0x5388, 0x6c},
+	{0x5389, 0x10},
+	{0x538a, 0x01},
+	{0x538b, 0x98},
+	/* CIP Control */
+	{0x5300, 0x08},
+	{0x5301, 0x30},
+	{0x5302, 0x10},
+	{0x5303, 0x00},
+	{0x5304, 0x08},
+	{0x5305, 0x30},
+	{0x5306, 0x08},
+	{0x5307, 0x16},
+	{0x5309, 0x08},
+	{0x530a, 0x30},
+	{0x530b, 0x04},
+	{0x530c, 0x06},
+	/* Gamma Control */
+	{0x5480, 0x01},
+	{0x5481, 0x08},
+	{0x5482, 0x14},
+	{0x5483, 0x28},
+	{0x5484, 0x51},
+	{0x5485, 0x65},
+	{0x5486, 0x71},
+	{0x5487, 0x7d},
+	{0x5488, 0x87},
+	{0x5489, 0x91},
+	{0x548a, 0x9a},
+	{0x548b, 0xaa},
+	{0x548c, 0xb8},
+	{0x548d, 0xcd},
+	{0x548e, 0xdd},
+	{0x548f, 0xea},
+	{0x5490, 0x1d},
+	/* SDE Control */
+	{0x5580, 0x02},
+	{0x5583, 0x40},
+	{0x5584, 0x10},
+	{0x5589, 0x10},
+	{0x558a, 0x00},
+	{0x558b, 0xf8},
+	/* LENC Control */
+	{0x5800, 0x23},
+	{0x5801, 0x14},
+	{0x5802, 0x0f},
+	{0x5803, 0x0f},
+	{0x5804, 0x12},
+	{0x5805, 0x26},
+	{0x5806, 0x0c},
+	{0x5807, 0x08},
+	{0x5808, 0x05},
+	{0x5809, 0x05},
+	{0x580a, 0x08},
+	{0x580b, 0x0d},
+	{0x580c, 0x08},
+	{0x580d, 0x03},
+	{0x580e, 0x00},
+	{0x580f, 0x00},
+	{0x5810, 0x03},
+	{0x5811, 0x09},
+	{0x5812, 0x07},
+	{0x5813, 0x03},
+	{0x5814, 0x00},
+	{0x5815, 0x01},
+	{0x5816, 0x03},
+	{0x5817, 0x08},
+	{0x5818, 0x0d},
+	{0x5819, 0x08},
+	{0x581a, 0x05},
+	{0x581b, 0x06},
+	{0x581c, 0x08},
+	{0x581d, 0x0e},
+	{0x581e, 0x29},
+	{0x581f, 0x17},
+	{0x5820, 0x11},
+	{0x5821, 0x11},
+	{0x5822, 0x15},
+	{0x5823, 0x28},
+	{0x5824, 0x46},
+	{0x5825, 0x26},
+	{0x5826, 0x08},
+	{0x5827, 0x26},
+	{0x5828, 0x64},
+	{0x5829, 0x26},
+	{0x582a, 0x24},
+	{0x582b, 0x22},
+	{0x582c, 0x24},
+	{0x582d, 0x24},
+	{0x582e, 0x06},
+	{0x582f, 0x22},
+	{0x5830, 0x40},
+	{0x5831, 0x42},
+	{0x5832, 0x24},
+	{0x5833, 0x26},
+	{0x5834, 0x24},
+	{0x5835, 0x22},
+	{0x5836, 0x22},
+	{0x5837, 0x26},
+	{0x5838, 0x44},
+	{0x5839, 0x24},
+	{0x583a, 0x26},
+	{0x583b, 0x28},
+	{0x583c, 0x42},
+	{0x583d, 0xce},
+
+	{0x5025, 0x00},
+	/* AEC Controls */
+	{0x3a0f, 0x30},
+	{0x3a10, 0x28},
+	{0x3a1b, 0x30},
+	{0x3a1e, 0x26},
+	{0x3a11, 0x60},
+	{0x3a1f, 0x14},
+
+	{0x3008, 0x42},		/* stop sensor streaming */
+
+#if ENABLE_COLOR_PATTERN
+	{0x503d, 0x80},		/*  Solid Colour Bars */
+#if 0
+	{0x503d, 0x80},		/*  Solid Colour Bars */
+	{0x503d, 0x81},		/*  Gradual change @ vertical mode 1 */
+	{0x503d, 0x82},		/*  Gradual change horizontal */
+	{0x503d, 0x83},		/*  Gradual change @ vertical mode 2 */
+#endif
+#endif
+
+	{0xFFFF, 0x00}
 };
-
-
-
-
 
 static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_MAX] = {
 	[OV5640_SIZE_QVGA] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 320,
-		.v_output_size = 240,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-    #ifdef FPS_30_MODE		
-		.h_total_size = 2176,
-		.v_total_size = 1632,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 3,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 3,
-    #else		
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-    #endif		
-    	.isp_scale_down = 0x23,
-    	.clk_dividers = 0x01,
-    #ifdef MIPI_2_LANES 
-    	.mipi_lanes = 0x45,
-    #else
-    	.mipi_lanes = 0x25,
-    #endif    	
-	},
+			      .x_addr_start = 0,
+			      .y_addr_start = 0,
+			      .x_addr_end = 2623,
+			      .y_addr_end = 1951,
+			      .h_output_size = 320,
+			      .v_output_size = 240,
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 6,
+#ifdef FPS_30_MODE
+			      .h_total_size = 2176,
+			      .v_total_size = 1632,
+			      .h_odd_ss_inc = 1,
+			      .h_even_ss_inc = 3,
+			      .v_odd_ss_inc = 1,
+			      .v_even_ss_inc = 3,
+#else
+			      .h_total_size = 2844,
+			      .v_total_size = 1968,
+			      .h_odd_ss_inc = 1,
+			      .h_even_ss_inc = 1,
+			      .v_odd_ss_inc = 1,
+			      .v_even_ss_inc = 1,
+#endif
+			      .isp_scale_down = 0x23,
+			      .clk_dividers = 0x01,
+#ifdef MIPI_2_LANES
+			      .mipi_lanes = 0x45,
+#else
+			      .mipi_lanes = 0x25,
+#endif
+			      },
 	[OV5640_SIZE_VGA] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 640,
-		.v_output_size = 480,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-    #ifdef FPS_30_MODE		
-		.h_total_size = 2176,
-		.v_total_size = 1632,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 3,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 3,
-    #else		
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-    #endif		
-    	.isp_scale_down = 0x23,
-    	.clk_dividers = 0x01,
-    #ifdef MIPI_2_LANES 
-    	.mipi_lanes = 0x45,
-    #else
-    	.mipi_lanes = 0x25,
-    #endif    	
-	},
+			     .x_addr_start = 0,
+			     .y_addr_start = 0,
+			     .x_addr_end = 2623,
+			     .y_addr_end = 1951,
+			     .h_output_size = 640,
+			     .v_output_size = 480,
+			     .isp_h_offset = 16,
+			     .isp_v_offset = 6,
+#ifdef FPS_30_MODE
+			     .h_total_size = 2176,
+			     .v_total_size = 1632,
+			     .h_odd_ss_inc = 1,
+			     .h_even_ss_inc = 3,
+			     .v_odd_ss_inc = 1,
+			     .v_even_ss_inc = 3,
+#else
+			     .h_total_size = 2844,
+			     .v_total_size = 1968,
+			     .h_odd_ss_inc = 1,
+			     .h_even_ss_inc = 1,
+			     .v_odd_ss_inc = 1,
+			     .v_even_ss_inc = 1,
+#endif
+			     .isp_scale_down = 0x23,
+			     .clk_dividers = 0x01,
+#ifdef MIPI_2_LANES
+			     .mipi_lanes = 0x45,
+#else
+			     .mipi_lanes = 0x25,
+#endif
+			     },
 	[OV5640_SIZE_XGA] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 1024,
-		.v_output_size = 768,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-    	.isp_scale_down = 0x23,
-    	.clk_dividers = 0x01,
-    #ifdef MIPI_2_LANES 
-    	.mipi_lanes = 0x45,
-    #else
-    	.mipi_lanes = 0x25,
-    #endif    	
-	},
+			     .x_addr_start = 0,
+			     .y_addr_start = 0,
+			     .x_addr_end = 2623,
+			     .y_addr_end = 1951,
+			     .h_output_size = 1024,
+			     .v_output_size = 768,
+			     .h_total_size = 2844,
+			     .v_total_size = 1968,
+			     .isp_h_offset = 16,
+			     .isp_v_offset = 6,
+			     .h_odd_ss_inc = 1,
+			     .h_even_ss_inc = 1,
+			     .v_odd_ss_inc = 1,
+			     .v_even_ss_inc = 1,
+			     .isp_scale_down = 0x23,
+			     .clk_dividers = 0x01,
+#ifdef MIPI_2_LANES
+			     .mipi_lanes = 0x45,
+#else
+			     .mipi_lanes = 0x25,
+#endif
+			     },
 	[OV5640_SIZE_720P] = {
-		.x_addr_start = 336,
-		.y_addr_start = 434,
-		.x_addr_end = 2287,
-		.y_addr_end = 1522,
-		.h_output_size = 1280,
-		.v_output_size = 720,
-		.h_total_size = 2500,
-		.v_total_size = 1120,
-		.isp_h_offset = 16,
-		.isp_v_offset = 4,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-    	.isp_scale_down = 0x23,
-    	.clk_dividers = 0x01,
-    #ifdef MIPI_2_LANES 
-    	.mipi_lanes = 0x45,
-    #else
-    	.mipi_lanes = 0x25,
-    #endif    	
-	},
+			      .x_addr_start = 336,
+			      .y_addr_start = 434,
+			      .x_addr_end = 2287,
+			      .y_addr_end = 1522,
+			      .h_output_size = 1280,
+			      .v_output_size = 720,
+			      .h_total_size = 2500,
+			      .v_total_size = 1120,
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 4,
+			      .h_odd_ss_inc = 1,
+			      .h_even_ss_inc = 1,
+			      .v_odd_ss_inc = 1,
+			      .v_even_ss_inc = 1,
+			      .isp_scale_down = 0x23,
+			      .clk_dividers = 0x01,
+#ifdef MIPI_2_LANES
+			      .mipi_lanes = 0x45,
+#else
+			      .mipi_lanes = 0x25,
+#endif
+			      },
 	[OV5640_SIZE_UXGA] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 1600,
-		.v_output_size = 1200,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-    	.isp_scale_down = 0x23,
-    	.clk_dividers = 0x01,
-    #ifdef MIPI_2_LANES 
-    	.mipi_lanes = 0x45,
-    #else
-    	.mipi_lanes = 0x25,
-    #endif    	
-	},
+			      .x_addr_start = 0,
+			      .y_addr_start = 0,
+			      .x_addr_end = 2623,
+			      .y_addr_end = 1951,
+			      .h_output_size = 1600,
+			      .v_output_size = 1200,
+			      .h_total_size = 2844,
+			      .v_total_size = 1968,
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 6,
+			      .h_odd_ss_inc = 1,
+			      .h_even_ss_inc = 1,
+			      .v_odd_ss_inc = 1,
+			      .v_even_ss_inc = 1,
+			      .isp_scale_down = 0x23,
+			      .clk_dividers = 0x01,
+#ifdef MIPI_2_LANES
+			      .mipi_lanes = 0x45,
+#else
+			      .mipi_lanes = 0x25,
+#endif
+			      },
 	[OV5640_SIZE_1080P] = {
-		.x_addr_start = 336,
-		.y_addr_start = 434,
-		.x_addr_end = 2287,
-		.y_addr_end = 1522,
-		.h_output_size = 1920,
-		.v_output_size = 1080,
-		.h_total_size = 2500,
-		.v_total_size = 1120,
-		.isp_h_offset = 16,
-		.isp_v_offset = 4,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-    	.isp_scale_down = 0x03,
-    	.clk_dividers = 0x02,
-    #ifdef MIPI_2_LANES 
-    	.mipi_lanes = 0x45,
-    #else
-    	.mipi_lanes = 0x25,
-    #endif    	
-	},
+			       .x_addr_start = 336,
+			       .y_addr_start = 434,
+			       .x_addr_end = 2287,
+			       .y_addr_end = 1522,
+			       .h_output_size = 1920,
+			       .v_output_size = 1080,
+			       .h_total_size = 2500,
+			       .v_total_size = 1120,
+			       .isp_h_offset = 16,
+			       .isp_v_offset = 4,
+			       .h_odd_ss_inc = 1,
+			       .h_even_ss_inc = 1,
+			       .v_odd_ss_inc = 1,
+			       .v_even_ss_inc = 1,
+			       .isp_scale_down = 0x03,
+			       .clk_dividers = 0x02,
+#ifdef MIPI_2_LANES
+			       .mipi_lanes = 0x45,
+#else
+			       .mipi_lanes = 0x25,
+#endif
+			       },
 	[OV5640_SIZE_QXGA] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 2048,
-		.v_output_size = 1536,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-    	.isp_scale_down = 0x23,
-    	.clk_dividers = 0x02,
-    #ifdef MIPI_2_LANES 
-    	.mipi_lanes = 0x45,
-    #else
-    	.mipi_lanes = 0x25,
-    #endif    	
-	},
+			      .x_addr_start = 0,
+			      .y_addr_start = 0,
+			      .x_addr_end = 2623,
+			      .y_addr_end = 1951,
+			      .h_output_size = 2048,
+			      .v_output_size = 1536,
+			      .h_total_size = 2844,
+			      .v_total_size = 1968,
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 6,
+			      .h_odd_ss_inc = 1,
+			      .h_even_ss_inc = 1,
+			      .v_odd_ss_inc = 1,
+			      .v_even_ss_inc = 1,
+			      .isp_scale_down = 0x23,
+			      .clk_dividers = 0x02,
+#ifdef MIPI_2_LANES
+			      .mipi_lanes = 0x45,
+#else
+			      .mipi_lanes = 0x25,
+#endif
+			      },
 	[OV5640_SIZE_5MP] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 2592,
-		.v_output_size = 1944,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-    	.isp_scale_down = 0x03,
-    	.clk_dividers = 0x02,
-    #ifdef MIPI_2_LANES 
-    	.mipi_lanes = 0x45,
-    #else
-    	.mipi_lanes = 0x25,
-    #endif    	
-	},
+			     .x_addr_start = 0,
+			     .y_addr_start = 0,
+			     .x_addr_end = 2623,
+			     .y_addr_end = 1951,
+			     .h_output_size = 2592,
+			     .v_output_size = 1944,
+			     .h_total_size = 2844,
+			     .v_total_size = 1968,
+			     .isp_h_offset = 16,
+			     .isp_v_offset = 6,
+			     .h_odd_ss_inc = 1,
+			     .h_even_ss_inc = 1,
+			     .v_odd_ss_inc = 1,
+			     .v_even_ss_inc = 1,
+			     .isp_scale_down = 0x03,
+			     .clk_dividers = 0x02,
+#ifdef MIPI_2_LANES
+			     .mipi_lanes = 0x45,
+#else
+			     .mipi_lanes = 0x25,
+#endif
+			     },
 
 	[OV5640_SIZE_QXGA_JPEG] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 2048,
-		.v_output_size = 1536,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-    	.isp_scale_down = 0x23,
-    	.clk_dividers = 0x01,
-    #ifdef MIPI_2_LANES 
-    	.mipi_lanes = 0x45,
-    #else
-    	.mipi_lanes = 0x25,
-    #endif    	
-	},
+				   .x_addr_start = 0,
+				   .y_addr_start = 0,
+				   .x_addr_end = 2623,
+				   .y_addr_end = 1951,
+				   .h_output_size = 2048,
+				   .v_output_size = 1536,
+				   .h_total_size = 2844,
+				   .v_total_size = 1968,
+				   .isp_h_offset = 16,
+				   .isp_v_offset = 6,
+				   .h_odd_ss_inc = 1,
+				   .h_even_ss_inc = 1,
+				   .v_odd_ss_inc = 1,
+				   .v_even_ss_inc = 1,
+				   .isp_scale_down = 0x23,
+				   .clk_dividers = 0x01,
+#ifdef MIPI_2_LANES
+				   .mipi_lanes = 0x45,
+#else
+				   .mipi_lanes = 0x25,
+#endif
+				   },
 
 	[OV5640_SIZE_5MP_JPEG] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 2592,
-		.v_output_size = 1944,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.isp_h_offset = 16,
-		.isp_v_offset = 6,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-    	.isp_scale_down = 0x03,
-    	.clk_dividers = 0x01,
-    #ifdef MIPI_2_LANES 
-    	.mipi_lanes = 0x45,
-    #else
-    	.mipi_lanes = 0x25,
-    #endif    	
-	},
-
+				  .x_addr_start = 0,
+				  .y_addr_start = 0,
+				  .x_addr_end = 2623,
+				  .y_addr_end = 1951,
+				  .h_output_size = 2592,
+				  .v_output_size = 1944,
+				  .h_total_size = 2844,
+				  .v_total_size = 1968,
+				  .isp_h_offset = 16,
+				  .isp_v_offset = 6,
+				  .h_odd_ss_inc = 1,
+				  .h_even_ss_inc = 1,
+				  .v_odd_ss_inc = 1,
+				  .v_even_ss_inc = 1,
+				  .isp_scale_down = 0x03,
+				  .clk_dividers = 0x01,
+#ifdef MIPI_2_LANES
+				  .mipi_lanes = 0x45,
+#else
+				  .mipi_lanes = 0x25,
+#endif
+				  },
 
 };
+
 #if 0
 static struct v4l2_subdev_sensor_serial_parms mipi_cfgs[OV5640_SIZE_LAST] = {
 	[OV5640_SIZE_QVGA] = {
-		.lanes = 1,
-		.channel = 0,
-		.phy_rate = (336 * 2 * 1000000),
-		.pix_clk = 21, /* Revisit */
-	},
+			      .lanes = 1,
+			      .channel = 0,
+			      .phy_rate = (336 * 2 * 1000000),
+			      .pix_clk = 21,	/* Revisit */
+			      },
 	[OV5640_SIZE_VGA] = {
-		.lanes = 1,
-		.channel = 0,
-		.phy_rate = (336 * 2 * 1000000),
-		.pix_clk = 21, /* Revisit */
-	},
+			     .lanes = 1,
+			     .channel = 0,
+			     .phy_rate = (336 * 2 * 1000000),
+			     .pix_clk = 21,	/* Revisit */
+			     },
 	[OV5640_SIZE_XGA] = {
-		.lanes = 1,
-		.channel = 0,
-		.phy_rate = (336 * 2 * 1000000),
-		.pix_clk = 21, /* Revisit */
-	},
+			     .lanes = 1,
+			     .channel = 0,
+			     .phy_rate = (336 * 2 * 1000000),
+			     .pix_clk = 21,	/* Revisit */
+			     },
 	[OV5640_SIZE_1080P] = {
-		.lanes = 1,
-		.channel = 0,
-		.phy_rate = (336 * 2 * 1000000),
-		.pix_clk = 21, /* Revisit */
-	},
+			       .lanes = 1,
+			       .channel = 0,
+			       .phy_rate = (336 * 2 * 1000000),
+			       .pix_clk = 21,	/* Revisit */
+			       },
 	[OV5640_SIZE_UXGA] = {
-		.lanes = 1,
-		.channel = 0,
-		.phy_rate = (336 * 2 * 1000000),
-		.pix_clk = 21, /* Revisit */
-	},
+			      .lanes = 1,
+			      .channel = 0,
+			      .phy_rate = (336 * 2 * 1000000),
+			      .pix_clk = 21,	/* Revisit */
+			      },
 	[OV5640_SIZE_720P] = {
-		.lanes = 1,
-		.channel = 0,
-		.phy_rate = (336 * 2 * 1000000),
-		.pix_clk = 21, /* Revisit */
-	},
+			      .lanes = 1,
+			      .channel = 0,
+			      .phy_rate = (336 * 2 * 1000000),
+			      .pix_clk = 21,	/* Revisit */
+			      },
 	[OV5640_SIZE_QXGA] = {
-		.lanes = 1,
-		.channel = 0,
-		.phy_rate = (336 * 2 * 1000000),
-		.pix_clk = 21, /* Revisit */
-	},
+			      .lanes = 1,
+			      .channel = 0,
+			      .phy_rate = (336 * 2 * 1000000),
+			      .pix_clk = 21,	/* Revisit */
+			      },
 	[OV5640_SIZE_5MP] = {
-		.lanes = 1,
-		.channel = 0,
-		.phy_rate = (336 * 2 * 1000000),
-		.pix_clk = 21, /* Revisit */
-	},
+			     .lanes = 1,
+			     .channel = 0,
+			     .phy_rate = (336 * 2 * 1000000),
+			     .pix_clk = 21,	/* Revisit */
+			     },
 };
 #endif
 
 /**
- * ov5640_reg_read - Read a value from a register in an ov5640 sensor device
- * @client: i2c driver client structure
- * @reg: register address / offset
- * @val: stores the value that gets read
+ *ov5640_reg_read - Read a value from a register in an ov5640 sensor device
+ *@client: i2c driver client structure
+ *@reg: register address / offset
+ *@val: stores the value that gets read
  *
  * Read a value from a register in an ov5640 sensor device.
  * The value is returned in 'val'.
@@ -1000,16 +995,16 @@ static struct v4l2_subdev_sensor_serial_parms mipi_cfgs[OV5640_SIZE_LAST] = {
 static int ov5640_reg_read(struct i2c_client *client, u16 reg, u8 *val)
 {
 	int ret;
-	u8 data[2] = {0};
+	u8 data[2] = { 0 };
 	struct i2c_msg msg = {
-		.addr	= client->addr,
-		.flags	= 0,
-		.len	= 2,
-		.buf	= data,
+		.addr = client->addr,
+		.flags = 0,
+		.len = 2,
+		.buf = data,
 	};
 
-	data[0] = (u8)(reg >> 8);
-	data[1] = (u8)(reg & 0xff);
+	data[0] = (u8) (reg >> 8);
+	data[1] = (u8) (reg & 0xff);
 
 	ret = i2c_transfer(client->adapter, &msg, 1);
 	if (ret < 0)
@@ -1024,27 +1019,27 @@ static int ov5640_reg_read(struct i2c_client *client, u16 reg, u8 *val)
 	*val = data[0];
 	return 0;
 
-err:
+      err:
 	dev_err(&client->dev, "Failed reading register 0x%02x!\n", reg);
 	return ret;
 }
 
 /**
  * Write a value to a register in ov5640 sensor device.
- * @client: i2c driver client structure.
- * @reg: Address of the register to read value from.
- * @val: Value to be written to a specific register.
+ *@client: i2c driver client structure.
+ *@reg: Address of the register to read value from.
+ *@val: Value to be written to a specific register.
  * Returns zero if successful, or non-zero otherwise.
  */
 static int ov5640_reg_write(struct i2c_client *client, u16 reg, u8 val)
 {
 	int ret;
-	unsigned char data[3] = { (u8)(reg >> 8), (u8)(reg & 0xff), val };
+	unsigned char data[3] = { (u8) (reg >> 8), (u8) (reg & 0xff), val };
 	struct i2c_msg msg = {
-		.addr	= client->addr,
-		.flags	= 0,
-		.len	= 3,
-		.buf	= data,
+		.addr = client->addr,
+		.flags = 0,
+		.len = 3,
+		.buf = data,
 	};
 
 	ret = i2c_transfer(client->adapter, &msg, 1);
@@ -1058,39 +1053,39 @@ static int ov5640_reg_write(struct i2c_client *client, u16 reg, u8 val)
 
 static const struct v4l2_queryctrl ov5640_controls[] = {
 	{
-		.id      	= V4L2_CID_BRIGHTNESS,
-		.type    	= V4L2_CTRL_TYPE_INTEGER,
-		.name    	= "Brightness",
-		.minimum	= OV5640_BRIGHTNESS_MIN,
-		.maximum	= OV5640_BRIGHTNESS_MAX,
-		.step		= OV5640_BRIGHTNESS_STEP,
-		.default_value	= OV5640_BRIGHTNESS_DEF,
-	},
+	 .id = V4L2_CID_BRIGHTNESS,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "Brightness",
+	 .minimum = OV5640_BRIGHTNESS_MIN,
+	 .maximum = OV5640_BRIGHTNESS_MAX,
+	 .step = OV5640_BRIGHTNESS_STEP,
+	 .default_value = OV5640_BRIGHTNESS_DEF,
+	 },
 	{
-		.id		= V4L2_CID_CONTRAST,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Contrast",
-		.minimum	= OV5640_CONTRAST_MIN,
-		.maximum	= OV5640_CONTRAST_MAX,
-		.step		= OV5640_CONTRAST_STEP,
-		.default_value	= OV5640_CONTRAST_DEF,
-	},
+	 .id = V4L2_CID_CONTRAST,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "Contrast",
+	 .minimum = OV5640_CONTRAST_MIN,
+	 .maximum = OV5640_CONTRAST_MAX,
+	 .step = OV5640_CONTRAST_STEP,
+	 .default_value = OV5640_CONTRAST_DEF,
+	 },
 	{
-		.id		= V4L2_CID_COLORFX,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Color Effects",
-		.minimum	= V4L2_COLORFX_NONE,
-		.maximum	= V4L2_COLORFX_NEGATIVE,
-		.step		= 1,
-		.default_value	= V4L2_COLORFX_NONE,
-	},
+	 .id = V4L2_CID_COLORFX,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "Color Effects",
+	 .minimum = V4L2_COLORFX_NONE,
+	 .maximum = V4L2_COLORFX_NEGATIVE,
+	 .step = 1,
+	 .default_value = V4L2_COLORFX_NONE,
+	 },
 };
 
 /**
  * Initialize a list of ov5640 registers.
  * The list of registers is terminated by the pair of values
- * @client: i2c driver client structure.
- * @reglist[]: List of address of the registers to write data.
+ *@client: i2c driver client structure.
+ *@reglist[]: List of address of the registers to write data.
  * Returns zero if successful, or non-zero otherwise.
  */
 static int ov5640_reg_writes(struct i2c_client *client,
@@ -1098,16 +1093,17 @@ static int ov5640_reg_writes(struct i2c_client *client,
 {
 	int err = 0, index;
 
-    for (index=0; ((reglist[index].reg != 0xFFFF) && (err == 0)); index++)
-    {
-        err |= ov5640_reg_write( client, reglist[index].reg, reglist[index].val );
-    // Check for Pause condition
-        if ( (reglist[index+1].reg == 0xFFFF) && (reglist[index+1].val != 0) )
-        {
-            msleep(reglist[index+1].val);
-            index += 1;
-       }
-    }
+	for (index = 0; ((reglist[index].reg != 0xFFFF) && (err == 0)); index++) {
+		err |=
+		    ov5640_reg_write(client, reglist[index].reg,
+				     reglist[index].val);
+		/*  Check for Pause condition */
+		if ((reglist[index + 1].reg == 0xFFFF)
+		    && (reglist[index + 1].val != 0)) {
+			msleep(reglist[index + 1].val);
+			index += 1;
+		}
+	}
 	return 0;
 }
 
@@ -1117,7 +1113,7 @@ static int ov5640_config_timing(struct i2c_client *client)
 	int ret, i = ov5640->i_size;
 
 	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8) {
-		
+
 		if (i == OV5640_SIZE_QXGA)
 			i = OV5640_SIZE_QXGA_JPEG;
 		if (i == OV5640_SIZE_5MP)
@@ -1125,158 +1121,142 @@ static int ov5640_config_timing(struct i2c_client *client)
 	}
 
 	ret = ov5640_reg_write(client,
-			0x3800,
-			(timing_cfg[i].x_addr_start & 0xFF00) >> 8);
+			       0x3800,
+			       (timing_cfg[i].x_addr_start & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3801,
-			timing_cfg[i].x_addr_start & 0xFF);
+			       0x3801, timing_cfg[i].x_addr_start & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3802,
-			(timing_cfg[i].y_addr_start & 0xFF00) >> 8);
+			       0x3802,
+			       (timing_cfg[i].y_addr_start & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3803,
-			timing_cfg[i].y_addr_start & 0xFF);
+			       0x3803, timing_cfg[i].y_addr_start & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3804,
-			(timing_cfg[i].x_addr_end & 0xFF00) >> 8);
+			       0x3804,
+			       (timing_cfg[i].x_addr_end & 0xFF00) >> 8);
+	if (ret)
+		return ret;
+
+	ret = ov5640_reg_write(client, 0x3805, timing_cfg[i].x_addr_end & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3805,
-			timing_cfg[i].x_addr_end & 0xFF);
+			       0x3806,
+			       (timing_cfg[i].y_addr_end & 0xFF00) >> 8);
+	if (ret)
+		return ret;
+
+	ret = ov5640_reg_write(client, 0x3807, timing_cfg[i].y_addr_end & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3806,
-			(timing_cfg[i].y_addr_end & 0xFF00) >> 8);
+			       0x3808,
+			       (timing_cfg[i].h_output_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3807,
-			timing_cfg[i].y_addr_end & 0xFF);
+			       0x3809, timing_cfg[i].h_output_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3808,
-			(timing_cfg[i].h_output_size & 0xFF00) >> 8);
+			       0x380A,
+			       (timing_cfg[i].v_output_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3809,
-			timing_cfg[i].h_output_size & 0xFF);
+			       0x380B, timing_cfg[i].v_output_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380A,
-			(timing_cfg[i].v_output_size & 0xFF00) >> 8);
+			       0x380C,
+			       (timing_cfg[i].h_total_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380B,
-			timing_cfg[i].v_output_size & 0xFF);
+			       0x380D, timing_cfg[i].h_total_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380C,
-			(timing_cfg[i].h_total_size & 0xFF00) >> 8);
+			       0x380E,
+			       (timing_cfg[i].v_total_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380D,
-			timing_cfg[i].h_total_size & 0xFF);
+			       0x380F, timing_cfg[i].v_total_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380E,
-			(timing_cfg[i].v_total_size & 0xFF00) >> 8);
+			       0x3810,
+			       (timing_cfg[i].isp_h_offset & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380F,
-			timing_cfg[i].v_total_size & 0xFF);
+			       0x3811, timing_cfg[i].isp_h_offset & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3810,
-			(timing_cfg[i].isp_h_offset & 0xFF00) >> 8);
+			       0x3812,
+			       (timing_cfg[i].isp_v_offset & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3811,
-			timing_cfg[i].isp_h_offset & 0xFF);
+			       0x3813, timing_cfg[i].isp_v_offset & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3812,
-			(timing_cfg[i].isp_v_offset & 0xFF00) >> 8);
+			       0x3814,
+			       ((timing_cfg[i].h_odd_ss_inc & 0xF) << 4) |
+			       (timing_cfg[i].h_even_ss_inc & 0xF));
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3813,
-			timing_cfg[i].isp_v_offset & 0xFF);
+			       0x3815,
+			       ((timing_cfg[i].v_odd_ss_inc & 0xF) << 4) |
+			       (timing_cfg[i].v_even_ss_inc & 0xF));
+
+	ret = ov5640_reg_write(client,
+			       0x3812,
+			       (timing_cfg[i].isp_v_offset & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3814,
-			((timing_cfg[i].h_odd_ss_inc & 0xF) << 4) |
-			(timing_cfg[i].h_even_ss_inc & 0xF));
+			       0x5001, timing_cfg[i].isp_scale_down & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3815,
-			((timing_cfg[i].v_odd_ss_inc & 0xF) << 4) |
-			(timing_cfg[i].v_even_ss_inc & 0xF));
-			
-	ret = ov5640_reg_write(client,
-			0x3812,
-			(timing_cfg[i].isp_v_offset & 0xFF00) >> 8);
-	if (ret)
-		return ret;
-			
-	ret = ov5640_reg_write(client,
-			0x5001,
-			timing_cfg[i].isp_scale_down & 0xFF);
+			       0x3108, timing_cfg[i].clk_dividers & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-			0x3108,
-			timing_cfg[i].clk_dividers & 0xFF);
-	if (ret)
-		return ret;
-
-	ret = ov5640_reg_write(client,
-			0x300E,
-			timing_cfg[i].mipi_lanes & 0xFF);
+	ret = ov5640_reg_write(client, 0x300E, timing_cfg[i].mipi_lanes & 0xFF);
 	if (ret)
 		return ret;
 
@@ -1303,17 +1283,17 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		if (ret)
 			goto out;
 
-		ret = ov5640_reg_write(client, 0x300e, 0x3d);   //MIPI Control  Powered down  
+		ret = ov5640_reg_write(client, 0x300e, 0x3d);	/* MIPI Control  Powered down   */
 		if (ret)
 			goto out;
 	}
 
-out:
+      out:
 	return ret;
 }
 
 static int ov5640_set_bus_param(struct soc_camera_device *icd,
-				 unsigned long flags)
+				unsigned long flags)
 {
 	/* TODO: Do the right thing here, and validate bus params */
 	return 0;
@@ -1322,8 +1302,8 @@ static int ov5640_set_bus_param(struct soc_camera_device *icd,
 static unsigned long ov5640_query_bus_param(struct soc_camera_device *icd)
 {
 	unsigned long flags = SOCAM_PCLK_SAMPLE_FALLING |
-		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
-		SOCAM_DATA_ACTIVE_HIGH | SOCAM_MASTER;
+	    SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
+	    SOCAM_DATA_ACTIVE_HIGH | SOCAM_MASTER;
 
 	/* TODO: Do the right thing here, and validate bus params */
 
@@ -1332,13 +1312,14 @@ static unsigned long ov5640_query_bus_param(struct soc_camera_device *icd)
 	return flags;
 }
 
-static int ov5640_enum_input(struct soc_camera_device *icd, struct v4l2_input *inp)
+static int ov5640_enum_input(struct soc_camera_device *icd,
+			     struct v4l2_input *inp)
 {
 	struct soc_camera_link *icl = to_soc_camera_link(icd);
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
 
 	inp->type = V4L2_INPUT_TYPE_CAMERA;
-	inp->std  = V4L2_STD_UNKNOWN;
+	inp->std = V4L2_STD_UNKNOWN;
 	strcpy(inp->name, "ov5640");
 
 	if (icl && icl->priv) {
@@ -1356,23 +1337,21 @@ static int ov5640_enum_input(struct soc_camera_device *icd, struct v4l2_input *i
 	return 0;
 }
 
-static int ov5640_g_fmt(struct v4l2_subdev *sd,
-			 struct v4l2_mbus_framefmt *mf)
+static int ov5640_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
 
-	mf->width	= ov5640_frmsizes[ov5640->i_size].width;
-	mf->height	= ov5640_frmsizes[ov5640->i_size].height;
-	mf->code	= ov5640_fmts[ov5640->i_fmt].code;
-	mf->colorspace	= ov5640_fmts[ov5640->i_fmt].colorspace;
-	mf->field	= V4L2_FIELD_NONE;
+	mf->width = ov5640_frmsizes[ov5640->i_size].width;
+	mf->height = ov5640_frmsizes[ov5640->i_size].height;
+	mf->code = ov5640_fmts[ov5640->i_fmt].code;
+	mf->colorspace = ov5640_fmts[ov5640->i_fmt].colorspace;
+	mf->field = V4L2_FIELD_NONE;
 
 	return 0;
 }
 
-static int ov5640_try_fmt(struct v4l2_subdev *sd,
-			   struct v4l2_mbus_framefmt *mf)
+static int ov5640_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
 	int i_fmt;
 	int i_size;
@@ -1380,8 +1359,8 @@ static int ov5640_try_fmt(struct v4l2_subdev *sd,
 	i_fmt = ov5640_find_datafmt(mf->code);
 
 	mf->code = ov5640_fmts[i_fmt].code;
-	mf->colorspace	= ov5640_fmts[i_fmt].colorspace;
-	mf->field	= V4L2_FIELD_NONE;
+	mf->colorspace = ov5640_fmts[i_fmt].colorspace;
+	mf->field = V4L2_FIELD_NONE;
 
 	i_size = ov5640_find_framesize(mf->width, mf->height);
 
@@ -1391,8 +1370,7 @@ static int ov5640_try_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int ov5640_s_fmt(struct v4l2_subdev *sd,
-			 struct v4l2_mbus_framefmt *mf)
+static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
@@ -1406,7 +1384,7 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 	ov5640->i_size = ov5640_find_framesize(mf->width, mf->height);
 	ov5640->i_fmt = ov5640_find_datafmt(mf->code);
 
-	switch ((u32)ov5640_fmts[ov5640->i_fmt].code) {
+	switch ((u32) ov5640_fmts[ov5640->i_fmt].code) {
 	case V4L2_MBUS_FMT_UYVY8_2X8:
 		fmtreg = 0x32;
 		fmtmuxreg = 0;
@@ -1423,8 +1401,8 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 		return ret;
 	}
 
-//stop sensor streaming
-//	ret = ov5640_reg_write(client, 0x3008, 0x42);
+/* stop sensor streaming */
+/*       ret = ov5640_reg_write(client, 0x3008, 0x42); */
 
 	if (fmtreg) {
 
@@ -1445,8 +1423,6 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 			return ret;
 	}
 
-
-
 	ret = ov5640_config_timing(client);
 	if (ret)
 		return ret;
@@ -1455,7 +1431,7 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 }
 
 static int ov5640_g_chip_ident(struct v4l2_subdev *sd,
-				struct v4l2_dbg_chip_ident *id)
+			       struct v4l2_dbg_chip_ident *id)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
@@ -1465,8 +1441,8 @@ static int ov5640_g_chip_ident(struct v4l2_subdev *sd,
 	if (id->match.addr != client->addr)
 		return -ENODEV;
 
-	id->ident	= V4L2_IDENT_OV5640;
-	id->revision	= 0;
+	id->ident = V4L2_IDENT_OV5640;
+	id->revision = 0;
 
 	return 0;
 }
@@ -1515,19 +1491,19 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ret = ov5640_reg_write(client, 0x5580, 0x04);
 		if (ret)
 			return ret;
-		switch(ov5640->brightness) {
+		switch (ov5640->brightness) {
 		case OV5640_BRIGHTNESS_MIN:
 			i_sde_ctrl7 = 0x40;
 			i_sde_ctrl8 = 0x08;
-		break;
+			break;
 		case OV5640_BRIGHTNESS_MAX:
 			i_sde_ctrl7 = 0x40;
 			i_sde_ctrl8 = 0x00;
-		break;
+			break;
 		default:
 			i_sde_ctrl7 = 0x00;
 			i_sde_ctrl8 = 0x00;
-		break;
+			break;
 		}
 		ret = ov5640_reg_write(client, 0x5587, i_sde_ctrl7);
 		if (ret)
@@ -1546,22 +1522,22 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ret = ov5640_reg_write(client, 0x5580, 0x04);
 		if (ret)
 			return ret;
-		switch(ov5640->contrast) {
+		switch (ov5640->contrast) {
 		case OV5640_CONTRAST_MIN:
 			i_sde_ctrl5 = 0x10;
 			i_sde_ctrl6 = 0x10;
 			i_sde_ctrl8 = 0x00;
-		break;
+			break;
 		case OV5640_CONTRAST_MAX:
 			i_sde_ctrl5 = 0x20;
 			i_sde_ctrl6 = 0x30;
 			i_sde_ctrl8 = 0x08;
-		break;
+			break;
 		default:
 			i_sde_ctrl5 = 0x00;
 			i_sde_ctrl6 = 0x20;
 			i_sde_ctrl8 = 0x00;
-		break;
+			break;
 		}
 
 		ret = ov5640_reg_write(client, 0x5585, i_sde_ctrl5);
@@ -1636,9 +1612,7 @@ static int ov5640_g_register(struct v4l2_subdev *sd,
 
 	reg->size = 2;
 	if (ov5640_reg_read(client, reg->reg, &reg->val))
-		return -EIO
-
-	return 0;
+		return -EIO return 0;
 }
 
 static int ov5640_s_register(struct v4l2_subdev *sd,
@@ -1660,11 +1634,11 @@ static int ov5640_s_register(struct v4l2_subdev *sd,
 #endif
 
 static struct soc_camera_ops ov5640_ops = {
-	.set_bus_param		= ov5640_set_bus_param,
-	.query_bus_param	= ov5640_query_bus_param,
-	.enum_input			= ov5640_enum_input,
-	.controls		= ov5640_controls,
-	.num_controls		= ARRAY_SIZE(ov5640_controls),
+	.set_bus_param = ov5640_set_bus_param,
+	.query_bus_param = ov5640_query_bus_param,
+	.enum_input = ov5640_enum_input,
+	.controls = ov5640_controls,
+	.num_controls = ARRAY_SIZE(ov5640_controls),
 };
 
 static int ov5640_init(struct i2c_client *client)
@@ -1683,13 +1657,13 @@ static int ov5640_init(struct i2c_client *client)
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 
-out:
+      out:
 	return ret;
 }
 
 /*
  * Interface active, can use i2c. If it fails, it can indeed mean, that
- * this wasn't our capture interface, so, we wait for the right one
+ *this wasn't our capture interface, so, we wait for the right one
  */
 static int ov5640_video_probe(struct soc_camera_device *icd,
 			      struct i2c_client *client)
@@ -1722,7 +1696,7 @@ static int ov5640_video_probe(struct soc_camera_device *icd,
 
 	/* TODO: Do something like ov5640_init */
 
-out:
+      out:
 	return ret;
 }
 
@@ -1733,17 +1707,17 @@ static void ov5640_video_remove(struct soc_camera_device *icd)
 }
 
 static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
-	.g_chip_ident	= ov5640_g_chip_ident,
-	.g_ctrl		= ov5640_g_ctrl,
-	.s_ctrl 	= ov5640_s_ctrl,
+	.g_chip_ident = ov5640_g_chip_ident,
+	.g_ctrl = ov5640_g_ctrl,
+	.s_ctrl = ov5640_s_ctrl,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
-	.g_register	= ov5640_g_register,
-	.s_register	= ov5640_s_register,
+	.g_register = ov5640_g_register,
+	.s_register = ov5640_s_register,
 #endif
 };
 
 static int ov5640_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
-			    enum v4l2_mbus_pixelcode *code)
+			   enum v4l2_mbus_pixelcode *code)
 {
 	if (index >= ARRAY_SIZE(ov5640_fmts))
 		return -EINVAL;
@@ -1766,10 +1740,9 @@ static int ov5640_enum_framesizes(struct v4l2_subdev *sd,
 	return 0;
 }
 
-
 /* we only support fixed frame rate */
 static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
-		struct v4l2_frmivalenum *interval)
+				      struct v4l2_frmivalenum *interval)
 {
 	int size;
 
@@ -1849,17 +1822,17 @@ static int ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 {
 	/*
 	 * FIXME: This just enforces the hardcoded framerates until this is
-	 * flexible enough.
+	 *flexible enough.
 	 */
 	return ov5640_g_parm(sd, param);
 }
 
 static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
-	.s_stream	= ov5640_s_stream,
-	.s_mbus_fmt	= ov5640_s_fmt,
-	.g_mbus_fmt	= ov5640_g_fmt,
-	.try_mbus_fmt	= ov5640_try_fmt,
-	.enum_mbus_fmt	= ov5640_enum_fmt,
+	.s_stream = ov5640_s_stream,
+	.s_mbus_fmt = ov5640_s_fmt,
+	.g_mbus_fmt = ov5640_g_fmt,
+	.try_mbus_fmt = ov5640_try_fmt,
+	.enum_mbus_fmt = ov5640_enum_fmt,
 	.enum_mbus_fsizes = ov5640_enum_framesizes,
 	.enum_framesizes = ov5640_enum_framesizes,
 	.enum_frameintervals = ov5640_enum_frameintervals,
@@ -1875,7 +1848,8 @@ static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 }
 
 static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
-			struct v4l2_subdev_sensor_interface_parms *parms)
+				    struct v4l2_subdev_sensor_interface_parms
+				    *parms)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
@@ -1883,29 +1857,27 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 	if (!parms)
 		return -EINVAL;
 
-
 	parms->if_type = ov5640->plat_parms->if_type;
 	parms->if_mode = ov5640->plat_parms->if_mode;
 	parms->parms = ov5640->plat_parms->parms;
-	//parms->parms.serial = mipi_cfgs[ov5640->i_size];
-
+	/* parms->parms.serial = mipi_cfgs[ov5640->i_size]; */
 
 	return 0;
 }
 
 static struct v4l2_subdev_sensor_ops ov5640_subdev_sensor_ops = {
-	.g_skip_frames	= ov5640_g_skip_frames,
+	.g_skip_frames = ov5640_g_skip_frames,
 	.g_interface_parms = ov5640_g_interface_parms,
 };
 
 static struct v4l2_subdev_ops ov5640_subdev_ops = {
-	.core	= &ov5640_subdev_core_ops,
-	.video	= &ov5640_subdev_video_ops,
-	.sensor	= &ov5640_subdev_sensor_ops,
+	.core = &ov5640_subdev_core_ops,
+	.video = &ov5640_subdev_video_ops,
+	.sensor = &ov5640_subdev_sensor_ops,
 };
 
 static int ov5640_probe(struct i2c_client *client,
-			 const struct i2c_device_id *did)
+			const struct i2c_device_id *did)
 {
 	struct ov5640 *ov5640;
 	struct soc_camera_device *icd = client->dev.platform_data;
@@ -1936,10 +1908,10 @@ static int ov5640_probe(struct i2c_client *client,
 	v4l2_i2c_subdev_init(&ov5640->subdev, client, &ov5640_subdev_ops);
 
 	/* Second stage probe - when a capture adapter is there */
-	icd->ops		= &ov5640_ops;
+	icd->ops = &ov5640_ops;
 
 	ov5640->i_size = OV5640_SIZE_VGA;
-	ov5640->i_fmt = 0; /* First format in the list */
+	ov5640->i_fmt = 0;	/* First format in the list */
 	ov5640->plat_parms = icl->priv;
 
 	ret = ov5640_video_probe(icd, client);
@@ -1973,18 +1945,19 @@ static int ov5640_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id ov5640_id[] = {
-	{ "ov5640", 0 },
-	{ }
+	{"ov5640", 0},
+	{}
 };
+
 MODULE_DEVICE_TABLE(i2c, ov5640_id);
 
 static struct i2c_driver ov5640_i2c_driver = {
 	.driver = {
-		.name = "ov5640",
-	},
-	.probe		= ov5640_probe,
-	.remove		= ov5640_remove,
-	.id_table	= ov5640_id,
+		   .name = "ov5640",
+		   },
+	.probe = ov5640_probe,
+	.remove = ov5640_remove,
+	.id_table = ov5640_id,
 };
 
 static int __init ov5640_mod_init(void)
