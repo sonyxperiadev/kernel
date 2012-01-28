@@ -268,7 +268,7 @@ static int  unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 
 			cslCamBufferData0.line_stride = (UInt32)line_stride;
 			/* assume 12bpp */
-			cslCamBufferData0.size = (line_stride *unicam_dev->icd->user_height * 3/2);
+			cslCamBufferData0.size = (line_stride * unicam_dev->icd->user_height * 3/2);
 			cslCamBufferData0.buffer_wrap_en = 1;
 			cslCamBufferData0.mem_type = CSL_CAM_MEM_TYPE_NONE;
 			dprintk("cslCamBufferData0 start_addr = 0x%x, line_stride = %d, size = %d\n",
@@ -403,6 +403,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	struct v4l2_subdev_sensor_interface_parms if_params;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	int ret;
+	int thumb;
 
 	CSL_CAM_INTF_CFG_st_t csl_cam_intf_cfg_st;
 	CSL_CAM_LANE_CONTROL_st_t cslCamLaneCtrl_st;
@@ -508,8 +509,22 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	/* set image identifier (CSI mode only) */
 	memset( &cslCamImageCtrl, 0, sizeof(CSL_CAM_IMAGE_ID_st_t) );
 
-	if (icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8)
-		cslCamImageCtrl.image_data_id0 = 0x30;
+	/* if thumbnail is supported we expect
+	 * thumbnail to be in image ptr format of thumbnails is yuv422
+	 * format is checked in try format.
+	 * in case where thumbnail is not supported we get jpeg
+	 * image in data pointer. so we set the id as 0
+	 */
+
+	thumb = 0;
+	ret = v4l2_subdev_call(sd, core, ioctl, VIDIOC_THUMB_SUPPORTED, (void *)&thumb);
+	if (ret < 0)
+		dev_warn(unicam_dev->dev, "sensor returns error(%d) for VIDIOC_THUMB_SUPPORTED\n",
+				ret);
+
+	if ((icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8)
+			&& (thumb == 0))
+		cslCamImageCtrl.image_data_id0 = 0x0; /* thumbnail not supported */
 	else
 		cslCamImageCtrl.image_data_id0 = 0x1E;
 
@@ -657,7 +672,10 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	const struct soc_camera_format_xlate *xlate;
 	struct v4l2_pix_format *pix = &f->fmt.pix;
 	struct v4l2_mbus_framefmt mf;
+	struct v4l2_format thumb_fmt;
+	struct v4l2_pix_format *thumb_pix;
 	__u32 pixfmt = pix->pixelformat;
+	int thumb;
 	int ret;
 
 	dprintk("-enter");
@@ -700,9 +718,35 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 
 	/* what format can unicam support */
 	switch (mf.code) {
+	case V4L2_MBUS_FMT_JPEG_1X8:
+		/* check here if thumbnail is supported and check thumbnail format */
+		ret = v4l2_subdev_call(sd, core, ioctl, VIDIOC_THUMB_SUPPORTED, (void *)&thumb);
+		if ((!ret) && thumb) {
+			ret = v4l2_subdev_call(sd, core, ioctl, VIDIOC_THUMB_G_FMT, (void *)&thumb_fmt);
+			if (ret < 0) {
+				dev_err(icd->dev.parent, "sensor driver should report thumbnail format\n");
+				return -EINVAL;
+			}
+			thumb_pix = &thumb_fmt.fmt.pix;
+			switch (thumb_pix->pixelformat) {
+				case V4L2_PIX_FMT_YUYV:
+				case V4L2_PIX_FMT_UYVY:
+					iprintk("sensor supports thumbnail %c%c%c%c format",
+							pixfmtstr(thumb_pix->pixelformat));
+					break;
+				default:
+					dev_err(icd->dev.parent,"sensor thumbnail format %c%c%c%c not supported\n",
+							pixfmtstr(thumb_pix->pixelformat));
+					return -EINVAL;
+			}
+		}
+		else
+			iprintk("sensor doesnot support thumbnail (thumb=%d, ret=%d)\n",
+					thumb, ret);
+
+
 	case V4L2_MBUS_FMT_YUYV8_2X8:
 	case V4L2_MBUS_FMT_UYVY8_2X8:
-	case V4L2_MBUS_FMT_JPEG_1X8:
 		/* Above formats are supported */
 		break;
 	default:
