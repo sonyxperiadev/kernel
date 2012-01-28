@@ -22,6 +22,7 @@
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
+#include <linux/videodev2_brcm.h>
 
 #define ENABLE_COLOR_PATTERN 0
 /* #define MIPI_2_LANES */
@@ -1598,6 +1599,26 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	return ret;
 }
 
+static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
+{
+	int ret = 0;
+
+	switch(cmd)
+	{
+		case VIDIOC_THUMB_SUPPORTED:
+		{
+			int *p = arg;
+			*p = 0; /* no we don't support thumbnail */
+			break;
+		}
+
+		default:
+			ret = -ENOIOCTLCMD;
+			break;
+	}
+	return ret;
+}
+
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 static int ov5640_g_register(struct v4l2_subdev *sd,
 			     struct v4l2_dbg_register *reg)
@@ -1710,6 +1731,7 @@ static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
 	.g_chip_ident = ov5640_g_chip_ident,
 	.g_ctrl = ov5640_g_ctrl,
 	.s_ctrl = ov5640_s_ctrl,
+	.ioctl		= ov5640_ioctl,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register = ov5640_g_register,
 	.s_register = ov5640_s_register,
