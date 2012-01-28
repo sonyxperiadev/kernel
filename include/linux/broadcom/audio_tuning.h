@@ -25,8 +25,7 @@
 #ifdef CNEON_LMP
 #define AUDIO_APP_NUMBER        3   // must be consistent with parm_audio.txt
 #else
-/* #define AUDIO_APP_NUMBER        16   // must be consistent with parm_audio.txt */
-#define AUDIO_APP_NUMBER        3
+#define AUDIO_APP_NUMBER        16   // must be consistent with parm_audio.txt
 #endif
 
 #define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*AUDIO_APP_NUMBER)
