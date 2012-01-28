@@ -456,7 +456,10 @@ UpdatePwrStatus:
 	LDR r2, [r2]
 	@ End of buffer.. Note the actual buffer is larger but
 	@ secure side max is 0x280@
-	ADD   r3,r2,#0x80
+	@ Pass end address as 3K.
+	@Total buffer size is 4K and 1 K from end address is used
+	@ by secure handler for MEMC workaround
+	ADD   r3,r2,#0xC00
 	MOV   r4,#SEC_DORMANT_MODE
 	PUSH  {r4}
 
