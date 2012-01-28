@@ -252,6 +252,7 @@ static int _complete(dwc_otg_hcd_t * hcd, void *urb_handle,
 		     dwc_otg_hcd_urb_t * dwc_otg_urb, int32_t status)
 {
 	struct urb *urb = (struct urb *)urb_handle;
+	uint64_t lock_flags;
 #ifdef DEBUG
 	if (CHK_DEBUG_LEVEL(DBG_HCDV | DBG_HCD_URB)) {
 		DWC_PRINTF("%s: urb %p, device %d, ep %d %s, status=%d\n",
@@ -332,6 +333,11 @@ static int _complete(dwc_otg_hcd_t * hcd, void *urb_handle,
 	}
 
 	dwc_free(dwc_otg_urb);
+
+	DWC_SPINLOCK_IRQSAVE(hcd->lock, &lock_flags);
+	usb_hcd_unlink_urb_from_ep(dwc_otg_hcd_to_hcd(hcd), urb);
+	DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, lock_flags);
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
 	usb_hcd_giveback_urb(dwc_otg_hcd_to_hcd(hcd), urb);
 #else
@@ -645,12 +651,20 @@ static int urb_enqueue(struct usb_hcd *hcd,
 	uint8_t ep_type = 0;
 	uint32_t flags = 0;
 	void *buf;
+	uint64_t lock_flags;
 
 #ifdef DEBUG
 	if (CHK_DEBUG_LEVEL(DBG_HCDV | DBG_HCD_URB)) {
 		dump_urb_info(urb, "urb_enqueue");
 	}
 #endif
+
+	DWC_SPINLOCK_IRQSAVE(dwc_otg_hcd->lock, &lock_flags);
+	retval = usb_hcd_link_urb_to_ep(hcd, urb);
+	DWC_SPINUNLOCK_IRQRESTORE(dwc_otg_hcd->lock, lock_flags);
+
+	if (retval < 0)
+		return retval;
 
 	if ((usb_pipetype(urb->pipe) == PIPE_ISOCHRONOUS)
 	    || (usb_pipetype(urb->pipe) == PIPE_INTERRUPT)) {
@@ -732,6 +746,10 @@ static int urb_enqueue(struct usb_hcd *hcd,
 		if (retval == -DWC_E_NO_DEVICE) {
 			retval = -ENODEV;
 		}
+
+		DWC_SPINLOCK_IRQSAVE(dwc_otg_hcd->lock, &lock_flags);
+		usb_hcd_unlink_urb_from_ep(hcd, urb);
+		DWC_SPINUNLOCK_IRQRESTORE(dwc_otg_hcd->lock, lock_flags);
 	}
 
 	return retval;
@@ -746,6 +764,8 @@ static int urb_dequeue(struct usb_hcd *hcd, struct urb *urb, int status)
 #endif
 {
 	dwc_otg_hcd_t *dwc_otg_hcd;
+	int retval = 0;
+	uint64_t lock_flags;
 	DWC_DEBUGPL(DBG_HCD, "DWC OTG HCD URB Dequeue\n");
 
 	dwc_otg_hcd = hcd_to_dwc_otg_hcd(hcd);
@@ -755,10 +775,22 @@ static int urb_dequeue(struct usb_hcd *hcd, struct urb *urb, int status)
 		dump_urb_info(urb, "urb_dequeue");
 	}
 #endif
+
+	DWC_SPINLOCK_IRQSAVE(dwc_otg_hcd->lock, &lock_flags);
+	retval = usb_hcd_check_unlink_urb(hcd, urb, status);
+
+	if (retval < 0 || !urb->hcpriv) {
+		DWC_SPINUNLOCK_IRQRESTORE(dwc_otg_hcd->lock, lock_flags);
+		return retval;
+	}
+
 	dwc_otg_hcd_urb_dequeue(dwc_otg_hcd, urb->hcpriv);
 
 	dwc_free(urb->hcpriv);
 	urb->hcpriv = NULL;
+
+	usb_hcd_unlink_urb_from_ep(hcd, urb);
+	DWC_SPINUNLOCK_IRQRESTORE(dwc_otg_hcd->lock, lock_flags);
 
 	/* Higher layer software sets URB status. */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)

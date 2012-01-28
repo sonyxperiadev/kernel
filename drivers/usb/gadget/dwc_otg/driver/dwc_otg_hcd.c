@@ -529,13 +529,9 @@ int dwc_otg_hcd_urb_enqueue(dwc_otg_hcd_t * hcd,
 int dwc_otg_hcd_urb_dequeue(dwc_otg_hcd_t * hcd,
 			    dwc_otg_hcd_urb_t * dwc_otg_urb)
 {
-	uint64_t flags;
-
 	dwc_otg_qh_t *qh;
 	dwc_otg_qtd_t *urb_qtd;
 
-	DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
-	
 	urb_qtd = dwc_otg_urb->qtd;
 	qh = urb_qtd->qh;
 #ifdef DEBUG
@@ -577,8 +573,6 @@ int dwc_otg_hcd_urb_dequeue(dwc_otg_hcd_t * hcd,
 	} else {
 		dwc_otg_hcd_qtd_remove_and_free(hcd, urb_qtd, qh);
 	}
-	
-	DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
 
 	return 0;
 }
