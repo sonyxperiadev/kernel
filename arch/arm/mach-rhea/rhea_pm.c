@@ -540,12 +540,6 @@ int enter_dormant_state(struct kona_idle_state* state)
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2221*/
 #ifdef CONFIG_RHEA_DORMANT_MODE
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-	/*Ignore dap power-up request and clear the bits that disallow dormant*/
-	/*TBD - Change pwrmgr interface function*/
-	writel(0x06600000,
-		KONA_PWRMGR_VA+PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
-#endif /* CONFIG_ROM_SEC_DISPATCHER*/
 	dormant_enter();
 #else
 	pm_set_scu_power_mode(SCU_STATUS_DORMANT);

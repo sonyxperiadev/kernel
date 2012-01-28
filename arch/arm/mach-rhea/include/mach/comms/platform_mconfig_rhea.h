@@ -113,6 +113,17 @@ extern "C" {
 //#else
 //#define DSP_PRAM_SIZE                                          0x000a0000
 //#endif
+
+#if defined (CNEON_LMP)
+#define MODEMHOSTSEC_HOST_BUFF          0xA0104000
+#define MODEMHOSTSEC_HOST_BUFF_SIZE     0x00000800
+
+#define MODEMHOSTSEC_MODEM_BUFF         0xA0104800
+#define MODEMHOSTSEC_MODEM_BUFF_SIZE    0x00000800
+
+#define MODEMHOSTSEC_BUFF_BASE          MODEMHOSTSEC_HOST_BUFF
+#define MODEMHOSTSEC_BUFF_SIZE          (MODEMHOSTSEC_HOST_BUFF_SIZE + MODEMHOSTSEC_MODEM_BUFF_SIZE)
+#endif
    
 #ifndef ISLANDRAY
 #define UMTS_CAL_ROM_ADDR      0x001D0000

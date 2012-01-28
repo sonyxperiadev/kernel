@@ -159,8 +159,6 @@ static int pi_change_notify(int pi_id, u32 type, u32 old_val, u32 new_val, u32 s
 static int pi_save_state(struct pi *pi, int save)
 {
 	int inx;
-	if((pi->pi_state[pi->state_allowed].flags & PI_STATE_SAVE_CONTEXT) == 0)
-		return -EINVAL;
 
 	/*ccu_save_state may call pi_enable again
 	increment usg_cnt to avoid lockup

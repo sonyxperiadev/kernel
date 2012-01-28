@@ -199,6 +199,10 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t *core_if)
 			dwc_modify_reg32(&global_regs->gotgctl, gotgctl.d32, 0);
 			DWC_DEBUGPL(DBG_ANY, "HNP Failed\n");
 			__DWC_ERROR("Device Not Connected/Responding\n");
+			/* Stop and re-start PCD to move back to B_PERIPHERAL state */
+			cil_pcd_stop(core_if);
+			cil_pcd_start(core_if);
+			core_if->op_state = B_PERIPHERAL;
 		}
 	}
 	if (gotgint.b.hstnegdet) {

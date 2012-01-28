@@ -2410,7 +2410,7 @@ int usb_port_suspend(struct usb_device *udev, pm_message_t msg)
 						USB_DEVICE_B_HNP_ENABLE,
 						0, NULL, 0, USB_CTRL_SET_TIMEOUT);
 		if (status < 0)
-			dev_dbg(&udev->dev, "can't enable HNP on port %d, "
+			dev_warn(&udev->dev, "can't enable HNP on port %d, "
 							"status %d\n", port1, status);
 		else
 			udev->bus->b_hnp_enable = 1;
