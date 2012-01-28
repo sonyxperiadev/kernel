@@ -246,8 +246,11 @@ static int pm_config_deep_sleep(void)
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
 	clk_set_crystal_pwr_on_idle(true);
-
+#ifdef CONFIG_RHEA_DORMANT_MODE
+	pwr_mgr_arm_core_dormant_enable(true /*allow dormant*/);
+#else
 	pwr_mgr_arm_core_dormant_enable(false /*disallow dormant*/);
+#endif /*CONFIG_RHEA_DORMANT_MODE*/
 	pm_enable_scu_standby(true);
 
 	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
