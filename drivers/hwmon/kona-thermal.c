@@ -310,7 +310,6 @@ void kona_thermal_register_notify(unsigned therm_id,
 	atomic_notifier_chain_register(&therm_notifier[therm_id - 1],
 				       thermal_block);
 }
-
 EXPORT_SYMBOL(kona_thermal_register_notify);
 
 void kona_thermal_unregister_notify(unsigned therm_id,
@@ -320,7 +319,6 @@ void kona_thermal_unregister_notify(unsigned therm_id,
 	atomic_notifier_chain_unregister(&therm_notifier[therm_id - 1],
 					 thermal_block);
 }
-
 EXPORT_SYMBOL(kona_thermal_unregister_notify);
 
 static void kona_thermal_notify_alarm(struct work_struct *ws)
@@ -365,10 +363,6 @@ static void kona_thermal_periodic_query(struct platform_drvdata *pdata)
 				temp = convert_adc_to_temp(adc_raw);
 #endif
 #endif
-				therm_debug("what it temp?: %d, crit:%d\n",
-					    temp,
-					    board->sensors[i].
-					    thermal_fatal_lvl);
 				if (temp >
 				    board->sensors[i].thermal_warning_lvl_1) {
 					/* Perform WARNING (maximum) action */
@@ -403,8 +397,7 @@ static void kona_thermal_periodic_query(struct platform_drvdata *pdata)
 						     THERM_ACTION_NOTIFY_SHUTDOWN)
 						    || (board->sensors[i].
 							thermal_fatal_action ==
-							THERM_ACTION_SHUTDOWN))
-						{
+							THERM_ACTION_SHUTDOWN)) {
 #ifdef CONFIG_MFD_BCM_PMU590XX
 							bcm590xx_shutdown();
 #else

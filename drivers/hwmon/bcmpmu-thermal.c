@@ -52,7 +52,7 @@ static int __devinit bcmpmu_thermal_probe(struct platform_device *pdev)
 
 static int __devexit bcmpmu_thermal_remove(struct platform_device *pdev)
 {
-	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
+	hwmon_device_register(&pdev->dev);
 
 	return 0;
 }
