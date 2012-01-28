@@ -62,6 +62,7 @@ obj-$(CONFIG_MWIFIEX)	+= mwifiex/
 obj-$(CONFIG_BCM4329)	+= bcm4329/
 obj-$(CONFIG_BCMDHD)   += bcmdhd/
 obj-$(CONFIG_BCMDHD_43362)   += bcmdhd_43362/
+obj-$(CONFIG_BCMDHD_4334)   += bcmdhd_4334/
 obj-$(CONFIG_BCMDHD_43362_LINUX)   += bcmdhd_lnx/
 obj-$(CONFIG_BCM4329_FALCON)   += bcm4329_falcon/
 obj-$(CONFIG_BCM4330_FALCON)   += bcm4329_falcon/
