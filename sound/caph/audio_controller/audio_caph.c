@@ -881,9 +881,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_FM_t *parm_FM =
 			    (BRCM_AUDIO_Param_FM_t *) arg_param;
-			/* use ARM2SP instance 1 for FM */
 			AUDCTRL_SetArm2spParam(parm_FM->fm_mix,
-					       VORENDER_ARM2SP_INSTANCE1);
+					       TRUE);
 		}
 		break;
 	case ACTION_AUD_SetPrePareParameters:

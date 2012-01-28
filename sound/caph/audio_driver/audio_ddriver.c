@@ -560,10 +560,9 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 				block_size,
 				(CSL_AUDRENDER_CB)
 					AUDIO_DRIVER_RenderDmaCallback,
-				aud_drv->stream_id);
-			csl_caph_arm2sp_set_param(
-				(UInt32)aud_drv->arm2sp_config.mixMode,
-				(aud_drv->arm2sp_config.instanceID));
+				aud_drv->stream_id,
+				aud_drv->arm2sp_config.mixMode);
+
 			/*start render*/
 			result_code = AUDCTRL_StartRender(aud_drv->stream_id);
 		}
@@ -1201,8 +1200,8 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 			aud_drv->bits_per_sample =
 			    pAudioConfig->bits_per_sample;
 			/* to decide on ARM2SP1 or ARM2SP2 */
-			aud_drv->arm2sp_config.instanceID =
-				pAudioConfig->instanceId;
+			/*aud_drv->arm2sp_config.instanceID =
+				pAudioConfig->instanceId;*/
 			aud_drv->arm2sp_config.mixMode =
 			    pAudioConfig->arm2sp_mixMode;
 			result_code = RESULT_OK;

@@ -154,7 +154,8 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 				    UInt32 numBlocks,
 				    UInt32 blockSize,
 				    CSL_AUDRENDER_CB csl_audio_render_cb,
-				    UInt32 streamID)
+				    UInt32 streamID,
+					int mixMode)
 {
 	CSL_CAPH_Render_Drv_t *audDrv = NULL;
 	CSL_CAPH_HWCTRL_STREAM_REGISTER_t stream;
@@ -201,6 +202,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 	stream.pBuf2 = NULL;
 	stream.size = numBlocks * blockSize;
 	stream.dmaCB = AUDIO_DMA_CB;
+	stream.mixMode = mixMode;
 	audDrv->pathID = csl_caph_hwctrl_RegisterStream(&stream);
 	if (audDrv->pathID == 0) {
 		audio_xassert(0, audDrv->pathID);

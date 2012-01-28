@@ -174,6 +174,7 @@ struct __CSL_STREAM_REGISTER_t {
 	UInt8 *pBuf2;
 	UInt32 size;
 	CSL_CAPH_DMA_CALLBACK_p dmaCB;
+	int mixMode;
 };
 #define CSL_CAPH_HWCTRL_STREAM_REGISTER_t struct __CSL_STREAM_REGISTER_t
 
@@ -289,6 +290,10 @@ struct __CSL_CAPH_HWConfig_Table_t {
 	/*0 for source, 1 for sink, 2 for sink2 */
 	AUDDRV_PATH_Enum_t audiohPath[MAX_SINK_NUM + 1];
 	audio_config_t audiohCfg[MAX_SINK_NUM + 1];
+
+	int arm2sp_instance;
+	CAPH_LIST_t arm2sp_path;
+	int arm2sp_mixmode;
 };
 #define CSL_CAPH_HWConfig_Table_t struct __CSL_CAPH_HWConfig_Table_t
 
@@ -650,12 +655,12 @@ void csl_caph_hwctrl_SetBTMode(int mode);
 
 /****************************************************************************
 *
-*  Function Name: csl_caph_arm2sp_set_mixMode
+*  Function Name: csl_caph_arm2sp_set_fm_mixmode
 *
-*  Description: control the MixMode for ARM2SP feature
+*  Description: control the MixMode for ARM2SP FM feature
 *
 ****************************************************************************/
-void csl_caph_arm2sp_set_param(UInt32 mixMode, UInt32 instanceId);
+void csl_caph_arm2sp_set_fm_mixmode(int mixMode);
 
 void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus);
 

@@ -585,12 +585,12 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 *  @brief  Set Arm2Sp Parameter
 *
 *  @param  mixMode        For selection of mixing with voice DL, UL, or both
-*  @param  instanceId     Instance ID: 1 for arm2sp1, 2 for arm2sp2
+*  @param  is_fm          is this for FM
 *
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_SetArm2spParam(UInt32 mixMode, UInt32 instanceId);
+void AUDCTRL_SetArm2spParam(UInt32 mixMode, Boolean is_fm);
 
 /********************************************************************
 *  @brief  Configure fm/pcm port

@@ -83,6 +83,7 @@ Result_t csl_audio_render_deinit(UInt32 streamID);
 *  @param   blockSize (in) size per each block
 *  @param   csl_audio_render_cb (in) cb registered by render driver
 *  @param   streamID (in) stream id of this stream
+*  @param   mixMode (in) arm2sp mix mode
 *
 *  @return Result_t status
 *****************************************************************************/
@@ -93,7 +94,8 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 				    UInt32 numBlocks,
 				    UInt32 blockSize,
 				    CSL_AUDRENDER_CB csl_audio_render_cb,
-				    UInt32 streamID);
+				    UInt32 streamID,
+					int mixMode);
 
 /**
 *

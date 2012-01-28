@@ -2429,10 +2429,10 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 * Description:   Set Arm2Sp Parameter
 *
 ****************************************************************************/
-/*move this to driver*/
-void AUDCTRL_SetArm2spParam(UInt32 mixMode, UInt32 instanceId)
+void AUDCTRL_SetArm2spParam(UInt32 mixMode, Boolean is_fm)
 {
-	csl_caph_arm2sp_set_param(mixMode, instanceId);
+	if (is_fm)
+		csl_caph_arm2sp_set_fm_mixmode((int)mixMode);
 }
 
 /****************************************************************************

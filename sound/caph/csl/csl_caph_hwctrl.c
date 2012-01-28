@@ -236,8 +236,6 @@ static void csl_caph_hwctrl_tdm_config(
  * local function definitions
  ******************************************************************************/
 
-CAPH_LIST_t arm2spPath = LIST_DMA_SRC_DMA;
-
 enum VORENDER_ARM2SP_INSTANCE_e {
 	VORENDER_ARM2SP_INSTANCE1,
 	VORENDER_ARM2SP_INSTANCE2,
@@ -247,22 +245,23 @@ enum VORENDER_ARM2SP_INSTANCE_e {
 #define VORENDER_ARM2SP_INSTANCE_e enum VORENDER_ARM2SP_INSTANCE_e
 
 struct ARM2SP_CONFIG_t {
-	UInt32 instanceID; /*arm2sp instance*/
 	AUDIO_SAMPLING_RATE_t srOut;
 	UInt32 dmaBytes;
 	UInt32 numFramesPerInterrupt;
-	CAPH_LIST_t path;
 	CAPH_SWITCH_TRIGGER_e trigger;
 	AUDIO_NUM_OF_CHANNEL_t chNumOut;
 	UInt16 arg0;
 	UInt32 mixMode;
 	UInt32 playbackMode;
+	Boolean started;
+	Boolean used;
+	CSL_CAPH_DMA_CHNL_e dma_ch;
 };
 
 #define ARM2SP_CONFIG_t struct ARM2SP_CONFIG_t
 
-ARM2SP_CONFIG_t arm2spCfg;
-
+static ARM2SP_CONFIG_t arm2spCfg[VORENDER_ARM2SP_INSTANCE_TOTAL];
+static int fm_mix_mode;
 static CSL_I2S_CONFIG_t fmCfg;
 static csl_pcm_config_device_t pcmCfg;
 static csl_pcm_config_tx_t pcmTxCfg;
@@ -280,8 +279,6 @@ static char *blockName[CAPH_TOTAL] = {
 
 #include "csl_arm2sp.h"
 #include "csl_dsp.h"
-
-static UInt8 arm2sp_start[2] = {FALSE};
 
 #if defined(CONFIG_BCM_MODEM)
 static void ARM2SP_DMA_Req(UInt16 bufferPosition)
@@ -310,94 +307,198 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 {
 #if defined(CONFIG_BCM_MODEM)
 	CSL_CAPH_HWConfig_Table_t *path;
+	ARM2SP_CONFIG_t *p_arm2sp;
 
 	if (!pathID)
 		return;
 	path = &HWConfig_Table[pathID-1];
 
+	if (path->arm2sp_instance < 0)
+		return;
+
+	p_arm2sp = &arm2spCfg[path->arm2sp_instance];
+
 	/*ARM2SP_INPUT_SIZE*2;*/
-	arm2spCfg.dmaBytes = csl_dsp_arm2sp_get_size(AUDIO_SAMPLING_RATE_8000);
-	arm2spCfg.path = arm2spPath;
-	arm2spCfg.srOut = path->src_sampleRate;
-	arm2spCfg.chNumOut = path->chnlNum;
-	if (arm2spCfg.path == LIST_DMA_DMA || arm2spCfg.path == LIST_SW_DMA) {
+	p_arm2sp->dmaBytes = csl_dsp_arm2sp_get_size(AUDIO_SAMPLING_RATE_8000);
+	p_arm2sp->srOut = path->src_sampleRate;
+	p_arm2sp->chNumOut = path->chnlNum;
+	if (path->arm2sp_path == LIST_DMA_DMA
+		|| path->arm2sp_path == LIST_SW_DMA) {
 		if (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000) {
 			/*mono uses half size, frame size is 20ms.*/
-			arm2spCfg.numFramesPerInterrupt =
+			p_arm2sp->numFramesPerInterrupt =
 				csl_dsp_arm2sp_get_size
 				(AUDIO_SAMPLING_RATE_48000)/(48*20*8);
-			arm2spCfg.trigger = CAPH_48KHZ;
-			arm2spCfg.dmaBytes = csl_dsp_arm2sp_get_size
+			p_arm2sp->trigger = CAPH_48KHZ;
+			p_arm2sp->dmaBytes = csl_dsp_arm2sp_get_size
 				(AUDIO_SAMPLING_RATE_48000);
 			if (path->chnlNum == AUDIO_CHANNEL_MONO &&
 					path->bitPerSample == 16) {
 				/*switch does not differentiate 16bit mono from
 				 * 16bit stereo, hence reduce the clock.
 				 */
-				arm2spCfg.trigger = CAPH_24KHZ;
+				p_arm2sp->trigger = CAPH_24KHZ;
 				/*For 48K, dsp only supports 2*20ms
 				 * ping-pong buffer, stereo or mono
 				 */
-				arm2spCfg.dmaBytes >>= 1;
+				p_arm2sp->dmaBytes >>= 1;
 			}
 		} else if (path->src_sampleRate == AUDIO_SAMPLING_RATE_16000) {
-			arm2spCfg.numFramesPerInterrupt = 2;
-			arm2spCfg.trigger = CAPH_16KHZ;
+			p_arm2sp->numFramesPerInterrupt = 2;
+			p_arm2sp->trigger = CAPH_16KHZ;
 			if (path->chnlNum == AUDIO_CHANNEL_MONO &&
 					path->bitPerSample == 16)
-				arm2spCfg.trigger = CAPH_8KHZ;
+				p_arm2sp->trigger = CAPH_8KHZ;
 		} else if (path->src_sampleRate == AUDIO_SAMPLING_RATE_8000) {
-			arm2spCfg.numFramesPerInterrupt = 4;
-			arm2spCfg.trigger = CAPH_8KHZ;
+			p_arm2sp->numFramesPerInterrupt = 4;
+			p_arm2sp->trigger = CAPH_8KHZ;
 
 			if (path->chnlNum == AUDIO_CHANNEL_MONO &&
 					path->bitPerSample == 16)
 
-				arm2spCfg.trigger = CAPH_4KHZ;
+				p_arm2sp->trigger = CAPH_4KHZ;
 		}
-	} else if (arm2spCfg.path == LIST_DMA_MIX_DMA) {
+	} else if (path->arm2sp_path == LIST_DMA_MIX_DMA) {
 		/*mono uses half size, frame size is 20ms.*/
-		arm2spCfg.numFramesPerInterrupt =
+		p_arm2sp->numFramesPerInterrupt =
 			csl_dsp_arm2sp_get_size
 			(AUDIO_SAMPLING_RATE_48000)/(48*20*8);
-		arm2spCfg.srOut = AUDIO_SAMPLING_RATE_48000;
+		p_arm2sp->srOut = AUDIO_SAMPLING_RATE_48000;
 		/*ARM2SP_INPUT_SIZE_48K;*/
-		arm2spCfg.dmaBytes = csl_dsp_arm2sp_get_size
+		p_arm2sp->dmaBytes = csl_dsp_arm2sp_get_size
 			(AUDIO_SAMPLING_RATE_48000)>>1;
-		arm2spCfg.chNumOut = AUDIO_CHANNEL_MONO;
-	} else if (arm2spCfg.path == LIST_DMA_SRC_DMA) {
-		arm2spCfg.numFramesPerInterrupt = 4;
-		arm2spCfg.srOut = AUDIO_SAMPLING_RATE_8000;
-		arm2spCfg.dmaBytes = csl_dsp_arm2sp_get_size
+		p_arm2sp->chNumOut = AUDIO_CHANNEL_MONO;
+	} else if (path->arm2sp_path == LIST_DMA_SRC_DMA) {
+		p_arm2sp->numFramesPerInterrupt = 4;
+		p_arm2sp->srOut = AUDIO_SAMPLING_RATE_8000;
+		p_arm2sp->dmaBytes = csl_dsp_arm2sp_get_size
 			(AUDIO_SAMPLING_RATE_8000); /*ARM2SP_INPUT_SIZE*2;*/
-		arm2spCfg.chNumOut = AUDIO_CHANNEL_MONO;
-	} else if (arm2spCfg.path == LIST_DMA_MIX_SRC_DMA) {
-		arm2spCfg.numFramesPerInterrupt = 4;
-		arm2spCfg.srOut = AUDIO_SAMPLING_RATE_8000;
-		arm2spCfg.dmaBytes = csl_dsp_arm2sp_get_size
+		p_arm2sp->chNumOut = AUDIO_CHANNEL_MONO;
+	} else if (path->arm2sp_path == LIST_DMA_MIX_SRC_DMA) {
+		p_arm2sp->numFramesPerInterrupt = 4;
+		p_arm2sp->srOut = AUDIO_SAMPLING_RATE_8000;
+		p_arm2sp->dmaBytes = csl_dsp_arm2sp_get_size
 			(AUDIO_SAMPLING_RATE_8000); /*ARM2SP_INPUT_SIZE*2;*/
-		arm2spCfg.chNumOut = AUDIO_CHANNEL_MONO;
+		p_arm2sp->chNumOut = AUDIO_CHANNEL_MONO;
 	}
+
+	if (path->source == CSL_CAPH_DEV_FM_RADIO)
+		p_arm2sp->mixMode = fm_mix_mode;
+	else
+		p_arm2sp->mixMode = path->arm2sp_mixmode;
+
+	if (p_arm2sp->mixMode == CSL_ARM2SP_VOICE_MIX_DL)
+		p_arm2sp->playbackMode = CSL_ARM2SP_PLAYBACK_DL;
+	else if (p_arm2sp->mixMode == CSL_ARM2SP_VOICE_MIX_UL)
+		p_arm2sp->playbackMode = CSL_ARM2SP_PLAYBACK_UL;
+	else if (p_arm2sp->mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
+		p_arm2sp->playbackMode = CSL_ARM2SP_PLAYBACK_BOTH;
+	else if (p_arm2sp->mixMode == CSL_ARM2SP_VOICE_MIX_NONE)
+		p_arm2sp->playbackMode = CSL_ARM2SP_PLAYBACK_DL;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_config_arm2sp path %d,"
+		"srOut %d, dmaBytes 0x%x, numFramesPerInt %d, trigger 0x%x\n",
+		pathID, (int)p_arm2sp->srOut,
+		(unsigned)p_arm2sp->dmaBytes,
+		(int)p_arm2sp->numFramesPerInterrupt,
+		(unsigned)p_arm2sp->trigger);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "chNumOut %d, arg0 0x%x,"
+		"mixMode %d, playbackMode %d,started %d,"
+		"used %d,dma %d\n",
+		p_arm2sp->chNumOut, p_arm2sp->arg0,
+		(int)p_arm2sp->mixMode,
+		(int)p_arm2sp->playbackMode,
+		p_arm2sp->started,
+		p_arm2sp->used, p_arm2sp->dma_ch);
 #endif
 }
 
-void csl_caph_arm2sp_set_param(UInt32 mixMode, UInt32 instanceId)
+static int csl_caph_obtain_arm2sp(void)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_arm2sp_set_Mode mixMode %d,"
-			"instanceId %d\r\n", (int)mixMode, (int)instanceId);
+	int i;
 
-	arm2spCfg.mixMode = mixMode;
+	for (i = 0; i < 2; i++) {
+		if (!arm2spCfg[i].used) {
+			arm2spCfg[i].used = TRUE;
+			break;
+		}
+	}
 
-	arm2spCfg.instanceID = instanceId;
+	if (i >= 2) {
+		audio_xassert(0, i);
+		i = -1;
+	}
 
-	if (mixMode == CSL_ARM2SP_VOICE_MIX_DL)
-		arm2spCfg.playbackMode = CSL_ARM2SP_PLAYBACK_DL;
-	else if (mixMode == CSL_ARM2SP_VOICE_MIX_UL)
-		arm2spCfg.playbackMode = CSL_ARM2SP_PLAYBACK_UL;
-	else if (mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
-		arm2spCfg.playbackMode = CSL_ARM2SP_PLAYBACK_BOTH;
-	else if (mixMode == CSL_ARM2SP_VOICE_MIX_NONE)/*for standalone testing*/
-		arm2spCfg.playbackMode = CSL_ARM2SP_PLAYBACK_DL;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_obtain_arm2sp %d\n", i);
+	return i;
+}
+
+static void csl_caph_start_arm2sp(int i)
+{
+	ARM2SP_CONFIG_t *p_arm2sp = &arm2spCfg[i];
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s %d, dma_ch %d\n",
+		__func__, i, p_arm2sp->dma_ch);
+
+	if (i == VORENDER_ARM2SP_INSTANCE1) {
+		CSL_ARM2SP_Init();
+		csl_arm2sp_set_arm2sp((UInt32) p_arm2sp->srOut,
+			(CSL_ARM2SP_PLAYBACK_MODE_t)p_arm2sp->playbackMode,
+			(CSL_ARM2SP_VOICE_MIX_MODE_t)p_arm2sp->mixMode,
+			p_arm2sp->numFramesPerInterrupt,
+			(p_arm2sp->chNumOut == AUDIO_CHANNEL_STEREO) ? 1 : 0,
+			0);
+	} else {
+		CSL_ARM2SP2_Init();
+		csl_arm2sp_set_arm2sp2((UInt32) p_arm2sp->srOut,
+			(CSL_ARM2SP_PLAYBACK_MODE_t)p_arm2sp->playbackMode,
+			(CSL_ARM2SP_VOICE_MIX_MODE_t)p_arm2sp->mixMode,
+			p_arm2sp->numFramesPerInterrupt,
+			(p_arm2sp->chNumOut == AUDIO_CHANNEL_STEREO) ? 1 : 0,
+			0);
+	}
+	p_arm2sp->started = TRUE;
+}
+
+static void csl_caph_release_arm2sp(int i)
+{
+	ARM2SP_CONFIG_t *p_arm2sp;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_release_arm2sp %d\n", i);
+	if (i >= 2) {
+		audio_xassert(0, i);
+		return;
+	}
+
+	p_arm2sp = &arm2spCfg[i];
+
+	if (i == VORENDER_ARM2SP_INSTANCE1)
+		csl_arm2sp_set_arm2sp((UInt32) p_arm2sp->srOut,
+				CSL_ARM2SP_PLAYBACK_NONE,
+				(CSL_ARM2SP_VOICE_MIX_MODE_t)
+				p_arm2sp->mixMode,
+				p_arm2sp->numFramesPerInterrupt,
+				(p_arm2sp->chNumOut ==
+				 AUDIO_CHANNEL_STEREO) ? 1 : 0,
+				0);
+	else if (i == VORENDER_ARM2SP_INSTANCE2)
+		csl_arm2sp_set_arm2sp2((UInt32) p_arm2sp->srOut,
+				CSL_ARM2SP_PLAYBACK_NONE,
+				(CSL_ARM2SP_VOICE_MIX_MODE_t)
+				p_arm2sp->mixMode,
+				p_arm2sp->numFramesPerInterrupt,
+				(p_arm2sp->chNumOut ==
+				 AUDIO_CHANNEL_STEREO) ? 1 : 0,
+				0);
+
+	memset(&arm2spCfg[i], 0, sizeof(arm2spCfg[0]));
+}
+
+void csl_caph_arm2sp_set_fm_mixmode(int mix_mode)
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s mix_mode %d --> %d\n",
+		__func__, fm_mix_mode, mix_mode);
+
+	fm_mix_mode = mix_mode;
 }
 
 /*
@@ -456,31 +557,16 @@ static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 {
 	/*when system is busy, dma cb may come after stop is issued.*/
-	if (!arm2sp_start[arm2spCfg.instanceID] &&
-			arm2spCfg.playbackMode != CSL_ARM2SP_PLAYBACK_NONE) {
+	/*Log_DebugPrintf(LOGID_SOC_AUDIO,
+		 "AUDIO_DMA_CB2:: chnl %d arm2sp dma_ch %d:%d, started %d:%d",
+		 chnl, arm2spCfg[0].dma_ch, arm2spCfg[1].dma_ch,
+		 arm2spCfg[0].started, arm2spCfg[1].started);*/
 
-		if (arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1) {
-			CSL_ARM2SP_Init();
-			csl_arm2sp_set_arm2sp((UInt32) arm2spCfg.srOut,
-			(CSL_ARM2SP_PLAYBACK_MODE_t)arm2spCfg.playbackMode,
-			(CSL_ARM2SP_VOICE_MIX_MODE_t)arm2spCfg.mixMode,
-			arm2spCfg.numFramesPerInterrupt,
-			(arm2spCfg.chNumOut == AUDIO_CHANNEL_STEREO) ? 1 : 0,
-			0);
+	if (arm2spCfg[0].dma_ch == chnl && !arm2spCfg[0].started)
+		csl_caph_start_arm2sp(0);
+	else if (arm2spCfg[1].dma_ch == chnl && !arm2spCfg[1].started)
+		csl_caph_start_arm2sp(1);
 
-		} else if (arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE2) {
-			CSL_ARM2SP2_Init();
-			csl_arm2sp_set_arm2sp2((UInt32) arm2spCfg.srOut,
-			(CSL_ARM2SP_PLAYBACK_MODE_t)arm2spCfg.playbackMode,
-			(CSL_ARM2SP_VOICE_MIX_MODE_t)arm2spCfg.mixMode,
-			arm2spCfg.numFramesPerInterrupt,
-			(arm2spCfg.chNumOut == AUDIO_CHANNEL_STEREO) ? 1 : 0,
-			0);
-}
-
-		arm2sp_start[arm2spCfg.instanceID] = TRUE;
-
-	}
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) &
 			CSL_CAPH_READY_LOW) == CSL_CAPH_READY_NONE) {
 		/*_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
@@ -1002,15 +1088,6 @@ static void csl_caph_obtain_blocks
 
 		if (!path->dma[sinkNo][1] && path->sink[sinkNo] ==
 				CSL_CAPH_DEV_DSP_throughMEM && offset > 0) {
-			/*dmaCH = CSL_CAPH_DMA_CH15;*/
-
-			/*if(arm2spCfg.instanceID==2)
-			 * dmaCH = CSL_CAPH_DMA_CH16;
-			 */
-
-			/*path->dmaCH2 =
-			 *csl_caph_dma_obtain_given_channel(dmaCH);
-			 */
 			path->dma[sinkNo][1] = csl_caph_dma_obtain_channel();
 			blockIdx = 1;
 		}
@@ -1276,6 +1353,9 @@ static void csl_caph_obtain_blocks
 				(AUDIO_NUM_OF_CHANNEL_t) 2;
 		path->audiohPath[sinkNo+1] = csl_caph_get_audio_path(sink);
 	}
+
+	if (path->arm2sp_path)
+		path->arm2sp_instance = csl_caph_obtain_arm2sp();
 }
 
 
@@ -1310,28 +1390,7 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 		path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM) ||
 		(path->source == CSL_CAPH_DEV_FM_RADIO &&
 		 path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM)) {
-		if (arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1)
-			csl_arm2sp_set_arm2sp((UInt32) arm2spCfg.srOut,
-					CSL_ARM2SP_PLAYBACK_NONE,
-					(CSL_ARM2SP_VOICE_MIX_MODE_t)
-					arm2spCfg.mixMode,
-					arm2spCfg.numFramesPerInterrupt,
-					(arm2spCfg.chNumOut ==
-					 AUDIO_CHANNEL_STEREO) ? 1 : 0,
-					0);
-		else if (arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE2)
-			csl_arm2sp_set_arm2sp2((UInt32) arm2spCfg.srOut,
-					CSL_ARM2SP_PLAYBACK_NONE,
-					(CSL_ARM2SP_VOICE_MIX_MODE_t)
-					arm2spCfg.mixMode,
-					arm2spCfg.numFramesPerInterrupt,
-					(arm2spCfg.chNumOut ==
-					 AUDIO_CHANNEL_STEREO) ? 1 : 0,
-					0);
-		arm2sp_start[arm2spCfg.instanceID] = FALSE; /*reset*/
-
-		if (arm2sp_start[0] == FALSE && arm2sp_start[1] == FALSE)
-			memset(&arm2spCfg, 0, sizeof(arm2spCfg));
+		csl_caph_release_arm2sp(path->arm2sp_instance);
 	}
 #endif
 	for (i = startOffset; i < MAX_PATH_LEN; i++) {
@@ -1389,7 +1448,8 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 			fmTxRunning = FALSE;
 			if (sspTDM_enabled) {
 				if (!csl_caph_hwctrl_ssp_running())
-					csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
+					csl_pcm_enable_scheduler(pcmHandleSSP,
+					FALSE);
 			} else {
 			if (fmRxRunning == FALSE)
 				csl_sspi_enable_scheduler(fmHandleSSP, 0);
@@ -1398,13 +1458,15 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 				path->source == CSL_CAPH_DEV_FM_RADIO) {
 			if (path->sinkCount == 1) {
 				if (sspTDM_enabled)
-					csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
+					csl_pcm_stop_rx(pcmHandleSSP,
+					CSL_PCM_CHAN_RX1);
 				else
 					csl_i2s_stop_rx(fmHandleSSP);
 				fmRxRunning = FALSE;
 			if (sspTDM_enabled) {
 				if (!csl_caph_hwctrl_ssp_running())
-					csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
+					csl_pcm_enable_scheduler(pcmHandleSSP,
+					FALSE);
 			} else {
 				if (fmTxRunning == FALSE)
 					csl_sspi_enable_scheduler
@@ -1591,8 +1653,9 @@ static void csl_caph_config_dma(CSL_CAPH_PathID
 		 * the physical address of AP SM
 		 */
 		dmaCfg.mem_addr = (void *)(csl_dsp_arm2sp_get_phy_base_addr());
-		dmaCfg.mem_size = arm2spCfg.dmaBytes;
+		dmaCfg.mem_size = arm2spCfg[path->arm2sp_instance].dmaBytes;
 		dmaCfg.dmaCB = AUDIO_DMA_CB2;
+		arm2spCfg[path->arm2sp_instance].dma_ch = dmaCfg.dma_ch;
 #endif
 	} else if (path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY
 			&& blockPathIdx) { /*dma to mem*/
@@ -1767,7 +1830,7 @@ static void csl_caph_config_sw
 				&& path->block[sinkNo][blockPathIdx+1]
 				== CAPH_CFIFO) {
 			/*is this arm2sp direct?*/
-			swCfg->trigger = arm2spCfg.trigger;
+			swCfg->trigger = arm2spCfg[path->arm2sp_instance].trigger;
 		} else if (path->block[sinkNo][blockPathIdx-1] == CAPH_SRC) {
 			/*if src is ahead, use src tap as trigger*/
 			blockIdxTmp = path->blockIdx[sinkNo][blockPathIdx-1];
@@ -1884,6 +1947,9 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 	if (!pathID)
 		return;
 	path = &HWConfig_Table[pathID-1];
+	/*do it before csl_caph_config_sw for trigger*/
+	if (path->arm2sp_path)
+		csl_caph_config_arm2sp(path->pathID);
 	while (1) {
 		block = path->block[sinkNo][i];
 
@@ -2186,22 +2252,10 @@ static void csl_caph_start_blocks
 			(path->source == CSL_CAPH_DEV_FM_RADIO &&
 			 path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM)) {
 #if defined(CONFIG_BCM_MODEM)
-		if (arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE1) {
+		if (path->arm2sp_instance == VORENDER_ARM2SP_INSTANCE1) {
 			CSL_RegisterARM2SPRenderStatusHandler
 				((void *)&ARM2SP_DMA_Req);
-			/*don't start immediately,start the
-			 * ARM2SP after the 1st DMA interrrupt
-			 */
-			/*
-			   CSL_ARM2SP_Init();
-			   csl_arm2sp_set_arm2sp((UInt32) arm2spCfg.srOut,
-			   (CSL_ARM2SP_PLAYBACK_MODE_t)arm2spCfg.playbackMode,
-			   (CSL_ARM2SP_VOICE_MIX_MODE_t)arm2spCfg.mixMode,
-			   arm2spCfg.numFramesPerInterrupt,
-			   (arm2spCfg.chNumOut == AUDIO_CHANNEL_STEREO)? 1 : 0,
-			   0 );
-			   */
-		} else if (arm2spCfg.instanceID == VORENDER_ARM2SP_INSTANCE2) {
+		} else if (path->arm2sp_instance == VORENDER_ARM2SP_INSTANCE2) {
 			CSL_RegisterARM2SP2RenderStatusHandler
 				((void *)&ARM2SP2_DMA_Req);
 		}
@@ -3198,9 +3252,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config,
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
 			" *** FM playback to EP/HS via arm2sp"
 			"(during voice call) *****\r\n"));
-		arm2spPath = LIST_SW_DMA;
-		list = arm2spPath;
-		csl_caph_config_arm2sp(path->pathID);
+		list = LIST_SW_DMA;
+		path->arm2sp_path = list;
 	} else if ((path->source == CSL_CAPH_DEV_BT_MIC) &&
 		(path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY)) {
 		if (path->snk_sampleRate == AUDIO_SAMPLING_RATE_8000
@@ -3331,16 +3384,15 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config,
 	} else if (path->source == CSL_CAPH_DEV_MEMORY &&
 		path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM) {
 		if (path->src_sampleRate == AUDIO_SAMPLING_RATE_44100)
-			arm2spPath = LIST_DMA_MIX_DMA;
+			list = LIST_DMA_MIX_DMA;
 			/*if(path->src_sampleRate==AUDIO_SAMPLING_RATE_44100
 			 * || path->src_sampleRate==AUDIO_SAMPLING_RATE_48000)
-			 * arm2spPath = LIST_DMA_MIX_SRC_DMA;
+			 * arm2sp_path = LIST_DMA_MIX_SRC_DMA;
 			 */
 		else
-			arm2spPath = LIST_DMA_DMA;
+			list = LIST_DMA_DMA;
 
-		list = arm2spPath;
-		csl_caph_config_arm2sp(path->pathID);
+		path->arm2sp_path = list;
 	}
 
 	if (list != LIST_NUM) {
@@ -3966,12 +4018,13 @@ CSL_CAPH_PathID csl_caph_hwctrl_RegisterStream(
 			HWConfig_Table[i].pBuf2 = stream->pBuf2;
 			HWConfig_Table[i].size = stream->size;
 			HWConfig_Table[i].dmaCB = stream->dmaCB;
+			HWConfig_Table[i].arm2sp_mixmode = stream->mixMode;
 
 			pathID = HWConfig_Table[i].pathID;
 			Log_DebugPrintf(LOGID_SOC_AUDIO,
-					"csl_caph_hwctrl_RegisterStream:"
-					"streamID = %d, pathID = %d,i = %d\r\n",
-					stream->streamID, pathID, i);
+				"csl_caph_hwctrl_RegisterStream:"
+				"streamID = %d, pathID = %d,i=%d,mixMode %d\n",
+				stream->streamID, pathID, i, stream->mixMode);
 			break;
 		}
 	}
