@@ -571,7 +571,57 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 
 static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 {
-	return -EFAULT;
+	UInt32 mask = 0;
+	RpcClientInfo_t *cInfo;
+	RpcIpc_PrivData_t *priv = filp->private_data;
+
+	if (!is_CP_running()) {
+	_DBG(RPC_TRACE("rpcipc_poll: Error - CP is not running\n"));
+	return POLLERR;
+	}
+
+	BUG_ON(!priv);
+
+	cInfo = gRpcClientList[priv->clientId];
+
+	if (!cInfo) {
+	_DBG(RPC_TRACE
+	("k:rpcipc_poll invalid clientID %d\n", priv->clientId));
+	return POLLERR;
+	}
+	//_DBG(RPC_TRACE("k:rpcipc_poll() start client=%d\n", priv->clientId));
+
+	//if data exist already, just return
+	spin_lock(&cInfo->mLock);
+	if (!list_empty(&cInfo->mQ.mList)) {
+	_DBG(RPC_TRACE("k:rpcipc_poll() precheck list not empty\n"));
+	mask |= (POLLIN | POLLRDNORM);
+	spin_unlock(&cInfo->mLock);
+	return mask;
+	}
+	spin_unlock(&cInfo->mLock);
+
+	//wait till data is ready
+	//_DBG(RPC_TRACE("k:rpcipc_poll() begin wait %x\n", (int)jiffies));
+	poll_wait(filp, &cInfo->mWaitQ, wait);
+	//wait_event_interruptible(&cInfo->mWaitQ, gAvailData);
+
+	// wait_event_interruptible_timeout(cInfo->mWaitQ, gAvailData, 10000);
+
+	//_DBG(RPC_TRACE("k:rpcipc_poll() end wait %x\n", (int)jiffies));
+
+	spin_lock(&cInfo->mLock);
+	if (!list_empty(&cInfo->mQ.mList)) {
+	_DBG(RPC_TRACE("rpcipc_poll() list not empty\n"));
+	mask |= (POLLIN | POLLRDNORM);
+	}
+	spin_unlock(&cInfo->mLock);
+	
+	cInfo->availData = 0;
+
+	//_DBG(RPC_TRACE("k:rpcipc_poll() mask=%x avail=%d\n", (int)mask, (int)(mask & (POLLIN | POLLRDNORM))?1:0 ));
+
+	return mask;
 }
 
 static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
