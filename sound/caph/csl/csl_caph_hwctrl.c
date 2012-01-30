@@ -3893,7 +3893,8 @@ void csl_caph_hwctrl_ChangeSampleRate(CSL_CAPH_PathID pathID,
 				|| (path->srcmRoute[0][0].inSampleRate ==
 					CSL_CAPH_SRCMIN_16KHZ))
 			&& (path->srcmRoute[0][0].outSampleRate ==
-				CSL_CAPH_SRCMIN_48KHZ)) {
+				csl_caph_srcmixer_samplerate_mapping(
+                    CSL_CAPH_SRCMIN_48KHZ))) {
 		if (path->srcmRoute[0][0].inSampleRate != sampleRate) {
 			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
 					"csl_caph_hwctrl_ChangeSampleRate"
@@ -3905,9 +3906,11 @@ void csl_caph_hwctrl_ChangeSampleRate(CSL_CAPH_PathID pathID,
 				(path->srcmRoute[0][0]);
 		}
 	} else if (((path->srcmRoute[0][0].outSampleRate ==
-					CSL_CAPH_SRCMIN_8KHZ)
+					csl_caph_srcmixer_samplerate_mapping(
+                        CSL_CAPH_SRCMIN_8KHZ))
 				|| (path->srcmRoute[0][0].outSampleRate ==
-					CSL_CAPH_SRCMIN_16KHZ))
+					csl_caph_srcmixer_samplerate_mapping(
+                        CSL_CAPH_SRCMIN_16KHZ)))
 			&& (path->srcmRoute[0][0].inSampleRate ==
 				CSL_CAPH_SRCMIN_48KHZ)) {
 		if (path->srcmRoute[0][0].outSampleRate !=

@@ -588,6 +588,14 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 #endif
 		}
 
+#if !defined(USE_NEW_AUDIO_PARAM)
+		AUDDRV_SetAudioMode(mode);
+#else
+		mode = GetAudioMode();
+        mode %= AUDIO_MODE_NUMBER;
+		AUDDRV_SetAudioMode(mode, audio_app);
+#endif
+	
 		if (AUDDRV_IsCall16K(GetAudioMode()))
 			AUDDRV_Telephony_ChangeSampleRate(
 				AUDIO_SAMPLING_RATE_16000);
@@ -595,12 +603,6 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 			AUDDRV_Telephony_ChangeSampleRate(
 				AUDIO_SAMPLING_RATE_8000);
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-		AUDDRV_SetAudioMode(mode);
-#else
-		mode = GetAudioMode();
-		AUDDRV_SetAudioMode(mode, audio_app);
-#endif
 		/* AUDDRV_Enable_Output (AUDDRV_VOICE_OUTPUT, speaker, TRUE,
 		   AUDIO_SAMPLING_RATE_8000); */
 #if defined(ENABLE_DMA_VOICE)
