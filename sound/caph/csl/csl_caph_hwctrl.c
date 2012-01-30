@@ -75,7 +75,6 @@
 /****************************************************************************
  * global variable definitions
  ****************************************************************************/
-extern CHAL_HANDLE lp_handle;
 
 /****************************************************************************
  *                         L O C A L   S E C T I O N
@@ -157,6 +156,7 @@ static Boolean isSTIHF = FALSE;
 static BT_MODE_t bt_mode = BT_MODE_NB;
 static Boolean sClkCurEnabled = FALSE;
 static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
+static CHAL_HANDLE lp_handle;
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -1489,9 +1489,10 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 		if (path->block[sinkNo][i] == CAPH_SRC ||
 				path->block[sinkNo][i] == CAPH_MIXER) {
 			blockIdx = path->blockIdx[sinkNo][i];
-			if (path->srcmRoute[sinkNo][blockIdx].inChnl !=
-					CSL_CAPH_SRCM_INCHNL_NONE) {
-				if (path->sinkCount > 1 &&
+			if (path->srcmRoute[sinkNo][blockIdx].inChnl ==
+					CSL_CAPH_SRCM_INCHNL_NONE)
+				continue;
+			if (path->sinkCount > 1 &&
 				path->srcmRoute[sinkNo][blockIdx].inChnl ==
 				path->block_split_inCh)	{
 
@@ -1499,17 +1500,21 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 
 				if (path->sink[sinkNo] ==
 						CSL_CAPH_DEV_BT_SPKR) {
-				int k, l;
-				for (k = 0; k < MAX_SINK_NUM; k++) {
-					if (k != sinkNo) {
-					for (l = 0; l < MAX_BLOCK_NUM; l++) {
-					if (path->srcmRoute[k][l].outChnl ==
-						path->srcmRoute
-						[sinkNo][blockIdx].outChnl)
-						closeOutChnl = 0;
+					int k, l;
+					for (k = 0; k < MAX_SINK_NUM; k++) {
+						if (k == sinkNo)
+							continue;
+						for (l = 0; l < MAX_BLOCK_NUM;
+							l++) {
+							if (path->
+							srcmRoute[k][l].outChnl
+							== path->srcmRoute
+							[sinkNo][blockIdx].
+							outChnl)
+								closeOutChnl =
+								0;
+						}
 					}
-					}
-				}
 				}
 				if (closeOutChnl) {
 					csl_caph_hwctrl_closeSRCMixerOutput
@@ -1527,7 +1532,6 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 				path->pathID);
 				memset(&path->srcmRoute[sinkNo][blockIdx], 0,
 					sizeof(CSL_CAPH_SRCM_ROUTE_t));
-			}
 			}
 		}
 	}
@@ -2150,9 +2154,10 @@ static void csl_caph_start_blocks
 				break;
 #if defined(ENABLE_DMA_VOICE) && !defined(ENABLE_DMA_LOOPBACK)
 			if ((path->dma[sinkNo][i] < CSL_CAPH_DMA_CH12) ||
-				(path->dma[sinkNo][i] > CSL_CAPH_DMA_CH14))
+				(path->dma[sinkNo][i] > CSL_CAPH_DMA_CH14)) {
+#else
+			if (1) {
 #endif
-			{
 				if (!(path->sinkCount > 1 &&
 				sinkNo == 0 && i == 0)) {
 					/*Don't need to start the DMA again
@@ -2180,11 +2185,11 @@ static void csl_caph_start_blocks
 		|| path->source == CSL_CAPH_DEV_BT_MIC) {
 		if (!pcmRxRunning && !pcmTxRunning) {
 #if !defined(ENABLE_DMA_VOICE)
-		if ((path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
-			&& path->source == CSL_CAPH_DEV_BT_MIC)
-			|| (path->source == CSL_CAPH_DEV_DSP)
-			|| (path->sink[sinkNo] == CSL_CAPH_DEV_DSP))
-			csl_caph_intc_enable_pcm_intr
+			if ((path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
+				&& path->source == CSL_CAPH_DEV_BT_MIC)
+				|| (path->source == CSL_CAPH_DEV_DSP)
+				|| (path->sink[sinkNo] == CSL_CAPH_DEV_DSP))
+				csl_caph_intc_enable_pcm_intr
 				(CSL_CAPH_DSP, sspidPcmUse);
 #endif
 			if ((path->source == CSL_CAPH_DEV_DSP) ||
@@ -3148,7 +3153,8 @@ void csl_caph_hwctrl_init(void)
 #endif
 	csl_caph_srcmixer_init
 		(addr.srcmixer_baseAddr, (UInt32)caph_intc_handle);
-	csl_caph_audioh_init(addr.audioh_baseAddr, addr.sdt_baseAddr);
+	lp_handle = csl_caph_audioh_init(addr.audioh_baseAddr,
+		addr.sdt_baseAddr);
 
 	csl_caph_ControlHWClock(FALSE);
 	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
@@ -3901,7 +3907,7 @@ void csl_caph_hwctrl_ChangeSampleRate(CSL_CAPH_PathID pathID,
 					CSL_CAPH_SRCMIN_16KHZ))
 			&& (path->srcmRoute[0][0].outSampleRate ==
 				csl_caph_srcmixer_samplerate_mapping(
-                    CSL_CAPH_SRCMIN_48KHZ))) {
+			CSL_CAPH_SRCMIN_48KHZ))) {
 		if (path->srcmRoute[0][0].inSampleRate != sampleRate) {
 			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
 					"csl_caph_hwctrl_ChangeSampleRate"
@@ -3914,10 +3920,10 @@ void csl_caph_hwctrl_ChangeSampleRate(CSL_CAPH_PathID pathID,
 		}
 	} else if (((path->srcmRoute[0][0].outSampleRate ==
 					csl_caph_srcmixer_samplerate_mapping(
-                        CSL_CAPH_SRCMIN_8KHZ))
+			CSL_CAPH_SRCMIN_8KHZ))
 				|| (path->srcmRoute[0][0].outSampleRate ==
 					csl_caph_srcmixer_samplerate_mapping(
-                        CSL_CAPH_SRCMIN_16KHZ)))
+			CSL_CAPH_SRCMIN_16KHZ)))
 			&& (path->srcmRoute[0][0].inSampleRate ==
 				CSL_CAPH_SRCMIN_48KHZ)) {
 		if (path->srcmRoute[0][0].outSampleRate !=
