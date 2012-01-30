@@ -114,7 +114,6 @@ static int isp_open(struct inode *inode, struct file *filp)
 
 	init_completion(&dev->irq_sem);
 
-	enable_isp_clock();
 	ret =
 	    pi_mgr_dfs_add_request(&isp_dfs_node, "isp", PI_MGR_PI_ID_MM,
 				   PI_MGR_DFS_MIN_VALUE);
@@ -123,6 +122,8 @@ static int isp_open(struct inode *inode, struct file *filp)
 		       __func__);
 		goto err;
 	}
+
+	enable_isp_clock();
 
 	ret =
 	    request_irq(IRQ_ISP, isp_isr, IRQF_DISABLED | IRQF_SHARED,
