@@ -98,10 +98,6 @@ enum pm8921_usb_debounce_time {
  *			VBAT_THERM goes below 35% of VREF_THERM, if low the
  *			battery will be considered hot when VBAT_THERM goes
  *			below 25% of VREF_THERM. Hardware defaults to low.
- * @max_current_dcp:	the max current to draw from a DCP charger. The usb
- *			standard states that a DCP can support up to 1500mA but
- *			not all chargers can support it. This is to restrict
- *			the current drawn from DCP.
  */
 struct pm8921_charger_platform_data {
 	struct pm8xxx_charger_core_data	charger_cdata;
@@ -133,7 +129,6 @@ struct pm8921_charger_platform_data {
 	int				thermal_levels;
 	enum pm8921_chg_cold_thr	cold_thr;
 	enum pm8921_chg_hot_thr		hot_thr;
-	int				max_current_dcp;
 };
 
 enum pm8921_charger_source {
