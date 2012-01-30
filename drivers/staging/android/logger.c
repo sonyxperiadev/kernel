@@ -610,7 +610,7 @@ static const struct file_operations logger_fops = {
  * LONG_MAX minus LOGGER_ENTRY_MAX_LEN.
  */
 #define DEFINE_LOGGER_DEVICE(VAR, NAME, SIZE) \
-static unsigned char _buf_ ## VAR[SIZE]; \
+unsigned char _buf_ ## VAR[SIZE]; \
 static struct logger_log VAR = { \
 	.buffer = _buf_ ## VAR, \
 	.misc = { \

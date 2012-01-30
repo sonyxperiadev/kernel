@@ -157,6 +157,175 @@ enum cdebugger_upload_cause_t cdebugger_upload_cause;
 
 struct cdebugger_fault_status_t cdebugger_fault_status;
 
+struct T_RAMDUMP_BLOCK {
+	unsigned int mem_start;
+	unsigned int mem_size;
+	/* 0xFFFFFFFF means stand-alone ramdump block */
+	unsigned int buffer_in_main;
+	char name[8];		/* one of names must be "MAIN" */
+};
+
+struct BCMLOG_Fifo_t {
+	unsigned char		*buf_ptr ;			///< the buffer
+	unsigned long		 buf_sz ;			///< buffer size
+	unsigned long		 idx_read ;			///< index of first data byte
+	unsigned long		 idx_write ;			///< index of first free byte
+};
+
+extern struct BCMLOG_Fifo_t g_fifo;
+
+const char linkSignature[120] = "Link Signature:  LINK_SIGNATURE";
+const char decoder_version[] = {"!!! SDL decoder: hspa_11_11_22.zip"};
+const unsigned int num_of_ramdumps = 1;
+const unsigned int mmu_unit_size = (1<< PAGE_SHIFT);
+struct T_RAMDUMP_BLOCK ramdump_list[16] = {
+{PHYS_OFFSET, 0x20000000, 0xFFFFFFFF, "MAIN"},
+};
+
+static struct TLV_android {
+	unsigned char type;
+	unsigned char name[30];
+	unsigned int length;
+	unsigned char *buf;
+};
+
+extern unsigned char _buf_log_main[512*1024];
+extern unsigned char _buf_log_radio[256*1024];
+extern unsigned char _buf_log_events[256*1024];
+extern unsigned char _buf_log_system[256*1024];
+extern char *log_buf;
+extern int log_buf_len;
+#define LOG_BUFFER	1
+
+static struct TLV_android main_log = {
+	.type	=	LOG_BUFFER,
+	.name	=	"android_main_log",
+	.length	=	512*1024,
+};
+
+static struct TLV_android radio_log = {
+	.type	=	LOG_BUFFER,
+	.name	=	"android_radio_log",
+	.length	=	256*1024,
+};
+
+static struct TLV_android events_log = {
+	.type	=	LOG_BUFFER,
+	.name	=	"android_events_log",
+	.length	=	256*1024,
+};
+
+static struct TLV_android system_log = {
+	.type	=	LOG_BUFFER,
+	.name	=	"android_system_log",
+	.length	=	256*1024,
+};
+
+void *log_tx_param[] __aligned(8) =
+{
+	(void *)0x4150FEFF,
+	(void *)0x7F576656,	/* begin flag */
+	0,	/* (void *)&log_sio_tx_buffer[0], */	// log_tx_buf, hard-coded by compiler, no SW initialization needed
+	0,	/* (void *)LOG_TX_SIZE, */			// log_tx_buf_size, hard-coded by compiler, no SW initialization needed
+	0,					// log_wr_index
+	0,					// log_rd_index
+	0,	/* (void *)&sdltrace_q, */
+	(void *)linkSignature,
+	0,
+	0,					// sl1r_versionString
+	0,					// DSP_version,
+	(void *)decoder_version,
+	0,					// ts_assert_begin, filled by asserting()
+	0,					// expr passed to asserting()
+	0,					// file passed to asserting()
+	0,					// line passed to asserting()
+	0,					// value passed to asserting()
+	0,					// his_log_switch filled by asserting()
+	0,	/* (void *)&taskmempool, */
+	(void *)&mmu_unit_size,
+	0,	/* (void *)&task_his[0], */
+	0,	/* (void *)&int_his[0], */
+	0,	/* (void *)&task_int_total, */
+	0,	/* (void *)&osheap_history[0], */
+	0,	/* (void *)&osheap_history_size, */
+	0,	/* &wtt_log_buffer[0], */
+	0,	/* WTT_LOG_BUFFER_SIZE, */
+	0,	/* &wtt_log_read_idx, */
+	0,	/* &wtt_log_write_idx, */
+	0,	/*(void *)&sl1r_buf, */         // Legacy code commented  H.Luo
+	0,	/*(void *)sizeof(sl1r_buf), */  // Legacy code commented  H.Luo
+	0,	/* (void *)&spinner_coredump_buffer[0], */
+	0,	/* (void *)&spinner_coredump_length, */
+	// Debug information version 0 ends here
+	(void *)5,	// Debug information version number
+	(void *)&cdebugger_fault_status,	// for backward compatibility//
+	0, //(void *)&TCD_Current_Thread,
+	0, //(void *)&TCD_System_Stack,
+	0, //(void *)&TCD_Created_Tasks_List,
+	0, //(void *)&TCD_Created_HISRs_List,
+	0, //(void *)&TMD_Created_Timers_List,
+	0, //(void *)&TMD_Created_List_Protect,
+	0, //(void *)&IOD_Created_Drivers_List,
+	0, //(void *)&DMD_Created_Pools_List,
+	0, //(void *)&PMD_Created_Pools_List,
+	0, //(void *)&QUD_Created_Queues_List,
+	0, //(void *)&EVD_Created_Event_Groups_List,
+	0, //(void *)&MBD_Created_Mailboxes_List,
+	0, //(void *)&PID_Created_Pipes_List,
+	0, //(void *)&SMD_Created_Semaphores_List,
+	0,  //(void *)procmap_table,         // Legacy code commented  H.Luo
+	0,  //(void *)&procmap_table_size,   // Legacy code commented  H.Luo
+	0,  //(void *)sigmap_table,          // Legacy code commented  H.Luo
+	0,  //(void *)&sigmap_table_size,    // Legacy code commented  H.Luo
+	0,  //(void *)statemap_table,        // Legacy code commented  H.Luo
+	0,  //(void *)&statemap_table_size,  // Legacy code commented  H.Luo
+	// Debug information version 1 ends here
+	(void *)2, // MMU-based virtual memory data structure version
+	(void *)4, // memory debug data structure version
+	(void *)&ramdump_list[0],
+	(void *)&num_of_ramdumps,
+	// Debug information version 2 ends here, Hui Luo, 10/12/07
+	0,	/* (void *)&ossemaphore_history[0], */
+	0,	/* (void *)&ossemaphore_history_size, */
+	0,	/* (void *)&osqueue_history[0], */
+	0,	/* (void *)&osqueue_history_size, */
+	0,	/* (void *)&oseventgroup_history[0], */
+	0,	/* (void *)&oseventgroup_history_size, */
+	0,	/* (void *)&ostimer_history[0], */
+	0,	/* (void *)&ostimer_history_size, */
+	0,	/* (void *)dump_assert_log, */
+	0,	/* (void *)SIM_LOG_ADDR, */
+	0,	/* (void *)SIM_AP_DEBUG_DATA, */
+	0,	/* (void *)&sim_flag, */
+	0,	/* (void *)&ITCM_buffer[0], */
+	0,	/* (void *)ITCM_SIZE, */
+	0,	/* (void *)ITCM_MVA_BASE, */
+	0,	/* (void *)ITCM_PAGE_SIZE, */
+	0,	/* (void *)ITCM_VPAGE_SIZE, */
+	0,	/* (void *)&DTCM_buffer[0], */
+	0,	/* (void *)DTCM_SIZE, */
+	0,	/* (void *)DTCM_BASE, */
+	0,
+	&cdebugger_mmu_reg,//
+	// Debug information version 3 ends here, Hui Luo, 1/2/08
+	0,	/* (void *)&REG_addr_buffer[0], ends with zero */
+	0,	/* (void *)&REG_value_buffer[0], ends with zero */
+	0,	/* (void *)&REG_buffer_size, */
+	0,	/* (void *)&MMUL1Entry[0], always 4096 */
+	/* Debug information version 4 ends here, Hui Luo, 9/24/09 */
+	(void *)0x7A9,		/* 0x7A9 = CortexA9 */
+	(void *)2,		/* 0=Nucleus, 1=ThreadX 2=Linux*/
+	/* Debug information version 5 ends here, Hui Luo, 12/13/10 */
+	&main_log,
+	&radio_log,
+	&events_log,
+	&system_log,
+	(void *)0x656675F7,
+	(void *)0xFFEF0514	/* end flag */
+};
+
+EXPORT_SYMBOL(log_tx_param);
+
 /* core reg dump function*/
 static void cdebugger_save_core_reg(struct cdebugger_core_t *core_reg)
 {
@@ -335,6 +504,14 @@ static void cdebugger_hw_reset(void)
 		arm_machine_restart('h', "upload");;
 }
 
+static void setup_log_buffer_address(void)
+{
+	main_log.buf 	= (void *) virt_to_phys((void *)_buf_log_main);
+	radio_log.buf 	= (void *) virt_to_phys((void *)_buf_log_radio);
+	events_log.buf 	= (void *) virt_to_phys((void *)_buf_log_events);
+	system_log.buf 	= (void *) virt_to_phys((void *)_buf_log_system);
+}
+
 static int cdebugger_panic_handler(struct notifier_block *nb,
 				   unsigned long l, void *buf)
 {
@@ -353,7 +530,32 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 
 	handle_sysrq('t');
 
+	ramdump_list[0].mem_size = (num_physpages << PAGE_SHIFT);
+	setup_log_buffer_address();
+
+	log_tx_param[2] = (void *)virt_to_phys((void *)log_buf);
+	log_tx_param[3] = (void *)log_buf_len;
+	log_tx_param[4] = (void *)0;//wr index
+	log_tx_param[5] = (void *)0;//rd index
+	log_tx_param[7] = (void *)virt_to_phys((void *)linkSignature);
+	log_tx_param[11] = (void *)virt_to_phys((void *)decoder_version);
+	log_tx_param[19] = (void *)virt_to_phys((void *)&mmu_unit_size);
+	log_tx_param[34] = (void *)virt_to_phys((void *)&cdebugger_fault_status);
+	log_tx_param[57] = (void *)virt_to_phys((void *)&ramdump_list[0]);
+	log_tx_param[58] = (void *)virt_to_phys((void *)&num_of_ramdumps);
+	log_tx_param[80] = (void *)virt_to_phys((void *)&cdebugger_mmu_reg);
+	log_tx_param[84] = (void *)(cdebugger_mmu_reg.TTBR0 & 0xFFFFC000);
+
+	log_tx_param[87] = (void *) virt_to_phys((void *)&main_log);
+	log_tx_param[88] = (void *) virt_to_phys((void *)&radio_log);
+	log_tx_param[89] = (void *) virt_to_phys((void *)&events_log);
+	log_tx_param[90] = (void *) virt_to_phys((void *) &system_log);
+
 	cdebugger_dump_stack();
+
+	flush_cache_all();
+	outer_flush_all();
+
 	cdebugger_hw_reset();
 
 	return 0;
@@ -370,10 +572,6 @@ int cdebugger_dump_stack(void)
 		return -1;
 
 	cdebugger_save_context();
-
-	/* flush L1 from each core.
-	   L2 will be flushed later before reset. */
-	flush_cache_all();
 
 	return 0;
 }
