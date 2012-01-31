@@ -146,4 +146,15 @@ int kona_timer_stop (struct kona_timer* kt);
  */
 int kona_timer_free (struct kona_timer* kt);
 
+/*
+ * kona_hubtimer_get_counter - Returns the counter value of aon hub timer
+ */
+unsigned long kona_hubtimer_get_counter(void);
+
+/*
+ * kona_slavetimer_get_counter - Returns the counter value of slave timer
+ */
+unsigned long kona_slavetimer_get_counter(void);
+
+
 #endif /* __PLAT_KONA_TIMER_H */

@@ -654,6 +654,20 @@ int kona_timer_disable_and_clear(struct kona_timer *kt)
 }
 EXPORT_SYMBOL(kona_timer_disable_and_clear);
 
+/* Return the counter value of hub timer */
+unsigned long kona_hubtimer_get_counter(void)
+{
+	return readl(timer_module_list[0].reg_base + KONA_GPTIMER_STCLO_OFFSET);
+}
+EXPORT_SYMBOL(kona_hubtimer_get_counter);
+
+/* Return the counter value of slave timer */
+unsigned long kona_slavetimer_get_counter(void)
+{
+	return readl(timer_module_list[1].reg_base + KONA_GPTIMER_STCLO_OFFSET);
+}
+EXPORT_SYMBOL(kona_slavetimer_get_counter);
+
 /* Local static functions */
 static struct kona_timer_module * __get_timer_module(char *name)
 {
