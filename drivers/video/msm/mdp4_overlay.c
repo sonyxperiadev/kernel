@@ -2381,6 +2381,8 @@ int mdp4_overlay_unset(struct fb_info *info, int ndx)
 	      ctrl->plist[OVERLAY_PIPE_VG2].pipe_used))
 		mdp4_update_perf_level(OVERLAY_PERF_LEVEL4);
 
+	mdp4_set_perf_level();
+
 	mutex_unlock(&mfd->dma->ov_mutex);
 
 #ifdef CONFIG_MSM_BUS_SCALING
