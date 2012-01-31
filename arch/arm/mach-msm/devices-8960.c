@@ -1392,6 +1392,11 @@ struct platform_device msm_pcm = {
 	.id	= -1,
 };
 
+struct platform_device msm_multi_ch_pcm = {
+	.name	= "msm-multi-ch-pcm-dsp",
+	.id	= -1,
+};
+
 struct platform_device msm_pcm_routing = {
 	.name	= "msm-pcm-routing",
 	.id	= -1,
@@ -1408,7 +1413,7 @@ struct platform_device msm_cpudai1 = {
 };
 
 struct platform_device msm_cpudai_hdmi_rx = {
-	.name	= "msm-dai-q6",
+	.name	= "msm-dai-q6-hdmi",
 	.id	= 8,
 };
 
