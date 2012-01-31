@@ -238,9 +238,9 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		/* PCG and loadcal currently use Q13p2 gain format */
 	case 100:
 		{
-		short gain;
+		int gain;
 
-		gain = (short)Params[3];
+		gain = (int)Params[3];
 
 		if (Params[1] == 3) {
 
@@ -274,11 +274,11 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 
 					if (Params[2] ==
 				PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
-						extern_hs_set_gain(gain,
+						extern_hs_set_gain(gain*25,
 						AUDIO_HS_LEFT);
 					else if (Params[2] ==
 				PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)
-						extern_hs_set_gain(gain,
+						extern_hs_set_gain(gain*25,
 						AUDIO_HS_RIGHT);
 				}
 #if defined(USE_NEW_AUDIO_PARAM)
@@ -296,7 +296,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 					DEBUG("%s ext IHF "
 					"speaker gain = %d\n",
 					     __func__, gain);
-					extern_ihf_set_gain(gain);
+					extern_ihf_set_gain(gain*25);
 				}
 
 			}
