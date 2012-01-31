@@ -238,9 +238,9 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		/* PCG and loadcal currently use Q13p2 gain format */
 	case 100:
 		{
-		int gain;
+		short gain;
 
-		gain = (int)Params[3];
+		gain = (short)Params[3];
 
 		if (Params[1] == 3) {
 
