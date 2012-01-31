@@ -392,22 +392,6 @@ void DSPCMD_AudioToneCtrl(
     UInt8 tone,
 	UInt8 tone_dur
 	);
-
-void DSPCMD_ConfigExpAlpha(
-	UInt16 expander_alpha      
-	);
-void DSPCMD_ConfigExpBeta(
-	UInt16 expander_beta      
-	);
- 
-void DSPCMD_ConfigEchoDual(
-     DspCmdEchoDual_t *echo_dual_parm    
-	);
-
-void DSPCMD_ConfigCompanderflag(
-    UInt16 compander_flag    
-	);
-
 void DSPCMD_SetPCMOnOff(
 	Boolean	on_off
 	);
@@ -430,11 +414,6 @@ void DSPCMD_ConfigEC(
 	Boolean audioTuningMode);		///< Configure EC  settings
 
 /** @} */
-
-
-void DSPCMD_ConfigEC_NLP_Filter( 
- UInt16 *coefs
-);
 
 
 /** @addtogroup DspCmdGroup
