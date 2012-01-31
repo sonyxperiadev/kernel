@@ -767,6 +767,7 @@ void SetAudioMode(AudioMode_t mode, AudioApp_t audio_app)
 	AUDIO_SOURCE_Enum_t mic;
 	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
+	AudioMode_t current_mode = GetAudioMode();
 
 	log(1, "SetAudioMode: mode %d audio_app %d",
 			mode, audio_app);
@@ -804,7 +805,8 @@ void SetAudioMode(AudioMode_t mode, AudioApp_t audio_app)
 			AUDCTRL_SetTelephonyMicSpkr(mic, spk);
 		}
 	} else if (audio_app == AUDIO_APP_MUSIC) {
-		AUDCTRL_SwitchPlaySpk(mic, spk, pathIDTuning);
+		if (current_mode != mode)
+			AUDCTRL_SwitchPlaySpk(mic, spk, pathIDTuning);
 	}
 	if (!AUDDRV_InVoiceCall()) {
 		/* for music tuning, if PCG changed audio mode when phone
@@ -935,6 +937,23 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 */
 	AUDDRV_SetAudioMode_ForMusicPlayback(mode,
 		GetAudioApp(), arg_pathID, inHWlpbk);
+
+	if (!AUDDRV_InVoiceCall()) {
+		/*for music tuning, if PCG changed audio mode,
+		need to pass audio mode to CP.
+		this command updates mode in audio_vdriver_caph.c,
+		it is not useful for MP3 audio tuning purpose.
+		*/
+		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+			(UInt32) mode,
+			(UInt32) GetAudioApp(), 0, 0, 0);
+		/*this command updates mode in audioapi.c.
+		 It is useful for MP3 audio tuning purpose.
+		 */
+		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
+			(UInt32) (((int)GetAudioApp()) * AUDIO_MODE_NUMBER +
+			mode), 0, 0, 0, 0);
+	}
 
 	if (!bClk)
 		csl_caph_ControlHWClock(FALSE);
@@ -1547,7 +1566,7 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 
 	log(1, "%s src 0x%x, Sink 0x%x", __func__, source, sink);
 	if (pathID == 0) {
-		audio_xassert(0, pathID);
+		/*audio_xassert(0, pathID);*/
 		return;
 	}
 	/*get the current speaker from pathID - need CSL API */
