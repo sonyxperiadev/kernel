@@ -1,0 +1,22 @@
+config SND_BCM_SOC
+	tristate "SoC Audio for Broadcom 21654 SoC"
+	depends on SND_SOC && !BCM_ALSA_SOUND
+	help
+	  Say Y or M if you want to add support for codecs attached to
+	  the 21654 I2S interface. You will also need to select the audio
+	  interfaces to support below.
+
+config SND_BCM_SOC_I2S
+	tristate "SoC Audio (I2S protocol) for Broadcom 21654 Rhea"
+	depends on SND_BCM_SOC
+	help
+	  Say Y if you want to use I2S protocol and I2S codec on 21654 Rhea
+	  based boards.
+
+config SND_BCM_SOC_RHEA
+	tristate "SoC Audio support for 21654 Rhea"
+	depends on SND_BCM_SOC
+    select SND_SOC_BCM_CODEC
+	help
+	  Say Y if you want to add support for ASoC audio on 21654 Rhea board
+

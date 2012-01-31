@@ -763,6 +763,16 @@ static struct platform_device unicam_camera_device = {
 };
 #endif
 
+#ifdef CONFIG_SND_BCM_SOC
+static struct platform_device caph_i2s_device = {
+	.name		=	"caph-i2s",
+};
+
+static struct platform_device caph_pcm_device = {
+	.name		=	"caph-pcm-audio",
+};
+#endif
+
 #ifdef CONFIG_WD_TAPPER
 static struct wd_tapper_platform_data wd_tapper_data = {
     /* Set the count to the time equivalent to the time-out in milliseconds
@@ -833,6 +843,11 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 
 #ifdef CONFIG_WD_TAPPER
 	&wd_tapper,
+#endif
+
+#ifdef CONFIG_SND_BCM_SOC
+	&caph_i2s_device,
+	&caph_pcm_device,
 #endif
 };
 
