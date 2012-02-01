@@ -1738,6 +1738,7 @@ EXPORT_SYMBOL(pwr_mgr_clr_intr_status);
  * Added for debugging purpose but not called
  */
 
+/*
 static void pwr_mgr_dump_i2c_cmd_regs(void)
 {
 	int idx;
@@ -1758,7 +1759,7 @@ static void pwr_mgr_dump_i2c_cmd_regs(void)
 			data0, (idx * 2) + 1, cmd1, data1);
 	}
 }
-
+*/
 #endif
 
 int pwr_mgr_init(struct pwr_mgr_info *info)

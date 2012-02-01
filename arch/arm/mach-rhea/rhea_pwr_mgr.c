@@ -326,8 +326,10 @@ struct pwr_mgr_info rhea_pwr_mgr_info = {
 	.num_special_event_range = ARRAY_SIZE(rhea_special_event_list),
 };
 
+
 int __init rhea_pwr_mgr_init()
 {
+	struct pm_policy_cfg cfg;
 
 	int i;
 	struct pi* pi;
@@ -351,7 +353,7 @@ int __init rhea_pwr_mgr_init()
 			.zerov_ptr = 52, /*Not used for Rhea*/
 		};
 #endif /*CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ*/
-	struct pm_policy_cfg cfg;
+
 	cfg.ac = 1;
 	cfg.atl = 0;
 

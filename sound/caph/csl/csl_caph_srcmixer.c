@@ -966,7 +966,7 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
 		AUDIO_SAMPLING_RATE_t
 		srOut)
 {
-	int ch = 0;
+	u8 ch = 0;
 	CSL_CAPH_SRCM_INCHNL_e neededChnl = CSL_CAPH_SRCM_INCHNL_NONE;
 
 	_DBG_(Log_DebugPrintf

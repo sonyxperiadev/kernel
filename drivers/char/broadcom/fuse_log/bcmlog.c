@@ -1149,7 +1149,6 @@ void BCMLOG_EndCpCrashDump(void)
  **/
 void BCMLOG_HandleCpCrashDumpData(const char *buf, int size)
 {
-	unsigned long irql;
 	switch (BCMLOG_GetCpCrashLogDevice()) {
 	case BCMLOG_OUTDEV_SDCARD:
 		if (sDumpFile && sDumpFile->f_op && sDumpFile->f_op->write) {

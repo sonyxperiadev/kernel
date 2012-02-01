@@ -203,12 +203,14 @@ static int read_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 	return ret;
 }
 
+/*
 static int adc_adjust_curr(struct bcmpmu_adc *padc, int raw_curr)
 {
 	unsigned short ucurr = (unsigned short)raw_curr;
 	short curr = (short)ucurr;
 	return (int)(curr / 4);
 }
+*/
 
 /* cal_adc_result
  * Input: request structure
@@ -1228,7 +1230,7 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	padc->adcunit = bcmpmu_get_adcunit();
 	padc->ctrlmap = bcmpmu_get_adc_ctrl_map();
 	padc->btmap = pdata->batt_temp_map;
-	padc->btmap_len = pdata->batt_temp_map_len;
+	padc->btmap_len = (int)pdata->batt_temp_map_len;
 	padc->rtmreq = NULL;
 	padc->bom_map = pdata->bom_map;
 	padc->bom_map_len = pdata->bom_map_len;

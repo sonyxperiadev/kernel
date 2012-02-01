@@ -130,7 +130,7 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
     /* Populate the timer config */
     cfg.mode = MODE_ONESHOT;
 	cfg.arg  = wd_tapper_data->kt;
-	cfg.cb	 = wd_tapper_callback;
+	cfg.cb	 = (intr_callback)wd_tapper_callback;
 	cfg.reload = wd_tapper_data->count;
 
     /* Configure the timer */

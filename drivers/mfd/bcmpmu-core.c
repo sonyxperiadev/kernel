@@ -134,7 +134,7 @@ static ssize_t bcmpmu_read(struct file *file, char *data, size_t len,
 			   loff_t *p);
 static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
 			    loff_t *p);
-static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
+static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 				unsigned long arg);
 
 static const struct file_operations bcmpmu_fops = {
@@ -198,7 +198,7 @@ static ssize_t bcmpmu_read(struct file *file, char *data, size_t len,
 	return ret;
 }
 
-static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
+static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	struct bcmpmu *bcmpmu = file->private_data;
@@ -216,11 +216,8 @@ static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 		    ((void *)&reg, argp,
 		     sizeof(struct bcmpmu_rw_data_ltp)) == 0) {
 			reg.mask = 0xff;
-			ret =
-			    bcmpmu->read_dev_drct(bcmpmu, reg.map, reg.addr,
-						  &value[0], reg.mask);
-			printk("BCMPMU register=0x%X, val=0x%X, map=0x%X\n",
-			       reg.addr, value[0], reg.map);
+		   ret = bcmpmu->read_dev_drct(bcmpmu, reg.map, reg.addr, (unsigned int *)&reg.val[0], reg.mask);
+			printk("BCMPMU register=0x%X, val=0x%X, map=0x%X\n", reg.addr, (unsigned int)&reg.val[0], reg.map);
 			if (ret != 0) {
 				printk(KERN_ERR "%s: read_dev_drct failed.\n",
 				       __func__);
@@ -250,10 +247,7 @@ static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 			       reg.map, reg.addr, reg.len);
 			if ((reg.map < 2) && ((reg.addr + reg.len) < 255)
 			    && (reg.len < 16)) {
-				ret =
-				    bcmpmu->read_dev_bulk(bcmpmu, reg.map,
-							  reg.addr, &value[0],
-							  reg.len);
+			   ret = bcmpmu->read_dev_bulk(bcmpmu, reg.map, reg.addr, (unsigned int *)&reg.val[0], reg.len);			   
 				if (ret != 0) {
 					printk(KERN_ERR
 					       "%s: read_dev_bulk failed.\n",

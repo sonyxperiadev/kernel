@@ -235,8 +235,6 @@ int bcm_sdiowl_init(void)
 	}
 	PRINT_ERR("timeout while populating sdio wifi device\n");
 	rc = -EIO;
-	goto err_disable_card;
-err_disable_card:
 	sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
 
 err_free_gpio:

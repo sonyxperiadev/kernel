@@ -291,6 +291,7 @@ err:
 	return ret;
 }
 
+/*
 static int bcmpmu_update_irq_enable(struct device *dev,
 		unsigned int enabled)
 {
@@ -306,6 +307,7 @@ static int bcmpmu_update_irq_enable(struct device *dev,
 err:
 	return ret;
 }
+*/
 
 static int bcmpmu_alarm_irq_enable(struct device *dev,
 		unsigned int enabled)
