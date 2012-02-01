@@ -709,19 +709,10 @@ enum bcmpmu_ioctl {
 struct bcmpmu_rw_data_ltp{
 	unsigned int map;
 	unsigned int addr;
-	char val[16];
+	unsigned int val[16];
 	unsigned int mask;	
 	unsigned int len;
 };
-
-struct bcmpmu_adc_ltp{
-	enum bcmpmu_adc_sig sig;
-	enum bcmpmu_adc_timing_t tm;
-	unsigned int raw;
-	unsigned int cal;
-	unsigned int cnv;
-};
-
 
 #define BCM_PMU_MAGIC   'P'
 #define BCM_PMU_CMD_READ_REG            0x83
@@ -729,12 +720,10 @@ struct bcmpmu_adc_ltp{
 #define BCM_PMU_CMD_BULK_READ_REG       0x85
 #define BCM_PMU_CMD_ADC_READ_REG        0x86
 
-
 #define BCM_PMU_IOCTL_READ_REG          _IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_READ_REG,  struct bcmpmu_rw_data_ltp )
 #define BCM_PMU_IOCTL_BULK_READ_REG     _IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_BULK_READ_REG, struct bcmpmu_rw_data_ltp)
-#define BCM_PMU_IOCTL_ADC_READ_REG     _IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_ADC_READ_REG, struct bcmpmu_adc_ltp)
+#define BCM_PMU_IOCTL_ADC_READ_REG     _IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_ADC_READ_REG, struct bcmpmu_adc_req)
 #define BCM_PMU_IOCTL_WRITE_REG         _IOW( BCM_PMU_MAGIC, BCM_PMU_CMD_WRITE_REG, struct bcmpmu_rw_data_ltp)
-
 
 enum bcmpmu_batt_event_t {
 	BCMPMU_BATT_EVENT_PRESENT,
