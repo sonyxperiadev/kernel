@@ -425,6 +425,12 @@ static struct platform_device bcmpmu_watchdog = {
 	.dev.platform_data = NULL,
 };
 
+static struct platform_device bcmpmu_thermal_device = {
+	.name = "bcmpmu_thermal",
+	.id = -1,
+	.dev.platform_data = NULL,
+};
+
 static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_irq_device,
 	&bcmpmu_hwmon_device,
@@ -435,6 +441,7 @@ static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_accy_device,
 	&bcmpmu_ponkey_device,
 	&bcmpmu_watchdog,
+	&bcmpmu_thermal_device,
 };
 
 static int __devinit bcmpmu_probe(struct platform_device *pdev)

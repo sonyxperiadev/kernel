@@ -607,9 +607,12 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(
     	dmaCtrlBlkInfo.srcXferWidth = 0;
     	dmaCtrlBlkInfo.dstXferWidth = 0;
     } else {
-	    if ((pData->dstAddr & 0xc0000000) == 0x40000000) {
+	    if (pData->dstAddr & 0xc0000000) {
     			dmaCtrlBlkInfo.srcXferWidth = 0;
     			dmaCtrlBlkInfo.dstXferWidth = 1;
+	    } else {
+    			dmaCtrlBlkInfo.srcXferWidth = 0;
+    			dmaCtrlBlkInfo.dstXferWidth = 0;
 	    }
     }
 

@@ -143,7 +143,6 @@ static int rhea_mm_memc_dma_start(int size, DMA_VC4LITE_BURST_LENGTH_t burst_siz
 
 	dmaCh = channel;
 
-	// Configure Channel
 	dmaChInfo.autoFreeChan	= 1;
 	dmaChInfo.srcID	      	= DMA_VC4LITE_CLIENT_MEMORY;
 	dmaChInfo.dstID		= DMA_VC4LITE_CLIENT_MEMORY;
@@ -209,79 +208,72 @@ static void rhea_mm_acp_workaround(void)
 {
 	int atm_count, index;
 
-	atm_count = readl(KONA_AXITRACE16_VA + 0x10); //write commands
+	atm_count = readl(KONA_AXITRACE16_VA + 0x10);
 	atm_count = atm_count % 8;
 	if (atm_count)
 	{
 		for(index=0; index < (8-atm_count); ++index) {
-			rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 1, 1); // Chan 1, Write
+			rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 1, 1);
 		}
 	}
 
-	atm_count = readl(KONA_AXITRACE16_VA + 0x58); //write beats
+	atm_count = readl(KONA_AXITRACE16_VA + 0x58);
 	atm_count = atm_count % 16;
 
 	if ((atm_count) && (atm_count > 8 )) {
 		/* we have less than 8 need to write, let's write 8 more. Make it more than 8 to write */
 		for(index=0; index < 8; ++index) {
-			//MMDMA_ui_write_one();
-			rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 1, 1); // Chan 1, Write
+			rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 1, 1);
 		}
 	}
 
-	atm_count = readl(KONA_AXITRACE16_VA + 0x58); //write beats
+	atm_count = readl(KONA_AXITRACE16_VA + 0x58);
 	atm_count = atm_count % 16;
 	if (atm_count)	{
 		if (atm_count <= 8 ) {
 		        /* we have > 8 to write */
 			for(index=0; index < 8-atm_count; ++index) {
-        			//MMDMA_ui_write_two();
-        			rhea_mm_memc_dma_start(0x20, DMA_VC4LITE_BURST_LENGTH_2, 1, 1, 1); // Chan 1, Write
+        			rhea_mm_memc_dma_start(0x20, DMA_VC4LITE_BURST_LENGTH_2, 1, 1, 1);
 			}
 			for(index=8-atm_count; index < 8; ++index) {
-				//MMDMA_ui_write_one();
-				rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 1, 1); // Chan 1, Write
+				rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 1, 1);
 			}
 		} else {
-			printk("atm <= 8 for AXI 16 write error");
+			printk(KERN_ERR "atm <= 8 for AXI 16 write error");
         	}
   	}
 
-	atm_count = readl(KONA_AXITRACE16_VA + 0x14); //read commands
+	atm_count = readl(KONA_AXITRACE16_VA + 0x14);
 	atm_count = atm_count % 8;
 	if (atm_count) {
 		for(index=0; index < (8-atm_count); ++index) {
-			//MMDMA_ui_write_one();
-        		rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 0, 1); // Chan 1, Read
+        		rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 0, 1);
      		}
 	}
 
-	atm_count = readl(KONA_AXITRACE16_VA + 0x5C); //Read beats
+	atm_count = readl(KONA_AXITRACE16_VA + 0x5C);
 	atm_count = atm_count % 16;
 
 	if ((atm_count) && (atm_count > 8 )) {
 	/* we have less than 8 need to write, let's write 8 more. Make it more than 8 to write */
 		for(index=0; index < 8; ++index) {
-			//MMDMA_ui_write_one();
-        		rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 0, 1); // Chan 1, Read
+        		rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 0, 1);
      		}
   	}
 
-	atm_count = readl(KONA_AXITRACE16_VA + 0x5C); //Read beats
+	atm_count = readl(KONA_AXITRACE16_VA + 0x5C);
 	atm_count = atm_count % 16;
 	if (atm_count) {
 		if (atm_count <= 8 ) {
 			/* we have > 8 to Read */
 			for(index=0; index < 8-atm_count; ++index) {
-        			//MMDMA_ui_write_two();
-        			rhea_mm_memc_dma_start(8, DMA_VC4LITE_BURST_LENGTH_2, 1, 0, 1); // Chan 1, Read
+        			rhea_mm_memc_dma_start(8, DMA_VC4LITE_BURST_LENGTH_2, 1, 0, 1);
 			}
 			for(index=8-atm_count; index < 8; ++index) {
-                  		//MMDMA_ui_write_one();
-        			rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 0, 1); // Chan 1, Read
+        			rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 0, 1);
 			}
 		} else {
-			printk("atm <= 8 AXI 16 read error");
+			printk(KERN_ERR "atm <= 8 AXI 16 read error");
 		}
 	}
 }
@@ -290,15 +282,15 @@ static void rhea_mm_memc_workaround(void)
 {
 	int atm_count, index;
 
-	atm_count = readl(KONA_AXITRACE17_VA + 0x10); //write commands
+	atm_count = readl(KONA_AXITRACE17_VA + 0x10);
 	atm_count = atm_count % 8;
 	if (atm_count) {
 		for(index=0; index < (8-atm_count); ++index) {
-			rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 1, 0); // Chan 1, Write
+			rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 1, 0);
      		}
   	}
 
-	atm_count = readl(KONA_AXITRACE17_VA + 0x58); //write beats
+	atm_count = readl(KONA_AXITRACE17_VA + 0x58);
 	atm_count = atm_count % 16;
 
 	if ((atm_count) && (atm_count > 8 )) {
@@ -308,43 +300,46 @@ static void rhea_mm_memc_workaround(void)
 		}
 	}
 
-	atm_count = readl(KONA_AXITRACE17_VA + 0x58); //write beats
+	atm_count = readl(KONA_AXITRACE17_VA + 0x58);
+
 	atm_count = atm_count % 16;
 	if (atm_count) {
 		if (atm_count <= 8 ) {
 			/* we have > 8 to write */
 			for(index=0; index < 8-atm_count; ++index) {
-				rhea_mm_memc_dma_start(0x20, DMA_VC4LITE_BURST_LENGTH_2, 1, 1, 0); // Chan 1, Write
+				rhea_mm_memc_dma_start(0x20, DMA_VC4LITE_BURST_LENGTH_2, 1, 1, 0);
 			}
+
 			for(index=8-atm_count; index < 8; ++index) {
-				rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 1, 0); // Chan 1, Write
+				rhea_mm_memc_dma_start(4, DMA_VC4LITE_BURST_LENGTH_1, 1, 1, 0);
 			}
 		} else {
-			printk("atm <= 8 error");
+			printk(KERN_ERR "atm <= 8 error");
 		}
   	}
 
-	// First align the read command counter
-	// Using 2 transfers per dma, the read counter increments by 3 each time. (2 transfers + 1 read command registers)
-	atm_count = readl(KONA_AXITRACE17_VA + 0x14); //read commands
+	/*
+	 * First align the read command counter
+	 * Using 2 transfers per dma, the read counter increments by 3 each time. (2 transfers + 1 read command registers)
+	 */
+	atm_count = readl(KONA_AXITRACE17_VA + 0x14);
 	atm_count = atm_count % 8;
 	if (atm_count) {
 		for(; atm_count % 8 != 0; atm_count += 3) {
-			rhea_mm_memc_dma_start(8, DMA_VC4LITE_BURST_LENGTH_1, 1, 0, 0); // Chan 1, Read
+			rhea_mm_memc_dma_start(8, DMA_VC4LITE_BURST_LENGTH_1, 1, 0, 0);
 		}
 	}
 
+	/* 
 	atm_count = readl(KONA_AXITRACE17_VA + 0x5C); //read beats
 	atm_count = atm_count % 16;
 
-  	// Align the read beats
-	// using 28 bytes (7 words), read cmd counter increments by 8 each time so it stays aligned
-	// Read beats increments by 13, 8 (7 transfers + 1 cmd)  + 5 (length of control bytes) each time
 	if (atm_count) {
 		for(; atm_count % 16 != 0; atm_count += 13) {
 			rhea_mm_memc_dma_start(28, DMA_VC4LITE_BURST_LENGTH_1, 1, 0, 0); // Chan 1, Read
 		}
 	}
+	*/
 
 	return;
 }
@@ -360,36 +355,25 @@ void rhea_mm_shutdown_workaround(void)
     	unsigned int  n_wr_cmds_mm_memc;
     	unsigned int  n_wr_beats_mm_memc;
 
+	unsigned int old_n_wr_cmds;
+	unsigned int old_n_rd_data;
+    	unsigned int old_n_wr_beats;
+    	unsigned int old_n_rd_cmds;
 
-	n_wr_cmds = readl(KONA_AXITRACE16_VA + 0x10);
-	n_rd_data = readl(KONA_AXITRACE16_VA + 0x5C);
+	unsigned int  old_n_rd_cmds_mm_memc;
+    	unsigned int  old_n_wr_cmds_mm_memc;
+    	unsigned int  old_n_wr_beats_mm_memc;
 
-	n_rd_cmds = readl(KONA_AXITRACE16_VA + 0x14);
-	n_wr_beats = readl(KONA_AXITRACE16_VA + 0x58);
 
-	n_rd_cmds_mm_memc = readl(KONA_AXITRACE17_VA + 0x14);
-	n_wr_cmds_mm_memc = readl(KONA_AXITRACE17_VA + 0x10);
-	n_wr_beats_mm_memc = readl(KONA_AXITRACE17_VA + 0x58);
+	old_n_wr_cmds = readl(KONA_AXITRACE16_VA + 0x10);
+	old_n_rd_data = readl(KONA_AXITRACE16_VA + 0x5C);
 
-	printk(KERN_ERR "Before shutdown workaround axi16 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x rbeats=0x%08x\n",
-		n_wr_cmds, n_rd_cmds,  n_wr_beats, n_rd_data);
-	printk(KERN_ERR "Before shutdown workaround axi17 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x\n",
-		n_wr_cmds_mm_memc, n_rd_cmds_mm_memc, n_wr_beats_mm_memc);
+	old_n_rd_cmds = readl(KONA_AXITRACE16_VA + 0x14);
+	old_n_wr_beats = readl(KONA_AXITRACE16_VA + 0x58);
 
-	n_wr_cmds = readl(KONA_AXITRACE16_VA + 0x10);
-	n_rd_data = readl(KONA_AXITRACE16_VA + 0x5C);
-
-	n_rd_cmds = readl(KONA_AXITRACE16_VA + 0x14);
-	n_wr_beats = readl(KONA_AXITRACE16_VA + 0x58);
-
-	n_rd_cmds_mm_memc = readl(KONA_AXITRACE17_VA + 0x14);
-	n_wr_cmds_mm_memc = readl(KONA_AXITRACE17_VA + 0x10);
-	n_wr_beats_mm_memc = readl(KONA_AXITRACE17_VA + 0x58);
-
-	printk(KERN_ERR "Before shutdown workaround axi16 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x rbeats=0x%08x\n",
-		n_wr_cmds, n_rd_cmds,  n_wr_beats, n_rd_data);
-	printk(KERN_ERR "Before shutdown workaround axi17 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x\n",
-		n_wr_cmds_mm_memc, n_rd_cmds_mm_memc, n_wr_beats_mm_memc);
+	old_n_rd_cmds_mm_memc = readl(KONA_AXITRACE17_VA + 0x14);
+	old_n_wr_cmds_mm_memc = readl(KONA_AXITRACE17_VA + 0x10);
+	old_n_wr_beats_mm_memc = readl(KONA_AXITRACE17_VA + 0x58);
 
 	rhea_mm_acp_workaround();
 	rhea_mm_memc_workaround();
@@ -404,10 +388,19 @@ void rhea_mm_shutdown_workaround(void)
 	n_wr_cmds_mm_memc = readl(KONA_AXITRACE17_VA + 0x10);
 	n_wr_beats_mm_memc = readl(KONA_AXITRACE17_VA + 0x58);
 
-	printk(KERN_ERR "After shutdown workaround axi16 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x rbeats=0x%08x\n",
-		n_wr_cmds, n_rd_cmds,  n_wr_beats, n_rd_data);
-	printk(KERN_ERR "After shutdown workaround axi17 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x\n",
-		n_wr_cmds_mm_memc, n_rd_cmds_mm_memc, n_wr_beats_mm_memc);
+	if (n_wr_cmds % 8 || n_rd_data % 16 || n_rd_cmds % 8 ||n_wr_beats % 16 || n_rd_cmds_mm_memc % 8 ||
+		n_wr_cmds_mm_memc % 8 || n_wr_beats_mm_memc % 16) { 
+		printk(KERN_ERR "Before shutdown workaround axi16 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x rbeats=0x%08x\n",
+			old_n_wr_cmds, old_n_rd_cmds,  old_n_wr_beats, old_n_rd_data);
+		printk(KERN_ERR "Before shutdown workaround axi17 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x\n",
+			old_n_wr_cmds_mm_memc, old_n_rd_cmds_mm_memc, old_n_wr_beats_mm_memc);
+
+		printk(KERN_ERR "After shutdown workaround axi16 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x rbeats=0x%08x\n",
+			n_wr_cmds, n_rd_cmds,  n_wr_beats, n_rd_data);
+		printk(KERN_ERR "After shutdown workaround axi17 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x\n",
+			n_wr_cmds_mm_memc, n_rd_cmds_mm_memc, n_wr_beats_mm_memc);
+		BUG();
+	}
 }
 EXPORT_SYMBOL(rhea_mm_shutdown_workaround);
 #endif /*defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)*/

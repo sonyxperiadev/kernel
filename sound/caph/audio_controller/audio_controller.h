@@ -292,6 +292,16 @@ AudioApp_t GetAudioApp(void);
 ****************************************************************************/
 void SetAudioApp(AudioApp_t audio_app);
 
+/**
+*   Set audio app
+*
+*	@param		AudioApp_t		audio app
+*
+*	@return		none
+*
+****************************************************************************/
+void SetUserAudioApp(AudioApp_t audio_app);
+
 /*********************************************************************
 *   Save audio app
 *

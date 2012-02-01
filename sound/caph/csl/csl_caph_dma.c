@@ -494,6 +494,10 @@ static irqreturn_t caph_dma_isr(int irq, void *dev_id)
 				    (DMA_ISR_BOTTOM_HALF_DATA_t *)
 				    kmalloc(sizeof(DMA_ISR_BOTTOM_HALF_DATA_t),
 					    GFP_ATOMIC);
+				if (!dma_bottom_half_data) {
+					pr_err("kmalloc failed in caph_dma_isr\n");
+					break;
+				}
 				dma_bottom_half_data->dma_channel = channel;
 				new_tasklet =
 				    &dma_bottom_half_data->dma_tasklet;

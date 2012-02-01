@@ -48,7 +48,7 @@
 /***************************************************************************/
 /*lobal variable definitions                                               */
 /***************************************************************************/
-CHAL_HANDLE lp_handle = 0x0;
+
 /***************************************************************************/
 /*                        L O C A L   S E C T I O N                        */
 /***************************************************************************/
@@ -336,7 +336,7 @@ const unsigned int stoneFirCoeff[] = {
 
 /*============================================================================
 //
-// Function Name: void csl_caph_audioh_init(UInt32 baseAddr, UInt32 sdtBaseAddr)
+// Function Name: void *csl_caph_audioh_init(UInt32 baseAddr,UInt32 sdtBaseAddr)
 //
 // Description:  Initialize audio path on CSL layer
 //
@@ -346,13 +346,11 @@ const unsigned int stoneFirCoeff[] = {
 //
 //===========================================================================*/
 
-void csl_caph_audioh_init(UInt32 baseAddr, UInt32 sdtBaseAddr)
+void *csl_caph_audioh_init(UInt32 baseAddr, UInt32 sdtBaseAddr)
 {
-
 	handle = (CHAL_HANDLE) chal_audio_init(baseAddr, sdtBaseAddr);
-	lp_handle = handle;
 /*  chal_audio_earpath_clr_fifo(handle);  */
-	return;
+	return handle;
 }
 
 /*============================================================================

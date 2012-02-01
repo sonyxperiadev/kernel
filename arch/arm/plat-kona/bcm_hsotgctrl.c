@@ -169,8 +169,6 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	/* Come up connected  */
 	bcm_hsotgctrl_phy_set_non_driving(false);
 
-	msleep_interruptible(HSOTGCTRL_ID_CHANGE_DELAY_IN_MS);
-
 	return (0);
 
 }

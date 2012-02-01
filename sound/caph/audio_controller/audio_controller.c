@@ -670,6 +670,7 @@ AudioApp_t GetAudioApp(void)
 *
 * Description:   set audio application.
 *                          should be called by upper layer
+*  This function is used for auto-detection of and auto-set APP
 ****************************************************************************/
 void SetAudioApp(AudioApp_t app)
 {
@@ -679,6 +680,39 @@ void SetAudioApp(AudioApp_t app)
 	if (AUDDRV_InVoiceCall())
 		if (app > AUDIO_APP_VOICE_CALL_WB)
 			return;
+
+	/*AUDIO_APP_VOIP and AUDIO_APP_RECORDING_GVS can only be set by
+	user space code. kernel audio code can not detect out them. */
+	if (currAudioApp == AUDIO_APP_VOIP
+		|| currAudioApp == AUDIO_APP_VOIP_INCOMM
+		|| currAudioApp == AUDIO_APP_RECORDING_GVS)
+		return; /*keep user-set audio APP intact*/
+
+	currAudioApp = app;
+}
+
+/****************************************************************************
+*
+* Function Name: SetUserAudioApp
+*
+* Description:   set audio application.
+*
+*  user space code use this function to call alsa mixer control to set APP
+****************************************************************************/
+void SetUserAudioApp(AudioApp_t app)
+{
+	Log_DebugPrintf(LOGID_AUDIO,
+			"\n\r\t* AUDCTRL_SetUserAudioApp() old audio_app=%d new app=%d\n\r",
+			currAudioApp, app);
+
+	if (AUDDRV_InVoiceCall())
+		if (app > AUDIO_APP_VOICE_CALL_WB)
+			return;
+
+	/*AUDIO_APP_VOIP,
+	AUDIO_APP_VOIP_INCOMM,
+	and AUDIO_APP_RECORDING_GVS can only be set by user space code.
+	This function allows user space to change APP away from the 3 APPs.*/
 
 	currAudioApp = app;
 }
@@ -698,6 +732,11 @@ void SaveAudioApp(AudioApp_t app)
 	if (AUDDRV_InVoiceCall())
 		if (app > AUDIO_APP_VOICE_CALL_WB)
 			return;
+
+	if (currAudioApp == AUDIO_APP_VOIP
+		|| currAudioApp == AUDIO_APP_VOIP_INCOMM
+		|| currAudioApp == AUDIO_APP_RECORDING_GVS)
+		return; /*keep user-set audio APP intact*/
 
 	currAudioApp = app;
 }
@@ -728,6 +767,7 @@ void SetAudioMode(AudioMode_t mode, AudioApp_t audio_app)
 	AUDIO_SOURCE_Enum_t mic;
 	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
+	AudioMode_t current_mode = GetAudioMode();
 
 	log(1, "SetAudioMode: mode %d audio_app %d",
 			mode, audio_app);
@@ -765,7 +805,8 @@ void SetAudioMode(AudioMode_t mode, AudioApp_t audio_app)
 			AUDCTRL_SetTelephonyMicSpkr(mic, spk);
 		}
 	} else if (audio_app == AUDIO_APP_MUSIC) {
-		AUDCTRL_SwitchPlaySpk(mic, spk, pathIDTuning);
+		if (current_mode != mode)
+			AUDCTRL_SwitchPlaySpk(mic, spk, pathIDTuning);
 	}
 	if (!AUDDRV_InVoiceCall()) {
 		/* for music tuning, if PCG changed audio mode when phone
@@ -896,6 +937,23 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 */
 	AUDDRV_SetAudioMode_ForMusicPlayback(mode,
 		GetAudioApp(), arg_pathID, inHWlpbk);
+
+	if (!AUDDRV_InVoiceCall()) {
+		/*for music tuning, if PCG changed audio mode,
+		need to pass audio mode to CP.
+		this command updates mode in audio_vdriver_caph.c,
+		it is not useful for MP3 audio tuning purpose.
+		*/
+		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+			(UInt32) mode,
+			(UInt32) GetAudioApp(), 0, 0, 0);
+		/*this command updates mode in audioapi.c.
+		 It is useful for MP3 audio tuning purpose.
+		 */
+		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
+			(UInt32) (((int)GetAudioApp()) * AUDIO_MODE_NUMBER +
+			mode), 0, 0, 0, 0);
+	}
 
 	if (!bClk)
 		csl_caph_ControlHWClock(FALSE);
@@ -1508,7 +1566,7 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 
 	log(1, "%s src 0x%x, Sink 0x%x", __func__, source, sink);
 	if (pathID == 0) {
-		audio_xassert(0, pathID);
+		/*audio_xassert(0, pathID);*/
 		return;
 	}
 	/*get the current speaker from pathID - need CSL API */
@@ -1555,8 +1613,11 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 	if ((sink == AUDIO_SINK_LOUDSPK) || (sink == AUDIO_SINK_HEADSET))
 		powerOnExternalAmp(sink, AudioUseExtSpkr, TRUE);
 
-	SetAudioMode_ForMusicPlayback(GetAudioModeBySink(sink),
-					      0, FALSE);
+	/*SetAudioMode_ForMusicPlayback(GetAudioModeBySink(sink),
+					      0, FALSE); */
+
+		/*for VoIP, need mic and speaker, */
+	SetAudioMode(GetAudioModeBySink(sink), GetAudioApp());
 
 	return;
 }
@@ -2291,7 +2352,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		}
 /*#endif*/
 #if defined(USE_NEW_AUDIO_PARAM)
-		SetAudioMode(audio_mode, 0/*GetAudioApp()*/);
+		SetAudioMode(audio_mode, AUDIO_APP_LOOPBACK);
 #else
 		SetAudioMode(audio_mode);
 #endif

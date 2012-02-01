@@ -462,8 +462,8 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 #else
 	if(event == PI_PRECHANGE)
 	{
-		if((IS_RETN_POLICY(p->new_value) || IS_SHUTDOWN_POLICY(p->new_value))
-					&& IS_ACTIVE_POLICY(p->old_value))
+		if((IS_RETN_POLICY(p->new_value) && IS_ACTIVE_POLICY(p->old_value)) ||
+			IS_SHUTDOWN_POLICY(p->new_value))
 		{
 			if (IS_RETN_POLICY(p->new_value)) {
 
@@ -480,10 +480,8 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 				pm_enable_scu_standby(1);
 			} 
 
-#if 0
 			if (IS_SHUTDOWN_POLICY(p->new_value)) {
 
-				printk(KERN_ERR "%s:MM shutdown workaround\n",__func__);
 				pm_enable_scu_standby(0);
 				writel(0xA5A501, KONA_MM_CLK_VA+MM_CLK_MGR_REG_WR_ACCESS_OFFSET);
 				reg_val = readl(KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
@@ -496,8 +494,14 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 				writel(reg_val, KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
 				pm_enable_scu_standby(1);
 			}
-#endif
 		}	
+	} else {
+		if(IS_SHUTDOWN_POLICY(p->old_value) && !IS_SHUTDOWN_POLICY(p->new_value)) {
+	
+			/* Enable the AXI trace17 counters again. */
+			writel(0x5551, KONA_AXITRACE17_VA + 0x0);
+			writel(0x2, KONA_AXITRACE17_VA + 0xC);
+		}
 	}
 #endif	
 	return 0;

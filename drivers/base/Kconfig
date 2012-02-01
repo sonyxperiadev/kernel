@@ -196,6 +196,12 @@ config CMA_STATS
 	help
 	  Adds support to show cma allocations per regions in /proc/cmainfo
 
+config CMA_TRACER
+	bool "Trace CMA allocation"
+	depends on EVENT_TRACING
+	help
+	  Say Y here enable tracing CMA buffer allocation and release.
+
 comment "Default contiguous memory area size:"
 
 config CMA_SIZE_MBYTES

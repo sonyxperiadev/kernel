@@ -324,78 +324,6 @@ static int spi_kona_setupxfer(struct spi_device *spi, struct spi_transfer *t)
 	return spi_kona_configure(spi_kona, &config);
 }
 
-/* TODO Need to find a better way to stop sequence in continuous mode */
-static int spi_kona_end_task(struct spi_device *spi,
-			     struct spi_transfer *transfer)
-{
-	struct spi_kona_data *spi_kona = spi_master_get_devdata(spi->master);
-	CHAL_HANDLE chandle = spi_kona->chandle;
-	chal_sspi_seq_conf_t seq_conf;
-	chal_sspi_task_conf_t task_conf;
-	uint32_t timeout = SSPI_TASK_TIME_OUT;
-
-	/* task_conf struct initialization */
-	memset(&task_conf, 0, sizeof(task_conf));
-
-	/* seq_conf struct initialization */
-	memset(&seq_conf, 0, sizeof(seq_conf));
-
-	/* disable scheduler operation */
-	if (chal_sspi_enable_scheduler(chandle, 0))
-		return -EIO;
-
-	/* task_conf struct configuration */
-	task_conf.chan_sel = SSPI_CHAN_SEL_CHAN0;
-	task_conf.cs_sel = SSPI_CS_SEL_CS0;
-	task_conf.tx_sel = SSPI_TX_SEL_TX0;
-	task_conf.rx_sel = (spi->mode & SPI_LOOP) ? SSPI_RX_SEL_COPY_TX0
-	    : SSPI_RX_SEL_RX0;
-	task_conf.div_sel = SSPI_CLK_DIVIDER0;
-	task_conf.seq_ptr = 0;
-
-	task_conf.loop_cnt = 0;
-	task_conf.continuous = 0;
-	task_conf.init_cond_mask = (transfer->tx_buf) ?
-	    SSPI_TASK_INIT_COND_THRESHOLD_TX0 : 0;
-	task_conf.wait_before_start = 0;
-
-	if (chal_sspi_set_task(chandle, 0, spi->mode & SPI_MODE_3, &task_conf))
-		return -EIO;
-
-	seq_conf.tx_enable = FALSE;
-	seq_conf.rx_enable = FALSE;
-	seq_conf.cs_activate = 0;
-	seq_conf.cs_deactivate = 1;
-	seq_conf.clk_idle = 1; /* Do not send clk in this sequence */
-	seq_conf.pattern_mode = 0;
-	seq_conf.rep_cnt = 0;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_STOP;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 0;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if (chal_sspi_set_sequence(chandle, 0, spi->mode & SPI_MODE_3,
-				   &seq_conf))
-		return -EIO;
-
-	/* enable scheduler operation */
-	if (chal_sspi_enable_scheduler(chandle, 1))
-		return -EIO;
-
-	while (timeout--) {
-		int status;
-		chal_sspi_get_intr_status(chandle, &status, NULL);
-		if (status & SSPIL_INTERRUPT_STATUS_SCHEDULER_STATUS_MASK) {
-			chal_sspi_clear_intr(chandle, status, 0);
-			return 0;
-		}
-		udelay(1);
-	}
-	return -EIO;
-}
-
 static int spi_kona_config_task(struct spi_device *spi,
 				struct spi_transfer *transfer)
 {
@@ -704,7 +632,6 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 			xfer_len = -EIO;
 	}
 
-	spi_kona_end_task(spi, transfer);
 	chal_sspi_enable_scheduler(chandle, 0);
 
 	/* Reset FIFO before configuring */

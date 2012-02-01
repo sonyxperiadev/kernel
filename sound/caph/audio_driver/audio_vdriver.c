@@ -421,6 +421,9 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker)
 		dma_mic_spk =
 		    (UInt16) (DSP_AADMAC_PRI_MIC_EN) |
 		    (UInt16) (DSP_AADMAC_SPKR_EN);
+		if (bDualMic_IsNeeded)
+			dma_mic_spk |= (UInt16)DSP_AADMAC_SEC_MIC_EN;
+
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0,
@@ -802,7 +805,8 @@ void AUDDRV_Telephony_Deinit(void)
 		dma_mic_spk =
 			(UInt16) (DSP_AADMAC_PRI_MIC_EN) |
 			((UInt16)(DSP_AADMAC_IHF_SPKR_EN)) |
-			(UInt16) (DSP_AADMAC_SPKR_EN);
+			(UInt16) (DSP_AADMAC_SPKR_EN) |
+			(UInt16) (DSP_AADMAC_SEC_MIC_EN);
 		csl_dsp_caph_control_aadmac_disable_path(dma_mic_spk);
 #endif
 		audio_control_dsp(DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0);

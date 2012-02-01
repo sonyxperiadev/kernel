@@ -1323,6 +1323,24 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	AUDCTRL_EnableTelephony(mic, spk);
 	AUDCTRL_SetTelephonySpkrVolume(spk, vol, AUDIO_GAIN_FORMAT_mB);
 
+	/* AUDCTRL_EnableTelephony changes app to VOICE_CALL.
+	here need to force audio APP to LOOPBACK*/
+	/* VOIP_PCM_16K or VOIP_AMR_WB */
+	if ((codecVal == 4) || (codecVal == 5)) {
+#if defined(USE_NEW_AUDIO_PARAM)
+		/* WB has to use AUDIO_APP_VOICE_CALL_WB */
+		SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
+#else
+		SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
+#endif
+	} else { /* NB VoIP case */
+#if defined(USE_NEW_AUDIO_PARAM)
+		SetAudioMode(mode, AUDIO_APP_LOOPBACK);
+#else
+		SetAudioMode(mode);
+#endif
+	}
+
 	/* init driver */
 
 	drv_handle = AUDIO_DRIVER_Open(AUDIO_DRIVER_VOIP);

@@ -516,8 +516,9 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 			BCMPMU_REGL_LPM_IN_DSM
 	},
 #endif
+#warning "Changing to Always ON temporarily to bypass the current leakage issue"
 	[BCMPMU_REGULATOR_CSR_NM] =	{
-		BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x31, 0
+		BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_CSR_NM2] = {
 		BCMPMU_REGULATOR_CSR_NM2, &bcm59039_csr_nm2_data, 0xFF, 0

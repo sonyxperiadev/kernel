@@ -134,7 +134,7 @@ typedef struct csl_caph_Mic_Gain_t {
 	int micDSPULGain; /* mdB in Q15 */
 } csl_caph_Mic_Gain_t;
 
-void csl_caph_audioh_init(UInt32 baseAddr, UInt32 sdtBaseAddr);
+void *csl_caph_audioh_init(UInt32 baseAddr, UInt32 sdtBaseAddr);
 void csl_caph_audioh_deinit(void);
 void csl_caph_audioh_config(int path_id, void *pcfg);
 void csl_caph_audioh_unconfig(int path_id);

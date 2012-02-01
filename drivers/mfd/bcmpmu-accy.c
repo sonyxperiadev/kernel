@@ -554,6 +554,7 @@ static void usb_det_work(struct work_struct *work)
 	enum bcmpmu_usb_type_t usb_type = PMU_CHRGR_TYPE_NONE;
 	unsigned int bc_status;
 	int vbus_status;
+	int id_status;
 	struct bcmpmu_accy *paccy =
 	    container_of(work, struct bcmpmu_accy, det_work.work);
 	struct bcmpmu *bcmpmu = paccy->bcmpmu;
@@ -561,6 +562,10 @@ static void usb_det_work(struct work_struct *work)
 	ret = bcmpmu_usb_get(bcmpmu,
 			     BCMPMU_USB_CTRL_GET_SESSION_STATUS,
 			     (void *)&vbus_status);
+
+	ret = bcmpmu_usb_get(bcmpmu,
+			     BCMPMU_USB_CTRL_GET_ID_VALUE,
+			     (void *)&id_status);
 
 	pr_accy(FLOW, "%s, enter state=%d, vbus=0x%X\n", __func__,
 		paccy->det_state, vbus_status);
@@ -577,7 +582,7 @@ static void usb_det_work(struct work_struct *work)
 		schedule_delayed_work(&paccy->det_work, msecs_to_jiffies(100));
 		break;
 	case USB_DETECT:
-		if (vbus_status != 0) {
+		if ((vbus_status != 0) && (id_status != PMU_USB_ID_GROUND)) {
 			bc_status = get_bc_status(paccy);
 			pr_accy(FLOW, "%s, bc_status=0x%X, retry=%d\n",
 				__func__, bc_status, paccy->retry_cnt);
@@ -628,7 +633,6 @@ static void usb_det_work(struct work_struct *work)
 						      msecs_to_jiffies(100));
 			}
 		} else {
-			enable_bc_clock(paccy, false);
 			usb_type = PMU_USB_TYPE_NONE;
 			chrgr_type = PMU_CHRGR_TYPE_NONE;
 			paccy->det_state = USB_IDLE;

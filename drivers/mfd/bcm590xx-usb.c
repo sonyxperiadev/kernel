@@ -335,7 +335,7 @@ static void bcmpmu_usb_isr(int intr, void *data)
 	struct bcmpmu_usb *bcmpmu_usb = data;
 	int event = -1;
 	int evnt_sts;
-	pr_info("%s: Interrupt number %d\n", __func__, intr);
+	pr_debug("%s: Interrupt number %d\n", __func__, intr);
 
 	switch(intr) {
 	case BCM59055_IRQID_INT2_USBINS:

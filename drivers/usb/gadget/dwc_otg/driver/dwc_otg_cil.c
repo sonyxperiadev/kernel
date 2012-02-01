@@ -4746,7 +4746,7 @@ void dwc_otg_core_reset(dwc_otg_core_if_t *core_if)
 		dwc_otg_core_soft_disconnect(core_if, true);
 #endif
 
-	/* Wait for 3 PHY Clocks */
+	/* Wait 100ms after core reset for right ID/mode and session level */
 	dwc_mdelay(100);
 }
 

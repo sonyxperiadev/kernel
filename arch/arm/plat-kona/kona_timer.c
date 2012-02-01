@@ -39,13 +39,9 @@
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_khubaon_rst_mgr_reg.h>
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_SAMOA) || defined(CONFIG_ARCH_ISLAND)
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
-#endif
-#else
-#include <mach/rdb/brcm_rdb_ikps_clk_mgr_reg.h>
 #endif
 
 #include <asm/io.h>
@@ -658,6 +654,20 @@ int kona_timer_disable_and_clear(struct kona_timer *kt)
 }
 EXPORT_SYMBOL(kona_timer_disable_and_clear);
 
+/* Return the counter value of hub timer */
+unsigned long kona_hubtimer_get_counter(void)
+{
+	return readl(timer_module_list[0].reg_base + KONA_GPTIMER_STCLO_OFFSET);
+}
+EXPORT_SYMBOL(kona_hubtimer_get_counter);
+
+/* Return the counter value of slave timer */
+unsigned long kona_slavetimer_get_counter(void)
+{
+	return readl(timer_module_list[1].reg_base + KONA_GPTIMER_STCLO_OFFSET);
+}
+EXPORT_SYMBOL(kona_slavetimer_get_counter);
+
 /* Local static functions */
 static struct kona_timer_module * __get_timer_module(char *name)
 {
@@ -677,9 +687,7 @@ static int __config_slave_timer_clock(struct kona_timer_module *pktm,
 #ifdef CONFIG_PERIPHERAL_TIMER_FIX
 	void __iomem *rootClockMgr_regs = IOMEM(KONA_ROOT_CLK_VA);
 #endif
-#if !defined(CONFIG_ARCH_SAMOA) || defined(CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY)
 	uint32_t old_enable;
-#endif
 	uint32_t val, mask;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
@@ -709,7 +717,6 @@ static int __config_slave_timer_clock(struct kona_timer_module *pktm,
 local_clk_cfg:
 	spin_lock_irqsave (&pktm->lock, flags);
 	/* Adjust clock source to 1Mhz */
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_ISLAND)
 	/* unlock slave clock manager */
 	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
 	old_enable = val & 0x1;	
@@ -738,75 +745,12 @@ local_clk_cfg:
 	val |= 0xA5A500;
 	val |= old_enable & 0x1;
 	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-#else
-#ifdef CONFIG_ARCH_SAMOA
-	/* unlock slave clock manager */
-#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
-#define KPS_CLK_MGR_REG_WR_ACCESS_OFFSET 0
-	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-	old_enable = val & 0x1;
-	val &= 0x80000000;
-	val |= 0xA5A500 | 0x1;
-	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-#else
-	/* Samoa kps_clk access control is different ... */
-#endif
-
-	/* set the value */
-	mask = KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
-	kona_set_reg_field(slaveClockMgr_regs + KPS_CLK_MGR_REG_TIMERS_DIV_OFFSET,
-			mask, KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT, 0);
-
-	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_KPS_DIV_TRIG_OFFSET);
-	writel(val | (1 << KPS_CLK_MGR_REG_KPS_DIV_TRIG_TIMERS_TRIGGER_SHIFT),
-		slaveClockMgr_regs + KPS_CLK_MGR_REG_KPS_DIV_TRIG_OFFSET);
-
-	while(readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_KPS_DIV_TRIG_OFFSET) &
-		(1 << KPS_CLK_MGR_REG_KPS_DIV_TRIG_TIMERS_TRIGGER_SHIFT))
-			;
-
-	/* restore slave clock manager */
-#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
-#else
-	/* Samoa ... */
-#endif
-#else
-	/* unlock slave clock manager */
-	val = readl(slaveClockMgr_regs + IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-	old_enable = val & 0x1; 
-	val &= 0x80000000;
-	val |= 0xA5A500 | 0x1;
-	writel(val, slaveClockMgr_regs + IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-
-	/* set the value */
-	mask = IKPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
-	kona_set_reg_field(slaveClockMgr_regs + IKPS_CLK_MGR_REG_TIMERS_DIV_OFFSET,
-			mask, IKPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT, 0);
-
-
-	val = readl(slaveClockMgr_regs + IKPS_CLK_MGR_REG_DIV_TRIG_OFFSET);
-	writel(val | (1 << IKPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT), 
-		slaveClockMgr_regs + IKPS_CLK_MGR_REG_DIV_TRIG_OFFSET);
-
-	while(readl(slaveClockMgr_regs + IKPS_CLK_MGR_REG_DIV_TRIG_OFFSET) & 
-			(1 << IKPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT))
-		;
-
-	/* restore slave clock manager */
-	val = readl(slaveClockMgr_regs + IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-	val &= 0x80000000;
-	val |= 0xA5A500;
-	val |= old_enable & 0x1;
-	writel(val, slaveClockMgr_regs + IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-#endif
-#endif
 
 #ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
 	/* 
 	 * This fix is only for 1 MHz since the clock source for
 	 * 1MHz is from frac_1M. The 32KHz clock is from PMU and is always ON.
 	 */
-#ifndef CONFIG_ARCH_SAMOA
 	if (reg_val == 1) {
 		/* unlock root clock manager */
 		val = readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
@@ -841,7 +785,6 @@ local_clk_cfg:
 		val |= 0xA5A500;
 		writel(val, slaveClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
 	}
-#endif
 #endif
 	spin_unlock_irqrestore (&pktm->lock, flags);
 	return 0;

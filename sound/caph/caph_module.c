@@ -634,7 +634,7 @@ static struct platform_device sgPlatformDevice = {
 };
 
 /* Platfoorm driver structure */
-static struct platform_driver sgPlatformDriver = {
+static struct platform_driver __refdata sgPlatformDriver = {
 	/*
 	 * probe is assigned in ALSAModuleInit
 	 * because of "section mismatch" warning.
