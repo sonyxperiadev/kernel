@@ -119,7 +119,7 @@
 #else
 #define SD_CARDDET_GPIO_PIN      72
 #endif
-#define SD_CARDDET_GPIO_PIN      72
+#define SD_CARDDET_GPIO_PIN      123
 
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
@@ -985,7 +985,7 @@ static struct resource board_sdio3_resource[] = {
 };
 #endif
 
-#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS)
+#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING)
 static struct resource board_sdio3_resource[] = {
 	[0] = {
 		.start = SDIO3_BASE_ADDR,
@@ -1057,7 +1057,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	},
 #endif
 
-#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS)
+#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined (CONFIG_MACH_RHEA_SS_AMAZING)
 	{ /* SDIO3 */
 		.id = 2,
 		.data_pullup = 0,
@@ -1104,7 +1104,7 @@ static struct platform_device board_sdio3_device = {
 	.resource = board_sdio3_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
-#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS)
+#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING)
 	.resource = board_sdio3_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
