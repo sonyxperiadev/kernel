@@ -284,6 +284,19 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {	/* revisit 
 	[PMU_REG_SYS_WDT_TIME] = {.map = 0x00, .addr = 0x02, .mask = 0x7F, .ro =
 				  0, .shift = 0},
 
+	/* BM access */
+	[PMU_REG_MBCCTRL1]  = { .map = 0x00, .addr = 0x50, .mask = 0xff, },
+	[PMU_REG_MBCCTRL2]  = { .map = 0x00, .addr = 0x51, .mask = 0xff, },
+	[PMU_REG_MBCCTRL3]  = { .map = 0x00, .addr = 0x52, .mask = 0xff, },
+	[PMU_REG_MBCCTRL4]  = { .map = 0x00, .addr = 0x53, .mask = 0xff, },
+	[PMU_REG_MBCCTRL5]  = { .map = 0x00, .addr = 0x54, .mask = 0xff, },
+	[PMU_REG_MBCCTRL6]  = { .map = 0x00, .addr = 0x55, .mask = 0xff, },
+	[PMU_REG_MBCCTRL7]  = { .map = 0x00, .addr = 0x56, .mask = 0xff, },
+	[PMU_REG_MBCCTRL8]  = { .map = 0x00, .addr = 0x57, .mask = 0xff, },
+	[PMU_REG_MBCCTRL9]  = { .map = 0x00, .addr = 0x58, .mask = 0xff, },
+	[PMU_REG_MBCCTRL10] = { .map = 0x00, .addr = 0x59, .mask = 0xff, },
+	[PMU_REG_BBCCTRL]   = { .map = 0x00, .addr = 0x2f, .mask = 0xff, },
+
 };
 
 static const struct bcmpmu_irq_map bcm59055_irq_map[PMU_IRQ_MAX] = {	/* revisit */
