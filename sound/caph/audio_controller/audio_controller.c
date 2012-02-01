@@ -2366,6 +2366,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		this function also sets all HW gains.
 		*/
 		SetAudioMode_ForMusicPlayback(audio_mode, pathID, TRUE);
+		AUDDRV_SetAudioMode_ForMusicRecord(audio_mode, GetAudioApp(), 0);
 
 		/* Enable Loopback ctrl */
 		/* Enable PMU for headset/IHF */
