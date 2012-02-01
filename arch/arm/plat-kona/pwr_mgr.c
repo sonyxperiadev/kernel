@@ -124,6 +124,7 @@ static char *pwr_mgr_event2str(int event)
 enum {
 	I2C_SEQ_READ,
 	I2C_SEQ_WRITE,
+	I2C_SEQ_READ_FIFO,
 };
 
 #endif
@@ -1466,6 +1467,12 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 		     i2c_wr_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
 		    PWRMGR_I2C_SW_START_ADDR_MASK;
 		break;
+	case I2C_SEQ_READ_FIFO:
+		reg_val |=
+		    (pwr_mgr.info->
+		     i2c_rd_fifo_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
+		    PWRMGR_I2C_SW_START_ADDR_MASK;
+		break;
 	default:
 		BUG();
 		break;
@@ -1528,12 +1535,34 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 	if (!ret && reg_val) {
 		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+		reg = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
+				PWRMGR_I2C_READ_DATA_SHIFT);
+		if (reg & 0x1) {
+			pr_info("PWRMGR: I2C READ NACK\n");
+			ret = -EAGAIN;
+			goto out_unlock;
+		}
+		/**
+		 * if there is no NACK from PMU, we will trigger
+		 * PWRMGR again to read the FIFO data from PMU_BSC
+		 * to PWRMGR buffer
+		 */
+		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+		ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ_FIFO);
+		if (ret < 0)
+			goto out;
+		spin_lock_irqsave(&pwr_mgr_lock, flgs);
+		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
+#endif
 		*reg_val = (reg & PWRMGR_I2C_READ_DATA_MASK) >>
 		    PWRMGR_I2C_READ_DATA_SHIFT;
 	}
+out_unlock:
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return ret;
-
+out:
+	return ret;
 }
 
 EXPORT_SYMBOL(pwr_mgr_pmu_reg_read);
