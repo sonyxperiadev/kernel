@@ -273,6 +273,8 @@ CSL_PCM_OPSTATUS_t csl_pcm_stop_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s handle %p, chan %d\n",
+		__func__, handle, channel);
 	if (!pDevice)
 		return CSL_PCM_ERR_HANDLE;
 
@@ -301,6 +303,9 @@ CSL_PCM_OPSTATUS_t csl_pcm_stop_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 CSL_PCM_OPSTATUS_t csl_pcm_stop_rx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s handle %p, chan %d\n",
+		__func__, handle, channel);
 
 	if (!pDevice)
 		return CSL_PCM_ERR_HANDLE;

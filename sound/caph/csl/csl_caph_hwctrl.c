@@ -493,6 +493,29 @@ static void csl_caph_release_arm2sp(int i)
 	memset(&arm2spCfg[i], 0, sizeof(arm2spCfg[0]));
 }
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_count_path_with_same_source
+*
+*  Description: count the paths with the same source
+*
+*****************************************************************************/
+static int csl_caph_count_path_with_same_source(CSL_CAPH_DEVICE_e source)
+{
+	int i, count = 0;
+	CSL_CAPH_HWConfig_Table_t *path;
+
+	path = &HWConfig_Table[0];
+	for (i = 0; i < MAX_AUDIO_PATH; i++) {
+		if (path[i].source == source)
+			count++;
+	}
+
+	Log_DebugPrintf(LOGID_AUDIO, "%s:: source %d, count %d\n",
+		__func__, source, count);
+	return count;
+}
+
 void csl_caph_arm2sp_set_fm_mixmode(int mix_mode)
 {
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s mix_mode %d --> %d\n",
@@ -1364,7 +1387,7 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 {
 	CSL_CAPH_HWConfig_Table_t *path;
 	CSL_CAPH_SRCM_INCHNL_e srcmIn;
-	int i, blockIdx = 0;
+	int i, blockIdx = 0, count_fmrx_path;
 
 	path = &HWConfig_Table[pathID-1];
 
@@ -1418,13 +1441,15 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 		}
 	}
 
-	if ((path->source == CSL_CAPH_DEV_FM_RADIO) &&
-			(path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY)) {
-		/*This assumes direct playback is on during recording.
-		 * how about direct playback is stopped during recording?
-		 */
-		/*do not close switch in this case*/
-	} else {
+	count_fmrx_path = 0;
+	if (path->source == CSL_CAPH_DEV_FM_RADIO &&
+		path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY)
+		count_fmrx_path =
+		csl_caph_count_path_with_same_source(CSL_CAPH_DEV_FM_RADIO);
+
+	if (count_fmrx_path <= 1) {
+		/*In case direct playback is on while stopping recording.*/
+		/*do not close switch*/
 		for (i = startOffset; i < MAX_PATH_LEN; i++) {
 			if (path->block[sinkNo][i] == CAPH_SW) {
 				blockIdx = path->blockIdx[sinkNo][i];
@@ -1552,40 +1577,23 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 		memset(&path->audiohCfg[sinkNo+1], 0, sizeof(audio_config_t));
 	}
 
-	if (((path->source == CSL_CAPH_DEV_DSP) && (path->sink[sinkNo]
-			== CSL_CAPH_DEV_BT_SPKR)) ||
-			((path->source == CSL_CAPH_DEV_BT_MIC) &&
-			 (path->sink[sinkNo] == CSL_CAPH_DEV_DSP))) {
-		if (pcmRxRunning && pcmTxRunning) {
-			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+	if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR ||
+		path->source == CSL_CAPH_DEV_BT_MIC) {
+		if (path->source == CSL_CAPH_DEV_BT_MIC && pcmRxRunning) {
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 #if !defined(ENABLE_DMA_VOICE)
-			csl_caph_intc_disable_pcm_intr
-				(CSL_CAPH_DSP, sspidPcmUse);
-			/*this is required to turn off ssp
-			 *clock after bt call is switched to ep
-			 */
+			if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
+				csl_caph_intc_disable_pcm_intr
+					(CSL_CAPH_DSP, sspidPcmUse);
 #endif
 			pcmRxRunning = FALSE;
-			pcmTxRunning = FALSE;
-			if (sspTDM_enabled) {
-				if (!csl_caph_hwctrl_ssp_running())
-					csl_pcm_enable_scheduler(pcmHandleSSP,
-						FALSE);
-			} else
-				csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
 		}
-	} else if (path->source == CSL_CAPH_DEV_BT_MIC ||
-			path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) {
-		if (path->source == CSL_CAPH_DEV_BT_MIC)
-			pcmRxRunning = FALSE;
-		if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR)
-			pcmTxRunning = FALSE;
-		if (!pcmRxRunning && !pcmTxRunning) {
-			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-			/* csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1); */
+		if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
+			&& pcmTxRunning) {
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-			/* csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1); */
+			pcmTxRunning = FALSE;
+		}
+		if (!pcmRxRunning && !pcmTxRunning) {
 			if (sspTDM_enabled) {
 				if (!csl_caph_hwctrl_ssp_running())
 					csl_pcm_enable_scheduler(pcmHandleSSP,
@@ -4653,4 +4661,3 @@ CSL_CAPH_PathID csl_caph_FindRenderPathID(CSL_CAPH_DEVICE_e sink_dev,
 
 	return path;
 }
-
