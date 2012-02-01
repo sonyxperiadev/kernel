@@ -140,42 +140,6 @@ enum s5k4ecgx_capture_frame_size {
 	S5K4ECGX_CAPTURE_MAX,
 };
 
-enum s5k4ecgx_zoom {
-
-	X_1_25_ZOOM_0 = 0,	
-	X_1_25_ZOOM_1,		
-	X_1_25_ZOOM_2,		
-	X_1_25_ZOOM_3,		
-	X_1_25_ZOOM_4,		
-	X_1_25_ZOOM_5,		
-	X_1_25_ZOOM_6,		
-	X_1_25_ZOOM_7,		
-	X_1_25_ZOOM_8,
-
-	X_1_6_ZOOM_0,	
-	X_1_6_ZOOM_1,		
-	X_1_6_ZOOM_2,		
-	X_1_6_ZOOM_3,		
-	X_1_6_ZOOM_4,		
-	X_1_6_ZOOM_5,		
-	X_1_6_ZOOM_6,		
-	X_1_6_ZOOM_7,		
-	X_1_6_ZOOM_8,
-
-	X_2_0_ZOOM_0,
-	X_2_0_ZOOM_1,
-	X_2_0_ZOOM_2,
-	X_2_0_ZOOM_3,
-	X_2_0_ZOOM_4,
-	X_2_0_ZOOM_5,
-	X_2_0_ZOOM_6,
-	X_2_0_ZOOM_7,
-	X_2_0_ZOOM_8,
-	ZOOM_MAX,
-		
-};
-
-
 struct s5k4ecgx_framesize {
 	u32 index;
 	u32 width;
@@ -327,7 +291,7 @@ struct s5k4ecgx_regs {
 	struct s5k4ecgx_regset_table get_esd_status;
 	struct s5k4ecgx_regset_table get_iso;
 	struct s5k4ecgx_regset_table get_shutterspeed;
-	struct s5k4ecgx_regset_table zoom[ZOOM_MAX];
+	struct s5k4ecgx_regset_table zoom[ZOOM_LEVEL_MAX];
 };
 
 #ifdef CONFIG_VIDEO_S5K4ECGX_V_1_0
@@ -663,7 +627,8 @@ static const struct s5k4ecgx_regs regs_for_fw_version_1_1 = {
 		S5K4ECGX_REGSET_TABLE(s5k4ecgx_get_shutterspeed_reg),
 	.zoom ={
 
-			S5K4ECGX_REGSET(X_1_25_ZOOM_0, s5k4ecgx_x_1_25_zoom_0),
+			S5K4ECGX_REGSET(ZOOM_LEVEL_0, s5k4ecgx_x_1_25_zoom_0),
+		#if 0
 			S5K4ECGX_REGSET(X_1_25_ZOOM_1, s5k4ecgx_x_1_25_zoom_1),
 			S5K4ECGX_REGSET(X_1_25_ZOOM_2, s5k4ecgx_x_1_25_zoom_2),
 			S5K4ECGX_REGSET(X_1_25_ZOOM_3, s5k4ecgx_x_1_25_zoom_3),
@@ -684,14 +649,15 @@ static const struct s5k4ecgx_regs regs_for_fw_version_1_1 = {
 			S5K4ECGX_REGSET(X_1_6_ZOOM_8, s5k4ecgx_x_1_6_zoom_8),
 			
 			S5K4ECGX_REGSET(X_2_0_ZOOM_0, s5k4ecgx_x_2_0_zoom_0),
-			S5K4ECGX_REGSET(X_2_0_ZOOM_1, s5k4ecgx_x_2_0_zoom_1),
-			S5K4ECGX_REGSET(X_2_0_ZOOM_2, s5k4ecgx_x_2_0_zoom_2),
-			S5K4ECGX_REGSET(X_2_0_ZOOM_3, s5k4ecgx_x_2_0_zoom_3),
-			S5K4ECGX_REGSET(X_2_0_ZOOM_4, s5k4ecgx_x_2_0_zoom_4),
-			S5K4ECGX_REGSET(X_2_0_ZOOM_5, s5k4ecgx_x_2_0_zoom_5),
-			S5K4ECGX_REGSET(X_2_0_ZOOM_6, s5k4ecgx_x_2_0_zoom_6),
-			S5K4ECGX_REGSET(X_2_0_ZOOM_7, s5k4ecgx_x_2_0_zoom_7),
-			S5K4ECGX_REGSET(X_2_0_ZOOM_8, s5k4ecgx_x_2_0_zoom_8),
+		#endif
+			S5K4ECGX_REGSET(ZOOM_LEVEL_1, s5k4ecgx_x_2_0_zoom_1),
+			S5K4ECGX_REGSET(ZOOM_LEVEL_2, s5k4ecgx_x_2_0_zoom_2),
+			S5K4ECGX_REGSET(ZOOM_LEVEL_3, s5k4ecgx_x_2_0_zoom_3),
+			S5K4ECGX_REGSET(ZOOM_LEVEL_4, s5k4ecgx_x_2_0_zoom_4),
+			S5K4ECGX_REGSET(ZOOM_LEVEL_5, s5k4ecgx_x_2_0_zoom_5),
+			S5K4ECGX_REGSET(ZOOM_LEVEL_6, s5k4ecgx_x_2_0_zoom_6),
+			S5K4ECGX_REGSET(ZOOM_LEVEL_7, s5k4ecgx_x_2_0_zoom_7),
+			S5K4ECGX_REGSET(ZOOM_LEVEL_8, s5k4ecgx_x_2_0_zoom_8),
 
 	},
 };
@@ -825,34 +791,251 @@ static int s5k4ecgx_i2c_write_twobyte(struct i2c_client *client,
 }
 
 static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
+
 	{
-		.id 		= V4L2_CID_BRIGHTNESS,
+		.id			= V4L2_CID_CAMERA_FLASH_MODE,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Flash",
+		.minimum	= FLASH_MODE_OFF,
+		.maximum	= FLASH_MODE_TORCH,
+		.step		= 1,
+		.default_value	= FLASH_MODE_AUTO,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_BRIGHTNESS,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Brightness",
 		.minimum	= EV_MINUS_4,
-		.maximum	= EV_MAX,
+		.maximum	= EV_PLUS_4,
 		.step		= 1,
-		.default_value	= EV_MINUS_4,
+		.default_value	= EV_DEFAULT,
 	},
+
 	{
-		.id 		= V4L2_CID_CAMERA_CONTRAST,
+		.id			= V4L2_CID_CAMERA_WHITE_BALANCE,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Whilte Balance",
+		.minimum	= WHITE_BALANCE_AUTO ,
+		.maximum	= WHITE_BALANCE_FLUORESCENT,
+		.step		= 1,
+		.default_value	= WHITE_BALANCE_AUTO,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_ZOOM,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Zoom",
+		.minimum	= ZOOM_LEVEL_0,
+		.maximum	= ZOOM_LEVEL_8,
+		.step		= 1,
+		.default_value	= ZOOM_LEVEL_0,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_EFFECT,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Color Effects",
+		.minimum	= IMAGE_EFFECT_NONE,
+		.maximum	= (1 << IMAGE_EFFECT_NONE | 1 << IMAGE_EFFECT_BNW
+						| 1 << IMAGE_EFFECT_SEPIA | 1 << IMAGE_EFFECT_NEGATIVE), /* this should be replace by querymenu */
+		.step		= 1,
+		.default_value	= IMAGE_EFFECT_NONE,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_ISO,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "ISO",
+		.minimum	= ISO_AUTO ,
+		.maximum	= ISO_MOVIE,
+		.step		= 1,
+		.default_value	= ISO_AUTO,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_METERING,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Metering",
+		.minimum	= METERING_MATRIX,
+		.maximum	= METERING_SPOT,
+		.step		= 1,
+		.default_value	= METERING_CENTER,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_CONTRAST,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Contrast",
 		.minimum	= CONTRAST_MINUS_2,
-		.maximum	= CONTRAST_MAX,
+		.maximum	= CONTRAST_PLUS_2,
 		.step		= 1,
-		.default_value	= CONTRAST_MINUS_2,
+		.default_value	= CONTRAST_DEFAULT,
 	},
 	{
-		.id 		= V4L2_CID_ZOOM_ABSOLUTE,
+		.id			= V4L2_CID_CAMERA_SATURATION,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Zoom",
-		.minimum	= X_1_25_ZOOM_0,
-		.maximum	= ZOOM_MAX,
+		.name		= "Saturation",
+		.minimum	= SATURATION_MINUS_2,
+		.maximum	= SATURATION_PLUS_2,
 		.step		= 1,
-		.default_value	= X_1_25_ZOOM_0,
+		.default_value	= SATURATION_DEFAULT,
 	},
 
+	{
+		.id			= V4L2_CID_CAMERA_SHARPNESS,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Sharpness",
+		.minimum	= SHARPNESS_MINUS_2,
+		.maximum	= SHARPNESS_PLUS_2,
+		.step		= 1,
+		.default_value	= SHARPNESS_DEFAULT,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_WDR,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "WDR",
+		.minimum	= WDR_OFF,
+		.maximum	= WDR_ON,
+		.step		= 1,
+		.default_value	= WDR_OFF,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_FACE_DETECTION,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Face Detection",
+		.minimum	= FACE_DETECTION_OFF,
+		.maximum	= FACE_DETECTION_ON,
+		.step		= 1,
+		.default_value	= FACE_DETECTION_OFF,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_FOCUS_MODE,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Focus",
+		.minimum	= FOCUS_MODE_AUTO,
+		.maximum	= (1 << FOCUS_MODE_AUTO | 1 << FOCUS_MODE_MACRO
+						| 1 << FOCUS_MODE_INFINITY), /* querymenu ?*/
+		.step		= 1,
+		.default_value	= FOCUS_MODE_AUTO,
+	},
+
+	{
+		.id			= V4L2_CID_CAM_JPEG_QUALITY,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "JPEG Quality",
+		.minimum	= 0,
+		.maximum	= 100,
+		.step		= 1,
+		.default_value	= 100,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_SCENE_MODE,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Scene Mode",
+		.minimum	= SCENE_MODE_NONE,
+		.maximum	= (1 << SCENE_MODE_NONE | 1 << SCENE_MODE_PORTRAIT |
+						1 << SCENE_MODE_NIGHTSHOT | 1 << SCENE_MODE_LANDSCAPE
+						| 1 << SCENE_MODE_SPORTS | 1 << SCENE_MODE_PARTY_INDOOR |
+						1 << SCENE_MODE_BEACH_SNOW | 1 << SCENE_MODE_SUNSET |
+						1 << SCENE_MODE_FIREWORKS | 1 << SCENE_MODE_CANDLE_LIGHT), /*querymenu?*/
+		.step		= 1,
+		.default_value	= SCENE_MODE_NONE,
+	},
+
+	{
+		.id			= V4L2_CID_CAM_JPEG_QUALITY,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "JPEG Quality",
+		.minimum	= 0,
+		.maximum	= 100,
+		.step		= 1,
+		.default_value	= 100,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_SET_AUTO_FOCUS,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Set AutoFocus",
+		.minimum	= AUTO_FOCUS_OFF,
+		.maximum	= AUTO_FOCUS_ON,
+		.step		= 1,
+		.default_value	= AUTO_FOCUS_OFF,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_FRAME_RATE,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Framerate control",
+		.minimum	= FRAME_RATE_AUTO,
+		.maximum	= FRAME_RATE_30,
+		.step		= 1,
+		.default_value	= FRAME_RATE_AUTO,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_SET_AUTO_FOCUS,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Set AutoFocus",
+		.minimum	= AUTO_FOCUS_OFF,
+		.maximum	= AUTO_FOCUS_ON,
+		.step		= 1,
+		.default_value	= AUTO_FOCUS_OFF,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_CAPTURE,
+		.type		= V4L2_CTRL_TYPE_BOOLEAN,
+		.name		= "Capture",
+		.minimum	= 0,
+		.maximum	= 0,
+		.step		= 0,
+		.default_value	= 0,
+	},
+
+	{
+		.id			= V4L2_CID_CAM_PREVIEW_ONOFF,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Preview control",
+		.minimum	= 0,
+		.maximum	= 1,
+		.step		= 1,
+		.default_value	= 0,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_CHECK_DATALINE,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Check Dataline",
+		.minimum	= 0,
+		.maximum	= 1,
+		.step		= 1,
+		.default_value	= 0,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_CHECK_DATALINE_STOP,
+		.type		= V4L2_CTRL_TYPE_BOOLEAN,
+		.name		= "Check Dataline Stop",
+		.minimum	= 0,
+		.maximum	= 0,
+		.step		= 0,
+		.default_value	= 0,
+	},
+
+	{
+		.id			= V4L2_CID_CAMERA_RETURN_FOCUS,
+		.type		= V4L2_CTRL_TYPE_BOOLEAN,
+		.name		= "Return Focus",
+		.minimum	= 0,
+		.maximum	= 0,
+		.step		= 0,
+		.default_value	= 0,
+	},
 };
 
 static int s5k4ecgx_write_regs(struct v4l2_subdev *sd, const u32 regs[],
@@ -1671,7 +1854,7 @@ static void s5k4ecgx_init_parameters(struct v4l2_subdev *sd)
 	parms->scene_mode = SCENE_MODE_NONE;
 	parms->sharpness = SHARPNESS_DEFAULT;
 	parms->white_balance = WHITE_BALANCE_AUTO;
-	parms->zoom = X_1_25_ZOOM_0;
+	parms->zoom = ZOOM_LEVEL_0;
 
 	state->jpeg.enable = 0;
 	state->jpeg.quality = 100;
@@ -2423,7 +2606,7 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAMERA_FLASH_MODE:
 		err = s5k4ecgx_set_flash_mode(sd, value);
 		break;
-	case V4L2_CID_BRIGHTNESS:
+	case V4L2_CID_CAMERA_BRIGHTNESS:
 		if (state->runmode == S5K4ECGX_RUNMODE_RUNNING) {
 			err = s5k4ecgx_set_parameter(sd, &parms->brightness,
 						value, "brightness",
@@ -2452,7 +2635,7 @@ static int s5k4ecgx_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 
-	case V4L2_CID_ZOOM_ABSOLUTE:
+	case V4L2_CID_CAMERA_ZOOM:
 
 		if (state->runmode == S5K4ECGX_RUNMODE_RUNNING) {
 				err = s5k4ecgx_set_parameter(sd, &parms->zoom,
