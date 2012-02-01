@@ -340,6 +340,17 @@ static int lm8325_configure(struct lm8325_chip *lm)
 	buf[1] = 0x3;
 	lm8325_write(lm, 2, buf);
 
+	/* Set autosleep time */
+	/* Set the lower 8 bits */
+	buf[0] = LM8325_CMD_AUTOSLPTIL;
+	buf[1] = ((lm->sleep_time) & 0xFF);
+	lm8325_write(lm, 2, buf);
+
+	/* Set the higher 8 bits */
+	buf[0] = LM8325_CMD_AUTOSLPTIH;
+	buf[1] = ((lm->sleep_time) & 0xFF00) >> 8;
+	lm8325_write(lm, 2, buf);
+
 	/* Enable autosleep */
 	buf[0] = LM8325_CMD_AUTOSLP;
 	buf[1] = lm->autosleep;
@@ -635,6 +646,7 @@ static int lm8325_probe(struct i2c_client *client,
 		lm->iocfg = 0xF8;
 
 	lm->autosleep = lm8325_pdata->autosleep;
+	lm->sleep_time = lm8325_pdata->sleep_time;
 
 	/* 6. Reset the controller and wait till its done - This is done by
 	   reading the controller register */

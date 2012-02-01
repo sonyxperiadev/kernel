@@ -85,6 +85,7 @@ struct lm8325_chip {
 	int			settle_time;
 	int 			iocfg;
 	int			autosleep;
+	int 			sleep_time;
 
 	int 			err_flag;
 	int 			error_count;
@@ -98,6 +99,7 @@ struct lm8325_platform_data {
 	int dedicated_key_cfg;
 	int iocfg;
 	int autosleep;
+	int sleep_time;
 
 	int size_x;
 	int size_y;
