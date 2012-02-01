@@ -948,16 +948,6 @@ static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
 	},
 
 	{
-		.id			= V4L2_CID_CAM_JPEG_QUALITY,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "JPEG Quality",
-		.minimum	= 0,
-		.maximum	= 100,
-		.step		= 1,
-		.default_value	= 100,
-	},
-
-	{
 		.id			= V4L2_CID_CAMERA_SET_AUTO_FOCUS,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Set AutoFocus",
