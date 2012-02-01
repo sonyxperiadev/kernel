@@ -82,6 +82,8 @@ struct spi_kona_data {
 	u8 use_dma;
 	u32 tx_dma_chan;
 	u32 rx_dma_chan;
+	dma_addr_t dma_rx_buf;
+	dma_addr_t dma_tx_buf;
 	u8 flags;		/* extra spi->mode support */
 	int irq;
 	int enable_dma;
@@ -259,7 +261,7 @@ static void spi_kona_fifo_config(struct spi_kona_data *spi_kona, int enable_dma)
 }
 
 static int spi_kona_configure(struct spi_kona_data *spi_kona,
-			       struct spi_kona_config *config)
+			      struct spi_kona_config *config)
 {
 	CHAL_HANDLE chandle = spi_kona->chandle;
 	uint32_t frame_mask = 1;
@@ -270,18 +272,19 @@ static int spi_kona_configure(struct spi_kona_data *spi_kona,
 
 	/* Set default FIFO threshold */
 	ret = chal_sspi_set_fifo_threshold(chandle, SSPI_FIFO_ID_TX0, 0x1);
-	if(ret < 0)
+	if (ret < 0)
 		return ret;
 
 	/* Configure the clock speed */
 	ret = spi_kona_config_clk(spi_kona, config->speed_hz);
-	if(ret < 0)
+	if (ret < 0)
 		return ret;
 
 	/* Set frame data size */
-	ret = chal_sspi_set_frame(chandle, &frame_mask, config->mode & SPI_MODE_3,
-			    config->bpw, 0);
-	if(ret < 0)
+	ret =
+	    chal_sspi_set_frame(chandle, &frame_mask, config->mode & SPI_MODE_3,
+				config->bpw, 0);
+	if (ret < 0)
 		return ret;
 
 	return 0;
@@ -391,7 +394,7 @@ static int spi_kona_config_task(struct spi_device *spi,
 	seq_conf.rx_enable = FALSE;
 	seq_conf.cs_activate = 0;
 	seq_conf.cs_deactivate = 1;
-	seq_conf.clk_idle = 1; /* Do not send clk in this sequence */
+	seq_conf.clk_idle = 1;	/* Do not send clk in this sequence */
 	seq_conf.pattern_mode = 0;
 	seq_conf.rep_cnt = 0;
 	seq_conf.opcode = SSPI_SEQ_OPCODE_STOP;
@@ -441,63 +444,84 @@ static void spi_dma_callback(void *priv, enum pl330_xfer_status status)
 		pr_err("NULL pointer passed to %s!!!!\n", __func__);
 }
 
-static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
+static int spi_kona_dma_xfer_rx(struct spi_kona_data *spi_kona)
 {
-	dma_addr_t dma_rx_buf, dma_tx_buf;
-	u32 tx_fifo, rx_fifo, cfg_rx, cfg_tx;
+	CHAL_HANDLE chandle = spi_kona->chandle;
+	int ret = -EIO;
+	/* Start RX DMA channel first */
+	if (dma_start_transfer(spi_kona->rx_dma_chan) != 0) {
+		pr_err("dma_start_transfer failed on RX chan\n");
+		goto err;
+	}
+
+	/* Enable Overrun interrupt */
+	chal_sspi_enable_intr(chandle,
+	SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK);
+
+	/* Trigger RX FIFO DMA */
+	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_RX0,
+			     SSPI_FIFO_ID_RX0, 1);
+	/* Wait for RX DMA completion */
+	if ((wait_for_completion_interruptible_timeout
+	     (&spi_kona->rx_dma_evt, msecs_to_jiffies(SSPI_WFC_TIME_OUT))) == 0)
+		pr_err("SPI Rx DMA Transfer timed out/interrupted\n");
+	else
+		ret = spi_kona->count;
+
+	/* Disable DMA for RX FIFO */
+	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_RX0,
+			     SSPI_FIFO_ID_RX0, 0);
+	dma_stop_transfer(spi_kona->rx_dma_chan);
+	dma_unmap_single(NULL, spi_kona->dma_rx_buf, spi_kona->count,
+			 DMA_TO_DEVICE);
+err:
+	return ret;
+}
+
+static int spi_kona_dma_xfer_tx(struct spi_kona_data *spi_kona)
+{
 	CHAL_HANDLE chandle = spi_kona->chandle;
 	int ret = -EIO;
 
-#ifdef DMA_BURST_CONFIG_16_BYTES
-	/* bs = 4, bl = 4, 16 bytes xfer per request */
-	cfg_tx = DMA_CFG_SRC_ADDR_INCREMENT | DMA_CFG_DST_ADDR_FIXED |
-	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_4;
-	cfg_rx = DMA_CFG_SRC_ADDR_FIXED | DMA_CFG_DST_ADDR_INCREMENT |
-	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_4;
-#else /* Burst = 64 Bytes */
-	cfg_tx = DMA_CFG_SRC_ADDR_INCREMENT | DMA_CFG_DST_ADDR_FIXED |
-	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
-	cfg_rx = DMA_CFG_SRC_ADDR_FIXED | DMA_CFG_DST_ADDR_INCREMENT |
-	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
-#endif
-
-	tx_fifo = SSP0_BASE_ADDR + chal_sspi_tx0_get_dma_port_addr_offset();
-	rx_fifo = SSP0_BASE_ADDR + chal_sspi_rx0_get_dma_port_addr_offset();
-
-	/* Get DMA'ble address */
-	dma_tx_buf = dma_map_single(NULL, (void *)spi_kona->tx_buf,
-				    spi_kona->count, DMA_TO_DEVICE);
-	if (!dma_tx_buf)
-		return ret;
-	dma_rx_buf = dma_map_single(NULL, (void *)spi_kona->rx_buf,
-				    spi_kona->count, DMA_FROM_DEVICE);
-	if (!dma_rx_buf)
+	/* Start TX DMA channel */
+	if (dma_start_transfer(spi_kona->tx_dma_chan) != 0) {
+		pr_err("dma_start_transfer failed on TX chan\n");
 		goto err;
-
-	/* Setup TX DMA */
-	if (dma_setup_transfer(spi_kona->tx_dma_chan, dma_tx_buf,
-			       tx_fifo, spi_kona->count,
-			       DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI,
-			       cfg_tx) != 0) {
-		pr_err("dma_setup_transfer(TX) failed\n");
-		goto err1;
 	}
 
-	/* Setup RX DMA */
-	if (dma_setup_transfer(spi_kona->rx_dma_chan, rx_fifo,
-			       dma_rx_buf, spi_kona->count,
-			       DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI,
-			       cfg_rx) != 0) {
-		pr_err("dma_setup_transfer(RX) failed\n");
-		goto err1;
-	}
+	/* Trigger TX FIFO DMA */
+	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_TX0,
+			     SSPI_FIFO_ID_TX0, 1);
+
+	/* Wait for TX DMA completion */
+	if ((wait_for_completion_interruptible_timeout
+	     (&spi_kona->tx_dma_evt, msecs_to_jiffies(SSPI_WFC_TIME_OUT))) == 0)
+		pr_err("SPI Tx DMA Transfer timed out/interrupted\n");
+	else
+		ret = spi_kona->count;
+
+	/* Disable DMA for TX FIFO */
+	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_TX0,
+			     SSPI_FIFO_ID_TX0, 0);
+
+	/* Disable all Interrupt */
+	dma_stop_transfer(spi_kona->tx_dma_chan);
+	dma_unmap_single(NULL, spi_kona->dma_tx_buf, spi_kona->count,
+			 DMA_TO_DEVICE);
+err:
+	return ret;
+}
+
+static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
+{
+	CHAL_HANDLE chandle = spi_kona->chandle;
+	int ret = -EIO;
 
 	/* Start RX DMA channel first */
 	if (dma_start_transfer(spi_kona->rx_dma_chan) != 0) {
 		pr_err("dma_start_transfer failed on RX chan\n");
 		goto err1;
 	}
-
 	/* Start TX DMA channel */
 	if (dma_start_transfer(spi_kona->tx_dma_chan) != 0) {
 		pr_err("dma_start_transfer failed on TX chan\n");
@@ -519,31 +543,100 @@ static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 	if ((wait_for_completion_interruptible_timeout
 	     (&spi_kona->tx_dma_evt, msecs_to_jiffies(SSPI_WFC_TIME_OUT))) == 0)
 		pr_err("SPI Tx DMA Transfer timed out/interrupted\n");
-
-	/* Wait for RX DMA completion */
 	else if ((wait_for_completion_interruptible_timeout
 		  (&spi_kona->rx_dma_evt,
 		   msecs_to_jiffies(SSPI_WFC_TIME_OUT))) == 0)
 		pr_err("SPI Rx DMA Transfer timed out/interrupted\n");
 	else
 		ret = spi_kona->count;
-
-	/* Disable DMA for RX/TX FIFO */
+	/* Disable DMA for RX FIFO */
 	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_RX0,
 			     SSPI_FIFO_ID_RX0, 0);
+	/* Disable DMA for TX FIFO */
 	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_TX0,
 			     SSPI_FIFO_ID_TX0, 0);
-
 	/* Disable all Interrupt */
 	dma_stop_transfer(spi_kona->tx_dma_chan);
-
-      err2:
+err2:
 	dma_stop_transfer(spi_kona->rx_dma_chan);
-      err1:
-	dma_unmap_single(NULL, dma_tx_buf, spi_kona->count, DMA_TO_DEVICE);
-      err:
-	dma_unmap_single(NULL, dma_rx_buf, spi_kona->count, DMA_FROM_DEVICE);
+err1:
+	dma_unmap_single(NULL, spi_kona->dma_tx_buf, spi_kona->count,
+			 DMA_TO_DEVICE);
+	dma_unmap_single(NULL, spi_kona->dma_rx_buf, spi_kona->count,
+			 DMA_FROM_DEVICE);
+
 	return ret;
+}
+
+static int spi_kona_configure_tx(struct spi_kona_data *spi_kona)
+{
+	u32 tx_fifo, cfg_tx;
+	int ret = -EIO;
+
+#ifdef DMA_BURST_CONFIG_16_BYTES
+	/* bs = 4, bl = 4, 16 bytes xfer per request */
+	cfg_tx = DMA_CFG_SRC_ADDR_INCREMENT | DMA_CFG_DST_ADDR_FIXED |
+	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_4;
+#else				/* Burst = 64 Bytes */
+	cfg_tx = DMA_CFG_SRC_ADDR_INCREMENT | DMA_CFG_DST_ADDR_FIXED |
+	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
+#endif
+	tx_fifo = SSP0_BASE_ADDR + chal_sspi_tx0_get_dma_port_addr_offset();
+
+	/* Get DMA'ble address */
+	spi_kona->dma_tx_buf = dma_map_single(NULL, (void *)spi_kona->tx_buf,
+					      spi_kona->count, DMA_TO_DEVICE);
+	if (!spi_kona->dma_tx_buf)
+		return ret;
+	/* Setup TX DMA */
+	if (dma_setup_transfer(spi_kona->tx_dma_chan, spi_kona->dma_tx_buf,
+			       tx_fifo, spi_kona->count,
+			       DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI,
+			       cfg_tx) != 0) {
+		pr_err("dma_setup_transfer(TX) failed\n");
+		goto err1;
+	}
+	return 0;
+err1:
+	dma_unmap_single(NULL, spi_kona->dma_tx_buf, spi_kona->count,
+			 DMA_TO_DEVICE);
+	return -EINVAL;
+
+}
+
+static int spi_kona_configure_rx(struct spi_kona_data *spi_kona)
+{
+	u32 rx_fifo, cfg_rx;
+#ifdef DMA_BURST_CONFIG_16_BYTES
+	/* bs = 4, bl = 4, 16 bytes xfer per request */
+	cfg_rx = DMA_CFG_SRC_ADDR_FIXED | DMA_CFG_DST_ADDR_INCREMENT |
+	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_4;
+#else				/* Burst = 64 Bytes */
+	cfg_rx = DMA_CFG_SRC_ADDR_FIXED | DMA_CFG_DST_ADDR_INCREMENT |
+	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
+#endif
+
+	rx_fifo = SSP0_BASE_ADDR + chal_sspi_rx0_get_dma_port_addr_offset();
+
+	spi_kona->dma_rx_buf = dma_map_single(NULL, (void *)spi_kona->rx_buf,
+					      spi_kona->count, DMA_FROM_DEVICE);
+	if (!spi_kona->dma_rx_buf)
+		goto err;
+
+	/* Setup RX DMA */
+	if (dma_setup_transfer(spi_kona->rx_dma_chan, rx_fifo,
+			       spi_kona->dma_rx_buf, spi_kona->count,
+			       DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI,
+			       cfg_rx) != 0) {
+		pr_err("dma_setup_transfer(RX) failed\n");
+		goto err;
+	}
+	return 0;
+err:
+	dma_unmap_single(NULL, spi_kona->dma_rx_buf, spi_kona->count,
+			 DMA_FROM_DEVICE);
+	return -EINVAL;
+
 }
 
 static int spi_kona_txrxfer_bufs(struct spi_device *spi,
@@ -589,16 +682,30 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 					    CHAL_SSPI_DMA_BURSTSIZE_16BYTES);
 		chal_sspi_dma_set_burstsize(chandle, SSPI_DMA_CHAN_SEL_CHAN_RX0,
 					    CHAL_SSPI_DMA_BURSTSIZE_16BYTES);
-#else /* Burst = 64 Bytes */
+#else				/* Burst = 64 Bytes */
 		chal_sspi_dma_set_burstsize(chandle, SSPI_DMA_CHAN_SEL_CHAN_TX0,
 					    CHAL_SSPI_DMA_BURSTSIZE_64BYTES);
 		chal_sspi_dma_set_burstsize(chandle, SSPI_DMA_CHAN_SEL_CHAN_RX0,
 					    CHAL_SSPI_DMA_BURSTSIZE_64BYTES);
 #endif
 
-		xfer_len = spi_kona_dma_xfer(spi_kona);
+		if (spi_kona->rx_buf != NULL && spi_kona->tx_buf != NULL) {
+			spi_kona_configure_rx(spi_kona);
+			spi_kona_configure_tx(spi_kona);
+			xfer_len = spi_kona_dma_xfer(spi_kona);
+		} else {
+			if (spi_kona->rx_buf != NULL) {
+				spi_kona_configure_rx(spi_kona);
+				xfer_len = spi_kona_dma_xfer_rx(spi_kona);
+			}
+			if (spi_kona->tx_buf != NULL) {
+				spi_kona_configure_tx(spi_kona);
+				xfer_len = spi_kona_dma_xfer_tx(spi_kona);
+			}
+		}
 		spi_kona->tx_buf = transfer->tx_buf + spi_kona->count;
 		spi_kona->rx_buf = transfer->rx_buf + spi_kona->count;
+
 		if (xfer_len == spi_kona->count)
 			spi_kona->count = unaligned;	/* DMA Success */
 		else
@@ -701,9 +808,7 @@ static void spi_kona_work(struct work_struct *work)
 			if (!t->tx_buf && !t->rx_buf && t->len) {
 				status = -EINVAL;
 				break;
-			}
-
-			if (t->len) {
+			} else {
 				if (!m->is_dma_mapped)
 					t->rx_dma = t->tx_dma = 0;
 				status = spi_kona_txrxfer_bufs(spi, t);
@@ -737,7 +842,7 @@ static void spi_kona_work(struct work_struct *work)
 		m->complete(m->context);
 
 		/* restore speed and wordsize if it was overridden */
-		if (do_setup == 1)	{
+		if (do_setup == 1) {
 			status = spi_kona_setupxfer(spi, NULL);
 			if (status < 0)
 				break;
@@ -816,7 +921,7 @@ static int spi_kona_config_spi_hw(struct spi_kona_data *spi_kona)
 	 * Set SSPI IDLE State in Mode 0 SPI
 	 * Currently only Mode 0 SPI supported by the driver
 	 */
-	if(chal_sspi_set_idle_state(chandle, SSPI_PROT_SPI_MODE0))
+	if (chal_sspi_set_idle_state(chandle, SSPI_PROT_SPI_MODE0))
 		return -EIO;
 
 	/* Set SSPI FIFO Size: Rx0/Tx0 - Full, other Rx/Tx to zero */
@@ -872,7 +977,7 @@ static int spi_kona_setup_dma(struct spi_kona_data *spi_kona)
 	return 0;
       err2:
 	dma_free_callback(spi_kona->tx_dma_chan);
-      err1:
+err1:
 	dma_free_chan(spi_kona->rx_dma_chan);
       err:
 	dma_free_chan(spi_kona->tx_dma_chan);
