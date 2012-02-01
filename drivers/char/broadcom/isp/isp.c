@@ -314,12 +314,12 @@ static int enable_isp_clock(void)
 		return -EIO;
 	}
 /*
-    ret = clk_set_rate(isp_clk, 249600000);
-    if (ret) {
-        err_print("%s: error changing clock rate\n", __func__);
-         return -EIO; 
-    }
-  */
+	ret = clk_set_rate(isp_clk, 249600000);
+	if (ret) {
+		err_print("%s: error changing clock rate\n", __func__);
+		return -EIO;
+	}
+*/
 	rate = clk_get_rate(isp_clk);
 	dbg_print("isp_clk_clk rate %lu\n", rate);
 
