@@ -24,6 +24,7 @@ struct bcm_otg_xceiver {
 	struct otg_transceiver xceiver;
 	struct timer_list srp_failure_timer;
 	struct timer_list sess_end_srp_timer;
+	struct wake_lock xceiver_wake_lock;
 	bool otg_vbus_off;
 	bool otg_srp_reqd;
 	/* For future expansion */

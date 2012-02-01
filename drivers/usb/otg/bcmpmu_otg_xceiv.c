@@ -636,6 +636,10 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->otg_xceiver.sess_end_srp_timer.data = (unsigned long)xceiv_data;
 	xceiv_data->otg_xceiver.sess_end_srp_timer.function = bcmpmu_otg_xceiv_sess_end_srp_timer_handler;
 
+	wake_lock_init(&xceiv_data->otg_xceiver.xceiver_wake_lock, WAKE_LOCK_SUSPEND, "otg_xcvr_wakelock");
+
+	wake_lock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
+
 	error = bcm_otg_adp_init(xceiv_data);
 	if (error)
 		goto error_attr_host;
@@ -674,6 +678,13 @@ error_attr_vbus:
 	device_remove_file(xceiv_data->dev, &dev_attr_host);
 
 error_attr_host:
+
+#ifdef CONFIG_USB_OTG
+	if (wake_lock_active(&xceiv_data->otg_xceiver.xceiver_wake_lock)) {
+		wake_unlock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
+		wake_lock_destroy(&xceiv_data->otg_xceiver.xceiver_wake_lock);
+	}
+#endif
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
 	kfree(xceiv_data);
 	return error;
@@ -688,6 +699,13 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	device_remove_file(xceiv_data->dev, &dev_attr_vbus);
 	device_remove_file(xceiv_data->dev, &dev_attr_host);
 
+#ifdef CONFIG_USB_OTG
+	if (wake_lock_active(&xceiv_data->otg_xceiver.xceiver_wake_lock)) {
+		wake_unlock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
+		wake_lock_destroy(&xceiv_data->otg_xceiver.xceiver_wake_lock);
+	}
+#endif
+
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
 	kfree(xceiv_data);
 	bcm_hsotgctrl_phy_deinit();
@@ -701,7 +719,7 @@ static struct platform_driver bcmpmu_otg_xceiv_driver = {
 	.driver = {
 		   .name = "bcmpmu_otg_xceiv",
 		   .owner = THIS_MODULE,
-		   },
+	},
 };
 
 static int __init bcmpmu_otg_xceiv_init(void)
