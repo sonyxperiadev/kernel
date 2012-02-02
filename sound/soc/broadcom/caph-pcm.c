@@ -31,6 +31,7 @@
 *
 ****************************************************************************/
 
+
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
@@ -88,14 +89,13 @@ static const struct snd_pcm_hardware caph_pcm_hardware = {
 static void caph_pcm_start_transfer(struct caph_runtime_data *prtd,
 	struct snd_pcm_substream *substream)
 {
-	/*
+/*
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct caph_pcm_config *config;
 
-
 	config = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
-    csl_caph_dma_start_transfer(config->dmaCH);   
-	*/
+    csl_caph_dma_start_transfer(config->dmaCH);
+*/
 }
 
 static void caph_pcm_dma_transfer_done(void *dev_id)
@@ -103,6 +103,7 @@ static void caph_pcm_dma_transfer_done(void *dev_id)
 	struct snd_pcm_substream *substream = dev_id;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct caph_runtime_data *prtd = runtime->private_data;
+
 
 	prtd->dma_pos += runtime->period_size;
 	if(prtd->dma_pos >= runtime->boundary)
@@ -116,14 +117,21 @@ static void caph_pcm_dma_transfer_done(void *dev_id)
 static void playback_callback(CSL_CAPH_DMA_CHNL_e chnl)
 {
 
+
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_LOW) ==
 	    CSL_CAPH_READY_NONE) {
-		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_LOW);
+		/*
+			printk(KERN_INFO "fill low half ch=0x%x \r\n", chnl);
+		*/
+			csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_LOW);
 	}
 
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_HIGH) ==
 	    CSL_CAPH_READY_NONE) {
-		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_HIGH);
+		/*
+			printk(KERN_INFO "fill high half ch=0x%x \r\n", chnl);
+		*/
+			csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_HIGH);
 	}
 
 	caph_pcm_dma_transfer_done(substream_playback);
@@ -131,7 +139,6 @@ static void playback_callback(CSL_CAPH_DMA_CHNL_e chnl)
 
 static void record_callback(CSL_CAPH_DMA_CHNL_e chnl)
 {
-
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_LOW) ==
 	    CSL_CAPH_READY_NONE) {
 		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_LOW);
@@ -151,11 +158,11 @@ static int caph_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct caph_runtime_data *prtd = runtime->private_data;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_dma_buffer *buf = &substream->dma_buffer;
 	struct caph_pcm_config *config;
 	CSL_CAPH_DMA_CONFIG_t dmaCfg;
 
 	config = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
-
 	if (!config)
 		return 0;
 
@@ -169,12 +176,13 @@ static int caph_pcm_hw_params(struct snd_pcm_substream *substream,
 		dmaCfg.dmaCB = playback_callback;
 	}
 	dmaCfg.dma_ch = config->dmaCH;
+	dmaCfg.fifo = config->fifo;
 	dmaCfg.Tsize = CSL_AADMAC_TSIZE;
-	dmaCfg.mem_addr = (void *)runtime->dma_addr;
-	dmaCfg.mem_size = runtime->dma_bytes / 2;
-
+	dmaCfg.mem_addr = (void *)buf->addr;
+	dmaCfg.mem_size = buf->bytes;
 
     csl_caph_dma_config_channel(dmaCfg);
+	csl_caph_dma_enable_intr(dmaCfg.dma_ch, CSL_CAPH_ARM);
 
 	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
 	runtime->dma_bytes = params_buffer_bytes(params);
@@ -183,7 +191,6 @@ static int caph_pcm_hw_params(struct snd_pcm_substream *substream,
 	prtd->dma_start = runtime->dma_addr;
 	prtd->dma_pos = prtd->dma_start;
 	prtd->dma_end = prtd->dma_start + runtime->dma_bytes;
-
 	return 0;
 }
 
@@ -191,6 +198,7 @@ static int caph_pcm_hw_params(struct snd_pcm_substream *substream,
 
 static int caph_pcm_hw_free(struct snd_pcm_substream *substream)
 {
+
 	snd_pcm_set_runtime_buffer(substream, NULL);
 	return 0;
 }
@@ -199,8 +207,7 @@ static int caph_pcm_hw_free(struct snd_pcm_substream *substream)
 static int caph_pcm_prepare(struct snd_pcm_substream *substream)
 {
 	struct caph_runtime_data *prtd = substream->runtime->private_data;
-
-	prtd->dma_pos = prtd->dma_start;
+	prtd->dma_pos = 0;
 	return 0;
 }
 
@@ -224,7 +231,6 @@ static int caph_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	default:
 		break;
 	}
-
 	return 0;
 }
 
@@ -237,7 +243,6 @@ static snd_pcm_uframes_t caph_pcm_pointer(struct snd_pcm_substream *substream)
 
 	offset = prtd->dma_pos + bytes_to_frames(runtime, 0);
 	offset %= runtime->buffer_size;
-
 	return offset;
 }
 
@@ -246,14 +251,13 @@ static int caph_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct caph_runtime_data *prtd;
 
- 	prtd = kzalloc(sizeof(*prtd), GFP_KERNEL);
+	prtd = kzalloc(sizeof(*prtd), GFP_KERNEL);
 	if (prtd == NULL)
 		return -ENOMEM;
 
 	snd_soc_set_runtime_hwparams(substream, &caph_pcm_hardware);
 
 	runtime->private_data = prtd;
-
 	return 0;
 }
 
@@ -262,9 +266,7 @@ static int caph_pcm_close(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct caph_runtime_data *prtd = runtime->private_data;
 
- 
 	kfree(prtd);
-
 	return 0;
 }
 
@@ -298,13 +300,12 @@ static int caph_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 	buf->dev.dev = pcm->card->dev;
 	buf->private_data = NULL;
 
- 	buf->area = dma_alloc_writecombine(pcm->card->dev, size,
+	buf->area = dma_alloc_writecombine(pcm->card->dev, size,
 					  &buf->addr, GFP_KERNEL);
 	if (!buf->area)
 		return -ENOMEM;
 
 	buf->bytes = size;
-
 	return 0;
 }
 
@@ -314,7 +315,7 @@ static void caph_pcm_free(struct snd_pcm *pcm)
 	struct snd_dma_buffer *buf;
 	int stream;
 
- 	for (stream = 0; stream < SNDRV_PCM_STREAM_LAST; ++stream) {
+	for (stream = 0; stream < SNDRV_PCM_STREAM_LAST; ++stream) {
 		substream = pcm->streams[stream].substream;
 		if (!substream)
 			continue;
@@ -336,7 +337,7 @@ int caph_pcm_new(struct snd_card *card, struct snd_soc_dai *dai,
 {
 	int ret = 0;
 
- 	if (!card->dev->dma_mask)
+	if (!card->dev->dma_mask)
 		card->dev->dma_mask = &caph_pcm_dmamask;
 
 	if (!card->dev->coherent_dma_mask)
@@ -357,7 +358,6 @@ int caph_pcm_new(struct snd_card *card, struct snd_soc_dai *dai,
 	}
 
 err:
-
 	return ret;
 }
 
@@ -374,8 +374,7 @@ static int __devinit caph_pcm_probe(struct platform_device *pdev)
 
 static int __devexit caph_pcm_remove(struct platform_device *pdev)
 {
-
- 	snd_soc_unregister_platform(&pdev->dev);
+	snd_soc_unregister_platform(&pdev->dev);
 	return 0;
 }
 
@@ -390,7 +389,7 @@ static struct platform_driver caph_pcm_driver = {
 
 static int __init caph_soc_platform_init(void)
 {
- 	return platform_driver_register(&caph_pcm_driver);
+	return platform_driver_register(&caph_pcm_driver);
 }
 module_init(caph_soc_platform_init);
 

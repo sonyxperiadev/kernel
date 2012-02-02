@@ -31,6 +31,7 @@
 *
 ****************************************************************************/
 
+
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
@@ -49,9 +50,14 @@
 #include <sound/soc.h>
 #include <sound/initval.h>
 
+#include <string.h>
 #include "mobcom_types.h"
+#include "chal_types.h"
 #include "chal_sspi.h"
 #include "csl_caph_i2s_sspi.h"
+#include "brcm_rdb_sspil.h"
+#include "brcm_rdb_padctrlreg.h"
+#include "brcm_rdb_sysmap.h"
 #include "log.h"
 #include "resultcode.h"
 #include "io_map.h"
@@ -60,6 +66,8 @@
 #include "csl_caph_cfifo.h"
 #include "csl_caph_switch.h"
 #include "csl_caph_hwctrl.h"
+
+
 #include "caph-i2s.h"
 #include "caph-pcm.h"
 
@@ -86,13 +94,13 @@ struct caph_i2s {
 static inline uint32_t caph_i2s_read(const struct caph_i2s *i2s,
 	unsigned int reg)
 {
- 	return 0;
+	return 0;
 }
 
 static inline void caph_i2s_write(const struct caph_i2s *i2s,
 	unsigned int reg, uint32_t value)
 {
- }
+}
 
 static int caph_i2s_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *dai)
@@ -105,6 +113,7 @@ static void caph_i2s_shutdown(struct snd_pcm_substream *substream,
 {
 	struct caph_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 	struct caph_pcm_config *pcm_config;
+
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		pcm_config = &i2s->pcm_config_playback;
@@ -137,7 +146,6 @@ static void caph_i2s_shutdown(struct snd_pcm_substream *substream,
 		}
 	}
 
-
 }
 
 static int caph_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
@@ -145,6 +153,7 @@ static int caph_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 {
 	struct caph_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 	struct caph_pcm_config *pcm_config;
+
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		pcm_config = &i2s->pcm_config_playback;
@@ -195,7 +204,7 @@ static int caph_i2s_hw_params(struct snd_pcm_substream *substream,
 	UInt16 threshold;
 	CSL_CAPH_SWITCH_CONFIG_t swCfg;
 
- 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		pcm_config = &i2s->pcm_config_playback;
 	}else{
 		pcm_config = &i2s->pcm_config_capture;
@@ -231,7 +240,7 @@ static int caph_i2s_hw_params(struct snd_pcm_substream *substream,
     csl_caph_switch_config_channel(swCfg);
 
 	/* configur i2s port */
-	if(!i2s->fmTxRunning &&  i2s->fmRxRunning) { 
+	if(!i2s->fmTxRunning &&  !i2s->fmRxRunning) {
 		i2s->fmCfg.mode = CSL_I2S_MASTER_MODE;
 		i2s->fmCfg.tx_ena = 1;
 		i2s->fmCfg.rx_ena = 1;
@@ -245,7 +254,6 @@ static int caph_i2s_hw_params(struct snd_pcm_substream *substream,
 		i2s->fmCfg.sampleRate = CSL_I2S_16BIT_48000HZ; 
 		csl_i2s_config(i2s->fmHandleSSP, &i2s->fmCfg);
 	}
-
 
 	/* configur DMA channel */
 	pcm_config->dmaCH = csl_caph_dma_obtain_channel();
@@ -317,7 +325,7 @@ static int __devinit caph_i2s_dev_probe(struct platform_device *pdev)
 	struct caph_i2s *i2s;
 	int ret;
 
- 	i2s = kzalloc(sizeof(*i2s), GFP_KERNEL);
+	i2s = kzalloc(sizeof(*i2s), GFP_KERNEL);
 	if (!i2s)
 		return -ENOMEM;
 
@@ -325,15 +333,14 @@ static int __devinit caph_i2s_dev_probe(struct platform_device *pdev)
 	csl_caph_hwctrl_init();
 	csl_caph_ControlHWClock(TRUE);
 
-	/* use SSP3 as I2S port */
+	/* use SSP4 as I2S port */
 
-	i2s->fmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
-	i2s->fmRxTrigger = CAPH_SSP3_RX0_TRIGGER;
-	i2s->fmHandleSSP = (CSL_HANDLE)csl_i2s_init(KONA_SSP3_BASE_VA);
-
+	i2s->fmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
+	i2s->fmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
+	i2s->fmHandleSSP = (CSL_HANDLE)csl_i2s_init(KONA_SSP4_BASE_VA);
     i2s->fmTxRunning = FALSE;
     i2s->fmRxRunning = FALSE;
-  
+
 	platform_set_drvdata(pdev, i2s);
 	ret = snd_soc_register_dai(&pdev->dev, &caph_i2s_dai);
 
@@ -356,7 +363,6 @@ static int __devexit caph_i2s_dev_remove(struct platform_device *pdev)
 {
 	struct caph_i2s *i2s = platform_get_drvdata(pdev);
 
-  
 	csl_caph_hwctrl_deinit();
 	snd_soc_unregister_dai(&pdev->dev);
 
