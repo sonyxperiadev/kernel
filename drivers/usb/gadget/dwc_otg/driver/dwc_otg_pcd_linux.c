@@ -223,6 +223,8 @@ static int ep_disable(struct usb_ep *usb_ep)
 		retval = -EINVAL;
 	}
 
+	usb_ep->maxpacket = MAX_PACKET_SIZE;
+
 	return retval;
 }
 

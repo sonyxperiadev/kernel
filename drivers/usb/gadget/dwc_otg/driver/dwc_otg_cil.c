@@ -3332,6 +3332,118 @@ void dwc_otg_ep_deactivate(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 
 	depctl.d32 = dwc_read_reg32(addr);
 
+	if (!core_if->dma_desc_enable && depctl.b.epena) {
+		int count = 0;
+
+		if (!ep->is_in) {
+			dctl_data_t dctl;
+			volatile uint32_t *dctl_addr =
+				&core_if->dev_if->dev_global_regs->dctl;
+			gintsts_data_t gintsts;
+			volatile uint32_t *gintsts_addr =
+				&core_if->core_global_regs->gintsts;
+			doepmsk_data_t doepmsk = {.d32 = 0 };
+			volatile uint32_t *doepmsk_addr =
+				&core_if->dev_if->dev_global_regs->doepmsk;
+			doepint_data_t doepint = {.d32 = 0 };
+			volatile uint32_t *doepint_addr =
+				&core_if->dev_if->out_ep_regs[ep->num]->doepint;
+
+			/* Set Global OUT NAK */
+			dctl.d32 = dwc_read_reg32(dctl_addr);
+			dctl.b.sgoutnak = 1;
+			dctl.b.cgoutnak = 0;
+			dwc_write_reg32(dctl_addr, dctl.d32);
+
+			/* Wait for Global OUT NAK effective interrupt */
+			do {
+				dwc_udelay(10);
+				gintsts.d32 = dwc_read_reg32(gintsts_addr);
+				if (++count > 1000) {
+					DWC_WARN("%s() HANG! GINTSTS=%0x\n",
+						 __func__, gintsts.d32);
+					break;
+				}
+			} while (gintsts.b.goutnakeff == 0);
+
+			/* Clear Global OUT NAK effective interrupt */
+			gintsts.d32 = 0;
+			gintsts.b.goutnakeff = 1;
+			dwc_write_reg32(gintsts_addr, gintsts.d32);
+
+			/* Mask endpoint disabled interrupt */
+			doepmsk.b.epdisabled = 1;
+			dwc_modify_reg32(doepmsk_addr, doepmsk.d32, 0);
+
+			/* Disable endpoint */
+			depctl.b.epena = 0;
+			depctl.b.epdis = 1;
+			depctl.b.snak = 1;
+			dwc_write_reg32(addr, depctl.d32);
+
+			/* Wait for endpoint disabled interrupt */
+			count = 0;
+			do {
+				dwc_udelay(10);
+				doepint.d32 = dwc_read_reg32(doepint_addr);
+				if (++count > 1000) {
+					DWC_WARN("%s() HANG! DOEPINT=%0x\n",
+						 __func__, doepint.d32);
+					break;
+				}
+			} while (doepint.b.epdisabled == 0);
+
+			/* Clear and unmask endpoint disabled interrupt */
+			doepint.d32 = 0;
+			doepint.b.epdisabled = 1;
+			dwc_write_reg32(doepint_addr, doepint.d32);
+			dwc_modify_reg32(doepmsk_addr, doepmsk.d32, 1);
+
+			/* Clear Global OUT NAK */
+			dctl.d32 = dwc_read_reg32(dctl_addr);
+			dctl.b.sgoutnak = 0;
+			dctl.b.cgoutnak = 1;
+			dwc_write_reg32(dctl_addr, dctl.d32);
+		} else {
+			diepmsk_data_t diepmsk = {.d32 = 0 };
+			volatile uint32_t *diepmsk_addr =
+				&core_if->dev_if->dev_global_regs->diepmsk;
+			diepint_data_t diepint = {.d32 = 0 };
+			volatile uint32_t *diepint_addr =
+				&core_if->dev_if->in_ep_regs[ep->num]->diepint;
+
+			/* Mask endpoint disabled interrupt */
+			diepmsk.b.epdisabled = 1;
+			dwc_modify_reg32(diepmsk_addr, diepmsk.d32, 0);
+
+			/* Disable endpoint */
+			depctl.b.epena = 0;
+			depctl.b.epdis = 1;
+			depctl.b.snak = 1;
+			dwc_write_reg32(addr, depctl.d32);
+
+			/* Wait for endpoint disabled interrupt */
+			do {
+				dwc_udelay(10);
+				diepint.d32 = dwc_read_reg32(diepint_addr);
+				if (++count > 1000) {
+					DWC_WARN("%s() HANG! DIEPINT=%0x\n",
+						 __func__, diepint.d32);
+					break;
+				}
+			} while (diepint.b.epdisabled == 0);
+
+			/* Clear and unmask endpoint disabled interrupt */
+			diepint.d32 = 0;
+			diepint.b.epdisabled = 1;
+			dwc_write_reg32(diepint_addr, diepint.d32);
+			dwc_modify_reg32(diepmsk_addr, diepmsk.d32, 1);
+		}
+
+		depctl.b.epdis = 0;
+		depctl.b.snak = 0;
+	}
+
 	depctl.b.usbactep = 0;
 	if (ep->is_in == 1)
 		depctl.b.txfnum = 0;
@@ -3538,6 +3650,15 @@ void dwc_otg_ep_start_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 		depctl.b.cnak = 1;
 		depctl.b.epena = 1;
 		dwc_write_reg32(&in_regs->diepctl, depctl.d32);
+
+		DWC_DEBUGPL(DBG_PCD, "DIEPCTLr=%08x DIEPTSIZr=%08x\n",
+			    dwc_read_reg32(&in_regs->diepctl),
+			    dwc_read_reg32(&in_regs->dieptsiz));
+		DWC_DEBUGPL(DBG_PCD, "DAINTMSK=%08x GINTMSK=%08x\n",
+			    dwc_read_reg32(&core_if->dev_if->dev_global_regs->
+					   daintmsk),
+			    dwc_read_reg32(&core_if->core_global_regs->
+					   gintmsk));
 
 		depctl.d32 =
 		    dwc_read_reg32(&core_if->dev_if->in_ep_regs[0]->diepctl);
