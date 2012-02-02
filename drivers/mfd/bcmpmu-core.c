@@ -203,9 +203,10 @@ static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 {
 	struct bcmpmu *bcmpmu = file->private_data;
 	struct bcmpmu_rw_data_ltp reg;
-	struct bcmpmu_adc_ltp adc;
+	struct bcmpmu_adc_req adcreq;
 	int i;
 	void __user *argp = (void __user *)arg;
+	unsigned int value[16];
 
 	ssize_t ret = 0;
 
@@ -214,15 +215,20 @@ static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 		if (copy_from_user
 		    ((void *)&reg, argp,
 		     sizeof(struct bcmpmu_rw_data_ltp)) == 0) {
+			reg.mask = 0xff;
 			ret =
 			    bcmpmu->read_dev_drct(bcmpmu, reg.map, reg.addr,
-						  &reg.val[0], reg.mask);
+						  &value[0], reg.mask);
 			printk("BCMPMU register=0x%X, val=0x%X, map=0x%X\n",
-			       reg.addr, reg.val, reg.map);
+			       reg.addr, value[0], reg.map);
 			if (ret != 0) {
 				printk(KERN_ERR "%s: read_dev_drct failed.\n",
 				       __func__);
 				return 0;
+			}else{
+				reg.val[0] = value[0] & 0xff;
+				printk("BCMPMU register=0x%X, val=0x%X, map=0x%X\n",
+                                       reg.addr, reg.val[0], reg.map);
 			}
 		} else {
 			printk(KERN_ERR "%s: failed to copy from user.\n",
@@ -246,18 +252,21 @@ static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 			    && (reg.len < 16)) {
 				ret =
 				    bcmpmu->read_dev_bulk(bcmpmu, reg.map,
-							  reg.addr, &reg.val[0],
+							  reg.addr, &value[0],
 							  reg.len);
 				if (ret != 0) {
 					printk(KERN_ERR
 					       "%s: read_dev_bulk failed.\n",
 					       __func__);
 					return 0;
+				}else{
+					memcpy(reg.val,value,sizeof(value[reg.len]));
+					for (i = 0; i < reg.len; i++){
+							reg.val[i] = value[i] & 0xff;
+						printk("BCMPMU register=0x%X, value=0x%X\n",
+								reg.addr+i, reg.val[i]);
+					}
 				}
-				for (i = 0; i < reg.len; i++)
-					printk
-					    ("BCMPMU register=0x%X, value=0x%X\n",
-					     reg.addr + i, reg.val[i]);
 			}
 		} else {
 			printk(KERN_ERR "%s: failed to copy from user.\n",
@@ -273,23 +282,25 @@ static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 
 	case BCM_PMU_IOCTL_ADC_READ_REG:
 		if (copy_from_user
-		    ((void *)&adc, argp, sizeof(struct bcmpmu_adc_ltp)) == 0) {
-			printk("BCMPMU ADC CH=0x%X, ADC TM=0x%X\n", adc.sig,
-			       adc.tm);
+		    ((void *)&adcreq, argp, sizeof(struct bcmpmu_adc_req)) == 0) {
+			printk("BCMPMU ADC CH=0x%X, TM=0x%X\n", adcreq.sig,
+			       adcreq.tm);
+			adcreq.flags = PMU_ADC_RAW_AND_UNIT;
+
 			if (bcmpmu->adc_req)
-				bcmpmu->adc_req(bcmpmu, &adc);
+				bcmpmu->adc_req(bcmpmu, &adcreq);
 			else
 				printk(KERN_INFO "%s: adc_req failed\n",
 				       __func__);
 
-			printk("BCMPMU ADC CH=0x%X, ADC TM=0x%X, ACD CNV=%d\n",
-			       adc.sig, adc.tm, adc.cnv);
+			printk("BCMPMU ADC CH=0x%X, TM=0x%X, CNV=%d\n",
+			       adcreq.sig, adcreq.tm, adcreq.cnv);
 		} else {
 			printk(KERN_ERR "%s: failed to copy from user.\n",
 			       __func__);
 		}
 		if (copy_to_user
-		    (argp, (void *)&adc, sizeof(struct bcmpmu_adc_ltp)) != 0) {
+		    (argp, (void *)&adcreq, sizeof(struct bcmpmu_adc_req)) != 0) {
 			return -EFAULT;
 		}
 
@@ -299,6 +310,7 @@ static ssize_t bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 		if (copy_from_user
 		    ((void *)&reg, argp,
 		     sizeof(struct bcmpmu_rw_data_ltp)) == 0) {
+			reg.mask = 0xff;
 			ret =
 			    bcmpmu->write_dev_drct(bcmpmu, reg.map, reg.addr,
 						   reg.val[0], reg.mask);
