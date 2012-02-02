@@ -15,7 +15,7 @@
 #define __ARCH_ARM_MACH_MSM_RPM_RESOURCES_H
 
 #include <mach/rpm.h>
-#include <mach/pm.h>
+#include "pm.h"
 
 
 struct msm_rpmrs_limits {

@@ -15,9 +15,9 @@
 #include <asm/cacheflush.h>
 #include <asm/vfp.h>
 
-#include <mach/pm.h>
 #include <mach/msm_rtb.h>
 
+#include "pm.h"
 #include "qdss.h"
 #include "spm.h"
 
