@@ -696,7 +696,7 @@ UInt32 AUDQUE_GetSizeReadPtrToBottom(AUDQUE_Queue_t *aq)
 	/* aq->readPtr 0x%x, aq->bottom = 0x%x, (aq->readPtr - aq->bottom) */
 	/* %d \n", aq->readPtr, aq->bottom, (aq->bottom - aq->readPtr) ));*/
 
-	audio_xassert(aq->readPtr <= aq->bottom, aq->readPtr);
+	audio_xassert(aq->readPtr <= aq->bottom, (unsigned int)aq->readPtr);
 
 	return aq->bottom - aq->readPtr;
 }
@@ -712,7 +712,7 @@ UInt32 AUDQUE_GetSizeReadPtrToBottom(AUDQUE_Queue_t *aq)
 
 UInt32 AUDQUE_GetSizeWritePtrToBottom(AUDQUE_Queue_t *aq)
 {
-	audio_xassert(aq->writePtr <= aq->bottom, aq->writePtr);
+	audio_xassert(aq->writePtr <= aq->bottom, (unsigned int)aq->writePtr);
 
 	return aq->bottom - aq->writePtr;
 }

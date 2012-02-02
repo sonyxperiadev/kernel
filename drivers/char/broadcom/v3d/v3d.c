@@ -228,7 +228,7 @@ typedef struct v3d_job_t_ {
 } v3d_job_t;
 
 #define MAX_BIN_BLOCKS  5
-#define BIN_MEM_SIZE    (2* 1024* 1024)
+#define BIN_MEM_SIZE    (2 * 1024 * 1024)
 static struct {
 	int oom_block;
 	void *oom_cpuaddr;
@@ -1951,7 +1951,7 @@ int __init v3d_init(void)
 	v3d_state.v3d_device =
 	    device_create(v3d_state.v3d_class, NULL, MKDEV(v3d_major, 0), NULL,
 			  V3D_DEV_NAME);
-	v3d_state.v3d_device->coherent_dma_mask = ((u64) ~ 0);
+	v3d_state.v3d_device->coherent_dma_mask = ((u64) ~0);
 
 	v3d_power(1);
 	v3d_print_info();

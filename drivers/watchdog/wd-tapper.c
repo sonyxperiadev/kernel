@@ -43,7 +43,7 @@ struct wd_tapper_data *wd_tapper_data;
  * Function used to pet the watchdog after the set interval
  *
  */
-int wd_tapper_callback(void)
+int wd_tapper_callback(void *dev)
 {
     /* Pet the PMU Watchdog */
     pr_info("petting the pmu wd\n");
@@ -55,7 +55,7 @@ int wd_tapper_callback(void)
  *
  * @return 0 on successfull set of the timer or negative error value on error
  */
-static int wd_tapper_start(void)
+static int wd_tapper_start(struct platform_device *pdev, pm_message_t state)
 {
 	if (kona_timer_set_match_start(wd_tapper_data->kt,wd_tapper_data->count) < 0) {
 		pr_err("kona_timer_set_match_start returned error \r\n");
@@ -69,7 +69,7 @@ static int wd_tapper_start(void)
  *
  * @return 0 on successfull stop of the timer or negative error value on error
  */
-static int wd_tapper_stop(void)
+static int wd_tapper_stop(struct platform_device *pdev)
 {
 	if (kona_timer_stop(wd_tapper_data->kt) < 0) {
 		pr_err("Unable to stop the timer kona_timer_stop returned error \r\n");

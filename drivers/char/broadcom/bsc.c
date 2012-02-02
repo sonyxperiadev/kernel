@@ -321,9 +321,9 @@ static long bsc_ioctl(
 struct file_operations bsc_fops = {
       owner:THIS_MODULE,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36)
-      ioctl:bsc_ioctl,
+      ioctl : bsc_ioctl,
 #else
-      unlocked_ioctl:bsc_ioctl,
+      unlocked_ioctl : bsc_ioctl,
 #endif
 };
 

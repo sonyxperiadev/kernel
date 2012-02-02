@@ -1603,18 +1603,17 @@ static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	int ret = 0;
 
-	switch(cmd)
-	{
-		case VIDIOC_THUMB_SUPPORTED:
+	switch (cmd) {
+	case VIDIOC_THUMB_SUPPORTED:
 		{
 			int *p = arg;
-			*p = 0; /* no we don't support thumbnail */
+			*p = 0;	/* no we don't support thumbnail */
 			break;
 		}
 
-		default:
-			ret = -ENOIOCTLCMD;
-			break;
+	default:
+		ret = -ENOIOCTLCMD;
+		break;
 	}
 	return ret;
 }
@@ -1731,7 +1730,7 @@ static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
 	.g_chip_ident = ov5640_g_chip_ident,
 	.g_ctrl = ov5640_g_ctrl,
 	.s_ctrl = ov5640_s_ctrl,
-	.ioctl		= ov5640_ioctl,
+	.ioctl = ov5640_ioctl,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register = ov5640_g_register,
 	.s_register = ov5640_s_register,

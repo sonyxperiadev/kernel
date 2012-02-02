@@ -33,6 +33,10 @@
 #include <linux/dma-contiguous.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
+#include "dma-contiguous-trace.h"
 
 #ifndef SZ_1M
 #define SZ_1M (1 << 20)
@@ -72,6 +76,8 @@ struct cma {
 
 struct cma *dma_contiguous_default_area;
 
+static DEFINE_MUTEX(cma_mutex);
+
 #ifdef CONFIG_CMA_SIZE_MBYTES
 #define CMA_SIZE_MBYTES CONFIG_CMA_SIZE_MBYTES
 #else
@@ -83,6 +89,79 @@ struct cma *dma_contiguous_default_area;
 #else
 #define CMA_SIZE_PERCENTAGE 0
 #endif
+
+/* debugfs related functions */
+#ifdef CONFIG_DEBUG_FS
+/* when using debugfs_create_file private data field is set on inode
+ * copy data pointer to file private data */
+static int cma_debugfs_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+static ssize_t cma_debugfs_read(struct file *file, char __user *user_buf,
+			 size_t size, loff_t *ppos)
+{
+	struct cma *cma = file->private_data;
+	char *buf;
+	unsigned int len = 0, count = 0;
+	/* bitmap_scnprintf() produces one hex-digit per 4 bits of the
+	 * bitmap and one comma per every 8 hex-digits meaning par every
+	 * 32 bits, add 64 bytes for the additional characters
+	 */
+	unsigned int buffer_size = (cma->count/4) + (cma->count/32) + 64;
+
+	buf = kmalloc(buffer_size, GFP_KERNEL);
+	if (!buf)
+		return 0;
+
+	len +=
+	    snprintf(buf + len, buffer_size - len,
+		     "CMA base 0x%08lx, count %lx\n", cma->base_pfn,
+		     cma->count);
+
+	len += snprintf(buf + len, buffer_size - len, "CMA bitmap : ");
+
+	mutex_lock(&cma_mutex);
+	len +=
+	    bitmap_scnprintf(buf + len, buffer_size - len, cma->bitmap,
+			     cma->count);
+	mutex_unlock(&cma_mutex);
+
+	len += snprintf(buf + len, buffer_size - len, "\n");
+
+	if (len > buffer_size)
+		len = buffer_size;
+
+	count = simple_read_from_buffer(user_buf, size, ppos, buf, len);
+	kfree(buf);
+
+	return count;
+}
+
+static const struct file_operations cma_debugfs_fops = {
+	.open = cma_debugfs_open,
+	.read = cma_debugfs_read,
+	.llseek = default_llseek,
+	.owner = THIS_MODULE,
+};
+
+static int region_count = 0;
+
+static char debugfs_cma_file[MAX_CMA_AREAS][6];
+static void cma_debugfs_create_file(struct cma *cma)
+{
+
+	sprintf(&debugfs_cma_file[region_count][0], "cma%d", region_count);
+	debugfs_create_file(&debugfs_cma_file[region_count][0], S_IRUSR, NULL, cma, &cma_debugfs_fops);
+	region_count++;
+}
+#else
+static inline void cma_debugfs_create_file(struct cma *cma) { }
+#endif
+
+
 
 /*
  * Default global CMA area size can be defined in kernel's .config.
@@ -167,8 +246,6 @@ void __init dma_contiguous_reserve(phys_addr_t limit)
 
 	dma_declare_contiguous(NULL, selected_size, 0, limit);
 };
-
-static DEFINE_MUTEX(cma_mutex);
 
 #ifdef CONFIG_CMA_STATS
 
@@ -341,6 +418,9 @@ static struct cma *cma_create_area(unsigned long base_pfn, unsigned long count)
 	cma->total_alloc = cma->highest_alloc = 0UL;
 	cma->largest_free_block = cma->count;
 #endif
+
+	cma_debugfs_create_file(cma);
+
 	pr_debug("%s: returned %p\n", __func__, (void *)cma);
 	return cma;
 
@@ -554,6 +634,8 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 	if (!count)
 		return NULL;
 
+	trace_cma_alloc_start(cma, count, align);
+
 	mutex_lock(&cma_mutex);
 
 	for (;;) {
@@ -601,101 +683,18 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 	}
 
 	add_cma_stats(dev, cma, pfn, count, align, 1);
+
 	mutex_unlock(&cma_mutex);
 
 	pr_debug("%s(): returned %p\n", __func__, pfn_to_page(pfn));
-	return pfn_to_page(pfn);
-      error:
-	mutex_unlock(&cma_mutex);
-	return NULL;
 
-/*
- * Cmav16 Modified code
- * I am keeping this here for now in case we need the retry routines in here
- *later.
- * FixMe : (ssp) Delete the commented code below, once CMAv18 reaches stability
- */
-#if 0
-	do {
-		pageno =
-		    bitmap_find_next_zero_area(cma->bitmap, cma->count,
-					       start_from, count,
-					       (1 << align) - 1);
-		if (pageno >= cma->count) {
-			printk(KERN_ERR
-			       "%s:%d #### CMA ALLOCATION FAILED ####\n",
-			       __func__, __LINE__);
-			printk(KERN_ERR
-			       "%s:%d # Could not find %d pages with %d alignment in this cma region bitmap\n",
-			       __func__, __LINE__, count, align);
-#ifdef CONFIG_CMA_STATS
-			printk(KERN_ERR
-			       "%s:%d # Total allocation(%lukB, %d pages), Largest free block(%lukB, %d pages)\n",
-			       __func__, __LINE__,
-			       (cma->total_alloc * PAGE_SIZE / SZ_1K),
-			       cma->total_alloc,
-			       (cma->largest_free_block * PAGE_SIZE / SZ_1K),
-			       cma->largest_free_block);
-#endif
-			printk(KERN_ERR
-			       "%s:%d ###############################\n",
-			       __func__, __LINE__);
-			ret = -ENOMEM;
-			goto error;
-		}
-
-		pr_debug
-		    ("%s: allocating (%d) pages starting from pageno (%ld)\n",
-		     __func__, count, pageno);
-		bitmap_set(cma->bitmap, pageno, count);
-
-		pfn = cma->base_pfn + pageno;
-		ret = alloc_contig_range(pfn, pfn + count, 0, MIGRATE_CMA);
-		if (ret) {
-			printk(KERN_ERR
-			       "%s:%d #### CMA MIGRATION FAILED, BUT RETRYING #### ret = %d for range(%08x-%08x)\n",
-			       __func__, __LINE__, ret, __pfn_to_phys(pfn),
-			       __pfn_to_phys(pfn + count));
-
-			/* Always retry from a new pageblock, that wasn't used before.
-			 *if we reach the end of region before running out of retries .. bad luck !
-			 */
-			start_from = ALIGN(pfn + count, MAX_ORDER_NR_PAGES);
-			if ((start_from + count) <=
-			    (cma->base_pfn + cma->count)) {
-				bitmap_clear(cma->bitmap, pageno, count);
-				/* Go back to the index withing CMA region */
-				start_from -= cma->base_pfn;
-				retries++;
-				printk(KERN_ERR
-				       "#### Retry(%u) with new start pfn/phys(%08lx/0x%08x) ####\n",
-				       retries, cma->base_pfn + start_from,
-				       __pfn_to_phys(cma->base_pfn +
-						     start_from));
-			} else {
-				printk(KERN_ERR
-				       "##############################################################\n");
-				printk(KERN_ERR
-				       "#### Not enough memory left in the CMA region for retries ####\n");
-				printk(KERN_ERR
-				       "##############################################################\n");
-				goto free;
-			}
-		}
-	} while (ret != 0 && retries < 10);
-	add_cma_stats(dev, cma, pfn, count, align, 1);
-
-	mutex_unlock(&cma_mutex);
-
-	pr_debug("%s(): returning [0x%08lx]\n", __func__, (pfn << PAGE_SHIFT));
+	trace_cma_alloc_end_success(cma, pfn, count);
 
 	return pfn_to_page(pfn);
-      free:
-	bitmap_clear(cma->bitmap, pageno, count);
-      error:
+error:
+	trace_cma_alloc_end_failed(cma, count);
 	mutex_unlock(&cma_mutex);
 	return NULL;
-#endif
 }
 
 /**
@@ -724,6 +723,8 @@ int dma_release_from_contiguous(struct device *dev, struct page *pages,
 	if (pfn < cma->base_pfn || pfn >= cma->base_pfn + cma->count)
 		return 0;
 
+	trace_cma_release_start(cma, pfn, count);
+
 	mutex_lock(&cma_mutex);
 
 	bitmap_clear(cma->bitmap, pfn - cma->base_pfn, count);
@@ -732,6 +733,9 @@ int dma_release_from_contiguous(struct device *dev, struct page *pages,
 	add_cma_stats(dev, cma, pfn, count, 0, 0);
 
 	mutex_unlock(&cma_mutex);
+
+	trace_cma_release_end(cma, pfn, count);
+
 	return 1;
 }
 

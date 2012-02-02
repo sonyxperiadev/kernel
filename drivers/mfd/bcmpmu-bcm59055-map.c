@@ -284,6 +284,19 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {	/* revisit 
 	[PMU_REG_SYS_WDT_TIME] = {.map = 0x00, .addr = 0x02, .mask = 0x7F, .ro =
 				  0, .shift = 0},
 
+	/* BM access */
+	[PMU_REG_MBCCTRL1]  = { .map = 0x00, .addr = 0x50, .mask = 0xff, },
+	[PMU_REG_MBCCTRL2]  = { .map = 0x00, .addr = 0x51, .mask = 0xff, },
+	[PMU_REG_MBCCTRL3]  = { .map = 0x00, .addr = 0x52, .mask = 0xff, },
+	[PMU_REG_MBCCTRL4]  = { .map = 0x00, .addr = 0x53, .mask = 0xff, },
+	[PMU_REG_MBCCTRL5]  = { .map = 0x00, .addr = 0x54, .mask = 0xff, },
+	[PMU_REG_MBCCTRL6]  = { .map = 0x00, .addr = 0x55, .mask = 0xff, },
+	[PMU_REG_MBCCTRL7]  = { .map = 0x00, .addr = 0x56, .mask = 0xff, },
+	[PMU_REG_MBCCTRL8]  = { .map = 0x00, .addr = 0x57, .mask = 0xff, },
+	[PMU_REG_MBCCTRL9]  = { .map = 0x00, .addr = 0x58, .mask = 0xff, },
+	[PMU_REG_MBCCTRL10] = { .map = 0x00, .addr = 0x59, .mask = 0xff, },
+	[PMU_REG_BBCCTRL]   = { .map = 0x00, .addr = 0x2f, .mask = 0xff, },
+
 };
 
 static const struct bcmpmu_irq_map bcm59055_irq_map[PMU_IRQ_MAX] = {	/* revisit */
@@ -406,47 +419,47 @@ static const struct bcmpmu_irq_map bcm59055_irq_map[PMU_IRQ_MAX] = {	/* revisit 
 };
 
 static const struct bcmpmu_env_info bcm59055_env_reg_map[PMU_ENV_MAX] = {	/* revisit */
-	[PMU_ENV_MBWV_DELTA] = {.regmap =
-				{.addr = 0xE0, .mask = 0x02, .shift = 1, .ro =
+	[PMU_ENV_MBWV_DELTA] = {.regmap = {
+				.addr = 0xE0, .mask = 0x02, .shift = 1, .ro =
 				 1}, .bitmask = PMU_ENV_BITMASK_MBWV_DELTA},
-	[PMU_ENV_CGPD_ENV] = {.regmap =
-			      {.addr = 0xE1, .mask = 0x01, .shift = 0, .ro =
+	[PMU_ENV_CGPD_ENV] = {.regmap = {
+			      .addr = 0xE1, .mask = 0x01, .shift = 0, .ro =
 			       1}, .bitmask = PMU_ENV_BITMASK_CGPD_ENV},
-	[PMU_ENV_UBPD_ENV] = {.regmap =
-			      {.addr = 0xE1, .mask = 0x02, .shift = 1, .ro =
+	[PMU_ENV_UBPD_ENV] = {.regmap = {
+			      .addr = 0xE1, .mask = 0x02, .shift = 1, .ro =
 			       1}, .bitmask = PMU_ENV_BITMASK_UBPD_ENV},
-	[PMU_ENV_UBPD_USBDET] = {.regmap =
-				 {.addr = 0xE1, .mask = 0x04, .shift = 2, .ro =
+	[PMU_ENV_UBPD_USBDET] = {.regmap = {
+				 .addr = 0xE1, .mask = 0x04, .shift = 2, .ro =
 				  1}, .bitmask = PMU_ENV_BITMASK_UBPD_USBDET},
-	[PMU_ENV_CGPD_PRI] = {.regmap =
-			      {.addr = 0xE1, .mask = 0x10, .shift = 4, .ro =
+	[PMU_ENV_CGPD_PRI] = {.regmap = {
+			      .addr = 0xE1, .mask = 0x10, .shift = 4, .ro =
 			       1}, .bitmask = PMU_ENV_BITMASK_CGPD_PRI},
-	[PMU_ENV_UBPD_PRI] = {.regmap =
-			      {.addr = 0xE1, .mask = 0x20, .shift = 5, .ro =
+	[PMU_ENV_UBPD_PRI] = {.regmap = {
+			      .addr = 0xE1, .mask = 0x20, .shift = 5, .ro =
 			       1}, .bitmask = PMU_ENV_BITMASK_UBPD_PRI},
-	[PMU_ENV_WAC_VALID] = {.regmap =
-			       {.addr = 0xE1, .mask = 0x40, .shift = 6, .ro =
+	[PMU_ENV_WAC_VALID] = {.regmap = {
+			       .addr = 0xE1, .mask = 0x40, .shift = 6, .ro =
 				1}, .bitmask = PMU_ENV_BITMASK_WAC_VALID},
-	[PMU_ENV_USB_VALID] = {.regmap =
-			       {.addr = 0xE1, .mask = 0x80, .shift = 7, .ro =
+	[PMU_ENV_USB_VALID] = {.regmap = {
+			       .addr = 0xE1, .mask = 0x80, .shift = 7, .ro =
 				1}, .bitmask = PMU_ENV_BITMASK_USB_VALID},
-	[PMU_ENV_P_CGPD_CHG] = {.regmap =
-				{.addr = 0x00, .mask = 0x00, .shift = 0, .ro =
+	[PMU_ENV_P_CGPD_CHG] = {.regmap = {
+				.addr = 0x00, .mask = 0x00, .shift = 0, .ro =
 				 1}, .bitmask = PMU_ENV_BITMASK_P_CGPD_CHG},
-	[PMU_ENV_P_UBPD_CHR] = {.regmap =
-				{.addr = 0xE1, .mask = 0x04, .shift = 2, .ro =
+	[PMU_ENV_P_UBPD_CHR] = {.regmap = {
+				.addr = 0xE1, .mask = 0x04, .shift = 2, .ro =
 				 1}, .bitmask = PMU_ENV_BITMASK_P_UBPD_CHR},
-	[PMU_ENV_PORT_DISABLE] = {.regmap =
-				  {.addr = 0x00, .mask = 0x00, .shift = 0, .ro =
+	[PMU_ENV_PORT_DISABLE] = {.regmap = {
+				  .addr = 0x00, .mask = 0x00, .shift = 0, .ro =
 				   1}, .bitmask = PMU_ENV_BITMASK_PORT_DISABLE},
-	[PMU_ENV_MBPD] = {.regmap =
-			  {.addr = 0xE4, .mask = 0x01, .shift = 0, .ro =
+	[PMU_ENV_MBPD] = {.regmap = {
+			  .addr = 0xE4, .mask = 0x01, .shift = 0, .ro =
 			   1}, .bitmask = PMU_ENV_BITMASK_MBPD},
-	[PMU_ENV_MBOV] = {.regmap =
-			  {.addr = 0xE0, .mask = 0x10, .shift = 4, .ro =
+	[PMU_ENV_MBOV] = {.regmap = {
+			  .addr = 0xE0, .mask = 0x10, .shift = 4, .ro =
 			   1}, .bitmask = PMU_ENV_BITMASK_MBOV},
-	[PMU_ENV_MBMC] = {.regmap =
-			  {.addr = 0xE0, .mask = 0x08, .shift = 3, .ro =
+	[PMU_ENV_MBMC] = {.regmap = {
+			  .addr = 0xE0, .mask = 0x08, .shift = 3, .ro =
 			   1}, .bitmask = PMU_ENV_BITMASK_MBMC},
 };
 

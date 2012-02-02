@@ -228,12 +228,12 @@ unsigned long long notrace sched_clock(void)
 	if (unlikely(gpt_src == NULL))
 		return 0;
 
-	return cyc_to_sched_clock(&cd, gptimer_clksrc_read(NULL), (u32) ~ 0);
+	return cyc_to_sched_clock(&cd, gptimer_clksrc_read(NULL), (u32) ~0);
 }
 
 static void notrace kona_update_sched_clock(void)
 {
-	update_sched_clock(&cd, gptimer_clksrc_read(NULL), (u32) ~ 0);
+	update_sched_clock(&cd, gptimer_clksrc_read(NULL), (u32) ~0);
 }
 
 void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
