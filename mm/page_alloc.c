@@ -1778,7 +1778,8 @@ static inline bool should_suppress_show_mem(void)
 {
 	bool ret = false;
 
-#if NODES_SHIFT > 8
+/* pmem_dump should not be called in the irq context. */
+#if defined (CONFIG_ANDROID_PMEM) || (NODES_SHIFT > 8)
 	ret = in_interrupt();
 #endif
 	return ret;
