@@ -49,6 +49,13 @@
 #include <linux/input.h>
 #include <linux/string.h>
 
+#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
+#include <linux/brvsens_driver.h>
+
+static int mod_debug = 0x0;
+module_param(mod_debug, int, 0644);
+#endif
+
 #define AL3006_DRV_NAME	"al3006"
 //#define AL3006_DRV_NAME		"dyna"
 #define DRIVER_VERSION		"1.7"
@@ -75,6 +82,10 @@
 #define AL3006_INT_SHIFT	(0)
 #define AL3006_INT_MASK		0x03
 
+#define AL3006_TIME_CTRL_COMMAND	0x01
+#define AL3006_TIME_CTRL_SHIFT	(0)
+#define AL3006_TIME_CTRL_MASK	0x7F
+
 #define LSC_DBG
 #ifdef LSC_DBG
 #define LDBG(s,args...)	{printk("LDBG: func [%s], line [%d], ",__func__,__LINE__); printk(s,## args);}
@@ -86,7 +97,7 @@ struct al3006_data {
 	struct i2c_client *client;
 	struct mutex lock;
 	u8 reg_cache[AL3006_NUM_CACHABLE_REGS];
-	u8 power_state_before_suspend;
+//	u8 power_state_before_suspend;
 	int irq;
 	struct input_dev *input;
 };
@@ -506,6 +517,140 @@ static const struct attribute_group al3006_attr_group = {
 	.attrs = al3006_attributes,
 };
 
+#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
+static int al3006_set_mode_no_lock(struct al3006_data *data, u8 mode)
+{
+	int ret;
+	u8 val = data->reg_cache[AL3006_MODE_COMMAND];
+	val &= ~AL3006_MODE_MASK;
+	val |= mode << AL3006_MODE_SHIFT;
+
+	ret = i2c_smbus_write_byte_data(data->client, AL3006_MODE_COMMAND, val);
+
+	if(mod_debug)
+		printk("%s() reg:0x%x mode:0x%x new_reg:0x%x return:%d\n", __func__, data->reg_cache[AL3006_MODE_COMMAND], mode, val, ret);
+
+	if(!ret)
+		data->reg_cache[AL3006_MODE_COMMAND] = val;
+
+	return ret;
+}
+
+static int al3006_activate(struct al3006_data *data, u8 flag)
+{
+	u8 reg, pwr;
+	int ret;
+
+	if(mod_debug)
+		printk("%s() %s reg:0x%x\n", __func__, flag?"UP":"DOWN", data->reg_cache[AL3006_MODE_COMMAND]);
+
+	mutex_lock(&data->lock);
+	reg = data->reg_cache[AL3006_MODE_COMMAND];
+	pwr = (reg & AL3006_POW_MASK) >> AL3006_POW_SHIFT;
+
+	if(flag) /* activate */
+	{
+		if(pwr != AL3006_POW_UP)
+		{
+			reg &= ~AL3006_POW_MASK;
+			reg |= AL3006_POW_UP << AL3006_POW_SHIFT;
+		}
+		reg &= ~AL3006_MODE_MASK;
+		reg |= 0x03 << AL3006_MODE_SHIFT;
+	}
+	else /* deactivate */
+	{
+		if(pwr != AL3006_POW_DOWN)
+		{
+			reg &= ~AL3006_POW_MASK;
+			reg |= AL3006_POW_DOWN << AL3006_POW_SHIFT;
+		}
+		reg &= ~AL3006_MODE_MASK;
+		reg |= 0x03 << AL3006_MODE_SHIFT;
+	}
+
+	ret = i2c_smbus_write_byte_data(data->client, AL3006_MODE_COMMAND, reg);
+	if (!ret)
+		data->reg_cache[AL3006_MODE_COMMAND] = reg;
+
+	mutex_unlock(&data->lock);
+
+	if(ret)
+		printk(KERN_ERR "%s() I2C ERROR %d\n", __func__, ret);
+
+	if(mod_debug)
+		printk("%s() new_reg:0x%x return=%d\n", __func__, reg, ret);
+
+	return ret;
+}
+
+static int al3006_read_als(struct al3006_data *data, u16* value)
+{
+	int val;
+
+	mutex_lock(&data->lock);
+	if(((data->reg_cache[AL3006_MODE_COMMAND] & AL3006_MODE_MASK) >> AL3006_MODE_SHIFT) != 0x00)
+	{
+		if(val = al3006_set_mode_no_lock(data, 0x00))
+		{
+			mutex_unlock(&data->lock);
+			printk(KERN_ERR "%s() I2C ERROR %d\n", __func__, val);
+			return val;
+		}
+	}
+
+	val = i2c_smbus_read_byte_data(data->client, AL3006_RES_COMMAND);
+	mutex_unlock(&data->lock);
+
+	if(val < 0)
+	{
+		printk("%s() I2C ERROR %d\n", __func__, val);
+		return val;
+	}
+
+	val &= AL3006_RES_MASK;
+	if((val + cali) > 63 || ((val + cali) < 0))
+		cali = 0;
+
+	*value = lux_table[(val + cali)];
+
+	if(mod_debug)
+		printk("%s() val=%d cali=%d value=%d\n", __func__, val, cali, *value);
+	return 0;
+}
+
+static int al3006_read_ps(struct al3006_data *data, u32* value)
+{
+	int val;
+
+	mutex_lock(&data->lock);
+	if(((data->reg_cache[AL3006_MODE_COMMAND] & AL3006_MODE_MASK) >> AL3006_MODE_SHIFT) != 0x01)
+	{
+		if(val = al3006_set_mode_no_lock(data, 0x01))
+		{
+			mutex_unlock(&data->lock);
+			printk(KERN_ERR "%s() I2C ERROR %d\n", __func__, val);
+			return val;
+		}
+	}
+
+	val = i2c_smbus_read_byte_data(data->client, AL3006_RES_COMMAND);
+	mutex_unlock(&data->lock);
+
+	if(val < 0)
+	{
+		printk("%s() I2C ERROR %d\n", __func__, val);
+		return val;
+	}
+
+	*value = (val & AL3006_OBJ_MASK) >> AL3006_OBJ_SHIFT;
+
+	if(mod_debug)
+		printk("%s() value=%d %s\n", __func__, *value, *value ? "obj near":"obj far");
+	return 0;
+}
+#endif
+
 static int al3006_init_client(struct i2c_client *client)
 {
 	struct al3006_data *data = i2c_get_clientdata(client);
@@ -524,6 +669,9 @@ static int al3006_init_client(struct i2c_client *client)
 	/* set defaults */
 	al3006_set_mode(client, 0);
 	al3006_set_power_state(client, 0);
+
+	/* set sensor responsiveness to fast (516 ms for the first read, 100ms afterward) */
+	__al3006_write_reg(client, AL3006_TIME_CTRL_COMMAND, AL3006_TIME_CTRL_MASK, AL3006_TIME_CTRL_SHIFT, 0x10);
 
 	return 0;
 }
@@ -558,7 +706,7 @@ static irqreturn_t al3006_irq(int irq, void *data_)
 	}
 
 	mutex_unlock(&data->lock);
-    return IRQ_HANDLED;
+	return IRQ_HANDLED;
 }
 
 static int __devinit al3006_probe(struct i2c_client *client,
@@ -597,11 +745,26 @@ static int __devinit al3006_probe(struct i2c_client *client,
 	err = request_threaded_irq(client->irq, NULL, al3006_irq,
                                IRQF_TRIGGER_FALLING,
                                "al3006", data);
-    if (err) {
+	if (err) {
 		dev_err(&client->dev, "ret: %d, could not get IRQ %d\n",err,client->irq);
-            goto exit_kfree;
-    }
+		goto exit_input;
+	}
 
+#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
+	brvsens_register(
+		SENSOR_HANDLE_LIGHT,
+		AL3006_DRV_NAME,
+		(void*)data,
+		(PFNACTIVATE)al3006_activate,
+		(PFNREAD)al3006_read_als);
+
+	brvsens_register(
+		SENSOR_HANDLE_PROXIMITY,
+		AL3006_DRV_NAME,
+		(void*)data,
+		(PFNACTIVATE)al3006_activate,
+		(PFNREAD)al3006_read_ps);
+#endif
 	dev_info(&client->dev, "AL3006 driver version %s enabled\n", DRIVER_VERSION);
 	return 0;
 
@@ -624,8 +787,17 @@ static int __devexit al3006_remove(struct i2c_client *client)
 	return 0;
 }
 
-#define al3006_suspend	NULL
-#define al3006_resume		NULL
+static int al3006_suspend(struct i2c_client *client, pm_message_t mesg)
+{
+	struct al3006_data *data = i2c_get_clientdata(client);
+	return al3006_activate(data, 0);
+}
+
+static int al3006_resume(struct i2c_client *client)
+{
+	struct al3006_data *data = i2c_get_clientdata(client);
+	return al3006_activate(data, 1);
+}
 
 static const struct i2c_device_id al3006_id[] = {
 	{ "al3006", 0 },
@@ -663,4 +835,3 @@ MODULE_VERSION(DRIVER_VERSION);
 
 module_init(al3006_init);
 module_exit(al3006_exit);
-
