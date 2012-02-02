@@ -1364,13 +1364,16 @@ static int __headset_hw_init (struct mic_t *p)
 	/* Set the threshold value for button press */
 	/* 
 	 * Got the feedback from the system design team that the button press 
-	 * threshold to programmed should be 0.12V
-	 * as well.
+	 * threshold to programmed should be 0.12V as well.
+	 * With this only send/end button works, so made this 600 i.e 0.6V.
+	 * With the threshold level set to 0.6V all the 3 button press works
+	 * OK.Note that this would trigger continus COMP1 Interrupts if enabled.
+	 * But since we don't enable COMP1 until we identify a Headset its OK.
 	 */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 		CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
 		CHAL_ACI_BLOCK_COMP1,
-		120);
+		600);
 
 	pr_debug ("=== __headset_hw_init: Configured the threshold value for button press\r\n");
 
