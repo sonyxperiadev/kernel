@@ -1562,6 +1562,7 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	CSL_CAPH_DEVICE_e curr_spk = CSL_CAPH_DEV_NONE;
+	CSL_CAPH_DEVICE_e new_spk = getDeviceFromSink(sink);
 	int i, j;
 
 	log(1, "%s src 0x%x, Sink 0x%x", __func__, source, sink);
@@ -1589,6 +1590,11 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 			break;
 	}
 
+	if (curr_spk == new_spk) {
+		log(1, "%s same speaker %d. ignored", __func__, curr_spk);
+		return;
+	}
+
 	if (curr_spk != CSL_CAPH_DEV_NONE) {
 		if (curr_spk == CSL_CAPH_DEV_HS)
 			powerOnExternalAmp(AUDIO_SINK_HEADSET, AudioUseExtSpkr,
@@ -1613,11 +1619,8 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 	if ((sink == AUDIO_SINK_LOUDSPK) || (sink == AUDIO_SINK_HEADSET))
 		powerOnExternalAmp(sink, AudioUseExtSpkr, TRUE);
 
-	/*SetAudioMode_ForMusicPlayback(GetAudioModeBySink(sink),
-					      0, FALSE); */
-
-		/*for VoIP, need mic and speaker, */
-	SetAudioMode(GetAudioModeBySink(sink), GetAudioApp());
+	SetAudioMode_ForMusicPlayback(GetAudioModeBySink(sink),
+					      0, FALSE);
 
 	return;
 }
