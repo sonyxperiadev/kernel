@@ -421,7 +421,6 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned long load)
 	struct kona_timer_module *ktm;
 	unsigned long flags;
 	unsigned long reg, msw, lsw;
-	unsigned long msw_exp, lsw_exp;
 
 	if (NULL == kt)
 		return -1;
@@ -443,9 +442,6 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned long load)
 	__get_counter (ktm->reg_base, &msw, &lsw);
 
 	/* Load the match register */
-	lsw_exp = load + lsw;
-	msw_exp = msw + (lsw_exp < load ? 1 : 0);
-
 	writel(load+lsw, ktm->reg_base + KONA_GPTIMER_STCM0_OFFSET + (kt->ch_num * 4));
 
 #ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
@@ -460,6 +456,7 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned long load)
 
 	/* Enable compare */
 	reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
+
 	/* 
 	 * Clean up the Match field (3..0), writing 1 to this bit
 	 * would clean the interrupt for the respective channel.
@@ -470,43 +467,7 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned long load)
 	reg |= (1 << (kt->ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
 	writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 
-	/* Check that we didn't miss the timer expiration */
-	__get_counter (ktm->reg_base, &msw, &lsw);
-
-	if ((msw > msw_exp) || ((msw == msw_exp) && (lsw >= lsw_exp))) {
-
-		/* Expiration time passed, check if interrupt fired */
-		reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
-		if (0 == (reg & (1 << kt->ch_num))) {
-
-			reg &= ~KONA_GPTIMER_STCS_TIMER_MATCH_MASK;
-			reg |= 1 << (kt->ch_num + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);
-			reg &= ~(1 << (kt->ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
-			writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
-
-			if (kt->cfg.mode == MODE_PERIODIC)
-				printk(KERN_ALERT "Periodic Kona timer had suspiciously small load value- now disabled\n");
-
-			/*
-			 * Release the spin lock here.
-			 * Note that if we call this call back from this
-			 * context i.e
-			 * hrtimer_interrupt - tick_program_event -
-			 * tick_dev_program_event - clockevents_program_event
-			 * - gptimer_set_next_event - kona_timer_set_match_start
-			 * this might re-trigger the same cycle. This will
-			 * lead to acquiring of the spin lock recurrsively.
-			 */
-			spin_unlock_irqrestore (&ktm->lock, flags);
-
-			/* Invoke the call back, if any */
-			if (kt->cfg.cb != NULL)
-				(*kt->cfg.cb)(kt->cfg.arg);
-		}
-	}
-	else {
-		spin_unlock_irqrestore (&ktm->lock, flags);
-	}
+	spin_unlock_irqrestore (&ktm->lock, flags);
 
 	return 0;
 }
