@@ -89,6 +89,10 @@ static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
 		/* De-initialize OTG core and PHY */
 		bcm_hsotgctrl_phy_deinit();
 		xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
+#ifndef CONFIG_USB_OTG
+		if (wake_lock_active(&xceiv_data->otg_xceiver.xceiver_wake_lock))
+			wake_unlock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
+#endif
 	}
 }
 
@@ -98,6 +102,10 @@ static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
 	bool id_gnd = false;
 
 	if (xceiv_data) {
+
+#ifndef CONFIG_USB_OTG
+		wake_lock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
+#endif
 		id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 		/* Initialize OTG core and PHY */
 		bcm_hsotgctrl_phy_init(!id_gnd);
@@ -627,6 +635,8 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 
 	ATOMIC_INIT_NOTIFIER_HEAD(&xceiv_data->otg_xceiver.xceiver.notifier);
 
+	wake_lock_init(&xceiv_data->otg_xceiver.xceiver_wake_lock, WAKE_LOCK_SUSPEND, "otg_xcvr_wakelock");
+
 #ifdef CONFIG_USB_OTG
 	init_timer(&xceiv_data->otg_xceiver.srp_failure_timer);
 	xceiv_data->otg_xceiver.srp_failure_timer.data = (unsigned long)xceiv_data;
@@ -636,13 +646,13 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->otg_xceiver.sess_end_srp_timer.data = (unsigned long)xceiv_data;
 	xceiv_data->otg_xceiver.sess_end_srp_timer.function = bcmpmu_otg_xceiv_sess_end_srp_timer_handler;
 
-	wake_lock_init(&xceiv_data->otg_xceiver.xceiver_wake_lock, WAKE_LOCK_SUSPEND, "otg_xcvr_wakelock");
-
+	/* Wake lock forevever in OTG build until we integrate otg-wakelock */
 	wake_lock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
 
 	error = bcm_otg_adp_init(xceiv_data);
 	if (error)
 		goto error_attr_host;
+
 #endif
 
 	otg_set_transceiver(&xceiv_data->otg_xceiver.xceiver);
