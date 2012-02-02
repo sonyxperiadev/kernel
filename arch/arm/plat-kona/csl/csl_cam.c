@@ -2106,29 +2106,41 @@ Int32 csl_cam_get_buffer_status( CSL_CAM_HANDLE cslCamH, CSL_CAM_SELECT_t status
     CAM_HANDLE                  camH = (CAM_HANDLE)cslCamH;
     CHAL_CAM_STATUS_CODES       chal_status = CHAL_OP_OK;
     CHAL_CAM_BUFFER_CFG_st_t    chal_cam_buffer_st;
+	CHAL_CAM_BUFFER_st_t bufferInfo;
 
 // Interface
     chal_cam_buffer_st.intf = cslCamChalIntf(cslCamDrv.intf_cfg.intf);
 // Channel
     chal_cam_buffer_st.chan = cslCamChalPortChan(camH->port_chan_sel);
-  
+
+	chal_cam_buffer_st.buffers.image0Buff = NULL;
+	chal_cam_buffer_st.buffers.data0Buff = NULL;
+	chal_cam_buffer_st.buffers.image1Buff = NULL;
+	chal_cam_buffer_st.buffers.data1Buff = NULL;
+
+	if (status_select == CSL_CAM_DATA)
+		chal_cam_buffer_st.buffers.data0Buff = &bufferInfo;
+	else
+		chal_cam_buffer_st.buffers.image0Buff = &bufferInfo;
+
+
     chal_status |= chal_cam_get_buffer_cfg(cslCamDrv.chalCamH, &chal_cam_buffer_st);
 
-    bufStatus->buffer_st.start_addr = chal_cam_buffer_st.buffers.image0Buff->start_addr; 
-    bufStatus->buffer_st.size = chal_cam_buffer_st.buffers.image0Buff->size; 
-    bufStatus->buffer_st.line_stride = chal_cam_buffer_st.buffers.image0Buff->line_stride; 
-    bufStatus->buffer_st.buffer_wrap_en = chal_cam_buffer_st.buffers.image0Buff->buf_wrap_enable; 
-    bufStatus->write_ptr = chal_cam_buffer_st.write_ptr; 
-    bufStatus->bytes_per_line = chal_cam_buffer_st.bytes_per_line; 
-    bufStatus->lines_per_frame = chal_cam_buffer_st.lines_per_frame; 
-    if (chal_status != CHAL_OP_OK)
+    bufStatus->buffer_st.start_addr = bufferInfo.start_addr;
+    bufStatus->buffer_st.size = bufferInfo.size;
+    bufStatus->buffer_st.line_stride = bufferInfo.line_stride;
+    bufStatus->buffer_st.buffer_wrap_en = bufferInfo.buf_wrap_enable;
+    bufStatus->write_ptr = chal_cam_buffer_st.write_ptr;
+    bufStatus->bytes_per_line = chal_cam_buffer_st.bytes_per_line;
+    bufStatus->lines_per_frame = chal_cam_buffer_st.lines_per_frame;
+
+	if (chal_status != CHAL_OP_OK)
     {
         DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_get_buffer_status][Info] : ERROR!\n") );
     }
     success |= cslCamChalResult(chal_status);
     return success;
 }
-    
 
 /***********************************************************
  * Name: csl_cam_get_intr_status

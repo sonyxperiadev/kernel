@@ -948,7 +948,10 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	unsigned int status;
 	unsigned int reg_status;
 	int ret;
+	CSL_CAM_BUFFER_STATUS_st_t bufStatus;
+	unsigned int bytes_used;
 	static unsigned int t1 = 0, t2 = 0, fps = 0;
+
 
 	/* has the interrupt occured for Channel 0? */
 	reg_status =
@@ -989,6 +992,22 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
 				list_del_init(&to_unicam_camera_vb(vb)->queue);
 				do_gettimeofday(&vb->v4l2_buf.timestamp);
+				vb->v4l2_planes[0].bytesused = 0;
+
+				if (unicam_dev->icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8) {
+
+					ret = csl_cam_get_buffer_status(unicam_dev->cslCamHandle,
+							CSL_CAM_DATA, &bufStatus);
+
+					if (ret == CSL_CAM_OK) {
+						bytes_used = (bufStatus.write_ptr - bufStatus.buffer_st.start_addr);
+						vb->v4l2_planes[0].bytesused = bytes_used;
+					}
+					else
+						dev_warn(unicam_dev->dev, "%s:failed to get buffer status",
+								__func__);
+				}
+
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
 
 				if (!list_empty(&unicam_dev->capture))
