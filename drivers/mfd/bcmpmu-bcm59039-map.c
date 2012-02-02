@@ -283,6 +283,7 @@ static const struct bcmpmu_env_info bcm59039_env_reg_map[PMU_ENV_MAX] = {
 	[PMU_ENV_UBPD_PRI] = 		{.regmap = {.addr = 0x00, .mask = 0x00, .shift = 0, .ro = 1}, .bitmask = PMU_ENV_BITMASK_UBPD_PRI},
 	[PMU_ENV_WAC_VALID] = 		{.regmap = {.addr = 0x00, .mask = 0x00, .shift = 0, .ro = 1}, .bitmask = PMU_ENV_BITMASK_WAC_VALID},
 	[PMU_ENV_USB_VALID] = 		{.regmap = {.addr = 0xE1, .mask = 0x08, .shift = 3, .ro = 1}, .bitmask = PMU_ENV_BITMASK_USB_VALID},
+	[PMU_ENV_P_UBPD_INT] = 		{.regmap = {.addr = 0xE1, .mask = 0x02, .shift = 1, .ro = 1}, .bitmask = PMU_ENV_BITMASK_P_UBPD_INT},
 	[PMU_ENV_P_CGPD_CHG] = 		{.regmap = {.addr = 0x00, .mask = 0x00, .shift = 0, .ro = 1}, .bitmask = PMU_ENV_BITMASK_P_CGPD_CHG},
 	[PMU_ENV_P_UBPD_CHR] = 		{.regmap = {.addr = 0xE1, .mask = 0x04, .shift = 2, .ro = 1}, .bitmask = PMU_ENV_BITMASK_P_UBPD_CHR},
 	[PMU_ENV_PORT_DISABLE] = 	{.regmap = {.addr = 0x00, .mask = 0x00, .shift = 0, .ro = 1}, .bitmask = PMU_ENV_BITMASK_PORT_DISABLE},

@@ -655,7 +655,7 @@ static void usb_det_work(struct work_struct *work)
 
 	case USB_CONNECTED:
 		if (paccy->bcmpmu->get_env_bit_status(paccy->bcmpmu,
-						      PMU_ENV_USB_VALID) !=
+						      PMU_ENV_P_UBPD_INT) !=
 		    true) {
 			usb_type = PMU_USB_TYPE_NONE;
 			chrgr_type = PMU_CHRGR_TYPE_NONE;

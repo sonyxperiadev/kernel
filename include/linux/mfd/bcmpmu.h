@@ -766,6 +766,7 @@ enum bcmpmu_env_bit_t {
 	PMU_ENV_UBPD_PRI,
 	PMU_ENV_WAC_VALID,
 	PMU_ENV_USB_VALID,
+	PMU_ENV_P_UBPD_INT,
 	PMU_ENV_P_CGPD_CHG,
 	PMU_ENV_P_UBPD_CHR,
 	PMU_ENV_PORT_DISABLE,
@@ -845,6 +846,7 @@ enum bcmpmu_bc_t {
 #define	PMU_ENV_BITMASK_MBPD			(1<<11)
 #define	PMU_ENV_BITMASK_MBOV			(1<<12)
 #define PMU_ENV_BITMASK_MBMC			(1<<13)
+#define	PMU_ENV_BITMASK_P_UBPD_INT		(1<<14)
 
 struct bcmpmu_env_info {
 	struct bcmpmu_reg_map regmap;
