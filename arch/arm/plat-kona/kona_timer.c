@@ -128,10 +128,14 @@ static int __config_aon_hub_timer_clock(struct kona_timer_module *pktm,
 static int __config_slave_timer_clock(struct kona_timer_module *pktm,
 	unsigned int rate,
 	unsigned int reg_val);
+/*
+ * Ensure that the code calls one function to read the counter value
+ * This will make life simple to implement the debouncing logic needed for
+ * Rhea B1
+ */
+static inline unsigned long __get_counter (void __iomem *reg_base);
 static inline void __disable_all_channels(void __iomem *reg_base);
 static inline void __disable_channel(void __iomem *reg_base, int ch_num);
-static inline void __get_counter (void __iomem *reg_base, unsigned long *msw,
-	unsigned long *lsw);
 static irqreturn_t kona_timer_isr(int irq, void *dev_id);
 
 static struct irqaction hub_timer_irq[NUM_OF_CHANNELS] = {
@@ -420,7 +424,7 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned long load)
 {
 	struct kona_timer_module *ktm;
 	unsigned long flags;
-	unsigned long reg, msw, lsw;
+	unsigned long reg, lsw;
 
 	if (NULL == kt)
 		return -1;
@@ -439,7 +443,8 @@ int kona_timer_set_match_start (struct kona_timer* kt, unsigned long load)
 	if (kt->cfg.mode == MODE_PERIODIC)
 		kt->cfg.reload = load;
 
-	__get_counter (ktm->reg_base, &msw, &lsw);
+	/* First read the existing counter */
+	lsw = __get_counter(ktm->reg_base);
 
 	/* Load the match register */
 	writel(load+lsw, ktm->reg_base + KONA_GPTIMER_STCM0_OFFSET + (kt->ch_num * 4));
@@ -566,10 +571,9 @@ unsigned int kona_timer_get_counter(struct kona_timer* kt)
 	}
 
 	ktm = kt->ktm;
-	counter = readl(ktm->reg_base + KONA_GPTIMER_STCLO_OFFSET);
+	counter = __get_counter(ktm->reg_base);
 
 	return counter;
-
 }
 EXPORT_SYMBOL(kona_timer_get_counter);
 
@@ -618,14 +622,14 @@ EXPORT_SYMBOL(kona_timer_disable_and_clear);
 /* Return the counter value of hub timer */
 unsigned long kona_hubtimer_get_counter(void)
 {
-	return readl(timer_module_list[0].reg_base + KONA_GPTIMER_STCLO_OFFSET);
+	return __get_counter(timer_module_list[0].reg_base);
 }
 EXPORT_SYMBOL(kona_hubtimer_get_counter);
 
 /* Return the counter value of slave timer */
 unsigned long kona_slavetimer_get_counter(void)
 {
-	return readl(timer_module_list[1].reg_base + KONA_GPTIMER_STCLO_OFFSET);
+	return __get_counter(timer_module_list[1].reg_base);
 }
 EXPORT_SYMBOL(kona_slavetimer_get_counter);
 
@@ -867,29 +871,13 @@ static inline void __disable_channel(void __iomem *reg_base, int ch_num)
 	writel(reg,reg_base + KONA_GPTIMER_STCS_OFFSET);
 }
 
-static inline void __get_counter (void __iomem *reg_base, unsigned long *msw,
-	unsigned long *lsw)
+static inline unsigned long __get_counter (void __iomem *reg_base)
 {
-	/* Read 64-bit Now while re-programming the match register the
-	 * addition 
-	 * operation will cause the same overflow which will be matched next
-	 * time
-	 * properly when the LSB matches this new value.ree running counter
-	 * 1. Read hi-word
-	 * 2. Read low-word
-	 * 3. Read hi-word again
-	 * 4.1 
-	 * 	if new hi-word is not equal to previously read hi-word, then
-	 * 	start from #1
-	 * 4.2
-	 * 	if new hi-word is equal to previously read hi-word then stop.
+	/*
+	 * For now this is a simple read, for Rhea B1 we'll implement the
+	 * debouncing here
 	 */
-	while (1) {
-		*msw = readl(reg_base + KONA_GPTIMER_STCHI_OFFSET);
-		*lsw = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
-		if (*msw == readl(reg_base + KONA_GPTIMER_STCHI_OFFSET))
-			break;
-	}
+	return (readl(reg_base + KONA_GPTIMER_STCLO_OFFSET));
 }
 
 static inline int irq_to_ch (int irq)
