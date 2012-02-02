@@ -22,6 +22,7 @@ typedef struct
 {
 	UInt8			channel;		///< AP Channel Info
 	Boolean 			unsolicited;		///< unsolicited flag
+	UInt8			sdevID;		///< serial device ID
 }AtRegisterInfo_t;
 
 typedef struct
