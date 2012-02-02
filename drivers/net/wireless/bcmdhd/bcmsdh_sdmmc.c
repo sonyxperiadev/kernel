@@ -21,7 +21,11 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
+<<<<<<< HEAD
  * $Id: bcmsdh_sdmmc.c 282820 2011-09-09 15:40:35Z $
+=======
+ * $Id: bcmsdh_sdmmc.c 301794 2011-12-08 20:41:35Z $
+>>>>>>> google-kernel
  */
 #include <typedefs.h>
 
@@ -448,6 +452,7 @@ sdioh_iovar_op(sdioh_info_t *si, const char *name,
 		bcopy(params, &int_val, sizeof(int_val));
 
 	bool_val = (int_val != 0) ? TRUE : FALSE;
+	BCM_REFERENCE(bool_val);
 
 	actionid = set ? IOV_SVAL(vi->varid) : IOV_GVAL(vi->varid);
 	switch (actionid) {
@@ -1002,11 +1007,11 @@ sdioh_request_buffer(sdioh_info_t *sd, uint pio_dma, uint fix_inc, uint write, u
 	if (pkt == NULL) {
 		sd_data(("%s: Creating new %s Packet, len=%d\n",
 		         __FUNCTION__, write ? "TX" : "RX", buflen_u));
-#ifdef DHD_USE_STATIC_BUF
+#ifdef CONFIG_DHD_USE_STATIC_BUF
 		if (!(mypkt = PKTGET_STATIC(sd->osh, buflen_u, write ? TRUE : FALSE))) {
 #else
 		if (!(mypkt = PKTGET(sd->osh, buflen_u, write ? TRUE : FALSE))) {
-#endif /* DHD_USE_STATIC_BUF */
+#endif /* CONFIG_DHD_USE_STATIC_BUF */
 			sd_err(("%s: PKTGET failed: len %d\n",
 			           __FUNCTION__, buflen_u));
 			return SDIOH_API_RC_FAIL;
@@ -1023,11 +1028,11 @@ sdioh_request_buffer(sdioh_info_t *sd, uint pio_dma, uint fix_inc, uint write, u
 		if (!write) {
 			bcopy(PKTDATA(sd->osh, mypkt), buffer, buflen_u);
 		}
-#ifdef DHD_USE_STATIC_BUF
+#ifdef CONFIG_DHD_USE_STATIC_BUF
 		PKTFREE_STATIC(sd->osh, mypkt, write ? TRUE : FALSE);
 #else
 		PKTFREE(sd->osh, mypkt, write ? TRUE : FALSE);
-#endif /* DHD_USE_STATIC_BUF */
+#endif /* CONFIG_DHD_USE_STATIC_BUF */
 	} else if (((uint32)(PKTDATA(sd->osh, pkt)) & DMA_ALIGN_MASK) != 0) {
 		/* Case 2: We have a packet, but it is unaligned. */
 
@@ -1036,11 +1041,11 @@ sdioh_request_buffer(sdioh_info_t *sd, uint pio_dma, uint fix_inc, uint write, u
 
 		sd_data(("%s: Creating aligned %s Packet, len=%d\n",
 		         __FUNCTION__, write ? "TX" : "RX", PKTLEN(sd->osh, pkt)));
-#ifdef DHD_USE_STATIC_BUF
+#ifdef CONFIG_DHD_USE_STATIC_BUF
 		if (!(mypkt = PKTGET_STATIC(sd->osh, PKTLEN(sd->osh, pkt), write ? TRUE : FALSE))) {
 #else
 		if (!(mypkt = PKTGET(sd->osh, PKTLEN(sd->osh, pkt), write ? TRUE : FALSE))) {
-#endif /* DHD_USE_STATIC_BUF */
+#endif /* CONFIG_DHD_USE_STATIC_BUF */
 			sd_err(("%s: PKTGET failed: len %d\n",
 			           __FUNCTION__, PKTLEN(sd->osh, pkt)));
 			return SDIOH_API_RC_FAIL;
@@ -1061,11 +1066,11 @@ sdioh_request_buffer(sdioh_info_t *sd, uint pio_dma, uint fix_inc, uint write, u
 			      PKTDATA(sd->osh, pkt),
 			      PKTLEN(sd->osh, mypkt));
 		}
-#ifdef DHD_USE_STATIC_BUF
+#ifdef CONFIG_DHD_USE_STATIC_BUF
 		PKTFREE_STATIC(sd->osh, mypkt, write ? TRUE : FALSE);
 #else
 		PKTFREE(sd->osh, mypkt, write ? TRUE : FALSE);
-#endif /* DHD_USE_STATIC_BUF */
+#endif /* CONFIG_DHD_USE_STATIC_BUF */
 	} else { /* case 3: We have a packet and it is aligned. */
 		sd_data(("%s: Aligned %s Packet, direct DMA\n",
 		         __FUNCTION__, write ? "Tx" : "Rx"));
@@ -1179,6 +1184,7 @@ static void IRQHandlerF2(struct sdio_func *func)
 	sd = gInstance->sd;
 
 	ASSERT(sd != NULL);
+	BCM_REFERENCE(sd);
 }
 #endif /* !defined(OOB_INTR_ONLY) */
 

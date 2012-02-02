@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd.h 294054 2011-11-04 02:01:13Z $
+ * $Id: dhd.h 306879 2012-01-09 21:33:03Z $
  */
 
 /****************
@@ -117,7 +117,7 @@ typedef enum  {
 } dhd_if_state_t;
 
 
-#if defined(DHD_USE_STATIC_BUF)
+#if defined(CONFIG_DHD_USE_STATIC_BUF)
 
 uint8* dhd_os_prealloc(void *osh, int section, uint size);
 void dhd_os_prefree(void *osh, void *addr, uint size);
@@ -129,7 +129,12 @@ void dhd_os_prefree(void *osh, void *addr, uint size);
 #define DHD_OS_PREALLOC(osh, section, size) MALLOC(osh, size)
 #define DHD_OS_PREFREE(osh, addr, size) MFREE(osh, addr, size)
 
-#endif /* defined(DHD_USE_STATIC_BUF) */
+#endif /* defined(CONFIG_DHD_USE_STATIC_BUF) */
+
+/* Packet alignment for most efficient SDIO (can change based on platform) */
+#ifndef DHD_SDALIGN
+#define DHD_SDALIGN	32
+#endif
 
 /* Packet alignment for most efficient SDIO (can change based on platform) */
 #ifndef DHD_SDALIGN
@@ -236,11 +241,12 @@ typedef struct dhd_cmn {
 	#define DHD_PM_RESUME_WAIT_INIT(a) DECLARE_WAIT_QUEUE_HEAD(a);
 	#define _DHD_PM_RESUME_WAIT(a, b) do {\
 			int retry = 0; \
-			smp_mb(); \
+			SMP_RD_BARRIER_DEPENDS(); \
 			while (dhd_mmc_suspend && retry++ != b) { \
-				wait_event_interruptible_timeout(a, FALSE, HZ/100); \
+				SMP_RD_BARRIER_DEPENDS(); \
+				wait_event_interruptible_timeout(a, !dhd_mmc_suspend, HZ/100); \
 			} \
-		} 	while (0)
+		} while (0)
 	#define DHD_PM_RESUME_WAIT(a) 		_DHD_PM_RESUME_WAIT(a, 200)
 	#define DHD_PM_RESUME_WAIT_FOREVER(a) 	_DHD_PM_RESUME_WAIT(a, ~0)
 	#define DHD_PM_RESUME_RETURN_ERROR(a)	do { if (dhd_mmc_suspend) return a; } while (0)
@@ -314,8 +320,8 @@ inline static void MUTEX_UNLOCK_SOFTAP_SET(dhd_pub_t * dhdp)
 #define DHD_OS_WAKE_LOCK_TIMEOUT(pub)		dhd_os_wake_lock_timeout(pub)
 #define DHD_OS_WAKE_LOCK_TIMEOUT_ENABLE(pub, val)	dhd_os_wake_lock_timeout_enable(pub, val)
 
-#define DHD_PACKET_TIMEOUT	1
-#define DHD_EVENT_TIMEOUT	2
+#define DHD_PACKET_TIMEOUT_MS	1000
+#define DHD_EVENT_TIMEOUT_MS	1500
 
 /* interface operations (register, remove) should be atomic, use this lock to prevent race
  * condition among wifi on/off and interface operation functions
@@ -416,6 +422,7 @@ extern int dhd_custom_get_mac_address(unsigned char *buf);
 extern void dhd_os_sdunlock_sndup_rxq(dhd_pub_t * pub);
 extern void dhd_os_sdlock_eventq(dhd_pub_t * pub);
 extern void dhd_os_sdunlock_eventq(dhd_pub_t * pub);
+extern bool dhd_os_check_hang(dhd_pub_t *dhdp, int ifidx, int ret);
 
 #ifdef PNO_SUPPORT
 extern int dhd_pno_enable(dhd_pub_t *dhd, int pfn_enabled);
@@ -439,8 +446,6 @@ extern int net_os_rxfilter_add_remove(struct net_device *dev, int val, int num);
 
 extern int dhd_get_dtim_skip(dhd_pub_t *dhd);
 extern bool dhd_check_ap_wfd_mode_set(dhd_pub_t *dhd);
-extern bool dhd_os_check_hang(dhd_pub_t *dhdp, int ifidx, int ret);
-
 
 #ifdef DHD_DEBUG
 extern int write_to_file(dhd_pub_t *dhd, uint8 *buf, int size);
@@ -475,6 +480,7 @@ extern int dhd_wl_ioctl_cmd(dhd_pub_t *dhd_pub, int cmd, void *arg, int len, uin
 extern struct dhd_cmn *dhd_common_init(osl_t *osh);
 extern void dhd_common_deinit(dhd_pub_t *dhd_pub, dhd_cmn_t *sa_cmn);
 
+extern int dhd_do_driver_init(struct net_device *net);
 extern int dhd_add_if(struct dhd_info *dhd, int ifidx, void *handle,
 	char *name, uint8 *mac_addr, uint32 flags, uint8 bssidx);
 extern void dhd_del_if(struct dhd_info *dhd, int ifidx);
@@ -714,12 +720,6 @@ typedef struct dhd_pkttag {
 #define DHD_PKTTAG_DSTN(tag)	((dhd_pkttag_t*)(tag))->dstn_ether
 
 typedef int (*f_commitpkt_t)(void* ctx, void* p);
-int dhd_wlfc_enable(dhd_pub_t *dhd);
-int dhd_wlfc_interface_event(struct dhd_info *, uint8 action, uint8 ifid, uint8 iftype, uint8* ea);
-int dhd_wlfc_FIFOcreditmap_event(struct dhd_info *dhd, uint8* event_data);
-int dhd_wlfc_event(struct dhd_info *dhd);
-int dhd_os_wlfc_block(dhd_pub_t *pub);
-int dhd_os_wlfc_unblock(dhd_pub_t *pub);
 
 #ifdef PROP_TXSTATUS_DEBUG
 #define DHD_WLFC_CTRINC_MAC_CLOSE(entry)	do { (entry)->closed_ct++; } while (0)

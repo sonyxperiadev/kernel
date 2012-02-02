@@ -878,33 +878,17 @@ xfs_log_inode(
 	struct xfs_trans	*tp;
 	int			error;
 
-	xfs_iunlock(ip, XFS_ILOCK_SHARED);
 	tp = xfs_trans_alloc(mp, XFS_TRANS_FSYNC_TS);
 	error = xfs_trans_reserve(tp, 0, XFS_FSYNC_TS_LOG_RES(mp), 0, 0, 0);
-
 	if (error) {
 		xfs_trans_cancel(tp, 0);
-		/* we need to return with the lock hold shared */
-		xfs_ilock(ip, XFS_ILOCK_SHARED);
 		return error;
 	}
 
 	xfs_ilock(ip, XFS_ILOCK_EXCL);
-
-	/*
-	 * Note - it's possible that we might have pushed ourselves out of the
-	 * way during trans_reserve which would flush the inode.  But there's
-	 * no guarantee that the inode buffer has actually gone out yet (it's
-	 * delwri).  Plus the buffer could be pinned anyway if it's part of
-	 * an inode in another recent transaction.  So we play it safe and
-	 * fire off the transaction anyway.
-	 */
-	xfs_trans_ijoin(tp, ip);
+	xfs_trans_ijoin_ref(tp, ip, XFS_ILOCK_EXCL);
 	xfs_trans_log_inode(tp, ip, XFS_ILOG_CORE);
-	error = xfs_trans_commit(tp, 0);
-	xfs_ilock_demote(ip, XFS_ILOCK_EXCL);
-
-	return error;
+	return xfs_trans_commit(tp, 0);
 }
 
 STATIC int
@@ -919,7 +903,9 @@ xfs_fs_write_inode(
 	trace_xfs_write_inode(ip);
 
 	if (XFS_FORCED_SHUTDOWN(mp))
-		return XFS_ERROR(EIO);
+		return -XFS_ERROR(EIO);
+	if (!ip->i_update_core)
+		return 0;
 
 	if (wbc->sync_mode == WB_SYNC_ALL) {
 		/*
@@ -930,12 +916,10 @@ xfs_fs_write_inode(
 		 * of synchronous log foces dramatically.
 		 */
 		xfs_ioend_wait(ip);
-		xfs_ilock(ip, XFS_ILOCK_SHARED);
-		if (ip->i_update_core) {
-			error = xfs_log_inode(ip);
-			if (error)
-				goto out_unlock;
-		}
+		error = xfs_log_inode(ip);
+		if (error)
+			goto out;
+		return 0;
 	} else {
 		/*
 		 * We make this non-blocking if the inode is contended, return
@@ -1412,37 +1396,35 @@ xfs_fs_fill_super(
 	sb->s_time_gran = 1;
 	set_posix_acl_flag(sb);
 
-	error = xfs_syncd_init(mp);
-	if (error)
-		goto out_filestream_unmount;
-
 	xfs_inode_shrinker_register(mp);
 
 	error = xfs_mountfs(mp);
 	if (error)
-		goto out_syncd_stop;
+		goto out_filestream_unmount;
+
+	error = xfs_syncd_init(mp);
+	if (error)
+		goto out_unmount;
 
 	root = igrab(VFS_I(mp->m_rootip));
 	if (!root) {
 		error = ENOENT;
-		goto fail_unmount;
+		goto out_syncd_stop;
 	}
 	if (is_bad_inode(root)) {
 		error = EINVAL;
-		goto fail_vnrele;
+		goto out_syncd_stop;
 	}
 	sb->s_root = d_alloc_root(root);
 	if (!sb->s_root) {
 		error = ENOMEM;
-		goto fail_vnrele;
+		goto out_iput;
 	}
 
 	return 0;
 
- out_syncd_stop:
-	xfs_inode_shrinker_unregister(mp);
-	xfs_syncd_stop(mp);
  out_filestream_unmount:
+	xfs_inode_shrinker_unregister(mp);
 	xfs_filestream_unmount(mp);
  out_free_sb:
 	xfs_freesb(mp);
@@ -1456,17 +1438,12 @@ xfs_fs_fill_super(
  out:
 	return -error;
 
- fail_vnrele:
-	if (sb->s_root) {
-		dput(sb->s_root);
-		sb->s_root = NULL;
-	} else {
-		iput(root);
-	}
-
- fail_unmount:
-	xfs_inode_shrinker_unregister(mp);
+ out_iput:
+	iput(root);
+ out_syncd_stop:
 	xfs_syncd_stop(mp);
+ out_unmount:
+	xfs_inode_shrinker_unregister(mp);
 
 	/*
 	 * Blow away any referenced inode in the filestreams cache.
@@ -1667,24 +1644,13 @@ xfs_init_workqueues(void)
 	 */
 	xfs_syncd_wq = alloc_workqueue("xfssyncd", WQ_CPU_INTENSIVE, 8);
 	if (!xfs_syncd_wq)
-		goto out;
-
-	xfs_ail_wq = alloc_workqueue("xfsail", WQ_CPU_INTENSIVE, 8);
-	if (!xfs_ail_wq)
-		goto out_destroy_syncd;
-
+		return -ENOMEM;
 	return 0;
-
-out_destroy_syncd:
-	destroy_workqueue(xfs_syncd_wq);
-out:
-	return -ENOMEM;
 }
 
 STATIC void
 xfs_destroy_workqueues(void)
 {
-	destroy_workqueue(xfs_ail_wq);
 	destroy_workqueue(xfs_syncd_wq);
 }
 

@@ -21,7 +21,7 @@
  *
  * Fundamental types and constants relating to 802.11
  *
- * $Id: 802.11.h,v 9.260.2.6 2010-12-15 21:41:14 $
+ * $Id: 802.11.h 304058 2011-12-21 00:39:12Z $
  */
 
 
@@ -429,10 +429,26 @@ typedef struct dot11_obss_chanlist dot11_obss_chanlist_t;
 BWL_PRE_PACKED_STRUCT struct dot11_extcap_ie {
 	uint8 id;
 	uint8 len;
-	uint8 cap;
+	uint8 cap[1];
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_extcap_ie dot11_extcap_ie_t;
 #define DOT11_EXTCAP_LEN    1
+#define DOT11_EXTCAP_LEN_TDLS	5
+
+BWL_PRE_PACKED_STRUCT struct dot11_extcap {
+	uint8 extcap[DOT11_EXTCAP_LEN_TDLS];
+} BWL_POST_PACKED_STRUCT;
+typedef struct dot11_extcap dot11_extcap_t;
+
+
+#define TDLS_CAP_TDLS			37		
+#define TDLS_CAP_PU_BUFFER_STA	28		
+#define TDLS_CAP_PEER_PSM		20		
+#define TDLS_CAP_CH_SW			30		
+#define TDLS_CAP_PROH			38		
+#define TDLS_CAP_CH_SW_PROH		39		
+
+#define TDLS_CAP_MAX_BIT		39		
 
 
 
@@ -545,6 +561,9 @@ typedef struct dot11_ibss_dfs dot11_ibss_dfs_t;
 #define WME_SUBTYPE_IE      0   
 #define WME_SUBTYPE_PARAM_IE    1   
 #define WME_SUBTYPE_TSPEC   2   
+#define WME_VERSION_LEN	1
+#define WME_PARAMETER_IE_LEN		24
+
 
 
 #define AC_BE           0   
@@ -709,6 +728,15 @@ BWL_PRE_PACKED_STRUCT struct dot11_management_notification {
 #define DOT11_MGMT_NOTIFICATION_LEN 4   
 
 
+BWL_PRE_PACKED_STRUCT struct ti_ie {
+	uint8 ti_type;
+	uint32 ti_val;
+} BWL_POST_PACKED_STRUCT;
+typedef struct ti_ie ti_ie_t;
+#define TI_TYPE_REASSOC_DEADLINE	1
+#define TI_TYPE_KEY_LIFETIME		2
+
+
 #define WME_ADDTS_REQUEST   0   
 #define WME_ADDTS_RESPONSE  1   
 #define WME_DELTS_REQUEST   2   
@@ -724,8 +752,7 @@ BWL_PRE_PACKED_STRUCT struct dot11_management_notification {
 
 #define DOT11_OPEN_SYSTEM   0   
 #define DOT11_SHARED_KEY    1   
-#define DOT11_FAST_BSS		3	
-#define DOT11_OPEN_SHARED	2	
+#define DOT11_FAST_BSS		2	
 #define DOT11_CHALLENGE_LEN 128 
 
 
@@ -926,9 +953,18 @@ BWL_PRE_PACKED_STRUCT struct dot11_management_notification {
 
 #define DOT11_RC_MAX            23  
 
+#define DOT11_RC_TDLS_PEER_UNREACH	25
+#define DOT11_RC_TDLS_DOWN_UNSPECIFIED	26
+
 
 #define DOT11_SC_SUCCESS        0   
 #define DOT11_SC_FAILURE        1   
+#define DOT11_SC_TDLS_WAKEUP_SCH_ALT 2	
+					
+#define DOT11_SC_TDLS_WAKEUP_SCH_REJ 3	
+#define DOT11_SC_TDLS_SEC_DISABLED	5	
+#define DOT11_SC_LIFETIME_REJ		6	
+#define DOT11_SC_NOT_SAME_BSS		7	
 #define DOT11_SC_CAP_MISMATCH       10  
 #define DOT11_SC_REASSOC_FAIL       11  
 #define DOT11_SC_ASSOC_FAIL     12  
@@ -951,14 +987,14 @@ BWL_PRE_PACKED_STRUCT struct dot11_management_notification {
 #define DOT11_SC_ASSOC_TRY_LATER	30	
 #define DOT11_SC_ASSOC_MFP_VIOLATION	31	
 
-#define DOT11_SC_DECLINED       37  
-#define DOT11_SC_INVALID_PARAMS     38  
+#define	DOT11_SC_DECLINED		37	
+#define	DOT11_SC_INVALID_PARAMS		38	
 #define DOT11_SC_INVALID_PAIRWISE_CIPHER	42 
-#define DOT11_SC_INVALID_AKMP       43  
+#define	DOT11_SC_INVALID_AKMP		43	
 #define DOT11_SC_INVALID_RSNIE_CAP	45	
 #define	DOT11_SC_INVALID_PMKID		53	
-#define DOT11_SC_INVALID_MDID       54  
-#define DOT11_SC_INVALID_FTIE       55  
+#define	DOT11_SC_INVALID_MDID		54	
+#define	DOT11_SC_INVALID_FTIE		55	
 
 #define DOT11_SC_UNEXP_MSG			70	
 #define DOT11_SC_INVALID_SNONCE		71	
@@ -1028,6 +1064,12 @@ BWL_PRE_PACKED_STRUCT struct dot11_management_notification {
 #define DOT11_MNG_HT_BSS_COEXINFO_ID        72  
 #define DOT11_MNG_HT_BSS_CHANNEL_REPORT_ID  73  
 #define DOT11_MNG_HT_OBSS_ID            74  
+#define DOT11_MNG_CHANNEL_USAGE			97 
+#define DOT11_MNG_LINK_IDENTIFIER_ID	101	
+#define DOT11_MNG_WAKEUP_SCHEDULE_ID	102 
+#define DOT11_MNG_CHANNEL_SWITCH_TIMING_ID	104 
+#define DOT11_MNG_PTI_CONTROL_ID		105	
+#define DOT11_MNG_PU_BUFFER_STATUS_ID	106	
 #define DOT11_MNG_EXT_CAP_ID           127 
 #define DOT11_MNG_WPA_ID            221 
 #define DOT11_MNG_PROPR_ID          221 
@@ -1352,6 +1394,14 @@ typedef struct dot11_ext_cap_ie dot11_ext_cap_ie_t;
 
 #define DOT11_OP_CLASS_NONE			255
 
+BWL_PRE_PACKED_STRUCT struct do11_ap_chrep {
+	uint8 id;
+	uint8 len;
+	uint8 reg;
+	uint8 chanlist[1];
+} BWL_POST_PACKED_STRUCT;
+typedef struct do11_ap_chrep dot11_ap_chrep_t;
+
 
 #define DOT11_RM_ACTION_RM_REQ      0   
 #define DOT11_RM_ACTION_RM_REP      1   
@@ -1442,7 +1492,7 @@ typedef struct dot11_rmrep_bcn dot11_rmrep_bcn_t;
 #define DOT11_RMREQ_BCN_REPINFO_ID  1
 #define DOT11_RMREQ_BCN_REPDET_ID   2
 #define DOT11_RMREQ_BCN_REQUEST_ID  10
-#define DOT11_RMREQ_BCN_APCHREP_ID  51
+#define DOT11_RMREQ_BCN_APCHREP_ID  DOT11_MNG_AP_CHREP_ID
 
 
 #define DOT11_RMREQ_BCN_REPDET_FIXED    0   
@@ -1459,6 +1509,7 @@ BWL_PRE_PACKED_STRUCT struct dot11_rmrep_nbr {
 	uint8 reg;
 	uint8 channel;
 	uint8 phytype;
+	uchar sub_elements[1]; 	
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_rmrep_nbr dot11_rmrep_nbr_t;
 #define DOT11_RMREP_NBR_LEN 13
@@ -1847,6 +1898,9 @@ typedef struct dot11_obss_ie dot11_obss_ie_t;
 #define RSN_AKM_PSK     2   
 #define RSN_AKM_FBT_1X      3   
 #define RSN_AKM_FBT_PSK     4   
+#define RSN_AKM_MFP_1X		5	
+#define RSN_AKM_MFP_PSK		6	
+#define RSN_AKM_TPK			7	
 
 
 #define DOT11_MAX_DEFAULT_KEYS  4   
@@ -1914,6 +1968,61 @@ typedef struct dot11_gtk_ie dot11_gtk_ie_t;
 #define BSSID_INVALID           "\x00\x00\x00\x00\x00\x00"
 #define BSSID_BROADCAST         "\xFF\xFF\xFF\xFF\xFF\xFF"
 
+BWL_PRE_PACKED_STRUCT struct link_id_ie {
+	uint8 id;
+	uint8 len;
+	struct ether_addr	bssid;
+	struct ether_addr	tdls_init_mac;
+	struct ether_addr	tdls_resp_mac;
+} BWL_POST_PACKED_STRUCT;
+typedef struct link_id_ie link_id_ie_t;
+#define TDLS_LINK_ID_IE_LEN		18
+
+
+BWL_PRE_PACKED_STRUCT struct wakeup_sch_ie {
+	uint8 id;
+	uint8 len;
+	uint32 offset;			
+	uint32 interval;		
+	uint32 awake_win_slots;	
+	uint32 max_wake_win;	
+	uint16 idle_cnt;		
+} BWL_POST_PACKED_STRUCT;
+typedef struct wakeup_sch_ie wakeup_sch_ie_t;
+#define TDLS_WAKEUP_SCH_IE_LEN		18
+
+
+BWL_PRE_PACKED_STRUCT struct channel_switch_timing_ie {
+	uint8 id;
+	uint8 len;
+	uint16 switch_time;		
+	uint16 switch_timeout;	
+} BWL_POST_PACKED_STRUCT;
+typedef struct channel_switch_timing_ie channel_switch_timing_ie_t;
+#define TDLS_CHANNEL_SWITCH_TIMING_IE_LEN		4
+
+
+BWL_PRE_PACKED_STRUCT struct pti_control_ie {
+	uint8 id;
+	uint8 len;
+	uint8 tid;
+	uint16 seq_control;
+} BWL_POST_PACKED_STRUCT;
+typedef struct pti_control_ie pti_control_ie_t;
+#define TDLS_PTI_CONTROL_IE_LEN		3
+
+
+BWL_PRE_PACKED_STRUCT struct pu_buffer_status_ie {
+	uint8 id;
+	uint8 len;
+	uint8 status;
+} BWL_POST_PACKED_STRUCT;
+typedef struct pu_buffer_status_ie pu_buffer_status_ie_t;
+#define TDLS_PU_BUFFER_STATUS_IE_LEN	1
+#define TDLS_PU_BUFFER_STATUS_AC_BK		1
+#define TDLS_PU_BUFFER_STATUS_AC_BE		2
+#define TDLS_PU_BUFFER_STATUS_AC_VI		4
+#define TDLS_PU_BUFFER_STATUS_AC_VO		8
 
 
 #include <packed_section_end.h>

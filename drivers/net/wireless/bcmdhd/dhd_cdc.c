@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_cdc.c 294560 2011-11-07 22:26:37Z $
+ * $Id: dhd_cdc.c 303389 2011-12-16 09:30:48Z $
  *
  * BDC is like CDC, except it includes a header for data packets to convey
  * packet priority over the bus, and flags (e.g. to indicate checksum status
@@ -78,6 +78,7 @@ typedef struct dhd_prot {
 	unsigned char buf[WLC_IOCTL_MAXLEN + ROUND_UP_MARGIN];
 } dhd_prot_t;
 
+extern int dhd_dbus_txdata(dhd_pub_t *dhdp, void *pktbuf);
 
 static int
 dhdcdc_msg(dhd_pub_t *dhd)
@@ -2178,6 +2179,7 @@ dhd_wlfc_init(dhd_pub_t *dhd)
 		WLFC_FLAGS_CREDIT_STATUS_SIGNALS |
 		WLFC_FLAGS_HOST_PROPTXSTATUS_ACTIVE : 0;
 
+	dhd->wlfc_state  = NULL;
 
 	/*
 	try to enable/disable signaling by sending "tlv" iovar. if that fails,
@@ -2464,10 +2466,10 @@ dhd_prot_attach(dhd_pub_t *dhd)
 	return 0;
 
 fail:
-#ifndef DHD_USE_STATIC_BUF
+#ifndef CONFIG_DHD_USE_STATIC_BUF
 	if (cdc != NULL)
 		MFREE(dhd->osh, cdc, sizeof(dhd_prot_t));
-#endif /* DHD_USE_STATIC_BUF */
+#endif /* CONFIG_DHD_USE_STATIC_BUF */
 	return BCME_NOMEM;
 }
 
@@ -2478,9 +2480,9 @@ dhd_prot_detach(dhd_pub_t *dhd)
 #ifdef PROP_TXSTATUS
 	dhd_wlfc_deinit(dhd);
 #endif
-#ifndef DHD_USE_STATIC_BUF
+#ifndef CONFIG_DHD_USE_STATIC_BUF
 	MFREE(dhd->osh, dhd->prot, sizeof(dhd_prot_t));
-#endif /* DHD_USE_STATIC_BUF */
+#endif /* CONFIG_DHD_USE_STATIC_BUF */
 	dhd->prot = NULL;
 }
 
@@ -2519,7 +2521,7 @@ dhd_prot_init(dhd_pub_t *dhd)
 #if defined(WL_CFG80211)
 	if (dhd_download_fw_on_driverload)
 #endif /* defined(WL_CFG80211) */
-		ret = dhd_preinit_ioctls(dhd);
+	ret = dhd_preinit_ioctls(dhd);
 
 	/* Always assumes wl for now */
 	dhd->iswl = TRUE;

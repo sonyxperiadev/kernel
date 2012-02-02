@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wlioctl.h 292924 2011-10-28 21:45:40Z $
+ * $Id: wlioctl.h 307468 2012-01-11 18:29:27Z $
  */
 
 
@@ -377,6 +377,8 @@ typedef struct {
 #define NRATE_SGI_SHIFT 23              
 #define NRATE_LDPC_CODING 0x00400000    
 #define NRATE_LDPC_SHIFT 22             
+#define NRATE_BCMC_OVERRIDE 0x00200000    
+#define NRATE_BCMC_SHIFT 21             
 
 #define NRATE_STF_SISO  0       
 #define NRATE_STF_CDD   1       
@@ -819,8 +821,14 @@ typedef struct wlc_iov_trx_s {
 #define WLC_IOCTL_MEDLEN        1536    
 #ifdef WLC_HIGH_ONLY
 #define WLC_SAMPLECOLLECT_MAXLEN    1024    
+#define WLC_SAMPLECOLLECT_MAXLEN_LCN40  1024
 #else
-#define WLC_SAMPLECOLLECT_MAXLEN    10240   
+#if defined(LCNCONF) || defined(LCN40CONF)
+#define WLC_SAMPLECOLLECT_MAXLEN	8192	
+#else
+#define WLC_SAMPLECOLLECT_MAXLEN	10240	
+#endif
+#define WLC_SAMPLECOLLECT_MAXLEN_LCN40  8192
 #endif 
 
 
@@ -852,6 +860,7 @@ typedef struct wlc_iov_trx_s {
 #define WLC_GET_SSID                25
 #define WLC_SET_SSID                26
 #define WLC_RESTART             27
+#define WLC_TERMINATED             28
  
 #define WLC_GET_CHANNEL             29
 #define WLC_SET_CHANNEL             30
@@ -1204,7 +1213,7 @@ typedef struct {
 
 #define WL_AUTH_OPEN_SYSTEM     0   
 #define WL_AUTH_SHARED_KEY      1   
-#define WL_AUTH_OPEN_SHARED     2   
+#define WL_AUTH_OPEN_SHARED		3	
 
 
 #define WL_RADIO_SW_DISABLE     (1<<0)
@@ -1281,17 +1290,16 @@ typedef struct wl_po {
 #define WL_CHAN_FREQ_RANGE_5GM     2
 #define WL_CHAN_FREQ_RANGE_5GH     3
 
-#define WL_CHAN_FREQ_RANGE_5GLL_VER2    4
-#define WL_CHAN_FREQ_RANGE_5GLH_VER2    5
-#define WL_CHAN_FREQ_RANGE_5GML_VER2    6
-#define WL_CHAN_FREQ_RANGE_5GMH_VER2    7
-#define WL_CHAN_FREQ_RANGE_5GH_VER2     8
-
 #define WL_CHAN_FREQ_RANGE_5GLL_5BAND    4
 #define WL_CHAN_FREQ_RANGE_5GLH_5BAND    5
 #define WL_CHAN_FREQ_RANGE_5GML_5BAND    6
 #define WL_CHAN_FREQ_RANGE_5GMH_5BAND    7
 #define WL_CHAN_FREQ_RANGE_5GH_5BAND     8
+
+#define WL_CHAN_FREQ_RANGE_5G_BAND0     1
+#define WL_CHAN_FREQ_RANGE_5G_BAND1     2
+#define WL_CHAN_FREQ_RANGE_5G_BAND2     3
+#define WL_CHAN_FREQ_RANGE_5G_BAND3     4
 
 
 #define WLC_PHY_TYPE_A      0
@@ -1409,7 +1417,7 @@ typedef struct wl_aci_args {
 #define TRIGGER_BADPLCP             0x10
 #define TRIGGER_CRSGLITCH           0x20
 #define WL_ACI_ARGS_LEGACY_LENGTH   16  
-#define WL_SAMPLECOLLECT_T_VERSION  1   
+#define	WL_SAMPLECOLLECT_T_VERSION	2	
 typedef struct wl_samplecollect_args {
 	
 	uint8 coll_us;
@@ -1417,7 +1425,7 @@ typedef struct wl_samplecollect_args {
 	
 	uint16 version;     
 	uint16 length;      
-	uint8 trigger;
+	int8 trigger;
 	uint16 timeout;
 	uint16 mode;
 	uint32 pre_dur;
@@ -1427,6 +1435,11 @@ typedef struct wl_samplecollect_args {
 	bool be_deaf;
 	bool agc;       
 	bool filter;        
+	
+	uint8 trigger_state;
+	uint8 module_sel1;
+	uint8 module_sel2;
+	uint16 nsamps;
 } wl_samplecollect_args_t;
 
 #define WL_SAMPLEDATA_HEADER_TYPE   1
@@ -1494,6 +1507,7 @@ typedef struct wl_sampledata {
 #define WL_P2P_VAL      0x00000200
 #define WL_TXRX_VAL		0x00000400
 #define WL_MCHAN_VAL            0x00000800
+#define WL_TDLS_VAL		0x00001000
 
 
 #define WL_LED_NUMGPIO      16  
@@ -2019,8 +2033,31 @@ typedef struct wl_keep_alive_pkt {
 
 
 
+#define MAX_WAKE_PACKET_BYTES 128
+
+
+typedef struct pm_wake_packet {
+	uint32	status;		
+	uint32	pattern_id;	
+	uint32	original_packet_size;
+	uint32	saved_packet_size;
+	uchar	packet[MAX_WAKE_PACKET_BYTES];
+} pm_wake_packet_t;
+
+
+
+#define PKT_FILTER_MODE_FORWARD_ON_MATCH      		1
+
+#define PKT_FILTER_MODE_DISABLE					2
+
+#define PKT_FILTER_MODE_PKT_CACHE_ON_MATCH    		4
+
+#define PKT_FILTER_MODE_PKT_FORWARD_OFF_DEFAULT 8
+
+
 typedef enum wl_pkt_filter_type {
-	WL_PKT_FILTER_TYPE_PATTERN_MATCH    
+	WL_PKT_FILTER_TYPE_PATTERN_MATCH,	
+	WL_PKT_FILTER_TYPE_MAGIC_PATTERN_MATCH	
 } wl_pkt_filter_type_t;
 
 #define WL_PKT_FILTER_TYPE wl_pkt_filter_type_t
@@ -2552,6 +2589,12 @@ typedef struct wl_phycal_state {
 
 #define WL_PHYCAL_STAT_FIXED_LEN OFFSETOF(wl_phycal_state_t, phycal_core)
 #endif 
+
+#ifdef WLDSTA
+typedef struct wl_dsta_if {
+	struct ether_addr addr;
+} wl_dsta_if_t;
+#endif
 
 #ifdef WLP2P
 

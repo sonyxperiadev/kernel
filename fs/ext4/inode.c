@@ -189,6 +189,9 @@ void ext4_evict_inode(struct inode *inode)
 	int err;
 
 	trace_ext4_evict_inode(inode);
+
+	ext4_ioend_wait(inode);
+
 	if (inode->i_nlink) {
 		truncate_inode_pages(&inode->i_data, 0);
 		goto no_delete;
@@ -1849,6 +1852,8 @@ static int ext4_journalled_write_end(struct file *file,
 	from = pos & (PAGE_CACHE_SIZE - 1);
 	to = from + len;
 
+	BUG_ON(!ext4_handle_valid(handle));
+
 	if (copied < len) {
 		if (!PageUptodate(page))
 			copied = 0;
@@ -2121,8 +2126,11 @@ static int mpage_da_submit_io(struct mpage_da_data *mpd,
 					clear_buffer_unwritten(bh);
 				}
 
-				/* skip page if block allocation undone */
-				if (buffer_delay(bh) || buffer_unwritten(bh))
+				/*
+				 * skip page if block allocation undone and
+				 * block is dirty
+				 */
+				if (ext4_bh_delay_or_unwritten(NULL, bh))
 					skip_page = 1;
 				bh = bh->b_this_page;
 				block_start += bh->b_size;
@@ -2148,7 +2156,12 @@ static int mpage_da_submit_io(struct mpage_da_data *mpd,
 			else if (test_opt(inode->i_sb, MBLK_IO_SUBMIT))
 				err = ext4_bio_write_page(&io_submit, page,
 							  len, mpd->wbc);
-			else
+			else if (buffer_uninit(page_bufs)) {
+				ext4_set_bh_endio(page_bufs, inode);
+				err = block_write_full_page_endio(page,
+					noalloc_get_block_write,
+					mpd->wbc, ext4_end_io_buffer_write);
+			} else
 				err = block_write_full_page(page,
 					noalloc_get_block_write, mpd->wbc);
 
@@ -2564,6 +2577,8 @@ static int __ext4_journalled_writepage(struct page *page,
 		goto out;
 	}
 
+	BUG_ON(!ext4_handle_valid(handle));
+
 	ret = walk_page_buffers(handle, page_bufs, 0, len, NULL,
 				do_journal_get_write_access);
 
@@ -2741,7 +2756,7 @@ static int write_cache_pages_da(struct address_space *mapping,
 	index = wbc->range_start >> PAGE_CACHE_SHIFT;
 	end = wbc->range_end >> PAGE_CACHE_SHIFT;
 
-	if (wbc->sync_mode == WB_SYNC_ALL)
+	if (wbc->sync_mode == WB_SYNC_ALL || wbc->tagged_writepages)
 		tag = PAGECACHE_TAG_TOWRITE;
 	else
 		tag = PAGECACHE_TAG_DIRTY;
@@ -2973,7 +2988,7 @@ static int ext4_da_writepages(struct address_space *mapping,
 	}
 
 retry:
-	if (wbc->sync_mode == WB_SYNC_ALL)
+	if (wbc->sync_mode == WB_SYNC_ALL || wbc->tagged_writepages)
 		tag_pages_for_writeback(mapping, index, end);
 
 	while (!ret && wbc->nr_to_write > 0) {
@@ -3219,7 +3234,7 @@ static int ext4_da_write_end(struct file *file,
 	 */
 
 	new_i_size = pos + copied;
-	if (new_i_size > EXT4_I(inode)->i_disksize) {
+	if (copied && new_i_size > EXT4_I(inode)->i_disksize) {
 		if (ext4_da_should_update_i_disksize(page, end)) {
 			down_write(&EXT4_I(inode)->i_data_sem);
 			if (new_i_size > EXT4_I(inode)->i_disksize) {
@@ -3635,8 +3650,15 @@ static void ext4_end_io_buffer_write(struct buffer_head *bh, int uptodate)
 		goto out;
 	}
 
-	io_end->flag = EXT4_IO_END_UNWRITTEN;
+	/*
+	 * It may be over-defensive here to check EXT4_IO_END_UNWRITTEN now,
+	 * but being more careful is always safe for the future change.
+	 */
 	inode = io_end->inode;
+	if (!(io_end->flag & EXT4_IO_END_UNWRITTEN)) {
+		io_end->flag |= EXT4_IO_END_UNWRITTEN;
+		atomic_inc(&EXT4_I(inode)->i_aiodio_unwritten);
+	}
 
 	/* Add the io_end to per-inode completed io list*/
 	spin_lock_irqsave(&EXT4_I(inode)->i_completed_io_lock, flags);

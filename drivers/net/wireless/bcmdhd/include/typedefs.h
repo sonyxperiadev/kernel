@@ -18,7 +18,7 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * $Id: typedefs.h 275703 2011-08-04 20:20:27Z $
+ * $Id: typedefs.h 290055 2011-10-15 21:26:26Z $
  */
 
 
@@ -303,6 +303,9 @@ typedef float64 float_t;
 
 
 #define UNUSED_PARAMETER(x) (void)(x)
+
+
+#define DISCARD_QUAL(ptr, type) ((type *)(uintptr)(ptr))
 
 
 #include <bcmdefs.h>
