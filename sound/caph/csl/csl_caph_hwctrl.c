@@ -1590,7 +1590,7 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 		}
 		if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
 			&& pcmTxRunning) {
-			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 			pcmTxRunning = FALSE;
 		}
 		if (!pcmRxRunning && !pcmTxRunning) {
@@ -2237,6 +2237,12 @@ static void csl_caph_start_blocks
 			} else
 				csl_pcm_start(pcmHandleSSP, &pcmCfg);
 			}
+		} else if (!pcmRxRunning &&
+			path->source == CSL_CAPH_DEV_BT_MIC) {
+			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+		} else if (!pcmTxRunning &&
+			path->source == CSL_CAPH_DEV_BT_SPKR) {
+			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 		}
 		if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR)
 			pcmTxRunning = TRUE;
