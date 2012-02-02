@@ -172,7 +172,7 @@ static enum bcmpmu_chrgr_type_t get_charger_type(struct bcmpmu_accy *paccy,
 		else if (bc_status & BB_BC_STS_CDP_MSK)
 			type = PMU_CHRGR_TYPE_CDP;
 		else if (bc_status & BB_BC_STS_DCP_MSK)
-			type = PMU_USB_TYPE_DCP;
+			type = PMU_CHRGR_TYPE_DCP;
 		else
 			type = PMU_CHRGR_TYPE_NONE;
 	} else if (paccy->bc == BCMPMU_BC_BB_BC12) {
@@ -596,9 +596,6 @@ static void usb_det_work(struct work_struct *work)
 						break;
 					case PMU_CHRGR_TYPE_CDP:
 						usb_type = PMU_USB_TYPE_CDP;
-						break;
-					case PMU_CHRGR_TYPE_DCP:
-						usb_type = PMU_USB_TYPE_DCP;
 						break;
 					case PMU_CHRGR_TYPE_ACA:
 						usb_type = PMU_USB_TYPE_ACA;
@@ -1098,11 +1095,13 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
 		 *to know the type explicitly
 		 */
 	case BCMPMU_USB_CTRL_GET_CHRGR_TYPE:
-		ret = bcmpmu->read_dev(bcmpmu,
-				       PMU_REG_CHP_TYP,
-				       &val,
-				       bcmpmu->regmap[PMU_REG_CHP_TYP].mask);
-		val = val >> bcmpmu->regmap[PMU_REG_CHP_TYP].shift;
+		ret = 0;
+		val = bcmpmu->usb_accy_data.chrgr_type;
+		break;
+
+	case BCMPMU_USB_CTRL_GET_USB_TYPE:
+		ret = 0;
+		val = bcmpmu->usb_accy_data.usb_type;
 		break;
 	default:
 		ret = -EINVAL;
