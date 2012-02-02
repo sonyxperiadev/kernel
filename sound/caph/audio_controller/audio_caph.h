@@ -80,7 +80,6 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_MuteTelephony,
 	ACTION_AUD_EnableByPassVibra,
 	ACTION_AUD_DisableByPassVibra,
-	ACTION_AUD_SetVibraStrength,
 	ACTION_AUD_SetPlaybackVolume,
 	ACTION_AUD_SetRecordGain,
 	ACTION_AUD_SetTelephonySpkrVolume,

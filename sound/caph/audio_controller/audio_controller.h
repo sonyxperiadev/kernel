@@ -625,14 +625,16 @@ void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus);
 void AUDCTRL_SetSspTdmMode(Boolean status);
 
 /********************************************************************
-*  @brief  Enable bypass mode for vibrator
+*  @brief  Enable bypass mode for vibrator and set the strength
 *
-*  @param  none
+*  @param  Strength  strength value
+*
+*  @param  direction vibrator moving direction
 *
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_EnableBypassVibra(void);
+void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction);
 
 /********************************************************************
 *  @brief  Disable vibrator in bypass mode
@@ -643,18 +645,6 @@ void AUDCTRL_EnableBypassVibra(void);
 *
 ****************************************************************************/
 void AUDCTRL_DisableBypassVibra(void);
-
-/********************************************************************
-*  @brief  Set the strength to vibrator in bypass mode
-*
-*  @param  Strength  strength value
-*
-*  @param  direction vibrator moving direction
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_SetBypassVibraStrength(UInt32 Strength, int direction);
 
 /********************************************************************
 *  @brief  Set IHF mode

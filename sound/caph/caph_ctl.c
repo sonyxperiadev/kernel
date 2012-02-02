@@ -1243,18 +1243,17 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 			ucontrol->value.integer.value[3];
 
 		if (pChip->pi32BypassVibraParam[0] == 1) {	/* Enable */
-			AUDIO_Ctrl_Trigger(ACTION_AUD_EnableByPassVibra, NULL,
-					   NULL, 0);
-			AUDIO_Ctrl_Trigger(ACTION_AUD_SetVibraStrength,
-					   &parm_vibra, NULL, 0);
+			AUDIO_Ctrl_Trigger(ACTION_AUD_EnableByPassVibra,
+				&parm_vibra, NULL, 0);
 		} else
 			AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra, NULL,
 					   NULL, 0);
 		DEBUG("MiscCtrlPut BypassVibra enable %d, "
-			"strength %d, direction %d.\n",
+			"strength %d, direction %d, duration %d.\n",
 			pChip->pi32BypassVibraParam[0],
 			pChip->pi32BypassVibraParam[1],
-			pChip->pi32BypassVibraParam[2]);
+			pChip->pi32BypassVibraParam[2],
+			pChip->pi32BypassVibraParam[3]);
 		break;
 	case CTL_FUNCTION_BT_TEST:
 		pChip->iEnableBTTest = ucontrol->value.integer.value[0];

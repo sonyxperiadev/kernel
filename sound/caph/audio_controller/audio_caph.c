@@ -277,11 +277,10 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 		size = sizeof(BRCM_AUDIO_Param_ECNS_t);
 		break;
 	case ACTION_AUD_EnableByPassVibra:
+		size = sizeof(BRCM_AUDIO_Param_Vibra_t);
+		break;
 	case ACTION_AUD_DisableByPassVibra:
 		size = 0;
-		break;
-	case ACTION_AUD_SetVibraStrength:
-		size = sizeof(BRCM_AUDIO_Param_Vibra_t);
 		break;
 	case ACTION_AUD_SetPlaybackVolume:
 	case ACTION_AUD_SetRecordGain:
@@ -722,15 +721,14 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		}
 		break;
 	case ACTION_AUD_EnableByPassVibra:
-		AUDCTRL_EnableBypassVibra();
-		break;
-	case ACTION_AUD_SetVibraStrength:
 		{
 			BRCM_AUDIO_Param_Vibra_t *parm_vibra =
 				(BRCM_AUDIO_Param_Vibra_t *)arg_param;
-			DEBUG("ACTION_AUD_SetVibraStrength\n");
-			AUDCTRL_SetBypassVibraStrength(parm_vibra->strength,
+			DEBUG("ACTION_AUD_EnableVibra and SetVibraStrength\n");
+
+			AUDCTRL_EnableBypassVibra(parm_vibra->strength,
 				parm_vibra->direction);
+
 			if (gpVibratorTimer) {
 				del_timer_sync(gpVibratorTimer);
 				gpVibratorTimer = NULL;

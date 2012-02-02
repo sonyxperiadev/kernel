@@ -2547,17 +2547,27 @@ void AUDCTRL_SetSspTdmMode(Boolean status)
 *
 * Function Name: AUDCTRL_EnableBypassVibra
 *
-* Description:   Enable the Vibrator bypass
+* Description:   Enable the Vibrator bypass and set the strength to the vibrator
 *
 ****************************************************************************/
-void AUDCTRL_EnableBypassVibra(void)
+void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction)
 {
+	UInt32 vib_power;
+
 	csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, TRUE);
+
+	vib_power = (0x7fff / 100) * Strength;
+
+	Strength = ((Strength > 100) ? 100 : Strength);
+
+	vib_power = ((direction == 0) ? vib_power : (0xffff - vib_power + 1));
+
+	csl_caph_hwctrl_vibrator_strength(vib_power);
 }
 
 /****************************************************************************
 *
-* Function Name: AUDCTRL_EnableBypassVibra
+* Function Name: AUDCTRL_DisableBypassVibra
 *
 * Description:   Disable the Vibrator bypass
 *
@@ -2567,24 +2577,6 @@ void AUDCTRL_DisableBypassVibra(void)
 	csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, FALSE);
 }
 
-/****************************************************************************
-*
-* Function Name: AUDCTRL_SetBypassVibraStrength
-*
-* Description:   Set the strenth to vibrator
-*
-****************************************************************************/
-void AUDCTRL_SetBypassVibraStrength(UInt32 Strength, int direction)
-{
-	UInt32 vib_power;
-
-	vib_power = (0x7fff / 100) * Strength;
-
-	Strength = ((Strength > 100) ? 100 : Strength);
-	vib_power = ((direction == 0) ? vib_power : (0xffff - vib_power + 1));
-
-	csl_caph_hwctrl_vibrator_strength(vib_power);
-}
 
 /********************************************************************
 *  @brief  Set IHF mode
