@@ -49,7 +49,7 @@ static struct clk *mdp_clk;
 static struct clk *mdp_pclk;
 static struct clk *mdp_lut_clk;
 int mdp_rev;
-static boolean mdp_hist_force_stop = FALSE;
+
 static struct regulator *footswitch;
 static unsigned int mdp_footswitch_on;
 
@@ -338,6 +338,8 @@ int mdp_stop_histogram(struct fb_info *info)
 {
 	unsigned long flag;
 	int ret = 0;
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+
 	mutex_lock(&mdp_hist_mutex);
 	if (!mdp_is_hist_start) {
 		printk(KERN_ERR "%s histogram already stopped\n", __func__);
@@ -348,6 +350,14 @@ int mdp_stop_histogram(struct fb_info *info)
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	mdp_is_hist_start = FALSE;
 	spin_unlock_irqrestore(&mdp_spin_lock, flag);
+
+	if (!mfd->panel_power_on) {
+
+		mdp_is_hist_data = FALSE;
+		complete(&mdp_hist_comp);
+		ret = -EINVAL;
+		goto mdp_hist_stop_err;
+	}
 
 	ret = _mdp_histogram_ctrl(FALSE);
 
@@ -429,11 +439,6 @@ static int mdp_do_histogram(struct fb_info *info, struct mdp_histogram *hist)
 		goto error;
 	}
 
-	if (mdp_hist_force_stop && (mdp_rev == MDP_REV_303)) {
-		ret = -EINVAL;
-		goto error;
-	}
-
 	if (!mdp_is_hist_start) {
 		printk(KERN_ERR "%s histogram not started\n", __func__);
 		ret = -EPERM;
@@ -444,17 +449,14 @@ static int mdp_do_histogram(struct fb_info *info, struct mdp_histogram *hist)
 	mdp_hist_frame_cnt = hist->frame_cnt;
 	mutex_unlock(&mdp_hist_mutex);
 
-	wait_for_completion_killable(&mdp_hist_comp);
+	if (wait_for_completion_killable(&mdp_hist_comp)) {
+		pr_err("%s(): histogram bin collection killed", __func__);
+		return -EINVAL;
+	}
 
 	mutex_lock(&mdp_hist_mutex);
-	if (mdp_is_hist_data) {
-		if (mdp_hist_force_stop && (mdp_rev == MDP_REV_303)) {
-			pr_debug("%s histogram stopped\n", __func__);
-			ret = -EINVAL;
-			goto error;
-		}
+	if (mdp_is_hist_data)
 		ret =  _mdp_copy_hist_data(hist);
-	}
 error:
 	mutex_unlock(&mdp_hist_mutex);
 	return ret;
@@ -740,12 +742,6 @@ void mdp_pipe_ctrl(MDP_BLOCK_TYPE block, MDP_BLOCK_POWER_STATE state,
 		if ((mdp_all_blocks_off) && (mdp_current_clk_on)) {
 			mutex_lock(&mdp_suspend_mutex);
 			if (block == MDP_MASTER_BLOCK || mdp_suspended) {
-				if ((mdp_prim_panel_type == MIPI_CMD_PANEL) &&
-					(mdp_rev == MDP_REV_303)) {
-					mdp_hist_force_stop = TRUE;
-					complete(&mdp_hist_comp);
-				}
-
 				mdp_current_clk_on = FALSE;
 				mb();
 				/* turn off MDP clks */
@@ -920,7 +916,6 @@ irqreturn_t mdp_isr(int irq, void *ptr)
 				dma->busy = FALSE;
 				mdp_pipe_ctrl(MDP_DMA2_BLOCK,
 					MDP_BLOCK_POWER_OFF, TRUE);
-				mdp_hist_force_stop = FALSE;
 				complete(&dma->comp);
 			}
 #endif
