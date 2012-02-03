@@ -56,6 +56,7 @@ typedef struct {
 	CSL_CAPH_DATAFORMAT_e dataFmt;
 	CAPH_SWITCH_TRIGGER_e trigger;
 	CSL_CAPH_SWITCH_STATUS_e status;
+	Boolean cloned;
 } CSL_CAPH_SWITCH_CONFIG_t;
 
 /**

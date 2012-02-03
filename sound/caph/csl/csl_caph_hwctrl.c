@@ -204,7 +204,7 @@ static void csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
 		CSL_CAPH_PathID pathID);
 static void csl_caph_hwctrl_removeHWResource(UInt32 fifoAddr,
 		CSL_CAPH_PathID pathID);
-static Boolean csl_caph_hwctrl_readHWResource(UInt32 fifoAddr,
+static int csl_caph_hwctrl_readHWResource(UInt32 fifoAddr,
 		CSL_CAPH_PathID myPathID);
 static void csl_caph_hwctrl_changeSwitchCHOwner(
 		CSL_CAPH_SWITCH_CONFIG_t switchCH, CSL_CAPH_PathID myPathID);
@@ -1163,7 +1163,6 @@ static void csl_caph_obtain_blocks
 		sw = csl_caph_switch_obtain_channel();
 
 		if (!path->sw[sinkNo][0].chnl)
-
 			blockIdx = 0;
 		else if (!path->sw[sinkNo][1].chnl)
 			blockIdx = 1;
@@ -1757,6 +1756,7 @@ static void csl_caph_config_sw
 	CSL_CAPH_SWITCH_CONFIG_t *swCfg;
 	CSL_CAPH_AUDIOH_BUFADDR_t audiohBufAddr;
 	CSL_CAPH_DEVICE_e sink;
+	int src_path, dst_path;
 
 	if (!pathID)
 		return;
@@ -1873,19 +1873,49 @@ static void csl_caph_config_sw
 		}
 	}
 
-	swCfg->status = csl_caph_switch_config_channel
-		(path->sw[sinkNo][blockIdx]);
+	src_path = csl_caph_hwctrl_readHWResource(swCfg->FIFO_srcAddr, pathID);
 
-	csl_caph_hwctrl_addHWResource(path->sw[sinkNo][blockIdx].
-			FIFO_srcAddr, pathID);
-	csl_caph_hwctrl_addHWResource(path->sw[sinkNo][blockIdx].
-			FIFO_dstAddr, pathID);
-	csl_caph_hwctrl_addHWResource(path->sw[sinkNo][blockIdx].
-			FIFO_dst2Addr, pathID);
-	csl_caph_hwctrl_addHWResource(path->sw[sinkNo][blockIdx].
-			FIFO_dst3Addr, pathID);
-	csl_caph_hwctrl_addHWResource(path->sw[sinkNo][blockIdx].
-			FIFO_dst4Addr, pathID);
+	if (src_path) {
+		dst_path = csl_caph_hwctrl_readHWResource
+			(swCfg->FIFO_dstAddr, pathID);
+
+		/*If two switches share the same source/dst, release it.*/
+		/*do not expect non-default dst address (like FIFO_dst2Addr)
+		  is used.*/
+		if (dst_path == src_path) {
+			UInt32 dst_addr = swCfg->FIFO_dstAddr;
+			UInt32 src_addr = swCfg->FIFO_srcAddr;
+			CSL_CAPH_HWConfig_Table_t *path2 =
+				&HWConfig_Table[src_path-1];
+			CSL_CAPH_SWITCH_CONFIG_t *swcfg2;
+			int i;
+
+			csl_caph_switch_release_channel(swCfg->chnl);
+
+			Log_DebugPrintf(LOGID_SOC_AUDIO,
+			"%s path %d, sw %d can clone the one in path %d. Released.\n",
+			__func__, pathID, swCfg->chnl, src_path);
+
+			for (i = 0; i < MAX_BLOCK_NUM; i++) {
+				swcfg2 = &path2->sw[sinkNo][i];
+				if (swcfg2->FIFO_srcAddr == src_addr &&
+					swcfg2->FIFO_dstAddr == dst_addr) {
+					memcpy(swCfg, swcfg2, sizeof(*swCfg));
+					swCfg->cloned = TRUE;
+					break;
+				}
+			}
+		}
+	}
+
+	if (!swCfg->cloned)
+		swCfg->status = csl_caph_switch_config_channel(*swCfg);
+
+	csl_caph_hwctrl_addHWResource(swCfg->FIFO_srcAddr, pathID);
+	csl_caph_hwctrl_addHWResource(swCfg->FIFO_dstAddr, pathID);
+	csl_caph_hwctrl_addHWResource(swCfg->FIFO_dst2Addr, pathID);
+	csl_caph_hwctrl_addHWResource(swCfg->FIFO_dst3Addr, pathID);
+	csl_caph_hwctrl_addHWResource(swCfg->FIFO_dst4Addr, pathID);
 }
 
 /*
@@ -2128,9 +2158,11 @@ static void csl_caph_start_blocks
 					(path->cfifo[sinkNo][blockIdx]);
 			break;
 		case CAPH_SW:
-			if (path->sw[sinkNo][blockIdx].chnl)
-				csl_caph_switch_start_transfer
+			if (path->sw[sinkNo][blockIdx].chnl) {
+				if (!path->sw[sinkNo][blockIdx].cloned)
+					csl_caph_switch_start_transfer
 					(path->sw[sinkNo][blockIdx].chnl);
+			}
 			break;
 		default:
 			break;
@@ -2666,33 +2698,38 @@ static void csl_caph_hwctrl_removeHWResource(UInt32 fifoAddr,
 }
 
 /****************************************************************************
- *  Function Name: Boolean csl_caph_hwctrl_readHWResource(UInt32 fifoAddr,
+ *  Function Name: int csl_caph_hwctrl_readHWResource(UInt32 fifoAddr,
  *                                         CSL_CAPH_PathID myPathID)
  *
  *  Description: Check whether fifo is used by other paths
  ****************************************************************************/
-static Boolean csl_caph_hwctrl_readHWResource(UInt32 fifoAddr,
+static int csl_caph_hwctrl_readHWResource(UInt32 fifoAddr,
 		CSL_CAPH_PathID myPathID)
 {
 	UInt8 j = 0;
 	UInt8 i = 0;
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
-		"csl_caph_hwctrl_readHWResource::fifo=0x%lx, myPathID=0x%x\n",
-		fifoAddr, myPathID));
+	int pathID = 0;
 	if (fifoAddr == 0x0)
-		return FALSE;
+		return 0;
 	if (myPathID == 0)
 		audio_xassert(0, myPathID);
 	for (j = 0; j < CSL_CAPH_FIFO_MAX_NUM; j++) {
 		if (HWResource_Table[j].fifoAddr == fifoAddr) {
 			for (i = 0; i < MAX_AUDIO_PATH; i++) {
-				if ((HWResource_Table[j].pathID[i] != myPathID)
-				&& (HWResource_Table[j].pathID[i] != 0))
-					return TRUE;
+				pathID = HWResource_Table[j].pathID[i];
+				if (pathID != myPathID && pathID != 0)
+					break;
+				else
+					pathID = 0;
 			}
 		}
+		if (pathID)
+			break;
 	}
-	return FALSE;
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+		"%s::fifo=0x%lx used by myPathID=%d, and path %d\n",
+		__func__, fifoAddr, myPathID, pathID));
+	return pathID;
 }
 
 /****************************************************************************
@@ -2752,7 +2789,7 @@ static void csl_caph_hwctrl_closeCFifo(CSL_CAPH_CFIFO_FIFO_e fifo,
 	fifoAddr = csl_caph_cfifo_get_fifo_addr(fifo);
 	csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
 
-	if (FALSE == csl_caph_hwctrl_readHWResource(fifoAddr, pathID)) {
+	if (0 == csl_caph_hwctrl_readHWResource(fifoAddr, pathID)) {
 		csl_caph_cfifo_stop_fifo(fifo);
 		csl_caph_cfifo_release_fifo(fifo);
 	}
@@ -2844,6 +2881,8 @@ static void csl_caph_hwctrl_changeSwitchCHOwner(
 static void csl_caph_hwctrl_closeSwitchCH(CSL_CAPH_SWITCH_CONFIG_t switchCH,
 		CSL_CAPH_PathID pathID)
 {
+	int src_path, dst_path[4];
+
 	if ((switchCH.chnl == CSL_CAPH_SWITCH_NONE) || (pathID == 0))
 		return;
 	Log_DebugPrintf(LOGID_SOC_AUDIO,
@@ -2855,30 +2894,51 @@ static void csl_caph_hwctrl_closeSwitchCH(CSL_CAPH_SWITCH_CONFIG_t switchCH,
 	csl_caph_hwctrl_removeHWResource(switchCH.FIFO_dst3Addr, pathID);
 	csl_caph_hwctrl_removeHWResource(switchCH.FIFO_dst4Addr, pathID);
 
-	if (FALSE == csl_caph_hwctrl_readHWResource
-			(switchCH.FIFO_srcAddr, pathID)) {
+	src_path = csl_caph_hwctrl_readHWResource(switchCH.FIFO_srcAddr,
+		pathID);
+
+	if (0 == src_path) {
 		csl_caph_switch_stop_transfer(switchCH.chnl);
 		csl_caph_switch_release_channel(switchCH.chnl);
 	} else {
-		if (FALSE == csl_caph_hwctrl_readHWResource
-				(switchCH.FIFO_dstAddr, pathID))
+		dst_path[0] = csl_caph_hwctrl_readHWResource
+				(switchCH.FIFO_dstAddr, pathID);
+		dst_path[1] = csl_caph_hwctrl_readHWResource
+				(switchCH.FIFO_dst2Addr, pathID);
+		dst_path[2] = csl_caph_hwctrl_readHWResource
+				(switchCH.FIFO_dst3Addr, pathID);
+		dst_path[3] = csl_caph_hwctrl_readHWResource
+				(switchCH.FIFO_dst4Addr, pathID);
+
+		if (0 == dst_path[0])
 			csl_caph_switch_remove_dst
 				(switchCH.chnl, switchCH.FIFO_dstAddr);
 
-		if (FALSE == csl_caph_hwctrl_readHWResource
-				(switchCH.FIFO_dst2Addr, pathID))
+		if (0 == dst_path[1])
 			csl_caph_switch_remove_dst
 				(switchCH.chnl, switchCH.FIFO_dst2Addr);
 
-		if (FALSE == csl_caph_hwctrl_readHWResource
-				(switchCH.FIFO_dst3Addr, pathID))
+		if (0 == dst_path[2])
 			csl_caph_switch_remove_dst
 				(switchCH.chnl, switchCH.FIFO_dst3Addr);
 
-		if (FALSE == csl_caph_hwctrl_readHWResource
-				(switchCH.FIFO_dst4Addr, pathID))
+		if (0 == dst_path[3])
 			csl_caph_switch_remove_dst
 				(switchCH.chnl, switchCH.FIFO_dst4Addr);
+
+		/*If two switches share the same source/dst, releasing
+		(with or without stop) one of them would stop both.*/
+		/*if (src_path != 0 &&
+			(dst_path[0] == src_path
+			|| dst_path[1] == src_path
+			|| dst_path[2] == src_path
+			|| dst_path[3] == src_path)) {
+			csl_caph_switch_stop_transfer(switchCH.chnl);
+			csl_caph_switch_release_channel(switchCH.chnl);
+			Log_DebugPrintf(LOGID_SOC_AUDIO,
+			"closeSwitch path %d, sw %d is cloned in path %d."
+			"Released.\n", pathID, switchCH.chnl, src_path);
+		}*/
 	}
 	return;
 }
@@ -2908,7 +2968,7 @@ static void csl_caph_hwctrl_closeSRCMixer(CSL_CAPH_SRCM_ROUTE_t routeConfig,
 		fifoAddr = csl_caph_srcmixer_get_fifo_addr(chal_fifo);
 		csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
 
-		if (FALSE == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
+		if (0 == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
 			csl_caph_srcmixer_release_inchnl(routeConfig.inChnl);
 	}
 
@@ -2918,7 +2978,7 @@ static void csl_caph_hwctrl_closeSRCMixer(CSL_CAPH_SRCM_ROUTE_t routeConfig,
 		fifoAddr = csl_caph_srcmixer_get_fifo_addr(chal_fifo);
 		csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
 
-		if (FALSE == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
+		if (0 == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
 			csl_caph_srcmixer_release_tapoutchnl
 				(routeConfig.tapOutChnl);
 	}
@@ -2928,7 +2988,7 @@ static void csl_caph_hwctrl_closeSRCMixer(CSL_CAPH_SRCM_ROUTE_t routeConfig,
 		fifoAddr = csl_caph_srcmixer_get_fifo_addr(chal_fifo);
 		csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
 
-		if (FALSE == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
+		if (0 == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
 			csl_caph_srcmixer_release_outchnl(routeConfig.outChnl);
 	}
 	return;
@@ -2961,7 +3021,7 @@ static void csl_caph_hwctrl_closeSRCMixerOutput(
 		fifoAddr = csl_caph_srcmixer_get_fifo_addr(chal_fifo);
 		csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
 
-		if (FALSE == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
+		if (0 == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
 			csl_caph_srcmixer_release_tapoutchnl
 				(routeConfig.tapOutChnl);
 
@@ -2975,7 +3035,7 @@ static void csl_caph_hwctrl_closeSRCMixerOutput(
 		fifoAddr = csl_caph_srcmixer_get_fifo_addr(chal_fifo);
 		csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
 
-		if (FALSE == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
+		if (0 == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
 			csl_caph_srcmixer_release_outchnl(routeConfig.outChnl);
 	}
 	return;
@@ -3005,9 +3065,9 @@ static void csl_caph_hwctrl_closeAudioH(CSL_CAPH_DEVICE_e dev,
 	csl_caph_hwctrl_removeHWResource(audiohBufAddr.bufAddr, pathID);
 	csl_caph_hwctrl_removeHWResource(audiohBufAddr.buf2Addr, pathID);
 
-	if ((FALSE == csl_caph_hwctrl_readHWResource
+	if ((0 == csl_caph_hwctrl_readHWResource
 			(audiohBufAddr.bufAddr, pathID))
-			&& (FALSE == csl_caph_hwctrl_readHWResource
+			&& (0 == csl_caph_hwctrl_readHWResource
 			(audiohBufAddr.buf2Addr, pathID)))
 		csl_caph_audioh_stop(audioh_path);
 
