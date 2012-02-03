@@ -5,7 +5,7 @@
  * JTAG, 0/1/2 UARTs, clock frequency control, a watchdog interrupt timer,
  * GPIO interface, extbus, and support for serial and parallel flashes.
  *
- * $Id: sbchipc.h 277737 2011-08-16 17:54:59Z $
+ * $Id: sbchipc.h 275703 2011-08-04 20:20:27Z $
  *
  * Copyright (C) 1999-2011, Broadcom Corporation
  * 

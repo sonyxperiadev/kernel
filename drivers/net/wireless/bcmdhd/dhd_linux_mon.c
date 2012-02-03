@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_linux_mon.c 303266 2011-12-16 00:15:23Z $
+ * $Id: dhd_linux_mon.c 294121 2011-11-04 08:46:10Z $
  */
 
 #include <linux/string.h>
@@ -239,9 +239,9 @@ static void dhd_mon_if_set_multicast_list(struct net_device *ndev)
 	mon_if = ndev_to_monif(ndev);
 	if (mon_if == NULL || mon_if->real_ndev == NULL)
 		MON_PRINT(" cannot find matched net dev, skip the packet\n");
-	} else {
+	else {
 		MON_PRINT("enter, if name: %s, matched if name %s\n",
-		ndev->name, mon_if->real_ndev->name);
+			ndev->name, mon_if->real_ndev->name);
 	}
 }
 
@@ -253,10 +253,11 @@ static int dhd_mon_if_change_mac(struct net_device *ndev, void *addr)
 	mon_if = ndev_to_monif(ndev);
 	if (mon_if == NULL || mon_if->real_ndev == NULL)
 		MON_PRINT(" cannot find matched net dev, skip the packet\n");
-	} else {
+	else {
 		MON_PRINT("enter, if name: %s, matched if name %s\n",
-		ndev->name, mon_if->real_ndev->name);
+			ndev->name, mon_if->real_ndev->name);
 	}
+
 	return ret;
 }
 

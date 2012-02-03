@@ -217,11 +217,11 @@ si_buscore_setup(si_info_t *sii, chipcregs_t *cc, uint bustype, uint32 savewin,
 
 	/* figure out bus/orignal core idx */
 	sii->pub.buscoretype = NODEV_CORE_ID;
-	sii->pub.buscorerev = (uint)NOREV;
+	sii->pub.buscorerev = NOREV;
 	sii->pub.buscoreidx = BADIDX;
 
 	pci = pcie = FALSE;
-	pcirev = pcierev = (uint)NOREV;
+	pcirev = pcierev = NOREV;
 	pciidx = pcieidx = BADIDX;
 
 	for (i = 0; i < sii->numcores; i++) {
@@ -369,19 +369,6 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 		return NULL;
 	}
 
-#if defined(HW_OOB)
-	if (CHIPID(sih->chip) == BCM43362_CHIP_ID) {
-		uint32 gpiocontrol, addr;
-		addr = SI_ENUM_BASE + OFFSETOF(chipcregs_t, gpiocontrol);
-		gpiocontrol = bcmsdh_reg_read(sdh, addr, 4);
-		gpiocontrol |= 0x2;
-		bcmsdh_reg_write(sdh, addr, 4, gpiocontrol);
-		bcmsdh_cfg_write(sdh, SDIO_FUNC_1, 0x10005, 0xf, NULL);
-		bcmsdh_cfg_write(sdh, SDIO_FUNC_1, 0x10006, 0x0, NULL);
-		bcmsdh_cfg_write(sdh, SDIO_FUNC_1, 0x10007, 0x2, NULL);
-	}
-#endif
-
 	if ((CHIPID(sih->chip) == BCM4329_CHIP_ID) && (sih->chiprev == 0) &&
 		(sih->chippkg != BCM4329_289PIN_PKG_ID)) {
 		sih->chippkg = BCM4329_182PIN_PKG_ID;
@@ -418,9 +405,8 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 	}
 
 	/* assume current core is CC */
-	if ((sii->pub.ccrev == 0x25) && ((CHIPID(sih->chip) == BCM43234_CHIP_ID ||
+	if ((sii->pub.ccrev == 0x25) && ((CHIPID(sih->chip) == BCM43236_CHIP_ID ||
 	                                  CHIPID(sih->chip) == BCM43235_CHIP_ID ||
-	                                  CHIPID(sih->chip) == BCM43236_CHIP_ID ||
 	                                  CHIPID(sih->chip) == BCM43238_CHIP_ID) &&
 	                                 (CHIPREV(sii->pub.chiprev) == 0))) {
 
@@ -1235,6 +1221,7 @@ si_clkctl_init(si_t *sih)
 		si_setcoreidx(sih, origidx);
 }
 
+
 /* change logical "focus" to the gpio core for optimized access */
 void *
 si_gpiosetcore(si_t *sih)
@@ -1905,11 +1892,9 @@ si_is_sprom_available(si_t *sih)
 		return (sih->chipst & CST4315_SPROM_SEL) != 0;
 	case BCM4319_CHIP_ID:
 		return (sih->chipst & CST4319_SPROM_SEL) != 0;
-
 	case BCM4336_CHIP_ID:
 	case BCM43362_CHIP_ID:
 		return (sih->chipst & CST4336_SPROM_PRESENT) != 0;
-
 	case BCM4330_CHIP_ID:
 		return (sih->chipst & CST4330_SPROM_PRESENT) != 0;
 	case BCM4313_CHIP_ID:

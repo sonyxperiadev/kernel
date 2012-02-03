@@ -18,7 +18,7 @@
 *      Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
-* $Id: dhd_wlfc.h 286994 2011-09-29 21:27:44Z $
+* $Id: dhd_wlfc.h 280556 2011-08-30 01:59:16Z $
 *
 */
 #ifndef __wlfc_host_driver_definitions_h__
@@ -264,13 +264,5 @@ typedef struct athost_wl_status_info {
 	uint32  borrow_defer_timestamp;
 
 } athost_wl_status_info_t;
-
-int dhd_wlfc_enable(dhd_pub_t *dhd);
-int dhd_wlfc_interface_event(struct dhd_info *,
-	ewlfc_mac_entry_action_t action, uint8 ifid, uint8 iftype, uint8* ea);
-int dhd_wlfc_FIFOcreditmap_event(struct dhd_info *dhd, uint8* event_data);
-int dhd_wlfc_event(struct dhd_info *dhd);
-int dhd_os_wlfc_block(dhd_pub_t *pub);
-int dhd_os_wlfc_unblock(dhd_pub_t *pub);
 
 #endif /* __wlfc_host_driver_definitions_h__ */

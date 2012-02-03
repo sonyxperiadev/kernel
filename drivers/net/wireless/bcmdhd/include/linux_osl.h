@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: linux_osl.h 301794 2011-12-08 20:41:35Z $
+ * $Id: linux_osl.h 284903 2011-09-20 02:36:51Z $
  */
 
 
@@ -268,7 +268,7 @@ extern int osl_error(int bcmerror);
 #define PKTLIST_DUMP(osh, buf)
 #define PKTDBG_TRACE(osh, pkt, bit)
 #define	PKTFREE(osh, skb, send)		osl_pktfree((osh), (skb), (send))
-#ifdef CONFIG_DHD_USE_STATIC_BUF
+#ifdef DHD_USE_STATIC_BUF
 #define	PKTGET_STATIC(osh, len, send)		osl_pktget_static((osh), (len))
 #define	PKTFREE_STATIC(osh, skb, send)		osl_pktfree_static((osh), (skb), (send))
 #endif 

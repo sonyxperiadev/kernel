@@ -182,7 +182,7 @@ static wlc_ssid_t g_ssid;
 #ifdef CONFIG_WPS2
 static char *g_wps_probe_req_ie;
 static int g_wps_probe_req_ie_len;
-#endif
+#endif 
 
 bool btcoex_is_sco_active(struct net_device *dev);  
 static wl_iw_ss_cache_ctrl_t g_ss_cache_ctrl;	
@@ -1564,63 +1564,6 @@ exit_proc:
 	net_os_wake_unlock(dev);
 	return res;
 }
-
-static int
-wl_iw_set_pno_setadd(
-	struct net_device *dev,
-	struct iw_request_info *info,
-	union iwreq_data *wrqu,
-	char *extra
-)
-{
-	int ret = -1;
-	char *tmp_ptr;
-	int size, tmp_size;
-
-	net_os_wake_lock(dev);
-	WL_ERROR(("\n### %s: info->cmd:%x, info->flags:%x, u.data=0x%p, u.len=%d\n",
-		__FUNCTION__, info->cmd, info->flags,
-		wrqu->data.pointer, wrqu->data.length));
-
-	if (g_onoff == G_WLAN_SET_OFF) {
-		WL_TRACE(("%s: driver is not up yet after START\n", __FUNCTION__));
-		goto exit_proc;
-	}
-
-	if (wrqu->data.length <= strlen(PNOSETADD_SET_CMD) + sizeof(cmd_tlv_t)) {
-		WL_ERROR(("%s argument=%d less than %d\n", __FUNCTION__,
-		          wrqu->data.length, (int)(strlen(PNOSETADD_SET_CMD) + sizeof(cmd_tlv_t))));
-		goto exit_proc;
-	}
-
-	
-	bcopy(PNOSETUP_SET_CMD, extra, strlen(PNOSETUP_SET_CMD));
-
-	tmp_ptr = extra + strlen(PNOSETUP_SET_CMD);
-	size = wrqu->data.length - strlen(PNOSETUP_SET_CMD);
-	tmp_size = size;
-	
-	while (*tmp_ptr && tmp_size > 0) {
-		if ((*tmp_ptr == 'S') && (size - tmp_size) >= sizeof(cmd_tlv_t)) {
-			*(tmp_ptr + 1) = ((*(tmp_ptr + 1) - '0') << 4) + (*(tmp_ptr + 2) - '0');
-			memmove(tmp_ptr + 2, tmp_ptr + 3, tmp_size - 3);
-			tmp_size -= 2 + *(tmp_ptr + 1);
-			tmp_ptr += 2 + *(tmp_ptr + 1);
-			size--;
-		} else {
-			tmp_ptr++;
-			tmp_size--;
-		}
-	}
-
-	wrqu->data.length = strlen(PNOSETUP_SET_CMD) + size;
-	ret = wl_iw_set_pno_set(dev, info, wrqu, extra);
-
-exit_proc:
-	net_os_wake_unlock(dev);
-	return ret;
-
-}
 #endif 
 
 static int
@@ -1683,7 +1626,7 @@ wl_iw_send_priv_event(
 	strcpy(extra, flag);
 	wrqu.data.length = strlen(extra);
 	wireless_send_event(dev, cmd, &wrqu, extra);
-	net_os_wake_lock_timeout_enable(dev, DHD_EVENT_TIMEOUT_MS);
+	net_os_wake_lock_timeout_enable(dev, DHD_EVENT_TIMEOUT);
 	WL_TRACE(("Send IWEVCUSTOM Event as %s\n", extra));
 
 	return 0;
@@ -1724,8 +1667,8 @@ wl_control_wl_start(struct net_device *dev)
 #if defined(BCMLXSDMMC)
 		sdioh_start(NULL, 1);
 #endif
-		if (!ret)
-			dhd_dev_init_ioctl(dev);
+
+		dhd_dev_init_ioctl(dev);
 
 		g_onoff = G_WLAN_SET_ON;
 	}
@@ -1772,7 +1715,7 @@ wl_iw_control_wl_off(
 		g_iscan->iscan_state = ISCAN_STATE_IDLE;
 #endif 
 
-		ret = dhd_dev_reset(dev, 1);
+		dhd_dev_reset(dev, 1);
 
 #if defined(WL_IW_USE_ISCAN)
 #if !defined(CSCAN)
@@ -1794,6 +1737,9 @@ wl_iw_control_wl_off(
 #if defined(BCMLXSDMMC)
 		sdioh_stop(NULL);
 #endif
+
+		
+		net_os_set_dtim_skip(dev, 0);
 
 		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 
@@ -2624,8 +2570,6 @@ wl_iw_get_range(
 	IW_EVENT_CAPA_SET(range->event_capa, SIOCGIWSCAN);
 	IW_EVENT_CAPA_SET(range->event_capa, IWEVTXDROP);
 	IW_EVENT_CAPA_SET(range->event_capa, IWEVMICHAELMICFAILURE);
-	IW_EVENT_CAPA_SET(range->event_capa, IWEVASSOCREQIE);
-	IW_EVENT_CAPA_SET(range->event_capa, IWEVASSOCRESPIE);
 	IW_EVENT_CAPA_SET(range->event_capa, IWEVPMKIDCAND);
 #endif 
 
@@ -5532,15 +5476,7 @@ wl_iw_set_wpaauth(
 	switch (paramid) {
 	case IW_AUTH_WPA_VERSION:
 		
-		if (paramval & IW_AUTH_WPA_VERSION_DISABLED)
-			val = WPA_AUTH_DISABLED;
-		else if (paramval & (IW_AUTH_WPA_VERSION_WPA))
-			val = WPA_AUTH_PSK | WPA_AUTH_UNSPECIFIED;
-		else if (paramval & IW_AUTH_WPA_VERSION_WPA2)
-			val = WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED;
-		WL_ERROR(("%s: %d: setting wpa_auth to 0x%0x\n", __FUNCTION__, __LINE__, val));
-		if ((error = dev_wlc_intvar_set(dev, "wpa_auth", val)))
-			return error;
+		iw->wpaversion = paramval;
 		break;
 
 	case IW_AUTH_CIPHER_PAIRWISE:
@@ -5558,27 +5494,7 @@ wl_iw_set_wpaauth(
 		break;
 
 	case IW_AUTH_KEY_MGMT:
-		if ((error = dev_wlc_intvar_get(dev, "wpa_auth", &val)))
-			return error;
-
-		if (val & (WPA_AUTH_PSK | WPA_AUTH_UNSPECIFIED)) {
-			if (paramval & IW_AUTH_KEY_MGMT_PSK)
-				val = WPA_AUTH_PSK;
-			else
-				val = WPA_AUTH_UNSPECIFIED;
-			if (paramval & 0x04)
-				val |= WPA2_AUTH_FT;
-		}
-		else if (val & (WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED)) {
-			if (paramval & IW_AUTH_KEY_MGMT_PSK)
-				val = WPA2_AUTH_PSK;
-			else
-				val = WPA2_AUTH_UNSPECIFIED;
-			if (paramval & 0x04)
-				val |= WPA2_AUTH_FT;
-		}
-
-		else if (paramval & IW_AUTH_KEY_MGMT_PSK) {
+		if (paramval & IW_AUTH_KEY_MGMT_PSK) {
 			if (iw->wpaversion == IW_AUTH_WPA_VERSION_WPA)
 				val = WPA_AUTH_PSK;
 			else if (iw->wpaversion == IW_AUTH_WPA_VERSION_WPA2)
@@ -6452,7 +6368,7 @@ fail:
 	}
 	return ret;
 }
-#endif
+#endif 
 
 
 #ifdef SOFTAP
@@ -6590,7 +6506,7 @@ get_softap_auto_channel(struct net_device *dev, struct ap_profile *ap)
 					WL_ERROR(("can't get auto channel sel, err = %d, "
 					          "chosen = 0x%04X\n", ret, (uint16)chosen));
 					goto fail;
-				} else {
+				} else { 
 					ap->channel = (uint16)last_auto_channel;
 					WL_ERROR(("auto channel sel timed out. we get channel %d\n",
 						ap->channel));
@@ -7613,8 +7529,6 @@ wl_iw_set_priv(
 			ret = wl_iw_set_pno_reset(dev, info, (union iwreq_data *)dwrq, extra);
 		else if (strnicmp(extra, PNOSETUP_SET_CMD, strlen(PNOSETUP_SET_CMD)) == 0)
 			ret = wl_iw_set_pno_set(dev, info, (union iwreq_data *)dwrq, extra);
-		else if (strnicmp(extra, PNOSETADD_SET_CMD, strlen(PNOSETADD_SET_CMD)) == 0)
-			ret = wl_iw_set_pno_setadd(dev, info, (union iwreq_data *)dwrq, extra);
 		else if (strnicmp(extra, PNOENABLE_SET_CMD, strlen(PNOENABLE_SET_CMD)) == 0)
 			ret = wl_iw_set_pno_enable(dev, info, (union iwreq_data *)dwrq, extra);
 #endif 
@@ -7648,7 +7562,7 @@ wl_iw_set_priv(
 			WL_SOFTAP(("penguin, set AP_MAC_LIST_SET\n"));
 			set_ap_mac_list(dev, (extra + PROFILE_OFFSET));
 		}
-#endif
+#endif 
 	    else {
 			WL_ERROR(("Unknown PRIVATE command %s - ignored\n", extra));
 			snprintf(extra, MAX_WX_STRING, "OK");
@@ -8303,6 +8217,7 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 			WL_TRACE(("Link UP\n"));
 
 		}
+		net_os_wake_lock_timeout_enable(dev, DHD_EVENT_TIMEOUT);
 		wrqu.addr.sa_family = ARPHRD_ETHER;
 		break;
 	case WLC_E_ACTION_FRAME:
@@ -8341,21 +8256,6 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 
 		break;
 	}
-
-	case WLC_E_ASSOC_REQ_IE:
-		cmd = IWEVASSOCREQIE;
-		wrqu.data.length = datalen;
-		if (datalen < sizeof(extra))
-			memcpy(extra, data, datalen);
-		break;
-
-	case WLC_E_ASSOC_RESP_IE:
-		cmd = IWEVASSOCRESPIE;
-		wrqu.data.length = datalen;
-		if (datalen < sizeof(extra))
-			memcpy(extra, data, datalen);
-		break;
-
 	case WLC_E_PMKID_CACHE: {
 		if (data)
 		{
@@ -8388,6 +8288,7 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 	case WLC_E_SCAN_COMPLETE:
 #if defined(WL_IW_USE_ISCAN)
 		if (!g_iscan) {
+			
 			WL_ERROR(("Event WLC_E_SCAN_COMPLETE on g_iscan NULL!"));
 			goto wl_iw_event_end;
 		}
@@ -8418,6 +8319,7 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 		WL_ERROR(("%s Event WLC_E_PFN_NET_FOUND, send %s up : find %s len=%d\n",
 		   __FUNCTION__, PNO_EVENT_UP, netinfo->pfnsubnet.SSID,
 		   netinfo->pfnsubnet.SSID_len));
+		net_os_wake_lock_timeout_enable(dev, DHD_EVENT_TIMEOUT);
 		cmd = IWEVCUSTOM;
 		memset(&wrqu, 0, sizeof(wrqu));
 		strcpy(extra, PNO_EVENT_UP);
@@ -8788,7 +8690,7 @@ wl_iw_attach(struct net_device *dev, void * dhdp)
 #ifdef CONFIG_WPS2
 	g_wps_probe_req_ie = NULL;
 	g_wps_probe_req_ie_len = 0;
-#endif
+#endif 
 	
 	iscan->timer_ms    = 8000;
 	init_timer(&iscan->timer);
@@ -8863,7 +8765,7 @@ wl_iw_detach(void)
 		g_wps_probe_req_ie = NULL;
 		g_wps_probe_req_ie_len = 0;
 	}
-#endif
+#endif 
 #if !defined(CSCAN)
 	wl_iw_release_ss_cache_ctrl();
 #endif 

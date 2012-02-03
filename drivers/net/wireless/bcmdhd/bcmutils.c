@@ -987,6 +987,7 @@ pktsetprio(void *pkt, bool update_vtag)
 	return (rc | priority);
 }
 
+#ifndef BCM_BOOTLOADER
 
 static char bcm_undeferrstr[32];
 static const char *bcmerrorstrtable[] = BCMERRSTRINGTABLE;
@@ -1008,6 +1009,7 @@ bcmerrorstr(int bcmerror)
 	return bcmerrorstrtable[-bcmerror];
 }
 
+#endif /* !BCM_BOOTLOADER */
 
 
 

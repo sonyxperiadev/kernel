@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: trxhdr.h 286295 2011-09-27 06:39:43Z $
+ * $Id: trxhdr.h 275703 2011-08-04 20:20:27Z $
  */
 
 #ifndef	_TRX_HDR_H_
@@ -37,7 +37,6 @@
 #define TRX_OVERLAYS	0x4     /* Contains an overlay header after the trx header */
 #define TRX_MAX_OFFSET	3		/* Max number of individual files */
 #define TRX_UNCOMP_IMAGE	0x20	/* Trx contains uncompressed rtecdc.bin image */
-#define TRX_ROMSIM_IMAGE	0x10	/* Trx contains ROM simulation image */
 
 struct trx_header {
 	uint32 magic;		/* "HDR0" */
