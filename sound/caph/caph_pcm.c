@@ -310,10 +310,10 @@ static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 
 	DEBUG
 	    ("\nplayback_prepare period=%d period_size=%d,"
-	     "bufsize=%d threshold=%ld frame_bits %d\n",
+	     "bufsize=%d threshold=%ld frame_bits %d rate=%d ch=%d\n",
 	     (int)runtime->periods, (int)runtime->period_size,
 	     (int)runtime->buffer_size, runtime->stop_threshold,
-	     runtime->frame_bits);
+	     runtime->frame_bits, runtime->rate, runtime->channels);
 
 	chip->streamCtl[substream->number].stream_hw_ptr = 0;
 	parm_prepare.drv_handle = substream->runtime->private_data;

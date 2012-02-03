@@ -85,21 +85,8 @@ Copyright 2009 - 2011  Broadcom Corporation
 static UInt8 *samplePCM16_inaudiotest;
 static UInt16 *record_test_buf;
 
-UInt8 playback_audiotest[1024000] = {
-#ifdef CONFIG_ENABLE_TESTDATA
-#include "pcm_16_48khz_mono.txt"
-#else
-	0
-#endif
-};
-UInt8 playback_audiotest_srcmixer[165856] = {
-
-#ifdef CONFIG_ENABLE_TESTDATA
-#include "sampleWAV16bit.txt"
-#else
-	0
-#endif
-};
+UInt8 playback_audiotest[] = { 0 };
+UInt8 playback_audiotest_srcmixer[] = { 0 };
 
 #define USE_LOOPBACK_SYSPARM
 
@@ -691,6 +678,7 @@ static int HandlePlayCommand()
 			DEBUG(" Audio DDRIVER Open Complete\n");
 		}
 		break;
+#ifdef CONFIG_BCM_ENABLE_TESTDATA
 	case 2:
 		{
 			src_used = 0;
@@ -719,6 +707,7 @@ static int HandlePlayCommand()
 			}
 		}
 		break;
+#endif
 	case 3:
 		{
 			DEBUG(" Audio DDRIVER Config\n");
@@ -1097,7 +1086,7 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate)
 }
 
 #ifdef CONFIG_ARM2SP_PLAYBACK_TEST
-
+#ifdef CONFIG_BCM_ENABLE_TESTDATA
 /* voice playback test including amrnb, pcm via VPU, ARM2SP, and amrwb */
 
 void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
@@ -1238,7 +1227,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
 	}
 }
-
+#endif
 #endif
 
 static AUDIO_DRIVER_HANDLE_t cur_drv_handle;
