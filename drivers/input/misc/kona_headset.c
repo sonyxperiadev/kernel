@@ -14,7 +14,7 @@
 *******************************************************************************/
 
 /* This should be defined before kernel.h is included */
-/* #define DEBUG  */
+/* #define DEBUG */
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -52,7 +52,40 @@
  *delayed work queue before sending the event to the input sub-system reads
  *right. But still on slow HS insertion, 1 HS button interrupt is serviced.
  * 2. Add DEBOUNCE_TIME as a part of the platform data in the board file to be
- *accessed in the driver - to make it board specific and not driver generic */
+ *accessed in the driver - to make it board specific and not driver generic
+ */
+
+ /*
+  * Driver HW resource usage info:
+  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  * GPIO  - Accessory insertion/removal detection
+  *
+  * COMP2 - In case if an open cable such as AD52 is plugged in first
+  *         to further detect a headset/headphone, when the item is plugged
+  *         to the open cable
+  *
+  * COMP2 - If the connected accesory is a headset configured to detect
+  *         button press
+  *
+  * For button release detection previously COMP1 INV ISR was used, but that
+  * logic does not work well if the MIC BIAS is configured in periodic
+  * measurement mode. So the button press work queue is used detect the button
+  * release by reading the raw output of COMP2
+  */
+
+/*
+ * Enabling this macro puts the MIC BIAS in contnious measurement mode for
+ * button press detection. Now to be power optimal, the MIC BIAS is in Low
+ * impedence state by default. Its turned ON in discontinuous mode
+ * 1) to detect accessory type on an open cable
+ * 2) If the accessory is headset for button press detection.
+ *
+ * In future if we see some instability issues with respect to detecting
+ * button press then we can turn this macro ON to enable MIC BIAS in continous
+ * mode for accurate detection, but the cost of this would be more power
+ * consumption when headset is connected.
+ */
+ /* #define KEEP_MIC_BIAS_ON_FOR_BP_DETECTION */
 
 /*
  * The gpio_set_debounce expects the debounce argument in micro seconds
@@ -62,14 +95,9 @@
  *change to the correct way of passing the time in microseconds resolution.
  */
 #define DEBOUNCE_TIME	(64000)
-#define KEY_PRESS_REF_TIME	msecs_to_jiffies(100)
 #define KEY_DETECT_DELAY	msecs_to_jiffies(128)
 #define ACCESSORY_INSERTION_REMOVE_SETTLE_TIME 	msecs_to_jiffies(500)
-#define ACI_S1  0
-#define ACI_T1  0xFE
-#define ACI_M1  0x500
-#define ACI_MT1 0x400
-#define HEADSET_DET_GPIO 74	/* Headset detection GPIO pin */
+
 struct mic_t {
 	int hsirq;
 	int hsbirq_press;
@@ -83,7 +111,6 @@ struct mic_t {
 #endif
 	struct delayed_work accessory_detect_work;
 	struct delayed_work button_press_work;
-	struct delayed_work button_release_work;
 	struct input_dev *headset_button_idev;
 	int hs_state;
 	int button_state;
@@ -111,42 +138,13 @@ enum button_state {
 };
 
 /*
- * API controllers
- */
- /*
-  * USE_SHARED_MIC_BIAS_CONTROL should be defined if driver
-  *should use the shared MIC Bias control function
-  */
-#define USE_SHARED_MIC_BIAS_CONTROL
-
-/*
- * Rhea COMP1 don't support interrupt on both rising and falling edgeds.
- * COMP2 is used for accessory detection as well as button press
- * COMP2 INV is used for button release.
- */
-#define COMP2_USED_FOR_HOOK_DETECTION
-
-/*
  * After configuring the ADC, it takes different 'time' for the
  * ADC to settle depending on the HS type. The time outs are
  *in milli seconds
  */
-
-#define DET_PLUG_INSERTION_SETTLE       250	/* Plug insertion setteling time */
 #define DET_PLUG_CONNECTED_SETTLE       80	/* in HAL_ACC_DET_PLUG_CONNECTED */
-#define DET_HEADPHONE_SETTLE            5	/* in HAL_ACC_DET_HEADPHONE */
 #define DET_OPEN_CABLE_SETTLE           20	/* in HAL_ACC_DET_OPEN_CABLE */
 #define DET_BASIC_CARKIT_SETTLE         20	/* in HAL_ACC_DET_BASIC_CARKIT */
-#define FINAL_HEADSET_SETTLE            40	/* Headset mode */
-#define FINAL_OPENCABLE_SETTLE          40	/* Open Cable mode */
-
-#ifdef COMP2_USED_FOR_HOOK_DETECTION
-#define CHAL_ACI_HOOK_DETECTION_BLOCK           CHAL_ACI_BLOCK_COMP2
-#define ACC_CHIPSET_HOOK_DETECTION_INTERRUPT    ACC_CHIPSET_INTERRUPT_COMP2
-#else
-#define CHAL_ACI_HOOK_DETECTION_BLOCK           CHAL_ACI_BLOCK_COMP1
-#define ACC_CHIPSET_HOOK_DETECTION_INTERRUPT    ACC_CHIPSET_INTERRUPT_COMP1
-#endif
 
 /*
  * Button/Hook Filter configuration
@@ -173,12 +171,6 @@ enum button_state {
 /* ADC */
 static const CHAL_ACI_filter_config_adc_t aci_filter_adc_config = { 0, 0x0B };
 
-/* COMP1 */
-#define ACI_S1  0
-#define ACI_T1  0xFE
-#define ACI_M1  0x500
-#define ACI_MT1 0x400
-
 static const CHAL_ACI_filter_config_comp_t comp_values_for_button_press = {
 	CHAL_ACI_FILTER_MODE_INTEGRATE,
 	CHAL_ACI_FILTER_RESET_FIRMWARE,
@@ -199,21 +191,31 @@ static const CHAL_ACI_filter_config_comp_t comp_values_for_type_det = {
 };
 
 /* MIC bias */
+
+/*
+ * Based on the power consumptio analysis. Program the MIC BIAS probe cycle to be
+ * 128ms. In this the mesaurement interval is 64ms and the measurement delay
+ * is 8ms.
+ *
+ * Mic Bias Power down control  and peridoic measurement control looks like
+ * this
+ *
+ *  --                      -------------------------------
+ *    | <-------------->   | <---------------------------> |
+ *    |     64 ms          |    128-64= 64ms               |
+ *     --------------------
+ *            -------------
+ *    <----->| <---------> |
+ *      8ms  |   56ms      |
+ * ----------               ---------------------
+ *
+ */
 static CHAL_ACI_micbias_config_t aci_mic_bias = {
 	CHAL_ACI_MIC_BIAS_OFF,
 	CHAL_ACI_MIC_BIAS_2_1V,
-	CHAL_ACI_MIC_BIAS_PRB_CYC_256MS,
-	CHAL_ACI_MIC_BIAS_MSR_DLY_4MS,
-	CHAL_ACI_MIC_BIAS_MSR_INTVL_64MS,
-	CHAL_ACI_MIC_BIAS_1_MEASUREMENT
-};
-
-static CHAL_ACI_micbias_config_t aci_init_mic_bias = {
-	CHAL_ACI_MIC_BIAS_ON,
-	CHAL_ACI_MIC_BIAS_2_1V,
 	CHAL_ACI_MIC_BIAS_PRB_CYC_128MS,
-	CHAL_ACI_MIC_BIAS_MSR_DLY_32MS,
-	CHAL_ACI_MIC_BIAS_MSR_INTVL_128MS,
+	CHAL_ACI_MIC_BIAS_MSR_DLY_8MS,
+	CHAL_ACI_MIC_BIAS_MSR_INTVL_64MS,
 	CHAL_ACI_MIC_BIAS_1_MEASUREMENT
 };
 
@@ -326,13 +328,14 @@ static int aci_hw_config(int hst)
 		/* Turn OFF MIC Bias */
 		aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_GND;
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+		                    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+		                    CHAL_ACI_BLOCK_GENERIC,
+				    &aci_mic_bias);
 
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
-				    CHAL_ACI_BLOCK_GENERIC, 0);
-
+		                    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
+		                    CHAL_ACI_BLOCK_GENERIC,
+				    0);
 		time_to_settle = DET_BASIC_CARKIT_SETTLE;
 		break;
 
@@ -466,26 +469,14 @@ static void button_press_work_func(struct work_struct *work)
 {
 	struct mic_t *p = container_of(work, struct mic_t,
 				       button_press_work.work);
+	int comp_status;
+	unsigned long headset_state = gpio_get_value(irq_to_gpio(p->hsirq));
+	headset_state = (headset_state ^ p->headset_pd->hs_default_state);
 
-	/*
-	 * Just to be sure check whether this is happened when the
-	 * Headset accessory is inserted,
-	 * If its triggered when the connected accessory is NOT a headset
-	 *_OR_ when none of the accessory is conneceted its spurious
-	 *
-	 */
-	if ((p->hs_state == HEADSET) && (p->button_state == BUTTON_RELEASED)) {
-		p->button_state = BUTTON_PRESSED;
-		pr_info(" Sending Key Press\r\n");
-		input_report_key(p->headset_button_idev, KEY_SEND, 1);
-		input_sync(p->headset_button_idev);
+	if (headset_state == 0) {
+		pr_err("Spurious button interrupts \r\n");
+		return;
 	}
-}
-
-static void button_release_work_func(struct work_struct *work)
-{
-	struct mic_t *p = container_of(work, struct mic_t,
-				       button_release_work.work);
 
 	/*
 	 * Just to be sure check whether this is happened when the
@@ -494,7 +485,18 @@ static void button_release_work_func(struct work_struct *work)
 	 *_OR_ when none of the accessory is conneceted its spurious
 	 *
 	 */
-	if ((p->hs_state == HEADSET) && (p->button_state == BUTTON_PRESSED)) {
+	comp_status = chal_aci_block_read(p->aci_chal_hdl,
+			CHAL_ACI_BLOCK_COMP2,
+			CHAL_ACI_BLOCK_COMP_RAW);
+	if (comp_status == CHAL_ACI_BLOCK_COMP_LINE_LOW) {
+		if ((p->hs_state == HEADSET) && (p->button_state == BUTTON_RELEASED)) {
+			p->button_state = BUTTON_PRESSED;
+			pr_info(" Sending Key Press\r\n");
+			input_report_key(p->headset_button_idev, KEY_SEND, 1);
+			input_sync(p->headset_button_idev);
+		}
+		schedule_delayed_work(&(p->button_press_work), KEY_DETECT_DELAY);
+	} else {
 		p->button_state = BUTTON_RELEASED;
 		pr_info(" Sending Key Release\r\n");
 		input_report_key(p->headset_button_idev, KEY_SEND, 0);
@@ -536,13 +538,25 @@ static void accessory_detect_work_func(struct work_struct *work)
 			pr_debug
 			    ("Detected Open cable enabling reconfig threshold values of COMP1\r\n");
 
+			/*
+			 * Put the MIC BIAS in Discontinuous measurement mode
+			 * to detect further accessory insertion
+			 */
+			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
+			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+
 			/* Configure the comparator 2 for type detection */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
 					    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
 					    CHAL_ACI_BLOCK_COMP2,
 					    &comp_values_for_type_det);
 
-			/* Set the threshold value for button press */
+			/*
+			 * Set the threshold value for accessory insertion
+			 * detection
+			 */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
 					    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
 					    CHAL_ACI_BLOCK_COMP2, 1900);
@@ -574,20 +588,44 @@ static void accessory_detect_work_func(struct work_struct *work)
 			 *button press
 			 */
 			p->button_state = BUTTON_RELEASED;
-			aci_interface_init(p);
+
+			/*
+			 * Put the MIC BIAS in Discontinuous measurement mode
+			 * to detect button press
+			 */
+#ifdef KEEP_MIC_BIAS_ON_FOR_BP_DETECTION
+			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
+#else
+			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
+#endif
+			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+
+			/* Configure the comparator 2 for button press */
+			chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
+			    CHAL_ACI_BLOCK_COMP2,
+			    &comp_values_for_button_press);
+
+			/* Set the threshold value for button press */
+			chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+			    CHAL_ACI_BLOCK_COMP2, 600);
 
 			/*
 			 * A settling time is required here. The call to
-			 *aci_interface_init invokes COMP2 & COMP2 INV
-			 *interrupts. Note that some times the interrupt gets
-			 *triggered after some time say 't'. If this 't'
-			 *happens before the next call to clear spurious
-			 *interrupts everything is OK, but if not it will
-			 *trigger unwanted button press, release events. So
-			 *its better to allow the work to wait until the
-			 *settling time and then clear the interrupts
+			 * configure the COMP2, MIC BIAS trigggers COMP2 and
+			 * COMP2 INV interrupts.
+			 * Note that some times the interrupt gets
+			 * triggered after some time say 't'. If this 't'
+			 * happens before the next call to clear spurious
+			 * interrupts everything is OK, but if not it will
+			 * trigger unwanted button press, release events. So
+			 * its better to allow the work to wait until the
+			 * settling time and then clear the interrupts
 			 */
-			msleep(DET_BASIC_CARKIT_SETTLE);
+			msleep(100);
 
 			/* Clear pending interrupts if any */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -605,14 +643,20 @@ static void accessory_detect_work_func(struct work_struct *work)
 					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
 					    CHAL_ACI_BLOCK_COMP2);
 
-			/* Enable COMP2 INV interrupt for button release  */
-			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
-					    CHAL_ACI_BLOCK_COMP2_INV);
-
 			/* Fall through to send the update to userland */
 		case HEADPHONE:
-			pr_info("\n\n Case HEADPHONE \n");
+			pr_debug("\n\n Case HEADPHONE \n");
+			/* Note: The chal code to power OFF i.e GND MIC BIAS
+			 * actually puts the MIC BIAS in continuous
+			 * measurement mode. This is not what we want.
+			 * So any way the MIC BIAS is in discontinuous mode
+			 * for both open cable and headset case, in case of accessory removed,
+			 * just put the MIC BIAS in Low impedance state.
+			 */
+			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
+				    CHAL_ACI_BLOCK_GENERIC, 0);
+
 			/* Clear pending interrupts if any */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
 					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
@@ -645,6 +689,24 @@ static void accessory_detect_work_func(struct work_struct *work)
 		if (p->hs_state == DISCONNECTED) {
 			pr_err("Accessory removed spurious event \r\n");
 		} else {
+
+			/* Turn OFF MIC Bias */
+			/* Note: The chal code to power OFF i.e GND MIC BIAS
+			 * actually puts the MIC BIAS in continuous
+			 * measurement mode. This is not what we want.
+			 * So any way the MIC BIAS is in discontinuous mode
+			 * for both open cable and headset case, in case of accessory removed,
+			 * just put the MIC BIAS in Low impedance state.
+			 */
+			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
+			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+
+			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
+				    CHAL_ACI_BLOCK_GENERIC, 0);
+
 			/* Inform userland about accessory removal */
 			p->hs_state = DISCONNECTED;
 			p->button_state = BUTTON_RELEASED;
@@ -708,7 +770,6 @@ int hs_switchinit(struct mic_t *p)
 static int hs_unreginputdev(struct mic_t *p)
 {
 	cancel_delayed_work_sync(&p->button_press_work);
-	cancel_delayed_work_sync(&p->button_release_work);
 	input_unregister_device(p->headset_button_idev);
 	input_free_device(p->headset_button_idev);
 	return 0;
@@ -750,7 +811,6 @@ static int hs_inputdev(struct mic_t *p)
 	}
 
 	INIT_DELAYED_WORK(&(p->button_press_work), button_press_work_func);
-	INIT_DELAYED_WORK(&(p->button_release_work), button_release_work_func);
 
       inputdev_err:
 	return result;
@@ -800,8 +860,7 @@ irqreturn_t comp2_isr(int irq, void *dev_id)
 	if (p->hs_state == HEADSET) {
 		pr_debug("button press scheduling button_press_work \r\n");
 
-		schedule_delayed_work(&(p->button_press_work),
-				      KEY_DETECT_DELAY);
+		schedule_delayed_work(&(p->button_press_work),0);
 
 		/* Re-enable COMP2 Interrupts */
 		chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -819,36 +878,6 @@ irqreturn_t comp2_isr(int irq, void *dev_id)
 				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
 				    CHAL_ACI_BLOCK_COMP2);
 	}
-	return IRQ_HANDLED;
-}
-
-/*------------------------------------------------------------------------------
-    Function name   : comp2_inv_isr
-    Description     : interrupt handler
-    Return type     : irqreturn_t
-------------------------------------------------------------------------------*/
-irqreturn_t comp2_inv_isr(int irq, void *dev_id)
-{
-	struct mic_t *p = (struct mic_t *)dev_id;
-
-	/* Acknowledge & clear the interrupt */
-	chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-			    CHAL_ACI_BLOCK_COMP2_INV);
-
-	pr_debug("comp2_inv_isr occured \r\n");
-
-	if (p->hs_state == HEADSET)
-		schedule_delayed_work(&(p->button_release_work),
-				      KEY_DETECT_DELAY);
-	else
-		pr_err("comp2_inv_isr is spurious \r\n");
-
-	/* Re-enable COMP2 Interrupts */
-	chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
-			    CHAL_ACI_BLOCK_COMP2_INV);
-
 	return IRQ_HANDLED;
 }
 
@@ -906,22 +935,10 @@ static int aci_interface_init(struct mic_t *p)
 	 *properly. Note that only when the mode is
 	 * CHAL_ACI_MIC_BIAS_DISCONTINUOUS, this is done.
 	 */
-	aci_init_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
+	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-			    CHAL_ACI_BLOCK_GENERIC, &aci_init_mic_bias);
-
-	/* Turn ON the MIC BIAS and put it in continuous mode */
-	/*
-	 * NOTE:
-	 * This chal call was failing becuase internally this call
-	 *was configuring AUDIOH registers as well. We have commmented
-	 *configuring AUDIOH reigsrs in CHAL and it works OK
-	 */
-	aci_init_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
-	chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-			    CHAL_ACI_BLOCK_GENERIC, &aci_init_mic_bias);
+			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
 
 	pr_debug("=== aci_interface_init: MIC BIAS settings done \r\n");
 
@@ -955,10 +972,10 @@ static int aci_interface_init(struct mic_t *p)
 
 	pr_debug("=== aci_interface_init: Configured Vref and ADC \r\n");
 
-	/* Power down the MIC Bias and put in HIZ */
+	/* Power down the MIC Bias and put in Low impedance */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
-			    CHAL_ACI_BLOCK_GENERIC, TRUE);
+			    CHAL_ACI_BLOCK_GENERIC, FALSE);
 
 	pr_debug
 	    ("=== aci_interface_init: powered down MIC BIAS and put in High impedence state \r\n");
@@ -1196,19 +1213,6 @@ static int __init hs_probe(struct platform_device *pdev)
 		       __func__, "button press", ret);
 		/* Free the HS IRQ if the HS Button IRQ request fails */
 		free_irq(mic->hsirq, mic);
-		goto err1;
-	}
-
-	/* Request the IRQ for HS Button release */
-	ret =
-	    request_irq(mic->hsbirq_release, comp2_inv_isr, IRQF_NO_SUSPEND,
-			"aci_hs_button_release", mic);
-	if (ret < 0) {
-		pr_err("%s(): request_irq() failed for headset %s: %d\n",
-		       __func__, "button release", ret);
-		/* Free the HS IRQ if the HS Button IRQ request fails */
-		free_irq(mic->hsirq, mic);
-		free_irq(mic->hsbirq_press, mic);
 		goto err1;
 	}
 
