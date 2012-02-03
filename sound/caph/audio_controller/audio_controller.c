@@ -336,29 +336,32 @@ void AUDCTRL_DisableTelephony(void)
  && FALSE==vipath_enabled )
       {*/
 
+	if (AUDDRV_InVoiceCall()) {
 #ifdef ENABLE_VOIF
-	VoIF_Deinit();
+		VoIF_Deinit();
 #endif
 
-	powerOnExternalAmp(voiceCallSpkr, TelephonyUseExtSpkr, FALSE);
+		powerOnExternalAmp(voiceCallSpkr,
+			TelephonyUseExtSpkr,
+			FALSE);
 
-	/* The following is the sequence we need to follow */
-	AUDDRV_Telephony_Deinit();
+		/* The following is the sequence we need to follow */
+		AUDDRV_Telephony_Deinit();
 
-	if ((voiceCallMic == AUDIO_SOURCE_DIGI1)
-	    || (voiceCallMic == AUDIO_SOURCE_DIGI2)
-	    || (voiceCallMic == AUDIO_SOURCE_DIGI3)
-	    || (voiceCallMic == AUDIO_SOURCE_DIGI4)
-	    || (voiceCallMic == AUDIO_SOURCE_SPEECH_DIGI)) {
 		/* Disable power to digital microphone */
-		powerOnDigitalMic(FALSE);
+		if ((voiceCallMic == AUDIO_SOURCE_DIGI1)
+			|| (voiceCallMic == AUDIO_SOURCE_DIGI2)
+			|| (voiceCallMic == AUDIO_SOURCE_DIGI3)
+			|| (voiceCallMic == AUDIO_SOURCE_DIGI4)
+			|| (voiceCallMic == AUDIO_SOURCE_SPEECH_DIGI))
+			powerOnDigitalMic(FALSE);
+
+		voiceCallSpkr = AUDIO_SINK_UNDEFINED;
+		voiceCallMic = AUDIO_SOURCE_UNDEFINED;
+
+		RemoveAudioApp(AUDIO_APP_VOICE_CALL);
+
 	}
-
-	voiceCallSpkr = AUDIO_SINK_UNDEFINED;
-	voiceCallMic = AUDIO_SOURCE_UNDEFINED;
-
-	RemoveAudioApp(AUDIO_APP_VOICE_CALL);
-
 	return;
 }
 
