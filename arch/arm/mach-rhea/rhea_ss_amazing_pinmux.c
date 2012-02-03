@@ -70,7 +70,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SDDAT1, SDDAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SDDAT0, SDDAT0, 0, OFF, ON, 0, 0, 8MA),
 
-#if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING) 
+#if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) 
 	
 	/* GPIO121 for TCA9539 IO expander */
 	PIN_CFG(ICUSBDP, GPIO121, 0, OFF, OFF, 0, 0, 8MA),
@@ -231,6 +231,9 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(DMIC0CLK, GPIO123, 0, OFF, OFF, 0, 0, 16MA), //SD_DECTECT
 	PIN_CFG(DSI0TE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(CAMCS0, GPIO43, 0, OFF, OFF, 0, 0, 16MA),
+	/* Headset */
+        PIN_CFG(STAT1, GPIO31, 0, OFF, ON, 0, 0, 4MA),
+
 };
 
 /* board level init */
