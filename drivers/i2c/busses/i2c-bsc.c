@@ -42,7 +42,7 @@
 #include "i2c-bsc.h"
 
 #define DEFAULT_I2C_BUS_SPEED    BSC_BUS_SPEED_50K
-#define CMDBUSY_DELAY            100000
+#define CMDBUSY_DELAY            100
 #define SES_TIMEOUT              (msecs_to_jiffies(100))
 
 /* maximum RX/TX FIFO size in bytes */
@@ -250,16 +250,17 @@ static irqreturn_t bsc_isr(int irq, void *devid)
  */
 static int bsc_wait_cmdbusy(struct bsc_i2c_dev *dev)
 {
-	unsigned int count = 0;
+	unsigned long time = 0, limit;
 
-	while (bsc_read_intr_status((uint32_t) dev->virt_base) &
-	       I2C_MM_HS_ISR_CMDBUSY_MASK) {
-		if (count > CMDBUSY_DELAY) {
-			dev_err(dev->device, "CMDBUSY timeout\n");
-			return -ETIMEDOUT;
-		}
+	/* wait for CMDBUSY is ready  */
+	limit = (loops_per_jiffy * msecs_to_jiffies(CMDBUSY_DELAY));
+	while ((bsc_read_intr_status((uint32_t)dev->virt_base) &
+		I2C_MM_HS_ISR_CMDBUSY_MASK) && (time++ < limit))
+		cpu_relax();
 
-		count++;
+	if (time >= limit) {
+		dev_err(dev->device, "CMDBUSY timeout\n");
+		return -ETIMEDOUT;
 	}
 
 	return 0;
