@@ -1,23 +1,23 @@
 /***************************************************************************
- *     Copyright (c) 2003-2008, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ *    Copyright (c) 2003-2008, Broadcom Corporation
+ *    All Rights Reserved
+ *    Confidential Property of Broadcom Corporation
  *
- *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
- *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
- *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+ * THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ * AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ * EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
  *
  * $brcm_Workfile: $
  * $brcm_Revision: $
  * $brcm_Date: $
  *
  * Module Description:
- *   The common include header file that all C-files will be using.
+ *  The common include header file that all C-files will be using.
  *
  * Revision History:
  *
  * $brcm_Log: $
- * 
+ *
  ***************************************************************************/
 #ifndef CHAL_REG_H__
 #define CHAL_REG_H__
@@ -56,8 +56,8 @@ extern "C" {
 #define CHAL_REG_READ32_P(addr)     (*(volatile unsigned long  *)(&(addr)))
 
 #define CHAL_REG_CLRBIT8_P(addr, bits)   (CHAL_REG_WRITE8_P(addr, (CHAL_REG_READ8_P(addr)  & (~(bits)))))
-#define CHAL_REG_CLRBIT16_P(addr,bits)  (CHAL_REG_WRITE16_P(addr, (CHAL_REG_READ16_P(addr) & (~(bits)))))
-#define CHAL_REG_CLRBIT32_P(addr,bits)  (CHAL_REG_WRITE32_P(addr, (CHAL_REG_READ32_P(addr) & (~(bits)))))
+#define CHAL_REG_CLRBIT16_P(addr, bits)  (CHAL_REG_WRITE16_P(addr, (CHAL_REG_READ16_P(addr) & (~(bits)))))
+#define CHAL_REG_CLRBIT32_P(addr, bits)  (CHAL_REG_WRITE32_P(addr, (CHAL_REG_READ32_P(addr) & (~(bits)))))
 
 #define CHAL_REG_SETBIT8_P(addr, bits)   (CHAL_REG_WRITE8_P(addr, (CHAL_REG_READ8_P(addr)  | (bits))))
 #define CHAL_REG_SETBIT16_P(addr, bits)  (CHAL_REG_WRITE16_P(addr, (CHAL_REG_READ16_P(addr) | (bits))))
@@ -75,6 +75,4 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CHAL_REG_H__ */
-
+#endif				/* CHAL_REG_H__ */

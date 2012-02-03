@@ -17,10 +17,10 @@
 #endif
 #include <mach/rdb/brcm_rdb_i2c_mm_hs.h>
 
-/* 
+/*
  * Map the B0 macros to the appropriate A0 macros to get both the variants
- * working - This has to be done as a part of adding the changes in the B0
- * specific RDB to the A0 RDB 
+ *working - This has to be done as a part of adding the changes in the B0
+ *specific RDB to the A0 RDB
  */
 #if defined(CONFIG_ARCH_RHEA_B0)
 #define I2C_MM_HS_CS_CMD_CMD_GEN_START          I2C_MM_HS_CS_CMD_CMD_START_RESTART
@@ -32,14 +32,12 @@
 #define I2C_MM_HS_PADCTL_PAD_SLEW_RATE_MASK     I2C_MM_HS_PADCTL_PULLUP_EN_MASK
 #endif
 
+		     /*#define BSC_HS*//* Athena has HS controller */
 
-/*#define BSC_HS*/   /* Athena has HS controller*/
-
-#define BSC_WRITE_REG_FIELD(addr,mask,shift,data) (writel((((data << shift) & (mask)) | ( readl(addr) & ~mask ) ) , addr)) 
-#define BSC_READ_REG_FIELD(addr,mask,shift)       ((readl(addr) & mask ) >> shift )
-#define BSC_WRITE_REG(addr,data)                  (writel(data,addr))
+#define BSC_WRITE_REG_FIELD(addr, mask, shift, data) (writel((((data << shift) & (mask)) | (readl(addr) & ~mask)) , addr))
+#define BSC_READ_REG_FIELD(addr, mask, shift)       ((readl(addr) & mask) >> shift)
+#define BSC_WRITE_REG(addr, data)                  (writel(data, addr))
 #define BSC_READ_REG(addr)                        (readl(addr))
-
 
 #define BSC_DEBUG_PRINT  0
 #if BSC_DEBUG_PRINT
@@ -51,27 +49,27 @@
 /**
 * Supported BSC bus speeds
 *****************************************************************************/
-typedef enum{
-    BSC_SPD_32K = 0,      /*< 32KHZ */
-    BSC_SPD_50K,          /*< 50KHZ */
-    BSC_SPD_100K,         /*< 100KHZ */
-    BSC_SPD_230K,         /*< 230KHZ */
-    BSC_SPD_380K,         /*< 380KHZ */
-    BSC_SPD_400K,         /*< 400KHZ */
-    BSC_SPD_430K,         /*< 430KHZ */
-    BSC_SPD_HS,           /*< HIGH SPEED */
-    BSC_SPD_100K_FPGA,    /*< 100KHZ based on a 26MHz incoming clock */
-    BSC_SPD_400K_FPGA,    /*< 400KHZ based on a 26MHz incoming clock */
-    BSC_SPD_HS_FPGA,       /*< HIGH SPEED based on a 26MHz incoming clock */
-    BSC_SPD_MAXIMUM       /*< 460K, assume auto sense turn off. */
+typedef enum {
+	BSC_SPD_32K = 0,	/*< 32KHZ */
+	BSC_SPD_50K,		/*< 50KHZ */
+	BSC_SPD_100K,		/*< 100KHZ */
+	BSC_SPD_230K,		/*< 230KHZ */
+	BSC_SPD_380K,		/*< 380KHZ */
+	BSC_SPD_400K,		/*< 400KHZ */
+	BSC_SPD_430K,		/*< 430KHZ */
+	BSC_SPD_HS,		/*< HIGH SPEED */
+	BSC_SPD_100K_FPGA,	/*< 100KHZ based on a 26MHz incoming clock */
+	BSC_SPD_400K_FPGA,	/*< 400KHZ based on a 26MHz incoming clock */
+	BSC_SPD_HS_FPGA,	/*< HIGH SPEED based on a 26MHz incoming clock */
+	BSC_SPD_MAXIMUM		/*< 460K, assume auto sense turn off. */
 } BSC_SPEED_t;
 
 /**
 * Supported BSC mode
 *****************************************************************************/
-typedef enum{
-    BSC_MODE_MASTER = 0, /*< Master mode */
-    BSC_MODE_SLAVE       /*< Slave mode */
+typedef enum {
+	BSC_MODE_MASTER = 0,	/*< Master mode */
+	BSC_MODE_SLAVE		/*< Slave mode */
 } BSC_MODE_t;
 
 /**
@@ -81,23 +79,24 @@ typedef enum{
 /**
 * BSC Command
 *****************************************************************************/
-typedef enum{
-    BSC_CMD_NOACTION = 0, /*< NOACTION */
-    BSC_CMD_START,        /*< START command */
-    BSC_CMD_RESTART,      /*< RESTART command */
-    BSC_CMD_STOP,         /*< STOP command */
-    BSC_CMD_READ_ACK,     /*< READ ACK command */
-    BSC_CMD_READ_NAK,     /*< READ NAK command */
-    BSC_CMD_HS_STOP       /*< High speed STOP command */
+typedef enum {
+	BSC_CMD_NOACTION = 0,	/*< NOACTION */
+	BSC_CMD_START,		/*< START command */
+	BSC_CMD_RESTART,	/*< RESTART command */
+	BSC_CMD_STOP,		/*< STOP command */
+	BSC_CMD_READ_ACK,	/*< READ ACK command */
+	BSC_CMD_READ_NAK,	/*< READ NAK command */
+	BSC_CMD_HS_STOP		/*< High speed STOP command */
 } BSC_CMD_t;
 
-
-static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed, bool src_clk_26m);
+static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
+				     bool src_clk_26m);
 static inline void isl_bsc_init(uint32_t baseAddr);
 static inline void bsc_disable_intr(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_clear_intr_status(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_set_tx_fifo(uint32_t baseAddr, unsigned char enable);
-static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on, unsigned char timeout_enable);
+static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on,
+				     unsigned char timeout_enable);
 static inline unsigned char bsc_get_timeout(uint32_t baseAddr);
 static inline void bsc_enable_intr(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_deinit(uint32_t baseAddr);
@@ -113,19 +112,19 @@ static inline void bsc_start_highspeed(uint32_t baseAddr);
 static inline void bsc_stop_highspeed(uint32_t baseAddr);
 static inline uint32_t bsc_get_enabled_intr(uint32_t baseAddr);
 static inline uint32_t bsc_read_intr_status(uint32_t baseAddr);
-static inline uint32_t bsc_read_data(uint32_t baseAddr, uint8_t *pBuffer, uint32_t size);
-static inline uint32_t bsc_write_data(uint32_t baseAddr, uint8_t *pBuffer, uint32_t size);
+static inline uint32_t bsc_read_data(uint32_t baseAddr, uint8_t *pBuffer,
+				     uint32_t size);
+static inline uint32_t bsc_write_data(uint32_t baseAddr, uint8_t *pBuffer,
+				      uint32_t size);
 static inline unsigned char bsc_get_autosense(uint32_t baseAddr);
 static inline unsigned char bsc_get_bus_status(uint32_t baseAddr);
 static inline unsigned char bsc_get_ack(uint32_t baseAddr);
 static inline unsigned char bsc_get_sda(uint32_t baseAddr);
 static inline unsigned char bsc_get_scl(uint32_t baseAddr);
-static inline void bsc_set_soft_reset(uint32_t baseAddr, unsigned char enable );
+static inline void bsc_set_soft_reset(uint32_t baseAddr, unsigned char enable);
 static inline unsigned char bsc_get_soft_reset_ready(uint32_t baseAddr);
 static inline unsigned char bsc_get_soft_reset(uint32_t baseAddr);
 static inline BSC_MODE_t bsc_set_mode(uint32_t baseAddr, BSC_MODE_t mode);
-
-
 
 /**
 *
@@ -137,43 +136,57 @@ static inline BSC_MODE_t bsc_set_mode(uint32_t baseAddr, BSC_MODE_t mode);
 *****************************************************************************/
 static inline void isl_bsc_init(uint32_t baseAddr)
 {
-   bsc_dprintf( CDBG_INFO, "isl_bsc_init, base=0x%x\n", baseAddr );
+	bsc_dprintf(CDBG_INFO, "isl_bsc_init, base=0x%x\n", baseAddr);
 
-   bsc_set_sda(baseAddr, 1);
-   bsc_set_scl(baseAddr, 1);
+	bsc_set_sda(baseAddr, 1);
+	bsc_set_scl(baseAddr, 1);
 
-   /* Time out */
-   bsc_set_timeout( baseAddr, 1 );
+	/* Time out */
+	bsc_set_timeout(baseAddr, 1);
 
-   /* set to max 1023 cycles */
-   BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET), I2C_MM_HS_TOUT_TOUT_LOW_MASK, I2C_MM_HS_TOUT_TOUT_LOW_SHIFT , 0x7F);
-   BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET), I2C_MM_HS_TOUT_TOUT_HIGH_MASK, I2C_MM_HS_TOUT_TOUT_HIGH_SHIFT,0x3);
+	/* set to max 1023 cycles */
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TOUT_OFFSET),
+			    I2C_MM_HS_TOUT_TOUT_LOW_MASK,
+			    I2C_MM_HS_TOUT_TOUT_LOW_SHIFT, 0x7F);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TOUT_OFFSET),
+			    I2C_MM_HS_TOUT_TOUT_HIGH_MASK,
+			    I2C_MM_HS_TOUT_TOUT_HIGH_SHIFT, 0x3);
 
-   /* FIFO */
-   bsc_set_tx_fifo(baseAddr, 0);
+	/* FIFO */
+	bsc_set_tx_fifo(baseAddr, 0);
 
-   /* CRC */
-   BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_RCM_OFFSET),I2C_MM_HS_RCM_EN_MASK , I2C_MM_HS_RCM_EN_SHIFT, 0);
-   BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_RCM_OFFSET),I2C_MM_HS_RCM_LSB0_MASK, I2C_MM_HS_RCM_LSB0_SHIFT, 1);
-   BSC_WRITE_REG((baseAddr+I2C_MM_HS_RCP_OFFSET), 0x89);
+	/* CRC */
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_RCM_OFFSET),
+			    I2C_MM_HS_RCM_EN_MASK, I2C_MM_HS_RCM_EN_SHIFT, 0);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_RCM_OFFSET),
+			    I2C_MM_HS_RCM_LSB0_MASK, I2C_MM_HS_RCM_LSB0_SHIFT,
+			    1);
+	BSC_WRITE_REG((baseAddr + I2C_MM_HS_RCP_OFFSET), 0x89);
 
-   /* Clear Interrupts */
-   bsc_clear_intr_status(baseAddr, 0xff);
+	/* Clear Interrupts */
+	bsc_clear_intr_status(baseAddr, 0xff);
 
-   /* Clear CMD */
-   isl_bsc_send_cmd(baseAddr, BSC_CMD_NOACTION);
+	/* Clear CMD */
+	isl_bsc_send_cmd(baseAddr, BSC_CMD_NOACTION);
 
 #ifdef BSC_HS
-   /*pad control, slew rate 60ns<Tr(Tf)<100ns
-     The PAD enable polarity is reverted. Need to use 0 instead of 1.*/
-	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_PADCTL_OFFSET), I2C_MM_HS_PADCTL_PAD_OUT_EN_MASK, I2C_MM_HS_PADCTL_PAD_OUT_EN_SHIFT , 0);
-   /* start with non-HS, use 13MHz */
-	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TIM_OFFSET), I2C_MM_HS_TIM_PRESCALE_MASK , I2C_MM_HS_TIM_PRESCALE_SHIFT, I2C_MM_HS_TIM_PRESCALE_CMD_NODIV);
-	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TIM_OFFSET), I2C_MM_HS_TIM_NO_DIV_MASK, I2C_MM_HS_TIM_NO_DIV_SHIFT, 0);
+	/*pad control, slew rate 60ns<Tr(Tf)<100ns
+	   The PAD enable polarity is reverted. Need to use 0 instead of 1. */
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_PADCTL_OFFSET),
+			    I2C_MM_HS_PADCTL_PAD_OUT_EN_MASK,
+			    I2C_MM_HS_PADCTL_PAD_OUT_EN_SHIFT, 0);
+	/* start with non-HS, use 13MHz */
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TIM_OFFSET),
+			    I2C_MM_HS_TIM_PRESCALE_MASK,
+			    I2C_MM_HS_TIM_PRESCALE_SHIFT,
+			    I2C_MM_HS_TIM_PRESCALE_CMD_NODIV);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TIM_OFFSET),
+			    I2C_MM_HS_TIM_NO_DIV_MASK,
+			    I2C_MM_HS_TIM_NO_DIV_SHIFT, 0);
 #endif
 
-   /* start */
-   bsc_start(baseAddr);
+	/* start */
+	bsc_start(baseAddr);
 }
 
 /**
@@ -186,7 +199,7 @@ static inline void isl_bsc_init(uint32_t baseAddr)
 *****************************************************************************/
 static inline void bsc_deinit(uint32_t baseAddr)
 {
-   bsc_stop(baseAddr);
+	bsc_stop(baseAddr);
 }
 
 /**
@@ -200,10 +213,18 @@ static inline void bsc_deinit(uint32_t baseAddr)
 
 static inline void bsc_start(uint32_t baseAddr)
 {
-   BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CLKEN_OFFSET), I2C_MM_HS_CLKEN_CLKEN_MASK, I2C_MM_HS_CLKEN_CLKEN_SHIFT, 1);
-   BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_CMD_MASK, I2C_MM_HS_CS_CMD_SHIFT, I2C_MM_HS_CS_CMD_CMD_NO_ACTION);
-   BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_ACK_MASK, I2C_MM_HS_CS_ACK_SHIFT, I2C_MM_HS_CS_ACK_CMD_GEN_START);
-   BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT, I2C_MM_HS_CS_EN_CMD_ENABLE_BSC);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CLKEN_OFFSET),
+			    I2C_MM_HS_CLKEN_CLKEN_MASK,
+			    I2C_MM_HS_CLKEN_CLKEN_SHIFT, 1);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			    I2C_MM_HS_CS_CMD_MASK, I2C_MM_HS_CS_CMD_SHIFT,
+			    I2C_MM_HS_CS_CMD_CMD_NO_ACTION);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			    I2C_MM_HS_CS_ACK_MASK, I2C_MM_HS_CS_ACK_SHIFT,
+			    I2C_MM_HS_CS_ACK_CMD_GEN_START);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			    I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT,
+			    I2C_MM_HS_CS_EN_CMD_ENABLE_BSC);
 }
 
 /**
@@ -216,18 +237,30 @@ static inline void bsc_start(uint32_t baseAddr)
 *****************************************************************************/
 static inline void bsc_stop(uint32_t baseAddr)
 {
-   BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT, I2C_MM_HS_CS_EN_CMD_RST_BSC);
-   BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CLKEN_OFFSET), I2C_MM_HS_CLKEN_CLKEN_MASK, I2C_MM_HS_CLKEN_CLKEN_SHIFT, 0);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			    I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT,
+			    I2C_MM_HS_CS_EN_CMD_RST_BSC);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CLKEN_OFFSET),
+			    I2C_MM_HS_CLKEN_CLKEN_MASK,
+			    I2C_MM_HS_CLKEN_CLKEN_SHIFT, 0);
 }
 
 static inline void bsc_reset(uint32_t baseAddr)
 {
-	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT, I2C_MM_HS_CS_EN_CMD_RST_BSC);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			    I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT,
+			    I2C_MM_HS_CS_EN_CMD_RST_BSC);
 	bsc_set_sda(baseAddr, 1);
 	bsc_set_scl(baseAddr, 1);
-	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_CMD_MASK, I2C_MM_HS_CS_CMD_SHIFT, I2C_MM_HS_CS_CMD_CMD_NO_ACTION);
-	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_ACK_MASK, I2C_MM_HS_CS_ACK_SHIFT, I2C_MM_HS_CS_ACK_CMD_GEN_START);
-	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT, I2C_MM_HS_CS_EN_CMD_ENABLE_BSC);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			    I2C_MM_HS_CS_CMD_MASK, I2C_MM_HS_CS_CMD_SHIFT,
+			    I2C_MM_HS_CS_CMD_CMD_NO_ACTION);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			    I2C_MM_HS_CS_ACK_MASK, I2C_MM_HS_CS_ACK_SHIFT,
+			    I2C_MM_HS_CS_ACK_CMD_GEN_START);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			    I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT,
+			    I2C_MM_HS_CS_EN_CMD_ENABLE_BSC);
 }
 
 /**
@@ -245,10 +278,10 @@ static inline void bsc_reset(uint32_t baseAddr)
 #define BSCTIM_DIV_3250000HZ    (2 << I2C_MM_HS_TIM_DIV_SHIFT)
 #define BSCTIM_DIV_6500000HZ    (3 << I2C_MM_HS_TIM_DIV_SHIFT)
 
-#ifndef FPGA 
+#ifndef FPGA
 /* HS Timings for 26MHz source:
- * 	Hold=1, HighPhase=3, Setup=4,
- * 	HS CLK = 26/(1+3+4) = 3.25MHz
+ *	Hold=1, HighPhase=3, Setup=4,
+ *	HS CLK = 26/(1+3+4) = 3.25MHz
  */
 #define BSC_HS_HSMODE_TIMING_26MHZ        0x0000043
 #define BSC_HS_HSMODE_TIMING              0x00000513
@@ -256,107 +289,120 @@ static inline void bsc_reset(uint32_t baseAddr)
 #define BSC_HS_HSMODE_TIMING              0x00000001
 #endif
 
-static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed, bool src_clk_26m)
+static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
+				     bool src_clk_26m)
 {
-    uint8_t DIV = 0, M = 0, N = 0, P = 0,NO_DIV=0,PRESCALE=I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
-    NO_DIV=0;
-    PRESCALE=I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
-    bsc_dprintf( CDBG_INFO, "bsc_set_bus_speed, %d\n", speed);
-    switch (speed)
-    {
-        case BSC_SPD_32K:
-            M = 0x01;
-            N = 0x01;
-            DIV = BSCTIM_DIV_812500HZ;
-            P = 0x04;
-            break;
-        case BSC_SPD_50K:
-            M = 0x01;
-            N = 0x01;
-            DIV = BSCTIM_DIV_812500HZ;
-            P = 0x02;
-            break;
-        case BSC_SPD_230K:
-            M = 0x07;
-            N = 0x00;
-            DIV = BSCTIM_DIV_3250000HZ;
-            P = 0x00;
-            break;
-        case BSC_SPD_380K:
-            M = 0x02;
-            N = 0x04;
-            DIV = BSCTIM_DIV_6500000HZ;
-            P = 0x01;
-            break;
-        case BSC_SPD_400K:
-            M = 0x01;/* 2;*/
-            N = 0x01;/* 2;*/
-            NO_DIV=1;
-            DIV = BSCTIM_DIV_3250000HZ;/*BSCTIM_DIV_6500000HZ; */
-            P = 0x06;/* 0x01; */
-            break;
-        case BSC_SPD_430K:
-            M = 0x03;
-            N = 0x01;
-            DIV = BSCTIM_DIV_6500000HZ;
-            P = 0x01;
-            break;
-        case BSC_SPD_MAXIMUM:
-            M = 0x02;
-            N = 0x01;
-            DIV = BSCTIM_DIV_6500000HZ;
-            P = 0x01;
-            break;
-        case BSC_SPD_HS:
-            M = 0x04;/*2;*/
-            N = 0x01;/*2;*/
-            DIV = BSCTIM_DIV_6500000HZ;
-            PRESCALE=I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
-            P = 0x05;/*0x01;*/
-            if(src_clk_26m)
-               BSC_WRITE_REG((baseAddr+I2C_MM_HS_HSTIM_OFFSET),BSC_HS_HSMODE_TIMING_26MHZ);
-            else
-               BSC_WRITE_REG((baseAddr+I2C_MM_HS_HSTIM_OFFSET),BSC_HS_HSMODE_TIMING);
-            break;
-        /* master clock is 26MHz for FPGA */
-        case BSC_SPD_100K_FPGA:
-            M = 0x01;
-            N = 0x01;
-            DIV = 2;
-            P = 0x06;
-            PRESCALE = 2;
-            break;
-        case BSC_SPD_400K_FPGA:
-            M = 0x04;
-            N = 0x01;
-            DIV = 0x3;
-            P = 0x05;
-            PRESCALE = 3;
-            break;
-        case BSC_SPD_HS_FPGA:
-            M = 0x04;
-            N = 0x01;
-            NO_DIV = 0;
-            DIV = 3;
-            PRESCALE=I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
-            P = 0x07;
-            BSC_WRITE_REG((baseAddr+I2C_MM_HS_HSTIM_OFFSET),BSC_HS_HSMODE_TIMING);
-            break;
-        case BSC_SPD_100K:
-        default:
-            M = 0x01;
-            N = 0x01;
-            DIV = BSCTIM_DIV_3250000HZ;/*BSCTIM_DIV_1625000HZ;*/
-            P = 0x06; /*2;*/
-            break;
-    }
+	uint8_t DIV = 0, M = 0, N = 0, P = 0, NO_DIV = 0, PRESCALE =
+	    I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+	NO_DIV = 0;
+	PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+	bsc_dprintf(CDBG_INFO, "bsc_set_bus_speed, %d\n", speed);
+	switch (speed) {
+	case BSC_SPD_32K:
+		M = 0x01;
+		N = 0x01;
+		DIV = BSCTIM_DIV_812500HZ;
+		P = 0x04;
+		break;
+	case BSC_SPD_50K:
+		M = 0x01;
+		N = 0x01;
+		DIV = BSCTIM_DIV_812500HZ;
+		P = 0x02;
+		break;
+	case BSC_SPD_230K:
+		M = 0x07;
+		N = 0x00;
+		DIV = BSCTIM_DIV_3250000HZ;
+		P = 0x00;
+		break;
+	case BSC_SPD_380K:
+		M = 0x02;
+		N = 0x04;
+		DIV = BSCTIM_DIV_6500000HZ;
+		P = 0x01;
+		break;
+	case BSC_SPD_400K:
+		M = 0x01;	/* 2; */
+		N = 0x01;	/* 2; */
+		NO_DIV = 1;
+		DIV = BSCTIM_DIV_3250000HZ;	/* BSCTIM_DIV_6500000HZ; */
+		P = 0x06;	/* 0x01; */
+		break;
+	case BSC_SPD_430K:
+		M = 0x03;
+		N = 0x01;
+		DIV = BSCTIM_DIV_6500000HZ;
+		P = 0x01;
+		break;
+	case BSC_SPD_MAXIMUM:
+		M = 0x02;
+		N = 0x01;
+		DIV = BSCTIM_DIV_6500000HZ;
+		P = 0x01;
+		break;
+	case BSC_SPD_HS:
+		M = 0x04;	/* 2; */
+		N = 0x01;	/* 2; */
+		DIV = BSCTIM_DIV_6500000HZ;
+		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+		P = 0x05;	/* 0x01; */
+		if (src_clk_26m)
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_TIMING_26MHZ);
+		else
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_TIMING);
+		break;
+		/* master clock is 26MHz for FPGA */
+	case BSC_SPD_100K_FPGA:
+		M = 0x01;
+		N = 0x01;
+		DIV = 2;
+		P = 0x06;
+		PRESCALE = 2;
+		break;
+	case BSC_SPD_400K_FPGA:
+		M = 0x04;
+		N = 0x01;
+		DIV = 0x3;
+		P = 0x05;
+		PRESCALE = 3;
+		break;
+	case BSC_SPD_HS_FPGA:
+		M = 0x04;
+		N = 0x01;
+		NO_DIV = 0;
+		DIV = 3;
+		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+		P = 0x07;
+		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+			      BSC_HS_HSMODE_TIMING);
+		break;
+	case BSC_SPD_100K:
+	default:
+		M = 0x01;
+		N = 0x01;
+		DIV = BSCTIM_DIV_3250000HZ;	/* BSCTIM_DIV_1625000HZ; */
+		P = 0x06;	/* 2; */
+		break;
+	}
 
-    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TIM_OFFSET), I2C_MM_HS_TIM_P_MASK, I2C_MM_HS_TIM_P_SHIFT, P);
-    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TIM_OFFSET), I2C_MM_HS_TIM_DIV_MASK, I2C_MM_HS_TIM_DIV_SHIFT, DIV);
-    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TIM_OFFSET), I2C_MM_HS_TIM_NO_DIV_MASK, I2C_MM_HS_TIM_NO_DIV_SHIFT, NO_DIV);
-    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TIM_OFFSET), I2C_MM_HS_TIM_PRESCALE_MASK, I2C_MM_HS_TIM_PRESCALE_SHIFT, PRESCALE);
-    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CLKEN_OFFSET), I2C_MM_HS_CLKEN_M_MASK, I2C_MM_HS_CLKEN_M_SHIFT, M);
-    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CLKEN_OFFSET), I2C_MM_HS_CLKEN_N_MASK, I2C_MM_HS_CLKEN_N_SHIFT, N);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TIM_OFFSET),
+			    I2C_MM_HS_TIM_P_MASK, I2C_MM_HS_TIM_P_SHIFT, P);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TIM_OFFSET),
+			    I2C_MM_HS_TIM_DIV_MASK, I2C_MM_HS_TIM_DIV_SHIFT,
+			    DIV);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TIM_OFFSET),
+			    I2C_MM_HS_TIM_NO_DIV_MASK,
+			    I2C_MM_HS_TIM_NO_DIV_SHIFT, NO_DIV);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TIM_OFFSET),
+			    I2C_MM_HS_TIM_PRESCALE_MASK,
+			    I2C_MM_HS_TIM_PRESCALE_SHIFT, PRESCALE);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CLKEN_OFFSET),
+			    I2C_MM_HS_CLKEN_M_MASK, I2C_MM_HS_CLKEN_M_SHIFT, M);
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CLKEN_OFFSET),
+			    I2C_MM_HS_CLKEN_N_MASK, I2C_MM_HS_CLKEN_N_SHIFT, N);
 }
 
 /**
@@ -369,7 +415,7 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed, bool 
 *****************************************************************************/
 static inline uint32_t bsc_get_tim(uint32_t baseAddr)
 {
-   return ( BSC_READ_REG(baseAddr+I2C_MM_HS_TIM_OFFSET) );
+	return (BSC_READ_REG(baseAddr + I2C_MM_HS_TIM_OFFSET));
 }
 
 /**
@@ -383,7 +429,7 @@ static inline uint32_t bsc_get_tim(uint32_t baseAddr)
 *****************************************************************************/
 static inline void bsc_set_tim(uint32_t baseAddr, uint32_t val)
 {
-   BSC_WRITE_REG((baseAddr+I2C_MM_HS_TIM_OFFSET), val);
+	BSC_WRITE_REG((baseAddr + I2C_MM_HS_TIM_OFFSET), val);
 }
 
 /**
@@ -398,20 +444,20 @@ static inline void bsc_set_tim(uint32_t baseAddr, uint32_t val)
 
 static inline void bsc_start_highspeed(uint32_t baseAddr)
 {
-    uint32_t val;
-#ifndef FPGA 
-    val = (7 << I2C_MM_HS_TIM_P_SHIFT) |
-          (I2C_MM_HS_TIM_PRESCALE_CMD_NODIV << I2C_MM_HS_TIM_PRESCALE_SHIFT) |
-          (I2C_MM_HS_TIM_NO_DIV_MASK); /* set to 0x3c;*/
+	uint32_t val;
+#ifndef FPGA
+	val = (7 << I2C_MM_HS_TIM_P_SHIFT) | (I2C_MM_HS_TIM_PRESCALE_CMD_NODIV << I2C_MM_HS_TIM_PRESCALE_SHIFT) | (I2C_MM_HS_TIM_NO_DIV_MASK);	/* set to 0x3c; */
 #else
-    val = (7 << I2C_MM_HS_TIM_P_SHIFT) |
-          (I2C_MM_HS_TIM_PRESCALE_CMD_NODIV << I2C_MM_HS_TIM_PRESCALE_SHIFT) |
-          (I2C_MM_HS_TIM_DIV_CMD_DIV2);
+	val = (7 << I2C_MM_HS_TIM_P_SHIFT) |
+	    (I2C_MM_HS_TIM_PRESCALE_CMD_NODIV << I2C_MM_HS_TIM_PRESCALE_SHIFT) |
+	    (I2C_MM_HS_TIM_DIV_CMD_DIV2);
 #endif
-    BSC_WRITE_REG((baseAddr+I2C_MM_HS_TIM_OFFSET),val);
+	BSC_WRITE_REG((baseAddr + I2C_MM_HS_TIM_OFFSET), val);
 
-    /* Configure Hs-mode timing register */
-    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_HSTIM_OFFSET), I2C_MM_HS_HSTIM_HS_MODE_MASK, I2C_MM_HS_HSTIM_HS_MODE_SHIFT, 1);
+	/* Configure Hs-mode timing register */
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+			    I2C_MM_HS_HSTIM_HS_MODE_MASK,
+			    I2C_MM_HS_HSTIM_HS_MODE_SHIFT, 1);
 }
 
 /**
@@ -425,10 +471,11 @@ static inline void bsc_start_highspeed(uint32_t baseAddr)
 *****************************************************************************/
 static inline void bsc_stop_highspeed(uint32_t baseAddr)
 {
-  /* Disable Hs-mode - leave other Hs-mode timing values untouched */
-    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_HSTIM_OFFSET), I2C_MM_HS_HSTIM_HS_MODE_MASK, I2C_MM_HS_HSTIM_HS_MODE_SHIFT, 0);
+	/* Disable Hs-mode - leave other Hs-mode timing values untouched */
+	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+			    I2C_MM_HS_HSTIM_HS_MODE_MASK,
+			    I2C_MM_HS_HSTIM_HS_MODE_SHIFT, 0);
 }
-
 
 /**
 *
@@ -443,27 +490,38 @@ static inline void bsc_stop_highspeed(uint32_t baseAddr)
 static inline void bsc_set_tx_fifo(uint32_t baseAddr, unsigned char enable)
 {
 	if (enable) {
-		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK, I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT ,1);
-	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_EN_MASK ,I2C_MM_HS_TXFCR_FIFO_EN_SHIFT,1);
-    } else {
-	    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK, I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT ,1);
-	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_EN_MASK ,I2C_MM_HS_TXFCR_FIFO_EN_SHIFT,0);
-    }
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TXFCR_OFFSET),
+				    I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK,
+				    I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT, 1);
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TXFCR_OFFSET),
+				    I2C_MM_HS_TXFCR_FIFO_EN_MASK,
+				    I2C_MM_HS_TXFCR_FIFO_EN_SHIFT, 1);
+	} else {
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TXFCR_OFFSET),
+				    I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK,
+				    I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT, 1);
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TXFCR_OFFSET),
+				    I2C_MM_HS_TXFCR_FIFO_EN_MASK,
+				    I2C_MM_HS_TXFCR_FIFO_EN_SHIFT, 0);
+	}
 }
 
-static inline void bsc_start_rx_fifo(uint32_t baseAddr, unsigned int noack, unsigned int len)
+static inline void bsc_start_rx_fifo(uint32_t baseAddr, unsigned int noack,
+				     unsigned int len)
 {
 	uint32_t val;
 
 	val = ((noack ? 1 : 0) << I2C_MM_HS_RXFCR_NACK_EN_SHIFT) |
-		((len << I2C_MM_HS_RXFCR_READ_COUNT_SHIFT) & I2C_MM_HS_RXFCR_READ_COUNT_MASK);
+	    ((len << I2C_MM_HS_RXFCR_READ_COUNT_SHIFT) &
+	     I2C_MM_HS_RXFCR_READ_COUNT_MASK);
 
 	BSC_WRITE_REG((baseAddr + I2C_MM_HS_RXFCR_OFFSET), val);
 }
 
 static uint8_t bsc_read_from_rx_fifo(uint32_t baseAddr)
 {
-	return (BSC_READ_REG(baseAddr + I2C_MM_HS_RXFIFORDOUT_OFFSET) & I2C_MM_HS_RXFIFORDOUT_RXFIFO_RDOUT_MASK);
+	return (BSC_READ_REG(baseAddr + I2C_MM_HS_RXFIFORDOUT_OFFSET) &
+		I2C_MM_HS_RXFIFORDOUT_RXFIFO_RDOUT_MASK);
 }
 
 /**
@@ -477,14 +535,14 @@ static uint8_t bsc_read_from_rx_fifo(uint32_t baseAddr)
 *****************************************************************************/
 static inline BSC_MODE_t bsc_set_mode(uint32_t baseAddr, BSC_MODE_t mode)
 {
-   (void) baseAddr;
+	(void)baseAddr;
 
-    if (mode != BSC_MODE_MASTER)
-    {
-        bsc_dprintf(CDBG_ERRO, "ERROR: bsc_set_mode: no slave support\n");
-    }
+	if (mode != BSC_MODE_MASTER) {
+		bsc_dprintf(CDBG_ERRO,
+			    "ERROR: bsc_set_mode: no slave support\n");
+	}
 
-    return BSC_MODE_MASTER;
+	return BSC_MODE_MASTER;
 }
 
 /**
@@ -498,10 +556,11 @@ static inline BSC_MODE_t bsc_set_mode(uint32_t baseAddr, BSC_MODE_t mode)
 *****************************************************************************/
 static inline void bsc_enable_intr(uint32_t baseAddr, uint32_t mask)
 {
-   /* clear pending interrupts */
-   BSC_WRITE_REG((baseAddr+I2C_MM_HS_ISR_OFFSET), mask);
+	/* clear pending interrupts */
+	BSC_WRITE_REG((baseAddr + I2C_MM_HS_ISR_OFFSET), mask);
 
-   BSC_WRITE_REG((baseAddr+I2C_MM_HS_IER_OFFSET), (bsc_get_enabled_intr(baseAddr) | mask) ) ;
+	BSC_WRITE_REG((baseAddr + I2C_MM_HS_IER_OFFSET),
+		      (bsc_get_enabled_intr(baseAddr) | mask));
 }
 
 /**
@@ -515,9 +574,9 @@ static inline void bsc_enable_intr(uint32_t baseAddr, uint32_t mask)
 *****************************************************************************/
 static inline void bsc_disable_intr(uint32_t baseAddr, uint32_t mask)
 {
-	BSC_WRITE_REG((baseAddr+I2C_MM_HS_IER_OFFSET), (bsc_get_enabled_intr(baseAddr) & (~mask)));
+	BSC_WRITE_REG((baseAddr + I2C_MM_HS_IER_OFFSET),
+		      (bsc_get_enabled_intr(baseAddr) & (~mask)));
 }
-
 
 /**
 *
@@ -530,9 +589,9 @@ static inline void bsc_disable_intr(uint32_t baseAddr, uint32_t mask)
 *****************************************************************************/
 static inline uint32_t bsc_get_enabled_intr(uint32_t baseAddr)
 {
-   return ( BSC_READ_REG(baseAddr+I2C_MM_HS_IER_OFFSET) & (~I2C_MM_HS_IER_RESERVED_MASK) );
+	return (BSC_READ_REG(baseAddr + I2C_MM_HS_IER_OFFSET) &
+		(~I2C_MM_HS_IER_RESERVED_MASK));
 }
-
 
 /**
 *
@@ -546,9 +605,9 @@ static inline uint32_t bsc_get_enabled_intr(uint32_t baseAddr)
 *****************************************************************************/
 static inline uint32_t bsc_read_intr_status(uint32_t baseAddr)
 {
-   return( BSC_READ_REG(baseAddr+I2C_MM_HS_ISR_OFFSET) & (~I2C_MM_HS_ISR_RESERVED_MASK) );
+	return (BSC_READ_REG(baseAddr + I2C_MM_HS_ISR_OFFSET) &
+		(~I2C_MM_HS_ISR_RESERVED_MASK));
 }
-
 
 /**
 *
@@ -560,9 +619,10 @@ static inline uint32_t bsc_read_intr_status(uint32_t baseAddr)
 *
 *  @note
 *****************************************************************************/
-static inline void bsc_clear_intr_status(uint32_t baseAddr, uint32_t mask )
+static inline void bsc_clear_intr_status(uint32_t baseAddr, uint32_t mask)
 {
-   BSC_WRITE_REG( (baseAddr+I2C_MM_HS_ISR_OFFSET), (bsc_read_intr_status(baseAddr) & (mask)) );
+	BSC_WRITE_REG((baseAddr + I2C_MM_HS_ISR_OFFSET),
+		      (bsc_read_intr_status(baseAddr) & (mask)));
 }
 
 /**
@@ -578,50 +638,56 @@ static inline void isl_bsc_send_cmd(uint32_t baseAddr, BSC_CMD_t cmd)
 {
 	uint8_t temp;
 
-	temp = BSC_READ_REG((baseAddr+I2C_MM_HS_CS_OFFSET));
+	temp = BSC_READ_REG((baseAddr + I2C_MM_HS_CS_OFFSET));
 
-    bsc_dprintf( CDBG_INFO, "bsc_send_cmd, %d\n", cmd);
-    switch (cmd) {
-        case BSC_CMD_NOACTION:
-            temp = (temp & ~I2C_MM_HS_CS_CMD_MASK & ~I2C_MM_HS_CS_ACK_MASK) |
-                (I2C_MM_HS_CS_CMD_CMD_NO_ACTION << I2C_MM_HS_CS_CMD_SHIFT);
-			break;
-		case BSC_CMD_START:
-            temp = (temp & ~I2C_MM_HS_CS_ACK_MASK & ~I2C_MM_HS_CS_CMD_MASK) |
-                (I2C_MM_HS_CS_CMD_CMD_GEN_START << I2C_MM_HS_CS_CMD_SHIFT);
-			break;
-		case BSC_CMD_RESTART:
-            temp = (temp & ~I2C_MM_HS_CS_CMD_MASK) | I2C_MM_HS_CS_ACK_MASK |
-                (I2C_MM_HS_CS_CMD_CMD_GEN_START << I2C_MM_HS_CS_CMD_SHIFT);
-			break;
-        case BSC_CMD_STOP:
-            temp = (temp & ~I2C_MM_HS_CS_CMD_MASK) |
-                I2C_MM_HS_CS_CMD_CMD_GEN_STOP << I2C_MM_HS_CS_CMD_SHIFT;
-			break;
+	bsc_dprintf(CDBG_INFO, "bsc_send_cmd, %d\n", cmd);
+	switch (cmd) {
+	case BSC_CMD_NOACTION:
+		temp =
+		    (temp & ~I2C_MM_HS_CS_CMD_MASK & ~I2C_MM_HS_CS_ACK_MASK) |
+		    (I2C_MM_HS_CS_CMD_CMD_NO_ACTION << I2C_MM_HS_CS_CMD_SHIFT);
+		break;
+	case BSC_CMD_START:
+		temp =
+		    (temp & ~I2C_MM_HS_CS_ACK_MASK & ~I2C_MM_HS_CS_CMD_MASK) |
+		    (I2C_MM_HS_CS_CMD_CMD_GEN_START << I2C_MM_HS_CS_CMD_SHIFT);
+		break;
+	case BSC_CMD_RESTART:
+		temp = (temp & ~I2C_MM_HS_CS_CMD_MASK) | I2C_MM_HS_CS_ACK_MASK |
+		    (I2C_MM_HS_CS_CMD_CMD_GEN_START << I2C_MM_HS_CS_CMD_SHIFT);
+		break;
+	case BSC_CMD_STOP:
+		temp = (temp & ~I2C_MM_HS_CS_CMD_MASK) |
+		    I2C_MM_HS_CS_CMD_CMD_GEN_STOP << I2C_MM_HS_CS_CMD_SHIFT;
+		break;
 
-        case BSC_CMD_READ_ACK:
-            temp = (temp & ~I2C_MM_HS_CS_ACK_MASK & ~I2C_MM_HS_CS_CMD_MASK) |
-                (I2C_MM_HS_CS_CMD_CMD_RD_A_BYTE << I2C_MM_HS_CS_CMD_SHIFT);
-            break;
-        case BSC_CMD_READ_NAK:
-            temp = (temp & ~I2C_MM_HS_CS_CMD_MASK) | I2C_MM_HS_CS_ACK_MASK |
-                (I2C_MM_HS_CS_CMD_CMD_RD_A_BYTE << I2C_MM_HS_CS_CMD_SHIFT);
-            break;
-        case BSC_CMD_HS_STOP:
-            /* For high speed stop, need to set different value for BSC_TIM */
-            {
-                uint32_t val;
-                /* Configure PRESCALE, p & DIV bit field */
-                val = (I2C_MM_HS_TIM_PRESCALE_CMD_DIV4 << I2C_MM_HS_TIM_PRESCALE_SHIFT) | (  5 << I2C_MM_HS_TIM_P_SHIFT ) \
-                    | ( I2C_MM_HS_TIM_DIV_CMD_DIV2 );
-                BSC_WRITE_REG((baseAddr+I2C_MM_HS_TIM_OFFSET),val);
-            }
-            temp = (temp & ~I2C_MM_HS_CS_CMD_MASK) |
-                I2C_MM_HS_CS_CMD_CMD_GEN_STOP << I2C_MM_HS_CS_CMD_SHIFT;
-            break;
-    }
+	case BSC_CMD_READ_ACK:
+		temp =
+		    (temp & ~I2C_MM_HS_CS_ACK_MASK & ~I2C_MM_HS_CS_CMD_MASK) |
+		    (I2C_MM_HS_CS_CMD_CMD_RD_A_BYTE << I2C_MM_HS_CS_CMD_SHIFT);
+		break;
+	case BSC_CMD_READ_NAK:
+		temp = (temp & ~I2C_MM_HS_CS_CMD_MASK) | I2C_MM_HS_CS_ACK_MASK |
+		    (I2C_MM_HS_CS_CMD_CMD_RD_A_BYTE << I2C_MM_HS_CS_CMD_SHIFT);
+		break;
+	case BSC_CMD_HS_STOP:
+		/* For high speed stop, need to set different value for BSC_TIM */
+		{
+			uint32_t val;
+			/* Configure PRESCALE, p & DIV bit field */
+			val =
+			    (I2C_MM_HS_TIM_PRESCALE_CMD_DIV4 <<
+			     I2C_MM_HS_TIM_PRESCALE_SHIFT) | (5 <<
+							      I2C_MM_HS_TIM_P_SHIFT)
+			    | (I2C_MM_HS_TIM_DIV_CMD_DIV2);
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_TIM_OFFSET), val);
+		}
+		temp = (temp & ~I2C_MM_HS_CS_CMD_MASK) |
+		    I2C_MM_HS_CS_CMD_CMD_GEN_STOP << I2C_MM_HS_CS_CMD_SHIFT;
+		break;
+	}
 
-	BSC_WRITE_REG((baseAddr+I2C_MM_HS_CS_OFFSET), temp);
+	BSC_WRITE_REG((baseAddr + I2C_MM_HS_CS_OFFSET), temp);
 }
 
 /**
@@ -634,14 +700,15 @@ static inline void isl_bsc_send_cmd(uint32_t baseAddr, BSC_CMD_t cmd)
 *
 *  @return Number of bytes read
 *****************************************************************************/
-static inline uint32_t bsc_read_data(uint32_t baseAddr, uint8_t *pBuffer, uint32_t size)
+static inline uint32_t bsc_read_data(uint32_t baseAddr, uint8_t *pBuffer,
+				     uint32_t size)
 {
-   (void) size;
+	(void)size;
 
-	pBuffer[0] = BSC_READ_REG(baseAddr+I2C_MM_HS_DAT_OFFSET);
+	pBuffer[0] = BSC_READ_REG(baseAddr + I2C_MM_HS_DAT_OFFSET);
 
-    /* no RX FIFO */
-    return 1;
+	/* no RX FIFO */
+	return 1;
 }
 
 /**
@@ -655,13 +722,14 @@ static inline uint32_t bsc_read_data(uint32_t baseAddr, uint8_t *pBuffer, uint32
 *  @return Number of bytes written
 *****************************************************************************/
 
-static inline uint32_t bsc_write_data(uint32_t baseAddr, uint8_t *pBuffer, uint32_t size)
+static inline uint32_t bsc_write_data(uint32_t baseAddr, uint8_t *pBuffer,
+				      uint32_t size)
 {
-    uint16_t i=0;
-    for(i=0;i<size;i++) {
-        BSC_WRITE_REG((baseAddr+I2C_MM_HS_DAT_OFFSET), pBuffer[i]);
-    }
-    return size;
+	uint16_t i = 0;
+	for (i = 0; i < size; i++) {
+		BSC_WRITE_REG((baseAddr + I2C_MM_HS_DAT_OFFSET), pBuffer[i]);
+	}
+	return size;
 }
 
 /**
@@ -674,10 +742,14 @@ static inline uint32_t bsc_write_data(uint32_t baseAddr, uint8_t *pBuffer, uint3
 *****************************************************************************/
 static inline void bsc_set_timeout(uint32_t baseAddr, unsigned char on)
 {
-   if (on)
-	  BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET),  I2C_MM_HS_TOUT_TE_MASK,  I2C_MM_HS_TOUT_TE_SHIFT, 1 ) ;
-   else
-	  BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET),  I2C_MM_HS_TOUT_TE_MASK,  I2C_MM_HS_TOUT_TE_SHIFT, 0 ) ;
+	if (on)
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TOUT_OFFSET),
+				    I2C_MM_HS_TOUT_TE_MASK,
+				    I2C_MM_HS_TOUT_TE_SHIFT, 1);
+	else
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TOUT_OFFSET),
+				    I2C_MM_HS_TOUT_TE_MASK,
+				    I2C_MM_HS_TOUT_TE_SHIFT, 0);
 }
 
 /**
@@ -690,11 +762,13 @@ static inline void bsc_set_timeout(uint32_t baseAddr, unsigned char on)
 *****************************************************************************/
 static inline unsigned char bsc_get_timeout(uint32_t baseAddr)
 {
-    uint8_t temp;
+	uint8_t temp;
 
-	temp = BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET), I2C_MM_HS_TOUT_TE_MASK, I2C_MM_HS_TOUT_TE_SHIFT);
+	temp =
+	    BSC_READ_REG_FIELD((baseAddr + I2C_MM_HS_TOUT_OFFSET),
+			       I2C_MM_HS_TOUT_TE_MASK, I2C_MM_HS_TOUT_TE_SHIFT);
 
-    return temp;
+	return temp;
 }
 
 /**
@@ -707,11 +781,14 @@ static inline unsigned char bsc_get_timeout(uint32_t baseAddr)
 *****************************************************************************/
 static inline unsigned char bsc_get_autosense(uint32_t baseAddr)
 {
-    uint8_t temp;
+	uint8_t temp;
 
-	temp = BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_CLKEN_OFFSET), I2C_MM_HS_CLKEN_AUTOSENSE_OFF_MASK, I2C_MM_HS_CLKEN_AUTOSENSE_OFF_SHIFT );
+	temp =
+	    BSC_READ_REG_FIELD((baseAddr + I2C_MM_HS_CLKEN_OFFSET),
+			       I2C_MM_HS_CLKEN_AUTOSENSE_OFF_MASK,
+			       I2C_MM_HS_CLKEN_AUTOSENSE_OFF_SHIFT);
 
-    return (!(temp));
+	return (!(temp));
 }
 
 /**
@@ -722,23 +799,29 @@ static inline unsigned char bsc_get_autosense(uint32_t baseAddr)
 *
 *  @return none
 *****************************************************************************/
-static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on, unsigned char timeout_enable)
+static inline void bsc_set_autosense(uint32_t baseAddr, unsigned char on,
+				     unsigned char timeout_enable)
 {
-    if (on)
-    {
-		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CLKEN_OFFSET),I2C_MM_HS_CLKEN_AUTOSENSE_OFF_MASK , I2C_MM_HS_CLKEN_AUTOSENSE_OFF_SHIFT, 0);
-      /* When autosense is ON, a device may stretch clock very long time
-		   We use max timeout value (1023 6.5MHz cycles)*/
-		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET), I2C_MM_HS_TOUT_TOUT_LOW_MASK, I2C_MM_HS_TOUT_TOUT_LOW_SHIFT, 0x7F);
-		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TOUT_OFFSET), I2C_MM_HS_TOUT_TOUT_HIGH_MASK,I2C_MM_HS_TOUT_TOUT_HIGH_SHIFT, 0x7);
+	if (on) {
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CLKEN_OFFSET),
+				    I2C_MM_HS_CLKEN_AUTOSENSE_OFF_MASK,
+				    I2C_MM_HS_CLKEN_AUTOSENSE_OFF_SHIFT, 0);
+		/* When autosense is ON, a device may stretch clock very long time
+		   We use max timeout value (1023 6.5MHz cycles) */
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TOUT_OFFSET),
+				    I2C_MM_HS_TOUT_TOUT_LOW_MASK,
+				    I2C_MM_HS_TOUT_TOUT_LOW_SHIFT, 0x7F);
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TOUT_OFFSET),
+				    I2C_MM_HS_TOUT_TOUT_HIGH_MASK,
+				    I2C_MM_HS_TOUT_TOUT_HIGH_SHIFT, 0x7);
 		bsc_set_timeout(baseAddr, timeout_enable);
-    }
-    else
-    {
-		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CLKEN_OFFSET), I2C_MM_HS_CLKEN_AUTOSENSE_OFF_MASK, I2C_MM_HS_CLKEN_AUTOSENSE_OFF_SHIFT, 1);
+	} else {
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CLKEN_OFFSET),
+				    I2C_MM_HS_CLKEN_AUTOSENSE_OFF_MASK,
+				    I2C_MM_HS_CLKEN_AUTOSENSE_OFF_SHIFT, 1);
 		/* Timeout feature is not used when autosense is off */
 		bsc_set_timeout(baseAddr, 0);
-    }
+	}
 }
 
 /**
@@ -753,7 +836,10 @@ static inline unsigned char bsc_get_bus_status(uint32_t baseAddr)
 {
 	uint8_t temp;
 
-	temp = BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_TXCOUNT_OFFSET), I2C_MM_HS_TXCOUNT_STATUS_MASK, I2C_MM_HS_TXCOUNT_STATUS_SHIFT );
+	temp =
+	    BSC_READ_REG_FIELD((baseAddr + I2C_MM_HS_TXCOUNT_OFFSET),
+			       I2C_MM_HS_TXCOUNT_STATUS_MASK,
+			       I2C_MM_HS_TXCOUNT_STATUS_SHIFT);
 
 	return temp;
 }
@@ -762,7 +848,10 @@ static inline int bsc_tx_fifo_is_full(uint32_t baseAddr)
 {
 	uint32_t val;
 
-	val = BSC_READ_REG(baseAddr + I2C_MM_HS_FIFO_STATUS_OFFSET) & I2C_MM_HS_FIFO_STATUS_TXFIFO_FULL_MASK;
+	val =
+	    BSC_READ_REG(baseAddr +
+			 I2C_MM_HS_FIFO_STATUS_OFFSET) &
+	    I2C_MM_HS_FIFO_STATUS_TXFIFO_FULL_MASK;
 	return (val ? 1 : 0);
 }
 
@@ -770,7 +859,10 @@ static inline int bsc_tx_fifo_is_empty(uint32_t baseAddr)
 {
 	uint32_t val;
 
-	val = BSC_READ_REG(baseAddr + I2C_MM_HS_FIFO_STATUS_OFFSET) & I2C_MM_HS_FIFO_STATUS_TXFIFO_EMPTY_MASK;
+	val =
+	    BSC_READ_REG(baseAddr +
+			 I2C_MM_HS_FIFO_STATUS_OFFSET) &
+	    I2C_MM_HS_FIFO_STATUS_TXFIFO_EMPTY_MASK;
 	return (val ? 1 : 0);
 }
 
@@ -778,7 +870,10 @@ static inline int bsc_rx_fifo_is_full(uint32_t baseAddr)
 {
 	uint32_t val;
 
-	val = BSC_READ_REG(baseAddr + I2C_MM_HS_FIFO_STATUS_OFFSET) & I2C_MM_HS_FIFO_STATUS_RXFIFO_FULL_MASK;
+	val =
+	    BSC_READ_REG(baseAddr +
+			 I2C_MM_HS_FIFO_STATUS_OFFSET) &
+	    I2C_MM_HS_FIFO_STATUS_RXFIFO_FULL_MASK;
 	return (val ? 1 : 0);
 }
 
@@ -786,7 +881,10 @@ static inline int bsc_rx_fifo_is_empty(uint32_t baseAddr)
 {
 	uint32_t val;
 
-	val = BSC_READ_REG(baseAddr + I2C_MM_HS_FIFO_STATUS_OFFSET) & I2C_MM_HS_FIFO_STATUS_RXFIFO_EMPTY_MASK;
+	val =
+	    BSC_READ_REG(baseAddr +
+			 I2C_MM_HS_FIFO_STATUS_OFFSET) &
+	    I2C_MM_HS_FIFO_STATUS_RXFIFO_EMPTY_MASK;
 	return (val ? 1 : 0);
 }
 
@@ -802,13 +900,15 @@ static inline unsigned char bsc_get_ack(uint32_t baseAddr)
 {
 	uint8_t temp;
 
-	temp = BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_ACK_MASK, I2C_MM_HS_CS_ACK_SHIFT);
+	temp =
+	    BSC_READ_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			       I2C_MM_HS_CS_ACK_MASK, I2C_MM_HS_CS_ACK_SHIFT);
 
-   /* ACK is active low */
-   if (temp)
-      return 0;
-   else
-      return 1;
+	/* ACK is active low */
+	if (temp)
+		return 0;
+	else
+		return 1;
 }
 
 /**
@@ -823,9 +923,11 @@ static inline unsigned char bsc_get_sda(uint32_t baseAddr)
 {
 	uint8_t temp;
 
-	temp = BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET),I2C_MM_HS_CS_SDA_MASK , I2C_MM_HS_CS_SDA_SHIFT);
+	temp =
+	    BSC_READ_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			       I2C_MM_HS_CS_SDA_MASK, I2C_MM_HS_CS_SDA_SHIFT);
 
-    return temp;
+	return temp;
 }
 
 /**
@@ -839,10 +941,14 @@ static inline unsigned char bsc_get_sda(uint32_t baseAddr)
 *****************************************************************************/
 static inline void bsc_set_sda(uint32_t baseAddr, unsigned char state)
 {
-    if (state)
-		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_SDA_MASK, I2C_MM_HS_CS_SDA_SHIFT, 1 ) ;
-    else
-		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_SDA_MASK, I2C_MM_HS_CS_SDA_SHIFT, 0 ) ;
+	if (state)
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+				    I2C_MM_HS_CS_SDA_MASK,
+				    I2C_MM_HS_CS_SDA_SHIFT, 1);
+	else
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+				    I2C_MM_HS_CS_SDA_MASK,
+				    I2C_MM_HS_CS_SDA_SHIFT, 0);
 }
 
 /**
@@ -857,9 +963,11 @@ static inline unsigned char bsc_get_scl(uint32_t baseAddr)
 {
 	uint8_t temp;
 
-	temp = BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_SCL_MASK, I2C_MM_HS_CS_SCL_SHIFT );
+	temp =
+	    BSC_READ_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+			       I2C_MM_HS_CS_SCL_MASK, I2C_MM_HS_CS_SCL_SHIFT);
 
-    return temp;
+	return temp;
 }
 
 /**
@@ -873,12 +981,15 @@ static inline unsigned char bsc_get_scl(uint32_t baseAddr)
 *****************************************************************************/
 static inline void bsc_set_scl(uint32_t baseAddr, unsigned char state)
 {
-    if (state)
-		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_SCL_MASK, I2C_MM_HS_CS_SCL_SHIFT, 1 ) ;
+	if (state)
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+				    I2C_MM_HS_CS_SCL_MASK,
+				    I2C_MM_HS_CS_SCL_SHIFT, 1);
 	else
-		BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_SCL_MASK, I2C_MM_HS_CS_SCL_SHIFT, 0 ) ;
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_CS_OFFSET),
+				    I2C_MM_HS_CS_SCL_MASK,
+				    I2C_MM_HS_CS_SCL_SHIFT, 0);
 }
-
 
 /**
 *
@@ -889,12 +1000,16 @@ static inline void bsc_set_scl(uint32_t baseAddr, unsigned char state)
 *
 *  @return none
 *****************************************************************************/
-static inline void bsc_set_soft_reset(uint32_t baseAddr, unsigned char enable )
+static inline void bsc_set_soft_reset(uint32_t baseAddr, unsigned char enable)
 {
-   if( enable )
-      BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_SFTRST_OFFSET),I2C_MM_HS_SFTRST_SWRST_MASK , I2C_MM_HS_SFTRST_SWRST_SHIFT, 1);
-   else
-      BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_SFTRST_OFFSET),I2C_MM_HS_SFTRST_SWRST_MASK , I2C_MM_HS_SFTRST_SWRST_SHIFT, 0);
+	if (enable)
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_SFTRST_OFFSET),
+				    I2C_MM_HS_SFTRST_SWRST_MASK,
+				    I2C_MM_HS_SFTRST_SWRST_SHIFT, 1);
+	else
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_SFTRST_OFFSET),
+				    I2C_MM_HS_SFTRST_SWRST_MASK,
+				    I2C_MM_HS_SFTRST_SWRST_SHIFT, 0);
 }
 
 /**
@@ -908,7 +1023,9 @@ static inline void bsc_set_soft_reset(uint32_t baseAddr, unsigned char enable )
 *****************************************************************************/
 static inline unsigned char bsc_get_soft_reset(uint32_t baseAddr)
 {
-   return( BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_SFTRST_OFFSET), I2C_MM_HS_SFTRST_SWRST_MASK, I2C_MM_HS_SFTRST_SWRST_SHIFT));
+	return (BSC_READ_REG_FIELD
+		((baseAddr + I2C_MM_HS_SFTRST_OFFSET),
+		 I2C_MM_HS_SFTRST_SWRST_MASK, I2C_MM_HS_SFTRST_SWRST_SHIFT));
 }
 
 /**
@@ -922,7 +1039,8 @@ static inline unsigned char bsc_get_soft_reset(uint32_t baseAddr)
 *****************************************************************************/
 static inline unsigned char bsc_get_soft_reset_ready(uint32_t baseAddr)
 {
-   return( BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_SFTRST_OFFSET), I2C_MM_HS_SFTRST_SWRST_RDY_MASK, I2C_MM_HS_SFTRST_SWRST_RDY_SHIFT));
+	return (BSC_READ_REG_FIELD
+		((baseAddr + I2C_MM_HS_SFTRST_OFFSET),
+		 I2C_MM_HS_SFTRST_SWRST_RDY_MASK,
+		 I2C_MM_HS_SFTRST_SWRST_RDY_SHIFT));
 }
-
-

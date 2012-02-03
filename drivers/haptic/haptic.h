@@ -1,8 +1,8 @@
 /*
- *  Haptic Core
+ * Haptic Core
  *
- *  Copyright (C) 2008 Samsung Electronics
- *  Kyungmin Park <kyungmin.park@samsung.com>
+ * Copyright (C) 2008 Samsung Electronics
+ * Kyungmin Park <kyungmin.park@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,7 +18,7 @@
 #include <linux/haptic.h>
 
 static inline void haptic_set_value(struct haptic_classdev *haptic_cdev,
-					enum haptic_value value)
+				    enum haptic_value value)
 {
 	if (value > HAPTIC_FULL)
 		value = HAPTIC_FULL;
@@ -32,4 +32,4 @@ static inline int haptic_get_value(struct haptic_classdev *haptic_cdev)
 	return haptic_cdev->value;
 }
 
-#endif	/* __HAPTIC_H_INCLUDED */
+#endif /* __HAPTIC_H_INCLUDED */
