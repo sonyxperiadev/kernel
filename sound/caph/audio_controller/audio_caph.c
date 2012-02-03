@@ -48,6 +48,17 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_caph.h"
 #include "caph_common.h"
 
+#define USE_HR_TIMER
+
+#ifdef USE_HR_TIMER
+#include <linux/hrtimer.h>
+#include <linux/ktime.h>
+#define MS_TO_NS(x) (x * 1E6L)
+static struct hrtimer hr_timer;
+static ktime_t ktime;
+#endif
+
+
 /* ---- Data structure  ------------------------------------------------- */
 
 /**
@@ -92,18 +103,31 @@ static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 static struct TAudioHalThreadData sgThreadData;
 #define	KFIFO_SIZE		(9*sizeof(TMsgAudioCtrl))
 
-static struct timer_list gTimerVib;
-static struct timer_list *gpVibratorTimer;
 
 static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			void *arg_param, void *callback, int block);
 
+#ifdef USE_HR_TIMER
+static enum hrtimer_restart TimerCbStopVibrator(struct hrtimer *timer)
+{
+	AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra, NULL, NULL, 0);
+
+	DEBUG("Disable Vib from HR Timer  cb\n");
+
+	return HRTIMER_NORESTART;
+}
+
+#else
+static struct timer_list gTimerVib;
+static struct timer_list *gpVibratorTimer;
 void TimerCbStopVibrator(unsigned long priv)
 {
 	AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra, NULL, NULL, 0);
 	/* AUDCTRL_DisableBypassVibra(); */
+
 	DEBUG("Disable Vib from timer cb\n");
 }
+#endif
 
 /**
  * AudioCtrlWorkThread: Worker thread, it query KFIFO for operation message
@@ -201,7 +225,9 @@ int LaunchAudioCtrlThread(void)
 	if (!sgThreadData.pWorkqueue_AudioControl)
 		DEBUG("\n Error : Can not create work queue:AudioCtrlWq\n");
 	sgThreadData.action_complete = OSSEMAPHORE_Create(0, 0);
+#ifndef USE_HR_TIMER
 	gpVibratorTimer = NULL;
+#endif
 	return ret;
 }
 
@@ -729,6 +755,18 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDCTRL_EnableBypassVibra(parm_vibra->strength,
 				parm_vibra->direction);
 
+			#ifdef USE_HR_TIMER
+			ktime = ktime_set(0,
+			(parm_vibra->duration*1000000));
+
+			hrtimer_init(&hr_timer, CLOCK_MONOTONIC,
+				HRTIMER_MODE_REL);
+
+			hr_timer.function = &TimerCbStopVibrator;
+
+			hrtimer_start(&hr_timer, ktime,
+				HRTIMER_MODE_REL);
+			#else
 			if (gpVibratorTimer) {
 				del_timer_sync(gpVibratorTimer);
 				gpVibratorTimer = NULL;
@@ -743,14 +781,19 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					msecs_to_jiffies(parm_vibra->duration);
 				add_timer(gpVibratorTimer);
 			}
+			#endif
 		}
 		break;
 	case ACTION_AUD_DisableByPassVibra:
 		DEBUG("ACTION_AUD_DisableByPassVibra\n");
+#ifdef USE_HR_TIMER
+		hrtimer_cancel(&hr_timer);
+#else
 		if (gpVibratorTimer) {
 			del_timer_sync(gpVibratorTimer);
 			gpVibratorTimer = NULL;
 		}
+#endif
 		/* stop it */
 		AUDCTRL_DisableBypassVibra();
 		break;
