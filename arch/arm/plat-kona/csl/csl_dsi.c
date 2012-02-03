@@ -2245,6 +2245,8 @@ CSL_LCD_RES_T  CSL_DSI_Close ( UInt32 bus )
 	chal_dsi_phy_afe_off ( dsiH->chalH );
 	dsiH->init = ~DSI_INITIALIZED;
 
+	cslDsiAfeLdoSetState ( dsiH, DSI_LDO_OFF);
+
 	LCD_DBG(LCD_DBG_INIT_ID, "[CSL DSI][%d] %s: OK\n", bus,	__FUNCTION__ );
 
 CSL_DSI_CloseRet:    
