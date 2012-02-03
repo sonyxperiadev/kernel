@@ -694,6 +694,8 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.support_fg = 1,
 	.bc = BCMPMU_BC_BB_BC12,
 	.wd_setting = &bcm59055_wd_setting,
+	.batt_model = "Unknown",
+	.cutoff_volt = 3200,
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {
