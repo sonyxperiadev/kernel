@@ -60,6 +60,14 @@ extern void dormant_enter(void);
 
 static u32 force_retention = 0;
 static u32 pm_debug = 2;
+/* Set this to 1 to enable dormant from boot */
+static u32 dormant_enable;
+
+#define CHIPREG_PERIPH_SPARE_CONTROL2    \
+	(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET)
+
+static struct pi_mgr_qos_node arm_qos;
+
 #ifdef CONFIG_ARCH_RHEA_A0
 static u32 pm_en_self_refresh = 0;
 #endif
@@ -74,16 +82,24 @@ char* noncache_buf_va;
 static int print_clock_count(void);
 static int print_sw_event_info(void);
 #endif
-static int enter_dormant_state(struct kona_idle_state* state);
+static int enter_idle_state(struct kona_idle_state *state);
 static int enter_suspend_state(struct kona_idle_state* state);
 
-enum
-{
+enum {
 	RHEA_STATE_C0,
 	RHEA_STATE_C1,
-	RHEA_STATE_C2
+	RHEA_STATE_C2,
+	RHEA_STATE_C3,
+	RHEA_STATE_C4,
 };
 
+enum {
+	RHEA_STATE_C0_LATENCY = 0,
+	RHEA_STATE_C1_LATENCY = 200,
+	RHEA_STATE_C2_LATENCY = 300,
+	RHEA_STATE_C3_LATENCY = 400,
+	RHEA_STATE_C4_LATENCY = 500,
+};
 
 const char *sleep_prevent_clocks[] =
 		{
@@ -109,57 +125,49 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.name = "C0",
 		.desc = "suspend",
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 0,
+		.latency = RHEA_STATE_C0_LATENCY,
 		.target_residency = 0,
 		.state = RHEA_STATE_C0,
 		.enter = enter_suspend_state,
 	},
-
-#ifdef CONFIG_RHEA_DORMANT_MODE
-
-	{
-		.name = "C1",
-		.desc = "suspend-drmnt", /*suspend-dormant*/
-		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 200,
-		.target_residency = 200,
-		.state = RHEA_STATE_C1,
-		.enter = enter_dormant_state,
-	},
-
-	{
-		.name = "C2",
-		.desc = "ds-drmnt", /*deepsleep-dormant(XTAL OFF)*/
-		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 300,
-		.target_residency = 300,
-		.state = RHEA_STATE_C2,
-		.enter = enter_dormant_state,
-	},
-
-#else
 	{
 		.name = "C1",
 		.desc = "suspend-rtn", /*suspend-retention (XTAL ON)*/
-		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 200,
+		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
+		.latency = RHEA_STATE_C1_LATENCY,
 		.target_residency = 200,
 		.state = RHEA_STATE_C1,
-		.enter = enter_dormant_state,
+		.enter = enter_idle_state,
 	},
 	{
 		.name = "C2",
 		.desc = "ds-retn", /*deepsleep-retention (XTAL OFF)*/
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 300,
+		.latency = RHEA_STATE_C2_LATENCY,
 		.target_residency = 300,
 		.state = RHEA_STATE_C2,
-		.enter = enter_dormant_state,
+		.enter = enter_idle_state,
 	},
-
+#ifdef CONFIG_RHEA_DORMANT_MODE
+	{
+		.name = "C3",
+		.desc = "suspend-drmnt", /* suspend-dormant */
+		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
+		.latency = RHEA_STATE_C3_LATENCY,
+		.target_residency = 400,
+		.state = RHEA_STATE_C3,
+		.enter = enter_idle_state,
+	}, {
+		.name = "C4",
+		.desc = "ds-drmnt", /* deepsleep-dormant(XTAL OFF) */
+		.flags = CPUIDLE_FLAG_TIME_VALID,
+		.latency = RHEA_STATE_C4_LATENCY,
+		.target_residency = 500,
+		.state = RHEA_STATE_C4,
+		.enter = enter_idle_state,
+	},
 #endif
 };
-
 
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 static int enable_sleep_prevention_clock(int enable)
@@ -244,11 +252,7 @@ static int pm_config_deep_sleep(void)
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
 	clk_set_crystal_pwr_on_idle(true);
-#ifdef CONFIG_RHEA_DORMANT_MODE
-	pwr_mgr_arm_core_dormant_enable(true /*allow dormant*/);
-#else
-	pwr_mgr_arm_core_dormant_enable(false /*disallow dormant*/);
-#endif /*CONFIG_RHEA_DORMANT_MODE*/
+
 	pm_enable_scu_standby(true);
 
 	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
@@ -264,18 +268,6 @@ static int pm_config_deep_sleep(void)
 	pm_enable_self_refresh(true);
 #endif
 
-#ifndef CONFIG_ARCH_RHEA_A0
-/*In rentetion mode A9 cache memory PM togling pin should be disabled
-otherwise the memory periphary will be powered down in retention
-which may cause system to hang - This bit was added in B0*/
-	reg_val = readl(KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
-#ifdef CONFIG_RHEA_DORMANT_MODE
-	reg_val &= ~CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
-#else /*A9 retnetion*/
-	reg_val |= CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
-#endif
-	writel(reg_val, KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
-#endif /*CONFIG_ARCH_RHEA_A0*/
     return 0;
 }
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
@@ -412,8 +404,40 @@ int enter_suspend_state(struct kona_idle_state* state)
 	return -1;
 }
 
+static int enter_dormant_state(struct kona_idle_state *state)
+{
+#ifdef CONFIG_RHEA_DORMANT_MODE
+#ifndef CONFIG_ARCH_RHEA_A0
+	u32 v;
+#endif
+	if (dormant_enable != 0) {
 
-int enter_dormant_state(struct kona_idle_state* state)
+		pwr_mgr_arm_core_dormant_enable(true);
+#ifndef CONFIG_ARCH_RHEA_A0
+		/* In rentetion mode A9 cache memory PM togling pin
+		 * should be disabled otherwise the memory periphary
+		 * will be powered down in retention which may cause
+		 * system to hang - This bit was added in B0
+		 */
+		v = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
+		v &= ~CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
+		writel(v, CHIPREG_PERIPH_SPARE_CONTROL2);
+#endif
+
+		dormant_enter();
+
+#ifndef CONFIG_ARCH_RHEA_A0
+		v = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
+		v |= CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
+		writel(v, CHIPREG_PERIPH_SPARE_CONTROL2);
+#endif
+		pwr_mgr_arm_core_dormant_enable(false);
+	}
+#endif /* CONFIG_RHEA_DORMANT_MODE */
+	return 0;
+}
+
+int enter_idle_state(struct kona_idle_state *state)
 {
 	struct pi* pi = NULL;
 #ifdef CONFIG_RHEA_WA_CRMEMC_919
@@ -446,7 +470,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 #endif
 
 	/*Turn off XTAL only for deep sleep state*/
-	if(state->state == RHEA_STATE_C1)
+	if (state->flags & CPUIDLE_FLAG_XTAL_ON)
 		clk_set_crystal_pwr_on_idle(false);
 /*JIRA HWRHEA-1659 : Remove this workaround for B0*/
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
@@ -511,12 +535,19 @@ int enter_dormant_state(struct kona_idle_state* state)
 			temp_val = *(volatile u32 *)noncache_buf_tmp_va;
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2221*/
-#ifdef CONFIG_RHEA_DORMANT_MODE
-	dormant_enter();
-#else
-	pm_set_scu_power_mode(SCU_STATUS_DORMANT);
-	enter_wfi();
-#endif
+
+	switch (state->state) {
+	case RHEA_STATE_C1:
+	case RHEA_STATE_C2:
+		pm_set_scu_power_mode(SCU_STATUS_DORMANT);
+		enter_wfi();
+		break;
+	case RHEA_STATE_C3:
+	case RHEA_STATE_C4:
+		enter_dormant_state(state);
+		break;
+	}
+
 #ifdef CONFIG_RHEA_WA_CRMEMC_919
  /*
 	Workaround for JIRA CRMEMC-919(Periodic device temperature polling will
@@ -619,7 +650,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 	ccu_write_access_enable(ccu_clk, false);
 #endif
 
-	if(state->state == RHEA_STATE_C1)
+	if (state->flags & CPUIDLE_FLAG_XTAL_ON)
 		clk_set_crystal_pwr_on_idle(true);
 	return -1;
 }
@@ -641,6 +672,7 @@ int __init rhea_pm_init(void)
     pm_config_deep_sleep();
 	return kona_pm_init();
 }
+device_initcall(rhea_pm_init);
 
 
 #ifdef CONFIG_DEBUG_FS
@@ -703,9 +735,28 @@ static int enable_self_refresh(void *data, u64 val)
 
 DEFINE_SIMPLE_ATTRIBUTE(pm_en_self_refresh_fops, NULL, enable_self_refresh, "%llu\n");
 
+/* Disable/enable dormant mode at runtime */
+static int dormant_enable_set(void *data, u64 val)
+{
+	if (val) {
+		dormant_enable = 1;
+		pi_mgr_qos_request_update(&arm_qos, PI_MGR_QOS_DEFAULT_VALUE);
+	} else {
+		pi_mgr_qos_request_update(&arm_qos, RHEA_STATE_C2_LATENCY);
+		dormant_enable = 0;
+	}
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(dormant_enable_fops, NULL, dormant_enable_set,
+			"%llu\n");
+
 static struct dentry *dent_rhea_pm_root_dir;
 int __init rhea_pm_debug_init(void)
 {
+	int ret;
+
     INIT_DELAYED_WORK(&uartb_wq, uartb_wq_handler);
 #ifdef CONFIG_UART_FORCE_RETENTION_TST
 	pwr_mgr_register_event_handler(UBRX_EVENT, uartb_pwr_mgr_event_cb, NULL);
@@ -723,11 +774,30 @@ int __init rhea_pm_debug_init(void)
 			dent_rhea_pm_root_dir, (int*)&force_retention))
 	return -ENOMEM;
 
+	/* A9 QOS interface is used to disable dormant C-states
+	 * at runtime. To disable dormant set PM_QOS_CPU_DMA_LATENCY
+	 * to the latency of the highest non-dormant state.
+	 */
+	ret = pi_mgr_qos_add_request(&arm_qos, "pm",
+				     PI_MGR_PI_ID_ARM_CORE,
+				     PI_MGR_QOS_DEFAULT_VALUE);
+	if (ret < 0)
+		return ret;
+
+	/* If dormant is not enabled out of boot, prevent cpuidle
+	 * from entering into dormant C-states.
+	 */
+	if (dormant_enable == 0)
+		pi_mgr_qos_request_update(&arm_qos, RHEA_STATE_C2_LATENCY);
+
+	/* Interface to enable disable dormant mode at runtime */
+	if (!debugfs_create_file("dormant_enable", S_IRUGO | S_IWUSR,
+				 dent_rhea_pm_root_dir, NULL,
+				 &dormant_enable_fops))
+		return -ENOMEM;
+
 	return 0;
 }
 late_initcall(rhea_pm_debug_init);
 
 #endif
-
-device_initcall(rhea_pm_init);
-

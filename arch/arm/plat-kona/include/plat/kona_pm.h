@@ -13,6 +13,8 @@
 #define __KONA_PM_H__
 
 #ifdef CONFIG_CPU_IDLE
+/* Additional cpuidle flags for rhea */
+#define CPUIDLE_FLAG_XTAL_ON    (1 << 16)
 
 struct kona_idle_state
 {
