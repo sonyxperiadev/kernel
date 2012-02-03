@@ -264,9 +264,19 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 		* for now. Just do SRP for ADP startup */
 		bcmpmu_otg_xceiv_do_srp(xceiv_data);
 #else
-		/* Shutdown the core */
-		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
-					xceiver.notifier, USB_EVENT_NONE, NULL);
+		{
+			int data;
+			bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_USB_TYPE, &data);
+			if ((data == PMU_USB_TYPE_SDP) || (data == PMU_USB_TYPE_CDP)) {
+				bcm_hsotgctrl_phy_set_id_stat(true);
+				bcm_hsotgctrl_phy_set_vbus_stat(true);
+				bcm_hsotgctrl_phy_set_non_driving(false);
+			} else {
+				/* Shutdown the core */
+				atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
+						xceiver.notifier, USB_EVENT_NONE, NULL);
+			}
+		}
 #endif
 
 	} else {

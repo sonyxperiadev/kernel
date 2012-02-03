@@ -1405,6 +1405,8 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	dwc_otg_disable_global_interrupts(gadget_wrapper->pcd->core_if);
 	/* Gadget about to unbound, disable connection to USB host */
 	dwc_otg_pcd_disconnect(gadget_wrapper->pcd, true);
+	/* Reflect our current connect status */
+	gadget_wrapper->pcd->core_if->gadget_pullup_on = false;
 
 	dwc_otg_pcd_stop(gadget_wrapper->pcd);
 
@@ -1456,8 +1458,14 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 
 		dwc_otg_disable_global_interrupts(gadget_wrapper->pcd->core_if);
 		/* Default is to connect to USB host. Gadget driver may override
-		 * this during its bind using the pullup() API.
+		 * this during its bind using the pullup() API. We will set our internal
+		 * gadget_pullup_on to reflect that we are coming up connected by
+		 * default. This way if bind doesn't do anything to connect/disconnect,
+		 * driver will maintain correct gadget pullup status. If bind overrides this
+		 * connect/disconnect via pullup function then gadget_pullup_on will be
+		 * updated by pullup function
 		 */
+		gadget_wrapper->pcd->core_if->gadget_pullup_on = true;
 		dwc_otg_pcd_disconnect(gadget_wrapper->pcd, false);
 
 		DWC_DEBUGPL(DBG_PCD, "bind to driver %s\n", driver->driver.name);
