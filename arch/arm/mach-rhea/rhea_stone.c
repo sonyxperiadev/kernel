@@ -962,6 +962,7 @@ static struct platform_device *rhea_stone_plat_devices[] __initdata = {
 
 #ifdef CONFIG_TOUCHSCREEN_TANGO
 static struct TANGO_I2C_TS_t tango_plat_data = {
+	.i2c_pdata	= {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),},
 	.i2c_slave_address	= 0,
 	.gpio_irq_pin		= TANGO_GPIO_IRQ_PIN,
 	.gpio_reset_pin		= TANGO_GPIO_RESET_PIN,

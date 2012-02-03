@@ -14,6 +14,7 @@
 
 #ifndef _TANGO_TS_H_
 #define _TANGO_TS_H_
+#include <linux/i2c-kona.h>
 
 #define I2C_TS_DRIVER_NAME			"tango_ts"
 #define TANGO_S32_SLAVE_ADDR		0x5C
@@ -39,6 +40,7 @@ typedef enum
 
 struct TANGO_I2C_TS_t
 {
+	struct i2c_slave_platform_data i2c_pdata;
 	int i2c_slave_address;
 	int gpio_irq_pin;
 	int gpio_reset_pin;
