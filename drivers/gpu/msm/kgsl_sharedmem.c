@@ -13,6 +13,7 @@
 #include <linux/vmalloc.h>
 #include <linux/memory_alloc.h>
 #include <asm/cacheflush.h>
+#include <mach/msm_rtb.h>
 
 #include "kgsl.h"
 #include "kgsl_sharedmem.h"
@@ -641,7 +642,7 @@ kgsl_sharedmem_readl(const struct kgsl_memdesc *memdesc,
 
 	if (offsetbytes + sizeof(unsigned int) > memdesc->size)
 		return -ERANGE;
-
+	uncached_logk(LOGK_GRAPHICS_MMU, memdesc->hostptr + offsetbytes);
 	*dst = readl_relaxed(memdesc->hostptr + offsetbytes);
 	return 0;
 }
@@ -655,6 +656,7 @@ kgsl_sharedmem_writel(const struct kgsl_memdesc *memdesc,
 	BUG_ON(memdesc == NULL || memdesc->hostptr == NULL);
 	BUG_ON(offsetbytes + sizeof(unsigned int) > memdesc->size);
 
+	uncached_logk(LOGK_GRAPHICS_MMU, memdesc->hostptr + offsetbytes);
 	kgsl_cffdump_setmem(memdesc->gpuaddr + offsetbytes,
 		src, sizeof(uint));
 	writel_relaxed(src, memdesc->hostptr + offsetbytes);
