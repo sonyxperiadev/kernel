@@ -60,6 +60,7 @@ Result_t AT_RPC_APCommandStr(UInt8 chan, const UInt8* atCmdStr);
 Result_t AT_RPC_FlightMode(UInt8 chan, Boolean flight_mode);
 Result_t  AT_RPC_RegisterAPTerminal(UInt8 chan, UInt8 clientID);
 
-Result_t AT_RPCPowerReset(UInt8 chan, UInt8 val);
+Result_t AT_RPC_PowerReset(UInt8 chan, UInt8 val);
+Result_t AT_RPC_LowPowerMode(UInt8 chan);
 
 #endif //_AT_RPC_H_

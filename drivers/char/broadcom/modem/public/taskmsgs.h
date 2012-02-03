@@ -2143,8 +2143,8 @@ typedef enum
 	MSG_AT_APCOMMAND_REQ			= MSG_GRP_INT_ATC+0x62,	///<Payload type {::AtCmdInfo_t}
 	MSG_AT_ADD_TERMINAL_REQ			= MSG_GRP_INT_ATC+0x63,	///<Payload type {::SerialDeviceID_t}
 	MSG_AT_REMOVE_TERMINAL_REQ			= MSG_GRP_INT_ATC+0x64,	///<Payload type {::SerialDeviceID_t}
-	MSG_AT_POWER_RESET_REQ			= MSG_GRP_INT_ATC+0x65,	///<Payload type {::void}
-	
+	MSG_AT_POWER_RESET_REQ			= MSG_GRP_INT_ATC+0x65,	///<Payload type {::UInt8}
+	MSG_AT_LOW_POWER_MODE_REQ		= MSG_GRP_INT_ATC+0x66,	///<Payload type {::void}
 //TASKMSGS_INCLUDE taskmsgs_usb.i
 	//---------------------------------------------------------------
 	// MSG_GRP_DEV, MESSAGE GROUP FOR DEVICES (0x0700)
@@ -6879,6 +6879,14 @@ typedef enum
 	payload is ::Result_t 
 	**/
 	MSG_SECMODEM_SET_INFO_PP_BITS_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x6F5,
+	 /** 
+	api is CAPI2_SYSPARM_GetImeiString 
+	**/
+	MSG_SYSPARM_GET_IMEI_STRING_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6F6,	///<Payload type {CAPI2_SYSPARM_GetImeiString_Req_t}
+	 /** 
+	payload is void 
+	**/
+	MSG_SYSPARM_GET_IMEI_STRING_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x6F7,	///<Payload type {void}
 
 	//MSG_GEN_REQ_END = 0x48FF
 
