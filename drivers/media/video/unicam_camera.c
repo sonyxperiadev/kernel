@@ -448,6 +448,12 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 		return -1;
 	}
 
+	ret = v4l2_subdev_call(sd, video, s_stream, 1);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
+		return ret;
+	}
+
 	/* get the sensor interface information */
 	ret = v4l2_subdev_call(sd, sensor, g_interface_parms, &if_params);
 	if (ret < 0) {
@@ -603,11 +609,23 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(q);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	CSL_CAM_FRAME_st_t cslCamFrame;
 	int ret = 0;
 	unsigned long flags;
 
+
+	/*
+	 * stop streaming before grabing spin lock
+	 * since this function can sleep.
+	 * */
+
+	ret = v4l2_subdev_call(sd, video, s_stream, 0);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		dev_err(unicam_dev->dev, "failed to stop sensor streaming\n");
+		ret = -1;
+	}
 	/* grab the lock */
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	dprintk("-enter");
@@ -617,8 +635,8 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 		dev_err(unicam_dev->dev, "stream already turned off\n");
 		goto out;
 	}
-	/* disable frame interrupts */
 
+	/* disable frame interrupts */
 	cslCamFrame.int_enable = CSL_CAM_INT_DISABLE;
 	cslCamFrame.int_line_count = 0;
 	cslCamFrame.capture_mode = CSL_CAM_CAPTURE_MODE_TRIGGER;
