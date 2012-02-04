@@ -836,6 +836,7 @@ CONFIG_EXTRA_FIRMWARE=""
 CONFIG_CMA=y
 # CONFIG_CMA_DEBUG is not set
 CONFIG_CMA_STATS=y
+# CONFIG_CMA_TRACER is not set
 
 #
 # Default contiguous memory area size:
@@ -1021,11 +1022,12 @@ CONFIG_WLAN=y
 # CONFIG_BCM4329 is not set
 # CONFIG_BCM4329_FALCON is not set
 # CONFIG_BCM4330_FALCON is not set
-CONFIG_BCMDHD=m
+# CONFIG_BCMDHD_4334 is not set
 CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_bcmdhd.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/nvram.txt"
 CONFIG_BCMDHD_IF_PREFIX=""
 # CONFIG_BCMDHD_WEXT is not set
+CONFIG_BCMDHD=m
 # CONFIG_BCMDHD_43362_LINUX is not set
 # CONFIG_BCMDHD_43362 is not set
 CONFIG_BCMDHD_43362_FW_PATH="/system/vendor/firmware/fw_bcmdhd.bin"
