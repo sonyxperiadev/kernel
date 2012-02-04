@@ -72,6 +72,9 @@ struct cma {
 	unsigned long base_pfn;
 	unsigned long count;
 	unsigned long *bitmap;
+#ifdef CONFIG_CMA_BEST_FIT
+	unsigned long *bf_bitmap;
+#endif
 };
 
 struct cma *dma_contiguous_default_area;
@@ -405,9 +408,14 @@ static struct cma *cma_create_area(unsigned long base_pfn, unsigned long count)
 	cma->base_pfn = base_pfn;
 	cma->count = count;
 	cma->bitmap = kzalloc(bitmap_size, GFP_KERNEL);
-
 	if (!cma->bitmap)
 		goto no_mem;
+
+#ifdef CONFIG_CMA_BEST_FIT
+	cma->bf_bitmap = kzalloc(bitmap_size, GFP_KERNEL);
+	if (!cma->bf_bitmap)
+		goto error;
+#endif
 
 	ret = cma_activate_area(base_pfn, count);
 	if (ret)
@@ -424,9 +432,12 @@ static struct cma *cma_create_area(unsigned long base_pfn, unsigned long count)
 	pr_debug("%s: returned %p\n", __func__, (void *)cma);
 	return cma;
 
-      error:
+error:
+#ifdef CONFIG_CMA_BEST_FIT
+	kfree(cma->bf_bitmap);
+#endif
 	kfree(cma->bitmap);
-      no_mem:
+no_mem:
 	kfree(cma);
 	return ERR_PTR(ret);
 }
@@ -541,7 +552,7 @@ int __init dma_declare_contiguous(struct device *dev, unsigned long size,
 	 */
 	dma_contiguous_early_fixup(base, size);
 	return 0;
-      err:
+err:
 	pr_err("CMA: failed to reserve %ld MiB\n", size / SZ_1M);
 	return base;
 }
@@ -602,6 +613,67 @@ void get_cma_area(struct device *dev, phys_addr_t *start, unsigned long *size)
 	}
 }
 
+#ifdef CONFIG_CMA_BEST_FIT
+
+struct cma_range {
+	unsigned long start;
+	unsigned long end;
+};
+
+static int find_best_area(struct cma *cma, int count,
+			   unsigned long mask, struct cma_range *best_fit)
+{
+	unsigned long index;
+	int start, end;
+	
+	best_fit->start = 0UL;
+	best_fit->end = ULONG_MAX;
+
+	for (start = 0; start < cma->count; start = end + 1) {
+		index = bitmap_find_next_zero_area(cma->bitmap, cma->count,
+					start, count, mask);
+		if (index >= cma->count) {
+			printk(KERN_ERR"%s:%d no free areas found\n", __func__, __LINE__);
+			return -EEXIST;
+		}
+
+		end = find_next_bit(cma->bitmap, cma->count, index); 
+
+		/* Best case */
+		if ((end - index) == count) {
+			/* check if we've already tried this */
+			if (!test_bit(index, cma->bf_bitmap)) {
+				best_fit->start = index;
+				best_fit->end = end;
+				break;
+			}
+		} else if ((end - index) < (best_fit->end - best_fit->start)) {
+			/* check if we've already tried this */
+			if (!test_bit(index, cma->bf_bitmap)) {
+				/* This is the smallest possible area that is bigger
+				 * than the allocation request so far. So, we just remember
+				 * this in "best_fit", but dont set the bitmap bit yet,
+				 * we may find a better area ahead
+				 */
+				best_fit->start = index;
+				best_fit->end = end;
+			}
+		}
+
+	}
+
+	if (best_fit->end == ULONG_MAX) {
+		printk(KERN_ERR"%s: Failed to find a new area\n", __func__);
+		return -EEXIST;
+	}
+
+	pr_debug("%s: found area at start(%lu), end(%lu)\n", __func__, best_fit->start, best_fit->end);
+
+	__set_bit(best_fit->start, cma->bf_bitmap);
+
+	return 0;
+}
+#endif /* CONFIG_CMA_BEST_FIT */
 /**
  *dma_alloc_from_contiguous() - allocate pages from contiguous area
  *@dev:   Pointer to device for which the allocation is performed.
@@ -617,10 +689,14 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 				       unsigned int align)
 {
 	struct cma *cma = dev_get_cma_area(dev);
-	unsigned long pfn, pageno, start = 0;
+	unsigned long pfn = 0, pageno;
 	unsigned long mask = (1 << align) - 1;
-	unsigned int retries = 0;
 	int ret;
+#ifdef CONFIG_CMA_BEST_FIT
+	struct cma_range best_fit;
+#else
+	unsigned long start = 0;
+#endif
 
 	if (!cma || !cma->count)
 		return NULL;
@@ -638,6 +714,7 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 
 	mutex_lock(&cma_mutex);
 
+#ifndef CONFIG_CMA_BEST_FIT
 	for (;;) {
 		pageno = bitmap_find_next_zero_area(cma->bitmap, cma->count,
 						    start, count, mask);
@@ -674,13 +751,80 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 			       __pfn_to_phys(pfn + count));
 			goto error;
 		}
-		retries++;
 		pr_debug
-		    ("%s(): memory range at %p is busy, starting retry (%u)\n",
-		     __func__, pfn_to_page(pfn), retries);
+		    ("%s(): memory range at %p is busy !\n",
+		     __func__, pfn_to_page(pfn));
 		/* try again with a bit different memory target */
 		start = pageno + mask + 1;
 	}
+
+#else /* !CONFIG_CMA_BEST_FIT */
+	for (;;) {
+		ret = find_best_area(cma, count, mask, &best_fit);
+		if (ret)  {
+			printk(KERN_ERR
+					"%s:%d #### CMA ALLOCATION FAILED ####\n",
+					__func__, __LINE__);
+			printk(KERN_ERR
+					"%s:%d # Could not find %d pages with %d alignment in this cma region bitmap\n",
+					__func__, __LINE__, count, align);
+#ifdef CONFIG_CMA_STATS
+			printk(KERN_ERR
+					"%s:%d # Total allocation(%lukB, %ld pages), Largest free block(%lukB, %ld pages)\n",
+					__func__, __LINE__,
+					(cma->total_alloc * PAGE_SIZE / SZ_1K),
+					cma->total_alloc,
+					(cma->largest_free_block * PAGE_SIZE / SZ_1K),
+					cma->largest_free_block);
+#endif
+			ret = -ENOMEM;
+			show_mem(SHOW_MEM_FILTER_NODES);
+			break;
+		}
+
+		/* Now try and allocate from the *best* cma area for this size.
+		 * Note that the area can be bigger than the requested allocation.
+		 * So, if migration fails, we keep retrying untill we reach the end
+		 * of this area. If we have failed allocation here, then we continue
+		 * the outer loop and find the next-best area for this allocation
+		 **/
+
+		pr_debug("%s: Try allocating (%d) pages withing area from (:%lu count:%lu, size:%lu)\n",
+					__func__, count, best_fit.start, best_fit.end, best_fit.end - best_fit.start);
+
+		for (pageno = best_fit.start, ret = -EBUSY;
+			((pageno + count) <= best_fit.end) && ret == -EBUSY;
+			pageno = __ALIGN_MASK(pageno + 1, mask)) {
+
+			pfn = cma->base_pfn + pageno;
+
+			pr_debug("%s:allocation range(%ld - %ld)\n", __func__, pageno, pageno+count);
+			ret = alloc_contig_range(pfn, pfn + count, MIGRATE_CMA);
+			if (ret == 0) {
+				bitmap_set(cma->bitmap, pageno, count);
+				pr_debug("%s: allocation successful\n", __func__);
+				break;
+			} 
+		}
+
+		if (likely(ret == 0))
+			break;
+
+		if (unlikely(ret != -EBUSY)) {
+			printk(KERN_ERR"%s:%d #### CMA alloc_contig_range failed #### ret = %d for range(%08x-%08x)\n",
+					__func__, __LINE__, ret, __pfn_to_phys(pfn),
+					__pfn_to_phys(pfn + count));
+			break;
+		}
+	}
+
+	/* Clear the best_fit bitmap here */
+	memset(cma->bf_bitmap, 0, BITS_TO_LONGS(cma->count) * sizeof(long));
+
+	/* if we are here, and ret is true, we have failed */
+	if (ret)
+		goto error;
+#endif
 
 	add_cma_stats(dev, cma, pfn, count, align, 1);
 
