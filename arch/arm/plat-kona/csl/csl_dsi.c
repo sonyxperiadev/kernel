@@ -1196,7 +1196,7 @@ static CSL_LCD_RES_T cslDsiWaitForInt( DSI_HANDLE dsiH,	UInt32 tout_msec )
 	OSStatus_t	osRes;
 	CSL_LCD_RES_T	res = CSL_LCD_OK;
 
-	osRes =	OSSEMAPHORE_Obtain ( dsiH->semaInt, tout_msec );
+	osRes =	OSSEMAPHORE_Obtain (dsiH->semaInt, TICKS_IN_MILLISECONDS(tout_msec));
 
 	if ( osRes != OSSTATUS_SUCCESS )
 	{
