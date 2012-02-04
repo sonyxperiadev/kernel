@@ -37,7 +37,7 @@
 #include "audio_consts.h"
 #include "extern_audio.h"
 #include "log.h"
-
+#include "linux/gpio.h"
 
 #if (!defined(CONFIG_BCMPMU_AUDIO))
 
@@ -248,6 +248,31 @@ static int hs_gain_l = -400; /* mB */
 static int hs_gain_r = -400; /* mB */
 static int ihf_gain = -400; /* mB */
 
+#if defined(CONFIG_IHF_EXT_AMPLIFIER)
+#define GPIO_IHF_EXT_AMP 28
+
+/******************************************************************************
+* Function Name: audio_gpio_output
+*
+* Description: Toggle gpio output pin
+*
+* Note: This is only required on some OEM hardware
+*
+******************************************************************************/
+static void audio_gpio_output(int gpio_pin, int value)
+{
+	int rc = gpio_request(gpio_pin, "IHF_EXT_AMP");
+
+	Log_DebugPrintf(LOGID_AUDIO,
+		"audio_gpio_output:: gpio pin %d value %d, rc=0x%x\n",
+		gpio_pin, value, rc);
+	gpio_direction_output(gpio_pin, 0);
+	gpio_set_value(gpio_pin, value);
+	gpio_free(gpio_pin);
+}
+#else
+#define audio_gpio_output(a, b)
+#endif
 
 /******************************************************************************
 * Function Name: map2pmu_hs_gain
@@ -327,7 +352,7 @@ void extern_hs_on(void)
 
 	AUDIO_PMU_HS_POWER(1);
 
-	mdelay(75);
+	msleep(75);
 
 	hs_IsOn = 1;
 }
@@ -344,7 +369,7 @@ void extern_hs_off(void)
 	AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
 				  PMU_HSGAIN_MUTE),
 	AUDIO_PMU_HS_POWER(0);
-	mdelay(20);
+	msleep(20);
 
 	hs_IsOn = 0;
 
@@ -367,6 +392,7 @@ void extern_ihf_on(void)
 
 	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
 	AUDIO_PMU_IHF_POWER(1);
+	audio_gpio_output(GPIO_IHF_EXT_AMP, 1);
 
 	ihf_IsOn = 1;
 }
@@ -382,6 +408,7 @@ void extern_ihf_off(void)
 {
 	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
 	AUDIO_PMU_IHF_POWER(0);
+	audio_gpio_output(GPIO_IHF_EXT_AMP, 0);
 
 	ihf_IsOn = 0;
 
