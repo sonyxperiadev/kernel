@@ -66,8 +66,6 @@ static u32 pm_en_self_refresh = 0;
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 
-#define MEMC_HW2221_SEMAPHORE 16
-
 dma_addr_t noncache_buf_pa;
 char* noncache_buf_va;
 #endif /* CONFIG_RHEA_WA_HWJIRA_2221 */
@@ -501,45 +499,16 @@ int enter_dormant_state(struct kona_idle_state* state)
 	if (JIRA_WA_ENABLED(2221)) {
 
 		u32 count;
-		int insurance = 0;
 		u32 temp_val;
 		char *noncache_buf_tmp_va;
 
 		/*JIRA HWRHEA_2221 VAR_312M is_idle from MEMC unexpectedly stays
 		 * asserted for long periods of time - preventing deepsleep entry */
 
-		 /*CORE0 semaphore locked ? */
-		 insurance = 0;
-		while ((readl(KONA_CHIPREG_VA +
-				CHIPREG_CORE0_SEMAPHORE_STATUS_OFFSET)
-				& (1 << MEMC_HW2221_SEMAPHORE)) == 0) {
-			/*lock CORE0 semaphore,
- 				 (1<<MEMC_HW2221_SEMAPHORE) -> 0x35004184 */
-			writel(1 << MEMC_HW2221_SEMAPHORE,
-			KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_LOCK_OFFSET);
-
-			/*play nice to other core*/
-			for (count = 0; count < 16; count++);
-			insurance++;
-			BUG_ON(insurance > 10000);
-		}
-
-		/*disable other MEMC ports */
-		writel((CSR_AXI_PORT_CTRL_PORT3_DISABLE_MASK |
-			 CSR_AXI_PORT_CTRL_PORT2_DISABLE_MASK |
-			 CSR_AXI_PORT_CTRL_PORT0_DISABLE_MASK),
-				 KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
-		udelay(1);
-
 		 /* reset all MEMC demesh entries */
 		 noncache_buf_tmp_va = noncache_buf_va;
 		 for (count = 0; count < 16; count++, noncache_buf_tmp_va += 64)
 			temp_val = *(volatile u32 *)noncache_buf_tmp_va;
-		 /* re-enable all MEMC ports, 0x0 -> 0x3500801c; */
-		 writel(0x0, KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
-		 /* release CORE0 semaphore, 1<<MEMC_HW2221_SEMAPHORE -> 0x35004188 */
-		 writel(1 << MEMC_HW2221_SEMAPHORE,
-			KONA_CHIPREG_VA + CHIPREG_CORE0_SEMAPHORE_UNLOCK_OFFSET);
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2221*/
 #ifdef CONFIG_RHEA_DORMANT_MODE
