@@ -434,6 +434,7 @@ static int pmem_open(struct inode *inode, struct file *file)
 	data->vma = NULL;
 	data->pid = 0;
 	data->master_file = NULL;
+	data->size = 0;
 #if PMEM_DEBUG
 	data->ref = 0;
 #endif
@@ -444,7 +445,7 @@ static int pmem_open(struct inode *inode, struct file *file)
 	INIT_LIST_HEAD(&data->list);
 
 	mutex_lock(&pmem[id].data_list_lock);
-	list_add(&data->list, &pmem[id].data_list);
+	list_add_tail(&data->list, &pmem[id].data_list);
 	mutex_unlock(&pmem[id].data_list_lock);
 
 	return ret;
@@ -762,7 +763,8 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	int ret = 0, id = get_id(file);
 	unsigned short total_allocation;
 #ifdef PMEM_SORTED_LIST
-	struct pmem_data *itr;
+	struct list_head *itr;
+	struct pmem_data *p;
 #endif
 
 	if (vma->vm_pgoff || !PMEM_IS_PAGE_ALIGNED(vma_size)) {
@@ -878,25 +880,57 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		list_add_tail(&data->list, &pmem[id].data_list);
 	} else {
 
-		list_for_each_entry(itr, &pmem[id].data_list, list) {
-			down_read(&itr->sem);
-			if ((itr->pid <= data->pid) &&
-					!list_is_last(&itr->list, &pmem[id].data_list)) {
-				up_read(&itr->sem);
-				continue;
+		list_for_each(itr, &pmem[id].data_list) {
+			p = list_entry(itr, struct pmem_data, list);
+			if (list_is_last(itr, &pmem[id].data_list)) {
+				down_read(&p->sem);
+				if (p->pid <= data->pid)
+					itr = &pmem[id].data_list;
+				up_read(&p->sem);
+
+				break;
+			} else {
+				down_read(&p->sem);
+				if (p->pid > data->pid) {
+					up_read(&p->sem);
+					break;
+				}
+				up_read(&p->sem);
 			}
-
-			up_read(&itr->sem);
-			if (list_is_last(&itr->list, &pmem[id].data_list))
-				itr = list_entry(itr->list.next, struct pmem_data, list);
-
-			break;
 		}
 
-		list_add_tail(&data->list, &itr->list);
+		list_add_tail(&data->list, itr);
 	}
+
+#ifdef DEBUG_LIST
+	printk(" ================ \n");
+	list_for_each(itr, &pmem[id].data_list) {
+		p = list_entry(itr, struct pmem_data, list);
+		down_read(&p->sem);
+		printk("%-16s (%6u) :",__func__, p->pid);
+		printk(" %08ldkB", pmem_len(id, p) / SZ_1K);
+		if (pmem[id].allocator == CMA_ALLOC) {
+			printk(" (0x%08lx-0x%08lx)",
+					PMEM_CMA_START_ADDR(id, p->index),
+					PMEM_CMA_START_ADDR(id, p->index) + p->size);
+		} else {
+			printk(" (0x%08lx-0x%08lx)",
+					PMEM_START_ADDR(id, p->index),
+					PMEM_END_ADDR(id, p->index));
+		}
+
+		if (p == data)
+			printk(" <<");
+
+		up_read(&p->sem);
+		printk("\n");
+	}
+	printk(" ================ \n");
+#endif /* DEBUG_LIST */
+
 	mutex_unlock(&pmem[id].data_list_lock);
-#endif
+
+#endif /* PMEM_SORTED_LIST */
 
 	return ret;
 
