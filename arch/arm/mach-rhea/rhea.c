@@ -67,7 +67,6 @@ static void rhea_restart(char mode, const char *cmd)
 static void __init rhea_l2x0_init(void)
 {
 	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
-
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 	u32 val;
 
@@ -86,6 +85,23 @@ static void __init rhea_l2x0_init(void)
 	l2x0_init(l2cache_base, 0x00040000, 0xfff0ffff);
 }
 #endif
+
+static int __init rhea_arch_init(void)
+{
+	void __iomem *scu_base = (void __iomem *)KONA_SCU_VA;
+	int ret;
+
+	ret = smc_init(scu_base);
+	if (ret < 0)
+		pr_err("smc_init failed\n");
+#ifdef CONFIG_CACHE_L2X0
+	rhea_l2x0_init();
+#endif
+
+	return ret;
+}
+
+arch_initcall(rhea_arch_init);
 
 /* GP Timer init code, common for all rhea based platforms */
 void __init rhea_ray_timer_init (void)
@@ -132,10 +148,6 @@ static int __init rhea_init(void)
 {
 	pm_power_off = rhea_poweroff;
 	arm_pm_restart = rhea_restart;
-
-#ifdef CONFIG_CACHE_L2X0
-	rhea_l2x0_init();
-#endif
 
 	pinmux_init();
 

@@ -20,10 +20,31 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/io.h>
+#include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
-#include <mach/memory.h>
-#include <mach/io_map.h>
+#include <mach/secure_api.h>
 #include <mach/rdb/brcm_rdb_scu.h>
+
+static u32 *smc_buf_p;
+static u32 *smc_buf_v;
+static void __iomem *scu;
+
+struct sec_api {
+	u32 id;        /* Service ID */
+	int nargs;     /* Number of arguments */
+};
+
+#define SEC_API_INIT(i, n)    \
+{                             \
+	.id = i,              \
+	.nargs = n,           \
+}
+
+static struct sec_api sec_api[SEC_API_MAX] = {
+	SEC_API_INIT(0x01000000, 3),
+	SEC_API_INIT(0x01000002, 0),
+	SEC_API_INIT(0x01000003, 0),
+};
 
 static inline u32 save_spsr(void)
 {
@@ -79,41 +100,70 @@ static u32 __smc(u32 service, u32 flags, u32 list)
 	return ret;
 }
 
-static inline u32 smc(u32 service, u32 flags, va_list *list)
+static inline u32 smc(u32 service, u32 flags, u32 args)
 {
-	unsigned long cpsr;
 	u32 spsr, cp15ctrl;
-	u32 args = __virt_to_phys(*(u32 *)list);
 	u32 ret;
 
-	local_irq_save(cpsr);
 	local_fiq_disable();
 	spsr = save_spsr();
 	cp15ctrl = save_cp15ctrl();
 
 	/* Flush caches */
-	writel(0xFF, KONA_SCU_VA + SCU_INVALIDATE_ALL_OFFSET);
+	writel(0xFF, scu + SCU_INVALIDATE_ALL_OFFSET);
 	flush_cache_all();
-	outer_flush_all();
 
 	ret = __smc(service, flags, args);
 
 	restore_cp15ctrl(cp15ctrl);
 	restore_spsr(spsr);
-	local_irq_restore(cpsr);
 
 	return ret;
 }
 
 u32 hw_sec_pub_dispatcher(u32 service, u32 flags, ...)
 {
+	unsigned long cpsr;
 	u32 ret;
 	va_list list;
+	int i, nargs, id;
+
+	BUG_ON(service > SEC_API_MAX);
+	if (smc_buf_v == NULL)
+		return -ENODEV;
+
+	local_irq_save(cpsr);
+
+	id = sec_api[service].id;
+	nargs = sec_api[service].nargs;
 
 	va_start(list, flags);
-	ret = smc(service, flags, &list);
+	for (i = 0; i < nargs; i++)
+		smc_buf_v[i] = va_arg(list, u32);
 	va_end(list);
+
+	ret = smc(id, flags, (u32)smc_buf_p);
+
+	local_irq_restore(cpsr);
 
 	return ret;
 }
 EXPORT_SYMBOL(hw_sec_pub_dispatcher);
+
+int __init smc_init(void __iomem *scu_base)
+{
+	void *v = NULL;
+	dma_addr_t p;
+
+	v = dma_alloc_coherent(NULL, SZ_1K, &p, GFP_ATOMIC);
+	if (v == NULL) {
+		pr_info("%s: smc dma buffer alloc failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	smc_buf_v = (u32 *) v;
+	smc_buf_p = (u32 *) p;
+	scu = scu_base;
+
+	return 0;
+}

@@ -8,16 +8,10 @@
 /*                                                                            */
 /******************************************************************************/
 
-#include <linux/sched.h>
-#include <linux/delay.h>
-#include <linux/module.h>
-#include <linux/debugfs.h>
-#include <linux/slab.h>
-#include <asm/io.h>
-#include <linux/err.h>
 #include <linux/dma-mapping.h>
-#include <mach/io_map.h>
+#include <asm/io.h>
 
+#include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_scu.h>
 #include <mach/rdb/brcm_rdb_csr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
@@ -25,7 +19,6 @@
 #include <mach/rdb/brcm_rdb_gicdist.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
-/* #include <mach/rdb/brcm_rdb_sectrap.h> */
 #include <mach/rdb/brcm_rdb_axitp1.h>
 #include <mach/rdb/brcm_rdb_swstm.h>
 #include <mach/rdb/brcm_rdb_giccpu.h>

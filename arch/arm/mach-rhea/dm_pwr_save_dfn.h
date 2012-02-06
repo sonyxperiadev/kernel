@@ -201,7 +201,7 @@
 									  real application.  */
 
 /* ASSUMPTION: PL310 at a +ve offset from CA9_SCU_BASE */
-#define CA9_SCU_L2CC 0x2000  /* the default RTSM-EB value for PL310 registers*/
+#define CA9_SCU_L2CC 0x20000  /* the default RTSM-EB value for PL310 registers*/
 
 /* DBG_BASE  EQU 0xYYYYYYYY  * memory mapped debug base */
 
