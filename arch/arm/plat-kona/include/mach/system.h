@@ -33,6 +33,7 @@
 #include <mach/rdb/brcm_rdb_iroot_rst_mgr_reg.h>
 #else
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_bmdm_rst_mgr_reg.h>
 #endif
 
 #if defined( CONFIG_KONA_WFI_WORKAROUND )
@@ -129,6 +130,24 @@ static void arch_reset(char mode, const char *cmd)
 	val &= IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_PRIV_ACCESS_MODE_MASK;	  /* retain access mode 	 */
 	__raw_writel(val, KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
 #else
+	/*Reset the CP*/
+	val = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_WR_ACCESS_OFFSET);
+	val &= BMDM_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;                  /* retain access mode          */
+	val |= (0xA5A5 << BMDM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);     /* set password                        */
+	val |= BMDM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK;                        /* set access enable           */
+	__raw_writel(val, KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_WR_ACCESS_OFFSET);
+
+	/* trigger reset */
+	val  = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+	val &= BMDM_RST_MGR_REG_CP_RSTN_PRIV_ACCESS_MODE_MASK;     /* retain access mode          */
+	__raw_writel(val, KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+
+	val  = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+	val &= BMDM_RST_MGR_REG_CP_RSTN_PRIV_ACCESS_MODE_MASK;     /* retain access mode          */
+	val |= (BMDM_RST_MGR_REG_CP_RSTN_CP_DEBUG_RSTN_MASK | BMDM_RST_MGR_REG_CP_RSTN_CP_RSTN_MASK);
+	__raw_writel(val, KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+
+	/*Reset the AP*/
 	/* enable reset register access */
 	val  = __raw_readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET); 
 	val &= ROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;		  /* retain access mode 	 */
