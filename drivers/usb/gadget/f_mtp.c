@@ -164,7 +164,7 @@ static struct usb_endpoint_descriptor mtp_intr_desc = {
 	.bDescriptorType        = USB_DT_ENDPOINT,
 	.bEndpointAddress       = USB_DIR_IN,
 	.bmAttributes           = USB_ENDPOINT_XFER_INT,
-	.wMaxPacketSize         = __constant_cpu_to_le16(INTR_BUFFER_SIZE),
+	.wMaxPacketSize			= __constant_cpu_to_le16(64),
 	.bInterval              = 6,
 };
 
@@ -564,9 +564,8 @@ static ssize_t mtp_write(struct file *fp, const char __user *buf,
 	/* we need to send a zero length packet to signal the end of transfer
 	 * if the transfer size is aligned to a packet boundary.
 	 */
-	if ((count & (dev->ep_in->maxpacket - 1)) == 0) {
+	if ((count & (dev->ep_in->maxpacket - 1)) == 0)
 		sendZLP = 1;
-	}
 
 	while (count > 0 || sendZLP) {
 		/* so we exit after sending ZLP */
@@ -628,8 +627,10 @@ static ssize_t mtp_write(struct file *fp, const char __user *buf,
 }
 
 /* read from a local file and write to USB */
-static void send_file_work(struct work_struct *data) {
-	struct mtp_dev	*dev = container_of(data, struct mtp_dev, send_file_work);
+static void send_file_work(struct work_struct *data)
+{
+	struct mtp_dev	*dev = container_of(data, struct mtp_dev,
+		send_file_work);
 	struct usb_composite_dev *cdev = dev->cdev;
 	struct usb_request *req = 0;
 	struct mtp_data_header *header;
@@ -658,9 +659,8 @@ static void send_file_work(struct work_struct *data) {
 	/* we need to send a zero length packet to signal the end of transfer
 	 * if the transfer size is aligned to a packet boundary.
 	 */
-	if ((count & (dev->ep_in->maxpacket - 1)) == 0) {
+	if ((count & (dev->ep_in->maxpacket - 1)) == 0)
 		sendZLP = 1;
-	}
 
 	while (count > 0 || sendZLP) {
 		/* so we exit after sending ZLP */
@@ -692,10 +692,12 @@ static void send_file_work(struct work_struct *data) {
 			header->length = __cpu_to_le32(count);
 			header->type = __cpu_to_le16(2); /* data packet */
 			header->command = __cpu_to_le16(dev->xfer_command);
-			header->transaction_id = __cpu_to_le32(dev->xfer_transaction_id);
+			header->transaction_id =
+				__cpu_to_le32(dev->xfer_transaction_id);
 		}
 
-		ret = vfs_read(filp, req->buf + hdr_size, xfer - hdr_size, &offset);
+		ret = vfs_read(filp, req->buf + hdr_size,
+			xfer - hdr_size, &offset);
 		if (ret < 0) {
 			r = ret;
 			break;
@@ -730,7 +732,8 @@ static void send_file_work(struct work_struct *data) {
 /* read from USB and write to a local file */
 static void receive_file_work(struct work_struct *data)
 {
-	struct mtp_dev	*dev = container_of(data, struct mtp_dev, receive_file_work);
+	struct mtp_dev	*dev = container_of(data, struct mtp_dev,
+		receive_file_work);
 	struct usb_composite_dev *cdev = dev->cdev;
 	struct usb_request *read_req = NULL, *write_req = NULL;
 	struct file *filp;
@@ -793,7 +796,8 @@ static void receive_file_work(struct work_struct *data)
 			if (count != 0xFFFFFFFF)
 				count -= read_req->actual;
 			if (read_req->actual < read_req->length) {
-				/* short packet is used to signal EOF for sizes > 4 gig */
+				/* short packet is used to signal
+				EOF for sizes > 4 gig */
 				DBG(cdev, "got short packet\n");
 				count = 0;
 			}
@@ -811,7 +815,7 @@ static void receive_file_work(struct work_struct *data)
 
 static int mtp_send_event(struct mtp_dev *dev, struct mtp_event *event)
 {
-	struct usb_request *req= NULL;
+	struct usb_request *req = NULL;
 	int ret;
 	int length = event->length;
 
@@ -823,9 +827,10 @@ static int mtp_send_event(struct mtp_dev *dev, struct mtp_event *event)
 		return -ENODEV;
 
 	ret = wait_event_interruptible_timeout(dev->intr_wq,
-		(req = mtp_req_get(dev, &dev->intr_idle)), msecs_to_jiffies(1000));
+		(req = mtp_req_get(dev, &dev->intr_idle)),
+		msecs_to_jiffies(1000));
 	if (!req)
-	    return -ETIME;
+		return -ETIME;
 
 	if (copy_from_user(req->buf, (void __user *)event->data, length)) {
 		mtp_req_put(dev, &dev->intr_idle, req);
@@ -1066,7 +1071,8 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 		cdev->req->length = value;
 		rc = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
 		if (rc < 0)
-			ERROR(cdev, "%s setup response queue error\n", __func__);
+			ERROR(cdev, "%s setup response queue
+				error\n", __func__);
 	}
 	return value;
 }
@@ -1188,8 +1194,7 @@ static int mtp_bind_config(struct usb_configuration *c, bool ptp_config)
 		c->descriptors = otg_desc;
 		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
 
-		if (gadget_is_otg2(c->cdev->gadget))
-		{
+		if (gadget_is_otg2(c->cdev->gadget)) {
 			otg_descriptor.bcdOTG = __constant_cpu_to_le16(0x0200);
 			otg_descriptor.bmAttributes |= USB_OTG_ADP;
 		}
