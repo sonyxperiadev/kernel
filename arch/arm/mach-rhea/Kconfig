@@ -170,6 +170,22 @@ config RHEA_WA_HWJIRA_2276
 	 Say Y to enable RHEA JIRA 2276 workaround
 	 Refer JIRA DB for more info on this JIRA
 
+config RHEA_WA_HWJIRA_2045
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2045"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2045 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2272
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2272"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2272 workaround
+	 Refer JIRA DB for more info on this JIRA
+
 config RHEALC_2093
 	bool "Enable RheaLC&2093"
 	default n

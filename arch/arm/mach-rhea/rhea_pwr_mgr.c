@@ -392,11 +392,12 @@ int __init rhea_pwr_mgr_init()
 
 	pwr_mgr_init(&rhea_pwr_mgr_info);
 	rhea_pi_mgr_init();
-/*For B0, it was observed that if MM CCU is switched to and from shutdown
- * state, it would break the DDR self refresh. work around for this from ASIC
- * team is to set the POWER_OK_MASK bit to 0 */
-#ifdef CONFIG_RHEA_B0_PM_ASIC_WORKAROUND
-	pwr_mgr_ignore_power_ok_signal(false);
+#ifdef CONFIG_RHEA_WA_HWJIRA_2272
+/*For B0, it was observed that if MM CCU is switched to and
+	from shutdown state, it would break the DDR self refresh.
+	Recommended workaround is to set the POWER_OK_MASK bit to 0 */
+	if (JIRA_WA_ENABLED(2272))
+		pwr_mgr_ignore_power_ok_signal(false);
 #endif
 
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND

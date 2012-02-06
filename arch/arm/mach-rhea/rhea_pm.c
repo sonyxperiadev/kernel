@@ -450,9 +450,6 @@ int enter_idle_state(struct kona_idle_state *state)
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	static struct ccu_clk* ccu_clk = NULL;
 #endif
-#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
-	u32 timer_lsw = 0;
-#endif
 
 	BUG_ON(!state);
 
@@ -559,11 +556,23 @@ int enter_idle_state(struct kona_idle_state *state)
                         CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
 
 #endif /*CONFIG_RHEA_WA_CRMEMC_919*/
-#if	defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
-	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
-	timer_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
-	while(timer_lsw == readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET));
-#endif
+
+#if	defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || \
+			defined(CONFIG_RHEA_WA_HWJIRA_2045)
+/*
+	Workaround for JIRA 2045:
+	HUB timer counter value is synchronized to apb register only on next
+	32KHz falling edge after WFI wakeup - worst case this could be close to
+	one 32KHz cycle (~30us). To avoid reading invalid counter value by timer
+	driver, idle handler, on exit from WFI, should wait till timer counter
+	is updated.
+*/
+	if (JIRA_WA_ENABLED(2045)) {
+		u32	tmr_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
+		while(tmr_lsw == readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET));
+	}
+#endif /*CONFIG_RHEA_WA_HWJIRA_2045*/
+
 	if(pm_debug != 2)
 		pr_info("SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
