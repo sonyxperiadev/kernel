@@ -2,7 +2,7 @@
  * Synopsys HS OTG Linux Software Driver and documentation (hereinafter,
  * "Software") is an Unsupported proprietary work of Synopsys, Inc. unless
  * otherwise expressly agreed to in writing between Synopsys and you.
- * 
+ *
  * The Software IS NOT an item of Licensed Software or Licensed Product under
  * any End User Software License Agreement or Agreement for Licensed Product
  * with Synopsys or any supplement thereto. You are permitted to use and
@@ -12,7 +12,7 @@
  * any information contained herein except pursuant to this license grant from
  * Synopsys. If you do not agree with this notice, including the disclaimer
  * below, then you are not authorized to use the Software.
- * 
+ *
  * THIS SOFTWARE IS BEING DISTRIBUTED BY SYNOPSYS SOLELY ON AN "AS IS" BASIS
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -26,10 +26,10 @@
  * DAMAGE.
  * ========================================================================== */
 
-/** @file 
+/** @file
  *
- * This file contains the most of the CFI(Core Feature Interface) 
- * implementation for the OTG. 
+ * This file contains the most of the CFI(Core Feature Interface)
+ * implementation for the OTG.
  */
 
 #ifdef DWC_UTE_CFI
@@ -42,26 +42,26 @@
 
 extern dwc_otg_pcd_ep_t *get_ep_by_addr(dwc_otg_pcd_t * pcd, u16 wIndex);
 
-static int cfi_core_features_buf(uint8_t * buf, uint16_t buflen);
-static int cfi_get_feature_value(uint8_t * buf, uint16_t buflen,
+static int cfi_core_features_buf(uint8_t *buf, uint16_t buflen);
+static int cfi_get_feature_value(uint8_t *buf, uint16_t buflen,
 				 struct dwc_otg_pcd *pcd,
 				 struct cfi_usb_ctrlrequest *ctrl_req);
 static int cfi_set_feature_value(struct dwc_otg_pcd *pcd);
-static int cfi_ep_get_sg_val(uint8_t * buf, struct dwc_otg_pcd *pcd,
+static int cfi_ep_get_sg_val(uint8_t *buf, struct dwc_otg_pcd *pcd,
 			     struct cfi_usb_ctrlrequest *req);
-static int cfi_ep_get_concat_val(uint8_t * buf, struct dwc_otg_pcd *pcd,
+static int cfi_ep_get_concat_val(uint8_t *buf, struct dwc_otg_pcd *pcd,
 				 struct cfi_usb_ctrlrequest *req);
-static int cfi_ep_get_align_val(uint8_t * buf, struct dwc_otg_pcd *pcd,
+static int cfi_ep_get_align_val(uint8_t *buf, struct dwc_otg_pcd *pcd,
 				struct cfi_usb_ctrlrequest *req);
 static int cfi_preproc_reset(struct dwc_otg_pcd *pcd,
 			     struct cfi_usb_ctrlrequest *req);
-static void cfi_free_ep_bs_dyn_data(cfi_ep_t * cfiep);
+static void cfi_free_ep_bs_dyn_data(cfi_ep_t *cfiep);
 
-static uint16_t get_dfifo_size(dwc_otg_core_if_t * core_if);
-static int32_t get_rxfifo_size(dwc_otg_core_if_t * core_if, uint16_t wValue);
+static uint16_t get_dfifo_size(dwc_otg_core_if_t *core_if);
+static int32_t get_rxfifo_size(dwc_otg_core_if_t *core_if, uint16_t wValue);
 static int32_t get_txfifo_size(struct dwc_otg_pcd *pcd, uint16_t wValue);
 
-static uint8_t resize_fifos(dwc_otg_core_if_t * core_if);
+static uint8_t resize_fifos(dwc_otg_core_if_t *core_if);
 
 /** This is the header of the all features descriptor */
 static cfi_all_features_header_t all_props_desc_header = {
@@ -98,7 +98,7 @@ static cfi_feature_desc_header_t prop_descs[] = {
 	{
 	 .wFeatureID = DWC_CONSTANT_CPU_TO_LE16(FT_ID_DMA_CONCAT_SETUP),
 	 .bmAttributes = CFI_FEATURE_ATTR_RW,
-	 //.wDataLength  = DWC_CONSTANT_CPU_TO_LE16(6),
+	 /*.wDataLength  = DWC_CONSTANT_CPU_TO_LE16(6),*/
 	 },
 
 	/* FT_ID_DMA_CIRCULAR */
@@ -153,10 +153,10 @@ cfi_string_t prop_name_table[] = {
 
 /************************************************************************/
 
-/** 
- * Returns the name of the feature by its ID 
+/**
+ * Returns the name of the feature by its ID
  * or NULL if no featute ID matches.
- * 
+ *
  */
 const uint8_t *get_prop_name(uint16_t prop_id, int *len)
 {
@@ -174,7 +174,7 @@ const uint8_t *get_prop_name(uint16_t prop_id, int *len)
 
 /**
  * This function handles all CFI specific control requests.
- * 
+ *
  * Return a negative value to stall the DCE.
  */
 int cfi_setup(struct dwc_otg_pcd *pcd, struct cfi_usb_ctrlrequest *ctrl)
@@ -189,7 +189,7 @@ int cfi_setup(struct dwc_otg_pcd *pcd, struct cfi_usb_ctrlrequest *ctrl)
 	uint32_t regaddr = 0;
 	uint32_t regval = 0;
 
-	/* Save this Control Request in the CFI object. 
+	/* Save this Control Request in the CFI object.
 	 * The data field will be assigned in the data stage completion CB function.
 	 */
 	cfi->ctrl_req = *ctrl;
@@ -202,7 +202,7 @@ int cfi_setup(struct dwc_otg_pcd *pcd, struct cfi_usb_ctrlrequest *ctrl)
 	case VEN_CORE_GET_FEATURES:
 		retval = cfi_core_features_buf(cfi->buf_in.buf, CFI_IN_BUF_LEN);
 		if (retval >= 0) {
-			//dump_msg(cfi->buf_in.buf, retval);
+			/*dump_msg(cfi->buf_in.buf, retval);*/
 			ep = &pcd->ep0;
 
 			retval = min((uint16_t) retval, wLen);
@@ -281,13 +281,13 @@ int cfi_setup(struct dwc_otg_pcd *pcd, struct cfi_usb_ctrlrequest *ctrl)
 	case VEN_CORE_READ_REGISTER:
 		CFI_INFO("VEN_CORE_READ_REGISTER\n");
 		/* wValue optionally contains the HI WORD of the register offset and
-		 * wIndex contains the LOW WORD of the register offset 
+		 * wIndex contains the LOW WORD of the register offset
 		 */
 		if (wValue == 0) {
 			/* @TODO - MAS - fix the access to the base field */
 			regaddr = 0;
-			//regaddr = (uint32_t) pcd->otg_dev->base;
-			//GET_CORE_IF(pcd)->co
+			/*regaddr = (uint32_t) pcd->otg_dev->base;*/
+			/*GET_CORE_IF(pcd)->co*/
 			regaddr |= wIndex;
 		} else {
 			regaddr = (wValue << 16) | wIndex;
@@ -345,7 +345,7 @@ int cfi_setup(struct dwc_otg_pcd *pcd, struct cfi_usb_ctrlrequest *ctrl)
 /**
  * This function prepares the core features descriptors and copies its
  * raw representation into the buffer <buf>.
- * 
+ *
  * The buffer structure is as follows:
  *	all_features_header (8 bytes)
  *	features_#1 (8 bytes + feature name string length)
@@ -353,7 +353,7 @@ int cfi_setup(struct dwc_otg_pcd *pcd, struct cfi_usb_ctrlrequest *ctrl)
  *	.....
  *	features_#n - where n=the total count of feature descriptors
  */
-static int cfi_core_features_buf(uint8_t * buf, uint16_t buflen)
+static int cfi_core_features_buf(uint8_t *buf, uint16_t buflen)
 {
 	cfi_feature_desc_header_t *prop_hdr = prop_descs;
 	cfi_feature_desc_header_t *prop;
@@ -399,7 +399,7 @@ static int cfi_core_features_buf(uint8_t * buf, uint16_t buflen)
 /**
  * This function releases all the dynamic memory in the CFI object.
  */
-static void cfi_release(cfiobject_t * cfiobj)
+static void cfi_release(cfiobject_t *cfiobj)
 {
 	cfi_ep_t *cfiep;
 	dwc_list_link_t *tmp;
@@ -419,7 +419,7 @@ static void cfi_release(cfiobject_t * cfiobj)
 	}
 
 	/* Free the Buffer Setup values for each EP */
-	//list_for_each_entry(cfiep, &cfiobj->active_eps, lh) {
+	/*list_for_each_entry(cfiep, &cfiobj->active_eps, lh) {*/
 	DWC_LIST_FOREACH(tmp, &cfiobj->active_eps) {
 		cfiep = DWC_LIST_ENTRY(tmp, struct cfi_ep, lh);
 		cfi_free_ep_bs_dyn_data(cfiep);
@@ -429,7 +429,7 @@ static void cfi_release(cfiobject_t * cfiobj)
 /**
  * This function frees the dynamically allocated EP buffer setup data.
  */
-static void cfi_free_ep_bs_dyn_data(cfi_ep_t * cfiep)
+static void cfi_free_ep_bs_dyn_data(cfi_ep_t *cfiep)
 {
 	if (cfiep->bm_sg) {
 		dwc_free(cfiep->bm_sg);
@@ -456,7 +456,7 @@ static void cfi_free_ep_bs_dyn_data(cfi_ep_t * cfiep)
  * for a specific endpoint and should be called only once when
  * the EP is enabled first time.
  */
-static int cfi_ep_init_defaults(struct dwc_otg_pcd *pcd, cfi_ep_t * cfiep)
+static int cfi_ep_init_defaults(struct dwc_otg_pcd *pcd, cfi_ep_t *cfiep)
 {
 	int retval = 0;
 
@@ -497,7 +497,7 @@ static int cfi_ep_init_defaults(struct dwc_otg_pcd *pcd, cfi_ep_t * cfiep)
  * The callback function that notifies the CFI on the activation of
  * an endpoint in the PCD. The following steps are done in this function:
  *
- *	Create a dynamically allocated cfi_ep_t object (a CFI wrapper to the PCD's 
+ *	Create a dynamically allocated cfi_ep_t object (a CFI wrapper to the PCD's
  *		active endpoint)
  *	Create MAX_DMA_DESCS_PER_EP count DMA Descriptors for the EP
  *	Set the Buffer Mode to standard
@@ -542,12 +542,13 @@ static int cfi_ep_enable(struct cfiobject *cfi, struct dwc_otg_pcd *pcd,
 
 		DWC_LIST_INIT(&cfiep->lh);
 
-		/* Set the buffer mode to BM_STANDARD. It will be modified 
+		/* Set the buffer mode to BM_STANDARD. It will be modified
 		 * when building descriptors for a specific buffer mode */
 		ep->dwc_ep.buff_mode = BM_STANDARD;
 
 		/* Create and initialize the default values for this EP's Buffer modes */
-		if ((retval = cfi_ep_init_defaults(pcd, cfiep)) < 0)
+		retval = cfi_ep_init_defaults(pcd, cfiep);
+		if (retval < 0)
 			return retval;
 
 		/* Add the cfi_ep_t object to the CFI object's list of active endpoints */
@@ -564,7 +565,7 @@ static int cfi_ep_enable(struct cfiobject *cfi, struct dwc_otg_pcd *pcd,
 /**
  * This function is called when the data stage of a 3-stage Control Write request
  * is complete.
- * 
+ *
  */
 static int cfi_ctrl_write_complete(struct cfiobject *cfi,
 				   struct dwc_otg_pcd *pcd)
@@ -573,7 +574,7 @@ static int cfi_ctrl_write_complete(struct cfiobject *cfi,
 	uint16_t wIndex, wValue;
 	uint8_t bRequest;
 	uint8_t *buf = cfi->buf_out.buf;
-	//struct usb_ctrlrequest *ctrl_req = &cfi->ctrl_req_saved;
+	/*struct usb_ctrlrequest *ctrl_req = &cfi->ctrl_req_saved;*/
 	struct cfi_usb_ctrlrequest *ctrl_req = &cfi->ctrl_req;
 	int retval = -DWC_E_NOT_SUPPORTED;
 
@@ -583,7 +584,7 @@ static int cfi_ctrl_write_complete(struct cfiobject *cfi,
 	wIndex = DWC_CONSTANT_CPU_TO_LE16(ctrl_req->wIndex);
 	wValue = DWC_CONSTANT_CPU_TO_LE16(ctrl_req->wValue);
 
-	/* 
+	/*
 	 * Save the pointer to the data stage in the ctrl_req's <data> field.
 	 * The request should be already saved in the command stage by now.
 	 */
@@ -597,13 +598,13 @@ static int cfi_ctrl_write_complete(struct cfiobject *cfi,
 		reg_value = *((uint32_t *) buf);
 		if (wValue == 0) {
 			addr = 0;
-			//addr = (uint32_t) pcd->otg_dev->base;
+			/*addr = (uint32_t) pcd->otg_dev->base;*/
 			addr += wIndex;
 		} else {
 			addr = (wValue << 16) | wIndex;
 		}
 
-		//writel(reg_value, addr);
+		/*writel(reg_value, addr);*/
 
 		retval = 0;
 		cfi->need_status_in_complete = 1;
@@ -628,8 +629,8 @@ static int cfi_ctrl_write_complete(struct cfiobject *cfi,
 /**
  * This function builds the DMA descriptors for the SG buffer mode.
  */
-static void cfi_build_sg_descs(struct cfiobject *cfi, cfi_ep_t * cfiep,
-			       dwc_otg_pcd_request_t * req)
+static void cfi_build_sg_descs(struct cfiobject *cfi, cfi_ep_t *cfiep,
+			       dwc_otg_pcd_request_t *req)
 {
 	struct dwc_otg_pcd_ep *ep = cfiep->ep;
 	ddma_sg_buffer_setup_t *sgval = cfiep->bm_sg;
@@ -642,8 +643,8 @@ static void cfi_build_sg_descs(struct cfiobject *cfi, cfi_ep_t * cfiep,
 	txsize = sgval->wSize;
 	off = sgval->bOffset;
 
-//      CFI_INFO("%s: %s TXSIZE=0x%08x; OFFSET=0x%08x\n", 
-//              __func__, cfiep->ep->ep.name, txsize, off);
+/*      CFI_INFO("%s: %s TXSIZE=0x%08x; OFFSET=0x%08x\n",
+		__func__, cfiep->ep->ep.name, txsize, off);*/
 
 	for (i = 0; i < sgval->bCount; i++) {
 		desc->status.b.bs = BS_HOST_BUSY;
@@ -672,8 +673,8 @@ static void cfi_build_sg_descs(struct cfiobject *cfi, cfi_ep_t * cfiep,
 /**
  * This function builds the DMA descriptors for the Concatenation buffer mode.
  */
-static void cfi_build_concat_descs(struct cfiobject *cfi, cfi_ep_t * cfiep,
-				   dwc_otg_pcd_request_t * req)
+static void cfi_build_concat_descs(struct cfiobject *cfi, cfi_ep_t *cfiep,
+				   dwc_otg_pcd_request_t *req)
 {
 	struct dwc_otg_pcd_ep *ep = cfiep->ep;
 	ddma_concat_buffer_setup_t *concatval = cfiep->bm_concat;
@@ -712,8 +713,8 @@ static void cfi_build_concat_descs(struct cfiobject *cfi, cfi_ep_t * cfiep,
 /**
  * This function builds the DMA descriptors for the Circular buffer mode
  */
-static void cfi_build_circ_descs(struct cfiobject *cfi, cfi_ep_t * cfiep,
-				 dwc_otg_pcd_request_t * req)
+static void cfi_build_circ_descs(struct cfiobject *cfi, cfi_ep_t *cfiep,
+				 dwc_otg_pcd_request_t *req)
 {
 	/* @todo: MAS - add implementation when this feature needs to be tested */
 }
@@ -721,8 +722,8 @@ static void cfi_build_circ_descs(struct cfiobject *cfi, cfi_ep_t * cfiep,
 /**
  * This function builds the DMA descriptors for the Alignment buffer mode
  */
-static void cfi_build_align_descs(struct cfiobject *cfi, cfi_ep_t * cfiep,
-				  dwc_otg_pcd_request_t * req)
+static void cfi_build_align_descs(struct cfiobject *cfi, cfi_ep_t *cfiep,
+				  dwc_otg_pcd_request_t *req)
 {
 	struct dwc_otg_pcd_ep *ep = cfiep->ep;
 	ddma_align_buffer_setup_t *alignval = cfiep->bm_align;
@@ -748,7 +749,7 @@ static void cfi_build_align_descs(struct cfiobject *cfi, cfi_ep_t * cfiep,
 static void cfi_build_descriptors(struct cfiobject *cfi,
 				  struct dwc_otg_pcd *pcd,
 				  struct dwc_otg_pcd_ep *ep,
-				  dwc_otg_pcd_request_t * req)
+				  dwc_otg_pcd_request_t *req)
 {
 	cfi_ep_t *cfiep;
 
@@ -798,7 +799,7 @@ static void *cfi_ep_alloc_buf(struct cfiobject *cfi, struct dwc_otg_pcd *pcd,
 /**
  * This function initializes the CFI object.
  */
-int init_cfi(cfiobject_t * cfiobj)
+int init_cfi(cfiobject_t *cfiobj)
 {
 	CFI_INFO("%s\n", __func__);
 
@@ -834,9 +835,9 @@ int init_cfi(cfiobject_t * cfiobj)
 /**
  * This function reads the required feature's current value into the buffer
  *
- * @retval: Returns negative as error, or the data length of the feature  
+ * @retval: Returns negative as error, or the data length of the feature
  */
-static int cfi_get_feature_value(uint8_t * buf, uint16_t buflen,
+static int cfi_get_feature_value(uint8_t *buf, uint16_t buflen,
 				 struct dwc_otg_pcd *pcd,
 				 struct cfi_usb_ctrlrequest *ctrl_req)
 {
@@ -902,7 +903,7 @@ static int cfi_get_feature_value(uint8_t * buf, uint16_t buflen,
 /**
  * This function resets the SG for the specified EP to its default value
  */
-static int cfi_reset_sg_val(cfi_ep_t * cfiep)
+static int cfi_reset_sg_val(cfi_ep_t *cfiep)
 {
 	dwc_memset(cfiep->bm_sg, 0, sizeof(ddma_sg_buffer_setup_t));
 	return 0;
@@ -911,7 +912,7 @@ static int cfi_reset_sg_val(cfi_ep_t * cfiep)
 /**
  * This function resets the Alignment for the specified EP to its default value
  */
-static int cfi_reset_align_val(cfi_ep_t * cfiep)
+static int cfi_reset_align_val(cfi_ep_t *cfiep)
 {
 	dwc_memset(cfiep->bm_sg, 0, sizeof(ddma_sg_buffer_setup_t));
 	return 0;
@@ -919,10 +920,10 @@ static int cfi_reset_align_val(cfi_ep_t * cfiep)
 
 /**
  * This function resets the Concatenation for the specified EP to its default value
- * This function will also set the value of the wTxBytes field to NULL after 
+ * This function will also set the value of the wTxBytes field to NULL after
  * freeing the memory previously allocated for this field.
  */
-static int cfi_reset_concat_val(cfi_ep_t * cfiep)
+static int cfi_reset_concat_val(cfi_ep_t *cfiep)
 {
 	/* First we need to free the wTxBytes field */
 	if (cfiep->bm_concat->wTxBytes) {
@@ -937,7 +938,7 @@ static int cfi_reset_concat_val(cfi_ep_t * cfiep)
 /**
  * This function resets all the buffer setups of the specified endpoint
  */
-static int cfi_ep_reset_all_setup_vals(cfi_ep_t * cfiep)
+static int cfi_ep_reset_all_setup_vals(cfi_ep_t *cfiep)
 {
 	cfi_reset_sg_val(cfiep);
 	cfi_reset_align_val(cfiep);
@@ -996,9 +997,8 @@ static int cfi_handle_reset_fifo_val(struct dwc_otg_pcd *pcd, uint8_t ep_addr,
 		CFI_INFO
 		    ("%s: Error resetting the feature Reset All(FIFO size)\n",
 		     __func__);
-		if (rx_rst) {
+		if (rx_rst)
 			params->dev_rx_fifo_size = rx_siz;
-		}
 
 		if (tx_rst) {
 			if (ep_addr == 0) {
@@ -1027,9 +1027,8 @@ static int cfi_handle_reset_all(struct dwc_otg_pcd *pcd, uint8_t addr)
 	dwc_list_link_t *tmp;
 
 	retval = cfi_handle_reset_fifo_val(pcd, addr, 1, 1);
-	if (retval < 0) {
+	if (retval < 0)
 		return retval;
-	}
 
 	/* If the EP address is known then reset the features for only that EP */
 	if (addr) {
@@ -1045,7 +1044,7 @@ static int cfi_handle_reset_all(struct dwc_otg_pcd *pcd, uint8_t addr)
 	/* Otherwise (wValue == 0), reset all features of all EP's */
 	else {
 		/* Traverse all the active EP's and reset the feature(s) value(s) */
-		//list_for_each_entry(cfiep, &cfi->active_eps, lh) {
+		/*list_for_each_entry(cfiep, &cfi->active_eps, lh) {*/
 		DWC_LIST_FOREACH(tmp, &cfi->active_eps) {
 			cfiep = DWC_LIST_ENTRY(tmp, struct cfi_ep, lh);
 			retval = cfi_ep_reset_all_setup_vals(cfiep);
@@ -1082,7 +1081,7 @@ static int cfi_handle_reset_dma_buff_setup(struct dwc_otg_pcd *pcd,
 	/* Otherwise (wValue == 0), reset all features of all EP's */
 	else {
 		/* Traverse all the active EP's and reset the feature(s) value(s) */
-		//list_for_each_entry(cfiep, &cfi->active_eps, lh) {
+		/*list_for_each_entry(cfiep, &cfi->active_eps, lh) {*/
 		DWC_LIST_FOREACH(tmp, &cfi->active_eps) {
 			cfiep = DWC_LIST_ENTRY(tmp, struct cfi_ep, lh);
 			retval = cfi_reset_sg_val(cfiep);
@@ -1117,7 +1116,7 @@ static int cfi_handle_reset_concat_val(struct dwc_otg_pcd *pcd, uint8_t addr)
 	/* Otherwise (wValue == 0), reset all features of all EP's */
 	else {
 		/* Traverse all the active EP's and reset the feature(s) value(s) */
-		//list_for_each_entry(cfiep, &cfi->active_eps, lh) {
+		/*list_for_each_entry(cfiep, &cfi->active_eps, lh) {*/
 		DWC_LIST_FOREACH(tmp, &cfi->active_eps) {
 			cfiep = DWC_LIST_ENTRY(tmp, struct cfi_ep, lh);
 			retval = cfi_reset_concat_val(cfiep);
@@ -1152,7 +1151,7 @@ static int cfi_handle_reset_align_val(struct dwc_otg_pcd *pcd, uint8_t addr)
 	/* Otherwise (wValue == 0), reset all features of all EP's */
 	else {
 		/* Traverse all the active EP's and reset the feature(s) value(s) */
-		//list_for_each_entry(cfiep, &cfi->active_eps, lh) {
+		/*list_for_each_entry(cfiep, &cfi->active_eps, lh) {*/
 		DWC_LIST_FOREACH(tmp, &cfi->active_eps) {
 			cfiep = DWC_LIST_ENTRY(tmp, struct cfi_ep, lh);
 			retval = cfi_reset_align_val(cfiep);
@@ -1214,7 +1213,7 @@ static int cfi_preproc_reset(struct dwc_otg_pcd *pcd,
 /**
  * This function sets a new value for the SG buffer setup.
  */
-static int cfi_ep_set_sg_val(uint8_t * buf, struct dwc_otg_pcd *pcd)
+static int cfi_ep_set_sg_val(uint8_t *buf, struct dwc_otg_pcd *pcd)
 {
 	uint8_t inaddr, outaddr;
 	cfi_ep_t *epin, *epout;
@@ -1271,7 +1270,7 @@ static int cfi_ep_set_sg_val(uint8_t * buf, struct dwc_otg_pcd *pcd)
 /**
  * This function sets a new value for the buffer Alignment setup.
  */
-static int cfi_ep_set_alignment_val(uint8_t * buf, struct dwc_otg_pcd *pcd)
+static int cfi_ep_set_alignment_val(uint8_t *buf, struct dwc_otg_pcd *pcd)
 {
 	cfi_ep_t *ep;
 	uint8_t addr;
@@ -1297,7 +1296,7 @@ static int cfi_ep_set_alignment_val(uint8_t * buf, struct dwc_otg_pcd *pcd)
 /**
  * This function sets a new value for the Concatenation buffer setup.
  */
-static int cfi_ep_set_concat_val(uint8_t * buf, struct dwc_otg_pcd *pcd)
+static int cfi_ep_set_concat_val(uint8_t *buf, struct dwc_otg_pcd *pcd)
 {
 	uint8_t addr;
 	cfi_ep_t *ep;
@@ -1329,9 +1328,9 @@ static int cfi_ep_set_concat_val(uint8_t * buf, struct dwc_otg_pcd *pcd)
 	mps = UGETW(ep->ep->desc->wMaxPacketSize);
 
 #if 0
-	for (i = 0; i < desccount; i++) {
+	for (i = 0; i < desccount; i++)
 		CFI_INFO("%s: wTxSize[%d]=0x%04x\n", __func__, i, pVals[i]);
-	}
+
 	CFI_INFO("%s: epname=%s; mps=%d\n", __func__, ep->ep->ep.name, mps);
 #endif
 
@@ -1349,9 +1348,8 @@ static int cfi_ep_set_concat_val(uint8_t * buf, struct dwc_otg_pcd *pcd)
 	dwc_memcpy(ep->bm_concat, pConcatValHdr, BS_CONCAT_VAL_HDR_LEN);
 
 	/* Free the previously allocated storage for the wTxBytes */
-	if (ep->bm_concat->wTxBytes) {
+	if (ep->bm_concat->wTxBytes)
 		dwc_free(ep->bm_concat->wTxBytes);
-	}
 
 	/* Allocate a new storage for the wTxBytes field */
 	ep->bm_concat->wTxBytes =
@@ -1370,13 +1368,13 @@ static int cfi_ep_set_concat_val(uint8_t * buf, struct dwc_otg_pcd *pcd)
 
 /**
  * This function calculates the total of all FIFO sizes
- * 
+ *
  * @param core_if Programming view of DWC_otg controller
  *
  * @return The total of data FIFO sizes.
  *
  */
-static uint16_t get_dfifo_size(dwc_otg_core_if_t * core_if)
+static uint16_t get_dfifo_size(dwc_otg_core_if_t *core_if)
 {
 	dwc_otg_core_params_t *params = core_if->core_params;
 	uint16_t dfifo_total = 0;
@@ -1387,22 +1385,21 @@ static uint16_t get_dfifo_size(dwc_otg_core_if_t * core_if)
 	    params->dev_rx_fifo_size + params->dev_nperio_tx_fifo_size;
 
 	/* Add up each TxFIFO size to the total */
-	for (i = 0; i < core_if->hwcfg4.b.num_in_eps; i++) {
+	for (i = 0; i < core_if->hwcfg4.b.num_in_eps; i++)
 		dfifo_total += params->dev_tx_fifo_size[i];
-	}
 
 	return dfifo_total;
 }
 
 /**
  * This function returns Rx FIFO size
- * 
+ *
  * @param core_if Programming view of DWC_otg controller
  *
  * @return The total of data FIFO sizes.
  *
  */
-static int32_t get_rxfifo_size(dwc_otg_core_if_t * core_if, uint16_t wValue)
+static int32_t get_rxfifo_size(dwc_otg_core_if_t *core_if, uint16_t wValue)
 {
 	switch (wValue >> 8) {
 	case 0:
@@ -1420,7 +1417,7 @@ static int32_t get_rxfifo_size(dwc_otg_core_if_t * core_if, uint16_t wValue)
 
 /**
  * This function returns Tx FIFO size for IN EP
- * 
+ *
  * @param core_if Programming view of DWC_otg controller
  *
  * @return The total of data FIFO sizes.
@@ -1465,15 +1462,15 @@ static int32_t get_txfifo_size(struct dwc_otg_pcd *pcd, uint16_t wValue)
 }
 
 /**
- * This function checks if the submitted combination of 
+ * This function checks if the submitted combination of
  * device mode FIFO sizes is possible or not.
- * 
+ *
  * @param core_if Programming view of DWC_otg controller
  *
  * @return 1 if possible, 0 otherwise.
  *
  */
-static uint8_t check_fifo_sizes(dwc_otg_core_if_t * core_if)
+static uint8_t check_fifo_sizes(dwc_otg_core_if_t *core_if)
 {
 	uint16_t dfifo_actual = 0;
 	dwc_otg_core_params_t *params = core_if->core_params;
@@ -1483,13 +1480,11 @@ static uint8_t check_fifo_sizes(dwc_otg_core_if_t * core_if)
 	dfifo_actual =
 	    params->dev_rx_fifo_size + params->dev_nperio_tx_fifo_size;
 
-	for (i = 0; i < core_if->hwcfg4.b.num_in_eps; i++) {
+	for (i = 0; i < core_if->hwcfg4.b.num_in_eps; i++)
 		dfifo_actual += params->dev_tx_fifo_size[i];
-	}
 
-	if (dfifo_actual > core_if->total_fifo_size) {
+	if (dfifo_actual > core_if->total_fifo_size)
 		return 0;
-	}
 
 	if (params->dev_rx_fifo_size > 32768 || params->dev_rx_fifo_size < 16)
 		return 0;
@@ -1525,13 +1520,13 @@ static uint8_t check_fifo_sizes(dwc_otg_core_if_t * core_if)
 
 /**
  * This function resizes Device mode FIFOs
- * 
+ *
  * @param core_if Programming view of DWC_otg controller
  *
  * @return 1 if successful, 0 otherwise
  *
  */
-static uint8_t resize_fifos(dwc_otg_core_if_t * core_if)
+static uint8_t resize_fifos(dwc_otg_core_if_t *core_if)
 {
 	int i = 0;
 	dwc_otg_core_global_regs_t *global_regs = core_if->core_global_regs;
@@ -1547,9 +1542,8 @@ static uint8_t resize_fifos(dwc_otg_core_if_t * core_if)
 	uint16_t start_address;
 	uint8_t retval = 1;
 
-	if (!check_fifo_sizes(core_if)) {
+	if (!check_fifo_sizes(core_if))
 		return 0;
-	}
 
 	/* Configure data FIFO sizes */
 	if (core_if->hwcfg2.b.dynamic_fifo && params->enable_dynamic_fifo) {
@@ -1587,19 +1581,16 @@ static uint8_t resize_fifos(dwc_otg_core_if_t * core_if)
 		}
 
 		/** Check if register values are set correctly */
-		if (rx_fifo_size != dwc_read_reg32(&global_regs->grxfsiz)) {
+		if (rx_fifo_size != dwc_read_reg32(&global_regs->grxfsiz))
 			retval = 0;
-		}
 
-		if (nptxfifosize.d32 != dwc_read_reg32(&global_regs->gnptxfsiz)) {
+		if (nptxfifosize.d32 != dwc_read_reg32(&global_regs->gnptxfsiz))
 			retval = 0;
-		}
 
 		for (i = 0; i < core_if->hwcfg4.b.num_in_eps; i++) {
 			if (txfifosize[i].d32 !=
-			    dwc_read_reg32(&global_regs->dtxfsiz[i])) {
+			    dwc_read_reg32(&global_regs->dtxfsiz[i]))
 				retval = 0;
-			}
 		}
 
 		/** If register values are not set correctly, reset old values */
@@ -1629,7 +1620,7 @@ static uint8_t resize_fifos(dwc_otg_core_if_t * core_if)
 /**
  * This function sets a new value for the buffer Alignment setup.
  */
-static int cfi_ep_set_tx_fifo_val(uint8_t * buf, dwc_otg_pcd_t * pcd)
+static int cfi_ep_set_tx_fifo_val(uint8_t *buf, dwc_otg_pcd_t * pcd)
 {
 	int retval;
 	uint32_t fsiz;
@@ -1674,7 +1665,7 @@ static int cfi_ep_set_tx_fifo_val(uint8_t * buf, dwc_otg_pcd_t * pcd)
 /**
  * This function sets a new value for the buffer Alignment setup.
  */
-static int cfi_set_rx_fifo_val(uint8_t * buf, dwc_otg_pcd_t * pcd)
+static int cfi_set_rx_fifo_val(uint8_t *buf, dwc_otg_pcd_t * pcd)
 {
 	int retval;
 	uint32_t fsiz;
@@ -1703,7 +1694,7 @@ static int cfi_set_rx_fifo_val(uint8_t * buf, dwc_otg_pcd_t * pcd)
 /**
  * This function reads the SG of an EP's buffer setup into the buffer buf
  */
-static int cfi_ep_get_sg_val(uint8_t * buf, struct dwc_otg_pcd *pcd,
+static int cfi_ep_get_sg_val(uint8_t *buf, struct dwc_otg_pcd *pcd,
 			     struct cfi_usb_ctrlrequest *req)
 {
 	int retval = -DWC_E_INVALID;
@@ -1728,10 +1719,10 @@ static int cfi_ep_get_sg_val(uint8_t * buf, struct dwc_otg_pcd *pcd,
 }
 
 /**
- * This function reads the Concatenation value of an EP's buffer mode into 
+ * This function reads the Concatenation value of an EP's buffer mode into
  * the buffer buf
  */
-static int cfi_ep_get_concat_val(uint8_t * buf, struct dwc_otg_pcd *pcd,
+static int cfi_ep_get_concat_val(uint8_t *buf, struct dwc_otg_pcd *pcd,
 				 struct cfi_usb_ctrlrequest *req)
 {
 	int retval = -DWC_E_INVALID;
@@ -1765,12 +1756,12 @@ static int cfi_ep_get_concat_val(uint8_t * buf, struct dwc_otg_pcd *pcd,
 }
 
 /**
- * This function reads the buffer Alignment value of an EP's buffer mode into 
+ * This function reads the buffer Alignment value of an EP's buffer mode into
  * the buffer buf
  *
  * @return The total number of bytes copied to the buffer or negative error code.
  */
-static int cfi_ep_get_align_val(uint8_t * buf, struct dwc_otg_pcd *pcd,
+static int cfi_ep_get_align_val(uint8_t *buf, struct dwc_otg_pcd *pcd,
 				struct cfi_usb_ctrlrequest *req)
 {
 	int retval = -DWC_E_INVALID;
@@ -1797,9 +1788,9 @@ static int cfi_ep_get_align_val(uint8_t * buf, struct dwc_otg_pcd *pcd,
 
 /**
  * This function sets a new value for the specified feature
- * 
+ *
  * @param	pcd	A pointer to the PCD object
- * 
+ *
  * @return 0 if successful, negative error code otherwise to stall the DCE.
  */
 static int cfi_set_feature_value(struct dwc_otg_pcd *pcd)
@@ -1824,7 +1815,8 @@ static int cfi_set_feature_value(struct dwc_otg_pcd *pcd)
 	switch (wIndex) {
 	case FT_ID_DMA_BUFFER_SETUP:
 		/* Modify the feature */
-		if ((retval = cfi_ep_set_sg_val(buf, pcd)) < 0)
+		retval = cfi_ep_set_sg_val(buf, pcd);
+		if (retval < 0)
 			return retval;
 
 		/* And send this request to the gadget */
@@ -1832,14 +1824,16 @@ static int cfi_set_feature_value(struct dwc_otg_pcd *pcd)
 		break;
 
 	case FT_ID_DMA_BUFF_ALIGN:
-		if ((retval = cfi_ep_set_alignment_val(buf, pcd)) < 0)
+		retval = cfi_ep_set_alignment_val(buf, pcd);
+		if (retval < 0)
 			return retval;
 		cfi->need_gadget_att = 1;
 		break;
 
 	case FT_ID_DMA_CONCAT_SETUP:
 		/* Modify the feature */
-		if ((retval = cfi_ep_set_concat_val(buf, pcd)) < 0)
+		retval = cfi_ep_set_concat_val(buf, pcd);
+		if (retval < 0)
 			return retval;
 		cfi->need_gadget_att = 1;
 		break;
@@ -1858,14 +1852,16 @@ static int cfi_set_feature_value(struct dwc_otg_pcd *pcd)
 
 	case FT_ID_TX_FIFO_DEPTH:
 		CFI_INFO("FT_ID_TX_FIFO_DEPTH\n");
-		if ((retval = cfi_ep_set_tx_fifo_val(buf, pcd)) < 0)
+		retval = cfi_ep_set_tx_fifo_val(buf, pcd);
+		if (retval < 0)
 			return retval;
 		cfi->need_gadget_att = 0;
 		break;
 
 	case FT_ID_RX_FIFO_DEPTH:
 		CFI_INFO("FT_ID_RX_FIFO_DEPTH\n");
-		if ((retval = cfi_set_rx_fifo_val(buf, pcd)) < 0)
+		retval = cfi_set_rx_fifo_val(buf, pcd);
+		if (retval < 0)
 			return retval;
 		cfi->need_gadget_att = 0;
 		break;
@@ -1874,4 +1870,4 @@ static int cfi_set_feature_value(struct dwc_otg_pcd *pcd)
 	return retval;
 }
 
-#endif				//DWC_UTE_CFI
+#endif	/*DWC_UTE_CFI*/

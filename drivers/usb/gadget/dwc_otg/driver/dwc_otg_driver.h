@@ -7,7 +7,7 @@
  * Synopsys HS OTG Linux Software Driver and documentation (hereinafter,
  * "Software") is an Unsupported proprietary work of Synopsys, Inc. unless
  * otherwise expressly agreed to in writing between Synopsys and you.
- * 
+ *
  * The Software IS NOT an item of Licensed Software or Licensed Product under
  * any End User Software License Agreement or Agreement for Licensed Product
  * with Synopsys or any supplement thereto. You are permitted to use and
@@ -17,7 +17,7 @@
  * any information contained herein except pursuant to this license grant from
  * Synopsys. If you do not agree with this notice, including the disclaimer
  * below, then you are not authorized to use the Software.
- * 
+ *
  * THIS SOFTWARE IS BEING DISTRIBUTED BY SYNOPSYS SOLELY ON AN "AS IS" BASIS
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -43,7 +43,7 @@
 struct dwc_otg_pcd;
 struct dwc_otg_hcd;
 
-#ifdef  PCI_INTERFACE
+#ifdef PCI_INTERFACE
 #include <linux/pci.h>
 #else
 #include <linux/device.h>
@@ -59,7 +59,7 @@ typedef struct dwc_otg_device {
 
 #ifdef LM_INTERFACE
 	struct lm_device *lmdev;
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	int rsrc_start;
 	int rsrc_len;
 #else
@@ -82,8 +82,8 @@ typedef struct dwc_otg_device {
 	uint8_t common_irq_installed;
 } dwc_otg_device_t;
 
-/*We must clear S3C24XX_EINTPEND external interrupt register 
- * because after clearing in this register trigerred IRQ from 
+/*We must clear S3C24XX_EINTPEND external interrupt register
+ * because after clearing in this register trigerred IRQ from
  * H/W core in kernel interrupt can be occured again before OTG
  * handlers clear all IRQ sources of Core registers because of
  * timing latencies and Low Level IRQ Type.
