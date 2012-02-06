@@ -76,7 +76,7 @@ static brcm_alsa_chip_t *sgpCaph_chip;
 /* AUDIO LOGGING */
 
 #define DATA_TO_READ 4
-int logging_link[LOG_STREAM_NUMBER] = { 0, 0, 0, 0 };
+static int logging_link[LOG_STREAM_NUMBER] = { 0, 0, 0, 0 };
 
 static int dev_use_count;
 static int process_logmsg(void *data);
@@ -342,7 +342,7 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 			index = p_log_info->log_link - AUDIO_LOG_PATH_1;
 
 			if ((index >= 0) && (index <= 3)) {
-				audio_log_cbinfo[index].capture_ready = TRUE;
+				audio_log_cbinfo[index].capture_ready = FALSE;
 				audio_log_cbinfo[index].stream_index = index;
 				audio_log_cbinfo[index].capture_point =
 				    p_log_info->log_capture_point;
@@ -396,7 +396,8 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 
 	case BCM_LOG_IOCTL_START_CHANNEL:
 		{
-			logging_link[p_log_info->log_link - 1] = 1;
+			index = p_log_info->log_link - AUDIO_LOG_PATH_1;
+			logging_link[index] = 1;
 			rtn =
 			    AUDDRV_AudLog_Start(p_log_info->log_link,
 						p_log_info->log_capture_point,
