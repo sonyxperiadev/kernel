@@ -101,7 +101,7 @@ static struct bcmpmu_temp_map batt_temp_map[] = {
 	{16, 373},			/* 100 C */
 };
 
-struct regulator_consumer_supply rf_supply[] = {
+__weak struct regulator_consumer_supply rf_supply[] = {
 	{.supply = "rf"},
 };
 static struct regulator_init_data bcm59039_rfldo_data = {
@@ -117,7 +117,7 @@ static struct regulator_init_data bcm59039_rfldo_data = {
 	.consumer_supplies = rf_supply,
 };
 
-struct regulator_consumer_supply cam_supply[] = {
+__weak struct regulator_consumer_supply cam_supply[] = {
 	{.supply = "cam"},
 };
 static struct regulator_init_data bcm59039_camldo_data = {
@@ -135,7 +135,7 @@ static struct regulator_init_data bcm59039_camldo_data = {
 };
 
 
-struct regulator_consumer_supply hv1_supply[] = {
+__weak struct regulator_consumer_supply hv1_supply[] = {
 	{.supply = "hv1"},
 };
 static struct regulator_init_data bcm59039_hv1ldo_data = {
@@ -152,7 +152,7 @@ static struct regulator_init_data bcm59039_hv1ldo_data = {
 	.consumer_supplies = hv1_supply,
 };
 
-struct regulator_consumer_supply hv2_supply[] = {
+__weak struct regulator_consumer_supply hv2_supply[] = {
 	{.supply = "hv2"},
 };
 static struct regulator_init_data bcm59039_hv2ldo_data = {
@@ -168,7 +168,7 @@ static struct regulator_init_data bcm59039_hv2ldo_data = {
 	.consumer_supplies = hv2_supply,
 };
 
-struct regulator_consumer_supply hv3_supply[] = {
+__weak struct regulator_consumer_supply hv3_supply[] = {
 	{.supply = "hv3"},
 };
 static struct regulator_init_data bcm59039_hv3ldo_data = {
@@ -184,7 +184,7 @@ static struct regulator_init_data bcm59039_hv3ldo_data = {
 	.consumer_supplies = hv3_supply,
 };
 
-struct regulator_consumer_supply hv4_supply[] = {
+__weak struct regulator_consumer_supply hv4_supply[] = {
 	{.supply = "hv4"},
 };
 static struct regulator_init_data bcm59039_hv4ldo_data = {
@@ -200,7 +200,7 @@ static struct regulator_init_data bcm59039_hv4ldo_data = {
 	.consumer_supplies = hv4_supply,
 };
 
-struct regulator_consumer_supply hv5_supply[] = {
+__weak struct regulator_consumer_supply hv5_supply[] = {
 	{.supply = "hv5"},
 };
 static struct regulator_init_data bcm59039_hv5ldo_data = {
@@ -216,7 +216,7 @@ static struct regulator_init_data bcm59039_hv5ldo_data = {
 	.consumer_supplies = hv5_supply,
 };
 
-struct regulator_consumer_supply hv6_supply[] = {
+__weak struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "vdd_sdio"},
 };
 static struct regulator_init_data bcm59039_hv6ldo_data = {
@@ -232,7 +232,7 @@ static struct regulator_init_data bcm59039_hv6ldo_data = {
 	.consumer_supplies = hv6_supply,
 };
 
-struct regulator_consumer_supply hv7_supply[] = {
+__weak struct regulator_consumer_supply hv7_supply[] = {
 	{.supply = "hv7"},
 };
 static struct regulator_init_data bcm59039_hv7ldo_data = {
@@ -248,7 +248,7 @@ static struct regulator_init_data bcm59039_hv7ldo_data = {
 	.consumer_supplies = hv7_supply,
 };
 
-struct regulator_consumer_supply hv8_supply[] = {
+__weak struct regulator_consumer_supply hv8_supply[] = {
 	{.supply = "hv8"},
 };
 static struct regulator_init_data bcm59039_hv8ldo_data = {
@@ -264,7 +264,7 @@ static struct regulator_init_data bcm59039_hv8ldo_data = {
 	.consumer_supplies = hv8_supply,
 };
 
-struct regulator_consumer_supply hv9_supply[] = {
+__weak struct regulator_consumer_supply hv9_supply[] = {
 	{.supply = "hv9"},
 };
 static struct regulator_init_data bcm59039_hv9ldo_data = {
@@ -280,7 +280,7 @@ static struct regulator_init_data bcm59039_hv9ldo_data = {
 	.consumer_supplies = hv9_supply,
 };
 
-struct regulator_consumer_supply hv10_supply[] = {
+__weak struct regulator_consumer_supply hv10_supply[] = {
 	{.supply = "hv10"},
 };
 
@@ -298,7 +298,7 @@ static struct regulator_init_data bcm59039_hv10ldo_data = {
 	.consumer_supplies = hv10_supply,
 };
 
-struct regulator_consumer_supply sim_supply[] = {
+__weak struct regulator_consumer_supply sim_supply[] = {
 	{.supply = "sim_vcc"},
 };
 static struct regulator_init_data bcm59039_simldo_data = {
