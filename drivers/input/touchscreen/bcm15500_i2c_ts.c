@@ -275,10 +275,6 @@ int bcmtch_init(struct i2c_client *p_i2c_client_spm, struct i2c_client *p_i2c_cl
 {
    unsigned char chipId[4];
    unsigned char regVal;
-   int           data;
-   int           spmReadError;
-   int           count;
-   unsigned char dataByte;
    unsigned char alfo_ctrl;
    int           ret;
 
@@ -560,7 +556,7 @@ void bcmtch_init_ram_contents(void)
 	tofe_tool.m_p_toc = (tofe_toc_t *)((char *)((uint32_t)tofe_tool.m_p_image + (uint32_t)TOFE_SIGNATURE_SIZE));
 
         DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-            printk("m_p_toc  = %08x\n",tofe_tool.m_p_toc);)
+            printk("m_p_toc  = %08x\n",(unsigned int)tofe_tool.m_p_toc);)
 
     /* setup cfg array */
 #ifdef _X64
@@ -584,7 +580,7 @@ void bcmtch_init_ram_contents(void)
 		    tofe_tool.cfg[index] = tofe_tool.m_p_toc->cfg[index];
 
             DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-                printk("tofe_tool.cfg[%d]=0x%08x\n",index,  tofe_tool.cfg[index]);)
+                printk("tofe_tool.cfg[%d]=0x%08x\n",index,  (unsigned int)tofe_tool.cfg[index]);)
 
         }
 #endif
@@ -675,8 +671,8 @@ int bcmtch_chan_init(tofe_channel_instance_cfg_t *channel_cfg, napa_channel_t **
             ptr->cfg.entry_size,
             ptr->cfg.trig_level,
             ptr->cfg.flags,
-	    ptr->cfg.channel_header,
-	    ptr->cfg.channel_data);)
+	    (unsigned int)ptr->cfg.channel_header,
+	    (unsigned int) ptr->cfg.channel_data);)
 #endif
 
         return (NAPA_INIT_SUCCESS);
@@ -900,7 +896,7 @@ uint32_t bcmtch_channel_read_header(napa_channel_t *channel)
     bcmtch_com_read_mem((int)channel->cfg.channel_header, sizeof(channel->header), (void*)&channel->header);
 
     DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d channel_header %08x sizeof %08x\n", __func__, __LINE__, channel->cfg.channel_header, sizeof(channel->header));)
+        printk("%s() line %d channel_header %08x sizeof %08x\n", __func__, __LINE__, (unsigned int)channel->cfg.channel_header, sizeof(channel->header));)
     DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
         printk("%s() line %d write %08x entry_num %08x entry size %08x trig_level %08x flags %08x read %08x data_offset %08x read_iterator %08x write_iterator %08x\n",__func__, __LINE__,
 
@@ -1201,7 +1197,7 @@ void bcmtch_event_touch_down(int tag, unsigned short x, unsigned short y)
 {
 
     DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d %08x\n", __func__, __LINE__, pInputDev);)
+        printk("%s() line %d %08x\n", __func__, __LINE__, (unsigned int)pInputDev);)
 
     if (tag > (NAPA_MAX_TOUCH-1))
         return;
@@ -1217,7 +1213,7 @@ void bcmtch_event_touch_up(int tag, unsigned short x, unsigned short y)
 {
 
     DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d %08x\n", __func__, __LINE__, pInputDev);)
+        printk("%s() line %d %08x\n", __func__, __LINE__, (unsigned int)pInputDev);)
 
     if (tag > (NAPA_MAX_TOUCH-1))
         return;
@@ -1233,7 +1229,7 @@ void bcmtch_event_touch_move(int tag, unsigned short x, unsigned short y)
 {
 
     DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d %08x\n", __func__, __LINE__, pInputDev);)
+        printk("%s() line %d %08x\n", __func__, __LINE__, (unsigned int)pInputDev);)
 
     if (tag > (NAPA_MAX_TOUCH-1))
         return;
@@ -1748,7 +1744,7 @@ int bcmtch_i2c_read_mem(int ahb_addr, int len, void *data)     /* port note, Rea
    //reg_val = bcmtch_i2c_read_reg(NAPA_I2C_AHB_SLAVE_ADDR, I2C_REG_RFIFO_DATA);
 
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() line %d count %d data %d\n", __func__, __LINE__, count, data);)
+      printk("%s() line %d count %d data %u\n", __func__, __LINE__, count, (unsigned int)data);)
    return count;
 }
 
@@ -1773,7 +1769,7 @@ int bcmtch_i2c_read_mem_reg32( int ahb_addr, void *data)
 
    count = bcmtch_i2c_read_mem(ahb_addr, len, (unsigned char *)data);
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() returning %d read: %d\n", __func__, count, (unsigned char *)data);)
+      printk("%s() returning %d read: %u\n", __func__, count, (unsigned int)data);)
 
    return count;
 }
@@ -2034,7 +2030,7 @@ static struct input_dev *bcmtch_allocate_input_dev(void)
    struct input_dev *pInputDev = NULL;
 
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-       printk("%s() line %d %08x  BEGIN....\n", __func__, __LINE__, pInputDev);)
+       printk("%s() line %d %08x  BEGIN....\n", __func__, __LINE__, (unsigned int)pInputDev);)
 
    for (index = 0 ; index < NAPA_MAX_TOUCH ; ++index) {
        napa_touch_status[index]=0;
@@ -2073,7 +2069,7 @@ static struct input_dev *bcmtch_allocate_input_dev(void)
    }
 
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-       printk("%s() line %d %08x  END....\n", __func__, __LINE__, pInputDev);)
+       printk("%s() line %d %08x  END....\n", __func__, __LINE__, (unsigned int)pInputDev);)
 
    return pInputDev;
 }
@@ -2215,7 +2211,6 @@ static int bcmtch_i2c_probe(struct i2c_client *p_i2c_client,
                           const struct i2c_device_id *id)
 {
    int ret = 0;
-   int rc = 0;
    struct bcm915500_platform_data *p_plat_data;
    struct i2c_client  *p_new_i2c_client;
    struct i2c_adapter *p_i2c_adapter;
