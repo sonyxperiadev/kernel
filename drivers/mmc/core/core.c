@@ -1934,6 +1934,14 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		host->rescan_disable = 0;
 		spin_unlock_irqrestore(&host->lock, flags);
 		mmc_detect_change(host, 0);
+		/* Add a flush here to make sure mmc_detect completes
+		 * executing. In absence of this there is a race condition
+		 * where multiple wakelocks could be taken by mmc_detect_change
+		 * and the first unlock triggering the suspend (and a suspend
+		 * failure). This sort of loops in the same cycle and the system
+		 * never enters suspend.
+		 */
+		mmc_flush_scheduled_work();
 
 	}
 
