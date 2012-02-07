@@ -1071,8 +1071,7 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 		cdev->req->length = value;
 		rc = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
 		if (rc < 0)
-			ERROR(cdev, "%s setup response queue
-				error\n", __func__);
+			ERROR(cdev, "%s setup response queue error\n", __func__);
 	}
 	return value;
 }
