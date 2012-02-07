@@ -567,7 +567,13 @@ static int bsc_xfer_write_data(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 			       uint8_t *buf, unsigned int len)
 {
+	int rc;
 	unsigned long time_left;
+
+	/* make sure the hareware is ready */
+	rc = bsc_wait_cmdbusy(dev);
+	if (rc < 0)
+		return rc;
 
 	/* enable TX FIFO */
 	bsc_set_tx_fifo((uint32_t) dev->virt_base, 1);
@@ -596,6 +602,11 @@ static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 		dev_err(dev->device, "TX FIFO timed out\n");
 		return 0;
 	}
+
+	/* make sure writing to be finished before disabling TX FIFO */
+	rc = bsc_wait_cmdbusy(dev);
+	if (rc < 0)
+		return rc;
 
 	/* disable TX FIFO */
 	bsc_set_tx_fifo((uint32_t) dev->virt_base, 0);
