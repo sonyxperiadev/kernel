@@ -1966,6 +1966,15 @@ static void sdhci_tasklet_card(unsigned long param)
 #ifdef CONFIG_MMC_BCM_SD
 		pr_info("SD Card Removed\n");
 	} else {
+		/*
+		 * Turn ON the SDCLK very early here; We do this
+		 * to handle the case of quick remove-insert.
+		 */
+		unsigned int clock;
+		clock = host->clock;
+		host->clock = 0;
+		sdhci_set_clock(host, clock);
+
 		pr_info("SD Card Inserted\n");
 #endif
 	}
