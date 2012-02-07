@@ -1175,38 +1175,25 @@ static int msm_rotator_start(unsigned long arg, int pid)
 	case MDP_RGBX_8888:
 	case MDP_BGRA_8888:
 		is_rgb = 1;
+		info.dst.format = info.src.format;
 		break;
 	case MDP_Y_CBCR_H2V2:
 	case MDP_Y_CRCB_H2V2:
+	case MDP_Y_CBCR_H2V1:
+	case MDP_Y_CRCB_H2V1:
+		info.dst.format = info.src.format;
+		break;
+	case MDP_YCRYCB_H2V1:
+		info.dst.format = MDP_Y_CRCB_H2V1;
+		break;
 	case MDP_Y_CB_CR_H2V2:
+	case MDP_Y_CBCR_H2V2_TILE:
+		info.dst.format = MDP_Y_CBCR_H2V2;
+		break;
 	case MDP_Y_CR_CB_H2V2:
 	case MDP_Y_CR_CB_GH2V2:
-	case MDP_Y_CBCR_H2V1:
-	case MDP_Y_CRCB_H2V1:
-	case MDP_YCRYCB_H2V1:
 	case MDP_Y_CRCB_H2V2_TILE:
-	case MDP_Y_CBCR_H2V2_TILE:
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	switch (info.dst.format) {
-	case MDP_RGB_565:
-	case MDP_BGR_565:
-	case MDP_RGB_888:
-	case MDP_ARGB_8888:
-	case MDP_RGBA_8888:
-	case MDP_XRGB_8888:
-	case MDP_RGBX_8888:
-	case MDP_BGRA_8888:
-	case MDP_Y_CBCR_H2V2:
-	case MDP_Y_CRCB_H2V2:
-	case MDP_Y_CB_CR_H2V2:
-	case MDP_Y_CR_CB_H2V2:
-	case MDP_Y_CBCR_H2V1:
-	case MDP_Y_CRCB_H2V1:
-	case MDP_YCRYCB_H2V1:
+		info.dst.format = MDP_Y_CRCB_H2V2;
 		break;
 	default:
 		return -EINVAL;
