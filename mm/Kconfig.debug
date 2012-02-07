@@ -22,3 +22,11 @@ config WANT_PAGE_DEBUG_FLAGS
 config PAGE_POISONING
 	bool
 	select WANT_PAGE_DEBUG_FLAGS
+
+config SHOW_FREE_LISTS
+	bool "Show Free lists per migrate-type in show_free_areas()"
+	---help---
+	  Shows the free lists per zone at the end of show_free_areas(). The
+	  list is identical to /proc/pagetypeinfo (In fact this uses the exact code
+	  and replaces seq_prints by printks. Specially usefull to see the free
+	  migrate type lists when kernel runs out of memory

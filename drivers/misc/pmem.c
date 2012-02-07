@@ -1550,6 +1550,13 @@ void pmem_dump(void)
 	unsigned long per_process_alloc = 0;
 #endif
 
+	/*
+	 * we shouldn't add additional overhead of pmem_dump() in
+	 * interrupt context anyway
+	 */
+	if (in_interrupt())
+		return;
+
 	for (id = 0; id < id_count; id++) {
 
 		printk("$$$$$$ For PMEM id (%d) $$$$$$\n", id);
@@ -1611,6 +1618,7 @@ void pmem_dump(void)
 			}
 #endif
 		}
+
 		mutex_unlock(&pmem[id].data_list_lock);
 
 		printk("==============================================\n");

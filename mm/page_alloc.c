@@ -850,10 +850,10 @@ struct page *__rmqueue_smallest(struct zone *zone, unsigned int order,
  * the free lists for the desirable migrate type are depleted
  */
 static int fallbacks[MIGRATE_TYPES][4] = {
-	[MIGRATE_UNMOVABLE]   = { MIGRATE_RECLAIMABLE, MIGRATE_MOVABLE,   MIGRATE_RESERVE },
-	[MIGRATE_RECLAIMABLE] = { MIGRATE_UNMOVABLE,   MIGRATE_MOVABLE,   MIGRATE_RESERVE },
+	[MIGRATE_UNMOVABLE]   = { MIGRATE_RECLAIMABLE, MIGRATE_MOVABLE,     MIGRATE_RESERVE },
+	[MIGRATE_RECLAIMABLE] = { MIGRATE_UNMOVABLE,   MIGRATE_MOVABLE,     MIGRATE_RESERVE },
 #ifdef CONFIG_CMA
- 	[MIGRATE_MOVABLE]     = { MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE, MIGRATE_CMA, MIGRATE_RESERVE },
+	[MIGRATE_MOVABLE]     = { MIGRATE_CMA,	       MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE, MIGRATE_RESERVE },
 	[MIGRATE_CMA]         = { MIGRATE_RESERVE }, /* Never used */
 #else
 	[MIGRATE_MOVABLE]     = { MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE,   MIGRATE_RESERVE },
@@ -1778,8 +1778,7 @@ static inline bool should_suppress_show_mem(void)
 {
 	bool ret = false;
 
-/* pmem_dump should not be called in the irq context. */
-#if defined (CONFIG_ANDROID_PMEM) || (NODES_SHIFT > 8)
+#if (NODES_SHIFT > 8)
 	ret = in_interrupt();
 #endif
 	return ret;
@@ -2581,19 +2580,26 @@ out:
  * SHOW_MEM_FILTER_NODES is passed.
  */
 
-static char * const migratetype_names[MIGRATE_TYPES] = {
+#ifdef CONFIG_SHOW_FREE_LISTS
+static char * const mtype_names[MIGRATE_TYPES] = {
 	"Unmovable",
 	"Reclaimable",
 	"Movable",
 	"Reserve",
-	"Cma",
+#ifdef CONFIG_CMA
+	"CMA",
+#endif
 	"Isolate",
 };
+#endif /* SHOW_FREE_LISTS */
+
 void show_free_areas(unsigned int filter)
 {
 	int cpu;
 	struct zone *zone;
+#ifdef CONFIG_SHOW_FREE_LISTS
 	int mtype;
+#endif /* SHOW_FREE_LISTS */
 
 	for_each_populated_zone(zone) {
 		if (skip_free_areas_node(filter, zone_to_nid(zone)))
@@ -2719,6 +2725,7 @@ void show_free_areas(unsigned int filter)
 			total += nr[order] << order;
 		}
 
+#ifdef CONFIG_SHOW_FREE_LISTS
 		printk("%-43s ", "Free pages count per migrate type at order");
 		for (order = 0; order < MAX_ORDER; ++order)
 			printk("%6lu ", order);
@@ -2726,7 +2733,7 @@ void show_free_areas(unsigned int filter)
 		for (mtype = 0; mtype < MIGRATE_TYPES; mtype++) {
 			printk("                   zone %8s, type %12s ",
 					zone->name,
-					migratetype_names[mtype]);
+					mtype_names[mtype]);
 			for (order = 0; order < MAX_ORDER; order++) {
 				unsigned long freecount = 0;
 				struct free_area *area;
@@ -2739,6 +2746,8 @@ void show_free_areas(unsigned int filter)
 			}
 			printk("\n");
 		}
+#endif /* CONFIG_SHOW_FREE_LISTS */
+
 		spin_unlock_irqrestore(&zone->lock, flags);
 		for (order = 0; order < MAX_ORDER; order++)
 			printk("%lu*%lukB ", nr[order], K(1UL) << order);
