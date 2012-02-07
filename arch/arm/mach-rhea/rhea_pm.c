@@ -61,7 +61,7 @@ extern void dormant_enter(void);
 static u32 force_retention = 0;
 static u32 pm_debug = 2;
 /* Set this to 1 to enable dormant from boot */
-static u32 dormant_enable = 1;
+static u32 dormant_enable;
 
 #define CHIPREG_PERIPH_SPARE_CONTROL2    \
 	(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET)
