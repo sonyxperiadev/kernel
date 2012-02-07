@@ -1440,7 +1440,9 @@ static int rhea_camera_power(struct device *dev, int on)
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
 	if (NULL == unicam_dfs_node) {
-		unicam_dfs_node = pi_mgr_dfs_add_request("unicam", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
+		unicam_dfs_node = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam", PI_MGR_PI_ID_MM,
+                                           PI_MGR_DFS_MIN_VALUE);
+//#		unicam_dfs_node = pi_mgr_dfs_add_request("unicam", PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
 		if (NULL == unicam_dfs_node) {
 			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
 			return -1;
