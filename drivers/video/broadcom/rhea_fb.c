@@ -43,6 +43,10 @@
 
 #define RHEA_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
 
+#define SHARP_RESET  	 (13)     
+#define DSI_BRIDGE_RESET (12)     
+#define DSI_BRIDGE_PON   (25)
+
 #ifdef CONFIG_CDEBUGGER
 struct struct_frame_buf_mark {
 	u32 special_mark_1;
@@ -251,6 +255,34 @@ skip_drawing:
 	return ret;
 }
 
+
+static void lq043y1dx01_reset(u32 gpio)
+{
+	gpio_request(gpio, "lcd_reset");
+	gpio_direction_output(gpio, 0);
+	gpio_set_value_cansleep(gpio, 1);
+	msleep(1);
+	gpio_set_value_cansleep(gpio, 0);
+	msleep(1);
+	gpio_set_value_cansleep(gpio, 1);
+	msleep(20);
+}
+
+static void lq_reset(void)
+{
+	// Reset SHARP DPI display
+	lq043y1dx01_reset(SHARP_RESET);
+	
+	/* DSI BRIDGE P-ON */
+	gpio_request(DSI_BRIDGE_PON, "dsi_bridge_pon");
+	gpio_direction_output(DSI_BRIDGE_PON, 0);
+	gpio_set_value_cansleep(DSI_BRIDGE_PON, 0);
+        msleep(20);
+	
+	/* Reset DSI Bridge */
+	lq043y1dx01_reset(DSI_BRIDGE_RESET);
+}
+
 static void reset_display(u32 gpio)
 {	
 	if (gpio != 0) {
@@ -262,6 +294,8 @@ static void reset_display(u32 gpio)
 		msleep(1);
 		gpio_set_value_cansleep(gpio, 1);
 		msleep(20);
+	} else {
+		lq_reset();
 	}
 }
 
@@ -278,7 +312,7 @@ static int enable_display(struct rhea_fb *fb, u32 gpio, u32 bus_width)
 	
 	reset_display(gpio);
 	printk("sleep 100ms after reset gpio %d\n",gpio);
-	msleep(100); //haipeng Temporary
+	msleep(20); //haipeng Temporary
 
 	local_DISPDRV_OPEN_PARM_T.busId = fb->phys_fbbase;
 	local_DISPDRV_OPEN_PARM_T.busCh = 0;

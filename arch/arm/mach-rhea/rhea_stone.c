@@ -724,7 +724,7 @@ static struct kona_fb_platform_data lq043y1dx01_dsi_display_fb_data = {
 	.screen_width		= 480,
 	.screen_height		= 800,
 	.bytes_per_pixel	= 2,
-	.gpio			= 41,
+	.gpio			= 0,
 	.pixel_format		= RGB565,
 };
 

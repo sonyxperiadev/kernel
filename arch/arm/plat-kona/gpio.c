@@ -168,9 +168,6 @@ static void kona_gpio_set(struct gpio_chip *chip, unsigned gpio, int value)
 	__raw_writel(val, reg_base + reg_offset);
 
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
-
-	pr_info("[GPIO] - write value 0x%08x to register 0x%08x\n",
-		val, reg_offset);
 }
 
 static int kona_gpio_get(struct gpio_chip *chip, unsigned gpio)
@@ -215,9 +212,6 @@ static int kona_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
 
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 
-	pr_info("[GPIO] - write value 0x%08x to register 0x%08x\n",
-		val, GPIO_CTRL(gpio));
-
 	return 0;
 }
 
@@ -237,17 +231,11 @@ static int kona_gpio_direction_output(struct gpio_chip *chip, unsigned gpio,
 	val |= GPIO_GPCTR0_IOTR_CMD_0UTPUT;
 	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
 
-	pr_info("[GPIO] - write value 0x%08x to register 0x%08x\n",
-		val, GPIO_CTRL(gpio));
-
 	val = __raw_readl(reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
 	val = (value) ? (val | (1 << GPIO_BIT(gpio))) : (val & (~(1 << GPIO_BIT(gpio))));
 	__raw_writel(val, reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
 
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
-
-	pr_info("[GPIO] - write value 0x%08x to register 0x%08x\n",
-		val, GPIO_OUT_SET(GPIO_BANK(gpio)));
 
 	return 0;
 }
@@ -301,9 +289,6 @@ static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigne
 	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
 
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
-
-	pr_info("[GPIO] - write value 0x%08x to register 0x%08x\n",
-		val, GPIO_CTRL(gpio));
 
 	return 0;
 }
@@ -416,9 +401,6 @@ static int kona_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 	__raw_writel(val, p_kona_gpio->reg_base + GPIO_CTRL(gpio));
 
 	spin_unlock_irqrestore(&p_kona_gpio->lock, flags);
-
-	pr_info("[GPIO] - write value 0x%08x to register 0x%08x\n",
-		val, GPIO_CTRL(gpio));
 
 	return 0;
 }

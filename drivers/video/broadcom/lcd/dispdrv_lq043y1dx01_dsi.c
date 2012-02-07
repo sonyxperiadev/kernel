@@ -393,6 +393,12 @@ static void lq043y1dx01_panel_on(LQ043Y1DX01_PANEL_t *pPanel) {
 	lq043y1dx01_send_cmd( pPanel->spi, sharp_disp_on  , 	ARRAY_SIZE(sharp_disp_on  )*sizeof(u16));
 }
 
+static void lq043y1dx01_panel_off(LQ043Y1DX01_PANEL_t *pPanel)  {
+      lq043y1dx01_send_cmd( pPanel->spi, sharp_disp_off  , ARRAY_SIZE(sharp_disp_off  )*sizeof(u16));
+      lq043y1dx01_send_cmd( pPanel->spi, sharp_sleep_in,          ARRAY_SIZE(sharp_sleep_in)*sizeof(u16));
+      msleep(60);
+}
+
 static void lq043y1dx01_reset(u32 gpio)
 {
 	int res1;
@@ -910,10 +916,10 @@ Int32 LQ043Y1DX01_PowerControl (
 			// RGB should be active at this point
 			lq043y1dx01_panel_on( pPanel );
 		    
-			lq043y1dx01_ReadReg( drvH, 0x0A );
-			lq043y1dx01_ReadReg( drvH, 0x0B );
-			lq043y1dx01_ReadReg( drvH, 0x0C );
-			lq043y1dx01_ReadReg( drvH, 0x0E );
+			//lq043y1dx01_ReadReg( drvH, 0x0A );
+			//lq043y1dx01_ReadReg( drvH, 0x0B );
+			//lq043y1dx01_ReadReg( drvH, 0x0C );
+			//lq043y1dx01_ReadReg( drvH, 0x0E );
 /*
 			lq043y1dx01_ReadReg( drvH, 0x85 );
 */
@@ -923,7 +929,11 @@ Int32 LQ043Y1DX01_PowerControl (
 				__FUNCTION__ );
 			break; 
                 case DISP_PWR_SLEEP_ON:
+	
 			lq043y1dx01_WrCmndP0 ( drvH, MIPI_DCS_EXIT_SLEEP_MODE );
+
+			//lq043y1dx01_panel_on( pPanel );
+
 			OSTASK_Sleep ( 120 );
 			pPanel->pwrState = DISP_PWR_SLEEP_OFF;
 			LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-OUT\n\r",
@@ -943,6 +953,8 @@ Int32 LQ043Y1DX01_PowerControl (
         case DISPLAY_POWER_STATE_SLEEP:
 		if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
 		{
+			lq043y1dx01_panel_off(pPanel);
+
 			lq043y1dx01_WrCmndP0 ( drvH, MIPI_DCS_ENTER_SLEEP_MODE );
 			OSTASK_Sleep ( 120 );
 			pPanel->pwrState = DISP_PWR_SLEEP_ON;
@@ -1230,7 +1242,8 @@ static int __devinit lq043y1dx01_spi_probe(struct spi_device *spi)
 	
 	
 	panel[0].spi = spi;
-	
+
+#if 0
 	// Reset SHARP DPI display
 	lq043y1dx01_reset(SHARP_RESET);
 	
@@ -1243,7 +1256,7 @@ static int __devinit lq043y1dx01_spi_probe(struct spi_device *spi)
 	
 	/* Reset DSI Bridge */
 	lq043y1dx01_reset(DSI_BRIDGE_RESET);
-
+#endif
 	/* Turn BL ON */
 /*	
 	res1=gpio_request(SHARP_BL, "sharp_bl");
