@@ -310,6 +310,7 @@ static int __pi_init_state(struct pi *pi)
 {
 	int ret = 0;
 	int inx;
+	unsigned long flgs;
 
 	pi_dbg("%s:%s\n",__func__,pi->name);
 	BUG_ON(pi->init == PI_INIT_NONE);
@@ -325,7 +326,7 @@ static int __pi_init_state(struct pi *pi)
 			pi->pi_ccu[inx] = clk_get(NULL,pi->ccu_id[inx]);
 			BUG_ON(pi->pi_ccu[inx] == 0 || IS_ERR(pi->pi_ccu[inx]));
 		}
-
+		spin_lock_irqsave(&pi_mgr_lock, flgs);
 		if(pi->ops && pi->ops->init_state)
 			ret = pi->ops->init_state(pi);
 
@@ -359,6 +360,7 @@ static int __pi_init_state(struct pi *pi)
 					pi->name,pi->usg_cnt,cfg.policy);
 			pwr_mgr_pi_set_wakeup_override(pi->id,true /*clear*/);
 		}
+		spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 	}
 	return ret;
 }
@@ -366,11 +368,8 @@ static int __pi_init_state(struct pi *pi)
 int pi_init_state(struct pi *pi)
 {
 	int ret;
-	unsigned long flgs;
 
-	spin_lock_irqsave(&pi_mgr_lock, flgs);
 	ret = __pi_init_state(pi);
-	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 	return ret;
 }
 EXPORT_SYMBOL(pi_init_state);
