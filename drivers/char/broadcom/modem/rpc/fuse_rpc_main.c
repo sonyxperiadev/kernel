@@ -196,7 +196,7 @@ static void sysRpcHandlerCbk(void *eventHandle)
 {
 	SysRpcMsgInfo_t *elem;
 
-	elem = kmalloc(sizeof(SysRpcMsgInfo_t), GFP_ATOMIC);
+	elem = kmalloc(sizeof(SysRpcMsgInfo_t), GFP_KERNEL);
 	if (!elem) {
 		_DBG(SYSRPC_TRACE
 		     ("sysrpc: sysRpcHandlerCbk Allocation error\n"));
