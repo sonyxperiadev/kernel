@@ -83,7 +83,7 @@ enum bcmpmu_usb_det_state_t {
 /* Values in this table need to be revisited */
 static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_NONE] = 0,
-	[PMU_CHRGR_TYPE_SDP] = 100,
+	[PMU_CHRGR_TYPE_SDP] = 0,
 	[PMU_CHRGR_TYPE_CDP] = 500,
 	[PMU_CHRGR_TYPE_DCP] = 1500,
 	[PMU_CHRGR_TYPE_TYPE1] = 1000,
