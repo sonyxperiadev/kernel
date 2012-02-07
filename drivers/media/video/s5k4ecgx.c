@@ -236,7 +236,7 @@ struct s5k4ecgx_regset_table {
 }
 
 struct s5k4ecgx_regs {
-	struct s5k4ecgx_regset_table ev[EV_MAX];
+	struct s5k4ecgx_regset_table ev[EV_MAXIMUM];
 	struct s5k4ecgx_regset_table metering[METERING_MAX];
 	struct s5k4ecgx_regset_table iso[ISO_MAX];
 	struct s5k4ecgx_regset_table effect[IMAGE_EFFECT_MAX];
@@ -2941,7 +2941,11 @@ static long s5k4ecgx_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 		case VIDIOC_THUMB_SUPPORTED:
 		{
 			int *p = arg;
+#ifdef	JPEG_THUMB_ACTIVE
 			*p = 1; /* yes */
+#else
+			*p = 0; /* no */
+#endif
 			break;
 		}
 
@@ -2969,6 +2973,18 @@ static long s5k4ecgx_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			break;
 		}
 
+		case VIDIOC_JPEG_G_PACKET_INFO:
+		{
+			struct v4l2_jpeg_packet_info *p = arg;
+#ifdef JPEG_THUMB_ACTIVE
+			 p->padded = 4;
+			 p->packet_size= 0x27c;
+#else
+			 p->padded = 0;
+			 p->packet_size = 0x810;
+#endif
+			 break;
+		}
 		default:
 			ret = -ENOIOCTLCMD;
 			break;

@@ -384,7 +384,7 @@ struct sr030pc50_regset_table {
 }
 
 struct sr030pc50_regs {
-	struct sr030pc50_regset_table ev[EV_MAX];
+	struct sr030pc50_regset_table ev[EV_MAXIMUM];
 	struct sr030pc50_regset_table metering[METERING_MAX];
 	struct sr030pc50_regset_table iso[ISO_MAX];
 	struct sr030pc50_regset_table effect[IMAGE_EFFECT_MAX];
