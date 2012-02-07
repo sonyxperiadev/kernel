@@ -531,11 +531,15 @@ static int dormant_attempt;
 module_param_named(dormant_attempt, dormant_attempt, int,
 		   S_IRUGO | S_IWUSR | S_IWGRP);
 
+static int enable_dormant;
+module_param_named(enable_dormant, enable_dormant, int,
+		   S_IRUGO | S_IWUSR | S_IWGRP);
+
 void dormant_enter(void)
 {
 	bool ret = false;
 
-	if (dormant_base_va != 0) {
+	if (enable_dormant) {
 		/* Count of total number of times dormant entry was
 		 * attempted.
 		 */
@@ -582,6 +586,7 @@ static int __init rhea_dormant_init(void)
 
 	pr_info("dormant base @ va: 0x%08x, pa: 0x%08x\n", dormant_base_va,
 		dormant_base_pa);
+	enable_dormant = 1;
 
 	return 0;
 }
