@@ -35,6 +35,16 @@ static unsigned long release_freepages(struct list_head *freelist)
 	return count;
 }
 
+static void map_pages(struct list_head *list)
+{
+	struct page *page;
+
+	list_for_each_entry(page, list, lru) {
+		arch_alloc_page(page, 0);
+		kernel_map_pages(page, 1, 1);
+	}
+}
+
 static inline bool migrate_async_suitable(int migratetype)
 {
 	return is_migrate_cma(migratetype) || migratetype == MIGRATE_MOVABLE;
@@ -114,23 +124,19 @@ isolate_freepages_range(unsigned long start_pfn, unsigned long end_pfn)
 	unsigned long isolated, pfn, block_end_pfn, flags;
 	struct zone *zone = NULL;
 	LIST_HEAD(freelist);
-	struct page *page;
+
+	if (pfn_valid(start_pfn))
+		zone = page_zone(pfn_to_page(start_pfn));
 
 	for (pfn = start_pfn; pfn < end_pfn; pfn += isolated) {
-		if (!pfn_valid(pfn))
-			break;
-
-		if (!zone)
-			zone = page_zone(pfn_to_page(pfn));
-		else if (zone != page_zone(pfn_to_page(pfn)))
+		if (!pfn_valid(pfn) || zone != page_zone(pfn_to_page(pfn)))
 			break;
 
 		/*
-		 * On subsequent iterations round_down() is actually not
-		 * needed, but we keep it that we not to complicate the code.
+		 * On subsequent iterations ALIGN() is actually not needed,
+		 * but we keep it that we not to complicate the code.
 		 */
-		block_end_pfn = round_down(pfn, pageblock_nr_pages)
-			+ pageblock_nr_pages;
+		block_end_pfn = ALIGN(pfn + 1, pageblock_nr_pages);
 		block_end_pfn = min(block_end_pfn, end_pfn);
 
 		spin_lock_irqsave(&zone->lock, flags);
@@ -154,10 +160,7 @@ isolate_freepages_range(unsigned long start_pfn, unsigned long end_pfn)
 	}
 
 	/* split_free_page does not map the pages */
-	list_for_each_entry(page, &freelist, lru) {
-		arch_alloc_page(page, 0);
-		kernel_map_pages(page, 1, 1);
-	}
+	map_pages(&freelist);
 
 	if (pfn < end_pfn) {
 		/* Loop terminated early, cleanup. */
@@ -262,7 +265,7 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 		} else if (!locked)
 			spin_lock_irq(&zone->lru_lock);
 
-		if (!pfn_valid(low_pfn))
+		if (!pfn_valid_within(low_pfn))
 			continue;
 		nr_scanned++;
 
@@ -311,10 +314,8 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 		nr_isolated++;
 
 		/* Avoid isolating too much */
-		if (cc->nr_migratepages == COMPACT_CLUSTER_MAX) {
-			++low_pfn;
+		if (cc->nr_migratepages == COMPACT_CLUSTER_MAX)
 			break;
-		}
 	}
 
 	acct_isolated(zone, cc);
@@ -434,10 +435,7 @@ static void isolate_freepages(struct zone *zone,
 	}
 
 	/* split_free_page does not map the pages */
-	list_for_each_entry(page, freelist, lru) {
-		arch_alloc_page(page, 0);
-		kernel_map_pages(page, 1, 1);
-	}
+	map_pages(freelist);
 
 	cc->free_pfn = high_pfn;
 	cc->nr_freepages = nr_freepages;

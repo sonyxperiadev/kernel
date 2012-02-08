@@ -688,9 +688,8 @@ static int find_best_area(struct cma *cma, int count,
 struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 				       unsigned int align)
 {
+	unsigned long mask, pfn, pageno;
 	struct cma *cma = dev_get_cma_area(dev);
-	unsigned long pfn = 0, pageno;
-	unsigned long mask = (1 << align) - 1;
 	int ret;
 #ifdef CONFIG_CMA_BEST_FIT
 	struct cma_range best_fit;
@@ -709,6 +708,8 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 
 	if (!count)
 		return NULL;
+
+	mask = (1 << align) - 1;
 
 	trace_cma_alloc_start(cma, count, align);
 

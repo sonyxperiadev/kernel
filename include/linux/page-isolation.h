@@ -28,27 +28,10 @@ undo_isolate_page_range(unsigned long start_pfn, unsigned long end_pfn,
 int test_pages_isolated(unsigned long start_pfn, unsigned long end_pfn);
 
 /*
- * Check all pages in pageblock, find the ones on pcp list, and set
- * their page_private to MIGRATE_ISOLATE.
- */
-extern void update_pcp_isolate_block(unsigned long pfn);
-
-/*
  * Internal functions. Changes pageblock's migrate type.
  */
 extern int set_migratetype_isolate(struct page *page);
 extern void unset_migratetype_isolate(struct page *page, unsigned migratetype);
 
-#ifdef CONFIG_CMA
-
-/* The below functions must be run on a range from a single zone. */
-extern int alloc_contig_range(unsigned long start, unsigned long end,
-			      unsigned migratetype);
-extern void free_contig_range(unsigned long pfn, unsigned nr_pages);
-
-/* CMA stuff */
-extern void init_cma_reserved_pageblock(struct page *page);
-
-#endif
 
 #endif

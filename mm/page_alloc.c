@@ -856,7 +856,7 @@ static int fallbacks[MIGRATE_TYPES][4] = {
  	[MIGRATE_MOVABLE]     = { MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE, MIGRATE_CMA, MIGRATE_RESERVE },
 	[MIGRATE_CMA]         = { MIGRATE_RESERVE }, /* Never used */
 #else
-	[MIGRATE_MOVABLE]     = { MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE, MIGRATE_RESERVE },
+	[MIGRATE_MOVABLE]     = { MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE,   MIGRATE_RESERVE },
 #endif
 	[MIGRATE_RESERVE]     = { MIGRATE_RESERVE }, /* Never used */
 	[MIGRATE_ISOLATE]     = { MIGRATE_RESERVE }, /* Never used */
@@ -981,7 +981,7 @@ __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 			 * want unmovable pages to be allocated from
 			 * MIGRATE_CMA areas.
 			 */
-			if (!is_pageblock_cma(page) &&
+			if (!is_migrate_cma(migratetype) &&
 			    (unlikely(current_order >= pageblock_order / 2) ||
 			     start_migratetype == MIGRATE_RECLAIMABLE ||
 			     page_group_by_mobility_disabled)) {
@@ -1004,13 +1004,13 @@ __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 
 			/* Take ownership for orders >= pageblock_order */
 			if (current_order >= pageblock_order &&
-			    !is_pageblock_cma(page))
+			    !is_migrate_cma(migratetype))
 				change_pageblock_range(page, current_order,
 							start_migratetype);
 
 			expand(zone, page, order, current_order, area,
-			       is_migrate_cma(start_migratetype)
-			     ? start_migratetype : migratetype);
+			       is_migrate_cma(migratetype)
+			     ? migratetype : start_migratetype);
 
 			trace_mm_page_alloc_extfrag(page, order, current_order,
 				start_migratetype, migratetype);
@@ -1061,7 +1061,7 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
 			unsigned long count, struct list_head *list,
 			int migratetype, int cold)
 {
-	int i;
+	int mt = migratetype, i;
 
 	spin_lock(&zone->lock);
 	for (i = 0; i < count; ++i) {
@@ -1083,11 +1083,11 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
 		else
 			list_add_tail(&page->lru, list);
 #ifdef CONFIG_CMA
-		if (is_pageblock_cma(page))
-			set_page_private(page, MIGRATE_CMA);
-		else
+		mt = get_pageblock_migratetype(page);
+		if (!is_migrate_cma(mt) && mt != MIGRATE_ISOLATE)
+			mt = migratetype;
 #endif
-			set_page_private(page, migratetype);
+		set_page_private(page, mt);
 		list = &page->lru;
 	}
 	__mod_zone_page_state(zone, NR_FREE_PAGES, -(i << order));
@@ -1972,7 +1972,7 @@ __alloc_pages_direct_compact(gfp_t gfp_mask, unsigned int order,
 #endif /* CONFIG_COMPACTION */
 
 /* Perform direct synchronous page reclaim */
-static inline int
+static int
 __perform_reclaim(gfp_t gfp_mask, unsigned int order, struct zonelist *zonelist,
 		  nodemask_t *nodemask)
 {
@@ -5571,14 +5571,16 @@ static int
 __count_immobile_pages(struct zone *zone, struct page *page, int count)
 {
 	unsigned long pfn, iter, found;
+	int mt;
+
 	/*
 	 * For avoiding noise data, lru_add_drain_all() should be called
 	 * If ZONE_MOVABLE, the zone never contains immobile pages
 	 */
 	if (zone_idx(zone) == ZONE_MOVABLE)
 		return true;
-	if (get_pageblock_migratetype(page) == MIGRATE_MOVABLE ||
-	    is_pageblock_cma(page))
+	mt = get_pageblock_migratetype(page);
+	if (mt == MIGRATE_MOVABLE || is_migrate_cma(mt))
 		return true;
 
 	pfn = page_to_pfn(page);
@@ -5669,7 +5671,6 @@ out:
 	if (!ret) {
 		set_pageblock_migratetype(page, MIGRATE_ISOLATE);
 		move_freepages_block(zone, page, MIGRATE_ISOLATE);
-		update_pcp_isolate_block(pfn);
 	}
 
 	spin_unlock_irqrestore(&zone->lock, flags);
@@ -5756,7 +5757,7 @@ static int __alloc_contig_migrate_range(unsigned long start, unsigned long end)
 	}
 
 	putback_lru_pages(&cc.migratepages);
-	return ret;
+	return ret > 0 ? 0 : ret;
 }
 
 /*
@@ -5772,6 +5773,13 @@ static int __reclaim_pages(struct zone *zone, gfp_t gfp_mask, int count)
 	int order = 1;
 	unsigned long watermark;
 
+	/*
+	 * Increase level of watermarks to force kswapd do his job
+	 * to stabilize at new watermark level.
+	 */
+	min_free_kbytes += count * PAGE_SIZE / 1024;
+	setup_per_zone_wmarks();
+
 	/* Obey watermarks as if the page was being allocated */
 	watermark = low_wmark_pages(zone) + count;
 	while (!zone_watermark_ok(zone, 0, watermark, 0, 0)) {
@@ -5784,6 +5792,11 @@ static int __reclaim_pages(struct zone *zone, gfp_t gfp_mask, int count)
 			out_of_memory(zonelist, gfp_mask, order, NULL);
 		}
 	}
+
+	/* Restore original watermark levels. */
+	min_free_kbytes -= count * PAGE_SIZE / 1024;
+	setup_per_zone_wmarks();
+
 	return count;
 }
 
@@ -5810,6 +5823,7 @@ static int __reclaim_pages(struct zone *zone, gfp_t gfp_mask, int count)
 int alloc_contig_range(unsigned long start, unsigned long end,
 		       unsigned migratetype)
 {
+	struct zone *zone = page_zone(pfn_to_page(start));
 	unsigned long outer_start, outer_end;
 	int ret = 0, order;
 
@@ -5858,6 +5872,9 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	 * page allocator holds, ie. they can be part of higher order
 	 * pages.  Because of this, we reserve the bigger range and
 	 * once this is done free the pages we are not interested in.
+	 *
+	 * We don't have to hold zone->lock here because the pages are
+	 * isolated thus they won't get removed from buddy.
 	 */
 
 	lru_add_drain_all();
@@ -5866,8 +5883,8 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	order = 0;
 	outer_start = start;
 	while (!PageBuddy(pfn_to_page(outer_start))) {
-		if (WARN_ON(++order >= MAX_ORDER)) {
-			ret = -EINVAL;
+		if (++order >= MAX_ORDER) {
+			ret = -EBUSY;
 			goto done;
 		}
 		outer_start &= ~0UL << order;
@@ -5875,7 +5892,7 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 
 	/* Make sure the range is really isolated. */
 	if (test_pages_isolated(outer_start, end)) {
-		pr_warn("__alloc_contig_migrate_range: test_pages_isolated(%lx, %lx) failed\n",
+		pr_warn("alloc_contig_range test_pages_isolated(%lx, %lx) failed\n",
 		       outer_start, end);
 		ret = -EBUSY;
 		goto done;
@@ -5885,8 +5902,7 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	 * Reclaim enough pages to make sure that contiguous allocation
 	 * will not starve the system.
 	 */
-	__reclaim_pages(page_zone(pfn_to_page(outer_start)),
-		        GFP_HIGHUSER_MOVABLE, end-start);
+	__reclaim_pages(zone, GFP_HIGHUSER_MOVABLE, end-start);
 
 	/* Grab isolated pages from freelists. */
 	outer_end = isolate_freepages_range(outer_start, end);
@@ -5912,9 +5928,7 @@ void free_contig_range(unsigned long pfn, unsigned nr_pages)
 	for (; nr_pages--; ++pfn)
 		__free_page(pfn_to_page(pfn));
 }
-
 #endif
-
 
 #ifdef CONFIG_MEMORY_HOTREMOVE
 /*

@@ -78,11 +78,6 @@ static inline int get_pageblock_migratetype(struct page *page)
 	return get_pageblock_flags_group(page, PB_migrate, PB_migrate_end);
 }
 
-static inline bool is_pageblock_cma(struct page *page)
-{
-	return is_migrate_cma(get_pageblock_migratetype(page));
-}
-
 struct free_area {
 	struct list_head	free_list[MIGRATE_TYPES];
 	unsigned long		nr_free;

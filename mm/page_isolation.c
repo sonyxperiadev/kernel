@@ -144,27 +144,3 @@ int test_pages_isolated(unsigned long start_pfn, unsigned long end_pfn)
 	spin_unlock_irqrestore(&zone->lock, flags);
 	return ret ? 0 : -EBUSY;
 }
-
-/* must hold zone->lock */
-void update_pcp_isolate_block(unsigned long pfn)
-{
-	unsigned long end_pfn = pfn + pageblock_nr_pages;
-	struct page *page;
-
-	while (pfn < end_pfn) {
-		if (!pfn_valid_within(pfn)) {
-			++pfn;
-			continue;
-		}
-
-		page = pfn_to_page(pfn);
-		if (PageBuddy(page)) {
-			pfn += 1 << page_order(page);
-		} else if (page_count(page) == 0) {
-			set_page_private(page, MIGRATE_ISOLATE);
-			++pfn;
-		} else {
-			++pfn;
-		}
-	}
-}
