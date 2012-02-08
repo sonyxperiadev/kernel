@@ -1711,7 +1711,11 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc (
 			cmVcH->bpp_dma	 = 2;  
 			cmVcH->bpp_wire	 = 2;
 			cmVcH->wc_rshift = 1;
+#ifdef CONFIG_FB_BRCM_ILI9486						
+			cmVcH->cm = DE1_CM_LE;
+#else
 			cmVcH->cm = DE1_CM_565;
+#endif			
 			break;
 		default:
 			LCD_DBG(LCD_DBG_ERR_ID,	"[CSL DSI][%d] %s: "

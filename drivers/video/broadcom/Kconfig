@@ -6,3 +6,10 @@ config FB_BRCM_RHEA
 	select FB_CFB_IMAGEBLIT
 	help
 	  This framebuffer device driver is for the Broadcom Rhea platform.
+
+config FB_BRCM_ILI9486
+	tristate "LCD Panel ILI9486 Controller"
+	default N
+	help 
+		HVGA LCD panel (ILI9486 controller)
+		
