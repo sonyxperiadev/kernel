@@ -4,8 +4,7 @@
 /* Memory Debugging */
 #ifdef DEBUG_MEMORY
 
-struct allocation
-{
+struct allocation {
 	void *addr;
 	char *func;
 	int line;
@@ -16,8 +15,7 @@ struct allocation
 
 DWC_CIRCLEQ_HEAD(allocation_queue, allocation);
 
-struct allocation_manager
-{
+struct allocation_manager {
 	struct allocation_queue allocations;
 
 	/* statistics */
@@ -30,9 +28,10 @@ struct allocation_manager
 };
 
 
-static struct allocation_manager *manager = NULL;
+static struct allocation_manager *manager;
 
-static void add_allocation(uint32_t size, char const* func, int line, void *addr, int dma)
+static void add_allocation(uint32_t size, char const *func,
+	int line, void *addr, int dma)
 {
 	struct allocation *a = __DWC_ALLOC_ATOMIC(sizeof(*a));
 	a->func = __DWC_ALLOC_ATOMIC(DWC_STRLEN(func)+1);
@@ -44,22 +43,20 @@ static void add_allocation(uint32_t size, char const* func, int line, void *addr
 	DWC_CIRCLEQ_INSERT_TAIL(&manager->allocations, a, entry);
 
 	/* Update stats */
-	manager->num ++;
-	manager->num_active ++;
+	manager->num++;
+	manager->num_active++;
 	manager->total += size;
 	manager->current += size;
-	if (manager->max < manager->current) {
+	if (manager->max < manager->current)
 		manager->max = manager->current;
-	}
 }
 
 static struct allocation *find_allocation(void *addr)
 {
 	struct allocation *a;
 	DWC_CIRCLEQ_FOREACH(a, &manager->allocations, entry) {
-		if (a->addr == addr) {
+		if (a->addr == addr)
 			return a;
-		}
 	}
 	return NULL;
 }
@@ -73,8 +70,8 @@ static void free_allocation(void *addr, char const* func, int line)
 	}
 	DWC_CIRCLEQ_REMOVE(&manager->allocations, a, entry);
 
-	manager->num_active --;
-	manager->num_freed ++;
+	manager->num_active--;
+	manager->num_freed++;
 	manager->current -= a->size;
 	__DWC_FREE(a->func);
 	__DWC_FREE(a);
@@ -83,9 +80,8 @@ static void free_allocation(void *addr, char const* func, int line)
 void dwc_memory_debug_start(void)
 {
 	DWC_ASSERT(manager == NULL, "Memory debugging has already started\n");
-	if (manager == NULL) {
+	if (manager == NULL)
 		manager = __DWC_ALLOC(sizeof(*manager));
-	}
 
 	DWC_CIRCLEQ_INIT(&manager->allocations);
 	manager->num = 0;

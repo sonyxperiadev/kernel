@@ -6904,11 +6904,9 @@ typedef enum
 	//---------------------------------------------------------------
 	// MSG_GRP_RTC, MESSAGE GROUP FOR RTC (0x5000)
 	//---------------------------------------------------------------
-#if defined (RTC_CAL_INCLUDED)
 	MSG_RTC_CAL_REQ						= MSG_GRP_RTC+0x00,
 	MSG_RTC_CAL_IND						= MSG_GRP_RTC+0x01,
 	MSG_RTC_CAL_RSP						= MSG_GRP_RTC+0x02,
-#endif
 	// End of MSG_GRP_RTC, (0x5000)
 	//------------------------------------------------
 	// end of list

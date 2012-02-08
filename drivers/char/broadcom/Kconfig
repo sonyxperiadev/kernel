@@ -246,3 +246,9 @@ config GPS_IRQ
 	--help---
 		If GPS I2C-HOSTWAKE is used
 
+config BCM_RTC_CAL
+    tristate "RTC CAL"
+    default n
+    ---help---
+      Select to build the RTC CAL driver.
+

@@ -77,14 +77,17 @@ extern int dwc_dh_pk(uint8_t nd, uint8_t *exp, uint8_t *pkd, uint8_t *hash);
  * Input:
  * pkd = The PKD value.
  * pkh = The PKH value.
- * exp = The A value (if device) or B value (if host) generated in dwc_wudev_dh_pk.
+ * exp = The A value (if device) or B value (if host)
+ * generated in dwc_wudev_dh_pk.
  * is_host = Set to non zero if a WUSB host is calling this function.
  *
  * Output:
 
- * dd = A pointer to an buffer to be set to the displayed digits string to be shown
- *      to the user.  This buffer should be at 5 bytes long to hold 4 digits plus a
- *      null termination character.  This buffer can be used directly for display.
+ * dd = A pointer to an buffer to be set to the displayed
+ * digits string to be shown to the user.
+ * This buffer should be at 5 bytes long to hold 4 digits plus a
+ * null termination character.  This buffer can be used directly
+ * for display.
  * ck = A 16-byte buffer to be filled with the CK.
  * kdk = A 32-byte buffer to be filled with the KDK.
  */

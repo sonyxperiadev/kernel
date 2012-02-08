@@ -86,9 +86,7 @@
 #define TASKPRI_DLINK                   NORMAL
 #define TASKPRI_RESTART                 BELOW_NORMAL
 #define TASKPRI_BKGMGR                  LOWEST-1
-#if defined (RTC_CAL_INCLUDED)
 #define TASKPRI_RTCCAL                  LOWEST-1
-#endif
 #define TASKPRI_I2C                     (TPriority_t)(LOWEST-3)
 #define TASKPRI_PCM                     (TPriority_t)(LOWEST-2)
 #define TASKPRI_IRSTACK                 NORMAL-1
@@ -225,9 +223,7 @@
 #define TASKNAME_DLINK                  (TName_t)"DLINK"
 #define TASKNAME_RESTART                (TName_t)"PPPRST"
 #define TASKNAME_BKGMGR                 (TName_t)"BKGMGR"
-#if defined (RTC_CAL_INCLUDED)
 #define TASKNAME_RTCCAL                 (TName_t)"RTCCAL"
-#endif
 #define TASKNAME_I2C                    (TName_t)"I2C"
 #define TASKNAME_PCM                    (TName_t)"PCM"
 #define TASKNAME_IRSTACK                (TName_t)"IRSTACK"
@@ -366,9 +362,7 @@
 
 #define STACKSIZE_RESTART               (STACKSIZE_BASIC + 512)
 #define STACKSIZE_BKGMGR                (STACKSIZE_BASIC + 2048)    //512
-#if defined (RTC_CAL_INCLUDED)
 #define STACKSIZE_RTCCAL                	(STACKSIZE_BASIC + 8192)
-#endif
 #define STACKSIZE_I2C                   (STACKSIZE_BASIC + 2048 + 1536)
 #define STACKSIZE_PCM                   (STACKSIZE_BASIC + 2048)
 #define STACKSIZE_IRSTACK               (STACKSIZE_BASIC + (4096*2))

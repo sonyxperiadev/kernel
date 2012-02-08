@@ -78,7 +78,8 @@ extern void dwc_cc_if_free(dwc_cc_if_t *cc_if);
 /** Removes all contexts from the connection context list */
 extern void dwc_cc_clear(dwc_cc_if_t *cc_if);
 
-/** Adds a connection context (CHID, CK, CDID, Name) to the connection context list.
+/** Adds a connection context (CHID, CK, CDID, Name) to the
+ * connection context list.
  * If a CHID already exists, the CK and name are overwritten.  Statistics are
  * not overwritten.
  *
@@ -91,7 +92,8 @@ extern void dwc_cc_clear(dwc_cc_if_t *cc_if);
  * @param length The length othe unicode string.
  * @return A unique identifier used to refer to this context that is valid for
  * as long as this context is still in the list. */
-extern int32_t dwc_cc_add(dwc_cc_if_t *cc_if, uint8_t *chid, uint8_t *cdid, uint8_t *ck, uint8_t *name, uint8_t length);
+extern int32_t dwc_cc_add(dwc_cc_if_t *cc_if, uint8_t *chid,
+	uint8_t *cdid, uint8_t *ck, uint8_t *name, uint8_t length);
 
 /** Changes the CHID, CK, CDID, or Name values of a connection context in the
  * list, preserving any accumulated statistics.  This would typically be called
@@ -107,7 +109,9 @@ extern int32_t dwc_cc_add(dwc_cc_if_t *cc_if, uint8_t *chid, uint8_t *cdid, uint
  * indicates no change.
  * @param name Host friendly name UTF16-LE.  NULL indicates no change.
  * @param length Length of name. */
-extern void dwc_cc_change(dwc_cc_if_t *cc_if, int32_t id, uint8_t *chid, uint8_t *cdid, uint8_t *ck, uint8_t *name, uint8_t length);
+extern void dwc_cc_change(dwc_cc_if_t *cc_if, int32_t id,
+	uint8_t *chid, uint8_t *cdid, uint8_t *ck,
+	uint8_t *name, uint8_t length);
 
 /** Remove the specified connection context.
  * @param cc_if The cc_if structure.
@@ -130,7 +134,8 @@ extern uint8_t *dwc_cc_data_for_save(dwc_cc_if_t *cc_if, unsigned int *length);
  * @param cc_if The cc_if structure.
  * @param data The data bytes as returned from dwc_cc_data_for_save.
  * @param length The length of the data. */
-extern void dwc_cc_restore_from_data(dwc_cc_if_t *cc_if, uint8_t *data, unsigned int length);
+extern void dwc_cc_restore_from_data(dwc_cc_if_t *cc_if,
+	uint8_t *data, unsigned int length);
 
 /** Find the connection context from the specified CHID.
  *
@@ -172,33 +177,36 @@ extern uint8_t *dwc_cc_cdid(dwc_cc_if_t *cc_if, int32_t id);
 extern uint8_t *dwc_cc_name(dwc_cc_if_t *cc_if, int32_t id, uint8_t *length);
 
 /** Checks a buffer for non-zero.
- * @param id A pointer to a 16 byte buffer. 
+ * @param id A pointer to a 16 byte buffer.
  * @return true if the 16 byte value is non-zero. */
-static inline unsigned dwc_assoc_is_not_zero_id(uint8_t *id) {
+static inline unsigned dwc_assoc_is_not_zero_id(uint8_t *id)
+{
 	int i;
-	for (i=0; i<16; i++) {
-		if (id[i]) return 1;
+	for (i = 0; i < 16; i++) {
+		if (id[i])
+			return 1;
 	}
 	return 0;
 }
 
 /** Checks a buffer for zero.
- * @param id A pointer to a 16 byte buffer. 
+ * @param id A pointer to a 16 byte buffer.
  * @return true if the 16 byte value is zero. */
-static inline unsigned dwc_assoc_is_zero_id(uint8_t *id) {
+static inline unsigned dwc_assoc_is_zero_id(uint8_t *id)
+{
 	return !dwc_assoc_is_not_zero_id(id);
 }
 
 /** Prints an ASCII representation for the 16-byte chid, cdid, or ck, into
  * buffer. */
-static inline int dwc_print_id_string(char *buffer, uint8_t *id) {
+static inline int dwc_print_id_string(char *buffer, uint8_t *id)
+{
 	char *ptr = buffer;
 	int i;
-	for (i=0; i<16; i++) {
+	for (i = 0; i < 16; i++) {
 		ptr += DWC_SPRINTF(ptr, "%02x", id[i]);
-		if (i < 15) {
+		if (i < 15)
 			ptr += DWC_SPRINTF(ptr, " ");
-		}
 	}
 	return ptr - buffer;
 }

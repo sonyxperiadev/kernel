@@ -101,8 +101,8 @@ struct rw_semaphore gRpcLock;
 #define RPC_WRITE_LOCK do{down_write(&gRpcLock);_DBG(RPC_TRACE("[RPC_LOCK] Write Lock pid=%d",current->pid));}while(0)
 #define RPC_WRITE_UNLOCK do{up_write(&gRpcLock);_DBG(RPC_TRACE("[RPC_LOCK] Write UnLock pid=%d",current->pid));}while(0)
 #else
-#define RPC_READ_LOCK		down_read(&gRpcLock)
-#define RPC_READ_UNLOCK		up_read(&gRpcLock)
+#define RPC_READ_LOCK		local_bh_disable() 
+#define RPC_READ_UNLOCK		local_bh_enable()
 
 #define RPC_WRITE_LOCK		down_write(&gRpcLock)
 #define RPC_WRITE_UNLOCK	up_write(&gRpcLock)
@@ -456,7 +456,7 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 		return RPC_RESULT_ERROR;
 	}
 
-	elem = kmalloc(sizeof(RpcCbkElement_t), GFP_KERNEL);
+	elem = kmalloc(sizeof(RpcCbkElement_t), GFP_ATOMIC);
 	if (!elem) {
 		_DBG(RPC_TRACE("k:RPC_ServerDispatchMsg Allocation error\n"));
 		return RPC_RESULT_ERROR;
@@ -493,7 +493,6 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 	RPC_Result_t ret = RPC_RESULT_ERROR;
 	int bFound = 0;
 
-	RPC_READ_LOCK;
 
 	if (interfaceType == INTERFACE_RPC_TELEPHONY) {
 		if (channel == 0xCD) {
@@ -562,7 +561,6 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 		}
 	}
 
-	RPC_READ_UNLOCK;
 
 	_DBG(RPC_TRACE("k:RPC_ServerRxCbk ret=%d\n", ret));
 
