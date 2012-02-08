@@ -182,12 +182,10 @@ static void kona_pwmc_get_field(const struct kona_pwmc *ap, unsigned int offset,
 static void kona_pwmc_stop(const struct kona_pwmc *ap, int chan)
 {
     kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_enable_shift,0) ;
-    clk_disable(ap->clk);
 }
 
 static void kona_pwmc_start(const struct kona_pwmc *ap, int chan)
 {
-    clk_enable(ap->clk);
     kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_enable_shift,1) ;
 }
 
@@ -195,13 +193,14 @@ static void kona_pwmc_config_polarity(struct kona_pwmc *ap, int chan,
                                          struct pwm_config *c)
 {
     struct pwm_device *p = ap->p[chan];
+	clk_enable(ap->clk);
 
     if ( c->polarity )
         kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_polarity_shift,1) ;
     else
         kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_polarity_shift,0) ;
-  
     p->polarity = c->polarity ? 1 : 0;
+	clk_disable(ap->clk);
 }
 
 static void kona_pwmc_config_duty_ticks(struct kona_pwmc *ap, int chan,
@@ -211,6 +210,7 @@ static void kona_pwmc_config_duty_ticks(struct kona_pwmc *ap, int chan,
     unsigned int pre_scaler = 0 ;
     unsigned int duty_cnt = 0 ;
 
+	clk_enable(ap->clk);
     kona_pwmc_get_field(ap, pwm_chan_pre_scaler_info[chan].offset,
     pwm_chan_pre_scaler_info[chan].mask, pwm_chan_pre_scaler_info[chan].shift, &pre_scaler) ;
 
@@ -233,6 +233,7 @@ static void kona_pwmc_config_duty_ticks(struct kona_pwmc *ap, int chan,
     kona_pwmc_start(ap, chan) ;
 
     p->duty_ticks = c->duty_ticks;
+	clk_disable(ap->clk);
 }
 
 static int kona_pwmc_config_period_ticks(struct kona_pwmc *ap, int chan,
@@ -242,6 +243,7 @@ static int kona_pwmc_config_period_ticks(struct kona_pwmc *ap, int chan,
     unsigned char pre_scaler = 0 ;
     struct pwm_device *p = ap->p[chan];
 
+	clk_enable(ap->clk);
     // pcnt = ( 26 * 1000000 * period_ns ) / (pre_scaler * 1000000000 )
     // Calculate period cnt.
     pre_scaler = c->period_ticks / 0xFFFFFF ;
@@ -271,6 +273,7 @@ static int kona_pwmc_config_period_ticks(struct kona_pwmc *ap, int chan,
     kona_pwmc_start(ap, chan) ;
 
     p->period_ticks = c->period_ticks;
+	clk_disable(ap->clk);
 
     return 0;
 }
@@ -309,6 +312,7 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
             .duty_ticks = p->duty_ticks,
         };
         kona_pwmc_config_duty_ticks(ap, chan, &d);
+		clk_enable(ap->clk);
         kona_pwmc_start(ap, chan);
     }
 
@@ -321,6 +325,7 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
         kona_pwmc_config_duty_ticks(ap, chan, &d);
         /* turn-off the PWM clock i.e. enabled during pwm_start */
         kona_pwmc_stop(ap, chan);
+		clk_disable(ap->clk);
     }
 
 out:
@@ -335,6 +340,7 @@ static int kona_pwmc_request(struct pwm_device *p)
     clk_enable(ap->clk);
     p->tick_hz = clk_get_rate(ap->clk);
     kona_pwmc_stop(ap, chan);
+	clk_disable(ap->clk);
     return 0;
 }
 
