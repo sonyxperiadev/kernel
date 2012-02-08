@@ -104,6 +104,10 @@ int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
 #endif
 static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char * reg_name);
 
+int sdio_dev_is_initialized(enum sdio_devtype devtype);
+
+
+
 #define DRIVER_NAME "sdio"
 /*
 static void sdhci_dumpregs(struct sdhci_host *host)
@@ -407,6 +411,51 @@ int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
 #endif
 }
 
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+static void kona_sdio_status_notify_cb (int card_present, void *dev_id)
+{
+	 struct sdhci_host *host;
+	 int ret;
+	 int rc;
+	 struct sdio_dev *dev;
+
+	 printk(KERN_ERR " %s ENTRY\n",__FUNCTION__);
+	 
+	 rc = sdio_dev_is_initialized(SDIO_DEV_TYPE_WIFI);
+	 if (rc <= 0)
+	 	{
+	 	printk(KERN_ERR " %s CARD IS NOT INITIALIZED\n",__FUNCTION__);
+		return NULL;
+	 	}
+	 dev = gDevs[SDIO_DEV_TYPE_WIFI];
+
+	 printk(KERN_ERR " %s DEV=%x\n",__FUNCTION__,dev);
+
+
+	 host = dev_id;
+	 if (host == NULL) {
+		 pr_err("%s(): Invalid host structure pointer \r\n", __func__);
+		 return;
+	 }
+	 printk(KERN_ERR " %s CALL EMULATION=%x\n",__FUNCTION__,dev);
+
+	  bcm_kona_sd_card_emulate(dev, 1);
+
+	   printk(KERN_ERR " %s EMULATION DONE=%x\n",__FUNCTION__,dev);
+	/* 
+	 * TODO: The required implementtion to check the status of the card
+	 * etc
+	 */
+
+	 /* Call the core function to rescan on the given host controller */
+
+	 printk(KERN_ERR " %s MMC_DETECT_CHANGE\n",__FUNCTION__);	
+	 mmc_detect_change(host->mmc, 0);
+
+	 	 printk(KERN_ERR " %s MMC_DETECT_CHANGE DONE\n",__FUNCTION__);	
+}
+#endif
+
 static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 {
 	struct sdhci_host *host;
@@ -415,6 +464,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	struct sdio_platform_cfg *hw_cfg;
 	char devname[MAX_DEV_NAME_SIZE];
 	int ret;
+	printk(KERN_ERR " %s ENTRY\n",__FUNCTION__);
 
 	BUG_ON(pdev == NULL);
 
@@ -424,12 +474,15 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	printk(KERN_ERR " % GET PLATFORM DATA \n",__FUNCTION__);
+
 	hw_cfg = (struct sdio_platform_cfg *)pdev->dev.platform_data;
 	if (hw_cfg->devtype >= SDIO_DEV_TYPE_MAX) {
 		dev_err(&pdev->dev, "unknown device type\n");
 		ret = -EFAULT;
 		goto err;
 	}
+	printk(KERN_ERR " %s GET PLATFORM RESOURCES\n",__FUNCTION__);
 
 	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!iomem) {
@@ -446,9 +499,14 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	printk(KERN_ERR " %s ALLOC HOST\n",__FUNCTION__);
+
 	host->hw_name = "bcm_kona_sd";
 	host->ops = &sdhci_pltfm_ops;
 	host->irq = platform_get_irq(pdev, 0);
+
+	printk(KERN_ERR " %s GET IRQ\n",__FUNCTION__);
+
 
 	if (hw_cfg->flags & KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE)
 		host->mmc->caps |= MMC_CAP_NONREMOVABLE;
@@ -467,6 +525,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err_free_mem_region;
 	}
 
+	printk(KERN_ERR " %s MEM and IO REGION OKAY\n",__FUNCTION__);
+
 	dev = sdhci_priv(host);
 	dev->dev = &pdev->dev;
 	dev->host = host;
@@ -474,6 +534,10 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	dev->cd_gpio = hw_cfg->cd_gpio;
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		dev->wifi_gpio = &hw_cfg->wifi_gpio;
+
+	printk(KERN_ERR " %s DEV TYPE %x\n",__FUNCTION__,dev->devtype);
+
+
 
 	gDevs[dev->devtype] = dev;
 
@@ -586,6 +650,17 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
 			bcm_kona_sd_card_emulate(dev, 1);
 	}
+
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+	if ( (dev->devtype==SDIO_DEV_TYPE_WIFI) && 
+	     (hw_cfg->register_status_notify != NULL)) {
+		hw_cfg->register_status_notify(kona_sdio_status_notify_cb, host);
+	}
+	printk(KERN_ERR " %s CALL BACK IS REGISTERED\n",__FUNCTION__);
+
+#endif
+
+
 
 	atomic_set(&dev->initialized, 1);
 	sdhci_pltfm_clk_enable(host, 0);

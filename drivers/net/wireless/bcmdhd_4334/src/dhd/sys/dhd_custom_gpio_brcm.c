@@ -34,6 +34,10 @@
 #include <wlioctl.h>
 #include <wl_iw.h>
 
+extern void bcm_sdiowl_reset_b(int onoff);
+extern int bcm_sdiowl_rescan(void);
+extern int bcm_sdiowl_init(void);
+
 #define WL_ERROR(x) printf x
 #define WL_TRACE(x)
 
@@ -122,6 +126,8 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 void
 dhd_customer_gpio_wlan_ctrl(int onoff)
 {
+	int error=0;
+
 	switch (onoff) {
 		case WLAN_RESET_OFF:
 			WL_TRACE(("%s: call customer specific GPIO to insert WLAN RESET\n",
@@ -132,6 +138,8 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #if defined(CUSTOMER_HW2) || defined(CUSTOMER_HW_SAMSUNG)
 			wifi_set_power(0, 0);
 #endif
+//			bcm_sdiowl_reset_b(0);
+			printk("SHRI:WLAN_RESET_OFF CALLED\n");
 			WL_ERROR(("=========== WLAN placed in RESET ========\n"));
 		break;
 
@@ -144,10 +152,13 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #if defined(CUSTOMER_HW2) || defined(CUSTOMER_HW_SAMSUNG)
 			wifi_set_power(1, 0);
 #endif
+			printk("SHRI:WLAN_RESET_ON CALLED\n");
+			bcm_sdiowl_reset_b(1);
 			WL_ERROR(("=========== WLAN going back to live  ========\n"));
 		break;
 
 		case WLAN_POWER_OFF:
+			printk("SHRI:WLAN_POWER_OFF CALLED\n");
 			WL_TRACE(("%s: call customer specific GPIO to turn off WL_REG_ON\n",
 				__FUNCTION__));
 #ifdef CUSTOMER_HW
@@ -156,13 +167,24 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 		break;
 
 		case WLAN_POWER_ON:
+			printk("SHRI:WLAN_POWER_ON CALLED\n");
 			WL_TRACE(("%s: call customer specific GPIO to turn on WL_REG_ON\n",
 				__FUNCTION__));
+
+		error = bcm_sdiowl_init();
+			
+//			bcm_sdiowl_reset_b(0);
+
+//	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
+//	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
+	error = bcm_sdiowl_rescan();
+
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_on(1);
 			/* Lets customer power to get stable */
 			OSL_DELAY(200);
 #endif /* CUSTOMER_HW */
+
 		break;
 	}
 }

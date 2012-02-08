@@ -89,6 +89,8 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 {
    int rc;
 
+   printk(KERN_ERR "%s:ENTRY\n",__FUNCTION__);
+
    PRINT_INFO("gpio pins reset:%d, req:%d wake:%d shutdown:%d\n",
 	gpio->reset, gpio->reg, gpio->host_wake, gpio->shutdown);
 
@@ -101,6 +103,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
          return -EBUSY;
       }
       PRINT_INFO("current value of reg GPIO: %d\n", gpio_get_value(gpio->reg));
+	    printk(KERN_ERR "%s: REG=%x\n",__FUNCTION__,gpio->reg);
       gpio_direction_output(gpio->reg, 1);
       gpio_set_value(gpio->reg, 1);
    }
@@ -113,6 +116,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
          PRINT_ERR("unable to request reset GPIO pin %d\n", gpio->reset);
          goto err_free_gpio_reg;
       }
+	  	    printk(KERN_ERR "%s: RESET=%x\n",__FUNCTION__,gpio->reset);
       PRINT_INFO("current value of reset GPIO: %d\n", 
 		 gpio_get_value(gpio->reset));
       gpio_direction_output(gpio->reset, 1);
@@ -127,6 +131,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
          PRINT_ERR("unable to request shutdown GPIO pin %d\n", gpio->shutdown);
          goto err_free_gpio_reset;
       }
+	  	    printk(KERN_ERR "%s: SHUTDOWN=%x\n",__FUNCTION__,gpio->shutdown );
       PRINT_INFO("current value of shutdown GPIO: %d\n", 
 		 gpio_get_value(gpio->shutdown));
       gpio_direction_output(gpio->shutdown, 1);
@@ -148,6 +153,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
          goto err_free_gpio_shutdown;
       }
    }
+   printk(KERN_ERR "%s: HOST_WAKE=%x\n",__FUNCTION__,gpio->host_wake);
 
    return 0;
 
@@ -186,6 +192,9 @@ int bcm_sdiowl_init(void)
    int rc, wait_cnt;
    struct sdio_wifi_dev *dev = &gDev;
    struct mmc_card *card;
+
+   
+  printk(KERN_ERR "%s:ENTRY\n",__FUNCTION__);
    
    /* check if the SDIO device is already up */
    rc = sdio_dev_is_initialized(SDIO_DEV_TYPE_WIFI);
@@ -194,13 +203,26 @@ int bcm_sdiowl_init(void)
       PRINT_ERR("sdio interface is not initialized or err=%d\n", rc);
       return rc;  
    }
+   printk(KERN_ERR "%s:GET_GPIO INFO\n",__FUNCTION__);
+
 
    dev->wifi_gpio = sdio_get_wifi_gpio(SDIO_DEV_TYPE_WIFI);
-   if (dev->wifi_gpio == NULL)
-   {
-      PRINT_ERR("wifi gpio hardware config is missing\n");
+#ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
+ if (dev->wifi_gpio == NULL)
+ {
+    PRINT_ERR("wifi gpio hardware config is missing\n");
       return -EFAULT;
-   }
+ }
+#endif 
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
+
+   dev->wifi_gpio->reset=70;
+   dev->wifi_gpio->reg=-1;
+   dev->wifi_gpio->host_wake=-1;
+   dev->wifi_gpio->shutdown=-1;
+#endif
 
    /* reserve GPIOs */
    rc = wifi_gpio_request(dev->wifi_gpio);
@@ -213,7 +235,12 @@ int bcm_sdiowl_init(void)
 	/* reset the wifi chip */
 	__wifi_reset(dev->wifi_gpio->reset, 0);
 	__wifi_reset(dev->wifi_gpio->reset, 1);
-   
+
+ 
+
+
+#ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
    /* now, emulate the card insertion */
    rc = sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 1);
    if (rc < 0)
@@ -239,7 +266,7 @@ int bcm_sdiowl_init(void)
 
 err_free_gpio:
    wifi_gpio_free(dev->wifi_gpio);
-
+#endif // CONFIG_BRCM_UNIFIED_DHD_SUPPORT
    return rc;
 }
 EXPORT_SYMBOL(bcm_sdiowl_init);
