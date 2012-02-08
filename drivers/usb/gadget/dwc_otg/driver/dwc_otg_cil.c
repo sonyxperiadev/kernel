@@ -122,6 +122,16 @@ void w_shutdown_core(void *p)
 	}
 }
 
+void w_vbus_draw(void *p)
+{
+#ifdef CONFIG_USB_OTG_UTILS
+	dwc_otg_core_if_t *core_if = p;
+
+	if (core_if->xceiver->set_power)
+		otg_set_power(core_if->xceiver, core_if->vbus_ma);
+#endif
+}
+
 #ifdef CONFIG_USB_OTG_UTILS
 static int dwc_otg_xceiv_nb_callback(struct notifier_block *nb,
 				     unsigned long val, void *priv)

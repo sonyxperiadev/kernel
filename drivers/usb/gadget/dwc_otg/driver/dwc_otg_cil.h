@@ -960,6 +960,9 @@ struct dwc_otg_core_if {
 	/** saved value of last request from stack to activate/deactivate pullup */
 	bool gadget_pullup_on;
 
+	/* Save last requested max Vbus current draw value */
+	uint32_t vbus_ma;
+
 #ifdef CONFIG_USB_OTG_UTILS
 	/* OTG transceiver */
 	struct otg_transceiver *xceiver;
@@ -981,6 +984,7 @@ extern void hc_xfer_timeout(void *ptr);
  */
 extern void w_conn_id_status_change(void *p);
 extern void w_shutdown_core(void *p);
+extern void w_vbus_draw(void *p);
 extern void w_wakeup_detected(void *p);
 extern void w_a_periph_done(void *p);
 extern void w_init_core(void *p);

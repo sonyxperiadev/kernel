@@ -689,6 +689,30 @@ static int get_frame_number(struct usb_gadget *gadget)
 }
 
 /**
+ * Controls how much current to draw from VBUS
+ */
+static int vbus_draw(struct usb_gadget *gadget, unsigned int mA)
+{
+	struct gadget_wrapper *d;
+
+	DWC_DEBUGPL(DBG_PCDV, "%s(%p)\n", __func__, gadget);
+
+	if (gadget == 0)
+		return -ENODEV;
+	else
+		d = container_of(gadget, struct gadget_wrapper, gadget);
+
+	/* Save requested max Vbus current draw */
+	d->pcd->core_if->vbus_ma = mA;
+
+	/* Schedule a work item to set the max current to draw on Vbus */
+	DWC_WORKQ_SCHEDULE(d->pcd->core_if->wq_otg, w_vbus_draw,
+				   d->pcd->core_if, "set max vbus current draw");
+	return 0;
+}
+
+
+/**
  * Controls pullup which lets the host detect that a USB device is attached.
  * On implies activate pullup, i.e. remove disconnect condition.
  */
@@ -769,6 +793,7 @@ static int set_selfpowered(struct usb_gadget *gadget, int is_selfpowered)
 
 static const struct usb_gadget_ops dwc_otg_pcd_ops = {
 	.get_frame = get_frame_number,
+	.vbus_draw = vbus_draw,
 	.pullup = pullup,
 	.wakeup = wakeup,
 #ifdef CONFIG_USB_DWC_OTG_LPM
