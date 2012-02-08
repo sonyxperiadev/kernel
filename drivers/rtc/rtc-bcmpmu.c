@@ -67,6 +67,13 @@ struct bcmpmu_rtc {
 	int update_irq_enabled;
 };
 
+#if CONFIG_BCM_RTC_CAL
+static bool rtc_cal_run = false;
+extern int bcm_rtc_cal_read_time(struct bcmpmu_rtc *rdata, struct rtc_time *tm);
+extern int bcm_rtc_cal_set_time(struct bcmpmu_rtc *rdata, struct rtc_time *tm);
+extern void bcm_rtc_cal_init(struct bcmpmu_rtc *rdata);
+extern void bcm_rtc_cal_shutdown(void);
+#endif // CONFIG_BCM_RTC_CAL
 
 static void bcmpmu_rtc_isr(enum bcmpmu_irq irq, void *data)
 {
@@ -93,6 +100,61 @@ static int bcmpmu_read_time(struct device *dev, struct rtc_time *tm)
 	unsigned int val;
 
 	mutex_lock(&rdata->lock);
+
+#if CONFIG_BCM_RTC_CAL
+	if(rtc_cal_run == false)
+	{
+		pr_rtc(DATA, "%s: rtc_cal not ready \n",__func__);
+		ret = rdata->bcmpmu->read_dev(rdata->bcmpmu, PMU_REG_RTCYR,
+						&val, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		tm->tm_year = val + 100;
+		
+		ret = rdata->bcmpmu->read_dev(rdata->bcmpmu, PMU_REG_RTCMT,
+						&val, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		if (val >= 1)
+			tm->tm_mon = val - 1;
+		
+		ret = rdata->bcmpmu->read_dev(rdata->bcmpmu, PMU_REG_RTCDT,
+						&val, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		tm->tm_mday = val;
+		
+		ret = rdata->bcmpmu->read_dev(rdata->bcmpmu, PMU_REG_RTCHR,
+						&val, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		tm->tm_hour = val;
+		
+		ret = rdata->bcmpmu->read_dev(rdata->bcmpmu, PMU_REG_RTCMN,
+						&val, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		tm->tm_min = val;
+		
+		ret = rdata->bcmpmu->read_dev(rdata->bcmpmu, PMU_REG_RTCSC,
+			&val, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		tm->tm_sec = val;
+		
+		ret = rtc_valid_tm(tm);
+		
+		pr_rtc(DATA, "%s: err=%d time=%d.%d.%d.%d.%d.%d\n",
+			__func__, ret,
+			tm->tm_year,tm->tm_mon,tm->tm_mday,
+			tm->tm_hour,tm->tm_min,tm->tm_sec);
+
+	}
+	else
+	{
+		ret = bcm_rtc_cal_read_time(rdata, tm);
+	}
+#else
 	ret = rdata->bcmpmu->read_dev(rdata->bcmpmu, PMU_REG_RTCYR,
 					&val, PMU_BITMASK_ALL);
 	if (unlikely(ret))
@@ -136,6 +198,8 @@ static int bcmpmu_read_time(struct device *dev, struct rtc_time *tm)
 		__func__, ret,
 		tm->tm_year,tm->tm_mon,tm->tm_mday,
 		tm->tm_hour,tm->tm_min,tm->tm_sec);
+#endif // CONFIG_BCM_RTC_CAL
+
 err:
 	mutex_unlock(&rdata->lock);
 	return ret;
@@ -152,7 +216,46 @@ static int bcmpmu_set_time(struct device *dev, struct rtc_time *tm)
 		tm->tm_hour,tm->tm_min,tm->tm_sec);
 
 	mutex_lock(&rdata->lock);
-	
+
+#if CONFIG_BCM_RTC_CAL
+	if(rtc_cal_run == false)
+	{
+		pr_rtc(DATA, "%s: rtc_cal not ready \n",__func__);
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCYR,
+					tm->tm_year - 100, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCMT,
+					tm->tm_mon + 1, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCDT,
+					tm->tm_mday, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCHR,
+					tm->tm_hour, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCMN,
+					tm->tm_min, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+		
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCSC,
+					tm->tm_sec, PMU_BITMASK_ALL);
+		if (unlikely(ret))
+			goto err;
+	}
+	else
+	{
+		ret = bcm_rtc_cal_set_time(rdata, tm);
+	}
+#else
 	ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCYR,
 				tm->tm_year - 100, PMU_BITMASK_ALL);
 	if (unlikely(ret))
@@ -182,6 +285,8 @@ static int bcmpmu_set_time(struct device *dev, struct rtc_time *tm)
 				tm->tm_sec, PMU_BITMASK_ALL);
 	if (unlikely(ret))
 		goto err;
+#endif // CONFIG_BCM_RTC_CAL
+
 err:
 	mutex_unlock(&rdata->lock);
 	return ret;
@@ -371,6 +476,11 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 	if (unlikely(ret))
 		goto err;
 
+#if CONFIG_BCM_RTC_CAL
+	bcm_rtc_cal_init(rdata);
+	rtc_cal_run = true;
+#endif // CONFIG_BCM_RTC_CAL
+
 	/* Workarond the invalid value, to be removed after RTCADJ interrupt
 	is handled properly */
 	bcmpmu->read_dev(bcmpmu, PMU_REG_RTCDT, &val, PMU_BITMASK_ALL);
@@ -397,6 +507,10 @@ static int __devexit bcmpmu_rtc_remove(struct platform_device *pdev)
 
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTC_ALARM);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTC_SEC);
+#if CONFIG_BCM_RTC_CAL
+	rtc_cal_run = false;
+	bcm_rtc_cal_shutdown();
+#endif // CONFIG_BCM_RTC_CAL
 	kfree(bcmpmu->rtcinfo);
 	return 0;
 }
