@@ -136,6 +136,7 @@ config RHEA_WA_HWJIRA_2531
 	default y
 	help
 	 Say Y to enable RHEA JIRA 2531 workaround
+	 Refer JIRA DB for more info on this JIRA
 
 config RHEA_WA_CRMEMC_919
 	depends on ARCH_RHEA
@@ -143,6 +144,7 @@ config RHEA_WA_CRMEMC_919
 	default y
 	help
 	 Say Y to enable RHEA JIRA CRMEMC-919 workaround
+	 Refer JIRA DB for more info on this JIRA
 
 config RHEA_WA_HWJIRA_2221
 	depends on ARCH_RHEA
@@ -150,6 +152,7 @@ config RHEA_WA_HWJIRA_2221
 	default y
 	help
 	 Say Y to enable RHEA JIRA 2221 workaround
+	 Refer JIRA DB for more info on this JIRA
 
 config RHEA_WA_HWJIRA_2490
 	depends on ARCH_RHEA
@@ -157,6 +160,31 @@ config RHEA_WA_HWJIRA_2490
 	default y
 	help
 	 Say Y to enable RHEA JIRA 2490 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2276
+	depends on ARCH_RHEA && RHEA_DORMANT_MODE
+	bool "Enable workaround for RHEA JIRA 2276"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2276 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2045
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2045"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2045 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2272
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2272"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2272 workaround
+	 Refer JIRA DB for more info on this JIRA
 
 config RHEALC_2093
 	bool "Enable RheaLC&2093"

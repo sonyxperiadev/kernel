@@ -38,7 +38,7 @@
 #include "csl_caph.h"
 #include "csl_caph_dma.h"
 
-#define	PCM_MAX_PLAYBACK_BUF_BYTES			(16*1024)
+#define	PCM_MAX_PLAYBACK_BUF_BYTES			(32*1024)
 #define	PCM_MIN_PLAYBACK_PERIOD_BYTES		(256)
 #define	PCM_MAX_PLAYBACK_PERIOD_BYTES		(PCM_MAX_PLAYBACK_BUF_BYTES/2)
 

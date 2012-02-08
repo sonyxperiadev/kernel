@@ -982,6 +982,12 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 
 	WARN_ON(host->cmd);
 
+#ifdef CONFIG_MMC_BCM_SD
+	DBG("%s: CMD:[%d]  SDHC_PRESENT_STATE=0x%x; Command Arg=0x%x\n",
+			mmc_hostname(host->mmc), cmd->opcode,
+			sdhci_readl(host, SDHCI_PRESENT_STATE), cmd->arg);
+#endif
+
 	/* Wait max 10 ms */
 #ifdef CONFIG_MMC_BCM_SD
 	timeout = 1000;
@@ -1957,6 +1963,20 @@ static void sdhci_tasklet_card(unsigned long param)
 			host->mrq->cmd->error = -ENOMEDIUM;
 			tasklet_schedule(&host->finish_tasklet);
 		}
+#ifdef CONFIG_MMC_BCM_SD
+		pr_info("SD Card Removed\n");
+	} else {
+		/*
+		 * Turn ON the SDCLK very early here; We do this
+		 * to handle the case of quick remove-insert.
+		 */
+		unsigned int clock;
+		clock = host->clock;
+		host->clock = 0;
+		sdhci_set_clock(host, clock);
+
+		pr_info("SD Card Inserted\n");
+#endif
 	}
 
 	sdhci_pltfm_clk_enable(host, 0);
@@ -2066,35 +2086,6 @@ static void sdhci_timeout_timer(unsigned long data)
 	spin_lock_irqsave(&host->lock, flags);
 
 	if (host->mrq) {
-#ifdef CONFIG_MMC_BCM_SD
-		/*
-		 * If timeout, re-send the command for maximum 5 retries. Refers to
-		 * the entry E5_2820A2 of BCM2820_A2_Errata_v1.1_CUSTOMER.doc
-		 */
-		if (host->cmd == NULL)
- 		{
-			printk(KERN_ERR "%s: Timeout waiting for transfer complete interrupt. \n",
-					mmc_hostname(host->mmc));
-		}
-		else
-		{
-			if (host->cmd->retries >= 1)
-			{
-				struct mmc_command *cmd;
-				host->cmd->retries--;
-				cmd = host->cmd;
-				host->cmd = NULL;
-				sdhci_send_command(host, cmd);
-				spin_unlock_irqrestore(&host->lock, flags);
-				return;
-			}
-			else
-			{
-				printk(KERN_ERR "%s: Timeout waiting for command complete interrupt "
-								"after 5 retries. \n", mmc_hostname(host->mmc));
-			}
-		}
-#endif
 		printk(KERN_ERR "%s: Timeout waiting for hardware "
 			"interrupt.\n", mmc_hostname(host->mmc));
 		sdhci_dumpregs(host);

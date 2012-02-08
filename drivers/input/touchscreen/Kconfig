@@ -110,6 +110,16 @@ config TOUCHSCREEN_BITSY
 	  To compile this driver as a module, choose M here: the
 	  module will be called h3600_ts_input.
 
+config TOUCHSCREEN_BCM915500
+	tristate "Broadcom 915500 touchscreen interface"
+	depends on I2C
+	help
+	  Say Y here if you want to support a capactive touchscreen interface using
+	  the BCM915500 controller.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called bcm915500.
+
 config TOUCHSCREEN_BU21013
 	tristate "BU21013 based touch panel controllers"
 	depends on I2C

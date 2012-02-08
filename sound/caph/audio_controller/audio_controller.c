@@ -2559,9 +2559,9 @@ void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction)
 
 	csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, TRUE);
 
-	vib_power = (0x7fff / 100) * Strength;
-
 	Strength = ((Strength > 100) ? 100 : Strength);
+
+	vib_power = (0x7fff / 100) * Strength;
 
 	vib_power = ((direction == 0) ? vib_power : (0xffff - vib_power + 1));
 

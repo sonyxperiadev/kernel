@@ -828,7 +828,7 @@ static int __init bcm_fuse_net_init_module(void)
 
 	/* proc entry for net config settings */
 	bcm_fuse_net_config_proc_entry =
-	    create_proc_entry("bcm_fuse_net_config", 0644, NULL);
+	    create_proc_entry("bcm_fuse_net_config", 0666, NULL);
 	if (bcm_fuse_net_config_proc_entry == NULL) {
 		BNET_DEBUG(DBG_INFO,
 			   "%s: Couldn't create bcm_fuse_net_config_proc_entry! \n",

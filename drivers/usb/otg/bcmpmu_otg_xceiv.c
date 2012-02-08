@@ -288,6 +288,13 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	return status;
 }
 
+static int bcmpmu_otg_xceiv_set_vbus_power(struct otg_transceiver *otg, unsigned int ma)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
+
+	return (bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_CHRG_CURR_LMT, ma));
+}
+
 static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
 				     struct usb_bus *host)
 {
@@ -637,6 +644,8 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->otg_xceiver.xceiver.set_vbus = bcmpmu_otg_xceiv_set_vbus;
 	xceiv_data->otg_xceiver.xceiver.set_peripheral =
 	    bcmpmu_otg_xceiv_set_peripheral;
+	xceiv_data->otg_xceiver.xceiver.set_power =
+	    bcmpmu_otg_xceiv_set_vbus_power;
 	xceiv_data->otg_xceiver.xceiver.set_host = bcmpmu_otg_xceiv_set_host;
 	xceiv_data->otg_xceiver.xceiver.shutdown = bcmpmu_otg_xceiv_shutdown;
 	xceiv_data->otg_xceiver.xceiver.init = bcmpmu_otg_xceiv_start;

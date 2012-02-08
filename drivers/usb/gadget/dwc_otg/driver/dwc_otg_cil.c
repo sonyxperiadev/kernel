@@ -122,6 +122,16 @@ void w_shutdown_core(void *p)
 	}
 }
 
+void w_vbus_draw(void *p)
+{
+#ifdef CONFIG_USB_OTG_UTILS
+	dwc_otg_core_if_t *core_if = p;
+
+	if (core_if->xceiver->set_power)
+		otg_set_power(core_if->xceiver, core_if->vbus_ma);
+#endif
+}
+
 #ifdef CONFIG_USB_OTG_UTILS
 static int dwc_otg_xceiv_nb_callback(struct notifier_block *nb,
 				     unsigned long val, void *priv)
@@ -5199,9 +5209,9 @@ int dwc_otg_set_param_otg_cap(dwc_otg_core_if_t *core_if, int32_t val)
 		break;
 	}
 	if (!valid) {
-		if (dwc_otg_param_initialized(core_if->core_params->otg_cap)) {
+		if (dwc_otg_param_initialized(core_if->core_params->otg_cap))
 			DWC_ERROR("%d invalid for otg_cap paremter. Check HW configuration.\n", val);
-		}
+
 		val =
 		    (((core_if->hwcfg2.b.op_mode ==
 		       DWC_HWCFG2_OP_MODE_HNP_SRP_CAPABLE_OTG)
@@ -5712,9 +5722,9 @@ int dwc_otg_set_param_phy_type(dwc_otg_core_if_t *core_if, int32_t val)
 		valid = 1;
 	}
 	if (!valid) {
-		if (dwc_otg_param_initialized(core_if->core_params->phy_type)) {
+		if (dwc_otg_param_initialized(core_if->core_params->phy_type))
 			DWC_ERROR("%d invalid for phy_type. Check HW configurations.\n", val);
-		}
+
 		if (core_if->hwcfg2.b.hs_phy_type) {
 			if ((core_if->hwcfg2.b.hs_phy_type == 3) ||
 			    (core_if->hwcfg2.b.hs_phy_type == 1)) {
@@ -5745,9 +5755,9 @@ int dwc_otg_set_param_speed(dwc_otg_core_if_t *core_if, int32_t val)
 	}
 	if ((val == 0)
 	    && dwc_otg_get_param_phy_type(core_if) == DWC_PHY_TYPE_PARAM_FS) {
-		if (dwc_otg_param_initialized(core_if->core_params->speed)) {
+		if (dwc_otg_param_initialized(core_if->core_params->speed))
 			DWC_ERROR("%d invalid for speed paremter. Check HW configuration.\n", val);
-		}
+
 		val =
 		    (dwc_otg_get_param_phy_type(core_if) ==
 		     DWC_PHY_TYPE_PARAM_FS ? 1 : 0);
@@ -5893,9 +5903,9 @@ int dwc_otg_set_param_i2c_enable(dwc_otg_core_if_t *core_if, int32_t val)
 	}
 #ifndef NO_FS_PHY_HW_CHECK
 	if (val == 1 && core_if->hwcfg3.b.i2c == 0) {
-		if (dwc_otg_param_initialized(core_if->core_params->i2c_enable)) {
+		if (dwc_otg_param_initialized(core_if->core_params->i2c_enable))
 			DWC_ERROR("%d invalid for i2c_enable. Check HW configuration.\n", val);
-		}
+
 		val = 0;
 		retval = -DWC_E_INVALID;
 	}
@@ -6017,9 +6027,9 @@ int dwc_otg_set_param_thr_ctl(dwc_otg_core_if_t *core_if, int32_t val)
 	if ((val != 0) &&
 	    (!dwc_otg_get_param_dma_enable(core_if) ||
 	     !core_if->hwcfg4.b.ded_fifo_en)) {
-		if (dwc_otg_param_initialized(core_if->core_params->thr_ctl)) {
+		if (dwc_otg_param_initialized(core_if->core_params->thr_ctl))
 			DWC_ERROR("%d invalid for parameter thr_ctl. Check HW configuration.\n", val);
-		}
+
 		val = 0;
 		retval = -DWC_E_INVALID;
 	}

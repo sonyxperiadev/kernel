@@ -15,7 +15,6 @@ obj-$(CONFIG_BCM_MODEM) += \
 	ipc_powersaving.o \
 	ipc_queues.o \
 	ipc_sharedmemory.o \
-	ipc_smbuffers.o \
 	ipc_trace.o \
 	ipc_server.o \
 	ipc_server_ccb.o \

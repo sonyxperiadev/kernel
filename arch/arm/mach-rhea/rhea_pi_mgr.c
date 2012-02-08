@@ -307,12 +307,21 @@ static struct pi_state sub_sys_states[] =
 
 		};
 
-static u32 sub_sys_dep_pi[] = {
-#ifdef CONFIG_RHEA_DORMANT_MODE
-	PI_MGR_PI_ID_ARM_CORE,
-#endif
-};
+/*
 
+*/
+#ifdef CONFIG_RHEA_WA_HWJIRA_2276
+/*A9 sometimes freezes on exit from dormant. Recommended
+workaround is to tie A9 & Fabric together to avoid A9 -> fabric
+glitch when A9 is powered off.
+
+With this workaround A9 enters dormant only when fabric is in
+retention */
+
+static u32 sub_sys_dep_pi[] = {
+	PI_MGR_PI_ID_ARM_CORE,
+};
+#endif /*CONFIG_RHEA_WA_HWJIRA_2276*/
 static struct pi sub_sys_pi =
 	{
 		.name = "sub_sys",
@@ -323,8 +332,10 @@ static struct pi sub_sys_pi =
 #endif
 		.num_ccu_id = ARRAY_SIZE(sub_sys_ccu),
 		.state_allowed = PI_STATE_RETENTION,
+#ifdef CONFIG_RHEA_WA_HWJIRA_2276
 		.dep_pi = sub_sys_dep_pi,
 		.num_dep_pi = ARRAY_SIZE(sub_sys_dep_pi),
+#endif /*CONFIG_RHEA_WA_HWJIRA_2276*/
 		.pi_state = sub_sys_states,
 		.num_states = ARRAY_SIZE(sub_sys_states),
 		.opp_active = 0,
@@ -472,13 +483,13 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 				reg_val = readl(KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
 				writel(reg_val|MM_CLK_MGR_REG_MM_DMA_CLKGATE_MM_DMA_AXI_CLK_EN_MASK,
 						 KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
-				
+
 				rhea_acp_workaround();
 				mb();
 
 				writel(reg_val, KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
 				pm_enable_scu_standby(1);
-			} 
+			}
 
 			if (IS_SHUTDOWN_POLICY(p->new_value)) {
 
@@ -487,23 +498,23 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 				reg_val = readl(KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
 				writel(reg_val|MM_CLK_MGR_REG_MM_DMA_CLKGATE_MM_DMA_AXI_CLK_EN_MASK,
 						 KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
-				
+
 				rhea_mm_shutdown_workaround();
 				mb();
 
 				writel(reg_val, KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
 				pm_enable_scu_standby(1);
 			}
-		}	
+		}
 	} else {
 		if(IS_SHUTDOWN_POLICY(p->old_value) && !IS_SHUTDOWN_POLICY(p->new_value)) {
-	
+
 			/* Enable the AXI trace17 counters again. */
 			writel(0x5551, KONA_AXITRACE17_VA + 0x0);
 			writel(0x2, KONA_AXITRACE17_VA + 0xC);
 		}
 	}
-#endif	
+#endif
 	return 0;
 }
 
@@ -517,6 +528,13 @@ static struct notifier_block mm_policy_notifier =
 void __init rhea_pi_mgr_init()
 {
 	int i;
+#ifdef CONFIG_RHEA_WA_HWJIRA_2276
+	if (!JIRA_WA_ENABLED(2276)) {
+
+		sub_sys_pi.dep_pi = NULL;
+		sub_sys_pi.num_dep_pi = 0;
+	}
+#endif /*CONFIG_RHEA_WA_HWJIRA_2276*/
 
 	pi_mgr_init();
 

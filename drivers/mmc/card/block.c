@@ -819,6 +819,9 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 
 		mmc_queue_bounce_post(mq);
 
+		if (brq.cmd.error == -ENOMEDIUM)
+			goto cmd_err;
+
 		/*
 		 * Check for errors here, but don't jump to cmd_err
 		 * until later as we need to wait for the card to leave
@@ -950,8 +953,10 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 	}
 
 	spin_lock_irq(&md->lock);
-	while (ret)
+	while (ret) {
+		req->cmd_flags |= REQ_QUIET;
 		ret = __blk_end_request(req, -EIO, blk_rq_cur_bytes(req));
+	}
 	spin_unlock_irq(&md->lock);
 
 	return 0;

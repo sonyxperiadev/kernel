@@ -231,7 +231,16 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 };
 
 #endif
+/* Regulator consumers differ across the platforms.
+ * The following definitions will override the weak
+ * consumer definitions in PMIC board files */
+#ifdef CONFIG_MFD_BCMPMU
 
+struct regulator_consumer_supply hv10_supply[] = {
+	{ .supply = "sim2_vcc"},
+};
+
+#endif
 
 
 
@@ -724,7 +733,7 @@ static struct kona_fb_platform_data lq043y1dx01_dsi_display_fb_data = {
 	.screen_width		= 480,
 	.screen_height		= 800,
 	.bytes_per_pixel	= 2,
-	.gpio			= 41,
+	.gpio			= 0,
 	.pixel_format		= RGB565,
 };
 

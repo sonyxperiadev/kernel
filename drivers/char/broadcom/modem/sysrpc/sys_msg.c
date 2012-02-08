@@ -63,7 +63,7 @@ bool_t xdr_SYS_ReqRep_t(XDR * xdrs, SYS_ReqRep_t * req, xdrproc_t proc)
 
 #define _T(a) a
 
-//#define BKMGRD_ENABLED    /* Uncomment this line to to let bkmgrd handle CPPS and FLASH_SAVEIMAGE messages */
+#define BKMGRD_ENABLED    /* Uncomment this line to to let bkmgrd handle CPPS and FLASH_SAVEIMAGE messages */
 
 /********************** XDR TABLE ENTRIES *******************************************/
 #define DEVELOPMENT_SYSRPC_UNION_MAPPING

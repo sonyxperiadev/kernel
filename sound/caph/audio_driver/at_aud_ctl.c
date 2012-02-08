@@ -91,6 +91,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 	int rtn = 0;		/* 0 means Ok */
 	static UInt8 loopback_status = 0, loopback_input = 0, loopback_output =
 	    0, sidetone_mode = 0;
+	static UInt8 loopback_api_input, loopback_api_output;
 	Int32 pCurSel[2];
 
 	DEBUG("%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld\n",
@@ -158,8 +159,8 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		/* mic: 0 = default mic, 1 = main mic */
 		/* spk: 0 = handset, 1 = headset, 2 = loud speaker */
 	case 11:
-		loopback_input = Params[1];
-		loopback_output = Params[2];
+		loopback_input = loopback_api_input = Params[1];
+		loopback_output = loopback_api_input = Params[2];
 		sidetone_mode = Params[3];
 
 		if (((loopback_input > 6) && (loopback_input != 11)) ||
@@ -171,28 +172,28 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			break;
 		}
 		if (loopback_output == 2)	/* use IHF */
-			loopback_output = 4;
+			loopback_api_output = 4;
 		if (loopback_input == 0)	/* default mic: use main mic */
-			loopback_input = 1;
+			loopback_api_input = 1;
 
 		loopback_status = 1;
 		/* enable the HW loopback without DSP. */
-		AUDCTRL_SetAudioLoopback(TRUE, loopback_input, loopback_output,
-					 sidetone_mode);
+		AUDCTRL_SetAudioLoopback(TRUE, loopback_api_input,
+			loopback_api_output, sidetone_mode);
 
 		DEBUG("%s ena lpback: src %d sink %d sidetone %d\n",
-				__func__, loopback_input, loopback_output,
-				sidetone_mode);
+				__func__, loopback_api_input,
+			loopback_api_output, sidetone_mode);
 		break;
 
 	case 12:		/* at*maudmode=12  --> disable loopback path */
 		loopback_status = 0;
-		AUDCTRL_SetAudioLoopback(FALSE, loopback_input, loopback_output,
-					 sidetone_mode);
+		AUDCTRL_SetAudioLoopback(FALSE, loopback_api_input,
+			loopback_api_output, sidetone_mode);
 		/* mdelay(100); */
 		DEBUG("%s dis lpback: src %d sink %d sidetone %d\n",
-				__func__, loopback_input, loopback_output,
-				sidetone_mode);
+				__func__, loopback_api_input,
+			loopback_api_output, sidetone_mode);
 		break;
 
 	case 13:		/* at*maudmode=13  --> Get call ID */

@@ -19,3 +19,4 @@ obj-$(CONFIG_BCM_MDMGPIO)              += mdmgpio/
 obj-$(CONFIG_BCM_HW_PCM)               += pcm/
 endif
 
+obj-$(CONFIG_BCM_RTC_CAL)           += rtc_cal/

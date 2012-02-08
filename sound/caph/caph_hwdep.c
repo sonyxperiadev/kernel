@@ -108,8 +108,6 @@ static const u16 sVoIPFrameLen[] = { 320, 158, 36, 164, 640, 68 };
 static u16 sVoIPAMRSilenceFrame[1] = { 0x000f };
 
 static u32 voipInstCnt;
-static voip_data_t voip_data;
-static Boolean setdefault = FALSE;
 
 /* local functions */
 static void HWDEP_VOIP_DumpUL_CB(void *pPrivate, u8 * pSrc, u32 nSize);
@@ -296,13 +294,6 @@ static int hwdep_open(struct snd_hwdep *hw, struct file *file)
 {
 	DEBUG("VoIP_Ioctl_Open\n");
 
-	/*set the default parameters only once */
-	if (!setdefault) {
-		setdefault = TRUE;
-		voip_data.mic = AUDIO_SOURCE_ANALOG_MAIN;
-		voip_data.spk = AUDIO_SINK_HANDSET;
-		voip_data.codec_type = 0;	/* PCM 8K */
-	}
 	return 0;
 }
 
@@ -325,6 +316,9 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 	Int32 size = 0;
 	int data;
 	static UserCtrl_data_t *dataptr;
+	brcm_alsa_chip_t *pChip = NULL;
+
+	pChip = (brcm_alsa_chip_t *)hw->card->private_data;
 
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
 
@@ -337,6 +331,8 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 	case VoIP_Ioctl_Start:
 		DEBUG("VoIP_Ioctl_Start\n");
 		if (voipInstCnt == 0) {	/* start VoIP only once */
+			BRCM_AUDIO_Param_RateChange_t param_rate_change;
+
 			voipInstCnt++;
 			hw->private_data =
 			    kzalloc(sizeof(bcm_caph_hwdep_voip_t), GFP_KERNEL);
@@ -344,9 +340,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
 			init_waitqueue_head(&pVoIP->sleep);
 
-			pVoIP->mic = voip_data.mic;
-			pVoIP->spk = voip_data.spk;
-			pVoIP->codec_type = voip_data.codec_type;
+			pVoIP->codec_type = pChip->voip_data.codec_type;
 
 			pVoIP->buffer_handle =
 			    (audio_voip_driver_t *)
@@ -416,14 +410,14 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			if ((pVoIP->codec_type == 4) ||
 			    (pVoIP->codec_type == 5)) {
 				/* VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k */
-				AUDCTRL_Telephony_RateChange(16000);
-			}
+				param_rate_change.codecID = 0x0A;
+			} else
+				param_rate_change.codecID = 0x06;
+			AUDIO_Ctrl_Trigger(ACTION_AUD_RateChange,
+					&param_rate_change, NULL, 0);
 
-			AUDCTRL_EnableTelephony(pVoIP->mic, pVoIP->spk);
-			AUDCTRL_SetTelephonySpkrVolume(pVoIP->spk, 0,
-						       AUDIO_GAIN_FORMAT_mB);
 			AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,
-					  AUDIO_DRIVER_START, &voip_data);
+				  AUDIO_DRIVER_START, &pChip->voip_data);
 
 			pVoIP->writecount = 1;
 			pVoIP->status = VoIP_Hwdep_Status_Started;
@@ -442,7 +436,6 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		else if (voipInstCnt == 1) {
 			AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,
 					  AUDIO_DRIVER_STOP, NULL);
-			AUDCTRL_DisableTelephony();
 
 			AUDIO_DRIVER_Close(pVoIP->buffer_handle->drv_handle);
 			kfree(pVoIP->buffer_handle->voip_data_dl_buf_ptr);
@@ -455,87 +448,73 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 
 		break;
 	case VoIP_Ioctl_SetSource:
-		get_user(data, __user(int *)arg);
-		voip_data.mic = (AUDIO_SOURCE_Enum_t) data;
-		DEBUG(" VoIP_Ioctl_SetSource mic %ld,\n",
-				voip_data.mic);
+		DEBUG(" Warning: VoIP_Ioctl_SetSource is depreciated, please "
+			"use mixer control VC-SEL instead\n");
 		break;
 
 	case VoIP_Ioctl_SetSink:
-		get_user(data, __user(int *)arg);
-		voip_data.spk = (AUDIO_SINK_Enum_t) data;
-		DEBUG(" VoIP_Ioctl_SetSink spk %ld,\n",
-				voip_data.spk);
+		DEBUG(" Warning: VoIP_Ioctl_SetSink is depreciated, please "
+			"use mixer control VC-SEL instead\n");
 		break;
 
 	case VoIP_Ioctl_SetCodecType:
 		get_user(data, __user(int *)arg);
-		voip_data.codec_type = (u32) data;
+		pChip->voip_data.codec_type = (u32) data;
 		DEBUG(" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
-				voip_data.codec_type);
+				pChip->voip_data.codec_type);
 		break;
 	case VoIP_Ioctl_SetBitrate:
 		get_user(data, __user(int *)arg);
-		voip_data.bitrate_index = (u32) data;
+		pChip->voip_data.bitrate_index = (u32) data;
 		DEBUG(" VoIP_Ioctl_SetBitrate bitrate_index %ld,\n",
-				voip_data.bitrate_index);
+				pChip->voip_data.bitrate_index);
 		break;
 	case VoIP_Ioctl_GetSource:
-		data = (int)voip_data.mic;
+		{
+		s32 *pSel;
+		pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1]
+			.iLineSelect;
+		data = (int)pSel[0];
 		put_user(data, __user(int *)arg);
+		}
 		break;
 	case VoIP_Ioctl_GetSink:
-		data = (int)voip_data.spk;
+		{
+		s32 *pSel;
+		pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1]
+			.iLineSelect;
+		data = (int)pSel[1];
 		put_user(data, __user(int *)arg);
+		}
 		break;
 	case VoIP_Ioctl_GetCodecType:
-		data = (int)voip_data.codec_type;
+		data = (int)pChip->voip_data.codec_type;
 		put_user(data, __user(int *)arg);
 		break;
 	case VoIP_Ioctl_GetBitrate:
-		data = (int)voip_data.bitrate_index;
+		data = (int)pChip->voip_data.bitrate_index;
 		put_user(data, __user(int *)arg);
 		break;
 	case VoIP_Ioctl_GetMode:
 		{
 			AudioMode_t mode = GetAudioMode();
 			put_user((int)mode, __user(int *)arg);
-		}
-		break;
-	case VoIP_Ioctl_SetMode:
-		{
-			int mode;
-			AUDIO_SOURCE_Enum_t new_mic;
-			AUDIO_SINK_Enum_t new_spk;
-			get_user(mode, __user(int *)arg);
-			AUDCTRL_GetSrcSinkByMode((AudioMode_t) (mode), &new_mic,
-						 &new_spk);
-
-			voip_data.mic = new_mic;
-			voip_data.spk = new_spk;
-
-			if ((pVoIP->codec_type == 4) ||
-			    (pVoIP->codec_type == 5)) {
-				/* VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k */
-				AUDCTRL_Telephony_RateChange(16000);
-			}
-#if !defined(USE_NEW_AUDIO_PARAM)
-			SetAudioMode(mode);
-#else
-			SetAudioMode(mode, GetAudioApp());
-#endif
-			DEBUG(" VoIP_Ioctl_SetMode mode %d,\n",
+			DEBUG(" VoIP_Ioctl_GetMode mode %d,\n",
 					mode);
 		}
 		break;
+	case VoIP_Ioctl_SetMode:
+		DEBUG(" Warning: VoIP_Ioctl_SetMode is depreciated, please "
+			"use mixer control VC-SEL instead\n");
+		break;
 	case VoIP_Ioctl_SetVoLTEFlag:
 		get_user(data, __user(int *)arg);
-		voip_data.isVoLTE = (u8) data;
+		pChip->voip_data.isVoLTE = (u8) data;
 		DEBUG(" VoIP_Ioctl_SetFlag isVoLTE %d,\n",
-				voip_data.isVoLTE);
+				pChip->voip_data.isVoLTE);
 		break;
 	case VoIP_Ioctl_GetVoLTEFlag:
-		data = (int)voip_data.isVoLTE;
+		data = (int)pChip->voip_data.isVoLTE;
 		put_user(data, __user(int *)arg);
 		break;
 	case DSPCtrl_Ioctl_SPCtrl:

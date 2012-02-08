@@ -107,7 +107,8 @@ extern dwc_bool_t DWC_IN_IRQ(void);
 #define dwc_in_irq DWC_IN_IRQ
 
 /** Returns "IRQ" if DWC_IN_IRQ is true. */
-static inline char *dwc_irq(void) {
+static inline char *dwc_irq(void)
+{
 	return DWC_IN_IRQ() ? "IRQ" : "";
 }
 
@@ -132,7 +133,7 @@ extern void DWC_PRINTF(char *format, ...)
 #ifdef __GNUC__
 	__attribute__ ((format(printf, 1, 2)));
 #else
-  ;
+;
 #endif
 #define dwc_printf DWC_PRINTF
 
@@ -141,9 +142,9 @@ extern void DWC_PRINTF(char *format, ...)
  */
 extern int DWC_SPRINTF(char *string, char *format, ...)
 #ifdef __GNUC__
-     __attribute__ ((format(printf, 2, 3)));
+	__attribute__ ((format(printf, 2, 3)));
 #else
-     ;
+;
 #endif
 #define dwc_sprintf DWC_SPRINTF
 
@@ -152,9 +153,9 @@ extern int DWC_SPRINTF(char *string, char *format, ...)
  */
 extern int DWC_SNPRINTF(char *string, int size, char *format, ...)
 #ifdef __GNUC__
-     __attribute__ ((format(printf, 3, 4)));
+	__attribute__ ((format(printf, 3, 4)));
 #else
-     ;
+;
 #endif
 #define dwc_snprintf DWC_SNPRINTF
 
@@ -167,9 +168,9 @@ extern int DWC_SNPRINTF(char *string, int size, char *format, ...)
  */
 extern void __DWC_WARN(char *format, ...)
 #ifdef __GNUC__
-     __attribute__ ((format(printf, 1, 2)));
+	__attribute__ ((format(printf, 1, 2)));
 #else
-     ;
+;
 #endif
 
 /**
@@ -181,9 +182,9 @@ extern void __DWC_WARN(char *format, ...)
  */
 extern void __DWC_ERROR(char *format, ...)
 #ifdef __GNUC__
-     __attribute__ ((format(printf, 1, 2)));
+	__attribute__ ((format(printf, 1, 2)));
 #else
-     ;
+;
 #endif
 
 /**
@@ -196,9 +197,9 @@ extern void __DWC_ERROR(char *format, ...)
  */
 extern void DWC_EXCEPTION(char *format, ...)
 #ifdef __GNUC__
-     __attribute__ ((format(printf, 1, 2)));
+	__attribute__ ((format(printf, 1, 2)));
 #else
-     ;
+;
 #endif
 #define dwc_exception DWC_EXCEPTION
 
@@ -210,9 +211,9 @@ extern void DWC_EXCEPTION(char *format, ...)
  */
 extern void __DWC_DEBUG(char *format, ...)
 #ifdef __GNUC__
-     __attribute__ ((format(printf, 1, 2)));
+	__attribute__ ((format(printf, 1, 2)));
 #else
-     ;
+;
 #endif
 #else
 #define __DWC_DEBUG(...)
@@ -303,7 +304,7 @@ extern void DWC_WRITE_REG32(uint32_t volatile *reg, uint32_t value);
 /** Writes to a 64-bit register. */
 extern void DWC_WRITE_REG64(uint64_t volatile *reg, uint64_t value);
 #define dwc_write_reg64 DWC_WRITE_REG64
-/**  
+/**
  * Modify bit values in a register.  Using the
  * algorithm: (reg_contents & ~clear_mask) | set_mask.
  */
@@ -317,39 +318,47 @@ extern void DWC_MODIFY_REG32(uint32_t volatile *reg, uint32_t clear_mask, uint32
 
 #ifdef DEBUG_REGS
 
-#define dwc_define_read_write_reg_n(_reg,_container_type) \
-static inline uint32_t dwc_read_##_reg##_n(_container_type *container, int num) { \
+#define dwc_define_read_write_reg_n(_reg, _container_type) \
+static inline uint32_t dwc_read_##_reg##_n(_container_type *container, int num) \
+{ \
 	return DWC_READ_REG32(&container->regs->_reg[num]); \
 } \
-static inline void dwc_write_##_reg##_n(_container_type *container, int num, uint32_t data) { \
-        DWC_DEBUG("WRITING %8s[%d]: %p: %08x", #_reg, num, &(((uint32_t*)container->regs->_reg)[num]), data); \
-	DWC_WRITE_REG32(&(((uint32_t*)container->regs->_reg)[num]), data); \
+static inline void dwc_write_##_reg##_n(_container_type *container, int num, uint32_t data) \
+{ \
+	DWC_DEBUG("WRITING %8s[%d]: %p: %08x", #_reg, num, &(((uint32_t *)container->regs->_reg)[num]), data); \
+	DWC_WRITE_REG32(&(((uint32_t *)container->regs->_reg)[num]), data); \
 }
 
-#define dwc_define_read_write_reg(_reg,_container_type) \
-static inline uint32_t dwc_read_##_reg(_container_type *container) { \
+#define dwc_define_read_write_reg(_reg, _container_type) \
+static inline uint32_t dwc_read_##_reg(_container_type *container) \
+{ \
 	return DWC_READ_REG32(&container->regs->_reg); \
 } \
-static inline void dwc_write_##_reg(_container_type *container, uint32_t data) { \
-        DWC_DEBUG("WRITING %11s: %p: %08x", #_reg, &container->regs->_reg, data); \
+static inline void dwc_write_##_reg(_container_type *container, uint32_t data) \
+{ \
+	DWC_DEBUG("WRITING %11s: %p: %08x", #_reg, &container->regs->_reg, data); \
 	DWC_WRITE_REG32(&container->regs->_reg, data); \
 }
 
 #else
 
-#define dwc_define_read_write_reg_n(_reg,_container_type) \
-static inline uint32_t dwc_read_##_reg##_n(_container_type *container, int num) { \
+#define dwc_define_read_write_reg_n(_reg, _container_type) \
+static inline uint32_t dwc_read_##_reg##_n(_container_type *container, int num) \
+{ \
 	return DWC_READ_REG32(&container->regs->_reg[num]); \
 } \
-static inline void dwc_write_##_reg##_n(_container_type *container, int num, uint32_t data) { \
-	DWC_WRITE_REG32(&(((uint32_t*)container->regs->_reg)[num]), data); \
+static inline void dwc_write_##_reg##_n(_container_type *container, int num, uint32_t data) \
+{ \
+	DWC_WRITE_REG32(&(((uint32_t *)container->regs->_reg)[num]), data); \
 }
 
-#define dwc_define_read_write_reg(_reg,_container_type) \
-static inline uint32_t dwc_read_##_reg(_container_type *container) { \
+#define dwc_define_read_write_reg(_reg, _container_type) \
+static inline uint32_t dwc_read_##_reg(_container_type *container) \
+{ \
 	return DWC_READ_REG32(&container->regs->_reg); \
 } \
-static inline void dwc_write_##_reg(_container_type *container, uint32_t data) { \
+static inline void dwc_write_##_reg(_container_type *container, uint32_t data) \
+{ \
 	DWC_WRITE_REG32(&container->regs->_reg, data); \
 }
 
@@ -457,9 +466,9 @@ extern void __DWC_FREE(void *addr);
 #define DWC_ALLOC(_size_) __DWC_ALLOC(_size_)
 #define DWC_ALLOC_ATOMIC(_size_) __DWC_ALLOC_ATOMIC(_size_)
 #define DWC_FREE(_addr_) __DWC_FREE(_addr_)
-#define DWC_DMA_ALLOC(_size_,_dma_) __DWC_DMA_ALLOC(_size_,_dma_)
-#define DWC_DMA_ALLOC_ATOMIC(_size_,_dma_) __DWC_DMA_ALLOC_ATOMIC(_size_,_dma_)
-#define DWC_DMA_FREE(_size_,_virt_,_dma_) __DWC_DMA_FREE(_size_,_virt_,_dma_)
+#define DWC_DMA_ALLOC(_size_, _dma_) __DWC_DMA_ALLOC(_size_, _dma_)
+#define DWC_DMA_ALLOC_ATOMIC(_size_, _dma_) __DWC_DMA_ALLOC_ATOMIC(_size_, _dma_)
+#define DWC_DMA_FREE(_size_, _virt_, _dma_) __DWC_DMA_FREE(_size_, _virt_, _dma_)
 
 #else
 
@@ -477,9 +486,9 @@ extern void dwc_memory_debug_report(void);
 #define DWC_ALLOC(_size_) (dwc_alloc_debug(_size_, __func__, __LINE__))
 #define DWC_ALLOC_ATOMIC(_size_) (dwc_alloc_atomic_debug(_size_, __func__, __LINE__))
 #define DWC_FREE(_addr_) (dwc_free_debug(_addr_, __func__, __LINE__))
-#define DWC_DMA_ALLOC(_size_,_dma_) dwc_dma_alloc_debug(_size_, _dma_, __func__, __LINE__)
+#define DWC_DMA_ALLOC(_size_, _dma_) dwc_dma_alloc_debug(_size_, _dma_, __func__, __LINE__)
 #define DWC_DMA_ALLOC_ATOMIC(_size_,_dma_) dwc_dma_alloc_atomic_debug(_size_, _dma_, __func__, __LINE__)
-#define DWC_DMA_FREE(_size_,_virt_,_dma_) dwc_dma_free_debug(_size_, _virt_, _dma_, __func__, __LINE__)
+#define DWC_DMA_FREE(_size_, _virt_, _dma_) dwc_dma_free_debug(_size_, _virt_, _dma_, __func__, __LINE__)
 
 #endif /* DEBUG_MEMORY */
 
@@ -632,17 +641,17 @@ extern void DWC_WORKQ_SCHEDULE(dwc_workq_t *workq, dwc_work_callback_t work_cb, 
 #ifdef __GNUC__
 	__attribute__ ((format(printf, 4, 5)));
 #else
-  ;
+;
 #endif
 #define dwc_workq_schedule DWC_WORKQ_SCHEDULE
 
-/** Schedule a callback on the workq, that will be called until at least 
+/** Schedule a callback on the workq, that will be called until at least
  * given number miliseconds have passed. */
 extern void DWC_WORKQ_SCHEDULE_DELAYED(dwc_workq_t *workq, dwc_work_callback_t work_cb, void *data, uint32_t time, char *format, ...)
 #ifdef __GNUC__
 	__attribute__ ((format(printf, 5, 6)));
 #else
-  ;
+;
 #endif
 #define dwc_workq_schedule_delayed DWC_WORKQ_SCHEDULE_DELAYED
 
@@ -782,7 +791,7 @@ extern dwc_mutex_t *DWC_MUTEX_ALLOC(void);
 #define DWC_MUTEX_FREE(__mutexp) do { \
 	mutex_destroy((struct mutex *)__mutexp); \
 	DWC_FREE(__mutexp); \
-} while(0)
+} while (0)
 #else
 extern void DWC_MUTEX_FREE(dwc_mutex_t *mutex);
 #define dwc_mutex_free DWC_MUTEX_FREE
@@ -826,7 +835,7 @@ extern void DWC_MSLEEP(uint32_t msecs);
 extern uint32_t DWC_TIME(void);
 #define dwc_time DWC_TIME
 
-#endif // _DWC_OS_H_
+#endif /* _DWC_OS_H_ */
 
 
 

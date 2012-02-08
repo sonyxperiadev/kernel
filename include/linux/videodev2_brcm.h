@@ -175,7 +175,7 @@ enum v4l2_ev_mode {
 	EV_PLUS_2,
 	EV_PLUS_3,
 	EV_PLUS_4,
-	EV_MAX,
+	EV_MAXIMUM,
 };
 
 #define V4L2_CID_CAMERA_WHITE_BALANCE		(V4L2_CID_PRIVATE_BASE + 74)
@@ -624,4 +624,13 @@ struct sec_cam_parm {
 	int zoom;
 };
 
+/*
+ * needed to remove padding with unicam interface
+ */
+struct v4l2_jpeg_packet_info {
+	int padded;  /* if non zero specifies no of bytes added */
+	int packet_size; /*packet size/offset where padded bytes are inserted */
+};
+
+#define VIDIOC_JPEG_G_PACKET_INFO	_IOR('V', BASE_VIDIOC_PRIVATE+7, struct v4l2_jpeg_packet_info)
 #endif /* __LINUX_VIDEODEV2_BRCM_H */

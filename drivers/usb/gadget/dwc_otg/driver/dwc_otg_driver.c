@@ -59,7 +59,7 @@
 #include <linux/version.h>
 #include <linux/interrupt.h>
 #ifdef LM_INTERFACE
-//#include <asm/arch/regs-irq.h>
+/*#include <asm/arch/regs-irq.h>*/
 #include <mach/lm.h>
 #include <asm/sizes.h>
 #else
@@ -69,7 +69,7 @@
 #include <linux/ioport.h>
 #include <linux/irq.h>
 
-#include <asm/io.h>
+#include <linux/io.h>
 
 #include <linux/usb/otg.h>
 #include "dwc_os.h"
@@ -80,6 +80,8 @@
 #include "dwc_otg_pcd_if.h"
 #include "dwc_otg_hcd_if.h"
 #include "dwc_otg_cil.h"
+#include "dwc_otg_adp.h"
+
 
 #define DWC_DRIVER_VERSION	"2.91a 18-FEB-2009"
 #define DWC_DRIVER_DESC		"HS OTG USB Controller driver"
@@ -89,43 +91,41 @@ static const char dwc_driver_name[] = "dwc_otg";
 extern int pcd_init(
 #ifdef LM_INTERFACE
 	struct lm_device *_dev
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	struct pci_dev *_dev
 #else
 	struct platform_device *_dev
 #endif
-        );
+);
 extern int hcd_init(
 #ifdef LM_INTERFACE
 	struct lm_device *_dev
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	struct pci_dev *_dev
 #else
 	struct platform_device *_dev
 #endif
-        );
+);
 
 extern int pcd_remove(
 #ifdef LM_INTERFACE
 	struct lm_device *_dev
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	struct pci_dev *_dev
 #else
 	struct platform_device *_dev
 #endif
-        );
+);
 
 extern void hcd_remove(
 #ifdef LM_INTERFACE
 	struct lm_device *_dev
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	struct pci_dev *_dev
 #else
 	struct platform_device *_dev
 #endif
-        );
-
-extern void dwc_otg_adp_start(dwc_otg_core_if_t * core_if);
+);
 
 /*-------------------------------------------------------------------------*/
 /* Encapsulate the module parameter settings */
@@ -278,7 +278,7 @@ static DRIVER_ATTR(version, S_IRUGO, version_show, NULL);
 /**
  * Global Debug Level Mask.
  */
-uint32_t g_dbg_lvl = 0;		/* OFF */
+uint32_t g_dbg_lvl;		/* OFF */
 
 /**
  * This function shows the driver Debug Level.
@@ -305,7 +305,7 @@ static DRIVER_ATTR(debuglevel, S_IRUGO | S_IWUSR, dbg_level_show,
  * This function is called during module intialization
  * to pass module parameters to the DWC_OTG CORE.
  */
-static int set_parameters(dwc_otg_core_if_t * core_if)
+static int set_parameters(dwc_otg_core_if_t *core_if)
 {
 	int retval = 0;
 	int i;
@@ -564,9 +564,9 @@ static irqreturn_t dwc_otg_common_irq(int irq, void *dev)
 	int32_t retval = IRQ_NONE;
 
 	retval = dwc_otg_handle_common_intr(otg_dev->core_if);
-	if (retval != 0) {
+	if (retval != 0)
 		S3C2410X_CLEAR_EINTPEND();
-	}
+
 	return IRQ_RETVAL(retval);
 }
 
@@ -582,7 +582,7 @@ static irqreturn_t dwc_otg_common_irq(int irq, void *dev)
 #ifdef LM_INTERFACE
 static void dwc_otg_driver_remove(
 	struct lm_device *_dev
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 static void dwc_otg_driver_remove(
 	struct pci_dev *_dev
 #else
@@ -593,7 +593,7 @@ static int dwc_otg_driver_remove(
 {
 #ifdef LM_INTERFACE
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = pci_get_drvdata(_dev);
 #else
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(_dev);
@@ -603,7 +603,7 @@ static int dwc_otg_driver_remove(
 
 	if (!otg_dev) {
 		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev NULL!\n", __func__);
-#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
+#if defined(LM_INTERFACE) || defined(PCI_INTERFACE)
 		return;
 #else
 		return -ENODEV;
@@ -614,34 +614,32 @@ static int dwc_otg_driver_remove(
 		hcd_remove(_dev);
 	} else {
 		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev->hcd NULL!\n", __func__);
-#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
+#if defined(LM_INTERFACE) || defined(PCI_INTERFACE)
 		return;
 #else
-                return -ENODEV;
+		return -ENODEV;
 #endif
 	}
 #endif
 
 #ifndef DWC_HOST_ONLY
-	if (otg_dev->pcd) {
+	if (otg_dev->pcd)
 		pcd_remove(_dev);
-	}
 #endif
 
 	/*
 	 * Free the IRQ
 	 */
 	if (otg_dev->common_irq_installed) {
-#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
+#if defined(LM_INTERFACE) || defined(PCI_INTERFACE)
 		free_irq(_dev->irq, otg_dev);
 #else
 		free_irq(platform_get_irq(_dev, 0), otg_dev);
 #endif
 	}
 
-	if (otg_dev->core_if) {
+	if (otg_dev->core_if)
 		dwc_otg_cil_remove(otg_dev->core_if);
-	}
 
 	/*
 	 * Remove the device attributes
@@ -651,9 +649,9 @@ static int dwc_otg_driver_remove(
 	/*
 	 * Return the memory.
 	 */
-	if (otg_dev->base) {
+	if (otg_dev->base)
 		iounmap(otg_dev->base);
-	}
+
 	dwc_free(otg_dev);
 
 	/*
@@ -661,7 +659,7 @@ static int dwc_otg_driver_remove(
 	 */
 #ifdef LM_INTERFACE
 	lm_set_drvdata(_dev, 0);
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	release_mem_region(otg_dev->rsrc_start, otg_dev->rsrc_len);
 	pci_set_drvdata(_dev, 0);
 #else
@@ -684,7 +682,7 @@ static int dwc_otg_driver_remove(
 #ifdef LM_INTERFACE
 static int dwc_otg_driver_probe(
 	struct lm_device *_dev
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 static int dwc_otg_driver_probe(
 	struct pci_dev *_dev,  const struct pci_device_id *id
 #else
@@ -695,17 +693,17 @@ static int dwc_otg_driver_probe(
 {
 	int retval = 0;
 	dwc_otg_device_t *dwc_otg_device;
-#if !defined LM_INTERFACE && !defined (PCI_INTERFACE)
+#if !defined LM_INTERFACE && !defined(PCI_INTERFACE)
 	struct resource *resource;
 #endif
 
 	dev_dbg(&_dev->dev, "dwc_otg_driver_probe(%p)\n", _dev);
 
 #ifdef LM_INTERFACE
-       dev_dbg(&_dev->dev, "start=0x%08x\n", (unsigned)_dev->resource.start);
-#elif defined (PCI_INTERFACE)
+	dev_dbg(&_dev->dev, "start=0x%08x\n", (unsigned)_dev->resource.start);
+#elif defined(PCI_INTERFACE)
 	if (!id) {
-	DWC_ERROR("Invalid pci_device_id %p", id);
+		DWC_ERROR("Invalid pci_device_id %p", id);
 		return -EINVAL;
 	}
 
@@ -749,42 +747,42 @@ static int dwc_otg_driver_probe(
 	 * Device structure.
 	 */
 	lm_set_drvdata(_dev, dwc_otg_device);
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 
 	_dev->current_state = PCI_D0;
 	_dev->dev.power.power_state = PMSG_ON;
-	
+
 	if (!_dev->irq) {
-                DWC_ERROR("Found HC with no IRQ. Check BIOS/PCI %s setup!", pci_name(_dev));
-                retval = -ENODEV;
-                goto fail;
-        }
+		DWC_ERROR("Found HC with no IRQ. Check BIOS/PCI %s setup!", pci_name(_dev));
+		retval = -ENODEV;
+		goto fail;
+	}
 
-        dwc_otg_device->rsrc_start = pci_resource_start(_dev,0);
-        dwc_otg_device->rsrc_len = pci_resource_len(_dev,0);
-        DWC_DEBUGPL(DBG_ANY,"PCI resource: start=%08x, len=%08x\n",
-                    dwc_otg_device->rsrc_start,
-                    dwc_otg_device->rsrc_len);
-        if (!request_mem_region(dwc_otg_device->rsrc_start, dwc_otg_device->rsrc_len, "dwc_otg")) {
-          dev_dbg(&_dev->dev, "error mapping memory\n");
-          retval = -EFAULT;
-          goto fail;
-        }
+	dwc_otg_device->rsrc_start = pci_resource_start(_dev,0);
+	dwc_otg_device->rsrc_len = pci_resource_len(_dev,0);
+	DWC_DEBUGPL(DBG_ANY,"PCI resource: start=%08x, len=%08x\n",
+			dwc_otg_device->rsrc_start,
+			dwc_otg_device->rsrc_len);
+	if (!request_mem_region(dwc_otg_device->rsrc_start, dwc_otg_device->rsrc_len, "dwc_otg")) {
+		dev_dbg(&_dev->dev, "error mapping memory\n");
+		retval = -EFAULT;
+		goto fail;
+	}
 
-        dwc_otg_device->base = ioremap_nocache(dwc_otg_device->rsrc_start, dwc_otg_device->rsrc_len);
-        if (dwc_otg_device->base == NULL) {
-                dev_dbg(&_dev->dev, "error mapping memory\n");
-                retval = -EFAULT;
-                goto fail;
-        }
-        dev_dbg(&_dev->dev, "base=0x%p (before adjust) \n", dwc_otg_device->base);
-        dwc_otg_device->base = (char *)dwc_otg_device->base;
-        dev_dbg(&_dev->dev, "base=0x%p (after adjust) \n", dwc_otg_device->base);
-        dev_dbg(&_dev->dev, "%s: mapped PA 0x%x to VA 0x%p\n", __func__,
-                (unsigned)dwc_otg_device->rsrc_start, dwc_otg_device->base);
+	dwc_otg_device->base = ioremap_nocache(dwc_otg_device->rsrc_start, dwc_otg_device->rsrc_len);
+	if (dwc_otg_device->base == NULL) {
+		dev_dbg(&_dev->dev, "error mapping memory\n");
+		retval = -EFAULT;
+		goto fail;
+	}
+	dev_dbg(&_dev->dev, "base=0x%p (before adjust)\n", dwc_otg_device->base);
+	dwc_otg_device->base = (char *)dwc_otg_device->base;
+	dev_dbg(&_dev->dev, "base=0x%p (after adjust)\n", dwc_otg_device->base);
+	dev_dbg(&_dev->dev, "%s: mapped PA 0x%x to VA 0x%p\n", __func__,
+		(unsigned)dwc_otg_device->rsrc_start, dwc_otg_device->base);
 
-        pci_set_drvdata(_dev, dwc_otg_device);
-        pci_set_master(_dev);
+	pci_set_drvdata(_dev, dwc_otg_device);
+	pci_set_master(_dev);
 #else
 	dwc_otg_device->base = ioremap(resource->start, SZ_256K);
 
@@ -851,7 +849,7 @@ static int dwc_otg_driver_probe(
 	 * Install the interrupt handler for the common interrupts before
 	 * enabling common interrupts in core_init below.
 	 */
-#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
+#if defined(LM_INTERFACE) || defined(PCI_INTERFACE)
 	DWC_DEBUGPL(DBG_CIL, "registering (common) handler for irq%d\n",
 			_dev->irq);
 	retval = request_irq(_dev->irq, dwc_otg_common_irq,
@@ -888,7 +886,7 @@ static int dwc_otg_driver_probe(
 		 * Initialize the DWC_otg core.
 		 */
 		dwc_otg_core_init(dwc_otg_device->core_if);
-	
+
 #ifndef DWC_HOST_ONLY
 		/*
 		 * Initialize the PCD
@@ -913,7 +911,7 @@ static int dwc_otg_driver_probe(
 #endif
 	}
 
-#if defined (PCI_INTERFACE)
+#if defined(PCI_INTERFACE)
 	pci_set_drvdata(_dev, dwc_otg_device);
 #endif
 
@@ -925,7 +923,7 @@ static int dwc_otg_driver_probe(
 
 	return 0;
 
-      fail:
+fail:
 	dwc_otg_driver_remove(_dev);
 	return retval;
 }
@@ -943,30 +941,30 @@ static int dwc_otg_driver_probe(
  */
 #ifdef LM_INTERFACE
 static struct lm_driver dwc_otg_driver = {
-       .drv = {
-               .name = (char *)dwc_driver_name,
-               },
-       .probe = dwc_otg_driver_probe,
-       .remove = dwc_otg_driver_remove,
+	.drv = {
+		.name = (char *)dwc_driver_name,
+	},
+	.probe = dwc_otg_driver_probe,
+	.remove = dwc_otg_driver_remove,
 };
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 static const struct pci_device_id pci_ids[] = { {
-        PCI_DEVICE(0x16c3, 0xabcd),
-        .driver_data = (unsigned long) 0xdeadbeef,
-        }, { /* end: all zeroes */ }
+	PCI_DEVICE(0x16c3, 0xabcd),
+	.driver_data = (unsigned long) 0xdeadbeef,
+	}, { /* end: all zeroes */ }
 };
 MODULE_DEVICE_TABLE(pci, pci_ids);
 /* pci driver glue; this is a "new style" PCI driver module */
 static struct pci_driver dwc_otg_driver = {
-        .name =         "dwc_otg",
-        .id_table =     pci_ids,
+	.name =         "dwc_otg",
+	.id_table =     pci_ids,
 
-        .probe =        dwc_otg_driver_probe,
-        .remove =       dwc_otg_driver_remove,
+	.probe =        dwc_otg_driver_probe,
+	.remove =       dwc_otg_driver_remove,
 
-        .driver = {
-                .name   = (char*)dwc_driver_name,
-        },
+	.driver = {
+		.name   = (char *)dwc_driver_name,
+	},
 };
 #else
 static struct platform_driver dwc_otg_driver = {
@@ -1002,25 +1000,25 @@ static int __init dwc_otg_driver_init(void)
 	if (retval < 0) {
 		pr_err("%s retval=%d\n", __func__, retval);
 		return retval;
-       }
-#elif defined (PCI_INTERFACE)
+	}
+#elif defined(PCI_INTERFACE)
 	retval = pci_register_driver(&dwc_otg_driver);
 	if (retval < 0) {
 		pr_err("%s retval=%d\n", __func__, retval);
 		return retval;
-       }
+	}
 #else
 	retval = platform_driver_register(&dwc_otg_driver);
 	if (retval < 0) {
 		pr_err("%s retval=%d\n", __func__, retval);
 		return retval;
-       }
+	}
 #endif
 
 #ifdef LM_INTERFACE
 	error = driver_create_file(&dwc_otg_driver.drv, &driver_attr_version);
 	error = driver_create_file(&dwc_otg_driver.drv, &driver_attr_debuglevel);
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	error = driver_create_file(&dwc_otg_driver.driver, &driver_attr_version);
 	error = driver_create_file(&dwc_otg_driver.driver, &driver_attr_debuglevel);
 #else
@@ -1047,7 +1045,7 @@ static void __exit dwc_otg_driver_cleanup(void)
 	driver_remove_file(&dwc_otg_driver.drv, &driver_attr_version);
 	lm_driver_unregister(&dwc_otg_driver);
 	pr_info("%s module removed\n", dwc_driver_name);
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	driver_remove_file(&dwc_otg_driver.driver, &driver_attr_debuglevel);
 	driver_remove_file(&dwc_otg_driver.driver, &driver_attr_version);
 	pci_unregister_driver(&dwc_otg_driver);
@@ -1495,7 +1493,7 @@ MODULE_PARM_DESC(otg_ver, "OTG revision supported 0=OTG 1.3 1=OTG 2.0");
  - 0: Disabled (default)
  - 1: Enabled
  </td></tr>
- 
+
  <tr>
  <td>en_multiple_tx_fifo</td>
  <td>Specifies whether dedicatedto tx fifos are enabled for non periodic IN EPs.
@@ -1579,7 +1577,7 @@ MODULE_PARM_DESC(otg_ver, "OTG revision supported 0=OTG 1.3 1=OTG 2.0");
  The driver will automatically detect the value for this parameter if none is
  specified.
  - 0: IC_USB disabled (default, if available)
- - 1: IC_USB enable 
+ - 1: IC_USB enable
  </td></tr>
 
 <tr>
@@ -1611,7 +1609,7 @@ MODULE_PARM_DESC(otg_ver, "OTG revision supported 0=OTG 1.3 1=OTG 2.0");
  <td>Specifies whether OTG is performing as USB OTG Revision 2.0 or Revision 1.3
  USB OTG device.
  - 0: OTG 2.0 support disabled (default)
- - 1: OTG 2.0 support enabled 
+ - 1: OTG 2.0 support enabled
  </td></tr>
 
 */

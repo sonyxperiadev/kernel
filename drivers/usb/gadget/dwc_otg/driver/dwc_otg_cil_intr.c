@@ -1320,11 +1320,10 @@ int32_t dwc_otg_handle_common_intr(dwc_otg_core_if_t *core_if)
 		DWC_DEBUGPL(DBG_ANY, "gpwrdn=%08x\n", gpwrdn.d32);
 		if (gpwrdn.b.disconn_det && gpwrdn.b.disconn_det_msk) {
 			CLEAR_GPWRDN_INTR(core_if, disconn_det);
-			if (gpwrdn.b.linestate == 0) {
+			if (gpwrdn.b.linestate == 0)
 				dwc_otg_handle_pwrdn_disconnect_intr(core_if);
-			} else {
+			else
 				DWC_PRINTF("Disconnect detected while linestate is not 0\n");
-			}
 
 			retval |= 1;
 		}

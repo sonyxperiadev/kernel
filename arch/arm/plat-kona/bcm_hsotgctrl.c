@@ -31,13 +31,16 @@
 #include <linux/usb/bcm_hsotgctrl.h>
 
 #define	PHY_MODE_OTG		2
-#define 	BCCFG_SW_OVERWRITE_KEY 0x55560000
+#define BCCFG_SW_OVERWRITE_KEY 0x55560000
 #define	BC_CONFIG_DELAY_MS 2
 #define	PHY_PLL_DELAY_MS	2
 
 #define USB_PHY_MDIO_ID 9
 #define USB_PHY_MDIO0 0
 #define USB_PHY_MDIO1 1
+#define USB_PHY_MDIO2 2
+#define USB_PHY_MDIO3 3
+#define MDIO_ACCESS_KEY 0x00A5A501
 #define PHY_MDIO_DELAY_IN_USECS 10
 #define PHY_MDIO_CURR_REF_ADJUST_VALUE 0x18
 #define PHY_MDIO_LDO_REF_VOLTAGE_ADJUST_VALUE 0x80
@@ -56,7 +59,7 @@ struct bcm_hsotgctrl_drv_data {
 
 static struct bcm_hsotgctrl_drv_data *local_hsotgctrl_handle = NULL;
 
-static ssize_t dump_hsotgctrl(struct device *dev, 
+static ssize_t dump_hsotgctrl(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
@@ -81,7 +84,7 @@ static DEVICE_ATTR(hsotgctrldump, S_IRUGO, dump_hsotgctrl, NULL);
 
 int bcm_hsotgctrl_en_clock(bool on)
 {
-	int rc=0;
+	int rc = 0;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
 
 	if (!bcm_hsotgctrl_handle || !bcm_hsotgctrl_handle->otg_clk)
@@ -93,11 +96,124 @@ int bcm_hsotgctrl_en_clock(bool on)
 		clk_disable(bcm_hsotgctrl_handle->otg_clk);
 
 	if (rc)
-		dev_warn(bcm_hsotgctrl_handle->dev, "%s: error in controlling clock\n", __func__);
+		dev_warn(bcm_hsotgctrl_handle->dev,"%s: error in controlling clock\n", __func__);
 
 	return rc;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_en_clock);
+
+#ifdef CONFIG_MFD_BCM59039
+int bcm_hsotgctrl_phy_Update_MDIO(void)
+{
+	int val;
+
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
+
+	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+		return -EIO;
+
+	/* Enable mdio */
+	/*	1. &mdiomaster_stprsts=Data.Long(EAHB:0x3400030C)&0x00010000 */
+	val = readl(bcm_hsotgctrl_handle->hub_clk_base +
+		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	val |= KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_STPRSTS_MASK;
+	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
+			KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+	/*	2. data.set EAHB:0x34000000 %long 0x00A5A501 */
+	val = MDIO_ACCESS_KEY;
+	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
+			KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+
+	/*3.  data.set EAHB:0x3400030C %long Data.Long(EAHB:0x3400030C)|0x00000303 */
+	val = readl(bcm_hsotgctrl_handle->hub_clk_base +
+		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	val |= KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_CLK_EN_MASK|
+		KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_HW_SW_GATING_SEL_MASK |
+		KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_HYST_VAL_MASK |
+		KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_HYST_EN_MASK;
+	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
+		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+
+	/* Program necessary values */
+	/* 5.data.set EAHB:0x3500403C %long 0x29000000 */
+	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
+		(USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
+		(USB_PHY_MDIO0 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+
+	/* *******MDIO REG 0::--> Write to MDIO0 (to 0x18) as ASIC team suggested */
+	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
+		(USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
+		(USB_PHY_MDIO0 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK | 0x18);
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+
+	/* -----------------------------------------------------------------------------*/
+	val =	(CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
+		(USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
+		(USB_PHY_MDIO0 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+
+	/* *******MDIO REG 1:: -->Write to MDIO1 (to 0x80) as ASIC team suggested */
+	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
+		(USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
+		(USB_PHY_MDIO1 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK | 0x80);
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+
+	/* -----------------------------------------------------------------------------*/
+	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
+		(USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
+		(USB_PHY_MDIO1 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+
+	/* ******* MDIO REG 3:: -->Write to MDIO3 (to 0x2600) as ASIC team suggested */
+	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
+		(USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
+		(USB_PHY_MDIO3 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK | 0x2600);
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+
+	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
+		(USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
+		(USB_PHY_MDIO3 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_READ_START_MASK);
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+
+	val = readl(bcm_hsotgctrl_handle->chipregs_base +
+		CHIPREG_MDIO_RDDATA_OFFSET);
+
+	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
+		(USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
+		(USB_PHY_MDIO0 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+
+	/* Disable mdio */
+	val = readl(bcm_hsotgctrl_handle->hub_clk_base +
+		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	val &= ~KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_CLK_EN_MASK;
+	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
+		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+
+	return 0;
+
+}
+#endif
 
 int bcm_hsotgctrl_phy_init(bool id_device)
 {
@@ -111,9 +227,11 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* clear bit 15 RDB error */
-	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
+		HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	val &= ~HSOTG_CTRL_PHY_P1CTL_USB11_OEB_IS_TXEB_MASK;
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
@@ -155,6 +273,10 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	bcm_hsotgctrl_phy_mdio_init();
 #endif
 
+#ifdef CONFIG_MFD_BCM59039
+	bcm_hsotgctrl_phy_Update_MDIO();
+#endif
+
 	if (id_device) {
 		/* Set correct ID value */
 		bcm_hsotgctrl_phy_set_id_stat(true);
@@ -169,7 +291,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	/* Come up connected  */
 	bcm_hsotgctrl_phy_set_non_driving(false);
 
-	return (0);
+	return 0;
 
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_init);
@@ -218,14 +340,18 @@ int bcm_hsotgctrl_phy_mdio_init(void)
 		return -EIO;
 
 	/* Enable mdio */
-	val = readl(bcm_hsotgctrl_handle->hub_clk_base + KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	val = readl(bcm_hsotgctrl_handle->hub_clk_base +
+		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
 	val |= KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_CLK_EN_MASK;
-	writel(val, bcm_hsotgctrl_handle->hub_clk_base + KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
+			KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
 
 	/* Program necessary values */
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK | (USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
+	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
+		(USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
 		(USB_PHY_MDIO0 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
-	writel(val, bcm_hsotgctrl_handle->chipregs_base + CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
 
 
 	/* Write to MDIO0 (afe_pll_tst lower 16 bits) for current reference adjustment */
@@ -234,7 +360,8 @@ int bcm_hsotgctrl_phy_mdio_init(void)
 		(USB_PHY_MDIO0 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
 		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK |
 		PHY_MDIO_CURR_REF_ADJUST_VALUE);
-	writel(val, bcm_hsotgctrl_handle->chipregs_base + CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+			CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
 
 	msleep_interruptible(PHY_PM_DELAY_IN_MS);
 
@@ -245,19 +372,24 @@ int bcm_hsotgctrl_phy_mdio_init(void)
 		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK |
 		PHY_MDIO_LDO_REF_VOLTAGE_ADJUST_VALUE);
 
-	writel(val, bcm_hsotgctrl_handle->chipregs_base + CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+			CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
 
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK | (USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
+	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
+		(USB_PHY_MDIO_ID << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
 		(USB_PHY_MDIO0 << CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
 
-	writel(val, bcm_hsotgctrl_handle->chipregs_base + CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+	writel(val, bcm_hsotgctrl_handle->chipregs_base +
+			CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
 
 	msleep_interruptible(PHY_PM_DELAY_IN_MS);
 
 	/* Disable mdio */
-	val = readl(bcm_hsotgctrl_handle->hub_clk_base + KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	val = readl(bcm_hsotgctrl_handle->hub_clk_base +
+			KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
 	val &= ~KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_CLK_EN_MASK;
-	writel(val, bcm_hsotgctrl_handle->hub_clk_base + KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
+			KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
 
 	return 0;
 }
@@ -270,25 +402,34 @@ int bcm_hsotgctrl_bc_reset(void)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET);
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_CFG_OFFSET);
 
 	/* Clear overwrite key */
-	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
-	val |= (BCCFG_SW_OVERWRITE_KEY | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK); //We need this key written for this register access
+	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK |
+		HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
+	/*We need this key written for this register access*/
+	val |= (BCCFG_SW_OVERWRITE_KEY |
+			HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
 	val |= HSOTG_CTRL_BC_CFG_SW_RST_MASK;
 
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET); //Reset BC1.1 state machine
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_CFG_OFFSET); /*Reset BC1.1 state machine */
 
 	msleep_interruptible(BC_CONFIG_DELAY_MS);
 
 	val &= ~HSOTG_CTRL_BC_CFG_SW_RST_MASK;
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET); //Clear reset
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_CFG_OFFSET); /*Clear reset*/
 
-	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET);
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_CFG_OFFSET);
 
 	/* Clear overwrite key so we don't accidently write to these bits */
-	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET);
+	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK |
+			HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_CFG_OFFSET);
 
 	return 0;
 }
@@ -302,7 +443,8 @@ int bcm_hsotgctrl_bc_status(unsigned long *status)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev) || !status)
 		return -EIO;
 
-	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_STATUS_OFFSET);
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_STATUS_OFFSET);
 	*status = val;
 
 	return 0;
@@ -317,14 +459,20 @@ int bcm_hsotgctrl_bc_vdp_src_off(void)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET);
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_CFG_OFFSET);
 
 	/* Clear overwrite key */
-	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
-	val |= (BCCFG_SW_OVERWRITE_KEY | HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK); //We need this key written for this register access
+	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK |
+			HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
+	/*We need this key written for this register access */
+	val |= (BCCFG_SW_OVERWRITE_KEY |
+			HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
 	val &= ~HSOTG_CTRL_BC_CFG_BC_OVWR_SET_P0_MASK;
 
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC_CFG_OFFSET); //Reset BC1.1 state machine
+	/*Reset BC1.1 state machine */
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_CFG_OFFSET);
 
 	msleep_interruptible(BC_CONFIG_DELAY_MS);
 
@@ -405,23 +553,28 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* clear bit 15 RDB error */
-	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base +
+			HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	val &= ~HSOTG_CTRL_PHY_P1CTL_USB11_OEB_IS_TXEB_MASK;
-	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
+			HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* S/W reset Phy, active low */
-	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base +
+			HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	val &= ~HSOTG_CTRL_PHY_P1CTL_SOFT_RESET_MASK;
-	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
+			HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* bring Phy out of reset */
-	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base +
+			HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_MODE_MASK;
 	val |= HSOTG_CTRL_PHY_P1CTL_SOFT_RESET_MASK;
-	val |= PHY_MODE_OTG << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT; // use OTG mode
+	val |= PHY_MODE_OTG << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT; /* use OTG mode */
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
@@ -433,20 +586,20 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	val =	HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
-			HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK | //Come up as device until we check PMU ID status to avoid turning on Vbus before checking
+			HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK | /*Come up as device until we check PMU ID status to avoid turning on Vbus before checking */
 			HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_USB_ON_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_PRST_N_SW_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK;
-	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
+			HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	error = device_create_file(&pdev->dev, &dev_attr_hsotgctrldump);
 
-	if (error)
-	{
+	if (error) {
 		dev_warn(&pdev->dev, "Failed to create HOST file\n");
 		goto Error_bcm_hsotgctrl_probe;
 	}
@@ -464,7 +617,8 @@ Error_bcm_hsotgctrl_probe:
 
 static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 {
-	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata = platform_get_drvdata(pdev);
+	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata =
+				platform_get_drvdata(pdev);
 
 	device_remove_file(&pdev->dev, &dev_attr_hsotgctrldump);
 
@@ -661,9 +815,11 @@ int bcm_hsotgctrl_set_aldo_pdn(bool on)
 	val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
 	if (on)
-		val |= (HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK | HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK);
+		val |= (HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK |
+				HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK);
 	else
-		val &= ~(HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK | HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK);
+		val &= ~(HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK |
+				HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK);
 
 	writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
@@ -709,8 +865,7 @@ int bcm_hsotgctrl_set_phy_clk_request(bool on)
 	if (on) {
 		val |= HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQUEST_MASK;
 		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-	}
-	else {
+	} else {
 		/* Clear PHY req */
 		val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQUEST_MASK;
 		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
@@ -760,15 +915,15 @@ int bcm_hsotgctrl_phy_set_id_stat(bool floating)
 
 	val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
-	if (floating) {
+	if (floating)
 		val |= HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK;
-	} else {
+	else
 		val &= ~HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK;
-	}
 
 	writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
 	return 0;
+
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_set_id_stat);
 

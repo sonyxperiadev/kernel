@@ -40,9 +40,8 @@
 #include <sound/soc.h>
 #include <linux/gpio.h>
 
-
 #define CAPH_SOC_DAIFMT (SND_SOC_DAIFMT_I2S)
-	
+
 static int caph_soc_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_codec *codec = rtd->codec;
@@ -64,11 +63,9 @@ static int caph_i2s_startup(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-
 static struct snd_soc_ops caph_i2s_ops = {
-	.startup	= caph_i2s_startup,
+	.startup = caph_i2s_startup,
 };
-
 
 static struct snd_soc_dai_link caph_dai = {
 	.name = "caph",
@@ -86,7 +83,6 @@ static struct snd_soc_card rhea = {
 	.dai_link = &caph_dai,
 	.num_links = 1,
 };
-
 
 static struct platform_device *caph_snd_spdif_dit_device;
 static struct platform_device *rhea_snd_device;
@@ -110,14 +106,13 @@ static int __init rhea_init(void)
 
 	platform_set_drvdata(rhea_snd_device, &rhea);
 
-
 	ret = platform_device_add(rhea_snd_device);
 	if (ret) {
 		pr_err("rhea snd: Failed to add snd soc device: %d\n", ret);
 		goto err_unset_pdata;
 	}
 
-	 return 0;
+	return 0;
 
 err_unset_pdata:
 	platform_set_drvdata(rhea_snd_device, NULL);
@@ -125,17 +120,17 @@ err_unset_pdata:
 err_unset_spif:
 	platform_device_put(caph_snd_spdif_dit_device);
 
- 	return ret;
+	return ret;
 }
+
 module_init(rhea_init);
 
 static void __exit rhea_exit(void)
 {
 	platform_device_unregister(rhea_snd_device);
 }
-module_exit(rhea_exit);
 
+module_exit(rhea_exit);
 
 MODULE_DESCRIPTION("Broadcom SoC 21654 PCM driver");
 MODULE_LICENSE("GPL");
-
