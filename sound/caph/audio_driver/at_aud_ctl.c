@@ -88,6 +88,8 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 {
 	AUDIO_SOURCE_Enum_t mic = AUDIO_SOURCE_ANALOG_MAIN;
 	AUDIO_SINK_Enum_t spk = AUDIO_SINK_HANDSET;
+	AudioMode_t mode = AUDIO_SINK_HANDSET;
+	AudioApp_t app = AUDIO_APP_VOICE_CALL;
 	int rtn = 0;		/* 0 means Ok */
 	static UInt8 loopback_status = 0, loopback_input = 0, loopback_output =
 	    0, sidetone_mode = 0;
@@ -212,7 +214,9 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 	/* at*maudmode=15  --> set current mode and app */
 	case 15:
 #if defined(USE_NEW_AUDIO_PARAM)
-		AUDCTRL_GetSrcSinkByMode(Params[2], &mic, &spk);
+		app = Params[1];
+		mode = Params[2];
+		AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 		pCurSel[0] = pChip->streamCtl[
 			CTL_STREAM_PANEL_VOICECALL - 1].iLineSelect[0];
 		/* save current setting */
@@ -224,7 +228,16 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		    iLineSelect[0] = mic;
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].
 		    iLineSelect[1] = spk;
-		SetAudioMode(Params[2], Params[1]);
+
+		if (app <= AUDIO_APP_VOICE_CALL_WB) {
+			AUDCTRL_SetTelephonyMicSpkr(mic, spk);
+			SetAudioMode(mode, app);
+		} else {
+			if (AUDCTRL_InVoiceCall() == FALSE)
+				AUDCTRL_SwitchPlaySpk_forTuning(mode);
+		}
+		/*if app > MUSIC
+			SetAudioMode(mode, app);*/
 		DEBUG("%s mic %d spk %d mode %ld app %ld\n",
 				__func__, mic, spk, Params[2],
 				Params[1]);
@@ -528,24 +541,7 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE,
 				      Params[1], 0, 0);
 		break;
-/*
- * There is errors in this case. XXX_Get_CP_AudioMode() does not
- * work. It cannot read audio mode from CP image.
- * I this this is not needed.
- * Comment it out for now. And it may be removed.
-	case 37:
-#if defined(USE_NEW_AUDIO_PARAM)
-	Params[1] = AUDDRV_Get_CP_AudioMode() / AUDIO_MODE_NUMBER;
-	Params[2] = AUDDRV_Get_CP_AudioMode() % AUDIO_MODE_NUMBER;
-	DEBUG("CP audio app %d, mode %d\n",
-			Params[1], Params[2]);
-#else
-	Params[1] = AUDDRV_Get_CP_AudioMode();
-	DEBUG("CP audio mode %d\n",
-			Params[1]);
-#endif
-		break;
-*/
+
 	case 99:
 		if (voip_running) {
 			AUDTST_VoIP_Stop();

@@ -1,5 +1,5 @@
 /**************************************************************************
- * Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.       */
+ * Copyright 2009 - 2012 Broadcom Corporation.  All rights reserved.       */
 /*                                                                        */
 /*     Unless you and Broadcom execute a separate written software license*/
 /*     agreement governing use of this software, this software is licensed*/
@@ -4662,6 +4662,56 @@ CSL_CAPH_MIXER_e csl_caph_FindMixer(CSL_CAPH_DEVICE_e speaker,
 
 /****************************************************************************
 *
+*  Function Name: csl_caph_FindSinkDevice
+*
+*  Description: find sink device from the path
+*
+*****************************************************************************/
+CSL_CAPH_DEVICE_e csl_caph_FindSinkDevice(unsigned int pathID)
+{
+	CSL_CAPH_DEVICE_e curr_spk = CSL_CAPH_DEV_NONE;
+	int i, j;
+
+	if (pathID == 0)
+		return curr_spk;
+
+	/*get the current speaker from pathID - need CSL API */
+	for (i = 0; i < MAX_AUDIO_PATH; i++) {
+		if (HWConfig_Table[i].pathID == pathID) {
+			for (j = 0; j < MAX_SINK_NUM; j++) {
+				if (HWConfig_Table[i].sink[j] !=
+				CSL_CAPH_DEV_NONE) {
+					curr_spk = HWConfig_Table[i].sink[j];
+					break;
+				}
+			}
+		}
+		if (curr_spk != CSL_CAPH_DEV_NONE)
+			break;
+	}
+
+	return curr_spk;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_FindRenderPath
+*
+*  Description: return pointer to path table
+*
+*****************************************************************************/
+CSL_CAPH_HWConfig_Table_t *csl_caph_FindPath(unsigned int pathID)
+{
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+
+	if (pathID)
+		path = &HWConfig_Table[pathID - 1];
+
+	return path;
+}
+
+/****************************************************************************
+*
 *  Function Name: csl_caph_FindRenderPath
 *
 *  Description: return pointer to path table
@@ -4713,17 +4763,17 @@ CSL_CAPH_PathID csl_caph_FindRenderPathID(CSL_CAPH_DEVICE_e sink_dev,
 	CSL_CAPH_DEVICE_e src_dev)
 {
 	int i, j;
-	CSL_CAPH_PathID path = 0;
+	CSL_CAPH_PathID pathID = 0;
 
 	for (i = 0; i < MAX_AUDIO_PATH; i++) {
 		for (j = 0; j < MAX_SINK_NUM; j++) {
 			if (HWConfig_Table[i].sink[j] == sink_dev
 			    && HWConfig_Table[i].source == src_dev) {
-				path = HWConfig_Table[i].pathID;
+				pathID = HWConfig_Table[i].pathID;
 				break;
 			}
 		}
 	}
 
-	return path;
+	return pathID;
 }

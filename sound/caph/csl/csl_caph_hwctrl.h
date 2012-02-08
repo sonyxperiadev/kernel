@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.
+* Copyright 2009 - 2012 Broadcom Corporation.  All rights reserved.
 *    Unless you and Broadcom execute a separate written software license
 *    agreement governing use of this software, this software is licensed to
 *    you under the terms of the GNU General Public License version 2
@@ -708,6 +708,27 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_FindMixInCh(CSL_CAPH_DEVICE_e speaker,
 *****************************************************************************/
 CSL_CAPH_MIXER_e csl_caph_FindMixer(CSL_CAPH_DEVICE_e speaker,
 	unsigned int pathID);
+
+/****************************************************************************
+*
+*  @brief  Find sink device
+*
+*  @param   pathID
+*
+*  @return CSL_CAPH_DEVICE_e sink device
+*
+*****************************************************************************/
+CSL_CAPH_DEVICE_e csl_caph_FindSinkDevice(unsigned int pathID);
+
+/****************************************************************************
+*  @brief  Find path
+*
+*  @param   pathID
+*
+*  @return CSL_CAPH_HWConfig_Table_t * pointer to path table
+*
+*****************************************************************************/
+CSL_CAPH_HWConfig_Table_t *csl_caph_FindPath(unsigned int pathID);
 
 /****************************************************************************
 *  @brief  Find render path

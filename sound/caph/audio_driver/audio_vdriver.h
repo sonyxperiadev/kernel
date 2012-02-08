@@ -1,5 +1,5 @@
 /****************************************************************************
-Copyright 2009 - 2011  Broadcom Corporation
+Copyright 2009 - 2012  Broadcom Corporation
  Unless you and Broadcom execute a separate written software license agreement
  governing use of this software, this software is licensed to you under the
  terms of the GNU General Public License version 2 (the GPL), available at
@@ -217,17 +217,23 @@ void AUDDRV_Shutdown(void);
 
 /*  the control sequence for starting telephony audio. */
 void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic,
-		AUDIO_SINK_Enum_t speaker);
+		AUDIO_SINK_Enum_t speaker,
+		AudioMode_t mode, AudioApp_t app,
+		int bDualMic_IsNeeded,
+		int bmuteVoiceCall);
 
 /**
 *  @brief  the control sequence for rate change of voice call.
 *
-*  @param  sample_rate  (in) voice call sampling rate
+*  @param  mode
+*  @param  audio_app
+*  @param  bDualMic_IsNeeded
 *
 *  @return none
 *
 ****************************************************************************/
-void AUDDRV_Telephony_RateChange(unsigned int sample_rate);
+void AUDDRV_Telephony_RateChange(AudioMode_t mode,
+	AudioApp_t audio_app, int bNeedDualMic, int bmuteVoiceCall);
 
 /**
 *
@@ -250,33 +256,11 @@ void AUDDRV_RegisterRateChangeCallback(audio_codecId_handler_t
 ****************************************************************************/
 void AUDDRV_Telephone_RequestRateChange(int codecID);
 
-/**
-*  @brief  Get voice call sampling rate, stored for call session.
-*
-*  @param  none
-*
-*  @return unsigned int (voiceCallSampleRate)
-*
-****************************************************************************/
-unsigned int AUDDRV_Telephone_GetSampleRate(void);
-
-/**
-*  @brief  Save voice call sampling rate, stored for call session.
-*
-*  @param  unsigned int (in) voiceCallSampleRate
-*
-*  @return none
-*
-****************************************************************************/
-void AUDDRV_Telephone_SaveSampleRate(unsigned int sample_rate);
-
 /* the control sequence for ending telephony audio.
  this func let DSP to turn off voice path, if need to resume apps operation
  on voice, controller needs to reenable voice path after phonce call ends. */
 void AUDDRV_Telephony_Deinit(void);
 
-void AUDDRV_Telephony_SelectMicSpkr(AUDIO_SOURCE_Enum_t mic,
-			AUDIO_SINK_Enum_t speaker);
 /* Enable DSP output processing. */
 void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t mixer_speaker_selection,
 			AUDIO_SAMPLING_RATE_t sample_rate);
@@ -285,11 +269,6 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t mic_selection,
 			AUDIO_SAMPLING_RATE_t sample_rate);
 void AUDDRV_DisableDSPOutput(void);
 void AUDDRV_DisableDSPInput(void);
-Boolean AUDDRV_IsVoiceCallWB(AudioMode_t audio_mode);
-Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode);
-Boolean AUDDRV_InVoiceCall(void);
-
-void AUDDRV_SetVoiceCallFlag(Boolean inVoiceCall);
 
 #ifdef CONFIG_BCM_MODEM
 SysAudioParm_t *AudParmP(void);
@@ -302,11 +281,11 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app);
 #else
 void AUDDRV_SetAudioMode(AudioMode_t audio_mode);
 #endif
-void AUDDRV_SetAudioMode_ForMusicPlayback(AudioMode_t audio_mode,
+void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 			AudioApp_t audio_app,
 			unsigned int arg_pathID,
 			Boolean inHWlpbk);
-void AUDDRV_SetAudioMode_ForMusicRecord(AudioMode_t audio_mode,
+void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 				AudioApp_t audio_app,
 				unsigned int arg_pathID);
 
@@ -319,57 +298,8 @@ void AUDDRV_SetPCMOnOff(Boolean on_off);
 
 void AUDDRV_ControlFlagFor_CustomGain(Boolean on_off);
 
-/**
-*  @brief  Set telephony microphone (uplink) gain
-*
-*  @param  mic	(in)  microphone selection
-*  @param  gain	(in)  gain
-*  @param  gain_format	(in)  gain format
-*
-*  @return none
-*
-****************************************************************************/
-void AUDDRV_SetTelephonyMicGain(AUDIO_SOURCE_Enum_t mic,
-		Int16 gain,
-		AUDIO_GAIN_FORMAT_t gain_format);
-/**
-*  @brief  Set telephony speaker (downlink) volume
-*
-*  @param  speaker	(in)  downlink sink, speaker selection
-*  @param  volume	(in)  downlink volume
-*  @param  gain_format	 (in)  gain format
-*
-*  @return none
-*
-****************************************************************************/
-void AUDDRV_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
-		int volume_mB);
-
-void AUDDRV_Telephony_MuteMic(AUDIO_SOURCE_Enum_t mic);
-void AUDDRV_Telephony_UnmuteMic(AUDIO_SOURCE_Enum_t mic);
-void AUDDRV_Telephony_MuteSpkr(AUDIO_SINK_Enum_t speaker);
-void AUDDRV_Telephony_UnmuteSpkr(AUDIO_SINK_Enum_t speaker);
 void AUDDRV_SetULSpeechRecordGain(Int16 gain);
 
-/*********************************************************************
-*
-* Get BTM headset NB or WB info
-* @return	Boolean, TRUE for WB and FALSE for NB (8k)
-* @note
-**********************************************************************/
-Boolean AUDDRV_IsBTMWB(void);
-
-/*********************************************************************
-*
-* Set BTM type
-* @param	Boolean isWB
-* @return	none
-*
-* @note	isWB=TRUE for BT WB headset; =FALSE for BT NB (8k) headset.
-**********************************************************************/
-void AUDDRV_SetBTMTypeWB(Boolean isWB);
-
-int AUDDRV_Get_CP_AudioMode(void);
 void Audio_InitRpc(void);
 void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx);
 void AUDDRV_EC(Boolean enable, UInt32 arg);

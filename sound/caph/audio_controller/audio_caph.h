@@ -67,7 +67,7 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_StopRecord,
 	ACTION_AUD_OpenRecord,
 	ACTION_AUD_CloseRecord,
-	ACTION_AUD_SetPrePareParameters,
+	ACTION_AUD_SetPrePareParameters,/* 10 */
 	ACTION_AUD_AddChannel,
 	ACTION_AUD_RemoveChannel,
 	ACTION_AUD_EnableTelephony,
@@ -77,7 +77,7 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_SetTelephonyMicSpkr,
 	ACTION_AUD_MutePlayback,
 	ACTION_AUD_MuteRecord,
-	ACTION_AUD_MuteTelephony,
+	ACTION_AUD_MuteTelephony,/* 20 */
 	ACTION_AUD_EnableByPassVibra,
 	ACTION_AUD_DisableByPassVibra,
 	ACTION_AUD_SetPlaybackVolume,
@@ -90,7 +90,7 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_EnableFMPlay,
 	ACTION_AUD_DisableFMPlay,
 	ACTION_AUD_SetARM2SPInst,
-	ACTION_AUD_RateChange,
+	ACTION_AUD_RateChange,/* 34 */
 	ACTION_AUD_TOTAL
 };
 #define BRCM_AUDIO_ACTION_en_t enum __BRCM_AUDIO_ACTION_en_t

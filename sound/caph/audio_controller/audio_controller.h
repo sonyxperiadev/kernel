@@ -185,6 +185,26 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate);
 void AUDCTRL_Telephony_RequestRateChange(UInt8 codecID);
 
 /**
+*  @brief  Get voice call sampling rate, stored for call session.
+*
+*  @param  none
+*
+*  @return unsigned int (voiceCallSampleRate)
+*
+****************************************************************************/
+unsigned int AUDCTRL_Telephony_GetSR(void);
+
+/**
+*  @brief  Save voice call sampling rate, stored for call session.
+*
+*  @param  unsigned int (in) voiceCallSampleRate
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_Telephony_SaveSR(unsigned int sample_rate);
+
+/**
 *  @brief  Change telephony audio path in HW and DSP
 *
 *  @param  source  (in)  uplink source, microphone selection
@@ -452,6 +472,15 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 			   AUDIO_SINK_Enum_t sink, unsigned int pathID);
 
 /********************************************************************
+*  @brief  switch speaker of playback
+*
+*  @param   mode audio mode
+*  @return none
+*
+***************************************************************************/
+void AUDCTRL_SwitchPlaySpk_forTuning(AudioMode_t mode);
+
+/********************************************************************
 *  @brief  Add a speaker to a playback path
 *
 *  @param   source  Source
@@ -645,6 +674,40 @@ void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction);
 *
 ****************************************************************************/
 void AUDCTRL_DisableBypassVibra(void);
+
+/*********************************************************************
+*
+* get the flag - voice call shall use HW sampling rate 16KHz
+* @return	int TRUE and FALSE
+* @note
+**********************************************************************/
+int AUDCTRL_Telephony_HW_16K(AudioMode_t voiceMode);
+
+/*********************************************************************
+*
+* get the flag - In Voice Call
+* @return	int TRUE and FALSE
+* @note
+**********************************************************************/
+int AUDCTRL_InVoiceCall(void);
+
+/*********************************************************************
+*
+* Get BTM headset NB or WB info
+* @return	int TRUE for WB and FALSE for NB (8k)
+* @note
+**********************************************************************/
+int AUDCTRL_IsBTMWB(void);
+
+/*********************************************************************
+*
+* Set BTM type
+* @param	Boolean isWB
+* @return	none
+*
+* @note	isWB=TRUE for BT WB headset; =FALSE for BT NB (8k) headset.
+**********************************************************************/
+void AUDCTRL_SetBTMTypeWB(Boolean isWB);
 
 /********************************************************************
 *  @brief  Set IHF mode
