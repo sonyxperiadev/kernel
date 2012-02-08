@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wpa.h,v 1.19 2009-07-13 08:29:58 $
+ * $Id: wpa.h 285437 2011-09-21 22:16:56Z $
  */
 
 
@@ -114,6 +114,8 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define WPA_CIPHER_AES_OCB	3	
 #define WPA_CIPHER_AES_CCM	4	
 #define WPA_CIPHER_WEP_104	5	
+#define WPA_CIPHER_BIP		6	
+#define WPA_CIPHER_TPK		7	
 
 #ifdef BCMWAPI_WPI
 #define WAPI_CIPHER_NONE	WPA_CIPHER_NONE
@@ -126,7 +128,9 @@ typedef BWL_PRE_PACKED_STRUCT struct
 				 (cipher) == WPA_CIPHER_WEP_104 || \
 				 (cipher) == WPA_CIPHER_TKIP || \
 				 (cipher) == WPA_CIPHER_AES_OCB || \
-				 (cipher) == WPA_CIPHER_AES_CCM)
+				 (cipher) == WPA_CIPHER_AES_CCM || \
+				 (cipher) == WPA_CIPHER_TPK)
+
 #ifdef BCMWAPI_WAI
 #define IS_WAPI_CIPHER(cipher)	((cipher) == WAPI_CIPHER_NONE || \
 					 (cipher) == WAPI_CSE_WPI_SMS4)
@@ -165,7 +169,11 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define WPA_CAP_REPLAY_CNTR_MASK	RSN_CAP_PTK_REPLAY_CNTR_MASK
 
 
+#define WPA_CAP_PEER_KEY_ENABLE		(0x1 << 1)	
+
+
 #define WPA_CAP_LEN	RSN_CAP_LEN	
+#define WPA_PMKID_CNT_LEN	2	
 
 #define	WPA_CAP_WPA2_PREAUTH		RSN_CAP_PREAUTH
 

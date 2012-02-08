@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: bcmwpa.h 278681 2011-08-19 17:50:47Z $
+ * $Id: bcmwpa.h 285437 2011-09-21 22:16:56Z $
  */
 
 #ifndef _BCMWPA_H_
@@ -79,6 +79,7 @@
 			     (akm) == RSN_AKM_PSK)
 #define IS_FBT_AKM(akm) ((akm) == RSN_AKM_FBT_1X ||	\
 			 (akm) == RSN_AKM_FBT_PSK)
+#define IS_TDLS_AKM(akm)        ((akm) == RSN_AKM_TPK)
 
 /* Broadcom(OUI) authenticated key managment suite */
 #define BRCM_AKM_NONE           0
@@ -127,6 +128,10 @@ extern wpa_ie_fixed_t *bcm_find_wpaie(uint8 *parse, uint len);
 /* Look for a WPS IE; return it's address if found, NULL otherwise */
 extern wpa_ie_fixed_t *bcm_find_wpsie(uint8 *parse, uint len);
 extern wps_at_fixed_t *bcm_wps_find_at(wps_at_fixed_t *at, int len, uint16 id);
+#ifdef WLTDLS
+extern bcm_tlv_t *bcm_find_wmeie(uint8 *parse, uint len, uint8 subtype, uint8 subtype_len);
+#endif /* WLTDLS */
+
 #ifdef WLP2P
 /* Look for a WiFi P2P IE; return it's address if found, NULL otherwise */
 extern wifi_p2p_ie_t *bcm_find_p2pie(uint8 *parse, uint len);
@@ -139,6 +144,9 @@ extern bool bcm_has_ie(uint8 *ie, uint8 **tlvs, uint *tlvs_len,
 
 /* Check whether pointed-to IE looks like WPA. */
 #define bcm_is_wpa_ie(ie, tlvs, len)    bcm_is_wfa_ie(ie, tlvs, len, WPA_OUI_TYPE)
+/* Check whether pointed-to IE looks like WME. */
+#define bcm_is_wme_ie(ie, tlvs, len)	bcm_has_ie(ie, tlvs, len, \
+	(const uint8 *)WME_OUI, WME_OUI_LEN, WME_OUI_TYPE)
 /* Check whether pointed-to IE looks like WPS. */
 #define bcm_is_wps_ie(ie, tlvs, len)    bcm_is_wfa_ie(ie, tlvs, len, WPS_OUI_TYPE)
 
@@ -235,4 +243,9 @@ extern void wpa_calc_ft_ptk(struct ether_addr *bssid, struct ether_addr *sta_ea,
                             uint8 *ptk, uint ptk_len);
 #endif /* WLFBT */
 
+#ifdef WLTDLS
+/* Calculate TPK for TDLS association */
+extern void wpa_calc_tpk(struct ether_addr *init_ea, struct ether_addr *resp_ea,
+struct ether_addr *bssid, uint8 *anonce, uint8* snonce, uint8 *tpk, uint tpk_len);
+#endif
 #endif  /* _BCMWPA_H_ */

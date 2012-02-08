@@ -1043,8 +1043,13 @@ CONFIG_WLAN=y
 # CONFIG_BCM4329 is not set
 # CONFIG_BCM4329_FALCON is not set
 # CONFIG_BCM4330_FALCON is not set
+<<<<<<< HEAD
 # CONFIG_BCMDHD_4334 is not set
 CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_bcmdhd.bin.a2"
+=======
+# CONFIG_BCMDHD is not set
+CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_bcmdhd.bin"
+>>>>>>> 730098b... WLAN: Updated drivers for Nokia 12P2.0 release
 CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/fw_wifi_nvram.txt"
 CONFIG_BCMDHD_IF_PREFIX=""
 # CONFIG_BCMDHD is not set

@@ -11,7 +11,7 @@ config BCMDHD_43362_LINUX
 config BCMDHD_FW_PATH
 	depends on BCMDHD_43362_LINUX
 	string "Firmware path"
-	default "/system/vendor/firmware/fw_bcmdhd.bin.a2"
+	default "/system/vendor/firmware/fw_bcmdhd.bin"
 	---help---
 	  Path to the firmware file.
 

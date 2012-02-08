@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dbus.h 280946 2011-08-31 21:41:04Z $
+ * $Id: dbus.h 287016 2011-09-29 23:02:07Z $
  */
 
 #ifndef __DBUS_H__
@@ -361,4 +361,6 @@ extern int dbus_bus_osl_hw_register(int vid, int pid, probe_cb_t prcb, disconnec
 extern int dbus_bus_osl_hw_deregister(void);
 
 extern uint usbdev_bulkin_eps(void);
+extern void *dbus_get_fw(int devid, uint8 **fw, int *fwlen);
+extern void dbus_release_fw(void *firmware);
 #endif /* __DBUS_H__ */

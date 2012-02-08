@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: siutils.h 275703 2011-08-04 20:20:27Z $
+ * $Id: siutils.h 285387 2011-09-21 18:38:37Z $
  */
 
 
@@ -58,6 +58,7 @@ struct si_pub {
 
 
 typedef const struct si_pub si_t;
+
 
 
 #define	SI_OSH		NULL	
@@ -269,5 +270,6 @@ extern uint32 si_pciereg(si_t *sih, uint32 offset, uint32 mask, uint32 val, uint
 extern uint32 si_pcieserdesreg(si_t *sih, uint32 mdioslave, uint32 offset, uint32 mask, uint32 val);
 
 char *si_getnvramflvar(si_t *sih, const char *name);
+
 
 #endif	

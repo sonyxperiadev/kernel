@@ -1,72 +1,43 @@
-# BCMDHD
+# BCMDHD_LNX
 
 DHDCFLAGS = -Dlinux -DLINUX -DBCMDRIVER -DBCMDONGLEHOST -DDHDTHREAD
-#DHDCFLAGS += -DUNRELEASEDCHIP -DBCMDMA32 -DDHD_SCHED -DWLP2P
 DHDCFLAGS += -DUNRELEASEDCHIP -DBCMDMA32 -DDHD_SCHED
 DHDCFLAGS += -DDHD_DEBUG -DBDC -DTOE -DDHD_BCMEVENTS -DSHOW_EVENTS
 DHDCFLAGS += -DDHD_SDALIGN=64 -DMAX_HDR_READ=64 -DDHD_FIRSTREAD=64
 DHDCFLAGS += -DBCMSDIO -DDHD_GPL -DBCMLXSDMMC -DBCMPLATFORM_BUS
-DHDCFLAGS += -DWL_CFG80211 -DWLP2P
-#DHDCFLAGS += -DEMBEDDED_PLATFORM -DPNO_SUPPORT -DARP_OFFLOAD_SUPPORT
-#DHDCFLAGS += -DPKT_FILTER_SUPPORT -DKEEP_ALIVE
+DHDCFLAGS += -DWL_CFG80211 -DWLP2P -DOEM_EMBEDDED_LINUX
+#DHDCFLAGS += -DARP_OFFLOAD_SUPPORT -DPKT_FILTER_SUPPORT -DKEEP_ALIVE
+#DHDCFLAGS += -DPNO_SUPPORT 
 DHDCFLAGS += -Wall -Wstrict-prototypes -Werror
 #DHDCFLAGS += -DCUSTOMER_HW3 -DCUSTOM_OOB_GPIO_NUM=85
-DHDCFLAGS += -DCUSTOMER_HW3 
-
-# Selective F/W loading for 43362
-DHDCFLAGS += -DDHD_SELECTIVE_FW_43362
+DHDCFLAGS += -DCUSTOMER_HW3
 
 # WAPI support (enable with nl80211 patch)
 #DHDCFLAGS += -DBCMWAPI_WPI -DBCMWAPI_WAI
 
-# In-Band Interrupt
-#DHDCFLAGS += -DSDIO_ISR_THREAD -DMMC_SDIO_ABORT
+# In-Band Interrupt -- UNCOMMENT BELOW TO TEST ON RHEARAY, OR COMMENT OUT FOR OOB
+DHDCFLAGS += -DSDIO_ISR_THREAD -DMMC_SDIO_ABORT
 
-# HW-OOB Interrupt
-#DHDCFLAGS += -DOOB_INTR_ONLY -DHW_OOB -DMMC_SDIO_ABORT
+# FOR Rhea OOB INT - UNCOMMENT BELOW AND REPLACE "85" FOR HW-OOB + COMMENT ABOVE
+#DHDCFLAGS += -DOOB_INTR_ONLY -DMMC_SDIO_ABORT -DCUSTOM_OOB_GPIO_NUM=85
 
-# SW-OOB Interrupt
+# HW-OOB Interrupt - BELOW NOT USED i.e. HW_OOB (KEEP COMMENTED OUT)
+#DHDCFLAGS += -DOOB_INTR_ONLY -DHW_OOB -DMMC_SDIO_ABORT -DCUSTOM_OOB_GPIO_NUM=85
+
+# SW-OOB Interrupt -- BELOW NOT USED (KEEP COMMENTED OUT)
 #DHDCFLAGS += -DOOB_INTR_ONLY -DMMC_SDIO_ABORT
 
-ifeq ($(CONFIG_BCMDHD_43362_LINUX),m)
-DHDCFLAGS += -DOOB_INTR_ONLY -DMMC_SDIO_ABORT -DCUSTOM_OOB_GPIO_NUM=85
-endif
 
-DHDCFLAGS += \
-	-Idrivers/net/wireless/bcmdhd_lnx/dhd/sys \
-	-Idrivers/net/wireless/bcmdhd_lnx/bcmsdio/sys \
-	-Idrivers/net/wireless/bcmdhd_lnx/shared \
-	-Idrivers/net/wireless/bcmdhd_lnx/dongle \
-	-Idrivers/net/wireless/bcmdhd_lnx/wl/exe \
-	-Idrivers/net/wireless/bcmdhd_lnx/wl/sys \
-	-Idrivers/net/wireless/bcmdhd_lnx/include
+DHDCFLAGS += -Idrivers/net/wireless/bcmdhd_lnx -Idrivers/net/wireless/bcmdhd_lnx/include
 
 #------------------------------------------------------------------------
 
-DHDO_BCMSDIO_SYS = \
-	bcmsdio/sys/bcmsdh.o bcmsdio/sys/bcmsdh_linux.o \
-	bcmsdio/sys/bcmsdh_sdmmc.o bcmsdio/sys/bcmsdh_sdmmc_linux.o
-
-DHDO_DHD_SYS = \
-	dhd/sys/dhd_cdc.o dhd/sys/dhd_common.o \
-	dhd/sys/dhd_custom_gpio.o dhd/sys/dhd_linux.o \
-	dhd/sys/dhd_linux_mon.o dhd/sys/dhd_linux_sched.o \
-	dhd/sys/dhd_sdio.o
-
-DHDO_SHARED = \
-	shared/aiutils.o shared/bcmevent.o \
-	shared/bcmutils.o shared/bcmwifi.o \
-	shared/hndpmu.o shared/linux_osl.o \
-	shared/sbutils.o shared/siutils.o
-
-DHDO_WL_SYS = \
-	wl/sys/wl_cfg80211.o wl/sys/wl_cfgp2p.o \
-	wl/sys/wldev_common.o
-
-DHDOFILES = $(DHDO_BCMSDIO_SYS)
-DHDOFILES += $(DHDO_DHD_SYS)
-DHDOFILES += $(DHDO_SHARED)
-DHDOFILES += $(DHDO_WL_SYS)
+DHDOFILES = \
+	aiutils.o bcmevent.o bcmsdh.o bcmsdh_linux.o bcmsdh_sdmmc.o \
+	bcmsdh_sdmmc_linux.o bcmutils.o bcmwifi.o dhd_cdc.o dhd_cfg80211.o \
+	dhd_common.o dhd_custom_gpio.o dhd_linux.o dhd_linux_sched.o \
+	dhd_sdio.o hndpmu.o linux_osl.o sbutils.o siutils.o wl_cfg80211.o \
+	wl_cfgp2p.o wldev_common.o wl_elinux.o wl_linux_mon.o
 
 obj-$(CONFIG_BCMDHD_43362_LINUX) += bcmdhd.o
 bcmdhd-objs += $(DHDOFILES)

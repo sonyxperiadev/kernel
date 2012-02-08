@@ -23,7 +23,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh.h 275703 2011-08-04 20:20:27Z $
+ * $Id: bcmsdh.h 300017 2011-12-01 20:30:27Z $
  */
 
 #ifndef	_bcmsdh_h_
@@ -210,5 +210,13 @@ extern void bcmsdh_chipinfo(void *sdh, uint32 chip, uint32 chiprev);
 #ifdef BCMSPI
 extern void bcmsdh_dwordmode(void *sdh, bool set);
 #endif /* BCMSPI */
+
+extern int bcmsdh_sleep(void *sdh, bool enab);
+
+/* GPIO support */
+extern int bcmsdh_gpio_init(void *sd);
+extern bool bcmsdh_gpioin(void *sd, uint32 gpio);
+extern int bcmsdh_gpioouten(void *sd, uint32 gpio);
+extern int bcmsdh_gpioout(void *sd, uint32 gpio, bool enab);
 
 #endif	/* _bcmsdh_h_ */

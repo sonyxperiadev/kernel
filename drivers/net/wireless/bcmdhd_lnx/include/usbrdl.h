@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: usbrdl.h 275703 2011-08-04 20:20:27Z $
+ * $Id: usbrdl.h 277737 2011-08-16 17:54:59Z $
  */
 
 #ifndef _USB_RDL_H
