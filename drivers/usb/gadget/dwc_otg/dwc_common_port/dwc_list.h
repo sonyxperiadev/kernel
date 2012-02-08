@@ -46,7 +46,7 @@
  */
 
 /*
- * This file defines five types of data structures: singly-linked lists, 
+ * This file defines five types of data structures: singly-linked lists,
  * lists, simple queues, tail queues, and circular queues.
  *
  *
@@ -73,7 +73,7 @@
  * head of the list. New elements can be added to the list before or after
  * an existing element, at the head of the list, or at the end of the
  * list. A simple queue may only be traversed in the forward direction.
- * 
+ *
  * A tail queue is headed by a pair of pointers, one to the head of the
  * list and the other to the tail of the list. The elements are doubly
  * linked so that an arbitrary element can be removed without a need to
@@ -101,10 +101,10 @@ typedef struct dwc_list_link {
 	struct dwc_list_link *prev;
 } dwc_list_link_t;
 
-#define DWC_LIST_INIT(link) do{		\
+#define DWC_LIST_INIT(link) do {		\
 	(link)->next = (link);		\
 	(link)->prev = (link);		\
-} while(0)
+} while (0)
 
 #define DWC_LIST_FIRST(link)	((link)->next)
 #define DWC_LIST_LAST(link)	((link)->prev)
@@ -121,47 +121,47 @@ typedef struct dwc_list_link {
 	(link)->prev = (list);					\
 	(list)->next->prev = link;				\
 	(list)->next = link;					\
-} while(0)
+} while (0)
 
 #define DWC_LIST_INSERT_TAIL(list, link) do {			\
 	(link)->next = list;					\
 	(link)->prev = (list)->prev;				\
 	(list)->prev->next = link;				\
 	(list)->prev = link;					\
-} while(0)
+} while (0)
 
 #define DWC_LIST_REMOVE(link) do {				\
 	(link)->next->prev = (link)->prev;			\
 	(link)->prev->next = (link)->next;			\
-} while(0)
+} while (0)
 
 #define DWC_LIST_REMOVE_INIT(link) do {				\
 	DWC_LIST_REMOVE(link);					\
 	DWC_LIST_INIT(link);					\
-} while(0)
+} while (0)
 
 #define DWC_LIST_MOVE_HEAD(list, link) do {			\
 	DWC_LIST_REMOVE(link);					\
 	DWC_LIST_INSERT_HEAD(list, link);			\
-} while(0)
+} while (0)
 
 #define DWC_LIST_MOVE_TAIL(list, link) do {			\
 	DWC_LIST_REMOVE(link);					\
 	DWC_LIST_INSERT_TAIL(list, link);			\
-} while(0)
+} while (0)
 
 #define DWC_LIST_FOREACH(var, list)				\
-	for((var) = DWC_LIST_FIRST(list);			\
+	for ((var) = DWC_LIST_FIRST(list);			\
 	    (var) != DWC_LIST_END(list);			\
 	    (var) = DWC_LIST_NEXT(var))
 
 #define DWC_LIST_FOREACH_SAFE(var, var2, list)			\
-	for((var) = DWC_LIST_FIRST(list), var2 = DWC_LIST_NEXT(var);	\
+	for ((var) = DWC_LIST_FIRST(list), var2 = DWC_LIST_NEXT(var);	\
 	    (var) != DWC_LIST_END(list);			\
 	    (var) = (var2), var2 = DWC_LIST_NEXT(var2))
 
 #define DWC_LIST_FOREACH_REVERSE(var, list)			\
-	for((var) = DWC_LIST_LAST(list);			\
+	for ((var) = DWC_LIST_LAST(list);			\
 	    (var) != DWC_LIST_END(list);			\
 	    (var) = DWC_LIST_PREV(var))
 
@@ -172,15 +172,15 @@ typedef struct dwc_list_link {
 struct name {								\
 	struct type *slh_first;	/* first element */			\
 }
- 
+
 #define	DWC_SLIST_HEAD_INITIALIZER(head)					\
 	{ NULL }
- 
+
 #define DWC_SLIST_ENTRY(type)						\
 struct {								\
 	struct type *sle_next;	/* next element */			\
 }
- 
+
 /*
  * Singly-linked List access methods.
  */
@@ -190,7 +190,7 @@ struct {								\
 #define DWC_SLIST_NEXT(elm, field)	((elm)->field.sle_next)
 
 #define DWC_SLIST_FOREACH(var, head, field)					\
-	for((var) = SLIST_FIRST(head);					\
+	for ((var) = SLIST_FIRST(head);					\
 	    (var) != SLIST_END(head);					\
 	    (var) = SLIST_NEXT(var, field))
 
@@ -230,7 +230,7 @@ struct {								\
 	}								\
 	else {								\
 		struct type *curelm = (head)->slh_first;		\
-		while( curelm->field.sle_next != (elm) )		\
+		while (curelm->field.sle_next != (elm))		\
 			curelm = curelm->field.sle_next;		\
 		curelm->field.sle_next =				\
 		    curelm->field.sle_next->field.sle_next;		\
@@ -265,11 +265,11 @@ struct {								\
 #define DWC_LIST_NEXT(elm, field)		((elm)->field.le_next)
 
 #define DWC_LIST_FOREACH(var, head, field)					\
-	for((var) = DWC_LIST_FIRST(head);					\
-	    (var)!= DWC_LIST_END(head);					\
+	for ((var) = DWC_LIST_FIRST(head);					\
+	    (var) != DWC_LIST_END(head);					\
 	    (var) = DWC_LIST_NEXT(var, field))
 #define DWC_LIST_FOREACH_SAFE(var, var2, head, field)				\
-	for((var) = DWC_LIST_FIRST(head), var2 = DWC_LIST_NEXT(var, field);				\
+	for ((var) = DWC_LIST_FIRST(head), var2 = DWC_LIST_NEXT(var, field);				\
 	    (var) != DWC_LIST_END(head);					\
 	    (var) = var2, var2 = DWC_LIST_NEXT(var, field))
 
@@ -345,7 +345,7 @@ struct {								\
 #define DWC_SIMPLEQ_NEXT(elm, field)    ((elm)->field.sqe_next)
 
 #define DWC_SIMPLEQ_FOREACH(var, head, field)				\
-	for((var) = SIMPLEQ_FIRST(head);				\
+	for ((var) = SIMPLEQ_FIRST(head);				\
 	    (var) != SIMPLEQ_END(head);					\
 	    (var) = SIMPLEQ_NEXT(var, field))
 
@@ -413,12 +413,12 @@ struct {								\
 	(TAILQ_FIRST(head) == TAILQ_END(head))
 
 #define DWC_TAILQ_FOREACH(var, head, field)					\
-	for((var) = TAILQ_FIRST(head);					\
+	for ((var) = TAILQ_FIRST(head);					\
 	    (var) != TAILQ_END(head);					\
 	    (var) = TAILQ_NEXT(var, field))
 
 #define DWC_TAILQ_FOREACH_REVERSE(var, head, headname, field)		\
-	for((var) = TAILQ_LAST(head, headname);				\
+	for ((var) = TAILQ_LAST(head, headname);				\
 	    (var) != TAILQ_END(head);					\
 	    (var) = TAILQ_PREV(var, headname, field))
 
@@ -502,7 +502,7 @@ struct {								\
 }
 
 /*
- * Circular queue access methods 
+ * Circular queue access methods
  */
 #define DWC_CIRCLEQ_FIRST(head)		((head)->cqh_first)
 #define DWC_CIRCLEQ_LAST(head)		((head)->cqh_last)
@@ -515,17 +515,17 @@ struct {								\
 #define DWC_CIRCLEQ_EMPTY_ENTRY(elm, field) (((elm)->field.cqe_next == NULL) && ((elm)->field.cqe_prev == NULL))
 
 #define DWC_CIRCLEQ_FOREACH(var, head, field)				\
-	for((var) = DWC_CIRCLEQ_FIRST(head);				\
+	for ((var) = DWC_CIRCLEQ_FIRST(head);				\
 	    (var) != DWC_CIRCLEQ_END(head);					\
 	    (var) = DWC_CIRCLEQ_NEXT(var, field))
 
 #define DWC_CIRCLEQ_FOREACH_SAFE(var, var2, head, field)				\
-	for((var) = DWC_CIRCLEQ_FIRST(head), var2 = DWC_CIRCLEQ_NEXT(var, field);				\
+	for ((var) = DWC_CIRCLEQ_FIRST(head), var2 = DWC_CIRCLEQ_NEXT(var, field);				\
 	    (var) != DWC_CIRCLEQ_END(head);					\
 	    (var) = var2, var2 = DWC_CIRCLEQ_NEXT(var, field))
 
 #define DWC_CIRCLEQ_FOREACH_REVERSE(var, head, field)			\
-	for((var) = DWC_CIRCLEQ_LAST(head);					\
+	for ((var) = DWC_CIRCLEQ_LAST(head);					\
 	    (var) != DWC_CIRCLEQ_END(head);					\
 	    (var) = DWC_CIRCLEQ_PREV(var, field))
 

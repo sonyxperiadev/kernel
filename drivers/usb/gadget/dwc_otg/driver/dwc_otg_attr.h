@@ -7,7 +7,7 @@
  * Synopsys HS OTG Linux Software Driver and documentation (hereinafter,
  * "Software") is an Unsupported proprietary work of Synopsys, Inc. unless
  * otherwise expressly agreed to in writing between Synopsys and you.
- * 
+ *
  * The Software IS NOT an item of Licensed Software or Licensed Product under
  * any End User Software License Agreement or Agreement for Licensed Product
  * with Synopsys or any supplement thereto. You are permitted to use and
@@ -17,7 +17,7 @@
  * any information contained herein except pursuant to this license grant from
  * Synopsys. If you do not agree with this notice, including the disclaimer
  * below, then you are not authorized to use the Software.
- * 
+ *
  * THIS SOFTWARE IS BEING DISTRIBUTED BY SYNOPSYS SOLELY ON AN "AS IS" BASIS
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -68,20 +68,20 @@ extern struct device_attribute devi_attr_sleep_status;
 void dwc_otg_attr_create(
 #ifdef LM_INTERFACE
 	struct lm_device *dev
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	struct pci_dev *dev
 #else
 	struct platform_device *dev
 #endif
-    );
+);
 
 void dwc_otg_attr_remove(
 #ifdef LM_INTERFACE
 	struct lm_device *dev
-#elif defined (PCI_INTERFACE)
+#elif defined(PCI_INTERFACE)
 	struct pci_dev *dev
 #else
 	struct platform_device *dev
 #endif
-    );
+);
 #endif

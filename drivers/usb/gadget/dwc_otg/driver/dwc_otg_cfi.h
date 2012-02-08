@@ -34,9 +34,9 @@
 
 /**
  * @file
- * This file contains the CFI related OTG PCD specific common constants, 
- * interfaces(functions and macros) and data structures.The CFI Protocol is an 
- * optional interface for internal testing purposes that a DUT may implement to 
+ * This file contains the CFI related OTG PCD specific common constants,
+ * interfaces(functions and macros) and data structures.The CFI Protocol is an
+ * optional interface for internal testing purposes that a DUT may implement to
  * support testing of configurable features.
  *
  */
@@ -198,18 +198,18 @@ struct cfiobject;
  * @param	ctrl_write_complete	Called when the data stage of the request is complete
  */
 typedef struct cfi_ops {
-	int (*ep_enable) (struct cfiobject * cfi, struct dwc_otg_pcd * pcd,
-			  struct dwc_otg_pcd_ep * ep);
-	void *(*ep_alloc_buf) (struct cfiobject * cfi, struct dwc_otg_pcd * pcd,
-			       struct dwc_otg_pcd_ep * ep, dma_addr_t * dma,
+	int (*ep_enable) (struct cfiobject *cfi, struct dwc_otg_pcd *pcd,
+			  struct dwc_otg_pcd_ep *ep);
+	void *(*ep_alloc_buf) (struct cfiobject *cfi, struct dwc_otg_pcd *pcd,
+			       struct dwc_otg_pcd_ep *ep, dma_addr_t * dma,
 			       unsigned size, gfp_t flags);
-	void (*release) (struct cfiobject * cfi);
-	int (*ctrl_write_complete) (struct cfiobject * cfi,
-				    struct dwc_otg_pcd * pcd);
-	void (*build_descriptors) (struct cfiobject * cfi,
-				   struct dwc_otg_pcd * pcd,
-				   struct dwc_otg_pcd_ep * ep,
-				   dwc_otg_pcd_request_t * req);
+	void (*release) (struct cfiobject *cfi);
+	int (*ctrl_write_complete) (struct cfiobject *cfi,
+				    struct dwc_otg_pcd *pcd);
+	void (*build_descriptors) (struct cfiobject *cfi,
+				   struct dwc_otg_pcd *pcd,
+				   struct dwc_otg_pcd_ep *ep,
+				   dwc_otg_pcd_request_t *req);
 } cfi_ops_t;
 
 struct cfiobject {
@@ -245,7 +245,7 @@ typedef struct cfiobject cfiobject_t;
 #define DUMP_MSG
 
 #if defined(DUMP_MSG)
-static inline void dump_msg(const u8 * buf, unsigned int length)
+static inline void dump_msg(const u8 *buf, unsigned int length)
 {
 	unsigned int start, num, i;
 	char line[52], *p;
@@ -271,7 +271,7 @@ static inline void dump_msg(const u8 * buf, unsigned int length)
 	}
 }
 #else
-static inline void dump_msg(const u8 * buf, unsigned int length)
+static inline void dump_msg(const u8 *buf, unsigned int length)
 {
 }
 #endif
@@ -288,9 +288,8 @@ static inline struct cfi_ep *get_cfi_ep_by_addr(struct cfiobject *cfi,
 	DWC_LIST_FOREACH(tmp, &cfi->active_eps) {
 		pcfiep = DWC_LIST_ENTRY(tmp, struct cfi_ep, lh);
 
-		if (pcfiep->ep->desc->bEndpointAddress == addr) {
+		if (pcfiep->ep->desc->bEndpointAddress == addr)
 			return pcfiep;
-		}
 	}
 
 	return NULL;
@@ -308,9 +307,8 @@ static inline struct cfi_ep *get_cfi_ep_by_pcd_ep(struct cfiobject *cfi,
 
 	DWC_LIST_FOREACH(tmp, &cfi->active_eps) {
 		pcfiep = DWC_LIST_ENTRY(tmp, struct cfi_ep, lh);
-		if (pcfiep->ep == ep) {
+		if (pcfiep->ep == ep)
 			return pcfiep;
-		}
 	}
 	return NULL;
 }

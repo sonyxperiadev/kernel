@@ -45,16 +45,18 @@ static void dh_dump(char *str, void *_num, int len)
 	uint8_t *num = _num;
 	int i;
 	DWC_PRINTF("%s\n", str);
-	for (i = 0; i < len; i ++) {
+	for (i = 0; i < len; i++) {
 		DWC_PRINTF("%02x", num[i]);
-		if (((i + 1) % 2) == 0) DWC_PRINTF(" ");
-		if (((i + 1) % 26) == 0) DWC_PRINTF("\n");
+		if (((i + 1) % 2) == 0)
+			DWC_PRINTF(" ");
+		if (((i + 1) % 26) == 0)
+			DWC_PRINTF("\n");
 	}
 
 	DWC_PRINTF("\n");
 }
 #else
-#define dh_dump(_x...) do {; } while(0)
+#define dh_dump(_x...) do {; } while (0)
 #endif
 
 /* Constant g value */
@@ -64,18 +66,30 @@ static __u32 dh_g[] = {
 
 /* Constant p value */
 static __u32 dh_p[] = {
-	0xFFFFFFFF, 0xFFFFFFFF, 0xA2DA0FC9, 0x34C26821, 0x8B62C6C4, 0xD11CDC80, 0x084E0229, 0x74CC678A,
-	0xA6BE0B02, 0x229B133B, 0x79084A51, 0xDD04348E, 0xB31995EF, 0x1B433ACD, 0x6D0A2B30, 0x37145FF2,
-	0x6D35E14F, 0x45C2516D, 0x76B585E4, 0xC67E5E62, 0xE9424CF4, 0x6BED37A6, 0xB65CFF0B, 0xEDB706F4,
-	0xFB6B38EE, 0xA59F895A, 0x11249FAE, 0xE61F4B7C, 0x51662849, 0x3D5BE4EC, 0xB87C00C2, 0x05BF63A1,
-	0x3648DA98, 0x9AD3551C, 0xA83F1669, 0x5FCF24FD, 0x235D6583, 0x96ADA3DC, 0x56F3621C, 0xBB528520,
-	0x0729D59E, 0x6D969670, 0x4E350C67, 0x0498BC4A, 0x086C74F1, 0x7C2118CA, 0x465E9032, 0x3BCE362E,
-	0x2C779EE3, 0x03860E18, 0xA283279B, 0x8FA207EC, 0xF05DC5B5, 0xC9524C6F, 0xF6CB2BDE, 0x18175895,
-	0x7C499539, 0xE56A95EA, 0x1826D215, 0x1005FA98, 0x5A8E7215, 0x2DC4AA8A, 0x0D1733AD, 0x337A5004,
-	0xAB2155A8, 0x64BA1CDF, 0x0485FBEC, 0x0AEFDB58, 0x5771EA8A, 0x7D0C065D, 0x850F97B3, 0xC7E4E1A6,
-	0x8CAEF5AB, 0xD73309DB, 0xE0948C1E, 0x9D61254A, 0x26D2E3CE, 0x6BEED21A, 0x06FA2FF1, 0x64088AD9,
-	0x730276D8, 0x646AC83E, 0x182B1F52, 0x0C207B17, 0x5717E1BB, 0x6C5D617A, 0xC0880977, 0xE246D9BA,
-	0xA04FE208, 0x31ABE574, 0xFC5BDB43, 0x8E10FDE0, 0x20D1824B, 0xCAD23AA9, 0xFFFFFFFF, 0xFFFFFFFF,
+	0xFFFFFFFF, 0xFFFFFFFF, 0xA2DA0FC9, 0x34C26821,
+	0x8B62C6C4, 0xD11CDC80, 0x084E0229, 0x74CC678A,
+	0xA6BE0B02, 0x229B133B, 0x79084A51, 0xDD04348E,
+	0xB31995EF, 0x1B433ACD, 0x6D0A2B30, 0x37145FF2,
+	0x6D35E14F, 0x45C2516D, 0x76B585E4, 0xC67E5E62,
+	0xE9424CF4, 0x6BED37A6, 0xB65CFF0B, 0xEDB706F4,
+	0xFB6B38EE, 0xA59F895A, 0x11249FAE, 0xE61F4B7C,
+	0x51662849, 0x3D5BE4EC, 0xB87C00C2, 0x05BF63A1,
+	0x3648DA98, 0x9AD3551C, 0xA83F1669, 0x5FCF24FD,
+	0x235D6583, 0x96ADA3DC, 0x56F3621C, 0xBB528520,
+	0x0729D59E, 0x6D969670, 0x4E350C67, 0x0498BC4A,
+	0x086C74F1, 0x7C2118CA, 0x465E9032, 0x3BCE362E,
+	0x2C779EE3, 0x03860E18, 0xA283279B, 0x8FA207EC,
+	0xF05DC5B5, 0xC9524C6F, 0xF6CB2BDE, 0x18175895,
+	0x7C499539, 0xE56A95EA, 0x1826D215, 0x1005FA98,
+	0x5A8E7215, 0x2DC4AA8A, 0x0D1733AD, 0x337A5004,
+	0xAB2155A8, 0x64BA1CDF, 0x0485FBEC, 0x0AEFDB58,
+	0x5771EA8A, 0x7D0C065D, 0x850F97B3, 0xC7E4E1A6,
+	0x8CAEF5AB, 0xD73309DB, 0xE0948C1E, 0x9D61254A,
+	0x26D2E3CE, 0x6BEED21A, 0x06FA2FF1, 0x64088AD9,
+	0x730276D8, 0x646AC83E, 0x182B1F52, 0x0C207B17,
+	0x5717E1BB, 0x6C5D617A, 0xC0880977, 0xE246D9BA,
+	0xA04FE208, 0x31ABE574, 0xFC5BDB43, 0x8E10FDE0,
+	0x20D1824B, 0xCAD23AA9, 0xFFFFFFFF, 0xFFFFFFFF,
 };
 
 static void dh_swap_bytes(void *_in, void *_out, uint32_t len)
@@ -83,9 +97,8 @@ static void dh_swap_bytes(void *_in, void *_out, uint32_t len)
 	uint8_t *in = _in;
 	uint8_t *out = _out;
 	int i;
-	for (i=0; i<len; i++) {
+	for (i = 0; i < len; i++)
 		out[i] = in[len-1-i];
-	}
 }
 
 /* Computes the modular exponentiation (num^exp % mod).  num, exp, and mod are
@@ -141,19 +154,20 @@ int dwc_dh_pk(uint8_t nd, uint8_t *exp, uint8_t *pk, uint8_t *hash)
 	DWC_RANDOM_BYTES(exp, 32);
 #endif
 
-	/* Compute the pkd */
-	if ((retval = dwc_dh_modpow(dh_g, 4,
+	retval = dwc_dh_modpow(dh_g, 4,
 					  exp, 32,
-					  dh_p, 384, pk))) {
+					  dh_p, 384, pk);
+
+	/* Compute the pkd */
+	if (retval)
 		return retval;
-	}
 
 	m3[384] = nd;
 	DWC_MEMCPY(&m3[0], pk, 384);
 	DWC_SHA256(m3, 385, hash);
 
- 	dh_dump("PK", pk, 384);
- 	dh_dump("SHA-256(M3)", hash, 32);
+	dh_dump("PK", pk, 384);
+	dh_dump("SHA-256(M3)", hash, 32);
 	return 0;
 }
 
@@ -172,18 +186,17 @@ int dwc_dh_derive_keys(uint8_t nd, uint8_t *pkh, uint8_t *pkd,
 
 	uint8_t *pk;
 
-	if (is_host) {
+	if (is_host)
 		pk = pkd;
-	}
-	else {
+	else
 		pk = pkh;
-	}
 
-	if ((retval = dwc_dh_modpow(pk, 384,
+	retval = dwc_dh_modpow(pk, 384,
 					  exp, 32,
-					  dh_p, 384, shared_secret))) {
+					  dh_p, 384, shared_secret);
+	if (retval)
 		return retval;
-	}
+
 	dh_dump("Shared Secret", shared_secret, 384);
 
 	DWC_SHA256(shared_secret, 384, dhkey);
@@ -223,12 +236,12 @@ int dwc_dh_derive_keys(uint8_t nd, uint8_t *pkh, uint8_t *pkd,
 
 	message = "connection key";
 	DWC_HMAC_SHA256(message, DWC_STRLEN(message), dhkey, 32, sha_result);
- 	dh_dump("HMAC(SHA-256, DHKey, connection key)", sha_result, 32);
+	dh_dump("HMAC(SHA-256, DHKey, connection key)", sha_result, 32);
 	DWC_MEMCPY(ck, sha_result, 16);
 
 	message = "key derivation key";
 	DWC_HMAC_SHA256(message, DWC_STRLEN(message), dhkey, 32, sha_result);
- 	dh_dump("HMAC(SHA-256, DHKey, key derivation key)", sha_result, 32);
+	dh_dump("HMAC(SHA-256, DHKey, key derivation key)", sha_result, 32);
 	DWC_MEMCPY(kdk, sha_result, 32);
 
 	return 0;
