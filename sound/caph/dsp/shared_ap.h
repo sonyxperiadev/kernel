@@ -2599,7 +2599,9 @@ EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_48K_SAMP_PER_INT0_INT]             
  * @}
  */
 
-EXTERN UInt32 shared_UNUSED[NUM_OF_48K_SAMP_PER_INT0_INT*2]                  AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_UNUSED[NUM_OF_48K_SAMP_PER_INT0_INT*2-1]                 AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_unused_extra                                             AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_unused_voif                                              AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
