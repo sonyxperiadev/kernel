@@ -69,7 +69,7 @@
 #define PROC_GLOBAL_PARENT_DIR  "sdhci-pltfm"
 #define PROC_ENTRY_CARD_CTRL    "cardCtrl"
 
-#define SD_DETECT_GPIO_DEBOUNCE_128MS	128000
+#define SD_DETECT_GPIO_DEBOUNCE_128MS	128
 
 struct procfs {
 	char name[MAX_PROC_NAME_SIZE];
@@ -644,12 +644,20 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			goto err_free_cd_gpio;
 		}
 
-		/* Set debounce for SD Card detect to maximum value */
-		ret = gpio_set_debounce(dev->cd_gpio, SD_DETECT_GPIO_DEBOUNCE_128MS);
+		/* Set debounce for SD Card detect to maximum value (128ms)
+		 *
+		 * NOTE: we give a msleep() of the "debounce" time here so that
+		 * we give enough time for the debounce to stabilize before
+		 * we read the gpio value in gpio_get_value_cansleep()
+		 */
+		ret = gpio_set_debounce(dev->cd_gpio, (SD_DETECT_GPIO_DEBOUNCE_128MS*1000));
 		if (ret < 0) {
 			dev_err(&pdev->dev, "%s: gpio set debounce failed\n", __func__);
 			goto err_free_cd_gpio;
 		}
+
+		/* Sleep for 128ms to allow debounce to stabilize */
+		msleep(SD_DETECT_GPIO_DEBOUNCE_128MS);
 
 		/*
 		 * Since the card detection GPIO interrupt is configured to be
