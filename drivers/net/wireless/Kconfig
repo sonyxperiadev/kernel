@@ -273,6 +273,16 @@ config WIFI_CONTROL_FUNC
 	help
 	  Enables Power/Reset/Carddetect function abstraction
 
+config BRCM_UNIFIED_DHD_SUPPORT
+	bool "Enable Unified DHD method of Wirless Card detection"
+	help
+	  "Enable Unified DHD method of Wirless Card detection"
+
+config CONFIG_DHD_USE_STATIC_BUF
+	bool "Enable SATIC BUFFER SUPPORT for DHD"
+	help
+	  "Enable SATIC BUFFER SUPPORT for DHD"
+
 source "drivers/net/wireless/ath/Kconfig"
 source "drivers/net/wireless/b43/Kconfig"
 source "drivers/net/wireless/b43legacy/Kconfig"

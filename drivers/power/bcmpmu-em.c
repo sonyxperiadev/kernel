@@ -578,11 +578,6 @@ static void update_charge_zone(struct bcmpmu_em *pem)
 		break;
 	}
 
-	/* Work around for PMU issue */
-	if (pem->bcmpmu->usb_accy_data.usb_dis == 1){
-		pem->bcmpmu->usb_accy_data.usb_dis = 0;
-		pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 1);
-	}
 	if ((zone != pem->charge_zone) ||
 		(pem->force_update != 0)) {
 		pem->icc_qc = pem->icc_qc = min(pem->zone[pem->charge_zone].qc, pem->chrgr_curr);
@@ -775,20 +770,28 @@ static void em_algorithm(struct work_struct *work)
 
 	if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE) {
 		if (pem->charge_state != CHRG_STATE_CHRG) {
-			if (bcmpmu->get_env_bit_status(bcmpmu, PMU_ENV_USB_VALID) == true) {
-#ifndef CONFIG_USB_OTG /* Temp fix for OTG Iuncfg limit */
-				bcmpmu->chrgr_usb_en(bcmpmu, 1);
+			if (bcmpmu->get_env_bit_status(bcmpmu, PMU_ENV_USB_VALID) == true)
 				pem->charge_state = CHRG_STATE_CHRG;
-#endif
-			} else {
-#ifndef CONFIG_USB_OTG /* Temp fix for OTG Iuncfg limit */
-				bcmpmu->chrgr_usb_en(bcmpmu, 1);
-#endif
-				pr_em(FLOW, "%s, charger not ready yet.\n", __func__);
-				pem->mode = MODE_IDLE;
-				schedule_delayed_work(&pem->work,
-					msecs_to_jiffies(get_update_rate(pem)));
-				return;
+			else {
+				if (pem->chrgr_curr != 0) {
+					bcmpmu->chrgr_usb_en(bcmpmu, 1);
+					pr_em(FLOW, "%s, charger not ready yet.\n", __func__);
+					pem->mode = MODE_IDLE;
+					schedule_delayed_work(&pem->work,
+						msecs_to_jiffies(get_update_rate(pem)));
+					return;
+				}
+			}
+		} else {
+			if ((pem->bcmpmu->usb_accy_data.usb_dis == 1) &&
+			    (pem->chrgr_curr != 0)){
+				pem->bcmpmu->usb_accy_data.usb_dis = 0;
+				pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 1);
+			}
+			if ((pem->bcmpmu->usb_accy_data.usb_dis == 0) &&
+			    (pem->chrgr_curr == 0)){
+				pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 0);
+				pem->bcmpmu->usb_accy_data.usb_dis = 1;
 			}
 		}
 	} else if (pem->charge_state != CHRG_STATE_IDLE) {

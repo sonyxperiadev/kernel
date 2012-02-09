@@ -171,6 +171,7 @@ struct brcm_alsa_chip {
 	 */
 	s32	i32CfgSSP[2];
 	s32	i32CurApp;
+	voip_data_t	voip_data;
 };
 
 #define	brcm_alsa_chip_t struct brcm_alsa_chip

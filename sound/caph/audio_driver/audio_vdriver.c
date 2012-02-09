@@ -595,10 +595,10 @@ void AUDDRV_Telephony_RateChange(unsigned int sample_rate)
 		AUDDRV_SetAudioMode(mode);
 #else
 		mode = GetAudioMode();
-        mode %= AUDIO_MODE_NUMBER;
+		mode %= AUDIO_MODE_NUMBER;
 		AUDDRV_SetAudioMode(mode, audio_app);
 #endif
-	
+
 		if (AUDDRV_IsCall16K(GetAudioMode()))
 			AUDDRV_Telephony_ChangeSampleRate(
 				AUDIO_SAMPLING_RATE_16000);

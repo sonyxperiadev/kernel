@@ -118,6 +118,15 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <linux/delay.h>
 
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
+#include <board-Rhea_wifi.h>
+extern int rhea_wifi_status_register(
+		void (*callback)(int card_present, void *dev_id),
+		void *dev_id);
+
+#endif
+
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
 
@@ -852,6 +861,7 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
+#if 1
 static struct resource board_sdio1_resource[] = {
 	[0] = {
 		.start = SDIO1_BASE_ADDR,
@@ -967,9 +977,24 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	},
 #endif
 
-
-
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
+
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
+{ /* SDIO3 */
+	.id = 2,
+	.data_pullup = 0,
+	.devtype = SDIO_DEV_TYPE_WIFI,
+	.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+	.peri_clk_name = "sdio3_clk",
+	.ahb_clk_name = "sdio3_ahb_clk",
+	.sleep_clk_name = "sdio3_sleep_clk",
+	.peri_clk_rate = 48000000,
+	.register_status_notify=rhea_wifi_status_register,
+},
+
+#else
+
 	{ /* SDIO3 */
 		.id = 2,
 		.data_pullup = 0,
@@ -986,7 +1011,12 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 48000000,
 	},
+
 #endif
+
+#endif
+
+
 #ifdef CONFIG_BCMDHD_43362_LINUX
 	{ /* SDIO3 */
 		.id = 2,
@@ -1059,6 +1089,13 @@ void __init board_add_sdio_devices(void)
 {
 	platform_add_devices(board_sdio_plat_devices, ARRAY_SIZE(board_sdio_plat_devices));
 }
+
+#endif
+
+
+
+
+
 
 #ifdef CONFIG_BACKLIGHT_PWM
 
@@ -1560,6 +1597,13 @@ static void __init rhea_ray_add_i2c_devices (void)
 
 static int __init rhea_ray_add_lateInit_devices (void)
 {
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
+	printk(KERN_ERR "Calling WLAN_INIT!\n");
+
+	 rhea_wlan_init();
+	 	printk(KERN_ERR "DONE WLAN_INIT!\n");
+#endif	
 	board_add_sdio_devices();
 	return 0;
 }

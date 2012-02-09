@@ -88,6 +88,13 @@ struct sdio_platform_cfg {
 	unsigned long peri_clk_rate;
 
 	struct sdio_wifi_gpio_cfg wifi_gpio;
+
+	/* Call back added for unified DHD support */
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+	int (*register_status_notify) (
+		void (*callback)(int card_present, void *dev_id),
+		void *dev_id);
+#endif
 };
 
 #endif  /* SDIO_PLATFORM_H */

@@ -98,8 +98,6 @@ struct _AUDIO_DRIVER_CallBackParams_t {
 struct _voip_data_t {
 	UInt32 codec_type;
 	UInt32 bitrate_index;
-	UInt32 mic;
-	UInt32 spk;
 	UInt8 isVoLTE;
 };
 #define voip_data_t struct _voip_data_t
