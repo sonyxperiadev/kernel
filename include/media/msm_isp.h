@@ -1,5 +1,19 @@
+/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 #ifndef __MSM_ISP_H__
 #define __MSM_ISP_H__
+
+#define BIT(nr)			(1UL << (nr))
 
 /* ISP message IDs */
 #define MSG_ID_RESET_ACK                0
@@ -41,6 +55,9 @@
 #define MSG_ID_BUS_OVERFLOW             36
 #define MSG_ID_SOF_ACK                  37
 #define MSG_ID_STOP_REC_ACK             38
+#define MSG_ID_STATS_AWB_AEC            39
+#define MSG_ID_OUTPUT_PRIMARY           40
+#define MSG_ID_OUTPUT_SECONDARY         41
 
 /* ISP command IDs */
 #define VFE_CMD_DUMMY_0                                 0
@@ -172,13 +189,21 @@
 #define VFE_CMD_GET_RGB_G_TABLE                         126
 #define VFE_CMD_GET_LA_TABLE                            127
 #define VFE_CMD_DEMOSAICV3_UPDATE                       128
+#define VFE_CMD_ACTIVE_REGION_CFG                       129
+#define VFE_CMD_COLOR_PROCESSING_CONFIG                 130
+#define VFE_CMD_STATS_WB_AEC_CONFIG                     131
+#define VFE_CMD_STATS_WB_AEC_UPDATE                     132
+#define VFE_CMD_Y_GAMMA_CONFIG                          133
+#define VFE_CMD_SCALE_OUTPUT1_CONFIG                    134
+#define VFE_CMD_SCALE_OUTPUT2_CONFIG                    135
+#define VFE_CMD_CAPTURE_RAW                             136
+#define VFE_CMD_STOP_LIVESHOT                           137
 
 struct msm_isp_cmd {
 	int32_t  id;
 	uint16_t length;
 	void     *value;
 };
-
 
 #define VPE_CMD_DUMMY_0                                 0
 #define VPE_CMD_INIT                                    1
@@ -192,8 +217,8 @@ struct msm_isp_cmd {
 #define VPE_CMD_OUTPUT_PLANE_CFG                        9
 #define VPE_CMD_INPUT_PLANE_UPDATE                      10
 #define VPE_CMD_SCALE_CFG_TYPE                          11
-#define VPE_CMD_DIS_OFFSET_CFG                          12
 #define VPE_CMD_ZOOM                                    13
+#define VPE_CMD_MAX                                     14
 
 #define MSM_PP_CMD_TYPE_NOT_USED        0  /* not used */
 #define MSM_PP_CMD_TYPE_VPE             1  /* VPE cmd */
@@ -208,9 +233,9 @@ struct msm_isp_cmd {
 #define MCTL_PP_EVENT_NOTUSED           0
 #define MCTL_PP_EVENT_CMD_ACK           1
 
-#define VPE_OPERATION_MODE_CFG_LEN      8
+#define VPE_OPERATION_MODE_CFG_LEN      4
 #define VPE_INPUT_PLANE_CFG_LEN         24
-#define VPE_OUTPUT_PLANE_CFG_LEN        24
+#define VPE_OUTPUT_PLANE_CFG_LEN        20
 #define VPE_INPUT_PLANE_UPDATE_LEN      12
 #define VPE_SCALER_CONFIG_LEN           260
 #define VPE_DIS_OFFSET_CFG_LEN          12
@@ -233,10 +258,6 @@ struct msm_vpe_input_plane_update_cfg {
 
 struct msm_vpe_scaler_cfg {
 	uint8_t scaler_cfg[VPE_SCALER_CONFIG_LEN];
-};
-
-struct msm_vpe_dis_offset_cfg {
-	uint8_t dis_offset_cfg[VPE_DIS_OFFSET_CFG_LEN];
 };
 
 struct msm_vpe_flush_frame_buffer {
@@ -279,6 +300,16 @@ struct msm_mctl_pp_frame_cmd {
 	int path;
 	/* TBD: 3D related */
 };
+
+#define VFE_OUTPUTS_MAIN_AND_PREVIEW	BIT(0)
+#define VFE_OUTPUTS_MAIN_AND_VIDEO	BIT(1)
+#define VFE_OUTPUTS_MAIN_AND_THUMB	BIT(2)
+#define VFE_OUTPUTS_THUMB_AND_MAIN	BIT(3)
+#define VFE_OUTPUTS_PREVIEW_AND_VIDEO	BIT(4)
+#define VFE_OUTPUTS_VIDEO_AND_PREVIEW	BIT(5)
+#define VFE_OUTPUTS_PREVIEW		BIT(6)
+#define VFE_OUTPUTS_VIDEO		BIT(7)
+#define VFE_OUTPUTS_RAW			BIT(8)
 
 #endif /*__MSM_ISP_H__*/
 
