@@ -218,6 +218,7 @@ extern void bcmpmu_audio_deinit(void);
 extern void bcmpmu_hs_power(bool on);
 extern void bcmpmu_ihf_power(bool on);
 extern void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain);
+extern void bcmpmu_hs_shortcircuit_dis(bool disable);
 extern void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain);
 extern void bcmpmu_hi_gain_mode_en(bool en);
 extern int bcmpmu_audio_ihf_selftest_stimulus_input(int stimulus);
@@ -228,6 +229,7 @@ extern int bcmpmu_audio_hs_selftest_stimulus(int stimulus);
 extern void bcmpmu_audio_hs_selftest_result(u8 *result);
 extern int bcmpmu_audio_hs_testmode(int Mode);
 extern int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode);
+extern void bcmpmu_ihf_bypass_en(bool enable);
 void bcmpmu_audio_hs_selftest_backup(bool Enable);
 void bcmpmu_audio_ihf_selftest_backup(bool Enable);
 
