@@ -1435,7 +1435,6 @@ static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 static int pwr_mgr_sw_i2c_seq_start(u32 action)
 {
 	u32 reg_val;
-	int time;
 	int ret = 0;
 	unsigned long flgs;
 
@@ -1488,14 +1487,12 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	INIT_COMPLETION(pwr_mgr.i2c_seq_done);
 	pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ, false);
 	writel(reg_val, PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
-	time = wait_for_completion_interruptible_timeout(&pwr_mgr.i2c_seq_done,
-							 msecs_to_jiffies
-							 (pwr_mgr.info->
-							  i2c_seq_timeout));
-	if (time <= 0) {
-		ret = -EAGAIN;
+	if (!wait_for_completion_timeout(&pwr_mgr.i2c_seq_done,
+			 msecs_to_jiffies(pwr_mgr.info->i2c_seq_timeout))) {
 		pr_info("%s seq timedout !!\n", __func__);
+		ret = -EAGAIN;
 	}
+
 	pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ, true);
 	/*disable sw seq */
 	/* reg_val &= ~PWRMGR_I2C_REQ_TRG_MASK; */
