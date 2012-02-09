@@ -1057,7 +1057,7 @@ static void csl_caph_obtain_blocks
 			csl_dsp_caph_control_get_aadmac_buf_base_addr
 			(DSP_AADMAC_SPKR_EN);
 		Log_DebugPrintf(LOGID_SOC_AUDIO,
-			"caph dsp spk buf@ 0x%x\r\n", path->pBuf);
+			"caph dsp spk buf@ %p\r\n", path->pBuf);
 #endif
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
 			if (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R) {
@@ -1067,7 +1067,7 @@ static void csl_caph_obtain_blocks
 				csl_dsp_caph_control_get_aadmac_buf_base_addr
 				(DSP_AADMAC_SEC_MIC_EN);
 				Log_DebugPrintf(LOGID_SOC_AUDIO,
-				"caph dsp sec buf@ 0x%x\r\n", path->pBuf);
+				"caph dsp sec buf@ %p\r\n", path->pBuf);
 #endif
 		} else {
 			dmaCH = CSL_CAPH_DMA_CH13;
@@ -1077,7 +1077,7 @@ static void csl_caph_obtain_blocks
 				csl_dsp_caph_control_get_aadmac_buf_base_addr
 				(DSP_AADMAC_PRI_MIC_EN);
 				Log_DebugPrintf(LOGID_SOC_AUDIO,
-				"caph dsp pri buf@ 0x%x\r\n", path->pBuf);
+				"caph dsp pri buf@ %p\r\n", path->pBuf);
 #endif
 		}
 		} /*else {
@@ -1385,7 +1385,6 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 		int sinkNo, int startOffset)
 {
 	CSL_CAPH_HWConfig_Table_t *path;
-	CSL_CAPH_SRCM_INCHNL_e srcmIn;
 	int i, blockIdx = 0, count_fmrx_path;
 
 	path = &HWConfig_Table[pathID-1];
@@ -1397,6 +1396,7 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 #if !defined(ENABLE_DMA_VOICE)
 	if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP
 			&& path->source != CSL_CAPH_DEV_BT_MIC) { /*UL to dsp*/
+		CSL_CAPH_SRCM_INCHNL_e srcmIn;
 		/* stop the src intc to dsp*/
 		if ((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) ||
 				(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
