@@ -103,17 +103,17 @@ static void msm_idle_stats_add_sample(struct msm_idle_stats_device *device,
 {
 	hrtimer_cancel(&device->busy_timer);
 	hrtimer_set_expires(&device->busy_timer, us_to_ktime(0));
-	if (device->stats->nr_collected >= MSM_IDLE_STATS_NR_MAX_INTERVALS)
+	if (device->stats->nr_collected >= device->max_samples)
 		return;
 
 	device->stats->pulse_chain[device->stats->nr_collected] = *pulse;
 	device->stats->nr_collected++;
 
-	if (device->stats->nr_collected == MSM_IDLE_STATS_NR_MAX_INTERVALS) {
+	if (device->stats->nr_collected == device->max_samples) {
 		msm_idle_stats_update_event(device,
 			MSM_IDLE_STATS_EVENT_COLLECTION_FULL);
 	} else if (device->stats->nr_collected ==
-				((MSM_IDLE_STATS_NR_MAX_INTERVALS * 3) / 4)) {
+				((device->max_samples * 3) / 4)) {
 		msm_idle_stats_update_event(device,
 			MSM_IDLE_STATS_EVENT_COLLECTION_NEARLY_FULL);
 	}
@@ -137,19 +137,18 @@ static long ioctl_read_stats(struct msm_idle_stats_device *device,
 		device->stats = &device->stats_vector[1];
 	else
 		device->stats = &device->stats_vector[0];
-	device->stats->event = (stats->event &
-			MSM_IDLE_STATS_EVENT_BUSY_TIMER_EXPIRED);
+	device->stats->event = 0;
 	device->stats->nr_collected = 0;
 	spin_unlock(&device->lock);
-	if (stats->nr_collected >= MSM_IDLE_STATS_NR_MAX_INTERVALS) {
-		stats->nr_collected = MSM_IDLE_STATS_NR_MAX_INTERVALS;
+	if (stats->nr_collected >= device->max_samples) {
+		stats->nr_collected = device->max_samples;
 	} else {
 	    stats->pulse_chain[stats->nr_collected] = pulse;
 	    stats->nr_collected++;
-	    if (stats->nr_collected == MSM_IDLE_STATS_NR_MAX_INTERVALS)
+	    if (stats->nr_collected == device->max_samples)
 			stats->event |= MSM_IDLE_STATS_EVENT_COLLECTION_FULL;
 	    else if (stats->nr_collected ==
-				 ((MSM_IDLE_STATS_NR_MAX_INTERVALS * 3) / 4))
+				 ((device->max_samples * 3) / 4))
 			stats->event |=
 				MSM_IDLE_STATS_EVENT_COLLECTION_NEARLY_FULL;
 	}
@@ -186,6 +185,9 @@ static long ioctl_write_stats(struct msm_idle_stats_device *device,
 	    device->busy_timer_interval = us_to_ktime(stats.next_busy_timer);
 	    if (ktime_to_us(device->idle_start) == 0)
 			start_busy_timer(device, us_to_ktime(stats.busy_timer));
+		if ((stats.max_samples > 0) &&
+			(stats.max_samples <= MSM_IDLE_STATS_NR_MAX_INTERVALS))
+			device->max_samples = stats.max_samples;
 	    spin_unlock(&device->lock);
 	}
 	return ret;
@@ -217,7 +219,7 @@ void msm_idle_stats_idle_start(struct msm_idle_stats_device *device)
 		device->remaining_time =
 				hrtimer_get_remaining(&device->busy_timer);
 		if (ktime_to_us(device->remaining_time) <= 0)
-			device->remaining_time = us_to_ktime(1);
+			device->remaining_time = us_to_ktime(0);
 	} else {
 		device->remaining_time = us_to_ktime(0);
 	}
@@ -228,8 +230,11 @@ EXPORT_SYMBOL(msm_idle_stats_idle_start);
 void msm_idle_stats_idle_end(struct msm_idle_stats_device *device,
 				struct msm_idle_pulse *pulse)
 {
+	u32 idle_time = 0;
 	spin_lock(&device->lock);
 	if (ktime_to_us(device->idle_start) != 0) {
+		idle_time = ktime_to_us(ktime_get())
+			- ktime_to_us(device->idle_start);
 		device->idle_start = us_to_ktime(0);
 	    msm_idle_stats_add_sample(device, pulse);
 		if (device->stats->event &
@@ -240,7 +245,10 @@ void msm_idle_stats_idle_end(struct msm_idle_stats_device *device,
 				MSM_IDLE_STATS_EVENT_BUSY_TIMER_EXPIRED_RESET);
 		} else if (ktime_to_us(device->busy_timer_interval) > 0) {
 			ktime_t busy_timer = device->busy_timer_interval;
-			if ((pulse->wait_interval > 0) &&
+			/* if it is serialized, it would be full busy,
+			 * checking 80%
+			 */
+			if ((pulse->wait_interval*5 >= idle_time*4) &&
 				(ktime_to_us(device->remaining_time) > 0) &&
 				(ktime_to_us(device->remaining_time) <
 				 ktime_to_us(busy_timer)))
@@ -314,6 +322,7 @@ int msm_idle_stats_register_device(struct msm_idle_stats_device *device)
 	device->stats_vector[1].nr_collected  = 0;
 	device->stats = &device->stats_vector[0];
 	device->busy_timer_interval = us_to_ktime(0);
+	device->max_samples = MSM_IDLE_STATS_NR_MAX_INTERVALS;
 
 	mutex_lock(&device_list_lock);
 	list_add(&device->list, &device_list);
