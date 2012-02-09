@@ -267,9 +267,16 @@ static int pm_config_deep_sleep(void)
 #ifndef CONFIG_ARCH_RHEA_A0
 	pm_enable_self_refresh(true);
 #endif
-
+/*Enable RAM standby
+If RAM standby is enabled, standby signal to RAM will be 0
+when subsystems are acvtive and 1 if in sleep (retention/dormant) */
+	reg_val = readl(KONA_CHIPREG_VA+CHIPREG_RAM_STBY_RET_OVERRIDE_OFFSET);
+	/*Enable standby for ROM, RAM & SRAM*/
+	reg_val |= 0x7F;
+	writel(reg_val, KONA_CHIPREG_VA+CHIPREG_RAM_STBY_RET_OVERRIDE_OFFSET);
     return 0;
 }
+
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 
 static int print_clock_count(void)
