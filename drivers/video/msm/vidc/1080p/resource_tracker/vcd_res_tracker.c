@@ -58,85 +58,135 @@ static void *res_trk_pmem_map
 	u32 index = 0;
 	struct ddl_context *ddl_context;
 	struct msm_mapped_buffer *mapped_buffer = NULL;
-	ddl_context = ddl_get_context();
-	if (!addr->alloced_phys_addr) {
-		pr_err(" %s() alloced addres NULL", __func__);
-		goto bail_out;
-	}
-	flags = MSM_SUBSYSTEM_MAP_IOVA | MSM_SUBSYSTEM_MAP_KADDR;
-	if (alignment == DDL_KILO_BYTE(128))
-			index = 1;
-	else if (alignment > SZ_4K)
-		flags |= MSM_SUBSYSTEM_ALIGN_IOVA_8K;
+	int ret = 0;
+	unsigned long iova = 0;
+	unsigned long buffer_size  = 0;
+	unsigned long *kernel_vaddr = NULL;
 
-	addr->mapped_buffer =
-	msm_subsystem_map_buffer((unsigned long)addr->alloced_phys_addr,
-	sz, flags, &restrk_mmu_subsystem[index],
-	sizeof(restrk_mmu_subsystem[index])/sizeof(unsigned int));
-	if (IS_ERR(addr->mapped_buffer)) {
-		pr_err(" %s() buffer map failed", __func__);
-		goto bail_out;
-	}
-	mapped_buffer = addr->mapped_buffer;
-	if (!mapped_buffer->vaddr || !mapped_buffer->iova[0]) {
-		pr_err("%s() map buffers failed\n", __func__);
-		goto bail_out;
-	}
-	addr->physical_base_addr = (u8 *)mapped_buffer->iova[0];
-	addr->virtual_base_addr = mapped_buffer->vaddr;
-	addr->align_physical_addr = (u8 *) DDL_ALIGN((u32)
+	ddl_context = ddl_get_context();
+	if (res_trk_get_enable_ion() && addr->alloc_handle) {
+		kernel_vaddr = (unsigned long *) ion_map_kernel(
+					ddl_context->video_ion_client,
+					addr->alloc_handle, UNCACHED);
+		if (IS_ERR_OR_NULL(kernel_vaddr)) {
+			DDL_MSG_ERROR("%s():DDL ION client map failed\n",
+						 __func__);
+			goto ion_bail_out;
+		}
+		addr->virtual_base_addr = (u8 *) kernel_vaddr;
+		ret = ion_map_iommu(ddl_context->video_ion_client,
+				addr->alloc_handle,
+				VIDEO_DOMAIN,
+				VIDEO_FIRMWARE_POOL,
+				SZ_4K,
+				0,
+				&iova,
+				&buffer_size,
+				UNCACHED, 0);
+		if (ret) {
+			DDL_MSG_ERROR("%s():DDL ION client iommu map failed\n",
+						 __func__);
+			goto ion_unmap_bail_out;
+		}
+		addr->mapped_buffer = NULL;
+		addr->physical_base_addr = (u8 *)iova;
+		addr->align_physical_addr = (u8 *) DDL_ALIGN((u32)
 		addr->physical_base_addr, alignment);
-	offset = (u32)(addr->align_physical_addr -
-			addr->physical_base_addr);
-	addr->align_virtual_addr = addr->virtual_base_addr + offset;
-	addr->buffer_size = sz;
+		offset = (u32)(addr->align_physical_addr -
+				addr->physical_base_addr);
+		addr->align_virtual_addr = addr->virtual_base_addr + offset;
+		addr->buffer_size = buffer_size;
+	} else {
+		if (!res_trk_check_for_sec_session()) {
+			if (!addr->alloced_phys_addr) {
+				pr_err(" %s() alloced addres NULL", __func__);
+				goto bail_out;
+			}
+			flags = MSM_SUBSYSTEM_MAP_IOVA|MSM_SUBSYSTEM_MAP_KADDR;
+			if (alignment == DDL_KILO_BYTE(128))
+					index = 1;
+			else if (alignment > SZ_4K)
+				flags |= MSM_SUBSYSTEM_ALIGN_IOVA_8K;
+
+			addr->mapped_buffer =
+			msm_subsystem_map_buffer(
+			(unsigned long)addr->alloced_phys_addr,
+			sz, flags, &restrk_mmu_subsystem[index],
+			sizeof(restrk_mmu_subsystem[index])
+			/sizeof(unsigned int));
+			if (IS_ERR(addr->mapped_buffer)) {
+				pr_err(" %s() buffer map failed", __func__);
+				goto bail_out;
+			}
+			mapped_buffer = addr->mapped_buffer;
+			if (!mapped_buffer->vaddr || !mapped_buffer->iova[0]) {
+				pr_err("%s() map buffers failed\n", __func__);
+				goto bail_out;
+			}
+			addr->physical_base_addr = (u8 *)mapped_buffer->iova[0];
+			addr->virtual_base_addr = mapped_buffer->vaddr;
+		} else {
+			addr->physical_base_addr = (u8 *)
+					 addr->alloced_phys_addr;
+			addr->virtual_base_addr = (u8 *)
+					addr->alloced_phys_addr;
+		}
+		addr->align_physical_addr = (u8 *) DDL_ALIGN((u32)
+		addr->physical_base_addr, alignment);
+		offset = (u32)(addr->align_physical_addr -
+				addr->physical_base_addr);
+		addr->align_virtual_addr = addr->virtual_base_addr + offset;
+		addr->buffer_size = sz;
+	}
 	return addr->virtual_base_addr;
 bail_out:
+	if (addr->mapped_buffer)
+		msm_subsystem_unmap_buffer(addr->mapped_buffer);
+	return NULL;
+ion_unmap_bail_out:
+	if (!IS_ERR_OR_NULL(addr->alloc_handle)) {
+		ion_unmap_kernel(resource_context.
+			res_ion_client,	addr->alloc_handle);
+	}
+ion_bail_out:
 	return NULL;
 }
 
-static void *res_trk_pmem_alloc
+static int res_trk_pmem_alloc
 	(struct ddl_buf_addr *addr, size_t sz, u32 alignment)
 {
 	u32 alloc_size;
 	struct ddl_context *ddl_context;
-	int rc = -EINVAL;
-	ion_phys_addr_t phyaddr = 0;
-	size_t len = 0;
+	int rc = 0;
 	DBG_PMEM("\n%s() IN: Requested alloc size(%u)", __func__, (u32)sz);
 	if (!addr) {
 		DDL_MSG_ERROR("\n%s() Invalid Parameters", __func__);
+		rc = -EINVAL;
 		goto bail_out;
 	}
 	ddl_context = ddl_get_context();
 	res_trk_set_mem_type(addr->mem_type);
 	alloc_size = (sz + alignment);
 	if (res_trk_get_enable_ion()) {
-		if (!ddl_context->video_ion_client)
-			ddl_context->video_ion_client =
-				res_trk_get_ion_client();
-		if (!ddl_context->video_ion_client) {
-			DDL_MSG_ERROR("%s() :DDL ION Client Invalid handle\n",
-						 __func__);
-			goto bail_out;
+			if (!ddl_context->video_ion_client)
+				ddl_context->video_ion_client =
+					res_trk_get_ion_client();
+			if (!ddl_context->video_ion_client) {
+				DDL_MSG_ERROR("%s() :DDL ION Client Invalid handle\n",
+							 __func__);
+				rc = -ENOMEM;
+				goto bail_out;
+			}
+			alloc_size = (alloc_size+4095) & ~4095;
+			addr->alloc_handle = ion_alloc(
+			ddl_context->video_ion_client, alloc_size, SZ_4K,
+				res_trk_get_mem_type());
+			if (IS_ERR_OR_NULL(addr->alloc_handle)) {
+				DDL_MSG_ERROR("%s() :DDL ION alloc failed\n",
+							 __func__);
+				rc = -ENOMEM;
+				goto bail_out;
 		}
-		addr->alloc_handle = ion_alloc(
-		ddl_context->video_ion_client, alloc_size, SZ_4K,
-			res_trk_get_mem_type());
-		if (IS_ERR_OR_NULL(addr->alloc_handle)) {
-			DDL_MSG_ERROR("%s() :DDL ION alloc failed\n",
-						 __func__);
-			goto bail_out;
-		}
-		rc = ion_phys(ddl_context->video_ion_client,
-				addr->alloc_handle, &phyaddr,
-				 &len);
-		if (rc || !phyaddr) {
-			DDL_MSG_ERROR("%s():DDL ION client physical failed\n",
-						 __func__);
-			goto free_acm_ion_alloc;
-		}
-		addr->alloced_phys_addr = phyaddr;
 	} else {
 		addr->alloced_phys_addr = (phys_addr_t)
 		allocate_contiguous_memory_nomap(alloc_size,
@@ -146,21 +196,11 @@ static void *res_trk_pmem_alloc
 					 __func__, alloc_size);
 			goto bail_out;
 		}
-	}
-
-	addr->buffer_size = sz;
-	return (void *)addr->alloced_phys_addr;
-
-free_acm_ion_alloc:
-	if (ddl_context->video_ion_client) {
-		if (addr->alloc_handle) {
-			ion_free(ddl_context->video_ion_client,
-				addr->alloc_handle);
-			addr->alloc_handle = NULL;
-		}
+		addr->buffer_size = sz;
+		return rc;
 	}
 bail_out:
-	return NULL;
+	return rc;
 }
 
 static void res_trk_pmem_unmap(struct ddl_buf_addr *addr)
@@ -169,7 +209,18 @@ static void res_trk_pmem_unmap(struct ddl_buf_addr *addr)
 		pr_err("%s() invalid args\n", __func__);
 		return;
 	}
-	if (addr->mapped_buffer)
+	if (!IS_ERR_OR_NULL(addr->alloc_handle)) {
+		if (addr->physical_base_addr) {
+			ion_unmap_kernel(resource_context.res_ion_client,
+					addr->alloc_handle);
+			ion_unmap_iommu(resource_context.res_ion_client,
+				addr->alloc_handle,
+				VIDEO_DOMAIN,
+				VIDEO_FIRMWARE_POOL);
+			addr->virtual_base_addr = NULL;
+			addr->physical_base_addr = NULL;
+		}
+	} else if (addr->mapped_buffer)
 		msm_subsystem_unmap_buffer(addr->mapped_buffer);
 	addr->mapped_buffer = NULL;
 }
@@ -591,7 +642,7 @@ void res_trk_init(struct device *device, u32 irq)
 		}
 		resource_context.core_type = VCD_CORE_1080P;
 		resource_context.firmware_addr.mem_type = DDL_FW_MEM;
-		if (!res_trk_pmem_alloc(&resource_context.firmware_addr,
+		if (res_trk_pmem_alloc(&resource_context.firmware_addr,
 			VIDC_FW_SIZE, DDL_KILO_BYTE(128))) {
 			pr_err("%s() Firmware buffer allocation failed",
 				   __func__);
@@ -638,8 +689,8 @@ int res_trk_get_mem_type(void)
 	int mem_type = -1;
 	switch (resource_context.res_mem_type) {
 	case DDL_FW_MEM:
-		mem_type = resource_context.fw_mem_type;
-		break;
+		mem_type = ION_HEAP(resource_context.fw_mem_type);
+		return mem_type;
 	case DDL_MM_MEM:
 		mem_type = resource_context.memtype;
 		break;
@@ -656,7 +707,8 @@ int res_trk_get_mem_type(void)
 		if (res_trk_check_for_sec_session())
 			mem_type = (ION_HEAP(mem_type) | ION_SECURE);
 		else
-			mem_type = ION_HEAP(mem_type);
+			mem_type = (ION_HEAP(mem_type) |
+					ION_HEAP(ION_IOMMU_HEAP_ID));
 	}
 	return mem_type;
 }
