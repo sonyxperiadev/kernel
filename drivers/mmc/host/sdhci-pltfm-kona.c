@@ -646,14 +646,21 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 		/* Set debounce for SD Card detect to maximum value (128ms)
 		 *
-		 * NOTE: we give a msleep() of the "debounce" time here so that
-		 * we give enough time for the debounce to stabilize before
-		 * we read the gpio value in gpio_get_value_cansleep()
+		 * NOTE-1: If gpio_set_debounce() returns error we still continue
+		 * with the default debounce value set. Another reason for
+		 * doing this is that on rhea-ray boards the SD Detect GPIO is on
+		 * GPIO Expander and gpio_set_debounce() will return error and if we
+		 * return error from here, then probe() would fail and SD detection
+		 * would always fail.
+		 *
+		 * NOTE-2: We also give a msleep() of the "debounce" time here so
+		 * that we give enough time for the debounce to stabilize before
+		 * we read the gpio value in gpio_get_value_cansleep().
 		 */
 		ret = gpio_set_debounce(dev->cd_gpio, (SD_DETECT_GPIO_DEBOUNCE_128MS*1000));
 		if (ret < 0) {
-			dev_err(&pdev->dev, "%s: gpio set debounce failed\n", __func__);
-			goto err_free_cd_gpio;
+			dev_err(&pdev->dev, "%s: gpio set debounce failed."
+					"default debounce value assumed\n", __func__);
 		}
 
 		/* Sleep for 128ms to allow debounce to stabilize */
@@ -676,8 +683,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	printk(KERN_ERR " %s CALL BACK IS REGISTERED\n",__FUNCTION__);
 
 #endif
-
-
 
 	atomic_set(&dev->initialized, 1);
 	sdhci_pltfm_clk_enable(host, 0);
