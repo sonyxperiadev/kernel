@@ -132,7 +132,7 @@
 
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
-extern bool gCameraInitialized;
+
 // keypad map
 #define BCM_KEY_ROW_0  0
 #define BCM_KEY_ROW_1  1
@@ -151,6 +151,8 @@ extern bool gCameraInitialized;
 #define BCM_KEY_COL_5  5
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
+
+extern bool camdrv_ss_power(int cam_id,int bOn);
 
 #ifdef CONFIG_MFD_BCMPMU
 void __init board_pmu_init(void);
@@ -1387,13 +1389,13 @@ static struct platform_device gps_hostwake= {
 
 static struct i2c_board_info rhea_i2c_camera[] = {
 	{
-		I2C_BOARD_INFO("s5k4ecgx", S5K4ECGX_I2C_ADDRESS),		
+		I2C_BOARD_INFO("camdrv_ss", S5K4ECGX_I2C_ADDRESS),		
 	},
 };
 
 static struct i2c_board_info rhea_i2c_camera_sub[] = {
 	{
-		I2C_BOARD_INFO("sr030pc50", SR030PC50_I2C_ADDRESS),
+		I2C_BOARD_INFO("camdrv_ss_sub", SR030PC50_I2C_ADDRESS),
 	},
 };
 //@HW
@@ -1566,8 +1568,12 @@ static int rhea_camera_power(struct device *dev, int on)
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
 		}
+	}
 
-		gCameraInitialized = false;
+	if(!camdrv_ss_power(0,on))
+	{
+		printk("%s,camdrv_ss_power failed for MAIN CAM!! \n");
+		return -1;
 	}
 	return 0;
 }
@@ -1623,7 +1629,7 @@ static struct soc_camera_link iclink_s5k4ecgx = {
 	
 	.board_info	= &rhea_i2c_camera[0],
 	.i2c_adapter_id	= 0,
-	.module_name	= "s5k4ecgx",
+	.module_name	= "camdrv_ss",
 	.power		= &rhea_camera_power,
 	.reset		= &rhea_camera_reset,
 	.priv		= &s5k4ecgx_if_params,
@@ -1637,14 +1643,29 @@ static struct platform_device rhea_camera = {
 	},
 };
 
+
+
+static struct v4l2_subdev_sensor_interface_parms sr030pc50_if_params = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
+    .orientation =V4L2_SUBDEV_SENSOR_LANDSCAPE,
+     .facing = V4L2_SUBDEV_SENSOR_FRONT,
+	.parms.serial = {
+		.lanes = 1,
+		.channel = 1,
+		.phy_rate = 0,
+		.pix_clk = 0
+	},
+};
 static struct soc_camera_link iclink_sr030pc50 = {
 	.bus_id		= 0,
 	
 	.board_info	= &rhea_i2c_camera_sub[0],
 	.i2c_adapter_id	= 0,
-	.module_name	= "sr030pc50",
+	.module_name	= "camdrv_ss_sub",
 	.power		= &rhea_camera_power_sub,
 	.reset		= &rhea_camera_reset_sub,
+	.priv		= &sr030pc50_if_params,
 };
 
 static struct platform_device rhea_camera_sub = {
