@@ -216,6 +216,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 #if defined(USE_NEW_AUDIO_PARAM)
 		app = Params[1];
 		mode = Params[2];
+		SetUserAudioApp(app); /* for PCG to set new app */
 		AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 		pCurSel[0] = pChip->streamCtl[
 			CTL_STREAM_PANEL_VOICECALL - 1].iLineSelect[0];
@@ -238,6 +239,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		}
 		/*if app > MUSIC
 			SetAudioMode(mode, app);*/
+
 		DEBUG("%s mic %d spk %d mode %ld app %ld\n",
 				__func__, mic, spk, Params[2],
 				Params[1]);
