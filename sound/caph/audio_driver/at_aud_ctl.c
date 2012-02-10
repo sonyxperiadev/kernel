@@ -441,108 +441,6 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		csl_caph_ControlHWClock(TRUE);
 
 	switch (Params[0]) {
-#if defined(USE_NEW_AUDIO_PARAM)
-		{
-			Int32 pCurSel[2];
-			AUDIO_SOURCE_Enum_t mic = AUDIO_SOURCE_ANALOG_MAIN;
-			AUDIO_SINK_Enum_t spk = AUDIO_SINK_HANDSET;
-
-	case 2:		/*at*maudtst 2: return both mode and app */
-			Params[2] = GetAudioMode();
-			Params[1] = GetAudioApp();
-			DEBUG("%s mode %ld app %ld\n", __func__,
-					Params[2], Params[1]);
-			break;
-
-	case 3:		/*at*maudtst 3 mode app: set mode and app */
-			AUDCTRL_GetSrcSinkByMode(Params[1], &mic, &spk);
-			pCurSel[0] =
-			    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
-					     1].iLineSelect[0];
-			pCurSel[1] =
-			    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
-					     1].iLineSelect[1];
-
-			/* Update 'VC-SEL' -- */
-			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
-					 1].iLineSelect[0] = mic;
-			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
-					 1].iLineSelect[1] = spk;
-			/* need to fill in audio app (check with pcg) */
-			SetAudioMode(Params[1], Params[2]);
-
-			DEBUG("%s mic %d spk %d mode %ld app %ld\n",
-					__func__, mic, spk, Params[1],
-					Params[2]);
-			break;
-		}
-#endif
-	case 25:
-		AUDCTRL_SetPlayVolume(AUDIO_SOURCE_MEM, Params[1],/* spk */
-			AUDIO_GAIN_FORMAT_mB, Params[2],/* left volume */
-				      Params[3],	/* right volume */
-				      0);
-
-		DEBUG("Set speaker volume left %ld right %ld\n",
-				Params[2], Params[3]);
-		break;
-
-		/* typedef enum AUDIO_SINK_Enum_t {
-		   !     AUDIO_SINK_HANDSET,
-		   !     AUDIO_SINK_HEADSET,
-		   !     AUDIO_SINK_HANDSFREE,
-		   !     AUDIO_SINK_BTM,  //Bluetooth HFP
-		   !     AUDIO_SINK_LOUDSPK,
-		   !     AUDIO_SINK_TTY,
-		   !     AUDIO_SINK_HAC,
-		   !     AUDIO_SINK_USB,
-		   !     AUDIO_SINK_BTS,  //Bluetooth A2DP
-		   !     AUDIO_SINK_I2S,
-		   !     AUDIO_SINK_VIBRA,
-		   * */
-	case 26:
-		AUDCTRL_SetPlayMute(
-		AUDIO_SOURCE_UNDEFINED, Params[1], Params[2], 0);
-		/* spk, mute flag 1 - mute */
-
-		if (Params[2] == 0)
-			DEBUG("Set speaker un-mute\n");
-		else
-			DEBUG("Set speaker mute\n");
-
-		break;
-
-		/* AT*MAUDTST=32, p2, p3
-		   !
-		   ! Function:    Mute / un-mute microphone of an operation.
-		   !
-		   ! Params:      p2 : operation
-		   !                      p3 = mute flag
-		   !                                1 - mute
-		   !                                0 - un-mute
-		   * */
-	case 32:
-		AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_UNDEFINED,
-					    (Boolean) Params[2]);
-		break;
-
-	case 33:
-		AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_UNDEFINED,
-					       Params[1],
-				AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN);
-		break;
-	case 34:
-		AUDCTRL_SetPlayVolume(AUDIO_SOURCE_I2S,
-				      AUDIO_SINK_LOUDSPK,
-			AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE,
-				      Params[1], 0, 0);
-		break;
-	case 35:
-		AUDCTRL_SetPlayVolume(AUDIO_SOURCE_I2S,
-				      AUDIO_SINK_HEADSET,
-			AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE,
-				      Params[1], 0, 0);
-		break;
 
 	case 99:
 		if (voip_running) {
@@ -580,14 +478,6 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			DEBUG("Disable CAPH clock\n");
 			csl_caph_ControlHWClock(FALSE);
 		}
-		break;
-
-	case 121:
-		/*
-		at*maudtst=121,x,y  x=0: EXT_SPEAKER_PGA,
-		x=1:EXT_SPEAKER_PREPGA,
-		x=2: MIC_PGA, y: gain value register value(enum value) */
-		/* PCG on Rhea platform uses at*maudmode=100,3, */
 		break;
 
 	case 500:		/*at*maudtst=500, */

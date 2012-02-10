@@ -347,7 +347,7 @@ void AUDCTRL_DisableTelephony(void)
 		bInVoiceCall = FALSE;
 
 		/* reset to 8KHz as default for the next call */
-		AUDCTRL_Telephony_SaveSR(AUDIO_SAMPLING_RATE_8000);
+		voiceCallSampleRate = AUDIO_SAMPLING_RATE_8000;
 
 		/* Disable power to digital microphone */
 		if (isDigiMic(voiceCallMic))
@@ -377,7 +377,7 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate)
 	int bNeedDualMic;
 	log(1, "%s sample_rate %d", __func__, sample_rate);
 
-	AUDCTRL_Telephony_SaveSR(sample_rate);
+	voiceCallSampleRate = sample_rate;
 	/* remember the rate for current call.
 	 (or for the incoming call in ring state.)*/
 
@@ -417,33 +417,6 @@ void AUDCTRL_Telephony_RequestRateChange(UInt8 codecID)
 		AUDCTRL_Telephony_RateChange(AUDIO_SAMPLING_RATE_8000);
 	}
 }
-
-/*=============================================================================
-//
-// Function Name: AUDCTRL_Telephony_GetSampleRate
-//
-// Description:   Get the sample rate for voice call
-//
-//=============================================================================
-*/
-unsigned int AUDCTRL_Telephony_GetSR()
-{
-	return voiceCallSampleRate;
-}
-
-/*=============================================================================
-//
-// Function Name: AUDCTRL_Telephony_SaveSampleRate
-//
-// Description:   Save the sample rate for voice call (rate of speech codec)
-//
-//=============================================================================
-*/
-void AUDCTRL_Telephony_SaveSR(unsigned int sample_rate)
-{
-	voiceCallSampleRate = sample_rate;
-}
-
 
 /****************************************************************************
 *
@@ -750,27 +723,12 @@ AudioApp_t GetAudioApp(void)
 *
 * Function Name: SetAudioApp
 *
-* Description:   set audio application.
-*                          should be called by upper layer
-*  This function is used for auto-detection of and auto-set APP
+* Description:   Do not use this function
 ****************************************************************************/
 void SetAudioApp(AudioApp_t app)
 {
 	log(1, "SetAudioApp() old audio_app=%d new app=%d",
 			currAudioApp, app);
-
-	if (AUDCTRL_InVoiceCall())
-		if (app > AUDIO_APP_VOICE_CALL_WB)
-			return;
-
-	/*AUDIO_APP_VOIP and AUDIO_APP_RECORDING_GVS can only be set by
-	user space code. kernel audio code can not detect out them. */
-	if (currAudioApp == AUDIO_APP_VOIP
-		|| currAudioApp == AUDIO_APP_VOIP_INCOMM
-		|| currAudioApp == AUDIO_APP_RECORDING_GVS)
-		return; /*keep user-set audio APP intact*/
-
-	currAudioApp = app;
 }
 
 /****************************************************************************
@@ -779,7 +737,7 @@ void SetAudioApp(AudioApp_t app)
 *
 * Description:   set audio application.
 *
-*  user space code use this function to call alsa mixer control to set APP
+*  user space code call mixer control to use this function to set APP
 ****************************************************************************/
 void SetUserAudioApp(AudioApp_t app)
 {
@@ -805,6 +763,7 @@ void SetUserAudioApp(AudioApp_t app)
 *
 * Description:   save audio application.
 *
+*  This function is used for auto-detection of and auto-set APP
 ****************************************************************************/
 void SaveAudioApp(AudioApp_t app)
 {
@@ -815,6 +774,8 @@ void SaveAudioApp(AudioApp_t app)
 		if (app > AUDIO_APP_VOICE_CALL_WB)
 			return;
 
+	/*AUDIO_APP_VOIP and AUDIO_APP_RECORDING_GVS can only be set by
+	user space code. kernel audio code can not detect them. */
 	if (currAudioApp == AUDIO_APP_VOIP
 		|| currAudioApp == AUDIO_APP_VOIP_INCOMM
 		|| currAudioApp == AUDIO_APP_RECORDING_GVS)
@@ -1092,10 +1053,10 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 	if (source == AUDIO_SOURCE_I2S && AUDCTRL_InVoiceCall() == FALSE) {
 		log(1, "%s FM src %d, sink %d", __func__, source, sink);
 
-		SetAudioApp(AUDIO_APP_FM);
+		SaveAudioApp(AUDIO_APP_FM);
 		powerOnExternalAmp(sink, FMRadioUseExtSpkr, TRUE);
 	} else {
-		SetAudioApp(AUDIO_APP_MUSIC);
+		SaveAudioApp(AUDIO_APP_MUSIC);
 		powerOnExternalAmp(sink, AudioUseExtSpkr, TRUE);
 	}
 
@@ -1274,7 +1235,7 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 	/*also need to support audio profile/mode set from user space code to
  support multi-profile/app.*/
 
-	SetAudioApp(AUDIO_APP_MUSIC);
+	SaveAudioApp(AUDIO_APP_MUSIC);
 
 	if (AUDCTRL_InVoiceCall() && path->srcmRoute[0][0].outChnl)
 		pathID = path->pathID;
@@ -1544,9 +1505,9 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 	} */
 
 	if (mute == TRUE)
-		(void)csl_caph_hwctrl_MuteSink(0 /*pathID */ , speaker);
+		csl_caph_hwctrl_MuteSink(0 /*pathID */ , speaker);
 	else
-		(void)csl_caph_hwctrl_UnmuteSink(0 /*pathID */ , speaker);
+		csl_caph_hwctrl_UnmuteSink(0 /*pathID */ , speaker);
 
 	return;
 }
@@ -1826,9 +1787,9 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 	}
 
 	if (sr == AUDIO_SAMPLING_RATE_48000)
-		SetAudioApp(AUDIO_APP_RECORDING_HQ);
+		SaveAudioApp(AUDIO_APP_RECORDING_HQ);
 	else
-		SetAudioApp(AUDIO_APP_RECORDING);
+		SaveAudioApp(AUDIO_APP_RECORDING);
 
 	if (source == AUDIO_SOURCE_SPEECH_DIGI) {
 		/* Not supported - One stream - two paths use case for record.
@@ -1956,9 +1917,9 @@ Result_t AUDCTRL_StartCapture(unsigned int streamID)
 	path = csl_caph_FindCapturePath(streamID);
 	mode = GetAudioModeFromCaptureDev(path->source);
 	if (path->snk_sampleRate == AUDIO_SAMPLING_RATE_48000)
-		SetAudioApp(AUDIO_APP_RECORDING_HQ);
+		SaveAudioApp(AUDIO_APP_RECORDING_HQ);
 	else
-		SetAudioApp(AUDIO_APP_RECORDING);
+		SaveAudioApp(AUDIO_APP_RECORDING);
 
 	SetAudioMode_ForMusicRecord(mode, 0);
 
@@ -2115,9 +2076,9 @@ static void AUDCTRL_SetRecordMuteMono(AUDIO_SOURCE_Enum_t source,
 	}
 
 	if (mute == TRUE)
-		(void)csl_caph_hwctrl_MuteSource(pathID);
+		csl_caph_hwctrl_MuteSource(pathID);
 	else
-		(void)csl_caph_hwctrl_UnmuteSource(pathID);
+		csl_caph_hwctrl_UnmuteSource(pathID);
 
 	return;
 }
@@ -2290,7 +2251,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		log(1, "%s Enable loopback with sidetone mode = %d\n",
 				__func__, sidetone_mode);
 
-		SetAudioApp(AUDIO_APP_LOOPBACK);
+		SaveAudioApp(AUDIO_APP_LOOPBACK);
 
 		/* For I2S/PCM loopback */
 		if (((source == CSL_CAPH_DEV_FM_RADIO)

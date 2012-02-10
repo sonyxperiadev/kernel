@@ -331,7 +331,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 		(DSP_AADMAC_IHF_SPKR_EN));
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDCTRL_Telephony_HW_16K(mode), 0, 0);
+		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 
 /* The delay is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done
  since it is a command via CP.*/
@@ -350,7 +350,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDCTRL_Telephony_HW_16K(mode), 0, 0);
+		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 
 /* The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done
  since it is a command via CP.*/

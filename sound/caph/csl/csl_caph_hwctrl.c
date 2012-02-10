@@ -3773,7 +3773,7 @@ Result_t csl_caph_hwctrl_ResumePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 }
 
 /****************************************************************************
-*  Function Name: Result_t csl_caph_hwctrl_MuteSink
+*  Function Name: void csl_caph_hwctrl_MuteSink
 *  (CSL_CAPH_PathID pathID, CSL_CAPH_DEVICE_e dev)
 *
 *  Description: Mute sink
@@ -3808,7 +3808,7 @@ void csl_caph_hwctrl_MuteSink(CSL_CAPH_PathID
 }
 
 /****************************************************************************
-*  Function Name: Result_t csl_caph_hwctrl_MuteSource(CSL_CAPH_PathID pathID)
+*  Function Name: void csl_caph_hwctrl_MuteSource(CSL_CAPH_PathID pathID)
 *
 *  Description: Mute sink
 ****************************************************************************/
@@ -3855,7 +3855,7 @@ void csl_caph_hwctrl_MuteSource(CSL_CAPH_PathID pathID)
 }
 
 /****************************************************************************
-*  Function Name: Result_t csl_caph_hwctrl_UnmuteSink
+*  Function Name: void csl_caph_hwctrl_UnmuteSink
 *  (CSL_CAPH_PathID pathID, CSL_CAPH_DEVICE_e dev)
 *
 *  Description: Unmute sink
@@ -3890,7 +3890,7 @@ void csl_caph_hwctrl_UnmuteSink(CSL_CAPH_PathID
 }
 
 /****************************************************************************
-*  Function Name: Result_t csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID)
+*  Function Name: void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID)
 *
 *  Description: Unmute sink
 ****************************************************************************/

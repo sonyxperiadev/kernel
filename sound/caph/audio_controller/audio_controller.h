@@ -185,26 +185,6 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate);
 void AUDCTRL_Telephony_RequestRateChange(UInt8 codecID);
 
 /**
-*  @brief  Get voice call sampling rate, stored for call session.
-*
-*  @param  none
-*
-*  @return unsigned int (voiceCallSampleRate)
-*
-****************************************************************************/
-unsigned int AUDCTRL_Telephony_GetSR(void);
-
-/**
-*  @brief  Save voice call sampling rate, stored for call session.
-*
-*  @param  unsigned int (in) voiceCallSampleRate
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_Telephony_SaveSR(unsigned int sample_rate);
-
-/**
 *  @brief  Change telephony audio path in HW and DSP
 *
 *  @param  source  (in)  uplink source, microphone selection
@@ -301,16 +281,6 @@ void SaveAudioMode(AudioMode_t mode);
 *
 ****************************************************************************/
 AudioApp_t GetAudioApp(void);
-
-/**
-*   Set current (voice call) audio app
-*
-*	@param		AudioApp_t		audio app
-*
-*	@return		none
-*
-****************************************************************************/
-void SetAudioApp(AudioApp_t audio_app);
 
 /**
 *   Set audio app

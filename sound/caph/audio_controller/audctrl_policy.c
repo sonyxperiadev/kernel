@@ -81,8 +81,7 @@ Result_t AUDIO_Policy_SetState(int state)
 
 	tState = state;
 
-	Log_DebugPrintf(LOGID_AUDIO,
-			"AUDIO_Policy_SetState:tPrevState - %d tState-%d state - %d\n",
+	log(1, "AUDIO_Policy_SetState:tPrevState - %d tState-%d state - %d\n",
 			tPrevState, tState, state);
 	return 1;
 }
@@ -95,8 +94,7 @@ Result_t AUDIO_Policy_RestoreState()
 {
 	tState = tPrevState;
 	tPrevState = BRCM_STATE_NORMAL;
-	Log_DebugPrintf(LOGID_AUDIO,
-			"AUDIO_Policy_RestoreState:tPrevState - %d tState-%d\n",
+	log(1, "AUDIO_Policy_RestoreState:tPrevState - %d tState-%d\n",
 			tPrevState, tState);
 	return 1;
 }
@@ -131,8 +129,7 @@ int AUDIO_Policy_Get_Profile(int app)
 		/*Set the profile to existing profile*/
 		new_app = cur_app;
 	}
-	Log_DebugPrintf(LOGID_AUDIO,
-			"AUDIO_Policy_Get_Profile:cur_app - %d new_app-%d app - %d\n",
+	log(1, "AUDIO_Policy_Get_Profile:cur_app - %d new_app-%d app - %d\n",
 			cur_app, new_app, app);
 	return new_app;
 }
