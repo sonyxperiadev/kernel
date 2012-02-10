@@ -51,9 +51,14 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_RTCYR_ALM] =		{.map = 0x00, .addr = 0x2C, .mask = 0xFF, .ro = 0},
 	[PMU_REG_RTC_CORE] =		{.map = 0x00, .addr = 0x2D, .mask = 0xFF, .ro = 0},
 	[PMU_REG_RTC_C2C1_XOTRIM] =	{.map = 0x00, .addr = 0x2E, .mask = 0xFF, .ro = 0},
+#ifdef CONFIG_BCM59039_VER_C0
+	[PMU_REG_RFOPMODCTRL] =		{.map = 0x00, .addr = 0xA2, .mask = 0xFF, .ro = 0},
+	[PMU_REG_HV1OPMODCTRL] =	{.map = 0x00, .addr = 0xA0, .mask = 0xFF, .ro = 0},
+#else
 	[PMU_REG_RFOPMODCTRL] =		{.map = 0x00, .addr = 0xA0, .mask = 0xFF, .ro = 0},
-	[PMU_REG_CAMOPMODCTRL] =	{.map = 0x00, .addr = 0xA1, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HV1OPMODCTRL] =	{.map = 0x00, .addr = 0xA2, .mask = 0xFF, .ro = 0},
+#endif
+	[PMU_REG_CAMOPMODCTRL] =	{.map = 0x00, .addr = 0xA1, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HV2OPMODCTRL] =	{.map = 0x00, .addr = 0xA3, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HV3OPMODCTRL] =	{.map = 0x00, .addr = 0xA4, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HV4OPMODCTRL] =	{.map = 0x00, .addr = 0xA5, .mask = 0xFF, .ro = 0},
@@ -68,9 +73,14 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_IOSROPMODCTRL] =	{.map = 0x00, .addr = 0xAE, .mask = 0xFF, .ro = 0},
 	[PMU_REG_SDSROPMODCTRL] =	{.map = 0x00, .addr = 0xAF, .mask = 0xFF, .ro = 0},
 	[PMU_REG_ASROPMODCTRL] =	{.map = 0x00, .addr = 0xB0, .mask = 0xFF, .ro = 0},
+#ifdef CONFIG_BCM59039_VER_C0
+	[PMU_REG_RFLDOCTRL] =		{.map = 0x00, .addr = 0xB3, .mask = 0x07, .ro = 0},
+	[PMU_REG_HVLDO1CTRL] =		{.map = 0x00, .addr = 0xB1, .mask = 0x07, .ro = 0},
+#else
 	[PMU_REG_RFLDOCTRL] =		{.map = 0x00, .addr = 0xB1, .mask = 0x07, .ro = 0},
-	[PMU_REG_CAMLDOCTRL] =		{.map = 0x00, .addr = 0xB2, .mask = 0x07, .ro = 0},
 	[PMU_REG_HVLDO1CTRL] =		{.map = 0x00, .addr = 0xB3, .mask = 0x07, .ro = 0},
+#endif
+	[PMU_REG_CAMLDOCTRL] =		{.map = 0x00, .addr = 0xB2, .mask = 0x07, .ro = 0},
 	[PMU_REG_HVLDO2CTRL] =		{.map = 0x00, .addr = 0xB4, .mask = 0x07, .ro = 0},
 	[PMU_REG_HVLDO3CTRL] =		{.map = 0x00, .addr = 0xB5, .mask = 0x07, .ro = 0},
 	[PMU_REG_HVLDO4CTRL] =		{.map = 0x00, .addr = 0xB6, .mask = 0x07, .ro = 0},

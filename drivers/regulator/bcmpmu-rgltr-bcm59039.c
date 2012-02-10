@@ -29,6 +29,41 @@ u32 bcm59039_ldo_v_table[] = {
 	3300000,			/* 0x111 */
 };
 
+#ifdef CONFIG_BCM59039_VER_C0
+u32 bcm59039_mod_sr_v_table[] = {
+	700000,			/* 0x0000 */
+	800000,			/* 0x0001 */
+	860000,			/* 0x0010 */
+	880000,			/* 0x0011 */
+	900000,			/* 0x0100 */
+	920000,			/* 0x0101 */
+	940000,			/* 0x0110 */
+	960000,			/* 0x0111 */
+	980000,			/* 0x1000 */
+	1000000,			/* 0x1001 */
+	1020000,			/* 0x1010 */
+	1040000,			/* 0x1011 */
+	1060000,			/* 0x1100 */
+	1080000,			/* 0x1101 */
+	1100000,			/* 0x1110 */
+	1120000,			/* 0x1111 */
+	1140000,			/* 0x10000 */
+	1160000,			/* 0x10001 */
+	1180000,			/* 0x10010 */
+	1200000,			/* 0x10011 */
+	1220000,			/* 0x10100 */
+	1240000,			/* 0x10101 */
+	1260000,			/* 0x10110 */
+	1280000,			/* 0x10111 */
+	1300000,			/* 0x11000 */
+	1320000,			/* 0x11001 */
+	1360000,
+	1380000,
+	1400000,
+	1420000,
+	1440000,
+};
+#endif
 u32 bcm59039_sr_v_table[] = {
 	700000,			/* 0x0000 */
 	800000,			/* 0x0001 */
@@ -173,7 +208,13 @@ struct regulator_desc bcm59039_desc[BCMPMU_REGULATOR_MAX] = {
 [BCMPMU_REGULATOR_CSR_NM] = {
 				.name = "csr_nm",
 				.id = BCMPMU_REGULATOR_CSR_NM,
-				.n_voltages = ARRAY_SIZE(bcm59039_sr_v_table),
+#ifdef CONFIG_BCM59039_VER_C0
+				.n_voltages =
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
+				.n_voltages =
+					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.ops = &bcmpmuldo_ops,
 				.type = REGULATOR_VOLTAGE,
 				.owner = THIS_MODULE,
@@ -181,7 +222,13 @@ struct regulator_desc bcm59039_desc[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_CSR_NM2] = {
 				.name = "csr_nm2",
 				.id = BCMPMU_REGULATOR_CSR_NM2,
-				.n_voltages = ARRAY_SIZE(bcm59039_sr_v_table),
+#ifdef CONFIG_BCM59039_VER_C0
+				.n_voltages =
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
+				.n_voltages =
+					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.ops = &bcmpmuldo_ops,
 				.type = REGULATOR_VOLTAGE,
 				.owner = THIS_MODULE,
@@ -189,7 +236,13 @@ struct regulator_desc bcm59039_desc[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_CSR_LPM] = {
 				.name = "csr_lpm",
 				.id = BCMPMU_REGULATOR_CSR_LPM,
-				.n_voltages = ARRAY_SIZE(bcm59039_sr_v_table),
+#ifdef CONFIG_BCM59039_VER_C0
+				.n_voltages =
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
+				.n_voltages =
+					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.ops = &bcmpmuldo_ops,
 				.type = REGULATOR_VOLTAGE,
 				.owner = THIS_MODULE,
@@ -224,7 +277,13 @@ struct regulator_desc bcm59039_desc[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_SDSR_NM] = {
 				.name = "sdsr",
 				.id = BCMPMU_REGULATOR_SDSR_NM,
-				.n_voltages = ARRAY_SIZE(bcm59039_sr_v_table),
+#ifdef CONFIG_BCM59039_VER_C0
+				.n_voltages =
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
+				.n_voltages =
+					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.ops = &bcmpmuldo_ops,
 				.type = REGULATOR_VOLTAGE,
 				.owner = THIS_MODULE,
@@ -232,8 +291,13 @@ struct regulator_desc bcm59039_desc[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_SDSR_NM2] = {
 				.name = "sdsr",
 				.id = BCMPMU_REGULATOR_SDSR_NM2,
+#ifdef CONFIG_BCM59039_VER_C0
 				.n_voltages =
-				ARRAY_SIZE(bcm59039_sr_v_table),
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
+				.n_voltages =
+					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.ops = &bcmpmuldo_ops,
 				.type = REGULATOR_VOLTAGE,
 				.owner = THIS_MODULE,
@@ -242,8 +306,13 @@ struct regulator_desc bcm59039_desc[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_SDSR_LPM] = {
 				.name = "sdsr",
 				.id = BCMPMU_REGULATOR_SDSR_LPM,
+#ifdef CONFIG_BCM59039_VER_C0
 				.n_voltages =
-				ARRAY_SIZE(bcm59039_sr_v_table),
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
+				.n_voltages =
+					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.ops = &bcmpmuldo_ops,
 				.type = REGULATOR_VOLTAGE,
 				.owner = THIS_MODULE,
@@ -456,9 +525,15 @@ struct bcmpmu_reg_info bcm59039_register_info[BCMPMU_REGULATOR_MAX] = {
 				.vout_shift_l = 0,
 				.vout_mask_t = 0x1F,
 				.vout_shift_t = 0,
+#ifdef CONFIG_BCM59039_VER_C0
+				.v_table = bcm59039_mod_sr_v_table,
+				.num_voltages =
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
 				.v_table = bcm59039_sr_v_table,
 				.num_voltages =
-				ARRAY_SIZE(bcm59039_sr_v_table),
+					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.mode_mask = 0xFF,
 				.ldo_or_sr = BCMPMU_SR,
 				},
@@ -471,9 +546,15 @@ struct bcmpmu_reg_info bcm59039_register_info[BCMPMU_REGULATOR_MAX] = {
 				.vout_shift_l = 0,
 				.vout_mask_t = 0x1F,
 				.vout_shift_t = 0,
+#ifdef CONFIG_BCM59039_VER_C0
+				.v_table = bcm59039_mod_sr_v_table,
+				.num_voltages =
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
 				.v_table = bcm59039_sr_v_table,
 				.num_voltages =
-				ARRAY_SIZE(bcm59039_sr_v_table),
+					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.mode_mask = 0xFF,
 				.ldo_or_sr = BCMPMU_SR,
 				},
@@ -486,9 +567,15 @@ struct bcmpmu_reg_info bcm59039_register_info[BCMPMU_REGULATOR_MAX] = {
 				.vout_shift_l = 0,
 				.vout_mask_t = 0x1F,
 				.vout_shift_t = 0,
+#ifdef CONFIG_BCM59039_VER_C0
+				.v_table = bcm59039_mod_sr_v_table,
+				.num_voltages =
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
 				.v_table = bcm59039_sr_v_table,
 				.num_voltages =
-				ARRAY_SIZE(bcm59039_sr_v_table),
+					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.mode_mask = 0xFF,
 				.ldo_or_sr = BCMPMU_SR,
 				},
@@ -516,9 +603,15 @@ struct bcmpmu_reg_info bcm59039_register_info[BCMPMU_REGULATOR_MAX] = {
 				.vout_shift_l = 0,
 				.vout_mask_t = 0x1F,
 				.vout_shift_t = 0,
+#ifdef CONFIG_BCM59039_VER_C0
+				.v_table = bcm59039_mod_sr_v_table,
+				.num_voltages =
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
 				.v_table = bcm59039_sr_v_table,
 				.num_voltages =
-				ARRAY_SIZE(bcm59039_sr_v_table),
+					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.mode_mask = 0xFF,
 				.ldo_or_sr = BCMPMU_SR,
 				},
@@ -546,9 +639,15 @@ struct bcmpmu_reg_info bcm59039_register_info[BCMPMU_REGULATOR_MAX] = {
 				.vout_shift_l = 0,
 				.vout_mask_t = 0x1F,
 				.vout_shift_t = 0,
+#ifdef CONFIG_BCM59039_VER_C0
+				.v_table = bcm59039_mod_sr_v_table,
+				.num_voltages =
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
 				.v_table = bcm59039_sr_v_table,
 				.num_voltages =
 					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.mode_mask = 0xFF,
 				.ldo_or_sr = BCMPMU_SR,
 				},
@@ -576,9 +675,15 @@ struct bcmpmu_reg_info bcm59039_register_info[BCMPMU_REGULATOR_MAX] = {
 				.vout_shift_l = 0,
 				.vout_mask_t = 0x1F,
 				.vout_shift_t = 0,
+#ifdef CONFIG_BCM59039_VER_C0
+				.v_table = bcm59039_mod_sr_v_table,
+				.num_voltages =
+					ARRAY_SIZE(bcm59039_mod_sr_v_table),
+#else
 				.v_table = bcm59039_sr_v_table,
 				.num_voltages =
 					ARRAY_SIZE(bcm59039_sr_v_table),
+#endif
 				.mode_mask = 0xFF,
 				.ldo_or_sr = BCMPMU_SR,
 				},
