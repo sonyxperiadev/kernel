@@ -82,6 +82,10 @@ struct pmem_data {
 	struct list_head region_list;
 	/* a linked list of data so we can access them for debugging */
 	struct list_head list;
+	/* a lined list of data that has a submap, so we can access them
+	 * quickly in pmem_release()
+	 */
+	struct list_head sub_data_list;
 #if PMEM_DEBUG
 	int ref;
 #endif
@@ -330,26 +334,28 @@ static int pmem_release(struct inode *inode, struct file *file)
 
 
 	mutex_lock(&pmem[id].data_list_lock);
-	/* if this file is a master, revoke all the memory in the connected
-	 *  files */
-	if (PMEM_FLAGS_MASTERMAP & data->flags) {
-		struct pmem_data *sub_data;
-		list_for_each(elt, &pmem[id].data_list) {
-			sub_data = list_entry(elt, struct pmem_data, list);
-			down_read(&sub_data->sem);
-			if (PMEM_IS_SUBMAP(sub_data) &&
-			    file == sub_data->master_file) {
-				up_read(&sub_data->sem);
-				pmem_revoke(file, sub_data);
-			}  else
-				up_read(&sub_data->sem);
-		}
-	}
 	list_del(&data->list);
 	mutex_unlock(&pmem[id].data_list_lock);
 
-
 	down_write(&data->sem);
+
+	/* if this file is a master, revoke all the memory in the connected
+	 *  files */
+	if (PMEM_FLAGS_MASTERMAP & data->flags && !list_empty(&data->sub_data_list)) {
+		struct pmem_data *sub_data;
+		list_for_each_safe(elt, elt2, &data->sub_data_list) {
+			sub_data = list_entry(elt, struct pmem_data, sub_data_list);
+			down_read(&sub_data->sem);
+			BUG_ON(file != sub_data->master_file);
+			if (PMEM_IS_SUBMAP(sub_data)) {
+				up_read(&sub_data->sem);
+				pmem_revoke(file, sub_data);
+			}  else {
+				up_read(&sub_data->sem);
+			}
+			list_del(elt);
+		}
+	}
 
 	/* if its not a conencted file and it has an allocation, free it */
 	if (!(PMEM_FLAGS_CONNECTED & data->flags) && has_allocation(file)) {
@@ -379,7 +385,6 @@ static int pmem_release(struct inode *inode, struct file *file)
 		data->index = -1;
 	}
 
-
 	/* if this file is a submap (mapped, connected file), downref the
 	 * task struct */
 	if (PMEM_FLAGS_SUBMAP & data->flags) {
@@ -396,6 +401,7 @@ static int pmem_release(struct inode *inode, struct file *file)
 		list_del(elt);
 		kfree(region_node);
 	}
+
 	BUG_ON(!list_empty(&data->region_list));
 
 	up_write(&data->sem);
@@ -438,6 +444,7 @@ static int pmem_open(struct inode *inode, struct file *file)
 	data->ref = 0;
 #endif
 	INIT_LIST_HEAD(&data->region_list);
+	INIT_LIST_HEAD(&data->sub_data_list);
 	init_rwsem(&data->sem);
 
 	file->private_data = data;
@@ -808,7 +815,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	}
 	/* either no space was available or an error occured */
 	if (!has_allocation(file)) {
-		ret = -EINVAL;
+		ret = -ENOMEM;
 		printk("pmem: could not find allocation for map.\n");
 		goto error;
 	}
@@ -1152,6 +1159,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 		ret = -EINVAL;
 		goto err_bad_file;
 	}
+
 	src_data = (struct pmem_data *)src_file->private_data;
 
 	if (has_allocation(file) && (data->index != src_data->index)) {
@@ -1168,6 +1176,10 @@ static int pmem_connect(unsigned long connect, struct file *file)
 	data->master_fd = connect;
 	data->size = src_data->size;
 	data->master_file = src_file;
+	/* Add subdata to the source data list, so we can find it quickly in
+	 * pmem_release
+	 */
+	list_add_tail(&data->sub_data_list, &src_data->sub_data_list);
 
 err_bad_file:
 	fput_light(src_file, put_needed);
@@ -1477,7 +1489,7 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 void pmem_dump(void)
 {
 	struct list_head *elt, *elt2;
-	struct pmem_data *data, *next_data;
+	struct pmem_data *data;
 	struct pmem_region_node *region_node;
 	struct task_struct *task;
 	int id;
@@ -1554,7 +1566,7 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 			  loff_t *ppos)
 {
 	struct list_head *elt, *elt2;
-	struct pmem_data *data, *next_data;
+	struct pmem_data *data;
 	struct pmem_region_node *region_node;
 	struct task_struct *task;
 	int id = (int)file->private_data;
