@@ -98,7 +98,7 @@ reset_reason_store(struct device *dev, struct device_attribute *attr,
 	return -EINVAL;
 }
 
-static DEVICE_ATTR(reset_reason, 0777, reset_reason_show, reset_reason_store);
+static DEVICE_ATTR(reset_reason, 0664, reset_reason_show, reset_reason_store);
 
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS
 static ssize_t

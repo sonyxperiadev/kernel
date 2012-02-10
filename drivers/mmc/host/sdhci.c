@@ -3037,7 +3037,7 @@ int sdhci_add_host(struct sdhci_host *host)
 		memset(&mmc_throughput[host->mmc->index], 0, sizeof(sdhci_throughput_t));
 		host->thrpt_dbgfs_enable = 0;
 		mmc_throughput[host->mmc->index].dentry = \
-			debugfs_create_u8(mmc_hostname(mmc), 0666, \
+			debugfs_create_u8(mmc_hostname(mmc), 0664, \
 					sdhci_throughput_dentry, &(host->thrpt_dbgfs_enable));
 		if (unlikely(mmc_throughput[host->mmc->index].dentry == NULL))
 			printk(KERN_ERR "could not create debugfs entry for %s\n", mmc_hostname(mmc));
