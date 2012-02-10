@@ -1028,6 +1028,7 @@ struct bcmpmu_platform_data {
 	struct bcmpmu_wd_setting *wd_setting;
 	char *batt_model;
 	int cutoff_volt;
+	int cutoff_count_max;
 };
 
 struct bcmpmu_fg {

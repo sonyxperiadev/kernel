@@ -83,6 +83,7 @@ enum {
 	CAL_MODE_LOWBAT,
 	CAL_MODE_HIGHBAT,
 	CAL_MODE_FORCE,
+	CAL_MODE_CUTOFF,
 };
 
 static struct bcmpmu_charge_zone chrg_zone[] = {
@@ -137,6 +138,9 @@ struct bcmpmu_em {
 	int charge_1c_rate;
 	int eoc;
 	int batt_impedence;
+	int cutoff_volt;
+	int cutoff_count;
+	int cutoff_count_max;
 	int fg_capacity_full;
 	int support_fg;
 	int fg_capacity;
@@ -485,7 +489,11 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 
 		volt = pem->batt_volt - (pem->batt_impedence * pem->batt_curr)/1000;
 
-		if (pem->fg_force_cal != 0) {
+		if (pem->batt_volt <= pem->cutoff_volt) {
+			pem->cutoff_count = 0;
+			pem->cal_mode = CAL_MODE_CUTOFF,
+			calibration = 1;
+		} else if (pem->fg_force_cal != 0) {
 			pem->fg_cap_cal = 0;
 			pem->cal_mode = CAL_MODE_FORCE,
 			calibration = 1;
@@ -701,8 +709,11 @@ static void em_algorithm(struct work_struct *work)
 		vacc += req.cnv;
 		pem->mode = MODE_POLL;
 		poll_count--;
-		pr_em(FLOW, "%s, first_run=%d, poll_count=%d, vacc=%d\n",
-			__func__, first_run, poll_count, vacc);
+		if (pem->cal_mode == CAL_MODE_CUTOFF)
+			if (req.cnv <= pem->cutoff_volt)
+				pem->cutoff_count++;
+		pr_em(FLOW, "%s, first_run=%d, poll_count=%d, vacc=%d, vmbatt=%d\n",
+			__func__, first_run, poll_count, vacc, req.cnv);
 		schedule_delayed_work(&pem->work, msecs_to_jiffies(get_update_rate(pem)));
 		return;
 	}
@@ -737,7 +748,14 @@ static void em_algorithm(struct work_struct *work)
 			if (capacity >= 30)
 				pem->fg_lowbatt_cal = 1;
 		} else {
-			if (pem->cal_mode == CAL_MODE_FORCE) {
+			if (pem->cal_mode == CAL_MODE_CUTOFF) {
+				pr_em(FLOW, "%s, Cutoff calibratrion, cutoff_count = %d\n",
+					__func__, pem->cutoff_count);
+				if (pem->cutoff_count >= pem->cutoff_count_max)
+					capacity = 0;
+				pem->cutoff_count = 0;
+				pem->transition = 1;
+			} else if (pem->cal_mode == CAL_MODE_FORCE) {
 					pem->fg_force_cal = 0;
 					pr_em(FLOW, "%s, Force calibratrion\n", __func__);
 			} else if (pem->cal_mode == CAL_MODE_LOWBAT) {
@@ -1043,6 +1061,14 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 		pem->batt_impedence = pdata->batt_impedence;
 	else
 		pem->batt_impedence = 250;;
+	if (pdata->cutoff_volt)
+		pem->cutoff_volt = pdata->cutoff_volt;
+	else
+		pem->cutoff_volt = 3200;
+	if (pdata->cutoff_count_max)
+		pem->cutoff_count_max = pdata->cutoff_count_max;
+	else
+		pem->cutoff_count_max = 3;
 
 	pem->charge_zone = CHRG_ZONE_QC;
 	
