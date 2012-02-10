@@ -88,6 +88,20 @@
 #define VERSION_KEY_MASK 0xFFFFFF00
 #define MAX_DOWNSCALE_RATIO 3
 
+#define ROTATOR_REVISION_V0		0
+#define ROTATOR_REVISION_V1		1
+#define ROTATOR_REVISION_V2		2
+#define ROTATOR_REVISION_NONE	0xffffffff
+
+uint32_t rotator_hw_revision;
+
+/*
+ * rotator_hw_revision:
+ * 0 == 7x30
+ * 1 == 8x60
+ * 2 == 8960
+ *
+ */
 struct tile_parm {
 	unsigned int width;  /* tile's width */
 	unsigned int height; /* tile's height */
@@ -491,8 +505,9 @@ static int msm_rotator_ycxcx_h2v2(struct msm_rotator_img_info *info,
 		return -EINVAL;
 
 	/* rotator expects YCbCr for planar input format */
-	if (info->src.format == MDP_Y_CR_CB_H2V2 ||
-	    info->src.format == MDP_Y_CR_CB_GH2V2)
+	if ((info->src.format == MDP_Y_CR_CB_H2V2 ||
+	    info->src.format == MDP_Y_CR_CB_GH2V2) &&
+	    rotator_hw_revision < ROTATOR_REVISION_V2)
 		swap(in_chroma_paddr, in_chroma2_paddr);
 
 	iowrite32(in_paddr, MSM_ROTATOR_SRCP0_ADDR);
@@ -1502,6 +1517,13 @@ static int __devinit msm_rotator_probe(struct platform_device *pdev)
 #endif
 	if (ver != pdata->hardware_version_number)
 		pr_info("%s: invalid HW version\n", DRIVER_NAME);
+
+	rotator_hw_revision = ver;
+	rotator_hw_revision >>= 16;     /* bit 31:16 */
+	rotator_hw_revision &= 0xff;
+
+	pr_info("%s: rotator_hw_revision=%x\n",
+		__func__, rotator_hw_revision);
 
 	msm_rotator_dev->irq = platform_get_irq(pdev, 0);
 	if (msm_rotator_dev->irq < 0) {
