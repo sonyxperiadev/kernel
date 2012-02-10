@@ -40,6 +40,9 @@
 #include <sound/soc.h>
 #include <linux/gpio.h>
 
+int gAudioDebugLevel;
+module_param(gAudioDebugLevel, int, 0);
+
 #define CAPH_SOC_DAIFMT (SND_SOC_DAIFMT_I2S)
 
 static int caph_soc_init(struct snd_soc_pcm_runtime *rtd)

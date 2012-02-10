@@ -1,13 +1,13 @@
 #/*******************************************************************************************
 #Copyright 2010 Broadcom Corporation.  All rights reserved.                                */
 #
-#Unless you and Broadcom execute a separate written software license agreement 
-#governing use of this software, this software is licensed to you under the 
-#terms of the GNU General Public License version 2, available at 
-#http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+#Unless you and Broadcom execute a separate written software license agreement
+#governing use of this software, this software is licensed to you under the
+#terms of the GNU General Public License version 2, available at
+#http://www.gnu.org/copyleft/gpl.html (the "GPL").
 #
-#Notwithstanding the above, under no circumstances may you combine this software 
-#in any way with any other Broadcom software provided under a license other than 
+#Notwithstanding the above, under no circumstances may you combine this software
+#in any way with any other Broadcom software provided under a license other than
 #the GPL, without Broadcom's express prior written consent.
 #*******************************************************************************************/
 
@@ -43,6 +43,7 @@ subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/caph/csl/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/caph/dsp/
 #CHAL header files
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I$(src)/chal/B0/inc/
+subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/caph/chal/B0/inc/
 #RPC Header files
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/modem/CAPI2_CIB/soc/debug/public/
@@ -76,6 +77,6 @@ snd-soc-rhea-objs := rhea.o
 
 obj-$(CONFIG_SND_BCM_SOC_RHEA) += snd-soc-rhea.o
 
-obj-$(CONFIG_SND_BCM_SOC) += chal/B0/src/
-obj-$(CONFIG_SND_BCM_SOC) += csl/
-obj-$(CONFIG_SND_BCM_SOC) += dsp/
+obj-$(CONFIG_SND_BCM_SOC) += ../../caph/chal/B0/src/
+obj-$(CONFIG_SND_BCM_SOC) += ../../caph/csl/
+obj-$(CONFIG_SND_BCM_SOC) += ../../caph/dsp/
