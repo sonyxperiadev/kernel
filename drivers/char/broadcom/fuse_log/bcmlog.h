@@ -293,6 +293,11 @@ extern "C" {
 #define BCMLOG_CUSTOM_DATA		2	/* partial message data */
 #define BCMLOG_CUSTOM_END		3	/* partial message end */
 
+extern struct apanic_data drv_ctx;
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+extern unsigned long get_apanic_start_address(void);
+#endif
+
 /**
  *	Get runtime log device
  **/

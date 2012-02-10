@@ -59,6 +59,7 @@ obj-y				+= carma/
 obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
 obj-$(CONFIG_APANIC)		+= apanic.o
 obj-$(CONFIG_APANIC_ON_MMC)	+= apanic_mmc.o
+obj-$(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) += cp_crash.o
 obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
 obj-$(CONFIG_SENSORS_AK8975_BRCM)	+= akm8975_brcm.o
 obj-$(CONFIG_INTER_PROCESSOR_COMM)	+= ipc.o

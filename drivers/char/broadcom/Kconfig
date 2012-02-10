@@ -8,6 +8,12 @@ menuconfig BRCM_CHAR_DRIVERS
 	help
 	  Broadcom's char drivers
 
+config BRCM_CP_CRASH_DUMP_EMMC
+	bool "cp crash dump to eMMC"
+        default y
+        ---help---
+        Say Y to enable the cp crash dump to eMMC support
+
 config V3D
 	tristate "V3D Driver"
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
@@ -24,25 +30,25 @@ config BRCM_FUSE_LOG
 	default n
 	--help---
 	  Broadcom FUSE LOG drivers
-	  
+
 config STM_DEFAULT
 	tristate "STM Driver"
 	depends on BRCM_CHAR_DRIVERS
 	default n
-    
+
 config ISP
 	tristate "ISP Driver"
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
-	default n   
+	default n
 
 config UNICAM
 	tristate "UNICAM Driver"
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
-	default n 	
+	default n
 
 config BCMPMU_RPC
 	bool "Support rpc with bcmpmu driver"
-	depends on BRCM_CHAR_DRIVERS    
+	depends on BRCM_CHAR_DRIVERS
 	depends on MFD_BCMPMU
 	depends on SENSORS_BCMPMU
 	default n
@@ -76,10 +82,10 @@ config BCM_BSC
     Say Y to enable the BSC support.
 
 config BCM_GPS_UART
-	int "GPS UART"	
+	int "GPS UART"
 	depends on BCM_GPS
 	--help---
-		GPS UART port no e.g. 0,1,2,3 to be used 
+		GPS UART port no e.g. 0,1,2,3 to be used
 
 config BCM_MODEM
         bool "Broadcom Modem Driver"
@@ -124,7 +130,7 @@ config BCM_HEADSET_SW
    default y
    ---help---
    Say Y to enable headset detection.
-	  
+
 config BCM_AMXR
    bool "Audio Mixer Driver support"
    depends on BRCM_CHAR_DRIVERS
@@ -139,7 +145,7 @@ config BCM_AMXR_CORE
    default n
    ---help---
    Say Y to enable the Audio Mixer Core module.
-   
+
 config BCM_HALAUDIO
     bool "HAL Audio Driver support"
     depends on BRCM_CHAR_DRIVERS
@@ -154,7 +160,7 @@ config BCM_HALAUDIO_CORE
     default n
     help
       Select m to build HAL Audio core framework module which is used to control
-      audio hardware.      
+      audio hardware.
 
 config BCM_HALAUDIO_AUDIOH_ISLAND
     tristate "HAL Audio Audio Hub driver for the Island Chip family"
@@ -226,7 +232,7 @@ config BCM_FRAME_PROFILER_SUPPORT
     depends on ARCH_BCM116X || ARCH_BCMRING
     default y
     ---help---
-      Maintain a history of time spent processing frames.      
+      Maintain a history of time spent processing frames.
 
 config BCM_WIFI_HDMI
     tristate "WIFI HDMI"
@@ -241,7 +247,7 @@ config VC_TEST_WIFI_HDMI
       Select to build the Wifi-Hdmi Videocore Service test driver.
 
 config GPS_IRQ
-	bool "GPS I2C HOSTWAKE"	
+	bool "GPS I2C HOSTWAKE"
 	default n
 	--help---
 		If GPS I2C-HOSTWAKE is used

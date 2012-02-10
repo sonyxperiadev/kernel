@@ -41,13 +41,12 @@
 #include <linux/bio.h>
 #include <linux/mmc-poll/mmc_poll.h>
 #include <linux/mmc-poll/mmc_poll_stack.h>
+#include "apanic_mmc.h"
 
 #define DRVNAME	 "apanic "
 #define APANIC_BLK_PATH "/dev/block"
 
-extern void ram_console_enable_console(int);
-extern unsigned long get_apanic_start_address(void);
-extern int mmc_poll_stack_init(void **mmc, int dev_num, int *mmc_poll_dev_num);
+int ap_triggered;
 
 struct panic_header {
 	u32 magic;
@@ -75,7 +74,7 @@ struct apanic_data {
 	struct proc_dir_entry	*apanic_threads;
 };
 
-static struct apanic_data drv_ctx;
+struct apanic_data drv_ctx;
 static struct work_struct proc_removal_work;
 static DEFINE_MUTEX(drv_mutex);
 
@@ -302,8 +301,6 @@ static int apanic_proc_write(struct file *file, const char __user *buffer,
 }
 
 static int in_panic;
-extern int log_buf_copy(char *dest, int idx, int len);
-extern void log_buf_clear(void);
 
 /*
  * Writes the contents of the console to the specified offset in flash.
@@ -386,6 +383,8 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	int threads_len = 0;
 	int rc;
 	unsigned long blk;
+
+	ap_triggered = 1;
 
 	if (in_panic)
 		return NOTIFY_DONE;

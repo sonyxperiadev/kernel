@@ -36,6 +36,10 @@
 #include <linux/time.h>
 #include <linux/rtc.h>
 #include <linux/kdebug.h>
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+#include <linux/mmc-poll/mmc_poll_stack.h>
+#include <linux/mmc-poll/mmc_poll.h>
+#endif
 #include <linux/jiffies.h>
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
@@ -86,6 +90,38 @@
 #define CP_CRASH_DUMP_BASE_FILE_NAME    "cp_crash_dump_"
 #define CP_CRASH_DUMP_FILE_EXT          ".bin"
 #define CP_CRASH_DUMP_MAX_LEN           100
+#define CP_DUMP_LEN			512
+#define KPANIC_CP_DUMP_OFFSET		0x100000
+
+struct panic_header {
+	u32 magic;
+#define PANIC_MAGIC 0xdeadf00d
+
+	u32 version;
+#define PHDR_VERSION   0x01
+
+	u32 console_offset;
+	u32 console_length;
+
+	u32 threads_offset;
+	u32 threads_length;
+};
+
+struct cpanic_data {
+	int dev_num;
+	int mmc_poll_dev_num;
+	char dev_path[256];
+	struct mmc *mmc;
+	struct panic_header curr;
+	void *bounce;
+	struct proc_dir_entry *apanic_trigger;
+	struct proc_dir_entry *apanic_console;
+	struct proc_dir_entry *apanic_threads;
+};
+
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+static unsigned long offs;
+#endif
 
 static unsigned int compress_memcpy(char *dest, char *src,
 				    unsigned short nbytes);
@@ -1084,6 +1120,102 @@ void BCMLOG_HandleCpLogMsg(unsigned char *buf, int size)
 	}
 }
 
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+void BCMLOG_WriteEMMC(const char *buf, int size)
+{
+	struct cpanic_data *ctx = &drv_ctx;
+	int ret = 0;
+	static int tot_size;
+	size_t wlen = 0;
+	int num_pages, written, fill_size;
+	int wr_sz;
+
+	wr_sz = ctx->mmc->write_bl_len;
+	written = wlen = fill_size = 0;
+
+	/* final write? */
+	if (buf == NULL)
+		goto final;
+
+	/* we accumulate anything less than page size */
+	if ((tot_size + size) < wr_sz) {
+		memcpy(cp_buf + tot_size, buf, size);
+		tot_size += size;
+		return;
+	}
+
+	fill_size = ctx->mmc->write_bl_len - tot_size;
+	memcpy(cp_buf + tot_size, buf, fill_size);
+
+final:
+	/* write locally stored data first */
+	ret =
+	    ctx->mmc->block_dev.block_write(ctx->mmc_poll_dev_num, offs, 1,
+					    cp_buf);
+	if (ret <= 0) {
+		printk(KERN_CRIT
+		       "%s: Error writing data to flash at line %d, offs:%x ret:%d!!\n",
+		       __func__, __LINE__, offs, ret);
+		return;
+	}
+
+	if (buf == NULL)
+		return;
+
+	memset(cp_buf, 0, wr_sz);
+	offs += ret;
+	buf += fill_size;
+	written += fill_size;
+
+	/* write the passed data now */
+	num_pages = (size - fill_size) / wr_sz;
+	while (num_pages) {
+		memcpy(cp_buf, buf, wr_sz);
+		ret =
+		    ctx->mmc->block_dev.block_write(ctx->mmc_poll_dev_num, offs,
+						    1, cp_buf);
+		if (ret <= 0) {
+			printk(KERN_CRIT
+			       "%s: Error writing data line:%d, offs:%x ret:%d!!\n",
+			       __func__, __LINE__, offs, ret);
+			return;
+		}
+
+		buf += wr_sz;
+		offs += ret;
+		written += wr_sz;
+		memset(cp_buf, 0, wr_sz);
+		num_pages--;
+	}
+
+	if (size - written) {
+		memcpy(cp_buf, buf, (size - written));
+		tot_size = size - written;
+	} else
+		tot_size = 0;
+}
+
+static void start_emmc_crashlog(void)
+{
+	struct cpanic_data *ctx = &drv_ctx;
+	unsigned long blk;
+
+	blk = get_apanic_start_address();
+	if (blk == 0) {
+		printk("apanic: Invalid block number \r\n");
+		return;
+	}
+
+	offs = (KPANIC_CP_DUMP_OFFSET / 0x200) + blk;
+	cp_buf = kmalloc(CP_DUMP_LEN, GFP_ATOMIC);
+	if (!cp_buf) {
+		printk(KERN_ERR "%s: kmalloc failed!!\n", __func__);
+		return;
+	}
+	memset(cp_buf, 0, CP_DUMP_LEN);
+}
+#endif
+
 void BCMLOG_WriteMTD(const char *buf, int size)
 {
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP
@@ -1256,9 +1388,11 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile)
 		start_sdcard_crashlog(inDumpFile);
 		break;
 	case BCMLOG_OUTDEV_PANIC:
-		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
-			      "Panic CP Crash Log not supported\n");
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+		start_emmc_crashlog();
+#else
 		start_panic_crashlog();
+#endif
 		break;
 	case BCMLOG_OUTDEV_NONE:
 		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
@@ -1291,7 +1425,11 @@ void BCMLOG_EndCpCrashDump(void)
 		sDumpFile = NULL;
 		break;
 	case BCMLOG_OUTDEV_PANIC:
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+		BCMLOG_WriteEMMC(NULL, 0);
+#else
 		BCMLOG_WriteMTD(NULL, 0);
+#endif
 		kfree(cp_buf);
 		break;
 	case BCMLOG_OUTDEV_NONE:
@@ -1317,7 +1455,11 @@ void BCMLOG_HandleCpCrashDumpData(const char *buf, int size)
 		}
 		break;
 	case BCMLOG_OUTDEV_PANIC:
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+		BCMLOG_WriteEMMC(buf, size);
+#else
 		BCMLOG_WriteMTD(buf, size);
+#endif
 		break;
 	case BCMLOG_OUTDEV_RNDIS:
 	case BCMLOG_OUTDEV_ACM:
@@ -1372,7 +1514,11 @@ void BCMLOG_LogCPCrashDumpString(const char *inLogString)
 			}
 			break;
 		case BCMLOG_OUTDEV_PANIC:
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+			BCMLOG_WriteEMMC(kbuf_mtt, mttFrameSize);
+#else
 			BCMLOG_WriteMTD(kbuf_mtt, mttFrameSize);
+#endif
 			break;
 		case BCMLOG_OUTDEV_RNDIS:
 		case BCMLOG_OUTDEV_STM:

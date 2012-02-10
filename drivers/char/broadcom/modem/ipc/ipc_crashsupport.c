@@ -133,8 +133,16 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	IPC_U32 *Dump;
 	void __iomem *DumpVAddr;
 
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
-	while (SmLocalControl.SmControl->CrashDump == NULL) ;
+	if (BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice()
+	    && ap_triggered == 0) {
+		/* we kill AP when CP crashes */
+		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
+		abort();
+	}
+#if defined(CONFIG_BRCM_CP_CRASH_DUMP)\
+	 || defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC)
+	while (SmLocalControl.SmControl->CrashDump == NULL)
+		;
 #endif
 
 	/* **NOTE** for now, continue doing simple dump out IPC_DEBUG so there
@@ -207,7 +215,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	 * log from CP and dump out to MTT */
 	DUMP_CP_assert_log();
 
-      cleanUp:
+cleanUp:
 
 	if (NULL != DumpVAddr)
 		iounmap(DumpVAddr);
@@ -290,13 +298,15 @@ void DUMP_CP_assert_log(void)
 		 * set to physical address of current assert buf */
 		while (SmLocalControl.SmControl->CrashCode ==
 		       IPC_AP_CLEAR_TO_SEND) {
-			for (i = 0; i < 256; i++) ;
+			for (i = 0; i < 256; i++)
+				;
 			if (TIMER_GetValue() - t1 > TICKS_ONE_SECOND * 20)
 				break;
 		}
 
 		/* check for time out */
-		if (SmLocalControl.SmControl->CrashCode == IPC_AP_CLEAR_TO_SEND) {
+		if (SmLocalControl.SmControl->CrashCode ==
+			IPC_AP_CLEAR_TO_SEND) {
 			if (retryCount < MAX_CP_DUMP_RETRIES) {
 				retryCount++;
 				IPC_DEBUG(DBG_TRACE,
@@ -509,6 +519,7 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 							mem_start,
 							pBlockVAddr[i].
 							mem_size);
+
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
 				 "RAM DUMP End: 0x%08x, 0x%08x",
 				 pBlockVAddr[i].mem_start,

@@ -16,7 +16,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+	extern int ap_triggered;
 	extern int cp_crashed;
 	extern void abort(void);
 
