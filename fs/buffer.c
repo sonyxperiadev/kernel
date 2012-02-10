@@ -3127,11 +3127,8 @@ drop_buffers(struct page *page, struct buffer_head **buffers_to_free)
 			set_bit(AS_EIO, &page->mapping->flags);
 		if (buffer_busy(bh)) {
 			if (bh_lru_evict(bh)) {
-				if (buffer_busy(bh)) {
-					printk(KERN_ERR"!!! %s: Buffer(state:0x%08lx count:%d) is busy after LRU eviction !!!\n",
-							__func__, bh->b_state, atomic_read(&bh->b_count));
+				if (buffer_busy(bh))
 					goto failed;
-				}
 			} else {
 				goto failed;
 			}
