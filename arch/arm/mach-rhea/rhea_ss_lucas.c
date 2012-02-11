@@ -989,7 +989,7 @@ static struct resource board_sdio3_resource[] = {
 };
 #endif
 
-#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_LUCAS)
+#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 static struct resource board_sdio3_resource[] = {
 	[0] = {
 		.start = SDIO3_BASE_ADDR,
@@ -1061,7 +1061,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	},
 #endif
 
-#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined (CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_LUCAS)
+#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined (CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 	{ /* SDIO3 */
 		.id = 2,
 		.data_pullup = 0,
@@ -1108,7 +1108,7 @@ static struct platform_device board_sdio3_device = {
 	.resource = board_sdio3_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
-#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_LUCAS)
+#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 	.resource = board_sdio3_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
@@ -1178,7 +1178,7 @@ static struct platform_device bcm_backlight_devices = {
 #if defined(CONFIG_MACH_RHEA_RAY) || defined(CONFIG_MACH_RHEA_RAY_EDN1X) \
 	|| defined(CONFIG_MACH_RHEA_FARADAY_EB10) \
 	|| defined(CONFIG_MACH_RHEA_DALTON) || defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) \
-	|| defined(CONFIG_MACH_RHEA_RAY_DEMO) || defined(CONFIG_MACH_RHEA_LUCAS)
+	|| defined(CONFIG_MACH_RHEA_RAY_DEMO) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X
@@ -1959,7 +1959,7 @@ void __init board_map_io(void)
 
 late_initcall(rhea_ray_add_lateInit_devices);
 
-MACHINE_START(RHEA, "rhea_ss_lucas")
+MACHINE_START(RHEA, "rhea_ss")
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
