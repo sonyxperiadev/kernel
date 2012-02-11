@@ -1043,8 +1043,6 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	p = &(AudParmP()[audio_mode + app * AUDIO_MODE_NUMBER]);
 #endif
 
-	log(1, "%s mode=%d, app=%d\n\r", __func__, audio_mode, app);
-
 	/* Load the mic gains from sysparm. */
 
 	/***
@@ -1059,7 +1057,10 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	***/
 
 	gainTemp1 = p->mic_pga; /* Q13p2 */
-	csl_caph_audioh_setMicPga_by_mB(((int)gainTemp1) * 25);
+	csl_caph_audioh_setMicPga_by_mB(gainTemp1 * 25);
+
+	log(1, "%s mode=%d, app=%d mic_gain %d", __func__, audio_mode,
+ 		app, gainTemp1*25);
 
 	gainTemp1 = p->amic_dga_coarse_gain;	/* Q13p2 dB */
 	gainTemp2 = p->amic_dga_fine_gain;	/* Q13p2 dB */

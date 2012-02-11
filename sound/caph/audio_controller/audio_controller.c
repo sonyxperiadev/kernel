@@ -2160,89 +2160,37 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	};
 	UInt32 *coeff = &sidetoneCoeff[0];
-	CSL_CAPH_DEVICE_e source, sink;
-	static CSL_CAPH_DEVICE_e audSpkr;
-	CSL_CAPH_PathID pathID;
+	CSL_CAPH_DEVICE_e src_dev = CSL_CAPH_DEV_ANALOG_MIC;
+	CSL_CAPH_DEVICE_e sink_dev = CSL_CAPH_DEV_EP;
+	static CSL_CAPH_DEVICE_e hw_lpbk_audSpkr;
+	CSL_CAPH_PathID pathID = 0;
 	CSL_CAPH_HWCTRL_CONFIG_t hwCtrlConfig;
 	AudioMode_t audio_mode = AUDIO_MODE_HANDSET;
-	CSL_CAPH_DEVICE_e src_dev, sink_dev;
 
 	log(1, "AUDCTRL_SetAudioLoopback: mic = %d, speaker = %d, mode = %d\n",
 			mic, speaker, sidetone_mode);
 
 	memset(&hwCtrlConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
-	source = sink = CSL_CAPH_DEV_NONE;
-	audSpkr = CSL_CAPH_DEV_NONE;
-	pathID = 0;
-	switch (mic) {
-	case AUDIO_SOURCE_ANALOG_MAIN:
-		source = CSL_CAPH_DEV_ANALOG_MIC;
-		break;
-	case AUDIO_SOURCE_ANALOG_AUX:
-		source = CSL_CAPH_DEV_HS_MIC;
-		break;
-	case AUDIO_SOURCE_SPEECH_DIGI:
-		source = CSL_CAPH_DEV_DIGI_MIC;
-		break;
-	case AUDIO_SOURCE_DIGI1:
-		source = CSL_CAPH_DEV_DIGI_MIC_L;
-		break;
-	case AUDIO_SOURCE_DIGI2:
-		source = CSL_CAPH_DEV_DIGI_MIC_R;
-		break;
-	case AUDIO_SOURCE_DIGI3:
-		source = CSL_CAPH_DEV_EANC_DIGI_MIC_L;
-		break;
-	case AUDIO_SOURCE_DIGI4:
-		source = CSL_CAPH_DEV_EANC_DIGI_MIC_R;
-		break;
-	case AUDIO_SOURCE_I2S:
-		source = CSL_CAPH_DEV_FM_RADIO;
-		break;
-	case AUDIO_SOURCE_BTM:
-		source = CSL_CAPH_DEV_BT_MIC;
-		break;
-	default:
-		source = CSL_CAPH_DEV_ANALOG_MIC;
-		log(1, "AUDCTRL_SetAudioLoopback: mic = %d\n", mic);
-		break;
-	}
+
+	src_dev = getDeviceFromSrc(mic);
 
 	switch (speaker) {
 	case AUDIO_SINK_HANDSET:
-		sink = CSL_CAPH_DEV_EP;
-		audSpkr = CSL_CAPH_DEV_EP;
-		audio_mode = AUDIO_MODE_HANDSET;
+		hw_lpbk_audSpkr = CSL_CAPH_DEV_EP;
 		break;
 	case AUDIO_SINK_HEADSET:
-		sink = CSL_CAPH_DEV_HS;
-		audSpkr = CSL_CAPH_DEV_HS;
-		audio_mode = AUDIO_MODE_HEADSET;
+		hw_lpbk_audSpkr = CSL_CAPH_DEV_HS;
 		break;
 	case AUDIO_SINK_LOUDSPK:
-		sink = CSL_CAPH_DEV_IHF;
-		audSpkr = CSL_CAPH_DEV_IHF;
-		audio_mode = AUDIO_MODE_SPEAKERPHONE;
-		break;
-	case AUDIO_SINK_I2S:
-		sink = CSL_CAPH_DEV_FM_TX;
-		/* No audio mode available for this case.
-		 for now just use AUDIO_MODE_HANDSFREE
-		*/
-		audio_mode = AUDIO_MODE_HANDSFREE;
-		break;
-	case AUDIO_SINK_BTM:
-		sink = CSL_CAPH_DEV_BT_SPKR;
-		audio_mode = AUDIO_MODE_BLUETOOTH;
+		hw_lpbk_audSpkr = CSL_CAPH_DEV_IHF;
 		break;
 	default:
-		audSpkr = CSL_CAPH_DEV_EP;
-		sink = CSL_CAPH_DEV_EP;
-		audio_mode = AUDIO_MODE_HANDSET;
-		log(1, "AUDCTRL_SetAudioLoopback: speaker = %d\n",
-				speaker);
+		hw_lpbk_audSpkr = CSL_CAPH_DEV_EP;
 		break;
 	}
+
+	sink_dev = getDeviceFromSink(speaker);
+	audio_mode = GetAudioModeBySink(speaker);
 
 	audio_control_generic(AUDDRV_CPCMD_PassAudioMode, (UInt32) audio_mode,
 					0, 0, 0, 0);
@@ -2254,17 +2202,17 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		SaveAudioApp(AUDIO_APP_LOOPBACK);
 
 		/* For I2S/PCM loopback */
-		if (((source == CSL_CAPH_DEV_FM_RADIO)
-		     && (sink == CSL_CAPH_DEV_FM_TX))
-		    || ((source == CSL_CAPH_DEV_BT_MIC)
-			&& (sink == CSL_CAPH_DEV_BT_SPKR))) {
+		if (((src_dev == CSL_CAPH_DEV_FM_RADIO)
+		     && (sink_dev == CSL_CAPH_DEV_FM_TX))
+		    || ((src_dev == CSL_CAPH_DEV_BT_MIC)
+			&& (sink_dev == CSL_CAPH_DEV_BT_SPKR))) {
 			/* I2S hard coded to use ssp3, BT PCM to use ssp4.
 			This could be changed later */
 			AUDIO_SOURCE_Enum_t srcTemp = AUDIO_SOURCE_I2S;
 			AUDIO_SINK_Enum_t sinkTemp = AUDIO_SINK_I2S;
-			if (source == CSL_CAPH_DEV_BT_MIC)
+			if (src_dev == CSL_CAPH_DEV_BT_MIC)
 				srcTemp = AUDIO_SOURCE_BTM;
-			if (sink == CSL_CAPH_DEV_BT_SPKR)
+			if (sink_dev == CSL_CAPH_DEV_BT_SPKR)
 				sinkTemp = AUDIO_SINK_BTM;
 
 			AUDCTRL_EnablePlay(srcTemp, speaker, AUDIO_CHANNEL_MONO,
@@ -2275,7 +2223,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		}
 #if 0
 /*removed this to make fm radio work using xpft script */
-		if (source == CSL_CAPH_DEV_FM_RADIO) {
+		if (src_dev == CSL_CAPH_DEV_FM_RADIO) {
 			AUDCTRL_EnableRecord(audRecHw, audPlayHw, mic,
 					     AUDIO_CHANNEL_STEREO, 48000);
 			if ((speaker == AUDIO_SINK_LOUDSPK)
@@ -2292,14 +2240,14 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		}
 		/* enable HW path */
 		hwCtrlConfig.streamID = CSL_CAPH_STREAM_NONE;
-		hwCtrlConfig.source = source;
-		hwCtrlConfig.sink = sink;
+		hwCtrlConfig.source = src_dev;
+		hwCtrlConfig.sink = sink_dev;
 		hwCtrlConfig.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 		hwCtrlConfig.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
-		if (source == CSL_CAPH_DEV_BT_MIC)
+		if (src_dev == CSL_CAPH_DEV_BT_MIC)
 			hwCtrlConfig.src_sampleRate =
 			 AUDIO_SAMPLING_RATE_8000; /*how about WB?*/
-		if (sink == CSL_CAPH_DEV_BT_SPKR)
+		if (sink_dev == CSL_CAPH_DEV_BT_SPKR)
 			hwCtrlConfig.snk_sampleRate =
 			 AUDIO_SAMPLING_RATE_8000; /*how about WB?*/
 
@@ -2317,7 +2265,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 			/*sidetone_mode = 1 to use sidetone path*/
 			/*Enable the sidetone path.*/
 			/*first step: enable sidetone*/
-			csl_caph_hwctrl_EnableSidetone(sink);
+			csl_caph_hwctrl_EnableSidetone(sink_dev);
 			/*second step: set filter and gain*/
 			csl_caph_hwctrl_ConfigSidetoneFilter(coeff);
 			csl_caph_hwctrl_SetSidetoneGain(0);
@@ -2336,7 +2284,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		/*sets all HW gains.
 		SetAudioMode is for telephony.
 		But is SetAudioMode_ForMusicPlayback enough
-		for both source and sink?
+		for both src_dev and sink_dev?
 
 		SetAudioMode( audio_mode );
 		this function also sets all HW gains.
@@ -2351,13 +2299,13 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		    || (speaker == AUDIO_SINK_HEADSET))
 			powerOnExternalAmp(speaker, AudioUseExtSpkr, TRUE);
 
-		if (((source == CSL_CAPH_DEV_ANALOG_MIC)
-		     || (source == CSL_CAPH_DEV_HS_MIC))
-		    && ((sink == CSL_CAPH_DEV_EP)
-			|| (sink == CSL_CAPH_DEV_IHF)
-			|| (sink == CSL_CAPH_DEV_HS))) {
+		if (((src_dev == CSL_CAPH_DEV_ANALOG_MIC)
+		     || (src_dev == CSL_CAPH_DEV_HS_MIC))
+		    && ((sink_dev == CSL_CAPH_DEV_EP)
+			|| (sink_dev == CSL_CAPH_DEV_IHF)
+			|| (sink_dev == CSL_CAPH_DEV_HS))) {
 #ifdef HW_ANALOG_LOOPBACK
-			csl_caph_audio_loopback_control(audSpkr, 0,
+			csl_caph_audio_loopback_control(hw_lpbk_audSpkr, 0,
 							enable_lpbk);
 #endif
 		}
@@ -2369,16 +2317,16 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		RemoveAudioApp(AUDIO_APP_LOOPBACK);
 
 		/* Disable I2S/PCM loopback */
-		if (((source == CSL_CAPH_DEV_FM_RADIO)
-		     && (sink == CSL_CAPH_DEV_FM_TX))
-		    || ((source == CSL_CAPH_DEV_BT_MIC)
-			&& (sink == CSL_CAPH_DEV_BT_SPKR))) {
+		if (((src_dev == CSL_CAPH_DEV_FM_RADIO)
+		     && (sink_dev == CSL_CAPH_DEV_FM_TX))
+		    || ((src_dev == CSL_CAPH_DEV_BT_MIC)
+			&& (sink_dev == CSL_CAPH_DEV_BT_SPKR))) {
 			/* I2S configured to use ssp3, BT PCM to use ssp4. */
 			AUDIO_SOURCE_Enum_t srcTemp = AUDIO_SOURCE_I2S;
 			AUDIO_SINK_Enum_t sinkTemp = AUDIO_SINK_I2S;
-			if (source == CSL_CAPH_DEV_BT_MIC)
+			if (src_dev == CSL_CAPH_DEV_BT_MIC)
 				srcTemp = AUDIO_SOURCE_BTM;
-			if (sink == CSL_CAPH_DEV_BT_SPKR)
+			if (sink_dev == CSL_CAPH_DEV_BT_SPKR)
 				sinkTemp = AUDIO_SINK_BTM;
 
 			AUDCTRL_DisablePlay(srcTemp, speaker, 0);
@@ -2387,7 +2335,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		}
 #if 0
 /*removed this to make fm radio work using xpft script*/
-		if (source == CSL_CAPH_DEV_FM_RADIO) {
+		if (src_dev == CSL_CAPH_DEV_FM_RADIO) {
 			AUDCTRL_DisableRecord(audRecHw, audPlayHw, mic);
 			if ((speaker == AUDIO_SINK_LOUDSPK)
 			    || (speaker == AUDIO_SINK_HEADSET))
@@ -2414,20 +2362,20 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		}
 
 		hwCtrlConfig.pathID = pathID;
-		if (((source == CSL_CAPH_DEV_ANALOG_MIC)
-		     || (source == CSL_CAPH_DEV_HS_MIC))
-		    && ((sink == CSL_CAPH_DEV_EP)
-			|| (sink == CSL_CAPH_DEV_IHF)
-			|| (sink == CSL_CAPH_DEV_HS))) {
+		if (((src_dev == CSL_CAPH_DEV_ANALOG_MIC)
+		     || (src_dev == CSL_CAPH_DEV_HS_MIC))
+		    && ((sink_dev == CSL_CAPH_DEV_EP)
+			|| (sink_dev == CSL_CAPH_DEV_IHF)
+			|| (sink_dev == CSL_CAPH_DEV_HS))) {
 #ifdef HW_ANALOG_LOOPBACK
-			csl_caph_audio_loopback_control(audSpkr, 0,
+			csl_caph_audio_loopback_control(hw_lpbk_audSpkr, 0,
 							enable_lpbk);
 #endif
 		}
 /*#ifdef HW_SIDETONE_LOOPBACK*/
 		/*Disable Sidetone path.*/
 		if (sidetone_mode)
-			csl_caph_hwctrl_DisableSidetone(sink);
+			csl_caph_hwctrl_DisableSidetone(sink_dev);
 /*#endif*/
 
 		/*clocks are disabled here, so no register access after this.*/

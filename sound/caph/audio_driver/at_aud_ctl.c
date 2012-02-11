@@ -216,7 +216,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 #if defined(USE_NEW_AUDIO_PARAM)
 		app = Params[1];
 		mode = Params[2];
-		SetUserAudioApp(app); /* for PCG to set new app */
+
 		AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 		pCurSel[0] = pChip->streamCtl[
 			CTL_STREAM_PANEL_VOICECALL - 1].iLineSelect[0];
@@ -230,15 +230,16 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].
 		    iLineSelect[1] = spk;
 
+		SetUserAudioApp(app); /* for PCG to set new app */
 		if (app <= AUDIO_APP_VOICE_CALL_WB) {
 			AUDCTRL_SetTelephonyMicSpkr(mic, spk);
 			SetAudioMode(mode, app);
-		} else {
+		}
+		if (app == AUDIO_APP_MUSIC)
 			if (AUDCTRL_InVoiceCall() == FALSE)
 				AUDCTRL_SwitchPlaySpk_forTuning(mode);
-		}
-		/*if app > MUSIC
-			SetAudioMode(mode, app);*/
+		if (app > AUDIO_APP_MUSIC)
+			SetAudioMode(mode, app);
 
 		DEBUG("%s mic %d spk %d mode %ld app %ld\n",
 				__func__, mic, spk, Params[2],
