@@ -24,9 +24,6 @@
 /**
  *	MTT frame constants
  **/
-#define MTT_HEADER_SIZE		13
-#define MTT_PAYLOAD_CS_SIZE	2
-
 /* message type SDL (high bit indicates AP) */
 static const unsigned short MTTLOG_MsgTypeSDL = 0x8001;
 /* payload is ASCII string (high bit indicates AP) */
@@ -41,6 +38,7 @@ static const int MTTLOG_FrameLenByte0 = 10;
 static const int MTTLOG_FrameLenByte1 = 11;
 
 static unsigned char cp_crash_frame_counter;
+static unsigned char ap_crash_frame_counter;
 
 static struct BMCLOG_Error_t log_error;
 static unsigned char is_log_err_once;
@@ -220,6 +218,56 @@ int BCMMTT_FrameString(char *p_dest, const char *p_src, int buflen)
 	*pSbuf++ = n & 0xFF;
 
 	return MTTLOG_NumFrameBytes + slen;
+}
+
+/**
+ *	Frame ap crash string for output to MTT.
+ *
+ *	@param	p_header(out)	pointer to destination header buffer
+ *	@param	p_trailer(out)	pointer to destination trailer buffer
+ *	@param	p_src	(in)	pointer to source buffer
+ *	@return	int		string length, or 0 on error
+ **/
+int BCMMTT_FrameString_nocopy(char *p_header, char *p_trailer,
+			      const char *p_src)
+{
+	int slen = MTTLOG_StringLen(p_src);
+	int n;
+	char *pSbuf;
+	unsigned long systime;
+
+	if (slen == 0)
+		return 0;
+
+	systime = MTTLOG_GetTime();
+
+	pSbuf = p_header;
+
+	*pSbuf++ = MTTLOG_FrameSync0;
+	*pSbuf++ = MTTLOG_FrameSync1;
+	*pSbuf++ = ap_crash_frame_counter++;
+	*pSbuf++ = MTTLOG_MttVersion;
+
+	*pSbuf++ = (systime >> 24);
+	*pSbuf++ = (systime >> 16) & 0xff;
+	*pSbuf++ = (systime >> 8) & 0xff;
+	*pSbuf++ = (systime) & 0xff;
+
+	*pSbuf++ = MTTLOG_MsgTypeASCII >> 8;
+	*pSbuf++ = MTTLOG_MsgTypeASCII & 0xFF;
+
+	*pSbuf++ = slen >> 8;
+	*pSbuf++ = slen & 0xFF;
+
+	n = pSbuf - p_header;
+	*pSbuf++ = MTTLOG_Checksum16((unsigned char *)p_header, n);
+
+	n = MTTLOG_Checksum16((unsigned char *)(p_src), slen);
+
+	*p_trailer++ = n >> 8;
+	*p_trailer++ = n & 0xFF;
+
+	return slen;
 }
 
 /**

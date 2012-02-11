@@ -233,6 +233,50 @@ static void WriteToLogDev_STM(void)
 	}
 }
 
+static void WriteToLogDev_CUSTOM(void)
+{
+	u32 nFifo;
+
+	int nWrite;
+
+	nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
+
+	if (nFifo > 0) {
+		if (nFifo < BCMLOG_FifoGetDataSize(&g_fifo)) {
+			nWrite =
+			    BCMLOG_CallHandler(BCMLOG_CUSTOM_RUN_LOG,
+					       BCMLOG_FifoGetData(&g_fifo),
+					       nFifo, BCMLOG_CUSTOM_START);
+			BCMLOG_FifoRemove(&g_fifo, nWrite);
+			nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
+
+			while ((nFifo < BCMLOG_FifoGetDataSize(&g_fifo))
+			       && (nWrite)) {
+				nWrite =
+				    BCMLOG_CallHandler(BCMLOG_CUSTOM_RUN_LOG,
+						       BCMLOG_FifoGetData
+						       (&g_fifo), nFifo,
+						       BCMLOG_CUSTOM_DATA);
+				BCMLOG_FifoRemove(&g_fifo, nWrite);
+				nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
+			}
+
+			nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
+			nWrite =
+			    BCMLOG_CallHandler(BCMLOG_CUSTOM_RUN_LOG,
+					       BCMLOG_FifoGetData(&g_fifo),
+					       nFifo, BCMLOG_CUSTOM_END);
+			BCMLOG_FifoRemove(&g_fifo, nWrite);
+		} else {
+			nWrite =
+			    BCMLOG_CallHandler(BCMLOG_CUSTOM_RUN_LOG,
+					       BCMLOG_FifoGetData(&g_fifo),
+					       nFifo, BCMLOG_CUSTOM_COMPLETE);
+			BCMLOG_FifoRemove(&g_fifo, nWrite);
+		}
+	}
+}
+
 static void WriteToLogDev_RNDIS(void)
 {
 #ifdef CONFIG_BRCM_NETCONSOLE
@@ -433,6 +477,12 @@ static void WriteToLogDev(struct work_struct *work)
 	case BCMLOG_OUTDEV_STM:
 		irql = AcquireOutputLock();
 		WriteToLogDev_STM();
+		ReleaseOutputLock(irql);
+		break;
+
+	case BCMLOG_OUTDEV_CUSTOM:
+		irql = AcquireOutputLock();
+		WriteToLogDev_CUSTOM();
 		ReleaseOutputLock(irql);
 		break;
 

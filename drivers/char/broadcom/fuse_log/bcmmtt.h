@@ -46,6 +46,9 @@ extern "C" {
 
 #define BCMLOG_LOGLOSS_SIZE	128
 
+#define MTT_HEADER_SIZE         13
+#define MTT_PAYLOAD_CS_SIZE     2
+
 /**
  *  for tracking log loss
  **/
@@ -89,6 +92,17 @@ extern "C" {
  *	@return	int		frame length, or -1 on error
  **/
 	int BCMMTT_FrameString(char *p_dest, const char *p_src, int buflen);
+
+/**
+ *	Frame ap crash string for output to MTT.
+ *
+ *	@param	p_header(out)	pointer to destination header buffer
+ *	@param	p_trailer(out)	pointer to destination trailer buffer
+ *	@param	p_src	(in)	pointer to source buffer
+ *	@return	int		string length, or 0 on error
+ **/
+	int BCMMTT_FrameString_nocopy(char *p_header, char *p_trailer,
+				      const char *p_src);
 
 /**
  *	compute 16-bit checksum of 8-bit byte array

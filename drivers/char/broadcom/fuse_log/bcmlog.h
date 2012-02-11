@@ -275,7 +275,23 @@ extern "C" {
 #define BCMLOG_OUTDEV_RNDIS		3	/* MTT/RNDIS */
 #define BCMLOG_OUTDEV_UART		4	/* UART */
 #define BCMLOG_OUTDEV_ACM		5	/* ACM/OBEX */
-#define BCMLOG_OUTDEV_STM               6	/* STM */
+#define BCMLOG_OUTDEV_STM		6	/* STM */
+#define BCMLOG_OUTDEV_CUSTOM		7	/* custom handler */
+
+/**
+ *	Custom Log type
+ **/
+#define BCMLOG_CUSTOM_RUN_LOG		0
+#define BCMLOG_CUSTOM_AP_CRASH_LOG	1
+#define BCMLOG_CUSTOM_CP_CRASH_LOG	2
+
+/**
+ *	Custom Logging payload type
+ **/
+#define BCMLOG_CUSTOM_COMPLETE		0	/* complete message */
+#define BCMLOG_CUSTOM_START		1	/* partial message start */
+#define BCMLOG_CUSTOM_DATA		2	/* partial message data */
+#define BCMLOG_CUSTOM_END		3	/* partial message end */
 
 /**
  *	Get runtime log device
@@ -290,6 +306,11 @@ extern "C" {
 	extern int bcmlog_mtt_on;
 	extern unsigned short bcmlog_log_ulogging_id;
 	extern unsigned long BCMLOG_GetFreeSize(void);
+	extern int BCMLOG_CallHandler(char log_type, const char *p_src,
+				      unsigned int len, char type);
+	extern int BCMLOG_RegisterHandler(char log_type,
+					  int (*handler) (const char *,
+							  unsigned int, char));
 
 #ifdef __cplusplus
 }

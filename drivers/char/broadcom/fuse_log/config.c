@@ -28,7 +28,7 @@
 /* work queue for reading config file */
 static struct delayed_work g_load_config_wq;
 /* log configuration */
-static BCMLOG_Config_t g_config;
+static struct BCMLOG_Config_t g_config;
 /* procfs file */
 static struct proc_dir_entry *g_proc_dir_entry = { 0 };
 
@@ -93,6 +93,9 @@ static void bld_device_status_str(char *buf, int len, char *label, int device)
 	case BCMLOG_OUTDEV_STM:
 		safe_strncat(buf, "-> STM\n", len);
 		break;
+	case BCMLOG_OUTDEV_CUSTOM:
+		safe_strncat(buf, "-> CUSTOM\n", len);
+		break;
 	default:
 		safe_strncat(buf, "-> ERROR\n", len);
 		break;
@@ -136,6 +139,9 @@ static int proc_read(char *page, char **start, off_t offset, int count,
  *		o - CP crash dump -> STM
  *		p - CP crash dump -> ACM
  *		s -  both BMTT and CP crash dump -> STM
+ *		t -  BMTT logging   -> custom
+ *		u -  APP crash dump -> custom
+ *		v -  CP crash dump -> custom
  **/
 static ssize_t proc_write(struct file *file, const char *buffer,
 			  unsigned long count, void *data)
@@ -166,10 +172,6 @@ static ssize_t proc_write(struct file *file, const char *buffer,
 		case 'h':
 			BCMLOG_SaveConfig(1);
 			break;
-		case 's':
-			g_config.runlog_dev = BCMLOG_OUTDEV_STM;
-			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_STM;
-			break;
 		case 'i':
 			SetConfigDefaults();
 			BCMLOG_SaveConfig(0);
@@ -194,6 +196,22 @@ static ssize_t proc_write(struct file *file, const char *buffer,
 			break;
 		case 'p':
 			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_ACM;
+			break;
+		case 's':
+			g_config.runlog_dev = BCMLOG_OUTDEV_STM;
+			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_STM;
+			break;
+		case 't':
+			if (g_config.runlog_handler)
+				g_config.runlog_dev = BCMLOG_OUTDEV_CUSTOM;
+			break;
+		case 'u':
+			if (g_config.ap_crashlog_handler)
+				g_config.ap_crashlog_dev = BCMLOG_OUTDEV_CUSTOM;
+			break;
+		case 'v':
+			if (g_config.cp_crashlog_handler)
+				g_config.cp_crashlog_dev = BCMLOG_OUTDEV_CUSTOM;
 			break;
 
 		}
@@ -221,9 +239,9 @@ static int LoadConfigFromPersistentStorage(void)
 	}
 
 	else {
-		if (sizeof(BCMLOG_Config_t) !=
+		if (sizeof(struct BCMLOG_Config_t) !=
 		    config_file->f_op->read(config_file, (void *)&g_config,
-					    sizeof(BCMLOG_Config_t),
+					    sizeof(struct BCMLOG_Config_t),
 					    &config_file->f_pos)) {
 			rc = -1;
 		}
@@ -285,15 +303,16 @@ int BCMLOG_SaveConfig(int saveFlag)
 
 	else {
 		if (saveFlag)
-			if (sizeof(BCMLOG_Config_t) !=
+			if (sizeof(struct BCMLOG_Config_t) !=
 			    config_file->f_op->write(config_file,
 						     (void *)&g_config,
-						     sizeof(BCMLOG_Config_t),
+						     sizeof(struct
+							    BCMLOG_Config_t),
 						     &config_file->f_pos))
 				rc = -1;
 
 		/* if !saveFlag the file is truncated to zero bytes,
-		* invalidating the configuration */
+		 * invalidating the configuration */
 		filp_close(config_file, NULL);
 	}
 
@@ -407,4 +426,61 @@ int BCMLOG_IsUSBLog(void)
 		return 1;
 	else
 		return 0;
+}
+
+/**
+ *	Register custom log handler
+ **/
+int BCMLOG_RegisterHandler(char log_type,
+			   int (*handler) (const char *, unsigned int, char))
+{
+	int rc = 0;
+
+	switch (log_type) {
+	case BCMLOG_CUSTOM_RUN_LOG:
+		g_config.runlog_handler = handler;
+		break;
+	case BCMLOG_CUSTOM_AP_CRASH_LOG:
+		g_config.ap_crashlog_handler = handler;
+		break;
+	case BCMLOG_CUSTOM_CP_CRASH_LOG:
+		g_config.cp_crashlog_handler = handler;
+		break;
+	default:
+		rc = -1;
+		break;
+	}
+
+	return rc;
+}
+EXPORT_SYMBOL(BCMLOG_RegisterHandler);
+
+/**
+ *	Call registered custom log handler
+ **/
+int BCMLOG_CallHandler(char log_type, const char *p_src, unsigned int len,
+		       char payload_type)
+{
+	int rc = 0;
+
+	switch (log_type) {
+	case BCMLOG_CUSTOM_RUN_LOG:
+		if (g_config.runlog_handler)
+			rc = g_config.runlog_handler(p_src, len, payload_type);
+		break;
+	case BCMLOG_CUSTOM_AP_CRASH_LOG:
+		if (g_config.ap_crashlog_handler)
+			rc = g_config.ap_crashlog_handler(p_src, len,
+							  payload_type);
+		break;
+	case BCMLOG_CUSTOM_CP_CRASH_LOG:
+		if (g_config.cp_crashlog_handler)
+			rc = g_config.cp_crashlog_handler(p_src, len,
+							  payload_type);
+		break;
+	default:
+		break;
+	}
+
+	return rc;
 }
