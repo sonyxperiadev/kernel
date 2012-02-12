@@ -149,4 +149,5 @@ enum {
 
 int rhea_pwr_mgr_init(void);
 int rhea_pwr_mgr_init_sequencer(void);
+int pwr_mgr_event_trg_enable(int event_id, int event_trg_type);
 #endif /*__RHEA_PWR_MNGR_H__*/

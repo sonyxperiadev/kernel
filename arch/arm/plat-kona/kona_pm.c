@@ -263,3 +263,19 @@ int __init kona_pm_init()
 	return 0;
 }
 
+/*
+ * Modify the platform_suspend-pos->enter callback with
+ * the address of the function passed in to enable force
+ * sleep of AP:
+ *
+ * 1. Debug interface in sysfs is used to trigger system
+ *    suspend.
+ * 2. Once all the device suspend callbacks complete, control
+ *    is transferred to the API, registered through
+ *    this function. This API can clear and disable appropriate
+ *    events and execute WFI to force AP to sleep.
+ */
+void kona_pm_reg_pm_enter_handler(int (*enter)(suspend_state_t state))
+{
+	kona_pm_ops.enter = enter;
+}

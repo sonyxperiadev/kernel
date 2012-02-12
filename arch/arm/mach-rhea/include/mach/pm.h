@@ -1,6 +1,10 @@
 #ifndef __RHEA_PM_H__
 #define __RHEA_PM_H__
 
+#ifndef __ASSEMBLY__
+#include <linux/suspend.h>
+#endif
+
 #define KONA_MACH_MAX_IDLE_STATE 1
 
 /* Set this to 0 to disable dormant mode tracing code */
@@ -34,6 +38,9 @@ extern u32 dormant_start(void);
 
 /* Variables exported by asm code */
 extern struct dormant_gpio_data dormant_gpio_data;
+
+extern int rhea_force_sleep(suspend_state_t state);
+extern void request_suspend_state(suspend_state_t state);
 extern void instrument_dormant_entry(void);
 extern void instrument_dormant_exit(void);
 #endif /* __ASSEMBLY__ */

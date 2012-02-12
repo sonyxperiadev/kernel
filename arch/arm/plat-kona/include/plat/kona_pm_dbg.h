@@ -11,6 +11,8 @@
 #ifndef _KONA_PM_DBG_H_
 #define _KONA_PM_DBG_H_
 
+#include <linux/suspend.h>
+
 /* Types of snapshot parms */
 enum {
 	SNAPSHOT_SIMPLE,
@@ -65,6 +67,7 @@ struct snapshot {
 extern void snapshot_get(void);
 extern void snapshot_show(void);
 extern void snapshot_table_register(struct snapshot *table, size_t len);
+extern void kona_pm_reg_pm_enter_handler(int (*enter)(suspend_state_t state));
 
 /* Callbacks into machine code for instrumentation */
 extern void instrument_idle_entry(void);

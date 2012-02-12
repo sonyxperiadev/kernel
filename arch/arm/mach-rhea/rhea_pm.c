@@ -55,6 +55,7 @@ static u32 force_retention = 0;
 static u32 pm_debug = 2;
 /* Set this to 1 to enable dormant from boot */
 static u32 dormant_enable = 1;
+static int force_sleep;
 
 #define CHIPREG_PERIPH_SPARE_CONTROL2    \
 	(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET)
@@ -363,6 +364,9 @@ static void config_wakeup_interrupts(void)
 {
 	/*all enabled interrupts can trigger COMMON_INT_TO_AC_EVENT*/
 
+	if (force_sleep)
+		return;
+
 	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET),
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET0_OFFSET);
 	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET2_OFFSET),
@@ -446,6 +450,38 @@ static int enter_dormant_state(struct kona_idle_state *state)
 	}
 #endif /* CONFIG_RHEA_DORMANT_MODE */
 	return 0;
+}
+
+int rhea_force_sleep(suspend_state_t state)
+{
+	struct kona_idle_state s;
+	int i;
+
+	pr_info("Forcing AP sleep\n");
+
+	memset(&s, 0, sizeof(s));
+	s.state = RHEA_STATE_C2;
+
+	/* No more scheduling out */
+	local_irq_disable();
+	local_fiq_disable();
+
+	force_sleep = 1;
+
+	while (1) {
+		for (i = 0; i < PWR_MGR_NUM_EVENTS; i++) {
+			int test = 0;
+
+			test |= (i == SOFTWARE_0_EVENT) ? 1 : 0;
+			test |= (i == SOFTWARE_2_EVENT) ? 1 : 0;
+			test |= (i == VREQ_NONZERO_PI_MODEM_EVENT) ? 1 : 0;
+
+			if (test == 0)
+				pwr_mgr_event_trg_enable(i, 0);
+		}
+
+		enter_idle_state(&s);
+	}
 }
 
 int enter_idle_state(struct kona_idle_state *state)
