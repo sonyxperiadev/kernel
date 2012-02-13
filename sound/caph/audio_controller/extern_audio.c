@@ -387,13 +387,15 @@ void extern_hs_off(void)
 ****************************************************************************/
 void extern_ihf_on(void)
 {
+#if defined(CONFIG_IHF_EXT_AMPLIFIER)
+	audio_gpio_output(GPIO_IHF_EXT_AMP, 1);
+#else
 	/*enable the audio PLL before power ON */
 	AUDIO_PMU_INIT();
 
 	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
 	AUDIO_PMU_IHF_POWER(1);
-	audio_gpio_output(GPIO_IHF_EXT_AMP, 1);
-
+#endif
 	ihf_IsOn = 1;
 }
 
@@ -406,15 +408,17 @@ void extern_ihf_on(void)
 ****************************************************************************/
 void extern_ihf_off(void)
 {
+	ihf_IsOn = 0;
+#if defined(CONFIG_IHF_EXT_AMPLIFIER)
+	audio_gpio_output(GPIO_IHF_EXT_AMP, 0);
+#else
 	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
 	AUDIO_PMU_IHF_POWER(0);
-	audio_gpio_output(GPIO_IHF_EXT_AMP, 0);
-
-	ihf_IsOn = 0;
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)
 		/*disable the audio PLL after power OFF*/
 		AUDIO_PMU_DEINIT();
+#endif
 }
 
 
