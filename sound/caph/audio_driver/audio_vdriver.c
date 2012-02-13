@@ -335,7 +335,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 
 /* The delay is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done
  since it is a command via CP.*/
-		mdelay(1);
+		usleep_range(1000, 10000);
 		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
 			    (TRUE, FALSE, FALSE);)
 	} else {
@@ -354,7 +354,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 
 /* The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done
  since it is a command via CP.*/
-		mdelay(1);
+		usleep_range(1000, 10000);
 	}
 
 
@@ -364,7 +364,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE,
 			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
 #endif
-	mdelay(40);
+	msleep(40);
 
 #if defined(ENABLE_DMA_VOICE)
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0);
@@ -460,7 +460,7 @@ void AUDDRV_Telephony_RateChange(AudioMode_t mode,
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
 
-	mdelay(40);
+	msleep(40);
 
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0);
 /*	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
@@ -591,7 +591,7 @@ void AUDDRV_Telephony_Deinit(void)
 
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
 
-		mdelay(3);	/*make sure audio is off */
+		usleep_range(3000, 10000);	/*make sure audio is off */
 
 		AUDDRV_Telephony_DeinitHW();
 	}
@@ -625,7 +625,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 	log(1, "%s mixer %d, sample_rate %u",
 		__func__, sink, sample_rate);
 
-	mdelay(5);
+	usleep_range(5000, 10000);
 	/* sometimes BBC video has no audio.
 	   This delay may help the mixer filter and mixer gain loading. */
 	currVoiceSpkr = sink;
@@ -1060,7 +1060,7 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	csl_caph_audioh_setMicPga_by_mB(gainTemp1 * 25);
 
 	log(1, "%s mode=%d, app=%d mic_gain %d", __func__, audio_mode,
- 		app, gainTemp1*25);
+		app, gainTemp1*25);
 
 	gainTemp1 = p->amic_dga_coarse_gain;	/* Q13p2 dB */
 	gainTemp2 = p->amic_dga_fine_gain;	/* Q13p2 dB */

@@ -192,7 +192,6 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		loopback_status = 0;
 		AUDCTRL_SetAudioLoopback(FALSE, loopback_api_input,
 			loopback_api_output, sidetone_mode);
-		/* mdelay(100); */
 		DEBUG("%s dis lpback: src %d sink %d sidetone %d\n",
 				__func__, loopback_api_input,
 			loopback_api_output, sidetone_mode);
@@ -1100,6 +1099,11 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				size = Params[2] >> 2;
 
 			phy_addr = Params[1];
+
+			if (!phy_addr) {
+				pr_err("invalid addr 0\n");
+				return 0;
+			}
 
 			addr = ioremap_nocache(phy_addr, sizeof(u32));
 			if (!addr) {
