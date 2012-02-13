@@ -683,29 +683,6 @@ void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute)
 	}
 }
 
-/*********************************************************************
-*      Get current (voice call) audio mode
-*      @return         mode            (voice call) audio mode
-**********************************************************************/
-AudioMode_t GetAudioMode(void)
-{
-	log(1, "GetAudioMode() audio_mode=%d", currAudioMode);
-	return currAudioMode;
-}
-
-/*********************************************************************
-*      Save audio mode before call SaveAudioMode( )
-*      @param          mode            (voice call) audio mode
-*      @param          app             (voice call) audio app
-*      @return         none
-**********************************************************************/
-void SaveAudioMode(AudioMode_t audio_mode)
-{
-	log(1, "SaveAudioMode: mode = %d\n", audio_mode);
-
-	currAudioMode = audio_mode;	/* update mode */
-}
-
 /****************************************************************************
 *
 * Function Name: GetAudioApp
@@ -737,12 +714,18 @@ void SetAudioApp(AudioApp_t app)
 *
 * Description:   set audio application.
 *
-*  user space code call mixer control to use this function to set APP
+* User space code call mixer control to use this function to set APP.
+*
+* Voice call APP is set by kernel auto-detection code
+*
+* User space code sets other APP (non voice call),
+* what ever APP (except voice call APP) set from
+* user space takes priority over the auto-detect and audto-set APP.
+*
 ****************************************************************************/
 void SetUserAudioApp(AudioApp_t app)
 {
-	Log_DebugPrintf(LOGID_AUDIO,
-			"\n\r\t* AUDCTRL_SetUserAudioApp() old audio_app=%d new app=%d\n\r",
+	log(1, "AUDCTRL_SetUserAudioApp() old audio_app=%d new app=%d",
 			currAudioApp, app);
 
 	if (AUDCTRL_InVoiceCall())
@@ -763,7 +746,9 @@ void SetUserAudioApp(AudioApp_t app)
 *
 * Description:   save audio application.
 *
-*  This function is used for auto-detection of and auto-set APP
+* Kernel code can detect the start of use case and set audio APP.
+* This function is used in kernel code to auto-detect and auto-set APP
+*
 ****************************************************************************/
 void SaveAudioApp(AudioApp_t app)
 {
@@ -794,6 +779,29 @@ void SaveAudioApp(AudioApp_t app)
 void RemoveAudioApp(AudioApp_t audio_app)
 {
 
+}
+
+/*********************************************************************
+*      Get current (voice call) audio mode
+*      @return         mode            (voice call) audio mode
+**********************************************************************/
+AudioMode_t GetAudioMode(void)
+{
+	log(1, "GetAudioMode() audio_mode=%d", currAudioMode);
+	return currAudioMode;
+}
+
+/*********************************************************************
+*      Save audio mode before call SaveAudioMode( )
+*      @param          mode            (voice call) audio mode
+*      @param          app             (voice call) audio app
+*      @return         none
+**********************************************************************/
+void SaveAudioMode(AudioMode_t audio_mode)
+{
+	log(1, "SaveAudioMode: mode = %d\n", audio_mode);
+
+	currAudioMode = audio_mode;	/* update mode */
 }
 
 /*********************************************************************

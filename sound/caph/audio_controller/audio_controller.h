@@ -256,23 +256,6 @@ void AUDCTRL_SetTelephonyMicGain(AUDIO_SOURCE_Enum_t mic,
 void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute);
 
 /**
-*   Get current (voice call) audio mode
-*
-*	@param		none
-*
-*	@return		AudioMode_t		(voice call) audio mode
-*
-****************************************************************************/
-AudioMode_t GetAudioMode(void);
-
-/**
-*  Save audio mode before call SetAudioMode( )
-*	@param		mode		(voice call) audio mode
-*	@return		none
-****************************************************************************/
-void SaveAudioMode(AudioMode_t mode);
-
-/**
 *   Get current (voice call) audio app
 *
 *	@param		none
@@ -307,6 +290,23 @@ void SaveAudioApp(AudioApp_t audio_app);
 *      @return         none
 **********************************************************************/
 void RemoveAudioApp(AudioApp_t audio_app);
+
+/**
+* Get current (voice call) audio mode
+*
+* @param	none
+*
+* @return	AudioMode_t	(voice call) audio mode
+*
+****************************************************************************/
+AudioMode_t GetAudioMode(void);
+
+/**
+* Save audio mode before call SetAudioMode( )
+* @param	mode	(voice call) audio mode
+* @return	none
+****************************************************************************/
+void SaveAudioMode(AudioMode_t mode);
 
 /*********************************************************************
 *   Set (voice call) audio mode

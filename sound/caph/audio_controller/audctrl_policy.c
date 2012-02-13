@@ -1,5 +1,5 @@
 /******************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2010 - 2012 Broadcom Corporation.  All rights reserved.
 
 Unless you and Broadcom execute a separate written software license agreement
 governing use of this software, this software is licensed to you under the
@@ -37,6 +37,13 @@ the GPL, without Broadcom's express prior written consent.
 /* Local typedefs */
 #include "log.h"
 
+struct BRCM_PREVMODEQueue {
+	BRCM_STATE_ENUM state;
+	int audioMode;
+	int audioApp;
+};
+
+
 static int tState = BRCM_STATE_NORMAL;
 static int tPrevState = BRCM_STATE_NORMAL;
 
@@ -61,6 +68,13 @@ static int NextAudioProfile[AUDIO_STATE_NUM][16] /*[AUDIO_APP_NUMBER] */ = {
 	AUDIO_APP_VOIP, AUDIO_APP_VOIP_INCOMM, AUDIO_APP_VT_CALL, \
 	AUDIO_APP_VT_CALL_WB}	/*BRCM_STATE_RECORD*/
 };
+
+static int tTopStatePtr;
+static struct BRCM_PREVMODEQueue tPrevModeQ[AUDIO_STATE_NUM] = {
+	{0, 0, 0},
+	{0, 0, 0},
+	{0, 0, 0},
+	{0, 0, 0} };
 
 /* ---- Data structure  ------------------------------------------------- */
 
@@ -154,3 +168,139 @@ int AUDIO_Policy_Get_Mode(int mode)
 
 	return new_mode;
 }
+
+/******************************************************************************
+*AUDIO_Policy_AddModeToQueue
+* called when the mode & app info of an active state is updated or entering
+* a new state:
+* 1. if the input state exists in the queue(i.e. the input state is already
+* active),
+* update the the mode & app info of the input state in the queue.
+* 2. if entering a new state, add the audio mode&app of the input state into
+* the top of the queue
+*****************************************************************************/
+Result_t AUDIO_Policy_AddModeToQueue(int state, int mode, int app)
+{
+	int i;
+
+	if ((mode >= AUDIO_MODE_INVALID)
+	|| (app >= AUDIO_APP_NUMBER)
+	|| (state >= BRCM_STATE_END))
+		return 0;
+
+	if (tTopStatePtr > BRCM_STATE_END) {
+		log(1, "%s(): error total %d active states.",
+			__func__, tTopStatePtr);
+		tTopStatePtr = 0;
+		for (i = 0; i < BRCM_STATE_END; i++) {
+			tPrevModeQ[i].state = 0;
+			tPrevModeQ[i].audioMode = 0;
+			tPrevModeQ[i].audioApp = 0;
+		}
+	}
+
+	/*total active state is <= BRCM_STATE_END*/
+	for (i = 0; i < tTopStatePtr; i++) {
+		if (tPrevModeQ[i].state == state) {
+			tPrevModeQ[i].audioMode = mode;
+			tPrevModeQ[i].audioApp = app;
+			return 1;
+		}
+	}
+
+	/*the current active state is a new state */
+	if (tTopStatePtr < BRCM_STATE_END) {
+		tPrevModeQ[i].state = state;
+		tPrevModeQ[i].audioMode = mode;
+		tPrevModeQ[i].audioApp = app;
+		tTopStatePtr++;
+	}
+
+	log(1, "%s(): state=%d, tTopStatePtr=%d",
+		__func__, state, tTopStatePtr);
+	log(1, "Queue: (%d %d %d) (%d %d %d) (%d %d %d) (%d %d %d)",
+		tPrevModeQ[0].state, tPrevModeQ[0].audioMode,
+		tPrevModeQ[0].audioApp,
+		tPrevModeQ[1].state, tPrevModeQ[1].audioMode,
+		tPrevModeQ[1].audioApp,
+		tPrevModeQ[2].state, tPrevModeQ[2].audioMode,
+		tPrevModeQ[2].audioApp,
+		tPrevModeQ[3].state, tPrevModeQ[3].audioMode,
+		tPrevModeQ[3].audioApp);
+
+	return 1;
+}
+
+/******************************************************************************
+*AUDIO_Policy_RemoveModeFromQueue
+* called when exiting an active state:
+* 1. remove the mode&app info of input state from the queue,
+* 2. if the queue is not empty after the removal,
+* restore the mode&app info of the active state which is at the top of the
+* queue.
+*****************************************************************************/
+Result_t AUDIO_Policy_RemoveModeFromQueue(
+	int state, int *pMode, int *pApp)
+{
+	int i;
+	Result_t ret = 0;
+
+	if (tTopStatePtr < 1)
+		return 0;
+
+	if (tTopStatePtr > BRCM_STATE_END) {
+		log(1, "%s: error total %d active states.\n",
+			__func__, tTopStatePtr);
+		tTopStatePtr = 0;
+		for (i = 0; i < BRCM_STATE_END; i++) {
+			tPrevModeQ[i].state = 0;
+			tPrevModeQ[i].audioMode = 0;
+			tPrevModeQ[i].audioApp = 0;
+		}
+		return 0;
+	}
+
+	/*locate the ending state from the active state queue*/
+	for (i = tTopStatePtr-1; i >= 0; i--) {
+		if (tPrevModeQ[i].state == state)
+			break;
+	}
+
+	tTopStatePtr--;
+
+	if (i == tTopStatePtr) {
+		tPrevModeQ[i].state = 0;
+		tPrevModeQ[i].audioMode = 0;
+		tPrevModeQ[i].audioApp = 0;
+	} else {
+		for (; i < tTopStatePtr; i++) {
+			tPrevModeQ[i].state = tPrevModeQ[i+1].state;
+			tPrevModeQ[i].audioMode = tPrevModeQ[i+1].audioMode;
+			tPrevModeQ[i].audioApp = tPrevModeQ[i+1].audioApp;
+		}
+		tPrevModeQ[i].state = 0;
+		tPrevModeQ[i].audioMode = 0;
+		tPrevModeQ[i].audioApp = 0;
+	}
+
+	if (tTopStatePtr > 0) {
+		*pMode = tPrevModeQ[tTopStatePtr-1].audioMode;
+		*pApp = tPrevModeQ[tTopStatePtr-1].audioApp;
+		ret = 1;
+	}
+
+	log(1, "%s: state=%d, tTopStatePtr=%d",
+		__func__, state, tTopStatePtr);
+	log(1, "Queue: (%d %d %d) (%d %d %d) (%d %d %d) (%d %d %d)}",
+		tPrevModeQ[0].state, tPrevModeQ[0].audioMode,
+		tPrevModeQ[0].audioApp,
+		tPrevModeQ[1].state, tPrevModeQ[1].audioMode,
+		tPrevModeQ[1].audioApp,
+		tPrevModeQ[2].state, tPrevModeQ[2].audioMode,
+		tPrevModeQ[2].audioApp,
+		tPrevModeQ[3].state, tPrevModeQ[3].audioMode,
+		tPrevModeQ[3].audioApp);
+
+	return ret;
+}
+

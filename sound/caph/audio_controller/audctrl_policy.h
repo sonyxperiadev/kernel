@@ -1,5 +1,5 @@
 /***************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2010 - 2012 Broadcom Corporation.  All rights reserved.
 
 Unless you and Broadcom execute a separate written software license agreement
 governing use of this software, this software is licensed to you under the
@@ -37,5 +37,10 @@ int AUDIO_Policy_GetState(void);
 
 int AUDIO_Policy_Get_Profile(int app);
 int AUDIO_Policy_Get_Mode(int mode);
+
+Result_t AUDIO_Policy_AddModeToQueue(
+	int state, int mode, int app);
+Result_t AUDIO_Policy_RemoveModeFromQueue(
+	int state, int *pMode, int *pApp);
 
 #endif /* _AUDCTRL_POLICY_H__ */
