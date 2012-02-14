@@ -246,12 +246,14 @@ static int i2c_ts_suspend_driver(struct i2c_client *p_client, pm_message_t mesg)
 
 static int i2c_ts_resume_driver(struct i2c_client *p_client)
 {
+	int rc = 0;
 	if (gp_i2c_ts->is_resetable)
 	{
 		i2c_ts_driver_reset_slave();
+		rc = i2c_ts_driver_check_mod_params();
 	}
 	enable_irq(gpio_to_irq(gp_i2c_ts->gpio_irq_pin));
-	return 0;
+	return rc;
 }
 #endif
 
@@ -447,6 +449,7 @@ void i2c_ts_driver_handle_i2c_error(int rc)
 		msleep(50);
 		i2c_ts_driver_reset_slave();
 		msleep(50);
+		rc = i2c_ts_driver_check_mod_params();
 	}
 	else
 	{
@@ -784,40 +787,6 @@ void i2c_ts_driver_send_multitouch_info(void)
 #endif
 }
 
-
-/*
- * Have to reset the I2C slave but do not have enough information about what
- * reset pin to use so use the default. It will be changed later if necessary.
- */
-int setup_gpio(void)
-{
-	int rc;
-	int ret = 0;
-
-	if ((rc = gpio_request(gp_i2c_ts->gpio_irq_pin,
-						   "i2c touch screen driver")) != 0)
-	{
-		TS_ERR("setup_gpio() gpio_request(%d) failed, rc = %d\n",
-				 gp_i2c_ts->gpio_irq_pin, rc);
-		ret = rc;
-	}
-
-	gpio_direction_input(gp_i2c_ts->gpio_irq_pin);
-
-	if ((rc = request_irq(gpio_to_irq(gp_i2c_ts->gpio_irq_pin),
-								 i2c_ts_driver_isr,
-								 (IRQF_TRIGGER_FALLING),
-								 "GPIO cap touch screen irq",
-								 p_tango_i2c_dev)) < 0)
-	{
-		TS_ERR("setup_gpio() request_irq(%d) failed, rc = %d\n",
-				 gp_i2c_ts->gpio_irq_pin, rc);
-		ret = rc;
-	}
-
-	return ret;
-}
-
 static int i2c_ts_driver_reset_slave(void)
 {
 	int rc = 0;
@@ -833,10 +802,10 @@ static int i2c_ts_driver_reset_slave(void)
 	mdelay(GPIO_I2C_RESET_DELAY_MSECS);
 
 	/* Rewrite these settings following reset. */
+	/* After Tango controller gets reset, it holds interrupt pin low for about 150ms.
+	    During this interrupt-pin holding period, it won't ACK to any I2C packet */
 	g_low_power_changed = 1;
 	mdelay(GPIO_I2C_RESET_DELAY_MSECS*100);
-
-	rc = i2c_ts_driver_check_mod_params();
 
 	return rc;
 }
@@ -918,6 +887,34 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		printk("%s: blob size	  %d\n", I2C_TS_DRIVER_NAME, g_blob_size);
 	}
 
+	/* Rest of the initialisation goes here. */
+	if (gp_i2c_ts->is_resetable)
+	{
+		if ((rc = gpio_request(gp_i2c_ts->gpio_reset_pin,
+							   "i2c-driver reset")) != 0)
+		{
+			TS_ERR("gpio_request() failed, rc = %d\n", rc);
+			goto ERROR1;
+		}
+
+		if ((rc = gpio_direction_output(gp_i2c_ts->gpio_reset_pin,
+										I2C_TS_DRIVER_DONT_RESET)) != 0)
+		{
+			TS_ERR("gpio_direction_output(%d, I2C_TS_DRIVER_DONT_RESET) "
+				   "error %d\n",
+					gp_i2c_ts->gpio_reset_pin, rc);
+			gpio_free(gp_i2c_ts->gpio_reset_pin);
+			goto ERROR1;
+		}
+	}
+
+	if(gp_i2c_ts->is_resetable)
+	{
+		rc = i2c_ts_driver_reset_slave();
+		/* This sets values on the slave. If the slave is not there it
+		 * will fail ensuring the slave address is valid. */
+	}
+
 	/* Create some space to store the I2C bytes read from the slave. */
 	gp_buffer = kzalloc(gp_i2c_ts->num_bytes_to_read, GFP_KERNEL);
 
@@ -934,7 +931,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	p_tango_i2c_dev->dummy_client = 0;
 
 	p_tango_i2c_dev->client = p_i2c_client;
-#if 0
+
 	p_tango_i2c_dev->dummy_client = i2c_new_dummy(p_i2c_client->adapter,
 												  TANGO_M29_SLAVE_ADDR);
 	if (!p_tango_i2c_dev->dummy_client) {
@@ -952,7 +949,6 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		p_tango_i2c_dev->dummy_client = 0;
 	}
 	else
-#endif
 		gp_i2c_ts->layout = TANGO_M29_LAYOUT;
 
 	mutex_init(&p_tango_i2c_dev->mutex_wq);
@@ -960,48 +956,45 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	INIT_WORK(&p_tango_i2c_dev->work, tango_i2c_wq);
 	i2c_set_clientdata(p_i2c_client, p_tango_i2c_dev);
 
-	/* Rest of the initialisation goes here. */
-	if (gp_i2c_ts->is_resetable)
-	{
-		if ((rc = gpio_request(gp_i2c_ts->gpio_reset_pin,
-							   "i2c-driver reset")) != 0)
-		{
-			TS_ERR("setup_gpio() gpio_request() failed, rc = %d\n", rc);
-		}
-
-		if ((rc = gpio_direction_output(gp_i2c_ts->gpio_reset_pin,
-									   	I2C_TS_DRIVER_DONT_RESET)) != 0)
-		{
-			TS_ERR("gpio_direction_output(%d, I2C_TS_DRIVER_DONT_RESET) "
-				   "error %d\n",
-					gp_i2c_ts->gpio_reset_pin, rc);
-		}
-	}
-
 	g_low_power_changed = 1;
-	if(gp_i2c_ts->is_resetable)
-	{
-		rc = i2c_ts_driver_reset_slave();
-		/* This sets values on the slave. If the slave is not there it
-		 * will fail ensuring the slave address is valid. */
-	}
-	else
-	{
-		rc = i2c_ts_driver_check_mod_params();
-	}
+	rc = i2c_ts_driver_check_mod_params();
 
 	if (rc < 0)
 	{  /* This also ensures that the slave is actually there! */
 		TS_ERR("%s i2c_ts_driver_probe() failed to write to slave, rc = %d\n",
 				 I2C_TS_DRIVER_NAME, rc);
-		goto ERROR3;
+		goto ERROR2;
 	}
 	else
 	{
 		rc = 0;
 	}
 
-	setup_gpio();
+	if ((rc = gpio_request(gp_i2c_ts->gpio_irq_pin,
+						   "i2c touch screen driver")) != 0)
+	{
+		TS_ERR("gpio_request(%d) failed, rc = %d\n",
+				 gp_i2c_ts->gpio_irq_pin, rc);
+		goto ERROR2;
+	}
+
+	if ((rc = gpio_direction_input(gp_i2c_ts->gpio_irq_pin)) != 0)
+	{
+		TS_ERR("gpio_direction_input(%d, ) " "error %d\n",
+				gp_i2c_ts->gpio_irq_pin, rc);
+		goto ERROR3;
+	}
+
+	if ((rc = request_irq(gpio_to_irq(gp_i2c_ts->gpio_irq_pin),
+								 i2c_ts_driver_isr,
+								 (IRQF_TRIGGER_FALLING),
+								 "GPIO cap touch screen irq",
+								 p_tango_i2c_dev)) < 0)
+	{
+		TS_ERR("request_irq(%d) failed, rc = %d\n",
+				 gp_i2c_ts->gpio_irq_pin, rc);
+		goto ERROR3;
+	}
 
 	/* Try to use the gpio pin to reset the I2C slave device prior to 
 	 * being probed. Setup the gpio for handling interrupt requests and
@@ -1088,11 +1081,8 @@ ERROR5:
 ERROR4:
 	free_irq(gp_i2c_ts->gpio_irq_pin, p_tango_i2c_dev);
 ERROR3:
-	if (gp_i2c_ts->is_resetable)
-	{
-		gpio_free(gp_i2c_ts->gpio_reset_pin);
-	}
-//ERROR2:
+	gpio_free(gp_i2c_ts->gpio_irq_pin);
+ERROR2:
 	kfree(gp_buffer);
 ERROR1:
 	device_remove_file(&p_i2c_client->dev, &dev_attr);
@@ -1103,6 +1093,8 @@ ERROR0:
 static int __devexit i2c_ts_driver_remove(struct i2c_client *client)
 {
 	struct tango_i2c *state = i2c_get_clientdata(client);
+
+	device_remove_file(&client->dev, &dev_attr);
 	kfree(state);
 
 	if (gp_i2c_ts->is_resetable)
@@ -1110,6 +1102,7 @@ static int __devexit i2c_ts_driver_remove(struct i2c_client *client)
 		gpio_free(gp_i2c_ts->gpio_reset_pin);
 	}
 
+	gpio_free(gp_i2c_ts->gpio_irq_pin);
 	free_irq(gp_i2c_ts->gpio_irq_pin, p_tango_i2c_dev);
 
 	/* Free all the memory that was allocated. */
