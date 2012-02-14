@@ -1,14 +1,30 @@
-/*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
-
-Unless you and Broadcom execute a separate written software license agreement governing use 
-of this software, this software is licensed to you under the terms of the GNU General Public 
-License version 2, available at http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
-
-Notwithstanding the above, under no circumstances may you combine this software in any way 
-with any other Broadcom software provided under a license other than the GPL, without 
-Broadcom's express prior written consent.
-*******************************************************************************************/
+/****************************************************************************/
+/*     Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.     */
+/*     Unless you and Broadcom execute a separate written software license  */
+/*	   agreement governing                                              */
+/*     use of this software, this software is licensed to you under the     */
+/*	   terms of the GNU General Public License version 2 (the GPL),     */
+/*     available at                                                         */
+/*                                                                          */
+/*          http://www.broadcom.com/licenses/GPLv2.php                      */
+/*                                                                          */
+/*     with the following added to such license:                            */
+/*                                                                          */
+/*     As a special exception, the copyright holders of this software give  */
+/*     you permission to link this software with independent modules, and   */
+/*     to copy and distribute the resulting executable under terms of your  */
+/*     choice, provided that you also meet, for each linked independent     */
+/*     module, the terms and conditions of the license of that module.      */
+/*     An independent module is a module which is not derived from this     */
+/*     software.  The special exception does not apply to any modifications */
+/*     of the software.                                                     */
+/*                                                                          */
+/*     Notwithstanding the above, under no circumstances may you combine    */
+/*     this software in any way with any other Broadcom software provided   */
+/*     under a license other than the GPL, without Broadcom's express prior */
+/*     written consent.                                                     */
+/*                                                                          */
+/****************************************************************************/
 
 /**
 *
@@ -18,43 +34,49 @@ Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
-
-
-
 #ifndef _CHAL_CAPH_DMA_
 #define _CHAL_CAPH_DMA_
 
 #include "chal_types.h"
 #include "chal_caph.h"
 
-
 /* Max number of chnnels supported by Hardware */
 #define CHAL_CAPH_DMA_MAX_CHANNELS      16
 /* Max number of Timestamp chnnels supported by Hardware */
 #define CHAL_CAPH_DMA_MAX_TS_CHANNELS   4
 /* Total Registers Size of each DMA channel  (CR1 + CR2 + SR1) */
-#define CHAL_CAPH_DMA_CH_REG_SIZE       ((CPH_AADMAC_CH2_AADMAC_CR_1_OFFSET - CPH_AADMAC_CH1_AADMAC_CR_1_OFFSET)/sizeof(cUInt32))
+#define CHAL_CAPH_DMA_CH_REG_SIZE       \
+((CPH_AADMAC_CH2_AADMAC_CR_1_OFFSET -	\
+CPH_AADMAC_CH1_AADMAC_CR_1_OFFSET)/sizeof(cUInt32))
+
 /* Timestamp registers Size of each DMA channel (TS) */
-#define CHAL_CAPH_DMA_CH_TS_REG_SIZE    ((CPH_AADMAC_CH2_AADMAC_TS_OFFSET-CPH_AADMAC_CH1_AADMAC_TS_OFFSET)/sizeof(cUInt32))
+#define CHAL_CAPH_DMA_CH_TS_REG_SIZE	\
+((CPH_AADMAC_CH2_AADMAC_TS_OFFSET -	\
+CPH_AADMAC_CH1_AADMAC_TS_OFFSET)/sizeof(cUInt32))
+
 #define CPH_AADMAC_DMA_MAX_WRAP_SIZE          0x10000
 #define CPH_AADMAC_DMA_CH1_2_MAX_WRAP_SIZE    0x1000000
 
+struct _chal_caph_dma_cb_t {
+	cUInt32 base;		/* Register Base address */
+	cBool alloc_status[CHAL_CAPH_DMA_MAX_CHANNELS];
+};
+#define chal_caph_dma_cb_t struct _chal_caph_dma_cb_t
 
-typedef struct
-{
-    cUInt32 base;                                       /* Register Base address */
-    cBool   alloc_status[CHAL_CAPH_DMA_MAX_CHANNELS];   /* allocation status for each channel */
-} chal_caph_dma_cb_t;
-
-typedef struct
-{
-    cVoid (*set_hibuffer)(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e  channel, cUInt32 address, cUInt32 size);
-    cVoid (*set_ddrfifo_status)(CHAL_HANDLE, CAPH_DMA_CHANNEL_e, CAPH_DMA_CHNL_FIFO_STATUS_e);
-    cVoid (*clr_ddrfifo_status)(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e channel, CAPH_DMA_CHNL_FIFO_STATUS_e status);
-    cVoid (*clr_channel_fifo)(CHAL_HANDLE handle, cUInt16 channel);
-    CAPH_DMA_CHNL_FIFO_STATUS_e (*read_ddrfifo_sw_status)(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e channel);
-} chal_caph_dma_funcs_t;
-
+struct _chal_caph_dma_funcs_t {
+	cVoid(*set_hibuffer) (CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e channel,
+			      cUInt32 address, cUInt32 size);
+	cVoid(*set_ddrfifo_status) (CHAL_HANDLE, CAPH_DMA_CHANNEL_e,
+				    CAPH_DMA_CHNL_FIFO_STATUS_e);
+	cVoid(*clr_ddrfifo_status) (CHAL_HANDLE handle,
+				    CAPH_DMA_CHANNEL_e channel,
+				    CAPH_DMA_CHNL_FIFO_STATUS_e status);
+	cVoid(*clr_channel_fifo) (CHAL_HANDLE handle, cUInt16 channel);
+	CAPH_DMA_CHNL_FIFO_STATUS_e(*read_ddrfifo_sw_status) (
+				CHAL_HANDLE	handle,
+				CAPH_DMA_CHANNEL_e	channel);
+};
+#define chal_caph_dma_funcs_t struct _chal_caph_dma_funcs_t
 /**
 *
 *  @brief  initialize the caph dma block
@@ -63,8 +85,7 @@ typedef struct
 *
 *  @return CHAL_HANDLE
 *****************************************************************************/
-cBool chal_caph_dma_platform_init(chal_caph_dma_funcs_t *);
-
+cBool chal_caph_dma_platform_init(chal_caph_dma_funcs_t *dma_func);
 
 /**
 *
@@ -95,8 +116,7 @@ cVoid chal_caph_dma_deinit(CHAL_HANDLE handle);
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_dma_enable(CHAL_HANDLE handle,
-			cUInt16 channel);
+cVoid chal_caph_dma_enable(CHAL_HANDLE handle, cUInt16 channel);
 
 /**
 *
@@ -107,8 +127,7 @@ cVoid chal_caph_dma_enable(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_dma_disable(CHAL_HANDLE handle,
-			cUInt16 channel);
+cVoid chal_caph_dma_disable(CHAL_HANDLE handle, cUInt16 channel);
 
 /**
 *
@@ -129,7 +148,9 @@ CAPH_DMA_CHANNEL_e chal_caph_dma_alloc_channel(CHAL_HANDLE handle);
 *
 *  @return CAPH_DMA_CHANNEL_e
 *****************************************************************************/
-CAPH_DMA_CHANNEL_e chal_caph_dma_alloc_given_channel(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e channel);
+CAPH_DMA_CHANNEL_e chal_caph_dma_alloc_given_channel(CHAL_HANDLE handle,
+						     CAPH_DMA_CHANNEL_e
+						     channel);
 
 /**
 *
@@ -141,7 +162,7 @@ CAPH_DMA_CHANNEL_e chal_caph_dma_alloc_given_channel(CHAL_HANDLE handle, CAPH_DM
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_dma_free_channel(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel);
+				 CAPH_DMA_CHANNEL_e channel);
 
 /**
 *
@@ -154,8 +175,8 @@ cVoid chal_caph_dma_free_channel(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_dma_set_direction(CHAL_HANDLE handle,
-            CAPH_DMA_CHANNEL_e  channel,
-			CAPH_CFIFO_CHNL_DIRECTION_e direction);
+				  CAPH_DMA_CHANNEL_e channel,
+				  CAPH_CFIFO_CHNL_DIRECTION_e direction);
 
 /**
 *
@@ -168,8 +189,8 @@ cVoid chal_caph_dma_set_direction(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_dma_set_cfifo(CHAL_HANDLE handle,
-            CAPH_DMA_CHANNEL_e  channel,
-			CAPH_CFIFO_e        cfifo_id);
+			      CAPH_DMA_CHANNEL_e channel,
+			      CAPH_CFIFO_e cfifo_id);
 
 /**
 *
@@ -182,8 +203,7 @@ cVoid chal_caph_dma_set_cfifo(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_dma_set_tsize(CHAL_HANDLE handle,
-            CAPH_DMA_CHANNEL_e  channel,
-			cUInt8              tsize);
+			      CAPH_DMA_CHANNEL_e channel, cUInt8 tsize);
 
 /**
 *
@@ -197,9 +217,8 @@ cVoid chal_caph_dma_set_tsize(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_dma_set_buffer(CHAL_HANDLE handle,
-            CAPH_DMA_CHANNEL_e  channel,
-			cUInt32             address,
-			cUInt32             size);
+			       CAPH_DMA_CHANNEL_e channel,
+			       cUInt32 address, cUInt32 size);
 
 /**
 *
@@ -212,13 +231,12 @@ cVoid chal_caph_dma_set_buffer(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_dma_set_buffer_address(CHAL_HANDLE handle,
-            CAPH_DMA_CHANNEL_e  channel,
-			cUInt32             address);
+				       CAPH_DMA_CHANNEL_e channel,
+				       cUInt32 address);
 
 cVoid chal_caph_dma_set_hibuffer(CHAL_HANDLE handle,
-            CAPH_DMA_CHANNEL_e  channel,
-			cUInt32             address,
-			cUInt32             size);
+				 CAPH_DMA_CHANNEL_e channel,
+				 cUInt32 address, cUInt32 size);
 
 /**
 *
@@ -231,8 +249,8 @@ cVoid chal_caph_dma_set_hibuffer(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_dma_set_ddrfifo_status(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel,
-			CAPH_DMA_CHNL_FIFO_STATUS_e status);
+				       CAPH_DMA_CHANNEL_e channel,
+				       CAPH_DMA_CHNL_FIFO_STATUS_e status);
 
 /**
 *
@@ -245,8 +263,8 @@ cVoid chal_caph_dma_set_ddrfifo_status(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_dma_clr_ddrfifo_status(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel,
-			CAPH_DMA_CHNL_FIFO_STATUS_e status);
+				       CAPH_DMA_CHANNEL_e channel,
+				       CAPH_DMA_CHNL_FIFO_STATUS_e status);
 
 /****************************************************************************
 *
@@ -265,8 +283,7 @@ cVoid chal_caph_dma_clr_ddrfifo_status(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_dma_clr_channel_fifo(CHAL_HANDLE handle,
-			cUInt16 channel);
+cVoid chal_caph_dma_clr_channel_fifo(CHAL_HANDLE handle, cUInt16 channel);
 /**
 *
 *  @brief  read caph dma ddr fifo sw status
@@ -276,8 +293,9 @@ cVoid chal_caph_dma_clr_channel_fifo(CHAL_HANDLE handle,
 *
 *  @return CAPH_DMA_CHNL_FIFO_STATUS_e
 *****************************************************************************/
-CAPH_DMA_CHNL_FIFO_STATUS_e chal_caph_dma_read_ddrfifo_sw_status(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel);
+CAPH_DMA_CHNL_FIFO_STATUS_e chal_caph_dma_read_ddrfifo_sw_status(
+				CHAL_HANDLE	handle,
+				CAPH_DMA_CHANNEL_e	channel);
 /**
 *
 *  @brief  read caph dma ddr fifo status
@@ -287,8 +305,9 @@ CAPH_DMA_CHNL_FIFO_STATUS_e chal_caph_dma_read_ddrfifo_sw_status(CHAL_HANDLE han
 *
 *  @return CAPH_DMA_CHNL_FIFO_STATUS_e
 *****************************************************************************/
-CAPH_DMA_CHNL_FIFO_STATUS_e chal_caph_dma_read_ddrfifo_status(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel);
+CAPH_DMA_CHNL_FIFO_STATUS_e chal_caph_dma_read_ddrfifo_status(
+				CHAL_HANDLE	handle,
+				CAPH_DMA_CHANNEL_e	channel);
 
 /**
 *
@@ -300,7 +319,7 @@ CAPH_DMA_CHNL_FIFO_STATUS_e chal_caph_dma_read_ddrfifo_status(CHAL_HANDLE handle
 *  @return cUInt8
 *****************************************************************************/
 cUInt8 chal_caph_dma_read_reqcount(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel);
+				   CAPH_DMA_CHANNEL_e channel);
 
 /**
 *
@@ -312,7 +331,7 @@ cUInt8 chal_caph_dma_read_reqcount(CHAL_HANDLE handle,
 *  @return cUInt16
 *****************************************************************************/
 cUInt16 chal_caph_dma_read_currmempointer(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel);
+					  CAPH_DMA_CHANNEL_e channel);
 
 /**
 *
@@ -324,7 +343,6 @@ cUInt16 chal_caph_dma_read_currmempointer(CHAL_HANDLE handle,
 *  @return cUInt32
 *****************************************************************************/
 cUInt32 chal_caph_dma_read_timestamp(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel);
+				     CAPH_DMA_CHANNEL_e channel);
 
-#endif // _CHAL_CAPH_DMA_
-
+#endif /* _CHAL_CAPH_DMA_ */

@@ -62,16 +62,18 @@
 /****************************************************************************/
 /* local typedef declarations                                               */
 /****************************************************************************/
-typedef struct {
+struct _CSL_CAPH_DMA_CH_t {
 	Boolean bUsed;
 	CAPH_DMA_CHNL_FIFO_STATUS_e eFifoStatus;
 	CSL_CAPH_DMA_CALLBACK_p caphDmaCb;
-} CSL_CAPH_DMA_CH_t;
+};
+#define CSL_CAPH_DMA_CH_t struct _CSL_CAPH_DMA_CH_t
 
-typedef struct {
+struct _DMA_ISR_BOTTOM_HALF_DATA_t {
 	CSL_CAPH_DMA_CHNL_e dma_channel;
 	struct tasklet_struct dma_tasklet;
-} DMA_ISR_BOTTOM_HALF_DATA_t;
+};
+#define DMA_ISR_BOTTOM_HALF_DATA_t struct _DMA_ISR_BOTTOM_HALF_DATA_t
 
 /****************************************************************************/
 /* local variable definitions                                               */

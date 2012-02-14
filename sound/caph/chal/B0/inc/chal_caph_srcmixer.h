@@ -1,14 +1,30 @@
-/*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
-
-Unless you and Broadcom execute a separate written software license agreement governing use
-of this software, this software is licensed to you under the terms of the GNU General Public
-License version 2, available at http://www.gnu.org/copyleft/gpl.html (the "GPL").
-
-Notwithstanding the above, under no circumstances may you combine this software in any way
-with any other Broadcom software provided under a license other than the GPL, without
-Broadcom's express prior written consent.
-*******************************************************************************************/
+/****************************************************************************/
+/*     Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.     */
+/*     Unless you and Broadcom execute a separate written software license  */
+/*	   agreement governing                                              */
+/*     use of this software, this software is licensed to you under the     */
+/*	   terms of the GNU General Public License version 2 (the GPL),     */
+/*     available at                                                         */
+/*                                                                          */
+/*          http://www.broadcom.com/licenses/GPLv2.php                      */
+/*                                                                          */
+/*     with the following added to such license:                            */
+/*                                                                          */
+/*     As a special exception, the copyright holders of this software give  */
+/*     you permission to link this software with independent modules, and   */
+/*     to copy and distribute the resulting executable under terms of your  */
+/*     choice, provided that you also meet, for each linked independent     */
+/*     module, the terms and conditions of the license of that module.      */
+/*     An independent module is a module which is not derived from this     */
+/*     software.  The special exception does not apply to any modifications */
+/*     of the software.                                                     */
+/*                                                                          */
+/*     Notwithstanding the above, under no circumstances may you combine    */
+/*     this software in any way with any other Broadcom software provided   */
+/*     under a license other than the GPL, without Broadcom's express prior */
+/*     written consent.                                                     */
+/*                                                                          */
+/****************************************************************************/
 
 /**
 *
@@ -17,9 +33,6 @@ Broadcom's express prior written consent.
 *   @brief  This file contains the definition for caph srcmixer CHA layer
 *
 ****************************************************************************/
-
-
-
 
 #ifndef _CHAL_CAPH_SRCMIXER_
 #define _CHAL_CAPH_SRCMIXER_
@@ -31,7 +44,7 @@ Broadcom's express prior written consent.
 *
 *  @brief  initialize the caph srcmixer block
 *
-*  @param   baseAddress  (in) mapped address of the caph srcmixer block to be initialized
+*  @param   baseAddress  (in) mapped address of the caph srcmixer block
 *
 *  @return CHAL_HANDLE
 *****************************************************************************/
@@ -57,7 +70,7 @@ cVoid chal_caph_srcmixer_deinit(CHAL_HANDLE handle);
 *  @return cUInt32
 *****************************************************************************/
 cUInt32 chal_caph_srcmixer_get_fifo_addr(CHAL_HANDLE handle,
-			CAPH_SRCMixer_FIFO_e fifo);
+					 CAPH_SRCMixer_FIFO_e fifo);
 
 /**
 *
@@ -78,8 +91,7 @@ cVoid chal_caph_srcmixer_clr_all_tapbuffers(CHAL_HANDLE handle);
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_srcmixer_enable_chnl(CHAL_HANDLE handle,
-			cUInt16 chnl);
+cVoid chal_caph_srcmixer_enable_chnl(CHAL_HANDLE handle, cUInt16 chnl);
 
 /**
 *
@@ -90,8 +102,7 @@ cVoid chal_caph_srcmixer_enable_chnl(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_srcmixer_disable_chnl(CHAL_HANDLE handle,
-			cUInt16 chnl);
+cVoid chal_caph_srcmixer_disable_chnl(CHAL_HANDLE handle, cUInt16 chnl);
 
 /**
 *
@@ -104,9 +115,8 @@ cVoid chal_caph_srcmixer_disable_chnl(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_SRC(CHAL_HANDLE handle,
-			CAPH_SRCMixer_CHNL_e chnl,
-			CAPH_SRCMixer_SRC_e sampleRate);
-
+				 CAPH_SRCMixer_CHNL_e chnl,
+				 CAPH_SRCMixer_SRC_e sampleRate);
 
 /**
 *
@@ -119,8 +129,8 @@ cVoid chal_caph_srcmixer_set_SRC(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_filter_type(CHAL_HANDLE handle,
-			CAPH_SRCMixer_CHNL_e chnl,
-			CAPH_SRCMixer_FILT_TYPE_e filter);
+					 CAPH_SRCMixer_CHNL_e chnl,
+					 CAPH_SRCMixer_FILT_TYPE_e filter);
 
 /**
 *
@@ -133,8 +143,8 @@ cVoid chal_caph_srcmixer_set_filter_type(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_fifo_datafmt(CHAL_HANDLE handle,
-			CAPH_SRCMixer_FIFO_e fifo,
-			CAPH_DATA_FORMAT_e dataFmt);
+					  CAPH_SRCMixer_FIFO_e fifo,
+					  CAPH_DATA_FORMAT_e dataFmt);
 
 /**
 *
@@ -145,8 +155,7 @@ cVoid chal_caph_srcmixer_set_fifo_datafmt(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_srcmixer_clr_fifo(CHAL_HANDLE handle,
-			cUInt16 fifo);
+cVoid chal_caph_srcmixer_clr_fifo(CHAL_HANDLE handle, cUInt16 fifo);
 
 /**
 *
@@ -160,9 +169,8 @@ cVoid chal_caph_srcmixer_clr_fifo(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_fifo_thres(CHAL_HANDLE handle,
-			CAPH_SRCMixer_FIFO_e fifo,
-			cUInt8 thres,
-			cUInt8 thres2);
+					CAPH_SRCMixer_FIFO_e fifo,
+					cUInt8 thres, cUInt8 thres2);
 
 /**
 *
@@ -173,8 +181,9 @@ cVoid chal_caph_srcmixer_set_fifo_thres(CHAL_HANDLE handle,
 *
 *  @return CAPH_SRCMixer_TAP_OUTBUFF_STATUS_e
 *****************************************************************************/
-CAPH_SRCMixer_TAP_OUTBUFF_STATUS_e chal_caph_srcmixer_read_fifo_status(CHAL_HANDLE handle,
-			CAPH_SRCMixer_FIFO_e fifo);
+CAPH_SRCMixer_TAP_OUTBUFF_STATUS_e
+chal_caph_srcmixer_read_fifo_status(CHAL_HANDLE handle,
+				    CAPH_SRCMixer_FIFO_e fifo);
 
 /**
 *
@@ -186,7 +195,7 @@ CAPH_SRCMixer_TAP_OUTBUFF_STATUS_e chal_caph_srcmixer_read_fifo_status(CHAL_HAND
 *  @return cUInt8
 *****************************************************************************/
 cUInt8 chal_caph_srcmixer_read_fifo_emptycount(CHAL_HANDLE handle,
-			CAPH_SRCMixer_FIFO_e fifo);
+					       CAPH_SRCMixer_FIFO_e fifo);
 
 /**
 *
@@ -201,10 +210,9 @@ cUInt8 chal_caph_srcmixer_read_fifo_emptycount(CHAL_HANDLE handle,
 *  @return cUInt8
 *****************************************************************************/
 cUInt8 chal_caph_srcmixer_write_fifo(CHAL_HANDLE handle,
-			CAPH_SRCMixer_FIFO_e fifo,
-			cUInt32* data,
-			cUInt8 size,
-			cBool   forceovf);
+				     CAPH_SRCMixer_FIFO_e fifo,
+				     cUInt32 *data,
+				     cUInt8 size, cBool forceovf);
 
 /**
 *
@@ -219,11 +227,9 @@ cUInt8 chal_caph_srcmixer_write_fifo(CHAL_HANDLE handle,
 *  @return cUInt8
 *****************************************************************************/
 cUInt8 chal_caph_srcmixer_read_fifo(CHAL_HANDLE handle,
-			CAPH_SRCMixer_FIFO_e fifo,
-			cUInt32* data,
-			cUInt8 size,
-			cBool   forceudf);
-
+				    CAPH_SRCMixer_FIFO_e fifo,
+				    cUInt32 *data,
+				    cUInt8 size, cBool forceudf);
 
 /**
 *
@@ -236,9 +242,8 @@ cUInt8 chal_caph_srcmixer_read_fifo(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_enable_mixing(CHAL_HANDLE handle,
-			CAPH_SRCMixer_CHNL_e chnl,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
-
+				       CAPH_SRCMixer_CHNL_e chnl,
+				       CAPH_SRCMixer_OUTPUT_e mixerOutput);
 
 /**
 *
@@ -251,8 +256,8 @@ cVoid chal_caph_srcmixer_enable_mixing(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_disable_mixing(CHAL_HANDLE handle,
-			CAPH_SRCMixer_CHNL_e chnl,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
+					CAPH_SRCMixer_CHNL_e chnl,
+					CAPH_SRCMixer_OUTPUT_e mixerOutput);
 
 /**
 *
@@ -266,9 +271,9 @@ cVoid chal_caph_srcmixer_disable_mixing(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_mixingain(CHAL_HANDLE handle,
-			CAPH_SRCMixer_CHNL_e chnl,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput,
-			cUInt16 gain);
+				       CAPH_SRCMixer_CHNL_e chnl,
+				       CAPH_SRCMixer_OUTPUT_e mixerOutput,
+				       cUInt16 gain);
 
 /**
 *
@@ -282,9 +287,9 @@ cVoid chal_caph_srcmixer_set_mixingain(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_mixingainstep(CHAL_HANDLE handle,
-			CAPH_SRCMixer_CHNL_e chnl,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput,
-			cUInt16 step);
+					   CAPH_SRCMixer_CHNL_e chnl,
+					   CAPH_SRCMixer_OUTPUT_e mixerOutput,
+					   cUInt16 step);
 
 /**
 *
@@ -297,8 +302,8 @@ cVoid chal_caph_srcmixer_set_mixingainstep(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_spkrgain(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput,
-			cUInt16 gain);
+				      CAPH_SRCMixer_OUTPUT_e mixerOutput,
+				      cUInt16 gain);
 
 /**
 *
@@ -311,8 +316,8 @@ cVoid chal_caph_srcmixer_set_spkrgain(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_spkrgain_bitsel(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput,
-			cUInt8 bitSel);
+				CAPH_SRCMixer_OUTPUT_e mixerOutput,
+				cUInt8 bitSel);
 
 /**
 *
@@ -325,8 +330,8 @@ cVoid chal_caph_srcmixer_set_spkrgain_bitsel(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_load_spkrgain_iir_coeff(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput,
-			cUInt8* coeff);
+						 CAPH_SRCMixer_OUTPUT_e
+						 mixerOutput, cUInt8 *coeff);
 
 /**
 *
@@ -338,7 +343,7 @@ cVoid chal_caph_srcmixer_load_spkrgain_iir_coeff(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_reset_spkrgain_iir(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
+				CAPH_SRCMixer_OUTPUT_e mixerOutput);
 
 /**
 *
@@ -351,8 +356,8 @@ cVoid chal_caph_srcmixer_reset_spkrgain_iir(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_spkrgain_slope(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput,
-			cUInt32 slope);
+					    CAPH_SRCMixer_OUTPUT_e mixerOutput,
+					    cUInt32 slope);
 
 /**
 *
@@ -364,7 +369,7 @@ cVoid chal_caph_srcmixer_set_spkrgain_slope(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_enable_spkrgain_slope(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
+					CAPH_SRCMixer_OUTPUT_e	mixerOutput);
 
 /**
 *
@@ -376,8 +381,7 @@ cVoid chal_caph_srcmixer_enable_spkrgain_slope(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_disable_spkrgain_slope(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
-
+					CAPH_SRCMixer_OUTPUT_e	mixerOutput);
 
 /**
 *
@@ -389,7 +393,7 @@ cVoid chal_caph_srcmixer_disable_spkrgain_slope(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_enable_aldc(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
+				     CAPH_SRCMixer_OUTPUT_e mixerOutput);
 
 /**
 *
@@ -401,8 +405,7 @@ cVoid chal_caph_srcmixer_enable_aldc(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_disable_aldc(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
-
+				      CAPH_SRCMixer_OUTPUT_e mixerOutput);
 
 /**
 *
@@ -414,7 +417,7 @@ cVoid chal_caph_srcmixer_disable_aldc(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_enable_spkrgain_compresser(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
+				CAPH_SRCMixer_OUTPUT_e	mixerOutput);
 
 /**
 *
@@ -426,7 +429,7 @@ cVoid chal_caph_srcmixer_enable_spkrgain_compresser(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_disable_spkrgain_compresser(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
+				CAPH_SRCMixer_OUTPUT_e	mixerOutput);
 
 /**
 *
@@ -440,9 +443,9 @@ cVoid chal_caph_srcmixer_disable_spkrgain_compresser(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_spkrgain_compresser_attack(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput,
-			cUInt16 step,
-			cUInt16 thres);
+				CAPH_SRCMixer_OUTPUT_e	mixerOutput,
+				cUInt16 step,
+				cUInt16 thres);
 
 /**
 *
@@ -455,8 +458,8 @@ cVoid chal_caph_srcmixer_set_spkrgain_compresser_attack(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_spkrgain_compresser_mode(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput,
-			CAPH_SRCMixer_CHNL_MODE_e chnlMode);
+				CAPH_SRCMixer_OUTPUT_e	mixerOutput,
+				CAPH_SRCMixer_CHNL_MODE_e	chnlMode);
 
 /**
 *
@@ -467,8 +470,9 @@ cVoid chal_caph_srcmixer_set_spkrgain_compresser_mode(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_srcmixer_enable_spkrgain_compresser_attackslope(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
+cVoid chal_caph_srcmixer_enable_spkrgain_compresser_attackslope(
+				CHAL_HANDLE	handle,
+				CAPH_SRCMixer_OUTPUT_e	mixerOutput);
 
 /**
 *
@@ -479,8 +483,9 @@ cVoid chal_caph_srcmixer_enable_spkrgain_compresser_attackslope(CHAL_HANDLE hand
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_srcmixer_disable_spkrgain_compresser_attackslope(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
+cVoid chal_caph_srcmixer_disable_spkrgain_compresser_attackslope(
+				CHAL_HANDLE	handle,
+				CAPH_SRCMixer_OUTPUT_e	mixerOutput);
 
 /**
 *
@@ -492,9 +497,10 @@ cVoid chal_caph_srcmixer_disable_spkrgain_compresser_attackslope(CHAL_HANDLE han
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_srcmixer_set_spkrgain_compresser_attackslope(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput,
-			cUInt32 slope);
+cVoid chal_caph_srcmixer_set_spkrgain_compresser_attackslope(
+				CHAL_HANDLE handle,
+				CAPH_SRCMixer_OUTPUT_e	mixerOutput,
+				cUInt32 slope);
 
 /**
 *
@@ -505,8 +511,9 @@ cVoid chal_caph_srcmixer_set_spkrgain_compresser_attackslope(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_srcmixer_enable_spkrgain_compresser_decayslope(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
+cVoid chal_caph_srcmixer_enable_spkrgain_compresser_decayslope(
+				CHAL_HANDLE	handle,
+				CAPH_SRCMixer_OUTPUT_e	mixerOutput);
 
 /**
 *
@@ -517,8 +524,9 @@ cVoid chal_caph_srcmixer_enable_spkrgain_compresser_decayslope(CHAL_HANDLE handl
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_srcmixer_disable_spkrgain_compresser_decayslope(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput);
+cVoid chal_caph_srcmixer_disable_spkrgain_compresser_decayslope(
+				CHAL_HANDLE	handle,
+				CAPH_SRCMixer_OUTPUT_e	mixerOutput);
 
 /**
 *
@@ -531,9 +539,8 @@ cVoid chal_caph_srcmixer_disable_spkrgain_compresser_decayslope(CHAL_HANDLE hand
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_srcmixer_set_spkrgain_compresser_decayslope(CHAL_HANDLE handle,
-			CAPH_SRCMixer_OUTPUT_e mixerOutput,
-			cUInt32 slope);
-
+				CAPH_SRCMixer_OUTPUT_e	mixerOutput,
+				cUInt32 slope);
 
 /**
 *
@@ -545,5 +552,4 @@ cVoid chal_caph_srcmixer_set_spkrgain_compresser_decayslope(CHAL_HANDLE handle,
 *****************************************************************************/
 cUInt8 chal_caph_get_passthrough_channels_count(cUInt8 bStereo);
 
-#endif // _CHAL_CAPH_SRCMIXER_
-
+#endif /* _CHAL_CAPH_SRCMIXER_ */

@@ -1,28 +1,30 @@
-/******************************************************************************/
-/* Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.           */
-/*     Unless you and Broadcom execute a separate written software license    */
-/*     agreement governing use of this software, this software is licensed to */
-/*     you under the terms of the GNU General Public License version 2        */
-/*    (the GPL), available at                                                 */
-/*                                                                            */
-/*          http://www.broadcom.com/licenses/GPLv2.php                        */
-/*                                                                            */
-/*     with the following added to such license:                              */
-/*                                                                            */
-/*     As a special exception, the copyright holders of this software give    */
-/*     you permission to link this software with independent modules, and to  */
-/*     copy and distribute the resulting executable under terms of your       */
-/*     choice, provided that you also meet, for each linked independent       */
-/*     module, the terms and conditions of the license of that module.        */
-/*     An independent module is a module which is not derived from this       */
-/*     software.  The special exception does not apply to any modifications   */
-/*     of the software.                                                       */
-/*                                                                            */
-/*     Notwithstanding the above, under no circumstances may you combine this */
-/*     software in any way with any other Broadcom software provided under a  */
-/*     license other than the GPL, without Broadcom's express prior written   */
-/*     consent.                                                               */
-/******************************************************************************/
+/****************************************************************************/
+/*     Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.     */
+/*     Unless you and Broadcom execute a separate written software license  */
+/*	   agreement governing                                              */
+/*     use of this software, this software is licensed to you under the     */
+/*	   terms of the GNU General Public License version 2 (the GPL),     */
+/*     available at                                                         */
+/*                                                                          */
+/*          http://www.broadcom.com/licenses/GPLv2.php                      */
+/*                                                                          */
+/*     with the following added to such license:                            */
+/*                                                                          */
+/*     As a special exception, the copyright holders of this software give  */
+/*     you permission to link this software with independent modules, and   */
+/*     to copy and distribute the resulting executable under terms of your  */
+/*     choice, provided that you also meet, for each linked independent     */
+/*     module, the terms and conditions of the license of that module.      */
+/*     An independent module is a module which is not derived from this     */
+/*     software.  The special exception does not apply to any modifications */
+/*     of the software.                                                     */
+/*                                                                          */
+/*     Notwithstanding the above, under no circumstances may you combine    */
+/*     this software in any way with any other Broadcom software provided   */
+/*     under a license other than the GPL, without Broadcom's express prior */
+/*     written consent.                                                     */
+/*                                                                          */
+/****************************************************************************/
 
 /**
 *
@@ -81,14 +83,14 @@ static struct CSL_CAPH_SWITCH_DST_STATUS_t dstStatusTable[CAPH_SWITCH_CHNL_NUM];
 /***************************************************************************/
 
 static void csl_caph_switch_initDSTStatus(void);
-static CAPH_DST_STATUS_e csl_caph_switch_getDSTStatus(CAPH_SWITCH_CHNL_e
-						      chal_chnl);
+static CAPH_DST_STATUS_e csl_caph_switch_getDSTStatus(
+		CAPH_SWITCH_CHNL_e	chal_chnl);
 static void csl_caph_switch_setDSTStatus(CAPH_SWITCH_CHNL_e chal_chnl,
-					 CAPH_DST_STATUS_e dstStatus);
-static CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_get_cslchnl(CAPH_SWITCH_CHNL_e
-							  chal_chnl);
-static CAPH_SWITCH_CHNL_e csl_caph_switch_get_chalchnl(CSL_CAPH_SWITCH_CHNL_e
-						       chnl);
+		CAPH_DST_STATUS_e dstStatus);
+static CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_get_cslchnl(
+		CAPH_SWITCH_CHNL_e	chal_chnl);
+static CAPH_SWITCH_CHNL_e csl_caph_switch_get_chalchnl(
+		CSL_CAPH_SWITCH_CHNL_e	chnl);
 
 /***************************************************************************/
 /* Global function definitions                                             */
@@ -144,8 +146,8 @@ static void csl_caph_switch_setDSTStatus(CAPH_SWITCH_CHNL_e chal_chnl,
 *  Description: Get the status of DST fifo of one SWITCH channel
 *
 ****************************************************************************/
-static CAPH_DST_STATUS_e csl_caph_switch_getDSTStatus(CAPH_SWITCH_CHNL_e
-						      chal_chnl)
+static CAPH_DST_STATUS_e csl_caph_switch_getDSTStatus(
+			CAPH_SWITCH_CHNL_e	chal_chnl)
 {
 	u8 i = 0;
 	for (i = 0; i < (Int8) CAPH_SWITCH_CHNL_NUM; i++) {
@@ -165,8 +167,8 @@ static CAPH_DST_STATUS_e csl_caph_switch_getDSTStatus(CAPH_SWITCH_CHNL_e
 *  Description: get the CSL SWITCH channel from CHAL SWITCH channel
 *
 ****************************************************************************/
-static CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_get_cslchnl(CAPH_SWITCH_CHNL_e
-							  chal_chnl)
+static CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_get_cslchnl(
+			CAPH_SWITCH_CHNL_e	chal_chnl)
 {
 	CSL_CAPH_SWITCH_CHNL_e chnl = CSL_CAPH_SWITCH_NONE;
 
@@ -251,8 +253,8 @@ static CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_get_cslchnl(CAPH_SWITCH_CHNL_e
 *  Description: get the CHAL SWITCH channel from CSL SWITCH channel
 *
 ****************************************************************************/
-static CAPH_SWITCH_CHNL_e csl_caph_switch_get_chalchnl(CSL_CAPH_SWITCH_CHNL_e
-						       chnl)
+static CAPH_SWITCH_CHNL_e csl_caph_switch_get_chalchnl(
+			CSL_CAPH_SWITCH_CHNL_e	chnl)
 {
 	CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 
@@ -400,8 +402,8 @@ void csl_caph_switch_release_channel(CSL_CAPH_SWITCH_CHNL_e chnl)
 {
 	CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
-			      "csl_caph_switch_release_channel:: chnl = 0x%x\n",
-			      chnl));
+		"csl_caph_switch_release_channel:: chnl = 0x%x\n",
+		chnl));
 
 	chal_chnl = csl_caph_switch_get_chalchnl(chnl);
 	chal_caph_switch_free_channel(handle, chal_chnl);
@@ -426,7 +428,8 @@ CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t
 	CSL_CAPH_SWITCH_STATUS_e status = CSL_CAPH_SWITCH_OWNER;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
-			      "csl_caph_switch_config_channel:: chnl = 0x%x, srcAddr = 0x%lx, dstcAddr = 0x%lx, dataFmt = 0x%x, trigger = 0x%x\n",
+		"csl_caph_switch_config_channel:: chnl = 0x%x, srcAddr = "
+		"0x%lx, dstcAddr = 0x%lx, dataFmt = 0x%x, trigger = 0x%x\n",
 			      chnl_config.chnl,
 			      chnl_config.FIFO_srcAddr,
 			      chnl_config.FIFO_dstAddr,
@@ -490,8 +493,8 @@ void csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr)
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_add_dst:: "));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
-			      "csl_caph_switch_add_dst:: chnl = 0x%x, dstcAddr = 0x%lx\n",
-			      chnl, FIFO_dstAddr));
+		"csl_caph_switch_add_dst:: chnl = 0x%x, dstcAddr = 0x%lx\n",
+		chnl, FIFO_dstAddr));
 	/* Get cHAL Channel */
 	chal_chnl = csl_caph_switch_get_chalchnl(chnl);
 	/* Add one more destination for this channel */
@@ -520,8 +523,8 @@ void csl_caph_switch_remove_dst(CSL_CAPH_SWITCH_CHNL_e chnl,
 	if (FIFO_dstAddr == 0)
 		return;
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
-			      "csl_caph_switch_remove_dst:: chnl = 0x%x, dstcAddr = 0x%lx\n",
-			      chnl, FIFO_dstAddr));
+		"csl_caph_switch_remove_dst:: chnl = 0x%x, dstcAddr = 0x%lx\n",
+		chnl, FIFO_dstAddr));
 	/* Get cHAL Channel */
 	chal_chnl = csl_caph_switch_get_chalchnl(chnl);
 	/* Remove one destination for this channel */
