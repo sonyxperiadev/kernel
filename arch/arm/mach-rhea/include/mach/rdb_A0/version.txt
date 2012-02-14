@@ -17,4 +17,6 @@ Date		Version Info
 		   functionality, in order not to complicate A0 support down the
 		   road, A0 rdb should be identical to B0 version
 		5) My recommendation is  to use B0.s DSI rdb for A0 as well
+14/Feb/2012	Adding brcm_rdb_bmdm_rst_mgr_reg.h from snap_2012-02-07
+
 
