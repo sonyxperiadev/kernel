@@ -38,6 +38,7 @@ typedef struct panel_id_s {
 #define MIPI_VIDEO_PANEL	8	/* MIPI */
 #define MIPI_CMD_PANEL		9	/* MIPI */
 #define WRITEBACK_PANEL		10	/* Wifi display */
+#define LVDS_PANEL		11	/* LVDS */
 
 /* panel class */
 typedef enum {

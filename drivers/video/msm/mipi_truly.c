@@ -116,7 +116,7 @@ static int mipi_truly_lcd_on(struct platform_device *pdev)
 		return -EINVAL;
 
 	msleep(20);
-	mipi_dsi_cmds_tx(mfd, &truly_tx_buf, truly_display_on_cmds,
+	mipi_dsi_cmds_tx(&truly_tx_buf, truly_display_on_cmds,
 			ARRAY_SIZE(truly_display_on_cmds));
 
 	return 0;
@@ -133,7 +133,7 @@ static int mipi_truly_lcd_off(struct platform_device *pdev)
 	if (mfd->key != MFD_KEY)
 		return -EINVAL;
 
-	mipi_dsi_cmds_tx(mfd, &truly_tx_buf, truly_display_off_cmds,
+	mipi_dsi_cmds_tx(&truly_tx_buf, truly_display_off_cmds,
 			ARRAY_SIZE(truly_display_off_cmds));
 
 	return 0;
