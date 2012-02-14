@@ -530,7 +530,7 @@ void csl_caph_arm2sp_set_fm_mixmode(int mix_mode)
  */
 
 #if defined(CONFIG_BCM_MODEM)
-static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
+void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 {
 	Log_DebugPrintf(LOGID_AUDIO,
 			"csl_caph_enable_adcpath_by_dsp enabled_path=0x%x,"
@@ -3232,9 +3232,6 @@ void csl_caph_hwctrl_init(void)
 
 	csl_caph_ControlHWClock(FALSE);
 	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
-#if defined(CONFIG_BCM_MODEM)
-	CSL_RegisterAudioEnableDoneHandler(&csl_caph_enable_adcpath_by_dsp);
-#endif
 	return;
 }
 

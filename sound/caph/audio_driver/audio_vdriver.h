@@ -196,6 +196,8 @@ struct _AudioSysParm_t {
 
 #endif
 
+extern struct completion audioEnableDone;
+
 UInt32 audio_control_generic(UInt32 param1,
 			UInt32 param2,
 			UInt32 param3,

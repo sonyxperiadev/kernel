@@ -17,6 +17,8 @@ Copyright 2009 - 2011  Broadcom Corporation
  in any way with any other Broadcom software provided under a license other than
  the GPL, without Broadcom's express prior written consent.
 ***************************************************************************/
+#include <linux/jiffies.h>
+#include <linux/completion.h>
 #include "mobcom_types.h"
 #include "resultcode.h"
 
@@ -37,6 +39,9 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "dspcmd.h"
 #include "csl_apcmd.h"
 #include "log.h"
+
+#define AUDIO_ENABLE_RESP_TIMEOUT 50  /* 50ms */
+#define	timeout_jiff msecs_to_jiffies(AUDIO_ENABLE_RESP_TIMEOUT)
 
 /* If this struct is changed then please change xdr_Audio_Params_t() also. */
 struct _Audio_Params_t {
@@ -440,6 +445,8 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
+	unsigned long remain_jiff = 0;
+
 	Log_DebugPrintf(LOGID_AUDIO,
 			"\n\r * audio_control_dsp (AP) param1 %ld, param2 %ld param3 %ld param4 %ld *\n\r",
 			param1, param2, param3, param4);
@@ -502,6 +509,16 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 		CAPI2_audio_control_dsp(tid, audioClientId, &audioParam);
 		RPC_SyncWaitForResponse(tid, audioClientId, &ackResult,
 					&msgType, NULL);
+		if (param1 == DSPCMD_TYPE_AUDIO_ENABLE) {
+			remain_jiff = wait_for_completion_interruptible_timeout(
+				&audioEnableDone,
+				timeout_jiff);
+			if (!remain_jiff) {
+				Log_DebugPrintf(LOGID_AUDIO,
+					"!!!Timeout on COMMAND_AUDIO_ENABLE resp!!!\n");
+				init_completion(&audioEnableDone);
+			}
+		}
 
 		break;
 	}

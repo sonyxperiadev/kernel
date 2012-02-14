@@ -762,5 +762,15 @@ CSL_CAPH_HWConfig_Table_t *csl_caph_FindCapturePath(unsigned int streamID);
 CSL_CAPH_PathID csl_caph_FindRenderPathID(CSL_CAPH_DEVICE_e sink_dev,
 	CSL_CAPH_DEVICE_e src_dev);
 
-
+#if defined(CONFIG_BCM_MODEM)
+/****************************************************************************
+*  @brief  enable adcpath
+*
+*  @param   enabled_path
+*
+*  @return none
+*
+*****************************************************************************/
+void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path);
+#endif
 #endif

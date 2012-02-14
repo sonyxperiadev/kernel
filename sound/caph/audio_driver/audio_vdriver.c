@@ -30,6 +30,7 @@ Copyright 2009 - 2012  Broadcom Corporation
 */
 #include <linux/kernel.h>
 #include <linux/slab.h>
+#include <linux/completion.h>
 #include "mobcom_types.h"
 #include "audio_consts.h"
 #include "dspcmd.h"
@@ -114,6 +115,8 @@ static Audio_Driver_t sAudDrv = { 0 };
 
 static audio_codecId_handler_t codecId_handler;
 
+struct completion audioEnableDone;
+
 /*=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -191,6 +194,7 @@ static void AUDDRV_HW_SetFilter(AUDDRV_HWCTRL_FILTER_e filter,
 				       void *coeff);
 static void AUDDRV_HW_EnableSideTone(AudioMode_t audio_mode);
 static void AUDDRV_HW_DisableSideTone(AudioMode_t audio_mode);
+static void AP_ProcessAudioEnableDone(UInt16 enabled_path);
 
 
 /*=============================================================================
@@ -235,9 +239,13 @@ void AUDDRV_Init(void)
 			((AudioLogStatusCB_t) &AUDLOG_ProcessLogChannel);)
 	    AUDIO_MODEM(CSL_RegisterVOIFStatusHandler
 			((VOIFStatusCB_t) &VOIF_Buffer_Request);)
+		AUDIO_MODEM(CSL_RegisterAudioEnableDoneHandler
+			((AudioEnableDoneStatusCB_t)
+			&AP_ProcessAudioEnableDone);)
 
 	    Audio_InitRpc();
 	sAudDrv.isRunning = TRUE;
+	init_completion(&audioEnableDone);
 }
 
 /**********************************************************************
@@ -333,9 +341,6 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 #endif
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 
-/* The delay is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done
- since it is a command via CP.*/
-		usleep_range(1000, 10000);
 		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
 			    (TRUE, FALSE, FALSE);)
 	} else {
@@ -351,10 +356,6 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
-
-/* The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done
- since it is a command via CP.*/
-		usleep_range(1000, 10000);
 	}
 
 
@@ -459,8 +460,6 @@ void AUDDRV_Telephony_RateChange(AudioMode_t mode,
 
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
-
-	msleep(40);
 
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0);
 /*	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
@@ -590,8 +589,6 @@ void AUDDRV_Telephony_Deinit(void)
 		audio_control_dsp(DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0);
 
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
-
-		usleep_range(3000, 10000);	/*make sure audio is off */
 
 		AUDDRV_Telephony_DeinitHW();
 	}
@@ -1615,4 +1612,15 @@ static UInt32 *AUDIO_GetIHF48KHzBufferBaseAddress(void)
 */
 	return AUDIO_Return_IHF_48kHz_buffer_base_address();
 
+}
+
+static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
+{
+	log(1, "%s, Got AUDIO ENABLE RESP FROM DSP\n", __func__);
+
+	complete(&audioEnableDone);
+
+#if defined(CONFIG_BCM_MODEM)
+	csl_caph_enable_adcpath_by_dsp(enabled_path);
+#endif
 }
