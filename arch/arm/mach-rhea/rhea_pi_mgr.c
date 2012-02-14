@@ -35,6 +35,8 @@
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_scu.h>
+#include <mach/rdb/brcm_rdb_csr.h>
+#include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <plat/clock.h>
@@ -57,7 +59,9 @@
 extern void rhea_acp_workaround(void);
 extern void rhea_mm_shutdown_workaround(void);
 #endif
-
+#ifdef CONFIG_RHEA_WA_HWJIRA_2221
+extern char* noncache_buf_va;
+#endif
 char* armc_core_ccu[] = {KPROC_CCU_CLK_NAME_STR};
 struct pi_opp arm_opp = {
 							.opp =  {
@@ -443,7 +447,8 @@ static int mm_policy_change_notifier(struct notifier_block *self,
                                unsigned long event, void *data)
 {
 	struct pi_notify_param *p = data;
-	u32 reg_val;
+	u32 reg_val, count, temp_val;
+	char *noncache_buf_tmp_va;
 
 	BUG_ON(p->pi_id != PI_MGR_PI_ID_MM);
 #if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND)
@@ -507,6 +512,19 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 			}
 		}
 	} else {
+#ifdef CONFIG_RHEA_WA_HWJIRA_2221
+           if (JIRA_WA_ENABLED(2221)) {
+	       if((IS_RETN_POLICY(p->new_value) && IS_ACTIVE_POLICY(p->old_value)) ||
+                       IS_SHUTDOWN_POLICY(p->new_value))
+               {
+		   writel((CSR_AXI_PORT_CTRL_PORT3_DISABLE_MASK), KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
+                   noncache_buf_tmp_va = noncache_buf_va;
+                   for (count = 0; count < 16; count++, noncache_buf_tmp_va += 64)
+		       temp_val = *(volatile u32 *)noncache_buf_tmp_va;
+		       writel(0x0, KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
+               }
+           }
+#endif
 		if(IS_SHUTDOWN_POLICY(p->old_value) && !IS_SHUTDOWN_POLICY(p->new_value)) {
 
 			/* Enable the AXI trace17 counters again. */

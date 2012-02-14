@@ -681,7 +681,7 @@ int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
 
 int __init rhea_pm_init(void)
 {
-#ifdef CONFIG_RHEA_WA_HWJIRA_2531
+#ifdef CONFIG_RHEA_WA_HWJIRA_2221
     noncache_buf_va = dma_alloc_coherent(NULL, 64*16,
 				&noncache_buf_pa, GFP_ATOMIC);
 #endif
