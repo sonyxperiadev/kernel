@@ -180,7 +180,7 @@ static int _disconnect(dwc_otg_hcd_t *hcd)
 			DWC_TIMER_SCHEDULE(hcd->conn_timer, TTST_VBOFF);
 		else
 #endif
-			DWC_TIMER_SCHEDULE(hcd->conn_timer, HOST_VBOFF);
+			DWC_TIMER_SCHEDULE(hcd->conn_timer, hcd->conn_wait_timeout);
 	}
 
 	return 0;

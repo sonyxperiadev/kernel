@@ -223,7 +223,7 @@ static void kill_all_urbs(dwc_otg_hcd_t *hcd)
  */
 static void dwc_otg_hcd_start_connect_timer(dwc_otg_hcd_t *hcd)
 {
-	DWC_TIMER_SCHEDULE(hcd->conn_timer, 10000 /* 10 seconds */);
+	DWC_TIMER_SCHEDULE(hcd->conn_timer, hcd->conn_wait_timeout);
 }
 
 /**
@@ -772,6 +772,9 @@ static void dwc_otg_hcd_free(dwc_otg_hcd_t *dwc_otg_hcd)
 	}
 	DWC_SPINLOCK_FREE(dwc_otg_hcd->lock);
 	DWC_TIMER_FREE(dwc_otg_hcd->conn_timer);
+
+	dwc_otg_hcd->conn_wait_timeout = T_HOST_VBOFF;
+
 	DWC_TASK_FREE(dwc_otg_hcd->reset_tasklet);
 
 #ifdef DWC_DEV_SRPCAP
@@ -836,6 +839,8 @@ int dwc_otg_hcd_init(dwc_otg_hcd_t *hcd, dwc_otg_core_if_t * core_if)
 	/* Initialize the Connection timeout timer. */
 	hcd->conn_timer = DWC_TIMER_ALLOC("Connection timer",
 					  dwc_otg_hcd_connect_timeout, (void *)hcd);
+
+	hcd->conn_wait_timeout = T_HOST_VBOFF;
 
 	/* Initialize reset tasklet. */
 	hcd->reset_tasklet = DWC_TASK_ALLOC(reset_tasklet_func, hcd);

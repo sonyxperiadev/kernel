@@ -282,6 +282,12 @@
  <td> Read</td>
  </tr>
 
+ <tr>
+ <td> h_conn_tmout </td>
+ <td> Gets or sets the host mode connection wait timeout value in milliseconds (decimal)
+ <td> Read/Write</td>
+ </tr>
+
  </table>
 
  Example usage:
@@ -319,6 +325,7 @@
 #include "dwc_otg_core_if.h"
 #include "dwc_otg_pcd_if.h"
 #include "dwc_otg_hcd_if.h"
+#include "dwc_otg_hcd.h"
 #include "dwc_otg_cil.h"
 
 /*
@@ -1252,6 +1259,55 @@ DEVICE_ATTR(sleep_status, S_IRUGO | S_IWUSR, sleepstatus_show,
 
 #endif				/* CONFIG_USB_DWC_OTG_LPM_ENABLE */
 
+/**
+ * Show the value of Host mode Connection Timeout.
+ */
+static ssize_t h_conn_wait_tmout_show(struct device *_dev,
+				  struct device_attribute *attr, char *buf)
+{
+#ifndef DWC_DEVICE_ONLY
+#ifdef LM_INTERFACE
+	struct lm_device *lm_dev = container_of(_dev, struct lm_device, dev);
+	dwc_otg_device_t *otg_dev = lm_get_drvdata(lm_dev);
+#elif defined(PCI_INTERFACE)
+	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
+#else
+	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
+#endif
+
+	return sprintf(buf, "Connection wait timeout in ms = %d\n", otg_dev->hcd->conn_wait_timeout);
+#else
+	return sprintf(buf, "Device Only Mode!\n");
+#endif /* #ifndef DWC_DEVICE_ONLY */
+}
+
+/**
+ * Set the value of host mode connection timeout
+ *
+ */
+static ssize_t h_conn_wait_tmout_store(struct device *_dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t count)
+{
+#ifndef DWC_DEVICE_ONLY
+#ifdef LM_INTERFACE
+	struct lm_device *lm_dev = container_of(_dev, struct lm_device, dev);
+	dwc_otg_device_t *otg_dev = lm_get_drvdata(lm_dev);
+#elif defined(PCI_INTERFACE)
+	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
+#else
+	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
+#endif
+
+	otg_dev->hcd->conn_wait_timeout = simple_strtoul(buf, NULL, 10);
+#endif
+	return count;
+}
+DEVICE_ATTR(h_conn_wait_tmout, S_IRUGO | S_IWUSR, h_conn_wait_tmout_show,
+	    h_conn_wait_tmout_store);
+
 /**@}*/
 
 /**
@@ -1307,6 +1363,7 @@ void dwc_otg_attr_create(
 	error = device_create_file(&dev->dev, &dev_attr_lpm_response);
 	error = device_create_file(&dev->dev, &dev_attr_sleep_status);
 #endif
+	error = device_create_file(&dev->dev, &dev_attr_h_conn_wait_tmout);
 }
 
 /**
@@ -1359,4 +1416,5 @@ void dwc_otg_attr_remove(
 	device_remove_file(&dev->dev, &dev_attr_lpm_response);
 	device_remove_file(&dev->dev, &dev_attr_sleep_status);
 #endif
+	device_remove_file(&dev->dev, &dev_attr_h_conn_wait_tmout);
 }
