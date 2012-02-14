@@ -194,9 +194,11 @@ VFPrestore:	VFP_RESTORE
 		@ PV do not access aux cr in NS mode
 		@MCR	p15,0,r4,c1,c0,1
 		ISB
+		dormant_tracer_v DORMANT_CTRL_PROG_START, r2, r3
 	@ SCTLR - System Control Register
 		MCR	p15,0,r5,c1,c0,0
 		ISB
+		dormant_tracer_v DORMANT_CTRL_PROG_END, r2, r3
 
 	@ Restore CPACR. This must be done after configuring FPU
 		LDR	r6,[r11,#DM_CPACR]

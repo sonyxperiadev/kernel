@@ -140,6 +140,7 @@
 #include <asm/asm-offsets.h>
 
 #include <mach/secure_api.h>
+#include <mach/pm.h>
 
 @ IMPLEMENTATION DEFINED: presence and usage status of the Security Extensions
 @ NOTE: all current/planned ARM implementations of ARMv7-A support
@@ -497,6 +498,7 @@ LateWakeupEventHandler: @ Secure routine returned without entering dormant here
     .align 5
 EnterResetHandler:
 	dormant_gpio_set_p r0, r1
+	dormant_tracer_p DORMANT_RESTORE1_START, r0, r1
 
 DormantRestoreStart:
    	@ copy of DORMANT_BASE => r0 as an 'argument' for DORMANT_RESTORE1
@@ -515,6 +517,7 @@ DormantRestoreStart:
 
 DormantRestore:
 	DORMANT_RESTORE1 @ context recovery software (PA phase)
+	dormant_tracer_p DORMANT_RESTORE1_END, r4, r5
 
 	.if (V7_MMU_PRESENT)
 
@@ -566,6 +569,7 @@ ContinueRestore:
 
 
 ContinueRestoreNoTEX:
+	dormant_tracer_v DORMANT_RESTORE2_START, r0, r1
 	DORMANT_RESTORE2
 	MOV     r0,#1              @ Indicate dormant entry succeeded
 	MOV	pc,lr               @ execution returns to WarmStartContinue

@@ -9,6 +9,7 @@
 /******************************************************************************/
 
 #include <linux/module.h>
+#include <linux/dma-mapping.h>
 #include <plat/kona_pm_dbg.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_csr.h>
@@ -19,6 +20,9 @@
 /*****************************************************************************
  *                        SLEEP STATE DEBUG INTERFACE                        *
  *****************************************************************************/
+
+u32 *dormant_trace_v;
+u32 *dormant_trace_p;
 
 struct debug {
 	int dummy;
@@ -45,6 +49,7 @@ module_param_named(debug, debug, debug, S_IRUGO | S_IWUSR | S_IWGRP);
 enum {
 	CMD_SHOW_HELP = 'h',
 	CMD_DORMANT = 'd',
+	CMD_DISPLAY_STATS = 's',
 };
 
 static void cmd_show_usage(void)
@@ -58,6 +63,7 @@ static void cmd_show_usage(void)
 	  "disable dormant gpio d g c\n"
 	  "display dormant gpio data d g d\n"
 #endif
+	  "display stats: s\n"
 	  "\n";
 
 	pr_info("%s", usage);
@@ -124,6 +130,12 @@ static void cmd_dormant(const char *p)
 }
 #endif
 
+static void cmd_display_stats(const char *p)
+{
+	pr_info("dormant trace v:%p, p:%p\n", dormant_trace_v, dormant_trace_p);
+	pr_info("dormant trace %x\n", *dormant_trace_v);
+}
+
 static int param_set_debug(const char *val, const struct kernel_param *kp)
 {
 	const char *p;
@@ -145,6 +157,9 @@ static int param_set_debug(const char *val, const struct kernel_param *kp)
 		cmd_dormant(p);
 		break;
 #endif
+	case CMD_DISPLAY_STATS:
+		cmd_display_stats(p);
+		break;
 	case CMD_SHOW_HELP: /* Fall-through */
 	default:
 		cmd_show_usage();
@@ -158,6 +173,22 @@ static int param_get_debug(char *buffer, const struct kernel_param *kp)
 {
 	cmd_show_usage();
 	return 0;
+}
+
+/*****************************************************************************
+ *                       DORMANT MODE INSTRUMENTATION                        *
+ *****************************************************************************/
+
+void instrument_dormant_entry(void)
+{
+	if (dormant_trace_v)
+		*dormant_trace_v = DORMANT_ENTRY;
+}
+
+void instrument_dormant_exit(void)
+{
+	if (dormant_trace_v)
+		*dormant_trace_v = DORMANT_EXIT;
 }
 
 /*****************************************************************************
@@ -210,11 +241,28 @@ void instrument_idle_exit(void)
 
 int __init rhea_pmdbg_init(void)
 {
+#ifdef CONFIG_RHEA_DORMANT_MODE
+	void *v = NULL;
+	dma_addr_t p;
+#endif
+
 	snapshot_table_register(snapshot, ARRAY_SIZE(snapshot));
 #ifdef CONFIG_RHEA_DORMANT_MODE
 	dormant_gpio_data.enable = 0;
+
+	v = dma_alloc_coherent(NULL, SZ_1K, &p, GFP_ATOMIC);
+	if (v == NULL) {
+		pr_info("%s: tracer dma buffer alloc failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	dormant_trace_v = (u32 *) v;
+	dormant_trace_p = (u32 *) p;
+
+	pr_info("dormant trace v:0x%x, p:0x%x\n", (u32)v, (u32)p);
 #endif
+
 	return 0;
 }
 
-module_init(rhea_pmdbg_init);
+arch_initcall(rhea_pmdbg_init);

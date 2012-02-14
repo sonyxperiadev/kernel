@@ -9,6 +9,7 @@
 /******************************************************************************/
 
 #include <linux/dma-mapping.h>
+#include <linux/slab.h>
 #include <asm/io.h>
 
 #include <mach/io_map.h>
@@ -535,7 +536,9 @@ void dormant_enter(void)
 		dormant_attempt++;
 		dormant_save_addnl_reg();
 
+		instrument_dormant_entry();
 		ret = dormant_start();
+		instrument_dormant_exit();
 
 		if (ret == true) {
 			/* Dormant entry succeeded */

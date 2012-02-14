@@ -588,3 +588,36 @@
     .endif
 
     .endm   @ RestoreDebugRegisters
+
+    @ Macro to trace dormant flow
+    @ ===========================
+    @ Args:
+    @ trace - value to be written to trace location
+    @ scratc1/scratch2 - scratch regs that will be modified
+    @                    after a call to this macro.
+    @ Assumes:
+    @ dormant_trace_p - contains physical address of trace location
+    @ dormant_trace_v - contains virtual address of trace location
+
+    .extern dormant_trace_p
+    .extern dormant_trace_v
+    .macro dormant_tracer_p trace scratch1 scratch2
+    .if (DORMANT_TRACE_ENABLE == 1)
+        ldr    \scratch1,=dormant_trace_p
+        ldr    \scratch2,=CONFIG_PAGE_OFFSET
+        sub    \scratch1,\scratch1,\scratch2
+        ldr    \scratch2,=PHYS_OFFSET
+        add    \scratch1,\scratch1,\scratch2
+        ldr    \scratch1,[\scratch1]
+        mov    \scratch2,#\trace
+        str    \scratch2,[\scratch1]
+    .endif
+    .endm
+    .macro dormant_tracer_v trace scratch1 scratch2
+    .if (DORMANT_TRACE_ENABLE == 1)
+        ldr    \scratch1,=dormant_trace_v
+        ldr    \scratch1,[\scratch1]
+        mov    \scratch2,#\trace
+        str    \scratch2,[\scratch1]
+    .endif
+    .endm
