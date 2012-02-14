@@ -1610,7 +1610,13 @@ static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			*p = 0;	/* no we don't support thumbnail */
 			break;
 		}
-
+	case VIDIOC_JPEG_G_PACKET_INFO:
+		{
+			struct v4l2_jpeg_packet_info *p = (struct v4l2_jpeg_packet_info *)arg;
+			p->padded = 0;
+			p->packet_size = 0x400;
+			break;
+		}
 	default:
 		ret = -ENOIOCTLCMD;
 		break;
