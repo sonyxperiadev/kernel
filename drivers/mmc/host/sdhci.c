@@ -2429,6 +2429,7 @@ out:
 int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 {
 	int ret = 0;
+	struct mmc_host *mmc = host->mmc;
 
 	sdhci_pltfm_clk_enable(host, 1);
 	sdhci_disable_card_detection(host);
@@ -2443,9 +2444,17 @@ int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 
 	flush_work_sync(&host->wait_erase_work);
 
-	ret = mmc_suspend_host(host->mmc);
-	if (ret)
-		goto suspend_ret;
+	/* Note that mmc_suspend_host calls mmc_power_off, that internally
+	 * calls set_ios function to re-program certain SDHC registers, which
+	 * is not desirable in case of WiFi case, so do not perform this call
+	 * in case of SDIO. (The type is detected dynamically while talking to
+	 * the card from mmc_sdio_init_card function.
+	 */
+	if (mmc->card && (mmc->card->type != MMC_TYPE_SDIO)) {
+		ret = mmc_suspend_host(host->mmc);
+			if (ret)
+				goto suspend_ret;
+	}
 
 	free_irq(host->irq, host);
 
@@ -2462,6 +2471,7 @@ EXPORT_SYMBOL_GPL(sdhci_suspend_host);
 int sdhci_resume_host(struct sdhci_host *host)
 {
 	int ret = 0;
+	struct mmc_host *mmc = host->mmc;
 
 	if (host->vmmc) {
 		int ret = regulator_enable(host->vmmc);
@@ -2483,7 +2493,13 @@ int sdhci_resume_host(struct sdhci_host *host)
 	sdhci_init(host, (host->mmc->pm_flags & MMC_PM_KEEP_POWER));
 	mmiowb();
 
-	ret = mmc_resume_host(host->mmc);
+	/* See the sdhci_suspend_host implementation. The suspend is called
+	 * only for non SDIO case, so resume too should happen only for non
+	 * SDIO case.
+	 */
+	if (mmc->card && (mmc->card->type != MMC_TYPE_SDIO))
+		ret = mmc_resume_host(host->mmc);
+
 	sdhci_enable_card_detection(host);
 
 	/* Set the re-tuning expiration flag */

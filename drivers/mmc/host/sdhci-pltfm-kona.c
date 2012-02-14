@@ -607,6 +607,25 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 	host->quirks = SDHCI_QUIRK_NO_CARD_NO_RESET | SDHCI_QUIRK_BROKEN_TIMEOUT_VAL;
 
+	/*Note that sdhci_add_host calls --> mmc_add_host, which in turn
+	 *checks for the flag MMC_PM_IGNORE_PM_NOTIFY before registering a PM
+	 *notifier for the specific instance of SDIO host controller. For
+	 *WiFi case, we don't want to get notified, becuase then from there
+	 *mmc_power_off is called which will reset the Host registers that
+	 *needs to be re-programmed by starting SDIO handsake again. We want
+	 *to prevent this in case of WiFi. So enable MMC_PM_IGNORE_PM_NOTIFY
+	 *flag, so that notifier never gets registered.
+	 */
+	if (dev->devtype == SDIO_DEV_TYPE_WIFI) {
+		/*The Wireless LAN drivers call the API sdio_get_host_pm_caps
+		 *to know the PM capabilities of the driver, which would
+		 *return pm_caps. While the internal code decides based on
+		 *pm_flags, the pm_caps also should reflect the same.
+		 */
+		host->mmc->pm_caps = MMC_PM_KEEP_POWER | MMC_PM_IGNORE_PM_NOTIFY;
+		host->mmc->pm_flags = MMC_PM_KEEP_POWER | MMC_PM_IGNORE_PM_NOTIFY;
+	}
+
 	ret = sdhci_add_host(host);
 	if (ret)
 		goto err_reset;
