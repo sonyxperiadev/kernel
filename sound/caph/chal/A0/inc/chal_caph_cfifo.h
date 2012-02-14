@@ -1,27 +1,30 @@
-/*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.                                */
-
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
-
+/****************************************************************************/
+/*     Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.     */
+/*     Unless you and Broadcom execute a separate written software license  */
+/*	   agreement governing                                              */
+/*     use of this software, this software is licensed to you under the     */
+/*	   terms of the GNU General Public License version 2 (the GPL),     */
+/*     available at                                                         */
+/*                                                                          */
+/*          http://www.broadcom.com/licenses/GPLv2.php                      */
+/*                                                                          */
+/*     with the following added to such license:                            */
+/*                                                                          */
+/*     As a special exception, the copyright holders of this software give  */
+/*     you permission to link this software with independent modules, and   */
+/*     to copy and distribute the resulting executable under terms of your  */
+/*     choice, provided that you also meet, for each linked independent     */
+/*     module, the terms and conditions of the license of that module.      */
+/*     An independent module is a module which is not derived from this     */
+/*     software.  The special exception does not apply to any modifications */
+/*     of the software.                                                     */
+/*                                                                          */
+/*     Notwithstanding the above, under no circumstances may you combine    */
+/*     this software in any way with any other Broadcom software provided   */
+/*     under a license other than the GPL, without Broadcom's express prior */
+/*     written consent.                                                     */
+/*                                                                          */
+/****************************************************************************/
 
 /**
 *
@@ -30,7 +33,6 @@ Copyright 2010 Broadcom Corporation.  All rights reserved.                      
 *   @brief  This file contains the definition for caph cfifo CHA layer
 *
 ****************************************************************************/
-
 
 #ifndef _CHAL_CAPH_CFIFO_
 #define _CHAL_CAPH_CFIFO_
@@ -67,9 +69,7 @@ cVoid chal_caph_cfifo_deinit(CHAL_HANDLE handle);
 *
 *  @return cUInt32
 *****************************************************************************/
-cUInt32 chal_caph_cfifo_get_fifo_addr(CHAL_HANDLE handle,
-			CAPH_CFIFO_e fifo);
-
+cUInt32 chal_caph_cfifo_get_fifo_addr(CHAL_HANDLE handle, CAPH_CFIFO_e fifo);
 
 /**
 *
@@ -90,7 +90,8 @@ CAPH_CFIFO_e chal_caph_cfifo_alloc_channel(CHAL_HANDLE handle);
 *
 *  @return CAPH_CFIFO_e allocated fifo id
 *****************************************************************************/
-CAPH_CFIFO_e chal_caph_cfifo_alloc_given_channel(CHAL_HANDLE handle, CAPH_CFIFO_e channel);
+CAPH_CFIFO_e chal_caph_cfifo_alloc_given_channel(CHAL_HANDLE handle,
+						 CAPH_CFIFO_e channel);
 
 /**
 *
@@ -112,8 +113,7 @@ cVoid chal_caph_cfifo_free_channel(CHAL_HANDLE handle, CAPH_CFIFO_e fifo);
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_cfifo_enable(CHAL_HANDLE handle,
-			cUInt16 fifo);
+cVoid chal_caph_cfifo_enable(CHAL_HANDLE handle, cUInt16 fifo);
 
 /**
 *
@@ -124,8 +124,7 @@ cVoid chal_caph_cfifo_enable(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_cfifo_disable(CHAL_HANDLE handle,
-			cUInt16 fifo);
+cVoid chal_caph_cfifo_disable(CHAL_HANDLE handle, cUInt16 fifo);
 
 /**
 *
@@ -138,8 +137,8 @@ cVoid chal_caph_cfifo_disable(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_cfifo_set_direction(CHAL_HANDLE handle,
-			CAPH_CFIFO_e fifo,
-			CAPH_CFIFO_CHNL_DIRECTION_e direction);
+				    CAPH_CFIFO_e fifo,
+				    CAPH_CFIFO_CHNL_DIRECTION_e direction);
 
 /**
 *
@@ -152,8 +151,7 @@ cVoid chal_caph_cfifo_set_direction(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_cfifo_set_address(CHAL_HANDLE handle,
-			CAPH_CFIFO_e fifo,
-			cUInt32      address);
+				  CAPH_CFIFO_e fifo, cUInt32 address);
 
 /**
 *
@@ -166,8 +164,7 @@ cVoid chal_caph_cfifo_set_address(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_cfifo_set_size(CHAL_HANDLE handle,
-			CAPH_CFIFO_e fifo,
-			cUInt16      size);
+			       CAPH_CFIFO_e fifo, cUInt16 size);
 
 /**
 *
@@ -180,8 +177,7 @@ cVoid chal_caph_cfifo_set_size(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_cfifo_queue_add_fifo(CHAL_HANDLE handle,
-			cUInt16 fifo,
-			CAPH_CFIFO_QUEUE_e queue);
+				     cUInt16 fifo, CAPH_CFIFO_QUEUE_e queue);
 
 /**
 *
@@ -194,8 +190,7 @@ cVoid chal_caph_cfifo_queue_add_fifo(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_cfifo_queue_remove_fifo(CHAL_HANDLE handle,
-			cUInt16 fifo,
-			CAPH_CFIFO_QUEUE_e queue);
+					cUInt16 fifo, CAPH_CFIFO_QUEUE_e queue);
 
 /**
 *
@@ -206,8 +201,7 @@ cVoid chal_caph_cfifo_queue_remove_fifo(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_cfifo_set_panic_timer(CHAL_HANDLE handle,
-			cUInt8 timeout);
+cVoid chal_caph_cfifo_set_panic_timer(CHAL_HANDLE handle, cUInt8 timeout);
 
 /**
 *
@@ -218,8 +212,7 @@ cVoid chal_caph_cfifo_set_panic_timer(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_cfifo_set_arb(CHAL_HANDLE handle,
-			cUInt32 key);
+cVoid chal_caph_cfifo_set_arb(CHAL_HANDLE handle, cUInt32 key);
 
 /**
 *
@@ -233,9 +226,8 @@ cVoid chal_caph_cfifo_set_arb(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_cfifo_set_fifo_thres(CHAL_HANDLE handle,
-			CAPH_CFIFO_e fifo,
-			cUInt16 thres,
-			cUInt16 thres2);
+				     CAPH_CFIFO_e fifo,
+				     cUInt16 thres, cUInt16 thres2);
 
 /**
 *
@@ -246,8 +238,7 @@ cVoid chal_caph_cfifo_set_fifo_thres(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_cfifo_clr_fifo(CHAL_HANDLE handle,
-			cUInt16 fifo);
+cVoid chal_caph_cfifo_clr_fifo(CHAL_HANDLE handle, cUInt16 fifo);
 
 /**
 *
@@ -258,8 +249,7 @@ cVoid chal_caph_cfifo_clr_fifo(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_cfifo_int_enable(CHAL_HANDLE handle,
-			cUInt16 fifo);
+cVoid chal_caph_cfifo_int_enable(CHAL_HANDLE handle, cUInt16 fifo);
 
 /**
 *
@@ -270,8 +260,7 @@ cVoid chal_caph_cfifo_int_enable(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_cfifo_int_disable(CHAL_HANDLE handle,
-			cUInt16 fifo);
+cVoid chal_caph_cfifo_int_disable(CHAL_HANDLE handle, cUInt16 fifo);
 
 /**
 *
@@ -282,8 +271,7 @@ cVoid chal_caph_cfifo_int_disable(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_cfifo_int_err_enable(CHAL_HANDLE handle,
-			cUInt16 fifo);
+cVoid chal_caph_cfifo_int_err_enable(CHAL_HANDLE handle, cUInt16 fifo);
 
 /**
 *
@@ -294,8 +282,7 @@ cVoid chal_caph_cfifo_int_err_enable(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_cfifo_int_err_disable(CHAL_HANDLE handle,
-			cUInt16 fifo);
+cVoid chal_caph_cfifo_int_err_disable(CHAL_HANDLE handle, cUInt16 fifo);
 
 /**
 *
@@ -306,8 +293,7 @@ cVoid chal_caph_cfifo_int_err_disable(CHAL_HANDLE handle,
 *
 *  @return cUInt32
 *****************************************************************************/
-cUInt32 chal_caph_cfifo_read_fifo_status(CHAL_HANDLE handle,
-			CAPH_CFIFO_e fifo);
+cUInt32 chal_caph_cfifo_read_fifo_status(CHAL_HANDLE handle, CAPH_CFIFO_e fifo);
 
 /**
 *
@@ -322,10 +308,9 @@ cUInt32 chal_caph_cfifo_read_fifo_status(CHAL_HANDLE handle,
 *  @return cUInt16 actual number of bytes written
 *****************************************************************************/
 cUInt16 chal_caph_cfifo_write_fifo(CHAL_HANDLE handle,
-			CAPH_CFIFO_e fifo,
-			cUInt32* data,
-			cUInt16 size,
-			cBool   forceovf);
+				   CAPH_CFIFO_e fifo,
+				   cUInt32 *data,
+				   cUInt16 size, cBool forceovf);
 
 /**
 *
@@ -340,10 +325,8 @@ cUInt16 chal_caph_cfifo_write_fifo(CHAL_HANDLE handle,
 *  @return cUInt16 actual number of bytes read
 *****************************************************************************/
 cUInt16 chal_caph_cfifo_read_fifo(CHAL_HANDLE handle,
-			CAPH_CFIFO_e fifo,
-			cUInt32* data,
-			cUInt16 size,
-			cBool   forceudf);
+				  CAPH_CFIFO_e fifo,
+				  cUInt32 *data, cUInt16 size, cBool forceudf);
 
 /**
 *
@@ -354,8 +337,6 @@ cUInt16 chal_caph_cfifo_read_fifo(CHAL_HANDLE handle,
 *
 *  @return cUInt32
 *****************************************************************************/
-cUInt32 chal_caph_cfifo_read_timestamp(CHAL_HANDLE handle,
-			CAPH_CFIFO_e fifo);
+cUInt32 chal_caph_cfifo_read_timestamp(CHAL_HANDLE handle, CAPH_CFIFO_e fifo);
 
-#endif // _CHAL_CAPH_CFIFO_
-
+#endif /* _CHAL_CAPH_CFIFO_ */

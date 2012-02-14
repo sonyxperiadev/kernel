@@ -1,27 +1,30 @@
-/*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.                                */
-
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
-
+/****************************************************************************/
+/*     Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.     */
+/*     Unless you and Broadcom execute a separate written software license  */
+/*	   agreement governing                                              */
+/*     use of this software, this software is licensed to you under the     */
+/*	   terms of the GNU General Public License version 2 (the GPL),     */
+/*     available at                                                         */
+/*                                                                          */
+/*          http://www.broadcom.com/licenses/GPLv2.php                      */
+/*                                                                          */
+/*     with the following added to such license:                            */
+/*                                                                          */
+/*     As a special exception, the copyright holders of this software give  */
+/*     you permission to link this software with independent modules, and   */
+/*     to copy and distribute the resulting executable under terms of your  */
+/*     choice, provided that you also meet, for each linked independent     */
+/*     module, the terms and conditions of the license of that module.      */
+/*     An independent module is a module which is not derived from this     */
+/*     software.  The special exception does not apply to any modifications */
+/*     of the software.                                                     */
+/*                                                                          */
+/*     Notwithstanding the above, under no circumstances may you combine    */
+/*     this software in any way with any other Broadcom software provided   */
+/*     under a license other than the GPL, without Broadcom's express prior */
+/*     written consent.                                                     */
+/*                                                                          */
+/****************************************************************************/
 
 /**
 *
@@ -30,9 +33,6 @@ Copyright 2010 Broadcom Corporation.  All rights reserved.                      
 *   @brief  This file contains the definition for caph switch CHA layer
 *
 ****************************************************************************/
-
-
-
 
 #ifndef _CHAL_CAPH_SWITCH_
 #define _CHAL_CAPH_SWITCH_
@@ -44,7 +44,7 @@ Copyright 2010 Broadcom Corporation.  All rights reserved.                      
 *
 *  @brief  initialize the caph asw block
 *
-*  @param   baseAddress  (in) mapped address of the caph asw block to be initialized
+*  @param   baseAddress  (in) mapped address of the caph asw block
 *
 *  @return CHAL_HANDLE
 *****************************************************************************/
@@ -71,8 +71,8 @@ cVoid chal_caph_switch_deinit(CHAL_HANDLE handle);
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_switch_select_src(CHAL_HANDLE handle,
-            CAPH_SWITCH_CHNL_e channel,
-            cUInt16 fifo_address);
+				  CAPH_SWITCH_CHNL_e channel,
+				  cUInt16 fifo_address);
 
 /**
 *
@@ -85,8 +85,8 @@ cVoid chal_caph_switch_select_src(CHAL_HANDLE handle,
 *  @return CAPH_DST_STATUS_e
 *****************************************************************************/
 CAPH_DST_STATUS_e chal_caph_switch_add_dst(CHAL_HANDLE handle,
-            CAPH_SWITCH_CHNL_e channel,
-            cUInt16 fifo_address);
+					   CAPH_SWITCH_CHNL_e channel,
+					   cUInt16 fifo_address);
 
 /**
 *
@@ -99,8 +99,8 @@ CAPH_DST_STATUS_e chal_caph_switch_add_dst(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_switch_remove_dst(CHAL_HANDLE handle,
-            CAPH_SWITCH_CHNL_e channel,
-            cUInt16 fifo_address);
+				  CAPH_SWITCH_CHNL_e channel,
+				  cUInt16 fifo_address);
 
 /**
 *
@@ -111,8 +111,7 @@ cVoid chal_caph_switch_remove_dst(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_switch_enable(CHAL_HANDLE handle,
-            cUInt16 channel);
+cVoid chal_caph_switch_enable(CHAL_HANDLE handle, cUInt16 channel);
 
 /**
 *
@@ -123,8 +122,7 @@ cVoid chal_caph_switch_enable(CHAL_HANDLE handle,
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_switch_disable(CHAL_HANDLE handle,
-            cUInt16 channel);
+cVoid chal_caph_switch_disable(CHAL_HANDLE handle, cUInt16 channel);
 
 /**
 *
@@ -145,7 +143,8 @@ CAPH_SWITCH_CHNL_e chal_caph_switch_alloc_channel(CHAL_HANDLE handle);
 *
 *  @return CAPH_CFIFO_e allocated fifo id
 *****************************************************************************/
-CAPH_SWITCH_CHNL_e chal_caph_switch_alloc_given_channel(CHAL_HANDLE handle, CAPH_SWITCH_CHNL_e channel);
+CAPH_SWITCH_CHNL_e chal_caph_switch_alloc_given_channel(CHAL_HANDLE handle,
+					CAPH_SWITCH_CHNL_e	channel);
 
 /**
 *
@@ -156,7 +155,7 @@ CAPH_SWITCH_CHNL_e chal_caph_switch_alloc_given_channel(CHAL_HANDLE handle, CAPH
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_switch_free_channel(CHAL_HANDLE handle,
-            CAPH_SWITCH_CHNL_e channel);
+				    CAPH_SWITCH_CHNL_e channel);
 
 /**
 *
@@ -169,8 +168,8 @@ cVoid chal_caph_switch_free_channel(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_switch_set_datafmt(CHAL_HANDLE handle,
-            CAPH_SWITCH_CHNL_e channel,
-            CAPH_DATA_FORMAT_e dataFormat);
+				   CAPH_SWITCH_CHNL_e channel,
+				   CAPH_DATA_FORMAT_e dataFormat);
 
 /**
 *
@@ -183,8 +182,8 @@ cVoid chal_caph_switch_set_datafmt(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_switch_select_trigger(CHAL_HANDLE handle,
-            CAPH_SWITCH_CHNL_e channel,
-            CAPH_SWITCH_TRIGGER_e trigger);
+				      CAPH_SWITCH_CHNL_e channel,
+				      CAPH_SWITCH_TRIGGER_e trigger);
 
 /**
 *
@@ -206,7 +205,6 @@ cVoid chal_caph_switch_enable_clock(CHAL_HANDLE handle);
 *****************************************************************************/
 cVoid chal_caph_switch_disable_clock(CHAL_HANDLE handle);
 
-
 /**
 *
 *  @brief  caph asw enable clock bypass
@@ -227,7 +225,6 @@ cVoid chal_caph_switch_enable_clock_bypass(CHAL_HANDLE handle);
 *****************************************************************************/
 cVoid chal_caph_switch_disable_clock_bypass(CHAL_HANDLE handle);
 
-
 /**
 *
 *  @brief  caph asw set clock (SSASW_MN0_DIVIDER)
@@ -239,8 +236,7 @@ cVoid chal_caph_switch_disable_clock_bypass(CHAL_HANDLE handle);
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_switch_set_clock0(CHAL_HANDLE handle,
-            cUInt8 m_ratio,
-            cUInt16 n_ratio);
+				  cUInt8 m_ratio, cUInt16 n_ratio);
 
 /**
 *
@@ -253,8 +249,7 @@ cVoid chal_caph_switch_set_clock0(CHAL_HANDLE handle,
 *  @return cVoid
 *****************************************************************************/
 cVoid chal_caph_switch_set_clock1(CHAL_HANDLE handle,
-            cUInt8 m_ratio,
-            cUInt16 n_ratio);
+				  cUInt8 m_ratio, cUInt16 n_ratio);
 
 /**
 *
@@ -285,7 +280,6 @@ cUInt8 chal_caph_switch_read_time(CHAL_HANDLE handle);
 *
 *  @return cVoid
 *****************************************************************************/
-cVoid chal_caph_switch_write_time(CHAL_HANDLE handle,
-            cUInt8 time);
-#endif // _CHAL_CAPH_SWITCH_
+cVoid chal_caph_switch_write_time(CHAL_HANDLE handle, cUInt8 time);
 
+#endif /* _CHAL_CAPH_SWITCH_ */
