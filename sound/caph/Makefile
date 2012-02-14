@@ -62,7 +62,7 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/
 ifdef CONFIG_ARCH_RHEA_B0
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/rdb_B0/
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/rdb_Bx/
 else
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/rdb_A0/
 endif
