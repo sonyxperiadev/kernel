@@ -1,27 +1,30 @@
-/*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.                                */
-
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
-
+/****************************************************************************/
+/*     Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.     */
+/*     Unless you and Broadcom execute a separate written software license  */
+/*	   agreement governing                                              */
+/*     use of this software, this software is licensed to you under the     */
+/*	   terms of the GNU General Public License version 2 (the GPL),     */
+/*     available at                                                         */
+/*                                                                          */
+/*          http://www.broadcom.com/licenses/GPLv2.php                      */
+/*                                                                          */
+/*     with the following added to such license:                            */
+/*                                                                          */
+/*     As a special exception, the copyright holders of this software give  */
+/*     you permission to link this software with independent modules, and   */
+/*     to copy and distribute the resulting executable under terms of your  */
+/*     choice, provided that you also meet, for each linked independent     */
+/*     module, the terms and conditions of the license of that module.      */
+/*     An independent module is a module which is not derived from this     */
+/*     software.  The special exception does not apply to any modifications */
+/*     of the software.                                                     */
+/*                                                                          */
+/*     Notwithstanding the above, under no circumstances may you combine    */
+/*     this software in any way with any other Broadcom software provided   */
+/*     under a license other than the GPL, without Broadcom's express prior */
+/*     written consent.                                                     */
+/*                                                                          */
+/****************************************************************************/
 
 /**
 *
@@ -30,9 +33,6 @@ Copyright 2010 Broadcom Corporation.  All rights reserved.                      
 *   @brief  This file contains the definition for Hera-N audio CHAL layer
 *
 ****************************************************************************/
-
-
-
 
 #ifndef _CHAL_HERA_AUDIO_
 #define _CHAL_HERA_AUDIO_
@@ -66,8 +66,6 @@ Copyright 2010 Broadcom Corporation.  All rights reserved.                      
 #define CHAL_AUDIO_PATH_DMIC4                   0x00000800
 #define CHAL_AUDIO_PATH_AMIC1                   0x00001000
 #define CHAL_AUDIO_PATH_AMIC2                   0x00002000
-
-
 
 /**
 * defines for Channel mode
@@ -106,13 +104,11 @@ Copyright 2010 Broadcom Corporation.  All rights reserved.                      
 #define     CHAL_AUDIO_IGNORE_FIFO_OVERFLOW     TRUE
 #define     CHAL_AUDIO_STOP_ON_FIFO_OVERFLOW    FALSE
 
-
 /**
 * defines for FIFO Bits per Sample defines
 ******************************************************************************/
 #define     CHAL_AUDIO_BPS_24                   24
 #define     CHAL_AUDIO_BPS_16                   16
-
 
 /**
 * defines for slow ramp generator controls
@@ -127,30 +123,27 @@ Copyright 2010 Broadcom Corporation.  All rights reserved.                      
 #define    CHAL_AUDIO_AUDIOTX_SR_PU_ENABLE      0x00000002
 #define    CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG    0x00000001
 
-
 /**
 * defines for isolator controls
 ******************************************************************************/
 #define    CHAL_AUDIO_AUDIOTX_ISO_IN            0x00000002
 #define    CHAL_AUDIO_AUDIOTX_ISO_OUT           0x00000001
 
-
 /**
 * Vout Driver Controls
 ******************************************************************************/
-#define    CHAL_AUDIO_AUDIOTX_EP_DRV_SPAREBIT   0x00008000
-#define    CHAL_AUDIO_AUDIOTX_EP_DRV_CM_CTRL_MASK                      0x000001F0
-#define    CHAL_AUDIO_AUDIOTX_EP_DRV_IQDBLDIS_MASK                     0x0000000C
-#define    CHAL_AUDIO_AUDIOTX_EP_DRV_MUTE       0x00000002
-#define    CHAL_AUDIO_AUDIOTX_EP_DRV_PD         0x00000001
+#define    CHAL_AUDIO_AUDIOTX_EP_DRV_SPAREBIT		0x00008000
+#define    CHAL_AUDIO_AUDIOTX_EP_DRV_CM_CTRL_MASK	0x000001F0
+#define    CHAL_AUDIO_AUDIOTX_EP_DRV_IQDBLDIS_MASK	0x0000000C
+#define    CHAL_AUDIO_AUDIOTX_EP_DRV_MUTE		0x00000002
+#define    CHAL_AUDIO_AUDIOTX_EP_DRV_PD			0x00000001
 
 /**
 * AUDIOH filter types
 ******************************************************************************/
-#define    CHAL_AUDIO_LINEAR_PHASE_FILTER               0x00000000
-#define    CHAL_AUDIO_MINIMUM_PHASE_FILTER            0x00000001
-#define    CHAL_AUDIO_MINIMUM_PHASE_FILTER_L        0x00000002
-
+#define    CHAL_AUDIO_LINEAR_PHASE_FILTER		0x00000000
+#define    CHAL_AUDIO_MINIMUM_PHASE_FILTER		0x00000001
+#define    CHAL_AUDIO_MINIMUM_PHASE_FILTER_L		0x00000002
 
 /**
 * Function prototypes
@@ -169,22 +162,17 @@ Copyright 2010 Broadcom Corporation.  All rights reserved.                      
 *
 *  @return CHAL handle for the Audio
 *****************************************************************************/
-extern CHAL_HANDLE  chal_audio_init(cUInt32 audioh_base, cUInt32 sdt_base);
+extern CHAL_HANDLE chal_audio_init(cUInt32 audioh_base, cUInt32 sdt_base);
 
 /**
 *
 *  @brief  De-Initialize CHAL AUDIO for the passed audio handle
 *
-*  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle  (in) got through chal_audio_init() function
 *
 *  @return none
 *****************************************************************************/
 extern void chal_audio_deinit(CHAL_HANDLE handle);
-
-
-
-
-
 
 /**
 * voice input (Vin) path function
@@ -194,31 +182,31 @@ extern void chal_audio_deinit(CHAL_HANDLE handle);
 *
 *  @brief  Enable vinpath digital Mics
 *
-*  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle  (in) got through chal_audio_init() function
 *  @param  enable  (in) this specify which channel digital MIC's to be enabled
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_vinpath_digi_mic_enable(CHAL_HANDLE handle, cUInt16 enable);
-
+extern void chal_audio_vinpath_digi_mic_enable(CHAL_HANDLE handle,
+					       cUInt16 enable);
 
 /**
 *
 *  @brief  Disable vinpath digital Mics
 *
-*  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle  (in) got through chal_audio_init() function
 *  @param disnable  (in) this specify which channel digital MIC's to be disabled
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_vinpath_digi_mic_disable(CHAL_HANDLE handle, cUInt16 disable);
-
+extern void chal_audio_vinpath_digi_mic_disable(CHAL_HANDLE handle,
+						cUInt16 disable);
 
 /**
 *
 *  @brief  Get vinpath digital Mic enabling status
 *
-*  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle  (in) got through chal_audio_init() function
 *
 *  @return cUInt8 status (out) digital mic enabling status
 *****************************************************************************/
@@ -228,89 +216,97 @@ extern cUInt8 chal_audio_vinpath_digi_mic_enable_read(CHAL_HANDLE handle);
 *
 *  @brief  Select vinpath primary mic instead of Digital MIC1
 *
-*  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable  (in) this specify whether to enable or disable
+*  @param  handle  (in) got through chal_audio_init() function
+*  @param  enable  (in) this specify to to enable or disable
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_select_primary_mic( CHAL_HANDLE handle,  cUInt16 enable );
+extern void chal_audio_vinpath_select_primary_mic(CHAL_HANDLE handle,
+						  cUInt16 enable);
 
 /**
 *
 *  @brief  Enable/Disable interrupt for the vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int_enable    (in) this specify whether to enable or disable fifo threshold interrupt
-*  @param  err_int_enable    (in) this specify whether to enable or disable fifo error interrupt
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int_enable    (in) enable or disable fifo threshold interrupt
+*  @param  err_int_enable    (in) enable or disable fifo error interrupt
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_int_enable(CHAL_HANDLE handle, cUInt16 thr_int_enable, cUInt16 err_int_enable );
+extern void chal_audio_vinpath_int_enable(CHAL_HANDLE handle,
+					  cUInt16 thr_int_enable,
+					  cUInt16 err_int_enable);
 
 /**
 *
 *  @brief  Enable/Disable DMA operation for the vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_enable       (in) this specify whether to enable or disable DMA mode for the FIFO
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_enable       (in) enable or disable DMA mode for the FIFO
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable );
+extern void chal_audio_vinpath_dma_enable(CHAL_HANDLE handle,
+					  Boolean dma_enable);
 
 /**
 *
 *  @brief  Get DMA port address (path FIFO address) for the vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) DMA port address will be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
+extern void chal_audio_vinpath_get_dma_port_addr(CHAL_HANDLE handle,
+						 cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Get DMA port address (path FIFO 2 address) for the vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) DMA port address will be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_get_dma_port_addr2(CHAL_HANDLE handle, cUInt32 *dma_addr);
+extern void chal_audio_vinpath_get_dma_port_addr2(CHAL_HANDLE handle,
+						  cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Set bits per sample for the FIFO of vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  bits                   (in) specifies the number of bits used for each sample in the FIFO
-*                                              current supported values are 16 and 24
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  bits		(in) number of bits used for each sample in FIFO
+*			current supported values are 16 and 24
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
+extern void chal_audio_vinpath_set_bits_per_sample(CHAL_HANDLE handle,
+						   cUInt16 bits);
 
 /**
 *
 *  @brief  Set mode of operation for the FIFO of vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  mode                 (in) specifies whether the mode is mono or stereo
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  mode                 (in) specifies to the mode is mono or stereo
 *                                              TRUE: Mono, FALSE: Stereo
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_set_mono_stereo (CHAL_HANDLE handle,Boolean mode);
+extern void chal_audio_vinpath_set_mono_stereo(CHAL_HANDLE handle,
+					       Boolean mode);
 
 /**
 *
 *  @brief  Set packed operation for the FIFO of vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  pack                  (in) specifies whether to set packed mode or un-packed mode
-*                                              TRUE: Packed, FALSE: Unpacked
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  pack		(in) packed mode or un-packed mode
+*			TRUE: Packed, FALSE: Unpacked
 *
 *  @return none
 *****************************************************************************/
@@ -320,25 +316,26 @@ extern void chal_audio_vinpath_set_pack(CHAL_HANDLE handle, Boolean pack);
 *
 *  @brief  Set threshold values for the FIFO of vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thres                 (in) specifies the threshold value on which the FIFO generates an interrupt
-*                                              or DMA request
-*  @param  thres_2             (in) specifies the threshold value which is treated as almost full and the FIFO
-*                                             error interrupt will be generated
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  thres	(in) threshold for the FIFO generates an interrupt
+*			or DMA request
+*  @param  thres_2	(in) threshold as FIFO full to generate error int
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres, cUInt16 thres_2);
+extern void chal_audio_vinpath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres,
+					      cUInt16 thres_2);
 
 /**
 *
 *  @brief  get current FIFO status for the vinpath fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
+*  @return current status of the FIFO defined in
+* CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
 *****************************************************************************/
 extern cUInt32 chal_audio_vinpath_read_fifo_status(CHAL_HANDLE handle);
 
@@ -346,10 +343,11 @@ extern cUInt32 chal_audio_vinpath_read_fifo_status(CHAL_HANDLE handle);
 *
 *  @brief  get current FIFO status for the vinpath fifo 2
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
+*  @return current status of the FIFO defined in
+* CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
 *****************************************************************************/
 extern cUInt32 chal_audio_vinpath_read_fifo_status2(CHAL_HANDLE handle);
 
@@ -357,39 +355,41 @@ extern cUInt32 chal_audio_vinpath_read_fifo_status2(CHAL_HANDLE handle);
 *
 *  @brief  Read current FIFO contents of vinpath fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  src                    (out) memory location where the FIFO contents will be written
-*  @param  length                (in) Number of 32bit reads on the FIFO to be done
-*  @param  ign_udf              (in) flag to control the number of reads.
-*                                              TRUE: read exactly the length words even if FIFO underflow happens
-*                                              FALSE: limit the read to below the almost empty statge to avoid underflow
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  src		(out) memory location for FIFO contents will be written
+*  @param  length	(in) Number of 32bit reads on the FIFO to be done
+*  @param  ign_udf	(in) flag to control the number of reads.
+*	TRUE: read exactly the length words even if FIFO underflow happens
+*	FALSE: limit the read to avoid underflow
 *
 *
 *  @return the number of words read from the fifo
 *****************************************************************************/
-extern cUInt32 chal_audio_vinpath_read_fifo(CHAL_HANDLE handle, cUInt32 *src, cUInt32 length, Boolean ign_udf);
+extern cUInt32 chal_audio_vinpath_read_fifo(CHAL_HANDLE handle, cUInt32 *src,
+					    cUInt32 length, Boolean ign_udf);
 
 /**
 *
 *  @brief  Read current FIFO contents of vinpath fifo 2
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  src                    (out) memory location where the FIFO contents will be written
-*  @param  length                (in) Number of 32bit reads on the FIFO to be done
-*  @param  ign_udf              (in) flag to control the number of reads.
-*                                              TRUE: read exactly the length words even if FIFO underflow happens
-*                                              FALSE: limit the read to below the almost empty statge to avoid underflow
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  src		(out) memory location for FIFO contents to write to
+*  @param  length	(in) Number of 32bit reads on the FIFO to be done
+*  @param  ign_udf	(in) flag to control the number of reads.
+*	TRUE: read exactly the length words even if FIFO underflow happens
+*	FALSE: limit the read to avoid underflow
 *
 *
 *  @return the number of words read from the fifo
 *****************************************************************************/
-extern cUInt32 chal_audio_vinpath_read_fifo2(CHAL_HANDLE handle, cUInt32 *src, cUInt32 length, Boolean ign_udf);
+extern cUInt32 chal_audio_vinpath_read_fifo2(CHAL_HANDLE handle, cUInt32 *src,
+					     cUInt32 length, Boolean ign_udf);
 
 /**
 *
 *  @brief  Clear the contents and reset the FIFO of vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
 *  @return None
@@ -400,31 +400,33 @@ extern void chal_audio_vinpath_clr_fifo(CHAL_HANDLE handle);
 *
 *  @brief  Clear the FIFO interrupts for vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int               (in) specifies whether to clear the threshold interrupt or not
-*  @param  err_int               (in) specifies whether to clear the error interrupt or not
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int               (in) clear the threshold interrupt or not
+*  @param  err_int               (in) clear the error interrupt or not
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_vinpath_int_clear(CHAL_HANDLE handle, Boolean thr_int, Boolean err_int);
+extern void chal_audio_vinpath_int_clear(CHAL_HANDLE handle, Boolean thr_int,
+					 Boolean err_int);
 
 /**
 *
 *  @brief  Get the current interrupt status for vinpath FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return Current FIFO interrupt status (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
+*  @return Current FIFO interrupt status
+* (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
 *****************************************************************************/
-extern  cUInt32 chal_audio_vinpath_read_int_status(CHAL_HANDLE handle);
+extern cUInt32 chal_audio_vinpath_read_int_status(CHAL_HANDLE handle);
 
 /**
 *
 *  @brief  set CIC scale parameters for vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  dmic1_coarse_scale   (in) the CIC coarse scale for Digital MIC 1
 *  @param  dmic1_fine_scale     (in) the CIC fine scale for Digital MIC 1
 *  @param  dmic2_coarse_scale   (in) the CIC coarse scale for Digital MIC 2
@@ -433,19 +435,17 @@ extern  cUInt32 chal_audio_vinpath_read_int_status(CHAL_HANDLE handle);
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle, 
-		cUInt32 dmic1_coarse_scale, 
-		cUInt32 dmic1_fine_scale, 
-		cUInt32 dmic2_coarse_scale, 
-		cUInt32 dmic2_fine_scale);
-
-
+extern void chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle,
+					     cUInt32 dmic1_coarse_scale,
+					     cUInt32 dmic1_fine_scale,
+					     cUInt32 dmic2_coarse_scale,
+					     cUInt32 dmic2_fine_scale);
 
 /**
 *
 *  @brief  set each CIC scale parameters for vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  micGainSelect	(in) the each mic gain selection.
 *  @param  gain			(in) the CIC scale
 *
@@ -453,45 +453,45 @@ extern void chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle,
 *  @return none
 *****************************************************************************/
 extern void chal_audio_vinpath_set_each_cic_scale(CHAL_HANDLE handle,
-						CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
-						cUInt32 gain);
+			CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
+			cUInt32 gain);
 /**
 *
 *  @brief  enable/disable sidetone data for vinpath FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  read_sidetone    (in) specifies sidetone data instead of DMIC2 data at the FIFO
-*                                               TRUE: enable sidetone data, FALSE: enable DMIC2 data
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  read_sidetone    (in) specifies sidetone or DMIC2 data at the FIFO
+*	TRUE: enable sidetone data, FALSE: enable DMIC2 data
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_select_sidetone (CHAL_HANDLE handle,Boolean read_sidetone);
+extern void chal_audio_vinpath_select_sidetone(CHAL_HANDLE handle,
+					       Boolean read_sidetone);
 
 /**
 *
-*  @brief  Set the delay for sampling the DIGITAL MIC1,2 signals on the DATA line
+*  @brief  Set the delay for sampling the DIGITAL MIC1,2 on the DATA line
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  delay                 (in) delay in 5.95 usec max possible is 41.6 usec
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  delay	(in) delay in 5.95 usec max possible is 41.6 usec
 *
 *
 *  @return none
 *****************************************************************************/
-extern cVoid chal_audio_vinpath_set_digimic_clkdelay(CHAL_HANDLE handle, cUInt16 delay);
+extern cVoid chal_audio_vinpath_set_digimic_clkdelay(CHAL_HANDLE handle,
+						     cUInt16 delay);
 
 /**
 *
 *  @brief  Set voice in path filter coefficients type
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  filter                  (in) filter type (linear or minimum phase
 *
 *  @return none
 *****************************************************************************/
 extern cVoid chal_audio_vinpath_set_filter(CHAL_HANDLE handle, cUInt16 filter);
-
-
 
 /**
 * Noise voice input (Nvin) path function
@@ -501,112 +501,118 @@ extern cVoid chal_audio_vinpath_set_filter(CHAL_HANDLE handle, cUInt16 filter);
 *
 *  @brief  Enable Noise vinpath digital Mics
 *
-*  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable  (in) this specify whcih channel digital MIC's to be enabled or disabled
+*  @param  handle  (in) got through chal_audio_init() function
+*  @param  enable  (in) digital MIC's to be enabled or disabled
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_nvinpath_digi_mic_enable(CHAL_HANDLE handle, cUInt16 enable);
-
+extern void chal_audio_nvinpath_digi_mic_enable(CHAL_HANDLE handle,
+						cUInt16 enable);
 
 /**
 *
 *  @brief  Disable nvinpath digital Mics
 *
-*  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param disnable  (in) this specify which channel digital MIC's to be disabled
+*  @param  handle  (in) got through chal_audio_init() function
+*  @param disnable  (in) which channel digital MIC's to be disabled
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_nvinpath_digi_mic_disable(CHAL_HANDLE handle, cUInt16 disable);
-
+extern void chal_audio_nvinpath_digi_mic_disable(CHAL_HANDLE handle,
+						 cUInt16 disable);
 
 /**
 *
 *  @brief  Get nvinpath digital Mic enabling status
 *
-*  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle  (in) got through chal_audio_init() function
 *
 *  @return cUInt8 status (out) digital mic enabling status
 *****************************************************************************/
 extern cUInt8 chal_audio_nvinpath_digi_mic_enable_read(CHAL_HANDLE handle);
 
-
 /**
 *
 *  @brief  Enable/Disable interrupt for the Noice vin path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int_enable    (in) this specify whether to enable or disable fifo threshold interrupt
-*  @param  err_int_enable    (in) this specify whether to enable or disable fifo error interrupt
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int_enable    (in) enable or disable fifo threshold interrupt
+*  @param  err_int_enable    (in) enable or disable fifo error interrupt
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_int_enable(CHAL_HANDLE handle, cUInt16 fifo_int_enable, cUInt16 err_int_enable );
+extern void chal_audio_nvinpath_int_enable(CHAL_HANDLE handle,
+					   cUInt16 fifo_int_enable,
+					   cUInt16 err_int_enable);
 
 /**
 *
 *  @brief  Enable/Disable DMA operation for the Noise vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_enable       (in) this specify whether to enable or disable DMA mode for the FIFO
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_enable       (in) enable or disable DMA mode for the FIFO
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable );
+extern void chal_audio_nvinpath_dma_enable(CHAL_HANDLE handle,
+					   Boolean dma_enable);
 
 /**
 *
 *  @brief  Get DMA port address (path FIFO address) for the Noice vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) DMA port address will be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
+extern void chal_audio_nvinpath_get_dma_port_addr(CHAL_HANDLE handle,
+						  cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Get DMA port address (path FIFO 2 address) for the Noice vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) DMA port address will be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_get_dma_port_addr2(CHAL_HANDLE handle, cUInt32 *dma_addr);
+extern void chal_audio_nvinpath_get_dma_port_addr2(CHAL_HANDLE handle,
+						   cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Set bits per sample for the FIFO of Noise vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  bits                   (in) specifies the number of bits used for each sample in the FIFO
-*                                              current supported values are 16 and 24
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  bits		(in) number of bits used for each sample in the FIFO
+*                       current supported values are 16 and 24
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
+extern void chal_audio_nvinpath_set_bits_per_sample(CHAL_HANDLE handle,
+						    cUInt16 bits);
 
 /**
 *
 *  @brief  Set mode of operation for the FIFO of Noise vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  mode                 (in) specifies whether the mode is mono or stereo
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  mode                 (in) specifies to the mode is mono or stereo
 *                                              TRUE: Mono, FALSE: Stereo
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_set_mono_stereo (CHAL_HANDLE handle,Boolean mode);
+extern void chal_audio_nvinpath_set_mono_stereo(CHAL_HANDLE handle,
+						Boolean mode);
 
 /**
 *
 *  @brief  Set packed operation for the FIFO of Noise vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  pack                  (in) specifies whether to set packed mode or un-packed mode
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  pack                  (in) packed mode or un-packed mode
 *                                              TRUE: Packed, FALSE: Unpacked
 *
 *  @return none
@@ -617,39 +623,42 @@ extern void chal_audio_nvinpath_set_pack(CHAL_HANDLE handle, Boolean pack);
 *
 *  @brief  enable/disable sidetone data for Noise vinpath FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  read_sidetone    (in) specifies sidetone data instead of DMIC3 or DMIC4 data at the FIFO
-*                                               Left Channel TRUE: enable sidetone data, FALSE: enable DMIC3 data
-*                                               Right Channel TRUE: enable sidetone data, FALSE: enable DMIC4 data
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  read_sidetone    (in) sidetone data is DMIC3 or DMIC4 at FIFO
+*	Left Channel TRUE: enable sidetone data, FALSE: enable DMIC3 data
+*	Right Channel TRUE: enable sidetone data, FALSE: enable DMIC4 data
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_select_sidetone (CHAL_HANDLE handle,cUInt16 read_sidetone);
+extern void chal_audio_nvinpath_select_sidetone(CHAL_HANDLE handle,
+						cUInt16 read_sidetone);
 
 /**
 *
 *  @brief  Set threshold values for the FIFO of Noise vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thres                 (in) specifies the threshold value on which the FIFO generates an interrupt
-*                                              or DMA request
-*  @param  thres_2             (in) specifies the threshold value which is treated as almost full and the FIFO
-*                                             error interrupt will be generated
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thres		(in) threshold for FIFO generates an interrupt
+*				or DMA request
+*  @param  thres_2		(in) threshold treated as almost full and
+*				the FIFO error interrupt will be generated
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres, cUInt16 thres_2);
+extern void chal_audio_nvinpath_set_fifo_thres(CHAL_HANDLE handle,
+					       cUInt16 thres, cUInt16 thres_2);
 
 /**
 *
 *  @brief  get current FIFO status for the Noise vinpath fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
+*  @return current status of the FIFO defined in
+* CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
 *****************************************************************************/
 extern cUInt32 chal_audio_nvinpath_read_fifo_status(CHAL_HANDLE handle);
 
@@ -657,10 +666,11 @@ extern cUInt32 chal_audio_nvinpath_read_fifo_status(CHAL_HANDLE handle);
 *
 *  @brief  get current FIFO status for the Noise vinpath fifo 2
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
+*  @return current status of the FIFO defined in
+* CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
 *****************************************************************************/
 extern cUInt32 chal_audio_nvinpath_read_fifo_status2(CHAL_HANDLE handle);
 
@@ -668,39 +678,41 @@ extern cUInt32 chal_audio_nvinpath_read_fifo_status2(CHAL_HANDLE handle);
 *
 *  @brief  Read current FIFO contents of Noise vinpath fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  src                    (out) memory location where the FIFO contents will be written
-*  @param  length                (in) Number of 32bit reads on the FIFO to be done
-*  @param  ign_udf              (in) flag to control the number of reads.
-*                                              TRUE: read exactly the length words even if FIFO underflow happens
-*                                              FALSE: limit the read to below the almost empty statge to avoid underflow
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  src		(out) memory location where the FIFO contents to writte
+*  @param  length	(in) Number of 32bit reads on the FIFO to be done
+*  @param  ign_udf	(in) flag to control the number of reads.
+*	TRUE: read exactly the length words even if FIFO underflow happens
+*	FALSE: limit the read to avoid underflow
 *
 *
 *  @return the number of words read from the fifo
 *****************************************************************************/
-extern cUInt32 chal_audio_nvinpath_read_fifo(CHAL_HANDLE handle, cUInt32 *src, cUInt32 length, Boolean ign_udf);
+extern cUInt32 chal_audio_nvinpath_read_fifo(CHAL_HANDLE handle, cUInt32 *src,
+					     cUInt32 length, Boolean ign_udf);
 
 /**
 *
 *  @brief  Read current FIFO contents of Noise vinpath fifo 2
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  src                    (out) memory location where the FIFO contents will be written
-*  @param  length                (in) Number of 32bit reads on the FIFO to be done
-*  @param  ign_udf              (in) flag to control the number of reads.
-*                                              TRUE: read exactly the length words even if FIFO underflow happens
-*                                              FALSE: limit the read to below the almost empty statge to avoid underflow
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  src		(out) memory location where the FIFO contents to write
+*  @param  length	(in) Number of 32bit reads on the FIFO to be done
+*  @param  ign_udf	(in) flag to control the number of reads.
+*	TRUE: read exactly the length words even if FIFO underflow happens
+*	FALSE: limit the read to avoid underflow
 *
 *
 *  @return the number of words read from the fifo
 *****************************************************************************/
-extern cUInt32 chal_audio_nvinpath_read_fifo2(CHAL_HANDLE handle, cUInt32 *src, cUInt32 length, Boolean ign_udf);
+extern cUInt32 chal_audio_nvinpath_read_fifo2(CHAL_HANDLE handle, cUInt32 *src,
+					      cUInt32 length, Boolean ign_udf);
 
 /**
 *
 *  @brief  Clear the contents and reset the FIFO of Noise vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
 *  @return None
@@ -711,31 +723,33 @@ extern void chal_audio_nvinpath_clr_fifo(CHAL_HANDLE handle);
 *
 *  @brief  Clear the FIFO interrupts for Noise vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int               (in) specifies whether to clear the threshold interrupt or not
-*  @param  err_int               (in) specifies whether to clear the error interrupt or not
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int               (in) clear the threshold interrupt or not
+*  @param  err_int               (in) clear the error interrupt or not
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_nvinpath_int_clear(CHAL_HANDLE handle, Boolean fifo_int, Boolean err_int);
+extern void chal_audio_nvinpath_int_clear(CHAL_HANDLE handle, Boolean fifo_int,
+					  Boolean err_int);
 
 /**
 *
 *  @brief  Get the current interrupt status for Noise vinpath FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return Current FIFO interrupt status (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
+*  @return Current FIFO interrupt status
+* (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
 *****************************************************************************/
-extern  cUInt32 chal_audio_nvinpath_read_int_status(CHAL_HANDLE handle);
+extern cUInt32 chal_audio_nvinpath_read_int_status(CHAL_HANDLE handle);
 
 /**
 *
 *  @brief  set CIC scale parameters for Noise vinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  dmic3_coarse_scale   (in) the CIC coarse scale for Digital MIC 3
 *  @param  dmic3_fine_scale     (in) the CIC fine scale for Digital MIC 3
 *  @param  dmic4_coarse_scale   (in) the CIC coarse scale for Digital MIC 4
@@ -744,19 +758,17 @@ extern  cUInt32 chal_audio_nvinpath_read_int_status(CHAL_HANDLE handle);
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle, 
-		cUInt32 dmic3_coarse_scale, 
-		cUInt32 dmic3_fine_scale, 
-		cUInt32 dmic4_coarse_scale, 
-		cUInt32 dmic4_fine_scale);
-
-
+extern void chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle,
+					      cUInt32 dmic3_coarse_scale,
+					      cUInt32 dmic3_fine_scale,
+					      cUInt32 dmic4_coarse_scale,
+					      cUInt32 dmic4_fine_scale);
 
 /**
 *
 *  @brief  set each CIC scale parameters for nvinpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  micGainSelect	(in) the each mic gain selection.
 *  @param  gain			(in) the CIC scale
 *
@@ -764,33 +776,32 @@ extern void chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle,
 *  @return none
 *****************************************************************************/
 extern void chal_audio_nvinpath_set_each_cic_scale(CHAL_HANDLE handle,
-								CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
-															cUInt32 gain);
+			CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
+			cUInt32 gain);
 
 /**
 *
 *  @brief  Set the delay for sampling the DIGITAL MIC3,4 signals on the DATA line
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  delay                 (in) delay in 5.95 usec max possible is 41.6 usec
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  delay	(in) delay in 5.95 usec max possible is 41.6 usec
 *
 *
 *  @return none
 *****************************************************************************/
-extern cVoid chal_audio_nvinpath_set_digimic_clkdelay(CHAL_HANDLE handle, cUInt16 delay);
+extern cVoid chal_audio_nvinpath_set_digimic_clkdelay(CHAL_HANDLE handle,
+						      cUInt16 delay);
 
 /**
 *
 *  @brief  Set noise vin path filter coefficients type
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  filter                  (in) filter type (linear or minimum phase
 *
 *  @return none
 *****************************************************************************/
 extern cVoid chal_audio_nvinpath_set_filter(CHAL_HANDLE handle, cUInt16 filter);
-
-
 
 /**
 * Headset path function
@@ -800,8 +811,8 @@ extern cVoid chal_audio_nvinpath_set_filter(CHAL_HANDLE handle, cUInt16 filter);
 *
 *  @brief  Enable Headset Path
 *
-*  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable_chan  (in) this specify whcih channel to be enabled or disabled
+*  @param  handle           (in) got through chal_audio_init() function
+*  @param  enable_chan  (in) channel to be enabled or disabled
 *
 *  @return none
 *****************************************************************************/
@@ -811,53 +822,57 @@ extern void chal_audio_hspath_enable(CHAL_HANDLE handle, cUInt16 enable_chan);
 *
 *  @brief  Enable/Disable interrupt for the Headset path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int_enable    (in) this specify whether to enable or disable fifo threshold interrupt
-*  @param  err_int_enable    (in) this specify whether to enable or disable fifo error interrupt
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int_enable    (in) enable or disable fifo threshold interrupt
+*  @param  err_int_enable    (in) enable or disable fifo error interrupt
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_hspath_int_enable(CHAL_HANDLE handle, cUInt16 fifo_int_enable, cUInt16 err_int_enable);
+extern void chal_audio_hspath_int_enable(CHAL_HANDLE handle,
+					 cUInt16 fifo_int_enable,
+					 cUInt16 err_int_enable);
 
 /**
 *
 *  @brief  Enable/Disable DMA operation for the Head Set path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_enable       (in) this specify whether to enable or disable DMA mode for the FIFO
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_enable       (in) enable or disable DMA mode for the FIFO
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_hspath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable);
+extern void chal_audio_hspath_dma_enable(CHAL_HANDLE handle,
+					 Boolean dma_enable);
 
 /**
 *
 *  @brief  Get DMA port address (path FIFO address) for the Head Set path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) where the DMA port address will be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_hspath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
+extern void chal_audio_hspath_get_dma_port_addr(CHAL_HANDLE handle,
+						cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Set the Mute for the Head Set path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  mute                 (in) specifies whether to mute or not the path
-*                                               TRUE: mute the path, FALSE: un-mute the path
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  mute                 (in) specifies to to mute or not the path
+*                      TRUE: mute the path, FALSE: un-mute the path
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_hspath_mute(CHAL_HANDLE handle,  Boolean mute);
+extern void chal_audio_hspath_mute(CHAL_HANDLE handle, Boolean mute);
 
 /**
 *
 *  @brief  Set the analog Gain for the Head Set path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  gain                   (in) specifies Gain value to be set
 *
 *  @return none
@@ -868,20 +883,21 @@ extern void chal_audio_hspath_set_gain(CHAL_HANDLE handle, cUInt32 gain);
 *
 *  @brief  Set bits per sample for the FIFO of Headset path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  bits                   (in) specifies the number of bits used for each sample in the FIFO
-*                                              current supported values are 16 and 24
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  bits		(in) number of bits used for each sample in the FIFO
+*                       current supported values are 16 and 24
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_hspath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
+extern void chal_audio_hspath_set_bits_per_sample(CHAL_HANDLE handle,
+						  cUInt16 bits);
 
 /**
 *
 *  @brief  Set mode of operation for the FIFO of Headset path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  mode                 (in) specifies whether the mode is mono or stereo
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  mode                 (in) specifies to the mode is mono or stereo
 *                                              TRUE: Mono, FALSE: Stereo
 *
 *  @return none
@@ -892,8 +908,8 @@ extern void chal_audio_hspath_set_mono_stereo(CHAL_HANDLE handle, Boolean mode);
 *
 *  @brief  Set packed operation for the FIFO of Headset path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  pack                  (in) specifies whether to set packed mode or un-packed mode
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  pack                  (in) to set packed mode or un-packed mode
 *                                              TRUE: Packed, FALSE: Unpacked
 *
 *  @return none
@@ -904,7 +920,7 @@ extern void chal_audio_hspath_set_pack(CHAL_HANDLE handle, Boolean pack);
 *
 *  @brief  Clear the contents and reset the FIFO of Headset path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
 *  @return None
@@ -915,25 +931,27 @@ extern void chal_audio_hspath_clr_fifo(CHAL_HANDLE handle);
 *
 *  @brief  Set threshold values for the FIFO of Headset path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thres                 (in) specifies the threshold value on which the FIFO generates an interrupt
-*                                              or DMA request
-*  @param  thres_2             (in) specifies the threshold value which is treated as almost full and the FIFO
-*                                             error interrupt will be generated
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  thres	(in) threshold on which the FIFO generates
+*			an interrupt or DMA request
+*  @param  thres_2	(in) threshold value as almost full and
+*			the FIFO error interrupt will be generated
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_hspath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres, cUInt16 thres_2);
+extern void chal_audio_hspath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres,
+					     cUInt16 thres_2);
 
 /**
 *
 *  @brief  get current FIFO status for the Headset path fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
+*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX
+*  bitmask values
 *****************************************************************************/
 extern cUInt32 chal_audio_hspath_read_fifo_status(CHAL_HANDLE handle);
 
@@ -941,10 +959,11 @@ extern cUInt32 chal_audio_hspath_read_fifo_status(CHAL_HANDLE handle);
 *
 *  @brief  Get the current interrupt status for Headset path FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return Current FIFO interrupt status (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
+*  @return Current FIFO interrupt status
+* (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
 *****************************************************************************/
 extern cUInt32 chal_audio_hspath_read_int_status(CHAL_HANDLE handle);
 
@@ -952,139 +971,153 @@ extern cUInt32 chal_audio_hspath_read_int_status(CHAL_HANDLE handle);
 *
 *  @brief  Wrte to the Headset path FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  src                    (in) memory location from where the data is read from
-*  @param  length                (in) length of data in words to be filled to the FIFO
-*  @param  ign_ovf              (in) specifies whether to ignore the FIFO overflow condition or not
-*                                               TRUE:   write exactly length words to the FIFO, ignore any overflow
-*                                               FALSE:  limit the write to the almost full condition
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  src                  (in) memory location where data is read from
+*  @param  length               (in) length of data in words to fill the FIFO
+*  @param  ign_ovf              (in) ignore FIFO overflow condition or not
+*				TRUE:   write exactly length words to the FIFO
+*				FALSE:  limit the write to the almost full
 *
 *
 *  @return Number of words written to the FIFO
 *****************************************************************************/
-extern cUInt32 chal_audio_hspath_write_fifo(CHAL_HANDLE handle, cUInt32 *src, cUInt32 length, Boolean ign_ovf);
+extern cUInt32 chal_audio_hspath_write_fifo(CHAL_HANDLE handle, cUInt32 *src,
+					    cUInt32 length, Boolean ign_ovf);
 
 /**
 *
 *  @brief  Set SDM dither poly parameters for the  Headset path
 *
-*  @param  handle                   (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle                   (in) got through chal_audio_init() function
 *  @param  hs_dither_poly_L    (in) Left channel dither polynomial
 *  @param  hs_dither_poly_R    (in) Right channel dither polynomial
 *
 *  @return None
 *****************************************************************************/
-extern void chal_audio_hspath_sdm_set_dither_poly(CHAL_HANDLE handle, cUInt32 hs_dither_poly_L, cUInt32 hs_dither_poly_R);
+extern void chal_audio_hspath_sdm_set_dither_poly(CHAL_HANDLE handle,
+						  cUInt32 hs_dither_poly_L,
+						  cUInt32 hs_dither_poly_R);
 
 /**
 *
 *  @brief  Set SDM dither Seed parameters for the  Headset path
 *
-*  @param  handle                   (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle                   (in) got through chal_audio_init() function
 *  @param  hs_dither_seed_L    (in) Left channel dither Seed
 *  @param  hs_dither_seed_R    (in) Right channel dither Seed
 *
 *  @return None
 *****************************************************************************/
-extern void chal_audio_hspath_sdm_set_dither_seed(CHAL_HANDLE handle, cUInt32 hs_dither_seed_L, cUInt32 hs_dither_seed_R);
+extern void chal_audio_hspath_sdm_set_dither_seed(CHAL_HANDLE handle,
+						  cUInt32 hs_dither_seed_L,
+						  cUInt32 hs_dither_seed_R);
 
 /**
 *
 *  @brief  Set Head Set Driver Supply Indicator control parameters
 *
-*  @param  handle                 (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle		(in) got through chal_audio_init() function
 *  @param  hs_ds_pol            (in) Indicator polarity
-*  @param  hs_ds_delay         (in) Indicator delay after reaching the threshold
-*  @param  hs_ds_lag            (in) Indicator lag after falling below threshold
+*  @param  hs_ds_delay		(in) delay after reaching the threshold
+*  @param  hs_ds_lag		(in) lag after falling below threshold
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_hspath_hs_supply_ctrl(CHAL_HANDLE handle, Boolean hs_ds_pol, cUInt8 hs_ds_delay, cUInt8 hs_ds_lag);
+extern void chal_audio_hspath_hs_supply_ctrl(CHAL_HANDLE handle,
+					     Boolean hs_ds_pol,
+					     cUInt8 hs_ds_delay,
+					     cUInt8 hs_ds_lag);
 
 /**
 *
 *  @brief  Set Head Set Driver Supply Indicator threshold parameters
 *
-*  @param  handle                 (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  hs_supply_thres   (in) Threshold value on which the indicator kicks-in
+*  @param  handle                 (in) got through chal_audio_init() function
+*  @param  hs_supply_thres   (in) Threshold value on indicator kicks-in
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_hspath_hs_supply_thres(CHAL_HANDLE handle, cUInt32 hs_supply_thres);
+extern void chal_audio_hspath_hs_supply_thres(CHAL_HANDLE handle,
+					      cUInt32 hs_supply_thres);
 
 /**
 *
 *  @brief  Eanble/disable EANC path data to the Headset path
 *
-*  @param  handle                 (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable                 (in) Specifies whether to enable or disable the EANC feedback data to this path
+*  @param  handle                 (in) got through chal_audio_init() function
+*  @param  enable                 (in) to enable or disable EANC feedback
+*				data to this path
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_hspath_eanc_in(CHAL_HANDLE handle, cUInt16 enable );
+extern void chal_audio_hspath_eanc_in(CHAL_HANDLE handle, cUInt16 enable);
 
 /**
 *
 *  @brief  Eanble/disable sidetone path data to the Headset path
 *
-*  @param  handle                 (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable                 (in) Specifies whether to enable or disable the sidetone feedback data to this path
+*  @param  handle                 (in) got through chal_audio_init() function
+*  @param  enable                 (in) to enable or disable the sidetone
+*				 feedback data to this path
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_hspath_sidetone_in(CHAL_HANDLE handle, cUInt16 enable );
+extern void chal_audio_hspath_sidetone_in(CHAL_HANDLE handle, cUInt16 enable);
 
 /**
 *
 *  @brief  Clear the FIFO interrupts for Headset path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int               (in) specifies whether to clear the threshold interrupt or not
-*  @param  err_int               (in) specifies whether to clear the error interrupt or not
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int               (in) to clear the threshold interrupt or not
+*  @param  err_int               (in) to clear the error interrupt or not
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_hspath_int_clear(CHAL_HANDLE handle, Boolean fifo_int, Boolean err_int);
+extern void chal_audio_hspath_int_clear(CHAL_HANDLE handle, Boolean fifo_int,
+					Boolean err_int);
 
 /**
 *
 *  @brief  Set the Sigma Delta Modulator coefficients for the Headset path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  hs_coef_L          (in) Left Channel cofficients
 *  @param  hs_coef_R          (in) Right channel coefficients
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_hspath_sdm_set_coef(CHAL_HANDLE handle, cUInt32 hs_coef_L, cUInt32 hs_coef_R);
+extern void chal_audio_hspath_sdm_set_coef(CHAL_HANDLE handle,
+					   cUInt32 hs_coef_L,
+					   cUInt32 hs_coef_R);
 
 /**
 *
 *  @brief  Set the Enable/disable Headset DAC
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable_chan      (in) bit mask of the DAC channels to be enabled or disabled
-*                                              bit 0 is for Left channel, bit 1 is for Right channel
-*                                              one each bit, value 1, power up, value 0 is power down
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  enable_chan		(in) bit mask of the DAC channels to be enabled
+*				 or disabled
+*		bit 0 is for Left channel, bit 1 is for Right channel
+*               one each bit, value 1, power up, value 0 is power down
 *
 *  @return none
 *****************************************************************************/
-extern  cVoid chal_audio_hspath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable_chan);
+extern cVoid chal_audio_hspath_set_dac_pwr(CHAL_HANDLE handle,
+					   cUInt16 enable_chan);
 
 /**
 *
 *  @brief  Set Headset path filter coefficients type
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  filter                  (in) filter type (linear or minimum phase
 *
 *  @return none
 *****************************************************************************/
 extern cVoid chal_audio_hspath_set_filter(CHAL_HANDLE handle, cUInt16 filter);
-
-
 
 /**
 * IHF Path
@@ -1094,8 +1127,8 @@ extern cVoid chal_audio_hspath_set_filter(CHAL_HANDLE handle, cUInt16 filter);
 *
 *  @brief  Enable IHF Path
 *
-*  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable_chan  (in) this specify whcih channel to be enabled or disabled
+*  @param  handle           (in) got through chal_audio_init() function
+*  @param  enable_chan  (in) specify whcih channel to be enabled or disabled
 *
 *  @return none
 *****************************************************************************/
@@ -1105,53 +1138,57 @@ extern void chal_audio_ihfpath_enable(CHAL_HANDLE handle, cUInt16 enable_chan);
 *
 *  @brief  Enable/Disable interrupt for the IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int_enable    (in) this specify whether to enable or disable fifo threshold interrupt
-*  @param  err_int_enable    (in) this specify whether to enable or disable fifo error interrupt
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int_enable    (in) to enable or disable fifo threshold interrupt
+*  @param  err_int_enable    (in) to enable or disable fifo error interrupt
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_ihfpath_int_enable(CHAL_HANDLE handle, cUInt16 fifo_int_enable, cUInt16 err_int_enable );
+extern void chal_audio_ihfpath_int_enable(CHAL_HANDLE handle,
+					  cUInt16 fifo_int_enable,
+					  cUInt16 err_int_enable);
 
 /**
 *
 *  @brief  Enable/Disable DMA operation for the IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_enable       (in) this specify whether to enable or disable DMA mode for the FIFO
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_enable       (in) to enable or disable DMA mode for the FIFO
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_ihfpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable);
+extern void chal_audio_ihfpath_dma_enable(CHAL_HANDLE handle,
+					  Boolean dma_enable);
 
 /**
 *
 *  @brief  Get DMA port address (path FIFO address) for the IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) where the DMA port address will be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_ihfpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
+extern void chal_audio_ihfpath_get_dma_port_addr(CHAL_HANDLE handle,
+						 cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Set the Mute for the IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  mute                 (in) specifies whether to mute or not the path
-*                                               TRUE: mute the path, FALSE: un-mute the path
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  mute                 (in) to mute or not the path
+*                                 TRUE: mute the path, FALSE: un-mute the path
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_ihfpath_mute(CHAL_HANDLE handle,  Boolean mute);
+extern void chal_audio_ihfpath_mute(CHAL_HANDLE handle, Boolean mute);
 
 /**
 *
 *  @brief  Set the analog Gain for the IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  gain                   (in) specifies Gain value to be set
 *
 *  @return none
@@ -1162,33 +1199,35 @@ extern void chal_audio_ihfpath_set_gain(CHAL_HANDLE handle, cUInt32 gain);
 *
 *  @brief  Set bits per sample for the FIFO of IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  bits                   (in) specifies the number of bits used for each sample in the FIFO
-*                                              current supported values are 16 and 24
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  bits                   (in) number of bits used for each sample
+*				 in the FIFO, current supported 16 and 24
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_ihfpath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
+extern void chal_audio_ihfpath_set_bits_per_sample(CHAL_HANDLE handle,
+						   cUInt16 bits);
 
 /**
 *
 *  @brief  Set mode of operation for the FIFO of IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  mode                 (in) specifies whether the mode is mono or stereo
-*                                              TRUE: Mono, FALSE: Stereo
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  mode                 (in) specifies mono or stereo
+*                               TRUE: Mono, FALSE: Stereo
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_ihfpath_set_mono_stereo(CHAL_HANDLE handle, Boolean mode);
+extern void chal_audio_ihfpath_set_mono_stereo(CHAL_HANDLE handle,
+					       Boolean mode);
 
 /**
 *
 *  @brief  Set packed operation for the FIFO of IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  pack                  (in) specifies whether to set packed mode or un-packed mode
-*                                              TRUE: Packed, FALSE: Unpacked
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  pack                  (in) specifies set packed or un-packed mode
+*                                TRUE: Packed, FALSE: Unpacked
 *
 *  @return none
 *****************************************************************************/
@@ -1198,7 +1237,7 @@ extern void chal_audio_ihfpath_set_pack(CHAL_HANDLE handle, Boolean pack);
 *
 *  @brief  Clear the contents and reset the FIFO of IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
 *  @return None
@@ -1209,25 +1248,28 @@ extern void chal_audio_ihfpath_clr_fifo(CHAL_HANDLE handle);
 *
 *  @brief  Set threshold values for the FIFO of IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thres                 (in) specifies the threshold value on which the FIFO generates an interrupt
-*                                              or DMA request
-*  @param  thres_2             (in) specifies the threshold value which is treated as almost full and the FIFO
-*                                             error interrupt will be generated
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thres                (in) threshold on FIFO generates an interrupt
+*				or DMA request
+*  @param  thres_2		(in) threshold value which is treated as almost
+*				full and the FIFO
+*				error interrupt will be generated
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_ihfpath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres, cUInt16 thres_2);
+extern void chal_audio_ihfpath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres,
+					      cUInt16 thres_2);
 
 /**
 *
 *  @brief  get current FIFO status for the IHF path fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
+*  @return current status of the FIFO defined in
+* CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
 *****************************************************************************/
 extern cUInt32 chal_audio_ihfpath_read_fifo_status(CHAL_HANDLE handle);
 
@@ -1235,10 +1277,11 @@ extern cUInt32 chal_audio_ihfpath_read_fifo_status(CHAL_HANDLE handle);
 *
 *  @brief  Get the current interrupt status for IHF path FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return Current FIFO interrupt status (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
+*  @return Current FIFO interrupt status (combination of
+* CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
 *****************************************************************************/
 extern cUInt32 chal_audio_ihfpath_read_int_status(CHAL_HANDLE handle);
 
@@ -1246,110 +1289,118 @@ extern cUInt32 chal_audio_ihfpath_read_int_status(CHAL_HANDLE handle);
 *
 *  @brief  Wrte to the IHF path FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  src                    (in) memory location from where the data is read from
-*  @param  length                (in) length of data in words to be filled to the FIFO
-*  @param  ign_ovf              (in) specifies whether to ignore the FIFO overflow condition or not
-*                                               TRUE:   write exactly length words to the FIFO, ignore any overflow
-*                                               FALSE:  limit the write to the almost full condition
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  src		(in) memory location from where data is read
+*  @param  length	(in) length of data in words to be filled to the FIFO
+*  @param  ign_ovf	(in) ignore the FIFO overflow condition or not
+*	TRUE:   write exactly length words to the FIFO, ignore any overflow
+*	FALSE:  limit the write to the almost full condition
 *
 *
 *  @return Number of words written to the FIFO
 *****************************************************************************/
-extern cUInt32 chal_audio_ihfpath_write_fifo(CHAL_HANDLE handle, cUInt32 *src, cUInt32 length, Boolean ign_ovf);
+extern cUInt32 chal_audio_ihfpath_write_fifo(CHAL_HANDLE handle, cUInt32 *src,
+					     cUInt32 length, Boolean ign_ovf);
 
 /**
 *
 *  @brief  Set SDM dither poly parameters for the  IHF path
 *
-*  @param  handle                   (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle                   (in) got through chal_audio_init() function
 *  @param  hs_dither_poly_L    (in) Left channel dither polynomial
 *  @param  hs_dither_poly_R    (in) Right channel dither polynomial
 *
 *  @return None
 *****************************************************************************/
-extern void chal_audio_ihfpath_sdm_set_dither_poly(CHAL_HANDLE handle, cUInt32 ihf_dither_poly_L, cUInt32 ihf_dither_poly_R);
+extern void chal_audio_ihfpath_sdm_set_dither_poly(CHAL_HANDLE handle,
+						   cUInt32 ihf_dither_poly_L,
+						   cUInt32 ihf_dither_poly_R);
 
 /**
 *
 *  @brief  Set SDM dither Seed parameters for the  IHF path
 *
-*  @param  handle                   (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle                   (in) got through chal_audio_init() function
 *  @param  hs_dither_seed_L    (in) Left channel dither Seed
 *  @param  hs_dither_seed_R    (in) Right channel dither Seed
 *
 *  @return None
 *****************************************************************************/
-extern void chal_audio_ihfpath_sdm_set_dither_seed(CHAL_HANDLE handle, cUInt32 ihf_dither_seed_L, cUInt32 ihf_dither_seed_R);
+extern void chal_audio_ihfpath_sdm_set_dither_seed(CHAL_HANDLE handle,
+						   cUInt32 ihf_dither_seed_L,
+						   cUInt32 ihf_dither_seed_R);
 
 /**
 *
 *  @brief  Eanble/disable EANC path data to the IHF path
 *
-*  @param  handle                 (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable                 (in) Specifies whether to enable or disable the EANC feedback data to this path
+*  @param  handle                 (in) got through chal_audio_init() function
+*  @param  enable                 (in) enable or disable the EANC feedback data
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_ihfpath_eanc_in(CHAL_HANDLE handle, cUInt16 enable );
+extern void chal_audio_ihfpath_eanc_in(CHAL_HANDLE handle, cUInt16 enable);
 
 /**
 *
 *  @brief  Eanble/disable sidetone path data to the IHF path
 *
-*  @param  handle                 (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable                 (in) Specifies whether to enable or disable the sidetone feedback data to this path
+*  @param  handle                 (in) got through chal_audio_init() function
+*  @param  enable                 (in) enable or disable the sidetone feedback
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_ihfpath_sidetone_in(CHAL_HANDLE handle, cUInt16 enable );
+extern void chal_audio_ihfpath_sidetone_in(CHAL_HANDLE handle, cUInt16 enable);
 
 /**
 *
 *  @brief  Clear the FIFO interrupts for IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int               (in) specifies whether to clear the threshold interrupt or not
-*  @param  err_int               (in) specifies whether to clear the error interrupt or not
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int               (in) clear the threshold interrupt or not
+*  @param  err_int               (in) clear the error interrupt or not
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_ihfpath_int_clear(CHAL_HANDLE handle, Boolean fifo_int, Boolean err_int);
+extern void chal_audio_ihfpath_int_clear(CHAL_HANDLE handle, Boolean fifo_int,
+					 Boolean err_int);
 
 /**
 *
 *  @brief  Set the Sigma Delta Modulator coefficients for the IHF path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  hs_coef_L          (in) Left Channel cofficients
 *  @param  hs_coef_R          (in) Right channel coefficients
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_ihfpath_sdm_set_coef(CHAL_HANDLE handle, cUInt32 hs_coef_L, cUInt32 hs_coef_R);
-
+extern void chal_audio_ihfpath_sdm_set_coef(CHAL_HANDLE handle,
+					    cUInt32 hs_coef_L,
+					    cUInt32 hs_coef_R);
 
 /**
 *
 *  @brief  Set the Enable/disable IHF DAC
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable_chan      (in) bit mask of the DAC channels to be enabled or disabled
-*                                              bit 0 is for Left channel, bit 1 is for Right channel
-*                                              one each bit, value 1, power up, value 0 is power down
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  enable_chan	(in) bit mask of the DAC channels to be enabled
+*			or disabled
+*		bit 0 is for Left channel, bit 1 is for Right channel
+*		one each bit, value 1, power up, value 0 is power down
 *
 *  @return none
 *****************************************************************************/
-extern  cVoid chal_audio_ihfpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable_chan);
-
+extern cVoid chal_audio_ihfpath_set_dac_pwr(CHAL_HANDLE handle,
+					    cUInt16 enable_chan);
 
 /**
 *
 *  @brief  Get the statuc of IHF DAC
 *
-*  @param  handle (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle (in) got through chal_audio_init() function
 *
 *  @return cUInt8 (out) status of IHF path DAC pwr
 *****************************************************************************/
@@ -1359,14 +1410,12 @@ extern cUInt8 chal_audio_ihfpath_get_dac_pwr(CHAL_HANDLE handle);
 *
 *  @brief  Set IHF path filter coefficients type
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  filter                  (in) filter type (linear or minimum phase
 *
 *  @return none
 *****************************************************************************/
 extern cVoid chal_audio_ihfpath_set_filter(CHAL_HANDLE handle, cUInt16 filter);
-
-
 
 /**
 * Earpiece (Vout) path function
@@ -1376,8 +1425,8 @@ extern cVoid chal_audio_ihfpath_set_filter(CHAL_HANDLE handle, cUInt16 filter);
 *
 *  @brief  Enable Headset Path
 *
-*  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable           (in) this specify whcih channel to be enabled or disabled
+*  @param  handle           (in) got through chal_audio_init() function
+*  @param  enable           (in) channel to be enabled or disabled
 *
 *  @return none
 *****************************************************************************/
@@ -1387,53 +1436,57 @@ extern void chal_audio_earpath_enable(CHAL_HANDLE handle, cUInt16 enable);
 *
 *  @brief  Enable/Disable interrupt for the ear piece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int_enable    (in) this specify whether to enable or disable fifo threshold interrupt
-*  @param  err_int_enable    (in) this specify whether to enable or disable fifo error interrupt
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int_enable    enable or disable fifo threshold interrupt
+*  @param  err_int_enable    enable or disable fifo error interrupt
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_earpath_int_enable(CHAL_HANDLE handle, cUInt16 fifo_int_enable, cUInt16 err_int_enable );
+extern void chal_audio_earpath_int_enable(CHAL_HANDLE handle,
+					  cUInt16 fifo_int_enable,
+					  cUInt16 err_int_enable);
 
 /**
 *
 *  @brief  Enable/Disable DMA operation for the Ear Piece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_enable       (in) this specify whether to enable or disable DMA mode for the FIFO
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_enable       (in) enable or disable DMA mode for the FIFO
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_earpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable);
+extern void chal_audio_earpath_dma_enable(CHAL_HANDLE handle,
+					  Boolean dma_enable);
 
 /**
 *
 *  @brief  Get DMA port address (path FIFO address) for the Ear Piece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) location DMA port address will be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_earpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
+extern void chal_audio_earpath_get_dma_port_addr(CHAL_HANDLE handle,
+						 cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Set the Mute for the ear piece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  mute                 (in) specifies whether to mute or not the path
-*                                               TRUE: mute the path, FALSE: un-mute the path
+*		TRUE: mute the path, FALSE: un-mute the path
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_earpath_mute(CHAL_HANDLE handle,  Boolean mute);
+extern void chal_audio_earpath_mute(CHAL_HANDLE handle, Boolean mute);
 
 /**
 *
 *  @brief  Set the analog Gain for the Ear Piece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  gain                   (in) specifies Gain value to be set
 *
 *  @return none
@@ -1444,32 +1497,34 @@ extern void chal_audio_earpath_set_gain(CHAL_HANDLE handle, cUInt32 gain);
 *
 *  @brief  Set bits per sample for the FIFO of Ear Piece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  bits                   (in) specifies the number of bits used for each sample in the FIFO
-*                                              current supported values are 16 and 24
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  bits		(in) number of bits used for each sample in the FIFO
+*			current supported values are 16 and 24
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_earpath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
+extern void chal_audio_earpath_set_bits_per_sample(CHAL_HANDLE handle,
+						   cUInt16 bits);
 
 /**
 *
 *  @brief  Set mode of operation for the FIFO of Earpiece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  mode                 (in) specifies whether the mode is mono or stereo
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  mode                 (in) mono or stereo
 *                                              TRUE: Mono, FALSE: Stereo
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_earpath_set_mono_stereo(CHAL_HANDLE handle, Boolean mode);
+extern void chal_audio_earpath_set_mono_stereo(CHAL_HANDLE handle,
+					       Boolean mode);
 
 /**
 *
 *  @brief  Set packed operation for the FIFO of Earpiece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  pack                  (in) specifies whether to set packed mode or un-packed mode
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  pack                  (in) packed mode or un-packed mode
 *                                              TRUE: Packed, FALSE: Unpacked
 *
 *  @return none
@@ -1480,7 +1535,7 @@ extern void chal_audio_earpath_set_pack(CHAL_HANDLE handle, Boolean pack);
 *
 *  @brief  Clear the contents and reset the FIFO of Earpiece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
 *  @return None
@@ -1491,25 +1546,27 @@ extern void chal_audio_earpath_clr_fifo(CHAL_HANDLE handle);
 *
 *  @brief  Set threshold values for the FIFO of Earpiece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thres                 (in) specifies the threshold value on which the FIFO generates an interrupt
-*                                              or DMA request
-*  @param  thres_2             (in) specifies the threshold value which is treated as almost full and the FIFO
-*                                             error interrupt will be generated
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thres		(in) threshold on which the FIFO generates
+*				an interrupt or DMA request
+*  @param  thres_2             (in) threshold value which is treated as almost
+* full and the FIFO error interrupt will be generated
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_earpath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres, cUInt16 thres_2);
+extern void chal_audio_earpath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres,
+					      cUInt16 thres_2);
 
 /**
 *
 *  @brief  get current FIFO status for the Earpiece path fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
+*  @return current status of the FIFO defined in
+* CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
 *****************************************************************************/
 extern cUInt32 chal_audio_earpath_read_fifo_status(CHAL_HANDLE handle);
 
@@ -1517,10 +1574,11 @@ extern cUInt32 chal_audio_earpath_read_fifo_status(CHAL_HANDLE handle);
 *
 *  @brief  Get the current interrupt status for Earpiece path FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return Current FIFO interrupt status (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
+*  @return Current FIFO interrupt status
+* (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
 *****************************************************************************/
 extern cUInt32 chal_audio_earpath_read_int_status(CHAL_HANDLE handle);
 
@@ -1528,107 +1586,111 @@ extern cUInt32 chal_audio_earpath_read_int_status(CHAL_HANDLE handle);
 *
 *  @brief  Wrte to the Earpiece path FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  src                    (in) memory location from where the data is read from
-*  @param  length                (in) length of data in words to be filled to the FIFO
-*  @param  ign_ovf              (in) specifies whether to ignore the FIFO overflow condition or not
-*                                               TRUE:   write exactly length words to the FIFO, ignore any overflow
-*                                               FALSE:  limit the write to the almost full condition
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  src		(in) memory location from where the data is read from
+*  @param  length	(in) length of data in words to be filled to the FIFO
+*  @param  ign_ovf	(in) ignore the FIFO overflow condition or not
+*		TRUE:   write length words to the FIFO, ignore any overflow
+*		FALSE:  limit the write to the almost full condition
 *
 *
 *  @return Number of words written to the FIFO
 *****************************************************************************/
-extern cUInt32 chal_audio_earpath_write_fifo(CHAL_HANDLE handle, cUInt32 *src, cUInt32 length, Boolean ign_ovf);
+extern cUInt32 chal_audio_earpath_write_fifo(CHAL_HANDLE handle, cUInt32 *src,
+					     cUInt32 length, Boolean ign_ovf);
 
 /**
 *
 *  @brief  Set SDM dither poly parameters for the  Earpiece path
 *
-*  @param  handle                   (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle                   (in) got through chal_audio_init() function
 *  @param  hs_dither_poly       (in) Left channel dither polynomial
 *
 *  @return None
 *****************************************************************************/
-extern void chal_audio_earpath_sdm_set_dither_poly(CHAL_HANDLE handle, cUInt32 vout_dither_poly);
+extern void chal_audio_earpath_sdm_set_dither_poly(CHAL_HANDLE handle,
+						   cUInt32 vout_dither_poly);
 
 /**
 *
 *  @brief  Set SDM dither Seed parameters for the  Earpiece path
 *
-*  @param  handle                   (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle                   (in) got through chal_audio_init() function
 *  @param  hs_dither_seed_L    (in) Left channel dither Seed
 *  @param  hs_dither_seed_R    (in) Right channel dither Seed
 *
 *  @return None
 *****************************************************************************/
-extern void chal_audio_earpath_sdm_set_dither_seed(CHAL_HANDLE handle, cUInt32 vout_dither_seed);
+extern void chal_audio_earpath_sdm_set_dither_seed(CHAL_HANDLE handle,
+						   cUInt32 vout_dither_seed);
 
 /**
 *
 *  @brief  Eanble/disable sidetone path data to the Earpiece path
 *
-*  @param  handle                 (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable                 (in) Specifies whether to enable or disable the sidetone feedback data to this path
+*  @param  handle                 (in) got through chal_audio_init() function
+*  @param  enable                 (in) enable the sidetone feedback data or not
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_earpath_sidetone_in(CHAL_HANDLE handle, cUInt16 enable );
+extern void chal_audio_earpath_sidetone_in(CHAL_HANDLE handle, cUInt16 enable);
 
 /**
 *
 *  @brief  Eanble/disable EANC path data to the Earpiece path
 *
-*  @param  handle                 (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable                 (in) Specifies whether to enable or disable the EANC feedback data to this path
+*  @param  handle                 (in) got through chal_audio_init() function
+*  @param  enable                 (in) enable or disable the EANC feedback data
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_earpath_eanc_in(CHAL_HANDLE handle, cUInt16 enable );
+extern void chal_audio_earpath_eanc_in(CHAL_HANDLE handle, cUInt16 enable);
 
 /**
 *
 *  @brief  Clear the FIFO interrupts for Earpiece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int               (in) specifies whether to clear the threshold interrupt or not
-*  @param  err_int               (in) specifies whether to clear the error interrupt or not
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int               (in) clear the threshold interrupt or not
+*  @param  err_int               (in) clear the error interrupt or not
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_earpath_int_clear(CHAL_HANDLE handle, Boolean fifo_int, Boolean err_int);
+extern void chal_audio_earpath_int_clear(CHAL_HANDLE handle, Boolean fifo_int,
+					 Boolean err_int);
 
 /**
 *
 *  @brief  Set the Sigma Delta Modulator coefficients for the Earpiece path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  hs_coef_L          (in) Left Channel cofficients
 *  @param  hs_coef_R          (in) Right channel coefficients
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_earpath_sdm_set_coef(CHAL_HANDLE handle, cUInt32 *SDM_coef );
-
+extern void chal_audio_earpath_sdm_set_coef(CHAL_HANDLE handle,
+					    cUInt32 *SDM_coef);
 
 /**
 *
 *  @brief  Set the Enable/disable Ear Piece DAC
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable               (in) Flag to specify power up or power down (1 - power up, 0 -  power down)
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  enable               (in) power down (1 - power up, 0 -  power down)
 *
 *  @return none
 *****************************************************************************/
-extern  cVoid chal_audio_earpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable);
+extern cVoid chal_audio_earpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable);
 
 /**
 *
 *  @brief  Set the Enable/disable Ear Piece Driver
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable               (in) Flag to specify power up or power down (1 - power up, 0 -  power down)
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  enable               (in) power down (1 - power up, 0 -  power down)
 *
 *  @return none
 *****************************************************************************/
@@ -1638,57 +1700,63 @@ extern cVoid chal_audio_earpath_set_drv_pwr(CHAL_HANDLE handle, cUInt16 enable);
 *
 *  @brief  Set the AUDIOTX slow ramp generator controls
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable               (in) Slow Ramp controls. Should be one of the combinations of CHAL_AUDIO_AUDIOTX_SR_XXXX
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  enable               (in) Slow Ramp controls.
+*	Should be one of the combinations of CHAL_AUDIO_AUDIOTX_SR_XXXX
 *
 *  @return none
 *****************************************************************************/
-extern cVoid chal_audio_earpath_set_slowramp_ctrl(CHAL_HANDLE handle, cUInt16 sr_ctrl);
-
+extern cVoid chal_audio_earpath_set_slowramp_ctrl(CHAL_HANDLE handle,
+						  cUInt16 sr_ctrl);
 
 /**
 *
 *  @brief  Clear the AUDIOTX slow ramp generator controls
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable               (in) Slow Ramp controls. Should be one of the combinations of CHAL_AUDIO_AUDIOTX_SR_XXXX
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  enable               (in) Slow Ramp controls.
+*	Should be one of the combinations of CHAL_AUDIO_AUDIOTX_SR_XXXX
 *
 *  @return none
 *****************************************************************************/
-extern cVoid chal_audio_earpath_clear_slowramp_ctrl(CHAL_HANDLE handle, cUInt16 sr_ctrl);
+extern cVoid chal_audio_earpath_clear_slowramp_ctrl(CHAL_HANDLE handle,
+						    cUInt16 sr_ctrl);
 /**
 *
 *  @brief  Set the AUDIOTX Isolation controls
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable               (in) isolation controls. Should be one of the combinations of CHAL_AUDIO_AUDIOTX_ISO_XXXX
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  enable               (in) isolation controls.
+*	Should be one of the combinations of CHAL_AUDIO_AUDIOTX_ISO_XXXX
 *
 *  @return none
 *****************************************************************************/
-extern cVoid chal_audio_earpath_set_isolation_ctrl(CHAL_HANDLE handle, cUInt16 iso_ctrl);
+extern cVoid chal_audio_earpath_set_isolation_ctrl(CHAL_HANDLE handle,
+						   cUInt16 iso_ctrl);
 
 /**
 *
 *  @brief  Clear the AUDIOTX Isolation controls
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable               (in) isolation controls. Should be one of the combinations of CHAL_AUDIO_AUDIOTX_ISO_XXXX
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  enable               (in) isolation controls.
+*	Should be one of the combinations of CHAL_AUDIO_AUDIOTX_ISO_XXXX
 *
 *  @return none
 *****************************************************************************/
-extern cVoid chal_audio_earpath_clear_isolation_ctrl(CHAL_HANDLE handle, cUInt16 iso_ctrl);
+extern cVoid chal_audio_earpath_clear_isolation_ctrl(CHAL_HANDLE handle,
+						     cUInt16 iso_ctrl);
 
 /**
 *
 *  @brief  Set Ear path filter coefficients type
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  filter                  (in) filter type (linear or minimum phase
 *
 *  @return none
 *****************************************************************************/
 extern cVoid chal_audio_earpath_set_filter(CHAL_HANDLE handle, cUInt16 filter);
-
 
 /**
 * Vibrator path function
@@ -1698,8 +1766,8 @@ extern cVoid chal_audio_earpath_set_filter(CHAL_HANDLE handle, cUInt16 filter);
 *
 *  @brief  Enable Vibra Path
 *
-*  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable           (in) this specify whcih channel to be enabled or disabled
+*  @param  handle           (in) got through chal_audio_init() function
+*  @param  enable           (in) whcih channel to be enabled or disabled
 *
 *  @return none
 *****************************************************************************/
@@ -1709,20 +1777,22 @@ extern void chal_audio_vibra_enable(CHAL_HANDLE handle, cUInt16 enable);
 *
 *  @brief  Enable/Disable interrupt for the VIBRA path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int_enable    (in) this specify whether to enable or disable fifo threshold interrupt
-*  @param  err_int_enable    (in) this specify whether to enable or disable fifo error interrupt
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int_enable    (in) enable or disable fifo threshold interrupt
+*  @param  err_int_enable    (in) enable or disable fifo error interrupt
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vibra_int_enable(CHAL_HANDLE handle, cUInt16 fifo_int_enable, cUInt16 err_int_enable );
+extern void chal_audio_vibra_int_enable(CHAL_HANDLE handle,
+					cUInt16 fifo_int_enable,
+					cUInt16 err_int_enable);
 
 /**
 *
 *  @brief  Enable/Disable DMA operation for the vibra path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_enable       (in) this specify whether to enable or disable DMA mode for the FIFO
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_enable       (in) enable or disable DMA mode for the FIFO
 *
 *  @return none
 *****************************************************************************/
@@ -1732,30 +1802,31 @@ extern void chal_audio_vibra_dma_enable(CHAL_HANDLE handle, Boolean dma_enable);
 *
 *  @brief  Get DMA port address (path FIFO address) for the VIBRA path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) location DMA port address to be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vibra_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
+extern void chal_audio_vibra_get_dma_port_addr(CHAL_HANDLE handle,
+					       cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Set the Mute for the vibra path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  mute                 (in) specifies whether to mute or not the path
-*                                               TRUE: mute the path, FALSE: un-mute the path
+*			TRUE: mute the path, FALSE: un-mute the path
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vibra_mute(CHAL_HANDLE handle,  Boolean mute);
+extern void chal_audio_vibra_mute(CHAL_HANDLE handle, Boolean mute);
 
 /**
 *
 *  @brief  Set the analog Gain for the Vibrator path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  gain                   (in) specifies Gain value to be set
 *
 *  @return none
@@ -1766,20 +1837,21 @@ extern void chal_audio_vibra_set_gain(CHAL_HANDLE handle, cUInt32 gain);
 *
 *  @brief  Set bits per sample for the FIFO of VIBRA path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  bits                   (in) specifies the number of bits used for each sample in the FIFO
-*                                              current supported values are 16 and 24
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  bits			(in) number of bits for sample in FIFO
+*				current supported values are 16 and 24
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vibra_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
+extern void chal_audio_vibra_set_bits_per_sample(CHAL_HANDLE handle,
+						 cUInt16 bits);
 
 /**
 *
 *  @brief  Set mode of operation for the FIFO of VIBRA path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  mode                 (in) specifies whether the mode is mono or stereo
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  mode                 (in) mono or stereo
 *                                              TRUE: Mono, FALSE: Stereo
 *
 *  @return none
@@ -1790,8 +1862,8 @@ extern void chal_audio_vibra_set_mono_stereo(CHAL_HANDLE handle, Boolean mode);
 *
 *  @brief  Set packed operation for the FIFO of VIBRA path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  pack                  (in) specifies whether to set packed mode or un-packed mode
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  pack                  (in) packed mode or un-packed mode
 *                                              TRUE: Packed, FALSE: Unpacked
 *
 *  @return none
@@ -1802,7 +1874,7 @@ extern void chal_audio_vibra_set_pack(CHAL_HANDLE handle, Boolean pack);
 *
 *  @brief  Clear the contents and reset the FIFO of VIBRA path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
 *  @return None
@@ -1813,25 +1885,27 @@ extern void chal_audio_vibra_clr_fifo(CHAL_HANDLE handle);
 *
 *  @brief  Set threshold values for the FIFO of VIBRA path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thres                 (in) specifies the threshold value on which the FIFO generates an interrupt
-*                                              or DMA request
-*  @param  thres_2             (in) specifies the threshold value which is treated as almost full and the FIFO
-*                                             error interrupt will be generated
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  thres	(in) thresholod for the FIFO generates an interrupt
+*			or DMA request
+*  @param  thres_2	(in) threshold value as almost full and the FIFO
+*			error interrupt will be generated
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vibra_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres, cUInt16 thres_2);
+extern void chal_audio_vibra_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres,
+					    cUInt16 thres_2);
 
 /**
 *
 *  @brief  get current FIFO status for the VIBRA path fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
+*  @return current status of the FIFO defined in
+* CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
 *****************************************************************************/
 extern cUInt32 chal_audio_vibra_read_fifo_status(CHAL_HANDLE handle);
 
@@ -1839,10 +1913,11 @@ extern cUInt32 chal_audio_vibra_read_fifo_status(CHAL_HANDLE handle);
 *
 *  @brief  Get the current interrupt status for VIBRA path FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return Current FIFO interrupt status (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
+*  @return Current FIFO interrupt status
+* (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
 *****************************************************************************/
 extern cUInt32 chal_audio_vibra_read_int_status(CHAL_HANDLE handle);
 
@@ -1850,102 +1925,106 @@ extern cUInt32 chal_audio_vibra_read_int_status(CHAL_HANDLE handle);
 *
 *  @brief  Wrte to the VIBRA path FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  src                    (in) memory location from where the data is read from
-*  @param  length                (in) length of data in words to be filled to the FIFO
-*  @param  ign_ovf              (in) specifies whether to ignore the FIFO overflow condition or not
-*                                               TRUE:   write exactly length words to the FIFO, ignore any overflow
-*                                               FALSE:  limit the write to the almost full condition
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  src		(in) memory location from where the data is read from
+*  @param  length	(in) length of data in words to fill the FIFO
+*  @param  ign_ovf	(in) ignore the FIFO overflow condition or not
+*	TRUE:   write exactly length words to the FIFO, ignore any overflow
+*	FALSE:  limit the write to the almost full condition
 *
 *
 *  @return Number of words written to the FIFO
 *****************************************************************************/
-extern cUInt32 chal_audio_vibra_write_fifo(CHAL_HANDLE handle, cUInt32 *src, cUInt32 length, Boolean ign_ovf);
+extern cUInt32 chal_audio_vibra_write_fifo(CHAL_HANDLE handle, cUInt32 *src,
+					   cUInt32 length, Boolean ign_ovf);
 
 /**
 *
 *  @brief  Set SDM dither poly parameters for the  VIBRA path
 *
-*  @param  handle                   (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle		(in) got through chal_audio_init() function
 *  @param  hs_dither_poly       (in) Left channel dither polynomial
 *
 *  @return None
 *****************************************************************************/
-extern void chal_audio_vibra_sdm_set_dither_poly(CHAL_HANDLE handle, cUInt32 vout_dither_poly);
+extern void chal_audio_vibra_sdm_set_dither_poly(CHAL_HANDLE handle,
+						 cUInt32 vout_dither_poly);
 
 /**
 *
 *  @brief  Set SDM dither Seed parameters for the  VIBRA path
 *
-*  @param  handle                   (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle		(in) got through chal_audio_init() function
 *  @param  hs_dither_seed_L    (in) Left channel dither Seed
 *  @param  hs_dither_seed_R    (in) Right channel dither Seed
 *
 *  @return None
 *****************************************************************************/
-extern void chal_audio_vibra_sdm_set_dither_seed(CHAL_HANDLE handle, cUInt32 vout_dither_seed);
+extern void chal_audio_vibra_sdm_set_dither_seed(CHAL_HANDLE handle,
+						 cUInt32 vout_dither_seed);
 
 /**
 *
 *  @brief Set bypass mode for the VIBRA path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  bypass               (in) this specify whether to bypass the FIFO or not
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  bypass               (in) bypass the FIFO or not
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_vibra_set_bypass(CHAL_HANDLE handle, Boolean bypass);
+extern void chal_audio_vibra_set_bypass(CHAL_HANDLE handle, Boolean bypass);
 
 /**
 *
 *  @brief  Clear the FIFO interrupts for VIBRA path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int               (in) specifies whether to clear the threshold interrupt or not
-*  @param  err_int               (in) specifies whether to clear the error interrupt or not
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int               (in) clear the threshold interrupt or not
+*  @param  err_int               (in) clear the error interrupt or not
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_vibra_int_clear(CHAL_HANDLE handle, Boolean fifo_int, Boolean err_int);
+extern void chal_audio_vibra_int_clear(CHAL_HANDLE handle, Boolean fifo_int,
+				       Boolean err_int);
 
 /**
 *
 *  @brief  Set the Sigma Delta Modulator coefficients for the VIBRA path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  hs_coef_L          (in) Left Channel cofficients
 *  @param  hs_coef_R          (in) Right channel coefficients
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_vibra_sdm_set_coef(CHAL_HANDLE handle, cUInt32 *SDM_coef );
+extern void chal_audio_vibra_sdm_set_coef(CHAL_HANDLE handle,
+					  cUInt32 *SDM_coef);
 
 /**
 *
 *  @brief  Set the Enable/disable Vibrator DAC
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable_chan      (in) Flag to specify power up or power down (1 - power up, 0 -  power down)
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  enable_chan		(in) Flag power up or power down
+*				(1 - power up, 0 -  power down)
 *
 *  @return none
 *****************************************************************************/
-extern  cVoid chal_audio_vibra_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable_chan);
+extern cVoid chal_audio_vibra_set_dac_pwr(CHAL_HANDLE handle,
+					  cUInt16 enable_chan);
 
 /**
 *
 *  @brief  Set Vibrator path filter coefficients type
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  filter                  (in) filter type (linear or minimum phase
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  filter               (in) filter type (linear or minimum phase
 *
 *  @return none
 *****************************************************************************/
 extern cVoid chal_audio_vibra_set_filter(CHAL_HANDLE handle, cUInt16 filter);
-
-
-
 
 /**
 * EANC (EANC) path function
@@ -1954,8 +2033,8 @@ extern cVoid chal_audio_vibra_set_filter(CHAL_HANDLE handle, cUInt16 filter);
 *
 *  @brief  Enable Headset Path
 *
-*  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable_chan  (in) this specify whcih channel to be enabled or disabled
+*  @param  handle           (in) got through chal_audio_init() function
+*  @param  enable_chan  (in) whcih channel to be enabled or disabled
 *
 *  @return none
 *****************************************************************************/
@@ -1965,66 +2044,72 @@ extern void chal_audio_eancpath_enable(CHAL_HANDLE handle, cUInt16 enable);
 *
 *  @brief  Enable/Disable interrupt for the EANC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int_enable    (in) this specify whether to enable or disable fifo threshold interrupt
-*  @param  err_int_enable    (in) this specify whether to enable or disable fifo error interrupt
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int_enable    (in) enable or disable fifo threshold interrupt
+*  @param  err_int_enable    (in) enable or disable fifo error interrupt
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_eancpath_int_enable(CHAL_HANDLE handle, cUInt16 fifo_int_enable, cUInt16 err_int_enable );
+extern void chal_audio_eancpath_int_enable(CHAL_HANDLE handle,
+					   cUInt16 fifo_int_enable,
+					   cUInt16 err_int_enable);
 
 /**
 *
 *  @brief  Enable/Disable DMA operation for the EANC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_enable       (in) this specify whether to enable or disable DMA mode for the FIFO
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_enable       (in) enable or disable DMA mode for the FIFO
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_eancpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable );
+extern void chal_audio_eancpath_dma_enable(CHAL_HANDLE handle,
+					   Boolean dma_enable);
 
 /**
 *
 *  @brief  Get DMA port address (path FIFO address) for the EANC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) location DMA port address will be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_eancpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
+extern void chal_audio_eancpath_get_dma_port_addr(CHAL_HANDLE handle,
+						  cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Set bits per sample for the FIFO of  EANC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  bits                   (in) specifies the number of bits used for each sample in the FIFO
-*                                              current supported values are 16 and 24
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  bits                   (in) number of bits of sample in the FIFO
+*                               current supported values are 16 and 24
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_eancpath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
+extern void chal_audio_eancpath_set_bits_per_sample(CHAL_HANDLE handle,
+						    cUInt16 bits);
 
 /**
 *
 *  @brief  Set mode of operation for the FIFO of EANC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  mode                 (in) specifies whether the mode is mono or stereo
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  mode                 (in) specifies mono or stereo
 *                                              TRUE: Mono, FALSE: Stereo
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_eancpath_set_mono_stereo (CHAL_HANDLE handle,Boolean mode);
+extern void chal_audio_eancpath_set_mono_stereo(CHAL_HANDLE handle,
+						Boolean mode);
 
 /**
 *
 *  @brief  Set packed operation for the FIFO of EANC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  pack                  (in) specifies whether to set packed mode or un-packed mode
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  pack                  (in) specifies packed mode or un-packed mode
 *                                              TRUE: Packed, FALSE: Unpacked
 *
 *  @return none
@@ -2035,38 +2120,43 @@ extern void chal_audio_eancpath_set_pack(CHAL_HANDLE handle, Boolean pack);
 *
 *  @brief  enable/disable sidetone data for EANC path FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  read_sidetone    (in) specifies sidetone data instead of DMIC2 data at the FIFO
-*                                               TRUE: enable sidetone data, FALSE: enable DMIC2 data
+*  @param  handle		(in) got through chal_audio_init() function
+*  @param  read_sidetone	(in) specifies sidetone instead of DMIC2 data
+*				at the FIFO
+*			TRUE: enable sidetone data, FALSE: enable DMIC2 data
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_eancpath_select_sidetone (CHAL_HANDLE handle,Boolean read_sidetone);
+extern void chal_audio_eancpath_select_sidetone(CHAL_HANDLE handle,
+						Boolean read_sidetone);
 
 /**
 *
 *  @brief  Set threshold values for the FIFO of EANC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thres                 (in) specifies the threshold value on which the FIFO generates an interrupt
-*                                              or DMA request
-*  @param  thres_2             (in) specifies the threshold value which is treated as almost full and the FIFO
-*                                             error interrupt will be generated
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  thres	(in) specifies the threshold value on which
+*			the FIFO generates an interrupt or DMA request
+*  @param  thres_2      (in) specifies the threshold value which is treated
+*			as almost full and the FIFO
+*			error interrupt will be generated
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_eancpath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres, cUInt16 thres_2);
+extern void chal_audio_eancpath_set_fifo_thres(CHAL_HANDLE handle,
+					       cUInt16 thres, cUInt16 thres_2);
 
 /**
 *
 *  @brief  get current FIFO status for the EANC path fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
+*  @return current status of the FIFO defined in
+* CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
 *****************************************************************************/
 extern cUInt32 chal_audio_eancpath_read_fifo_status(CHAL_HANDLE handle);
 
@@ -2074,23 +2164,24 @@ extern cUInt32 chal_audio_eancpath_read_fifo_status(CHAL_HANDLE handle);
 *
 *  @brief  Read current FIFO contents of EANC path fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  src                    (out) memory location where the FIFO contents will be written
-*  @param  length                (in) Number of 32bit reads on the FIFO to be done
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  src		(out) memory where FIFO contents will be written
+*  @param  length	(in) Number of 32bit reads on the FIFO to be done
 *  @param  ign_udf              (in) flag to control the number of reads.
-*                                              TRUE: read exactly the length words even if FIFO underflow happens
-*                                              FALSE: limit the read to below the almost empty statge to avoid underflow
+*	TRUE: read exactly the length words even if FIFO underflow happens
+*       FALSE: limit the read to avoid underflow
 *
 *
 *  @return the number of words read from the fifo
 *****************************************************************************/
-extern cUInt32 chal_audio_eancpath_read_fifo(CHAL_HANDLE handle, cUInt32 *src, cUInt32 length, Boolean ign_udf);
+extern cUInt32 chal_audio_eancpath_read_fifo(CHAL_HANDLE handle, cUInt32 *src,
+					     cUInt32 length, Boolean ign_udf);
 
 /**
 *
 *  @brief  Clear the contents and reset the FIFO of EANC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
 *  @return None
@@ -2099,162 +2190,167 @@ extern void chal_audio_eancpath_clr_fifo(CHAL_HANDLE handle);
 
 /**
 *
-*  @brief  Set A IIR filter coefficients for the EANC path from the specified memory
+*  @brief  Set A IIR filter coefficients for the EANC path from memory
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  AIIR_coef          (in) specifies location where filter cofficients are located
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  AIIR_coef          (in) where filter cofficients are located
 *
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_eancpath_set_AIIR_coef(CHAL_HANDLE handle, cUInt32 *AIIR_coef );
+extern void chal_audio_eancpath_set_AIIR_coef(CHAL_HANDLE handle,
+					      cUInt32 *AIIR_coef);
 
 /**
 *
-*  @brief  Set A FIR filter coefficients for the EANC path from the specified memory
+*  @brief  Set A FIR filter coefficients for the EANC path from memory
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  AFIR_coef          (in) specifies location where filter cofficients are located
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  AFIR_coef          (in) where filter cofficients are located
 *
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_eancpath_set_AFIR_coef(CHAL_HANDLE handle, cUInt32 *AFIR_coef );
+extern void chal_audio_eancpath_set_AFIR_coef(CHAL_HANDLE handle,
+					      cUInt32 *AFIR_coef);
 
 /**
 *
-*  @brief  Set D IIR filter coefficients for the EANC path from the specified memory
+*  @brief  Set D IIR filter coefficients for the EANC path from memory
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  DIIR_coef          (in) specifies location where filter cofficients are located
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  DIIR_coef          (in) where filter cofficients are located
 *
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_eancpath_set_DIIR_coef(CHAL_HANDLE handle, cUInt32 *DIIR_coef );
+extern void chal_audio_eancpath_set_DIIR_coef(CHAL_HANDLE handle,
+					      cUInt32 *DIIR_coef);
 
 /**
 *
-*  @brief  Set U IIR filter coefficients for the EANC path from the specified memory
+*  @brief  Set U IIR filter coefficients for the EANC path from memory
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  UIIR_coef          (in) specifies location where filter cofficients are located
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  UIIR_coef          (in) where filter cofficients are located
 *
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_eancpath_set_UIIR_coef(CHAL_HANDLE handle, cUInt32 *UIIR_coef );
+extern void chal_audio_eancpath_set_UIIR_coef(CHAL_HANDLE handle,
+					      cUInt32 *UIIR_coef);
 
 /**
 *
 *  @brief  Set the EANC path control taps
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  taps                  (in) specifies EANC path filter taps
 *
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_eancpath_ctrl_tap(CHAL_HANDLE handle, cUInt32 taps);
+extern void chal_audio_eancpath_ctrl_tap(CHAL_HANDLE handle, cUInt32 taps);
 
 /**
 *
 *  @brief  Set the EANC path CIC Gain
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  ucic_gain           (in) specifies EANC path up sampling CIC gain
 *  @param  dcic_gain           (in) specifies EANC path down sampling CIC gain
 *
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_eancpath_set_cic_gain(CHAL_HANDLE handle, cUInt16 ucic_gain, cUInt16 dcic_gain);
+extern void chal_audio_eancpath_set_cic_gain(CHAL_HANDLE handle,
+					     cUInt16 ucic_gain,
+					     cUInt16 dcic_gain);
 
 /**
 *
 *  @brief  Select input MIC for the EANC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dmic                  (in) specifies EANC path input mic, 0-DMIC1, 1-DMIC2, 2-DMIC3, 3-DMIC4
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dmic                (in) EANC path input mic, 0-DMIC1, 1-DMIC2,
+*				2-DMIC3, 3-DMIC4
 *
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_eancpath_set_input_mic(CHAL_HANDLE handle, cUInt16 dmic);
+extern void chal_audio_eancpath_set_input_mic(CHAL_HANDLE handle, cUInt16 dmic);
 
 /**
 *
 *  @brief  Select  EANC path 96K mode
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  mode                 (in) specifies EANC path sampling rate mode
-*                                               TRUE: 96K mode, FALSE: 48k mode
+*                               TRUE: 96K mode, FALSE: 48k mode
 *
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_eancpath_set_mode(CHAL_HANDLE handle, Boolean mode);
+extern void chal_audio_eancpath_set_mode(CHAL_HANDLE handle, Boolean mode);
 
 /**
 *
 *  @brief  Clear the FIFO interrupts for EANC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thr_int               (in) specifies whether to clear the threshold interrupt or not
-*  @param  err_int               (in) specifies whether to clear the error interrupt or not
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thr_int               (in) clear the threshold interrupt or not
+*  @param  err_int               (in) clear the error interrupt or not
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_eancpath_int_clear(CHAL_HANDLE handle, Boolean fifo_int, Boolean err_int);
+extern void chal_audio_eancpath_int_clear(CHAL_HANDLE handle, Boolean fifo_int,
+					  Boolean err_int);
 
 /**
 *
 *  @brief  Get the current interrupt status for EANC path FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return Current FIFO interrupt status (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
+*  @return Current FIFO interrupt status
+* (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
 *****************************************************************************/
-extern  cUInt32 chal_audio_eancpath_read_int_status(CHAL_HANDLE handle);
-
-
-
-
+extern cUInt32 chal_audio_eancpath_read_int_status(CHAL_HANDLE handle);
 
 /**
 * sidetone path functions
 *****************************************************************************/
 
-
 /**
 *
 *  @brief  Enable Headset Path
 *
-*  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable_chan  (in) this specify whcih channel to be enabled or disabled
+*  @param  handle           (in) got through chal_audio_init() function
+*  @param  enable_chan  (in) whcih channel to be enabled or disabled
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable);
+extern void chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable);
 
 /**
 *
 *  @brief  Set Sidetone path Filter coefficients
 *
-*  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  coeff              (in) this specify the location where filter coefficients are located
+*  @param  handle           (in) got through chal_audio_init() function
+*  @param  coeff              (in) where filter coefficients are located
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff, cUInt32 length);
+extern void chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff,
+					  cUInt32 length);
 
 /**
 *
 *  @brief  Set the analog Gain for the Sidetone path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  gain                   (in) specifies Gain value to be set
 *
 *  @return none
@@ -2265,107 +2361,116 @@ extern void chal_audio_stpath_set_gain(CHAL_HANDLE handle, cUInt32 gain);
 *
 *  @brief  Set Sidetone path gain slope parameters
 *
-*  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  sof_slope       (in) this specify the gain change is soft slope or not
-*  @param  linear             (in) this specify the gain change is linear or logerithemic
-*  @param  slope             (in) this specify the gain change slope
+*  @param  handle           (in) got through chal_audio_init() function
+*  @param  sof_slope       (in) gain change is soft slope or not
+*  @param  linear             (in) gain change is linear or logerithemic
+*  @param  slope             (in) gain change slope
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_set_sofslope(CHAL_HANDLE handle, cUInt16 sof_slope, cUInt16 linear, cUInt32 slope);
+extern void chal_audio_stpath_set_sofslope(CHAL_HANDLE handle,
+					   cUInt16 sof_slope, cUInt16 linear,
+					   cUInt32 slope);
 
 /**
 *
 *  @brief  Set Sidetone path other parameters
 *
-*  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  clipping          (in) this specify whether to clip the signal or not
-*  @param  dis_filter         (in) this specifies whether to disable filtering or not
-*  @param  gain_bypass   (in) this specifies whether to bypass the gain or not
+*  @param  handle		(in) got through chal_audio_init() function
+*  @param  clipping		(in) to clip the signal or not
+*  @param  dis_filter		(in) disable filtering or not
+*  @param  gain_bypass		(in) to bypass the gain or not
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_config_misc(CHAL_HANDLE handle, cUInt16 clipping, cUInt16 dis_filter, cUInt16 gain_bypass);
+extern void chal_audio_stpath_config_misc(CHAL_HANDLE handle, cUInt16 clipping,
+					  cUInt16 dis_filter,
+					  cUInt16 gain_bypass);
 
 /**
 *
 *  @brief  Set Sidetone path filter taps
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  lower_taps          (in) this specify the lower filter taps
 *  @param  upper_taps         (in) this specifies the upper filter taps
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_set_filter_taps(CHAL_HANDLE handle, cUInt16 lower_taps, cUInt16 upper_taps);
-
+extern void chal_audio_stpath_set_filter_taps(CHAL_HANDLE handle,
+					      cUInt16 lower_taps,
+					      cUInt16 upper_taps);
 
 /**
 *
 *  @brief  Enable/Disable DMA operation for the sidetone path fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_enable       (in) this specify whether to enable or disable DMA mode for the FIFO
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_enable       (in) enable or disable DMA mode for the FIFO
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable );
-
+extern void chal_audio_stpath_dma_enable(CHAL_HANDLE handle,
+					 Boolean dma_enable);
 
 /**
 *
 *  @brief  Get DMA port address (path FIFO address) for the Sidetone path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) location where the DMA port address
+*				will be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
-
+extern void chal_audio_stpath_get_dma_port_addr(CHAL_HANDLE handle,
+						cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Get DMA port address (path FIFO address) for the stpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dma_addr          (out) location where the DMA port address will be copied
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dma_addr          (out) location where the DMA port address
+*				will be copied
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
+extern void chal_audio_stpath_get_dma_port_addr(CHAL_HANDLE handle,
+						cUInt32 *dma_addr);
 
 /**
 *
 *  @brief  Set bits per sample for the FIFO of stpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  bits                   (in) specifies the number of bits used for each sample in the FIFO
-*                                              current supported values are 16 and 24
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  bits                 (in) number of bits for each sample in FIFO
+*                               current supported values are 16 and 24
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
+extern void chal_audio_stpath_set_bits_per_sample(CHAL_HANDLE handle,
+						  cUInt16 bits);
 
 /**
 *
 *  @brief  Set mode of operation for the FIFO of stpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  mode                 (in) specifies whether the mode is mono or stereo
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  mode                 (in) mono or stereo
 *                                              TRUE: Mono, FALSE: Stereo
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_set_mono_stereo (CHAL_HANDLE handle,Boolean mode);
+extern void chal_audio_stpath_set_mono_stereo(CHAL_HANDLE handle, Boolean mode);
 
 /**
 *
 *  @brief  Set packed operation for the FIFO of stpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  pack                  (in) specifies whether to set packed mode or un-packed mode
-*                                              TRUE: Packed, FALSE: Unpacked
+*  @param  handle		(in) got through chal_audio_init() function
+*  @param  pack                  (in) set packed mode or un-packed mode
+*                                TRUE: Packed, FALSE: Unpacked
 *
 *  @return none
 *****************************************************************************/
@@ -2375,25 +2480,27 @@ extern void chal_audio_stpath_set_pack(CHAL_HANDLE handle, Boolean pack);
 *
 *  @brief  Set threshold values for the FIFO of stpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  thres                 (in) specifies the threshold value on which the FIFO generates an interrupt
-*                                              or DMA request
-*  @param  thres_2             (in) specifies the threshold value which is treated as almost full and the FIFO
-*                                             error interrupt will be generated
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  thres               (in) threshold value on which the FIFO generates
+*				an interrupt or DMA request
+*  @param  thres_2             (in) threshold treated as almost full
+*				and the FIFO error interrupt will be generated
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres, cUInt16 thres_2);
+extern void chal_audio_stpath_set_fifo_thres(CHAL_HANDLE handle, cUInt16 thres,
+					     cUInt16 thres_2);
 
 /**
 *
 *  @brief  get current FIFO status for the stpath fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
-*  @return current status of the FIFO defined in CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
+*  @return current status of the FIFO defined in
+* CHAL_AUDIO_FIFO_STATUS_XXXX bitmask values
 *****************************************************************************/
 extern cUInt32 chal_audio_stpath_read_fifo_status(CHAL_HANDLE handle);
 
@@ -2401,23 +2508,27 @@ extern cUInt32 chal_audio_stpath_read_fifo_status(CHAL_HANDLE handle);
 *
 *  @brief  Read current FIFO contents of stpath fifo
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  src                    (out) memory location where the FIFO contents will be written
-*  @param  length                (in) Number of 32bit reads on the FIFO to be done
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  src			(out) memory location where the FIFO contents
+*				 will be written
+*  @param  length		(in) Number of 32bit reads on the FIFO
 *  @param  ign_udf              (in) flag to control the number of reads.
-*                                              TRUE: read exactly the length words even if FIFO underflow happens
-*                                              FALSE: limit the read to below the almost empty statge to avoid underflow
+*				TRUE: read exactly the length words even
+*				FIFO underflow
+*				FALSE: limit the read to below the almost
+*				empty statge to avoid underflow
 *
 *
 *  @return the number of words read from the fifo
 *****************************************************************************/
-extern cUInt32 chal_audio_stpath_read_fifo(CHAL_HANDLE handle, cUInt32 *src, cUInt32 length, Boolean ign_udf);
+extern cUInt32 chal_audio_stpath_read_fifo(CHAL_HANDLE handle, cUInt32 *src,
+					   cUInt32 length, Boolean ign_udf);
 
 /**
 *
 *  @brief  Clear the contents and reset the FIFO of stpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
 *  @return None
@@ -2428,37 +2539,40 @@ extern void chal_audio_stpath_clr_fifo(CHAL_HANDLE handle);
 *
 *  @brief  Clear the FIFO interrupts for stpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  thr_int               (in) specifies whether to clear the threshold interrupt or not
 *  @param  err_int               (in) specifies whether to clear the error interrupt or not
 *
 *
 *  @return None
 *****************************************************************************/
-extern  void chal_audio_stpath_int_clear(CHAL_HANDLE handle, Boolean thr_int, Boolean err_int);
+extern void chal_audio_stpath_int_clear(CHAL_HANDLE handle, Boolean thr_int,
+					Boolean err_int);
 
 /**
 *
 *  @brief  Get the current interrupt status for stpath FIFO
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *
 *  @return Current FIFO interrupt status (combination of CHAL_AUDIO_FIFO_STATUS_THR|ERR_INT)
 *****************************************************************************/
-extern  cUInt32 chal_audio_stpath_read_int_status(CHAL_HANDLE handle);
+extern cUInt32 chal_audio_stpath_read_int_status(CHAL_HANDLE handle);
 
 /**
 *
 *  @brief  Enable/Disable interrupt for the stpath
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  thr_int_enable    (in) this specify whether to enable or disable fifo threshold interrupt
 *  @param  err_int_enable    (in) this specify whether to enable or disable fifo error interrupt
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_int_enable(CHAL_HANDLE handle, cUInt16 thr_int_enable, cUInt16 err_int_enable );
+extern void chal_audio_stpath_int_enable(CHAL_HANDLE handle,
+					 cUInt16 thr_int_enable,
+					 cUInt16 err_int_enable);
 
 /**
 * Analog Testing functions
@@ -2468,25 +2582,27 @@ extern void chal_audio_stpath_int_enable(CHAL_HANDLE handle, cUInt16 thr_int_ena
 *
 *  @brief  Enable/disable DAC paths
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  dac_mask          (in) bit mask of the DAC paths for which enable or disable is needed
-*  @param  enable               (in) flag to specify whether enable or disable the DACs
+*  @param  enable               (in) flag whether enable or disable the DACs
 *
 *  @return none
 *****************************************************************************/
-void chal_audio_enable_dac_paths(CHAL_HANDLE handle, cUInt32 dac_mask, cUInt16 enable);
+void chal_audio_enable_dac_paths(CHAL_HANDLE handle, cUInt32 dac_mask,
+				 cUInt16 enable);
 
 /**
 *
 *  @brief  Enable/disable ADC paths
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  adc_mask          (in) bit mask of the ADC paths for which enable or disable is needed
-*  @param  enable               (in) flag to specify whether enable or disable the ADCs
+*  @param  enable               (in) flag whether enable or disable the ADCs
 *
 *  @return none
 *****************************************************************************/
-void chal_audio_enable_adc_paths(CHAL_HANDLE handle, cUInt32 adc_mask, cUInt16 enable);
+void chal_audio_enable_adc_paths(CHAL_HANDLE handle, cUInt32 adc_mask,
+				 cUInt16 enable);
 
 /**
 * Analog Testing (API) functions
@@ -2496,45 +2612,49 @@ void chal_audio_enable_adc_paths(CHAL_HANDLE handle, cUInt32 adc_mask, cUInt16 e
 *
 *  @brief  Enable/disable API for DAC
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  dac_mask          (in) bit mask of the ADC paths for which API enable or disable is needed
-*  @param  enable               (in) flag to specify whether enable or disable the API
+*  @param  enable               (in) flag whether enable or disable the API
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_api_enable_dac(CHAL_HANDLE handle, cUInt32 dac_mask, cUInt16 enable);
+extern void chal_audio_api_enable_dac(CHAL_HANDLE handle, cUInt32 dac_mask,
+				      cUInt16 enable);
 
 /**
 *
 *  @brief  Enable/disable API attenuation for DAC
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  dac_mask          (in) bit mask of the ADC paths for which API attenuation enable or disable is needed
-*  @param  enable               (in) flag to specify whether enable or disable the API attenuation
+*  @param  enable               (in) flag whether enable or disable the API attenuation
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_api_set_dac_attenuation(CHAL_HANDLE handle, cUInt32 dac_mask, cUInt16 enable);
+extern void chal_audio_api_set_dac_attenuation(CHAL_HANDLE handle,
+					       cUInt32 dac_mask,
+					       cUInt16 enable);
 
 /**
 *
 *  @brief  Enable/disable API for ADC
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  adc_mask          (in) bit mask of the ADC paths for which API enable or disable is needed
-*  @param  enable               (in) flag to specify whether enable or disable the API
+*  @param  enable               (in) flag whether enable or disable the API
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_api_enable_adc(CHAL_HANDLE handle, cUInt32 adc_mask, cUInt16 enable);
+extern void chal_audio_api_enable_adc(CHAL_HANDLE handle, cUInt32 adc_mask,
+				      cUInt16 enable);
 
-// LOOPBACK path
+/* LOOPBACK path */
 /**
 *
 *  @brief  Enable/disable Loopback path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable               (in) flag to specify whether enable or disable the loopback
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  enable               (in) flag to enable or disable the loopback
 *
 *  @return none
 *****************************************************************************/
@@ -2544,20 +2664,22 @@ extern void chal_audio_loopback_enable(CHAL_HANDLE handle, cUInt16 enable);
 *
 *  @brief  Enable/disable DAC Loopback
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dac_mask          (in) bit mask of the ADC paths for which loopback enable or disable is needed
-*  @param  enable               (in) flag to specify whether enable or disable the loopback
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  dac_mask		(in) bit mask of the ADC paths
+*				for which loopback enable or disable is needed
+*  @param  enable               (in) flag to enable or disable the loopback
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_loopback_set_out_paths(CHAL_HANDLE handle, cUInt32 dac_mask, cUInt16 enable);
+extern void chal_audio_loopback_set_out_paths(CHAL_HANDLE handle,
+					      cUInt32 dac_mask, cUInt16 enable);
 
 /**
 *
 *  @brief  Set AUDIOTX DAC controls including clock & self test
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  ctrl                     (in) clock and self test controls
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  ctrl                 (in) clock and self test controls
 *
 *  @return none
 *****************************************************************************/
@@ -2567,19 +2689,17 @@ extern cVoid chal_audio_audiotx_set_dac_ctrl(CHAL_HANDLE handle, cUInt32 ctrl);
 *
 *  @brief  Get AUDIOTX DAC controls including clock & self test
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *  @return clock and self test controls of AUDIOTX
 *****************************************************************************/
-extern  cUInt32 chal_audio_audiotx_get_dac_ctrl(CHAL_HANDLE handle);
-
-
+extern cUInt32 chal_audio_audiotx_get_dac_ctrl(CHAL_HANDLE handle);
 
 /**
 *
 *  @brief  Set the audiotx spare bit
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *
 *  @return none
 *****************************************************************************/
@@ -2593,62 +2713,62 @@ extern cVoid chal_audio_audiotx_set_spare_bit(CHAL_HANDLE handle);
 *
 *  @brief  power on/off analog microphone path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  pwronoff            (in) flag to specify power on (TRUE) or power down (FALSE)
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  pwronoff            (in) flag power on (TRUE) or power down (FALSE)
 *
 *  @return none
 *****************************************************************************/
-extern  cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff);
+extern cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff);
 
 /**
 *
 *  @brief  power on/off headset microphone path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  pwronoff            (in) flag to specify power on (TRUE) or power down (FALSE)
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  pwronoff            (in) flag power on (TRUE) or power down (FALSE)
 *
 *  @return none
 *****************************************************************************/
-extern  cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff);
+extern cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff);
 
 /**
 *
 *  @brief  control ADC standby state on analog microphone path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  standby             (in) flag to specify standby on (TRUE) or active (FALSE)
+*  @param  handle               (in) got through chal_audio_init() function
+*  @param  standby             (in) flag standby on (TRUE) or active (FALSE)
 *
 *  @return none
 *****************************************************************************/
-extern  cVoid chal_audio_mic_adc_standby(CHAL_HANDLE handle, Boolean standby);
+extern cVoid chal_audio_mic_adc_standby(CHAL_HANDLE handle, Boolean standby);
 
 /**
 *
 *  @brief  Set gain on analog microphone path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  gain                  (in) Gain value (register value)
 *
 *  @return none
 *****************************************************************************/
-extern  cVoid chal_audio_mic_pga(CHAL_HANDLE handle, int gain);
+extern cVoid chal_audio_mic_pga(CHAL_HANDLE handle, int gain);
 
 /**
 *
 *  @brief  Select and enable Analog MIC path
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  mic_input           (in) mic selection, 0 will disable the MIC
 *
 *  @return none
 *****************************************************************************/
-extern  cVoid chal_audio_mic_input_select(CHAL_HANDLE handle, cUInt16 mic_input);
+extern cVoid chal_audio_mic_input_select(CHAL_HANDLE handle, cUInt16 mic_input);
 
 /**
 *
 *  @brief  Set DMIC1 CLK and DATA Pad functioin
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  pwronoff             (in)  on or off selection
 *
 *  @return none
@@ -2660,7 +2780,7 @@ extern cVoid chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff);
 *
 *  @brief  Set DMIC2 CLK and DATA Pad function
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  pwronoff             (in)  on or off selection
 *
 *  @return none
@@ -2672,7 +2792,7 @@ extern cVoid chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff);
 *
 *  @brief  Mute the ANALOG MIC and AUX MIC signals on the DATA line
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle               (in) got through chal_audio_init() function
 *  @param  mute_ctrl            (in) mute control
 *
 *  @return none
@@ -2684,19 +2804,19 @@ cVoid chal_audio_mic_mute(CHAL_HANDLE handle, Boolean mute_ctrl);
 *
 *  @brief  enable adcpath in one write
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable            (in) set/clear the adcpath enable bits
+*  @param  handle	(in) got through chal_audio_init() function
+*  @param  enable       (in) set/clear the adcpath enable bits
 *
 *  @return none
 *****************************************************************************/
 
-cVoid chal_audio_adcpath_global_enable(CHAL_HANDLE handle,Boolean enable);
+cVoid chal_audio_adcpath_global_enable(CHAL_HANDLE handle, Boolean enable);
 
 /**
 *
 *  @brief  check the adcpath global bit status
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle    (in) got through chal_audio_init() function
 *
 *  @return bit status
 *****************************************************************************/
@@ -2707,12 +2827,12 @@ Boolean chal_audio_adcpath_global_enable_status(CHAL_HANDLE handle);
 *
 *  @brief  clear the adcpath fifo in one write
 *
-*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  handle	(in) got through
+*			chal_audio_init() function
 *  @param  clear            (in) clear the adcpath fifo
 *
 *  @return none
 *****************************************************************************/
 
-cVoid chal_audio_adcpath_fifo_global_clear(CHAL_HANDLE handle,Boolean clear );
-#endif // _CHAL_HERA_AUDIO_
-
+cVoid chal_audio_adcpath_fifo_global_clear(CHAL_HANDLE handle, Boolean clear);
+#endif /* _CHAL_HERA_AUDIO_ */

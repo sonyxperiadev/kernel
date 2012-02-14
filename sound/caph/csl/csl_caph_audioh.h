@@ -1,28 +1,30 @@
-/******************************************************************************/
-/* Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.           */
-/*     Unless you and Broadcom execute a separate written software license    */
-/*     agreement governing use of this software, this software is licensed to */
-/*     you under the terms of the GNU General Public License version 2        */
-/*    (the GPL), available at                                                 */
-/*                                                                            */
-/*          http://www.broadcom.com/licenses/GPLv2.php                        */
-/*                                                                            */
-/*     with the following added to such license:                              */
-/*                                                                            */
-/*     As a special exception, the copyright holders of this software give    */
-/*     you permission to link this software with independent modules, and to  */
-/*     copy and distribute the resulting executable under terms of your       */
-/*     choice, provided that you also meet, for each linked independent       */
-/*     module, the terms and conditions of the license of that module.        */
-/*     An independent module is a module which is not derived from this       */
-/*     software.  The special exception does not apply to any modifications   */
-/*     of the software.                                                       */
-/*                                                                            */
-/*     Notwithstanding the above, under no circumstances may you combine this */
-/*     software in any way with any other Broadcom software provided under a  */
-/*     license other than the GPL, without Broadcom's express prior written   */
-/*     consent.                                                               */
-/******************************************************************************/
+/****************************************************************************/
+/*     Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.     */
+/*     Unless you and Broadcom execute a separate written software license  */
+/*	   agreement governing                                              */
+/*     use of this software, this software is licensed to you under the     */
+/*	   terms of the GNU General Public License version 2 (the GPL),     */
+/*     available at                                                         */
+/*                                                                          */
+/*          http://www.broadcom.com/licenses/GPLv2.php                      */
+/*                                                                          */
+/*     with the following added to such license:                            */
+/*                                                                          */
+/*     As a special exception, the copyright holders of this software give  */
+/*     you permission to link this software with independent modules, and   */
+/*     to copy and distribute the resulting executable under terms of your  */
+/*     choice, provided that you also meet, for each linked independent     */
+/*     module, the terms and conditions of the license of that module.      */
+/*     An independent module is a module which is not derived from this     */
+/*     software.  The special exception does not apply to any modifications */
+/*     of the software.                                                     */
+/*                                                                          */
+/*     Notwithstanding the above, under no circumstances may you combine    */
+/*     this software in any way with any other Broadcom software provided   */
+/*     under a license other than the GPL, without Broadcom's express prior */
+/*     written consent.                                                     */
+/*                                                                          */
+/****************************************************************************/
 
 /**
 *
@@ -39,7 +41,7 @@
 *  CAPH AUDIOH Path
 ******************************************************************************/
 
-typedef enum {
+enum _AUDDRV_PATH_Enum_t {
 	AUDDRV_PATH_NONE,
 	AUDDRV_PATH_VIBRA_OUTPUT,
 	AUDDRV_PATH_HEADSET_OUTPUT,
@@ -56,28 +58,31 @@ typedef enum {
 	AUDDRV_PATH_SIDETONE_INPUT,
 	AUDDRV_PATH_HEADSET_INPUT,
 	AUDDRV_PATH_TOTAL,
-} AUDDRV_PATH_Enum_t;
+};
+#define AUDDRV_PATH_Enum_t enum _AUDDRV_PATH_Enum_t
 
-typedef enum {
-
+enum _AUDDRV_VIBRATOR_MODE_Enum_t {
 	AUDDRV_VIBRATOR_BYPASS_MODE,
 	AUDDRV_VIBRATOR_WAVE_MODE
-} AUDDRV_VIBRATOR_MODE_Enum_t;
+};
+#define AUDDRV_VIBRATOR_MODE_Enum_t enum _AUDDRV_VIBRATOR_MODE_Enum_t
 
 /**
 *  CAPH AUDIOH Data handling
 ******************************************************************************/
-typedef enum {
+enum _AUDDRV_PATH_DATA_TRANSFER_MODE_Enum_t {
 	DRIVER_HANDLE_DATA_TRANSFER = 0,
 	DRIVER_HANDLE_DATA_RINGBUFFER,
 	CLIENT_HANDLE_DATA_TRANSFER,
 	DEVICE_HANDLE_DATA_TRANSFER,
-} AUDDRV_PATH_DATA_TRANSFER_MODE_Enum_t;
+};
+#define AUDDRV_PATH_DATA_TRANSFER_MODE_Enum_t \
+enum _AUDDRV_PATH_DATA_TRANSFER_MODE_Enum_t
 
 /**
 *  CAPH AUDIOH Path Configuration parameters
 ******************************************************************************/
-typedef struct {
+struct _CSL_CAPH_AUDIOH_Path_t {
 	/* below are same defeinition as audio_config_t */
 	int sample_rate;
 	int sample_size;
@@ -85,29 +90,32 @@ typedef struct {
 	int sample_pack;
 	int eanc_input;
 	int eanc_output;
-} CSL_CAPH_AUDIOH_Path_t;
+};
+#define CSL_CAPH_AUDIOH_Path_t struct _CSL_CAPH_AUDIOH_Path_t
 
 /**
 * For AudioH, the buffer address
 ******************************************************************************/
-typedef struct {
+struct _CSL_CAPH_AUDIOH_BUFADDR_t {
 	UInt32 bufAddr;
 	UInt32 buf2Addr;
-} CSL_CAPH_AUDIOH_BUFADDR_t;
+};
+#define CSL_CAPH_AUDIOH_BUFADDR_t struct _CSL_CAPH_AUDIOH_BUFADDR_t
 
 /**
 * For AudioH, test
 ******************************************************************************/
-typedef struct {
+struct _CSL_CAPH_AUDIOH_DACCTRL_t {
 	UInt32 AUDIOTX_TEST_EN;
 	UInt32 AUDIOTX_BB_STI;
 	UInt32 AUDIOTX_EP_DRV_STO;
-} CSL_CAPH_AUDIOH_DACCTRL_t;
+};
+#define CSL_CAPH_AUDIOH_DACCTRL_t struct _CSL_CAPH_AUDIOH_DACCTRL_t
 
 /**
 *  CAPH AUDIOH Control Configuration parameters
 ******************************************************************************/
-typedef struct {
+struct _audio_config_t {
 	int sample_rate;
 	int sample_size;
 	AUDIO_NUM_OF_CHANNEL_t sample_mode;
@@ -116,23 +124,26 @@ typedef struct {
 	AUDDRV_PATH_Enum_t eanc_output;
 	AUDDRV_PATH_Enum_t sidetone_output;
 	AUDDRV_PATH_DATA_TRANSFER_MODE_Enum_t data_handle_mode;
-} audio_config_t;
+};
+#define audio_config_t struct _audio_config_t
 
 #define GAIN_SYSPARM 0x8000
 #define GAIN_NA 0x8001
 
-typedef enum {
+enum _csl_caph_MIC_Path_e {
 	MIC_ANALOG_HEADSET,
 	MIC_DIGITAL,
-} csl_caph_MIC_Path_e;
+};
+#define csl_caph_MIC_Path_e enum _csl_caph_MIC_Path_e
 
-typedef struct csl_caph_Mic_Gain_t {
+struct _csl_caph_Mic_Gain_t {
 	int gain_in_mB;
 	UInt16 micPGA;
 	UInt16 micCICFineScale;
 	UInt16 micCICBitSelect;
 	int micDSPULGain; /* mdB in Q15 */
-} csl_caph_Mic_Gain_t;
+};
+#define csl_caph_Mic_Gain_t struct _csl_caph_Mic_Gain_t
 
 void *csl_caph_audioh_init(UInt32 baseAddr, UInt32 sdtBaseAddr);
 void csl_caph_audioh_deinit(void);

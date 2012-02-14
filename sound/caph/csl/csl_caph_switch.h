@@ -1,28 +1,30 @@
-/******************************************************************************/
-/* Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.           */
-/*     Unless you and Broadcom execute a separate written software license    */
-/*     agreement governing use of this software, this software is licensed to */
-/*     you under the terms of the GNU General Public License version 2        */
-/*    (the GPL), available at                                                 */
-/*                                                                            */
-/*          http://www.broadcom.com/licenses/GPLv2.php                        */
-/*                                                                            */
-/*     with the following added to such license:                              */
-/*                                                                            */
-/*     As a special exception, the copyright holders of this software give    */
-/*     you permission to link this software with independent modules, and to  */
-/*     copy and distribute the resulting executable under terms of your       */
-/*     choice, provided that you also meet, for each linked independent       */
-/*     module, the terms and conditions of the license of that module.        */
-/*     An independent module is a module which is not derived from this       */
-/*     software.  The special exception does not apply to any modifications   */
-/*     of the software.                                                       */
-/*                                                                            */
-/*     Notwithstanding the above, under no circumstances may you combine this */
-/*     software in any way with any other Broadcom software provided under a  */
-/*     license other than the GPL, without Broadcom's express prior written   */
-/*     consent.                                                               */
-/******************************************************************************/
+/****************************************************************************/
+/*     Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.     */
+/*     Unless you and Broadcom execute a separate written software license  */
+/*	   agreement governing                                              */
+/*     use of this software, this software is licensed to you under the     */
+/*	   terms of the GNU General Public License version 2 (the GPL),     */
+/*     available at                                                         */
+/*                                                                          */
+/*          http://www.broadcom.com/licenses/GPLv2.php                      */
+/*                                                                          */
+/*     with the following added to such license:                            */
+/*                                                                          */
+/*     As a special exception, the copyright holders of this software give  */
+/*     you permission to link this software with independent modules, and   */
+/*     to copy and distribute the resulting executable under terms of your  */
+/*     choice, provided that you also meet, for each linked independent     */
+/*     module, the terms and conditions of the license of that module.      */
+/*     An independent module is a module which is not derived from this     */
+/*     software.  The special exception does not apply to any modifications */
+/*     of the software.                                                     */
+/*                                                                          */
+/*     Notwithstanding the above, under no circumstances may you combine    */
+/*     this software in any way with any other Broadcom software provided   */
+/*     under a license other than the GPL, without Broadcom's express prior */
+/*     written consent.                                                     */
+/*                                                                          */
+/****************************************************************************/
 
 /**
 *
@@ -38,15 +40,16 @@
 /**
 * CAPH SWITCH channel configuration parameter
 ******************************************************************************/
-typedef enum {
+enum _CSL_CAPH_SWITCH_STATUS_e {
 	CSL_CAPH_SWITCH_OWNER,
 	CSL_CAPH_SWITCH_BORROWER
-} CSL_CAPH_SWITCH_STATUS_e;
+};
+#define CSL_CAPH_SWITCH_STATUS_e enum _CSL_CAPH_SWITCH_STATUS_e
 
 /**
 * CAPH SWITCH channel configuration parameter
 ******************************************************************************/
-typedef struct {
+struct _CSL_CAPH_SWITCH_CONFIG_t {
 	CSL_CAPH_SWITCH_CHNL_e chnl;
 	UInt32 FIFO_srcAddr;
 	UInt32 FIFO_dstAddr;
@@ -57,7 +60,8 @@ typedef struct {
 	CAPH_SWITCH_TRIGGER_e trigger;
 	CSL_CAPH_SWITCH_STATUS_e status;
 	Boolean cloned;
-} CSL_CAPH_SWITCH_CONFIG_t;
+};
+#define CSL_CAPH_SWITCH_CONFIG_t struct _CSL_CAPH_SWITCH_CONFIG_t
 
 /**
 *

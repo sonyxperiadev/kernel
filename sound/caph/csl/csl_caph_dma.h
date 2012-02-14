@@ -47,26 +47,29 @@
 /**
 * CAPH AADMAC Channels
 ******************************************************************************/
-typedef struct {
+struct _CSL_CAPH_DMA_CHNL_t {
 	CSL_CAPH_DMA_CHNL_e dmaCH;
 	CSL_CAPH_DMA_CHNL_e dmaCH2;
-} CSL_CAPH_DMA_CHNL_t;
+};
+#define CSL_CAPH_DMA_CHNL_t struct _CSL_CAPH_DMA_CHNL_t
 
 /**
 * CAPH AADMAC Channel direction: IN: DDR->CFIFO, OUT: CFIFO->DDR
 ******************************************************************************/
-typedef enum {
+enum _CSL_CAPH_DMA_DIRECTION_e {
 	CSL_CAPH_DMA_IN,
 	CSL_CAPH_DMA_OUT,
-} CSL_CAPH_DMA_DIRECTION_e;
+};
+#define CSL_CAPH_DMA_DIRECTION_e enum _CSL_CAPH_DMA_DIRECTION_e
 
 /**
 * CAPH HW DMA channel Configuration for different audio HW paths.
 ******************************************************************************/
-typedef struct {
+struct _CSL_CAPH_HWConfig_DMA_t {
 	UInt8 dmaNum;		/* 0 <= dmaNum <= 2. */
 	CSL_CAPH_DMA_CHNL_e dma[2];
-} CSL_CAPH_HWConfig_DMA_t;
+};
+#define CSL_CAPH_HWConfig_DMA_t struct _CSL_CAPH_HWConfig_DMA_t
 
 /**
 * CAPH DMA Callback function
@@ -76,7 +79,7 @@ typedef void (*CSL_CAPH_DMA_CALLBACK_p) (CSL_CAPH_DMA_CHNL_e chnl);
 /**
 * CAPH AADMAC Channel configuration parameter
 ******************************************************************************/
-typedef struct {
+struct _CSL_CAPH_DMA_CONFIG_t {
 	CSL_CAPH_DMA_DIRECTION_e direction;
 	CSL_CAPH_CFIFO_FIFO_e fifo;
 	CSL_CAPH_DMA_CHNL_e dma_ch;
@@ -84,22 +87,24 @@ typedef struct {
 	UInt32 mem_size;
 	UInt8 Tsize;
 	CSL_CAPH_DMA_CALLBACK_p dmaCB;
-} CSL_CAPH_DMA_CONFIG_t;
+};
+#define CSL_CAPH_DMA_CONFIG_t struct _CSL_CAPH_DMA_CONFIG_t
 
 /**
 *  CSL CAPH DMA CHANNEL FIFO status
 ******************************************************************************/
-typedef enum {
+enum _CSL_CAPH_DMA_CHNL_FIFO_STATUS_e {
 	CSL_CAPH_READY_NONE = 0x00,
 	CSL_CAPH_READY_LOW = 0x01,
 	CSL_CAPH_READY_HIGH = 0x02,
 	CSL_CAPH_READY_HIGHLOW = 0x03
-} CSL_CAPH_DMA_CHNL_FIFO_STATUS_e;
+};
+#define CSL_CAPH_DMA_CHNL_FIFO_STATUS_e enum _CSL_CAPH_DMA_CHNL_FIFO_STATUS_e
 
 /**
 * CAPH AADMAC Channel interrupt
 ******************************************************************************/
-typedef enum {
+enum _CSL_CAPH_DMA_INT_e {
 	CSL_CAPH_DMA_INT1 = 0x0001,
 	CSL_CAPH_DMA_INT2 = 0x0002,
 	CSL_CAPH_DMA_INT3 = 0x0004,
@@ -116,7 +121,8 @@ typedef enum {
 	CSL_CAPH_DMA_INT14 = 0x2000,
 	CSL_CAPH_DMA_INT15 = 0x4000,
 	CSL_CAPH_DMA_INT16 = 0x8000,
-} CSL_CAPH_DMA_INT_e;
+};
+#define CSL_CAPH_DMA_INT_e enum _CSL_CAPH_DMA_INT_e
 
 /**
 *
