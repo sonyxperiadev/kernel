@@ -1710,7 +1710,6 @@ EXPORT_SYMBOL(pwr_mgr_get_intr_status);
 int pwr_mgr_clr_intr_status(u32 intr)
 {
 	u32 mask = intr;
-	unsigned long flgs;
 	pwr_dbg("%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
 		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
@@ -1722,10 +1721,8 @@ int pwr_mgr_clr_intr_status(u32 intr)
 		mask = 0xFFFFFFFF >> (32 - PWRMGR_INTR_MAX);
 
 	/* Write 1 to clear */
-	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 	writel(PWR_MGR_INTR_MASK(mask),
 	       PWR_MGR_REG_ADDR(PWRMGR_INTR_STATUS_OFFSET));
-	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return 0;
 }
 
