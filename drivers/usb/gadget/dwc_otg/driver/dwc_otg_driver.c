@@ -921,6 +921,15 @@ static int dwc_otg_driver_probe(
 	 */
 	dwc_otg_enable_global_interrupts(dwc_otg_device->core_if);
 
+#if !defined (CONFIG_USB_OTG) && defined (CONFIG_USB_OTG_UTILS)
+	if (dwc_otg_device->core_if->xceiver->shutdown &&
+		  (!dwc_otg_device->core_if->xceiver->default_a)) {
+		/* Shutdown USB when in non-OTG device mode until
+		 * a driver is registered */
+		w_shutdown_core((void*)(dwc_otg_device->core_if));
+	}
+#endif
+
 	return 0;
 
 fail:

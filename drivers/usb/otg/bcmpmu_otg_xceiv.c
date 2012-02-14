@@ -228,33 +228,6 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	dev_info(xceiv_data->dev, "Setting Peripheral\n");
 	otg->gadget = gadget;
 
-	/* We want to register notifiers during probe
-	* but that is not possible right now and there is no direct
-	* link to remove these notifiers. Avoid an unnecessary
-	* remove notifer. Just check if it is already registered
-	*/
-	if (xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call == NULL) {
-		xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call =
-		    bcmpmu_otg_xceiv_vbus_notif_handler;
-		bcmpmu_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID,
-				    &xceiv_data->
-				    bcm_otg_vbus_validity_notifier);
-		bcmpmu_add_notifier(BCMPMU_USB_EVENT_SESSION_INVALID,
-				    &xceiv_data->
-				    bcm_otg_vbus_validity_notifier);
-
-		xceiv_data->bcm_otg_id_chg_notifier.notifier_call =
-		    bcmpmu_otg_xceiv_id_chg_notif_handler;
-		bcmpmu_add_notifier(BCMPMU_USB_EVENT_ID_CHANGE,
-				    &xceiv_data->bcm_otg_id_chg_notifier);
-
-		xceiv_data->bcm_otg_chg_detection_notifier.notifier_call =
-		    bcmpmu_otg_xceiv_chg_detection_notif_handler;
-		bcmpmu_add_notifier(BCMPMU_USB_EVENT_USB_DETECTION,
-				    &xceiv_data->
-				    bcm_otg_chg_detection_notifier);
-	}
-
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 
 	if (!id_gnd) {
@@ -267,11 +240,7 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 		{
 			int data;
 			bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_USB_TYPE, &data);
-			if ((data == PMU_USB_TYPE_SDP) || (data == PMU_USB_TYPE_CDP)) {
-				bcm_hsotgctrl_phy_set_id_stat(true);
-				bcm_hsotgctrl_phy_set_vbus_stat(true);
-				bcm_hsotgctrl_phy_set_non_driving(false);
-			} else {
+			if ((data != PMU_USB_TYPE_SDP) && (data != PMU_USB_TYPE_CDP)) {
 				/* Shutdown the core */
 				atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
 						xceiver.notifier, USB_EVENT_NONE, NULL);
@@ -304,13 +273,16 @@ static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
 	dev_info(xceiv_data->dev, "Setting Host\n");
 	otg->host = host;
 
-	/* Do calibration probe */
-	bcm_otg_do_adp_calibration_probe(xceiv_data);
+	if (host) {
+		/* Do calibration probe */
+		bcm_otg_do_adp_calibration_probe(xceiv_data);
 
-	if (bcmpmu_otg_xceiv_check_id_gnd(xceiv_data))
-		bcm_hsotgctrl_phy_set_id_stat(false);
-	else
-		bcm_hsotgctrl_phy_set_id_stat(true);
+		if (bcmpmu_otg_xceiv_check_id_gnd(xceiv_data)) {
+			bcm_hsotgctrl_phy_set_id_stat(false);
+			bcm_hsotgctrl_phy_set_non_driving(false);
+		} else
+			bcm_hsotgctrl_phy_set_id_stat(true);
+	}
 
 	return status;
 }
@@ -583,7 +555,7 @@ static void bcmpmu_otg_xceiv_chg_detect_handler(struct work_struct *work)
 
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 
-	if (!id_gnd)		/* Non-ACA interpretation for now */
+	if (!id_gnd && xceiv_data->otg_xceiver.xceiver.gadget)		/* Non-ACA interpretation for now */
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.
 					   notifier, USB_EVENT_VBUS, NULL);
 #else
@@ -654,6 +626,23 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 
 	ATOMIC_INIT_NOTIFIER_HEAD(&xceiv_data->otg_xceiver.xceiver.notifier);
 
+	xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call =
+		    bcmpmu_otg_xceiv_vbus_notif_handler;
+	bcmpmu_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID,
+		    &xceiv_data->bcm_otg_vbus_validity_notifier);
+	bcmpmu_add_notifier(BCMPMU_USB_EVENT_SESSION_INVALID,
+		    &xceiv_data->bcm_otg_vbus_validity_notifier);
+	xceiv_data->bcm_otg_id_chg_notifier.notifier_call =
+		    bcmpmu_otg_xceiv_id_chg_notif_handler;
+	bcmpmu_add_notifier(BCMPMU_USB_EVENT_ID_CHANGE,
+		    &xceiv_data->bcm_otg_id_chg_notifier);
+
+	xceiv_data->bcm_otg_chg_detection_notifier.notifier_call =
+		    bcmpmu_otg_xceiv_chg_detection_notif_handler;
+	bcmpmu_add_notifier(BCMPMU_USB_EVENT_USB_DETECTION,
+		    &xceiv_data->bcm_otg_chg_detection_notifier);
+
+
 	wake_lock_init(&xceiv_data->otg_xceiver.xceiver_wake_lock, WAKE_LOCK_SUSPEND, "otg_xcvr_wakelock");
 
 #ifdef CONFIG_USB_OTG
@@ -671,7 +660,6 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	error = bcm_otg_adp_init(xceiv_data);
 	if (error)
 		goto error_attr_host;
-
 #endif
 
 	otg_set_transceiver(&xceiv_data->otg_xceiver.xceiver);
@@ -695,6 +683,9 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev, "Failed to create WAKE file\n");
 		goto error_attr_wake;
 	}
+
+	/* Check if we should default to A-device */
+	xceiv_data->otg_xceiver.xceiver.default_a = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 
 	dev_info(&pdev->dev, "Probing successful\n");
 
@@ -734,6 +725,16 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 		wake_lock_destroy(&xceiv_data->otg_xceiver.xceiver_wake_lock);
 	}
 #endif
+
+	/* Remove notifiers */
+	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_VBUS_VALID,
+		    &xceiv_data->bcm_otg_vbus_validity_notifier);
+	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_SESSION_INVALID,
+		    &xceiv_data->bcm_otg_vbus_validity_notifier);
+	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_ID_CHANGE,
+		    &xceiv_data->bcm_otg_id_chg_notifier);
+	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_USB_DETECTION,
+		    &xceiv_data->bcm_otg_chg_detection_notifier);
 
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
 	kfree(xceiv_data);

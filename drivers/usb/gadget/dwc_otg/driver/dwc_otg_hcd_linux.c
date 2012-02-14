@@ -520,10 +520,17 @@ void hcd_remove(
 			    __func__);
 		return;
 	}
+
+#ifdef CONFIG_USB_OTG_UTILS
+	if (dwc_otg_hcd->core_if->xceiver->set_host)
+		otg_set_host(dwc_otg_hcd->core_if->xceiver, NULL);
+#endif
+
 	usb_remove_hcd(hcd);
 	dwc_otg_hcd_set_priv_data(dwc_otg_hcd, NULL);
 	dwc_otg_hcd_remove(dwc_otg_hcd);
 	usb_put_hcd(hcd);
+
 }
 
 /* =========================================================================

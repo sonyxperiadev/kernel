@@ -1423,7 +1423,16 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	dwc_otg_enable_global_interrupts(gadget_wrapper->pcd->core_if);
 
 	driver->unbind(&gadget_wrapper->gadget);
+
+	/* Schedule a work item to shutdown the core */
+	DWC_WORKQ_SCHEDULE(gadget_wrapper->pcd->core_if->wq_otg, w_shutdown_core,
+				   gadget_wrapper->pcd->core_if, "Shutdown core");
 	gadget_wrapper->driver = 0;
+
+#ifdef CONFIG_USB_OTG_UTILS
+	if (gadget_wrapper->pcd->core_if->xceiver->set_peripheral)
+		otg_set_peripheral(gadget_wrapper->pcd->core_if->xceiver, NULL);
+#endif
 
 	DWC_DEBUGPL(DBG_ANY, "unregistered driver '%s'\n", driver->driver.name);
 	return 0;
@@ -1464,6 +1473,9 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	/* hook up the driver */
 	gadget_wrapper->driver = driver;
 	gadget_wrapper->gadget.dev.driver = &driver->driver;
+
+	/* Init the core */
+	w_init_core((void*)gadget_wrapper->pcd->core_if);
 
 	dwc_otg_disable_global_interrupts(gadget_wrapper->pcd->core_if);
 	/* Default is to connect to USB host. Gadget driver may override
