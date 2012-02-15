@@ -198,10 +198,21 @@ config CMA_DEBUG
 	  messages for every CMA call as well as various messages while
 	  processing calls such as dma_alloc_from_contiguous().
 	  This option does not affect warning and error messages.
+
+config CMA_DEBUG_FS
+	depends on DEBUG_FS
+	bool "CMA bitmap and statistics in <debugfs mount>/cmaN"
+	help
+	  Adds support to show cma region bitmap along with per region
+	  statistics at the end of bitmap
+
 config CMA_STATS
+	depends on PROC_FS
 	bool "CMA Statistics in /proc/cmastat"
 	help
-	  Adds support to show cma allocations per regions in /proc/cmainfo
+	  Adds support to show detailed cma allocations per region
+	  in /proc/cmastat. This adds additional overhead in CMA
+	  alloc/free path
 
 config CMA_TRACER
 	bool "Trace CMA allocation"
