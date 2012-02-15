@@ -43,6 +43,9 @@
 #include <mach/kona.h>
 #include <mach/rhea.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
+#include <mach/io_map.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
+#include <plat/cpu.h>
 #include <asm/mach/map.h>
 #include <linux/broadcom/ipcinterface.h>
 #include <asm/pmu.h>
@@ -958,3 +961,12 @@ void __init board_add_common_devices(void)
 		       android_pmem_cma_data.start, android_pmem_cma_data.size);
 	}
 }
+
+/* Return the Rhea chip revision ID */
+int get_chip_rev_id(void)
+{
+    return ((readl(KONA_CHIPREG_VA + CHIPREG_CHIPID_REVID_OFFSET) &
+         CHIPREG_CHIPID_REVID_REVID_MASK) >>
+        CHIPREG_CHIPID_REVID_REVID_SHIFT);
+}
+EXPORT_SYMBOL(get_chip_rev_id);
