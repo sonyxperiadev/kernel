@@ -1460,8 +1460,35 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	}
 
 	if (client->irq) {
+		int gpio_pin;
 		dev_info(&client->adapter->dev,
 			 "Installing irq using %d\n", client->irq);
+		/* BRCM */
+		/* set up the GPIO pin */
+		gpio_pin = irq_to_gpio(client->irq);
+		if (!gpio_pin) {
+			dev_err(&client->adapter->dev,
+				"mpu_probe: no valid GPIO for the interrupt %d\n", client->irq);
+			res = -EINVAL;
+			goto out_misc_register_failed;
+		}
+
+		res = gpio_request(gpio_pin, "mpu6050_int");
+		if (res < 0) {
+			dev_err(&client->adapter->dev,
+				"mpu_probe: request GPIO %d failed, err %d\n", gpio_pin, res);
+			goto out_misc_register_failed;
+		}
+
+		res = gpio_direction_input(gpio_pin);
+		if (res < 0) {
+			dev_err(&client->adapter->dev,
+				"mpu_probe: set GPIO %d as input failed, err %d\n", gpio_pin, res);
+			gpio_free(gpio_pin);
+			goto out_misc_register_failed;
+		}
+		dev_info(&client->adapter->dev, "mpu_probe: set GPIO %d as input\n", gpio_pin);
+		/* BRCM */
 		res = mpuirq_init(client, mldl_cfg);
 		if (res)
 			goto out_mpuirq_failed;
