@@ -97,12 +97,18 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 		if ((*codecID) != 0)	/* Make sure codeid is not 0 */
 			AUDDRV_Telephone_RequestRateChange((UInt8) (*codecID));
 	}
-
+	if ((MSG_AUDIO_CTRL_GENERIC_RSP == pMsg->msgId) ||
+		(MSG_AUDIO_CTRL_DSP_RSP == pMsg->msgId) ||
+		(MSG_AUDIO_COMP_FILTER_RSP == pMsg->msgId)) {
+		Log_DebugPrintf(LOGID_AUDIO,
+			"HandleAudioEventrespCb GENERIC_DSP_RSP: tid=%ld\n",
+				pMsg->tid);
+	}
 	if (dataBufHandle)
 		RPC_SYSFreeResultDataBuffer(dataBufHandle);
 	else
 		Log_DebugPrintf(LOGID_MISC,
-				"HandleAudioEventrespCb : dataBufHandle is NULL \r\n");
+			"HandleAudioEventrespCb : dataBufHandle is NULL \r\n");
 }
 
 
@@ -411,6 +417,7 @@ bool_t xdr_AudioCompfilter_t(void *xdrs, AudioCompfilter_t *rsp)
 #endif
 
 #if defined(CONFIG_BCM_MODEM)
+static UInt32 s_sid;
 UInt32 audio_control_generic(UInt32 param1, UInt32 param2, UInt32 param3,
 			     UInt32 param4, UInt32 param5, UInt32 param6)
 {
@@ -418,8 +425,9 @@ UInt32 audio_control_generic(UInt32 param1, UInt32 param2, UInt32 param3,
 
 	Audio_Params_t audioParam;
 	UInt32 tid;
+	/*
 	MsgType_t msgType;
-	RPC_ACK_Result_t ackResult;
+	RPC_ACK_Result_t ackResult; */
 
 	audioParam.param1 = param1;
 	audioParam.param2 = param2;
@@ -428,10 +436,14 @@ UInt32 audio_control_generic(UInt32 param1, UInt32 param2, UInt32 param3,
 	audioParam.param5 = param5;
 	audioParam.param6 = param6;
 
-	tid = RPC_SyncCreateTID(&val, sizeof(UInt32));
+	tid = s_sid++; /* RPC_SyncCreateTID(&val, sizeof(UInt32)); */
+	Log_DebugPrintf(LOGID_AUDIO,
+		"audio_control_generic tid=%ld, param1=%ld\n", tid, param1);
 	CAPI2_audio_control_generic(tid, audioClientId, &audioParam);
-	RPC_SyncWaitForResponse(tid, audioClientId, &ackResult, &msgType, NULL);
-
+	/*
+	RPC_SyncWaitForResponse(tid, audioClientId, &ackResult,
+				&msgType, NULL);
+	*/
 	return val;
 
 }
@@ -443,12 +455,14 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 
 	Audio_Params_t audioParam;
 	UInt32 tid;
+	/*
 	MsgType_t msgType;
-	RPC_ACK_Result_t ackResult;
-	unsigned long remain_jiff = 0;
+	RPC_ACK_Result_t ackResult; */
+	unsigned long jiff_in = 0;
 
 	Log_DebugPrintf(LOGID_AUDIO,
-			"\n\r * audio_control_dsp (AP) param1 %ld, param2 %ld param3 %ld param4 %ld *\n\r",
+			"\n\r * audio_control_dsp (AP) param1 %ld, param2 %ld"
+			" param3 %ld param4 %ld *\n\r",
 			param1, param2, param3, param4);
 
 	switch (param1) {
@@ -505,17 +519,22 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 		audioParam.param5 = param5;
 		audioParam.param6 = param6;
 
-		tid = RPC_SyncCreateTID(&val, sizeof(UInt32));
+		tid = s_sid++; /* RPC_SyncCreateTID(&val, sizeof(UInt32)); */
+		Log_DebugPrintf(LOGID_AUDIO,
+			"audio_control_dsp tid=%ld,param1=%ld\n", tid, param1);
 		CAPI2_audio_control_dsp(tid, audioClientId, &audioParam);
+		/*
 		RPC_SyncWaitForResponse(tid, audioClientId, &ackResult,
 					&msgType, NULL);
+		*/
 		if (param1 == DSPCMD_TYPE_AUDIO_ENABLE) {
-			remain_jiff = wait_for_completion_interruptible_timeout(
+			jiff_in = wait_for_completion_interruptible_timeout(
 				&audioEnableDone,
 				timeout_jiff);
-			if (!remain_jiff) {
+			if (!jiff_in) {
 				Log_DebugPrintf(LOGID_AUDIO,
-					"!!!Timeout on COMMAND_AUDIO_ENABLE resp!!!\n");
+					"!!!Timeout on COMMAND_AUDIO_ENABLE"
+					" resp!!!\n");
 				init_completion(&audioEnableDone);
 			}
 		}
@@ -532,13 +551,19 @@ UInt32 audio_cmf_filter(AudioCompfilter_t *cf)
 	UInt32 val = (UInt32) 0;
 
 	UInt32 tid;
+	/*
 	MsgType_t msgType;
-	RPC_ACK_Result_t ackResult;
+	RPC_ACK_Result_t ackResult; */
 	Log_DebugPrintf(LOGID_AUDIO, "audio_cmf_filter (AP) ");
 
-	tid = RPC_SyncCreateTID(&val, sizeof(UInt32));
+	tid = s_sid++; /*RPC_SyncCreateTID(&val, sizeof(UInt32)); */
 	CAPI2_audio_cmf_filter(tid, audioClientId, cf);
-	RPC_SyncWaitForResponse(tid, audioClientId, &ackResult, &msgType, NULL);
+	Log_DebugPrintf(LOGID_AUDIO,
+		"audio_cmf_filter tid=%ld\n", tid);
+	/*
+	RPC_SyncWaitForResponse(tid, audioClientId, &ackResult,
+				&msgType, NULL);
+	*/
 
 	return val;
 }
