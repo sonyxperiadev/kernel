@@ -258,6 +258,10 @@ static int bcmpmu_set_eoc(struct bcmpmu *bcmpmu, int curr)
 
 static int bcmpmu_chrgr_usb_en(struct bcmpmu *bcmpmu, int en)
 {
+	/* REVISIT:
+	 * Charger en/dis and change in charging current timing needs
+	 * to be checked before enabling for OTG */
+#ifndef CONFIG_USB_OTG
 	int ret;
 	if (en == 0)
 		ret = bcmpmu->write_dev(bcmpmu,
@@ -269,7 +273,11 @@ static int bcmpmu_chrgr_usb_en(struct bcmpmu *bcmpmu, int en)
 			PMU_REG_CHRGR_USB_EN,
 			bcmpmu->regmap[PMU_REG_CHRGR_USB_EN].mask,
 			bcmpmu->regmap[PMU_REG_CHRGR_USB_EN].mask);
+
 	return ret;
+#else
+	return 0;
+#endif
 }
 
 static int bcmpmu_chrgr_wac_en(struct bcmpmu *bcmpmu, int en)
