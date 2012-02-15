@@ -735,11 +735,13 @@ struct v4l2_jpeg_packet_info {
 struct v4l2_sensor_optical_info {
 	struct v4l2_fract hor_angle; /* horizontal view angle */
 	struct v4l2_fract ver_angle; /* vertical view angle */
-	int focus_distance[3]; /* focus distance
-							  element 0 -near focus distance in CM,
-							  element 1 -optimal focus distance in CM,
-							  element 2 - far focus distance in CM,
-							  -1 for for infinity */
+
+	/* focus distance
+	 * element 0 -near focus distance in CM,
+	 * element 1 -optimal focus distance in CM,
+	 * element 2 - far focus distance in CM,
+	 * -1 for for infinity */
+	int focus_distance[3];
 };
 
 #define VIDIOC_SENSOR_G_OPTICAL_INFO	_IOR('V', BASE_VIDIOC_PRIVATE+8, struct v4l2_sensor_optical_info)
