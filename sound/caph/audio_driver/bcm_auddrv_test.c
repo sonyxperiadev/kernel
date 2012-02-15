@@ -806,11 +806,6 @@ static int HandlePlayCommand()
 			CSL_CAPH_DEVICE_e aud_dev = CSL_CAPH_DEV_EP;
 			DEBUG(" Start Playback\n");
 			spkr = sgBrcm_auddrv_TestValues[2];
-#if defined(USE_NEW_AUDIO_PARAM)
-			SaveAudioApp(AUDIO_APP_MUSIC);
-#endif
-
-			SaveAudioMode(spkr);
 
 			AUDCTRL_EnablePlay(AUDIO_SOURCE_MEM,
 					   spkr,

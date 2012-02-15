@@ -65,6 +65,7 @@
 #include "extern_audio.h"
 #include "voif_handler.h"
 
+#include "audctrl_policy.h"
 
 /**There are two loopback paths available in AudioH.
 One is 6.5MHz analog microphone loopback path. It does not support digital mics.
@@ -626,8 +627,6 @@ int AUDCTRL_GetTelephonySpkrVolume(AUDIO_GAIN_FORMAT_t gain_format)
 ****************************************************************************/
 void AUDCTRL_SetTelephonySpkrMute(AUDIO_SINK_Enum_t spk, Boolean mute)
 {
-	log(1, "AUDCTRL_SetTelephonySpkrMute: mute = 0x%x", mute);
-
 	if (mute)
 		audio_control_generic(AUDDRV_CPCMD_SetBasebandDownlinkMute, 0,
 				0, 0, 0, 0);
@@ -692,20 +691,7 @@ void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute)
 ****************************************************************************/
 AudioApp_t GetAudioApp(void)
 {
-	log(1, "%s audio_app=%d", __func__, currAudioApp);
 	return currAudioApp;
-}
-
-/****************************************************************************
-*
-* Function Name: SetAudioApp
-*
-* Description:   Do not use this function
-****************************************************************************/
-void SetAudioApp(AudioApp_t app)
-{
-	log(1, "SetAudioApp() old audio_app=%d new app=%d",
-			currAudioApp, app);
 }
 
 /****************************************************************************
@@ -725,7 +711,7 @@ void SetAudioApp(AudioApp_t app)
 ****************************************************************************/
 void SetUserAudioApp(AudioApp_t app)
 {
-	log(1, "AUDCTRL_SetUserAudioApp() old audio_app=%d new app=%d",
+	log(1, "SetUserAudioApp currAudioApp=%d new app=%d",
 			currAudioApp, app);
 
 	if (AUDCTRL_InVoiceCall())
@@ -752,12 +738,18 @@ void SetUserAudioApp(AudioApp_t app)
 ****************************************************************************/
 void SaveAudioApp(AudioApp_t app)
 {
-	log(1, "%s old audio_app=%d new audio_app=%d", __func__,
+	log(1, "%s currAudioApp=%d new app=%d", __func__,
 			currAudioApp, app);
 
 	if (AUDCTRL_InVoiceCall())
 		if (app > AUDIO_APP_VOICE_CALL_WB)
 			return;
+#if defined(CNEON_LMP)
+	if (app >= AUDIO_APP_MUSIC)
+		currAudioApp = AUDIO_APP_MUSIC;
+
+	return;
+#endif
 
 	/*AUDIO_APP_VOIP and AUDIO_APP_RECORDING_GVS can only be set by
 	user space code. kernel audio code can not detect them. */
@@ -787,7 +779,6 @@ void RemoveAudioApp(AudioApp_t audio_app)
 **********************************************************************/
 AudioMode_t GetAudioMode(void)
 {
-	log(1, "GetAudioMode() audio_mode=%d", currAudioMode);
 	return currAudioMode;
 }
 
@@ -801,7 +792,7 @@ void SaveAudioMode(AudioMode_t audio_mode)
 {
 	log(1, "SaveAudioMode: mode = %d\n", audio_mode);
 
-	currAudioMode = audio_mode;	/* update mode */
+ 	currAudioMode = audio_mode;	/* update mode */
 }
 
 /*********************************************************************
@@ -895,16 +886,11 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 
 	if (!AUDCTRL_InVoiceCall()) {
 		/*for music tuning, if PCG changed audio mode,
-		need to pass audio mode to CP.
-		this command updates mode in audio_vdriver_caph.c,
-		it is not useful for MP3 audio tuning purpose.
-		*/
+		need to pass audio mode to CP in audio_vdriver_caph.c */
 		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
 			(UInt32) mode,
 			(UInt32) GetAudioApp(), 0, 0, 0);
-		/*this command updates mode in audioapi.c.
-		 It is useful for MP3 audio tuning purpose.
-		 */
+		/*this command updates mode in audioapi.c. */
 		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
 			(UInt32) (((int)GetAudioApp()) * AUDIO_MODE_NUMBER +
 			mode), 0, 0, 0, 0);
@@ -1266,8 +1252,7 @@ Result_t AUDCTRL_StopRender(unsigned int streamID)
 {
 	Result_t res;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_StopRender::streamID=0x%x\n",
-			streamID);
+	log(1, "AUDCTRL_StopRender::streamID=0x%x\n", streamID);
 	res = csl_audio_render_stop(streamID);
 	RemoveAudioApp(AUDIO_APP_MUSIC);
 
@@ -1460,11 +1445,13 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 
 	/*determine which mixer output to apply the gains to*/
 
+	/*
 	log(1, "%s extGain %d\n", __func__, extGain);
 	log(1, "mixInGain 0x%x, mixOutGain 0x%x, mixBitSel %d\n",
 			mixInGain, mixOutGain, mixBitSel);
 	log(1, "sink %d, gain_format %d\n",	sink, gain_format);
 	log(1, "vol_left 0x%x vol_right 0x%x\n", vol_left, vol_right);
+	*/
 
 	speaker = getDeviceFromSink(sink);
 	mixer = csl_caph_FindMixer(speaker, pathID);
@@ -2586,6 +2573,7 @@ void AUDCTRL_GetHardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 *
 *  @return  int
 * note
+* this is for test purpose
 *alsa_amixer cset name=HW-CTL 1 0 100 0  (set EP_MIX_IN_GAIN to 100 mB, 1 dB)
 *alsa_amixer cset name=HW-CTL 1 1 2400 0  (set EP_MIX_BITSEL_GAIN to 24 dB)
 *alsa_amixer cset name=HW-CTL 1 2 -600 0  (set EP_MIX_FINE_GAIN to -6 dB)
@@ -2596,8 +2584,7 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 {
 	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,
-			"AUDCTRL_HardwareControl::type %d, arg 0x%x %x %x %x.\n",
+	log(1, "AUDCTRL_HardwareControl::type %d, arg 0x%x %x %x %x.\n",
 			access_type, arg1, arg2, arg3, arg4);
 
 	if (access_type >= AUDCTRL_HW_ACCESS_TYPE_TOTAL)
@@ -2754,7 +2741,6 @@ void powerOnDigitalMic(Boolean powerOn)
 ****************************************************************************/
 CSL_CAPH_DEVICE_e getDeviceFromSrc(AUDIO_SOURCE_Enum_t source)
 {
-/*log(1,"getDeviceFromSrc: source = 0x%x\n", source); */
 	return MIC_Mapping_Table[source].dev;
 }
 
@@ -2767,7 +2753,6 @@ CSL_CAPH_DEVICE_e getDeviceFromSrc(AUDIO_SOURCE_Enum_t source)
 ****************************************************************************/
 CSL_CAPH_DEVICE_e getDeviceFromSink(AUDIO_SINK_Enum_t sink)
 {
-/*log(1,"getDeviceFromSink: sink = 0x%x\n", sink);*/
 	return SPKR_Mapping_Table[sink].dev;
 }
 
