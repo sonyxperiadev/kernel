@@ -2180,6 +2180,8 @@ static void csl_caph_start_blocks
 #if defined(ENABLE_DMA_VOICE)
 			if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
 				csl_caph_audioh_adcpath_global_enable(FALSE);
+			else /*o.w. adc global should be set*/
+				csl_caph_audioh_adcpath_global_enable(TRUE);
 #endif
 			csl_caph_audioh_start(path->audiohPath[0]);
 		}

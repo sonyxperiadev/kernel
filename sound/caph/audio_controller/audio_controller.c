@@ -792,7 +792,7 @@ void SaveAudioMode(AudioMode_t audio_mode)
 {
 	log(1, "SaveAudioMode: mode = %d\n", audio_mode);
 
- 	currAudioMode = audio_mode;	/* update mode */
+	currAudioMode = audio_mode;	/* update mode */
 }
 
 /*********************************************************************
@@ -2270,23 +2270,12 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 			log(1, "%s sidetone path disabled\n", __func__);
 		}
 /*#endif*/
-#if defined(USE_NEW_AUDIO_PARAM)
-		SetAudioMode(audio_mode, AUDIO_APP_LOOPBACK);
-#else
-		SetAudioMode(audio_mode);
-#endif
 
-		/*sets all HW gains.
-		SetAudioMode is for telephony.
-		But is SetAudioMode_ForMusicPlayback enough
-		for both src_dev and sink_dev?
-
-		SetAudioMode( audio_mode );
-		this function also sets all HW gains.
-		*/
+		/*Assume HW lpt does not involve DSP. o.w. use SetAudioMode*/
+		SaveAudioMode(audio_mode);
+		SaveAudioApp(AUDIO_APP_LOOPBACK);
 		SetAudioMode_ForMusicPlayback(audio_mode, pathID, TRUE);
-		AUDDRV_SetAudioMode_Mic(audio_mode,
-			GetAudioApp(), 0);
+		SetAudioMode_ForMusicRecord(audio_mode, 0);
 
 		/* Enable Loopback ctrl */
 		/* Enable PMU for headset/IHF */

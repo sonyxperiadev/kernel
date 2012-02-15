@@ -296,6 +296,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	////////////////////////////////////////////////////////////////-*/
 
 	log(1, "AUDDRV_Telephony_Init");
+	csl_caph_ControlHWClock(TRUE); /*enable clock before any DSP command*/
 
 	currVoiceMic = mic;
 	currVoiceSpkr = speaker;
@@ -827,10 +828,19 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
 /*load speaker EQ filter and Mic EQ filter from sysparm to DSP*/
 /* It means mic1, mic2, speaker */
 	if (userEQOn == FALSE) {
+		/* Use the old code, before CP function
+		   audio_control_BuildDSPUlCompfilterCoef() is updated to
+		   handle the mode properly.*/
+		if (audio_app == AUDIO_APP_VOICE_CALL_WB)
+			audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + AUDIO_MODE_NUMBER, 7, 0, 0, 0);
+		else
+			audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode % AUDIO_MODE_NUMBER, 7, 0, 0, 0);
+		/*
 		audio_control_generic(AUDDRV_CPCMD_SetFilter,
 				audio_mode + audio_app*AUDIO_MODE_NUMBER,
 				7, 0, 0, 0);
-		/*
 		audio_control_generic(AUDDRV_CPCMD_SetFilter,
 				audio_mode + audio_app * AUDIO_MODE_NUMBER,
 				1, 0, 0, 0);
