@@ -42,6 +42,11 @@ config MACH_RHEA_SS_COMMON
 	help
           Support Broadcom Rhea SS project common option.
 
+config MACH_RHEA_SS_LUCAS
+        bool "Support Broadcom Rhea SS Lucas board"
+        help
+          Support for the Broadcom Rhea SS Lucas board.
+
 config MACH_RHEA_FARADAY_EB10
 	bool "Support Nokia Faraday EB10 board"
 	select RHEALC_2093

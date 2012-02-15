@@ -84,8 +84,7 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 	int data1, data2, data3;
 	int ret = 0;
 	int HSwasEn = 0;
-	pr_debug("Inside %s, HSgain %d, HSInputmode %d\n", __func__, HSgain,
-			HSInputmode);
+	pr_info("Inside %s, HSgain %d, HSInputmode %d\n", __func__, HSgain, HSInputmode);
 
 	mutex_lock(&bcmpmu_audio->lock);
 	if (bcmpmu_audio->HS_On) {

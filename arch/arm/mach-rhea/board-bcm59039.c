@@ -194,7 +194,7 @@ static struct regulator_init_data bcm59039_hv4ldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-#ifdef CONFIG_MACH_RHEA_SS_AMAZING
+#if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 			.always_on = 0,
 #else
 			.always_on = 1,
@@ -483,7 +483,7 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV4LDO] =	{
-#ifdef CONFIG_MACH_RHEA_SS_AMAZING
+#if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, 0
 #else		
 		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0x00, 0
