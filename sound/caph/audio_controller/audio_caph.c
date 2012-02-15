@@ -756,18 +756,20 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDCTRL_EnableBypassVibra(parm_vibra->strength,
 				parm_vibra->direction);
 
-			#ifdef USE_HR_TIMER
-			ktime = ktime_set(0,
-			(parm_vibra->duration*1000000));
+#ifdef USE_HR_TIMER
+			if (parm_vibra->duration != 0) {
+				ktime = ktime_set(0,
+				(parm_vibra->duration*1000000));
 
-			hrtimer_init(&hr_timer, CLOCK_MONOTONIC,
-				HRTIMER_MODE_REL);
+				hrtimer_init(&hr_timer, CLOCK_MONOTONIC,
+					HRTIMER_MODE_REL);
 
-			hr_timer.function = &TimerCbStopVibrator;
+				hr_timer.function = &TimerCbStopVibrator;
 
-			hrtimer_start(&hr_timer, ktime,
-				HRTIMER_MODE_REL);
-			#else
+				hrtimer_start(&hr_timer, ktime,
+					HRTIMER_MODE_REL);
+			}
+#else
 			if (gpVibratorTimer) {
 				del_timer_sync(gpVibratorTimer);
 				gpVibratorTimer = NULL;
@@ -782,7 +784,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					msecs_to_jiffies(parm_vibra->duration);
 				add_timer(gpVibratorTimer);
 			}
-			#endif
+#endif
 		}
 		break;
 	case ACTION_AUD_DisableByPassVibra:
