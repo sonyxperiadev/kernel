@@ -1475,8 +1475,12 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	gadget_wrapper->driver = driver;
 	gadget_wrapper->gadget.dev.driver = &driver->driver;
 
-	/* Init the core */
-	w_init_core((void*)gadget_wrapper->pcd->core_if);
+#if !defined (CONFIG_USB_OTG) && defined (CONFIG_USB_OTG_UTILS)
+	if (!(gadget_wrapper->pcd->core_if->xceiver->default_a)) {
+		/* Init the core */
+		w_init_core((void*)gadget_wrapper->pcd->core_if);
+	}
+#endif
 
 	dwc_otg_disable_global_interrupts(gadget_wrapper->pcd->core_if);
 	/* Default is to connect to USB host. Gadget driver may override
