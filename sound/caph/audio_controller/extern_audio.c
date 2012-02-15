@@ -352,8 +352,6 @@ void extern_hs_on(void)
 
 	AUDIO_PMU_HS_POWER(1);
 
-	msleep(75);
-
 	hs_IsOn = 1;
 }
 
@@ -369,7 +367,6 @@ void extern_hs_off(void)
 	AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
 				  PMU_HSGAIN_MUTE),
 	AUDIO_PMU_HS_POWER(0);
-	msleep(20);
 
 	hs_IsOn = 0;
 
