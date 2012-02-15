@@ -474,9 +474,9 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 	      (int)cInfo, (int)dataBufHandle, clientId, (int)elem, (int)msgId));
 
 	//add to queue
-	spin_lock(&cInfo->mLock);
+	spin_lock_bh(&cInfo->mLock);
 	list_add_tail(&elem->mList, &cInfo->mQ.mList);
-	spin_unlock(&cInfo->mLock);
+	spin_unlock_bh(&cInfo->mLock);
 
 	cInfo->availData = 1;
 	wake_up_interruptible(&cInfo->mWaitQ);
@@ -574,8 +574,8 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 	RpcIpc_PrivData_t *priv = filp->private_data;
 
 	if (!is_CP_running()) {
-	_DBG(RPC_TRACE("rpcipc_poll: Error - CP is not running\n"));
-	return POLLERR;
+	    _DBG(RPC_TRACE("rpcipc_poll: Error - CP is not running\n"));
+	    return POLLERR;
 	}
 
 	BUG_ON(!priv);
@@ -583,21 +583,21 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 	cInfo = gRpcClientList[priv->clientId];
 
 	if (!cInfo) {
-	_DBG(RPC_TRACE
-	("k:rpcipc_poll invalid clientID %d\n", priv->clientId));
-	return POLLERR;
+	    _DBG(RPC_TRACE
+	        ("k:rpcipc_poll invalid clientID %d\n", priv->clientId));
+	    return POLLERR;
 	}
 	//_DBG(RPC_TRACE("k:rpcipc_poll() start client=%d\n", priv->clientId));
 
 	//if data exist already, just return
-	spin_lock(&cInfo->mLock);
+	spin_lock_bh(&cInfo->mLock);
 	if (!list_empty(&cInfo->mQ.mList)) {
-	_DBG(RPC_TRACE("k:rpcipc_poll() precheck list not empty\n"));
-	mask |= (POLLIN | POLLRDNORM);
-	spin_unlock(&cInfo->mLock);
-	return mask;
+	    spin_unlock_bh(&cInfo->mLock);
+	    mask |= (POLLIN | POLLRDNORM);
+   	    _DBG(RPC_TRACE("k:rpcipc_poll() precheck list not empty\n"));
+	    return mask;
 	}
-	spin_unlock(&cInfo->mLock);
+	spin_unlock_bh(&cInfo->mLock);
 
 	//wait till data is ready
 	//_DBG(RPC_TRACE("k:rpcipc_poll() begin wait %x\n", (int)jiffies));
@@ -608,12 +608,13 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 
 	//_DBG(RPC_TRACE("k:rpcipc_poll() end wait %x\n", (int)jiffies));
 
-	spin_lock(&cInfo->mLock);
+	spin_lock_bh(&cInfo->mLock);
 	if (!list_empty(&cInfo->mQ.mList)) {
-	_DBG(RPC_TRACE("rpcipc_poll() list not empty\n"));
-	mask |= (POLLIN | POLLRDNORM);
+		mask |= (POLLIN | POLLRDNORM);
 	}
-	spin_unlock(&cInfo->mLock);
+	spin_unlock_bh(&cInfo->mLock);
+
+	_DBG(RPC_TRACE("rpcipc_poll: mask = %x\n", mask));
 	
 	cInfo->availData = 0;
 
@@ -644,9 +645,9 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 		return -EINVAL;
 	}
 
-	spin_lock(&cInfo->mLock);
+	spin_lock_bh(&cInfo->mLock);
 	ioc_param.isEmpty = (Boolean) list_empty(&cInfo->mQ.mList);
-	spin_unlock(&cInfo->mLock);
+	spin_unlock_bh(&cInfo->mLock);
 
 	if (ioc_param.waitTime > 0 && ioc_param.isEmpty) {
 		int jiffyBefore = jiffies;	
@@ -669,9 +670,9 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 
 		cInfo->availData = 0;
 
-		spin_lock(&cInfo->mLock);
+	    spin_lock_bh(&cInfo->mLock);
 		ioc_param.isEmpty = (Boolean) list_empty(&cInfo->mQ.mList);
-		spin_unlock(&cInfo->mLock);
+	    spin_unlock_bh(&cInfo->mLock);
 	}
     
  	_DBG(RPC_TRACE
@@ -718,16 +719,17 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
 	}
 
 	/* Get one resp from the queue */
-	spin_lock(&cInfo->mLock);
-
+	spin_lock_bh(&cInfo->mLock);
 	if (list_empty(&cInfo->mQ.mList)) {
+		spin_unlock_bh(&cInfo->mLock);
 		_DBG(RPC_TRACE("k:handle_pkt_rx_buffer_ioc Q empty\n"));
-		spin_unlock(&cInfo->mLock);
 		return -EAGAIN;
 	}
 
 	entry = cInfo->mQ.mList.next;
 	Item = list_entry(entry, RpcCbkElement_t, mList);
+	list_del(entry);
+	spin_unlock_bh(&cInfo->mLock);
 
 	ioc_param.type = Item->type;
 	ioc_param.interfaceType = Item->interfaceType;
@@ -742,10 +744,8 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
 	     ("k:handle_pkt_rx_buffer_ioc item=%x len=%d pkt=%x\n", (int)Item,
 	      (int)ioc_param.len, (int)Item->dataBufHandle));
 
-	list_del(entry);
 	kfree(entry);
 
-	spin_unlock(&cInfo->mLock);
 
 	if (copy_to_user
 	    ((rpc_pkt_rx_buf_t *) param, &ioc_param,
@@ -1220,21 +1220,25 @@ static void RpcListCleanup(UInt8 clientId)
 	if (!cInfo)
 		return;
 
-	spin_lock(&cInfo->mLock);
+	spin_lock_bh(&cInfo->mLock);
 	list_for_each_safe(listptr, pos, &cInfo->mQ.mList) {
 		Item = list_entry(listptr, RpcCbkElement_t, mList);
+		list_del(listptr);
+		spin_unlock_bh(&cInfo->mLock);
+		
 		RPC_PACKET_FreeBufferEx(Item->dataBufHandle, clientId);
 
 		_DBG(RPC_TRACE
 		     ("k:RpcListCleanup index=%d item=%x\n", clientId,
 		      (int)Item));
-		list_del(listptr);
 		kfree(Item);
+		spin_lock_bh(&cInfo->mLock);
 	}
+	spin_unlock_bh(&cInfo->mLock);
+
 	gRpcClientList[clientId] = NULL;
 	gNumActiveClients--;
 
-	spin_unlock(&cInfo->mLock);
 }
 
 static void RpcServerCleanup(void)
