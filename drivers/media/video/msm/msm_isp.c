@@ -26,6 +26,7 @@
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-device.h>
 #include <media/msm_isp.h>
+#include <media/msm_gemini.h>
 
 #include "msm.h"
 
@@ -34,10 +35,6 @@
 #else
 #define D(fmt, args...) do {} while (0)
 #endif
-#define ERR_USER_COPY(to) pr_err("%s(%d): copy %s user\n", \
-				__func__, __LINE__, ((to) ? "to" : "from"))
-#define ERR_COPY_FROM_USER() ERR_USER_COPY(0)
-#define ERR_COPY_TO_USER() ERR_USER_COPY(1)
 
 #define MSM_FRAME_AXI_MAX_BUF 32
 
@@ -142,7 +139,7 @@ static int msm_isp_notify_VFE_BUF_EVT(struct v4l2_subdev *sd, void *arg)
 {
 	int rc = -EINVAL, image_mode;
 	struct msm_vfe_resp *vdata = (struct msm_vfe_resp *)arg;
-	struct msm_free_buf free_buf;
+	struct msm_free_buf free_buf, temp_free_buf;
 	struct msm_camvfe_params vfe_params;
 	struct msm_vfe_cfg_cmd cfgcmd;
 	struct msm_sync *sync =
@@ -151,7 +148,7 @@ static int msm_isp_notify_VFE_BUF_EVT(struct v4l2_subdev *sd, void *arg)
 
 	int vfe_id = vdata->evt_msg.msg_id;
 	if (!pcam) {
-		pr_err("%s pcam is null. return\n", __func__);
+		pr_debug("%s pcam is null. return\n", __func__);
 		msm_isp_sync_free(vdata);
 		return rc;
 	}
@@ -181,7 +178,7 @@ static int msm_isp_notify_VFE_BUF_EVT(struct v4l2_subdev *sd, void *arg)
 		break;
 	case VFE_MSG_V32_CAPTURE:
 	case VFE_MSG_V2X_CAPTURE:
-		pr_err("%s Got V32_CAPTURE: getting buffer for id = %d",
+		pr_debug("%s Got V32_CAPTURE: getting buffer for id = %d",
 						__func__, vfe_id);
 		msm_mctl_reserve_free_buf(&pcam->mctl, NULL,
 					image_mode, &free_buf);
@@ -190,7 +187,12 @@ static int msm_isp_notify_VFE_BUF_EVT(struct v4l2_subdev *sd, void *arg)
 		vfe_params.vfe_cfg = &cfgcmd;
 		vfe_params.data = (void *)&free_buf;
 		rc = v4l2_subdev_call(sd, core, ioctl, 0, &vfe_params);
-		/* Write the same buffer into PONG */
+		temp_free_buf = free_buf;
+		if (msm_mctl_reserve_free_buf(&pcam->mctl, NULL,
+					image_mode, &free_buf)) {
+			/* Write the same buffer into PONG */
+			free_buf = temp_free_buf;
+		}
 		cfgcmd.cmd_type = CMD_CONFIG_PONG_ADDR;
 		cfgcmd.value = &vfe_id;
 		vfe_params.vfe_cfg = &cfgcmd;
@@ -307,6 +309,36 @@ static int msm_isp_notify_vfe(struct v4l2_subdev *sd,
 		}
 		}
 		break;
+	case NOTIFY_VFE_MSG_COMP_STATS: {
+		struct msm_stats_buf *stats = (struct msm_stats_buf *)arg;
+		struct msm_stats_buf *stats_buf = NULL;
+
+		isp_event->isp_data.isp_msg.msg_id = MSG_ID_STATS_COMPOSITE;
+		stats->aec.buff = msm_pmem_stats_ptov_lookup(&pmctl->sync,
+					stats->aec.buff, &(stats->aec.fd));
+		stats->awb.buff = msm_pmem_stats_ptov_lookup(&pmctl->sync,
+					stats->awb.buff, &(stats->awb.fd));
+		stats->af.buff = msm_pmem_stats_ptov_lookup(&pmctl->sync,
+					stats->af.buff, &(stats->af.fd));
+		stats->ihist.buff = msm_pmem_stats_ptov_lookup(&pmctl->sync,
+					stats->ihist.buff, &(stats->ihist.fd));
+		stats->rs.buff = msm_pmem_stats_ptov_lookup(&pmctl->sync,
+					stats->rs.buff, &(stats->rs.fd));
+		stats->cs.buff = msm_pmem_stats_ptov_lookup(&pmctl->sync,
+					stats->cs.buff, &(stats->cs.fd));
+
+		stats_buf = kmalloc(sizeof(struct msm_stats_buf), GFP_ATOMIC);
+		if (!stats_buf) {
+			pr_err("%s: out of memory.\n", __func__);
+			rc = -ENOMEM;
+		} else {
+			*stats_buf = *stats;
+			isp_event->isp_data.isp_msg.len	=
+				sizeof(struct msm_stats_buf);
+			isp_event->isp_data.isp_msg.data = stats_buf;
+		}
+		}
+		break;
 	case NOTIFY_VFE_MSG_STATS: {
 		struct msm_stats_buf stats;
 		struct isp_msg_stats *isp_stats = (struct isp_msg_stats *)arg;
@@ -378,7 +410,7 @@ static int msm_isp_notify(struct v4l2_subdev *sd,
 
 /* This function is called by open() function, so we need to init HW*/
 static int msm_isp_open(struct v4l2_subdev *sd,
-	struct v4l2_subdev *sd_vpe,
+	struct v4l2_subdev *sd_vpe, struct v4l2_subdev *gemini_sdev,
 	struct msm_sync *sync)
 {
 	/* init vfe and senor, register sync callbacks for init*/
@@ -404,7 +436,8 @@ static int msm_isp_open(struct v4l2_subdev *sd,
 	return rc;
 }
 
-static void msm_isp_release(struct msm_sync *psync)
+static void msm_isp_release(struct msm_sync *psync,
+		struct v4l2_subdev *gemini_sdev)
 {
 	D("%s\n", __func__);
 	msm_vfe_subdev_release(psync->pdev);
@@ -412,7 +445,7 @@ static void msm_isp_release(struct msm_sync *psync)
 }
 
 static int msm_config_vfe(struct v4l2_subdev *sd,
-		struct msm_sync *sync, void __user *arg)
+	struct msm_sync *sync, void __user *arg)
 {
 	struct msm_vfe_cfg_cmd cfgcmd;
 	struct msm_pmem_region region[8];

@@ -241,6 +241,7 @@ static int msm_mctl_notify(struct msm_cam_media_controller *p_mctl,
 	case NOTIFY_ISP_MSG_EVT:
 	case NOTIFY_VFE_MSG_OUT:
 	case NOTIFY_VFE_MSG_STATS:
+	case NOTIFY_VFE_MSG_COMP_STATS:
 	case NOTIFY_VFE_BUF_EVT:
 	case NOTIFY_VFE_BUF_FREE_EVT:
 		if (p_mctl->isp_sdev && p_mctl->isp_sdev->isp_notify) {
@@ -303,7 +304,7 @@ static int msm_mctl_cmd(struct msm_cam_media_controller *p_mctl,
 		pr_err("%s: param is NULL", __func__);
 		return -EINVAL;
 	}
-	D("%s cmd = %d\n", __func__, _IOC_NR(cmd));
+	D("%s:%d: cmd %d\n", __func__, __LINE__, cmd);
 
 	/* ... call sensor, ISPIF or VEF subdev*/
 	switch (cmd) {
@@ -435,6 +436,8 @@ static int msm_mctl_cmd(struct msm_cam_media_controller *p_mctl,
 			/* ISFIF config*/
 	default:
 		/* ISP config*/
+		D("%s:%d: go to default. Calling msm_isp_config\n",
+			__func__, __LINE__);
 		rc = p_mctl->isp_sdev->isp_config(p_mctl, cmd, arg);
 		break;
 	}
@@ -555,6 +558,34 @@ static int msm_mctl_register_subdevs(struct msm_cam_media_controller *p_mctl,
 	}
 
 	rc = 0;
+
+
+	/* register gemini subdev */
+	driver = driver_find(MSM_GEMINI_DRV_NAME, &platform_bus_type);
+	if (!driver) {
+		pr_err("%s:%d:Gemini: Failure: goto out\n",
+			__func__, __LINE__);
+		goto out;
+	}
+	pr_debug("%s:%d:Gemini: driver_find_device Gemini driver 0x%x\n",
+		__func__, __LINE__, (uint32_t)driver);
+	dev = driver_find_device(driver, NULL, NULL,
+				msm_mctl_subdev_match_core);
+	if (!dev) {
+		pr_err("%s:%d:Gemini: Failure goto out_put_driver\n",
+			__func__, __LINE__);
+		goto out_put_driver;
+	}
+	p_mctl->gemini_sdev = dev_get_drvdata(dev);
+	pr_debug("%s:%d:Gemini: After dev_get_drvdata gemini_sdev=0x%x\n",
+		__func__, __LINE__, (uint32_t)p_mctl->gemini_sdev);
+
+	if (p_mctl->gemini_sdev == NULL) {
+		pr_err("%s:%d:Gemini: Failure gemini_sdev is null\n",
+			__func__, __LINE__);
+		goto out_put_driver;
+	}
+	rc = 0;
 	return rc;
 out_put_driver:
 	put_driver(driver);
@@ -628,7 +659,9 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 		if (p_mctl->isp_sdev && p_mctl->isp_sdev->isp_open)
 			rc = p_mctl->isp_sdev->isp_open(
 				p_mctl->isp_sdev->sd,
-				p_mctl->isp_sdev->sd_vpe, sync);
+				p_mctl->isp_sdev->sd_vpe,
+				p_mctl->gemini_sdev,
+				sync);
 		if (rc < 0) {
 			pr_err("%s: isp init failed: %d\n", __func__, rc);
 			goto msm_open_done;
@@ -690,7 +723,8 @@ static int msm_mctl_release(struct msm_cam_media_controller *p_mctl)
 	}
 
 	if (p_mctl->isp_sdev && p_mctl->isp_sdev->isp_release)
-		p_mctl->isp_sdev->isp_release(&p_mctl->sync);
+		p_mctl->isp_sdev->isp_release(&p_mctl->sync,
+				p_mctl->gemini_sdev);
 
 	if (camdev->is_csid) {
 		v4l2_subdev_call(p_mctl->csid_sdev, core, ioctl,

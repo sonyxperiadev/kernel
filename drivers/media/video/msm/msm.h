@@ -36,7 +36,7 @@
 #define MSM_V4L2_DIMENSION_SIZE 96
 #define MAX_DEV_NAME_LEN 50
 
-#define ERR_USER_COPY(to) pr_err("%s(%d): copy %s user\n", \
+#define ERR_USER_COPY(to) pr_debug("%s(%d): copy %s user\n", \
 				__func__, __LINE__, ((to) ? "to" : "from"))
 #define ERR_COPY_FROM_USER() ERR_USER_COPY(0)
 #define ERR_COPY_TO_USER() ERR_USER_COPY(1)
@@ -47,6 +47,7 @@
 #define MSM_ISPIF_DRV_NAME "msm_ispif"
 #define MSM_VFE_DRV_NAME "msm_vfe"
 #define MSM_VPE_DRV_NAME "msm_vpe"
+#define MSM_GEMINI_DRV_NAME "msm_gemini"
 
 /* msm queue management APIs*/
 
@@ -116,6 +117,7 @@ enum msm_camera_v4l2_subdev_notify {
 	NOTIFY_ISP_MSG_EVT, /* arg = enum ISP_MESSAGE_ID */
 	NOTIFY_VFE_MSG_OUT, /* arg = struct isp_msg_output */
 	NOTIFY_VFE_MSG_STATS,  /* arg = struct isp_msg_stats */
+	NOTIFY_VFE_MSG_COMP_STATS, /* arg = struct msm_stats_buf */
 	NOTIFY_VFE_BUF_EVT, /* arg = struct msm_vfe_resp */
 	NOTIFY_ISPIF_STREAM, /* arg = enable parameter for s_stream */
 	NOTIFY_VPE_MSG_EVT,
@@ -231,6 +233,7 @@ struct msm_cam_media_controller {
 	struct v4l2_subdev *csic_sdev; /*csid sub device*/
 	struct v4l2_subdev *ispif_sdev; /* ispif sub device */
 	struct v4l2_subdev *act_sdev; /* actuator sub device */
+	struct v4l2_subdev *gemini_sdev; /* gemini sub device */
 
 	struct pm_qos_request_list pm_qos_req_list;
 	struct msm_mctl_pp_info pp_info;
@@ -247,12 +250,13 @@ struct msm_isp_ops {
 
 	/*int (*isp_init)(struct msm_cam_v4l2_device *pcam);*/
 	int (*isp_open)(struct v4l2_subdev *sd, struct v4l2_subdev *sd_vpe,
-					struct msm_sync *sync);
+		struct v4l2_subdev *gemini_sdev, struct msm_sync *sync);
 	int (*isp_config)(struct msm_cam_media_controller *pmctl,
 		 unsigned int cmd, unsigned long arg);
 	int (*isp_notify)(struct v4l2_subdev *sd,
 		unsigned int notification, void *arg);
-	void (*isp_release)(struct msm_sync *psync);
+	void (*isp_release)(struct msm_sync *psync,
+		struct v4l2_subdev *gemini_sdev);
 	int (*isp_pp_cmd)(struct msm_cam_media_controller *pmctl,
 		 struct msm_mctl_pp_cmd, void *data);
 
@@ -426,7 +430,7 @@ int msm_mctl_buf_done(struct msm_cam_media_controller *pmctl,
 			int msg_type, struct msm_free_buf *buf,
 			uint32_t frame_id);
 int msm_mctl_buf_done_pp(struct msm_cam_media_controller *pmctl,
-			int msg_type, struct msm_free_buf *frame, int dirty);
+	int msg_type, struct msm_free_buf *frame, int dirty, int node_type);
 int msm_mctl_reserve_free_buf(struct msm_cam_media_controller *pmctl,
 				struct msm_cam_v4l2_dev_inst *pcam_inst,
 				int path, struct msm_free_buf *free_buf);
@@ -461,7 +465,9 @@ int msm_isp_subdev_ioctl(struct v4l2_subdev *sd,
 	struct msm_vfe_cfg_cmd *cfgcmd, void *data);
 int msm_vpe_subdev_init(struct v4l2_subdev *sd, void *data,
 	struct platform_device *pdev);
+int msm_gemini_subdev_init(struct v4l2_subdev *sd);
 void msm_vpe_subdev_release(struct platform_device *pdev);
+void msm_gemini_subdev_release(struct v4l2_subdev *gemini_sd);
 int msm_isp_subdev_ioctl_vpe(struct v4l2_subdev *isp_subdev,
 	struct msm_mctl_pp_cmd *cmd, void *data);
 int msm_mctl_is_pp_msg_type(struct msm_cam_media_controller *p_mctl,
@@ -473,7 +479,7 @@ int msm_mctl_pp_ioctl(struct msm_cam_media_controller *p_mctl,
 int msm_mctl_pp_notify(struct msm_cam_media_controller *pmctl,
 			struct msm_mctl_pp_frame_info *pp_frame_info);
 int msm_mctl_img_mode_to_inst_index(struct msm_cam_media_controller *pmctl,
-					int out_type);
+					int out_type, int node_type);
 struct msm_frame_buffer *msm_mctl_buf_find(
 	struct msm_cam_media_controller *pmctl,
 	struct msm_cam_v4l2_dev_inst *pcam_inst, int del_buf,
