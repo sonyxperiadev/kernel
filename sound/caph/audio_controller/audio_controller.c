@@ -307,7 +307,7 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 
 	powerOnExternalAmp(sink, TelephonyUseExtSpkr, TRUE);
 
-#ifdef ENABLE_VOIF
+#ifdef CONFIG_ENABLE_VOIF
 	mode = GetAudioMode();
 
 	if (mode >= AUDIO_MODE_NUMBER)
@@ -335,7 +335,7 @@ void AUDCTRL_DisableTelephony(void)
       {*/
 
 	if (AUDCTRL_InVoiceCall()) {
-#ifdef ENABLE_VOIF
+#ifdef CONFIG_ENABLE_VOIF
 		VoIF_Deinit();
 #endif
 
@@ -744,7 +744,7 @@ void SaveAudioApp(AudioApp_t app)
 	if (AUDCTRL_InVoiceCall())
 		if (app > AUDIO_APP_VOICE_CALL_WB)
 			return;
-#if defined(CNEON_LMP)
+#if defined(CONFIG_BCM_AUDIO_ENABLE_3_PROFILES)
 	if (app >= AUDIO_APP_MUSIC)
 		currAudioApp = AUDIO_APP_MUSIC;
 

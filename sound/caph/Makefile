@@ -22,7 +22,6 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DUNDER_LINUX -DUNDER_LINUX_MODEM -DL
 #the options below are used by audio
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_DMA_VOICE
 #subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DVOLTE_SUPPORT
-#subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_VOIF
 ifdef CONFIG_ARCH_RHEA_B0
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCAPH_48K_MONO_PASSTHRU
 endif

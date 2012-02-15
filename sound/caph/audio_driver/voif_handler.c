@@ -36,7 +36,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 
 /* APIs */
 
-#ifndef ENABLE_VOIF
+#ifndef CONFIG_ENABLE_VOIF
 static int voifDelay; /* init to 0 */
 static int voifGain = 0x4000; /* In Q14 format, 0x4000 in Q14 == 1.0 */
 #endif
@@ -49,9 +49,9 @@ static void VOIF_CB_Fxn(
 	UInt8 isCall16K)
 {
 
-#ifdef ENABLE_VOIF
+#ifdef CONFIG_ENABLE_VOIF
 
-/* The flag "ENABLE_VOIF" will be enabled by customer.  custormer will hook
+/* The flag "CONFIG_ENABLE_VOIF" will be enabled by customer.  custormer will hook
 up their voice solution in callback */
 
 #else
@@ -98,7 +98,7 @@ void VoIF_Deinit()
 	return;
 }
 
-#ifndef ENABLE_VOIF
+#ifndef CONFIG_ENABLE_VOIF
 void VoIF_SetDelay(int delay)
 {
 	voifDelay = delay;

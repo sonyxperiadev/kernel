@@ -26,3 +26,13 @@ config BCM_AUDIO_SELFTEST
         default n
         help
           Say Y here to activate Brcm Audio selftest
+config BCM_AUDIO_ENABLE_3_PROFILES
+	boolean "Broadcom include 3 audio profiles"
+        default n
+        help
+          Say Y here to activate Brcm Audio 3 profile
+config ENABLE_VOIF
+	boolean "Broadcom enable VOIF feature"
+        default n
+        help
+          Say Y here to activate Brcm voif

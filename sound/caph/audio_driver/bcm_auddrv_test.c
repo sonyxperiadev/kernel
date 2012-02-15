@@ -630,7 +630,7 @@ WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET) ,regVal);
 		}
 		break;
 #endif
-#ifndef ENABLE_VOIF
+#ifndef CONFIG_ENABLE_VOIF
 	case 11:
 		{
 			/* Internal VoIF test */
