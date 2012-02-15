@@ -635,51 +635,49 @@ static int find_best_area(struct cma *cma, int count,
 	best_fit->start = 0UL;
 	best_fit->end = ULONG_MAX;
 
-	for (start = 0; start < cma->count; start = end + 1) {
+	for (start = 0; start < cma->count; start = end) {
 		index = bitmap_find_next_zero_area(cma->bitmap, cma->count,
 					start, count, mask);
-		if (index >= cma->count) {
-			printk(KERN_ERR"%s:%d no free areas found\n", __func__, __LINE__);
-			return -EEXIST;
-		}
+		if (index >= cma->count)
+			break;
 
 		end = find_next_bit(cma->bitmap, cma->count, index); 
 
-		/* Best case */
-		if ((end - index) == count) {
-			/* check if we've already tried this */
-			if (!test_bit(index, cma->bf_bitmap)) {
+		/* check if we've already tried this */
+		if (!test_bit(index, cma->bf_bitmap)) {
+			/* Best case */
+			if ((end - index) == count) {
 				best_fit->start = index;
 				best_fit->end = end;
 				break;
 			}
-		} else if ((end - index) < (best_fit->end - best_fit->start)) {
-			/* check if we've already tried this */
-			if (!test_bit(index, cma->bf_bitmap)) {
-				/* This is the smallest possible area that is bigger
-				 * than the allocation request so far. So, we just remember
-				 * this in "best_fit", but dont set the bitmap bit yet,
-				 * we may find a better area ahead
-				 */
+
+			/* This is the smallest possible area that is bigger
+			 * than the allocation request so far. We just remember
+			 * this in "best_fit", but dont set the bitmap bit yet,
+			 * we may find a better area ahead
+			 */
+			if ((end - index) < (best_fit->end - best_fit->start)) {
 				best_fit->start = index;
 				best_fit->end = end;
 			}
 		}
-
 	}
 
-	if (best_fit->end == ULONG_MAX) {
-		printk(KERN_ERR"%s: Failed to find a new area\n", __func__);
-		return -EEXIST;
+	if (unlikely(best_fit->end == ULONG_MAX)) {
+		printk(KERN_ERR"%s: Failed to find free pages\n", __func__);
+		return -ENOMEM;
 	}
 
-	pr_debug("%s: found area at start(%lu), end(%lu)\n", __func__, best_fit->start, best_fit->end);
+	pr_debug("%s: found area at start(%lu), end(%lu)\n",
+			__func__, best_fit->start,  best_fit->end);
 
 	__set_bit(best_fit->start, cma->bf_bitmap);
 
 	return 0;
 }
 #endif /* CONFIG_CMA_BEST_FIT */
+
 /**
  *dma_alloc_from_contiguous() - allocate pages from contiguous area
  *@dev:   Pointer to device for which the allocation is performed.
@@ -712,7 +710,7 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 	pr_debug("%s(cma %p, count %d, align %d)\n", __func__, (void *)cma,
 		 count, align);
 
-	if (!count)
+	if (!count || count > cma->count)
 		return NULL;
 
 	mask = (1 << align) - 1;
@@ -821,8 +819,8 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 
 		if (unlikely(ret != -EBUSY)) {
 			printk(KERN_ERR"%s:%d #### CMA alloc_contig_range failed #### ret = %d for range(%08x-%08x)\n",
-					__func__, __LINE__, ret, __pfn_to_phys(pfn),
-					__pfn_to_phys(pfn + count));
+					__func__, __LINE__, ret, __pfn_to_phys(cma->base_pfn + pageno),
+					__pfn_to_phys(cma->base_pfn + pageno + count));
 			break;
 		}
 	}
