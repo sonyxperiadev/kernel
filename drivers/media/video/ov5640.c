@@ -1617,6 +1617,20 @@ static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			p->packet_size = 0x400;
 			break;
 		}
+
+	case VIDIOC_SENSOR_G_OPTICAL_INFO:
+		{
+			struct v4l2_sensor_optical_info *p = (struct v4l2_sensor_optical_info *)arg;
+			/* assuming 67.5 degree diagonal viewing angle */
+			p->hor_angle.numerator = 5401;
+			p->hor_angle.denominator = 100;
+			p->ver_angle.numerator = 3608;
+			p->ver_angle.denominator = 100;
+			p->focus_distance[0] = 10; /* near focus in cm */
+			p->focus_distance[1] = 100; /* optimal focus in cm */
+			p->focus_distance[2] = -1; /* infinity */
+			break;
+		}
 	default:
 		ret = -ENOIOCTLCMD;
 		break;
