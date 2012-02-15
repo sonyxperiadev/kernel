@@ -35,6 +35,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/kernel.h>
 #include <linux/kfifo.h>
 #include <linux/wait.h>
+#include <linux/jiffies.h>
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -102,7 +103,7 @@ static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 
 static struct TAudioHalThreadData sgThreadData;
 #define	KFIFO_SIZE		(9*sizeof(TMsgAudioCtrl))
-
+#define WAIT_TIME		1280		/* in msec */
 
 static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			void *arg_param, void *callback, int block);
@@ -348,6 +349,7 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	unsigned int len;
 	OSStatus_t osStatus;
 	int params_size = AUDIO_Ctrl_Trigger_GetParamsSize(action_code);
+	unsigned long to_jiff = msecs_to_jiffies(WAIT_TIME);
 
 	DEBUG("AudioHalThread action=%d\r\n", action_code);
 
@@ -370,9 +372,8 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 
 	queue_work(sgThreadData.pWorkqueue_AudioControl, &sgThreadData.mwork);
 	if (block) {
-		/* wait for 10sec */
 		osStatus =
-		    OSSEMAPHORE_Obtain(sgThreadData.action_complete, 1280);
+		    OSSEMAPHORE_Obtain(sgThreadData.action_complete, to_jiff);
 		if (osStatus != OSSTATUS_SUCCESS) {
 			DEBUG("AUDIO_Ctrl_Trigger Timeout=%d\r\n",
 					osStatus);

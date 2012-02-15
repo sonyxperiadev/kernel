@@ -1,22 +1,31 @@
-/****************************************************************************
-Copyright 2009 - 2011  Broadcom Corporation
- Unless you and Broadcom execute a separate written software license agreement
- governing use of this software, this software is licensed to you under the
- terms of the GNU General Public License version 2 (the GPL), available at
-	http://www.broadcom.com/licenses/GPLv2.php
+/****************************************************************************/
+/*     Copyright 2009-2012 Broadcom Corporation.  All rights reserved.      */
+/*     Unless you and Broadcom execute a separate written software license  */
+/*	   agreement governing                                              */
+/*     use of this software, this software is licensed to you under the     */
+/*	   terms of the GNU General Public License version 2 (the GPL),     */
+/*     available at                                                         */
+/*                                                                          */
+/*          http://www.broadcom.com/licenses/GPLv2.php                      */
+/*                                                                          */
+/*     with the following added to such license:                            */
+/*                                                                          */
+/*     As a special exception, the copyright holders of this software give  */
+/*     you permission to link this software with independent modules, and   */
+/*     to copy and distribute the resulting executable under terms of your  */
+/*     choice, provided that you also meet, for each linked independent     */
+/*     module, the terms and conditions of the license of that module.      */
+/*     An independent module is a module which is not derived from this     */
+/*     software.  The special exception does not apply to any modifications */
+/*     of the software.                                                     */
+/*                                                                          */
+/*     Notwithstanding the above, under no circumstances may you combine    */
+/*     this software in any way with any other Broadcom software provided   */
+/*     under a license other than the GPL, without Broadcom's express prior */
+/*     written consent.                                                     */
+/*                                                                          */
+/****************************************************************************/
 
- with the following added to such license:
- As a special exception, the copyright holders of this software give you
- permission to link this software with independent modules, and to copy and
- distribute the resulting executable under terms of your choice, provided
- that you also meet, for each linked independent module, the terms and
- conditions of the license of that module.
- An independent module is a module which is not derived from this software.
- The special exception does not apply to any modifications of the software.
- Notwithstanding the above, under no circumstances may you combine this software
- in any way with any other Broadcom software provided under a license other than
- the GPL, without Broadcom's express prior written consent.
-***************************************************************************/
 /**
 *
 *   @file   bcm_auddrv_test.c
@@ -1083,7 +1092,7 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate)
 #ifdef CONFIG_ARM2SP_PLAYBACK_TEST
 #ifdef CONFIG_BCM_ENABLE_TESTDATA
 /* voice playback test including amrnb, pcm via VPU, ARM2SP, and amrwb */
-
+#define	WAIT_TIME	2000	/* in msec */
 void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 			  UInt32 Val6)
 {
@@ -1100,6 +1109,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 		AUDIO_SINK_Enum_t speaker = AUDIO_SINK_HANDSET;
 		Boolean setTransfer = FALSE;
 		AUDIO_NUM_OF_CHANNEL_t stereo = AUDIO_CHANNEL_MONO;
+		unsigned long to_jiff = msecs_to_jiffies(WAIT_TIME);
 
 		/* for rhea from here */
 		if (Val3 == 0) {
@@ -1178,7 +1188,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 
 		/* The AUDDRV_BUFFER_DONE_CB callback will release
 		 the buffer size. */
-		while (OSSEMAPHORE_Obtain(AUDDRV_BufDoneSema, 2 * 1000) ==
+		while (OSSEMAPHORE_Obtain(AUDDRV_BufDoneSema, to_jiff) ==
 		       OSSTATUS_SUCCESS) {
 
 			dataSrc += writeSize;
