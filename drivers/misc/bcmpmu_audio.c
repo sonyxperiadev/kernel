@@ -42,7 +42,7 @@ void bcmpmu_hs_power(bool on)
 {
 	unsigned int val;
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
-	printk("%s:  ######### ON = %d\n", __func__, on);
+	printk(KERN_WARNING "%s:  ######### ON = %d\n", __func__, on);
 	mutex_lock(&bcmpmu_audio->lock);
 
 	if (on) {
@@ -62,7 +62,6 @@ void bcmpmu_hs_power(bool on)
 	}
 	mutex_unlock(&bcmpmu_audio->lock);
 }
-
 EXPORT_SYMBOL(bcmpmu_hs_power);
 
 void bcmpmu_hs_shortcircuit_dis(bool disable)
@@ -158,7 +157,8 @@ void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	int data1, data2;
-	printk("%s:  ######### PATH = %d, GAIN = %d\n", __func__, path, gain);
+	printk(KERN_WARNING "%s: ######### PATH = %d, GAIN = %d\n",
+		__func__, path, gain);
 
 	mutex_lock(&bcmpmu_audio->lock);
 	bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPGA1, &data1,
@@ -171,7 +171,7 @@ void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain)
 		data1 |= (gain & BCMPMU_HS_GAIN_MASK);
 		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA1, data1,
 				bcmpmu->regmap[PMU_REG_HSPGA1].mask);
-	} else if (path == PMU_AUDIO_HS_RIGHT){
+	} else if (path == PMU_AUDIO_HS_RIGHT) {
 		data2 &= ~BCMPMU_HS_GAIN_MASK;
 		data2 |= (gain & BCMPMU_HS_GAIN_MASK);
 		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA2, data2,
@@ -196,7 +196,7 @@ void bcmpmu_ihf_power(bool on)
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	struct bcmpmu_rw_data reg;
 	unsigned int val;
-	printk("%s:  ######### ON = %d\n", __func__, on);
+	printk(KERN_WARNING "%s:  ######### ON = %d\n", __func__, on);
 	mutex_lock(&bcmpmu_audio->lock);
 	if (on) {
 		if (bcmpmu_audio->IHF_On) {
@@ -272,7 +272,7 @@ void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	u8 val;
-	printk("%s:  ######### GAIN = %d\n", __func__, gain);
+	printk(KERN_WARNING "%s:  ######### GAIN = %d\n", __func__, gain);
 	mutex_lock(&bcmpmu_audio->lock);
 	val = (gain & bcmpmu->regmap[PMU_REG_IHFPGA2_GAIN].mask) <<
 	    bcmpmu->regmap[PMU_REG_IHFPGA2_GAIN].shift;
@@ -305,7 +305,6 @@ int bcmpmu_audio_ihf_selftest_stimulus_input(int stimulus)
 					       regmap[PMU_REG_IHFSTIN_I_IHFSTI].
 					       mask);
 }
-
 EXPORT_SYMBOL(bcmpmu_audio_ihf_selftest_stimulus_input);
 
 int bcmpmu_audio_ihf_selftest_stimulus_output(int stimulus)
@@ -320,7 +319,6 @@ int bcmpmu_audio_ihf_selftest_stimulus_output(int stimulus)
 					       regmap[PMU_REG_IHFSTIN_I_IHFSTO].
 					       mask);
 }
-
 EXPORT_SYMBOL(bcmpmu_audio_ihf_selftest_stimulus_output);
 
 void bcmpmu_audio_ihf_selftest_result(u8 *result)
@@ -337,7 +335,6 @@ void bcmpmu_audio_ihf_selftest_result(u8 *result)
 	*result = val;
 
 }
-
 EXPORT_SYMBOL(bcmpmu_audio_ihf_selftest_result);
 
 int bcmpmu_audio_ihf_testmode(int Mode)
@@ -346,14 +343,13 @@ int bcmpmu_audio_ihf_testmode(int Mode)
 	    Mode << bcmpmu_audio->bcmpmu->
 	    regmap[PMU_REG_IHFSTIN_I_IHFSELFTEST_EN].shift;
 	return bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
-					       PMU_REG_IHFSTIN_I_IHFSELFTEST_EN,
-					       Mode,
-					       bcmpmu_audio->bcmpmu->
-					       regmap
-					       [PMU_REG_IHFSTIN_I_IHFSELFTEST_EN].
-					       mask);
+				PMU_REG_IHFSTIN_I_IHFSELFTEST_EN,
+				Mode,
+				bcmpmu_audio->bcmpmu->
+				regmap
+				[PMU_REG_IHFSTIN_I_IHFSELFTEST_EN].
+				mask);
 }
-
 EXPORT_SYMBOL(bcmpmu_audio_ihf_testmode);
 
 int bcmpmu_audio_hs_selftest_stimulus(int stimulus)
@@ -367,7 +363,6 @@ int bcmpmu_audio_hs_selftest_stimulus(int stimulus)
 					       regmap[PMU_REG_HSIST_I_HS_IST].
 					       mask);
 }
-
 EXPORT_SYMBOL(bcmpmu_audio_hs_selftest_stimulus);
 
 void bcmpmu_audio_hs_selftest_result(u8 *result)
@@ -382,7 +377,6 @@ void bcmpmu_audio_hs_selftest_result(u8 *result)
 	    val >> bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSOUT1_O_HS_IST].shift;
 	*result = val;
 }
-
 EXPORT_SYMBOL(bcmpmu_audio_hs_selftest_result);
 
 int bcmpmu_audio_hs_testmode(int Mode)
@@ -395,7 +389,6 @@ int bcmpmu_audio_hs_testmode(int Mode)
 					       regmap[PMU_REG_HSIST_I_HS_ENST].
 					       mask);
 }
-
 EXPORT_SYMBOL(bcmpmu_audio_hs_testmode);
 
 /* Backup registers used for headset selftest */
@@ -423,12 +416,12 @@ void bcmpmu_audio_ihf_selftest_backup(bool Enable)
 	} else {
 		/* Restore PMU register values */
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
-						PMU_REG_IHFSTIN_I_IHFSELFTEST_EN,
-						StoredRegValue[0],
-						bcmpmu_audio->bcmpmu->
-						regmap
-						[PMU_REG_IHFSTIN_I_IHFSELFTEST_EN].
-						mask);
+					PMU_REG_IHFSTIN_I_IHFSELFTEST_EN,
+					StoredRegValue[0],
+					bcmpmu_audio->bcmpmu->
+					regmap
+					[PMU_REG_IHFSTIN_I_IHFSELFTEST_EN].
+					mask);
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
 						PMU_REG_IHFSTIN_I_IHFSTI,
 						StoredRegValue[1],
@@ -547,7 +540,7 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 void bcmpmu_audio_init(void)
 {
 	struct bcmpmu_rw_data reg;
-	printk("%s: ######\n", __func__);
+	printk(KERN_WARNING "%s: ######\n", __func__);
 
 	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL,
 				       &reg.val, PMU_BITMASK_ALL);
@@ -555,7 +548,6 @@ void bcmpmu_audio_init(void)
 	bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL,
 					reg.val, PMU_BITMASK_ALL);
 }
-
 EXPORT_SYMBOL(bcmpmu_audio_init);
 
 void bcmpmu_audio_deinit(void)
@@ -571,7 +563,6 @@ void bcmpmu_audio_deinit(void)
 	bcmpmu_audio->HS_On = false;
 	bcmpmu_audio->IHF_On = false;
 }
-
 EXPORT_SYMBOL(bcmpmu_audio_deinit);
 
 static void bcmpmu_audio_isr(enum bcmpmu_irq irq, void *data)
@@ -579,8 +570,8 @@ static void bcmpmu_audio_isr(enum bcmpmu_irq irq, void *data)
 	struct bcmpmu *bcmpmu = ((struct bcmpmu_audio *)data)->bcmpmu;
 	unsigned int mask;
 	pr_info("%s: Interrupt for %s\n", __func__,
-			(irq==PMU_IRQ_AUD_HSAB_SHCKT)?"HS SC":"IHF SC");
-	switch (irq){
+			(irq == PMU_IRQ_AUD_HSAB_SHCKT) ? "HS SC" : "IHF SC");
+	switch (irq) {
 	case PMU_IRQ_AUD_HSAB_SHCKT:
 		mask = bcmpmu->regmap[PMU_REG_HS_SC_EDISABLE].mask;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_HS_SC_EDISABLE, mask, mask);
@@ -594,7 +585,7 @@ static void bcmpmu_audio_isr(enum bcmpmu_irq irq, void *data)
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHF_SC_EDISABLE, 0, mask);
 		break;
 	default:
-		pr_info("%s: Wrong IRQ number \n", __func__);
+		pr_info("%s: Wrong IRQ number\n", __func__);
 		break;
 	}
 }
@@ -700,7 +691,8 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 	if (!ihf_on)
 		goto debugfs_err;
 	return 0;
-      debugfs_err:
+
+debugfs_err:
 	debugfs_remove(hs_on);
 	debugfs_remove(ihf_gain);
 	debugfs_remove(hs_gain);

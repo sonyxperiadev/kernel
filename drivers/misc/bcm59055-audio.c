@@ -35,7 +35,7 @@
 #include <linux/uaccess.h>
 #include <linux/io.h>
 #include <linux/broadcom/bcm59055-audio.h>
-//#include <linux/mfd/bcm590xx/bcm59055_A0.h>
+/*#include <linux/mfd/bcm590xx/bcm59055_A0.h>*/
 #include <linux/mfd/bcm590xx/core.h>
 
 struct bcm59055_audio {
@@ -191,7 +191,8 @@ int bcm59055_hs_set_input_mode(int HSgain, int HSInputmode)
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
 	int ret = 0;
 	int HSwasEn = 0;
-	pr_debug("Inside %s, HSgain %d, HSInputmode %d\n", __func__, HSgain, HSInputmode);
+	pr_debug("Inside %s, HSgain %d, HSInputmode %d\n",
+		__func__, HSgain, HSInputmode);
 
 	mutex_lock(&driv_data->lock);
 	if (HSInputmode == driv_data->HSInputMode) {
@@ -214,16 +215,19 @@ int bcm59055_hs_set_input_mode(int HSgain, int HSInputmode)
 
 	if (HSInputmode == PMU_HS_SINGLE_ENDED_AC_COUPLED) {
 		data1 &= ~BCM59055_PGA_CTL_MASK;
-		data1 |= (BCM59055_HSPGA1_PGA_GAINL | BCM59055_HSPGA1_PGA_GAINR |
+		data1 |= (BCM59055_HSPGA1_PGA_GAINL
+			| BCM59055_HSPGA1_PGA_GAINR |
 			(HSgain & BCM59055_PGA_CTL_MASK));
 
 		data2 &= ~BCM59055_PGA_CTL_MASK;
 		data2 |= HSgain & BCM59055_PGA_CTL_MASK;
 
-		data3 &= ~(BCM59055_HSPGA3_PGA_ACINADJ | BCM59055_HSPGA3_PGA_PULLDNSJ);
+		data3 &= ~(BCM59055_HSPGA3_PGA_ACINADJ
+			| BCM59055_HSPGA3_PGA_PULLDNSJ);
 		data3 |= BCM59055_HSPGA3_PGA_ENACCPL;
 	} else if (HSInputmode == PMU_HS_DIFFERENTIAL_AC_COUPLED) {
-		data1 &= ~(BCM59055_HSPGA1_PGA_GAINL | BCM59055_HSPGA1_PGA_GAINR |
+		data1 &= ~(BCM59055_HSPGA1_PGA_GAINL
+			| BCM59055_HSPGA1_PGA_GAINR |
 			BCM59055_PGA_CTL_MASK);
 		data1 |= HSgain & BCM59055_PGA_CTL_MASK;
 
@@ -231,16 +235,21 @@ int bcm59055_hs_set_input_mode(int HSgain, int HSInputmode)
 		data2 |= HSgain & BCM59055_PGA_CTL_MASK;
 
 		data3 &= ~BCM59055_HSPGA3_PGA_PULLDNSJ;
-		data3 |= (BCM59055_HSPGA3_PGA_ENACCPL | BCM59055_HSPGA3_PGA_ACINADJ);
+		data3 |= (BCM59055_HSPGA3_PGA_ENACCPL
+			| BCM59055_HSPGA3_PGA_ACINADJ);
 	} else if (HSInputmode == PMU_HS_DIFFERENTIAL_DC_COUPLED) {
-		data1 &= ~(BCM59055_HSPGA1_PGA_GAINL | BCM59055_HSPGA1_PGA_GAINR |
+		data1 &=
+			~(BCM59055_HSPGA1_PGA_GAINL
+			| BCM59055_HSPGA1_PGA_GAINR |
 			BCM59055_PGA_CTL_MASK);
 		data1 |= HSgain & BCM59055_PGA_CTL_MASK;
 
 		data2 &= ~BCM59055_PGA_CTL_MASK;
 		data2 |= HSgain & BCM59055_PGA_CTL_MASK;
 
-		data3 &= ~(BCM59055_HSPGA3_PGA_PULLDNSJ | BCM59055_HSPGA3_PGA_ENACCPL |
+		data3 &=
+			~(BCM59055_HSPGA3_PGA_PULLDNSJ
+			| BCM59055_HSPGA3_PGA_ENACCPL |
 			BCM59055_HSPGA3_PGA_ACINADJ);
 	}
 
@@ -320,7 +329,7 @@ int bcm59055_hs_class_sel(bool i2cmethod, bool classAB)
 	pr_debug("Inside %s\n", __func__);
 	mutex_lock(&driv_data->lock);
 	data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_HSCP3);
-	//data |= BCM59055_IHFPOP_AUTOSEQ;
+	/*data |= BCM59055_IHFPOP_AUTOSEQ;*/
 
 	if (driv_data->i2cMethod) {
 		data &= ~BCM59055_HSCP3_CG_SEL;
@@ -382,8 +391,10 @@ int bcm59055_audio_ihf_selftest_stimulus_input(int stimulus)
 
 	data  =  bcm590xx_reg_read(bcm590xx,
 				      BCM59055_REG_IHFSTIN);
-	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFSTIN,
-			   (data & ~PMU_IHFSTIN_MASK_I_IHFSTI)|(stimulus << PMU_IHFSTIN_OFFSET_I_IHFSTI));
+	return bcm590xx_reg_write(bcm590xx,
+			BCM59055_REG_IHFSTIN,
+			(data & ~PMU_IHFSTIN_MASK_I_IHFSTI)
+			|(stimulus << PMU_IHFSTIN_OFFSET_I_IHFSTI));
 }
 EXPORT_SYMBOL(bcm59055_audio_ihf_selftest_stimulus_input);
 
@@ -393,7 +404,10 @@ int bcm59055_audio_ihf_selftest_stimulus_output(int stimulus)
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
 	data  =  bcm590xx_reg_read(bcm590xx,
 				      BCM59055_REG_IHFSTIN);
-	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFSTIN, (data & ~PMU_IHFSTIN_MASK_I_IHFSTO) | (stimulus << PMU_IHFSTIN_OFFSET_I_IHFSTO));
+	return bcm590xx_reg_write(bcm590xx,
+			BCM59055_REG_IHFSTIN,
+			(data & ~PMU_IHFSTIN_MASK_I_IHFSTO)
+			| (stimulus << PMU_IHFSTIN_OFFSET_I_IHFSTO));
 
 
 }
@@ -405,7 +419,8 @@ void bcm59055_audio_ihf_selftest_result(u8 *result)
 
 	*result = bcm590xx_reg_read(bcm590xx, BCM59055_REG_IHFSTO);
 
-	*result = (*result&PMU_IHFSTO_MASK_O_IHFSTI)>>PMU_IHFSTO_OFFSET_O_IHFSTI;
+	*result =
+		(*result&PMU_IHFSTO_MASK_O_IHFSTI)>>PMU_IHFSTO_OFFSET_O_IHFSTI;
 
 }
 EXPORT_SYMBOL(bcm59055_audio_ihf_selftest_result);
@@ -418,7 +433,8 @@ int bcm59055_audio_ihf_testmode(int Mode)
 	data  =  bcm590xx_reg_read(bcm590xx,
 				      BCM59055_REG_IHFSTIN);
 	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFSTIN,
-			   (data & ~PMU_IHFSTIN_MASK_I_IHFSELFTEST_EN)|(Mode << PMU_IHFSTIN_OFFSET_I_IHFSELFTEST_EN));
+			   (data & ~PMU_IHFSTIN_MASK_I_IHFSELFTEST_EN)
+			   |(Mode << PMU_IHFSTIN_OFFSET_I_IHFSELFTEST_EN));
 }
 EXPORT_SYMBOL(bcm59055_audio_ihf_testmode);
 
@@ -431,7 +447,8 @@ int bcm59055_audio_hs_selftest_stimulus(int stimulus)
 	data  =  (u8)bcm590xx_reg_read(bcm590xx,
 					   BCM59055_REG_HSIST);
 	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSIST,
-			(data & ~PMU_HSIST_MASK_I_HS_IST) | (stimulus << PMU_HSIST_OFFSET_I_HS_IST));
+			(data & ~PMU_HSIST_MASK_I_HS_IST)
+			| (stimulus << PMU_HSIST_OFFSET_I_HS_IST));
 
 }
 EXPORT_SYMBOL(bcm59055_audio_hs_selftest_stimulus);
@@ -451,11 +468,14 @@ int bcm59055_audio_hs_testmode(int Mode)
 	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
 
 
-	/* 1.   Enable test mode (driving buffer enabled) (i_hs_enst[1:0]  =  '11') on PMU */
+	/* 1. Enable test mode (driving buffer enabled)
+	(i_hs_enst[1:0]  =  '11') on PMU
+	*/
 	data  =  (u8)bcm590xx_reg_read(bcm590xx,
 					   BCM59055_REG_HSIST);
 	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSIST,
-			    (data & ~PMU_HSIST_MASK_I_HS_ENST)|(Mode << PMU_HSIST_OFFSET_I_HS_ENST));
+			    (data & ~PMU_HSIST_MASK_I_HS_ENST)
+				|(Mode << PMU_HSIST_OFFSET_I_HS_ENST));
 
 }
 EXPORT_SYMBOL(bcm59055_audio_hs_testmode);
@@ -469,7 +489,7 @@ static int __devinit bcm59055_audio_probe(struct platform_device *pdev)
 	int data;
 	pr_info("Inside %s\n", __func__);
 
-	if(!bcm590xx)
+	if (!bcm590xx)
 		return -EINVAL;
 	audio_data = kzalloc((sizeof(struct bcm59055_audio)), GFP_KERNEL);
 	if (!audio_data) {
@@ -483,19 +503,21 @@ static int __devinit bcm59055_audio_probe(struct platform_device *pdev)
 	audio_data->bcm590xx = bcm590xx;
 	driv_data = audio_data;
 	platform_set_drvdata(pdev, audio_data);
-	// Enable auto sequence for IHF power up and power down
+	/* Enable auto sequence for IHF power up and power down */
 	data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_IHFPOP);
 	data |= BCM59055_IHFPOP_AUTOSEQ;
 	bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFPOP, data);
 	/*set default miser input, mode and per-amp gain settings*/
-	if(bcm590xx ->pdata && bcm590xx ->pdata->audio_pdata)
-	{
-		struct bcm590xx_audio_pdata* audio_pdata = bcm590xx->pdata->audio_pdata;
-		if (!bcm59055_hs_class_sel(audio_pdata->i2cmethod, audio_pdata->classAB)) {
-			pr_info("%s: Unable to set class\n", __func__);
-		}
+	if (bcm590xx->pdata && bcm590xx->pdata->audio_pdata) {
+		struct bcm590xx_audio_pdata *audio_pdata =
+			bcm590xx->pdata->audio_pdata;
 
-		bcm59055_hs_set_input_mode(audio_pdata->hsgain, audio_pdata->hsinputmode);
+		if (!bcm59055_hs_class_sel(audio_pdata->i2cmethod,
+				audio_pdata->classAB))
+			pr_info("%s: Unable to set class\n", __func__);
+
+		bcm59055_hs_set_input_mode(audio_pdata->hsgain,
+			audio_pdata->hsinputmode);
 		bcm59055_hs_sc_thold(audio_pdata->sc_thold);
 		bcm59055_ihf_set_gain(audio_pdata->ihf_gain);
 		bcm59055_ihf_bypass_en(audio_pdata->ihf_bypass_en);
