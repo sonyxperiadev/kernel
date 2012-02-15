@@ -1449,9 +1449,10 @@ static int mmc_blk_probe(struct mmc_card *card)
 		mmcpart_table[index][cnt].hd.start_sect = disk_part->start_sect;
 		mmcpart_table[index][cnt].hd.nr_sects = disk_part->nr_sects;
 		pr_debug(KERN_ERR
-			 "%s: part^name: %s, start_sect: %llu nr_sects %llu,",
+			 "%s: partname: %s, start_sect: %llu nr_sects %llu,",
 			 __func__, disk_part->info->volname,
-			 disk_part->start_sect, disk_part->nr_sects);
+			 (unsigned long long)disk_part->start_sect, 
+			 (unsigned long long)disk_part->nr_sects);
 		cnt++;
 	}
 	disk_part_iter_exit(&piter);
@@ -1463,8 +1464,8 @@ static int mmc_blk_probe(struct mmc_card *card)
 			 "nr_sects: %llu, partno: %d, major: %d, minor: %d, part_tbl->len %d\n",
 			 __func__,
 			 mmcpart_table[index][i].partname,
-			 md->disk->part_tbl->part[i]->start_sect,
-			 md->disk->part_tbl->part[i]->nr_sects,
+			(unsigned long long)md->disk->part_tbl->part[i]->start_sect,
+			(unsigned long long)md->disk->part_tbl->part[i]->nr_sects,
 			 i,
 			 mmcpart_table[index][i].hd.major,
 			 mmcpart_table[index][i].hd.first_minor,
@@ -1484,8 +1485,8 @@ static int mmc_blk_probe(struct mmc_card *card)
 					 "%s: adding mmcblk%dp%d:%s %llu %llu\n",
 					 __func__, index, i,
 					 mmcpart_table[index][i].partname,
-					 mmcpart_table[index][i].hd.start_sect,
-					 mmcpart_table[index][i].hd.nr_sects);
+					 (unsigned long long)mmcpart_table[index][i].hd.start_sect,
+					 (unsigned long long)mmcpart_table[index][i].hd.nr_sects);
 				nt->add(&mmcpart_table[index][i].hd);
 			}
 		}

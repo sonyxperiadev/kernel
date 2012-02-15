@@ -97,7 +97,7 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 		struct page *page;
 
 		pr_debug("%s command is recovery, allocate size of %llu\n",
-			 __func__, mmc_hd->nr_sects * 512);
+			 __func__, (unsigned long long)(mmc_hd->nr_sects * 512));
 		/* Allocate a buffer to hold a block from 'misc' */
 		flashblock = kmalloc(mmc_hd->nr_sects * 512, GFP_KERNEL);
 

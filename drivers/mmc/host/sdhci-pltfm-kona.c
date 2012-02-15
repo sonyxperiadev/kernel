@@ -476,7 +476,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	printk(KERN_ERR " % GET PLATFORM DATA \n",__FUNCTION__);
+	printk(KERN_ERR " %s GET PLATFORM DATA \n",__FUNCTION__);
 
 	hw_cfg = (struct sdio_platform_cfg *)pdev->dev.platform_data;
 	if (hw_cfg->devtype >= SDIO_DEV_TYPE_MAX) {
