@@ -50,6 +50,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "csl_voif.h"
 #include "csl_caph_hwctrl.h"
 #include "audio_controller.h"
+#include "audio_trace.h"
 
 /* Public Variable declarations */
 
@@ -229,13 +230,13 @@ UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h)
 static int SetPlaybackStreamHandle(AUDIO_DDRIVER_t *h)
 {
 	if (h->stream_id >= CSL_CAPH_STREAM_TOTAL) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"Error: SetPlaybackStreamHandle invalid stream id=%ld\n",
 				h->stream_id);
 		return -1;
 	}
 	if (audio_render_driver[h->stream_id] != NULL)
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"Warnning: SetPlaybackStreamHandle handle of stream id=%ld is overwritten pre=%p, after=%p\n",
 				h->stream_id, audio_render_driver[h->stream_id],
 				h);
@@ -248,7 +249,7 @@ static int SetPlaybackStreamHandle(AUDIO_DDRIVER_t *h)
 static AUDIO_DDRIVER_t *GetPlaybackStreamHandle(UInt32 streamID)
 {
 	if (audio_render_driver[streamID] == NULL)
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"Error: GetPlaybackStreamHandle invalid handle for id %ld\n",
 				streamID);
 	return audio_render_driver[streamID];
@@ -258,7 +259,7 @@ static int ResetPlaybackStreamHandle(UInt32 streamID)
 {
 
 	if (audio_render_driver[streamID] == NULL)
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"Warning: ResetPlaybackStreamHandle invalid handle for id %ld\n",
 				streamID);
 	audio_render_driver[streamID] = NULL;
@@ -276,7 +277,7 @@ static int ResetPlaybackStreamHandle(UInt32 streamID)
 AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 {
 	AUDIO_DDRIVER_t *aud_drv = NULL;
-	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_Open::\n");
+	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_Open::\n");
 
 	/* allocate memory */
 	aud_drv = kzalloc(sizeof(AUDIO_DDRIVER_t), GFP_KERNEL);
@@ -311,7 +312,7 @@ AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 		break;
 
 	default:
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_Open::Unsupported driver\n");
 		break;
 	}
@@ -328,10 +329,10 @@ AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 {
 	AUDIO_DDRIVER_t *aud_drv = (AUDIO_DDRIVER_t *) drv_handle;
-	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_Close\n");
+	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_Close\n");
 
 	if (aud_drv == NULL) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_Close::Invalid Handle\n");
 		return;
 	}
@@ -352,7 +353,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 		}
 		break;
 	default:
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_Close::Unsupported driver\n");
 		break;
 	}
@@ -371,7 +372,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 void AUDIO_DRIVER_Read(AUDIO_DRIVER_HANDLE_t drv_handle,
 		       UInt8 *pBuf, UInt32 nSize)
 {
-	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_Read::\n");
+	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_Read::\n");
 	return;
 }
 
@@ -386,7 +387,7 @@ void AUDIO_DRIVER_Read(AUDIO_DRIVER_HANDLE_t drv_handle,
 void AUDIO_DRIVER_Write(AUDIO_DRIVER_HANDLE_t drv_handle,
 			UInt8 *pBuf, UInt32 nBufSize)
 {
-	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_Write::\n");
+	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_Write::\n");
 
 	return;
 }
@@ -405,7 +406,7 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 	Result_t result_code = RESULT_ERROR;
 
 	if (aud_drv == NULL) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_Ctrl::Invalid Handle\n");
 		return;
 	}
@@ -465,13 +466,13 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 		}
 		break;
 	default:
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_Ctrl::Unsupported driver\n");
 		break;
 	}
 
 	if (result_code == RESULT_ERROR) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_Ctrl::command processing failed aud_drv->drv_type %d ctrl_cmd %d\n",
 				aud_drv->drv_type, ctrl_cmd);
 	}
@@ -490,7 +491,7 @@ void AUDIO_DRIVER_UpdateBuffer(AUDIO_DRIVER_HANDLE_t drv_handle,
 			       UInt32 nBufSize,
 			       UInt32 nCurrentIndex, UInt32 nSize)
 {
-	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_UpdateBuffer::\n");
+	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_UpdateBuffer::\n");
 	return;
 }
 
@@ -509,7 +510,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 {
 	Result_t result_code = RESULT_ERROR;
 	AUDIO_SINK_Enum_t *dev = NULL;
-	/*Log_DebugPrintf(LOGID_AUDIO,
+	/*aTrace(LOG_AUDIO_DRIVER,
 	"AUDIO_DRIVER_ProcessRenderCmd::%d\n",ctrl_cmd );*/
 	switch (ctrl_cmd) {
 	case AUDIO_DRIVER_START:
@@ -530,7 +531,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 			    (aud_drv->ring_buffer == NULL) ||
 			    (aud_drv->ring_buffer_size == 0)
 			    ) {
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 						"AUDIO_DRIVER_ProcessRenderCmd::All Configuration is not set yet\n");
 				return result_code;
 			}
@@ -592,7 +593,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 		}
 		break;
 	default:
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_ProcessRenderCmd::Unsupported command\n");
 		break;
 	}
@@ -617,7 +618,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode;
 	UInt32 numFramesPerInterrupt;
 
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessVoiceRenderCmd::%d\n", ctrl_cmd);
 	switch (ctrl_cmd) {
 	case AUDIO_DRIVER_START:
@@ -631,7 +632,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 		    (aud_drv->ring_buffer == NULL) ||
 		    (aud_drv->ring_buffer_size == 0)
 		    ) {
-			Log_DebugPrintf(LOGID_AUDIO,
+			aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_ProcessVoiceRenderCmd::All cfg is not set yet\n");
 			return result_code;
 		}
@@ -749,14 +750,14 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 	}
 	break;
 	default:
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessVoiceRenderCmd::Unsupported command\n");
 	break;
 	}
 #else
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 		"AUDIO_DRIVER_ProcessCaptureCmd : dummy for AP only, NO DSP");
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 		"AUDIO_DRIVER_ProcessCaptureCmd : ARM2SP is not supported");
 #endif
 	return result_code;
@@ -795,7 +796,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t *aud_drv,
 		    (aud_drv->ring_buffer == NULL) ||
 		    (aud_drv->ring_buffer_size == 0)
 		    ) {
-			Log_DebugPrintf(LOGID_AUDIO,
+			aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessCaptureCmd::All Config is not set yet\n");
 			return result_code;
 		}
@@ -850,7 +851,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t *aud_drv,
 	}
 	break;
 	default:
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessCaptureCmd::Unsupported command\n");
 	break;
 	}
@@ -873,7 +874,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 #if defined(CONFIG_BCM_MODEM)
 	VOCAPTURE_RECORD_MODE_t *recordMode = NULL;
 
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessCaptureVoiceCmd::%d\n", ctrl_cmd);
 
 	switch (ctrl_cmd) {
@@ -899,9 +900,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			    (aud_drv->ring_buffer == NULL) ||
 			    (aud_drv->ring_buffer_size == 0)
 			    ) {
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 					"AUDIO_DRIVER_ProcessCaptureCmd::");
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 					"All Configuration is not set yet\n");
 				return result_code;
 			}
@@ -963,12 +964,12 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_RESUME:
 		break;
 	default:
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessCaptureVoiceCmd::Invalid command\n");
 		break;
 	}
 #else
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessCaptureVoiceCmd : dummy for AP only");
 #endif
 	return result_code;
@@ -989,7 +990,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 	UInt32 codec_type = 99;	/* valid number:0~5 */
 	UInt32 bitrate_index = 0;
 
-	Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_ProcessVoIPCmd::%d\n",
+	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_ProcessVoIPCmd::%d\n",
 			ctrl_cmd);
 
 	switch (ctrl_cmd) {
@@ -1018,7 +1019,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 			aud_drv->voip_config.codec_type =
 			    VOIP_AMR_WB_MODE_7k;
 		else {
-			Log_DebugPrintf(LOGID_AUDIO,
+			aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n");
 			break;
 		}
@@ -1044,11 +1045,11 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 						GFP_KERNEL);
 
 				DJB_Init();
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 					"==> VoLTE call starts, codec_type=%x\n",
 					aud_drv->voip_config.codec_type);
 			} else {
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 					"==> Codec Type not supported in VoLTE\n");
 				return result_code;
 			}
@@ -1070,7 +1071,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 
 		AUDIO_DRIVER_CallBackParams_t *pCbParams;
 		if (pCtrlStruct == NULL) {
-			Log_DebugPrintf(LOGID_AUDIO,
+			aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr\n");
 			return result_code;
 		}
@@ -1088,7 +1089,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 	{
 		AUDIO_DRIVER_CallBackParams_t *pCbParams;
 		if (pCtrlStruct == NULL) {
-			Log_DebugPrintf(LOGID_AUDIO,
+			aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr\n");
 			return result_code;
 		}
@@ -1103,7 +1104,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 	}
 	break;
 	default:
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessVoIPCmd::Unsupported command\n");
 	break;
 	}
@@ -1133,7 +1134,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t *aud_drv,
 			VPRIPCMDQ_VOIFControl(1);
 			voif_enabled = TRUE;
 			voifDrv.isRunning = TRUE;
-			Log_DebugPrintf(LOGID_AUDIO,
+			aTrace(LOG_AUDIO_DRIVER,
 					" AUDDRV_VOIF_Start end\r\n");
 			result_code = RESULT_OK;
 		}
@@ -1146,7 +1147,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t *aud_drv,
 			voifDrv.cb = NULL;
 			voif_enabled = FALSE;
 			voifDrv.isRunning = FALSE;
-			Log_DebugPrintf(LOGID_AUDIO,
+			aTrace(LOG_AUDIO_DRIVER,
 					"AUDDRV_VOIF_Stop end\r\n");
 			result_code = RESULT_OK;
 		}
@@ -1158,12 +1159,12 @@ static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t *aud_drv,
 		}
 		break;
 	default:
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessVoIFCmd::Unsupported command\n");
 		break;
 	}
 #else
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessVoIFCmd : dummy for AP only (no DSP)");
 #endif
 	return result_code;
@@ -1182,7 +1183,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 {
 	Result_t result_code = RESULT_ERROR;
 
-	/* Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCommonCmd::%d\n",
+	/* aTrace(LOG_AUDIO_DRIVER,"AUDIO_DRIVER_ProcessCommonCmd::%d\n",
 		ctrl_cmd ); */
 
 	switch (ctrl_cmd) {
@@ -1191,7 +1192,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 			AUDIO_DRIVER_CONFIG_t *pAudioConfig =
 			    (AUDIO_DRIVER_CONFIG_t *) pCtrlStruct;
 			if (pCtrlStruct == NULL) {
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 						"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1212,7 +1213,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 		{
 			AUDIO_DRIVER_CallBackParams_t *pCbParams;
 			if (pCtrlStruct == NULL) {
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1227,7 +1228,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_SET_INT_PERIOD:
 		{
 			if (pCtrlStruct == NULL) {
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1240,7 +1241,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 			AUDIO_DRIVER_BUFFER_t *pAudioBuffer =
 			    (AUDIO_DRIVER_BUFFER_t *) pCtrlStruct;
 			if (pCtrlStruct == NULL) {
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1256,7 +1257,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 			AUDIO_DRIVER_TYPE_t *pDriverType =
 			    (AUDIO_DRIVER_TYPE_t *) pCtrlStruct;
 			if (pCtrlStruct == NULL) {
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1298,11 +1299,11 @@ static Result_t ARM2SP_play_start(AUDIO_DDRIVER_t *aud_drv,
 		aud_drv->arm2sp_config.numFramesPerInterrupt = 1;
 	}
 
-	Log_DebugPrintf(LOGID_AUDIO, " ARM2SP_play_start::Start render");
-	Log_DebugPrintf(LOGID_AUDIO, "playbackMode = %d, mixMode = %d,",
+	aTrace(LOG_AUDIO_DRIVER, " ARM2SP_play_start::Start render");
+	aTrace(LOG_AUDIO_DRIVER, "playbackMode = %d, mixMode = %d,",
 		aud_drv->arm2sp_config.playbackMode,
 		aud_drv->arm2sp_config.mixMode);
-	Log_DebugPrintf(LOGID_AUDIO, "instanceID=0x%lx, samplingRate = %u\n",
+	aTrace(LOG_AUDIO_DRIVER, "instanceID=0x%lx, samplingRate = %u\n",
 		aud_drv->arm2sp_config.instanceID,
 		aud_drv->sample_rate);
 
@@ -1311,7 +1312,7 @@ static Result_t ARM2SP_play_start(AUDIO_DDRIVER_t *aud_drv,
 		VORENDER_ARM2SP_INSTANCE1) {
 		CSL_ARM2SP_Init();
 
-		Log_DebugPrintf(LOGID_AUDIO, " start ARM2SP\n");
+		aTrace(LOG_AUDIO_DRIVER, " start ARM2SP\n");
 		csl_arm2sp_set_arm2sp(
 			(UInt32)aud_drv->sample_rate,
 			(CSL_ARM2SP_PLAYBACK_MODE_t)
@@ -1326,7 +1327,7 @@ static Result_t ARM2SP_play_start(AUDIO_DDRIVER_t *aud_drv,
 		/* clean buffer before starting to play */
 		CSL_ARM2SP2_Init();
 
-		Log_DebugPrintf(LOGID_AUDIO, " start ARM2SP2\n");
+		aTrace(LOG_AUDIO_DRIVER, " start ARM2SP2\n");
 		csl_arm2sp_set_arm2sp2(
 			(UInt32)aud_drv->sample_rate,
 			(CSL_ARM2SP_PLAYBACK_MODE_t)
@@ -1351,7 +1352,7 @@ static Result_t ARM2SP_play_start(AUDIO_DDRIVER_t *aud_drv,
 static Result_t ARM2SP_play_resume(AUDIO_DDRIVER_t *aud_drv)
 {
 #if defined(CONFIG_BCM_MODEM)
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"Resume ARM2SP voice play instanceID=0x%lx\n",
 			aud_drv->arm2sp_config.instanceID);
 
@@ -1375,7 +1376,7 @@ static Result_t ARM2SP_play_resume(AUDIO_DDRIVER_t *aud_drv)
 				       numFramesPerInterrupt,
 				       aud_drv->arm2sp_config.audMode, 1);
 #else
-	Log_DebugPrintf(LOGID_AUDIO, "ARM2SP_play_resume  : dummy for AP only");
+	aTrace(LOG_AUDIO_DRIVER, "ARM2SP_play_resume  : dummy for AP only");
 #endif
 	return RESULT_OK;
 }
@@ -1406,13 +1407,13 @@ static Result_t VPU_record_start(
 	if (numFramesPerInterrupt > 4)
 		numFramesPerInterrupt = 4;
 
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 		" VPU_record_start::Start capture, encodingMode = 0x%x,",
 		encodingMode);
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 		" recordMode = 0x%x, procEnable = 0x%x, dtxEnable = 0x%x",
 		recordMode, procEnable, dtxEnable);
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 		"speechMode = 0x%lx, dataRate = 0x%lx\n",
 		speechMode, dataRate);
 
@@ -1421,7 +1422,7 @@ static Result_t VPU_record_start(
 				     (UInt8) numFramesPerInterrupt,
 				     (UInt16) encodingMode);
 #else
-	Log_DebugPrintf(LOGID_AUDIO, "VPU_record_start  : dummy for AP only");
+	aTrace(LOG_AUDIO_DRIVER, "VPU_record_start  : dummy for AP only");
 #endif
 	return RESULT_OK;
 }
@@ -1474,7 +1475,7 @@ void VOIF_Buffer_Request(UInt32 bufferIndex, UInt32 samplingRate)
 	else
 		sampleCount = VOIF_8K_SAMPLE_COUNT;
 
-	/*Log_DebugPrintf(LOGID_AUDIO,"VOIF_ISR_Handler received
+	/*aTrace(LOG_AUDIO_DRIVER,"VOIF_ISR_Handler received
 		VOIF_DATA_READY. dlIndex = %d isCall16K = %d\r\n",
 		dlIndex, samplingRate);*/
 
@@ -1482,7 +1483,7 @@ void VOIF_Buffer_Request(UInt32 bufferIndex, UInt32 samplingRate)
 	if (voifDrv.cb)
 		voifDrv.cb(ulBuf, dlBuf, sampleCount, (UInt8) samplingRate);
 #else
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"VOIF_Buffer_Request : dummy for AP only (no DSP)");
 #endif
 }
@@ -1500,7 +1501,7 @@ void VOIF_Buffer_Request(UInt32 bufferIndex, UInt32 samplingRate)
  ***************************************************************************/
 static Boolean VoIP_StartTelephony(void)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "=====VoIP_StartTelephony\r\n");
+	aTrace(LOGID_SOC_AUDIO, "=====VoIP_StartTelephony\r\n");
 	voip_workqueue = create_workqueue("voip");
 	if (!voip_workqueue)
 		return TRUE;
@@ -1524,7 +1525,7 @@ static Boolean VoIP_StartTelephony(void)
  ***************************************************************************/
 static Boolean VoIP_StopTelephony(void)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "=====VoIP_StopTelephony\r\n");
+	aTrace(LOGID_SOC_AUDIO, "=====VoIP_StopTelephony\r\n");
 
 	/* Clear voip mode, which block audio processing for voice calls */
 	/* arg0 = 0 to clear VOIPmode */
@@ -1558,20 +1559,22 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
 
 	pAudDrv = GetPlaybackStreamHandle(stream_id);
 
-	/*Log_DebugPrintf(LOGID_AUDIO,
+	/*aTrace(LOG_AUDIO_DRIVER,
 		"AUDIO_DRIVER_RenderDmaCallback:: stream_id = %d\n",
 		stream_id);*/
 
 	if ((pAudDrv == NULL)) {
-		Log_DebugPrintf(LOGID_AUDIO,
-				"AUDIO_DRIVER_RenderDmaCallback:: Spurious call back\n");
+		aTrace(LOG_AUDIO_DRIVER,
+				"AUDIO_DRIVER_RenderDmaCallback::"
+				"Spurious call back\n");
 		return;
 	}
 	if (pAudDrv->pCallback != NULL) {
 		pAudDrv->pCallback(pAudDrv->pCBPrivate);
 	} else
-		Log_DebugPrintf(LOGID_AUDIO,
-				"AUDIO_DRIVER_RenderDmaCallback:: No callback registerd\n");
+		aTrace(LOG_AUDIO_DRIVER,
+				"AUDIO_DRIVER_RenderDmaCallback::"
+				"No callback registerd\n");
 
 	return;
 }
@@ -1683,10 +1686,10 @@ void ARM2SP2_Render_Request(UInt16 buf_index)
 static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
 {
 
-	/*Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_CaptureDmaCallback::\n");*/
+	/*aTrace(LOG_AUDIO_DRIVER,"AUDIO_DRIVER_CaptureDmaCallback::\n");*/
 
 	if ((audio_capture_driver == NULL)) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_CaptureDmaCallback:: Spurious call back\n");
 		return;
 	}
@@ -1694,7 +1697,7 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
 		audio_capture_driver->pCallback(audio_capture_driver->
 						pCBPrivate);
 	} else
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_CaptureDmaCallback:: No callback registerd\n");
 
 	return;
@@ -1718,13 +1721,13 @@ void VPU_Capture_Request(UInt16 buf_index)
 	aud_drv = audio_capture_driver;
 
 	if ((aud_drv == NULL)) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"VPU_Capture_Request:: Spurious call back\n");
 		return;
 	}
-	/*Log_DebugPrintf(LOGID_AUDIO,
+	/*aTrace(LOG_AUDIO_DRIVER,
 		"VPU_Capture_Request:: buf_index\n", buf_index);
-	Log_DebugPrintf(LOGID_AUDIO, " aud_drv->write_index = %d\n",
+	aTrace(LOG_AUDIO_DRIVER, " aud_drv->write_index = %d\n",
 		buf_index,aud_drv->write_index);*/
 
 	/* Copy the data to the ringbuffer from dsp shared memory */
@@ -1805,10 +1808,10 @@ static void VoIP_StartMainAMRDecodeEncode(
 
 	if (prev_amr_mode == 0xffff || prev_amr_mode != encode_amr_mode) {
 
-		/*Log_DebugPrintf(LOGID_SOC_AUDIO,
+		/*aTrace(LOGID_SOC_AUDIO,
 		"VoIP_StartMainAMRDecodeEncode UL codecType=0x%x\n",
 		encode_amr_mode);
-		Log_DebugPrintf(LOGID_SOC_AUDIO,
+		aTrace(LOGID_SOC_AUDIO,
 		"send VP_COMMAND_MAIN_AMR_RUN to DSP\n"); */
 		prev_amr_mode = encode_amr_mode;
 		VPRIPCMDQ_DSP_AMR_RUN((UInt16) encode_amr_mode,
@@ -1862,7 +1865,7 @@ static Boolean VOIP_DumpUL_CB(UInt8 *pSrc, UInt32 amrMode)
 
 	aud_drv = audio_voip_driver;
 	if ((aud_drv == NULL)) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 			"VOIP_DumpUL_CB:: Spurious call back\n");
 		return TRUE;
 	}
@@ -1870,11 +1873,11 @@ static Boolean VOIP_DumpUL_CB(UInt8 *pSrc, UInt32 amrMode)
 	codecType = voipBufPtr->voip_vocoder;
 	index = (codecType & 0xf000) >> 12;
 	if (index >= 7)
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"VOIP_DumpUL_CB :: Invalid codecType = 0x%x\n",
 				codecType);
 	else {
-		/*Log_DebugPrintf(LOGID_AUDIO,
+		/*aTrace(LOG_AUDIO_DRIVER,
 		"VOIP_DumpUL_CB :: codecType = 0x%x, index = %d pSrc 0x%x\n",
 		codecType, index, pSrc);*/
 		ulSize = sVoIPDataLen[(codecType & 0xf000) >> 12];
@@ -1903,14 +1906,14 @@ static Boolean VOIP_FillDL_CB(UInt32 nFrames)
 
 	aud_drv = audio_voip_driver;
 	if (aud_drv == NULL) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"VOIP_FillDL_CB:: Spurious call back\n");
 		return TRUE;
 	}
 	dlSize = sVoIPDataLen[(aud_drv->voip_config.codec_type & 0xf000) >> 12];
 	memset(aud_drv->tmp_buffer, 0, VOIP_MAX_FRAME_LEN);
 	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
-	/*Log_DebugPrintf(LOGID_AUDIO,
+	/*aTrace(LOG_AUDIO_DRIVER,
 	"VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n",
 	aud_drv->voip_config.codec_type, dlSize);*/
 
@@ -1944,7 +1947,7 @@ static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf)
 	UInt16 *dataPtr = pBuf;
 
 	if (djbBuf == NULL) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"VoLTE_WriteDLData, missing VoLTE init ...\n");
 		return FALSE;
 	}
@@ -1956,7 +1959,7 @@ static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf)
 		 && decode_mode <= VOIP_AMR_WB_MODE_24k)
 		isAMRWB = TRUE;
 	else {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"VoLTE_WriteDLData, unsupported codec type.\n");
 		return FALSE;
 	}
@@ -1979,10 +1982,10 @@ static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf)
 	djbBuf->frameQuality =
 	    (djbBuf->frameType & 0x000f) ? VOLTEFRAMESILENT : VOLTEFRAMEGOOD;
 
-	/*Log_DebugPrintf(LOGID_AUDIO,
+	/*aTrace(LOG_AUDIO_DRIVER,
 	"VoLTE_WriteDLData, TimeStamp=%d, payloadSize=%d ",
 	djbBuf->RTPTimestamp, djbBuf->payloadSize);
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 	"codecType=%d, quality=%d\n",
 	djbBuf->codecType, djbBuf->frameQuality);*/
 

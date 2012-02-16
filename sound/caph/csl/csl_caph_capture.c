@@ -40,6 +40,7 @@
 #include "csl_caph_dma.h"
 #include "csl_caph_hwctrl.h"
 #include "csl_audio_capture.h"
+#include "audio_trace.h"
 
 /***************************************************************************/
 /*                       G L O B A L   S E C T I O N                       */
@@ -89,10 +90,10 @@ UInt32 csl_audio_capture_init(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVICE_e sink)
 	UInt32 streamID = CSL_CAPH_STREAM_NONE;
 	CSL_CAPH_Capture_Drv_t *audDrv = NULL;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_audio_capture_init::source=0x%x sink=0x%x.\n", source,
-	       sink));
+	       sink);
 
 	/* allocate a unique streamID */
 	streamID = (UInt32) csl_caph_hwctrl_AllocateStreamID();
@@ -123,10 +124,10 @@ Result_t csl_audio_capture_deinit(UInt32 streamID)
 	if (audDrv == NULL)
 		return RESULT_ERROR;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_audio_capture_deinit::dmaCH=0x%x, dmaCH2-0x%x\n",
-	       audDrv->dmaCH, audDrv->dmaCH2));
+	       audDrv->dmaCH, audDrv->dmaCH2);
 
 	memset(audDrv, 0, sizeof(CSL_CAPH_Capture_Drv_t));
 
@@ -152,8 +153,8 @@ Result_t csl_audio_capture_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 	CSL_CAPH_Capture_Drv_t *audDrv = NULL;
 	CSL_CAPH_HWCTRL_STREAM_REGISTER_t stream;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_audio_capture_configure::\n"));
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_audio_capture_configure::\n");
 
 	audDrv = GetCaptureDriverByType(streamID);
 
@@ -179,7 +180,7 @@ Result_t csl_audio_capture_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 
 	if (audDrv->source == CSL_CAPH_DEV_DSP
 	    && audDrv->sink == CSL_CAPH_DEV_MEMORY) {
-		Log_DebugPrintf(LOGID_SOC_AUDIO,
+		Log_DebugPrintf(LOG_AUDIO_CSL,
 			"csl_audio_capture_configure::USB call?"
 			"reset src_sampleRate from %u to 8000.\r\n",
 			stream.src_sampleRate);
@@ -207,9 +208,9 @@ Result_t csl_audio_capture_start(UInt32 streamID)
 {
 	CSL_CAPH_Capture_Drv_t *audDrv = NULL;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_audio_capture_start::streamID=0x%lx\n",
-	       streamID));
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_audio_capture_start::streamID=0x%lx\n",
+	       streamID);
 
 	audDrv = GetCaptureDriverByType(streamID);
 
@@ -232,9 +233,9 @@ Result_t csl_audio_capture_stop(UInt32 streamID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_audio_capture_stop::streamID=0x%lx\n",
-	       streamID));
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_audio_capture_stop::streamID=0x%lx\n",
+	       streamID);
 
 	config.streamID = (CSL_CAPH_STREAM_e) streamID;
 	(void)csl_caph_hwctrl_DisablePath(config);
@@ -253,9 +254,9 @@ Result_t csl_audio_capture_pause(UInt32 streamID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_audio_capture_pause::streamID=0x%lx\n",
-	       streamID));
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_audio_capture_pause::streamID=0x%lx\n",
+	       streamID);
 
 	config.streamID = (CSL_CAPH_STREAM_e) streamID;
 	(void)csl_caph_hwctrl_PausePath(config);
@@ -274,9 +275,9 @@ Result_t csl_audio_capture_resume(UInt32 streamID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_audio_capture_resume::streamID=0x%lx\n",
-	       streamID));
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_audio_capture_resume::streamID=0x%lx\n",
+	       streamID);
 
 	config.streamID = (CSL_CAPH_STREAM_e) streamID;
 	(void)csl_caph_hwctrl_ResumePath(config);
@@ -312,21 +313,21 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 	CSL_CAPH_Capture_Drv_t *audDrv = NULL;
 	UInt32 streamID = CSL_CAPH_STREAM_NONE;
 
-	/*_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
-	       "AUDIO_DMA_CB:: DMA callback.\n")); */
+	/*aTrace(LOG_AUDIO_CSL,
+	       "AUDIO_DMA_CB:: DMA callback.\n"); */
 
 	/* will revisit this when sync with upper layer.*/
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_LOW) ==
 	    CSL_CAPH_READY_NONE) {
-		/*_DBG_(Log_DebugPrintf(LOGID_AUDIO,
-		   "DMARequess fill low half ch=0x%x \r\n", chnl)); */
+		/*aTrace(LOGID_AUDIO,
+		   "DMARequess fill low half ch=0x%x \r\n", chnl); */
 		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_LOW);
 	}
 
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_HIGH) ==
 	    CSL_CAPH_READY_NONE) {
-		/*_DBG_(Log_DebugPrintf(LOGID_AUDIO,
-		      "DMARequest fill high half ch=0x%x \r\n", chnl)); */
+		/*aTrace(LOGID_AUDIO,
+		      "DMARequest fill high half ch=0x%x \r\n", chnl); */
 		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_HIGH);
 	}
 	streamID = GetStreamIDByDmaCH(chnl);

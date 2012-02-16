@@ -33,9 +33,10 @@ the GPL, without Broadcom's express prior written consent.
 #include "csl_caph.h"
 #include "audio_controller.h"
 #include "audctrl_policy.h"
+#include "audio_trace.h"
 
 /* Local typedefs */
-#include "log.h"
+/*#include "aTrace.h"*/
 
 struct BRCM_PREVMODEQueue {
 	BRCM_STATE_ENUM state;
@@ -95,7 +96,9 @@ Result_t AUDIO_Policy_SetState(int state)
 
 	tState = state;
 
-	log(1, "AUDIO_Policy_SetState:tPrevState - %d tState-%d state - %d\n",
+	aTrace(LOG_AUDIO_CNTLR,
+			"AUDIO_Policy_SetState:tPrevState"
+			"- %d tState-%d state - %d\n",
 			tPrevState, tState, state);
 	return 1;
 }
@@ -108,7 +111,9 @@ Result_t AUDIO_Policy_RestoreState()
 {
 	tState = tPrevState;
 	tPrevState = BRCM_STATE_NORMAL;
-	log(1, "AUDIO_Policy_RestoreState:tPrevState - %d tState-%d\n",
+	aTrace(LOG_AUDIO_CNTLR,
+			"AUDIO_Policy_RestoreState:"
+			"tPrevState - %d tState-%d\n",
 			tPrevState, tState);
 	return 1;
 }
@@ -143,7 +148,9 @@ int AUDIO_Policy_Get_Profile(int app)
 		/*Set the profile to existing profile*/
 		new_app = cur_app;
 	}
-	log(1, "AUDIO_Policy_Get_Profile:cur_app - %d new_app-%d app - %d\n",
+	aTrace(LOG_AUDIO_CNTLR,
+			"AUDIO_Policy_Get_Profile:cur_app"
+			"- %d new_app-%d app - %d\n",
 			cur_app, new_app, app);
 	return new_app;
 }
@@ -189,7 +196,8 @@ Result_t AUDIO_Policy_AddModeToQueue(int state, int mode, int app)
 		return 0;
 
 	if (tTopStatePtr > BRCM_STATE_END) {
-		log(1, "%s(): error total %d active states.",
+		aTrace(LOG_AUDIO_CNTLR,
+				"%s(): error total %d active states.",
 			__func__, tTopStatePtr);
 		tTopStatePtr = 0;
 		for (i = 0; i < BRCM_STATE_END; i++) {
@@ -216,9 +224,10 @@ Result_t AUDIO_Policy_AddModeToQueue(int state, int mode, int app)
 		tTopStatePtr++;
 	}
 
-	log(1, "%s(): state=%d, tTopStatePtr=%d",
+	aTrace(LOG_AUDIO_CNTLR, "%s(): state=%d, tTopStatePtr=%d",
 		__func__, state, tTopStatePtr);
-	log(1, "Queue: (%d %d %d) (%d %d %d) (%d %d %d) (%d %d %d)",
+	aTrace(LOG_AUDIO_CNTLR,
+			"Queue: (%d %d %d) (%d %d %d) (%d %d %d) (%d %d %d)",
 		tPrevModeQ[0].state, tPrevModeQ[0].audioMode,
 		tPrevModeQ[0].audioApp,
 		tPrevModeQ[1].state, tPrevModeQ[1].audioMode,
@@ -249,7 +258,8 @@ Result_t AUDIO_Policy_RemoveModeFromQueue(
 		return 0;
 
 	if (tTopStatePtr > BRCM_STATE_END) {
-		log(1, "%s: error total %d active states.\n",
+		aTrace(LOG_AUDIO_CNTLR,
+				"%s: error total %d active states.\n",
 			__func__, tTopStatePtr);
 		tTopStatePtr = 0;
 		for (i = 0; i < BRCM_STATE_END; i++) {
@@ -289,9 +299,10 @@ Result_t AUDIO_Policy_RemoveModeFromQueue(
 		ret = 1;
 	}
 
-	log(1, "%s: state=%d, tTopStatePtr=%d",
+	aTrace(LOG_AUDIO_CNTLR, "%s: state=%d, tTopStatePtr=%d",
 		__func__, state, tTopStatePtr);
-	log(1, "Queue: (%d %d %d) (%d %d %d) (%d %d %d) (%d %d %d)}",
+	aTrace(LOG_AUDIO_CNTLR,
+			"Queue: (%d %d %d) (%d %d %d) (%d %d %d) (%d %d %d)}",
 		tPrevModeQ[0].state, tPrevModeQ[0].audioMode,
 		tPrevModeQ[0].audioApp,
 		tPrevModeQ[1].state, tPrevModeQ[1].audioMode,

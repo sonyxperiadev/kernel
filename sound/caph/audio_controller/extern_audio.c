@@ -38,6 +38,7 @@
 #include "extern_audio.h"
 #include "log.h"
 #include "linux/gpio.h"
+#include "audio_trace.h"
 
 #if (!defined(CONFIG_BCMPMU_AUDIO))
 
@@ -432,7 +433,8 @@ int extern_hs_find_gain(int gain_mB)
 	struct PMU_AudioGainMapping_t gain_map;
 
 	gain_map = map2pmu_hs_gain(gain_mB);
-	log(1, "%s need %d, find %d\n", __func__, gain_mB, gain_map.gain_mB);
+	aTrace(LOG_AUDIO_CNTLR, "%s need %d, find %d\n", __func__,
+			gain_mB, gain_map.gain_mB);
 
 	return gain_map.gain_mB;
 }
@@ -449,7 +451,7 @@ void extern_hs_set_gain(int gain_mB, AUDIO_GAIN_LR_t lr)
 	struct PMU_AudioGainMapping_t gain_map;
 
 	gain_map = map2pmu_hs_gain(gain_mB);
-	log(1, "%s need %d, pmu_gain_enum=%d\n",
+	aTrace(LOG_AUDIO_CNTLR, "%s need %d, pmu_gain_enum=%d\n",
 			__func__, gain_mB, gain_map.PMU_gain_enum);
 
 	if (lr == AUDIO_HS_BOTH) {
@@ -519,7 +521,8 @@ int extern_ihf_find_gain(int gain_mB)
 	struct PMU_AudioGainMapping_t gain_map;
 
 	gain_map = map2pmu_ihf_gain(gain_mB);
-	log(1, "%s need %d, find %d\n",	__func__, gain_mB, gain_map.gain_mB);
+	aTrace(LOG_AUDIO_CNTLR, "%s need %d, find %d\n",
+			__func__, gain_mB, gain_map.gain_mB);
 
 	return gain_map.gain_mB;
 }
@@ -536,7 +539,7 @@ void extern_ihf_set_gain(int gain_mB)
 	struct PMU_AudioGainMapping_t gain_map;
 
 	gain_map = map2pmu_ihf_gain(gain_mB);
-	log(1, "%s gain_mB=%d, pmu_gain_enum=%d\n",
+	aTrace(LOG_AUDIO_CNTLR, "%s gain_mB=%d, pmu_gain_enum=%d\n",
 			__func__, gain_mB, gain_map.PMU_gain_enum);
 
 	AUDIO_PMU_IHF_SET_GAIN(gain_map.PMU_gain_enum);

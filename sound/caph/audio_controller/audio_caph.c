@@ -48,6 +48,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_ddriver.h"
 #include "audio_caph.h"
 #include "caph_common.h"
+#include "audio_trace.h"
 
 #define USE_HR_TIMER
 
@@ -113,7 +114,7 @@ static enum hrtimer_restart TimerCbStopVibrator(struct hrtimer *timer)
 {
 	AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra, NULL, NULL, 0);
 
-	DEBUG("Disable Vib from HR Timer  cb\n");
+	aTrace(LOG_AUDIO_CNTLR, "Disable Vib from HR Timer  cb\n");
 
 	return HRTIMER_NORESTART;
 }
@@ -126,7 +127,7 @@ void TimerCbStopVibrator(unsigned long priv)
 	AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra, NULL, NULL, 0);
 	/* AUDCTRL_DisableBypassVibra(); */
 
-	DEBUG("Disable Vib from timer cb\n");
+	aTrace(LOG_AUDIO_CNTLR, "Disable Vib from timer cb\n");
 }
 #endif
 
@@ -177,7 +178,8 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 static void AudioCodecIdHander(int codecID)
 {
 	BRCM_AUDIO_Param_RateChange_t param_rate_change;
-	DEBUG("AudioCodeCIdHander : CodecId = %d \r\n", codecID);
+	aTrace(LOG_AUDIO_CNTLR,
+			"AudioCodeCIdHander : CodecId = %d \r\n", codecID);
 	param_rate_change.codecID = codecID;
 	AUDIO_Ctrl_Trigger(ACTION_AUD_RateChange, &param_rate_change, NULL, 0);
 }
@@ -224,7 +226,7 @@ int LaunchAudioCtrlThread(void)
 
 	sgThreadData.pWorkqueue_AudioControl = create_workqueue("AudioCtrlWq");
 	if (!sgThreadData.pWorkqueue_AudioControl)
-		DEBUG("\n Error : Can not create work queue:AudioCtrlWq\n");
+		aError("\n Error : Can not create work queue:AudioCtrlWq\n");
 	sgThreadData.action_complete = OSSEMAPHORE_Create(0, 0);
 #ifndef USE_HR_TIMER
 	gpVibratorTimer = NULL;
@@ -351,7 +353,7 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	int params_size = AUDIO_Ctrl_Trigger_GetParamsSize(action_code);
 	unsigned long to_jiff = msecs_to_jiffies(WAIT_TIME);
 
-	DEBUG("AudioHalThread action=%d\r\n", action_code);
+	aTrace(LOG_AUDIO_CNTLR, "AudioHalThread action=%d\r\n", action_code);
 
 	msgAudioCtrl.action_code = action_code;
 	if (arg_param)
@@ -366,7 +368,7 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 			    (unsigned char *)&msgAudioCtrl,
 			    sizeof(TMsgAudioCtrl), &sgThreadData.m_lock);
 	if (len != sizeof(TMsgAudioCtrl))
-		DEBUG
+		aError
 		    ("Error AUDIO_Ctrl_Trigger len=%d expected %d\n", len,
 		     sizeof(TMsgAudioCtrl));
 
@@ -375,7 +377,7 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 		osStatus =
 		    OSSEMAPHORE_Obtain(sgThreadData.action_complete, to_jiff);
 		if (osStatus != OSSTATUS_SUCCESS) {
-			DEBUG("AUDIO_Ctrl_Trigger Timeout=%d\r\n",
+			aWarn("AUDIO_Ctrl_Trigger Timeout=%d\r\n",
 					osStatus);
 			status = RESULT_ERROR;
 			return status;
@@ -419,7 +421,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 	int i;
 	unsigned int path;
 
-	DEBUG("AUDIO_Ctrl_Process action_code=%d\r\n", action_code);
+	aTrace(LOG_AUDIO_CNTLR,
+			"AUDIO_Ctrl_Process action_code=%d\r\n", action_code);
 
 	switch (action_code) {
 	case ACTION_AUD_OpenPlay:
@@ -431,7 +434,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    AUDIO_DRIVER_Open(param_open->pdev_prop->p[0].
 					      drv_type);
 			if (param_open->drv_handle == NULL)
-				DEBUG("\n %lx:AUDIO_Ctrl_Process-"
+				aTrace(LOG_AUDIO_CNTLR,
+						"\n %lx:AUDIO_Ctrl_Process-"
 						"AUDIO_DRIVER_Open  failed\n",
 						jiffies);
 		}
@@ -523,7 +527,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 				pathID[param_stop->stream] = 0;
 			}
-			DEBUG("AUDIO_Ctrl_Process Stop Playback"
+			aTrace(LOG_AUDIO_CNTLR,
+					"AUDIO_Ctrl_Process Stop Playback"
 					" completed\n");
 		}
 		break;
@@ -656,7 +661,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    AUDIO_DRIVER_Open(param_open->pdev_prop->c.
 					      drv_type);
 
-			DEBUG("param_open->drv_handle -  0x%lx\n",
+			aTrace(LOG_AUDIO_CNTLR,
+					"param_open->drv_handle -  0x%lx\n",
 					(UInt32) param_open->drv_handle);
 
 		}
@@ -751,7 +757,9 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_Vibra_t *parm_vibra =
 				(BRCM_AUDIO_Param_Vibra_t *)arg_param;
-			DEBUG("ACTION_AUD_EnableVibra and SetVibraStrength\n");
+			aTrace(LOG_AUDIO_CNTLR,
+					"ACTION_AUD_EnableVibra"
+					"and SetVibraStrength\n");
 
 			AUDCTRL_EnableBypassVibra(parm_vibra->strength,
 				parm_vibra->direction);
@@ -788,7 +796,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		}
 		break;
 	case ACTION_AUD_DisableByPassVibra:
-		DEBUG("ACTION_AUD_DisableByPassVibra\n");
+		aTrace(LOG_AUDIO_CNTLR, "ACTION_AUD_DisableByPassVibra\n");
 #ifdef USE_HR_TIMER
 		hrtimer_cancel(&hr_timer);
 #else
@@ -962,12 +970,12 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		break;
 
 	case ACTION_AUD_DisableECNSTelephony:
-		DEBUG("Telephony : Turning Off EC and NS\n");
+		aTrace(LOG_AUDIO_CNTLR, "Telephony : Turning Off EC and NS\n");
 		AUDCTRL_EC(FALSE, 0);
 		AUDCTRL_NS(FALSE);
 		break;
 	case ACTION_AUD_EnableECNSTelephony:
-		DEBUG("Telephony : Turning On EC and NS\n");
+		aTrace(LOG_AUDIO_CNTLR, "Telephony : Turning On EC and NS\n");
 		AUDCTRL_EC(TRUE, 0);
 		AUDCTRL_NS(TRUE);
 		break;
@@ -994,7 +1002,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		break;
 
 	default:
-		DEBUG
+		aError
 		    ("Error AUDIO_Ctrl_Process Invalid acction command\n");
 		break;
 	}
@@ -1016,7 +1024,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				      sizeof(TMsgAudioCtrl),
 				      &sgThreadData.m_lock_out);
 		if (len != sizeof(TMsgAudioCtrl))
-			DEBUG("Error AUDIO_Ctrl_Process "
+			aError("Error AUDIO_Ctrl_Process "
 					"len=%d expected %d\n", len,
 					sizeof(TMsgAudioCtrl));
 		/* release the semaphore */

@@ -46,6 +46,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "bcmlog.h"
 #include "audio_caph.h"
 #include "caph_common.h"
+#include "audio_trace.h"
 
 /**
 *
@@ -114,7 +115,7 @@ Result_t AUDDRV_AudLog_Init(void)
 			((sizeof(LOG_FRAME_t)) * 4), GFP_KERNEL);
 
 		if (bcmlog_stream_ptr == NULL) {
-			pr_info("kmalloc failed\n");
+			aError("kmalloc failed\n");
 			return -1;
 		}
 		/* Make sure page boundry */
@@ -122,8 +123,9 @@ Result_t AUDDRV_AudLog_Init(void)
 		    (int *)(((unsigned long)bcmlog_stream_ptr + PAGE_SIZE - 1) &
 			    PAGE_MASK);
 		if (bcmlog_stream_area == NULL) {
-			pr_info("Couldn't get proper page boundry, ");
-			pr_info("may be issue for page swapping to user space\n");
+			aError("Couldn't get proper page boundry, ");
+			aError("may be issue for"
+					"page swapping to user space\n");
 			return -1;
 		}
 		/*pr_alert( "Setup bcmlog_stream_area = %x\n",
@@ -143,7 +145,7 @@ Result_t AUDDRV_AudLog_Init(void)
 	if (auddrv_log_state != AUDDRV_LOG_STATE_INITED
 	    && auddrv_log_state != AUDDRV_LOG_STATE_STARTED) {
 		auddrv_log_state = AUDDRV_LOG_STATE_INITED;
-		/* Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_AudLog_Init"); */
+		/* aTrace(LOG_AUDIO_DRIVER, "AUDDRV_AudLog_Init"); */
 	}
 	return 0;
 }
@@ -171,7 +173,7 @@ void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 		/* check the SHmem ctrl point. */
 		if (sender != 0) {
 			if (sLogInfo.log_consumer[n] == LOG_TO_PC) {
-				/*Log_DebugPrintf(LOGID_AUDIO, "AUDLOG: 0x%x
+				/*aTrace(LOG_AUDIO_DRIVER, "AUDLOG: 0x%x
 				addr=0x%p size=%ld stream=%d sender=%d",
 				DSP_DATA, loggingbuf, size, stream, sender);*/
 				if (loggingbuf) {
@@ -181,10 +183,10 @@ void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 						(UInt16 *)loggingbuf,
 						size, stream, sender);
 				} else {
-					Log_DebugPrintf(LOGID_AUDIO,
+					aTrace(LOG_AUDIO_DRIVER,
 						"!!!!!! Err ptr = 0x%p size=%d ",
 						loggingbuf, size);
-					Log_DebugPrintf(LOGID_AUDIO,
+					aTrace(LOG_AUDIO_DRIVER,
 						"stream=%d sender=%d\n",
 						stream, sender);
 				}
@@ -211,7 +213,7 @@ void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 		}
 
 	}
-	/*Log_DebugPrintf(LOGID_AUDIO,
+	/*aTrace(LOG_AUDIO_DRIVER,
 		"<=== process_Log_Channel done <===\r\n");*/
 }
 
@@ -252,7 +254,7 @@ Result_t AUDDRV_AudLog_Start(UInt32 log_stream,
 	Result_t res = RESULT_OK;
 
 	if ((log_stream >= 0x10) && (log_stream < 0x20)) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"=> Start Music Playback Log @stream %ld log_consumer %d=>\r\n",
 				log_stream, (uint) log_consumer);
 
@@ -277,14 +279,14 @@ Result_t AUDDRV_AudLog_Start(UInt32 log_stream,
 
 	loggingbuf = kmalloc(LOG_WB_SIZE, GFP_KERNEL); /* maxFrameSize */
 	if (loggingbuf == NULL) {
-		pr_err("AUDDRV_AudLog_Start : not able to allocate memory for");
-		pr_err("the logging data\n");
+		aError("AUDDRV_AudLog_Start : not able to allocate memory for");
+		aError("the logging data\n");
 		return RESULT_LOW_MEMORY;
 	}
 
 	AUDIO_MODEM(res = CSL_LOG_Start(log_stream, log_capture_point);)
 
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			    "===> Start_Log stream %ld log_consumer %d===>\r\n",
 			    log_stream, (uint) log_consumer);
 	return res;
@@ -305,12 +307,12 @@ Result_t AUDDRV_AudLog_Stop(UInt32 log_stream)
 
 	UInt8 flag = 0;
 
-	Log_DebugPrintf(LOGID_AUDIO, "<=== Stop_Log stream %ld <===",
+	aTrace(LOG_AUDIO_DRIVER, "<=== Stop_Log stream %ld <===",
 			log_stream);
 
 	AUDIO_MODEM(res = CSL_LOG_Stop((UInt16) log_stream, &flag);)
 
-	    Log_DebugPrintf(LOGID_AUDIO,
+	    aTrace(LOG_AUDIO_DRIVER,
 			    "<=== Stop_Log stream done %ld <===, flag %d",
 			    log_stream, flag);
 

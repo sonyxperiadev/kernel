@@ -1,4 +1,5 @@
 /**************************************************************************
+ *
  * Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.          */
 /*                                                                        */
 /*     Unless you and Broadcom execute a separate written software license*/
@@ -40,6 +41,7 @@
 #include "chal_caph_srcmixer.h"
 #include "csl_caph_switch.h"
 #include "csl_caph_srcmixer.h"
+#include "audio_trace.h"
 
 /****************************************************************************
  *                        G L O B A L   S E C T I O N
@@ -716,7 +718,7 @@ static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_MIXER_e
 		audio_xassert(0, chalOutChnl);
 	}
 
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"csl_caph_srcmixer_get_chaloutchnl"
 			"outChnl %d, chalOutChnl %d \r\n",
 			outChnl, chalOutChnl);
@@ -880,11 +882,11 @@ UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_MIXER_e outChnl)
 			inChnls = chnlTable[ch].inChnl;
 
 	}
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_srcmixer_read_outchnltable::"
 	       "outChnl 0x%x, inChnl 0x%x.\n",
-	       outChnl, inChnls));
+	       outChnl, inChnls);
 	return inChnls;
 }
 
@@ -898,7 +900,7 @@ UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_MIXER_e outChnl)
  ****************************************************************************/
 void csl_caph_srcmixer_init(UInt32 baseAddress, UInt32 caphIntcHandle)
 {
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_init::\n"));
+	aTrace(LOG_AUDIO_CSL, "csl_caph_srcmixer_init::\n");
 
 	/* FIFO Threshold2 */
 	srcmixer_fifo_thres2 = 0;
@@ -921,9 +923,9 @@ void csl_caph_srcmixer_init(UInt32 baseAddress, UInt32 caphIntcHandle)
 
 	intc_handle = (CHAL_HANDLE) caphIntcHandle;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"csl_caph_srcmixer_init:: baseAddress = 0x%lx\n",
-			baseAddress));
+			baseAddress);
 	return;
 }
 
@@ -937,8 +939,8 @@ void csl_caph_srcmixer_init(UInt32 baseAddress, UInt32 caphIntcHandle)
 void csl_caph_srcmixer_deinit(void)
 {
 	UInt8 ch;
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_caph_srcmixer_deinit::\n"));
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_caph_srcmixer_deinit::\n");
 
 	chal_caph_srcmixer_deinit(handle);
 
@@ -969,13 +971,13 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
 	u8 ch = 0;
 	CSL_CAPH_SRCM_INCHNL_e neededChnl = CSL_CAPH_SRCM_INCHNL_NONE;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_caph_srcmixer_obtain_inchnl::\n"));
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_caph_srcmixer_obtain_inchnl::\n");
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_srcmixer_obtain_inchnl::"
 	       "dataFormat = 0x%x, sampleRate = 0x%x\n",
-	       dataFormat, sampleRate));
+	       dataFormat, sampleRate);
 
 	if (dataFormat == CSL_CAPH_16BIT_STEREO
 			|| (dataFormat == CSL_CAPH_24BIT_STEREO)) {
@@ -1064,10 +1066,10 @@ CSL_CAPH_MIXER_e csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEVICE_e
 	default:
 		break;
 	}
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_srcmixer_obtain_outchnl:: sink = 0x%x, outChnl %d\n",
-	       sink, outChnl));
+	       sink, outChnl);
 	return outChnl;
 }
 /****************************************************************************
@@ -1307,17 +1309,17 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	UInt8 chnl = 0x0;
 	CAPH_SRCMixer_CHNL_e chalInChnlMono;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_srcmixer_config_mix_route:: ch %x:%x"
 	       "dataFmt %d:%d sr %d:%d tapCh %d.\r\n",
 	       routeConfig.inChnl, routeConfig.outChnl, routeConfig.inDataFmt,
 	       routeConfig.outDataFmt, routeConfig.inSampleRate,
-	       routeConfig.outSampleRate, routeConfig.tapOutChnl));
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	       routeConfig.outSampleRate, routeConfig.tapOutChnl);
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_srcmixer_config_mix_route:: threshold %x:%x.\r\n",
-	       routeConfig.inThres, routeConfig.outThres));
+	       routeConfig.inThres, routeConfig.outThres);
 
 	if (routeConfig.inSampleRate == CSL_CAPH_SRCMIN_8KHZ) {
 		/* 8KHz -> 48KHz */
@@ -1546,17 +1548,17 @@ void csl_caph_srcmixer_config_src_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	CAPH_SRCMixer_FIFO_e fifo = CAPH_CH_INFIFO_NONE;
 	CAPH_DATA_FORMAT_e dataFmt = CAPH_MONO_16BIT;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_srcmixer_config_src_route:: ch %x:%x"
 	       "dataFmt %d:%d sr %d:%d tapCh %d.\r\n",
 	       routeConfig.inChnl, routeConfig.outChnl, routeConfig.inDataFmt,
 	       routeConfig.outDataFmt, routeConfig.inSampleRate,
-	       routeConfig.outSampleRate, routeConfig.tapOutChnl));
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	       routeConfig.outSampleRate, routeConfig.tapOutChnl);
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_srcmixer_config_src_route:: threshold %x:%x.\r\n",
-	       routeConfig.inThres, routeConfig.outThres));
+	       routeConfig.inThres, routeConfig.outThres);
 
 	if ((routeConfig.inSampleRate == CSL_CAPH_SRCMIN_8KHZ)
 	    & (routeConfig.outSampleRate == CSL_CAPH_SRCMOUT_48KHZ)) {
@@ -1653,14 +1655,14 @@ void csl_caph_srcmixer_change_samplerate(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	CAPH_SRCMixer_SRC_e srcSampleRate = CAPH_8KHz_48KHz;
 	CAPH_SRCMixer_FIFO_e fifo = CAPH_CH_INFIFO_NONE;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 				"csl_caph_srcmixer_chang_sampletate:: ch %x:%x"
 				"dataFmt %d:%d sr %d:%d tapCh %d.\r\n",
 				routeConfig.inChnl, routeConfig.outChnl,
 				routeConfig.inDataFmt, routeConfig.outDataFmt,
 				routeConfig.inSampleRate,
 				routeConfig.outSampleRate,
-				routeConfig.tapOutChnl));
+				routeConfig.tapOutChnl);
 
 	/*Disable all of the current input channels*/
 	/*Set the new inSampleRate*/
@@ -1783,11 +1785,11 @@ void csl_srcmixer_setMixInGain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 	else
 		right_scale = 0x1000;	/*scale 1/4*/
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			      "csl_caph_srcmixer_set_mixingain::"
 			      "ch %x:%x gain %d:%d, scale 0x%x:%x.\r\n",
 			      inChnl, outChnl, gainL_mB, gainR_mB, left_scale,
-			      right_scale));
+			      right_scale);
 
 	/* Map CSL SRCM input channel to cHAL SRC Input channel */
 	chalInChnl = csl_caph_srcmixer_get_single_chal_inchnl(inChnl);
@@ -2025,11 +2027,11 @@ void csl_srcmixer_setMixAllInGain(CSL_CAPH_MIXER_e outChnl,
 	else
 		right_scale = 0x1000;	/*scale 1/4*/
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			      "csl_caph_srcmixer_set_mixingain:: outCh %x"
 			      "gain %d:%d, scale 0x%x:%x.\r\n",
 			      outChnl, gainL_mB, gainR_mB, left_scale,
-			      right_scale));
+			      right_scale);
 
 	/* get the cHAL output channel from CSL output channel */
 	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
@@ -2192,10 +2194,10 @@ void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
 	 * = 3827 = 0xEF3.
 	 */
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			      "csl_srcmixer_setMixOutGain:: ch %x"
 			      "gain %d, scale 0x%x.\r\n",
-			      outChnl, gain_mB, scale));
+			      outChnl, gain_mB, scale);
 
 	/* get the cHAL output channel from CSL output channel */
 	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
@@ -2226,10 +2228,10 @@ void csl_srcmixer_setMixBitSel(CSL_CAPH_MIXER_e outChnl,
 {
 	UInt8 chalOutChnl = 0x0;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			      "csl_caph_srcmixer_set_mixoutcoarsegain::"
 			      "ch %x bit_shift 0x%x.\r\n",
-			      outChnl, bit_shift));
+			      outChnl, bit_shift);
 
 	/*
 	MixerBitSelect:  SRC_SPK0_LT_GAIN_CTRL1 : SPK0_LT_BIT_SELECT
@@ -2416,7 +2418,7 @@ void csl_caph_intc_enable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl,
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_enable_tapin_intr::\n");
+	aTrace(LOG_AUDIO_CSL, "csl_caph_enable_tapin_intr::\n");
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
@@ -2442,7 +2444,7 @@ void csl_caph_intc_disable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl,
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_disable_tapin_intr::\n");
+	aTrace(LOG_AUDIO_CSL, "csl_caph_disable_tapin_intr::\n");
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
@@ -2469,7 +2471,7 @@ void csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl,
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_enable_tapout_intr::\n");
+	aTrace(LOG_AUDIO_CSL, "csl_caph_enable_tapout_intr::\n");
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
@@ -2495,7 +2497,7 @@ void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl,
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_disable_tapout_intr::\n");
+	aTrace(LOG_AUDIO_CSL, "csl_caph_disable_tapout_intr::\n");
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;

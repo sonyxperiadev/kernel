@@ -63,21 +63,13 @@ the GPL, without Broadcom's express prior written consent.
 #include "linux/interrupt.h"
 #include "mach/chip_pinmux.h"
 #include "mach/pinmux.h"
+#include "audio_trace.h"
 
 #define IHF_ST_SUPPORTED
 #define HEADSET_ST_SUPPORTED
 #define DIGIMIC_SUPPORTED
 
 #if defined(IHF_ST_SUPPORTED) | defined(HEADSET_ST_SUPPORTED)
-/* Generel Broadcom includes */
-#define NO_DEBUG
-#ifdef NO_DEBUG
-#define ST_DBG(text, ...) pr_debug(text"\n", ## __VA_ARGS__)
-#define ST_MDBG(text, ...) pr_debug(text"\n", ## __VA_ARGS__)
-#else
-#define ST_DBG(text, ...) printk(KERN_INFO text"\n", ## __VA_ARGS__)
-#define ST_MDBG(text, ...) printk(KERN_INFO text"\n", ## __VA_ARGS__)
-#endif
 
 /* BRCM audio */
 #include "chal_caph_audioh.h"
@@ -267,7 +259,8 @@ static void st_audio_audiotx_set_dac_ctrl(CHAL_HANDLE audiohandle,
 	u32 ctrl = 0;
 
 	ctrl = chal_audio_audiotx_get_dac_ctrl(audiohandle);
-	ST_DBG("GLUE_SELFTEST::st_audio_audiotx_set_dac_ctrl():" \
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::"
+			"st_audio_audiotx_set_dac_ctrl():"
 		" Pre-AUDIOH_DAC_CTRL: 0x%08X",
 		ctrl);
 
@@ -281,7 +274,8 @@ static void st_audio_audiotx_set_dac_ctrl(CHAL_HANDLE audiohandle,
 	    ((writedata.
 	      AUDIOTX_BB_STI) & 3) << AUDIOH_DAC_CTRL_AUDIOTX_BB_STI_SHIFT;
 
-	ST_DBG("GLUE_SELFTEST::st_audio_audiotx_set_dac_ctrl(): " \
+	aTrace(LOG_AUDIO_DRIVER,
+			"GLUE_SELFTEST::st_audio_audiotx_set_dac_ctrl(): "
 	       "AUDIOH_DAC_CTRL: 0x%08X",
 	       ctrl);
 	chal_audio_audiotx_set_dac_ctrl(audiohandle, ctrl);
@@ -289,7 +283,7 @@ static void st_audio_audiotx_set_dac_ctrl(CHAL_HANDLE audiohandle,
 	{
 		u32 val;
 		val = BRCM_READ_REG(KONA_AUDIOH_VA, AUDIOH_DAC_CTRL);
-		ST_DBG("GLUE_SELFTEST::std_selftest_hs():" \
+		aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_hs():"
 		       " AUDIOH_DAC_CTRL: 0x%08X",
 		       val);
 	}
@@ -512,16 +506,20 @@ void st_audio_restore_registers(enum selftest_store_e test)
 	switch (test) {
 	case SELFTEST_DMIC:
 		/* Restore GPIO setting registers */
-		ST_DBG("GLUE_SELFTEST:: 1:pinmux_set_pin_config(%u)",
+		aTrace(LOG_AUDIO_DRIVER,
+				"GLUE_SELFTEST:: 1:pinmux_set_pin_config(%u)",
 		       DmicStoredValue[0].name);
 		pinmux_set_pin_config(&DmicStoredValue[0]);
-		ST_DBG("GLUE_SELFTEST:: 2:pinmux_set_pin_config(%u)",
+		aTrace(LOG_AUDIO_DRIVER,
+				"GLUE_SELFTEST:: 2:pinmux_set_pin_config(%u)",
 		       DmicStoredValue[1].name);
 		pinmux_set_pin_config(&DmicStoredValue[1]);
-		ST_DBG("GLUE_SELFTEST:: 3:pinmux_set_pin_config(%u)",
+		aTrace(LOG_AUDIO_DRIVER,
+				"GLUE_SELFTEST:: 3:pinmux_set_pin_config(%u)",
 		       DmicStoredValue[2].name);
 		pinmux_set_pin_config(&DmicStoredValue[2]);
-		ST_DBG("GLUE_SELFTEST:: 4:pinmux_set_pin_config(%u)",
+		aTrace(LOG_AUDIO_DRIVER,
+				"GLUE_SELFTEST:: 4:pinmux_set_pin_config(%u)",
 		       DmicStoredValue[3].name);
 		pinmux_set_pin_config(&DmicStoredValue[3]);
 		StoredDMIC0Enable =
@@ -604,7 +602,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 	struct dac_ctrl_t Dac_Ctrl;
 	CHAL_HANDLE audiohandle;
 
-	ST_DBG("GLUE_SELFTEST::std_selftest_ihf() called.");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_ihf() called.");
 
 	audiohandle = chal_audio_init(KONA_AUDIOH_VA, KONA_SDT_BASE_VA);
 	st_audio_store_registers(SELFTEST_IHF);
@@ -617,16 +615,17 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 	bcmpmu_audio_ihf_testmode(PMU_TEST_READ_AND_ENABLE);
 	/*2.     Disable Output (i_hs_enst  =  '0') on BB */
 	/* AUDIOTX_TEST_EN[1:0]  =  '00' */
-	ST_DBG("GLUE_SELFTEST::std_selftest_ihf() Disable Output");
+	aTrace(LOG_AUDIO_DRIVER,
+			"GLUE_SELFTEST::std_selftest_ihf() Disable Output");
 	Dac_Ctrl.AUDIOTX_TEST_EN = BB_TEST_DISABLE;
 	st_audio_audiotx_set_dac_ctrl(audiohandle, Dac_Ctrl);
 	/*2a. Disable BB output drivers (High-Z) */
-	ST_DBG
-	    ("GLUE_SELFTEST::std_selftest_ihf()" \
+	aTrace
+	    (LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_ihf()"
 	     "Disable BB output drivers (High-Z)");
 	chal_audio_ihfpath_set_dac_pwr(audiohandle, 0);
 
-	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 1.1");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_ihf()  Test 1.1");
 	/*3.     Set Output (i_hs_ist  =  '1') on PMU    */
 
 	bcmpmu_audio_ihf_selftest_stimulus_input(0x02);
@@ -638,10 +637,12 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 	CHECKBIT_AND_ASSIGN_ERROR(0, IHF_NUMBER_OF_SUBTESTS1,
 				  ReadValue,
 				  ResultArray1, ST_SHORTED_GROUND);
-	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test1 readvalue  =  0x%X",
+	aTrace(LOG_AUDIO_DRIVER,
+			"GLUE_SELFTEST::std_selftest_ihf()"
+			"Test1 readvalue  =  0x%X",
 	       ReadValue);
 
-	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 1.2");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_ihf()  Test 1.2");
 	/*5.     Set Output (i_hs_ist  =  '0') on PMU */
 	bcmpmu_audio_ihf_selftest_stimulus_input(0x00);
 	/*6.     Check result (o_hst_ist[3:0]).    */
@@ -651,7 +652,8 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 	/* b.    Bit High  = > Shorted to Power */
 	CHECKBIT_AND_ASSIGN_ERROR(1, IHF_NUMBER_OF_SUBTESTS1, ReadValue,
 				  ResultArray1, ST_SHORTED_POWER);
-	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test2 readvalue  =  0x%X",
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_ihf()"
+			"Test2 readvalue  =  0x%X",
 	       ReadValue);
 
 	/* BB output test: */
@@ -661,7 +663,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 	/*2.     Enable test mode (Short or Open test) */
 	/*  (i_IHFselftest_en[1:0]  =  '10') */
 	bcmpmu_audio_ihf_testmode(PMU_TEST_READ_AND_DISABLE);
-	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 1.3");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_ihf()  Test 1.3");
 	/*3.     Set Output (i_BB_sti  =  '11') */
 	Dac_Ctrl.AUDIOTX_BB_STI = 0x03;
 	st_audio_audiotx_set_dac_ctrl(audiohandle, Dac_Ctrl);
@@ -676,7 +678,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 				  ReadValue, ResultArray1,
 				  ST_BAD_CONNECTION_OR_GROUND);
 
-	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 1.4");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_ihf()  Test 1.4");
 	/*5.    Set Output (i_BB_sti  =  '00') */
 	Dac_Ctrl.AUDIOTX_BB_STI = 0x00;
 	st_audio_audiotx_set_dac_ctrl(audiohandle, Dac_Ctrl);
@@ -693,7 +695,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 
 	/* Subtest 3 + 4 - IHF Output  */
 	/*PMU Output Pins Test: */
-	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 2.1");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_ihf()  Test 2.1");
 	/*1.     Enable by setting i_IHFselftest_en[0] to 1. */
 	bcmpmu_audio_ihf_testmode(PMU_TEST_ENABLE_NO_READ);
 	/*2.     i_IHFsto[1:0]  =  '0x' */
@@ -709,7 +711,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 				  ReadValue, ResultArray2,
 				  ST_BAD_CONNECTION_OR_POWER);
 
-	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 2.2");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_ihf()  Test 2.2");
 	/*3.     i_IHFsto[1:0]  =  '1x' */
 	bcmpmu_audio_ihf_selftest_stimulus_output(0x02);
 	/* Check */
@@ -731,8 +733,9 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 		for (i = 0; i < IHF_NUMBER_OF_SUBTESTS1; i++) {
 			cmddata->subtestStatus[i] =
 			    ResultArray1[IHF_NUMBER_OF_SUBTESTS1 - 1 - i];
-			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_ihf()  " \
+			aTrace
+			    (LOG_AUDIO_DRIVER,
+			     "GLUE_SELFTEST::std_selftest_ihf()"
 			     "ResultArray1[%u]  =  %u",
 			     IHF_NUMBER_OF_SUBTESTS1 - 1 - i,
 			     ResultArray1[IHF_NUMBER_OF_SUBTESTS1 - 1 - i]);
@@ -744,8 +747,9 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 		for (i = 0; i < IHF_NUMBER_OF_SUBTESTS2; i++) {
 			cmddata->subtestStatus[i + IHF_NUMBER_OF_SUBTESTS1] =
 			    ResultArray2[IHF_NUMBER_OF_SUBTESTS2 - 1 - i];
-			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_ihf()  " \
+			aTrace
+			    (LOG_AUDIO_DRIVER,
+			     "GLUE_SELFTEST::std_selftest_ihf()  "
 			     "ResultArray2[%u]  =  %u",
 			     IHF_NUMBER_OF_SUBTESTS2 - 1 - i,
 			     ResultArray2[IHF_NUMBER_OF_SUBTESTS2 - 1 - i]);
@@ -780,7 +784,8 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	u8 ReadValue;		/* Value read from PMU */
 	struct dac_ctrl_t Dac_Ctrl;
 	CHAL_HANDLE audiohandle;
-	ST_DBG("GLUE_SELFTEST::std_selftest_headset() called.");
+	aTrace(LOG_AUDIO_DRIVER,
+			"GLUE_SELFTEST::std_selftest_headset() called.");
 
 	audiohandle = chal_audio_init(KONA_AUDIOH_VA, KONA_SDT_BASE_VA);
 	st_audio_store_registers(SELFTEST_HS);
@@ -789,8 +794,8 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	/**************************/
 	/* Subtest 1 + 2 + 3 + 4  */
 	/**************************/
-	ST_DBG
-	    ("GLUE_SELFTEST::std_selftest_hs()  " \
+	aTrace
+	    (LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_hs()  "
 	     "RA[0] = %u,RA[1] = %u,RA[2] = %u,RA[3] = %u",
 	     ResultArray[0], ResultArray[1], ResultArray[2], ResultArray[3]);
 
@@ -805,8 +810,9 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	/**********/
 	/* TEST 1 */
 	/**********/
-	ST_DBG("GLUE_SELFTEST::std_selftest_hs()  INPUT TEST");
-	ST_DBG("GLUE_SELFTEST::TEST 1");
+	aTrace(LOG_AUDIO_DRIVER,
+			"GLUE_SELFTEST::std_selftest_hs()  INPUT TEST");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::TEST 1");
 	/* 1.   Enable test mode (driving buffer enabled)
 	   (i_hs_enst[1:0]  =  '11') on PMU */
 
@@ -830,17 +836,18 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	CHECKBIT_AND_ASSIGN_ERROR(0, HA_NUMBER_OF_SUBTESTS,
 				  ReadValue, ResultArray,
 				  ST_SHORTED_GROUND);
-	ST_DBG("GLUE_SELFTEST::std_selftest_hs()  Test1 readvalue  =  0x%X",
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_hs()"
+			"Test1 readvalue  =  0x%X",
 	       ReadValue);
-	ST_DBG
-	    ("GLUE_SELFTEST::std_selftest_hs()  " \
+	aTrace
+	    (LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_hs()  "
 	     "RA[0] = %u,RA[1] = %u,RA[2] = %u,RA[3] = %u",
 	     ResultArray[0], ResultArray[1], ResultArray[2], ResultArray[3]);
 
 	/**********/
 	/* TEST 2 */
 	/**********/
-	ST_DBG("GLUE_SELFTEST::TEST 2");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::TEST 2");
 	BRCM_WRITE_REG_FIELD(KONA_AUDIOH_VA, AUDIOH_DAC_CTRL, AUDIOTX_BB_STI,
 			     0x03);
 
@@ -854,10 +861,12 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	CHECKBIT_AND_ASSIGN_ERROR(1, HA_NUMBER_OF_SUBTESTS,
 				  ReadValue,
 				  ResultArray, ST_SHORTED_POWER);
-	ST_DBG("GLUE_SELFTEST::std_selftest_hs()  Test2 readvalue  =  0x%X",
+	aTrace(LOG_AUDIO_DRIVER,
+			"GLUE_SELFTEST::std_selftest_hs()"
+			"Test2 readvalue  =  0x%X",
 	       ReadValue);
-	ST_DBG
-	    ("GLUE_SELFTEST::std_selftest_hs()  " \
+	aTrace
+	    (LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_hs()  "
 	     "RA[0] = %u,RA[1] = %u,RA[2] = %u,RA[3] = %u",
 	     ResultArray[0], ResultArray[1], ResultArray[2], ResultArray[3]);
 
@@ -865,8 +874,9 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	/**********/
 	/* TEST 3 */
 	/**********/
-	ST_DBG("GLUE_SELFTEST::std_selftest_hs()  OUTPUT TEST");
-	ST_DBG("GLUE_SELFTEST::TEST 3");
+	aTrace(LOG_AUDIO_DRIVER,
+			"GLUE_SELFTEST::std_selftest_hs()  OUTPUT TEST");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::TEST 3");
 	/*1.     Enable test mode (driving buffer disabled)
 	  (i_hs_enst[1:0]  =  '10') on PMU */
 	bcmpmu_audio_hs_testmode(PMU_TEST_READ_AND_DISABLE);
@@ -886,17 +896,19 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	CHECKBIT_AND_ASSIGN_ERROR(0, HA_NUMBER_OF_SUBTESTS,
 				  ReadValue, ResultArray,
 				  ST_BAD_CONNECTION_OR_GROUND);
-	ST_DBG("GLUE_SELFTEST::std_selftest_hs()  Test3 readvalue  =  0x%X",
+	aTrace(LOG_AUDIO_DRIVER,
+			"GLUE_SELFTEST::std_selftest_hs()"
+			"Test3 readvalue  =  0x%X",
 	       ReadValue);
-	ST_DBG
-	    ("GLUE_SELFTEST::std_selftest_hs()  " \
+	aTrace
+	    (LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_hs()  "
 	     "RA[0] = %u,RA[1] = %u,RA[2] = %u,RA[3] = %u",
 	     ResultArray[0], ResultArray[1], ResultArray[2], ResultArray[3]);
 
 	/**********/
 	/* TEST 4 */
 	/**********/
-	ST_DBG("GLUE_SELFTEST::TEST 4");
+	aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::TEST 4");
 	/*5.     Set Output (i_hs_ist  =  '0') on BB */
 	/* AUDIOTX_BB_STI[1:0]  =  '00' */
 	Dac_Ctrl.AUDIOTX_BB_STI = 0x00;
@@ -912,10 +924,12 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 				  ReadValue,
 				  ResultArray,
 				  ST_BAD_CONNECTION_OR_POWER);
-	ST_DBG("GLUE_SELFTEST::std_selftest_hs()  Test4 readvalue  =  0x%X",
+	aTrace(LOG_AUDIO_DRIVER,
+			"GLUE_SELFTEST::std_selftest_hs()"
+			"Test4 readvalue  =  0x%X",
 	       ReadValue);
-	ST_DBG
-	    ("GLUE_SELFTEST::std_selftest_hs()  "\
+	aTrace
+	    (LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_hs()  "
 	     "RA[0] = %u,RA[1] = %u,RA[2] = %u,RA[3] = %u",
 	     ResultArray[0], ResultArray[1], ResultArray[2], ResultArray[3]);
 
@@ -927,8 +941,9 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 		for (i = 0; i < HA_NUMBER_OF_SUBTESTS; i++) {
 			cmddata->subtestStatus[i] =
 			    ResultArray[HA_NUMBER_OF_SUBTESTS - 1 - i];
-			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_headset()  " \
+			aTrace
+			    (LOG_AUDIO_DRIVER,
+			     "GLUE_SELFTEST::std_selftest_headset()  "
 			     "ResultArray[%u]  =  %u",
 			     HA_NUMBER_OF_SUBTESTS - 1 - i,
 			     ResultArray[HA_NUMBER_OF_SUBTESTS - 1 - i]);
@@ -956,8 +971,8 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 static void ST_AUDIOH_hw_DMIC_Enable(CHAL_HANDLE audiohandle, int dmic)
 {
 	/* Enable DMIC paths */
-	ST_DBG
-	    ("GLUE_SELFTEST::AUDIOH_hw_DMIC_Enable()  " \
+	aTrace
+	    (LOG_AUDIO_DRIVER, "GLUE_SELFTEST::AUDIOH_hw_DMIC_Enable()  "
 	     "Enable interface DMIC%u(RDB)",
 	     dmic);
 	switch (dmic) {
@@ -1000,7 +1015,9 @@ static irqreturn_t GPIO_DigiMicSelftestEventFunction(int irq, void *dev_id)
 	/* Receive GPIO event */
 	DigiMicInterruptReceived = true;
 
-	ST_DBG("GLUE_SELFTEST::GPIO_DigiMicSelftestEventFunction(%u)  ", irq);
+	aTrace(LOG_AUDIO_DRIVER,
+			"GLUE_SELFTEST::GPIO_DigiMicSelftestEventFunction(%u) "
+			, irq);
 
 	disable_irq_nosync(irq);
 
@@ -1045,8 +1062,8 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 	for (i = 0; i < MAX_DIGIMIC_IF_COUNT; i++) {
 		pinmux_find_gpio(PMUX_DQ_CONNECTION[i], &find_gpio,
 				 &find_PF_gpio);
-		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_digimic() " \
+		aTrace
+		    (LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_digimic() "
 		     "PMUX_DQ_CONNECTION[%u]=%u, gpio=%u, gpio_func=%u ",
 		     i, PMUX_DQ_CONNECTION[i], find_gpio, find_PF_gpio);
 		DQ_CONNECTION[i] = find_gpio;
@@ -1083,28 +1100,31 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 		if (!TestMic[Mic]) {
 			Status[Mic * DIGIMIC_SUBTESTS_PER_MIC] =
 			    ST_NOT_TESTED;
-			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_digimic()  " \
+			aTrace
+			    (LOG_AUDIO_DRIVER,
+			     "GLUE_SELFTEST::std_selftest_digimic()"
 			     "Mic#%u Not Tested",
 			     Mic);
 			continue;
 		}
 		MicIf = MIC_IF[Mic];
 
-		ST_DBG("GLUE_SELFTEST::std_selftest_digimic()  Mic#%u", Mic);
+		aTrace(LOG_AUDIO_DRIVER,
+				"GLUE_SELFTEST::std_selftest_digimic()"
+				"Mic#%u", Mic);
 
 		/* Subtest 3(6) - Connection test */
-		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_digimic()  " \
+		aTrace
+		    (LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_digimic()"
 		     "Connection Test (%u) DQ = %u ",
 		     Mic, DQ_CONNECTION[MicIf]);
 		/*0. Power on microphone HVLDO7 (on PMU HVLDO7PMODCTRL) */
 		/* powerOnDigitalMic(true); */
 		regl_hv7ldo = regulator_get(NULL, DIGMIC_VCC_REGULATOR);
 		if (IS_ERR(regl_hv7ldo)) {
-			printk(KERN_INFO "%s: regulator_get failed(0x%X)\n",
+			aError("%s: regulator_get failed(0x%X)\n",
 			       __func__, (unsigned int)regl_hv7ldo);
-			printk(KERN_ERR "Cannot get <hv7ldo> regulator");
+			aError("Cannot get <hv7ldo> regulator");
 		} else {
 			regulator_enable(regl_hv7ldo);
 			regulator_put(regl_hv7ldo);
@@ -1115,14 +1135,16 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 		PIN_GPIO_Setup.reg.val = 0;
 		PIN_GPIO_Setup.reg.b.drv_sth = DRIVE_STRENGTH_8MA;
 		pinmux_set_pin_config(&PIN_GPIO_Setup);
-		ST_DBG("GLUE_SELFTEST:: DQ Setup 0x%X", PIN_GPIO_Setup.reg.val);
+		aTrace(LOG_AUDIO_DRIVER,
+				"GLUE_SELFTEST:: DQ Setup 0x%X",
+				PIN_GPIO_Setup.reg.val);
 
 		PIN_DMIC_Setup.name = PMUX_CLK_CONNECTION[MicIf];
 		PIN_DMIC_Setup.func = PMUX_DMIC_CLK_MODE_CLK[MicIf];
 		PIN_DMIC_Setup.reg.val = 0;
 		PIN_DMIC_Setup.reg.b.drv_sth = DRIVE_STRENGTH_8MA;
 		pinmux_set_pin_config(&PIN_DMIC_Setup);
-		ST_DBG("GLUE_SELFTEST:: CLK Setup 0x%X",
+		aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST:: CLK Setup 0x%X",
 		       PIN_DMIC_Setup.reg.val);
 
 		/* Enable Audio Clocks */
@@ -1135,21 +1157,23 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 
 		ret = gpio_request(DQ_CONNECTION[MicIf], "DMICDQ");
 		if (ret < 0) {
-			ST_DBG("GLUE_SELFTEST::gpio %u request failed",
+			aTrace(LOG_AUDIO_DRIVER,
+					"GLUE_SELFTEST::gpio %u request failed",
 			       DQ_CONNECTION[MicIf]);
 			cmddata->testStatus = ST_FAIL;
 			return;
 		}
 		DigiMicInterruptReceived = false;
-		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_digimic()  " \
+		aTrace
+		    (LOG_AUDIO_DRIVER, "GLUE_SELFTEST::std_selftest_digimic()  "
 		     "Set interrupt Mode(Input/Rising)");
 		gpio_direction_input(DQ_CONNECTION[MicIf]);
 		ret = request_irq(gpio_to_irq(DQ_CONNECTION[MicIf]),
 				  GPIO_DigiMicSelftestEventFunction,
 				  IRQF_TRIGGER_RISING, "Digmimic Data", 0);
 		if (ret < 0) {
-			ST_DBG("GLUE_SELFTEST::gpio irq %u request failed",
+			aTrace(LOG_AUDIO_DRIVER,
+				"GLUE_SELFTEST::gpio irq %u request failed",
 			       DQ_CONNECTION[MicIf]);
 			cmddata->testStatus = ST_FAIL;
 			gpio_free(DQ_CONNECTION[MicIf]);
@@ -1157,24 +1181,27 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 		}
 		/*4.     Wait for interrupt for 10ms                      */
 		for (i = 0; i < 10; i++) {
-			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_digimic()  " \
+			aTrace
+			    (LOG_AUDIO_DRIVER,
+			     "GLUE_SELFTEST::std_selftest_digimic()  "
 			     "Interrrupt wait loop %u, Value = %u",
 			     i, gpio_get_value(DQ_CONNECTION[MicIf]));
 			mdelay(2);
 			if (DigiMicInterruptReceived == true)
 				break;
 		}
-		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_digimic()  " \
+		aTrace
+		    (LOG_AUDIO_DRIVER,
+		     "GLUE_SELFTEST::std_selftest_digimic()  "
 		     "Disable Interrupt");
 		disable_irq(gpio_to_irq(DQ_CONNECTION[MicIf]));
 		free_irq(gpio_to_irq(DQ_CONNECTION[MicIf]), 0);
 		gpio_free(DQ_CONNECTION[MicIf]);
 		if (DigiMicInterruptReceived == true) {
 			/* b.    Interrupt received  = > Continue to 5.  */
-			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_digimic() " \
+			aTrace
+			    (LOG_AUDIO_DRIVER,
+			     "GLUE_SELFTEST::std_selftest_digimic() "
 			     "Interrupt Received");
 			Status[(Mic * DIGIMIC_SUBTESTS_PER_MIC) +
 			       DIGIMIC_COMM_TEST] = ST_PASS;
@@ -1183,8 +1210,9 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 			       DIGIMIC_COMM_TEST] = ST_BAD_CONNECTION;
 			/* a.    Timeout  = > No connection - Test failed */
 		}
-		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_digimic()  " \
+		aTrace
+		    (LOG_AUDIO_DRIVER,
+		     "GLUE_SELFTEST::std_selftest_digimic()  "
 		     "3.1 Status[%u]  =  %u ",
 		     (Mic * DIGIMIC_SUBTESTS_PER_MIC) + DIGIMIC_COMM_TEST,
 		     Status[(Mic * DIGIMIC_SUBTESTS_PER_MIC) +
@@ -1196,15 +1224,17 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 			DigiMicInterruptReceived = false;
 			ret = gpio_request(DQ_CONNECTION[MicIf], "DMICDQ");
 			if (ret < 0) {
-				ST_DBG("GLUE_SELFTEST::gpio %u request failed",
+				aTrace(LOG_AUDIO_DRIVER,
+						"GLUE_SELFTEST::gpio %u request failed",
 				       DQ_CONNECTION[MicIf]);
 				cmddata->testStatus = ST_FAIL;
 				return;
 			}
 			gpio_direction_input(DQ_CONNECTION[MicIf]);
 			DigiMicInterruptReceived = false;
-			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_digimic()  " \
+			aTrace
+			    (LOG_AUDIO_DRIVER ,
+			     "GLUE_SELFTEST::std_selftest_digimic()  "
 			     "Set interrupt Mode(Input/Falling)");
 			ret =
 			    request_irq(gpio_to_irq(DQ_CONNECTION[MicIf]),
@@ -1212,7 +1242,7 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 					IRQF_TRIGGER_FALLING, "Digmimic Data",
 					0);
 			if (ret < 0) {
-				ST_DBG("GLUE_SELFTEST::" \
+				aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::"
 				       "gpio irq %u request failed",
 				     DQ_CONNECTION[MicIf]);
 				cmddata->testStatus = ST_FAIL;
@@ -1221,16 +1251,18 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 			}
 			/*6.     Wait for interrupt for 10ms  */
 			for (i = 0; i < 10; i++) {
-				ST_DBG
-				    ("GLUE_SELFTEST::std_selftest_digimic()  "\
+				aTrace
+				    (LOG_AUDIO_DRIVER,
+				     "GLUE_SELFTEST::std_selftest_digimic()  "
 				     "Interrrupt wait loop %u, Value = %u",
 				     i, gpio_get_value(DQ_CONNECTION[MicIf]));
 				mdelay(2);
 				if (DigiMicInterruptReceived == true)
 					break;
 			}
-			ST_DBG
-			    ("GLUE_SELFTEST::std_selftest_digimic()  " \
+			aTrace
+			    (LOG_AUDIO_DRIVER,
+			     "GLUE_SELFTEST::std_selftest_digimic()  "
 			     "Disable Interrupt");
 			disable_irq(gpio_to_irq(DQ_CONNECTION[MicIf]));
 			free_irq(gpio_to_irq(DQ_CONNECTION[MicIf]), 0);
@@ -1238,8 +1270,9 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 			if (DigiMicInterruptReceived == true) {
 				/* b.    Interrupt received
 				   = > ST_PASS */
-				ST_DBG
-				    ("GLUE_SELFTEST::std_selftest_digimic() " \
+				aTrace
+				    (LOG_AUDIO_DRIVER,
+				     "GLUE_SELFTEST::std_selftest_digimic() "
 				     "Interrupt Received");
 				Status[(Mic * DIGIMIC_SUBTESTS_PER_MIC) +
 				       DIGIMIC_COMM_TEST] = ST_PASS;
@@ -1250,7 +1283,8 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 				       DIGIMIC_COMM_TEST] =
 				    ST_BAD_CONNECTION;
 			}
-			ST_DBG("GLUE_SELFTEST::std_selftest_digimic()  "\
+			aTrace(LOG_AUDIO_DRIVER,
+					"GLUE_SELFTEST::std_selftest_digimic()"
 			     "3.2 Status[%u]  =  %u",
 			     (Mic * DIGIMIC_SUBTESTS_PER_MIC) +
 			     DIGIMIC_COMM_TEST,
@@ -1267,8 +1301,9 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 	/* Fill out failures status code structure */
 	for (i = 0; i < DIGIMIC_NUMBER_OF_SUBTESTS; i++) {
 		cmddata->subtestStatus[i] = Status[i];
-		ST_DBG
-		    ("GLUE_SELFTEST::std_selftest_digimic()  Status[%u]  =  %u",
+		aTrace
+		    (LOG_AUDIO_DRIVER,
+		     "GLUE_SELFTEST::std_selftest_digimic()  Status[%u] = %u",
 		     i, Status[i]);
 	}
 	/* Find return code */

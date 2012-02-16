@@ -42,6 +42,7 @@
 #include "csl_caph_srcmixer.h"
 #include "csl_caph_dma.h"
 #include "irqs.h"
+#include "audio_trace.h"
 
 /****************************************************************************/
 /*                        G L O B A L   S E C T I O N                       */
@@ -469,7 +470,7 @@ csl_caph_dma_get_chal_direction(CSL_CAPH_DMA_DIRECTION_e direct)
 ****************************************************************************/
 static irqreturn_t caph_dma_isr(int irq, void *dev_id)
 {
-	/* Log_DebugPrintf(LOGID_AUDIO," %s ISR called\n", __func__); */
+	/* aTrace(LOG_AUDIO_CSL," %s ISR called\n", __func__); */
 
 	CSL_CAPH_DMA_CHNL_e channel = CSL_CAPH_DMA_NONE;
 
@@ -529,7 +530,7 @@ static void caph_dma_isr_bottom_half_func(unsigned long data)
 	    (DMA_ISR_BOTTOM_HALF_DATA_t *) data;
 	CSL_CAPH_DMA_CHNL_e channel = my_data->dma_channel;
 
-	/* Log_DebugPrintf(LOGID_SOC_AUDIO,
+	/* aTrace(LOG_AUDIO_CSL,
 	 * "%s: DMA chanel %d\n", __func__, channel);
 	 */
 	/* call the callback to do more work */
@@ -553,7 +554,7 @@ static void caph_dma_isr_bottom_half_func(unsigned long data)
 void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)
 {
 	int rc = 0;
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s::\n", __func__);
+	aTrace(LOG_AUDIO_CSL, "%s::\n", __func__);
 
 	handle = chal_caph_dma_init(baseAddressDma);
 	intc_handle = (CHAL_HANDLE) caphIntcHandle;
@@ -564,7 +565,7 @@ void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)
 			 "caph-interrupt", NULL);
 
 	if (rc < 0) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_CSL,
 				"%s:  failed to attach interrupt, rc = %d\n",
 				__func__, rc);
 		return;
@@ -582,7 +583,7 @@ void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)
 ****************************************************************************/
 void csl_caph_dma_deinit(void)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s::\n", __func__);
+	aTrace(LOG_AUDIO_CSL, "%s::\n", __func__);
 	chal_caph_dma_deinit(handle);
 	memset(dmaCH_ctrl, 0, sizeof(dmaCH_ctrl));
 	return;
@@ -600,7 +601,7 @@ CSL_CAPH_DMA_CHNL_e csl_caph_dma_obtain_channel(void)
 	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
 	CSL_CAPH_DMA_CHNL_e csl_caph_aadmac_ch = CSL_CAPH_DMA_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s::\n", __func__);
+	aTrace(LOG_AUDIO_CSL, "%s::\n", __func__);
 
 	caph_aadmac_ch = chal_caph_dma_alloc_channel(handle);
 
@@ -624,7 +625,7 @@ CSL_CAPH_DMA_CHNL_e csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CHNL_e
 {
 	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"%s:: %d\n", __func__, csl_caph_aadmac_ch);
 
 	caph_aadmac_ch = csl_caph_dma_get_chal_chnl(csl_caph_aadmac_ch);
@@ -648,7 +649,7 @@ CSL_CAPH_DMA_CHNL_e csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CHNL_e
 ****************************************************************************/
 void csl_caph_dma_release_channel(CSL_CAPH_DMA_CHNL_e chnl)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s:: %d\n", __func__, chnl);
+	aTrace(LOG_AUDIO_CSL, "%s:: %d\n", __func__, chnl);
 
 	if (chnl != CSL_CAPH_DMA_NONE) {
 		chal_caph_dma_free_channel(handle,
@@ -672,13 +673,13 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
 	CAPH_CFIFO_e caph_cfifo_fifo = CAPH_CFIFO_VOID;
 	CAPH_CFIFO_CHNL_DIRECTION_e direction = CAPH_CFIFO_IN;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "%s:: dir %d fifo %d dma %d mem %p size %ld Tsize %d dmaCB %p.\r\n",
 	       __func__,
 	       chnl_config.direction, chnl_config.fifo, chnl_config.dma_ch,
 	       chnl_config.mem_addr, chnl_config.mem_size, chnl_config.Tsize,
-	       chnl_config.dmaCB));
+	       chnl_config.dmaCB);
 
 	if ((chnl_config.fifo == CSL_CAPH_CFIFO_NONE)
 	    || (chnl_config.dma_ch == CSL_CAPH_DMA_NONE))
@@ -721,7 +722,7 @@ void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config)
 {
 	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"%s:: dir %d fifo %d dma %d mem %p size %ld Tsize %d dmaCB %p.\r\n",
 			__func__,
 			chnl_config.direction, chnl_config.fifo,
@@ -751,7 +752,7 @@ void csl_caph_dma_set_hibuffer_address(CSL_CAPH_DMA_CHNL_e chnl, UInt8 *addr)
 {
 	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "%s::\n", __func__));
+	aTrace(LOG_AUDIO_CSL, "%s::\n", __func__);
 
 	if (chnl == CSL_CAPH_DMA_NONE)
 		return;
@@ -776,7 +777,7 @@ void csl_caph_dma_switch_buffer(CSL_CAPH_DMA_CONFIG_t chnl_config)
 	CAPH_CFIFO_e caph_cfifo_fifo = CAPH_CFIFO_VOID;
 	CAPH_CFIFO_CHNL_DIRECTION_e direction = CAPH_CFIFO_IN;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s::\n", __func__);
+	aTrace(LOG_AUDIO_CSL, "%s::\n", __func__);
 
 	if ((chnl_config.fifo == CSL_CAPH_CFIFO_NONE)
 	    || (chnl_config.dma_ch == CSL_CAPH_DMA_NONE))
@@ -818,7 +819,7 @@ void csl_caph_dma_switch_buffer(CSL_CAPH_DMA_CONFIG_t chnl_config)
 ****************************************************************************/
 void csl_caph_dma_start_transfer(CSL_CAPH_DMA_CHNL_e chnl)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s:: %d\n", __func__, chnl);
+	aTrace(LOG_AUDIO_CSL, "%s:: %d\n", __func__, chnl);
 
 	if (chnl != CSL_CAPH_DMA_NONE)
 		chal_caph_dma_enable(handle, csl_caph_dma_get_chal_chnl(chnl));
@@ -835,7 +836,7 @@ void csl_caph_dma_start_transfer(CSL_CAPH_DMA_CHNL_e chnl)
 ****************************************************************************/
 void csl_caph_dma_stop_transfer(CSL_CAPH_DMA_CHNL_e chnl)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s:: %d\n", __func__, chnl);
+	aTrace(LOG_AUDIO_CSL, "%s:: %d\n", __func__, chnl);
 
 	if (chnl != CSL_CAPH_DMA_NONE) {
 		/* Disable the DMA and its fifo status to make a complete
@@ -865,7 +866,7 @@ void csl_caph_dma_enable_intr(CSL_CAPH_DMA_CHNL_e chnl,
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"%s:chnl=0x%x owner=0x%x\n", __func__, chnl, csl_owner);
 
 	if (csl_owner == CSL_CAPH_DSP)
@@ -892,7 +893,7 @@ void csl_caph_dma_disable_intr(CSL_CAPH_DMA_CHNL_e chnl,
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"%s:chnl=0x%x owner=0x%x\n", __func__, chnl, csl_owner);
 
 	if (csl_owner == CSL_CAPH_DSP)
@@ -919,7 +920,7 @@ Boolean csl_caph_dma_get_intr(CSL_CAPH_DMA_CHNL_e chnl,
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	/* Log_DebugPrintf(LOGID_SOC_AUDIO, "%s:chnl=0x%x
+	/* aTrace(LOG_AUDIO_CSL, "%s:chnl=0x%x
 	   owner=0x%x \n", __func__, chnl, csl_owner); */
 
 	if (csl_owner == CSL_CAPH_DSP)
@@ -947,7 +948,7 @@ void csl_caph_dma_clear_intr(CSL_CAPH_DMA_CHNL_e chnl,
 	CAPH_DMA_CHANNEL_e chal_chnl = CAPH_DMA_CH_VOID;
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	/* Log_DebugPrintf(LOGID_SOC_AUDIO, "%s: chnl=0x%x
+	/* aTrace(LOG_AUDIO_CSL, "%s: chnl=0x%x
 	   owner=0x%x \n", __func__, chnl, csl_owner);
 	 */
 	if (csl_owner == CSL_CAPH_DSP)
@@ -981,7 +982,7 @@ void csl_caph_dma_set_ddrfifo_status(CSL_CAPH_DMA_CHNL_e chnl,
 	CAPH_DMA_CHANNEL_e chal_chnl = CAPH_DMA_CH_VOID;
 	CAPH_DMA_CHNL_FIFO_STATUS_e chal_status = CAPH_READY_NONE;
 
-	/* Log_DebugPrintf(LOGID_SOC_AUDIO, "%s::\n", __func__); */
+	/* aTrace(LOG_AUDIO_CSL, "%s::\n", __func__); */
 
 	chal_chnl = csl_caph_dma_get_chal_chnl(chnl);
 	chal_status = csl_caph_dma_get_chal_ddrfifo_status(status);
@@ -1003,7 +1004,7 @@ csl_caph_dma_read_ddrfifo_sw_status(CSL_CAPH_DMA_CHNL_e chnl)
 	CAPH_DMA_CHANNEL_e chal_chnl = CAPH_DMA_CH_VOID;
 	CAPH_DMA_CHNL_FIFO_STATUS_e chal_status = CAPH_READY_NONE;
 
-	/* Log_DebugPrintf(LOGID_SOC_AUDIO, "%s::\n", __func__); */
+	/* aTrace(LOG_AUDIO_CSL, "%s::\n", __func__); */
 
 	chal_chnl = csl_caph_dma_get_chal_chnl(chnl);
 	chal_status = chal_caph_dma_read_ddrfifo_sw_status(handle, chal_chnl);
@@ -1025,7 +1026,7 @@ csl_caph_dma_read_ddrfifo_status(CSL_CAPH_DMA_CHNL_e chnl)
 	CAPH_DMA_CHANNEL_e chal_chnl = CAPH_DMA_CH_VOID;
 	CAPH_DMA_CHNL_FIFO_STATUS_e chal_status = CAPH_READY_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s::\n", __func__);
+	aTrace(LOG_AUDIO_CSL, "%s::\n", __func__);
 
 	chal_chnl = csl_caph_dma_get_chal_chnl(chnl);
 	chal_status = chal_caph_dma_read_ddrfifo_status(handle, chal_chnl);
@@ -1044,7 +1045,7 @@ void csl_caph_dma_clear_ddrfifo_status(CSL_CAPH_DMA_CHNL_e chnl)
 {
 	CAPH_DMA_CHANNEL_e chal_chnl = CAPH_DMA_CH_VOID;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s::\n", __func__);
+	aTrace(LOG_AUDIO_CSL, "%s::\n", __func__);
 
 	if (chnl != CSL_CAPH_DMA_NONE) {
 		chal_chnl = csl_caph_dma_get_chal_chnl(chnl);

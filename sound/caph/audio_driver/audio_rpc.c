@@ -39,6 +39,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "dspcmd.h"
 #include "csl_apcmd.h"
 #include "log.h"
+#include "audio_trace.h"
 
 #define AUDIO_ENABLE_RESP_TIMEOUT 50  /* 50ms */
 #define	timeout_jiff msecs_to_jiffies(AUDIO_ENABLE_RESP_TIMEOUT)
@@ -90,7 +91,7 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 		UInt32 *codecID = NULL;
 		codecID = (UInt32 *) pMsg->dataBuf;
 
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 				"HandleAudioEventrespCb : codecid=0x%lx \r\n",
 				(*codecID));
 
@@ -100,14 +101,14 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 	if ((MSG_AUDIO_CTRL_GENERIC_RSP == pMsg->msgId) ||
 		(MSG_AUDIO_CTRL_DSP_RSP == pMsg->msgId) ||
 		(MSG_AUDIO_COMP_FILTER_RSP == pMsg->msgId)) {
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 			"HandleAudioEventrespCb GENERIC_DSP_RSP: tid=%ld\n",
 				pMsg->tid);
 	}
 	if (dataBufHandle)
 		RPC_SYSFreeResultDataBuffer(dataBufHandle);
 	else
-		Log_DebugPrintf(LOGID_MISC,
+		aTrace(LOG_AUDIO_DRIVER,
 			"HandleAudioEventrespCb : dataBufHandle is NULL \r\n");
 }
 
@@ -139,7 +140,7 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 			    UInt32 userContextData)
 {
 
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"HandleAudioEventrespCb : dummy for AP only");
 }
 
@@ -168,11 +169,12 @@ void HandleCallStatusIndCb(InterTaskMsg_t *taskMsg)
 	UInt32 codecID = (UInt32) 0;
 
 	if (taskMsg->msgType == MSG_CALL_STATUS_IND) {
-		MSG_LOG
-		    ("HandleCallStatusIndCb()   Receive MSG_CALL_STATUS_IND");
+		aTrace
+			(LOG_AUDIO_DRIVER, "HandleCallStatusIndCb()"
+			"Receive MSG_CALL_STATUS_IND");
 		callStatusMsg = (CallStatusMsg_t *) taskMsg->dataBuf;
-		MSG_LOGV("HandleCallStatusIndCb() codecid =",
-			 callStatusMsg->codecId);
+		aTrace(LOG_AUDIO_DRIVER, "HandleCallStatusIndCb() codecid =",
+				callStatusMsg->codecId);
 		codecID = callStatusMsg->codecId;
 
 		msg.msgId = MSG_AUDIO_CALL_STATUS_IND;
@@ -190,7 +192,7 @@ void HandleAudioEventReqCb(RPC_Msg_t *pMsg,
 			   ResultDataBufHandle_t dataBufHandle,
 			   UInt32 userContextData)
 {
-	Log_DebugPrintf(LOGID_MISC,
+	aTrace(LOG_AUDIO_DRIVER,
 			"HandleAudioEventRspCb msg=0x%x clientID=%d ",
 			pMsg->msgId, 0);
 
@@ -249,7 +251,7 @@ void Audio_InitRpc(void)
 #endif
 
 		audioRpcInited = TRUE;
-		Log_DebugPrintf(LOGID_MISC, "Audio_InitRpc %d", audioClientId);
+		aTrace(LOG_AUDIO_DRIVER, "Audio_InitRpc %d", audioClientId);
 	}
 }
 
@@ -294,7 +296,7 @@ void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t *cf)
 
 bool_t xdr_Audio_Params_t(void *xdrs, Audio_Params_t *rsp)
 {
-	XDR_LOG(xdrs, "Audio_Params_t")
+	aTrace(LOG_AUDIO_DRIVER , "Audio_Params_t");
 
 	    if (xdr_UInt32(xdrs, &rsp->param1) &&
 		xdr_UInt32(xdrs, &rsp->param2) &&
@@ -310,7 +312,7 @@ bool_t xdr_Audio_Params_t(void *xdrs, Audio_Params_t *rsp)
 
 bool_t xdr_DlCompfilter_t(void *xdrs, EQDlCompfilter_t *rsp)
 {
-	XDR_LOG(xdrs, "EQDlCompfilter_t")
+	aTrace(LOG_AUDIO_DRIVER , "EQDlCompfilter_t");
 
 	    if (xdr_vector(xdrs, (char *)(void *)&(rsp->dl_coef_fw_8k), 12 * 3,
 			   sizeof(Int32), (xdrproc_t) xdr_Int32) &&
@@ -334,7 +336,7 @@ bool_t xdr_DlCompfilter_t(void *xdrs, EQDlCompfilter_t *rsp)
 
 bool_t xdr_UlCompfilter_t(void *xdrs, EQUlCompfilter_t *rsp)
 {
-	XDR_LOG(xdrs, "EQUlCompfilter_t")
+	aTrace(LOG_AUDIO_DRIVER, "EQUlCompfilter_t");
 
 	    if (xdr_vector(xdrs, (char *)(void *)&(rsp->ul_coef_fw_8k), 12 * 3,
 			   sizeof(Int32), (xdrproc_t) xdr_Int32) &&
@@ -358,7 +360,7 @@ bool_t xdr_UlCompfilter_t(void *xdrs, EQUlCompfilter_t *rsp)
 
 bool_t xdr_AudioCompfilter_t(void *xdrs, AudioCompfilter_t *rsp)
 {
-	XDR_LOG(xdrs, "AudioCompfilter_t")
+	aTrace(LOG_AUDIO_DRIVER, "AudioCompfilter_t");
 
 	    if (xdr_DlCompfilter_t(xdrs, &rsp->dl) &&
 		xdr_UlCompfilter_t(xdrs, &rsp->ul))
@@ -370,26 +372,26 @@ bool_t xdr_AudioCompfilter_t(void *xdrs, AudioCompfilter_t *rsp)
 #else
 void Audio_InitRpc(void)
 {
-	Log_DebugPrintf(LOGID_AUDIO, "Audio_InitRpc : dummy for AP only");
+	aTrace(LOG_AUDIO_DRIVER, "Audio_InitRpc : dummy for AP only");
 }
 
 void CAPI2_audio_control_generic(UInt32 tid, UInt8 clientID,
 				 Audio_Params_t *params)
 {
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"CAPI2_audio_control_generic : dummy for AP only");
 }
 
 void CAPI2_audio_control_dsp(UInt32 tid, UInt8 clientID,
 			     Audio_Params_t *params)
 {
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"CAPI2_audio_control_dsp : dummy for AP only");
 }
 
 void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t *cf)
 {
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"CCAPI2_audio_cmf_filter : dummy for AP only");
 }
 
@@ -437,7 +439,7 @@ UInt32 audio_control_generic(UInt32 param1, UInt32 param2, UInt32 param3,
 	audioParam.param6 = param6;
 
 	tid = s_sid++; /* RPC_SyncCreateTID(&val, sizeof(UInt32)); */
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 		"audio_control_generic tid=%ld, param1=%ld\n", tid, param1);
 	CAPI2_audio_control_generic(tid, audioClientId, &audioParam);
 	/*
@@ -460,7 +462,7 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 	RPC_ACK_Result_t ackResult; */
 	unsigned long jiff_in = 0;
 
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"\n\r * audio_control_dsp (AP) param1 %ld, param2 %ld"
 			" param3 %ld param4 %ld *\n\r",
 			param1, param2, param3, param4);
@@ -520,7 +522,7 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 		audioParam.param6 = param6;
 
 		tid = s_sid++; /* RPC_SyncCreateTID(&val, sizeof(UInt32)); */
-		Log_DebugPrintf(LOGID_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 			"audio_control_dsp tid=%ld,param1=%ld\n", tid, param1);
 		CAPI2_audio_control_dsp(tid, audioClientId, &audioParam);
 		/*
@@ -532,7 +534,7 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 				&audioEnableDone,
 				timeout_jiff);
 			if (!jiff_in) {
-				Log_DebugPrintf(LOGID_AUDIO,
+				aTrace(LOG_AUDIO_DRIVER,
 					"!!!Timeout on COMMAND_AUDIO_ENABLE"
 					" resp!!!\n");
 				init_completion(&audioEnableDone);
@@ -554,11 +556,11 @@ UInt32 audio_cmf_filter(AudioCompfilter_t *cf)
 	/*
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult; */
-	Log_DebugPrintf(LOGID_AUDIO, "audio_cmf_filter (AP) ");
+	aTrace(LOG_AUDIO_DRIVER, "audio_cmf_filter (AP) ");
 
 	tid = s_sid++; /*RPC_SyncCreateTID(&val, sizeof(UInt32)); */
 	CAPI2_audio_cmf_filter(tid, audioClientId, cf);
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 		"audio_cmf_filter tid=%ld\n", tid);
 	/*
 	RPC_SyncWaitForResponse(tid, audioClientId, &ackResult,
@@ -575,7 +577,7 @@ UInt32 audio_control_generic(UInt32 param1, UInt32 param2, UInt32 param3,
 {
 	UInt32 val = (UInt32) 0;
 
-	Log_DebugPrintf(LOGID_AUDIO,
+	aTrace(LOG_AUDIO_DRIVER,
 			"audio_control_generic : dummy for AP only");
 
 	return val;
@@ -587,7 +589,7 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 {
 	UInt32 val = (UInt32) 0;
 
-	Log_DebugPrintf(LOGID_AUDIO, "audio_control_dsp : dummy for AP only");
+	aTrace(LOG_AUDIO_DRIVER, "audio_control_dsp : dummy for AP only");
 
 	return val;
 }
@@ -596,7 +598,7 @@ UInt32 audio_cmf_filter(AudioCompfilter_t *cf)
 {
 	UInt32 val = (UInt32) 0;
 
-	Log_DebugPrintf(LOGID_AUDIO, "audio_cmf_filter : dummy for AP only");
+	aTrace(LOG_AUDIO_DRIVER, "audio_cmf_filter : dummy for AP only");
 
 	return val;
 }

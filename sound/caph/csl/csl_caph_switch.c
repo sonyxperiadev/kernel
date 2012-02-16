@@ -43,7 +43,7 @@
 #include "csl_caph_cfifo.h"
 #include "csl_caph_srcmixer.h"
 #include "csl_caph_switch.h"
-
+#include "audio_trace.h"
 
 /***************************************************************************/
 /*                       G L O B A L   S E C T I O N                       */
@@ -341,14 +341,14 @@ static CAPH_SWITCH_CHNL_e csl_caph_switch_get_chalchnl(
 ****************************************************************************/
 void csl_caph_switch_init(UInt32 baseAddress)
 {
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_init:: "));
+	aTrace(LOG_AUDIO_CSL, "csl_caph_switch_init:: ");
 
 	csl_caph_switch_initDSTStatus();
 	handle = chal_caph_switch_init(baseAddress);
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			      "csl_caph_switch_Init:: baseAddress = 0x%lx\n",
-			      baseAddress));
+			      baseAddress);
 	return;
 }
 
@@ -361,7 +361,7 @@ void csl_caph_switch_init(UInt32 baseAddress)
 ****************************************************************************/
 void csl_caph_switch_deinit(void)
 {
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_deinit:: "));
+	aTrace(LOG_AUDIO_CSL, "csl_caph_switch_deinit:: ");
 
 	chal_caph_switch_deinit(handle);
 
@@ -383,9 +383,9 @@ CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_obtain_channel(void)
 	chal_chnl = chal_caph_switch_alloc_channel(handle);
 	chnl = csl_caph_switch_get_cslchnl(chal_chnl);
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			      "csl_caph_switch_obtain_channel:: chnl = 0x%x\n",
-			      chnl));
+			      chnl);
 
 	return chnl;
 }
@@ -401,9 +401,9 @@ CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_obtain_channel(void)
 void csl_caph_switch_release_channel(CSL_CAPH_SWITCH_CHNL_e chnl)
 {
 	CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 		"csl_caph_switch_release_channel:: chnl = 0x%x\n",
-		chnl));
+		chnl);
 
 	chal_chnl = csl_caph_switch_get_chalchnl(chnl);
 	chal_caph_switch_free_channel(handle, chal_chnl);
@@ -427,13 +427,13 @@ CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t
 	CAPH_DST_STATUS_e dstStatus = CAPH_DST_OK;
 	CSL_CAPH_SWITCH_STATUS_e status = CSL_CAPH_SWITCH_OWNER;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 		"csl_caph_switch_config_channel:: chnl = 0x%x, srcAddr = "
 		"0x%lx, dstcAddr = 0x%lx, dataFmt = 0x%x, trigger = 0x%x\n",
 			      chnl_config.chnl,
 			      chnl_config.FIFO_srcAddr,
 			      chnl_config.FIFO_dstAddr,
-			      chnl_config.dataFmt, chnl_config.trigger));
+			      chnl_config.dataFmt, chnl_config.trigger);
 
 	/* Get cHAL Channel */
 	chal_chnl = csl_caph_switch_get_chalchnl(chnl_config.chnl);
@@ -491,18 +491,18 @@ void csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr)
 {
 	CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_add_dst:: "));
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL, "csl_caph_switch_add_dst:: ");
+	aTrace(LOG_AUDIO_CSL,
 		"csl_caph_switch_add_dst:: chnl = 0x%x, dstcAddr = 0x%lx\n",
-		chnl, FIFO_dstAddr));
+		chnl, FIFO_dstAddr);
 	/* Get cHAL Channel */
 	chal_chnl = csl_caph_switch_get_chalchnl(chnl);
 	/* Add one more destination for this channel */
 	if (CAPH_DST_OK !=
 	    chal_caph_switch_add_dst(handle, chal_chnl,
 				     (UInt16) FIFO_dstAddr)) {
-		_DBG_(Log_DebugPrintf
-		      (LOGID_SOC_AUDIO, "csl_caph_switch_add_dst:: FAIL\n"));
+		aTrace
+		      (LOG_AUDIO_CSL, "csl_caph_switch_add_dst:: FAIL\n");
 	}
 
 }
@@ -522,9 +522,9 @@ void csl_caph_switch_remove_dst(CSL_CAPH_SWITCH_CHNL_e chnl,
 
 	if (FIFO_dstAddr == 0)
 		return;
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 		"csl_caph_switch_remove_dst:: chnl = 0x%x, dstcAddr = 0x%lx\n",
-		chnl, FIFO_dstAddr));
+		chnl, FIFO_dstAddr);
 	/* Get cHAL Channel */
 	chal_chnl = csl_caph_switch_get_chalchnl(chnl);
 	/* Remove one destination for this channel */
@@ -545,9 +545,9 @@ void csl_caph_switch_start_transfer(CSL_CAPH_SWITCH_CHNL_e chnl)
 {
 	CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			      "csl_caph_switch_start_transfer:: chnl = 0x%x\n",
-			      chnl));
+			      chnl);
 	/* Get cHAL Channel */
 	chal_chnl = csl_caph_switch_get_chalchnl(chnl);
 	/* Check whether DST of the switch channel is defined properly */
@@ -574,11 +574,11 @@ void csl_caph_switch_stop_transfer(CSL_CAPH_SWITCH_CHNL_e chnl)
 {
 	CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_caph_switch_stop_transfer:: "));
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_caph_switch_stop_transfer:: chnl = 0x%x",
-	       chnl));
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_caph_switch_stop_transfer:: ");
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_caph_switch_stop_transfer:: chnl = 0x%x",
+	       chnl);
 	/* Get cHAL Channel */
 	chal_chnl = csl_caph_switch_get_chalchnl(chnl);
 	/* Stop this channel */

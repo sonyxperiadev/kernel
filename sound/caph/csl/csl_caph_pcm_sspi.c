@@ -44,6 +44,7 @@
 #include "brcm_rdb_sysmap.h"
 #include "brcm_rdb_sspil.h"
 #include "log.h"
+#include "audio_trace.h"
 
 #define SSPI_HW_WORD_LEN_32Bit					32
 #define SSPI_HW_WORD_LEN_25Bit					25
@@ -77,12 +78,12 @@ CSL_PCM_HANDLE csl_pcm_init(UInt32 baseAddr, UInt32 caphIntcHandle)
 	CSL_PCM_HANDLE handle = 0;
 	CSL_PCM_HANDLE_t *pDevice;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "+csl_pcm_init\r\n");
+	aTrace(LOG_AUDIO_CSL, "+csl_pcm_init\r\n");
 
 	handle = chal_sspi_init(baseAddr);
 	pDevice = (CSL_PCM_HANDLE_t *) handle;
 	if (handle == NULL) {
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_init failed\r\n");
+		aTrace(LOG_AUDIO_CSL, "csl_pcm_init failed\r\n");
 		return NULL;
 	}
 
@@ -90,7 +91,7 @@ CSL_PCM_HANDLE csl_pcm_init(UInt32 baseAddr, UInt32 caphIntcHandle)
 
 	intc_handle = (CHAL_HANDLE) caphIntcHandle;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "-csl_pcm_init base address 0x%x\r\n",
+	aTrace(LOG_AUDIO_CSL, "-csl_pcm_init base address 0x%x\r\n",
 			(unsigned int)pDevice->base);
 
 	return handle;
@@ -108,16 +109,16 @@ CSL_PCM_OPSTATUS_t csl_pcm_deinit(CSL_PCM_HANDLE handle)
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 	CHAL_SSPI_STATUS_t status;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "+csl_pcm_deinit\r\n");
+	aTrace(LOG_AUDIO_CSL, "+csl_pcm_deinit\r\n");
 
 	if (handle == NULL) {
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_deinit failed\r\n");
+		aTrace(LOG_AUDIO_CSL, "csl_pcm_deinit failed\r\n");
 		return CSL_PCM_ERR_HANDLE;
 	}
 
 	status = chal_sspi_deinit(pDevice);
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "-csl_pcm_deinit\r\n");
+	aTrace(LOG_AUDIO_CSL, "-csl_pcm_deinit\r\n");
 
 	if (status == CHAL_SSPI_STATUS_SUCCESS)
 		return CSL_PCM_SUCCESS;
@@ -137,7 +138,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_enable_scheduler(CSL_PCM_HANDLE handle,
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"csl_pcm_enable_scheduler:: handle %p enable %d.\r\n",
 			handle, enable);
 	if (!pDevice)
@@ -161,9 +162,9 @@ CSL_PCM_OPSTATUS_t csl_pcm_start(CSL_PCM_HANDLE handle,
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 	CHAL_SSPI_STATUS_t status;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start::"
+	_DBG_(aTrace(LOG_AUDIO_CSL, "csl_pcm_start::"
 			      "handle %p.\r\n", handle));
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	_DBG_(aTrace(LOG_AUDIO_CSL,
 			      "csl_pcm_start:: cfgDev mode %d interleave %d protocol %d"
 			      "format %d size %ld bits %ld sr %ld.\r\n",
 			      config->mode, config->interleave,
@@ -210,7 +211,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_start_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"csl_pcm_start_tx:: handle %p, channel %d.\r\n", handle,
 			channel);
 	if (!pDevice)
@@ -242,7 +243,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_start_rx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"csl_pcm_start_rx:: handle %p, channel %d.\r\n", handle,
 			channel);
 	if (!pDevice)
@@ -273,7 +274,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_stop_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s handle %p, chan %d\n",
+	aTrace(LOG_AUDIO_CSL, "%s handle %p, chan %d\n",
 		__func__, handle, channel);
 	if (!pDevice)
 		return CSL_PCM_ERR_HANDLE;
@@ -304,7 +305,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_stop_rx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s handle %p, chan %d\n",
+	aTrace(LOG_AUDIO_CSL, "%s handle %p, chan %d\n",
 		__func__, handle, channel);
 
 	if (!pDevice)
@@ -372,28 +373,28 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	csl_pcm_config_device_t *devCfg = configDev;
 	uint32_t intrMask;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_pcm_config:: handle %p.\r\n", handle));
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	_DBG_(aTrace
+	      (LOG_AUDIO_CSL, "csl_pcm_config:: handle %p.\r\n", handle));
+	_DBG_(aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_pcm_config:: cfgDev mode %d interleave %d protocol %d"
 	       "format %d size %ld bits %ld sr %ld.\r\n",
 	       configDev->mode, configDev->interleave, configDev->protocol,
 	       configDev->format, configDev->xferSize, configDev->ext_bits,
 	       configDev->sample_rate));
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	_DBG_(aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_pcm_config:: cfgTx ena %d ch %d sr %d lpbEna %d.\r\n",
 	       configTx->enable, configTx->channel, configTx->sampleRate,
 	       configTx->loopback_enable));
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	_DBG_(aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_pcm_config:: cfgRx ena %d ch %d sr %d lpbEna %d.\r\n",
 	       configRx->enable, configRx->channel, configRx->sampleRate,
 	       configRx->loopback_enable));
 
 	if (handle == NULL) {
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config failed\r\n");
+		aTrace(LOG_AUDIO_CSL, "csl_pcm_config failed\r\n");
 		return CSL_PCM_ERR_HANDLE;
 	}
 
@@ -445,7 +446,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	chal_sspi_soft_reset(pDevice);
 
 	chal_sspi_get_intr_mask(pDevice, &intrMask);
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: intrMask1 0x%x.\r\n",
+	aTrace(LOG_AUDIO_CSL, "csl_pcm_config:: intrMask1 0x%x.\r\n",
 			intrMask);
 
 	if (devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT) {
@@ -459,7 +460,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	} else {		/*for voice call only enable RX START */
 		intrMask |= SSPIL_INTR_ENABLE_PIO_RX_START;
 	}
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: intrMask2 0x%x.\r\n",
+	aTrace(LOG_AUDIO_CSL, "csl_pcm_config:: intrMask2 0x%x.\r\n",
 			intrMask);
 	/*need to disable all other interrupts to avoid confusing
 	  dsp 03-02-11 */
@@ -467,7 +468,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 
 	/*set sspi at idle state */
 	if (chal_sspi_set_idle_state(pDevice, protocol)) {
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config failed \r\n");
+		aTrace(LOG_AUDIO_CSL, "csl_pcm_config failed \r\n");
 		return CSL_PCM_ERROR;
 	}
 
@@ -1606,7 +1607,7 @@ void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner,
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"csl_caph_intc_enable_pcm_intr:: owner %d, ssp %d.\n",
 			csl_owner, csl_sspid);
 
@@ -1635,7 +1636,7 @@ void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner,
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			"csl_caph_intc_disable_pcm_intr:: owner %d, ssp %d.\n",
 			csl_owner, csl_sspid);
 

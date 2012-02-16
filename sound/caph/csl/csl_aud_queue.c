@@ -49,6 +49,7 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.          */
 
 #include "log.h"
 #include "csl_aud_queue.h"
+#include "audio_trace.h"
 
 /* use it to debug if you suspect sw corrupt the data of ring buffer. */
 #ifdef DEBUG_RING_BUFFER
@@ -562,7 +563,7 @@ void AUDQUE_UpdateReadPtr(AUDQUE_Queue_t *aq)
 
 		for (j = 0; j < k; j++) {
 			if (*(buf + j) != i_hack++) {
-				Log_DebugPrintf(LOGID_SOC_AUDIO,
+				aTrace(LOG_AUDIO_CSL,
 						"richlu AUDQUE_Write found driver error! i_hack = %d, j = %d, buf = %d\n",
 						i_hack, j, *(buf + j));
 			}
@@ -580,7 +581,7 @@ void AUDQUE_UpdateReadPtr(AUDQUE_Queue_t *aq)
 		 * changes to handle non-pcm data
 		 */
 		if (aq->isCleared == FALSE) {
-			Log_DebugPrintf(LOGID_SOC_AUDIO,
+			aTrace(LOG_AUDIO_CSL,
 					"AUDQUE_UpdateReadPtr flush the queue due to underflow.\n");
 
 			memset(aq->base, 0, aq->bottom - aq->base);
@@ -643,7 +644,7 @@ UInt32 AUDQUE_GetLoad(AUDQUE_Queue_t *aq)
 		load = aq->writePtr - aq->readPtr;
 
 
-	/*_DBG_(Log_DebugPrintf(LOGID_AUDIO, "AUDQUE_GetLoad:: aq->writePtr
+	/*_DBG_(aTrace(LOGID_AUDIO, "AUDQUE_GetLoad:: aq->writePtr
 	 * 0x%x, aq->readPtr 0x%x, aq->base 0x%x, aq->bottom = 0x%x, load %d
 	 * \n",aq->writePtr, aq->readPtr,aq->base, aq->bottom,load ));
 	 */
@@ -692,7 +693,7 @@ UInt32 AUDQUE_GetQueueSize(AUDQUE_Queue_t *aq)
 UInt32 AUDQUE_GetSizeReadPtrToBottom(AUDQUE_Queue_t *aq)
 {
 
-	/* _DBG_(Log_DebugPrintf(LOGID_AUDIO, "AUDQUE_GetSizeReadPtrToBottom: */
+	/* _DBG_(aTrace(LOGID_AUDIO, "AUDQUE_GetSizeReadPtrToBottom: */
 	/* aq->readPtr 0x%x, aq->bottom = 0x%x, (aq->readPtr - aq->bottom) */
 	/* %d \n", aq->readPtr, aq->bottom, (aq->bottom - aq->readPtr) ));*/
 

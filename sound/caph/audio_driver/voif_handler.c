@@ -33,6 +33,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "voif_handler.h"
 #include "audio_ddriver.h"
 #include "log.h"
+#include "audio_trace.h"
 
 /* APIs */
 

@@ -45,7 +45,7 @@
 #include "brcm_rdb_padctrlreg.h"
 #include "brcm_rdb_sysmap.h"
 #include "log.h"
-
+#include "audio_trace.h"
 /*
  * global variable declarations
  */
@@ -89,15 +89,15 @@ CSL_HANDLE csl_i2s_init(cUInt32 baseAddr)
 {
 	CSL_HANDLE handle = 0;
 	CSL_SSPI_HANDLE_T *pDevice;
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "+csl_i2s_init\n");
+	aTrace(LOG_AUDIO_CSL, "+csl_i2s_init\n");
 
 	handle = chal_sspi_init(baseAddr);
 	pDevice = (CSL_SSPI_HANDLE_T *) handle;
 	if (pDevice)
-		Log_DebugPrintf(LOGID_SOC_AUDIO,
+		aTrace(LOG_AUDIO_CSL,
 				"base address in csl 0x%x \r\n",
 				(unsigned int)pDevice->base);
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "-csl_i2s_init \r\n");
+	aTrace(LOG_AUDIO_CSL, "-csl_i2s_init \r\n");
 
 	return handle;
 
@@ -131,26 +131,26 @@ void csl_i2s_config(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
 	CSL_SSPI_HANDLE_T *pDevice = NULL;
 	SSPI_hw_status_t status = SSPI_HW_NOERR;
 
-	_DBG_(Log_DebugPrintf
-			(LOGID_SOC_AUDIO,
+	aTrace
+			(LOG_AUDIO_CSL,
 			 "csl_i2s_config:: handle %p mode %ld txEn %ld"
 			 "rxEn %ld txLbEn %ld"
 			 "rxLbEn %ld trans_size %ld.\r\n",
 			 handle, config->mode, config->tx_ena, config->rx_ena,
 			 config->tx_loopback_ena, config->rx_loopback_ena,
-			 config->trans_size));
-	_DBG_(Log_DebugPrintf
-			(LOGID_SOC_AUDIO,
+			 config->trans_size);
+	aTrace
+			(LOG_AUDIO_CSL,
 			 "csl_i2s_config:: prot %ld interleave %ld sr %d.\r\n",
-			 config->prot, config->interleave, config->sampleRate));
+			 config->prot, config->interleave, config->sampleRate);
 
 	if (config->mode == CSL_I2S_MASTER_MODE) {
 		pDevice = (CSL_SSPI_HANDLE_T *) handle;
-		/*_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Master Mode base
-		 * address 0x%x \r\n", pDevice->base));
+		/*aTrace(LOG_AUDIO_CSL, "Master Mode base
+		 * address 0x%x \r\n", pDevice->base);
 		 */
-		/*_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "handle 0x%x \r\n",
-		 * handle));
+		/*aTrace(LOG_AUDIO_CSL, "handle 0x%x \r\n",
+		 * handle);
 		 */
 
 		if (!config->interleave)
@@ -159,7 +159,7 @@ void csl_i2s_config(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
 			status = SSPI_hw_interleave_init(handle, config);
 
 		if (status) {
-			Log_DebugPrintf(LOGID_SOC_AUDIO,
+			aTrace(LOG_AUDIO_CSL,
 					"SSPI_hw_i2s_init failed \r\n");
 		}
 
@@ -170,12 +170,12 @@ void csl_i2s_config(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
 			status = SSPI_hw_interleave_slave_init(handle, config);
 
 		if (pDevice != NULL) {
-			/* _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Slave
-			 * Mode base address 0x%x \r\n", pDevice->base));
+			/* aTrace(LOG_AUDIO_CSL, "Slave
+			 * Mode base address 0x%x \r\n", pDevice->base);
 			 */
 		}
 	}
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "-csl_i2s_config \r\n");
+	aTrace(LOG_AUDIO_CSL, "-csl_i2s_config \r\n");
 	return;
 
 }
@@ -189,12 +189,12 @@ void csl_i2s_config(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
  */
 void csl_i2s_start_rx(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "+csl_i2s_start \r\n");
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "config->trans_size 0x%x \r\n",
+	aTrace(LOG_AUDIO_CSL, "+csl_i2s_start \r\n");
+	aTrace(LOG_AUDIO_CSL, "config->trans_size 0x%x \r\n",
 			(unsigned int)config->trans_size);
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "handle 0x%x \r\n",
+	aTrace(LOG_AUDIO_CSL, "handle 0x%x \r\n",
 			(unsigned int)handle);
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "config 0x%x \r\n",
+	aTrace(LOG_AUDIO_CSL, "config 0x%x \r\n",
 			(unsigned int)config);
 
 	chal_sspi_enable_fifo_pio_start_stop_intr(handle,
@@ -217,12 +217,12 @@ void csl_i2s_start_rx(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
  */
 void csl_i2s_start_tx(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "+csl_i2s_start_tx \r\n");
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "config->trans_size 0x%x \r\n",
+	aTrace(LOG_AUDIO_CSL, "+csl_i2s_start_tx \r\n");
+	aTrace(LOG_AUDIO_CSL, "config->trans_size 0x%x \r\n",
 			(unsigned int)config->trans_size);
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "handle 0x%x \r\n",
+	aTrace(LOG_AUDIO_CSL, "handle 0x%x \r\n",
 			(unsigned int)handle);
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "config 0x%x \r\n",
+	aTrace(LOG_AUDIO_CSL, "config 0x%x \r\n",
 			(unsigned int)config);
 
 	chal_sspi_enable_fifo_pio_start_stop_intr(handle,
@@ -397,21 +397,21 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
 		clk_source = SSPI_CLK_SRC_AUDIOCLK;
 		fifo_pack = SSPI_FIFO_DATA_PACK_NONE;
 		clk_div = 2;
-		_DBG_(Log_DebugPrintf
-				(LOGID_SOC_AUDIO,
-				 "sample Rate = CSL_I2S_32BIT_8000HZ \r\n"));
+		aTrace
+				(LOG_AUDIO_CSL,
+				 "sample Rate = CSL_I2S_32BIT_8000HZ \r\n");
 		break;
 	case CSL_I2S_25BIT_48000HZ:
 		clk_source = SSPI_CLK_SRC_INTCLK;
 		fifo_pack = SSPI_FIFO_DATA_PACK_NONE;
 		clk_div = 0;
-		_DBG_(Log_DebugPrintf
-				(LOGID_SOC_AUDIO,
-				 "sample Rate = CSL_I2S_25BIT_48000HZ \r\n"));
+		aTrace
+				(LOG_AUDIO_CSL,
+				 "sample Rate = CSL_I2S_25BIT_48000HZ \r\n");
 		break;
 	default:
-		_DBG_(Log_DebugPrintf
-				(LOGID_SOC_AUDIO, "unknown rate setting \r\n"));
+		aTrace
+				(LOG_AUDIO_CSL, "unknown rate setting \r\n");
 		return SSPI_HW_ERR_PROT;
 	}
 #endif
@@ -592,53 +592,53 @@ static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle,
 		clk_source = SSPI_CLK_SRC_AUDIOCLK;
 		fifo_pack = SSPI_FIFO_DATA_PACK_16BIT;
 		clk_div = 11;
-		_DBG_(Log_DebugPrintf
-				(LOGID_SOC_AUDIO,
-				 "sample Rate = CSL_I2S_16BIT_4000HZ \r\n"));
+		aTrace
+				(LOG_AUDIO_CSL,
+				 "sample Rate = CSL_I2S_16BIT_4000HZ \r\n");
 		break;
 	case CSL_I2S_16BIT_8000HZ:
 		clk_source = SSPI_CLK_SRC_AUDIOCLK;
 		fifo_pack = SSPI_FIFO_DATA_PACK_16BIT;
 		clk_div = 5;
-		_DBG_(Log_DebugPrintf
-				(LOGID_SOC_AUDIO,
-				 "sample Rate = CSL_I2S_16BIT_8000HZ \r\n"));
+		aTrace
+				(LOG_AUDIO_CSL,
+				 "sample Rate = CSL_I2S_16BIT_8000HZ \r\n");
 		break;
 	case CSL_I2S_16BIT_16000HZ:
 		clk_source = SSPI_CLK_SRC_AUDIOCLK;
 		fifo_pack = SSPI_FIFO_DATA_PACK_16BIT;
 		clk_div = 2;
-		_DBG_(Log_DebugPrintf
-				(LOGID_SOC_AUDIO,
-				 "sample Rate = CSL_I2S_16BIT_16000HZ \r\n"));
+		aTrace
+				(LOG_AUDIO_CSL,
+				 "sample Rate = CSL_I2S_16BIT_16000HZ \r\n");
 		break;
 	case CSL_I2S_16BIT_48000HZ:
 		clk_source = SSPI_CLK_SRC_AUDIOCLK;
 		fifo_pack = SSPI_FIFO_DATA_PACK_16BIT;
 		clk_div = 0;
-		_DBG_(Log_DebugPrintf
-				(LOGID_SOC_AUDIO,
-				 "sample Rate = CSL_I2S_16BIT_48000HZ \r\n"));
+		aTrace
+				(LOG_AUDIO_CSL,
+				 "sample Rate = CSL_I2S_16BIT_48000HZ \r\n");
 		break;
 	case CSL_I2S_32BIT_8000HZ:
 		clk_source = SSPI_CLK_SRC_AUDIOCLK;
 		fifo_pack = SSPI_FIFO_DATA_PACK_NONE;
 		clk_div = 2;
-		_DBG_(Log_DebugPrintf
-				(LOGID_SOC_AUDIO,
-				 "sample Rate = CSL_I2S_32BIT_8000HZ \r\n"));
+		aTrace
+				(LOG_AUDIO_CSL,
+				 "sample Rate = CSL_I2S_32BIT_8000HZ \r\n");
 		break;
 	case CSL_I2S_25BIT_48000HZ:
 		clk_source = SSPI_CLK_SRC_INTCLK;
 		fifo_pack = SSPI_FIFO_DATA_PACK_NONE;
 		clk_div = 0;
-		_DBG_(Log_DebugPrintf
-				(LOGID_SOC_AUDIO,
-				 "sample Rate = CSL_I2S_25BIT_48000HZ \r\n"));
+		aTrace
+				(LOG_AUDIO_CSL,
+				 "sample Rate = CSL_I2S_25BIT_48000HZ \r\n");
 		break;
 	default:
-		_DBG_(Log_DebugPrintf
-				(LOGID_SOC_AUDIO, "unknown rate setting \r\n"));
+		aTrace
+				(LOG_AUDIO_CSL, "unknown rate setting \r\n");
 		return SSPI_HW_ERR_PROT;
 	}
 #endif

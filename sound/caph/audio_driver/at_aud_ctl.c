@@ -65,6 +65,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "csl_caph_hwctrl.h"
 
 #include "extern_audio.h"
+#include "audio_trace.h"
 
 /**
 	Description:
@@ -96,9 +97,9 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 	static UInt8 loopback_api_input, loopback_api_output;
 	Int32 pCurSel[2];
 
-	DEBUG("%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld\n",
-	      __func__, Params[0], Params[1], Params[2],
-	      Params[3], Params[4], Params[5], ParamCount);
+	aTrace(LOG_AUDIO_DRIVER, "%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld\n",
+			__func__, Params[0], Params[1], Params[2],
+			Params[3], Params[4], Params[5], ParamCount);
 
 	csl_caph_ControlHWClock(TRUE);
 
@@ -107,7 +108,7 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 	case 0:		/* at*maudmode 0 */
 #if !defined(USE_NEW_AUDIO_PARAM)
 		Params[0] = GetAudioMode();
-		DEBUG(" %s mode %ld\n", __func__, Params[0]);
+		aTrace(LOG_AUDIO_DRIVER, " %s mode %ld\n", __func__, Params[0]);
 #endif
 		break;
 
@@ -127,13 +128,17 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
 				 1].iLineSelect[1] = spk;
 		SetAudioMode(Params[1]);
-		DEBUG(" %s mic %d spk %d mode %ld\n", __func__,
-		      mic, spk, Params[1]);
+		aTrace(LOG_AUDIO_DRIVER,
+				" %s mic %d spk %d mode %ld\n", __func__,
+				mic, spk, Params[1]);
 #endif
 		break;
 
 	case 8:		/* at*maudmode=8 */
 		Params[0] = loopback_status;
+		aTrace(LOG_AUDIO_DRIVER,
+				" %s loopback status is %d\n", __func__,
+				loopback_status);
 		DEBUG(" %s loopback status is %d\n", __func__, loopback_status);
 		break;
 
@@ -142,8 +147,10 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 		if (loopback_status > 1)
 			loopback_status = 1;
 
-		DEBUG(" %s set loopback status %d (1:ena 0:dis)\n",
-		      __func__, loopback_status);
+		aTrace(LOG_AUDIO_DRIVER,
+				" %s set loopback status %d (1:ena 0:dis)\n",
+				__func__, loopback_status);
+
 		break;
 
 	case 10:		/* at*maudmode=10  --> get loopback path */
@@ -152,8 +159,9 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 
 		Params[0] = loopback_input;
 		Params[1] = loopback_output;
-		DEBUG("%s loopback path is from src %d to sink %d\n",
-		      __func__, loopback_input, loopback_output);
+		aTrace(LOG_AUDIO_DRIVER,
+				"%s loopback path is from src %d to sink %d\n",
+				__func__, loopback_input, loopback_output);
 		break;
 
 		/* at*maudmode=11,x,y  --> set loopback path. */
@@ -167,7 +175,9 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 		if (((loopback_input > 6) && (loopback_input != 11)) ||
 		    ((loopback_output > 2) && (loopback_output != 9) &&
 		     (loopback_output != 4))) {
-			DEBUG("%s srr/sink exceeds its range.\n", __func__);
+			aTrace(LOG_AUDIO_DRIVER,
+					"%s srr/sink exceeds its range.\n",
+					__func__);
 			rtn = -1;
 			break;
 		}
@@ -181,22 +191,25 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 		AUDCTRL_SetAudioLoopback(TRUE, loopback_api_input,
 					 loopback_api_output, sidetone_mode);
 
-		DEBUG("%s ena lpback: src %d sink %d sidetone %d\n",
-		      __func__, loopback_api_input,
-		      loopback_api_output, sidetone_mode);
+		aTrace(LOG_AUDIO_DRIVER,
+				"%s ena lpback: src %d sink %d sidetone %d\n",
+				__func__, loopback_api_input,
+			loopback_api_output, sidetone_mode);
 		break;
 
 	case 12:		/* at*maudmode=12  --> disable loopback path */
 		loopback_status = 0;
 		AUDCTRL_SetAudioLoopback(FALSE, loopback_api_input,
-					 loopback_api_output, sidetone_mode);
-		DEBUG("%s dis lpback: src %d sink %d sidetone %d\n",
-		      __func__, loopback_api_input,
-		      loopback_api_output, sidetone_mode);
+			loopback_api_output, sidetone_mode);
+		aTrace(LOG_AUDIO_DRIVER,
+				"%s dis lpback: src %d sink %d sidetone %d\n",
+				__func__, loopback_api_input,
+			loopback_api_output, sidetone_mode);
 		break;
 
 	case 13:		/* at*maudmode=13  --> Get call ID */
-		DEBUG("%s get call ID is not supported\n", __func__);
+		aTrace(LOG_AUDIO_DRIVER,
+				"%s get call ID is not supported\n", __func__);
 		rtn = -1;
 		break;
 		/* at*maudmode=14  --> read current mode and app */
@@ -204,7 +217,8 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 #if defined(USE_NEW_AUDIO_PARAM)
 		Params[0] = GetAudioApp();
 		Params[1] = GetAudioMode();
-		DEBUG("%s app %ld mode %ld\n", __func__, Params[0], Params[1]);
+		aTrace(LOG_AUDIO_DRIVER, "%s app %ld mode %ld\n",
+				__func__, Params[0], Params[1]);
 #endif
 		break;
 		/* at*maudmode=15  --> set current mode and app */
@@ -240,8 +254,9 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 			SetAudioMode(mode, app);
 		}
 
-		DEBUG("%s mic %d spk %d mode %ld app %ld\n",
-		      __func__, mic, spk, Params[2], Params[1]);
+		aTrace(LOG_AUDIO_DRIVER, "%s mic %d spk %d mode %ld app %ld\n",
+				__func__, mic, spk, Params[2],
+				Params[1]);
 #endif
 		break;
 
@@ -259,10 +274,10 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 
 			if (Params[1] == 3) {
 
-				DEBUG("Params[2] = %d, "
-				      "Params[3] %d, audio mode %d\n",
-				      (int)Params[3], (int)Params[2],
-				      GetAudioMode());
+			aTrace(LOG_AUDIO_DRIVER, "Params[2] = %d, "
+				"Params[3] %d, audio mode %d\n",
+			     (int)Params[3], (int)Params[2],
+			     GetAudioMode());
 
 				if ((Params[2] ==
 				     PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
@@ -282,23 +297,22 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 					    || (GetAudioMode() ==
 						AUDIO_MODE_TTY_WB)) {
 #endif
-						extern_ihf_off();
-						extern_hs_on();
-						DEBUG("%s ext headset "
-						      "speaker gain = %d\n",
-						      __func__, gain);
+					extern_ihf_off();
+					extern_hs_on();
+					aTrace(LOG_AUDIO_DRIVER,
+							"%s ext headset "
+					"speaker gain = %d\n",
+					     __func__, gain);
 
-						if (Params[2] ==
-						    PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
-							extern_hs_set_gain(gain
-									   * 25,
-									   AUDIO_HS_LEFT);
-						else if (Params[2] ==
-							 PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)
-							extern_hs_set_gain(gain
-									   * 25,
-									   AUDIO_HS_RIGHT);
-					}
+					if (Params[2] ==
+				PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+						extern_hs_set_gain(gain*25,
+						AUDIO_HS_LEFT);
+					else if (Params[2] ==
+				PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)
+						extern_hs_set_gain(gain*25,
+						AUDIO_HS_RIGHT);
+				}
 #if defined(USE_NEW_AUDIO_PARAM)
 					else if (GetAudioMode() ==
 						 AUDIO_MODE_SPEAKERPHONE) {
@@ -310,18 +324,18 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 						     AUDIO_MODE_SPEAKERPHONE_WB)
 					    ) {
 #endif
-						extern_hs_off();
-						extern_ihf_on();
-						DEBUG("%s ext IHF "
-						      "speaker gain = %d\n",
-						      __func__, gain);
-						extern_ihf_set_gain(gain * 25);
-					}
+					extern_hs_off();
+					extern_ihf_on();
+					aTrace(LOG_AUDIO_DRIVER, "%s ext IHF "
+					"speaker gain = %d\n",
+					     __func__, gain);
+					extern_ihf_set_gain(gain*25);
+				}
 
 				}
 				/* Params[2] checking */
-				DEBUG
-				    ("Params[2] = %d, Params[3] %d,"
+				aTrace
+				    (LOG_AUDIO_DRIVER, "Params[2] = %d, Params[3] %d,"
 				     " audio mode %d\n",
 				     (int)Params[3], (int)Params[2],
 				     GetAudioMode());
@@ -337,9 +351,12 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 					    || (GetAudioMode() ==
 						AUDIO_MODE_SPEAKERPHONE_WB)) {
 #endif
-						DEBUG("ext IHF high gain "
-						      "mode = %d\n",
-						      (int)Params[3]);
+					aTrace(LOG_AUDIO_DRIVER,
+							"ext IHF high gain "
+					"mode = %d\n",
+					 (int)Params[3]);
+					extern_ihf_en_hi_gain_mode(
+						(int)Params[3]);
 						extern_ihf_en_hi_gain_mode((int)
 									   Params
 									   [3]);
@@ -352,7 +369,8 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 		break;
 
 	default:
-		DEBUG("%s Unsupported cmd %ld\n", __func__, Params[0]);
+		aTrace(LOG_AUDIO_DRIVER, "%s Unsupported cmd %ld\n", __func__,
+				Params[0]);
 		rtn = -1;
 		break;
 	}
@@ -370,10 +388,9 @@ int AtMaudMode(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 **/
 int AtMaudLoopback(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 {
-	DEBUG("%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld\n",
-	      __func__, Params[0], Params[1], Params[2],
-	      Params[3], Params[4], Params[5], ParamCount);
-
+	aTrace(LOG_AUDIO_DRIVER, "%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld\n",
+			__func__, Params[0], Params[1], Params[2],
+			Params[3], Params[4], Params[5], ParamCount);
 	return -1;
 }
 
@@ -389,9 +406,9 @@ int AtMaudLog(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 {
 	int rtn = 0;
 
-	DEBUG("%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld.\n",
-	      __func__, Params[0], Params[1], Params[2],
-	      Params[3], Params[4], Params[5], ParamCount);
+	aTrace(LOG_AUDIO_DRIVER, "%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld.\n",
+			__func__, Params[0], Params[1], Params[2],
+			Params[3], Params[4], Params[5], ParamCount);
 
 	switch (Params[0]) {
 	case 1:		/* at*maudlog=1,x,y,z */
@@ -399,19 +416,21 @@ int AtMaudLog(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 		    AUDDRV_AudLog_Start(Params[1], Params[2], Params[3],
 					(char *)NULL);
 		if (rtn < 0) {
-			DEBUG("\n Couldnt setup channel\n");
+			aTrace(LOG_AUDIO_DRIVER, "\n Couldnt setup channel\n");
 			rtn = -1;
 		}
-		DEBUG("%s start log on stream %ld, "
-		      "capture pt %ld, consumer %ld.\n",
-		      __func__, Params[1], Params[2], Params[3]);
+		aTrace(LOG_AUDIO_DRIVER, "%s start log on stream %ld, "
+				"capture pt %ld, consumer %ld.\n",
+		     __func__, Params[1], Params[2], Params[3]);
 		break;
 
 	case 2:		/* at*maudlog=2,x */
 		rtn = AUDDRV_AudLog_Stop(Params[1]);
 		if (rtn < 0)
 			rtn = -1;
-		DEBUG("%s start log on stream %ld.\n", __func__, Params[1]);
+		aTrace(LOG_AUDIO_DRIVER,
+				"%s start log on stream %ld.\n", __func__,
+				Params[1]);
 		break;
 
 	default:
@@ -433,9 +452,9 @@ int AtMaudLog(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 static Boolean voip_running = FALSE;
 int AtMaudTst(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 {
-	DEBUG("%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld.\n",
-	      __func__, Params[0], Params[1], Params[2],
-	      Params[3], Params[4], Params[5], ParamCount);
+	aTrace(LOG_AUDIO_DRIVER, "%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld.\n",
+			__func__, Params[0], Params[1], Params[2],
+			Params[3], Params[4], Params[5], ParamCount);
 
 	/* test command 110/101 is to control the HW clock.
 	   In this case, dont enable the clock */
@@ -467,15 +486,16 @@ int AtMaudTst(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 
 	case 101:
 		Params[0] = (Int32) csl_caph_QueryHWClock();
-		DEBUG("csl_caph_QueryHWClock %ld.\n", Params[0]);
+		aTrace(LOG_AUDIO_DRIVER,
+				"csl_caph_QueryHWClock %ld.\n", Params[0]);
 		break;
 
 	case 110:
 		if (Params[1] == 1) {
-			DEBUG("Enable CAPH clock\n");
+			aTrace(LOG_AUDIO_DRIVER, "Enable CAPH clock\n");
 			csl_caph_ControlHWClock(TRUE);
 		} else if (Params[1] == 0) {
-			DEBUG("Disable CAPH clock\n");
+			aTrace(LOG_AUDIO_DRIVER, "Disable CAPH clock\n");
 			csl_caph_ControlHWClock(FALSE);
 		}
 		break;
@@ -1118,7 +1138,8 @@ int AtMaudTst(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 		break;
 
 	default:
-		DEBUG("%s Not supported command\n", __func__);
+		aTrace(LOG_AUDIO_DRIVER,
+				"%s Not supported command\n", __func__);
 		return -1;
 	}
 	return 0;
@@ -1137,9 +1158,9 @@ int AtMaudVol(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 	int *pVolume;
 	int mode, vol;
 
-	DEBUG("%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld\n",
-	      __func__, Params[0], Params[1], Params[2],
-	      Params[3], Params[4], Params[5], ParamCount);
+	aTrace(LOG_AUDIO_DRIVER, "%s P1-P6=%ld %ld %ld %ld %ld %ld cnt=%ld\n",
+			__func__, Params[0], Params[1], Params[2],
+			Params[3], Params[4], Params[5], ParamCount);
 
 	csl_caph_ControlHWClock(TRUE);
 
@@ -1153,11 +1174,12 @@ int AtMaudVol(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 		Params[0] += AudParmP()[mode].voice_volume_max;
 		/* Range 0~36 dB shown in PCG */
 		/*
-		   pVolume = pChip->streamCtl[
-		   CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
-		   Params[0] = pVolume[0];
-		 */
-		DEBUG("%s pVolume[0] %ld\n", __func__, Params[0]);
+		pVolume = pChip->streamCtl[
+		CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
+		Params[0] = pVolume[0];
+		*/
+		aTrace(LOG_AUDIO_DRIVER,
+				"%s pVolume[0] %ld\n", __func__, Params[0]);
 		return 0;
 
 	case 7:		/* at*maudvol=7,x    Range 0~36 dB in PCG */
@@ -1178,12 +1200,13 @@ int AtMaudVol(brcm_alsa_chip_t * pChip, Int32 ParamCount, Int32 * Params)
 					       (vol * 100),
 					       AUDIO_GAIN_FORMAT_mB);
 
-		DEBUG("%s pVolume[0] %d mode=%d vol %d\n",
-		      __func__, pVolume[0], mode, vol);
+		aTrace(LOG_AUDIO_DRIVER, "%s pVolume[0] %d mode=%d vol %d\n",
+				__func__, pVolume[0], mode, vol);
 		return 0;
 
 	default:
-		DEBUG("%s Unsupported cmd %ld\n", __func__, Params[0]);
+		aTrace(LOG_AUDIO_DRIVER, "%s Unsupported cmd %ld\n", __func__,
+				Params[0]);
 		break;
 	}
 	return -1;
@@ -1204,10 +1227,10 @@ int AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t * pChip,
 {
 	int rtn = 0;
 
-	DEBUG("AT-AUD-put ctl=%ld ParamCount= %ld "
-	      "[%ld %ld %ld %ld %ld %ld %ld]\n",
-	      cmdIndex, ParamCount, Params[0], Params[1], Params[2], Params[3],
-	      Params[4], Params[5], Params[6]);
+	aTrace(LOG_AUDIO_DRIVER, "AT-AUD-put ctl=%ld ParamCount= %ld "
+		"[%ld %ld %ld %ld %ld %ld %ld]\n",
+	     cmdIndex, ParamCount, Params[0], Params[1], Params[2], Params[3],
+	     Params[4], Params[5], Params[6]);
 
 	switch (cmdIndex) {
 	case AT_AUD_CTL_INDEX:
@@ -1249,7 +1272,9 @@ int AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t * pChip,
 		rtn = AtMaudLoopback(pChip, ParamCount - 1, &Params[1]);
 		break;
 	default:
-		DEBUG("%s Unsupported handler %ld\n", __func__, Params[0]);
+		aTrace(LOG_AUDIO_DRIVER,
+				"%s Unsupported handler %ld\n", __func__,
+				Params[0]);
 		rtn = -1;
 		break;
 	}
@@ -1275,10 +1300,10 @@ int AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t * pChip,
 	    sizeof(pChip->i32AtAudHandlerParms[0]);
 	int rtn = 0;
 
-	DEBUG("AT-AUD-get ctl=%ld ParamCount= %ld "
-	      "[%ld %ld %ld %ld %ld %ld %ld]\n",
-	      cmdIndex, ParamCount, Params[0], Params[1], Params[2], Params[3],
-	      Params[4], Params[5], Params[6]);
+	aTrace(LOG_AUDIO_DRIVER, "AT-AUD-get ctl=%ld ParamCount= %ld "
+		"[%ld %ld %ld %ld %ld %ld %ld]\n",
+	     cmdIndex, ParamCount, Params[0], Params[1], Params[2], Params[3],
+	     Params[4], Params[5], Params[6]);
 
 	switch (cmdIndex) {
 
@@ -1319,7 +1344,9 @@ int AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t * pChip,
 		rtn = AtMaudLoopback(pChip, ParamCount - 1, &Params[1]);
 		break;
 	default:
-		DEBUG("%s Unsupported handler %ld\n", __func__, Params[0]);
+		aTrace(LOG_AUDIO_DRIVER,
+				"%s Unsupported handler %ld\n", __func__,
+				Params[0]);
 		rtn = -1;
 		break;
 	}

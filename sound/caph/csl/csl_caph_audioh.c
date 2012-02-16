@@ -40,6 +40,7 @@
 #include "csl_caph.h"
 #include "csl_caph_audioh.h"
 #include "log.h"
+#include "audio_trace.h"
 
 /***************************************************************************/
 /*                       G L O B A L   S E C T I O N                       */
@@ -409,15 +410,15 @@ void csl_caph_audioh_unconfig(int path_id)
 void csl_caph_audioh_config(int path_id, void *p)
 {
 	audio_config_t *pcfg = (void *)p;
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_config:: path %d sr %d bits %d chNum %d pack %d eanc %d:%d.\r\n",
 	       path_id, pcfg->sample_rate, pcfg->sample_size, pcfg->sample_mode,
-	       pcfg->sample_pack, pcfg->eanc_input, pcfg->eanc_output));
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	       pcfg->sample_pack, pcfg->eanc_input, pcfg->eanc_output);
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_config:: st out %d tr mode %d.\r\n",
-	       pcfg->sidetone_output, pcfg->data_handle_mode));
+	       pcfg->sidetone_output, pcfg->data_handle_mode);
 
 	path[path_id].sample_rate = pcfg->sample_rate;
 	path[path_id].sample_size = pcfg->sample_size;
@@ -786,8 +787,8 @@ void csl_caph_audioh_start(int path_id)
 {
 	UInt16 chnl_enable = 0x0;
 
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO, "csl_caph_audioh_start:: %d.\r\n", path_id));
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_caph_audioh_start:: %d.\r\n", path_id);
 	switch (path_id) {
 	case AUDDRV_PATH_VIBRA_OUTPUT:
 
@@ -1815,10 +1816,10 @@ void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl)
 //===========================================================================*/
 void csl_caph_audioh_adcpath_global_enable(Boolean enable)
 {
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_adcpath_global_enable:: enable %d.\r\n",
-	       enable));
+	       enable);
 	if (enable) {
 		chal_audio_adcpath_global_enable(handle, FALSE);
 
@@ -2148,10 +2149,10 @@ csl_caph_Mic_Gain_t csl_caph_map_mB_gain_to_registerVal(csl_caph_MIC_Path_e mic,
 	UInt8 maxNum = 0;
 
 	memset(&outGain, 0, sizeof(csl_caph_Mic_Gain_t));
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
+	aTrace
+	      (LOG_AUDIO_CSL,
 	       "csl_caph_gain_GetMicDSPGain::mic=%d, gain_mB=0x%x\n", mic,
-	       gain_mB));
+	       gain_mB);
 
 	if (mic == MIC_ANALOG_HEADSET) {
 		maxNum = AMIC_GAIN_LEVEL_NUM;
@@ -2177,10 +2178,10 @@ csl_caph_Mic_Gain_t csl_caph_map_mB_gain_to_registerVal(csl_caph_MIC_Path_e mic,
 		}
 	}
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+	aTrace(LOG_AUDIO_CSL,
 			      "map_mB_gain_to_registerVal micPGA=0x%x, micCICFineScale=0x%x, micCICBitSelect=0x%x, micDSPULGain=0x%x\n",
 			      outGain.micPGA, outGain.micCICFineScale,
-			      outGain.micCICBitSelect, outGain.micDSPULGain));
+			      outGain.micCICBitSelect, outGain.micDSPULGain);
 
 	return outGain;
 

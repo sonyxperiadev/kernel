@@ -54,6 +54,7 @@ Copyright 2009 - 2012  Broadcom Corporation
 
 #include "audio_controller.h"
 #include "audio_ddriver.h"
+#include "audio_trace.h"
 /**
 *
 * @addtogroup AudioDriverGroup
@@ -212,7 +213,7 @@ static void AP_ProcessAudioEnableDone(UInt16 enabled_path);
 */
 void AUDDRV_Init(void)
 {
-	log(1, "AUDDRV_Init");
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Init");
 
 	if (sAudDrv.isRunning == TRUE)
 		return;
@@ -295,7 +296,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 		Send VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
 	////////////////////////////////////////////////////////////////-*/
 
-	log(1, "AUDDRV_Telephony_Init");
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Telephony_Init");
 	csl_caph_ControlHWClock(TRUE); /*enable clock before any DSP command*/
 
 	currVoiceMic = mic;
@@ -415,7 +416,7 @@ void AUDDRV_Telephony_RateChange(AudioMode_t mode,
 	Boolean ns_enable_from_sysparm = dspNSEnable;
 	CSL_CAPH_SRCM_INSAMPLERATE_e sr = CSL_CAPH_SRCMIN_8KHZ;
 
-	log(1, "%s mode %d, app %d, bNeedDualMic %d",
+	aTrace(LOG_AUDIO_DRIVER,  "%s mode %d, app %d, bNeedDualMic %d",
 		__func__, mode, audio_app, bNeedDualMic);
 
 	audio_control_dsp(DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0);
@@ -490,7 +491,7 @@ void AUDDRV_Telephony_RateChange(AudioMode_t mode,
 
 void AUDDRV_RegisterRateChangeCallback(audio_codecId_handler_t codecId_cb)
 {
-	log(1, "AUDDRV_RegisterRateChangeCallback, 0x%lx",
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_RegisterRateChangeCallback, 0x%lx",
 			(long unsigned int)codecId_cb);
 	codecId_handler = codecId_cb;
 }
@@ -550,7 +551,7 @@ void AUDDRV_Telephony_Deinit(void)
 	UInt16 dma_mic_spk;
 #endif
 
-	log(1, "%s voicePlayOutpathEnabled = %d", __func__,
+	aTrace(LOG_AUDIO_DRIVER,  "%s voicePlayOutpathEnabled = %d", __func__,
 			voicePlayOutpathEnabled);
 
 /* continues speech playback when end the phone call.
@@ -620,7 +621,7 @@ void AUDDRV_Telephony_Deinit(void)
 void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 			    AUDIO_SAMPLING_RATE_t sample_rate)
 {
-	log(1, "%s mixer %d, sample_rate %u",
+	aTrace(LOG_AUDIO_DRIVER,  "%s mixer %d, sample_rate %u",
 		__func__, sink, sample_rate);
 
 	usleep_range(5000, 10000);
@@ -663,7 +664,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 	}
 	voicePlayOutpathEnabled = TRUE;
 
-	log(1, "%s voicePlayOutpathEnabled=%d",
+	aTrace(LOG_AUDIO_DRIVER,  "%s voicePlayOutpathEnabled=%d",
 		__func__, voicePlayOutpathEnabled);
 
 #if 0
@@ -687,7 +688,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 */
 void AUDDRV_DisableDSPOutput(void)
 {
-	log(1, "%s", __func__);
+	aTrace(LOG_AUDIO_DRIVER,  "%s", __func__);
 
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0,
 			  0);
@@ -712,7 +713,7 @@ void AUDDRV_DisableDSPOutput(void)
 void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 			   AUDIO_SAMPLING_RATE_t sample_rate)
 {
-	log(1, "%s source %d *\n\r", __func__, source);
+	aTrace(LOG_AUDIO_DRIVER,  "%s source %d *\n\r", __func__, source);
 
 	if (sample_rate == AUDIO_SAMPLING_RATE_8000) {
 #if defined(ENABLE_DMA_VOICE)
@@ -782,7 +783,7 @@ For now, when voice record is started, UMUTE UL command will be sent */
 */
 void AUDDRV_DisableDSPInput(void)
 {
-	log(1, "%s", __func__);
+	aTrace(LOG_AUDIO_DRIVER,  "%s", __func__);
 
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0,
 			  0);
@@ -809,7 +810,9 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode)
 void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
 #endif
 {
-	log(1, "%s mode==%d, app=%d\n\r", __func__, audio_mode, audio_app);
+	aTrace(LOG_AUDIO_DRIVER,
+			"%s mode==%d, app=%d\n\r", __func__,
+			audio_mode, audio_app);
 
 #if !defined(USE_NEW_AUDIO_PARAM)
 	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
@@ -896,7 +899,7 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 	p = &(AudParmP()[audio_mode + app * AUDIO_MODE_NUMBER]);
 #endif
 
-	log(1, "%s mode=%d, app %d, pathID %d\n",
+	aTrace(LOG_AUDIO_DRIVER,  "%s mode=%d, app %d, pathID %d\n",
 			__func__, audio_mode, app, arg_pathID);
 
 	/* Load the speaker gains form sysparm. */
@@ -1066,7 +1069,8 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	gainTemp1 = p->mic_pga; /* Q13p2 */
 	csl_caph_audioh_setMicPga_by_mB(gainTemp1 * 25);
 
-	log(1, "%s mode=%d, app=%d mic_gain %d", __func__, audio_mode,
+	aTrace(LOG_AUDIO_DRIVER,
+			"%s mode=%d, app=%d mic_gain %d", __func__, audio_mode,
 		app, gainTemp1*25);
 
 	gainTemp1 = p->amic_dga_coarse_gain;	/* Q13p2 dB */
@@ -1111,11 +1115,11 @@ int AUDDRV_User_CtrlDSP(AudioDrvUserCtrl_t UserCtrlType, Boolean enable,
 	static Boolean ConfigSP = FALSE;
 	static void *spCtrl, *spVar;
 
-	log(1, "AUDDRV_User_CtrlDSP");
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_User_CtrlDSP");
 
 	switch (UserCtrlType) {
 	case AUDDRV_USER_SP_QUERY:
-		log(1, "%s AUDDRV_USER_SP_QUERY", __func__);
+		aTrace(LOG_AUDIO_DRIVER,  "%s AUDDRV_USER_SP_QUERY", __func__);
 
 		if (param == NULL)
 			return -EINVAL;
@@ -1124,7 +1128,7 @@ int AUDDRV_User_CtrlDSP(AudioDrvUserCtrl_t UserCtrlType, Boolean enable,
 
 		break;
 	case AUDDRV_USER_SP_CTRL:
-		log(1, "%s AUDDRV_USER_SP_CTRL", __func__);
+		aTrace(LOG_AUDIO_DRIVER,  "%s AUDDRV_USER_SP_CTRL", __func__);
 
 		if (enable) {
 			if (size <= 0 || param == NULL)
@@ -1152,7 +1156,8 @@ int AUDDRV_User_CtrlDSP(AudioDrvUserCtrl_t UserCtrlType, Boolean enable,
 		}
 		break;
 	case AUDDRV_USER_SP_VAR:
-		log(1, "%s AUDDRV_USER_SET_SP_VAR", __func__);
+		aTrace(LOG_AUDIO_DRIVER,  "%s AUDDRV_USER_SET_SP_VAR",
+				__func__);
 
 		if (ConfigSP == TRUE && spCtrl != NULL) {
 			if (param == NULL)
@@ -1176,7 +1181,7 @@ int AUDDRV_User_CtrlDSP(AudioDrvUserCtrl_t UserCtrlType, Boolean enable,
 
 		break;
 	case AUDDRV_USER_EQ_CTRL:
-		log(1, "%s AUDDRV_USER_EQ_CTRL", __func__);
+		aTrace(LOG_AUDIO_DRIVER,  "%s AUDDRV_USER_EQ_CTRL", __func__);
 
 		if (enable == TRUE) {
 			if (param == NULL)
@@ -1189,11 +1194,12 @@ int AUDDRV_User_CtrlDSP(AudioDrvUserCtrl_t UserCtrlType, Boolean enable,
 
 		break;
 	default:
-		log(1, "%s Invalid request %d\n\r", __func__, UserCtrlType);
+		aTrace(LOG_AUDIO_DRIVER,  "%s Invalid request %d\n\r",
+				__func__, UserCtrlType);
 		break;
 	}
 #else
-	log(1, "AUDDRV_User_CtrlDSP:dummy for AP only");
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_User_CtrlDSP:dummy for AP only");
 #endif
 	return 0;
 }
@@ -1208,7 +1214,7 @@ int AUDDRV_User_CtrlDSP(AudioDrvUserCtrl_t UserCtrlType, Boolean enable,
 */
 void AUDDRV_User_HandleDSPInt(UInt32 param1, UInt32 param2, UInt32 param3)
 {
-	log(1, "AUDDRV_User_HandleDSPInt");
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_User_HandleDSPInt");
 	if (sUserCB)
 		((AUDDRV_User_CB) sUserCB) (param1, param2, param3);
 }
@@ -1286,7 +1292,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	UInt32 *memAddr = 0;
 
-	log(1, "%s mic=%d, spkr=%d sample_rate=%u*\n",
+	aTrace(LOG_AUDIO_DRIVER,  "%s mic=%d, spkr=%d sample_rate=%u*\n",
 		__func__, mic, speaker, sample_rate);
 
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
@@ -1342,7 +1348,8 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 
 	telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
 
-	log(1, "%s bNeedDualMic=%d *\n\r", __func__, bNeedDualMic);
+	aTrace(LOG_AUDIO_DRIVER,  "%s bNeedDualMic=%d *\n\r",
+			__func__, bNeedDualMic);
 
 	/* If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used
 	   //Here Let us assume it is DMIC3. It can be changed. */
@@ -1374,7 +1381,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 static void AUDDRV_Telephony_DeinitHW(void)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
-	log(1, "AUDDRV_Telephony_DeinitHW");
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Telephony_DeinitHW");
 
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
@@ -1510,7 +1517,8 @@ static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic(AUDIO_SOURCE_Enum_t mic)
 {
 	CSL_CAPH_DEVICE_e dev = CSL_CAPH_DEV_NONE;
 
-	log(1, "AUDDRV_GetDRVDeviceFromMic:: mic = 0x%x\n", mic);
+	aTrace(LOG_AUDIO_DRIVER,
+			"AUDDRV_GetDRVDeviceFromMic:: mic = 0x%x\n", mic);
 
 	switch (mic) {
 	case AUDIO_SOURCE_UNDEFINED:
@@ -1566,7 +1574,8 @@ static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr(AUDIO_SINK_Enum_t spkr)
 {
 	CSL_CAPH_DEVICE_e dev = CSL_CAPH_DEV_NONE;
 
-	log(1, "AUDDRV_GetDRVDeviceFromSpkr:: spkr = 0x%x\n", spkr);
+	aTrace(LOG_AUDIO_DRIVER,
+			"AUDDRV_GetDRVDeviceFromSpkr:: spkr = 0x%x\n", spkr);
 
 	switch (spkr) {
 	case AUDIO_SINK_UNDEFINED:
@@ -1626,7 +1635,8 @@ static UInt32 *AUDIO_GetIHF48KHzBufferBaseAddress(void)
 
 static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 {
-	log(1, "%s, Got AUDIO ENABLE RESP FROM DSP\n", __func__);
+	aTrace(LOG_AUDIO_DRIVER,
+			"%s, Got AUDIO ENABLE RESP FROM DSP\n", __func__);
 
 	complete(&audioEnableDone);
 
