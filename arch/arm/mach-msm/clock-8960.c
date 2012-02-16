@@ -5751,6 +5751,10 @@ struct clock_init_data msm8960_clock_init_data __initdata;
 static void __init msm8960_clock_init(void)
 {
 	size_t num_lookups = ARRAY_SIZE(msm_clocks_8960_v1);
+	/* Copy gfx2d's frequency table because it's modified by both clocks */
+	gfx2d1_clk.freq_tbl = kmemdup(clk_tbl_gfx2d,
+			sizeof(struct clk_freq_tbl) * ARRAY_SIZE(clk_tbl_gfx2d),
+			GFP_KERNEL);
 
 	xo_pxo = msm_xo_get(MSM_XO_PXO, "clock-8960");
 	if (IS_ERR(xo_pxo)) {
