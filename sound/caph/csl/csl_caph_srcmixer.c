@@ -740,7 +740,7 @@ static CAPH_DATA_FORMAT_e csl_caph_srcmixer_get_chal_dataformat(CHAL_HANDLE
 	CAPH_DATA_FORMAT_e chalDataFmt = CAPH_MONO_16BIT;
 	switch (dataFmt) {
 	case CSL_CAPH_16BIT_MONO:
-#if defined(CONFIG_ARCH_RHEA_B0)
+#if defined(CONFIG_ARCH_RHEA_BX)
 		/* test 16bit mono in pass through */
 		chalDataFmt = CAPH_MONO_16BITP;
 #else

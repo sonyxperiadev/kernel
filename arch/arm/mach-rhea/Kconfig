@@ -3,13 +3,13 @@ menu	"Rhea SoC based Machine types"
 
 choice
 	prompt "Choose Rhea SOC Silicon Version"
-	default ARCH_RHEA_A0
+	default ARCH_RHEA_BX
+
+config  ARCH_RHEA_BX
+        bool "Rhea SOC Version - Bx [B1/B0]"
 
 config  ARCH_RHEA_A0
         bool "Rhea SOC Version - A0"
-
-config  ARCH_RHEA_B0
-        bool "Rhea SOC Version - Bx [B1/B0]"
 
 endchoice
 

@@ -22,7 +22,7 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DUNDER_LINUX -DUNDER_LINUX_MODEM -DL
 #the options below are used by audio
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_DMA_VOICE
 #subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DVOLTE_SUPPORT
-ifdef CONFIG_ARCH_RHEA_B0
+ifdef CONFIG_ARCH_RHEA_BX
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCAPH_48K_MONO_PASSTHRU
 endif
 
@@ -41,7 +41,7 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph/audio_driver/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph/csl/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph/dsp/
 #CHAL header files
-ifdef CONFIG_ARCH_RHEA_B0
+ifdef CONFIG_ARCH_RHEA_BX
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I$(src)/chal/B0/inc/
 else
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I$(src)/chal/A0/inc/
@@ -60,7 +60,7 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/mach
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/
-ifdef CONFIG_ARCH_RHEA_B0
+ifdef CONFIG_ARCH_RHEA_BX
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/rdb_Bx/
 else
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/rdb_A0/
@@ -74,7 +74,7 @@ obj-$(CONFIG_BCM_ALSA_SOUND) += caph_ctl.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_pcm.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_hwdep.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += audio_controller/ audio_driver/
-ifdef CONFIG_ARCH_RHEA_B0
+ifdef CONFIG_ARCH_RHEA_BX
 obj-$(CONFIG_BCM_ALSA_SOUND) += chal/B0/src/
 else
 obj-$(CONFIG_BCM_ALSA_SOUND) += chal/A0/src/

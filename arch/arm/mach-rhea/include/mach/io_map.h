@@ -80,7 +80,7 @@
 #define KONA_SDIO2_VA               HW_IO_PHYS_TO_VIRT( SDIO2_BASE_ADDR )           /* SDIO 2 */
 #define KONA_SDIO3_VA               HW_IO_PHYS_TO_VIRT( SDIO3_BASE_ADDR )           /* SDIO 3 */
 
-#ifdef CONFIG_ARCH_RHEA_B0
+#ifdef CONFIG_ARCH_RHEA_BX
 #define KONA_SDIO4_VA               HW_IO_PHYS_TO_VIRT( SDIO4_BASE_ADDR )           /* SDIO 4 */
 #endif
 

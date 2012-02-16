@@ -268,7 +268,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	/* Disable software control of PHY-PM */
 	bcm_hsotgctrl_set_soft_ldo_pwrdn(false);
 
-#ifndef CONFIG_ARCH_RHEA_B0
+#ifndef CONFIG_ARCH_RHEA_BX
 	/* Do MDIO init values after PHY is up */
 	bcm_hsotgctrl_phy_mdio_init();
 #endif

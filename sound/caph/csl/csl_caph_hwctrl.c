@@ -2503,7 +2503,7 @@ void csl_caph_ControlHWClock(Boolean enable)
 		if (clkIDCAPH[0]->use_cnt)
 			clk_disable(clkIDCAPH[0]);
 #endif
-#if defined(CONFIG_ARCH_RHEA_B0)
+#if defined(CONFIG_ARCH_RHEA_BX)
 		/*Rhea B0 and above.*/
 		clk_set_rate(clkIDCAPH[0], 78000000);
 #else

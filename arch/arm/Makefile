@@ -289,7 +289,7 @@ boot := arch/arm/boot
 
 archprepare:
 	$(Q)$(MAKE) $(build)=arch/arm/tools include/generated/mach-types.h
-ifeq ($(CONFIG_ARCH_RHEA_B0),y)
+ifeq ($(CONFIG_ARCH_RHEA_BX),y)
 	$(Q)echo "Creating rdb link for Rhea Bx (B1/B0)"; \
 	ln -fsn $(srctree)/arch/arm/mach-rhea/include/mach/rdb_Bx $(srctree)/arch/arm/mach-rhea/include/mach/rdb
 endif

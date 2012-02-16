@@ -294,8 +294,8 @@ CONFIG_PROC_PINMUX_DUMP=y
 #
 # Rhea SoC based Machine types
 #
+CONFIG_ARCH_RHEA_BX=y
 # CONFIG_ARCH_RHEA_A0 is not set
-CONFIG_ARCH_RHEA_B0=y
 # CONFIG_MACH_RHEA_RAY is not set
 # CONFIG_MACH_RHEA_RAY_DEMO is not set
 # CONFIG_MACH_RHEA_RAY_EDN1X is not set

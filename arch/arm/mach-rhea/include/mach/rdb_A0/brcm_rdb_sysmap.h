@@ -263,7 +263,7 @@
 #define SDIO2_BASE_ADDR           0x3F190000 /* brcm_rdb_emmcsdxc.h */
 #define SDIO3_BASE_ADDR           0x3F1A0000 /* brcm_rdb_emmcsdxc.h */
 
-#ifdef CONFIG_ARCH_RHEA_B0
+#ifdef CONFIG_ARCH_RHEA_BX
 #define SDIO4_BASE_ADDR           0x3F1B0000 /* brcm_rdb_emmcsdxc.h */
 #endif
 

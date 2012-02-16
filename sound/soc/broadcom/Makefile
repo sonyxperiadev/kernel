@@ -23,7 +23,7 @@ subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -DUNDER_LINUX -DUNDER_LINUX_MODEM -DLINU
 #subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -DENABLE_DMA_VOICE
 #subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -DVOLTE_SUPPORT
 #subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -DENABLE_VOIF
-ifdef CONFIG_ARCH_RHEA_B0
+ifdef CONFIG_ARCH_RHEA_BX
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -DCAPH_48K_MONO_PASSTHRU
 endif
 
@@ -58,7 +58,7 @@ subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./arch/arm/plat-kona/include/mach
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./arch/arm/mach-rhea/include/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./arch/arm/mach-rhea/include/mach/
-subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./arch/arm/mach-rhea/include/mach/rdb_B0/
+subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./arch/arm/mach-rhea/include/mach/rdb_Bx/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./arch/arm/plat-kona/include/plat/chal/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./arch/arm/plat-kona/include/plat/csl/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./arch/arm/plat-kona/include/plat/osabstract/
