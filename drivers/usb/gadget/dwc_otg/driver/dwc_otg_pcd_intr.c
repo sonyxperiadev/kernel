@@ -3337,8 +3337,17 @@ do { \
 				CLEAR_IN_EP_INTR(core_if, epnum, xfercompl);
 
 				/* Complete the transfer */
-				if (epnum == 0)
+				if (epnum == 0) {
+					/* set the disable and nak bits */
+					if (depctl.b.epena) {
+						depctl.b.epdis = 1;
+						depctl.b.snak = 1;
+						dwc_write_reg32(&dev_if->
+							in_ep_regs[epnum]->
+							diepctl, depctl.d32);
+					}
 					handle_ep0(pcd);
+				}
 #ifdef DWC_EN_ISOC
 				else if (dwc_ep->type == DWC_OTG_EP_TYPE_ISOC) {
 					if (!ep->stopped)
