@@ -269,13 +269,12 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 	log(1, "%s sink %d, mic %d\n", __func__, sink, source);
 
 	mode = GetAudioModeBySink(sink);
-	if (AUDCTRL_Telephony_HW_16K(mode) == FALSE){
+	if (AUDCTRL_Telephony_HW_16K(mode) == FALSE) {
 		app = GetAudioApp();
-		/*If VT app set from user,select VT app profile,only VT-NB supported*/
-		if(app != AUDIO_APP_VT_CALL)
-		app = AUDIO_APP_VOICE_CALL;
-       }
-	else
+	/*If VT app set from user,select VT app profile,only VT-NB supported*/
+		if (app != AUDIO_APP_VT_CALL)
+			app = AUDIO_APP_VOICE_CALL;
+	} else
 		app = AUDIO_APP_VOICE_CALL_WB;
 
 	bNeedDualMic = needDualMic(mode, app);
