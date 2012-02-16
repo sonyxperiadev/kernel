@@ -151,7 +151,7 @@ static void ion_buffer_add(struct ion_device *dev,
 	rb_insert_color(&buffer->node, &dev->buffers);
 }
 
-void ion_iommu_add(struct ion_buffer *buffer,
+static void ion_iommu_add(struct ion_buffer *buffer,
 			  struct ion_iommu_map *iommu)
 {
 	struct rb_node **p = &buffer->iommu_maps.rb_node;
@@ -437,6 +437,7 @@ end:
 	ion_buffer_put(buffer);
 	return handle;
 }
+EXPORT_SYMBOL(ion_alloc);
 
 void ion_free(struct ion_client *client, struct ion_handle *handle)
 {
@@ -454,6 +455,7 @@ void ion_free(struct ion_client *client, struct ion_handle *handle)
 	ion_handle_put(handle);
 	mutex_unlock(&client->lock);
 }
+EXPORT_SYMBOL(ion_free);
 
 static void ion_client_get(struct ion_client *client);
 static int ion_client_put(struct ion_client *client);
@@ -511,6 +513,7 @@ int ion_phys(struct ion_client *client, struct ion_handle *handle,
 	ret = buffer->heap->ops->phys(buffer->heap, buffer, addr, len);
 	return ret;
 }
+EXPORT_SYMBOL(ion_phys);
 
 void *ion_map_kernel(struct ion_client *client, struct ion_handle *handle,
 			unsigned long flags)
@@ -557,8 +560,9 @@ out:
 	mutex_unlock(&client->lock);
 	return vaddr;
 }
+EXPORT_SYMBOL(ion_map_kernel);
 
-int __ion_iommu_map(struct ion_buffer *buffer,
+static int __ion_iommu_map(struct ion_buffer *buffer,
 		int domain_num, int partition_num, unsigned long align,
 		unsigned long iova_length, unsigned long flags,
 		unsigned long *iova)
@@ -775,6 +779,7 @@ out:
 	mutex_unlock(&client->lock);
 	return sglist;
 }
+EXPORT_SYMBOL(ion_map_dma);
 
 void ion_unmap_kernel(struct ion_client *client, struct ion_handle *handle)
 {
@@ -790,6 +795,7 @@ void ion_unmap_kernel(struct ion_client *client, struct ion_handle *handle)
 	mutex_unlock(&buffer->lock);
 	mutex_unlock(&client->lock);
 }
+EXPORT_SYMBOL(ion_unmap_kernel);
 
 void ion_unmap_dma(struct ion_client *client, struct ion_handle *handle)
 {
@@ -805,7 +811,7 @@ void ion_unmap_dma(struct ion_client *client, struct ion_handle *handle)
 	mutex_unlock(&buffer->lock);
 	mutex_unlock(&client->lock);
 }
-
+EXPORT_SYMBOL(ion_unmap_dma);
 
 struct ion_buffer *ion_share(struct ion_client *client,
 				 struct ion_handle *handle)
@@ -827,6 +833,7 @@ struct ion_buffer *ion_share(struct ion_client *client,
 	 */
 	return handle->buffer;
 }
+EXPORT_SYMBOL(ion_share);
 
 struct ion_handle *ion_import(struct ion_client *client,
 			      struct ion_buffer *buffer)
@@ -848,6 +855,7 @@ end:
 	mutex_unlock(&client->lock);
 	return handle;
 }
+EXPORT_SYMBOL(ion_import);
 
 static int check_vaddr_bounds(unsigned long start, unsigned long end)
 {
@@ -874,7 +882,7 @@ out:
 	return ret;
 }
 
-int ion_do_cache_op(struct ion_client *client, struct ion_handle *handle,
+static int ion_do_cache_op(struct ion_client *client, struct ion_handle *handle,
 			void *uaddr, unsigned long offset, unsigned long len,
 			unsigned int cmd)
 {
@@ -936,6 +944,7 @@ end:
 	fput(file);
 	return handle;
 }
+EXPORT_SYMBOL(ion_import_fd);
 
 static int ion_debug_client_show(struct seq_file *s, void *unused)
 {
@@ -1043,14 +1052,13 @@ struct ion_client *ion_client_create(struct ion_device *dev,
 	client->handles = RB_ROOT;
 	mutex_init(&client->lock);
 
-	client->name = kzalloc(sizeof(name_len+1), GFP_KERNEL);
+	client->name = kzalloc(name_len+1, GFP_KERNEL);
 	if (!client->name) {
 		put_task_struct(current->group_leader);
 		kfree(client);
 		return ERR_PTR(-ENOMEM);
 	} else {
-		strncpy(client->name, name, name_len);
-		client->name[name_len] = '\0';
+		strlcpy(client->name, name, name_len+1);
 	}
 
 	client->heap_mask = heap_mask;
@@ -1137,6 +1145,7 @@ void ion_client_destroy(struct ion_client *client)
 	if (client)
 		ion_client_put(client);
 }
+EXPORT_SYMBOL(ion_client_destroy);
 
 int ion_handle_get_flags(struct ion_client *client, struct ion_handle *handle,
 			unsigned long *flags)
@@ -1684,7 +1693,6 @@ int ion_secure_heap(struct ion_device *dev, int heap_id)
 	mutex_unlock(&dev->lock);
 	return ret_val;
 }
-EXPORT_SYMBOL(ion_secure_heap);
 
 int ion_unsecure_heap(struct ion_device *dev, int heap_id)
 {
@@ -1711,7 +1719,6 @@ int ion_unsecure_heap(struct ion_device *dev, int heap_id)
 	mutex_unlock(&dev->lock);
 	return ret_val;
 }
-EXPORT_SYMBOL(ion_unsecure_heap);
 
 static int ion_debug_leak_show(struct seq_file *s, void *unused)
 {
