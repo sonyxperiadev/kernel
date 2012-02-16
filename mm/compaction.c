@@ -281,7 +281,7 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 		 */
 		pageblock_nr = low_pfn >> pageblock_order;
 		if (!cc->sync && last_pageblock_nr != pageblock_nr &&
-		    migrate_async_suitable(get_pageblock_migratetype(page))) {
+		    !migrate_async_suitable(get_pageblock_migratetype(page))) {
 			low_pfn += pageblock_nr_pages;
 			low_pfn = ALIGN(low_pfn, pageblock_nr_pages) - 1;
 			last_pageblock_nr = pageblock_nr;

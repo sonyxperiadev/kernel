@@ -272,7 +272,7 @@ static unsigned long __init cma_early_get_total_pages(void)
  *dma_contiguous_reserve() - reserve area for contiguous memory handling
  *@limit: End address of the reserved memory (optional, 0 for any).
  *
- * This funtion reserves memory from early allocator. It should be
+ *This function reserves memory from early allocator. It should be
  *called by arch specific code once the early allocator (memblock or bootmem)
  *has been activated and all other subsystems have already allocated/reserved
  *memory.
@@ -376,7 +376,7 @@ done:
 
 #endif /* CONFIG_CMA_STATS */
 
-static int cma_activate_area(unsigned long base_pfn, unsigned long count)
+static __init int cma_activate_area(unsigned long base_pfn, unsigned long count)
 {
 	unsigned long pfn = base_pfn;
 	unsigned i = count >> pageblock_order;
@@ -398,7 +398,8 @@ static int cma_activate_area(unsigned long base_pfn, unsigned long count)
 	return 0;
 }
 
-static struct cma *cma_create_area(unsigned long base_pfn, unsigned long count)
+static __init struct cma *cma_create_area(unsigned long base_pfn,
+			unsigned long count)
 {
 	int bitmap_size = BITS_TO_LONGS(count) * sizeof(long);
 	struct cma *cma;
@@ -486,7 +487,7 @@ core_initcall(cma_init_reserved_areas);
  *@start: Start address of the reserved memory (optional, 0 for any).
  *@limit: End address of the reserved memory (optional, 0 for any).
  *
- * This funtion reserves memory for specified device. It should be
+ * This function reserves memory for specified device. It should be
  *called by board specific code when early allocator (memblock or bootmem)
  *is still activate.
  */
@@ -552,9 +553,7 @@ int __init dma_declare_contiguous(struct device *dev, unsigned long size,
 	pr_info("CMA: reserved %ld MiB at %08lx\n", size / SZ_1M,
 		(unsigned long)base);
 
-	/*
-	 * Architecture specific contiguous memory fixup.
-	 */
+	/* Architecture specific contiguous memory fixup. */
 	dma_contiguous_early_fixup(base, size);
 	return 0;
 err:
@@ -684,7 +683,7 @@ static int find_best_area(struct cma *cma, int count,
  *@count: Requested number of pages.
  *@align: Requested alignment of pages (in PAGE_SIZE order).
  *
- * This funtion allocates memory buffer for specified device. It uses
+ *This function allocates memory buffer for specified device. It uses
  *device specific contiguous memory area if available or the default
  *global one. Requires architecture specific get_dev_cma_area() helper
  *function.
@@ -856,7 +855,7 @@ error:
  *@count: Number of allocated pages.
  *
  * This funtion releases memory allocated by dma_alloc_from_contiguous().
- * It return 0 when provided pages doen't belongs to contiguous area and
+ * It returns 0 when provided pages do not belong to contiguous area and
  * 1 on success.
  */
 int dma_release_from_contiguous(struct device *dev, struct page *pages,

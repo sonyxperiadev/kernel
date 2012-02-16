@@ -722,9 +722,7 @@ void __meminit __free_pages_bootmem(struct page *page, unsigned int order)
 }
 
 #ifdef CONFIG_CMA
-/*
- * Free whole pageblock and set it's migration type to MIGRATE_CMA.
- */
+/* Free whole pageblock and set it's migration type to MIGRATE_CMA. */
 void __init init_cma_reserved_pageblock(struct page *page)
 {
 	unsigned i = pageblock_nr_pages;
@@ -5199,6 +5197,11 @@ void setup_per_zone_wmarks(void)
 
 		zone->watermark[WMARK_LOW]  = min_wmark_pages(zone) + (tmp >> 2);
 		zone->watermark[WMARK_HIGH] = min_wmark_pages(zone) + (tmp >> 1);
+#ifdef CONFIG_CMA
+		zone->watermark[WMARK_MIN] += zone->min_cma_pages;
+		zone->watermark[WMARK_LOW] += zone->min_cma_pages;
+		zone->watermark[WMARK_HIGH] += zone->min_cma_pages;
+#endif
 		setup_zone_migrate_reserve(zone);
 		spin_unlock_irqrestore(&zone->lock, flags);
 	}
@@ -5780,13 +5783,15 @@ static int __reclaim_pages(struct zone *zone, gfp_t gfp_mask, int count)
 	struct zonelist *zonelist = node_zonelist(0, gfp_mask);
 	int did_some_progress = 0;
 	int order = 1;
-	unsigned long watermark;
+	unsigned long watermark, flags;
 
 	/*
 	 * Increase level of watermarks to force kswapd do his job
-	 * to stabilize at new watermark level.
+	 * to stabilise at new watermark level.
 	 */
-	min_free_kbytes += count * PAGE_SIZE / 1024;
+	spin_lock_irqsave(&zone->lock, flags);
+	zone->min_cma_pages += count;
+	spin_unlock_irqrestore(&zone->lock, flags);
 	setup_per_zone_wmarks();
 
 	/* Obey watermarks as if the page was being allocated */
@@ -5803,7 +5808,9 @@ static int __reclaim_pages(struct zone *zone, gfp_t gfp_mask, int count)
 	}
 
 	/* Restore original watermark levels. */
-	min_free_kbytes -= count * PAGE_SIZE / 1024;
+	spin_lock_irqsave(&zone->lock, flags);
+	zone->min_cma_pages -= count;
+	spin_unlock_irqrestore(&zone->lock, flags);
 	setup_per_zone_wmarks();
 
 	return count;
@@ -5874,7 +5881,7 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	 * aligned blocks that are marked as MIGRATE_ISOLATE.  What's
 	 * more, all pages in [start, end) are free in page allocator.
 	 * What we are going to do is to allocate all pages from
-	 * [start, end) (that is remove them from page allocater).
+	 * [start, end) (that is remove them from page allocator).
 	 *
 	 * The only problem is that pages at the beginning and at the
 	 * end of interesting range may be not aligned with pages that

@@ -340,6 +340,13 @@ struct zone {
 	/* see spanned/present_pages for more description */
 	seqlock_t		span_seqlock;
 #endif
+#ifdef CONFIG_CMA
+	/*
+	 * CMA needs to increase watermark levels during the allocation
+	 * process to make sure that the system is not starved.
+	 */
+	unsigned long		min_cma_pages;
+#endif
 	struct free_area	free_area[MAX_ORDER];
 
 #ifndef CONFIG_SPARSEMEM
