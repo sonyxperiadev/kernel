@@ -33,7 +33,7 @@ config MFD_BCMPMU
 
 config MFD_BCM_PMU590XX
 	bool "MFD BCM PMU590XX PMIC"
-	depends on MFD_CORE && I2C_BSC 
+	depends on MFD_CORE && I2C_BSC
 	help
 	  Support for the Broadcom PMIC.
 
@@ -57,13 +57,6 @@ config MFD_BCM59039
 	default n
 	help
 	  This enables PMU driver to support BCM59039.
-
-config BCM59039_VER_C0
-	bool "PMU BCM59039 C0 Support"
-	depends on MFD_BCMPMU
-	default n
-	help
-	  This enables PMU driver to support BCM59039 C0 chip.
 
 config MFD_BCM_PWRMGR_SW_SEQUENCER
 	bool "MFD BCM POWER MANAGER I2C SEQUENCER Support"

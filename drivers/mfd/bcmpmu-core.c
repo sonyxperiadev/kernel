@@ -460,9 +460,26 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *root_dir = NULL;
 #endif
-	bcmpmu->regmap = bcmpmu_get_regmap();
-
 	printk(KERN_INFO "%s: called.\n", __func__);
+	ret = bcmpmu_init_pmurev_info(bcmpmu);
+	if (ret < 0) {
+		dev_err(bcmpmu->dev, "Failed to init PMU rev info: %d\n", ret);
+		goto err;
+	} else {
+		printk(KERN_INFO "%s: ---- pmu revision info -----\n",
+								__func__);
+		printk(KERN_INFO "PMU Gen id = 0x%x\n",
+					 bcmpmu->rev_info.gen_id);
+		printk(KERN_INFO "PMU Project id = 0x%x\n",
+						bcmpmu->rev_info.prj_id);
+		printk(KERN_INFO "PMU Digital Revison = 0x%x\n",
+					bcmpmu->rev_info.dig_rev);
+		printk(KERN_INFO "PMU Analog Revision = 0x%x\n",
+					bcmpmu->rev_info.ana_rev);
+	}
+
+	bcmpmu->regmap = bcmpmu_get_regmap(bcmpmu);
+
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_PMUID, &val, 0xffffffff);
 	if (ret < 0) {
 		dev_err(bcmpmu->dev, "Failed to read ID: %d\n", ret);

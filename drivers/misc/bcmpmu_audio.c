@@ -196,7 +196,6 @@ void bcmpmu_ihf_power(bool on)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	struct bcmpmu_rw_data reg;
-	unsigned int val;
 	printk(KERN_WARNING "%s:  ######### ON = %d\n", __func__, on);
 	mutex_lock(&bcmpmu_audio->lock);
 	if (on) {
@@ -634,7 +633,6 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_audio *pdata;
 	struct bcmpmu_rw_data reg;
-	unsigned int val;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *audio_dir = NULL, *hs_gain = NULL, *ihf_gain =
 	    NULL, *hs_on = NULL, *ihf_on = NULL;

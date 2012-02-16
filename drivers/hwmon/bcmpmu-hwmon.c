@@ -1226,9 +1226,9 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	mutex_init(&padc->lock);
 	mutex_init(&padc->cal_lock);
 	padc->bcmpmu = bcmpmu;
-	padc->adcmap = bcmpmu_get_adcmap();
-	padc->adcunit = bcmpmu_get_adcunit();
-	padc->ctrlmap = bcmpmu_get_adc_ctrl_map();
+	padc->adcmap = bcmpmu_get_adcmap(bcmpmu);
+	padc->adcunit = bcmpmu_get_adcunit(bcmpmu);
+	padc->ctrlmap = bcmpmu_get_adc_ctrl_map(bcmpmu);
 	padc->btmap = pdata->batt_temp_map;
 	padc->btmap_len = (int)pdata->batt_temp_map_len;
 	padc->rtmreq = NULL;
@@ -1265,7 +1265,7 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 		pr_hwmon(ERROR, "%s failed to alloc mem.\n", __func__);
 		return -ENOMEM;
 	}
-	penv->envregmap = bcmpmu_get_envregmap(&penv->env_size);
+	penv->envregmap = bcmpmu_get_envregmap(bcmpmu, &penv->env_size);
 	envregs = kzalloc((penv->env_size * sizeof(int)), GFP_KERNEL);
 	if (envregs == NULL) {
 		pr_hwmon(ERROR, "%s failed to alloc mem.\n", __func__);

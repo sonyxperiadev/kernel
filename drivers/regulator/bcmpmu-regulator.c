@@ -351,8 +351,8 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 	/*
 	* register regulator
 	*/
-	bcmpmu->rgltr_desc = bcmpmu_rgltr_desc();
-	bcmpmu->rgltr_info = bcmpmu_rgltr_info();
+	bcmpmu->rgltr_desc = bcmpmu_rgltr_desc(bcmpmu);
+	bcmpmu->rgltr_info = bcmpmu_rgltr_info(bcmpmu);
 	if ((bcmpmu->rgltr_info == NULL) || (bcmpmu->rgltr_desc == NULL))
 		pr_info(KERN_ERR "%s: regulator info and desc not avail.\n",
 			__func__);

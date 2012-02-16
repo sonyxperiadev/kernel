@@ -325,8 +325,8 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	bcmpmu->unregister_irq = bcmpmu_unregister_irq;
 	bcmpmu->mask_irq = bcmpmu_mask_irq;
 	bcmpmu->unmask_irq = bcmpmu_unmask_irq;
-	idata->irqmap = bcmpmu_get_irqmap();
-	idata->irqregmap = bcmpmu_get_irqregmap(&idata->irqreg_size);
+	idata->irqmap = bcmpmu_get_irqmap(bcmpmu);
+	idata->irqregmap = bcmpmu_get_irqregmap(bcmpmu, &idata->irqreg_size);
 
 	for (i = 0; i < PMU_IRQ_MAX; i++) {
 		idata->irq_cb[i].callback = NULL;

@@ -728,7 +728,7 @@ struct bcmpmu_rw_data_ltp{
 	unsigned int map;
 	unsigned int addr;
 	unsigned int val[16];
-	unsigned int mask;	
+	unsigned int mask;
 	unsigned int len;
 };
 
@@ -886,6 +886,16 @@ struct bcmpmu_wd_setting {
 	unsigned int watchdog_timeout;
 };
 
+/**
+ * PMU revsion information
+ */
+struct bcmpmu_rev_info {
+	u8 gen_id; /* Generation id */
+	u8 prj_id; /* Project id */
+	u8 dig_rev; /* Digital revision */
+	u8 ana_rev; /* Analog revision */
+};
+
 struct bcmpmu_platform_data;
 struct bcmpmu {
 	struct device *dev;
@@ -901,7 +911,7 @@ struct bcmpmu {
 	void *eminfo;
 	void *ponkeyinfo;
 	void *rpcinfo;
-
+	struct bcmpmu_rev_info rev_info;
 	/* reg access */
 	int (*read_dev) (struct bcmpmu *bcmpmu, int reg, unsigned int *val,
 			 unsigned int mask);
@@ -1006,7 +1016,7 @@ struct bcmpmu_platform_data {
 	int pa_temp_voltmap_len;
 	struct bcmpmu_temp_map *x32_temp_voltmap;
 	int x32_temp_voltmap_len;
-	struct bcmpmu_temp_map *bom_map;
+	struct bcmpmu_bom_map *bom_map;
 	int bom_map_len;
 
 	struct bcmpmu_voltcap_map *batt_voltcap_map;
@@ -1048,17 +1058,21 @@ struct bcmpmu_fg {
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
 int bcmpmu_sel_adcsync(enum bcmpmu_adc_timing_t timing);
 
-const struct bcmpmu_reg_map *bcmpmu_get_regmap(void);
-const struct bcmpmu_irq_map *bcmpmu_get_irqmap(void);
-const struct bcmpmu_adc_map *bcmpmu_get_adcmap(void);
-struct bcmpmu_adc_unit *bcmpmu_get_adcunit(void);
-const struct bcmpmu_reg_map *bcmpmu_get_irqregmap(int *len);
-const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(void);
-const struct bcmpmu_env_info *bcmpmu_get_envregmap(int *len);
-const int *bcmpmu_get_usb_id_map(int *len);
+int bcmpmu_init_pmurev_info(struct bcmpmu *bcmpmu);
+const struct bcmpmu_reg_map *bcmpmu_get_pmurev_regmap(struct bcmpmu *bcmpmu);
+const struct bcmpmu_reg_map *bcmpmu_get_regmap(struct bcmpmu *bcmpmu);
+const struct bcmpmu_irq_map *bcmpmu_get_irqmap(struct bcmpmu *bcmpmu);
+const struct bcmpmu_adc_map *bcmpmu_get_adcmap(struct bcmpmu *bcmpmu);
+struct bcmpmu_adc_unit *bcmpmu_get_adcunit(struct bcmpmu *bcmpmu);
+const struct bcmpmu_reg_map *bcmpmu_get_irqregmap(struct bcmpmu *bcmpmu,
+								int *len);
+const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(struct bcmpmu *bcmpmu);
+const struct bcmpmu_env_info *bcmpmu_get_envregmap(struct bcmpmu *bcmpmu,
+								int *len);
+const int *bcmpmu_get_usb_id_map(struct bcmpmu *bcmpmu, int *len);
 
-struct regulator_desc *bcmpmu_rgltr_desc(void);
-struct bcmpmu_reg_info *bcmpmu_rgltr_info(void);
+struct regulator_desc *bcmpmu_rgltr_desc(struct bcmpmu *bcmpmu);
+struct bcmpmu_reg_info *bcmpmu_rgltr_info(struct bcmpmu *bcmpmu);
 
 void bcmpmu_reg_dev_init(struct bcmpmu *bcmpmu);
 void bcmpmu_reg_dev_exit(struct bcmpmu *bcmpmu);

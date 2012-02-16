@@ -537,11 +537,11 @@ struct bcmpmu_reg_info bcm59055_register_info[BCMPMU_REGULATOR_MAX] = {
 				},
 };
 
-struct regulator_desc *bcmpmu_rgltr_desc(void)
+struct regulator_desc *bcmpmu_rgltr_desc(struct bcmpmu *bcmpmu)
 {
 	return bcm59055_desc;
 }
-struct bcmpmu_reg_info *bcmpmu_rgltr_info(void)
+struct bcmpmu_reg_info *bcmpmu_rgltr_info(struct bcmpmu *bcmpmu)
 {
 	return bcm59055_register_info;
 }

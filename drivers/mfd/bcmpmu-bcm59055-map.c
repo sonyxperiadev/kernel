@@ -693,33 +693,34 @@ static const int bcm59055_usb_id_map[PMU_USB_ID_LVL_MAX] = {
 	[7] = PMU_USB_ID_FLOAT,
 };
 
-const struct bcmpmu_reg_map *bcmpmu_get_regmap(void)
+const struct bcmpmu_reg_map *bcmpmu_get_regmap(struct bcmpmu *bcmpmu)
 {
 	return bcm59055_reg_map;
 }
 
-const struct bcmpmu_irq_map *bcmpmu_get_irqmap(void)
+const struct bcmpmu_irq_map *bcmpmu_get_irqmap(struct bcmpmu *bcmpmu)
 {
 	return bcm59055_irq_map;
 }
 
-const struct bcmpmu_adc_map *bcmpmu_get_adcmap(void)
+const struct bcmpmu_adc_map *bcmpmu_get_adcmap(struct bcmpmu *bcmpmu)
 {
 	return bcm59055_adc_map;
 }
 
-struct bcmpmu_adc_unit *bcmpmu_get_adcunit(void)
+struct bcmpmu_adc_unit *bcmpmu_get_adcunit(struct bcmpmu *bcmpmu)
 {
 	return bcm59055_adc_unit;
 }
 
-const struct bcmpmu_reg_map *bcmpmu_get_irqregmap(int *len)
+const struct bcmpmu_reg_map *bcmpmu_get_irqregmap(struct bcmpmu *bcmpmu,
+			int *len)
 {
 	*len = PMU_IRG_REG_MAX;
 	return bcm59055_irq_reg_map;
 }
 
-const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(void)
+const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(struct bcmpmu *bcmpmu)
 {
 	return bcm59055_adc_ctrl_map;
 }
@@ -729,7 +730,8 @@ int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu)
 	return 0;
 }
 
-const struct bcmpmu_env_info *bcmpmu_get_envregmap(int *len)
+const struct bcmpmu_env_info *bcmpmu_get_envregmap(struct bcmpmu *bcmpmu,
+	 int *len)
 {
 	*len = PMU_ENV_REG_MAX;
 	return bcm59055_env_reg_map;
@@ -740,11 +742,45 @@ int bcmpmu_sel_adcsync(enum bcmpmu_adc_timing_t timing)
 	return 0;
 }
 
-const int *bcmpmu_get_usb_id_map(int *len)
+const int *bcmpmu_get_usb_id_map(struct bcmpmu *bcmpmu, int *len)
 {
 	*len = PMU_USB_ID_LVL_MAX;
 	return bcm59055_usb_id_map;
 }
+
+int bcmpmu_init_pmurev_info(struct bcmpmu *bcmpmu)
+{
+	int val;
+	int ret;
+
+	ret = bcmpmu->read_dev_drct(bcmpmu,
+				bcm59055_reg_map[PMU_REG_PMUGID].map,
+				bcm59055_reg_map[PMU_REG_PMUGID].addr, &val,
+				bcm59055_reg_map[PMU_REG_PMUGID].mask);
+	if (unlikely(ret))
+		return ret;
+	bcmpmu->rev_info.gen_id = (u8)val;
+
+	ret = bcmpmu->read_dev_drct(bcmpmu, bcm59055_reg_map[PMU_REG_PMUID].map,
+				bcm59055_reg_map[PMU_REG_PMUID].addr, &val,
+				bcm59055_reg_map[PMU_REG_PMUID].mask);
+	if (unlikely(ret))
+		return ret;
+	bcmpmu->rev_info.prj_id = (u8)val;
+
+	ret = bcmpmu->read_dev_drct(bcmpmu,
+				bcm59055_reg_map[PMU_REG_PMUREV].map,
+				bcm59055_reg_map[PMU_REG_PMUREV].addr, &val,
+				bcm59055_reg_map[PMU_REG_PMUREV].mask);
+
+	if (unlikely(ret))
+		return ret;
+	bcmpmu->rev_info.dig_rev = ((u8)val) & 0xF;
+	bcmpmu->rev_info.ana_rev = (((u8)val) >> 4) & 0xF;
+
+	return ret;
+}
+
 
 MODULE_DESCRIPTION("BCM590XX PMIC bcm59055 driver");
 MODULE_LICENSE("GPL");

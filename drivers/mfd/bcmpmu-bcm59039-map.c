@@ -28,7 +28,10 @@
 #define PMU_ENV_REG_MAX		7
 #define PMU_USB_ID_LVL_MAX	2
 
-static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
+#define BCM59039_CO_DIG_REV	3
+#define BCM59039_CO_ANA_REV	3
+
+static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_SMPLCTRL] =		{.map = 0x00, .addr = 0x06, .mask = 0xFF, .ro = 0},
 	[PMU_REG_WRLOCKKEY] =		{.map = 0x00, .addr = 0x07, .mask = 0xFF, .ro = 0},
 	[PMU_REG_WRPROEN] =		{.map = 0x00, .addr = 0x08, .mask = 0xFF, .ro = 0},
@@ -51,13 +54,10 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_RTCYR_ALM] =		{.map = 0x00, .addr = 0x2C, .mask = 0xFF, .ro = 0},
 	[PMU_REG_RTC_CORE] =		{.map = 0x00, .addr = 0x2D, .mask = 0xFF, .ro = 0},
 	[PMU_REG_RTC_C2C1_XOTRIM] =	{.map = 0x00, .addr = 0x2E, .mask = 0xFF, .ro = 0},
-#ifdef CONFIG_BCM59039_VER_C0
+/*init C0 values by default */
 	[PMU_REG_RFOPMODCTRL] =		{.map = 0x00, .addr = 0xA2, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HV1OPMODCTRL] =	{.map = 0x00, .addr = 0xA0, .mask = 0xFF, .ro = 0},
-#else
-	[PMU_REG_RFOPMODCTRL] =		{.map = 0x00, .addr = 0xA0, .mask = 0xFF, .ro = 0},
-	[PMU_REG_HV1OPMODCTRL] =	{.map = 0x00, .addr = 0xA2, .mask = 0xFF, .ro = 0},
-#endif
+
 	[PMU_REG_CAMOPMODCTRL] =	{.map = 0x00, .addr = 0xA1, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HV2OPMODCTRL] =	{.map = 0x00, .addr = 0xA3, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HV3OPMODCTRL] =	{.map = 0x00, .addr = 0xA4, .mask = 0xFF, .ro = 0},
@@ -73,13 +73,10 @@ static const struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_IOSROPMODCTRL] =	{.map = 0x00, .addr = 0xAE, .mask = 0xFF, .ro = 0},
 	[PMU_REG_SDSROPMODCTRL] =	{.map = 0x00, .addr = 0xAF, .mask = 0xFF, .ro = 0},
 	[PMU_REG_ASROPMODCTRL] =	{.map = 0x00, .addr = 0xB0, .mask = 0xFF, .ro = 0},
-#ifdef CONFIG_BCM59039_VER_C0
+	/*init C0 values by default */
 	[PMU_REG_RFLDOCTRL] =		{.map = 0x00, .addr = 0xB3, .mask = 0x07, .ro = 0},
 	[PMU_REG_HVLDO1CTRL] =		{.map = 0x00, .addr = 0xB1, .mask = 0x07, .ro = 0},
-#else
-	[PMU_REG_RFLDOCTRL] =		{.map = 0x00, .addr = 0xB1, .mask = 0x07, .ro = 0},
-	[PMU_REG_HVLDO1CTRL] =		{.map = 0x00, .addr = 0xB3, .mask = 0x07, .ro = 0},
-#endif
+
 	[PMU_REG_CAMLDOCTRL] =		{.map = 0x00, .addr = 0xB2, .mask = 0x07, .ro = 0},
 	[PMU_REG_HVLDO2CTRL] =		{.map = 0x00, .addr = 0xB4, .mask = 0x07, .ro = 0},
 	[PMU_REG_HVLDO3CTRL] =		{.map = 0x00, .addr = 0xB5, .mask = 0x07, .ro = 0},
@@ -430,33 +427,41 @@ static const int bcm59039_usb_id_map[PMU_USB_ID_LVL_MAX] = {
 	[1] = 	PMU_USB_ID_FLOAT,
 };
 
-const struct bcmpmu_reg_map *bcmpmu_get_regmap(void)
+const struct bcmpmu_reg_map *bcmpmu_get_regmap(struct bcmpmu *bcmpmu)
 {
+	if (bcmpmu->rev_info.dig_rev < BCM59039_CO_DIG_REV) {
+		bcm59039_reg_map[PMU_REG_RFLDOCTRL].addr  = 0xB1;
+		bcm59039_reg_map[PMU_REG_HVLDO1CTRL].addr =	0xB3;
+
+		bcm59039_reg_map[PMU_REG_RFOPMODCTRL].addr = 0xA0;
+		bcm59039_reg_map[PMU_REG_HV1OPMODCTRL].addr = 0xA2;
+	}
 	return bcm59039_reg_map;
 }
 
-const struct bcmpmu_irq_map *bcmpmu_get_irqmap(void)
+const struct bcmpmu_irq_map *bcmpmu_get_irqmap(struct bcmpmu *bcmpmu)
 {
 	return bcm59039_irq_map;
 }
 
-const struct bcmpmu_adc_map *bcmpmu_get_adcmap(void)
+const struct bcmpmu_adc_map *bcmpmu_get_adcmap(struct bcmpmu *bcmpmu)
 {
 	return bcm59039_adc_map;
 }
 
-const struct bcmpmu_reg_map *bcmpmu_get_irqregmap(int *len)
+const struct bcmpmu_reg_map *bcmpmu_get_irqregmap(struct bcmpmu *bcmpmu,
+						int *len)
 {
 	*len = PMU_IRG_REG_MAX;
 	return bcm59039_irq_reg_map;
 }
 
-const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(void)
+const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(struct bcmpmu *bcmpmu)
 {
 	return bcm59039_adc_ctrl_map;
 }
 
-struct bcmpmu_adc_unit *bcmpmu_get_adcunit(void)
+struct bcmpmu_adc_unit *bcmpmu_get_adcunit(struct bcmpmu *bcmpmu)
 {
 	return NULL;
 }
@@ -466,7 +471,8 @@ int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu)
 	return 0;
 }
 
-const struct bcmpmu_env_info *bcmpmu_get_envregmap(int *len)
+const struct bcmpmu_env_info *bcmpmu_get_envregmap(struct bcmpmu *bcmpmu,
+					int *len)
 {
 	*len = PMU_ENV_REG_MAX;
 	return bcm59039_env_reg_map;
@@ -477,12 +483,44 @@ int bcmpmu_sel_adcsync(enum bcmpmu_adc_timing_t timing)
 	return 0;
 }
 
-const int *bcmpmu_get_usb_id_map(int *len)
+const int *bcmpmu_get_usb_id_map(struct bcmpmu *bcmpmu, int *len)
 {
 	*len = PMU_USB_ID_LVL_MAX;
 	return bcm59039_usb_id_map;
 }
 
+int bcmpmu_init_pmurev_info(struct bcmpmu *bcmpmu)
+{
+	int val;
+	int ret;
+
+	ret = bcmpmu->read_dev_drct(bcmpmu,
+				bcm59039_reg_map[PMU_REG_PMUGID].map,
+				bcm59039_reg_map[PMU_REG_PMUGID].addr, &val,
+				bcm59039_reg_map[PMU_REG_PMUGID].mask);
+	if (unlikely(ret))
+		return ret;
+	bcmpmu->rev_info.gen_id = (u8)val;
+
+	ret = bcmpmu->read_dev_drct(bcmpmu, bcm59039_reg_map[PMU_REG_PMUID].map,
+				bcm59039_reg_map[PMU_REG_PMUID].addr, &val,
+				bcm59039_reg_map[PMU_REG_PMUID].mask);
+	if (unlikely(ret))
+		return ret;
+	bcmpmu->rev_info.prj_id = (u8)val;
+
+	ret = bcmpmu->read_dev_drct(bcmpmu,
+				bcm59039_reg_map[PMU_REG_PMUREV].map,
+				bcm59039_reg_map[PMU_REG_PMUREV].addr, &val,
+				bcm59039_reg_map[PMU_REG_PMUREV].mask);
+
+	if (unlikely(ret))
+		return ret;
+	bcmpmu->rev_info.dig_rev = ((u8)val) & 0xF;
+	bcmpmu->rev_info.ana_rev = (((u8)val) >> 4) & 0xF;
+
+	return ret;
+}
 
 MODULE_DESCRIPTION("BCM590XX PMIC bcm59039 driver");
 MODULE_LICENSE("GPL");
