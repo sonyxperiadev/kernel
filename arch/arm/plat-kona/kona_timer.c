@@ -875,7 +875,7 @@ static inline void __disable_channel(void __iomem *reg_base, int ch_num)
 static inline unsigned long __get_counter (void __iomem *reg_base)
 {
 	unsigned long prev;
-	volatile unsigned long cur;
+	unsigned long cur;
 
 	/* If the CPU is Rhea B1 and if the counter read call is for HUB timer
 	 * then we need to read the counter until we get the same value for
