@@ -697,6 +697,11 @@ typedef struct dwc_otg_core_params {
 	 */
 	int32_t otg_ver;
 
+	/** OTG Support
+	 * 0 - OTG support disabled
+	 * 1 - OTG support enabled
+	 */
+	int32_t otg_supp_enable;
 } dwc_otg_core_params_t;
 
 #ifdef DEBUG

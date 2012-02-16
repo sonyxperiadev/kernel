@@ -173,6 +173,7 @@ struct dwc_otg_driver_module_params {
 	int32_t stop_phy_clk;
 	int32_t otg_ver;
 	int32_t adp_enable;
+	int32_t otg_enable;
 };
 
 static struct dwc_otg_driver_module_params dwc_otg_module_params = {
@@ -262,6 +263,7 @@ static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.otg_ver = 0,
 #endif
 	.adp_enable = -1,
+	.otg_enable = 0, /* Disabled by default */
 };
 
 /**
@@ -551,6 +553,13 @@ static int set_parameters(dwc_otg_core_if_t *core_if)
 						 dwc_otg_module_params.
 						 adp_enable);
 	}
+	if (dwc_otg_module_params.otg_enable != -1) {
+		retval +=
+		    dwc_otg_set_param_otg_enable(core_if,
+						 dwc_otg_module_params.
+						 otg_enable);
+	}
+
 	return retval;
 }
 
@@ -1303,6 +1312,8 @@ module_param_named(adp_enable, dwc_otg_module_params.adp_enable, int, 0444);
 MODULE_PARM_DESC(adp_enable, "ADP Enable 0=ADP Disabled 1=ADP Enabled");
 module_param_named(otg_ver, dwc_otg_module_params.otg_ver, int, 0444);
 MODULE_PARM_DESC(otg_ver, "OTG revision supported 0=OTG 1.3 1=OTG 2.0");
+module_param_named(otg_enable, dwc_otg_module_params.otg_enable, int, 0444);
+MODULE_PARM_DESC(otg_enable, "OTG support 0=OTG Disabled 1=OTG Enabled");
 
 /** @page "Module Parameters"
  *
@@ -1619,6 +1630,14 @@ MODULE_PARM_DESC(otg_ver, "OTG revision supported 0=OTG 1.3 1=OTG 2.0");
  USB OTG device.
  - 0: OTG 2.0 support disabled (default)
  - 1: OTG 2.0 support enabled
+ </td></tr>
+
+   <tr>
+ <td>otg_enable</td>
+ <td>Specifies whether OTG is enabled or disabled
+ USB OTG device.
+ - 0: OTG support disabled (default)
+ - 1: OTG support enabled
  </td></tr>
 
 */

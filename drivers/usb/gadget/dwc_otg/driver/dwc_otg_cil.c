@@ -6195,6 +6195,23 @@ int dwc_otg_set_param_adp_enable(dwc_otg_core_if_t *core_if, int32_t val)
 	return retval;
 }
 
+int dwc_otg_set_param_otg_enable(dwc_otg_core_if_t *core_if, int32_t val)
+{
+	int retval = 0;
+	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
+		DWC_WARN("`%d' invalid for parameter `otg_enable'\n", val);
+		return -DWC_E_INVALID;
+	}
+
+	core_if->core_params->otg_supp_enable = val;
+	return retval;
+}
+
+int32_t dwc_otg_get_param_otg_enable(dwc_otg_core_if_t *core_if)
+{
+	return core_if->core_params->otg_supp_enable;
+}
+
 int32_t dwc_otg_get_param_adp_enable(dwc_otg_core_if_t *core_if)
 {
 	return core_if->core_params->adp_supp_enable;

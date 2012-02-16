@@ -472,6 +472,9 @@ extern int dwc_otg_set_param_otg_ver(dwc_otg_core_if_t *core_if, int32_t val);
 extern int32_t dwc_otg_get_param_otg_ver(dwc_otg_core_if_t *core_if);
 #define dwc_param_otg_ver_default 1
 
+extern int dwc_otg_set_param_otg_enable(dwc_otg_core_if_t *core_if, int32_t val);
+extern int32_t dwc_otg_get_param_otg_enable(dwc_otg_core_if_t *core_if);
+
 /** @} */
 
 /** @name Access to registers and bit-fields */
