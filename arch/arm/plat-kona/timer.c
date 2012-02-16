@@ -149,7 +149,7 @@ static void __init gptimer_clockevents_init(void)
 	/* This is to accomodate the polling in kona_timer_set_match_start().
 	 */
 	clockevent_gptimer.min_delta_ns =
-	    clockevent_delta2ns(160, &clockevent_gptimer);
+	    clockevent_delta2ns((CLOCK_TICK_RATE*5)/32000, &clockevent_gptimer);
 #else
 	clockevent_gptimer.min_delta_ns =
 	    clockevent_delta2ns(6, &clockevent_gptimer);
