@@ -215,6 +215,8 @@ static int bam_connection_is_active;
 static int wait_for_ack;
 static struct wake_lock bam_wakelock;
 static int a2_pc_disabled;
+static DEFINE_MUTEX(dfab_status_lock);
+static int dfab_is_on;
 static int wait_for_dfab;
 static struct completion dfab_unvote_completion;
 static DEFINE_SPINLOCK(wakelock_reference_lock);
@@ -1659,18 +1661,36 @@ static void vote_dfab(void)
 	int rc;
 
 	bam_dmux_log("%s\n", __func__);
+	mutex_lock(&dfab_status_lock);
+	if (dfab_is_on) {
+		bam_dmux_log("%s: dfab is already on\n", __func__);
+		mutex_unlock(&dfab_status_lock);
+		return;
+	}
 	rc = clk_enable(dfab_clk);
 	if (rc)
 		DMUX_LOG_KERR("bam_dmux vote for dfab failed rc = %d\n", rc);
+	dfab_is_on = 1;
 	rc = clk_prepare_enable(xo_clk);
 	if (rc)
 	       DMUX_LOG_KERR("bam_dmux vote for xo failed rc = %d\n", rc);
+	mutex_unlock(&dfab_status_lock);
 }
 
 static void unvote_dfab(void)
 {
 	bam_dmux_log("%s\n", __func__);
+	mutex_lock(&dfab_status_lock);
+	if (!dfab_is_on) {
+		DMUX_LOG_KERR("%s: dfab is already off\n", __func__);
+		dump_stack();
+		mutex_unlock(&dfab_status_lock);
+		return;
+	}
+	clk_disable(dfab_clk);
 	clk_disable_unprepare(xo_clk);
+	dfab_is_on = 0;
+	mutex_unlock(&dfab_status_lock);
 }
 
 /* reference counting wrapper around wakelock */
