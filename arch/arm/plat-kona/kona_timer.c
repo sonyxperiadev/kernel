@@ -30,6 +30,7 @@
 #include <linux/err.h>
 #include <linux/clk.h>
 
+#include <plat/cpu.h>
 #include <mach/kona_timer.h>
 #include <mach/io.h>
 #include <mach/io_map.h>
@@ -873,11 +874,30 @@ static inline void __disable_channel(void __iomem *reg_base, int ch_num)
 
 static inline unsigned long __get_counter (void __iomem *reg_base)
 {
-	/*
-	 * For now this is a simple read, for Rhea B1 we'll implement the
-	 * debouncing here
+	unsigned long prev;
+	volatile unsigned long cur;
+
+	/* If the CPU is Rhea B1 and if the counter read call is for HUB timer
+	 * then we need to read the counter until we get the same value for
+	 * two consecutive reads. That is the Hub timer value may not be
+	 * synchronized especially after WFI. Since on B1 there is a "force
+	 * read" option for this timer we might read while there is a
+	 * transition of counter in progress, so this debouncing is required.
+	 * Refer - HWRHEA2045
 	 */
-	return (readl(reg_base + KONA_GPTIMER_STCLO_OFFSET));
+	if (cpu_is_rhea_B1() && (reg_base == IOMEM(KONA_TMR_HUB_VA))) {
+		prev = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
+		do {
+			cur = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
+			if (cur != prev)
+				prev=cur;
+			else
+				break;
+		} while(1);
+		return cur;
+	} else {
+		return (readl(reg_base + KONA_GPTIMER_STCLO_OFFSET));
+	}
 }
 
 static inline int irq_to_ch (int irq)
