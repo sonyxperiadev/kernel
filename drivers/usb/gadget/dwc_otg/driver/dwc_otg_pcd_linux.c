@@ -1427,8 +1427,8 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	/* Schedule a work item to shutdown the core */
 	DWC_WORKQ_SCHEDULE(gadget_wrapper->pcd->core_if->wq_otg, w_shutdown_core,
 				   gadget_wrapper->pcd->core_if, "Shutdown core");
+	gadget_wrapper->gadget.dev.driver = NULL;
 	gadget_wrapper->driver = 0;
-	device_del(&gadget_wrapper->gadget.dev);
 
 #ifdef CONFIG_USB_OTG_UTILS
 	if (gadget_wrapper->pcd->core_if->xceiver->set_peripheral)
