@@ -88,12 +88,14 @@ static void __init rhea_l2x0_init(void)
 
 static int __init rhea_arch_init(void)
 {
+	int ret = 0;
+#ifdef CONFIG_ROM_SEC_DISPATCHER
 	void __iomem *scu_base = (void __iomem *)KONA_SCU_VA;
-	int ret;
 
 	ret = smc_init(scu_base);
 	if (ret < 0)
 		pr_err("smc_init failed\n");
+#endif
 #ifdef CONFIG_CACHE_L2X0
 	rhea_l2x0_init();
 #endif
