@@ -39,10 +39,10 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/gpio.h>
 #include <plat/pi_mgr.h>
+#include <plat/scu.h>
 #include <linux/dma-mapping.h>
 #include <linux/kthread.h>
 #include <mach/io_map.h>
-#include <mach/rdb/brcm_rdb_scu.h>
 
 #define V3D_DEV_NAME	"v3d"
 
@@ -1032,20 +1032,6 @@ static int disable_v3d_clock(void)
 	return rc;
 }
 
-static int pm_enable_scu_standby(bool enable)
-{
-	u32 reg_val = 0;
-	reg_val = readl(KONA_SCU_VA + SCU_CONTROL_OFFSET);
-	if (enable)
-		reg_val |= SCU_CONTROL_SCU_STANDBY_EN_MASK;
-	else
-		reg_val &= ~SCU_CONTROL_SCU_STANDBY_EN_MASK;
-
-	writel(reg_val, KONA_SCU_VA + SCU_CONTROL_OFFSET);
-
-	return 0;
-}
-
 static void v3d_power(int flag)
 {
 	u32 value;
@@ -1059,7 +1045,7 @@ static void v3d_power(int flag)
 		/* Request for SIMPLE wfi */
 		pi_mgr_qos_request_update(&v3d_state.qos_node, 0);
 
-		pm_enable_scu_standby(0);
+		scu_standby(0);
 		mb();
 
 		v3d_is_on = 1;
@@ -1098,7 +1084,7 @@ static void v3d_power(int flag)
 
 		pi_mgr_qos_request_update(&v3d_state.qos_node,
 					  PI_MGR_QOS_DEFAULT_VALUE);
-		pm_enable_scu_standby(1);
+		scu_standby(1);
 
 		disable_v3d_clock();
 	}

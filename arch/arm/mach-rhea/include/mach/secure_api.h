@@ -26,6 +26,6 @@
 #ifndef __ASSEMBLY__
 u32 hw_sec_pub_dispatcher(u32 service, u32 flags, ...);
 u32 hw_sec_rom_pub_bridge(u32 appl_id, u32 flags, va_list v);
-int smc_init(void __iomem *scu_base);
+int smc_init(void);
 #endif
 

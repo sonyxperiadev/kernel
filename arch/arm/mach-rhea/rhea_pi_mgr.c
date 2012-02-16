@@ -34,7 +34,6 @@
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>
-#include <mach/rdb/brcm_rdb_scu.h>
 #include <mach/rdb/brcm_rdb_csr.h>
 #include <linux/delay.h>
 #include <linux/io.h>
@@ -43,6 +42,7 @@
 #include <mach/clock.h>
 #include <mach/pi_mgr.h>
 #include <plat/pwr_mgr.h>
+#include <plat/scu.h>
 
 #include "pm_params.h"
 
@@ -418,22 +418,6 @@ struct pi* pi_list[] = {
 
 };
 
-#if defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
-static int pm_enable_scu_standby(bool enable)
-{
-    u32 reg_val = 0;
-    reg_val = readl(KONA_SCU_VA + SCU_CONTROL_OFFSET);
-    if(enable)
-		reg_val |= SCU_CONTROL_SCU_STANDBY_EN_MASK;
-    else
-		reg_val &= ~SCU_CONTROL_SCU_STANDBY_EN_MASK;
-
-    writel(reg_val, KONA_SCU_VA + SCU_CONTROL_OFFSET);
-
-    return 0;
-}
-#endif
-
 #if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 /* JIRA HWRHEA-1689, HWRHEA-1739 we confirmed that there is a bug in Rhea A0 where wrong control signal
 is used to turn on mm power switches which results in mm clamps getting released before mm subsystem
@@ -483,7 +467,7 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 		{
 			if (IS_RETN_POLICY(p->new_value)) {
 
-				pm_enable_scu_standby(0);
+				scu_standby(0);
 				writel(0xA5A501, KONA_MM_CLK_VA+MM_CLK_MGR_REG_WR_ACCESS_OFFSET);
 				reg_val = readl(KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
 				writel(reg_val|MM_CLK_MGR_REG_MM_DMA_CLKGATE_MM_DMA_AXI_CLK_EN_MASK,
@@ -493,12 +477,11 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 				mb();
 
 				writel(reg_val, KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
-				pm_enable_scu_standby(1);
+				scu_standby(1);
 			}
 
 			if (IS_SHUTDOWN_POLICY(p->new_value)) {
-
-				pm_enable_scu_standby(0);
+				scu_standby(0);
 				writel(0xA5A501, KONA_MM_CLK_VA+MM_CLK_MGR_REG_WR_ACCESS_OFFSET);
 				reg_val = readl(KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
 				writel(reg_val|MM_CLK_MGR_REG_MM_DMA_CLKGATE_MM_DMA_AXI_CLK_EN_MASK,
@@ -508,7 +491,7 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 				mb();
 
 				writel(reg_val, KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
-				pm_enable_scu_standby(1);
+				scu_standby(1);
 			}
 		}
 	} else {

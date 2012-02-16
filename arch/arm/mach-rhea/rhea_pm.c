@@ -17,13 +17,13 @@
 #include <plat/kona_pm.h>
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
+#include <plat/scu.h>
 #include <linux/clk.h>
 #include <asm/io.h>
 #include <mach/io_map.h>
 #include <plat/clock.h>
 #include <linux/err.h>
 #include <linux/debugfs.h>
-#include <mach/rdb/brcm_rdb_scu.h>
 #include <mach/rdb/brcm_rdb_csr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
@@ -213,20 +213,6 @@ static int pm_set_scu_power_mode(u32 mode)
 	return 0;
 }
 
-static int pm_enable_scu_standby(bool enable)
-{
-    u32 reg_val = 0;
-    reg_val = readl(KONA_SCU_VA + SCU_CONTROL_OFFSET);
-    if(enable)
-		reg_val |= SCU_CONTROL_SCU_STANDBY_EN_MASK;
-    else
-		reg_val &= ~SCU_CONTROL_SCU_STANDBY_EN_MASK;
-
-    writel(reg_val, KONA_SCU_VA + SCU_CONTROL_OFFSET);
-
-    return 0;
-}
-
 #ifndef CONFIG_ARCH_RHEA_A0
 static int pm_enable_self_refresh(bool enable)
 {
@@ -252,8 +238,6 @@ static int pm_config_deep_sleep(void)
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
 	clk_set_crystal_pwr_on_idle(true);
-
-	pm_enable_scu_standby(true);
 
 	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 #ifdef CONFIG_ARCH_RHEA_A0

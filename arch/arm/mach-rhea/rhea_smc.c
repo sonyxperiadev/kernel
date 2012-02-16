@@ -22,12 +22,11 @@
 #include <linux/io.h>
 #include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
+#include <plat/scu.h>
 #include <mach/secure_api.h>
-#include <mach/rdb/brcm_rdb_scu.h>
 
 static u32 *smc_buf_p;
 static u32 *smc_buf_v;
-static void __iomem *scu;
 
 struct sec_api {
 	u32 id;        /* Service ID */
@@ -110,7 +109,7 @@ static inline u32 smc(u32 service, u32 flags, u32 args)
 	cp15ctrl = save_cp15ctrl();
 
 	/* Flush caches */
-	writel(0xFF, scu + SCU_INVALIDATE_ALL_OFFSET);
+	scu_invalidate_all();
 	flush_cache_all();
 
 	ret = __smc(service, flags, args);
@@ -150,7 +149,7 @@ u32 hw_sec_pub_dispatcher(u32 service, u32 flags, ...)
 }
 EXPORT_SYMBOL(hw_sec_pub_dispatcher);
 
-int __init smc_init(void __iomem *scu_base)
+int __init smc_init(void)
 {
 	void *v = NULL;
 	dma_addr_t p;
@@ -163,7 +162,6 @@ int __init smc_init(void __iomem *scu_base)
 
 	smc_buf_v = (u32 *) v;
 	smc_buf_p = (u32 *) p;
-	scu = scu_base;
 
 	return 0;
 }

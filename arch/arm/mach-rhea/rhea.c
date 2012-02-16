@@ -34,6 +34,7 @@
 #include <mach/clock.h>
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcmpmu.h>
+#include <plat/scu.h>
 #include <mach/gpio.h>
 #include <mach/pinmux.h>
 #include <mach/kona.h>
@@ -90,9 +91,7 @@ static int __init rhea_arch_init(void)
 {
 	int ret = 0;
 #ifdef CONFIG_ROM_SEC_DISPATCHER
-	void __iomem *scu_base = (void __iomem *)KONA_SCU_VA;
-
-	ret = smc_init(scu_base);
+	ret = smc_init();
 	if (ret < 0)
 		pr_err("smc_init failed\n");
 #endif
@@ -164,7 +163,7 @@ static int __init rhea_init(void)
 	kona_gpio_init(4);
 #endif
 
-
+	scu_init((void __iomem *)KONA_SCU_VA);
 	return 0;
 }
 
