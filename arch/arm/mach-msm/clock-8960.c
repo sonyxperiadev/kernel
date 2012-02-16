@@ -5508,7 +5508,7 @@ static void __init reg_init(void)
 		rmwreg(0x00003C38, SAXI_EN_REG,  0x00003FFF);
 	else
 		rmwreg(0x000003C7, SAXI_EN_REG,  0x00003FFF);
-
+	rcg_clk_disable_hwcg(&mdp_axi_clk.c);
 	/* Enable IMEM's clk_on signal */
 	imem_reg = ioremap(0x04b00040, 4);
 	if (imem_reg) {
