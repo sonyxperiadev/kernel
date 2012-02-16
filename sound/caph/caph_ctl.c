@@ -56,6 +56,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_controller.h"
 #include "audio_caph.h"
 #include "caph_common.h"
+#include "audio_trace.h"
 
 static Boolean isSTIHF = FALSE;
 
@@ -192,7 +193,8 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 			else
 				break;
 
-			DEBUG("VolumeCtrlPut stream state = %d\n",
+			aTrace(LOG_ALSA_INTERFACE,
+					"VolumeCtrlPut stream state = %d\n",
 					pStream->runtime->status->state);
 
 			if (pStream->runtime->status->state ==
@@ -202,7 +204,8 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 				/*
 				 * call audio driver to set volume
 				 */
-				DEBUG("VolumeCtrlPut caling "
+				aTrace(LOG_ALSA_INTERFACE,
+						"VolumeCtrlPut caling "
 				"AUDCTRL_SetPlayVolume pVolume[0] =%d (0.25dB)"
 				", pVolume[1]=%d\n", pVolume[0], pVolume[1]);
 				parm_vol.source =
@@ -230,7 +233,7 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 			 * call audio driver to set volume
 			 */
 
-			DEBUG("VolumeCtrlPut caling "
+			aTrace(LOG_ALSA_INTERFACE, "VolumeCtrlPut caling "
 			"AUDCTRL_SetPlayVolume pVolume[0] =%d (0.25dB), "
 			"pVolume[1]=%d\n", pVolume[0], pVolume[1]);
 			parm_vol.source =
@@ -246,8 +249,9 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 		}
 		break;
 	case CTL_STREAM_PANEL_VOICECALL:
-		DEBUG
-		    ("VolumeCtrlPut pCurSel[1] = %d, pVolume[0] =%d, dev =%d\n",
+		aTrace
+		    (LOG_ALSA_INTERFACE,
+		     "VolumeCtrlPut pCurSel[1] = %d, pVolume[0] =%d, dev =%d\n",
 		     pCurSel[1], pVolume[0], dev);
 
 		/*
@@ -275,7 +279,8 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 			else
 				break;
 
-			DEBUG("VolumeCtrlPut stream state = %d\n",
+			aTrace(LOG_ALSA_INTERFACE,
+					"VolumeCtrlPut stream state = %d\n",
 					pStream->runtime->status->state);
 			if (pStream->runtime->status->state ==
 				SNDRV_PCM_STATE_RUNNING ||
@@ -284,7 +289,8 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 				/*
 				 * call audio driver to set volume
 				 */
-				DEBUG("VolumeCtrlPut caling "
+				aTrace(LOG_ALSA_INTERFACE,
+						"VolumeCtrlPut caling "
 				"AUDCTRL_SetRecordGain pVolume[0] =%d"
 				", pVolume[1]=%d\n",
 				pVolume[0], pVolume[1]);
@@ -375,7 +381,7 @@ static int SelCtrlGet(struct snd_kcontrol *kcontrol,
 	 */
 	pSel = pChip->streamCtl[stream].iLineSelect;
 
-	DEBUG("xnumid=%d xindex=%d", ucontrol->id.numid,
+	aTrace(LOG_ALSA_INTERFACE, "xnumid=%d xindex=%d", ucontrol->id.numid,
 			ucontrol->id.index);
 
 	/*
@@ -440,8 +446,9 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 			pSel[2] = AUDIO_SINK_HANDSET;
 	}
 
-	DEBUG
-	    ("SelCtrlPut stream =%d, pSel[0]=%d, pSel[1]=%d, pSel[2]=%d,\n",
+	aTrace
+	    (LOG_ALSA_INTERFACE,
+	     "SelCtrlPut stream =%d, pSel[0]=%d, pSel[1]=%d, pSel[2]=%d,\n",
 	     stream, pSel[0], pSel[1], pSel[2]);
 
 	switch (stream) {
@@ -456,7 +463,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 		else
 			break;	/* stream is not running, return */
 
-		DEBUG("SetCtrlput stream state = %d\n",
+		aTrace(LOG_ALSA_INTERFACE, "SetCtrlput stream state = %d\n",
 				pStream->runtime->status->state);
 
 		if (pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING
@@ -486,7 +493,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 						 */
 						if (++count ==
 							MAX_PLAYBACK_DEV) {
-							DEBUG("No "
+							aError("No "
 							"device selected by "
 							"the user ?\n");
 							return -EINVAL;
@@ -506,7 +513,8 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 					    && (pChip->streamCtl[stream - 1].
 						dev_prop.p[i + 1].sink ==
 						AUDIO_SINK_HANDSET)) {
-						DEBUG("Stereo IHF, "
+						aTrace(LOG_ALSA_INTERFACE,
+								"Stereo IHF ,"
 							"remove EP path first.\n");
 						parm_spkr.src =
 						    pChip->streamCtl[stream -
@@ -594,7 +602,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 						 1].dev_prop.p[0].sink =
 				    pSel[0];
 			} else {
-				DEBUG
+				aError
 				    ("No device selected by the user ?\n");
 				return -EINVAL;
 			}
@@ -696,9 +704,11 @@ static int SwitchCtrlPut(struct snd_kcontrol *kcontrol,
 		else
 			break;
 
-		DEBUG("SwitchCtrlPut stream state = %d\n",
+		aTrace(LOG_ALSA_INTERFACE,
+				"SwitchCtrlPut stream state = %d\n",
 				pStream->runtime->status->state);
-		DEBUG("SwitchCtrlPut sink = %d, pMute[0] = %d\n",
+		aTrace(LOG_ALSA_INTERFACE,
+				"SwitchCtrlPut sink = %d, pMute[0] = %d\n",
 				pChip->streamCtl[stream - 1].dev_prop.p[0].sink,
 				pMute[0]);
 
@@ -740,7 +750,7 @@ static int SwitchCtrlPut(struct snd_kcontrol *kcontrol,
 		else
 			break;
 
-		DEBUG("SwitchCtrlPut stream state = %d\n",
+		aTrace(LOG_ALSA_INTERFACE, "SwitchCtrlPut stream state = %d\n",
 				pStream->runtime->status->state);
 
 		if (pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING
@@ -909,7 +919,7 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		uinfo->value.integer.max = 15;
 		break;
 	default:
-		DEBUG("Unexpected function code %d\n", function);
+		aWarn("Unexpected function code %d\n", function);
 		break;
 	}
 
@@ -962,7 +972,8 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		    pChip->pi32SpeechMixOption[stream - 1];
 		break;
 	case CTL_FUNCTION_FM_ENABLE:
-		DEBUG("CTL_FUNCTION_FM_ENABLE, status=%d\n",
+		aTrace(LOG_ALSA_INTERFACE,
+				"CTL_FUNCTION_FM_ENABLE, status=%d\n",
 				pChip->iEnableFM);
 		ucontrol->value.integer.value[0] = pChip->iEnableFM;
 		break;
@@ -973,7 +984,8 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		rtn =
 		    AtAudCtlHandler_get(kcontrol->id.index, pChip, info.count,
 					ucontrol->value.integer.value);
-		DEBUG("%s values [%ld %ld %ld %ld %ld %ld %ld]",
+		aTrace(LOG_ALSA_INTERFACE,
+				"%s values [%ld %ld %ld %ld %ld %ld %ld]",
 				__func__, ucontrol->value.integer.value[0],
 				ucontrol->value.integer.value[1],
 				ucontrol->value.integer.value[2],
@@ -1022,12 +1034,13 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 			(void *)ucontrol->value.integer.value);
 		break;
 	case CTL_FUNCTION_APP_SEL:
-		DEBUG("CTL_FUNCTION_APP_SEL, current app =%d\n",
+		aTrace(LOG_ALSA_INTERFACE,
+				"CTL_FUNCTION_APP_SEL, current app =%d\n",
 				pChip->i32CurApp);
 		ucontrol->value.integer.value[0] = pChip->i32CurApp;
 		break;
 	default:
-		DEBUG("Unexpected function code %d\n", function);
+		aWarn("Unexpected function code %d\n", function);
 		break;
 	}
 
@@ -1091,9 +1104,10 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
 				     1].iLineSelect;
 
-		DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ENABLE"
-			"pSel[0] = %d-%d, EnablePhoneCall %d\n",
-			pSel[0], pSel[1], pChip->iEnablePhoneCall);
+		aTrace(LOG_ALSA_INTERFACE,
+				"MiscCtrlPut CTL_FUNCTION_PHONE_ENABLE"
+				"pSel[0] = %d-%d, EnablePhoneCall %d\n",
+				pSel[0], pSel[1], pChip->iEnablePhoneCall);
 		parm_call.new_mic = parm_call.cur_mic = pSel[0];
 		parm_call.new_spkr = parm_call.cur_spkr = pSel[1];
 
@@ -1117,10 +1131,12 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				    streamCtl[CTL_STREAM_PANEL_VOICECALL -
 					      1].iLineSelect;
 
-				DEBUG("MiscCtrlPut pSel[0] = %d "
-					"pMute[0] =%d pMute[1] =%d\n",
-					pSel[0], pChip->iMutePhoneCall[0],
-					pChip->iMutePhoneCall[1]);
+				aTrace(LOG_ALSA_INTERFACE,
+						"MiscCtrlPut pSel[0] = %d "
+						"pMute[0] =%d pMute[1] =%d\n",
+						pSel[0],
+						pChip->iMutePhoneCall[0],
+						pChip->iMutePhoneCall[1]);
 
 				/*
 				 * call audio driver to mute
@@ -1134,9 +1150,10 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		break;
 	case CTL_FUNCTION_PHONE_ECNS_ENABLE:
 		pChip->iEnableECNSPhoneCall = ucontrol->value.integer.value[0];
-		DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ECNS_ENABLE "
-			"pChip->iEnableECNSPhoneCall = %d\n",
-			pChip->iEnableECNSPhoneCall);
+		aTrace(LOG_ALSA_INTERFACE,
+				"MiscCtrlPut CTL_FUNCTION_PHONE_ECNS_ENABLE "
+				"pChip->iEnableECNSPhoneCall = %d\n",
+				pChip->iEnableECNSPhoneCall);
 		parm_ecns.ec_ns = pChip->iEnableECNSPhoneCall;
 		if (!pChip->iEnableECNSPhoneCall) /* disable EC NS */
 			AUDIO_Ctrl_Trigger(ACTION_AUD_DisableECNSTelephony,
@@ -1148,9 +1165,10 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	case CTL_FUNCTION_SPEECH_MIXING_OPTION:
 		pChip->pi32SpeechMixOption[stream - 1] =
 		    ucontrol->value.integer.value[0];
-		DEBUG("MiscCtrlPut CTL_FUNCTION_SPEECH_MIXING_OPTION "
-			"stream = %d, option = %d\n",
-			stream, pChip->pi32SpeechMixOption[stream - 1]);
+		aTrace(LOG_ALSA_INTERFACE,
+				"MiscCtrlPut CTL_FUNCTION_SPEECH_MIXING_OPTION "
+				"stream = %d, option = %d\n",
+				stream, pChip->pi32SpeechMixOption[stream - 1]);
 		break;
 	case CTL_FUNCTION_FM_ENABLE:
 		callMode = pChip->iEnablePhoneCall;
@@ -1158,7 +1176,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		pChip->streamCtl[stream - 1].dev_prop.p[0].source =
 		    AUDIO_SOURCE_I2S;
 		pSel = pChip->streamCtl[stream - 1].iLineSelect;
-		DEBUG("MiscCtrlPut CTL_FUNCTION_FM_ENABLE"
+		aTrace(LOG_ALSA_INTERFACE, "MiscCtrlPut CTL_FUNCTION_FM_ENABLE"
 			"stream = %d, status = %d, pSel[0] = %d-%d\n",
 			stream, pChip->iEnableFM, pSel[0], pSel[1]);
 
@@ -1191,7 +1209,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 							 1].dev_prop.p[0].sink =
 					    pSel[0];
 				} else {
-					DEBUG("No device selected "
+					aError("No device selected "
 						"by the user ?\n");
 					return -EINVAL;
 				}
@@ -1248,7 +1266,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		} else
 			AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra, NULL,
 					   NULL, 0);
-		DEBUG("MiscCtrlPut BypassVibra enable %d, "
+		aTrace(LOG_ALSA_INTERFACE, "MiscCtrlPut BypassVibra enable %d, "
 			"strength %d, direction %d, duration %d.\n",
 			pChip->pi32BypassVibraParam[0],
 			pChip->pi32BypassVibraParam[1],
@@ -1269,7 +1287,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 			isSTIHF = TRUE;/* stereo IHF */
 			AUDCTRL_SetIHFmode(isSTIHF);
 		} else {
-			DEBUG("%s, Invalid value for"
+			aWarn("%s, Invalid value for"
 				"setting IHF mode: %ld, 1-mono, 2-stereo.",
 				__func__, ucontrol->value.integer.value[0]);
 		}
@@ -1285,7 +1303,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		break;
 
 	case CTL_FUNCTION_VOL:
-		DEBUG("CTL_FUNCTION_VOL stream=%d vol0=%ld"
+		aTrace(LOG_ALSA_INTERFACE, "CTL_FUNCTION_VOL stream=%d vol0=%ld"
 				" vol1=%ld\n",	stream,
 				ucontrol->value.integer.value[0],
 				ucontrol->value.integer.value[1]);
@@ -1329,10 +1347,12 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		break;
 
 	case CTL_FUNCTION_SINK_CHG:
-		DEBUG
-		    ("Change sink device stream=%d cmd=%ld sink=%ld\n", stream,
-		     ucontrol->value.integer.value[0],
-		     ucontrol->value.integer.value[1]);
+		aTrace
+			(LOG_ALSA_INTERFACE,
+			 "Change sink device stream=%d"
+			 "cmd=%ld sink=%ld\n", stream,
+			 ucontrol->value.integer.value[0],
+			 ucontrol->value.integer.value[1]);
 		cmd = ucontrol->value.integer.value[0];
 		pSel = pChip->streamCtl[stream - 1].iLineSelect;
 		if (cmd == 0) {	/*add device */
@@ -1344,12 +1364,15 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				} else if (pSel[i] ==
 					   ucontrol->value.integer.value[1]) {
 					indexVal = -1;
-					DEBUG("Device already added "
-					"in the list\n");
+					aTrace(LOG_ALSA_INTERFACE,
+							"Device already added "
+							"in the list\n");
 					break;
 				} else if (++cnt == MAX_PLAYBACK_DEV) {
-					DEBUG("Max devices count "
-					"reached. Cannot add more device\n");
+					aTrace(LOG_ALSA_INTERFACE,
+							"Max devices count "
+							"reached. Cannot add"
+							"more device\n");
 					return -1;
 				}
 			}
@@ -1433,9 +1456,10 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		}
 		break;
 	case CTL_FUNCTION_HW_CTL:
-		DEBUG("CTL_FUNCTION_HW_CTL index %d,parm1=%d,"
-		   "parm2=%d,param3=%d,param4=%d\n",
-		   kcontrol->id.index,
+		aTrace(LOG_ALSA_INTERFACE,
+				"CTL_FUNCTION_HW_CTL index %d,parm1=%d,"
+				"parm2=%d,param3=%d,param4=%d\n",
+				kcontrol->id.index,
 		   (int)ucontrol->value.integer.value[0],
 		   (int)ucontrol->value.integer.value[1],
 		   (int)ucontrol->value.integer.value[2],
@@ -1447,11 +1471,12 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		   (int)ucontrol->value.integer.value[3]);
 	break;
 	case CTL_FUNCTION_APP_SEL:
-		DEBUG("CTL_FUNCTION_APP_SEL curApp=%d, newApp=%d",
-		   (int)pChip->i32CurApp,
-		   (int)ucontrol->value.integer.value[0]);
+	aTrace(LOG_ALSA_INTERFACE,
+			"CTL_FUNCTION_APP_SEL curApp=%d, newApp=%d",
+			(int)pChip->i32CurApp,
+			(int)ucontrol->value.integer.value[0]);
 
-		pChip->i32CurApp = ucontrol->value.integer.value[0];
+	pChip->i32CurApp = ucontrol->value.integer.value[0];
 		/* Make the call to Audio Controller here */
 		parm_setapp.aud_app = (int)ucontrol->value.\
 			integer.value[0]; /* new app */
@@ -1459,7 +1484,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				   NULL, 0);
 		break;
 	default:
-		DEBUG("Unexpected function code %d\n", function);
+		aWarn("Unexpected function code %d\n", function);
 		break;
 	}
 
@@ -1812,7 +1837,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		CAPH_ASSERT(strlen(devSelect.name) < MAX_CTL_NAME_LENGTH);
 		err = snd_ctl_add(card, snd_ctl_new1(&devSelect, pChip));
 		if (err < 0) {
-			DEBUG("Error to add devselect idx=%d\n", idx);
+			aError("Error to add devselect idx=%d\n", idx);
 			return err;
 		}
 
@@ -1856,7 +1881,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 			err =
 			    snd_ctl_add(card, snd_ctl_new1(&kctlVolume, pChip));
 			if (err < 0) {
-				DEBUG("error to add volume for " \
+				aError("error to add volume for " \
 					"idx=%d j=%d err=%d\n", idx, j, err);
 				return err;
 			}
@@ -1878,7 +1903,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 				    snd_ctl_add(card,
 						snd_ctl_new1(&kctlMute, pChip));
 				if (err < 0) {
-					DEBUG("error to add mute for"
+					aError("error to add mute for"
 					" idx=%d j=%d err=%d\n", idx, j, err);
 					return err;
 				}
@@ -1893,7 +1918,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	for (j = 0; j < (sizeof((sgSndCtrls)) / sizeof(sgSndCtrls[0])); j++) {
 		err = snd_ctl_add(card, snd_ctl_new1(&sgSndCtrls[j], pChip));
 		if (err < 0) {
-			DEBUG("error (err=%d) when adding control "
+			aError("error (err=%d) when adding control "
 				"name=%s  index=%d\n", err,
 				sgSndCtrls[j].name, sgSndCtrls[j].index);
 			return err;
@@ -1916,6 +1941,6 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 void caphassert(const char *fcn, int line, const char *expr)
 {
 	int x;
-	pr_err("ASSERTION FAILED, %s:%s:%d %s\n", __FILE__, fcn, line, expr);
+	aError("ASSERTION FAILED, %s:%s:%d %s\n", __FILE__, fcn, line, expr);
 	x = *(int *)0;		/* force proc to exit */
 }

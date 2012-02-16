@@ -49,6 +49,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "osdal_os.h"
 #include "resultcode.h"
 #include "audio_consts.h"
+#include "audio_trace.h"
 
 #include "bcm_fuse_sysparm_CIB.h"
 #include "csl_caph.h"
@@ -292,7 +293,7 @@ static long hwdep_write(struct snd_hwdep *hw, const char __user * buf,
 
 static int hwdep_open(struct snd_hwdep *hw, struct file *file)
 {
-	DEBUG("VoIP_Ioctl_Open\n");
+	aTrace(LOG_ALSA_INTERFACE , "VoIP_Ioctl_Open\n");
 
 	return 0;
 }
@@ -302,7 +303,7 @@ static int hwdep_release(struct snd_hwdep *hw, struct file *file)
 	bcm_caph_hwdep_voip_t *pVoIP;
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
 
-	DEBUG("VoIP_Ioctl_Release\n");
+	aTrace(LOG_ALSA_INTERFACE , "VoIP_Ioctl_Release\n");
 	return 0;
 }
 
@@ -322,14 +323,14 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
 
-	DEBUG("hwdep_ioctl cmd=%d\n", cmd);
+	aTrace(LOG_ALSA_INTERFACE, "hwdep_ioctl cmd=%d\n", cmd);
 
 	switch (cmd) {
 	case VoIP_Ioctl_GetVersion:
 		/* ret = put_user(BrcmAACEncVersion, (int __user *)arg); */
 		break;
 	case VoIP_Ioctl_Start:
-		DEBUG("VoIP_Ioctl_Start\n");
+		aTrace(LOG_ALSA_INTERFACE, "VoIP_Ioctl_Start\n");
 		if (voipInstCnt == 0) {	/* start VoIP only once */
 			BRCM_AUDIO_Param_RateChange_t param_rate_change;
 
@@ -423,13 +424,14 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			pVoIP->status = VoIP_Hwdep_Status_Started;
 		} else {
 			voipInstCnt++;
-			DEBUG("VoIP_Ioctl_Start -> just increment "
-				"the count, voip already started\n");
+			aTrace(LOG_ALSA_INTERFACE,
+					"VoIP_Ioctl_Start -> just increment "
+					"the count, voip already started\n");
 		}
 
 		break;
 	case VoIP_Ioctl_Stop:
-		DEBUG("VoIP_Ioctl_Stop\n");
+		aTrace(LOG_ALSA_INTERFACE, "VoIP_Ioctl_Stop\n");
 
 		if (voipInstCnt == 2)
 			voipInstCnt--;
@@ -448,25 +450,31 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 
 		break;
 	case VoIP_Ioctl_SetSource:
-		DEBUG(" Warning: VoIP_Ioctl_SetSource is depreciated, please "
-			"use mixer control VC-SEL instead\n");
+		aTrace(LOG_ALSA_INTERFACE ,
+				" Warning: VoIP_Ioctl_SetSource"
+				"is depreciated , please"
+				"use mixer control VC-SEL instead\n");
 		break;
 
 	case VoIP_Ioctl_SetSink:
-		DEBUG(" Warning: VoIP_Ioctl_SetSink is depreciated, please "
-			"use mixer control VC-SEL instead\n");
+		aTrace(LOG_ALSA_INTERFACE ,
+				" Warning: VoIP_Ioctl_SetSink"
+				"is depreciated, please"
+				"use mixer control VC-SEL instead\n");
 		break;
 
 	case VoIP_Ioctl_SetCodecType:
 		get_user(data, __user(int *)arg);
 		pChip->voip_data.codec_type = (u32) data;
-		DEBUG(" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
+		aTrace(LOG_ALSA_INTERFACE,
+				" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
 				pChip->voip_data.codec_type);
 		break;
 	case VoIP_Ioctl_SetBitrate:
 		get_user(data, __user(int *)arg);
 		pChip->voip_data.bitrate_index = (u32) data;
-		DEBUG(" VoIP_Ioctl_SetBitrate bitrate_index %ld,\n",
+		aTrace(LOG_ALSA_INTERFACE,
+				" VoIP_Ioctl_SetBitrate bitrate_index %ld,\n",
 				pChip->voip_data.bitrate_index);
 		break;
 	case VoIP_Ioctl_GetSource:
@@ -499,18 +507,21 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		{
 			AudioMode_t mode = GetAudioMode();
 			put_user((int)mode, __user(int *)arg);
-			DEBUG(" VoIP_Ioctl_GetMode mode %d,\n",
+			aTrace(LOG_ALSA_INTERFACE,
+					" VoIP_Ioctl_GetMode mode %d,\n",
 					mode);
 		}
 		break;
 	case VoIP_Ioctl_SetMode:
-		DEBUG(" Warning: VoIP_Ioctl_SetMode is depreciated, please "
-			"use mixer control VC-SEL instead\n");
+		aTrace(LOG_ALSA_INTERFACE ,
+				" Warning: VoIP_Ioctl_SetMode"
+				"is depreciated, please "
+				"use mixer control VC-SEL instead\n");
 		break;
 	case VoIP_Ioctl_SetVoLTEFlag:
 		get_user(data, __user(int *)arg);
 		pChip->voip_data.isVoLTE = (u8) data;
-		DEBUG(" VoIP_Ioctl_SetFlag isVoLTE %d,\n",
+		aTrace(LOG_ALSA_INTERFACE, " VoIP_Ioctl_SetFlag isVoLTE %d,\n",
 				pChip->voip_data.isVoLTE);
 		break;
 	case VoIP_Ioctl_GetVoLTEFlag:
@@ -660,7 +671,7 @@ int __devinit HwdepDeviceNew(struct snd_card *card)
 
 	err = snd_hwdep_new(card, "Broadcom CAPH VOIP", 0, &pHwdep);
 	if (err < 0) {
-		DEBUG("error create hwdep device\n");
+		aError("error create hwdep device\n");
 		return err;
 	}
 	pHwdep->iface = SNDRV_HWDEP_IFACE_OPL4;

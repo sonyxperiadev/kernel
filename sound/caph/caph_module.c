@@ -60,6 +60,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_caph.h"
 #include "caph_common.h"
 #include "bcm_audio.h"
+#include "audio_trace.h"
 
 
 /*  Module declarations. */
@@ -101,9 +102,9 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	struct snd_card *card;
 	int err;
 
-	pr_info("ALSA:In Driver Probe:\n");
+	aTrace(LOG_ALSA_INTERFACE, "ALSA:In Driver Probe:\n");
 
-	DEBUG("\n %lx:DriverProbe\n", jiffies);
+	aTrace(LOG_ALSA_INTERFACE, "\n %lx:DriverProbe\n", jiffies);
 
 	err = -ENODEV;
 
@@ -145,12 +146,12 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 
 		ret = BrcmCreateAuddrv_testSysFs(card);
 		if (ret != 0)
-			DEBUG("ALSA DriverProbe Error to create "
+			aError("ALSA DriverProbe Error to create "
 			"sysfs for Auddrv test ret = %d\n", ret);
 #ifdef CONFIG_BCM_AUDIO_SELFTEST
 		ret = BrcmCreateAuddrv_selftestSysFs(card);
 		if (ret != 0)
-			DEBUG("ALSA DriverProbe Error to create sysfs"
+			aError("ALSA DriverProbe Error to create sysfs"
 			" for Auddrv selftest ret = %d\n", ret);
 #endif
 
@@ -158,7 +159,7 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	}
 
 err:
-	DEBUG("\n probe failed =%d\n", err);
+	aError("\n probe failed =%d\n", err);
 	if (card)
 		snd_card_free(card);
 
@@ -200,7 +201,7 @@ static int DriverResume(struct platform_device *pdev)
 static int BCMAudLOG_open(struct inode *inode, struct file *file)
 {
 
-	DEBUG("\n BCMLOG_open\n");
+	aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_open\n");
 
 	dev_use_count++;
 	if (dev_use_count > 1)
@@ -221,7 +222,7 @@ BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
 	       loff_t *ppos)
 {
 	int ret;
-	DEBUG("\n BCMLOG_read\n");
+	aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_read\n");
 
 	if (wait_event_interruptible(bcmlogreadq, (audio_data_arrived != 0))) {
 		/*  Wait for read  ... */
@@ -229,7 +230,7 @@ BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
 	}
 
 	if (audio_data_arrived == 2) {
-		DEBUG("\n BCMLOG_read : dummy reading\n");
+		aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_read : dummy reading\n");
 		audio_data_arrived = 0;
 		return 0;
 	}
@@ -262,16 +263,18 @@ BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
 
 static int BCMAudLOG_release(struct inode *inode, struct file *file)
 {
-	DEBUG("\n BCMLOG_release\n");
+	aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_release\n");
 
 	dev_use_count--;
 	if (dev_use_count > 0) {
-		DEBUG("\n BCMLOG_release : 1 dev_use_count = %d\n",
+		aTrace(LOG_ALSA_INTERFACE,
+				"\n BCMLOG_release : 1 dev_use_count = %d\n",
 				dev_use_count);
 		return -1;
 	}
 
-	DEBUG("\n BCMLOG_release : 2 dev_use_count = %d\n",
+	aTrace(LOG_ALSA_INTERFACE,
+			"\n BCMLOG_release : 2 dev_use_count = %d\n",
 			dev_use_count);
 
 	if (audio_log_thread) {
@@ -283,7 +286,8 @@ static int BCMAudLOG_release(struct inode *inode, struct file *file)
 		audio_data_arrived = 0;
 	}
 
-	DEBUG("\n BCMLOG_release : 3 dev_use_count = %d\n",
+	aTrace(LOG_ALSA_INTERFACE,
+			"\n BCMLOG_release : 3 dev_use_count = %d\n",
 			dev_use_count);
 
 	return 0;
@@ -295,13 +299,13 @@ static int BCMAudLOG_mmap(struct file *filp, struct vm_area_struct *vma)
 	int ret;
 	long length = vma->vm_end - vma->vm_start;
 
-	DEBUG("\n BCMLOG_mmap\n");
+	aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_mmap\n");
 
 	/* check length - do not allow larger mappings than the number of
 	 * pages allocated
 	 */
 	if (length > (PAGE_SIZE + (sizeof(LOG_FRAME_t) * 4))) {
-		DEBUG("\n Failed at page boundary\n\r");
+		aError("\n Failed at page boundary\n\r");
 		return -EIO;
 	}
 
@@ -311,7 +315,7 @@ static int BCMAudLOG_mmap(struct file *filp, struct vm_area_struct *vma)
 			      PAGE_SHIFT, length, vma->vm_page_prot);
 
 	if (ret != 0) {
-		DEBUG("\n BCMLOG_mmap_kmem -EAGAIN \r\n");
+		aError("\n BCMLOG_mmap_kmem -EAGAIN \r\n");
 		return -EAGAIN;
 	}
 
@@ -332,7 +336,7 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 	AUDDRV_CFG_LOG_INFO *p_log_info = (AUDDRV_CFG_LOG_INFO *) (arg);
 	int index;
 	int rtn = 0;
-	DEBUG("\n BCMLOG_ioctl cmd=0x%x\n", cmd);
+	aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_ioctl cmd=0x%x\n", cmd);
 
 	switch (cmd) {
 	case BCM_LOG_IOCTL_CONFIG_CHANNEL:
@@ -368,9 +372,11 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 			STREAM_INFO *p = (STREAM_INFO *) arg;
 			STREAM_INFO info;
 
-			DEBUG
-			    ("BCMLOG_ioctl : BCM_LOG_IOCTL_GETMSG_CHANNEL\n");
-			DEBUG("\n p->stream_index = %d\n",
+			aTrace
+			    (LOG_ALSA_INTERFACE,
+			     "BCMLOG_ioctl : BCM_LOG_IOCTL_GETMSG_CHANNEL\n");
+			aTrace(LOG_ALSA_INTERFACE,
+					"\n p->stream_index = %d\n",
 					p->stream_index);
 
 			index = p->stream_index - AUDIO_LOG_PATH_1;
@@ -404,7 +410,7 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 						p_log_info->log_consumer,
 						(char *)NULL);
 			if (rtn < 0) {
-				DEBUG("\n Couldnt setup channel\n");
+				aError("\n Couldnt setup channel\n");
 				rtn = -1;
 			}
 		}
@@ -435,7 +441,7 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 		break;
 	default:
 		{
-			DEBUG("\n Wrong IOCTL cmd\n");
+			aError("\n Wrong IOCTL cmd\n");
 			rtn = -1;
 		}
 		break;
@@ -469,12 +475,14 @@ int logmsg_ready(struct snd_pcm_substream *substream, int log_point)
 			spin_unlock(&audio_log_cbinfo[i].audio_log_lock);
 
 			if (audio_log_cbinfo[i].consumer == LOG_TO_PC) {
-				DEBUG
-				    ("\n Trigger MTT writeing now\n");
+				aTrace
+				    (LOG_ALSA_INTERFACE,
+				     "\n Trigger MTT writeing now\n");
 				wake_up_interruptible(&audio_log_queue);
 			} else {
-				DEBUG
-				    ("\n Trigger file writeing now\n");
+				aTrace
+				    (LOG_ALSA_INTERFACE,
+				     "\n Trigger file writeing now\n");
 
 				if (substream) {
 					runtime = substream->runtime;
@@ -542,7 +550,7 @@ int process_logmsg(void *data)
 		/* DEBUG("\n Capture thread running now\n"); */
 
 		if (dev_use_count == 0) {
-			DEBUG("\n Stop process_logmsg thread\n");
+			aError("\n Stop process_logmsg thread\n");
 			audio_log_writecb.pPrivate = NULL;
 			break;
 		}
@@ -669,16 +677,18 @@ static int __devinit ALSAModuleInit(void)
 {
 	int err = 0;
 
-	DEBUG(KERN_INFO "ALSA Module init called:\n");
+	aTrace(LOG_ALSA_INTERFACE, "ALSA Module init called:\n");
 
 	err = platform_device_register(&sgPlatformDevice);
-	DEBUG("\n %lx:device register done %d\n", jiffies, err);
+	aTrace(LOG_ALSA_INTERFACE, "\n %lx:device register done %d\n"
+			, jiffies, err);
 	if (err)
 		return err;
 
 	sgPlatformDriver.probe = DriverProbe;
 	err = platform_driver_register(&sgPlatformDriver);
-	DEBUG("\n %lx:driver register done %d\n", jiffies, err);
+	aTrace(LOG_ALSA_INTERFACE, "\n %lx:driver register done %d\n"
+			, jiffies, err);
 	if (err)
 		return err;
 
@@ -709,7 +719,7 @@ static int __devinit ALSAModuleInit(void)
 static void __devexit ALSAModuleExit(void)
 {
 
-	DEBUG("\n %lx:ModuleExit\n", jiffies);
+	aTrace(LOG_ALSA_INTERFACE, "\n %lx:ModuleExit\n", jiffies);
 
 	snd_card_free(sgpCaph_chip->card);
 
@@ -718,7 +728,7 @@ static void __devexit ALSAModuleExit(void)
 	platform_device_unregister(&sgPlatformDevice);
 	TerminateAudioHalThread();
 
-	DEBUG("\n %lx:exit done\n", jiffies);
+	aTrace(LOG_ALSA_INTERFACE, "\n %lx:exit done\n", jiffies);
 }
 
 /* lower down the CAPH module init priority, so it can be done after RPC init*/
