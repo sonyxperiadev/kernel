@@ -1,14 +1,30 @@
-/*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
-
-Unless you and Broadcom execute a separate written software license agreement governing use
-of this software, this software is licensed to you under the terms of the GNU General Public
-License version 2, available at http://www.gnu.org/copyleft/gpl.html (the "GPL").
-
-Notwithstanding the above, under no circumstances may you combine this software in any way
-with any other Broadcom software provided under a license other than the GPL, without
-Broadcom's express prior written consent.
-*******************************************************************************************/
+/****************************************************************************/
+/*     Copyright 2009-2012  Broadcom Corporation.  All rights reserved.     */
+/*     Unless you and Broadcom execute a separate written software license  */
+/*	   agreement governing                                              */
+/*     use of this software, this software is licensed to you under the     */
+/*	   terms of the GNU General Public License version 2 (the GPL),     */
+/*     available at                                                         */
+/*                                                                          */
+/*          http://www.broadcom.com/licenses/GPLv2.php                      */
+/*                                                                          */
+/*     with the following added to such license:                            */
+/*                                                                          */
+/*     As a special exception, the copyright holders of this software give  */
+/*     you permission to link this software with independent modules, and   */
+/*     to copy and distribute the resulting executable under terms of your  */
+/*     choice, provided that you also meet, for each linked independent     */
+/*     module, the terms and conditions of the license of that module.      */
+/*     An independent module is a module which is not derived from this     */
+/*     software.  The special exception does not apply to any modifications */
+/*     of the software.                                                     */
+/*                                                                          */
+/*     Notwithstanding the above, under no circumstances may you combine    */
+/*     this software in any way with any other Broadcom software provided   */
+/*     under a license other than the GPL, without Broadcom's express prior */
+/*     written consent.                                                     */
+/*                                                                          */
+/****************************************************************************/
 
 /**
 *
@@ -23,75 +39,77 @@ Broadcom's express prior written consent.
 #include "brcm_rdb_cph_aadmac.h"
 #include "brcm_rdb_util.h"
 
-//****************************************************************************
-//                        G L O B A L   S E C T I O N
-//****************************************************************************
+/****************************************************************************
+			G L O B A L   S E C T I O N
+****************************************************************************/
 
-//****************************************************************************
-// global variable definitions
-//****************************************************************************
+/****************************************************************************
+ global variable definitions
+****************************************************************************/
 
+/****************************************************************************
+			L O C A L   S E C T I O N
+****************************************************************************/
 
-//****************************************************************************
-//                         L O C A L   S E C T I O N
-//****************************************************************************
+/****************************************************************************
+ local macro declarations
+****************************************************************************/
 
-//****************************************************************************
-// local macro declarations
-//****************************************************************************
+/****************************************************************************
+ local typedef declarations
+****************************************************************************/
 
-//****************************************************************************
-// local typedef declarations
-//****************************************************************************
+/****************************************************************************
+ local variable definitions
+****************************************************************************/
 
-//****************************************************************************
-// local variable definitions
-//****************************************************************************
-
-//****************************************************************************
-// local function declarations
-//****************************************************************************
+/****************************************************************************
+ local function declarations
+****************************************************************************/
 
 static cVoid chal_caph_dma_rheaB0_set_hibuffer(CHAL_HANDLE handle,
-            CAPH_DMA_CHANNEL_e  channel,
-            cUInt32             address,
-            cUInt32             size);
+					       CAPH_DMA_CHANNEL_e channel,
+					       cUInt32 address, cUInt32 size);
 
 static cVoid chal_caph_dma_rheaB0_set_ddrfifo_status(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel,
-			CAPH_DMA_CHNL_FIFO_STATUS_e status);
+						     CAPH_DMA_CHANNEL_e channel,
+						     CAPH_DMA_CHNL_FIFO_STATUS_e
+						     status);
 
 static cVoid chal_caph_dma_rheaB0_clr_ddrfifo_status(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel,
-			CAPH_DMA_CHNL_FIFO_STATUS_e status);
+						     CAPH_DMA_CHANNEL_e channel,
+						     CAPH_DMA_CHNL_FIFO_STATUS_e
+						     status);
 
 static cVoid chal_caph_dma_rheaB0_clr_channel_fifo(CHAL_HANDLE handle,
-			cUInt16 channel);
+						   cUInt16 channel);
 
-static CAPH_DMA_CHNL_FIFO_STATUS_e chal_caph_dma_rheaB0_read_ddrfifo_sw_status(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel);
+static CAPH_DMA_CHNL_FIFO_STATUS_e
+chal_caph_dma_rheaB0_read_ddrfifo_sw_status(CHAL_HANDLE handle,
+					    CAPH_DMA_CHANNEL_e channel);
 
 /****************************************************************************
 *
-*  Function Name: CHAL_HANDLE chal_caph_dma_platform_init(chal_caph_dma_funcs_t *pfuncs)
+*  Function Name: CHAL_HANDLE chal_caph_dma_platform_init
+* (chal_caph_dma_funcs_t *pfuncs)
 *
 *  Description: init platform-specific CAPH DMA functions.
 *
 ****************************************************************************/
 cBool chal_caph_dma_platform_init(chal_caph_dma_funcs_t *pfuncs)
 {
-    pfuncs->set_ddrfifo_status = chal_caph_dma_rheaB0_set_ddrfifo_status;
-    pfuncs->clr_channel_fifo = chal_caph_dma_rheaB0_clr_channel_fifo;
-    pfuncs->clr_ddrfifo_status = chal_caph_dma_rheaB0_clr_ddrfifo_status;
-    pfuncs->read_ddrfifo_sw_status = chal_caph_dma_rheaB0_read_ddrfifo_sw_status;
-    pfuncs->set_hibuffer = chal_caph_dma_rheaB0_set_hibuffer;
-    return TRUE;
+	pfuncs->set_ddrfifo_status = chal_caph_dma_rheaB0_set_ddrfifo_status;
+	pfuncs->clr_channel_fifo = chal_caph_dma_rheaB0_clr_channel_fifo;
+	pfuncs->clr_ddrfifo_status = chal_caph_dma_rheaB0_clr_ddrfifo_status;
+	pfuncs->read_ddrfifo_sw_status =
+	    chal_caph_dma_rheaB0_read_ddrfifo_sw_status;
+	pfuncs->set_hibuffer = chal_caph_dma_rheaB0_set_hibuffer;
+	return TRUE;
 }
 
-//****************************************************************************
-// local function definitions
-//****************************************************************************
-
+/****************************************************************************
+ local function definitions
+****************************************************************************/
 
 /****************************************************************************
 *
@@ -104,40 +122,45 @@ cBool chal_caph_dma_platform_init(chal_caph_dma_funcs_t *pfuncs)
 *
 ****************************************************************************/
 static cVoid chal_caph_dma_rheaB0_set_hibuffer(CHAL_HANDLE handle,
-            CAPH_DMA_CHANNEL_e  channel,
-            cUInt32             address,
-            cUInt32             size)
+					       CAPH_DMA_CHANNEL_e channel,
+					       cUInt32 address, cUInt32 size)
 {
-    cUInt32     base = ((chal_caph_dma_cb_t*)handle)->base;
-    cUInt8      index;
-    cUInt32     cr = 0;
+	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
+	cUInt8 index;
+	cUInt32 cr = 0;
 
-    /* Find the channel we are looking for */
-    for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
-    {
-        if((1UL << index)&channel)
-        {
-            /* Set the DMA buffer Address */
-            address &= CPH_AADMAC_CH1_AADMAC_CR_3_CH1_AADMAC_HIGH_BASE_MASK;
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_CR_3, index, address);
+	/* Find the channel we are looking for */
+	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
+		if ((1UL << index) & channel) {
+			/* Set the DMA buffer Address */
+			address &=
+			CPH_AADMAC_CH1_AADMAC_CR_3_CH1_AADMAC_HIGH_BASE_MASK;
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_3,
+					   index, address);
 
-            /* enable the use of hi buffer*/
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_CR_2, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
+			/* enable the use of hi buffer */
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_2,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
 
-            /* Configure the use of buffer base address register */
-            cr &= ~CPH_AADMAC_CH1_AADMAC_CR_2_CH1_AADMAC_HIGH_BASE_EN_MASK;
-            cr |= (1 << CPH_AADMAC_CH1_AADMAC_CR_2_CH1_AADMAC_HIGH_BASE_EN_SHIFT);
+			/* Configure the use of buffer base address register */
+			cr &=
+		~CPH_AADMAC_CH1_AADMAC_CR_2_CH1_AADMAC_HIGH_BASE_EN_MASK;
+			cr |=
+			    (1 <<
+		CPH_AADMAC_CH1_AADMAC_CR_2_CH1_AADMAC_HIGH_BASE_EN_SHIFT);
 
-            /* Apply the settings in the hardware */
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_CR_2, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
-            break;
-        }
+			/* Apply the settings in the hardware */
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_2,
+					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
+					   cr);
+			break;
+		}
 
-    }
+	}
 
-    return;
+	return;
 }
-
 
 /****************************************************************************
 *
@@ -149,52 +172,68 @@ static cVoid chal_caph_dma_rheaB0_set_hibuffer(CHAL_HANDLE handle,
 *
 ****************************************************************************/
 static cVoid chal_caph_dma_rheaB0_set_ddrfifo_status(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel,
-			CAPH_DMA_CHNL_FIFO_STATUS_e status)
+						     CAPH_DMA_CHANNEL_e channel,
+						     CAPH_DMA_CHNL_FIFO_STATUS_e
+						     status)
 {
-    cUInt32     base = ((chal_caph_dma_cb_t*)handle)->base;
-    cUInt8      index;
-    cUInt32     cr = 0;
+	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
+	cUInt8 index;
+	cUInt32 cr = 0;
 
-
-    /* Find the channel we are looking for */
-    for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
-    {
-        if((1UL << index)&channel)
-        {
-            /* found the channel we are looking for, Set the DDR fifo status */
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
-            if(status == CAPH_READY_NONE)
-            {
-                cr &= (~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_MASK);
-                cr &= (~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_HIGH_MASK);
-                BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
-            }
-            else
-            {
+	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
+		if ((1UL << index) & channel) {
+			/* found the channel, Set the DDR fifo status */
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
+			if (status == CAPH_READY_NONE) {
+				cr &=
+			(~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_MASK);
+				cr &=
+			(~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_HIGH_MASK);
+				BRCM_WRITE_REG_IDX(base,
+						   CPH_AADMAC_CH1_AADMAC_SR_1,
+						   (index *
+						    CHAL_CAPH_DMA_CH_REG_SIZE),
+						   cr);
+			} else {
 #if 1
-                if (status & CAPH_READY_LOW)
-                {
-                    cr = CAPH_READY_LOW << CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT;
-                    BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
-                }
-                if (status & CAPH_READY_HIGH)
-                {
-                    cr |= CAPH_READY_HIGH << CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT;
-                    BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
-                }
+				if (status & CAPH_READY_LOW) {
+					cr = CAPH_READY_LOW <<
+			CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT;
+					BRCM_WRITE_REG_IDX(base,
+						CPH_AADMAC_CH1_AADMAC_SR_1,
+						(index *
+						CHAL_CAPH_DMA_CH_REG_SIZE),
+						cr);
+				}
+				if (status & CAPH_READY_HIGH) {
+					cr |=
+					    CAPH_READY_HIGH <<
+			CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT;
+					BRCM_WRITE_REG_IDX(base,
+						CPH_AADMAC_CH1_AADMAC_SR_1,
+						(index *
+						CHAL_CAPH_DMA_CH_REG_SIZE),
+						cr);
+				}
 #else
-                cr |= (status << CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT);
-                BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
+				cr |=
+				    (status <<
+			CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT);
+				BRCM_WRITE_REG_IDX(base,
+						   CPH_AADMAC_CH1_AADMAC_SR_1,
+						   (index *
+						    CHAL_CAPH_DMA_CH_REG_SIZE),
+						   cr);
 #endif
-            }
-            break;
-        }
-    }
+			}
+			break;
+		}
+	}
 
-    return;
+	return;
 }
-
 
 /****************************************************************************
 *
@@ -206,30 +245,34 @@ static cVoid chal_caph_dma_rheaB0_set_ddrfifo_status(CHAL_HANDLE handle,
 *
 ****************************************************************************/
 static cVoid chal_caph_dma_rheaB0_clr_ddrfifo_status(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel,
-			CAPH_DMA_CHNL_FIFO_STATUS_e status)
+						     CAPH_DMA_CHANNEL_e channel,
+						     CAPH_DMA_CHNL_FIFO_STATUS_e
+						     status)
 {
-    cUInt32     base = ((chal_caph_dma_cb_t*)handle)->base;
-    cUInt8      index;
-    cUInt32     sr = 0;
+	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
+	cUInt8 index;
+	cUInt32 sr = 0;
 
+	/* Find the channel */
+	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
+		if ((1UL << index) & channel) {
+			/* found the channel, Get the channel status */
+			sr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
+			/* write 0 to clear the bits that had been set */
+			sr &=
+			    ~((status & CAPH_READY_HIGHLOW) <<
+			  CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_SHIFT);
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
+					   sr);
+			break;
+		}
 
-    /* Find the channel we are looking for */
-    for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
-    {
-        if((1UL << index)&channel)
-        {
-            /* found the channel we are looking for, Get the channel status */
-            sr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
-            /* write 0 to clear the bits that had been set */
-            sr &= ~((status & CAPH_READY_HIGHLOW)<<CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_SHIFT);
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), sr);
-            break;
-        }
+	}
 
-    }
-
-    return;
+	return;
 }
 
 /****************************************************************************
@@ -241,41 +284,53 @@ static cVoid chal_caph_dma_rheaB0_clr_ddrfifo_status(CHAL_HANDLE handle,
 *
 ****************************************************************************/
 static cVoid chal_caph_dma_rheaB0_clr_channel_fifo(CHAL_HANDLE handle,
-			cUInt16 channel)
+						   cUInt16 channel)
 {
-    cUInt32     base = ((chal_caph_dma_cb_t*)handle)->base;
-    cUInt8      index;
-    cUInt32     cr;
+	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
+	cUInt8 index;
+	cUInt32 cr;
 
+	/* Find the FIFOs we are looking for */
+	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
+		if ((1UL << index) & channel) {
+			/* found the Channel, Disable the FIFO */
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
 
-    /* Find the FIFOs we are looking for */
-    for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
-    {
-        if((1UL << index)&channel)
-        {
-            /* found the Channel we are looking for, Disable the FIFO */
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
+			/* Send Reset Pulse to Hardware. First make sure is 0,
+				set to 1, then clear to 0 */
+			/* Clear Reset */
+			cr &=
+			  ~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
+					   cr);
 
-            /* Send Reset Pulse to the Hardware. First make sure it is 0, set to 1, then clear to 0 */
-            /* Clear Reset */
-            cr &= ~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
+			/* Start Reset  process on Hardware */
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
+			cr |=
+			    CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
+					   cr);
 
-            /* Start Reset  process on Hardware*/
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
-            cr |= CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
+			/* Clear Reset */
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
+			cr &=
+			~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
+					   cr);
+		}
 
+	}
 
-            /* Clear Reset */
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
-            cr &= ~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
-            BRCM_WRITE_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE), cr);
-        }
-
-    }
-
-    return;
+	return;
 }
 
 /****************************************************************************
@@ -286,29 +341,31 @@ static cVoid chal_caph_dma_rheaB0_clr_channel_fifo(CHAL_HANDLE handle,
 *  Description: read CAPH DMA ddr fifo sw status
 *
 ****************************************************************************/
-static CAPH_DMA_CHNL_FIFO_STATUS_e chal_caph_dma_rheaB0_read_ddrfifo_sw_status(CHAL_HANDLE handle,
-			CAPH_DMA_CHANNEL_e channel)
+static CAPH_DMA_CHNL_FIFO_STATUS_e
+chal_caph_dma_rheaB0_read_ddrfifo_sw_status(CHAL_HANDLE handle,
+					    CAPH_DMA_CHANNEL_e channel)
 {
-    cUInt32     base = ((chal_caph_dma_cb_t*)handle)->base;
-    cUInt8      index;
-    cUInt32     cr = (cUInt32)CAPH_READY_NONE;
+	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
+	cUInt8 index;
+	cUInt32 cr = (cUInt32) CAPH_READY_NONE;
 
+	/* Find the channel */
+	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
+		if ((1UL << index) & channel) {
+			/* found the channel, Get the channel status */
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
 
-    /* Find the channel we are looking for */
-    for(index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++)
-    {
-        if((1UL << index)&channel)
-        {
-            /* found the channel we are looking for, Get the channel status */
-            cr = BRCM_READ_REG_IDX( base,  CPH_AADMAC_CH1_AADMAC_SR_1, (index*CHAL_CAPH_DMA_CH_REG_SIZE));
+			/* Retrieve the DDR FIFO staus from status */
+			cr &=
+			   (CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_HIGH_MASK |
+			    CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_MASK);
+			cr >>=
+			    CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT;
+			break;
+		}
+	}
 
-            /* Retrieve the DDR FIFO staus information from status */
-            cr &= (CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_HIGH_MASK|CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_MASK);
-            cr >>= CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT;
-            break;
-        }
-    }
-
-    return (CAPH_DMA_CHNL_FIFO_STATUS_e)cr;
+	return (CAPH_DMA_CHNL_FIFO_STATUS_e) cr;
 }
-
