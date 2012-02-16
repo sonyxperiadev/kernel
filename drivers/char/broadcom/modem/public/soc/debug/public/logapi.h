@@ -400,6 +400,7 @@ FTDI driver needed).
 #define LOGID_LTE_TCM_CRITICAL					530
 #define LOGID_LTE_ULA_CRITICAL					531
 #define LOGID_LTE_NAS_CRITICAL					532
+#define LOGID_LTE_LMAC_CRITICAL         		533
 
 #define LOGID_LTE_PDCP_TX_MAJOR					543
 #define LOGID_LTE_PDCP_RX_MAJOR					544
@@ -418,6 +419,13 @@ FTDI driver needed).
 #define LOGID_LTE_TCM_MAJOR						557
 #define LOGID_LTE_ULA_MAJOR						558
 #define LOGID_LTE_NAS_MAJOR						559
+#define LOGID_LTE_LMAC_MAJOR					560		
+#define LOGID_LTE_LMAC_TX_MAJOR					561		
+#define LOGID_LTE_LMAC_RX_MAJOR					562		
+#define LOGID_LTE_LMAC_POWER_MAJOR				563	
+#define LOGID_LTE_LMAC_HO_MEAS_MAJOR			564
+#define LOGID_LTE_LMAC_RACH_MAJOR				565	
+#define LOGID_LTE_LMAC_RLM_MAJOR				566	
 
 #define LOGID_LTE_PDCP_TX_MINOR					571
 #define LOGID_LTE_PDCP_RX_MINOR					572
@@ -436,8 +444,26 @@ FTDI driver needed).
 #define LOGID_LTE_TCM_MINOR						585
 #define LOGID_LTE_ULA_MINOR						586
 #define LOGID_LTE_NAS_MINOR						587
+#define LOGID_LTE_LMAC_MINOR					588
+//#define LOGID_LTE_MINOR_END						598
 
-#define	LOGID_LTE_GROUP250						650
+/* Log ids 601 - 650 are reserved for LTE SCC */
+//#define LOGID_LTE_SCC_GROUP1					601
+#define LOGID_LTE_SCC_CAPI_LIB					601
+#define LOGID_LTE_SCC_RSA						602
+#define LOGID_LTE_SCC_IMS_SUE_APP				603
+#define LOGID_LTE_SCC_IMS_SAC_APP				604
+#define LOGID_LTE_SCC_IMS_SMS_APP				605
+#define LOGID_LTE_SCC_IMS_VOLTE_APP				606
+#define LOGID_LTE_SCC_IMS_SUE_ENGINE			607
+#define LOGID_LTE_SCC_IMS_SAC_ENGINE			608
+#define LOGID_LTE_SCC_IMS_SMS_ENGINE			609
+#define LOGID_LTE_SCC_IMS_VOLTE_ENGINE			610
+#define LOGID_LTE_SCC_IMS_PDN_MGR				611
+#define LOGID_LTE_SCC_IMS_GENERAL				612
+
+#define LOGID_LTE_SCC_KERNEL_GENERAL			649
+//#define LOGID_LTE_SCC_GROUP50					650
 
 #define	LOGID_RTOS								666
 
@@ -546,6 +572,25 @@ void Log_EnableStackLogging(UInt16 subID, Boolean isEnabled);
 **/	
 
 void Log_EnableStackRange(UInt16 fromSubID, UInt16 toSubId, Boolean isEnabled);
+
+//***************************************************************************************
+/**
+    Function to enable a logging group by name
+	@param		group_name (in) group name. if it ends with "_detail", this API enables
+				both "group" and "group_detail"; otherwise, this API only enables "group".
+**/	
+
+void Log_EnableGroup(char *group_name);
+
+//***************************************************************************************
+/**
+    Function to disable a logging group by name
+	@param		group_name (in) group name. if it ends with "_detail", this API disables
+				"group_detail" only; otherwise, this API disables both "group" and
+				"group_detail".
+**/	
+
+void Log_DisableGroup(char *group_name);
 
 //***************************************************************************************
 /**

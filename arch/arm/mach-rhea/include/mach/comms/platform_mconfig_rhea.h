@@ -90,6 +90,7 @@ extern "C" {
 #define PARM_DEP_ROM_ADDR      0x00380000
 #endif
    
+#ifdef ISLANDRAY   // No SPML for Rhea
 #define PARM_SPML_IND_ROM_ADDR 0x00110000
 #define PARM_SPML_IND_RAM_OFFSET               0x1B0000 
 #define PARM_SPML_IND_RAM_ADDR                 (EXT_RAM_BASE_ADDR + PARM_SPML_IND_RAM_OFFSET)
@@ -99,6 +100,7 @@ extern "C" {
 #define PARM_SPML_DEP_RAM_OFFSET               0x1F0000 
 #define PARM_SPML_DEP_RAM_ADDR                 (EXT_RAM_BASE_ADDR + PARM_SPML_DEP_RAM_OFFSET)
 #define PARM_SPML_DEP_SIZE                                     0x00010000   
+#endif
 
 #ifndef ISLANDRAY   
 #define DSP_PRAM_ROM_ADDR      0x01F20000
