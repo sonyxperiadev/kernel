@@ -884,6 +884,12 @@ static int dwc_otg_driver_probe(
 	}
 #endif
 
+#ifdef CONFIG_USB_OTG_UTILS
+	if (dwc_otg_device->core_if->xceiver->set_otg_enable)
+		dwc_otg_device->core_if->xceiver->set_otg_enable(dwc_otg_device->core_if->xceiver,
+		    dwc_otg_device->core_if->core_params->otg_supp_enable);
+#endif
+
 	if (dwc_otg_get_param_adp_enable(dwc_otg_device->core_if)) {
 		/*
 		 * Performs initial actions required for
@@ -930,14 +936,21 @@ static int dwc_otg_driver_probe(
 	 */
 	dwc_otg_enable_global_interrupts(dwc_otg_device->core_if);
 
-#if !defined (CONFIG_USB_OTG) && defined (CONFIG_USB_OTG_UTILS)
+#ifdef CONFIG_USB_OTG_UTILS
+#ifdef CONFIG_USB_OTG
 	if (dwc_otg_device->core_if->xceiver->shutdown &&
-		  (!dwc_otg_device->core_if->xceiver->default_a)) {
+		  (!dwc_otg_device->core_if->xceiver->default_a) &&
+		  (!dwc_otg_device->core_if->core_params->otg_supp_enable))
+#else
+	if (dwc_otg_device->core_if->xceiver->shutdown &&
+		  (!dwc_otg_device->core_if->xceiver->default_a))
+#endif /* CONFIG_USB_OTG */
+	 {
 		/* Shutdown USB when in non-OTG device mode until
 		 * a driver is registered */
 		w_shutdown_core((void*)(dwc_otg_device->core_if));
 	}
-#endif
+#endif /* CONFIG_USB_OTG_UTILS */
 
 	return 0;
 

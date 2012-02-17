@@ -117,6 +117,9 @@ struct otg_transceiver {
 	/* set SRP required after Vbus goes off */
 	int	(*set_srp_reqd)(struct otg_transceiver *otg);
 
+	/* Set OTG enable/disable in transceiver */
+	int	(*set_otg_enable)(struct otg_transceiver *otg, bool enable);
+
 };
 
 

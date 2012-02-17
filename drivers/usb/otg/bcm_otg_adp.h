@@ -18,7 +18,6 @@
 int bcm_otg_do_adp_calibration_probe(struct bcmpmu_otg_xceiv_data *xceiv_data);
 int bcm_otg_do_adp_probe(struct bcmpmu_otg_xceiv_data *xceiv_data);
 int bcm_otg_do_adp_sense(struct bcmpmu_otg_xceiv_data *xceiv_data);
-int bcm_otg_do_adp_sense_then_probe(struct bcmpmu_otg_xceiv_data *xceiv_data);
 int bcm_otg_adp_change_callback(struct bcmpmu_otg_xceiv_data *xceiv_data, void *cb_data);
 int bcm_otg_adp_init(struct bcmpmu_otg_xceiv_data *xceiv_data);
 

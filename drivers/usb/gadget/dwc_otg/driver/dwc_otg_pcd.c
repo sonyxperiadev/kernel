@@ -135,16 +135,19 @@ void dwc_otg_pcd_start(dwc_otg_pcd_t *pcd,
 static int32_t dwc_otg_pcd_start_cb(void *p)
 {
 	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *) p;
+	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);
 
 	/*
 	 * Initialized the Core for Device mode.
 	 */
-	if (dwc_otg_is_device_mode(GET_CORE_IF(pcd)))
-		dwc_otg_core_dev_init(GET_CORE_IF(pcd));
+	if (dwc_otg_is_device_mode(core_if))
+		dwc_otg_core_dev_init(core_if);
 
 #ifdef CONFIG_USB_OTG
-	/* Now we it is okay to connect */
-	dwc_otg_pcd_disconnect(pcd, false);
+	if (core_if->core_params->otg_supp_enable) {
+		/* Now it is okay to connect */
+		dwc_otg_pcd_disconnect(pcd, false);
+	}
 #endif
 	return 1;
 }
@@ -1346,7 +1349,7 @@ uint32_t dwc_otg_pcd_is_otg(dwc_otg_pcd_t *pcd)
 	gusbcfg_data_t usbcfg = {.d32 = 0 };
 
 	usbcfg.d32 = dwc_read_reg32(&core_if->core_global_regs->gusbcfg);
-	if (!usbcfg.b.srpcap || !usbcfg.b.hnpcap)
+	if (!usbcfg.b.srpcap || !usbcfg.b.hnpcap || !core_if->core_params->otg_supp_enable)
 		return 0;
 
 	return 1;

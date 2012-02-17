@@ -55,14 +55,16 @@ static void bcmpmu_otg_xceiv_adp_sense_end_handler(struct work_struct *work)
 			 bcm_otg_sens_end_work);
 	dev_info(xceiv_data->dev, "ADP Sense End detected\n");
 
-	/* Check if probing was detected */
-	bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ADP_SENSE_STATUS,
-		       &adp_sns_status);
+	if (xceiv_data->otg_enabled) {
+		/* Check if probing was detected */
+		bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ADP_SENSE_STATUS,
+			       &adp_sns_status);
 
-	if (adp_sns_status)
-		schedule_delayed_work(&xceiv_data->bcm_otg_delayed_adp_work, msecs_to_jiffies(T_B_ADP_DETACH));
-	else
-		bcm_otg_do_adp_probe(xceiv_data);
+		if (adp_sns_status)
+			schedule_delayed_work(&xceiv_data->bcm_otg_delayed_adp_work, msecs_to_jiffies(T_B_ADP_DETACH));
+		else
+			bcm_otg_do_adp_probe(xceiv_data);
+	}
 #endif
 }
 
@@ -100,39 +102,41 @@ static int bcmpmu_otg_xceiv_adp_sns_end_notif_handler(struct notifier_block *nb,
 
 int bcm_otg_do_adp_calibration_probe(struct bcmpmu_otg_xceiv_data *xceiv_data)
 {
+	if (!xceiv_data)
+		return -EINVAL;
+
 #ifdef CONFIG_USB_OTG
-	return bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_START_ADP_CAL_PRB, 1);
-#else
-	return 0;
+	if (xceiv_data->otg_enabled)
+		return bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_START_ADP_CAL_PRB, 1);
 #endif
+		return 0;
 }
 
 int bcm_otg_do_adp_probe(struct bcmpmu_otg_xceiv_data *xceiv_data)
 {
 	int status = 0;
+
 #ifdef CONFIG_USB_OTG
-	status = bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_SET_ADP_PRB_MOD, PMU_USB_ADP_MODE_REPEAT);
-	if (!status)
-		status = bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_START_STOP_ADP_PRB, 1);
+	if (xceiv_data->otg_enabled) {
+		status = bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_SET_ADP_PRB_MOD, PMU_USB_ADP_MODE_REPEAT);
+		if (!status)
+			status = bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_START_STOP_ADP_PRB, 1);
+	}
 #endif
+
 	return status;
 }
 
 int bcm_otg_do_adp_sense(struct bcmpmu_otg_xceiv_data *xceiv_data)
 {
 #ifdef CONFIG_USB_OTG
-	return
-		bcmpmu_usb_set(xceiv_data->bcmpmu,
-		  BCMPMU_USB_CTRL_START_STOP_ADP_SENS_PRB, 1);
-#else
-	return 0;
+	if (xceiv_data->otg_enabled) {
+		return
+			bcmpmu_usb_set(xceiv_data->bcmpmu,
+			    BCMPMU_USB_CTRL_START_STOP_ADP_SENS_PRB, 1);
+	}
 #endif
-}
 
-int bcm_otg_do_adp_sense_then_probe(struct bcmpmu_otg_xceiv_data *xceiv_data)
-{
-	/* PMU driver does not handle this request so we
-	** need to implement this here */
 	return 0;
 }
 
