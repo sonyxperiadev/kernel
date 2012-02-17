@@ -128,6 +128,8 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err);
 static int spum_hash_final(struct ahash_request *req);
 
 struct tasklet_struct	dma_tasklet;
+static u32      total_payload = 0;
+struct scatterlist *sg_updt;
 
 #ifdef DEBUG
 static void hexdump(unsigned char *buf, unsigned int len)
@@ -136,18 +138,33 @@ static void hexdump(unsigned char *buf, unsigned int len)
 			16, 1,
 			buf, len, false);
 }
+
+void show_sglist(struct scatterlist *sg)
+{
+	struct scatterlist *sgl = sg;
+
+	pr_debug("%s: Show sg list\n",__func__);
+	while(sgl) {
+		pr_debug("length %d\n",sgl->length);
+		sgl = scatterwalk_sg_next(sgl);
+	}	
+
+}
 #endif
 
 /* Mark the sg list for DMA xfer. */
-static u32 get_sg_list(struct scatterlist *sgl, u32 *length)
+static u32 get_sg_list(struct spum_request_context *rctx, 
+			struct scatterlist *sgl, u32 *length)
 {
 	struct scatterlist *sg = sgl;
-	u32 count = 0, len = 0;
+	u32 count = 0, len = 0,sglen;
 
 	while(sg) {
-		if(!(sg->length%64) && (sg->length > 64)) {
+		sglen = min(rctx->rx_len, sg->length);
+		if(!(sglen%64) && (sglen > 64) &&
+			 ((len+sglen)<=rctx->rx_len)) {
 			count++;
-			len += sg->length;
+			len += sglen;
 		}
 		else {
 			break;
@@ -158,6 +175,32 @@ static u32 get_sg_list(struct scatterlist *sgl, u32 *length)
 	*length = len;
 
 	return count;
+}
+
+/*
+ * Get the sg list for update command when total payload
+ * greater than 64kb.
+ */
+static u32 get_sg_update(struct scatterlist *sgl)
+{
+        struct scatterlist *sg;
+        u32 length = 0;
+
+        while(sgl) {
+                if((length+sgl->length) <= SPUM_MAX_PAYLOAD_PER_CMD) {
+                        length += sgl->length;
+                        sg = sgl;
+                        sgl = scatterwalk_sg_next(sgl);
+                }
+                else {
+                        sg_updt = sgl;
+                        sg_mark_end(sg);
+			break;
+                }
+        }
+
+        total_payload -= length;
+        return length;
 }
 
 static u32 spum_append_buffer(struct spum_request_context *rctx,
@@ -189,11 +232,11 @@ static void spum_append_sg(struct spum_request_context *rctx)
 		if (!count)
 			break;
 		rctx->offset += count;
-		rctx->total -= count;
-		if (rctx->offset == rctx->sg->length) {
+		if(rctx->offset == min(rctx->sg->length, rctx->total)) {
 			rctx->offset = 0;
 			rctx->sg = scatterwalk_sg_next(rctx->sg);
 		}
+		rctx->total -= count;
 	}
 }
 
@@ -204,7 +247,7 @@ static int spum_cpu_xfer(struct brcm_spum_device *dd, u8 *in_buff, u32 length)
 	static int k = 0;
 	u32 *buff = (u32 *)in_buff;
 
-	pr_debug("%s: entry\n",__func__);
+	pr_debug("%s: entry length %d\n",__func__,length);
 
 	spum_dma_init(dd->io_axi_base);
 
@@ -218,10 +261,14 @@ static int spum_cpu_xfer(struct brcm_spum_device *dd, u8 *in_buff, u32 length)
 			writel(*buff++, dd->io_axi_base + SPUM_AXI_FIFO_IN_OFFSET );
             		i++;
 		}
+		if((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) && tx_len) {
+			out_fifo[k%32] = readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
+			k++; tx_len--;
+		}
 	}
 	status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 	while((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) && tx_len) {
-		out_fifo[k] = readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
+		out_fifo[k%32] = readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
 		k++; tx_len--;
 		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 	}
@@ -242,16 +289,13 @@ static int spum_cpu_xfer(struct brcm_spum_device *dd, u8 *in_buff, u32 length)
         }
 
 	rctx->tx_len -= k*4;
-
-	if(rctx->sg->length == rctx->offset) {
+	
+	if((rctx->sg->length - rctx->offset) == length) { //rctx->offset) {
 		rctx->sg = scatterwalk_sg_next(rctx->sg);
 		rctx->offset = 0;
 	}
-	else {
-		rctx->sg->offset += rctx->offset;
-		rctx->sg->length -= rctx->offset;
-		rctx->offset = 0;
-	}
+	pr_debug("%s: exit\n",__func__);
+
 	return 0;
 }
 
@@ -272,19 +316,37 @@ static int spum_dma_xfer(struct brcm_spum_device *dd, u32 dma_len, u32 length)
 	rx_fifo = (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_IN_OFFSET;
 	tx_fifo = (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_OUT_OFFSET;
 
-	/* Rx setup */
-	if(dma_setup_transfer_sg(dd->rx_dma_chan, rctx->sg, dma_len, rx_fifo,
-				DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI, cfg_rx)) {
-		pr_err("%s: Rx dma_setup_transfer failed 0x%x\n",__func__,(u32)dd->flags);
-		err = -EIO;
-		goto err;
+	if(dma_len > 1) {
+		/* Rx setup */
+		if(dma_setup_transfer_sg(dd->rx_dma_chan, rctx->sg, dma_len, rx_fifo,
+					DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI, cfg_rx)) {
+			pr_err("%s: Rx dma_setup_transfer failed 0x%x\n",__func__,(u32)dd->flags);
+			err = -EIO;
+			goto err;
+		}
+		/* Tx setup */
+		if(dma_setup_transfer_sg(dd->tx_dma_chan, rctx->sg, dma_len, tx_fifo,
+					DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI, cfg_tx)) {
+			pr_err("%s: Tx dma_setup_transfer failed 0x%x\n",__func__,(u32)dd->flags);
+			err = -EIO;
+			goto err;
+		}
 	}
-	/* Tx setup */
-	if(dma_setup_transfer_sg(dd->tx_dma_chan, rctx->sg, dma_len, tx_fifo,
+	else {
+		/* Rx setup */
+		if(dma_setup_transfer(dd->rx_dma_chan, (sg_dma_address(rctx->sg)+rctx->offset), rx_fifo, length,
+				DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI, cfg_rx)) {
+			pr_err("Rx dma_setup_transfer failed %d\n",err);
+			err = -EIO;
+			goto err;
+		}
+		/* Tx setup */
+		if(dma_setup_transfer(dd->tx_dma_chan, tx_fifo, dd->dma_addr, length,
 				DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI, cfg_tx)) {
-		pr_err("%s: Tx dma_setup_transfer failed 0x%x\n",__func__,(u32)dd->flags);
-		err = -EIO;
-		goto err;
+			pr_err("Tx dma_setup_transfer failed %d\n",err);
+			err = -EIO;
+			goto err;
+		}
 	}
 
 	spum_dma_init(dd->io_axi_base);
@@ -292,8 +354,21 @@ static int spum_dma_xfer(struct brcm_spum_device *dd, u32 dma_len, u32 length)
 	set_bit(FLAGS_TBUSY, &dd->flags);
 	set_bit(FLAGS_RBUSY, &dd->flags);
 
-	rctx->tx_len -= length;
-	rctx->rx_len -= length;
+	if(rctx->tx_len >= length)
+		rctx->tx_len -= length;
+	else
+		rctx->tx_len = 0;
+
+	if(rctx->rx_len >= length)
+		rctx->rx_len -= length;
+	else {
+		length -= rctx->rx_len;
+		if(rctx->partial >= length)
+			rctx->partial -= length;
+		else
+			rctx->partial = 0;
+		rctx->rx_len = 0;
+	}
 
 	/* Rx start xfer */
 	if(dma_start_transfer(dd->rx_dma_chan)) {
@@ -327,39 +402,78 @@ static int spum_hash_update_data(struct brcm_spum_device *dd)
 	if(!(rctx->rx_len+ rctx->partial))
 		return 0;
 
-
 	/* Here check for DMA burst size alignment.
 	 * If not, Do length -= (length%dma_burst_size)
 	 * Seting rctx->offset = length should take care the remaining data tx.
 	 */
-	if(rctx->rx_len > SPUM_HASH_BLOCK_SIZE) {
-		dd->dma_len = get_sg_list(rctx->sg, &length);
+	if(rctx->rx_len > SPUM_HASH_BLOCK_SIZE && (!((u32)sg_virt(rctx->sg)%4))) {
+		dd->dma_len = get_sg_list(rctx, rctx->sg, &length);
 
-		if(dd->dma_len) {
-			sg = rctx->sg;
-			if(sg_is_last(sg)) {
-				length -= rctx->partial;
-				rctx->offset = length;
-				spum_append_sg(rctx);
-				rctx->partial -= rctx->bufcnt;
-				rctx->sg = sg;
-				if (!length)
-					return 0;
-			}
-
+		if(dd->dma_len > 1) {
 			sg_cnt = dma_map_sg(dd->dev, rctx->sg, dd->dma_len, DMA_TO_DEVICE);
-			return spum_dma_xfer(dd, sg_cnt, length);
+			if(sg_cnt) {
+				return spum_dma_xfer(dd, sg_cnt, length);
+			}
+			else {
+				pr_err("%s:dma map error\n",__func__);
+			}
+		}
+		else if(dd->dma_len && (!(length%64)) && 
+				(!((u32)(sg_virt(rctx->sg)+rctx->offset)%4))) {
+                        sg = rctx->sg;
+                        if(sg_is_last(sg)) {
+				u32 offset = rctx->offset;
+                                rctx->offset += length;
+                                spum_append_sg(rctx);
+                                rctx->offset = offset;
+                                rctx->partial -= rctx->bufcnt;
+                                rctx->sg = sg;
+                                if (!length)
+                                        return 0;
+                        }
+                        sg_cnt = dma_map_sg(dd->dev, rctx->sg, dd->dma_len, DMA_TO_DEVICE);
+			if(sg_cnt) {
+				return spum_dma_xfer(dd, sg_cnt, length);
+			}
+			else {
+				pr_err("%s:dma map error\n",__func__);
+			}
 		}
 	}
 
-	length = min((rctx->rx_len+rctx->partial), rctx->sg->length);
-	rctx->offset = length;
+	length = min((rctx->rx_len+rctx->partial), (rctx->sg->length - rctx->offset));
 	sg = rctx->sg;
 	if(!length)
 		return 0;
 
+	pr_debug("%s: length %d offset %d\n",__func__,length,rctx->offset);
+
 	if (sg_virt(sg) != rctx->buffer) { /* If it's not header. */
-		if(length%4) {
+                if(sg_is_last(sg)) {
+                        if(rctx->bufcnt) {
+                                spum_append_sg(rctx);
+                                if(rctx->bufcnt==64) {
+                                        err = spum_cpu_xfer(dd, rctx->buff, rctx->bufcnt);
+                                        rctx->bufcnt = 0;
+                                }
+                                if(rctx->sg)
+                                        return spum_hash_process_request(dd);
+                                else
+                                        return 0;
+                        }
+                        else {
+				u32 offset = rctx->offset;
+                                length -= rctx->partial;
+                                rctx->offset += length;
+                                spum_append_sg(rctx);
+                                rctx->offset = offset;
+                                rctx->partial -= rctx->bufcnt;
+                                rctx->sg = sg;
+                                if (!length)
+                                        return 0;
+                        }
+                }
+		else if(length%4) {
 			if(sg_virt(sg) == rctx->buff) {
 				rctx->sg = scatterwalk_sg_next(rctx->sg);
 				rctx->bufcnt = length;
@@ -369,7 +483,6 @@ static int spum_hash_update_data(struct brcm_spum_device *dd)
 					return 0;
 			}
 			else {
-				rctx->offset = 0;
 				spum_append_sg(rctx);
 				if(rctx->bufcnt==64) {
 					err = spum_cpu_xfer(dd, rctx->buff, rctx->bufcnt);
@@ -382,7 +495,6 @@ static int spum_hash_update_data(struct brcm_spum_device *dd)
 			}
 		}
 		else if(rctx->bufcnt) {
-			rctx->offset = 0;
 			spum_append_sg(rctx);
 			if(rctx->bufcnt==64) {
 				err = spum_cpu_xfer(dd, rctx->buff, rctx->bufcnt);
@@ -393,18 +505,9 @@ static int spum_hash_update_data(struct brcm_spum_device *dd)
 			else
 				return 0;
 		}
-		else if(sg_is_last(sg)) {
-			length -= rctx->partial;
-			rctx->offset = length;
-			spum_append_sg(rctx);
-			rctx->partial -= rctx->bufcnt;
-			rctx->sg = sg;
-			if (!length)
-				return 0;
-		}
 	}
 
-	err = spum_cpu_xfer(dd, sg_virt(sg), length);
+	err = spum_cpu_xfer(dd, (sg_virt(sg)+rctx->offset), length);
 	return spum_hash_process_request(dd);
 }
 
@@ -416,16 +519,15 @@ static int spum_hash_update_final(struct brcm_spum_device *dd)
 
 	if(!rctx->rx_len)
 		return 0;
-	length = min(rctx->rx_len, rctx->sg->length);
+	length = min(rctx->rx_len, (rctx->sg->length - rctx->offset));
 
 	if((length <= SPUM_HASH_BLOCK_SIZE) || 
 		(!IS_ALIGNED(rctx->sg->offset, sizeof(u32))) || (!(IS_ALIGNED(length,16)))) {
-			rctx->offset = length;
-			err = spum_cpu_xfer(dd, sg_virt(rctx->sg), length);
+			err = spum_cpu_xfer(dd, (sg_virt(rctx->sg)), length);
 			return spum_hash_process_request(dd);
 	}
 	else {
-		dd->dma_len = get_sg_list(rctx->sg, &length);
+		dd->dma_len = get_sg_list(rctx, rctx->sg, &length);
 
 		if(!dma_map_sg(dd->dev, rctx->sg, dd->dma_len, DMA_TO_DEVICE)) {
 			pr_err("%s:dma map error\n",__func__);
@@ -541,9 +643,10 @@ static int spum_hash_update(struct ahash_request *req)
 	if(!req->nbytes)
 		return 0;
 
+	total_payload = req->nbytes>SPUM_MAX_PAYLOAD_PER_CMD? req->nbytes:0;
+
 	if(req->nbytes > SPUM_MAX_PAYLOAD_PER_CMD) {
-		pr_err("%s: Per update size can not be more than (64K -64)bytes\n",__func__);
-		return -EINVAL;
+                req->nbytes = get_sg_update(req->src);
 	}
 
 	rctx->sg = req->src;
@@ -557,7 +660,7 @@ static int spum_hash_update(struct ahash_request *req)
 
 	rctx->partial = (rctx->bufcnt + rctx->total)%SPUM_HASH_BLOCK_SIZE;
 	rctx->rx_len = (rctx->bufcnt + rctx->total) - rctx->partial;
-	rctx->blk_cnt += rctx->rx_len/SPUM_HASH_BLOCK_SIZE;
+	rctx->blk_cnt += rctx->rx_len;
 
 	memset((void*)&spum_hw_hash_ctx, 0, sizeof(spum_hw_hash_ctx));
 
@@ -617,7 +720,7 @@ static int spum_hash_update(struct ahash_request *req)
 		ctx->hash_init = 1;
 
 	cmd_len_bytes = spum_format_command(&spum_hw_hash_ctx, &rctx->buffer);
-
+	
 	sg_init_table(rctx->spum_hdr,(rctx->bufcnt)?3:2);
 	sg_set_buf(&rctx->spum_hdr[0], &rctx->buffer, cmd_len_bytes);
 
@@ -670,6 +773,7 @@ static int spum_hash_init(struct ahash_request *req)
 	rctx->offset = 0;
 	rctx->blk_cnt = 0;
 	rctx->digestsize = crypto_ahash_digestsize(tfm);
+        total_payload = req->nbytes>SPUM_MAX_PAYLOAD_PER_CMD? req->nbytes:0;
 
 	pr_debug("%s: exit\n",__func__);
 
@@ -693,6 +797,7 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 
 	/* Should also read previous leftover data on tx fifo. max(tx_len+dig, read(fifostate))*/
 	count = (tx_len+(rctx->digestsize/4));
+	status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 	i=0; 
 	while(i<count) {
 		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
@@ -707,9 +812,13 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 	/* Make a local copy of the intemediate hash value. */
 	memcpy(&ctx->digest, (u8 *)&tx_fifo[tx_len], rctx->digestsize);
 
+	clear_bit(FLAGS_BUSY, &dd->flags);
+	clear_bit(FLAGS_RBUSY, &dd->flags);
+	clear_bit(FLAGS_TBUSY, &dd->flags);
+	clk_disable(dd->spum_open_clk);
+
 	if((rctx->op&OP_FINAL) || ((rctx->op&OP_UPDATE) && (!rctx->flags&FLAGS_FINUP)) ||
 		((rctx->flags&FLAGS_FINUP) && (rctx->bufcnt == 0))) {
-
 
 		/* Copy back hash value to request if buffer pointer provided. */
 		if(dd->req->result)
@@ -718,15 +827,17 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 		if(rctx->digestsize == MD5_DIGEST_SIZE)
 			b_host_2_be32(dd->req->result, rctx->digestsize/sizeof(u32));
 
-		if (dd->req->base.complete)
+		rctx->offset = 0;
+		if(total_payload) {
+			dd->req->nbytes = total_payload;
+			dd->req->src = sg_updt;
+			spum_hash_update(dd->req);
+		}
+		else if (dd->req->base.complete) {
 			dd->req->base.complete(&dd->req->base, err);
-		pr_debug("%s: ACK to client\n",__func__);
+			pr_debug("%s: ACK to client offset %d\n",__func__,rctx->offset);
+		}
 	}
-
-	clear_bit(FLAGS_BUSY, &dd->flags);
-	clear_bit(FLAGS_RBUSY, &dd->flags);
-	clear_bit(FLAGS_TBUSY, &dd->flags);
-	clk_disable(dd->spum_open_clk);
 
 	pr_debug("%s: exit\n",__func__);
 }
@@ -742,21 +853,21 @@ static int spum_hash_final(struct ahash_request *req)
 	static const u8 padding[64] = { 0x80, };
 	__be64 bits;
 
+	pr_debug("%s: entry\n",__func__);
+
 	rctx->flags &= ~FLAGS_FINUP;
 
-	pr_debug("%s: entry bufcnt %d\n",__func__,rctx->bufcnt);
-
-	index = rctx->bufcnt;// & 0x3f;
+	index = rctx->bufcnt;
 	padlen = (index < 56) ? (56 - index) : ((64+56) - index);
 
 	if(rctx->digestsize == MD5_DIGEST_SIZE) {
 		*(u32 *)&rctx->buff[index+padlen] =
-			(rctx->bufcnt+(rctx->blk_cnt*64)) << 3;
+			(rctx->bufcnt+rctx->blk_cnt) << 3;
 		*(u32 *)&rctx->buff[index+padlen+4] =
-			(rctx->bufcnt+(rctx->blk_cnt*64)) >> 29;
+			(rctx->bufcnt+rctx->blk_cnt) >> 29;
 	}
 	else {
-		bits = cpu_to_be64((rctx->bufcnt+(rctx->blk_cnt*64)) << 3);
+		bits = cpu_to_be64((rctx->bufcnt+rctx->blk_cnt) << 3);
 		memcpy(&rctx->buff[index+padlen], (const u8 *)&bits, sizeof(bits));
 	}
 
@@ -1016,6 +1127,7 @@ static void spum_dma_tasklet(unsigned long data)
 	dma_unmap_sg(dd->dev, rctx->sg, dd->dma_len, DMA_TO_DEVICE);
 
 	while(dd->dma_len) {
+		pr_debug("%s:length %d offset %d dma_len %d\n",__func__,rctx->sg->length,rctx->offset,dd->dma_len);	
 		rctx->sg = scatterwalk_sg_next(rctx->sg);
 		dd->dma_len--;
 	}
