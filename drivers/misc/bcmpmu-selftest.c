@@ -333,6 +333,7 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 				     SCLKCAL_CACMP, MODE13MHZ, 0);
 
 		/* Start the calibration */
+		udelay(250); /* JIRA HWRHEA-1243 */
 		BRCM_WRITE_REG_FIELD(KONA_SCLKCAL_VA, SCLKCAL_CACTRL, CAINIT,
 				     1);
 
@@ -432,6 +433,17 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 			     "calibrationCounterSlowRegister  =  %u.",
 			     calibrationCounterFastRegister,
 			     calibrationCounterSlowRegister);
+			if(calibrationCounterSlowRegister &&
+			   calibrationCounterFastRegister) {
+				/* Calculate the frequency and check
+				   if it is in the range. */
+				calibratedClockFrequency =
+				    13000000.0 / 12 *
+					calibrationCounterSlowRegister /
+				    calibrationCounterFastRegister;
+				ST_DBG("GLUE_SELFTEST::calClockFreq  =  %u",
+				       calibratedClockFrequency);
+			}
 			if (CalibrateTries < 10) {
 				ST_DBG("GLUE_SELFTEST:: Calibrate again...");
 				CalibrateAgain = true;
@@ -599,7 +611,7 @@ static void std_selftest_irq(struct SelftestUserCmdData_t *cmddata)
 						 &ReqData);
 		reading = ReqData.raw;
 		if (reading < 0)
-			mdelay(20);
+			msleep(20);
 
 	} while ((reading < 0) && (i++ < 5) && (reading != -EIO));
 	if (reading > 0 || reading == -EIO)

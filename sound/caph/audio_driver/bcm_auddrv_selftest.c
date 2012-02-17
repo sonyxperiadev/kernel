@@ -630,7 +630,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 
 	bcmpmu_audio_ihf_selftest_stimulus_input(0x02);
 	/*4.     Check result (o_hst_ist[3:0]). */
-	mdelay(AUDIO_SETTLING_TIME);
+	msleep(AUDIO_SETTLING_TIME);
 	bcmpmu_audio_ihf_selftest_result(&ReadValue);
 	/* a.    Bit High  = > Check passed     */
 	/* b.    Bit Low  = > Shorted to Ground */
@@ -646,7 +646,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 	/*5.     Set Output (i_hs_ist  =  '0') on PMU */
 	bcmpmu_audio_ihf_selftest_stimulus_input(0x00);
 	/*6.     Check result (o_hst_ist[3:0]).    */
-	mdelay(AUDIO_SETTLING_TIME);
+	msleep(AUDIO_SETTLING_TIME);
 	bcmpmu_audio_ihf_selftest_result(&ReadValue);
 	/* a.    Bit Low  = > Check passed        */
 	/* b.    Bit High  = > Shorted to Power */
@@ -670,7 +670,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 	/*3a.   Set (i_IHFsti  =  '0x') */
 	bcmpmu_audio_ihf_selftest_stimulus_input(0x00);
 	/*4.     Check result (o_IHFsti). */
-	mdelay(AUDIO_SETTLING_TIME);
+	msleep(AUDIO_SETTLING_TIME);
 	bcmpmu_audio_ihf_selftest_result(&ReadValue);
 	/* a.    Bit High  = > Check passed */
 	/* b.    Bit Low  = > Shorted to Ground */
@@ -685,7 +685,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 	/*5a.   Set (i_IHFsti  =  '0x') */
 	bcmpmu_audio_ihf_selftest_stimulus_input(0x00);
 	/*6.     Check result (o_IHFsti). */
-	mdelay(AUDIO_SETTLING_TIME);
+	msleep(AUDIO_SETTLING_TIME);
 	bcmpmu_audio_ihf_selftest_result(&ReadValue);
 	/* a.    Bit Low  = > Check passed */
 	/* b.    Bit High  = > Shorted to Supply */
@@ -701,7 +701,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 	/*2.     i_IHFsto[1:0]  =  '0x' */
 	bcmpmu_audio_ihf_selftest_stimulus_output(0x00);
 	/* Check */
-	mdelay(AUDIO_SETTLING_TIME);
+	msleep(AUDIO_SETTLING_TIME);
 	bcmpmu_audio_ihf_selftest_result(&ReadValue);
 	/* a.   Check if  o_IHFsto[1:0] == '00' */
 	/*   = > No pull-up resistor from the output pins to Supply */
@@ -715,7 +715,7 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 	/*3.     i_IHFsto[1:0]  =  '1x' */
 	bcmpmu_audio_ihf_selftest_stimulus_output(0x02);
 	/* Check */
-	mdelay(AUDIO_SETTLING_TIME);
+	msleep(AUDIO_SETTLING_TIME);
 	bcmpmu_audio_ihf_selftest_result(&ReadValue);
 	/* a.    Check o_IHFsto[1:0] = '00' */
 	/*   = > No pull-down resistor from the output pins to ground */
@@ -828,7 +828,7 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	bcmpmu_audio_hs_selftest_stimulus(0x01);
 
 	/*4.     Check result (o_hst_ist[3:0]). */
-	mdelay(AUDIO_SETTLING_TIME);
+	msleep(AUDIO_SETTLING_TIME);
 	bcmpmu_audio_hs_selftest_result(&ReadValue);
 
 	/* a.    Bit High  = > Check passed     */
@@ -854,7 +854,7 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	/*5.     Set Output (i_hs_ist  =  '0') on PMU */
 	bcmpmu_audio_hs_selftest_stimulus(0x00);
 	/*6.     Check result (o_hst_ist[3:0]).    */
-	mdelay(AUDIO_SETTLING_TIME);
+	msleep(AUDIO_SETTLING_TIME);
 	bcmpmu_audio_hs_selftest_result(&ReadValue);
 	/* a.    Bit Low  = > Check passed      */
 	/* b.    Bit High  = > Shorted to Power */
@@ -889,7 +889,7 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	st_audio_audiotx_set_dac_ctrl(audiohandle, Dac_Ctrl);
 
 	/*4.     Check result (o_hst_ist[3:0]).   */
-	mdelay(AUDIO_SETTLING_TIME);
+	msleep(AUDIO_SETTLING_TIME);
 	bcmpmu_audio_hs_selftest_result(&ReadValue);
 	/* a.    Bit High  = > Check passed                               */
 	/* b.    Bit Low  = > Shorted to Ground or Not connected */
@@ -915,7 +915,7 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 	st_audio_audiotx_set_dac_ctrl(audiohandle, Dac_Ctrl);
 
 	/*6.     Check result (o_hst_ist[3:0]).   */
-	mdelay(AUDIO_SETTLING_TIME);
+	msleep(AUDIO_SETTLING_TIME);
 	bcmpmu_audio_hs_selftest_result(&ReadValue);
 
 	/* a.    Bit Low  = > Check passed */
@@ -1150,7 +1150,7 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 		/* Enable Audio Clocks */
 		ST_AUDIOH_hw_DMIC_Enable(audiohandle, Mic);
 
-		mdelay(DMIC_SETTLING_TIME);
+		msleep(DMIC_SETTLING_TIME);
 
 		/*2.     Setup DMICXDQ  input  */
 		/*3.     Setup DMICXDQ to interrupt on rising edge */
@@ -1186,7 +1186,7 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 			     "GLUE_SELFTEST::std_selftest_digimic()  "
 			     "Interrrupt wait loop %u, Value = %u",
 			     i, gpio_get_value(DQ_CONNECTION[MicIf]));
-			mdelay(2);
+			msleep(2);
 			if (DigiMicInterruptReceived == true)
 				break;
 		}
@@ -1256,7 +1256,7 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 				     "GLUE_SELFTEST::std_selftest_digimic()  "
 				     "Interrrupt wait loop %u, Value = %u",
 				     i, gpio_get_value(DQ_CONNECTION[MicIf]));
-				mdelay(2);
+				msleep(2);
 				if (DigiMicInterruptReceived == true)
 					break;
 			}
