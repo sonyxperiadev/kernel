@@ -51,8 +51,7 @@ struct debug_qos_client
     char client_name[20];
     int req;
     struct dentry *dent_client;
-    struct pi_mgr_qos_node* debugfs_qos_node;
-    struct pi_mgr_qos_node qos_node;
+    struct pi_mgr_qos_node debugfs_qos_node;
 };
 
 struct debug_dfs_client
@@ -1368,8 +1367,8 @@ static int pi_debug_set_qos(void *data, u64 val)
 {
 	u32 inx = (u32)data;
 	int ret;
-	BUG_ON(debug_qos_client[inx].debugfs_qos_node == NULL);
-	ret = pi_mgr_qos_request_update(debug_qos_client[inx].debugfs_qos_node
+	BUG_ON(debug_qos_client[inx].pi == NULL);
+	ret = pi_mgr_qos_request_update(&debug_qos_client[inx].debugfs_qos_node
 			, val);
 	if(ret == 0)
 		debug_qos_client[inx].req = (int)val;
@@ -1378,7 +1377,7 @@ static int pi_debug_set_qos(void *data, u64 val)
 static int pi_debug_get_qos(void *data, u64* val)
 {
 	u32 inx = (u32)data;
-	BUG_ON(debug_qos_client[inx].debugfs_qos_node == NULL);
+	BUG_ON(debug_qos_client[inx].pi == NULL);
 	*val = debug_qos_client[inx].req;
 	return 0;
 }
@@ -1421,7 +1420,7 @@ static int pi_debug_register_qos_client(void *data, u64 value)
 		goto err;
 
     ret =
-	pi_mgr_qos_add_request(&debug_qos_client[val].qos_node, debug_qos_client[val].client_name, pi->id, PI_MGR_QOS_DEFAULT_VALUE);
+	pi_mgr_qos_add_request(&debug_qos_client[val].debugfs_qos_node, debug_qos_client[val].client_name, pi->id, PI_MGR_QOS_DEFAULT_VALUE);
 	if (ret)
 	    goto err;
 
@@ -1450,9 +1449,9 @@ static int pi_debug_remove_qos_client(void *data, u64 value)
     if(debug_qos_client[val].pi &&
 		debug_qos_client[val].pi->id == pi->id)
 	{
-		BUG_ON(!debug_qos_client[val].debugfs_qos_node ||
+		BUG_ON(!debug_qos_client[val].pi ||
 				!debug_qos_client[val].dent_client);
-	    ret = pi_mgr_qos_request_remove(debug_qos_client[val].debugfs_qos_node);
+	    ret = pi_mgr_qos_request_remove(&debug_qos_client[val].debugfs_qos_node);
 	    if(ret)
 			pi_dbg("Failed to remove node\n");
 	    debugfs_remove(debug_qos_client[val].dent_client);
@@ -1460,7 +1459,6 @@ static int pi_debug_remove_qos_client(void *data, u64 value)
 	    debug_qos_client[val].pi = NULL;
 	    debug_qos_client[val].client_name[0] = '\0';
 	    debug_qos_client[val].dent_client = NULL;
-	    debug_qos_client[val].debugfs_qos_node = NULL;
 	    pi_dbg("This client registration removed for this PI\n");
 	}
 	else
