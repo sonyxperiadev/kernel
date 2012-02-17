@@ -322,8 +322,9 @@ static int32_t dwc_otg_hcd_disconnect_cb(void *p)
 				DWC_WORKQ_SCHEDULE(dwc_otg_hcd->core_if->wq_otg,
 					   disable_vbus_func,
 					   dwc_otg_hcd->core_if, "disconnect");
-		}
+		
 #endif
+		}
 		dwc_otg_disable_host_interrupts(dwc_otg_hcd->core_if);
 	}
 

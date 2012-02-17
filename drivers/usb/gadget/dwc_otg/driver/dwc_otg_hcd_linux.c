@@ -69,9 +69,9 @@
 #include "dwc_otg_dbg.h"
 #include "dwc_otg_driver.h"
 
-#ifdef CONFIG_USB_OTG_UTILS
+
 #include "dwc_otg_hcd.h"
-#endif
+
 
 /**
  * Gets the endpoint number from a _bEndpointAddress argument. The endpoint is
