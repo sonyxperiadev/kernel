@@ -121,11 +121,11 @@ struct tsens_tm_device_sensor {
 	int				offset;
 	int				calib_data;
 	int				calib_data_backup;
+	int				slope_mul_tsens_factor;
 };
 
 struct tsens_tm_device {
 	bool				prev_reading_avail;
-	int				slope_mul_tsens_factor;
 	int				tsens_factor;
 	uint32_t			tsens_num_sensor;
 	enum platform_type		hw_type;
@@ -137,26 +137,28 @@ struct tsens_tm_device *tmdev;
 /* Temperature on y axis and ADC-code on x-axis */
 static int tsens_tz_code_to_degC(int adc_code, int sensor_num)
 {
-	int degC, degcbeforefactor;
-	degcbeforefactor = adc_code * tmdev->slope_mul_tsens_factor
-				+ tmdev->sensor[sensor_num].offset;
+	int degcbeforefactor, degc;
+	degcbeforefactor = (adc_code *
+			tmdev->sensor[sensor_num].slope_mul_tsens_factor
+			+ tmdev->sensor[sensor_num].offset);
+
 	if (degcbeforefactor == 0)
-		degC = degcbeforefactor;
+		degc = degcbeforefactor;
 	else if (degcbeforefactor > 0)
-		degC = (degcbeforefactor + tmdev->tsens_factor/2)
-						/ tmdev->tsens_factor;
-	else  /* rounding for negative degrees */
-		degC = (degcbeforefactor - tmdev->tsens_factor/2)
-						/ tmdev->tsens_factor;
-	return degC;
+		degc = (degcbeforefactor + tmdev->tsens_factor/2)
+				/ tmdev->tsens_factor;
+	else
+		degc = (degcbeforefactor - tmdev->tsens_factor/2)
+				/ tmdev->tsens_factor;
+	return degc;
 }
 
 static int tsens_tz_degC_to_code(int degC, int sensor_num)
 {
 	int code = (degC * tmdev->tsens_factor -
-			tmdev->sensor[sensor_num].offset
-			+ tmdev->slope_mul_tsens_factor/2)
-			/ tmdev->slope_mul_tsens_factor;
+		tmdev->sensor[sensor_num].offset
+		+ tmdev->sensor[sensor_num].slope_mul_tsens_factor/2)
+		/ tmdev->sensor[sensor_num].slope_mul_tsens_factor;
 
 	if (code > TSENS_THRESHOLD_MAX_CODE)
 		code = TSENS_THRESHOLD_MAX_CODE;
@@ -594,6 +596,19 @@ static irqreturn_t tsens_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static void tsens8960_sensor_mode_init(void)
+{
+	unsigned int reg_cntl = 0;
+
+	reg_cntl = readl_relaxed(TSENS_CNTL_ADDR);
+	if (tmdev->hw_type == MSM_8960 || tmdev->hw_type == MSM_9615) {
+		writel_relaxed(reg_cntl &
+				~((((1 << tmdev->tsens_num_sensor) - 1) >> 1)
+				<< (TSENS_SENSOR0_SHIFT + 1)), TSENS_CNTL_ADDR);
+		tmdev->sensor[TSENS_MAIN_SENSOR].mode = THERMAL_DEVICE_ENABLED;
+	}
+}
+
 static void tsens_disable_mode(void)
 {
 	unsigned int reg_cntl = 0;
@@ -682,7 +697,8 @@ static int tsens_calib_sensors8660(void)
 	}
 
 	tmdev->sensor[TSENS_MAIN_SENSOR].offset = tmdev->tsens_factor *
-		TSENS_CAL_DEGC - tmdev->slope_mul_tsens_factor *
+		TSENS_CAL_DEGC -
+		tmdev->sensor[TSENS_MAIN_SENSOR].slope_mul_tsens_factor *
 		tmdev->sensor[TSENS_MAIN_SENSOR].calib_data;
 	tmdev->prev_reading_avail = false;
 	INIT_WORK(&tmdev->sensor[TSENS_MAIN_SENSOR].work,
@@ -720,7 +736,8 @@ static int tsens_calib_sensors8960(void)
 			return -ENODEV;
 		}
 		tmdev->sensor[i].offset = tmdev->tsens_factor *
-			TSENS_CAL_DEGC - tmdev->slope_mul_tsens_factor *
+			TSENS_CAL_DEGC -
+			tmdev->sensor[i].slope_mul_tsens_factor *
 			tmdev->sensor[i].calib_data;
 		tmdev->prev_reading_avail = false;
 		INIT_WORK(&tmdev->sensor[i].work, notify_uspace_tsens_fn);
@@ -754,7 +771,7 @@ static int tsens_calib_sensors(void)
 
 int msm_tsens_early_init(struct tsens_platform_data *pdata)
 {
-	int rc = 0;
+	int rc = 0, i;
 
 	if (!pdata) {
 		pr_err("No TSENS Platform data\n");
@@ -770,7 +787,8 @@ int msm_tsens_early_init(struct tsens_platform_data *pdata)
 		return -ENOMEM;
 	}
 
-	tmdev->slope_mul_tsens_factor = pdata->slope;
+	for (i = 0; i < pdata->tsens_num_sensor; i++)
+		tmdev->sensor[i].slope_mul_tsens_factor = pdata->slope[i];
 	tmdev->tsens_factor = pdata->tsens_factor;
 	tmdev->tsens_num_sensor = pdata->tsens_num_sensor;
 	tmdev->hw_type = pdata->hw_type;
@@ -822,6 +840,8 @@ static int __init tsens_tm_init(void)
 		tmdev->sensor[i].mode = THERMAL_DEVICE_DISABLED;
 	}
 
+	tsens8960_sensor_mode_init();
+
 	rc = request_irq(TSENS_UPPER_LOWER_INT, tsens_isr,
 		IRQF_TRIGGER_RISING, "tsens_interrupt", tmdev);
 	if (rc < 0) {
@@ -831,7 +851,7 @@ static int __init tsens_tm_init(void)
 		goto fail;
 	}
 
-	pr_notice("%s: OK\n", __func__);
+	pr_debug("%s: OK\n", __func__);
 	mb();
 	return 0;
 fail:

@@ -380,7 +380,7 @@ struct platform_device msm_device_sps = {
 };
 
 static struct tsens_platform_data msm_tsens_pdata = {
-	.slope			= 910,
+	.slope			= {910, 910, 910, 910, 910},
 	.tsens_factor		= 1000,
 	.hw_type		= MSM_9615,
 	.tsens_num_sensor	= 5,
