@@ -24,6 +24,7 @@
 #include <plat/csl/csl_cam.h>
 #include <linux/videodev2_brcm.h>
 
+#define UNICAM_BUF_MAGIC		0xBABEFACE
 #define UNICAM_CAM_DRV_NAME		"unicam-camera"
 
 #define iprintk(format, arg...)	\
@@ -74,6 +75,7 @@ struct unicam_camera_dev {
 struct unicam_camera_buffer {
 	struct vb2_buffer vb;
 	struct list_head queue;
+	unsigned int magic;
 };
 
 static irqreturn_t unicam_camera_isr(int irq, void *arg);
@@ -410,8 +412,8 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 		vb2_get_plane_payload(vb, 0));
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 
-	list_del_init(&buf->queue);
-
+	if (buf->magic == UNICAM_BUF_MAGIC)
+		list_del_init(&buf->queue);
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 
 	dprintk("-exit");
@@ -419,7 +421,9 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 
 static int unicam_videobuf_init(struct vb2_buffer *vb)
 {
-	INIT_LIST_HEAD(&to_unicam_camera_vb(vb)->queue);
+	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
+	INIT_LIST_HEAD(&buf->queue);
+	buf->magic = UNICAM_BUF_MAGIC;
 	return 0;
 }
 
