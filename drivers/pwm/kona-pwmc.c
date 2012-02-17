@@ -216,14 +216,14 @@ static void kona_pwmc_config_duty_ticks(struct kona_pwmc *ap, int chan,
 
     // Read prescaler value from register.
     duty_cnt = c->duty_ticks / (pre_scaler + 1) ;
+	/* disable channel*/
+	kona_pwmc_stop(ap, chan) ;
 
     // program duty cycle.
     kona_pwmc_set_field(ap, pwm_chan_duty_cycle_info[chan].offset,
                         pwm_chan_duty_cycle_info[chan].mask,
                         pwm_chan_duty_cycle_info[chan].shift, duty_cnt) ;
 
-    // disable channel
-    kona_pwmc_stop(ap, chan) ;
 
     /* Workaround suggested by ASIC team */
     if(pre_scaler >= 2)
@@ -311,6 +311,8 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
             .config_mask = PWM_CONFIG_DUTY_TICKS,
             .duty_ticks = p->duty_ticks,
         };
+		kona_pwmc_clear_set_bit(ap, pwm_chan_ctrl_info[chan].offset,
+				pwm_chan_ctrl_info[chan].smooth_type_shift, 1);
         kona_pwmc_config_duty_ticks(ap, chan, &d);
 		clk_enable(ap->clk);
         kona_pwmc_start(ap, chan);
@@ -322,9 +324,11 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
             .config_mask = PWM_CONFIG_DUTY_TICKS,
             .duty_ticks = 0,
         };
+		kona_pwmc_clear_set_bit(ap, pwm_chan_ctrl_info[chan].offset,
+				pwm_chan_ctrl_info[chan].smooth_type_shift, 0);
         kona_pwmc_config_duty_ticks(ap, chan, &d);
         /* turn-off the PWM clock i.e. enabled during pwm_start */
-        kona_pwmc_stop(ap, chan);
+		ndelay(410);
 		clk_disable(ap->clk);
     }
 
