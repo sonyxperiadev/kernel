@@ -2176,7 +2176,7 @@ void __init board_map_io(void)
 
 late_initcall(rhea_ray_add_lateInit_devices);
 
-MACHINE_START(RHEA, "rhea_ss")
+MACHINE_START(RHEA, "rhea_ss_amazing")
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
