@@ -1334,7 +1334,11 @@ static void csl_caph_obtain_blocks
 			sink = csl_caph_hwctrl_obtainMixerOutChannelSink();
 			dataFormat = CSL_CAPH_16BIT_MONO;
 		} else if ((sink == CSL_CAPH_DEV_BT_SPKR) ||
-				(path->source == CSL_CAPH_DEV_BT_MIC)) {
+			(path->source == CSL_CAPH_DEV_BT_MIC &&
+			!path->audiohPath[sinkNo+1])) {
+			/* BT playback and BT 48k mono recording requires to
+			 * obtain an extra mixer output here.
+			 * No need for BT to EP/IHF loopback.*/
 			sink = csl_caph_hwctrl_obtainMixerOutChannelSink();
 			bt_spk_mixer_sink = sink;
 			dataFormat = CSL_CAPH_16BIT_MONO;
@@ -3377,7 +3381,9 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config,
 		&& (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR)) {
 		list = LIST_SW;
 	} else if ((path->source == CSL_CAPH_DEV_BT_MIC) &&
-		(path->sink[sinkNo] == CSL_CAPH_DEV_EP)) {
+		(path->sink[sinkNo] == CSL_CAPH_DEV_EP
+		|| path->sink[sinkNo] == CSL_CAPH_DEV_IHF
+		|| path->sink[sinkNo] == CSL_CAPH_DEV_HS)) {
 		list = LIST_SW_MIX_SW;
 	} else if ((path->source == CSL_CAPH_DEV_DSP_throughMEM)
 		&& (path->sink[sinkNo] == CSL_CAPH_DEV_IHF)) {
@@ -4388,6 +4394,7 @@ void csl_caph_hwctrl_SetBTMode(int mode)
 *  Function Name: csl_caph_hwctrl_obtainMixerOutChannelSink
 *
 *  Description: get mixer out channel sink IHF or EP, whichever is available
+*               to support MFD, EP mixer output is selected by default
 *
 ****************************************************************************/
 CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void)
@@ -4396,14 +4403,14 @@ CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void)
 	UInt16 inChnls;
 
 	inChnls = csl_caph_srcmixer_read_outchnltable
-		(CSL_CAPH_SRCM_STEREO_CH2_R); /*IHF mixer output*/
+		(CSL_CAPH_SRCM_STEREO_CH2_L); /*EP mixer output*/
 	if (inChnls == 0)
-		mixer_sink = CSL_CAPH_DEV_IHF;
+		mixer_sink = CSL_CAPH_DEV_EP;
 	else {
 		inChnls = csl_caph_srcmixer_read_outchnltable
-			(CSL_CAPH_SRCM_STEREO_CH2_L); /*EP mixer output*/
+			(CSL_CAPH_SRCM_STEREO_CH2_R); /*IHF mixer output*/
 		if (inChnls == 0)
-			mixer_sink = CSL_CAPH_DEV_EP;
+			mixer_sink = CSL_CAPH_DEV_IHF;
 	}
 
 	if (!mixer_sink)
@@ -4411,7 +4418,6 @@ CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void)
 	aTrace(LOG_AUDIO_CSL,
 		"csl_caph_hwctrl_obtainMixerOutChannelSink mixer output sink"
 		"%d available\r\n", mixer_sink);
-
 	return mixer_sink;
 }
 
@@ -4667,7 +4673,8 @@ CSL_CAPH_MIXER_e csl_caph_FindMixer(CSL_CAPH_DEVICE_e speaker,
 		} else if (speaker == CSL_CAPH_DEV_IHF) {
 			mixer = CSL_CAPH_SRCM_STEREO_CH2_R;
 			/*for the case of Stereo_IHF*/
-			mixer = (CSL_CAPH_SRCM_STEREO_CH2_R |
+			if (isSTIHF)
+				mixer = (CSL_CAPH_SRCM_STEREO_CH2_R |
 				 CSL_CAPH_SRCM_STEREO_CH2_L);
 		} else if (speaker == CSL_CAPH_DEV_HS) {
 			mixer = CSL_CAPH_SRCM_STEREO_CH1;

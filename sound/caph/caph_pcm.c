@@ -384,19 +384,23 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 		chip->streamCtl[substream_number].dev_prop.p[i].sink =
 		    AUDIO_SINK_UNDEFINED;
 	}
-	/*call mode & not FM Tx playback */
-	if ((callMode == 1)
+
+	if (AUDCTRL_GetMFDMode() &&
+		(chip->streamCtl[substream_number].iLineSelect[0] ==
+			AUDIO_SINK_VIBRA)) {
+		/*With MFD, vibra plays to IHF, and it does not mix with
+		  voice even in call mode*/
+		chip->streamCtl[substream_number].dev_prop.p[0].sink =
+			AUDIO_SINK_LOUDSPK;
+	} else if ((callMode == 1)
 	    && (chip->streamCtl[substream_number].iLineSelect[0]
 		!= AUDIO_SINK_I2S)) {
+		/*call mode & not FM Tx playback */
 		chip->streamCtl[substream_number].dev_prop.p[0].source =
 		    AUDIO_SOURCE_MEM;
 		chip->streamCtl[substream_number].dev_prop.p[0].sink =
 		    AUDIO_SINK_DSP;
-	}
-
-	if ((callMode != 1)
-	    || (chip->streamCtl[substream_number].iLineSelect[0] ==
-		AUDIO_SINK_I2S)) {
+	} else {
 		for (i = 0; i < MAX_PLAYBACK_DEV; i++) {
 			if (pSel[i] >= AUDIO_SINK_HANDSET
 			    && pSel[i] < AUDIO_SINK_VALID_TOTAL) {
@@ -534,6 +538,8 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	UInt16 dmaPointer = 0;
 	if ((callMode == 0)
+	    || (chip->streamCtl[substream->number].iLineSelect[0] ==
+		AUDIO_SINK_VIBRA && AUDCTRL_GetMFDMode())
 	    || (chip->streamCtl[substream->number].iLineSelect[0] ==
 		AUDIO_SINK_I2S)) {
 		dmaPointer =

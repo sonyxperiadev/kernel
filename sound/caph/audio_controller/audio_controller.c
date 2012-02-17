@@ -145,6 +145,7 @@ static unsigned int voiceCallSampleRate = AUDIO_SAMPLING_RATE_8000;
 static int IsBTM_WB = FALSE;	/*Bluetooth headset is WB(16KHz voice) */
 static int bInVoiceCall = FALSE;
 static int bmuteVoiceCall = FALSE;
+static Boolean isMFD = FALSE;
 
 /*
 static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
@@ -2625,6 +2626,9 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 	case AUDCTRL_HW_CFG_HEADSET:
 		csl_caph_hwctrl_SetHeadsetMode(arg1);
 		break;
+	case AUDCTRL_HW_CFG_MFD:
+		isMFD = arg1 ? TRUE : FALSE;
+		break;
 	case AUDCTRL_HW_WRITE_GAIN:
 
 		/*arg2 is gain in milli Bel */
@@ -3091,4 +3095,17 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 		break;
 	}
 
+}
+
+/********************************************************************
+*  @brief  Get MFD mode
+*
+*  @param  none
+*
+*  @return  Boolean
+*
+****************************************************************************/
+Boolean AUDCTRL_GetMFDMode(void)
+{
+	return isMFD;
 }

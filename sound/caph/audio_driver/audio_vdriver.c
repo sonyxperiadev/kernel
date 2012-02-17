@@ -930,11 +930,7 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 #if !defined(USE_NEW_AUDIO_PARAM)
 	case AUDIO_MODE_SPEAKERPHONE_WB:
 #endif
-		outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;
-
-		/*for the case of Stereo_IHF */
-		outChnl =
-		    (CSL_CAPH_SRCM_STEREO_CH2_R | CSL_CAPH_SRCM_STEREO_CH2_L);
+		outChnl = csl_caph_FindMixer(CSL_CAPH_DEV_IHF, 0);
 		break;
 
 	case AUDIO_MODE_BLUETOOTH:
