@@ -107,7 +107,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 
 	case 0:		/* at*maudmode 0 */
 #if !defined(USE_NEW_AUDIO_PARAM)
-		Params[0] = GetAudioMode();
+		Params[0] = AUDCTRL_GetAudioMode();
 		aTrace(LOG_AUDIO_DRIVER, " %s mode %ld\n", __func__, Params[0]);
 #endif
 		break;
@@ -127,7 +127,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				 1].iLineSelect[0] = mic;
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
 				 1].iLineSelect[1] = spk;
-		SetAudioMode(Params[1]);
+		AUDCTRL_SetAudioMode(Params[1]);
 		aTrace(LOG_AUDIO_DRIVER,
 				" %s mic %d spk %d mode %ld\n", __func__,
 				mic, spk, Params[1]);
@@ -215,8 +215,8 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		/* at*maudmode=14  --> read current mode and app */
 	case 14:
 #if defined(USE_NEW_AUDIO_PARAM)
-		Params[0] = GetAudioApp();
-		Params[1] = GetAudioMode();
+		Params[0] = AUDCTRL_GetAudioApp();
+		Params[1] = AUDCTRL_GetAudioMode();
 		aTrace(LOG_AUDIO_DRIVER, "%s app %ld mode %ld\n",
 				__func__, Params[0], Params[1]);
 #endif
@@ -241,17 +241,17 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].
 		    iLineSelect[1] = spk;
 
-		SetUserAudioApp(app);	/* for PCG to set new app */
+		AUDCTRL_SetUserAudioApp(app);	/* for PCG to set new app */
 		if (app <= AUDIO_APP_VOICE_CALL_WB) {
 			AUDCTRL_SetTelephonyMicSpkr(mic, spk);
-			SetAudioMode(mode, app);
+			AUDCTRL_SetAudioMode(mode, app);
 		} else if (app == AUDIO_APP_MUSIC) {
 			if (AUDCTRL_InVoiceCall() == FALSE) {
 				AUDCTRL_SwitchPlaySpk_forTuning(mode);
-				SaveAudioMode(mode);
+				AUDCTRL_SaveAudioMode(mode);
 			}
 		} else if (app > AUDIO_APP_MUSIC) {
-			SetAudioMode(mode, app);
+			AUDCTRL_SetAudioMode(mode, app);
 		}
 
 		aTrace(LOG_AUDIO_DRIVER, "%s mic %d spk %d mode %ld app %ld\n",
@@ -268,35 +268,38 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		/* PCG and loadcal currently use Q13p2 gain format */
 	case 100:
 		{
-			short gain;
+		short gain;
 
-			gain = (short)Params[3];
+		gain = (short)Params[3];
 
-			if (Params[1] == 3) {
+		if (Params[1] == 3) {
 
 			aTrace(LOG_AUDIO_DRIVER, "Params[2] = %d, "
 				"Params[3] %d, audio mode %d\n",
 			     (int)Params[3], (int)Params[2],
-			     GetAudioMode());
+			     AUDCTRL_GetAudioMode());
 
 				if ((Params[2] ==
 				     PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
 				    || (Params[2] ==
 					PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
 #if defined(USE_NEW_AUDIO_PARAM)
-					if (GetAudioMode() == AUDIO_MODE_HEADSET
-					    || GetAudioMode() ==
-					    AUDIO_MODE_TTY) {
+					if (AUDCTRL_GetAudioMode() ==
+							AUDIO_MODE_HEADSET
+					    || AUDCTRL_GetAudioMode() ==
+					    AUDIO_MODE_TTY
 #else
-					if ((GetAudioMode() ==
+					if ((AUDCTRL_GetAudioMode() ==
 					     AUDIO_MODE_HEADSET)
-					    || (GetAudioMode() ==
+					    || (AUDCTRL_GetAudioMode() ==
 						AUDIO_MODE_HEADSET_WB)
-					    || (GetAudioMode() ==
+					    || (AUDCTRL_GetAudioMode() ==
 						AUDIO_MODE_TTY)
-					    || (GetAudioMode() ==
-						AUDIO_MODE_TTY_WB)) {
+					    || (AUDCTRL_GetAudioMode() ==
+						AUDIO_MODE_TTY_WB)
 #endif
+					) {
+
 					extern_ihf_off();
 					extern_hs_on();
 					aTrace(LOG_AUDIO_DRIVER,
@@ -314,16 +317,17 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 						AUDIO_HS_RIGHT);
 				}
 #if defined(USE_NEW_AUDIO_PARAM)
-					else if (GetAudioMode() ==
-						 AUDIO_MODE_SPEAKERPHONE) {
+					else if (AUDCTRL_GetAudioMode() ==
+						 AUDIO_MODE_SPEAKERPHONE
 #else
-					else if ((GetAudioMode() ==
+					else if ((AUDCTRL_GetAudioMode() ==
 						  AUDIO_MODE_SPEAKERPHONE)
-						 || (GetAudioMode()
+						 || (AUDCTRL_GetAudioMode()
 						     ==
 						     AUDIO_MODE_SPEAKERPHONE_WB)
-					    ) {
 #endif
+					) {
+
 					extern_hs_off();
 					extern_ihf_on();
 					aTrace(LOG_AUDIO_DRIVER, "%s ext IHF "
@@ -335,35 +339,35 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				}
 				/* Params[2] checking */
 				aTrace
-				    (LOG_AUDIO_DRIVER, "Params[2] = %d, Params[3] %d,"
+				    (LOG_AUDIO_DRIVER,
+				    "Params[2] = %d, Params[3] %d,"
 				     " audio mode %d\n",
 				     (int)Params[3], (int)Params[2],
-				     GetAudioMode());
+				     AUDCTRL_GetAudioMode());
 
 				if (Params[2]
 				    == PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
 #if defined(USE_NEW_AUDIO_PARAM)
-					if (GetAudioMode() ==
-					    AUDIO_MODE_SPEAKERPHONE) {
+					if (AUDCTRL_GetAudioMode() ==
+					    AUDIO_MODE_SPEAKERPHONE
 #else
-					if ((GetAudioMode() ==
+					if ((AUDCTRL_GetAudioMode() ==
 					     AUDIO_MODE_SPEAKERPHONE)
-					    || (GetAudioMode() ==
-						AUDIO_MODE_SPEAKERPHONE_WB)) {
+					    || (AUDCTRL_GetAudioMode() ==
+						AUDIO_MODE_SPEAKERPHONE_WB)
 #endif
+					) {
+
 					aTrace(LOG_AUDIO_DRIVER,
 							"ext IHF high gain "
 					"mode = %d\n",
 					 (int)Params[3]);
 					extern_ihf_en_hi_gain_mode(
 						(int)Params[3]);
-						extern_ihf_en_hi_gain_mode((int)
-									   Params
-									   [3]);
 					}
 				}
 
-			}	/* if (Params[1] == 3) */
+		}	/* if (Params[1] == 3) */
 		}		/* case 100 */
 
 		break;
@@ -1166,7 +1170,7 @@ int AtMaudVol(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 
 	switch (Params[0]) {
 	case 6:		/*at*maudvol=6 */
-		mode = GetAudioMode();
+		mode = AUDCTRL_GetAudioMode();
 		/*Get volume. Range -36 ~ 0 dB in Driver and DSP: */
 		Params[0] =
 		    AUDCTRL_GetTelephonySpkrVolume(AUDIO_GAIN_FORMAT_mB);
@@ -1183,7 +1187,7 @@ int AtMaudVol(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		return 0;
 
 	case 7:		/* at*maudvol=7,x    Range 0~36 dB in PCG */
-		mode = GetAudioMode();
+		mode = AUDCTRL_GetAudioMode();
 		/*
 		   mode = pChip->streamCtl[
 		   CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1];

@@ -597,7 +597,7 @@ void AUDDRV_Telephony_Deinit(void)
 
 	/*if voice recording, voice playback and voice call do not use PCM
 	interface, turn PCM off*/
-	if (AUDIO_MODE_BLUETOOTH == GetAudioMode())
+	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode())
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0);
 
 	currVoiceMic = AUDIO_SOURCE_UNDEFINED;
@@ -1381,7 +1381,7 @@ static void AUDDRV_Telephony_DeinitHW(void)
 
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
-	AUDDRV_HW_DisableSideTone(GetAudioMode());
+	AUDDRV_HW_DisableSideTone(AUDCTRL_GetAudioMode());
 
 	config.streamID = CSL_CAPH_STREAM_NONE;
 	config.pathID = telephonyPathID.ulPathID;

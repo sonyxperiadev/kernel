@@ -505,7 +505,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		break;
 	case VoIP_Ioctl_GetMode:
 		{
-			AudioMode_t mode = GetAudioMode();
+			AudioMode_t mode = AUDCTRL_GetAudioMode();
 			put_user((int)mode, __user(int *)arg);
 			aTrace(LOG_ALSA_INTERFACE,
 					" VoIP_Ioctl_GetMode mode %d,\n",

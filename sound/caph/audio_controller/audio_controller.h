@@ -264,7 +264,7 @@ void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute);
 *	@return		AudioApp_t		audio app
 *
 ****************************************************************************/
-AudioApp_t GetAudioApp(void);
+AudioApp_t AUDCTRL_GetAudioApp(void);
 
 /**
 *   Set audio app
@@ -274,7 +274,7 @@ AudioApp_t GetAudioApp(void);
 *	@return		none
 *
 ****************************************************************************/
-void SetUserAudioApp(AudioApp_t audio_app);
+void AUDCTRL_SetUserAudioApp(AudioApp_t audio_app);
 
 /*********************************************************************
 *   Save audio app
@@ -282,7 +282,7 @@ void SetUserAudioApp(AudioApp_t audio_app);
 *	@param		AudioApp_t		audio app
 *	@return		none
 **********************************************************************/
-void SaveAudioApp(AudioApp_t audio_app);
+void AUDCTRL_SaveAudioApp(AudioApp_t audio_app);
 
 /*********************************************************************
 *   Do not need this audio app
@@ -290,7 +290,7 @@ void SaveAudioApp(AudioApp_t audio_app);
 *	@param		AudioApp_t		audio app
 *      @return         none
 **********************************************************************/
-void RemoveAudioApp(AudioApp_t audio_app);
+void AUDCTRL_RemoveAudioApp(AudioApp_t audio_app);
 
 /**
 * Get current (voice call) audio mode
@@ -300,14 +300,14 @@ void RemoveAudioApp(AudioApp_t audio_app);
 * @return	AudioMode_t	(voice call) audio mode
 *
 ****************************************************************************/
-AudioMode_t GetAudioMode(void);
+AudioMode_t AUDCTRL_GetAudioMode(void);
 
 /**
 * Save audio mode before call SetAudioMode( )
 * @param	mode	(voice call) audio mode
 * @return	none
 ****************************************************************************/
-void SaveAudioMode(AudioMode_t mode);
+void AUDCTRL_SaveAudioMode(AudioMode_t mode);
 
 /*********************************************************************
 *   Set (voice call) audio mode
@@ -315,7 +315,7 @@ void SaveAudioMode(AudioMode_t mode);
 *      @param          app             (voice call) audio app
 *      @return         none
 **********************************************************************/
-void SetAudioMode(AudioMode_t mode, AudioApp_t app);
+void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app);
 
 /**
 *   Set audio mode for music playback. (no DSP voice)
@@ -324,7 +324,7 @@ void SetAudioMode(AudioMode_t mode, AudioApp_t app);
 *
 *	@return		none
 ****************************************************************************/
-void SetAudioMode_ForMusicPlayback(AudioMode_t mode,
+void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 					   unsigned int arg_pathID,
 					   Boolean inHWlpbk);
 
@@ -335,7 +335,7 @@ void SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 *
 *	@return		none
 ****************************************************************************/
-void SetAudioMode_ForMusicRecord(AudioMode_t mode,
+void AUDCTRL_SetAudioMode_ForMusicRecord(AudioMode_t mode,
 					 unsigned int arg_pathID);
 
 /**

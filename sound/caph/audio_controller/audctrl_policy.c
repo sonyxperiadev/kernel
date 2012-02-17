@@ -138,7 +138,7 @@ int AUDIO_Policy_Get_Profile(int app)
 	if (app >= AUDIO_APP_NUMBER)
 		app = AUDIO_APP_VOICE_CALL;	/* defalult profile */
 
-	cur_app = GetAudioApp();
+	cur_app = AUDCTRL_GetAudioApp();
 
 	if (cur_app >= AUDIO_APP_NUMBER)
 		cur_app = AUDIO_APP_VOICE_CALL;	/* defalult profile */
@@ -163,7 +163,7 @@ int AUDIO_Policy_Get_Mode(int mode)
 {
 	AudioMode_t new_mode, cur_mode;
 
-	cur_mode = GetAudioMode();
+	cur_mode = AUDCTRL_GetAudioMode();
 
 	if (cur_mode >= AUDIO_MODE_NUMBER)
 		cur_mode = (AudioMode_t) (cur_mode - AUDIO_MODE_NUMBER);

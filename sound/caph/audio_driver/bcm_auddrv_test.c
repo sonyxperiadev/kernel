@@ -652,7 +652,7 @@ WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET) ,regVal);
 				if (sgBrcm_auddrv_TestValues[4] > 0)
 					VoIF_SetGain(sgBrcm_auddrv_TestValues
 						     [4]);
-				audMode = GetAudioMode();
+				audMode = AUDCTRL_GetAudioMode();
 				VoIF_init(audMode);
 			} else
 				VoIF_Deinit();
@@ -1308,15 +1308,15 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	if ((codecVal == 4) || (codecVal == 5)) {
 #if defined(USE_NEW_AUDIO_PARAM)
 		/* WB has to use AUDIO_APP_VOICE_CALL_WB */
-		SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
+		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
 #else
-		SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
+		AUDCTRL_SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
 #endif
 	} else { /* NB VoIP case */
 #if defined(USE_NEW_AUDIO_PARAM)
-		SetAudioMode(mode, AUDIO_APP_LOOPBACK);
+		AUDCTRL_SetAudioMode(mode, AUDIO_APP_LOOPBACK);
 #else
-		SetAudioMode(mode);
+		AUDCTRL_SetAudioMode(mode);
 #endif
 	}
 	/* configure EC and NS for the loopback test */
@@ -1353,15 +1353,15 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	if ((codecVal == 4) || (codecVal == 5)) {
 #if defined(USE_NEW_AUDIO_PARAM)
 		/* WB has to use AUDIO_APP_VOICE_CALL_WB */
-		SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
+		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
 #else
-		SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
+		AUDCTRL_SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
 #endif
 	} else { /* NB VoIP case */
 #if defined(USE_NEW_AUDIO_PARAM)
-		SetAudioMode(mode, AUDIO_APP_LOOPBACK);
+		AUDCTRL_SetAudioMode(mode, AUDIO_APP_LOOPBACK);
 #else
-		SetAudioMode(mode);
+		AUDCTRL_SetAudioMode(mode);
 #endif
 	}
 
@@ -1408,9 +1408,9 @@ void AUDTST_VoIP_Stop(void)
 		/* VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k */
 		if ((cur_codecVal == 4) || (cur_codecVal == 5))
 #if !defined(USE_NEW_AUDIO_PARAM)
-			SetAudioMode(cur_mode);
+			AUDCTRL_SetAudioMode(cur_mode);
 #else
-			SetAudioMode(cur_mode, AUDIO_APP_LOOPBACK);
+			AUDCTRL_SetAudioMode(cur_mode, AUDIO_APP_LOOPBACK);
 #endif
 		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
 		OSSEMAPHORE_Destroy(sVtQueue_Sema);
