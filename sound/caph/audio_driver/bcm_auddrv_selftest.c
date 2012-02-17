@@ -106,28 +106,28 @@ xReadValue, xResultArray, xErrorCode) \
 	u8 TestValue; \
 	TestValue = xReadValue; \
 	for (i = 0 ; i < (xChecks) ; i++) { \
-		ST_MDBG("GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR(%u):" \
+		aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR(%u):" \
 			" AL:%u,  TV=0x%X, BTV=0x%X",\
 			i, xAssertLevel, TestValue,\
 			((TestValue) & (1 << i))); \
 	if (xResultArray[i] == ST_PASS) {\
 			if ((xAssertLevel == 1))  { \
-				ST_MDBG("GLUE_SELFTEST::" \
+				aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::" \
 					"CHECKBIT_AND_ASSIGN_ERROR:" \
 					" High Check (%u)", i); \
 		if (((TestValue) & (1 << i)) != 0) { \
 			xResultArray[i]  =  xErrorCode; \
-		  ST_MDBG("GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR:" \
+		  aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR:" \
 			  " High Assign err = %u", \
 			  xErrorCode); \
 		} \
 	  } \
 	  else { \
-		ST_MDBG("GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR:" \
+		aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR:" \
 			" Low Check (%u)", i); \
 		if (((TestValue) & (1 << i)) == 0) { \
 			xResultArray[i] = xErrorCode; \
-			ST_MDBG("GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR:" \
+			aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR:" \
 				" Low Assign err = %u", \
 				xErrorCode); \
 		} \

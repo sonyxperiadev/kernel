@@ -50,6 +50,7 @@
 #include "csl_apcmd.h"
 #include "chal_bmodem_intc_inc.h"
 #include "csl_arm2sp.h"
+#include "audio_trace.h"
 
 typedef struct
 {
@@ -79,7 +80,7 @@ static void IRQ_Enable_BModem_Interrupt(InterruptId_t Id, UInt32 DstID)
 static UInt32 IRQ_EnableRIPInt(void)
 {
     chal_bmintc_enable_interrupt(dsp_drv.h, BINTC_OUT_DEST_AP2DSP, (UInt32)IRQ_TO_BMIRQ(AP_RIP_IRQ));
-        
+
     return 1;
 }
 
@@ -110,17 +111,17 @@ void DSPDRV_Init( )
 	UInt32 *dsp_shared_mem;
     int rc;
 
-	Log_DebugPrintf(LOGID_AUDIO, " DSPDRV_Init:  \n");
+	aTrace(LOG_AUDIO_DSP, "DSPDRV_Init:\n");
 
     dsp_drv.h = chal_intc_init(KONA_BINTC_BASE_ADDR);
 
 	dsp_shared_mem = DSPDRV_GetSharedMemoryAddress();
-	
+
 	VPSHAREDMEM_Init(dsp_shared_mem);
 
 	//Create Tasklet
 	tasklet_init(&(dsp_drv.task), dsp_thread_proc,(unsigned long)(&dsp_drv));
-	
+
 	IRQ_EnableRIPInt();
 	IRQ_Enable_BModem_Interrupt(BMIRQ23, 6);
 
@@ -129,8 +130,9 @@ void DSPDRV_Init( )
 			 "bcm215xx-dsp", &(dsp_drv));
 
 	if (rc < 0) {
-		Log_DebugPrintf(LOGID_AUDIO,"RIPISR: %s failed to attach interrupt, rc = %d\n",
-		       __FUNCTION__, rc);
+		aTrace(LOG_AUDIO_DSP,
+			"RIPISR: %s failed to attach interrupt, rc = %d\n",
+			__FUNCTION__, rc);
 		return;
 	}
 
@@ -157,12 +159,13 @@ static UInt32 *DSPDRV_GetSharedMemoryAddress( )
 	 {
 		 dsp_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
 		 if (dsp_shared_mem == NULL) {
-			 Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping shared memory failed\n\r");
+			 aTrace(LOG_AUDIO_DSP, 
+				 "\n\r\t* mapping shared memory failed\n\r");
 			 return NULL;
 		 }
 	}
 
-		
+
 	return dsp_shared_mem;
 }
 
@@ -182,7 +185,7 @@ static irqreturn_t rip_isr(int irq, void *dev_id)
 
 	disable_irq_nosync(COMMS_SUBS6_IRQ);
 	tasklet_schedule(&dev->task);
-	IRQ_SoftInt_Clear(BMIRQ23);	
+	IRQ_SoftInt_Clear(BMIRQ23);
 
 	return IRQ_HANDLED;
 }
@@ -198,11 +201,11 @@ static irqreturn_t rip_isr(int irq, void *dev_id)
 //******************************************************************************
 static void dsp_thread_proc(unsigned long data)
 {
-	//Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AP dsp_thread_proc \n\r");
+	/*aTrace(LOG_AUDIO_DSP, "\n\r\t* AP dsp_thread_proc \n\r");*/
 	AP_ProcessStatus();
-	 
+
     enable_irq(COMMS_SUBS6_IRQ);
-	
+
 }
 
 //******************************************************************************
@@ -216,7 +219,7 @@ static void dsp_thread_proc(unsigned long data)
 //******************************************************************************
 void VPSHAREDMEM_TriggerRIPInt()
 {
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* VPSHAREDMEM_TriggerRIPInt\n\r");
+	aTrace(LOG_AUDIO_DSP, "\n\r\t* VPSHAREDMEM_TriggerRIPInt\n\r");
 
 	IRQ_TriggerRIPInt();
 
@@ -236,14 +239,14 @@ AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()// Return pointer to shared memor
 {
         global_shared_mem = (AP_SharedMem_t *)DSPDRV_GetSharedMemoryAddress();
 	return global_shared_mem;
-}	
+}
 
 //******************************************************************************
 //
 // Function Name:	DSPDRV_GetPhysicalSharedMemoryAddress
 //
-// @note Function to return physical address of the Shared Memory. 
-//              
+// @note Function to return physical address of the Shared Memory.
+//
 // @note This address is to be used only for setting certain registers and should
 //       not be used for accessing any buffers/variables in the shared memory.
 //
