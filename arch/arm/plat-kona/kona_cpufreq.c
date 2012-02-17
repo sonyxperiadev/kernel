@@ -372,7 +372,7 @@ static int __devexit cpufreq_drv_remove(struct platform_device *pdev)
     return 0;
 }
 
-static struct platform_driver cpufreq_drv =
+static struct platform_driver cpufreq_driver =
 	{
 	.probe = cpufreq_drv_probe,
 	.remove = __devexit_p(cpufreq_drv_remove),
@@ -384,13 +384,13 @@ static struct platform_driver cpufreq_drv =
 
 static int __init cpufreq_drv_init(void)
 {
-	return   platform_driver_register(&cpufreq_drv);
+	return   platform_driver_register(&cpufreq_driver);
 }
 module_init(cpufreq_drv_init);
 
 static void __exit cpufreq_drv_exit(void)
 {
-	platform_driver_unregister(&cpufreq_drv);
+	platform_driver_unregister(&cpufreq_driver);
 }
 module_exit(cpufreq_drv_exit);
 

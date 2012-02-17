@@ -271,7 +271,7 @@ static int __devexit kona_avs_drv_remove(struct platform_device *pdev)
 }
 
 
-static struct platform_driver kona_avs_drv =
+static struct platform_driver kona_avs_driver =
 {
 	.probe  =  kona_avs_drv_probe,
 	.remove = __devexit_p(kona_avs_drv_remove),
@@ -280,7 +280,7 @@ static struct platform_driver kona_avs_drv =
 
 static int __init kona_avs_drv_init(void)
 {
-	return platform_driver_register(&kona_avs_drv);
+	return platform_driver_register(&kona_avs_driver);
 }
 
 
@@ -288,7 +288,7 @@ arch_initcall(kona_avs_drv_init);
 
 static void __exit kona_avs_drv_exit(void)
 {
-	platform_driver_unregister(&kona_avs_drv);
+	platform_driver_unregister(&kona_avs_driver);
 }
 
 
