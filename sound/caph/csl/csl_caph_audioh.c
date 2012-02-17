@@ -1803,6 +1803,144 @@ void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl)
 	return;
 }
 
+
+/*============================================================================
+//
+// Function Name: void csl_caph_audioh_set_linear_filter(void)
+//
+// Description:  Disable MIN_PHASE register for mic/speaker path
+//
+// Parameters:  path ID
+// Return:
+//
+//===========================================================================*/
+
+
+void csl_caph_audioh_set_linear_filter(int path_id)
+{
+	_DBG_(Log_DebugPrintf
+	      (LOGID_SOC_AUDIO,
+	       "csl_caph_audioh_set_linear_filter.\r\n"));
+
+	switch (path_id) {
+	case AUDDRV_PATH_VIBRA_OUTPUT:
+		chal_audio_vibra_set_filter(handle,
+				CHAL_AUDIO_LINEAR_PHASE_FILTER);
+		break;
+	case AUDDRV_PATH_HEADSET_OUTPUT:
+		chal_audio_hspath_set_filter(handle,
+				CHAL_AUDIO_LINEAR_PHASE_FILTER);
+		break;
+	case AUDDRV_PATH_IHF_OUTPUT:
+		chal_audio_ihfpath_set_filter(handle,
+				CHAL_AUDIO_LINEAR_PHASE_FILTER);
+		break;
+
+	case AUDDRV_PATH_EARPICEC_OUTPUT:
+		chal_audio_earpath_set_filter(handle,
+				CHAL_AUDIO_LINEAR_PHASE_FILTER);
+		break;
+
+	case AUDDRV_PATH_ANALOGMIC_INPUT:
+	case AUDDRV_PATH_VIN_INPUT:
+	case AUDDRV_PATH_VIN_INPUT_L:
+	case AUDDRV_PATH_VIN_INPUT_R:
+	case AUDDRV_PATH_HEADSET_INPUT:
+		chal_audio_vinpath_set_filter(handle,
+				CHAL_AUDIO_LINEAR_PHASE_FILTER);
+		break;
+
+	case AUDDRV_PATH_NVIN_INPUT:
+	case AUDDRV_PATH_NVIN_INPUT_L:
+	case AUDDRV_PATH_NVIN_INPUT_R:
+		chal_audio_nvinpath_set_filter(handle,
+				CHAL_AUDIO_LINEAR_PHASE_FILTER);
+		break;
+
+	default:
+		audio_xassert(0, path_id);
+	}
+	return;
+}
+
+
+
+/*============================================================================
+//
+// Function Name: void csl_caph_audioh_set_minimum_filter(void)
+//
+// Description:  Enable MIN_PHASE register for mic/speaker path
+//
+// Parameters:  path ID
+// Return:
+//
+//===========================================================================*/
+
+void csl_caph_audioh_set_minimum_filter(int path_id)
+{
+	_DBG_(Log_DebugPrintf
+	      (LOGID_SOC_AUDIO,
+	       "csl_caph_audioh_set_minimum_filter.\r\n"));
+
+	switch (path_id) {
+	case AUDDRV_PATH_VIBRA_OUTPUT:
+		chal_audio_vibra_set_filter(handle,
+				CHAL_AUDIO_MINIMUM_PHASE_FILTER);
+		break;
+	case AUDDRV_PATH_HEADSET_OUTPUT:
+		chal_audio_hspath_set_filter(handle,
+				CHAL_AUDIO_MINIMUM_PHASE_FILTER);
+		break;
+	case AUDDRV_PATH_IHF_OUTPUT:
+		chal_audio_ihfpath_set_filter(handle,
+				CHAL_AUDIO_MINIMUM_PHASE_FILTER);
+		break;
+
+	case AUDDRV_PATH_EARPICEC_OUTPUT:
+		chal_audio_earpath_set_filter(handle,
+				CHAL_AUDIO_MINIMUM_PHASE_FILTER);
+		break;
+
+	case AUDDRV_PATH_VIN_INPUT:
+		chal_audio_vinpath_set_filter(handle,
+			CHAL_AUDIO_MINIMUM_PHASE_FILTER_L
+			|CHAL_AUDIO_MINIMUM_PHASE_FILTER);
+		break;
+
+	case AUDDRV_PATH_ANALOGMIC_INPUT:
+	case AUDDRV_PATH_VIN_INPUT_L:
+	case AUDDRV_PATH_HEADSET_INPUT:
+		chal_audio_vinpath_set_filter(handle,
+			CHAL_AUDIO_MINIMUM_PHASE_FILTER);
+		break;
+
+	case AUDDRV_PATH_VIN_INPUT_R:
+		chal_audio_vinpath_set_filter(handle,
+			CHAL_AUDIO_MINIMUM_PHASE_FILTER_L);
+		break;
+
+	case AUDDRV_PATH_NVIN_INPUT:
+		chal_audio_nvinpath_set_filter(handle,
+			CHAL_AUDIO_MINIMUM_PHASE_FILTER_L
+			|CHAL_AUDIO_MINIMUM_PHASE_FILTER);
+		break;
+
+	case AUDDRV_PATH_NVIN_INPUT_R:
+		chal_audio_nvinpath_set_filter(handle,
+			CHAL_AUDIO_MINIMUM_PHASE_FILTER_L);
+		break;
+
+	case AUDDRV_PATH_NVIN_INPUT_L:
+		chal_audio_nvinpath_set_filter(handle,
+			CHAL_AUDIO_MINIMUM_PHASE_FILTER);
+		break;
+
+	default:
+		audio_xassert(0, path_id);
+	}
+	return;
+}
+
 /*============================================================================
 //
 // Function Name: void csl_caph_audioh_adcpath_global_enable(Boolean enable)

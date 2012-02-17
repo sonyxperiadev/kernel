@@ -175,6 +175,8 @@ void csl_caph_audioh_sidetone_set_gain(UInt32 gain);
 void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff);
 void csl_caph_audioh_vinpath_digi_mic_enable(UInt16 ctrl);
 void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl);
+void csl_caph_audioh_set_minimum_filter(int path_id);
+void csl_caph_audioh_set_linear_filter(int path_id);
 void csl_caph_audioh_adcpath_global_enable(Boolean enable);
 
 /**

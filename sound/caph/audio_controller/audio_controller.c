@@ -83,8 +83,8 @@ struct AUDCTRL_SPKR_Mapping_t {
 };
 
 /* must match AUDIO_SINK_Enum_t */
-static struct AUDCTRL_SPKR_Mapping_t
- SPKR_Mapping_Table[AUDIO_SINK_TOTAL_COUNT] = {
+static struct AUDCTRL_SPKR_Mapping_t \
+SPKR_Mapping_Table[AUDIO_SINK_TOTAL_COUNT] = {
 	/* sink ino                                       Device ID */
 	{AUDIO_SINK_HANDSET, CSL_CAPH_DEV_EP},
 	{AUDIO_SINK_HEADSET, CSL_CAPH_DEV_HS},
@@ -110,8 +110,8 @@ struct AUDIO_SOURCE_Mapping_t {
 };
 
 /* must match AUDIO_SOURCE_Enum_t */
-static struct AUDIO_SOURCE_Mapping_t
- MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] = {
+static struct AUDIO_SOURCE_Mapping_t \
+MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] = {
 	/* source info              Device ID */
 	{AUDIO_SOURCE_UNDEFINED, CSL_CAPH_DEV_NONE},
 	{AUDIO_SOURCE_ANALOG_MAIN, CSL_CAPH_DEV_ANALOG_MIC},
@@ -235,7 +235,7 @@ void AUDCTRL_Init(void)
 	/*access sysparm here will cause system panic.
 	   sysparm is not initialzed when this fucniton is called. */
 	/* telephony_digital_gain_dB = 12;
-	   SYSPARM_GetAudioParamsFromFlash( cur_mode )->voice_volume_init;  dB */
+SYSPARM_GetAudioParamsFromFlash( cur_mode )->voice_volume_init;  dB */
 
 	for (i = 0; i < AUDCTRL_PATH_TOTAL_NUM; i++)
 		path_user_set_gain[i].gainFormat = AUDIO_GAIN_FORMAT_INVALID;
@@ -271,7 +271,7 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 	mode = GetAudioModeBySink(sink);
 	if (AUDCTRL_Telephony_HW_16K(mode) == FALSE) {
 		app = GetAudioApp();
-		/*If VT app set from user,select VT app profile,only VT-NB supported */
+/*If VT app set from user,select VT app profile,only VT-NB supported */
 		if (app != AUDIO_APP_VT_CALL)
 			app = AUDIO_APP_VOICE_CALL;
 	} else
@@ -519,7 +519,8 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	}
 
 	AUDDRV_Telephony_Deinit();
-	AUDDRV_Telephony_Init(source, sink, mode, app, bNeedDualMic, bmuteVoiceCall);	/* retain the mute flag */
+	AUDDRV_Telephony_Init(source, sink, mode, app,
+	bNeedDualMic, bmuteVoiceCall);	/* retain the mute flag */
 
 	if (voiceCallSpkr != sink)
 		powerOnExternalAmp(sink, TelephonyUseExtSpkr, TRUE);
@@ -649,7 +650,7 @@ void AUDCTRL_SetTelephonyMicGain(AUDIO_SOURCE_Enum_t mic,
 				      0, 0, 0, 0);
 
 		/* sysparm.c(4990):  pg1_mem->shared_echo_fast_NLP_gain[1]
-		   = SYSPARM_GetAudioParmAccessPtr()->audio_parm[currentAudioMode].
+   = SYSPARM_GetAudioParmAccessPtr()->audio_parm[currentAudioMode].
 		   echoNlp_parms.echo_nlp_gain; */
 		/* CP should load this parameter in SetAudioMode() */
 	}
@@ -717,7 +718,7 @@ void SetUserAudioApp(AudioApp_t app)
 	/*AUDIO_APP_VOIP,
 	   AUDIO_APP_VOIP_INCOMM,
 	   and AUDIO_APP_RECORDING_GVS can only be set by user space code.
-	   This function allows user space to change APP away from the 3 APPs. */
+  This function allows user space to change APP away from the 3 APPs. */
 
 	currAudioApp = app;
 }
@@ -951,8 +952,8 @@ also need to support audio profile (and/or mode) set from user space code
 *	pSpk -- Sink device coresponding to audio mode
 *Return   none
 **********************************************************************/
-void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t * pMic,
-			      AUDIO_SINK_Enum_t * pSpk)
+void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
+			      AUDIO_SINK_Enum_t *pSpk)
 {
 	switch (mode) {
 	case AUDIO_MODE_HANDSET:
@@ -1063,7 +1064,8 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 	}
 
 	if ((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)
-	    || sink == AUDIO_SINK_BTS) ;
+	    || sink == AUDIO_SINK_BTS)
+		;
 	else
 		pathID = csl_caph_hwctrl_EnablePath(config);
 
@@ -1151,7 +1153,8 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 			AUDDRV_DisableDSPOutput();
 
 	if ((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)
-	    || sink == AUDIO_SINK_BTS) ;
+	    || sink == AUDIO_SINK_BTS)
+		;
 	else {
 		config.pathID = pathID;
 		(void)csl_caph_hwctrl_DisablePath(config);
@@ -1711,15 +1714,19 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 
 	if (source == AUDIO_SOURCE_USB && sink == AUDIO_SINK_DSP) {
 		/* in this case, the entire data pass is
-		   USB Mic(48K mono) --> DDR --> (via AADMAC, Caph switch)HW srcMixer input CH2
-		   --> HW srcMixer tapout CH2 --> DSP input --> DSP sharedmem --> DDR
+			USB Mic(48K mono) --> DDR --> (via AADMAC,
+			Caph switch)HW srcMixer input CH2
+		   --> HW srcMixer tapout CH2 --> DSP input --> DSP
+		   sharedmem --> DDR
 
 		   for HW control, need to setup the caph path DDR -->
 		   (via AADMAC, Caph switch)HW srcMixer input CH2 -->
 		   HW srcMixer tapout CH2 --> DSP.
 		   the caph path source is MEMORY, the capth path sink is DSP.
-		   Also need to set the input sampling rate as 48K, and output sampling
-		   rate as 8K or 16 (depending on the passed in parameter sr), so we
+		   Also need to set the input sampling rate as 48K,
+		   and output sampling
+		   rate as 8K or 16 (depending on the passed in parameter sr),
+		   so we
 		   know we need to use the HW srcMixer.
 		 */
 		config.source = CSL_CAPH_DEV_MEMORY;
@@ -1734,7 +1741,8 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 	   Because Capture driver really enables the path.
 	   AUDCTRL_LoadMicGain(pathID, mic, FALSE);
 
-	   also need to have a table to list the used Mic / Mic's (AUDIO_SOURCE_Enum_t)
+	   also need to have a table to list the used
+	   Mic / Mic's (AUDIO_SOURCE_Enum_t)
 	   for each audio mode (audio device).
 	   use gains from sysparm as baseline, adjust gains to achieve user-set
 	   volume/gain before call AUDDRV_SetAudioMode( ).
@@ -1883,16 +1891,21 @@ void AUDCTRL_DisableRecord(AUDIO_SOURCE_Enum_t source,
 
 		if (source == AUDIO_SOURCE_USB && sink == AUDIO_SINK_DSP) {
 			/* in this case, the entire data pass is
-			   USB Mic(48K mono) --> DDR --> (via AADMAC, Caph switch)HW srcMixer input CH2
-			   --> HW srcMixer tapout CH2 --> DSP input --> DSP sharedmem --> DDR
+			   USB Mic(48K mono) --> DDR -->
+			   (via AADMAC, Caph switch)HW srcMixer input CH2
+			   --> HW srcMixer tapout CH2 --> DSP input
+			   --> DSP sharedmem --> DDR
 
 			   for HW control, need to setup the caph path DDR -->
 			   (via AADMAC, Caph switch)HW srcMixer input CH2 -->
 			   HW srcMixer tapout CH2 --> DSP.
 
-			   the caph path source is MEMORY, the capth path sink is DSP.
-			   Also need to set the input sampling rate as 48K, and output
-			   sampling rate as 8K or 16 (depending on the passed in parameter
+			   the caph path source is MEMORY, the capth path
+			   sink is DSP.
+			   Also need to set the input sampling rate as 48K,
+			   and output
+			   sampling rate as 8K or 16 (depending on the passed
+			   in parameter
 			   sr), so we know we need to use the HW srcMixer.
 			 */
 			config.source = CSL_CAPH_DEV_MEMORY;
@@ -2024,7 +2037,7 @@ void AUDCTRL_SetRecordGain(AUDIO_SOURCE_Enum_t source,
 			break;
 
 		case AUDIO_SOURCE_SPEECH_DIGI:
-			/*Digital Mic1/Mic2 in recording/Normal Quality Voice call. */
+	/*Digital Mic1/Mic2 in recording/Normal Quality Voice call. */
 			outGain =
 			    csl_caph_map_mB_gain_to_registerVal(MIC_DIGITAL,
 								(int)gainL);
@@ -2258,9 +2271,11 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		hwCtrlConfig.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 		hwCtrlConfig.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
 		if (src_dev == CSL_CAPH_DEV_BT_MIC)
-			hwCtrlConfig.src_sampleRate = AUDIO_SAMPLING_RATE_8000;	/*how about WB? */
+			hwCtrlConfig.src_sampleRate =
+			AUDIO_SAMPLING_RATE_8000;	/*how about WB? */
 		if (sink_dev == CSL_CAPH_DEV_BT_SPKR)
-			hwCtrlConfig.snk_sampleRate = AUDIO_SAMPLING_RATE_8000;	/*how about WB? */
+			hwCtrlConfig.snk_sampleRate =
+			AUDIO_SAMPLING_RATE_8000;	/*how about WB? */
 
 		hwCtrlConfig.chnlNum =
 		    (speaker ==
@@ -2617,7 +2632,7 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 		case AUDCTRL_EP_MIX_IN_GAIN:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
 			/*csl_srcmixer_setMixInGain(
-			   path->srcmRoute[0][0].inChnl, outChnl, arg2, arg2); */
+	   path->srcmRoute[0][0].inChnl, outChnl, arg2, arg2); */
 			csl_srcmixer_setMixAllInGain(outChnl, arg2, arg2);
 			break;
 
@@ -2636,7 +2651,8 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 			   CSL_CAPH_SRCM_STEREO_CH2_L); */
 			outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;
 			/*csl_srcmixer_setMixInGain(
-			   path->srcmRoute[0][0].inChnl, outChnl, arg2, arg2); */
+				path->srcmRoute[0][0].inChnl,
+				outChnl, arg2, arg2); */
 			csl_srcmixer_setMixAllInGain(outChnl, arg2, arg2);
 			break;
 
@@ -2657,7 +2673,8 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 		case AUDCTRL_HS_LEFT_MIX_IN_GAIN:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH1_L;
 			/*csl_srcmixer_setMixInGain(
-			   path->srcmRoute[0][0].inChnl, outChnl, arg2, arg2); */
+				path->srcmRoute[0][0].inChnl,
+				outChnl, arg2, arg2); */
 			csl_srcmixer_setMixAllInGain(outChnl, arg2, arg2);
 			break;
 
@@ -2674,7 +2691,8 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 		case AUDCTRL_HS_RIGHT_MIX_IN_GAIN:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH1_R;
 			/*csl_srcmixer_setMixInGain(
-			   path->srcmRoute[0][0].inChnl, outChnl, arg2, arg2); */
+				path->srcmRoute[0][0].inChnl,
+				outChnl, arg2, arg2); */
 			csl_srcmixer_setMixAllInGain(outChnl, arg2, arg2);
 			break;
 
@@ -2701,7 +2719,8 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 			break;
 
 		case AUDCTRL_PMU_HIGH_GAIN_MODE:
-			extern_ihf_en_hi_gain_mode(arg2);	/*arg2: TRUE or FALSE */
+			extern_ihf_en_hi_gain_mode(arg2);
+			/*arg2: TRUE or FALSE */
 			break;
 
 		default:

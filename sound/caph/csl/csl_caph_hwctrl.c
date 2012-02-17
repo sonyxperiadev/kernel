@@ -2027,16 +2027,34 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 
 	if (path->sinkCount == 1) {
 		/*first sink, config source also.*/
-		if (path->audiohPath[0])
+		if (path->audiohPath[0]) {
 			csl_caph_audioh_config
 				(path->audiohPath[0],
 				 (void *)&path->audiohCfg[0]);
+
+		/*config the MIN_PHASE register for Mic path */
+		if ((path->source == CSL_CAPH_DEV_DSP)
+			|| (path->sink[0] == CSL_CAPH_DEV_DSP))
+			csl_caph_audioh_set_minimum_filter(path->audiohPath[0]);
+		else
+			csl_caph_audioh_set_linear_filter(path->audiohPath[0]);
+		}
 	}
 
 	/*config the new sink*/
-	if (path->audiohPath[sinkNo+1])
+	if (path->audiohPath[sinkNo+1]) {
 		csl_caph_audioh_config(path->audiohPath[sinkNo+1],
 		 (void *)&path->audiohCfg[sinkNo+1]);
+
+		/*config the MIN_PHASE register for Speaker path */
+		if ((path->source == CSL_CAPH_DEV_DSP)
+			|| (path->sink[0] == CSL_CAPH_DEV_DSP))
+			csl_caph_audioh_set_minimum_filter
+				(path->audiohPath[sinkNo+1]);
+		else
+			csl_caph_audioh_set_linear_filter
+				(path->audiohPath[sinkNo+1]);
+	}
 
 	if (sspTDM_enabled &&
 		(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
