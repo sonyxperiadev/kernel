@@ -741,7 +741,7 @@ void AUDCTRL_SaveAudioApp(AudioApp_t app)
 	aTrace(LOG_AUDIO_CNTLR, "%s currAudioApp=%d new app=%d", __func__,
 			currAudioApp, app);
 	if (AUDCTRL_InVoiceCall())
-		if (app > AUDIO_APP_VOICE_CALL_WB)
+		if (app > AUDIO_APP_VOICE_CALL_WB && app != AUDIO_APP_LOOPBACK)
 			return;
 #if defined(CONFIG_BCM_AUDIO_ENABLE_3_PROFILES)
 	if (app >= AUDIO_APP_MUSIC)
@@ -812,7 +812,7 @@ void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app)
 	aTrace(LOG_AUDIO_CNTLR, "SetAudioMode: mode %d app %d", mode, app);
 
 	if (AUDCTRL_InVoiceCall())
-		if (app > AUDIO_APP_VOICE_CALL_WB)
+		if (app > AUDIO_APP_VOICE_CALL_WB && app != AUDIO_APP_LOOPBACK)
 			return;
 
 	AUDCTRL_SaveAudioMode(mode);
