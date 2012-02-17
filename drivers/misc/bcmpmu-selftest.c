@@ -218,7 +218,7 @@ static bool TestActive[SELFTEST_COUNT] = { false, false, false, false,
 #define SIM2_FIRST 4
 #define SIM2_LAST  7
 #define MAX_SIM_INDEX (ST_SIM_GPIO_CNT-1)
-#define SETTLING_TIME 5
+#define SETTLING_TIME 5000
 /* SIM: GPIO Defines */
 #define ST_SIMRST       53
 #define ST_SIMDAT       54
@@ -360,7 +360,7 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 			     (KONA_SCLKCAL_VA, SCLKCAL_CACTRL, CASTAT))) {
 				isCalibrationStarted = true;
 			} else {
-				mdelay(2);
+				usleep_range(2000, 2500);
 				i++;
 			}
 		} while (!isCalibrationStarted && (i < 10));
@@ -368,7 +368,7 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 		if (isCalibrationStarted) {
 			ST_DBG("GLUE_SELFTEST::std_selftest_sleepclk()"
 			       " isCalibrationStarted");
-			mdelay(45);
+			msleep(45);
 			i = 0;
 
 			/*verify if calibration has finished, by checking
@@ -383,7 +383,7 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 					ST_DBG
 					    ("GLUE_SELFTEST:: "
 					     "Waiting for Calibration#%02u", i);
-					mdelay(5);
+					usleep_range(5000, 5500);
 					i++;
 				}
 			} while (!isCalibrationFinished && (i < 10));
@@ -503,7 +503,7 @@ static void std_selftest_batrm(struct SelftestUserCmdData_t *cmddata)
 					   bcmpmu_selftest->bcmpmu->
 					   regmap[PMU_REG_HOSTCTRL3].mask);
 
-	mdelay(1);
+	usleep_range(1000, 1500);
 	/*set the output data bit to high */
 	new_register_value |= PMU_HOSTCTRL3_BATRMTEST;
 	bcmpmu_selftest->bcmpmu->write_dev(bcmpmu_selftest->bcmpmu,
@@ -532,7 +532,7 @@ static void std_selftest_batrm(struct SelftestUserCmdData_t *cmddata)
 		ST_DBG("GLUE_SELFTEST:: High test: batrm_n  =  %u", batrm_n);
 		if (0 != batrm_n)
 			break;
-		mdelay(5);
+		usleep_range(5000, 5500);
 	}
 
 	if (0 != batrm_n) {
@@ -550,7 +550,7 @@ static void std_selftest_batrm(struct SelftestUserCmdData_t *cmddata)
 
 		ST_DBG("GLUE_SELFTEST:: Low test: PMU_REG_HOSTCTRL3  =  0x%X",
 		       readback);
-		mdelay(10);
+		usleep_range(10000, 10500);
 		/* Read via SIM interface */
 		batrm_n = BRCM_READ_REG_FIELD(KONA_SIMI_VA,
 					      SIMI_DESDISR, BATRM_N);
@@ -697,7 +697,7 @@ static bool PowerOnSIM(int slot)
 				ST_DBG
 				    ("GLUE_SELFTEST::PowerOnSIM(%u) "
 				     "SIM1 supported", slot);
-				mdelay(10);
+				usleep_range(10000, 10500);
 
 				regulator_put(regl_sim);
 				return true;
@@ -719,7 +719,7 @@ static bool PowerOnSIM(int slot)
 			regulator_enable(regl_sim);
 			ST_DBG("GLUE_SELFTEST::PowerOnSIM(%u) SIM2 supported",
 			       slot);
-			mdelay(10);
+			usleep_range(10000, 10500);
 
 			regulator_put(regl_sim);
 			return true;
@@ -900,7 +900,7 @@ static void std_selftest_sim(struct SelftestUserCmdData_t *cmddata)
 			pinmux_set_pin_config(&GPIOSetup);
 			gpio_direction_input(ST_GPIOList[st]);
 		}
-		mdelay(SETTLING_TIME);
+		usleep_range(SETTLING_TIME, SETTLING_TIME+500);
 		for (st = FirstPin; st <= LastPin; st++) {
 			ST_DBG
 			    ("GLUE_SELFTEST::hal_selftest_sim() "
@@ -931,7 +931,7 @@ static void std_selftest_sim(struct SelftestUserCmdData_t *cmddata)
 			pinmux_set_pin_config(&GPIOSetup);
 			gpio_direction_input(ST_GPIOList[st]);
 		}
-		mdelay(SETTLING_TIME);
+		usleep_range(SETTLING_TIME, SETTLING_TIME+500);
 		for (st = FirstPin; st <= LastPin; st++) {
 			if (ST_GPIOList_Power[st] == 0) {
 				/* Pin cannot be power tested as
@@ -978,7 +978,7 @@ static void std_selftest_sim(struct SelftestUserCmdData_t *cmddata)
 			gpio_direction_output(ST_GPIOList[st], 0);
 			gpio_set_value(ST_GPIOList[st], 0);
 
-			mdelay(SETTLING_TIME);
+		    usleep_range(SETTLING_TIME, SETTLING_TIME+500);
 			for (i = 0; i <= MAX_SIM_INDEX; i++) {
 				if (ST_GPIOList_Inter[st][i] == 0) {
 					/* This connection can not be tested due
@@ -1038,7 +1038,7 @@ static void std_selftest_sim(struct SelftestUserCmdData_t *cmddata)
 			gpio_direction_output(ST_GPIOList[st], 1);
 			gpio_set_value(ST_GPIOList[st], 1);
 
-			mdelay(SETTLING_TIME);
+		    usleep_range(SETTLING_TIME, SETTLING_TIME+500);
 			for (i = 0; i <= MAX_SIM_INDEX; i++) {
 				if (ST_GPIOList_Inter_High[st][i] == 0) {
 					/* This connection can not be tested due
@@ -1437,7 +1437,7 @@ static void std_selftest_usb_charger(struct SelftestUserCmdData_t *cmddata)
 						   regmap
 						   [PMU_REG_MBCCTRL5_USB_DET_LDO_EN].
 						   mask);
-		mdelay(5);
+		usleep_range(5000, 5500);
 	}
 
 	bcmpmu_selftest->bcmpmu->write_dev(bcmpmu_selftest->bcmpmu,
@@ -1463,11 +1463,11 @@ static void std_selftest_usb_charger(struct SelftestUserCmdData_t *cmddata)
 
 	for (i = 0; i < 200; i++) {
 		/* wait for CHGDET_LATCH status */
-		mdelay(2);
+		usleep_range(2000, 2500);
 		if (hal_selftest_usb_charger_latch_ok)
 			break;
 	}
-	mdelay(25);
+	msleep(25);
 
 	/* Restore MBCCTRL5 */
 	bcmpmu_selftest->bcmpmu->write_dev(bcmpmu_selftest->bcmpmu,
@@ -1514,7 +1514,7 @@ static void std_selftest_adc(struct SelftestUserCmdData_t *cmddata)
 						     &ReqData);
 		reading = ReqData.raw;
 		if (reading < 0)
-			mdelay(20);
+			msleep(20);
 		ST_DBG("GLUE_SELFTEST::std_selftest_adc() Test loop(%u,%i)", i,
 		       ret);
 	} while ((reading < 0) && (i++ < 5) && (reading != -EIO));

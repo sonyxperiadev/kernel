@@ -416,7 +416,7 @@ static int vce_release(struct inode *inode, struct file *filp)
 		{
 			int uglyctr = 0;
 			while (!vce_is_idle() && (uglyctr++ < 10000))
-				udelay(100);
+				usleep_range(100, 200);
 		}
 		mutex_unlock(&vce_state.work_lock);
 		if (vce_is_idle())

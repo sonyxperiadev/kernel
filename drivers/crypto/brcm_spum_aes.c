@@ -113,7 +113,8 @@ static int spum_aes_cpu_xfer(struct spum_aes_device *dd, u32 *in_buff,
 		}
 	}
 
-	mdelay(1);
+    /* wait for 1ms sec */
+	usleep_range(1000, 1500);
 
 	status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 	while((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK)) {

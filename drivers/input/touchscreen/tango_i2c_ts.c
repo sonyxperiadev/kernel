@@ -100,7 +100,7 @@ typedef enum
 	kErrorIdle		 	= 0x100,
 } touch_errors;
 
-#define GPIO_I2C_RESET_DELAY_MSECS	10
+#define GPIO_I2C_RESET_DELAY_USECS	10000
 #define GPIO_RESET_PIN				1
 #define INPUT_EVENT_PRESSURE		0xff
 #define INPUT_EVENT_NO_PRESSURE		0
@@ -220,7 +220,8 @@ static ssize_t i2c_ts_driver_calibration(struct device *dev,
 	}
 	else
 	{
-		mdelay(10);
+        /* Wait for 10ms */
+		usleep_range(10000, 10500);
 		printk("Calibration done\n");
 		return count;
 	}
@@ -797,15 +798,15 @@ static int i2c_ts_driver_reset_slave(void)
 	}
 
 	gpio_set_value(gp_i2c_ts->gpio_reset_pin, I2C_TS_DRIVER_DO_RESET);
-	mdelay(GPIO_I2C_RESET_DELAY_MSECS);
+	usleep_range(GPIO_I2C_RESET_DELAY_USECS, GPIO_I2C_RESET_DELAY_USECS+500);
 	gpio_set_value(gp_i2c_ts->gpio_reset_pin, I2C_TS_DRIVER_DONT_RESET);
-	mdelay(GPIO_I2C_RESET_DELAY_MSECS);
+	usleep_range(GPIO_I2C_RESET_DELAY_USECS, GPIO_I2C_RESET_DELAY_USECS+500);
 
 	/* Rewrite these settings following reset. */
 	/* After Tango controller gets reset, it holds interrupt pin low for about 150ms.
 	    During this interrupt-pin holding period, it won't ACK to any I2C packet */
 	g_low_power_changed = 1;
-	mdelay(GPIO_I2C_RESET_DELAY_MSECS*100);
+	msleep(GPIO_I2C_RESET_DELAY_USECS);
 
 	return rc;
 }

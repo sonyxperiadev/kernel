@@ -1800,9 +1800,9 @@ void bcmtch_poll(struct napa_i2c *p_napa_i2c)
 
    //bcmtch_setup_poll_timer(p_napa_i2c, 2);
    if (mod_debug == MOD_DEBUG_I2C_DOWNLOAD)
-      mdelay(500);
+      msleep(500000);
    else
-      mdelay(2);
+      usleep_range(2000, 2500);
 
    queue_work(p_napa_i2c->p_ktouch_wq, &p_napa_i2c->work);
 }
