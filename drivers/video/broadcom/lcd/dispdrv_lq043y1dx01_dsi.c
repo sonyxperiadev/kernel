@@ -399,6 +399,13 @@ static void lq043y1dx01_panel_off(LQ043Y1DX01_PANEL_t *pPanel)  {
       msleep(60);
 }
 
+static void lq043y1dx01_pwrdown_dpi_bridge(void)
+{
+	gpio_direction_output(DSI_BRIDGE_PON, 0);
+	gpio_set_value_cansleep(DSI_BRIDGE_PON, 1);
+	msleep(20);
+}
+
 static void lq043y1dx01_reset(u32 gpio)
 {
 	int res1;
@@ -957,6 +964,9 @@ Int32 LQ043Y1DX01_PowerControl (
 
 			lq043y1dx01_WrCmndP0 ( drvH, MIPI_DCS_ENTER_SLEEP_MODE );
 			OSTASK_Sleep ( 120 );
+
+			lq043y1dx01_pwrdown_dpi_bridge();
+
 			pPanel->pwrState = DISP_PWR_SLEEP_ON;
 			LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-IN\n\r",
 			    __FUNCTION__ );
