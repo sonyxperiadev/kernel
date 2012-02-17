@@ -359,6 +359,7 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 	dwc_otg_pcd_t *pcd;
 	struct dwc_otg_pcd_ep *ep = NULL;
 	int retval = 0, is_isoc_ep = 0;
+	void *buf = NULL;
 
 	DWC_DEBUGPL(DBG_PCDV, "%s(%p,%p,%d)\n",
 		    __func__, usb_ep, usb_req, gfp_flags);
@@ -410,10 +411,6 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 	}
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
-	dma_addr = usb_req->dma;
-#else
-
 #if defined(PCI_INTERFACE)
 #error	"need to take care cache coherence"
 #else
@@ -426,7 +423,7 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 	 * allocate 4byte-aligned dma buffer if needed
 	 */
 	if (!is_req_aligned(usb_req)) {
-		void *buf = kmalloc(usb_req->length, gfp_flags);
+		buf = kmalloc(usb_req->length, gfp_flags);
 		if (!buf) {
 			DWC_WARN("Can't allocate aligned DMA buffer\n");
 			return -ENOMEM;
@@ -435,9 +432,11 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 		usb_req->dma = virt_to_phys(buf);
 		if (ep->dwc_ep.is_in)
 			memcpy(buf, usb_req->buf, usb_req->length);
-		/* coverity[leaked_storage] */
-	} else
+	} else {
+		buf = usb_req->buf;
 		usb_req->dma = virt_to_phys(usb_req->buf);
+	}
+
 	dma_sync_single_for_device(NULL,
 				   usb_req->dma,
 				   usb_req->length,
@@ -445,9 +444,8 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 				   is_in ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 
 #endif
-#endif
 
-	retval = dwc_otg_pcd_ep_queue(pcd, usb_ep, usb_req->buf, usb_req->dma,
+	retval = dwc_otg_pcd_ep_queue(pcd, usb_ep, buf, usb_req->dma,
 				      usb_req->length, usb_req->zero, usb_req,
 				      gfp_flags == GFP_ATOMIC ? 1 : 0);
 	if (retval)
