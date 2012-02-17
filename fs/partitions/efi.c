@@ -636,6 +636,7 @@ int efi_partition(struct parsed_partitions *state)
 	if (!find_valid_gpt(state, &gpt, &ptes) || !gpt || !ptes) {
 		kfree(gpt);
 		kfree(ptes);
+		kfree(partition_name);
 		return 0;
 	}
 
@@ -701,6 +702,7 @@ int efi_partition(struct parsed_partitions *state)
 	}
 	kfree(ptes);
 	kfree(gpt);
+	kfree(partition_name);
 	strlcat(state->pp_buf, "\n", PAGE_SIZE);
 	return 1;
 }
