@@ -258,6 +258,12 @@ when subsystems are acvtive and 1 if in sleep (retention/dormant) */
 	/*Enable standby for ROM, RAM & SRAM*/
 	reg_val |= 0x7F;
 	writel(reg_val, KONA_CHIPREG_VA+CHIPREG_RAM_STBY_RET_OVERRIDE_OFFSET);
+#ifndef CONFIG_ARCH_RHEA_A0
+	reg_val = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
+	reg_val |= CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
+	writel(reg_val, CHIPREG_PERIPH_SPARE_CONTROL2);
+#endif
+	pwr_mgr_arm_core_dormant_enable(false);
     return 0;
 }
 
