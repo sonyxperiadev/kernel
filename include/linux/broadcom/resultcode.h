@@ -39,7 +39,8 @@ extern "C" {
 #define TCH_RESULT_START			320
 #endif
 
-#define CC_RESULT_START				350		
+#define CC_RESULT_START				350	
+#define RES_CME_GPRS_START			400
 
 /** @{ */
 
@@ -313,7 +314,15 @@ typedef enum {
 	RESULT_DIALSTR_INVALID,					///< 380	Dial String Invalid
 	CC_UNKNOWN_DTMF_TONE,					///< 381 Unknown DTMF Tone
 	CC_MAKE_DATA_CALL,						///< 382    Data Call needs to be initiated
-    CC_BDN_BLOCK_MAKE_CALL					///< 383	Call request is blocked by BDN settings
+    CC_BDN_BLOCK_MAKE_CALL,					///< 383	Call request is blocked by BDN settings
+
+	//------ Result code for CME GPRS error -----
+	RESULT_ERR_ILLEGAL_MS = RES_CME_GPRS_START, ///< 400	Illegal MS
+	RESULT_ERR_ILLEGAL_ME,					///< 401	Illegal ME
+	RESULT_ERR_GPRS_SVC_NOT_ALLOWED,		///< 402	GPRS service not allowed
+	RESULT_ERR_PLMN_NOT_ALLOWED,			///< 403	GPRS PLMN not allowed
+	RESULT_ERR_LA_NOT_ALLOWED,				///< 404	LA not allowed
+	RESULT_ERR_ROAM_NOT_ALLOWED				///< 405	Roam not allowed
 			
 } Result_t; ///< Result Codes
 

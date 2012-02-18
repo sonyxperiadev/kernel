@@ -681,7 +681,7 @@ typedef enum
     *                      \htmlonly 
     *                      <pre>
     *                             {
-    *                               bit15     - Sampling Rate of ARM2SP2 stream  0 = 8kHz, 1 =  16kHz
+    *                               bit15     - Sampling Rate of ARM2SP stream  0 = 8kHz, 1 =  16kHz
     *                               bits14:12 - Number of frames of data after which the DSP is supposed to send the VP_STATUS_ARM2SP_EMPTY reply
     *                                           (between 1 to 4 for 8kHz data and between 1 and 2 for 16kHz data - default is 4 for 8kHz and 
     *                                           2 for 16kHz)
@@ -694,7 +694,8 @@ typedef enum
     *                               bit5      - UL_OVERWRITE_bit   1= overwrite Arm2SP buffer to UL (only when UL_MIX_bit=0) 
     *                               bit4      - UL_MIX_bit         1= mixing Arm2SP buffer with UL (regardless UL_OVERWRITE_bit setting)
     *                               bit3      - Record_bit         1= enable recording this PCM into memo/call recording
-    *                               bit2      - reserved
+    *                               bit2      - 48K input          1= Sampling rate of ARM2SP stream = 48k (irrespective of bit15 setting),
+    *                                                              0= sampling rate determined by bit 15
     *                               bit1      - UL_enable          [1/0] = [enable/disable]
     *                               bit0      - DL_enable          [1/0] = [enable/disable]
     *                             }

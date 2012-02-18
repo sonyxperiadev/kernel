@@ -21,7 +21,6 @@
 #include "csl_dsp_common_util.h"
 #include "log.h"
 #include "osdw_dsp_drv.h"
-#include "audio_trace.h"
 
 extern AP_SharedMem_t	*vp_shared_mem;
 extern AP_SharedMem_t   *DSPDRV_GetPhysicalSharedMemoryAddress( void);
@@ -34,11 +33,11 @@ extern void VPRIPCMDQ_SetARM2SP2(UInt16 arg0, UInt16 arg1);
 *
 *   CSL_ARM2SP_Init initializes  ARM2SP input buffer.
 *
-*
+* 
 **********************************************************************/
 void CSL_ARM2SP_Init(void)
 {
-    memset(&vp_shared_mem->shared_Arm2SP_InBuf, 0, sizeof(vp_shared_mem->shared_Arm2SP_InBuf)); // clean buffer
+    memset(&vp_shared_mem->shared_Arm2SP_InBuf, 0, sizeof(vp_shared_mem->shared_Arm2SP_InBuf)); // clean buffer 
 
 } // CSL_ARM2SP_Init
 
@@ -47,7 +46,7 @@ void CSL_ARM2SP_Init(void)
 /**
 *
 *   CSL_ARM2SP_Write writes data to shared memory for ARM2SP voice play.
-*
+* 
 *   @param    inBuf			(in)	source buffer
 *   @param    inSize_inBytes  (in)	data size to write
 *   @param    writeIndex	(in)	index of ping-pong buffer
@@ -65,7 +64,7 @@ UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, 
 
 	bufSize_inWords = (in48K == TRUE)? ARM2SP_INPUT_SIZE_48K : ARM2SP_INPUT_SIZE;  //in number of words.
 	halfBufSize_inBytes = bufSize_inWords; // in number of bytes
-
+		
 	//beginning of the buffer or the half point in the buffer.
 	offset = (writeIndex == 0)? (bufSize_inWords/2) : 0; // offset is in 16bit words
 	if(in48K && audMode==0) offset >>= 1; //48k mono uses only half buffer
@@ -73,7 +72,7 @@ UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, 
 	totalCopied_bytes = (inSize_inBytes < halfBufSize_inBytes) ? inSize_inBytes : halfBufSize_inBytes;
 
 	memcpy( (UInt8 *)(&vp_shared_mem->shared_Arm2SP_InBuf[offset]), inBuf, totalCopied_bytes);
-
+	
 	return totalCopied_bytes;  	// return the number of bytes has been copied
 
 } // CSL_ARM2SP_Write
@@ -84,11 +83,11 @@ UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, 
 *
 *   CSL_ARM2SP2_Init initializes  ARM2SP2 input buffer.
 *
-*
+* 
 **********************************************************************/
 void CSL_ARM2SP2_Init(void)
 {
-    memset(&vp_shared_mem->shared_Arm2SP2_InBuf, 0, sizeof(vp_shared_mem->shared_Arm2SP2_InBuf)); // clean buffer
+    memset(&vp_shared_mem->shared_Arm2SP2_InBuf, 0, sizeof(vp_shared_mem->shared_Arm2SP2_InBuf)); // clean buffer 
 
 } // CSL_ARM2SP2_Init
 
@@ -97,7 +96,7 @@ void CSL_ARM2SP2_Init(void)
 /**
 *
 *   CSL_ARM2SP2_Write writes data to shared memory for ARM2SP2 voice play.
-*
+* 
 *   @param    inBuf			(in)	source buffer
 *   @param    inSize_inBytes  (in)	data size to write
 *   @param    writeIndex	(in)	index of ping-pong buffer
@@ -115,7 +114,7 @@ UInt32 CSL_ARM2SP2_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex,
 
 	bufSize_inWords = (in48K == TRUE)? ARM2SP_INPUT_SIZE_48K : ARM2SP_INPUT_SIZE;  //in number of words.
 	halfBufSize_inBytes = bufSize_inWords; // in number of bytes
-
+		
 	//beginning of the buffer or the half point in the buffer.
 	offset = (writeIndex == 0)? (bufSize_inWords/2) : 0; // offset is in 16bit words
 	if(in48K && audMode==0) offset >>= 1; //48k mono uses only half buffer
@@ -123,7 +122,7 @@ UInt32 CSL_ARM2SP2_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex,
 	totalCopied_bytes = (inSize_inBytes < halfBufSize_inBytes) ? inSize_inBytes : halfBufSize_inBytes;
 
 	memcpy( (UInt8 *)(&vp_shared_mem->shared_Arm2SP2_InBuf[offset]), inBuf, totalCopied_bytes);
-
+	
 	return totalCopied_bytes;  	// return the number of bytes has been copied
 
 } // CSL_ARM2SP2_Write
@@ -136,7 +135,7 @@ UInt32 CSL_ARM2SP2_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex,
 *
 *   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 0 millibel)
 *   @return   Boolean				TRUE if value is out of limits
-*
+* 
 **********************************************************************/
 Boolean CSL_SetARM2SpeechDLGain(Int16 mBGain)
 {
@@ -150,11 +149,11 @@ Boolean CSL_SetARM2SpeechDLGain(Int16 mBGain)
 
 	/* adjust DL scale factor to DSP Q1.14 format */
 	scale>>=(GAIN_FRACTION_BITS_NUMBER-14);
-
+	
 	gain = (UInt16)scale;
 
 	/* limit gain to DSP range */
-	if(gain > MAX_ARM2SP_DL_GAIN)
+	if(gain > MAX_ARM2SP_DL_GAIN) 
 	{
 		gain = MAX_ARM2SP_DL_GAIN;
 
@@ -178,7 +177,7 @@ Boolean CSL_SetARM2SpeechDLGain(Int16 mBGain)
 *
 *   CSL_MuteARM2SpeechDL mutes ARM2SP downlink.
 *
-*
+* 
 **********************************************************************/
 void CSL_MuteARM2SpeechDL(void)
 {
@@ -201,7 +200,7 @@ void CSL_MuteARM2SpeechDL(void)
 *
 *   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
 *   @return   Boolean				TRUE if value is out of limits
-*
+* 
 **********************************************************************/
 Boolean CSL_SetARM2SpeechULGain(Int16 mBGain)
 {
@@ -215,11 +214,11 @@ Boolean CSL_SetARM2SpeechULGain(Int16 mBGain)
 
 	/* adjust DL scale factor to DSP Q1.14 format */
 	scale>>=(GAIN_FRACTION_BITS_NUMBER-14);
-
+	
 	gain = (UInt16)scale;
 
 	/* limit gain to DSP range */
-	if(gain > MAX_ARM2SP_UL_GAIN)
+	if(gain > MAX_ARM2SP_UL_GAIN) 
 	{
 		gain = MAX_ARM2SP_UL_GAIN;
 
@@ -244,7 +243,7 @@ Boolean CSL_SetARM2SpeechULGain(Int16 mBGain)
 *
 *   CSL_MuteARM2SpeechUL mutes ARM2SP uplink.
 *
-*
+* 
 **********************************************************************/
 void CSL_MuteARM2SpeechUL(void)
 {
@@ -267,7 +266,7 @@ void CSL_MuteARM2SpeechUL(void)
 *
 *   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 0 millibel)
 *   @return   Boolean				TRUE if value is out of limits
-*
+* 
 **********************************************************************/
 Boolean CSL_SetARM2Speech2DLGain(Int16 mBGain)
 {
@@ -281,11 +280,11 @@ Boolean CSL_SetARM2Speech2DLGain(Int16 mBGain)
 
 	/* adjust DL scale factor to DSP Q1.14 format */
 	scale>>=(GAIN_FRACTION_BITS_NUMBER-14);
-
+	
 	gain = (UInt16)scale;
 
 	/* limit gain to DSP range */
-	if(gain > MAX_ARM2SP2_DL_GAIN)
+	if(gain > MAX_ARM2SP2_DL_GAIN) 
 	{
 		gain = MAX_ARM2SP2_DL_GAIN;
 
@@ -309,7 +308,7 @@ Boolean CSL_SetARM2Speech2DLGain(Int16 mBGain)
 *
 *   CSL_MuteARM2Speech2DL mutes ARM2SP2 downlink.
 *
-*
+* 
 **********************************************************************/
 void CSL_MuteARM2Speech2DL(void)
 {
@@ -333,7 +332,7 @@ void CSL_MuteARM2Speech2DL(void)
 *
 *   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
 *   @return   Boolean				TRUE if value is out of limits
-*
+* 
 **********************************************************************/
 Boolean CSL_SetARM2Speech2ULGain(Int16 mBGain)
 {
@@ -347,11 +346,11 @@ Boolean CSL_SetARM2Speech2ULGain(Int16 mBGain)
 
 	/* adjust DL scale factor to DSP Q1.14 format */
 	scale>>=(GAIN_FRACTION_BITS_NUMBER-14);
-
+	
 	gain = (UInt16)scale;
 
 	/* limit gain to DSP range */
-	if(gain > MAX_ARM2SP2_UL_GAIN)
+	if(gain > MAX_ARM2SP2_UL_GAIN) 
 	{
 		gain = MAX_ARM2SP2_UL_GAIN;
 
@@ -375,7 +374,7 @@ Boolean CSL_SetARM2Speech2ULGain(Int16 mBGain)
 *
 *   CSL_MuteARM2Speech2UL mutes ARM2SP2 uplink.
 *
-*
+* 
 **********************************************************************/
 void CSL_MuteARM2Speech2UL(void)
 {
@@ -393,12 +392,12 @@ void CSL_MuteARM2Speech2UL(void)
 //*********************************************************************
 /**
 *
-*   CSL_SetInpSpeechToARM2SpeechMixerDLGain sets Downlink Input Speech
+*   CSL_SetInpSpeechToARM2SpeechMixerDLGain sets Downlink Input Speech 
 *   Gain to ARM2SP mixer.
 *
 *   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 0 millibel)
 *   @return   Boolean				TRUE if value is out of limits
-*
+* 
 **********************************************************************/
 Boolean CSL_SetInpSpeechToARM2SpeechMixerDLGain(Int16 mBGain)
 {
@@ -412,11 +411,11 @@ Boolean CSL_SetInpSpeechToARM2SpeechMixerDLGain(Int16 mBGain)
 
 	/* adjust DL scale factor to DSP Q1.14 format */
 	scale>>=(GAIN_FRACTION_BITS_NUMBER-14);
-
+	
 	gain = (UInt16)scale;
 
 	/* limit gain to DSP range */
-	if(gain > MAX_INP_SP_TO_ARM2SP_MIXER_DL_GAIN)
+	if(gain > MAX_INP_SP_TO_ARM2SP_MIXER_DL_GAIN) 
 	{
 		gain = MAX_INP_SP_TO_ARM2SP_MIXER_DL_GAIN;
 
@@ -439,12 +438,12 @@ Boolean CSL_SetInpSpeechToARM2SpeechMixerDLGain(Int16 mBGain)
 //*********************************************************************
 /**
 *
-*   CSL_MuteInpSpeechToARM2SpeechMixerDL mutes Downlink Input Speech
+*   CSL_MuteInpSpeechToARM2SpeechMixerDL mutes Downlink Input Speech 
 *   to ARM2SP mixer.
 *
 *   @param    None
 *   @return   None
-*
+* 
 **********************************************************************/
 void CSL_MuteInpSpeechToARM2SpeechMixerDL(void)
 {
@@ -462,12 +461,12 @@ void CSL_MuteInpSpeechToARM2SpeechMixerDL(void)
 //*********************************************************************
 /**
 *
-*   CSL_SetInpSpeechToARM2SpeechMixerULGain sets Uplink Input Speech
+*   CSL_SetInpSpeechToARM2SpeechMixerULGain sets Uplink Input Speech 
 *   Gain to ARM2SP mixer.
 *
 *   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
 *   @return   Boolean				TRUE if value is out of limits
-*
+* 
 **********************************************************************/
 Boolean CSL_SetInpSpeechToARM2SpeechMixerULGain(Int16 mBGain)
 {
@@ -481,11 +480,11 @@ Boolean CSL_SetInpSpeechToARM2SpeechMixerULGain(Int16 mBGain)
 
 	/* adjust UL scale factor to DSP Q1.14 format */
 	scale>>=(GAIN_FRACTION_BITS_NUMBER-14);
-
+	
 	gain = (UInt16)scale;
 
 	/* limit gain to DSP range */
-	if(gain > MAX_INP_SP_TO_ARM2SP_MIXER_UL_GAIN)
+	if(gain > MAX_INP_SP_TO_ARM2SP_MIXER_UL_GAIN) 
 	{
 		gain = MAX_INP_SP_TO_ARM2SP_MIXER_UL_GAIN;
 
@@ -508,12 +507,12 @@ Boolean CSL_SetInpSpeechToARM2SpeechMixerULGain(Int16 mBGain)
 //*********************************************************************
 /**
 *
-*   CSL_MuteInpSpeechToARM2SpeechMixerUL mutes Uplink Input Speech
+*   CSL_MuteInpSpeechToARM2SpeechMixerUL mutes Uplink Input Speech 
 *   to ARM2SP mixer.
 *
 *   @param    None
 *   @return   None
-*
+* 
 **********************************************************************/
 void CSL_MuteInpSpeechToARM2SpeechMixerUL(void)
 {
@@ -535,7 +534,7 @@ void CSL_MuteInpSpeechToARM2SpeechMixerUL(void)
 *
 *   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
 *   @return   Boolean				TRUE if value is out of limits
-*
+* 
 **********************************************************************/
 Boolean CSL_SetARM2SpeechCallRecordGain(Int16 mBGain)
 {
@@ -549,11 +548,11 @@ Boolean CSL_SetARM2SpeechCallRecordGain(Int16 mBGain)
 
 	/* adjust DL scale factor to DSP Q1.14 format */
 	scale>>=(GAIN_FRACTION_BITS_NUMBER-14);
-
+	
 	gain = (UInt16)scale;
 
 	/* limit gain to DSP range */
-	if(gain > MAX_ARM2SP_CALL_REC_GAIN)
+	if(gain > MAX_ARM2SP_CALL_REC_GAIN) 
 	{
 		gain = MAX_ARM2SP_CALL_REC_GAIN;
 
@@ -574,9 +573,9 @@ Boolean CSL_SetARM2SpeechCallRecordGain(Int16 mBGain)
 //*********************************************************************
 /**
 *
-*   CSL_MuteARM2SpeechCallRecord mutes ARM2SP Call Record
+*   CSL_MuteARM2SpeechCallRecord mutes ARM2SP Call Record 
 *
-*
+* 
 **********************************************************************/
 void CSL_MuteARM2SpeechCallRecord(void)
 {
@@ -598,7 +597,7 @@ void CSL_MuteARM2SpeechCallRecord(void)
 *
 *   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
 *   @return   Boolean				TRUE if value is out of limits
-*
+* 
 **********************************************************************/
 Boolean CSL_SetARM2Speech2CallRecordGain(Int16 mBGain)
 {
@@ -612,11 +611,11 @@ Boolean CSL_SetARM2Speech2CallRecordGain(Int16 mBGain)
 
 	/* adjust DL scale factor to DSP Q1.14 format */
 	scale>>=(GAIN_FRACTION_BITS_NUMBER-14);
-
+	
 	gain = (UInt16)scale;
 
 	/* limit gain to DSP range */
-	if(gain > MAX_ARM2SP2_CALL_REC_GAIN)
+	if(gain > MAX_ARM2SP2_CALL_REC_GAIN) 
 	{
 		gain = MAX_ARM2SP2_CALL_REC_GAIN;
 
@@ -637,9 +636,9 @@ Boolean CSL_SetARM2Speech2CallRecordGain(Int16 mBGain)
 //*********************************************************************
 /**
 *
-*   CSL_MuteARM2Speech2CallRecord mutes ARM2SP2 Call Record
+*   CSL_MuteARM2Speech2CallRecord mutes ARM2SP2 Call Record 
 *
-*
+* 
 **********************************************************************/
 void CSL_MuteARM2Speech2CallRecord(void)
 {
@@ -655,13 +654,13 @@ void CSL_MuteARM2Speech2CallRecord(void)
 
 /*****************************************************************************************/
 /**
-*
+* 
 * Function Name: csl_dsp_arm2sp_get_phy_base_addr
 *
 *   @note     This function returns the base address of the low part of ARM2SP Input Buffer
 *             for programming the AADMAC (this function should not be used for any software
 *             access).
-*
+*                                                                                         
 *   @return   Physical Base address of the low half of the ARM2SP input buffer
 *
 **/
@@ -676,13 +675,13 @@ UInt16 *csl_dsp_arm2sp_get_phy_base_addr(void)
 
 /*****************************************************************************************/
 /**
-*
+* 
 * Function Name: csl_dsp_arm2sp2_get_phy_base_addr
 *
 *   @note     This function returns the base address of the low part of ARM2SP2 Input Buffer
 *             for programming the AADMAC (this function should not be used for any software
 *             access).
-*
+*                                                                                         
 *   @return   Physical Base address of the low half of the ARM2SP2 input buffer
 *
 **/
@@ -697,13 +696,13 @@ UInt16 *csl_dsp_arm2sp2_get_phy_base_addr(void)
 
 /*****************************************************************************************/
 /**
-*
+* 
 * Function Name: csl_dsp_arm2sp_get_size
 *
 *   @note     This function returns the size of the whole of ARM2SP Input Buffer
 *             for programming the AADMAC
-*
-*   @param    Rate = 8000, 16000 or 48000
+*                                               
+*   @param    Rate = 8000, 16000 or 48000                                     
 *   @return   Size of the entire ARM2SP input buffer
 *
 **/
@@ -732,13 +731,13 @@ UInt16 csl_dsp_arm2sp_get_size(UInt32 rate)
 
 /*****************************************************************************************/
 /**
-*
+* 
 * Function Name: csl_dsp_arm2sp2_get_size
 *
 *   @note     This function returns the size of the whole of ARM2SP2 Input Buffer
 *             for programming the AADMAC
-*
-*   @param    Rate = 8000, 16000 or 48000
+*                                                                                         
+*   @param    Rate = 8000, 16000 or 48000                                     
 *   @return   Size of the entire ARM2SP2 input buffer
 *
 **/
@@ -767,12 +766,12 @@ UInt16 csl_dsp_arm2sp2_get_size(UInt32 rate)
 
 /*****************************************************************************************/
 /**
-*
+* 
 * Function Name: csl_arm2sp_set_arm2sp
 *
 *   @note     This function Starts and Stops the ARM2SP interface.
-*
-*   @param    UInt32 Rate = 8000, 16000 or 48000
+*                                                                                         
+*   @param    UInt32 Rate = 8000, 16000 or 48000                                     
 *   @param    CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
 *   @param    CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
 *   @param    UInt32 numFramesPerInterrupt
@@ -781,7 +780,7 @@ UInt16 csl_dsp_arm2sp2_get_size(UInt32 rate)
 *   @param    UInt16 Reset_out_ptr_flag \BR
 *                                        =0, reset output pointer - shared_Arm2SP2_InBuf_out - of buffer
 *                                            shared_Arm2SP2_InBuf[] to 0. Used for new arm2sp2 session.\BR
-*                                        =1, keep output pointer - shared_Arm2SP2_InBuf_out - unchange.
+*                                        =1, keep output pointer - shared_Arm2SP2_InBuf_out - unchange. 
 *                                            Used for PAUSE/RESUME the same arm2sp2 session.
 *
 *   @return   None
@@ -818,7 +817,7 @@ void csl_arm2sp_set_arm2sp(UInt32               		samplingRate,
 			// set UL_enable
 			arg0 |= ARM2SP_UL_ENABLE_MASK;
 
-			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL 
 				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
 			{
 				// mixing UL
@@ -835,7 +834,7 @@ void csl_arm2sp_set_arm2sp(UInt32               		samplingRate,
 			// set DL_enable
 			arg0 |= ARM2SP_DL_ENABLE_MASK;
 
-			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL 
 				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
 			{
 				// mixing DL
@@ -855,7 +854,7 @@ void csl_arm2sp_set_arm2sp(UInt32               		samplingRate,
 			// set DL_enable
 			arg0 |= ARM2SP_DL_ENABLE_MASK;
 
-			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL 
 				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
 			{
 				// mixing UL
@@ -866,8 +865,8 @@ void csl_arm2sp_set_arm2sp(UInt32               		samplingRate,
 				// overwirte UL
 				arg0 |= ARM2SP_UL_OVERWRITE;
 			}
-
-			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL
+			
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL 
 				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
 			{
 				// mixing DL
@@ -890,22 +889,20 @@ void csl_arm2sp_set_arm2sp(UInt32               		samplingRate,
 			break;
 	}
 
-	aTrace(LOG_AUDIO_DSP, "ARM2SP Start, playbackMode = %d,"
-			"mixMode = %d, arg0 = 0x%x instanceID=1,"
-			"Reset_out_ptr_flag = %d\n",
-			playbackMode, mixMode, arg0, Reset_out_ptr_flag);
+	Log_DebugPrintf(LOGID_AUDIO, "ARM2SP Start, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=1, Reset_out_ptr_flag = %d\n",
+						playbackMode, mixMode, arg0, Reset_out_ptr_flag);
 
     VPRIPCMDQ_SetARM2SP(arg0, Reset_out_ptr_flag);
 }
 
 /*****************************************************************************************/
 /**
-*
+* 
 * Function Name: csl_arm2sp_set_arm2sp2
 *
 *   @note     This function Starts and Stops the ARM2SP2 interface.
-*
-*   @param    UInt32 Rate = 8000, 16000 or 48000
+*                                                                                         
+*   @param    UInt32 Rate = 8000, 16000 or 48000                                     
 *   @param    CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
 *   @param    CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
 *   @param    UInt32 numFramesPerInterrupt
@@ -914,7 +911,7 @@ void csl_arm2sp_set_arm2sp(UInt32               		samplingRate,
 *   @param    UInt16 Reset_out_ptr_flag \BR
 *                                        =0, reset output pointer - shared_Arm2SP2_InBuf_out - of buffer
 *                                            shared_Arm2SP2_InBuf[] to 0. Used for new arm2sp2 session.\BR
-*                                        =1, keep output pointer - shared_Arm2SP2_InBuf_out - unchange.
+*                                        =1, keep output pointer - shared_Arm2SP2_InBuf_out - unchange. 
 *                                            Used for PAUSE/RESUME the same arm2sp2 session.
 *
 *   @return   None
@@ -951,7 +948,7 @@ void csl_arm2sp_set_arm2sp2(UInt32               		samplingRate,
 			// set UL_enable
 			arg0 |= ARM2SP_UL_ENABLE_MASK;
 
-			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL 
 				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
 			{
 				// mixing UL
@@ -968,7 +965,7 @@ void csl_arm2sp_set_arm2sp2(UInt32               		samplingRate,
 			// set DL_enable
 			arg0 |= ARM2SP_DL_ENABLE_MASK;
 
-			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL 
 				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
 			{
 				// mixing DL
@@ -988,7 +985,7 @@ void csl_arm2sp_set_arm2sp2(UInt32               		samplingRate,
 			// set DL_enable
 			arg0 |= ARM2SP_DL_ENABLE_MASK;
 
-			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL 
 				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
 			{
 				// mixing UL
@@ -999,8 +996,8 @@ void csl_arm2sp_set_arm2sp2(UInt32               		samplingRate,
 				// overwirte UL
 				arg0 |= ARM2SP_UL_OVERWRITE;
 			}
-
-			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL
+			
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL 
 				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
 			{
 				// mixing DL
@@ -1023,10 +1020,8 @@ void csl_arm2sp_set_arm2sp2(UInt32               		samplingRate,
 			break;
 	}
 
-	aTrace(LOG_AUDIO_DSP, "ARM2SP Start, playbackMode = %d,"
-			"mixMode = %d, arg0 = 0x%x instanceID=2,"
-			"Reset_out_ptr_flag = %d\n",
-			playbackMode, mixMode, arg0, Reset_out_ptr_flag);
+	Log_DebugPrintf(LOGID_AUDIO, "ARM2SP Start, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=2, Reset_out_ptr_flag = %d\n",
+						playbackMode, mixMode, arg0, Reset_out_ptr_flag);
 
 	VPRIPCMDQ_SetARM2SP2(arg0, Reset_out_ptr_flag);
 }

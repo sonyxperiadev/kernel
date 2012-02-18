@@ -19,7 +19,6 @@
 #include "shared.h"
 #include "resultcode.h"
 #include "csl_log.h"
-#include "audio_trace.h"
 
 extern AP_SharedMem_t	*vp_shared_mem;
 

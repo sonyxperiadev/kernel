@@ -331,6 +331,7 @@ typedef struct
 	UInt16 multiband_comp_beta_mid;
 	UInt16 multiband_comp_beta_high;
 	Int32 fm_radio_digital_vol[NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME]; //in mB (0.01 dB).
+	UInt16 ltpf_enable;
 
 } SysAudioParm_t;
 

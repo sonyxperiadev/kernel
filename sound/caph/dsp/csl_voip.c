@@ -20,7 +20,6 @@
 #include "csl_voip.h"
 #include "csl_apcmd.h"
 #include "log.h"
-#include "audio_trace.h"
 
 extern AP_SharedMem_t	*vp_shared_mem;
 
@@ -34,7 +33,7 @@ static const UInt16 sVoIPDataLen[7] = {0, 322, 160, 38, 166, 642, 70};
 *
 *   @param    codec_type	(in)		codec type
 *   @param    pSrc			(in)		source of the data to write
-*
+* 
 **********************************************************************/
 void CSL_WriteDLVoIPData(UInt16 codec_type, UInt16 *pSrc)
 {
@@ -44,9 +43,7 @@ void CSL_WriteDLVoIPData(UInt16 codec_type, UInt16 *pSrc)
 
 	index = (codec_type & 0xf000) >> 12;
 	if (index >= 7)
-  		aTrace(LOG_AUDIO_DSP,
-				"===== CSL_WriteDLVoIPData,"
-				"invalid codec type!!!\n");
+  		Log_DebugPrintf(LOGID_AUDIO, "===== CSL_WriteDLVoIPData, invalid codec type!!!\n");
 	else
 		data_len = sVoIPDataLen[index];
 
@@ -61,7 +58,7 @@ void CSL_WriteDLVoIPData(UInt16 codec_type, UInt16 *pSrc)
 *   @param    codec_type	(in)		codec type
 *   @param    pDst			(in)		destination of read data
 *   @return   UInt8						size of data in bytes
-*
+* 
 **********************************************************************/
 UInt8 CSL_ReadULVoIPData(UInt16 codec_type, UInt16 *pDst)
 {
@@ -71,14 +68,12 @@ UInt8 CSL_ReadULVoIPData(UInt16 codec_type, UInt16 *pDst)
 
 	index = (codec_type & 0xf000) >> 12;
 	if (index >= 7)
-  		aTrace(LOG_AUDIO_DSP,
-				"===== CSL_ReadULVoIPData,"
-				"invalid codec type!!!\n");
+  		Log_DebugPrintf(LOGID_AUDIO, "===== CSL_ReadULVoIPData, invalid codec type!!!\n");
 	else
 		data_len = sVoIPDataLen[index];
-
+	
 	memcpy(pDst, pSrc, data_len);
-
+	
 	return data_len;
 }
 
@@ -97,7 +92,7 @@ void DJB_Init(void)
 
 	/* clear payload buffer */
 	memset(&vp_shared_mem->ajcPayloadBuffer[0], 0, DJB_BUFFER_SIZE*sizeof(UInt16));
-
+	
 	/* send init command to DSP */
 	VPRIPCMDQ_VoLTE_Init();
 
@@ -107,7 +102,7 @@ void DJB_Init(void)
 /**
 *
 *   DJB_Init flushes Jitter Buffer for new stream
-*
+* 
 **********************************************************************/
 void DJB_StartStream(void)
 {
@@ -126,7 +121,7 @@ void DJB_StartStream(void)
 *  NOTE:
 ****************************************************************************/
 static Int16 searchFreeIndex(DJB_PAYLOADQ *payloadqp)
-{
+{   
    UInt16 *freeListp = &vp_shared_mem->ajcPayloadBuffer[0] + (payloadqp->numEntry * 4);
    UInt16 i, bufferidx = 0;
    UInt16 search = 0;
@@ -152,7 +147,7 @@ static Int16 searchFreeIndex(DJB_PAYLOADQ *payloadqp)
    }
 
    bufferidx += (i*16);
-
+   
    if(bufferidx < payloadqp->numEntry)
    {
       result = (Int16)bufferidx;
@@ -169,7 +164,7 @@ static Int16 searchFreeIndex(DJB_PAYLOADQ *payloadqp)
 *   DJB_PutFrame puts incoming frame into Jitter Buffer of VoLTE interface
 *
 *   @param    pInputFrame	(in)		input frame
-*
+* 
 **********************************************************************/
 void DJB_PutFrame(DJB_InputFrame *pInputFrame)
 {
@@ -189,18 +184,16 @@ void DJB_PutFrame(DJB_InputFrame *pInputFrame)
     {
 		pPayload = &vp_shared_mem->ajcPayloadBuffer[0] + (payloadqp->numEntry * 4) + (payloadqp->numEntry>>4) + 1 + (bufferIndex * payloadqp->entrySizeInWords);
         payloadqp->numAlloc++;
-
+     
 	}
 	else
 	{
-		aTrace(LOG_AUDIO_DSP,
-				"===== DJB_PutFrame,"
-				"Jitter Buffer overflow!!!\n");
+		Log_DebugPrintf(LOGID_AUDIO, "===== DJB_PutFrame, Jitter Buffer overflow!!!\n");
 
 		return;
 	}
 
-
+	
 	/* copy payload content to DSP shared memory */
 	memcpy(pPayload, pInputFrame->pFramePayload, pInputFrame->payloadSize);
 

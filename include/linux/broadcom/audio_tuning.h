@@ -396,8 +396,9 @@ typedef enum {
 	PARAM_MULTIBAND_COMP_BETA_LOW,               //317
 	PARAM_MULTIBAND_COMP_BETA_MID,				//318
 	PARAM_MULTIBAND_COMP_BETA_HIGH,		    	//319
+	PARAM_VOICE_LTPF_ENABLE,           			//320 
     
-    AUDIO_PARM_NUMBER   						// 320
+    AUDIO_PARM_NUMBER   						//321
 
 } AudioParam_t;
 
