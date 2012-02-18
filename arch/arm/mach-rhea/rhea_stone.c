@@ -260,6 +260,7 @@ static struct bcmi2cnfc_i2c_platform_data bcmi2cnfc_pdata = {
 
 static int bcmi2cnfc_gpio_setup(void *this)
 {
+/*
 	struct bcmi2cnfc_i2c_platform_data *p;
 	p = (struct bcmi2cnfc_i2c_platform_data *) this;
 	if (!p)
@@ -275,11 +276,12 @@ static int bcmi2cnfc_gpio_setup(void *this)
 
 	gpio_request(p->wake_gpio, "nfc_wake");
 	gpio_direction_output(p->wake_gpio, 0);
-
+*/
 	return 0;
 }
 static int bcmi2cnfc_gpio_clear(void *this)
 {
+/*
 	struct bcmi2cnfc_i2c_platform_data *p;
 	p = (struct bcmi2cnfc_i2c_platform_data *) this;
 	if (!p)
@@ -293,7 +295,7 @@ static int bcmi2cnfc_gpio_clear(void *this)
 	gpio_free(p->en_gpio);
 	gpio_free(p->wake_gpio);
 	gpio_free(p->irq_gpio);
-
+*/
 	return 0;
 }
 
