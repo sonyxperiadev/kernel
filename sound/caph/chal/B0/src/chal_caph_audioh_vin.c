@@ -584,7 +584,7 @@ cUInt32 chal_audio_vinpath_read_fifo(CHAL_HANDLE handle, cUInt32 *src,
 
 	if (ign_udf == CHAL_AUDIO_STOP_ON_FIFO_UNDERFLOW) {
 		for (n = 0; n < length; n++) {
-			/* Check if the FIFO is getting underflow or not,*
+			/* Check if the FIFO is getting underflow or not,*/
 			/* if ign_udf flag is not set */
 			if (chal_audio_vinpath_read_fifo_status(handle) &
 			    CHAL_AUDIO_FIFO_STATUS_NEAR_EMPTY) {

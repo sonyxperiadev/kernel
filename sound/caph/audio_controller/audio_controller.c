@@ -2917,16 +2917,6 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 	aTrace(LOG_AUDIO_CNTLR, "%s speaker %d, usage_flag %d, use %d\n",
 			__func__, speaker, usage_flag, use);
 
-/** If the speaker doesn't need PMU, we don't do anything.
-Otherwise, in concurrent audio paths(one is IHF, the other is EP), the PMU
-IHF external PGA gain can be overwitten by EP mode gain(0), will mute the PMU.
- May need to turn off PMU if speaker is not IHF/HS, but its PMU is still on.
-*/
-	if (speaker != AUDIO_SINK_HEADSET && speaker != AUDIO_SINK_TTY
-	    && speaker != AUDIO_SINK_LOUDSPK && (!IHF_IsOn && !HS_IsOn)) {
-		return;
-	}
-
 	switch (speaker) {
 	case AUDIO_SINK_HEADSET:
 	case AUDIO_SINK_TTY:
@@ -2976,22 +2966,7 @@ IHF external PGA gain can be overwitten by EP mode gain(0), will mute the PMU.
 		break;
 
 	default:
-		/*not HS/IHF, so turn off HS/IHF PMU if its PMU is on. */
-		switch (usage_flag) {
-		case TelephonyUseExtSpkr:
-			callUseIHF = FALSE;
-			callUseHS = FALSE;
-			break;
-
-		case AudioUseExtSpkr:
-			audioUseIHF = FALSE;
-			audioUseHS = FALSE;
-			break;
-
-		default:
-			break;
-		}
-		break;
+		return;
 	}
 
 	if ((callUseHS == FALSE) && (audioUseHS == FALSE)

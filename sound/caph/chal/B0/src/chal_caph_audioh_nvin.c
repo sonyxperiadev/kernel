@@ -27,7 +27,7 @@
 /****************************************************************************/
 /**
 *
-*  @file   chal_caph_audioh_vin.c
+*  @file   chal_caph_audioh_nvin.c
 *
 *  @brief  chal layer driver for caph audioh device driver
 *
