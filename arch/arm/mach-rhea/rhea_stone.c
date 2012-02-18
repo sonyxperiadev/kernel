@@ -752,7 +752,7 @@ static struct platform_device lq043y1dx01_dsi_display_device = {
 /*
  * Camera Specifc
  */
-#define SENSOR_0_GPIO_PWRDN		(2)
+#define SENSOR_0_GPIO_PWRDN		(121)
 #define SENSOR_0_GPIO_RST		(111)
 #define SENSOR_0_CLK			"dig_ch0_clk"
 #define SENSOR_0_CLK_FREQ		(13000000)
