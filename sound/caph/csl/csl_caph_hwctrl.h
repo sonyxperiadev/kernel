@@ -662,7 +662,8 @@ void csl_caph_hwctrl_SetBTMode(int mode);
 ****************************************************************************/
 void csl_caph_arm2sp_set_fm_mixmode(int mixMode);
 
-void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus);
+void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
+			       int en_lpbk);
 
 /****************************************************************************
 *

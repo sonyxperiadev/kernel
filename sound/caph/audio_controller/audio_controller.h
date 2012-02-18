@@ -609,10 +609,13 @@ void AUDCTRL_SetArm2spParam(UInt32 mixMode, Boolean is_fm);
 *
 *  @param  bus   protocol (I2S or PCM)
 *
+*  @param  en_lpbk enable loopback. If enabled, port is ignored.
+*
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus);
+void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus,
+		       int en_lpbk);
 
 /********************************************************************
 *  @brief  Control ssp tdm mode
