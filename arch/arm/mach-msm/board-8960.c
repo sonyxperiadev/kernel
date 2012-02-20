@@ -79,6 +79,7 @@
 #include <mach/ion.h>
 #include <mach/mdm2.h>
 #include <mach/mdm-peripheral.h>
+#include <mach/msm_rtb.h>
 
 #include <linux/fmem.h>
 
@@ -271,6 +272,38 @@ static struct memtype_reserve msm8960_reserve_table[] __initdata = {
 	},
 };
 
+#if defined(CONFIG_MSM_RTB)
+static struct msm_rtb_platform_data msm_rtb_pdata = {
+	.size = SZ_1M,
+};
+
+static int __init msm_rtb_set_buffer_size(char *p)
+{
+	int s;
+
+	s = memparse(p, NULL);
+	msm_rtb_pdata.size = ALIGN(s, SZ_4K);
+	return 0;
+}
+early_param("msm_rtb_size", msm_rtb_set_buffer_size);
+
+
+static struct platform_device msm_rtb_device = {
+	.name           = "msm_rtb",
+	.id             = -1,
+	.dev            = {
+		.platform_data = &msm_rtb_pdata,
+	},
+};
+#endif
+
+static void __init reserve_rtb_memory(void)
+{
+#if defined(CONFIG_MSM_RTB)
+	msm8960_reserve_table[MEMTYPE_EBI1].size += msm_rtb_pdata.size;
+#endif
+}
+
 static void __init size_pmem_devices(void)
 {
 #ifdef CONFIG_ANDROID_PMEM
@@ -461,6 +494,7 @@ static void __init msm8960_calculate_reserve_sizes(void)
 	reserve_ion_memory();
 	reserve_fmem_memory();
 	reserve_mdp_memory();
+	reserve_rtb_memory();
 }
 
 static struct reserve_info msm8960_reserve_info __initdata = {
@@ -1769,6 +1803,9 @@ static struct platform_device *common_devices[] __initdata = {
 #endif
 	&msm_device_dspcrashd_8960,
 	&msm8960_device_watchdog,
+#ifdef CONFIG_MSM_RTB
+	&msm_rtb_device,
+#endif
 };
 
 static struct platform_device *sim_devices[] __initdata = {
