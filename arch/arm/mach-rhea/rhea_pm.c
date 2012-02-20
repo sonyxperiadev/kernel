@@ -69,6 +69,7 @@ static u32 pm_en_self_refresh = 0;
 
 dma_addr_t noncache_buf_pa;
 char* noncache_buf_va;
+static u32 memc_freq_map = 0;
 #endif /* CONFIG_RHEA_WA_HWJIRA_2221 */
 
 #ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
@@ -540,6 +541,10 @@ int enter_idle_state(struct kona_idle_state *state)
 		 noncache_buf_tmp_va = noncache_buf_va;
 		 for (count = 0; count < 16; count++, noncache_buf_tmp_va += 64)
 			temp_val = *(volatile u32 *)noncache_buf_tmp_va;
+		memc_freq_map = readl(KONA_MEMC0_NS_VA +
+						CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
+		writel(1, KONA_MEMC0_NS_VA +
+				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2221*/
 
@@ -564,8 +569,14 @@ int enter_idle_state(struct kona_idle_state *state)
 	if (JIRA_WA_ENABLED(919))
 		writel(lpddr2_temp_period, KONA_MEMC0_NS_VA +
                         CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
-
 #endif /*CONFIG_RHEA_WA_CRMEMC_919*/
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2221
+	if (JIRA_WA_ENABLED(2221))
+		writel(memc_freq_map, KONA_MEMC0_NS_VA +
+				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
+#endif
+
 
 #if	defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || \
 			defined(CONFIG_RHEA_WA_HWJIRA_2045)
