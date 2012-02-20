@@ -716,7 +716,8 @@ static struct snd_soc_dsp_link fe_media = {
 	},
 };
 
-static struct snd_soc_dsp_link slimbus0_hl_media = {
+/* bi-directional media definition for hostless PCM device */
+static struct snd_soc_dsp_link bidir_hl_media = {
 	.playback = true,
 	.capture = true,
 	.trigger = {
@@ -725,9 +726,8 @@ static struct snd_soc_dsp_link slimbus0_hl_media = {
 	},
 };
 
-static struct snd_soc_dsp_link int_fm_hl_media = {
+static struct snd_soc_dsp_link hdmi_rx_hl = {
 	.playback = true,
-	.capture = true,
 	.trigger = {
 		SND_SOC_DSP_TRIGGER_POST,
 		SND_SOC_DSP_TRIGGER_POST
@@ -979,7 +979,7 @@ static struct snd_soc_dai_link msm8960_dai[] = {
 		.cpu_dai_name	= "SLIMBUS0_HOSTLESS",
 		.platform_name  = "msm-pcm-hostless",
 		.dynamic = 1,
-		.dsp_link = &slimbus0_hl_media,
+		.dsp_link = &bidir_hl_media,
 		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
 		.ignore_suspend = 1,
 		/* .be_id = do not care */
@@ -990,7 +990,7 @@ static struct snd_soc_dai_link msm8960_dai[] = {
 		.cpu_dai_name	= "INT_FM_HOSTLESS",
 		.platform_name  = "msm-pcm-hostless",
 		.dynamic = 1,
-		.dsp_link = &int_fm_hl_media,
+		.dsp_link = &bidir_hl_media,
 		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
 		.ignore_suspend = 1,
 		/* .be_id = do not care */
@@ -1021,6 +1021,28 @@ static struct snd_soc_dai_link msm8960_dai[] = {
 		.dynamic = 1,
 		.dsp_link = &lpa_fe_media,
 		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA4,
+	},
+	{
+		.name = "AUXPCM Hostless",
+		.stream_name = "AUXPCM Hostless",
+		.cpu_dai_name	= "AUXPCM_HOSTLESS",
+		.platform_name  = "msm-pcm-hostless",
+		.dynamic = 1,
+		.dsp_link = &bidir_hl_media,
+		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+		.ignore_suspend = 1,
+	},
+	/* HDMI Hostless */
+	{
+		.name = "HDMI_RX_HOSTLESS",
+		.stream_name = "HDMI_RX_HOSTLESS",
+		.cpu_dai_name = "HDMI_HOSTLESS",
+		.platform_name = "msm-pcm-hostless",
+		.dynamic = 1,
+		.dsp_link = &hdmi_rx_hl,
+		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+		.no_codec = 1,
+		.ignore_suspend = 1,
 	},
 	/* Backend DAI Links */
 	{
