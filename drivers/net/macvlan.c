@@ -239,7 +239,7 @@ static int macvlan_queue_xmit(struct sk_buff *skb, struct net_device *dev)
 		dest = macvlan_hash_lookup(port, eth->h_dest);
 		if (dest && dest->mode == MACVLAN_MODE_BRIDGE) {
 			/* send to lowerdev first for its network taps */
-			vlan->forward(vlan->lowerdev, skb);
+			dev_forward_skb(vlan->lowerdev, skb);
 
 			return NET_XMIT_SUCCESS;
 		}
@@ -547,7 +547,7 @@ void macvlan_common_setup(struct net_device *dev)
 {
 	ether_setup(dev);
 
-	dev->priv_flags	       &= ~IFF_XMIT_DST_RELEASE;
+	dev->priv_flags	       &= ~(IFF_XMIT_DST_RELEASE | IFF_TX_SKB_SHARING);
 	dev->netdev_ops		= &macvlan_netdev_ops;
 	dev->destructor		= free_netdev;
 	dev->header_ops		= &macvlan_hard_header_ops,
