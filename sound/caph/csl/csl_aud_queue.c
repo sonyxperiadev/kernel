@@ -47,7 +47,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.          */
 #include "mobcom_types.h"
 #include "audio_consts.h"
 
-#include "log.h"
 #include "csl_aud_queue.h"
 #include "audio_trace.h"
 

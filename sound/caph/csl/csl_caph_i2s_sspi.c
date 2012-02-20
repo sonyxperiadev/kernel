@@ -44,7 +44,6 @@
 #include "brcm_rdb_sspil.h"
 #include "brcm_rdb_padctrlreg.h"
 #include "brcm_rdb_sysmap.h"
-#include "log.h"
 #include "audio_trace.h"
 /*
  * global variable declarations

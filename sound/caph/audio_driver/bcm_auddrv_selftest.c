@@ -48,7 +48,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "chal_types.h"
-#include "log.h"
 
 #include "csl_caph.h"
 

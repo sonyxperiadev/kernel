@@ -36,7 +36,6 @@
 #include <linux/kernel.h>
 #include "audio_consts.h"
 #include "extern_audio.h"
-#include "log.h"
 #include "linux/gpio.h"
 #include "audio_trace.h"
 

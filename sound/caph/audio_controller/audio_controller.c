@@ -52,7 +52,6 @@
 
 #include "audio_vdriver.h"
 #include "audio_controller.h"
-#include "log.h"
 
 #ifdef CONFIG_DIGI_MIC
 #ifdef CONFIG_BCMPMU_AUDIO

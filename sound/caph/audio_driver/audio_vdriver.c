@@ -38,7 +38,6 @@ Copyright 2009 - 2012  Broadcom Corporation
 
 #include "bcm_fuse_sysparm_CIB.h"
 
-#include "log.h"
 #include "csl_caph.h"
 #include "csl_dsp.h"
 #include "csl_caph_audioh.h"

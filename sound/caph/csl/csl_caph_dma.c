@@ -34,7 +34,6 @@
 ****************************************************************************/
 #include <linux/interrupt.h>
 #include <linux/slab.h>
-#include "log.h"
 #include "mobcom_types.h"
 #include "chal_caph_dma.h"
 #include "chal_caph_intc.h"

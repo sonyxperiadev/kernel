@@ -33,7 +33,6 @@
 ****************************************************************************/
 #include "mobcom_types.h"
 #include "resultcode.h"
-#include "log.h"
 #include "msconsts.h"
 #include "audio_consts.h"
 #include "csl_caph.h"
@@ -180,7 +179,7 @@ Result_t csl_audio_capture_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 
 	if (audDrv->source == CSL_CAPH_DEV_DSP
 	    && audDrv->sink == CSL_CAPH_DEV_MEMORY) {
-		Log_DebugPrintf(LOG_AUDIO_CSL,
+		aTrace(LOG_AUDIO_CSL,
 			"csl_audio_capture_configure::USB call?"
 			"reset src_sampleRate from %u to 8000.\r\n",
 			stream.src_sampleRate);

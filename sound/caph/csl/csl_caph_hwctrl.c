@@ -35,7 +35,6 @@
 #include "resultcode.h"
 #include "mobcom_types.h"
 #include "msconsts.h"
-#include "log.h"
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_intc.h"
