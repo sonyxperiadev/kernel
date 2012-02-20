@@ -1,19 +1,13 @@
- /*****************************************************************************
+/*
+ *  Copyright (C) 2002 ARM Ltd.
+ *  All Rights Reserved
  *
- * Kona extensions to generic ARM scu API
- *
- * Copyright 2012 Broadcom Corporation.  All rights reserved.
- *
- * Unless you and Broadcom execute a separate written software license
- * agreement governing use of this software, this software is licensed to you
- * under the terms of the GNU General Public License version 2, available at
- * http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
- *
- * Notwithstanding the above, under no circumstances may you combine this
- * software in any way with any other Broadcom software provided under a
- * license other than the GPL, without Broadcom's express prior written
- * consent.
- *****************************************************************************/
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* Portions of this software are Copyright 2011 Broadcom Corporation */
 
 #include <linux/module.h>
 #include <linux/io.h>
@@ -67,9 +61,40 @@ int scu_standby(bool enable)
 }
 #endif /* CONFIG_RHEA_B0_PM_ASIC_WORKAROUND */
 
-void scu_invalidate_all(void)
+int scu_invalidate_all(void)
 {
+	if (!scu_base)
+		return -ENODEV;
+
 	writel(0xFFFF, scu_base + SCU_INVALIDATE_ALL_OFFSET);
+
+	return 0;
+}
+
+/*
+ * Set the executing CPUs power mode as defined.  This will be in
+ * preparation for it executing a WFI instruction.
+ *
+ * This function must be called with preemption disabled, and as it
+ * has the side effect of disabling coherency, caches must have been
+ * flushed.  Interrupts must also have been disabled.
+ */
+int scu_set_power_mode(unsigned int mode)
+{
+	unsigned int val;
+	int cpu = smp_processor_id();
+
+	if (!scu_base)
+		return -ENODEV;
+
+	if (mode > 3 || mode == 1 || cpu > 3)
+		return -EINVAL;
+
+	val = readb(scu_base + SCU_POWER_STATUS_OFFSET + cpu) & ~0x03;
+	val |= mode;
+	writeb(val, scu_base + SCU_POWER_STATUS_OFFSET + cpu);
+
+	return 0;
 }
 
 void scu_init(void __iomem *base)

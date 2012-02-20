@@ -47,14 +47,6 @@
 	} while(0)
 #endif
 
-/*SCU power status values*/
-enum
-{
-	SCU_STATUS_NORMAL 	= 0,
-	SCU_STATUS_DORMANT 	= 2, /*used to force A9 to retention*/
-	SCU_STATUS_OFF 		= 3, /*used to force A9 to dormant*/
-};
-
 extern void enter_wfi(void);
 extern void dormant_enter(void);
 
@@ -200,18 +192,6 @@ static int enable_sleep_prevention_clock(int enable)
     return 0;
 }
 #endif
-
-static int pm_set_scu_power_mode(u32 mode)
-{
-	u32 reg_val = 0;
-	BUG_ON(mode > SCU_STATUS_OFF || mode == 1);
-	reg_val = readl(KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
-	reg_val &= ~SCU_POWER_STATUS_CPU0_STATUS_MASK;
-	reg_val |= mode & SCU_POWER_STATUS_CPU0_STATUS_MASK;
-	writel(reg_val, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
-
-	return 0;
-}
 
 #ifndef CONFIG_ARCH_RHEA_A0
 static int pm_enable_self_refresh(bool enable)
@@ -533,7 +513,7 @@ int enter_idle_state(struct kona_idle_state *state)
 	switch (state->state) {
 	case RHEA_STATE_C1:
 	case RHEA_STATE_C2:
-		pm_set_scu_power_mode(SCU_STATUS_DORMANT);
+		scu_set_power_mode(SCU_STATUS_DORMANT);
 		enter_wfi();
 		break;
 	case RHEA_STATE_C3:
@@ -575,7 +555,7 @@ int enter_idle_state(struct kona_idle_state *state)
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
 
 	pi_enable(pi,1);
-	pm_set_scu_power_mode(SCU_STATUS_NORMAL);
+	scu_set_power_mode(SCU_STATUS_NORMAL);
 #ifdef CONFIG_ARCH_RHEA_A0
 	if(pm_en_self_refresh)
 	{
