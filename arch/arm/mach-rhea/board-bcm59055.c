@@ -74,6 +74,29 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x7B, .val = 0xC3, .mask = 0xFF},
 	{.map = 0, .addr = 0x7C, .val = 0xA7, .mask = 0xFF},
 	{.map = 0, .addr = 0x7D, .val = 0x08, .mask = 0xFF},
+
+	/*Init SDSR NM, NM2 and LPM voltages to 1.2V
+	*/
+	{.map = 0, .addr = 0xD0, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0xD1, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0xD2, .val = 0x13, .mask = 0xFF},
+
+	/*Init CSR LPM  to 0.9 V
+	CSR NM2 to 1.22V
+	*/
+	{.map = 0, .addr = 0xC1, .val = 0x04, .mask = 0xFF},
+	{.map = 0, .addr = 0xC2, .val = 0x14, .mask = 0xFF},
+	
+	/*Set IOSR LMP voltage to 1.8V*/
+	{.map = 0, .addr = 0xC9, .val = 0x1B, .mask = 0xFF},
+
+	/*PLLCTRL, Clear Bit 0 to disable PLL when PC2:PC1 = 0b00*/
+	{.map = 0, .addr = 0x0A, .val = 0x0E, .mask = 0x0F},
+	/*CMPCTRL13, Set bits 4, 1 for BSI Sync. Mode */
+	{.map = 0, .addr = 0x1C, .val = 0x13, .mask = 0xFF},
+	/*CMPCTRL12, Set bits 4, 1 for NTC Sync. Mode*/
+	{.map = 0, .addr = 0x1B, .val = 0x13, .mask = 0xFF},
+
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
@@ -189,6 +212,7 @@ static struct regulator_init_data bcm59055_camldo_data = {
 
 struct regulator_consumer_supply hv1_supply[] = {
 	{.supply = "hv1ldo_uc"},
+	{.supply = "2v9_aud"},
 };
 static struct regulator_init_data bcm59055_hv1ldo_data = {
 	.constraints = {
@@ -438,8 +462,7 @@ static struct regulator_init_data bcm59055_sdsr_nm_data = {
 			.name = "sdsr_nm",
 			.min_uV = 700000,
 			.max_uV = 1800000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
+			.valid_ops_mask =REGULATOR_CHANGE_MODE ,
 			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sdsr_nm_supply),
@@ -482,31 +505,31 @@ static struct regulator_init_data bcm59055_sdsr_lpm_data = {
 
 struct bcmpmu_regulator_init_data bcm59055_regulators[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_RFLDO] = {
-		BCMPMU_REGULATOR_RFLDO, &bcm59055_rfldo_data, 0x00, 0
+		BCMPMU_REGULATOR_RFLDO, &bcm59055_rfldo_data, 0x01, 0
 	},
 	[BCMPMU_REGULATOR_CAMLDO] = {
-		BCMPMU_REGULATOR_CAMLDO, &bcm59055_camldo_data, 0x00, 0
+		BCMPMU_REGULATOR_CAMLDO, &bcm59055_camldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV1LDO] =	{
-		BCMPMU_REGULATOR_HV1LDO, &bcm59055_hv1ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV1LDO, &bcm59055_hv1ldo_data, 0x22, 0
 	},
 	[BCMPMU_REGULATOR_HV2LDO] =	{
-		BCMPMU_REGULATOR_HV2LDO, &bcm59055_hv2ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV2LDO, &bcm59055_hv2ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV3LDO] = {
-		BCMPMU_REGULATOR_HV3LDO, &bcm59055_hv3ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV3LDO, &bcm59055_hv3ldo_data, 0x22, 0
 	},
 	[BCMPMU_REGULATOR_HV4LDO] =	{
-		BCMPMU_REGULATOR_HV4LDO, &bcm59055_hv4ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV4LDO, &bcm59055_hv4ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV5LDO] = {
-		BCMPMU_REGULATOR_HV5LDO, &bcm59055_hv5ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV5LDO, &bcm59055_hv5ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV6LDO] = {
-		BCMPMU_REGULATOR_HV6LDO, &bcm59055_hv6ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV6LDO, &bcm59055_hv6ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV7LDO] = {
-		BCMPMU_REGULATOR_HV7LDO, &bcm59055_hv7ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV7LDO, &bcm59055_hv7ldo_data, 0x22, 0
 	},
 
 /*TODO: We observed that, on Rhearay HW, interrupt from GPIO expander
@@ -534,22 +557,22 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 		BCMPMU_REGULATOR_CSR_LPM, &bcm59055_csr_lpm_data, 0xFF, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_NM] = {
-		BCMPMU_REGULATOR_IOSR_NM, &bcm59055_iosr_nm_data, 0x00, 0
+		BCMPMU_REGULATOR_IOSR_NM, &bcm59055_iosr_nm_data, 0x01, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_NM2] = {
-		BCMPMU_REGULATOR_IOSR_NM2, &bcm59055_iosr_nm2_data, 0x00, 0
+		BCMPMU_REGULATOR_IOSR_NM2, &bcm59055_iosr_nm2_data, 0xFF, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_LPM] = {
-		BCMPMU_REGULATOR_IOSR_LPM, &bcm59055_iosr_lpm_data, 0x00, 0
+		BCMPMU_REGULATOR_IOSR_LPM, &bcm59055_iosr_lpm_data, 0xFF, 0
 	},
 	[BCMPMU_REGULATOR_SDSR_NM] = {
-		BCMPMU_REGULATOR_SDSR_NM, &bcm59055_sdsr_nm_data, 0x00, 0
+		BCMPMU_REGULATOR_SDSR_NM, &bcm59055_sdsr_nm_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_SDSR_NM2] = {
-		BCMPMU_REGULATOR_SDSR_NM2, &bcm59055_sdsr_nm2_data, 0x00, 0
+		BCMPMU_REGULATOR_SDSR_NM2, &bcm59055_sdsr_nm2_data, 0xFF, 0
 	},
 	[BCMPMU_REGULATOR_SDSR_LPM] = {
-		BCMPMU_REGULATOR_SDSR_LPM, &bcm59055_sdsr_lpm_data, 0x00, 0
+		BCMPMU_REGULATOR_SDSR_LPM, &bcm59055_sdsr_lpm_data, 0xFF, 0
 	},
 };
 
