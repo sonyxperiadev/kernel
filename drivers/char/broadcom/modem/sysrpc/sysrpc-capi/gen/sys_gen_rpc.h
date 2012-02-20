@@ -67,6 +67,27 @@ typedef struct
 	Boolean	val;
 }CAPI2_FLASH_SaveImage_Rsp_t;
 
+typedef struct
+{
+	UInt8  simId;
+	SYS_SIMLOCK_SIM_DATA_t  *sim_data;
+	Boolean  is_testsim;
+}SYS_SimLockApi_GetStatus_Req_t;
+
+typedef struct
+{
+	SYS_SIMLOCK_STATE_t	val;
+}SYS_SimLockApi_GetStatus_Rsp_t;
+
+typedef struct
+{
+	SYS_SIMLOCK_STATE_t  *simlock_state;
+}SYS_SIMLOCKApi_SetStatus_Req_t;
+
+typedef struct
+{
+	UInt32	val;
+}SYS_SimApi_GetCurrLockedSimlockType_Rsp_t;
 //***************** < 2 > **********************
 
 
@@ -80,6 +101,10 @@ bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t(void* xdrs, CAPI2_SYSRPC_PMU_IsSIMR
 bool_t xdr_CAPI2_SYSRPC_PMU_ActivateSIM_Req_t(void* xdrs, CAPI2_SYSRPC_PMU_ActivateSIM_Req_t *rsp);
 bool_t xdr_CAPI2_FLASH_SaveImage_Req_t(void* xdrs, CAPI2_FLASH_SaveImage_Req_t *rsp);
 bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void* xdrs, CAPI2_FLASH_SaveImage_Rsp_t *rsp);
+bool_t xdr_SYS_SimLockApi_GetStatus_Req_t(void* xdrs, SYS_SimLockApi_GetStatus_Req_t *rsp);
+bool_t xdr_SYS_SimLockApi_GetStatus_Rsp_t(void* xdrs, SYS_SimLockApi_GetStatus_Rsp_t *rsp);
+bool_t xdr_SYS_SIMLOCKApi_SetStatus_Req_t(void* xdrs, SYS_SIMLOCKApi_SetStatus_Req_t *rsp);
+bool_t xdr_SYS_SimApi_GetCurrLockedSimlockType_Rsp_t(void* xdrs, SYS_SimApi_GetCurrLockedSimlockType_Rsp_t *rsp);
 
 //***************** < 3 > **********************
 
@@ -91,6 +116,9 @@ Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t* pReqMsg, UInt32 cmd, UInt32 addres
 Result_t Handle_CAPI2_SYSRPC_PMU_IsSIMReady(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo);
 Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo, PMU_SIMVolt_t volt);
 Result_t Handle_CAPI2_FLASH_SaveImage(RPC_Msg_t* pReqMsg, UInt32 flash_addr, UInt32 length, UInt32 shared_mem_addr);
+Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t* pReqMsg, UInt8 simId, SYS_SIMLOCK_SIM_DATA_t *sim_data, Boolean is_testsim);
+Result_t Handle_SYS_SIMLOCKApi_SetStatus(RPC_Msg_t* pReqMsg, SYS_SIMLOCK_STATE_t *simlock_state);
+Result_t Handle_SYS_SimApi_GetCurrLockedSimlockType(RPC_Msg_t* pReqMsg);
 
 //***************** < 12 > **********************
 
@@ -126,6 +154,45 @@ void CAPI2_SYSRPC_PMU_IsSIMReady(UInt32 tid, UInt8 clientID, PMU_SIMLDO_t simldo
 void CAPI2_SYSRPC_PMU_ActivateSIM(UInt32 tid, UInt8 clientID, PMU_SIMLDO_t simldo, PMU_SIMVolt_t volt);
 
 
+//***************************************************************************************
+/**
+	Function response for the SYS_SimLockApi_GetStatus
+	@param		tid (in) Unique exchange/transaction id which is passed in the request
+	@param		clientID (in) Client ID
+	@param		simId(in) param of type UInt8
+	@param		sim_data(in) param of type SYS_SIMLOCK_SIM_DATA_t
+	@param		is_testsim(in) param of type Boolean
+	@return		Not Applicable
+	@note
+	Payload: SYS_SIMLOCK_STATE_t
+	@n Response to CP will be notified via ::MSG_SYS_SIMLOCK_GET_STATUS_RSP
+**/
+void SYS_SimLockApi_GetStatus(UInt32 tid, UInt8 clientID, UInt8 simId, SYS_SIMLOCK_SIM_DATA_t *sim_data, Boolean is_testsim);
+
+//***************************************************************************************
+/**
+	Function response for the SYS_SIMLOCKApi_SetStatus
+	@param		tid (in) Unique exchange/transaction id which is passed in the request
+	@param		clientID (in) Client ID
+	@param		simlock_state(in) param of type SYS_SIMLOCK_STATE_t
+	@return		Not Applicable
+	@note
+	Payload: default_proc
+	@n Response to CP will be notified via ::MSG_SYS_SIMLOCK_SET_STATUS_RSP
+**/
+void SYS_SIMLOCKApi_SetStatus(UInt32 tid, UInt8 clientID, SYS_SIMLOCK_STATE_t *simlock_state);
+
+//***************************************************************************************
+/**
+	Function response for the SYS_SimApi_GetCurrLockedSimlockType
+	@param		tid (in) Unique exchange/transaction id which is passed in the request
+	@param		clientID (in) Client ID
+	@return		Not Applicable
+	@note
+	Payload: UInt32
+	@n Response to CP will be notified via ::MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP
+**/
+void SYS_SimApi_GetCurrLockedSimlockType(UInt32 tid, UInt8 clientID);
 //***************** < 16 > **********************
 
 

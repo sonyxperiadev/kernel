@@ -16,10 +16,36 @@
 #ifndef _SYS_RPC_H
 #define _SYS_RPC_H
 
- XDR_ENUM_DECLARE(PMU_SIMLDO_t)
-    XDR_ENUM_DECLARE(PMU_SIMVolt_t)
-    XDR_ENUM_DECLARE(Result_t)
+XDR_ENUM_DECLARE(PMU_SIMLDO_t)
+XDR_ENUM_DECLARE(PMU_SIMVolt_t)
+XDR_ENUM_DECLARE(Result_t)
 
+XDR_STRUCT_DECLARE(SYS_SIMLOCK_SIM_DATA_t)
+XDR_STRUCT_DECLARE(SYS_SIMLOCK_STATE_t)
+ /** 
+api is SYS_SimLockApi_GetStatus 
+**/
+#define MSG_SYS_SIMLOCK_GET_STATUS_REQ  (MsgType_t)0x4B3C	///<Payload type {::SYS_SimLockApi_GetStatus_Req_t}
+ /** 
+payload is ::SYS_SIMLOCK_SIM_DATA_t 
+**/
+#define MSG_SYS_SIMLOCK_GET_STATUS_RSP  (MsgType_t)0x4B3D	///<Payload type {::SYS_SIMLOCK_SIM_DATA_t}
+ /** 
+api is SYS_SIMLOCKApi_SetStatus 
+**/
+#define MSG_SYS_SIMLOCK_SET_STATUS_REQ  (MsgType_t)0x4B3E	///<Payload type {::SYS_SIMLOCKApi_SetStatus_Req_t}
+ /** 
+payload is ::default_proc 
+**/
+#define MSG_SYS_SIMLOCK_SET_STATUS_RSP  (MsgType_t)0x4B3F
+ /** 
+api is SYS_SimApi_GetCurrLockedSimlockType 
+**/
+#define MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ  (MsgType_t)0x4B40
+ /** 
+payload is ::UInt32 
+**/
+#define MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP  (MsgType_t)0x4B41	///<Payload type {::UInt32}
 #define xdr_Int16	xdr_int16_t
 #ifndef UNDER_LINUX
 typedef UInt8 *CAPI2_SYSPARM_IMEI_PTR_t;
@@ -45,6 +71,10 @@ typedef struct tag_SYS_ReqRep_t {
 		CAPI2_FLASH_SaveImage_Req_t CAPI2_FLASH_SaveImage_Req;
 		CAPI2_FLASH_SaveImage_Rsp_t CAPI2_FLASH_SaveImage_Rsp;
 
+	SYS_SimLockApi_GetStatus_Req_t   SYS_SimLockApi_GetStatus_Req;
+	SYS_SimLockApi_GetStatus_Rsp_t   SYS_SimLockApi_GetStatus_Rsp;
+	SYS_SIMLOCKApi_SetStatus_Req_t   SYS_SIMLOCKApi_SetStatus_Req;
+	SYS_SimApi_GetCurrLockedSimlockType_Rsp_t   SYS_SimApi_GetCurrLockedSimlockType_Rsp;
 #endif				//DEVELOPMENT_SYSRPC_UNION_DECLARE
 /*** _SYSRPC_CODE_GEN_END_ ***/
 

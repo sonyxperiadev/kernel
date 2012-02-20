@@ -119,6 +119,142 @@ bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void *xdrs,
 
 //***************** < 9 > **********************
 
+#if defined(FUSE_COMMS_PROCESSOR) 
+
+void SYS_SimLockApi_GetStatus(UInt32 tid, UInt8 clientID, UInt8 simId, SYS_SIMLOCK_SIM_DATA_t *sim_data, Boolean is_testsim)
+{
+	SYS_ReqRep_t req;
+	RPC_Msg_t msg;
+	
+	memset(&req, 0, sizeof(SYS_ReqRep_t));
+	
+	req.req_rep_u.SYS_SimLockApi_GetStatus_Req.simId = simId;
+	req.req_rep_u.SYS_SimLockApi_GetStatus_Req.sim_data = sim_data;
+	req.req_rep_u.SYS_SimLockApi_GetStatus_Req.is_testsim = is_testsim;
+	req.respId = MSG_SYS_SIMLOCK_GET_STATUS_RSP;
+	msg.msgId = MSG_SYS_SIMLOCK_GET_STATUS_REQ;
+	msg.tid = tid;
+	msg.clientID = clientID;
+	msg.dataBuf = (void*)&req;
+	msg.dataLen = 0;
+	RPC_SerializeReq(&msg);
+}
+
+#endif
+
+
+#if defined(FUSE_APPS_PROCESSOR) 
+
+void SYS_SIMLOCKApi_SetStatus(UInt32 tid, UInt8 clientID, SYS_SIMLOCK_STATE_t *simlock_state)
+{
+	SYS_ReqRep_t req;
+	RPC_Msg_t msg;
+	
+	memset(&req, 0, sizeof(SYS_ReqRep_t));
+	
+	req.req_rep_u.SYS_SIMLOCKApi_SetStatus_Req.simlock_state = simlock_state;
+	req.respId = MSG_SYS_SIMLOCK_SET_STATUS_RSP;
+	msg.msgId = MSG_SYS_SIMLOCK_SET_STATUS_REQ;
+	msg.tid = tid;
+	msg.clientID = clientID;
+	msg.dataBuf = (void*)&req;
+	msg.dataLen = 0;
+	RPC_SerializeReq(&msg);
+}
+
+void SYS_SimApi_GetCurrLockedSimlockType(UInt32 tid, UInt8 clientID)
+{
+	SYS_ReqRep_t req;
+	RPC_Msg_t msg;
+	
+	memset(&req, 0, sizeof(SYS_ReqRep_t));
+	
+	req.respId = MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP;
+	msg.msgId = MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ;
+	msg.tid = tid;
+	msg.clientID = clientID;
+	msg.dataBuf = (void*)&req;
+	msg.dataLen = 0;
+	RPC_SerializeReq(&msg);
+}
+
+#endif
+
+bool_t xdr_SYS_SimLockApi_GetStatus_Req_t(void* xdrs, SYS_SimLockApi_GetStatus_Req_t *rsp)
+{
+	XDR_LOG(xdrs,"SYS_SimLockApi_GetStatus_Req_t")
+
+	if(
+		_xdr_UInt8(xdrs, &rsp->simId,"simId") &&
+		xdr_pointer(xdrs, (char**)(void*)&rsp->sim_data,sizeof( SYS_SIMLOCK_SIM_DATA_t ), (xdrproc_t)xdr_SYS_SIMLOCK_SIM_DATA_t) &&
+		_xdr_Boolean(xdrs, (u_char *)&rsp->is_testsim,"is_testsim") &&
+	1)
+		return TRUE;
+	else
+		return FALSE;
+}
+
+bool_t xdr_SYS_SimLockApi_GetStatus_Rsp_t(void* xdrs, SYS_SimLockApi_GetStatus_Rsp_t *rsp)
+{
+	XDR_LOG(xdrs,"SYS_SimLockApi_GetStatus_Rsp_t")
+
+	 return xdr_SYS_SIMLOCK_STATE_t(xdrs, &rsp->val);
+}
+
+bool_t xdr_SYS_SIMLOCKApi_SetStatus_Req_t(void* xdrs, SYS_SIMLOCKApi_SetStatus_Req_t *rsp)
+{
+	XDR_LOG(xdrs,"SYS_SIMLOCKApi_SetStatus_Req_t")
+
+	if(
+		xdr_pointer(xdrs, (char**)(void*)&rsp->simlock_state,sizeof( SYS_SIMLOCK_STATE_t ), (xdrproc_t)xdr_SYS_SIMLOCK_STATE_t) &&
+	1)
+		return TRUE;
+	else
+		return FALSE;
+}
+
+bool_t xdr_SYS_SimApi_GetCurrLockedSimlockType_Rsp_t(void* xdrs, SYS_SimApi_GetCurrLockedSimlockType_Rsp_t *rsp)
+{
+	XDR_LOG(xdrs,"SYS_SimApi_GetCurrLockedSimlockType_Rsp_t")
+
+	 return xdr_UInt32(xdrs, &rsp->val);
+}
+#if defined(FUSE_APPS_PROCESSOR) 
+
+
+
+#endif
+
+#if defined(FUSE_COMMS_PROCESSOR) 
+
+Result_t Handle_SYS_SIMLOCKApi_SetStatus(RPC_Msg_t* pReqMsg, SYS_SIMLOCK_STATE_t *simlock_state)
+{
+	Result_t result = RESULT_OK;
+	SYS_ReqRep_t data;
+
+	memset(&data, 0, sizeof(SYS_ReqRep_t));
+	SIMLOCKApi_SetStatus(simlock_state);
+
+	data.result = result;
+	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_SIMLOCK_SET_STATUS_RSP, &data);
+	return result;
+}
+
+Result_t Handle_SYS_SimApi_GetCurrLockedSimlockType(RPC_Msg_t* pReqMsg)
+{
+	Result_t result = RESULT_OK;
+	SYS_ReqRep_t data;
+
+	memset(&data, 0, sizeof(SYS_ReqRep_t));
+	data.req_rep_u.SYS_SimApi_GetCurrLockedSimlockType_Rsp.val = (UInt32)SimApi_GetCurrLockedSimlockType();
+
+	data.result = result;
+	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP, &data);
+	return result;
+}
+
+#endif
+
 //***************** < 10 > **********************
 
 Result_t SYS_GenCommsMsgHnd(RPC_Msg_t * pReqMsg, SYS_ReqRep_t * req)
@@ -172,6 +308,27 @@ Result_t SYS_GenCommsMsgHnd(RPC_Msg_t * pReqMsg, SYS_ReqRep_t * req)
 
 #endif
 
+#if defined(FUSE_APPS_PROCESSOR) 
+	case MSG_SYS_SIMLOCK_GET_STATUS_REQ:
+		result = 
+			Handle_SYS_SimLockApi_GetStatus(pReqMsg,
+						req->req_rep_u.SYS_SimLockApi_GetStatus_Req.simId,
+						req->req_rep_u.SYS_SimLockApi_GetStatus_Req.sim_data,
+						req->req_rep_u.SYS_SimLockApi_GetStatus_Req.is_testsim);
+		break;
+#endif
+
+#if defined(FUSE_COMMS_PROCESSOR) 
+	case MSG_SYS_SIMLOCK_SET_STATUS_REQ:
+		result = 
+			Handle_SYS_SIMLOCKApi_SetStatus(pReqMsg,
+						req->req_rep_u.SYS_SIMLOCKApi_SetStatus_Req.simlock_state);
+		break;
+	case MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ:
+		result = Handle_SYS_SimApi_GetCurrLockedSimlockType(pReqMsg);
+		break;
+#endif
+
 	default:
 		break;
 	}
@@ -210,9 +367,57 @@ void SYS_GenGetPayloadInfo(void *dataBuf, MsgType_t msgType, void **ppBuf,
 			*ppBuf = (void *)&(pVal->val);
 			break;
 		}
+	case MSG_SYS_SIMLOCK_GET_STATUS_RSP:
+		{
+			SYS_SimLockApi_GetStatus_Rsp_t* pVal = (SYS_SimLockApi_GetStatus_Rsp_t*)dataBuf;
+		    *ppBuf = (void*)&(pVal->val);
+			break;
+		}
+	case MSG_SYS_SIMLOCK_SET_STATUS_RSP:
+		{
+			*ppBuf = NULL;
+			break;
+		}
+	case MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP:
+		{
+			SYS_SimApi_GetCurrLockedSimlockType_Rsp_t* pVal = (SYS_SimApi_GetCurrLockedSimlockType_Rsp_t*)dataBuf;
+			*ppBuf = (void*)&(pVal->val);
+			break;
+		}
 	default:
 		xassert(0, msgType);
 		break;
 	}
 	return;
 }
+
+#ifdef DEVELOPMENT_SYSRPC_WIN_UNIT_TEST 
+#define _D(a) _ ## a 
+#else 
+#define _D(a) a
+#endif
+#if defined(FUSE_APPS_PROCESSOR) 
+
+void _D(SIMLOCKApi_SetStatus)(SYS_SIMLOCK_STATE_t *simlock_state)
+{
+	UInt32 tid;
+	MsgType_t msgType;
+	RPC_ACK_Result_t ackResult;
+	tid = RPC_SyncCreateTID( NULL, 0);
+	SYS_SIMLOCKApi_SetStatus(tid, SYS_GetClientId(),simlock_state);
+	RPC_SyncWaitForResponse( tid,SYS_GetClientId(), &ackResult, &msgType, NULL );
+}
+
+UInt32 _D(SimApi_GetCurrLockedSimlockType)()
+{
+	UInt32 tid;
+	MsgType_t msgType;
+	RPC_ACK_Result_t ackResult;
+	UInt32 val = (UInt32)0;
+	tid = RPC_SyncCreateTID( &val, sizeof( UInt32 ) );
+	SYS_SimApi_GetCurrLockedSimlockType(tid, SYS_GetClientId());
+	RPC_SyncWaitForResponse( tid,SYS_GetClientId(), &ackResult, &msgType, NULL );
+	return val;
+}
+
+#endif

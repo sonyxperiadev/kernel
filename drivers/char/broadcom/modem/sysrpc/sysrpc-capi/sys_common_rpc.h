@@ -58,6 +58,49 @@ typedef enum {
 	PMU_SIM0P0Volt
 } PMU_SIMVolt_t;
 
+typedef enum
+{
+    SYS_SIM_SECURITY_OPEN,		    ///< SIMLOCK/PhoneLock disabled or password verified
+	SYS_SIM_SECURITY_LOCKED,	    ///< SIMLOCK/PhoneLock enabled & pending on password verification    
+	SYS_SIM_SECURITY_BLOCKED,	    ///< SIMLOCK/PhoneLock blocked & may be unblocked if semi-permanent
+	SYS_SIM_SECURITY_VERIFIED,      ///< SIMLOCK/PhoneLock password has been verified
+	SYS_SIM_SECURITY_NOT_INIT       ///< SIMLOCK status not initialized yet
+} SYS_SIM_SECURITY_STATE_t;
+
+
+/// SIMLOCK status for all SIMLOCK types
+typedef struct
+{
+	UInt8 network_lock_enabled;			///< TRUE if network lock is enabled
+	UInt8 network_subset_lock_enabled;	///< TRUE if network subset lock is enabled
+	UInt8 service_provider_lock_enabled;	///< TRUE if service provider lock is enabled
+	UInt8 corporate_lock_enabled;			///< TRUE if corporate lock is enabled
+	UInt8 phone_lock_enabled;				///< TRUE if phone lock is enabled
+
+	SYS_SIM_SECURITY_STATE_t network_lock;			///< Network Lock status
+	SYS_SIM_SECURITY_STATE_t network_subset_lock;	///< Network Subset Lock status
+	SYS_SIM_SECURITY_STATE_t service_provider_lock;	///< Service Provider Lock status
+	SYS_SIM_SECURITY_STATE_t corporate_lock;		///< Corporate Lock status
+	SYS_SIM_SECURITY_STATE_t phone_lock;			///< Phone Lock status
+} SYS_SIMLOCK_STATE_t;								///< SIMLOCK status structure
+
+#define SYS_GID_DIGITS	10	///< Max. GID1/GID2 file length
+#define SYS_IMSI_DIGITS	15	///< Max. IMSI digits
+typedef UInt8 SYS_GID_DIGIT_t[SYS_GID_DIGITS];	///< GID1/GID2 file length (not null terminated)
+typedef UInt8 SYS_IMSI_t[SYS_IMSI_DIGITS + 1];	///< NULL terminated IMSI string in ASCII format
+
+typedef struct
+{
+	SYS_IMSI_t imsi_string;	///< NULL terminated IMSI string
+	SYS_GID_DIGIT_t	gid1;	///< GID1 data
+	UInt8 gid1_len;		///< Number of bytes in "gid1" element, i.e. number of bytes in EF-GID1
+	SYS_GID_DIGIT_t gid2;	///< GID2 data
+	UInt8 gid2_len;		///< Number of bytes in "gid2" element, i.e. number of bytes in EF-GID2
+} SYS_SIMLOCK_SIM_DATA_t;
+
+void SIMLOCKApi_SetStatus(SYS_SIMLOCK_STATE_t *simlock_state);
+UInt32 SimApi_GetCurrLockedSimlockType(void);
+
 //***************** < 1 > **********************
 
 #endif

@@ -30,7 +30,7 @@
     
 #ifndef _SYSRPC_INIT_H
 #define _SYSRPC_INIT_H
-void SYS_InitRpc(void);
+
+void SYS_InitRpc(void);
 
 #endif //_SYSRPC_INIT_H
-    
