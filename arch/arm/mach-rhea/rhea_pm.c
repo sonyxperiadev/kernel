@@ -18,6 +18,7 @@
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
+#include <plat/cpu.h>
 #include <linux/clk.h>
 #include <asm/io.h>
 #include <mach/io_map.h>
@@ -76,6 +77,7 @@ static int print_sw_event_info(void);
 #endif
 static int enter_idle_state(struct kona_idle_state *state);
 static int enter_suspend_state(struct kona_idle_state* state);
+static void set_spare_power_status(unsigned int mode);
 
 enum {
 	RHEA_STATE_C0,
@@ -244,6 +246,7 @@ when subsystems are acvtive and 1 if in sleep (retention/dormant) */
 	writel(reg_val, CHIPREG_PERIPH_SPARE_CONTROL2);
 #endif
 	pwr_mgr_arm_core_dormant_enable(false);
+	set_spare_power_status(SCU_STATUS_NORMAL);
     return 0;
 }
 
@@ -381,6 +384,34 @@ int enter_suspend_state(struct kona_idle_state* state)
 	return -1;
 }
 
+/* Rhea B1 adds PWRCTL1_bypass & PWRCTL0_bypass in Periph Spare Control2
+ * register to store the CPU power mode. Boot ROM reads this register
+ * instead of SCU Power Status register to differentiate between POR and
+ * dormant reset. Linux needs to set this register to DORMANT_MODE before
+ * dormant entry.
+ *
+ * In the dormant entry path, if an event or interrupt becomes pending
+ * soon after the power manager starts the dormant state machine, the SCU
+ * power status bits gets changed from dormant to normal mode. This also
+ * gets latched in the power manager. But the system anyway enters dormant
+ * mode and on wakeup, boot ROM incorrectly senses POR instead of dormant
+ * wakeup. The new bits listed above is meant to overcome this problem.
+ */
+static void set_spare_power_status(unsigned int mode)
+{
+	unsigned int val;
+
+	if (get_chip_rev_id() < RHEA_CHIP_REV_B1)
+		return;
+
+	mode = mode & 0x3;
+
+	val = readl(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
+	val &= ~(3 << CHIPREG_PERIPH_SPARE_CONTROL2_PWRCTL0_BYPASS_SHIFT);
+	val |= mode << CHIPREG_PERIPH_SPARE_CONTROL2_PWRCTL0_BYPASS_SHIFT;
+	writel(val, KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
+}
+
 static int enter_dormant_state(struct kona_idle_state *state)
 {
 #ifdef CONFIG_RHEA_DORMANT_MODE
@@ -400,9 +431,11 @@ static int enter_dormant_state(struct kona_idle_state *state)
 		v &= ~CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
 		writel(v, CHIPREG_PERIPH_SPARE_CONTROL2);
 #endif
+		set_spare_power_status(SCU_STATUS_DORMANT);
 
 		dormant_enter();
 
+		set_spare_power_status(SCU_STATUS_NORMAL);
 #ifndef CONFIG_ARCH_RHEA_A0
 		v = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
 		v |= CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
