@@ -44,6 +44,8 @@
 /* global spinlock for clock API */
 static DEFINE_SPINLOCK(clk_lock);
 
+#define DEBUG
+
 int clk_debug = 0;
 
 /*clk_dfs_request_update -  action*/
@@ -1945,6 +1947,8 @@ static int ccu_clk_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int f
 	                         ccu_clk->clk.flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
 	ccu_write_access_enable(ccu_clk,false);
 
+	clk_dbg("%s:%s ccu OK\n",__func__,
+	        ccu_clk->clk.name);
 	return 0;
 }
 
