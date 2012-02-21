@@ -34,7 +34,7 @@
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 2
 
-static struct bcmpmu_rw_data __initdata register_init_data[PMU_REG_INIT_MAX] = {
+static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0x01, .val = 0x00, .mask = 0x01},
 	{.map = 0, .addr = 0x0c, .val = 0x1b, .mask = 0xFF},
 	{.map = 0, .addr = 0x40, .val = 0xFF, .mask = 0xFF},
@@ -691,7 +691,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.init_data = &register_init_data[0],
 	/* # of registers defined in register_init_data.
 	   This value will come from device tree */
-	.init_max = 22,
+	.init_max = ARRAY_SIZE(register_init_data),
 	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
