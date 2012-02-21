@@ -626,6 +626,10 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		host->mmc->pm_flags = MMC_PM_KEEP_POWER | MMC_PM_IGNORE_PM_NOTIFY;
 	}
 
+	/* Enable 1.8V DDR operation for e.MMC */
+	if (dev->devtype == SDIO_DEV_TYPE_EMMC)
+		host->mmc->caps |= MMC_CAP_1_8V_DDR;
+
 	ret = sdhci_add_host(host);
 	if (ret)
 		goto err_reset;
