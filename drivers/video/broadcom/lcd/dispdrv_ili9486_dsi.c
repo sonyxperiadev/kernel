@@ -279,35 +279,6 @@ static int DISPDRV_TeOff ( DISPDRV_PANEL_T *pPanel )
     return ( res );
 }
 
-
-static void DISPDRV_WrCmndPn( 
-    DISPDRV_HANDLE_T    drvH, 
-    UInt32              Pn, 
-    UInt8*              Pdata
-    )
-{
-    DISPDRV_PANEL_T *pPanel = (DISPDRV_PANEL_T *)drvH;
-    CSL_DSI_CMND_t      msg;
-  //  UInt8               msgData[4];
-	
-	
-    if(Pn <=2)
-	{
-		msg.dsiCmnd    = DSI_DT_SH_DCS_WR_P1;
-		msg.isLong = TRUE;
-	}
-	else
-	{
-		msg.dsiCmnd    = DSI_DT_LG_DCS_WR;
-		msg.isLong = FALSE;
-	}
-    msg.msg        = &Pdata[0];
-    msg.msgLen     = Pn;
-    msg.vc         = DISPDRV_VC;
-    msg.isLP       = DISPDRV_CMND_IS_LP;   
-    msg.endWithBta = FALSE;	
-    CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
-}
 //*****************************************************************************
 //
 // Function Name:  DISPDRV__WrCmndP1
@@ -585,62 +556,7 @@ static int DISPDRV_ReadID( DISPDRV_HANDLE_T drvH,UInt8 reg )
 	return(rxBuff[0]);    
     
 } // bcm91008_ale
-//*****************************************************************************
-//
-// Function Name:  DISPDRV_GenericRead
-// 
-// Parameters:     
-//
-// Description:    Able to read up to CSL_DSI_GetMaxRxMsgSize bytes back
-//
-//*****************************************************************************
-static int DISPDRV_GenericRead( 
-	DISPDRV_HANDLE_T 	drvH, 
-	UInt8 			reg, 	   // register to read from
-	UInt8* 			rx_buff,   // read buffer
-	UInt32* 		rx_size    // no of bytes read back
-	)
-{
-	DISPDRV_PANEL_T 		*pPanel = (DISPDRV_PANEL_T *)drvH;
-	CSL_DSI_CMND_t      		msg;         
-	volatile CSL_DSI_REPLY_t 	rxMsg;	    // CSL DSI RX message
-	UInt8               		txData[1];  // DCS Rd Command
-	Int32               		res = 0;
-	CSL_LCD_RES_T       		cslRes;
-    
 
-	msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
-	msg.msg        = &txData[0];
-	msg.msgLen     = 1;
-	msg.vc         = DISPDRV_VC;
-	msg.isLP       = DISPDRV_CMND_IS_LP;
-	msg.isLong     = FALSE;
-	msg.endWithBta = TRUE;
-
-	rxMsg.pReadReply = rx_buff;
-	msg.reply        = (CSL_DSI_REPLY_t *)&rxMsg;
-
-	*rx_size = 0;
-
-	txData[0] = reg;                                    
-	cslRes = CSL_DSI_SendPacket( pPanel->clientH, &msg, FALSE );
-	if( (cslRes != CSL_LCD_OK) || ((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0) )
-	{
-		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
-			"Reading error\n\r", 
-			__FUNCTION__);
-		res = -1;    
-		goto failed;
-	}
-	*rx_size = rxMsg.readReplySize;
-
-	LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: We've Received %d Byte(s) "
-		"Reading From Reg[0x%02X]\n",
-		__FUNCTION__, (unsigned int)rxMsg.readReplySize, reg );
-		 
-failed:    
-    	return(res);	
-} // DISPDRV_GenericRead
 //*****************************************************************************
 //
 // Function Name:  DISPDRV_WrSendCmnd

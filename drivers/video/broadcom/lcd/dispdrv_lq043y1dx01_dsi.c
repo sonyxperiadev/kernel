@@ -406,6 +406,7 @@ static void lq043y1dx01_pwrdown_dpi_bridge(void)
 	msleep(20);
 }
 
+#if 0
 static void lq043y1dx01_reset(u32 gpio)
 {
 	int res1;
@@ -423,7 +424,7 @@ static void lq043y1dx01_reset(u32 gpio)
 	gpio_set_value_cansleep(gpio, 1);
 	msleep(20);
 }
-
+#endif
 
 
 //*****************************************************************************
@@ -498,7 +499,7 @@ static void lq043y1dx01_WrCmndP0(
 	CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);   
 }
 
-
+#if 0
 //*****************************************************************************
 //
 // Function Name:  lq043y1dx01_ReadReg
@@ -546,7 +547,7 @@ static int lq043y1dx01_ReadReg( DISPDRV_HANDLE_T drvH, UInt8 reg )
 
 	return(res);	
 }
-
+#endif
 
 //*****************************************************************************
 //
@@ -1234,7 +1235,7 @@ Int32 LQ043Y1DX01_Update (
 
 static int __devinit lq043y1dx01_spi_probe(struct spi_device *spi)
 {
-	int err, res1;
+	int err;
 
 
 	LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s\n", __func__ );
