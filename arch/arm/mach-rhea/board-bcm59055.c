@@ -353,7 +353,6 @@ static struct regulator_init_data bcm59055_simldo_data = {
 is not detected by baseband if SIMLDO is disabled. As a temp. workaround
 we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-#warning "Fix SIMLDO always_on setting on Rhearay"
 			.always_on = 1,
 #endif
 			},
@@ -536,7 +535,6 @@ struct bcmpmu_regulator_init_data bcm59055_regulators[BCMPMU_REGULATOR_MAX] = {
 is not detected by baseband if SIMLDO is disabled. As a temp. workaround
 we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-#warning "Fix SIMLDO opmode setting on Rhearay"
 	[BCMPMU_REGULATOR_SIMLDO] = {
 		BCMPMU_REGULATOR_SIMLDO, &bcm59055_simldo_data, 0x00,
 			BCMPMU_REGL_LPM_IN_DSM

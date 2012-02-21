@@ -67,13 +67,13 @@ struct bcmpmu_rtc {
 	int update_irq_enabled;
 };
 
-#if CONFIG_BCM_RTC_CAL
+#ifdef CONFIG_BCM_RTC_CAL
 static bool rtc_cal_run = false;
 extern int bcm_rtc_cal_read_time(struct bcmpmu_rtc *rdata, struct rtc_time *tm);
 extern int bcm_rtc_cal_set_time(struct bcmpmu_rtc *rdata, struct rtc_time *tm);
 extern void bcm_rtc_cal_init(struct bcmpmu_rtc *rdata);
 extern void bcm_rtc_cal_shutdown(void);
-#endif // CONFIG_BCM_RTC_CAL
+#endif /* CONFIG_BCM_RTC_CAL*/
 
 static void bcmpmu_rtc_isr(enum bcmpmu_irq irq, void *data)
 {
@@ -101,7 +101,7 @@ static int bcmpmu_read_time(struct device *dev, struct rtc_time *tm)
 
 	mutex_lock(&rdata->lock);
 
-#if CONFIG_BCM_RTC_CAL
+#ifdef CONFIG_BCM_RTC_CAL
 	if(rtc_cal_run == false)
 	{
 		pr_rtc(DATA, "%s: rtc_cal not ready \n",__func__);
@@ -198,7 +198,8 @@ static int bcmpmu_read_time(struct device *dev, struct rtc_time *tm)
 		__func__, ret,
 		tm->tm_year,tm->tm_mon,tm->tm_mday,
 		tm->tm_hour,tm->tm_min,tm->tm_sec);
-#endif // CONFIG_BCM_RTC_CAL
+#endif /* CONFIG_BCM_RTC_CAL*/
+
 
 err:
 	mutex_unlock(&rdata->lock);
@@ -217,7 +218,7 @@ static int bcmpmu_set_time(struct device *dev, struct rtc_time *tm)
 
 	mutex_lock(&rdata->lock);
 
-#if CONFIG_BCM_RTC_CAL
+#ifdef CONFIG_BCM_RTC_CAL
 	if(rtc_cal_run == false)
 	{
 		pr_rtc(DATA, "%s: rtc_cal not ready \n",__func__);
@@ -285,7 +286,7 @@ static int bcmpmu_set_time(struct device *dev, struct rtc_time *tm)
 				tm->tm_sec, PMU_BITMASK_ALL);
 	if (unlikely(ret))
 		goto err;
-#endif // CONFIG_BCM_RTC_CAL
+#endif /* CONFIG_BCM_RTC_CAL*/
 
 err:
 	mutex_unlock(&rdata->lock);
@@ -476,10 +477,10 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 	if (unlikely(ret))
 		goto err;
 
-#if CONFIG_BCM_RTC_CAL
+#ifdef CONFIG_BCM_RTC_CAL
 	bcm_rtc_cal_init(rdata);
 	rtc_cal_run = true;
-#endif // CONFIG_BCM_RTC_CAL
+#endif /*CONFIG_BCM_RTC_CAL*/
 
 	/* Workarond the invalid value, to be removed after RTCADJ interrupt
 	is handled properly */
@@ -507,10 +508,10 @@ static int __devexit bcmpmu_rtc_remove(struct platform_device *pdev)
 
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTC_ALARM);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTC_SEC);
-#if CONFIG_BCM_RTC_CAL
+#ifdef CONFIG_BCM_RTC_CAL
 	rtc_cal_run = false;
 	bcm_rtc_cal_shutdown();
-#endif // CONFIG_BCM_RTC_CAL
+#endif /*CONFIG_BCM_RTC_CAL*/
 	kfree(bcmpmu->rtcinfo);
 	return 0;
 }
