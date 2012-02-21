@@ -49,6 +49,7 @@
 #include <mach/pi_mgr.h>
 #include <asm/div64.h>
 #include <plat/pi_mgr.h>
+#include <plat/cpu.h>
 #include "pm_params.h"
 
 unsigned long clock_get_xtal(void)
@@ -6471,6 +6472,17 @@ by HW during deep sleep */
 			KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2490*/
+
+	/*Set 8-phase enable de-glitch enable bit for B1 and later chips*/
+	if (get_chip_rev_id() >= RHEA_CHIP_REV_B1) {
+		reg_val = readl(KONA_ROOT_CLK_VA +
+					ROOT_CLK_MGR_REG_PLL1CTRL3_OFFSET);
+		reg_val |=
+		ROOT_CLK_MGR_REG_PLL1CTRL3_PLL1_8PHASE_EN_DEGLITCH_EN_MASK;
+		writel(reg_val,
+			KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL3_OFFSET);
+	}
+
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
 

@@ -28,8 +28,8 @@
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
+#include <plat/cpu.h>
 #include "pm_params.h"
-
 
 /*JIRA workaround flag and sysfs definitions
 These flags can be used to enable/disable JIRA workaround at runtime
@@ -38,8 +38,8 @@ These flags can be used to enable/disable JIRA workaround at runtime
 DEFINE_JIRA_WA_RO_FLG(2531, 1);
 #endif
 
-#ifdef CONFIG_RHEA_WA_CRMEMC_919
-DEFINE_JIRA_WA_FLG(919, 1);
+#ifdef CONFIG_RHEA_WA_HWJIRA_2301
+DEFINE_JIRA_WA_FLG(2301, 1);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
@@ -58,23 +58,97 @@ DEFINE_JIRA_WA_RO_FLG(2276, 1);
 DEFINE_JIRA_WA_FLG(2045, 1);
 #endif
 
+#ifdef CONFIG_RHEA_WA_HWJIRA_2348
+DEFINE_JIRA_WA_FLG(2348, 1);
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2489
+DEFINE_JIRA_WA_FLG(2489, 1);
+#endif
+
 #ifdef CONFIG_RHEA_WA_HWJIRA_2272
 DEFINE_JIRA_WA_RO_FLG(2272, 1);
 #endif
 
+extern int __jira_wa_enabled(u32 jira)
+{
+	int enabled = false;
+
+	switch (jira) {
+#ifdef CONFIG_RHEA_WA_HWJIRA_2531
+	case 2531:
+		enabled = JIRA_WA_FLG_NAME(2531);
+		break;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2221
+	case 2221:
+		enabled = JIRA_WA_FLG_NAME(2221);
+		break;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2301
+	case 2301:
+		enabled = JIRA_WA_FLG_NAME(2301);
+		break;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2489
+	case 2489:
+		enabled = JIRA_WA_FLG_NAME(2489);
+		break;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2272
+	case 2272:
+		enabled = JIRA_WA_FLG_NAME(2272);
+		break;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2348
+	case 2348:
+		enabled = JIRA_WA_FLG_NAME(2348);
+		break;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2045
+	case 2045:
+		enabled = JIRA_WA_FLG_NAME(2045);
+		break;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2276
+	case 2276:
+		enabled = JIRA_WA_FLG_NAME(2276);
+		break;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+	case 2490:
+		enabled = JIRA_WA_FLG_NAME(2490);
+		break;
+#endif
+
+	default:
+		break;
+	};
+
+	return enabled;
+}
+
 #ifdef CONFIG_KONA_POWER_MGR
 
 #ifdef CONFIG_KONA_PMU_BSC_HS_MODE
-	#define START_CMD			0xb
-	#define START_DELAY			6
-	#define WRITE_DELAY			6
-	#define VLT_CHANGE_DELAY		0x25
+#define START_CMD			0xb
+#define START_DELAY			6
+#define WRITE_DELAY			6
+#define VLT_CHANGE_DELAY		0x25
 #else
-	#define START_CMD			0x3
-	#define START_DELAY			0x10
-	#define WRITE_DELAY			0x80
-	#define VLT_CHANGE_DELAY		0x80
-#endif /*CONFIG_KONA_PMU_BSC_HS_MODE*/
+#define START_CMD			0x3
+#define START_DELAY			0x10
+#define WRITE_DELAY			0x80
+#define VLT_CHANGE_DELAY		0x80
+#endif /*CONFIG_KONA_PMU_BSC_HS_MODE */
 #define PMU_SLAVE_ID				0x8
 #define PMU_CSR_REG_ADDR			0xC0
 #define READ_DELAY				0x20
@@ -91,146 +165,191 @@ DEFINE_JIRA_WA_RO_FLG(2272, 1);
 #define BSC_PAD_OUT_DIS				(0x1<<2)
 
 static struct i2c_cmd i2c_cmd[] = {
-	{REG_ADDR, 0},			/* 0:NOP */
-	{JUMP_VOLTAGE, 0},		/* 1: Jump based upon the voltage */
+	{REG_ADDR, 0},		/* 0:NOP */
+	{JUMP_VOLTAGE, 0},	/* 1: Jump based upon the voltage */
 #ifdef CONFIG_KONA_PMU_BSC_CLKPAD_CTRL
-	{REG_ADDR, PMU_BSC_PADCTL_REG}, /* 2: Set BSC PADCTL Regiter */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 2: Set BSC PADCTL Regiter */
 	{REG_DATA, BSC_PAD_OUT_EN},	/* 3: Enable pad output */
 #else
-	{REG_ADDR, 0},			/* 4: NOP */
-	{REG_ADDR, 0},			/* 5: NOP */
+	{REG_ADDR, 0},		/* 4: NOP */
+	{REG_ADDR, 0},		/* 5: NOP */
 #endif
-	{REG_ADDR, 0x20},		/* 4: Set BSC CS address */
-	{REG_DATA, START_CMD},		/* 5: Start condition */
+	{REG_ADDR, 0x20},	/* 4: Set BSC CS address */
+	{REG_DATA, START_CMD},	/* 5: Start condition */
 	{WAIT_TIMER, START_DELAY},	/* 6: Wait */
-	{REG_DATA, 1},			/* 7: Clear Start Condition */
-	{I2C_DATA, (PMU_SLAVE_ID << 1)},/* 8: Send Slave Address */
+	{REG_DATA, 1},		/* 7: Clear Start Condition */
+	{I2C_DATA, (PMU_SLAVE_ID << 1)},	/* 8: Send Slave Address */
 	{WAIT_TIMER, WRITE_DELAY},	/* 9: Wait ... */
 	{I2C_DATA, PMU_CSR_REG_ADDR},	/* 10: Send CSR Reg address */
 	{WAIT_TIMER, WRITE_DELAY},	/* 11: Wait ... */
-	{I2C_VAR, 0},			/* 12: Write Variable voltage */
-	{WAIT_TIMER, VLT_CHANGE_DELAY}, /* 13: Wait for voltage change */
+	{I2C_VAR, 0},		/* 12: Write Variable voltage */
+	{WAIT_TIMER, VLT_CHANGE_DELAY},	/* 13: Wait for voltage change */
 #ifdef CONFIG_KONA_PMU_BSC_CLKPAD_CTRL
-	{REG_ADDR, PMU_BSC_PADCTL_REG}, /* 14: Set BSC PADCTL Register */
-	{REG_DATA, BSC_PAD_OUT_DIS},     /* 15: Disable pad outpout */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 14: Set BSC PADCTL Register */
+	{REG_DATA, BSC_PAD_OUT_DIS},	/* 15: Disable pad outpout */
 #else
-	{REG_ADDR, 0},			/* 14 : NOP */
-	{REG_ADDR, 0},			/* 15: NOP */
+	{REG_ADDR, 0},		/* 14 : NOP */
+	{REG_ADDR, 0},		/* 15: NOP */
 #endif
-	{END, 0},			/* 16: End Sequence */
+	{END, 0},		/* 16: End Sequence */
 #ifdef CONFIG_KONA_PMU_BSC_CLKPAD_CTRL
-	{REG_ADDR, PMU_BSC_PADCTL_REG}, /* 17: i2c_rd_off */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 17: i2c_rd_off */
 	{REG_DATA, BSC_PAD_OUT_EN},	/* 18: Enable pad output */
 #else
-	{REG_ADDR, 0},			/* 17: NOP */
-	{REG_ADDR, 0},			/* 18: NOP */
+	{REG_ADDR, 0},		/* 17: NOP */
+	{REG_ADDR, 0},		/* 18: NOP */
 #endif
-	{REG_ADDR, 0x20},		/* 19: Set BSC CS Register */
-	{REG_DATA, START_CMD},		/* 20: Send Start command */
+	{REG_ADDR, 0x20},	/* 19: Set BSC CS Register */
+	{REG_DATA, START_CMD},	/* 20: Send Start command */
 	{WAIT_TIMER, START_DELAY},	/* 21: Wait ... */
-	{REG_DATA, 1},			/* 22: Clear Start condition */
-	{I2C_DATA, 0x10},		/* 23: i2c_rd_slv_id_off1 */
+	{REG_DATA, 1},		/* 22: Clear Start condition */
+	{I2C_DATA, 0x10},	/* 23: i2c_rd_slv_id_off1 */
 	{WAIT_TIMER, WRITE_DELAY},	/* 24: Wait ... */
-	{I2C_DATA, 0x00},		/* 25: i2c_rd_reg_addr_off */
+	{I2C_DATA, 0x00},	/* 25: i2c_rd_reg_addr_off */
 	{WAIT_TIMER, WRITE_DELAY},	/* 26: Wait ... */
-	{REG_ADDR, 0x20},		/* 27: Set BSC CS Addr */
-	{REG_DATA, START_CMD},		/* 28: Send Restart */
+	{REG_ADDR, 0x20},	/* 27: Set BSC CS Addr */
+	{REG_DATA, START_CMD},	/* 28: Send Restart */
 	{WAIT_TIMER, START_DELAY},	/* 29: Wait ... */
-	{REG_DATA, 1},			/* 30: Clear Start */
-	{I2C_DATA, 0x11},		/* 31: i2c_rd_slv_id_off2 */
+	{REG_DATA, 1},		/* 30: Clear Start */
+	{I2C_DATA, 0x11},	/* 31: i2c_rd_slv_id_off2 */
 	{WAIT_TIMER, WRITE_DELAY},	/* 32: Wait ... */
-	{REG_ADDR, 0x20},		/* 33: Set BSC CS Addr */
-	{REG_DATA, 0xF},		/* 34: Read Cmd */
+	{REG_ADDR, 0x20},	/* 33: Set BSC CS Addr */
+	{REG_DATA, 0xF},	/* 34: Read Cmd */
 	{WAIT_TIMER, READ_DELAY},	/* 35 : Wait ... */
-	{REG_DATA, 1},			/* 36: Clear Start condition */
+	{REG_DATA, 1},		/* 36: Clear Start condition */
 #if defined(CONFIG_KONA_PWRMGR_REV2)
-	{READ_FIFO, 0},			/* 37: Read data */
+	{READ_FIFO, 0},		/* 37: Read data */
 #else
-	{REG_ADDR, 0},			/* 37 : NOP */
+	{REG_ADDR, 0},		/* 37 : NOP */
 #endif
-	{END, 0},			/* 38 : End sequence */
-	{REG_ADDR, 0x0}, /* 39: i2c_rd_nack_off */
-	{JUMP, 0x0}, /* 40: jump to i2c_rd_nack_jump_off offset*/
+	{END, 0},		/* 38 : End sequence */
+	{REG_ADDR, 0x0},	/* 39: i2c_rd_nack_off */
+	{JUMP, 0x0},		/* 40: jump to i2c_rd_nack_jump_off offset */
 #ifdef CONFIG_KONA_PMU_BSC_CLKPAD_CTRL
-	{REG_ADDR, PMU_BSC_PADCTL_REG}, /* 41: Write start: i2c_wr_off */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 41: Write start: i2c_wr_off */
 	{REG_DATA, BSC_PAD_OUT_EN},	/* 42: Enable pad output */
 #else
-	{REG_ADDR, 0},			/* 41: NOP */
-	{REG_ADDR, 0},			/* 42: NOP */
+	{REG_ADDR, 0},		/* 41: NOP */
+	{REG_ADDR, 0},		/* 42: NOP */
 #endif
-	{REG_ADDR, 0x20},		/* 43: Set BSC CS Reg */
-	{REG_DATA, START_CMD},		/* 44: Send Start condition */
+	{REG_ADDR, 0x20},	/* 43: Set BSC CS Reg */
+	{REG_DATA, START_CMD},	/* 44: Send Start condition */
 	{WAIT_TIMER, START_DELAY},	/* 45 : Wait ... */
-	{REG_DATA, 1},			/* 46: Clear Start condition */
-	{I2C_DATA, 0x10},		/* 47: i2c_wr_slv_id_off */
+	{REG_DATA, 1},		/* 46: Clear Start condition */
+	{I2C_DATA, 0x10},	/* 47: i2c_wr_slv_id_off */
 	{WAIT_TIMER, WRITE_DELAY},	/* 48: Wait... */
-	{I2C_DATA, 0x00},		/* 49: i2c_wr_reg_addr_off */
+	{I2C_DATA, 0x00},	/* 49: i2c_wr_reg_addr_off */
 	{WAIT_TIMER, WRITE_DELAY},	/* 50: Wait ... */
-	{I2C_DATA, 0xC0},		/* 51: i2c_wr_val_addr_off */
+	{I2C_DATA, 0xC0},	/* 51: i2c_wr_val_addr_off */
 	{WAIT_TIMER, WRITE_DELAY},	/* 52: fall through */
 #if defined(CONFIG_KONA_PWRMGR_REV2)
-	{SET_READ_DATA, 0x48},		/* 53: i2c_rd_nack_jump_off */
+	{SET_READ_DATA, 0x48},	/* 53: i2c_rd_nack_jump_off */
 #else
-	{REG_ADDR, 0},			/* 53 : NOP */
+	{REG_ADDR, 0},		/* 53 : NOP */
 #endif
-	{REG_ADDR, PMU_BSC_INT_STATUS_REG}, /* 54: Set BSC INT Reg */
-	{REG_DATA, PMU_BSC_INT_STATUS_MASK}, /* 55: Clear INT Status */
+	{REG_ADDR, PMU_BSC_INT_STATUS_REG},	/* 54: Set BSC INT Reg */
+	{REG_DATA, PMU_BSC_INT_STATUS_MASK},	/* 55: Clear INT Status */
 #ifdef CONFIG_KONA_PMU_BSC_CLKPAD_CTRL
-	{REG_ADDR, PMU_BSC_PADCTL_REG}, /* 56: Set BSC PADCTL Reg */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 56: Set BSC PADCTL Reg */
 	{REG_DATA, BSC_PAD_OUT_DIS},	/* 57: Disable pad output */
 #else
-	{REG_ADDR, 0},			/* 56: NOP */
-	{REG_ADDR, 0},			/* 57: NOP */
+	{REG_ADDR, 0},		/* 56: NOP */
+	{REG_ADDR, 0},		/* 57: NOP */
 #endif
-	{END, 0},			/* 58: End sequence (write/read) */
-	{SET_PC_PINS, 0x30},		/* 59: set2_ptr */
-	{END, 0},			/* 60: End sequence (SET2) */
-	{SET_PC_PINS, 0x31},		/* 61: set1_ptr */
-	{END, 0},			/* 62: End sequence (SET1) */
+	{END, 0},		/* 58: End sequence (write/read) */
+	{SET_PC_PINS, 0x30},	/* 59: set2_ptr */
+	{END, 0},		/* 60: End sequence (SET2) */
+	{SET_PC_PINS, 0x31},	/* 61: set1_ptr */
+	{END, 0},		/* 62: End sequence (SET1) */
 };
-
-
 
 /*Default voltage lookup table
 Need to move this to board-file
 */
-static u8 pwrmgr_default_volt_lut[] =
-									{
-										PMU_SCR_VLT_TBL_SS
-									};
+static u8 pwrmgr_default_volt_lut[] = {
+	PMU_SCR_VLT_TBL_SS
+};
 
+static struct v0x_spec_i2c_cmd_ptr v0_ptr = {
+	.other_ptr = 2,
+	.set2_val = 1,		/*Retention voltage inx */
+	.set2_ptr = 59,
+	.set1_val = 2,		/*wakeup from retention voltage inx */
+	.set1_ptr = 61,
+	.zerov_ptr = 59,	/*Not used for Rhea */
+};
 
-static struct v0x_spec_i2c_cmd_ptr v0_ptr =
-		{
-			.other_ptr = 2,
-			.set2_val = 1, /*Retention voltage inx*/
-			.set2_ptr = 59,
-			.set1_val = 2,/*wakeup from retention voltage inx*/
-			.set1_ptr = 61,
-			.zerov_ptr = 59, /*Not used for Rhea*/
-		};
-
-struct pwrmgr_init_param pwrmgr_init_param =
-	{
-		.cmd_buf = i2c_cmd,
-		.cmb_buf_size = ARRAY_SIZE(i2c_cmd),
-		.v0ptr = &v0_ptr,
-		.def_vlt_tbl = pwrmgr_default_volt_lut,
-		.vlt_tbl_size = ARRAY_SIZE(pwrmgr_default_volt_lut),
+struct pwrmgr_init_param pwrmgr_init_param = {
+	.cmd_buf = i2c_cmd,
+	.cmb_buf_size = ARRAY_SIZE(i2c_cmd),
+	.v0ptr = &v0_ptr,
+	.def_vlt_tbl = pwrmgr_default_volt_lut,
+	.vlt_tbl_size = ARRAY_SIZE(pwrmgr_default_volt_lut),
 #if defined(CONFIG_KONA_PWRMGR_REV2)
-		.i2c_rd_off = 17,
-		.i2c_rd_slv_id_off1 = 23,
-		.i2c_rd_reg_addr_off = 25,
-		.i2c_rd_slv_id_off2 = 31,
-		.i2c_rd_nack_off = 39,
-		.i2c_rd_nack_jump_off = 53,
-		.i2c_wr_off = 41,
-		.i2c_wr_slv_id_off = 47,
-		.i2c_wr_reg_addr_off = 49,
-		.i2c_wr_val_addr_off = 51,
-		.i2c_seq_timeout = 100,
+	.i2c_rd_off = 17,
+	.i2c_rd_slv_id_off1 = 23,
+	.i2c_rd_reg_addr_off = 25,
+	.i2c_rd_slv_id_off2 = 31,
+	.i2c_rd_nack_off = 39,
+	.i2c_rd_nack_jump_off = 53,
+	.i2c_wr_off = 41,
+	.i2c_wr_slv_id_off = 47,
+	.i2c_wr_reg_addr_off = 49,
+	.i2c_wr_val_addr_off = 51,
+	.i2c_seq_timeout = 100,
 #endif
-	};
+};
 
-#endif /*CONFIG_KONA_POWER_MGR*/
+#endif /*CONFIG_KONA_POWER_MGR */
 
+static void rhea_pm_init_wa_flgs(void)
+{
+	int chip_rev = get_chip_rev_id();
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2531
+	JIRA_WA_FLG_NAME(2531) = chip_rev <= RHEA_CHIP_REV_B1;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2221
+	JIRA_WA_FLG_NAME(2221) = chip_rev <= RHEA_CHIP_REV_B1;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2301
+	JIRA_WA_FLG_NAME(2301) = chip_rev <= RHEA_CHIP_REV_B1;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2489
+	JIRA_WA_FLG_NAME(2489) = chip_rev <= RHEA_CHIP_REV_B1;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2348
+	JIRA_WA_FLG_NAME(2348) = chip_rev <= RHEA_CHIP_REV_B1;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2272
+	JIRA_WA_FLG_NAME(2272) = chip_rev <= RHEA_CHIP_REV_B1;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2045
+	/*      Workaround is disabled for B1.
+	   New register bits added in B1 to resolve this issue.
+	 */
+	JIRA_WA_FLG_NAME(2045) = chip_rev < RHEA_CHIP_REV_B1;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2276
+	JIRA_WA_FLG_NAME(2276) = chip_rev <= RHEA_CHIP_REV_B1;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+	/*Workaround not enabled for B1 */
+	JIRA_WA_FLG_NAME(2490) = chip_rev < RHEA_CHIP_REV_B1;
+#endif
+
+}
+
+int __init rhea_pm_params_init(void)
+{
+	rhea_pm_init_wa_flgs();
+	return 0;
+}

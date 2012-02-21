@@ -88,12 +88,12 @@ config MACH_RHEA_SS
         bool "Support Broadcom Rhea RheaCooper SS board"
         help
 	  Support Broadcom Rhea RheaCooper SS board.
-	  
+
 config MACH_RHEA_SS_AMAZING
 	bool "Support Broadcom Rhea SS Amazing board"
 	help
 	  Support for the Broadcom Rhea SS Amazing board.
-          
+
 config MACH_RHEA_SS_LUCAS
 	bool "Support Broadcom Rhea SS Amazing board"
 	help
@@ -167,12 +167,12 @@ config RHEA_WA_HWJIRA_2531
 	 Say Y to enable RHEA JIRA 2531 workaround
 	 Refer JIRA DB for more info on this JIRA
 
-config RHEA_WA_CRMEMC_919
+config RHEA_WA_HWJIRA_2301
 	depends on ARCH_RHEA
-	bool "Enable workaround for RHEA JIRA CRMEMC-919"
+	bool "Enable workaround for RHEA JIRA 2301"
 	default y
 	help
-	 Say Y to enable RHEA JIRA CRMEMC-919 workaround
+	 Say Y to enable RHEA JIRA 2301 workaround
 	 Refer JIRA DB for more info on this JIRA
 
 config RHEA_WA_HWJIRA_2221
@@ -213,6 +213,22 @@ config RHEA_WA_HWJIRA_2272
 	default y
 	help
 	 Say Y to enable RHEA JIRA 2272 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2348
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2348"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2348 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2489
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2489"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2489 workaround
 	 Refer JIRA DB for more info on this JIRA
 
 config RHEALC_2093

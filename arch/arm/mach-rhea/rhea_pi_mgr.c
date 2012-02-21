@@ -42,7 +42,6 @@
 #include <mach/clock.h>
 #include <mach/pi_mgr.h>
 #include <plat/pwr_mgr.h>
-#include <plat/scu.h>
 
 #include "pm_params.h"
 
@@ -55,10 +54,6 @@
 		.hw_wakeup_latency = latency,.flags = flg}
 
 
-#if defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
-extern void rhea_acp_workaround(void);
-extern void rhea_mm_shutdown_workaround(void);
-#endif
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 extern char* noncache_buf_va;
 #endif
@@ -418,14 +413,16 @@ struct pi* pi_list[] = {
 
 };
 
-#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
-/* JIRA HWRHEA-1689, HWRHEA-1739 we confirmed that there is a bug in Rhea A0 where wrong control signal
-is used to turn on mm power switches which results in mm clamps getting released before mm subsystem
- has powered up. This results in glitches on mm outputs which in some parts causes fake write
- transaction to memc with random ID. Next real write transfer to memc from mm creates write
- interleaving error in memc and hangs mm. This is the root cause of MM block test failures observed
- in BLTS MobC00164066: SW workaround is to reduce inrush current setting on mm power switch control
- from default 14.5mA (0x3) to 1.5mA (0x0) in bits 1:0 of CHIPREG:mm_powerswitch_control_status register.
+#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND)
+/* JIRA HWRHEA-1689, HWRHEA-1739 we confirmed that there is a bug in Rhea A0
+where wrong control signal is used to turn on mm power switches which results
+in mm clamps getting released before mm subsystem has powered up. This results
+in glitches on mm outputs which in some parts causes fake write transaction to
+memc with random ID. Next real write transfer to memc from mm creates write
+interleaving error in memc and hangs mm. This is the root cause of MM block
+test failures observed in BLTS MobC00164066: SW workaround is to reduce inrush
+current setting on mm power switch control from default 14.5mA (0x3) to 1.5mA
+(0x0) in bits 1:0 of CHIPREG:mm_powerswitch_control_status register.
 */
 static int mm_policy_change_notifier(struct notifier_block *self,
                                unsigned long event, void *data)
@@ -435,7 +432,6 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 	char *noncache_buf_tmp_va;
 
 	BUG_ON(p->pi_id != PI_MGR_PI_ID_MM);
-#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND)
 	/*Is MM PI waking up from shutdown state ?*/
 	if(IS_SHUTDOWN_POLICY(p->old_value) && !IS_SHUTDOWN_POLICY(p->new_value))
 	{
@@ -445,7 +441,8 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 			reg_val = readl(KONA_CHIPREG_VA +
 					CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET);
 			/* 1.5mA per switch */
-			reg_val &= ~CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_POWER_SWITCH_CTRL_MASK;
+			reg_val &=
+				~CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_POWER_SWITCH_CTRL_MASK;
 			writel(reg_val, (KONA_CHIPREG_VA +
 					CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET));
 		}
@@ -454,68 +451,12 @@ static int mm_policy_change_notifier(struct notifier_block *self,
 			pr_info("%s:POLICY_POSTCHANGE\n",__func__);
 			reg_val = readl(KONA_CHIPREG_VA +
 				CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET);
-			reg_val |= CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_POWER_SWITCH_CTRL_MASK;
+			reg_val |=
+				CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_POWER_SWITCH_CTRL_MASK;
 			writel(reg_val, (KONA_CHIPREG_VA +
 					CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET));
 		}
 	}
-#else
-	if(event == PI_PRECHANGE)
-	{
-		if((IS_RETN_POLICY(p->new_value) && IS_ACTIVE_POLICY(p->old_value)) ||
-			IS_SHUTDOWN_POLICY(p->new_value))
-		{
-			if (IS_RETN_POLICY(p->new_value)) {
-
-				scu_standby(0);
-				writel(0xA5A501, KONA_MM_CLK_VA+MM_CLK_MGR_REG_WR_ACCESS_OFFSET);
-				reg_val = readl(KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
-				writel(reg_val|MM_CLK_MGR_REG_MM_DMA_CLKGATE_MM_DMA_AXI_CLK_EN_MASK,
-						 KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
-
-				rhea_acp_workaround();
-				mb();
-
-				writel(reg_val, KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
-				scu_standby(1);
-			}
-
-			if (IS_SHUTDOWN_POLICY(p->new_value)) {
-				scu_standby(0);
-				writel(0xA5A501, KONA_MM_CLK_VA+MM_CLK_MGR_REG_WR_ACCESS_OFFSET);
-				reg_val = readl(KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
-				writel(reg_val|MM_CLK_MGR_REG_MM_DMA_CLKGATE_MM_DMA_AXI_CLK_EN_MASK,
-						 KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
-
-				rhea_mm_shutdown_workaround();
-				mb();
-
-				writel(reg_val, KONA_MM_CLK_VA+MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
-				scu_standby(1);
-			}
-		}
-	} else {
-#ifdef CONFIG_RHEA_WA_HWJIRA_2221
-           if (JIRA_WA_ENABLED(2221)) {
-	       if((IS_RETN_POLICY(p->new_value) && IS_ACTIVE_POLICY(p->old_value)) ||
-                       IS_SHUTDOWN_POLICY(p->new_value))
-               {
-		   writel((CSR_AXI_PORT_CTRL_PORT3_DISABLE_MASK), KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
-                   noncache_buf_tmp_va = noncache_buf_va;
-                   for (count = 0; count < 16; count++, noncache_buf_tmp_va += 64)
-		       temp_val = *(volatile u32 *)noncache_buf_tmp_va;
-		       writel(0x0, KONA_MEMC0_NS_VA + CSR_AXI_PORT_CTRL_OFFSET);
-               }
-           }
-#endif
-		if(IS_SHUTDOWN_POLICY(p->old_value) && !IS_SHUTDOWN_POLICY(p->new_value)) {
-
-			/* Enable the AXI trace17 counters again. */
-			writel(0x5551, KONA_AXITRACE17_VA + 0x0);
-			writel(0x2, KONA_AXITRACE17_VA + 0xC);
-		}
-	}
-#endif
 	return 0;
 }
 
@@ -561,7 +502,7 @@ int __init pi_mgr_late_init(void)
 	    pi_debug_add_pi(pi_list[i]);
     }
 #endif /* CONFIG_DEBUG_FS */
-#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
+#if defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND)
 	pi_mgr_register_notifier(PI_MGR_PI_ID_MM,
 					&mm_policy_notifier,
 					PI_NOTIFY_POLICY_CHANGE);

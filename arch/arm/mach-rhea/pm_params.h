@@ -205,56 +205,29 @@ extern struct pwrmgr_init_param pwrmgr_init_param;
 
 #endif /*CONFIG_KONA_POWER_MGR*/
 
+extern int __init rhea_pm_params_init(void);
+
 /*Helper macros for HW JIRA workarounds*/
 /*Macro to check if the workaround enable flag is enabled
 */
-#define JIRA_WA_ENABLED(x) (jira_##x##_enable)
+int __jira_wa_enabled(u32 jira);
+#define JIRA_WA_ENABLED(x) __jira_wa_enabled(x)
 
+#define JIRA_WA_FLG_NAME(x) jira_##x##_enable
 /*Macro to define the JIRA workaround flag. R/W sysfs
 interface is also added to control the flag from console*/
 #define DEFINE_JIRA_WA_FLG(x, def_val)	\
-						int jira_##x##_enable = def_val;\
-						module_param_named(jira_##x##_enable, \
-						jira_##x##_enable, int, S_IRUGO | S_IWUSR \
-								| S_IWGRP)
+				int JIRA_WA_FLG_NAME(x) = def_val;\
+				module_param_named(JIRA_WA_FLG_NAME(x),\
+				JIRA_WA_FLG_NAME(x), int, S_IRUGO | \
+				S_IWUSR | S_IWGRP)
 /*Macro to define the JIRA workaround flag. Read only sysfs
 interface is also added to read the flag from console*/
 #define DEFINE_JIRA_WA_RO_FLG(x, def_val)	\
-						int jira_##x##_enable = def_val;\
-						module_param_named(jira_##x##_enable, \
-						jira_##x##_enable, int, S_IRUGO)
+				int JIRA_WA_FLG_NAME(x) = def_val;\
+				module_param_named(JIRA_WA_FLG_NAME(x), \
+				JIRA_WA_FLG_NAME(x), int, S_IRUGO)
 
-#define DECLARE_JIRA_WA_FLG(x)	extern int jira_##x##_enable
-
-/*JIRA workaround flag declarations*/
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2531
-DECLARE_JIRA_WA_FLG(2531);
-#endif
-
-#ifdef CONFIG_RHEA_WA_CRMEMC_919
-DECLARE_JIRA_WA_FLG(919);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2221
-DECLARE_JIRA_WA_FLG(2221);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-DECLARE_JIRA_WA_FLG(2490);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2276
-DECLARE_JIRA_WA_FLG(2276);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2045
-DECLARE_JIRA_WA_FLG(2045);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2272
-DECLARE_JIRA_WA_FLG(2272);
-#endif
 
 #endif /*__PM_PARAMS_H__*/
 

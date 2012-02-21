@@ -487,7 +487,7 @@ int rhea_force_sleep(suspend_state_t state)
 int enter_idle_state(struct kona_idle_state *state)
 {
 	struct pi* pi = NULL;
-#ifdef CONFIG_RHEA_WA_CRMEMC_919
+#ifdef CONFIG_RHEA_WA_HWJIRA_2301
 	u32 lpddr2_temp_period = 0;
 #endif
 #ifdef CONFIG_ARCH_RHEA_A0
@@ -543,11 +543,11 @@ int enter_idle_state(struct kona_idle_state *state)
 
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	pi_enable(pi,0);
-#ifdef CONFIG_RHEA_WA_CRMEMC_919
-	if (JIRA_WA_ENABLED(919)) {
+#ifdef CONFIG_RHEA_WA_HWJIRA_2301
+	if (JIRA_WA_ENABLED(2301)) {
 		/*
-		Workaround for JIRA CRMEMC-919(Periodic device temp. polling will
-		prevent entering deep sleep in Rhea B0)
+		Workaround for JIRA CRMEMC-919/2301(Periodic device temp.
+		polling will prevent entering deep sleep in Rhea B0)
 		 Workaround  : Disable temp. polling when A9 enters LPM &
 		re-enable on exit from LPM
 		*/
@@ -561,7 +561,7 @@ int enter_idle_state(struct kona_idle_state *state)
 		 writel(0xC3500,
 			KONA_MEMC0_NS_VA + CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
 	}
-#endif /*CONFIG_RHEA_WA_CRMEMC_919*/
+#endif /*CONFIG_RHEA_WA_HWJIRA_2301*/
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 	if (JIRA_WA_ENABLED(2221)) {
@@ -596,16 +596,16 @@ int enter_idle_state(struct kona_idle_state *state)
 		break;
 	}
 
-#ifdef CONFIG_RHEA_WA_CRMEMC_919
+#ifdef CONFIG_RHEA_WA_HWJIRA_2301
  /*
-	Workaround for JIRA CRMEMC-919(Periodic device temperature polling will
-	prevent entering deep sleep in Rhea B0)
+	Workaround for JIRA CRMEMC-919/2301(Periodic device temperature polling
+	will prevent entering deep sleep in Rhea B0)
 	- Disable temp. polling when A9 enters LPM & re-enable on exit from LPM
  */
-	if (JIRA_WA_ENABLED(919))
+	if (JIRA_WA_ENABLED(2301))
 		writel(lpddr2_temp_period, KONA_MEMC0_NS_VA +
                         CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
-#endif /*CONFIG_RHEA_WA_CRMEMC_919*/
+#endif /*CONFIG_RHEA_WA_HWJIRA_2301*/
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 	if (JIRA_WA_ENABLED(2221))
