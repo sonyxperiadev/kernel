@@ -671,6 +671,12 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	mutex_init(&bcmpmu_i2c->i2c_mutex);
 
 #if defined(CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER)
+#if defined(CONFIG_KONA_PMU_BSC_CLKPAD_CTRL)
+	/**
+	 * Initialize the power manager sequencer
+	 */
+	rhea_pwr_mgr_init_sequencer();
+#endif
 	bcmpmu->read_dev = bcmpmu_i2c_pwrmgr_read;
 	bcmpmu->write_dev = bcmpmu_i2c_pwrmgr_write;
 	bcmpmu->read_dev_drct = bcmpmu_i2c_pwrmgr_read_direct;

@@ -148,4 +148,5 @@ enum {
 
 
 int rhea_pwr_mgr_init(void);
+int rhea_pwr_mgr_init_sequencer(void);
 #endif /*__RHEA_PWR_MNGR_H__*/
