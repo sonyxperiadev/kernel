@@ -90,8 +90,13 @@
 #endif
 
 #ifdef CONFIG_BCM_BT_LPM
-#include <linux/broadcom/bcmbt_lpm.h
+#include <linux/broadcom/bcmbt_lpm.h>
 #endif
+
+#ifdef CONFIG_BCM_BZHW
+#include <linux/broadcom/bcm_bzhw.h>
+#endif
+
 
 #if defined(CONFIG_BCMI2CNFC)
 #include <linux/bcmi2cnfc.h>
@@ -850,6 +855,24 @@ static struct platform_device board_bcmbt_rfkill_device = {
 };
 #endif
 
+#ifdef CONFIG_BCM_BZHW
+#define GPIO_BT_WAKE 122
+#define GPIO_HOST_WAKE 111
+static struct bcm_bzhw_platform_data bcm_bzhw_data = {
+	.gpio_bt_wake = GPIO_BT_WAKE,
+	.gpio_host_wake = GPIO_HOST_WAKE,
+};
+
+static struct platform_device board_bcm_bzhw_device = {
+	.name = "bcm_bzhw",
+	.id = -1,
+	.dev = {
+		.platform_data = &bcm_bzhw_data,
+		},
+};
+#endif
+
+
 #ifdef CONFIG_BCM_BT_LPM
 #ifdef CONFIG_MACH_RHEA_BERRI_EDN40
 #define GPIO_BT_WAKE 122
@@ -1481,6 +1504,12 @@ static struct platform_device *rhea_berri_plat_devices[] __initdata = {
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 	&board_bcmbt_rfkill_device,
 #endif
+
+#ifdef CONFIG_BCM_BZHW
+	&board_bcm_bzhw_device,
+#endif
+
+
 #ifdef CONFIG_BCM_BT_LPM
 	&board_bcmbt_lpm_device,
 #endif

@@ -77,3 +77,5 @@ obj-$(CONFIG_BCM59055_SELFTEST)	+= bcm59055-selftest.o
 obj-$(CONFIG_BRALLOC_MEM)	+= bralloc_mem.o
 obj-$(CONFIG_BCMPMU_SELFTEST)	+= bcmpmu-selftest.o
 obj-$(CONFIG_RECOVERY) += bcm_reset_mmc_utils.o
+obj-$(CONFIG_BCM_RFKILL)        += bcmbt_rfkill.o
+obj-$(CONFIG_BCM_BT_LPM)        += bcmbt_lpm.o

@@ -90,6 +90,10 @@
 #include <linux/broadcom/bcmbt_rfkill.h>
 #endif
 
+#ifdef CONFIG_BCM_BZHW
+#include <linux/broadcom/bcm_bzhw.h>
+#endif
+
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
@@ -98,9 +102,6 @@
 #include <video/kona_fb.h>
 #include <linux/pwm_backlight.h>
 
-#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-#include <linux/broadcom/bcmbt_rfkill.h>
-#endif
 
 #ifdef CONFIG_GPIO_PCA953X
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
@@ -108,10 +109,6 @@
 #define SD_CARDDET_GPIO_PIN      75
 #endif
 
-
-#ifdef CONFIG_BCM_BT_LPM
-#include <linux/broadcom/bcmbt_lpm.h>
-#endif
 
 #include <media/soc_camera.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
@@ -1324,6 +1321,25 @@ static struct platform_device board_bcmbt_rfkill_device = {
 };
 #endif
 
+
+#ifdef CONFIG_BCM_BZHW
+#define GPIO_BT_WAKE 04
+#define GPIO_HOST_WAKE 111
+static struct bcm_bzhw_platform_data bcm_bzhw_data = {
+	.gpio_bt_wake = GPIO_BT_WAKE,
+	.gpio_host_wake = GPIO_HOST_WAKE,
+};
+
+static struct platform_device board_bcm_bzhw_device = {
+	.name = "bcm_bzhw",
+	.id = -1,
+	.dev = {
+		.platform_data = &bcm_bzhw_data,
+		},
+};
+#endif
+
+
 #ifdef CONFIG_BCM_BT_LPM
 #define GPIO_BT_WAKE 04
 #define GPIO_HOST_WAKE 111
@@ -1520,6 +1536,12 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
     &board_bcmbt_rfkill_device,
 #endif
+
+#ifdef CONFIG_BCM_BZHW
+	&board_bcm_bzhw_device,
+#endif
+
+
 #ifdef CONFIG_BCM_BT_LPM
     &board_bcmbt_lpm_device,
 #endif

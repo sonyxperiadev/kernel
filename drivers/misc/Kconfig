@@ -727,6 +727,19 @@ config RECOVERY
 	depends on ARCH_KONA
 	default y
 
+config BCM_RFKILL
+        bool "BCM RFKILL driver support for Bluetooth"
+        depends on RFKILL
+        default n
+        help
+          This driver adds RFKILL support for Broadcom bluetooth
+
+config BCM_BT_LPM
+        bool "BCM BT Low Power support"
+        default n
+        help
+          This driver adds Low Power mode support for Broadcom bluetooth
+
 source "drivers/misc/Kconfig.stm"
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
