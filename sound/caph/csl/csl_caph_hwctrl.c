@@ -156,7 +156,7 @@ static BT_MODE_t bt_mode = BT_MODE_NB;
 static Boolean sClkCurEnabled = FALSE;
 static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 static CHAL_HANDLE lp_handle;
-static int en_lpbk_pcm = 0, en_lpbk_i2s = 0;
+static int en_lpbk_pcm, en_lpbk_i2s;
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -3168,6 +3168,8 @@ void csl_caph_hwctrl_init(void)
 {
 	struct CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
 
+	en_lpbk_pcm = 0;
+	en_lpbk_i2s = 0;
 	csl_caph_ControlHWClock(TRUE);
 
 	memset(&addr, 0, sizeof(addr));
