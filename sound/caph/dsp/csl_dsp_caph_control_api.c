@@ -13,7 +13,7 @@
 *
 *  @brief  This file contains CSL DSP API functions for control of CAPH (related to DSP)
 *
-*  @note   
+*  @note
 *
 **/
 /*******************************************************************************************/
@@ -25,6 +25,7 @@
 #include "dspcmd.h"
 #include "csl_dsp_caph_control_api.h"
 #include "log.h"
+#include "audio_trace.h"
 
 extern AP_SharedMem_t	*vp_shared_mem;
 extern AP_SharedMem_t   *DSPDRV_GetPhysicalSharedMemoryAddress( void);
@@ -32,13 +33,13 @@ extern AP_SharedMem_t   *DSPDRV_GetPhysicalSharedMemoryAddress( void);
 
 /*****************************************************************************************/
 /**
-* 
+*
 * Function Name: csl_dsp_caph_control_get_aadmac_buf_base_addr
 *
 *   @note     This function returns the base address of the AADMAC buffer's base address
 *             (pointing to the start of the Low part of the AADMAC buffer).
-*                                                                                         
-*   @param    value (DSP_AADMAC_Audio_Connections_t)  Return the base address for which 
+*
+*   @param    value (DSP_AADMAC_Audio_Connections_t)  Return the base address for which
 *                                                     AADMAC buffer.
 *
 *   @return   UInt32 *dsp_aadmac_base_addr Base address of the AADMAC buffer.
@@ -74,12 +75,12 @@ UInt32 * csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_Audio_Connecti
 
 /*****************************************************************************************/
 /**
-* 
+*
 * Function Name: csl_dsp_caph_control_aadmac_set_samp_rate
 *
 *   @note     This function sets the sample rate for the AADMAC based audio for the DSP
 *             (not valid for IHF)
-*                                                                                         
+*
 *   @param    value (UInt16)  Sample rate for AADMAC based audio for the DSP (non-IHF)
 *             = 8000 or 16000
 *
@@ -102,13 +103,13 @@ void csl_dsp_caph_control_aadmac_set_samp_rate(UInt16 value)
 
 /*****************************************************************************************/
 /**
-* 
+*
 * Function Name: csl_dsp_caph_control_aadmac_enable_path
 *
-*   @note     This function informs the DSP about which hardware path is enabled, and 
+*   @note     This function informs the DSP about which hardware path is enabled, and
 *             based on this information, DSP processes the audio interrupt.
 *             (not valid for IHF)
-*                                                                                         
+*
 *   @param    path (DSP_AADMAC_Audio_Connections_t)
 *
 *   @return   None
@@ -128,11 +129,11 @@ void csl_dsp_caph_control_aadmac_enable_path(UInt16 path)
 
 
         vp_shared_mem->shared_aadmac_aud_enable |= path;
-    	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t*  \
-                csl_dsp_caph_control_aadmac_enable_path: vp_shared_mem = %lx, \
-                &(vp_shared_mem->shared_aadmac_aud_enable) =%lx, \
-                shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem, 
-                (UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)), 
+    	aTrace(LOG_AUDIO_DSP, "\n\r\t*"
+                "csl_dsp_caph_control_aadmac_enable_path: vp_shared_mem = %lx,"
+                "&(vp_shared_mem->shared_aadmac_aud_enable) =%lx,"
+                "shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem,
+                (UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)),
                 vp_shared_mem->shared_aadmac_aud_enable);
 
     }
@@ -141,13 +142,13 @@ void csl_dsp_caph_control_aadmac_enable_path(UInt16 path)
 
 /*****************************************************************************************/
 /**
-* 
+*
 * Function Name: csl_dsp_caph_control_aadmac_disable_path
 *
-*   @note     This function informs the DSP about which hardware path is disabled, and 
+*   @note     This function informs the DSP about which hardware path is disabled, and
 *             based on this information, DSP processes the audio interrupt.
 *             (not valid for IHF)
-*                                                                                         
+*
 *   @param    path (DSP_AADMAC_Audio_Connections_t)
 *
 *   @return   None
@@ -165,12 +166,12 @@ void csl_dsp_caph_control_aadmac_disable_path(UInt16 path)
     else
     {
         vp_shared_mem->shared_aadmac_aud_enable &= ~path;
-        Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* \
-                csl_dsp_caph_control_aadmac_disable_path vp_shared_mem = %lx, \
-                &(vp_shared_mem->shared_aadmac_aud_enable) =%lx, \
-                shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem, 
-                (UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)), 
-                vp_shared_mem->shared_aadmac_aud_enable);
+	aTrace(LOG_AUDIO_DSP, "\n\r\t*"
+		"csl_dsp_caph_control_aadmac_disable_path vp_shared_mem = %lx,"
+		"&(vp_shared_mem->shared_aadmac_aud_enable) =%lx,"
+		"shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem,
+		(UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)),
+		vp_shared_mem->shared_aadmac_aud_enable);
 
     }
 

@@ -16,6 +16,7 @@
 ****************************************************************************/
 #include "mobcom_types.h"
 #include "csl_dsp_common_util.h"
+#include "audio_trace.h"
 
 static const UInt32 Log2LinearTable[] = 
 {

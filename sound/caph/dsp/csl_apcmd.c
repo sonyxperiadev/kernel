@@ -18,6 +18,7 @@
 #include "shared.h"
 #include "csl_dsp.h"
 #include "csl_apcmd.h"
+#include "audio_trace.h"
 
 void VPRIPCMDQ_SetARM2SP(UInt16 arg0, UInt16 arg1);
 

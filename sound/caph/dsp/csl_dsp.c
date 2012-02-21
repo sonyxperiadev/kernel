@@ -22,6 +22,7 @@
 #include "osdw_dsp_drv.h"
 #include "csl_arm2sp.h"
 #include "csl_vpu.h"
+#include "audio_trace.h"
 
 AP_SharedMem_t	*vp_shared_mem;
 extern AP_SharedMem_t   *DSPDRV_GetPhysicalSharedMemoryAddress( void);
@@ -44,14 +45,15 @@ extern void sp_StatusUpdate(void);
 *
 *   VPSHAREDMEM_Init initializes AP interface to DSP.
 *
-*   @param    dsp_shared_mem (in)	AP shared memory address 
-* 
+*   @param    dsp_shared_mem (in)	AP shared memory address
+*
 **********************************************************************/
 void VPSHAREDMEM_Init(UInt32 *dsp_shared_mem)
 {
 	vp_shared_mem = (AP_SharedMem_t*) dsp_shared_mem;
-	
-	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", (UInt32)dsp_shared_mem);
+
+	aTrace(LOG_AUDIO_DSP, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n"
+			, (UInt32)dsp_shared_mem);
 
 	/* Clear out shared memory */
 	memset(vp_shared_mem, 0, sizeof(AP_SharedMem_t));
@@ -82,15 +84,18 @@ void VPSHAREDMEM_Init(UInt32 *dsp_shared_mem)
 *
 *   VPSHAREDMEM_PostCmdQ writes an entry to the VPU command queue.
 *
-*   @param    status_msg	(in)	input status message pointer 
-* 
+*   @param    status_msg	(in)	input status message pointer
+*
 **********************************************************************/
 void VPSHAREDMEM_PostCmdQ(VPCmdQ_t *cmd_msg)
 {
 	VPCmdQ_t 	*p;
 	UInt8 	next_cmd_in;
 
-	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_PostCmdQ: cmdq_in=0x%x, cmdq_out=0x%x \n", vp_shared_mem->vp_shared_cmdq_in, vp_shared_mem->vp_shared_cmdq_out);
+	aTrace(LOG_AUDIO_DSP, " VPSHAREDMEM_PostCmdQ: cmdq_in=0x%x,"
+			"cmdq_out=0x%x \n",
+			vp_shared_mem->vp_shared_cmdq_in,
+			vp_shared_mem->vp_shared_cmdq_out);
 	next_cmd_in = (UInt8)(( vp_shared_mem->vp_shared_cmdq_in + 1 ) % VP_CMDQ_SIZE);
 
 	assert( next_cmd_in != vp_shared_mem->vp_shared_cmdq_out );
@@ -102,7 +107,9 @@ void VPSHAREDMEM_PostCmdQ(VPCmdQ_t *cmd_msg)
 	p->arg2 = cmd_msg->arg2;
 
 	vp_shared_mem->vp_shared_cmdq_in = next_cmd_in;
-	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_PostCmdQ: cmd=0x%x, arg0=0x%x, arg1=%d, arg2=%d \n", cmd_msg->cmd, cmd_msg->arg0, cmd_msg->arg1, cmd_msg->arg2);
+	aTrace(LOG_AUDIO_DSP, " VPSHAREDMEM_PostCmdQ: cmd=0x%x, arg0=0x%x,"
+			"arg1=%d, arg2=%d \n",
+			cmd_msg->cmd, cmd_msg->arg0, cmd_msg->arg1, cmd_msg->arg2);
 
 	VPSHAREDMEM_TriggerRIPInt();
 
@@ -114,8 +121,8 @@ void VPSHAREDMEM_PostCmdQ(VPCmdQ_t *cmd_msg)
 *
 *   VPSHAREDMEM_ReadStatusQ reads an entry from the VPU status  queue.
 *
-*   @param    status_msg	(in)	status message destination pointer 
-* 
+*   @param    status_msg	(in)	status message destination pointer
+*
 **********************************************************************/
 static Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 {
@@ -123,7 +130,10 @@ static Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 	UInt8	status_out = vp_shared_mem->vp_shared_statusq_out;
 	UInt8	status_in = vp_shared_mem->vp_shared_statusq_in;
 
-//	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
+/*	aTrace(LOG_AUDIO_DSP, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x,
+ *	status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in,
+ *	vp_shared_mem->vp_shared_statusq_out);
+ */
 	if ( status_out == status_in )
 	{
 		return FALSE;
@@ -138,7 +148,10 @@ static Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 		status_msg->arg3 = (UInt16)p->arg3;
 #ifdef BRCM_RTOS
 #else
-		Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
+		aTrace(LOG_AUDIO_DSP,
+				" VPSHAREDMEM_ReadStatusQ: status=%d,"
+				"arg0=%d, arg1=%d, arg2=%d, arg3=%d \n",
+				p->status, p->arg0, p->arg1, p->arg2, p->arg3);
 #endif
 		vp_shared_mem->vp_shared_statusq_out = ( status_out + 1 ) % VP_STATUSQ_SIZE;
 
@@ -153,8 +166,8 @@ static Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 *
 *   CSL_RegisterVPUCaptureStatusHandler registers VPU capture status handler.
 *
-*   @param    callbackFunction	(in)	callback function to register 
-* 
+*   @param    callbackFunction	(in)	callback function to register
+*
 **********************************************************************/
 void CSL_RegisterVPUCaptureStatusHandler(VPUCaptureStatusCB_t callbackFunction)
 {
@@ -167,8 +180,8 @@ void CSL_RegisterVPUCaptureStatusHandler(VPUCaptureStatusCB_t callbackFunction)
 *
 *   CSL_RegisterVPURenderStatusHandler registers VPU render status handler.
 *
-*   @param    callbackFunction	(in)	callback function to register 
-* 
+*   @param    callbackFunction	(in)	callback function to register
+*
 **********************************************************************/
 void CSL_RegisterVPURenderStatusHandler(VPURenderStatusCB_t callbackFunction)
 {
@@ -182,8 +195,8 @@ void CSL_RegisterVPURenderStatusHandler(VPURenderStatusCB_t callbackFunction)
 *
 *   CSL_RegisterUSBStatusHandler registers USB status handler.
 *
-*   @param    callbackFunction	(in)	callback function to register 
-* 
+*   @param    callbackFunction	(in)	callback function to register
+*
 **********************************************************************/
 void CSL_RegisterUSBStatusHandler(USBStatusCB_t callbackFunction)
 {
@@ -196,8 +209,8 @@ void CSL_RegisterUSBStatusHandler(USBStatusCB_t callbackFunction)
 *
 *   CSL_RegisterVOIFStatusHandler registers VOIF status handler.
 *
-*   @param    callbackFunction	(in)	callback function to register 
-* 
+*   @param    callbackFunction	(in)	callback function to register
+*
 **********************************************************************/
 void CSL_RegisterVOIFStatusHandler(VOIFStatusCB_t callbackFunction)
 {
@@ -208,11 +221,11 @@ void CSL_RegisterVOIFStatusHandler(VOIFStatusCB_t callbackFunction)
 //*********************************************************************
 /**
 *
-*   CSL_RegisterARM2SPRenderStatusHandler registers main ARM2SP render 
+*   CSL_RegisterARM2SPRenderStatusHandler registers main ARM2SP render
 *	status handler.
 *
-*   @param    callbackFunction	(in)	callback function to register 
-* 
+*   @param    callbackFunction	(in)	callback function to register
+*
 **********************************************************************/
 void CSL_RegisterARM2SPRenderStatusHandler(ARM2SPRenderStatusCB_t callbackFunction)
 {
@@ -223,11 +236,11 @@ void CSL_RegisterARM2SPRenderStatusHandler(ARM2SPRenderStatusCB_t callbackFuncti
 //*********************************************************************
 /**
 *
-*   CSL_RegisterARM2SP2RenderStatusHandler registers main ARM2SP2 render 
+*   CSL_RegisterARM2SP2RenderStatusHandler registers main ARM2SP2 render
 *	status handler.
 *
-*   @param    callbackFunction	(in)	callback function to register 
-* 
+*   @param    callbackFunction	(in)	callback function to register
+*
 **********************************************************************/
 void CSL_RegisterARM2SP2RenderStatusHandler(ARM2SP2RenderStatusCB_t callbackFunction)
 {
@@ -241,8 +254,8 @@ void CSL_RegisterARM2SP2RenderStatusHandler(ARM2SP2RenderStatusCB_t callbackFunc
 *
 *   CSL_RegisterMainAMRStatusHandler registers main AMR status handler.
 *
-*   @param    callbackFunction	(in)	callback function to register 
-* 
+*   @param    callbackFunction	(in)	callback function to register
+*
 **********************************************************************/
 void CSL_RegisterMainAMRStatusHandler(MainAMRStatusCB_t callbackFunction)
 {
@@ -255,8 +268,8 @@ void CSL_RegisterMainAMRStatusHandler(MainAMRStatusCB_t callbackFunction)
 *
 *   CSL_RegisterAudioLogHandler registers VoIP status handler.
 *
-*   @param    callbackFunction	(in)	callback function to register 
-* 
+*   @param    callbackFunction	(in)	callback function to register
+*
 **********************************************************************/
 void CSL_RegisterVoIPStatusHandler(VoIPStatusCB_t callbackFunction)
 {
@@ -270,8 +283,8 @@ void CSL_RegisterVoIPStatusHandler(VoIPStatusCB_t callbackFunction)
 *
 *   CSL_RegisterAudioLogHandler registers audio logging status handler.
 *
-*   @param    callbackFunction	(in)	callback function to register 
-* 
+*   @param    callbackFunction	(in)	callback function to register
+*
 **********************************************************************/
 void CSL_RegisterAudioLogHandler(AudioLogStatusCB_t callbackFunction)
 {
@@ -282,11 +295,11 @@ void CSL_RegisterAudioLogHandler(AudioLogStatusCB_t callbackFunction)
 //*********************************************************************
 /**
 *
-*   CSL_RegisterAudioEnableDoneHandler registers audio enable done 
+*   CSL_RegisterAudioEnableDoneHandler registers audio enable done
 *   status handler.
 *
-*   @param    callbackFunction	(in)	callback function to register 
-* 
+*   @param    callbackFunction	(in)	callback function to register
+*
 **********************************************************************/
 void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t callbackFunction)
 {
@@ -300,14 +313,14 @@ void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t callbackFuncti
 *
 *   AP_ProcessStatus processes VPU status message from DSP on AP.
 *
-* 
+*
 **********************************************************************/
 void AP_ProcessStatus(void)
-{	
+{
  VPStatQ_t status_msg;
 
 	while(VPSHAREDMEM_ReadStatusQ(&status_msg))
-	{    
+	{
 		switch(status_msg.status)
 		{
 			case VP_STATUS_RECORDING_DATA_READY:
@@ -318,7 +331,10 @@ void AP_ProcessStatus(void)
 				}
 				else
 				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: VPUCaptureStatusHandler is not registered");
+					aTrace(LOG_AUDIO_DSP,
+						"AP DSP Interrupt:"
+						"VPUCaptureStatusHandler"
+						"is not registered");
 				}
 				break;
 
@@ -332,10 +348,13 @@ void AP_ProcessStatus(void)
 				}
 				else
 				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: VPURenderStatusHandler is not registered");
+					aTrace(LOG_AUDIO_DSP,
+							"AP DSP Interrupt:"
+							"VPURenderStatusHandler"
+							"is not registered");
 				}
 				break;
-			
+
 			}
 
 			case VP_STATUS_USB_HEADSET_BUFFER:
@@ -346,7 +365,10 @@ void AP_ProcessStatus(void)
 				}
 				else
 				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: USBStatusHandler is not registered");
+					aTrace(LOG_AUDIO_DSP,
+							"AP DSP Interrupt:"
+							"USBStatusHandler"
+							"is not registered");
 				}
 				break;
 			}
@@ -359,7 +381,10 @@ void AP_ProcessStatus(void)
 				}
 				else
 				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: VOIFStatusHandler is not registered");
+					aTrace(LOG_AUDIO_DSP,
+							"AP DSP Interrupt:"
+							"VOIFStatusHandler"
+							"is not registered");
 				}
 				break;
 			}
@@ -372,7 +397,10 @@ void AP_ProcessStatus(void)
 				}
 				else
 				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: ARM2SPRenderStatusHandler is not registered");
+					aTrace(LOG_AUDIO_DSP,
+						"AP DSP Interrupt:"
+						"ARM2SPRenderStatusHandler"
+						"is not registered");
 				}
 				break;
 			}
@@ -385,11 +413,14 @@ void AP_ProcessStatus(void)
 				}
 				else
 				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: ARM2SP2RenderStatusHandler is not registered");
+					aTrace(LOG_AUDIO_DSP,
+						"AP DSP Interrupt:"
+						"ARM2SP2RenderStatusHandler"
+						"is not registered");
 				}
 				break;
 			}
-			
+
 			case VP_STATUS_MAIN_AMR_DONE:
 			{
 				if(MainAMRStatusHandler != NULL)
@@ -398,7 +429,10 @@ void AP_ProcessStatus(void)
 				}
 				else
 				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: MainAMRStatusHandler is not registered");
+					aTrace(LOG_AUDIO_DSP,
+							"AP DSP Interrupt:"
+							"MainAMRStatusHandler"
+							"is not registered");
 				}
  				break;
 			}
@@ -411,7 +445,10 @@ void AP_ProcessStatus(void)
 				}
 				else
 				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: VoIPStatusHandler is not registered");
+					aTrace(LOG_AUDIO_DSP,
+							"AP DSP Interrupt:"
+							"VoIPStatusHandler"
+							"is not registered");
 				}
 				break;
 			}
@@ -419,7 +456,7 @@ void AP_ProcessStatus(void)
 			case VP_STATUS_SP:
 			{
 				sp_StatusUpdate();
-				
+
 				break;
 
 			}
@@ -432,9 +469,12 @@ void AP_ProcessStatus(void)
 				}
 				else
 				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: AudioLogStatusHandler is not registered");
+					aTrace(LOG_AUDIO_DSP,
+							"AP DSP Interrupt:"
+							"AudioLogStatusHandler"
+							"is not registered");
 				}
-				break;		
+				break;
 			}
 
 			case VP_STATUS_AUDIO_ENABLE_DONE:
@@ -445,13 +485,18 @@ void AP_ProcessStatus(void)
 				}
 				else
 				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: AudioEnableDoneHandler is not registered");
+					aTrace(LOG_AUDIO_DSP,
+							"AP DSP Interrupt:"
+							"AudioEnableDoneHandler"
+							"is not registered");
 				}
-				break;		
+				break;
 			}
 
 			default:
-				Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: Unknown Status received");
+				aTrace(LOG_AUDIO_DSP,
+						"AP DSP Interrupt:"
+						"Unknown Status received");
 
 				break;
 
@@ -463,15 +508,15 @@ void AP_ProcessStatus(void)
 
 /*****************************************************************************************/
 /**
-* 
+*
 * Function Name: AUDIO_Return_IHF_48kHz_buffer_base_address
 *
 *   @note     This function returns the base address to the shared memory buffer where
 *             the ping-pong 48kHz data would be stored for AADMAC to pick them up
-*             for IHF case. This base address needs to be programmed to the 
+*             for IHF case. This base address needs to be programmed to the
 *             AADMAC_CTRL1 register.
-*                                                                                         
-*   @return   ptr (UInt32 *) Pointer to the base address of shared memory ping-pong buffer 
+*
+*   @return   ptr (UInt32 *) Pointer to the base address of shared memory ping-pong buffer
 *                            for transferring 48kHz speech data from DSP to AADMAC for IHF.
 *
 **/
