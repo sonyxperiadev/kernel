@@ -1800,7 +1800,7 @@ void bcmtch_poll(struct napa_i2c *p_napa_i2c)
 
    //bcmtch_setup_poll_timer(p_napa_i2c, 2);
    if (mod_debug == MOD_DEBUG_I2C_DOWNLOAD)
-      msleep(500000);
+      msleep(500);
    else
       usleep_range(2000, 2500);
 

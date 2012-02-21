@@ -26,6 +26,7 @@
 
 #define UNICAM_BUF_MAGIC		0xBABEFACE
 #define UNICAM_CAM_DRV_NAME		"unicam-camera"
+#define UNICAM_CAPTURE_MODE             CSL_CAM_CAPTURE_MODE_TRIGGER   // CSL_CAM_CAPTURE_MODE_TRIGGER (Stills )  CSL_CAM_CAPTURE_MODE_NORMAL (Video)
 
 #define iprintk(format, arg...)	\
 	printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg)
@@ -327,10 +328,6 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 {
 	int ret = 0;
 	CSL_CAM_FRAME_st_t cslCamFrame;
-	CSL_CAM_DATA_st_t cslCamDataCtrl;
-	int bytes_per_line =
-	    soc_mbus_bytes_per_line(unicam_dev->icd->user_width,
-				    unicam_dev->icd->current_fmt->host_fmt);
 	dprintk("-enter");
 
 	if (!unicam_dev->active) {
@@ -338,33 +335,26 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 		return ret;
 	}
 
-	cslCamDataCtrl.int_enable = (CSL_CAM_INTERRUPT_t) (CSL_CAM_INT_DISABLE);
-	cslCamDataCtrl.line_count = 2;	/* (unicam_dev->icd->user_height - 1); */
-	cslCamDataCtrl.data_id = 0x00;
-	cslCamDataCtrl.data_size = CSL_CAM_PIXEL_8BIT;
-	cslCamDataCtrl.fsp_decode_enable = FALSE;
-
-	if (csl_cam_set_data_type_control
-	    (unicam_dev->cslCamHandle, &cslCamDataCtrl)) {
+	/* enable frame Interrupts */
+	cslCamFrame.int_enable = CSL_CAM_INT_FRAME_END;
+	/* for testing enabled frame start interrupt */
+	//cslCamFrame.int_enable |= CSL_CAM_INT_FRAME_START;
+	cslCamFrame.int_line_count = 0;
+	cslCamFrame.capture_mode = UNICAM_CAPTURE_MODE;
+	cslCamFrame.capture_size = 0;
+	if (csl_cam_set_frame_control(unicam_dev->cslCamHandle, &cslCamFrame)) {
 		dev_err(unicam_dev->dev,
-			"error in csl_cam_set_data_type_control()\n");
+			"csl_cam_set_frame_control(): FAILED\n");
 		return -1;
 	}
 
-	cslCamFrame.int_enable = (CSL_CAM_INT_FRAME_END);
-	/* for testing enable frame start interrupt */
-	cslCamFrame.int_enable |= CSL_CAM_INT_FRAME_START;
-	cslCamFrame.int_line_count = (unicam_dev->icd->user_height - 1);
-	cslCamFrame.capture_mode = CSL_CAM_CAPTURE_MODE_TRIGGER;
-
-	/*TODO: fix resolution */
-	cslCamFrame.capture_size =
-	    unicam_dev->icd->user_height * bytes_per_line;
-
-	if (csl_cam_trigger_capture(unicam_dev->cslCamHandle) != 0) {
-		dev_err(unicam_dev->dev, "error in triggering capture\n");
-		return -1;
-	}
+    if (UNICAM_CAPTURE_MODE == CSL_CAM_CAPTURE_MODE_TRIGGER)
+    {
+		if (csl_cam_trigger_capture(unicam_dev->cslCamHandle) != 0) {
+			dev_err(unicam_dev->dev, "error in triggering capture\n");
+			return -1;
+		}
+    }
 	dprintk("-exit()");
 	return ret;
 }
@@ -440,9 +430,8 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	CSL_CAM_INTF_CFG_st_t csl_cam_intf_cfg_st;
 	CSL_CAM_LANE_CONTROL_st_t cslCamLaneCtrl_st;
 	CSL_CAM_PIPELINE_st_t cslCamPipeline;
-	CSL_CAM_INPUT_st_t cslCamInput;
 	CSL_CAM_IMAGE_ID_st_t cslCamImageCtrl;
-	CSL_CAM_FRAME_st_t cslCamFrame;
+	CSL_CAM_DATA_st_t cslCamDataCtrl;
 
 	dprintk("-enter");
 	iprintk("enabling csi");
@@ -469,6 +458,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	unicam_dev->if_params = if_params;
 
 	/* set camera interface parameters */
+	memset(&csl_cam_intf_cfg_st, 0, sizeof(CSL_CAM_INTF_CFG_st_t));
 
 	/* we only support serial and csi2 sensor */
 	if ((unicam_dev->if_params.if_type == V4L2_SUBDEV_SENSOR_SERIAL)
@@ -516,19 +506,10 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 		return -1;
 	}
 
-	/* lane/clk configuration */
-	cslCamInput.input_mode = CSL_CAM_INPUT_SINGLE_LANE;
-	cslCamInput.frame_time_out = 1000;
-
-	if (csl_cam_set_input_mode(unicam_dev->cslCamHandle, &cslCamInput)) {
-		dev_err(unicam_dev->dev, "csl_cam_set_input_mode(): FAILED\n");
-		return -1;
-	}
-
 	/* set data lane timing */
 	cslCamLaneCtrl_st.lane_select = CSL_CAM_DATA_LANE_0;
 	cslCamLaneCtrl_st.lane_control = CSL_CAM_LANE_HS_TERM_TIME;
-	cslCamLaneCtrl_st.param = 7;
+	cslCamLaneCtrl_st.param = 1;
 	if (csl_cam_set_lane_control
 	    (unicam_dev->cslCamHandle, &cslCamLaneCtrl_st)) {
 		dev_err(unicam_dev->dev,
@@ -586,24 +567,26 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 		return -1;
 	}
 
+	/* set data capture */
+	cslCamDataCtrl.int_enable = (CSL_CAM_INTERRUPT_t) (CSL_CAM_INT_DISABLE);
+	cslCamDataCtrl.line_count = 2;
+	cslCamDataCtrl.data_id = 0x00;
+	cslCamDataCtrl.data_size = CSL_CAM_PIXEL_8BIT;
+	cslCamDataCtrl.fsp_decode_enable = FALSE;
+
+	if (csl_cam_set_data_type_control
+        (unicam_dev->cslCamHandle, &cslCamDataCtrl)) {
+		dev_err(unicam_dev->dev,
+			"csl_cam_set_data_type_control(): FAILED\n");
+		return -1;
+	}
+
 	/* start receiver */
 	if (csl_cam_rx_start(unicam_dev->cslCamHandle)) {
 		dev_err(unicam_dev->dev, "csl_cam_rx_start(): FAILED\n");
 		return -1;
 	}
 
-	/* enable frame Interrupts */
-	cslCamFrame.int_enable = CSL_CAM_INT_FRAME_END;
-	/* for testing enabled frame start interrupt */
-	cslCamFrame.int_enable |= CSL_CAM_INT_FRAME_START;
-	cslCamFrame.int_line_count = (unicam_dev->icd->user_height - 1);
-	cslCamFrame.capture_mode = CSL_CAM_CAPTURE_MODE_TRIGGER;	/* CSL_CAM_CAPTURE_MODE_TRIGGER */
-	cslCamFrame.capture_size = 0;
-	if (csl_cam_set_frame_control(unicam_dev->cslCamHandle, &cslCamFrame)) {
-		dev_err(unicam_dev->dev,
-			"csl_cam_set_frame_control(): FAILED\n");
-		return -1;
-	}
 	unicam_dev->streaming = 1;
 	dprintk("-exit");
 	return 0;
@@ -643,7 +626,7 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	/* disable frame interrupts */
 	cslCamFrame.int_enable = CSL_CAM_INT_DISABLE;
 	cslCamFrame.int_line_count = 0;
-	cslCamFrame.capture_mode = CSL_CAM_CAPTURE_MODE_TRIGGER;
+	cslCamFrame.capture_mode = UNICAM_CAPTURE_MODE;
 	cslCamFrame.capture_size = 0;
 
 	if (csl_cam_set_frame_control(unicam_dev->cslCamHandle, &cslCamFrame)) {

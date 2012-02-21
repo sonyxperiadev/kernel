@@ -52,7 +52,6 @@
 
 #include "audio_vdriver.h"
 #include "audio_controller.h"
-#include "log.h"
 
 #ifdef CONFIG_DIGI_MIC
 #ifdef CONFIG_BCMPMU_AUDIO
@@ -2434,28 +2433,30 @@ void AUDCTRL_SetArm2spParam(UInt32 mixMode, Boolean is_fm)
 * Function Name: AUDCTRL_ConfigSSP
 *
 * Description:   Set FM/PCM SSP protocol, and port number
+*                If loopback is enabled, port is ignored
 *
 ****************************************************************************/
-void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus)
+void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus,
+		       int en_lpbk)
 {
-	CSL_SSP_PORT_e csl_port;
-	CSL_SSP_BUS_e csl_bus;
+	CSL_SSP_PORT_e csl_port = CSL_SSP_3;
+	CSL_SSP_BUS_e csl_bus = CSL_SSP_PCM;
 
 	if (port == AUDCTRL_SSP_4)
 		csl_port = CSL_SSP_4;
 	else if (port == AUDCTRL_SSP_3)
 		csl_port = CSL_SSP_3;
-	else
+	else if (!en_lpbk)
 		return;
 
 	if (bus == AUDCTRL_SSP_I2S)
 		csl_bus = CSL_SSP_I2S;
 	else if (bus == AUDCTRL_SSP_PCM)
 		csl_bus = CSL_SSP_PCM;
-	else
+	else if (!en_lpbk)
 		return;
 
-	csl_caph_hwctrl_ConfigSSP(csl_port, csl_bus);
+	csl_caph_hwctrl_ConfigSSP(csl_port, csl_bus, en_lpbk);
 }
 
 /****************************************************************************
@@ -2632,6 +2633,9 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 	switch (access_type) {
 	case AUDCTRL_HW_CFG_HEADSET:
 		csl_caph_hwctrl_SetHeadsetMode(arg1);
+		break;
+	case AUDCTRL_HW_CFG_SSP:
+		AUDCTRL_ConfigSSP(arg1, arg2, arg3);
 		break;
 	case AUDCTRL_HW_CFG_MFD:
 		isMFD = arg1 ? TRUE : FALSE;

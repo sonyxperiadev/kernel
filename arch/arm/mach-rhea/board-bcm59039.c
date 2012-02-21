@@ -34,7 +34,7 @@
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 2
 
-static struct bcmpmu_rw_data __initdata register_init_data[PMU_REG_INIT_MAX] = {
+static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0x01, .val = 0x00, .mask = 0x01},
 	{.map = 0, .addr = 0x0c, .val = 0x1b, .mask = 0xFF},
 	{.map = 0, .addr = 0x40, .val = 0xFF, .mask = 0xFF},
@@ -61,6 +61,25 @@ static struct bcmpmu_rw_data __initdata register_init_data[PMU_REG_INIT_MAX] = {
 	{.map = 0, .addr = 0xB8, .val = 0x06, .mask = 0xFF},
 	{.map = 0, .addr = 0xB9, .val = 0x07, .mask = 0xFF},
 	{.map = 0, .addr = 0xBD, .val = 0x21, .mask = 0xFF},
+
+	/*Init SDSR NM, NM2 and LPM voltages to 1.2V
+	*/
+	{.map = 0, .addr = 0xD0, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0xD1, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0xD2, .val = 0x13, .mask = 0xFF},
+
+	/*Init CSR LPM  to 0.9 V
+	CSR NM2 to 1.22V
+	*/
+	{.map = 0, .addr = 0xC1, .val = 0x04, .mask = 0xFF},
+	{.map = 0, .addr = 0xC2, .val = 0x14, .mask = 0xFF},
+
+	/*PLLCTRL, Clear Bit 0 to disable PLL when PC2:PC1 = 0b00*/
+	{.map = 0, .addr = 0x0A, .val = 0x0E, .mask = 0x0F},
+	/*CMPCTRL13, Set bits 4, 1 for BSI Sync. Mode */
+	{.map = 0, .addr = 0x1C, .val = 0x13, .mask = 0xFF},
+	/*CMPCTRL12, Set bits 4, 1 for NTC Sync. Mode*/
+	{.map = 0, .addr = 0x1B, .val = 0x13, .mask = 0xFF},
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
@@ -198,7 +217,7 @@ static struct regulator_init_data bcm59039_hv4ldo_data = {
 			.always_on = 0,
 #else
 			.always_on = 1,
-#endif			
+#endif
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv4_supply),
 	.consumer_supplies = hv4_supply,
@@ -315,7 +334,6 @@ static struct regulator_init_data bcm59039_simldo_data = {
 is not detected by baseband if SIMLDO is disabled. As a temp. workaround
 we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-#warning "Fix SIMLDO always_on setting on Rhearay"
            .always_on = 1,
 #endif
 
@@ -468,13 +486,13 @@ static struct regulator_init_data bcm59039_sdsr_lpm_data = {
 
 struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_RFLDO] = {
-		BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data, 0x00, 0
+		BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data, 0x01, 0
 	},
 	[BCMPMU_REGULATOR_CAMLDO] = {
 		BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV1LDO] =	{
-		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x22, 0
 	},
 	[BCMPMU_REGULATOR_HV2LDO] =	{
 		BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x00, 0
@@ -485,9 +503,9 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_HV4LDO] =	{
 #if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, 0
-#else		
+#else
 		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0x00, 0
-#endif		
+#endif
 	},
 	[BCMPMU_REGULATOR_HV5LDO] = {
 		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x00, 0
@@ -512,7 +530,6 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 is not detected by baseband if SIMLDO is disabled. As a temp. workaround
 we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-#warning "Fix SIMLDO opmode setting on Rhearay"
 	[BCMPMU_REGULATOR_SIMLDO] = {
 		BCMPMU_REGULATOR_SIMLDO, &bcm59039_simldo_data, 0x00,
 			BCMPMU_REGL_LPM_IN_DSM
@@ -523,9 +540,8 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 			BCMPMU_REGL_LPM_IN_DSM
 	},
 #endif
-#warning "Changing to Always ON temporarily to bypass the current leakage issue"
 	[BCMPMU_REGULATOR_CSR_NM] =	{
-		BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x00, 0
+		BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x31, 0
 	},
 	[BCMPMU_REGULATOR_CSR_NM2] = {
 		BCMPMU_REGULATOR_CSR_NM2, &bcm59039_csr_nm2_data, 0xFF, 0
@@ -534,22 +550,22 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 		BCMPMU_REGULATOR_CSR_LPM, &bcm59039_csr_lpm_data, 0xFF, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_NM] = {
-		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0x00, 0
+		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_NM2] = {
-		BCMPMU_REGULATOR_IOSR_NM2, &bcm59039_iosr_nm2_data, 0x00, 0
+		BCMPMU_REGULATOR_IOSR_NM2, &bcm59039_iosr_nm2_data, 0xFF, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_LPM] = {
-		BCMPMU_REGULATOR_IOSR_LPM, &bcm59039_iosr_lpm_data, 0x00, 0
+		BCMPMU_REGULATOR_IOSR_LPM, &bcm59039_iosr_lpm_data, 0xFF, 0
 	},
 	[BCMPMU_REGULATOR_SDSR_NM] = {
-		BCMPMU_REGULATOR_SDSR_NM, &bcm59039_sdsr_nm_data, 0x00, 0
+		BCMPMU_REGULATOR_SDSR_NM, &bcm59039_sdsr_nm_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_SDSR_NM2] = {
-		BCMPMU_REGULATOR_SDSR_NM2, &bcm59039_sdsr_nm2_data, 0x00, 0
+		BCMPMU_REGULATOR_SDSR_NM2, &bcm59039_sdsr_nm2_data, 0xFF, 0
 	},
 	[BCMPMU_REGULATOR_SDSR_LPM] = {
-		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0x00, 0
+		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0xFF, 0
 	},
 };
 
@@ -673,7 +689,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.init_data = &register_init_data[0],
 	/* # of registers defined in register_init_data.
 	   This value will come from device tree */
-	.init_max = 22,
+	.init_max = ARRAY_SIZE(register_init_data),
 	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,

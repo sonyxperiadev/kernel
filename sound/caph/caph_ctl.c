@@ -1299,7 +1299,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		 * Port is 1 base
 		 */
 		AUDCTRL_ConfigSSP(kcontrol->id.index + 1,
-				  pChip->i32CfgSSP[kcontrol->id.index]);
+				  pChip->i32CfgSSP[kcontrol->id.index], 0);
 		break;
 
 	case CTL_FUNCTION_VOL:

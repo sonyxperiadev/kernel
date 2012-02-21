@@ -89,8 +89,12 @@
 #include <linux/broadcom/gps.h>
 #endif
 
+#ifdef CONFIG_BCM_BZHW
+#include <linux/broadcom/bcm_bzhw.h>
+#endif
+
 #ifdef CONFIG_BCM_BT_LPM
-#include <linux/broadcom/bcmbt_lpm.h
+#include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
 #if defined(CONFIG_BCMI2CNFC)
@@ -455,6 +459,24 @@ static struct platform_device board_bcmbt_rfkill_device = {
         },
 };
 #endif
+
+#ifdef CONFIG_BCM_BZHW
+#define GPIO_BT_WAKE 27
+#define GPIO_HOST_WAKE 72
+static struct bcm_bzhw_platform_data bcm_bzhw_data = {
+	.gpio_bt_wake = GPIO_BT_WAKE,
+	.gpio_host_wake = GPIO_HOST_WAKE,
+};
+
+static struct platform_device board_bcm_bzhw_device = {
+	.name = "bcm_bzhw",
+	.id = -1,
+	.dev = {
+		.platform_data = &bcm_bzhw_data,
+		},
+};
+#endif
+
 
 #ifdef CONFIG_BCM_BT_LPM
 #define GPIO_BT_WAKE	27
@@ -908,7 +930,7 @@ static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
 	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
 	.facing = V4L2_SUBDEV_SENSOR_BACK,
 	.parms.serial = {
-		.lanes = 1,
+		.lanes = 2,
 		.channel = 0,
 		.phy_rate = 0,
 		.pix_clk = 0
@@ -959,6 +981,10 @@ static struct platform_device *rhea_stone_plat_devices[] __initdata = {
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
     &board_bcmbt_rfkill_device,
+#endif
+
+#ifdef CONFIG_BCM_BZHW
+	&board_bcm_bzhw_device,
 #endif
 
 #ifdef CONFIG_BCM_BT_LPM

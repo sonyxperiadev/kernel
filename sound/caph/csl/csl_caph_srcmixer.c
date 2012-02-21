@@ -33,7 +33,6 @@
 *  @brief  csl layer driver for caph SRCMixer driver
 *
 ****************************************************************************/
-#include "log.h"
 #include "mobcom_types.h"
 #include "chal_caph.h"
 #include "csl_caph.h"

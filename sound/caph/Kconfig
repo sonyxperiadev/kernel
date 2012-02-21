@@ -36,3 +36,9 @@ config ENABLE_VOIF
         default n
         help
           Say Y here to activate Brcm voif
+config IHF_EXT_AMPLIFIER
+        boolean "Define if an external amp is used for IHF"
+        depends on BCM_ALSA_SOUND
+        default n
+        help
+          Say Y here to enable the external amp for IHF

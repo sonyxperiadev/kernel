@@ -223,7 +223,8 @@ struct pwr_mgr_info
 	int i2c_rd_slv_id_off1;  /*slave id offset -  write reg address*/
 	int i2c_rd_slv_id_off2; /*slave id offset - read reg value*/
 	int i2c_rd_reg_addr_off;
-	int i2c_rd_fifo_off; /* Read PMU BSC FIFO offset */
+	int i2c_rd_nack_off;
+	int i2c_rd_nack_jump_off;
 	u32 i2c_wr_off;
 	int i2c_wr_slv_id_off;
 	int i2c_wr_reg_addr_off;
@@ -279,6 +280,7 @@ int pwr_mgr_register_event_handler(u32 event_id, void (*pwr_mgr_event_cb)(u32 ev
 											void* param);
 int pwr_mgr_unregister_event_handler(u32 event_id);
 int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event);
+void pwr_mgr_init_sequencer(struct pwr_mgr_info *info);
 int pwr_mgr_init(struct pwr_mgr_info* info);
 
 #if defined(CONFIG_KONA_PWRMGR_REV2)

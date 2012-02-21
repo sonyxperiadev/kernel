@@ -75,7 +75,7 @@ static void cmd_show_usage(void)
 	pr_info("%s", usage);
 }
 
-void handle_snapshot_list(const char *p)
+static void handle_snapshot_list(const char *p)
 {
 	u32 reg = 0, mask = 0, good = 0;
 	int cmd = *p;

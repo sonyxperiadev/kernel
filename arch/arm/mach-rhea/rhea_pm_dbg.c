@@ -11,11 +11,13 @@
 #include <linux/module.h>
 #include <linux/dma-mapping.h>
 #include <plat/kona_pm_dbg.h>
+#include <plat/pwr_mgr.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_csr.h>
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_gpio.h>
 #include <mach/pm.h>
+#include <mach/pwr_mgr.h>
 
 /*****************************************************************************
  *                        SLEEP STATE DEBUG INTERFACE                        *
@@ -50,6 +52,7 @@ enum {
 	CMD_SHOW_HELP = 'h',
 	CMD_DORMANT = 'd',
 	CMD_DISPLAY_STATS = 's',
+	CMD_FORCE_SLEEP = 'f',
 };
 
 static void cmd_show_usage(void)
@@ -63,6 +66,7 @@ static void cmd_show_usage(void)
 	  "disable dormant gpio d g c\n"
 	  "display dormant gpio data d g d\n"
 #endif
+	  "force sleep: f\n"
 	  "display stats: s\n"
 	  "\n";
 
@@ -136,6 +140,12 @@ static void cmd_display_stats(const char *p)
 	pr_info("dormant trace %x\n", *dormant_trace_v);
 }
 
+static void cmd_force_sleep(const char *p)
+{
+	kona_pm_reg_pm_enter_handler(&rhea_force_sleep);
+	request_suspend_state(PM_SUSPEND_MEM);
+}
+
 static int param_set_debug(const char *val, const struct kernel_param *kp)
 {
 	const char *p;
@@ -159,6 +169,9 @@ static int param_set_debug(const char *val, const struct kernel_param *kp)
 #endif
 	case CMD_DISPLAY_STATS:
 		cmd_display_stats(p);
+		break;
+	case CMD_FORCE_SLEEP:
+		cmd_force_sleep(p);
 		break;
 	case CMD_SHOW_HELP: /* Fall-through */
 	default:

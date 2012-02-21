@@ -657,6 +657,10 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 	reg.val |= BCMPMU_IHFPOP_AUTOSEQ;  /*IHFPOP*/
 	bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFPOP_PUP, reg.val,
 			PMU_BITMASK_ALL);
+	/* Bypass IHF ALC/APS, so that IHF gain can be controlled manually */
+	bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC_BYPASS,
+			bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask,
+			bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask);
 
 	/* register for HS and IHF Shortcircuit INT */
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_AUD_HSAB_SHCKT, bcmpmu_audio_isr,

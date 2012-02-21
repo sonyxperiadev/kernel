@@ -39,7 +39,6 @@
 #include "chal_caph_audioh.h"
 #include "csl_caph.h"
 #include "csl_caph_audioh.h"
-#include "log.h"
 #include "audio_trace.h"
 
 /***************************************************************************/
@@ -1818,9 +1817,9 @@ void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl)
 
 void csl_caph_audioh_set_linear_filter(int path_id)
 {
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
-	       "csl_caph_audioh_set_linear_filter.\r\n"));
+	aTrace
+	      (LOG_AUDIO_CSL,
+	       "csl_caph_audioh_set_linear_filter.\r\n");
 
 	switch (path_id) {
 	case AUDDRV_PATH_VIBRA_OUTPUT:
@@ -1878,9 +1877,9 @@ void csl_caph_audioh_set_linear_filter(int path_id)
 
 void csl_caph_audioh_set_minimum_filter(int path_id)
 {
-	_DBG_(Log_DebugPrintf
-	      (LOGID_SOC_AUDIO,
-	       "csl_caph_audioh_set_minimum_filter.\r\n"));
+	aTrace
+	      (LOG_AUDIO_CSL,
+	       "csl_caph_audioh_set_minimum_filter.\r\n");
 
 	switch (path_id) {
 	case AUDDRV_PATH_VIBRA_OUTPUT:

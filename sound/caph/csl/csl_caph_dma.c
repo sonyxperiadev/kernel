@@ -34,7 +34,6 @@
 ****************************************************************************/
 #include <linux/interrupt.h>
 #include <linux/slab.h>
-#include "log.h"
 #include "mobcom_types.h"
 #include "chal_caph_dma.h"
 #include "chal_caph_intc.h"
@@ -43,6 +42,7 @@
 #include "csl_caph_dma.h"
 #include "irqs.h"
 #include "audio_trace.h"
+#include <plat/cpu.h>
 
 /****************************************************************************/
 /*                        G L O B A L   S E C T I O N                       */
@@ -841,7 +841,8 @@ void csl_caph_dma_stop_transfer(CSL_CAPH_DMA_CHNL_e chnl)
 	if (chnl != CSL_CAPH_DMA_NONE) {
 		/* Disable the DMA and its fifo status to make a complete
 		 * reset */
-		chal_caph_dma_set_ddrfifo_status(handle,
+		if (cpu_is_rhea_B0()) /*refer to HWRHEA-2394*/
+			chal_caph_dma_set_ddrfifo_status(handle,
 						 csl_caph_dma_get_chal_chnl
 						 (chnl), CAPH_READY_NONE);
 		chal_caph_dma_clr_channel_fifo(handle,

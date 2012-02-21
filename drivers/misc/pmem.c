@@ -199,6 +199,9 @@ static int id_count;
  * and write-back cache bits
  **/
 
+#define pgprot_noncached(prot) \
+	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_UNCACHED)
+
 #define pgprot_writethrough(prot) \
 	__pgprot((pgprot_val(prot) & ~L_PTE_MT_MASK) | L_PTE_MT_WRITETHROUGH)
 
@@ -554,10 +557,8 @@ static int pmem_allocate(int id, unsigned long len)
 static pgprot_t pmem_access_prot(struct file *file, pgprot_t vma_prot)
 {
 	int id = get_id(file);
-#ifdef pgprot_noncached
 	if (pmem[id].cached == 0 || file->f_flags & O_SYNC)
 		return pgprot_noncached(vma_prot);
-#endif
 #ifdef pgprot_ext_buffered
 	else if (pmem[id].buffered)
 		return pgprot_ext_buffered(vma_prot);
@@ -634,11 +635,12 @@ static void pmem_restore_kernel_mappings(int id, struct pmem_data *data,
 	start = (unsigned long)PMEM_CMA_START_VADDR(id, data->index) + offset;
 
 	apply_to_page_range(&init_mm, start, len, pmem_update_pte, &pgprot_kernel);
+
 	dsb();
 	flush_tlb_kernel_range(start, start + len);
 }
 
-/* Taken from __dma_remap */
+/* Taken from __dma_clear_buffer + __dma_remap */
 static void pmem_update_kernel_mappings(int id, struct file *file,
 				struct pmem_data *data, unsigned long offset,
 				unsigned long len)
@@ -648,7 +650,15 @@ static void pmem_update_kernel_mappings(int id, struct file *file,
 
 	start = (unsigned long)PMEM_CMA_START_VADDR(id, data->index) + offset;
 
+	/*
+	 * Ensure that the allocated pages are flushed and that any data
+	 * lurking in the kernel direct-mapped region is invalidated.
+	 */
+	dmac_flush_range((void *)start, (void *)(start + len));
+	outer_flush_range(__pa(start), __pa(start) + len);
+
 	apply_to_page_range(&init_mm, start, len, pmem_update_pte, &new_prot);
+
 	dsb();
 	flush_tlb_kernel_range(start, start + len);
 }
@@ -709,9 +719,17 @@ static int pmem_remap_pfn_range(int id, struct file *file, struct vm_area_struct
 			      struct pmem_data *data, unsigned long offset,
 			      unsigned long len)
 {
+	unsigned long end;
+
 	/* hold the mm semp for the vma you are modifying when you call this */
 	BUG_ON(!vma);
-	zap_page_range(vma, vma->vm_start + offset, len, NULL);
+
+	end = zap_page_range(vma, vma->vm_start + offset, len, NULL);
+	if (end != vma->vm_start + offset) {
+		printk(KERN_ERR"%s: zap_page_range returned unexpected end (%lu), expected was (%lu)\n",
+				__func__, end, vma->vm_start + offset);
+	}
+
 	return pmem_map_pfn_range(id, file, vma, data, offset, len);
 }
 

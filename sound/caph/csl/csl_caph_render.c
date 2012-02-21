@@ -33,7 +33,6 @@
 ****************************************************************************/
 #include "mobcom_types.h"
 #include "resultcode.h"
-#include "log.h"
 #include "msconsts.h"
 #include "audio_consts.h"
 #include "csl_caph.h"

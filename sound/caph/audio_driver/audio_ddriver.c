@@ -37,7 +37,6 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "bcm_fuse_sysparm_CIB.h"
 #include "audio_ddriver.h"
 
-#include "log.h"
 #include "csl_caph.h"
 #include "audio_vdriver.h"
 #include "csl_apcmd.h"
@@ -1501,7 +1500,7 @@ void VOIF_Buffer_Request(UInt32 bufferIndex, UInt32 samplingRate)
  ***************************************************************************/
 static Boolean VoIP_StartTelephony(void)
 {
-	aTrace(LOGID_SOC_AUDIO, "=====VoIP_StartTelephony\r\n");
+	aTrace(LOG_AUDIO_DRIVER, "=====VoIP_StartTelephony\r\n");
 	voip_workqueue = create_workqueue("voip");
 	if (!voip_workqueue)
 		return TRUE;
@@ -1525,7 +1524,7 @@ static Boolean VoIP_StartTelephony(void)
  ***************************************************************************/
 static Boolean VoIP_StopTelephony(void)
 {
-	aTrace(LOGID_SOC_AUDIO, "=====VoIP_StopTelephony\r\n");
+	aTrace(LOG_AUDIO_DRIVER, "=====VoIP_StopTelephony\r\n");
 
 	/* Clear voip mode, which block audio processing for voice calls */
 	/* arg0 = 0 to clear VOIPmode */
@@ -1808,10 +1807,10 @@ static void VoIP_StartMainAMRDecodeEncode(
 
 	if (prev_amr_mode == 0xffff || prev_amr_mode != encode_amr_mode) {
 
-		/*aTrace(LOGID_SOC_AUDIO,
+		/*aTrace(LOG_AUDIO_DRIVER,
 		"VoIP_StartMainAMRDecodeEncode UL codecType=0x%x\n",
 		encode_amr_mode);
-		aTrace(LOGID_SOC_AUDIO,
+		aTrace(LOG_AUDIO_DRIVER,
 		"send VP_COMMAND_MAIN_AMR_RUN to DSP\n"); */
 		prev_amr_mode = encode_amr_mode;
 		VPRIPCMDQ_DSP_AMR_RUN((UInt16) encode_amr_mode,

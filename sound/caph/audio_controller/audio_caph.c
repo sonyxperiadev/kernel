@@ -765,6 +765,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				parm_vibra->direction);
 
 #ifdef USE_HR_TIMER
+			hrtimer_cancel(&hr_timer);
+
 			if (parm_vibra->duration != 0) {
 				ktime = ktime_set(0,
 				(parm_vibra->duration*1000000));

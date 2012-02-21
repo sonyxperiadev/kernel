@@ -234,7 +234,8 @@ static const struct rhea_event_table event_table[] = {
 
 };
 
-#ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ
+#if defined(CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ) || \
+	defined(CONFIG_KONA_PMU_BSC_CLKPAD_CTRL)
 
 static struct i2c_cmd i2c_dummy_seq_cmd[] =
 						{
@@ -342,7 +343,8 @@ int __init rhea_pwr_mgr_init()
 	writel(0x2, KONA_AXITRACE16_VA + 0xC);
 #endif
 
-#ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ
+#if defined(CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ) || \
+	defined(CONFIG_KONA_PMU_BSC_CLKPAD_CTRL)
 	struct v0x_spec_i2c_cmd_ptr dummy_seq_v0_ptr =
 		{
 			.other_ptr = 2,
@@ -352,12 +354,13 @@ int __init rhea_pwr_mgr_init()
 			.set1_ptr = 56,
 			.zerov_ptr = 52, /*Not used for Rhea*/
 		};
-#endif /*CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ*/
+#endif
 
 	cfg.ac = 1;
 	cfg.atl = 0;
 
-#ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ
+#if defined(CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ) || \
+	defined(CONFIG_KONA_PMU_BSC_CLKPAD_CTRL)
 	rhea_pwr_mgr_info.i2c_cmds = i2c_dummy_seq_cmd ;
 	rhea_pwr_mgr_info.num_i2c_cmds = ARRAY_SIZE(i2c_dummy_seq_cmd);
 	rhea_pwr_mgr_info.i2c_cmd_ptr[VOLT0] = &dummy_seq_v0_ptr;
@@ -377,8 +380,10 @@ int __init rhea_pwr_mgr_init()
 		pwrmgr_init_param.i2c_rd_slv_id_off2;
 	rhea_pwr_mgr_info.i2c_rd_reg_addr_off =
 		pwrmgr_init_param.i2c_rd_reg_addr_off;
-	rhea_pwr_mgr_info.i2c_rd_fifo_off =
-		pwrmgr_init_param.i2c_rd_fifo_off;
+	rhea_pwr_mgr_info.i2c_rd_nack_jump_off =
+		pwrmgr_init_param.i2c_rd_nack_jump_off;
+	rhea_pwr_mgr_info.i2c_rd_nack_off =
+		pwrmgr_init_param.i2c_rd_nack_off;
 	rhea_pwr_mgr_info.i2c_wr_off = pwrmgr_init_param.i2c_wr_off;
 	rhea_pwr_mgr_info.i2c_wr_slv_id_off =
 		pwrmgr_init_param.i2c_wr_slv_id_off;
@@ -508,6 +513,7 @@ int __init rhea_pwr_mgr_late_init(void)
 	int i;
 	struct pi *pi;
 
+
 	/*All the initializations are done. Clear override bit here so that
 	 * appropriate policies take effect*/
 	for (i = 0; i < PI_MGR_PI_ID_MODEM; i++) {
@@ -531,4 +537,19 @@ int __init rhea_pwr_mgr_late_init(void)
 
 late_initcall(rhea_pwr_mgr_late_init);
 
+#if defined(CONFIG_KONA_PMU_BSC_CLKPAD_CTRL)
+int __init rhea_pwr_mgr_init_sequencer(void)
+{
+	pr_info("%s\n", __func__);
+	rhea_pwr_mgr_info.i2c_cmds = pwrmgr_init_param.cmd_buf;
+	rhea_pwr_mgr_info.num_i2c_cmds = pwrmgr_init_param.cmb_buf_size;
+	rhea_pwr_mgr_info.i2c_cmd_ptr[VOLT0] = pwrmgr_init_param.v0ptr;
 
+	pwr_mgr_init_sequencer(&rhea_pwr_mgr_info);
+
+	/* enable the power manager i2c sequencer */
+	pwr_mgr_pm_i2c_enable(true);
+	return 0;
+}
+EXPORT_SYMBOL(rhea_pwr_mgr_init_sequencer);
+#endif

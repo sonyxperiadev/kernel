@@ -35,7 +35,6 @@
 #include "resultcode.h"
 #include "mobcom_types.h"
 #include "msconsts.h"
-#include "log.h"
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_intc.h"
@@ -157,6 +156,7 @@ static BT_MODE_t bt_mode = BT_MODE_NB;
 static Boolean sClkCurEnabled = FALSE;
 static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 static CHAL_HANDLE lp_handle;
+static int en_lpbk_pcm, en_lpbk_i2s;
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -2095,7 +2095,7 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 			pcmCfg.ext_bits = 0;
 			pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
 			pcmTxCfg.enable = 1;
-			pcmTxCfg.loopback_enable = 0;
+			pcmTxCfg.loopback_enable = en_lpbk_pcm;
 			pcmRxCfg.enable = 1;
 			pcmRxCfg.loopback_enable = 0;
 			csl_pcm_config
@@ -2109,7 +2109,7 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 		fmCfg.mode = CSL_I2S_MASTER_MODE;
 		fmCfg.tx_ena = 1;
 		fmCfg.rx_ena = 1;
-		fmCfg.tx_loopback_ena = 0;
+		fmCfg.tx_loopback_ena = en_lpbk_i2s;
 		fmCfg.rx_loopback_ena = 0;
 		/*Transfer size > 4096 bytes: Continuous transfer.*/
 		/*< 4096 bytes: just transfer one block and then stop.*/
@@ -3168,6 +3168,8 @@ void csl_caph_hwctrl_init(void)
 {
 	struct CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
 
+	en_lpbk_pcm = 0;
+	en_lpbk_i2s = 0;
 	csl_caph_ControlHWClock(TRUE);
 
 	memset(&addr, 0, sizeof(addr));
@@ -4426,18 +4428,31 @@ CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void)
 *  Function Name: void csl_caph_hwctrl_ConfigSSP
 *
 *  Description: Configure fm/pcm port
+*               If loopback is enabled, port is ignored
+*                en_lpbk = 1 to enable, 2 to disable
 *
 ****************************************************************************/
-void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus)
+void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
+			       int en_lpbk)
 {
 	CSL_CAPH_SSP_e ssp_port;
 	UInt32 addr;
 	CAPH_SWITCH_TRIGGER_e tx_trigger, rx_trigger;
 
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_ConfigSSP::"
-		"port %d, bus %d, fmHandleSSP %p, pcmHandleSSP %p.\r\n",
-		port, bus, fmHandleSSP, pcmHandleSSP);
+		"fm %p, pcm %p, port %d, bus %d, lpbk %d:%d:%d\n",
+		fmHandleSSP, pcmHandleSSP, port, bus, en_lpbk,
+		en_lpbk_i2s, en_lpbk_pcm);
 
+	if (en_lpbk) {
+		if (en_lpbk == 2)
+			en_lpbk = 0;
+		if (bus == CSL_SSP_I2S)
+			en_lpbk_i2s = en_lpbk;
+		else if (bus == CSL_SSP_PCM)
+			en_lpbk_pcm = en_lpbk;
+		return;
+	}
 	if (port == CSL_SSP_3) {
 		ssp_port = CSL_CAPH_SSP_3;
 		addr = SSP3_BASE_ADDR1;

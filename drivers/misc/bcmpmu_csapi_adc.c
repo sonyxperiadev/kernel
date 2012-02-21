@@ -155,7 +155,7 @@ static int read_rtm_adc(int physical_channel)
 		    adc_req(bcmpmu_adc_chipset_api->bcmpmu, &ar);
 		pr_debug("%s: Status %d, reading %d", __func__, status, ar.raw);
 		if (status < 0) {
-			mdelay(20);
+			msleep(20);
 		}
 	} while (status < 0);
 

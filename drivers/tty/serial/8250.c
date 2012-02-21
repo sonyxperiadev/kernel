@@ -2586,6 +2586,27 @@ static unsigned int serial8250_get_divisor(struct uart_port *port, unsigned int 
 	return quot;
 }
 
+void serial8250_togglerts(struct uart_port *port, unsigned int flowon)
+{
+
+	unsigned char old_mcr;
+        struct uart_8250_port *up = (struct uart_8250_port *)port;
+
+       /*if(port->mcr & UART_MCR_AFE){*/
+	 if(flowon)
+	  {
+		old_mcr = serial_in(up, UART_MCR);
+		old_mcr |= UART_MCR_RTS;
+		serial_outp(up, UART_MCR, old_mcr);
+	  }else {
+             old_mcr = serial_in(up, UART_MCR);
+             old_mcr &= ~UART_MCR_RTS;
+             serial_outp(up, UART_MCR, old_mcr);
+	
+       }
+
+}
+
 void
 serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 		          struct ktermios *old)

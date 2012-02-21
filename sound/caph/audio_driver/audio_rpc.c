@@ -38,7 +38,6 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "audio_vdriver.h"
 #include "dspcmd.h"
 #include "csl_apcmd.h"
-#include "log.h"
 #include "audio_trace.h"
 
 #define AUDIO_ENABLE_RESP_TIMEOUT 50  /* 50ms */

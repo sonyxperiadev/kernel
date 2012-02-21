@@ -43,7 +43,6 @@
 #include "brcm_rdb_padctrlreg.h"
 #include "brcm_rdb_sysmap.h"
 #include "brcm_rdb_sspil.h"
-#include "log.h"
 #include "audio_trace.h"
 
 #define SSPI_HW_WORD_LEN_32Bit					32
@@ -162,15 +161,15 @@ CSL_PCM_OPSTATUS_t csl_pcm_start(CSL_PCM_HANDLE handle,
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *) handle;
 	CHAL_SSPI_STATUS_t status;
 
-	_DBG_(aTrace(LOG_AUDIO_CSL, "csl_pcm_start::"
-			      "handle %p.\r\n", handle));
-	_DBG_(aTrace(LOG_AUDIO_CSL,
+	aTrace(LOG_AUDIO_CSL, "csl_pcm_start::"
+			      "handle %p.\r\n", handle);
+	aTrace(LOG_AUDIO_CSL,
 			      "csl_pcm_start:: cfgDev mode %d interleave %d protocol %d"
 			      "format %d size %ld bits %ld sr %ld.\r\n",
 			      config->mode, config->interleave,
 			      config->protocol, config->format,
 			      config->xferSize, config->ext_bits,
-			      config->sample_rate));
+			      config->sample_rate);
 
 	/*pcm_config_dma(handle, config); */
 	/*enable scheduler operation */
@@ -373,25 +372,25 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	csl_pcm_config_device_t *devCfg = configDev;
 	uint32_t intrMask;
 
-	_DBG_(aTrace
-	      (LOG_AUDIO_CSL, "csl_pcm_config:: handle %p.\r\n", handle));
-	_DBG_(aTrace
+	aTrace
+	      (LOG_AUDIO_CSL, "csl_pcm_config:: handle %p.\r\n", handle);
+	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_pcm_config:: cfgDev mode %d interleave %d protocol %d"
 	       "format %d size %ld bits %ld sr %ld.\r\n",
 	       configDev->mode, configDev->interleave, configDev->protocol,
 	       configDev->format, configDev->xferSize, configDev->ext_bits,
-	       configDev->sample_rate));
-	_DBG_(aTrace
+	       configDev->sample_rate);
+	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_pcm_config:: cfgTx ena %d ch %d sr %d lpbEna %d.\r\n",
 	       configTx->enable, configTx->channel, configTx->sampleRate,
-	       configTx->loopback_enable));
-	_DBG_(aTrace
+	       configTx->loopback_enable);
+	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_pcm_config:: cfgRx ena %d ch %d sr %d lpbEna %d.\r\n",
 	       configRx->enable, configRx->channel, configRx->sampleRate,
-	       configRx->loopback_enable));
+	       configRx->loopback_enable);
 
 	if (handle == NULL) {
 		aTrace(LOG_AUDIO_CSL, "csl_pcm_config failed\r\n");

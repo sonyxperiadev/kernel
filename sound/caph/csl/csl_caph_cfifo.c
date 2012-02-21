@@ -37,7 +37,6 @@
 #include "chal_caph_cfifo.h"
 #include "csl_caph.h"
 #include "csl_caph_cfifo.h"
-#include "log.h"
 #include "audio_trace.h"
 
 /****************************************************************************

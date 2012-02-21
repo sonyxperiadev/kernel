@@ -34,7 +34,6 @@
 *
 ****************************************************************************/
 
-#include "log.h"
 #include "resultcode.h"
 #include "mobcom_types.h"
 #include "chal_caph_switch.h"

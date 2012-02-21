@@ -66,7 +66,6 @@
 #include "audio_consts.h"
 #include "bcm_fuse_sysparm_CIB.h"
 #include "chal_types.h"
-#include "log.h"
 #include "audio_trace.h"
 
 #include "csl_caph.h"

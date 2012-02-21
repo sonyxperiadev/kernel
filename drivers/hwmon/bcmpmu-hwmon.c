@@ -261,10 +261,9 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 				     i <
 				     padc->adcsetting->compensation_samples;) {
 					cal_req.sig = PMU_ADC_NTC_CAL_LO;
-					padc->bcmpmu->adc_req(padc->bcmpmu,
-							      &cal_req);
-					if (cal_req.raw != 0x3ff) {
-						read1 += cal_req.raw;
+					if (!padc->bcmpmu->adc_req(
+						    padc->bcmpmu, &cal_req) &&
+					    cal_req.raw != 0x3ff) {
 						i++;
 					}
 				}
@@ -275,9 +274,9 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 				     i <
 				     padc->adcsetting->compensation_samples;) {
 					cal_req.sig = PMU_ADC_NTC_CAL_HI;
-					padc->bcmpmu->adc_req(padc->bcmpmu,
-							      &cal_req);
-					if (cal_req.raw != 0x3ff) {
+					if (!padc->bcmpmu->adc_req(
+						    padc->bcmpmu, &cal_req) &&
+					    cal_req.raw != 0x3ff) {
 						read2 += cal_req.raw;
 						i++;
 					}
@@ -642,6 +641,8 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 			if (wait_event_interruptible_timeout(padc->wait,
 							     req->ready,
 							     timeout) == 0) {
+				pr_hwmon(ERROR, "%s: RTM ADC timeout\n",
+					 __func__);
 				ret = -ETIMEDOUT;
 			} else
 				ret = update_adc_result(padc, req);
@@ -1236,7 +1237,7 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	padc->bom_map_len = pdata->bom_map_len;
 	padc->adcsetting = pdata->adc_setting;
 	if (!padc->adcsetting->sw_timeout)
-		padc->adcsetting->sw_timeout = 10;
+		padc->adcsetting->sw_timeout = 50;
 	if (!padc->adcsetting->txrx_timeout)
 		padc->adcsetting->txrx_timeout = 2000;
 	bcmpmu->adcinfo = (void *)padc;

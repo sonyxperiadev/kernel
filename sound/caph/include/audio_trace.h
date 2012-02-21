@@ -79,5 +79,11 @@ extern int gAudioDebugLevel;
 
 #endif /* CONFIG_SND_BCM_AUDIO_DEBUG_OFF */
 
+#define audio_xassert(a, b) \
+	{if ((a) == 0)\
+		pr_info("%s assert line %d, %d, 0x%x.",\
+				__func__, __LINE__, a, b);\
+	}
+
 #endif /*__AUDIO_LOG_H__ */
 

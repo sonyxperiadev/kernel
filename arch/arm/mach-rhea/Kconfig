@@ -150,6 +150,15 @@ config RHEA_PWRMGR_USE_DUMMY_SEQ
        help
        Say Y if you want to use dummy PWRMGR HW I2C sequencer
 
+config KONA_PMU_BSC_CLKPAD_CTRL
+	bool "Kona PMU_BSC CLKPAD Control feature"
+	depends on MFD_BCM_PWRMGR_SW_SEQUENCER
+	default y
+	help
+	   Enable to save the leakage current due to BSC CLKPAD. If enabled
+	   Sequencer will disable the PMU BSC CLK pad at the end of each
+	   i2c transaction which will save the leakage current on the pad pi
+
 config RHEA_WA_HWJIRA_2531
 	depends on ARCH_RHEA
 	bool "Enable workaround for RHEA JIRA 2531"

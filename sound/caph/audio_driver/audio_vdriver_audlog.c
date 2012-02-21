@@ -40,7 +40,6 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "auddrv_audlog.h"
 #include "audio_controller.h"
 #include "log_sig_code.h"
-#include "log.h"
 
 #include "csl_log.h"
 #include "bcmlog.h"

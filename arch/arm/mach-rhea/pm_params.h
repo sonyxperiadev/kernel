@@ -191,7 +191,8 @@ struct pwrmgr_init_param
 	int i2c_rd_slv_id_off1;  /*slave id offset -  write reg address*/
 	int i2c_rd_slv_id_off2; /*slave id offset - read reg value*/
 	int i2c_rd_reg_addr_off;
-	int i2c_rd_fifo_off; /* I2C PMU BSC FIFO Read offset */
+	int i2c_rd_nack_off;
+	int i2c_rd_nack_jump_off;
 	u32 i2c_wr_off;
 	int i2c_wr_slv_id_off;
 	int i2c_wr_reg_addr_off;
