@@ -97,6 +97,12 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	/*CMPCTRL12, Set bits 4, 1 for NTC Sync. Mode*/
 	{.map = 0, .addr = 0x1B, .val = 0x13, .mask = 0xFF},
 
+
+	/*Init IOSR NM2 and LPM voltages to 1.8V
+	*/
+	{.map = 0, .addr = 0xC9, .val = 0x1B, .mask = 0xFF},
+	{.map = 0, .addr = 0xCA, .val = 0x1B, .mask = 0xFF},
+
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
