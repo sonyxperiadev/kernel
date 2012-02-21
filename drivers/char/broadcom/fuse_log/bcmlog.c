@@ -599,6 +599,7 @@ static int __init BCMLOG_ModuleInit(void)
  **/
 static void __exit BCMLOG_ModuleExit(void)
 {
+	BCMLOG_OutputExit();
 }
 
 /**
