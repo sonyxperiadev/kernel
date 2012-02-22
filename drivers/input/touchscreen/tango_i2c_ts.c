@@ -945,20 +945,19 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	else
 		gp_i2c_ts->layout = TANGO_M29_LAYOUT;
 
-	if(p_tango_i2c_dev->dummy_client) {
-		rc = device_create_file(&p_tango_i2c_dev->dummy_client->dev, &dev_attr);
-		if (rc)
-		{
+	if (p_tango_i2c_dev->dummy_client) {
+		rc = device_create_file(&p_tango_i2c_dev->dummy_client->dev,
+						&dev_attr);
+		if (rc) {
 			TS_ERR("%s:%s Cannot create sysfs entry\n",
-					 I2C_TS_DRIVER_NAME, __FUNCTION__);
+					 I2C_TS_DRIVER_NAME, __func__);
 			goto ERROR2;
 		}
 	} else {
 		rc = device_create_file(&p_i2c_client->dev, &dev_attr);
-		if (rc)
-		{
+		if (rc) {
 			TS_ERR("%s:%s Cannot create sysfs entry\n",
-					 I2C_TS_DRIVER_NAME, __FUNCTION__);
+					 I2C_TS_DRIVER_NAME, __func__);
 			goto ERROR2;
 		}
 	}
