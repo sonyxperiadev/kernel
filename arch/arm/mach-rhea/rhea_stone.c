@@ -101,6 +101,12 @@
 #include <linux/bcmi2cnfc.h>
 #endif
 
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#include <linux/mpu.h>
+#include <linux/mpu6050b1.h>
+#include <linux/brcm_axis_change.h>
+#include <mach/mpu6050_settings.h>
+#endif
 
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
@@ -320,6 +326,102 @@ static struct i2c_board_info __initdata bcmi2cnfc[] = {
 
 };
 #endif
+
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+
+#ifdef RHEASTONE_MPU6050_DRIVER_ACCEL_GYRO_SETTINGS
+static struct t_brcm_axis_change board_mpu6050_accel_gyro_change = RHEASTONE_MPU6050_DRIVER_ACCEL_GYRO_SETTINGS;
+#endif
+
+#ifdef MPU6050_DRIVER_COMPASS_SETTINGS
+static struct t_brcm_axis_change board_mpu6050_compass_change = MPU6050_DRIVER_COMPASS_SETTINGS;
+#endif
+
+#ifdef MPU6050_DRIVER_REG_VALUES
+static int mpu6050_reg_vals[] = MPU6050_DRIVER_REG_VALUES;
+#endif
+
+static struct t_brcm_sensors_axis_change board_mpu6050_sensors_change =
+{
+	/* The MPU6050 is an accelerometer and a gyro. */
+#ifdef RHEASTONE_MPU6050_DRIVER_ACCEL_GYRO_SETTINGS
+	.p_accel_axis_change   = &board_mpu6050_accel_gyro_change,
+	.p_gyro_axis_change    = &board_mpu6050_accel_gyro_change,
+#else
+	.p_accel_axis_change   = NULL,
+	.p_gyro_axis_change    = NULL,
+#endif
+
+#ifdef MPU6050_DRIVER_COMPASS_SETTINGS
+	.p_compass_axis_change = &board_mpu6050_compass_change,
+#else
+	.p_compass_axis_change = NULL,
+#endif
+
+#ifdef MPU6050_DRIVER_REG_VALUES
+	.p_data = (void *) &mpu6050_reg_vals,
+#else
+	.p_data = NULL;
+#endif
+};
+
+static struct mpu_platform_data mpu6050_platform_data =
+{
+	.int_config  = MPU6050_INIT_CFG,
+#if defined CONFIG_MPU_SENSORS_MPU6050_GYRO
+	/* gyro settings */
+	.orientation = {  0,  -1,  0,
+		-1,  0,  0,
+		0,  0, -1 },
+#endif
+#if defined CONFIG_MPU_SENSORS_MPU6050_ACCEL
+	/* accel settings */
+	.accel = {
+#if defined CONFIG_INV_SENSORS_MODULE
+		.get_slave_descr = NULL,
+#else
+		.get_slave_descr = get_accel_slave_descr,
+#endif
+		/*		.irq         not used */
+		.adapt_num   = MPU6050_I2C_BUS_ID,
+		.bus         = EXT_SLAVE_BUS_PRIMARY,
+		.address     = DEFAULT_MPU_SLAVEADDR,
+		.orientation = {  0,  -1,  0,
+			-1,  0,  0,
+			0,  0, -1 },
+		.private_data = (void *)&board_mpu6050_sensors_change,
+	},
+#endif
+#if defined CONFIG_MPU_SENSORS_AMI306
+	/* compass settings */
+	.compass =
+	{
+
+#if defined CONFIG_INV_SENSORS_MODULE
+		.get_slave_descr = NULL,
+#else
+		.get_slave_descr = get_compass_slave_descr,
+#endif
+		/*		.irq         not used */
+		.adapt_num   = MPU6050_I2C_BUS_ID,
+		.bus         = EXT_SLAVE_BUS_SECONDARY,
+		.address     = MPU6050_COMPASS_SLAVE_ADDR,
+		.orientation = { 1, 0, 0,
+			0, 1, 0,
+			0, 0, 1 },
+	},
+#endif
+};
+
+static struct i2c_board_info __initdata i2c_mpu6050_info[] =
+{
+	{
+		I2C_BOARD_INFO(MPU_NAME, MPU6050_SLAVE_ADDR),
+		.irq = gpio_to_irq(MPU_INT_GPIO_PIN),
+		.platform_data  = &mpu6050_platform_data,
+	},
+};
+#endif /* CONFIG_MPU_SENSORS_MPU6050B1 */
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 
@@ -1167,6 +1269,12 @@ static void __init rhea_stone_add_i2c_devices (void)
 #if defined(CONFIG_BCMI2CNFC)
 	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
 #endif
+
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+	i2c_register_board_info(MPU6050_I2C_BUS_ID,
+			i2c_mpu6050_info, ARRAY_SIZE(i2c_mpu6050_info));
+#endif
+
 
 }
 

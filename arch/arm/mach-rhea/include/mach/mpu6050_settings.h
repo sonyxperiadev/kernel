@@ -57,6 +57,18 @@
    .z_change = axis_z_dir, \
 }
 
+/* For RheaStone
+ * x = reverse x
+ * y = y
+ * z = reverse z
+ */
+#define RHEASTONE_MPU6050_DRIVER_ACCEL_GYRO_SETTINGS \
+{ \
+   .x_change = axis_x_dir_rev, \
+   .y_change = axis_y_dir, \
+   .z_change = axis_z_dir_rev, \
+}
+
 #define MPU6050_DRIVER_COMPASS_SETTINGS \
 { \
    .x_change = axis_y_dir, \
