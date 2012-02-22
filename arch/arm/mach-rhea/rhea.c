@@ -43,6 +43,7 @@
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 #include <mach/secure_api.h>
 #endif
+#include <plat/cpu.h>
 
 static void rhea_poweroff(void)
 {
@@ -90,6 +91,7 @@ static void __init rhea_l2x0_init(void)
 static int __init rhea_arch_init(void)
 {
 	int ret = 0;
+
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 	ret = smc_init();
 	if (ret < 0)
@@ -145,11 +147,20 @@ uint32_t dt_pinmux_gpio_mask[4] = {0, 0, 0, 0};
 uint32_t dt_gpio[128];
 #endif
 
+static void cpu_info_verbose(void)
+{
+	if (cpu_is_rhea_B0())
+		pr_info("Rhea CHIPID-B0\n");
+	if (cpu_is_rhea_B1())
+		pr_info("Rhea CHIPID-B1\n");
+}
+
 static int __init rhea_init(void)
 {
 	pm_power_off = rhea_poweroff;
 	arm_pm_restart = rhea_restart;
 
+	cpu_info_verbose();
 	pinmux_init();
 
 #ifdef CONFIG_KONA_ATAG_DT
