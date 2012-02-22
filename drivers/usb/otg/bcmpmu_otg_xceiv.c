@@ -156,6 +156,18 @@ static int bcmpmu_otg_xceiv_set_otg_enable(struct otg_transceiver *otg, bool ena
 	return 0;
 }
 
+static int bcmpmu_otg_xceiv_pullup_on(struct otg_transceiver *otg, bool on)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
+
+	if (!xceiv_data)
+		return -EINVAL;
+
+	bcm_hsotgctrl_phy_set_non_driving(!on);
+
+	return 0;
+}
+
 static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data
 					      *xceiv_data, bool enable)
 {
@@ -228,7 +240,6 @@ static int bcmpmu_otg_xceiv_id_chg_notif_handler(struct notifier_block *nb,
 			 bcm_otg_id_chg_notifier);
 
 	if (xceiv_data) {
-		dev_info(xceiv_data->dev, "ID change detected\n");
 		queue_work(xceiv_data->bcm_otg_work_queue,
 			   &xceiv_data->bcm_otg_id_status_change_work);
 	} else
@@ -488,8 +499,7 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 					  jiffies +
 					  msecs_to_jiffies(T_SESS_END_SRP_START_IN_MS);
 				add_timer(&xceiv_data->otg_xceiver.sess_end_srp_timer);
-			}
-			else
+			} else
 				bcm_otg_do_adp_sense(xceiv_data);
 		}
 	}
@@ -500,7 +510,7 @@ void bcmpmu_otg_xceiv_do_srp(struct bcmpmu_otg_xceiv_data *xceiv_data)
 	if (xceiv_data->otg_xceiver.xceiver.gadget && xceiv_data->otg_xceiver.xceiver.gadget->ops &&
 		  xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup &&
 		    xceiv_data->otg_enabled) {
-		bcm_hsotgctrl_phy_set_non_driving(false);
+
 		/* Do SRP */
 		xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup(xceiv_data->otg_xceiver.xceiver.gadget);
 		/* Start SRP failure timer to do ADP probes if it expires */
@@ -645,6 +655,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->otg_xceiver.xceiver.set_delayed_adp = bcmpmu_otg_xceiv_set_delayed_adp;
 	xceiv_data->otg_xceiver.xceiver.set_srp_reqd = bcmpmu_otg_xceiv_set_srp_reqd_handler;
 	xceiv_data->otg_xceiver.xceiver.set_otg_enable = bcmpmu_otg_xceiv_set_otg_enable;
+	xceiv_data->otg_xceiver.xceiver.pullup_on = bcmpmu_otg_xceiv_pullup_on;
 
 	ATOMIC_INIT_NOTIFIER_HEAD(&xceiv_data->otg_xceiver.xceiver.notifier);
 

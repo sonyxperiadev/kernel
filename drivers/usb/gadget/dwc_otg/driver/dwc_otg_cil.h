@@ -1050,6 +1050,8 @@ extern void dwc_otg_ep_clear_stall(dwc_otg_core_if_t *_core_if,
 				   dwc_ep_t *_ep);
 extern void dwc_otg_enable_device_interrupts(dwc_otg_core_if_t *_core_if);
 
+extern void dwc_otg_core_soft_disconnect(dwc_otg_core_if_t *core_if, bool en);
+
 #ifdef DWC_EN_ISOC
 extern void dwc_otg_iso_ep_start_frm_transfer(dwc_otg_core_if_t *core_if,
 					      dwc_ep_t *ep);

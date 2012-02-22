@@ -143,12 +143,14 @@ static int32_t dwc_otg_pcd_start_cb(void *p)
 	if (dwc_otg_is_device_mode(core_if))
 		dwc_otg_core_dev_init(core_if);
 
-#ifdef CONFIG_USB_OTG
 	if (core_if->core_params->otg_supp_enable) {
 		/* Now it is okay to connect */
 		dwc_otg_pcd_disconnect(pcd, false);
+	} else {
+		dwc_otg_pcd_disconnect(pcd,
+				    core_if->gadget_pullup_on ? false : true);
 	}
-#endif
+
 	return 1;
 }
 
@@ -2455,43 +2457,15 @@ void dwc_otg_pcd_remote_wakeup(dwc_otg_pcd_t *pcd, int set)
 
 void dwc_otg_pcd_disconnect(dwc_otg_pcd_t *pcd, int enable)
 {
-	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);
-	dctl_data_t dctl = { 0 };
-
-	if (dwc_otg_is_device_mode(core_if)) {
-		dctl.d32 =
-		    dwc_read_reg32(&core_if->dev_if->dev_global_regs->dctl);
-		dctl.b.sftdiscon = enable ? 1 : 0;
-		dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl,
-				dctl.d32);
-		DWC_PRINTF("Soft disconnect %s\n",
-			   enable ? "enabled" : "disabled");
-	} else {
-		DWC_PRINTF("NOT SUPPORTED IN HOST MODE\n");
-	}
-	return;
-
+	return dwc_otg_core_soft_disconnect(GET_CORE_IF(pcd), enable);
 }
 
 void dwc_otg_pcd_disconnect_us(dwc_otg_pcd_t *pcd, int no_of_usecs)
 {
-	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);
-	dctl_data_t dctl = { 0 };
-
-	if (dwc_otg_is_device_mode(core_if)) {
-		dctl.b.sftdiscon = 1;
-		DWC_PRINTF("Soft disconnect for %d useconds\n", no_of_usecs);
-		dwc_modify_reg32(&core_if->dev_if->dev_global_regs->dctl, 0,
-				 dctl.d32);
-		dwc_udelay(no_of_usecs);
-		dwc_modify_reg32(&core_if->dev_if->dev_global_regs->dctl,
-				 dctl.d32, 0);
-
-	} else {
-		DWC_PRINTF("NOT SUPPORTED IN HOST MODE\n");
-	}
+	dwc_otg_core_soft_disconnect(GET_CORE_IF(pcd), true);
+	dwc_udelay(no_of_usecs);
+	dwc_otg_core_soft_disconnect(GET_CORE_IF(pcd), false);
 	return;
-
 }
 
 int dwc_otg_pcd_wakeup(dwc_otg_pcd_t *pcd)

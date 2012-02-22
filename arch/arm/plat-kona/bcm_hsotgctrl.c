@@ -286,10 +286,9 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	} else {
 		/* Set correct ID value */
 		bcm_hsotgctrl_phy_set_id_stat(false);
+		/* Clear non-driving */
+		bcm_hsotgctrl_phy_set_non_driving(false);
 	}
-
-	/* Come up connected  */
-	bcm_hsotgctrl_phy_set_non_driving(false);
 
 	return 0;
 
@@ -582,7 +581,6 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	/* Enable pad, internal PLL etc */
 	bcm_hsotgctrl_set_phy_off(false);
 
-
 	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	val =	HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
@@ -603,6 +601,11 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev, "Failed to create HOST file\n");
 		goto Error_bcm_hsotgctrl_probe;
 	}
+
+#ifndef CONFIG_USB_OTG_UTILS
+	/* Clear non-driving as default in case there is no transceiver hookup */
+	bcm_hsotgctrl_phy_set_non_driving(false);
+#endif
 
 	return 0;
 

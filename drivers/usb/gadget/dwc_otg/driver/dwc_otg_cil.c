@@ -63,16 +63,25 @@
 
 static int dwc_otg_setup_params(dwc_otg_core_if_t *core_if);
 
-static void dwc_otg_core_soft_disconnect(dwc_otg_core_if_t *core_if, bool en)
+void dwc_otg_core_soft_disconnect(dwc_otg_core_if_t *core_if, bool en)
 {
 	dctl_data_t dctl = {.d32 = 0 };
+	gotgctl_data_t gotgctl = {.d32 = 0 };
 
 	if (dwc_otg_is_device_mode(core_if)) {
+		gotgctl.d32 =
+		    dwc_read_reg32(&core_if->core_global_regs->gotgctl);
 		dctl.d32 =
 		    dwc_read_reg32(&core_if->dev_if->dev_global_regs->dctl);
 		dctl.b.sftdiscon = en ? 1 : 0;
 		dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl,
 				dctl.d32);
+#ifdef CONFIG_USB_OTG_UTILS
+		if (core_if->xceiver->pullup_on && (!gotgctl.b.hnpreq))
+			core_if->xceiver->pullup_on(core_if->xceiver, !en);
+#endif
+	} else {
+		DWC_PRINTF("NOT SUPPORTED IN HOST MODE\n");
 	}
 }
 
@@ -4855,12 +4864,6 @@ void dwc_otg_core_reset(dwc_otg_core_if_t *core_if)
 	greset.b.csftrst = 1;
 	dwc_write_reg32(&global_regs->grstctl, greset.d32);
 	do {
-#ifdef CONFIG_USB_OTG_UTILS
-		/* Core clears this bit by default upon reset or these
-		* versions of the core so we need to set it */
-		if (core_if->snpsid <= OTG_CORE_REV_2_93a)
-			dwc_otg_core_soft_disconnect(core_if, true);
-#endif
 		greset.d32 = dwc_read_reg32(&global_regs->grstctl);
 		if (++count > 10000) {
 			DWC_WARN("%s() HANG! Soft Reset GRSTCTL=%0x\n",
@@ -4869,13 +4872,6 @@ void dwc_otg_core_reset(dwc_otg_core_if_t *core_if)
 		}
 		dwc_udelay(1);
 	} while (greset.b.csftrst == 1);
-
-#ifdef CONFIG_USB_OTG_UTILS
-	/* Core clears this bit by default upon reset or these
-	* versions of the core so we need to set it */
-	if (core_if->snpsid <= OTG_CORE_REV_2_93a)
-		dwc_otg_core_soft_disconnect(core_if, true);
-#endif
 
 	/* Wait 100ms after core reset for right ID/mode and session level */
 	dwc_mdelay(100);
@@ -6700,6 +6696,11 @@ void dwc_otg_initiate_srp(dwc_otg_core_if_t *core_if)
 		DWC_ERROR("Session Request Already active!\n");
 		return;
 	}
+
+#ifdef CONFIG_USB_OTG_UTILS
+	if (core_if->xceiver->pullup_on)
+		core_if->xceiver->pullup_on(core_if->xceiver, true);
+#endif
 
 	DWC_INFO("Session Request Initated\n");	/* NOTICE */
 	mem.d32 = dwc_read_reg32(addr);
