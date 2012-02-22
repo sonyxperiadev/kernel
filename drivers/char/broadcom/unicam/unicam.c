@@ -44,6 +44,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <mach/rdb/brcm_rdb_util.h>
 #include <plat/pi_mgr.h>
+#include <plat/scu.h>
 
 #if (1)				/* (defined (_RHEA_) && (CHIP_REVISION == 10)) */
 #include <mach/rdb/brcm_rdb_csr.h>
@@ -89,6 +90,7 @@ static void __iomem *csr_base = NULL;
 static struct pi_mgr_dfs_node unicam_dfs_node = {
 	.valid = 0,
 };
+static struct pi_mgr_qos_node unicam_qos_node;
 
 typedef struct {
 	struct completion irq_sem;
@@ -369,6 +371,10 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 
 	enable_unicam_clock();
 
+	pi_mgr_qos_request_update(&unicam_qos_node, 0);
+	scu_standby(0);
+	mb();
+
 	if (port == 0) {
 		/*  Set Camera CSI0 Phy & Clock Registers */
 		reg_write(mmcfg_base, MM_CFG_CSI0_LDO_CTL_OFFSET, 0x5A00000F);
@@ -521,6 +527,9 @@ static void unicam_close_csi(unsigned int port, unsigned int clk_src)
 	}
 #endif
 	disable_unicam_clock();
+	pi_mgr_qos_request_update(&unicam_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+	scu_standby(1);
+	mb();
 }
 
 static int enable_unicam_clock(void)
@@ -577,6 +586,8 @@ static int __devexit unicam_drv_remove(struct platform_device *pdev)
 {
 	pi_mgr_dfs_request_remove(&unicam_dfs_node);
 	unicam_dfs_node.name = NULL;
+	pi_mgr_qos_request_remove(&unicam_qos_node);
+	unicam_qos_node.name = NULL;
 	return 0;
 }
 
@@ -602,10 +613,21 @@ static int unicam_drv_probe(struct platform_device *pdev)
 	if (ret) {
 		printk(KERN_ERR "%s: failed to register PI DFS request\n",
 		       __func__);
-		return -EIO;
+		ret = -EIO;
+		goto error;
+	}
+	ret = pi_mgr_qos_add_request(&unicam_qos_node, "unicam", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+	if (ret) {
+		printk(KERN_ERR "%s: failed to register PI QOS request\n", __func__);
+		ret = -EIO;
+		goto qos_request_fail;
 	}
 
-      error:
+	return ret;
+
+qos_request_fail:
+	pi_mgr_dfs_request_remove(&unicam_dfs_node);
+error:
 	return ret;
 }
 
