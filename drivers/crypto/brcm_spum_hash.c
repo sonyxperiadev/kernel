@@ -341,7 +341,7 @@ static int spum_dma_xfer(struct brcm_spum_device *dd, u32 dma_len, u32 length)
 			goto err;
 		}
 		/* Tx setup */
-		if(dma_setup_transfer(dd->tx_dma_chan, tx_fifo, dd->dma_addr, length,
+		if(dma_setup_transfer(dd->tx_dma_chan, tx_fifo, (sg_dma_address(rctx->sg)+rctx->offset)/*dd->dma_addr*/, length,
 				DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI, cfg_tx)) {
 			pr_err("Tx dma_setup_transfer failed %d\n",err);
 			err = -EIO;
