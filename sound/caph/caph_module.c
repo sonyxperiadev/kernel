@@ -69,7 +69,7 @@ MODULE_DESCRIPTION("Broadcom CAPH sound interface");
 MODULE_LICENSE("GPL");
 
 /* global */
-int gAudioDebugLevel = 6; /*Default log level: ALSA INTR + Audio Cntl */
+int gAudioDebugLevel; /*Default audio logging is disabled */
 module_param(gAudioDebugLevel, int, 0);
 
 static brcm_alsa_chip_t *sgpCaph_chip;

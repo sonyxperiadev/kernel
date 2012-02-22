@@ -103,8 +103,8 @@ struct TAudioHalThreadData {
 static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 
 static struct TAudioHalThreadData sgThreadData;
-#define	KFIFO_SIZE		(9*sizeof(TMsgAudioCtrl))
-#define WAIT_TIME		1280		/* in msec */
+#define	KFIFO_SIZE		1024 /*(9*sizeof(TMsgAudioCtrl))*/
+#define WAIT_TIME		3000		/* in msec */
 
 static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			void *arg_param, void *callback, int block);
