@@ -82,23 +82,6 @@ module_param_named(watchdog_timeout, wd_hw_timeout, int,
 module_param_named(nowayout, nowayout, int, S_IRUGO);
 
 
-static int bcmpmu_wdog_is_enabled(struct bcmpmu_wdog *wddev)
-{
-	struct bcmpmu *bcmpmu = wddev->bcmpmu;
-	int ret;
-	unsigned int regVal = 0;
-
-	pr_debug("Inside %s\n", __func__);
-
-	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_SYS_WDT_EN, &regVal,
-		bcmpmu->regmap[PMU_REG_SYS_WDT_EN].mask);
-	regVal >>= bcmpmu->regmap[PMU_REG_SYS_WDT_EN].shift;
-
-	if (regVal)
-		return 1;
-	else
-		return 0;
-}
 static int bcmpmu_wdog_enable(struct bcmpmu_wdog *wddev)
 {
 	struct bcmpmu *bcmpmu = wddev->bcmpmu;
@@ -115,20 +98,6 @@ static int bcmpmu_wdog_enable(struct bcmpmu_wdog *wddev)
 
 }
 
-static int bcmpmu_wdog_disable(struct bcmpmu_wdog *wddev)
-{
-	struct bcmpmu *bcmpmu = wddev->bcmpmu;
-	int ret;
-
-	pr_debug("Inside %s\n", __func__);
-
-	/* Disable The watchdog */
-	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_SYS_WDT_EN, 0,
-		bcmpmu->regmap[PMU_REG_SYS_WDT_EN].mask);
-
-	return ret;
-}
-
 static int bcmpmu_wdog_gettimeout(struct bcmpmu_wdog *wddev)
 {
 	struct bcmpmu *bcmpmu = wddev->bcmpmu;
@@ -137,7 +106,6 @@ static int bcmpmu_wdog_gettimeout(struct bcmpmu_wdog *wddev)
 
 	pr_debug("Inside %s\n", __func__);
 
-	/* Enable The watchdog */
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_SYS_WDT_TIME, &regVal,
 		bcmpmu->regmap[PMU_REG_SYS_WDT_TIME].mask);
 
@@ -184,6 +152,12 @@ static int bcmpmu_wdog_reset(struct bcmpmu_wdog *wddev)
 	return ret;
 }
 
+static void bcmpmu_wdog_keepalive(struct bcmpmu_wdog *wd, unsigned long delay)
+{
+	cancel_delayed_work_sync(&wd->wd_work);
+	queue_delayed_work(wd->wd_workqueue, &wd->wd_work, delay);
+}
+
 
 static ssize_t bcmpmu_wdog_write(struct file *file, const char *data,
 				   size_t len, loff_t *ppos)
@@ -199,27 +173,19 @@ static ssize_t bcmpmu_wdog_write(struct file *file, const char *data,
 			for (i = 0; i != len; i++) {
 				char c;
 				if (get_user(c, data + i)) {
-					pr_info("get user failed \n");
+					pr_info("get user failed\n");
 					return -EFAULT;
 				}
 				if (c == 'V') {
-					pr_info("Watchdog magic close char recieved\n");
+					pr_info("can be closed\n");
 					expect_close = 42;
 				}
 			}
 		}
 	}
 
-	/* Reset the watchdog */
 	bcmpmu_wdog_reset(wdog);
-
-	/**
-	 * cancel the Work Q and reschedule it
-	 */
-
-	cancel_delayed_work_sync(&wdog->wd_work);
-	queue_delayed_work(wdog->wd_workqueue, &wdog->wd_work,
-			EARLY_PANIC_WORK_DELAY);
+	bcmpmu_wdog_keepalive(wdog, EARLY_PANIC_WORK_DELAY);
 
 	return len;
 }
@@ -244,9 +210,7 @@ static long bcmpmu_wdog_ioctl(struct file *file, unsigned int cmd,
 		ret = put_user(0, (int __user *)arg);
 		break;
 	case WDIOC_KEEPALIVE:
-		cancel_delayed_work_sync(&wddog->wd_work);
-		queue_delayed_work(wddog->wd_workqueue, &wddog->wd_work,
-			EARLY_PANIC_WORK_DELAY);
+		bcmpmu_wdog_keepalive(wddog, EARLY_PANIC_WORK_DELAY);
 		ret = bcmpmu_wdog_reset(wdog);
 		break;
 	case WDIOC_SETTIMEOUT:
@@ -271,7 +235,7 @@ static int bcmpmu_wdog_open(struct inode *inode, struct file *file)
 	pr_info("Inside %s\n", __func__);
 
 	if (test_and_set_bit(0, &wddog->wd_is_opened)) {
-		pr_info("Watchdog : test_and_set_bit failed!! \n");
+		pr_info("Watchdog : test_and_set_bit failed!!\n");
 		return -EBUSY;
 	}
 	bcmpmu_wdog_enable(wddog);
@@ -285,14 +249,14 @@ static int bcmpmu_wdog_release(struct inode *inode, struct file *file)
 {
 	struct bcmpmu_wdog *wdog = file->private_data;
 
-	printk(KERN_ALERT "Watchdog: Driver is closed !!\n");
+	pr_notice("Watchdog: file is closed\n");
 
 	if (expect_close == 42) {
-		bcmpmu_wdog_disable(wdog);
-		cancel_delayed_work_sync(&wddog->wd_work);
 		clear_bit(0, &wdog->wd_is_opened);
+		bcmpmu_wdog_keepalive(wdog, 0);
 	} else {
-		printk(KERN_ALERT "Watchdog: Unexpected Close, System will reboot !!\n");
+		pr_alert("Watchdog: Unexpected close, nobody feeds me\n");
+		cancel_delayed_work_sync(&wddog->wd_work);
 	}
 
 	expect_close = 0;
@@ -305,12 +269,15 @@ static int bcmpmu_wdog_release(struct inode *inode, struct file *file)
 static int bcmpmu_wdog_notify_sys(struct notifier_block *this,
 				    unsigned long code, void *unused)
 {
-	if (code == SYS_DOWN || code == SYS_HALT)
-		/* bcmpmu_wdog_stop(); */               /* Turn the WDT off*/
+	if (code == SYS_DOWN || code == SYS_HALT) {
+		cancel_delayed_work_sync(&wddog->wd_work);
+		/* give a time to halt */
+		bcmpmu_wdog_reset(wddog);
+	}
 	return NOTIFY_DONE;
 }
 
-static struct file_operations bcmpmu_wdog_fops = {
+static const struct file_operations bcmpmu_wdog_fops = {
 	.owner = THIS_MODULE,
 	.llseek = no_llseek,
 	.write = bcmpmu_wdog_write,
@@ -344,7 +311,7 @@ static void bcmpmu_keepalive_work(struct work_struct *work)
  * custom API to pet the watchdog from the kernel space
  */
 
-static int bcmpmu_watchdog_pet(void)
+int bcmpmu_watchdog_pet(void)
 {
 	pr_debug("Inside %s\n", __func__);
 
@@ -417,8 +384,8 @@ static int __devinit bcmpmu_wdog_probe(struct platform_device *pdev)
 	return 0;
 
 err_free:
-	if (wddog)
-		kfree(wddog);
+	kfree(wddog);
+	wddog = NULL;
 err:
 	return ret;
 }
@@ -434,6 +401,7 @@ static int __devexit bcmpmu_wdog_remove(struct platform_device *pdev)
 		if (wddog->wd_workqueue)
 			destroy_workqueue(wddog->wd_workqueue);
 		kfree(wddog);
+		wddog = NULL;
 	}
 	return 0;
 }
