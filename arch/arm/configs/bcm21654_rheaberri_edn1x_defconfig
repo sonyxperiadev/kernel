@@ -1,6 +1,6 @@
 #
 # Automatically generated make config: don't edit
-# Linux/arm 3.0.1 Kernel Configuration
+# Linux/arm 3.0.15 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -386,6 +386,7 @@ CONFIG_PL330=y
 # CONFIG_PCI_SYSCALL is not set
 # CONFIG_ARCH_SUPPORTS_MSI is not set
 # CONFIG_PCCARD is not set
+# CONFIG_PL310_ERRATA_769419 is not set
 
 #
 # Kernel Features
@@ -434,6 +435,7 @@ CONFIG_ALIGNMENT_TRAP=y
 # CONFIG_SECCOMP is not set
 # CONFIG_CC_STACKPROTECTOR is not set
 # CONFIG_DEPRECATED_PARAM_STRUCT is not set
+# CONFIG_ARM_FLUSH_CONSOLE_ON_RESTART is not set
 
 #
 # Boot options
@@ -880,7 +882,6 @@ CONFIG_ANDROID_PMEM=y
 # CONFIG_INTEL_MID_PTI is not set
 # CONFIG_ICS932S401 is not set
 # CONFIG_ENCLOSURE_SERVICES is not set
-# CONFIG_KERNEL_DEBUGGER_CORE is not set
 # CONFIG_APDS9802ALS is not set
 # CONFIG_BRCM_VIRTUAL_SENSOR is not set
 # CONFIG_ISL29003 is not set

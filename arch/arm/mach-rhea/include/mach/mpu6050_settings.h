@@ -20,7 +20,9 @@
 
 #define MPU6050_INIT_CFG	0x10
 
-#define MPU6050_IRQ_GPIO	77
+#define MPU_INT_GPIO_PIN		77
+#define ACCE_INT_GPIO_PIN		77
+#define COMP_INT_GPIO_PIN		78
 
 #ifdef CONFIG_MPU_SENSORS_AK8975
 #define MPU6050_COMPASS_SLAVE_ADDR   0x0E
@@ -37,24 +39,40 @@
 #endif
 
 /*
- * Correction for the mount position of MPU6050 sensor on daughter card PCB.
- *  For x x
- *  For y y
- *  For z reverse z
+ * Correction for the mount position of MPU6050 sensor on RheaBerri EDN40
+ * NOTE: If you are using this on other boards, you may have to change these
+ * according to the MPU6050 mount position on it. This setting is specifically
+ * for RheaBerri EDN40
+ *
+ *  For x y
+ *  For y reverse x
+ *  For z z
  */
 
-#define MPU6050_DRIVER_ACCEL_GYRO_ORIENTATION \
+/*   .y_change = axis_x_dir_rev, \ */
+#define MPU6050_DRIVER_ACCEL_GYRO_SETTINGS \
 { \
-	 0, 1, 0, \
-	-1, 0, 0, \
-	 0, 0, 1, \
+   .x_change = axis_y_dir, \
+   .y_change = axis_x_dir_rev, \
+   .z_change = axis_z_dir, \
 }
 
-#define MPU6050_DRIVER_COMPASS_ORIENTATION \
+#define MPU6050_DRIVER_COMPASS_SETTINGS \
 { \
-	 1, 0, 0, \
-	 0, 1, 0, \
-	 0, 0, 1, \
+   .x_change = axis_y_dir, \
+   .y_change = axis_x_dir, \
+   .z_change = axis_z_dir_rev, \
 }
 
-#endif // MPU6050_SETTINGS_H
+#define MPU6050_DRIVER_REG_VALUES \
+{ \
+    0x0, /* MPUREG_PWR_MGMT_1   0x6C, 108 */ \
+    0x4, /* MPUREG_SMPLRT_DIV   0x19,  25 */ \
+    0xb, /* MPUREG_CONFIG       0x1a,  26 */ \
+    0x8, /* MPUREG_GYRO_CONFIG  0x1b,  27 */ \
+    0x8, /* MPUREG_ACCEL_CONFIG 0x1c,  28 */ \
+    0x1, /* MPUREG_PWR_MGMT_1   0x6b, 107 */ \
+    0x0, /* MPUREG_PWR_MGMT_2   0x6C, 108 */ \
+}
+
+#endif
