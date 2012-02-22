@@ -910,7 +910,7 @@ static int sysparm_init(void)
 			BUG();
 		}
 
-		mdelay(25);
+		msleep(25);
 		sysparm_ready_count++;
 	}
 
