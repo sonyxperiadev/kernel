@@ -1,130 +1,120 @@
 /****************************************************************************
-*																			
-*     Copyright (c) 2007-2008 Broadcom Corporation								
-*																			
-*   Unless you and Broadcom execute a separate written software license		
-*   agreement governing use of this software, this software is licensed to you	
-*   under the terms of the GNU General Public License version 2, available	
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").	
-*																			
-*   Notwithstanding the above, under no circumstances may you combine this	
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.	
-*																			
+*
+*     Copyright (c) 2007-2008 Broadcom Corporation
+*
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
+*
+*   Notwithstanding the above, under no circumstances may you combine this
+*   software in any way with any other Broadcom software provided under a license
+*   other than the GPL, without Broadcom's express prior written consent.
+*
 ****************************************************************************/
 /****************************************************************************
-*																			
-*     WARNING!!!! Generated File ( Do NOT Modify !!!! )					
-*																			
+*
+*     WARNING!!!! Generated File ( Do NOT Modify !!!! )
+*
 ****************************************************************************/
 #ifndef SYS_GEN_MSG_H
 #define SYS_GEN_MSG_H
 
-
 //***************** < 1 > **********************
 
-typedef struct
-{
-	UInt32  cmd;
-	UInt32  address;
-	UInt32  offset;
-	UInt32  size;
-}CAPI2_CPPS_Control_Req_t;
+typedef struct {
+	UInt32 cmd;
+	UInt32 address;
+	UInt32 offset;
+	UInt32 size;
+} CAPI2_CPPS_Control_Req_t;
 
-typedef struct
-{
-	UInt32	val;
-}CAPI2_CPPS_Control_Rsp_t;
+typedef struct {
+	UInt32 val;
+} CAPI2_CPPS_Control_Rsp_t;
 
+typedef struct {
+	PMU_SIMLDO_t simldo;
+} CAPI2_SYSRPC_PMU_IsSIMReady_Req_t;
 
+typedef struct {
+	Boolean val;
+} CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t;
 
+typedef struct {
+	PMU_SIMLDO_t simldo;
+	PMU_SIMVolt_t volt;
+} CAPI2_SYSRPC_PMU_ActivateSIM_Req_t;
 
-typedef struct
-{
-	PMU_SIMLDO_t  simldo;
-}CAPI2_SYSRPC_PMU_IsSIMReady_Req_t;
+typedef struct {
+	UInt32 flash_addr;
+	UInt32 length;
+	UInt32 shared_mem_addr;
+} CAPI2_FLASH_SaveImage_Req_t;
 
-typedef struct
-{
-	Boolean	val;
-}CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t;
+typedef struct {
+	Boolean val;
+} CAPI2_FLASH_SaveImage_Rsp_t;
 
-typedef struct
-{
-	PMU_SIMLDO_t  simldo;
-	PMU_SIMVolt_t  volt;
-}CAPI2_SYSRPC_PMU_ActivateSIM_Req_t;
+typedef struct {
+	UInt8 simId;
+	SYS_SIMLOCK_SIM_DATA_t *sim_data;
+	Boolean is_testsim;
+} SYS_SimLockApi_GetStatus_Req_t;
 
-typedef struct
-{
-	UInt32  flash_addr;
-	UInt32  length;
-	UInt32  shared_mem_addr;
-}CAPI2_FLASH_SaveImage_Req_t;
+typedef struct {
+	SYS_SIMLOCK_STATE_t val;
+} SYS_SimLockApi_GetStatus_Rsp_t;
 
-typedef struct
-{
-	Boolean	val;
-}CAPI2_FLASH_SaveImage_Rsp_t;
+typedef struct {
+	SYS_SIMLOCK_STATE_t *simlock_state;
+} SYS_SIMLOCKApi_SetStatus_Req_t;
 
-typedef struct
-{
-	UInt8  simId;
-	SYS_SIMLOCK_SIM_DATA_t  *sim_data;
-	Boolean  is_testsim;
-}SYS_SimLockApi_GetStatus_Req_t;
-
-typedef struct
-{
-	SYS_SIMLOCK_STATE_t	val;
-}SYS_SimLockApi_GetStatus_Rsp_t;
-
-typedef struct
-{
-	SYS_SIMLOCK_STATE_t  *simlock_state;
-}SYS_SIMLOCKApi_SetStatus_Req_t;
-
-typedef struct
-{
-	UInt32	val;
-}SYS_SimApi_GetCurrLockedSimlockType_Rsp_t;
+typedef struct {
+	UInt32 val;
+} SYS_SimApi_GetCurrLockedSimlockType_Rsp_t;
 //***************** < 2 > **********************
 
-
-
-
-
-bool_t xdr_CAPI2_CPPS_Control_Req_t(void* xdrs, CAPI2_CPPS_Control_Req_t *rsp);
-bool_t xdr_CAPI2_CPPS_Control_Rsp_t(void* xdrs, CAPI2_CPPS_Control_Rsp_t *rsp);
-bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Req_t(void* xdrs, CAPI2_SYSRPC_PMU_IsSIMReady_Req_t *rsp);
-bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t(void* xdrs, CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t *rsp);
-bool_t xdr_CAPI2_SYSRPC_PMU_ActivateSIM_Req_t(void* xdrs, CAPI2_SYSRPC_PMU_ActivateSIM_Req_t *rsp);
-bool_t xdr_CAPI2_FLASH_SaveImage_Req_t(void* xdrs, CAPI2_FLASH_SaveImage_Req_t *rsp);
-bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void* xdrs, CAPI2_FLASH_SaveImage_Rsp_t *rsp);
-bool_t xdr_SYS_SimLockApi_GetStatus_Req_t(void* xdrs, SYS_SimLockApi_GetStatus_Req_t *rsp);
-bool_t xdr_SYS_SimLockApi_GetStatus_Rsp_t(void* xdrs, SYS_SimLockApi_GetStatus_Rsp_t *rsp);
-bool_t xdr_SYS_SIMLOCKApi_SetStatus_Req_t(void* xdrs, SYS_SIMLOCKApi_SetStatus_Req_t *rsp);
-bool_t xdr_SYS_SimApi_GetCurrLockedSimlockType_Rsp_t(void* xdrs, SYS_SimApi_GetCurrLockedSimlockType_Rsp_t *rsp);
+bool_t xdr_CAPI2_CPPS_Control_Req_t(void *xdrs, CAPI2_CPPS_Control_Req_t * rsp);
+bool_t xdr_CAPI2_CPPS_Control_Rsp_t(void *xdrs, CAPI2_CPPS_Control_Rsp_t * rsp);
+bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Req_t(void *xdrs,
+					     CAPI2_SYSRPC_PMU_IsSIMReady_Req_t *rsp);
+bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t(void *xdrs,
+					     CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t *rsp);
+bool_t xdr_CAPI2_SYSRPC_PMU_ActivateSIM_Req_t(void *xdrs,
+					      CAPI2_SYSRPC_PMU_ActivateSIM_Req_t *rsp);
+bool_t xdr_CAPI2_FLASH_SaveImage_Req_t(void *xdrs,
+				       CAPI2_FLASH_SaveImage_Req_t *rsp);
+bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void *xdrs,
+				       CAPI2_FLASH_SaveImage_Rsp_t *rsp);
+bool_t xdr_SYS_SimLockApi_GetStatus_Req_t(void *xdrs,
+					  SYS_SimLockApi_GetStatus_Req_t *rsp);
+bool_t xdr_SYS_SimLockApi_GetStatus_Rsp_t(void *xdrs,
+					  SYS_SimLockApi_GetStatus_Rsp_t *rsp);
+bool_t xdr_SYS_SIMLOCKApi_SetStatus_Req_t(void *xdrs,
+					  SYS_SIMLOCKApi_SetStatus_Req_t *rsp);
+bool_t xdr_SYS_SimApi_GetCurrLockedSimlockType_Rsp_t(void *xdrs,
+						     SYS_SimApi_GetCurrLockedSimlockType_Rsp_t *rsp);
 
 //***************** < 3 > **********************
 
-
-
-
-
-Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t* pReqMsg, UInt32 cmd, UInt32 address, UInt32 offset, UInt32 size);
-Result_t Handle_CAPI2_SYSRPC_PMU_IsSIMReady(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo);
-Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo, PMU_SIMVolt_t volt);
-Result_t Handle_CAPI2_FLASH_SaveImage(RPC_Msg_t* pReqMsg, UInt32 flash_addr, UInt32 length, UInt32 shared_mem_addr);
-Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t* pReqMsg, UInt8 simId, SYS_SIMLOCK_SIM_DATA_t *sim_data, Boolean is_testsim);
-Result_t Handle_SYS_SIMLOCKApi_SetStatus(RPC_Msg_t* pReqMsg, SYS_SIMLOCK_STATE_t *simlock_state);
-Result_t Handle_SYS_SimApi_GetCurrLockedSimlockType(RPC_Msg_t* pReqMsg);
+Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t *pReqMsg, UInt32 cmd,
+				   UInt32 address, UInt32 offset, UInt32 size);
+Result_t Handle_CAPI2_SYSRPC_PMU_IsSIMReady(RPC_Msg_t *pReqMsg,
+					    PMU_SIMLDO_t simldo);
+Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
+					     PMU_SIMLDO_t simldo,
+					     PMU_SIMVolt_t volt);
+Result_t Handle_CAPI2_FLASH_SaveImage(RPC_Msg_t *pReqMsg, UInt32 flash_addr,
+				      UInt32 length, UInt32 shared_mem_addr);
+Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId,
+					 SYS_SIMLOCK_SIM_DATA_t *sim_data,
+					 Boolean is_testsim);
+Result_t Handle_SYS_SIMLOCKApi_SetStatus(RPC_Msg_t *pReqMsg,
+					 SYS_SIMLOCK_STATE_t *simlock_state);
+Result_t Handle_SYS_SimApi_GetCurrLockedSimlockType(RPC_Msg_t *pReqMsg);
 
 //***************** < 12 > **********************
-
-
-
-
 
 //***************************************************************************************
 /**
@@ -137,7 +127,8 @@ Result_t Handle_SYS_SimApi_GetCurrLockedSimlockType(RPC_Msg_t* pReqMsg);
 	Payload: Boolean
 	@n Response to CP will be notified via ::MSG_PMU_IS_SIM_READY_RSP
 **/
-void CAPI2_SYSRPC_PMU_IsSIMReady(UInt32 tid, UInt8 clientID, PMU_SIMLDO_t simldo);
+void CAPI2_SYSRPC_PMU_IsSIMReady(UInt32 tid, UInt8 clientID,
+				 PMU_SIMLDO_t simldo);
 
 //***************************************************************************************
 /**
@@ -151,8 +142,8 @@ void CAPI2_SYSRPC_PMU_IsSIMReady(UInt32 tid, UInt8 clientID, PMU_SIMLDO_t simldo
 	Payload: default_proc
 	@n Response to CP will be notified via ::MSG_PMU_ACTIVATE_SIM_RSP
 **/
-void CAPI2_SYSRPC_PMU_ActivateSIM(UInt32 tid, UInt8 clientID, PMU_SIMLDO_t simldo, PMU_SIMVolt_t volt);
-
+void CAPI2_SYSRPC_PMU_ActivateSIM(UInt32 tid, UInt8 clientID,
+				  PMU_SIMLDO_t simldo, PMU_SIMVolt_t volt);
 
 //***************************************************************************************
 /**
@@ -167,7 +158,9 @@ void CAPI2_SYSRPC_PMU_ActivateSIM(UInt32 tid, UInt8 clientID, PMU_SIMLDO_t simld
 	Payload: SYS_SIMLOCK_STATE_t
 	@n Response to CP will be notified via ::MSG_SYS_SIMLOCK_GET_STATUS_RSP
 **/
-void SYS_SimLockApi_GetStatus(UInt32 tid, UInt8 clientID, UInt8 simId, SYS_SIMLOCK_SIM_DATA_t *sim_data, Boolean is_testsim);
+void SYS_SimLockApi_GetStatus(UInt32 tid, UInt8 clientID, UInt8 simId,
+			      SYS_SIMLOCK_SIM_DATA_t *sim_data,
+			      Boolean is_testsim);
 
 //***************************************************************************************
 /**
@@ -180,7 +173,8 @@ void SYS_SimLockApi_GetStatus(UInt32 tid, UInt8 clientID, UInt8 simId, SYS_SIMLO
 	Payload: default_proc
 	@n Response to CP will be notified via ::MSG_SYS_SIMLOCK_SET_STATUS_RSP
 **/
-void SYS_SIMLOCKApi_SetStatus(UInt32 tid, UInt8 clientID, SYS_SIMLOCK_STATE_t *simlock_state);
+void SYS_SIMLOCKApi_SetStatus(UInt32 tid, UInt8 clientID,
+			      SYS_SIMLOCK_STATE_t *simlock_state);
 
 //***************************************************************************************
 /**
@@ -194,7 +188,5 @@ void SYS_SIMLOCKApi_SetStatus(UInt32 tid, UInt8 clientID, SYS_SIMLOCK_STATE_t *s
 **/
 void SYS_SimApi_GetCurrLockedSimlockType(UInt32 tid, UInt8 clientID);
 //***************** < 16 > **********************
-
-
 
 #endif

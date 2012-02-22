@@ -2,13 +2,13 @@
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
+*   Notwithstanding the above, under no circumstances may you combine this
+*   software in any way with any other Broadcom software provided under a license
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
@@ -37,10 +37,10 @@
 #include "sys_rpc.h"
 
 XDR_ENUM_FUNC(PMU_SIMLDO_t)
-    XDR_ENUM_FUNC(PMU_SIMVolt_t)
+XDR_ENUM_FUNC(PMU_SIMVolt_t)
 
 XDR_ENUM_FUNC(SYS_SIM_SECURITY_STATE_t)
-bool_t xdr_SYS_ReqRep_t(XDR * xdrs, SYS_ReqRep_t * req, xdrproc_t proc)
+bool_t xdr_SYS_ReqRep_t(XDR *xdrs, SYS_ReqRep_t *req, xdrproc_t proc)
 {
 	XDR_LOG(xdrs, "xdr_SYS_ReqRep_t")
 
@@ -49,16 +49,16 @@ bool_t xdr_SYS_ReqRep_t(XDR * xdrs, SYS_ReqRep_t * req, xdrproc_t proc)
 		return proc(xdrs, &(req->req_rep_u));
 	}
 
-	return (FALSE);
+	return FALSE;
 }
 
-#define _xdr_char(a,b,c) xdr_char(a,b)
-#define _xdr_u_int32_t(a,b,c) xdr_u_long(a,b)
-#define _xdr_short(a,b,c) xdr_short(a,b)
-#define _xdr_u_short(a,b,c) xdr_u_short(a,b)
-#define _xdr_double(a,b,c) xdr_double(a,b)
-#define _xdr_float(a,b,c) xdr_float(a,b)
-#define _xdr_long(a,b,c)  xdr_long(a,b)
+#define _xdr_char(a, b, c) xdr_char(a, b)
+#define _xdr_u_int32_t(a, b, c) xdr_u_long(a, b)
+#define _xdr_short(a, b, c) xdr_short(a, b)
+#define _xdr_u_short(a, b, c) xdr_u_short(a, b)
+#define _xdr_double(a, b, c) xdr_double(a, b)
+#define _xdr_float(a, b, c) xdr_float(a, b)
+#define _xdr_long(a, b, c)  xdr_long(a, b)
 
 #define MAX_LOG_STRING_LENGTH   78
 
@@ -96,37 +96,37 @@ static RPC_XdrInfo_t SYS_Prim_dscrm[] = {
 	 (xdrproc_t) xdr_CAPI2_FLASH_SaveImage_Rsp_t, sizeof(Boolean), 0}
 	,
 #endif
-	{ MSG_SYS_SIMLOCK_GET_STATUS_REQ,_T("MSG_SYS_SIMLOCK_GET_STATUS_REQ"), 
+	{ MSG_SYS_SIMLOCK_GET_STATUS_REQ, _T("MSG_SYS_SIMLOCK_GET_STATUS_REQ"),
 	 (xdrproc_t) xdr_SYS_SimLockApi_GetStatus_Req_t, 0, 0},
 
-	{ MSG_SYS_SIMLOCK_GET_STATUS_RSP,_T("MSG_SYS_SIMLOCK_GET_STATUS_RSP"), 
+	{ MSG_SYS_SIMLOCK_GET_STATUS_RSP, _T("MSG_SYS_SIMLOCK_GET_STATUS_RSP"),
 	 (xdrproc_t)xdr_SYS_SimLockApi_GetStatus_Rsp_t, sizeof( SYS_SIMLOCK_STATE_t ), 0 },
 
-	{ MSG_SYS_SIMLOCK_SET_STATUS_REQ,_T("MSG_SYS_SIMLOCK_SET_STATUS_REQ"), 
+	{ MSG_SYS_SIMLOCK_SET_STATUS_REQ, _T("MSG_SYS_SIMLOCK_SET_STATUS_REQ"),
 	 (xdrproc_t) xdr_SYS_SIMLOCKApi_SetStatus_Req_t, 0, 0},
 
-	{ MSG_SYS_SIMLOCK_SET_STATUS_RSP,_T("MSG_SYS_SIMLOCK_SET_STATUS_RSP"), 
+	{ MSG_SYS_SIMLOCK_SET_STATUS_RSP, _T("MSG_SYS_SIMLOCK_SET_STATUS_RSP"),
 	 (xdrproc_t) xdr_default_proc, 0, 0 },
 
-	{ MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ,_T("MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ"), 
+	{ MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ, _T("MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ"),
 	 (xdrproc_t) xdr_default_proc, 0, 0},
 
-	{ MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP,_T("MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP"), 
+	{ MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP, _T("MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP"),
 	 (xdrproc_t)xdr_SYS_SimApi_GetCurrLockedSimlockType_Rsp_t, sizeof( UInt32 ), 0 },
 
 	{(MsgType_t) __dontcare__, "", NULL_xdrproc_t, 0, 0}
 };
 
-void sysGetXdrStruct(RPC_XdrInfo_t ** ptr, UInt16 * size)
+void sysGetXdrStruct(RPC_XdrInfo_t **ptr, UInt16 *size)
 {
 	*size = (sizeof(SYS_Prim_dscrm) / sizeof(RPC_XdrInfo_t));
 	*ptr = (RPC_XdrInfo_t *) SYS_Prim_dscrm;
 }
 
 bool_t
-xdr_SYS_SIMLOCK_SIM_DATA_t(XDR* xdrs, SYS_SIMLOCK_SIM_DATA_t *sim_data)
+xdr_SYS_SIMLOCK_SIM_DATA_t(XDR *xdrs, SYS_SIMLOCK_SIM_DATA_t *sim_data)
 {
-	XDR_LOG(xdrs,"xdr_SYS_SIMLOCK_SIM_DATA_t");
+	XDR_LOG(xdrs, "xdr_SYS_SIMLOCK_SIM_DATA_t");
 
 	if ( xdr_opaque(xdrs, (caddr_t) &sim_data->imsi_string, sizeof(SYS_IMSI_t)) &&
 		 xdr_opaque(xdrs, (caddr_t) &sim_data->gid1, sizeof(SYS_GID_DIGIT_t)) &&
@@ -134,19 +134,19 @@ xdr_SYS_SIMLOCK_SIM_DATA_t(XDR* xdrs, SYS_SIMLOCK_SIM_DATA_t *sim_data)
 		 xdr_opaque(xdrs, (caddr_t) &sim_data->gid2, sizeof(SYS_GID_DIGIT_t)) &&
 		 xdr_u_char(xdrs, &sim_data->gid2_len) )
 	{
-		return(TRUE);
+		return TRUE;
 	}
-	else
+	else 
 	{
-		return(FALSE);
-	}	 
+		return FALSE;
+	}
 }
 
 
-bool_t 
-xdr_SYS_SIMLOCK_STATE_t(XDR* xdrs, SYS_SIMLOCK_STATE_t *simlock_state)
+bool_t
+xdr_SYS_SIMLOCK_STATE_t(XDR *xdrs, SYS_SIMLOCK_STATE_t *simlock_state)
 {
-	XDR_LOG(xdrs,"xdr_SYS_SIMLOCK_STATE_t");
+	XDR_LOG(xdrs, "xdr_SYS_SIMLOCK_STATE_t");
 
 	if ( xdr_u_char(xdrs, &simlock_state->network_lock_enabled) &&
 		 xdr_u_char(xdrs, &simlock_state->network_subset_lock_enabled) &&
@@ -159,11 +159,11 @@ xdr_SYS_SIMLOCK_STATE_t(XDR* xdrs, SYS_SIMLOCK_STATE_t *simlock_state)
 		 XDR_ENUM(xdrs, &simlock_state->corporate_lock, SYS_SIM_SECURITY_STATE_t) &&
 		 XDR_ENUM(xdrs, &simlock_state->phone_lock, SYS_SIM_SECURITY_STATE_t) )
 	{
-		return(TRUE);
+		return TRUE;
 	}
 	else
 	{
-		return(FALSE);
-	}	
+		return FALSE;
+	}
 }
 
