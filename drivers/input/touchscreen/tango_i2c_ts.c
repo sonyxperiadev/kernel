@@ -822,7 +822,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		TS_ERR("%s i2c_ts_driver_probe() p_i2c_client == NULL\n",
 				I2C_TS_DRIVER_NAME);
 		rc = -1;
-		goto ERROR0;
+		goto ERROR1;
 	}
 
 	if (p_i2c_client->dev.platform_data == NULL)
@@ -831,7 +831,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 			   "p_i2c_client->dev.platform_data == NULL\n",
 				 I2C_TS_DRIVER_NAME);
 		rc = -1;
-		goto ERROR0;
+		goto ERROR1;
 	}
 
 	if (!i2c_check_functionality(p_i2c_client->adapter,
@@ -841,7 +841,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 			   "i2c_check_functionality() failed %d\n",
 				 I2C_TS_DRIVER_NAME, -ENODEV);
 		rc = ENODEV;
-		goto ERROR0;
+		goto ERROR1;
 	}
 
 	if (g_found_slave_addr > 0)
@@ -849,7 +849,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		TS_ERR("%s i2c_ts_driver_probe() i2c slave already found at 0x%x\n",
 				 I2C_TS_DRIVER_NAME, g_found_slave_addr);
 		rc = -1;
-		goto ERROR0;
+		goto ERROR1;
 	}
 
 	/* Get the I2C information compiled in for this platform. */
@@ -861,7 +861,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		TS_ERR("%s:%s Cannot access platform data for I2C slave address %d\n",
 				 I2C_TS_DRIVER_NAME, __FUNCTION__, p_i2c_client->addr);
 		rc = -1;
-		goto ERROR0;
+		goto ERROR1;
 	}
 
 	printk("%s: slave address 0x%x\n", I2C_TS_DRIVER_NAME, p_i2c_client->addr);
@@ -872,13 +872,6 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	printk("%s: is multitouch %d\n",
 			I2C_TS_DRIVER_NAME, gp_i2c_ts->is_multi_touch);
 
-	rc = device_create_file(&p_i2c_client->dev, &dev_attr);
-	if (rc)
-	{
-		TS_ERR("%s:%s Cannot create sysfs entry\n",
-				 I2C_TS_DRIVER_NAME, __FUNCTION__);
-		goto ERROR0;
-	}
 	/* Assign the finger touch size. */
 	g_blob_size = I2C_TS_DRIVER_BLOB_SIZE *
 				  gp_i2c_ts->x_max_value / gp_i2c_ts->panel_width;
@@ -951,6 +944,24 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	}
 	else
 		gp_i2c_ts->layout = TANGO_M29_LAYOUT;
+
+	if(p_tango_i2c_dev->dummy_client) {
+		rc = device_create_file(&p_tango_i2c_dev->dummy_client->dev, &dev_attr);
+		if (rc)
+		{
+			TS_ERR("%s:%s Cannot create sysfs entry\n",
+					 I2C_TS_DRIVER_NAME, __FUNCTION__);
+			goto ERROR2;
+		}
+	} else {
+		rc = device_create_file(&p_i2c_client->dev, &dev_attr);
+		if (rc)
+		{
+			TS_ERR("%s:%s Cannot create sysfs entry\n",
+					 I2C_TS_DRIVER_NAME, __FUNCTION__);
+			goto ERROR2;
+		}
+	}
 
 	mutex_init(&p_tango_i2c_dev->mutex_wq);
 	p_tango_i2c_dev->ktouch_wq = create_workqueue("tango_touch_wq");
@@ -1082,12 +1093,11 @@ ERROR5:
 ERROR4:
 	free_irq(gp_i2c_ts->gpio_irq_pin, p_tango_i2c_dev);
 ERROR3:
+	device_remove_file(&p_i2c_client->dev, &dev_attr);
 	gpio_free(gp_i2c_ts->gpio_irq_pin);
 ERROR2:
 	kfree(gp_buffer);
 ERROR1:
-	device_remove_file(&p_i2c_client->dev, &dev_attr);
-ERROR0:
 	return rc;
 }
 
