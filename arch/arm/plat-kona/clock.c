@@ -44,8 +44,6 @@
 /* global spinlock for clock API */
 static DEFINE_SPINLOCK(clk_lock);
 
-#define DEBUG
-
 int clk_debug = 0;
 
 /*clk_dfs_request_update -  action*/
