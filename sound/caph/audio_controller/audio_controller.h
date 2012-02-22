@@ -321,6 +321,18 @@ void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app);
 void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 					   unsigned int arg_pathID,
 					   Boolean inHWlpbk);
+#ifdef CONFIG_ENABLE_SSMULTICAST
+/**
+*   Set audio mode for music multicast. (no DSP voice)
+*
+*	@param		mode		music audio mode
+*
+*	@return		none
+****************************************************************************/
+void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode,
+					   unsigned int arg_pathID,
+					   Boolean inHWlpbk);
+#endif
 
 /**
 *   Set audio mode for music record. (no DSP voice)

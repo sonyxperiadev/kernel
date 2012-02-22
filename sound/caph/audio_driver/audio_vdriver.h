@@ -287,6 +287,14 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 			AudioApp_t audio_app,
 			unsigned int arg_pathID,
 			Boolean inHWlpbk);
+
+#ifdef CONFIG_ENABLE_SSMULTICAST
+void AUDDRV_SetAudioMode_Multicast(AudioMode_t audio_mode,
+			AudioApp_t audio_app,
+			unsigned int arg_pathID,
+			Boolean inHWlpbk);
+#endif
+
 void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 				AudioApp_t audio_app,
 				unsigned int arg_pathID);

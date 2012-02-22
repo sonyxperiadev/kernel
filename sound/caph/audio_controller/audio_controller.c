@@ -954,6 +954,96 @@ also need to support audio profile (and/or mode) set from user space code
 	/*disable clock if it is enabled by this function. */
 }
 
+#ifdef CONFIG_ENABLE_SSMULTICAST
+/*********************************************************************
+*	Set audio mode for music multicast to IHF+HS
+*	@param          mode            audio mode for music playback
+*	@return         none
+*
+**********************************************************************/
+void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode,
+				   unsigned int arg_pathID,
+					Boolean inHWlpbk)
+{
+	Boolean bClk = csl_caph_QueryHWClock();
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+
+	aTrace(LOG_AUDIO_CNTLR,
+			"%s mode %d, pathID %d", __func__, mode, arg_pathID);
+
+	path = csl_caph_FindPath(arg_pathID);
+
+	if (AUDCTRL_InVoiceCall()) {
+		if (!path)
+			return;	/*don't affect voice call audio mode */
+		if (!path->srcmRoute[0][0].outChnl)
+			return;
+		/*if arm2sp does not use HW mixer, no need to set gain */
+	}
+
+	if (!bClk)
+		csl_caph_ControlHWClock(TRUE);
+	/*enable clock if it is not enabled. */
+
+/*set PMU on/off, gain,
+for multicast, need to find the other mode and reconcile on mixer gains.
+ like BT + IHF
+*/
+	/*For SS Multicast to IHF+HS, mode will be always Speakerphone*/
+	currAudioMode_playback = AUDIO_MODE_SPEAKERPHONE;
+
+	switch (currAudioMode) {
+
+	case AUDIO_MODE_HEADSET:
+	if (mode == AUDIO_MODE_SPEAKERPHONE) {
+		/*adding IHF reload HS param*/
+		AUDDRV_SetAudioMode_Multicast(
+			AUDIO_MODE_HEADSET, AUDCTRL_GetAudioApp(),
+			arg_pathID, inHWlpbk);
+
+		/*Load HS params from mode RESERVED*/
+		setExternAudioGain(AUDIO_MODE_RESERVE, AUDCTRL_GetAudioApp());
+
+		AUDDRV_SetAudioMode_Multicast(
+			mode, AUDCTRL_GetAudioApp(), arg_pathID, inHWlpbk);
+	}
+	break;
+	case AUDIO_MODE_SPEAKERPHONE:
+	if (mode == AUDIO_MODE_HEADSET) {
+		/*Adding HS load HS param*/
+		AUDDRV_SetAudioMode_Multicast(
+			mode, AUDCTRL_GetAudioApp(), arg_pathID, inHWlpbk);
+		/*Load HS params from mode RESERVED*/
+		setExternAudioGain(AUDIO_MODE_RESERVE, AUDCTRL_GetAudioApp());
+	}
+	break;
+	/*Multicasting to BT+IHF or any other*/
+	default:
+	AUDDRV_SetAudioMode_Speaker(
+		mode, AUDCTRL_GetAudioApp(), arg_pathID, inHWlpbk);
+	currAudioMode_playback = mode;
+	break;
+	} /*end of switch (currAudioMode)*/
+
+	if (!AUDCTRL_InVoiceCall()) {
+		/*for music tuning, if PCG changed audio mode,
+		   need to pass audio mode to CP in audio_vdriver_caph.c */
+		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+				      (UInt32) AUDIO_MODE_SPEAKERPHONE,
+				      (UInt32) AUDCTRL_GetAudioApp(), 0, 0, 0);
+		/*this command updates mode in audioapi.c. */
+		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
+				(UInt32)(((int)AUDCTRL_GetAudioApp())*
+				AUDIO_MODE_NUMBER+AUDIO_MODE_SPEAKERPHONE),
+				0, 0, 0, 0);
+	}
+
+	if (!bClk)
+		csl_caph_ControlHWClock(FALSE);
+	/*disable clock if it is enabled by this function. */
+}
+#endif
+
 /*********************************************************************
 *Description :
 *	Get sink and source device by audio mode
@@ -1666,10 +1756,13 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 		config.sink = speaker;
 		(void)csl_caph_hwctrl_AddPath(pathID, config);
 	}
-
+#ifndef CONFIG_ENABLE_SSMULTICAST
 	AUDCTRL_SetAudioMode_ForMusicPlayback(
 		GetAudioModeBySink(sink), 0, FALSE);
-
+#else
+	AUDCTRL_SetAudioMode_ForMusicMulticast(
+		GetAudioModeBySink(sink), 0, FALSE);
+#endif
 	return;
 
 }
@@ -1704,6 +1797,18 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 		config.source = getDeviceFromSrc(source);
 		config.sink = speaker;
 		(void)csl_caph_hwctrl_RemovePath(pathID, config);
+
+#ifdef CONFIG_ENABLE_SSMULTICAST
+	/*If IHF removed reload HS params with mode HEADSET*/
+	if (sink == AUDIO_SINK_LOUDSPK &&
+		currAudioMode_playback == AUDIO_MODE_SPEAKERPHONE) {
+
+		AUDDRV_SetAudioMode_Speaker(AUDIO_MODE_HEADSET,
+				AUDCTRL_GetAudioApp(),
+				0, FALSE);
+		setExternAudioGain(AUDIO_MODE_HEADSET, AUDCTRL_GetAudioApp());
+	}
+#endif
 	}
 	return;
 }
@@ -3082,13 +3187,21 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 
 	aTrace(LOG_AUDIO_CNTLR, "%s mode %d, app %d\n", __func__, mode, app);
 
-	/*Load PMU gain from sysparm. */
+	/*Load PMU gain from sysparm.For SS multicast case Headset gain
+	 will be loaded from AUDIO_MODE_RESERVE
+	*/
 	switch (mode) {
 	case AUDIO_MODE_HEADSET:
 	case AUDIO_MODE_TTY:
+#ifdef CONFIG_ENABLE_SSMULTICAST
+	case AUDIO_MODE_RESERVE:
+#endif
 #if !defined(USE_NEW_AUDIO_PARAM)
 	case AUDIO_MODE_HEADSET_WB:
 	case AUDIO_MODE_TTY_WB:
+#ifdef CONFIG_ENABLE_SSMULTICAST
+	case AUDIO_MODE_RESERVE_WB:
+#endif
 #endif
 
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
