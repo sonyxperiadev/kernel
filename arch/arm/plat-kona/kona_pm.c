@@ -23,6 +23,10 @@
 #include <linux/wakelock.h>
 #endif /*CONFIG_HAS_WAKELOCK*/
 
+#ifdef CONFIG_BCM_MODEM
+#include <linux/broadcom/bcm_rpc.h>
+#endif
+
 enum
 {
 	KONA_PM_LOG_LVL_NONE = 0,
@@ -166,7 +170,13 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 			if(LOG_LEVEL_ENABLED(KONAL_PM_LOG_LVL_FLOW))
 				pr_info("--%s:def_suspend_state--\n",__func__);
 
+#ifdef CONFIG_BCM_MODEM
+			BcmRpc_SetApSleep(1);
+#endif
 			def_suspend_state->enter(def_suspend_state);
+#ifdef CONFIG_BCM_MODEM
+			BcmRpc_SetApSleep(0);
+#endif
 		}
 		else
 			cpu_do_idle();
