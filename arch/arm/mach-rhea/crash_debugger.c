@@ -570,8 +570,13 @@ static struct notifier_block nb_reboot_block = {
 	.notifier_call = cdebugger_normal_reboot_handler
 };
 
+/* As this panic notifier handler does a arch reset
+ * its priority should be less than that of the
+ * modem watchdog monitor's panic notifier handler*/
+#define CRASH_DEBUGGER_NOTIFIER_PRIO	0
 static struct notifier_block nb_panic_block = {
 	.notifier_call = cdebugger_panic_handler,
+	.priority      = CRASH_DEBUGGER_NOTIFIER_PRIO,
 };
 
 static void cdebugger_set_build_info(void)
