@@ -63,6 +63,13 @@ Copyright 2009 - 2011  Broadcom Corporation
 #endif
 #define VOIF_8K_SAMPLE_COUNT    160
 #define VOIF_16K_SAMPLE_COUNT   320
+#ifdef CONFIG_VOIF_DUPLUX_UL_PCM
+/* 0x1: Legacy DyVE (duplex DL PCM, UL PCM reference)
+   0x3: Enhanced VoIF (duplex DL PCM, duplex UL PCM) */
+#define START_VOIF				0x3
+#else
+#define START_VOIF				0x1
+#endif
 
 struct _ARM2SP_PLAYBACK_t {
 	CSL_ARM2SP_PLAYBACK_MODE_t playbackMode;
@@ -1130,7 +1137,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t *aud_drv,
 			if (voifDrv.isRunning)
 				return result_code;
 
-			VPRIPCMDQ_VOIFControl(1);
+			VPRIPCMDQ_VOIFControl(START_VOIF);
 			voif_enabled = TRUE;
 			voifDrv.isRunning = TRUE;
 			aTrace(LOG_AUDIO_DRIVER,
@@ -1460,14 +1467,13 @@ void VOIP_ProcessVOIPDLDone(void)
 void VOIF_Buffer_Request(UInt32 bufferIndex, UInt32 samplingRate)
 {
 #if defined(CONFIG_BCM_MODEM)
-	UInt32 dlIndex;
+	UInt32 bufIndex;
 	Int16 *ulBuf, *dlBuf;
 	UInt32 sampleCount = VOIF_8K_SAMPLE_COUNT;
 
 	if (!voif_enabled)
 		return;
-	ulBuf = CSL_GetULVoIFBuffer();
-	dlIndex = bufferIndex & 0x1;
+	bufIndex = bufferIndex & 0x1;
 
 	if (samplingRate)
 		sampleCount = VOIF_16K_SAMPLE_COUNT;
@@ -1478,7 +1484,9 @@ void VOIF_Buffer_Request(UInt32 bufferIndex, UInt32 samplingRate)
 		VOIF_DATA_READY. dlIndex = %d isCall16K = %d\r\n",
 		dlIndex, samplingRate);*/
 
-	dlBuf = CSL_GetDLVoIFBuffer(sampleCount, dlIndex);
+	ulBuf = CSL_GetULVoIFBuffer(sampleCount, bufIndex, START_VOIF);
+
+	dlBuf = CSL_GetDLVoIFBuffer(sampleCount, bufIndex);
 	if (voifDrv.cb)
 		voifDrv.cb(ulBuf, dlBuf, sampleCount, (UInt8) samplingRate);
 #else

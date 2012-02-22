@@ -33,9 +33,16 @@ config BCM_AUDIO_ENABLE_3_PROFILES
           Say Y here to activate Brcm Audio 3 profile
 config ENABLE_VOIF
 	boolean "Broadcom enable VOIF feature"
+        depends on BCM_MODEM
         default n
         help
           Say Y here to activate Brcm voif
+config VOIF_DUPLUX_UL_PCM
+	boolean "Broadcom VOIF support duplex UL PCM"
+        depends on BCM_MODEM
+        default n
+        help
+          Say Y here to enable VOIF duplex UL PCM
 config IHF_EXT_AMPLIFIER
         boolean "Define if an external amp is used for IHF"
         depends on BCM_ALSA_SOUND
