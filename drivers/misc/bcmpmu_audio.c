@@ -661,6 +661,13 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 	bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC_BYPASS,
 			bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask,
 			bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask);
+	/* temporarily disable HS short-circuitry as HS SC interrupt
+	 * is getting generated continuously on 59039 variants.
+	 * Remove this once fix has been found
+	*/
+#ifdef CONFIG_MFD_BCM59039
+	bcmpmu_hs_shortcircuit_dis(true);
+#endif
 
 	/* register for HS and IHF Shortcircuit INT */
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_AUD_HSAB_SHCKT, bcmpmu_audio_isr,
