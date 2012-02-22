@@ -124,6 +124,15 @@ enum bcmpmu_reg {
 	PMU_REG_PONKEYCTRL1,
 	PMU_REG_PONKEYCTRL2,
 	PMU_REG_PONKEYCTRL3,
+	/* PMU Ponkey Shutdown/HardReset/Restart Reg */
+	PMU_REG_KEY_PAD_LOCK,
+	PMU_REG_POK_RSTPIN_ONLY,
+	PMU_REG_PONKEYOFFHOLD_DEB,
+	PMU_REG_PONKEY_SHUTDOWN_DLY,
+	PMU_REG_PONKEY_RESTART_EN,
+	PMU_REG_PONKEY_RESTART_DEB,
+	PMU_REG_PONKEY_RESTART_DLY,
+
 	PMU_REG_AUXCTRL,
 	PMU_REG_RTCSC,
 	PMU_REG_RTCMN,
@@ -1040,6 +1049,14 @@ struct bcmpmu_platform_data {
 	char *batt_model;
 	int cutoff_volt;
 	int cutoff_count_max;
+	/* Ponkey shutdown/hard reset/restart settings */
+	int hard_reset_en;
+	int restart_en;
+	int pok_hold_deb;
+	int pok_shtdwn_dly;
+	int pok_restart_dly;
+	int pok_restart_deb;
+	int pok_lock;
 };
 
 struct bcmpmu_fg {

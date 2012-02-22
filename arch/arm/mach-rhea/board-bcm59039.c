@@ -28,6 +28,7 @@
 #include <linux/uaccess.h>
 #include <linux/i2c.h>
 #include <linux/mfd/bcmpmu.h>
+#include <linux/broadcom/bcmpmu-ponkey.h>
 
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0C
@@ -618,6 +619,17 @@ static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 	int             i;
 	printk(KERN_INFO "%s: called.\n", __func__);
 
+	/* Samsung requirement for PMU restart should be enabled.
+	 * Will get configured only 59039C0 or above version
+	*/
+	if (bcmpmu->rev_info.dig_rev >= BCM59039_CO_DIG_REV) {
+		bcmpmu->pdata->restart_en = 1;
+		bcmpmu->pdata->pok_restart_dly = POK_RESTRT_DLY_4SEC;
+		bcmpmu->pdata->pok_restart_deb = POK_RESTRT_DEB_4SEC;
+		bcmpmu->pdata->pok_lock = 1;
+		bcmpmu->pdata->hard_reset_en = 0;
+	}
+
 	for (i = 0; i < ARRAY_SIZE(bcmpmu_client_devices); i++)
 		bcmpmu_client_devices[i]->dev.platform_data = bcmpmu;
 	platform_add_devices(bcmpmu_client_devices,
@@ -718,6 +730,12 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.batt_model = "Unknown",
 	.cutoff_volt = 3200,
 	.cutoff_count_max = 3,
+	.hard_reset_en = -1,
+	.restart_en = -1,
+	.pok_hold_deb = -1,
+	.pok_shtdwn_dly = -1,
+	.pok_restart_dly = -1,
+	.pok_restart_deb = -1,
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {
