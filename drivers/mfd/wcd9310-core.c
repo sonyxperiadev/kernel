@@ -760,6 +760,7 @@ static int __devinit tabla_i2c_probe(struct i2c_client *client,
 		ret = -EIO;
 		goto err_tabla;
 	}
+	dev_set_drvdata(&client->dev, tabla);
 	tabla->dev = &client->dev;
 	tabla->reset_gpio = pdata->reset_gpio;
 
@@ -999,7 +1000,10 @@ static int tabla_slim_resume(struct slim_device *sldev)
 static int tabla_i2c_resume(struct i2c_client *i2cdev)
 {
 	struct tabla *tabla = dev_get_drvdata(&i2cdev->dev);
-	return tabla_resume(tabla);
+	if (tabla)
+		return tabla_resume(tabla);
+	else
+		return 0;
 }
 
 static int tabla_suspend(struct tabla *tabla, pm_message_t pmesg)
@@ -1053,7 +1057,10 @@ static int tabla_slim_suspend(struct slim_device *sldev, pm_message_t pmesg)
 static int tabla_i2c_suspend(struct i2c_client *i2cdev, pm_message_t pmesg)
 {
 	struct tabla *tabla = dev_get_drvdata(&i2cdev->dev);
-	return tabla_suspend(tabla, pmesg);
+	if (tabla)
+		return tabla_suspend(tabla, pmesg);
+	else
+		return 0;
 }
 
 static const struct slim_device_id slimtest_id[] = {
