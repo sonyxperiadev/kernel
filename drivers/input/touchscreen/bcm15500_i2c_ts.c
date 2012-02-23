@@ -63,6 +63,8 @@
 #include <linux/firmware.h>
 #include <linux/input/mt.h>
 
+#include <linux/time.h>
+
 #include <linux/i2c/bcm15500_i2c_ts.h>
 #include <linux/i2c/bcm15500_tofe.h>
 
@@ -77,11 +79,23 @@
 #define TOUCHCON_MTC_FULL_FIRMWARE                      1
 #define ADD_INTERRUPT_HANDLING                          1
 #define THROTTLE_MOVE_FRAMES                            0
+#define MOVE_THROTTLE_FACTOR                            4
 #define NAPA_GPIO_RESET_SUPPORT                         1
 
+#define	NAPA_INT_WHILE									0
+#define NAPA_SINGLE_READ                                1
+#define NAPA_DELAY                                      0
+#define NAPA_MIMIC_MT                                   1
+
+#define NAPA_USE_TOUCH                                  1
+#define NAPA_USE_MTC                                    0
 #define DEBUG_INTERFACE_TUNING                          0
 
+#define NAPA_MERGE_WRITEBACK_REGS                       0
+#define NAPA_DONT_USE_12C_TRANSFER                      0
+
 #define MOD_DEBUG_I2C_DOWNLOAD                     0x0001
+#define MOD_DEBUG_TIMES                            0x0002
 #define MOD_DEBUG_DOWN                             0x0040
 #define MOD_DEBUG_MOVE                             0x0080
 #define MOD_DEBUG_UP                               0x0100
@@ -97,12 +111,13 @@
 
 /* ---- Public Variables ------------------------------------------------- */
 
-static int mod_debug  = 0x0;
+static int mod_debug  = 0;
 
 module_param(mod_debug, int, 0644);
 
 #if DEBUG_INTERFACE_TUNING
-static int d_i_t_fc = 0;
+static unsigned long d_i_t_fc = 0;
+static unsigned long d_i_t_i_i = 0;
 #endif
 
 struct napa_i2c
@@ -245,14 +260,19 @@ int bcmtch_mutex_release(int mutex);
 void bcmtch_sleep_ms(int ms);
 void bcmtch_poll(struct napa_i2c *p_napa_i2c);
 int bcmtch_setup_poll_timer(struct napa_i2c *p_napa_i2c, int delay);
+
 int bcmtch_i2c_read(int slave_addr, int len, unsigned char *buffer);
 int bcmtch_i2c_write(int slave_addr, int len, unsigned char *buffer);
+
 unsigned char bcmtch_i2c_read_reg(int slave_addr, int reg);
 int bcmtch_i2c_write_reg(int slave_addr, int reg, unsigned char data);
+
 int bcmtch_i2c_write_mem( int ahb_addr, int len, void *data);
 int bcmtch_i2c_read_mem(int ahb_addr, int len, void *data);
+
 int bcmtch_i2c_write_mem_reg32(int ahb_addr, int data);
 int bcmtch_i2c_read_mem_reg32( int ahb_addr, void *data);
+
 static ssize_t bcmtch_cli_fcn(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
 
 static DEVICE_ATTR(bcmtch_cli, S_IWUGO, NULL, bcmtch_cli_fcn);
@@ -276,7 +296,7 @@ int bcmtch_init(struct i2c_client *p_i2c_client_spm, struct i2c_client *p_i2c_cl
    unsigned char chipId[4];
    unsigned char regVal;
    unsigned char alfo_ctrl;
-   int           ret;
+   int           ret = 0;
 
    unsigned int  reg;
    unsigned int  tch_version = 0xdeadbeef;
@@ -287,7 +307,11 @@ int bcmtch_init(struct i2c_client *p_i2c_client_spm, struct i2c_client *p_i2c_cl
    gp_i2c_client_ahb = p_i2c_client_ahb;
 
    /* 0. Set proper communication interface - SPI or I2C mode */
-   ret = bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_SPI_I2C_MODE, TCC_HOST_IF_I2C_MODE);
+   bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_SPI_I2C_MODE, TCC_HOST_IF_I2C_MODE);
+   bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
+   bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, SPI_HOST_I2CS_CHIPID, HW_BCM915500_SLAVE_AHB);
+   bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
+
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
       printk("%s() line %d ret: %d\n", __func__, __LINE__, ret);)
 
@@ -351,6 +375,9 @@ int bcmtch_init(struct i2c_client *p_i2c_client_spm, struct i2c_client *p_i2c_cl
    {
       // SW over-ride for ALFO.
       bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_ALFO_CTRL, alfo_ctrl);
+
+      bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
+
    }else
    {
       // FLL powered up by SPM and ALFO trimming bits used from OTP
@@ -420,6 +447,9 @@ int bcmtch_download(void)
 
    /* Hold ARM in RESET before we reload firmware */
    ret = bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_SOFT_RESETS, 0x02);
+
+   bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
+
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
       printk("%s() line %d ret: %d\n", __func__, __LINE__, ret);)
 
@@ -440,9 +470,7 @@ int bcmtch_download(void)
    ret = bcmtch_com_write_mem(VECTORS_OFFSET, g_vector_size, gp_vector);
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
       printk("%s() bcmtch_com_write_mem() wrote vector, ret = %d\n", __func__, ret);)
-#endif
 
-#if BOOT_FROM_RAM
    /* Load ROM code image */
    /* ROM_OFFSET is 0 for FPGA ROM load and ARM RAM0 (0x10000000) for RAM load */
    ret = bcmtch_com_write_mem(ROM_OFFSET, g_code_size, gp_code);
@@ -471,6 +499,9 @@ int bcmtch_download(void)
        * Clear PIN_RESET in SPM_STICKY_BITS register so microcode jumps to ARM reset vector
        */
       ret = bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR,TCC_REG_SPM_SOFT_RESETS, 0x00);
+
+      bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
+
       DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
          printk("%s() line %d ret: %d\n", __func__, __LINE__, ret);)
 
@@ -490,6 +521,9 @@ int bcmtch_download(void)
 
 #ifdef LOAD_N_RUN
       bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR,TCC_REG_SPM_SOFT_RESETS, 0x00);
+
+      bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
+
       bcmtch_com_write_mem_reg32(SPM_STICKY_BITS, 0x02)
       return (NAPA_INIT_SUCCESS);
 #else
@@ -672,7 +706,7 @@ int bcmtch_chan_init(tofe_channel_instance_cfg_t *channel_cfg, napa_channel_t **
             ptr->cfg.trig_level,
             ptr->cfg.flags,
 	    (unsigned int)ptr->cfg.channel_header,
-	    (unsigned int) ptr->cfg.channel_data);)
+	    (unsigned int)ptr->cfg.channel_data);)
 #endif
 
         return (NAPA_INIT_SUCCESS);
@@ -709,17 +743,76 @@ void bcmtch_request_wakeup(int cause)
 
     bcmtch_mutex_lock(NAPA_MUTEX);
     bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_MSG_FROM_HOST, cause);
+
+    bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
+
     bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_Request_from_Host, TCC_SPM_REQUEST_FROM_HOST_WAKE_REQUEST);
+
+    bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
+
     bcmtch_mutex_release(NAPA_MUTEX);
 
 }
 
 void bcmtch_release_wakeup(int cause)
 {
+    struct i2c_msg       xfer[2];
+    unsigned char        buffer[2];
+    unsigned char        buffer2[2];
+    struct i2c_client    *p_i2c_client;
 
     bcmtch_mutex_lock(NAPA_MUTEX);
+#if NAPA_DONT_USE_12C_TRANSFER
     bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_MSG_FROM_HOST, cause);
+
     bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_Request_from_Host, TCC_SPM_REQUEST_FROM_HOST_RELEASE_WAKE_REQUEST);
+#else
+
+   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
+   {
+      printk("%s() reg = %d data = %d\n", __func__, TCC_REG_SPM_MSG_FROM_HOST, cause);
+   })
+
+   // Write register and data
+   buffer[0] = (unsigned char)TCC_REG_SPM_MSG_FROM_HOST;
+   buffer[1] = cause;
+
+   /* Write register */
+   xfer[0].addr = NAPA_I2C_SLAVE_ADDR;
+   xfer[0].len = 2;
+   xfer[0].flags = 0;
+   xfer[0].buf = buffer;
+
+   // Write register and data
+   buffer2[0] = (unsigned char)TCC_REG_SPM_Request_from_Host;
+   buffer2[1] = TCC_SPM_REQUEST_FROM_HOST_RELEASE_WAKE_REQUEST;
+
+   /* Write register */
+   xfer[1].addr = NAPA_I2C_SLAVE_ADDR;
+   xfer[1].len = 2;
+   xfer[1].flags = 0;
+   xfer[1].buf = buffer2;
+
+   if (xfer[0].addr == gp_i2c_client_spm->addr)
+   {
+      p_i2c_client = gp_i2c_client_spm;
+   }
+   else if (xfer[0].addr == gp_i2c_client_ahb->addr)
+   {
+      p_i2c_client = gp_i2c_client_ahb;
+   }
+   else
+   {
+      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
+             __func__, xfer[0].addr);
+      return ;
+   }
+
+   if (i2c_transfer(p_i2c_client->adapter, xfer, 2) != 2) {
+       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
+       return ;
+   }
+#endif
     bcmtch_mutex_release(NAPA_MUTEX);
 
 }
@@ -751,6 +844,9 @@ int bcmtch_request_sleep(void)
 
         // Comm interface will be lost at reset
         bcmtch_com_write(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_SPI_I2C_MODE, TCC_HOST_IF_I2C_MODE);
+        bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
+        bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, SPI_HOST_I2CS_CHIPID, HW_BCM915500_SLAVE_AHB);
+        bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
 
         if (bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_PSR) != SPM_POWER_STATE_SLEEP)
         {
@@ -799,7 +895,7 @@ int bcmtch_interrupt(void)
     uint32_t num_touch_events = 0;
     uint32_t retVal = 0;
 
-    bcmtch_int_deassert();
+//    bcmtch_int_deassert();
 
     DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
             printk("%s() line %d \n", __func__, __LINE__);)
@@ -820,12 +916,11 @@ int bcmtch_interrupt(void)
 	** NOTE: cannot reset the local copy 'read pointer'
 	**       since it is needed below by mtr_process_events()
 	*/
-
-        bcmtch_channel_write_header_pointer_flags(touch_channel.channel,
-    			                          NAPA_CHANNEL_WRITE_HEADER_READER,
-                                                  touch_channel.channel->header.write,
-                                                  touch_channel.channel->header.flags & ~TOFE_CHANNEL_FLAG_STATUS_LEVEL_TRIGGER);
-
+        bcmtch_channel_write_header_pointer_flags(
+            touch_channel.channel,
+            NAPA_CHANNEL_WRITE_HEADER_READER,
+            touch_channel.channel->header.write,
+            touch_channel.channel->header.flags & ~TOFE_CHANNEL_FLAG_STATUS_LEVEL_TRIGGER);
     }
 
 
@@ -834,7 +929,9 @@ int bcmtch_interrupt(void)
         /*
         ** Write 'Read Complete' Message to Mailbox
         */
+#if !NAPA_MERGE_WRITEBACK_REGS
         bcmtch_release_wakeup(TOFE_COMMAND_NO_COMMAND);
+#endif
     }
 
     retVal = (num_touch_events);
@@ -914,9 +1011,64 @@ uint32_t bcmtch_channel_read_header(napa_channel_t *channel)
 
     /* return count of elements in channel to read */
     return(bcmtch_channel_num_queued(&channel->header));
-
 }
 
+#if NAPA_SINGLE_READ
+uint32_t bcmtch_channel_read(napa_channel_t *channel)
+{
+
+    /* local */
+    int32_t num_elements = 0;
+    uint32_t channel_size_data;
+    uint32_t complete_read_size;
+
+    /* validate params */
+    if(channel == NULL)
+    {
+        DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
+            printk("%s() line %d channel==NULL\n", __func__, __LINE__);)
+        return(num_elements);
+    }
+
+    /*
+    ** Calculate sizes
+    ** - channel_size_data = size of channel data buffer
+    */
+    channel_size_data =
+        (channel->cfg.entry_num * channel->cfg.entry_size);
+
+    complete_read_size = channel_size_data + sizeof(channel->header);
+
+    /* read channel header & channel data buffer */
+    bcmtch_com_read_mem((int)channel->cfg.channel_header, complete_read_size, (void*)&channel->header);
+
+    /* get count */
+    num_elements = bcmtch_channel_num_queued(&channel->header);
+
+    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
+        printk("%s() line %d channel_header %08x sizeof %08x\n", __func__, __LINE__, (unsigned int)channel->cfg.channel_header, sizeof(channel->header));)
+    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
+        printk("%s() line %d write %08x entry_num %08x entry size %08x trig_level %08x flags %08x read %08x data_offset %08x read_iterator %08x write_iterator %08x\n",__func__, __LINE__,
+
+     channel->header.write,
+     channel->header.entry_num,
+     channel->header.entry_size,
+     channel->header.trig_level,
+     channel->header.flags,
+     channel->header.read,
+     channel->header.data_offset,
+     channel->header.read_iterator,
+     channel->header.write_iterator
+
+    );)
+
+    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
+        printk("%s() line %d num_elements %08x \n", __func__, __LINE__, num_elements); )
+
+    /* return count of elements in channel to read */
+    return(num_elements);
+}
+#else
 uint32_t bcmtch_channel_read(napa_channel_t *channel)
 {
 
@@ -946,9 +1098,11 @@ uint32_t bcmtch_channel_read(napa_channel_t *channel)
     /* return count of elements in channel to read */
     return(num_elements);
 }
+#endif
 
 void bcmtch_channel_write_header_pointer(napa_channel_t *channel, napa_channel_write_header_e which, uint32_t pointer_data)
 {
+#if 1
     /* validate params */
     if(channel == NULL)
     {
@@ -971,6 +1125,117 @@ void bcmtch_channel_write_header_pointer(napa_channel_t *channel, napa_channel_w
         &pointer_data);
 
      }
+#else
+
+    /*
+     * init variables for mem write
+     */
+
+    int ahb_addr = (int)channel->cfg.channel_header + offsetof(tofe_channel_header_t, read);
+    int len = sizeof(channel->header.read);
+    void *data = &pointer_data;
+
+    /*
+     * mem write
+     */
+
+    int count;
+    int length = 8;
+    unsigned char *I2CWritePkt;
+
+    //allocate buffer for the num_bytes
+    //ATT: we need one byte more for the offset
+    I2CWritePkt = kzalloc(len + 1, GFP_KERNEL);
+
+    //set the address
+    I2Cheader[1] = (unsigned char)(ahb_addr & 0xFF);
+    I2Cheader[2] = (unsigned char)((ahb_addr & 0xFF00) >> 8);
+    I2Cheader[3] = (unsigned char)((ahb_addr & 0xFF0000) >> 16);
+    I2Cheader[4] = (unsigned char)((ahb_addr & 0xFF000000) >> 24);
+    //set the length
+    I2Cheader[5] = (unsigned char)(len & 0xFF);
+    I2Cheader[6] = (unsigned char)((len & 0xFF00) >> 8);
+    //set the command
+    I2Cheader[7] = (unsigned char)MahbWrite;
+
+    count = (int)sizeof(I2Cheader);
+
+    struct i2c_msg       xfer[4];
+    struct i2c_client    *p_i2c_client;
+
+    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
+       printk("%s() ahb_addr %d len %d before count = %d\n", __func__, ahb_addr, len, count);)
+
+    /* Write DMA header */
+    xfer[0].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+    xfer[0].len = length;
+    xfer[0].flags = 0;
+    xfer[0].buf = I2Cheader;
+
+    I2CWritePkt[0] = I2C_REG_WFIFO_DATA;    //select the write FiFo
+    /* Prepare the dat packet, select the write FiFo. */
+    memcpy(I2CWritePkt + 1, data, len);
+
+    /* Write DMA data */
+    xfer[1].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+    xfer[1].len = (int)len+1;
+    xfer[1].flags = 0;
+    xfer[1].buf = I2CWritePkt;
+
+    count = (int)len+1;
+
+    /*
+     * reg writes
+     */
+
+   unsigned char        buffer[2];
+   unsigned char        buffer2[2];
+
+   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
+   {
+      printk("%s() reg = %d data = %d\n", __func__, TCC_REG_SPM_MSG_FROM_HOST, cause);
+   })
+
+   // Write register and data
+   buffer[0] = (unsigned char)TCC_REG_SPM_MSG_FROM_HOST;
+   buffer[1] = cause;
+
+   /* Write register */
+   xfer[2].addr = NAPA_I2C_SLAVE_ADDR;
+   xfer[2].len = 2;
+   xfer[2].flags = 0;
+   xfer[2].buf = buffer;
+
+   // Write register and data
+   buffer2[0] = (unsigned char)TCC_REG_SPM_Request_from_Host;
+   buffer2[1] = TCC_SPM_REQUEST_FROM_HOST_RELEASE_WAKE_REQUEST;
+
+   /* Write register */
+   xfer[3].addr = NAPA_I2C_SLAVE_ADDR;
+   xfer[3].len = 2;
+   xfer[3].flags = 0;
+   xfer[3].buf = buffer2;
+
+   if (xfer[0].addr == gp_i2c_client_spm->addr)
+   {
+      p_i2c_client = gp_i2c_client_spm;
+   }
+   else if (xfer[0].addr == gp_i2c_client_ahb->addr)
+   {
+      p_i2c_client = gp_i2c_client_ahb;
+   }
+   else
+   {
+      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
+             __func__, xfer[0].addr);
+      return -1;
+   }
+
+   if (i2c_transfer(p_i2c_client->adapter, xfer, 2) != 2) {
+       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
+       return -EIO;
+   }
+#endif
 }
 
 unsigned bcmtch_channel_num_queued(tofe_channel_header_t *channel)
@@ -1002,7 +1267,7 @@ void bcmtch_channel_write_header_pointer_flags(napa_channel_t *channel,
     /* set target */
     target_header = channel->header;
     target_header.flags = flags;
-
+#if !NAPA_MERGE_WRITEBACK_REGS
     if(which == NAPA_CHANNEL_WRITE_HEADER_READER)
     {
 
@@ -1021,6 +1286,125 @@ void bcmtch_channel_write_header_pointer_flags(napa_channel_t *channel,
   	                   &target_header.write );
 
     }
+#else
+
+    /*
+     * init variables for mem write
+     */
+    if(which == NAPA_CHANNEL_WRITE_HEADER_READER)
+    {
+        target_header.read = pointer_data;
+    }
+    else
+    {
+        target_header.write = pointer_data;
+    }
+
+    int ahb_addr = ((int)channel->cfg.channel_header + offsetof(tofe_channel_header_t, entry_num));
+    int len = (offsetof(tofe_channel_header_t, data_offset) - offsetof(tofe_channel_header_t, entry_num));
+    void *data = &target_header.entry_num;
+
+    /*
+     * mem write
+     */
+
+    int count;
+    int length = 8;
+    unsigned char *I2CWritePkt;
+
+    //allocate buffer for the num_bytes
+    //ATT: we need one byte more for the offset
+    I2CWritePkt = kzalloc(len + 1, GFP_KERNEL);
+
+    //set the address
+    I2Cheader[1] = (unsigned char)(ahb_addr & 0xFF);
+    I2Cheader[2] = (unsigned char)((ahb_addr & 0xFF00) >> 8);
+    I2Cheader[3] = (unsigned char)((ahb_addr & 0xFF0000) >> 16);
+    I2Cheader[4] = (unsigned char)((ahb_addr & 0xFF000000) >> 24);
+    //set the length
+    I2Cheader[5] = (unsigned char)(len & 0xFF);
+    I2Cheader[6] = (unsigned char)((len & 0xFF00) >> 8);
+    //set the command
+    I2Cheader[7] = (unsigned char)MahbWrite;
+
+    count = (int)sizeof(I2Cheader);
+
+    struct i2c_msg       xfer[4];
+    struct i2c_client    *p_i2c_client;
+
+    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
+       printk("%s() ahb_addr %d len %d before count = %d\n", __func__, ahb_addr, len, count);)
+
+    /* Write DMA header */
+    xfer[0].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+    xfer[0].len = length;
+    xfer[0].flags = 0;
+    xfer[0].buf = I2Cheader;
+
+    I2CWritePkt[0] = I2C_REG_WFIFO_DATA;    //select the write FiFo
+    /* Prepare the dat packet, select the write FiFo. */
+    memcpy(I2CWritePkt + 1, data, len);
+
+    /* Write DMA data */
+    xfer[1].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+    xfer[1].len = (int)len+1;
+    xfer[1].flags = 0;
+    xfer[1].buf = I2CWritePkt;
+
+    count = (int)len+1;
+
+    /*
+     * reg writes
+     */
+
+   unsigned char        buffer[2];
+   unsigned char        buffer2[2];
+
+   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
+   {
+      printk("%s() reg = %d data = %d\n", __func__, TCC_REG_SPM_MSG_FROM_HOST, TOFE_COMMAND_NO_COMMAND);
+   })
+
+   // Write register and data
+   buffer[0] = (unsigned char)TCC_REG_SPM_MSG_FROM_HOST;
+   buffer[1] = TOFE_COMMAND_NO_COMMAND;
+
+   /* Write register */
+   xfer[2].addr = NAPA_I2C_SLAVE_ADDR;
+   xfer[2].len = 2;
+   xfer[2].flags = 0;
+   xfer[2].buf = buffer;
+
+   // Write register and data
+   buffer2[0] = (unsigned char)TCC_REG_SPM_Request_from_Host;
+   buffer2[1] = TCC_SPM_REQUEST_FROM_HOST_RELEASE_WAKE_REQUEST;
+
+   /* Write register */
+   xfer[3].addr = NAPA_I2C_SLAVE_ADDR;
+   xfer[3].len = 2;
+   xfer[3].flags = 0;
+   xfer[3].buf = buffer2;
+
+   if (xfer[0].addr == gp_i2c_client_spm->addr)
+   {
+      p_i2c_client = gp_i2c_client_spm;
+   }
+   else if (xfer[0].addr == gp_i2c_client_ahb->addr)
+   {
+      p_i2c_client = gp_i2c_client_ahb;
+   }
+   else
+   {
+      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
+             __func__, xfer[0].addr);
+      return -1;
+   }
+
+   if (i2c_transfer(p_i2c_client->adapter, xfer, 4) != 4) {
+       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
+       return -EIO;
+   }
+#endif
 
 }
 
@@ -1033,7 +1417,7 @@ void bcmtch_process_touch_events(napa_channel_t *touch_channel)
 
     int index;
     bcmtch_event_t           *pmtc_event;
-    bool update = false;
+    int touch_num = 0;
 //  static bool have_timestamps = false;
 
     tofe_channel_read_begin(&touch_channel->header);
@@ -1064,7 +1448,6 @@ void bcmtch_process_touch_events(napa_channel_t *touch_channel)
                   printk("%s() rxd BCMTCH_EVENT_TYPE_DOWN\n", __func__);)
 
                     bcmtch_event_touch_down(ptch_event->track_tag, ptch_event->x, ptch_event->y);
-                    update = true;
                     DEBUG(if ((mod_debug & MOD_DEBUG_CHANNEL) || (mod_debug & MOD_DEBUG_DOWN))
                         printk("%s() line %d BCMTCH_EVENT_TYPE_DOWN: T%d: (%d , %d)\n", __func__, __LINE__,
                                                                                     ptch_event->track_tag,
@@ -1089,7 +1472,6 @@ void bcmtch_process_touch_events(napa_channel_t *touch_channel)
                                                                                     ptch_event->track_tag,
                                                                                     ptch_event->x,
                                                                                     ptch_event->y );)
-		    update = true;
 		}
 
 		if (ptch_event->type == BCMTCH_EVENT_TYPE_UP)
@@ -1098,8 +1480,6 @@ void bcmtch_process_touch_events(napa_channel_t *touch_channel)
                   printk("%s() rxd BCMTCH_EVENT_TYPE_UP\n", __func__);)
 
                     bcmtch_event_touch_up(ptch_event->track_tag, ptch_event->x, ptch_event->y);
-		    update = true;
-
                     DEBUG(if ((mod_debug & MOD_DEBUG_CHANNEL) || (mod_debug & MOD_DEBUG_UP))
                         printk("%s() line %d BCMTCH_EVENT_TYPE_UP: T%d: (%d , %d)\n", __func__, __LINE__,
                                                                                     ptch_event->track_tag,
@@ -1122,11 +1502,14 @@ void bcmtch_process_touch_events(napa_channel_t *touch_channel)
                     DEBUG(if ((mod_debug & MOD_DEBUG_CHANNEL) || (mod_debug & MOD_DEBUG_FRAME))
                         printk("%s() line %d BCMTCH_EVENT_TYPE_FRAME   \n", __func__, __LINE__);)
 
+#if NAPA_USE_MTC
+                    touch_num = 0;
                     for (index = 0 ; index < NAPA_MAX_TOUCH ; ++index) {
+                        input_mt_slot(pInputDev, index);
+                        input_mt_report_slot_state(pInputDev, MT_TOOL_FINGER, (napa_touch_status[index]));
+
                         if (napa_touch_status[index]) {
-                            input_report_abs(pInputDev, ABS_MT_TRACKING_ID, index);
-                            input_report_abs(pInputDev, ABS_MT_TOUCH_MAJOR, 1);
-                            input_report_abs(pInputDev, ABS_MT_WIDTH_MAJOR, 0);
+                            touch_num++;
 #if HW_BCM915500_AXIS_SWAP_X_Y
                             input_report_abs(pInputDev, ABS_MT_POSITION_X, napa_touch_y[index]);
                             input_report_abs(pInputDev, ABS_MT_POSITION_Y, napa_touch_x[index]);
@@ -1134,16 +1517,54 @@ void bcmtch_process_touch_events(napa_channel_t *touch_channel)
                             input_report_abs(pInputDev, ABS_MT_POSITION_X, napa_touch_x[index]);
                             input_report_abs(pInputDev, ABS_MT_POSITION_Y, napa_touch_y[index]);
 #endif
+#if NAPA_MIMIC_MT
+                            input_mt_sync(pInputDev);
+#endif
+                        }
+                    }
+                    input_report_key(pInputDev, BTN_TOUCH, touch_num > 0);
+                    input_sync(pInputDev);
+#else
+#if NAPA_USE_TOUCH
+                    touch_num = 0;
+#endif
+                    for (index = 0 ; index < NAPA_MAX_TOUCH ; ++index) {
+                        if (napa_touch_status[index]) {
+#if NAPA_USE_TOUCH
+                            touch_num++;
+#endif
+
+#if NAPA_MIMIC_MT
+#if NAPA_USE_TOUCH
+#else
+                            input_report_abs(pInputDev, ABS_MT_TOUCH_MAJOR, 64);
+#endif
+#else
+                            input_report_abs(pInputDev, ABS_MT_TRACKING_ID, index);
+                            input_report_abs(pInputDev, ABS_MT_TOUCH_MAJOR, 1);
+                            input_report_abs(pInputDev, ABS_MT_WIDTH_MAJOR, 0);
+#endif
+#if HW_BCM915500_AXIS_SWAP_X_Y
+                            input_report_abs(pInputDev, ABS_MT_POSITION_X, napa_touch_y[index]);
+                            input_report_abs(pInputDev, ABS_MT_POSITION_Y, napa_touch_x[index]);
+#else
+                            input_report_abs(pInputDev, ABS_MT_POSITION_X, napa_touch_x[index]);
+                            input_report_abs(pInputDev, ABS_MT_POSITION_Y, napa_touch_y[index]);
+#endif
+#if NAPA_MIMIC_MT
+                            input_mt_sync(pInputDev);
+                        }
+#else
                         }
                         input_mt_sync(pInputDev);
+#endif
                     }
+#if NAPA_USE_TOUCH
+                    input_report_key(pInputDev, BTN_TOUCH, touch_num > 0);
+#endif
                     input_sync(pInputDev);
-
-#if THROTTLE_MOVE_FRAMES
-                    udelay(1000);
 #endif
                }
-
 		    break;
 
 		case BCMTCH_EVENT_TYPE_TIMESTAMP:
@@ -1195,51 +1616,44 @@ void bcmtch_process_touch_events(napa_channel_t *touch_channel)
 
 void bcmtch_event_touch_down(int tag, unsigned short x, unsigned short y)
 {
-
     DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d %08x\n", __func__, __LINE__, (unsigned int)pInputDev);)
+        printk("%s() line %d %08x\n", __func__, __LINE__,(unsigned int)pInputDev);)
 
-    if (tag > (NAPA_MAX_TOUCH-1))
-        return;
-
-    napa_touch_status[tag] = 1; // Down
-    napa_touch_x[tag]=y;
-    napa_touch_y[tag]=x;
-    napa_touch_event[tag] = BCMTCH_EVENT_TYPE_DOWN;
-    return;
+    if (tag < NAPA_MAX_TOUCH)
+    {
+        napa_touch_status[tag] = 2; // Down
+        napa_touch_x[tag]=x;
+        napa_touch_y[tag]=y;
+        napa_touch_event[tag] = BCMTCH_EVENT_TYPE_DOWN;
+    }
 }
 
 void bcmtch_event_touch_up(int tag, unsigned short x, unsigned short y)
 {
-
     DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
         printk("%s() line %d %08x\n", __func__, __LINE__, (unsigned int)pInputDev);)
 
-    if (tag > (NAPA_MAX_TOUCH-1))
-        return;
-
-    napa_touch_status[tag] = 0;  // Up
-    napa_touch_x[tag]=0;
-    napa_touch_y[tag]=0;
-    napa_touch_event[tag] = BCMTCH_EVENT_TYPE_UP;
-    return;
+    if (tag < NAPA_MAX_TOUCH)
+    {
+        napa_touch_status[tag] = 0;  // Up
+        napa_touch_x[tag]=0;
+        napa_touch_y[tag]=0;
+        napa_touch_event[tag] = BCMTCH_EVENT_TYPE_UP;
+    }
 }
 
 void bcmtch_event_touch_move(int tag, unsigned short x, unsigned short y)
 {
-
     DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
         printk("%s() line %d %08x\n", __func__, __LINE__, (unsigned int)pInputDev);)
 
-    if (tag > (NAPA_MAX_TOUCH-1))
-        return;
-
-    napa_touch_status[tag] = 1; // Move
-    napa_touch_x[tag]=y;
-    napa_touch_y[tag]=x;
-    napa_touch_event[tag] = BCMTCH_EVENT_TYPE_MOVE;
-    return;
-
+    if (tag < NAPA_MAX_TOUCH)
+    {
+        napa_touch_status[tag] = 1; // Move
+        napa_touch_x[tag]=x;
+        napa_touch_y[tag]=y;
+        napa_touch_event[tag] = BCMTCH_EVENT_TYPE_MOVE;
+    }
 }
 
 #if THROTTLE_MOVE_FRAMES
@@ -1269,7 +1683,7 @@ int bcmtch_throttle_move_frame(void)
 
    g_num_move_frames++;
 
-   if (g_num_move_frames%5 == 0)
+   if (g_num_move_frames%MOVE_THROTTLE_FACTOR == 0)
       return 0;
 
    return 1;
@@ -1578,11 +1992,17 @@ int bcmtch_i2c_write(int slave_addr, int length, unsigned char *buffer)
 
 unsigned char bcmtch_i2c_read_reg(int slave_addr, int reg)
 {
-   int count=0;
-   unsigned char buffer[2];
+   struct i2c_msg       xfer[2];
+   unsigned char        rbuffer;
+   unsigned char        wbuffer;
 
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() reading register %d\n", __func__, reg);)
+    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
+       printk("%s() reading register %d\n", __func__, reg);)
+
+#if NAPA_DONT_USE_12C_TRANSFER
+    int count=0;
+    unsigned char buffer[2];
+
    // Write register that we want to read
    buffer[0] = reg;
    count = bcmtch_i2c_write(slave_addr, 1, buffer);
@@ -1590,11 +2010,41 @@ unsigned char bcmtch_i2c_read_reg(int slave_addr, int reg)
    // Read register
    count = bcmtch_i2c_read(slave_addr, 1, buffer);
 
-   return buffer[0];
+#else
+
+   // Write register that we want to read
+   wbuffer = reg;
+
+   /* Write register */
+   xfer[0].addr = slave_addr;
+   xfer[0].len = 1;
+   xfer[0].flags = 0;
+   xfer[0].buf = &wbuffer;
+
+   /* Read data */
+   xfer[1].addr = slave_addr;
+   xfer[1].flags = I2C_M_RD;
+   xfer[1].len = 1;
+   xfer[1].buf = &rbuffer;
+
+   if (i2c_transfer(gp_i2c_client_spm->adapter, xfer, 2) != 2) {
+       dev_err(&gp_i2c_client_spm->dev, "%s: i2c transfer failed\n", __func__);
+       return(-EIO);
+   }
+
+   return(rbuffer);
+#endif
 }
 
 int bcmtch_i2c_write_reg(int slave_addr, int reg, unsigned char data)
 {
+    struct i2c_msg       xfer[1];
+    unsigned char        buffer[2];
+
+    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
+       printk("%s() reg = %d data = %d\n", __func__, reg, data);)
+
+#if NAPA_DONT_USE_12C_TRANSFER
    int count=0;
    unsigned char buffer[2];
 
@@ -1603,14 +2053,31 @@ int bcmtch_i2c_write_reg(int slave_addr, int reg, unsigned char data)
 
    count = bcmtch_i2c_write(slave_addr, 2, buffer);
 
-   bcmtch_sleep_ms(10);   // DO WE REALLY NEED THIS...
-
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
    {
       printk("%s() count = %d\n", __func__, count);
    })
 
    return count;  // Number of bytes written
+#else
+
+   // Write register and data
+   buffer[0] = (unsigned char)reg;
+   buffer[1] = data;
+
+   /* Write register */
+   xfer[0].addr = slave_addr;
+   xfer[0].len = 2;
+   xfer[0].flags = 0;
+   xfer[0].buf = buffer;
+
+   if (i2c_transfer(gp_i2c_client_spm->adapter, xfer, 1) != 1) {
+       dev_err(&gp_i2c_client_spm->dev, "%s: i2c transfer failed\n", __func__);
+       return(-EIO);
+   }
+
+   return(2);  // Number of bytes written
+#endif
 }
 
 int bcmtch_i2c_write_mem( int ahb_addr, int len, void *data)     // port note, WriteAHBI2C ahb_addr was DWORD
@@ -1618,6 +2085,8 @@ int bcmtch_i2c_write_mem( int ahb_addr, int len, void *data)     // port note, W
    int count;
    int length = 8;
    unsigned char *I2CWritePkt;
+   struct i2c_msg       xfer[2];
+   struct i2c_client    *p_i2c_client;
 
    //allocate buffer for the num_bytes
    //ATT: we need one byte more for the offset
@@ -1635,6 +2104,8 @@ int bcmtch_i2c_write_mem( int ahb_addr, int len, void *data)     // port note, W
    I2Cheader[7] = (unsigned char)MahbWrite;
 
    count = (int)sizeof(I2Cheader);
+
+#if NAPA_DONT_USE_12C_TRANSFER
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
       printk("%s() ahb_addr %d len %d before count = %d\n", __func__, ahb_addr, len, count);)
 
@@ -1656,6 +2127,50 @@ int bcmtch_i2c_write_mem( int ahb_addr, int len, void *data)     // port note, W
 
    /* Send the data (payload). */
    count = bcmtch_i2c_write(NAPA_I2C_AHB_SLAVE_ADDR, (int)len+1, (unsigned char *)I2CWritePkt);
+
+#else
+
+   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
+      printk("%s() ahb_addr 0x%x len %d before count = %d\n", __func__, ahb_addr, len, count);)
+
+   /* Write DMA header */
+   xfer[0].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+   xfer[0].len = length;
+   xfer[0].flags = 0;
+   xfer[0].buf = I2Cheader;
+
+   I2CWritePkt[0] = I2C_REG_WFIFO_DATA;    //select the write FiFo
+   /* Prepare the dat packet, select the write FiFo. */
+   memcpy(I2CWritePkt + 1, data, len);
+
+   /* Write DMA data */
+   xfer[1].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+   xfer[1].len = (int)len+1;
+   xfer[1].flags = 0;
+   xfer[1].buf = I2CWritePkt;
+
+   if (xfer[0].addr == gp_i2c_client_spm->addr)
+   {
+      p_i2c_client = gp_i2c_client_spm;
+   }
+   else if (xfer[0].addr == gp_i2c_client_ahb->addr)
+   {
+      p_i2c_client = gp_i2c_client_ahb;
+   }
+   else
+   {
+      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
+             __func__, xfer[0].addr);
+      return -1;
+   }
+
+   if (i2c_transfer(p_i2c_client->adapter, xfer, 2) != 2) {
+       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
+       return -EIO;
+   }
+
+   count = (int)len+1;
+#endif
 
    if (count < 0)
    {
@@ -1683,11 +2198,13 @@ int bcmtch_i2c_write_mem( int ahb_addr, int len, void *data)     // port note, W
 
 int bcmtch_i2c_read_mem(int ahb_addr, int len, void *data)     /* port note, ReadAHBI2C ahb_addr was DWORD */
 {
-   int count;
    unsigned char I2CreadPkt;
    int timeOut = 0;
    unsigned char status;
    int read_counter = 0;
+   struct i2c_msg       xfer[3];
+   unsigned char        buffer[2];
+   struct i2c_client    *p_i2c_client;
 
    //set the address
    I2Cheader[1] = (unsigned char)(ahb_addr & 0xFF);
@@ -1700,21 +2217,59 @@ int bcmtch_i2c_read_mem(int ahb_addr, int len, void *data)     /* port note, Rea
    //set the command
    I2Cheader[7] = (unsigned char)MahbRead;
 
+#if NAPA_DONT_USE_12C_TRANSFER
    count = bcmtch_i2c_write(NAPA_I2C_AHB_SLAVE_ADDR, (int)sizeof(I2Cheader), (unsigned char *)I2Cheader);
+#else
+
+   /* Write register */
+   xfer[0].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+   xfer[0].len = (int)sizeof(I2Cheader);
+   xfer[0].flags = 0;
+   xfer[0].buf = I2Cheader;
+
+   // Write register that we want to read
+   buffer[0] = I2C_REG_STATUS;
+
+   /* Write register */
+   xfer[1].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+   xfer[1].len = 1;
+   xfer[1].flags = 0;
+   xfer[1].buf = buffer;
+
+   /* Read data */
+   xfer[2].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+   xfer[2].flags = I2C_M_RD;
+   xfer[2].len = 1;
+   xfer[2].buf = buffer;
+
+   if (xfer[0].addr == gp_i2c_client_spm->addr)
+   {
+      p_i2c_client = gp_i2c_client_spm;
+   }
+   else if (xfer[0].addr == gp_i2c_client_ahb->addr)
+   {
+      p_i2c_client = gp_i2c_client_ahb;
+   }
+   else
+   {
+      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
+             __func__, xfer[0].addr);
+      return -1;
+   }
+
+   if (i2c_transfer(p_i2c_client->adapter, xfer, 3) != 3) {
+       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
+       return -EIO;
+   }
+
+   status = buffer[0];
+#endif
 
    /* Check the FiFo if result is available and we can start reading. */
 
-   while (1)
+   while (status != 1)
    {
-      status = bcmtch_i2c_read_reg(NAPA_I2C_AHB_SLAVE_ADDR, I2C_REG_STATUS);
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() line %d status %d\n", __func__, __LINE__, status);)
-
-      /* PPTEST CLEAN UP NEEDED HERE! */
-      if (status == 1)
-         break;
-
-      bcmtch_sleep_ms(1);
+      //bcmtch_sleep_ms(1);
       timeOut++;
       if (timeOut > 1000)
       {
@@ -1725,6 +2280,14 @@ int bcmtch_i2c_read_mem(int ahb_addr, int len, void *data)     /* port note, Rea
 
       if (read_counter > 3)
          break;
+
+      status = bcmtch_i2c_read_reg(NAPA_I2C_AHB_SLAVE_ADDR, I2C_REG_STATUS);
+      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
+         printk("%s() line %d status %d\n", __func__, __LINE__, status);)
+
+      /* PPTEST CLEAN UP NEEDED HERE! */
+      if (status == 1)
+         break;
    }                 //I2C complete ?
 
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
@@ -1732,20 +2295,35 @@ int bcmtch_i2c_read_mem(int ahb_addr, int len, void *data)     /* port note, Rea
 
 
    I2CreadPkt = I2C_REG_RFIFO_DATA;
-
+#if NAPA_DONT_USE_12C_TRANSFER
    count = bcmtch_i2c_write(NAPA_I2C_AHB_SLAVE_ADDR,
                           (int)sizeof(I2CreadPkt),
                           (unsigned char *)&I2CreadPkt);
 
    count = bcmtch_i2c_read(NAPA_I2C_AHB_SLAVE_ADDR, len, (unsigned char *)data);
-   //count = bcmtch_i2c_read_reg(NAPA_I2C_AHB_SLAVE_ADDR, len, (unsigned char *)data);
-   //int reg_val;
+#else
 
-   //reg_val = bcmtch_i2c_read_reg(NAPA_I2C_AHB_SLAVE_ADDR, I2C_REG_RFIFO_DATA);
+   /* Write register */
+   xfer[0].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+   xfer[0].len = (int)sizeof(I2CreadPkt);
+   xfer[0].flags = 0;
+   xfer[0].buf = (unsigned char *)&I2CreadPkt;
+
+   /* Read data */
+   xfer[1].addr = NAPA_I2C_AHB_SLAVE_ADDR;
+   xfer[1].flags = I2C_M_RD;
+   xfer[1].len = len;
+   xfer[1].buf = data;
+
+   if (i2c_transfer(p_i2c_client->adapter, xfer, 2) != 2) {
+       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
+       return -EIO;
+   }
+#endif
 
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() line %d count %d data %u\n", __func__, __LINE__, count, (unsigned int)data);)
-   return count;
+      printk("%s() line %d count %d data %d\n", __func__, __LINE__, len, (int)data);)
+   return len;
 }
 
 int bcmtch_i2c_write_mem_reg32(int ahb_addr, int data)
@@ -1769,7 +2347,7 @@ int bcmtch_i2c_read_mem_reg32( int ahb_addr, void *data)
 
    count = bcmtch_i2c_read_mem(ahb_addr, len, (unsigned char *)data);
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() returning %d read: %u\n", __func__, count, (unsigned int)data);)
+      printk("%s() returning %d read: %d\n", __func__, count, (int)data);)
 
    return count;
 }
@@ -1984,6 +2562,7 @@ int bcmtch_read_regs(struct napa_i2c *p_napa_i2c,
    return 0;
 }
 
+#if 0
 int bcmtch_get_chip_info(struct napa_i2c *p_napa_i2c)
 {
    int ret    = 0;
@@ -2022,6 +2601,7 @@ int bcmtch_get_chip_info(struct napa_i2c *p_napa_i2c)
 
    return ret;
 }
+#endif
 
 static struct input_dev *bcmtch_allocate_input_dev(void)
 {
@@ -2030,7 +2610,7 @@ static struct input_dev *bcmtch_allocate_input_dev(void)
    struct input_dev *pInputDev = NULL;
 
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-       printk("%s() line %d %08x  BEGIN....\n", __func__, __LINE__, (unsigned int)pInputDev);)
+       printk("%s() line %d %08x  BEGIN....\n", __func__, __LINE__,(unsigned int)pInputDev);)
 
    for (index = 0 ; index < NAPA_MAX_TOUCH ; ++index) {
        napa_touch_status[index]=0;
@@ -2051,14 +2631,42 @@ static struct input_dev *bcmtch_allocate_input_dev(void)
    pInputDev->id.product = 0x0020;
    pInputDev->id.version = 0x0000;
 
+#if NAPA_USE_MTC
    set_bit(EV_ABS, pInputDev->evbit);
+   set_bit(EV_KEY, pInputDev->evbit);
+   set_bit(BTN_TOUCH, pInputDev->keybit);
+#if NAPA_MIMIC_MT
+   __set_bit(INPUT_PROP_DIRECT, pInputDev->propbit);
+#else
+   set_bit(BTN_TOOL_FINGER, pInputDev->keybit);
+#endif
+
+   input_mt_init_slots(pInputDev, NAPA_MAX_TOUCH);
 
    input_set_abs_params(pInputDev, ABS_MT_POSITION_X, 0, NAPA_MAX_X, 0, 0);
    input_set_abs_params(pInputDev, ABS_MT_POSITION_Y, 0, NAPA_MAX_Y, 0, 0);
-   input_set_abs_params(pInputDev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
+#else
+   set_bit(EV_SYN, pInputDev->evbit);
+   set_bit(EV_ABS, pInputDev->evbit);
+
+#if NAPA_USE_TOUCH
+   set_bit(EV_KEY, pInputDev->evbit);
+   set_bit(BTN_TOUCH, pInputDev->keybit);
+#else
+   input_set_abs_params(pInputDev, ABS_MT_TOUCH_MAJOR, 0, 64, 0, 0);
+#endif
+
+   input_set_abs_params(pInputDev, ABS_MT_POSITION_X, 0, NAPA_MAX_X, 0, 0);
+   input_set_abs_params(pInputDev, ABS_MT_POSITION_Y, 0, NAPA_MAX_Y, 0, 0);
+#if NAPA_MIMIC_MT
+   __set_bit(INPUT_PROP_DIRECT, pInputDev->propbit);
+#else
    input_set_abs_params(pInputDev, ABS_MT_WIDTH_MAJOR, 0, 255, 0, 0);
    input_set_abs_params(pInputDev, ABS_MT_TRACKING_ID, 0, NAPA_MAX_TOUCH-1, 0, 0);
+#endif
+#endif
 
+   input_set_events_per_packet(pInputDev, 10 * NAPA_MAX_TOUCH);
    ret = input_register_device(pInputDev);
    if (ret)
    {
@@ -2096,12 +2704,16 @@ static void bcmtch_i2c_wq(struct work_struct *work)
    int gpio;
 
 #if DEBUG_INTERFACE_TUNING
-   int d_i_t_liq = 0;
+   unsigned long d_i_t_liq = 0;
    unsigned long d_i_t_ji = jiffies;
    unsigned long d_i_t_jo = 0;
 
    d_i_t_fc = 0;
 #endif
+   struct timespec begin, end;
+
+   DEBUG(if (mod_debug & MOD_DEBUG_TIMES)
+       {getrawmonotonic(&begin);})
 
    if (work == NULL)
    {
@@ -2131,32 +2743,52 @@ static void bcmtch_i2c_wq(struct work_struct *work)
 
 #if ADD_INTERRUPT_HANDLING
    /* continue recv data while GPIO is pulled low */
+#if NAPA_INT_WHILE
    while (!gpio_get_value(gpio))
+#else
+   if (!gpio_get_value(gpio))
+#endif
    {
       /* Interrupt handler code here. */
 #if DEBUG_INTERFACE_TUNING
       d_i_t_liq++;
 #endif
       bcmtch_interrupt();
+#if NAPA_INT_WHILE
       schedule();
    }
+#else
+   }
+#endif
 
 #else
-   ret = bcmtch_interrupt();
+   bcmtch_interrupt();
 
    bcmtch_poll(p_napa_i2c);
 #endif
 
 #if DEBUG_INTERFACE_TUNING
    d_i_t_jo = jiffies;
-   printk(KERN_ERR "%s() l[%d] f[%d] i(0x%x) o(x%x)\n", __func__,d_i_t_liq, d_i_t_fc, d_i_t_ji, d_i_t_jo);
+   printk(KERN_ERR "l[%d] f[%d] %x %x %x\n", d_i_t_liq, d_i_t_fc, d_i_t_i_i, d_i_t_ji, d_i_t_jo);
+   d_i_t_i_i = 0;
 #endif
+
+   DEBUG(if (mod_debug & MOD_DEBUG_TIMES)
+        {getrawmonotonic(&end);
+        printk("%s() : b=%d:%d  e=%d:%d\n", __func__, (int)begin.tv_sec, (int)begin.tv_nsec, (int)end.tv_sec, (int)end.tv_nsec);})
+
    mutex_unlock(&p_napa_i2c->mutex_wq);
 }
 
 static irqreturn_t bcmtch_i2c_interrupt_handler(int irq, void *dev_id)
 {
    struct napa_i2c *p_napa_i2c = (struct napa_i2c *)dev_id;
+
+#if DEBUG_INTERFACE_TUNING
+   if(d_i_t_i_i == 0)
+       d_i_t_i_i = jiffies;
+#endif
+
 
    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
       printk("%s() with irq:%d\n", __func__, irq);)
@@ -2560,6 +3192,9 @@ static ssize_t bcmtch_cli_fcn(struct device *dev, struct device_attribute *attr,
             in_reg += 1;
         }
 
+    }else if (sscanf(buf, "debug %x", &in_value)) {
+        mod_debug = in_value;
+        printk("%s() line %d debug %08x\n", __func__, __LINE__, mod_debug );
     }
 
     return count;

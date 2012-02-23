@@ -45,9 +45,9 @@
 /* hardware / platform specific - MUST be set according to hardware platform */
 
 #define HW_BCM915500_SLAVE_SPM        0x66 /* SPM */
-#define HW_BCM915500_SLAVE_AHB        0x68 /* AHB */
+#define HW_BCM915500_SLAVE_AHB        0x55 /* AHB */
 
-#define HW_BCM915500_AXIS_SWAP_X_Y  1
+#define HW_BCM915500_AXIS_SWAP_X_Y  0
 #define HW_BCM915500_AXIS_SWAP_Y    0
 #define HW_BCM915500_AXIS_SWAP_X    0
 

@@ -50,6 +50,7 @@
 #define TCC_REG_SPM_ChipID1                            66
 #define TCC_REG_SPM_ChipID2                            67
 #define TCC_REG_SPM_SPI_I2C_MODE                       68
+#define SPI_HOST_I2CS_CHIPID                           69
 
 #define TCC_REG_SPM_PSR                                72
 #define TCC_REG_SPM_Request_from_Host                  76

@@ -120,6 +120,13 @@
 
 #define SD_CARDDET_GPIO_PIN	38
 
+#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+#include <linux/i2c/bcm15500_i2c_ts.h>
+#define HW_BCM915500_GPIO_RESET        70
+#define HW_BCM915500_GPIO_INTERRUPT    71
+#define HW_BCM915500_I2C_BUS_ID        1
+#endif
+
 // keypad map
 #define BCM_KEY_ROW_0  0
 #define BCM_KEY_ROW_1  1
@@ -1039,7 +1046,25 @@ static struct i2c_board_info __initdata tango_info[] =
 		.irq = gpio_to_irq(TANGO_GPIO_IRQ_PIN),
 	},
 };
+#endif
 
+#if defined(CONFIG_TOUCHSCREEN_BCM915500)|| defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+static struct bcm915500_platform_data bcm915500_i2c_param =
+{
+	.id = -1,
+#ifdef HW_BCM915500_I2C_BUS_ID
+	.i2c_adapter_id = HW_BCM915500_I2C_BUS_ID,
+#endif
+};
+
+static struct i2c_board_info bcm915500_i2c_boardinfo[] =
+{
+	{
+		.type = BCM915500_TSC_NAME,
+		.addr = HW_BCM915500_SLAVE_SPM,
+		.platform_data = &bcm915500_i2c_param,
+	},
+};
 #endif
 
 #ifdef CONFIG_AL3006
@@ -1100,6 +1125,35 @@ static void __init rhea_stone_add_i2c_devices (void)
 		tango_info,
 		ARRAY_SIZE(tango_info));
 #endif
+
+#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+#ifdef HW_BCM915500_I2C_BUS_ID /* Temporary: in bcm915500_i2c_ts.h */
+	bcm915500_i2c_param.id = HW_BCM915500_I2C_BUS_ID;
+#endif
+
+#ifdef HW_BCM915500_I2C_BUS_ID
+	bcm915500_i2c_param.i2c_adapter_id = HW_BCM915500_I2C_BUS_ID,
+#endif
+
+#ifdef HW_BCM915500_GPIO_RESET
+	bcm915500_i2c_param.gpio_reset = HW_BCM915500_GPIO_RESET,
+#endif
+
+#ifdef HW_BCM915500_GPIO_INTERRUPT
+	bcm915500_i2c_param.gpio_interrupt = HW_BCM915500_GPIO_INTERRUPT,
+#endif
+
+	bcm915500_i2c_boardinfo[0].irq =
+		gpio_to_irq(bcm915500_i2c_param.gpio_interrupt);
+
+	printk("PPTEST %s() bcm915500_i2c_boardinfo[0].irq: %d\n",
+		__func__, bcm915500_i2c_boardinfo[0].irq);
+
+	i2c_register_board_info(bcm915500_i2c_param.id,
+				bcm915500_i2c_boardinfo,
+				ARRAY_SIZE(bcm915500_i2c_boardinfo));
+#endif
+
 #ifdef CONFIG_AL3006
 	i2c_register_board_info(1,
 			al3006_info,
