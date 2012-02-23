@@ -6,9 +6,9 @@
 	#size-cells = <1>;
 	model = "RheaRay_EDN30";
 	compatible = "21654B0";
-	/*  timestamp = "v21, 2/22/2012 5:58:00 PM";*/
+	/*  timestamp = "v2.0, 2/23/2012 10:57:09 AM";*/
 	/*Version	Date	Person Responisble	Change Description	*/
-	/*21	2/22/2012	Aswath Oruganti	Changed the SD interface, SIMDAT, SIM2DAT to slew enable	*/
+	/*2.0	2/22/2012	Aswath Oruganti	Changed the SD interface, SIMDAT, SIM2DAT to slew enable	*/
 	/*1.0	12/22/2011	Aswath Oruganti	Changed SIM2DAT aand SIMDAT to pull up enabled.	*/
 	/*0.0	12/21/2011	Aswath Oruganti	Initial Release	*/
 
@@ -127,7 +127,7 @@
 			0x00000033   /* 0x3500_49A4: SDDAT2: SDDAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000033   /* 0x3500_49A8: SDDAT3: SDDAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000003   /* 0x3500_49AC: SIMCLK: SIMCLK: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00001023   /* 0x3500_49B0: SIMDAT: SIMDAT: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA : 10 = 10k pull-up */
+			0x00001033   /* 0x3500_49B0: SIMDAT: SIMDAT: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA : 10 = 10k pull-up */
 			0x00000023   /* 0x3500_49B4: SIMDET: SIMDET: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA  */
 			0x00000003   /* 0x3500_49B8: SIMRST: SIMRSTN: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA  */
 			0x00000120   /* 0x3500_49BC: GPIO93: GPEN13: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA  */
@@ -193,8 +193,8 @@
 			118    0x00000000 /* 0: Drive Low  0: Output */
 			119    0x00000000 /* 0: Drive Low  0: Output */
 			120    0x00000000 /* 0: Drive Low  0: Output */
-			121    0x00000002 /* 1: Drive High  0: Output */
-			122    0x00000002 /* 1: Drive High  0: Output */
+			121    0x00000003 /* 1: Drive High  1: Input */
+			122    0x00000003 /* 1: Drive High  1: Input */
 			>;
 	};
 };
