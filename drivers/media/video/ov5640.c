@@ -23,20 +23,8 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 #include <linux/videodev2_brcm.h>
+#include "ov5640.h"
 
-#define ENABLE_COLOR_PATTERN 0
-/* #define MIPI_2_LANES */
-/* #define FPS_30_MODE            */
-
-#define OV5640_BRIGHTNESS_MIN           0
-#define OV5640_BRIGHTNESS_MAX           200
-#define OV5640_BRIGHTNESS_STEP          100
-#define OV5640_BRIGHTNESS_DEF           100
-
-#define OV5640_CONTRAST_MIN				0
-#define OV5640_CONTRAST_MAX				200
-#define OV5640_CONTRAST_STEP            100
-#define OV5640_CONTRAST_DEF				100
 
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
@@ -143,6 +131,8 @@ struct ov5640 {
 	int brightness;
 	int contrast;
 	int colorlevel;
+	int sharpness;
+	int saturation;
 };
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
@@ -150,360 +140,6 @@ static struct ov5640 *to_ov5640(const struct i2c_client *client)
 	return container_of(i2c_get_clientdata(client), struct ov5640, subdev);
 }
 
-/**
- *struct ov5640_reg - ov5640 register format
- *@reg: 16-bit offset to register
- *@val: 8/16/32-bit register value
- *@length: length of the register
- *
- * Define a structure for OV5640 register initialization values
- */
-struct ov5640_reg {
-	u16 reg;
-	u8 val;
-};
-
-/* TODO: Divide this properly */
-static const struct ov5640_reg configscript_common1[] = {
-    //System Control
-        {0x3103,0x11},
-        {0x3008,0x82},      // Reset [7] PowerDn [6]
-        {0xFFFF,  3 },      // Sleep 3ms
-        {0x3008,0x42},
-        {0x3103,0x03},      //PLL Clock Select
-
-    //IO Config
-        {0x3017,0x00},      //IO [3:0] D9-D6 (MIPI MD1-D9:D8 MC-D7:D6)
-        {0x3018,0x00},      //IO [7:2] D5-D0 (MIPI MD0-D5:D4) [1]GPIO1 [0]GPIO0 (MIPI MD2/MC/MD1)
-
-    //MIPI Control
-		{0x4800,0x04},
-        {0x3034,0x18},
-        {0x300e,0x45},      //MIPI Control  Dual Lane       ********************
-    // CLKS = Src=13Mhz:  676Mbps 8-bit
-        {0x3037,0x12},      //PLL Pre-Div [0:3], /2=6.5Mhz   PLL Root Div [4] /1=806Mhz
-        {0x3036,0x68},      //PLL Mult 4~252 0:7  0x68=104=676Mhz
-    //PLL ADCLK
-        {0x303d,0x20},      //PreDivSp [5:4] /2=6.5Mhz
-        {0x303b,0x1E},      //DivCntsb [4:0] *30=195Mhz
-    //????
-        {0x302e,0x08},      //undocumented
-    //Format control
-        {0x501f,0x00},      //ISP Format
-    //JPG Control
-        {0x4713,0x02},      //JPG Mode Select
-    //????
-        {0x4407,0x04},
-        {0x440e,0x00},
-    //VFIFO Control
-        {0x460b,0x35},      //????
-        {0x460c,0x22},      //PCLK Divider Manual
-    //????
-        {0x3630,0x36},
-        {0x3631,0x0e},
-        {0x3632,0xe2},
-        {0x3633,0x12},
-        {0x3621,0xe0},
-        {0x3704,0xa0},
-        {0x3703,0x5a},
-        {0x3715,0x78},
-        {0x3717,0x01},
-        {0x370b,0x60},
-        {0x3705,0x1a},
-        {0x3905,0x02},
-        {0x3906,0x10},
-        {0x3901,0x0a},
-        {0x3731,0x12},
-    //VCM Control
-        {0x3600,0x08},
-        {0x3601,0x33},
-    //????
-        {0x302d,0x60},
-        {0x3620,0x52},
-        {0x371b,0x20},
-        {0x471c,0x50},
-    //AEC Controls
-        {0x3a13,0x43},
-        {0x3a18,0x00},
-        {0x3a19,0xf8},
-    //????
-        {0x3635,0x13},
-        {0x3636,0x03},
-        {0x3634,0x40},
-        {0x3622,0x01},
-    //50/60Hz Detector
-        {0x3c01,0x34},
-        {0x3c04,0x28},
-        {0x3c05,0x98},
-        {0x3c06,0x00},
-
-        {0x3c07,0x08},
-        {0x3c08,0x00},
-        {0x3c09,0x1c},
-        {0x3c0a,0x9c},
-        {0x3c0b,0x40},
-
-    // Sensor Read
-        {0x3820,0x40},      //vflip
-        {0x3814,0x11},      //X incr
-        {0x3815,0x11},      //Y incr
-    // Sensor Timing control  2624 x 1952 --> 2560 x 1920
-        {0x3800,0x00},      //X start
-        {0x3801,0x20},
-        {0x3802,0x00},      //Y start
-        {0x3803,0x10},
-        {0x3804,0x0a},      //X end
-        {0x3805,0x1f},
-        {0x3806,0x07},      //Y end
-        {0x3807,0x8f},
-    // Output size
-        {0x3808,0x0a},      //output X  2592
-        {0x3809,0x20},
-        {0x380a,0x07},      //output Y  1944
-        {0x380b,0x98},
-    // Total size (+blanking)
-        {0x380c,0x0b},      //Total X  2844
-        {0x380d,0x1c},
-        {0x380e,0x07},      //Total Y  1968
-        {0x380f,0xb0},
-    // ISP Windowing size  2560 x 1920 --> 2560 x 1920
-        {0x3810,0x00},      //ISP X offset = 0
-        {0x3811,0x00},
-        {0x3812,0x00},      //ISP Y offset = 0
-        {0x3813,0x00},
-    //????
-        {0x3618,0x00},
-        {0x3612,0x29},
-        {0x3708,0x64},
-        {0x3709,0x52},
-        {0x370c,0x03},
-    //AEC/AGC
-        {0x3a02,0x03},
-        {0x3a03,0xd8},
-        {0x3a08,0x01},
-        {0x3a09,0x27},
-        {0x3a0a,0x00},
-        {0x3a0b,0xf6},
-        {0x3a0e,0x03},
-        {0x3a0d,0x04},
-        {0x3a14,0x03},
-        {0x3a15,0xd8},
-    //BLC Control
-        {0x4001,0x02},
-        {0x4004,0x02},
-    //ISP Control
-        {0x5000,0xa7},
-        {0x5001,0xa3},      //isp scale down  Special Effects
-    //AWB Control
-        {0x5180,0xff},
-        {0x5181,0xf2},
-        {0x5182,0x00},
-        {0x5183,0x14},
-        {0x5184,0x25},
-        {0x5185,0x24},
-        {0x5186,0x09},
-        {0x5187,0x09},
-        {0x5188,0x09},
-        {0x5189,0x75},
-        {0x518a,0x54},
-        {0x518b,0xe0},
-        {0x518c,0xb2},
-        {0x518d,0x42},
-        {0x518e,0x3d},
-        {0x518f,0x56},
-        {0x5190,0x46},
-        {0x5191,0xf8},
-        {0x5192,0x04},
-        {0x5193,0x70},
-        {0x5194,0xf0},
-        {0x5195,0xf0},
-        {0x5196,0x03},
-        {0x5197,0x01},
-        {0x5198,0x04},
-        {0x5199,0x12},
-        {0x519a,0x04},
-        {0x519b,0x00},
-        {0x519c,0x06},
-        {0x519d,0x82},
-        {0x519e,0x38},
-    //CMX Control
-        {0x5381,0x1e},
-        {0x5382,0x5b},
-        {0x5383,0x08},
-        {0x5384,0x0a},
-        {0x5385,0x7e},
-        {0x5386,0x88},
-        {0x5387,0x7c},
-        {0x5388,0x6c},
-        {0x5389,0x10},
-        {0x538a,0x01},
-        {0x538b,0x98},
-    //CIP Control
-        {0x5300,0x08},
-        {0x5301,0x30},
-        {0x5302,0x10},
-        {0x5303,0x00},
-        {0x5304,0x08},
-        {0x5305,0x30},
-        {0x5306,0x08},
-        {0x5307,0x16},
-        {0x5309,0x08},
-        {0x530a,0x30},
-        {0x530b,0x04},
-        {0x530c,0x06},
-    //Gamma Control
-        {0x5480,0x01},
-        {0x5481,0x08},
-        {0x5482,0x14},
-        {0x5483,0x28},
-        {0x5484,0x51},
-        {0x5485,0x65},
-        {0x5486,0x71},
-        {0x5487,0x7d},
-        {0x5488,0x87},
-        {0x5489,0x91},
-        {0x548a,0x9a},
-        {0x548b,0xaa},
-        {0x548c,0xb8},
-        {0x548d,0xcd},
-        {0x548e,0xdd},
-        {0x548f,0xea},
-        {0x5490,0x1d},
-    //SDE Control
-        {0x5580,0x02},
-        {0x5583,0x40},
-        {0x5584,0x10},
-        {0x5589,0x10},
-        {0x558a,0x00},
-        {0x558b,0xf8},
-    //LENC Control
-        {0x5800,0x23},
-        {0x5801,0x14},
-        {0x5802,0x0f},
-        {0x5803,0x0f},
-        {0x5804,0x12},
-        {0x5805,0x26},
-        {0x5806,0x0c},
-        {0x5807,0x08},
-        {0x5808,0x05},
-        {0x5809,0x05},
-        {0x580a,0x08},
-        {0x580b,0x0d},
-        {0x580c,0x08},
-        {0x580d,0x03},
-        {0x580e,0x00},
-        {0x580f,0x00},
-        {0x5810,0x03},
-        {0x5811,0x09},
-        {0x5812,0x07},
-        {0x5813,0x03},
-        {0x5814,0x00},
-        {0x5815,0x01},
-        {0x5816,0x03},
-        {0x5817,0x08},
-        {0x5818,0x0d},
-        {0x5819,0x08},
-        {0x581a,0x05},
-        {0x581b,0x06},
-        {0x581c,0x08},
-        {0x581d,0x0e},
-        {0x581e,0x29},
-        {0x581f,0x17},
-        {0x5820,0x11},
-        {0x5821,0x11},
-        {0x5822,0x15},
-        {0x5823,0x28},
-        {0x5824,0x46},
-        {0x5825,0x26},
-        {0x5826,0x08},
-        {0x5827,0x26},
-        {0x5828,0x64},
-        {0x5829,0x26},
-        {0x582a,0x24},
-        {0x582b,0x22},
-        {0x582c,0x24},
-        {0x582d,0x24},
-        {0x582e,0x06},
-        {0x582f,0x22},
-        {0x5830,0x40},
-        {0x5831,0x42},
-        {0x5832,0x24},
-        {0x5833,0x26},
-        {0x5834,0x24},
-        {0x5835,0x22},
-        {0x5836,0x22},
-        {0x5837,0x26},
-        {0x5838,0x44},
-        {0x5839,0x24},
-        {0x583a,0x26},
-        {0x583b,0x28},
-        {0x583c,0x42},
-        {0x583d,0xce},
-
-        {0x5025,0x00},
-    //AEC Controls
-        {0x3a0f,0x30},
-        {0x3a10,0x28},
-        {0x3a1b,0x30},
-        {0x3a1e,0x26},
-        {0x3a11,0x60},
-        {0x3a1f,0x14},
-
-		{0x3008,0x42},      //stop sensor streaming
-        {0x300e,0x3d},      //MIPI Control  Powered down       ********************
-
-    #if ENABLE_COLOR_PATTERN
-        {0x503d,0x80},   // Solid Colour Bars
-        #if 0
-            {0x503d,0x80},   // Solid Colour Bars
-            {0x503d,0x81},   // Gradual change @ vertical mode 1
-            {0x503d,0x82},   // Gradual change horizontal
-            {0x503d,0x83},   // Gradual change @ vertical mode 2
-        #endif
-    #endif
-
-	{0xFFFF, 0x00},
-};
-
-static const struct ov5640_reg yuv422_init_common[] = {
-    // System Clock Div
-        {0x3035,0x11},      //SystemClkDiv 7:4, /1=728Mhz  MIPI Sclk Div 3:0, /1=728Mhz
-    //System/IO pad Control
-        {0x3000,0x00},      //Resets
-        {0x3002,0x1c},
-        {0x3004,0xff},      //Clocks
-        {0x3006,0xc3},
-    //Format control
-        {0x4300,0x32},      //Output Format[7:4] Sequence[3:0] (UVYV)
-    //MIPI Control
-        {0x300e,0x45},      //MIPI Control  Dual Lane       ********************
-        {0x4837,0x0a},
-    //PCLK Divider
-        {0x3824,0x01},      //Scale Divider [4:0]
-		{0x3008,0x42},      //stop sensor streaming
-
-   { 0xFFFF, 0x00 }
-};
-
-static const struct ov5640_reg jpeg_init_common[] = {
-    // System Clock Div
-        {0x3035,0x12},      //SystemClkDiv 7:4, /1=728Mhz  MIPI Sclk Div 3:0, /1=728Mhz
-    //System/IO pad Control
-        {0x3000,0x00},      //Resets
-        {0x3002,0x00},
-        {0x3004,0xff},      //Clocks
-        {0x3006,0xff},
-    //Format control
-        {0x4300,0x30},      //Output Format[7:4] Sequence[3:0] (UVYV)
-    //MIPI Control
-        {0x300e,0x45},      //MIPI Control  Dual Lane       ********************
-        {0x4837,0x16},
-    //PCLK Divider
-        {0x3824,0x04},      //Scale Divider [4:0]
-		{0x3008,0x42},      //stop sensor streaming
-
-   { 0xFFFF, 0x00 }
-};
 
 static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 	[OV5640_SIZE_QVGA] = {
@@ -1073,31 +709,32 @@ static int ov5640_reg_write(struct i2c_client *client, u16 reg, u8 val)
 
 static const struct v4l2_queryctrl ov5640_controls[] = {
 	{
-	 .id = V4L2_CID_BRIGHTNESS,
+	 .id = V4L2_CID_CAMERA_BRIGHTNESS,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Brightness",
-	 .minimum = OV5640_BRIGHTNESS_MIN,
-	 .maximum = OV5640_BRIGHTNESS_MAX,
-	 .step = OV5640_BRIGHTNESS_STEP,
-	 .default_value = OV5640_BRIGHTNESS_DEF,
+	 .minimum = EV_MINUS_1,
+	 .maximum = EV_PLUS_1,
+	 .step = 1,
+	 .default_value = EV_DEFAULT,
 	 },
 	{
-	 .id = V4L2_CID_CONTRAST,
+	 .id = V4L2_CID_CAMERA_CONTRAST,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Contrast",
-	 .minimum = OV5640_CONTRAST_MIN,
-	 .maximum = OV5640_CONTRAST_MAX,
-	 .step = OV5640_CONTRAST_STEP,
-	 .default_value = OV5640_CONTRAST_DEF,
+	 .minimum = CONTRAST_MINUS_1,
+	 .maximum = CONTRAST_PLUS_1,
+	 .step = 1,
+	 .default_value = CONTRAST_DEFAULT,
 	 },
 	{
-	 .id = V4L2_CID_COLORFX,
+	 .id = V4L2_CID_CAMERA_EFFECT,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Color Effects",
-	 .minimum = V4L2_COLORFX_NONE,
-	 .maximum = V4L2_COLORFX_NEGATIVE,
+	 .minimum = IMAGE_EFFECT_NONE,
+	 .maximum = (1 << IMAGE_EFFECT_NONE | 1 << IMAGE_EFFECT_SEPIA |
+			 1 << IMAGE_EFFECT_BNW | 1 << IMAGE_EFFECT_NEGATIVE),
 	 .step = 1,
-	 .default_value = V4L2_COLORFX_NONE,
+	 .default_value = IMAGE_EFFECT_NONE,
 	 },
 };
 
@@ -1462,14 +1099,20 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	dev_dbg(&client->dev, "ov5640_g_ctrl\n");
 
 	switch (ctrl->id) {
-	case V4L2_CID_BRIGHTNESS:
+	case V4L2_CID_CAMERA_BRIGHTNESS:
 		ctrl->value = ov5640->brightness;
 		break;
-	case V4L2_CID_CONTRAST:
+	case V4L2_CID_CAMERA_CONTRAST:
 		ctrl->value = ov5640->contrast;
 		break;
-	case V4L2_CID_COLORFX:
+	case V4L2_CID_CAMERA_EFFECT:
 		ctrl->value = ov5640->colorlevel;
+		break;
+	case V4L2_CID_SATURATION:
+		ctrl->value = ov5640->saturation;
+		break;
+	case V4L2_CID_SHARPNESS:
+		ctrl->value = ov5640->sharpness;
 		break;
 	}
 
@@ -1480,123 +1123,128 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
-	int i_sde_ctrl0 = 0;
-	int i_sde_ctrl3 = 0, i_sde_ctrl4 = 0;
-	int i_sde_ctrl5 = 0, i_sde_ctrl6 = 0;
-	int i_sde_ctrl7 = 0, i_sde_ctrl8 = 0;
 	int ret = 0;
 
 	dev_dbg(&client->dev, "ov5640_s_ctrl\n");
 
 	switch (ctrl->id) {
-	case V4L2_CID_BRIGHTNESS:
+	case V4L2_CID_CAMERA_BRIGHTNESS:
 
-		if (ctrl->value > OV5640_BRIGHTNESS_MAX)
+		if (ctrl->value > EV_PLUS_1)
 			return -EINVAL;
 
 		ov5640->brightness = ctrl->value;
-		ret = ov5640_reg_write(client, 0x5580, 0x04);
-		if (ret)
-			return ret;
 		switch (ov5640->brightness) {
-		case OV5640_BRIGHTNESS_MIN:
-			i_sde_ctrl7 = 0x40;
-			i_sde_ctrl8 = 0x08;
+		case EV_MINUS_1:
+			ret = ov5640_reg_writes(client,
+					ov5640_brightness_lv4_tbl);
 			break;
-		case OV5640_BRIGHTNESS_MAX:
-			i_sde_ctrl7 = 0x40;
-			i_sde_ctrl8 = 0x00;
+		case EV_PLUS_1:
+			ret = ov5640_reg_writes(client,
+					ov5640_brightness_lv0_tbl);
 			break;
 		default:
-			i_sde_ctrl7 = 0x00;
-			i_sde_ctrl8 = 0x00;
+			ret = ov5640_reg_writes(client,
+					ov5640_brightness_lv2_default_tbl);
 			break;
 		}
-		ret = ov5640_reg_write(client, 0x5587, i_sde_ctrl7);
-		if (ret)
-			return ret;
-
-		ret = ov5640_reg_write(client, 0x5588, i_sde_ctrl8);
 		if (ret)
 			return ret;
 		break;
-	case V4L2_CID_CONTRAST:
+	case V4L2_CID_CAMERA_CONTRAST:
 
-		if (ctrl->value > OV5640_CONTRAST_MAX)
+		if (ctrl->value > CONTRAST_PLUS_1)
 			return -EINVAL;
 
 		ov5640->contrast = ctrl->value;
-		ret = ov5640_reg_write(client, 0x5580, 0x04);
-		if (ret)
-			return ret;
 		switch (ov5640->contrast) {
-		case OV5640_CONTRAST_MIN:
-			i_sde_ctrl5 = 0x10;
-			i_sde_ctrl6 = 0x10;
-			i_sde_ctrl8 = 0x00;
+		case CONTRAST_MINUS_1:
+			ret = ov5640_reg_writes(client,
+					ov5640_contrast_lv5_tbl);
 			break;
-		case OV5640_CONTRAST_MAX:
-			i_sde_ctrl5 = 0x20;
-			i_sde_ctrl6 = 0x30;
-			i_sde_ctrl8 = 0x08;
+		case CONTRAST_PLUS_1:
+			ret = ov5640_reg_writes(client,
+					ov5640_contrast_lv0_tbl);
 			break;
 		default:
-			i_sde_ctrl5 = 0x00;
-			i_sde_ctrl6 = 0x20;
-			i_sde_ctrl8 = 0x00;
+			ret = ov5640_reg_writes(client,
+					ov5640_contrast_default_lv3_tbl);
 			break;
 		}
-
-		ret = ov5640_reg_write(client, 0x5585, i_sde_ctrl5);
-		if (ret)
-			return ret;
-
-		ret = ov5640_reg_write(client, 0x5586, i_sde_ctrl6);
-		if (ret)
-			return ret;
-
-		ret = ov5640_reg_write(client, 0x5588, i_sde_ctrl8);
 		if (ret)
 			return ret;
 		break;
-	case V4L2_CID_COLORFX:
-		if (ctrl->value > V4L2_COLORFX_NEGATIVE)
+	case V4L2_CID_CAMERA_EFFECT:
+
+		if (ctrl->value > IMAGE_EFFECT_BNW)
 			return -EINVAL;
 
 		ov5640->colorlevel = ctrl->value;
 
 		switch (ov5640->colorlevel) {
-		case V4L2_COLORFX_BW:
-			i_sde_ctrl0 = 0x18;
-			i_sde_ctrl3 = 0x80;
-			i_sde_ctrl4 = 0x80;
+		case IMAGE_EFFECT_BNW:
+			ret = ov5640_reg_writes(client,
+					ov5640_effect_bw_tbl);
 			break;
-		case V4L2_COLORFX_SEPIA:
-			i_sde_ctrl0 = 0x18;
-			i_sde_ctrl3 = 0x40;
-			i_sde_ctrl4 = 0xA0;
+		case IMAGE_EFFECT_SEPIA:
+			ret = ov5640_reg_writes(client,
+					ov5640_effect_sepia_tbl);
 			break;
-		case V4L2_COLORFX_NEGATIVE:
-			i_sde_ctrl0 = 0x40;
-			i_sde_ctrl3 = 0x00;
-			i_sde_ctrl4 = 0x00;
+		case IMAGE_EFFECT_NEGATIVE:
+			ret = ov5640_reg_writes(client,
+					ov5640_effect_negative_tbl);
 			break;
 		default:
-			i_sde_ctrl0 = 0x00;
-			i_sde_ctrl3 = 0x00;
-			i_sde_ctrl4 = 0x00;
+			ret = ov5640_reg_writes(client,
+					ov5640_effect_normal_tbl);
 			break;
 		}
-
-		ret = ov5640_reg_write(client, 0x5580, i_sde_ctrl0);
 		if (ret)
 			return ret;
+		break;
+	case V4L2_CID_SATURATION:
 
-		ret = ov5640_reg_write(client, 0x5583, i_sde_ctrl3);
+		if (ctrl->value > OV5640_SATURATION_MAX)
+			return -EINVAL;
+
+		ov5640->saturation = ctrl->value;
+		switch (ov5640->saturation) {
+		case OV5640_SATURATION_MIN:
+			ret = ov5640_reg_writes(client,
+					ov5640_saturation_lv0_tbl);
+			break;
+		case OV5640_SATURATION_MAX:
+			ret = ov5640_reg_writes(client,
+					ov5640_saturation_lv5_tbl);
+			break;
+		default:
+			ret = ov5640_reg_writes(client,
+					ov5640_saturation_default_lv3_tbl);
+			break;
+		}
 		if (ret)
 			return ret;
+		break;
+	case V4L2_CID_SHARPNESS:
 
-		ret = ov5640_reg_write(client, 0x5584, i_sde_ctrl4);
+		if (ctrl->value > OV5640_SHARPNESS_MAX)
+			return -EINVAL;
+
+		ov5640->sharpness = ctrl->value;
+		switch (ov5640->sharpness) {
+		case OV5640_SHARPNESS_MIN:
+			ret = ov5640_reg_writes(client,
+					ov5640_sharpness_lv0_tbl);
+			break;
+		case OV5640_SHARPNESS_MAX:
+			ret = ov5640_reg_writes(client,
+					ov5640_sharpness_lv3_tbl);
+			break;
+		default:
+			ret = ov5640_reg_writes(client,
+					ov5640_sharpness_default_lv2_tbl);
+			break;
+		}
 		if (ret)
 			return ret;
 		break;
@@ -1697,9 +1345,9 @@ static int ov5640_init(struct i2c_client *client)
 		goto out;
 
 	/* default brightness and contrast */
-	ov5640->brightness = OV5640_BRIGHTNESS_DEF;
-	ov5640->contrast = OV5640_CONTRAST_DEF;
-	ov5640->colorlevel = V4L2_COLORFX_NONE;
+	ov5640->brightness = EV_DEFAULT;
+	ov5640->contrast = CONTRAST_DEFAULT;
+	ov5640->colorlevel = IMAGE_EFFECT_NONE;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 
@@ -1913,6 +1561,8 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 
 	return 0;
 }
+
+
 
 static struct v4l2_subdev_sensor_ops ov5640_subdev_sensor_ops = {
 	.g_skip_frames = ov5640_g_skip_frames,
