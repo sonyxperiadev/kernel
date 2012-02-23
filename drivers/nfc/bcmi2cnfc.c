@@ -12,7 +12,6 @@
 * consent.
 *****************************************************************************/
 
-
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/fs.h>
@@ -35,14 +34,17 @@
 #include <linux/version.h>
 
 #define     TRUE                1
-#define     GENEROUS_IRQ        TRUE
+#define     FALSE               0
+#define     STATE_HIGH          1
+#define     STATE_LOW           0
 
-#define     ACAR_PLATFORM       1
-#define     MSM_PLATFORM        0
+#define     NFC_REQ_ACTIVE_STATE    STATE_HIGH
+#define     NFC_WAKE_ACTIVE_STATE   STATE_HIGH
+#define     NFC_REQ_INACTIVE_STATE  STATE_LOW
+
 #define     CHANGE_CLIENT_ADDR  TRUE
 
 #define     MAX_BUFFER_SIZE     780
-#define     SMART_READ          TRUE
 
 struct bcmi2cnfc_dev {
 	wait_queue_head_t read_wq;
@@ -54,6 +56,8 @@ struct bcmi2cnfc_dev {
 	unsigned int irq_gpio;
 	bool irq_enabled;
 	spinlock_t irq_enabled_lock;
+	unsigned int packet_size;
+	unsigned int wake_active_state;
 };
 
 #define INTERRUPT_TRIGGER_TYPE  IRQF_TRIGGER_RISING
@@ -92,23 +96,22 @@ static void change_client_addr(struct bcmi2cnfc_dev *bcmi2cnfc_dev, int addr)
 		ret += addr_data[i];
 	addr_data[sizeof(addr_data) - 1] = (ret & 0xFF);
 	dev_dbg(&client->dev,
-		"Change client device at (0x%04X) flag = %04x, addr_data[%d] = %02x\n",
-		client->addr, client->flags, sizeof(addr_data) - 1,
-		addr_data[sizeof(addr_data) - 1]);
+		 "Change client device at (0x%04X) flag = %04x, addr_data[%d] = %02x\n",
+		 client->addr, client->flags, sizeof(addr_data) - 1,
+		 addr_data[sizeof(addr_data) - 1]);
 	ret = i2c_master_send(client, addr_data, sizeof(addr_data));
 	client->addr = addr_data[5];
 
 	dev_dbg(&client->dev,
-		"Change client device changed to (0x%04X) flag = %04x, ret = %d\n",
-		client->addr, client->flags, ret);
+		 "Change client device changed to (0x%04X) flag = %04x, ret = %d\n",
+		 client->addr, client->flags, ret);
 }
 #endif
 
 static irqreturn_t bcmi2cnfc_dev_irq_handler(int irq, void *dev_id)
 {
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev = dev_id;
-
-	if (!gpio_get_value(bcmi2cnfc_dev->irq_gpio))
+	if (gpio_get_value(bcmi2cnfc_dev->irq_gpio) != NFC_REQ_ACTIVE_STATE)
 		return IRQ_HANDLED;
 
 	/* Wake up waiting readers */
@@ -123,7 +126,7 @@ static unsigned int bcmi2cnfc_dev_poll(struct file *filp, poll_table * wait)
 	unsigned int mask = 0;
 
 	poll_wait(filp, &bcmi2cnfc_dev->read_wq, wait);
-	if (gpio_get_value(bcmi2cnfc_dev->irq_gpio))
+	if (gpio_get_value(bcmi2cnfc_dev->irq_gpio) == NFC_REQ_ACTIVE_STATE)
 		mask |= POLLIN | POLLRDNORM;
 
 	return mask;
@@ -137,27 +140,37 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
 	int ret, len, total, packets;
 
 	ret = 0;
-	len = 0;
+	len = 1;
 	total = 0;
 	packets = 0;
 	if (count > MAX_BUFFER_SIZE)
 		count = MAX_BUFFER_SIZE;
 
+	if (bcmi2cnfc_dev->packet_size > 0) {
+		count = bcmi2cnfc_dev->packet_size;
+		len = count;
+	}
+
 	/* Read data */
-#if 1				/*SMART_READ*/
+
 #define PACKET_HEADER_SIZE_NCI      (4)
 #define PACKET_HEADER_SIZE_HCI      (3)
 #define PACKET_TYPE_NCI             (16)
 #define PACKET_TYPE_HCIEV           (4)
 #define MAX_PACKET_SIZE             (PACKET_HEADER_SIZE_NCI + 255)
 
-	while (gpio_get_value(bcmi2cnfc_dev->irq_gpio)
-	       && total + MAX_PACKET_SIZE <= count) {
-		/* read packet type */
-		ret = i2c_master_recv(bcmi2cnfc_dev->client, tmp + total, 1);
-		if (ret != 1) {
+	while (gpio_get_value(bcmi2cnfc_dev->irq_gpio) == NFC_REQ_ACTIVE_STATE
+	       && (total + MAX_PACKET_SIZE <= count
+		   || bcmi2cnfc_dev->packet_size)) {
+		ret = i2c_master_recv(bcmi2cnfc_dev->client, tmp + total, len);
+		if (ret != len) {
 			dev_err(&bcmi2cnfc_dev->client->dev,
 				"(type byte)IO Error ret=%d !!!!\n", ret);
+			break;
+		}
+
+		if (len > 1) {
+			total = ret;
 			break;
 		}
 
@@ -200,16 +213,8 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
 			}
 		}
 		++packets;
+		len = 1;
 	}
-#else
-	ret = i2c_master_recv(bcmi2cnfc_dev->client, tmp, count);
-	if (ret != count) {
-		dev_err(&bcmi2cnfc_dev->client->dev,
-			"IO Error ret = %d!!!!\n", ret);
-	} else {
-		total = ret;
-	}
-#endif
 
 	if (total > count || copy_to_user(buf, tmp, total)) {
 		dev_err(&bcmi2cnfc_dev->client->dev,
@@ -218,7 +223,7 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
 	}
 
 	dev_dbg(&bcmi2cnfc_dev->client->dev,
-		"%s: %d packets, total %d\n", __func__, packets, total);
+		 "%s: %d packets, total %d\n", __func__, packets, total);
 
 	return total;
 }
@@ -257,12 +262,15 @@ static ssize_t bcmi2cnfc_dev_write(struct file *filp, const char __user * buf,
 static int bcmi2cnfc_dev_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
-	struct bcmi2cnfc_dev *bcmi2cnfc_dev1 = container_of(filp->private_data,
-							    struct
-							    bcmi2cnfc_dev,
-							    bcmi2cnfc_device);
+	struct bcmi2cnfc_dev *bcmi2cnfc_dev = container_of(filp->private_data,
+							   struct bcmi2cnfc_dev,
+							   bcmi2cnfc_device);
 
-	filp->private_data = bcmi2cnfc_dev1;
+	filp->private_data = bcmi2cnfc_dev;
+	bcmi2cnfc_dev->wake_active_state = NFC_WAKE_ACTIVE_STATE;
+
+	dev_dbg(&bcmi2cnfc_dev->client->dev,
+		 "%d,%d\n", imajor(inode), iminor(inode));
 
 	return ret;
 }
@@ -273,31 +281,37 @@ static long bcmi2cnfc_dev_unlocked_ioctl(struct file *filp,
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev = filp->private_data;
 
 	switch (cmd) {
+	case BCMNFC_SET_WAKE_ACTIVE_STATE:
+		dev_dbg(&bcmi2cnfc_dev->client->dev,
+			 "%s, BCMNFC_SET_WAKE_ACTIVE_STATE (%x, %lx):\n",
+			 __func__, cmd, arg);
+		bcmi2cnfc_dev->wake_active_state = arg;
+		break;
+	case BCMNFC_READ_FULL_PACKET:
+		dev_dbg(&bcmi2cnfc_dev->client->dev,
+			 "%s, BCMNFC_READ_FULL_PACKET (%x, %lx):\n", __func__,
+			 cmd, arg);
+		bcmi2cnfc_dev->packet_size = arg;
+		break;
 #if CHANGE_CLIENT_ADDR
 	case BCMNFC_CHANGE_ADDR:
 		dev_dbg(&bcmi2cnfc_dev->client->dev,
-			"%s, BCMNFC_CHANGE_ADDR (%x, %lx):\n", __func__, cmd,
-			arg);
+			 "%s, BCMNFC_CHANGE_ADDR (%x, %lx):\n", __func__, cmd,
+			 arg);
 		change_client_addr(bcmi2cnfc_dev, arg);
 		break;
 #endif
 	case BCMNFC_POWER_CTL:
 		dev_dbg(&bcmi2cnfc_dev->client->dev,
-			"%s, BCMNFC_POWER_CTL (%x, %lx):\n", __func__, cmd,
-			arg);
-		if (arg == BCMNFC_POWER_OFF) {
-			gpio_set_value(bcmi2cnfc_dev->en_gpio, 0);
-		} else if (arg == BCMNFC_POWER_ON) {
-			gpio_set_value(bcmi2cnfc_dev->en_gpio, 1);
-		} else if (arg == BCMNFC_WAKE_OFF) {
-			gpio_set_value(bcmi2cnfc_dev->wake_gpio, 0);
-		} else if (arg == BCMNFC_WAKE_ON) {
-			gpio_set_value(bcmi2cnfc_dev->wake_gpio, 1);
-		} else {
-			dev_err(&bcmi2cnfc_dev->client->dev,
-				"%s, bad arg %lx\n", __func__, arg);
-			return -EINVAL;
-		}
+			 "%s, BCMNFC_POWER_CTL (%x, %lx):\n", __func__, cmd,
+			 arg);
+		gpio_set_value(bcmi2cnfc_dev->en_gpio, arg);
+		break;
+	case BCMNFC_WAKE_CTL:
+		dev_dbg(&bcmi2cnfc_dev->client->dev,
+			 "%s, BCMNFC_WAKE_CTL (%x, %lx):\n", __func__, cmd,
+			 arg);
+		gpio_set_value(bcmi2cnfc_dev->wake_gpio, arg);
 		break;
 	default:
 		dev_err(&bcmi2cnfc_dev->client->dev,
@@ -385,6 +399,10 @@ static int bcmi2cnfc_probe(struct i2c_client *client,
 		goto err_request_irq_failed;
 	}
 	i2c_set_clientdata(client, bcmi2cnfc_dev);
+	bcmi2cnfc_dev->packet_size = 0;
+	dev_dbg(&client->dev,
+		 "%s, probing bcmi2cnfc driver exited successfully\n",
+		 __func__);
 	return 0;
 
 err_request_irq_failed:

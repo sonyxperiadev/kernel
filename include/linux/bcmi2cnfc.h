@@ -19,23 +19,20 @@
  * BCMNFC power control via ioctl
  * BCMNFC_POWER_CTL(0): power off
  * BCMNFC_POWER_CTL(1): power on
- * BCMNFC_POWER_CTL(2): Sleep off
- * BCMNFC_POWER_CTL(3): Sleep on
+ * BCMNFC_WAKE_CTL(0): wake off
+ * BCMNFC_WAKE_CTL(1): wake on
  */
 #define BCMNFC_POWER_CTL	_IO(BCMNFC_MAGIC, 0x01)
 #define BCMNFC_CHANGE_ADDR  _IO(BCMNFC_MAGIC, 0x02)
-
-#define BCMNFC_POWER_OFF   0
-#define BCMNFC_POWER_ON    1
-#define BCMNFC_WAKE_OFF    2
-#define BCMNFC_WAKE_ON     3
-
+#define BCMNFC_READ_FULL_PACKET       _IO(BCMNFC_MAGIC, 0x03)
+#define BCMNFC_SET_WAKE_ACTIVE_STATE  _IO(BCMNFC_MAGIC, 0x04)
+#define BCMNFC_WAKE_CTL               _IO(BCMNFC_MAGIC, 0x05)
 
 struct bcmi2cnfc_i2c_platform_data {
+	struct i2c_slave_platform_data i2c_pdata;
 	unsigned int irq_gpio;
 	unsigned int en_gpio;
 	unsigned int wake_gpio;
 	int (*init)(void *);
 	int (*reset)(void *);
-	struct i2c_slave_platform_data i2c_pdata;
 };
