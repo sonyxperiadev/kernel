@@ -873,18 +873,16 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
 // Function Name: AUDDRV_SetAudioMode_Multicast
 //
 // Description:   set audio mode for IHF+HS Multicast.
-//
+//		For SS multicase both HS and IHF params are from mode SPEAKER
 //=============================================================================
 */
 void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
-					AudioApp_t app,
-					unsigned int arg_pathID,
-					Boolean inHWlpbk)
+					AudioApp_t app)
 {
 	int mixInGain;	/* Register value. */
 	int mixOutGain;	/* Bit12:0, Output Fine Gain */
 	int mixBitSel;
-	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	/*CSL_CAPH_HWConfig_Table_t *path = NULL;*/
 	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 	AudioMode_t audio_mode = AUDIO_MODE_SPEAKERPHONE;
 
@@ -900,30 +898,19 @@ void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
 	p = &(AudParmP()[audio_mode + app * AUDIO_MODE_NUMBER]);
 #endif
 
-	aTrace(LOG_AUDIO_DRIVER,  "%s mode=%d, app %d, pathID %d\n",
-			__func__, audio_mode, app, arg_pathID);
+	aTrace(LOG_AUDIO_DRIVER, "%s mode=%d, app %d,\n",
+			__func__, audio_mode, app);
 
 	/* Load the speaker gains form sysparm. */
 
 	/*determine which mixer output to apply the gains to */
 
 	switch (audiomode) {
-	case AUDIO_MODE_HANDSET:
-	case AUDIO_MODE_HAC:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HANDSET_WB:
-	case AUDIO_MODE_HAC_WB:
-#endif
-		outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
-		break;
 
 	case AUDIO_MODE_HEADSET:
-	case AUDIO_MODE_TTY:
 #if !defined(USE_NEW_AUDIO_PARAM)
 	case AUDIO_MODE_HEADSET_WB:
-	case AUDIO_MODE_TTY_WB:
 #endif
-/*outChnl = (CSL_CAPH_SRCM_STEREO_CH1_L | CSL_CAPH_SRCM_STEREO_CH1_R);*/
 		outChnl = CSL_CAPH_SRCM_STEREO_CH1;
 		break;
 
@@ -933,12 +920,6 @@ void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
 #endif
 		outChnl = csl_caph_FindMixer(CSL_CAPH_DEV_IHF, 0);
 		break;
-
-	case AUDIO_MODE_BLUETOOTH:
-		outChnl =
-		    csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEV_BT_SPKR);
-		break;
-
 	default:
 		break;
 	}
@@ -954,22 +935,9 @@ void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
 
 	/*determine which which mixer input to apply the gains to */
 
-	if (arg_pathID >= 1)
-		path = csl_caph_FindPath(arg_pathID);
-
-	if (path != 0) {
-		if (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM)
-			outChnl = path->srcmRoute[0][0].outChnl;
-		/*set HW mixer gain for arm2sp */
-		if (outChnl)
-			csl_srcmixer_setMixInGain(path->srcmRoute[0][0].
-				  inChnl, outChnl, mixInGain, mixInGain);
-	} else {
-		if (outChnl)
-			csl_srcmixer_setMixAllInGain(outChnl,
+	if (outChnl)
+		csl_srcmixer_setMixAllInGain(outChnl,
 				mixInGain, mixInGain);
-	}
-
 	if (outChnl) {
 		/* Q13p2 dB */
 		mixOutGain = (short)p->srcmixer_output_fine_gain_l;
@@ -991,37 +959,9 @@ void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
 		csl_srcmixer_setMixBitSel(outChnl, mixBitSel);
 		csl_srcmixer_setMixOutGain(outChnl, mixOutGain);
 	}
-
-	if (path != 0) {
-		if (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM)
-			return;
-/*no need for anything other than HW mixer gain for arm2sp */
-	}
-/* Do not enable/disable sidetone path based on sysparm when in HW loopback */
-	if (!inHWlpbk) {
-		/*Config sidetone */
-		void *coef = NULL;
-		UInt16 gain = 0;
-		UInt16 enable = 0;
-
-		enable = p->hw_sidetone_enable;
-		if (!enable) {
-			AUDDRV_HW_DisableSideTone(audio_mode);
-		} else {
-			/*first step: enable sidetone */
-			AUDDRV_HW_EnableSideTone(audio_mode);
-
-			/*second step: set filter and gain. */
-			coef = (void *)&(p->hw_sidetone_eq[0]);
-			AUDDRV_HW_SetFilter(AUDDRV_SIDETONE_FILTER, coef);
-
-			gain = p->hw_sidetone_gain;
-			csl_caph_audioh_sidetone_set_gain(gain);
-		}
-	}
-
 }
 #endif
+
 /*=============================================================================
 //
 // Function Name: AUDDRV_SetAudioMode_Speaker
