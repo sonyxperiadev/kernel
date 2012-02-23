@@ -76,7 +76,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(ICUSBDP, GPIO121, 0, OFF, OFF, 0, 0, 8MA),
 #else
 	/* GPIO74 for TCA9539 IO expander */
-	PIN_CFG(MMC1DAT4, GPIO74, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(MMC1DAT4, GPIO74, 0, OFF, ON, 0, 0, 8MA),
 #endif
 
 	/*	Pinmux for keypad */
@@ -102,7 +102,7 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SSP4 - I2S */
 #if defined(CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X) || defined (CONFIG_MACH_RHEA_RAY_EDN2X) \
-	|| defined(CONFIG_MACH_RHEA_RAY_DEMO) || defined(CONFIG_MACH_RHEA_SS)
+	|| defined(CONFIG_MACH_RHEA_RAY_DEMO) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING)
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO93, SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
 //	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
@@ -145,8 +145,8 @@ static struct __init pin_config board_pin_config[] = {
 
 
 	/* SMI */
-	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(LCDSDA, LCDD0, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(LCDSDA, LCDD0, 0, OFF, ON, 0, 0, 8MA),
 #ifdef CONFIG_MACH_RHEA_RAY_DEMO
 	PIN_CFG(GPIO00, LCDD15, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO01, LCDD14, 0, OFF, ON, 0, 0, 8MA),
@@ -179,15 +179,21 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPS_CALREQ, GPIO99, 0, OFF, ON, 0, 0, 8MA),
 
 	/* Bluetooth related GPIOS */
-	PIN_CFG(SPI0RXD, GPIO92, 0, OFF, ON, 0, 0, 8MA),      // BT_WAKE
-	PIN_CFG(SPI0TXD, GPIO91, 0, OFF, ON, 0, 0, 8MA),      // BT_HOST_WAKE
-	PIN_CFG(SPI0CLK, GPIO90, 0, OFF, ON, 0, 0, 8MA),      // BT_RESETN
-	PIN_CFG(GPS_HOSTREQ, GPIO100, 0, OFF, ON, 0, 0, 8MA), // BT_REG_ON	
-//	PIN_CFG(GPIO10, GPIO10, 0, OFF, ON, 0, 0, 8MA),       // BT_SEC
+	PIN_CFG(LCDSCL, GPIO39, 0, OFF, ON, 0, 0, 8MA),      // BT_WAKE
+	PIN_CFG(UBRTSN, GPIO47, 0, OFF, ON, 0, 0, 8MA),      // BT_HOST_WAKE
+	PIN_CFG(LCDSDA, GPIO40, 0, OFF, ON, 0, 0, 8MA),      // BT_RESETN
+	PIN_CFG(GPS_HOSTREQ, GPIO100, 0, OFF, ON, 0, 0, 8MA), // BT_REG_ON
+
+	PIN_CFG(MMC1DAT4, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(MMC1DAT7, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(MMC1DAT6, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(MMC1DAT5, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
 
 	// for GPS
 	PIN_CFG(GPIO28, GPIO28, 0, OFF, ON, 0, 0, 8MA),   // GPS_EN
-	PIN_CFG(GPIO11, GPIO11, 0, OFF, ON, 0, 0, 8MA),   // GPS_SEL
+	PIN_CFG(DMIC0DQ, GPIO124, 0, OFF, ON, 0, 0, 8MA), // GPS_HOST_REQ
+	PIN_CFG(GPS_PABLANK, GPIO97, 0, ON, OFF, 0, 0, 8MA),   // GPS_CAL_REQ
+
 
 	PIN_CFG(GPIO18, UB2TX, 0, OFF, OFF, 0, 0, 8MA),   // UART B2
 	PIN_CFG(GPIO19, UB2RX, 0, OFF, OFF, 0, 0, 8MA),

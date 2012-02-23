@@ -102,6 +102,10 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
+#ifdef CONFIG_BCM_BZHW
+#include <linux/broadcom/bcm_bzhw.h>
+#endif
+
 #ifdef CONFIG_I2C_GPIO
 
 #include <linux/i2c-gpio.h>
@@ -1336,7 +1340,7 @@ static struct platform_device r61581_smi8_display_device = {
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 
 #define BCMBT_VREG_GPIO       (100)
-#define BCMBT_N_RESET_GPIO    (90)
+#define BCMBT_N_RESET_GPIO    (40)
 #define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
 #define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
 
@@ -1357,9 +1361,26 @@ static struct platform_device board_bcmbt_rfkill_device = {
 };
 #endif
 
+#ifdef CONFIG_BCM_BZHW
+#define GPIO_BT_WAKE 39
+#define GPIO_HOST_WAKE 47
+static struct bcm_bzhw_platform_data bcm_bzhw_data = {
+	.gpio_bt_wake = GPIO_BT_WAKE,
+	.gpio_host_wake = GPIO_HOST_WAKE,
+};
+
+static struct platform_device board_bcm_bzhw_device = {
+	.name = "bcm_bzhw",
+	.id = -1,
+	.dev = {
+		.platform_data = &bcm_bzhw_data,
+		},
+};
+#endif
+
 #ifdef CONFIG_BCM_BT_LPM
-#define GPIO_BT_WAKE   92 
-#define GPIO_HOST_WAKE 91
+#define GPIO_BT_WAKE   39 
+#define GPIO_HOST_WAKE 47
 
 static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
         .gpio_bt_wake = GPIO_BT_WAKE,
@@ -1378,7 +1399,7 @@ static struct platform_device board_bcmbt_lpm_device = {
 
 #ifdef CONFIG_GPS_IRQ
 
-#define GPIO_GPS_HOST_WAKE 03 
+#define GPIO_GPS_HOST_WAKE 124 
 
 static struct gps_platform_data gps_hostwake_data= {
         .gpio_interrupt = GPIO_GPS_HOST_WAKE,
@@ -1967,8 +1988,13 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
     &board_bcmbt_rfkill_device,
 #endif
+
+#ifdef CONFIG_BCM_BZHW
+	&board_bcm_bzhw_device,
+#endif
+
 #ifdef CONFIG_BCM_BT_LPM
-    &board_bcmbt_lpm_device,
+	&board_bcmbt_lpm_device,
 #endif
 	&rhea_camera,
 	&rhea_camera_sub,
