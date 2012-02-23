@@ -48,6 +48,12 @@
 #include <linux/usb/audio.h>
 #include <linux/usb/audio-v2.h>
 
+#ifdef CONFIG_SWITCH
+#include <linux/switch.h>
+#define USB_HEADSET_NONE 0
+#define USB_HEADSET_DGTL 2
+#endif
+
 #include <sound/control.h>
 #include <sound/core.h>
 #include <sound/info.h>
@@ -114,6 +120,10 @@ MODULE_PARM_DESC(ignore_ctl_error,
 static DEFINE_MUTEX(register_mutex);
 static struct snd_usb_audio *usb_chip[SNDRV_CARDS];
 static struct usb_driver usb_audio_driver;
+
+#ifdef CONFIG_SWITCH
+static struct switch_dev usb_audio_switch;
+#endif
 
 /*
  * disconnect streams
@@ -525,6 +535,32 @@ static void *snd_usb_audio_probe(struct usb_device *dev,
 	usb_chip[chip->index] = chip;
 	chip->num_interfaces++;
 	chip->probing = 0;
+#ifdef CONFIG_SWITCH
+	if (chip->index == 0) {
+		struct list_head *p;
+		struct snd_usb_stream *as;
+		struct snd_usb_substream *subs;
+		int playback = 0, capture = 0;
+
+		list_for_each(p, &chip->pcm_list) {
+			as = list_entry(p, struct snd_usb_stream, list);
+
+			subs = &as->substream[SNDRV_PCM_STREAM_PLAYBACK];
+			if (subs->num_formats)
+				playback++;
+
+			subs = &as->substream[SNDRV_PCM_STREAM_CAPTURE];
+			if (subs->num_formats)
+				capture++;
+
+			if (playback && capture) {
+				switch_set_state(&usb_audio_switch,
+						 USB_HEADSET_DGTL);
+				break;
+			}
+		}
+	}
+#endif
 	mutex_unlock(&register_mutex);
 	return chip;
 
@@ -559,6 +595,10 @@ static void snd_usb_audio_disconnect(struct usb_device *dev, void *ptr)
 	chip->shutdown = 1;
 	chip->num_interfaces--;
 	if (chip->num_interfaces <= 0) {
+#ifdef CONFIG_SWITCH
+		if (chip->index == 0)
+			switch_set_state(&usb_audio_switch, USB_HEADSET_NONE);
+#endif
 		snd_card_disconnect(card);
 		/* release the pcm resources */
 		list_for_each(p, &chip->pcm_list) {
@@ -716,11 +756,22 @@ static int __init snd_usb_audio_init(void)
 		printk(KERN_WARNING "invalid nrpacks value.\n");
 		return -EINVAL;
 	}
+#ifdef CONFIG_SWITCH
+	usb_audio_switch.name = "usb_audio";
+
+	if (switch_dev_register(&usb_audio_switch) < 0) {
+		printk(KERN_ERR "failed to register switch dev\n");
+		return -EFAULT;
+	}
+#endif
 	return usb_register(&usb_audio_driver);
 }
 
 static void __exit snd_usb_audio_cleanup(void)
 {
+#ifdef CONFIG_SWITCH
+	switch_dev_unregister(&usb_audio_switch);
+#endif
 	usb_deregister(&usb_audio_driver);
 }
 
