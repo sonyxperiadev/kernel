@@ -118,7 +118,7 @@ No support for I2S on Island */
 /* static Interrupt_t AUDDRV_HISR_HANDLE; */
 /* static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
 */
-
+static Boolean use26MClk = FALSE;
 static struct clk *clkIDCAPH[MAX_CAPH_CLOCK_NUM] = {NULL, NULL, NULL, NULL};
 
 /* static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM] = {NULL,NULL}; */
@@ -2525,9 +2525,14 @@ void csl_caph_ControlHWClock(Boolean enable)
 		if (clkIDCAPH[0]->use_cnt)
 			clk_disable(clkIDCAPH[0]);
 #endif
+		aTrace(LOG_AUDIO_CSL,
+		"csl_caph_ControlHWClock: use26MClk = %d\n", use26MClk);
 #if defined(CONFIG_ARCH_RHEA_BX)
 		/*Rhea B0 and above.*/
-		clk_set_rate(clkIDCAPH[0], 78000000);
+		if (use26MClk)
+			clk_set_rate(clkIDCAPH[0], 26000000);
+		else
+			clk_set_rate(clkIDCAPH[0], 78000000);
 #else
 		clk_set_rate(clkIDCAPH[0], 156000000);
 #endif
@@ -4815,4 +4820,16 @@ CSL_CAPH_PathID csl_caph_FindRenderPathID(CSL_CAPH_DEVICE_e sink_dev,
 	}
 
 	return pathID;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_SetSRC26MClk
+*
+*  Description: Set SRCMixer clock rate to use 26MHz
+*
+*****************************************************************************/
+void csl_caph_SetSRC26MClk(Boolean is26M)
+{
+	use26MClk = is26M;
 }

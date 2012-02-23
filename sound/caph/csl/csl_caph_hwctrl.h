@@ -763,6 +763,16 @@ CSL_CAPH_HWConfig_Table_t *csl_caph_FindCapturePath(unsigned int streamID);
 CSL_CAPH_PathID csl_caph_FindRenderPathID(CSL_CAPH_DEVICE_e sink_dev,
 	CSL_CAPH_DEVICE_e src_dev);
 
+/****************************************************************************
+*  @brief  Set SRCMixer clock rate to use 26MHz
+*
+*  @param   is26M
+*
+*  @return none
+*
+*****************************************************************************/
+void csl_caph_SetSRC26MClk(Boolean is26M);
+
 #if defined(CONFIG_BCM_MODEM)
 /****************************************************************************
 *  @brief  enable adcpath

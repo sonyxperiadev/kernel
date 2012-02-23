@@ -64,6 +64,7 @@ enum __AUDCTRL_HW_ACCESS_TYPE_en_t {
 	AUDCTRL_HW_CFG_IHF,
 	AUDCTRL_HW_CFG_SSP,
 	AUDCTRL_HW_CFG_MFD,
+	AUDCTRL_HW_CFG_CLK,
 	/* below are for internal purposes */
 	AUDCTRL_HW_READ_GAIN = 20,
 	AUDCTRL_HW_WRITE_GAIN,
@@ -744,7 +745,6 @@ void powerOnDigitalMic(Boolean powerOn);
 *  @return device (out)
 *
 ****************************************************************************/
-
 CSL_CAPH_DEVICE_e getDeviceFromSrc(AUDIO_SOURCE_Enum_t source);
 
 /**
@@ -755,12 +755,9 @@ CSL_CAPH_DEVICE_e getDeviceFromSrc(AUDIO_SOURCE_Enum_t source);
 *  @return device (out)
 *
 ****************************************************************************/
-
 CSL_CAPH_DEVICE_e getDeviceFromSink(AUDIO_SINK_Enum_t sink);
 
 AudioMode_t GetAudioModeBySink(AUDIO_SINK_Enum_t sink);
-
-
 void AUDCTRL_EC(Boolean enable, UInt32 arg);
 void AUDCTRL_NS(Boolean enable);
 
@@ -773,4 +770,15 @@ void AUDCTRL_NS(Boolean enable);
 *
 ****************************************************************************/
 Boolean AUDCTRL_GetMFDMode(void);
+
+/********************************************************************
+*  @brief  Get SRCMixer clock mode
+*
+*  @param  none
+*
+*  @return  return TRUE if use 26M clock; FALSE if not (78M)
+*
+****************************************************************************/
+Boolean AUDCTRL_GetSRCClock(void);
+
 #endif /* #define __AUDIO_CONTROLLER_H__ */
