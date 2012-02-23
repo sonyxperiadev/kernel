@@ -55,18 +55,115 @@
 #define ATAG_RHEA_MAC	0x57464d41
 /* #define ATAG_RHEA_MAC_DEBUG */
 
-#define PREALLOC_WLAN_NUMBER_OF_SECTIONS	4
-#define PREALLOC_WLAN_NUMBER_OF_BUFFERS		160
-#define PREALLOC_WLAN_SECTION_HEADER		24
+#ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
 
-#define WLAN_SECTION_SIZE_0	(PREALLOC_WLAN_NUMBER_OF_BUFFERS * 128)
-#define WLAN_SECTION_SIZE_1	(PREALLOC_WLAN_NUMBER_OF_BUFFERS * 128)
-#define WLAN_SECTION_SIZE_2	(PREALLOC_WLAN_NUMBER_OF_BUFFERS * 512)
-#define WLAN_SECTION_SIZE_3	(PREALLOC_WLAN_NUMBER_OF_BUFFERS * 1024)
 
-#define WLAN_SKB_BUF_NUM	16
+#define WLAN_STATIC_SCAN_BUF0		5
+#define WLAN_STATIC_SCAN_BUF1		6
+#define PREALLOC_WLAN_SEC_NUM		4
+#define PREALLOC_WLAN_BUF_NUM		160
+#define PREALLOC_WLAN_SECTION_HEADER	24
+
+#define WLAN_SECTION_SIZE_0	(PREALLOC_WLAN_BUF_NUM * 128)
+#define WLAN_SECTION_SIZE_1	(PREALLOC_WLAN_BUF_NUM * 128)
+#define WLAN_SECTION_SIZE_2	(PREALLOC_WLAN_BUF_NUM * 512)
+#define WLAN_SECTION_SIZE_3	(PREALLOC_WLAN_BUF_NUM * 1024)
+
+#define DHD_SKB_HDRSIZE			336
+#define DHD_SKB_1PAGE_BUFSIZE	((PAGE_SIZE*1)-DHD_SKB_HDRSIZE)
+#define DHD_SKB_2PAGE_BUFSIZE	((PAGE_SIZE*2)-DHD_SKB_HDRSIZE)
+#define DHD_SKB_4PAGE_BUFSIZE	((PAGE_SIZE*4)-DHD_SKB_HDRSIZE)
+
+#define WLAN_SKB_BUF_NUM	17
 
 static struct sk_buff *wlan_static_skb[WLAN_SKB_BUF_NUM];
+
+struct wlan_mem_prealloc {
+	void *mem_ptr;
+	unsigned long size;
+};
+
+static struct wlan_mem_prealloc wlan_mem_array[PREALLOC_WLAN_SEC_NUM] = {
+	{NULL, (WLAN_SECTION_SIZE_0 + PREALLOC_WLAN_SECTION_HEADER)},
+	{NULL, (WLAN_SECTION_SIZE_1 + PREALLOC_WLAN_SECTION_HEADER)},
+	{NULL, (WLAN_SECTION_SIZE_2 + PREALLOC_WLAN_SECTION_HEADER)},
+	{NULL, (WLAN_SECTION_SIZE_3 + PREALLOC_WLAN_SECTION_HEADER)}
+};
+
+void *wlan_static_scan_buf0;
+void *wlan_static_scan_buf1;
+
+static void *rhea_wifi_mem_prealloc(int section, unsigned long size)
+{
+	if (section == PREALLOC_WLAN_SEC_NUM)
+		return wlan_static_skb;
+	if (section == WLAN_STATIC_SCAN_BUF0)
+		return wlan_static_scan_buf0;	
+	if (section == WLAN_STATIC_SCAN_BUF1)
+		return wlan_static_scan_buf1;	
+	if ((section < 0) || (section > PREALLOC_WLAN_SEC_NUM))
+		return NULL;
+
+	if (wlan_mem_array[section].size < size)
+		return NULL;
+
+	return wlan_mem_array[section].mem_ptr;
+}
+
+int __init rhea_init_wifi_mem(void)
+{
+	int i;
+	int j;
+
+	for (i = 0; i < 8; i++) {
+		wlan_static_skb[i] = dev_alloc_skb(DHD_SKB_1PAGE_BUFSIZE);
+		if (!wlan_static_skb[i])
+			goto err_skb_alloc;
+	}
+
+	for (; i < 16; i++) {
+		wlan_static_skb[i] = dev_alloc_skb(DHD_SKB_2PAGE_BUFSIZE);
+		if (!wlan_static_skb[i])
+			goto err_skb_alloc;
+	}
+
+	wlan_static_skb[i] = dev_alloc_skb(DHD_SKB_4PAGE_BUFSIZE);
+	if (!wlan_static_skb[i])
+		goto err_skb_alloc;
+
+	for (i = 0 ; i < PREALLOC_WLAN_SEC_NUM ; i++) {
+		wlan_mem_array[i].mem_ptr =
+				kmalloc(wlan_mem_array[i].size, GFP_KERNEL);
+
+		if (!wlan_mem_array[i].mem_ptr)
+			goto err_mem_alloc;
+	}
+	wlan_static_scan_buf0 = kmalloc (65536, GFP_KERNEL);
+	if(!wlan_static_scan_buf0)		
+		goto err_mem_alloc;
+	wlan_static_scan_buf1 = kmalloc (65536, GFP_KERNEL);
+	if(!wlan_static_scan_buf1)		
+		goto err_mem_alloc;
+
+	printk("%s: WIFI MEM Allocated\n", __FUNCTION__);
+	return 0;
+
+ err_mem_alloc:
+	pr_err("Failed to mem_alloc for WLAN\n");
+	for (j = 0 ; j < i ; j++)
+		kfree(wlan_mem_array[j].mem_ptr);
+
+	i = WLAN_SKB_BUF_NUM;
+
+ err_skb_alloc:
+	pr_err("Failed to skb_alloc for WLAN\n");
+	for (j = 0 ; j < i ; j++)
+		dev_kfree_skb(wlan_static_skb[j]);
+
+	return -ENOMEM;
+}
+#endif /* CONFIG_BROADCOM_WIFI_RESERVED_MEM */
+
 
 extern int bcm_sdiowl_init(void);
 
@@ -77,13 +174,6 @@ int rhea_wifi_status_register(
 
 
 EXPORT_SYMBOL(rhea_wifi_status_register);
-
-
-
-
-
-
-
 
 
 int omap4_rhea_get_type(void);
@@ -111,49 +201,6 @@ int __init omap_mux_init_signal(const char *muxname, int val)
 
 
 
-typedef struct wifi_mem_prealloc_struct {
-	void *mem_ptr;
-	unsigned long size;
-} wifi_mem_prealloc_t;
-
-static wifi_mem_prealloc_t wifi_mem_array[PREALLOC_WLAN_NUMBER_OF_SECTIONS] = {
-	{ NULL, (WLAN_SECTION_SIZE_0 + PREALLOC_WLAN_SECTION_HEADER) },
-	{ NULL, (WLAN_SECTION_SIZE_1 + PREALLOC_WLAN_SECTION_HEADER) },
-	{ NULL, (WLAN_SECTION_SIZE_2 + PREALLOC_WLAN_SECTION_HEADER) },
-	{ NULL, (WLAN_SECTION_SIZE_3 + PREALLOC_WLAN_SECTION_HEADER) }
-};
-
-static void *rhea_wifi_mem_prealloc(int section, unsigned long size)
-{
-	printk(KERN_ERR " %s INSIDE rhea_wifi_mem_prealloc\n",__FUNCTION__);
-
-	if (section == PREALLOC_WLAN_NUMBER_OF_SECTIONS)
-		return wlan_static_skb;
-	if ((section < 0) || (section > PREALLOC_WLAN_NUMBER_OF_SECTIONS))
-		return NULL;
-	if (wifi_mem_array[section].size < size)
-		return NULL;
-	return wifi_mem_array[section].mem_ptr;
-}
-
-int __init rhea_init_wifi_mem(void)
-{
-	int i;
-
-	for(i=0;( i < WLAN_SKB_BUF_NUM );i++) {
-		if (i < (WLAN_SKB_BUF_NUM/2))
-			wlan_static_skb[i] = dev_alloc_skb(4096);
-		else
-			wlan_static_skb[i] = dev_alloc_skb(8192);
-	}
-	for(i=0;( i < PREALLOC_WLAN_NUMBER_OF_SECTIONS );i++) {
-		wifi_mem_array[i].mem_ptr = kmalloc(wifi_mem_array[i].size,
-							GFP_KERNEL);
-		if (wifi_mem_array[i].mem_ptr == NULL)
-			return -ENOMEM;
-	}
-	return 0;
-}
 #if 0
 static struct resource rhea_wifi_resources[] = {
 	[0] = {
@@ -328,13 +375,6 @@ static int __init rhea_mac_addr_setup(char *str)
 __setup("androidboot.macaddr=", rhea_mac_addr_setup);
 
 
-
-
-
-
-
-
-
 static int rhea_wifi_get_mac_addr(unsigned char *buf)
 {
 	int type = omap4_rhea_get_type();
@@ -431,7 +471,7 @@ static struct resource rhea_wifi_resources[] = {
 		.name		= "bcmdhd_wlan_irq",
 		.start		= -1,
 		.end		= -1,
-		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE,
+		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_LOWEDGE/* IORESOURCE_IRQ_HIGHLEVEL */| IORESOURCE_IRQ_SHAREABLE,
 	},
 };
 
@@ -441,7 +481,9 @@ static struct wifi_platform_data rhea_wifi_control = {
 	.set_power      = rhea_wifi_power,
 	.set_reset      = rhea_wifi_reset,
 	.set_carddetect = rhea_wifi_set_carddetect,
+#ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
 	.mem_prealloc	= rhea_wifi_mem_prealloc,
+#endif
 	.get_mac_addr	= rhea_wifi_get_mac_addr,
 	.get_country_code = rhea_wifi_get_country_code,
 };
@@ -538,10 +580,12 @@ int __init rhea_wlan_init(void)
 
 	rhea_wlan_gpio();
 	printk(KERN_ERR " %s Calling GPIO INIT DONE !\n",__FUNCTION__);
+#ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
 	rhea_init_wifi_mem();
+#endif
 	printk(KERN_ERR " %s Calling MEM INIT DONE !\n",__FUNCTION__);	
 	
-//	platform_device_register(&omap_vwlan_device);
+
 	return platform_device_register(&rhea_wifi_device);
 
 

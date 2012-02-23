@@ -220,7 +220,7 @@ int bcm_sdiowl_init(void)
 
    dev->wifi_gpio->reset=70;
    dev->wifi_gpio->reg=-1;
-   dev->wifi_gpio->host_wake=-1;
+   dev->wifi_gpio->host_wake=85;
    dev->wifi_gpio->shutdown=-1;
 #endif
 
