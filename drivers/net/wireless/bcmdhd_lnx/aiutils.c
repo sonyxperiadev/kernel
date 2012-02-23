@@ -417,10 +417,6 @@ ai_flag(si_t *sih)
 	aidmp_t *ai;
 
 	sii = SI_INFO(sih);
-	if (BCM47162_DMP()) {
-		SI_ERROR(("%s: Attempting to read MIPS DMP registers on 47162a0", __FUNCTION__));
-		return sii->curidx;
-	}
 	ai = sii->curwrap;
 
 	return (R_REG(sii->osh, &ai->oobselouta30) & 0x1f);
@@ -624,13 +620,6 @@ ai_core_cflags_wo(si_t *sih, uint32 mask, uint32 val)
 	uint32 w;
 
 	sii = SI_INFO(sih);
-
-	if (BCM47162_DMP()) {
-		SI_ERROR(("%s: Accessing MIPS DMP register (ioctrl) on 47162a0",
-		          __FUNCTION__));
-		return;
-	}
-
 	ASSERT(GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 
@@ -650,12 +639,6 @@ ai_core_cflags(si_t *sih, uint32 mask, uint32 val)
 	uint32 w;
 
 	sii = SI_INFO(sih);
-	if (BCM47162_DMP()) {
-		SI_ERROR(("%s: Accessing MIPS DMP register (ioctrl) on 47162a0",
-		          __FUNCTION__));
-		return 0;
-	}
-
 	ASSERT(GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 
@@ -677,12 +660,6 @@ ai_core_sflags(si_t *sih, uint32 mask, uint32 val)
 	uint32 w;
 
 	sii = SI_INFO(sih);
-	if (BCM47162_DMP()) {
-		SI_ERROR(("%s: Accessing MIPS DMP register (iostatus) on 47162a0",
-		          __FUNCTION__));
-		return 0;
-	}
-
 	ASSERT(GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 

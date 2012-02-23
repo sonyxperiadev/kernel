@@ -44,5 +44,8 @@
 int wl_elinux_init(void);
 int wl_elinux_exit(void);
 void wl_elinux_post_init(void);
+int wl_elinux_wifi_on(struct net_device *dev);
+int wl_elinux_wifi_off(struct net_device *dev);
+int wl_elinux_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd);
 
 #endif /* _wl_elinux_h_ */

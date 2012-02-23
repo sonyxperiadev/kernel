@@ -1,5 +1,5 @@
 config BCMDHD_43362_LINUX
-	tristate "Broadcom 43362_LINUX DRIVE wireless cards support"
+	tristate "Broadcom 43362_LINUX DRIVER wireless cards support"
 	depends on MMC
 	---help---
 	  This module adds support for wireless adapters based on
@@ -8,31 +8,23 @@ config BCMDHD_43362_LINUX
 	  If you choose to build a module, it'll be called dhd. Say M if
 	  unsure.
 
-config BCMDHD_FW_PATH
+config BCMDHD_LNX_FW_PATH
 	depends on BCMDHD_43362_LINUX
 	string "Firmware path"
-	default "/system/vendor/firmware/fw_bcmdhd.bin"
+	default "/system/vendor/firmware_lnx/fw_bcmdhd.bin"
 	---help---
 	  Path to the firmware file.
 
-config BCMDHD_NVRAM_PATH
+config BCMDHD_LNX_NVRAM_PATH
 	depends on BCMDHD_43362_LINUX
 	string "NVRAM path"
-	default "/system/vendor/firmware/fw_wifi_nvram.txt"
+	default "/system/vendor/firmware_lnx/fw_wifi_nvram.txt"
 	---help---
 	  Path to the calibration file.
 
-config BCMDHD_IF_PREFIX
+config BCMDHD_LNX_IF_PREFIX
 	depends on BCMDHD_43362_LINUX
 	string "Wireless interface prefix"
-	default ""
+	default "wlan"
 	---help---
-	  Name of wireless interface. The default value is "eth%d".
-
-config BCMDHD_WEXT
-	bool "Enable WEXT support"
-	depends on BCMDHD_43362_LINUX && CFG80211 = n
-	select WIRELESS_EXT
-	select WEXT_PRIV
-	help
-	  Enables WEXT support
+	  Name of wireless interface. The default value is "wlan%d".

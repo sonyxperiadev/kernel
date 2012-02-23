@@ -399,7 +399,7 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 		bcmsdh_cfg_write(sdh, SDIO_FUNC_1, 0x10006, 0x0, NULL);
 		bcmsdh_cfg_write(sdh, SDIO_FUNC_1, 0x10007, 0x2, NULL);
 	}
-#endif
+#endif 
 
 	if ((CHIPID(sih->chip) == BCM4329_CHIP_ID) && (sih->chiprev == 0) &&
 		(sih->chippkg != BCM4329_289PIN_PKG_ID)) {
@@ -1922,9 +1922,11 @@ si_is_sprom_available(si_t *sih)
 		return (sih->chipst & CST4315_SPROM_SEL) != 0;
 	case BCM4319_CHIP_ID:
 		return (sih->chipst & CST4319_SPROM_SEL) != 0;
+
 	case BCM4336_CHIP_ID:
 	case BCM43362_CHIP_ID:
 		return (sih->chipst & CST4336_SPROM_PRESENT) != 0;
+
 	case BCM4330_CHIP_ID:
 		return (sih->chipst & CST4330_SPROM_PRESENT) != 0;
 	case BCM4313_CHIP_ID:

@@ -1148,7 +1148,10 @@ CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_bcmdhd.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/nvram.txt"
 CONFIG_BCMDHD_IF_PREFIX=""
 CONFIG_BCMDHD=m
-# CONFIG_BCMDHD_43362_LINUX is not set
+CONFIG_BCMDHD_43362_LINUX=m
+CONFIG_BCMDHD_LNX_FW_PATH="/system/vendor/firmware_lnx/fw_bcmdhd.bin"
+CONFIG_BCMDHD_LNX_NVRAM_PATH="/system/vendor/firmware_lnx/fw_wifi_nvram.txt"
+CONFIG_BCMDHD_LNX_IF_PREFIX="wlan"
 # CONFIG_BCMDHD_43362 is not set
 CONFIG_BCMDHD_43362_FW_PATH="/system/vendor/firmware/fw_bcmdhd.bin"
 CONFIG_BCMDHD_43362_NVRAM_PATH="/system/vendor/firmware/nvram.txt"

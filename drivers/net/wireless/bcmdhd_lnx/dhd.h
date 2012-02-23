@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd.h 303471 2011-12-16 14:29:42Z $
+ * $Id: dhd.h 311717 2012-01-31 03:11:13Z $
  */
 
 /****************
@@ -118,7 +118,6 @@ typedef enum  {
 	DHD_IF_DELETING
 } dhd_if_state_t;
 
-
 #if defined(CONFIG_DHD_USE_STATIC_BUF)
 
 uint8* dhd_os_prealloc(void *osh, int section, uint size);
@@ -205,6 +204,7 @@ typedef struct dhd_pub {
 	char eventmask[WL_EVENTING_MASK_LEN];
 	int	op_mode;				/* STA, HostAPD, WFD, SoftAP */
 
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_HAS_WAKELOCK)
 	struct wake_lock 	wakelock[WAKE_LOCK_MAX];
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined (CONFIG_HAS_WAKELOCK) */
@@ -240,11 +240,12 @@ typedef struct dhd_cmn {
 	#define DHD_PM_RESUME_WAIT_INIT(a) DECLARE_WAIT_QUEUE_HEAD(a);
 	#define _DHD_PM_RESUME_WAIT(a, b) do {\
 			int retry = 0; \
-			smp_mb(); \
+			SMP_RD_BARRIER_DEPENDS(); \
 			while (dhd_mmc_suspend && retry++ != b) { \
-				wait_event_interruptible_timeout(a, FALSE, HZ/100); \
+				SMP_RD_BARRIER_DEPENDS(); \
+				wait_event_interruptible_timeout(a, !dhd_mmc_suspend, HZ/100); \
 			} \
-		} 	while (0)
+		} while (0)
 	#define DHD_PM_RESUME_WAIT(a) 		_DHD_PM_RESUME_WAIT(a, 200)
 	#define DHD_PM_RESUME_WAIT_FOREVER(a) 	_DHD_PM_RESUME_WAIT(a, ~0)
 	#define DHD_PM_RESUME_RETURN_ERROR(a)	do { if (dhd_mmc_suspend) return a; } while (0)
@@ -455,6 +456,7 @@ extern int dhd_wl_ioctl_cmd(dhd_pub_t *dhd_pub, int cmd, void *arg, int len, uin
 extern struct dhd_cmn *dhd_common_init(osl_t *osh);
 extern void dhd_common_deinit(dhd_pub_t *dhd_pub, dhd_cmn_t *sa_cmn);
 
+extern int dhd_do_driver_init(struct net_device *net);
 extern int dhd_add_if(struct dhd_info *dhd, int ifidx, void *handle,
 	char *name, uint8 *mac_addr, uint32 flags, uint8 bssidx);
 extern void dhd_del_if(struct dhd_info *dhd, int ifidx);
@@ -485,6 +487,7 @@ extern int dhd_keep_alive_onoff(dhd_pub_t *dhd);
 #endif /* KEEP_ALIVE */
 
 #ifdef ARP_OFFLOAD_SUPPORT
+extern int dhd_dev_arp_offload_enable(struct net_device *dev,  int arp_enabled);
 extern void dhd_arp_offload_set(dhd_pub_t * dhd, int arp_mode);
 extern void dhd_arp_offload_enable(dhd_pub_t * dhd, int arp_enable);
 #endif /* ARP_OFFLOAD_SUPPORT */

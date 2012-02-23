@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_cdc.c 303389 2011-12-16 09:30:48Z $
+ * $Id: dhd_cdc.c 314732 2012-02-14 03:22:42Z $
  *
  * BDC is like CDC, except it includes a header for data packets to convey
  * packet priority over the bus, and flags (e.g. to indicate checksum status
@@ -2508,15 +2508,19 @@ dhd_prot_init(dhd_pub_t *dhd)
 {
 	int ret = 0;
 	wlc_rev_info_t revinfo;
+#if !defined(OEM_EMBEDDED_LINUX)
 	char buf[128];
+#endif 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
+#if !defined(OEM_EMBEDDED_LINUX)
 	/* Get the device MAC address */
 	strcpy(buf, "cur_etheraddr");
 	ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, buf, sizeof(buf), FALSE, 0);
 	if (ret < 0)
 		goto done;
 	memcpy(dhd->mac.octet, buf, ETHER_ADDR_LEN);
+#endif 
 
 	/* Get the device rev info */
 	memset(&revinfo, 0, sizeof(revinfo));

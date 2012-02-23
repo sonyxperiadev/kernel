@@ -1,13 +1,13 @@
 /*
 * Customer code to add GPIO control during WLAN start/stop
 * Copyright (C) 1999-2011, Broadcom Corporation
-* 
+*
 *         Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2 (the "GPL"),
 * available at http://www.broadcom.com/licenses/GPLv2.php, with the
 * following added to such license:
-* 
+*
 *      As a special exception, the copyright holders of this software give you
 * permission to link this software with independent modules, and to copy and
 * distribute the resulting executable under terms of your choice, provided that
@@ -15,7 +15,7 @@
 * the license of that module.  An independent module is a module which is not
 * derived from this software.  The special exception does not apply to any
 * modifications of the software.
-* 
+*
 *      Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
@@ -34,9 +34,9 @@
 #include <wlioctl.h>
 #include <wl_iw.h>
 
-extern void bcm_sdiowl_reset_b(int onoff);
-extern int bcm_sdiowl_rescan(void);
 extern int bcm_sdiowl_init(void);
+extern void bcm_sdiowl_term(void);
+extern void bcm_sdiowl_reset_b(int onoff);
 
 #define WL_ERROR(x) printf x
 #define WL_TRACE(x)
@@ -126,8 +126,6 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 void
 dhd_customer_gpio_wlan_ctrl(int onoff)
 {
-	int error=0;
-
 	switch (onoff) {
 		case WLAN_RESET_OFF:
 			WL_TRACE(("%s: call customer specific GPIO to insert WLAN RESET\n",
@@ -138,8 +136,8 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW2
 			wifi_set_power(0, 0);
 #endif
-//			bcm_sdiowl_reset_b(0);
-			printk("SHRI:WLAN_RESET_OFF CALLED\n");
+			printk("%s: WLAN_RESET_OFF: call bcm_sdiowl_reset_b(0)\n", __FUNCTION__);
+			bcm_sdiowl_reset_b(0);
 			WL_ERROR(("=========== WLAN placed in RESET ========\n"));
 		break;
 
@@ -152,38 +150,38 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW2
 			wifi_set_power(1, 0);
 #endif
-			printk("SHRI:WLAN_RESET_ON CALLED\n");
+			printk("%s: WLAN_RESET_ON: call bcm_sdiowl_reset_b(1)\n", __FUNCTION__);
 			bcm_sdiowl_reset_b(1);
+			OSL_DELAY(200);
 			WL_ERROR(("=========== WLAN going back to live  ========\n"));
 		break;
 
 		case WLAN_POWER_OFF:
-			printk("SHRI:WLAN_POWER_OFF CALLED\n");
 			WL_TRACE(("%s: call customer specific GPIO to turn off WL_REG_ON\n",
 				__FUNCTION__));
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_off(1);
 #endif /* CUSTOMER_HW */
+			printk("%s: WLAN_POWER_OFF: call bcm_sdiowl_reset_b(0)\n", __FUNCTION__);
+			bcm_sdiowl_reset_b(0);
+			printk("%s: WLAN_POWER_OFF: call bcm_sdiowl_term()\n", __FUNCTION__);
+			bcm_sdiowl_term();
 		break;
 
 		case WLAN_POWER_ON:
-			printk("SHRI:WLAN_POWER_ON CALLED\n");
 			WL_TRACE(("%s: call customer specific GPIO to turn on WL_REG_ON\n",
 				__FUNCTION__));
-
-		error = bcm_sdiowl_init();
-
-//			bcm_sdiowl_reset_b(0);
-
-//	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
-//	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
-//	error = bcm_sdiowl_rescan();
-
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_on(1);
 			/* Lets customer power to get stable */
 			OSL_DELAY(200);
 #endif /* CUSTOMER_HW */
+			printk("%s: WLAN_POWER_ON: call bcm_sdiowl_init()\n", __FUNCTION__);
+			bcm_sdiowl_init();
+			/*
+			 * XXX: bcm_sdiowl_reset_b(1) is already called
+			 *      from bcm_sdiowl_init() function
+			 */
 		break;
 	}
 }

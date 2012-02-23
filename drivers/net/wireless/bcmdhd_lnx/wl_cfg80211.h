@@ -2,13 +2,13 @@
  * Linux cfg80211 driver
  *
  * Copyright (C) 1999-2011, Broadcom Corporation
- *
+ * 
  *         Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -126,12 +126,17 @@ do {									\
 #define WL_AP_MAX		256
 #define WL_FILE_NAME_MAX	256
 #define WL_DWELL_TIME 		200
+#define WL_MED_DWELL_TIME       400
 #define WL_LONG_DWELL_TIME 	1000
 #define IFACE_MAX_CNT 		2
 
 #define WL_SCAN_TIMER_INTERVAL_MS	8000 /* Scan timeout */
 #define WL_CHANNEL_SYNC_RETRY 	5
 #define WL_INVALID 		-1
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0) && defined(PNO_SUPPORT) && 0
+#define WL_SCHED_SCAN	1
+#endif
 
 /* driver status */
 enum wl_status {
@@ -441,6 +446,10 @@ struct wl_priv {
 	bool p2p_supported;
 	struct btcoex_info *btcoex_info;
 	struct timer_list scan_timeout;   /* Timer for catch scan event timeout */
+#ifdef WL_SCHED_SCAN
+	struct cfg80211_sched_scan_request *sched_scan_req;	/* scheduled scan req */
+#endif /* WL_SCHED_SCAN */
+	bool sched_scan_running;	/* scheduled scan req status */
 };
 
 
@@ -632,7 +641,8 @@ struct device *wl_cfg80211_get_parent_dev(void);
 
 extern s32 wl_cfg80211_up(void *para);
 extern s32 wl_cfg80211_down(void *para);
-extern s32 wl_cfg80211_notify_ifadd(struct net_device *net, s32 idx, s32 bssidx, void* _net_attach);
+extern s32 wl_cfg80211_notify_ifadd(struct net_device *ndev, s32 idx, s32 bssidx,
+	void* _net_attach);
 extern s32 wl_cfg80211_ifdel_ops(struct net_device *net);
 extern s32 wl_cfg80211_notify_ifdel(struct net_device *ndev);
 extern s32 wl_cfg80211_is_progress_ifadd(void);
@@ -648,6 +658,8 @@ extern s32 wl_cfg80211_set_wps_p2p_ie(struct net_device *net, char *buf, int len
 extern s32 wl_cfg80211_set_p2p_ps(struct net_device *net, char* buf, int len);
 extern int wl_cfg80211_hang(struct net_device *dev, u16 reason);
 extern s32 wl_mode_to_nl80211_iftype(s32 mode);
+int wl_cfg80211_do_driver_init(struct net_device *net);
+void wl_cfg80211_enable_trace(int level);
 
 /* do scan abort */
 extern s32 wl_cfg80211_scan_abort(struct wl_priv *wl, struct net_device *ndev);

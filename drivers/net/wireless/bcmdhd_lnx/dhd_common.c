@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_common.c 297563 2011-11-20 15:38:29Z $
+ * $Id: dhd_common.c 314732 2012-02-14 03:22:42Z $
  */
 #include <typedefs.h>
 #include <osl.h>
@@ -191,20 +191,19 @@ dhd_common_init(osl_t *osh)
 	memset(cmn, 0, sizeof(dhd_cmn_t));
 	cmn->osh = osh;
 
-#ifdef CONFIG_BCMDHD_FW_PATH
-	bcm_strncpy_s(fw_path, sizeof(fw_path), CONFIG_BCMDHD_FW_PATH, MOD_PARAM_PATHLEN-1);
-#else /* CONFIG_BCMDHD_FW_PATH */
+#ifdef CONFIG_BCMDHD_LNX_FW_PATH
+	bcm_strncpy_s(fw_path, sizeof(fw_path), CONFIG_BCMDHD_LNX_FW_PATH, MOD_PARAM_PATHLEN-1);
+#else 
 	fw_path[0] = '\0';
-#endif /* CONFIG_BCMDHD_FW_PATH */
-#ifdef CONFIG_BCMDHD_NVRAM_PATH
-	bcm_strncpy_s(nv_path, sizeof(nv_path), CONFIG_BCMDHD_NVRAM_PATH, MOD_PARAM_PATHLEN-1);
-#else /* CONFIG_BCMDHD_NVRAM_PATH */
+#endif /* CONFIG_BCMDHD_LNX_FW_PATH */
+#ifdef CONFIG_BCMDHD_LNX_NVRAM_PATH
+	bcm_strncpy_s(nv_path, sizeof(nv_path), CONFIG_BCMDHD_LNX_NVRAM_PATH, MOD_PARAM_PATHLEN-1);
+#else 
 	nv_path[0] = '\0';
-#endif /* CONFIG_BCMDHD_NVRAM_PATH */
+#endif /* CONFIG_BCMDHD_LNX_NVRAM_PATH */
 #ifdef SOFTAP
 	fw_path2[0] = '\0';
 #endif
-
 	return cmn;
 }
 
@@ -304,6 +303,10 @@ dhd_wl_ioctl(dhd_pub_t *dhd_pub, int ifindex, wl_ioctl_t *ioc, void *buf, int le
 	dhd_os_proto_block(dhd_pub);
 
 	ret = dhd_prot_ioctl(dhd_pub, ifindex, ioc, buf, len);
+#if defined(OEM_EMBEDDED_LINUX)
+	if (!ret)
+		dhd_os_check_hang(dhd_pub, ifindex, ret);
+#endif 
 
 	dhd_os_proto_unblock(dhd_pub);
 	return ret;
@@ -338,6 +341,11 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 
 	case IOV_SVAL(IOV_MSGLEVEL):
 		dhd_msg_level = int_val;
+#ifdef WL_CFG80211
+		/* Enable DHD and WL logs in oneshot */
+		if (dhd_msg_level & DHD_WL_VAL)
+			wl_cfg80211_enable_trace(dhd_msg_level);
+#endif
 		break;
 	case IOV_GVAL(IOV_BCMERRORSTR):
 		bcm_strncpy_s((char *)arg, len, bcmerrorstr(dhd_pub->bcmerror), BCME_STRLEN);

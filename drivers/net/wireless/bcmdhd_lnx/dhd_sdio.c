@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_sdio.c 303389 2011-12-16 09:30:48Z $
+ * $Id: dhd_sdio.c 314732 2012-02-14 03:22:42Z $
  */
 
 #include <typedefs.h>
@@ -872,7 +872,8 @@ dhdsdio_clkctl(dhd_bus_t *bus, uint target, bool pendok)
 #ifdef DHD_DEBUG
 		if (dhd_console_ms == 0)
 #endif /* DHD_DEBUG */
-		dhd_os_wd_timer(bus->dhd, 0);
+		if (bus->poll == 0)
+			dhd_os_wd_timer(bus->dhd, 0);
 		break;
 	}
 #ifdef DHD_DEBUG
@@ -922,8 +923,10 @@ dhdsdio_bussleep(dhd_bus_t *bus, bool sleep)
 		                 SBSDIO_FORCE_HW_CLKREQ_OFF, NULL);
 
 		/* Isolate the bus */
-		bcmsdh_cfg_write(sdh, SDIO_FUNC_1, SBSDIO_DEVICE_CTL,
-		                 SBSDIO_DEVCTL_PADS_ISO, NULL);
+		if (bus->sih->chip != BCM4329_CHIP_ID && bus->sih->chip != BCM4319_CHIP_ID) {
+			bcmsdh_cfg_write(sdh, SDIO_FUNC_1, SBSDIO_DEVICE_CTL,
+				SBSDIO_DEVCTL_PADS_ISO, NULL);
+		}
 
 		/* Change state */
 		bus->sleeping = TRUE;
@@ -5467,18 +5470,17 @@ dhdsdio_chipmatch(uint16 chipid)
 		return TRUE;
 	if (chipid == BCM4319_CHIP_ID)
 		return TRUE;
-	if (chipid == BCM4336_CHIP_ID)
-		return TRUE;
 	if (chipid == BCM4330_CHIP_ID)
+		return TRUE;
+	if (chipid == BCM43239_CHIP_ID)
+		return TRUE;
+	if (chipid == BCM4336_CHIP_ID)
 		return TRUE;
 	if (chipid == BCM43237_CHIP_ID)
 		return TRUE;
 	if (chipid == BCM43362_CHIP_ID)
 		return TRUE;
-	if (chipid == BCM43239_CHIP_ID)
-		return TRUE;
-	if (chipid == BCM4324_CHIP_ID)
-		return TRUE;
+
 	return FALSE;
 }
 
@@ -6565,6 +6567,13 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 			bcmerror = BCME_SDIO_ERROR;
 			DHD_INFO(("%s called when dongle is not in reset\n",
 				__FUNCTION__));
+#if defined(OEM_EMBEDDED_LINUX)
+			DHD_INFO(("Will call dhd_bus_start instead\n"));
+			sdioh_start(NULL, 1);
+			if ((bcmerror = dhd_bus_start(dhdp)) != 0)
+				DHD_ERROR(("%s: dhd_bus_start fail with %d\n",
+					__FUNCTION__, bcmerror));
+#endif 
 		}
 	}
 	return bcmerror;
