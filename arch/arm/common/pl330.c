@@ -144,9 +144,15 @@
 
 #define	PART		0x330
 #define DESIGNER	0x41
-#define REVISION	0x0
 #define INTEG_CFG	0x0
 #define PERIPH_ID_VAL	((PART << 0) | (DESIGNER << 12))
+#define PERIPH_ID_MASK	(0x000FFFFF)
+
+#define PERIPH_REV_SHIFT	20
+#define PERIPH_REV_MASK		0xF
+#define PERIPH_REV_R0P0		0
+#define PERIPH_REV_R1P0		1
+#define PERIPH_REV_R1P1		2
 
 #define PCELL_ID_VAL	0xb105f00d
 
@@ -389,6 +395,12 @@ static inline u32 get_id(struct pl330_info *pi, u32 off)
 	id |= (readb(regs + off + 0xc) << 24);
 
 	return id;
+}
+
+/* Return PL330 revision ID info */
+static inline u32 get_revision_id(u32 periph_id)
+{
+	return ((periph_id >> PERIPH_REV_SHIFT) & PERIPH_REV_MASK);
 }
 
 static inline u32 _emit_ADDH(unsigned dry_run, u8 buf[],
@@ -1002,14 +1014,25 @@ static inline int _ldst_memtomem(unsigned dry_run, u8 buf[],
 		const struct _xfer_spec *pxs, int cyc)
 {
 	int off = 0;
+	struct pl330_config *pcfg = pxs->r->cfg->pcfg;
 
-	while (cyc--) {
-		off += _emit_LD(dry_run, &buf[off], ALWAYS);
-		off += _emit_RMB(dry_run, &buf[off]);
-		off += _emit_ST(dry_run, &buf[off], ALWAYS);
-		off += _emit_WMB(dry_run, &buf[off]);
+	/*
+	 * PL330 rev r0p0 needs needs memory barrier instructions
+	 * This workaround is not nedded for DMAC rev >= r1p0
+	 */
+	if (get_revision_id(pcfg->periph_id) >= PERIPH_REV_R1P0) {
+		while (cyc--) {
+			off += _emit_LD(dry_run, &buf[off], ALWAYS);
+			off += _emit_ST(dry_run, &buf[off], ALWAYS);
+		}
+	} else {
+		while (cyc--) {
+			off += _emit_LD(dry_run, &buf[off], ALWAYS);
+			off += _emit_RMB(dry_run, &buf[off]);
+			off += _emit_ST(dry_run, &buf[off], ALWAYS);
+			off += _emit_WMB(dry_run, &buf[off]);
+		}
 	}
-
 	return off;
 }
 
@@ -1018,16 +1041,21 @@ static inline int _ldst_devtomem(unsigned dry_run, u8 buf[],
 {
 	int off = 0;
 	enum pl330_cond c = SINGLE;
+	struct pl330_config *pcfg = pxs->r->cfg->pcfg;
 
 	if (pxs->r->cfg->brst_size)
 		c = BURST;
 
+	/*
+	 * PL330 rev r0p0 needs needs memory barrier instructions(ERRATA 716336)
+	 * This workaround is not nedded for DMAC rev >= r1p0
+	 */
 	while (cyc--) {
 		off += _emit_WFP(dry_run, &buf[off], c, pxs->r->peri);
 		off += _emit_LDP(dry_run, &buf[off], c, pxs->r->peri);
-#ifdef CONFIG_ARM_PL330_FIX_ERRATA_716336
-		off += _emit_RMB(dry_run, &buf[off]);
-#endif
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
+			off += _emit_RMB(dry_run, &buf[off]);
+		}
 		off += _emit_ST(dry_run, &buf[off], ALWAYS);
 		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
 	}
@@ -1040,16 +1068,21 @@ static inline int _ldst_memtodev(unsigned dry_run, u8 buf[],
 {
 	int off = 0;
 	enum pl330_cond c = SINGLE;
+	struct pl330_config *pcfg = pxs->r->cfg->pcfg;
 
 	if (pxs->r->cfg->brst_size)
 		c = BURST;
 
+	/*
+	 * PL330 rev r0p0 needs needs memory barrier instructions(ERRATA 716336)
+	 * This workaround is not nedded for DMAC rev >= r1p0
+	 */
 	while (cyc--) {
 		off += _emit_WFP(dry_run, &buf[off], c, pxs->r->peri);
 		off += _emit_LD(dry_run, &buf[off], ALWAYS);
-#ifdef CONFIG_ARM_PL330_FIX_ERRATA_716336
-		off += _emit_RMB(dry_run, &buf[off]);
-#endif
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
+			off += _emit_RMB(dry_run, &buf[off]);
+		}
 		off += _emit_STP(dry_run, &buf[off], c, pxs->r->peri);
 		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
 	}
@@ -1323,6 +1356,8 @@ int pl330_submit_req(void *ch_id, struct pl330_req *r)
 		ret = -EAGAIN;
 		goto xfer_exit;
 	}
+
+	r->cfg->pcfg = &pi->pcfg;
 
 	/* Prefer Secure Channel */
 	if (!_manager_ns(thrd))
@@ -1914,15 +1949,29 @@ int pl330_add(struct pl330_info *pi)
 	regs = pi->base;
 
 	/* Check if we can handle this DMAC */
-	if ((get_id(pi, PERIPH_ID) & 0xfffff) != PERIPH_ID_VAL
-	   || get_id(pi, PCELL_ID) != PCELL_ID_VAL) {
+	if (((get_id(pi, PERIPH_ID) & PERIPH_ID_MASK) != PERIPH_ID_VAL)
+	    || (get_id(pi, PCELL_ID) != PCELL_ID_VAL)) {
 		dev_err(pi->dev, "PERIPH_ID 0x%x, PCELL_ID 0x%x !\n",
-			get_id(pi, PERIPH_ID), get_id(pi, PCELL_ID));
+			get_id(pi, PERIPH_ID) & PERIPH_ID_MASK, get_id(pi, PCELL_ID));
 		return -EINVAL;
 	}
 
 	/* Read the configuration of the DMAC */
 	read_dmac_config(pi);
+
+	/* Print PL330 revision */
+	if (get_revision_id(pi->pcfg.periph_id) == PERIPH_REV_R0P0)
+		dev_info(pi->dev, "PL330 DMAC Revision ID = 0x%04x, Revision r0p0\n",
+			get_revision_id(pi->pcfg.periph_id));
+	else if (get_revision_id(pi->pcfg.periph_id) == PERIPH_REV_R1P0)
+		dev_info(pi->dev, "PL330 DMAC Revision ID = 0x%04x, Revision r1p0\n",
+			get_revision_id(pi->pcfg.periph_id));
+	else if (get_revision_id(pi->pcfg.periph_id) == PERIPH_REV_R1P1)
+		dev_info(pi->dev, "PL330 DMAC Revision ID = 0x%04x, Revision r1p1\n",
+			get_revision_id(pi->pcfg.periph_id));
+	else
+		dev_info(pi->dev, "PL330 DMAC Revision ID = 0x%04x\n",
+			 get_revision_id(pi->pcfg.periph_id));
 
 	if (pi->pcfg.num_events == 0) {
 		dev_err(pi->dev, "%s:%d Can't work without events!\n",

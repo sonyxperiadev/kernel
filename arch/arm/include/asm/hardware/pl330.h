@@ -117,6 +117,7 @@ struct pl330_reqcfg {
 	enum pl330_dstcachectrl dcctl;
 	enum pl330_srccachectrl scctl;
 	enum pl330_byteswap swap;
+	struct pl330_config *pcfg;
 };
 
 /*
