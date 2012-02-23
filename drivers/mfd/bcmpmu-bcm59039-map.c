@@ -232,6 +232,17 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	/* PMU BUS */
 	[PMU_REG_BUS_STATUS_WRITE_FIFO] =	{.map = 0x00, .addr = 0x00, .mask = 0x2, .ro = 1, .shift = 1},
 	[PMU_REG_BUS_STATUS_READ_FIFO] =	{.map = 0x00, .addr = 0x00, .mask = 0x1, .ro = 1, .shift = 0},
+
+	/*UAS*/
+	[PMU_REG_UAS_DET_MODE] =	{.map = 0x00, .addr = 0x70,
+		.mask = 0x03, .ro = 0, .shift = 0},
+	[PMU_REG_UAS_SW_GRP] =		{.map = 0x00, .addr = 0x70,
+		.mask = 0x1C, .ro = 0, .shift = 2},
+	[PMU_REG_UASCTRL3] =		{.map = 0x00, .addr = 0x72,
+		.mask = 0xFF, .ro = 0},
+	[PMU_REG_UASCTRL4] ={		.map = 0x00, .addr = 0x73,
+		.mask = 0xFF, .ro = 0},
+
 };
 
 static const struct bcmpmu_irq_map bcm59039_irq_map[PMU_IRQ_MAX] = {
@@ -290,7 +301,7 @@ static const struct bcmpmu_irq_map bcm59039_irq_map[PMU_IRQ_MAX] = {
 	[PMU_IRQ_PONKEYB_RESTART] =	{.int_addr = 0x36, .mask_addr = 0x46, .bit_mask = 0x40},
 	[PMU_IRQ_IDCHG] =		{.int_addr = 0x37, .mask_addr = 0x47, .bit_mask = 0x01},
 	[PMU_IRQ_JIG_USB_INS] =		{.int_addr = 0x37, .mask_addr = 0x47, .bit_mask = 0x02},
-	[PMU_IRQ_UART_INS] =		{.int_addr = 0x37, .mask_addr = 0x47, .bit_mask = 0x04},
+	[PMU_IRQ_JIG_UART_INS] =	{.int_addr = 0x37, .mask_addr = 0x47, .bit_mask = 0x04},
 	[PMU_IRQ_ID_INS] =		{.int_addr = 0x37, .mask_addr = 0x47, .bit_mask = 0x08},
 	[PMU_IRQ_ID_RM] =		{.int_addr = 0x37, .mask_addr = 0x47, .bit_mask = 0x10},
 	[PMU_IRQ_ADP_CHANGE] =		{.int_addr = 0x34, .mask_addr = 0x44, .bit_mask = 0x10},

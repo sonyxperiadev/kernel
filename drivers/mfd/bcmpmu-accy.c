@@ -66,6 +66,7 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define PMU_BC_STS_PS2_MSK	(1<<4)
 #define PMU_BC_STS_BC_DONE_MSK	(1<<8)
 
+
 /* pattern to write before accessing PMU BC CTRL reg */
 #define PMU_BC_CTRL_OVWR_PATTERN       0x5
 struct accy_cb {
@@ -326,6 +327,127 @@ int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier)
 
 EXPORT_SYMBOL_GPL(bcmpmu_remove_notifier);
 
+int bcmpmu_set_uas_det_mode(u32 det_mode)
+{
+	struct bcmpmu *bcmpmu;
+	int ret;
+	if (!bcmpmu_accy) {
+		pr_accy(ERROR, "%s: BCMPMU accy driver is not initialized\n",
+			__func__);
+		return -EAGAIN;
+	}
+	if (unlikely(det_mode >= BCMPMU_UAS_MODE_MAX)) {
+		pr_accy(ERROR, "%s: Invalid mode\n", __func__);
+		return -EINVAL;
+	}
+
+	bcmpmu = bcmpmu_accy->bcmpmu;
+	BUG_ON(bcmpmu == NULL);
+
+	det_mode <<= bcmpmu->regmap[PMU_REG_UAS_DET_MODE].shift;
+	det_mode &= bcmpmu->regmap[PMU_REG_UAS_DET_MODE].mask;
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_UAS_DET_MODE,
+			  det_mode, bcmpmu->regmap[PMU_REG_UAS_DET_MODE].mask);
+	return ret;
+}
+
+EXPORT_SYMBOL_GPL(bcmpmu_set_uas_det_mode);
+
+
+int bcmpmu_get_uas_sw_grp(void)
+{
+
+	struct bcmpmu *bcmpmu;
+	unsigned int val;
+	int ret;
+	if (!bcmpmu_accy) {
+		pr_accy(ERROR, "%s: BCMPMU accy driver is not initialized\n",
+			__func__);
+		return -EAGAIN;
+	}
+
+	bcmpmu = bcmpmu_accy->bcmpmu;
+
+	BUG_ON(bcmpmu == NULL);
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_UAS_SW_GRP, &val,
+			bcmpmu->regmap[PMU_REG_UAS_SW_GRP].mask);
+
+	val >>= bcmpmu->regmap[PMU_REG_UAS_SW_GRP].shift;
+	return val;
+}
+
+EXPORT_SYMBOL_GPL(bcmpmu_get_uas_sw_grp);
+
+
+int bcmpmu_set_uas_sw_grp(u32 sw_grp)
+{
+	struct bcmpmu *bcmpmu;
+	int ret;
+	if (!bcmpmu_accy) {
+		pr_accy(ERROR, "%s: BCMPMU accy driver is not initialized\n",
+			__func__);
+		return -EAGAIN;
+	}
+
+	bcmpmu = bcmpmu_accy->bcmpmu;
+	BUG_ON(bcmpmu == NULL);
+
+	/*SW grp cannot be changed in HW det mode*/
+	if ((sw_grp & bcmpmu->regmap[PMU_REG_UAS_SW_GRP].mask) >=
+			BCMPMU_UAS_MODE_HW)
+		return -EINVAL;
+
+	sw_grp >>= bcmpmu->regmap[PMU_REG_UAS_SW_GRP].shift;
+
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_UAS_SW_GRP,
+			  sw_grp, bcmpmu->regmap[PMU_REG_UAS_SW_GRP].mask);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(bcmpmu_set_uas_sw_grp);
+
+int bcmpmu_set_uas_switch_enable(u32 uas_switch, bool enable)
+{
+	struct bcmpmu *bcmpmu;
+	unsigned int val;
+	int ret;
+	u32 shift = uas_switch;
+	u32 reg = PMU_REG_UASCTRL3;
+	if (!bcmpmu_accy) {
+		pr_accy(ERROR, "%s: BCMPMU accy driver is not initialized\n",
+			__func__);
+		return -EAGAIN;
+	}
+
+	if (unlikely(uas_switch >= UAS_SW_MAX)) {
+		pr_accy(ERROR, "%s: Invalid SW\n", __func__);
+		return -EINVAL;
+	}
+	bcmpmu = bcmpmu_accy->bcmpmu;
+	BUG_ON(bcmpmu == NULL);
+
+	if (uas_switch == UAS_SW7 ||
+		uas_switch == UAS_SW8) {
+		reg = PMU_REG_UASCTRL4;
+		shift = uas_switch - UAS_SW7;
+	}
+
+	ret = bcmpmu->read_dev(bcmpmu,
+				       reg,
+				       &val,
+				       bcmpmu->
+				       regmap[reg].mask);
+	if (enable)
+		val |= 1 << shift;
+	else
+		val &= ~(1 << shift);
+
+	ret = bcmpmu->write_dev(bcmpmu, reg,
+			  val, bcmpmu->regmap[reg].mask);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(bcmpmu_set_uas_switch_enable);
+
 static void send_usb_event(struct bcmpmu *pmu,
 			   enum bcmpmu_event_t event, void *para)
 {
@@ -467,6 +589,17 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 					     notifiers, BCMPMU_FG_EVENT_FGC,
 					     NULL);
 		break;
+
+	case PMU_IRQ_JIG_UART_INS:
+		pr_info("%s : PMU_IRQ_JIG_UART_INS\n",__func__);
+		blocking_notifier_call_chain(&paccy->event[BCMPMU_JIG_EVENT_UART].
+					     notifiers, BCMPMU_JIG_EVENT_UART, NULL);
+		break;
+
+	case PMU_IRQ_JIG_USB_INS:
+		pr_info("%s : PMU_IRQ_JIG_USB_INS\n",__func__);
+		blocking_notifier_call_chain(&paccy->event[BCMPMU_JIG_EVENT_USB].
+					     notifiers, BCMPMU_JIG_EVENT_USB, NULL);
 
 	case PMU_IRQ_EOC:
 		schedule_delayed_work(&paccy->det_work, 0);
@@ -1209,6 +1342,8 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 			     paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_FGC, bcmpmu_accy_isr, paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_EOC, bcmpmu_accy_isr, paccy);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_JIG_UART_INS, bcmpmu_accy_isr, paccy);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_JIG_USB_INS, bcmpmu_accy_isr, paccy);
 
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBINS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBRM);
@@ -1226,6 +1361,8 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_VBUS_OVERCURRENT);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_FGC);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_JIG_UART_INS);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_JIG_USB_INS);
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_accy_attr_group);
 #endif
@@ -1261,6 +1398,8 @@ static int __devexit bcmpmu_accy_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_VBUS_OVERCURRENT);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_FGC);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_EOC);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_JIG_USB_INS);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_JIG_UART_INS);
 	cancel_delayed_work_sync(&paccy->det_work);
 	cancel_delayed_work_sync(&paccy->adp_work);
 	wake_lock_destroy(&paccy->wake_lock);
