@@ -90,7 +90,7 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_EnableFMPlay,
 	ACTION_AUD_DisableFMPlay,
 	ACTION_AUD_SetARM2SPInst,
-	ACTION_AUD_RateChange,/* 34 */
+	ACTION_AUD_RateChange,/* 33 */
 	ACTION_AUD_TOTAL
 };
 #define BRCM_AUDIO_ACTION_en_t enum __BRCM_AUDIO_ACTION_en_t

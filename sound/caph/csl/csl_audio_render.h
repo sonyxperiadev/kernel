@@ -46,10 +46,10 @@ struct _CSL_CAPH_Render_Drv_t {
 	CSL_CAPH_PathID pathID;
 	CSL_AUDRENDER_CB dmaCB;
 	CSL_CAPH_DMA_CHNL_e dmaCH;
-	CSL_CAPH_DMA_CHNL_e dmaCH2;
+	/*CSL_CAPH_DMA_CHNL_e dmaCH2;
 	AUDIO_NUM_OF_CHANNEL_t numChannels;
 	AUDIO_BITS_PER_SAMPLE_t bitsPerSample;
-	AUDIO_SAMPLING_RATE_t sampleRate;
+	AUDIO_SAMPLING_RATE_t sampleRate;*/
 };
 #define CSL_CAPH_Render_Drv_t struct _CSL_CAPH_Render_Drv_t
 /**

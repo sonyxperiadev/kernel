@@ -100,6 +100,43 @@ struct TAudioHalThreadData {
 
 };
 
+static char action_names[ACTION_AUD_TOTAL][40] = {
+		"OpenPlay",
+		"ClosePlay",
+		"StartPlay",
+		"StopPlay",
+		"PausePlay",
+		"ResumePlay",
+		"StartRecord",
+		"StopRecord",
+		"OpenRecord",
+		"CloseRecord",
+		"SetPrePareParameters",/* 10 */
+		"AddChannel",
+		"RemoveChannel",
+		"EnableTelephony",
+		"DisableTelephony",
+		"EnableECNSTelephony",
+		"DisableECNSTelephony",
+		"SetTelephonyMicSpkr",
+		"MutePlayback",
+		"MuteRecord",
+		"MuteTelephony",/* 20 */
+		"EnableByPassVibra",
+		"DisableByPassVibra",
+		"SetPlaybackVolume",
+		"SetRecordGain",
+		"SetTelephonySpkrVolume",
+		"SwitchSpkr",
+		"SetHWLoopback",
+		"SetAudioMode",
+		"SetAudioApp", /*set audio profile*/
+		"EnableFMPlay",
+		"DisableFMPlay",
+		"SetARM2SPInst",
+		"RateChange" /*33 */
+};
+
 static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 
 static struct TAudioHalThreadData sgThreadData;
@@ -422,7 +459,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 	unsigned int path;
 
 	aTrace(LOG_AUDIO_CNTLR,
-			"AUDIO_Ctrl_Process action_code=%d\r\n", action_code);
+		"AUDIO_Ctrl_Process action_code=%d %s", action_code,
+		&action_names[action_code][0]);
 
 	switch (action_code) {
 	case ACTION_AUD_OpenPlay:

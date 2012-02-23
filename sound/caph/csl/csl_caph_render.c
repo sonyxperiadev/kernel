@@ -170,9 +170,9 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 		return RESULT_ERROR;
 
 	audDrv->dmaCB = csl_audio_render_cb;
-	audDrv->numChannels = numChannels;
+	/*audDrv->numChannels = numChannels;
 	audDrv->bitsPerSample = bitsPerSample;
-	audDrv->sampleRate = sampleRate;
+	audDrv->sampleRate = sampleRate;*/
 
 #ifdef DSP_FPGA_TEST
 	if (audDrv->source == CSL_CAPH_DEV_DSP)

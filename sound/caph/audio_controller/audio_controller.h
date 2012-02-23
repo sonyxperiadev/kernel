@@ -39,13 +39,6 @@
  * @addtogroup Audio_Controller
  * @{
  */
-enum __ExtSpkrUsage_en_t {
-	TelephonyUseExtSpkr,
-	AudioUseExtSpkr,
-	Audio2UseExtSpkr,	/* for 2nd audio playback */
-	FMRadioUseExtSpkr
-};
-#define ExtSpkrUsage_en_t enum __ExtSpkrUsage_en_t
 
 enum __AUDCTRL_SSP_PORT_e {
 	AUDCTRL_SSP_4 = 1,	/*SSPI1 --- ASIC SSPI4, SSPI2 --- ASIC SSPI3 */

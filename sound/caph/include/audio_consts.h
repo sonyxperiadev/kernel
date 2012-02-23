@@ -175,7 +175,7 @@ enum _AUDIO_SOURCE_Enum_t {
 	AUDIO_SOURCE_BTM,
 		/* USB headset Mic */
 	AUDIO_SOURCE_USB,
-	AUDIO_SOURCE_I2S,
+	AUDIO_SOURCE_I2S, /*11*/
 	/*Any valid enums that needs to be exposed to user for recording
 	needs to be added before AUDIO_SOURCE_VALID_TOTAL*/
 	AUDIO_SOURCE_RESERVED1,
@@ -183,7 +183,7 @@ enum _AUDIO_SOURCE_Enum_t {
 	AUDIO_SOURCE_VALID_TOTAL,
 	/*Digital Mic1/Mic2 in recording/Normal Quality Voice call.*/
 	AUDIO_SOURCE_SPEECH_DIGI,
-	AUDIO_SOURCE_MEM,
+	AUDIO_SOURCE_MEM, /*16*/
 	AUDIO_SOURCE_DSP,
 	AUDIO_SOURCE_TOTAL_COUNT
 };

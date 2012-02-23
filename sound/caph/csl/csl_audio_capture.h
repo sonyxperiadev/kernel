@@ -48,10 +48,10 @@ struct _CSL_CAPH_Capture_Drv_t {
 	CSL_CAPH_DMA_CHNL_e dmaCH;
 	CSL_CAPH_DMA_CHNL_e dmaCH2;	/* temp leave this back compatible */
 
-	UInt8 *ringBuffer;
+	/*UInt8 *ringBuffer;
 	UInt32 numBlocks;
 	UInt32 blockSize;
-	AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+	AUDIO_BITS_PER_SAMPLE_t bitPerSample;*/
 } ;
 #define CSL_CAPH_Capture_Drv_t struct _CSL_CAPH_Capture_Drv_t
 /**

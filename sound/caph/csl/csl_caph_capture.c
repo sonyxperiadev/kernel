@@ -161,9 +161,9 @@ Result_t csl_audio_capture_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 		return RESULT_ERROR;
 
 	audDrv->dmaCB = csl_audio_capture_cb;
-	audDrv->ringBuffer = ringBuffer;
+	/*audDrv->ringBuffer = ringBuffer;
 	audDrv->blockSize = blockSize;
-	audDrv->numBlocks = numBlocks;
+	audDrv->numBlocks = numBlocks;*/
 
 /* : make sure ringbuffer, numblocks and block size are legal for Rhea */
 	memset(&stream, 0, sizeof(CSL_CAPH_HWCTRL_STREAM_REGISTER_t));
