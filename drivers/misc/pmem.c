@@ -32,27 +32,27 @@
 #include <asm/uaccess.h>
 #include <asm/cacheflush.h>
 
-#define PMEM_MAX_DEVICES 10
-#define PMEM_MAX_ORDER 128
-#define PMEM_MIN_ALLOC PAGE_SIZE
+#define PMEM_MAX_DEVICES	(10)
+#define PMEM_MAX_ORDER		(128)
+#define PMEM_MIN_ALLOC		PAGE_SIZE
 
-#define PMEM_DEBUG 1
+#define PMEM_DEBUG		0
 
 /* indicates that a refernce to this file has been taken via get_pmem_file,
  * the file should not be released until put_pmem_file is called */
-#define PMEM_FLAGS_BUSY 0x1
+#define PMEM_FLAGS_BUSY		(0x1)
 /* indicates that this is a suballocation of a larger master range */
-#define PMEM_FLAGS_CONNECTED 0x1 << 1
+#define PMEM_FLAGS_CONNECTED	(0x1 << 1)
 /* indicates this is a master and not a sub allocation and that it is mmaped */
-#define PMEM_FLAGS_MASTERMAP 0x1 << 2
+#define PMEM_FLAGS_MASTERMAP	(0x1 << 2)
 /* submap and unsubmap flags indicate:
  * 00: subregion has never been mmaped
  * 10: subregion has been mmaped, reference to the mm was taken
  * 11: subretion has ben released, refernece to the mm still held
  * 01: subretion has been released, reference to the mm has been released
  */
-#define PMEM_FLAGS_SUBMAP 0x1 << 3
-#define PMEM_FLAGS_UNSUBMAP 0x1 << 4
+#define PMEM_FLAGS_SUBMAP	(0x1 << 3)
+#define PMEM_FLAGS_UNSUBMAP	(0x1 << 4)
 
 #define PMEM_FLAGS_DIRTY_REGION (0x1 << 5)
 
@@ -195,10 +195,9 @@ static int id_count;
 #define PMEM_CMA_START_ADDR(id, index) (pmem[id].base + (index * PAGE_SIZE))
 #define PMEM_CMA_START_VADDR(id, index) (pmem[id].vbase + (index * PAGE_SIZE))
 
-/* Macros to set pgprot values to match write-through
+/* Macros to set pgprot values to match uncached, write-through
  * and write-back cache bits
  **/
-
 #define pgprot_noncached(prot) \
 	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_UNCACHED)
 
@@ -831,6 +830,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 			mutex_unlock(&pmem[id].alloc_stat_lock);
 		}
 	}
+
 	/* either no space was available or an error occured */
 	if (!has_allocation(file)) {
 		ret = -ENOMEM;
@@ -843,7 +843,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		       "size of backing region [%lu].\n", vma_size,
 		       pmem_len(id, data));
 		ret = -EINVAL;
-		goto error_free_mem;
+		goto error;
 	}
 
 
@@ -895,8 +895,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 
 	return ret;
 
-error_free_mem:
-
+error_free_mem :
 	printk(KERN_ERR"pmem_mmap() failed, freeing allocated memory\n");
 	mutex_lock(&pmem[id].alloc_stat_lock);
 	pmem[id].total_allocation -= pmem_len(id, data) / PAGE_SIZE;
@@ -911,7 +910,7 @@ error_free_mem:
 		up_write(&pmem[id].bitmap_sem);
 	}
 	data->index = -1;
-error:
+error :
 	up_write(&data->sem);
 	return ret;
 }
@@ -1402,8 +1401,6 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			region.offset = pmem_start_addr(id, data);
 			region.len = pmem_len(id, data);
 		}
-		printk(KERN_DEBUG"pmem: request for physical address of pmem region "
-				"from process %d.\n", current->pid);
 		if (copy_to_user((void __user *)arg, &region,
 					sizeof(struct pmem_region)))
 			return -EFAULT;
@@ -1573,7 +1570,6 @@ void pmem_dump(void)
 }
 EXPORT_SYMBOL(pmem_dump);
 
-#if PMEM_DEBUG
 static ssize_t debug_open(struct inode *inode, struct file *file)
 {
 	file->private_data = inode->i_private;
@@ -1694,7 +1690,6 @@ static struct file_operations debug_fops = {
 	.read = debug_read,
 	.open = debug_open,
 };
-#endif
 
 int pmem_setup(struct platform_device *pdev,
 	       struct android_pmem_platform_data *pdata,
@@ -1796,10 +1791,9 @@ int pmem_setup(struct platform_device *pdev,
 	pmem[id].hwm = 9 * (pmem[id].size / PAGE_SIZE)/ 10;
 	pmem[id].garbage_pfn = page_to_pfn(alloc_page(GFP_KERNEL));
 
-#if PMEM_DEBUG
 	debugfs_create_file(pdata->name, S_IFREG | S_IRUGO, NULL, (void *)id,
 			    &debug_fops);
-#endif
+
 	printk(KERN_INFO"Pmem driver initialised with (%s) allocator with size = %lu pages, hwm = %u pages\n",
 			pmem[id].allocator == CMA_ALLOC ? "CMA" : "Buddy", pmem[id].size/PAGE_SIZE, pmem[id].hwm);
 	return 0;
