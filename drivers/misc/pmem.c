@@ -803,6 +803,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		ret = -EINVAL;
 		goto error;
 	}
+
 	/* if file->private_data == unalloced, alloc*/
 	if (data && data->index == -1) {
 		if (pmem[id].allocator == CMA_ALLOC) {
@@ -879,14 +880,17 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		DLOG("submmapped file %p vma %p pid %u\n", file, vma,
 		     current->pid);
 	} else {
-		data->flags |= PMEM_FLAGS_MASTERMAP;
 		if (pmem_map_pfn_range(id, file, vma, data, 0, vma_size)) {
 			printk(KERN_INFO "pmem: mmap failed in kernel!\n");
 			data->flags &= ~PMEM_FLAGS_MASTERMAP;
 			ret = -EAGAIN;
 			goto error_free_mem;
 		}
-		data->pid = task_pid_nr(current->group_leader);
+
+		if (!(data->flags & PMEM_FLAGS_MASTERMAP)) {
+			data->flags |= PMEM_FLAGS_MASTERMAP;
+			data->pid = task_pid_nr(current->group_leader);
+		}
 	}
 
 	vma->vm_ops = &vm_ops;
@@ -1202,6 +1206,7 @@ err_bad_file:
 	fput_light(src_file, put_needed);
 err_no_file:
 	up_write(&data->sem);
+
 	return ret;
 }
 
@@ -1242,7 +1247,6 @@ lock_mm:
 	 * once */
 	if (PMEM_IS_SUBMAP(data) && !mm) {
 		pmem_unlock_data_and_mm(data, mm);
-		up_write(&data->sem);
 		goto lock_mm;
 	}
 	/* now check that vma.mm is still there, it could have been
