@@ -78,6 +78,12 @@ static wait_queue_head_t mWaitQ;
 
 SysRpcMsgInfo_t gSysRpcMsgInfo = { LIST_HEAD_INIT(gSysRpcMsgInfo.mList), NULL };
 
+#define RPC_READ_LOCK		spin_lock_bh(&mLock)
+#define RPC_READ_UNLOCK		spin_unlock_bh(&mLock)
+
+#define RPC_WRITE_LOCK		spin_lock_bh(&mLock)
+#define RPC_WRITE_UNLOCK	spin_unlock_bh(&mLock)
+
 /***************************************************************************/
 /**
  *  Called by Linux power management system when AP enters and exits sleep.
@@ -151,9 +157,9 @@ static int sysRpcKthreadFn(void *data)
 {
 	Boolean isEmpty;
 	while (1) {
-		spin_lock(&mLock);
+		RPC_READ_LOCK;
 		isEmpty = (Boolean) list_empty(&gSysRpcMsgInfo.mList);
-		spin_unlock(&mLock);
+		RPC_READ_UNLOCK;
 
 		if (isEmpty) {
 			gAvailData = 0;
@@ -167,14 +173,14 @@ static int sysRpcKthreadFn(void *data)
 			SysRpcMsgInfo_t *Item = NULL;
 			void *data;
 
-			spin_lock(&mLock);
+			RPC_WRITE_LOCK;
 			entry = gSysRpcMsgInfo.mList.next;
 			Item = list_entry(entry, SysRpcMsgInfo_t, mList);
 			data = Item->data;
 
 			list_del(entry);
 			kfree(entry);
-			spin_unlock(&mLock);
+			RPC_WRITE_UNLOCK;
 
 			_DBG(SYSRPC_TRACE
 			     ("sysrpc: Handle event=%x\n", (int)data));
@@ -205,9 +211,9 @@ static void sysRpcHandlerCbk(void *eventHandle)
 	elem->data = eventHandle;
 
 	//add to queue
-	spin_lock(&mLock);
+	RPC_WRITE_LOCK;
 	list_add_tail(&elem->mList, &gSysRpcMsgInfo.mList);
-	spin_unlock(&mLock);
+	RPC_WRITE_UNLOCK;
 
 	_DBG(SYSRPC_TRACE("sysrpc: Post event=%x\n", (int)eventHandle));
 
