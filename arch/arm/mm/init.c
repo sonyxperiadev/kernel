@@ -90,10 +90,6 @@ void __init early_init_dt_setup_initrd_arch(unsigned long start, unsigned long e
  */
 struct meminfo meminfo;
 
-#ifdef CONFIG_ANDROID_PMEM
-extern void pmem_dump(void);
-#endif
-
 void show_mem(unsigned int filter)
 {
 	int free = 0, total = 0, reserved = 0;
@@ -136,11 +132,6 @@ void show_mem(unsigned int filter)
 	printk("%d slab pages\n", slab);
 	printk("%d pages shared\n", shared);
 	printk("%d pages swap cached\n", cached);
-
-#ifdef CONFIG_ANDROID_PMEM
-	printk("\n");
-	pmem_dump();
-#endif
 }
 
 #ifdef CONFIG_MEMORY_HOTPLUG
