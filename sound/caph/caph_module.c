@@ -61,6 +61,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "caph_common.h"
 #include "bcm_audio.h"
 #include "audio_trace.h"
+#include "bcmlog.h"
 
 
 /*  Module declarations. */
@@ -536,8 +537,10 @@ int process_logmsg(void *data)
 	struct snd_pcm_runtime *runtime;
 	AUDIOLOG_HEADER_t log_header;
 	unsigned char *p_dma_area;
-
-	log_link_list_t link_list[2];
+	unsigned int sig_code;
+	struct BCMLOG_LogLinkList_t link_list[2];
+	unsigned short state;
+	unsigned short sender;
 
 	while (1) {
 		wait_event_interruptible(audio_log_queue,
@@ -568,11 +571,15 @@ int process_logmsg(void *data)
 				if ((audio_log_cbinfo[i].capture_point ==
 				     AUD_LOG_PCMOUT)
 				    || (audio_log_cbinfo[i].capture_point ==
-					AUD_LOG_PCMOUT)) {
+					AUD_LOG_PCMIN)) {
 					substream =
 					    (struct snd_pcm_substream *)
 					    audio_log_cbinfo[i].pPrivate;
+					if (substream == NULL)
+						goto this_path_done;
 					runtime = substream->runtime;
+					if (runtime == NULL)
+						goto this_path_done;
 
 					log_header.magicID = 0xA0D10106;
 					log_header.logPointID =
@@ -583,6 +590,8 @@ int process_logmsg(void *data)
 					    runtime->channels;
 					log_header.bitsPerSample =
 					    runtime->sample_bits;
+					log_header.frame_size =
+					    runtime->dma_bytes / 2;
 				} else {
 					/* Prepare other format header */
 				}
@@ -595,7 +604,16 @@ int process_logmsg(void *data)
 				if ((audio_log_cbinfo[i].capture_point ==
 				     AUD_LOG_PCMOUT)
 				    || (audio_log_cbinfo[i].capture_point ==
-					AUD_LOG_PCMOUT)) {
+					AUD_LOG_PCMIN)) {
+					substream =
+					    (struct snd_pcm_substream *)
+					    audio_log_cbinfo[i].pPrivate;
+					if (substream == NULL)
+						goto this_path_done;
+					runtime = substream->runtime;
+					if (runtime == NULL)
+						goto this_path_done;
+
 					p_dma_area =
 					    (void *)audio_log_cbinfo[i].
 					    p_LogRead;
@@ -612,17 +630,22 @@ int process_logmsg(void *data)
 					audio_log_cbinfo[i].p_LogRead =
 					    (void *)p_dma_area;
 
+
+					link_list[1].byte_array = p_dma_area;
+					link_list[1].size =
+						runtime->dma_bytes / 2;
+
+				} else {
+					/* Prepare other path data chunk */
 				}
 
-				link_list[1].byte_array = p_dma_area;
-				link_list[1].size = runtime->dma_bytes / 2;
+				sig_code = AUDIO_DATA;
+				state = 0;
+				sender = P_log_general;
 
-				/* void Log_DebugLinkList(UInt32 sig_code,
-				 * log_link_list_t* link_list,
-				 *UInt32 list_size_size, UInt16 state,
-				 * UInt16 sender);
-				 */
-
+				BCMLOG_LogLinkList(sig_code,
+					link_list, 2, state, sender);
+this_path_done:
 				spin_lock(&audio_log_cbinfo[i].audio_log_lock);
 				audio_log_cbinfo[i].capture_ready = 0;
 				spin_unlock(&audio_log_cbinfo[i].

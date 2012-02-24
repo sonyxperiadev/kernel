@@ -94,6 +94,7 @@ struct _AUDIOLOG_HEADER_t {
 	AUDIO_SAMPLING_RATE_t samplingRate; /* 8000, 48000 Hz */
 	AUDIO_NUM_OF_CHANNEL_t stereoType;	/* mono/stereo */
 	AUDIO_BITS_PER_SAMPLE_t bitsPerSample;	/* 8/16/24/32 */
+	UInt32 frame_size;
 };
 #define AUDIOLOG_HEADER_t struct _AUDIOLOG_HEADER_t
 
