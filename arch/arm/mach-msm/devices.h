@@ -269,3 +269,5 @@ extern struct platform_device msm_etm_device;
 #endif
 
 extern struct platform_device msm8960_cpu_idle_device;
+
+extern struct platform_device msm8960_msm_gov_device;
