@@ -39,7 +39,6 @@
 #define BCM_KRIL_MAJOR        201
 #define BCM_LOG_MAJOR	      202
 #define BCM_AT_MAJOR          203
-#define BCM_RPC_MAJOR          205
 #define BCM_ALSA_PCG_MAJOR       206	/* used for ALSA PCG tool */
 #define BCM_ALSA_LOG_MAJOR    207	/* used for Audio logging driver */
 #define BCM_VSP_MAJOR         208
