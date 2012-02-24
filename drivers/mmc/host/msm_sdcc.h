@@ -361,7 +361,7 @@ struct msmsdcc_host {
 	struct msmsdcc_sps_data sps;
 	bool			is_dma_mode;
 	bool			is_sps_mode;
-	struct sg_mapping_iter sg_miter;
+	struct msmsdcc_pio_data	pio;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
