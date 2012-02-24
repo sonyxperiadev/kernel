@@ -140,7 +140,7 @@ config FSL_USB2_OTG
 
 config BCMPMU_OTG_XCEIV
        tristate "Broadcom USB OTG Transceiver Driver"
-       depends on MFD_BCM_PMU590XX || MFD_BCMPMU
+       select MFD_BCMPMU
        select USB_OTG_UTILS
        help
          Enable this to support Broadcom USB OTG transceiver
@@ -149,7 +149,7 @@ config USB_BCM_OTG
        tristate "Broadcom USB OTG Driver"
        select USB_OTG
        select USB_SUSPEND
-       depends on BCMPMU_OTG_XCEIV
+       select BCMPMU_OTG_XCEIV
        default n
        help
 	  Enable this to support Broadcom USB OTG driver
