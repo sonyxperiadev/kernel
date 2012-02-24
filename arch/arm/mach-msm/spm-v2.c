@@ -18,8 +18,8 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <mach/msm_iomap.h>
+#include <mach/msm_rtb.h>
 #include <mach/socinfo.h>
-
 #include "spm_driver.h"
 
 enum {
@@ -213,15 +213,24 @@ failed_write_seq_data:
 int msm_spm_drv_set_low_power_mode(struct msm_spm_driver_data *dev,
 		uint32_t addr)
 {
-
+	void *base = NULL;
 	/* TODO: Remove this after 8064 bring up */
 	if (cpu_is_apq8064())
 		return 0;
-
 	/* SPM is configured to reset start address to zero after end of Program
 	 */
 	if (!dev)
 		return -EINVAL;
+
+	base = dev->reg_base_addr;
+	msm_spm_drv_load_shadow(dev, MSM_SPM_REG_SAW2_SPM_CTL);
+	msm_spm_drv_load_shadow(dev, MSM_SPM_REG_SAW2_STS0);
+	uncached_logk_pc(LOGK_PM,
+		(void *)(base + msm_spm_reg_offsets[MSM_SPM_REG_SAW2_SPM_CTL]),
+		(void *)dev->reg_shadow[MSM_SPM_REG_SAW2_SPM_CTL]);
+	uncached_logk_pc(LOGK_PM,
+		(void *)(base + msm_spm_reg_offsets[MSM_SPM_REG_SAW2_STS0]),
+		(void *)dev->reg_shadow[MSM_SPM_REG_SAW2_STS0]);
 
 	msm_spm_drv_set_start_addr(dev, addr);
 
