@@ -494,7 +494,7 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 	int bFound = 0;
 
 
-	if (interfaceType == INTERFACE_RPC_TELEPHONY) {
+	if (interfaceType == INTERFACE_CAPI2) {
 		if (channel == 0xCD) {
 			channel = 0;
 		}
@@ -520,10 +520,10 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 	      (int)interfaceType, (int)dataBufHandle, channel, (int)clientId,
 	      (int)bFound, gNumActiveClients));
 
-	if (interfaceType != INTERFACE_RPC_TELEPHONY && !bFound)	//Did not find client with registered interface type
+	if (interfaceType != INTERFACE_CAPI2 && !bFound)	/* Did not find client with registered interface type */
 	{
 		ret = RPC_RESULT_ERROR;
-	} else if (interfaceType == INTERFACE_RPC_TELEPHONY && channel == 201)	//Return Error for now. Used for DRX sync
+	} else if (interfaceType == INTERFACE_CAPI2 && channel == 201)	/* Return Error for now. Used for DRX sync */
 	{
 		ret = RPC_RESULT_ERROR;
 	} else {
@@ -544,7 +544,7 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 			for (k = 0; k < 0xFF; k++) {
 				if (gRpcClientList[k]
 				    && (gRpcClientList[k]->info.interfaceType ==
-					INTERFACE_RPC_TELEPHONY)) {
+					INTERFACE_CAPI2)) {
 					ret2 =
 					    RPC_ServerDispatchMsg(interfaceType,
 								  k, channel,

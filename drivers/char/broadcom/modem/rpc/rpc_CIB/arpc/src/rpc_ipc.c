@@ -681,9 +681,7 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 	memset(ipcBufList, 0, sizeof(ipcBufList));
 
 	for (itype = INTERFACE_START; itype < INTERFACE_TOTAL; itype++) {
-		if (itype == INTERFACE_RPC_TELEPHONY
-		    || itype == INTERFACE_RPC_PMU
-		    || itype == INTERFACE_RPC_AUDIO) {
+		if (itype >= INTERFACE_CAPI2 && itype < INTERFACE_PACKET) {
 			ipcBufList[itype].max_pkts[0] = CFG_RPC_CMD_MAX_PACKETS;
 			ipcBufList[itype].max_pkts[1] =
 			    CFG_RPC_CMD_MAX_PACKETS2;
