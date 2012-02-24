@@ -2555,6 +2555,8 @@ void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus,
 		csl_bus = CSL_SSP_I2S;
 	else if (bus == AUDCTRL_SSP_PCM)
 		csl_bus = CSL_SSP_PCM;
+	else if (bus == AUDCTRL_SSP_TDM)
+		csl_bus = CSL_SSP_TDM;
 	else if (!en_lpbk)
 		return;
 

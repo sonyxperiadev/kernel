@@ -882,7 +882,7 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 		uinfo->count = 1;
 		uinfo->value.integer.min = 0;
-		uinfo->value.integer.max = 1;
+		uinfo->value.integer.max = 3;
 		break;
 	case CTL_FUNCTION_VOL:
 		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -1293,6 +1293,10 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		}
 		break;
 	case CTL_FUNCTION_CFG_SSP:
+		/* bus is tdm: 0-pcm 1-i2s 2-mux 3-tdm */
+		if (ucontrol->value.integer.value[0] == 3)
+			AUDCTRL_ConfigSSP(2, 2, 0);
+		else {
 		pChip->i32CfgSSP[kcontrol->id.index] =
 		    ucontrol->value.integer.value[0];
 		/*
@@ -1300,6 +1304,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		 */
 		AUDCTRL_ConfigSSP(kcontrol->id.index + 1,
 				  pChip->i32CfgSSP[kcontrol->id.index], 0);
+		}
 		break;
 
 	case CTL_FUNCTION_VOL:

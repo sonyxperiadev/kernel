@@ -589,12 +589,22 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		chal_sspi_set_fifo_size(pDevice,
 					SSPI_FIFO_ID_TX3, SSPI_FIFO_SIZE_NONE);
 
-		chal_sspi_set_fifo_pack(pDevice,
+		/* for pcm slot, dsp has different requirement of data format */
+		if (devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT) {
+			chal_sspi_set_fifo_pack(pDevice,
+						SSPI_FIFO_ID_RX0,
+						SSPI_FIFO_DATA_PACK_16BIT);
+			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_TX0,
+						SSPI_FIFO_DATA_PACK_16BIT);
+		} else {
+			chal_sspi_set_fifo_pack(pDevice,
 					SSPI_FIFO_ID_RX0,
-					SSPI_FIFO_DATA_PACK_16BIT);
+					SSPI_FIFO_DATA_PACK_NONE);
+			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_TX0,
+					SSPI_FIFO_DATA_PACK_NONE);
+		}
+		/* for fm slot, data is always packed */
 		chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_RX1,
-					SSPI_FIFO_DATA_PACK_16BIT);
-		chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_TX0,
 					SSPI_FIFO_DATA_PACK_16BIT);
 		chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_TX1,
 					SSPI_FIFO_DATA_PACK_16BIT);

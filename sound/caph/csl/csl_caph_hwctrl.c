@@ -4440,7 +4440,6 @@ CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void)
 void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 			       int en_lpbk)
 {
-	CSL_CAPH_SSP_e ssp_port;
 	UInt32 addr;
 	CAPH_SWITCH_TRIGGER_e tx_trigger, rx_trigger;
 
@@ -4459,12 +4458,10 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 		return;
 	}
 	if (port == CSL_SSP_3) {
-		ssp_port = CSL_CAPH_SSP_3;
 		addr = SSP3_BASE_ADDR1;
 		rx_trigger = CAPH_SSP3_RX0_TRIGGER;
 		tx_trigger = CAPH_SSP3_TX0_TRIGGER;
 	} else if (port == CSL_SSP_4) {
-		ssp_port = CSL_CAPH_SSP_4;
 		addr = SSP4_BASE_ADDR1;
 		rx_trigger = CAPH_SSP4_RX0_TRIGGER;
 		tx_trigger = CAPH_SSP4_TX0_TRIGGER;
@@ -4497,6 +4494,13 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 		pcmHandleSSP = (CSL_HANDLE)csl_pcm_init
 			(addr, (UInt32)caph_intc_handle);
 	} else if (bus == CSL_SSP_TDM) {
+		sspTDM_enabled = TRUE;
+		/* upper layer should use below to config TDM for rheaberri
+		if (sspTDM_enabled) {
+			port = CSL_SSP_3;
+			bus = CSL_SSP_TDM;
+		}
+		*/
 		/* may need to extend to more sspis */
 		if (pcmHandleSSP)
 			csl_pcm_deinit(pcmHandleSSP);
@@ -4504,12 +4508,22 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 			/* deinit only if other bus is not using the
 			   same port */
 			csl_i2s_deinit(fmHandleSSP);
-		pcmTxTrigger = fmTxTrigger = tx_trigger;
-		pcmRxTrigger = fmRxTrigger = rx_trigger;
-		if (port == CSL_SSP_3)
+
+		if (port == CSL_SSP_3) {
+			addr = SSP3_BASE_ADDR1;
+			pcmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
+			pcmRxTrigger = CAPH_SSP3_RX0_TRIGGER;
+			fmRxTrigger = CAPH_SSP3_RX1_TRIGGER;
+			fmTxTrigger = CAPH_SSP3_TX1_TRIGGER;
 			sspidPcmUse = sspidI2SUse = CSL_CAPH_SSP_3;
-		else if (port == CSL_SSP_4)
+		} else if (port == CSL_SSP_4) {
+			addr = SSP4_BASE_ADDR1;
+			pcmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
+			pcmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
+			fmRxTrigger = CAPH_SSP4_RX1_TRIGGER;
+			fmTxTrigger = CAPH_SSP4_TX1_TRIGGER;
 			sspidPcmUse = sspidI2SUse = CSL_CAPH_SSP_4;
+		}
 		pcmHandleSSP = (CSL_HANDLE)csl_pcm_init(addr,
 			(UInt32)caph_intc_handle);
 		fmHandleSSP = pcmHandleSSP;
@@ -4618,7 +4632,13 @@ static void csl_caph_hwctrl_tdm_config(
 			else if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
 				&& path->source == CSL_CAPH_DEV_BT_MIC)
 				pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
-			pcmCfg.sample_rate = path->snk_sampleRate;
+			/* copied the logic from non-TDM mode case */
+			if ((bt_mode == BT_MODE_NB) ||
+					(bt_mode == BT_MODE_NB_TEST))
+				pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_8000;
+			else
+				pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_16000;
+			/* this case, audio controller setting has priority */
 			if (path->source == CSL_CAPH_DEV_DSP)
 				pcmCfg.sample_rate = path->src_sampleRate;
 			pcmCfg.interleave = TRUE;
