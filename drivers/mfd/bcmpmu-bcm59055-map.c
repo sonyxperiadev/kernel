@@ -413,7 +413,7 @@ static const struct bcmpmu_irq_map bcm59055_irq_map[PMU_IRQ_MAX] = {	/* revisit 
 	[PMU_IRQ_IDCHG] = {.int_addr = 0x34, .mask_addr = 0x44, .bit_mask = 0x01},
 	[PMU_IRQ_JIG_USB_INS] = {.int_addr = 0x00, .mask_addr = 0x00, .bit_mask =
 				 0x00},
-	[PMU_IRQ_UART_INS] = {.int_addr = 0x00, .mask_addr = 0x00, .bit_mask =
+	[PMU_IRQ_JIG_UART_INS] = {.int_addr = 0x00, .mask_addr = 0x00, .bit_mask =
 			      0x00},
 	[PMU_IRQ_ID_INS] = {.int_addr = 0x00, .mask_addr = 0x00, .bit_mask =
 			    0x00},
