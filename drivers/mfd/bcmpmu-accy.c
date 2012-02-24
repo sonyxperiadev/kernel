@@ -735,7 +735,6 @@ static void usb_det_work(struct work_struct *work)
 						break;
 					default:
 						usb_type = PMU_USB_TYPE_NONE;
-#ifdef CONFIG_USB_OTG
 						/* REVISIT: In error case, Type2 detected for SDP
 						* Need to retry and find the right charger type otherwise
 						* USB will not be notified
@@ -744,7 +743,6 @@ static void usb_det_work(struct work_struct *work)
 						schedule_delayed_work(&paccy->det_work,
 								      msecs_to_jiffies
 								      (0));
-#endif
 						break;
 					}
 				} else {
