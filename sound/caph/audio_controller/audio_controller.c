@@ -189,7 +189,7 @@ static int isDigiMic(AUDIO_SOURCE_Enum_t source);
 static int needDualMic(AudioMode_t mode, AudioApp_t app);
 static AudioMode_t GetAudioModeFromCaptureDev(CSL_CAPH_DEVICE_e source);
 static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
-			       enum ExtSpkrUsage_en_t usage_flag, int use);
+			       enum ExtSpkrUsage_en_t usage_flag, int use, int force);
 static void setExternAudioGain(AudioMode_t mode, AudioApp_t app);
 
 /****************************************************************************
@@ -316,7 +316,7 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 	voiceCallSpkr = sink;
 	voiceCallMic = source;
 
-	powerOnExternalAmp(sink, TelephonyUse, TRUE);
+	powerOnExternalAmp(sink, TelephonyUse, TRUE, FALSE);
 
 #ifdef CONFIG_ENABLE_VOIF
 	mode = AUDCTRL_GetAudioMode();
@@ -350,7 +350,8 @@ void AUDCTRL_DisableTelephony(void)
 		VoIF_Deinit();
 #endif
 
-		powerOnExternalAmp(voiceCallSpkr, TelephonyUse, FALSE);
+		powerOnExternalAmp(voiceCallSpkr, TelephonyUse,
+				FALSE, FALSE);
 
 		/* The following is the sequence we need to follow */
 		AUDDRV_Telephony_Deinit();
@@ -454,6 +455,29 @@ void AUDCTRL_NS(Boolean enable)
 
 /****************************************************************************
 *
+* Function Name: AUDCTRL_EnableAmp
+*
+* Description:   AMP ON/OFF
+*
+****************************************************************************/
+void AUDCTRL_EnableAmp(Int32 ampCtl)
+{
+	static Int32 curAmpStatus = TRUE;
+	if (curAmpStatus == FALSE && ampCtl == TRUE) {
+		/* sink and usage flags are  ignored when force is set to TRUE*/
+		powerOnExternalAmp(AUDIO_SINK_UNDEFINED,
+				AudioUse, TRUE, TRUE);
+		curAmpStatus = TRUE;
+	} else if (curAmpStatus == TRUE && ampCtl == FALSE) {
+		/* sink and usage flags are ignored when force is set to TRUE*/
+		powerOnExternalAmp(AUDIO_SINK_UNDEFINED,
+				AudioUse, FALSE, TRUE);
+		curAmpStatus = FALSE;
+	}
+}
+
+/****************************************************************************
+*
 * Function Name: AUDCTRL_SetTelephonyMicSpkr
 *
 * Description:   Set the micphone and speaker to telephony path, previous
@@ -510,7 +534,8 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 		return;
 
 	if (voiceCallSpkr != sink)
-		powerOnExternalAmp(voiceCallSpkr, TelephonyUse, FALSE);
+		powerOnExternalAmp(voiceCallSpkr, TelephonyUse,
+				FALSE, FALSE);
 
 	if (voiceCallMic != source) {
 		if (isDigiMic(voiceCallMic)) {
@@ -531,7 +556,8 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	bNeedDualMic, bmuteVoiceCall);	/* retain the mute flag */
 
 	if (voiceCallSpkr != sink)
-		powerOnExternalAmp(sink, TelephonyUse, TRUE);
+		powerOnExternalAmp(sink, TelephonyUse,
+				TRUE, FALSE);
 
 	voiceCallSpkr = sink;
 	voiceCallMic = source;
@@ -1122,10 +1148,12 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 				source, sink);
 
 		AUDCTRL_SaveAudioApp(AUDIO_APP_FM);
-		powerOnExternalAmp(sink, FmUse, TRUE);
+		powerOnExternalAmp(sink, FmUse,
+				TRUE, FALSE);
 	} else {
 		AUDCTRL_SaveAudioApp(AUDIO_APP_MUSIC);
-		powerOnExternalAmp(sink, AudioUse, TRUE);
+		powerOnExternalAmp(sink, AudioUse,
+				TRUE, FALSE);
 	}
 
 	if (source == AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB) {
@@ -1254,12 +1282,12 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 					"%s FM src %d, sink %d",
 					__func__, source, sink);
 
-			powerOnExternalAmp(sink, FmUse, FALSE);
+			powerOnExternalAmp(sink, FmUse, FALSE, FALSE);
 			fmPlayStarted = FALSE;
 			AUDCTRL_RemoveAudioApp(AUDIO_APP_FM);
 		} else if ((sink == AUDIO_SINK_HEADSET)
 			   || (sink == AUDIO_SINK_LOUDSPK)) {
-			powerOnExternalAmp(sink, AudioUse, FALSE);
+			powerOnExternalAmp(sink, AudioUse, FALSE, FALSE);
 			AUDCTRL_RemoveAudioApp(AUDIO_APP_MUSIC);
 		}
 	}
@@ -1625,17 +1653,17 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 		&& fmPlayStarted == TRUE) {
 		if (curr_spk == CSL_CAPH_DEV_HS)
 			powerOnExternalAmp(AUDIO_SINK_HEADSET, FmUse,
-					   FALSE);
+					   FALSE, FALSE);
 		else if (curr_spk == CSL_CAPH_DEV_IHF)
 			powerOnExternalAmp(AUDIO_SINK_LOUDSPK, FmUse,
-					   FALSE);
+					   FALSE, FALSE);
 	} else {
 		if (curr_spk == CSL_CAPH_DEV_HS)
 			powerOnExternalAmp(AUDIO_SINK_HEADSET, AudioUse,
-					   FALSE);
+					   FALSE, FALSE);
 		else if (curr_spk == CSL_CAPH_DEV_IHF)
 			powerOnExternalAmp(AUDIO_SINK_LOUDSPK, AudioUse,
-					   FALSE);
+					   FALSE, FALSE);
 	}
 
 	/* add new spk first... */
@@ -1654,10 +1682,10 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 	if (source == AUDIO_SOURCE_I2S && AUDCTRL_InVoiceCall() == FALSE
 		&& fmPlayStarted == TRUE) {
 		if (sink == AUDIO_SINK_LOUDSPK || sink == AUDIO_SINK_HEADSET)
-			powerOnExternalAmp(sink, FmUse, TRUE);
+			powerOnExternalAmp(sink, FmUse, TRUE, FALSE);
 	} else
 		if (sink == AUDIO_SINK_LOUDSPK || sink == AUDIO_SINK_HEADSET)
-			powerOnExternalAmp(sink, AudioUse, TRUE);
+			powerOnExternalAmp(sink, AudioUse, TRUE, FALSE);
 
 	AUDCTRL_SetAudioMode_ForMusicPlayback(
 		GetAudioModeBySink(sink), 0, FALSE);
@@ -1725,7 +1753,7 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 		/*Enable the PMU for HS/IHF. */
 		if ((sink == AUDIO_SINK_LOUDSPK)
 		    || (sink == AUDIO_SINK_HEADSET))
-			powerOnExternalAmp(sink, AudioUse, TRUE);
+			powerOnExternalAmp(sink, AudioUse, TRUE, FALSE);
 
 		config.source = getDeviceFromSrc(source);
 		config.sink = speaker;
@@ -1767,7 +1795,7 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 		/*Disable the PMU for HS/IHF. */
 		if ((sink == AUDIO_SINK_LOUDSPK)
 		    || (sink == AUDIO_SINK_HEADSET))
-			powerOnExternalAmp(sink, AudioUse, FALSE);
+			powerOnExternalAmp(sink, AudioUse, FALSE, FALSE);
 
 		config.source = getDeviceFromSrc(source);
 		config.sink = speaker;
@@ -2423,7 +2451,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		/* Enable PMU for headset/IHF */
 		if ((speaker == AUDIO_SINK_LOUDSPK)
 		    || (speaker == AUDIO_SINK_HEADSET))
-			powerOnExternalAmp(speaker, AudioUse, TRUE);
+			powerOnExternalAmp(speaker, AudioUse, TRUE, FALSE);
 
 		if (((src_dev == CSL_CAPH_DEV_ANALOG_MIC)
 		     || (src_dev == CSL_CAPH_DEV_HS_MIC))
@@ -2511,7 +2539,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		/*Enable PMU for headset/IHF */
 		if ((speaker == AUDIO_SINK_LOUDSPK)
 		    || (speaker == AUDIO_SINK_HEADSET)) {
-			powerOnExternalAmp(speaker, AudioUse, FALSE);
+			powerOnExternalAmp(speaker, AudioUse, FALSE, FALSE);
 		}
 
 	}
@@ -3020,7 +3048,7 @@ static int needDualMic(AudioMode_t mode, AudioApp_t app)
 *
 ****************************************************************************/
 static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
-			       enum ExtSpkrUsage_en_t usage_flag, int use)
+			       enum ExtSpkrUsage_en_t usage_flag, int use, int force)
 {
 
 	static Boolean callUseHS = FALSE;
@@ -3035,101 +3063,129 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 
 	static Boolean IHF_IsOn = FALSE;
 	static Boolean HS_IsOn = FALSE;
+	static Boolean ampControl = TRUE;
 
-	aTrace(LOG_AUDIO_CNTLR, "%s speaker %d, usage_flag %d, use %d\n",
-			__func__, speaker, usage_flag, use);
+	aTrace(LOG_AUDIO_CNTLR, "%s speaker %d, usage_flag %d, use %d,"
+			" force %d\n",
+			__func__, speaker, usage_flag, use, force);
+	if (force == TRUE) {
+		if (use == FALSE) {
+			if (IHF_IsOn == TRUE)
+				extern_ihf_off();
+			if (HS_IsOn == TRUE)
+				extern_hs_off();
+			ampControl = FALSE;
+		}
+		if (use == TRUE) {
+			if (IHF_IsOn == TRUE) {
+				extern_ihf_on();
+				setExternAudioGain(
+					GetAudioModeBySink(AUDIO_SINK_LOUDSPK),
+					AUDCTRL_GetAudioApp());
+			}
+			if (HS_IsOn == TRUE) {
+				extern_hs_on();
+				setExternAudioGain(
+					GetAudioModeBySink(AUDIO_SINK_HEADSET),
+					AUDCTRL_GetAudioApp());
+			}
+			ampControl = TRUE;
+		}
 
-	switch (speaker) {
-	case AUDIO_SINK_HEADSET:
-	case AUDIO_SINK_TTY:
-		switch (usage_flag) {
-		case TelephonyUse:
-			callUseHS = use;
-			/*only one output channel for voice call */
-			if (use)
-				callUseIHF = FALSE;
+	} else {
+		switch (speaker) {
+		case AUDIO_SINK_HEADSET:
+		case AUDIO_SINK_TTY:
+			switch (usage_flag) {
+			case TelephonyUse:
+				callUseHS = use;
+				if (use)
+					/*only one output channel
+					for voice call */
+					callUseIHF = FALSE;
+				break;
 
-			break;
+			case AudioUse:
+				audioUseHS = use;
+				break;
 
-		case AudioUse:
-			audioUseHS = use;
-			break;
+			case FmUse:
+				fmUseHS = use;
+				break;
 
-		case FmUse:
-			fmUseHS = use;
-			break;
-
-		default:
-			break;
+			default:
+				break;
 		}
 		break;
 
-	case AUDIO_SINK_LOUDSPK:
-		switch (usage_flag) {
-		case TelephonyUse:
-			callUseIHF = use;
-			/*only one output channel for voice call */
-			if (use)
-				callUseHS = FALSE;
+		case AUDIO_SINK_LOUDSPK:
+			switch (usage_flag) {
+			case TelephonyUse:
+				callUseIHF = use;
+				/*only one output channel for voice call */
+				if (use)
+					callUseHS = FALSE;
 
-			break;
+				break;
 
-		case AudioUse:
-			audioUseIHF = use;
-			break;
+			case AudioUse:
+				audioUseIHF = use;
+				break;
 
-		case FmUse:
-			fmUseIHF = use;
+			case FmUse:
+				fmUseIHF = use;
+				break;
+
+			default:
+				break;
+			}
 			break;
 
 		default:
-			break;
-		}
-		break;
-
-	default:
-		return;
-	}
-
-	aTrace(LOG_AUDIO_CNTLR, "fmUseIHF %d, audioUseIHF %d, callUseIHF %d,"
-			" fmUseHS %d, audioUseHS %d, callUseHS %d\n",
-			fmUseIHF, audioUseIHF, callUseIHF,
-			fmUseHS, audioUseHS, callUseHS);
-
-	if ((callUseHS == FALSE) && (audioUseHS == FALSE)
-	    && (fmUseHS == FALSE)) {
-		if (HS_IsOn != FALSE) {
-			aTrace(LOG_AUDIO_CNTLR, "power OFF pmu HS amp\n");
-
-			extern_hs_off();
-		}
-		HS_IsOn = FALSE;
-	} else {
-		if (HS_IsOn != TRUE) {
-			aTrace(LOG_AUDIO_CNTLR,
-				"powerOnExternalAmp power on HS");
-			extern_hs_on();
+			return;
 		}
 
-		setExternAudioGain(GetAudioModeBySink(speaker),
-			AUDCTRL_GetAudioApp());
+		aTrace(LOG_AUDIO_CNTLR, "fmUseIHF %d, audioUseIHF %d,"
+				" callUseIHF %d,"
+				" fmUseHS %d, audioUseHS %d, callUseHS %d\n",
+				fmUseIHF, audioUseIHF, callUseIHF,
+				fmUseHS, audioUseHS, callUseHS);
 
-		HS_IsOn = TRUE;
-	}
+		if ((callUseHS == FALSE) && (audioUseHS == FALSE)
+		    && (fmUseHS == FALSE)) {
+			if (HS_IsOn != FALSE) {
+				aTrace(LOG_AUDIO_CNTLR,
+					"power OFF pmu HS amp\n");
 
-	if ((callUseIHF == FALSE) && (audioUseIHF == FALSE)
-	    && (fmUseIHF == FALSE)) {
-		if (IHF_IsOn != FALSE) {
-			aTrace(LOG_AUDIO_CNTLR,
-				"power OFF pmu IHF amp\n");
-			extern_ihf_off();
+				extern_hs_off();
+			}
+			HS_IsOn = FALSE;
+		} else {
+			if (HS_IsOn != TRUE && ampControl == TRUE) {
+				aTrace(LOG_AUDIO_CNTLR,
+					"powerOnExternalAmp power on HS");
+				extern_hs_on();
+			}
+
+			setExternAudioGain(GetAudioModeBySink(speaker),
+				AUDCTRL_GetAudioApp());
+
+			HS_IsOn = TRUE;
 		}
-		IHF_IsOn = FALSE;
-	} else {
-		if (IHF_IsOn != TRUE) {
-			aTrace(LOG_AUDIO_CNTLR,
-				"powerOnExternalAmp power on IHF");
-			extern_ihf_on();
+
+		if ((callUseIHF == FALSE) && (audioUseIHF == FALSE)
+		    && (fmUseIHF == FALSE)) {
+			if (IHF_IsOn != FALSE) {
+				aTrace(LOG_AUDIO_CNTLR,
+					"power OFF pmu IHF amp\n");
+				extern_ihf_off();
+			}
+			IHF_IsOn = FALSE;
+		} else {
+			if (IHF_IsOn != TRUE && ampControl == TRUE) {
+				aTrace(LOG_AUDIO_CNTLR,
+					"powerOnExternalAmp power on IHF");
+				extern_ihf_on();
 		}
 
 		setExternAudioGain(GetAudioModeBySink(speaker),
@@ -3137,7 +3193,7 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 
 		IHF_IsOn = TRUE;
 	}
-
+	}
 }
 
 /****************************************************************************

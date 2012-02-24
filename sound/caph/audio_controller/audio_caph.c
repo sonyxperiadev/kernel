@@ -134,7 +134,8 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 		"EnableFMPlay",
 		"DisableFMPlay",
 		"SetARM2SPInst",
-		"RateChange" /*33 */
+		"RateChange", /*33 */
+		"AmpEnable"
 };
 
 static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
@@ -370,6 +371,9 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 		break;
 	case ACTION_AUD_SetAudioApp:
 		size = sizeof(BRCM_AUDIO_Param_SetApp_t);
+		break;
+	case ACTION_AUD_AMPEnable:
+		size = sizeof(BRCM_AUDIO_Param_AMPCTL_t);
 		break;
 	default:
 		break;
@@ -1040,7 +1044,15 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDCTRL_SetUserAudioApp(parm_setapp->aud_app);
 		}
 		break;
+	case ACTION_AUD_AMPEnable:
+		{
+			BRCM_AUDIO_Param_AMPCTL_t *parm_setamp =
+				(BRCM_AUDIO_Param_AMPCTL_t *)arg_param;
+			AUDCTRL_EnableAmp(parm_setamp->amp_status);
 
+
+		}
+		break;
 	default:
 		aError
 		    ("Error AUDIO_Ctrl_Process Invalid acction command\n");

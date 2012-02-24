@@ -918,6 +918,12 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		uinfo->value.integer.min = 0;
 		uinfo->value.integer.max = 15;
 		break;
+	case CTL_FUNCTION_AMP_CTL:
+		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+		uinfo->count = 1;
+		uinfo->value.integer.min = 0;
+		uinfo->value.integer.max = 1;
+		break;
 	default:
 		aWarn("Unexpected function code %d\n", function);
 		break;
@@ -1039,6 +1045,12 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 				pChip->i32CurApp);
 		ucontrol->value.integer.value[0] = pChip->i32CurApp;
 		break;
+	case CTL_FUNCTION_AMP_CTL:
+		aTrace(LOG_ALSA_INTERFACE,
+				"CTL_FUNCTION_AMP_CTL, current amp =%d\n",
+				pChip->i32CurAmpState);
+		ucontrol->value.integer.value[0] = pChip->i32CurAmpState;
+		break;
 	default:
 		aWarn("Unexpected function code %d\n", function);
 		break;
@@ -1075,6 +1087,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	BRCM_AUDIO_Param_SetApp_t parm_setapp;
 	int rtn = 0, cmd, i, indexVal = -1, cnt = 0;
 	BRCM_AUDIO_Param_ECNS_t parm_ecns;
+	BRCM_AUDIO_Param_AMPCTL_t parm_ampctl;
 	struct snd_pcm_substream *pStream = NULL;
 	int sink = 0;
 	struct snd_ctl_elem_info info;
@@ -1488,6 +1501,18 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		AUDIO_Ctrl_Trigger(ACTION_AUD_SetAudioApp, &parm_setapp,
 				   NULL, 0);
 		break;
+	case CTL_FUNCTION_AMP_CTL:
+		aTrace(LOG_ALSA_INTERFACE,
+				"CTL_FUNCTION_AMP_CTL curAmpStatus =%d, newAmpStatus=%d",
+				(int)pChip->i32CurAmpState,
+				(int)ucontrol->value.integer.value[0]);
+		pChip->i32CurAmpState = ucontrol->value.integer.value[0];
+		/* Make the call to Audio Controller here */
+		parm_ampctl.amp_status = (int)ucontrol->value.\
+		integer.value[0]; /* new amp state */
+		AUDIO_Ctrl_Trigger(ACTION_AUD_AMPEnable, &parm_ampctl,
+				   NULL, 0);
+		break;
 	default:
 		aWarn("Unexpected function code %d\n", function);
 		break;
@@ -1799,6 +1824,8 @@ static struct snd_kcontrol_new sgSndCtrls[] __devinitdata = {
 		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_WRITE_REG,
 		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "AMP-CTL", 0,
+		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_AMP_CTL)),
 };
 
 #define	MAX_CTL_NUMS	161

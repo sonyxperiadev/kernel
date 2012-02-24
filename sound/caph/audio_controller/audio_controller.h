@@ -764,6 +764,7 @@ CSL_CAPH_DEVICE_e getDeviceFromSink(AUDIO_SINK_Enum_t sink);
 AudioMode_t GetAudioModeBySink(AUDIO_SINK_Enum_t sink);
 void AUDCTRL_EC(Boolean enable, UInt32 arg);
 void AUDCTRL_NS(Boolean enable);
+void AUDCTRL_EnableAmp(Int32 ampCtl);
 
 /********************************************************************
 *  @brief  Get MFD mode
