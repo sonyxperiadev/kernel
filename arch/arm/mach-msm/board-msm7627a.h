@@ -13,6 +13,7 @@
 #ifndef __ARCH_ARM_MACH_MSM_BOARD_7627A__
 #define __ARCH_ARM_MACH_MSM_BOARD_7627A__
 
+#include "pm.h"
 void __init msm7627a_init_mmc(void);
 
 enum {
@@ -100,5 +101,5 @@ void __init msm7627a_bt_power_init(void);
 #endif
 
 void __init msm7627a_camera_init(void);
-
+u32 msm7627a_power_collapse_latency(enum msm_pm_sleep_mode);
 #endif
