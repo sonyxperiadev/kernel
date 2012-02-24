@@ -325,8 +325,17 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 #endif
 	}
 
+	msleep(40);
+
 	/* Set new filter coef, sidetone filters, gains. */
 	AUDDRV_SetAudioMode(mode, app);
+
+	if (speaker == AUDIO_SINK_BTM)
+		AUDDRV_SetPCMOnOff(1);
+	else {
+		if (currVoiceMic != AUDIO_SOURCE_BTM)	/*check mic too. */
+			AUDDRV_SetPCMOnOff(0);
+	}
 
 	if (speaker == AUDIO_SINK_LOUDSPK) {
 #if defined(ENABLE_DMA_VOICE)
@@ -366,7 +375,6 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE,
 			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
 #endif
-	msleep(40);
 
 #if defined(ENABLE_DMA_VOICE)
 	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0);
@@ -389,13 +397,6 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 
 /* per call basis: enable the DTX by calling stack api when call connected */
 	audio_control_generic(AUDDRV_CPCMD_ENABLE_DSP_DTX, TRUE, 0, 0, 0, 0);
-
-	if (speaker == AUDIO_SINK_BTM)
-		AUDDRV_SetPCMOnOff(1);
-	else {
-		if (currVoiceMic != AUDIO_SOURCE_BTM)	/*check mic too. */
-			AUDDRV_SetPCMOnOff(0);
-	}
 
 	return;
 }
