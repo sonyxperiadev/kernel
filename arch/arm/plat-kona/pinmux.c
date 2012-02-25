@@ -199,7 +199,7 @@ int pinmux_set_pin_config(struct pin_config *config)
 	writel(config->reg.val,
 	       base + g_chip_pin_desc.desc_tbl[name].reg_offset);
 
-	pr_info("[PINMUX] - write value 0x%08x to register 0x%08x\n",
+	pr_debug("[PINMUX] - write value 0x%08x to register 0x%08x\n",
 		config->reg.val,
 		g_chip_pin_desc.desc_tbl[name].reg_offset);
 
