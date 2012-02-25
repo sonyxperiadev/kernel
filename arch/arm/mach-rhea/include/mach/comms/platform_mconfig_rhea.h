@@ -24,9 +24,7 @@ extern "C" {
 /*****************************************************************************/
 //      name                   ROM address     RAM address     size
 //      ================       ==========      ==========      ==========
-#if defined (CNEON_LMP)
-#define EXT_RAM_BASE_ADDR                      0xA0000000
-#elif defined (RAM_BASE_ADDRESS)
+#if defined (RAM_BASE_ADDRESS)
 #define EXT_RAM_BASE_ADDR                      RAM_BASE_ADDRESS
 #else
 #define EXT_RAM_BASE_ADDR                      0x80000000
@@ -117,10 +115,10 @@ extern "C" {
 //#endif
 
 #if defined (CNEON_LMP)
-#define MODEMHOSTSEC_HOST_BUFF          0xA0104000
+#define MODEMHOSTSEC_HOST_BUFF          EXT_RAM_BASE_ADDR + 0x00104000
 #define MODEMHOSTSEC_HOST_BUFF_SIZE     0x00000800
 
-#define MODEMHOSTSEC_MODEM_BUFF         0xA0104800
+#define MODEMHOSTSEC_MODEM_BUFF         EXT_RAM_BASE_ADDR + 0x00104800
 #define MODEMHOSTSEC_MODEM_BUFF_SIZE    0x00000800
 
 #define MODEMHOSTSEC_BUFF_BASE          MODEMHOSTSEC_HOST_BUFF
