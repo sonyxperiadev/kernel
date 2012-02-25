@@ -263,7 +263,7 @@ static struct regulator_init_data bcm59055_hv3ldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv3_supply),
@@ -522,7 +522,7 @@ struct bcmpmu_regulator_init_data bcm59055_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_HV2LDO, &bcm59055_hv2ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV3LDO] = {
-		BCMPMU_REGULATOR_HV3LDO, &bcm59055_hv3ldo_data, 0x22, 0
+		BCMPMU_REGULATOR_HV3LDO, &bcm59055_hv3ldo_data, 0xAA, 0
 	},
 	[BCMPMU_REGULATOR_HV4LDO] =	{
 		BCMPMU_REGULATOR_HV4LDO, &bcm59055_hv4ldo_data, 0x11, 0

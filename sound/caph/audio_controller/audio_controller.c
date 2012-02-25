@@ -67,6 +67,9 @@
 #include "audctrl_policy.h"
 #include "audio_trace.h"
 
+#include <linux/err.h>
+#include <linux/regulator/consumer.h>
+
 /**There are two loopback paths available in AudioH.
 One is 6.5MHz analog microphone loopback path. It does not support digital mics.
 The other one is HW sidetone path. It supports all the mics. This is prefered.
@@ -184,6 +187,9 @@ static AudioMode_t currAudioMode = AUDIO_MODE_HANDSET;
  /* need to update this on AP and also in audioapi.c on CP. */
 static AudioMode_t currAudioMode_playback = AUDIO_MODE_SPEAKERPHONE;
 static AudioMode_t currAudioMode_record = AUDIO_MODE_SPEAKERPHONE;
+
+static struct regulator *vibra_reg;
+static int vibra_reg_got;
 
 static int isDigiMic(AUDIO_SOURCE_Enum_t source);
 static int needDualMic(AudioMode_t mode, AudioApp_t app);
@@ -2591,6 +2597,14 @@ void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus,
 	csl_caph_hwctrl_ConfigSSP(csl_port, csl_bus, en_lpbk);
 }
 
+#ifdef CONFIG_REGULATOR_BCM59055
+#define VIBRA_LDO_REGULATOR "hv3ldo_uc"
+#endif
+
+#ifdef CONFIG_REGULATOR_BCM59039
+#define VIBRA_LDO_REGULATOR "hv4"
+#endif
+
 /****************************************************************************
 *
 * Function Name: AUDCTRL_EnableBypassVibra
@@ -2601,8 +2615,21 @@ void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus,
 void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction)
 {
 	UInt32 vib_power;
+	int ret = 0;
 
 	aTrace(LOG_AUDIO_CNTLR, "AUDCTRL_EnableBypassVibra");
+
+	if (vibra_reg_got == 0)
+		vibra_reg = regulator_get(NULL, VIBRA_LDO_REGULATOR);
+
+	if (IS_ERR(vibra_reg))
+		aError("Failed to get LDO for Vibra\n");
+	else {
+		vibra_reg_got = 1;
+		ret = regulator_enable(vibra_reg);
+		if (ret != 0)
+			aError("Failed to enable LDO for Vibra: %d\n", ret);
+	}
 
 	csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, TRUE);
 
@@ -2622,8 +2649,15 @@ void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction)
 ****************************************************************************/
 void AUDCTRL_DisableBypassVibra(void)
 {
+	int ret;
 	aTrace(LOG_AUDIO_CNTLR, "AUDCTRL_DisableBypassVibra");
 	csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, FALSE);
+
+	if (vibra_reg_got == 1) {
+		ret = regulator_disable(vibra_reg);
+		if (ret != 0)
+			aError("Failed to disable LDO for Vibra: %d\n", ret);
+	}
 }
 
 /****************************************************************************
