@@ -118,7 +118,9 @@ No support for I2S on Island */
 /* static Interrupt_t AUDDRV_HISR_HANDLE; */
 /* static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
 */
+/*when SRCMixer is running at 26M, 44k SRC does not coexist with other SRCs*/
 static Boolean use26MClk = FALSE;
+static Boolean allow_26m = FALSE;
 static struct clk *clkIDCAPH[MAX_CAPH_CLOCK_NUM] = {NULL, NULL, NULL, NULL};
 
 /* static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM] = {NULL,NULL}; */
@@ -2526,12 +2528,14 @@ void csl_caph_ControlHWClock(Boolean enable)
 			clk_disable(clkIDCAPH[0]);
 #endif
 		aTrace(LOG_AUDIO_CSL,
-		"csl_caph_ControlHWClock: use26MClk = %d\n", use26MClk);
+		"csl_caph_ControlHWClock: use26MClk %d, allow_26m %d\n",
+		use26MClk, allow_26m);
 #if defined(CONFIG_ARCH_RHEA_BX)
 		/*Rhea B0 and above.*/
-		if (use26MClk)
+		if (use26MClk && allow_26m) {
 			clk_set_rate(clkIDCAPH[0], 26000000);
-		else
+			allow_26m = FALSE;
+		} else
 			clk_set_rate(clkIDCAPH[0], 78000000);
 #else
 		clk_set_rate(clkIDCAPH[0], 156000000);
@@ -3591,6 +3595,23 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	CSL_CAPH_PathID pathID = config.pathID;
 	CSL_CAPH_HWConfig_Table_t *path;
 
+	/*The use cases that don't allow 26M SRCMixer clock:
+	   - voice related.
+	   - 44k playback to BT mono.
+	   - 44k + 8/16k playback. User space should make sure
+	     this wouldn't happen.
+	*/
+	allow_26m = TRUE;
+	if (config.source == CSL_CAPH_DEV_DSP_throughMEM
+		 || config.source == CSL_CAPH_DEV_DSP
+		 || config.sink == CSL_CAPH_DEV_DSP_throughMEM
+		 || config.sink == CSL_CAPH_DEV_DSP) {
+		allow_26m = FALSE;
+	} else if (config.source == CSL_CAPH_DEV_MEMORY
+		&& config.sink == CSL_CAPH_DEV_BT_SPKR
+		&& config.src_sampleRate == AUDIO_SAMPLING_RATE_44100) {
+		allow_26m = FALSE;
+	}
 	/*try to enable all audio clock first*/
 	csl_caph_ControlHWClock(TRUE);
 
