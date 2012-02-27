@@ -60,6 +60,7 @@
 #include "dwc_os.h"
 #include "dwc_otg_regs.h"
 #include "dwc_otg_cil.h"
+#include "plat/cpu.h"
 
 static int dwc_otg_setup_params(dwc_otg_core_if_t *core_if);
 
@@ -1564,12 +1565,12 @@ void dwc_otg_core_init(dwc_otg_core_if_t *core_if)
 	case DWC_INT_DMA_ARCH:
 		DWC_DEBUGPL(DBG_CIL, "Internal DMA Mode\n");
 
-#ifdef USE_DMA_MULTI_DWORD_BURSTS
-		ahbcfg.b.hburstlen = DWC_GAHBCFG_INT_DMA_BURST_INCR8;
-#else
-		/* Default to single burst */
-		ahbcfg.b.hburstlen = DWC_GAHBCFG_INT_DMA_BURST_SINGLE;
-#endif
+		if (get_chip_rev_id() >= RHEA_CHIP_REV_B1)
+			ahbcfg.b.hburstlen = DWC_GAHBCFG_INT_DMA_BURST_INCR8;
+		else {
+			/* Default to single burst */
+			ahbcfg.b.hburstlen = DWC_GAHBCFG_INT_DMA_BURST_SINGLE;
+		}
 		core_if->dma_enable = (core_if->core_params->dma_enable != 0);
 		core_if->dma_desc_enable =
 		    (core_if->core_params->dma_desc_enable != 0);

@@ -87,6 +87,11 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	*/
 	{.map = 0, .addr = 0xC9, .val = 0x1A, .mask = 0xFF},
 	{.map = 0, .addr = 0xCA, .val = 0x1A, .mask = 0xFF},
+	{.map = 0, .addr = 0x13, .val = 0x43, .mask = 0xFF},
+	{.map = 0, .addr = 0x14, .val = 0x7F, .mask = 0xFF},
+	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
+	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
+	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
@@ -223,7 +228,7 @@ static struct regulator_init_data bcm59039_hv4ldo_data = {
 #if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 			.always_on = 0,
 #else
-			.always_on = 1,
+			.always_on = 0,
 #endif
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv4_supply),
@@ -511,7 +516,7 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 #if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, 0
 #else
-		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, 0
 #endif
 	},
 	[BCMPMU_REGULATOR_HV5LDO] = {
@@ -656,12 +661,12 @@ static struct bcmpmu_adc_setting adc_setting = {
 
 static struct bcmpmu_charge_zone chrg_zone[] = {
 	{.tl = 268, .th = 333, .v = 3000, .fc = 10, .qc = 100},	/* Zone QC */
-	{.tl = 268, .th = 272, .v = 3800, .fc = 50, .qc = 0},	/* Zone LL */
-	{.tl = 273, .th = 282, .v = 4200, .fc = 50, .qc = 0},	/* Zone L */
+	{.tl = 268, .th = 272, .v = 4200, .fc = 100, .qc = 0},	/* Zone LL */
+	{.tl = 273, .th = 282, .v = 4200, .fc = 100, .qc = 0},	/* Zone L */
 	{.tl = 283, .th = 318, .v = 4200, .fc = 100, .qc = 0},	/* Zone N */
-	{.tl = 319, .th = 323, .v = 4200, .fc = 50, .qc = 0},	/* Zone H */
-	{.tl = 324, .th = 333, .v = 4100, .fc = 50, .qc = 0},	/* Zone HH */
-	{.tl = 253, .th = 333, .v = 0, .fc = 0, .qc = 0},	/* Zone OUT */
+	{.tl = 319, .th = 323, .v = 4200, .fc = 100, .qc = 0},	/* Zone H */
+	{.tl = 324, .th = 333, .v = 4200, .fc = 100, .qc = 0},	/* Zone HH */
+	{.tl = 268, .th = 333, .v = 0, .fc = 0, .qc = 0},	/* Zone OUT */
 };
 
 static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
@@ -722,7 +727,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.batt_voltcap_map_len = ARRAY_SIZE(batt_voltcap_map),
 	.batt_impedence = 238,
 	.chrg_1c_rate = 1350,
-	.chrg_eoc = 67,
+	.chrg_eoc = 100,
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1350 * 3600,
 	.support_fg = 1,

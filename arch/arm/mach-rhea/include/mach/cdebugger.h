@@ -17,7 +17,7 @@
 
 #if defined(CONFIG_CDEBUGGER)
 
-#define MAGIC_ADDR				BCM21553_SCRATCHRAM_BASE + 0x7800
+#define MAGIC_ADDR	(BCM21553_SCRATCHRAM_BASE + 0x7800)
 
 extern int cdebugger_init(void);
 extern int cdebugger_dump_stack(void);
@@ -34,15 +34,25 @@ extern void sec_getlog_supply_kloginfo(void *klog_buf);
 extern void sec_gaf_supply_rqinfo(unsigned short curr_offset,
 				  unsigned short rq_offset);
 
-extern void cdebugger_save_pte(void *pte, int task_addr); 
+extern void cdebugger_save_pte(void *pte, int task_addr);
 
+extern unsigned char _buf_log_main[512 * 1024];
+extern unsigned char _buf_log_radio[256 * 1024];
+extern unsigned char _buf_log_events[256 * 1024];
+extern unsigned char _buf_log_system[256 * 1024];
+extern char *log_buf;
+extern int log_buf_len;
 
 #else
 static inline int cdebugger_init(void)
 {
 }
-static inline int cdebugger_dump_stack(void) {}
-static inline void cdebugger_check_crash_key(unsigned int code, int value) {}
+static inline int cdebugger_dump_stack(void)
+{
+}
+static inline void cdebugger_check_crash_key(unsigned int code, int value)
+{
+}
 
 static inline void sec_getlog_supply_fbinfo(void *p_fb, u32 res_x, u32 res_y,
 					    u32 bpp, u32 frames)
@@ -69,12 +79,10 @@ static inline void sec_gaf_supply_rqinfo(unsigned short curr_offset,
 {
 }
 
-void cdebugger_save_pte(void *pte, unsigned int faulttype )
+void cdebugger_save_pte(void *pte, unsigned int faulttype)
 {
 }
 
 #endif
 
 #endif /* CDEBUGGER_H */
-
-

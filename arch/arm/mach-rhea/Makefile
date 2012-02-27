@@ -32,6 +32,7 @@ obj-$(CONFIG_MACH_RHEA_BERRI_EDN40) += rhea_berri.o rhea_berri_pinmux.o
 obj-$(CONFIG_MACH_RHEALC_BERRI) += rhea_berri.o rhea_berri_pinmux.o
 obj-$(CONFIG_MACH_RHEA_STONE) += rhea_stone.o
 obj-$(CONFIG_CDEBUGGER) += crash_debugger.o
+obj-$(CONFIG_ARCH_RHEA) += rhea_bmdm_wd_monitor.o
 obj-y += pm_params.o
 
 obj-$(CONFIG_ROM_SEC_DISPATCHER_LIB) += sec_bridge_tz.i

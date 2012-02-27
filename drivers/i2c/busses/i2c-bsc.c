@@ -1637,13 +1637,13 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* high-speed mode */
 	if (dev->speed == BSC_BUS_SPEED_HS) {
 		dev->high_speed_mode = 1;
-		pr_info("disable slew rate  for id = %d\n", pdev->id);
+		pr_debug("disable slew rate  for id = %d\n", pdev->id);
 		i2c_pin_cfg(pdev->id, 0);
 
 	} else {
 		dev->high_speed_mode = 0;
 
-		pr_info("enable slew rate  for id = %d\n", pdev->id);
+		pr_debug("enable slew rate  for id = %d\n", pdev->id);
 		i2c_pin_cfg(pdev->id, 1);
 
 	}

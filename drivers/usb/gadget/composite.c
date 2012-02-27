@@ -772,9 +772,12 @@ static int get_string(struct usb_composite_dev *cdev,
 	else
 		str = NULL;
 	if (str) {
+		/* Init with NULL str in last element */
+		struct usb_string language_string_array[2] =
+			    {{ 0xff, str}, {0xff, NULL}};
 		struct usb_gadget_strings strings = {
 			.language = language,
-			.strings  = &(struct usb_string) { 0xff, str }
+			.strings  = language_string_array
 		};
 		return usb_gadget_get_string(&strings, 0xff, buf);
 	}

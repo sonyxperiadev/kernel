@@ -57,7 +57,7 @@
 /**
 	Maximum number of filtered event masks for each client
  **/
-#define  MAX_FILTERED_EVENT_MASK_NUM		10
+#define  MAX_FILTERED_EVENT_MASK_NUM		20
 
 typedef enum
 {

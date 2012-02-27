@@ -54,11 +54,13 @@ int scu_standby(bool enable)
 
 	return 0;
 }
+EXPORT_SYMBOL(scu_standby);
 #else
 int scu_standby(bool enable)
 {
 	return 0;
 }
+EXPORT_SYMBOL(scu_standby);
 #endif /* CONFIG_RHEA_B0_PM_ASIC_WORKAROUND */
 
 int scu_invalidate_all(void)

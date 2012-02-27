@@ -30,13 +30,14 @@ the GPL, without Broadcom's express prior written consent.
 #include <asm/io.h>
 
 #include <plat/pi_mgr.h>
+#include <plat/scu.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_vce.h>
 
 #include <linux/broadcom/vce.h>
 
-#define DRIVER_VERSION 10103
+#define DRIVER_VERSION 10104
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -339,6 +340,7 @@ static void cpu_keepawake_dec(void)
 	if (vce_state.arm_keepawake_count == 0) {
 		pi_mgr_qos_request_update(&vce_state.cpu_qos_node,
 					  PI_MGR_QOS_DEFAULT_VALUE);
+		scu_standby(1);
 	}
 	up(&vce_state.armctl_sem);
 }
@@ -348,6 +350,8 @@ static void cpu_keepawake_inc(void)
 	down(&vce_state.armctl_sem);
 	if (vce_state.arm_keepawake_count == 0) {
 		pi_mgr_qos_request_update(&vce_state.cpu_qos_node, 0);
+		scu_standby(0);
+		mb();
 	}
 	vce_state.arm_keepawake_count += 1;
 	up(&vce_state.armctl_sem);

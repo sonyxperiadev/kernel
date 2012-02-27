@@ -18,7 +18,7 @@
 #include <linux/delay.h>
 #include <linux/sysrq.h>
 #include <asm/cacheflush.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <linux/sched.h>
 #include <linux/smp.h>
 #include <linux/slab.h>
@@ -32,121 +32,121 @@
 #include <linux/fs.h>
 
 enum cdebugger_upload_cause_t {
-    UPLOAD_CAUSE_INIT = 0xCAFEBABE,
-    UPLOAD_CAUSE_KERNEL_PANIC = 0x000000C8,
-    UPLOAD_CAUSE_FORCED_UPLOAD = 0x00000022,
-    UPLOAD_CAUSE_CP_ERROR_FATAL = 0x000000CC,
-    UPLOAD_CAUSE_USER_FAULT = 0x0000002F,
+	UPLOAD_CAUSE_INIT = 0xCAFEBABE,
+	UPLOAD_CAUSE_KERNEL_PANIC = 0x000000C8,
+	UPLOAD_CAUSE_FORCED_UPLOAD = 0x00000022,
+	UPLOAD_CAUSE_CP_ERROR_FATAL = 0x000000CC,
+	UPLOAD_CAUSE_USER_FAULT = 0x0000002F,
 };
 
 struct cdebugger_mmu_reg_t {
-    int SCTLR;
-    int TTBR0;
-    int TTBR1;
-    int TTBCR;
-    int DACR;
-    int DFSR;
-    int FAR;
-    int IFSR;
-    int DAFSR;
-    int IAFSR;
-    int PMRRR;
-    int NMRRR;
-    int FCSEPID;
-    int CONTEXT;
-    int URWTPID;
-    int UROTPID;
-    int POTPIDR;
+	int SCTLR;
+	int TTBR0;
+	int TTBR1;
+	int TTBCR;
+	int DACR;
+	int DFSR;
+	int FAR;
+	int IFSR;
+	int DAFSR;
+	int IAFSR;
+	int PMRRR;
+	int NMRRR;
+	int FCSEPID;
+	int CONTEXT;
+	int URWTPID;
+	int UROTPID;
+	int POTPIDR;
 };
 
 /* ARM CORE regs mapping structure */
 struct cdebugger_core_t {
-    /* COMMON */
-    unsigned int r0;
-    unsigned int r1;
-    unsigned int r2;
-    unsigned int r3;
-    unsigned int r4;
-    unsigned int r5;
-    unsigned int r6;
-    unsigned int r7;
-    unsigned int r8;
-    unsigned int r9;
-    unsigned int r10;
-    unsigned int r11;
-    unsigned int r12;
+	/* COMMON */
+	unsigned int r0;
+	unsigned int r1;
+	unsigned int r2;
+	unsigned int r3;
+	unsigned int r4;
+	unsigned int r5;
+	unsigned int r6;
+	unsigned int r7;
+	unsigned int r8;
+	unsigned int r9;
+	unsigned int r10;
+	unsigned int r11;
+	unsigned int r12;
 
-    /* SVC */
-    unsigned int r13_svc;
-    unsigned int r14_svc;
-    unsigned int spsr_svc;
+	/* SVC */
+	unsigned int r13_svc;
+	unsigned int r14_svc;
+	unsigned int spsr_svc;
 
-    /* PC & CPSR */
-    unsigned int pc;
-    unsigned int cpsr;
+	/* PC & CPSR */
+	unsigned int pc;
+	unsigned int cpsr;
 
-    /* USR/SYS */
-    unsigned int r13_usr;
-    unsigned int r14_usr;
+	/* USR/SYS */
+	unsigned int r13_usr;
+	unsigned int r14_usr;
 
-    /* FIQ */
-    unsigned int r8_fiq;
-    unsigned int r9_fiq;
-    unsigned int r10_fiq;
-    unsigned int r11_fiq;
-    unsigned int r12_fiq;
-    unsigned int r13_fiq;
-    unsigned int r14_fiq;
-    unsigned int spsr_fiq;
+	/* FIQ */
+	unsigned int r8_fiq;
+	unsigned int r9_fiq;
+	unsigned int r10_fiq;
+	unsigned int r11_fiq;
+	unsigned int r12_fiq;
+	unsigned int r13_fiq;
+	unsigned int r14_fiq;
+	unsigned int spsr_fiq;
 
-    /* IRQ */
-    unsigned int r13_irq;
-    unsigned int r14_irq;
-    unsigned int spsr_irq;
+	/* IRQ */
+	unsigned int r13_irq;
+	unsigned int r14_irq;
+	unsigned int spsr_irq;
 
-    /* ABT */
-    unsigned int r13_abt;
-    unsigned int r14_abt;
-    unsigned int spsr_abt;
+	/* ABT */
+	unsigned int r13_abt;
+	unsigned int r14_abt;
+	unsigned int spsr_abt;
 
-    /* UNDEF */
-    unsigned int r13_und;
-    unsigned int r14_und;
-    unsigned int spsr_und;
+	/* UNDEF */
+	unsigned int r13_und;
+	unsigned int r14_und;
+	unsigned int spsr_und;
 
 };
 
 struct cdebugger_fault_status_t {
-    /* COMMON */
-    unsigned int r0;
-    unsigned int r1;
-    unsigned int r2;
-    unsigned int r3;
-    unsigned int r4;
-    unsigned int r5;
-    unsigned int r6;
-    unsigned int r7;
-    unsigned int r8;
-    unsigned int r9;
-    unsigned int r10;
-    unsigned int r11;
-    unsigned int r12;
-    unsigned int r13;
-    unsigned int r14;
-    unsigned int r15;
-    unsigned int cpsr;
-    unsigned int cur_process_magic;
+	/* COMMON */
+	unsigned int r0;
+	unsigned int r1;
+	unsigned int r2;
+	unsigned int r3;
+	unsigned int r4;
+	unsigned int r5;
+	unsigned int r6;
+	unsigned int r7;
+	unsigned int r8;
+	unsigned int r9;
+	unsigned int r10;
+	unsigned int r11;
+	unsigned int r12;
+	unsigned int r13;
+	unsigned int r14;
+	unsigned int r15;
+	unsigned int cpsr;
+	unsigned int cur_process_magic;
 };
 
 /* enable cdebugger feature */
-static unsigned enable = 0;
+static unsigned enable;
 /*SRAM base address*/
 void __iomem *cdebugger_mem_base;
 module_param_named(enable, enable, uint, 0644);
 
-static const char *gkernel_cdebugger_build_info_date_time[] = {
-    __DATE__,
-    __TIME__
+static const char * const gkernel_cdebugger_build_info_date_time[] = {
+	__DATE__,
+	__TIME__
 };
 
 static char gkernel_cdebugger_build_info[100];
@@ -165,54 +165,47 @@ struct T_RAMDUMP_BLOCK {
 };
 
 const char linkSignature[120] = "Link Signature:  LINK_SIGNATURE";
-const char decoder_version[] = {"!!! SDL decoder: hspa_11_11_22.zip"};
+const char decoder_version[] = { "!!! SDL decoder: hspa_11_11_22.zip" };
 const unsigned int num_of_ramdumps = 1;
-const unsigned int mmu_unit_size = (1<< PAGE_SHIFT);
+const unsigned int mmu_unit_size = (1 << PAGE_SHIFT);
 struct T_RAMDUMP_BLOCK ramdump_list[16] = {
-{PHYS_OFFSET, 0x20000000, 0xFFFFFFFF, "MAIN"},
+	{PHYS_OFFSET, 0x20000000, 0xFFFFFFFF, "MAIN"},
 };
 
-static struct TLV_android {
+struct TLV_android {
 	unsigned char type;
 	unsigned char name[30];
 	unsigned int length;
 	unsigned char *buf;
 };
 
-extern unsigned char _buf_log_main[512*1024];
-extern unsigned char _buf_log_radio[256*1024];
-extern unsigned char _buf_log_events[256*1024];
-extern unsigned char _buf_log_system[256*1024];
-extern char *log_buf;
-extern int log_buf_len;
 #define LOG_BUFFER	1
 
 static struct TLV_android main_log = {
-	.type	=	LOG_BUFFER,
-	.name	=	"android_main_log",
-	.length	=	512*1024,
+	.type = LOG_BUFFER,
+	.name = "android_main_log",
+	.length = 512 * 1024,
 };
 
 static struct TLV_android radio_log = {
-	.type	=	LOG_BUFFER,
-	.name	=	"android_radio_log",
-	.length	=	256*1024,
+	.type = LOG_BUFFER,
+	.name = "android_radio_log",
+	.length = 256 * 1024,
 };
 
 static struct TLV_android events_log = {
-	.type	=	LOG_BUFFER,
-	.name	=	"android_events_log",
-	.length	=	256*1024,
+	.type = LOG_BUFFER,
+	.name = "android_events_log",
+	.length = 256 * 1024,
 };
 
 static struct TLV_android system_log = {
-	.type	=	LOG_BUFFER,
-	.name	=	"android_system_log",
-	.length	=	256*1024,
+	.type = LOG_BUFFER,
+	.name = "android_system_log",
+	.length = 256 * 1024,
 };
 
-void *log_tx_param[] __aligned(8) =
-{
+void *log_tx_param[] __aligned(8) = {
 	(void *)0x4150FEFF,
 	(void *)0x7F576656,	/* begin flag */
 	0,
@@ -307,7 +300,6 @@ void *log_tx_param[] __aligned(8) =
 	(void *)0x656675F7,
 	(void *)0xFFEF0514	/* end flag */
 };
-
 EXPORT_SYMBOL(log_tx_param);
 
 static int __init setup_crash_ramdump(char *p)
@@ -454,18 +446,18 @@ static void cdebugger_save_context(void)
 	local_irq_restore(flags);
 }
 
-void cdebugger_save_pte(void *pte, int task_addr) 
+void cdebugger_save_pte(void *pte, int task_addr)
 {
 
-	memcpy(&cdebugger_fault_status, pte,sizeof(cdebugger_fault_status));
-	cdebugger_fault_status.cur_process_magic =task_addr;
+	memcpy(&cdebugger_fault_status, pte, sizeof(cdebugger_fault_status));
+	cdebugger_fault_status.cur_process_magic = task_addr;
 
 }
 
 static void cdebugger_set_upload_magic(unsigned magic)
 {
 
-	iowrite32(magic,cdebugger_mem_base);
+	iowrite32(magic, cdebugger_mem_base);
 
 	flush_cache_all();
 
@@ -488,20 +480,20 @@ static void cdebugger_set_upload_cause(enum cdebugger_upload_cause_t type)
 	 * Store the cause of crash.
 	 * This can be read from the bootloader later on
 	 */
-	iowrite32(type,cdebugger_mem_base + 0x4);
+	iowrite32(type, cdebugger_mem_base + 0x4);
 }
 
 static void cdebugger_hw_reset(void)
 {
-		arm_machine_restart('h', "upload");;
+	arm_machine_restart('h', "upload");
 }
 
 static void setup_log_buffer_address(void)
 {
-	main_log.buf 	= (void *) virt_to_phys((void *)_buf_log_main);
-	radio_log.buf 	= (void *) virt_to_phys((void *)_buf_log_radio);
-	events_log.buf 	= (void *) virt_to_phys((void *)_buf_log_events);
-	system_log.buf 	= (void *) virt_to_phys((void *)_buf_log_system);
+	main_log.buf = (void *)virt_to_phys((void *)_buf_log_main);
+	radio_log.buf = (void *)virt_to_phys((void *)_buf_log_radio);
+	events_log.buf = (void *)virt_to_phys((void *)_buf_log_events);
+	system_log.buf = (void *)virt_to_phys((void *)_buf_log_system);
 }
 
 static int cdebugger_panic_handler(struct notifier_block *nb,
@@ -517,7 +509,6 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 		else
 			cdebugger_set_upload_cause(UPLOAD_CAUSE_KERNEL_PANIC);
 
-
 		handle_sysrq('t');
 
 		ramdump_list[0].mem_size = (num_physpages << PAGE_SHIFT);
@@ -525,21 +516,27 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 
 		log_tx_param[2] = (void *)virt_to_phys((void *)log_buf);
 		log_tx_param[3] = (void *)log_buf_len;
-		log_tx_param[4] = (void *)0;//wr index
-		log_tx_param[5] = (void *)0;//rd index
+		log_tx_param[4] = (void *)0;	/* wr index */
+		log_tx_param[5] = (void *)0;	/* rd index */
 		log_tx_param[7] = (void *)virt_to_phys((void *)linkSignature);
-		log_tx_param[11] = (void *)virt_to_phys((void *)decoder_version);
+		log_tx_param[11] =
+		    (void *)virt_to_phys((void *)decoder_version);
 		log_tx_param[19] = (void *)virt_to_phys((void *)&mmu_unit_size);
-		log_tx_param[34] = (void *)virt_to_phys((void *)&cdebugger_fault_status);
-		log_tx_param[57] = (void *)virt_to_phys((void *)&ramdump_list[0]);
-		log_tx_param[58] = (void *)virt_to_phys((void *)&num_of_ramdumps);
-		log_tx_param[80] = (void *)virt_to_phys((void *)&cdebugger_mmu_reg);
-		log_tx_param[84] = (void *)(cdebugger_mmu_reg.TTBR0 & 0xFFFFC000);
+		log_tx_param[34] =
+		    (void *)virt_to_phys((void *)&cdebugger_fault_status);
+		log_tx_param[57] =
+		    (void *)virt_to_phys((void *)&ramdump_list[0]);
+		log_tx_param[58] =
+		    (void *)virt_to_phys((void *)&num_of_ramdumps);
+		log_tx_param[80] =
+		    (void *)virt_to_phys((void *)&cdebugger_mmu_reg);
+		log_tx_param[84] =
+		    (void *)(cdebugger_mmu_reg.TTBR0 & 0xFFFFC000);
 
-		log_tx_param[87] = (void *) virt_to_phys((void *)&main_log);
-		log_tx_param[88] = (void *) virt_to_phys((void *)&radio_log);
-		log_tx_param[89] = (void *) virt_to_phys((void *)&events_log);
-		log_tx_param[90] = (void *) virt_to_phys((void *) &system_log);
+		log_tx_param[87] = (void *)virt_to_phys((void *)&main_log);
+		log_tx_param[88] = (void *)virt_to_phys((void *)&radio_log);
+		log_tx_param[89] = (void *)virt_to_phys((void *)&events_log);
+		log_tx_param[90] = (void *)virt_to_phys((void *)&system_log);
 
 		cdebugger_dump_stack();
 
@@ -570,8 +567,13 @@ static struct notifier_block nb_reboot_block = {
 	.notifier_call = cdebugger_normal_reboot_handler
 };
 
+/* As this panic notifier handler does a arch reset
+ * its priority should be less than that of the
+ * modem watchdog monitor's panic notifier handler*/
+#define CRASH_DEBUGGER_NOTIFIER_PRIO	0
 static struct notifier_block nb_panic_block = {
 	.notifier_call = cdebugger_panic_handler,
+	.priority      = CRASH_DEBUGGER_NOTIFIER_PRIO,
 };
 
 static void cdebugger_set_build_info(void)
@@ -598,26 +600,27 @@ __init int cdebugger_init(void)
 	return 0;
 }
 
-#define CDEBUGGER_SRAM_MEM_OFFSET 	0xBF9C
-#define INTERNAL_SRAM_BASE_ADDR         0x34040000
-#define SCRATCHRAM_BASE 		INTERNAL_SRAM_BASE_ADDR
+#define CDEBUGGER_SRAM_MEM_OFFSET	0xBF9C
+#define INTERNAL_SRAM_BASE_ADDR		0x34040000
+#define SCRATCHRAM_BASE			INTERNAL_SRAM_BASE_ADDR
 
 unsigned int cdebugger_memory_init(void)
 {
-	printk("cdebugger_magic_init > \n");
+	pr_info("cdebugger_magic_init >\n");
 
 	cdebugger_mem_base = ioremap_nocache(SCRATCHRAM_BASE +
-					CDEBUGGER_SRAM_MEM_OFFSET, SZ_1K);
+					     CDEBUGGER_SRAM_MEM_OFFSET, SZ_1K);
 
-	if(cdebugger_mem_base == NULL){
-		printk("cdebugger ioremap failed!\n");
+	if (cdebugger_mem_base == NULL) {
+		pr_info("cdebugger ioremap failed!\n");
 		return (int)cdebugger_mem_base;
 	}
 
 	return 0;
 }
 
-static int ramdump_panic(struct notifier_block *this, unsigned long event, void *ptr)
+static int ramdump_panic(struct notifier_block *this, unsigned long event,
+			 void *ptr)
 {
 	if (enable)
 		panic_timeout = 2;
@@ -633,8 +636,8 @@ static int __init crash_debugger_init(void)
 	cdebugger_memory_init();
 	/* ready to run */
 	cdebugger_init();
-	/*Initialize MAGIC*/
-	iowrite32(UPLOAD_CAUSE_INIT,cdebugger_mem_base);
+	/*Initialize MAGIC */
+	iowrite32(UPLOAD_CAUSE_INIT, cdebugger_mem_base);
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_block);
 	/* Any other relevant init */
 	return 0;
@@ -647,4 +650,3 @@ static void crash_debugger_exit(void)
 
 device_initcall(crash_debugger_init);
 module_exit(crash_debugger_exit);
-

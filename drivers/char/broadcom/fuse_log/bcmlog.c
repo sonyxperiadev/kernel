@@ -645,11 +645,10 @@ static void LogString_Internal(const char *inLogString, unsigned short inSender)
 		return;
 	}
 
-	kbuf_mtt = kmalloc(mttFrameSize, GFP_ATOMIC);
+	kbuf_mtt = kmalloc(mttFrameSize, GFP_ATOMIC|__GFP_NOWARN);
 
 	if (!kbuf_mtt) {
 		BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
-		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR, "allocation error\n");
 		return;
 	}
 
