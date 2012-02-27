@@ -18,6 +18,8 @@
 static void __iomem *scu_base;
 static DEFINE_MUTEX(scu_lock);
 
+EXPORT_SYMBOL(scu_standby);
+
 #if defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 /* Ref counting for scu_standby signal disable requests */
 static int scu_standby_disable_cnt;
