@@ -20,7 +20,7 @@
 #include <media/soc_camera.h>
 #include <media/soc_mediabus.h>
 
-#include <plat/mobcom_types.h>
+#include <linux/broadcom/mobcom_types.h>
 #include <plat/csl/csl_cam.h>
 #include <linux/videodev2_brcm.h>
 

@@ -24,9 +24,9 @@
 // use PMUX_DRV for enabling TE inputs, otherwise set MUX Control Directly
 //#define __USE_PMUX_DRV__
 
+#include "linux/broadcom/mobcom_types.h"
 #include "plat/chal/chal_types.h"
-#include "plat/mobcom_types.h"
-#include "plat/msconsts.h"
+#include "linux/broadcom/msconsts.h"
 
 //#include "plat/osabstract/ostypes.h"
 //#include "sio.h"

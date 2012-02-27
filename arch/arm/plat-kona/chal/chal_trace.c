@@ -24,9 +24,9 @@
 #define UNDER_LINUX // Only supports Rhea
 #define FUSE_APPS_PROCESSOR
 
+#include "linux/broadcom/mobcom_types.h"
 #include "plat/chal/chal_common.h"
 #include "plat/chal/chal_trace.h"
-#include "plat/mobcom_types.h"
 #include "mach/rdb/brcm_rdb_util.h"
 #include "mach/rdb/brcm_rdb_atbfilter.h"
 #include <mach/io_map.h>

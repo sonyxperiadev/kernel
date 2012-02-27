@@ -26,6 +26,6 @@
 
 /** @{ */
 #include <linux/types.h>
-//#include <plat/mobcom_types.h>
+
 #endif
 

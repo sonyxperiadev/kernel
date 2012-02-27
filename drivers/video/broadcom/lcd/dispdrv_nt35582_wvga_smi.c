@@ -70,7 +70,7 @@
 #else  /* __KERNEL__ */ 
 
 #include <linux/string.h>
-#include <plat/mobcom_types.h>
+#include <linux/broadcom/mobcom_types.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
 #include <linux/gpio.h>

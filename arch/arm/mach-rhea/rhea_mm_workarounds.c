@@ -38,7 +38,7 @@
 #include <mach/clock.h>
 #include <mach/pi_mgr.h>
 #include <plat/pwr_mgr.h>
-#include <plat/mobcom_types.h>
+#include <linux/broadcom/mobcom_types.h>
 #include <plat/csl/csl_dma_vc4lite.h>
 #include <linux/dma-mapping.h>
 #include <plat/scu.h>
