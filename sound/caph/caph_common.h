@@ -32,6 +32,8 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef __CAPH_COMMON_H__
 #define __CAPH_COMMON_H__
 
+#ifdef __KERNEL__
+
 #include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/jiffies.h>
@@ -50,6 +52,65 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 #include <linux/wakelock.h>
+
+#endif /*__KERNEL__*/
+
+
+/*
+ * Common section
+ *      This section is shared between user land and kernel space
+ */
+enum voip_start_stop_type {
+	VoIP_DL_UL = 0,
+	VoIP_DL,
+	VoIP_UL,
+	VoIP_Total
+};
+#define	voip_start_stop_type_t	enum voip_start_stop_type
+
+enum voip_codec_type {
+	VoIP_Codec_PCM_8K,
+	VoIP_Codec_FR,
+	VoIP_Codec_AMR475,
+	VOIP_Codec_G711_U,
+	VoIP_Codec_PCM_16K,
+	VOIP_Codec_AMR_WB_7K
+};
+#define	voip_codec_type_t	enum voip_codec_type
+
+#define MAX_USERCTRL_DATA_SIZE		300
+struct __userCtrl_data {
+	int data[MAX_USERCTRL_DATA_SIZE];
+};
+#define	UserCtrl_data_t	struct __userCtrl_data
+
+enum {
+	VoIP_Ioctl_GetVersion = _IOR('H', 0x10, int),
+	VoIP_Ioctl_Start = _IOW('H', 0x11, voip_start_stop_type_t),
+	VoIP_Ioctl_Stop = _IOW('H', 0x12, voip_start_stop_type_t),
+	VoIP_Ioctl_SetSource = _IOW('H', 0x13, int),
+	VoIP_Ioctl_SetSink = _IOW('H', 0x14, int),
+	VoIP_Ioctl_SetCodecType = _IOW('H', 0x15, int),
+	VoIP_Ioctl_GetSource = _IOR('H', 0x16, int),
+	VoIP_Ioctl_GetSink = _IOR('H', 0x17, int),
+	VoIP_Ioctl_GetCodecType = _IOR('H', 0x18, int),
+	VoIP_Ioctl_SetMode = _IOW('H', 0x19, int),
+	VoIP_Ioctl_GetMode = _IOR('H', 0x1A, int),
+	VoIP_Ioctl_SetBitrate = _IOW('H', 0x1B, int),
+	VoIP_Ioctl_GetBitrate = _IOR('H', 0x1C, int),
+	VoIP_Ioctl_SetVoLTEFlag = _IOW('H', 0x1D, int),
+	VoIP_Ioctl_GetVoLTEFlag = _IOR('H', 0x1E, int),
+	DSPCtrl_Ioctl_SPCtrl = _IOW('H', 0x30, UserCtrl_data_t),
+	DSPCtrl_Ioctl_SPSetVar = _IOW('H', 0x31, UserCtrl_data_t),
+	DSPCtrl_Ioctl_SPQuery = _IOR('H', 0x32, UserCtrl_data_t),
+	DSPCtrl_Ioctl_EQCtrl = _IOW('H', 0x33, UserCtrl_data_t)
+};
+
+/*
+ * End of Common section of user land and kernel space
+ */
+
+#ifdef __KERNEL__
 
 #ifdef	CONFIG_SND_BCM_PREALLOC_MEM_FOR_PCM
 #define	IS_PCM_MEM_PREALLOCATED		1
@@ -90,7 +151,6 @@ extern int gAudioDebugLevel;
 					MIC_TOTAL_COUNT_FOR_USER : \
 					AUDIO_SINK_TOTAL_COUNT)
 #define	CAPH_MAX_PCM_STREAMS		8
-#define MAX_USERCTRL_DATA_SIZE		300
 
 /* Output volume */
 #define	MIN_VOLUME_mB			-5000
@@ -233,52 +293,6 @@ enum	AT_AUD_Handler_t {
 };
 
 
-enum voip_start_stop_type {
-	VoIP_DL_UL = 0,
-	VoIP_DL,
-	VoIP_UL,
-	VoIP_Total
-};
-#define	voip_start_stop_type_t	enum voip_start_stop_type
-
-enum voip_codec_type {
-	VoIP_Codec_PCM_8K,
-	VoIP_Codec_FR,
-	VoIP_Codec_AMR475,
-	VOIP_Codec_G711_U,
-	VoIP_Codec_PCM_16K,
-	VOIP_Codec_AMR_WB_7K
-};
-#define	voip_codec_type_t	enum voip_codec_type
-
-
-struct __userCtrl_data {
-	s32 data[MAX_USERCTRL_DATA_SIZE];
-};
-#define	UserCtrl_data_t	struct __userCtrl_data
-
-enum {
-	VoIP_Ioctl_GetVersion = _IOR('H', 0x10, int),
-	VoIP_Ioctl_Start = _IOW('H', 0x11, voip_start_stop_type_t),
-	VoIP_Ioctl_Stop = _IOW('H', 0x12, voip_start_stop_type_t),
-	VoIP_Ioctl_SetSource = _IOW('H', 0x13, int),
-	VoIP_Ioctl_SetSink = _IOW('H', 0x14, int),
-	VoIP_Ioctl_SetCodecType = _IOW('H', 0x15, int),
-	VoIP_Ioctl_GetSource = _IOR('H', 0x16, int),
-	VoIP_Ioctl_GetSink = _IOR('H', 0x17, int),
-	VoIP_Ioctl_GetCodecType = _IOR('H', 0x18, int),
-	VoIP_Ioctl_SetMode = _IOW('H', 0x19, int),
-	VoIP_Ioctl_GetMode = _IOR('H', 0x1A, int),
-	VoIP_Ioctl_SetBitrate = _IOW('H', 0x1B, int),
-	VoIP_Ioctl_GetBitrate = _IOR('H', 0x1C, int),
-	VoIP_Ioctl_SetVoLTEFlag = _IOW('H', 0x1D, int),
-	VoIP_Ioctl_GetVoLTEFlag = _IOR('H', 0x1E, int),
-	DSPCtrl_Ioctl_SPCtrl = _IOW('H', 0x30, UserCtrl_data_t),
-	DSPCtrl_Ioctl_SPSetVar = _IOW('H', 0x31, UserCtrl_data_t),
-	DSPCtrl_Ioctl_SPQuery = _IOR('H', 0x32, UserCtrl_data_t),
-	DSPCtrl_Ioctl_EQCtrl = _IOW('H', 0x33, UserCtrl_data_t)
-};
-
 #define	CAPH_CTL_PRIVATE(dev, line, function) ((dev)<<16|(line)<<8|(function))
 #define	STREAM_OF_CTL(private)		(((private)>>16)&0xFF)
 #define	DEV_OF_CTL(private)			(((private)>>8)&0xFF)
@@ -301,5 +315,6 @@ extern int BrcmCreateAuddrv_testSysFs(struct snd_card *card);
 extern int BrcmCreateAuddrv_selftestSysFs(struct snd_card *card);
 extern int LaunchAudioCtrlThread(void);
 extern int TerminateAudioHalThread(void);
+#endif /* __KERNEL__ */
 #endif /* __CAPH_COMMON_H__ */
 
