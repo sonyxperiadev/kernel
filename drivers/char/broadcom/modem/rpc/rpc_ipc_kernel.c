@@ -694,9 +694,6 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 		_DBG(RPC_TRACE
 			("k:handle_pkt_poll_ioc - copy_to_user() FAILS! RC=%d\n", copyRc));
 		_DBG(RPC_TRACE
-			("  src addr=%x, dest addr=%x, size=%d\n",
-				(int)&ioc_param, (int)param, sizeof(rpc_pkt_avail_t)));
-		_DBG(RPC_TRACE
 			("  clientId:%d, isEmpty:%d, waitTime:%d\n", (int)ioc_param.clientId,
 				(int)ioc_param.isEmpty, (int)ioc_param.waitTime));
 		return -EFAULT;
