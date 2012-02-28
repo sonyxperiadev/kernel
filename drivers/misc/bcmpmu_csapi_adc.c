@@ -838,9 +838,9 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 		}
 	}
 
-	printk(KERN_INFO
-	       "%s: Command %s, total number of args(including first command) %d",
-	       __func__, argv[0], arg_cnt);
+//	printk(KERN_INFO
+//	       "%s: Command %s, total number of args(including first command) %d",
+//	       __func__, argv[0], arg_cnt);
 	i = 0;
 	while (i < arg_cnt) {
 		if (strcmp(argv[i], "VBAT_UNIT") == 0) {
@@ -866,8 +866,8 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 			adc_unit =
 			    csapi_adc_unit_convert(NULL, CSAPI_ADC_BTEMP,
 						   adc_raw);
-			printk(KERN_INFO "%s: BTEMP: Raw %d, unit %d K\n",
-			       __func__, adc_raw, adc_unit);
+			printk(KERN_INFO "%s:%s: BTEMP: Raw %d, unit %d K\n",
+			       __func__,argv[0], adc_raw, adc_unit);
 		}
 
 		else if (strcmp(argv[i], "csapi_adc_raw_read") == 0) {
@@ -879,13 +879,13 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 								     [i + 1],
 								     NULL, 0),
 						       &adc_raw, NULL, NULL);
-				printk(KERN_INFO "%s: Status %d, Raw %d\n",
-				       __func__, status, adc_raw);
+				printk(KERN_INFO "%s:%s: Status %d, Raw %d\n",
+				       __func__, argv[0], status, adc_raw);
 				i++;	/* since we are using two arguments here, add one extra to i */
 			} else {
 				printk(KERN_INFO
-				       "%s: Not enough parameters for %s\n",
-				       __func__, argv[i]);
+				       "%s:%s: Not enough parameters for %s\n",
+				       __func__, argv[0], argv[i]);
 			}
 		} else if (strcmp(argv[i], "csapi_adc_unit_read") == 0) {
 			/* Only(CSAPI) channel can be supplied here, rest is given */
@@ -896,13 +896,13 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 								      [i + 1],
 								      NULL, 0),
 							&adc_raw, NULL, NULL);
-				printk(KERN_INFO "%s: Status %d, Unit %d\n",
-				       __func__, status, adc_raw);
+				printk(KERN_INFO "%s:%s: Status %d, Unit %d\n",
+				       __func__, argv[0], status, adc_raw);
 				i++;	/* since we are using two arguments here, add one extra to i */
 			} else {
 				printk(KERN_INFO
-				       "%s: Not enough parameters for %s\n",
-				       __func__, argv[i]);
+				       "%s:%s: Not enough parameters for %s\n",
+				       __func__, argv[0], argv[i]);
 			}
 
 		} else if (strcmp(argv[i], "csapi_adc_unit_convert") == 0) {

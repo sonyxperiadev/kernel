@@ -264,6 +264,8 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 					if (!padc->bcmpmu->adc_req(
 						    padc->bcmpmu, &cal_req) &&
 					    cal_req.raw != 0x3ff) {
+						pr_hwmon(DATA,"%s: LO[%u]cal_req.raw=%u",__func__, i, cal_req.raw );
+						read1 += cal_req.raw;
 						i++;
 					}
 				}
@@ -277,6 +279,7 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 					if (!padc->bcmpmu->adc_req(
 						    padc->bcmpmu, &cal_req) &&
 					    cal_req.raw != 0x3ff) {
+						pr_hwmon(DATA,"%s: HI[%u]cal_req.raw=%u",__func__, i, cal_req.raw );
 						read2 += cal_req.raw;
 						i++;
 					}
