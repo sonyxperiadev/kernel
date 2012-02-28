@@ -53,6 +53,44 @@ the GPL, without Broadcom's express prior written consent.
 
 #define IRQ_GRAPHICS	BCM_INT_ID_RESERVED148
 
+//Bitmask to decide which stats to print (max 16)
+#define DEFAULT_PERF_PRINT_MASK 0x1FFFE000
+#ifdef V3D_PERF_SUPPORT
+uint32_t perf_ctr[16];
+const char *perf_ctr_str[30] = {
+	"FEP Valid primitives that result in no rendered pixels, for all rendered tiles",
+	"FEP Valid primitives for all rendered tiles. (primitives may be counted in more than one tile)",
+	"FEP Early-Z / Near / Far clipped quads",
+	"FEP Valid quads",
+	"TLB Quads with no pixels passing the stencil test",
+	"TLB Quads with no pixels passing the Z and stencil tests",
+	"TLB Quads with any pixels passing the Z and stencil tests",
+	"TLB Quads with all pixels having zero coverage",
+	"TLB Quads with any pixels having non-zero coverage",
+	"TLB Quads with valid pixels written to colour buffer",
+	"PTB Primitives discarded by being outside the viewport",
+	"PTB Primitives that need clipping",
+	"PSE Primitives that are discarded because they are reversed",
+	"QPU Total idle clock cycles for all QPUs",
+	"QPU Total clock cycles for all QPUs doing vertex/coordinate shading",
+	"QPU Total clock cycles for all QPUs doing fragment shading",
+	"QPU Total clock cycles for all QPUs executing valid instructions",
+	"QPU Total clock cycles for all QPUs stalled waiting for TMUs",
+	"QPU Total clock cycles for all QPUs stalled waiting for Scoreboard",
+	"QPU Total clock cycles for all QPUs stalled waiting for Varyings",
+	"QPU Total instruction cache hits for all slices",
+	"QPU Total instruction cache misses for all slices",
+	"QPU Total uniforms cache hits for all slices",
+	"QPU Total uniforms cache misses for all slices",
+	"TMU Total texture quads processed",
+	"TMU Total texture cache misses (number of fetches from memory/L2cache)",
+	"VPM Total clock cycles VDW is stalled waiting for VPM access",
+	"VPM Total clock cycles VCD is stalled waiting for VPM access",
+	"L2C Total Level 2 cache hits",
+	"L2C Total Level 2 cache misses"
+};
+#endif
+
 /******************************************************************
 	V3D kernel prints
 *******************************************************************/
@@ -191,7 +229,7 @@ typedef struct {
 	Imported stuff
 ********************************************************/
 /* Job Error Handling variables */
-#define V3D_ISR_TIMEOUT_IN_MS	(5000)
+#define V3D_ISR_TIMEOUT_IN_MS	(1500)
 #define V3D_JOB_TIMEOUT_IN_MS	(V3D_ISR_TIMEOUT_IN_MS)
 
 /* Enable the macro to retry the job on timeout, else will skip the job */
@@ -829,8 +867,6 @@ static int v3d_thread(void *data)
 					ret = v3d_job_start();
 					continue;
 				}
-#else
-				BUG();
 #endif
 				v3d_job_kill((v3d_job_t *) v3d_job_curr,
 					     V3D_JOB_STATUS_TIMED_OUT);
@@ -984,6 +1020,68 @@ static inline void v3d_write(uint32_t val, uint32_t reg)
 	iowrite32(val, v3d_base + reg);
 }
 
+#ifdef V3D_PERF_SUPPORT
+static void	v3d_set_perf_counter(void)
+{
+	int perf_ctr = 0;
+	int perf_ctr_id = 0;
+	unsigned int pctre;
+	unsigned int perf_mask = DEFAULT_PERF_PRINT_MASK;
+
+	v3d_write(0, V3D_PCTRE_OFFSET);
+	v3d_write(0xFF, V3D_PCTRC_OFFSET);
+	while (perf_mask && (perf_ctr <16)) {
+		if (perf_mask & 1) {
+			v3d_write(perf_ctr_id, V3D_PCTRS0_OFFSET + (8*perf_ctr));
+			perf_ctr++;
+		}
+		perf_ctr_id++;
+		perf_mask >>= 1;
+	}
+	pctre = 0x80000000 | ((1 << perf_ctr)-1);
+	v3d_write(pctre, V3D_PCTRE_OFFSET);
+}
+
+static void	v3d_read_perf_counter(unsigned int *p_perf_ctr, int incremental)
+{
+	unsigned int perf_mask = DEFAULT_PERF_PRINT_MASK;
+	int perf_ctr_id = 0;
+	int perf_ctr = 0;
+	int perf_ctr_val;
+
+	while (perf_mask && (perf_ctr <16)) {
+		if (perf_mask & 1) {
+			perf_ctr_val = 0;
+			perf_ctr_val = v3d_read(V3D_PCTR0_OFFSET + (8*perf_ctr));
+			if (incremental == 0) {
+				p_perf_ctr[perf_ctr] = perf_ctr_val;
+			} else {
+				p_perf_ctr[perf_ctr] = perf_ctr_val + p_perf_ctr[perf_ctr];
+			}
+			perf_ctr++;
+		}
+		perf_ctr_id++;
+		perf_mask >>= 1;
+	}
+}
+
+static void v3d_print_perf_counter(unsigned int *p_perf_ctr)
+{
+	unsigned int perf_mask = DEFAULT_PERF_PRINT_MASK;
+	int perf_ctr_id = 0;
+	int perf_ctr = 0;
+	printk("\n");
+	while (perf_mask && (perf_ctr <16)) {
+		if (perf_mask & 1) {
+			printk(" ID:%s = %ul\n", perf_ctr_str[perf_ctr_id], p_perf_ctr[perf_ctr]);
+			perf_ctr++;
+		}
+		perf_ctr_id++;
+		perf_mask >>= 1;
+	}
+}
+#endif
+
 /******************************************************************
 	V3D Power managment function
 *******************************************************************/
@@ -1053,6 +1151,10 @@ static void v3d_power(int flag)
 		/* Update counters */
 		v3d_state.j1 = jiffies;
 		v3d_state.free_time += v3d_state.j1 - v3d_state.j2;
+	} else {
+		v3d_state.j2 = jiffies;
+		v3d_state.acquired_time += v3d_state.j2 - v3d_state.j1;
+
 		if ((v3d_state.show_v3d_usage)
 		    && jiffies_to_msecs(v3d_state.free_time +
 					v3d_state.acquired_time) > 5000) {
@@ -1061,10 +1163,10 @@ static void v3d_power(int flag)
 			       (v3d_state.free_time + v3d_state.acquired_time));
 			v3d_state.free_time = 0;
 			v3d_state.acquired_time = 0;
+#ifdef V3D_PERF_SUPPORT
+			v3d_print_perf_counter(perf_ctr);
+#endif
 		}
-	} else {
-		v3d_state.j2 = jiffies;
-		v3d_state.acquired_time += v3d_state.j2 - v3d_state.j1;
 
 		/* Write the password to enable accessing other registers */
 		writel((0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
@@ -1197,6 +1299,10 @@ static void v3d_reset(void)
 {
 	u32 value;
 
+#ifdef V3D_PERF_SUPPORT
+	v3d_read_perf_counter(perf_ctr, 1);
+#endif
+
 	/* Write the password to enable accessing other registers */
 	writel((0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
 	       (0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT),
@@ -1216,7 +1322,9 @@ static void v3d_reset(void)
 	mb();
 
 	v3d_reg_init();
-
+#ifdef V3D_PERF_SUPPORT
+    v3d_set_perf_counter();
+#endif
 	mb();
 
 	free_bin_mem(0);
@@ -1799,6 +1907,8 @@ int proc_v3d_write(struct file *file, const char __user *buffer,
 
 	if (!strncmp("print_usage=on", v3d_req, 14)) {
 		v3d_state.show_v3d_usage = 1;
+		v3d_state.free_time = 0;
+		v3d_state.acquired_time = 0;
 	} else if (!strncmp("print_usage=off", v3d_req, 15)) {
 		v3d_state.show_v3d_usage = 0;
 	} else
