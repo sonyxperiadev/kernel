@@ -254,6 +254,7 @@ static struct regulator_init_data bcm59055_hv2ldo_data = {
 
 struct regulator_consumer_supply hv3_supply[] = {
 	{.supply = "hv3ldo_uc"},
+	{.supply = "2v9_vibra"},
 };
 static struct regulator_init_data bcm59055_hv3ldo_data = {
 	.constraints = {
