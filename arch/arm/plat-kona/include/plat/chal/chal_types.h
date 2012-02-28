@@ -56,11 +56,11 @@ typedef signed long long   cInt64;   ///< signed long long integer (64 bits wide
 typedef signed __int64     cInt64;   ///< signed long long integer (64 bits wide) 
 #endif
 
-#ifndef _MOBCOM_TYPES_H_
+#ifndef _INC_MS_BASIC_TYPES_H_
 typedef unsigned char      Boolean;  ///< unsiged character (8 bits wide)
 #endif
 
-#ifndef _MOBCOM_TYPES_H_
+#ifndef _INC_MS_BASIC_TYPES_H_
 #define BOOL      Boolean            ///< unsigned character (8 bits wide)
 #endif
 

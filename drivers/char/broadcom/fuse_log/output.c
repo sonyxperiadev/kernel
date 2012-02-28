@@ -26,7 +26,7 @@
 #include <linux/time.h>
 #include <linux/rtc.h>
 #include <trace/stm.h>
-#include "plat/mobcom_types.h"
+#include "linux/broadcom/mobcom_types.h"
 #include <linux/vt_kern.h>
 #include "bcmlog.h"
 #include "fifo.h"

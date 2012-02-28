@@ -25,7 +25,7 @@
 #include <asm/cacheflush.h>
 #include <asm/sizes.h>
 #include <plat/clock.h>
-#include <plat/mobcom_types.h>
+#include <linux/broadcom/mobcom_types.h>
 #include <mach/hardware.h>
 #include <mach/dma.h>
 #include <linux/crypto.h>

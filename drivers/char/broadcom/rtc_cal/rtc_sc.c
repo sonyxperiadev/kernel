@@ -26,7 +26,7 @@
 #include <linux/mfd/bcm590xx/core.h>
 #include <asm/io.h>
 #include <linux/broadcom/resultcode.h>
-#include "mobcom_types.h"
+#include <linux/broadcom/mobcom_types.h>
 #include "taskmsgs.h"
 #include "msconsts.h"
 

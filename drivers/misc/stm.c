@@ -16,7 +16,7 @@
 #include <linux/debugfs.h>
 #include <trace/stm.h>
 #ifdef CONFIG_BCM_STM
-#include "plat/mobcom_types.h"
+#include "linux/broadcom/mobcom_types.h"
 #ifdef CONFIG_ARCH_RHEA
 #include "mach/rdb/brcm_rdb_padctrlreg.h"
 #endif

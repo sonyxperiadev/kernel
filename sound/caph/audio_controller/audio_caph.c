@@ -637,6 +637,10 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_LAST - 1));
 
 			/* allow FM recording in call mode */
+			/*
+			 * AUDCTRL_EnableRecord enables HW path, reads SYSPARM
+			 * and sets HW gains as defined in SYSPARM.
+			 */
 			if ((param_start->callMode != 1) ||
 			    (param_start->pdev_prop->c.source ==
 			     AUDIO_SOURCE_I2S)) {
@@ -648,12 +652,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 						     param_start->rate, &path);
 
 				pathID[param_start->stream] = path;
-			/*
-			 * AUDCTRL_EnableRecord enables HW path, reads SYSPARM
-			 * and sets HW gains as defined in SYSPARM.
-			 */
-
 			}
+
 			if (param_start->pdev_prop->c.drv_type ==
 			    AUDIO_DRIVER_CAPT_HQ)
 				AUDIO_DRIVER_Ctrl(param_start->drv_handle,
