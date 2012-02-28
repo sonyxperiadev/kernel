@@ -43,6 +43,7 @@ void BCMLOG_Output(unsigned char *pUserBuf, unsigned long userBufSz,
  *	@return	int zero if success, nonzero if error
  **/
 int BCMLOG_OutputInit(void);
+void BCMLOG_OutputExit(void);
 
 #ifdef CONFIG_BRCM_NETCONSOLE
 extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks
@@ -51,6 +52,6 @@ extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks
 extern void stm_trace_buffer_start(int channel);
 extern void stm_trace_buffer_end(int channel);
 extern int stm_trace_buffer_data(int channel,
-			const void *data_ptr, size_t length);
+				 const void *data_ptr, size_t length);
 
 #endif /* __BCMLOG_OUTPUT_H__ */

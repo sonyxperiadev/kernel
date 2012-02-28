@@ -409,7 +409,7 @@ void IPCCP_SetCPCrashedStatus(IPC_CrashCode_T CrashCode)
 	SmLocalControl.SmControl->CrashCode = CrashCode;
 
 	// Just for the info that CP is crashed
-	SmLocalControl.RaiseInterrupt();
+	RAISE_INTERRUPT;
 }
 
 //**************************************************
@@ -419,7 +419,7 @@ void IPCCP_SignalCrashToAP(IPC_CrashCode_T CrashCode, void *Dump)
 	SmLocalControl.SmControl->CrashDump = Dump;
 
 	// Interrupt AP so that it can start taking the crash dump out
-	SmLocalControl.RaiseInterrupt();
+	RAISE_INTERRUPT;
 }
 
 //**************************************************
@@ -498,6 +498,7 @@ void IPC_ProcessEvents(void)
 	{
 		{
 			IPC_Fifo SendFifo = SmLocalControl.SendFifo;
+
 			while (0 != (Buffer = IPC_SmFifoRead(SendFifo))) {
 				IPC_EndpointId_T DestinationEpId =
 				    IPC_PoolDestinationEndpointId
@@ -922,3 +923,56 @@ void IPC_Dump(void)
 
 	IPC_PoolDumpAll(SmControl->FirstPool);
 }
+
+
+
+int IPC_DumpStatus(char *buf)
+{
+	char            *p = buf;
+
+	IPC_SmControl SmControl = SmLocalControl.SmControl;
+	IPC_U32 CpuIndex;
+
+	p += sprintf(p, "\n===== IPC Dump =====\n");
+
+	CpuIndex = IPC_CPU_ID_INDEX(IPC_AP_CPU);
+	p += sprintf(p, "IPC_AP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d \n",
+		  IPC_AP_CPU,
+		  SmControl->Initialised[CpuIndex],
+		  SmControl->Allocated[CpuIndex],
+		  SmControl->CurrentBuffers[CpuIndex]);
+
+	p += sprintf(p, "Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d;",
+		  SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
+		  SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
+		  SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
+		  SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
+
+	p += sprintf(p, "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d \n",
+		  SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
+		  SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
+		  SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
+		  SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
+
+	CpuIndex = IPC_CPU_ID_INDEX(IPC_CP_CPU);
+	p += sprintf(p, "IPC_CP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d \n",
+		  IPC_CP_CPU,
+		  SmControl->Initialised[CpuIndex],
+		  SmControl->Allocated[CpuIndex],
+		  SmControl->CurrentBuffers[CpuIndex]);
+
+	p += sprintf(p, "Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d \n",
+		  SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
+		  SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
+		  SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
+		  SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
+
+	p += sprintf(p, "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d \n",
+		  SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
+		  SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
+		  SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
+		  SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
+
+	return  p - buf;
+}
+

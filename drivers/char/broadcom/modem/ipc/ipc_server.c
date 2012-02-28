@@ -20,6 +20,7 @@
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/fs.h>
+#include <linux/proc_fs.h>
 #include <linux/fcntl.h>
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
@@ -473,9 +474,27 @@ void Comms_Start(void)
 	IPC_DEBUG(DBG_TRACE, "modem (R4 COMMS) started ...\n");
 }
 
+static int ipcs_read_proc(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = IPC_DumpStatus(page);
+	if (len <= off+count) *eof = 1;
+	*start = page + off;
+	len -= off;
+	if (len>count) len = count;
+	if (len<0) len = 0;
+	return len;
+}
+
 static int __init ipcs_module_init(void)
 {
 	int rc;
+	struct proc_dir_entry *dir;
+
+	dir = create_proc_read_entry ("driver/bcmipc", 0, NULL, ipcs_read_proc, NULL);
+	if (dir == NULL) {
+		IPC_DEBUG(DBG_ERROR, "ipcs_module_init: can't create /proc/driver/bcmipc\n");
+		//return -1;
+	}
 
 	IPC_DEBUG(DBG_TRACE, "start ...\n");
 
