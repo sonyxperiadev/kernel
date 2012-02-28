@@ -265,6 +265,12 @@ config RHEA_PANDA
         help
            For Rhea Panda Project.
 
+config 59055_SIM_EM_SHDWN
+	bool "Enable Emergency SIM shutdown"
+	default n
+	help
+	   For 59055 supported emergency sim shutdown
+
 endmenu
 
 
