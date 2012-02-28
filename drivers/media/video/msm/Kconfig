@@ -272,3 +272,11 @@ config S5K3L1YX
 		4 mipi lanes, preview config = 1984 * 1508 at 30 fps,
 		snapshot config = 4000 * 3000 at 20 fps,
 		hfr video at 60, 90 and 120 fps.
+
+config MSM_V4L2_VIDEO_OVERLAY_DEVICE
+	tristate "Qualcomm MSM V4l2 video overlay device"
+	---help---
+	  Enables support for the MSM V4L2 video
+	  overlay driver. This allows video rendering
+	  apps to render overlaid video using Video4Linux2
+	  APIs, by using /dev/videoX device

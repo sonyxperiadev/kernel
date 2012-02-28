@@ -55,6 +55,12 @@
 #include "pm-boot.h"
 #include "board-msm7627a.h"
 
+/*
+ * Reserve enough v4l2 space for a double buffered full screen
+ * res image (864x480x1.5x2)
+*/
+#define MSM_V4L2_VIDEO_OVERLAY_BUF_SIZE 1244160
+
 #define PMEM_KERNEL_EBI1_SIZE	0x3A000
 #define MSM_PMEM_AUDIO_SIZE	0x5B000
 
@@ -595,6 +601,14 @@ static struct resource msm_fb_resources[] = {
 	}
 };
 
+#ifdef CONFIG_MSM_V4L2_VIDEO_OVERLAY_DEVICE
+static struct resource msm_v4l2_video_overlay_resources[] = {
+	{
+		.flags = IORESOURCE_DMA,
+	}
+};
+#endif
+
 #define LCDC_TOSHIBA_FWVGA_PANEL_NAME	"lcdc_toshiba_fwvga_pt"
 #define MIPI_CMD_RENESAS_FWVGA_PANEL_NAME	"mipi_cmd_renesas_fwvga"
 
@@ -638,6 +652,15 @@ static struct platform_device msm_fb_device = {
 		.platform_data = &msm_fb_pdata,
 	}
 };
+
+#ifdef CONFIG_MSM_V4L2_VIDEO_OVERLAY_DEVICE
+static struct platform_device msm_v4l2_video_overlay_device = {
+	.name   = "msm_v4l2_overlay_pd",
+	.id     = 0,
+	.num_resources  = ARRAY_SIZE(msm_v4l2_video_overlay_resources),
+	.resource       = msm_v4l2_video_overlay_resources,
+};
+#endif
 
 #ifdef CONFIG_FB_MSM_MIPI_DSI
 static int mipi_renesas_set_bl(int level)
@@ -977,6 +1000,9 @@ static struct platform_device *surf_ffa_devices[] __initdata = {
 #ifdef CONFIG_FB_MSM_MIPI_DSI
 	&mipi_dsi_renesas_panel_device,
 #endif
+#ifdef CONFIG_MSM_V4L2_VIDEO_OVERLAY_DEVICE
+	&msm_v4l2_video_overlay_device,
+#endif
 	&msm_kgsl_3d0,
 #ifdef CONFIG_BT
 	&msm_bt_power_device,
@@ -1018,6 +1044,17 @@ static void __init msm_msm7x2x_allocate_memory_regions(void)
 	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
 	pr_info("allocating %lu bytes at %p (%lx physical) for fb\n",
 		size, addr, __pa(addr));
+
+#ifdef CONFIG_MSM_V4L2_VIDEO_OVERLAY_DEVICE
+	fb_size = MSM_V4L2_VIDEO_OVERLAY_BUF_SIZE;
+	addr = alloc_bootmem_align(fb_size, 0x1000);
+	msm_v4l2_video_overlay_resources[0].start = __pa(addr);
+	msm_v4l2_video_overlay_resources[0].end =
+	msm_v4l2_video_overlay_resources[0].start + fb_size - 1;
+	pr_debug("allocating %lu bytes at %p (%lx physical) for v4l2\n",
+	fb_size, addr, __pa(addr));
+#endif
+
 }
 
 static struct memtype_reserve msm7x27a_reserve_table[] __initdata = {
