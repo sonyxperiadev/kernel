@@ -104,6 +104,7 @@ static AUDIO_SINK_Enum_t currVoiceSpkr = AUDIO_SINK_UNDEFINED;
 static Boolean dspECEnable = TRUE;
 static Boolean dspNSEnable = TRUE;
 static Boolean controlFlagForCustomGain = FALSE;
+static Boolean inCallRateChange = FALSE;
 
 struct _Audio_Driver_t {
 	UInt8 isRunning;
@@ -412,71 +413,11 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 void AUDDRV_Telephony_RateChange(AudioMode_t mode,
 	AudioApp_t audio_app, int bNeedDualMic, int bmuteVoiceCall)
 {
-	Boolean ec_enable_from_sysparm = dspECEnable;
-	Boolean ns_enable_from_sysparm = dspNSEnable;
-	CSL_CAPH_SRCM_INSAMPLERATE_e sr = CSL_CAPH_SRCMIN_8KHZ;
-
-	aTrace(LOG_AUDIO_DRIVER,  "%s mode %d, app %d, bNeedDualMic %d",
-		__func__, mode, audio_app, bNeedDualMic);
-
-	audio_control_dsp(DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, FALSE, FALSE, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_DUAL_MIC_ON, FALSE, 0, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff,
-			  FALSE, 0, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0);
-
-
-#if !defined(USE_NEW_AUDIO_PARAM)
-	AUDDRV_SetAudioMode(mode);
-#else
-	AUDDRV_SetAudioMode(mode, audio_app);
-#endif
-
-	if (audio_app == AUDIO_APP_VOICE_CALL_WB)
-		sr = CSL_CAPH_SRCMIN_16KHZ;
-	else
-		sr = CSL_CAPH_SRCMIN_8KHZ;
-
-	/*Change the sample rate for UL*/
-	if (telephonyPathID.ulPathID)
-		csl_caph_hwctrl_ChangeSampleRate(telephonyPathID.ulPathID, sr);
-
-	/*Change the sample rate for UL secondary mic path*/
-	if (telephonyPathID.ul2PathID)
-		csl_caph_hwctrl_ChangeSampleRate(telephonyPathID.ul2PathID, sr);
-
-	/*Change the sample rate for DL*/
-	if (telephonyPathID.dlPathID)
-		csl_caph_hwctrl_ChangeSampleRate(telephonyPathID.dlPathID, sr);
-
-#if defined(ENABLE_DMA_VOICE)
-	if (audio_app == AUDIO_APP_VOICE_CALL_WB)
-		csl_dsp_caph_control_aadmac_set_samp_rate(
-			AUDIO_SAMPLING_RATE_16000);
-	else
-		csl_dsp_caph_control_aadmac_set_samp_rate(
-			AUDIO_SAMPLING_RATE_8000);
-#endif
-
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
-
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0);
-/*	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
-	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, ec_enable_from_sysparm,
-				  ns_enable_from_sysparm, 0, 0, 0);
-
-	if (bNeedDualMic == TRUE)
-		audio_control_dsp(DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0);
-
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff,
-			  TRUE, 0, 0, 0, 0);
-
-	if (bmuteVoiceCall == FALSE)
-		audio_control_dsp(DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0);
-
+	inCallRateChange = TRUE;
+	AUDDRV_Telephony_Deinit();
+	AUDDRV_Telephony_Init(currVoiceMic, currVoiceSpkr, mode, audio_app,
+		bNeedDualMic, bmuteVoiceCall);
+	inCallRateChange = FALSE;
 	return;
 }
 
@@ -600,8 +541,10 @@ void AUDDRV_Telephony_Deinit(void)
 	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode())
 		audio_control_dsp(DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0);
 
-	currVoiceMic = AUDIO_SOURCE_UNDEFINED;
-	currVoiceSpkr = AUDIO_SINK_UNDEFINED;
+	if (!inCallRateChange) {
+		currVoiceMic = AUDIO_SOURCE_UNDEFINED;
+		currVoiceSpkr = AUDIO_SINK_UNDEFINED;
+	}
 
 	telephonyPathID.ulPathID = 0;
 	telephonyPathID.ul2PathID = 0;
