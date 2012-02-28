@@ -35,6 +35,9 @@
 #include <linux/gpio.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+#endif
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
@@ -116,6 +119,31 @@ struct mic_t {
 	int hs_state;
 	int button_state;
 	int button_pressed;
+#ifdef CONFIG_HAS_WAKELOCK
+	/* The wakelock is added to prevent the Baseband from going to
+	 * suspend state while handling accessory detection/button press
+	 * interrupts. Note that accessory insertion, reoval and button press
+	 * are wakeup sources. So the following is the scenario
+	 * 1) No accessory is connected the base band goes to deep sleep.
+	 *    a) The gpio interrupt (in case if GPIO is used) and the comp2
+	 *    interrupt are configured as wake up sources. So the ISR will be
+	 *    fired.
+	 *    b) In the respective ISR we'll acquire this wake lock and
+	 *    release it from the respective work queues once the processing
+	 *    is over.
+	 * 2) Accessory is connected and the base band goes to deep sleep
+	 *    a) The button press should wake up the system. So the COMP1 isr
+	 *    is configured as wake up source. Again the same lock can be
+	 *    acquired by the ISR and can be released once the work queue
+	 *    finishes sending the button release event to the input sub-system.
+	 *    b) Again the GPIO interrupt in case of GPIO based detecton and
+	 *    COMP2 INV in case of non GPIO based detection is configured as
+	 *    wakeup source for accessory removal. Again, when one of the isr
+	 *    is fired, we should acquire this lock and should free them once
+	 *    the work queue has finished its task.
+	 */
+	struct wake_lock accessory_wklock;
+#endif
 };
 
 static struct mic_t *mic_dev = NULL;
@@ -607,6 +635,9 @@ static void button_work_func(struct work_struct *work)
 		pr_info(" Sending Key Release\r\n");
 		input_report_key(p->headset_button_idev, p->button_pressed, 0);
 		input_sync(p->headset_button_idev);
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_unlock(&p->accessory_wklock);
+#endif
 	}
 out:
 	return;
@@ -670,6 +701,9 @@ static void accessory_detect_work_func(struct work_struct *work)
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
 			CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
 	}
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_unlock(&p->accessory_wklock);
+#endif
 }
 
 static void no_gpio_accessory_insert_work_func(struct work_struct *work)
@@ -790,6 +824,9 @@ static void no_gpio_accessory_insert_work_func(struct work_struct *work)
 			CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
 			CHAL_ACI_BLOCK_COMP2);
 	}
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_unlock(&p->accessory_wklock);
+#endif
 }
 
 static void no_gpio_accessory_remove_work_func(struct work_struct *work)
@@ -866,6 +903,9 @@ static void no_gpio_accessory_remove_work_func(struct work_struct *work)
 			CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
 			CHAL_ACI_BLOCK_COMP2_INV);
 	}
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_unlock(&p->accessory_wklock);
+#endif
 }
 
 static void __handle_accessory_inserted (struct mic_t *p)
@@ -1097,7 +1137,9 @@ inputdev_err:
 irqreturn_t gpio_isr(int irq, void *dev_id)
 {
 	struct mic_t *p = (struct mic_t *)dev_id;
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&p->accessory_wklock);
+#endif
 	pr_debug("HS ISR GPIO STATE: 0x%x \r\n", gpio_get_value(irq_to_gpio(p->gpio_irq)));
 
 	schedule_delayed_work(&(p->accessory_detect_work), ACCESSORY_INSERTION_REMOVE_SETTLE_TIME);
@@ -1113,7 +1155,9 @@ irqreturn_t gpio_isr(int irq, void *dev_id)
 irqreturn_t comp1_isr(int irq, void *dev_id)
 {
 	struct mic_t *p = (struct mic_t *)dev_id;
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&p->accessory_wklock);
+#endif
 	pr_debug("In COMP 1  ISR 0x%x ... \r\n", readl(p->aci_base + ACI_INT_OFFSET));
 
 	if ( (readl(p->aci_base + ACI_INT_OFFSET) & 0x01) != 0x01) {
@@ -1150,10 +1194,13 @@ irqreturn_t comp1_isr(int irq, void *dev_id)
     Description     : interrupt handler
     Return type     : irqreturn_t
 ------------------------------------------------------------------------------*/
+
 irqreturn_t comp2_isr(int irq, void *dev_id)
 {
 	struct mic_t *p = (struct mic_t *)dev_id;
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&p->accessory_wklock);
+#endif
 	pr_debug("In COMP 2  ISR 0x%x ... \r\n", readl(p->aci_base + ACI_INT_OFFSET));
 
 	/* Acknowledge & clear the interrupt */
@@ -1198,7 +1245,9 @@ irqreturn_t comp2_isr(int irq, void *dev_id)
 irqreturn_t comp2_inv_isr(int irq, void *dev_id)
 {
 	struct mic_t *p = (struct mic_t *)dev_id;
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&p->accessory_wklock);
+#endif
 	pr_debug("In INV COMP 2 ISR 0x%x ... \r\n", readl(p->aci_base + ACI_INT_OFFSET));
 
 	if ( (readl(p->aci_base + ACI_INT_OFFSET) & 0x04) != 0x04) {
@@ -1529,7 +1578,9 @@ static int __init hs_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	mic_dev = mic;
-
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&mic_dev->accessory_wklock, WAKE_LOCK_SUSPEND, "HS_det_wklock");
+#endif
 	if (pdev->dev.platform_data)
 		mic->headset_pd = pdev->dev.platform_data;
 	else {
