@@ -356,21 +356,28 @@ static int __init ipcs_init(void *smbase, unsigned int size)
 {
 	int rc = 0;
 
+	IPC_DEBUG(DBG_TRACE, "WaitForCpIpc\n");
+	
 	/* Wait for CP to initialize */
 	WaitForCpIpc(smbase);
+	IPC_DEBUG(DBG_TRACE, "WaitForCpIpc done\n");
 
 	/* Initialize OS specific callbacks with the IPC lib */
-	rc = ipc_ipc_init(smbase, size);
+  rc = ipc_ipc_init(smbase, size);
 	if (rc) {
 		IPC_DEBUG(DBG_ERROR, "ipc_ipc_init() failed, ret[%d]\n", rc);
-		return rc;
-	}
-	/* Register Endpoints  */
-	rc = ipcs_ccb_init();
+		return (rc);
+  }
+	IPC_DEBUG(DBG_TRACE, "ipc_ipc_init done\n");
+
+  //Register Endpoints 
+	rc = ipcs_ccb_init(isReset);
 	if (rc) {
-		IPC_DEBUG(DBG_ERROR, "ipcs_ccb_init() failed, ret[%d]\n", rc);
-		return rc;
-	}
+    IPC_DEBUG(DBG_ERROR, "ipcs_ccb_init() failed, ret[%d]\n", rc);
+      return(rc);
+  }
+
+	IPC_DEBUG(DBG_TRACE, "ipcs_ccb_init done\n");
 	/* Let CP know that we are done registering endpoints */
 	IPC_Configured();
 
@@ -382,50 +389,69 @@ static int __init ipcs_init(void *smbase, unsigned int size)
 
 int ipcs_reinitialize_ipc(void)
 {
-	return ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE);
+	IPC_DEBUG(DBG_INFO, "calling ipcs_init\n");
+	return ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE, 1);
 }
 
 static int CP_Boot(void)
 {
-	int started = 0;
-	void __iomem *cp_boot_itcm;
-	void __iomem *cp_bmodem_r4cfg;
-	unsigned int r4init;
-	unsigned int jump_instruction = 0xEA000000;
+    int started = 0;
+    void __iomem *cp_boot_itcm;
+    void __iomem *cp_bmodem_r4cfg;
+    unsigned int r4init;
+    unsigned int jump_instruction = 0xEA000000;
 
-#define BMODEM_SYSCFG_R4_CFG0  0x3a004000
-#define CP_SYSCFG_BASE_SIZE    0x8
-#define CP_ITCM_BASE_SIZE      0x1000	/* 1 4k page */
+    #define BMODEM_SYSCFG_R4_CFG0  0x3a004000
+    #define CP_SYSCFG_BASE_SIZE    0x8
+    #define CP_ITCM_BASE_SIZE      0x1000 // 1 4k page
 
-	cp_bmodem_r4cfg = ioremap(BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
-	if (!cp_bmodem_r4cfg) {
+	IPC_DEBUG(DBG_TRACE, "enter\n");
+    cp_bmodem_r4cfg = ioremap(BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
+    if (!cp_bmodem_r4cfg) {
+	IPC_DEBUG(DBG_ERROR,
+		"BMODEM_SYSCFG_R4_CFG0=0x%x, CP_SYSCFG_BASE_SIZE=0x%x\n",
+		BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
+	IPC_DEBUG(DBG_ERROR, "ioremap cp_bmodem_r4cfg failed\n");
+        return started;
+    }
+
+    r4init = *(unsigned int *)(cp_bmodem_r4cfg);
+
+    /* check if the CP is already booted, and if not, then boot it */
+    if ((0x5 != (r4init & 0x5)))
+    {
+	IPC_DEBUG(DBG_TRACE, "boot (R4 COMMS) - init code 0x%x ...\n", r4init);
+
+        /* Set the CP jump to address.  CP must jump to DTCM offset 0x400 */
+        cp_boot_itcm = ioremap(MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
+	if (!cp_boot_itcm) {
 		IPC_DEBUG(DBG_ERROR,
-			  "BMODEM_SYSCFG_R4_CFG0=0x%x, CP_SYSCFG_BASE_SIZE=0x%x\n",
-			  BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
-		IPC_DEBUG(DBG_ERROR, "ioremap cp_bmodem_r4cfg failed\n");
-		return started;
-	}
+			"MODEM_ITCM_ADDRESS=0x%x, CP_ITCM_BASE_SIZE=0x%x\n",
+			MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
+		IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_itcm failed\n");
+            return 0;
+        }
+	/* generate instruction for reset vector that jumps to start of
+	 * cp_boot.img at 0x20400
+	 */
+	jump_instruction |= (0x00FFFFFFUL & (((0x20000 + RESERVED_HEADER)
+								/ 4) - 2));
+	IPC_DEBUG(DBG_TRACE, "cp_boot_itcm 0x%x jump_instruction 0x%x\n",
+			(unsigned int)cp_boot_itcm, jump_instruction);
+	/* write jump instruction to cp reset vector */
+        *(unsigned int *)(cp_boot_itcm) = jump_instruction;
 
-	r4init = *(unsigned int *)(cp_bmodem_r4cfg);
+        iounmap(cp_boot_itcm);
 
-	/* check if the CP is already booted, and if not, then boot it */
-	if ((0x5 != (r4init & 0x5))) {
-		IPC_DEBUG(DBG_TRACE, "boot (R4 COMMS) - init code 0x%x ...\n",
-			  r4init);
+	/* start CP - should jump to 0x20400 and spin there */
+        *(unsigned int *)(cp_bmodem_r4cfg) = 0x5;
+	} else {
+	IPC_DEBUG(DBG_TRACE,
+		"(R4 COMMS) already started - init code 0x%x ...\n", r4init);
+    }
 
-		/* Set the CP jump to address.
-		   CP must jump to DTCM offset 0x400 */
-		cp_boot_itcm = ioremap(MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
-		if (!cp_boot_itcm) {
-			IPC_DEBUG(DBG_ERROR,
-				  "MODEM_ITCM_ADDRESS=0x%x, CP_ITCM_BASE_SIZE=0x%x\n",
-				  MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
-			IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_itcm failed\n");
-			return 0;
-		}
-		jump_instruction |=
-		    (0x00FFFFFFUL & (((0x10000 + RESERVED_HEADER) / 4) - 2));
-		*(unsigned int *)(cp_boot_itcm) = jump_instruction;
+    iounmap(cp_bmodem_r4cfg);
+	IPC_DEBUG(DBG_TRACE, "exit\n");
 
 		iounmap(cp_boot_itcm);
 
@@ -447,10 +473,13 @@ void Comms_Start(int isReset)
 	void __iomem *cp_boot_base;
 	u32 reg_val;
 
+	IPC_DEBUG(DBG_TRACE, "enter\n");
+
 #ifdef CONFIG_BCM_MODEM_DEFER_CP_START
     CP_Boot();
 #else
-	if (isReset)
+	if (isReset) {
+		IPC_DEBUG(DBG_INFO, "call CP_Boot\n");
 		CP_Boot();
 #endif
 
@@ -464,6 +493,7 @@ void Comms_Start(int isReset)
 	/* clear first (9) 32-bit words in shared memory */
 	memset(apcp_shmem, 0, IPC_SIZE);
 	iounmap(apcp_shmem);
+	IPC_DEBUG(DBG_TRACE, "cleared sh mem\n");
 
 	cp_boot_base = ioremap_nocache(MODEM_DTCM_ADDRESS,
 				       INIT_ADDRESS_OFFSET + RESERVED_HEADER);
@@ -477,9 +507,17 @@ void Comms_Start(int isReset)
 		return -1;
 	}
 
-	/* Start the CP */
-	reg_val = readl(cp_boot_base + MAIN_ADDRESS_OFFSET + RESERVED_HEADER);
-	writel(reg_val, cp_boot_base + INIT_ADDRESS_OFFSET + RESERVED_HEADER);
+	/* Start the CP:
+	 *	- read main address
+	 *	- write to init address
+	 */
+	reg_val = readl(cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER);
+	IPC_DEBUG(DBG_TRACE, "init addr 0x%x\n", reg_val);
+	reg_val = readl(cp_boot_base+MAIN_ADDRESS_OFFSET+RESERVED_HEADER);
+	IPC_DEBUG(DBG_TRACE, "main addr 0x%x\n", reg_val);
+	writel(reg_val, cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER);
+	reg_val = readl(cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER);
+	IPC_DEBUG(DBG_TRACE, "init addr after 0x%x\n", reg_val);
 
 	iounmap(cp_boot_base);
 	IPC_DEBUG(DBG_TRACE, "modem (R4 COMMS) started ...\n");
@@ -514,7 +552,6 @@ static int __init ipcs_module_init(void)
 	int rc = -1;
 	struct proc_dir_entry *dir;
 
-<<<<<<< HEAD
 	dir =
 	    create_proc_read_entry("driver/bcmipc", 0, NULL, ipcs_read_proc,
 				   NULL);
@@ -525,11 +562,11 @@ static int __init ipcs_module_init(void)
 	}
   
 	rc = register_chrdev_region(g_ipc_info.devnum, 1, BCM_KERNEL_IPC_NAME);
-  if (rc < 0) 
-  {
-	IPC_DEBUG(DBG_ERROR, "Error registering the IPC device\n");
-    goto out;
-  }
+	if (rc < 0) 
+	{
+		IPC_DEBUG(DBG_ERROR, "Error registering the IPC device\n");
+		goto out;
+	}
 
 	IPC_DEBUG(DBG_TRACE, "start ...\n");
 
@@ -597,6 +634,16 @@ static int __init ipcs_module_init(void)
 		IPC_DEBUG(DBG_ERROR, "request_irq error\n");
 		goto out_irq_req_fail;
 	}
+
+	/* proc entry for net config settings */
+	bcm_ipc_test_proc_entry = create_proc_entry("bcm_ipc_cpreset_test", 0644, NULL);
+	if (bcm_ipc_test_proc_entry == NULL) {
+		IPC_DEBUG(DBG_ERROR,
+			"Couldn't create bcm_ipc_test_proc_entry!\n");
+	} else {
+		IPC_DEBUG(DBG_TRACE, "bcm_ipc_test_proc_entry created\n");
+		bcm_ipc_test_proc_entry->write_proc = bcm_ipc_test_proc_write;
+	} 
 
 	IPC_DEBUG(DBG_TRACE, "IRQ Clear and Enable\n");
 
