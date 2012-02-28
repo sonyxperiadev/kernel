@@ -22,8 +22,8 @@
 ****************************************************************************/
 #define UNDER_LINUX
 
+#include "linux/broadcom/mobcom_types.h"
 #include "plat/chal/chal_types.h"
-#include "plat/mobcom_types.h"
 #include "plat/osabstract/osinterrupt.h"
 #include "plat/osabstract/ossemaphore.h"
 #include "mach/rdb/brcm_rdb_sysmap.h"

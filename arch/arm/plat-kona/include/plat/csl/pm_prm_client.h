@@ -23,7 +23,7 @@
 // Include directives
 //=============================================================================
 
-#include "plat/mobcom_types.h"
+
 
 // initialize client table
 void client_init(void);

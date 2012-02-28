@@ -22,7 +22,7 @@
 #include "chip_version.h"
 #else
 #include <linux/string.h>
-#include <plat/mobcom_types.h>
+#include <linux/broadcom/mobcom_types.h>
 #endif
 
 

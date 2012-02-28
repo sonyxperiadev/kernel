@@ -32,7 +32,7 @@
 #endif
 #include <linux/clk.h>
 #include <plat/pi_mgr.h>
-#include <plat/mobcom_types.h>
+#include <linux/broadcom/mobcom_types.h>
 
 #include "rhea_fb.h"
 #include "lcd/display_drv.h"
@@ -715,7 +715,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	ret = rhea_fb_pan_display(&fb->fb.var, &fb->fb);
 	if (ret) {
 		rheafb_error("Can not enable the LCD!\n");
-		goto err_fb_register_failed;;
+		goto err_fb_register_failed;
 	}
 
 	ret = register_framebuffer(&fb->fb);

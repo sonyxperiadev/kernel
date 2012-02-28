@@ -626,6 +626,7 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 				UInt32 param)
 {
+	int copyRc;
 	RpcClientInfo_t *cInfo;
 	rpc_pkt_avail_t ioc_param = { 0 };
 
@@ -679,11 +680,17 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 	     ("k:handle_pkt_poll_ioc clientId=%d empty=%d\n",
 	      (int)ioc_param.clientId, (int)ioc_param.isEmpty));
 
-	if (copy_to_user
-	    ((rpc_pkt_avail_t *) param, &ioc_param,
-	     sizeof(rpc_pkt_avail_t)) != 0) {
+	copyRc = copy_to_user((rpc_pkt_avail_t *) param, &ioc_param,
+			sizeof(rpc_pkt_avail_t));
+	if (copyRc != 0) {
 		_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ioc - copy_to_user() had error\n"));
+			("k:handle_pkt_poll_ioc - copy_to_user() FAILS! RC=%d\n", copyRc));
+		_DBG(RPC_TRACE
+			("  src addr=%x, dest addr=%x, size=%d\n",
+				(int)&ioc_param, (int)param, sizeof(rpc_pkt_avail_t)));
+		_DBG(RPC_TRACE
+			("  clientId:%d, isEmpty:%d, waitTime:%d\n", (int)ioc_param.clientId,
+				(int)ioc_param.isEmpty, (int)ioc_param.waitTime));
 		return -EFAULT;
 	}
 

@@ -195,7 +195,7 @@ static int isDigiMic(AUDIO_SOURCE_Enum_t source);
 static int needDualMic(AudioMode_t mode, AudioApp_t app);
 static AudioMode_t GetAudioModeFromCaptureDev(CSL_CAPH_DEVICE_e source);
 static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
-			       enum ExtSpkrUsage_en_t usage_flag, int use, int force);
+		       enum ExtSpkrUsage_en_t usage_flag, int use, int force);
 static void setExternAudioGain(AudioMode_t mode, AudioApp_t app);
 
 /****************************************************************************
@@ -781,12 +781,6 @@ void AUDCTRL_SaveAudioApp(AudioApp_t app)
 	if (AUDCTRL_InVoiceCall())
 		if (app > AUDIO_APP_VOICE_CALL_WB && app != AUDIO_APP_LOOPBACK)
 			return;
-#if defined(CONFIG_BCM_AUDIO_ENABLE_3_PROFILES)
-	if (app >= AUDIO_APP_MUSIC)
-		currAudioApp = AUDIO_APP_MUSIC;
-
-	return;
-#endif
 
 	/*AUDIO_APP_VOIP and AUDIO_APP_RECORDING_GVS can only be set by
 	   user space code. kernel audio code can not detect them. */
@@ -3082,7 +3076,7 @@ static int needDualMic(AudioMode_t mode, AudioApp_t app)
 *
 ****************************************************************************/
 static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
-			       enum ExtSpkrUsage_en_t usage_flag, int use, int force)
+		       enum ExtSpkrUsage_en_t usage_flag, int use, int force)
 {
 
 	static Boolean callUseHS = FALSE;

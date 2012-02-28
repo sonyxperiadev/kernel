@@ -2,7 +2,7 @@
 #define _BRCM_RDB_UTIL_H_
 
 // Register Access Macros:
-#ifndef _MOBCOM_TYPES_H_
+#ifndef _INC_MS_BASIC_TYPES_H_
 typedef unsigned long  UInt32;
 typedef unsigned short UInt16;
 typedef unsigned char  UInt8;

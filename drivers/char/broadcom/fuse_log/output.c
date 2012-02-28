@@ -26,7 +26,7 @@
 #include <linux/time.h>
 #include <linux/rtc.h>
 #include <trace/stm.h>
-#include "plat/mobcom_types.h"
+#include "linux/broadcom/mobcom_types.h"
 #include <linux/vt_kern.h>
 #include "bcmlog.h"
 #include "fifo.h"
@@ -68,7 +68,8 @@ struct acm_callbacks {
 };
 
 struct WriteToLogDevParms_t {
-	struct work_struct wq;
+	struct workqueue_struct *wq;
+	struct work_struct work;
 	int outdev;
 	int prev_outdev;
 	struct file *file;
@@ -602,7 +603,7 @@ void BCMLOG_Output(unsigned char *pBytes, unsigned long nBytes,
 		g_devWrParms.busy = 1;
 		g_devWrParms.prev_outdev = g_devWrParms.outdev;
 		g_devWrParms.outdev = BCMLOG_GetRunlogDevice();
-		schedule_work(&g_devWrParms.wq);
+		queue_work(g_devWrParms.wq, &g_devWrParms.work);
 	}
 }
 
@@ -623,7 +624,12 @@ int BCMLOG_OutputInit(void)
 	g_devWrParms.busy = 0;
 	g_devWrParms.file = 0;
 
-	INIT_WORK(&g_devWrParms.wq, WriteToLogDev);
+	INIT_WORK(&g_devWrParms.work, WriteToLogDev);
+	g_devWrParms.wq = alloc_workqueue("fuse_log_work", WQ_FREEZABLE, 1);
+	if (!g_devWrParms.wq) {
+		printk(KERN_ERR "Failed to init fuse log workqueue\n");
+		return -ENOMEM;
+	}
 #ifdef CONFIG_BRCM_NETCONSOLE
 
 	/*
@@ -634,4 +640,9 @@ int BCMLOG_OutputInit(void)
 #endif
 	return 0;
 
+}
+
+void BCMLOG_OutputExit(void)
+{
+	destroy_workqueue(g_devWrParms.wq);
 }

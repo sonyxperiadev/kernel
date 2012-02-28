@@ -24,7 +24,7 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <asm/cacheflush.h>
-#include <plat/mobcom_types.h>
+#include <linux/broadcom/mobcom_types.h>
 #include <mach/hardware.h>
 #include <mach/dma.h>
 #include <linux/crypto.h>
@@ -34,7 +34,7 @@
 #include <crypto/scatterwalk.h>
 #include <mach/rdb/brcm_rdb_spum_apb.h>
 #include <mach/rdb/brcm_rdb_spum_axi.h>
-#include "brcm_spum.h" 
+#include "brcm_spum.h"
 
 
 #ifdef DEBUG
@@ -49,7 +49,7 @@ static void hexdump(unsigned char *buf, unsigned int len)
 #define WORD_ALIGNED	__attribute__((aligned(sizeof(u32))))
 
 #define	FLAGS_BUSY	1
-#define SPUM_AES_QUEUE_LENGTH	10 
+#define SPUM_AES_QUEUE_LENGTH	10
 
 #define AES_XTS_MIN_KEY_SIZE	32
 #define AES_XTS_MAX_KEY_SIZE	64

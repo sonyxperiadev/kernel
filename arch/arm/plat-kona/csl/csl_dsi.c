@@ -32,8 +32,8 @@
 #include <linux/workqueue.h>
 #include <linux/time.h>
 #include <linux/interrupt.h>
-#include <plat/mobcom_types.h>
-#include <plat/msconsts.h>
+#include <linux/broadcom/mobcom_types.h>
+#include <linux/broadcom/msconsts.h>
 #include <plat/osabstract/ostypes.h>
 #include <plat/osabstract/ostask.h>
 #include <plat/osabstract/ossemaphore.h>

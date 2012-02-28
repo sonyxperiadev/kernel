@@ -38,8 +38,6 @@ static int bcmbt_rfkill_set_power(void *data, bool blocked)
 	int aux0_gpio = ((struct bcmbt_rfkill_platform_data *)data)->aux0_gpio;
 	int aux1_gpio = ((struct bcmbt_rfkill_platform_data *)data)->aux1_gpio;
 
-/*	pr_info("bcm_bt_rfkill_setpower(): vreg_gpio: %d, n_reset_gpio: %d, aux0_gpio: %d, aux1_gpio: %d\n", vreg_gpio, n_reset_gpio, aux0_gpio, aux1_gpio);*/
-
 	if (blocked == false) {	/* Transmitter ON (Unblocked) */
 		if (BCMBT_UNUSED_GPIO != aux1_gpio)
 			gpio_set_value(aux1_gpio, BCMBT_AUX1_ON);

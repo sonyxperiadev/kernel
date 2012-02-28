@@ -133,6 +133,7 @@ struct ov5640 {
 	int colorlevel;
 	int sharpness;
 	int saturation;
+	int antibanding;
 };
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
@@ -736,6 +737,15 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .step = 1,
 	 .default_value = IMAGE_EFFECT_NONE,
 	 },
+	{
+	 .id = V4L2_CID_CAMERA_ANTI_BANDING,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "Anti Banding",
+	 .minimum = ANTI_BANDING_AUTO,
+	 .maximum = ANTI_BANDING_60HZ,
+	 .step = 1,
+	 .default_value = ANTI_BANDING_AUTO,
+	 },
 };
 
 /**
@@ -1114,6 +1124,9 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_SHARPNESS:
 		ctrl->value = ov5640->sharpness;
 		break;
+	case V4L2_CID_CAMERA_ANTI_BANDING:
+		ctrl->value = ov5640->antibanding;
+		break;
 	}
 
 	return 0;
@@ -1248,6 +1261,31 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
+
+	case V4L2_CID_CAMERA_ANTI_BANDING:
+
+		if (ctrl->value > ANTI_BANDING_60HZ)
+			return -EINVAL;
+
+		ov5640->antibanding = ctrl->value;
+
+		switch (ov5640->antibanding) {
+			case ANTI_BANDING_50HZ:
+				ret = ov5640_reg_writes(client,
+						ov5640_antibanding_50z_tbl);
+				break;
+			case ANTI_BANDING_60HZ:
+				ret = ov5640_reg_writes(client,
+						ov5640_antibanding_60z_tbl);
+				break;
+			default:
+				ret = ov5640_reg_writes(client,
+						ov5640_antibanding_auto_tbl);
+				break;
+		}
+		if (ret)
+			return ret;
+		break;
 	}
 
 	return ret;
@@ -1283,6 +1321,8 @@ static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			p->focus_distance[0] = 10; /* near focus in cm */
 			p->focus_distance[1] = 100; /* optimal focus in cm */
 			p->focus_distance[2] = -1; /* infinity */
+			p->focal_length.numerator = 342;
+			p->focal_length.denominator = 100;
 			break;
 		}
 	default:
@@ -1348,6 +1388,7 @@ static int ov5640_init(struct i2c_client *client)
 	ov5640->brightness = EV_DEFAULT;
 	ov5640->contrast = CONTRAST_DEFAULT;
 	ov5640->colorlevel = IMAGE_EFFECT_NONE;
+	ov5640->antibanding = ANTI_BANDING_AUTO;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 
