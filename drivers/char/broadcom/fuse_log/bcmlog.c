@@ -1154,8 +1154,8 @@ final:
 					    cp_buf);
 	if (ret <= 0) {
 		printk(KERN_CRIT
-		       "%s: Error writing data to flash at line %d, offs:%x ret:%d!!\n",
-		       __func__, __LINE__, (unsigned int)offs, ret);
+		       "%s: Error writing data to flash at line %d, offs:%lx ret:%d!!\n",
+		       __func__, __LINE__, offs, ret);
 		return;
 	}
 
@@ -1176,8 +1176,8 @@ final:
 						    1, cp_buf);
 		if (ret <= 0) {
 			printk(KERN_CRIT
-			       "%s: Error writing data line:%d, offs:%x ret:%d!!\n",
-			       __func__, __LINE__, (unsigned int)offs, ret);
+			       "%s: Error writing data line:%d, offs:%lx ret:%d!!\n",
+			       __func__, __LINE__, offs, ret);
 			return;
 		}
 
