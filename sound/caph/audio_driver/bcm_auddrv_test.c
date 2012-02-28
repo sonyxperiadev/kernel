@@ -323,6 +323,10 @@ static int HandleControlCommand()
 			{
 				char *MsgBuf = NULL;
 				MsgBuf = kmalloc(2408, GFP_KERNEL);
+				if (MsgBuf == NULL) {
+					aError("kmalloc failed\n");
+					return -1;
+				}
 
 				csl_caph_ControlHWClock(TRUE);
 
@@ -1043,6 +1047,10 @@ static int HandleCaptCommand()
 			if (!record_buf_allocated) {
 				record_test_buf =
 				    kmalloc(TEST_BUF_SIZE, GFP_KERNEL);
+				if (record_test_buf == NULL) {
+					aError("kmalloc failed\n");
+					return -1;
+				}
 				memset(record_test_buf, 0, TEST_BUF_SIZE);
 				record_buf_allocated = 1;
 			}
@@ -1289,6 +1297,11 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 
 	if (record_test_buf == NULL)
 		record_test_buf = OSHEAP_Alloc(1024 * 1024);
+
+	if (record_test_buf == NULL) {
+		aError("Memory allocation failed\n");
+		return;
+	}
 
 	codecVal = Val5;	/* 0 for 8k PCM */
 	voip_codec.codec_type = cur_codecVal = codecVal;
