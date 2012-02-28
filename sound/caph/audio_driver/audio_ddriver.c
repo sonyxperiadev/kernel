@@ -138,6 +138,7 @@ static Boolean endOfBuffer = FALSE;
 static const UInt16 sVoIPDataLen[] = { 0, 322, 160, 38, 166, 642, 70 };
 static CSL_VP_Mode_AMR_t prev_amr_mode = (CSL_VP_Mode_AMR_t) 0xffff;
 static Boolean telephony_amr_if2;
+static int wait_cnt, waitcnt_thold = 2;
 
 static struct work_struct voip_work;
 static struct workqueue_struct *voip_workqueue; /* init to NULL */
@@ -944,6 +945,19 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			aud_drv->voicecapt_config.recordMode = *recordMode;
 			audio_capture_driver = aud_drv;
 
+			if (AUDCTRL_InVoiceCall()) {
+				wait_cnt = 100;
+				waitcnt_thold = 2;
+			} else {
+				if (num_frames >= 3)
+					waitcnt_thold = 2;
+				else if (num_frames == 2)
+					waitcnt_thold = 4;
+				else
+					waitcnt_thold = 8;
+				wait_cnt = 0;
+			}
+
 			result_code = VPU_record_start(*recordMode,
 				aud_drv->sample_rate,
 				speech_mode, 0,	/* used by AMRNB and AMRWB */
@@ -959,6 +973,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			result_code = RESULT_OK;
 			index = 1;	/* reset */
 			endOfBuffer = FALSE;
+			wait_cnt = 0;
 
 			/* de-init during stop as the android sequence is
 			open->start->stop->start */
@@ -1729,7 +1744,15 @@ void VPU_Capture_Request(UInt16 buf_index)
 
 	if ((aud_drv == NULL)) {
 		aTrace(LOG_AUDIO_DRIVER,
-				"VPU_Capture_Request:: Spurious call back\n");
+			"VPU_Capture_Request:: Spurious call back\n");
+		return;
+	}
+	/* get rid of HW glitch in VPU recording */
+	if (wait_cnt < waitcnt_thold) {
+		aTrace(LOG_AUDIO_DRIVER,
+			"VPU_Capture_Request:: wait_cnt = %d, thold=%d\n",
+			wait_cnt, waitcnt_thold);
+		wait_cnt++;
 		return;
 	}
 	/*aTrace(LOG_AUDIO_DRIVER,

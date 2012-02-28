@@ -674,8 +674,7 @@ static int PcmCapturePrepare(struct snd_pcm_substream *substream)
 	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
 
-	aTrace
-		(LOG_ALSA_INTERFACE,
+	aTrace(LOG_ALSA_INTERFACE,
 		 "\n %lx:capture_prepare: subdevice=%d rate =%d,"
 		 "format =%d channel=%d dma_area=0x%x dma_bytes=%d,"
 		 "period_bytes=%d avail_min=%d periods=%d buffer_size=%d\n",
@@ -835,15 +834,16 @@ static snd_pcm_uframes_t PcmCapturePointer(struct snd_pcm_substream *substream)
 	pos =
 	    chip->streamCtl[substream_number].stream_hw_ptr %
 	    runtime->buffer_size;
-	/*DEBUG("%lx:PcmCapturePointer pos=%d
-	   pcm_read_ptr=%d, buffer size = %d,\n",jiffies,
-	   (int)pos,(int)chip->streamCtl[substream_number].stream_hw_ptr,
-	   (int)runtime->buffer_size);
-	 */
+	/*
+	aTrace(LOG_ALSA_INTERFACE,
+	"%lx:PcmCapturePointer pos=%d pcm_read_ptr=%d, buffer size = %d,\n",
+	jiffies, (int)pos, (int)chip->streamCtl[substream_number].stream_hw_ptr,
+	(int)runtime->buffer_size);
+	*/
 	return pos;
 }
 
-/*Playback device operator */
+/* Playback device operator */
 static struct snd_pcm_ops brcm_alsa_omx_pcm_playback_ops = {
 	.open = PcmPlaybackOpen,
 	.close = PcmPlaybackClose,
@@ -855,7 +855,7 @@ static struct snd_pcm_ops brcm_alsa_omx_pcm_playback_ops = {
 	.pointer = PcmPlaybackPointer,
 };
 
-/*Capture device operator*/
+/* Capture device operator*/
 static struct snd_pcm_ops brcm_alsa_omx_pcm_capture_ops = {
 	.open = PcmCaptureOpen,
 	.close = PcmCaptureClose,
@@ -900,6 +900,9 @@ static void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 
 	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_GET_DRV_TYPE,
 			  (void *)&drv_type);
+	aTrace(LOG_ALSA_INTERFACE,
+		"%lx:CaptInterruptPeriodCB drv_type=%d,\n",
+		jiffies, (int)drv_type);
 
 	switch (drv_type) {
 	case AUDIO_DRIVER_CAPT_HQ:
