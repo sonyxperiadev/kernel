@@ -742,6 +742,11 @@ struct v4l2_sensor_optical_info {
 	 * element 2 - far focus distance in CM,
 	 * -1 for for infinity */
 	int focus_distance[3];
+
+	/*
+	 * focal length in mm
+	 */
+	struct v4l2_fract focal_length;
 };
 
 #define VIDIOC_SENSOR_G_OPTICAL_INFO	_IOR('V', BASE_VIDIOC_PRIVATE+8, struct v4l2_sensor_optical_info)

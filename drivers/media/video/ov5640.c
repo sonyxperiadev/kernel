@@ -1283,6 +1283,8 @@ static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			p->focus_distance[0] = 10; /* near focus in cm */
 			p->focus_distance[1] = 100; /* optimal focus in cm */
 			p->focus_distance[2] = -1; /* infinity */
+			p->focal_length.numerator = 342;
+			p->focal_length.denominator = 100;
 			break;
 		}
 	default:
