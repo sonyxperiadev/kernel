@@ -1123,7 +1123,7 @@ void BCMLOG_HandleCpLogMsg(unsigned char *buf, int size)
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 void BCMLOG_WriteEMMC(const char *buf, int size)
 {
-	struct cpanic_data *ctx = &drv_ctx;
+	struct cpanic_data *ctx = (struct cpanic_data *)&drv_ctx;
 	int ret = 0;
 	static int tot_size;
 	size_t wlen = 0;
@@ -1155,7 +1155,7 @@ final:
 	if (ret <= 0) {
 		printk(KERN_CRIT
 		       "%s: Error writing data to flash at line %d, offs:%x ret:%d!!\n",
-		       __func__, __LINE__, offs, ret);
+		       __func__, __LINE__, (unsigned int)offs, ret);
 		return;
 	}
 
@@ -1177,7 +1177,7 @@ final:
 		if (ret <= 0) {
 			printk(KERN_CRIT
 			       "%s: Error writing data line:%d, offs:%x ret:%d!!\n",
-			       __func__, __LINE__, offs, ret);
+			       __func__, __LINE__, (unsigned int)offs, ret);
 			return;
 		}
 
@@ -1197,7 +1197,6 @@ final:
 
 static void start_emmc_crashlog(void)
 {
-	struct cpanic_data *ctx = &drv_ctx;
 	unsigned long blk;
 
 	blk = get_apanic_start_address();
@@ -1313,6 +1312,7 @@ final:
 #endif
 }
 
+#if !defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC)
 static void start_panic_crashlog(void)
 {
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP
@@ -1331,6 +1331,8 @@ static void start_panic_crashlog(void)
 	memset(cp_buf, 0xff, mtd->writesize);
 #endif
 }
+#endif /* !defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) */
+
 
 static void start_sdcard_crashlog(struct file *inDumpFile)
 {
