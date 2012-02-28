@@ -128,12 +128,16 @@ int brcm_enable_dsi_lcd_clocks(
 {
 	struct clk *mm_dma_axi;
 
-	struct clk *dsi_axi;
-	struct clk *dsi_esc;
-	struct clk *dsi_pll;
-	struct clk *dsi_pll_ch;
-	u32    pixel_pll_val;
-        u32    dsi_pll_ch_hz;
+	struct	clk *dsi_axi;
+	struct	clk *dsi_esc;
+	struct	clk *dsi_pll;
+	struct	clk *dsi_pll_ch;
+	u32	pixel_pll_val;
+        u32	dsi_pll_ch_hz;
+	u32	dsi_pll_ch_hz_csl;
+	
+	/* DSI timing is set-up in CSL/cHal using req. clock values */
+	dsi_pll_ch_hz_csl = dsi_pll_hz / dsi_pll_ch_div;
 
 	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
 	{
@@ -168,8 +172,9 @@ int brcm_enable_dsi_lcd_clocks(
 		printk(KERN_ERR "Failed to enable the DSI[%d] PLL\n", dsi_bus);
 		return -EIO;
 	}
-        
+	
         dsi_pll_ch_hz = clk_get_rate(dsi_pll) / dsi_pll_ch_div;
+	
 	if (clk_set_rate(dsi_pll_ch, dsi_pll_ch_hz)) {
 		printk(KERN_ERR "Failed to set the DSI[%d] PLL CH to %d Hz\n", 
                 	dsi_bus, dsi_pll_ch_hz);
@@ -181,14 +186,15 @@ int brcm_enable_dsi_lcd_clocks(
 		return -EIO;
 	}
        
-       	#define DSI_CORE_MAX_HZ	 150000000
-        if(     (dsi_pll_ch_hz >> 1) <= DSI_CORE_MAX_HZ)
-        	pixel_pll_val = DSI_TXDDRCLK;
-        else if((dsi_pll_ch_hz >> 2) <= DSI_CORE_MAX_HZ)
-        	pixel_pll_val = DSI_TXDDRCLK2;
-        else 
-        	pixel_pll_val = DSI_TX0_BCLKHS;
-                
+       	#define DSI_CORE_MAX_HZ	 125000000
+	
+	if(	(dsi_pll_ch_hz_csl >> 1) <= DSI_CORE_MAX_HZ)
+		pixel_pll_val = DSI_TXDDRCLK;
+	else if((dsi_pll_ch_hz_csl >> 2) <= DSI_CORE_MAX_HZ)
+		pixel_pll_val = DSI_TXDDRCLK2;
+	else 
+		pixel_pll_val = DSI_TX0_BCLKHS;
+
         if (mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel,
         	pixel_pll_val)) {
                 
