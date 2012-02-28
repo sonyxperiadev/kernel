@@ -28,7 +28,7 @@
 #include <linux/uaccess.h>
 #include <linux/broadcom/bcm_security.h>
 
-#include "types.h"
+#include "linux/broadcom/mobcom_types.h"
 #include "resultcode.h"
 #include "taskmsgs.h"
 #include "simlockfun.h"

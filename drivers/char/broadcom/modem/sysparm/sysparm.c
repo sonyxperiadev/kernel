@@ -28,7 +28,7 @@
 #include <linux/module.h>
 #include <linux/interrupt.h>
 
-#include "types.h"
+#include <linux/broadcom/mobcom_types.h>
 #include <linux/broadcom/bcmtypes.h>
 
 #include <mach/comms/platform_mconfig.h>
