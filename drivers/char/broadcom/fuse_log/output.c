@@ -55,7 +55,6 @@ static char g_acm_on = 1;
 
 #define BCMLOG_OUTPUT_FIFO_MAX_BYTES 65536
 static BCMLOG_Fifo_t g_fifo;	/* output fifo */
-#define FUSE_LOG_CHANNEL	8
 /* 23MB reserved area for AP/CP crash dump */
 #define MTT_SD_RESERVED (23 * 1024 * 1024)
 /**
