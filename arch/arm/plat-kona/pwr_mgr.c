@@ -1811,18 +1811,36 @@ EXPORT_SYMBOL(pwr_mgr_init);
 
 static u32 bmdm_pwr_mgr_base;
 
-__weak void pwr_mgr_mach_debug_fs_init(int type)
+__weak void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param)
 {
 }
 
-static int set_pm_mgr_dbg_bus(void *data, u64 val)
+static int pwrmgr_debugfs_open(struct inode *inode, struct file *file)
 {
-	u32 reg_val = 0;
+	file->private_data = inode->i_private;
+	return 0;
+}
 
-	pwr_dbg("%s: val: %lld\n", __func__, val);
-	pwr_mgr_mach_debug_fs_init(0);
-	if (val > 0xA)
-		return -EINVAL;
+static ssize_t set_pm_mgr_dbg_bus(struct file *file, char const __user *buf,
+					size_t count, loff_t *offset)
+{
+	u32 len = 0;
+	int db_sel = 0;
+	int val = 0;
+	int param = 0;
+	char input_str[100];
+	u32 reg_val;
+
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+	sscanf(input_str, "%d%d%d", &val, &db_sel, &param);
+
+	pwr_mgr_mach_debug_fs_init(0, db_sel, param);
 	reg_val =
 	    readl(PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
 	reg_val &= ~(0xF << 20);
@@ -1834,22 +1852,37 @@ static int set_pm_mgr_dbg_bus(void *data, u64 val)
 	reg_val =
 	    readl(PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
 	pwr_dbg("PC_PIN_OVERRIDE_CONTROL Register: %08x\n", reg_val);
-
-	return 0;
+	return count;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(set_pm_dbg_bus_fops, NULL, set_pm_mgr_dbg_bus,
-			"%llu\n");
+static struct file_operations set_pm_dbg_bus_fops = {
+	.open = pwrmgr_debugfs_open,
+	.write = set_pm_mgr_dbg_bus,
+};
 
-static int set_bmdm_mgr_dbg_bus(void *data, u64 val)
+
+static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
+					size_t count, loff_t *offset)
 {
-	u32 reg_val = 0;
+	u32 len = 0;
+	int db_sel = 0;
+	int val = 0;
+	int param = 0;
+	char input_str[100];
+	u32 reg_val;
 	u32 reg_addr =
 	    bmdm_pwr_mgr_base + BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_OFFSET;
-	pwr_dbg("%s: val: %lld\n", __func__, val);
-	pwr_mgr_mach_debug_fs_init(1);
-	if (val > 0xA)
-		return -EINVAL;
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+	sscanf(input_str, "%d%d%d", &val, &db_sel, &param);
+
+	pwr_dbg("%s: val: %d\n", __func__, val);
+	pwr_mgr_mach_debug_fs_init(1, db_sel, param);
 	reg_val = readl(reg_addr);
 	reg_val &=
 	    ~(BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_DEBUG_BUS_SELECT_MASK);
@@ -1859,16 +1892,17 @@ static int set_bmdm_mgr_dbg_bus(void *data, u64 val)
 	    BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_DEBUG_BUS_SELECT_MASK;
 	pwr_dbg("reg_val to be written %08x\n", reg_val);
 	writel(reg_val, reg_addr);
-
 	reg_val = readl(reg_addr);
 	pwr_dbg("BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL Register: %08x\n",
 		reg_val);
-
-	return 0;
+	return count;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(set_bmdm_dbg_bus_fops, NULL, set_bmdm_mgr_dbg_bus,
-			"%llu\n");
+static struct file_operations set_bmdm_dbg_bus_fops = {
+	.open = pwrmgr_debugfs_open,
+	.write = set_bmdm_mgr_dbg_bus,
+};
+
 
 static int pwr_mgr_dbg_event_get_active(void *data, u64 *val)
 {

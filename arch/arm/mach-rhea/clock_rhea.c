@@ -6938,41 +6938,76 @@ int __init rhea_clock_init(void)
 }
 
 #ifdef CONFIG_DEBUG_FS
-int set_gpio_mux_for_debug_bus(void)
+int set_gpio_mux_for_debug_bus(int mux_sel, int mux_param)
 {
-    static bool mux_init = false;
-    printk("in %s \n", __func__);
-    if(!mux_init) {
-	mux_init = true;
+	u32 reg_val;
+	pr_info("in %s \n", __func__);
+
 	/*Get pad control write access by rwiting password */
 	writel(0xa5a501, KONA_PAD_CTRL + PADCTRLREG_WR_ACCESS_OFFSET);
-	/* unlock first 32 pad control registers */
+	/* unlock pad control registers */
 	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK0_OFFSET);
+	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK1_OFFSET);
+	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK2_OFFSET);
+	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK3_OFFSET);
+	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK4_OFFSET);
 
-	/* Configure GPIO_XX to TESTPORT_XX  */
-	/* writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET); */
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO01_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO02_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO03_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO04_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO05_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO06_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO07_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO08_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO09_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO10_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO11_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO12_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO13_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO14_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO15_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO16_OFFSET);
-    }
+	if (mux_sel == 0) {
+		/* Configure GPIO_XX to TESTPORT_XX  */
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO01_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO02_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO03_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO04_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO05_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO06_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO07_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO08_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO09_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO10_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO11_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO12_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO13_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO14_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO15_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO16_OFFSET);
+
+		reg_val = readl(KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+		reg_val &=
+			~CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
+		reg_val |=
+			(mux_param <<
+			CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_SHIFT) &
+			CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
+		writel(reg_val,
+			KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+
+	} else if (mux_sel == 1) {  /*SDDATA*/
+
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT0_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT1_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT2_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT3_OFFSET);
+
+		reg_val = readl(KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+		reg_val &=
+			~CHIPREG_PERIPH_SPARE_CONTROL0_PM_DEBUG_MUX_CONTROL_MASK;
+		reg_val |=
+			(mux_param <<
+			CHIPREG_PERIPH_SPARE_CONTROL0_PM_DEBUG_MUX_CONTROL_SHIFT) &
+				CHIPREG_PERIPH_SPARE_CONTROL0_PM_DEBUG_MUX_CONTROL_MASK;
+		writel(reg_val, KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+
+	} else
+		return -1;
 
     return 0;
 }
-int set_clk_idle_debug_mon(int clk_idle)
+
+int set_clk_idle_debug_mon(int clk_idle, int db_sel)
 {
     u32 reg_val;
     struct clk *clk;
@@ -6983,9 +7018,8 @@ int set_clk_idle_debug_mon(int clk_idle)
 	clk_dbg("%s: Invalid value for rootCCU debug bus: %d\n", __func__, clk_idle);
 	return -EINVAL;
     }
-
-    set_gpio_mux_for_debug_bus();
-    writel(0xF, KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+	set_gpio_mux_for_debug_bus(db_sel,
+		(db_sel == 0) ? 0xF : 8);
 
     clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
     ccu_clk = to_ccu_clk(clk);
@@ -7001,7 +7035,7 @@ int set_clk_idle_debug_mon(int clk_idle)
 
     return 0;
 }
-int set_clk_monitor_debug(int mon_select)
+int set_clk_monitor_debug(int mon_select, int db_sel)
 {
     printk("in %s monitor select: %d\n", __func__, mon_select);
     switch(mon_select) {
@@ -7009,8 +7043,8 @@ int set_clk_monitor_debug(int mon_select)
 		writel(0x303, KONA_PAD_CTRL + PADCTRLREG_CAMCS1_OFFSET);
 		break;
 	case MONITOR_DEBUG_BUS_GPIO:
-		set_gpio_mux_for_debug_bus();
-		writel(0xF, KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+		set_gpio_mux_for_debug_bus(db_sel,
+			(db_sel == 0) ? 0xF : 8);
 		break;
 	default:
 		return -EINVAL;

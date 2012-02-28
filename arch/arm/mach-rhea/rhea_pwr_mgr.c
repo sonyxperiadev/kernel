@@ -442,20 +442,12 @@ early_initcall(rhea_pwr_mgr_init);
 
 #ifdef CONFIG_DEBUG_FS
 
-void pwr_mgr_mach_debug_fs_init(int type)
+void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param)
 {
-	u32 reg_val;
+	if (db_mux == 0)/*GPIO ?*/
+		mux_param = (type == 0) ? 2 : 0xD;
 
-	set_gpio_mux_for_debug_bus();
-	reg_val = readl(KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
-	reg_val &= ~CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
-	if(type == 0)
-		reg_val |= 0x2 << CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_SHIFT;
-	else if(type == 1)
-		reg_val |= 0xD << CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_SHIFT;
-	else
-		BUG();
-	writel(reg_val,KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+	set_gpio_mux_for_debug_bus(db_mux, mux_param);
 }
 
 #endif /*CONFIG_DEBUG_FS*/

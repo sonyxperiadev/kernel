@@ -38,6 +38,7 @@
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#include <asm/uaccess.h>
 #include <linux/seq_file.h>
 #endif
 
@@ -4415,17 +4416,17 @@ struct gen_clk_ops gen_core_clk_ops =
 
 #ifdef CONFIG_DEBUG_FS
 
-__weak int set_gpio_mux_for_debug_bus(void)
+__weak int set_gpio_mux_for_debug_bus(int mux_sel, int mux_param)
 {
     return 0;
 }
 
-__weak int set_clk_idle_debug_mon(int clk_idle)
+__weak int set_clk_idle_debug_mon(int clk_idle, int db_sel)
 {
     return 0;
 }
 
-__weak int set_clk_monitor_debug(int mon_select)
+__weak int set_clk_monitor_debug(int mon_select, int debug_bus)
 {
     return 0;
 }
@@ -4435,23 +4436,64 @@ __weak int clock_monitor_enable(struct clk *clk, int monitor)
     return 0;
 }
 
-static int set_clk_idle_debug(void *data, u64 clk_idle)
+static int clk_debugfs_open(struct inode *inode, struct file *file)
 {
-    return (set_clk_idle_debug_mon(clk_idle));
-}
-DEFINE_SIMPLE_ATTRIBUTE(clock_idle_debug_fops, NULL, set_clk_idle_debug, "%llu\n");
-
-static int set_clk_mon_debug(void *data, u64 mon_select)
-{
-    int ret = 0;
-    clk_dbg("%s:Clock to be monitored on %s\n", __func__, mon_select?"DEBUG_BUS_GPIO":"CAMCS_PIN");
-
-    ret = set_clk_monitor_debug(mon_select);
-
-    return ret;
+	file->private_data = inode->i_private;
+	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(clock_mon_debug_fops, NULL, set_clk_mon_debug, "%llu\n");
+static ssize_t set_clk_idle_debug(struct file *file, char const __user *buf,
+					size_t count, loff_t *offset)
+{
+	u32 len = 0;
+	int db_sel = 0;
+	int clk_idle = 0;
+	char input_str[100];
+
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+	sscanf(input_str, "%d%d", &clk_idle, &db_sel);
+	set_clk_idle_debug_mon(clk_idle, db_sel);
+	return count;
+}
+
+static struct file_operations clock_idle_debug_fops = {
+	.open = clk_debugfs_open,
+	.write = set_clk_idle_debug,
+};
+
+static ssize_t set_clk_mon_debug(struct file *file, char const __user *buf,
+					size_t count, loff_t *offset)
+{
+	u32 len = 0;
+	int db_sel = 0;
+	int mon_sel = 0;
+	char input_str[100];
+
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+	sscanf(input_str, "%d%d", &mon_sel, &db_sel);
+	clk_dbg("%s:Clock to be monitored on %s\n", __func__,
+			mon_sel ? "DEBUG_BUS_GPIO" : "CAMCS_PIN");
+	set_clk_monitor_debug(mon_sel, db_sel);
+	return count;
+}
+
+static struct file_operations clock_mon_debug_fops = {
+	.open = clk_debugfs_open,
+	.write = set_clk_mon_debug,
+};
+
 
 static int clk_mon_enable(void *data, u64 val)
 {
