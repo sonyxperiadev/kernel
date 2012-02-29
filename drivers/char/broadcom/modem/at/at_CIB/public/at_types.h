@@ -64,7 +64,9 @@ typedef enum {
     AT_CMDTYPE_UNKNOWN, /**< unknown */
     AT_CMDTYPE_BASIC,   /**< basic command; examples: ATE, ATE0 */
     AT_CMDTYPE_EXTENDED, /**< extended command; examples: AT+COPS=1,2,3 */
-    AT_CMDTYPE_SPECIAL  /**< special command accepts everything as arg; example: ATD12345; */
+    AT_CMDTYPE_SPECIAL,  /**< special command accepts everything as arg; example: ATD12345; */
+    AT_CMDTYPE_INTERNAL,  /**< proprietary command ; example: AT*MTEST; */
+    AT_CMDTYPE_DEVELOPMENT  /**< development command ;  */
 } AT_CmdTypes_t;
 
 /** Command options, may be or'ed together */
