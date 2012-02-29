@@ -1103,7 +1103,6 @@ Int32 csl_cam_open(  pCSL_CAM_INTF_CFG_st intfCfg, CSL_CAM_HANDLE* cslCamH )
             {
                 chal_cam_param_st.param |= CHAL_CAM_DATA_LANE_1;
             }
-            chal_cam_param_st.param = chal_cam_param_st.lane;
             chal_status |= chal_cam_lane_enable(cslCamDrv.chalCamH, &chal_cam_param_st);
         }   // if (cslCamDrv.use_count == 1)
 
