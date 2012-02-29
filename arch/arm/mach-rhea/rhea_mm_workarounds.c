@@ -47,6 +47,14 @@
 static void *acp_workaround_src_buffer, *acp_workaround_dest_buffer;
 static u32 acp_workaround_src_buffer_phys, acp_workaround_dest_buffer_phys;
 
+#define MM_WORKAROUND_DEBUG_ENABLE	0
+
+#if (MM_WORKAROUND_DEBUG_ENABLE == 1)
+#define mm_workaround_debug(format, args...)	printk(KERN_ERR format, ##args)
+#else
+#define mm_workaround_debug(format, args...)	do { } while (0)
+#endif
+
 #define ACP_WR_CMD_ALIGNMENT	8
 #define ACP_RD_DATA_ALIGNMENT	16
 extern void csl_dma_poll_int(int chanID);
@@ -447,12 +455,11 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 	BUG_ON(p->pi_id != PI_MGR_PI_ID_MM);
 
 	if (event == PI_PRECHANGE) {
-		if ((!IS_ACTIVE_POLICY(p->new_value) &&
-		     IS_ACTIVE_POLICY(p->old_value))) {
 #ifdef CONFIG_RHEA_WA_HWJIRA_2348
 			if (JIRA_WA_ENABLED(2348)) {
-				if (IS_RETN_POLICY(p->new_value)) {
+				if (IS_ACTIVE_POLICY(p->old_value) && IS_RETN_POLICY(p->new_value)) {
 					u32 reg_val;
+					mm_workaround_debug("before going to retention\n");
 					scu_standby(false);
 					writel(0xA5A501, KONA_MM_CLK_VA +
 					       MM_CLK_MGR_REG_WR_ACCESS_OFFSET);
@@ -470,6 +477,7 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 					       KONA_MM_CLK_VA +
 					       MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
 					scu_standby(true);
+					mm_workaround_debug("After going to retention\n");
 				}
 			}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2348 */
@@ -477,6 +485,8 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 			if (JIRA_WA_ENABLED(2489)) {
 				if (IS_SHUTDOWN_POLICY(p->new_value)) {
 					u32 reg_val;
+
+					mm_workaround_debug("before going to shut down\n");
 					scu_standby(false);
 					writel(0xA5A501,
 					       KONA_MM_CLK_VA +
@@ -496,10 +506,11 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 					       KONA_MM_CLK_VA +
 					       MM_CLK_MGR_REG_MM_DMA_CLKGATE_OFFSET);
 					scu_standby(true);
+
+					mm_workaround_debug("After going to shut down\n");
 				}
 			}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2489 */
-		}
 	} else {
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
@@ -531,6 +542,7 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 			if (IS_SHUTDOWN_POLICY(p->old_value) &&
 			    !IS_SHUTDOWN_POLICY(p->new_value)) {
 
+				mm_workaround_debug("coming out of shutdown reset\n");
 				/* Enable the AXI trace17 counters again. */
 				writel(0x5551, KONA_AXITRACE17_VA + 0x0);
 				writel(0x2, KONA_AXITRACE17_VA + 0xC);

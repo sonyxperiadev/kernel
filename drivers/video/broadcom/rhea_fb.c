@@ -47,6 +47,8 @@
 #define DSI_BRIDGE_RESET (12)     
 #define DSI_BRIDGE_PON   (25)
 
+static struct pi_mgr_qos_node g_mm_qos_node;
+
 #ifdef CONFIG_CDEBUGGER
 struct struct_frame_buf_mark {
 	u32 special_mark_1;
@@ -440,7 +442,8 @@ static void rhea_fb_early_suspend(struct early_suspend *h)
 		disable_display(fb);
 		rhea_clock_stop(fb);
 		mutex_unlock(&fb->update_sem);
-		/* Turn off the ldo */
+		/* Ok for MM going to shutdown state */
+		pi_mgr_qos_request_update(&g_mm_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 		break;
 
 	default:
@@ -471,7 +474,8 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 
 	case EARLY_SUSPEND_LEVEL_DISABLE_FB:
 		fb = container_of(h, struct rhea_fb, early_suspend_level3);
-		/* Turn on the ldo */
+		/* Ok for MM going to retention but not shutdown state */
+		pi_mgr_qos_request_update(&g_mm_qos_node, 10);
 		/* screen comes out of sleep */
 	 	rhea_clock_start(fb);
 		if (enable_display(fb, fb->gpio, fb->bus_width))
@@ -834,12 +838,15 @@ static int __init rhea_fb_init(void)
 {
 	int ret;
 
+	ret = pi_mgr_qos_add_request(&g_mm_qos_node, "lcd", PI_MGR_PI_ID_MM, 10);
+	if (ret)
+			printk(KERN_ERR "failed to register qos client for lcd\n");
+
 	ret = platform_driver_register(&rhea_fb_driver);
 	if (ret) {
 		printk(KERN_ERR"%s : Unable to register Rhea framebuffer driver\n", __func__);
 		goto fail_to_register;
 	}
-
 fail_to_register:
 	printk(KERN_INFO"BRCM Framebuffer Init %s !\n", ret ? "FAILED" : "OK");
 
