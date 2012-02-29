@@ -307,7 +307,7 @@ static void reserve_skbs_list(void)
 
 	spin_lock_irqsave(&skb_pool.lock, flags);
 	while (skb_pool.qlen < MAX_SKBS) {
-		skb = alloc_skb(MAX_SKB_SIZE, GFP_ATOMIC);
+		skb = alloc_skb(MAX_SKB_SIZE, GFP_KERNEL);
 		if (!skb)
 			break;
 		__skb_queue_tail(&skb_pool, skb);
@@ -512,7 +512,7 @@ void netpoll_send_udp(struct netpoll *np, const char *msg, int len)
 	rndis_header->DataOffset = __constant_cpu_to_le32 (36);
 	rndis_header->DataLength = cpu_to_le32(skb->len - sizeof *rndis_header);
 #endif
-	skb->netpoll_signature = SKB_NETPOLL_SIGNATURE;
+	skb->signature = SKB_NETPOLL_SIGNATURE;
 	skb->dev = np->dev;
 
 	netpoll_send_skb(np, skb);

@@ -76,6 +76,11 @@ static struct kmem_cache *skbuff_fclone_cache __read_mostly;
 
 extern unsigned short netpoll_skb_size(void);
 extern void netpoll_recycle_skbs(struct sk_buff *skb);
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+extern atomic_t ueth_rx_skb_ref_count;
+extern unsigned short ueth_rx_skb_size(void);
+extern void ueth_recycle_rx_skbs(struct sk_buff *skb);
+#endif
 
 static void sock_pipe_buf_release(struct pipe_inode_info *pipe,
 				  struct pipe_buffer *buf)
@@ -451,20 +456,29 @@ void __kfree_skb(struct sk_buff *skb)
 {
 #ifdef CONFIG_BRCM_NETCONSOLE
 	/* If the skb has the netpoll signature, we will recycle the skb buf to avoid running out of memory.*/
-	if (skb->netpoll_signature == 0x12345678)
+	if (skb->signature == SKB_NETPOLL_SIGNATURE)
 	{
 		recycle_skbs_process(skb,  netpoll_skb_size());
 		netpoll_recycle_skbs(skb);
 
-	} else {
+	} else
+#endif	/* #ifdef CONFIG_BRCM_NETCONSOLE */
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+	 if (skb->signature == SKB_UETH_RX_NO_PRE_ALLOC_MEM_SIG) {
+		skb->signature = 0;
+		skb_release_all(skb);
+		kfree_skbmem(skb);
+		atomic_dec(&ueth_rx_skb_ref_count);
+		/* pr_info("--: ueth_rx_skb_ref_count = %d \n", atomic_read(&ueth_rx_skb_ref_count)); */
+        } else if (skb->signature == SKB_UETH_RX_PRE_ALLOC_MEM_SIG) {
+               recycle_skbs_process(skb,  ueth_rx_skb_size());
+               ueth_recycle_rx_skbs(skb);
+        } else 
+#endif
+	{
 		skb_release_all(skb);
 		kfree_skbmem(skb);
 	}
-#else
-	skb_release_all(skb);
-	kfree_skbmem(skb);
-#endif /* #ifdef CONFIG_BRCM_NETCONSOLE */
-
 }
 EXPORT_SYMBOL(__kfree_skb);
 
