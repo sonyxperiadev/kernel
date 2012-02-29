@@ -762,7 +762,6 @@ UInt32 RPC_SyncGetCbkFromTid(UInt32 tid)
 	if (ctx->sig == 0xBABEFACE && ctx->val != 0) {
 		val = ctx->val;
 	} else {
-		OSTASK_Sleep(5000);
 		_DBG_(RPC_TRACE
 		      ("RPC_SyncGetCbkFromTid ERROR tid %d sig=%x \r\n", tid,
 		       ctx->sig));
@@ -791,7 +790,6 @@ void RPC_SyncDeleteCbkFromTid(UInt32 tid)
 		ctx->val = 0;
 		OSHEAP_Delete(ctx);
 	} else {
-		OSTASK_Sleep(5000);
 		_DBG_(RPC_TRACE
 		      ("RPC_SyncDeleteCbkFromTid ERROR tid %d sig=%x \r\n", tid,
 		       ctx->sig));
