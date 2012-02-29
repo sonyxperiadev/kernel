@@ -80,9 +80,11 @@ static struct pi arm_core_pi =
 		.name = "arm_core",
 		.id = PI_MGR_PI_ID_ARM_CORE,
 #ifdef CONFIG_RHEA_PI_MGR_DISABLE_POLICY_CHANGE
-		.flags = PI_ENABLE_ON_INIT|PI_ARM_CORE|UPDATE_PM_QOS|NO_POLICY_CHANGE,
+		.flags = PI_ENABLE_ON_INIT|PI_ARM_CORE|UPDATE_PM_QOS|
+			NO_POLICY_CHANGE|DFS_LIMIT_CHECK_EN,
 #else
-		.flags = PI_ENABLE_ON_INIT|PI_ARM_CORE|UPDATE_PM_QOS,
+		.flags = PI_ENABLE_ON_INIT|PI_ARM_CORE|UPDATE_PM_QOS|
+			DFS_LIMIT_CHECK_EN,
 #endif
 		.ccu_id = armc_core_ccu,
 		.num_ccu_id = ARRAY_SIZE(armc_core_ccu),
@@ -90,6 +92,8 @@ static struct pi arm_core_pi =
 		.pi_state = arm_core_states,
 		.num_states = ARRAY_SIZE(arm_core_states),
 		.opp_active = 2,
+		.opp_lmt_max = 2,
+		.opp_lmt_min = 0,
 		.pi_opp =  &arm_opp,
 		.num_opp = 3,
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
@@ -134,7 +138,9 @@ static struct pi mm_pi =
 		.name = "mm",
 		.id = PI_MGR_PI_ID_MM,
 #ifdef CONFIG_RHEA_PI_MGR_DISABLE_POLICY_CHANGE
-		.flags = NO_POLICY_CHANGE,
+		.flags = NO_POLICY_CHANGE|DFS_LIMIT_CHECK_EN,
+#else
+		.flags = DFS_LIMIT_CHECK_EN,
 #endif
 		.ccu_id = mm_ccu,
 		.num_ccu_id = ARRAY_SIZE(mm_ccu),
@@ -148,6 +154,8 @@ static struct pi mm_pi =
 								[PI_OPP_NORMAL] = 50,
 							 },
 		.num_opp = 3,
+		.opp_lmt_max = 2,
+		.opp_lmt_min = 0,
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
 
 		.pi_info =
@@ -192,7 +200,9 @@ static struct pi hub_pi =
 		.name = "hub",
 		.id = PI_MGR_PI_ID_HUB_SWITCHABLE,
 #ifdef CONFIG_RHEA_PI_MGR_DISABLE_POLICY_CHANGE
-		.flags = NO_POLICY_CHANGE,
+		.flags = NO_POLICY_CHANGE|DFS_LIMIT_CHECK_EN,
+#else
+		.flags = DFS_LIMIT_CHECK_EN,
 #endif
 		.ccu_id = hub_ccu,
 		.num_ccu_id = ARRAY_SIZE(hub_ccu),
@@ -202,6 +212,8 @@ static struct pi hub_pi =
 		.opp_active = 0,
 		.pi_opp =  &hub_opp,
 		.num_opp = 2,
+		.opp_lmt_max = 1,
+		.opp_lmt_min = 0,
 		.opp_def_weightage = {
 								[PI_OPP_ECONOMY] = 25,
 							 },
@@ -250,7 +262,9 @@ static struct pi aon_pi =
 		.name = "aon",
 		.id = PI_MGR_PI_ID_HUB_AON,
 #ifdef CONFIG_RHEA_PI_MGR_DISABLE_POLICY_CHANGE
-		.flags = NO_POLICY_CHANGE,
+		.flags = NO_POLICY_CHANGE|DFS_LIMIT_CHECK_EN,
+#else
+		.flags = DFS_LIMIT_CHECK_EN,
 #endif
 		.ccu_id = aon_ccu,
 		.num_ccu_id = ARRAY_SIZE(aon_ccu),
@@ -261,6 +275,8 @@ static struct pi aon_pi =
 		/*opp frequnecies ...need to revisit*/
 		.pi_opp =  &aon_opp,
 		.num_opp = 2,
+		.opp_lmt_max = 1,
+		.opp_lmt_min = 0,
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
 
 		.pi_info =
@@ -325,7 +341,9 @@ static struct pi sub_sys_pi =
 		.id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
 		.ccu_id = sub_sys_ccu,
 #ifdef CONFIG_RHEA_PI_MGR_DISABLE_POLICY_CHANGE
-		.flags = NO_POLICY_CHANGE,
+		.flags = NO_POLICY_CHANGE|DFS_LIMIT_CHECK_EN,
+#else
+		.flags = DFS_LIMIT_CHECK_EN,
 #endif
 		.num_ccu_id = ARRAY_SIZE(sub_sys_ccu),
 		.state_allowed = PI_STATE_RETENTION,
@@ -338,6 +356,8 @@ static struct pi sub_sys_pi =
 		.opp_active = 0,
 		.pi_opp =  sub_sys_opp,
 		.num_opp = 2,
+		.opp_lmt_max = 1,
+		.opp_lmt_min = 0,
 		.opp_def_weightage = {
 								[PI_OPP_ECONOMY] = 25,
 							 },
