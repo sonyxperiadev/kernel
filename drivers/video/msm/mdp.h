@@ -42,6 +42,7 @@ extern uint32 mdp_hw_revision;
 extern ulong mdp4_display_intf;
 extern spinlock_t mdp_spin_lock;
 extern int mdp_rev;
+extern struct mdp_csc_cfg mdp_csc_convert[4];
 
 extern struct workqueue_struct *mdp_hist_wq;
 extern struct work_struct mdp_histogram_worker;
