@@ -273,6 +273,22 @@ static int bcmpmu_chrgr_usb_en(struct bcmpmu *bcmpmu, int en)
 	return ret;
 }
 
+static int bcmpmu_chrgr_usb_maint(struct bcmpmu *bcmpmu, int en)
+{
+	int ret;
+	if (en == 0)
+		ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_CHRGR_USB_MAINT,
+			0,
+			bcmpmu->regmap[PMU_REG_CHRGR_USB_MAINT].mask);
+	else
+		ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_CHRGR_USB_MAINT,
+			bcmpmu->regmap[PMU_REG_CHRGR_USB_MAINT].mask,
+			bcmpmu->regmap[PMU_REG_CHRGR_USB_MAINT].mask);
+	return ret;
+}
+
 static int bcmpmu_chrgr_wac_en(struct bcmpmu *bcmpmu, int en)
 {
 	int ret;
@@ -445,6 +461,7 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	bcmpmu->chrgrinfo = (void *)pchrgr;
 
 	bcmpmu->chrgr_usb_en = bcmpmu_chrgr_usb_en;
+	bcmpmu->chrgr_usb_maint = bcmpmu_chrgr_usb_maint;
 	bcmpmu->chrgr_wac_en = bcmpmu_chrgr_wac_en;
 	bcmpmu->set_icc_fc = bcmpmu_set_icc_fc;
 	bcmpmu->set_icc_qc = bcmpmu_set_icc_qc;

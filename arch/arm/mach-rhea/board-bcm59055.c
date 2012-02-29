@@ -733,6 +733,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1500 * 3600,
 	.support_fg = 1,
+	.support_chrg_maint = 0,
 	.bc = BCMPMU_BC_BB_BC12,
 	.wd_setting = &bcm59055_wd_setting,
 	.batt_model = "Unknown",
