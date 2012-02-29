@@ -24,7 +24,7 @@ extern "C" {
 /*****************************************************************************/
 //      name                   ROM address     RAM address     size
 //      ================       ==========      ==========      ==========
-#if defined (RAM_BASE_ADDRESS)
+#if defined(RAM_BASE_ADDRESS)
 #define EXT_RAM_BASE_ADDR                      RAM_BASE_ADDRESS
 #else
 #define EXT_RAM_BASE_ADDR                      0x80000000
@@ -72,13 +72,8 @@ extern "C" {
 #define PARM_IND_ROM_ADDR      0x00300000
 #endif
 
-#if defined (CNEON_LMP)
 #define PARM_IND_RAM_OFFSET                    0x140000
-#define PARM_IND_SIZE                                          0x00040000
-#else
-#define PARM_IND_RAM_OFFSET                    0x100000
-#define PARM_IND_SIZE                                          0x00080000
-#endif
+#define PARM_IND_SIZE                          0x00080000
 
 #define PARM_IND_RAM_ADDR                      (EXT_RAM_BASE_ADDR + PARM_IND_RAM_OFFSET)
 
@@ -106,7 +101,7 @@ extern "C" {
 #define DSP_PRAM_ROM_ADDR      0x00400000
 #endif
 
-#define DSP_PRAM_RAM_OFFSET                    0x1A0000
+#define DSP_PRAM_RAM_OFFSET                    0x1D0000
 #define DSP_PRAM_RAM_ADDR                      (EXT_RAM_BASE_ADDR + DSP_PRAM_RAM_OFFSET)
 //#ifndef ISLANDRAY 
 #define DSP_PRAM_SIZE                                          0x00004000
@@ -114,15 +109,16 @@ extern "C" {
 //#define DSP_PRAM_SIZE                                          0x000a0000
 //#endif
 
-#if defined (CNEON_LMP)
-#define MODEMHOSTSEC_HOST_BUFF          EXT_RAM_BASE_ADDR + 0x00104000
+#if defined(CNEON_LMP)
+#define MODEMHOSTSEC_HOST_BUFF          (EXT_RAM_BASE_ADDR + 0x00104000)
 #define MODEMHOSTSEC_HOST_BUFF_SIZE     0x00000800
 
-#define MODEMHOSTSEC_MODEM_BUFF         EXT_RAM_BASE_ADDR + 0x00104800
+#define MODEMHOSTSEC_MODEM_BUFF         (EXT_RAM_BASE_ADDR + 0x00104800)
 #define MODEMHOSTSEC_MODEM_BUFF_SIZE    0x00000800
 
 #define MODEMHOSTSEC_BUFF_BASE          MODEMHOSTSEC_HOST_BUFF
-#define MODEMHOSTSEC_BUFF_SIZE          (MODEMHOSTSEC_HOST_BUFF_SIZE + MODEMHOSTSEC_MODEM_BUFF_SIZE)
+#define MODEMHOSTSEC_BUFF_SIZE          \
+		(MODEMHOSTSEC_HOST_BUFF_SIZE + MODEMHOSTSEC_MODEM_BUFF_SIZE)
 #endif
    
 #ifndef ISLANDRAY
@@ -131,11 +127,7 @@ extern "C" {
 #define UMTS_CAL_ROM_ADDR      0x00280000
 #endif
 
-#if defined (CNEON_LMP)
 #define UMTS_CAL_RAM_OFFSET                    0x110000
-#else
-#define UMTS_CAL_RAM_OFFSET                    0xE0000
-#endif
 
 #define UMTS_CAL_RAM_ADDR                      (EXT_RAM_BASE_ADDR + UMTS_CAL_RAM_OFFSET)
 #define UMTS_CAL_SIZE                                          0x00020000
@@ -268,7 +260,7 @@ extern "C" {
 #define IPC_BASE                               (EXT_RAM_BASE_ADDR + IPC_OFFSET)
 #define IPC_SIZE                                               0x00200000
 
-#define PARM_DEP_RAM_OFFSET                    0x180000
+#define PARM_DEP_RAM_OFFSET                    0x1C0000
 #define PARM_DEP_RAM_ADDR                      (EXT_RAM_BASE_ADDR + PARM_DEP_RAM_OFFSET)
 #ifndef ISLANDRAY
 #define PARM_DEP_SIZE                                          0x00010000
