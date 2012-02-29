@@ -140,7 +140,16 @@ enum wl_cfgp2p_status {
 			printk args;							\
 		}									\
 	} while (0)
-
+#define INIT_TIMER(timer, func, duration, extra_delay)	\
+	do {				   \
+		init_timer(timer); \
+		timer->function = func; \
+		timer->expires = jiffies + msecs_to_jiffies(duration + extra_delay); \
+		timer->data = (unsigned long) wl; \
+		add_timer(timer); \
+	} while (0);
+extern void
+wl_cfgp2p_listen_expired(unsigned long data);
 extern bool
 wl_cfgp2p_is_pub_action(void *frame, u32 frame_len);
 extern bool

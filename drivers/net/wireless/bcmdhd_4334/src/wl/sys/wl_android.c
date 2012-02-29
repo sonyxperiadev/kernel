@@ -76,6 +76,10 @@
 #define CMD_P2P_SET_PS		"P2P_SET_PS"
 #define CMD_SET_AP_WPS_P2P_IE 		"SET_AP_WPS_P2P_IE"
 
+/* Hostapd private command */
+#define CMD_SET_HAPD_MAX_NUM_STA	"HAPD_MAX_NUM_STA"
+#define CMD_SET_HAPD_SSID			"HAPD_SSID"
+#define CMD_SET_HAPD_HIDE_SSID		"HAPD_HIDE_SSID"
 
 #ifdef PNO_SUPPORT
 #define CMD_PNOSSIDCLR_SET	"PNOSSIDCLR"
@@ -147,6 +151,13 @@ extern void *bcmsdh_get_drvdata(void);
 extern bool ap_fw_loaded;
 #if defined(CUSTOMER_HW2) || defined(CUSTOMER_HW_SAMSUNG)
 extern char iface_name[IFNAMSIZ];
+#endif
+
+/* CSP#505233: Flags to indicate if we distingish power off policy when
+ * user set the memu "Keep Wi-Fi on during sleep" to "Never"
+ */
+#ifdef WL_CFG80211
+bool suspend_power_off;
 #endif
 
 /**
@@ -598,6 +609,56 @@ static int wl_android_set_fwpath(struct net_device *net, char *command, int tota
 	return 0;
 }
 
+static int my_atoi(const char *string_num)
+{
+	int int_val=0;
+        for(;; string_num++) {
+		switch (*string_num) {
+		        case '0'...'9' :
+				    int_val = 10 * int_val + (*string_num-'0');
+				    break;
+			default:
+			        return int_val;
+		}
+	}
+	return int_val;
+}
+
+static int wl_android_set_max_num_sta(struct net_device *dev, const char* string_num)
+{
+	int max_assoc;
+
+	max_assoc = my_atoi(string_num);
+	DHD_INFO(("%s : HAPD_MAX_NUM_STA = %d\n", __FUNCTION__, max_assoc));
+	wldev_iovar_setint(dev, "maxassoc", max_assoc);
+	return 1;
+}
+
+static int wl_android_set_ssid (struct net_device *dev, const char* hapd_ssid)
+{
+	wlc_ssid_t ssid;
+
+	ssid.SSID_len = strlen(hapd_ssid);
+	bcm_strncpy_s(ssid.SSID, sizeof(ssid.SSID), hapd_ssid, ssid.SSID_len);
+	DHD_INFO(("%s: HAPD_SSID = %s\n", __FUNCTION__, ssid.SSID));
+	wldev_ioctl(dev, WLC_SET_SSID, &ssid, sizeof(wlc_ssid_t), true);
+	return 1;
+
+}
+
+static int wl_android_set_hide_ssid(struct net_device *dev, const char* string_num)
+{
+	int hide_ssid;
+	int enable = 0;
+	
+	hide_ssid = my_atoi(string_num);
+	DHD_INFO(("%s: HAPD_HIDE_SSID = %d\n", __FUNCTION__, hide_ssid));
+	if (hide_ssid)
+		enable = 1;
+	wldev_iovar_setint(dev, "closednet", enable);
+	return 1;
+}
+
 #ifdef OKC_SUPPORT
 
 static int
@@ -819,6 +880,18 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 			priv_cmd.total_len - skip, *(command + skip - 2) - '0');
 	}
 #endif /* WL_CFG80211 */
+	else if (strnicmp(command, CMD_SET_HAPD_MAX_NUM_STA, strlen(CMD_SET_HAPD_MAX_NUM_STA)) == 0) {
+		int skip = strlen(CMD_SET_HAPD_MAX_NUM_STA) + 3;
+		wl_android_set_max_num_sta(net, (const char*)command+skip);
+	}
+	else if (strnicmp(command, CMD_SET_HAPD_SSID, strlen(CMD_SET_HAPD_SSID)) == 0) {
+		int skip = strlen(CMD_SET_HAPD_SSID) + 3;
+		wl_android_set_ssid(net, (const char*)command+skip);
+	}
+	else if (strnicmp(command, CMD_SET_HAPD_HIDE_SSID, strlen(CMD_SET_HAPD_HIDE_SSID)) == 0) {
+		int skip = strlen(CMD_SET_HAPD_HIDE_SSID) + 3;
+		wl_android_set_hide_ssid(net, (const char*)command+skip);
+	}
 #ifdef OKC_SUPPORT
 	else if (strnicmp(command, CMD_OKC_SET_PMK, strlen(CMD_OKC_SET_PMK)) == 0)
 		bytes_written = wl_android_set_pmk(net, command, priv_cmd.total_len);
@@ -1026,6 +1099,10 @@ static int wifi_probe(struct platform_device *pdev)
 	wifi_set_power(1, 200);	/* Power On */
 	wifi_set_carddetect(1);	/* CardDetect (0->1) */
 
+#ifdef WL_CFG80211
+	suspend_power_off = FALSE;
+#endif
+
 	up(&wifi_control_sem);
 	return 0;
 }
@@ -1041,6 +1118,11 @@ static int wifi_remove(struct platform_device *pdev)
 	wifi_set_power(0, 0);	/* Power Off */
 	wifi_set_carddetect(0);	/* CardDetect (1->0) */
 
+#ifdef WL_CFG80211
+	if (suspend_power_off)
+		suspend_power_off = FALSE;
+#endif
+
 	up(&wifi_control_sem);
 	return 0;
 }
@@ -1050,15 +1132,17 @@ static int wifi_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	DHD_ERROR(("##> %s\n", __FUNCTION__));
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39)) && defined(OOB_INTR_ONLY) && 1
-	bcmsdh_oob_intr_set(0);
+	if (dhd_os_check_if_up(bcmsdh_get_drvdata()))
+		bcmsdh_oob_intr_set(0);
 #endif /* (OOB_INTR_ONLY) */
-	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
-	{
+	if (dhd_os_check_if_up(bcmsdh_get_drvdata()) &&
+		dhd_os_check_wakelock(bcmsdh_get_drvdata())) {
 		DHD_ERROR(("%s no driver data\n", __FUNCTION__));
 		return -EBUSY;
 	}
 #if defined(OOB_INTR_ONLY)
-	bcmsdh_oob_intr_set(0);
+	if (dhd_os_check_if_up(bcmsdh_get_drvdata()))
+		bcmsdh_oob_intr_set(0);
 #endif	/* defined(OOB_INTR_ONLY) */
 	smp_mb();
 	return 0;

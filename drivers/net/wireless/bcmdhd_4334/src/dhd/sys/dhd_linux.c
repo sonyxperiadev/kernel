@@ -1458,6 +1458,25 @@ dhd_start_xmit(struct sk_buff *skb, struct net_device *net)
 	DHD_OS_WAKE_LOCK(&dhd->pub);
 
 	/* Reject if down */
+#ifdef CUSTOMER_HW_SAMSUNG
+	/*
+	 * CSP #506108
+	 *   kernel panic issue when first bootup time,
+	 *   rmmod without interface down make unnecessary hang event.
+	 */
+	if (dhd->pub.busstate == DHD_BUS_DOWN) {
+		DHD_ERROR(("%s: xmit rejected pub.up=%d busstate=%d \n",
+			__FUNCTION__, dhd->pub.up, dhd->pub.busstate));
+		netif_stop_queue(net);
+		/* Send Event when bus down detected during data session */
+		if (dhd->pub.up) {
+			DHD_ERROR(("%s: Event HANG sent up\n", __FUNCTION__));
+			net_os_send_hang_message(net);
+		}
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
+		return -ENODEV;
+	}
+#else
 	if (!dhd->pub.up || (dhd->pub.busstate == DHD_BUS_DOWN)) {
 		DHD_ERROR(("%s: xmit rejected pub.up=%d busstate=%d \n",
 			__FUNCTION__, dhd->pub.up, dhd->pub.busstate));
@@ -1470,6 +1489,7 @@ dhd_start_xmit(struct sk_buff *skb, struct net_device *net)
 		DHD_OS_WAKE_UNLOCK(&dhd->pub);
 		return -ENODEV;
 	}
+#endif
 
 	ifidx = dhd_net2idx(dhd, net);
 	if (ifidx == DHD_BAD_IF) {
@@ -1946,6 +1966,10 @@ static void dhd_watchdog(ulong data)
 {
 	dhd_info_t *dhd = (dhd_info_t *)data;
 	unsigned long flags;
+
+	/* To avoid kernel panic */
+	if (!dhd->wd_timer_valid)
+		return;
 
 	DHD_OS_WAKE_LOCK(&dhd->pub);
 	if (dhd->pub.dongle_reset) {
@@ -2582,9 +2606,10 @@ dhd_stop(struct net_device *net)
 	dhd_prot_stop(&dhd->pub);
 
 #if defined(WL_CFG80211)
-	if (ifidx == 0 && !dhd_download_fw_on_driverload)
+	if (ifidx == 0 &&
+		(!dhd_download_fw_on_driverload || suspend_power_off))
 		wl_android_wifi_off(net);
-#endif
+#endif /* WL_CFG80211 */
 	dhd->pub.hang_was_sent = 0;
 	dhd->pub.rxcnt_timeout = 0;
 	dhd->pub.txcnt_timeout = 0;
@@ -2598,12 +2623,11 @@ static int
 dhd_open(struct net_device *net)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(net);
-
+#ifdef PROP_TXSTATUS
+	uint up = 0;
+#endif
 #ifdef TOE
 	uint32 toe_ol;
-#endif
-#ifdef PROP_TXSTATUS
-	uint up;
 #endif
 	int ifidx;
 	int32 ret = 0;
@@ -2667,10 +2691,7 @@ dhd_open(struct net_device *net)
 				goto exit;
 				}
 		} else {
-			if (fw_changed) {
-#ifdef PROP_TXSTATUS
-				dhd_wlfc_deinit(&dhd->pub);
-#endif
+			if (fw_changed || suspend_power_off) {
 				wl_android_wifi_off(net);
 				msleep(300);
 				ret = wl_android_wifi_on(net);
@@ -2710,20 +2731,18 @@ dhd_open(struct net_device *net)
 			ret = -1;
 			goto exit;
 		}
+		
+		/* CSP#505233: Flags to indicate if we distingish power off policy when
+		 * user set the memu "Keep Wi-Fi on during sleep" to "Never"
+		 */
+		if (!suspend_power_off)
+			suspend_power_off = TRUE;
 #endif /* WL_CFG80211 */
 	}
-	if (!dhd->pub.up)
-		fw_changed = TRUE;
 
 	/* Allow transmit calls */
 	netif_start_queue(net);
 	dhd->pub.up = 1;
-#ifdef PROP_TXSTATUS
-	if (dhd_download_fw_on_driverload && ifidx == 0 && fw_changed) {
-		dhd_wlfc_init(&dhd->pub);
-		dhd_wl_ioctl_cmd(&dhd->pub, WLC_UP, (char *)&up, sizeof(up), TRUE, 0);
-	}
-#endif
 
 #ifdef BCMDBGFS
 	dhd_dbg_init(&dhd->pub);
@@ -3246,26 +3265,32 @@ dhd_bus_start(dhd_pub_t *dhdp)
  * firmware and accordingly enable concurrent mode (Apply P2P settings). SoftAP firmware
  * would still be named as fw_bcmdhd_apsta.
  */
-static u32
+static bool
 dhd_concurrent_fw(dhd_pub_t *dhd)
 {
-	int ret = 0;
+	int i, ret = 0;
 	char buf[WLC_IOCTL_SMLEN];
-
+	char *cap[] = {"p2p", "mchan", "dsta", NULL};
 	if ((!op_mode) && (strstr(fw_path, "_p2p") == NULL) &&
 		(strstr(fw_path, "_apsta") == NULL)) {
-		/* Given path is for the STA firmware. Check whether P2P support is present in
-		 * the firmware. If so, set mode as P2P (concurrent support).
+		/* Given path is for the STA firmware. Check whether VSDB + P2P support
+		 * is present in  the firmware. If so, set mode as P2P (concurrent support).
 		 */
-		memset(buf, 0, sizeof(buf));
-		bcm_mkiovar("p2p", 0, 0, buf, sizeof(buf));
-		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, buf, sizeof(buf),
-			FALSE, 0)) < 0) {
-			DHD_TRACE(("%s: Get P2P failed (error=%d)\n", __FUNCTION__, ret));
-		} else if (buf[0] == 1) {
-			DHD_TRACE(("%s: P2P is supported\n", __FUNCTION__));
-			return 1;
+		for (i = 0; cap[i] != NULL; ) {
+			memset(buf, 0, sizeof(buf));
+			bcm_mkiovar(cap[i++], 0, 0, buf, sizeof(buf));
+			if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, buf, sizeof(buf),
+				FALSE, 0)) < 0) {
+				DHD_TRACE(("%s: Get VSDB Capability(%s) failed (error=%d)\n",
+					__FUNCTION__, cap[i-1], ret));
+				return 0;
+			} else if (buf[0] != 1) {
+				DHD_TRACE(("VSDB(%s) is not supported , ret : %d\n",
+					cap[i-1], buf[0]));
+				return 0;
+			}
 		}
+		return 1;
 	}
 	return 0;
 }
@@ -3282,6 +3307,8 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	uint32 dongle_align = DHD_SDALIGN;
 #if defined(BCM4334_CHIP)
 	uint32 glom = 5; /* 2012.02.21 for perfomance */
+#elif defined(BCM43241_CHIP)
+	uint32 glom = 1;
 #else
 	uint32 glom = 0;
 #endif
@@ -3331,6 +3358,9 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #ifdef OKC_SUPPORT
 	uint32 okc = 1;
 #endif
+#ifdef BCM43241_CHIP
+	int mimo_bw_cap = 1;
+#endif /* BCM43241_CHIP */
 
 	DHD_TRACE(("Enter %s\n", __FUNCTION__));
 	dhd->op_mode = 0;
@@ -3392,7 +3422,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR,
 			iovbuf, sizeof(iovbuf), TRUE, 0)) < 0) {
 			DHD_ERROR(("%s APSTA for WFD failed ret= %d\n", __FUNCTION__, ret));
-		} else {
+		} else if (!dhd_concurrent_fw(dhd)) {
 			dhd->op_mode |= WFD_MASK;
 #if defined(ARP_OFFLOAD_SUPPORT)
 			arpoe = 0;
@@ -3446,6 +3476,9 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		/* STA only operation mode */
 		dhd->op_mode |= STA_MASK;
 		dhd_pkt_filter_enable = TRUE;
+		if (dhd_concurrent_fw(dhd)) {
+			dhd->op_mode |= WFD_MASK;
+		}
 	}
 
 	DHD_ERROR(("Firmware up: op_mode=%d, "
@@ -3516,6 +3549,11 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	bcm_mkiovar("apsta", (char *)&apsta, 4, iovbuf, sizeof(iovbuf));
 	dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 #endif /* defined(AP) && !defined(WLP2P) */
+
+#ifdef BCM43241_CHIP
+	bcm_mkiovar("mimo_bw_cap", (char *)&mimo_bw_cap, 4, iovbuf, sizeof(iovbuf));
+	dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+#endif
 
 #if defined(SOFTAP)
 	if (ap_fw_loaded == TRUE) {
@@ -3993,6 +4031,15 @@ void dhd_detach(dhd_pub_t *dhdp)
 		return;
 
 	DHD_TRACE(("%s: Enter state 0x%x\n", __FUNCTION__, dhd->dhd_state));
+
+#ifdef CUSTOMER_HW_SAMSUNG
+	/*
+	 * CSP #506108
+	 *   kernel panic issue when first bootup time,
+	 *   rmmod without interface down make unnecessary hang event.
+	 */
+	dhd->pub.up = 0;
+#endif
 
 	if (!(dhd->dhd_state & DHD_ATTACH_STATE_DONE)) {
 		/* Give sufficient time for threads to start running in case
