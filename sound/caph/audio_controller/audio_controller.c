@@ -162,16 +162,31 @@ static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 static unsigned int recordGainR[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 */
 
+enum AUDPATH_en_t {
+	AUDPATH_NONE,
+	AUDPATH_P1,
+	AUDPATH_P2,
+	AUDPATH_VOIP_OUT,
+	AUDPATH_AUDIO_IN,
+	AUDPATH_SPEECH_IN,
+	AUDPATH_VOIP_IN,
+	AUDPATH_VOICECALL,
+	AUDPATH_FM,
+	AUDPATH_FM_CAPTURE,
+	AUDPATH_FM_TX,
+	AUDPATH_TOTAL_NUM
+};
+
 struct USER_SET_GAIN_t {
-	int path_gainL;
-	int path_gainR;
+	int L;
+	int R;
 	/*AUDIO_SINK_Enum_t sink1; */
 	/*AUDIO_SINK_Enum_t sink2; */
-	/*int path2_gainL; */
-	/*int path2_gainR; */
-	AUDIO_GAIN_FORMAT_t gainFormat;
+	/*int path2_L; */
+	/*int path2_R; */
+	int valid;
 };
-static struct USER_SET_GAIN_t users_gain[AUDCTRL_PATH_TOTAL_NUM];
+static struct USER_SET_GAIN_t users_gain[AUDPATH_TOTAL_NUM];
 
 static unsigned hw_control[AUDCTRL_HW_ACCESS_TYPE_TOTAL][4] = { {0} };
 
@@ -194,7 +209,8 @@ static int isDigiMic(AUDIO_SOURCE_Enum_t source);
 static int needDualMic(AudioMode_t mode, AudioApp_t app);
 static AudioMode_t GetAudioModeFromCaptureDev(CSL_CAPH_DEVICE_e source);
 static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
-		       enum ExtSpkrUsage_en_t usage_flag, int use, int force);
+			       enum ExtSpkrUsage_en_t usage_flag,
+			       int use, int force);
 static void setExternAudioGain(AudioMode_t mode, AudioApp_t app);
 
 /****************************************************************************
@@ -249,8 +265,8 @@ void AUDCTRL_Init(void)
 	/* telephony_digital_gain_dB = 12;
 SYSPARM_GetAudioParamsFromFlash( cur_mode )->voice_volume_init;  dB */
 
-	for (i = 0; i < AUDCTRL_PATH_TOTAL_NUM; i++)
-		users_gain[i].gainFormat = AUDIO_GAIN_FORMAT_INVALID;
+	for (i = 0; i < AUDPATH_TOTAL_NUM; i++)
+		users_gain[i].valid = FALSE;
 }
 
 /****************************************************************************
@@ -593,9 +609,9 @@ void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 
 	aTrace(LOG_AUDIO_CNTLR, "%s volume = %d", __func__, volume);
 
-	users_gain[AUDCTRL_PATH_VOICECALL].gainFormat = gain_format;
-	users_gain[AUDCTRL_PATH_VOICECALL].path_gainL = volume;
-	users_gain[AUDCTRL_PATH_VOICECALL].path_gainR = volume;
+	users_gain[AUDPATH_VOICECALL].valid = TRUE;
+	users_gain[AUDPATH_VOICECALL].L = volume;
+	users_gain[AUDPATH_VOICECALL].R = volume;
 
 	if (gain_format == AUDIO_GAIN_FORMAT_mB) {
 		/* volume is in range of -3600 mB ~ 0 mB from the API */
@@ -896,6 +912,12 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 		/*if arm2sp does not use HW mixer, no need to set gain */
 	}
 
+	if (!path)
+		return; /*don't know which mixer input */
+	if (!path->srcmRoute[0][0].outChnl)
+		return;
+		/*if arm2sp does not use HW mixer, no need to set gain */
+
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
 	/*enable clock if it is not enabled. */
@@ -911,7 +933,8 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 	/*currAudioApp_playback = ; */
 
 	AUDDRV_SetAudioMode_Speaker(
-		mode, AUDCTRL_GetAudioApp(), arg_pathID, inHWlpbk);
+		mode, AUDCTRL_GetAudioApp(), arg_pathID, inHWlpbk,
+		GAIN_SYSPARM, GAIN_SYSPARM);
 
 	if (!AUDCTRL_InVoiceCall()) {
 		/*for music tuning, if PCG changed audio mode,
@@ -932,6 +955,72 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 		csl_caph_ControlHWClock(FALSE);
 	/*disable clock if it is enabled by this function. */
 }
+
+/*********************************************************************
+*	Set audio mode for FM radio playback
+*	@param          mode            audio mode
+*	@return         none
+*
+**********************************************************************/
+void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
+				   unsigned int arg_pathID, Boolean inHWlpbk)
+{
+	AUDIO_SOURCE_Enum_t mic;
+	AUDIO_SINK_Enum_t spk;
+	Boolean bClk = csl_caph_QueryHWClock();
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+
+	aTrace(LOG_AUDIO_CNTLR,
+			"%s mode %d, pathID %d", __func__, mode, arg_pathID);
+
+	path = csl_caph_FindPath(arg_pathID);
+
+	if (AUDCTRL_InVoiceCall()) {
+		if (!path)
+			return;	/*don't affect voice call audio mode */
+		if (!path->srcmRoute[0][0].outChnl)
+			return;
+		/*if arm2sp does not use HW mixer, no need to set gain */
+	}
+
+	if (!bClk)
+		csl_caph_ControlHWClock(TRUE);
+	/*enable clock if it is not enabled. */
+
+	AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
+
+	if (users_gain[AUDPATH_FM].valid)
+
+			AUDDRV_SetAudioMode_Speaker(
+				mode, AUDCTRL_GetAudioApp(), arg_pathID,
+				inHWlpbk,
+				users_gain[AUDPATH_FM].L,
+				GAIN_SYSPARM);
+	else
+		AUDDRV_SetAudioMode_Speaker(
+			mode, AUDCTRL_GetAudioApp(), arg_pathID, inHWlpbk,
+			GAIN_SYSPARM, GAIN_SYSPARM);
+
+	if (!AUDCTRL_InVoiceCall()) {
+		/*for music tuning, if PCG changed audio mode,
+		   need to pass audio mode to CP in audio_vdriver_caph.c */
+		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+				      (UInt32) mode,
+				      (UInt32) AUDCTRL_GetAudioApp(), 0, 0, 0);
+		/*this command updates mode in audioapi.c. */
+		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
+				      (UInt32) (((int)AUDCTRL_GetAudioApp()) *
+						AUDIO_MODE_NUMBER + mode), 0, 0,
+				      0, 0);
+	}
+
+	setExternAudioGain(mode, AUDCTRL_GetAudioApp());
+
+	if (!bClk)
+		csl_caph_ControlHWClock(FALSE);
+	/*disable clock if it is enabled by this function. */
+}
+
 
 /*********************************************************************
 *	Set audio mode for music record
@@ -1184,30 +1273,15 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 			AUDDRV_EnableDSPOutput(sink, sr);
 	}
 
+	/*to set HW mixer gain for Music playback */
+	mode = AUDCTRL_GetModeBySpeaker(config.sink);
 	if (source == AUDIO_SOURCE_I2S && AUDCTRL_InVoiceCall() == FALSE) {
-		/*to set HW mixer gain for FM */
-		mode = AUDCTRL_GetModeBySpeaker(config.sink);
-		AUDCTRL_SetAudioMode_ForMusicPlayback(mode, pathID, FALSE);
+		AUDCTRL_SetAudioMode_ForFM(mode, pathID, FALSE);
 
 		fmPlayStarted = TRUE;
+	} else
+		AUDCTRL_SetAudioMode_ForMusicPlayback(mode, pathID, FALSE);
 
-		if (users_gain[AUDCTRL_PATH_FM_LISTENING].gainFormat !=
-		    AUDIO_GAIN_FORMAT_INVALID) {
-			/*if user set FM radio listening gain before start FM
-			   radio,       use the gain */
-			AUDCTRL_SetPlayVolume(source,
-					      sink,
-					      users_gain
-					      [AUDCTRL_PATH_FM_LISTENING].
-					      path_gainL,
-					      users_gain
-					      [AUDCTRL_PATH_FM_LISTENING].
-					      path_gainR,
-					      users_gain
-					      [AUDCTRL_PATH_FM_LISTENING].
-					      gainFormat, pathID);
-		}
-	}
 	if (pPathID)
 		*pPathID = pathID;
 
@@ -1376,16 +1450,10 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 			   int vol_left, int vol_right, unsigned int pathID)
 {
 	/* left_channel in stereo, or mono: Register value. */
-	static int mixInGain;	/* Bit12:0, Output Fine Gain */
-	static int mixOutGain;
-	static int mixBitSel;
-	static int extGain;
+	static int mixInGain, mixOutGain, mixBitSel, extGain;
 
 	/* for right channel in stereo: Register value. */
-	static int mixInGain_r;	/* Bit12:0, Output Fine Gain */
-	static int mixOutGain_r;
-	static int mixBitSel_r;
-	static int extGain_r;
+	static int mixInGain_r, mixOutGain_r, mixBitSel_r, extGain_r;
 
 	CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
 	CSL_CAPH_MIXER_e mixer = CSL_CAPH_SRCM_CH_NONE;
@@ -1434,31 +1502,39 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 		   the FM's actual pathID is alloc'ed when enable FM,
 		   and could be non 0. */
 
-		users_gain[AUDCTRL_PATH_FM_LISTENING].gainFormat =
-		    gain_format;
-		users_gain[AUDCTRL_PATH_FM_LISTENING].path_gainL =
-		    vol_left;
-		users_gain[AUDCTRL_PATH_FM_LISTENING].path_gainR =
-		    vol_right;
-
-		vol_left = p->fm_radio_digital_vol[vol_left];
-		gain_format = AUDIO_GAIN_FORMAT_mB;
-
-		aTrace(LOG_AUDIO_CNTLR, "%s fmPlayStarted=%d\n", __func__,
-				fmPlayStarted);
+		users_gain[AUDPATH_FM].valid = TRUE;
+		users_gain[AUDPATH_FM].L = p->fm_radio_digital_vol[vol_left];
+		/*users_gain[AUDPATH_FM].R =
+		p->fm_radio_digital_vol[vol_right];*/
+		/*vol_right is always 0. need to fix it in caph_ctl.c*/
+		users_gain[AUDPATH_FM].R = p->fm_radio_digital_vol[vol_left];
 
 		/*if( fmPlayStarted == FALSE ) */
 		/*if ( path->status != PATH_OCCUPIED ) */
 		if (FALSE == csl_caph_QueryHWClock()) {
-			aTrace(LOG_AUDIO_CNTLR,
-					"AUDCTRL_SetPlayVolume:clock is off\n");
-
 			/*the CAPH clock may be not turned on.
 			   defer setting the FM radio audio gain until start
 			   render.
 			 */
 			return;
 		}
+
+		speaker = getDeviceFromSink(sink);
+		mixer = csl_caph_FindMixer(speaker, pathID);
+		/*determine which mixer input to apply the gains to */
+		/*is the inChnl stereo two channels? */
+		mixInCh = csl_caph_FindMixInCh(speaker, pathID);
+
+		if (mixInCh != CSL_CAPH_SRCM_INCHNL_NONE)
+			csl_srcmixer_setMixInGain(mixInCh, mixer,
+				users_gain[AUDPATH_FM].L,
+				users_gain[AUDPATH_FM].R);
+		else {
+			aError("AUDCTRL_SetPlayVolume no mixer input!\n");
+			audio_xassert(0, pathID);
+		}
+
+		return;
 
 	}
 
@@ -1570,8 +1646,9 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 
 	if (mixInCh != CSL_CAPH_SRCM_INCHNL_NONE)
 		csl_srcmixer_setMixInGain(mixInCh, mixer, mixInGain, mixInGain);
-	else
-		csl_srcmixer_setMixAllInGain(mixer, mixInGain, mixInGain);
+	/*else
+	do not know which mixer input channel to apply on
+		csl_srcmixer_setMixAllInGain(mixer, mixInGain, mixInGain);*/
 
 	csl_srcmixer_setMixOutGain(mixer, mixOutGain);
 
@@ -1682,12 +1759,17 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 		&& fmPlayStarted == TRUE) {
 		if (sink == AUDIO_SINK_LOUDSPK || sink == AUDIO_SINK_HEADSET)
 			powerOnExternalAmp(sink, FmUse, TRUE, FALSE);
-	} else
+
+		AUDCTRL_SetAudioMode_ForFM(
+			GetAudioModeBySink(sink), 0, FALSE);
+	} else {
 		if (sink == AUDIO_SINK_LOUDSPK || sink == AUDIO_SINK_HEADSET)
 			powerOnExternalAmp(sink, AudioUse, TRUE, FALSE);
 
-	AUDCTRL_SetAudioMode_ForMusicPlayback(
-		GetAudioModeBySink(sink), 0, FALSE);
+		AUDCTRL_SetAudioMode_ForMusicPlayback(
+			GetAudioModeBySink(sink), 0, FALSE);
+
+	}
 
 	return;
 }
@@ -3071,7 +3153,8 @@ static int needDualMic(AudioMode_t mode, AudioApp_t app)
 *
 ****************************************************************************/
 static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
-		       enum ExtSpkrUsage_en_t usage_flag, int use, int force)
+			       enum ExtSpkrUsage_en_t usage_flag,
+			       int use, int force)
 {
 
 	static Boolean callUseHS = FALSE;

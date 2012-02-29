@@ -806,7 +806,8 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
 /* audio_cmf_filter((AudioCompfilter_t *) &copy_of_AudioCompfilter ); */
 
 	AUDDRV_SetAudioMode_Mic(audio_mode, audio_app, 0);
-	AUDDRV_SetAudioMode_Speaker(audio_mode, audio_app, 0, FALSE);
+	AUDDRV_SetAudioMode_Speaker(audio_mode, audio_app, 0, FALSE,
+		GAIN_SYSPARM, GAIN_SYSPARM);
 
 }
 
@@ -914,14 +915,14 @@ void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
 //=============================================================================
 */
 void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
-					AudioApp_t app,
-					unsigned int arg_pathID,
-					Boolean inHWlpbk)
- /* add a second audio_mode for broadcast case */
+				AudioApp_t app,
+				unsigned int arg_pathID,
+				Boolean inHWlpbk,
+				unsigned int arg_mixInGain_mB,
+				unsigned int arg_mixOutGain_mB
+				)
 {
-	int mixInGain;	/* Register value. */
-	int mixOutGain;	/* Bit12:0, Output Fine Gain */
-	int mixBitSel;
+	int mixInGain, mixOutGain, mixBitSel;	/* Register value. */
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
@@ -982,12 +983,16 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 
 	/*Load HW Mixer gains from sysparm */
 
-	mixInGain = (short)p->srcmixer_input_gain_l;	/* Q13p2 dB */
-	mixInGain = mixInGain * 25;	/* into mB */
-/*	mixInGain = (short) AudParmP()[
-	arg_audio_mode].srcmixer_input_gain_r;
-	mixInGain = mixInGain*25; //into mB
-*/
+	if (arg_mixInGain_mB == GAIN_SYSPARM) {
+		/*GAIN_SYSPARM means use sysparm*/
+		mixInGain = (short)p->srcmixer_input_gain_l; /* Q13p2 dB */
+		mixInGain = mixInGain * 25;	/* into mB */
+	/*	mixInGain = (short) AudParmP()[
+		arg_audio_mode].srcmixer_input_gain_r;
+		mixInGain = mixInGain*25; //into mB
+	*/
+	} else
+		mixInGain = arg_mixInGain_mB;
 
 	/*determine which which mixer input to apply the gains to */
 
@@ -1002,18 +1007,24 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 			csl_srcmixer_setMixInGain(path->srcmRoute[0][0].
 				  inChnl, outChnl, mixInGain, mixInGain);
 	} else {
+		/*do not know which mix input to aplly gain on
 		if (outChnl)
 			csl_srcmixer_setMixAllInGain(outChnl,
 				mixInGain, mixInGain);
+		*/
 	}
 
 	if (outChnl) {
-		/* Q13p2 dB */
-		mixOutGain = (short)p->srcmixer_output_fine_gain_l;
-		mixOutGain = mixOutGain * 25;	/*into mB */
-		/* mixOutGain = (short) AudParmP()[
-		   arg_audio_mode].srcmixer_output_fine_gain_r; */
-		/* mixOutGain = mixOutGain*25; //into mB */
+		if (arg_mixOutGain_mB != GAIN_SYSPARM)
+			mixOutGain = arg_mixOutGain_mB;
+		else {
+			/* Q13p2 dB */
+			mixOutGain = (short)p->srcmixer_output_fine_gain_l;
+			mixOutGain = mixOutGain * 25;	/*into mB */
+			/* mixOutGain = (short) AudParmP()[
+			   arg_audio_mode].srcmixer_output_fine_gain_r; */
+			/* mixOutGain = mixOutGain*25; //into mB */
+		}
 
 		/* Q13p2 dB */
 		mixBitSel = (short)p->srcmixer_output_coarse_gain_l;
@@ -1034,6 +1045,7 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 			return;
 /*no need for anything other than HW mixer gain for arm2sp */
 	}
+
 /* Do not enable/disable sidetone path based on sysparm when in HW loopback */
 	if (!inHWlpbk) {
 		/*Config sidetone */
