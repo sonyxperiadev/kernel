@@ -174,6 +174,11 @@ RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t * initParams,
 {
 	RPC_SyncParams_t *internalParam =
 	    (RPC_SyncParams_t *) OSHEAP_Alloc(sizeof(RPC_SyncParams_t));
+	if(!internalParam)
+	{
+		panic("RPC_SyncRegisterClient: OSHEAP_Alloc failed");
+		return 0;
+	}
 
 	internalParam->clientParams = *initParams;
 	internalParam->SyncRpcParams = *initParams;
