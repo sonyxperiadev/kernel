@@ -191,10 +191,6 @@ UInt32 AUDQUE_Write(AUDQUE_Queue_t *aq, UInt8 *data, UInt32 size)
 	UInt32 copied = 0;
 	UInt8 *buf = data;
 
-	if (aq == NULL) {
-		BUG();
-		return -1;
-	}
 	if (aq->writePtr < aq->readPtr) {
 		if (aq->writePtr + size < aq->readPtr) {
 			/* copy all*/
@@ -289,10 +285,6 @@ UInt32 AUDQUE_WriteInterleave(AUDQUE_Queue_t *aq,
 	UInt8 *buf = data;
 	UInt8 *buf2 = data2;
 
-	if (aq == NULL) {
-		BUG();
-		return -1;
-	}
 	if (aq->writePtr < aq->readPtr) {
 		if (aq->writePtr + size < aq->readPtr) {
 			/* copy all */
@@ -454,10 +446,6 @@ UInt32 AUDQUE_Read(AUDQUE_Queue_t *aq, UInt8 *data, UInt32 size)
 	UInt32 copied;
 	UInt8 *buf = data;
 
-	if (aq == NULL) {
-		BUG();
-		return -1;
-	}
 	if (aq->readPtr == aq->writePtr) {
 		/* wait for write start first. */
 		copied = 0;

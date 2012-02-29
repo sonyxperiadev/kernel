@@ -1397,6 +1397,10 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	dataDest = (UInt8 *) &record_test_buf[0];
 
 	sVtQueue = AUDQUE_Create(dataDest, 2000, 322);
+	if (sVtQueue == NULL) {
+		aError("Memory allocation failed!\n");
+		return;
+	}
 
 	AUDDRV_BufDoneSema = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
 	sVtQueue_Sema = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
