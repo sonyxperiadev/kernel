@@ -2869,7 +2869,6 @@ static int msmfb_mixer_info(struct fb_info *info, unsigned long *argp)
 
 DEFINE_SEMAPHORE(msm_fb_ioctl_ppp_sem);
 DEFINE_MUTEX(msm_fb_ioctl_lut_sem);
-DEFINE_MUTEX(msm_fb_ioctl_hist_sem);
 
 /* Set color conversion matrix from user space */
 
@@ -2995,7 +2994,9 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	void __user *argp = (void __user *)arg;
 	struct fb_cursor cursor;
 	struct fb_cmap cmap;
-	struct mdp_histogram hist;
+	struct mdp_histogram_data hist;
+	struct mdp_histogram_start_req hist_req;
+	uint32_t block;
 #ifndef CONFIG_FB_MSM_MDP40
 	struct mdp_ccs ccs_matrix;
 #else
@@ -3216,9 +3217,7 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (ret)
 			return ret;
 
-		mutex_lock(&msm_fb_ioctl_hist_sem);
 		ret = mfd->do_histogram(info, &hist);
-		mutex_unlock(&msm_fb_ioctl_hist_sem);
 		break;
 
 	case MSMFB_HISTOGRAM_START:
@@ -3227,13 +3226,23 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 
 		if (!mfd->do_histogram)
 			return -ENODEV;
-		ret = mdp_start_histogram(info);
+
+		ret = copy_from_user(&hist_req, argp, sizeof(hist_req));
+		if (ret)
+			return ret;
+
+		ret = mdp_histogram_start(&hist_req);
 		break;
 
 	case MSMFB_HISTOGRAM_STOP:
 		if (!mfd->do_histogram)
 			return -ENODEV;
-		ret = mdp_stop_histogram(info);
+
+		ret = copy_from_user(&block, argp, sizeof(int));
+		if (ret)
+			return ret;
+
+		ret = mdp_histogram_stop(info, block);
 		break;
 
 
