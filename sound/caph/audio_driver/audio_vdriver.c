@@ -284,10 +284,6 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	Boolean ec_enable_from_sysparm = dspECEnable;
 	Boolean ns_enable_from_sysparm = dspNSEnable;
 
-	telephonyPathID.ulPathID = 0;
-	telephonyPathID.ul2PathID = 0;
-	telephonyPathID.dlPathID = 0;
-
 	/*-/////////////////////////////////////////////////////////////////
 	// Phone Setup Sequence
 	// 1. Init CAPH HW
@@ -329,7 +325,10 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	msleep(40);
 
 	/* Set new filter coef, sidetone filters, gains. */
-	AUDDRV_SetAudioMode(mode, app);
+	AUDDRV_SetAudioMode(mode, app,
+		telephonyPathID.ulPathID,
+		telephonyPathID.ul2PathID,
+		telephonyPathID.dlPathID);
 
 	if (speaker == AUDIO_SINK_BTM)
 		AUDDRV_SetPCMOnOff(1);
@@ -546,10 +545,6 @@ void AUDDRV_Telephony_Deinit(void)
 		currVoiceSpkr = AUDIO_SINK_UNDEFINED;
 	}
 
-	telephonyPathID.ulPathID = 0;
-	telephonyPathID.ul2PathID = 0;
-	telephonyPathID.dlPathID = 0;
-
 	return;
 }
 
@@ -750,7 +745,10 @@ void AUDDRV_DisableDSPInput(void)
 #if !defined(USE_NEW_AUDIO_PARAM)
 void AUDDRV_SetAudioMode(AudioMode_t audio_mode)
 #else
-void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
+void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
+	CSL_CAPH_PathID ulPathID,
+	CSL_CAPH_PathID ul2PathID,
+	CSL_CAPH_PathID dlPathID)
 #endif
 {
 	aTrace(LOG_AUDIO_DRIVER,
@@ -805,8 +803,8 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app)
 	   It means we'll get the coefficients every time if ECI headset on. */
 /* audio_cmf_filter((AudioCompfilter_t *) &copy_of_AudioCompfilter ); */
 
-	AUDDRV_SetAudioMode_Mic(audio_mode, audio_app, 0);
-	AUDDRV_SetAudioMode_Speaker(audio_mode, audio_app, 0, FALSE,
+	AUDDRV_SetAudioMode_Mic(audio_mode, audio_app, ulPathID, ul2PathID);
+	AUDDRV_SetAudioMode_Speaker(audio_mode, audio_app, dlPathID, FALSE,
 		GAIN_SYSPARM, GAIN_SYSPARM);
 
 }
@@ -1007,6 +1005,8 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 			csl_srcmixer_setMixInGain(path->srcmRoute[0][0].
 				  inChnl, outChnl, mixInGain, mixInGain);
 	} else {
+		aError(
+		"AUDDRV_SetAudioMode_Speaker can not find mixer input\n");
 		/*do not know which mix input to aplly gain on
 		if (outChnl)
 			csl_srcmixer_setMixAllInGain(outChnl,
@@ -1081,7 +1081,8 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 */
 void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 					AudioApp_t app,
-					unsigned int arg_pathID)
+					unsigned int arg_pathID,
+					unsigned int arg_pathID2)
 {
 	/* for 48 KHz recording no DSP and 8KHz recording through DSP. */
 
@@ -1343,6 +1344,10 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
+	telephonyPathID.ulPathID = 0;
+	telephonyPathID.ul2PathID = 0;
+	telephonyPathID.dlPathID = 0;
+
 	/* DL */
 	config.streamID = CSL_CAPH_STREAM_NONE;
 	config.pathID = 0;
@@ -1451,6 +1456,10 @@ static void AUDDRV_Telephony_DeinitHW(void)
 	(void)csl_caph_hwctrl_DisablePath(config);
 
 	sink = CSL_CAPH_DEV_NONE;
+
+	telephonyPathID.ulPathID = 0;
+	telephonyPathID.ul2PathID = 0;
+	telephonyPathID.dlPathID = 0;
 
 	return;
 }

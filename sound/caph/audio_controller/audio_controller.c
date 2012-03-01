@@ -878,7 +878,10 @@ void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app)
 	/*enable clock if it is not enabled. */
 
 	/* Here may need to consider for other apps like vt and voip etc */
-	AUDDRV_SetAudioMode(mode, app);
+	AUDDRV_SetAudioMode(mode, app,
+		0,
+		0,
+		0); /*need pathID to find mixer input*/
 
 	/*disable clock if it is enabled by this function */
 	if (!bClk)
@@ -1061,7 +1064,8 @@ also need to support audio profile (and/or mode) set from user space code
 
 	currAudioMode_record = mode;
 
-	AUDDRV_SetAudioMode_Mic(mode, AUDCTRL_GetAudioApp(), 0);
+	AUDDRV_SetAudioMode_Mic(mode, AUDCTRL_GetAudioApp(),
+		arg_pathID, 0);
 
 	if (!bClk)
 		csl_caph_ControlHWClock(FALSE);
@@ -1107,6 +1111,7 @@ void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode)
 		AUDDRV_SetAudioMode_Multicast(mode, AUDCTRL_GetAudioApp());
 	}
 	break;
+
 	case AUDIO_MODE_SPEAKERPHONE:
 	if (mode == AUDIO_MODE_HEADSET) {
 		/*Adding HS load HS param*/
@@ -1116,11 +1121,12 @@ void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode)
 		setExternAudioGain(AUDIO_MODE_RESERVE, AUDCTRL_GetAudioApp());
 	}
 	break;
+
 	/*Multicasting to BT+IHF or any other
 	right now for any BT+IHF case we will not end up here*/
 	default:
 	AUDDRV_SetAudioMode_Speaker(
-		mode, AUDCTRL_GetAudioApp(), 0, FALSE);
+		mode, AUDCTRL_GetAudioApp(), 0, FALSE); /* need pathID */
 	currAudioMode_playback = mode;
 	break;
 	} /*end of switch (currAudioMode)*/
@@ -1761,13 +1767,13 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 			powerOnExternalAmp(sink, FmUse, TRUE, FALSE);
 
 		AUDCTRL_SetAudioMode_ForFM(
-			GetAudioModeBySink(sink), 0, FALSE);
+			GetAudioModeBySink(sink), pathID, FALSE);
 	} else {
 		if (sink == AUDIO_SINK_LOUDSPK || sink == AUDIO_SINK_HEADSET)
 			powerOnExternalAmp(sink, AudioUse, TRUE, FALSE);
 
 		AUDCTRL_SetAudioMode_ForMusicPlayback(
-			GetAudioModeBySink(sink), 0, FALSE);
+			GetAudioModeBySink(sink), pathID, FALSE);
 
 	}
 
@@ -1889,7 +1895,7 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 
 		AUDDRV_SetAudioMode_Speaker(AUDIO_MODE_HEADSET,
 				AUDCTRL_GetAudioApp(),
-				0, FALSE);
+				0, FALSE); /*need pathID*/
 		setExternAudioGain(AUDIO_MODE_HEADSET, AUDCTRL_GetAudioApp());
 		AUDCTRL_SaveAudioMode(AUDIO_MODE_HEADSET);
 	}
@@ -1982,7 +1988,7 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 			/* without setting mic gains (such as PGA),
 			   idle mode recording gives low volume */
 			AUDDRV_SetAudioMode_Mic(AUDCTRL_GetAudioMode(),
-						AUDCTRL_GetAudioApp(), 0);
+						AUDCTRL_GetAudioApp(), pathID, 0);
 		}
 
 		/* if bInVoiceCall== TRUE, assume the telphony_init() function
