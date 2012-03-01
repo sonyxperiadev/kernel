@@ -61,6 +61,10 @@
 #include "csl_dsp_caph_control_api.h"
 #endif
 
+#include <linux/regulator/consumer.h>
+#include <linux/regulator/driver.h>
+static struct regulator *gHV_regulator;
+
 /*#define CONFIG_VOICE_LOOPBACK_TEST */
 
 /****************************************************************************
@@ -2515,6 +2519,7 @@ static void csl_ssp_ControlHWClock(Boolean enable,
  */
 void csl_caph_ControlHWClock(Boolean enable)
 {
+	int ret = 0;
 	if (enable == TRUE && sClkCurEnabled == FALSE) {
 		sClkCurEnabled = TRUE;
 
@@ -2550,13 +2555,47 @@ void csl_caph_ControlHWClock(Boolean enable)
 
 		clkIDCAPH[3] = clk_get(NULL, "audioh_156m_clk");
 		clk_enable(clkIDCAPH[3]);
+
+
+		/*Get and turn on the regulator, if its not already on*/
+		if (!gHV_regulator) {
+			gHV_regulator = regulator_get(NULL, "2v9_aud");
+			if (IS_ERR(gHV_regulator))
+				aError("HVLDO1_Regulator_get -FAIL\n");
+		}
+		if (gHV_regulator) {
+
+			ret = regulator_enable(gHV_regulator);
+			ret = regulator_get_voltage(gHV_regulator);
+			aTrace(LOG_AUDIO_CSL,
+				"Reg(HVLDO1) Voltage before set = %d\n", ret);
+			if (ret != 2900000) {
+				regulator_set_voltage(gHV_regulator,
+							2900000, 2900000);
+				aTrace(LOG_AUDIO_CSL,
+						"Reg Voltage(HVLDO1) after set"
+						" = %d\n", ret);
+			}
+		}
+
 	} else if (enable == FALSE && sClkCurEnabled == TRUE) {
 		UInt32 count = 0;
 		sClkCurEnabled = FALSE;
 		/*disable only CAPH clocks*/
 		for (count = 0; count <  MAX_CAPH_CLOCK_NUM; count++)
 			clk_disable(clkIDCAPH[count]);
+
+
+		/* Turn off the regulator*/
+		if (gHV_regulator) {
+			ret = regulator_disable(gHV_regulator);
+			regulator_put(gHV_regulator);
+			gHV_regulator = NULL;
+			aTrace(LOG_AUDIO_CSL, "Disable regulator(HVLDO1)"
+				"returned %d\n", ret);
+		}
 	}
+
 
 	aTrace(LOG_AUDIO_CSL,
 		"csl_caph_ControlHWClock: action = %d,"

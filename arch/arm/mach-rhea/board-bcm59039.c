@@ -168,6 +168,7 @@ static struct regulator_init_data bcm59039_camldo_data = {
 
 __weak struct regulator_consumer_supply hv1_supply[] = {
 	{.supply = "hv1"},
+	{.supply = "2v9_aud"},
 };
 static struct regulator_init_data bcm59039_hv1ldo_data = {
 	.constraints = {
@@ -177,7 +178,12 @@ static struct regulator_init_data bcm59039_hv1ldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
+#if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 			.always_on = 1,
+#else
+			.always_on = 0,
+#endif
+
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv1_supply),
 	.consumer_supplies = hv1_supply,
