@@ -302,6 +302,17 @@ extern unsigned long get_apanic_start_address(void);
  *	Get runtime log device
  **/
 	int BCMLOG_GetRunlogDevice(void);
+
+/**
+ *	Set runtime log device
+ **/
+	void BCMLOG_SetRunlogDevice(int run_log_dev);
+
+/**
+ *	Get runtime SD log file size in bytes
+ **/
+	int BCMLOG_GetSdFileMax(void);
+
 	int BCMLOG_GetCpCrashLogDevice(void);
 	int BCMLOG_GetApCrashLogDevice(void);
 
