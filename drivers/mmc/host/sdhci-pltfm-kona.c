@@ -440,8 +440,10 @@ static void kona_sdio_status_notify_cb (int card_present, void *dev_id)
 		 return;
 	 }
 	 printk(KERN_ERR " %s CALL EMULATION=%x\n",__FUNCTION__,dev);
-
+		if(card_present)
 	  bcm_kona_sd_card_emulate(dev, 1);
+		else
+	  bcm_kona_sd_card_emulate(dev, 0);			
 
 	   printk(KERN_ERR " %s EMULATION DONE=%x\n",__FUNCTION__,dev);
 	/* 
@@ -452,7 +454,8 @@ static void kona_sdio_status_notify_cb (int card_present, void *dev_id)
 	 /* Call the core function to rescan on the given host controller */
 
 	 printk(KERN_ERR " %s MMC_DETECT_CHANGE\n",__FUNCTION__);	
-	 mmc_detect_change(host->mmc, 0);
+	if(card_present)
+	 mmc_detect_change(host->mmc, 100);
 
 	 	 printk(KERN_ERR " %s MMC_DETECT_CHANGE DONE\n",__FUNCTION__);	
 }
