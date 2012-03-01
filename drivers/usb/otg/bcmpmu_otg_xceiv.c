@@ -168,6 +168,19 @@ static int bcmpmu_otg_xceiv_pullup_on(struct otg_transceiver *otg, bool on)
 	return 0;
 }
 
+static int bcmpmu_otg_xceiv_set_suspend(struct otg_transceiver *otg, int suspend)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
+
+	if (!xceiv_data)
+		return -EINVAL;
+
+	/* REVISIT: When we use external wake interrupt, we will add more power savings */
+	bcm_hsotgctrl_set_phy_clk_request(!suspend);
+
+	return 0;
+}
+
 static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data
 					      *xceiv_data, bool enable)
 {
@@ -656,6 +669,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->otg_xceiver.xceiver.set_srp_reqd = bcmpmu_otg_xceiv_set_srp_reqd_handler;
 	xceiv_data->otg_xceiver.xceiver.set_otg_enable = bcmpmu_otg_xceiv_set_otg_enable;
 	xceiv_data->otg_xceiver.xceiver.pullup_on = bcmpmu_otg_xceiv_pullup_on;
+	xceiv_data->otg_xceiver.xceiver.set_suspend = bcmpmu_otg_xceiv_set_suspend;
 
 	ATOMIC_INIT_NOTIFIER_HEAD(&xceiv_data->otg_xceiver.xceiver.notifier);
 

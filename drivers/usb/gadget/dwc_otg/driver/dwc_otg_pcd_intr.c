@@ -790,6 +790,15 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	gintsts_data_t gintsts;
 	pcgcctl_data_t power = {.d32 = 0 };
 
+#ifdef CONFIG_USB_OTG_UTILS
+	if (core_if->xceiver->set_suspend &&
+		  (core_if->lx_state == DWC_OTG_L2) &&
+		  !core_if->core_params->otg_supp_enable) {
+		/* REVISIT when we use the external wake interrupt */
+		otg_set_suspend(core_if->xceiver, 0);
+	}
+#endif
+
 #ifdef CONFIG_USB_OTG
 	DWC_TIMER_CANCEL(core_if->bidl_adisconn_timer);
 #endif
