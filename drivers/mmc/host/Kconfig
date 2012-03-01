@@ -481,7 +481,7 @@ config MMC_SDHI
 
 config MMC_BCM_SD
 	tristate "Broadcom MMC/SD/SDIO Card Interface support"
-	depends on MMC
+	depends on MMC && MMC_SDHCI_PLTFM_KONA
 	help
 	  This selects a driver for the MMC/SD/SDIO interface found in
 	  BCM2820, BCM2152, BCM2850 and BCMRING... CPUs.
