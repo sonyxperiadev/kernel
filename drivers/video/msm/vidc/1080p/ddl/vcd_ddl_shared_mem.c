@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -184,6 +184,15 @@
 #define VIDC_SM_METADATA_ENABLE_QP_BMSK              0x1
 #define VIDC_SM_METADATA_ENABLE_QP_SHFT              0
 
+#define VIDC_SM_ASPECT_RATIO_INFO_ADDR               0x00c8
+#define VIDC_SM_MPEG4_ASPECT_RATIO_INFO_BMSK         0xf
+#define VIDC_SM_MPEG4_ASPECT_RATIO_INFO_SHFT         0x0
+#define VIDC_SM_EXTENDED_PAR_ADDR                    0x00cc
+#define VIDC_SM_EXTENDED_PAR_WIDTH_BMSK              0xffff0000
+#define VIDC_SM_EXTENDED_PAR_WIDTH_SHFT              0xf
+#define VIDC_SM_EXTENDED_PAR_HEIGHT_BMSK             0x0000ffff
+#define VIDC_SM_EXTENDED_PAR_HEIGHT_SHFT             0x0
+
 
 #define VIDC_SM_METADATA_STATUS_ADDR         0x003c
 #define VIDC_SM_METADATA_STATUS_STATUS_BMSK  0x1
@@ -201,6 +210,15 @@
 #define VIDC_SM_CHROMA_ADDR_CHANGE_ADDR   0x0148
 #define VIDC_SM_CHROMA_ADDR_CHANGE_BMASK  0x00000001
 #define VIDC_SM_CHROMA_ADDR_CHANGE_SHFT   0
+
+#define VIDC_SM_ERROR_CONCEALMENT_CONFIG_ADDR   0x0154
+
+#define VIDC_SM_ERROR_CONCEALMENT_CONFIG_INTER_SLICE_BMSK  0x0c
+#define VIDC_SM_ERROR_CONCEALMENT_CONFIG_INTER_SLICE_SHFT 2
+#define VIDC_SM_ERROR_CONCEALMENT_CONFIG_INTRA_SLICE_BMSK 0X02
+#define VIDC_SM_ERROR_CONCEALMENT_CONFIG_INTRA_SLICE_SHFT 1
+#define VIDC_SM_ERROR_CONCEALMENT_CONFIG_CONCEAL_ENABLE_BMSK  0x01
+#define VIDC_SM_ERROR_CONCEALMENT_CONFIG_CONCEAL_ENABLE_SHFT   0
 
 #define VIDC_SM_SEI_ENABLE_ADDR                     0x0180
 #define VIDC_SM_SEI_ENABLE_RECOVERY_POINT_SEI_BMSK  0x00000001
@@ -737,18 +755,60 @@ void vidc_sm_get_decoder_sei_enable(struct ddl_buf_addr *shared_mem,
 	*sei_enable = DDL_MEM_READ_32(shared_mem, VIDC_SM_SEI_ENABLE_ADDR);
 }
 
+void vidc_sm_set_error_concealment_config(struct ddl_buf_addr *shared_mem,
+	u32 inter_slice, u32 intra_slice, u32 conceal_config_enable)
+{
+	u32 error_conceal_config = 0;
+
+	error_conceal_config = VIDC_SETFIELD(inter_slice,
+			VIDC_SM_ERROR_CONCEALMENT_CONFIG_INTER_SLICE_SHFT,
+			VIDC_SM_ERROR_CONCEALMENT_CONFIG_INTER_SLICE_BMSK);
+
+	error_conceal_config |= VIDC_SETFIELD(intra_slice,
+			VIDC_SM_ERROR_CONCEALMENT_CONFIG_INTRA_SLICE_SHFT,
+			VIDC_SM_ERROR_CONCEALMENT_CONFIG_INTRA_SLICE_BMSK);
+
+	error_conceal_config |= VIDC_SETFIELD(conceal_config_enable,
+			VIDC_SM_ERROR_CONCEALMENT_CONFIG_CONCEAL_ENABLE_SHFT,
+			VIDC_SM_ERROR_CONCEALMENT_CONFIG_CONCEAL_ENABLE_BMSK);
+
+	DDL_MEM_WRITE_32(shared_mem, VIDC_SM_ERROR_CONCEALMENT_CONFIG_ADDR,
+			error_conceal_config);
+}
+
 void vidc_sm_set_decoder_stuff_bytes_consumption(
 	struct ddl_buf_addr *shared_mem,
 	enum vidc_sm_num_stuff_bytes_consume_info consume_info)
 {
 	DDL_MEM_WRITE_32(shared_mem, VIDC_SM_NUM_STUFF_BYTES_CONSUME_ADDR,
-			consume_info);
+	consume_info);
 }
 
 void vidc_sm_set_video_core_timeout_value(struct ddl_buf_addr *shared_mem,
-	u32 timeout)
+        u32 timeout)
 {
-	DDL_MEM_WRITE_32(shared_mem, VIDC_SM_TIMEOUT_VALUE_ADDR,
-			timeout);
+    DDL_MEM_WRITE_32(shared_mem, VIDC_SM_TIMEOUT_VALUE_ADDR,
+        timeout);
+}
+
+void vidc_sm_get_aspect_ratio_info(struct ddl_buf_addr *shared_mem,
+    struct vcd_aspect_ratio *aspect_ratio_info)
+{
+        u32 extended_par_info = 0;
+            aspect_ratio_info->aspect_ratio = DDL_MEM_READ_32(shared_mem,
+                            VIDC_SM_ASPECT_RATIO_INFO_ADDR);
+
+         if (aspect_ratio_info->aspect_ratio == 0x0f) {
+                extended_par_info = DDL_MEM_READ_32(shared_mem,
+                        VIDC_SM_EXTENDED_PAR_ADDR);
+                aspect_ratio_info->extended_par_width =
+                    VIDC_GETFIELD(extended_par_info,
+                            VIDC_SM_EXTENDED_PAR_WIDTH_BMSK,
+                            VIDC_SM_EXTENDED_PAR_WIDTH_SHFT);
+                aspect_ratio_info->extended_par_height =
+                    VIDC_GETFIELD(extended_par_info,
+                            VIDC_SM_EXTENDED_PAR_HEIGHT_BMSK,
+                            VIDC_SM_EXTENDED_PAR_HEIGHT_SHFT);
+         }
 }
 
