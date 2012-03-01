@@ -576,6 +576,17 @@ cVoid chal_aci_interrupt_disable( CHAL_ACI_INTERRUPT_SELECT_t mask );
 ****************************************************************************/
 cVoid chal_aci_interrupt_acknowledge( CHAL_ACI_INTERRUPT_SELECT_t mask );
 
+
+/**
+*
+*  @brief This function will power on the ACI part for AUX MIC for audio 
+*
+*  @param  Void
+*  
+*  @return none
+****************************************************************************/
+cVoid chal_aci_powerup_auxmic( void );
+
 /** @} */
 
 #ifdef __cplusplus

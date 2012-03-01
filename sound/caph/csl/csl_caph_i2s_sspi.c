@@ -367,9 +367,6 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
 	else
 		return SSPI_HW_ERR_PROT;
 
-	temp = *(volatile int *)0x3502F000;
-	*(volatile int *)0x3502F000 = temp | 0x1;
-
 #if 0
 	switch (config->sampleRate) {
 	case CSL_I2S_16BIT_4000HZ:
