@@ -230,6 +230,12 @@ static void AudioCodecIdHander(int codecID)
 void caph_audio_init(void)
 {
 	AUDDRV_RegisterRateChangeCallback(AudioCodecIdHander);
+
+#ifdef USE_HR_TIMER
+	hrtimer_init(&hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	hr_timer.function = &TimerCbStopVibrator;
+#endif
+
 }
 
 /**
@@ -799,6 +805,10 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_Vibra_t *parm_vibra =
 				(BRCM_AUDIO_Param_Vibra_t *)arg_param;
+#ifdef USE_HR_TIMER
+			int isHRTimActive = 0;
+#endif
+
 			aTrace(LOG_AUDIO_CNTLR,
 					"ACTION_AUD_EnableVibra"
 					"and SetVibraStrength\n");
@@ -807,16 +817,18 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				parm_vibra->direction);
 
 #ifdef USE_HR_TIMER
-			hrtimer_cancel(&hr_timer);
+			isHRTimActive = hrtimer_active(&hr_timer);
+
+			if (isHRTimActive) {
+				aTrace(LOG_AUDIO_CNTLR,
+					"Hrtimer cancel is going to be called\n");
+
+				hrtimer_cancel(&hr_timer);
+			}
 
 			if (parm_vibra->duration != 0) {
 				ktime = ktime_set(0,
 				(parm_vibra->duration*1000000));
-
-				hrtimer_init(&hr_timer, CLOCK_MONOTONIC,
-					HRTIMER_MODE_REL);
-
-				hr_timer.function = &TimerCbStopVibrator;
 
 				hrtimer_start(&hr_timer, ktime,
 					HRTIMER_MODE_REL);
@@ -840,17 +852,29 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		}
 		break;
 	case ACTION_AUD_DisableByPassVibra:
-		aTrace(LOG_AUDIO_CNTLR, "ACTION_AUD_DisableByPassVibra\n");
+		{
 #ifdef USE_HR_TIMER
-		hrtimer_cancel(&hr_timer);
+			int isHRTimActive = 0;
+			isHRTimActive = hrtimer_active(&hr_timer);
+			if (isHRTimActive) {
+				aTrace(LOG_AUDIO_CNTLR,
+					"Hrtimer cancel is going to be called"
+					"from Disable Vibra\n");
+
+				hrtimer_cancel(&hr_timer);
+			}
 #else
-		if (gpVibratorTimer) {
-			del_timer_sync(gpVibratorTimer);
-			gpVibratorTimer = NULL;
-		}
+			if (gpVibratorTimer) {
+				del_timer_sync(gpVibratorTimer);
+				gpVibratorTimer = NULL;
+			}
 #endif
-		/* stop it */
-		AUDCTRL_DisableBypassVibra();
+			/* stop it */
+			aTrace(LOG_AUDIO_CNTLR,
+				"ACTION_AUD_DisableByPassVibra\n");
+
+			AUDCTRL_DisableBypassVibra();
+		}
 		break;
 	case ACTION_AUD_SetPlaybackVolume:
 		{
