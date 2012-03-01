@@ -461,6 +461,11 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	host->hw_name = "bcm_kona_sd";
 	host->ops = &sdhci_pltfm_ops;
 	host->irq = platform_get_irq(pdev, 0);
+	host->quirks = SDHCI_QUIRK_NO_CARD_NO_RESET
+		| SDHCI_QUIRK_BROKEN_TIMEOUT_VAL
+		| SDHCI_QUIRK_32BIT_DMA_ADDR
+		| SDHCI_QUIRK_32BIT_DMA_SIZE
+		| SDHCI_QUIRK_32BIT_ADMA_SIZE;
 
 	printk(KERN_ERR " %s GET IRQ\n",__FUNCTION__);
 
@@ -559,8 +564,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 	if (hw_cfg->is_8bit)
 		host->mmc->caps |= MMC_CAP_8_BIT_DATA;
-
-	host->quirks = SDHCI_QUIRK_NO_CARD_NO_RESET | SDHCI_QUIRK_BROKEN_TIMEOUT_VAL;
 
 	/*Note that sdhci_add_host calls --> mmc_add_host, which in turn
 	 *checks for the flag MMC_PM_IGNORE_PM_NOTIFY before registering a PM
