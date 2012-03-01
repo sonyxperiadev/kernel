@@ -974,6 +974,33 @@ int sdio_card_emulate(enum sdio_devtype devtype, int insert)
 EXPORT_SYMBOL(sdio_card_emulate);
 
 
+
+int sdio_stop_clk(enum sdio_devtype devtype, int insert)
+
+{
+	int rc;
+	struct sdio_dev *dev;
+
+	
+	rc = sdio_dev_is_initialized(devtype);
+	if (rc <= 0)
+	   return -EFAULT;
+	
+	dev = gDevs[devtype];
+	struct sdhci_host *host = dev->host;
+
+	
+#ifndef CONFIG_ARCH_ISLAND
+	   sdhci_pltfm_clk_enable(host, insert);
+#endif
+
+
+}
+
+EXPORT_SYMBOL(sdio_stop_clk);
+
+
+
 static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char * reg_name)
 {
 	int ret;

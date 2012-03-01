@@ -279,7 +279,11 @@ void bcm_sdiowl_term(void)
    atomic_set(&dev->dev_is_ready, 0);
 //   sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
    msleep(2000);
-  __wifi_reset(dev->wifi_gpio->reset, 0);
+ 
+  
+	sdio_stop_clk(SDIO_DEV_TYPE_WIFI, 0);
+
+   __wifi_reset(dev->wifi_gpio->reset, 0);
 
    /* free GPIOs */
    wifi_gpio_free(dev->wifi_gpio);

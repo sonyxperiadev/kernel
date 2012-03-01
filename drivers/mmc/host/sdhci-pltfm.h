@@ -24,6 +24,9 @@ extern int sdio_dev_is_initialized(enum sdio_devtype devtype);
 extern struct mmc_card *sdio_get_mmc_card(enum sdio_devtype devtype);
 extern struct sdio_wifi_gpio_cfg *sdio_get_wifi_gpio(enum sdio_devtype devtype);
 extern int sdio_card_emulate(enum sdio_devtype devtype, int insert);
+extern int sdio_stop_clk(enum sdio_devtype devtype, int insert);
+
+
 extern int sdio_reset_comm(struct mmc_card *card);
 
 #endif /* _SDHCI_PLTFM_H_ */
