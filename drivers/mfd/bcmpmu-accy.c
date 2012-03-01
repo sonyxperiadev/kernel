@@ -734,15 +734,20 @@ static void usb_det_work(struct work_struct *work)
 						usb_type = PMU_USB_TYPE_ACA;
 						break;
 					default:
-						usb_type = PMU_USB_TYPE_NONE;
-						/* REVISIT: In error case, Type2 detected for SDP
-						* Need to retry and find the right charger type otherwise
-						* USB will not be notified
-						*/
-						paccy->det_state = USB_RETRY;
-						schedule_delayed_work(&paccy->det_work,
-								      msecs_to_jiffies
-								      (0));
+						/* REVISIT: DCP was removed from USB
+						 * charger types. Remove retry for DCP
+						 * until charger type issues are resolved */
+						if (chrgr_type != PMU_CHRGR_TYPE_DCP) {
+							usb_type = PMU_USB_TYPE_NONE;
+							/* REVISIT: In error case, Type2 detected for SDP
+							* Need to retry and find the right charger type otherwise
+							* USB will not be notified
+							*/
+							paccy->det_state = USB_RETRY;
+							schedule_delayed_work(&paccy->det_work,
+									      msecs_to_jiffies
+									      (0));
+						}
 						break;
 					}
 				} else {
