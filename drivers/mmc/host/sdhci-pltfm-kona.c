@@ -406,7 +406,7 @@ static void kona_sdio_status_notify_cb (int card_present, void *dev_id)
 	 /* Call the core function to rescan on the given host controller */
 
 	 printk(KERN_ERR " %s MMC_DETECT_CHANGE\n",__FUNCTION__);	
-	if(card_present)
+//	if(card_present)
 	 mmc_detect_change(host->mmc, 100);
 
 	 	 printk(KERN_ERR " %s MMC_DETECT_CHANGE DONE\n",__FUNCTION__);	
