@@ -41,6 +41,9 @@
 #include <linux/kthread.h>
 #include <linux/syscalls.h>
 #include <linux/slab.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
 
 #include <linux/hrtimer.h>
 #include <asm/io.h>
@@ -78,6 +81,9 @@ struct tango_i2c {
 	struct mutex mutex_wq;
 	struct i2c_client *client;
 	struct i2c_client *dummy_client;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend suspend_desc;
+#endif
 };
 
 typedef enum
@@ -229,7 +235,7 @@ static ssize_t i2c_ts_driver_calibration(struct device *dev,
 
 /* ---- Functions -------------------------------------------------------- */
 
-#ifdef CONFIG_PM
+#if defined(CONFIG_PM) || defined(CONFIG_HAS_EARLYSUSPEND)
 /* In preparation for implementing PM_SUSPEND_STANDBY. */
 static int i2c_ts_suspend_driver(struct i2c_client *p_client, pm_message_t mesg)
 {  /* Can put it into deep sleep only if the slave can be reset to bring
@@ -255,6 +261,27 @@ static int i2c_ts_resume_driver(struct i2c_client *p_client)
 	}
 	enable_irq(gpio_to_irq(gp_i2c_ts->gpio_irq_pin));
 	return rc;
+}
+#else
+#define i2c_ts_suspend_driver NULL
+#define i2c_ts_resume_driver NULL
+#endif
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void i2c_ts_early_suspend(struct early_suspend *desc)
+{
+	struct tango_i2c *data = container_of(desc, struct tango_i2c, suspend_desc);
+	pm_message_t mesg = {
+		.event = PM_EVENT_SUSPEND,
+	};
+
+	i2c_ts_suspend_driver(data->client, mesg);
+}
+
+static void i2c_ts_late_resume(struct early_suspend *desc)
+{
+	struct tango_i2c *data = container_of(desc, struct tango_i2c, suspend_desc);
+	i2c_ts_resume_driver(data->client);
 }
 #endif
 
@@ -966,6 +993,13 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	p_tango_i2c_dev->ktouch_wq = create_workqueue("tango_touch_wq");
 	INIT_WORK(&p_tango_i2c_dev->work, tango_i2c_wq);
 	i2c_set_clientdata(p_i2c_client, p_tango_i2c_dev);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	p_tango_i2c_dev->suspend_desc.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
+	p_tango_i2c_dev->suspend_desc.suspend = i2c_ts_early_suspend,
+	p_tango_i2c_dev->suspend_desc.resume = i2c_ts_late_resume,
+	register_early_suspend(&p_tango_i2c_dev->suspend_desc);
+#endif
+
 
 	g_low_power_changed = 1;
 	rc = i2c_ts_driver_check_mod_params();
@@ -1155,7 +1189,7 @@ static struct i2c_driver tango_i2c_driver = {
 	.class			 = I2C_CLASS_TOUCHSCREEN,
 	.probe			 = i2c_ts_driver_probe,
 	.remove			= __devexit_p(i2c_ts_driver_remove),
-#ifdef CONFIG_PM
+#ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend		  = i2c_ts_suspend_driver,
 	.resume			= i2c_ts_resume_driver,
 #endif
