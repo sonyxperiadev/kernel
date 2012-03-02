@@ -766,7 +766,7 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 	PACKET_InterfaceType_t itype;
 	Int8 index;
 	int ret;
-	
+
 	memset(ipcBufList, 0, sizeof(ipcBufList));
 
 	for (itype = INTERFACE_START; itype < INTERFACE_TOTAL; itype++) {
