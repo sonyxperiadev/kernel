@@ -293,7 +293,7 @@ static long hwdep_write(struct snd_hwdep *hw, const char __user * buf,
 
 static int hwdep_open(struct snd_hwdep *hw, struct file *file)
 {
-	aTrace(LOG_ALSA_INTERFACE , "VoIP_Ioctl_Open\n");
+	aTrace(LOG_ALSA_INTERFACE , "ALSA-CAPH VoIP_Ioctl_Open\n");
 
 	return 0;
 }
@@ -303,7 +303,7 @@ static int hwdep_release(struct snd_hwdep *hw, struct file *file)
 	bcm_caph_hwdep_voip_t *pVoIP;
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
 
-	aTrace(LOG_ALSA_INTERFACE , "VoIP_Ioctl_Release\n");
+	aTrace(LOG_ALSA_INTERFACE , "ALSA-CAPH VoIP_Ioctl_Release\n");
 	return 0;
 }
 
@@ -323,7 +323,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
 
-	aTrace(LOG_ALSA_INTERFACE, "hwdep_ioctl cmd=%d\n", cmd);
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH hwdep_ioctl cmd=%d\n", cmd);
 
 	switch (cmd) {
 	case VoIP_Ioctl_GetVersion:

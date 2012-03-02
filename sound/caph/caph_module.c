@@ -103,7 +103,7 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	struct snd_card *card;
 	int err;
 
-	aTrace(LOG_ALSA_INTERFACE, "ALSA:In Driver Probe:\n");
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH Driver Probe:\n");
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:DriverProbe\n", jiffies);
 
@@ -202,7 +202,7 @@ static int DriverResume(struct platform_device *pdev)
 static int BCMAudLOG_open(struct inode *inode, struct file *file)
 {
 
-	aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_open\n");
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH BCMLOG_open\n");
 
 	dev_use_count++;
 	if (dev_use_count > 1)
@@ -223,7 +223,7 @@ BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
 	       loff_t *ppos)
 {
 	int ret;
-	aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_read\n");
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH BCMLOG_read\n");
 
 	if (wait_event_interruptible(bcmlogreadq, (audio_data_arrived != 0))) {
 		/*  Wait for read  ... */
@@ -264,7 +264,7 @@ BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
 
 static int BCMAudLOG_release(struct inode *inode, struct file *file)
 {
-	aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_release\n");
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH BCMLOG_release\n");
 
 	dev_use_count--;
 	if (dev_use_count > 0) {
@@ -300,7 +300,7 @@ static int BCMAudLOG_mmap(struct file *filp, struct vm_area_struct *vma)
 	int ret;
 	long length = vma->vm_end - vma->vm_start;
 
-	aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_mmap\n");
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH BCMLOG_mmap\n");
 
 	/* check length - do not allow larger mappings than the number of
 	 * pages allocated
@@ -337,7 +337,7 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 	AUDDRV_CFG_LOG_INFO *p_log_info = (AUDDRV_CFG_LOG_INFO *) (arg);
 	int index;
 	int rtn = 0;
-	aTrace(LOG_ALSA_INTERFACE, "\n BCMLOG_ioctl cmd=0x%x\n", cmd);
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH BCMLOG_ioctl cmd=0x%x\n", cmd);
 
 	switch (cmd) {
 	case BCM_LOG_IOCTL_CONFIG_CHANNEL:

@@ -247,8 +247,6 @@ static Boolean csl_caph_hwctrl_ssp_running(void);
 static void csl_caph_hwctrl_tdm_config(
 			CSL_CAPH_HWConfig_Table_t *path, int sinkNo);
 
-static void csl_caph_hwctrl_setDSPInterrupt(void);
-
 /******************************************************************************
  * local function definitions
  ******************************************************************************/
