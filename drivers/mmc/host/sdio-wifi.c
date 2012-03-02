@@ -284,7 +284,7 @@ void bcm_sdiowl_term(void)
 #endif
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT    
-	msleep(2000); 
+	msleep(2); 
 #endif
 
 
