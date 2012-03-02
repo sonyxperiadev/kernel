@@ -102,6 +102,9 @@ struct clk {
 
 	struct list_head children;
 	struct list_head siblings;
+#ifdef CONFIG_CLOCK_MAP
+	unsigned id;
+#endif
 
 	unsigned count;
 	spinlock_t lock;

@@ -1868,6 +1868,14 @@ config MSM_QDSS_ETM_DEFAULT_ENABLE
 	  Turns on QDSS ETM tracing by default. Otherwise, tracing is
 	  disabled by default but can be enabled by other means.
 
+config CLOCK_MAP
+	bool "Log clk_enable()/clk_disable() calls"
+	help
+	  Turn on extra debugging for clk_enable()/clk_disable() calls.
+	  A bitmap is maintained in non-cached memory and each registered
+	  clock gets a unique id. If the bitmap has that bit set the clock
+	  is enabled, otherwise the clock is disabled.
+
 config MSM_SLEEP_STATS
 	bool "Enable exporting of MSM sleep stats to userspace"
 	depends on CPU_IDLE
