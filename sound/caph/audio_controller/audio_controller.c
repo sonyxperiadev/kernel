@@ -903,7 +903,8 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 
 	aTrace(LOG_AUDIO_CNTLR,
-			"%s mode %d, pathID %d", __func__, mode, arg_pathID);
+			"%s mode %d, pathID %d",
+			__func__, mode, arg_pathID);
 
 	path = csl_caph_FindPath(arg_pathID);
 
@@ -915,11 +916,12 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 		/*if arm2sp does not use HW mixer, no need to set gain */
 	}
 
-	if (!path)
+	if (!path) {
+		aTrace(LOG_AUDIO_CNTLR,
+			"%s mode %d, pathID %d no path",
+			__func__, mode, arg_pathID);
 		return; /*don't know which mixer input */
-	if (!path->srcmRoute[0][0].outChnl)
-		return;
-		/*if arm2sp does not use HW mixer, no need to set gain */
+	}
 
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
@@ -1393,6 +1395,7 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 
 	path = csl_caph_FindRenderPath(streamID);
 	if (path == 0) {
+		/*can remove this function call*/
 		AUDCTRL_SetAudioMode_ForMusicPlayback(mode, pathID, FALSE);
 		return RESULT_OK;
 	}
@@ -1409,8 +1412,6 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 
 	if (mode == AUDIO_MODE_RESERVE)
 		return RESULT_OK;	/*no need to set HW gain for FM TX. */
-	/*also need to support audio profile/mode set from user space code to
-	   support multi-profile/app. */
 
 	AUDCTRL_SaveAudioApp(AUDIO_APP_MUSIC);
 
@@ -1418,8 +1419,6 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 		pathID = path->pathID;
 	/*arm2sp may use HW mixer, whose gain should be set */
 	AUDCTRL_SetAudioMode_ForMusicPlayback(mode, pathID, FALSE);
-
-	/*for multi-cast, also use path->sink[1] */
 
 	return RESULT_OK;
 }
@@ -1848,7 +1847,7 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 	}
 #ifndef CONFIG_ENABLE_SSMULTICAST
 	AUDCTRL_SetAudioMode_ForMusicPlayback(
-		GetAudioModeBySink(sink), 0, FALSE);
+		GetAudioModeBySink(sink), pathID, FALSE);
 #else
 	AUDCTRL_SetAudioMode_ForMusicMulticast(
 		GetAudioModeBySink(sink));
@@ -1895,7 +1894,7 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 
 		AUDDRV_SetAudioMode_Speaker(AUDIO_MODE_HEADSET,
 				AUDCTRL_GetAudioApp(),
-				0, FALSE); /*need pathID*/
+				pathID, FALSE);
 		setExternAudioGain(AUDIO_MODE_HEADSET, AUDCTRL_GetAudioApp());
 		AUDCTRL_SaveAudioMode(AUDIO_MODE_HEADSET);
 	}
@@ -1987,8 +1986,9 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 		if (!AUDCTRL_InVoiceCall()) {
 			/* without setting mic gains (such as PGA),
 			   idle mode recording gives low volume */
-			AUDDRV_SetAudioMode_Mic(AUDCTRL_GetAudioMode(),
-						AUDCTRL_GetAudioApp(), pathID, 0);
+			AUDDRV_SetAudioMode_Mic(
+				AUDCTRL_GetAudioMode(),
+				AUDCTRL_GetAudioApp(), pathID, 0);
 		}
 
 		/* if bInVoiceCall== TRUE, assume the telphony_init() function
@@ -2532,7 +2532,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		AUDCTRL_SaveAudioMode(audio_mode);
 		AUDCTRL_SaveAudioApp(AUDIO_APP_LOOPBACK);
 		AUDCTRL_SetAudioMode_ForMusicPlayback(audio_mode, pathID, TRUE);
-		AUDCTRL_SetAudioMode_ForMusicRecord(audio_mode, 0);
+		AUDCTRL_SetAudioMode_ForMusicRecord(audio_mode, pathID);
 
 		/* Enable Loopback ctrl */
 		/* Enable PMU for headset/IHF */

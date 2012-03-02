@@ -998,16 +998,40 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 		path = csl_caph_FindPath(arg_pathID);
 
 	if (path != 0) {
-		if (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM)
-			outChnl = path->srcmRoute[0][0].outChnl;
-		/*set HW mixer gain for arm2sp */
-		if (outChnl)
-			csl_srcmixer_setMixInGain(path->srcmRoute[0][0].
-				  inChnl, outChnl, mixInGain, mixInGain);
+		/*if (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM)
+			outChnl = path->srcmRoute[0][0].outChnl;*/
+
+		int i, j, found;
+		found = 0;
+		for (i = 0; i < MAX_SINK_NUM; i++)
+			for (j = 0; j < MAX_BLOCK_NUM; j++)
+				if (path->srcmRoute[i][j].outChnl !=
+				CSL_CAPH_SRCM_CH_NONE) {
+					/*and supposedly
+					path->srcmRoute[i][j].sink
+					matches this speaker*/
+
+					outChnl = path->srcmRoute[i][j].outChnl;
+
+					aTrace(LOG_AUDIO_DRIVER,
+						"%s pathID %d found outChnl 0x%x inChnl 0x%x\n",
+						__func__, arg_pathID, outChnl,
+						path->srcmRoute[i][j].inChnl);
+
+					csl_srcmixer_setMixInGain(
+						  path->srcmRoute[i][j].inChnl,
+						  path->srcmRoute[i][j].outChnl,
+						  mixInGain, mixInGain);
+					found = 1;
+				}
+			if (found == 0)
+				aError(
+				"AUDDRV_SetAudioMode_Speaker can not find mixer output\n");
+
 	} else {
 		aError(
-		"AUDDRV_SetAudioMode_Speaker can not find mixer input\n");
-		/*do not know which mix input to aplly gain on
+		"AUDDRV_SetAudioMode_Speaker can not find path\n");
+		/*do not know which mix input to apply gain on
 		if (outChnl)
 			csl_srcmixer_setMixAllInGain(outChnl,
 				mixInGain, mixInGain);
@@ -1015,6 +1039,10 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 	}
 
 	if (outChnl) {
+
+		/*for multi-cast, need to iterate path->sink[0..n],
+		and find path->srcmRoute[i][j].outChnl */
+
 		if (arg_mixOutGain_mB != GAIN_SYSPARM)
 			mixOutGain = arg_mixOutGain_mB;
 		else {
