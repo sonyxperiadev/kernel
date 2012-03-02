@@ -2822,6 +2822,10 @@ void AUDCTRL_SetIHFmode(Boolean stIHF)
 ****************************************************************************/
 void AUDCTRL_SetBTMode(int mode)
 {
+	if ((mode == BT_MODE_WB) || (mode == BT_MODE_WB_TEST))
+		AUDCTRL_SetBTMTypeWB(TRUE);
+	else
+		AUDCTRL_SetBTMTypeWB(FALSE);
 	csl_caph_hwctrl_SetBTMode(mode);
 }
 
