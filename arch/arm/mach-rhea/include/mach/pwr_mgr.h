@@ -12,9 +12,6 @@
 
 #define PWRMGR_HW_SEM_WA_PI_ID		PI_MGR_PI_ID_MM
 #define PWRMGR_HW_SEM_LOCK_WA_PI_OPP	PI_OPP_TURBO
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-#define PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP PI_OPP_NORMAL
-#endif
 #ifdef CONFIG_DEBUG_FS
 extern const char* _rhea__event2str[];
 #define PWRMGR_EVENT_ID_TO_STR(e) _rhea__event2str[e]
