@@ -270,7 +270,8 @@ static int i2c_ts_resume_driver(struct i2c_client *p_client)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void i2c_ts_early_suspend(struct early_suspend *desc)
 {
-	struct tango_i2c *data = container_of(desc, struct tango_i2c, suspend_desc);
+	struct tango_i2c *data = container_of(desc,
+			struct tango_i2c, suspend_desc);
 	pm_message_t mesg = {
 		.event = PM_EVENT_SUSPEND,
 	};
@@ -280,7 +281,8 @@ static void i2c_ts_early_suspend(struct early_suspend *desc)
 
 static void i2c_ts_late_resume(struct early_suspend *desc)
 {
-	struct tango_i2c *data = container_of(desc, struct tango_i2c, suspend_desc);
+	struct tango_i2c *data = container_of(desc,
+			struct tango_i2c, suspend_desc);
 	i2c_ts_resume_driver(data->client);
 }
 #endif
