@@ -37,7 +37,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/broadcom/vce.h>
 
-#define DRIVER_VERSION 10104
+#define DRIVER_VERSION 10105
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -81,7 +81,7 @@ static struct {
 	struct proc_dir_entry *proc_version;
 	struct proc_dir_entry *proc_status;
 	struct class *vce_class;
-	uint32_t irq_enabled;
+	uint32_t isr_installed;
 	struct pi_mgr_dfs_node dfs_node;
 	struct pi_mgr_qos_node cpu_qos_node;
 	struct semaphore armctl_sem;
@@ -280,8 +280,42 @@ static void _clock_off(void)
 	BUG_ON(vce_clk != NULL);
 }
 
+static void drop_interrupt_handler(void)
+{
+	/* NB. no thread safety here.  we make it the caller's
+	 * responsibility to take appropriate mutexes */
+	if (vce_state.isr_installed) {
+		free_irq(IRQ_VCE, NULL);
+		vce_state.isr_installed = 0;
+	}
+}
+
+static int wire_interrupt_handler(void)
+{
+	/* NB. no thread safety here.  we make it the caller's
+	 * responsibility to take appropriate mutexes */
+	if (!vce_state.isr_installed) {
+		int s;
+		s = request_irq(IRQ_VCE, vce_isr,
+				IRQF_DISABLED | IRQF_TRIGGER_RISING,
+				VCE_DEV_NAME, NULL);
+		if (s != 0) {
+			err_print("request_irq failed s = %d\n", s);
+			goto err_request_irq_failed;
+		}
+
+		vce_state.isr_installed = 1;
+	}
+	return 0;
+
+err_request_irq_failed:
+	return -1;
+}
+
 static void power_on_and_start_clock(void)
 {
+	int s;
+
 	/* Assume clock control mutex is already acquired, and that block is currently off */
 	BUG_ON(vce_state.clock_enable_count != 0);
 
@@ -291,6 +325,9 @@ static void power_on_and_start_clock(void)
 	BUG_ON(mm_rst_base == NULL);
 
 	_clock_on();		/* TODO: error handling */
+
+	s = wire_interrupt_handler();
+	BUG_ON(s != 0);         /* TODO: error handling */
 
 	/* We probably ought to map vce registers here, but for now,
 	 *we go with the "promise not to access them" approach */
@@ -625,6 +662,12 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
+	case VCE_IOCTL_UNINSTALL_ISR:
+		{
+			drop_interrupt_handler();
+		}
+		break;
+
 #if 0
 		/* Some DEBUG stuff -- we may wish to lose this in production driver... */
 	case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
@@ -852,13 +895,9 @@ int __init vce_init(void)
 		goto err1;
 
 	/* Request the VCE IRQ */
-	ret = request_irq(IRQ_VCE, vce_isr,
-			  IRQF_DISABLED | IRQF_TRIGGER_RISING, VCE_DEV_NAME,
-			  NULL);
-	if (ret != 0) {
-		err_print("request_irq failed ret = %d\n", ret);
+	ret = wire_interrupt_handler();
+	if (ret < 0)
 		goto err2a;
-	}
 
 	/* Initialize the VCE acquire_sem and work_lock */
 	init_completion(&vce_state.acquire_sem);
@@ -920,7 +959,7 @@ int __init vce_init(void)
 	remove_proc_entry(VCE_DEV_NAME, NULL);
       err2:
 
-	free_irq(IRQ_VCE, NULL);
+	drop_interrupt_handler();
       err2a:
 
 	iounmap(mm_rst_base);
@@ -959,7 +998,7 @@ void __exit vce_exit(void)
 	remove_proc_entry(VCE_DEV_NAME, NULL);
 
 	/* free interrupts */
-	free_irq(IRQ_VCE, NULL);
+	drop_interrupt_handler();
 
 	/* Unmap addresses */
 	if (vce_base)
