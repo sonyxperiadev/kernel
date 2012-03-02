@@ -58,6 +58,9 @@ the GPL, without Broadcom's express prior written consent.
 #include "caph_common.h"
 #include "audio_trace.h"
 
+static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
+		       struct snd_ctl_elem_value *ucontrol);
+
 static Boolean isSTIHF = FALSE;
 
 /**
@@ -469,6 +472,56 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 		if (pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING
 		    || pStream->runtime->status->state ==
 		    SNDRV_PCM_STATE_PAUSED) {
+
+			/*
+			 * During playback, Px-SEL can not handle multicast to
+			 * singlecast. Reroute to Px-CHG.
+			 * This is a workaround. It is suggested to use Px-CHG
+			 * to do multicast.
+			 */
+			if (pCurSel[0] < AUDIO_SINK_VALID_TOTAL
+			    && pCurSel[1] < AUDIO_SINK_VALID_TOTAL
+			    && pSel[1] >= AUDIO_SINK_VALID_TOTAL) {
+				struct snd_kcontrol tmp_kcontrol;
+				struct snd_ctl_elem_value tmp_ucontrol;
+				s32 new_sel[MAX_PLAYBACK_DEV];
+
+				aTrace(LOG_ALSA_INTERFACE,
+				"Apply multicast to singlecast workaround\n");
+
+				for (i = 0; i < MAX_PLAYBACK_DEV; i++) {
+					new_sel[i] = pSel[i];
+					/*restore values for Px-CHG*/
+					pSel[i] = pCurSel[i];
+				}
+
+				memcpy(&tmp_kcontrol, kcontrol,
+					sizeof(tmp_kcontrol));
+				tmp_kcontrol.private_value =
+					CAPH_CTL_PRIVATE(stream, 0,
+					CTL_FUNCTION_SINK_CHG);
+
+				memcpy(&tmp_ucontrol, ucontrol,
+					sizeof(tmp_ucontrol));
+				/*1 to remove a sink*/
+				tmp_ucontrol.value.integer.value[0] = 1;
+
+				if (pCurSel[0] != new_sel[0]) {
+					tmp_ucontrol.value.integer.value[1] =
+						pCurSel[0];
+					MiscCtrlPut(&tmp_kcontrol,
+						&tmp_ucontrol);
+				}
+
+				if (pCurSel[1] != new_sel[0]) {
+					tmp_ucontrol.value.integer.value[1] =
+						pCurSel[1];
+					MiscCtrlPut(&tmp_kcontrol,
+						&tmp_ucontrol);
+				}
+				break;
+			}
+
 			/*
 			 * call audio driver to set sink, or do switching if
 			 * the current and new device are not same
