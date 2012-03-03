@@ -344,7 +344,7 @@ static void rhea_pm_init_wa_flgs(void)
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
 	/*Workaround not enabled for B1 */
-	JIRA_WA_FLG_NAME(2490) = chip_rev < RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2490) = chip_rev <= RHEA_CHIP_REV_B1;
 #endif
 
 }
