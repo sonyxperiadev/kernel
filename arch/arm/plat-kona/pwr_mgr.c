@@ -1807,6 +1807,131 @@ int pwr_mgr_init(struct pwr_mgr_info *info)
 
 EXPORT_SYMBOL(pwr_mgr_init);
 
+static int pwr_mgr_pm_i2c_var_data_modify(u8 index, u8 val)
+{
+	u32 reg_inx;
+	u32 data_loc;
+	u32 reg_val;
+	unsigned long flgs;
+	pr_info("%s: index:%d, value:%d\n", __func__, index, val);
+
+	if (unlikely(!pwr_mgr.info)) {
+		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		return -EINVAL;
+	}
+	if (unlikely((pwr_mgr.info->flags & PM_PMU_I2C) == 0 )) {
+		pwr_dbg("%s:ERROR - invalid param or not supported\n",
+			__func__);
+		return -EINVAL;
+	}
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+
+	reg_inx = index / 4;
+	reg_val = readl(PWR_MGR_REG_ADDR
+		(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET + reg_inx * 4));
+
+	data_loc = index % 4;
+
+	switch (data_loc) {
+	case 0:
+		reg_val &=
+		~PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_00_MASK;
+		reg_val |= (val <<
+		     PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_00_SHIFT)
+		    &
+		    PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_00_MASK;
+		    break;
+	case 1:
+		reg_val &=
+		~PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_01_MASK;
+
+		reg_val |= (val <<
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_01_SHIFT)
+			&
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_01_MASK;
+		    break;
+	case 2:
+		reg_val &=
+		~PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_02_MASK;
+
+		reg_val |= (val <<
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_02_SHIFT)
+			&
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_02_MASK;
+		    break;
+	case 3:
+		reg_val &=
+		~PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_MASK;
+
+		reg_val |= (val <<
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_SHIFT)
+			&
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_MASK;
+		    break;
+	default:
+		pr_info("return as data_loc is invalid\n");
+		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+		return -EINVAL;
+	}
+
+	writel(reg_val, PWR_MGR_REG_ADDR
+		       (PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
+			+ reg_inx * 4));
+
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+	pr_info("%s: %x set to %x register\n", __func__, reg_val,
+			PWR_MGR_REG_ADDR
+			(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
+			 + reg_inx * 4));
+
+	return 0;
+}
+
+static int pwr_mgr_pm_i2c_var_data_read(u8 *data)
+{
+	u32 reg_inx;
+	u32 data_loc = 0;
+	u32 reg_val;
+	unsigned long flgs;
+
+	if (unlikely(!pwr_mgr.info)) {
+		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		return -EINVAL;
+	}
+	if (unlikely((pwr_mgr.info->flags & PM_PMU_I2C) == 0 )) {
+		pwr_dbg("%s:ERROR - invalid param or not supported\n",
+			__func__);
+		return -EINVAL;
+	}
+	if (data == NULL)
+	    return -EINVAL;
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+
+	for (reg_inx = 0; reg_inx < 4; reg_inx++) {
+	    reg_val = readl(PWR_MGR_REG_ADDR
+			(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
+			+ reg_inx * 4));
+
+	    data[data_loc++]  = (reg_val &
+		PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_00_MASK)
+		>> PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_00_SHIFT;
+	    data[data_loc++]  = (reg_val &
+		PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_01_MASK)
+		>> PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_01_SHIFT;
+	    data[data_loc++]  = (reg_val &
+		PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_02_MASK)
+		>> PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_02_SHIFT;
+	    data[data_loc++]  = (reg_val &
+	    	PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_MASK)
+		>> PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_SHIFT;
+	}
+
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+
+	return data_loc;
+}
+
+
 #ifdef CONFIG_DEBUG_FS
 
 static u32 bmdm_pwr_mgr_base;
@@ -2095,6 +2220,107 @@ static struct file_operations i2c_sw_seq_ops = {
 	.write = pwr_mgr_i2c_req,
 };
 #endif
+static int pwr_mgr_pmu_volt_inx_tbl_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+static ssize_t pwr_mgr_pmu_volt_inx_tbl_display(struct file *file, char __user *buf, size_t len, loff_t *offset)
+{
+    u8 volt_tbl[16];
+    int i, count =0, length =0;
+    static ssize_t total_len = 0;
+    char out_str[400];
+    char *out_ptr;
+
+    /* This is to avoid the read getting called again and again. This is
+     * useful only if we have large chunk of data greater than PAGE_SIZE. we
+     * have only small chunk of data */
+    if(total_len > 0) {
+	total_len = 0;
+	return 0;
+    }
+    memset(volt_tbl, 0, sizeof(volt_tbl));
+    memset(out_str, 0, sizeof(out_str));
+    out_ptr = &out_str[0];
+    if (len < 400)
+	return -EINVAL;
+
+    count = pwr_mgr_pm_i2c_var_data_read(volt_tbl);
+    for (i=0;i<count;i++) {
+	length = sprintf(out_ptr, "volt_id[%d]: %x\n", i, volt_tbl[i]);
+	out_ptr += length;
+	total_len += length;
+    }
+
+    if (copy_to_user(buf, out_str, total_len))
+	return -EFAULT;
+
+    return total_len;
+}
+
+static ssize_t pwr_mgr_pmu_volt_inx_tbl_update(struct file *file, char const __user *buf,
+			       size_t count, loff_t *offset)
+{
+	int i;
+	u32 val = 0xFFFF;
+	u32 len = 0, index1 = 0;
+	char *str_ptr;
+	u8 data[16];
+
+	char input_str[100];
+
+	memset(input_str, 0, 100);
+	memset(data, 0, 16);
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	str_ptr = &input_str[0];
+	while(*str_ptr && *str_ptr != 0xA) { /*not null && not LF character*/
+	    sscanf(str_ptr, "%x%n", &val, &len);
+	    if (val == 0xFFFF) {
+		printk("invalid or end of input\n");
+		break;
+	    }
+	    data[index1] = (u8)val;
+	    pr_info("data[%d] :%x  len:%d\n", index1, data[index1], len);
+	    str_ptr += len;
+	    if (data[index1] > 0xF) {
+		printk("invalid param\n");
+		return count;
+	    }
+	    index1 += 1;
+	    val = 0xFFFF;
+	}
+	if (index1 == 2) {
+	    pwr_mgr_pm_i2c_enable(false);
+	    pwr_mgr_pm_i2c_var_data_modify(data[0], data[1]);
+	    pr_info("index:%d , value= %x\n", data[0], data[1]);
+	    pwr_mgr_pm_i2c_enable(true);
+	} else if (index1 == 16){
+	    for (i = 0; i<16;i++)
+		pr_info("data[%d] = %x\n", i, data[i]);
+	    pwr_mgr_pm_i2c_enable(false);
+	    pwr_mgr_pm_i2c_var_data_write(data, index1);
+	    pwr_mgr_pm_i2c_enable(true);
+	}else
+	    pr_info("invalid number of arguments\n");
+
+	return count;
+}
+
+
+static struct file_operations set_pmu_volt_inx_tbl_fops = {
+    .open = pwr_mgr_pmu_volt_inx_tbl_open,
+    .write = pwr_mgr_pmu_volt_inx_tbl_update,
+    .read = pwr_mgr_pmu_volt_inx_tbl_display,
+};
+
 
 struct dentry *dent_pwr_root_dir = NULL;
 int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
@@ -2140,6 +2366,11 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 	     &i2c_sw_seq_ops))
 		return -ENOMEM;
 #endif
+	if (!debugfs_create_file
+	    ("pmu_volt_inx", S_IRUGO | S_IWUSR , dent_pwr_root_dir, NULL,
+	     &set_pmu_volt_inx_tbl_fops))
+		return -ENOMEM;
+
 	dent_event_tbl = debugfs_create_dir("event_table", dent_pwr_root_dir);
 	if (!dent_event_tbl)
 		return -ENOMEM;

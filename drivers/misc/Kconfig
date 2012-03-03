@@ -719,8 +719,8 @@ config BRALLOC_MEM_STATS
 
 config RECOVERY
 	bool "Android Recovery Support"
-	depends on ARCH_KONA
-	default y
+	depends on ARCH_KONA && MMC_BLOCK
+	default n
 
 config BCM_RFKILL
         bool "BCM RFKILL driver support for Bluetooth"

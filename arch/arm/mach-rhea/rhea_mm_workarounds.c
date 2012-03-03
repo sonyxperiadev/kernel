@@ -443,7 +443,6 @@ static void rhea_mm_shutdown_workaround(void)
 		       "After shutdown workaround axi17 wcmd=0x%08x rcmds=0x%08x wbeats=0x%08x\n",
 		       n_wr_cmds_mm_memc, n_rd_cmds_mm_memc,
 		       n_wr_beats_mm_memc);
-		BUG();
 	}
 }
 

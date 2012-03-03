@@ -2,13 +2,13 @@
 *
 *     Copyright (c) 2009 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
+*   Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
@@ -51,37 +51,23 @@
 #include "rpc_debug.h"
 #include "rpc_sync_api.h"
 #include "bcmlog.h"
+#include "mqueue.h"
 
 #define SYSRPC_TRACE_TRACE_ON
 
 #ifdef SYSRPC_TRACE_TRACE_ON
 #define _DBG(a) a
-#define SYSRPC_TRACE(fmt,args...) BCMLOG_Printf( BCMLOG_RPC_KERNEL_BASIC, fmt, ##args )
+#define SYSRPC_TRACE(fmt , args...) \
+	BCMLOG_Printf(BCMLOG_RPC_KERNEL_BASIC, fmt, ##args)
 #else
 #define SYSRPC_TRACE(str) {}
 #endif
 
+static MsgQueueHandle_t sysRpcMQhandle;
+
 static int __init bcm_fuse_rpc_init_module(void);
 static void __exit bcm_fuse_rpc_exit_module(void);
 
-static struct task_struct *sysRpcThread = NULL;
-static int gAvailData = 0;
-
-typedef struct {
-	struct list_head mList;
-	void *data;
-} SysRpcMsgInfo_t;
-
-static spinlock_t mLock;
-static wait_queue_head_t mWaitQ;
-
-SysRpcMsgInfo_t gSysRpcMsgInfo = { LIST_HEAD_INIT(gSysRpcMsgInfo.mList), NULL };
-
-#define RPC_READ_LOCK		spin_lock_bh(&mLock)
-#define RPC_READ_UNLOCK		spin_unlock_bh(&mLock)
-
-#define RPC_WRITE_LOCK		spin_lock_bh(&mLock)
-#define RPC_WRITE_UNLOCK	spin_unlock_bh(&mLock)
 
 /***************************************************************************/
 /**
@@ -98,8 +84,8 @@ void BcmRpc_SetApSleep(bool inSleep)
 
 void RPC_Assert(char *expr, char *file, int line, int value)
 {
-	printk("RPC Assert !!! (%s) file=%s line=%d val=%d \n", expr, file,
-	       line, value);
+	printk(KERN_CRIT "RPC Assert !!! (%s) file=%s line=%d val=%d\n",
+				expr, file, line, value);
 }
 
 /****************************************************************************
@@ -109,41 +95,12 @@ void RPC_Assert(char *expr, char *file, int line, int value)
 *  kthread handler
 *
 ***************************************************************************/
-static int sysRpcKthreadFn(void *data)
+static int sysRpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 {
-	Boolean isEmpty;
-	while (1) {
-		RPC_READ_LOCK;
-		isEmpty = (Boolean) list_empty(&gSysRpcMsgInfo.mList);
-		RPC_READ_UNLOCK;
-
-		if (isEmpty) {
-			gAvailData = 0;
-			_DBG(SYSRPC_TRACE
-			     ("sysrpc:before wait %x\n", (int)jiffies));
-			wait_event_interruptible(mWaitQ, gAvailData);
-			_DBG(SYSRPC_TRACE
-			     ("sysrpc:after wait %x\n", (int)jiffies));
-		} else {
-			struct list_head *entry;
-			SysRpcMsgInfo_t *Item = NULL;
-			void *data;
-
-			RPC_WRITE_LOCK;
-			entry = gSysRpcMsgInfo.mList.next;
-			Item = list_entry(entry, SysRpcMsgInfo_t, mList);
-			data = Item->data;
-
-			list_del(entry);
-			kfree(entry);
-			RPC_WRITE_UNLOCK;
-
-			_DBG(SYSRPC_TRACE
-			     ("sysrpc: Handle event=%x\n", (int)data));
-
-			RPC_HandleEvent(data);
-		}
-	}
+	_DBG(SYSRPC_TRACE(
+		"RPC_BufferDelivery PROCESS sysrpc mHandle=%x event=%d\n",
+		(int)mHandle, (int)data));
+	RPC_HandleEvent(data);
 	return 0;
 }
 
@@ -156,25 +113,16 @@ static int sysRpcKthreadFn(void *data)
 ***************************************************************************/
 static void sysRpcHandlerCbk(void *eventHandle)
 {
-	SysRpcMsgInfo_t *elem;
-
-	elem = kmalloc(sizeof(SysRpcMsgInfo_t), GFP_ATOMIC);
-	if (!elem) {
-		_DBG(SYSRPC_TRACE
-		     ("sysrpc: sysRpcHandlerCbk Allocation error\n"));
-		return;
+	int ret;
+	_DBG(SYSRPC_TRACE(
+		"RPC_BufferDelivery POST sysrpc h=%d\n\n", (int)eventHandle));
+	ret = MsgQueueAdd(&sysRpcMQhandle, eventHandle);
+	if (ret != 0) {
+		_DBG(SYSRPC_TRACE(
+			"sysrpc: sysRpcHandlerCbk POST event FAIL=%x\n\n",
+			(int)eventHandle));
+		RPC_PACKET_FreeBufferEx(eventHandle, 0);
 	}
-	elem->data = eventHandle;
-
-	//add to queue
-	RPC_WRITE_LOCK;
-	list_add_tail(&elem->mList, &gSysRpcMsgInfo.mList);
-	RPC_WRITE_UNLOCK;
-
-	_DBG(SYSRPC_TRACE("sysrpc: Post event=%x\n", (int)eventHandle));
-
-	gAvailData = 1;
-	wake_up_interruptible(&mWaitQ);
 }
 
 /****************************************************************************
@@ -186,14 +134,14 @@ static void sysRpcHandlerCbk(void *eventHandle)
 ***************************************************************************/
 UInt32 RPC_Init(void)
 {
-	INIT_LIST_HEAD(&gSysRpcMsgInfo.mList);
-	spin_lock_init(&mLock);
-	init_waitqueue_head(&mWaitQ);
+	int ret;
 
-	sysRpcThread = kthread_run(sysRpcKthreadFn, NULL, "sysrpc_kthread");
+	ret = MsgQueueInit(&sysRpcMQhandle, sysRpcKthreadFn,
+				"SysRpcKThread", 0, NULL);
 
-	if (!sysRpcThread) {
-		RPC_DEBUG(DBG_ERROR, "sysrpc: kthread_run fail...!\n");
+	if (ret != 0) {
+		RPC_DEBUG(DBG_ERROR, "sysrpc: MsgQueueInit fail...!\n");
+		printk(KERN_CRIT "MsgQueueInit fail\n");
 		return 1;
 	}
 
@@ -205,13 +153,13 @@ UInt32 RPC_Init(void)
 		RPC_DEBUG(DBG_ERROR, "registering the RPC device fail...!\n");
 		return 1;
 	}
-	// initialize the synchronous RPC interface
+	/* initialize the synchronous RPC interface*/
 	if (RPC_SyncInitialize() != RESULT_OK) {
 		RPC_DEBUG(DBG_ERROR, "RPC_SyncInitialize fail...!\n");
 		return 1;
 	}
 
-	return (0);
+	return 0;
 }
 
 /****************************************************************************
@@ -247,7 +195,7 @@ static int __init bcm_fuse_rpc_init_module(void)
 ***************************************************************************/
 static void __exit bcm_fuse_rpc_exit_module(void)
 {
-
+	MsgQueueDeInit(&sysRpcMQhandle);
 	return;
 }
 

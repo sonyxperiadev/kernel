@@ -106,32 +106,9 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 	switch (Params[0]) {
 
 	case 0:		/* at*maudmode 0 */
-#if !defined(USE_NEW_AUDIO_PARAM)
-		Params[0] = AUDCTRL_GetAudioMode();
-		aTrace(LOG_AUDIO_DRIVER, " %s mode %ld\n", __func__, Params[0]);
-#endif
 		break;
 
 	case 1:		/* at*maudmode 1 mode */
-#if !defined(USE_NEW_AUDIO_PARAM)
-		AUDCTRL_GetSrcSinkByMode(Params[1], &mic, &spk);
-		pCurSel[0] =
-		    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
-				     1].iLineSelect[0];
-		pCurSel[1] =
-		    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
-				     1].iLineSelect[1];
-
-		/* Update 'VC-SEL' -- */
-		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
-				 1].iLineSelect[0] = mic;
-		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
-				 1].iLineSelect[1] = spk;
-		AUDCTRL_SetAudioMode(Params[1]);
-		aTrace(LOG_AUDIO_DRIVER,
-				" %s mic %d spk %d mode %ld\n", __func__,
-				mic, spk, Params[1]);
-#endif
 		break;
 
 	case 8:		/* at*maudmode=8 */
@@ -214,16 +191,13 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		break;
 		/* at*maudmode=14  --> read current mode and app */
 	case 14:
-#if defined(USE_NEW_AUDIO_PARAM)
 		Params[0] = AUDCTRL_GetAudioApp();
 		Params[1] = AUDCTRL_GetAudioMode();
 		aTrace(LOG_AUDIO_DRIVER, "%s app %ld mode %ld\n",
 				__func__, Params[0], Params[1]);
-#endif
 		break;
 		/* at*maudmode=15  --> set current mode and app */
 	case 15:
-#if defined(USE_NEW_AUDIO_PARAM)
 		app = Params[1];
 		mode = Params[2];
 
@@ -257,7 +231,6 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		aTrace(LOG_AUDIO_DRIVER, "%s mic %d spk %d mode %ld app %ld\n",
 				__func__, mic, spk, Params[2],
 				Params[1]);
-#endif
 		break;
 
 	case 99:		/* at*maudmode=99  --> stop tuning */
@@ -283,21 +256,10 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				     PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
 				    || (Params[2] ==
 					PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
-#if defined(USE_NEW_AUDIO_PARAM)
 					if (AUDCTRL_GetAudioMode() ==
 							AUDIO_MODE_HEADSET
 					    || AUDCTRL_GetAudioMode() ==
 					    AUDIO_MODE_TTY
-#else
-					if ((AUDCTRL_GetAudioMode() ==
-					     AUDIO_MODE_HEADSET)
-					    || (AUDCTRL_GetAudioMode() ==
-						AUDIO_MODE_HEADSET_WB)
-					    || (AUDCTRL_GetAudioMode() ==
-						AUDIO_MODE_TTY)
-					    || (AUDCTRL_GetAudioMode() ==
-						AUDIO_MODE_TTY_WB)
-#endif
 					) {
 
 					extern_ihf_off();
@@ -316,16 +278,8 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 						extern_hs_set_gain(gain*25,
 						AUDIO_HS_RIGHT);
 				}
-#if defined(USE_NEW_AUDIO_PARAM)
 					else if (AUDCTRL_GetAudioMode() ==
 						 AUDIO_MODE_SPEAKERPHONE
-#else
-					else if ((AUDCTRL_GetAudioMode() ==
-						  AUDIO_MODE_SPEAKERPHONE)
-						 || (AUDCTRL_GetAudioMode()
-						     ==
-						     AUDIO_MODE_SPEAKERPHONE_WB)
-#endif
 					) {
 
 					extern_hs_off();
@@ -347,15 +301,8 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 
 				if (Params[2]
 				    == PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
-#if defined(USE_NEW_AUDIO_PARAM)
 					if (AUDCTRL_GetAudioMode() ==
 					    AUDIO_MODE_SPEAKERPHONE
-#else
-					if ((AUDCTRL_GetAudioMode() ==
-					     AUDIO_MODE_SPEAKERPHONE)
-					    || (AUDCTRL_GetAudioMode() ==
-						AUDIO_MODE_SPEAKERPHONE_WB)
-#endif
 					) {
 
 					aTrace(LOG_AUDIO_DRIVER,

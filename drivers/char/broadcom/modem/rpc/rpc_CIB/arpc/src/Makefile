@@ -2,6 +2,7 @@
 EXTRA_CFLAGS += -Werror
 
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/ipc/
+EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/public
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/inc
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/inc

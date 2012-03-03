@@ -6645,6 +6645,60 @@ static int mm_ccu_clk_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 volt
 	return 0;
 }
 
+static int mm_ccu_clk_get_voltage(struct ccu_clk * ccu_clk, int freq_id)
+{
+	u32 shift, reg_val;
+	u32 reg_addr;
+	int volt_id;
+
+	/*Ideally we should compare against ccu_clk->freq_count,but anyways
+	 * allowing read for all 8 freq Ids.*/
+	if(freq_id >= 8)
+		return -EINVAL;
+
+	switch(freq_id)
+	{
+	case CCU_VLT0:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_00_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT1:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_01_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT2:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_02_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT3:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_03_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT4:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_04_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT5:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_05_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT6:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_06_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT7:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_07_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	default:
+		return -EINVAL;
+	}
+	reg_val =  readl(reg_addr);
+	volt_id = (reg_val & (CCU_VLT_MASK << shift)) >> shift;
+
+	return volt_id;
+}
+
 
 
 /* table for registering clock */
@@ -6918,6 +6972,7 @@ int __init rhea_clock_init(void)
 	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;
 	mm_ccu_ops.get_freq_policy = mm_ccu_get_freq_policy;
 	mm_ccu_ops.set_voltage = mm_ccu_clk_set_voltage;
+	mm_ccu_ops.get_voltage = mm_ccu_clk_get_voltage;
 	mm_ccu_ops.set_peri_voltage = mm_ccu_set_peri_voltage;
 
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;

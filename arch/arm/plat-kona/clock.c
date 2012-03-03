@@ -1714,6 +1714,20 @@ int ccu_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage)
 }
 EXPORT_SYMBOL(ccu_set_voltage);
 
+int ccu_get_voltage(struct ccu_clk * ccu_clk, int freq_id)
+{
+	int ret;
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->get_voltage)
+		return -EINVAL;
+	CCU_PI_ENABLE(ccu_clk,1);
+	ret = ccu_clk->ccu_ops->get_voltage(ccu_clk, freq_id);
+	CCU_PI_ENABLE(ccu_clk,0);
+	return ret;
+
+}
+EXPORT_SYMBOL(ccu_get_voltage);
+
+
 int ccu_set_active_policy(struct ccu_clk * ccu_clk, u32 policy)
 {
 	int ret;
@@ -2061,6 +2075,60 @@ static int ccu_clk_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage
 	return 0;
 }
 
+static int ccu_clk_get_voltage(struct ccu_clk * ccu_clk, int freq_id)
+{
+	u32 shift, reg_val;
+	u32 reg_addr;
+	int volt_id;
+
+	/*Ideally we should compare against ccu_clk->freq_count,
+		but anyways allowing read for all 8 freq Ids.*/
+	if(freq_id >= 8)
+		return -EINVAL;
+
+	switch(freq_id)
+	{
+	case CCU_VLT0:
+		shift = CCU_VLT0_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT1:
+		shift = CCU_VLT1_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT2:
+		shift = CCU_VLT2_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT3:
+		shift = CCU_VLT3_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT4:
+		shift = CCU_VLT4_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT5:
+		shift = CCU_VLT5_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT6:
+		shift = CCU_VLT6_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT7:
+		shift = CCU_VLT7_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	default:
+		return -EINVAL;
+	}
+	reg_val =  readl(reg_addr);
+	volt_id = (reg_val & (CCU_VLT_MASK << shift)) >> shift;
+
+	return volt_id;
+}
+
 static int ccu_policy_dbg_get_act_freqid(struct ccu_clk * ccu_clk)
 {
 	u32 reg_val;
@@ -2179,6 +2247,7 @@ struct ccu_clk_ops gen_ccu_ops =
 	.get_freq_policy = ccu_clk_get_freq_policy,
 	.set_peri_voltage = ccu_clk_set_peri_voltage,
 	.set_voltage = ccu_clk_set_voltage,
+	.get_voltage = ccu_clk_get_voltage,
 	.set_active_policy = ccu_clk_set_active_policy,
 	.get_active_policy = ccu_clk_get_active_policy,
 	.save_state	= ccu_clk_save_state,
@@ -4978,6 +5047,172 @@ static const struct file_operations clock_source_fops =
 	.release                = single_release,
 };
 
+static int __ccu_volt_id_update_for_freqid(struct clk *clk, u8 freq_id, u8 volt_id)
+{
+    struct ccu_clk * ccu_clk;
+    BUG_ON(clk->clk_type != CLK_TYPE_CCU);
+    ccu_clk = to_ccu_clk(clk);
+
+
+    if(freq_id > 8 || volt_id > 0xF)
+	return -EINVAL;
+    if (freq_id > (ccu_clk->freq_count - 1))
+	pr_info("invalid freq_id for this CCU\n");
+
+    /* enable write access*/
+    ccu_write_access_enable(ccu_clk,true);
+    /*stop policy engine */
+    ccu_policy_engine_stop(ccu_clk);
+    ccu_set_voltage(ccu_clk, freq_id, volt_id);
+
+    /*Set ATL & AC */
+    if(clk->flags & CCU_TARGET_LOAD) {
+	if(clk->flags & CCU_TARGET_AC)
+	    ccu_set_policy_ctrl(ccu_clk, POLICY_CTRL_GO_AC, CCU_AUTOCOPY_ON);
+	ccu_policy_engine_resume(ccu_clk, CCU_LOAD_TARGET);
+    } else
+	ccu_policy_engine_resume(ccu_clk, CCU_LOAD_ACTIVE);
+
+    /* disable write access*/
+    ccu_write_access_enable(ccu_clk, false);
+
+    return 0;
+}
+
+int ccu_volt_id_update_for_freqid(struct clk *clk, u8 freq_id, u8 volt_id)
+{
+	int ret = 0;
+	unsigned long flags;
+	struct ccu_clk * ccu_clk;
+
+	if(IS_ERR_OR_NULL(clk))
+		return -EINVAL;
+	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
+	ccu_clk = to_ccu_clk(clk);
+
+	pr_info("%s - %s\n", __func__, clk->name);
+	spin_lock_irqsave(&clk_lock, flags);
+	CCU_PI_ENABLE(ccu_clk,1);
+	ret = __ccu_volt_id_update_for_freqid(clk, freq_id, volt_id);
+	CCU_PI_ENABLE(ccu_clk,0);
+	spin_unlock_irqrestore(&clk_lock, flags);
+
+	return ret;
+}
+
+int ccu_volt_tbl_display(struct clk *clk, u8 *volt_tbl)
+{
+	int ret = 0;
+	int freq_id;
+	unsigned long flags;
+	struct ccu_clk * ccu_clk;
+
+	if(volt_tbl == NULL)
+	    return -EINVAL;
+	if(IS_ERR_OR_NULL(clk))
+		return -EINVAL;
+	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
+	ccu_clk = to_ccu_clk(clk);
+	spin_lock_irqsave(&clk_lock, flags);
+	CCU_PI_ENABLE(ccu_clk,1);
+
+	for (freq_id = 0; freq_id < 8; freq_id++) {
+	    /*if (freq_id > (ccu_clk->freq_count - 1))
+		pr_info("invalid freq_id for this CCU\n"); */
+	    volt_tbl[freq_id] = ccu_get_voltage(ccu_clk, freq_id);
+	}
+
+	CCU_PI_ENABLE(ccu_clk,0);
+	spin_unlock_irqrestore(&clk_lock, flags);
+
+	return ret;
+}
+
+
+static int ccu_volt_id_update_open(struct inode *inode, struct file *file)
+{
+    file->private_data = inode->i_private;
+    return 0;
+}
+static ssize_t ccu_volt_id_display(struct file *file, char __user *buf, size_t len, loff_t *offset)
+{
+    u8 volt_tbl[8];
+    int i, length =0;
+    static ssize_t total_len = 0;
+    char out_str[400];
+    char *out_ptr;
+    struct clk *clk = file->private_data;
+
+    /* This is to avoid the read getting called again and again. This is
+     * useful only if we have large chunk of data greater than PAGE_SIZE. we
+     * have only small chunk of data */
+    if(total_len > 0) {
+	total_len = 0;
+	return 0;
+    }
+
+    memset(volt_tbl, 0, sizeof(volt_tbl));
+    memset(out_str, 0, sizeof(out_str));
+    out_ptr = &out_str[0];
+    if (len < 400)
+	return -EINVAL;
+
+    if(ccu_volt_tbl_display(clk, volt_tbl))
+	return -EINVAL;
+
+    for (i=0;i<8;i++) {
+	length = sprintf(out_ptr, "volt_tbl[%d]: %x\n", i, volt_tbl[i]);
+	out_ptr += length;
+	total_len += length;
+    }
+
+    if (copy_to_user(buf, out_str, total_len))
+	return -EFAULT;
+
+    return total_len;
+
+}
+static ssize_t ccu_volt_id_update(struct file *file,
+	char const __user *buf, size_t count, loff_t *offset)
+{
+	struct clk *clk = file->private_data;
+	u32 len = 0;
+	char *str_ptr;
+	u32 freq_id = 0xFFFF, volt_id = 0xFFFF;
+
+	char input_str[10];
+
+	memset(input_str, 0, 10);
+	if (count > 10)
+		len = 10;
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	str_ptr = &input_str[0];
+	sscanf(str_ptr, "%x%x", &freq_id, &volt_id);
+	if (freq_id == 0xFFFF || volt_id == 0xFFFF) {
+	    printk("invalid input\n");
+	    return count;
+	}
+	if (freq_id > 7 || volt_id > 0xF) {
+	    pr_info("Invalid param\n");
+	    return count;
+	}
+	ccu_volt_id_update_for_freqid(clk, (u8)freq_id, (u8)volt_id);
+	return count;
+}
+
+
+static struct file_operations ccu_volt_tbl_update_fops =
+{
+    .open = ccu_volt_id_update_open,
+    .write = ccu_volt_id_update,
+    .read = ccu_volt_id_display,
+};
+
 static struct dentry *dent_clk_root_dir;
 int __init clock_debug_init(void)
 {
@@ -4999,7 +5234,8 @@ int __init clock_debug_init(void)
 int __init clock_debug_add_ccu(struct clk *c)
 {
 	struct ccu_clk *ccu_clk;
-	struct dentry *dent_clock_list = 0, *dent_freqid=0, *dent_policy =0;
+	struct dentry *dent_clock_list = 0, *dent_freqid=0, *dent_policy =0,
+	*dent_volt_tbl =0;
 	struct dentry * dent_count;
 
 	BUG_ON(!dent_clk_root_dir);
@@ -5024,6 +5260,10 @@ int __init clock_debug_add_ccu(struct clk *c)
 	dent_count = debugfs_create_u32("use_cnt", 0444, ccu_clk->dent_ccu_dir, &c->use_cnt);
 	if(!dent_count)
 		goto err;
+	dent_volt_tbl = debugfs_create_file("volt_id_update",
+		(S_IWUSR | S_IRUSR), ccu_clk->dent_ccu_dir, c, &ccu_volt_tbl_update_fops);
+	if (!dent_volt_tbl)
+	    goto err;
 
 
 	return 0;

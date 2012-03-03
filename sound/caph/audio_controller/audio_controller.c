@@ -541,13 +541,8 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 		   here need to pass audio mode to CP.
 		 */
 
-#if defined(USE_NEW_AUDIO_PARAM)
 		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
 				      (UInt32) mode, (UInt32) app, 0, 0, 0);
-#else
-		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
-				      (UInt32) mode, 0, 0, 0, 0);
-#endif
 		return;
 	}
 
@@ -600,12 +595,8 @@ void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 	AudioSysParm_t *p;
 #endif
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	p = &(AudParmP()[AUDCTRL_GetAudioMode()]);
-#else
 	p = &(AudParmP()[AUDCTRL_GetAudioMode()
 			 + AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER]);
-#endif
 
 	aTrace(LOG_AUDIO_CNTLR, "%s volume = %d", __func__, volume);
 
@@ -878,7 +869,10 @@ void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app)
 	/*enable clock if it is not enabled. */
 
 	/* Here may need to consider for other apps like vt and voip etc */
-	AUDDRV_SetAudioMode(mode, app);
+	AUDDRV_SetAudioMode(mode, app,
+		0,
+		0,
+		0); /*need pathID to find mixer input*/
 
 	/*disable clock if it is enabled by this function */
 	if (!bClk)
@@ -900,7 +894,8 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 
 	aTrace(LOG_AUDIO_CNTLR,
-			"%s mode %d, pathID %d", __func__, mode, arg_pathID);
+			"%s mode %d, pathID %d",
+			__func__, mode, arg_pathID);
 
 	path = csl_caph_FindPath(arg_pathID);
 
@@ -912,11 +907,12 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 		/*if arm2sp does not use HW mixer, no need to set gain */
 	}
 
-	if (!path)
+	if (!path) {
+		aTrace(LOG_AUDIO_CNTLR,
+			"%s mode %d, pathID %d no path",
+			__func__, mode, arg_pathID);
 		return; /*don't know which mixer input */
-	if (!path->srcmRoute[0][0].outChnl)
-		return;
-		/*if arm2sp does not use HW mixer, no need to set gain */
+	}
 
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
@@ -1061,7 +1057,8 @@ also need to support audio profile (and/or mode) set from user space code
 
 	currAudioMode_record = mode;
 
-	AUDDRV_SetAudioMode_Mic(mode, AUDCTRL_GetAudioApp(), 0);
+	AUDDRV_SetAudioMode_Mic(mode, AUDCTRL_GetAudioApp(),
+		arg_pathID, 0);
 
 	if (!bClk)
 		csl_caph_ControlHWClock(FALSE);
@@ -1107,6 +1104,7 @@ void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode)
 		AUDDRV_SetAudioMode_Multicast(mode, AUDCTRL_GetAudioApp());
 	}
 	break;
+
 	case AUDIO_MODE_SPEAKERPHONE:
 	if (mode == AUDIO_MODE_HEADSET) {
 		/*Adding HS load HS param*/
@@ -1116,11 +1114,12 @@ void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode)
 		setExternAudioGain(AUDIO_MODE_RESERVE, AUDCTRL_GetAudioApp());
 	}
 	break;
+
 	/*Multicasting to BT+IHF or any other
 	right now for any BT+IHF case we will not end up here*/
 	default:
 	AUDDRV_SetAudioMode_Speaker(
-		mode, AUDCTRL_GetAudioApp(), 0, FALSE);
+		mode, AUDCTRL_GetAudioApp(), 0, FALSE); /* need pathID */
 	currAudioMode_playback = mode;
 	break;
 	} /*end of switch (currAudioMode)*/
@@ -1148,36 +1147,22 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 	switch (mode) {
 	case AUDIO_MODE_HANDSET:
 	case AUDIO_MODE_HAC:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HANDSET_WB:
-	case AUDIO_MODE_HAC_WB:
-#endif
 		*pMic = AUDIO_SOURCE_ANALOG_MAIN;
 		*pSpk = AUDIO_SINK_HANDSET;
 		break;
 
 	case AUDIO_MODE_HEADSET:
 	case AUDIO_MODE_TTY:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HEADSET_WB:
-	case AUDIO_MODE_TTY_WB:
-#endif
 		*pMic = AUDIO_SOURCE_ANALOG_AUX;
 		*pSpk = AUDIO_SINK_HEADSET;
 		break;
 
 	case AUDIO_MODE_BLUETOOTH:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_BLUETOOTH_WB:
-#endif
 		*pMic = AUDIO_SOURCE_BTM;
 		*pSpk = AUDIO_SINK_BTM;
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_SPEAKERPHONE_WB:
-#endif
 		*pMic = AUDIO_SOURCE_ANALOG_MAIN;
 		*pSpk = AUDIO_SINK_LOUDSPK;
 		break;
@@ -1225,9 +1210,7 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 
 	/*save audio for powerOnExternalAmp() to use. */
 	mode = GetAudioModeBySink(sink);
-#if defined(USE_NEW_AUDIO_PARAM)
 	AUDCTRL_SaveAudioApp(AUDIO_APP_MUSIC);
-#endif
 	AUDCTRL_SaveAudioMode(mode);
 
 	if (source == AUDIO_SOURCE_I2S && AUDCTRL_InVoiceCall() == FALSE) {
@@ -1387,6 +1370,7 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 
 	path = csl_caph_FindRenderPath(streamID);
 	if (path == 0) {
+		/*can remove this function call*/
 		AUDCTRL_SetAudioMode_ForMusicPlayback(mode, pathID, FALSE);
 		return RESULT_OK;
 	}
@@ -1403,8 +1387,6 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 
 	if (mode == AUDIO_MODE_RESERVE)
 		return RESULT_OK;	/*no need to set HW gain for FM TX. */
-	/*also need to support audio profile/mode set from user space code to
-	   support multi-profile/app. */
 
 	AUDCTRL_SaveAudioApp(AUDIO_APP_MUSIC);
 
@@ -1412,8 +1394,6 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 		pathID = path->pathID;
 	/*arm2sp may use HW mixer, whose gain should be set */
 	AUDCTRL_SetAudioMode_ForMusicPlayback(mode, pathID, FALSE);
-
-	/*for multi-cast, also use path->sink[1] */
 
 	return RESULT_OK;
 }
@@ -1465,12 +1445,8 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 	AudioSysParm_t *p;
 #endif
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	p = &(AudParmP()[GetAudioModeBySink(sink)]);
-#else
 	p = &(AudParmP()[GetAudioModeBySink(sink)
 			 + AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER]);
-#endif
 
 	if ((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)
 	    || sink == AUDIO_SINK_BTS)
@@ -1761,13 +1737,13 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 			powerOnExternalAmp(sink, FmUse, TRUE, FALSE);
 
 		AUDCTRL_SetAudioMode_ForFM(
-			GetAudioModeBySink(sink), 0, FALSE);
+			GetAudioModeBySink(sink), pathID, FALSE);
 	} else {
 		if (sink == AUDIO_SINK_LOUDSPK || sink == AUDIO_SINK_HEADSET)
 			powerOnExternalAmp(sink, AudioUse, TRUE, FALSE);
 
 		AUDCTRL_SetAudioMode_ForMusicPlayback(
-			GetAudioModeBySink(sink), 0, FALSE);
+			GetAudioModeBySink(sink), pathID, FALSE);
 
 	}
 
@@ -1842,7 +1818,7 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 	}
 #ifndef CONFIG_ENABLE_SSMULTICAST
 	AUDCTRL_SetAudioMode_ForMusicPlayback(
-		GetAudioModeBySink(sink), 0, FALSE);
+		GetAudioModeBySink(sink), pathID, FALSE);
 #else
 	AUDCTRL_SetAudioMode_ForMusicMulticast(
 		GetAudioModeBySink(sink));
@@ -1889,7 +1865,7 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 
 		AUDDRV_SetAudioMode_Speaker(AUDIO_MODE_HEADSET,
 				AUDCTRL_GetAudioApp(),
-				0, FALSE);
+				pathID, FALSE);
 		setExternAudioGain(AUDIO_MODE_HEADSET, AUDCTRL_GetAudioApp());
 		AUDCTRL_SaveAudioMode(AUDIO_MODE_HEADSET);
 	}
@@ -1981,8 +1957,9 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 		if (!AUDCTRL_InVoiceCall()) {
 			/* without setting mic gains (such as PGA),
 			   idle mode recording gives low volume */
-			AUDDRV_SetAudioMode_Mic(AUDCTRL_GetAudioMode(),
-						AUDCTRL_GetAudioApp(), 0);
+			AUDDRV_SetAudioMode_Mic(
+				AUDCTRL_GetAudioMode(),
+				AUDCTRL_GetAudioApp(), pathID, 0);
 		}
 
 		/* if bInVoiceCall== TRUE, assume the telphony_init() function
@@ -2526,7 +2503,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		AUDCTRL_SaveAudioMode(audio_mode);
 		AUDCTRL_SaveAudioApp(AUDIO_APP_LOOPBACK);
 		AUDCTRL_SetAudioMode_ForMusicPlayback(audio_mode, pathID, TRUE);
-		AUDCTRL_SetAudioMode_ForMusicRecord(audio_mode, 0);
+		AUDCTRL_SetAudioMode_ForMusicRecord(audio_mode, pathID);
 
 		/* Enable Loopback ctrl */
 		/* Enable PMU for headset/IHF */
@@ -2749,11 +2726,6 @@ int AUDCTRL_Telephony_HW_16K(AudioMode_t voiceMode)
 	if (voiceMode == AUDIO_MODE_BLUETOOTH)
 		is_call16k = AUDCTRL_IsBTMWB();
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	if (voiceMode == AUDIO_MODE_BLUETOOTH_WB)
-		is_call16k = AUDCTRL_IsBTMWB();
-#endif
-
 	return is_call16k;
 }
 
@@ -2816,6 +2788,10 @@ void AUDCTRL_SetIHFmode(Boolean stIHF)
 ****************************************************************************/
 void AUDCTRL_SetBTMode(int mode)
 {
+	if ((mode == BT_MODE_WB) || (mode == BT_MODE_WB_TEST))
+		AUDCTRL_SetBTMTypeWB(TRUE);
+	else
+		AUDCTRL_SetBTMTypeWB(FALSE);
 	csl_caph_hwctrl_SetBTMode(mode);
 }
 
@@ -3319,11 +3295,7 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 	AudioSysParm_t *p;
 #endif
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	p = &(AudParmP()[mode]);
-#else
 	p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
-#endif
 
 	aTrace(LOG_AUDIO_CNTLR, "%s mode %d, app %d\n", __func__, mode, app);
 
@@ -3336,14 +3308,6 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 #ifdef CONFIG_ENABLE_SSMULTICAST
 	case AUDIO_MODE_RESERVE:
 #endif
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HEADSET_WB:
-	case AUDIO_MODE_TTY_WB:
-#ifdef CONFIG_ENABLE_SSMULTICAST
-	case AUDIO_MODE_RESERVE_WB:
-#endif
-#endif
-
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
 		extern_hs_set_gain(pmu_gain * 25, AUDIO_HS_LEFT);
 
@@ -3353,9 +3317,6 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_SPEAKERPHONE_WB:
-#endif
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
 		extern_ihf_set_gain(pmu_gain * 25);
 
