@@ -541,13 +541,8 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 		   here need to pass audio mode to CP.
 		 */
 
-#if defined(USE_NEW_AUDIO_PARAM)
 		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
 				      (UInt32) mode, (UInt32) app, 0, 0, 0);
-#else
-		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
-				      (UInt32) mode, 0, 0, 0, 0);
-#endif
 		return;
 	}
 
@@ -600,12 +595,8 @@ void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 	AudioSysParm_t *p;
 #endif
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	p = &(AudParmP()[AUDCTRL_GetAudioMode()]);
-#else
 	p = &(AudParmP()[AUDCTRL_GetAudioMode()
 			 + AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER]);
-#endif
 
 	aTrace(LOG_AUDIO_CNTLR, "%s volume = %d", __func__, volume);
 
@@ -1156,36 +1147,22 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 	switch (mode) {
 	case AUDIO_MODE_HANDSET:
 	case AUDIO_MODE_HAC:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HANDSET_WB:
-	case AUDIO_MODE_HAC_WB:
-#endif
 		*pMic = AUDIO_SOURCE_ANALOG_MAIN;
 		*pSpk = AUDIO_SINK_HANDSET;
 		break;
 
 	case AUDIO_MODE_HEADSET:
 	case AUDIO_MODE_TTY:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HEADSET_WB:
-	case AUDIO_MODE_TTY_WB:
-#endif
 		*pMic = AUDIO_SOURCE_ANALOG_AUX;
 		*pSpk = AUDIO_SINK_HEADSET;
 		break;
 
 	case AUDIO_MODE_BLUETOOTH:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_BLUETOOTH_WB:
-#endif
 		*pMic = AUDIO_SOURCE_BTM;
 		*pSpk = AUDIO_SINK_BTM;
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_SPEAKERPHONE_WB:
-#endif
 		*pMic = AUDIO_SOURCE_ANALOG_MAIN;
 		*pSpk = AUDIO_SINK_LOUDSPK;
 		break;
@@ -1233,9 +1210,7 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 
 	/*save audio for powerOnExternalAmp() to use. */
 	mode = GetAudioModeBySink(sink);
-#if defined(USE_NEW_AUDIO_PARAM)
 	AUDCTRL_SaveAudioApp(AUDIO_APP_MUSIC);
-#endif
 	AUDCTRL_SaveAudioMode(mode);
 
 	if (source == AUDIO_SOURCE_I2S && AUDCTRL_InVoiceCall() == FALSE) {
@@ -1470,12 +1445,8 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 	AudioSysParm_t *p;
 #endif
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	p = &(AudParmP()[GetAudioModeBySink(sink)]);
-#else
 	p = &(AudParmP()[GetAudioModeBySink(sink)
 			 + AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER]);
-#endif
 
 	if ((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)
 	    || sink == AUDIO_SINK_BTS)
@@ -2755,11 +2726,6 @@ int AUDCTRL_Telephony_HW_16K(AudioMode_t voiceMode)
 	if (voiceMode == AUDIO_MODE_BLUETOOTH)
 		is_call16k = AUDCTRL_IsBTMWB();
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	if (voiceMode == AUDIO_MODE_BLUETOOTH_WB)
-		is_call16k = AUDCTRL_IsBTMWB();
-#endif
-
 	return is_call16k;
 }
 
@@ -3329,11 +3295,7 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 	AudioSysParm_t *p;
 #endif
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	p = &(AudParmP()[mode]);
-#else
 	p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
-#endif
 
 	aTrace(LOG_AUDIO_CNTLR, "%s mode %d, app %d\n", __func__, mode, app);
 
@@ -3346,14 +3308,6 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 #ifdef CONFIG_ENABLE_SSMULTICAST
 	case AUDIO_MODE_RESERVE:
 #endif
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HEADSET_WB:
-	case AUDIO_MODE_TTY_WB:
-#ifdef CONFIG_ENABLE_SSMULTICAST
-	case AUDIO_MODE_RESERVE_WB:
-#endif
-#endif
-
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
 		extern_hs_set_gain(pmu_gain * 25, AUDIO_HS_LEFT);
 
@@ -3363,9 +3317,6 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_SPEAKERPHONE_WB:
-#endif
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
 		extern_ihf_set_gain(pmu_gain * 25);
 

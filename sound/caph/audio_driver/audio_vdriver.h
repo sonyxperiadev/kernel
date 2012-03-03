@@ -277,14 +277,10 @@ SysAudioParm_t *AudParmP(void);
 AudioSysParm_t *AudParmP(void);
 #endif
 
-#if defined(USE_NEW_AUDIO_PARAM)
 void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 	CSL_CAPH_PathID ulPathID,
 	CSL_CAPH_PathID ul2PathID,
 	CSL_CAPH_PathID dlPathID);
-#else
-void AUDDRV_SetAudioMode(AudioMode_t audio_mode);
-#endif
 
 void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 			AudioApp_t audio_app,

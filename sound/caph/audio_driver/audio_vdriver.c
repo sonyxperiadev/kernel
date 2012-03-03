@@ -742,32 +742,21 @@ void AUDDRV_DisableDSPInput(void)
 //
 //=============================================================================
 */
-#if !defined(USE_NEW_AUDIO_PARAM)
-void AUDDRV_SetAudioMode(AudioMode_t audio_mode)
-#else
 void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 	CSL_CAPH_PathID ulPathID,
 	CSL_CAPH_PathID ul2PathID,
 	CSL_CAPH_PathID dlPathID)
-#endif
 {
 	aTrace(LOG_AUDIO_DRIVER,
 			"%s mode==%d, app=%d\n\r", __func__,
 			audio_mode, audio_app);
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
-			      (UInt32) audio_mode, 0, 0, 0, 0);
-	audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
-			      (UInt32) audio_mode, 0, 0, 0, 0);
-#else
 	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
 			      (UInt32) audio_mode, (UInt32) audio_app, 0, 0, 0);
 	audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
 			      (UInt32) (audio_mode +
 					audio_app * AUDIO_MODE_NUMBER),
 			      (UInt32) audio_app, 0, 0, 0);
-#endif
 
 /*load speaker EQ filter and Mic EQ filter from sysparm to DSP*/
 /* It means mic1, mic2, speaker */
@@ -834,11 +823,7 @@ void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
 	AudioSysParm_t *p;
 #endif
 /*For SS multicast case always load params from mode AUDIO_MODE_SPEAKERPHONE*/
-#if !defined(USE_NEW_AUDIO_PARAM)
-	p = &(AudParmP()[audio_mode]);
-#else
 	p = &(AudParmP()[audio_mode + app * AUDIO_MODE_NUMBER]);
-#endif
 
 	aTrace(LOG_AUDIO_DRIVER, "%s mode=%d, app %d,\n",
 			__func__, audio_mode, app);
@@ -850,16 +835,10 @@ void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
 	switch (audiomode) {
 
 	case AUDIO_MODE_HEADSET:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HEADSET_WB:
-#endif
 		outChnl = CSL_CAPH_SRCM_STEREO_CH1;
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_SPEAKERPHONE_WB:
-#endif
 		outChnl = csl_caph_FindMixer(CSL_CAPH_DEV_IHF, 0);
 		break;
 	default:
@@ -930,11 +909,7 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 	AudioSysParm_t *p;
 #endif
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	p = &(AudParmP()[audio_mode]);
-#else
 	p = &(AudParmP()[audio_mode + app * AUDIO_MODE_NUMBER]);
-#endif
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s mode=%d, app %d, pathID %d\n",
 			__func__, audio_mode, app, arg_pathID);
@@ -946,27 +921,16 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 	switch (audio_mode) {
 	case AUDIO_MODE_HANDSET:
 	case AUDIO_MODE_HAC:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HANDSET_WB:
-	case AUDIO_MODE_HAC_WB:
-#endif
 		outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
 		break;
 
 	case AUDIO_MODE_HEADSET:
 	case AUDIO_MODE_TTY:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HEADSET_WB:
-	case AUDIO_MODE_TTY_WB:
-#endif
 /*outChnl = (CSL_CAPH_SRCM_STEREO_CH1_L | CSL_CAPH_SRCM_STEREO_CH1_R);*/
 		outChnl = CSL_CAPH_SRCM_STEREO_CH1;
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_SPEAKERPHONE_WB:
-#endif
 		outChnl = csl_caph_FindMixer(CSL_CAPH_DEV_IHF, 0);
 		break;
 
@@ -1122,11 +1086,7 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	AudioSysParm_t *p;
 #endif
 
-#if !defined(USE_NEW_AUDIO_PARAM)
-	p = &(AudParmP()[audio_mode]);
-#else
 	p = &(AudParmP()[audio_mode + app * AUDIO_MODE_NUMBER]);
-#endif
 
 	/* Load the mic gains from sysparm. */
 
@@ -1520,24 +1480,13 @@ static void AUDDRV_HW_EnableSideTone(AudioMode_t audio_mode)
 	switch (audio_mode) {
 	case AUDIO_MODE_HEADSET:
 	case AUDIO_MODE_TTY:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HEADSET_WB:
-	case AUDIO_MODE_TTY_WB:
-#endif
 		pathId = AUDDRV_PATH_HEADSET_OUTPUT;
 		break;
 	case AUDIO_MODE_HANDSET:
 	case AUDIO_MODE_HAC:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HANDSET_WB:
-	case AUDIO_MODE_HAC_WB:
-#endif
 		pathId = AUDDRV_PATH_EARPICEC_OUTPUT;
 		break;
 	case AUDIO_MODE_SPEAKERPHONE:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_SPEAKERPHONE_WB:
-#endif
 		pathId = AUDDRV_PATH_IHF_OUTPUT;
 		break;
 
@@ -1560,24 +1509,13 @@ static void AUDDRV_HW_DisableSideTone(AudioMode_t audio_mode)
 	switch (audio_mode) {
 	case AUDIO_MODE_HEADSET:
 	case AUDIO_MODE_TTY:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HEADSET_WB:
-	case AUDIO_MODE_TTY_WB:
-#endif
 		pathId = AUDDRV_PATH_HEADSET_OUTPUT;
 		break;
 	case AUDIO_MODE_HANDSET:
 	case AUDIO_MODE_HAC:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_HANDSET_WB:
-	case AUDIO_MODE_HAC_WB:
-#endif
 		pathId = AUDDRV_PATH_EARPICEC_OUTPUT;
 		break;
 	case AUDIO_MODE_SPEAKERPHONE:
-#if !defined(USE_NEW_AUDIO_PARAM)
-	case AUDIO_MODE_SPEAKERPHONE_WB:
-#endif
 		pathId = AUDDRV_PATH_IHF_OUTPUT;
 		break;
 
