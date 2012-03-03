@@ -1318,22 +1318,13 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	aTrace(LOG_AUDIO_DRIVER, "\n AUDTST_VoIP codecVal %ld\n", codecVal);
 	/* VOIP_PCM_16K or VOIP_AMR_WB */
 	if ((codecVal == 4) || (codecVal == 5)) {
-#if defined(USE_NEW_AUDIO_PARAM)
 		/* WB has to use AUDIO_APP_VOICE_CALL_WB */
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
-#else
-		AUDCTRL_SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
-#endif
 	} else { /* NB VoIP case */
-#if defined(USE_NEW_AUDIO_PARAM)
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_LOOPBACK);
-#else
-		AUDCTRL_SetAudioMode(mode);
-#endif
 	}
 	/* configure EC and NS for the loopback test */
 #if defined(USE_LOOPBACK_SYSPARM)
-#if defined(USE_NEW_AUDIO_PARAM)
 	/* use sysparm to configure EC */
 	AUDCTRL_EC((Boolean)(AudParmP()[mode +
 	AUDIO_APP_LOOPBACK * AUDIO_MODE_NUMBER].echo_cancelling_enable),
@@ -1342,15 +1333,6 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	AUDCTRL_NS((Boolean)(AudParmP()[mode +
 	AUDIO_APP_LOOPBACK * AUDIO_MODE_NUMBER].\
 	ul_noise_suppression_enable));
-#else
-	/* use sysparm to configure EC */
-	AUDCTRL_EC((Boolean)(AudParmP()[
-	mode].echo_cancelling_enable),
-	0);
-	/* use sysparm to configure NS */
-	AUDCTRL_NS((Boolean)(AudParmP()[
-	mode].ul_noise_suppression_enable));
-#endif
 #else	/* USE_LOOPBACK_SYSPARM */
 	AUDCTRL_EC(FALSE, 0);
 	AUDCTRL_NS(FALSE);
@@ -1363,18 +1345,10 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	here need to force audio APP to LOOPBACK*/
 	/* VOIP_PCM_16K or VOIP_AMR_WB */
 	if ((codecVal == 4) || (codecVal == 5)) {
-#if defined(USE_NEW_AUDIO_PARAM)
 		/* WB has to use AUDIO_APP_VOICE_CALL_WB */
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
-#else
-		AUDCTRL_SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
-#endif
 	} else { /* NB VoIP case */
-#if defined(USE_NEW_AUDIO_PARAM)
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_LOOPBACK);
-#else
-		AUDCTRL_SetAudioMode(mode);
-#endif
 	}
 
 	/* init driver */
@@ -1423,11 +1397,7 @@ void AUDTST_VoIP_Stop(void)
 		AUDCTRL_DisableTelephony();
 		/* VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k */
 		if ((cur_codecVal == 4) || (cur_codecVal == 5))
-#if !defined(USE_NEW_AUDIO_PARAM)
-			AUDCTRL_SetAudioMode(cur_mode);
-#else
 			AUDCTRL_SetAudioMode(cur_mode, AUDIO_APP_LOOPBACK);
-#endif
 		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
 		OSSEMAPHORE_Destroy(sVtQueue_Sema);
 		AUDQUE_Destroy(sVtQueue);

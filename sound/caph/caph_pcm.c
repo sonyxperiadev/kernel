@@ -181,7 +181,7 @@ static int PcmHwParams(struct snd_pcm_substream *substream,
  */
 
 	aTrace
-	    (LOG_ALSA_INTERFACE, "\t params_access=%d params_format=%d,"
+	    (LOG_ALSA_INTERFACE, "ALSA-CAPH params_access=%d params_format=%d,"
 	     "params_subformat=%d params_channels=%d,"
 	     "params_rate=%d, buffer bytes=%d\n",
 	     params_access(hw_params), params_format(hw_params),
@@ -235,7 +235,7 @@ static int PcmPlaybackOpen(struct snd_pcm_substream *substream)
 	int substream_number = substream->number;
 
 	aTrace
-	    (LOG_ALSA_INTERFACE, "\n %lx:playback_open subdevice=%d,"
+	    (LOG_ALSA_INTERFACE, "ALSA-CAPH %lx:playback_open subdevice=%d,"
 	     "PCM_TOTAL_BUF_BYTES=%d chip->iEnablePhoneCall=%d,"
 	     "speaker=%d\n",
 	     jiffies, substream->number, PCM_TOTAL_BUF_BYTES,
@@ -284,8 +284,8 @@ static int PcmPlaybackClose(struct snd_pcm_substream *substream)
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 
 	aTrace(LOG_ALSA_INTERFACE,
-			"\n %lx:playback_close subdevice=%d\n", jiffies,
-			substream->number);
+		"ALSA-CAPH %lx:playback_close subdevice=%d\n", jiffies,
+		substream->number);
 
 	param_close.drv_handle = substream->runtime->private_data;
 
@@ -313,7 +313,8 @@ static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
 
 	aTrace
-	    (LOG_ALSA_INTERFACE, "\nplayback_prepare period=%d period_size=%d,"
+	    (LOG_ALSA_INTERFACE, "ALSA-CAPH playback_prepare "
+	     "period=%d period_size=%d,"
 	     "bufsize=%d threshold=%ld frame_bits %d rate=%d ch=%d\n",
 	     (int)runtime->periods, (int)runtime->period_size,
 	     (int)runtime->buffer_size, runtime->stop_threshold,
@@ -371,8 +372,8 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 	int i, count = 0;
 
 	aTrace(LOG_ALSA_INTERFACE,
-			"\n PcmPlaybackTrigger substream_number=%d\n",
-			substream_number);
+		"ALSA-CAPH PcmPlaybackTrigger substream_number=%d, cmd %d\n",
+		substream_number, cmd);
 
 	callMode = chip->iEnablePhoneCall;
 	drv_handle = substream->runtime->private_data;
@@ -581,8 +582,8 @@ static int PcmCaptureOpen(struct snd_pcm_substream *substream)
 	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 
 	aTrace(LOG_ALSA_INTERFACE,
-			"\n ALSA : PcmCaptureOpen substream->number = %d\n",
-			substream->number);
+		"ALSA-CAPH PcmCaptureOpen substream->number = %d\n",
+		substream->number);
 
 	callMode = chip->iEnablePhoneCall;
 
@@ -653,8 +654,8 @@ static int PcmCaptureClose(struct snd_pcm_substream *substream)
 	chip->streamCtl[substream_number].pSubStream = NULL;
 
 	aTrace(LOG_ALSA_INTERFACE,
-			"\n %lx:capture_close subdevice=%d\n"
-			, jiffies, substream_number);
+		"ALSA-CAPH %lx:capture_close subdevice=%d\n"
+		, jiffies, substream_number);
 
 	return 0;
 }
@@ -675,7 +676,7 @@ static int PcmCapturePrepare(struct snd_pcm_substream *substream)
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
 
 	aTrace(LOG_ALSA_INTERFACE,
-		 "\n %lx:capture_prepare: subdevice=%d rate =%d,"
+		 "ALSA-CAPH %lx:capture_prepare: subdevice=%d rate =%d,"
 		 "format =%d channel=%d dma_area=0x%x dma_bytes=%d,"
 		 "period_bytes=%d avail_min=%d periods=%d buffer_size=%d\n",
 		 jiffies, substream->number, runtime->rate, runtime->format,
@@ -732,8 +733,8 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 
 	aTrace(LOG_ALSA_INTERFACE,
-			"\n %lx:capture_trigger subdevice=%d cmd=%d\n", jiffies,
-			substream_number, cmd);
+		"ALSA-CAPH %lx:capture_trigger subdevice=%d cmd=%d\n", jiffies,
+		substream_number, cmd);
 
 	drv_handle = substream->runtime->private_data;
 	pSel = chip->streamCtl[substream_number].iLineSelect;
@@ -901,7 +902,7 @@ static void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_GET_DRV_TYPE,
 			  (void *)&drv_type);
 	aTrace(LOG_ALSA_INTERFACE,
-		"%lx:CaptInterruptPeriodCB drv_type=%d,\n",
+		"\n %lx:CaptInterruptPeriodCB drv_type=%d,\n",
 		jiffies, (int)drv_type);
 
 	switch (drv_type) {
@@ -1058,7 +1059,7 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 	pChip = (brcm_alsa_chip_t *) card->private_data;
 
 	/* Initialize the audio controller */
-	aTrace(LOG_ALSA_INTERFACE, "\n PcmDeviceNew : call AUDIO_Init\n");
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH PcmDeviceNew:call AUDIO_Init\n");
 	caph_audio_init();
 	AUDCTRL_Init();
 #if defined(CONFIG_BCM_MODEM)

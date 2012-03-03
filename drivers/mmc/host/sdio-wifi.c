@@ -277,13 +277,23 @@ void bcm_sdiowl_term(void)
    printk(KERN_ERR " %s ENTRY \n",__FUNCTION__);
 
    atomic_set(&dev->dev_is_ready, 0);
-//   sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
-   msleep(2000);
- 
-  
-	sdio_stop_clk(SDIO_DEV_TYPE_WIFI, 0);
+   
+#ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT 
+   sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
+
+#endif
+
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT    
+	msleep(2); 
+#endif
+
+
+	
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT 
+   sdio_stop_clk(SDIO_DEV_TYPE_WIFI, 0);
 
    __wifi_reset(dev->wifi_gpio->reset, 0);
+#endif
 
    /* free GPIOs */
    wifi_gpio_free(dev->wifi_gpio);

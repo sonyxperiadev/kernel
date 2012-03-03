@@ -936,11 +936,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    (BRCM_AUDIO_Param_Call_t *) arg_param;
 			AudioMode_t tempMode =
 			    (AudioMode_t) parm_call->new_spkr;
-#if defined(USE_NEW_AUDIO_PARAM)
 			AUDCTRL_SetAudioMode(tempMode, AUDCTRL_GetAudioApp());
-#else
-			AUDCTRL_SetAudioMode(tempMode);
-#endif
 		}
 		break;
 
@@ -970,10 +966,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 *
 			 * can set music app and mode
 			 */
-#if defined(USE_NEW_AUDIO_PARAM)
 			/* re-enable FM; need to fill audio app */
 			AUDCTRL_SaveAudioApp(AUDIO_APP_FM);
-#endif
 			AUDCTRL_SaveAudioMode((AudioMode_t) parm_FM->sink);
 
 			AUDCTRL_EnablePlay(parm_FM->source,

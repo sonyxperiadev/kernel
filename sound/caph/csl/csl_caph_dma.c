@@ -700,10 +700,18 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
 
 	chal_caph_dma_set_tsize(handle, caph_aadmac_ch, chnl_config.Tsize);
 
-	chal_caph_dma_set_ddrfifo_status(handle, caph_aadmac_ch,
+	/*On B1, FIFO_RST will clear SW_RDY bits*/
+	if (cpu_is_rhea_B0()) {
+		chal_caph_dma_set_ddrfifo_status(handle, caph_aadmac_ch,
 					 CAPH_READY_HIGHLOW);
 
-	chal_caph_dma_clr_channel_fifo(handle, caph_aadmac_ch);
+		chal_caph_dma_clr_channel_fifo(handle, caph_aadmac_ch);
+	} else {
+		chal_caph_dma_clr_channel_fifo(handle, caph_aadmac_ch);
+
+		chal_caph_dma_set_ddrfifo_status(handle, caph_aadmac_ch,
+					 CAPH_READY_HIGHLOW);
+	}
 
 	dmaCH_ctrl[chnl_config.dma_ch].caphDmaCb = chnl_config.dmaCB;
 
