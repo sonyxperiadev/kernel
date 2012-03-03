@@ -124,7 +124,7 @@ static char *pwr_mgr_event2str(int event)
 enum {
 	I2C_SEQ_READ,
 	I2C_SEQ_WRITE,
-	I2C_SEQ_READ_NACK,
+	I2C_SEQ_READ_FIFO,
 };
 
 #endif
@@ -1466,10 +1466,10 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 		     i2c_wr_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
 		    PWRMGR_I2C_SW_START_ADDR_MASK;
 		break;
-	case I2C_SEQ_READ_NACK:
+	case I2C_SEQ_READ_FIFO:
 		reg_val |=
 		    (pwr_mgr.info->
-		     i2c_rd_nack_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
+		     i2c_rd_fifo_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
 		    PWRMGR_I2C_SW_START_ADDR_MASK;
 		break;
 	default:
@@ -1505,7 +1505,6 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	unsigned long flgs;
 	int ret;
 	u32 reg;
-	u8 i2c_data;
 
 	pwr_dbg("%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
@@ -1532,14 +1531,6 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	if (!ret && reg_val) {
 		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 #if defined(CONFIG_KONA_PWRMGR_REV2)
-		i2c_data = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
-				PWRMGR_I2C_READ_DATA_SHIFT);
-		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
-		ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ_NACK);
-		if (ret < 0)
-			goto out;
-		spin_lock_irqsave(&pwr_mgr_lock, flgs);
-		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 		reg = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
 				PWRMGR_I2C_READ_DATA_SHIFT);
 		if (reg & 0x1) {
@@ -1547,8 +1538,20 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 			ret = -EAGAIN;
 			goto out_unlock;
 		}
+		/**
+		 * if there is no NACK from PMU, we will trigger
+		 * PWRMGR again to read the FIFO data from PMU_BSC
+		 * to PWRMGR buffer
+		 */
+		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+		ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ_FIFO);
+		if (ret < 0)
+			goto out;
+		spin_lock_irqsave(&pwr_mgr_lock, flgs);
+		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 #endif
-		*reg_val = i2c_data;
+		*reg_val = (reg & PWRMGR_I2C_READ_DATA_MASK) >>
+		    PWRMGR_I2C_READ_DATA_SHIFT;
 	}
 out_unlock:
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
@@ -1727,7 +1730,7 @@ EXPORT_SYMBOL(pwr_mgr_clr_intr_status);
  * Added for debugging purpose but not called
  */
 
-/*
+#if 0
 static void pwr_mgr_dump_i2c_cmd_regs(void)
 {
 	int idx;
@@ -1748,7 +1751,7 @@ static void pwr_mgr_dump_i2c_cmd_regs(void)
 			data0, (idx * 2) + 1, cmd1, data1);
 	}
 }
-*/
+#endif
 #endif
 void pwr_mgr_init_sequencer(struct pwr_mgr_info *info)
 {
