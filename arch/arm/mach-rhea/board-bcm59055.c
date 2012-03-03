@@ -228,7 +228,7 @@ static struct regulator_init_data bcm59055_hv1ldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 0,
+			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv1_supply),
 	.consumer_supplies = hv1_supply,
