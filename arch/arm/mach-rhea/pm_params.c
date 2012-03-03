@@ -324,7 +324,7 @@ static void rhea_pm_init_wa_flgs(void)
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2348
-	JIRA_WA_FLG_NAME(2348) = chip_rev <= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2348) = chip_rev < RHEA_CHIP_REV_B1;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2272
