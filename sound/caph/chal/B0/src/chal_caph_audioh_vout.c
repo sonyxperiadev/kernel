@@ -248,7 +248,8 @@ cVoid chal_audio_earpath_set_gain(CHAL_HANDLE handle, cUInt32 gain)
 	reg_val &= 0xFE7FFFFF;
 	reg_val |= ((gain & 0x03) << 23);
 #endif
-	reg_val = 0x100A00;	/* based on value provided by ASIC team. */
+	/*reg_val = 0x100A00;*/	/* based on value provided by ASIC team. */
+	reg_val = 0x01900A00;	/* based on value provided by ASIC team. */
 
 	/* Set the required setting */
 	BRCM_WRITE_REG(base, AUDIOH_EP_DAC_CTRL, reg_val);
