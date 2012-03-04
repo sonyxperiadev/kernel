@@ -2268,9 +2268,9 @@ static ssize_t pwr_mgr_pmu_volt_inx_tbl_update(struct file *file, char const __u
 {
 	int i;
 	u32 val = 0xFFFF;
-	u32 len = 0, index1 = 0;
+	u32 len = 0, inx = 0;
 	char *str_ptr;
-	u8 data[16];
+	u8 data[17];
 
 	char input_str[100];
 
@@ -2284,35 +2284,41 @@ static ssize_t pwr_mgr_pmu_volt_inx_tbl_update(struct file *file, char const __u
 		return -EFAULT;
 
 	str_ptr = &input_str[0];
-	while(*str_ptr && *str_ptr != 0xA) { /*not null && not LF character*/
-	    sscanf(str_ptr, "%x%n", &val, &len);
-	    if (val == 0xFFFF) {
-		printk("invalid or end of input\n");
-		break;
-	    }
-	    data[index1] = (u8)val;
-	    pr_info("data[%d] :%x  len:%d\n", index1, data[index1], len);
-	    str_ptr += len;
-	    if (data[index1] > 0xF) {
-		printk("invalid param\n");
-		return count;
-	    }
-	    index1 += 1;
-	    val = 0xFFFF;
+	while (*str_ptr && *str_ptr != 0xA) { /*not null && not LF character*/
+		sscanf(str_ptr, "%x%n", &val, &len);
+		if (val == 0xFFFF)
+			break;
+
+		data[inx] = (u8)val;
+		pr_info("data[%d] :%x  len:%d\n", inx, data[inx], len);
+		str_ptr += len;
+		inx++;
+		if (inx > 16)
+			break;
+		val = 0xFFFF;
 	}
-	if (index1 == 2) {
-	    pwr_mgr_pm_i2c_enable(false);
-	    pwr_mgr_pm_i2c_var_data_modify(data[0], data[1]);
-	    pr_info("index:%d , value= %x\n", data[0], data[1]);
-	    pwr_mgr_pm_i2c_enable(true);
-	} else if (index1 == 16){
-	    for (i = 0; i<16;i++)
-		pr_info("data[%d] = %x\n", i, data[i]);
-	    pwr_mgr_pm_i2c_enable(false);
-	    pwr_mgr_pm_i2c_var_data_write(data, index1);
-	    pwr_mgr_pm_i2c_enable(true);
-	}else
-	    pr_info("invalid number of arguments\n");
+	if (inx == 2) {
+		/*max inx is 0xF*/
+		if (data[0] > 0xF) {
+			pr_info("invalid inx\n");
+			return count;
+		}
+		local_irq_disable();
+		pwr_mgr_pm_i2c_enable(false);
+		pwr_mgr_pm_i2c_var_data_modify(data[0], data[1]);
+		pr_info("index:%d , value= %x\n", data[0], data[1]);
+		pwr_mgr_pm_i2c_enable(true);
+		local_irq_enable();
+	} else if (inx == 16) {
+		for (i = 0; i < 16; i++)
+			pr_info("data[%d] = %x\n", i, data[i]);
+		local_irq_disable();
+		pwr_mgr_pm_i2c_enable(false);
+		pwr_mgr_pm_i2c_var_data_write(data, inx);
+		pwr_mgr_pm_i2c_enable(true);
+		local_irq_enable();
+	} else
+		pr_info("invalid number of arguments\n");
 
 	return count;
 }
