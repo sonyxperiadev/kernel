@@ -747,6 +747,7 @@ int __init clock_debug_add_ccu(struct clk *c);
 #endif
 
 int clk_init(struct clk* clk);
+int clk_reset(struct clk *clk);
 int clk_get_usage(struct clk *clk);
 int clk_register(struct clk_lookup *clk_lkup,int num_clks);
 int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
