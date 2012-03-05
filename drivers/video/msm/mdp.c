@@ -1500,12 +1500,12 @@ static int mdp_on(struct platform_device *pdev)
 
 #ifdef CONFIG_FB_MSM_MDP40
 	struct msm_fb_data_type *mfd;
-
 	mdp4_overlay_ctrl_db_reset();
+
+	mfd = platform_get_drvdata(pdev);
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	if (is_mdp4_hw_reset()) {
-		mfd = platform_get_drvdata(pdev);
 		mdp_vsync_cfg_regs(mfd, FALSE);
 		mdp4_hw_init();
 		outpdw(MDP_BASE + 0x0038, mdp4_display_intf);
@@ -1518,6 +1518,13 @@ static int mdp_on(struct platform_device *pdev)
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
 	mdp_histogram_ctrl(TRUE);
+#ifdef CONFIG_FB_MSM_MDP40
+	if (mfd->panel.type == MIPI_CMD_PANEL)
+		mdp4_dsi_cmd_overlay_restore();
+	else if (mfd->panel.type == MDDI_PANEL)
+		mdp4_mddi_overlay_restore();
+#endif
+
 	return ret;
 }
 
