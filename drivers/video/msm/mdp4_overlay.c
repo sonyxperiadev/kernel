@@ -2046,7 +2046,8 @@ static int mdp4_overlay_is_rgb_type(int format)
 	}
 }
 
-static uint32 mdp4_overlay_get_perf_level(struct mdp_overlay *req)
+static uint32 mdp4_overlay_get_perf_level(struct mdp_overlay *req,
+					  struct msm_fb_data_type *mfd)
 {
 	int is_fg, i, cnt;
 
