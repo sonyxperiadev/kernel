@@ -36,6 +36,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_isp.h>
 #include <plat/pi_mgr.h>
+#include <plat/scu.h>
 #include <linux/delay.h>
 
 /* TODO - define the major device ID */
@@ -65,6 +66,7 @@ static void __iomem *mmclk_base = NULL;
 static struct clk *isp_clk;
 static int interrupt_irq = 0;
 static struct pi_mgr_dfs_node isp_dfs_node;
+static struct pi_mgr_qos_node isp_qos_node;
 
 typedef struct {
 	unsigned int status;
@@ -117,13 +119,23 @@ static int isp_open(struct inode *inode, struct file *filp)
 	ret =
 	    pi_mgr_dfs_add_request(&isp_dfs_node, "isp", PI_MGR_PI_ID_MM,
 				   PI_MGR_DFS_MIN_VALUE);
+
 	if (ret) {
 		printk(KERN_ERR "%s: failed to register PI DFS request\n",
 		       __func__);
 		goto err;
 	}
 
+	ret = pi_mgr_qos_add_request(&isp_qos_node, "isp", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+	if (ret) {
+		printk(KERN_ERR "%s: failed to register PI QOS request\n", __func__);
+		ret = -EIO;
+		goto qos_request_fail;
+	}
+
 	enable_isp_clock();
+	pi_mgr_qos_request_update(&isp_qos_node, 0);
+	scu_standby(0);
 
 	ret =
 	    request_irq(IRQ_ISP, isp_isr, IRQF_DISABLED | IRQF_SHARED,
@@ -136,7 +148,10 @@ static int isp_open(struct inode *inode, struct file *filp)
 	disable_irq(IRQ_ISP);
 	return 0;
 
-      err:
+
+qos_request_fail:
+	pi_mgr_dfs_request_remove(&isp_dfs_node);
+err:
 	if (dev)
 		kfree(dev);
 	return ret;
@@ -146,10 +161,16 @@ static int isp_release(struct inode *inode, struct file *filp)
 {
 	isp_t *dev = (isp_t *) filp->private_data;
 
+	pi_mgr_qos_request_update(&isp_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+	scu_standby(1);
+
 	disable_isp_clock();
 
 	pi_mgr_dfs_request_remove(&isp_dfs_node);
 	isp_dfs_node.name = NULL;
+
+	pi_mgr_qos_request_remove(&isp_qos_node);
+	isp_qos_node.name = NULL;
 
 	free_irq(IRQ_ISP, dev);
 	if (dev)
