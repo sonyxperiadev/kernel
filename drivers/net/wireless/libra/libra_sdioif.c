@@ -62,6 +62,37 @@ int libra_enable_sdio_irq_in_chip(struct sdio_func *func, u8 enable)
 }
 EXPORT_SYMBOL(libra_enable_sdio_irq_in_chip);
 
+int libra_enable_sdio_irq_in_chip(struct sdio_func *func, u8 enable)
+{
+	unsigned char reg = 0;
+	int err = 0;
+
+	sdio_claim_host(func);
+
+	/* Read the value into reg */
+	libra_sdiocmd52(func, SDIO_CCCR_IENx, &reg, 0, &err);
+	if (err)
+		printk(KERN_ERR "%s: Could not read  SDIO_CCCR_IENx register "
+				"err=%d\n", __func__, err);
+
+	if (libra_mmc_host) {
+		if (enable) {
+			reg |= 1 << func->num;
+			reg |= 1;
+		} else {
+			reg &= ~(1 << func->num);
+		}
+		libra_sdiocmd52(func, SDIO_CCCR_IENx, &reg, 1, &err);
+		if (err)
+			printk(KERN_ERR "%s: Could not enable/disable irq "
+					 "err=%d\n", __func__, err);
+	 }
+	sdio_release_host(func);
+
+	return err;
+}
+EXPORT_SYMBOL(libra_enable_sdio_irq_in_chip);
+
 /**
  * libra_sdio_configure() - Function to configure the SDIO device param
  * @libra_sdio_rxhandler    Rx handler
