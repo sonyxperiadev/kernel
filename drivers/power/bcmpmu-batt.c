@@ -49,6 +49,7 @@ struct bcmpmu_batt {
 static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu_batt *pbatt = (struct bcmpmu_batt *)data;
+	struct bcmpmu *bcmpmu = pbatt->bcmpmu;
 
 	switch (irq) {
 	case PMU_IRQ_BATRM:
@@ -62,6 +63,21 @@ static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
 		break;
 	case PMU_IRQ_MBOV_DIS:
 		pbatt->state.health = POWER_SUPPLY_HEALTH_GOOD;
+		break;
+	case PMU_IRQ_MBTEMPHIGH:
+		printk("bcmpmu_batt_isr: PMU_IRQ_MBTEMPHIGH triggered \n");
+		pbatt->state.health = POWER_SUPPLY_HEALTH_OVERHEAT;
+		power_supply_changed(&pbatt->batt);
+		break;
+	case PMU_IRQ_MBTEMPLOW:
+		printk("bcmpmu_batt_isr: PMU_IRQ_MBTEMPLOW triggered \n");
+		pbatt->state.health = POWER_SUPPLY_HEALTH_COLD;
+		power_supply_changed(&pbatt->batt);
+		break;
+	case PMU_IRQ_CHGERRDIS:
+		printk("bcmpmu_batt_isr: PMU_IRQ_CHGERRDIS triggered \n");
+		pbatt->state.health = POWER_SUPPLY_HEALTH_GOOD;
+		power_supply_changed(&pbatt->batt);
 		break;
 	default:
 		break;
@@ -277,6 +293,7 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_SMPL_INT, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBTEMPLOW, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBTEMPHIGH, bcmpmu_batt_isr, pbatt);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHGERRDIS, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBOV, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBOV_DIS, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBWV_R_10S_WAIT, bcmpmu_batt_isr, pbatt);
@@ -312,6 +329,7 @@ static int __devexit bcmpmu_batt_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_SMPL_INT);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBTEMPLOW);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBTEMPHIGH);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHGERRDIS);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBOV);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBOV_DIS);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBWV_R_10S_WAIT);
