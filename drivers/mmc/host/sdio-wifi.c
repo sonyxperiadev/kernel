@@ -236,7 +236,7 @@ int bcm_sdiowl_init(void)
 	__wifi_reset(dev->wifi_gpio->reset, 0);
 	__wifi_reset(dev->wifi_gpio->reset, 1);
 
- 
+ 	printk(KERN_ERR "%s:GPIO TOGGLED AND EXIT\n",__FUNCTION__);
 
 
 #ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
@@ -274,12 +274,31 @@ EXPORT_SYMBOL(bcm_sdiowl_init);
 void bcm_sdiowl_term(void)
 {
    struct sdio_wifi_dev *dev = &gDev;
+   printk(KERN_ERR " %s ENTRY \n",__FUNCTION__);
 
    atomic_set(&dev->dev_is_ready, 0);
+   
+#ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT 
    sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
+
+#endif
+
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT    
+	msleep(2); 
+#endif
+
+
+	
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT 
+   sdio_stop_clk(SDIO_DEV_TYPE_WIFI, 0);
+
+   __wifi_reset(dev->wifi_gpio->reset, 0);
+#endif
 
    /* free GPIOs */
    wifi_gpio_free(dev->wifi_gpio);
+   printk(KERN_ERR " %s GPIO Released \n",__FUNCTION__);
+
 
    dev->wifi_gpio = NULL;
 }

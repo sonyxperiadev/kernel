@@ -166,6 +166,7 @@ int __init rhea_init_wifi_mem(void)
 
 
 extern int bcm_sdiowl_init(void);
+extern int bcm_sdiowl_term(void);
 
 
 int rhea_wifi_status_register(
@@ -255,6 +256,9 @@ static int rhea_wifi_set_carddetect(int val)
 		printk(KERN_ERR " %s CALLBACK COMPLETE\n",__FUNCTION__);	
 	} else
 		pr_warning("%s: Nobody to notify\n", __func__);
+	
+	if(val==0)
+		bcm_sdiowl_term();
 	return 0;
 }
 
@@ -324,8 +328,9 @@ static int rhea_wifi_power(int on)
 	if (clk32kaudio_reg && !on && rhea_wifi_power_state)
 		regulator_disable(clk32kaudio_reg);
 #endif
-	bcm_sdiowl_init();
-
+	if(on)
+		bcm_sdiowl_init();
+		
 	rhea_wifi_power_state = on;
 	
 	return 0;

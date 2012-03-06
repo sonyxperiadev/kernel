@@ -14,7 +14,7 @@
 ****************************************************************************/
 /****************************************************************************
 *
-*     WARNING!!!! Generated File ( Do NOT Modify !!!! )	
+*     WARNING!!!! Generated File ( Do NOT Modify !!!! )
 *
 ****************************************************************************/
 #ifndef SYS_COMMON_RPC_H
@@ -94,9 +94,9 @@ typedef struct {
 	UInt8 gid2_len;		///< Number of bytes in "gid2" element, i.e. number of bytes in EF-GID2
 } SYS_SIMLOCK_SIM_DATA_t;
 
-void SIMLOCKApi_SetStatus(SYS_SIMLOCK_STATE_t *simlock_state);
-UInt32 SimApi_GetCurrLockedSimlockType(void);
+void SIMLOCKApi_SetStatus(ClientInfo_t *inClientInfoPtr, SYS_SIMLOCK_STATE_t *simlock_state);
+UInt32 SimApi_GetCurrLockedSimlockType(ClientInfo_t *inClientInfoPtr);
 
-//***************** < 1 > **********************
+/***************** < 1 > **********************/
 
 #endif

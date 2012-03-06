@@ -5759,7 +5759,7 @@ static struct bus_clk CLK_NAME(csi0_axi) = {
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
  .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
- .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_ISP_SOFT_RSTN_MASK,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_CSI0_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5786,7 +5786,7 @@ static struct bus_clk CLK_NAME(csi1_axi) = {
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
  .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
- .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_VCE_SOFT_RSTN_MASK,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_CSI1_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5813,7 +5813,7 @@ static struct bus_clk CLK_NAME(isp_axi) = {
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
  .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
- .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_MM_DMA_SOFT_RSTN_MASK,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_ISP_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5840,7 +5840,7 @@ static struct bus_clk CLK_NAME(smi_axi) = {
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
  .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
- .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_MASK,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_SMI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5866,6 +5866,9 @@ static struct bus_clk CLK_NAME(vce_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+	.soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_VCE_SOFT_RSTN_MASK,
+
 };
 
 /*
@@ -5891,6 +5894,9 @@ static struct bus_clk CLK_NAME(dsi0_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+	.soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN1_DSI0_SOFT_RSTN_MASK,
+
 };
 
 /*
@@ -5916,6 +5922,9 @@ static struct bus_clk CLK_NAME(dsi1_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+	.soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN1_DSI1_SOFT_RSTN_MASK,
+
 };
 
 /*
@@ -5995,6 +6004,9 @@ static struct bus_clk CLK_NAME(mm_dma_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+	.soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_MM_DMA_SOFT_RSTN_MASK,
+
 };
 
 /*
@@ -6020,6 +6032,9 @@ static struct bus_clk CLK_NAME(v3d_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+	.soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_MASK,
+
 };
 
 /*
@@ -6645,6 +6660,60 @@ static int mm_ccu_clk_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 volt
 	return 0;
 }
 
+static int mm_ccu_clk_get_voltage(struct ccu_clk * ccu_clk, int freq_id)
+{
+	u32 shift, reg_val;
+	u32 reg_addr;
+	int volt_id;
+
+	/*Ideally we should compare against ccu_clk->freq_count,but anyways
+	 * allowing read for all 8 freq Ids.*/
+	if(freq_id >= 8)
+		return -EINVAL;
+
+	switch(freq_id)
+	{
+	case CCU_VLT0:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_00_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT1:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_01_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT2:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_02_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT3:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_03_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT4:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_04_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT5:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_05_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT6:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_06_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT7:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_07_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	default:
+		return -EINVAL;
+	}
+	reg_val =  readl(reg_addr);
+	volt_id = (reg_val & (CCU_VLT_MASK << shift)) >> shift;
+
+	return volt_id;
+}
+
 
 
 /* table for registering clock */
@@ -6918,6 +6987,7 @@ int __init rhea_clock_init(void)
 	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;
 	mm_ccu_ops.get_freq_policy = mm_ccu_get_freq_policy;
 	mm_ccu_ops.set_voltage = mm_ccu_clk_set_voltage;
+	mm_ccu_ops.get_voltage = mm_ccu_clk_get_voltage;
 	mm_ccu_ops.set_peri_voltage = mm_ccu_set_peri_voltage;
 
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
@@ -6938,41 +7008,76 @@ int __init rhea_clock_init(void)
 }
 
 #ifdef CONFIG_DEBUG_FS
-int set_gpio_mux_for_debug_bus(void)
+int set_gpio_mux_for_debug_bus(int mux_sel, int mux_param)
 {
-    static bool mux_init = false;
-    printk("in %s \n", __func__);
-    if(!mux_init) {
-	mux_init = true;
+	u32 reg_val;
+	pr_info("in %s \n", __func__);
+
 	/*Get pad control write access by rwiting password */
 	writel(0xa5a501, KONA_PAD_CTRL + PADCTRLREG_WR_ACCESS_OFFSET);
-	/* unlock first 32 pad control registers */
+	/* unlock pad control registers */
 	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK0_OFFSET);
+	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK1_OFFSET);
+	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK2_OFFSET);
+	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK3_OFFSET);
+	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK4_OFFSET);
 
-	/* Configure GPIO_XX to TESTPORT_XX  */
-	/* writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET); */
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO01_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO02_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO03_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO04_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO05_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO06_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO07_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO08_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO09_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO10_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO11_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO12_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO13_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO14_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO15_OFFSET);
-	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO16_OFFSET);
-    }
+	if (mux_sel == 0) {
+		/* Configure GPIO_XX to TESTPORT_XX  */
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO01_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO02_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO03_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO04_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO05_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO06_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO07_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO08_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO09_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO10_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO11_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO12_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO13_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO14_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO15_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO16_OFFSET);
+
+		reg_val = readl(KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+		reg_val &=
+			~CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
+		reg_val |=
+			(mux_param <<
+			CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_SHIFT) &
+			CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
+		writel(reg_val,
+			KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+
+	} else if (mux_sel == 1) {  /*SDDATA*/
+
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT0_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT1_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT2_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT3_OFFSET);
+
+		reg_val = readl(KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+		reg_val &=
+			~CHIPREG_PERIPH_SPARE_CONTROL0_PM_DEBUG_MUX_CONTROL_MASK;
+		reg_val |=
+			(mux_param <<
+			CHIPREG_PERIPH_SPARE_CONTROL0_PM_DEBUG_MUX_CONTROL_SHIFT) &
+				CHIPREG_PERIPH_SPARE_CONTROL0_PM_DEBUG_MUX_CONTROL_MASK;
+		writel(reg_val, KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+
+	} else
+		return -1;
 
     return 0;
 }
-int set_clk_idle_debug_mon(int clk_idle)
+
+int set_clk_idle_debug_mon(int clk_idle, int db_sel)
 {
     u32 reg_val;
     struct clk *clk;
@@ -6983,9 +7088,8 @@ int set_clk_idle_debug_mon(int clk_idle)
 	clk_dbg("%s: Invalid value for rootCCU debug bus: %d\n", __func__, clk_idle);
 	return -EINVAL;
     }
-
-    set_gpio_mux_for_debug_bus();
-    writel(0xF, KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+	set_gpio_mux_for_debug_bus(db_sel,
+		(db_sel == 0) ? 0xF : 8);
 
     clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
     ccu_clk = to_ccu_clk(clk);
@@ -7001,7 +7105,7 @@ int set_clk_idle_debug_mon(int clk_idle)
 
     return 0;
 }
-int set_clk_monitor_debug(int mon_select)
+int set_clk_monitor_debug(int mon_select, int db_sel)
 {
     printk("in %s monitor select: %d\n", __func__, mon_select);
     switch(mon_select) {
@@ -7009,8 +7113,8 @@ int set_clk_monitor_debug(int mon_select)
 		writel(0x303, KONA_PAD_CTRL + PADCTRLREG_CAMCS1_OFFSET);
 		break;
 	case MONITOR_DEBUG_BUS_GPIO:
-		set_gpio_mux_for_debug_bus();
-		writel(0xF, KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+		set_gpio_mux_for_debug_bus(db_sel,
+			(db_sel == 0) ? 0xF : 8);
 		break;
 	default:
 		return -EINVAL;

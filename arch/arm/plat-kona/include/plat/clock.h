@@ -355,6 +355,7 @@ struct ccu_clk_ops
 	int (*get_freq_policy)(struct ccu_clk * ccu_clk, int policy_id);
 	int (*set_peri_voltage)(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage);
 	int (*set_voltage)(struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
+	int (*get_voltage)(struct ccu_clk * ccu_clk, int freq_id);
 	int (*set_active_policy)(struct ccu_clk * ccu_clk, u32 policy);
 	int (*get_active_policy)(struct ccu_clk * ccu_clk);
 	int (*save_state)(struct ccu_clk * ccu_clk, int save);
@@ -746,6 +747,7 @@ int __init clock_debug_add_ccu(struct clk *c);
 #endif
 
 int clk_init(struct clk* clk);
+int clk_reset(struct clk *clk);
 int clk_get_usage(struct clk *clk);
 int clk_register(struct clk_lookup *clk_lkup,int num_clks);
 int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
@@ -763,6 +765,7 @@ int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
 int ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id);
 int ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage);
 int ccu_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
+int ccu_get_voltage(struct ccu_clk * ccu_clk, int freq_id);
 int ccu_set_active_policy(struct ccu_clk * ccu_clk, u32 policy);
 int ccu_get_active_policy(struct ccu_clk * ccu_clk);
 int ccu_save_state(struct ccu_clk * ccu_clk, int save);

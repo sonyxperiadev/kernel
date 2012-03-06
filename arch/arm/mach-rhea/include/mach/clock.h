@@ -721,9 +721,9 @@ int clk_set_crystal_pwr_on_idle(int enable);
 int rhea_clock_init(void);
 int rhea_chip_reset(void);
 #ifdef CONFIG_DEBUG_FS
-int set_gpio_mux_for_debug_bus(void);
-int set_clk_idle_debug_mon(int clk_idle);
-int set_clk_monitor_debug(int mon_select);
+int set_gpio_mux_for_debug_bus(int mux_sel, int mux_param);
+int set_clk_idle_debug_mon(int clk_idle, int db_sel);
+int set_clk_monitor_debug(int mon_select, int db_sel);
 #endif
 
 #endif /* __ARM_ARCH_BCM2165X_CLOCK_MGR_H  */

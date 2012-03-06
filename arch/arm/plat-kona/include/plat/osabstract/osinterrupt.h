@@ -118,7 +118,7 @@ static inline void OSINTERRUPT_Destroy(
 {
 	struct tasklet_struct * tasklet = (struct tasklet_struct *)t;
 
-	tasklet_disable(tasklet);
+	tasklet_kill(tasklet);
 }
 
 /**
@@ -139,58 +139,5 @@ static inline OSStatus_t OSINTERRUPT_Trigger(			// process interrupt
 	return OSSTATUS_SUCCESS;
 }
 
-/**
-	Disable all interrupts at ARM (by changing the CPSR).
-	@return UInt32	mask - previous CPSR INT/FIQ bits to save for call to OSINTERRUPT_Restore
-**/
-
-static inline UInt32 OSINTERRUPT_DisableAll(				// disables all interrupts
-	void
-	)
-{
-	return 0;
-}
-
-/**
-	Restore previous interrupt mask - returned from OSINTERRUPT_DisableAll.
-	@param mask (in) saved CPSR INT/FIQ bits.
-	@return previous CPSR INT/FIQ bits
-**/
-
-static inline UInt32 OSINTERRUPT_Restore(				// restore previous interrupt
-	UInt32 mask
-	)
-{
-	return 0;
-}
-
-/**
-	Check if RTOS disabled interrupt
-	@return 0 = enabled; nonzero = the number of recursive disabling
-**/
-
-static inline int OSINTERRUPT_GetInterruptStatus(
-	void
-	)
-{
-	return 0;
-}
-
-/**
-	Get the name of an HISR
-	@param i		(in)	Handle associated with HISR.
-	@param p_name	(in)	Name storage (minimum 9 characters).
-	@return OSStatus_t		Status of operation.
-**/
-
-static inline OSStatus_t OSINTERRUPT_GetName(		// get ASCII name of interrupt
-	Interrupt_t i,					// interrupt pointer
-	UInt8 *p_name					// location to store the ASCII name
-	)
-{
-	return OSSTATUS_FAILURE;
-}
-
-/** @} */
 
 #endif

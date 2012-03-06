@@ -174,6 +174,11 @@ RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t * initParams,
 {
 	RPC_SyncParams_t *internalParam =
 	    (RPC_SyncParams_t *) OSHEAP_Alloc(sizeof(RPC_SyncParams_t));
+	if(!internalParam)
+	{
+		panic("RPC_SyncRegisterClient: OSHEAP_Alloc failed");
+		return 0;
+	}
 
 	internalParam->clientParams = *initParams;
 	internalParam->SyncRpcParams = *initParams;
@@ -762,7 +767,6 @@ UInt32 RPC_SyncGetCbkFromTid(UInt32 tid)
 	if (ctx->sig == 0xBABEFACE && ctx->val != 0) {
 		val = ctx->val;
 	} else {
-		OSTASK_Sleep(5000);
 		_DBG_(RPC_TRACE
 		      ("RPC_SyncGetCbkFromTid ERROR tid %d sig=%x \r\n", tid,
 		       ctx->sig));
@@ -791,7 +795,6 @@ void RPC_SyncDeleteCbkFromTid(UInt32 tid)
 		ctx->val = 0;
 		OSHEAP_Delete(ctx);
 	} else {
-		OSTASK_Sleep(5000);
 		_DBG_(RPC_TRACE
 		      ("RPC_SyncDeleteCbkFromTid ERROR tid %d sig=%x \r\n", tid,
 		       ctx->sig));

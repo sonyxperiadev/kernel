@@ -389,18 +389,7 @@ void r61581hvgaSmi_ExecCmndList(
         }
         else if (cmnd_lst[i].type == DISPCTRL_SLEEP_MS)
         {
-            if ( useOs )
-            {
-                OSTASK_Sleep ( TICKS_IN_MILLISECONDS(cmnd_lst[i].data) );
-            }
-            else
-            {
-#ifndef __KERNEL__
-                DISPDRV_Delay_us ( cmnd_lst[i].data * 1000 );
-#else
-		mdelay( cmnd_lst[i].data );
-#endif
-            }
+		OSTASK_Sleep ( TICKS_IN_MILLISECONDS(cmnd_lst[i].data) );
         }
         i++;
     }

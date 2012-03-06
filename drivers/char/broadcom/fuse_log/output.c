@@ -28,6 +28,8 @@
 #include <trace/stm.h>
 #include "linux/broadcom/mobcom_types.h"
 #include <linux/vt_kern.h>
+#include <linux/statfs.h>
+#include <linux/namei.h>
 #include "bcmlog.h"
 #include "fifo.h"
 #include "bcmmtt.h"
@@ -54,7 +56,8 @@ static char g_acm_on = 1;
 #define BCMLOG_OUTPUT_FIFO_MAX_BYTES 65536
 static BCMLOG_Fifo_t g_fifo;	/* output fifo */
 #define FUSE_LOG_CHANNEL	8
-
+/* 23MB reserved area for AP/CP crash dump */
+#define MTT_SD_RESERVED (23 * 1024 * 1024)
 /**
  *	frame counter
  **/
@@ -138,6 +141,31 @@ static void GetLogFileName(char *buf, char *rootdev, int size)
 #define MAX_LOG_PATHNAME     64
 
 /*
+ *	Return available SD card size (bytes)
+ *	If over 2G, return 2G
+ */
+static int Get_SDCARD_Available(void)
+{
+	struct kstatfs sbuf;
+	struct path path;
+	int ret;
+	u64 int_max = INT_MAX;
+
+	ret = kern_path("/sdcard/", LOOKUP_DIRECTORY, &path);
+	if (ret < 0)
+		goto out;
+
+	ret = vfs_statfs(&path, &sbuf);
+	if (ret < 0)
+		goto out;
+
+	ret = (int)min(sbuf.f_bavail * sbuf.f_bsize, int_max);
+
+out:
+	return ret;
+}
+
+/*
  *	Write log to file system
  */
 static void WriteToLogDev_SDCARD(void)
@@ -152,13 +180,23 @@ static void WriteToLogDev_SDCARD(void)
 	 *      Attempt to open log file, if not already open
 	 */
 	if (!g_devWrParms.file) {
-		GetLogFileName(fname, "/sdcard/", sizeof(fname));
+		if ((Get_SDCARD_Available()) > MTT_SD_RESERVED) {
+			GetLogFileName(fname, "/sdcard/", sizeof(fname));
 
-		g_devWrParms.file =
-		    filp_open(fname, O_WRONLY | O_TRUNC | O_CREAT, 0666);
+			g_devWrParms.file =
+			    filp_open(fname, O_WRONLY | O_TRUNC | O_CREAT,
+				      0666);
 
-		if (IS_ERR(g_devWrParms.file))
-			g_devWrParms.file = 0;
+			if (IS_ERR(g_devWrParms.file))
+				g_devWrParms.file = 0;
+		} else if ((Get_SDCARD_Available()) > 0) {
+			g_devWrParms.outdev = BCMLOG_OUTDEV_NONE;
+			BCMLOG_SetRunlogDevice(BCMLOG_OUTDEV_NONE);
+		} else {
+			/*
+			 * SD card not exist or not mounted yet.
+			 */
+		}
 	}
 
 	/*
@@ -184,7 +222,9 @@ static void WriteToLogDev_SDCARD(void)
 				if (nWrite > 0)
 					BCMLOG_FifoRemove(&g_fifo, nWrite);
 
-				if (nWrite < nFifo) {
+				if ((nWrite < nFifo)
+				    || ((Get_SDCARD_Available()) <
+					MTT_SD_RESERVED)) {
 					nFifo = 0;
 					filp_close(g_devWrParms.file, NULL);
 					g_devWrParms.file = 0;
@@ -195,6 +235,18 @@ static void WriteToLogDev_SDCARD(void)
 					 */
 					g_devWrParms.outdev =
 					    BCMLOG_OUTDEV_NONE;
+					BCMLOG_SetRunlogDevice
+					    (BCMLOG_OUTDEV_NONE);
+				} else if (g_devWrParms.file->f_pos >=
+					   (BCMLOG_GetSdFileMax())) {
+
+					/*
+					 * file size reached maximum.
+					 * close and open new file.
+					 */
+					nFifo = 0;
+					filp_close(g_devWrParms.file, NULL);
+					g_devWrParms.file = 0;
 				}
 			}
 		} while (nFifo > 0);

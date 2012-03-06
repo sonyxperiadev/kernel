@@ -773,7 +773,7 @@ static CSL_LCD_RES_T cslSmiWaitForInt( pSMI_SPI_HANDLE pSmi, UInt32 tout_msec )
     OSStatus_t      osRes;
     CSL_LCD_RES_T   res = CSL_LCD_OK;
     
-    osRes = OSSEMAPHORE_Obtain ( smiSemaInt, tout_msec );
+    osRes = OSSEMAPHORE_Obtain (smiSemaInt, TICKS_IN_MILLISECONDS(tout_msec));
 
 #ifndef __KERNEL__
     cslSmiDisInt ( pSmi );

@@ -214,22 +214,22 @@ void SysApi_GetSimLockStatus(ClientInfo_t *inClientInfoPtr, SYS_SIMLOCK_STATE_t 
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
 
-	tid = RPC_SyncCreateTID( (SYS_SIMLOCK_STATE_t *)simlock_state, sizeof(SYS_SIMLOCK_STATE_t));
+	tid = RPC_SyncCreateTID((SYS_SIMLOCK_STATE_t *)simlock_state, sizeof(SYS_SIMLOCK_STATE_t));
 	inClientInfoPtr->reserved = tid;
 	SYS_SimLockApi_GetStatus(tid, SYS_GetClientId(), inClientInfoPtr->simId, (SYS_SIMLOCK_SIM_DATA_t *) sim_data, is_testsim);
-	res = RPC_SyncWaitForResponseTimer( tid, inClientInfoPtr->clientId , &ackResult, &msgType, NULL, (TICKS_ONE_SECOND * 5) );
+	res = RPC_SyncWaitForResponseTimer(tid, inClientInfoPtr->clientId , &ackResult, &msgType, NULL, (TICKS_ONE_SECOND * 5));
 #endif
 
 	if(res == RESULT_TIMER_EXPIRED)
 	{
-		SYS_TRACE( "SysApi_GetSimLockStatus WARNING!!! (Timeout) Check if AP is handling this message \n");
+		SYS_TRACE("SysApi_GetSimLockStatus WARNING!!! (Timeout) Check if AP is handling this message \n");
 		simlock_state->network_lock_enabled = FALSE;
 		simlock_state->network_subset_lock_enabled = FALSE;
 		simlock_state->service_provider_lock_enabled = FALSE;
 		simlock_state->corporate_lock_enabled = FALSE;
 		simlock_state->phone_lock_enabled = FALSE;
 
-		simlock_state->network_lock = SYS_SIM_SECURITY_OPEN; 
+		simlock_state->network_lock = SYS_SIM_SECURITY_OPEN;
 		simlock_state->network_subset_lock = SYS_SIM_SECURITY_OPEN;
 		simlock_state->service_provider_lock = SYS_SIM_SECURITY_OPEN;
 		simlock_state->corporate_lock = SYS_SIM_SECURITY_OPEN;
@@ -238,7 +238,7 @@ void SysApi_GetSimLockStatus(ClientInfo_t *inClientInfoPtr, SYS_SIMLOCK_STATE_t 
 	}
 
 	SYS_TRACE("SysApi_GetSimLockStatus enabled: %d, %d, %d, %d, %d\r\n", simlock_state->network_lock_enabled,
-						simlock_state->network_subset_lock_enabled, simlock_state->service_provider_lock_enabled, 
+						simlock_state->network_subset_lock_enabled, simlock_state->service_provider_lock_enabled,
 						simlock_state->corporate_lock_enabled, simlock_state->phone_lock_enabled);
 
 	SYS_TRACE("SysApi_GetSimLockStatus status: %d, %d, %d, %d, %d\r\n", simlock_state->network_lock,
@@ -246,11 +246,42 @@ void SysApi_GetSimLockStatus(ClientInfo_t *inClientInfoPtr, SYS_SIMLOCK_STATE_t 
 						simlock_state->corporate_lock, simlock_state->phone_lock);
 }
 
+Result_t Handle_SYS_SIMLOCKApi_SetStatusEx(RPC_Msg_t *pReqMsg, UInt8 simId, SYS_SIMLOCK_STATE_t *simlock_state) 
+{ 
+	Result_t result = RESULT_OK; 
+ 	SYS_ReqRep_t data; 
+ 	ClientInfo_t cInfo = {0}; 
+
+	memset(&data, 0, sizeof(SYS_ReqRep_t)); 
+
+	cInfo.simId = (SimNumber_t)simId; 
+	SIMLOCKApi_SetStatus(&cInfo,simlock_state); 
+
+	data.result = result; 
+ 	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_SIMLOCK_SET_STATUS_RSP, &data); 
+ 	return result; 
+} 
+
+Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t *pReqMsg, UInt8 simId) 
+{ 
+ 	Result_t result = RESULT_OK; 
+ 	SYS_ReqRep_t data; 
+ 	ClientInfo_t cInfo = {0}; 
+ 
+ 	memset(&data, 0, sizeof(SYS_ReqRep_t)); 
+ 	cInfo.simId = (SimNumber_t)simId; 
+ 	data.req_rep_u.SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp.val = (UInt32)SimApi_GetCurrLockedSimlockType(&cInfo); 
+  
+ 	data.result = result; 
+	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP, &data); 
+ 	return result; 
+} 
+
 #endif
 
 #if defined(FUSE_APPS_PROCESSOR)
 
-static SYS_SIM_SECURITY_STATE_t convert_security_state( SEC_SimLock_Security_State_t sec_state )
+static SYS_SIM_SECURITY_STATE_t convert_security_state(SEC_SimLock_Security_State_t sec_state)
 {
 	SYS_SIM_SECURITY_STATE_t tmp_state = SYS_SIM_SECURITY_OPEN;
 
@@ -292,14 +323,14 @@ Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId, SYS_SI
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
 	/* convert sim_data to security driver format here... */
-	strncpy( tmp_sim_data.imsi_string, sim_data->imsi_string, MAX_IMSI_DIGITS );
+	strncpy(tmp_sim_data.imsi_string, sim_data->imsi_string, MAX_IMSI_DIGITS);
 	tmp_sim_data.imsi_string[MAX_IMSI_DIGITS] = '\0';
-	memcpy( tmp_sim_data.gid1, sim_data->gid1, MAX_GID_DIGITS );
-	memcpy( tmp_sim_data.gid2, sim_data->gid2, MAX_GID_DIGITS );
+	memcpy(tmp_sim_data.gid1, sim_data->gid1, MAX_GID_DIGITS);
+	memcpy(tmp_sim_data.gid2, sim_data->gid2, MAX_GID_DIGITS);
 	tmp_sim_data.gid1_len = sim_data->gid1_len;
 	tmp_sim_data.gid2_len = sim_data->gid2_len;
 
-	if (0 == sec_simlock_get_status( &tmp_sim_data,
+	if (0 == sec_simlock_get_status(&tmp_sim_data,
 										simId,
 										is_testsim,
 										&tmp_sim_state)) {

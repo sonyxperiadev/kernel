@@ -30,7 +30,7 @@ config STM_PRINTK_CHANNEL
 config STM_FTRACE
        bool "functions tracing"
        depends on FTRACE
-       default y
+       default n
        help
          Output function tracing on STM dedicated channel
 
@@ -45,7 +45,7 @@ config STM_FTRACE_CHANNEL
 config STM_CTX_SWITCH
        bool "Context switch tracing"
        depends on CONTEXT_SWITCH_TRACER
-       default y
+       default n
        help
          Output scheduler context switch on STM dedicated channel
 
@@ -60,7 +60,7 @@ config STM_CTX_SWITCH_CHANNEL
 config STM_WAKEUP
        bool "Scheduler wakeup tracing"
        depends on CONTEXT_SWITCH_TRACER
-       default y
+       default n
        help
          Output scheduler wakeup on STM dedicated channel
 
@@ -75,7 +75,7 @@ config STM_WAKEUP_CHANNEL
 config STM_STACK_TRACE
        bool "Stack tracing"
        depends on STACKTRACE
-       default y
+       default n
        help
          Output stack tracing on STM dedicated channel
 
@@ -90,7 +90,7 @@ config STM_STACK_TRACE_CHANNEL
 config STM_TRACE_PRINTK
        bool "trace printk & binary printk support"
        depends on TRACING
-       default y
+       default n
        help
          Duplicate trace printk output on STM printk channel
 

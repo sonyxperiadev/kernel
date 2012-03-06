@@ -17,8 +17,6 @@
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/module.h>
-#include <linux/cdev.h>
-#include <linux/device.h>
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/fcntl.h>
@@ -63,12 +61,8 @@
 #define NUM_BMIRQs            56
 #define IRQ_TO_BMIRQ(irq)         ((irq)-FIRST_BMIRQ)
 
-#define IPC_MAJOR (204)
-
 struct ipcs_info_t {
-	dev_t devnum;
 	int ipc_state;
-	struct cdev cdev;
 	struct tasklet_struct intr_tasklet;
 	struct work_struct cp_crash_dump_wq;
 	struct workqueue_struct *crash_dump_workqueue;
@@ -135,56 +129,6 @@ static IPC_ReturnCode_T EventWait(void *Event, IPC_U32 MilliSeconds)
 
 	return IPC_OK;
 }
-
-static int ipcs_open(struct inode *inode, struct file *file)
-{
-	struct ipcs_info_t *info;
-
-	info = container_of(inode->i_cdev, struct ipcs_info_t, cdev);
-	file->private_data = info;
-
-	return 0;
-}
-
-static int ipcs_release(struct inode *inode, struct file *file)
-{
-	return 0;
-}
-
-ssize_t ipcs_read(struct file * filep, char __user * buf, size_t size,
-		  loff_t * off)
-{
-	ssize_t rc = 0;
-
-	/* rc = ipc_server_read(filep, buf, size, off); */
-
-	return rc;
-}
-
-ssize_t ipcs_write(struct file * filep, const char __user * buf, size_t size,
-		   loff_t * off)
-{
-	return -EPERM;
-}
-
-static long ipcs_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
-{
-	int rc = 0;
-
-	/* rc = ipc_server_ioctl(cmd, arg); */
-
-	return rc;
-}
-
-static const struct file_operations ipc_ops = {
-	.owner = THIS_MODULE,
-	.open = ipcs_open,
-	.read = ipcs_read,
-	.write = ipcs_write,
-	.unlocked_ioctl = ipcs_ioctl,
-	.mmap = NULL,
-	.release = ipcs_release,
-};
 
 /**
    @fn Boolean is_CP_running(void);
@@ -487,7 +431,7 @@ static int ipcs_read_proc(char *page, char **start, off_t off, int count, int *e
 
 static int __init ipcs_module_init(void)
 {
-	int rc;
+	int rc = -1;
 	struct proc_dir_entry *dir;
 
 	dir = create_proc_read_entry ("driver/bcmipc", 0, NULL, ipcs_read_proc, NULL);
@@ -502,31 +446,13 @@ static int __init ipcs_module_init(void)
 
 	g_ipc_info.ipc_state = 0;
 
-	g_ipc_info.devnum = MKDEV(IPC_MAJOR, 0);
-
-	rc = register_chrdev_region(g_ipc_info.devnum, 1, "bcm_fuse_ipc");
-	if (rc < 0) {
-		IPC_DEBUG(DBG_ERROR, "Error registering the IPC device\n");
-		goto out;
-	}
-
-	cdev_init(&g_ipc_info.cdev, &ipc_ops);
-
-	g_ipc_info.cdev.owner = THIS_MODULE;
-
-	rc = cdev_add(&g_ipc_info.cdev, g_ipc_info.devnum, 1);
-	if (rc) {
-		IPC_DEBUG(DBG_ERROR, "cdev_add errpr\n");
-		goto out_unregister;
-	}
-
 	IPC_DEBUG(DBG_TRACE, "Allocate CP crash dump workqueue\n");
 	g_ipc_info.crash_dump_workqueue = alloc_workqueue("dump-wq",
 			WQ_FREEZABLE | WQ_MEM_RECLAIM, 0);
 
 	if (!g_ipc_info.crash_dump_workqueue) {
 		IPC_DEBUG(DBG_ERROR, "Cannot allocate CP crash dump workqueue\n");
-		goto out_unregister;
+		goto out;
 	}
 
 	INIT_WORK(&g_ipc_info.cp_crash_dump_wq, ProcessCPCrashedDump);
@@ -542,14 +468,14 @@ static int __init ipcs_module_init(void)
 	if (!g_ipc_info.apcp_shmem) {
 		rc = -ENOMEM;
 		IPC_DEBUG(DBG_ERROR, "Could not map shmem\n");
-		goto out_del;
+		goto out;
 	}
 
 	IPC_DEBUG(DBG_TRACE, "ipcs_init\n");
 	if (ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE)) {
 		rc = -1;
 		IPC_DEBUG(DBG_ERROR, "ipcs_init() failed\n");
-		goto out_del;
+		goto out;
 	}
 
 	IPC_DEBUG(DBG_TRACE, "ok\n");
@@ -564,17 +490,13 @@ static int __init ipcs_module_init(void)
 
 	if (rc) {
 		IPC_DEBUG(DBG_ERROR, "request_irq error\n");
-		goto out_del;
+		goto out;
 	}
 
 	IPC_DEBUG(DBG_TRACE, "IRQ Clear and Enable\n");
 
 	return 0;
 
-out_del:
-	cdev_del(&g_ipc_info.cdev);
-out_unregister:
-	unregister_chrdev_region(g_ipc_info.devnum, 1);
 out:
 	IPC_DEBUG(DBG_ERROR, "IPC Driver Failed to initialise!\n");
 	return rc;
@@ -590,9 +512,6 @@ static void __exit ipcs_module_exit(void)
 
 	free_irq(IRQ_IPC_C2A, &g_ipc_info);
 
-	cdev_del(&g_ipc_info.cdev);
-
-	unregister_chrdev_region(g_ipc_info.devnum, 1);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&ipc_wake_lock);
 #endif

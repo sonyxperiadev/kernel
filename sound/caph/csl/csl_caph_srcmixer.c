@@ -156,6 +156,215 @@ static CSL_CAPH_SRCM_CHNL_TABLE_t chnlTable[OUTCHNL_MAX_NUM_CHNL] = {
 	{CSL_CAPH_SRCM_STEREO_CH2_R, 0x0000}
 };
 
+#define MIXER_GAIN_LEVEL_NUM 201 /*entries for (50dB * 4 + 1)*/
+
+/* mapping table: maps Gain dB Q13.2 to register value. */
+static struct MixGainMapping_t
+Mixer_GainTable[MIXER_GAIN_LEVEL_NUM] = {
+	/*  0mB,   qDB,  mixer input gain, mix output gain */
+	{     0, 0x0000, 16384, 0x0},
+	{   -25, 0xffff, 15919, 0xa},
+	{   -50, 0xfffe, 15467, 0x16},
+	{   -75, 0xfffd, 15029, 0x20},
+	{  -100, 0xfffc, 14602, 0x2b},
+	{  -125, 0xfffb, 14188, 0x35},
+	{  -150, 0xfffa, 13785, 0x3f},
+	{  -175, 0xfff9, 13394, 0x4b},
+	{  -200, 0xfff8, 13014, 0x55},
+	{  -225, 0xfff7, 12645, 0x60},
+	{  -250, 0xfff6, 12286, 0x6a},
+	{  -275, 0xfff5, 11938, 0x75},
+	{  -300, 0xfff4, 11599, 0x80},
+	{  -325, 0xfff3, 11270, 0x8a},
+	{  -350, 0xfff2, 10950, 0x95},
+	{  -375, 0xfff1, 10639, 0x9f},
+	{  -400, 0xfff0, 10338, 0xaa},
+	{  -425, 0xffef, 10044, 0xb5},
+	{  -450, 0xffee, 9759, 0xc0},
+	{  -475, 0xffed, 9482, 0xca},
+	{  -500, 0xffec, 9213, 0xd4},
+	{  -525, 0xffeb, 8952, 0xe0},
+	{  -550, 0xffea, 8698, 0xea},
+	{  -575, 0xffe9, 8451, 0xf5},
+	{  -600, 0xffe8, 8211, 0xff},
+	{  -625, 0xffe7, 7978, 0x10a},
+	{  -650, 0xffe6, 7752, 0x115},
+	{  -675, 0xffe5, 7514, 0x11f},
+	{  -700, 0xffe4, 7301, 0x12a},
+	{  -725, 0xffe3, 7094, 0x134},
+	{  -750, 0xffe2, 6892, 0x13f},
+	{  -775, 0xffe1, 6697, 0x14a},
+	{  -800, 0xffe0, 6507, 0x154},
+	{  -825, 0xffdf, 6322, 0x15f},
+	{  -850, 0xffde, 6143, 0x16a},
+	{  -875, 0xffdd, 5969, 0x174},
+	{  -900, 0xffdc, 5799, 0x17f},
+	{  -925, 0xffdb, 5635, 0x18a},
+	{  -950, 0xffda, 5475, 0x194},
+	{  -975, 0xffd9, 5319, 0x19f},
+	{ -1000, 0xffd8, 5169, 0x1aa},
+	{ -1025, 0xffd7, 5022, 0x1b4},
+	{ -1050, 0xffd6, 4879, 0x1be},
+	{ -1075, 0xffd5, 4741, 0x1c9},
+	{ -1100, 0xffd4, 4606, 0x1d4},
+	{ -1125, 0xffd3, 4476, 0x1df},
+	{ -1150, 0xffd2, 4349, 0x1e9},
+	{ -1175, 0xffd1, 4225, 0x1f3},
+	{ -1200, 0xffd0, 4105, 0x1ff},
+	{ -1225, 0xffcf, 3989, 0x209},
+	{ -1250, 0xffce, 3876, 0x214},
+	{ -1275, 0xffcd, 3757, 0x21e},
+	{ -1300, 0xffcc, 3650, 0x229},
+	{ -1325, 0xffcb, 3547, 0x234},
+	{ -1350, 0xffca, 3446, 0x23e},
+	{ -1375, 0xffc9, 3348, 0x249},
+	{ -1400, 0xffc8, 3253, 0x253},
+	{ -1425, 0xffc7, 3161, 0x25e},
+	{ -1450, 0xffc6, 3071, 0x269},
+	{ -1475, 0xffc5, 2984, 0x274},
+	{ -1500, 0xffc4, 2899, 0x27e},
+	{ -1525, 0xffc3, 2817, 0x288},
+	{ -1550, 0xffc2, 2737, 0x293},
+	{ -1575, 0xffc1, 2659, 0x29e},
+	{ -1600, 0xffc0, 2584, 0x2a9},
+	{ -1625, 0xffbf, 2511, 0x2b3},
+	{ -1650, 0xffbe, 2439, 0x2be},
+	{ -1675, 0xffbd, 2370, 0x2c9},
+	{ -1700, 0xffbc, 2303, 0x2d3},
+	{ -1725, 0xffbb, 2238, 0x2de},
+	{ -1750, 0xffba, 2174, 0x2e8},
+	{ -1775, 0xffb9, 2112, 0x2f3},
+	{ -1800, 0xffb8, 2052, 0x2fe},
+	{ -1825, 0xffb7, 1994, 0x308},
+	{ -1850, 0xffb6, 1938, 0x312},
+	{ -1875, 0xffb5, 1878, 0x31d},
+	{ -1900, 0xffb4, 1825, 0x328},
+	{ -1925, 0xffb3, 1773, 0x333},
+	{ -1950, 0xffb2, 1723, 0x33e},
+	{ -1975, 0xffb1, 1674, 0x348},
+	{ -2000, 0xffb0, 1626, 0x353},
+	{ -2025, 0xffaf, 1580, 0x35d},
+	{ -2050, 0xffae, 1535, 0x368},
+	{ -2075, 0xffad, 1492, 0x373},
+	{ -2100, 0xffac, 1449, 0x37d},
+	{ -2125, 0xffab, 1408, 0x388},
+	{ -2150, 0xffaa, 1368, 0x393},
+	{ -2175, 0xffa9, 1329, 0x39d},
+	{ -2200, 0xffa8, 1292, 0x3a7},
+	{ -2225, 0xffa7, 1255, 0x3b2},
+	{ -2250, 0xffa6, 1219, 0x3bd},
+	{ -2275, 0xffa5, 1185, 0x3c8},
+	{ -2300, 0xffa4, 1151, 0x3d2},
+	{ -2325, 0xffa3, 1119, 0x3dc},
+	{ -2350, 0xffa2, 1087, 0x3e8},
+	{ -2375, 0xffa1, 1056, 0x3f2},
+	{ -2400, 0xffa0, 1026, 0x3fd},
+	{ -2425, 0xff9f, 997, 0x407},
+	{ -2450, 0xff9e, 969, 0x412},
+	{ -2475, 0xff9d, 939, 0x41d},
+	{ -2500, 0xff9c, 912, 0x427},
+	{ -2525, 0xff9b, 886, 0x432},
+	{ -2550, 0xff9a, 861, 0x43c},
+	{ -2575, 0xff99, 837, 0x447},
+	{ -2600, 0xff98, 813, 0x452},
+	{ -2625, 0xff97, 790, 0x45d},
+	{ -2650, 0xff96, 767, 0x467},
+	{ -2675, 0xff95, 746, 0x471},
+	{ -2700, 0xff94, 724, 0x47c},
+	{ -2725, 0xff93, 704, 0x487},
+	{ -2750, 0xff92, 684, 0x492},
+	{ -2775, 0xff91, 664, 0x49c},
+	{ -2800, 0xff90, 646, 0x4a7},
+	{ -2825, 0xff8f, 627, 0x4b2},
+	{ -2850, 0xff8e, 609, 0x4bc},
+	{ -2875, 0xff8d, 592, 0x4c7},
+	{ -2900, 0xff8c, 575, 0x4d1},
+	{ -2925, 0xff8b, 559, 0x4dc},
+	{ -2950, 0xff8a, 543, 0x4e7},
+	{ -2975, 0xff89, 528, 0x4f1},
+	{ -3000, 0xff88, 513, 0x4fb},
+	{ -3025, 0xff87, 498, 0x507},
+	{ -3050, 0xff86, 484, 0x511},
+	{ -3075, 0xff85, 469, 0x51c},
+	{ -3100, 0xff84, 456, 0x527},
+	{ -3125, 0xff83, 443, 0x531},
+	{ -3150, 0xff82, 430, 0x53c},
+	{ -3175, 0xff81, 418, 0x546},
+	{ -3200, 0xff80, 406, 0x551},
+	{ -3225, 0xff7f, 395, 0x55b},
+	{ -3250, 0xff7e, 383, 0x566},
+	{ -3275, 0xff7d, 373, 0x571},
+	{ -3300, 0xff7c, 362, 0x57c},
+	{ -3325, 0xff7b, 352, 0x586},
+	{ -3350, 0xff7a, 342, 0x590},
+	{ -3375, 0xff79, 332, 0x59c},
+	{ -3400, 0xff78, 323, 0x5a6},
+	{ -3425, 0xff77, 313, 0x5b1},
+	{ -3450, 0xff76, 304, 0x5bb},
+	{ -3475, 0xff75, 296, 0x5c6},
+	{ -3500, 0xff74, 287, 0x5d1},
+	{ -3525, 0xff73, 279, 0x5db},
+	{ -3550, 0xff72, 271, 0x5e6},
+	{ -3575, 0xff71, 264, 0x5f0},
+	{ -3600, 0xff70, 256, 0x5fb},
+	{ -3625, 0xff6f, 249, 0x606},
+	{ -3650, 0xff6e, 242, 0x610},
+	{ -3675, 0xff6d, 234, 0x61b},
+	{ -3700, 0xff6c, 228, 0x625},
+	{ -3725, 0xff6b, 221, 0x630},
+	{ -3750, 0xff6a, 215, 0x63b},
+	{ -3775, 0xff69, 209, 0x646},
+	{ -3800, 0xff68, 203, 0x650},
+	{ -3825, 0xff67, 197, 0x65b},
+	{ -3850, 0xff66, 191, 0x665},
+	{ -3875, 0xff65, 186, 0x670},
+	{ -3900, 0xff64, 181, 0x67b},
+	{ -3925, 0xff63, 176, 0x685},
+	{ -3950, 0xff62, 171, 0x690},
+	{ -3975, 0xff61, 166, 0x69b},
+	{ -4000, 0xff60, 161, 0x6a5},
+	{ -4025, 0xff5f, 156, 0x6af},
+	{ -4050, 0xff5e, 152, 0x6bb},
+	{ -4075, 0xff5d, 148, 0x6c5},
+	{ -4100, 0xff5c, 143, 0x6d0},
+	{ -4125, 0xff5b, 139, 0x6da},
+	{ -4150, 0xff5a, 135, 0x6e4},
+	{ -4175, 0xff59, 132, 0x6f0},
+	{ -4200, 0xff58, 128, 0x6fa},
+	{ -4225, 0xff57, 124, 0x705},
+	{ -4250, 0xff56, 121, 0x70f},
+	{ -4275, 0xff55, 117, 0x71a},
+	{ -4300, 0xff54, 114, 0x725},
+	{ -4325, 0xff53, 110, 0x72f},
+	{ -4350, 0xff52, 107, 0x73a},
+	{ -4375, 0xff51, 104, 0x744},
+	{ -4400, 0xff50, 101, 0x74f},
+	{ -4425, 0xff4f, 98, 0x75a},
+	{ -4450, 0xff4e, 95, 0x765},
+	{ -4475, 0xff4d, 93, 0x76f},
+	{ -4500, 0xff4c, 90, 0x779},
+	{ -4525, 0xff4b, 88, 0x785},
+	{ -4550, 0xff4a, 85, 0x78f},
+	{ -4575, 0xff49, 83, 0x79a},
+	{ -4600, 0xff48, 80, 0x7a4},
+	{ -4625, 0xff47, 78, 0x7af},
+	{ -4650, 0xff46, 76, 0x7ba},
+	{ -4675, 0xff45, 74, 0x7c4},
+	{ -4700, 0xff44, 71, 0x7cf},
+	{ -4725, 0xff43, 69, 0x7d9},
+	{ -4750, 0xff42, 67, 0x7e4},
+	{ -4775, 0xff41, 66, 0x7ef},
+	{ -4800, 0xff40, 64, 0x7f9},
+	{ -4825, 0xff3f, 62, 0x804},
+	{ -4850, 0xff3e, 60, 0x80f},
+	{ -4875, 0xff3d, 58, 0x819},
+	{ -4900, 0xff3c, 57, 0x824},
+	{ -4925, 0xff3b, 55, 0x82f},
+	{ -4950, 0xff3a, 53, 0x839},
+	{ -4975, 0xff39, 52, 0x844},
+	{ -5000, 0xff38, 50, 0x84f}
+};
+
 /****************************************************************************
  *			local function declarations
  ****************************************************************************/
@@ -1395,6 +1604,30 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 		chnl = (inChnls >> (ch - 1)) & 0x1;
 		if (!chnl) {
 			if (!(CAPH_SRCM_CH1 << (ch - 1) & chalInChnlM)) {
+
+				aTrace
+				(LOG_AUDIO_CSL,
+				"csl_caph_srcmixer_config_mix_route MUTE chalOutChnl 0x%x, inCh 0x%x\r\n",
+				chalOutChnl,
+				(CAPH_SRCM_CH1 << (ch - 1)));
+
+				/* do not mute FM radio when play tone */
+				if ((CAPH_SRCM_CH1 << (ch - 1)) ==
+				CAPH_SRCM_PASSCH3
+				&& (csl_caph_srcmixer_read_outchnltable(
+				routeConfig.outChnl) &
+				CSL_CAPH_SRCM_STEREO_PASS_CH1))
+					continue;
+					/* do not mute CAPH_SRCM_PASSCH1_L. */
+
+				if ((CAPH_SRCM_CH1 << (ch - 1)) ==
+				CAPH_SRCM_PASSCH4
+				&& (csl_caph_srcmixer_read_outchnltable(
+				routeConfig.outChnl) &
+				CSL_CAPH_SRCM_STEREO_PASS_CH2))
+					continue;
+					/* do not mute CAPH_SRCM_PASSCH2_L. */
+
 				if (chalOutChnl & (UInt8) CAPH_M0_Left) {
 					chal_caph_srcmixer_set_mixingain(handle,
 							CAPH_SRCM_CH1
@@ -1717,6 +1950,25 @@ void csl_caph_srcmixer_change_samplerate(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	return;
 }
 
+
+/****************************************************************************
+*
+*  Function Name: csl_srcmixer_GetMixerGain
+*
+*  Description: Get the gain mapping structure that contains mixer input gain
+*	register value for the request gain.
+*
+****************************************************************************/
+static int getMixerGain(int req_gain_mB)
+{
+	int i = 0;
+
+	for (i = 0; i <= MIXER_GAIN_LEVEL_NUM-1; i++)
+		if (req_gain_mB >= Mixer_GainTable[i].requestGain_mB)
+			break;
+	return i;
+}
+
 /****************************************************************************
  *
  *  Function Name:  csl_srcmixer_setMixInGain
@@ -1741,52 +1993,12 @@ void csl_srcmixer_setMixInGain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 	 * 0x0000 the input path is essentially switched off
 	 */
 
-	/*if( gainL_mB == 0)
-	left_scale = 0x4000;
-	else
-	if( gainL_mB >= 600)
-	left_scale = 0x7FFF;  scale 2
-	else
-	if( gainL_mB >= 300)
-	left_scale = 0x5A67;  scale 1.42
-	else
-	*/
-
-	if (gainL_mB >= 0)
-		left_scale = 0x4000;
-	else if (gainL_mB >= -300)
-		left_scale = 0x2D4E;	/* scale 1/1.42*/
-	else if (gainL_mB >= -600)
-		left_scale = 0x2000;	/* scale 1/2*/
-	else if (gainL_mB >= -900)
-		left_scale = 0x1555;	/*scale 1/3*/
-	else
-		left_scale = 0x1000;	/*scale 1/4*/
-
-	/*if( gainR_mB == 0)
-	 *	right_scale = 0x4000;
-	 *else
-	 *if( gainR_mB >= 600)
-	 *	right_scale = 0x7FFF;  scale 2
-	 *else
-	 *if( gainR_mB >= 300)
-	 *	right_scale = 0x5A67;  scale 1.42
-	 *else
-	 */
-	if (gainR_mB >= 0)
-		right_scale = 0x4000;
-	else if (gainR_mB >= -300)
-		right_scale = 0x2D4E;	/* scale 1/1.42*/
-	else if (gainR_mB >= -600)
-		right_scale = 0x2000;	/* scale 1/2 */
-	else if (gainR_mB >= -900)
-		right_scale = 0x1555;	/*scale 1/3*/
-	else
-		right_scale = 0x1000;	/*scale 1/4*/
+	left_scale = Mixer_GainTable[getMixerGain(gainL_mB)].mixerInputGain;
+	right_scale = Mixer_GainTable[getMixerGain(gainR_mB)].mixerInputGain;
 
 	aTrace(LOG_AUDIO_CSL,
-			      "csl_caph_srcmixer_set_mixingain::"
-			      "ch %x:%x gain %d:%d, scale 0x%x:%x.\r\n",
+		"csl_srcmixer_setMixInGain::"
+		"ch %x:%x gain %d:%d, scale 0x%x:%x.\r\n",
 			      inChnl, outChnl, gainL_mB, gainR_mB, left_scale,
 			      right_scale);
 
@@ -1986,48 +2198,11 @@ void csl_srcmixer_setMixAllInGain(CSL_CAPH_MIXER_e outChnl,
 	0x0000 the input path is essentially switched off
 	*/
 
-	/*if( gainL_mB == 0)
-		left_scale = 0x4000;
-	else
-	if( gainL_mB >= 600)
-		left_scale = 0x7FFF;  scale 2
-	else
-	if( gainL_mB >= 300)
-		left_scale = 0x5A67;  scale 1.42
-	else*/
-	if (gainL_mB >= 0)
-		left_scale = 0x4000;
-	else if (gainL_mB >= -300)
-		left_scale = 0x2D4E;	/* scale 1/1.42*/
-	else if (gainL_mB >= -600)
-		left_scale = 0x2000;	/* scale 1/2*/
-	else if (gainL_mB >= -900)
-		left_scale = 0x1555;	/*scale 1/3*/
-	else
-		left_scale = 0x1000;	/*scale 1/4*/
-
-	/*if( gainR_mB == 0)
-		right_scale = 0x4000;
-	else
-	if( gainR_mB >= 600)
-		right_scale = 0x7FFF;  scale 2
-	else
-	if( gainR_mB >= 300)
-		right_scale = 0x5A67;  scale 1.42
-	else*/
-	if (gainR_mB >= 0)
-		right_scale = 0x4000;
-	else if (gainR_mB >= -300)
-		right_scale = 0x2D4E;	/* scale 1/1.42*/
-	else if (gainR_mB >= -600)
-		right_scale = 0x2000;	/* scale 1/2*/
-	else if (gainR_mB >= -900)
-		right_scale = 0x1555;	/*scale 1/3*/
-	else
-		right_scale = 0x1000;	/*scale 1/4*/
+	left_scale = Mixer_GainTable[getMixerGain(gainL_mB)].mixerInputGain;
+	right_scale = Mixer_GainTable[getMixerGain(gainR_mB)].mixerInputGain;
 
 	aTrace(LOG_AUDIO_CSL,
-			      "csl_caph_srcmixer_set_mixingain:: outCh %x"
+			      "csl_srcmixer_setMixAllInGain:: outCh %x"
 			      "gain %d:%d, scale 0x%x:%x.\r\n",
 			      outChnl, gainL_mB, gainR_mB, left_scale,
 			      right_scale);

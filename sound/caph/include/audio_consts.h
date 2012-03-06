@@ -58,11 +58,6 @@ enum _AUDIO_GAIN_LR {
 };
 #define AUDIO_GAIN_LR_t enum _AUDIO_GAIN_LR
 
-
-/* enable this flag when cp image is in lmp */
-#define USE_NEW_AUDIO_PARAM
-/*#undef USE_NEW_AUDIO_PARAM */
-
 /**
 	audio application (2-D audio parameters profile)
 **/
@@ -101,17 +96,6 @@ enum _AudioMode_t {
 	AUDIO_MODE_HAC = 6,
 	AUDIO_MODE_USB = 7,
 	AUDIO_MODE_RESERVE = 8,
-#if !defined(USE_NEW_AUDIO_PARAM)
-	AUDIO_MODE_HANDSET_WB = 9,
-	AUDIO_MODE_HEADSET_WB = 10,
-	AUDIO_MODE_HANDSFREE_WB = 11,
-	AUDIO_MODE_BLUETOOTH_WB = 12,
-	AUDIO_MODE_SPEAKERPHONE_WB = 13,
-	AUDIO_MODE_TTY_WB = 14,
-	AUDIO_MODE_HAC_WB = 15,
-	AUDIO_MODE_USB_WB = 16,
-	AUDIO_MODE_RESERVE_WB = 17,
-#endif
 	/* numbers of modes above this line has to be the same as
 	the AUDIO_MODE_NUMBER */
 	AUDIO_MODE_INVALID

@@ -1552,6 +1552,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	if (pdata && pdata->accel.get_slave_descr && pdata->accel.irq)
 		slaveirq_exit(&pdata->accel);
  out_accelirq_failed:
+	unregister_pm_notifier(&mpu->nb);
 	kfree(mpu);
  out_alloc_data_failed:
  out_check_functionality_failed:

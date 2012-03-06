@@ -146,7 +146,15 @@ enum wl_status {
 	WL_STATUS_AP_CREATED,
 	WL_STATUS_SENDING_ACT_FRM,	/* includes scanning peer chan and sending af via "actframe" */
 	WL_STATUS_SCANNING_PEER_CHANNEL, /* scanning peer chan for searching peer's channel */
+	/* it will be set when upper layer requests listen and succeed in setting listen mode.
+	 * if set, other scan request can abort current listen state */
 	WL_STATUS_REMAINING_ON_CHANNEL,
+#ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
+	/* it will be set when upper layer requests listen but scan is running.
+	 * it's fake listen state to keep current scan process.
+	 * if set, other scan request will not abort scan. */
+	WL_STATUS_FAKE_REMAINING_ON_CHANNEL,
+#endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
 #ifdef WL_CFG80211_SYNC_GON_TIME
 	/* waiting for next af to sync time of supplicant.
 	 * it includes SENDING_ACT_FRM and WAITING_MORE_TIME_NEXT_ACT_FRM
@@ -448,6 +456,7 @@ struct wl_priv {
 	bool pwr_save;
 	bool roam_on;		/* on/off switch for self-roaming */
 	bool scan_tried;	/* indicates if first scan attempted */
+	bool wlfc_on;
 	u8 *ioctl_buf;	/* ioctl buffer */
 	struct mutex ioctl_buf_sync;
 	u8 *escan_ioctl_buf;

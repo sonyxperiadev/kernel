@@ -103,22 +103,6 @@ enum __AUDCTRL_GAIN_POINT_en_t {
 };
 #define AUDCTRL_GAIN_POINT_en_t enum __AUDCTRL_GAIN_POINT_en_t
 
-enum __AUDCTRL_PATH_en_t {
-	AUDCTRL_PATH_NONE,
-	AUDCTRL_PATH_P1,
-	AUDCTRL_PATH_P2,
-	AUDCTRL_PATH_VOIP_OUT,
-	AUDCTRL_PATH_AUDIO_IN,
-	AUDCTRL_PATH_SPEECH_IN,
-	AUDCTRL_PATH_VOIP_IN,
-	AUDCTRL_PATH_VOICECALL,
-	AUDCTRL_PATH_FM_LISTENING,
-	AUDCTRL_PATH_FM_CAPTURE,
-	AUDCTRL_PATH_FM_TX,
-	AUDCTRL_PATH_TOTAL_NUM
-};
-#define AUDCTRL_PATH_en_t enum __AUDCTRL_PATH_en_t
-
 /**
 *  @brief  This function is the Init entry point for Audio Controller
 *
@@ -316,12 +300,22 @@ void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app);
 *   Set audio mode for music playback. (no DSP voice)
 *
 *	@param		mode		music audio mode
-*
 *	@return		none
 ****************************************************************************/
 void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 					   unsigned int arg_pathID,
 					   Boolean inHWlpbk);
+
+/**
+*   Set audio mode for FM radio playback.
+*
+*	@param		mode		audio mode
+*	@return		none
+****************************************************************************/
+void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
+					   unsigned int arg_pathID,
+					   Boolean inHWlpbk);
+
 #ifdef CONFIG_ENABLE_SSMULTICAST
 /**
 *   Set audio mode for music multicast. (no DSP voice)

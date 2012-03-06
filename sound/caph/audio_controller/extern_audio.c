@@ -263,8 +263,8 @@ static void audio_gpio_output(int gpio_pin, int value)
 {
 	int rc = gpio_request(gpio_pin, "IHF_EXT_AMP");
 
-	Log_DebugPrintf(LOGID_AUDIO,
-		"audio_gpio_output:: gpio pin %d value %d, rc=0x%x\n",
+	aTrace(LOG_AUDIO_CNTLR,
+		"audio_gpio_output::gpio pin %d value %d, rc=0x%x\n",
 		gpio_pin, value, rc);
 	gpio_direction_output(gpio_pin, 0);
 	gpio_set_value(gpio_pin, value);

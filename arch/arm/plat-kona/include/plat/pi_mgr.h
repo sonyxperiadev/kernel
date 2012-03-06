@@ -67,12 +67,13 @@ enum
 
 enum
 {
-	PI_ENABLE_ON_INIT  		= (1 << 0),
-	PI_ARM_CORE				= (1 << 1),
-	PI_NO_QOS				= (1 << 2),
-	PI_NO_DFS				= (1 << 3),
-	UPDATE_PM_QOS			= (1 << 5),
-	NO_POLICY_CHANGE		= (1 << 6),
+	PI_ENABLE_ON_INIT	= (1 << 0),
+	PI_ARM_CORE		= (1 << 1),
+	PI_NO_QOS		= (1 << 2),
+	PI_NO_DFS		= (1 << 3),
+	UPDATE_PM_QOS		= (1 << 5),
+	NO_POLICY_CHANGE	= (1 << 6),
+	DFS_LIMIT_CHECK_EN	= (1 << 7),
 };
 
 struct pm_pi_info
@@ -127,6 +128,8 @@ struct pi
 	u32 state_saved;
 	int init;
 	u32 usg_cnt;
+	u32 opp_lmt_max;
+	u32 opp_lmt_min;
 	u32 opp_active;
 	u32 qos_sw_event_id;
 #ifdef CONFIG_CHANGE_POLICY_FOR_DFS
@@ -218,6 +221,7 @@ int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp);
 int pi_mgr_dfs_add_request_ex(struct pi_mgr_dfs_node* node,char* client_name, u32 pi_id, u32 opp,u32 opp_weightage);
 int pi_mgr_dfs_request_update_ex(struct pi_mgr_dfs_node* node, u32 opp, u32 opp_weightage);
 int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node);
+int pi_mgr_set_dfs_opp_limit(int pi_id, int min, int max);
 
 int pi_mgr_register_notifier(u32 pi_id, struct notifier_block *notifier, u32 type);
 int pi_mgr_unregister_notifier(u32 pi_id, struct notifier_block *notifier, u32 type);
@@ -251,6 +255,8 @@ static inline int pi_mgr_dfs_add_request(struct pi_mgr_qos_node* node,char* clie
 static inline int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp)
 	{return	0;}
 static inline int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node) {return 0;}
+static inline int pi_mgr_set_dfs_opp_limit(int pi_id, int min, int max)
+	{ return 0; }
 static inline int pi_mgr_register_notifier(u32 pi_id, struct notifier_block *notifier, u32 type)
 	{return	0;}
 static inline int pi_mgr_unregister_notifier(u32 pi_id, struct notifier_block *notifier, u32 type)

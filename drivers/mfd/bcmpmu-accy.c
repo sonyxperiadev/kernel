@@ -65,7 +65,13 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define PMU_BC_STS_ACA_MSK	(1<<7)
 #define PMU_BC_STS_PS2_MSK	(1<<4)
 #define PMU_BC_STS_BC_DONE_MSK	(1<<8)
-
+/* TPROBE_MAX definition */
+#define TPROBE_MAX_USEC			16000
+#define TPROBE_MAX_MSB_MASK		0xC0
+#define TPROBE_MAX_DATA(msb, lsb)	((((msb >> 6) & 0x3) << 8) | \
+							(lsb & 0xFF))
+#define TPROBE_MAX_GET_MSB(data)	(((data >> 8) & 0x3) << 6)
+#define TPROBE_MAX_GET_LSB(data)	(data & 0xFF)
 
 /* pattern to write before accessing PMU BC CTRL reg */
 #define PMU_BC_CTRL_OVWR_PATTERN       0x5
@@ -643,10 +649,9 @@ bcmpmu_dbg_usb_set(struct device *dev, struct device_attribute *attr,
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	int ctrl, val;
-	sscanf(buf, "%x, %x", &ctrl, &val);
+	sscanf(buf, "%x %x", &ctrl, &val);
 	bcmpmu->usb_set(bcmpmu, ctrl, val);
-	pr_accy(FLOW, "%s, ctrl=0x%X, val=0x%X\n", __func__, ctrl, val);
-
+	pr_info("%s, ctrl=0x%X, val=0x%X\n", __func__, ctrl, val);
 	return n;
 }
 
@@ -658,7 +663,7 @@ bcmpmu_dbg_usb_get(struct device *dev, struct device_attribute *attr,
 	int ctrl, val;
 	sscanf(buf, "%x", &ctrl);
 	bcmpmu->usb_get(bcmpmu, ctrl, &val);
-	pr_accy(FLOW, "%s, ctrl=0x%X, val=0x%X\n", __func__, ctrl, val);
+	pr_info("%s, ctrl=0x%X, val=0x%X\n", __func__, ctrl, val);
 	return n;
 }
 
@@ -734,15 +739,20 @@ static void usb_det_work(struct work_struct *work)
 						usb_type = PMU_USB_TYPE_ACA;
 						break;
 					default:
-						usb_type = PMU_USB_TYPE_NONE;
-						/* REVISIT: In error case, Type2 detected for SDP
-						* Need to retry and find the right charger type otherwise
-						* USB will not be notified
-						*/
-						paccy->det_state = USB_RETRY;
-						schedule_delayed_work(&paccy->det_work,
-								      msecs_to_jiffies
-								      (0));
+						/* REVISIT: DCP was removed from USB
+						 * charger types. Remove retry for DCP
+						 * until charger type issues are resolved */
+						if (chrgr_type != PMU_CHRGR_TYPE_DCP) {
+							usb_type = PMU_USB_TYPE_NONE;
+							/* REVISIT: In error case, Type2 detected for SDP
+							* Need to retry and find the right charger type otherwise
+							* USB will not be notified
+							*/
+							paccy->det_state = USB_RETRY;
+							schedule_delayed_work(&paccy->det_work,
+									      msecs_to_jiffies
+									      (0));
+						}
 						break;
 					}
 				} else {
@@ -859,7 +869,8 @@ int bcmpmu_usb_set(struct bcmpmu *bcmpmu,
 		   enum bcmpmu_usb_ctrl_t ctrl, unsigned long data)
 {
 	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)bcmpmu->accyinfo;
-	int ret = 0;
+	int ret = 0, val;
+	int reg;
 	pr_accy(FLOW, "%s, ctrl=%d, val=0x%lX\n", __func__, ctrl, data);
 
 	switch (ctrl) {
@@ -1123,6 +1134,20 @@ int bcmpmu_usb_set(struct bcmpmu *bcmpmu,
 						mask);
 		}
 		break;
+	case BCMPMU_USB_CTRL_TPROBE_MAX:
+		if ((data >= 0) && (data <= TPROBE_MAX_USEC)) {
+			val = (data * 2 * 1000) / 31250;
+			bcmpmu->read_dev(bcmpmu, PMU_REG_OTGCTRL9, &reg,
+					bcmpmu->regmap[PMU_REG_OTGCTRL9].mask);
+			reg &= ~TPROBE_MAX_MSB_MASK;
+			reg |= TPROBE_MAX_GET_MSB(val);
+			ret = bcmpmu->write_dev(bcmpmu, PMU_REG_OTGCTRL9, reg,
+					bcmpmu->regmap[PMU_REG_OTGCTRL9].mask);
+			ret |= bcmpmu->write_dev(bcmpmu, PMU_REG_OTGCTRL10,
+					TPROBE_MAX_GET_LSB(val),
+					bcmpmu->regmap[PMU_REG_OTGCTRL10].mask);
+		}
+		break;
 
 	default:
 		ret = -EINVAL;
@@ -1138,8 +1163,17 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
 {
 	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)bcmpmu->accyinfo;
 	unsigned int val, val1;
+	int tprobe;
 	int ret = -EINVAL;
 	switch (ctrl) {
+	case BCMPMU_USB_CTRL_TPROBE_MAX:
+		ret = bcmpmu->read_dev(bcmpmu, PMU_REG_OTGCTRL9, &val,
+				bcmpmu->regmap[PMU_REG_OTGCTRL9].mask);
+		ret |= bcmpmu->read_dev(bcmpmu, PMU_REG_OTGCTRL10, &val1,
+				bcmpmu->regmap[PMU_REG_OTGCTRL10].mask);
+		tprobe = TPROBE_MAX_DATA(val, val1);
+		val = ((tprobe * 31250) / (2 * 1000));
+		break;
 	case BCMPMU_USB_CTRL_GET_ADP_CHANGE_STATUS:
 		ret = bcmpmu->read_dev(bcmpmu,
 				       PMU_REG_ADP_STATUS_ATTACH_DET,

@@ -440,6 +440,17 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 
 #endif
 
+/* Regulator consumers differ across the platforms.
+ * The following definitions will override the weak
+ * consumer definitions in PMIC board files */
+#ifdef CONFIG_MFD_BCMPMU
+ 
+struct regulator_consumer_supply hv10_supply[] = {
+       { .supply = "sim2_vcc"},
+};
+
+#endif
+
 #ifdef CONFIG_GPIO_PCA953X
 
 #if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) 
@@ -2165,7 +2176,7 @@ void __init board_map_io(void)
 
 late_initcall(rhea_ray_add_lateInit_devices);
 
-MACHINE_START(RHEA, "rhea_ss")
+MACHINE_START(RHEA, "rhea_ss_amazing")
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,

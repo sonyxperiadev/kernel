@@ -50,6 +50,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "chal_types.h"
 
 #include "csl_caph.h"
+#include "csl_caph_hwctrl.h"
 
 #include "msconsts.h"
 #include "shared.h"
@@ -80,9 +81,6 @@ the GPL, without Broadcom's express prior written consent.
 /* RDB access */
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_audioh.h>
-#include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>	/* For DigiMic test */
-#include <mach/rdb/brcm_rdb_sclkcal.h>	/* For Sleep clock test */
-#include <mach/rdb/brcm_rdb_bmdm_clk_mgr_reg.h>	/* For Sleep clock test */
 #include <mach/rdb/brcm_rdb_util.h>
 
 /* HW Settling time */
@@ -105,10 +103,11 @@ xReadValue, xResultArray, xErrorCode) \
 	u8 TestValue; \
 	TestValue = xReadValue; \
 	for (i = 0 ; i < (xChecks) ; i++) { \
-		aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR(%u):" \
-			" AL:%u,  TV=0x%X, BTV=0x%X",\
-			i, xAssertLevel, TestValue,\
-			((TestValue) & (1 << i))); \
+		aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::" \
+					 "CHECKBIT_AND_ASSIGN_ERROR(%u):" \
+					 " AL:%u,  TV=0x%X, BTV=0x%X",\
+					 i, xAssertLevel, TestValue,\
+					 ((TestValue) & (1 << i))); \
 	if (xResultArray[i] == ST_PASS) {\
 			if ((xAssertLevel == 1))  { \
 				aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::" \
@@ -116,26 +115,29 @@ xReadValue, xResultArray, xErrorCode) \
 					" High Check (%u)", i); \
 		if (((TestValue) & (1 << i)) != 0) { \
 			xResultArray[i]  =  xErrorCode; \
-		  aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR:" \
-			  " High Assign err = %u", \
-			  xErrorCode); \
+		  aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::" \
+					   "CHECKBIT_AND_ASSIGN_ERROR:" \
+					   " High Assign err = %u", \
+					   xErrorCode); \
 		} \
 	  } \
 	  else { \
-		aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR:" \
-			" Low Check (%u)", i); \
+		aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::" \
+					 "CHECKBIT_AND_ASSIGN_ERROR:" \
+					 " Low Check (%u)", i); \
 		if (((TestValue) & (1 << i)) == 0) { \
 			xResultArray[i] = xErrorCode; \
-			aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::CHECKBIT_AND_ASSIGN_ERROR:" \
-				" Low Assign err = %u", \
-				xErrorCode); \
+			aTrace(LOG_AUDIO_DRIVER, "GLUE_SELFTEST::" \
+						 "CHECKBIT_AND_ASSIGN_ERROR:" \
+						 " Low Assign err = %u", \
+						 xErrorCode); \
 		} \
 	  } \
 	} \
 	} \
 	}
 
-#endif
+#endif /*defined(IHF_ST_SUPPORTED) | defined(HEADSET_ST_SUPPORTED) */
 
 enum Selftest_Results_t {
 	ST_PASS,	/* Test succeded */
@@ -307,100 +309,13 @@ enum selftest_store_e {
 	SELFTEST_COUNT
 };
 
-/****************************************************************************
-*
-* NAME:  AUDIOH_hw_clkInit
-*
-*
-*  Description:  Initializes the clock manager settings for APB13
-*
-*
-*  Parameters:  None
-*
-*  Returns: None
-*
-*  Notes:   This function is should be part of CLKMGR block.
-*           Will be replaced with CLKMGR_hw_XXX	function once available
-*
-****************************************************************************/
-static void AUDIOH_hw_clkInit(void)
-{
-	u32 regVal;
-
-	/* Enable write access */
-	regVal = (0x00A5A5 << KHUB_CLK_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
-	regVal |= KHUB_CLK_MGR_REG_WR_ACCESS_CLKMGR_ACC_MASK;
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_WR_ACCESS,
-		       regVal);
-
-	/* Set the frequency policy */
-	regVal = (0x06 << KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY0_FREQ_SHIFT);
-	regVal |= (0x06 << KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT);
-	regVal |= (0x06 << KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY2_FREQ_SHIFT);
-	regVal |= (0x06 << KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY3_FREQ_SHIFT);
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_POLICY_FREQ,
-		       regVal);
-
-	/* Set the frequency policy */
-	regVal = 0x7FFFFFFF;
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_POLICY0_MASK1,
-		       regVal);
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_POLICY1_MASK1,
-		       regVal);
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_POLICY2_MASK1,
-		       regVal);
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_POLICY3_MASK1,
-		       regVal);
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_POLICY0_MASK2,
-		       regVal);
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_POLICY1_MASK2,
-		       regVal);
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_POLICY2_MASK2,
-		       regVal);
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_POLICY3_MASK2,
-		       regVal);
-
-	/* start the frequency policy */
-	regVal =
-	    (KHUB_CLK_MGR_REG_POLICY_CTL_GO_MASK |
-	     KHUB_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK);
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_POLICY_CTL,
-		       regVal);
-}
-
-static void AUDIOH_hw_setClk(void)
-{
-	u32 regVal;
-
-	/* Enable all the AUDIOH clocks, 26M, 156M, 2p4M, 6p5M  */
-	regVal = KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_APB_CLK_EN_MASK;
-	regVal |=
-	    KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_APB_HW_SW_GATING_SEL_MASK;
-	regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_156M_CLK_EN_MASK;
-	regVal |=
-	    KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_156M_HW_SW_GATING_SEL_MASK;
-	regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_26M_CLK_EN_MASK;
-	regVal |=
-	    KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_26M_HW_SW_GATING_SEL_MASK;
-	regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_2P4M_CLK_EN_MASK;
-	regVal |=
-	    KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_2P4M_HW_SW_GATING_SEL_MASK;
-	regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_APB_HYST_VAL_MASK;
-
-	BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA, KHUB_CLK_MGR_REG_AUDIOH_CLKGATE,
-		       regVal);
-
-}
-
 static struct dac_ctrl_t Stored_dac_ctrl_Value;
 static u8 Stored_DacPower;
 static struct pin_config DmicStoredValue[4];
 static int regl_hv7ldo_orig_state;
 static u8 StoredDMIC0Enable;
 static u8 StoredDMIC1Enable;
-static u32 StoredClkGate;
-static u32 StoredPolicyFreq;
-static u32 StoredPolicyMask[8];
+static bool AudioClockState;
 static bool TestActive[SELFTEST_COUNT] = { false, false, false };
 
 void st_audio_store_registers(enum selftest_store_e test)
@@ -412,36 +327,7 @@ void st_audio_store_registers(enum selftest_store_e test)
 	if (TestActive[SELFTEST_DMIC] ||
 	    TestActive[SELFTEST_IHF] || TestActive[SELFTEST_HS]) {
 		/* Store clock settings  */
-		StoredClkGate =
-		    BRCM_READ_REG(KONA_HUB_CLK_BASE_VA,
-				  KHUB_CLK_MGR_REG_AUDIOH_CLKGATE);
-		StoredPolicyFreq =
-		    BRCM_READ_REG(KONA_HUB_CLK_BASE_VA,
-				  KHUB_CLK_MGR_REG_POLICY_FREQ);
-		StoredPolicyMask[0] =
-		    BRCM_READ_REG(KONA_HUB_CLK_BASE_VA,
-				  KHUB_CLK_MGR_REG_POLICY0_MASK1);
-		StoredPolicyMask[1] =
-		    BRCM_READ_REG(KONA_HUB_CLK_BASE_VA,
-				  KHUB_CLK_MGR_REG_POLICY1_MASK1);
-		StoredPolicyMask[2] =
-		    BRCM_READ_REG(KONA_HUB_CLK_BASE_VA,
-				  KHUB_CLK_MGR_REG_POLICY2_MASK1);
-		StoredPolicyMask[3] =
-		    BRCM_READ_REG(KONA_HUB_CLK_BASE_VA,
-				  KHUB_CLK_MGR_REG_POLICY3_MASK1);
-		StoredPolicyMask[4] =
-		    BRCM_READ_REG(KONA_HUB_CLK_BASE_VA,
-				  KHUB_CLK_MGR_REG_POLICY0_MASK2);
-		StoredPolicyMask[5] =
-		    BRCM_READ_REG(KONA_HUB_CLK_BASE_VA,
-				  KHUB_CLK_MGR_REG_POLICY1_MASK2);
-		StoredPolicyMask[6] =
-		    BRCM_READ_REG(KONA_HUB_CLK_BASE_VA,
-				  KHUB_CLK_MGR_REG_POLICY2_MASK2);
-		StoredPolicyMask[7] =
-		    BRCM_READ_REG(KONA_HUB_CLK_BASE_VA,
-				  KHUB_CLK_MGR_REG_POLICY3_MASK2);
+		AudioClockState = csl_caph_QueryHWClock();
 	}
 
 	TestActive[test] = true;
@@ -465,17 +351,15 @@ void st_audio_store_registers(enum selftest_store_e test)
 			    regulator_is_enabled(regl_hv7ldo);
 			regulator_put(regl_hv7ldo);
 		}
-		AUDIOH_hw_clkInit();
-		AUDIOH_hw_setClk();
+		csl_caph_ControlHWClock(TRUE);
 		StoredDMIC0Enable =
 		    chal_audio_vinpath_digi_mic_enable_read(audiohandle);
 		StoredDMIC1Enable =
 		    chal_audio_nvinpath_digi_mic_enable_read(audiohandle);
 		break;
 	case SELFTEST_IHF:
-		bcmpmu_audio_ihf_selftest_backup(1);
-		AUDIOH_hw_clkInit();
-		AUDIOH_hw_setClk();
+		bcmpmu_audio_ihf_selftest_backup(TRUE);
+		csl_caph_ControlHWClock(TRUE);
 		/*      Store BB register Values */
 		/* Register shared with HS */
 		st_audio_audiotx_get_dac_ctrl(audiohandle,
@@ -483,9 +367,8 @@ void st_audio_store_registers(enum selftest_store_e test)
 		Stored_DacPower = chal_audio_ihfpath_get_dac_pwr(audiohandle);
 		break;
 	case SELFTEST_HS:
-		bcmpmu_audio_hs_selftest_backup(1);
-		AUDIOH_hw_clkInit();
-		AUDIOH_hw_setClk();
+		bcmpmu_audio_hs_selftest_backup(TRUE);
+		csl_caph_ControlHWClock(TRUE);
 		/* Store BB register Values */
 		/* Register shared with IHF */
 		st_audio_audiotx_get_dac_ctrl(audiohandle,
@@ -535,14 +418,14 @@ void st_audio_restore_registers(enum selftest_store_e test)
 		}
 		break;
 	case SELFTEST_IHF:
-		bcmpmu_audio_ihf_selftest_backup(0);
+		bcmpmu_audio_ihf_selftest_backup(FALSE);
 		/* Restore BB register values */
 		st_audio_audiotx_set_dac_ctrl(audiohandle,
 					      Stored_dac_ctrl_Value);
 		chal_audio_ihfpath_set_dac_pwr(audiohandle, Stored_DacPower);
 		break;
 	case SELFTEST_HS:
-		bcmpmu_audio_hs_selftest_backup(0);
+		bcmpmu_audio_hs_selftest_backup(FALSE);
 		/* Restore BB register values */
 		st_audio_audiotx_set_dac_ctrl(audiohandle,
 					      Stored_dac_ctrl_Value);
@@ -553,34 +436,7 @@ void st_audio_restore_registers(enum selftest_store_e test)
 	if (!TestActive[SELFTEST_DMIC] &&
 	    !TestActive[SELFTEST_IHF] && !TestActive[SELFTEST_HS]) {
 		/* Retore clock settings  */
-		BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA,
-			       KHUB_CLK_MGR_REG_AUDIOH_CLKGATE, StoredClkGate);
-		BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA,
-			       KHUB_CLK_MGR_REG_POLICY_FREQ, StoredPolicyFreq);
-		BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA,
-			       KHUB_CLK_MGR_REG_POLICY0_MASK1,
-			       StoredPolicyMask[0]);
-		BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA,
-			       KHUB_CLK_MGR_REG_POLICY1_MASK1,
-			       StoredPolicyMask[1]);
-		BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA,
-			       KHUB_CLK_MGR_REG_POLICY2_MASK1,
-			       StoredPolicyMask[2]);
-		BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA,
-			       KHUB_CLK_MGR_REG_POLICY3_MASK1,
-			       StoredPolicyMask[3]);
-		BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA,
-			       KHUB_CLK_MGR_REG_POLICY0_MASK2,
-			       StoredPolicyMask[4]);
-		BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA,
-			       KHUB_CLK_MGR_REG_POLICY1_MASK2,
-			       StoredPolicyMask[5]);
-		BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA,
-			       KHUB_CLK_MGR_REG_POLICY2_MASK2,
-			       StoredPolicyMask[6]);
-		BRCM_WRITE_REG(KONA_HUB_CLK_BASE_VA,
-			       KHUB_CLK_MGR_REG_POLICY3_MASK2,
-			       StoredPolicyMask[7]);
+		csl_caph_ControlHWClock(AudioClockState);
 	}
 	TestActive[test] = false;
 }
@@ -1178,16 +1034,16 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 			gpio_free(DQ_CONNECTION[MicIf]);
 			return;
 		}
-		/*4.     Wait for interrupt for 10ms                      */
-		for (i = 0; i < 10; i++) {
+		/*4.     Wait for interrupt                      */
+		for (i = 0; i < 2; i++) {
+			if (DigiMicInterruptReceived == true)
+				break;
 			aTrace
 			    (LOG_AUDIO_DRIVER,
 			     "GLUE_SELFTEST::std_selftest_digimic()  "
 			     "Interrrupt wait loop %u, Value = %u",
 			     i, gpio_get_value(DQ_CONNECTION[MicIf]));
-			msleep(2);
-			if (DigiMicInterruptReceived == true)
-				break;
+			msleep(20);
 		}
 		aTrace
 		    (LOG_AUDIO_DRIVER,
@@ -1248,16 +1104,16 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 				gpio_free(DQ_CONNECTION[MicIf]);
 				return;
 			}
-			/*6.     Wait for interrupt for 10ms  */
-			for (i = 0; i < 10; i++) {
+			/*6.     Wait for interrupt  */
+			for (i = 0; i < 2; i++) {
+				if (DigiMicInterruptReceived == true)
+					break;
 				aTrace
 				    (LOG_AUDIO_DRIVER,
 				     "GLUE_SELFTEST::std_selftest_digimic()  "
 				     "Interrrupt wait loop %u, Value = %u",
 				     i, gpio_get_value(DQ_CONNECTION[MicIf]));
-				msleep(2);
-				if (DigiMicInterruptReceived == true)
-					break;
+				msleep(20);
 			}
 			aTrace
 			    (LOG_AUDIO_DRIVER,

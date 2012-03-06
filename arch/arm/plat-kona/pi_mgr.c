@@ -92,7 +92,8 @@ enum
 {
 	NODE_ADD,
 	NODE_DELETE,
-	NODE_UPDATE
+	NODE_UPDATE,
+	NODE_RECALC,
 };
 
 static DEFINE_SPINLOCK(pi_mgr_lock);
@@ -524,7 +525,9 @@ static int pi_def_init(struct pi *pi)
 		if(pi->flags & UPDATE_PM_QOS)
 		{
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
-			pi->pm_qos	= pm_qos_add_request(PM_QOS_CPU_DMA_LATENCY,PM_QOS_DEFAULT_VALUE);
+			pi->pm_qos =
+			pm_qos_add_request(PM_QOS_CPU_DMA_LATENCY,
+						PM_QOS_DEFAULT_VALUE);
 #else
 			pm_qos_add_request(&pi->pm_qos, PM_QOS_CPU_DMA_LATENCY,PM_QOS_DEFAULT_VALUE);
 #endif
@@ -540,6 +543,9 @@ static int pi_def_init(struct pi *pi)
 		dfs->pi_id = pi->id;
 		dfs->default_opp = 0;
 		BUG_ON(pi->num_opp && pi->pi_opp == NULL);
+		if (pi->flags & DFS_LIMIT_CHECK_EN)
+			BUG_ON(pi->num_opp <= pi->opp_lmt_max ||
+				pi->opp_lmt_max < pi->opp_lmt_min);
 
 	}
 
@@ -686,7 +692,23 @@ static u32 pi_mgr_dfs_get_opp(const struct pi_mgr_dfs_object* dfs)
 	return opp;
 }
 
-static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node* node, u32 pi_id, int action)
+static u32 check_dfs_limit(struct pi *pi, u32 opp)
+{
+	u32 act_opp = opp;
+
+	if (pi->flags & DFS_LIMIT_CHECK_EN) {
+
+		BUG_ON(pi->opp_lmt_min > pi->opp_lmt_max);
+		if (opp < pi->opp_lmt_min)
+			act_opp = pi->opp_lmt_min;
+		else if (opp > pi->opp_lmt_max)
+			act_opp = pi->opp_lmt_max;
+	}
+	return act_opp;
+}
+
+static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
+						u32 pi_id, int action)
 {
 	u32 old_val, new_val;
 	struct pi_mgr_dfs_object* dfs = &pi_mgr.dfs[pi_id];
@@ -713,11 +735,16 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node* node, u32 pi_id, int action
 		plist_node_init(&node->list,node->opp);
 		plist_add(&node->list, &dfs->requests);
 		break;
+
+	case NODE_RECALC:
+		pi_dbg("%s:NODE_RECALC\n", __func__);
+		break;
+
 	default:
 		BUG();
 		break;
 	}
-	new_val = pi_mgr_dfs_get_opp(dfs);
+	new_val = check_dfs_limit(pi, pi_mgr_dfs_get_opp(dfs));
 	pi_dbg("%s:pi_id= %d oldval = %d new val = %d\n",__func__,pi_id,old_val,new_val);
 
 	if(old_val != new_val)
@@ -1166,12 +1193,36 @@ int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node)
 		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
-	pi_mgr_dfs_update(node,node->pi_id,NODE_DELETE);
+	pi_mgr_dfs_update(node, node->pi_id, NODE_DELETE);
 	node->name = NULL;
 	node->valid = 0;
 	return 0;
 }
 EXPORT_SYMBOL(pi_mgr_dfs_request_remove);
+
+int pi_mgr_set_dfs_opp_limit(int pi_id, int min, int max)
+{
+	struct pi *pi = pi_mgr_get(pi_id);
+	bool update = false;
+	BUG_ON(pi == NULL);
+	if ((pi->flags & DFS_LIMIT_CHECK_EN) == 0)
+		return -EINVAL;
+	if (min >= 0 && (u32)min != pi->opp_lmt_min) {
+		pi->opp_lmt_min = (u32)min;
+		update = true;
+	}
+
+	if (max >= 0 && (u32)max != pi->opp_lmt_max) {
+		if ((u32)max >= pi->num_opp)
+			return -EINVAL;
+		pi->opp_lmt_max = (u32)max;
+		update = true;
+	}
+	if (update)
+		pi_mgr_dfs_update(NULL, pi_id, NODE_RECALC);
+	return 0;
+}
+EXPORT_SYMBOL(pi_mgr_set_dfs_opp_limit);
 
 /*Interface function to PI disable policy change
  PI policy will be set to 7, and PI policies won't be updated
@@ -1640,11 +1691,58 @@ static ssize_t read_get_dfs_request_list(struct file *file, char __user *user_bu
 	return simple_read_from_buffer(user_buf, count, ppos, debug_fs_buf, len);
 }
 
-static struct file_operations pi_dfs_request_list_fops =
-{
+static const struct file_operations pi_dfs_request_list_fops = {
 	.open =         pi_debugfs_open,
 	.read =         read_get_dfs_request_list,
 };
+
+static int pi_opp_set_min_lmt(void *data, u64 val)
+{
+	struct pi *pi = data;
+	BUG_ON(pi == NULL);
+
+	if (unlikely(val > pi->opp_lmt_max)) {
+		pr_info("%s: min > max\n", __func__);
+		return 0;
+	}
+	return pi_mgr_set_dfs_opp_limit(pi->id, (int)val, -1);
+}
+
+static int pi_opp_get_min_lmt(void *data, u64 *val)
+{
+	struct pi *pi = data;
+	BUG_ON(pi == NULL);
+	*val = pi->opp_lmt_min;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pi_opp_min_lmt_fops, pi_opp_get_min_lmt,
+					pi_opp_set_min_lmt, "%llu\n");
+
+static int pi_opp_set_max_lmt(void *data, u64 val)
+{
+	struct pi *pi = data;
+	BUG_ON(pi == NULL);
+
+	if (unlikely(val < pi->opp_lmt_min ||
+			val >= pi->num_opp)) {
+		pr_info("%s: min > max or max > max supported opp\n",
+				__func__);
+		return 0;
+	}
+	return pi_mgr_set_dfs_opp_limit(pi->id, -1, (int)val);
+}
+
+static int pi_opp_get_max_lmt(void *data, u64 *val)
+{
+	struct pi *pi = data;
+	BUG_ON(pi == NULL);
+	*val = pi->opp_lmt_max;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pi_opp_max_lmt_fops, pi_opp_get_max_lmt,
+					pi_opp_set_max_lmt, "%llu\n");
 
 static int debug_chip_reset(void *data, u64 val)
 {
@@ -1956,6 +2054,15 @@ int __init pi_debug_add_pi(struct pi *pi)
 	dent_request_dfs = debugfs_create_file("request_list", S_IRUSR, dent_dfs_dir, pi, &pi_dfs_request_list_fops);
 	if(!dent_request_dfs)
 	    goto err;
+
+	if (pi->flags & DFS_LIMIT_CHECK_EN) {
+
+		debugfs_create_file("opp_lmt_max", S_IRUSR, dent_dfs_dir, pi,
+			&pi_opp_max_lmt_fops);
+
+		debugfs_create_file("opp_lmt_min", S_IRUSR, dent_dfs_dir, pi,
+				&pi_opp_min_lmt_fops);
+	}
     }
 
     return 0;

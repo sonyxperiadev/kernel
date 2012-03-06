@@ -1,0 +1,26 @@
+#
+# BRCM BT Port Driver
+#
+
+menuconfig BTPORT
+	bool "BT port support"
+	default n
+	help
+	  Redirect SPP driver to a fixed device node.
+	  Say Y here to get to see options for device drivers from various
+	  different categories. This option alone does not add any kernel code.
+
+	  If you say N, all options in this submenu will be skipped and disabled.
+
+if BTPORT
+
+config BRCM_BTPORT_DRV
+	tristate "BRCM BT Port Support"
+	default y
+	help
+	  This option enables rfcomm support for Broadcom bluetooth serial profile.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called btport.
+
+endif # BTPORT

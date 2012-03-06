@@ -719,8 +719,8 @@ config BRALLOC_MEM_STATS
 
 config RECOVERY
 	bool "Android Recovery Support"
-	depends on ARCH_KONA
-	default y
+	depends on ARCH_KONA && MMC_BLOCK
+	default n
 
 config BCM_RFKILL
         bool "BCM RFKILL driver support for Bluetooth"
@@ -744,5 +744,6 @@ source "drivers/misc/ti-st/Kconfig"
 source "drivers/misc/lis3lv02d/Kconfig"
 source "drivers/misc/carma/Kconfig"
 source "drivers/misc/mpu3050/Kconfig"
+source "drivers/misc/btport/Kconfig"
 
 endif # MISC_DEVICES

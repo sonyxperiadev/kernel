@@ -254,6 +254,7 @@ static struct regulator_init_data bcm59055_hv2ldo_data = {
 
 struct regulator_consumer_supply hv3_supply[] = {
 	{.supply = "hv3ldo_uc"},
+	{.supply = "2v9_vibra"},
 };
 static struct regulator_init_data bcm59055_hv3ldo_data = {
 	.constraints = {
@@ -552,7 +553,7 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	},
 #endif
 	[BCMPMU_REGULATOR_CSR_NM] =	{
-		BCMPMU_REGULATOR_CSR_NM, &bcm59055_csr_nm_data, 0x31, 0
+		BCMPMU_REGULATOR_CSR_NM, &bcm59055_csr_nm_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_CSR_NM2] = {
 		BCMPMU_REGULATOR_CSR_NM2, &bcm59055_csr_nm2_data, 0xFF, 0
