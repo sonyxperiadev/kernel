@@ -613,14 +613,15 @@ int __init rhea_pm_debug_init(void)
     dent_rhea_pm_root_dir = debugfs_create_dir("rhea_pm", 0);
     if(!dent_rhea_pm_root_dir)
 	return -ENOMEM;
-    if (!debugfs_create_u32("pm_debug", 0644, dent_rhea_pm_root_dir, (int*)&pm_debug))
-	return -ENOMEM;
-    if (!debugfs_create_file("en_self_refresh", 0644,
+	if (!debugfs_create_u32("pm_debug", S_IRUGO | S_IWUSR,
+		dent_rhea_pm_root_dir, (int *)&pm_debug))
+		return -ENOMEM;
+	if (!debugfs_create_file("en_self_refresh", S_IRUGO | S_IWUSR,
 		dent_rhea_pm_root_dir, NULL, &pm_en_self_refresh_fops))
-	return -ENOMEM;
-    if (!debugfs_create_u32("force_retention", 0644,
+		return -ENOMEM;
+	if (!debugfs_create_u32("force_retention", S_IRUGO | S_IWUSR,
 			dent_rhea_pm_root_dir, (int*)&force_retention))
-	return -ENOMEM;
+		return -ENOMEM;
 
 	/* A9 QOS interface is used to disable dormant C-states
 	 * at runtime. To disable dormant set PM_QOS_CPU_DMA_LATENCY
