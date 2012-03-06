@@ -255,6 +255,7 @@ int mdp4_dtv_off(struct platform_device *pdev)
 		mdp4_dtv_stop(mfd);
 		mdp4_overlay_pipe_free(dtv_pipe);
 		dtv_pipe = NULL;
+		msleep(20);
 	}
 	mdp4_overlay_panel_mode_unset(MDP4_MIXER1, MDP4_PANEL_DTV);
 
@@ -465,6 +466,7 @@ static void mdp4_overlay_dtv_wait4_ov_done(struct msm_fb_data_type *mfd,
 void mdp4_overlay_dtv_ov_done_push(struct msm_fb_data_type *mfd,
 			struct mdp4_overlay_pipe *pipe)
 {
+	mdp4_overlay_reg_flush(pipe, 0);
 	mdp4_overlay_dtv_ov_start(mfd);
 
 	if (pipe->flags & MDP_OV_PLAY_NOWAIT)
