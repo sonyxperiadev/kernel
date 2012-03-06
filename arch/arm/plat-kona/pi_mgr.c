@@ -1925,12 +1925,23 @@ static const struct file_operations pi_debug_count_fops = {
 	.open =         pi_debugfs_open,
 	.read =         read_file_pi_count,
 };
+static int pi_debug_count_clear(void *data, u64 val)
+{
+	if (val == 1) {
+		pm_mgr_pi_count_clear(true);
+		pm_mgr_pi_count_clear(false);
+	} else
+		pr_info("Invalid parm\n");
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(pi_debug_count_clr_fops, NULL, pi_debug_count_clear,
+"%llu\n");
 
 static struct dentry *dent_pi_root_dir;
 int __init pi_debug_init(void)
 {
     struct dentry *dent_all_requests = 0, *dent_chip_reset = 0;
-    struct dentry *dent_pi_count = 0;
+	struct dentry *dent_pi_count = 0, *dent_pi_count_clr = 0;
     dent_pi_root_dir = debugfs_create_dir("power_domains", 0);
     if(!dent_pi_root_dir)
 		return -ENOMEM;
@@ -1949,6 +1960,11 @@ int __init pi_debug_init(void)
 				dent_pi_root_dir, NULL, &pi_debug_count_fops);
 	if (!dent_pi_count)
 		pi_dbg("Error registering pi_count with debugfs\n");
+
+	dent_pi_count_clr = debugfs_create_file("pi_count_clear",
+	S_IRUSR|S_IWUSR, dent_pi_root_dir, NULL, &pi_debug_count_clr_fops);
+	if (!dent_pi_count_clr)
+		pi_dbg("Error registering pi_count_clear with debugfs\n");
 
     return 0;
 

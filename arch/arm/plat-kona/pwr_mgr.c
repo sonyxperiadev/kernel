@@ -753,7 +753,11 @@ EXPORT_SYMBOL(pwr_mgr_pi_counter_enable);
 
 int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 {
-	u32 reg_val;
+	u32 reg_val1 = 0;
+	u32 reg_val2 = 0;
+	int insurance;
+	unsigned long flgs;
+
 	const struct pi *pi;
 	pwr_dbg("%s : pi_id = %d\n", __func__, pi_id);
 
@@ -768,15 +772,27 @@ int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 	}
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
-	reg_val = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
-	pwr_dbg("%s:counter reg val = %x\n", __func__, reg_val);
+	insurance = 0;
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+	do {
+		reg_val1 = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
+		reg_val2 = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
+		if ((reg_val2 >= reg_val1) && ((reg_val2 - reg_val1) < 2))
+			break;
+		insurance++;
+	} while (insurance < 1000);
+	WARN_ON(insurance >= 1000);
+
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+
+	pwr_dbg("%s:counter reg val = %x\n", __func__, reg_val2);
 
 	if (over_flow)
-		*over_flow = !!(reg_val &
+		*over_flow = !!(reg_val2 &
 				PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_OVERFLOW_MASK);
-	return ((reg_val &
+	return (reg_val2 &
 		 PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_MASK)
-		>> PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_SHIFT);
+		>> PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_SHIFT;
 }
 
 EXPORT_SYMBOL(pwr_mgr_pi_counter_read);
