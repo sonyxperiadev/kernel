@@ -39,7 +39,7 @@
 
 //#define RHEA_FB_DEBUG 
 //#define PARTIAL_UPDATE_SUPPORT
-#define RHEA_FB_ENABLE_DYNAMIC_CLOCK	0
+#define RHEA_FB_ENABLE_DYNAMIC_CLOCK	1
 
 #define RHEA_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
 
@@ -306,8 +306,6 @@ static int enable_display(struct rhea_fb *fb, u32 gpio, u32 bus_width)
 	int ret = 0;
 	DISPDRV_OPEN_PARM_T local_DISPDRV_OPEN_PARM_T;
 
-	fb->display_ops->start(&fb->dfs_node);
-
 	ret = fb->display_ops->init(bus_width);
 	if (ret != 0) {
 		rheafb_error("Failed to init this display device!\n");
@@ -340,8 +338,6 @@ fail_to_power_control:
 fail_to_open:
 	fb->display_ops->exit();
 fail_to_init:
-	fb->display_ops->stop(&fb->dfs_node);
-
  	return ret;
 
 }
@@ -355,8 +351,6 @@ static int disable_display(struct rhea_fb *fb)
 	fb->display_ops->close(fb->display_hdl);
 
 	fb->display_ops->exit();
-
-	fb->display_ops->stop(&fb->dfs_node);
 
 	rheafb_info("RHEA display is disabled successfully\n");
 	return ret;
@@ -621,7 +615,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	}
 
 #if (RHEA_FB_ENABLE_DYNAMIC_CLOCK != 1)
-	//fb->display_ops->start(&fb->dfs_node);
+	fb->display_ops->start(&fb->dfs_node);
 #endif
 
 	fb->gpio = fb_data->gpio;
@@ -783,7 +777,7 @@ err_set_var_failed:
 	rhea_clock_stop(fb);
 
 #if (RHEA_FB_ENABLE_DYNAMIC_CLOCK != 1)
-	//fb->display_ops->stop(&fb->dfs_node);
+	fb->display_ops->stop(&fb->dfs_node);
 #endif
 
 err_enable_display_failed:

@@ -578,6 +578,9 @@ static void button_work_func(struct work_struct *work)
 
 	if (p->hs_state != HEADSET) {
 		pr_err("%s() ..scheduled while acessory is not Headset, spurious \r\n", __func__);
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_unlock(&p->accessory_wklock);
+#endif
 		return;
 	}
 
@@ -605,6 +608,9 @@ static void button_work_func(struct work_struct *work)
 				default:
 					pr_err("Button type not supported \r\n");
 					err = 1;
+#ifdef CONFIG_HAS_WAKELOCK
+					wake_unlock(&p->accessory_wklock);
+#endif
 					break;
 			}
 

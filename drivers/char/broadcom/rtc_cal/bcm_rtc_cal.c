@@ -49,21 +49,13 @@
 #include <linux/mfd/bcmpmu.h>
 #include <asm/io.h>
 #include "mobcom_types.h"
-#include <linux/broadcom/resultcode.h>
 #include "taskmsgs.h"
 #include "msconsts.h"
-#include <plat/types.h>
-#include <plat/osabstract/ostypes.h>
-#include <plat/osabstract/ossemaphore.h>
-#include <plat/osabstract/osqueue.h>
-#include <plat/osabstract/ostask.h>
 #include <linux/delay.h>
 #include <linux/syscalls.h>
-#define OSHEAP_Alloc(x) kmalloc( x, GFP_KERNEL )
-#define OSHEAP_Delete(x) kfree( x )
-#define OSTASK_GetCurrentTask( ) sys_gettid( )
-#define OSTASK_IsValidTask(x)  TRUE
-#define OSTASK_Sleep(x)  msleep(x) 
+#include <linux/kfifo.h>
+#include <linux/semaphore.h>
+#include <linux/wait.h>
 
 #include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/bcm_rpc.h>
@@ -91,7 +83,7 @@
 
 #define RTC_RATIO	(1000000)
 #define RTC_RESET_SLIPPAGE	(0)
-#define RTC_PERIODICUPDATE	(TICKS_ONE_SECOND * 60)
+#define RTC_PERIODICUPDATE	(HZ * 60)
 
 #define RTC_HZ2FPU		(1000000)
 #define RTC_RES			(1000000)
@@ -101,7 +93,19 @@
 #define pr_rtcdebug(fmt, ...) \
 	pr_debug(pr_fmt(fmt), ##__VA_ARGS__)
 
+/* The Task Structure */
+struct TaskStruct_t {
+	struct workqueue_struct *wrk_q;
+	struct work_struct wrk;
+};
 
+static struct work_struct rtccal_work;
+static struct workqueue_struct *rtccal_workqueue = NULL;
+static void *rtccal_semaphore = NULL;
+
+struct kfifo rtccal_kfifo;
+spinlock_t rtccal_flock;
+static wait_queue_head_t rtccal_q;
 
 static int rtc_cal_debug = 0;
 
@@ -112,12 +116,8 @@ static rtc_cal_TC_t sRTC_TC = {0};
 
 static rtc_cal_TC_t *pRTC_TC = NULL;
 
-static Task_t	rtc_task;
-
 static bool  IsRTCInit = FALSE;
 static bool  IsRTCRun = FALSE;
-static Semaphore_t 	Semaphore_rtc = NULL;
-Queue_t			queueRTCMsg;
 
 static unsigned long RTCCAL_Ratio = 0;
 static unsigned long RTCCAL_Ratio_min = 0;
@@ -552,6 +552,7 @@ bool rtc_cal_msg(rtc_cal_msg_id_t id, unsigned long val1, unsigned long val2, un
 
 	rtc_cal_msg_t	msg;
 	static unsigned long count = 0;
+	unsigned int len;
 
 	msg.id = id;
 	msg.val1 = val1;
@@ -566,8 +567,15 @@ bool rtc_cal_msg(rtc_cal_msg_id_t id, unsigned long val1, unsigned long val2, un
 	}
 
 	count++;
-	pr_info("%s : msg.id = %u(%lu), val1=%lu, val2=%lu, val3=%lu, val4=%lu",__func__,(unsigned int)msg.id,count,val1, val2, val3, val4);
-	OSQUEUE_Post(queueRTCMsg, (QMsg_t*)&msg, TICKS_FOREVER);
+
+	len = kfifo_in_locked(&rtccal_kfifo,(unsigned char *)&msg,
+		sizeof(rtc_cal_msg_t), &rtccal_flock);
+	if(len!=sizeof(rtc_cal_msg_t))
+		pr_err("%s len=%u",__func__,len);
+
+	wake_up(&rtccal_q);
+
+	pr_info("%s : msg.id = %u(%lu), val1=%lu, val2=%lu, val3=%lu, val4=%lu,len=%u",__func__,(unsigned int)msg.id,count,val1, val2, val3, val4,len);
 
 	return true;
 }
@@ -1191,9 +1199,16 @@ void rtc_cal_tc_get_time(struct rtc_time *tm)
 
 	pr_rtcdebug("%s",__func__);
 
-	if(Semaphore_rtc == NULL)
-		Semaphore_rtc = OSSEMAPHORE_Create( 1, OSSUSPEND_FIFO );
-	OSSEMAPHORE_Obtain( Semaphore_rtc, TICKS_FOREVER );
+	if(rtccal_semaphore == NULL)
+	{
+		rtccal_semaphore = kzalloc(sizeof(struct semaphore), GFP_KERNEL);
+		if (rtccal_semaphore == NULL) {
+			pr_err("%s cannot create semaphore at %d\n", __func__, __LINE__);
+		}
+		sema_init((struct semaphore *)rtccal_semaphore, 1);
+	}
+
+	down((struct semaphore *)rtccal_semaphore);
 
 	rtc_cal_tc_update();
 
@@ -1210,7 +1225,7 @@ void rtc_cal_tc_get_time(struct rtc_time *tm)
 	rtc_util_convert_sec2rtctime_t(&time_rtc, rtc_time);
 	rtc_util_convert_rtctime_t2tm(tm, &time_rtc);
 
-	OSSEMAPHORE_Release(Semaphore_rtc);
+	up((struct semaphore *)rtccal_semaphore);
 
 }
 
@@ -1280,21 +1295,34 @@ static void rtc_cal_task( void )
 	rtc_cal_msg_t	msg;
 	rtctime_t time_rtc;
 	unsigned long time_sec =0;
-	OSStatus_t		status;
 	u64 rtc_slip_prev;
 	bool rtc_slip_flag;
 	struct rtc_time tm;
+	unsigned int len;
 
-	if(Semaphore_rtc == NULL)
-		Semaphore_rtc = OSSEMAPHORE_Create( 1, OSSUSPEND_FIFO );
+	if(rtccal_semaphore == NULL)
+	{
+		rtccal_semaphore = kzalloc(sizeof(struct semaphore), GFP_KERNEL);
+		if (rtccal_semaphore == NULL) {
+			pr_err("%s cannot create semaphore at %d\n", __func__, __LINE__);
+		}
+		sema_init((struct semaphore *)rtccal_semaphore, 1);
+	}
 
 	while( TRUE )
 	{
-		status = OSQUEUE_Pend(queueRTCMsg, (QMsg_t *)&msg, TICKS_FOREVER );
-		pr_rtcdebug("rtc_cal_task : msg.id = %u",(unsigned int)msg.id);
+		memset(&msg, 0, sizeof(rtc_cal_msg_t));
+		wait_event_interruptible(rtccal_q,!kfifo_is_empty(&rtccal_kfifo));
+		
+		len = kfifo_out_locked(&rtccal_kfifo,(unsigned char *)&msg,
+			sizeof(rtc_cal_msg_t),&rtccal_flock);
+		if(len!=sizeof(rtc_cal_msg_t))
+			pr_err("%s len=%u",__func__,len);
 
-		if (status != OSSTATUS_SUCCESS) continue;
-		OSSEMAPHORE_Obtain( Semaphore_rtc, TICKS_FOREVER );
+		pr_rtcdebug("rtc_cal_task : msg.id = %u,%u",(unsigned int)msg.id,len);
+
+		down((struct semaphore *)rtccal_semaphore);
+
 		switch(msg.id)
 			{
 			case RTCCAL_ID_SETTIME:		// set time access from MMI or  upper layer
@@ -1353,7 +1381,9 @@ static void rtc_cal_task( void )
 				break;
 			}
 		rtc_cal_pr_vars();
-		OSSEMAPHORE_Release(Semaphore_rtc);
+
+		up((struct semaphore *)rtccal_semaphore);
+		schedule();
 	}
 }
 
@@ -1369,13 +1399,15 @@ static void rtc_cal_task( void )
 bool rtc_cal_init(void)
 {
 	bool status = TRUE;
+	int ret;
+	spin_lock_init(&rtccal_flock);
+	init_waitqueue_head(&rtccal_q);
 
-	queueRTCMsg = OSQUEUE_Create(RTC_QUEUESIZE,
-								  sizeof(rtc_cal_msg_t),
-								  OSSUSPEND_PRIORITY
-								  );
-	if(queueRTCMsg == NULL)
+	ret = kfifo_alloc(&rtccal_kfifo, RTC_QUEUESIZE * sizeof(rtc_cal_msg_t), GFP_KERNEL);
+
+	if(ret)
 	{
+		pr_err("%s ret=%d",__func__,ret);
 		status = FALSE;
 	}
 
@@ -1428,7 +1460,10 @@ void rtc_cal_run( void )
 
 	pr_rtcdebug("%s",__func__);
 
-	rtc_task = OSTASK_Create( (TEntry_t)rtc_cal_task, TASKNAME_RTCCAL, (TPriority_t)(TASKPRI_RTCCAL), (TStackSize_t)STACKSIZE_RTCCAL);
+
+	rtccal_workqueue = create_workqueue("RTCCAL");
+	INIT_WORK(&rtccal_work, (work_func_t)rtc_cal_task);
+	queue_work(rtccal_workqueue, &rtccal_work);
 	
 	IsRTCRun = true;
 
@@ -1448,7 +1483,13 @@ void rtc_cal_shutdown( void )
 	if(IsRTCRun)
 	{
 		IsRTCRun = false;
-		OSTASK_Destroy( rtc_task );
+		cancel_work_sync(&rtccal_work);
+		flush_workqueue(rtccal_workqueue);
+		destroy_workqueue(rtccal_workqueue);
+		rtccal_workqueue = NULL;
+
+		kfifo_free(&rtccal_kfifo);
+
 		pRTC_TC = NULL;
 	}
 }

@@ -80,9 +80,6 @@
 #include "brcm_rdb_khub_clk_mgr_reg.h"
 
 #include "ossemaphore.h"
-#define OSHEAP_Alloc(s)	kzalloc((s), GFP_KERNEL)
-#define OSHEAP_Delete(a)	kfree((a))
-
 #include "msconsts.h"
 #include "csl_aud_queue.h"
 #include "csl_vpu.h"
@@ -1296,7 +1293,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	voip_data_t voip_codec;
 
 	if (record_test_buf == NULL)
-		record_test_buf = OSHEAP_Alloc(1024 * 1024);
+		record_test_buf = kzalloc(1024 * 1024, GFP_KERNEL);
 
 	if (record_test_buf == NULL) {
 		aError("Memory allocation failed\n");
@@ -1404,6 +1401,9 @@ void AUDTST_VoIP_Stop(void)
 
 		AUDIO_DRIVER_Close(cur_drv_handle);
 		cur_drv_handle = NULL;
+		/* from ceckpatch: kfree is safe, so no need to check */
+		kfree(record_test_buf);
+		record_test_buf = NULL;
 	} else
 		aTrace(LOG_AUDIO_DRIVER, "\nInvalid VoIP Stop\n");
 

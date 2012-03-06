@@ -1090,6 +1090,13 @@ static inline unsigned long get_mm_rss(struct mm_struct *mm)
 		get_mm_counter(mm, MM_ANONPAGES);
 }
 
+#ifdef CONFIG_CMA
+static inline unsigned long get_mm_cma(struct mm_struct *mm)
+{
+	return get_mm_counter(mm, MM_CMAPAGES);
+}
+#endif
+
 static inline unsigned long get_mm_hiwater_rss(struct mm_struct *mm)
 {
 	return max(mm->hiwater_rss, get_mm_rss(mm));

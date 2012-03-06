@@ -40,6 +40,8 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_PONKEYCTRL2] =		{.map = 0x00, .addr = 0x0D, .mask = 0xFF, .ro = 0},
 	[PMU_REG_PONKEYCTRL3] =		{.map = 0x00, .addr = 0x0E, .mask = 0xFF, .ro = 0},
 	/* PONKEY Shutdown/Hard Reset/Restart Registers */
+	[PMU_REG_HOSTCTRL1] = {.map = 0x00, .addr = 0x01, .mask = 0xFF,
+		.ro = 0},
 	[PMU_REG_KEY_PAD_LOCK] =	{.map = 0x00, .addr = 0x0C,
 		.mask = 0x80, .ro = 0, .shift = 7},
 	[PMU_REG_POK_RSTPIN_ONLY] =	{.map = 0x00, .addr = 0x05,
@@ -148,7 +150,8 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_IHFLDO_PUP] =		{.map = 0x01, .addr = 0x82, .mask = 0x01, .ro = 0},
 	[PMU_REG_IHFPOP_PUP] =		{.map = 0x01, .addr = 0x83, .mask = 0xFF, .ro = 0},
 	[PMU_REG_IHFPGA2_GAIN] =	{.map = 0x01, .addr = 0x8E, .mask = 0x3F, .ro = 0, .shift = 0},
-	[PMU_REG_HIGH_GAIN_MODE] =	{.map = 0x01, .addr = 0x8D, .mask = 0x01, .ro = 0, .shift = 3},
+	[PMU_REG_HIGH_GAIN_MODE] =	{.map = 0x01, .addr = 0x8D,
+		.mask = 0x08, .ro = 0, .shift = 3},
 	[PMU_REG_IHF_SC_EDISABLE] =	{.map = 0x01, .addr = 0x9C, .mask = 0x04, .ro = 0},
 	[PMU_REG_HS_SC_EDISABLE] =	{.map = 0x01, .addr = 0x9C, .mask = 0x02, .ro = 0},
 	[PMU_REG_HSPUP_IDDQ_PWRDWN] =	{.map = 0x01, .addr = 0xAA, .mask = 0x10, .ro = 0, .shift = 4},

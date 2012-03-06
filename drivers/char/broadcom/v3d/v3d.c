@@ -794,8 +794,9 @@ static int v3d_thread(void *data)
 					}
 					/* Binning only (job) complete. Launch next job if available, else sleep till next post */
 					if (v3d_job_curr->job_wait_state) {
+						v3d_job_curr->job_status = V3D_JOB_STATUS_SUCCESS;
 						wake_up_interruptible(&
-								      (((v3d_job_t *) v3d_job_curr)->v3d_job_done_q));
+								(((v3d_job_t *)v3d_job_curr)->v3d_job_done_q));
 					}
 					v3d_job_curr = v3d_job_curr->next;
 #if 0

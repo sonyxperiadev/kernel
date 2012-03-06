@@ -296,6 +296,32 @@ struct regulator_desc bcm59039_desc[BCMPMU_REGULATOR_MAX] = {
 				.type = REGULATOR_VOLTAGE,
 				.owner = THIS_MODULE,
 				},
+	[BCMPMU_REGULATOR_ASR_NM] = {
+				.name = "asr_nm",
+				.id = BCMPMU_REGULATOR_ASR_NM,
+				.n_voltages = ARRAY_SIZE(bcm59039_sr_v_table),
+				.ops = &bcmpmuldo_ops,
+				.type = REGULATOR_VOLTAGE,
+				.owner = THIS_MODULE,
+				},
+	[BCMPMU_REGULATOR_ASR_NM2] = {
+				.name = "asr_nm2",
+				.id = BCMPMU_REGULATOR_ASR_NM2,
+				.n_voltages =
+				ARRAY_SIZE(bcm59039_sr_v_table),
+				.ops = &bcmpmuldo_ops,
+				.type = REGULATOR_VOLTAGE,
+				.owner = THIS_MODULE,
+				},
+	[BCMPMU_REGULATOR_ASR_LPM] = {
+				.name = "asr_lpm",
+				.id = BCMPMU_REGULATOR_ASR_LPM,
+				.n_voltages =
+				ARRAY_SIZE(bcm59039_sr_v_table),
+				.ops = &bcmpmuldo_ops,
+				.type = REGULATOR_VOLTAGE,
+				.owner = THIS_MODULE,
+				},
 
 };
 
@@ -574,6 +600,21 @@ struct bcmpmu_reg_info bcm59039_register_info[BCMPMU_REGULATOR_MAX] = {
 				.mode_mask = 0xFF,
 				.ldo_or_sr = BCMPMU_SR,
 				},
+	[BCMPMU_REGULATOR_ASR_NM] = {
+				.reg_addr = PMU_REG_ASROPMODCTRL,
+				.reg_addr_volt = PMU_REG_ASRCTRL1,
+				.vout_mask = 0x1F,
+				.vout_shift = 0,
+				.vout_mask_l = 0x1F,
+				.vout_shift_l = 0,
+				.vout_mask_t = 0x1F,
+				.vout_shift_t = 0,
+				.v_table = bcm59039_sr_v_table,
+				.num_voltages =
+				ARRAY_SIZE(bcm59039_sr_v_table),
+				.mode_mask = 0xFF,
+				.ldo_or_sr = BCMPMU_SR,
+				},
 	[BCMPMU_REGULATOR_IOSR_NM2] = {
 				.reg_addr = PMU_REG_IOSROPMODCTRL,
 				.reg_addr_volt = PMU_REG_IOSRCTRL3,
@@ -605,6 +646,21 @@ struct bcmpmu_reg_info bcm59039_register_info[BCMPMU_REGULATOR_MAX] = {
 				.mode_mask = 0xFF,
 				.ldo_or_sr = BCMPMU_SR,
 				},
+	[BCMPMU_REGULATOR_ASR_NM2] = {
+				.reg_addr = PMU_REG_ASROPMODCTRL,
+				.reg_addr_volt = PMU_REG_ASRCTRL3,
+				.vout_mask = 0x1F,
+				.vout_shift = 0,
+				.vout_mask_l = 0x1F,
+				.vout_shift_l = 0,
+				.vout_mask_t = 0x1F,
+				.vout_shift_t = 0,
+				.v_table = bcm59039_sr_v_table,
+				.num_voltages =
+				ARRAY_SIZE(bcm59039_sr_v_table),
+				.mode_mask = 0xFF,
+				.ldo_or_sr = BCMPMU_SR,
+				},
 	[BCMPMU_REGULATOR_IOSR_LPM] = {
 				.reg_addr = PMU_REG_IOSROPMODCTRL,
 				.reg_addr_volt = PMU_REG_IOSRCTRL2,
@@ -633,6 +689,21 @@ struct bcmpmu_reg_info bcm59039_register_info[BCMPMU_REGULATOR_MAX] = {
 				.v_table = bcm59039_c0_sr_v_table,
 				.num_voltages =
 					ARRAY_SIZE(bcm59039_c0_sr_v_table),
+				.mode_mask = 0xFF,
+				.ldo_or_sr = BCMPMU_SR,
+				},
+		[BCMPMU_REGULATOR_ASR_LPM] = {
+				.reg_addr = PMU_REG_ASROPMODCTRL,
+				.reg_addr_volt = PMU_REG_ASRCTRL2,
+				.vout_mask = 0x1F,
+				.vout_shift = 0,
+				.vout_mask_l = 0x1F,
+				.vout_shift_l = 0,
+				.vout_mask_t = 0x1F,
+				.vout_shift_t = 0,
+				.v_table = bcm59039_sr_v_table,
+				.num_voltages =
+				ARRAY_SIZE(bcm59039_sr_v_table),
 				.mode_mask = 0xFF,
 				.ldo_or_sr = BCMPMU_SR,
 				},
