@@ -1015,6 +1015,14 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 	case ACTION_AUD_DisableECNSTelephony:
 		aTrace(LOG_AUDIO_CNTLR, "Telephony : Turning Off EC and NS\n");
+#ifdef AUDIO_FEATURE_SET_DISABLE_ECNS
+
+		/* when turning off EC and NS, using
+		  * AUDIO_MODE_HANDSFREE as customer's request
+		  */
+		AUDCTRL_SetAudioMode(AUDIO_MODE_HANDSFREE,
+		AUDCTRL_GetAudioApp());
+#endif
 		AUDCTRL_EC(FALSE, 0);
 		AUDCTRL_NS(FALSE);
 		break;
