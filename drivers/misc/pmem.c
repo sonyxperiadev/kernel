@@ -784,8 +784,10 @@ static struct vm_operations_struct vm_ops = {
 static bool should_retry_allocation(int id)
 {
 
-	if (pmem_watermark_ok(&pmem[id]))
+	if (pmem_watermark_ok(&pmem[id]) ||
+			fatal_signal_pending(current)) {
 		goto out;
+	}
 
 	/* retry only if we have a pending death .. */
 	if (pmem[id].deathpending) {
