@@ -322,8 +322,6 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 #endif
 	}
 
-	msleep(40);
-
 	/* Set new filter coef, sidetone filters, gains. */
 	AUDDRV_SetAudioMode(mode, app,
 		telephonyPathID.ulPathID,
@@ -562,9 +560,6 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 	aTrace(LOG_AUDIO_DRIVER,  "%s mixer %d, sample_rate %u",
 		__func__, sink, sample_rate);
 
-	usleep_range(5000, 10000);
-	/* sometimes BBC video has no audio.
-	   This delay may help the mixer filter and mixer gain loading. */
 	currVoiceSpkr = sink;
 
 	if (sample_rate == AUDIO_SAMPLING_RATE_8000) {
@@ -965,8 +960,7 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 		/*if (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM)
 			outChnl = path->srcmRoute[0][0].outChnl;*/
 
-		int i, j, found;
-		found = 0;
+		int i, j;
 		for (i = 0; i < MAX_SINK_NUM; i++)
 			for (j = 0; j < MAX_BLOCK_NUM; j++)
 				if (path->srcmRoute[i][j].outChnl !=
@@ -978,20 +972,15 @@ void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
 					outChnl = path->srcmRoute[i][j].outChnl;
 
 					aTrace(LOG_AUDIO_DRIVER,
-						"%s pathID %d found outChnl 0x%x inChnl 0x%x\n",
-						__func__, arg_pathID, outChnl,
-						path->srcmRoute[i][j].inChnl);
+					"%s pathID %d outChnl 0x%x inChnl 0x%x\n",
+					__func__, arg_pathID, outChnl,
+					path->srcmRoute[i][j].inChnl);
 
 					csl_srcmixer_setMixInGain(
 						  path->srcmRoute[i][j].inChnl,
 						  path->srcmRoute[i][j].outChnl,
 						  mixInGain, mixInGain);
-					found = 1;
 				}
-			if (found == 0)
-				aError(
-				"AUDDRV_SetAudioMode_Speaker can not find mixer output\n");
-
 	} else {
 		aError(
 		"AUDDRV_SetAudioMode_Speaker can not find path\n");
