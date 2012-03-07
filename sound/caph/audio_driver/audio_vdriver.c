@@ -987,7 +987,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 
 					aTrace(LOG_AUDIO_DRIVER,
 					"%s pathID %d outChnl 0x%x inChnl 0x%x\n",
-					__func__, arg_pathID, outChnl,
+					__func__, param.pathID, outChnl,
 					path->srcmRoute[i][j].inChnl);
 
 					aTrace(LOG_AUDIO_DRIVER,
@@ -997,7 +997,6 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 						  path->srcmRoute[i][j].inChnl,
 						  path->srcmRoute[i][j].outChnl,
 						  mixInGain, mixInGainR);
-					found = 1;
 				}
 	} else {
 		aError(
