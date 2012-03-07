@@ -39,6 +39,7 @@ Copyright 2009 - 2012  Broadcom Corporation
 #define	__AUDIO_VDRIVER_H__
 
 #include "csl_caph_hwctrl.h"
+#include "audio_rpc.h"
 
 /**
 *
@@ -51,36 +52,6 @@ typedef void (*audio_codecId_handler_t) (int codecId);
 /* Define the other mic which is used for Noise Cancellation.
 	It is product-dependent. */
 #define MIC_NOISE_CANCEL CSL_CAPH_DEV_EANC_DIGI_MIC_R
-
-enum _AUDDRV_CP_CMD_en_t {
-	/**
-	AP->CP->DSP cmd to reuse the enum in dspcmd.h
-	AP->CP cmd to be listed here including filter loading.
-	AUDDRV_DSP_FASTCMD,
-	AUDDRV_DSP_VPUCMD,
-	**/
-
-	/* CP: */
-	AUDDRV_CPCMD_SetOmegaVoiceParam,
-	AUDDRV_CPCMD_SetFilter,
-	AUDDRV_CPCMD_SetBasebandVolume,
-	AUDDRV_CPCMD_SetBasebandDownlinkMute,
-	AUDDRV_CPCMD_SetBasebandDownlinkUnmute,
-	AUDDRV_CPCMD_SetBasebandUplinkGain,
-	AUDDRV_CPCMD_SetBasebandDownlinkGain,
-	AUDDRV_CPCMD_SET_DSP_AMR_VOLUME_UL,
-	AUDDRV_CPCMD_SET_DSP_AMR_VOLUME_DL,
-	AUDDRV_CPCMD_SetAudioMode,
-	AUDDRV_CPCMD_READ_AUDVOC_AEQMODE,
-	AUDDRV_CPCMD_WRITE_AUDVOC_AEQMODE,
-	AUDDRV_CPCMD_GET_CP_AUDIO_MODE,
-	AUDDRV_CPCMD_UPDATE_AUDIO_MODE,
-	AUDDRV_CPCMD_ENABLE_DSP_DTX,
-	AUDDRV_CPCMD_SetULSpeechRecordGain,
-	AUDDRV_CPCMD_PassAudioMode
-};
-#define AUDDRV_CP_CMD_en_t enum _AUDDRV_CP_CMD_en_t
-
 
 enum _AUDDRV_REQUEST_ID_t {
 	AUDDRV_RATE_CHANGE_REQ,	/* 0x00 */
