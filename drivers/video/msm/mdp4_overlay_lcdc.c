@@ -93,6 +93,8 @@ int mdp_lcdc_on(struct platform_device *pdev)
 	if (mfd->key != MFD_KEY)
 		return -EINVAL;
 
+	mdp4_overlay_ctrl_db_reset();
+
 	fbi = mfd->fbi;
 	var = &fbi->var;
 
@@ -231,7 +233,6 @@ int mdp_lcdc_on(struct platform_device *pdev)
 	MDP_OUTP(MDP_BASE + LCDC_BASE + 0x20, active_v_start);
 	MDP_OUTP(MDP_BASE + LCDC_BASE + 0x24, active_v_end);
 
-	mdp4_overlay_reg_flush(pipe, 1);
 #ifdef CONFIG_MSM_BUS_SCALING
 	mdp_bus_scale_update_request(2);
 #endif
@@ -273,11 +274,10 @@ int mdp_lcdc_off(struct platform_device *pdev)
 	/* delay to make sure the last frame finishes */
 	msleep(16);
 
-#ifdef LCDC_RGB_UNSTAGE
 	/* dis-engage rgb0 from mixer0 */
 	if (lcdc_pipe)
 		mdp4_mixer_stage_down(lcdc_pipe);
-#endif
+
 #ifdef CONFIG_MSM_BUS_SCALING
 	mdp_bus_scale_update_request(0);
 #endif
@@ -541,7 +541,7 @@ void mdp4_lcdc_overlay(struct msm_fb_data_type *mfd)
 	pipe = lcdc_pipe;
 	pipe->srcp0_addr = (uint32) buf;
 	mdp4_overlay_rgb_setup(pipe);
-	mdp4_overlay_reg_flush(pipe, 1);
+	mdp4_mixer_stage_up(pipe);
 	mdp4_overlay_lcdc_vsync_push(mfd, pipe);
 	mutex_unlock(&mfd->dma->ov_mutex);
 }
