@@ -229,8 +229,8 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		}
 
 		aTrace(LOG_AUDIO_DRIVER, "%s mic %d spk %d mode %ld app %ld\n",
-				__func__, mic, spk, Params[2],
-				Params[1]);
+			__func__, mic, spk, Params[2],
+			Params[1]);
 		break;
 
 	case 99:		/* at*maudmode=99  --> stop tuning */
@@ -246,74 +246,59 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		gain = (short)Params[3];
 
 		if (Params[1] == 3) {
-
 			aTrace(LOG_AUDIO_DRIVER, "Params[2] = %d, "
 				"Params[3] %d, audio mode %d\n",
-			     (int)Params[3], (int)Params[2],
-			     AUDCTRL_GetAudioMode());
-
-				if ((Params[2] ==
-				     PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
-				    || (Params[2] ==
-					PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
-					if (AUDCTRL_GetAudioMode() ==
-							AUDIO_MODE_HEADSET
-					    || AUDCTRL_GetAudioMode() ==
-					    AUDIO_MODE_TTY
-					) {
-
-					extern_ihf_off();
-					extern_hs_on();
-					aTrace(LOG_AUDIO_DRIVER,
-							"%s ext headset "
-					"speaker gain = %d\n",
-					     __func__, gain);
+				(int)Params[3], (int)Params[2],
+				AUDCTRL_GetAudioMode());
+			if ((Params[2] == PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+			|| (Params[2] == PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
+				if (AUDCTRL_GetAudioMode() == AUDIO_MODE_HEADSET
+					|| AUDCTRL_GetAudioMode() ==
+					AUDIO_MODE_TTY) {
+						extern_ihf_off();
+						extern_hs_on();
+						aTrace(LOG_AUDIO_DRIVER,
+						"%s ext headset "
+						"speaker gain = %d\n",
+						__func__, gain);
 
 					if (Params[2] ==
-				PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+					PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
 						extern_hs_set_gain(gain*25,
 						AUDIO_HS_LEFT);
 					else if (Params[2] ==
-				PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)
+					PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)
 						extern_hs_set_gain(gain*25,
 						AUDIO_HS_RIGHT);
-				}
-					else if (AUDCTRL_GetAudioMode() ==
-						 AUDIO_MODE_SPEAKERPHONE
-					) {
-
+				} else if (AUDCTRL_GetAudioMode() ==
+					AUDIO_MODE_SPEAKERPHONE) {
 					extern_hs_off();
 					extern_ihf_on();
 					aTrace(LOG_AUDIO_DRIVER, "%s ext IHF "
-					"speaker gain = %d\n",
-					     __func__, gain);
+						"speaker gain = %d\n",
+						__func__, gain);
 					extern_ihf_set_gain(gain*25);
 				}
 
-				}
-				/* Params[2] checking */
-				aTrace
-				    (LOG_AUDIO_DRIVER,
+			}
+			/* Params[2] checking */
+			aTrace(LOG_AUDIO_DRIVER,
 				    "Params[2] = %d, Params[3] %d,"
 				     " audio mode %d\n",
 				     (int)Params[3], (int)Params[2],
 				     AUDCTRL_GetAudioMode());
 
-				if (Params[2]
-				    == PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
-					if (AUDCTRL_GetAudioMode() ==
-					    AUDIO_MODE_SPEAKERPHONE
-					) {
-
+			if (Params[2] == PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
+				if (AUDCTRL_GetAudioMode() ==
+					AUDIO_MODE_SPEAKERPHONE) {
 					aTrace(LOG_AUDIO_DRIVER,
-							"ext IHF high gain "
-					"mode = %d\n",
-					 (int)Params[3]);
+						"ext IHF high gain "
+						"mode = %d\n",
+						(int)Params[3]);
 					extern_ihf_en_hi_gain_mode(
 						(int)Params[3]);
-					}
 				}
-
+			}
 		}	/* if (Params[1] == 3) */
 		}		/* case 100 */
 
@@ -413,6 +398,13 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		csl_caph_ControlHWClock(TRUE);
 
 	switch (Params[0]) {
+	case 50:	/* set audio debug level */
+		gAudioDebugLevel = Params[1];
+		break;
+
+	case 51:	/* print audio debug level */
+		pr_info("audio debug level is 0x%x\n", gAudioDebugLevel);
+		break;
 
 	case 99:
 		if (voip_running) {
@@ -1090,7 +1082,7 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 
 	default:
 		aTrace(LOG_AUDIO_DRIVER,
-				"%s Not supported command\n", __func__);
+			"%s Not supported command\n", __func__);
 		return -1;
 	}
 	return 0;
