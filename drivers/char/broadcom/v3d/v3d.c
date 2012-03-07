@@ -40,6 +40,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/gpio.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
+#include <plat/clock.h>
 #include <linux/dma-mapping.h>
 #include <linux/kthread.h>
 #include <mach/io_map.h>
@@ -1133,8 +1134,6 @@ static int disable_v3d_clock(void)
 
 static void v3d_power(int flag)
 {
-	u32 value;
-
 	mutex_lock(&v3d_state.work_lock);
 	KLOG_D("v3d_power [%d] v3d_inuse[%d]", flag, v3d_in_use);
 
@@ -1168,28 +1167,12 @@ static void v3d_power(int flag)
 			v3d_print_perf_counter(perf_ctr);
 #endif
 		}
-
-		/* Write the password to enable accessing other registers */
-		writel((0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
-		       (0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT),
-		       mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
-
-		/* Put V3D in reset state */
-		value = readl(mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
-		value =
-		    value & ~(0x1 <<
-			      MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
-		writel(value, mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
-		mb();
-
 		/* Disable V3D clock */
 		v3d_is_on = 0;
-
+		disable_v3d_clock();
 		pi_mgr_qos_request_update(&v3d_state.qos_node,
 					  PI_MGR_QOS_DEFAULT_VALUE);
 		scu_standby(1);
-
-		disable_v3d_clock();
 	}
 
 	mutex_unlock(&v3d_state.work_lock);
@@ -1298,30 +1281,12 @@ static void v3d_reg_init(void)
 
 static void v3d_reset(void)
 {
-	u32 value;
-
 #ifdef V3D_PERF_SUPPORT
 	v3d_read_perf_counter(perf_ctr, 1);
 #endif
 
-	/* Write the password to enable accessing other registers */
-	writel((0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
-	       (0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT),
-	       mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
-
-	/*  Put V3D in reset state */
-	value = readl(mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
-	value = value & ~(0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
-	writel(value, mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
-
-	/* udelay(10); */
-
-	value = readl(mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
-	value = value | (0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
-	writel(value, mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
-
-	mb();
-
+	v3d_clk = clk_get(NULL, "v3d_axi_clk");
+	clk_reset(v3d_clk);
 	v3d_reg_init();
 #ifdef V3D_PERF_SUPPORT
     v3d_set_perf_counter();
