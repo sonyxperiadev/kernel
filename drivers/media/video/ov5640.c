@@ -60,7 +60,6 @@ static const struct ov5640_datafmt ov5640_fmts[] = {
 	 */
 	{V4L2_MBUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_JPEG},
 	{V4L2_MBUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
-	{V4L2_MBUS_FMT_JPEG_1X8, V4L2_COLORSPACE_JPEG},
 };
 
 enum ov5640_size {
@@ -1591,6 +1590,7 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
+	u8 sclk_dividers;
 
 	if (!parms)
 		return -EINVAL;
@@ -1598,7 +1598,17 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 	parms->if_type = ov5640->plat_parms->if_type;
 	parms->if_mode = ov5640->plat_parms->if_mode;
 	parms->parms = ov5640->plat_parms->parms;
-	/* parms->parms.serial = mipi_cfgs[ov5640->i_size]; */
+
+	/* set the hs term time */
+	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8)
+		sclk_dividers  = timing_cfg_jpeg[ov5640->i_size].sclk_dividers;
+	else
+		sclk_dividers = timing_cfg_yuv[ov5640->i_size].sclk_dividers;
+
+	if (sclk_dividers == 0x01)
+		parms->parms.serial.hs_term_time = 0x01;
+	else
+		parms->parms.serial.hs_term_time = 0x08;
 
 	return 0;
 }
