@@ -634,6 +634,20 @@ enum bcmpmu_usb_id_lvl_t {
 	PMU_USB_ID_FLOAT,
 };
 
+enum {
+	FG_TMP_ZONE_MIN,
+	FG_TMP_ZONE_n20 = FG_TMP_ZONE_MIN,
+	FG_TMP_ZONE_n15,
+	FG_TMP_ZONE_n10,
+	FG_TMP_ZONE_n5,
+	FG_TMP_ZONE_0,
+	FG_TMP_ZONE_p5,
+	FG_TMP_ZONE_p10,
+	FG_TMP_ZONE_p15,
+	FG_TMP_ZONE_p20,
+	FG_TMP_ZONE_MAX = FG_TMP_ZONE_p20,
+};
+
 struct bcmpmu_rw_data {
 	unsigned int map;
 	unsigned int addr;
@@ -692,7 +706,6 @@ struct bcmpmu_adc_setting {
 	unsigned int compensation_volt_lo;
 	unsigned int compensation_volt_hi;
 	unsigned int compensation_interval;
-
 };
 
 enum bcmpmu_adc_flags {
@@ -733,6 +746,30 @@ struct bcmpmu_charge_zone {
 	int v;
 	int fc;
 	int qc;
+};
+
+struct bcmpmu_fg_zone {
+	int temp;
+	int reset;
+	int fct;
+	int guardband;
+	int esr_vl_lvl;
+	int esr_vl;
+	int esr_vl_slope;
+	int esr_vl_offset;
+	int esr_vm_lvl;
+	int esr_vm;
+	int esr_vm_slope;
+	int esr_vm_offset;
+	int esr_vh_lvl;
+	int esr_vh;
+	int esr_vh_slope;
+	int esr_vh_offset;
+	int esr_vf;
+	int esr_vf_slope;
+	int esr_vf_offset;
+	struct bcmpmu_voltcap_map *vcmap;
+	int maplen;
 };
 
 struct bcmpmu_adc_cal {
@@ -1100,6 +1137,11 @@ struct bcmpmu_platform_data {
 	int support_fg;
 	int support_chrg_maint;
 	int chrg_resume_lvl;
+	int fg_support_tc;
+	int fg_tc_dn_lvl;
+	int fg_tc_up_lvl;
+	int fg_zone_settle_tm;
+	struct bcmpmu_fg_zone *fg_zone_info;
 	enum bcmpmu_bc_t bc;
 	int rpc_rate;
 	struct bcmpmu_wd_setting *wd_setting;
@@ -1129,6 +1171,7 @@ struct bcmpmu_fg {
 	int fg_columb_cnt;
 	int fg_ibat_avg;
 };
+
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
 int bcmpmu_sel_adcsync(enum bcmpmu_adc_timing_t timing);

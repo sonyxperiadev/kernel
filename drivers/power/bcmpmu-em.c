@@ -85,6 +85,7 @@ enum {
 	CAL_MODE_HIGHBAT,
 	CAL_MODE_FORCE,
 	CAL_MODE_CUTOFF,
+	CAL_MODE_TEMP,
 };
 
 static struct bcmpmu_charge_zone chrg_zone[] = {
@@ -99,7 +100,7 @@ static struct bcmpmu_charge_zone chrg_zone[] = {
 };
 
 static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
-/* This table is default data, the reak data is from board file*/
+/* This table is default data, the real data is from board file*/
 /*	volt	capacity*/
 	{4160, 100},
 	{4130, 95},
@@ -138,7 +139,7 @@ struct bcmpmu_em {
 	int bvcap_len;
 	int charge_1c_rate;
 	int eoc;
-	int batt_impedence;
+	int esr;
 	int cutoff_volt;
 	int cutoff_count;
 	int cutoff_count_max;
@@ -174,6 +175,18 @@ struct bcmpmu_em {
 	unsigned char batt_present;
 	unsigned char batt_capacity;
 	unsigned long time;
+	int fg_support_tc;
+	int fg_tc_dn_zone;
+	int fg_tc_up_zone;
+	int fg_zone;
+	int fg_temp_fact;
+	int fg_comp_mode;
+	int fg_guard;
+	int fg_pending_zone;
+	int fg_zone_settle_tm;
+	struct bcmpmu_fg_zone *fg_zone_ptr;
+	int fg_dbg_temp;
+	unsigned long fg_zone_tm;
 };
 static struct bcmpmu_em *bcmpmu_em;
 
@@ -297,6 +310,210 @@ static int get_fg_cap(struct bcmpmu *bcmpmu, int *cap)
 	return ret;
 }
 
+static int get_fg_zone(struct bcmpmu_em *pem, int temp)
+{
+	int zone = FG_TMP_ZONE_MAX;
+	int i;
+	struct bcmpmu_fg_zone *pzone;
+
+	if (pem->fg_support_tc == 0)
+		return FG_TMP_ZONE_MAX;
+	if (pem->fg_zone_ptr == NULL) {
+		pr_em(FLOW, "%s, FG zone info not defined\n", __func__);
+		return FG_TMP_ZONE_MAX;
+	}
+	for (i = FG_TMP_ZONE_MIN; i <= FG_TMP_ZONE_MAX; i++) {
+		pzone = pem->fg_zone_ptr + i;
+		if (temp <= pzone->temp) {
+			zone = i;
+			break;
+		}
+	}
+	pr_em(FLOW, "%s, fg zone =%d\n", __func__, zone);
+	return zone;
+}
+
+static int update_fg_zone(struct bcmpmu_em *pem, int temp)
+{
+	int zone = FG_TMP_ZONE_MAX;
+	unsigned long time = get_seconds();
+
+	if (pem->fg_support_tc == 0)
+		return FG_TMP_ZONE_MAX;
+	if (pem->fg_zone_ptr == NULL) {
+		pr_em(FLOW, "%s, FG zone info not defined\n", __func__);
+		return FG_TMP_ZONE_MAX;
+	}
+
+	zone = get_fg_zone(pem, temp);
+	if (zone != pem->fg_zone) {
+		if (zone != pem->fg_pending_zone) {
+			pem->fg_pending_zone = zone;
+			zone = pem->fg_zone;
+			pem->fg_zone_tm = time;
+		} else if ((time - pem->fg_zone_tm) < pem->fg_zone_settle_tm)
+				zone = pem->fg_zone;
+		else
+			zone = pem->fg_pending_zone;
+	}
+	if ((zone < pem->fg_zone) &&
+		(zone > pem->fg_tc_dn_zone))
+		zone = pem->fg_zone;
+	else if ((zone > pem->fg_zone) &&
+		(zone >= pem->fg_tc_up_zone))
+		zone = pem->fg_tc_up_zone;
+	pr_em(FLOW, "%s, zn=%d, pdzn=%d, tmp=%d, ztmp=%d, tm=%ld\n",
+		__func__, zone, pem->fg_pending_zone, temp,
+		pem->fg_zone_ptr[zone].temp, time - pem->fg_zone_tm);
+	return zone;
+}
+
+static struct bcmpmu_voltcap_map *get_fg_vcmap(struct bcmpmu_em *pem, int *len)
+{
+	struct bcmpmu_voltcap_map *map;
+	if (pem->fg_support_tc == 0) {
+		*len = pem->bvcap_len;
+		map = pem->bvcap;
+	} else if (pem->fg_zone_ptr == NULL) {
+		pr_em(FLOW, "%s, FG zone info not defined\n", __func__);
+		*len = pem->bvcap_len;
+		map = pem->bvcap;
+	} else {
+		if (pem->fg_zone_ptr[pem->fg_zone].reset != 0) {
+			*len = pem->fg_zone_ptr[pem->fg_zone].maplen;
+			map = pem->fg_zone_ptr[pem->fg_zone].vcmap;
+		} else {
+			if ((pem->fg_zone >= FG_TMP_ZONE_MAX) ||
+				(pem->fg_zone <= FG_TMP_ZONE_MIN)) {
+				*len = pem->fg_zone_ptr[pem->fg_zone].maplen;
+				map = pem->fg_zone_ptr[pem->fg_zone].vcmap;
+			} else if (pem->batt_temp >=
+				pem->fg_zone_ptr[pem->fg_zone].temp) {
+				*len = pem->fg_zone_ptr
+					[pem->fg_zone + 1].maplen;
+				map = pem->fg_zone_ptr[pem->fg_zone + 1].vcmap;
+			} else {
+				*len = pem->fg_zone_ptr
+					[pem->fg_zone - 1].maplen;
+				map = pem->fg_zone_ptr[pem->fg_zone - 1].vcmap;
+			}
+		}
+	}
+	return map;
+}
+
+static int get_fg_guard(struct bcmpmu_em *pem)
+{
+	int guard;
+	if (pem->fg_support_tc == 0)
+		guard = 30;
+	else if (pem->fg_zone_ptr == NULL) {
+		pr_em(FLOW, "%s, FG zone info not defined\n", __func__);
+		guard = 30;
+	} else
+		guard = pem->fg_zone_ptr[pem->fg_zone].guardband;
+	pr_em(FLOW, "%s, FG guard band =%d\n", __func__, guard);
+	return guard;
+}
+
+static int get_fg_esr(struct bcmpmu_em *pem)
+{
+	int esr;
+	int slope = 100;
+	int offset = 0;
+	if (pem->fg_support_tc == 0)
+		esr = pem->esr;
+	else if (pem->fg_zone_ptr == NULL) {
+		pr_em(FLOW, "%s, FG zone info not defined\n", __func__);
+		esr = pem->esr;
+	} else {
+		if (pem->batt_volt <
+			pem->fg_zone_ptr[pem->fg_zone].esr_vl_lvl) {
+			slope = pem->fg_zone_ptr[pem->fg_zone].esr_vl_slope;
+			offset = pem->fg_zone_ptr[pem->fg_zone].esr_vl_offset;
+			esr = pem->fg_zone_ptr[pem->fg_zone].esr_vl;
+		} else if (pem->batt_volt <
+			pem->fg_zone_ptr[pem->fg_zone].esr_vm_lvl) {
+			slope = pem->fg_zone_ptr[pem->fg_zone].esr_vm_slope;
+			offset = pem->fg_zone_ptr[pem->fg_zone].esr_vm_offset;
+			esr = pem->fg_zone_ptr[pem->fg_zone].esr_vm;
+		} else if (pem->batt_volt <
+			pem->fg_zone_ptr[pem->fg_zone].esr_vh_lvl) {
+			slope = pem->fg_zone_ptr[pem->fg_zone].esr_vh_slope;
+			offset = pem->fg_zone_ptr[pem->fg_zone].esr_vh_offset;
+			esr = pem->fg_zone_ptr[pem->fg_zone].esr_vh;
+		} else {
+			slope = pem->fg_zone_ptr[pem->fg_zone].esr_vf_slope;
+			offset = pem->fg_zone_ptr[pem->fg_zone].esr_vf_offset;
+			esr = pem->fg_zone_ptr[pem->fg_zone].esr_vf;
+		}
+	}
+	pr_em(FLOW, "%s, fg temp esr=%d, slope=%d, offset=%d\n",
+	      __func__, esr, slope, offset);
+	esr = (esr * slope)/100 + offset;
+	return esr;
+}
+
+static int get_fg_temp_factor(struct bcmpmu_em *pem, int temp)
+{
+	int factor;
+	int dtemp;
+	int dzone;
+	int dfactor;
+
+	if (pem->fg_support_tc == 0)
+		factor = 1000;
+	else if (pem->fg_zone_ptr == NULL) {
+		pr_em(FLOW, "%s, FG zone info not defined\n", __func__);
+		factor = 1000;
+	} else {
+		if (pem->fg_zone >= FG_TMP_ZONE_MAX)
+			factor = pem->fg_zone_ptr[FG_TMP_ZONE_MAX].fct;
+		else if (pem->fg_zone <= FG_TMP_ZONE_MIN) {
+			if (temp >= pem->fg_zone_ptr[FG_TMP_ZONE_MIN + 1].temp)
+				factor = pem->fg_zone_ptr
+					[FG_TMP_ZONE_MIN + 1].fct;
+			else if (temp <= pem->fg_zone_ptr[FG_TMP_ZONE_MIN].temp)
+				factor = pem->fg_zone_ptr[FG_TMP_ZONE_MIN].fct;
+			else {
+				dfactor = (pem->fg_zone_ptr
+						[FG_TMP_ZONE_MIN + 1].fct -
+					 pem->fg_zone_ptr[FG_TMP_ZONE_MIN].fct);
+				dzone = pem->fg_zone_ptr
+						[FG_TMP_ZONE_MIN + 1].temp -
+					pem->fg_zone_ptr[FG_TMP_ZONE_MIN].temp;
+				dtemp = temp - pem->fg_zone_ptr
+						[FG_TMP_ZONE_MIN].temp;
+				factor = (dtemp * dfactor)/dzone +
+					  pem->fg_zone_ptr[FG_TMP_ZONE_MIN].fct;
+			}
+		} else if (temp >= pem->fg_zone_ptr[pem->fg_zone + 1].temp)
+			factor = pem->fg_zone_ptr[pem->fg_zone + 1].fct;
+		else if (temp <= pem->fg_zone_ptr[pem->fg_zone - 1].temp)
+			factor = pem->fg_zone_ptr[pem->fg_zone - 1].fct;
+		else if (temp > pem->fg_zone_ptr[pem->fg_zone].temp) {
+			dfactor = pem->fg_zone_ptr[pem->fg_zone + 1].fct -
+				pem->fg_zone_ptr[pem->fg_zone].fct;
+			dzone = pem->fg_zone_ptr[pem->fg_zone+1].temp -
+				pem->fg_zone_ptr[pem->fg_zone].temp;
+			dtemp = temp - pem->fg_zone_ptr[pem->fg_zone].temp;
+			factor = (dtemp * dfactor)/dzone +
+				pem->fg_zone_ptr[pem->fg_zone].fct;
+		} else if (temp < pem->fg_zone_ptr[pem->fg_zone].temp) {
+			dfactor = pem->fg_zone_ptr[pem->fg_zone].fct -
+				pem->fg_zone_ptr[pem->fg_zone - 1].fct;
+			dzone = pem->fg_zone_ptr[pem->fg_zone].temp -
+				pem->fg_zone_ptr[pem->fg_zone - 1].temp;
+			dtemp = temp - pem->fg_zone_ptr[pem->fg_zone].temp;
+			factor = (dtemp * dfactor)/dzone +
+				pem->fg_zone_ptr[pem->fg_zone].fct;
+		} else
+			factor = pem->fg_zone_ptr[pem->fg_zone].fct;
+		pr_em(FLOW, "%s, fg temp factor=%d\n", __func__, factor);
+	}
+	return factor;
+}
+
 #ifdef CONFIG_MFD_BCMPMU_DBG
 static ssize_t
 dbgmsk_show(struct device *dev, struct device_attribute *attr,
@@ -386,15 +603,160 @@ fgdelta_set(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
+static ssize_t fg_tcstatus_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	ssize_t count;
+	count = sprintf(buf, "Fuel temp compensation status\n");
+	count += sprintf(buf + count, "fg_support_tc=%d\n",
+			 pem->fg_support_tc);
+	count += sprintf(buf + count, "fg_tc_dn_zone=%d\n",
+			 pem->fg_tc_dn_zone);
+	count += sprintf(buf + count, "fg_tc_up_zone=%d\n",
+			 pem->fg_tc_up_zone);
+	count += sprintf(buf + count, "fg_zone_settle_tm=%d\n",
+			 pem->fg_zone_settle_tm);
+	count += sprintf(buf + count, "fg_zone=%d\n",
+			 pem->fg_zone);
+	count += sprintf(buf + count, "fg_pending_zone=%d\n",
+			 pem->fg_pending_zone);
+	return count;
+}
+
+static ssize_t fg_tczone_info_show(struct device *dev,
+				   struct device_attribute *attr,
+				   char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	ssize_t count;
+	struct bcmpmu_fg_zone zone;
+	if (pem->fg_zone_ptr == NULL)
+		return sprintf(buf, "fg_zone_ptr not defined\n");
+	zone = pem->fg_zone_ptr[pem->fg_zone];
+
+	count = sprintf(buf, "Fuel temp compensation zone info\n");
+	count += sprintf(buf + count, "zone=%d\n", pem->fg_zone);
+
+	count += sprintf(buf + count, "temp=%d\n", zone.temp);
+	count += sprintf(buf + count, "reset=%d\n", zone.reset);
+	count += sprintf(buf + count, "guardband=%d\n", zone.guardband);
+	count += sprintf(buf + count, "factor=%d\n", zone.fct);
+
+	count += sprintf(buf + count, "esr_vl_lvl=%d\n", zone.esr_vl_lvl);
+	count += sprintf(buf + count, "esr_vm_lvl=%d\n", zone.esr_vm_lvl);
+	count += sprintf(buf + count, "esr_vh_lvl=%d\n", zone.esr_vh_lvl);
+
+	count += sprintf(buf + count, "esr_vl=%d\n", zone.esr_vl);
+	count += sprintf(buf + count, "esr_vl_slope=%d\n", zone.esr_vl_slope);
+	count += sprintf(buf + count, "esr_vl_offset=%d\n", zone.esr_vl_offset);
+
+	count += sprintf(buf + count, "esr_vm=%d\n", zone.esr_vl);
+	count += sprintf(buf + count, "esr_vm_slope=%d\n", zone.esr_vl_slope);
+	count += sprintf(buf + count, "esr_vm_offset=%d\n", zone.esr_vl_offset);
+
+	count += sprintf(buf + count, "esr_vh=%d\n", zone.esr_vl);
+	count += sprintf(buf + count, "esr_vh_slope=%d\n", zone.esr_vl_slope);
+	count += sprintf(buf + count, "esr_vh_offset=%d\n", zone.esr_vl_offset);
+
+	count += sprintf(buf + count, "esr_vf=%d\n", zone.esr_vf);
+	count += sprintf(buf + count, "esr_vf_slope=%d\n", zone.esr_vf_slope);
+	count += sprintf(buf + count, "esr_vf_offset=%d\n", zone.esr_vf_offset);
+
+	return count;
+}
+
+static ssize_t fg_tczone_map_show(struct device *dev,
+				  struct device_attribute *attr,
+				  char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	int i;
+	ssize_t count;
+	struct bcmpmu_fg_zone *zone;
+
+	if (pem->fg_zone_ptr == NULL)
+		return sprintf(buf, "fg_zone_ptr not defined\n");
+	zone = pem->fg_zone_ptr + pem->fg_zone;
+
+	count = sprintf(buf, "Fuel temp compensation volt factor table\n");
+	count += sprintf(buf+count, "map addr=%p, len=%d\n",
+			zone->vcmap,
+			zone->maplen);
+	for (i = 0; i < zone->maplen; i++)
+		count += sprintf(buf+count, "volt=%d, percent=%d\n",
+				zone->vcmap[i].volt,
+				zone->vcmap[i].cap);
+	return count;
+}
+
+static ssize_t fg_room_map_show(struct device *dev,
+				  struct device_attribute *attr,
+				  char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	int i;
+	ssize_t count;
+	count = sprintf(buf, "FG room temp volt map table\n");
+	count += sprintf(buf+count, "map addr=%p, len=%d\n",
+			pem->bvcap,
+			pem->bvcap_len);
+	for (i = 0; i < pem->bvcap_len; i++)
+		count += sprintf(buf+count, "volt=%d, capacity=%d\n",
+				pem->bvcap[i].volt,
+				pem->bvcap[i].cap);
+	return count;
+}
+
+static ssize_t
+fg_temp_show(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	return sprintf(buf, "fg_dbg_temp=%d\n", pem->fg_dbg_temp - 273);
+}
+
+static ssize_t
+fg_temp_set(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	int val, code;
+	sscanf(buf, "%x %d", &code, &val);
+	if (code != 0xFEED)
+		return -EINVAL;
+	if ((val > 100) || (val < -40))
+		return -EINVAL;
+	pem->fg_dbg_temp = val + 273;
+	return count;
+}
+
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_set);
 static DEVICE_ATTR(pollrate, 0644, pollrate_show, pollrate_set);
 static DEVICE_ATTR(fgcal, 0644, fgcal_show, fgcal_set);
 static DEVICE_ATTR(fgdelta, 0644, fgdelta_show, fgdelta_set);
+static DEVICE_ATTR(fg_dbg_temp, 0644, fg_temp_show, fg_temp_set);
+static DEVICE_ATTR(fg_tcstatus, 0644, fg_tcstatus_show, NULL);
+static DEVICE_ATTR(fg_tczone_info, 0644, fg_tczone_info_show, NULL);
+static DEVICE_ATTR(fg_tczone_map, 0644, fg_tczone_map_show, NULL);
+static DEVICE_ATTR(fg_room_map, 0644, fg_room_map_show, NULL);
 static struct attribute *bcmpmu_em_attrs[] = {
 	&dev_attr_dbgmsk.attr,
 	&dev_attr_pollrate.attr,
 	&dev_attr_fgcal.attr,
 	&dev_attr_fgdelta.attr,
+	&dev_attr_fg_dbg_temp.attr,
+	&dev_attr_fg_tcstatus.attr,
+	&dev_attr_fg_tczone_info.attr,
+	&dev_attr_fg_tczone_map.attr,
+	&dev_attr_fg_room_map.attr,
 	NULL
 };
 
@@ -409,27 +771,30 @@ static int em_batt_get_capacity(struct bcmpmu_em *pem, int pvolt, int curr)
 	int cap = pem->bvcap[i].cap;
 	int index;
 	int volt = pvolt;
+	int len;
+	struct bcmpmu_voltcap_map *vcmap = get_fg_vcmap(pem, &len);
 	
-	volt = pvolt - (pem->batt_impedence * curr)/1000;
+	volt = pvolt - (pem->esr * curr)/1000;
 
-	if (volt >= pem->bvcap[0].volt)
-		cap = pem->bvcap[0].cap;
-	else if (volt <= pem->bvcap[pem->bvcap_len - 1].volt)
-		cap = pem->bvcap[pem->bvcap_len - 1].cap;
+	if (volt >= vcmap[0].volt)
+		cap = vcmap[0].cap;
+	else if (volt <= vcmap[len - 1].volt)
+		cap = vcmap[len - 1].cap;
 	else {
-		for (i = 0; i < pem->bvcap_len - 1; i++) {
-			if ((volt <= pem->bvcap[i].volt) &&
-			    (volt > pem->bvcap[i+1].volt)) {
-				index = ((pem->bvcap[i].volt - volt) * 1000)/
-					 (pem->bvcap[i].volt - pem->bvcap[i+1].volt);
-				cap = pem->bvcap[i].cap +
-					((pem->bvcap[i+1].cap - pem->bvcap[i].cap) * index)/1000;
+		for (i = 0; i < len - 1; i++) {
+			if ((volt <= vcmap[i].volt) &&
+			    (volt > vcmap[i+1].volt)) {
+				index = ((vcmap[i].volt - volt) * 1000)/
+					 (vcmap[i].volt - vcmap[i+1].volt);
+				cap = vcmap[i].cap +
+					((vcmap[i+1].cap - vcmap[i].cap)
+					* index)/1000;
 				break;
 			}
 		}
 	}
 	pr_em(FLOW, "%s, cpcty=%d, pvlt=%d, crr=%d, vlt=%d, imp=%d\n",
-		__func__, cap, pvolt, curr, volt, pem->batt_impedence);
+		__func__, cap, pvolt, curr, volt, pem->esr);
 	return cap;
 }
 
@@ -443,12 +808,35 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 	int calibration = 0;
 	static int eoc_count = 0;
 	int volt;
+	int zone = pem->fg_zone;
 
 	req.sig = PMU_ADC_NTC;
 	req.tm = PMU_ADC_TM_HK;
 	req.flags = PMU_ADC_RAW_AND_UNIT;
 	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
 	pem->batt_temp = req.cnv;
+	if (pem->fg_dbg_temp != 0)
+		pem->batt_temp = pem->fg_dbg_temp;
+	pem->fg_zone = update_fg_zone(pem, pem->batt_temp);
+	if (pem->fg_temp_fact >= 1000)
+		pem->fg_comp_mode = 0;
+	pem->fg_temp_fact = get_fg_temp_factor(pem, pem->batt_temp);
+	if (pem->fg_temp_fact < 1000)
+		pem->fg_comp_mode = 1;
+	pem->fg_guard = get_fg_guard(pem);
+	pem->esr = get_fg_esr(pem);
+
+	if (pem->fg_zone_ptr) {
+		if ((pem->fg_zone != zone) &&
+		    (pem->fg_zone_ptr[pem->fg_zone].reset != 0)) {
+			pem->fg_cap_cal = 0;
+			pem->cal_mode = CAL_MODE_TEMP,
+			calibration = 1;
+			pr_em(FLOW, "%s, reset by fg zone\n", __func__);
+			goto err;
+		};
+	};
+
 	req.sig = PMU_ADC_VMBATT;
 	req.tm = PMU_ADC_TM_HK;
 	req.flags = PMU_ADC_RAW_AND_UNIT;
@@ -473,6 +861,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 			goto err;
 		}
 		pem->fg_capacity += fg_result;
+
 		if (pem->fg_capacity >= pem->fg_capacity_full)
 			pem->fg_capacity = pem->fg_capacity_full;
 		if (pem->fg_capacity <= 0)
@@ -491,7 +880,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 		capacity_v = em_batt_get_capacity(pem,
 				pem->batt_volt, pem->batt_curr);
 
-		volt = pem->batt_volt - (pem->batt_impedence * pem->batt_curr)/1000;
+		volt = pem->batt_volt - (pem->esr * pem->batt_curr)/1000;
 
 		if (pem->batt_volt <= pem->cutoff_volt) {
 			pem->cutoff_count = 0;
@@ -502,14 +891,15 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 			pem->cal_mode = CAL_MODE_FORCE,
 			calibration = 1;
 		} else if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
-		    (pem->fg_lowbatt_cal != 0) &&
-		    (volt < 3550)) {
+			   (pem->fg_lowbatt_cal != 0) &&
+			   (pem->fg_comp_mode == 0) &&
+			   (volt < 3550)) {
 			pem->cal_mode = CAL_MODE_LOWBAT,
 			calibration = 1;
 		} else if ((pem->mode != MODE_TRANSITION) &&
 			   (pem->mode != MODE_CHRG) &&
-			   ((capacity > (capacity_v + 30)) ||
-			    ((capacity + 30) < (capacity_v)))) {
+			   ((capacity > (capacity_v + pem->fg_guard)) ||
+			    ((capacity + pem->fg_guard) < (capacity_v)))) {
 			pem->fg_cap_cal = 0;
 			pem->cal_mode = CAL_MODE_HIGHBAT,
 			calibration = 1;
@@ -521,7 +911,8 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 		eoc_count++;
 		if (eoc_count > 5) {
 			capacity = 100;
-			pem->fg_cap_cal = 1;
+			if (pem->fg_comp_mode == 0)
+				pem->fg_cap_cal = 1;
 			pem->fg_capacity = pem->fg_capacity_full;
 			if (pem->support_chrg_maint) {
 				pem->charge_state = CHRG_STATE_MAINT;
@@ -530,13 +921,14 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 			}
 		}
 	} else eoc_count = 0;
-
+	if (calibration == 0)
+		*cap = (capacity * pem->fg_temp_fact)/1000;
+	else
+		*cap = capacity;
 err:
-	pr_em(FLOW, "%s, fg_acc=%d, fg_cpcty=%d, cpcty=%d, vcpcty=%d, t=%d, cal=%d, calm=%d\n",
+	pr_em(FLOW, "%s, facc=%d, fcp=%d, cp=%d, vcp=%d, t=%d, cl=%d, clm=%d\n",
 		__func__, fg_result, pem->fg_capacity, capacity,
 		capacity_v, pem->batt_temp, calibration, pem->cal_mode);
-
-	*cap = capacity;
 	return calibration;
 }
 
@@ -662,7 +1054,7 @@ static void em_algorithm(struct work_struct *work)
 		container_of(work, struct bcmpmu_em, work.work);
 	struct bcmpmu *bcmpmu = pem->bcmpmu;
 	struct bcmpmu_adc_req req;
-	int capacity;
+	int capacity = pem->batt_capacity;
 	int psy_changed = 0;
 	int charge_zone;
 	int calibration;
@@ -680,19 +1072,30 @@ static void em_algorithm(struct work_struct *work)
 		req.tm = PMU_ADC_TM_HK;
 		req.flags = PMU_ADC_RAW_AND_UNIT;
 		bcmpmu->adc_req(bcmpmu, &req);
+		pem->batt_volt = req.cnv;
 		get_fg_delta(pem->bcmpmu, &pem->cap_delta);
 		update_fg_delta(pem);
 		get_fg_cap(pem->bcmpmu, &pem->cap_init);
+
+		req.sig = PMU_ADC_NTC;
+		req.tm = PMU_ADC_TM_HK;
+		req.flags = PMU_ADC_RAW_AND_UNIT;
+		pem->bcmpmu->adc_req(pem->bcmpmu, &req);
+		pem->batt_temp = req.cnv;
+		pem->fg_zone = get_fg_zone(pem, pem->batt_temp);
+		pem->fg_temp_fact = get_fg_temp_factor(pem, pem->batt_temp);
+		pem->fg_guard = get_fg_guard(pem);
+		pem->esr = get_fg_esr(pem);
+
 		pr_em(INIT, "%s, first fg delta =%d, cap init =%d\n", __func__,
 			pem->cap_delta, pem->cap_init);
 		
-		if (req.cnv == 0) {
+		if (pem->batt_volt == 0) {
 			poll_count = POLL_SAMPLES;
 			pem->mode = MODE_POLL;
 			init_poll = 1;
 			vacc = 0;
 		} else {
-			pem->batt_volt = req.cnv;
 			capacity = em_batt_get_capacity(pem,
 				pem->batt_volt, 0);
 			if ((pem->cap_init != 0) &&
@@ -752,21 +1155,21 @@ static void em_algorithm(struct work_struct *work)
 			    (((capacity - pem->cap_init) > 20) ||
 			     ((capacity - pem->cap_init) < -20))) {
 				capacity = pem->cap_init;
-				pr_em(FLOW, "%s, Init calibratrion.\n", __func__);
+				pr_em(FLOW, "%s, Init cal.\n", __func__);
 			}
 			if (capacity >= 30)
 				pem->fg_lowbatt_cal = 1;
 		} else {
 			if (pem->cal_mode == CAL_MODE_CUTOFF) {
-				pr_em(FLOW, "%s, Cutoff calibratrion, cutoff_count = %d\n",
+				pr_em(FLOW, "%s, Cutoff cal, count = %d\n",
 					__func__, pem->cutoff_count);
 				if (pem->cutoff_count >= pem->cutoff_count_max)
 					capacity = 0;
 				pem->cutoff_count = 0;
 				pem->transition = 1;
 			} else if (pem->cal_mode == CAL_MODE_FORCE) {
-					pem->fg_force_cal = 0;
-					pr_em(FLOW, "%s, Force calibratrion\n", __func__);
+				pem->fg_force_cal = 0;
+				pr_em(FLOW, "%s, Force cal\n", __func__);
 			} else if (pem->cal_mode == CAL_MODE_LOWBAT) {
 				if (pem->fg_cap_cal == 1) {
 					pem->cap_delta += capacity - pem->batt_capacity;
@@ -776,9 +1179,11 @@ static void em_algorithm(struct work_struct *work)
 					pem->fg_cap_cal = 0;
 				}
 				pem->fg_lowbatt_cal = 0;
-				pr_em(FLOW, "%s, Low Volt calibratrion.\n", __func__);
-			} else
-				pr_em(FLOW, "%s, High Volt calibratrion.\n", __func__);
+				pr_em(FLOW, "%s, Low Volt cal.\n", __func__);
+			} else if (pem->cal_mode == CAL_MODE_TEMP)
+				pr_em(FLOW, "%s, Temp cal.\n", __func__);
+			else
+				pr_em(FLOW, "%s, High Volt cal.\n", __func__);
 			pem->cal_mode = CAL_MODE_NONE;
 		}
 		pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
@@ -904,7 +1309,8 @@ static void em_algorithm(struct work_struct *work)
 	ps->set_property(ps, POWER_SUPPLY_PROP_VOLTAGE_NOW, &propval);
 
 	if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
-		(capacity > pem->batt_capacity))
+	    (pem->fg_comp_mode == 0) &&
+	    (capacity > pem->batt_capacity))
 		capacity = pem->batt_capacity;
 
 	propval.intval = capacity;
@@ -1080,9 +1486,9 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	else
 		pem->eoc = 50;
 	if (pdata->batt_impedence)
-		pem->batt_impedence = pdata->batt_impedence;
+		pem->esr = pdata->batt_impedence;
 	else
-		pem->batt_impedence = 250;;
+		pem->esr = 250;
 	if (pdata->cutoff_volt)
 		pem->cutoff_volt = pdata->cutoff_volt;
 	else
@@ -1099,8 +1505,34 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	else
 		pem->chrg_resume_lvl = 4000;
 
+	if (pdata->fg_support_tc)
+		pem->fg_support_tc = pdata->fg_support_tc;
+	else
+		pem->fg_support_tc = 0;
+	if (pdata->fg_zone_info)
+		pem->fg_zone_ptr = pdata->fg_zone_info;
+	else
+		pem->fg_zone_ptr = NULL;
+
+	if (pdata->fg_zone_settle_tm)
+		pem->fg_zone_settle_tm = pdata->fg_zone_settle_tm;
+	else
+		pem->fg_zone_settle_tm = 120;
+	if (pdata->fg_tc_dn_lvl)
+		pem->fg_tc_dn_zone = get_fg_zone(pem, pdata->fg_tc_dn_lvl);
+	else
+		pem->fg_tc_dn_zone = FG_TMP_ZONE_p5;
+
+	if (pdata->fg_tc_up_lvl)
+		pem->fg_tc_up_zone = get_fg_zone(pem, pdata->fg_tc_up_lvl);
+	else
+		pem->fg_tc_up_zone = FG_TMP_ZONE_p10;
+
 	pem->charge_zone = CHRG_ZONE_QC;
-	
+	pem->fg_zone = FG_TMP_ZONE_MAX;
+	pem->fg_pending_zone = FG_TMP_ZONE_MAX;
+	pem->fg_dbg_temp = 0;
+
 	INIT_DELAYED_WORK(&pem->work, em_algorithm);
 	misc_register(&bcmpmu_em_device);
 
