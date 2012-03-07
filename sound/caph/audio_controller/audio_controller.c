@@ -818,7 +818,8 @@ void AUDCTRL_SaveAudioApp(AudioApp_t app)
 	   user space code. kernel audio code can not detect them. */
 	if (currAudioApp == AUDIO_APP_VOIP
 	    || currAudioApp == AUDIO_APP_VOIP_INCOMM
-	    || currAudioApp == AUDIO_APP_RECORDING_GVS)
+	    || currAudioApp == AUDIO_APP_RECORDING_GVS
+	    || currAudioApp == AUDIO_APP_FM)
 		return;		/*keep user-set audio APP intact */
 
 	currAudioApp = app;
