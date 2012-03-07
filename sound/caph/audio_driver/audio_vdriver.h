@@ -194,6 +194,17 @@ struct _AudioSysParm_t {
 #define AudioSysParm_t struct _AudioSysParm_t
 
 #endif
+struct _SetAudioMode_Sp_t {
+	AudioMode_t mode;
+	AudioApp_t app;
+	unsigned int pathID;
+	Boolean inHWlpbk;
+	int mixInGain_mB;
+	int mixInGainR_mB;
+	int mixOutGain_mB;
+	int mixOutGainR_mB;
+};
+#define SetAudioMode_Sp_t struct _SetAudioMode_Sp_t
 
 extern struct completion audioEnableDone;
 
@@ -282,13 +293,7 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 	CSL_CAPH_PathID ul2PathID,
 	CSL_CAPH_PathID dlPathID);
 
-void AUDDRV_SetAudioMode_Speaker(AudioMode_t audio_mode,
-			AudioApp_t audio_app,
-			unsigned int arg_pathID,
-			Boolean inHWlpbk,
-			unsigned int mixInGain,
-			unsigned int mixOutGain
-			);
+void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param);
 
 #ifdef CONFIG_ENABLE_SSMULTICAST
 void AUDDRV_SetAudioMode_Multicast(AudioMode_t audio_mode,
