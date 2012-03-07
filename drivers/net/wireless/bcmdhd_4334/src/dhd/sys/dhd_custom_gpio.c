@@ -86,7 +86,7 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 {
 	int  host_oob_irq = 0;
 
-#if defined(CUSTOMER_HW2) || defined(CUSTOMER_HW_SAMSUNG)
+#if defined(CUSTOMER_HW2) //|| defined(CUSTOMER_HW_SAMSUNG)
 	host_oob_irq = wifi_get_irq_number(irq_flags_ptr);
 
 #else
