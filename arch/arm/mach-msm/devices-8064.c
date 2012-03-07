@@ -920,3 +920,17 @@ struct clock_init_data apq8064_dummy_clock_init_data __initdata = {
 	.table = msm_clocks_8064_dummy,
 	.size = ARRAY_SIZE(msm_clocks_8064_dummy),
 };
+
+static struct resource msm_l2_erp_resources[] = {
+	{
+		.start = APCC_QGICL2IRPTREQ,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+struct platform_device apq8064_device_l2_erp = {
+	.name		= "msm_l2_erp",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(msm_l2_erp_resources),
+	.resource	= msm_l2_erp_resources,
+};
