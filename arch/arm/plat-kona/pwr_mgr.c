@@ -763,12 +763,12 @@ int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 
 	if (unlikely(!pwr_mgr.info)) {
 		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
-		return 0;
+		return -EPERM;
 	}
 
 	if (unlikely(pi_id >= pwr_mgr.info->num_pi)) {
 		pwr_dbg("%s:invalid param\n", __func__);
-		return 0;
+		return -EINVAL;
 	}
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
@@ -785,6 +785,8 @@ int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 
+	if (insurance >= 1000)
+		return -EIO;
 	pwr_dbg("%s:counter reg val = %x\n", __func__, reg_val2);
 
 	if (over_flow)

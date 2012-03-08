@@ -1896,7 +1896,7 @@ static struct file_operations all_req_fops =
 static ssize_t read_file_pi_count(struct file *file, char __user *user_buf,
 				size_t count, loff_t *ppos)
 {
-	int i, counter;
+	int i, counter = 0;
 	u32 len = 0;
 	struct pi *pi;
 	bool overflow;
@@ -1911,6 +1911,8 @@ static ssize_t read_file_pi_count(struct file *file, char __user *user_buf,
 			continue;
 
 		counter = pwr_mgr_pi_counter_read(pi->id, &overflow);
+		if (counter < 0)
+			return -ENOMEM;
 		len += snprintf(debug_fs_buf+len, sizeof(debug_fs_buf)-len,
 				"%8s(%1d): counter:0x%08X, overflow:%d, "
 				"systime:%16ld mS\n",
