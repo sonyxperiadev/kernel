@@ -149,6 +149,7 @@ struct pi
 	struct pm_qos_request_list pm_qos;
 #endif
 	struct pi_ops* ops;
+	spinlock_t lock;
 };
 
 struct pi_mgr_qos_node

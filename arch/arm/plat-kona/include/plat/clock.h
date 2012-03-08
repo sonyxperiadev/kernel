@@ -131,7 +131,7 @@
 (register_bits).reg_offset)
 
 /*Helper Macros*/
-#define CLK_FLG_ENABLED(clk,flg) (!!((clk)->flags & flg))
+#define CLK_FLG_ENABLED(clk, flg) (!!((clk)->flags & flg))
 #define GET_CLK_NAME_STR(x) ((x)->clk.name)
 #define CLK_NAME(x) clk_##x
 #define CLK_PTR(x)  (&(clk_##x).clk)
@@ -148,17 +148,18 @@
 #define FREQ_KHZ(x) ((x)*1000)
 
 #ifdef CONFIG_KONA_PI_MGR
-#define CCU_PI_ENABLE(ccu,en) if((ccu)->pi_id != -1) \
-				{\
-					struct pi* pi = pi_mgr_get((ccu)->pi_id);\
-					BUG_ON(pi == NULL);\
-					if(en)\
-						__pi_enable(pi);\
-					else\
-						__pi_disable(pi);\
-				}
+#define CCU_ACCESS_EN(ccu, en) \
+		if (CLK_FLG_ENABLED(&(ccu)->clk, CCU_ACCESS_ENABLE) &&\
+						(ccu)->pi_id != -1) {\
+			struct pi *pi = pi_mgr_get((ccu)->pi_id);\
+			BUG_ON(pi == NULL);\
+			if (en)\
+				__pi_enable(pi);\
+			else\
+				__pi_disable(pi);\
+		}
 #else
-#define CCU_PI_ENABLE(ccu,en)	{}
+#define CCU_ACCESS_EN(ccu, en)	{}
 #endif
 
 #define PLL_VCO_RATE_MAX	0xFFFFFFFF
@@ -266,25 +267,26 @@ enum
 
 /* Clock flags */
 enum {
-    HYST_ENABLE 		= (1 << 0),
-    HYST_HIGH 			= (1 << 1),
-    AUTO_GATE 			= (1 << 2),
-    INVERT_ENABLE		= (1 << 3),
-    ENABLE_ON_INIT		= (1 << 4),
-    DISABLE_ON_INIT		= (1 << 5),
-    ENABLE_HVT			= (1 << 6),
-    RATE_FIXED			= (1 << 7), /*used for peri ...clk set/get rate functions uses .rate field*/
-    NOTIFY_STATUS_TO_CCU	= (1 << 8),
-    DONOT_NOTIFY_STATUS_TO_CCU	= (1 << 9),
+	HYST_ENABLE			= (1 << 0),
+	HYST_HIGH			= (1 << 1),
+	AUTO_GATE			= (1 << 2),
+	INVERT_ENABLE			= (1 << 3),
+	ENABLE_ON_INIT			= (1 << 4),
+	DISABLE_ON_INIT			= (1 << 5),
+	ENABLE_HVT			= (1 << 6),
+	/*used for peri ...clk set/get rate functions uses .rate field*/
+	RATE_FIXED			= (1 << 7),
+	NOTIFY_STATUS_TO_CCU		= (1 << 8),
+	DONOT_NOTIFY_STATUS_TO_CCU	= (1 << 9),
 	UPDATE_LPJ			= (1 << 10),  /*used for core clock*/
 
-    /* CCU specific flags */
-    CCU_TARGET_LOAD		= (1 << 16),
-    CCU_TARGET_AC		= (1 << 17),
+	/* CCU specific flags */
+	CCU_TARGET_LOAD			= (1 << 16),
+	CCU_TARGET_AC			= (1 << 17),
+	CCU_ACCESS_ENABLE		= (1 << 18),
 
-    /*Ref clk flags*/
-    CLK_RATE_FIXED		= (1<<24),
-
+	/*Ref clk flags*/
+	CLK_RATE_FIXED			= (1 << 24),
 
 };
 
@@ -508,6 +510,7 @@ struct ccu_clk {
 	u8 active_policy;
 	u32*	freq_tbl[MAX_CCU_FREQ_COUNT];
 	struct ccu_state_save *ccu_state_save;
+	spinlock_t lock;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_ccu_dir;
 	u32 policy_dbg_offset;
