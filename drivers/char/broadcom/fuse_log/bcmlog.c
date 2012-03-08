@@ -1507,11 +1507,11 @@ static void start_sdcard_crashlog(struct file *inDumpFile)
  **/
 void BCMLOG_StartCpCrashDump(struct file *inDumpFile)
 {
+	int dump_port;
 	/* note: don't need wakelock here as CP crash */
 	/* dump is done under IPC wakelock */
 	g_module.dumping_cp_crash_log = 1;
 	sDumpFile = inDumpFile;
-	int dump_port;
 
 	/* We don't support SD card crash dump when AP kernel crash is
 	 * triggered first because file operations are not allowed in

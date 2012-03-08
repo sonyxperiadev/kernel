@@ -460,7 +460,7 @@ int BCMLOG_GetCpCrashLogDevice(void)
 	return g_config.cp_crashlog_dev;
 }
 
-int BCMLOG_SetCpCrashLogDevice(int port)
+void BCMLOG_SetCpCrashLogDevice(int port)
 {
 	g_config.cp_crashlog_dev = port;
 }

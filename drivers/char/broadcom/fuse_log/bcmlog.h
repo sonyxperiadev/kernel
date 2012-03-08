@@ -323,7 +323,7 @@ extern "C" {
 
 	int BCMLOG_GetCpCrashLogDevice(void);
 	int BCMLOG_GetApCrashLogDevice(void);
-	int BCMLOG_SetCpCrashLogDevice(int port);
+	void BCMLOG_SetCpCrashLogDevice(int port);
 
 	extern void (*BrcmLogString) (const char *inLogString,
 				      unsigned short inSender);
