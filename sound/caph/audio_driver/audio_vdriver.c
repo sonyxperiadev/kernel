@@ -935,6 +935,9 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		break;
 
 	case AUDIO_MODE_BLUETOOTH:
+#ifdef AUDIO_FEATURE_SET_DISABLE_ECNS
+	case AUDIO_MODE_HANDSFREE:
+#endif
 		outChnl =
 		    csl_caph_hwctrl_GetMixerOutChannel(CSL_CAPH_DEV_BT_SPKR);
 		break;
