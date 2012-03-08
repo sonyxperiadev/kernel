@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Copyright 2012 Broadcom Corporation.  All rights reserved.
 *
-* 	@file	 rtc-sc.c
+* @file rtc-sc.c
 *
 * Unless you and Broadcom execute a separate written software license agreement
 * governing use of this software, this software is licensed to you under the
@@ -24,24 +24,11 @@
 #include <linux/platform_device.h>
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
 #include <linux/mfd/bcm590xx/core.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <linux/broadcom/resultcode.h>
-#include <linux/broadcom/mobcom_types.h>
+#include "mobcom_types.h"
 #include "taskmsgs.h"
 #include "msconsts.h"
-
-#include <plat/types.h>
-#include <plat/osabstract/ostypes.h>
-#include <plat/osabstract/ossemaphore.h>
-#include <plat/osabstract/osqueue.h>
-#include <plat/osabstract/ostask.h>
-#include <linux/delay.h>
-#include <linux/syscalls.h>
-#define OSHEAP_Alloc(x) kmalloc( x, GFP_KERNEL )
-#define OSHEAP_Delete(x) kfree( x )
-#define OSTASK_GetCurrentTask( ) sys_gettid( )
-#define OSTASK_IsValidTask(x)  TRUE
-#define OSTASK_Sleep(x)  msleep(x) 
 
 #include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/bcm_rpc.h>
@@ -64,12 +51,10 @@
 #include <linux/seq_file.h>
 #endif
 
-extern void TRACE_Printf_Sio(const char *, ...);
-
 #ifdef _DBG_
 #undef _DBG_
 #endif
-//#define _DBG_(a) (a)
+/* #define _DBG_(a) (a) */
 #define _DBG_(a)
 
 #define RTCSC_CLIENT_ID 211
@@ -85,37 +70,45 @@ static int first_time = 1;
 static RTCSC_Config	rtcsc_configCB = (RTCSC_Config)0;
 
 
-bool_t xdr_RTCSC_Params_t(void* xdrs, RPC_SimpleMsg_t *rsp);
+bool_t xdr_RTCSC_Params_t(void *xdrs, RPC_SimpleMsg_t *rsp)
+{
+	XDR_LOG(xdrs, "RTCSC_Params_t")
+
+	if (
+		xdr_UInt32(xdrs, &rsp->type) &&
+		xdr_UInt32(xdrs, &rsp->param1) &&
+		xdr_UInt32(xdrs, &rsp->param2) &&
+	1)
+		return TRUE;
+	else
+		return FALSE;
+}
+
 #define _T(a) a
 
-#ifdef CNEON_COMMON
-/* It's to hook up prm sleep clock cal function to be handled in rtc API.
- * chipset_sw/broadcom_sw/glue_rhea/prm/
- */
-extern void prm_sleep_clock_calibration_handler(unsigned int ratio);
-#endif
 
-/*************************************  FRAMEWORK CODE *******************************************************************/
+/*********************  FRAMEWORK CODE ****************************/
 static RPC_XdrInfo_t RTCSC_Prim_dscrm[] = {
-	
+
 	/* Add message serialize/deserialize routine map */
-	{ MSG_RTC_CAL_RSP,_T("MSG_RTC_CAL_RSP"), (xdrproc_t)xdr_RTCSC_Params_t, sizeof(RPC_SimpleMsg_t),0 },
-	{ (MsgType_t)__dontcare__, "",NULL_xdrproc_t, 0,0 } 
+	{ MSG_RTC_CAL_RSP, _T("MSG_RTC_CAL_RSP"), (xdrproc_t)xdr_RTCSC_Params_t,
+		sizeof(RPC_SimpleMsg_t), 0 },
+	{ (MsgType_t)__dontcare__, "", NULL_xdrproc_t, 0, 0 }
 };
 
 static void RTCSC_TestCallback(UInt32 resolution_ppb, UInt32 duration_ms)
 {
-	//empty function for now
-	//MSG_LOGV2("new RTC Threshold:", resolution_ppb, duration_ms);		
-	_DBG_(TRACE_Printf_Sio("RTCSC_TestCallback : resolution_ppb=%d, duration_ms=%d\n\r",resolution_ppb,duration_ms));
+	_DBG_(TRACE_Printf_Sio
+		("RTCSC_TestCallback : resolution_ppb=%d, duration_ms=%d\n\r",
+		resolution_ppb, duration_ms));
 
 }
 
-Result_t RTCSC_SendSimpleMsg(UInt32 tid, UInt8 clientID, RPC_SimpleMsg_t* pMsg)
+Result_t RTCSC_SendSimpleMsg(UInt32 tid, UInt8 clientID, RPC_SimpleMsg_t *pMsg)
 {
 	RPC_Msg_t msg;
 
-	memset(&msg,0,sizeof(RPC_Msg_t));
+	memset(&msg, 0, sizeof(RPC_Msg_t));
 
 	msg.msgId = MSG_RTC_CAL_RSP;
 	msg.tid = tid;
@@ -128,20 +121,21 @@ Result_t RTCSC_SendSimpleMsg(UInt32 tid, UInt8 clientID, RPC_SimpleMsg_t* pMsg)
 
 Boolean RTCSC_sendRatioSignal(UInt32 ratio, UInt16 temp)
 {
-	RPC_SimpleMsg_t msg={0};
+	RPC_SimpleMsg_t msg = {0};
 	msg.type = (UInt32)RTC_SC_EVENT_RATIO;
 	msg.param1 = ratio;
 	msg.param2 = (UInt32) temp;
 
-	_DBG_(TRACE_Printf_Sio("RTC_SC_sendRatioSignal : ratio=%d, temp=%d\n\r",ratio,temp));
+	_DBG_(TRACE_Printf_Sio
+		("RTC_SC_sendRatioSignal : ratio=%d, temp=%d\n\r",
+		ratio, temp));
 	RTCSC_SendSimpleMsg(1, RTCSCClientId, &msg);
 	return TRUE;
 }
 
-//***************************************************************************************
 /**
 	This function is used to send ratio event to RTC CAL task
-	
+
 	@param		ratio (in) UInt32 for ratio
 	@param		temp (in) UInt16 for temp
 	@note
@@ -149,7 +143,8 @@ Boolean RTCSC_sendRatioSignal(UInt32 ratio, UInt16 temp)
 **/
 void RTC_SC_RatioEvent(UInt32 ratio, UInt16 temp)
 {
-	_DBG_(TRACE_Printf_Sio("RTC_SC_RatioEvent : ratio=%d, temp=%d\n\r",ratio,temp));
+	_DBG_(TRACE_Printf_Sio
+		("RTC_SC_RatioEvent : ratio=%d, temp=%d\n\r", ratio, temp));
 	rtc_sc_isupdated = TRUE;
 	rtc_sc_ratio = ratio;
 	rtc_sc_temp = temp;
@@ -159,29 +154,29 @@ void RTC_SC_RatioEvent(UInt32 ratio, UInt16 temp)
 
 void RTC_SC_GenCPEvent(void)
 {
-	if(rtc_sc_isupdated)
-		{
-		_DBG_(TRACE_Printf_Sio("RTC_SC_GenCPEvent : ratio=%d, temp=%d\n\r",rtc_sc_ratio,rtc_sc_temp));
+	if (rtc_sc_isupdated) {
+		_DBG_(TRACE_Printf_Sio
+			("RTC_SC_GenCPEvent : ratio=%d, temp=%d\n\r",
+			rtc_sc_ratio, rtc_sc_temp));
 
 		RTCSC_sendRatioSignal(rtc_sc_ratio, rtc_sc_temp);
 		rtc_sc_isupdated = FALSE;
-		}
+	}
 }
 
 
-//***************************************************************************************
 /**
 	This function is used to register config_func to RTC Slow Clock component
-	
+
 	@param		config_func (in) RTCSC_Config for config_func
 	@note
 
 **/
 void RTC_SC_RegisterEvent(RTCSC_Config config_func)
 {
-	RPC_SimpleMsg_t msg={0};
+	RPC_SimpleMsg_t msg = {0};
 
-	_DBG_(TRACE_Printf_Sio("RTC_SC_RegisterEvent %x\n\r",config_func));
+	_DBG_(TRACE_Printf_Sio("RTC_SC_RegisterEvent %x\n\r", config_func));
 	rtcsc_configCB = config_func;
 
 	msg.type = (UInt32)RTC_SC_EVENT_REGIST;
@@ -191,22 +186,22 @@ void RTC_SC_RegisterEvent(RTCSC_Config config_func)
 
 void RTC_SC_CalConfig(UInt32 resolution_ppb, UInt32 duration_ms)
 {
-	if(rtcsc_configCB != (RTCSC_Config)0)
-	{
-		_DBG_(TRACE_Printf_Sio("RTC_SC_CalConfig : resolution_ppb=%d, duration_ms=%d\n\r",resolution_ppb,duration_ms));
+	if (rtcsc_configCB != (RTCSC_Config)0) {
+		_DBG_(TRACE_Printf_Sio(
+			"RTC_SC_CalConfig : resolution_ppb=%d, duration_ms=%d\n\r",
+			resolution_ppb, duration_ms));
 		rtcsc_configCB(resolution_ppb, duration_ms);
-	}
-	else
-	{
-		_DBG_(TRACE_Printf_Sio("RTC_SC_CalConfig calback is not registered yet : resolution_ppb=%d, duration_ms=%d\n\r",resolution_ppb,duration_ms));
+	} else {
+		_DBG_(TRACE_Printf_Sio(
+			"RTC_SC_CalConfig calback is not registered : ppb=%d, ms=%d\n\r",
+			resolution_ppb, duration_ms));
 	}
 }
 
 
-//***************************************************************************************
 /**
 	This function is used to send config info to modem/CAL
-	
+
 	@param		threshold (in) UInt32 for threshold
 	@param		duration (in) UInt32 for duration
 	@note
@@ -214,20 +209,21 @@ void RTC_SC_CalConfig(UInt32 resolution_ppb, UInt32 duration_ms)
 **/
 Boolean RTCSC_sendCalConfig(UInt32 threshold, UInt32 duration)
 {
-	RPC_SimpleMsg_t msg={0};
+	RPC_SimpleMsg_t msg = {0};
 	msg.type = (UInt32)RTC_SC_EVENT_CONFIG;
 	msg.param1 = threshold;
 	msg.param2 = duration;
 
-	_DBG_(TRACE_Printf_Sio("RTCSC_sendCalConfig : threshold=%d, duration=%d\n\r",threshold,duration));
+	_DBG_(TRACE_Printf_Sio(
+		"RTCSC_sendCalConfig : threshold=%d, duration=%d\n\r",
+		threshold, duration));
 	RTCSC_SendSimpleMsg(1, RTCSCClientId, &msg);
 	return TRUE;
 }
 
-//***************************************************************************************
 /**
 	This function is used to send simulation msg to CP for generating ratio event
-	
+
 	@param		ratio (in) UInt32 for ratio
 	@param		temp (in) UInt16 for temp
 	@note
@@ -235,9 +231,10 @@ Boolean RTCSC_sendCalConfig(UInt32 threshold, UInt32 duration)
 **/
 void RTC_SC_GenSimulMsg1(UInt32 ratio, UInt16 temp)
 {
-	RPC_SimpleMsg_t msg={0};
+	RPC_SimpleMsg_t msg = {0};
 
-	_DBG_(TRACE_Printf_Sio("RTC_SC_GenMsg1 : ratio=%d, temp=%d\n\r",ratio,temp));
+	_DBG_(TRACE_Printf_Sio(
+		"RTC_SC_GenMsg1 : ratio=%d, temp=%d\n\r", ratio, temp));
 
 	msg.type = (UInt32)RTC_SC_EVENT_SIMUL1;
 	msg.param1 = ratio;
@@ -246,7 +243,6 @@ void RTC_SC_GenSimulMsg1(UInt32 ratio, UInt16 temp)
 	RTCSC_SendSimpleMsg(1, RTCSCClientId, &msg);
 }
 
-//***************************************************************************************
 /**
 	This function is used to send simulation msg to CP for generating register event
 
@@ -255,74 +251,63 @@ void RTC_SC_GenSimulMsg1(UInt32 ratio, UInt16 temp)
 **/
 void RTC_SC_GenSimulMsg2(void)
 {
-	RPC_SimpleMsg_t msg={0};
+	RPC_SimpleMsg_t msg = {0};
 
-	_DBG_(TRACE_Printf_Sio("RTC_SC_GenMsg2 : \n\r"));
+	_DBG_(TRACE_Printf_Sio("RTC_SC_GenMsg2\n\r"));
 
 	msg.type = (UInt32)RTC_SC_EVENT_SIMUL2;
 
 	RTCSC_SendSimpleMsg(1, RTCSCClientId, &msg);
 }
 
-#if defined(UNDER_LINUX)
-extern bool bcm_rtc_cal_ratio(u32 val1, u32 val2);
-#endif
 
 void HandleRTCSCEventRspCb(
-	RPC_Msg_t* pMsg, 
-	 ResultDataBufHandle_t dataBufHandle, 
+	RPC_Msg_t *pMsg,
+	 ResultDataBufHandle_t dataBufHandle,
 	 UInt32 userContextData)
 {
 
-	_DBG_(TRACE_Printf_Sio("HandleRTCSCEventRspCb : pMsg->msgId=%x\n\r",pMsg->msgId));
+	_DBG_(TRACE_Printf_Sio
+		("HandleRTCSCEventRspCb : pMsg->msgId=%x\n\r", pMsg->msgId));
 
-	if(pMsg->msgId == MSG_RTC_CAL_RSP)
-	{
-		RPC_SimpleMsg_t* p = (RPC_SimpleMsg_t*)pMsg->dataBuf;
-		_DBG_(TRACE_Printf_Sio("HandleRTCSCEventRspCb : p->type(%d), p->param1(%d), p->param2(%d)\n\r",p->type, p->param1, p->param2));
-		
-		switch((RTC_SC_Event_en_t)p->type)
-		{
-			case RTC_SC_EVENT_CONFIG:
-				_DBG_(TRACE_Printf_Sio("RTC_SC_EVENT_REGIST\n\r"));
+	if (pMsg->msgId == MSG_RTC_CAL_RSP) {
+		RPC_SimpleMsg_t *p = (RPC_SimpleMsg_t *)pMsg->dataBuf;
+		_DBG_(TRACE_Printf_Sio(
+			"HandleRTCSCEventRspCb : p->type(%d), p->param1(%d), p->param2(%d)\n\r",
+			p->type, p->param1, p->param2));
+
+		switch (p->type) {
+		case RTC_SC_EVENT_CONFIG:
+			_DBG_(TRACE_Printf_Sio("RTC_SC_EVENT_REGIST\n\r"));
 				RTC_SC_CalConfig(p->param1, p->param2);
-				break;
-			case RTC_SC_EVENT_SIMUL1:
-				_DBG_(TRACE_Printf_Sio("RTC_SC_EVENT_SIMUL1\n\r"));
+			break;
+		case RTC_SC_EVENT_SIMUL1:
+			_DBG_(TRACE_Printf_Sio("RTC_SC_EVENT_SIMUL1\n\r"));
 				RTC_SC_RatioEvent(p->param1, p->param2);
+			break;
+		case RTC_SC_EVENT_SIMUL2:
+			_DBG_(TRACE_Printf_Sio(
+				"RTC_SC_EVENT_SIMUL2\n\r"));
+			RTC_SC_RegisterEvent
+				((RTCSC_Config)RTCSC_TestCallback);
 				break;
-			case RTC_SC_EVENT_SIMUL2:
-				_DBG_(TRACE_Printf_Sio("RTC_SC_EVENT_SIMUL2\n\r"));
-				RTC_SC_RegisterEvent((RTCSC_Config)RTCSC_TestCallback);
-				break;
-#if !defined (FUSE_COMMS_PROCESSOR)
-			case RTC_SC_EVENT_RATIO:
-				_DBG_(TRACE_Printf_Sio("RTC_SC_EVENT_RATIO\n\r"));
-#if defined(UNDER_LINUX)
-				bcm_rtc_cal_ratio(p->param1, p->param2);
-#else
-				RTCCal_CalEvent(p->param1, (UInt16)p->param2);
-#ifdef CNEON_COMMON
-				prm_sleep_clock_calibration_handler(p->param1);
+#if !defined(FUSE_COMMS_PROCESSOR)
+		case RTC_SC_EVENT_RATIO:
+			_DBG_(TRACE_Printf_Sio(
+				"RTC_SC_EVENT_RATIO\n\r"));
+			bcm_rtc_cal_ratio(p->param1, p->param2);
+
+
+			break;
 #endif
-#endif
-				break;
-#if !defined(UNDER_LINUX)
-			case RTC_SC_EVENT_REGIST:
-				_DBG_(TRACE_Printf_Sio("RTC_SC_EVENT_REGIST\n\r"));
-				RTCCal_ReqCallback(TRUE);
-				break;
-#endif
-#endif
-			default:
-				_DBG_(TRACE_Printf_Sio("RTC_SC_EVENT : no hanlder\n\r"));
-				break;
+		default:
+			_DBG_(TRACE_Printf_Sio(
+				"RTC_SC_EVENT : no hanlder\n\r"));
+			break;
 		}
-		
-	}
-	else
-	{
-	// 
+
+	}	else {
+	/* */
 	}
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 }
@@ -330,38 +315,24 @@ void HandleRTCSCEventRspCb(
 void RTCSC_InitRpc(void)
 {
 
-	if(first_time)
-	{
-		RPC_InitParams_t params={0};
+	if (first_time)	{
+
+		RPC_InitParams_t params = {0};
 		RPC_Handle_t handle;
 
 		params.iType = INTERFACE_RPC_DEFAULT;
-		params.table_size = (sizeof(RTCSC_Prim_dscrm)/sizeof(RPC_XdrInfo_t));
+		params.table_size = (sizeof(RTCSC_Prim_dscrm)
+			/sizeof(RPC_XdrInfo_t));
 		params.xdrtbl = RTCSC_Prim_dscrm;
 		params.respCb = HandleRTCSCEventRspCb;
 
 		handle = RPC_SYS_RegisterClient(&params);
 		RTCSCClientId = RTCSC_CLIENT_ID;
 		RPC_SYS_BindClientID(handle, RTCSCClientId);
-		
+
 		first_time = 0;
 		rtc_sc_isupdated = FALSE;
-		//Log_DebugPrintf(LOGID_MISC, "RTCSC_InitRpc %d", RTCSCClientId);
+
 	}
-}
-
-
-bool_t xdr_RTCSC_Params_t(void* xdrs, RPC_SimpleMsg_t *rsp)
-{
-	XDR_LOG(xdrs,"RTCSC_Params_t")
-
-	if(
-		xdr_UInt32(xdrs, &rsp->type) &&
-		xdr_UInt32(xdrs, &rsp->param1) &&
-		xdr_UInt32(xdrs, &rsp->param2) &&
-	1)
-		return TRUE;
-	else
-		return FALSE;
 }
 

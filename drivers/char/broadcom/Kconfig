@@ -254,6 +254,7 @@ config GPS_IRQ
 
 config BCM_RTC_CAL
     tristate "RTC CAL"
+    depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
     default n
     ---help---
       Select to build the RTC CAL driver.
