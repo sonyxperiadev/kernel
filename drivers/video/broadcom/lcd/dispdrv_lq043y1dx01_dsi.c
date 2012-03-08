@@ -664,17 +664,15 @@ Int32 LQ043Y1DX01_Open(
 	pPanel->is_hw_TE = pPanel->isTE 
 		&& (lq043y1dx01_VcCmCfg.teCfg.teInType != DSI_TE_CTRLR_TRIG);
 
-#if 0
-	if (brcm_enable_dsi_lcd_clocks(&pPanel->dfs_node,0,
+	if( brcm_enable_dsi_pll_clocks(0,
 		lq043y1dx01_dsiCfg.hsBitClk.clkIn_MHz * 1000000,
 		lq043y1dx01_dsiCfg.hsBitClk.clkInDiv,
 		lq043y1dx01_dsiCfg.escClk.clkIn_MHz   * 1000000 / lq043y1dx01_dsiCfg.escClk.clkInDiv ))
 	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable "
-			"the clock\n",	__FUNCTION__  );
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+			__FUNCTION__  );
 		return ( -1 );
 	}
-#endif
 
 	if( pPanel->is_hw_TE ) 
 	{
@@ -774,14 +772,12 @@ Int32 LQ043Y1DX01_Close ( DISPDRV_HANDLE_T drvH )
 	if(pPanel->is_hw_TE) 
 		lq043y1dx01_TeOff ( pPanel );
 
-#if 0
-	if (brcm_disable_dsi_lcd_clocks(pPanel->dfs_node,0))
+	if (brcm_disable_dsi_pll_clocks(0))
 	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable "
-			"the clock\n", __FUNCTION__  );
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the pll clock\n",
+			__FUNCTION__  );
 		return ( -1 );
 	}
-#endif
 
 	pPanel->pwrState = DISP_PWR_OFF;
 	pPanel->drvState = DRV_STATE_INIT;

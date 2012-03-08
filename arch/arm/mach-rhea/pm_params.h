@@ -193,6 +193,7 @@ struct pwrmgr_init_param
 	int i2c_rd_reg_addr_off;
 	int i2c_rd_nack_off;
 	int i2c_rd_nack_jump_off;
+	int i2c_rd_fifo_off;
 	u32 i2c_wr_off;
 	int i2c_wr_slv_id_off;
 	int i2c_wr_reg_addr_off;

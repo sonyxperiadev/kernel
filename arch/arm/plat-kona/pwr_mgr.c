@@ -124,7 +124,7 @@ static char *pwr_mgr_event2str(int event)
 enum {
 	I2C_SEQ_READ,
 	I2C_SEQ_WRITE,
-	I2C_SEQ_READ_NACK,
+	I2C_SEQ_READ_FIFO,
 };
 
 #endif
@@ -753,30 +753,48 @@ EXPORT_SYMBOL(pwr_mgr_pi_counter_enable);
 
 int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 {
-	u32 reg_val;
+	u32 reg_val1 = 0;
+	u32 reg_val2 = 0;
+	int insurance;
+	unsigned long flgs;
+
 	const struct pi *pi;
 	pwr_dbg("%s : pi_id = %d\n", __func__, pi_id);
 
 	if (unlikely(!pwr_mgr.info)) {
 		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
-		return 0;
+		return -EPERM;
 	}
 
 	if (unlikely(pi_id >= pwr_mgr.info->num_pi)) {
 		pwr_dbg("%s:invalid param\n", __func__);
-		return 0;
+		return -EINVAL;
 	}
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
-	reg_val = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
-	pwr_dbg("%s:counter reg val = %x\n", __func__, reg_val);
+	insurance = 0;
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+	do {
+		reg_val1 = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
+		reg_val2 = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
+		if ((reg_val2 >= reg_val1) && ((reg_val2 - reg_val1) < 2))
+			break;
+		insurance++;
+	} while (insurance < 1000);
+	WARN_ON(insurance >= 1000);
+
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+
+	if (insurance >= 1000)
+		return -EIO;
+	pwr_dbg("%s:counter reg val = %x\n", __func__, reg_val2);
 
 	if (over_flow)
-		*over_flow = !!(reg_val &
+		*over_flow = !!(reg_val2 &
 				PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_OVERFLOW_MASK);
-	return ((reg_val &
+	return (reg_val2 &
 		 PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_MASK)
-		>> PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_SHIFT);
+		>> PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_SHIFT;
 }
 
 EXPORT_SYMBOL(pwr_mgr_pi_counter_read);
@@ -1466,10 +1484,10 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 		     i2c_wr_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
 		    PWRMGR_I2C_SW_START_ADDR_MASK;
 		break;
-	case I2C_SEQ_READ_NACK:
+	case I2C_SEQ_READ_FIFO:
 		reg_val |=
 		    (pwr_mgr.info->
-		     i2c_rd_nack_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
+		     i2c_rd_fifo_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
 		    PWRMGR_I2C_SW_START_ADDR_MASK;
 		break;
 	default:
@@ -1505,7 +1523,6 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	unsigned long flgs;
 	int ret;
 	u32 reg;
-	u8 i2c_data;
 
 	pwr_dbg("%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
@@ -1532,14 +1549,6 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	if (!ret && reg_val) {
 		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 #if defined(CONFIG_KONA_PWRMGR_REV2)
-		i2c_data = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
-				PWRMGR_I2C_READ_DATA_SHIFT);
-		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
-		ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ_NACK);
-		if (ret < 0)
-			goto out;
-		spin_lock_irqsave(&pwr_mgr_lock, flgs);
-		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 		reg = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
 				PWRMGR_I2C_READ_DATA_SHIFT);
 		if (reg & 0x1) {
@@ -1547,8 +1556,20 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 			ret = -EAGAIN;
 			goto out_unlock;
 		}
+		/**
+		 * if there is no NACK from PMU, we will trigger
+		 * PWRMGR again to read the FIFO data from PMU_BSC
+		 * to PWRMGR buffer
+		 */
+		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+		ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ_FIFO);
+		if (ret < 0)
+			goto out;
+		spin_lock_irqsave(&pwr_mgr_lock, flgs);
+		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 #endif
-		*reg_val = i2c_data;
+		*reg_val = (reg & PWRMGR_I2C_READ_DATA_MASK) >>
+		    PWRMGR_I2C_READ_DATA_SHIFT;
 	}
 out_unlock:
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
@@ -1727,7 +1748,7 @@ EXPORT_SYMBOL(pwr_mgr_clr_intr_status);
  * Added for debugging purpose but not called
  */
 
-/*
+#if 0
 static void pwr_mgr_dump_i2c_cmd_regs(void)
 {
 	int idx;
@@ -1748,7 +1769,7 @@ static void pwr_mgr_dump_i2c_cmd_regs(void)
 			data0, (idx * 2) + 1, cmd1, data1);
 	}
 }
-*/
+#endif
 #endif
 void pwr_mgr_init_sequencer(struct pwr_mgr_info *info)
 {
@@ -2265,9 +2286,9 @@ static ssize_t pwr_mgr_pmu_volt_inx_tbl_update(struct file *file, char const __u
 {
 	int i;
 	u32 val = 0xFFFF;
-	u32 len = 0, index1 = 0;
+	u32 len = 0, inx = 0;
 	char *str_ptr;
-	u8 data[16];
+	u8 data[17];
 
 	char input_str[100];
 
@@ -2281,35 +2302,41 @@ static ssize_t pwr_mgr_pmu_volt_inx_tbl_update(struct file *file, char const __u
 		return -EFAULT;
 
 	str_ptr = &input_str[0];
-	while(*str_ptr && *str_ptr != 0xA) { /*not null && not LF character*/
-	    sscanf(str_ptr, "%x%n", &val, &len);
-	    if (val == 0xFFFF) {
-		printk("invalid or end of input\n");
-		break;
-	    }
-	    data[index1] = (u8)val;
-	    pr_info("data[%d] :%x  len:%d\n", index1, data[index1], len);
-	    str_ptr += len;
-	    if (data[index1] > 0xF) {
-		printk("invalid param\n");
-		return count;
-	    }
-	    index1 += 1;
-	    val = 0xFFFF;
+	while (*str_ptr && *str_ptr != 0xA) { /*not null && not LF character*/
+		sscanf(str_ptr, "%x%n", &val, &len);
+		if (val == 0xFFFF)
+			break;
+
+		data[inx] = (u8)val;
+		pr_info("data[%d] :%x  len:%d\n", inx, data[inx], len);
+		str_ptr += len;
+		inx++;
+		if (inx > 16)
+			break;
+		val = 0xFFFF;
 	}
-	if (index1 == 2) {
-	    pwr_mgr_pm_i2c_enable(false);
-	    pwr_mgr_pm_i2c_var_data_modify(data[0], data[1]);
-	    pr_info("index:%d , value= %x\n", data[0], data[1]);
-	    pwr_mgr_pm_i2c_enable(true);
-	} else if (index1 == 16){
-	    for (i = 0; i<16;i++)
-		pr_info("data[%d] = %x\n", i, data[i]);
-	    pwr_mgr_pm_i2c_enable(false);
-	    pwr_mgr_pm_i2c_var_data_write(data, index1);
-	    pwr_mgr_pm_i2c_enable(true);
-	}else
-	    pr_info("invalid number of arguments\n");
+	if (inx == 2) {
+		/*max inx is 0xF*/
+		if (data[0] > 0xF) {
+			pr_info("invalid inx\n");
+			return count;
+		}
+		local_irq_disable();
+		pwr_mgr_pm_i2c_enable(false);
+		pwr_mgr_pm_i2c_var_data_modify(data[0], data[1]);
+		pr_info("index:%d , value= %x\n", data[0], data[1]);
+		pwr_mgr_pm_i2c_enable(true);
+		local_irq_enable();
+	} else if (inx == 16) {
+		for (i = 0; i < 16; i++)
+			pr_info("data[%d] = %x\n", i, data[i]);
+		local_irq_disable();
+		pwr_mgr_pm_i2c_enable(false);
+		pwr_mgr_pm_i2c_var_data_write(data, inx);
+		pwr_mgr_pm_i2c_enable(true);
+		local_irq_enable();
+	} else
+		pr_info("invalid number of arguments\n");
 
 	return count;
 }

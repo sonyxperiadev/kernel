@@ -33,6 +33,7 @@ struct BCMLOG_Config_t {
 	int cp_crashlog_dev;
 	int runlog_dev;
 	unsigned long id_enable[1 + BCMLOG_MAX_LOG_ID / BITS_PER_LONG];
+	int sd_file_max;
 	int (*runlog_handler) (const char *, unsigned int, char);
 	int (*ap_crashlog_handler) (const char *, unsigned int, char);
 	int (*cp_crashlog_handler) (const char *, unsigned int, char);

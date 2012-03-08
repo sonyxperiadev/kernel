@@ -38,14 +38,9 @@ config MACH_RHEA_RAY_EDN2X
 	  Support for the Broadcom Rhea Ray EDN2X board.
 
 config MACH_RHEA_SS_COMMON
-        bool "Support Broadcom Rhea SS project common option"
+	bool "Support Broadcom Rhea SS project common option"
 	help
-          Support Broadcom Rhea SS project common option.
-
-config MACH_RHEA_SS_LUCAS
-        bool "Support Broadcom Rhea SS Lucas board"
-        help
-          Support for the Broadcom Rhea SS Lucas board.
+		Support Broadcom Rhea SS project common option.
 
 config MACH_RHEA_FARADAY_EB10
 	bool "Support Nokia Faraday EB10 board"
@@ -84,20 +79,28 @@ config MACH_RHEA_STONE
 
 endchoice
 
+
+choice
+	prompt "Rhea SS based board type"
+	depends on MACH_RHEA_SS_COMMON
+
 config MACH_RHEA_SS
-        bool "Support Broadcom Rhea RheaCooper SS board"
-        help
+	bool "Support Broadcom Rhea SS board"
+	help
 	  Support Broadcom Rhea RheaCooper SS board.
+
+config MACH_RHEA_SS_LUCAS
+	bool "Support Broadcom Rhea SS Lucas board"
+	help
+		Support for the Broadcom Rhea SS Lucas board.
 
 config MACH_RHEA_SS_AMAZING
 	bool "Support Broadcom Rhea SS Amazing board"
 	help
 	  Support for the Broadcom Rhea SS Amazing board.
 
-config MACH_RHEA_SS_LUCAS
-	bool "Support Broadcom Rhea SS Amazing board"
-	help
-	  Support for the Broadcom Rhea SS Amazing board.
+endchoice
+
 
 config RHEA_DORMANT_MODE
        bool "Enable dormant mode support for Rhea platform"

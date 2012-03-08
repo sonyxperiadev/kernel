@@ -249,7 +249,9 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 				padc->adcsetting->compensation_interval < now)
 			    || (abs(last_temperature - new_temperature) > 16)) {
 				pr_hwmon(DATA,
-					 "%s: Reading calibration channels: last_time %d, now %d, last_temp %d, new_temp %d",
+					 "%s: Reading calibration channels:"
+					 " last_time %d, now %d, last_temp %d,"
+					 " new_temp %d",
 					 __func__, last_time, now,
 					 last_temperature, new_temperature);
 				last_time = get_seconds();
@@ -264,13 +266,19 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 					if (!padc->bcmpmu->adc_req(
 						    padc->bcmpmu, &cal_req) &&
 					    cal_req.raw != 0x3ff) {
-						pr_hwmon(DATA,"%s: LO[%u]cal_req.raw=%u",__func__, i, cal_req.raw );
+						pr_hwmon(DATA, "%s: LO[%u]"
+							      "cal_req.raw=%u",
+							 __func__, i,
+							  cal_req.raw);
 						read1 += cal_req.raw;
 						i++;
 					}
 				}
-				read1 += padc->adcsetting->compensation_samples / 2;	/* add samples/2 for rounding */
-				read1 /= padc->adcsetting->compensation_samples;	/* Divide by the number of samples */
+				/* add samples/2 for rounding */
+				read1 += padc->adcsetting->
+					compensation_samples / 2;
+				/* Divide by the number of samples */
+				read1 /= padc->adcsetting->compensation_samples;
 				read2 = 0;
 				for (i = 0;
 				     i <
@@ -279,13 +287,19 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 					if (!padc->bcmpmu->adc_req(
 						    padc->bcmpmu, &cal_req) &&
 					    cal_req.raw != 0x3ff) {
-						pr_hwmon(DATA,"%s: HI[%u]cal_req.raw=%u",__func__, i, cal_req.raw );
+						pr_hwmon(DATA, "%s: HI[%u]"
+							 "cal_req.raw=%u",
+							 __func__, i,
+							  cal_req.raw);
 						read2 += cal_req.raw;
 						i++;
 					}
 				}
-				read2 += padc->adcsetting->compensation_samples / 2;	/* For rounding */
-				read2 /= padc->adcsetting->compensation_samples;	/* Divide to get average */
+				/* For rounding */
+				read2 += padc->adcsetting->
+					compensation_samples / 2;
+				/* Divide to get average */
+				read2 /= padc->adcsetting->compensation_samples;
 				/* Calculate uvperbit and offset */
 				if (read1 != read2) {
 					gain =
@@ -300,7 +314,8 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 					    (read2 * gain);
 				}
 				pr_hwmon(DATA,
-					 "%s: Value %d, read1 %d, read2 %d, gain %d, offset %d, vmax %d",
+					 "%s: Value %d, read1 %d, read2 %d, "
+					 "gain %d, offset %d, vmax %d",
 					 __func__, req->raw, read1, read2, gain,
 					 offset, padc->adcunit[req->sig].vmax);
 			}
@@ -312,7 +327,8 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 	default:
 		break;
 	}
-	req->cal = req->raw * padc->adcunit[req->sig].vstep + padc->adcunit[req->sig].voffset;	/* vstep, offset is in uV */
+	req->cal = req->raw * padc->adcunit[req->sig].vstep +
+		padc->adcunit[req->sig].voffset; /* vstep, offset is in uV */
 	pr_hwmon(DATA, "%s: raw %d, vstep %d, offset %d, cal %d uV", __func__,
 		 req->raw, padc->adcunit[req->sig].vstep,
 		 padc->adcunit[req->sig].voffset, req->cal);
@@ -320,8 +336,10 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 
 /* cnv_adc_result
  * Input: request structure
- * Descripton: Converts the calibrated value (uV or raw copy) to the appropiate channel unit.
- * Voltage channels will return mV, temperature channels K, current channels mA and resitive
+ * Descripton: Converts the calibrated value (uV or raw copy) to the
+ * appropiate channel unit.
+ * Voltage channels will return mV, temperature channels K, current channels
+ * mA and resitive
  *channels HOhm.
 */
 static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
@@ -333,19 +351,24 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 	case PMU_ADC_VBUS:
 	case PMU_ADC_ID:
 	case PMU_ADC_FG_VMBATT:
-		if (padc->adcunit)
-			req->cnv = (req->cal + 500) / 1000;	/* uV to mV, include rounding */
-		else
+		if (padc->adcunit) {
+			/* uV to mV, include rounding */
+			req->cnv = (req->cal + 500) / 1000;
+		} else
 			req->cnv =
 			    (req->cal * padc->adcmap[req->sig].vrng) / 1024;
 		break;
 	case PMU_ADC_NTC:
 	case PMU_ADC_PATEMP:
 	case PMU_ADC_32KTEMP:
-		if (padc->adcunit)
-			req->cnv = adc_map_batt_temp(padc, (req->cal / 1000), req->sig);	/* req->cal is in uV, table is in mV */
-		else
-			req->cnv = adc_map_batt_temp(padc, req->cal, req->sig);	/* Table is the raw value */
+		if (padc->adcunit) {
+			/* req->cal is in uV, table is in mV */
+			req->cnv = adc_map_batt_temp(padc, (req->cal / 1000),
+						     req->sig);
+		} else {
+			/* Table is the raw value */
+			req->cnv = adc_map_batt_temp(padc, req->cal, req->sig);
+		}
 		break;
 	case PMU_ADC_FG_RAW:
 	case PMU_ADC_FG_CURRSMPL:
@@ -364,14 +387,16 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 				    ((reading * modifier) / 1024) -
 				    padc->adcunit[req->sig].voffset;
 				pr_hwmon(DATA,
-					 "%s: reading %d, ibat_to_return before negation and 976 modification %d",
+					 "%s: reading %d, ibat_to_return before"
+					 " negation and 976 modification %d",
 					 __func__, reading, ibat_to_return);
 			} else
 				ibat_to_return = reading;
 			ibat_to_return =
 			    (ibat_to_return * pfg->fg_factor) / 1000;
 			pr_hwmon(DATA,
-				 "%s: raw %x, value %d, modifier %d Offset %d, ibat %d",
+				 "%s: raw %x, value %d, modifier %d Offset %d,"
+				 " ibat %d",
 				 __func__, req->raw, reading, modifier, offset,
 				 ibat_to_return);
 			req->cnv = ibat_to_return;
@@ -415,12 +440,13 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 		}
 		break;
 	case PMU_ADC_BOM:
-		if (padc->adcunit[req->sig].lut_ptr) {
+		if (padc->adcunit[req->sig].lut_ptr) { /* bom_map */
 			/* Lookup it up in the look-up table... */
 			/* We have voltages in uV */
 			req->cnv = adc_map_bom(padc, req->cal / 1000);
 		} else
 			req->cnv = 0;
+		break;
 	default:
 		req->cnv = req->cal;
 		break;
@@ -444,7 +470,7 @@ static int update_adc_result(struct bcmpmu_adc *padc,
 			return ret;
 	}
 	while (req->raw == -EINVAL) {
-		ret = read_adc_result(padc, req);	/* Here we get the raw value */
+		ret = read_adc_result(padc, req);/* Here we get the raw value */
 		if (ret != 0)
 			return ret;
 	};
@@ -625,15 +651,15 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 							     map,
 							     padc->
 							     ctrlmap
-							     [PMU_ADC_RTM_START].
+							    [PMU_ADC_RTM_START].
 							     addr,
 							     padc->
 							     ctrlmap
-							     [PMU_ADC_RTM_START].
+							    [PMU_ADC_RTM_START].
 							     mask,
 							     padc->
 							     ctrlmap
-							     [PMU_ADC_RTM_START].
+							    [PMU_ADC_RTM_START].
 							     mask);
 			}
 			pr_hwmon(FLOW, "%s: start rtm adc\n", __func__);
@@ -1198,10 +1224,13 @@ static ssize_t fg_status_show(struct device *dev, struct device_attribute *attr,
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	struct bcmpmu_fg *pfg = bcmpmu->fginfo;
-	return sprintf(buf, "Fuel Gauge Status\n \
-	fg_acc=%d\n fg_smpl_cnt=%d\n fg_slp_cnt=%d\n \
-	fg_smpl_cnt_tm=%d\n fg_slp_cnt_tm=%d\n \
-	fg_slp_curr_ua=%d\n fg_sns_res=%d\n fg_factor=%d\n", pfg->fg_acc, pfg->fg_smpl_cnt, pfg->fg_slp_cnt, pfg->fg_smpl_cnt_tm, pfg->fg_slp_cnt_tm, pfg->fg_slp_curr_ua, pfg->fg_sns_res, pfg->fg_factor);
+	return sprintf(buf, "Fuel Gauge Status\n "
+	"fg_acc=%d\n fg_smpl_cnt=%d\n fg_slp_cnt=%d\n "
+	"fg_smpl_cnt_tm=%d\n fg_slp_cnt_tm=%d\n "
+	"fg_slp_curr_ua=%d\n fg_sns_res=%d\n fg_factor=%d\n", pfg->fg_acc,
+		       pfg->fg_smpl_cnt, pfg->fg_slp_cnt, pfg->fg_smpl_cnt_tm,
+		       pfg->fg_slp_cnt_tm, pfg->fg_slp_curr_ua,
+		       pfg->fg_sns_res, pfg->fg_factor);
 }
 
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_store);
@@ -1336,9 +1365,9 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY, adc_isr, padc);
 	/*bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS, adc_isr, padc);
-	   bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_UPPER, adc_isr, padc);
-	   bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IGNORE, adc_isr, padc);
-	   bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN, adc_isr, padc); */
+	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_UPPER, adc_isr, padc);
+	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IGNORE, adc_isr, padc);
+	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN, adc_isr, padc); */
 
 	/*bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC); */
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
@@ -1353,7 +1382,7 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 #endif
 	return 0;
 
-      exit_remove_files:
+exit_remove_files:
 	sysfs_remove_group(&padc->hwmon_dev->kobj, &bcmpmu_hwmon_attr_group);
 	return ret;
 }

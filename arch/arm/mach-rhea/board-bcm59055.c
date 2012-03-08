@@ -228,7 +228,7 @@ static struct regulator_init_data bcm59055_hv1ldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 0,
+			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv1_supply),
 	.consumer_supplies = hv1_supply,
@@ -553,7 +553,7 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	},
 #endif
 	[BCMPMU_REGULATOR_CSR_NM] =	{
-		BCMPMU_REGULATOR_CSR_NM, &bcm59055_csr_nm_data, 0x31, 0
+		BCMPMU_REGULATOR_CSR_NM, &bcm59055_csr_nm_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_CSR_NM2] = {
 		BCMPMU_REGULATOR_CSR_NM2, &bcm59055_csr_nm2_data, 0xFF, 0

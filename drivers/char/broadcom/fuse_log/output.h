@@ -26,6 +26,8 @@
 #define BCMLOG_OUTPUT_XFER_MAXBYTES		8192
 #define BCMLOG_OUTPUT_XFER_MINBYTES		  64
 
+#define FUSE_LOG_CHANNEL	8
+
 /**
  *	Output bytes to host
  *	@param  pUserBuf		(in)	pointer to user buffer

@@ -1538,7 +1538,7 @@ typedef enum
 	MSG_SIM_RESET_IND					= MSG_GRP_SIM+0x81,	///<Payload type {::MsgType_t}
 
 	/* This message is to notify ATC/MMI the Setup Event List information regarding to MMI events */
-	MSG_SIM_MMI_SETUP_EVENT_IND			= MSG_GRP_SIM+0x82,	///<Payload type {::UInt16}
+	MSG_SIM_MMI_SETUP_EVENT_IND			= MSG_GRP_SIM+0x82,	///<Payload type {::UInt16}    
 
 	/* This message is to notify ATC/MMI fatal error status of the SIM with the following possible status:
 	 *
@@ -1573,6 +1573,11 @@ typedef enum
 	**/
 	MSG_SIM_PIN_IND                     = MSG_GRP_SIM+0x91, ///<Payload type {::SimPinInd_t}
     
+	/** 
+	SIM Simlock Data (IMSI/GID1/GID2) sent if PIN1 is unlocked or disabled
+	**/
+	MSG_SIMLOCK_SIM_DATA_IND				= MSG_GRP_SIM+0x92,	///<Payload type {::SIMLOCK_SIM_DATA_t}
+
 	// End of MSG_GRP_SIM (0x0C00)
 
 	//---------------------------------------------------------------

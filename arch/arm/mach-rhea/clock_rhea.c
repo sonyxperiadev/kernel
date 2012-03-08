@@ -5759,7 +5759,7 @@ static struct bus_clk CLK_NAME(csi0_axi) = {
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
  .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
- .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_ISP_SOFT_RSTN_MASK,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_CSI0_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5786,7 +5786,7 @@ static struct bus_clk CLK_NAME(csi1_axi) = {
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
  .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
- .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_VCE_SOFT_RSTN_MASK,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_CSI1_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5813,7 +5813,7 @@ static struct bus_clk CLK_NAME(isp_axi) = {
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
  .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
- .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_MM_DMA_SOFT_RSTN_MASK,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_ISP_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5840,7 +5840,7 @@ static struct bus_clk CLK_NAME(smi_axi) = {
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
  .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
- .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_MASK,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_SMI_SOFT_RSTN_MASK,
 };
 
 /*
@@ -5866,6 +5866,9 @@ static struct bus_clk CLK_NAME(vce_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+	.soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_VCE_SOFT_RSTN_MASK,
+
 };
 
 /*
@@ -5891,6 +5894,9 @@ static struct bus_clk CLK_NAME(dsi0_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+	.soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN1_DSI0_SOFT_RSTN_MASK,
+
 };
 
 /*
@@ -5916,6 +5922,9 @@ static struct bus_clk CLK_NAME(dsi1_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+	.soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN1_DSI1_SOFT_RSTN_MASK,
+
 };
 
 /*
@@ -5995,6 +6004,9 @@ static struct bus_clk CLK_NAME(mm_dma_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+	.soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_MM_DMA_SOFT_RSTN_MASK,
+
 };
 
 /*
@@ -6020,6 +6032,9 @@ static struct bus_clk CLK_NAME(v3d_axi) = {
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
     .clk_sel_val = -1,
+	.soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_MASK,
+
 };
 
 /*

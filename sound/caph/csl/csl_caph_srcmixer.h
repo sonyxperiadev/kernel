@@ -362,7 +362,7 @@ void csl_srcmixer_setMixAllInGain(CSL_CAPH_MIXER_e outChnl,
 *  @return void
 *****************************************************************************/
 void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
-		int gain_mB);
+		int gainL_mB, int gainR_mB);
 
 
 /**
@@ -375,7 +375,7 @@ void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
 *  @return void
 *****************************************************************************/
 void csl_srcmixer_setMixBitSel(CSL_CAPH_MIXER_e outChnl,
-		unsigned int bit_shift);
+		unsigned int bit_shift_l, unsigned int bit_shift_r);
 
 /**
 *

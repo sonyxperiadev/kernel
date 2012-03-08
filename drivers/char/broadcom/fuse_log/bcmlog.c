@@ -56,6 +56,7 @@
 #include "bcmlog.h"
 #include "output.h"
 #include "config.h"
+
 /**
  *	Console message logging levels -- can be or'ed together
  **/
@@ -646,7 +647,7 @@ static void LogString_Internal(const char *inLogString, unsigned short inSender)
 		return;
 	}
 
-	kbuf_mtt = kmalloc(mttFrameSize, GFP_ATOMIC|__GFP_NOWARN);
+	kbuf_mtt = kmalloc(mttFrameSize, GFP_ATOMIC | __GFP_NOWARN);
 
 	if (!kbuf_mtt) {
 		BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
@@ -745,19 +746,31 @@ static void BCMLOG_LogString_AP_Crash(const char *inLogString,
 }
 
 /**
- *	Handle CP crash dump data from IPC server
- *	for custom registered handler.
+ * Handle CP crash dump data from IPC server
+ * for STM without going through workqueue which
+ * is freezable. While in dump, this should be avoided.
+ * Since STM HW detects a packet as following -
+ * 72,data,0 and CP doesn't send a complete frame, we need to
+ * parse a complet packet, and should know left over packet is
+ * part of header or data so that can be sent as another complete
+ * packet on next visit. so the following helper functions are needed.
  *
- *	@param	buf		(in)	message buffer
- *	@param	size	(in)	message length
- *	@note	data from IPC is not alligned by MTT frame.
+ * Helper functions:
+ * stm_trace_buffer_start() - send only start byte, 0x72.
+ * stm_trace_buffer_data() - send only data part of a packet.
+ * stm_trace_buffer_onchannel() - send start byte, data, and end
+ * byte, 0x0.
+ *
+ * @param	buf		(in)	message buffer
+ * @param	size	(in)	message length
+ * @note	data from IPC is not alligned by MTT frame.
  **/
-static void BCMLOG_HandleCpCrashDumpData_Custom(const char *buf, int size)
+static void BCMLOG_HandleCpCrashDumpData_Custom_STM(const char *buf, int size)
 {
 	static int rem_data_len;
 	static int rem_header_len;
 	static char partial_header[MTT_HEADER_SIZE];
-	int i = 0;
+	int i = 0, j = 0;
 	int complete_size = 0;
 	int packet_size;
 	const char *p_buf = buf;
@@ -779,23 +792,84 @@ static void BCMLOG_HandleCpCrashDumpData_Custom(const char *buf, int size)
 		}
 		packet_size += MTT_HEADER_SIZE + MTT_PAYLOAD_CS_SIZE;
 
-		BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG, partial_header,
-				   rem_header_len, BCMLOG_CUSTOM_START);
-		BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG, p_buf,
-				   packet_size - rem_header_len,
-				   BCMLOG_CUSTOM_END);
-		p_buf += (packet_size - rem_header_len);
-		rem_size -= (packet_size - rem_header_len);
-		rem_header_len = 0;
-	} else if (rem_data_len) {
-		BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG, p_buf,
-				   rem_data_len, BCMLOG_CUSTOM_END);
+		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM)
+			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
+			partial_header, rem_header_len, BCMLOG_CUSTOM_START);
+		else if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM) {
+			stm_trace_buffer_start(FUSE_LOG_CHANNEL);
+			stm_trace_buffer_data(FUSE_LOG_CHANNEL, partial_header,
+				      rem_header_len);
+		}
 
-		p_buf += rem_data_len;
-		rem_size -= rem_data_len;
-		rem_data_len = 0;
+		if (packet_size - rem_header_len <= size) {
+			if (BCMLOG_GetCpCrashLogDevice() ==
+						BCMLOG_OUTDEV_CUSTOM)
+				BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
+				p_buf, packet_size - rem_header_len,
+				BCMLOG_CUSTOM_END);
+			else if (BCMLOG_GetCpCrashLogDevice() ==
+							BCMLOG_OUTDEV_STM) {
+				stm_trace_buffer_data(FUSE_LOG_CHANNEL, p_buf,
+					      packet_size - rem_header_len);
+				stm_trace_buffer_end(FUSE_LOG_CHANNEL);
+			}
+			p_buf += (packet_size - rem_header_len);
+			rem_size -= (packet_size - rem_header_len);
+			rem_header_len = 0;
+			rem_data_len = 0;
+		} else {
+			if (BCMLOG_GetCpCrashLogDevice() ==
+						BCMLOG_OUTDEV_CUSTOM)
+				BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
+				p_buf, size, BCMLOG_CUSTOM_DATA);
+			else if (BCMLOG_GetCpCrashLogDevice() ==
+						BCMLOG_OUTDEV_STM)
+				stm_trace_buffer_data(FUSE_LOG_CHANNEL,
+							p_buf, size);
+
+			rem_size = 0;
+			rem_header_len = 0;
+			rem_data_len = packet_size - rem_header_len - size;
+		}
+	} else if (rem_data_len) {
+		if (rem_data_len <= size) {
+			if (BCMLOG_GetCpCrashLogDevice() ==
+						BCMLOG_OUTDEV_CUSTOM)
+				BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
+				p_buf, rem_data_len, BCMLOG_CUSTOM_END);
+			else if (BCMLOG_GetCpCrashLogDevice() ==
+						BCMLOG_OUTDEV_STM) {
+				stm_trace_buffer_data(FUSE_LOG_CHANNEL, p_buf,
+					      rem_data_len);
+				stm_trace_buffer_end(FUSE_LOG_CHANNEL);
+			}
+
+			p_buf += rem_data_len;
+			rem_size -= rem_data_len;
+			rem_data_len = 0;
+		} else {
+			if (BCMLOG_GetCpCrashLogDevice() ==
+						BCMLOG_OUTDEV_CUSTOM)
+				BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
+				p_buf, size, BCMLOG_CUSTOM_DATA);
+			else if (BCMLOG_GetCpCrashLogDevice() ==
+						BCMLOG_OUTDEV_STM)
+				stm_trace_buffer_data(FUSE_LOG_CHANNEL,
+				p_buf, size);
+
+			rem_size = 0;
+			rem_data_len -= size;
+
+		}
 	}
 
+	/* looks for sync bytes A5 C3, if this packet is long enough
+	 * (>12) to know packet size, increment to that size. When there
+	 * is not much CP activities CP sends 0s for "last moment" logs.
+	 * If this is the case, break here and skip all 0s.
+	 * CP will increment rd_index and send another data to AP on next
+	 * turn.
+	 */
 	while (i + 12 < rem_size) {
 		if (p_buf[i] == MTTLOG_FrameSync0
 		    && p_buf[i + 1] == MTTLOG_FrameSync1) {
@@ -805,20 +879,75 @@ static void BCMLOG_HandleCpCrashDumpData_Custom(const char *buf, int size)
 			      (unsigned short)(p_buf[i + 11]));
 			if (i <= rem_size)
 				complete_size = i;
-		}
+		} else
+			break;
 	}
 
-	BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG, p_buf, complete_size,
-			   BCMLOG_CUSTOM_COMPLETE);
+	/* this is a complete packet, so send using stm_trace_buffer_onchannel()
+	 * which will send start, data, and end bytes at once.
+	 */
+	if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM)
+		BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
+		p_buf, complete_size, BCMLOG_CUSTOM_COMPLETE);
+	else if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM)
+		stm_trace_buffer_onchannel(FUSE_LOG_CHANNEL, p_buf,
+		complete_size);
 
 	rem_size -= complete_size;
+	/* increment the buffer to look for another A5 C3 in a fream from CP */
+	p_buf += complete_size;
+
+	/* if a buffer contains 0s, skip and look for another sync byte */
+	while ((p_buf[0] != MTTLOG_FrameSync0
+				|| p_buf[1] != MTTLOG_FrameSync1)
+			       && 1 < rem_size) {
+				p_buf++;
+				rem_size--;
+	}
+
+	if ((rem_size == 1) && (p_buf[0] != MTTLOG_FrameSync0)) {
+		p_buf++;
+		rem_size--;
+	}
+
+	/* after skipping 0s, go through the loop again to parse a packet */
+	while (j + 12 < rem_size) {
+		if (p_buf[j] == MTTLOG_FrameSync0
+		    && p_buf[j + 1] == MTTLOG_FrameSync1) {
+			j += (MTT_HEADER_SIZE + MTT_PAYLOAD_CS_SIZE +
+			      (((unsigned
+				 short)(p_buf[j + 10])) << 8) +
+			      (unsigned short)(p_buf[j + 11]));
+			if (j <= rem_size)
+				complete_size = j;
+		}
+	}
+	if (complete_size) {
+		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM)
+			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
+			p_buf, complete_size, BCMLOG_CUSTOM_COMPLETE);
+		else if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM)
+			stm_trace_buffer_onchannel(FUSE_LOG_CHANNEL,
+				p_buf, complete_size);
+		rem_size -= complete_size;
+	}
+
+	/* some bytes left, take care of it on next visit either as
+	 * a partial header(< MTT_HEADER_SIZE) or partial data(
+	 * >= MTT_HEADER_SIZE */
 	if ((rem_size > 0) && (rem_size < MTT_HEADER_SIZE)) {
 		memcpy(partial_header, &p_buf[complete_size], rem_size);
 		rem_header_len = rem_size;
 	} else if (rem_size >= MTT_HEADER_SIZE) {
-		BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
+		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM)
+			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
 				   &p_buf[complete_size], rem_size,
 				   BCMLOG_CUSTOM_START);
+		else if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM) {
+			stm_trace_buffer_start(FUSE_LOG_CHANNEL);
+			stm_trace_buffer_data(FUSE_LOG_CHANNEL,
+				&p_buf[complete_size], rem_size);
+		}
 		rem_data_len =
 		    (MTT_HEADER_SIZE + MTT_PAYLOAD_CS_SIZE +
 		     (((unsigned short)(p_buf[complete_size + 10])) << 8) +
@@ -1014,8 +1143,7 @@ static void LogSignal_Internal(unsigned int inSigCode,
 	}
 
 	if (CpCrashDumpInProgress()) {
-		if ((BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM) ||
-		    (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) ||
+		if ((BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) ||
 		    (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM))
 			irql = AcquireOutputLock();
 
@@ -1049,13 +1177,12 @@ static void LogSignal_Internal(unsigned int inSigCode,
 			/* then signal if applicable... */
 			if (bufToSend && (bufToSendSize > 0))
 				BCMLOG_HandleCpCrashDumpData(bufToSend,
-							     bufToSendSize);
+						bufToSendSize);
 			/* then frame end */
-			BCMLOG_HandleCpCrashDumpData(frame_end, frame_end_size);
+			BCMLOG_HandleCpCrashDumpData(frame_end,
+							     frame_end_size);
 		}
-
-		if ((BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM) ||
-		    (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) ||
+		if ((BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) ||
 		    (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM))
 			ReleaseOutputLock(irql);
 	} else {
@@ -1380,10 +1507,21 @@ static void start_sdcard_crashlog(struct file *inDumpFile)
  **/
 void BCMLOG_StartCpCrashDump(struct file *inDumpFile)
 {
+	int dump_port;
 	/* note: don't need wakelock here as CP crash */
 	/* dump is done under IPC wakelock */
 	g_module.dumping_cp_crash_log = 1;
 	sDumpFile = inDumpFile;
+
+	/* We don't support SD card crash dump when AP kernel crash is
+	 * triggered first because file operations are not allowed in
+	 * atomic context. So we switch the port to emmc and save cp dump
+	 */
+	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice()) &&
+				ap_triggered) {
+		dump_port = BCMLOG_OUTDEV_PANIC;
+		BCMLOG_SetCpCrashLogDevice(dump_port);
+	}
 
 	switch (BCMLOG_GetCpCrashLogDevice()) {
 	case BCMLOG_OUTDEV_SDCARD:
@@ -1463,13 +1601,15 @@ void BCMLOG_HandleCpCrashDumpData(const char *buf, int size)
 		BCMLOG_WriteMTD(buf, size);
 #endif
 		break;
+	case BCMLOG_OUTDEV_STM:
+		BCMLOG_HandleCpCrashDumpData_Custom_STM(buf, size);
+		break;
 	case BCMLOG_OUTDEV_RNDIS:
 	case BCMLOG_OUTDEV_ACM:
-	case BCMLOG_OUTDEV_STM:
 		BCMLOG_Output((unsigned char *)buf, size, 0);
 		break;
 	case BCMLOG_OUTDEV_CUSTOM:
-		BCMLOG_HandleCpCrashDumpData_Custom(buf, size);
+		BCMLOG_HandleCpCrashDumpData_Custom_STM(buf, size);
 		break;
 	case BCMLOG_OUTDEV_NONE:
 		break;
@@ -1522,8 +1662,11 @@ void BCMLOG_LogCPCrashDumpString(const char *inLogString)
 			BCMLOG_WriteMTD(kbuf_mtt, mttFrameSize);
 #endif
 			break;
-		case BCMLOG_OUTDEV_RNDIS:
 		case BCMLOG_OUTDEV_STM:
+			stm_trace_buffer_onchannel(FUSE_LOG_CHANNEL, kbuf_mtt,
+						   mttFrameSize);
+			break;
+		case BCMLOG_OUTDEV_RNDIS:
 		case BCMLOG_OUTDEV_ACM:
 			irql = AcquireOutputLock();
 			BCMLOG_Output(kbuf_mtt, mttFrameSize, 0);
@@ -1659,8 +1802,7 @@ void BCMLOG_HandleCpCrashMemDumpData(const char *inPhysAddr, int size)
 		/**
 		 * A small sleep to let slower drivers like RNDIS time to dump
 		 **/
-		if ((BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) ||
-		    (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM)) {
+		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) {
 			set_current_state(TASK_INTERRUPTIBLE);
 			schedule_timeout(1);
 		}

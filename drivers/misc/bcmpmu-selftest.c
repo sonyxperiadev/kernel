@@ -341,17 +341,17 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 		    ("GLUE_SELFTEST::std_selftest_sleepclk() "
 		     "WCDMA_32K_CLKGATE  =  0x%08X",
 		     (unsigned int)BRCM_READ_REG(KONA_BMDM_CCU_VA,
-						 BMDM_CLK_MGR_REG_WCDMA_32K_CLKGATE));
+					 BMDM_CLK_MGR_REG_WCDMA_32K_CLKGATE));
 		ST_DBG
 		    ("GLUE_SELFTEST::std_selftest_sleepclk() "
 		     "SCLKCAL_CLKGATE    =  0x%08X",
 		     (unsigned int)BRCM_READ_REG(KONA_BMDM_CCU_VA,
-						 BMDM_CLK_MGR_REG_SCLKCAL_CLKGATE));
+					 BMDM_CLK_MGR_REG_SCLKCAL_CLKGATE));
 		ST_DBG
 		    ("GLUE_SELFTEST::std_selftest_sleepclk() "
 		     "ACTIVITY_MON1	  =  0x%08X",
 		     (unsigned int)BRCM_READ_REG(KONA_BMDM_CCU_VA,
-						 BMDM_CLK_MGR_REG_ACTIVITY_MON1));
+					 BMDM_CLK_MGR_REG_ACTIVITY_MON1));
 
 		/* make sure the 9th bit is set to 1, which is the CASTAT
 		   field of Calibration Control/Status Register */
@@ -412,8 +412,8 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 			/* Calculate the frequency and check if it is in the
 			   range. */
 			calibratedClockFrequency =
-			    13000000.0 / 12 * calibrationCounterSlowRegister /
-			    calibrationCounterFastRegister;
+			    ((13000000 / 12) * calibrationCounterSlowRegister) /
+			  calibrationCounterFastRegister;
 			ST_DBG("GLUE_SELFTEST::calibratedClockFrequency  =  %u",
 			       calibratedClockFrequency);
 			if ((calibratedClockFrequency >=
@@ -433,14 +433,14 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 			     "calibrationCounterSlowRegister  =  %u.",
 			     calibrationCounterFastRegister,
 			     calibrationCounterSlowRegister);
-			if(calibrationCounterSlowRegister &&
+			if (calibrationCounterSlowRegister &&
 			   calibrationCounterFastRegister) {
 				/* Calculate the frequency and check
 				   if it is in the range. */
 				calibratedClockFrequency =
-				    13000000.0 / 12 *
-					calibrationCounterSlowRegister /
-				    calibrationCounterFastRegister;
+				    ((13000000 / 12) *
+				     calibrationCounterSlowRegister) /
+				     calibrationCounterFastRegister;
 				ST_DBG("GLUE_SELFTEST::calClockFreq  =  %u",
 				       calibratedClockFrequency);
 			}
@@ -1405,7 +1405,7 @@ static void std_selftest_usb_charger(struct SelftestUserCmdData_t *cmddata)
 			status =
 			    bcmpmu_selftest->bcmpmu->
 			    register_usb_callback(bcmpmu_selftest->bcmpmu,
-						  std_selftest_usb_event_notif_callback,
+					  std_selftest_usb_event_notif_callback,
 						  (void *)bcmpmu_selftest);
 		}
 		ST_DBG("GLUE_SELFTEST::hal_selftest_usb_charger() Status: %d",
@@ -1443,12 +1443,12 @@ static void std_selftest_usb_charger(struct SelftestUserCmdData_t *cmddata)
 		     "USB_DET_LDO is already on, orig = %x aon = %x",
 		     mbc5_cdet_orig, 0);
 		bcmpmu_selftest->bcmpmu->write_dev(bcmpmu_selftest->bcmpmu,
-						   PMU_REG_MBCCTRL5_USB_DET_LDO_EN,
-						   0,
-						   bcmpmu_selftest->bcmpmu->
-						   regmap
-						   [PMU_REG_MBCCTRL5_USB_DET_LDO_EN].
-						   mask);
+					   PMU_REG_MBCCTRL5_USB_DET_LDO_EN,
+					   0,
+					   bcmpmu_selftest->bcmpmu->
+					   regmap
+					   [PMU_REG_MBCCTRL5_USB_DET_LDO_EN].
+					   mask);
 		usleep_range(5000, 5500);
 	}
 
