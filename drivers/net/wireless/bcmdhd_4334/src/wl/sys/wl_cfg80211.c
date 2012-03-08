@@ -458,6 +458,10 @@ do {									\
 
 
 extern int dhd_wait_pend8021x(struct net_device *dev);
+#ifdef PROP_TXSTATUS
+extern int dhd_wlfc_init(dhd_pub_t *dhd);
+extern void dhd_wlfc_deinit(dhd_pub_t *dhd);
+#endif
 
 #if (WL_DBG_LEVEL > 0)
 #define WL_DBG_ESTR_MAX	50
@@ -975,10 +979,12 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 	s32 timeout = -1;
 	s32 wlif_type = -1;
 	s32 mode = 0;
+	s32 up = 1;
 	chanspec_t chspec;
 	struct wl_priv *wl = wiphy_priv(wiphy);
 	struct net_device *_ndev;
 	struct ether_addr primary_mac;
+	dhd_pub_t *dhd =  (dhd_pub_t *)(wl->pub);
 	int (*net_attach)(void *dhdp, int ifidx);
 	bool rollback_lock = false;
 
@@ -1058,7 +1064,13 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 		memset(wl->p2p->vir_ifname, 0, IFNAMSIZ);
 		strncpy(wl->p2p->vir_ifname, name, IFNAMSIZ - 1);
 		wl_cfg80211_scan_abort(wl, _ndev);
-
+#ifdef PROP_TXSTATUS
+		if (dhd->wlfc_enabled && !wl->wlfc_on) {
+			dhd_wlfc_init(dhd);
+			wldev_ioctl(_ndev, WLC_UP, &up, sizeof(s32), true);
+			wl->wlfc_on = true;
+		}
+#endif
 
 		/* In concurrency case, STA may be already associated in a particular channel.
 		 * so retrieve the current channel of primary interface and then start the virtual
@@ -1124,6 +1136,12 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 			WL_ERR((" virtual interface(%s) is not created \n", wl->p2p->vir_ifname));
 			memset(wl->p2p->vir_ifname, '\0', IFNAMSIZ);
 			wl->p2p->vif_created = false;
+#ifdef PROP_TXSTATUS
+		if (dhd->wlfc_enabled && wl->wlfc_on) {
+			dhd_wlfc_deinit(dhd);
+			wl->wlfc_on = false;
+		}
+#endif
 		}
 	}
 fail:
@@ -1299,6 +1317,7 @@ wl_cfg80211_notify_ifdel(struct net_device *ndev)
 {
 	struct wl_priv *wl = wlcfg_drv_priv;
 	bool rollback_lock = false;
+	dhd_pub_t *dhd =  (dhd_pub_t *)(wl->pub);
 	s32 index = 0;
 	if (!ndev || !ndev->name) {
 		WL_ERR(("net is NULL\n"));
@@ -1333,7 +1352,12 @@ wl_cfg80211_notify_ifdel(struct net_device *ndev)
 			index);
 		wl_clr_p2p_status(wl, IF_DELETING);
 		WL_DBG(("index : %d\n", index));
-
+#ifdef PROP_TXSTATUS
+		if (dhd->wlfc_enabled && wl->wlfc_on) {
+			dhd_wlfc_deinit(dhd);
+			wl->wlfc_on = false;
+		}
+#endif
 	}
 	/* Wake up any waiting thread */
 	wake_up_interruptible(&wl->netif_change_event);
@@ -1649,7 +1673,11 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 	wl_uint32_list_t *list;
 	struct net_device *dev = NULL;
 	WL_DBG(("Enter \n"));
-
+	WL_DBG(("p2p_supported ? %s, ndev is %s, p2p_scan ? %s, p2p_is_on ? %s\n",
+		(wl->p2p_supported) ? "YES":"NO",
+		(ndev == wl_to_prmry_ndev(wl)) ? "Primary":"P2P",
+		p2p_scan(wl) ? "YES":"NO", 
+		p2p_is_on(wl) ? "YES":"NO"));
 
 	if (!wl->p2p_supported || ((ndev == wl_to_prmry_ndev(wl)) &&
 		!p2p_scan(wl))) {
@@ -1721,6 +1749,9 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 		/* P2P SCAN TRIGGER */
 		s32 _freq = 0;
 		n_nodfs = 0;
+
+		WL_DBG((" P2P E-SCAN START\n"));
+
 		if (scan_request && scan_request->n_channels) {
 			num_chans = scan_request->n_channels;
 			WL_SCAN((" chann number : %d\n", num_chans));
@@ -1853,6 +1884,12 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 	}
 
 	WL_DBG(("scan start\n"));
+
+#ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
+	if (wl_get_drv_status_all(wl, REMAINING_ON_CHANNEL)) {
+		wl_cfg80211_scan_abort(wl, ndev);
+	}
+#endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
 
 	/* Arm scan timeout timer */
 	mod_timer(&wl->scan_timeout, jiffies + WL_SCAN_TIMER_INTERVAL_MS * HZ / 1000);
@@ -1998,6 +2035,12 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 	return 0;
 
 scan_out:
+
+	if (err == BCME_BUSY || err == BCME_NOTREADY) {
+		WL_ERR(("---> Error occurred err = (%d), busy?%d", err, -EBUSY));
+		err = -EBUSY;
+	}
+
 	wl_clr_drv_status(wl, SCANNING, ndev);
 	wl->scan_request = NULL;
 	return err;
@@ -3742,8 +3785,9 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 
 	s32 err = BCME_OK;
 	struct wl_priv *wl = wiphy_priv(wiphy);
-	WL_DBG(("Enter, netdev_ifidx: %d, channel: %d, duration ms (%d) \n",
-		dev->ifindex, ieee80211_frequency_to_channel(channel->center_freq), duration));
+	WL_DBG(("Enter, ifindex: %d, channel: %d, duration ms (%d) SCANNING ?? %s \n",
+		dev->ifindex, ieee80211_frequency_to_channel(channel->center_freq),
+		duration, (wl_get_drv_status(wl, SCANNING, ndev)) ? "YES":"NO"));
 
 	if (wl->first_remain) {
 		wl->first_remain = false;
@@ -3755,10 +3799,11 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 	} else {
 		ndev = dev;
 	}
-
+#ifndef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
 	if (wl_get_drv_status(wl, SCANNING, ndev)) {
 		wl_cfg80211_scan_abort(wl, ndev);
 	}
+#endif /* not WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
 
 	target_channel = ieee80211_frequency_to_channel(channel->center_freq);
 	memcpy(&wl->remain_on_chan, channel, sizeof(struct ieee80211_channel));
@@ -3769,6 +3814,44 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 	*cookie = id;
 	cfg80211_ready_on_channel(dev, *cookie, channel,
 		channel_type, duration, GFP_KERNEL);
+
+#ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
+	if (wl_get_drv_status(wl, SCANNING, ndev)) {
+		struct timer_list *_timer;
+		WL_DBG((": fake listen state !! \n"));
+
+		wl_set_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, ndev);
+
+		if (timer_pending(&wl->p2p->listen_timer)) {
+			WL_ERR((": cancel current listen timer \n"));
+			spin_lock_bh(&wl->p2p->timer_lock);
+			del_timer_sync(&wl->p2p->listen_timer);
+			spin_unlock_bh(&wl->p2p->timer_lock);
+		}
+
+		_timer = &wl->p2p->listen_timer;
+		wl_clr_p2p_status(wl, LISTEN_EXPIRED);
+
+		INIT_TIMER(_timer, wl_cfgp2p_listen_expired, duration, 0);
+
+		return BCME_OK;
+	}
+#endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
+
+#ifdef WL_CFG80211_SYNC_GON_TIME
+	if (wl_get_drv_status_all(wl, WAITING_MORE_TIME_NEXT_ACT_FRM)) {
+		/* do not enter listen mode again if we are in listen mode already for next af.
+		 * remain on channel completion will be returned by waiting next af completion.
+		 */
+#ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
+		wl_set_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, ndev);
+#else
+		wl_set_drv_status(wl, REMAINING_ON_CHANNEL, ndev);
+#endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
+		goto exit;
+	}
+#endif /* WL_CFG80211_SYNC_GON_TIME */
+
 	if (!p2p_is_on(wl)) {
 		get_primary_mac(wl, &primary_mac);
 		wl_cfgp2p_generate_bss_mac(&primary_mac, &wl->p2p->dev_addr, &wl->p2p->int_addr);
@@ -3786,16 +3869,20 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 	}
 
 	if (p2p_is_on(wl)) {
+#ifndef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
 		wl_set_drv_status(wl, REMAINING_ON_CHANNEL, ndev);
-#ifdef WL_CFG80211_SYNC_GON_TIME
-		if (wl_get_drv_status_all(wl, WAITING_MORE_TIME_NEXT_ACT_FRM)) {
-			/* do not enter listen mode again if we are in listen mode already for next af.
-			 * remain on channel completion will be returned by waiting next af completion.
-			 */
-			goto exit;
+#endif /* not WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
+		err = wl_cfgp2p_discover_listen(wl, target_channel, duration);
+
+#ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
+		if (err == BCME_OK) {
+			wl_set_drv_status(wl, REMAINING_ON_CHANNEL, ndev);
+		} else {
+			/* if failed, firmware may be internal scanning state.
+			so other scan request shall not abort it */
+			wl_set_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, ndev);
 		}
-#endif /* WL_CFG80211_SYNC_GON_TIME */
-		wl_cfgp2p_discover_listen(wl, target_channel, duration);
+#endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
 	}
 
 exit:
@@ -3848,14 +3935,20 @@ wl_cfg80211_afx_handler(struct work_struct *work)
 
 	struct afx_hdl *afx_instance;
 	struct wl_priv *wl = wlcfg_drv_priv;
+	s32 ret = BCME_OK;
 
 	afx_instance = container_of(work, struct afx_hdl, work);
 	if (afx_instance != NULL) {
 		if (wl->afx_hdl->is_listen && wl->afx_hdl->my_listen_chan) {
-			wl_cfgp2p_discover_listen(wl, wl->afx_hdl->my_listen_chan, 100);
+			ret = wl_cfgp2p_discover_listen(wl, wl->afx_hdl->my_listen_chan, 100);
 		} else {
-			wl_cfgp2p_act_frm_search(wl, wl->afx_hdl->dev,
+			ret = wl_cfgp2p_act_frm_search(wl, wl->afx_hdl->dev,
 				wl->afx_hdl->bssidx, wl->afx_hdl->peer_listen_chan);
+		}
+		if (unlikely(ret != BCME_OK)) {
+			WL_ERR(("ERROR occurred! returned value is (%d)\n", ret));
+			if (wl_get_drv_status_all(wl, SCANNING_PEER_CHANNEL))
+				complete(&wl->act_frm_scan);
 		}
 	}
 }
@@ -3886,7 +3979,8 @@ wl_cfg80211_send_at_common_channel(struct wl_priv *wl,
 			wl->afx_hdl->retry));
 		/* Do find_peer_for_action */
 		schedule_work(&wl->afx_hdl->work);
-		wait_for_completion(&wl->act_frm_scan);
+		wait_for_completion_timeout(&wl->act_frm_scan,
+									msecs_to_jiffies(MAX_WAIT_TIME));
 
 		if ((wl->afx_hdl->peer_chan != WL_INVALID) ||
 			!(wl_get_drv_status_all(wl, SCANNING_PEER_CHANNEL)))
@@ -3898,7 +3992,8 @@ wl_cfg80211_send_at_common_channel(struct wl_priv *wl,
 			wl->afx_hdl->is_listen = TRUE;
 			/* Do find_peer_for_action */
 			schedule_work(&wl->afx_hdl->work);
-			wait_for_completion(&wl->act_frm_scan);
+			wait_for_completion_timeout(&wl->act_frm_scan,
+									msecs_to_jiffies(MAX_WAIT_TIME));
 		}
 		if (!wl_get_drv_status_all(wl, SCANNING_PEER_CHANNEL))
 			break;
@@ -3957,10 +4052,8 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 	wifi_p2p_pub_act_frame_t *act_frm = NULL;
 	wifi_p2p_action_frame_t *p2p_act_frm = NULL;
 	wifi_p2psd_gas_pub_act_frame_t *sd_act_frm = NULL;
-#ifndef VSDB
 	scb_val_t scb_val;
 	s8 eabuf[ETHER_ADDR_STR_LEN];
-#endif
 #ifdef WL_CFG80211_GON_COLLISION
 	static uint8 saved_af_subtype = 0xff;
 #endif /* WL_CFG80211_GON_COLLISION */
@@ -4053,14 +4146,12 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 			goto exit;
 		} else if (ieee80211_is_disassoc(mgmt->frame_control) ||
 			ieee80211_is_deauth(mgmt->frame_control)) {
-#ifndef VSDB
 			memcpy(scb_val.ea.octet, mgmt->da, ETH_ALEN);
 			scb_val.val = mgmt->u.disassoc.reason_code;
 			wldev_ioctl(dev, WLC_SCB_DEAUTHENTICATE_FOR_REASON, &scb_val,
 				sizeof(scb_val_t), true);
 			WL_DBG(("Disconnect STA : %s\n",
 				bcm_ether_ntoa((const struct ether_addr *)mgmt->da, eabuf)));
-#endif
 			cfg80211_mgmt_tx_status(ndev, *cookie, buf, len, true, GFP_KERNEL);
 			goto exit;
 
@@ -4274,10 +4365,13 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 
 		if (extar_listen_time > 50) {
 			wl_set_drv_status(wl, WAITING_MORE_TIME_NEXT_ACT_FRM, dev);
-			WL_ERR(("Wait more time! actual af time:%d, calculated extar listen:%d\n",
+			WL_DBG(("Wait more time! actual af time:%d, calculated extar listen:%d\n",
 				af_params->dwell_time, extar_listen_time));
-			wl_cfgp2p_discover_listen(wl, wl->af_sent_channel, extar_listen_time + 100);
-			wait_for_completion(&wl->wait_next_af);
+			if (wl_cfgp2p_discover_listen(wl, wl->af_sent_channel,
+					extar_listen_time + 100) == BCME_OK) {
+				wait_for_completion_timeout(&wl->wait_next_af,
+									msecs_to_jiffies(extar_listen_time + 100 + 300));
+			}
 		}
 	}
 	wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM, dev);
@@ -6665,6 +6759,9 @@ static void wl_notify_escan_complete(struct wl_priv *wl,
 	unsigned long flags;
 
 	WL_DBG(("Enter \n"));
+	if (wl->escan_info.ndev != ndev)
+		return;
+
 	wl_clr_drv_status(wl, SCANNING, ndev);
 	if (p2p_is_on(wl))
 		wl_clr_p2p_status(wl, SCANNING);
@@ -6920,6 +7017,7 @@ static s32 wl_init_priv(struct wl_priv *wl)
 	wl->active_scan = true;
 	wl->rf_blocked = false;
 	wl->first_remain = true;
+	wl->wlfc_on = false;
 	spin_lock_init(&wl->cfgdrv_lock);
 	mutex_init(&wl->ioctl_buf_sync);
 	init_waitqueue_head(&wl->netif_change_event);

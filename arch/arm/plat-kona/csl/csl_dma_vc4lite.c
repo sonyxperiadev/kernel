@@ -586,6 +586,13 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(
     dmaCtrlBlkInfo.waitCycles = 0;
     dmaCtrlBlkInfo.srcIgnoreRead = 0;
     dmaCtrlBlkInfo.dstIgnoreWrite = 0;
+    if (chanID == 1) {
+ 	if ((pData->dstAddr & 0xff000000) == 0x34000000)
+		dmaCtrlBlkInfo.dstIgnoreWrite = 1;
+ 	if ((pData->srcAddr & 0xff000000) == 0x34000000)
+		dmaCtrlBlkInfo.srcIgnoreRead = 0;
+    }
+
     dmaCtrlBlkInfo.waitResponse = pdma->chan[chanID].chanInfo.waitResponse;
 
     dmaCtrlBlkInfo.srcDreqID = dma_vc4lite_per_map(pdma->chan[chanID].chanInfo.srcID);

@@ -58,6 +58,9 @@ the GPL, without Broadcom's express prior written consent.
 #include "caph_common.h"
 #include "audio_trace.h"
 
+static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
+		       struct snd_ctl_elem_value *ucontrol);
+
 static Boolean isSTIHF = FALSE;
 
 /**
@@ -135,6 +138,8 @@ static int VolumeCtrlGet(struct snd_kcontrol *kcontrol,
 	ucontrol->value.integer.value[0] = pVolume[0];
 	ucontrol->value.integer.value[1] = pVolume[1];
 
+	aTrace(LOG_ALSA_INTERFACE, "\nALSA-CAPH %s stream %d, volume %d:%d\n",
+		__func__, stream+1, pVolume[0], pVolume[1]);
 	return 0;
 }
 
@@ -174,6 +179,11 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 
 	pCurSel = pChip->streamCtl[stream - 1].iLineSelect;
 
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH %s stream %d, volume %d:%d,"
+		" dev %d, pCurSel %d:%d\n",
+		__func__, stream, pVolume[0], pVolume[1], dev,
+		pCurSel[0], pCurSel[1]);
+
 	/*
 	 * Apply Volume if the stream is running
 	 */
@@ -204,10 +214,6 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 				/*
 				 * call audio driver to set volume
 				 */
-				aTrace(LOG_ALSA_INTERFACE,
-						"VolumeCtrlPut caling "
-				"AUDCTRL_SetPlayVolume pVolume[0] =%d (0.25dB)"
-				", pVolume[1]=%d\n", pVolume[0], pVolume[1]);
 				parm_vol.source =
 				    pChip->streamCtl[stream -
 						     1].dev_prop.p[0].source;
@@ -233,9 +239,6 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 			 * call audio driver to set volume
 			 */
 
-			aTrace(LOG_ALSA_INTERFACE, "VolumeCtrlPut caling "
-			"AUDCTRL_SetPlayVolume pVolume[0] =%d (0.25dB), "
-			"pVolume[1]=%d\n", pVolume[0], pVolume[1]);
 			parm_vol.source =
 			    pChip->streamCtl[stream - 1].dev_prop.p[0].source;
 			parm_vol.sink =
@@ -249,11 +252,6 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 		}
 		break;
 	case CTL_STREAM_PANEL_VOICECALL:
-		aTrace
-		    (LOG_ALSA_INTERFACE,
-		     "VolumeCtrlPut pCurSel[1] = %d, pVolume[0] =%d, dev =%d\n",
-		     pCurSel[1], pVolume[0], dev);
-
 		/*
 		 * call audio driver to set gain/volume
 		 */
@@ -289,11 +287,6 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 				/*
 				 * call audio driver to set volume
 				 */
-				aTrace(LOG_ALSA_INTERFACE,
-						"VolumeCtrlPut caling "
-				"AUDCTRL_SetRecordGain pVolume[0] =%d"
-				", pVolume[1]=%d\n",
-				pVolume[0], pVolume[1]);
 				parm_vol.source =
 				    pChip->streamCtl[stream -
 						     1].dev_prop.c.source;
@@ -381,15 +374,15 @@ static int SelCtrlGet(struct snd_kcontrol *kcontrol,
 	 */
 	pSel = pChip->streamCtl[stream].iLineSelect;
 
-	aTrace(LOG_ALSA_INTERFACE, "xnumid=%d xindex=%d", ucontrol->id.numid,
-			ucontrol->id.index);
-
 	/*
 	 * May need to get the value from driver
 	 */
 	ucontrol->value.integer.value[0] = pSel[0];
 	ucontrol->value.integer.value[1] = pSel[1];
-
+	aTrace(LOG_ALSA_INTERFACE, "\nALSA-CAPH %s stream %d, pSel %d:%d, "
+		"numid=%d index=%d\n",
+		__func__, stream+1, pSel[0], pSel[1],
+		ucontrol->id.numid, ucontrol->id.index);
 	return 0;
 }
 
@@ -446,10 +439,8 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 			pSel[2] = AUDIO_SINK_HANDSET;
 	}
 
-	aTrace
-	    (LOG_ALSA_INTERFACE,
-	     "SelCtrlPut stream =%d, pSel[0]=%d, pSel[1]=%d, pSel[2]=%d,\n",
-	     stream, pSel[0], pSel[1], pSel[2]);
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH %s stream %d, pSel %d:%d:%d\n",
+		__func__, stream, pSel[0], pSel[1], pSel[2]);
 
 	switch (stream) {
 	case CTL_STREAM_PANEL_PCMOUT1:	/* pcmout 1 */
@@ -469,6 +460,57 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 		if (pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING
 		    || pStream->runtime->status->state ==
 		    SNDRV_PCM_STATE_PAUSED) {
+
+			/*
+			 * During playback, Px-SEL can not handle multicast to
+			 * singlecast. Reroute to Px-CHG.
+			 * This is a workaround. It is suggested to use Px-CHG
+			 * to do multicast.
+			 */
+			if (pCurSel[0] < AUDIO_SINK_VALID_TOTAL
+			    && pCurSel[1] < AUDIO_SINK_VALID_TOTAL
+			    && pSel[1] >= AUDIO_SINK_VALID_TOTAL) {
+				struct snd_kcontrol tmp_kcontrol;
+				struct snd_ctl_elem_value tmp_ucontrol;
+				s32 new_sel[MAX_PLAYBACK_DEV];
+
+				aTrace(LOG_ALSA_INTERFACE,
+				"ALSA-CAPH apply multicast to singlecast "
+				"workaround\n");
+
+				for (i = 0; i < MAX_PLAYBACK_DEV; i++) {
+					new_sel[i] = pSel[i];
+					/*restore values for Px-CHG*/
+					pSel[i] = pCurSel[i];
+				}
+
+				memcpy(&tmp_kcontrol, kcontrol,
+					sizeof(tmp_kcontrol));
+				tmp_kcontrol.private_value =
+					CAPH_CTL_PRIVATE(stream, 0,
+					CTL_FUNCTION_SINK_CHG);
+
+				memcpy(&tmp_ucontrol, ucontrol,
+					sizeof(tmp_ucontrol));
+				/*1 to remove a sink*/
+				tmp_ucontrol.value.integer.value[0] = 1;
+
+				if (pCurSel[0] != new_sel[0]) {
+					tmp_ucontrol.value.integer.value[1] =
+						pCurSel[0];
+					MiscCtrlPut(&tmp_kcontrol,
+						&tmp_ucontrol);
+				}
+
+				if (pCurSel[1] != new_sel[0]) {
+					tmp_ucontrol.value.integer.value[1] =
+						pCurSel[1];
+					MiscCtrlPut(&tmp_kcontrol,
+						&tmp_ucontrol);
+				}
+				break;
+			}
+
 			/*
 			 * call audio driver to set sink, or do switching if
 			 * the current and new device are not same
@@ -653,6 +695,8 @@ static int SwitchCtrlGet(struct snd_kcontrol *kcontrol,
 
 	ucontrol->value.integer.value[0] = pMute[0];
 	ucontrol->value.integer.value[1] = pMute[1];
+	aTrace(LOG_ALSA_INTERFACE, "\nALSA-CAPH %s stream %d, pMute %d:%d\n",
+		__func__, stream+1, pMute[0], pMute[1]);
 	return 0;
 }
 
@@ -690,6 +734,9 @@ static int SwitchCtrlPut(struct snd_kcontrol *kcontrol,
 	pMute[0] = ucontrol->value.integer.value[0];
 	pMute[1] = ucontrol->value.integer.value[1];
 
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH %s stream %d, pMute %d:%d\n",
+		__func__, stream, pMute[0], pMute[1]);
+
 	/*
 	 * Apply mute is the stream is running
 	 */
@@ -707,10 +754,6 @@ static int SwitchCtrlPut(struct snd_kcontrol *kcontrol,
 		aTrace(LOG_ALSA_INTERFACE,
 				"SwitchCtrlPut stream state = %d\n",
 				pStream->runtime->status->state);
-		aTrace(LOG_ALSA_INTERFACE,
-				"SwitchCtrlPut sink = %d, pMute[0] = %d\n",
-				pChip->streamCtl[stream - 1].dev_prop.p[0].sink,
-				pMute[0]);
 
 		if (pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING
 		    || pStream->runtime->status->state ==
@@ -978,9 +1021,6 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		    pChip->pi32SpeechMixOption[stream - 1];
 		break;
 	case CTL_FUNCTION_FM_ENABLE:
-		aTrace(LOG_ALSA_INTERFACE,
-				"CTL_FUNCTION_FM_ENABLE, status=%d\n",
-				pChip->iEnableFM);
 		ucontrol->value.integer.value[0] = pChip->iEnableFM;
 		break;
 	case CTL_FUNCTION_FM_FORMAT:
@@ -990,15 +1030,6 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		rtn =
 		    AtAudCtlHandler_get(kcontrol->id.index, pChip, info.count,
 					ucontrol->value.integer.value);
-		aTrace(LOG_ALSA_INTERFACE,
-				"%s values [%ld %ld %ld %ld %ld %ld %ld]",
-				__func__, ucontrol->value.integer.value[0],
-				ucontrol->value.integer.value[1],
-				ucontrol->value.integer.value[2],
-				ucontrol->value.integer.value[3],
-				ucontrol->value.integer.value[4],
-				ucontrol->value.integer.value[5],
-				ucontrol->value.integer.value[6]);
 		break;
 	case CTL_FUNCTION_BYPASS_VIBRA:
 		ucontrol->value.integer.value[0] =
@@ -1040,15 +1071,9 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 			(void *)ucontrol->value.integer.value);
 		break;
 	case CTL_FUNCTION_APP_SEL:
-		aTrace(LOG_ALSA_INTERFACE,
-				"CTL_FUNCTION_APP_SEL, current app =%d\n",
-				pChip->i32CurApp);
 		ucontrol->value.integer.value[0] = pChip->i32CurApp;
 		break;
 	case CTL_FUNCTION_AMP_CTL:
-		aTrace(LOG_ALSA_INTERFACE,
-				"CTL_FUNCTION_AMP_CTL, current amp =%d\n",
-				pChip->i32CurAmpState);
 		ucontrol->value.integer.value[0] = pChip->i32CurAmpState;
 		break;
 	default:
@@ -1056,6 +1081,16 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		break;
 	}
 
+	aTrace(LOG_ALSA_INTERFACE, "\nALSA-CAPH %s stream %d, function %d, "
+		"value %ld %ld %ld %ld %ld %ld %ld\n",
+		__func__, stream, function,
+		ucontrol->value.integer.value[0],
+		ucontrol->value.integer.value[1],
+		ucontrol->value.integer.value[2],
+		ucontrol->value.integer.value[3],
+		ucontrol->value.integer.value[4],
+		ucontrol->value.integer.value[5],
+		ucontrol->value.integer.value[6]);
 	return rtn;
 }
 
@@ -1093,6 +1128,14 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_info info;
 
 	pSel = pChip->streamCtl[stream - 1].iLineSelect;
+	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH %s stream %d, function %d, "
+		"index %d, value %ld %ld %ld %ld\n",
+		__func__, stream, function,
+		kcontrol->id.index,
+		ucontrol->value.integer.value[0],
+		ucontrol->value.integer.value[1],
+		ucontrol->value.integer.value[2],
+		ucontrol->value.integer.value[3]);
 
 	switch (function) {
 	case CTL_FUNCTION_LOOPBACK_TEST:
@@ -1117,10 +1160,6 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
 				     1].iLineSelect;
 
-		aTrace(LOG_ALSA_INTERFACE,
-				"MiscCtrlPut CTL_FUNCTION_PHONE_ENABLE"
-				"pSel[0] = %d-%d, EnablePhoneCall %d\n",
-				pSel[0], pSel[1], pChip->iEnablePhoneCall);
 		parm_call.new_mic = parm_call.cur_mic = pSel[0];
 		parm_call.new_spkr = parm_call.cur_spkr = pSel[1];
 
@@ -1143,13 +1182,6 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				    pChip->
 				    streamCtl[CTL_STREAM_PANEL_VOICECALL -
 					      1].iLineSelect;
-
-				aTrace(LOG_ALSA_INTERFACE,
-						"MiscCtrlPut pSel[0] = %d "
-						"pMute[0] =%d pMute[1] =%d\n",
-						pSel[0],
-						pChip->iMutePhoneCall[0],
-						pChip->iMutePhoneCall[1]);
 
 				/*
 				 * call audio driver to mute
@@ -1178,10 +1210,6 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	case CTL_FUNCTION_SPEECH_MIXING_OPTION:
 		pChip->pi32SpeechMixOption[stream - 1] =
 		    ucontrol->value.integer.value[0];
-		aTrace(LOG_ALSA_INTERFACE,
-				"MiscCtrlPut CTL_FUNCTION_SPEECH_MIXING_OPTION "
-				"stream = %d, option = %d\n",
-				stream, pChip->pi32SpeechMixOption[stream - 1]);
 		break;
 	case CTL_FUNCTION_FM_ENABLE:
 		callMode = pChip->iEnablePhoneCall;
@@ -1321,11 +1349,6 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		break;
 
 	case CTL_FUNCTION_VOL:
-		aTrace(LOG_ALSA_INTERFACE, "CTL_FUNCTION_VOL stream=%d vol0=%ld"
-				" vol1=%ld\n",	stream,
-				ucontrol->value.integer.value[0],
-				ucontrol->value.integer.value[1]);
-
 		parm_vol.stream = (stream - 1);
 
 		if (stream == CTL_STREAM_PANEL_VOICECALL) {
@@ -1474,20 +1497,12 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		}
 		break;
 	case CTL_FUNCTION_HW_CTL:
-		aTrace(LOG_ALSA_INTERFACE,
-				"CTL_FUNCTION_HW_CTL index %d,parm1=%d,"
-				"parm2=%d,param3=%d,param4=%d\n",
-				kcontrol->id.index,
-		   (int)ucontrol->value.integer.value[0],
-		   (int)ucontrol->value.integer.value[1],
-		   (int)ucontrol->value.integer.value[2],
-		   (int)ucontrol->value.integer.value[3]);
 		AUDCTRL_HardwareControl(kcontrol->id.index,
 		   (int)ucontrol->value.integer.value[0],
 		   (int)ucontrol->value.integer.value[1],
 		   (int)ucontrol->value.integer.value[2],
 		   (int)ucontrol->value.integer.value[3]);
-	break;
+		break;
 	case CTL_FUNCTION_APP_SEL:
 	aTrace(LOG_ALSA_INTERFACE,
 			"CTL_FUNCTION_APP_SEL curApp=%d, newApp=%d",

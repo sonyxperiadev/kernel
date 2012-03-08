@@ -217,14 +217,14 @@ static struct i2c_cmd i2c_cmd[] = {
 	{REG_DATA, 0xF},	/* 34: Read Cmd */
 	{WAIT_TIMER, READ_DELAY},	/* 35 : Wait ... */
 	{REG_DATA, 1},		/* 36: Clear Start condition */
+	{REG_ADDR, 0x0},	/* 37: i2c_rd_nack_off */
+	{JUMP, 0x0},		/* 38: jump to i2c_rd_nack_jump_off offset */
 #if defined(CONFIG_KONA_PWRMGR_REV2)
-	{READ_FIFO, 0},		/* 37: Read data */
+	{READ_FIFO, 0},		/* 39: i2c_rd_fifo_off */
 #else
-	{REG_ADDR, 0},		/* 37 : NOP */
+	{REG_ADDR, 0},		/* 39 : NOP */
 #endif
-	{END, 0},		/* 38 : End sequence */
-	{REG_ADDR, 0x0},	/* 39: i2c_rd_nack_off */
-	{JUMP, 0x0},		/* 40: jump to i2c_rd_nack_jump_off offset */
+	{END, 0},		/* 40 : End sequence */
 #ifdef CONFIG_KONA_PMU_BSC_CLKPAD_CTRL
 	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 41: Write start: i2c_wr_off */
 	{REG_DATA, BSC_PAD_OUT_EN},	/* 42: Enable pad output */
@@ -290,7 +290,8 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 	.i2c_rd_slv_id_off1 = 23,
 	.i2c_rd_reg_addr_off = 25,
 	.i2c_rd_slv_id_off2 = 31,
-	.i2c_rd_nack_off = 39,
+	.i2c_rd_nack_off = 37,
+	.i2c_rd_fifo_off = 39,
 	.i2c_rd_nack_jump_off = 53,
 	.i2c_wr_off = 41,
 	.i2c_wr_slv_id_off = 47,
@@ -311,19 +312,19 @@ static void rhea_pm_init_wa_flgs(void)
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
-	JIRA_WA_FLG_NAME(2221) = chip_rev <= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2221) = chip_rev < RHEA_CHIP_REV_B1;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2301
-	JIRA_WA_FLG_NAME(2301) = chip_rev <= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2301) = chip_rev < RHEA_CHIP_REV_B1;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2489
-	JIRA_WA_FLG_NAME(2489) = chip_rev <= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2489) = chip_rev < RHEA_CHIP_REV_B1;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2348
-	JIRA_WA_FLG_NAME(2348) = chip_rev <= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2348) = chip_rev < RHEA_CHIP_REV_B1;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2272
@@ -338,12 +339,12 @@ static void rhea_pm_init_wa_flgs(void)
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2276
-	JIRA_WA_FLG_NAME(2276) = chip_rev <= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2276) = chip_rev < RHEA_CHIP_REV_B1;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
 	/*Workaround not enabled for B1 */
-	JIRA_WA_FLG_NAME(2490) = chip_rev < RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2490) = chip_rev <= RHEA_CHIP_REV_B1;
 #endif
 
 }

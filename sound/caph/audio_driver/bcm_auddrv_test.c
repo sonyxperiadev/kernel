@@ -80,9 +80,6 @@
 #include "brcm_rdb_khub_clk_mgr_reg.h"
 
 #include "ossemaphore.h"
-#define OSHEAP_Alloc(s)	kzalloc((s), GFP_KERNEL)
-#define OSHEAP_Delete(a)	kfree((a))
-
 #include "msconsts.h"
 #include "csl_aud_queue.h"
 #include "csl_vpu.h"
@@ -323,6 +320,10 @@ static int HandleControlCommand()
 			{
 				char *MsgBuf = NULL;
 				MsgBuf = kmalloc(2408, GFP_KERNEL);
+				if (MsgBuf == NULL) {
+					aError("kmalloc failed\n");
+					return -1;
+				}
 
 				csl_caph_ControlHWClock(TRUE);
 
@@ -1043,6 +1044,10 @@ static int HandleCaptCommand()
 			if (!record_buf_allocated) {
 				record_test_buf =
 				    kmalloc(TEST_BUF_SIZE, GFP_KERNEL);
+				if (record_test_buf == NULL) {
+					aError("kmalloc failed\n");
+					return -1;
+				}
 				memset(record_test_buf, 0, TEST_BUF_SIZE);
 				record_buf_allocated = 1;
 			}
@@ -1288,7 +1293,12 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	voip_data_t voip_codec;
 
 	if (record_test_buf == NULL)
-		record_test_buf = OSHEAP_Alloc(1024 * 1024);
+		record_test_buf = kzalloc(1024 * 1024, GFP_KERNEL);
+
+	if (record_test_buf == NULL) {
+		aError("Memory allocation failed\n");
+		return;
+	}
 
 	codecVal = Val5;	/* 0 for 8k PCM */
 	voip_codec.codec_type = cur_codecVal = codecVal;
@@ -1305,22 +1315,13 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	aTrace(LOG_AUDIO_DRIVER, "\n AUDTST_VoIP codecVal %ld\n", codecVal);
 	/* VOIP_PCM_16K or VOIP_AMR_WB */
 	if ((codecVal == 4) || (codecVal == 5)) {
-#if defined(USE_NEW_AUDIO_PARAM)
 		/* WB has to use AUDIO_APP_VOICE_CALL_WB */
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
-#else
-		AUDCTRL_SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
-#endif
 	} else { /* NB VoIP case */
-#if defined(USE_NEW_AUDIO_PARAM)
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_LOOPBACK);
-#else
-		AUDCTRL_SetAudioMode(mode);
-#endif
 	}
 	/* configure EC and NS for the loopback test */
 #if defined(USE_LOOPBACK_SYSPARM)
-#if defined(USE_NEW_AUDIO_PARAM)
 	/* use sysparm to configure EC */
 	AUDCTRL_EC((Boolean)(AudParmP()[mode +
 	AUDIO_APP_LOOPBACK * AUDIO_MODE_NUMBER].echo_cancelling_enable),
@@ -1329,15 +1330,6 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	AUDCTRL_NS((Boolean)(AudParmP()[mode +
 	AUDIO_APP_LOOPBACK * AUDIO_MODE_NUMBER].\
 	ul_noise_suppression_enable));
-#else
-	/* use sysparm to configure EC */
-	AUDCTRL_EC((Boolean)(AudParmP()[
-	mode].echo_cancelling_enable),
-	0);
-	/* use sysparm to configure NS */
-	AUDCTRL_NS((Boolean)(AudParmP()[
-	mode].ul_noise_suppression_enable));
-#endif
 #else	/* USE_LOOPBACK_SYSPARM */
 	AUDCTRL_EC(FALSE, 0);
 	AUDCTRL_NS(FALSE);
@@ -1350,18 +1342,10 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	here need to force audio APP to LOOPBACK*/
 	/* VOIP_PCM_16K or VOIP_AMR_WB */
 	if ((codecVal == 4) || (codecVal == 5)) {
-#if defined(USE_NEW_AUDIO_PARAM)
 		/* WB has to use AUDIO_APP_VOICE_CALL_WB */
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
-#else
-		AUDCTRL_SetAudioMode((AudioMode_t) (mode + AUDIO_MODE_NUMBER));
-#endif
 	} else { /* NB VoIP case */
-#if defined(USE_NEW_AUDIO_PARAM)
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_LOOPBACK);
-#else
-		AUDCTRL_SetAudioMode(mode);
-#endif
 	}
 
 	/* init driver */
@@ -1384,6 +1368,10 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	dataDest = (UInt8 *) &record_test_buf[0];
 
 	sVtQueue = AUDQUE_Create(dataDest, 2000, 322);
+	if (sVtQueue == NULL) {
+		aError("Memory allocation failed!\n");
+		return;
+	}
 
 	AUDDRV_BufDoneSema = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
 	sVtQueue_Sema = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
@@ -1406,17 +1394,16 @@ void AUDTST_VoIP_Stop(void)
 		AUDCTRL_DisableTelephony();
 		/* VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k */
 		if ((cur_codecVal == 4) || (cur_codecVal == 5))
-#if !defined(USE_NEW_AUDIO_PARAM)
-			AUDCTRL_SetAudioMode(cur_mode);
-#else
 			AUDCTRL_SetAudioMode(cur_mode, AUDIO_APP_LOOPBACK);
-#endif
 		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
 		OSSEMAPHORE_Destroy(sVtQueue_Sema);
 		AUDQUE_Destroy(sVtQueue);
 
 		AUDIO_DRIVER_Close(cur_drv_handle);
 		cur_drv_handle = NULL;
+		/* from ceckpatch: kfree is safe, so no need to check */
+		kfree(record_test_buf);
+		record_test_buf = NULL;
 	} else
 		aTrace(LOG_AUDIO_DRIVER, "\nInvalid VoIP Stop\n");
 

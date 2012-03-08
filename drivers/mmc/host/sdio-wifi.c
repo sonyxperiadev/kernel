@@ -120,7 +120,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
       PRINT_INFO("current value of reset GPIO: %d\n", 
 		 gpio_get_value(gpio->reset));
       gpio_direction_output(gpio->reset, 1);
-      gpio_set_value(gpio->reset, 1);
+//      gpio_set_value(gpio->reset, 1);
    }
 
    if (gpio->shutdown >= 0)
@@ -215,13 +215,28 @@ int bcm_sdiowl_init(void)
       return -EFAULT;
  }
 #endif 
+
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
 
-   dev->wifi_gpio->reset=70;
+
+
+#ifdef CONFIG_MACH_RHEA_STONE
+   dev->wifi_gpio->reset=42;
    dev->wifi_gpio->reg=-1;
-   dev->wifi_gpio->host_wake=85;
+   dev->wifi_gpio->host_wake=74;
    dev->wifi_gpio->shutdown=-1;
+#else
+//Rhea Ray
+	dev->wifi_gpio->reset=70;
+	dev->wifi_gpio->reg=-1;
+	dev->wifi_gpio->host_wake=85;
+	dev->wifi_gpio->shutdown=-1;
+#endif
+
+
+
 #endif
 
    /* reserve GPIOs */
@@ -236,7 +251,7 @@ int bcm_sdiowl_init(void)
 	__wifi_reset(dev->wifi_gpio->reset, 0);
 	__wifi_reset(dev->wifi_gpio->reset, 1);
 
- 
+ 	printk(KERN_ERR "%s:GPIO TOGGLED AND EXIT\n",__FUNCTION__);
 
 
 #ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
@@ -274,12 +289,31 @@ EXPORT_SYMBOL(bcm_sdiowl_init);
 void bcm_sdiowl_term(void)
 {
    struct sdio_wifi_dev *dev = &gDev;
+   printk(KERN_ERR " %s ENTRY \n",__FUNCTION__);
 
    atomic_set(&dev->dev_is_ready, 0);
+   
+#ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT 
    sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
+
+#endif
+
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT    
+	msleep(2); 
+#endif
+
+
+	
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT 
+   sdio_stop_clk(SDIO_DEV_TYPE_WIFI, 0);
+
+   __wifi_reset(dev->wifi_gpio->reset, 0);
+#endif
 
    /* free GPIOs */
    wifi_gpio_free(dev->wifi_gpio);
+   printk(KERN_ERR " %s GPIO Released \n",__FUNCTION__);
+
 
    dev->wifi_gpio = NULL;
 }

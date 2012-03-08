@@ -217,6 +217,7 @@ static struct regulator_init_data bcm59039_hv3ldo_data = {
 
 __weak struct regulator_consumer_supply hv4_supply[] = {
 	{.supply = "hv4"},
+	{.supply = "2v9_vibra"},
 };
 static struct regulator_init_data bcm59039_hv4ldo_data = {
 	.constraints = {
@@ -496,40 +497,87 @@ static struct regulator_init_data bcm59039_sdsr_lpm_data = {
 	.consumer_supplies = sdsr_lpm_supply,
 };
 
+struct regulator_consumer_supply asr_nm_supply[] = {
+	{.supply = "asr_nm_uc"},
+};
+
+static struct regulator_init_data bcm59039_asr_nm_data = {
+	.constraints = {
+			.name = "asr_nm",
+			.min_uV = 700000,
+			.max_uV = 2900000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(asr_nm_supply),
+	.consumer_supplies = asr_nm_supply,
+};
+
+struct regulator_consumer_supply asr_nm2_supply[] = {
+	{.supply = "asr_nm2_uc"},
+};
+
+static struct regulator_init_data bcm59039_asr_nm2_data = {
+	.constraints = {
+			.name = "asr_nm2",
+			.min_uV = 700000,
+			.max_uV = 2900000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(asr_nm2_supply),
+	.consumer_supplies = asr_nm2_supply,
+};
+
+struct regulator_consumer_supply asr_lpm_supply[] = {
+	{.supply = "asr_lpm_uc"},
+};
+
+static struct regulator_init_data bcm59039_asr_lpm_data = {
+	.constraints = {
+			.name = "asr_lpm",
+			.min_uV = 700000,
+			.max_uV = 2900000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(asr_lpm_supply),
+	.consumer_supplies = asr_lpm_supply,
+};
+
 struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_RFLDO] = {
 		BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data, 0x01, 0
 	},
 	[BCMPMU_REGULATOR_CAMLDO] = {
-		BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0x00, 0
+		BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV1LDO] =	{
-		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x22, 0
+		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV2LDO] =	{
-		BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV3LDO] = {
-		BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV4LDO] =	{
-#if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, 0
-#else
-		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, 0
-#endif
 	},
 	[BCMPMU_REGULATOR_HV5LDO] = {
-		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x22, 0
 	},
 	[BCMPMU_REGULATOR_HV6LDO] = {
-		BCMPMU_REGULATOR_HV6LDO, &bcm59039_hv6ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV6LDO, &bcm59039_hv6ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV7LDO] = {
-		BCMPMU_REGULATOR_HV7LDO, &bcm59039_hv7ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV7LDO, &bcm59039_hv7ldo_data, 0x22, 0
 	},
 	[BCMPMU_REGULATOR_HV8LDO] = {
-			BCMPMU_REGULATOR_HV8LDO, &bcm59039_hv8ldo_data, 0x00, 0
+			BCMPMU_REGULATOR_HV8LDO, &bcm59039_hv8ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV9LDO] = {
 				BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0x00, 0
@@ -553,7 +601,7 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	},
 #endif
 	[BCMPMU_REGULATOR_CSR_NM] =	{
-		BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x31, 0
+		BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_CSR_NM2] = {
 		BCMPMU_REGULATOR_CSR_NM2, &bcm59039_csr_nm2_data, 0xFF, 0
@@ -562,7 +610,7 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 		BCMPMU_REGULATOR_CSR_LPM, &bcm59039_csr_lpm_data, 0xFF, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_NM] = {
-		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0x11, 0
+		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0x01, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_NM2] = {
 		BCMPMU_REGULATOR_IOSR_NM2, &bcm59039_iosr_nm2_data, 0xFF, 0
@@ -578,6 +626,16 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	},
 	[BCMPMU_REGULATOR_SDSR_LPM] = {
 		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0xFF, 0
+	},
+
+	[BCMPMU_REGULATOR_ASR_NM] = {
+		BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x11, 0
+	},
+	[BCMPMU_REGULATOR_ASR_NM2] = {
+		BCMPMU_REGULATOR_ASR_NM2, &bcm59039_asr_nm2_data, 0xFF, 0
+	},
+	[BCMPMU_REGULATOR_ASR_LPM] = {
+		BCMPMU_REGULATOR_ASR_LPM, &bcm59039_asr_lpm_data, 0xFF, 0
 	},
 };
 
@@ -671,35 +729,35 @@ static struct bcmpmu_charge_zone chrg_zone[] = {
 
 static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 	/*
-	* Battery data for 1350mAH
+	* Battery data for 1300mAH
 	*/
 	/*
 	* volt capacity
 	*/
 	{4160, 100},
-	{4130, 95},
-	{4085, 90},
-	{4040, 85},
-	{3986, 80},
-	{3948, 75},
-	{3914, 70},
-	{3877, 65},
-	{3842, 60},
-	{3815, 55},
-	{3794, 50},
-	{3776, 45},
-	{3761, 40},
-	{3751, 35},
-	{3742, 30},
-	{3724, 25},
-	{3684, 20},
-	{3659, 15},
-	{3612, 10},
-	{3565, 8},
-	{3507, 6},
-	{3430, 4},
-	{3340, 2},
-	{3236, 0},
+	{4122, 95},
+	{4072, 90},
+	{4031, 85},
+	{3978, 80},
+	{3937, 75},
+	{3903, 70},
+	{3866, 65},
+	{3834, 60},
+	{3808, 55},
+	{3787, 50},
+	{3769, 45},
+	{3753, 40},
+	{3741, 35},
+	{3730, 30},
+	{3710, 25},
+	{3670, 20},
+	{3648, 15},
+	{3590, 10},
+	{3542, 8},
+	{3480, 6},
+	{3400, 4},
+	{3310, 2},
+	{3200, 0},
 };
 
 static struct bcmpmu_platform_data bcmpmu_plat_data = {
@@ -725,15 +783,15 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.fg_sns_res = 10,
 	.batt_voltcap_map = &batt_voltcap_map[0],
 	.batt_voltcap_map_len = ARRAY_SIZE(batt_voltcap_map),
-	.batt_impedence = 238,
-	.chrg_1c_rate = 1350,
-	.chrg_eoc = 100,
+	.batt_impedence = 140,
+	.chrg_1c_rate = 1300,
+	.chrg_eoc = 65,
 	.chrg_zone_map = &chrg_zone[0],
-	.fg_capacity_full = 1350 * 3600,
+	.fg_capacity_full = 1300 * 3600,
 	.support_fg = 1,
-	.bc = BCMPMU_BC_PMU_BC12,	/* BCMPMU_BC_BB_BC12 */
+	.bc = BCMPMU_BC_PMU_BC12,
 	.batt_model = "Unknown",
-	.cutoff_volt = 3200,
+	.cutoff_volt = 3300,
 	.cutoff_count_max = 3,
 	.hard_reset_en = -1,
 	.restart_en = -1,

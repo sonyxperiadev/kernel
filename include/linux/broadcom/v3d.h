@@ -18,6 +18,7 @@ the GPL, without Broadcom's express prior written consent.
 #define BCM_V3D_MAGIC	'V'
 
 #define SUPPORT_V3D_WORKLIST
+#define V3D_PERF_SUPPORT
 
 typedef struct {
 	void *ptr;		// virtual address

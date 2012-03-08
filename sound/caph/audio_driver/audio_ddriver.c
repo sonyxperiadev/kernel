@@ -288,6 +288,12 @@ AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 
 	/* allocate memory */
 	aud_drv = kzalloc(sizeof(AUDIO_DDRIVER_t), GFP_KERNEL);
+	if (aud_drv == NULL) {
+		aError("kzalloc failed\n");
+		BUG();
+		return NULL;
+	}
+
 	aud_drv->drv_type = drv_type;
 	aud_drv->pCallback = NULL;
 	aud_drv->interrupt_period = 0;
@@ -1048,9 +1054,10 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 		aud_drv->voip_config.codec_type += (bitrate_index << 8);
 		aud_drv->tmp_buffer = kzalloc(VOIP_MAX_FRAME_LEN, GFP_KERNEL);
 
-		if (aud_drv->tmp_buffer == NULL)
+		if (aud_drv->tmp_buffer == NULL) {
+			BUG();
 			break;
-		else
+		} else
 			memset(aud_drv->tmp_buffer, 0, VOIP_MAX_FRAME_LEN);
 
 #ifdef VOLTE_SUPPORT

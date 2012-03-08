@@ -12,13 +12,14 @@
 *  consent.
 *
 *****************************************************************************/
-//============================================================================
-//!
-//! \file   chal_aci.c
-//! \brief  ACI cHAL layer
-//! \note  
-//!
-//============================================================================
+/*============================================================================
+*!
+*! \file   chal_aci.c
+*! \brief  ACI cHAL layer
+*! \note  
+*!
+*============================================================================
+*/
 
 /* ---- Include Files ------------------------------------------------------- */
 
@@ -37,13 +38,15 @@
 
 #include <mach/hardware.h>
 #include <mach/memory.h>
-//==========================================================================
-// Local Typedefs
-//==========================================================================
+/*==========================================================================
+* Local Typedefs
+*==========================================================================
+*/
 
-//==========================================================================
-// Local Definitions and Declarations
-//==========================================================================
+/*==========================================================================
+* Local Definitions and Declarations
+*==========================================================================
+*/
 
 /*
  * CONFIG_AUDIOH_REGS
@@ -55,8 +58,8 @@
  * protected  under undefined macro.
  */
 
-#define ADC_FS_BIG_SMALL_B_LOW_RANGE                            0   // Sets ADC low scale: 0 = 1150 mV
-#define ADC_FS_BIG_SMALL_B_FULL_RANGE                           1   // Sets ADC full scale: 1= 2300 mV
+#define ADC_FS_BIG_SMALL_B_LOW_RANGE 0 /*Sets ADC low scale: 0 = 1150 mV*/
+#define ADC_FS_BIG_SMALL_B_FULL_RANGE 1 /*Sets ADC full scale: 1= 2300 mV*/
 
 #define ACI_TX_INV_SETTING                                      ((~ACI_ACI_TX_INV_ACI_TX_INV_CMD_INVETED) & ACI_ACI_TX_INV_ACI_TX_INV_MASK)
 
@@ -122,30 +125,30 @@
 static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t action, CHAL_ACI_block_id_t id, va_list argp );
 static cVoid chal_aci_init_aci( cUInt32 baseAddr );
 
-//=============================================================================
-// Local Variables 
-//=============================================================================
+/*=============================================================================
+* Local Variables 
+*=============================================================================
+*/
 static volatile cUInt8*    base_addr = NULL;
 
-//==========================================================================
-// Function Declarations
-//==========================================================================
+/*==========================================================================
+* Function Declarations
+*==========================================================================
+*/
 
-//============================================================================
-//
-// Function Name: CHAL_HANDLE chal_aci_init(cUInt32 baseAddr)
-//
-// Description:   Standard Init entry point for ACI Accessory driver which should
-//                be the first function to call.
-//
-// Parameters:
-// 			   baseAddr,    mapped address of this ACI Accessory instance. Not Used
-//
-// Return:
-//             CHAL handle for this ACI Accessory instance
-//
-//============================================================================
-
+/**
+* Function Name: CHAL_HANDLE chal_aci_init(cUInt32 baseAddr)
+*
+* Description:   Standard Init entry point for ACI Accessory driver which should
+*                be the first function to call.
+*
+* Parameters:
+* 			   baseAddr,    mapped address of this ACI Accessory instance. Not Used
+*
+* Return:
+*             CHAL handle for this ACI Accessory instance
+*
+*/
 CHAL_HANDLE chal_aci_init( cUInt32 baseAddr_NotUsed )
 {
     base_addr = (cUInt8*)KONA_ACI_VA;
@@ -154,20 +157,18 @@ CHAL_HANDLE chal_aci_init( cUInt32 baseAddr_NotUsed )
 }
 
 
-//==============================================================================
-//
-// Description:  De-Initialize CHAL ACI for the passed ACI Accessory instance
-//
-// Parameters:  handle (in) this ACI Accessory instance
-//
-// return none
-//==============================================================================
+/**
+* Description:  De-Initialize CHAL ACI for the passed ACI Accessory instance
+*
+* Parameters:  handle (in) this ACI Accessory instance
+*
+* return none
+*/
 cVoid chal_aci_deinit( CHAL_HANDLE handle )
 {
 }
 
 
-//***************************************************************************
 /**
 *   Control MIC line route
 * 
@@ -240,7 +241,6 @@ cVoid chal_aci_set_mic_route( CHAL_HANDLE handle, CHAL_ACI_mic_route_t route )
     }
 }
 
-//***************************************************************************
 /**
 *   Function used to control Accessory Block 
 * 
@@ -733,7 +733,6 @@ cVoid chal_aci_block_ctrl( CHAL_HANDLE handle, CHAL_ACI_block_action_t action, C
 }
 
 
-//***************************************************************************
 /**
 *   This function will read the value on a specified output and return the 
 *   value.
@@ -839,7 +838,6 @@ cInt32 chal_aci_block_read( CHAL_HANDLE handle, CHAL_ACI_block_id_t id, CHAL_ACI
  */
 /* -------------------------------------------------------------------------- */
 
-//***************************************************************************
 /**
 *   This function will initialize the ACI block
 * 
@@ -873,7 +871,6 @@ static cVoid chal_aci_init_aci( cUInt32 baseAddr )
 }
 
 
-//***************************************************************************
 /**
 *   This function will enbale the ACI block
 * 
@@ -890,8 +887,6 @@ cVoid chal_aci_enable_aci( void )
     HW_ACI_REGISTER_WRITE_SETTLE;
 }
 
-
-//***************************************************************************
 /**
 *   This function will disable the ACI block
 * 
@@ -910,7 +905,6 @@ cVoid chal_aci_disable_aci( void )
 }
 
 
-//***************************************************************************
 /**
 *   This function will check if the ACI block is enabled
 * 
@@ -925,7 +919,6 @@ cBool chal_aci_is_aci_enabled( void )
     return (BRCM_READ_REG_FIELD( KONA_ACI_VA, ACI_COMR, DBIDOC ) == ACI_COMR_DBIDOC_CMD_INUSE ? TRUE : FALSE);
 }
 
-//***************************************************************************
 /**
 *   This function will configure the RX input select
 * 
@@ -948,8 +941,6 @@ cVoid chal_aci_rx_input_set( CHAL_ACI_RX_INPUT_TYPE_t input_type )
     HW_ACI_REGISTER_WRITE_SETTLE;
 }
 
-
-//***************************************************************************
 /**
 *   This function will configure the Bus Holde time
 * 
@@ -973,7 +964,6 @@ cVoid chal_aci_bus_hold_set( CHAL_ACI_BUS_HOLD_TIME_t bus_hold )
 }
 
 
-//***************************************************************************
 /**
 *   This function will configure the Start Pulse Length
 * 
@@ -993,7 +983,6 @@ cVoid chal_aci_start_pulse_set( cUInt8 start_pulse_length )
 }
 
 
-//***************************************************************************
 /**
 *   This function will configure the use of the RxDaR register
 * 
@@ -1017,7 +1006,6 @@ cVoid chal_aci_rxdar_use( CHAL_ACI_RXDAR_USE_t use )
 }
 
 
-//***************************************************************************
 /**
 *   This function will configure the RxDaR source
 * 
@@ -1041,7 +1029,6 @@ cVoid chal_aci_rxdar_source( CHAL_ACI_RXDAR_SOURCE_t source )
 }
 
 
-//***************************************************************************
 /**
 *   This function will force Tx Output
 * 
@@ -1065,7 +1052,6 @@ cVoid chal_aci_tx_output_high( cBool high )
 }
 
 
-//***************************************************************************
 /**
 *   This function will read the Interrupt status register
 * 
@@ -1081,7 +1067,6 @@ CHAL_ACI_INTERRUPT_MASK_t chal_aci_interrupt_read( void  )
 }
 
 
-//***************************************************************************
 /**
 *   This function will read Rx input
 * 
@@ -1097,7 +1082,6 @@ cUInt16 chal_aci_rx_read( void )
 }
 
 
-//***************************************************************************
 /**
 *   This function will write the Tx output register
 * 
@@ -1113,8 +1097,6 @@ cVoid chal_aci_tx_write( cUInt16 data )
     HW_ACI_REGISTER_WRITE_SETTLE;
 }
 
-
-//***************************************************************************
 /**
 *   This function will write the Command register
 * 
@@ -1138,7 +1120,6 @@ cVoid chal_aci_command( CHAL_ACI_COMMAND_t command )
 }
 
 
-//***************************************************************************
 /**
 *   This function will enable ACI block interrupts given by mask
 * 
@@ -1159,7 +1140,6 @@ cVoid chal_aci_interrupt_enable( CHAL_ACI_INTERRUPT_SELECT_t mask )
 }
 
 
-//***************************************************************************
 /**
 *   This function will disable ACI block interrupts given by mask
 * 
@@ -1180,7 +1160,6 @@ cVoid chal_aci_interrupt_disable( CHAL_ACI_INTERRUPT_SELECT_t mask )
 } 
 
 
-//***************************************************************************
 /**
 *   This function will acknowledge ACI block interrupts given by mask
 * 
@@ -1196,6 +1175,31 @@ cVoid chal_aci_interrupt_acknowledge( CHAL_ACI_INTERRUPT_SELECT_t mask )
     HW_ACI_REGISTER_WRITE_SETTLE;
 }
 
+
+/***************************************************************************
+*   This function will power on the ACI part for AUX MIC for audio
+*  
+*   @param  Void
+*
+*   @return Void
+*  
+*   @todo   <todo list> 
+*/
+cVoid chal_aci_powerup_auxmic(void)
+{
+	/* 0x3500E0D0 = 0x20*/
+	BRCM_WRITE_REG(KONA_ACI_VA, ACI_ACI_CTRL, 0x00000020);
+	/* 0x35000E0D4 = 0xC0*/
+	BRCM_WRITE_REG(KONA_ACI_VA, ACI_ADC_CTRL, 0x000000C0);
+	/* 0x35000E028 = 0x0*/
+	BRCM_WRITE_REG(KONA_AUXMIC_VA, AUXMIC_F_PWRDWN, 0x00000000);
+	/* 0x35000E00C = 0x1*/
+	BRCM_WRITE_REG(KONA_AUXMIC_VA, AUXMIC_CMC, 0x00000001);
+	/* 0x35000E0C4 = 0x0*/
+	BRCM_WRITE_REG(KONA_ACI_VA, ACI_MIC_BIAS, 0x00000000);
+	/* 0x35000E014 = 0x1*/
+	BRCM_WRITE_REG(KONA_AUXMIC_VA, AUXMIC_AUXEN, 0x00000001);
+}
 
 /** @} */
 

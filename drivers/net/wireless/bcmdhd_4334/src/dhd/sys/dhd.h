@@ -650,6 +650,13 @@ extern char fw_path2[MOD_PARAM_PATHLEN];
 /* Flag to indicate if we should download firmware on driver load */
 extern uint dhd_download_fw_on_driverload;
 
+#ifdef WL_CFG80211
+/* CSP#505233: Flags to indicate if we distingish power off policy when
+ * user set the memu "Keep Wi-Fi on during sleep" to "Never"
+ */
+extern bool suspend_power_off;
+#endif /* WL_CFG80211 */
+
 #ifdef BCM4334_CHECK_CHIP_REV
 /* Check chip revision */
 extern uint g_chipver;

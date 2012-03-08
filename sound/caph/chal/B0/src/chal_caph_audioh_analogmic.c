@@ -33,7 +33,7 @@
 *  @brief  chal layer driver for caph audioh device driver
 *
 ****************************************************************************/
-
+#include <linux/io.h>
 #include "io_map.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
@@ -59,9 +59,8 @@
 * local macro declarations
 *****************************************************************************/
 
-#define  READ_REG32(reg)		(*((volatile UInt32*)(reg)))
-#define  WRITE_REG32(reg, value)	(*((volatile UInt32*)(reg)) = \
-(UInt32)(value))
+#define READ_REG32(reg) readl(reg)
+#define	WRITE_REG32(reg, value)	writel(value, reg)
 
 /****************************************************************************
 * local typedef declarations

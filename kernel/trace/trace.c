@@ -37,7 +37,9 @@
 #include <linux/init.h>
 #include <linux/poll.h>
 #include <linux/fs.h>
+#ifdef CONFIG_STM_FTRACE
 #include <trace/stm.h>
+#endif
 
 #include "trace.h"
 #include "trace_output.h"
@@ -1223,8 +1225,9 @@ trace_function(struct trace_array *tr,
 
 	if (!filter_check_discard(call, entry, buffer, event))
 		ring_buffer_unlock_commit(buffer, event);
-
+#ifdef CONFIG_STM_FTRACE
 	stm_ftrace(ip, parent_ip);
+#endif
 }
 
 void
@@ -1261,8 +1264,9 @@ static void __ftrace_trace_stack(struct ring_buffer *buffer,
 	save_stack_trace(&trace);
 	if (!filter_check_discard(call, entry, buffer, event))
 		ring_buffer_unlock_commit(buffer, event);
-
+#ifdef CONFIG_STM_STACK_TRACE
 	stm_stack_trace(trace.entries);
+#endif
 }
 
 void ftrace_trace_stack(struct ring_buffer *buffer, unsigned long flags,
@@ -1417,8 +1421,9 @@ int trace_vbprintk(unsigned long ip, const char *fmt, va_list args)
 		ring_buffer_unlock_commit(buffer, event);
 		ftrace_trace_stack(buffer, flags, 6, pc);
 	}
-
+#ifdef CONFIG_STM_TRACE_PRINTK
 	stm_trace_bprintk_buf(ip, fmt, trace_buf, sizeof(u32) * len);
+#endif
 
 out_unlock:
 	arch_spin_unlock(&trace_buf_lock);
@@ -1495,8 +1500,9 @@ int trace_array_vprintk(struct trace_array *tr,
 		ring_buffer_unlock_commit(buffer, event);
 		ftrace_trace_stack(buffer, irq_flags, 6, pc);
 	}
-
+#ifdef CONFIG_STM_TRACE_PRINTK
 	stm_trace_printk_buf(ip, trace_buf, len);
+#endif
  out_unlock:
 	arch_spin_unlock(&trace_buf_lock);
 	raw_local_irq_restore(irq_flags);

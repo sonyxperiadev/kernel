@@ -349,7 +349,7 @@ extern "C" {
 //
 // Returns IPC_EP_NONE  on failure
 	IPC_EndpointId_T IPC_PoolDestinationEndpointId(IPC_BufferPool Pool);
-	
+	
 //**************************************************
 // Sets a callback function to be called when a buffer is returned to this pool
 // Note, Buffer is not automatically freed after this is called
@@ -501,7 +501,7 @@ extern "C" {
 	
 //****************************************
 	 IPC_Boolean IPC_ApSleepModeGet(void);
-	
+	
 //****************************************
 	 IPC_PowerSavingInfo_T * IPC_ApGetAddrPSStruct(void);
 	
@@ -529,7 +529,12 @@ extern "C" {
 	
 //****************************************
 	void IPC_Dump(void);
-	
+
+//****************************************
+#ifdef UNDER_LINUX
+	int IPC_DumpStatus(char *buf);
+#endif
+
 //============================================================
 	
 //============================================================

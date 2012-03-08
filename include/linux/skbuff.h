@@ -46,7 +46,10 @@
 #define SKB_MAX_ALLOC		(SKB_MAX_ORDER(0, 2))
 
 #define SKB_NETPOLL_SIGNATURE	0x12345678
-
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+#define SKB_UETH_RX_PRE_ALLOC_MEM_SIG  0xfedcba98
+#define SKB_UETH_RX_NO_PRE_ALLOC_MEM_SIG  0x789ABCDE
+#endif
 /* A. Checksumming of received packets by device.
  *
  *	NONE: device failed to checksum this packet.
@@ -426,7 +429,7 @@ struct sk_buff {
 				*data;
 	unsigned int		truesize;
 	atomic_t		users;
-	unsigned int			netpoll_signature;
+	unsigned int			signature;
 	};
 
 #ifdef __KERNEL__

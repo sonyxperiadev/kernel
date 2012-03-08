@@ -60,7 +60,6 @@ static const struct ov5640_datafmt ov5640_fmts[] = {
 	 */
 	{V4L2_MBUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_JPEG},
 	{V4L2_MBUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
-	{V4L2_MBUS_FMT_JPEG_1X8, V4L2_COLORSPACE_JPEG},
 };
 
 enum ov5640_size {
@@ -133,6 +132,7 @@ struct ov5640 {
 	int colorlevel;
 	int sharpness;
 	int saturation;
+	int antibanding;
 };
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
@@ -736,6 +736,15 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .step = 1,
 	 .default_value = IMAGE_EFFECT_NONE,
 	 },
+	{
+	 .id = V4L2_CID_CAMERA_ANTI_BANDING,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "Anti Banding",
+	 .minimum = ANTI_BANDING_AUTO,
+	 .maximum = ANTI_BANDING_60HZ,
+	 .step = 1,
+	 .default_value = ANTI_BANDING_AUTO,
+	 },
 };
 
 /**
@@ -1114,6 +1123,9 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_SHARPNESS:
 		ctrl->value = ov5640->sharpness;
 		break;
+	case V4L2_CID_CAMERA_ANTI_BANDING:
+		ctrl->value = ov5640->antibanding;
+		break;
 	}
 
 	return 0;
@@ -1248,6 +1260,31 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
+
+	case V4L2_CID_CAMERA_ANTI_BANDING:
+
+		if (ctrl->value > ANTI_BANDING_60HZ)
+			return -EINVAL;
+
+		ov5640->antibanding = ctrl->value;
+
+		switch (ov5640->antibanding) {
+			case ANTI_BANDING_50HZ:
+				ret = ov5640_reg_writes(client,
+						ov5640_antibanding_50z_tbl);
+				break;
+			case ANTI_BANDING_60HZ:
+				ret = ov5640_reg_writes(client,
+						ov5640_antibanding_60z_tbl);
+				break;
+			default:
+				ret = ov5640_reg_writes(client,
+						ov5640_antibanding_auto_tbl);
+				break;
+		}
+		if (ret)
+			return ret;
+		break;
 	}
 
 	return ret;
@@ -1283,6 +1320,8 @@ static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			p->focus_distance[0] = 10; /* near focus in cm */
 			p->focus_distance[1] = 100; /* optimal focus in cm */
 			p->focus_distance[2] = -1; /* infinity */
+			p->focal_length.numerator = 342;
+			p->focal_length.denominator = 100;
 			break;
 		}
 	default:
@@ -1348,6 +1387,7 @@ static int ov5640_init(struct i2c_client *client)
 	ov5640->brightness = EV_DEFAULT;
 	ov5640->contrast = CONTRAST_DEFAULT;
 	ov5640->colorlevel = IMAGE_EFFECT_NONE;
+	ov5640->antibanding = ANTI_BANDING_AUTO;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 
@@ -1550,6 +1590,7 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
+	u8 sclk_dividers;
 
 	if (!parms)
 		return -EINVAL;
@@ -1557,7 +1598,17 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 	parms->if_type = ov5640->plat_parms->if_type;
 	parms->if_mode = ov5640->plat_parms->if_mode;
 	parms->parms = ov5640->plat_parms->parms;
-	/* parms->parms.serial = mipi_cfgs[ov5640->i_size]; */
+
+	/* set the hs term time */
+	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8)
+		sclk_dividers  = timing_cfg_jpeg[ov5640->i_size].sclk_dividers;
+	else
+		sclk_dividers = timing_cfg_yuv[ov5640->i_size].sclk_dividers;
+
+	if (sclk_dividers == 0x01)
+		parms->parms.serial.hs_term_time = 0x01;
+	else
+		parms->parms.serial.hs_term_time = 0x08;
 
 	return 0;
 }

@@ -27,7 +27,9 @@
 #include <linux/broadcom/ipcinterface.h>
 #include "cp_crash.h"
 
-#define BCMLOG_OUTDEV_PANIC	1
+#define BCMLOG_OUTDEV_SDCARD	2
+#define BCMLOG_OUTDEV_RNDIS	3
+#define CP_SETTLE_TIME		300
 
 /* Prototypes */
 static int do_cp_crash(struct notifier_block *, unsigned long, void *);
@@ -35,9 +37,15 @@ static int do_cp_crash(struct notifier_block *, unsigned long, void *);
 static int do_cp_crash(struct notifier_block *this, unsigned long event,
 		       void *ptr)
 {
-	int ipc_state;
+	int ipc_state, k = 0;
 
-	if (BCMLOG_OUTDEV_PANIC != BCMLOG_GetCpCrashLogDevice())
+	/* SD card to trigger cp crash after kernel panic
+	 * is not supported as file operation in atomic context
+	 * is not possible. */
+	if (BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice())
+		goto out;
+
+	if (BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice() && cp_crashed)
 		goto out;
 
 #ifdef CONFIG_PREEMPT
@@ -51,7 +59,10 @@ static int do_cp_crash(struct notifier_block *this, unsigned long event,
 
 	if (!cp_crashed)
 		IPCCP_SetCPCrashedStatus(IPC_AP_ASSERT);
-
+	/* give a little time for AP to notify CP that
+	it has crashed */
+	while (k++ < CP_SETTLE_TIME)
+		;
 	ProcessCPCrashedDump(NULL);
 
 out:

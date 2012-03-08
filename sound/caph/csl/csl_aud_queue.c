@@ -41,9 +41,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.          */
 */
 #include <linux/kernel.h>
 #include <linux/slab.h>
-#define OSHEAP_Alloc(s)	kzalloc((s), GFP_KERNEL)
-#define OSHEAP_Delete(a)	kfree((a))
-
 #include "mobcom_types.h"
 #include "audio_consts.h"
 
@@ -139,8 +136,13 @@ static void AUDQUE_MemCpyInterleave(UInt8 *dest,
 AUDQUE_Queue_t *AUDQUE_Create(UInt8 *baseAddr,
 			      UInt32 blockNum, UInt32 blockSize)
 {
-	AUDQUE_Queue_t *que =
-	    (AUDQUE_Queue_t *) OSHEAP_Alloc(sizeof(AUDQUE_Queue_t));
+	AUDQUE_Queue_t *que = kzalloc(sizeof(AUDQUE_Queue_t), GFP_KERNEL);
+
+	if (que == NULL) {
+		aError("kzalloc failed\n");
+		BUG();
+		return NULL;
+	}
 
 	que->base = que->readPtr = que->writePtr = baseAddr;
 	que->blockNum = blockNum;
@@ -166,7 +168,7 @@ AUDQUE_Queue_t *AUDQUE_Create(UInt8 *baseAddr,
 
 void AUDQUE_Destroy(AUDQUE_Queue_t *aq)
 {
-	OSHEAP_Delete(aq);
+	kfree(aq);
 }
 
 /*

@@ -1043,7 +1043,8 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 				DHD_ERROR(("%s:  ifidx %d for %s action %d\n",
 					__FUNCTION__, ifevent->ifidx,
 					event->ifname, ifevent->action));
-				if (ifevent->action == WLC_E_IF_ADD)
+				if (ifevent->action == WLC_E_IF_ADD
+					|| ifevent->action == WLC_E_IF_CHANGE)
 					wl_cfg80211_notify_ifchange();
 				return (BCME_OK);
 			}

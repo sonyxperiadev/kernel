@@ -44,6 +44,8 @@ the GPL, without Broadcom's express prior written consent.
 #include <asm/pgtable.h>
 #include <linux/io.h>
 #include <linux/proc_fs.h>
+#include <linux/ioport.h>
+#include <linux/interrupt.h>
 
 #include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/ipc_sharedmemory.h>
@@ -57,7 +59,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "bcmlog.h"
 
 #include "rpc_ipc.h"
-//#include "rpc_api.h"
 
 #include <linux/broadcom/rpc_ipc_kernel.h>
 
@@ -101,8 +102,8 @@ struct rw_semaphore gRpcLock;
 #define RPC_WRITE_LOCK do{down_write(&gRpcLock);_DBG(RPC_TRACE("[RPC_LOCK] Write Lock pid=%d",current->pid));}while(0)
 #define RPC_WRITE_UNLOCK do{up_write(&gRpcLock);_DBG(RPC_TRACE("[RPC_LOCK] Write UnLock pid=%d",current->pid));}while(0)
 #else
-#define RPC_READ_LOCK		local_bh_disable() 
-#define RPC_READ_UNLOCK		local_bh_enable()
+#define RPC_READ_LOCK		down_read(&gRpcLock)
+#define RPC_READ_UNLOCK		up_read(&gRpcLock)
 
 #define RPC_WRITE_LOCK		down_write(&gRpcLock)
 #define RPC_WRITE_UNLOCK	up_write(&gRpcLock)
@@ -434,6 +435,8 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg)
 	return retVal;
 }
 
+
+
 RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 				   UInt8 clientId, UInt8 channel,
 				   PACKET_BufHandle_t dataBufHandle,
@@ -456,7 +459,7 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 		return RPC_RESULT_ERROR;
 	}
 
-	elem = kmalloc(sizeof(RpcCbkElement_t), GFP_ATOMIC);
+	elem = kmalloc(sizeof(RpcCbkElement_t), in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
 	if (!elem) {
 		_DBG(RPC_TRACE("k:RPC_ServerDispatchMsg Allocation error\n"));
 		return RPC_RESULT_ERROR;
@@ -493,6 +496,7 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 	RPC_Result_t ret = RPC_RESULT_ERROR;
 	int bFound = 0;
 
+	RPC_READ_LOCK;
 
 	if (interfaceType == INTERFACE_CAPI2) {
 		if (channel == 0xCD) {
@@ -561,6 +565,7 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 		}
 	}
 
+	RPC_READ_UNLOCK;
 
 	_DBG(RPC_TRACE("k:RPC_ServerRxCbk ret=%d\n", ret));
 
@@ -626,6 +631,7 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 				UInt32 param)
 {
+	int copyRc;
 	RpcClientInfo_t *cInfo;
 	rpc_pkt_avail_t ioc_param = { 0 };
 
@@ -679,11 +685,17 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 	     ("k:handle_pkt_poll_ioc clientId=%d empty=%d\n",
 	      (int)ioc_param.clientId, (int)ioc_param.isEmpty));
 
-	if (copy_to_user
-	    ((rpc_pkt_avail_t *) param, &ioc_param,
-	     sizeof(rpc_pkt_avail_t)) != 0) {
+	copyRc = copy_to_user((rpc_pkt_avail_t *) param, &ioc_param,
+			sizeof(rpc_pkt_avail_t));
+	if (copyRc != 0) {
 		_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ioc - copy_to_user() had error\n"));
+			("k:handle_pkt_poll_ioc - copy_to_user() FAILS! RC=%d\n", copyRc));
+		_DBG(RPC_TRACE
+			("  src addr=%x, dest addr=%x, size=%d\n",
+				(int)&ioc_param, (int)param, sizeof(rpc_pkt_avail_t)));
+		_DBG(RPC_TRACE
+			("  clientId:%d, isEmpty:%d, waitTime:%d\n", (int)ioc_param.clientId,
+				(int)ioc_param.isEmpty, (int)ioc_param.waitTime));
 		return -EFAULT;
 	}
 
@@ -1101,6 +1113,7 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 	INIT_LIST_HEAD(&cInfo->mQ.mList);
 	spin_lock_init(&cInfo->mLock);
 	init_waitqueue_head(&cInfo->mWaitQ);
+	cInfo->availData = 0;
 
 	RPC_PACKET_RegisterFilterCbk(ioc_param.rpcClientID,
 				     ioc_param.interfaceType, RPC_ServerRxCbk);

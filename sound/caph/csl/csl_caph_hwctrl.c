@@ -32,6 +32,7 @@
  *  @brief  csl layer driver for caph render
  *
  ****************************************************************************/
+#include <linux/io.h>
 #include "resultcode.h"
 #include "mobcom_types.h"
 #include "msconsts.h"
@@ -40,6 +41,7 @@
 #include "chal_caph_intc.h"
 #include "brcm_rdb_audioh.h"
 #include "brcm_rdb_khub_clk_mgr_reg.h"
+#include "brcm_rdb_sysmap.h"
 #include "csl_caph.h"
 #include "csl_caph_cfifo.h"
 #include "csl_caph_switch.h"
@@ -59,6 +61,13 @@
 #include "clk.h"
 #if defined(ENABLE_DMA_VOICE)
 #include "csl_dsp_caph_control_api.h"
+#endif
+
+#if !defined(CNEON_COMMON) && !defined(CNEON_LMP)
+#include "chal_common_os.h"
+#include "chal_aci.h"
+#define __forceinline __attribute__((always_inline))
+#include "chal_bmodem_intc_inc.h"
 #endif
 
 /*#define CONFIG_VOICE_LOOPBACK_TEST */
@@ -299,7 +308,24 @@ static void ARM2SP2_DMA_Req(UInt16 bufferPosition)
 	 */
 }
 #endif
+/*
+ * Function Name: csl_caph_hwctrl_SetDSPInterrupt
+ * Description: Enable the DSP interrupt in BMINTC block
+ */
+static void csl_caph_hwctrl_SetDSPInterrupt(void)
+{
+	UInt32 value;
+	char *reg;
+	reg = (char *)(BINTC_BASE_ADDR
+				+BINTC_IMR0_0_OFFSET
+				+BINTC_OUT_DEST_DSP_NORM*BMREG_BLOCK_SIZE);
 
+	reg = (char *)ioremap_nocache(((UInt32)(reg)), (sizeof(UInt32)));
+	value = readl(reg);
+	writel(value|0x80, reg);
+	iounmap(reg);
+	return;
+}
 /*
  * Function Name: csl_caph_config_arm2sp
  * Description: config ARM2SP
@@ -2349,97 +2375,6 @@ static void csl_caph_start_blocks
 		csl_caph_hwctrl_ACIControl();
 }
 
-#if 0
-/*
- * Function Name: Boolean csl_caph_QueryHWClockReg(int clock)
- * Description: This is to query if the CAPH HW clock are ON/OFF
- * KHUB_CAPH_SRCMIXER_CLK
- * KHUB_AUDIOH_2P4M_CLK
- * KHUB_AUDIOH_26M_CLK
- * KHUB_AUDIOH_156M_CLK
- */
-static Boolean csl_caph_QueryHWClockReg(UInt8 clock)
-{
-
-	UInt32 reg_read = 0x00;
-	Boolean ret = FALSE;
-
-	/* Reading CLK MGR registers to make sure if they are
-	 * not enabled. We need to read the registers as we
-	 * don't have any syncronization mechanism of clock
-	 * control between AP and CP. Hence before enabling
-	 * the clock, we will just read the registers if it
-	 * is really enabled or not and then enable the clock.
-	 */
-
-	 /*Note : This function is platform specific (RDB)*/
-
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_RHEA)
-
-	UInt32 base_addr = KONA_HUB_CLK_VA;
-	switch (clock) {
-	case CAPH_SRCMIXER_CLOCK:
-	{
-		reg_read = *((volatile UInt32 *)
-			(base_addr + KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET));
-		if (reg_read &
-			KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_CLK_EN_MASK)
-			ret = TRUE;
-	}
-	break;
-	case AUDIO_SSP3_CLOCK:
-	{
-		reg_read = *((volatile UInt32 *)
-			(base_addr + KHUB_CLK_MGR_REG_SSP3_CLKGATE_OFFSET));
-		if (reg_read &
-			KHUB_CLK_MGR_REG_SSP3_CLKGATE_SSP3_AUDIO_CLK_EN_MASK)
-			ret = TRUE;
-	}
-	break;
-	case AUDIO_SSP4_CLOCK:
-	{
-		reg_read = *((volatile UInt32 *)
-			(base_addr + KHUB_CLK_MGR_REG_SSP4_CLKGATE_OFFSET));
-		if (reg_read &
-			KHUB_CLK_MGR_REG_SSP4_CLKGATE_SSP4_AUDIO_CLK_EN_MASK)
-			ret = TRUE;
-	}
-	break;
-	case AUDIOH_2P4M_CLOCK:
-	{
-		reg_read = *((volatile UInt32 *)
-			(base_addr + KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET));
-		if (reg_read &
-			KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_2P4M_CLK_EN_MASK)
-			ret = TRUE;
-	}
-	break;
-	case AUDIOH_26M_CLOCK:
-	{
-		reg_read = *((volatile UInt32 *)
-			(base_addr + KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET));
-		if (reg_read &
-			KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_26M_CLK_EN_MASK)
-			ret = TRUE;
-	}
-	break;
-	case AUDIOH_156M_CLOCK:
-	{
-		reg_read = *((volatile UInt32 *)
-			(base_addr + KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET));
-		if (reg_read &
-			KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_156M_CLK_EN_MASK)
-			ret = TRUE;
-	}
-	break;
-	default:
-		break;
-	}
-#endif
-	return ret;
-}
-
-#endif
 /*
  * Function Name: void csl_caph_QueryHWClock(Boolean enable)
  * Description: This is to query if the CAPH clocks are enabled/disabled
@@ -3115,32 +3050,7 @@ static void csl_caph_hwctrl_ACIControl()
 {
 	/*For CNEON, Accessory driver controls the ACI*/
 #if !defined(CNEON_COMMON) && !defined(CNEON_LMP)
-	/*Power Up the AUX MIC by controlling ACI registers.*/
-	/*THis part may be implemented in ACI hal layer.*/
-	/*Need to get confirmed.*/
-	/*connect PMIC_DATA_IN to PMIC_DATA_OUT*/
-	(*((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3500e0D0))) =
-	 (UInt32)(0x20));
-
-	/*power up VREF, Bias, others "0"*/
-	(*((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3500e0d4))) =
-	 (UInt32)(0xc0));
-
-	/*disable force power down*/
-	(*((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3500e028))) =
-	 (UInt32)(0x0));
-
-	/*Continuous measurements*/
-	(*((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3500e00C))) =
-	 (UInt32)(0x1));
-
-	/*disable measurements, , others "0"*/
-	(*((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3500e0C4))) =
-	 (UInt32)(0x0));
-
-	/*enable AUXMIC, , others "0"*/
-	(*((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3500e014))) =
-	 (UInt32)(0x1));
+	chal_aci_powerup_auxmic();
 #endif
 }
 
@@ -3195,16 +3105,8 @@ void csl_caph_hwctrl_init(void)
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_init::\n");
 	memset(HWConfig_Table, 0, sizeof(HWConfig_Table));
 
-#if 1
-	/*Mapping 7 to 17.*/
-	(*((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(0x3A050260)))
-	 = (UInt32) (0x00000080));
-#else
-	bmintc_handle = (void *)chal_bmintc_init(BINTC_BASE_ADDR);
+	csl_caph_hwctrl_SetDSPInterrupt();
 
-	chal_bmintc_enable_interrupt(bmintc_handle,
-			BINTC_OUT_DEST_DSP_NORM, 0x7);
-#endif
 	/*csl_caph_switch_init() should be run as the first init function*/
 	/*It will enable clock in SSASW_NOC register. It is needed by*/
 	/*FIFO and SSASW.*/

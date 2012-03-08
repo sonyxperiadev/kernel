@@ -132,6 +132,7 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t * pReqMsg,
 	Result_t result = RESULT_OK;
 	SYS_ReqRep_t data;
 	int simMicroVolts = 0;
+	int ret;
 	RegulatorInfo_t *curReg = &gRegulatorList[REG_INDEX(simldo)];
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
@@ -169,25 +170,17 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t * pReqMsg,
 
 	case PMU_SIM0P0Volt:
 		{
-			int enabled = regulator_is_enabled(curReg->handle);
-			KRIL_DEBUG(DBG_INFO,
-				   " ** PMU_SIM0P0Volt - regulator_is_enabled returned %d\n",
-				   enabled);
-
 			simMicroVolts = 0;
-			curReg->isSimInit = FALSE;
-			if (enabled > 0) {
-				int ret;
-				KRIL_DEBUG(DBG_INFO,
-					   " ** PMU_SIM0P0Volt - turn off regulator (FORCE)\n");
+
+			KRIL_DEBUG(DBG_INFO,
+				   " ** PMU_SIM0P0Volt - turn off regulator (FORCE)\n");
+
+			if (curReg->isSimInit) {
+				curReg->isSimInit = FALSE;
 				ret = regulator_disable(curReg->handle);
 				KRIL_DEBUG(DBG_INFO,
-					   " regulator_disable returned 0x%x\n",
-					   ret);
-
-			} else {
-				KRIL_DEBUG(DBG_INFO,
-					   " ** PMU_SIM0P0Volt - regulator not enabled, do nothing...\n");
+					" regulator_disable returned 0x%x\n",
+					ret);
 			}
 			break;
 		}
@@ -203,18 +196,15 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t * pReqMsg,
 	}
 
 	if (simMicroVolts > 0) {
-		int ret =
+		ret =
 		    regulator_set_voltage(curReg->handle, simMicroVolts,
 					  simMicroVolts);
 		KRIL_DEBUG(DBG_INFO, " regulator_set_voltage returned %d\n",
 			   ret);
-		if (regulator_is_enabled(curReg->handle) > 0) {
-			KRIL_DEBUG(DBG_INFO, " regulator already enabled \n");
-		} else {
-			ret = regulator_enable(curReg->handle);
-			KRIL_DEBUG(DBG_INFO, " regulator_enable returned %d\n",
-				   ret);
-		}
+
+		ret = regulator_enable(curReg->handle);
+		KRIL_DEBUG(DBG_INFO, " regulator_enable returned %d\n", ret);
+
 		curReg->isSimInit = TRUE;
 	}
 	//PMU_ActivateSIM(volt);

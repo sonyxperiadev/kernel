@@ -577,7 +577,7 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 	}
 
 	if (!strlen(ctx->dev_path))
-		strncpy(ctx->dev_path, copy_devpath, sizeof(ctx->dev_path));
+		strncpy(ctx->dev_path, copy_devpath, sizeof(ctx->dev_path)-1);
 
 	page = virt_to_page(ctx->bounce);
 

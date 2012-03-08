@@ -40,27 +40,25 @@
 #include "sys_gen_rpc.h"
 #include "sys_rpc.h"
 #include "xassert.h"
-/********************************** End Hdr file generated contents ************************************************************/
+/************************* End Hdr file generated contents ********************/
 
 bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Req_t(void *xdrs,
-					     CAPI2_SYSRPC_PMU_IsSIMReady_Req_t *
-					     rsp)
+					     CAPI2_SYSRPC_PMU_IsSIMReady_Req_t *rsp)
 {
 	XDR_LOG(xdrs, "CAPI2_SYSRPC_PMU_IsSIMReady_Req_t")
 
-	    if (xdr_PMU_SIMLDO_t(xdrs, &rsp->simldo) && 1)
+	if (xdr_PMU_SIMLDO_t(xdrs, &rsp->simldo) && 1)
 		return TRUE;
 	else
 		return FALSE;
 }
 
 bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t(void *xdrs,
-					     CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t *
-					     rsp)
+					     CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t *rsp)
 {
 	XDR_LOG(xdrs, "CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t")
 
-	    return _xdr_Boolean(xdrs, (u_char *) &rsp->val, "val");
+    return _xdr_Boolean(xdrs, (u_char *) &rsp->val, "val");
 }
 
 bool_t xdr_CAPI2_SYSRPC_PMU_ActivateSIM_Req_t(void *xdrs,
@@ -69,7 +67,7 @@ bool_t xdr_CAPI2_SYSRPC_PMU_ActivateSIM_Req_t(void *xdrs,
 {
 	XDR_LOG(xdrs, "CAPI2_SYSRPC_PMU_ActivateSIM_Req_t")
 
-	    if (xdr_PMU_SIMLDO_t(xdrs, &rsp->simldo) &&
+    if (xdr_PMU_SIMLDO_t(xdrs, &rsp->simldo) &&
 		xdr_PMU_SIMVolt_t(xdrs, &rsp->volt) && 1)
 		return TRUE;
 	else
@@ -80,7 +78,7 @@ bool_t xdr_CAPI2_CPPS_Control_Req_t(void *xdrs, CAPI2_CPPS_Control_Req_t * rsp)
 {
 	XDR_LOG(xdrs, "CAPI2_CPPS_Control_Req_t")
 
-	    if (xdr_UInt32(xdrs, &rsp->cmd) &&
+	if (xdr_UInt32(xdrs, &rsp->cmd) &&
 		xdr_UInt32(xdrs, &rsp->address) &&
 		xdr_UInt32(xdrs, &rsp->offset) &&
 		xdr_UInt32(xdrs, &rsp->size) && 1)
@@ -89,11 +87,11 @@ bool_t xdr_CAPI2_CPPS_Control_Req_t(void *xdrs, CAPI2_CPPS_Control_Req_t * rsp)
 		return FALSE;
 }
 
-bool_t xdr_CAPI2_CPPS_Control_Rsp_t(void *xdrs, CAPI2_CPPS_Control_Rsp_t * rsp)
+bool_t xdr_CAPI2_CPPS_Control_Rsp_t(void *xdrs, CAPI2_CPPS_Control_Rsp_t *rsp)
 {
 	XDR_LOG(xdrs, "CAPI2_CPPS_Control_Rsp_t")
 
-	    return xdr_UInt32(xdrs, &rsp->val);
+    return xdr_UInt32(xdrs, &rsp->val);
 }
 
 bool_t xdr_CAPI2_FLASH_SaveImage_Req_t(void *xdrs,
@@ -101,7 +99,7 @@ bool_t xdr_CAPI2_FLASH_SaveImage_Req_t(void *xdrs,
 {
 	XDR_LOG(xdrs, "CAPI2_FLASH_SaveImage_Req_t")
 
-	    if (xdr_UInt32(xdrs, &rsp->flash_addr) &&
+    if (xdr_UInt32(xdrs, &rsp->flash_addr) &&
 		xdr_UInt32(xdrs, &rsp->length) &&
 		xdr_UInt32(xdrs, &rsp->shared_mem_addr) && 1)
 		return TRUE;
@@ -114,10 +112,10 @@ bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void *xdrs,
 {
 	XDR_LOG(xdrs, "CAPI2_FLASH_SaveImage_Rsp_t")
 
-	    return _xdr_Boolean(xdrs, (u_char *) &rsp->val, "val");
+    return _xdr_Boolean(xdrs, (u_char *) &rsp->val, "val");
 }
 
-//***************** < 9 > **********************
+/***************** < 9 > **********************/
 
 #if defined(FUSE_COMMS_PROCESSOR)
 
@@ -146,15 +144,18 @@ void SYS_SimLockApi_GetStatus(UInt32 tid, UInt8 clientID, UInt8 simId,
 
 #if defined(FUSE_APPS_PROCESSOR)
 
-void SYS_SIMLOCKApi_SetStatus(UInt32 tid, UInt8 clientID,
-			      SYS_SIMLOCK_STATE_t *simlock_state)
+void SYS_SIMLOCKApi_SetStatusEx(UInt32 tid, 
+					UInt8 clientID, 
+					UInt8 simId, 
+					SYS_SIMLOCK_STATE_t *simlock_state)
 {
 	SYS_ReqRep_t req;
 	RPC_Msg_t msg;
 
 	memset(&req, 0, sizeof(SYS_ReqRep_t));
 
-	req.req_rep_u.SYS_SIMLOCKApi_SetStatus_Req.simlock_state = simlock_state;
+	req.req_rep_u.SYS_SIMLOCKApi_SetStatusEx_Req.simId = simId;
+	req.req_rep_u.SYS_SIMLOCKApi_SetStatusEx_Req.simlock_state = simlock_state;
 	req.respId = MSG_SYS_SIMLOCK_SET_STATUS_RSP;
 	msg.msgId = MSG_SYS_SIMLOCK_SET_STATUS_REQ;
 	msg.tid = tid;
@@ -164,13 +165,16 @@ void SYS_SIMLOCKApi_SetStatus(UInt32 tid, UInt8 clientID,
 	RPC_SerializeReq(&msg);
 }
 
-void SYS_SimApi_GetCurrLockedSimlockType(UInt32 tid, UInt8 clientID)
+void SYS_SimApi_GetCurrLockedSimlockTypeEx(UInt32 tid, 
+						UInt8 clientID, 
+						UInt8 simId)
 {
 	SYS_ReqRep_t req;
 	RPC_Msg_t msg;
 
 	memset(&req, 0, sizeof(SYS_ReqRep_t));
 
+	req.req_rep_u.SYS_SimApi_GetCurrLockedSimlockTypeEx_Req.simId = simId;
 	req.respId = MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP;
 	msg.msgId = MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ;
 	msg.tid = tid;
@@ -191,12 +195,9 @@ bool_t xdr_SYS_SimLockApi_GetStatus_Req_t(void *xdrs,
 		_xdr_UInt8(xdrs, &rsp->simId, "simId") &&
 		xdr_pointer(xdrs, (char **)(void *)&rsp->sim_data, sizeof(SYS_SIMLOCK_SIM_DATA_t), (xdrproc_t) xdr_SYS_SIMLOCK_SIM_DATA_t) &&
 		_xdr_Boolean(xdrs, (u_char *) &rsp->is_testsim, "is_testsim") &&
-	1)
-	{
+	1) {
 		return TRUE;
-	}
-	else
-	{
+	} else {
 		return FALSE;
 	}
 }
@@ -209,65 +210,43 @@ bool_t xdr_SYS_SimLockApi_GetStatus_Rsp_t(void *xdrs,
 	return xdr_SYS_SIMLOCK_STATE_t(xdrs, &rsp->val);
 }
 
-bool_t xdr_SYS_SIMLOCKApi_SetStatus_Req_t(void *xdrs,
-					  SYS_SIMLOCKApi_SetStatus_Req_t *rsp)
+bool_t xdr_SYS_SIMLOCKApi_SetStatusEx_Req_t(void *xdrs,
+						SYS_SIMLOCKApi_SetStatusEx_Req_t *rsp)
 {
-	XDR_LOG(xdrs, "SYS_SIMLOCKApi_SetStatus_Req_t")
+	XDR_LOG(xdrs,"SYS_SIMLOCKApi_SetStatusEx_Req_t")
 
 	if (
-		xdr_pointer (xdrs, (char **)(void *)&rsp->simlock_state, sizeof(SYS_SIMLOCK_STATE_t), (xdrproc_t) xdr_SYS_SIMLOCK_STATE_t) && 
+		_xdr_UInt8(xdrs, &rsp->simId, "simId") &&
+		xdr_pointer(xdrs, (char **)(void *)&rsp->simlock_state, sizeof(SYS_SIMLOCK_STATE_t), (xdrproc_t) xdr_SYS_SIMLOCK_STATE_t) &&
 	1)
 		return TRUE;
 	else
 		return FALSE;
 }
 
-bool_t xdr_SYS_SimApi_GetCurrLockedSimlockType_Rsp_t(void *xdrs,
-						     SYS_SimApi_GetCurrLockedSimlockType_Rsp_t
-						     *rsp)
+bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t(void *xdrs,
+						SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t *rsp)
 {
-	XDR_LOG(xdrs, "SYS_SimApi_GetCurrLockedSimlockType_Rsp_t")
+	XDR_LOG(xdrs, "SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t")
 
-    return xdr_UInt32(xdrs, &rsp->val);
+	if (
+		_xdr_UInt8(xdrs, &rsp->simId, "simId") &&
+	1)
+		return TRUE;
+	else
+		return FALSE;
 }
 
-#if defined(FUSE_APPS_PROCESSOR)
-
-#endif
-
-#if defined(FUSE_COMMS_PROCESSOR)
-
-Result_t Handle_SYS_SIMLOCKApi_SetStatus(RPC_Msg_t *pReqMsg,
-					 SYS_SIMLOCK_STATE_t *simlock_state)
+bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t(void *xdrs,
+						SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t *rsp)
 {
-	Result_t result = RESULT_OK;
-	SYS_ReqRep_t data;
+	XDR_LOG(xdrs, "SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t")
 
-	memset(&data, 0, sizeof(SYS_ReqRep_t));
-	SIMLOCKApi_SetStatus(simlock_state);
-
-	data.result = result;
-	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_SIMLOCK_SET_STATUS_RSP, &data);
-	return result;
+	return xdr_UInt32(xdrs, &rsp->val);
 }
 
-Result_t Handle_SYS_SimApi_GetCurrLockedSimlockType(RPC_Msg_t *pReqMsg)
-{
-	Result_t result = RESULT_OK;
-	SYS_ReqRep_t data;
 
-	memset(&data, 0, sizeof(SYS_ReqRep_t));
-	data.req_rep_u.SYS_SimApi_GetCurrLockedSimlockType_Rsp.val = (UInt32) SimApi_GetCurrLockedSimlockType();
-
-	data.result = result;
-	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP,
-			       &data);
-	return result;
-}
-
-#endif
-
-//***************** < 10 > **********************
+/***************** < 10 > **********************/
 
 Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
 {
@@ -332,12 +311,14 @@ Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
 
 #if defined(FUSE_COMMS_PROCESSOR)
 	case MSG_SYS_SIMLOCK_SET_STATUS_REQ:
-		result =
-		    Handle_SYS_SIMLOCKApi_SetStatus(pReqMsg,
-						    req->req_rep_u.SYS_SIMLOCKApi_SetStatus_Req.simlock_state);
+		result = 
+			Handle_SYS_SIMLOCKApi_SetStatusEx(pReqMsg,
+					req->req_rep_u.SYS_SIMLOCKApi_SetStatusEx_Req.simId,
+					req->req_rep_u.SYS_SIMLOCKApi_SetStatusEx_Req.simlock_state);
 		break;
 	case MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ:
-		result = Handle_SYS_SimApi_GetCurrLockedSimlockType(pReqMsg);
+		result = Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(pReqMsg,
+				req->req_rep_u.SYS_SimApi_GetCurrLockedSimlockTypeEx_Req.simId);
 		break;
 #endif
 
@@ -347,7 +328,7 @@ Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
 	return result;
 }
 
-//***************** < 11 > **********************
+/***************** < 11 > **********************/
 
 void SYS_GenGetPayloadInfo(void *dataBuf, MsgType_t msgType, void **ppBuf,
 			   UInt32 *len)
@@ -393,8 +374,8 @@ void SYS_GenGetPayloadInfo(void *dataBuf, MsgType_t msgType, void **ppBuf,
 		}
 	case MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP:
 		{
-			SYS_SimApi_GetCurrLockedSimlockType_Rsp_t *pVal =
-			    (SYS_SimApi_GetCurrLockedSimlockType_Rsp_t *) dataBuf;
+			SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t* pVal = 
+				(SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t*)dataBuf;
 			*ppBuf = (void *)&(pVal->val);
 			break;
 		}
@@ -410,26 +391,27 @@ void SYS_GenGetPayloadInfo(void *dataBuf, MsgType_t msgType, void **ppBuf,
 #else
 #define _D(a) a
 #endif
+
 #if defined(FUSE_APPS_PROCESSOR)
 
-void _D(SIMLOCKApi_SetStatus) (SYS_SIMLOCK_STATE_t *simlock_state)
+void _D(SIMLOCKApi_SetStatusEx)(UInt8 simId, SYS_SIMLOCK_STATE_t *simlock_state)
 {
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
 	tid = RPC_SyncCreateTID(NULL, 0);
-	SYS_SIMLOCKApi_SetStatus(tid, SYS_GetClientId(), simlock_state);
+	SYS_SIMLOCKApi_SetStatusEx(tid, SYS_GetClientId(), simId, simlock_state);
 	RPC_SyncWaitForResponse(tid, SYS_GetClientId(), &ackResult, &msgType, NULL);
 }
 
-UInt32 _D(SimApi_GetCurrLockedSimlockType) ()
+UInt32 _D(SimApi_GetCurrLockedSimlockTypeEx)(UInt8 simId)
 {
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
 	UInt32 val = (UInt32) 0;
 	tid = RPC_SyncCreateTID(&val, sizeof(UInt32));
-	SYS_SimApi_GetCurrLockedSimlockType(tid, SYS_GetClientId());
+	SYS_SimApi_GetCurrLockedSimlockTypeEx(tid, SYS_GetClientId(), simId);
 	RPC_SyncWaitForResponse(tid, SYS_GetClientId(), &ackResult, &msgType, NULL);
 	return val;
 }

@@ -21,7 +21,7 @@
 /*******************************************************************************
 * Copyright 2010 Broadcom Corporation.  All rights reserved.
 *
-* 	@file	drivers/serial/bcm_bt_lpm.c
+* @file	drivers/serial/bcm_bt_lpm.c
 *
 * Unless you and Broadcom execute a separate written software license agreement
 * governing use of this software, this software is licensed to you under the
@@ -35,7 +35,7 @@
 
 #include <linux/module.h>
 #include <linux/init.h>
-#include <asm/gpio.h>
+#include <linux/gpio.h>
 #include <mach/gpio.h>
 #include <linux/broadcom/bcmbt_lpm.h>
 #include <linux/platform_device.h>
@@ -44,15 +44,14 @@
 #include <linux/serial_core.h>
 #include <linux/tty.h>
 
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
 #endif
 #include <linux/clk.h>
 
-#include <asm/io.h>
+#include <linux/io.h>
 #include <asm/irq.h>
-#include <asm/uaccess.h>
 
 #ifdef CONFIG_KONA_PI_MGR
 #include <mach/pi_mgr.h>
@@ -71,7 +70,11 @@ static struct bcm_bt_lpm_data bcm_bt_lpm_data = {
 
 static struct pi_mgr_qos_node btqos_node;
 
-static int bcm_assert_bt_wake()
+static int bcm_assert_bt_wake(void);
+static int bcm_deassert_bt_wake(void);
+
+
+static int bcm_assert_bt_wake(void)
 {
 	if (bcm_bt_lpm_data.gpio_bt_wake == -1)
 		return -EFAULT;
@@ -88,7 +91,7 @@ static int bcm_assert_bt_wake()
 	return 0;
 }
 
-static int bcm_deassert_bt_wake()
+static int bcm_deassert_bt_wake(void)
 {
 	if (bcm_bt_lpm_data.gpio_bt_wake == -1)
 		return -EFAULT;
@@ -105,9 +108,9 @@ static int bcm_deassert_bt_wake()
 	return 0;
 }
 
-static int bcm_get_bt_wake_state(unsigned long __user * retinfo)
+static int bcm_get_bt_wake_state(unsigned long arg)
 {
-
+	void __user *uarg = (void __user *)arg;
 	unsigned long tmp;
 
 	if (bcm_bt_lpm_data.gpio_bt_wake == -1)
@@ -115,10 +118,10 @@ static int bcm_get_bt_wake_state(unsigned long __user * retinfo)
 
 	tmp = gpio_get_value(bcm_bt_lpm_data.gpio_bt_wake);
 
-	pr_info("bcm_get_bt_wake_state(bt_wake:%d) \n",
+	pr_info("bcm_get_bt_wake_state(bt_wake:%d)\n",
 		bcm_bt_lpm_data.gpio_bt_wake);
 
-	if (copy_to_user(retinfo, &tmp, sizeof(*retinfo)))
+	if (copy_to_user(uarg, &tmp, sizeof(*uarg)))
 		return -EFAULT;
 	return 0;
 }
@@ -134,12 +137,13 @@ static int bcmbt_init_peripheral_clock(void)
 	return 0;
 }
 
+/*
 static int bcmbt_release_peripheral_clock(void)
 {
 	pi_mgr_qos_request_update(&btqos_node, PI_MGR_QOS_DEFAULT_VALUE);
 	return 0;
 }
-
+*/
 static int bcmbt_tty_ioctl(struct tty_struct *tty, struct file *file,
 			   unsigned int cmd, unsigned long arg)
 {
@@ -250,28 +254,26 @@ int bcm_init_hostwake(struct bcm_bt_lpm_platform_data *gpio_data)
 	unsigned int irq;
 	int ret;
 	if (bcm_bt_lpm_data.host_wake_installed) {
-		pr_info("host wake irq is already installed \n");
+		pr_info("host wake irq is already installed\n");
 		return 0;
 	} else
 		bcm_bt_lpm_data.host_wake_installed = 1;
+
+	bcmbt_init_peripheral_clock();
 
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&bcm_bt_lpm_data.host_wake_lock, WAKE_LOCK_SUSPEND,
 		       "HOSTWAKE");
 #endif
-	/* make sure host_wake is pulled into the right direction if BT chips is NOT powered to avoid
-	 * wake lock being blocked accidentally! The value of HOST_WAKE_DEASSERT gives the direction
-	 * to pull to. */
 	irq = gpio_to_irq(gpio_data->gpio_host_wake);
 
-	pr_info("host wake irq=%d \n", irq);
+	pr_info("host wake irq=%d\n", irq);
 
 	ret = request_irq(irq, host_wake_isr,
 			  (IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING |
 			   IRQF_NO_SUSPEND), "bt_host_wake", NULL);
 
-	pr_info("request_irq returned value=%u \n", ret);
-	bcmbt_init_peripheral_clock();
+	pr_info("request_irq returned value=%u\n", ret);
 
 	return ret;
 }
@@ -291,8 +293,9 @@ int bcm_init_bt_wake(struct bcm_bt_lpm_platform_data *gpio_data)
 			       "BTWAKE");
 #endif
 		/* register the tty line discipline driver */
-		if (rc = bcmbt_tty_init()) {
-			pr_err("%s: bcmbt_tty_init failed\n", __FUNCTION__);
+		rc = bcmbt_tty_init();
+		if (rc) {
+			pr_err("%s: bcmbt_tty_init failed\n", __func__);
 #ifdef CONFIG_HAS_WAKELOCK
 			wake_lock_destroy(&bcm_bt_lpm_data.host_wake_lock);
 #endif
@@ -306,9 +309,8 @@ int bcm_init_bt_wake(struct bcm_bt_lpm_platform_data *gpio_data)
 		return 0;
 	}
 
-	if (bcm_init_hostwake(gpio_data)) {
-		pr_info("host_wake_isr installation failed \n");
-	}
+	if (bcm_init_hostwake(gpio_data))
+		pr_info("host_wake_isr installation failed\n");
 	return 0;
 }
 

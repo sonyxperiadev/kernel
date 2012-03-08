@@ -124,7 +124,7 @@ static char *pwr_mgr_event2str(int event)
 enum {
 	I2C_SEQ_READ,
 	I2C_SEQ_WRITE,
-	I2C_SEQ_READ_NACK,
+	I2C_SEQ_READ_FIFO,
 };
 
 #endif
@@ -753,30 +753,48 @@ EXPORT_SYMBOL(pwr_mgr_pi_counter_enable);
 
 int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 {
-	u32 reg_val;
+	u32 reg_val1 = 0;
+	u32 reg_val2 = 0;
+	int insurance;
+	unsigned long flgs;
+
 	const struct pi *pi;
 	pwr_dbg("%s : pi_id = %d\n", __func__, pi_id);
 
 	if (unlikely(!pwr_mgr.info)) {
 		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
-		return 0;
+		return -EPERM;
 	}
 
 	if (unlikely(pi_id >= pwr_mgr.info->num_pi)) {
 		pwr_dbg("%s:invalid param\n", __func__);
-		return 0;
+		return -EINVAL;
 	}
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
-	reg_val = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
-	pwr_dbg("%s:counter reg val = %x\n", __func__, reg_val);
+	insurance = 0;
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+	do {
+		reg_val1 = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
+		reg_val2 = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
+		if ((reg_val2 >= reg_val1) && ((reg_val2 - reg_val1) < 2))
+			break;
+		insurance++;
+	} while (insurance < 1000);
+	WARN_ON(insurance >= 1000);
+
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+
+	if (insurance >= 1000)
+		return -EIO;
+	pwr_dbg("%s:counter reg val = %x\n", __func__, reg_val2);
 
 	if (over_flow)
-		*over_flow = !!(reg_val &
+		*over_flow = !!(reg_val2 &
 				PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_OVERFLOW_MASK);
-	return ((reg_val &
+	return (reg_val2 &
 		 PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_MASK)
-		>> PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_SHIFT);
+		>> PWRMGR_PI_ARM_CORE_ON_COUNTER_PI_ARM_CORE_ON_COUNTER_SHIFT;
 }
 
 EXPORT_SYMBOL(pwr_mgr_pi_counter_read);
@@ -1466,10 +1484,10 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 		     i2c_wr_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
 		    PWRMGR_I2C_SW_START_ADDR_MASK;
 		break;
-	case I2C_SEQ_READ_NACK:
+	case I2C_SEQ_READ_FIFO:
 		reg_val |=
 		    (pwr_mgr.info->
-		     i2c_rd_nack_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
+		     i2c_rd_fifo_off << PWRMGR_I2C_SW_START_ADDR_SHIFT) &
 		    PWRMGR_I2C_SW_START_ADDR_MASK;
 		break;
 	default:
@@ -1505,7 +1523,6 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	unsigned long flgs;
 	int ret;
 	u32 reg;
-	u8 i2c_data;
 
 	pwr_dbg("%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
@@ -1532,14 +1549,6 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	if (!ret && reg_val) {
 		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 #if defined(CONFIG_KONA_PWRMGR_REV2)
-		i2c_data = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
-				PWRMGR_I2C_READ_DATA_SHIFT);
-		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
-		ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ_NACK);
-		if (ret < 0)
-			goto out;
-		spin_lock_irqsave(&pwr_mgr_lock, flgs);
-		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 		reg = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
 				PWRMGR_I2C_READ_DATA_SHIFT);
 		if (reg & 0x1) {
@@ -1547,8 +1556,20 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 			ret = -EAGAIN;
 			goto out_unlock;
 		}
+		/**
+		 * if there is no NACK from PMU, we will trigger
+		 * PWRMGR again to read the FIFO data from PMU_BSC
+		 * to PWRMGR buffer
+		 */
+		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+		ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ_FIFO);
+		if (ret < 0)
+			goto out;
+		spin_lock_irqsave(&pwr_mgr_lock, flgs);
+		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 #endif
-		*reg_val = i2c_data;
+		*reg_val = (reg & PWRMGR_I2C_READ_DATA_MASK) >>
+		    PWRMGR_I2C_READ_DATA_SHIFT;
 	}
 out_unlock:
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
@@ -1727,7 +1748,7 @@ EXPORT_SYMBOL(pwr_mgr_clr_intr_status);
  * Added for debugging purpose but not called
  */
 
-/*
+#if 0
 static void pwr_mgr_dump_i2c_cmd_regs(void)
 {
 	int idx;
@@ -1748,7 +1769,7 @@ static void pwr_mgr_dump_i2c_cmd_regs(void)
 			data0, (idx * 2) + 1, cmd1, data1);
 	}
 }
-*/
+#endif
 #endif
 void pwr_mgr_init_sequencer(struct pwr_mgr_info *info)
 {
@@ -1807,22 +1828,165 @@ int pwr_mgr_init(struct pwr_mgr_info *info)
 
 EXPORT_SYMBOL(pwr_mgr_init);
 
+static int pwr_mgr_pm_i2c_var_data_modify(u8 index, u8 val)
+{
+	u32 reg_inx;
+	u32 data_loc;
+	u32 reg_val;
+	unsigned long flgs;
+	pr_info("%s: index:%d, value:%d\n", __func__, index, val);
+
+	if (unlikely(!pwr_mgr.info)) {
+		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		return -EINVAL;
+	}
+	if (unlikely((pwr_mgr.info->flags & PM_PMU_I2C) == 0 )) {
+		pwr_dbg("%s:ERROR - invalid param or not supported\n",
+			__func__);
+		return -EINVAL;
+	}
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+
+	reg_inx = index / 4;
+	reg_val = readl(PWR_MGR_REG_ADDR
+		(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET + reg_inx * 4));
+
+	data_loc = index % 4;
+
+	switch (data_loc) {
+	case 0:
+		reg_val &=
+		~PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_00_MASK;
+		reg_val |= (val <<
+		     PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_00_SHIFT)
+		    &
+		    PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_00_MASK;
+		    break;
+	case 1:
+		reg_val &=
+		~PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_01_MASK;
+
+		reg_val |= (val <<
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_01_SHIFT)
+			&
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_01_MASK;
+		    break;
+	case 2:
+		reg_val &=
+		~PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_02_MASK;
+
+		reg_val |= (val <<
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_02_SHIFT)
+			&
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_02_MASK;
+		    break;
+	case 3:
+		reg_val &=
+		~PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_MASK;
+
+		reg_val |= (val <<
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_SHIFT)
+			&
+			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_MASK;
+		    break;
+	default:
+		pr_info("return as data_loc is invalid\n");
+		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+		return -EINVAL;
+	}
+
+	writel(reg_val, PWR_MGR_REG_ADDR
+		       (PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
+			+ reg_inx * 4));
+
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+	pr_info("%s: %x set to %x register\n", __func__, reg_val,
+			PWR_MGR_REG_ADDR
+			(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
+			 + reg_inx * 4));
+
+	return 0;
+}
+
+static int pwr_mgr_pm_i2c_var_data_read(u8 *data)
+{
+	u32 reg_inx;
+	u32 data_loc = 0;
+	u32 reg_val;
+	unsigned long flgs;
+
+	if (unlikely(!pwr_mgr.info)) {
+		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		return -EINVAL;
+	}
+	if (unlikely((pwr_mgr.info->flags & PM_PMU_I2C) == 0 )) {
+		pwr_dbg("%s:ERROR - invalid param or not supported\n",
+			__func__);
+		return -EINVAL;
+	}
+	if (data == NULL)
+	    return -EINVAL;
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+
+	for (reg_inx = 0; reg_inx < 4; reg_inx++) {
+	    reg_val = readl(PWR_MGR_REG_ADDR
+			(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
+			+ reg_inx * 4));
+
+	    data[data_loc++]  = (reg_val &
+		PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_00_MASK)
+		>> PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_00_SHIFT;
+	    data[data_loc++]  = (reg_val &
+		PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_01_MASK)
+		>> PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_01_SHIFT;
+	    data[data_loc++]  = (reg_val &
+		PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_02_MASK)
+		>> PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_02_SHIFT;
+	    data[data_loc++]  = (reg_val &
+	    	PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_MASK)
+		>> PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_SHIFT;
+	}
+
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+
+	return data_loc;
+}
+
+
 #ifdef CONFIG_DEBUG_FS
 
 static u32 bmdm_pwr_mgr_base;
 
-__weak void pwr_mgr_mach_debug_fs_init(int type)
+__weak void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param)
 {
 }
 
-static int set_pm_mgr_dbg_bus(void *data, u64 val)
+static int pwrmgr_debugfs_open(struct inode *inode, struct file *file)
 {
-	u32 reg_val = 0;
+	file->private_data = inode->i_private;
+	return 0;
+}
 
-	pwr_dbg("%s: val: %lld\n", __func__, val);
-	pwr_mgr_mach_debug_fs_init(0);
-	if (val > 0xA)
-		return -EINVAL;
+static ssize_t set_pm_mgr_dbg_bus(struct file *file, char const __user *buf,
+					size_t count, loff_t *offset)
+{
+	u32 len = 0;
+	int db_sel = 0;
+	int val = 0;
+	int param = 0;
+	char input_str[100];
+	u32 reg_val;
+
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+	sscanf(input_str, "%d%d%d", &val, &db_sel, &param);
+
+	pwr_mgr_mach_debug_fs_init(0, db_sel, param);
 	reg_val =
 	    readl(PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
 	reg_val &= ~(0xF << 20);
@@ -1834,22 +1998,37 @@ static int set_pm_mgr_dbg_bus(void *data, u64 val)
 	reg_val =
 	    readl(PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
 	pwr_dbg("PC_PIN_OVERRIDE_CONTROL Register: %08x\n", reg_val);
-
-	return 0;
+	return count;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(set_pm_dbg_bus_fops, NULL, set_pm_mgr_dbg_bus,
-			"%llu\n");
+static struct file_operations set_pm_dbg_bus_fops = {
+	.open = pwrmgr_debugfs_open,
+	.write = set_pm_mgr_dbg_bus,
+};
 
-static int set_bmdm_mgr_dbg_bus(void *data, u64 val)
+
+static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
+					size_t count, loff_t *offset)
 {
-	u32 reg_val = 0;
+	u32 len = 0;
+	int db_sel = 0;
+	int val = 0;
+	int param = 0;
+	char input_str[100];
+	u32 reg_val;
 	u32 reg_addr =
 	    bmdm_pwr_mgr_base + BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_OFFSET;
-	pwr_dbg("%s: val: %lld\n", __func__, val);
-	pwr_mgr_mach_debug_fs_init(1);
-	if (val > 0xA)
-		return -EINVAL;
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+	sscanf(input_str, "%d%d%d", &val, &db_sel, &param);
+
+	pwr_dbg("%s: val: %d\n", __func__, val);
+	pwr_mgr_mach_debug_fs_init(1, db_sel, param);
 	reg_val = readl(reg_addr);
 	reg_val &=
 	    ~(BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_DEBUG_BUS_SELECT_MASK);
@@ -1859,16 +2038,17 @@ static int set_bmdm_mgr_dbg_bus(void *data, u64 val)
 	    BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_DEBUG_BUS_SELECT_MASK;
 	pwr_dbg("reg_val to be written %08x\n", reg_val);
 	writel(reg_val, reg_addr);
-
 	reg_val = readl(reg_addr);
 	pwr_dbg("BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL Register: %08x\n",
 		reg_val);
-
-	return 0;
+	return count;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(set_bmdm_dbg_bus_fops, NULL, set_bmdm_mgr_dbg_bus,
-			"%llu\n");
+static struct file_operations set_bmdm_dbg_bus_fops = {
+	.open = pwrmgr_debugfs_open,
+	.write = set_bmdm_mgr_dbg_bus,
+};
+
 
 static int pwr_mgr_dbg_event_get_active(void *data, u64 *val)
 {
@@ -2061,6 +2241,113 @@ static struct file_operations i2c_sw_seq_ops = {
 	.write = pwr_mgr_i2c_req,
 };
 #endif
+static int pwr_mgr_pmu_volt_inx_tbl_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+static ssize_t pwr_mgr_pmu_volt_inx_tbl_display(struct file *file, char __user *buf, size_t len, loff_t *offset)
+{
+    u8 volt_tbl[16];
+    int i, count =0, length =0;
+    static ssize_t total_len = 0;
+    char out_str[400];
+    char *out_ptr;
+
+    /* This is to avoid the read getting called again and again. This is
+     * useful only if we have large chunk of data greater than PAGE_SIZE. we
+     * have only small chunk of data */
+    if(total_len > 0) {
+	total_len = 0;
+	return 0;
+    }
+    memset(volt_tbl, 0, sizeof(volt_tbl));
+    memset(out_str, 0, sizeof(out_str));
+    out_ptr = &out_str[0];
+    if (len < 400)
+	return -EINVAL;
+
+    count = pwr_mgr_pm_i2c_var_data_read(volt_tbl);
+    for (i=0;i<count;i++) {
+	length = sprintf(out_ptr, "volt_id[%d]: %x\n", i, volt_tbl[i]);
+	out_ptr += length;
+	total_len += length;
+    }
+
+    if (copy_to_user(buf, out_str, total_len))
+	return -EFAULT;
+
+    return total_len;
+}
+
+static ssize_t pwr_mgr_pmu_volt_inx_tbl_update(struct file *file, char const __user *buf,
+			       size_t count, loff_t *offset)
+{
+	int i;
+	u32 val = 0xFFFF;
+	u32 len = 0, inx = 0;
+	char *str_ptr;
+	u8 data[17];
+
+	char input_str[100];
+
+	memset(input_str, 0, 100);
+	memset(data, 0, 16);
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	str_ptr = &input_str[0];
+	while (*str_ptr && *str_ptr != 0xA) { /*not null && not LF character*/
+		sscanf(str_ptr, "%x%n", &val, &len);
+		if (val == 0xFFFF)
+			break;
+
+		data[inx] = (u8)val;
+		pr_info("data[%d] :%x  len:%d\n", inx, data[inx], len);
+		str_ptr += len;
+		inx++;
+		if (inx > 16)
+			break;
+		val = 0xFFFF;
+	}
+	if (inx == 2) {
+		/*max inx is 0xF*/
+		if (data[0] > 0xF) {
+			pr_info("invalid inx\n");
+			return count;
+		}
+		local_irq_disable();
+		pwr_mgr_pm_i2c_enable(false);
+		pwr_mgr_pm_i2c_var_data_modify(data[0], data[1]);
+		pr_info("index:%d , value= %x\n", data[0], data[1]);
+		pwr_mgr_pm_i2c_enable(true);
+		local_irq_enable();
+	} else if (inx == 16) {
+		for (i = 0; i < 16; i++)
+			pr_info("data[%d] = %x\n", i, data[i]);
+		local_irq_disable();
+		pwr_mgr_pm_i2c_enable(false);
+		pwr_mgr_pm_i2c_var_data_write(data, inx);
+		pwr_mgr_pm_i2c_enable(true);
+		local_irq_enable();
+	} else
+		pr_info("invalid number of arguments\n");
+
+	return count;
+}
+
+
+static struct file_operations set_pmu_volt_inx_tbl_fops = {
+    .open = pwr_mgr_pmu_volt_inx_tbl_open,
+    .write = pwr_mgr_pmu_volt_inx_tbl_update,
+    .read = pwr_mgr_pmu_volt_inx_tbl_display,
+};
+
 
 struct dentry *dent_pwr_root_dir = NULL;
 int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
@@ -2106,6 +2393,11 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 	     &i2c_sw_seq_ops))
 		return -ENOMEM;
 #endif
+	if (!debugfs_create_file
+	    ("pmu_volt_inx", S_IRUGO | S_IWUSR , dent_pwr_root_dir, NULL,
+	     &set_pmu_volt_inx_tbl_fops))
+		return -ENOMEM;
+
 	dent_event_tbl = debugfs_create_dir("event_table", dent_pwr_root_dir);
 	if (!dent_event_tbl)
 		return -ENOMEM;

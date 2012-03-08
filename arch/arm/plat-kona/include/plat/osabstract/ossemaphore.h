@@ -119,103 +119,6 @@ static inline OSStatus_t OSSEMAPHORE_Release(			// wait to release a semaphore
 }
 
 /**
-	Create a Mutex.
-	@param	mode	(in)	Suspension Mode
-	@return Semaphore_t		Semaphore Object.
-**/
- 
-static inline Semaphore_t OSSEMAPHORE_createMutex(	// returns newly-created "mutex"
-	OSSuspend_t mode					// suspending task mode
-	)
-{
-	Semaphore_t *mutex_ptr = (Semaphore_t) kzalloc(sizeof(struct mutex), GFP_KERNEL);
-	if (mutex_ptr == NULL) {
-		pr_err("%s cannot create mutext at line %d\n", __func__, __LINE__);
-		return mutex_ptr;
-	}
-	mutex_init((struct mutex *)mutex_ptr);
-	return mutex_ptr;
-}
-
-/**
-	Deallocate and destroy resources associated with a Mutex.
-	@param	s	(in)	Sempahore Object
-**/
-
-static inline void OSSEMAPHORE_destroyMutex( 			// Destroy a "mutex"
-	Semaphore_t s						// "Mutex" to destroy
-	)
-{
-	if (s)
-		kfree(s);
-	else
-		pr_err("%s cannot destroy mutex(%p) at line %d\n", __func__, s, __LINE__);
-}
-
-/**
-	Obtain a mutex.  If the mutex is already "locked" the calling task
-	will block until the mutex is "unlocked".
-	@param s (in)	Sempahore Object.
-	@param timeout (in) Ticks to wait for mutex.
-	@return OSSTATUS_t	Status of operation.
-**/
-
-static inline OSStatus_t OSSEMAPHORE_obtainMutex(		// wait to obtain a "mutex"
-	Semaphore_t s,						// "Mutex" pointer
-	Ticks_t timeout						// timeout to failed "mutex" obtain
-	)
-{
-	return (mutex_lock_interruptible((struct mutex *)s)? OSSTATUS_FAILURE : OSSTATUS_SUCCESS);
-}
-
-/**
-	Release a mutex that was obtained via a call to OSSEMPAHORE_obtainMutex.
-	@param	s	(in)	Sempahore Object.
-	@return OSStatus_t	Status of operation.
-**/
-
-
-static inline OSStatus_t OSSEMAPHORE_releaseMutex(	// wait to release a "mutex"
-	Semaphore_t s						// "mutex" pointer
-	)
-{
-	mutex_unlock((struct mutex *)s);
-	return OSSTATUS_SUCCESS;
-}
-
-	
-/**
-	Get current count of a counting semaphore.
-	@param passed_in_s	(in)	Semaphore Object.
-	@return UInt32	Semaphore count.
-**/
-
-static inline UInt32 OSSEMAPHORE_GetCnt(				// return count of semaphore,
-	Semaphore_t passed_in_s				// if count <= 0, return -1
-	)
-{
-	/* Not supported*/
-	return 0;
-}
-
-
-/**
-	Reset the count of a semaphore to zero.
-	This function has high risk. Use it with extreme caution
-	@param passed_in_s	(in)	Semaphore Object.
-	@return UInt32	Semaphore count.
-**/
-
-static inline UInt32 OSSEMAPHORE_ResetCnt(
-	Semaphore_t passed_in_s
-	)
-{
-	/* Not supported*/
-	return 0;
-}
-
-
-/**
 	Change the name of an existing semaphore.
 	@param s	(in)	Semaphore Object.
 	@param name	(in)	New name of the semaphore.
@@ -244,7 +147,5 @@ static inline OSStatus_t OSSEMAPHORE_GetName(		// get ASCII name of semaphore
 	/* We should define a separate structure in case this needs to be implemented */
 	return OSSTATUS_FAILURE;
 }
-
-/** @} */
 
 #endif

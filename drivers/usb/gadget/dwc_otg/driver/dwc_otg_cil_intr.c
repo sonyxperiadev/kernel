@@ -460,6 +460,15 @@ int32_t dwc_otg_handle_wakeup_detected_intr(dwc_otg_core_if_t *core_if)
 
 	DWC_PRINTF("%s lxstate = %d\n", __func__, core_if->lx_state);
 
+#ifdef CONFIG_USB_OTG_UTILS
+	if (core_if->xceiver->set_suspend &&
+		  (core_if->lx_state == DWC_OTG_L2) &&
+		  !core_if->core_params->otg_supp_enable) {
+		/* REVISIT when we use the external wake interrupt */
+		otg_set_suspend(core_if->xceiver, 0);
+	}
+#endif
+
 	if (dwc_otg_is_device_mode(core_if)) {
 		dctl_data_t dctl = {.d32 = 0 };
 		DWC_DEBUGPL(DBG_PCD, "DSTS=0x%0x\n",
@@ -1155,6 +1164,14 @@ int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
 	gintsts.d32 = 0;
 	gintsts.b.usbsuspend = 1;
 	dwc_write_reg32(&core_if->core_global_regs->gintsts, gintsts.d32);
+
+#ifdef CONFIG_USB_OTG_UTILS
+		if (core_if->xceiver->set_suspend &&
+			  !core_if->core_params->otg_supp_enable) {
+			/* Suspend trasceiver */
+			otg_set_suspend(core_if->xceiver, 1);
+		}
+#endif
 
 	return 1;
 }

@@ -18,12 +18,15 @@
 #include <linux/fs.h>
 #include <linux/file.h>
 #include <linux/mm.h>
+#include <linux/oom.h>
+#include <linux/notifier.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/debugfs.h>
 #include <linux/android_pmem.h>
 #include <linux/mempolicy.h>
 #include <linux/sched.h>
+#include <linux/workqueue.h>
 #include <linux/rcupdate.h>
 #include <linux/dma-mapping.h>
 #include <linux/wait.h>
@@ -32,7 +35,7 @@
 #include <asm/uaccess.h>
 #include <asm/cacheflush.h>
 
-#define PMEM_MAX_DEVICES	(10)
+#define PMEM_MAX_DEVICES	(2)
 #define PMEM_MAX_ORDER		(128)
 #define PMEM_MIN_ALLOC		PAGE_SIZE
 
@@ -86,9 +89,8 @@ struct pmem_data {
 	 * quickly in pmem_release()
 	 */
 	struct list_head sub_data_list;
-#if PMEM_DEBUG
+
 	int ref;
-#endif
 };
 
 struct pmem_bits {
@@ -121,13 +123,6 @@ struct pmem_info {
 	unsigned long base;
 	/* vitual start address of the remaped pmem space */
 	unsigned char __iomem *vbase;
-	/* high water mark in pages for this pmem space */
-	unsigned short hwm;
-	/* Total allocation done in no. of pages from this pmem space */
-	unsigned short total_allocation;
-	/* mutex to protect total_allocation */
-	struct mutex alloc_stat_lock;
-	/* total size of the pmem space */
 	unsigned long size;
 	/* number of entries in the pmem space */
 	unsigned long num_entries;
@@ -145,13 +140,21 @@ struct pmem_info {
 	 * O_SYNC to get an uncached region */
 	unsigned cached;
 	unsigned buffered;
-	/* if allocator = NO_ALLOC the first mapper gets the whole space and sets
-	 * this flag */
-	unsigned allocated;
-	/* for debugging, creates a list of pmem file structs, the
-	 * data_list_lock should be taken before pmem_data->sem if both are
-	 * needed */
+	/* mutually exclusive shrinker function */
+	struct mutex shrinker_lock;
+	/* Work that shrinks pmem allocations */
+	struct work_struct pmem_shrinker;
+	/* Task killed by the pmem_shrinker */
+	struct task_struct *deathpending;
+	/* Wait Queue to wait for killed process to die .. */
+	wait_queue_head_t deatheaters;
+	/* Stats for the CMA region for this device */
+	struct dev_cma_stats stats;
+	/* high water mark in pages for this pmem space */
+	unsigned short hwm;
+	/* protects data list */
 	struct mutex data_list_lock;
+	/* total size of the pmem space */
 	struct list_head data_list;
 	/* pmem_sem protects the bitmap array
 	 * a write lock should be held when modifying entries in bitmap
@@ -274,6 +277,14 @@ static int is_master_owner(struct file *file)
 	return ret;
 }
 
+/* Must be called with p_info->lock held */
+static inline bool pmem_watermark_ok(struct pmem_info *p_info)
+{
+	get_dev_cma_stats(&p_info->pdev->dev, &p_info->stats);
+
+	return (p_info->stats.max_free_block >= p_info->hwm);
+}
+
 static void pmem_restore_kernel_mappings(int id, struct pmem_data *data,
 					 unsigned long offset, unsigned long len);
 static int pmem_cma_free(int id, struct pmem_data *data)
@@ -288,8 +299,12 @@ static int pmem_cma_free(int id, struct pmem_data *data)
 
 	ret = !dma_release_from_contiguous(&pmem[id].pdev->dev, start_page, (data->size >> PAGE_SHIFT));
 	if (!ret) {
+		if (current->group_leader && current->group_leader->mm)
+			add_mm_counter(current->group_leader->mm,
+				MM_CMAPAGES, -(data->size >> PAGE_SHIFT));
 		data->size = 0;
 	}
+
 	return ret;
 }
 
@@ -297,13 +312,12 @@ static int pmem_free(int id, int index)
 {
 	/* caller should hold the write lock on pmem_sem! */
 	int buddy, curr = index;
+	unsigned long order;
+
 	DLOG("index %d\n", index);
 
-	if (!pmem[id].allocator) {
-		pmem[id].allocated = 0;
-		return 0;
-	}
 	/* clean up the bitmap, merging any buddies */
+	order = PMEM_ORDER(id, curr);
 	pmem[id].bitmap[curr].allocated = 0;
 	/* find a slots buddy Buddy# = Slot# ^ (1 << order)
 	 * if the buddy is also free merge them
@@ -332,7 +346,6 @@ static int pmem_release(struct inode *inode, struct file *file)
 	struct pmem_region_node *region_node;
 	struct list_head *elt, *elt2;
 	int id = get_id(file), ret = 0;
-	unsigned long len;
 
 
 	mutex_lock(&pmem[id].data_list_lock);
@@ -340,10 +353,10 @@ static int pmem_release(struct inode *inode, struct file *file)
 	mutex_unlock(&pmem[id].data_list_lock);
 
 	down_write(&data->sem);
-
 	/* if this file is a master, revoke all the memory in the connected
 	 *  files */
-	if (PMEM_FLAGS_MASTERMAP & data->flags && !list_empty(&data->sub_data_list)) {
+	if ((PMEM_FLAGS_MASTERMAP & data->flags)
+			&& !list_empty(&data->sub_data_list)) {
 		struct pmem_data *sub_data;
 		list_for_each_safe(elt, elt2, &data->sub_data_list) {
 			sub_data = list_entry(elt, struct pmem_data, sub_data_list);
@@ -361,29 +374,18 @@ static int pmem_release(struct inode *inode, struct file *file)
 
 	/* if its not a conencted file and it has an allocation, free it */
 	if (!(PMEM_FLAGS_CONNECTED & data->flags) && has_allocation(file)) {
-		len = pmem_len(id, data) / PAGE_SIZE;
-
-		mutex_lock(&pmem[id].alloc_stat_lock);
-		if (pmem[id].total_allocation < len) {
-			printk(KERN_ALERT"pmem: total_alloc (%u pages) is less than region len(%lu pages)\n",
-					pmem[id].total_allocation, len);
-			BUG();
-		}
-		pmem[id].total_allocation -= len;
-
 		if (pmem[id].allocator == CMA_ALLOC) {
+			if (data->ref) {
+				printk(KERN_ALERT"%s: (%s) Freeing file(%p) data(%p) with ref (%d)\n",
+						__func__, current->group_leader ? current->group_leader->comm : current->comm,
+						file, data, data->ref);
+			}
 			ret = pmem_cma_free(id, data);
 		} else {
 			down_write(&pmem[id].bitmap_sem);
 			ret = pmem_free(id, data->index);
 			up_write(&pmem[id].bitmap_sem);
 		}
-
-		if (ret) {
-			printk(KERN_ERR"pmem: freeing pages failed\n");
-			pmem[id].total_allocation += len;
-		}
-		mutex_unlock(&pmem[id].alloc_stat_lock);
 		data->index = -1;
 	}
 
@@ -442,9 +444,8 @@ static int pmem_open(struct inode *inode, struct file *file)
 	data->pid = 0;
 	data->master_file = NULL;
 	data->size = 0;
-#if PMEM_DEBUG
 	data->ref = 0;
-#endif
+
 	INIT_LIST_HEAD(&data->region_list);
 	INIT_LIST_HEAD(&data->sub_data_list);
 	init_rwsem(&data->sem);
@@ -487,6 +488,14 @@ static int pmem_cma_allocate(int id, unsigned long len)
 		return -1;
 	}
 
+	BUG_ON(!current->group_leader->mm);
+	add_mm_counter(current->group_leader->mm,
+				MM_CMAPAGES, (len >> PAGE_SHIFT));
+	if (!pmem_watermark_ok(&pmem[id])) {
+		schedule_work(&pmem[id].pmem_shrinker);
+		wake_up_all(&cleaners);
+	}
+
 	return PMEM_CMA_PAGE_INDEX(id, page);
 }
 
@@ -498,14 +507,6 @@ static int pmem_allocate(int id, unsigned long len)
 	int end = pmem[id].num_entries;
 	int best_fit = -1;
 	unsigned long order = pmem_order(id, len);
-
-	if (!pmem[id].allocator) {
-		DLOG("no allocator");
-		if ((len > pmem[id].size) || pmem[id].allocated)
-			return -1;
-		pmem[id].allocated = 1;
-		return len;
-	}
 
 	if (order > PMEM_MAX_ORDER)
 		return -1;
@@ -570,9 +571,7 @@ static pgprot_t pmem_access_prot(struct file *file, pgprot_t vma_prot)
 
 static unsigned long pmem_start_addr(int id, struct pmem_data *data)
 {
-	if (!pmem[id].allocator)
-		return PMEM_START_ADDR(id, 0);
-	else if (pmem[id].allocator == CMA_ALLOC)
+	if (pmem[id].allocator == CMA_ALLOC)
 		return PMEM_CMA_START_ADDR(id, data->index);
 	else
 		return PMEM_START_ADDR(id, data->index);
@@ -591,9 +590,7 @@ static unsigned long pmem_len(int id, struct pmem_data *data)
 		return 0;
 	}
 
-	if (!pmem[id].allocator)
-		return data->index;
-	else if (pmem[id].allocator == CMA_ALLOC)
+	if (pmem[id].allocator == CMA_ALLOC)
 		return data->size;
 	else
 		return PMEM_LEN(id, data->index);
@@ -769,6 +766,12 @@ static void pmem_vma_close(struct vm_area_struct *vma)
 		    (data->flags & PMEM_FLAGS_SUBMAP))
 			data->flags |= PMEM_FLAGS_UNSUBMAP;
 	}
+
+	if (data->flags & PMEM_FLAGS_MASTERMAP) {
+		if (data->ref > 0)
+			data->ref--;
+	}
+
 	/* the kernel is going to free this vma now anyway */
 	up_write(&data->sem);
 }
@@ -778,13 +781,31 @@ static struct vm_operations_struct vm_ops = {
 	.close = pmem_vma_close,
 };
 
+static bool should_retry_allocation(int id)
+{
+
+	if (pmem_watermark_ok(&pmem[id]) ||
+			fatal_signal_pending(current)) {
+		goto out;
+	}
+
+	/* retry only if we have a pending death .. */
+	if (pmem[id].deathpending) {
+		printk(KERN_INFO"%s: waiting for deathpending!\n", __func__);
+		wait_event(pmem[id].deatheaters,
+				(pmem[id].deathpending == NULL));
+		return true;
+	}
+out:
+	return false;
+}
+
 static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	struct pmem_data *data;
-	int index;
+	int index = -1;
 	unsigned long vma_size =  vma->vm_end - vma->vm_start;
 	int ret = 0, id = get_id(file);
-	unsigned short total_allocation;
 
 	if (vma->vm_pgoff || !PMEM_IS_PAGE_ALIGNED(vma_size)) {
 		printk(KERN_ERR "pmem: mmaps must be at offset zero, aligned"
@@ -793,7 +814,14 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	}
 
 	data = (struct pmem_data *)file->private_data;
+
+	if (!data) {
+		ret = -ENODEV;
+		goto error;
+	}
+
 	down_write(&data->sem);
+
 	/* check this file isn't already mmaped, for submaps check this file
 	 * has never been mmaped */
 	if ((data->flags & PMEM_FLAGS_SUBMAP) ||
@@ -801,42 +829,29 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		printk(KERN_ERR "pmem: you can only mmap a pmem file once, "
 		       "this file is already mmaped. %x\n", data->flags);
 		ret = -EINVAL;
-		goto error;
+		goto error_up_write;
 	}
 
-	/* if file->private_data == unalloced, alloc*/
-	if (data && data->index == -1) {
-		if (pmem[id].allocator == CMA_ALLOC) {
-			index = pmem_cma_allocate(id, vma->vm_end - vma->vm_start);
-			if (index >= 0)
-				data->size = vma->vm_end - vma->vm_start;
-		} else {
-			down_write(&pmem[id].bitmap_sem);
-			index = pmem_allocate(id, vma->vm_end - vma->vm_start);
-			up_write(&pmem[id].bitmap_sem);
+	if (likely(!has_allocation(file))) {
+		do {
+			/* if file->private_data == unalloced, alloc*/
+			if (pmem[id].allocator == CMA_ALLOC) {
+				index = pmem_cma_allocate(id, vma->vm_end - vma->vm_start);
+			} else {
+				down_write(&pmem[id].bitmap_sem);
+				index = pmem_allocate(id, vma->vm_end - vma->vm_start);
+				up_write(&pmem[id].bitmap_sem);
+			}
+		} while (((index < 0) && should_retry_allocation(id)));
+
+		if (index < 0)  {
+			printk(KERN_ERR"pmem: could not find allocation for map.\n");
+			ret = -ENOMEM;
+			goto error_up_write;
 		}
 
 		data->index = index;
-		if (index >= 0) {
-			mutex_lock(&pmem[id].alloc_stat_lock);
-			total_allocation = pmem[id].total_allocation;
-			total_allocation += pmem_len(id, data) / PAGE_SIZE;
-			/* Check if we rounded off, that should never happen */
-			BUG_ON(total_allocation < pmem[id].total_allocation);
-			pmem[id].total_allocation = total_allocation;
-			if (pmem[id].total_allocation >= pmem[id].hwm) {
-				printk(KERN_ALERT"!!! pmem: High watermark is HIT !!!\n");
-				wake_up_all(&cleaners);
-			}
-			mutex_unlock(&pmem[id].alloc_stat_lock);
-		}
-	}
-
-	/* either no space was available or an error occured */
-	if (!has_allocation(file)) {
-		ret = -ENOMEM;
-		printk("pmem: could not find allocation for map.\n");
-		goto error;
+		data->size = vma->vm_end - vma->vm_start;
 	}
 
 	if (pmem_len(id, data) < vma_size) {
@@ -844,7 +859,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		       "size of backing region [%lu].\n", vma_size,
 		       pmem_len(id, data));
 		ret = -EINVAL;
-		goto error;
+		goto error_up_write;
 	}
 
 
@@ -857,7 +872,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		if (pmem_map_garbage(id, vma, data, 0, vma_size)) {
 			printk("pmem: mmap failed in kernel!\n");
 			ret = -EAGAIN;
-			goto error;
+			goto error_up_write;
 		}
 		list_for_each(elt, &data->region_list) {
 			region_node = list_entry(elt, struct pmem_region_node,
@@ -869,7 +884,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 						 region_node->region.offset,
 						 region_node->region.len)) {
 				ret = -EAGAIN;
-				goto error;
+				goto error_up_write;
 			}
 		}
 		data->flags |= PMEM_FLAGS_SUBMAP;
@@ -882,7 +897,6 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	} else {
 		if (pmem_map_pfn_range(id, file, vma, data, 0, vma_size)) {
 			printk(KERN_INFO "pmem: mmap failed in kernel!\n");
-			data->flags &= ~PMEM_FLAGS_MASTERMAP;
 			ret = -EAGAIN;
 			goto error_free_mem;
 		}
@@ -893,30 +907,32 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		}
 	}
 
+	data->ref++;
 	vma->vm_ops = &vm_ops;
-
 	up_write(&data->sem);
 
 	return ret;
 
-error_free_mem :
-	printk(KERN_ERR"pmem_mmap() failed, freeing allocated memory\n");
-	mutex_lock(&pmem[id].alloc_stat_lock);
-	pmem[id].total_allocation -= pmem_len(id, data) / PAGE_SIZE;
-	mutex_unlock(&pmem[id].alloc_stat_lock);
-	if (pmem[id].allocator == CMA_ALLOC) {
-		ret = pmem_cma_free(id, data);
-		if (ret)
-			printk(KERN_ALERT"pmem: Unable to free allocated memory during error handling\n");
-	} else {
-		down_write(&pmem[id].bitmap_sem);
-		ret = pmem_free(id, data->index);
-		up_write(&pmem[id].bitmap_sem);
+error_free_mem:
+	if (data->ref == 0) {
+		printk(KERN_ERR"pmem_mmap() failed, freeing allocated memory\n");
+		if (pmem[id].allocator == CMA_ALLOC) {
+			ret = pmem_cma_free(id, data);
+			if (ret)
+				printk(KERN_ALERT"pmem: Unable to free allocated memory during error handling\n");
+		} else {
+			down_write(&pmem[id].bitmap_sem);
+			ret = pmem_free(id, data->index);
+			up_write(&pmem[id].bitmap_sem);
+		}
+		data->index = -1;
 	}
-	data->index = -1;
-error :
+error_up_write:
 	up_write(&data->sem);
 	return ret;
+error:
+	return ret;
+
 }
 
 /* the following are the api for accessing pmem regions by other drivers
@@ -1432,9 +1448,9 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (data->flags & PMEM_FLAGS_DIRTY_REGION) {
 			region.len = 1;
 			data->flags &= ~PMEM_FLAGS_DIRTY_REGION;
-		} else
+		} else {
 			region.len = 0;
-
+		}
 		up_write(&data->sem);
 
 		if (copy_to_user((void __user *)arg, &region,
@@ -1485,12 +1501,10 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case PMEM_CLEANER_WAIT:
 		data = (struct pmem_data *)file->private_data;
 
-		mutex_lock(&pmem[id].alloc_stat_lock);
-		should_wait = pmem[id].total_allocation >= pmem[id].hwm ? false : true;
-		mutex_unlock(&pmem[id].alloc_stat_lock);
+		should_wait = pmem_watermark_ok(&pmem[id]);
 
 		if (should_wait) {
-			ret = wait_event_interruptible(cleaners, pmem[id].total_allocation >= pmem[id].hwm);
+			ret = wait_event_interruptible(cleaners, !pmem_watermark_ok(&pmem[id]));
 			ret = -ERESTARTSYS;
 			if (ret == -ERESTARTSYS)
 				ret = -EAGAIN;
@@ -1533,7 +1547,7 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 			return -ENOMEM;
 
 		n = scnprintf(buffer, debug_bufmax,
-				"process (pid #) : flags | size | range | mapped regions (start, end) (start, end)...\n");
+				"process (pid #) : ref | flags | size | range | mapped regions (start, end) (start, end)...\n");
 
 		mutex_lock(&pmem[id].data_list_lock);
 		list_for_each(elt, &pmem[id].data_list) {
@@ -1545,15 +1559,6 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 				get_task_struct(task);
 			rcu_read_unlock();
 			if (!task) {
-				if (unlikely(data->flags || data->task
-						|| data->vma ||	data->master_file
-						|| data->pid || data->index != -1)) {
-					printk(KERN_ALERT"pmem: Illegal pmem entry found\n"
-							"flags(0x%08x), task(0x%p), vma(0x%p),\n"
-							"master_file(0x%p), pid(%d), index(%d)\n",
-							data->flags, data->task, data->vma,
-							data->master_file, data->pid, data->index);
-				}
 				up_read(&data->sem);
 				continue;
 			}
@@ -1564,6 +1569,8 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 			task_unlock(task);
 			put_task_struct(task);
 
+			n += scnprintf(buffer + n, debug_bufmax - n, "   %08d",
+					data->ref);
 			n += scnprintf(buffer + n, debug_bufmax - n, " 0x%08x",
 					data->flags);
 			n += scnprintf(buffer + n, debug_bufmax - n, " %08ldkB",
@@ -1591,12 +1598,13 @@ static ssize_t debug_read(struct file *file, char __user *buf, size_t count,
 
 			up_read(&data->sem);
 		}
-		mutex_unlock(&pmem[id].data_list_lock);
-		mutex_lock(&pmem[id].alloc_stat_lock);
+
+		get_dev_cma_stats(&pmem[id].pdev->dev, &pmem[id].stats);
+
 		n += scnprintf(buffer + n, debug_bufmax - n, "=========================================================\n");
-		n += scnprintf(buffer + n, debug_bufmax - n, "Total Allocation : %u pages, %08ukB\n", pmem[id].total_allocation,
-										(pmem[id].total_allocation << PAGE_SHIFT)/SZ_1K);
-		mutex_unlock(&pmem[id].alloc_stat_lock);
+		n += scnprintf(buffer + n, debug_bufmax - n, "Total Allocation : %lu pages, %08lukB\n", pmem[id].stats.total_alloc,
+										(pmem[id].stats.total_alloc << PAGE_SHIFT)/SZ_1K);
+		mutex_unlock(&pmem[id].data_list_lock);
 		n += scnprintf(buffer + n, debug_bufmax - n, "High Watermark : %u pages, %08ukB\n", pmem[id].hwm,
 										(pmem[id].hwm << PAGE_SHIFT)/SZ_1K);
 		n++;
@@ -1626,6 +1634,125 @@ static struct file_operations debug_fops = {
 	.open = debug_open,
 };
 
+
+static int
+pmem_task_notify_func(struct notifier_block *self, unsigned long val, void *data)
+{
+	int id;
+	struct task_struct *task = data;
+
+	for (id = 0; id < PMEM_MAX_DEVICES; id++) {
+		/* only if valid pmem device */
+		if (pmem[id].base) {
+			if (task == pmem[id].deathpending) {
+				printk(KERN_INFO"%s: %s(%d) pmem deathpending killed\n",
+						__func__, task->comm, task->pid);
+				pmem[id].deathpending = NULL;
+				wake_up_all(&pmem[id].deatheaters);
+			}
+		}
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block pmem_task_nb = {
+	.notifier_call	= pmem_task_notify_func,
+};
+
+/* Can only be called from allocation path after wmark checks are done */
+/* Must be called with alloc_stat_lock held */
+static void pmem_shrink(struct work_struct *work)
+{
+	struct list_head *itr;
+	struct task_struct *task, *selected = NULL;
+	unsigned long task_cmasize, selected_task_cmasize = 0;
+	int selected_oom_adj = OOM_DISABLE;
+	struct pmem_data *data;
+	struct pmem_info *p_info =
+		container_of(work, struct pmem_info, pmem_shrinker);
+
+
+	mutex_lock(&p_info->shrinker_lock);
+
+	if (pmem_watermark_ok(p_info) || p_info->deathpending)
+		goto out;
+
+	/* Scan the list and find the task with minimum oom_adj value
+	*/
+	mutex_lock(&p_info->data_list_lock);
+	list_for_each(itr, &p_info->data_list) {
+		int oom_adj;
+		data = list_entry(itr, struct pmem_data, list);
+
+		down_read(&data->sem);
+		/* Skip data w/o MASTERMAP */
+		if (!(data->flags & PMEM_FLAGS_MASTERMAP)) {
+			up_read(&data->sem);
+			continue;
+		}
+
+		rcu_read_lock();
+		task = find_task_by_pid_ns(data->pid, &init_pid_ns);
+		if (task)
+			task_lock(task);
+		rcu_read_unlock();
+		up_read(&data->sem);
+		/* skip if no signal and oom_adj is 0 or less
+		 * if (oom_adj <= 0) means the task is either too
+		 * important or at the forground
+		 */
+		if (!task->mm || !task->signal) {
+			task_unlock(task);
+			continue;
+		}
+
+		oom_adj = task->signal->oom_adj;
+		/* The task is too important to kill */
+		if (oom_adj <= 0) {
+			task_unlock(task);
+			continue;
+		}
+
+		task_cmasize = get_mm_cma(task->mm);
+		task_unlock(task);
+
+		BUG_ON(!task_cmasize);
+		if (selected) {
+			/* Its possible we encounter the selected task again */
+			if (selected == task)
+				continue;
+			if (oom_adj < selected_oom_adj)
+				continue;
+			if ((oom_adj == selected_oom_adj) &&
+					(task_cmasize <= selected_task_cmasize))
+				continue;
+		}
+
+		selected = task;
+		selected_task_cmasize = task_cmasize;
+		selected_oom_adj = oom_adj;
+	}
+
+	mutex_unlock(&p_info->data_list_lock);
+
+	if (selected) {
+		printk(KERN_INFO"%s:%d killing \"%s\"(%d), adj %d, size %lu pages\n",
+				__func__, current->pid, selected->comm, selected->pid, selected_oom_adj,
+				selected_task_cmasize);
+		p_info->deathpending = selected;
+		force_sig(SIGKILL, selected);
+	} else {
+		printk(KERN_ALERT"%s: didn't find a suitable task to kill\n", __func__);
+		goto out;
+	}
+
+	/* wait on queue ...*/
+	wait_event(p_info->deatheaters, (p_info->deathpending == NULL));
+out:
+	mutex_unlock(&p_info->shrinker_lock);
+}
+
 int pmem_setup(struct platform_device *pdev,
 	       struct android_pmem_platform_data *pdata,
 	       long (*ioctl)(struct file *, unsigned int, unsigned long),
@@ -1634,7 +1761,15 @@ int pmem_setup(struct platform_device *pdev,
 	int err = 0;
 	int i, index = 0;
 	int id = id_count;
+
 	id_count++;
+
+	if ((pdata->allocator != CMA_ALLOC) &&
+		(pdata->allocator != DEFAULT_ALLOC)) {
+		printk(KERN_ERR"%s: ##### pmem allocator(%d) is not supported, FAILED #####\n",
+					__func__, pdata->allocator);
+		goto err_cant_register_device;
+	}
 
 	pmem[id].allocator = pdata->allocator;
 	pmem[id].cached = pdata->cached;
@@ -1665,11 +1800,14 @@ int pmem_setup(struct platform_device *pdev,
 	pmem[id].release = release;
 	init_rwsem(&pmem[id].bitmap_sem);
 	mutex_init(&pmem[id].data_list_lock);
-	mutex_init(&pmem[id].alloc_stat_lock);
 	INIT_LIST_HEAD(&pmem[id].data_list);
+	mutex_init(&pmem[id].shrinker_lock);
+	INIT_WORK(&pmem[id].pmem_shrinker, pmem_shrink);
+	init_waitqueue_head(&pmem[id].deatheaters);
 	pmem[id].dev.name = pdata->name;
 	pmem[id].dev.minor = id;
 	pmem[id].dev.fops = &pmem_fops;
+	pmem[id].deathpending = NULL;
 	printk(KERN_INFO "%s: %d init\n", pdata->name, pdata->cached);
 
 	err = misc_register(&pmem[id].dev);
@@ -1707,11 +1845,6 @@ int pmem_setup(struct platform_device *pdev,
 
 		if (pmem[id].vbase == 0)
 			goto error_cant_remap;
-
-		/* No allocator */
-		if (!pmem[id].allocator)
-			pmem[id].allocated = 0;
-
 	}
 
 	if ((pmem[id].size/PAGE_SIZE) > USHRT_MAX) {
@@ -1721,13 +1854,17 @@ int pmem_setup(struct platform_device *pdev,
 		goto error_cant_remap;
 	}
 
-	pmem[id].total_allocation = 0;
-	/* Current high water mark is set to 90% of total pmem space */
-	pmem[id].hwm = 9 * (pmem[id].size / PAGE_SIZE)/ 10;
+	memset(&pmem[id].stats, 0, sizeof(struct dev_cma_stats));
+	/* High watermark is set so we atleast have 16 MB of largest free block
+	 * */
+	pmem[id].hwm = (10 * SZ_1M)/PAGE_SIZE;
 	pmem[id].garbage_pfn = page_to_pfn(alloc_page(GFP_KERNEL));
 
 	debugfs_create_file(pdata->name, S_IFREG | S_IRUGO, NULL, (void *)id,
 			    &debug_fops);
+
+	/* register task free notifier */
+	task_free_register(&pmem_task_nb);
 
 	printk(KERN_INFO"Pmem driver initialised with (%s) allocator with size = %lu pages, hwm = %u pages\n",
 			pmem[id].allocator == CMA_ALLOC ? "CMA" : "Buddy", pmem[id].size/PAGE_SIZE, pmem[id].hwm);

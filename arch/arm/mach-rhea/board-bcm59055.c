@@ -86,7 +86,7 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	*/
 	{.map = 0, .addr = 0xC1, .val = 0x04, .mask = 0xFF},
 	{.map = 0, .addr = 0xC2, .val = 0x14, .mask = 0xFF},
-	
+
 	/*Set IOSR LMP voltage to 1.8V*/
 	{.map = 0, .addr = 0xC9, .val = 0x1B, .mask = 0xFF},
 
@@ -254,6 +254,7 @@ static struct regulator_init_data bcm59055_hv2ldo_data = {
 
 struct regulator_consumer_supply hv3_supply[] = {
 	{.supply = "hv3ldo_uc"},
+	{.supply = "2v9_vibra"},
 };
 static struct regulator_init_data bcm59055_hv3ldo_data = {
 	.constraints = {
@@ -552,7 +553,7 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	},
 #endif
 	[BCMPMU_REGULATOR_CSR_NM] =	{
-		BCMPMU_REGULATOR_CSR_NM, &bcm59055_csr_nm_data, 0x31, 0
+		BCMPMU_REGULATOR_CSR_NM, &bcm59055_csr_nm_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_CSR_NM2] = {
 		BCMPMU_REGULATOR_CSR_NM2, &bcm59055_csr_nm2_data, 0xFF, 0
@@ -651,6 +652,19 @@ static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 		bcmpmu_client_devices[i]->dev.platform_data = bcmpmu;
 	platform_add_devices(bcmpmu_client_devices,
 			ARRAY_SIZE(bcmpmu_client_devices));
+#ifdef CONFIG_59055_SIM_EM_SHDWN
+	/* In 59055 PMU STAT1 and SIMOFFb pin are muxed.
+	 * need to make it for SIMOFFb so that SIM emergency
+	 * shutdown can happen. This feature is not present
+	 * in 59039 or 59042
+	*/
+	bcmpmu->write_dev(bcmpmu, PMU_REG_STATMUX,
+			bcmpmu->regmap[PMU_REG_STATMUX].mask,
+			bcmpmu->regmap[PMU_REG_STATMUX].mask);
+	bcmpmu->write_dev(bcmpmu, PMU_REG_SIMOFF_EN,
+			bcmpmu->regmap[PMU_REG_SIMOFF_EN].mask,
+			bcmpmu->regmap[PMU_REG_SIMOFF_EN].mask);
+#endif
 
 	return 0;
 }

@@ -817,7 +817,7 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 			}
 		}
 
-		DHD_ERROR(("%s: clk before sleep: 0x%x\n", __FUNCTION__,
+		DHD_TRACE(("%s: clk before sleep: 0x%x\n", __FUNCTION__,
 			bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1,
 			SBSDIO_FUNC1_CHIPCLKCSR, &err)));
 #ifdef USE_CMD14
@@ -5863,9 +5863,6 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 #ifdef GET_CUSTOM_MAC_ENABLE
 	struct ether_addr ea_addr;
 #endif /* GET_CUSTOM_MAC_ENABLE */
-#ifdef PROP_TXSTATUS
-	uint up = 0;
-#endif
 
 	/* Init global variables at run-time, not as part of the declaration.
 	 * This is required to support init/de-init of the driver. Initialization
@@ -6025,10 +6022,6 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 		goto fail;
 	}
 
-#ifdef PROP_TXSTATUS
-	if (dhd_download_fw_on_driverload)
-		dhd_wl_ioctl_cmd(bus->dhd, WLC_UP, (char *)&up, sizeof(up), TRUE, 0);
-#endif
 	return bus;
 
 fail:

@@ -73,9 +73,9 @@ typedef struct tag_SYS_ReqRep_t {
 
 		SYS_SimLockApi_GetStatus_Req_t SYS_SimLockApi_GetStatus_Req;
 		SYS_SimLockApi_GetStatus_Rsp_t SYS_SimLockApi_GetStatus_Rsp;
-		SYS_SIMLOCKApi_SetStatus_Req_t SYS_SIMLOCKApi_SetStatus_Req;
-		SYS_SimApi_GetCurrLockedSimlockType_Rsp_t
-		    SYS_SimApi_GetCurrLockedSimlockType_Rsp;
+		SYS_SIMLOCKApi_SetStatusEx_Req_t SYS_SIMLOCKApi_SetStatusEx_Req;
+		SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t SYS_SimApi_GetCurrLockedSimlockTypeEx_Req;
+		SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp;
 #endif				//DEVELOPMENT_SYSRPC_UNION_DECLARE
 /*** _SYSRPC_CODE_GEN_END_ ***/
 

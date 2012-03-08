@@ -784,17 +784,15 @@ Int32 BCM91008_ALEX_Open (
     }
 #endif
 
-#if 0
-    if (brcm_enable_dsi_lcd_clocks(&pPanel->dfs_node,0,
-    		dsiCfg.hsBitClk.clkIn_MHz * 1000000,
-                dsiCfg.hsBitClk.clkInDiv,
-                dsiCfg.escClk.clkIn_MHz   * 1000000 / dsiCfg.escClk.clkInDiv ))
+    if (brcm_enable_dsi_pll_clocks(0,
+		dsiCfg.hsBitClk.clkIn_MHz * 1000000,
+		dsiCfg.hsBitClk.clkInDiv,
+		dsiCfg.escClk.clkIn_MHz   * 1000000 / dsiCfg.escClk.clkInDiv))
     {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the pll clock\n",
             __FUNCTION__  );
         return ( -1 );
     }
-#endif
 
     if( pPanel->is_hw_TE && bcm91008_AlexTeOn ( pPanel ) ==  -1 )
     {
@@ -895,14 +893,12 @@ Int32 BCM91008_ALEX_Close ( DISPDRV_HANDLE_T drvH )
     bcm91008_AlexTeOff ( pPanel );
 #endif
 
-#if 0
-    if (brcm_disable_dsi_lcd_clocks(pPanel->dfs_node,0))
+    if (brcm_disable_dsi_pll_clocks(0))
     {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the pll clock\n",
             __FUNCTION__  );
         return ( -1 );
     }
-#endif
 
     pPanel->pwrState = DISP_PWR_OFF;
     pPanel->drvState = DRV_STATE_INIT;

@@ -198,6 +198,14 @@ enum CSL_CAPH_SRCM_FIFO_e {
 
 #define CSL_CAPH_SRCM_FIFO_e enum CSL_CAPH_SRCM_FIFO_e
 
+struct MixGainMapping_t {
+	int requestGain_mB; /* mB */
+	int requestGain_qDB; /* dB in Q13.2 */
+	unsigned int mixerInputGain; /* Register value. */
+	/* Register value. Bit12:0, Output Fine Gain */
+	unsigned int mixerOutputFineGain;
+};
+
 /**
 *
 *  @brief  initialize the caph srcmixer block
@@ -315,7 +323,6 @@ void csl_caph_srcmixer_change_samplerate(CSL_CAPH_SRCM_ROUTE_t routeConfig);
 CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcmixer_samplerate_mapping(
 		CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate);
 
-
 /**
 *
 *  @brief  set the mixer input gain
@@ -355,7 +362,7 @@ void csl_srcmixer_setMixAllInGain(CSL_CAPH_MIXER_e outChnl,
 *  @return void
 *****************************************************************************/
 void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
-		int gain_mB);
+		int gainL_mB, int gainR_mB);
 
 
 /**
@@ -368,7 +375,7 @@ void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
 *  @return void
 *****************************************************************************/
 void csl_srcmixer_setMixBitSel(CSL_CAPH_MIXER_e outChnl,
-		unsigned int bit_shift);
+		unsigned int bit_shift_l, unsigned int bit_shift_r);
 
 /**
 *

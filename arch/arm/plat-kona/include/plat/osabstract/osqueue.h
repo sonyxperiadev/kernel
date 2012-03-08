@@ -257,32 +257,6 @@ err_tmp:
 
 #define OSQUEUE_Post_PostToFront(q,msg,timeout) OSQUEUE_PostGeneric(q, msg, timeout, FALSE)
 
-/**
-	Query if a Queue is Empty.
-	@param q	(in)	Queue to query.
-	@return Boolean	TRUE if Empty and FALSE otherwise.
-**/
-
-static inline Boolean OSQUEUE_IsEmpty(				// Check if there are any messages in queue
-	Queue_t q							// queue pointer
-	)
-{
-	return TRUE;
-}
-
-/**
-	@cond internal
-	Get number of messages currently queued. 
-	@param	q	(in)	Queue object.
-	@return UInt32	Number of messages queue.
-**/
-
-static inline UInt32 *OSQUEUE_GetCountAddr(			// Get number of messages currently queued. 
-	Queue_t q
-	)
-{
-	return 0;
-}
 
 /** @endcond */
 
@@ -298,36 +272,6 @@ static inline void OSQUEUE_ChangeName(
 	)
 {
 
-}
-
-/**
-	Query if a Task is idlely pending at its input Queue.
-	@param t	(in)	Task to query.
-	@param q	(in)	Task's input Queue.
-	@return Boolean	TRUE if Idle and FALSE otherwise.
-**/
-
-static inline Boolean OSQUEUE_IsTaskIdle(
-	Task_t t,							// task (pointer)
-	Queue_t q							// task's main queue (pointer)
-	)
-{
-	return TRUE;
-}
-
-/**
-	Get the name of a Queue.
-	@param q		(in)	Queue object.
-	@param p_name	(in)	Name storage (minimum 9 characters).
-	@return OSSTATUS_t		Result of operation.
-**/
-
-static inline OSStatus_t OSQUEUE_GetName(		// get ASCII name of Queue
-	Queue_t q,					// Queue pointer
-	UInt8 *p_name				// location to store the ASCII name
-	)
-{
-	return OSSTATUS_SUCCESS;
 }
 
 /** @} */

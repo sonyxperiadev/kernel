@@ -1,48 +1,39 @@
 /******************************************************************************
-**  
 **  Broadcom Bluetooth Low Power UART protocol
-**
 **  Copyright 2009 Broadcom Corporation
-**  
 **  This program is the proprietary software of Broadcom Corporation and/or its
-**  licensors, and may only be used, duplicated, modified or distributed 
-**  pursuant to the terms and conditions of a separate, written license 
-**  agreement executed between you and Broadcom (an "Authorized License").  
-**  Except as set forth in an Authorized License, Broadcom grants no license 
-**  (express or implied), right to use, or waiver of any kind with respect to 
-**  the Software, and Broadcom expressly reserves all rights in and to the 
-**  Software and all intellectual property rights therein.  IF YOU HAVE NO 
+**  licensors, and may only be used, duplicated, modified or distributed
+**  pursuant to the terms and conditions of a separate, written license
+**  agreement executed between you and Broadcom (an "Authorized License").
+**  Except as set forth in an Authorized License, Broadcom grants no license
+**  (express or implied), right to use, or waiver of any kind with respect to
+**  the Software, and Broadcom expressly reserves all rights in and to the
+**  Software and all intellectual property rights therein.  IF YOU HAVE NO
 **  AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE IN ANY WAY,
-**  AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE ALL USE OF THE 
-**  SOFTWARE.  
-**   
+**  AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE ALL USE OF THE
+**  SOFTWARE.
 **  Except as expressly set forth in the Authorized License,
-**   
-**  1.     This program, including its structure, sequence and organization, 
-**  constitutes the valuable trade secrets of Broadcom, and you shall use all 
-**  reasonable efforts to protect the confidentiality thereof, and to use this 
+**  1.This program, including its structure, sequence and organization,
+**  constitutes the valuable trade secrets of Broadcom, and you shall use all
+**  reasonable efforts to protect the confidentiality thereof, and to use this
 **  information only in connection with your use of Broadcom integrated circuit
-**  products.
-**   
-**  2.     TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS
-**  IS" AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR 
-**  WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT 
-**  TO THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL IMPLIED 
-**  WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A 
-**  PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET 
-**  ENJOYMENT, QUIET POSSESSION OR CORRESPONDENCE TO DESCRIPTION. YOU ASSUME 
+**  products
+**  2.TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS
+**  IS" AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR
+**  WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT
+**  TO THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL IMPLIED
+**  WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A
+**  PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET
+**  ENJOYMENT, QUIET POSSESSION OR CORRESPONDENCE TO DESCRIPTION. YOU ASSUME
 **  THE ENTIRE RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
-**  
-**  3.     TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM 
-**  OR ITS LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, 
-**  INDIRECT, OR EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY 
-**  RELATING TO YOUR USE OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM 
-**  HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN 
-**  EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, 
-**  WHICHEVER IS GREATER. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY 
+**  3.TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM
+**  OR ITS LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL,
+**  INDIRECT, OR EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY
+**  RELATING TO YOUR USE OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM
+**  HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN
+**  EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1,
+**  WHICHEVER IS GREATER. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY
 **  FAILURE OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-**  
-**  
 ******************************************************************************/
 
 #include <linux/module.h>
@@ -56,7 +47,7 @@
 #include <linux/ptrace.h>
 #include <linux/poll.h>
 #include <linux/timer.h>
-#include <asm/gpio.h>
+#include <linux/gpio.h>
 
 #include <linux/slab.h>
 #include <linux/tty.h>
@@ -71,10 +62,12 @@
 #include <net/bluetooth/hci_core.h>
 #include "hci_uart.h"
 
+#include <linux/broadcom/bcm_bzhw.h>
+
 #if 0
 #ifndef CONFIG_BT_HCIUART_DEBUG
 #undef  BT_DBG
-#define BT_DBG( A... )
+#define BT_DBG(A...)
 #endif
 #endif
 
@@ -92,12 +85,7 @@
 #define HCIBRCM_W4_DATA		4
 
 #define TIMER_PERIOD 100	/* 100 ms */
-#define HOST_CONTROLLER_IDLE_TSH 4000	/* 4 s */
-
-void assert_bt_wake(void);
-void deassert_bt_wake(void);
-int bcm_bzhw_assert_bt_wake(void);
-int bcm_bzhw_deassert_bt_wake(void);
+#define HOST_CONTROLLER_IDLE_TSH 500	/* 4 s */
 
 void assert_bt_wake()
 {
@@ -135,10 +123,9 @@ struct brcm_struct {
 };
 
 static struct timer_list sleep_timer;
-
-//
-// timeout handler
-//
+/**
+ * timeout handler
+*/
 void sleep_timer_function(unsigned long data)
 {
 	struct brcm_struct *lbrcm = (struct brcm_struct *)data;
@@ -146,45 +133,25 @@ void sleep_timer_function(unsigned long data)
 		lbrcm->inactive_period = 0;
 		lbrcm->is_there_activity = 0;
 	} else {
-		if (lbrcm->hcibrcm_state != HCIBRCM_ASLEEP) {
-			lbrcm->inactive_period += TIMER_PERIOD;
-			if (lbrcm->inactive_period >= HOST_CONTROLLER_IDLE_TSH) {
-				// deassert BT_WAKE signal
-				BT_DBG("Deassert wake signal, moves to ASLEEP");
-				lbrcm->hcibrcm_state = HCIBRCM_ASLEEP;
-				lbrcm->inactive_period = 0;
-				deassert_bt_wake();
-			}
+		/*if (lbrcm->hcibrcm_state != HCIBRCM_ASLEEP) {*/
+		lbrcm->inactive_period += TIMER_PERIOD;
+		if (lbrcm->inactive_period >= HOST_CONTROLLER_IDLE_TSH) {
+			/* deassert BT_WAKE signal*/
+			BT_DBG("Deassert wake signal, moves to ASLEEP");
+			lbrcm->hcibrcm_state = HCIBRCM_ASLEEP;
+			lbrcm->inactive_period = 0;
+			deassert_bt_wake();
 		}
+		/*}*/
 	}
-	//mod_timer(&sleep_timer, jiffies + TIMER_PERIOD * HZ / 1000);
-	mod_timer(&sleep_timer, jiffies + msecs_to_jiffies(TIMER_PERIOD));
+	if (lbrcm->hcibrcm_state != HCIBRCM_ASLEEP) {
+		mod_timer(&sleep_timer,
+			  jiffies + msecs_to_jiffies(TIMER_PERIOD));
+	}
 }
 
-#ifdef CONFIG_SERIAL_MSM_HS
-void msm_hs_request_clock_off(struct uart_port *uport);
-void msm_hs_request_clock_on(struct uart_port *uport);
-void sleep_timer_function(unsigned long data);
 
-static void __brcm_msm_serial_clock_on(struct tty_struct *tty)
-{
-	struct uart_state *state = tty->driver_data;
-	struct uart_port *port = state->port;
-
-	msm_hs_request_clock_on(port);
-}
-
-static void __brcm_msm_serial_clock_request_off(struct tty_struct *tty)
-{
-	struct uart_state *state = tty->driver_data;
-	struct uart_port *port = state->port;
-
-	msm_hs_request_clock_off(port);
-}
-#elif CONFIG_BCM_BZHW
-void bcm_bzhw_request_clock_on(struct uart_port *uport);
-void bcm_bzhw_request_clock_off(struct uart_port *uport);
-static void __brcm_msm_serial_clock_on(struct tty_struct *tty)
+static void __brcm_bcm_serial_clock_on(struct tty_struct *tty)
 {
 	struct uart_state *state = tty->driver_data;
 	struct uart_port *port = state->uart_port;
@@ -192,22 +159,14 @@ static void __brcm_msm_serial_clock_on(struct tty_struct *tty)
 	bcm_bzhw_request_clock_on(port);
 }
 
-static void __brcm_msm_serial_clock_request_off(struct tty_struct *tty)
+static void __brcm_bcm_serial_clock_request_off(struct tty_struct *tty)
 {
 	struct uart_state *state = tty->driver_data;
 	struct uart_port *port = state->uart_port;
 
-	bcm_bzhw_request_clock_on(port);
+	bcm_bzhw_request_clock_off(port);
 }
 
-#else
-static inline void __brcm_msm_serial_clock_on(struct tty_struct *tty)
-{
-}
-static inline void __brcm_msm_serial_clock_request_off(struct tty_struct *tty)
-{
-}
-#endif
 
 /*
  * Builds and sends an HCIBRCM command packet.
@@ -237,7 +196,7 @@ static int send_hcibrcm_cmd(u8 cmd, struct hci_uart *hu)
 
 	/* send packet */
 	skb_queue_tail(&brcm->txq, skb);
-      out:
+out:
 	return err;
 }
 
@@ -257,11 +216,10 @@ static int brcm_open(struct hci_uart *hu)
 	spin_lock_init(&brcm->hcibrcm_lock);
 
 	brcm->hcibrcm_state = HCIBRCM_AWAKE;
-	__brcm_msm_serial_clock_on(hu->tty);
+	__brcm_bcm_serial_clock_on(hu->tty);
 	assert_bt_wake();
 	init_timer(&sleep_timer);
 	sleep_timer.expires = jiffies + msecs_to_jiffies(TIMER_PERIOD);
-	//sleep_timer.expires = jiffies + TIMER_PERIOD * HZ / 1000;
 	sleep_timer.data = (unsigned long)brcm;
 	sleep_timer.function = sleep_timer_function;
 	add_timer(&sleep_timer);
@@ -294,7 +252,9 @@ static int brcm_close(struct hci_uart *hu)
 	skb_queue_purge(&brcm->tx_wait_q);
 	skb_queue_purge(&brcm->txq);
 	brcm->hcibrcm_state = HCIBRCM_ASLEEP;
+	del_timer(&sleep_timer);
 	deassert_bt_wake();
+	__brcm_bcm_serial_clock_request_off(hu->tty);
 	if (brcm->rx_skb)
 		kfree_skb(brcm->rx_skb);
 
@@ -353,7 +313,7 @@ static void brcm_device_want_to_wakeup(struct hci_uart *hu)
 		/* Make sure clock is on - we may have turned clock off since
 		 * receiving the wake up indicator
 		 */
-		__brcm_msm_serial_clock_on(hu->tty);
+		__brcm_bcm_serial_clock_on(hu->tty);
 		/* acknowledge device wake up */
 		if (send_hcibrcm_cmd(HCIBRCM_WAKE_UP_ACK, hu) < 0) {
 			BT_ERR("cannot acknowledge device wake up");
@@ -370,7 +330,7 @@ static void brcm_device_want_to_wakeup(struct hci_uart *hu)
 	/* send pending packets and change state to HCIBRCM_AWAKE */
 	__brcm_do_awake(brcm);
 
-      out:
+out:
 	spin_unlock_irqrestore(&brcm->hcibrcm_lock, flags);
 
 	/* actuabrcmy send the packets */
@@ -404,7 +364,7 @@ static void brcm_device_want_to_sleep(struct hci_uart *hu)
 	/* update state */
 	brcm->hcibrcm_state = HCIBRCM_ASLEEP;
 
-      out:
+out:
 	spin_unlock_irqrestore(&brcm->hcibrcm_lock, flags);
 
 	/* actuabrcmy send the sleep ack packet */
@@ -412,7 +372,7 @@ static void brcm_device_want_to_sleep(struct hci_uart *hu)
 
 	spin_lock_irqsave(&brcm->hcibrcm_lock, flags);
 	if (brcm->hcibrcm_state == HCIBRCM_ASLEEP)
-		__brcm_msm_serial_clock_request_off(hu->tty);
+		__brcm_bcm_serial_clock_request_off(hu->tty);
 	spin_unlock_irqrestore(&brcm->hcibrcm_lock, flags);
 }
 
@@ -447,7 +407,6 @@ static void brcm_device_woke_up(struct hci_uart *hu)
 /* may be cabrcmed from two simultaneous tasklets */
 static int brcm_enqueue(struct hci_uart *hu, struct sk_buff *skb)
 {
-	//unsigned long flags = 0;
 	struct brcm_struct *brcm = hu->priv;
 
 	BT_DBG("hu %p skb %p", hu, skb);
@@ -466,7 +425,7 @@ static int brcm_enqueue(struct hci_uart *hu, struct sk_buff *skb)
 		break;
 	case HCIBRCM_ASLEEP:
 		BT_DBG("device asleep, waking up and queueing packet");
-		__brcm_msm_serial_clock_on(hu->tty);
+		__brcm_bcm_serial_clock_on(hu->tty);
 		/* save packet for later */
 		skb_queue_tail(&brcm->tx_wait_q, skb);
 		/* awake device */
@@ -499,6 +458,9 @@ static int brcm_enqueue(struct hci_uart *hu, struct sk_buff *skb)
 		/* assert BT_WAKE signal */
 		assert_bt_wake();
 		brcm->hcibrcm_state = HCIBRCM_AWAKE;
+		mod_timer(&sleep_timer,
+			  jiffies + msecs_to_jiffies(TIMER_PERIOD));
+
 	}
 
 	return 0;
@@ -547,6 +509,8 @@ static int brcm_recv(struct hci_uart *hu, void *data, int count)
 		/* assert BT_WAKE signal */
 		assert_bt_wake();
 		brcm->hcibrcm_state = HCIBRCM_AWAKE;
+		mod_timer(&sleep_timer,
+			  jiffies + msecs_to_jiffies(TIMER_PERIOD));
 	}
 	ptr = data;
 	while (count) {
@@ -652,7 +616,7 @@ static int brcm_recv(struct hci_uart *hu, void *data, int count)
 			continue;
 
 		default:
-			BT_ERR("Unknown HCI packet type %2.2x", (__u8) * ptr);
+			BT_ERR("Unknown HCI packet type %2.2x", (__u8) *ptr);
 			hu->hdev->stat.err_rx++;
 			ptr++;
 			count--;
