@@ -12,13 +12,11 @@
 * consent.
 *****************************************************************************/
 
-
 #ifndef _LM_DEVICE_H_
 #define _LM_DEVICE_H_
 
 #include <linux/device.h>
 #include <linux/ioport.h>
-
 
 struct lm_device {
 	struct device dev;

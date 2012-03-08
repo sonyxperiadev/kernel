@@ -30,15 +30,15 @@
 
 #define PHYS_OFFSET	(CONFIG_BCM_RAM_BASE+CONFIG_BCM_RAM_START_RESERVED_SIZE)
 
-#define IO_START_PA			(0x34000000) /* HUB clock manager reg base */
+#define IO_START_PA			(0x34000000)	/* HUB clock manager reg base */
 #define IO_START_VA			(VMALLOC_END)
 
 #ifndef HW_IO_PHYS_TO_VIRT
-#define HW_IO_PHYS_TO_VIRT(phys)	((phys) - IO_START_PA + IO_START_VA) 
+#define HW_IO_PHYS_TO_VIRT(phys)	((phys) - IO_START_PA + IO_START_VA)
 #endif
 
 #define HW_IO_VIRT_TO_PHYS(virt)	((virt) - IO_START_VA + IO_START_PA)
 
 #define CONSISTENT_DMA_SIZE SZ_4M
 
-#endif /* __PLAT_KONA_MEMORY_H */ 
+#endif /* __PLAT_KONA_MEMORY_H */
