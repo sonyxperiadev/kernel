@@ -59,7 +59,6 @@ extern "C" {
 *****************************************************************************/
 #define CHAL_DELAY_MS( t)  mdelay(t)
 
-
 /**
 *
 * 
@@ -76,9 +75,9 @@ extern "C" {
 * Register access defines
 *
 *****************************************************************************/
-#define CHAL_REG_READ8(addr)  readb(addr) 
-#define CHAL_REG_READ16(addr) readw(addr) 
-#define CHAL_REG_READ32(addr) readl(addr) 
+#define CHAL_REG_READ8(addr)  readb(addr)
+#define CHAL_REG_READ16(addr) readw(addr)
+#define CHAL_REG_READ32(addr) readl(addr)
 
 #define CHAL_REG_WRITE8(addr, val)  writeb(val, addr)
 #define CHAL_REG_WRITE16(addr, val) writew(val, addr)
@@ -105,9 +104,9 @@ extern "C" {
 
 #ifndef CHAL_NDEBUG_BUILD
 
-extern void dprintf_impl(const cUInt32 level, cInt8 *fmt, ...);
+	extern void dprintf_impl(const cUInt32 level, cInt8 * fmt, ...);
 //#define chal_dprintf dprintf_impl
-#define chal_dprintf(_level_, format, arg...)	printk(format, ##arg) 
+#define chal_dprintf(_level_, format, arg...)	printk(format, ##arg)
 
 #else
 
@@ -120,6 +119,4 @@ extern void dprintf_impl(const cUInt32 level, cInt8 *fmt, ...);
 #ifdef __cplusplus
 }
 #endif
-
-#endif //_CHAL_COMMON_OS_H_
-
+#endif				//_CHAL_COMMON_OS_H_
