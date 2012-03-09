@@ -46,7 +46,7 @@ extern "C" {
 #include "plat/chal/chal_pm_v_1_00.h"	// top-level power manager
 #include "plat/chal/chal_bmdm_pm.h"	// BMODEM power manager
 #elif defined(_HERA_)
-#include "plat/chal/chal_pm.h"		// top-level power manager
+#include "plat/chal/chal_pm.h"	// top-level power manager
 #endif
 
 #if defined(_RHEA_)
@@ -57,32 +57,31 @@ extern "C" {
 
 #include "plat/csl/pm_prm.h"
 
-typedef struct
-{
-	PERIPHERAL_ID	logical;
-	PERIPHERAL_ID	physical;
-} PERI_RESOURCE_MAPPING_t;
+	typedef struct {
+		PERIPHERAL_ID logical;
+		PERIPHERAL_ID physical;
+	} PERI_RESOURCE_MAPPING_t;
 
 #define MAX_NUM_OF_PERI_RESOURCE_MAPPING		32
-typedef struct
-{
-	// sysparm data for PRM
-	CHAL_HANDLE				pm_handle;
-	CHAL_HANDLE				pm_bmdm_handle;
-	CHAL_CCU_HANDLE_t		ccu_handle[NUMBER_OF_CCU];
-	int						prm_initialized;
-	OPP_STATE				initial_opp_state[NUM_PERF_RESOURCE];
-	int						client_opp_change_allowed[NUM_PERF_RESOURCE];
-	int						dfs_opp_change_allowed[NUM_PERF_RESOURCE];
-	int						sleep_state_allowed[NUM_PERF_RESOURCE];
-	int						number_of_peri_resource_mapping;
-	PERI_RESOURCE_MAPPING_t	peri_resource_mapping[MAX_NUM_OF_PERI_RESOURCE_MAPPING];
+	typedef struct {
+		// sysparm data for PRM
+		CHAL_HANDLE pm_handle;
+		CHAL_HANDLE pm_bmdm_handle;
+		CHAL_CCU_HANDLE_t ccu_handle[NUMBER_OF_CCU];
+		int prm_initialized;
+		OPP_STATE initial_opp_state[NUM_PERF_RESOURCE];
+		int client_opp_change_allowed[NUM_PERF_RESOURCE];
+		int dfs_opp_change_allowed[NUM_PERF_RESOURCE];
+		int sleep_state_allowed[NUM_PERF_RESOURCE];
+		int number_of_peri_resource_mapping;
+		PERI_RESOURCE_MAPPING_t
+		    peri_resource_mapping[MAX_NUM_OF_PERI_RESOURCE_MAPPING];
 
-	// sysparm data for DVFS
+		// sysparm data for DVFS
 
-	// sysparm data for AVS
+		// sysparm data for AVS
 
-} PM_INIT_CONFIG_t;
+	} PM_INIT_CONFIG_t;
 
 /**
 *  @brief  PM initilizaiton
@@ -94,7 +93,7 @@ typedef struct
 *  @note   
 *
 ****************************************************************************/
-void PRM_init(void);
+	void PRM_init(void);
 
 /**
 *  @brief  Return pointer to PM configuration data
@@ -106,11 +105,9 @@ void PRM_init(void);
 *  @note   
 *
 ****************************************************************************/
-PM_INIT_CONFIG_t *PM_Get_Init_Configuration_Ptr(void);
-
+	PM_INIT_CONFIG_t *PM_Get_Init_Configuration_Ptr(void);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // __pm_H__
+#endif				// __pm_H__
