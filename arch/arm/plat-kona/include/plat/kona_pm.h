@@ -16,17 +16,16 @@
 /* Additional cpuidle flags for rhea */
 #define CPUIDLE_FLAG_XTAL_ON    (1 << 16)
 
-struct kona_idle_state
-{
-	char*	name;
-	char*	desc;
-	u32		flags;
-	u32 	state;
-	u32 	latency; /* in uS */
-	u32		target_residency; /* in uS */
-	int (*enter)(struct kona_idle_state* state);
+struct kona_idle_state {
+	char *name;
+	char *desc;
+	u32 flags;
+	u32 state;
+	u32 latency;		/* in uS */
+	u32 target_residency;	/* in uS */
+	int (*enter) (struct kona_idle_state * state);
 };
-#endif /*CONFIG_CPU_IDLE*/
+#endif /*CONFIG_CPU_IDLE */
 
 int __init kona_pm_init(void);
 extern void instrument_idle_entry(void);

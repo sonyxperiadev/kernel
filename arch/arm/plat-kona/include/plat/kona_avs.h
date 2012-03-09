@@ -16,44 +16,41 @@
 #ifndef __KONA_AVS___
 #define __KONA_AVS___
 
-enum
-{
+enum {
 	SILICON_TYPE_SLOW,
 	SILICON_TYPE_TYPICAL,
 	SILICON_TYPE_FAST
 };
 
-enum
-{
-	AVS_TYPE_OPEN       =   1,
-	AVS_TYPE_BOOT       =   1 << 1,
-	AVS_READ_FROM_OTP   =   1 << 2,	  /*specify OTP row no as param */
-	AVS_READ_FROM_MEM   =   1 << 3,	  /*specify physical mem addr as param */
+enum {
+	AVS_TYPE_OPEN = 1,
+	AVS_TYPE_BOOT = 1 << 1,
+	AVS_READ_FROM_OTP = 1 << 2,	/*specify OTP row no as param */
+	AVS_READ_FROM_MEM = 1 << 3,	/*specify physical mem addr as param */
 };
 
-struct kona_avs_pdata
-{
+struct kona_avs_pdata {
 	u32 flags;
 	u32 param;
-	void (*silicon_type_notify)(u32 silicon_type);
+	void (*silicon_type_notify) (u32 silicon_type);
 
 	u32 nmos_bin_size;
 	u32 pmos_bin_size;
 
-	u32* svt_pmos_bin;
-	u32* svt_nmos_bin;
+	u32 *svt_pmos_bin;
+	u32 *svt_nmos_bin;
 
-	u32* lvt_pmos_bin;
-	u32* lvt_nmos_bin;
+	u32 *lvt_pmos_bin;
+	u32 *lvt_nmos_bin;
 
-	u32* svt_silicon_type_lut;
-	u32* lvt_silicon_type_lut;
+	u32 *svt_silicon_type_lut;
+	u32 *lvt_silicon_type_lut;
 
-	u8** volt_table;
+	u8 **volt_table;
 
 };
 
 u32 kona_avs_get_solicon_type(void);
-u8* kona_avs_get_volt_table(void);
+u8 *kona_avs_get_volt_table(void);
 
 #endif	  /*__KONA_AVS___*/
