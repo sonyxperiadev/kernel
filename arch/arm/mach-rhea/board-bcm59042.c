@@ -343,19 +343,20 @@ __weak struct regulator_consumer_supply sim_supply[] = {
 };
 static struct regulator_init_data bcm59042_simldo_data = {
 	.constraints = {
-			.name = "simldo",
-			.min_uV = 1300000,
-			.max_uV = 3300000,
-			.valid_ops_mask =
+		.name = "simldo",
+		.min_uV = 1300000,
+		.max_uV = 3300000,
+		.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-/*TODO: We observed that, on Rhearay HW, interrupt from GPIO expander
-is not detected by baseband if SIMLDO is disabled. As a temp. workaround
-we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
+		/*TODO: We observed that, on Rhearay HW, interrupt from
+		 * GPIO expander is not detected by baseband if SIMLDO is
+		 * disabled. As a temp. workaround we keep SIMLDO ON by
+		 * default for Rhearay till the issue is root casued*/
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-           .always_on = 1,
+		.always_on = 1,
 #endif
 
-			},
+	},
 	.num_consumer_supplies = ARRAY_SIZE(sim_supply),
 	.consumer_supplies = sim_supply,
 };
@@ -534,10 +535,10 @@ struct bcmpmu_regulator_init_data bcm59042_regulators[BCMPMU_REGULATOR_MAX] = {
 			BCMPMU_REGULATOR_HV8LDO, &bcm59042_hv8ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV9LDO] = {
-				BCMPMU_REGULATOR_HV9LDO, &bcm59042_hv9ldo_data, 0x00, 0
+			BCMPMU_REGULATOR_HV9LDO, &bcm59042_hv9ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV10LDO] = {
-				BCMPMU_REGULATOR_HV10LDO, &bcm59042_hv10ldo_data, 0xAA, 0
+		BCMPMU_REGULATOR_HV10LDO, &bcm59042_hv10ldo_data, 0xAA, 0
 	},
 
 /*TODO: We observed that, on Rhearay HW, interrupt from GPIO expander
