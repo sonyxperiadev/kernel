@@ -1558,7 +1558,7 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		 */
 		ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ_FIFO);
 		if (ret < 0)
-			goto out;
+			goto out_unlock;
 		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 #endif
 		*reg_val = (reg & PWRMGR_I2C_READ_DATA_MASK) >>
@@ -1566,8 +1566,6 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	}
 out_unlock:
 	mutex_unlock(&seq_mutex);
-	return ret;
-out:
 	return ret;
 }
 
