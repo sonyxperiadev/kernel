@@ -871,6 +871,11 @@ struct voice_data {
 	struct voice_rec_route_state rec_route_state;
 };
 
+struct cal_mem {
+	uint32_t phy;
+	void *buf;
+};
+
 #define MAX_VOC_SESSIONS 2
 #define SESSION_ID_BASE 0xFFF0
 
@@ -886,6 +891,9 @@ struct common_data {
 	void *apr_q6_cvs;
 	/* APR to CVP in the Q6 */
 	void *apr_q6_cvp;
+
+	struct cal_mem cvp_cal;
+	struct cal_mem cvs_cal;
 
 	struct mutex common_lock;
 
