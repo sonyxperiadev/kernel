@@ -1205,9 +1205,6 @@ int gether_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
  */
 void gether_cleanup(void)
 {
-#ifdef CONFIG_BRCM_NETCONSOLE
-	unsigned short retry = 0;
-#endif
 	pr_info("%s\n", __func__);
 
 	if (!the_dev)
