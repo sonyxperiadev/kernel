@@ -131,7 +131,7 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 	default:
 	break;
 	}
-	pr_info("%s: id = %d reg_addr = %x reg_val = %x\n", __func__, id,
+	pr_debug("%s: id = %d reg_addr = %x reg_val = %x\n", __func__, id,
 		info->reg_addr, val);
 	return bcmpmu->write_dev(bcmpmu, info->reg_addr, val, info->mode_mask);
 }

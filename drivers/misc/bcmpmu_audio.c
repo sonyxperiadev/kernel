@@ -39,17 +39,18 @@ struct bcmpmu_audio {
 };
 static struct bcmpmu_audio *bcmpmu_audio;
 
+/* callee of this API need to put 20ms delay to
+ * make sure power up seq done properly by h/w
+*/
 void bcmpmu_hs_power(bool on)
 {
 	unsigned int val;
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
-	printk(KERN_WARNING "%s:  ######### ON = %d\n", __func__, on);
+	pr_debug(KERN_WARNING "%s:  ######### ON = %d\n", __func__, on);
 	mutex_lock(&bcmpmu_audio->lock);
 
 	if (on) {
 		bcmpmu_audio->HS_On = true;
-		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP_IDDQ_PWRDWN, false,
-				bcmpmu->regmap[PMU_REG_HSPUP_IDDQ_PWRDWN].mask);
 		val = 1 << bcmpmu->regmap[PMU_REG_HSPUP_HS_PWRUP].shift;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP_HS_PWRUP, val,
 				bcmpmu->regmap[PMU_REG_HSPUP_HS_PWRUP].mask);
@@ -57,9 +58,6 @@ void bcmpmu_hs_power(bool on)
 		bcmpmu_audio->HS_On = false;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP_HS_PWRUP, false,
 				bcmpmu->regmap[PMU_REG_HSPUP_HS_PWRUP].mask);
-		val = 1 << bcmpmu->regmap[PMU_REG_HSPUP_IDDQ_PWRDWN].shift;
-		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP_IDDQ_PWRDWN, val,
-				bcmpmu->regmap[PMU_REG_HSPUP_IDDQ_PWRDWN].mask);
 	}
 	mutex_unlock(&bcmpmu_audio->lock);
 }
@@ -84,7 +82,7 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 	int data1, data2, data3;
 	int ret = 0;
 	int HSwasEn = 0;
-	pr_info("Inside %s, HSgain %d, HSInputmode %d\n",
+	pr_debug("Inside %s, HSgain %d, HSInputmode %d\n",
 		__func__, HSgain, HSInputmode);
 
 	mutex_lock(&bcmpmu_audio->lock);
@@ -193,7 +191,7 @@ void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	int data1, data2;
-	printk(KERN_WARNING "%s: ######### PATH = %d, GAIN = %d\n",
+	pr_debug(KERN_WARNING "%s: ######### PATH = %d, GAIN = %d\n",
 		__func__, path, gain);
 
 	mutex_lock(&bcmpmu_audio->lock);
@@ -227,11 +225,14 @@ void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain)
 EXPORT_SYMBOL(bcmpmu_hs_set_gain);
 
 
+/* callee of this API need to put 65ms delay to
+ * make sure power up seq done properly by h/w
+*/
 void bcmpmu_ihf_power(bool on)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	struct bcmpmu_rw_data reg;
-	printk(KERN_WARNING "%s:  ######### ON = %d\n", __func__, on);
+	pr_debug(KERN_WARNING "%s:  ######### ON = %d\n", __func__, on);
 	mutex_lock(&bcmpmu_audio->lock);
 	if (on) {
 		if (bcmpmu_audio->IHF_On) {
@@ -241,17 +242,19 @@ void bcmpmu_ihf_power(bool on)
 		}
 		bcmpmu_audio->IHF_On = true;
 
-		/* Set i_IHF_IDDQ =0, */
-		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFTOP_IHF_IDDQ, false,
-				bcmpmu->regmap[PMU_REG_IHFTOP_IHF_IDDQ].mask);
+		/* Enable auto sequence for IHF power up and power down */
+		bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFPOP_PUP,
+				&reg.val, PMU_BITMASK_ALL);
+		reg.val |= BCMPMU_IHFPOP_AUTOSEQ;  /*IHFPOP*/
+		bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFPOP_PUP,
+				reg.val, PMU_BITMASK_ALL);
 
-		/*toggle i_IHFLDO_pup from 0 to 1. */
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFLDO_PUP,
-				  0, bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
-
-		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFLDO_PUP,
-				  bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask,
-				  bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
+				bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask,
+				bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
+		/* Enable IHF ALC/APS - OPTIONAL */
+		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC_BYPASS, false,
+				bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask);
 	} else {
 		if (!bcmpmu_audio->IHF_On) {
 			printk(KERN_INFO "%s: IHF is already off.\n", __func__);
@@ -260,10 +263,17 @@ void bcmpmu_ihf_power(bool on)
 		}
 		bcmpmu_audio->IHF_On = false;
 
+		/* Bypass IHF ALC/APS, so that IHF gain can be
+		 * controlled manually
+		*/
+		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC_BYPASS,
+			bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask,
+			bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask);
+
 		/* Toggle i_IHFpop_pup from 1 to 0. */
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFPOP_PUP, &reg.val,
 				PMU_BITMASK_ALL);
-		reg.val |= BCMPMU_IHFPOP_PUP; /* IHFPOP*/
+		reg.val |= (BCMPMU_IHFPOP_PUP | BCPMU_IHFPOP_BYPASS);
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFPOP_PUP, reg.val,
 				PMU_BITMASK_ALL);
 
@@ -276,11 +286,6 @@ void bcmpmu_ihf_power(bool on)
 		/* Set i_IHFLDO_pup=0. */
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFLDO_PUP,
 				  0, bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
-
-		/* Set i_IHF_IDDQ =1. */
-		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFTOP_IHF_IDDQ,
-				  bcmpmu->regmap[PMU_REG_IHFTOP_IHF_IDDQ].mask,
-				  bcmpmu->regmap[PMU_REG_IHFTOP_IHF_IDDQ].mask);
 
 	}
 	mutex_unlock(&bcmpmu_audio->lock);
@@ -307,7 +312,7 @@ void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	u8 val;
-	printk(KERN_WARNING "%s:  ######### GAIN = %d\n", __func__, gain);
+	pr_debug(KERN_WARNING "%s:  ######### GAIN = %d\n", __func__, gain);
 	mutex_lock(&bcmpmu_audio->lock);
 	val = (gain & bcmpmu->regmap[PMU_REG_IHFPGA2_GAIN].mask) <<
 	    bcmpmu->regmap[PMU_REG_IHFPGA2_GAIN].shift;
@@ -575,27 +580,77 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 void bcmpmu_audio_init(void)
 {
 	struct bcmpmu_rw_data reg;
-	pr_info("%s: ###### - pll_use_count = %u\n",
+	pr_debug("%s: ###### - pll_use_count = %u\n",
 		__func__, bcmpmu_audio->pll_use_count);
-
+	mutex_lock(&bcmpmu_audio->lock);
 	if (bcmpmu_audio->pll_use_count++ == 0)	{
-
+		/* set PLLEN and AUDIO EN */
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
-			PMU_REG_PLLCTRL, &reg.val, PMU_BITMASK_ALL);
+				PMU_REG_PLLCTRL, &reg.val, PMU_BITMASK_ALL);
 		reg.val |= (BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN);
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
-			PMU_REG_PLLCTRL, reg.val, PMU_BITMASK_ALL);
+				PMU_REG_PLLCTRL, reg.val, PMU_BITMASK_ALL);
+		/* HS and IHF reset disable */
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+				PMU_REG_HSPUP_IDDQ_PWRDWN,
+				false,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSPUP_IDDQ_PWRDWN].mask);
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+				PMU_REG_IHFTOP_IHF_IDDQ, false,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFTOP_IHF_IDDQ].mask);
+
+		/* enable class G HS */
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+					PMU_REG_HSCP3_CP_CG_SEL,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSCP3_CP_CG_SEL].mask,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSCP3_CP_CG_SEL].mask);
+		/* enable HS offset correction */
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+				PMU_REG_HSIST_OC_DISOCMUX,
+				false,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSIST_OC_DISOCMUX].mask);
+		/* Bypass IHF ALC/APS, so that IHF gain can
+		 * be controlled manually
+		*/
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+				PMU_REG_IHFALC_BYPASS,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask);
+		/* set IHF pop ramp time */
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+				PMU_REG_IHFPOP_POPTIME_CTL, 0x2,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFPOP_POPTIME_CTL].mask);
 	}
+	mutex_unlock(&bcmpmu_audio->lock);
 }
 EXPORT_SYMBOL(bcmpmu_audio_init);
 
 void bcmpmu_audio_deinit(void)
 {
 	struct bcmpmu_rw_data reg;
-	pr_info("%s: ###### - pll_use_count = %u\n",
+	pr_debug("%s: ###### - pll_use_count = %u\n",
 		__func__, bcmpmu_audio->pll_use_count);
+	mutex_lock(&bcmpmu_audio->lock);
 	if (bcmpmu_audio->pll_use_count &&
 			--bcmpmu_audio->pll_use_count == 0) {
+		/* HS and IHF reset enable */
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_IHFTOP_IHF_IDDQ,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFTOP_IHF_IDDQ].mask,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFTOP_IHF_IDDQ].mask);
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_HSPUP_IDDQ_PWRDWN,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSPUP_IDDQ_PWRDWN].mask,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSPUP_IDDQ_PWRDWN].mask);
+		/* disable HS offset correction */
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_HSIST_OC_DISOCMUX,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSIST_OC_DISOCMUX].mask,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_HSIST_OC_DISOCMUX].mask);
+		/* Enable IHF ALC/APS */
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_IHFALC_BYPASS, false,
+		 bcmpmu_audio->bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask);
 
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
 			PMU_REG_PLLCTRL, &reg.val, PMU_BITMASK_ALL);
@@ -606,6 +661,7 @@ void bcmpmu_audio_deinit(void)
 		bcmpmu_audio->HS_On = false;
 		bcmpmu_audio->IHF_On = false;
 	}
+	mutex_unlock(&bcmpmu_audio->lock);
 }
 EXPORT_SYMBOL(bcmpmu_audio_deinit);
 
@@ -676,7 +732,6 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 {
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_audio *pdata;
-	struct bcmpmu_rw_data reg;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *audio_dir = NULL, *hs_gain = NULL, *ihf_gain =
 	    NULL, *hs_on = NULL, *ihf_on = NULL;
@@ -696,16 +751,6 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 	bcmpmu_audio->HS_On = false;
 	bcmpmu_audio->IHF_On = false;
 
-	/* Enable auto sequence for IHF power up and power down */
-	bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFPOP_PUP, &reg.val,
-			PMU_BITMASK_ALL);
-	reg.val |= BCMPMU_IHFPOP_AUTOSEQ;  /*IHFPOP*/
-	bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_IHFPOP_PUP, reg.val,
-			PMU_BITMASK_ALL);
-	/* Bypass IHF ALC/APS, so that IHF gain can be controlled manually */
-	bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC_BYPASS,
-			bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask,
-			bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask);
 	/* temporarily disable HS short-circuitry as HS SC interrupt
 	 * is getting generated continuously on 59039 variants.
 	 * Remove this once fix has been found

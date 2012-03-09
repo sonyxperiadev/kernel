@@ -35,6 +35,7 @@ the GPL, without Broadcom's express prior written consent.
 #define BCMPMU_IHFTOP_IDDQ		0x01
 #define BCMPMU_IHFLDO_PUP		0x01
 #define BCMPMU_IHFPOP_PUP		0x08
+#define BCPMU_IHFPOP_BYPASS		0x20
 #define BCMPMU_IHFPOP_AUTOSEQ	0x40
 #define BCMPMU_HSPUP1_IDDQ_PWRDN	0x10
 #define BCMPMU_HSPUP2_HS_PWRUP	0x40
