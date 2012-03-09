@@ -735,6 +735,14 @@ config BCM_BT_LPM
         help
           This driver adds Low Power mode support for Broadcom bluetooth
 
+config BCM_USERFAULT_HANDLER
+	bool "BCM User fault handler"
+	default n
+	help
+	  This driver would expose debug functionlity for user space to
+	  enable/disable crash on user fault. This could be used to
+	  get full dumps of ram on user fault.
+
 source "drivers/misc/Kconfig.stm"
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

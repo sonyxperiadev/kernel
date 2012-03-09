@@ -80,4 +80,5 @@ obj-$(CONFIG_BCMPMU_SELFTEST)	+= bcmpmu-selftest.o
 obj-$(CONFIG_RECOVERY) += bcm_reset_mmc_utils.o
 obj-$(CONFIG_BCM_RFKILL)        += bcmbt_rfkill.o
 obj-$(CONFIG_BCM_BT_LPM)        += bcmbt_lpm.o
+obj-$(CONFIG_BCM_USERFAULT_HANDLER) += bcm_userfault_handler.o
 obj-$(CONFIG_BRCM_BTPORT_DRV)   += btport/
