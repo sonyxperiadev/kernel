@@ -594,7 +594,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
 	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
 
-	init_completion(&fb->refresh_wait_sem, 0);
+	init_completion(&fb->refresh_wait_sem);
 
 	fb->thread = kthread_run(rhea_refresh_thread, fb, "lcdrefresh_d");
 	if (IS_ERR(fb->thread)) {
