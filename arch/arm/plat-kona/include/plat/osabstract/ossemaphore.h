@@ -14,8 +14,6 @@
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
-
-
 #ifndef _OSSEMAPHORE_H_
 #define _OSSEMAPHORE_H_
 
@@ -45,14 +43,16 @@ typedef UInt32 SCount_t;
 	@return	Sempahore_t	A sempahore object.
 **/
 
-static inline Semaphore_t OSSEMAPHORE_Create(			// returns newly-created semaphore
-	SCount_t count,						// number of available semaphores
-	OSSuspend_t mode					// suspending task mode
-	)
+static inline Semaphore_t OSSEMAPHORE_Create(	// returns newly-created semaphore
+						    SCount_t count,	// number of available semaphores
+						    OSSuspend_t mode	// suspending task mode
+    )
 {
-	Semaphore_t *sem_ptr = (Semaphore_t *) kzalloc(sizeof(struct semaphore), GFP_KERNEL);
+	Semaphore_t *sem_ptr =
+	    (Semaphore_t *) kzalloc(sizeof(struct semaphore), GFP_KERNEL);
 	if (sem_ptr == NULL) {
-		pr_err("%s cannot create semaphore at %d\n", __func__, __LINE__);
+		pr_err("%s cannot create semaphore at %d\n", __func__,
+		       __LINE__);
 		return sem_ptr;
 	}
 	sema_init((struct semaphore *)sem_ptr, count);
@@ -64,14 +64,15 @@ static inline Semaphore_t OSSEMAPHORE_Create(			// returns newly-created semapho
 	@param	s	(in)	Semaphore object to destory.
 **/
 
-static inline void OSSEMAPHORE_Destroy( 				// Destroy a semaphore
-	Semaphore_t s						// Semaphore to destroy
-	)
+static inline void OSSEMAPHORE_Destroy(	// Destroy a semaphore
+					      Semaphore_t s	// Semaphore to destroy
+    )
 {
 	if (s)
 		kfree(s);
 	else
-		pr_err("%s cannot destroy semapthore(%p) at line %d\n", __func__, s, __LINE__);
+		pr_err("%s cannot destroy semapthore(%p) at line %d\n",
+		       __func__, s, __LINE__);
 }
 
 /**
@@ -82,23 +83,18 @@ static inline void OSSEMAPHORE_Destroy( 				// Destroy a semaphore
 	@return OSStatus_t	Status of operation.
 **/
 
-static inline OSStatus_t OSSEMAPHORE_Obtain(			// wait to obtain a semaphore
-	Semaphore_t s,						// semaphore pointer
-	Ticks_t timeout						// timeout to failed semaphore obtain
-	)
+static inline OSStatus_t OSSEMAPHORE_Obtain(	// wait to obtain a semaphore
+						   Semaphore_t s,	// semaphore pointer
+						   Ticks_t timeout	// timeout to failed semaphore obtain
+    )
 {
 	int status = down_timeout((struct semaphore *)s, timeout);
-	if(!status)
-	{
+	if (!status) {
 		return OSSTATUS_SUCCESS;
-	}
-	else if(status == -ETIME)
-	{
+	} else if (status == -ETIME) {
 		pr_info("OSSEMAPHORE_Obtain timeout\n");
 		return OSSTATUS_TIMEOUT;
-	}
-	else
-	{
+	} else {
 		pr_info("OSSEMAPHORE_Obtain error:%d\n", status);
 		return OSSTATUS_FAILURE;
 	}
@@ -110,9 +106,9 @@ static inline OSStatus_t OSSEMAPHORE_Obtain(			// wait to obtain a semaphore
 	@return OSStatus_t	Status of operation.
 **/
 
-static inline OSStatus_t OSSEMAPHORE_Release(			// wait to release a semaphore
-	Semaphore_t s						// semaphore pointer
-	)
+static inline OSStatus_t OSSEMAPHORE_Release(	// wait to release a semaphore
+						    Semaphore_t s	// semaphore pointer
+    )
 {
 	up((struct semaphore *)s);
 	return OSSTATUS_SUCCESS;
@@ -124,12 +120,9 @@ static inline OSStatus_t OSSEMAPHORE_Release(			// wait to release a semaphore
 	@param name	(in)	New name of the semaphore.
 **/
 
-static inline void OSSEMAPHORE_ChangeName(
-	Semaphore_t s,
-	const char* name
-	)
+static inline void OSSEMAPHORE_ChangeName(Semaphore_t s, const char *name)
 {
-	/* We should define a separate structure in case this needs to be implemented*/
+	/* We should define a separate structure in case this needs to be implemented */
 }
 
 /**
@@ -139,10 +132,10 @@ static inline void OSSEMAPHORE_ChangeName(
 	@return OSStatus_t	Status of operation.
 **/
 
-static inline OSStatus_t OSSEMAPHORE_GetName(		// get ASCII name of semaphore
-	Semaphore_t s,					// semaphore pointer
-	UInt8 *p_name					// location to store the ASCII name
-	)
+static inline OSStatus_t OSSEMAPHORE_GetName(	// get ASCII name of semaphore
+						    Semaphore_t s,	// semaphore pointer
+						    UInt8 * p_name	// location to store the ASCII name
+    )
 {
 	/* We should define a separate structure in case this needs to be implemented */
 	return OSSTATUS_FAILURE;

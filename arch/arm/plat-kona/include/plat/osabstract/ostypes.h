@@ -38,8 +38,7 @@ typedef UInt32 OSSuspend_t;
  *	@brief OSStatus_t is a general status type returned by the RTOS API. 
 */
 
-typedef enum
-{
+typedef enum {
 	OSSTATUS_FAILURE,
 	OSSTATUS_SUCCESS,
 	OSSTATUS_TIMEOUT
@@ -49,28 +48,27 @@ typedef enum
  *	@brief OSMutexMode_t defines whether the mutex is configured for priority inversion or not. 
 */
 
-typedef enum
-{
+typedef enum {
 	OSMUTEX_NOINHERIT,
 	OSMUTEX_INHERIT
 } OSMutexMode_t;
 
 #define	OS_MAX_NAME_LEN					8	// must be 8 chars
 /* These need to be adjusted if remove define TX_DISABLE_NOTIFY_CALLBACKS from tx_user.h */
-#define	OS_QUEUE_SIZE					18  // ulongs
-#define	OS_EVENT_GROUP_SIZE				12  // ulongs
-#define	OS_SEMAPHORE_SIZE				12  // ulongs
-#define OS_TCB_HEADER_SIZE              216  //bytes
-#define	OS_TIMER_SIZE					19  // ulongs
-#define	OS_MUTEX_SIZE					18  // ulongs
+#define	OS_QUEUE_SIZE					18	// ulongs
+#define	OS_EVENT_GROUP_SIZE				12	// ulongs
+#define	OS_SEMAPHORE_SIZE				12	// ulongs
+#define OS_TCB_HEADER_SIZE              216	//bytes
+#define	OS_TIMER_SIZE					19	// ulongs
+#define	OS_MUTEX_SIZE					18	// ulongs
 
 #define	STACKSIZE_BASIC					512
 
 // Set for ThreadX, JPG
 #define	OS_PARTITION_POOL_SIZE			-1
 #define	OS_MEMORY_POOL_SIZE				-1
-#define OS_BLOCK_MEMORY_HEADER_SIZE     32  //bytes
-#define OS_BYTE_MEMORY_HEADER_SIZE      32  //bytes
+#define OS_BLOCK_MEMORY_HEADER_SIZE     32	//bytes
+#define OS_BYTE_MEMORY_HEADER_SIZE      32	//bytes
 
 typedef void *Task_t;
 typedef void *Queue_t;
@@ -93,10 +91,9 @@ typedef UInt32 Ticks_t;
 
 //because 32k clock can't provide exact 1ms timer, need change to 1024 ticks/s
 
-#define TICKS_ONE_SECOND				msecs_to_jiffies(1000) //ticks per second
+#define TICKS_ONE_SECOND				msecs_to_jiffies(1000)	//ticks per second
 //Returns number of Ticks for x millisecs
 #define TICKS_IN_MILLISECONDS(x)			msecs_to_jiffies(x)
-
 
 /** @} */
 
