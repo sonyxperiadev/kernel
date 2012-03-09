@@ -606,7 +606,7 @@ error:
 	return ret;
 }
 
-static struct platform_driver unicam_drv = {
+static struct platform_driver __refdata unicam_drv = {
 	.probe = unicam_drv_probe,
 	.remove = __devexit_p(unicam_drv_remove),
 	.driver = {.name = "kona-unicam",},
