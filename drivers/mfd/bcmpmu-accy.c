@@ -505,9 +505,13 @@ static void send_chrgr_event(struct bcmpmu *pmu,
 			__func__, paccy->bcmpmu->usb_accy_data.chrgr_type);
 		propval.intval = paccy->bcmpmu->usb_accy_data.chrgr_type;
 		ps->set_property(ps, POWER_SUPPLY_PROP_TYPE, &propval);
-		if (paccy->det_state == USB_CONNECTED)
-			propval.intval = 1;
-		else
+		if (paccy->det_state == USB_CONNECTED) {
+			if (paccy->bcmpmu->usb_accy_data.chrgr_type
+			    == PMU_CHRGR_TYPE_SDP)
+				propval.intval = 0;
+			else
+				propval.intval = 1;
+		} else
 			propval.intval = 0;
 		ps->set_property(ps, POWER_SUPPLY_PROP_ONLINE, &propval);
 	} else if (event == BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT) {
