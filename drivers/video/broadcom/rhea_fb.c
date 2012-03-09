@@ -80,7 +80,7 @@ struct rhea_fb {
 	struct mutex update_sem;
 	struct completion prev_buf_done_sem;
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON)  \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
 	struct completion refresh_wait_sem;
 #endif
 	atomic_t buff_idx;
@@ -487,7 +487,7 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 #endif
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)  && !defined(CONFIG_MACH_RHEA_STONE)
 static int rhea_refresh_thread(void *arg)
 {
 	struct rhea_fb *fb = arg;
@@ -592,9 +592,9 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	init_completion(&fb->thread_sem);
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
 
-	sema_init(&fb->refresh_wait_sem, 0);
+	init_completion(&fb->refresh_wait_sem, 0);
 
 	fb->thread = kthread_run(rhea_refresh_thread, fb, "lcdrefresh_d");
 	if (IS_ERR(fb->thread)) {
@@ -784,7 +784,7 @@ err_set_var_failed:
 err_enable_display_failed:
 err_fbmem_alloc_failed:
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
 thread_create_failed:
 #endif
 	if (pi_mgr_dfs_request_remove(&fb->dfs_node))
