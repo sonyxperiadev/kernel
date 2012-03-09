@@ -6361,14 +6361,14 @@ int mm_ccu_set_pll_select(u32 clk_id, u32 value)
 	default:
 		return -EINVAL;
 	}
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ccu_write_access_enable(ccu_clk,true);
     reg_val = readl(CCU_REG_ADDR(ccu_clk,offset));
 	reg_val &= ~mask;
 	reg_val |= (value << shift) & mask;
 	writel(reg_val,CCU_REG_ADDR(ccu_clk,offset));
 	ccu_write_access_enable(ccu_clk,false);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return 0;
 
 }

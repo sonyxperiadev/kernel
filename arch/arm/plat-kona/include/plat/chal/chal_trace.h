@@ -37,374 +37,360 @@ extern "C" {
 /**
 * funnels
 ******************************************************************************/
-typedef enum
-{
-    CHAL_TRACE_HUB_FUNNEL = 0, // HUB_FUNNEL register block (Hub.APB9)
-    CHAL_TRACE_FIN_FUNNEL, // FIN_FUNNEL register block (Hub.APB9)
-    CHAL_TRACE_COMMS_FUNNEL, // A9_ATB_FUNNEL register block (Comm_Subsystem.APB13)
+	typedef enum {
+		CHAL_TRACE_HUB_FUNNEL = 0,	// HUB_FUNNEL register block (Hub.APB9)
+		CHAL_TRACE_FIN_FUNNEL,	// FIN_FUNNEL register block (Hub.APB9)
+		CHAL_TRACE_COMMS_FUNNEL,	// A9_ATB_FUNNEL register block (Comm_Subsystem.APB13)
 #if defined (_HERA_)
-    CHAL_TRACE_MM_FUNNEL, // MM_FUNNEL register block (MM_Subsystem.APB12)
+		CHAL_TRACE_MM_FUNNEL,	// MM_FUNNEL register block (MM_Subsystem.APB12)
 #endif //_HERA_
-    CHAL_TRACE_FAB_FUNNEL1, // FAB_FUNNEL1 register block (Apps_Subsystem.Fabric.APB8)
-    CHAL_TRACE_FUNNEL, // FUNNEL register block (Apps_Subsystem.Processor.APB0)
-    CHAL_TRACE_MAX_FUNNEL
-} CHAL_TRACE_FUNNEL_t;
+		CHAL_TRACE_FAB_FUNNEL1,	// FAB_FUNNEL1 register block (Apps_Subsystem.Fabric.APB8)
+		CHAL_TRACE_FUNNEL,	// FUNNEL register block (Apps_Subsystem.Processor.APB0)
+		CHAL_TRACE_MAX_FUNNEL
+	} CHAL_TRACE_FUNNEL_t;
 
 /**
 * axi trace
 ******************************************************************************/
-typedef enum
-{
-    CHAL_TRACE_AXITRACE0 = 0,
-    CHAL_TRACE_AXITRACE1,
-    CHAL_TRACE_AXITRACE2,
-    CHAL_TRACE_AXITRACE3,
-    CHAL_TRACE_AXITRACE4,
-    CHAL_TRACE_AXITRACE5,
-    CHAL_TRACE_AXITRACE6,
-    CHAL_TRACE_AXITRACE7,
-    CHAL_TRACE_AXITRACE8,
-    CHAL_TRACE_AXITRACE9,
-    CHAL_TRACE_AXITRACE10,
-    CHAL_TRACE_AXITRACE11,
-    CHAL_TRACE_AXITRACE12,
-    CHAL_TRACE_AXITRACE13,
-    CHAL_TRACE_AXITRACE14,
-    CHAL_TRACE_AXITRACE15,
-    CHAL_TRACE_AXITRACE16,
-    CHAL_TRACE_AXITRACE17,
-    CHAL_TRACE_AXITRACE18,
-    CHAL_TRACE_AXITRACE19,
-    CHAL_TRACE_MAX_AXITRACE
-} CHAL_TRACE_AXITRACE_t;
+	typedef enum {
+		CHAL_TRACE_AXITRACE0 = 0,
+		CHAL_TRACE_AXITRACE1,
+		CHAL_TRACE_AXITRACE2,
+		CHAL_TRACE_AXITRACE3,
+		CHAL_TRACE_AXITRACE4,
+		CHAL_TRACE_AXITRACE5,
+		CHAL_TRACE_AXITRACE6,
+		CHAL_TRACE_AXITRACE7,
+		CHAL_TRACE_AXITRACE8,
+		CHAL_TRACE_AXITRACE9,
+		CHAL_TRACE_AXITRACE10,
+		CHAL_TRACE_AXITRACE11,
+		CHAL_TRACE_AXITRACE12,
+		CHAL_TRACE_AXITRACE13,
+		CHAL_TRACE_AXITRACE14,
+		CHAL_TRACE_AXITRACE15,
+		CHAL_TRACE_AXITRACE16,
+		CHAL_TRACE_AXITRACE17,
+		CHAL_TRACE_AXITRACE18,
+		CHAL_TRACE_AXITRACE19,
+		CHAL_TRACE_MAX_AXITRACE
+	} CHAL_TRACE_AXITRACE_t;
 
 /**
 * axi trace performance counters
 ******************************************************************************/
-typedef enum
-{
-    WRITE_COMMANDS,
-    READ_COMMANDS,
-    WRITE_ADDRESS_CYCLES,
-    READ_ADDRESS_CYCLES,
-    WRITE_DATA_CYCLES,
-    READ_DATA_CYCLES,
-    WRITE_RESPONSE_CYCLES,
-    WRITE_ADDRESS_BUSY_CYCLES,
-    READ_ADDRESS_BUSY_CYCLES,
-    WRITE_DATA_BUSY_CYCLES,
-    READ_DATA_BUSY_CYCLES,
-    WRITE_RESPONSE_BUSY_CYCLES,
-    WRITE_LATENCY_SUM_CYCLES,
-    READ_LATENCY_SUM_CYCLES,
-    WRITE_LATENCY_MINIMUM_CYCLES,
-    READ_LATENCY_MINIMUM_CYCLES,
-    WRITE_LATENCY_MAXIMUM_CYCLES,
-    READ_LATENCY_MAXIMUM_CYCLES,
-    WRITE_DATA_BEATS,
-    READ_DATA_BEATS,
-    WRITE_OUTSTANDING_COMMANDS_CYCLES,
-    READ_OUTSTANDING_COMMANDS_CYCLES,
-    CHAL_TRACE_AXITRACE_MAX_COUNT,
-} CHAL_TRACE_AXITRACE_COUNT_t;
+	typedef enum {
+		WRITE_COMMANDS,
+		READ_COMMANDS,
+		WRITE_ADDRESS_CYCLES,
+		READ_ADDRESS_CYCLES,
+		WRITE_DATA_CYCLES,
+		READ_DATA_CYCLES,
+		WRITE_RESPONSE_CYCLES,
+		WRITE_ADDRESS_BUSY_CYCLES,
+		READ_ADDRESS_BUSY_CYCLES,
+		WRITE_DATA_BUSY_CYCLES,
+		READ_DATA_BUSY_CYCLES,
+		WRITE_RESPONSE_BUSY_CYCLES,
+		WRITE_LATENCY_SUM_CYCLES,
+		READ_LATENCY_SUM_CYCLES,
+		WRITE_LATENCY_MINIMUM_CYCLES,
+		READ_LATENCY_MINIMUM_CYCLES,
+		WRITE_LATENCY_MAXIMUM_CYCLES,
+		READ_LATENCY_MAXIMUM_CYCLES,
+		WRITE_DATA_BEATS,
+		READ_DATA_BEATS,
+		WRITE_OUTSTANDING_COMMANDS_CYCLES,
+		READ_OUTSTANDING_COMMANDS_CYCLES,
+		CHAL_TRACE_AXITRACE_MAX_COUNT,
+	} CHAL_TRACE_AXITRACE_COUNT_t;
 
 /**
 * CTI
 ******************************************************************************/
-typedef enum
-{
-    CHAL_TRACE_HUB_CTI = 0, 
-    CHAL_TRACE_MM_CTI,
-    CHAL_TRACE_FAB_CTI,
-    CHAL_TRACE_A9CTI0,
-    CHAL_TRACE_R4_CTI,
+	typedef enum {
+		CHAL_TRACE_HUB_CTI = 0,
+		CHAL_TRACE_MM_CTI,
+		CHAL_TRACE_FAB_CTI,
+		CHAL_TRACE_A9CTI0,
+		CHAL_TRACE_R4_CTI,
 #if defined (_HERA_)
-    CHAL_TRACE_R4CS_CTI,
-    CHAL_TRACE_R4MPSS_CTI,
+		CHAL_TRACE_R4CS_CTI,
+		CHAL_TRACE_R4MPSS_CTI,
 #endif //_HERA_
-    CHAL_TRACE_MAX_CTI
-} CHAL_TRACE_CTI_t;
-
+		CHAL_TRACE_MAX_CTI
+	} CHAL_TRACE_CTI_t;
 
 /**
 * local command
 ******************************************************************************/
-typedef enum
-{
-    CHAL_TRACE_COUNTER_CLEAR = 0, // 00=counter clear
-    CHAL_TRACE_COUNTER_STOP, // 01=counter stop
-    CHAL_TRACE_COUNTER_START // 10=counter start
-} CHAL_TRACE_LOCAL_CMD_t;
+	typedef enum {
+		CHAL_TRACE_COUNTER_CLEAR = 0,	// 00=counter clear
+		CHAL_TRACE_COUNTER_STOP,	// 01=counter stop
+		CHAL_TRACE_COUNTER_START	// 10=counter start
+	} CHAL_TRACE_LOCAL_CMD_t;
 
 /**
 * global performance counter command
 ******************************************************************************/
-typedef enum
-{
-    CHAL_TRACE_GLB_CLEAR = 0,       // 0=counter clear
-    CHAL_TRACE_GLB_STOP = 1,        // 1=stop
-    CHAL_TRACE_GLB_START_RESUME = 2,// 2=start&resume
-    CHAL_TRACE_GLB_LOAD = 4,        // 4=load
-    CHAL_TRACE_GLB_STOP_RESET = 7,  // 7=stop&reset.
-} CHAL_TRACE_GLB_CMD_t;
+	typedef enum {
+		CHAL_TRACE_GLB_CLEAR = 0,	// 0=counter clear
+		CHAL_TRACE_GLB_STOP = 1,	// 1=stop
+		CHAL_TRACE_GLB_START_RESUME = 2,	// 2=start&resume
+		CHAL_TRACE_GLB_LOAD = 4,	// 4=load
+		CHAL_TRACE_GLB_STOP_RESET = 7,	// 7=stop&reset.
+	} CHAL_TRACE_GLB_CMD_t;
 
 /**
 * GIC latency
 ******************************************************************************/
-typedef enum
-{
-    CHAL_TRACE_GIC_FIQ_LAT0 = 0, // FIQ Latency 0
-    CHAL_TRACE_GIC_IRQ_LAT0, // IRQ Latency 0
-    CHAL_TRACE_GIC_FIQ_LAT1, // FIQ Latency 1
-    CHAL_TRACE_GIC_IRQ_LAT1, // IRQ Latency 1
-} CHAL_TRACE_GIC_LAT_t;
+	typedef enum {
+		CHAL_TRACE_GIC_FIQ_LAT0 = 0,	// FIQ Latency 0
+		CHAL_TRACE_GIC_IRQ_LAT0,	// IRQ Latency 0
+		CHAL_TRACE_GIC_FIQ_LAT1,	// FIQ Latency 1
+		CHAL_TRACE_GIC_IRQ_LAT1,	// IRQ Latency 1
+	} CHAL_TRACE_GIC_LAT_t;
 
 /**
 * SW STM
 ******************************************************************************/
-typedef enum
-{
-    CHAL_TRACE_SWSTM = 0, // Software STM
-    CHAL_TRACE_SWSTM_ST, // Software STM with ST
-    CHAL_TRACE_MAX_SWSTM
-} CHAL_TRACE_SWSTM_t;
+	typedef enum {
+		CHAL_TRACE_SWSTM = 0,	// Software STM
+		CHAL_TRACE_SWSTM_ST,	// Software STM with ST
+		CHAL_TRACE_MAX_SWSTM
+	} CHAL_TRACE_SWSTM_t;
 
 /**
 * CHAL trace base address
 ******************************************************************************/
-typedef struct
-{
+	typedef struct {
 #if defined (_HERA_)
-    cUInt32 APB2ATB_base; // APB2ATB register block (Apps_Subsystem.Fabric.APB8)
-    cUInt32 ATB2PTI_base; // ATB2PTI register block (Hub.APB9)
-    cUInt32 ATB2OCP_base; // ATB2OCP register block (Hub.APB9)
-    cUInt32 WGM_OCP2ATB_base; // WGM_OCP2ATB register block (Comm_Subsystem.APB13)
-    cUInt32 HUBOCP2ATB_base; // HUBOCP2ATB register block (Hub.APB9)
-#endif //_HERA_
-    cUInt32 GICTR_base; // GIC Trace (Apps_Subsystem.Processor.APB0)
-    cUInt32 CHIPREGS_base; // CHIPREGS Block 
-    cUInt32 PWRMGR_base; // PWRMGR Block  (Hub.Power_Manager)
-    cUInt32 FUNNEL_base[CHAL_TRACE_MAX_FUNNEL];
-    cUInt32 AXITRACE_base[CHAL_TRACE_MAX_AXITRACE];
-    cUInt32 CTI_base[CHAL_TRACE_MAX_CTI];
-    cUInt32 ETB_base;
-    cUInt32 ETB2AXI_base;
-    cUInt32 GLOBPERF_base; // Global Counters Registers
-    cUInt32 ATB_STM_base; // ATB_STM register block (Hub.APB9)
-    cUInt32 SW_STM_base[CHAL_TRACE_MAX_SWSTM]; // SWSTM register block (Apps_Subsystem.Processor.APB0)
-}CHAL_TRACE_DEV_t;
+		cUInt32 APB2ATB_base;	// APB2ATB register block (Apps_Subsystem.Fabric.APB8)
+		cUInt32 ATB2PTI_base;	// ATB2PTI register block (Hub.APB9)
+		cUInt32 ATB2OCP_base;	// ATB2OCP register block (Hub.APB9)
+		cUInt32 WGM_OCP2ATB_base;	// WGM_OCP2ATB register block (Comm_Subsystem.APB13)
+		cUInt32 HUBOCP2ATB_base;	// HUBOCP2ATB register block (Hub.APB9)
+#endif				//_HERA_
+		cUInt32 GICTR_base;	// GIC Trace (Apps_Subsystem.Processor.APB0)
+		cUInt32 CHIPREGS_base;	// CHIPREGS Block 
+		cUInt32 PWRMGR_base;	// PWRMGR Block  (Hub.Power_Manager)
+		cUInt32 FUNNEL_base[CHAL_TRACE_MAX_FUNNEL];
+		cUInt32 AXITRACE_base[CHAL_TRACE_MAX_AXITRACE];
+		cUInt32 CTI_base[CHAL_TRACE_MAX_CTI];
+		cUInt32 ETB_base;
+		cUInt32 ETB2AXI_base;
+		cUInt32 GLOBPERF_base;	// Global Counters Registers
+		cUInt32 ATB_STM_base;	// ATB_STM register block (Hub.APB9)
+		cUInt32 SW_STM_base[CHAL_TRACE_MAX_SWSTM];	// SWSTM register block (Apps_Subsystem.Processor.APB0)
+	} CHAL_TRACE_DEV_t;
 
 /**
 * CHAL axi ATM CONFIG
 ******************************************************************************/
-typedef struct
-{
-    // bit filed 31:19, Busy ID
-    // Defines ID value for busy-cycle counting of AXI channel cycles. 
-    // Meaningful only if BUSY_FILTERED=1. 
-    // This field should only be changed while the counting is in the stopped state
-    cUInt16 BUSY_ID;
+	typedef struct {
+		// bit filed 31:19, Busy ID
+		// Defines ID value for busy-cycle counting of AXI channel cycles. 
+		// Meaningful only if BUSY_FILTERED=1. 
+		// This field should only be changed while the counting is in the stopped state
+		cUInt16 BUSY_ID;
 
-    // bit filed 18:16, Outstanding Threshold
-    // Defines number of AXI transactions that must be exceeded to enable counting of cycles for oustanding commands. 
-    // This field should only be changed while the counting is in the stopped state.
-    cUInt8 OUTS_THRESH;
+		// bit filed 18:16, Outstanding Threshold
+		// Defines number of AXI transactions that must be exceeded to enable counting of cycles for oustanding commands. 
+		// This field should only be changed while the counting is in the stopped state.
+		cUInt8 OUTS_THRESH;
 
-    // bit filed 15, Outstanding Filtered
-    // When set, outstanding command cycle counting uses AXI transactions passing the programmed filter(s). 
-    // When cleared, all AXI transactions are used. 
-    // This bit should only be changed while the counting is in the stopped state.
-    cBool OUTS_FILTERED;
+		// bit filed 15, Outstanding Filtered
+		// When set, outstanding command cycle counting uses AXI transactions passing the programmed filter(s). 
+		// When cleared, all AXI transactions are used. 
+		// This bit should only be changed while the counting is in the stopped state.
+		cBool OUTS_FILTERED;
 
-    // bit filed 14, Outstanding Count Enable
-    // This bit is loaded into the outstanding command cycle counting enable state for a counter-start command. 
-    // The state is synchronized to the AXI clock.
-    cBool OUTS_EN;
+		// bit filed 14, Outstanding Count Enable
+		// This bit is loaded into the outstanding command cycle counting enable state for a counter-start command. 
+		// The state is synchronized to the AXI clock.
+		cBool OUTS_EN;
 #if defined(_RHEA_)
-    // bit filed 14, All Cycles Enable
-    // When set, BCYCLES counts all cycles regardless of any handshakes and BBUSY is meaningless. 
-    // BUSY_EN must be set for this to work. When cleared, BCYCLES works normally. 
-    // This bit should only be changed while the counting is in the stopped state.
-    cBool ALL_CYCLES_EN;
-#endif //_RHEA_
-    // bit filed 12, Read Latency Mode
-    // When set, read latency measurements use the RLAST cycle to end a single transaction. 
-    // When cleared, measurements use the first read data cycle. 
-    // This bit should only be changed while the counting is in the stopped state.
-    cBool RDLAT_MODE;
+		// bit filed 14, All Cycles Enable
+		// When set, BCYCLES counts all cycles regardless of any handshakes and BBUSY is meaningless. 
+		// BUSY_EN must be set for this to work. When cleared, BCYCLES works normally. 
+		// This bit should only be changed while the counting is in the stopped state.
+		cBool ALL_CYCLES_EN;
+#endif				//_RHEA_
+		// bit filed 12, Read Latency Mode
+		// When set, read latency measurements use the RLAST cycle to end a single transaction. 
+		// When cleared, measurements use the first read data cycle. 
+		// This bit should only be changed while the counting is in the stopped state.
+		cBool RDLAT_MODE;
 
-    // bit filed 11, Latency Filtered
-    // When set, latency measurements use AXI transactions passing the programmed filter(s). 
-    // When cleared, all AXI transactions are used. 
-    // This bit should only be changed while the counting is in the stopped state.
-    cBool LATENCY_FILTERED;
+		// bit filed 11, Latency Filtered
+		// When set, latency measurements use AXI transactions passing the programmed filter(s). 
+		// When cleared, all AXI transactions are used. 
+		// This bit should only be changed while the counting is in the stopped state.
+		cBool LATENCY_FILTERED;
 
-    // bit filed 10, Latency Measurement Enable
-    // This bit is loaded into the latency measurement enable state for a counter-start command. 
-    // The state is synchronized to the AXI clock.
-    cBool LATENCY_EN;
+		// bit filed 10, Latency Measurement Enable
+		// This bit is loaded into the latency measurement enable state for a counter-start command. 
+		// The state is synchronized to the AXI clock.
+		cBool LATENCY_EN;
 
-    // bit filed 09, Busy Filtered
-    // When set, BUSY_ID is used. 
-    // When cleared, all AXI transactions are used for busy-cycle counting. 
-    // This bit should only be changed while the counting is in the stopped state.
-    cBool BUSY_FILTERED;
+		// bit filed 09, Busy Filtered
+		// When set, BUSY_ID is used. 
+		// When cleared, all AXI transactions are used for busy-cycle counting. 
+		// This bit should only be changed while the counting is in the stopped state.
+		cBool BUSY_FILTERED;
 
-    // bit filed 08, Busy Counting Enable
-    // This bit is loaded into the busy-cycle counting enable state for a counter-start command. 
-    // The state is synchronized to the AXI clock.
-    cBool BUSY_EN;
+		// bit filed 08, Busy Counting Enable
+		// This bit is loaded into the busy-cycle counting enable state for a counter-start command. 
+		// The state is synchronized to the AXI clock.
+		cBool BUSY_EN;
 
-    // bit filed 07, Beats Filtered
-    // When set, data beat counting uses AXI transactions passing the programmed filter(s). 
-    // When cleared, all AXI transactions are used. 
-    // This bit should only be changed while the counting is in the stopped state.
-    cBool BEATS_FILTERED;
+		// bit filed 07, Beats Filtered
+		// When set, data beat counting uses AXI transactions passing the programmed filter(s). 
+		// When cleared, all AXI transactions are used. 
+		// This bit should only be changed while the counting is in the stopped state.
+		cBool BEATS_FILTERED;
 
-    // bit filed 06, Beats Counting Enable
-    // This bit is loaded into the data beats counting enable state for a counter-start command. 
-    // The state is synchronized to the AXI clock.
-    cBool BEATS_EN;
+		// bit filed 06, Beats Counting Enable
+		// This bit is loaded into the data beats counting enable state for a counter-start command. 
+		// The state is synchronized to the AXI clock.
+		cBool BEATS_EN;
 
-    // bit filed 05, Commands Filtered
-    // When set, commands counting uses AXI transactions passing the programmed filter(s). 
-    // When cleared, all AXI transactions are used. 
-    // This bit should only be changed while the counting is in the stopped state.
-    cBool CMDS_FILTERED;
+		// bit filed 05, Commands Filtered
+		// When set, commands counting uses AXI transactions passing the programmed filter(s). 
+		// When cleared, all AXI transactions are used. 
+		// This bit should only be changed while the counting is in the stopped state.
+		cBool CMDS_FILTERED;
 
-    // bit filed 04, Commands Counting Enable
-    // This bit is loaded into the commands counting enable state for a counter-start command. 
-    // The state is synchronized to the AXI clock.
-    cBool CMDS_EN;
+		// bit filed 04, Commands Counting Enable
+		// This bit is loaded into the commands counting enable state for a counter-start command. 
+		// The state is synchronized to the AXI clock.
+		cBool CMDS_EN;
 
-    // bit filed 03, Trace Enable
-    // When set, trace format FIFO loads are enabled. 
-    // This bit is synchronized to the AXI clock.
-    cBool TRACE_EN;
+		// bit filed 03, Trace Enable
+		// When set, trace format FIFO loads are enabled. 
+		// This bit is synchronized to the AXI clock.
+		cBool TRACE_EN;
 
-    // bit filed 02, Flush
-    // Set by firmware and cleared by hardware when complete. 
-    // When set, capture and filter pipelines, as well as trace format FIFO's, are emptied.
-    cBool FLUSH;
+		// bit filed 02, Flush
+		// Set by firmware and cleared by hardware when complete. 
+		// When set, capture and filter pipelines, as well as trace format FIFO's, are emptied.
+		cBool FLUSH;
 
-    // bit filed 01, Saturate Enable
-    // When set, performance counters stop incrementing when they reach maximum (typically 0xFFFF_FFFF). 
-    // When cleared, the counters roll over to 0. 
-    // This bit is synchronized to the AXI clock.
-    cBool SAT_EN;
+		// bit filed 01, Saturate Enable
+		// When set, performance counters stop incrementing when they reach maximum (typically 0xFFFF_FFFF). 
+		// When cleared, the counters roll over to 0. 
+		// This bit is synchronized to the AXI clock.
+		cBool SAT_EN;
 
-    // bit filed 00, Control Source
-    // When set, performance counters are under local control. 
-    // When cleared, the counters are under global control.
-    cBool CTRL_SRC;
-}CHAL_TRACE_ATM_CONF_t;
+		// bit filed 00, Control Source
+		// When set, performance counters are under local control. 
+		// When cleared, the counters are under global control.
+		cBool CTRL_SRC;
+	} CHAL_TRACE_ATM_CONF_t;
 
 /**
 * CHAL axi ATM Filter CONFIG
 ******************************************************************************/
-typedef struct
-{
-    // bit filed 31, Trigger Enable
-    // When set, AXI transactions passing this filter generate a trigger output.
-    cBool TRIGGER_EN;
+	typedef struct {
+		// bit filed 31, Trigger Enable
+		// When set, AXI transactions passing this filter generate a trigger output.
+		cBool TRIGGER_EN;
 
-    // bit filed 30, Filter Secure
-    // When set, secure AXI transactions pass this filter. When cleared, secure transactions do not.
-    cBool FILTER_SEC;
+		// bit filed 30, Filter Secure
+		// When set, secure AXI transactions pass this filter. When cleared, secure transactions do not.
+		cBool FILTER_SEC;
 
-    // bit filed 29, Filter Open
-    // When set, open AXI transactions pass this filter. When cleared, open transactions do not.
-    cBool FILTER_OPEN;
+		// bit filed 29, Filter Open
+		// When set, open AXI transactions pass this filter. When cleared, open transactions do not.
+		cBool FILTER_OPEN;
 
-    // bit filed 28:16, Filter ID
-    // Combined with ID_MASK, this field defines the AXI ID for transactions passing this filter.
-    cUInt16 FILTER_ID;
+		// bit filed 28:16, Filter ID
+		// Combined with ID_MASK, this field defines the AXI ID for transactions passing this filter.
+		cUInt16 FILTER_ID;
 
-    // bit filed 15:8, ID Mask
-    // Set bits in this mask define AXI ID bits that are compared between transactions and FILTER_ID. 
-    // Cleared bits are don't-cares.
-    cUInt8 ID_MASK;
+		// bit filed 15:8, ID Mask
+		// Set bits in this mask define AXI ID bits that are compared between transactions and FILTER_ID. 
+		// Cleared bits are don't-cares.
+		cUInt8 ID_MASK;
 
-    // bit filed 7:4, Filter Length
-    // Defines the comparison value for AXI length according to LEN_MODE for AXI transactions passing this filter.
-    cUInt8 FILTER_LEN;
+		// bit filed 7:4, Filter Length
+		// Defines the comparison value for AXI length according to LEN_MODE for AXI transactions passing this filter.
+		cUInt8 FILTER_LEN;
 
-    // bit filed 3:2, Length Mode
-    // 0x=AXI length must be == FILTER_LEN; 10=AXI length must be <= FILTER_LEN; 11=AXI length must be > FILTER_LEN.
-    cUInt8 LEN_MODE;
+		// bit filed 3:2, Length Mode
+		// 0x=AXI length must be == FILTER_LEN; 10=AXI length must be <= FILTER_LEN; 11=AXI length must be > FILTER_LEN.
+		cUInt8 LEN_MODE;
 
-    // bit filed 1, Filter Write
-    // When set, AXI write transactions pass this filter.
-    cBool FILTER_WRITE;
+		// bit filed 1, Filter Write
+		// When set, AXI write transactions pass this filter.
+		cBool FILTER_WRITE;
 
-    // bit filed 0, Filter Read
-    // When set, AXI read transactions pass this filter.
-    cBool FILTER_READ;
-}CHAL_TRACE_AXI_FILTER_CONF_t;
+		// bit filed 0, Filter Read
+		// When set, AXI read transactions pass this filter.
+		cBool FILTER_READ;
+	} CHAL_TRACE_AXI_FILTER_CONF_t;
 
 /**
 * CHAL GIC Trace CONFIG
 ******************************************************************************/
-typedef struct
-{
-    // bit filed 10, Latency Measurement Enable. 
-    // This bit is loaded into the latency measurement enable state for a counter-start command.
-    cBool LATENCY_EN;
+	typedef struct {
+		// bit filed 10, Latency Measurement Enable. 
+		// This bit is loaded into the latency measurement enable state for a counter-start command.
+		cBool LATENCY_EN;
 
-    // bit filed 3, Trace Enable
-    // When set, trace data is enabled. This bit is synchronized to the ATB clock.
-    cBool TRACE_EN;
+		// bit filed 3, Trace Enable
+		// When set, trace data is enabled. This bit is synchronized to the ATB clock.
+		cBool TRACE_EN;
 
-    // bit filed 0, Control Source
-    // When set, performance counters are under local control. When cleared, the counters are under global control.
-    cBool CTRL_SRC;
-}CHAL_TRACE_GIC_CONF_t;
+		// bit filed 0, Control Source
+		// When set, performance counters are under local control. When cleared, the counters are under global control.
+		cBool CTRL_SRC;
+	} CHAL_TRACE_GIC_CONF_t;
 
 /**
 * CHAL ETB Formatter and Flush Control
 ******************************************************************************/
-typedef struct
-{
-    // bit filed 13
-    // Stop formatter for a trigger event.
-    cBool StopTrig;
+	typedef struct {
+		// bit filed 13
+		// Stop formatter for a trigger event.
+		cBool StopTrig;
 
-    // bit filed 12
-    // Stop formatter when flush completes.
-    cBool StopFl;
+		// bit filed 12
+		// Stop formatter when flush completes.
+		cBool StopFl;
 
-    // bit filed 10
-    // Indicate a trigger on flush completion.
-    cBool TrigFl;
+		// bit filed 10
+		// Indicate a trigger on flush completion.
+		cBool TrigFl;
 
-    // bit filed 9
-    // Indicate a trigger on a trigger event.
-    cBool TrigEvt;
+		// bit filed 9
+		// Indicate a trigger on a trigger event.
+		cBool TrigEvt;
 
-    // bit filed 8
-    // Indicate a trigger on TRIGIN.
-    cBool Trigin;
+		// bit filed 8
+		// Indicate a trigger on TRIGIN.
+		cBool Trigin;
 
-    // bit filed 6
-    // Manually generate a flush.
-    cBool FOnMan;
+		// bit filed 6
+		// Manually generate a flush.
+		cBool FOnMan;
 
-    // bit filed 5
-    // Generate flush for a trigger event.
-    cBool FOnTrig;
+		// bit filed 5
+		// Generate flush for a trigger event.
+		cBool FOnTrig;
 
-    // bit filed 4
-    // Generate flush on TRIGIN.
-    cBool FOnFlIn;
+		// bit filed 4
+		// Generate flush on TRIGIN.
+		cBool FOnFlIn;
 
-    // bit filed 1
-    // Continuous formatting.
-    cBool EnFCont;
+		// bit filed 1
+		// Continuous formatting.
+		cBool EnFCont;
 
-    // bit filed 0
-    // Enable formatting.
-    cBool EnFTC;
- }CHAL_TRACE_ETB_FF_CONF_t;
+		// bit filed 0
+		// Enable formatting.
+		cBool EnFTC;
+	} CHAL_TRACE_ETB_FF_CONF_t;
 
 /*****************************************************************************
 * function declarations
@@ -421,7 +407,7 @@ typedef struct
 *  @note    
 *
 ******************************************************************************/
-cBool  chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr);
+	cBool chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr);
 
 #if defined (_HERA_)
 /**
@@ -439,7 +425,9 @@ cBool  chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr);
 *  @note    
 *
 ******************************************************************************/
-cBool chal_trace_cfg_hub_atb2pti (CHAL_HANDLE handle, cBool twobit_mode, cBool intlv_mode, cBool pti_en, cUInt8 match_id);
+	cBool chal_trace_cfg_hub_atb2pti(CHAL_HANDLE handle, cBool twobit_mode,
+					 cBool intlv_mode, cBool pti_en,
+					 cUInt8 match_id);
 
 /**
 *
@@ -454,7 +442,8 @@ cBool chal_trace_cfg_hub_atb2pti (CHAL_HANDLE handle, cBool twobit_mode, cBool i
 *  @note    
 *
 ******************************************************************************/
-cBool chal_trace_cfg_hub_atb2ocp_sw_id (CHAL_HANDLE handle, cUInt8 sw, cUInt8 atb_id);
+	cBool chal_trace_cfg_hub_atb2ocp_sw_id(CHAL_HANDLE handle, cUInt8 sw,
+					       cUInt8 atb_id);
 
 /**
 *
@@ -469,7 +458,9 @@ cBool chal_trace_cfg_hub_atb2ocp_sw_id (CHAL_HANDLE handle, cUInt8 sw, cUInt8 at
 *  @note    
 *
 ******************************************************************************/
-cBool chal_trace_cfg_hub_atb2ocp_filter_id (CHAL_HANDLE handle, cUInt8 filter, cUInt8 atb_id);
+	cBool chal_trace_cfg_hub_atb2ocp_filter_id(CHAL_HANDLE handle,
+						   cUInt8 filter,
+						   cUInt8 atb_id);
 
 /**
 *
@@ -484,7 +475,8 @@ cBool chal_trace_cfg_hub_atb2ocp_filter_id (CHAL_HANDLE handle, cUInt8 filter, c
 *  @note    
 *
 ******************************************************************************/
-cBool chal_trace_cfg_fabric_apb2atb_atb_id (CHAL_HANDLE handle, cUInt8 cpu_n, cUInt8 atb_id);
+	cBool chal_trace_cfg_fabric_apb2atb_atb_id(CHAL_HANDLE handle,
+						   cUInt8 cpu_n, cUInt8 atb_id);
 
 /**
 *
@@ -498,7 +490,8 @@ cBool chal_trace_cfg_fabric_apb2atb_atb_id (CHAL_HANDLE handle, cUInt8 cpu_n, cU
 *  @note    
 *
 ******************************************************************************/
-cBool chal_trace_cfg_fabric_apb2atb_stall_mode (CHAL_HANDLE handle, cBool stall_mode);
+	cBool chal_trace_cfg_fabric_apb2atb_stall_mode(CHAL_HANDLE handle,
+						       cBool stall_mode);
 
 /**
 *
@@ -512,7 +505,7 @@ cBool chal_trace_cfg_fabric_apb2atb_stall_mode (CHAL_HANDLE handle, cBool stall_
 *  @note    
 *
 ******************************************************************************/
-cBool chal_trace_cfg_comms_ocp2atb (CHAL_HANDLE handle, cUInt8 atb_id);
+	cBool chal_trace_cfg_comms_ocp2atb(CHAL_HANDLE handle, cUInt8 atb_id);
 
 /**
 *
@@ -526,8 +519,8 @@ cBool chal_trace_cfg_comms_ocp2atb (CHAL_HANDLE handle, cUInt8 atb_id);
 *  @note    
 *
 ******************************************************************************/
-cBool chal_trace_cfg_hub_ocp2atb (CHAL_HANDLE handle, cUInt8 atb_id);
-#endif //_HERA_
+	cBool chal_trace_cfg_hub_ocp2atb(CHAL_HANDLE handle, cUInt8 atb_id);
+#endif				//_HERA_
 
 /**
 *
@@ -546,7 +539,9 @@ cBool chal_trace_cfg_hub_ocp2atb (CHAL_HANDLE handle, cUInt8 atb_id);
 *           Reset value is 0x0.
 *
 ******************************************************************************/
-cBool chal_trace_funnel_set_enable (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type, cUInt8 port_n, cBool enable);
+	cBool chal_trace_funnel_set_enable(CHAL_HANDLE handle,
+					   CHAL_TRACE_FUNNEL_t funnel_type,
+					   cUInt8 port_n, cBool enable);
 
 /**
 *
@@ -566,7 +561,10 @@ cBool chal_trace_funnel_set_enable (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funn
 *           Reset value is 0x3.
 *
 ******************************************************************************/
-cBool chal_trace_funnel_set_min_hold_time (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type, cUInt8 min_hold_time);
+	cBool chal_trace_funnel_set_min_hold_time(CHAL_HANDLE handle,
+						  CHAL_TRACE_FUNNEL_t
+						  funnel_type,
+						  cUInt8 min_hold_time);
 
 /**
 *
@@ -598,7 +596,9 @@ cBool chal_trace_funnel_set_min_hold_time (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL
 *           sources are off and the system is drained.
 *
 ******************************************************************************/
-cBool chal_trace_funnel_set_priority (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type, cUInt8 port_n, cUInt8 priority);
+	cBool chal_trace_funnel_set_priority(CHAL_HANDLE handle,
+					     CHAL_TRACE_FUNNEL_t funnel_type,
+					     cUInt8 port_n, cUInt8 priority);
 
 /**
 *
@@ -618,7 +618,9 @@ cBool chal_trace_funnel_set_priority (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t fu
 *           At reset integration functionality is disabled.
 *
 ******************************************************************************/
-cBool chal_trace_funnel_set_itctrl (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type, cUInt8 mode);
+	cBool chal_trace_funnel_set_itctrl(CHAL_HANDLE handle,
+					   CHAL_TRACE_FUNNEL_t funnel_type,
+					   cUInt8 mode);
 
 /**
 *
@@ -640,7 +642,9 @@ cBool chal_trace_funnel_set_itctrl (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funn
 *           Bit-set marks the bit in the CTV.
 *
 ******************************************************************************/
-cBool chal_trace_funnel_set_claim_tag_set (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type, cUInt8 ctv);
+	cBool chal_trace_funnel_set_claim_tag_set(CHAL_HANDLE handle,
+						  CHAL_TRACE_FUNNEL_t
+						  funnel_type, cUInt8 ctv);
 
 /**
 *
@@ -661,7 +665,9 @@ cBool chal_trace_funnel_set_claim_tag_set (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL
 *           This is 0 on reset.
 *
 ******************************************************************************/
-cBool chal_trace_funnel_set_claim_tag_clear (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type, cUInt8 ctv);
+	cBool chal_trace_funnel_set_claim_tag_clear(CHAL_HANDLE handle,
+						    CHAL_TRACE_FUNNEL_t
+						    funnel_type, cUInt8 ctv);
 
 /**
 *
@@ -677,7 +683,9 @@ cBool chal_trace_funnel_set_claim_tag_clear (CHAL_HANDLE handle, CHAL_TRACE_FUNN
 *           invalid write has the effect of removing write access. Reserved RAZ/SBZP.
 *
 ******************************************************************************/
-cBool chal_trace_funnel_set_lock_access(CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type, cUInt32 write_access_code);
+	cBool chal_trace_funnel_set_lock_access(CHAL_HANDLE handle,
+						CHAL_TRACE_FUNNEL_t funnel_type,
+						cUInt32 write_access_code);
 
 /**
 *
@@ -707,7 +715,9 @@ cBool chal_trace_funnel_set_lock_access(CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t 
 *           Register and PADDRDBG[31] see the CoreSight Architecture Specification.
 *
 ******************************************************************************/
-cUInt32 chal_trace_funnel_get_lock_status (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type);
+	cUInt32 chal_trace_funnel_get_lock_status(CHAL_HANDLE handle,
+						  CHAL_TRACE_FUNNEL_t
+						  funnel_type);
 
 /**
 *
@@ -721,7 +731,8 @@ cUInt32 chal_trace_funnel_get_lock_status (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL
 *  @note    
 *
 ******************************************************************************/
-cBool chal_trace_funnel_locked (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type);
+	cBool chal_trace_funnel_locked(CHAL_HANDLE handle,
+				       CHAL_TRACE_FUNNEL_t funnel_type);
 
 /**
 *
@@ -749,7 +760,9 @@ cBool chal_trace_funnel_locked (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_t
 *           See the CoreSight Architecture Specification for more information.
 *
 ******************************************************************************/
-cUInt32 chal_trace_funnel_get_auth_status (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type);
+	cUInt32 chal_trace_funnel_get_auth_status(CHAL_HANDLE handle,
+						  CHAL_TRACE_FUNNEL_t
+						  funnel_type);
 
 /**
 *
@@ -769,7 +782,9 @@ cUInt32 chal_trace_funnel_get_auth_status (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL
 *           ports are connected. 0x0 and 0x1 are illegal values. 
 *
 ******************************************************************************/
-cUInt32 chal_trace_funnel_get_device_id (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type);
+	cUInt32 chal_trace_funnel_get_device_id(CHAL_HANDLE handle,
+						CHAL_TRACE_FUNNEL_t
+						funnel_type);
 
 /**
 *
@@ -787,7 +802,9 @@ cUInt32 chal_trace_funnel_get_device_id (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t
 *           Main type/class.
 *
 ******************************************************************************/
-cUInt32 chal_trace_funnel_get_device_type_identifier (CHAL_HANDLE handle, CHAL_TRACE_FUNNEL_t funnel_type);
+	cUInt32 chal_trace_funnel_get_device_type_identifier(CHAL_HANDLE handle,
+							     CHAL_TRACE_FUNNEL_t
+							     funnel_type);
 
 /**
 *
@@ -801,7 +818,8 @@ cUInt32 chal_trace_funnel_get_device_type_identifier (CHAL_HANDLE handle, CHAL_T
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_gic_set_config (CHAL_HANDLE handle, CHAL_TRACE_GIC_CONF_t * p_gic_config);
+	cBool chal_trace_gic_set_config(CHAL_HANDLE handle,
+					CHAL_TRACE_GIC_CONF_t * p_gic_config);
 
 /**
 *
@@ -815,7 +833,8 @@ cBool chal_trace_gic_set_config (CHAL_HANDLE handle, CHAL_TRACE_GIC_CONF_t * p_g
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_gic_get_config (CHAL_HANDLE handle, CHAL_TRACE_GIC_CONF_t * p_gic_config);
+	cBool chal_trace_gic_get_config(CHAL_HANDLE handle,
+					CHAL_TRACE_GIC_CONF_t * p_gic_config);
 
 /**
 *
@@ -829,7 +848,7 @@ cBool chal_trace_gic_get_config (CHAL_HANDLE handle, CHAL_TRACE_GIC_CONF_t * p_g
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_gic_set_outid (CHAL_HANDLE handle, cUInt8 atb_id);
+	cBool chal_trace_gic_set_outid(CHAL_HANDLE handle, cUInt8 atb_id);
 
 /**
 *
@@ -844,7 +863,8 @@ cBool chal_trace_gic_set_outid (CHAL_HANDLE handle, cUInt8 atb_id);
 *           When CTRL_SRC=0 writes are ignored.
 * 
 ******************************************************************************/
-cBool chal_trace_gic_set_cmd (CHAL_HANDLE handle, CHAL_TRACE_LOCAL_CMD_t command);
+	cBool chal_trace_gic_set_cmd(CHAL_HANDLE handle,
+				     CHAL_TRACE_LOCAL_CMD_t command);
 
 /**
 *
@@ -857,7 +877,7 @@ cBool chal_trace_gic_set_cmd (CHAL_HANDLE handle, CHAL_TRACE_LOCAL_CMD_t command
 *  @note    Latency Measurement State. When set, measurements are enabled.
 * 
 ******************************************************************************/
-cBool chal_trace_gic_get_status (CHAL_HANDLE handle);
+	cBool chal_trace_gic_get_status(CHAL_HANDLE handle);
 
 /**
 *
@@ -871,7 +891,8 @@ cBool chal_trace_gic_get_status (CHAL_HANDLE handle);
 *  @note    Reports the number of APB clock cycles the last time that the interrupt was active.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_gic_get_latency (CHAL_HANDLE handle, CHAL_TRACE_GIC_LAT_t fiq_irq);
+	cUInt32 chal_trace_gic_get_latency(CHAL_HANDLE handle,
+					   CHAL_TRACE_GIC_LAT_t fiq_irq);
 
 /**
 *
@@ -885,7 +906,7 @@ cUInt32 chal_trace_gic_get_latency (CHAL_HANDLE handle, CHAL_TRACE_GIC_LAT_t fiq
 *  @note    
 *
 ******************************************************************************/
-cBool chal_trace_pwrmgr_set_atb_id (CHAL_HANDLE handle, cUInt8 atb_id);
+	cBool chal_trace_pwrmgr_set_atb_id(CHAL_HANDLE handle, cUInt8 atb_id);
 
 /**
 *
@@ -900,7 +921,10 @@ cBool chal_trace_pwrmgr_set_atb_id (CHAL_HANDLE handle, cUInt8 atb_id);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_axi_set_atm_config (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t axitrace_type, CHAL_TRACE_ATM_CONF_t * p_atm_config);
+	cBool chal_trace_axi_set_atm_config(CHAL_HANDLE handle,
+					    CHAL_TRACE_AXITRACE_t axitrace_type,
+					    CHAL_TRACE_ATM_CONF_t *
+					    p_atm_config);
 
 /**
 *
@@ -915,7 +939,10 @@ cBool chal_trace_axi_set_atm_config (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t a
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_axi_get_atm_config (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t axitrace_type, CHAL_TRACE_ATM_CONF_t * p_atm_config);
+	cBool chal_trace_axi_get_atm_config(CHAL_HANDLE handle,
+					    CHAL_TRACE_AXITRACE_t axitrace_type,
+					    CHAL_TRACE_ATM_CONF_t *
+					    p_atm_config);
 
 /**
 *
@@ -931,7 +958,9 @@ cBool chal_trace_axi_get_atm_config (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t a
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_axi_set_atm_outid (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t axitrace_type, cUInt8 w_atb_id, cUInt8 r_atb_id);
+	cBool chal_trace_axi_set_atm_outid(CHAL_HANDLE handle,
+					   CHAL_TRACE_AXITRACE_t axitrace_type,
+					   cUInt8 w_atb_id, cUInt8 r_atb_id);
 
 /**
 *
@@ -947,7 +976,9 @@ cBool chal_trace_axi_set_atm_outid (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t ax
 *           When CTRL_SRC=0 writes are ignored.
 * 
 ******************************************************************************/
-cBool chal_trace_axi_set_atm_cmd (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t axitrace_type, CHAL_TRACE_LOCAL_CMD_t cmd);
+	cBool chal_trace_axi_set_atm_cmd(CHAL_HANDLE handle,
+					 CHAL_TRACE_AXITRACE_t axitrace_type,
+					 CHAL_TRACE_LOCAL_CMD_t cmd);
 
 /**
 *
@@ -971,7 +1002,8 @@ cBool chal_trace_axi_set_atm_cmd (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t axit
 *           Bit Field 0 Read Trace Clock-Crossing FIFO Empty.
 *
 ******************************************************************************/
-cUInt32 chal_trace_axi_get_status (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t axitrace_type);
+	cUInt32 chal_trace_axi_get_status(CHAL_HANDLE handle,
+					  CHAL_TRACE_AXITRACE_t axitrace_type);
 
 /**
 *
@@ -985,7 +1017,9 @@ cUInt32 chal_trace_axi_get_status (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t axi
 *  @note    
 *
 ******************************************************************************/
-cUInt32 chal_trace_axi_get_status_sat (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t axitrace_type);
+	cUInt32 chal_trace_axi_get_status_sat(CHAL_HANDLE handle,
+					      CHAL_TRACE_AXITRACE_t
+					      axitrace_type);
 
 /**
 *
@@ -1000,7 +1034,9 @@ cUInt32 chal_trace_axi_get_status_sat (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t
 *  @note    
 *
 ******************************************************************************/
-cUInt32 chal_trace_axi_get_count (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t axitrace_type, CHAL_TRACE_AXITRACE_COUNT_t counter);
+	cUInt32 chal_trace_axi_get_count(CHAL_HANDLE handle,
+					 CHAL_TRACE_AXITRACE_t axitrace_type,
+					 CHAL_TRACE_AXITRACE_COUNT_t counter);
 
 /**
 *
@@ -1018,13 +1054,12 @@ cUInt32 chal_trace_axi_get_count (CHAL_HANDLE handle, CHAL_TRACE_AXITRACE_t axit
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_axi_set_filter (
-        CHAL_HANDLE handle, 
-        CHAL_TRACE_AXITRACE_t axitrace_type, 
-        cUInt8 filter_num,
-        CHAL_TRACE_AXI_FILTER_CONF_t *filter_config, 
-        cUInt32 addr_low, 
-        cUInt32 addr_high);
+	cBool chal_trace_axi_set_filter(CHAL_HANDLE handle,
+					CHAL_TRACE_AXITRACE_t axitrace_type,
+					cUInt8 filter_num,
+					CHAL_TRACE_AXI_FILTER_CONF_t *
+					filter_config, cUInt32 addr_low,
+					cUInt32 addr_high);
 
 /**
 *
@@ -1039,7 +1074,9 @@ cBool chal_trace_axi_set_filter (
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_control (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cBool enable);
+	cBool chal_trace_cti_set_control(CHAL_HANDLE handle,
+					 CHAL_TRACE_CTI_t cti_type,
+					 cBool enable);
 
 /**
 *
@@ -1054,7 +1091,9 @@ cBool chal_trace_cti_set_control (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_int_ack (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 int_ack);
+	cBool chal_trace_cti_set_int_ack(CHAL_HANDLE handle,
+					 CHAL_TRACE_CTI_t cti_type,
+					 cUInt8 int_ack);
 
 /**
 *
@@ -1069,7 +1108,9 @@ cBool chal_trace_cti_set_int_ack (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_app_set (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 channel);
+	cBool chal_trace_cti_set_app_set(CHAL_HANDLE handle,
+					 CHAL_TRACE_CTI_t cti_type,
+					 cUInt8 channel);
 
 /**
 *
@@ -1084,7 +1125,9 @@ cBool chal_trace_cti_set_app_set (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_app_clear (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 channel);
+	cBool chal_trace_cti_set_app_clear(CHAL_HANDLE handle,
+					   CHAL_TRACE_CTI_t cti_type,
+					   cUInt8 channel);
 
 /**
 *
@@ -1099,7 +1142,9 @@ cBool chal_trace_cti_set_app_clear (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_typ
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_app_pulse (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 channel);
+	cBool chal_trace_cti_set_app_pulse(CHAL_HANDLE handle,
+					   CHAL_TRACE_CTI_t cti_type,
+					   cUInt8 channel);
 
 /**
 *
@@ -1115,8 +1160,10 @@ cBool chal_trace_cti_set_app_pulse (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_typ
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_in_en (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,  cUInt8 n_trigger, cUInt8 channel);
- 
+	cBool chal_trace_cti_set_in_en(CHAL_HANDLE handle,
+				       CHAL_TRACE_CTI_t cti_type,
+				       cUInt8 n_trigger, cUInt8 channel);
+
 /**
 *
 *  @brief  Enables a channel event to generate CTITRIGOUT.
@@ -1131,8 +1178,10 @@ cBool chal_trace_cti_set_in_en (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,  
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_out_en (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,  cUInt8 n_trigger, cUInt8 channel);
- 
+	cBool chal_trace_cti_set_out_en(CHAL_HANDLE handle,
+					CHAL_TRACE_CTI_t cti_type,
+					cUInt8 n_trigger, cUInt8 channel);
+
 /**
 *
 *  @brief  Reads CTI Trigger In Status
@@ -1145,7 +1194,8 @@ cBool chal_trace_cti_set_out_en (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, 
 *  @note    Bit Field 7:0 TRIGINSTATUS
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_trig_in_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_trig_in_status(CHAL_HANDLE handle,
+						  CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1159,7 +1209,8 @@ cUInt32 chal_trace_cti_get_trig_in_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t 
 *  @note    Bit Field 7:0 TRIGOUTSTATUS
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_trig_out_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_trig_out_status(CHAL_HANDLE handle,
+						   CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1173,7 +1224,8 @@ cUInt32 chal_trace_cti_get_trig_out_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t
 *  @note    Bit Field 3:0 CHINSTATUS
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_ch_in_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_ch_in_status(CHAL_HANDLE handle,
+						CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1187,7 +1239,8 @@ cUInt32 chal_trace_cti_get_ch_in_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t ct
 *  @note    Bit Field 3:0 TRIGOUTSTATUS
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_ch_out_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_ch_out_status(CHAL_HANDLE handle,
+						 CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1202,7 +1255,9 @@ cUInt32 chal_trace_cti_get_ch_out_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t c
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_ch_gate (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 channel);
+	cBool chal_trace_cti_set_ch_gate(CHAL_HANDLE handle,
+					 CHAL_TRACE_CTI_t cti_type,
+					 cUInt8 channel);
 
 /**
 *
@@ -1222,7 +1277,9 @@ cBool chal_trace_cti_set_ch_gate (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 *           Bit Field 0 ETMEXTIN1EDGE
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_asic_control (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 triger_output);
+	cBool chal_trace_cti_set_asic_control(CHAL_HANDLE handle,
+					      CHAL_TRACE_CTI_t cti_type,
+					      cUInt8 triger_output);
 
 /**
 *
@@ -1237,7 +1294,9 @@ cBool chal_trace_cti_set_asic_control (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_it_ch_in_ack (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 channel);
+	cBool chal_trace_cti_set_it_ch_in_ack(CHAL_HANDLE handle,
+					      CHAL_TRACE_CTI_t cti_type,
+					      cUInt8 channel);
 
 /**
 *
@@ -1252,8 +1311,10 @@ cBool chal_trace_cti_set_it_ch_in_ack (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_it_trig_in_ack (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 trigger);
- 
+	cBool chal_trace_cti_set_it_trig_in_ack(CHAL_HANDLE handle,
+						CHAL_TRACE_CTI_t cti_type,
+						cUInt8 trigger);
+
 /**
 *
 *  @brief  Set Integ. Test Channel Out
@@ -1267,8 +1328,10 @@ cBool chal_trace_cti_set_it_trig_in_ack (CHAL_HANDLE handle, CHAL_TRACE_CTI_t ct
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_it_ch_out (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 channel);
- 
+	cBool chal_trace_cti_set_it_ch_out(CHAL_HANDLE handle,
+					   CHAL_TRACE_CTI_t cti_type,
+					   cUInt8 channel);
+
 /**
 *
 *  @brief  Set Integ. Test Trigger Out
@@ -1282,8 +1345,10 @@ cBool chal_trace_cti_set_it_ch_out (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_typ
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_it_trig_out (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 trigger);
- 
+	cBool chal_trace_cti_set_it_trig_out(CHAL_HANDLE handle,
+					     CHAL_TRACE_CTI_t cti_type,
+					     cUInt8 trigger);
+
 /**
 *
 *  @brief  Read Integ. Test Channel Out Ack
@@ -1296,7 +1361,8 @@ cBool chal_trace_cti_set_it_trig_out (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_t
 *  @note    Bit Field 3:0 CTCHOUTACK. Reads value of CTCHOUTACK.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_it_ch_out_ack (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_it_ch_out_ack(CHAL_HANDLE handle,
+						 CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1310,7 +1376,8 @@ cUInt32 chal_trace_cti_get_it_ch_out_ack (CHAL_HANDLE handle, CHAL_TRACE_CTI_t c
 *  @note    Bit Field 7:0 CTTRIGOUTACK. Reads value of CTTRIGOUTACK.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_it_trig_out_ack (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_it_trig_out_ack(CHAL_HANDLE handle,
+						   CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1324,7 +1391,8 @@ cUInt32 chal_trace_cti_get_it_trig_out_ack (CHAL_HANDLE handle, CHAL_TRACE_CTI_t
 *  @note    Bit Field 3:0 CTCHIN. Reads value of CTCHIN.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_it_ch_in (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_it_ch_in(CHAL_HANDLE handle,
+					    CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1338,7 +1406,8 @@ cUInt32 chal_trace_cti_get_it_ch_in (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_ty
 *  @note    Bit Field 7:0 CTTRIGIN. Reads value of CTTRIGIN.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_it_trig_in (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_it_trig_in(CHAL_HANDLE handle,
+					      CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1353,7 +1422,9 @@ cUInt32 chal_trace_cti_get_it_trig_in (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_int_mode_control (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cBool enable);
+	cBool chal_trace_cti_set_int_mode_control(CHAL_HANDLE handle,
+						  CHAL_TRACE_CTI_t cti_type,
+						  cBool enable);
 
 /**
 *
@@ -1368,8 +1439,10 @@ cBool chal_trace_cti_set_int_mode_control (CHAL_HANDLE handle, CHAL_TRACE_CTI_t 
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_claim_set (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 channel);
- 
+	cBool chal_trace_cti_set_claim_set(CHAL_HANDLE handle,
+					   CHAL_TRACE_CTI_t cti_type,
+					   cUInt8 channel);
+
 /**
 *
 *  @brief  Set Claim Tag Clear
@@ -1383,7 +1456,9 @@ cBool chal_trace_cti_set_claim_set (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_typ
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_claim_clr (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 channel);
+	cBool chal_trace_cti_set_claim_clr(CHAL_HANDLE handle,
+					   CHAL_TRACE_CTI_t cti_type,
+					   cUInt8 channel);
 
 /**
 *
@@ -1398,7 +1473,9 @@ cBool chal_trace_cti_set_claim_clr (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_typ
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_cti_set_lock_access (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt32 control);
+	cBool chal_trace_cti_set_lock_access(CHAL_HANDLE handle,
+					     CHAL_TRACE_CTI_t cti_type,
+					     cUInt32 control);
 
 /**
 *
@@ -1413,7 +1490,8 @@ cBool chal_trace_cti_set_lock_access (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_t
 *           Bit Field 0 Lock implemented.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_lock_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_lock_status(CHAL_HANDLE handle,
+					       CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1428,7 +1506,8 @@ cUInt32 chal_trace_cti_get_lock_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti
 *           Bit Field 1:0 Open invasive debug enabled.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_auth_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_auth_status(CHAL_HANDLE handle,
+					       CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1444,7 +1523,8 @@ cUInt32 chal_trace_cti_get_auth_status (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti
 *           Bit Field 4:0 Main class.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_dev_id (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_dev_id(CHAL_HANDLE handle,
+					  CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1459,7 +1539,8 @@ cUInt32 chal_trace_cti_get_dev_id (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type
 *           Bit Field 3:0 Main class.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_dev_type (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type);
+	cUInt32 chal_trace_cti_get_dev_type(CHAL_HANDLE handle,
+					    CHAL_TRACE_CTI_t cti_type);
 
 /**
 *
@@ -1474,7 +1555,9 @@ cUInt32 chal_trace_cti_get_dev_type (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_ty
 *  @note    Bit Field 7:0 Peripheral ID n
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_per_id (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 n_peripheral);
+	cUInt32 chal_trace_cti_get_per_id(CHAL_HANDLE handle,
+					  CHAL_TRACE_CTI_t cti_type,
+					  cUInt8 n_peripheral);
 
 /**
 *
@@ -1489,7 +1572,9 @@ cUInt32 chal_trace_cti_get_per_id (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type
 *  @note    Bit Field 7:0 Component ID n
 * 
 ******************************************************************************/
-cUInt32 chal_trace_cti_get_comp_id (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type, cUInt8 n_component);
+	cUInt32 chal_trace_cti_get_comp_id(CHAL_HANDLE handle,
+					   CHAL_TRACE_CTI_t cti_type,
+					   cUInt8 n_component);
 
 /**
 *
@@ -1502,7 +1587,7 @@ cUInt32 chal_trace_cti_get_comp_id (CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_typ
 *  @note    Bit Field 31:0 RDP. Depth in words of trace memory, fixed at synthesis.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_ram_depth (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_ram_depth(CHAL_HANDLE handle);
 
 /**
 *
@@ -1518,7 +1603,7 @@ cUInt32 chal_trace_etb_get_ram_depth (CHAL_HANDLE handle);
 *           Bit Field 0 Full. RAM write pointer has wrapped.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_status (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_status(CHAL_HANDLE handle);
 
 /**
 *
@@ -1531,7 +1616,7 @@ cUInt32 chal_trace_etb_get_status (CHAL_HANDLE handle);
 *  @note    Bit Field 31:0 RRD. Read data from trace RAM.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_ram_read_data (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_ram_read_data(CHAL_HANDLE handle);
 
 /**
 *
@@ -1545,7 +1630,8 @@ cUInt32 chal_trace_etb_get_ram_read_data (CHAL_HANDLE handle);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_ram_read_pointer (CHAL_HANDLE handle, cUInt32 rrp);
+	cBool chal_trace_etb_set_ram_read_pointer(CHAL_HANDLE handle,
+						  cUInt32 rrp);
 
 /**
 *
@@ -1559,7 +1645,8 @@ cBool chal_trace_etb_set_ram_read_pointer (CHAL_HANDLE handle, cUInt32 rrp);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_ram_write_pointer (CHAL_HANDLE handle, cUInt32 rwp);
+	cBool chal_trace_etb_set_ram_write_pointer(CHAL_HANDLE handle,
+						   cUInt32 rwp);
 
 /**
 *
@@ -1573,7 +1660,8 @@ cBool chal_trace_etb_set_ram_write_pointer (CHAL_HANDLE handle, cUInt32 rwp);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_trigger_counter (CHAL_HANDLE handle, cUInt32 trg);
+	cBool chal_trace_etb_set_trigger_counter(CHAL_HANDLE handle,
+						 cUInt32 trg);
 
 /**
 *
@@ -1587,7 +1675,7 @@ cBool chal_trace_etb_set_trigger_counter (CHAL_HANDLE handle, cUInt32 trg);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_control (CHAL_HANDLE handle, cBool enable);
+	cBool chal_trace_etb_set_control(CHAL_HANDLE handle, cBool enable);
 
 /**
 *
@@ -1601,7 +1689,8 @@ cBool chal_trace_etb_set_control (CHAL_HANDLE handle, cBool enable);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_ram_write_data (CHAL_HANDLE handle, cUInt32 rwd);
+	cBool chal_trace_etb_set_ram_write_data(CHAL_HANDLE handle,
+						cUInt32 rwd);
 
 /**
 *
@@ -1615,7 +1704,7 @@ cBool chal_trace_etb_set_ram_write_data (CHAL_HANDLE handle, cUInt32 rwd);
 *           Bit Field 0 FlInProg. Flush in progress.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_ff_status (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_ff_status(CHAL_HANDLE handle);
 
 /**
 *
@@ -1629,7 +1718,8 @@ cUInt32 chal_trace_etb_get_ff_status (CHAL_HANDLE handle);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_ff_control (CHAL_HANDLE handle, CHAL_TRACE_ETB_FF_CONF_t * ffcr);
+	cBool chal_trace_etb_set_ff_control(CHAL_HANDLE handle,
+					    CHAL_TRACE_ETB_FF_CONF_t * ffcr);
 
 /**
 *
@@ -1644,7 +1734,8 @@ cBool chal_trace_etb_set_ff_control (CHAL_HANDLE handle, CHAL_TRACE_ETB_FF_CONF_
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_it_misc_op0 (CHAL_HANDLE handle, cBool full, cBool acq_comp);
+	cBool chal_trace_etb_set_it_misc_op0(CHAL_HANDLE handle, cBool full,
+					     cBool acq_comp);
 
 /**
 *
@@ -1659,7 +1750,8 @@ cBool chal_trace_etb_set_it_misc_op0 (CHAL_HANDLE handle, cBool full, cBool acq_
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_it_tr_fl_in_ack (CHAL_HANDLE handle, cBool trig, cBool flush);
+	cBool chal_trace_etb_set_it_tr_fl_in_ack(CHAL_HANDLE handle, cBool trig,
+						 cBool flush);
 
 /**
 *
@@ -1673,7 +1765,7 @@ cBool chal_trace_etb_set_it_tr_fl_in_ack (CHAL_HANDLE handle, cBool trig, cBool 
 *           Bit Field 0 TRIGIN. Read value of TRIGIN.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_it_tr_fl_in (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_it_tr_fl_in(CHAL_HANDLE handle);
 
 /**
 *
@@ -1690,7 +1782,7 @@ cUInt32 chal_trace_etb_get_it_tr_fl_in (CHAL_HANDLE handle);
 *           Bit Field 0 ATDATA_0. Read value of ATDATAS[0].
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_it_atb_data0 (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_it_atb_data0(CHAL_HANDLE handle);
 
 /**
 *
@@ -1705,7 +1797,8 @@ cUInt32 chal_trace_etb_get_it_atb_data0 (CHAL_HANDLE handle);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_it_atb_ctrl2 (CHAL_HANDLE handle, cBool afvalids, cBool atreadys);
+	cBool chal_trace_etb_set_it_atb_ctrl2(CHAL_HANDLE handle,
+					      cBool afvalids, cBool atreadys);
 
 /**
 *
@@ -1718,7 +1811,7 @@ cBool chal_trace_etb_set_it_atb_ctrl2 (CHAL_HANDLE handle, cBool afvalids, cBool
 *  @note    Bit Field 6:0 ITATIDS. Read value of ATIDS.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_it_atb_ctrl1 (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_it_atb_ctrl1(CHAL_HANDLE handle);
 
 /**
 *
@@ -1733,7 +1826,7 @@ cUInt32 chal_trace_etb_get_it_atb_ctrl1 (CHAL_HANDLE handle);
 *           Bit Field 0 ATVALID. Read value of ATVALIDS.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_it_atb_ctrl0 (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_it_atb_ctrl0(CHAL_HANDLE handle);
 
 /**
 *
@@ -1747,7 +1840,8 @@ cUInt32 chal_trace_etb_get_it_atb_ctrl0 (CHAL_HANDLE handle);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_int_mode_control (CHAL_HANDLE handle, cBool enable);
+	cBool chal_trace_etb_set_int_mode_control(CHAL_HANDLE handle,
+						  cBool enable);
 
 /**
 *
@@ -1761,7 +1855,7 @@ cBool chal_trace_etb_set_int_mode_control (CHAL_HANDLE handle, cBool enable);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_claim_set (CHAL_HANDLE handle, cUInt8 channel);
+	cBool chal_trace_etb_set_claim_set(CHAL_HANDLE handle, cUInt8 channel);
 
 /**
 *
@@ -1775,7 +1869,7 @@ cBool chal_trace_etb_set_claim_set (CHAL_HANDLE handle, cUInt8 channel);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_claim_clr (CHAL_HANDLE handle, cUInt8 channel);
+	cBool chal_trace_etb_set_claim_clr(CHAL_HANDLE handle, cUInt8 channel);
 
 /**
 *
@@ -1789,7 +1883,8 @@ cBool chal_trace_etb_set_claim_clr (CHAL_HANDLE handle, cUInt8 channel);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb_set_lock_access (CHAL_HANDLE handle, cUInt32 control);
+	cBool chal_trace_etb_set_lock_access(CHAL_HANDLE handle,
+					     cUInt32 control);
 
 /**
 *
@@ -1804,7 +1899,7 @@ cBool chal_trace_etb_set_lock_access (CHAL_HANDLE handle, cUInt32 control);
 *           Bit Field 0 Lock implemented.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_lock_status (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_lock_status(CHAL_HANDLE handle);
 
 /**
 *
@@ -1820,7 +1915,7 @@ cUInt32 chal_trace_etb_get_lock_status (CHAL_HANDLE handle);
 *           Bit Field 1:0 Open invasive debug enabled.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_auth_status (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_auth_status(CHAL_HANDLE handle);
 
 /**
 *
@@ -1833,7 +1928,7 @@ cUInt32 chal_trace_etb_get_auth_status (CHAL_HANDLE handle);
 *  @note    Bit Field 31:0 Device ID.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_dev_id (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_dev_id(CHAL_HANDLE handle);
 
 /**
 *
@@ -1847,7 +1942,7 @@ cUInt32 chal_trace_etb_get_dev_id (CHAL_HANDLE handle);
 *           Bit Field 3:0 Main class.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_dev_type (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb_get_dev_type(CHAL_HANDLE handle);
 
 /**
 *
@@ -1861,7 +1956,8 @@ cUInt32 chal_trace_etb_get_dev_type (CHAL_HANDLE handle);
 *  @note    Bit Field 7:0 Peripheral ID n
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_per_id (CHAL_HANDLE handle, cUInt8 n_peripheral);
+	cUInt32 chal_trace_etb_get_per_id(CHAL_HANDLE handle,
+					  cUInt8 n_peripheral);
 
 /**
 *
@@ -1875,10 +1971,9 @@ cUInt32 chal_trace_etb_get_per_id (CHAL_HANDLE handle, cUInt8 n_peripheral);
 *  @note    Bit Field 7:0 Component ID n
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb_get_comp_id (CHAL_HANDLE handle, cUInt8 n_component);
+	cUInt32 chal_trace_etb_get_comp_id(CHAL_HANDLE handle,
+					   cUInt8 n_component);
 
-
- 
 /**
 *
 *  @brief  Set ETB to AXI Configuration
@@ -1891,7 +1986,7 @@ cUInt32 chal_trace_etb_get_comp_id (CHAL_HANDLE handle, cUInt8 n_component);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb2axi_set_config (CHAL_HANDLE handle, cBool flush);
+	cBool chal_trace_etb2axi_set_config(CHAL_HANDLE handle, cBool flush);
 
 /**
 *
@@ -1905,8 +2000,8 @@ cBool chal_trace_etb2axi_set_config (CHAL_HANDLE handle, cBool flush);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_etb2axi_set_wr_ptr (CHAL_HANDLE handle, cUInt32 wr_ptr);
-  
+	cBool chal_trace_etb2axi_set_wr_ptr(CHAL_HANDLE handle, cUInt32 wr_ptr);
+
 /**
 *
 *  @brief  Read ETB to AXI Status
@@ -1919,7 +2014,7 @@ cBool chal_trace_etb2axi_set_wr_ptr (CHAL_HANDLE handle, cUInt32 wr_ptr);
 *           Power-of-two for memory size for data storage minus 2 (e.g., 18 = 1 MB).
 * 
 ******************************************************************************/
-cUInt32 chal_trace_etb2axi_get_status (CHAL_HANDLE handle);
+	cUInt32 chal_trace_etb2axi_get_status(CHAL_HANDLE handle);
 
 #if !defined(_SAMOA_)
 /**
@@ -1935,7 +2030,9 @@ cUInt32 chal_trace_etb2axi_get_status (CHAL_HANDLE handle);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_globperf_set_config (CHAL_HANDLE handle, cBool counter_stop_en, cUInt32 timeout);
+	cBool chal_trace_globperf_set_config(CHAL_HANDLE handle,
+					     cBool counter_stop_en,
+					     cUInt32 timeout);
 
 /**
 *
@@ -1949,7 +2046,8 @@ cBool chal_trace_globperf_set_config (CHAL_HANDLE handle, cBool counter_stop_en,
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_globperf_set_cmd (CHAL_HANDLE handle, CHAL_TRACE_GLB_CMD_t cmd);
+	cBool chal_trace_globperf_set_cmd(CHAL_HANDLE handle,
+					  CHAL_TRACE_GLB_CMD_t cmd);
 
 /**
 *
@@ -1964,7 +2062,7 @@ cBool chal_trace_globperf_set_cmd (CHAL_HANDLE handle, CHAL_TRACE_GLB_CMD_t cmd)
 *           Bit Field [0] Request status for GIC Trace
 * 
 ******************************************************************************/
-cUInt32 chal_trace_globperf_get_status (CHAL_HANDLE handle);
+	cUInt32 chal_trace_globperf_get_status(CHAL_HANDLE handle);
 
 /**
 *
@@ -1978,8 +2076,8 @@ cUInt32 chal_trace_globperf_get_status (CHAL_HANDLE handle);
 *           Bit Field [27:0] global down-counter value.
 * 
 ******************************************************************************/
-cUInt32 chal_trace_globperf_get_count (CHAL_HANDLE handle);
-#endif // !defined(_SAMOA_)
+	cUInt32 chal_trace_globperf_get_count(CHAL_HANDLE handle);
+#endif				// !defined(_SAMOA_)
 
 #if !defined(_HERA_)
 /**
@@ -2003,8 +2101,11 @@ cUInt32 chal_trace_globperf_get_count (CHAL_HANDLE handle);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_atb_stm_set_config (CHAL_HANDLE handle, cBool twobit_mode, cUInt8 break_limit, cUInt8 output_mode, cUInt8 atb_id);
-  
+	cBool chal_trace_atb_stm_set_config(CHAL_HANDLE handle,
+					    cBool twobit_mode,
+					    cUInt8 break_limit,
+					    cUInt8 output_mode, cUInt8 atb_id);
+
 /**
 *
 *  @brief  Set ATB_STM Master Enables Low/High
@@ -2022,8 +2123,9 @@ cBool chal_trace_atb_stm_set_config (CHAL_HANDLE handle, cBool twobit_mode, cUIn
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_atb_stm_set_en (CHAL_HANDLE handle, cUInt32 low_half, cUInt32 high_half);
-  
+	cBool chal_trace_atb_stm_set_en(CHAL_HANDLE handle, cUInt32 low_half,
+					cUInt32 high_half);
+
 /**
 *
 *  @brief  Return ATB_STM Master Enables Low/High
@@ -2036,7 +2138,7 @@ cBool chal_trace_atb_stm_set_en (CHAL_HANDLE handle, cUInt32 low_half, cUInt32 h
 *  @note    
 * 
 ******************************************************************************/
-cUInt32 chal_trace_atb_stm_get_en (CHAL_HANDLE handle, cBool high);
+	cUInt32 chal_trace_atb_stm_get_en(CHAL_HANDLE handle, cBool high);
 
 /**
 *
@@ -2057,7 +2159,8 @@ cUInt32 chal_trace_atb_stm_get_en (CHAL_HANDLE handle, cBool high);
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_atb_stm_set_sw (CHAL_HANDLE handle, cUInt32 low_half, cUInt32 high_half);
+	cBool chal_trace_atb_stm_set_sw(CHAL_HANDLE handle, cUInt32 low_half,
+					cUInt32 high_half);
 
 /**
 *
@@ -2071,7 +2174,7 @@ cBool chal_trace_atb_stm_set_sw (CHAL_HANDLE handle, cUInt32 low_half, cUInt32 h
 *  @note    
 * 
 ******************************************************************************/
-cUInt32 chal_trace_atb_stm_get_sw (CHAL_HANDLE handle, cBool high);
+	cUInt32 chal_trace_atb_stm_get_sw(CHAL_HANDLE handle, cBool high);
 
 /**
 *
@@ -2088,8 +2191,10 @@ cUInt32 chal_trace_atb_stm_get_sw (CHAL_HANDLE handle, cBool high);
 *  @note    atb_id used in this function is 6 bit unlike to other functions.
 * 
 ******************************************************************************/
-cBool chal_trace_sw_stm_set_config (CHAL_HANDLE handle, CHAL_TRACE_SWSTM_t swstm_st, cBool stall_mode, cUInt8 atb_id);
-  
+	cBool chal_trace_sw_stm_set_config(CHAL_HANDLE handle,
+					   CHAL_TRACE_SWSTM_t swstm_st,
+					   cBool stall_mode, cUInt8 atb_id);
+
 /**
 *
 *  @brief  Creates n-byte value with Channel nn.
@@ -2105,13 +2210,15 @@ cBool chal_trace_sw_stm_set_config (CHAL_HANDLE handle, CHAL_TRACE_SWSTM_t swstm
 *  @note    
 * 
 ******************************************************************************/
-cBool chal_trace_sw_stm_write (CHAL_HANDLE handle, CHAL_TRACE_SWSTM_t swstm_st, cUInt8 n_channel, cUInt8 n_bytes, cUInt32 value);
-#endif // !defined(_HERA_)
+	cBool chal_trace_sw_stm_write(CHAL_HANDLE handle,
+				      CHAL_TRACE_SWSTM_t swstm_st,
+				      cUInt8 n_channel, cUInt8 n_bytes,
+				      cUInt32 value);
+#endif				// !defined(_HERA_)
 
 /** @} */
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // _CHAL_TRACE_H_
+#endif				// _CHAL_TRACE_H_

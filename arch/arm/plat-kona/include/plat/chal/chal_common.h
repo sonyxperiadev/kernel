@@ -39,11 +39,8 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-
 /**
 *   common OS dependent headers
 ******************************************************************************/
 #include "plat/chal/chal_common_os.h"
-
-#endif //_CHAL_COMMON_H_
-
+#endif				//_CHAL_COMMON_H_

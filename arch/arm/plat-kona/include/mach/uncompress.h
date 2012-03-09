@@ -35,18 +35,21 @@
 static inline void putc(int c)
 {
 	/* data should be written to THR register only if THRE (LSR bit5) is set) */
-	while (0 == (__raw_readl(KONA_UART0_PA + UARTB_LSR_OFFSET) & UARTB_LSR_THRE_MASK ))
-	{
+	while (0 ==
+	       (__raw_readl(KONA_UART0_PA + UARTB_LSR_OFFSET) &
+		UARTB_LSR_THRE_MASK)) {
 	}
 
-	__raw_writel((unsigned long)c, KONA_UART0_PA + UARTB_RBR_THR_DLL_OFFSET);
+	__raw_writel((unsigned long)c,
+		     KONA_UART0_PA + UARTB_RBR_THR_DLL_OFFSET);
 }
 
 static inline void flush(void)
 {
 	/* Wait for the tx fifo to be empty and last char to be sent */
-	while (0 == (__raw_readl(KONA_UART0_PA + UARTB_LSR_OFFSET) & UARTB_LSR_TEMT_MASK ))
-	{
+	while (0 ==
+	       (__raw_readl(KONA_UART0_PA + UARTB_LSR_OFFSET) &
+		UARTB_LSR_TEMT_MASK)) {
 	}
 }
 

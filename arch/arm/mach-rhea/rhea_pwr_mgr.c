@@ -499,7 +499,8 @@ int __init rhea_pwr_mgr_init_sequencer(void)
 
 	pwr_mgr_init_sequencer(&rhea_pwr_mgr_info);
 
-	/* enable the power manager i2c sequencer */
+	/* pwr_mgr_init_sequencer function will disable the sequencer
+	re-enable the power manager i2c sequencer */
 	pwr_mgr_pm_i2c_enable(true);
 	return 0;
 }

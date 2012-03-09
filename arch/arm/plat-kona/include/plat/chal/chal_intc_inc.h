@@ -38,8 +38,8 @@
 #define CHAL_MAX_INT_NUM 224
 
 typedef struct {
-    cUInt32 dword[CHAL_MAX_INT_NUM/32];
-}chal_intc_mask_t;
+	cUInt32 dword[CHAL_MAX_INT_NUM / 32];
+} chal_intc_mask_t;
 
 #define INTC_WRITE32( regOffset, data)    CHAL_REG_WRITE32( ((cUInt32) h) + (regOffset), data)
 #define INTC_READ32( regOffset) CHAL_REG_READ32( ((cUInt32) h) + (regOffset))
@@ -58,19 +58,19 @@ typedef struct {
 //
 // Notes:
 //
-__forceinline void chal_intc_clear_interrupt(CHAL_HANDLE h, cUInt32 Id  ) 
+__forceinline void chal_intc_clear_interrupt(CHAL_HANDLE h, cUInt32 Id)
 {
 /* can't clear interrupts in CHIPREGS, need to clear in originating peripheral */
 #if 0
-    cUInt32 mask;
-    cUInt32 offset;
-    
-    offset = (Id/32)*4;
+	cUInt32 mask;
+	cUInt32 offset;
 
-    mask = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + offset);
-    mask &= ~(1 << (Id % 32));
-    INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + offset, mask);
-#endif    
+	offset = (Id / 32) * 4;
+
+	mask = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + offset);
+	mask &= ~(1 << (Id % 32));
+	INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + offset, mask);
+#endif
 }
 
 //==============================================================================
@@ -86,16 +86,17 @@ __forceinline void chal_intc_clear_interrupt(CHAL_HANDLE h, cUInt32 Id  )
 //
 // Notes:
 //
-__forceinline void chal_intc_clear_intr_mask(CHAL_HANDLE h, chal_intc_mask_t *mask ) 
+__forceinline void chal_intc_clear_intr_mask(CHAL_HANDLE h,
+					     chal_intc_mask_t * mask)
 {
 /* can't clear interrupts in CHIPREGS, need to clear in originating peripheral */
-#if 0    
-    cUInt32 i;
-    
-    for(i=0; i<CHAL_MAX_INT_NUM/32; i++)
-    {
-        INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + i*4, ~(mask->dword[i]));
-    }
+#if 0
+	cUInt32 i;
+
+	for (i = 0; i < CHAL_MAX_INT_NUM / 32; i++) {
+		INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + i * 4,
+			     ~(mask->dword[i]));
+	}
 #endif
 }
 
@@ -111,16 +112,16 @@ __forceinline void chal_intc_clear_intr_mask(CHAL_HANDLE h, chal_intc_mask_t *ma
 //
 // Notes:
 //
-__forceinline void chal_intc_enable_interrupt(CHAL_HANDLE h, cUInt32 Id ) 
+__forceinline void chal_intc_enable_interrupt(CHAL_HANDLE h, cUInt32 Id)
 {
-    cUInt32 mask;
-    cUInt32 offset;
-    
-    offset = (Id/32)*4;
+	cUInt32 mask;
+	cUInt32 offset;
 
-    mask = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + offset);
-    mask |= (1 << (Id % 32));
-    INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + offset, mask);
+	offset = (Id / 32) * 4;
+
+	mask = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + offset);
+	mask |= (1 << (Id % 32));
+	INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + offset, mask);
 
 }
 
@@ -136,16 +137,16 @@ __forceinline void chal_intc_enable_interrupt(CHAL_HANDLE h, cUInt32 Id )
 //
 // Notes:
 //
-__forceinline void chal_intc_disable_interrupt(CHAL_HANDLE h, cUInt32 Id) 
+__forceinline void chal_intc_disable_interrupt(CHAL_HANDLE h, cUInt32 Id)
 {
-    cUInt32 mask;
-    cUInt32 offset;
-    
-    offset = (Id/32)*4;
+	cUInt32 mask;
+	cUInt32 offset;
 
-    mask = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + offset);
-    mask &= ~(1 << (Id % 32));
-    INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + offset, mask);
+	offset = (Id / 32) * 4;
+
+	mask = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + offset);
+	mask &= ~(1 << (Id % 32));
+	INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + offset, mask);
 }
 
 //==============================================================================
@@ -162,23 +163,19 @@ __forceinline void chal_intc_disable_interrupt(CHAL_HANDLE h, cUInt32 Id)
 //
 // Notes:
 //
-__forceinline void chal_intc_disable_intr_mask(CHAL_HANDLE h, 
-                                           chal_intc_mask_t *mask
-                                          )
+__forceinline void chal_intc_disable_intr_mask(CHAL_HANDLE h,
+					       chal_intc_mask_t * mask)
 {
-   
-    cUInt32 i;
-    
-    
-    for(i=0; i<CHAL_MAX_INT_NUM/32; i++)
-    {
-        cUInt32 amask = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + (i*4));
-        amask &= ~(mask->dword[i]);
-        INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + (i*4), amask);
-    }
-   
-}
 
+	cUInt32 i;
+
+	for (i = 0; i < CHAL_MAX_INT_NUM / 32; i++) {
+		cUInt32 amask = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + (i * 4));
+		amask &= ~(mask->dword[i]);
+		INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + (i * 4), amask);
+	}
+
+}
 
 //==============================================================================
 //
@@ -193,18 +190,15 @@ __forceinline void chal_intc_disable_intr_mask(CHAL_HANDLE h,
 //
 // Notes:
 //
-__forceinline void chal_intc_restore_interrupts(CHAL_HANDLE h, 
-                                           chal_intc_mask_t *mask
-                                          )
+__forceinline void chal_intc_restore_interrupts(CHAL_HANDLE h,
+						chal_intc_mask_t * mask)
 {
-    cUInt32 i;
-    
-    
-    for(i=0; i<CHAL_MAX_INT_NUM/32; i++)
-    {
-        INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + i*4, mask->dword[i]);
-    }
-   
+	cUInt32 i;
+
+	for (i = 0; i < CHAL_MAX_INT_NUM / 32; i++) {
+		INTC_WRITE32(CHIPREG_MDM_IMR0_OFFSET + i * 4, mask->dword[i]);
+	}
+
 }
 
 //==============================================================================
@@ -220,19 +214,16 @@ __forceinline void chal_intc_restore_interrupts(CHAL_HANDLE h,
 //
 // Notes:
 //
-__forceinline void chal_intc_get_interrupt_mask(CHAL_HANDLE h, 
-                                           chal_intc_mask_t* mask) 
+__forceinline void chal_intc_get_interrupt_mask(CHAL_HANDLE h,
+						chal_intc_mask_t * mask)
 {
-    cUInt32 i;
+	cUInt32 i;
 
-    for(i=0; i<CHAL_MAX_INT_NUM/32; i++)
-    {
-        mask->dword[i] = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + i*4);
-    }
-    
+	for (i = 0; i < CHAL_MAX_INT_NUM / 32; i++) {
+		mask->dword[i] = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + i * 4);
+	}
+
 }
-
-
 
 //==============================================================================
 //
@@ -248,15 +239,14 @@ __forceinline void chal_intc_get_interrupt_mask(CHAL_HANDLE h,
 //
 // Notes:
 //
-__forceinline Boolean chal_intc_is_interrupt_enabled(CHAL_HANDLE h, cUInt32 Id ) 
+__forceinline Boolean chal_intc_is_interrupt_enabled(CHAL_HANDLE h, cUInt32 Id)
 {
-    
-    cUInt32 mask;
- 
-    mask = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + (Id/32)*4);
-    return ( (mask & (1 <<(Id % 32))) ? TRUE : FALSE);
 
-    
+	cUInt32 mask;
+
+	mask = INTC_READ32(CHIPREG_MDM_IMR0_OFFSET + (Id / 32) * 4);
+	return ((mask & (1 << (Id % 32))) ? TRUE : FALSE);
+
 }
 
 //==============================================================================
@@ -272,18 +262,16 @@ __forceinline Boolean chal_intc_is_interrupt_enabled(CHAL_HANDLE h, cUInt32 Id )
 //
 // Notes:
 //
-__forceinline void chal_intc_get_status(CHAL_HANDLE h, chal_intc_mask_t *status)
+__forceinline void chal_intc_get_status(CHAL_HANDLE h,
+					chal_intc_mask_t * status)
 {
-    cUInt32 i;
+	cUInt32 i;
 
-    for(i=0; i<CHAL_MAX_INT_NUM/32; i++)
-    {
-        status->dword[i] = INTC_READ32(CHIPREG_MDM_IMSR0_OFFSET + i*4);
-    }
+	for (i = 0; i < CHAL_MAX_INT_NUM / 32; i++) {
+		status->dword[i] =
+		    INTC_READ32(CHIPREG_MDM_IMSR0_OFFSET + i * 4);
+	}
 }
-
-
-
 
 //==============================================================================
 //
@@ -299,15 +287,14 @@ __forceinline void chal_intc_get_status(CHAL_HANDLE h, chal_intc_mask_t *status)
 //
 // Notes:
 //
-__forceinline Boolean chal_intc_is_interrupt_active(CHAL_HANDLE h, cUInt32 Id ) 
+__forceinline Boolean chal_intc_is_interrupt_active(CHAL_HANDLE h, cUInt32 Id)
 {
 
-    cUInt32 mask;
- 
-    mask = INTC_READ32(CHIPREG_MDM_IMSR0_OFFSET + (Id/32)*4);
-    return ( (mask & (1 <<(Id % 32))) ? TRUE : FALSE);
-}
+	cUInt32 mask;
 
+	mask = INTC_READ32(CHIPREG_MDM_IMSR0_OFFSET + (Id / 32) * 4);
+	return ((mask & (1 << (Id % 32))) ? TRUE : FALSE);
+}
 
 //==============================================================================
 //
@@ -322,11 +309,10 @@ __forceinline Boolean chal_intc_is_interrupt_active(CHAL_HANDLE h, cUInt32 Id )
 //
 // Notes:
 //
-__forceinline void chal_intc_set_soft_int(CHAL_HANDLE h, cUInt32 Id, cUInt32 cpu_mask)
+__forceinline void chal_intc_set_soft_int(CHAL_HANDLE h, cUInt32 Id,
+					  cUInt32 cpu_mask)
 {
 }
-
-
 
 //==============================================================================
 //
@@ -341,8 +327,7 @@ __forceinline void chal_intc_set_soft_int(CHAL_HANDLE h, cUInt32 Id, cUInt32 cpu
 //
 CHAL_HANDLE chal_intc_init(cUInt32 DeviceBaseAddress)
 {
-    return (CHAL_HANDLE)DeviceBaseAddress;
+	return (CHAL_HANDLE) DeviceBaseAddress;
 }
 
 #endif /* _CHAL_INTC_INC_H_ */
-

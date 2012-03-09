@@ -92,6 +92,10 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
 	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
 	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
+
+	/*Init ASR LPM to 2.9V
+	*/
+	{.map = 0, .addr = 0xD9, .val = 0x1F, .mask = 0xFF},
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
@@ -568,7 +572,7 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, 0
 	},
 	[BCMPMU_REGULATOR_HV5LDO] = {
-		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x22, 0
+		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV6LDO] = {
 		BCMPMU_REGULATOR_HV6LDO, &bcm59039_hv6ldo_data, 0x11, 0
@@ -580,7 +584,7 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 			BCMPMU_REGULATOR_HV8LDO, &bcm59039_hv8ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV9LDO] = {
-				BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0x00, 0
+				BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV10LDO] = {
 				BCMPMU_REGULATOR_HV10LDO, &bcm59039_hv10ldo_data, 0xAA, 0

@@ -30,10 +30,10 @@
 struct kona_timer;
 
 /* Channel specific data structures */
-typedef int (*intr_callback)(void *data);
+typedef int (*intr_callback) (void *data);
 
 enum timer_mode {
-	MODE_PERIODIC=0,
+	MODE_PERIODIC = 0,
 	MODE_ONESHOT,
 };
 
@@ -69,21 +69,20 @@ struct timer_ch_cfg {
  *  kona_timer_modules_init - Initialize the data structures
  *  that depcits the Kona timer modules
  */
-int kona_timer_modules_init (void);
+int kona_timer_modules_init(void);
 
 /*
  * kona_timer_module_set_rate - Set the speed in which a timer module should count
  * name - Name of the Timer to configure
  * rate - Speed 
  */
-int kona_timer_module_set_rate(char* name, unsigned int rate);
+int kona_timer_module_set_rate(char *name, unsigned int rate);
 
 /* 
  * kona_timer_module_get_rate - Get the speed in which a timer module is running
  * name - Name of the Timer module 
  */
-int kona_timer_module_get_rate (char* name);
-
+int kona_timer_module_get_rate(char *name);
 
 /* Channel/Timer related APIs */
 /*
@@ -92,7 +91,7 @@ int kona_timer_module_get_rate (char* name);
  *  channel - Channel number requested. If this is -1 then by default
  *            the next available channel will be returned
  */
-struct kona_timer* kona_timer_request(char* name, int channel);
+struct kona_timer *kona_timer_request(char *name, int channel);
 
 /*
  *  kona_timer_config - Configure the following parameters of the timer
@@ -103,7 +102,7 @@ struct kona_timer* kona_timer_request(char* name, int channel);
  *  kt - Kona timer context (returned by kona_timer_request())
  *  pcfg - pointer to the configuration structure
  */
-int kona_timer_config (struct kona_timer *kt, struct timer_ch_cfg *pcfg);  
+int kona_timer_config(struct kona_timer *kt, struct timer_ch_cfg *pcfg);
 
 /*
  * kona_timer_set_match_start - Set the match register for the timer and start
@@ -115,14 +114,14 @@ int kona_timer_config (struct kona_timer *kt, struct timer_ch_cfg *pcfg);
  *         match register. Once the timer is started when the counter 
  *         reaches this value an interrupt will be raised
  */
-int kona_timer_set_match_start (struct kona_timer* kt, unsigned long load);
+int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load);
 
 /*
  * kona_timer_free - Read the counter register of the timer 
  *
  * kt - Timer context to be freed.
  */
-unsigned int kona_timer_get_counter(struct kona_timer* kt);
+unsigned int kona_timer_get_counter(struct kona_timer *kt);
 /*
  * kona_timer_disable_and_clear - Disable the timer and clear the 
  * interrupt
@@ -136,7 +135,7 @@ int kona_timer_disable_and_clear(struct kona_timer *kt);
  *
  * kt - The timer context to be stopped.
  */
-int kona_timer_stop (struct kona_timer* kt);
+int kona_timer_stop(struct kona_timer *kt);
 
 /*
  * kona_timer_free - Release the timer, after this call the timer can be used
@@ -144,7 +143,7 @@ int kona_timer_stop (struct kona_timer* kt);
  *
  * kt - Timer context to be freed.
  */
-int kona_timer_free (struct kona_timer* kt);
+int kona_timer_free(struct kona_timer *kt);
 
 /*
  * kona_hubtimer_get_counter - Returns the counter value of aon hub timer
@@ -155,6 +154,5 @@ unsigned long kona_hubtimer_get_counter(void);
  * kona_slavetimer_get_counter - Returns the counter value of slave timer
  */
 unsigned long kona_slavetimer_get_counter(void);
-
 
 #endif /* __PLAT_KONA_TIMER_H */

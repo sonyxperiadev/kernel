@@ -69,48 +69,58 @@ Interrupt source number. The max number depends on the chip.
 #endif
 
 typedef enum {
-	IRQ0,   IRQ1,   IRQ2,   IRQ3,   IRQ4,   IRQ5,   IRQ6,   IRQ7,   IRQ8,   IRQ9,
-	IRQ10,  IRQ11,  IRQ12,  IRQ13,  IRQ14,  IRQ15,  IRQ16,  IRQ17,  IRQ18,  IRQ19,
-	IRQ20,  IRQ21,  IRQ22,  IRQ23,  IRQ24,  IRQ25,  IRQ26,  IRQ27,  IRQ28,  IRQ29,
-	IRQ30,  IRQ31,  IRQ32,  IRQ33,  IRQ34,  IRQ35,  IRQ36,  IRQ37,  IRQ38,  IRQ39,
-	IRQ40,  IRQ41,  IRQ42,  IRQ43,  IRQ44,  IRQ45,  IRQ46,  IRQ47,  IRQ48,  IRQ49,
-	IRQ50,  IRQ51,  IRQ52,  IRQ53,  IRQ54,  IRQ55,  IRQ56,  IRQ57,  IRQ58,  IRQ59,
-	IRQ60,  IRQ61,  IRQ62,  IRQ63,  IRQ64,  IRQ65,  IRQ66,  IRQ67,  IRQ68,  IRQ69,
-	IRQ70,  IRQ71,  IRQ72,  IRQ73,  IRQ74,  IRQ75,  IRQ76,  IRQ77,  IRQ78,  IRQ79,
-	IRQ80,  IRQ81,  IRQ82,  IRQ83,  IRQ84,  IRQ85,  IRQ86,  IRQ87,  IRQ88,  IRQ89,
-	IRQ90,  IRQ91,  IRQ92,  IRQ93,  IRQ94,  IRQ95,  IRQ96,  IRQ97,  IRQ98,  IRQ99,
-	IRQ100, IRQ101, IRQ102, IRQ103, IRQ104, IRQ105, IRQ106, IRQ107, IRQ108, IRQ109,
-	IRQ110, IRQ111, IRQ112, IRQ113, IRQ114, IRQ115, IRQ116, IRQ117, IRQ118, IRQ119,
-	IRQ120, IRQ121, IRQ122, IRQ123, IRQ124, IRQ125, IRQ126, IRQ127, IRQ128, IRQ129,
-	IRQ130, IRQ131, IRQ132, IRQ133, IRQ134, IRQ135, IRQ136, IRQ137, IRQ138, IRQ139,
-	IRQ140, IRQ141, IRQ142, IRQ143, IRQ144, IRQ145, IRQ146, IRQ147, IRQ148, IRQ149,
-	IRQ150, IRQ151, IRQ152, IRQ153, IRQ154, IRQ155, IRQ156, IRQ157, IRQ158, IRQ159,
-	IRQ160, IRQ161, IRQ162, IRQ163, IRQ164, IRQ165, IRQ166, IRQ167, IRQ168, IRQ169,
-	IRQ170, IRQ171, IRQ172, IRQ173, IRQ174, IRQ175, IRQ176, IRQ177, IRQ178, IRQ179,
-	IRQ180, IRQ181, IRQ182, IRQ183, IRQ184, IRQ185, IRQ186, IRQ187, IRQ188, IRQ189,
+	IRQ0, IRQ1, IRQ2, IRQ3, IRQ4, IRQ5, IRQ6, IRQ7, IRQ8, IRQ9,
+	IRQ10, IRQ11, IRQ12, IRQ13, IRQ14, IRQ15, IRQ16, IRQ17, IRQ18, IRQ19,
+	IRQ20, IRQ21, IRQ22, IRQ23, IRQ24, IRQ25, IRQ26, IRQ27, IRQ28, IRQ29,
+	IRQ30, IRQ31, IRQ32, IRQ33, IRQ34, IRQ35, IRQ36, IRQ37, IRQ38, IRQ39,
+	IRQ40, IRQ41, IRQ42, IRQ43, IRQ44, IRQ45, IRQ46, IRQ47, IRQ48, IRQ49,
+	IRQ50, IRQ51, IRQ52, IRQ53, IRQ54, IRQ55, IRQ56, IRQ57, IRQ58, IRQ59,
+	IRQ60, IRQ61, IRQ62, IRQ63, IRQ64, IRQ65, IRQ66, IRQ67, IRQ68, IRQ69,
+	IRQ70, IRQ71, IRQ72, IRQ73, IRQ74, IRQ75, IRQ76, IRQ77, IRQ78, IRQ79,
+	IRQ80, IRQ81, IRQ82, IRQ83, IRQ84, IRQ85, IRQ86, IRQ87, IRQ88, IRQ89,
+	IRQ90, IRQ91, IRQ92, IRQ93, IRQ94, IRQ95, IRQ96, IRQ97, IRQ98, IRQ99,
+	IRQ100, IRQ101, IRQ102, IRQ103, IRQ104, IRQ105, IRQ106, IRQ107, IRQ108,
+	    IRQ109,
+	IRQ110, IRQ111, IRQ112, IRQ113, IRQ114, IRQ115, IRQ116, IRQ117, IRQ118,
+	    IRQ119,
+	IRQ120, IRQ121, IRQ122, IRQ123, IRQ124, IRQ125, IRQ126, IRQ127, IRQ128,
+	    IRQ129,
+	IRQ130, IRQ131, IRQ132, IRQ133, IRQ134, IRQ135, IRQ136, IRQ137, IRQ138,
+	    IRQ139,
+	IRQ140, IRQ141, IRQ142, IRQ143, IRQ144, IRQ145, IRQ146, IRQ147, IRQ148,
+	    IRQ149,
+	IRQ150, IRQ151, IRQ152, IRQ153, IRQ154, IRQ155, IRQ156, IRQ157, IRQ158,
+	    IRQ159,
+	IRQ160, IRQ161, IRQ162, IRQ163, IRQ164, IRQ165, IRQ166, IRQ167, IRQ168,
+	    IRQ169,
+	IRQ170, IRQ171, IRQ172, IRQ173, IRQ174, IRQ175, IRQ176, IRQ177, IRQ178,
+	    IRQ179,
+	IRQ180, IRQ181, IRQ182, IRQ183, IRQ184, IRQ185, IRQ186, IRQ187, IRQ188,
+	    IRQ189,
 	IRQ190, IRQ191
-        /* #if removed as Hera & Rhea both have 192 shared Peripheral interrupts
-           starting from IRQ32 */
-	              , IRQ192, IRQ193, IRQ194, IRQ195, IRQ196, IRQ197, IRQ198, IRQ199,
-	IRQ200, IRQ201, IRQ202, IRQ203, IRQ204, IRQ205, IRQ206, IRQ207, IRQ208, IRQ209,
-	IRQ210, IRQ211, IRQ212, IRQ213, IRQ214, IRQ215, IRQ216, IRQ217, IRQ218, IRQ219,
+	    /* #if removed as Hera & Rhea both have 192 shared Peripheral interrupts
+	       starting from IRQ32 */
+	    , IRQ192, IRQ193, IRQ194, IRQ195, IRQ196, IRQ197, IRQ198, IRQ199,
+	IRQ200, IRQ201, IRQ202, IRQ203, IRQ204, IRQ205, IRQ206, IRQ207, IRQ208,
+	    IRQ209,
+	IRQ210, IRQ211, IRQ212, IRQ213, IRQ214, IRQ215, IRQ216, IRQ217, IRQ218,
+	    IRQ219,
 	IRQ220, IRQ221, IRQ222, IRQ223
-
-	/* BMODEM interrupts */
-	, BMIRQ0 = FIRST_BMIRQ
-	, BMIRQ1,   BMIRQ2,   BMIRQ3,   BMIRQ4,   BMIRQ5,   BMIRQ6,   BMIRQ7,   BMIRQ8,   BMIRQ9,  BMIRQ10
-	, BMIRQ11,  BMIRQ12,  BMIRQ13,  BMIRQ14,  BMIRQ15,  BMIRQ16,  BMIRQ17,  BMIRQ18,  BMIRQ19, BMIRQ20
-	, BMIRQ21,  BMIRQ22,  BMIRQ23,  BMIRQ24,  BMIRQ25,  BMIRQ26,  BMIRQ27,  BMIRQ28,  BMIRQ29, BMIRQ30
-	, BMIRQ31,  BMIRQ32,  BMIRQ33,  BMIRQ34,  BMIRQ35,  BMIRQ36,  BMIRQ37,  BMIRQ38,  BMIRQ39, BMIRQ40
-	, BMIRQ41,  BMIRQ42,  BMIRQ43,  BMIRQ44,  BMIRQ45,  BMIRQ46,  BMIRQ47,  BMIRQ48,  BMIRQ49, BMIRQ50
-	, BMIRQ51,  BMIRQ52,  BMIRQ53,  BMIRQ54,  BMIRQ55
+	    /* BMODEM interrupts */
+	, BMIRQ0 =
+	    FIRST_BMIRQ, BMIRQ1, BMIRQ2, BMIRQ3, BMIRQ4, BMIRQ5, BMIRQ6,
+	    BMIRQ7, BMIRQ8, BMIRQ9, BMIRQ10, BMIRQ11, BMIRQ12, BMIRQ13,
+	    BMIRQ14, BMIRQ15, BMIRQ16, BMIRQ17, BMIRQ18, BMIRQ19, BMIRQ20,
+	    BMIRQ21, BMIRQ22, BMIRQ23, BMIRQ24, BMIRQ25, BMIRQ26, BMIRQ27,
+	    BMIRQ28, BMIRQ29, BMIRQ30, BMIRQ31, BMIRQ32, BMIRQ33, BMIRQ34,
+	    BMIRQ35, BMIRQ36, BMIRQ37, BMIRQ38, BMIRQ39, BMIRQ40, BMIRQ41,
+	    BMIRQ42, BMIRQ43, BMIRQ44, BMIRQ45, BMIRQ46, BMIRQ47, BMIRQ48,
+	    BMIRQ49, BMIRQ50, BMIRQ51, BMIRQ52, BMIRQ53, BMIRQ54, BMIRQ55
 } InterruptId_t;
-
-
 
 /* aliases for modem interrupts coming from CHIPREGS */
 #define DMAC_INT              BMIRQ0
-#define BSIM_IRQ              BMIRQ1 /* matches name in modem baseline */
+#define BSIM_IRQ              BMIRQ1	/* matches name in modem baseline */
 #define BSIM2_IRQ             BMIRQ2
 #define HSIRX_INT             BMIRQ3
 #define HSITX_INT             BMIRQ4
@@ -124,25 +134,23 @@ typedef enum {
 #define CHIPREGS_12_TBD       BMIRQ12
 #define CHIPREGS_13_TBD       BMIRQ13
 #define CHIPREGS_14_TBD       BMIRQ14
-#define BM_KONA_IRQ           BMIRQ15 /* controlled by CHIPREGS */
+#define BM_KONA_IRQ           BMIRQ15	/* controlled by CHIPREGS */
 
 #if defined(FUSE_APPS_PROCESSOR)
-typedef struct { 
-	UInt32 mask[(NUM_IRQs + 31)/32];
+typedef struct {
+	UInt32 mask[(NUM_IRQs + 31) / 32];
 } IRQMask_t;
 #define RIP_IRQ 0
 #else // #if defined(FUSE_APPS_PROCESSOR)
-typedef struct { 
-	UInt32 mask[(NUM_KONAIRQs+31)/32];
+typedef struct {
+	UInt32 mask[(NUM_KONAIRQs + 31) / 32];
 } KonaIRQMask_t;
 
-typedef struct { 
-	UInt32 mask[(NUM_BMIRQs+31)/32];
+typedef struct {
+	UInt32 mask[(NUM_BMIRQs + 31) / 32];
 } BMIRQMask_t;
 
 typedef BMIRQMask_t IRQMask_t;
-
-
 
 /* aliases for modem interrupts coming from DSP */
 #define DSP_A5_INT            BMIRQ16
@@ -155,8 +163,7 @@ typedef BMIRQMask_t IRQMask_t;
 #define DSP_OTOAINT           BMIRQ23
 #define DSP_OTOACFINT         BMIRQ24
 #define DSP_OTOCINT           BMIRQ25
-#define SMC_INT_IRQ           DSP_SMC_INT    
-
+#define SMC_INT_IRQ           DSP_SMC_INT
 
 #define   RIP_IRQ			  DSP_OTOCINT
 #define   FIQ                 MP_DONE_INT
@@ -164,19 +171,19 @@ typedef BMIRQMask_t IRQMask_t;
 /* aliases for modem interrupts coming from WCDMA core */
 #define WCDMA_nIRQ            BMIRQ28
 #define WCDMA_nFIQ            BMIRQ29
-#define WCDMA_L2_IRQ          BMIRQ30 /* matches name in modem baseline */
+#define WCDMA_L2_IRQ          BMIRQ30	/* matches name in modem baseline */
 
 /* aliases for modem interrupts coming from within the modem subsystem */
-#define GEA3_IRQ              BMIRQ31 /* matches name in modem baseline */
+#define GEA3_IRQ              BMIRQ31	/* matches name in modem baseline */
 #define MP_DONE_INT           BMIRQ32
-#define CIPHER_IRQ            BMIRQ33 /* matches name in modem baseline */
-#define PACKER_IRQ            BMIRQ34 /* matches name in modem baseline */
-#define HUCM_IRQ              BMIRQ35 /* matches name in modem baseline */
+#define CIPHER_IRQ            BMIRQ33	/* matches name in modem baseline */
+#define PACKER_IRQ            BMIRQ34	/* matches name in modem baseline */
+#define HUCM_IRQ              BMIRQ35	/* matches name in modem baseline */
 #define WDTIMER_INT           BMIRQ36
 #define GPTIMER_INT0          BMIRQ37
 #define GPTIMER_INT1          BMIRQ38
 #define SLPTIMER_INT          BMIRQ39
-#define BM_SleepModeTimer_IRQ SLPTIMER_INT /* alias for RTOS/osdriver */
+#define BM_SleepModeTimer_IRQ SLPTIMER_INT	/* alias for RTOS/osdriver */
 #define INT_TWIF_SWITCH0      BMIRQ40
 #define INT_TWIF_SWITCH1      BMIRQ41
 #define INT_RFSPI_SWITCH0     BMIRQ42
@@ -187,7 +194,6 @@ typedef BMIRQMask_t IRQMask_t;
 #define DSP_CCU_ACT_INT       BMIRQ47
 #define DSP_CCU_TGT_INT       BMIRQ48
 
-
 /* aliases for "spare" interrupts */
 #define IPC_WCDMA0            BMIRQ52
 #define IPC_WCDMA1            BMIRQ53
@@ -197,18 +203,16 @@ typedef BMIRQMask_t IRQMask_t;
 #endif /* FUSE_APPS_PROCESSOR */
 #define   DSP2AP_IRQ		  BMIRQ22
 
-#define AP_RIP_IRQ            BMIRQ53  //using a reserved source for AP RIP 
-#define CP_RIP_IRQ            BMIRQ54  //using a reserved source for CP RIP 
-
+#define AP_RIP_IRQ            BMIRQ53	//using a reserved source for AP RIP
+#define CP_RIP_IRQ            BMIRQ54	//using a reserved source for CP RIP
 
 #ifdef FUSE_DUAL_PROCESSOR_ARCHITECTURE
 #define IPC_C2A_SOFTINT       COMMS_SUBS7_IRQ
-#define IPC_C2A_SOFTINT_BINTC BMIRQ55   
+#define IPC_C2A_SOFTINT_BINTC BMIRQ55
 #define IPC_A2C_SOFTINT_BINTC BMIRQ11
 
 #define IPC_A2C_SOFTINT IPC_A2C_SOFTINT_BINTC
 #endif
-
 
 //Re-map of IRQ numbers for backward compatibilities. Please remap your own meaningful names
 //in module include file.
@@ -284,7 +288,7 @@ typedef BMIRQMask_t IRQMask_t;
 #define		HUB_TIMER3_IRQ			IRQ83
 #define		PERIPH_TIMER4_IRQ		IRQ84
 #define		PERIPH_TIMER3_IRQ		IRQ85
-//#define		ROOT_CCU_IRQ			IRQ88
+//#define               ROOT_CCU_IRQ                    IRQ88
 #define		UARTB_B_IRQ				IRQ89
 #define		SYS_EMI_SECURE_IRQ		IRQ92
 #define		SYS_EMI_OPEN_IRQ		IRQ93
@@ -299,9 +303,9 @@ typedef BMIRQMask_t IRQMask_t;
 #define		UARTB2_B_IRQ			IRQ101
 #define		AON_ACT_INT_IRQ			IRQ103
 #define		AON_TGT_INT_IRQ			IRQ104
-//#define	SDIO3_IRQ				IRQ106
-//#define	SDIO2_IRQ				IRQ108
-//#define	SDIO1_IRQ				IRQ109
+//#define       SDIO3_IRQ                               IRQ106
+//#define       SDIO2_IRQ                               IRQ108
+//#define       SDIO1_IRQ                               IRQ109
 #define		SDIO2_IRQ				IRQ106
 #define		SDIO1_IRQ				IRQ108
 #define		SDIO0_IRQ				IRQ109
@@ -348,14 +352,14 @@ typedef BMIRQMask_t IRQMask_t;
 #define     CAPH_NORM_IRQ           IRQ156
 #define     HUB_TGT_INT_IRQ         IRQ157
 #define		KEYPAD_IRQ				IRQ159
-//#define		ANALOG_MIC_IRQ			IRQ160
+//#define               ANALOG_MIC_IRQ                  IRQ160
 #define     HSOTG_WAKEUP_IRQ        IRQ160
 #define     FSOTG_WAKEUP_IRQ        IRQ161
-//#define		DIGITAL_MIC_IRQ			IRQ161
-//#define		VIBRA_IRQ				IRQ162
+//#define               DIGITAL_MIC_IRQ                 IRQ161
+//#define               VIBRA_IRQ                               IRQ162
 #define     ACI_WAKEUP_IRQ          IRQ162
-//#define		IHF0_IRQ				IRQ163
-//#define		EAR_PIECE_IRQ			IRQ164
+//#define               IHF0_IRQ                                IRQ163
+//#define               EAR_PIECE_IRQ                   IRQ164
 #define     AUXMIC_COMP1_IRQ        IRQ163
 #define     AUXMIC_COMP2_IRQ        IRQ164
 #define     HSI_TX_IRQ              IRQ165
@@ -396,9 +400,9 @@ typedef BMIRQMask_t IRQMask_t;
 #define		COMMS_SUBS9_IRQ			IRQ201
 #define		COMMS_SUBS10_IRQ		IRQ202
 #define		COMMS_SUBS11_IRQ		IRQ203
-//#define		COMMS_SUBS12_IRQ		IRQ204
+//#define               COMMS_SUBS12_IRQ                IRQ204
 #define     FIXED_SPM_IRQ           IRQ204
-//#define		COMMS_SUBS13_IRQ		IRQ205
+//#define               COMMS_SUBS13_IRQ                IRQ205
 #define     VAR_SPM_IRQ             IRQ204
 #define		COMMS_ACT_INT_IRQ		IRQ206
 #define		COMMS_TGT_INT_IRQ		IRQ207
@@ -424,7 +428,4 @@ typedef BMIRQMask_t IRQMask_t;
 //HERA to be remove 
 #define		GPIO_IRQ				IRQ6
 
-
-
 #endif /* _CHIP_IRQ_H_ */
-

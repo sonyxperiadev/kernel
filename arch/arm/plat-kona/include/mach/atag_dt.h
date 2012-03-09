@@ -26,7 +26,6 @@
 #ifndef __ATAGDT_H_
 #define __ATAGDT_H_
 
-
 /*
   This is a Broadcom Kona specific ATAG for DT-blob.
   Put it here instead of setup.h to avoid conflict when merging upstream.
@@ -34,16 +33,16 @@
 #define ATAG_DTBLOB	0x54411122
 
 extern int early_init_dt_scan_pinmux(unsigned long node, const
-				char *uname,int depth, void *data);
+				     char *uname, int depth, void *data);
 
 extern int early_init_dt_scan_gpio(unsigned long node, const
-				char *uname,int depth, void *data);
+				   char *uname, int depth, void *data);
 
 #ifdef CONFIG_KONA_DT_BCMPMU
 extern int early_init_dt_scan_pmu(unsigned long node, const
-				char *uname,int depth, void *data);
+				  char *uname, int depth, void *data);
 extern int early_init_dt_scan_batt(unsigned long node, const
-				char *uname,int depth, void *data);
+				   char *uname, int depth, void *data);
 #endif
 
 #endif /* __ATAGDT_H_ */

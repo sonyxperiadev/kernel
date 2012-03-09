@@ -1,52 +1,52 @@
 //***************************************************************************
 //
-//	Copyright © 2004-2010 Broadcom Corporation
-//	
-//	This program is the proprietary software of Broadcom Corporation 
-//	and/or its licensors, and may only be used, duplicated, modified 
-//	or distributed pursuant to the terms and conditions of a separate, 
-//	written license agreement executed between you and Broadcom (an 
-//	"Authorized License").  Except as set forth in an Authorized 
-//	License, Broadcom grants no license (express or implied), right 
-//	to use, or waiver of any kind with respect to the Software, and 
-//	Broadcom expressly reserves all rights in and to the Software and 
-//	all intellectual property rights therein.  IF YOU HAVE NO 
-//	AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE 
-//	IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE 
-//	ALL USE OF THE SOFTWARE.  
-//	
-//	Except as expressly set forth in the Authorized License,
-//	
-//	1.	This program, including its structure, sequence and 
-//		organization, constitutes the valuable trade secrets 
-//		of Broadcom, and you shall use all reasonable efforts 
-//		to protect the confidentiality thereof, and to use 
-//		this information only in connection with your use 
-//		of Broadcom integrated circuit products.
-//	
-//	2.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE 
-//		IS PROVIDED "AS IS" AND WITH ALL FAULTS AND BROADCOM 
-//		MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES, 
-//		EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, 
-//		WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY 
-//		DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE, 
-//		MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A 
-//		PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR 
-//		COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR 
-//		CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE 
-//		RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.  
+//      Copyright © 2004-2010 Broadcom Corporation
+//      
+//      This program is the proprietary software of Broadcom Corporation 
+//      and/or its licensors, and may only be used, duplicated, modified 
+//      or distributed pursuant to the terms and conditions of a separate, 
+//      written license agreement executed between you and Broadcom (an 
+//      "Authorized License").  Except as set forth in an Authorized 
+//      License, Broadcom grants no license (express or implied), right 
+//      to use, or waiver of any kind with respect to the Software, and 
+//      Broadcom expressly reserves all rights in and to the Software and 
+//      all intellectual property rights therein.  IF YOU HAVE NO 
+//      AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE 
+//      IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE 
+//      ALL USE OF THE SOFTWARE.  
+//      
+//      Except as expressly set forth in the Authorized License,
+//      
+//      1.      This program, including its structure, sequence and 
+//              organization, constitutes the valuable trade secrets 
+//              of Broadcom, and you shall use all reasonable efforts 
+//              to protect the confidentiality thereof, and to use 
+//              this information only in connection with your use 
+//              of Broadcom integrated circuit products.
+//      
+//      2.      TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE 
+//              IS PROVIDED "AS IS" AND WITH ALL FAULTS AND BROADCOM 
+//              MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES, 
+//              EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, 
+//              WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY 
+//              DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE, 
+//              MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A 
+//              PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR 
+//              COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR 
+//              CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE 
+//              RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.  
 //
-//	3.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT 
-//		SHALL BROADCOM OR ITS LICENSORS BE LIABLE FOR 
-//		(i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR 
-//		EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY 
-//		WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE 
-//		SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE 
-//		POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN 
-//		EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE 
-//		ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE 
-//		LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE 
-//		OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
+//      3.      TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT 
+//              SHALL BROADCOM OR ITS LICENSORS BE LIABLE FOR 
+//              (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR 
+//              EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY 
+//              WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE 
+//              SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE 
+//              POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN 
+//              EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE 
+//              ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE 
+//              LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE 
+//              OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
 //
 //***************************************************************************
 
@@ -66,44 +66,44 @@
 #define BMINTC_READ32( regOffset)   CHAL_REG_READ32( ((cUInt32) h) + (regOffset))
 
 typedef struct {
-    cUInt32 mask[2];
-}chal_bmintc_mask_t;
+	cUInt32 mask[2];
+} chal_bmintc_mask_t;
 
 typedef enum {
-    BINTC_OUT_DEST_0  = 0,
-    BINTC_OUT_DEST_1  = 1,
-    BINTC_OUT_DEST_2  = 2,
-    BINTC_OUT_DEST_3  = 3,
-    BINTC_OUT_DEST_4  = 4,
-    BINTC_OUT_DEST_5  = 5,
-    BINTC_OUT_DEST_6  = 6,
-    BINTC_OUT_DEST_7  = 7,
-    BINTC_OUT_DEST_8  = 8,
-    BINTC_OUT_DEST_9  = 9,
-    BINTC_OUT_DEST_10 = 10,
-    BINTC_OUT_DEST_11 = 11,
-    BINTC_OUT_DEST_12 = 12,
-    BINTC_OUT_DEST_13 = 13,
-    BINTC_OUT_DEST_14 = 13,
-    BINTC_OUT_DEST_15 = 15,
-    BINTC_OUT_DEST_16 = 16,
-    BINTC_OUT_DEST_17 = 17,
-    BINTC_OUT_DEST_18 = 18,
-    BINTC_OUT_DEST_19 = 19,
-    BINTC_OUT_DEST_20 = 20,
-    BINTC_OUT_DEST_21 = 21,
-    BINTC_OUT_DEST_22 = 22,
-    BINTC_OUT_DEST_23 = 23,
-    BINTC_OUT_DEST_24 = 24,
-    BINTC_OUT_DEST_25 = 25,
-    BINTC_OUT_DEST_26 = 26,
-    BINTC_OUT_DEST_27 = 27,
-    BINTC_OUT_DEST_28 = 28,
-    BINTC_OUT_DEST_29 = 29,
-    BINTC_OUT_DEST_30 = 30,
-    BINTC_OUT_DEST_31 = 31
-}BINTC_OUT_DEST_en;
-    
+	BINTC_OUT_DEST_0 = 0,
+	BINTC_OUT_DEST_1 = 1,
+	BINTC_OUT_DEST_2 = 2,
+	BINTC_OUT_DEST_3 = 3,
+	BINTC_OUT_DEST_4 = 4,
+	BINTC_OUT_DEST_5 = 5,
+	BINTC_OUT_DEST_6 = 6,
+	BINTC_OUT_DEST_7 = 7,
+	BINTC_OUT_DEST_8 = 8,
+	BINTC_OUT_DEST_9 = 9,
+	BINTC_OUT_DEST_10 = 10,
+	BINTC_OUT_DEST_11 = 11,
+	BINTC_OUT_DEST_12 = 12,
+	BINTC_OUT_DEST_13 = 13,
+	BINTC_OUT_DEST_14 = 13,
+	BINTC_OUT_DEST_15 = 15,
+	BINTC_OUT_DEST_16 = 16,
+	BINTC_OUT_DEST_17 = 17,
+	BINTC_OUT_DEST_18 = 18,
+	BINTC_OUT_DEST_19 = 19,
+	BINTC_OUT_DEST_20 = 20,
+	BINTC_OUT_DEST_21 = 21,
+	BINTC_OUT_DEST_22 = 22,
+	BINTC_OUT_DEST_23 = 23,
+	BINTC_OUT_DEST_24 = 24,
+	BINTC_OUT_DEST_25 = 25,
+	BINTC_OUT_DEST_26 = 26,
+	BINTC_OUT_DEST_27 = 27,
+	BINTC_OUT_DEST_28 = 28,
+	BINTC_OUT_DEST_29 = 29,
+	BINTC_OUT_DEST_30 = 30,
+	BINTC_OUT_DEST_31 = 31
+} BINTC_OUT_DEST_en;
+
 #define BINTC_OUT_DEST_IPC          BINTC_OUT_DEST_7
 #define BINTC_OUT_DEST_PWRMGR0      BINTC_OUT_DEST_8
 #define BINTC_OUT_DEST_PWRMGR1      BINTC_OUT_DEST_9
@@ -135,21 +135,17 @@ typedef enum {
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_clear_interrupt(CHAL_HANDLE h, cUInt32 Id  ) 
+__forceinline static void chal_bmintc_clear_interrupt(CHAL_HANDLE h, cUInt32 Id)
 {
-    
-    
-    if(Id >= 64)
-        return;
-        
-    if(Id >= 32)
-    {
-        BMINTC_WRITE32(BINTC_ICR1_OFFSET, 1 << (Id-32));
-    }
-    else
-    {
-        BMINTC_WRITE32(BINTC_ICR0_OFFSET, 1 << Id);
-    }
+
+	if (Id >= 64)
+		return;
+
+	if (Id >= 32) {
+		BMINTC_WRITE32(BINTC_ICR1_OFFSET, 1 << (Id - 32));
+	} else {
+		BMINTC_WRITE32(BINTC_ICR0_OFFSET, 1 << Id);
+	}
 }
 
 //==============================================================================
@@ -165,12 +161,12 @@ __forceinline static void chal_bmintc_clear_interrupt(CHAL_HANDLE h, cUInt32 Id 
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_clear_intr_mask(CHAL_HANDLE h, chal_bmintc_mask_t *mask ) 
+__forceinline static void chal_bmintc_clear_intr_mask(CHAL_HANDLE h,
+						      chal_bmintc_mask_t * mask)
 {
-    
 
-    BMINTC_WRITE32(BINTC_ICR0_OFFSET, mask->mask[0]);
-    BMINTC_WRITE32(BINTC_ICR1_OFFSET, mask->mask[1]);
+	BMINTC_WRITE32(BINTC_ICR0_OFFSET, mask->mask[0]);
+	BMINTC_WRITE32(BINTC_ICR1_OFFSET, mask->mask[1]);
 }
 
 //==============================================================================
@@ -187,30 +183,31 @@ __forceinline static void chal_bmintc_clear_intr_mask(CHAL_HANDLE h, chal_bmintc
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_enable_interrupt(CHAL_HANDLE h, cUInt32 destId, cUInt32 Id ) 
+__forceinline static void chal_bmintc_enable_interrupt(CHAL_HANDLE h,
+						       cUInt32 destId,
+						       cUInt32 Id)
 {
-    
-    
-    if(Id >= 64)
-        return;
-    
 
-    if (Id >= 32) // Id < 64
-    {   
-        BMINTC_WRITE32(BINTC_IMR1_0_SET_OFFSET + destId*BMREG_BLOCK_SIZE, (1 << (Id-32)));  
-    }
-    else
-    {    
-        BMINTC_WRITE32(BINTC_IMR0_0_SET_OFFSET + destId*BMREG_BLOCK_SIZE, (1 << Id ));
-        
-    }
+	if (Id >= 64)
+		return;
+
+	if (Id >= 32)		// Id < 64
+	{
+		BMINTC_WRITE32(BINTC_IMR1_0_SET_OFFSET +
+			       destId * BMREG_BLOCK_SIZE, (1 << (Id - 32)));
+	} else {
+		BMINTC_WRITE32(BINTC_IMR0_0_SET_OFFSET +
+			       destId * BMREG_BLOCK_SIZE, (1 << Id));
+
+	}
 }
-__forceinline static void chal_bmintc_enable_DSP_interrupt(CHAL_HANDLE h, cUInt32 destId, cUInt32 Id ) 
+__forceinline static void chal_bmintc_enable_DSP_interrupt(CHAL_HANDLE h,
+							   cUInt32 destId,
+							   cUInt32 Id)
 {
-        BMINTC_WRITE32(destId, (1 << Id ));
-        
-}
+	BMINTC_WRITE32(destId, (1 << Id));
 
+}
 
 //==============================================================================
 //
@@ -226,23 +223,23 @@ __forceinline static void chal_bmintc_enable_DSP_interrupt(CHAL_HANDLE h, cUInt3
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_disable_interrupt(CHAL_HANDLE h,cUInt32 destId,cUInt32 Id) 
+__forceinline static void chal_bmintc_disable_interrupt(CHAL_HANDLE h,
+							cUInt32 destId,
+							cUInt32 Id)
 {
-    
-    
-    if(Id >= 64)
-        return;
-    
 
-    if (Id >= 32) // Id < 64
-    {   
-        BMINTC_WRITE32(BINTC_IMR1_0_CLR_OFFSET + destId*BMREG_BLOCK_SIZE, (1 << (Id-32)));  
-    }
-    else
-    {    
-        BMINTC_WRITE32(BINTC_IMR0_0_CLR_OFFSET + destId*BMREG_BLOCK_SIZE, (1 << Id ));
-        
-    }
+	if (Id >= 64)
+		return;
+
+	if (Id >= 32)		// Id < 64
+	{
+		BMINTC_WRITE32(BINTC_IMR1_0_CLR_OFFSET +
+			       destId * BMREG_BLOCK_SIZE, (1 << (Id - 32)));
+	} else {
+		BMINTC_WRITE32(BINTC_IMR0_0_CLR_OFFSET +
+			       destId * BMREG_BLOCK_SIZE, (1 << Id));
+
+	}
 }
 
 //==============================================================================
@@ -262,19 +259,19 @@ __forceinline static void chal_bmintc_disable_interrupt(CHAL_HANDLE h,cUInt32 de
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_disable_intr_mask(CHAL_HANDLE h, 
-                                           cUInt32 destId, 
-                                           chal_bmintc_mask_t *mask
-                                          )
+__forceinline static void chal_bmintc_disable_intr_mask(CHAL_HANDLE h,
+							cUInt32 destId,
+							chal_bmintc_mask_t *
+							mask)
 {
-    
-    BMINTC_WRITE32(BINTC_IMR1_0_CLR_OFFSET + destId*BMREG_BLOCK_SIZE, mask->mask[1]);  
-        
-    BMINTC_WRITE32(BINTC_IMR0_0_CLR_OFFSET + destId*BMREG_BLOCK_SIZE, mask->mask[0]);
-        
-   
-}
 
+	BMINTC_WRITE32(BINTC_IMR1_0_CLR_OFFSET + destId * BMREG_BLOCK_SIZE,
+		       mask->mask[1]);
+
+	BMINTC_WRITE32(BINTC_IMR0_0_CLR_OFFSET + destId * BMREG_BLOCK_SIZE,
+		       mask->mask[0]);
+
+}
 
 //==============================================================================
 //
@@ -292,20 +289,24 @@ __forceinline static void chal_bmintc_disable_intr_mask(CHAL_HANDLE h,
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_restore_interrupts(CHAL_HANDLE h, 
-                                           cUInt32 destId, 
-                                           chal_bmintc_mask_t *mask
-                                          )
+__forceinline static void chal_bmintc_restore_interrupts(CHAL_HANDLE h,
+							 cUInt32 destId,
+							 chal_bmintc_mask_t *
+							 mask)
 {
-	/* disable all set interrupt so only those set in mask are set when we return from the function */    
-    BMINTC_WRITE32(BINTC_IMR0_0_CLR_OFFSET + destId*BMREG_BLOCK_SIZE, 0xffffffff);  
-    BMINTC_WRITE32(BINTC_IMR1_0_CLR_OFFSET + destId*BMREG_BLOCK_SIZE, 0xffffffff);  
-    
-    //each destination has 7 32bit registers
-    BMINTC_WRITE32(BINTC_IMR1_0_SET_OFFSET + destId*BMREG_BLOCK_SIZE, mask->mask[1]);  
-        
-    BMINTC_WRITE32(BINTC_IMR0_0_SET_OFFSET + destId*BMREG_BLOCK_SIZE, mask->mask[0]);
-   
+	/* disable all set interrupt so only those set in mask are set when we return from the function */
+	BMINTC_WRITE32(BINTC_IMR0_0_CLR_OFFSET + destId * BMREG_BLOCK_SIZE,
+		       0xffffffff);
+	BMINTC_WRITE32(BINTC_IMR1_0_CLR_OFFSET + destId * BMREG_BLOCK_SIZE,
+		       0xffffffff);
+
+	//each destination has 7 32bit registers
+	BMINTC_WRITE32(BINTC_IMR1_0_SET_OFFSET + destId * BMREG_BLOCK_SIZE,
+		       mask->mask[1]);
+
+	BMINTC_WRITE32(BINTC_IMR0_0_SET_OFFSET + destId * BMREG_BLOCK_SIZE,
+		       mask->mask[0]);
+
 }
 
 //==============================================================================
@@ -324,20 +325,20 @@ __forceinline static void chal_bmintc_restore_interrupts(CHAL_HANDLE h,
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_get_interrupt_mask(CHAL_HANDLE h, 
-                                           cUInt32 destId, 
-                                           chal_bmintc_mask_t* mask) 
+__forceinline static void chal_bmintc_get_interrupt_mask(CHAL_HANDLE h,
+							 cUInt32 destId,
+							 chal_bmintc_mask_t *
+							 mask)
 {
-    
 
-    //each destination has 7 32bit registers
-    mask->mask[0] = BMINTC_READ32(BINTC_IMR0_0_OFFSET + destId*BMREG_BLOCK_SIZE);
-    mask->mask[1] = BMINTC_READ32(BINTC_IMR1_0_OFFSET + destId*BMREG_BLOCK_SIZE);
-        
-    return;
+	//each destination has 7 32bit registers
+	mask->mask[0] =
+	    BMINTC_READ32(BINTC_IMR0_0_OFFSET + destId * BMREG_BLOCK_SIZE);
+	mask->mask[1] =
+	    BMINTC_READ32(BINTC_IMR1_0_OFFSET + destId * BMREG_BLOCK_SIZE);
+
+	return;
 }
-
-
 
 //==============================================================================
 //
@@ -355,25 +356,26 @@ __forceinline static void chal_bmintc_get_interrupt_mask(CHAL_HANDLE h,
 //
 // Notes:
 //
-__forceinline static Boolean chal_bmintc_is_interrupt_enabled(CHAL_HANDLE h, cUInt32 destId, cUInt32 Id ) 
+__forceinline static Boolean chal_bmintc_is_interrupt_enabled(CHAL_HANDLE h,
+							      cUInt32 destId,
+							      cUInt32 Id)
 {
 
-    
+	if (Id >= 64)
+		return 0;
 
-    if(Id >= 64)
-        return 0;
-        
-    
-    if (Id >= 32) // Id < 64
-    {
-        //each destination has 7 32bit registers
-        return ((BMINTC_READ32(BINTC_IMR1_0_OFFSET + destId*BMREG_BLOCK_SIZE) & (1<<(Id-32))) != 0);      
-    }
-    else
-    {
-        return ((BMINTC_READ32(BINTC_IMR0_0_OFFSET + destId*BMREG_BLOCK_SIZE) & (1<<Id)) != 0);
-    }
-    
+	if (Id >= 32)		// Id < 64
+	{
+		//each destination has 7 32bit registers
+		return ((BMINTC_READ32
+			 (BINTC_IMR1_0_OFFSET +
+			  destId * BMREG_BLOCK_SIZE) & (1 << (Id - 32))) != 0);
+	} else {
+		return ((BMINTC_READ32
+			 (BINTC_IMR0_0_OFFSET +
+			  destId * BMREG_BLOCK_SIZE) & (1 << Id)) != 0);
+	}
+
 }
 
 //==============================================================================
@@ -390,14 +392,15 @@ __forceinline static Boolean chal_bmintc_is_interrupt_enabled(CHAL_HANDLE h, cUI
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_get_status(CHAL_HANDLE h, cUInt32 destId, chal_bmintc_mask_t *status)
+__forceinline static void chal_bmintc_get_status(CHAL_HANDLE h, cUInt32 destId,
+						 chal_bmintc_mask_t * status)
 {
 
-    
-    
-    status->mask[0] = BMINTC_READ32(BINTC_IMSR0_0_OFFSET + destId*BMREG_BLOCK_SIZE);
-    status->mask[1] = BMINTC_READ32(BINTC_IMSR1_0_OFFSET + destId*BMREG_BLOCK_SIZE);
-        
+	status->mask[0] =
+	    BMINTC_READ32(BINTC_IMSR0_0_OFFSET + destId * BMREG_BLOCK_SIZE);
+	status->mask[1] =
+	    BMINTC_READ32(BINTC_IMSR1_0_OFFSET + destId * BMREG_BLOCK_SIZE);
+
 }
 
 //==============================================================================
@@ -414,23 +417,21 @@ __forceinline static void chal_bmintc_get_status(CHAL_HANDLE h, cUInt32 destId, 
 //
 // Notes:
 //
-__forceinline static UInt32 chal_bmintc_get_per_register_status(CHAL_HANDLE h, 
-                                                              cUInt32 destId,
-                                                              cUInt32 reg_offset)
+__forceinline static UInt32 chal_bmintc_get_per_register_status(CHAL_HANDLE h,
+								cUInt32 destId,
+								cUInt32
+								reg_offset)
 {
 
-    
-    if(reg_offset == 0)
-    {
-        return (BMINTC_READ32(BINTC_IMSR0_0_OFFSET + destId*BMREG_BLOCK_SIZE));
-    }
-    else
-    {
-        return (BMINTC_READ32(BINTC_IMSR1_0_OFFSET + destId*BMREG_BLOCK_SIZE));
-    }
-        
-}
+	if (reg_offset == 0) {
+		return (BMINTC_READ32
+			(BINTC_IMSR0_0_OFFSET + destId * BMREG_BLOCK_SIZE));
+	} else {
+		return (BMINTC_READ32
+			(BINTC_IMSR1_0_OFFSET + destId * BMREG_BLOCK_SIZE));
+	}
 
+}
 
 //==============================================================================
 //
@@ -448,18 +449,22 @@ __forceinline static UInt32 chal_bmintc_get_per_register_status(CHAL_HANDLE h,
 //
 // Notes:
 //
-__forceinline static Boolean chal_bmintc_is_interrupt_active(CHAL_HANDLE h, cUInt32 destId, cUInt32 Id ) 
+__forceinline static Boolean chal_bmintc_is_interrupt_active(CHAL_HANDLE h,
+							     cUInt32 destId,
+							     cUInt32 Id)
 {
-    
-    
-    if (Id >= 64)
-        return 0;
-    
-    
-    if (Id >= 32)// Id < 64
-        return ( (BMINTC_READ32(BINTC_IMSR1_0_OFFSET + destId*BMREG_BLOCK_SIZE) & (1<<(Id-32))) != 0  );
-    else // Id < 32 
-        return ( (BMINTC_READ32(BINTC_IMSR0_0_OFFSET + destId*BMREG_BLOCK_SIZE) & (1<<Id)) != 0  );
+
+	if (Id >= 64)
+		return 0;
+
+	if (Id >= 32)		// Id < 64
+		return ((BMINTC_READ32
+			 (BINTC_IMSR1_0_OFFSET +
+			  destId * BMREG_BLOCK_SIZE) & (1 << (Id - 32))) != 0);
+	else			// Id < 32 
+		return ((BMINTC_READ32
+			 (BINTC_IMSR0_0_OFFSET +
+			  destId * BMREG_BLOCK_SIZE) & (1 << Id)) != 0);
 }
 
 #if 0
@@ -477,9 +482,10 @@ __forceinline static Boolean chal_bmintc_is_interrupt_active(CHAL_HANDLE h, cUIn
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_set_irq_trigger(CHAL_HANDLE h, cUInt32 Id, cUInt32 EdgeSetting )
+__forceinline static void chal_bmintc_set_irq_trigger(CHAL_HANDLE h, cUInt32 Id,
+						      cUInt32 EdgeSetting)
 {
-    
+
 }
 #endif
 
@@ -498,20 +504,20 @@ __forceinline static void chal_bmintc_set_irq_trigger(CHAL_HANDLE h, cUInt32 Id,
 //
 __forceinline static void chal_bmintc_set_soft_int(CHAL_HANDLE h, cUInt32 Id)
 {
-    
 
-    if (Id >= 64)
-        return;
-        
-    if(Id >= 32) // Id < 64
-        BMINTC_WRITE32(BINTC_ISWIR1_OFFSET, 1 << (Id-32));
-    else // Id < 32 
-        BMINTC_WRITE32(BINTC_ISWIR0_OFFSET, 1 << Id);
-    
+	if (Id >= 64)
+		return;
+
+	if (Id >= 32)		// Id < 64
+		BMINTC_WRITE32(BINTC_ISWIR1_OFFSET, 1 << (Id - 32));
+	else			// Id < 32 
+		BMINTC_WRITE32(BINTC_ISWIR0_OFFSET, 1 << Id);
+
 }
-__forceinline static void chal_bmintc_set_DSP_soft_int(CHAL_HANDLE h, cUInt32 Id)
+__forceinline static void chal_bmintc_set_DSP_soft_int(CHAL_HANDLE h,
+						       cUInt32 Id)
 {
-        BMINTC_WRITE32(BINTC_ISWIR1_OFFSET, 1 << Id);
+	BMINTC_WRITE32(BINTC_ISWIR1_OFFSET, 1 << Id);
 }
 
 //==============================================================================
@@ -529,19 +535,16 @@ __forceinline static void chal_bmintc_set_DSP_soft_int(CHAL_HANDLE h, cUInt32 Id
 //
 __forceinline static void chal_bmintc_clear_soft_int(CHAL_HANDLE h, cUInt32 Id)
 {
-    
 
-    if (Id >= 64)
-        return;
-        
-    if(Id >= 32) // Id < 64
-        BMINTC_WRITE32(BINTC_ISWIR1_CLR_OFFSET, 1 << (Id-32));
-    else // Id < 32 
-        BMINTC_WRITE32(BINTC_ISWIR0_CLR_OFFSET, 1 << Id);
-    
+	if (Id >= 64)
+		return;
+
+	if (Id >= 32)		// Id < 64
+		BMINTC_WRITE32(BINTC_ISWIR1_CLR_OFFSET, 1 << (Id - 32));
+	else			// Id < 32 
+		BMINTC_WRITE32(BINTC_ISWIR0_CLR_OFFSET, 1 << Id);
+
 }
-
-
 
 //==============================================================================
 //
@@ -557,27 +560,25 @@ __forceinline static void chal_bmintc_clear_soft_int(CHAL_HANDLE h, cUInt32 Id)
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_set_intr_to_fiq( CHAL_HANDLE h, cUInt32 Id)
+__forceinline static void chal_bmintc_set_intr_to_fiq(CHAL_HANDLE h, cUInt32 Id)
 {
-    UInt32 bits = 0;
+	UInt32 bits = 0;
 
-    if (Id >= 64)
-        return;
-     
-   
-    if(Id >= 32) // Id < 64
-    {
-        bits = BMINTC_READ32(BINTC_ISELR1_13_OFFSET);
-        bits |= 1 << (Id-32);
-        BMINTC_WRITE32(BINTC_ISELR1_13_OFFSET, bits);
-    }
-    else // Id < 32 
-    {
-        bits = BMINTC_READ32(BINTC_ISELR0_13_OFFSET);
-        bits |= 1 << Id;
-        BMINTC_WRITE32(BINTC_ISELR0_13_OFFSET, bits);
-    }
-  
+	if (Id >= 64)
+		return;
+
+	if (Id >= 32)		// Id < 64
+	{
+		bits = BMINTC_READ32(BINTC_ISELR1_13_OFFSET);
+		bits |= 1 << (Id - 32);
+		BMINTC_WRITE32(BINTC_ISELR1_13_OFFSET, bits);
+	} else			// Id < 32 
+	{
+		bits = BMINTC_READ32(BINTC_ISELR0_13_OFFSET);
+		bits |= 1 << Id;
+		BMINTC_WRITE32(BINTC_ISELR0_13_OFFSET, bits);
+	}
+
 }
 
 //==============================================================================
@@ -594,27 +595,26 @@ __forceinline static void chal_bmintc_set_intr_to_fiq( CHAL_HANDLE h, cUInt32 Id
 //
 // Notes:
 //
-__forceinline static void chal_bmintc_set_intr_to_irq( CHAL_HANDLE h, cUInt32 Id)
+__forceinline static void chal_bmintc_set_intr_to_irq(CHAL_HANDLE h, cUInt32 Id)
 {
-    UInt32 bits = 0;
+	UInt32 bits = 0;
 
-    if (Id >= 64)
-        return;
-     
-   
-    if(Id >= 32) // Id < 64
-    {
-        bits = BMINTC_READ32(BINTC_ISELR1_13_OFFSET);
-        bits &= ~(1 << (Id-32));
-        BMINTC_WRITE32(BINTC_ISELR1_13_OFFSET, bits);
-    }
-    else // Id < 32 
-    {
-        bits = BMINTC_READ32(BINTC_ISELR0_13_OFFSET);
-        bits &= ~(1 << Id);
-        BMINTC_WRITE32(BINTC_ISELR0_13_OFFSET, bits);
-    }
+	if (Id >= 64)
+		return;
+
+	if (Id >= 32)		// Id < 64
+	{
+		bits = BMINTC_READ32(BINTC_ISELR1_13_OFFSET);
+		bits &= ~(1 << (Id - 32));
+		BMINTC_WRITE32(BINTC_ISELR1_13_OFFSET, bits);
+	} else			// Id < 32 
+	{
+		bits = BMINTC_READ32(BINTC_ISELR0_13_OFFSET);
+		bits &= ~(1 << Id);
+		BMINTC_WRITE32(BINTC_ISELR0_13_OFFSET, bits);
+	}
 }
+
 //==============================================================================
 //
 // Function Name: CHAL_HANDLE chal_bmintc_init(const cUInt32 DeviceBaseAddress)
@@ -628,8 +628,8 @@ __forceinline static void chal_bmintc_set_intr_to_irq( CHAL_HANDLE h, cUInt32 Id
 //
 __forceinline static CHAL_HANDLE chal_bmintc_init(cUInt32 DeviceBaseAddress)
 {
-   
-    return (CHAL_HANDLE)DeviceBaseAddress;
+
+	return (CHAL_HANDLE) DeviceBaseAddress;
 }
 
 #endif //_CHAL_BMINTC_INC_H_

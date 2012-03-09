@@ -63,7 +63,6 @@
 #define CSR_REG_VAL_NRML_FF		0xA
 #define CSR_REG_VAL_TURBO_FF		0xE
 
-
 #define VLT_NORMAL_PERI	VLT_ID_ECO
 #define VLT_HIGH_PERI	VLT_ID_NORMAL
 
@@ -93,17 +92,15 @@
 
 #define BMDM_CCU_FREQ_VOLT_TBL		VLT_ID_ECO,VLT_ID_ECO,VLT_ID_NORMAL,VLT_ID_NORMAL,\
 						VLT_ID_NORMAL,VLT_ID_TURBO,VLT_ID_TURBO,VLT_ID_TURBO
-#define BMDM_CCU_FREQ_VOLT_TBL_SZ	8 /* As per RDB there are only 6 valid freq_ids for bmdm. this count
-						is used only to initialize voltage table from AP */
+#define BMDM_CCU_FREQ_VOLT_TBL_SZ	8	/* As per RDB there are only 6 valid freq_ids for bmdm. this count
+						   is used only to initialize voltage table from AP */
 #define DSP_CCU_FREQ_VOLT_TBL		VLT_ID_ECO,VLT_ID_ECO,VLT_ID_NORMAL,VLT_ID_NORMAL,\
 						VLT_ID_TURBO,VLT_ID_TURBO,VLT_ID_TURBO,VLT_ID_TURBO
-#define DSP_CCU_FREQ_VOLT_TBL_SZ	8 /* As per RDB there are only 5 valid freq_ids for dsp. this count
-						is used only to initialize voltage table from AP */
-
+#define DSP_CCU_FREQ_VOLT_TBL_SZ	8	/* As per RDB there are only 5 valid freq_ids for dsp. this count
+						   is used only to initialize voltage table from AP */
 
 #define PROC_CCU_FREQ_POLICY_TBL	PROC_CCU_FREQ_ID_ECO,PROC_CCU_FREQ_ID_ECO, \
 						PROC_CCU_FREQ_ID_ECO,PROC_CCU_FREQ_ID_TURBO
-
 
 #define MM_CCU_FREQ_POLICY_TBL		MM_CCU_FREQ_ID_ECO,MM_CCU_FREQ_ID_ECO, \
 						MM_CCU_FREQ_ID_ECO, MM_CCU_FREQ_ID_TURBO
@@ -119,8 +116,6 @@
 
 #define KPS_CCU_FREQ_POLICY_TBL		KPS_CCU_FREQ_ID_ECO,KPS_CCU_FREQ_ID_ECO, \
 						KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_NRML
-
-
 
 #define PMU_SCR_VLT_TBL_SS		CSR_REG_VAL_RETN_SS, \
 					CSR_REG_VAL_RETN_SS, \
@@ -174,17 +169,16 @@
 					CSR_REG_VAL_TURBO_FF
 
 #ifdef CONFIG_KONA_POWER_MGR
-struct pwrmgr_init_param
-{
-	struct i2c_cmd* cmd_buf;
+struct pwrmgr_init_param {
+	struct i2c_cmd *cmd_buf;
 	u32 cmb_buf_size;
-	struct v0x_spec_i2c_cmd_ptr * v0ptr;
-	u8* def_vlt_tbl;
+	struct v0x_spec_i2c_cmd_ptr *v0ptr;
+	u8 *def_vlt_tbl;
 	u32 vlt_tbl_size;
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 i2c_rd_off;
-	int i2c_rd_slv_id_off1;  /*slave id offset -  write reg address*/
-	int i2c_rd_slv_id_off2; /*slave id offset - read reg value*/
+	int i2c_rd_slv_id_off1;	/*slave id offset -  write reg address */
+	int i2c_rd_slv_id_off2;	/*slave id offset - read reg value */
 	int i2c_rd_reg_addr_off;
 	int i2c_rd_nack_off;
 	int i2c_rd_nack_jump_off;
@@ -193,13 +187,13 @@ struct pwrmgr_init_param
 	int i2c_wr_slv_id_off;
 	int i2c_wr_reg_addr_off;
 	int i2c_wr_val_addr_off;
-	u32 i2c_seq_timeout; /*timeout in ms*/
+	u32 i2c_seq_timeout;	/*timeout in ms */
 #endif
 };
 
 extern struct pwrmgr_init_param pwrmgr_init_param;
 
-#endif /*CONFIG_KONA_POWER_MGR*/
+#endif /*CONFIG_KONA_POWER_MGR */
 
 extern int __init rhea_pm_params_init(void);
 
@@ -224,6 +218,4 @@ interface is also added to read the flag from console*/
 				module_param_named(JIRA_WA_FLG_NAME(x), \
 				JIRA_WA_FLG_NAME(x), int, S_IRUGO)
 
-
 #endif /*__PM_PARAMS_H__*/
-

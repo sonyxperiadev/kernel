@@ -59,7 +59,8 @@ static void arch_idle(void)
 #endif
 
 #ifdef CONFIG_BCM_KNLLOG_IRQ
-	if (gKnllogIrqSchedEnable & KNLLOG_THREAD) KNLLOGCALL("schedule", "0 -> 99999");
+	if (gKnllogIrqSchedEnable & KNLLOG_THREAD)
+		KNLLOGCALL("schedule", "0 -> 99999");
 #endif
 
 #ifdef CONFIG_BCM_IDLE_PROFILER
@@ -73,21 +74,18 @@ static void arch_idle(void)
 	 * dramatically. So as a workaround, we have the BIVCM code increment wfi_count while 
 	 * it's doing a transfer. The following code will prevent the second core from doing 
 	 * a WFI while the videocore is transferring from the ARM memory. 
-	*/
+	 */
 
-   if ( wfi_workaround_enabled )
-	{
-		if (atomic_inc_return( &wfi_count ) <= 2)
-		{
+	if (wfi_workaround_enabled) {
+		if (atomic_inc_return(&wfi_count) <= 2) {
 			/*
 			 * This should do all the clock switching
 			 * and wait for interrupt tricks
 			 */
 			cpu_do_idle();
 		}
-		atomic_dec( &wfi_count );
-	}
-	else
+		atomic_dec(&wfi_count);
+	} else
 #endif
 	{
 		/*
@@ -104,14 +102,15 @@ static void arch_idle(void)
 #endif
 
 #ifdef CONFIG_BCM_KNLLOG_IRQ
-	if (gKnllogIrqSchedEnable & KNLLOG_THREAD) KNLLOGCALL("schedule", "99999 -> 0");
+	if (gKnllogIrqSchedEnable & KNLLOG_THREAD)
+		KNLLOGCALL("schedule", "99999 -> 0");
 #endif
 }
 
 static void arch_reset(char mode, const char *cmd)
 {
 	unsigned int val;
-	
+
 	/*
 	 * Disable GIC interrupt distribution.
 	 */
@@ -119,58 +118,75 @@ static void arch_reset(char mode, const char *cmd)
 
 #if defined(CONFIG_ARCH_ISLAND)
 	/* enable reset register access */
-	val  = __raw_readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET); 
-	val &= IROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;		  /* retain access mode 	 */
-	val |= (0xA5A5 << IROOT_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);	  /* set password			 */
-	val |= IROOT_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK; 			  /* set access enable		 */
-	__raw_writel(val, KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
+	val =
+	    __raw_readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
+	val &= IROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
+	val |= (0xA5A5 << IROOT_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);	/* set password                        */
+	val |= IROOT_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK;	/* set access enable           */
+	__raw_writel(val,
+		     KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
 
 	/* trigger reset */
-	val  = __raw_readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
-	val &= IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_PRIV_ACCESS_MODE_MASK;	  /* retain access mode 	 */
-	__raw_writel(val, KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	val =
+	    __raw_readl(KONA_ROOT_RST_VA +
+			IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	val &= IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
+	__raw_writel(val,
+		     KONA_ROOT_RST_VA +
+		     IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
 #else
-	/*Reset the CP*/
+	/*Reset the CP */
 	/* enable reset register access */
-	val  = __raw_readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
-	val &= ROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;                  /* retain access mode          */
-	val |= (0xA5A5 << ROOT_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);     /* set password                        */
-	val |= ROOT_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK;                        /* set access enable           */
+	val = __raw_readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
+	val &= ROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
+	val |= (0xA5A5 << ROOT_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);	/* set password                        */
+	val |= ROOT_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK;	/* set access enable           */
 	__raw_writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
 
-	val  = __raw_readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
+	val =
+	    __raw_readl(KONA_ROOT_RST_VA +
+			ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
 	val &= ~ROOT_RST_MGR_REG_PD_SOFT_RSTN_MDM_SOFT_RSTN_MASK;
-	__raw_writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
+	__raw_writel(val,
+		     KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
 
-	val  = __raw_readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
+	val =
+	    __raw_readl(KONA_ROOT_RST_VA +
+			ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
 	val |= ROOT_RST_MGR_REG_PD_SOFT_RSTN_MDM_SOFT_RSTN_MASK;
-	__raw_writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
+	__raw_writel(val,
+		     KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
 
 	val = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_WR_ACCESS_OFFSET);
-	val &= BMDM_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;                  /* retain access mode          */
-	val |= (0xA5A5 << BMDM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);     /* set password                        */
-	val |= BMDM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK;                        /* set access enable           */
+	val &= BMDM_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
+	val |= (0xA5A5 << BMDM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);	/* set password                        */
+	val |= BMDM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK;	/* set access enable           */
 	__raw_writel(val, KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_WR_ACCESS_OFFSET);
 
 	/* trigger reset */
-	val  = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
-	val &= BMDM_RST_MGR_REG_CP_RSTN_PRIV_ACCESS_MODE_MASK;     /* retain access mode          */
+	val = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+	val &= BMDM_RST_MGR_REG_CP_RSTN_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
 	val |= BMDM_RST_MGR_REG_CP_RSTN_CP_DEBUG_RSTN_MASK;
 	__raw_writel(val, KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
 
-	val  = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
-	val &= BMDM_RST_MGR_REG_CP_RSTN_PRIV_ACCESS_MODE_MASK;     /* retain access mode          */
-	val |= (BMDM_RST_MGR_REG_CP_RSTN_CP_RSTN_MASK | BMDM_RST_MGR_REG_CP_RSTN_CP_DEBUG_RSTN_MASK);
+	val = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+	val &= BMDM_RST_MGR_REG_CP_RSTN_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
+	val |=
+	    (BMDM_RST_MGR_REG_CP_RSTN_CP_RSTN_MASK |
+	     BMDM_RST_MGR_REG_CP_RSTN_CP_DEBUG_RSTN_MASK);
 	__raw_writel(val, KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
 
-	/*Reset the AP*/
+	/*Reset the AP */
 	/* trigger reset */
-	val  = __raw_readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
-	val &= ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_PRIV_ACCESS_MODE_MASK;	  /* retain access mode 	 */
-	__raw_writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	val =
+	    __raw_readl(KONA_ROOT_RST_VA +
+			ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	val &= ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
+	__raw_writel(val,
+		     KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
 #endif
 
-	while(1);
+	while (1) ;
 }
 
 #endif /*__PLAT_KONA_SYSTEM_H */

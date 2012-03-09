@@ -7,7 +7,7 @@ typedef unsigned int timer_tick_count_t;
 typedef unsigned int timer_tick_rate_t;
 typedef unsigned int timer_msec_t;
 
-void profile_timer_init(void __iomem *base);
+void profile_timer_init(void __iomem * base);
 timer_tick_count_t timer_get_tick_count(void);
 timer_tick_rate_t timer_get_tick_rate(void);
 timer_msec_t timer_get_msec(void);

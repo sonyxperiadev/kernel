@@ -26,6 +26,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/cpumask.h>
+#include <linux/delay.h>
 #include <mach/io_map.h>
 #include <asm/io.h>
 #include <asm/mach/map.h>
@@ -55,6 +56,8 @@ static void rhea_poweroff(void)
         bcmpmu_client_power_off();
 #endif
 
+	mdelay(5);
+	pr_err("Failed power off!!!\n");
 	while(1)
 		;
 }

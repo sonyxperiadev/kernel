@@ -49,7 +49,7 @@ extern "C" {
 
 #define MAX_IMSI_DIGITS	15
 #define MAX_GID_DIGITS 10
-#define CHV_MAX_LENGTH  16
+#define CK_MAX_LENGTH  16
 
 enum _SEC_SimLock_SimNumber_t {
 	SEC_SimLock_SIM_SINGLE,
@@ -111,8 +111,9 @@ struct _sec_simlock_state_t {
 struct _sec_simlock_unlock_t {
 	SEC_SimLock_SimNumber_t sim_id;
 	SEC_SimLock_LockType_t lock_type;   /* type of lock to be unlocked */
-	char password[CHV_MAX_LENGTH + 1];  /* unlock password */
+	char password[CK_MAX_LENGTH + 1];  /* unlock password */
 	SEC_SimLock_Status_t unlock_status; /* result of unlock operation */
+	int remain_attempt;
 };
 #define sec_simlock_unlock_t struct _sec_simlock_unlock_t
 
@@ -131,8 +132,9 @@ struct _sec_simlock_set_lock_t {
 	int full_lock_on; /* 1:PH-SIM full lock should */
 			  /* be enabled 0 otherwise */
 	SEC_SimLock_LockType_t lock_type;	/* type of lock to be set */
-	char key[CHV_MAX_LENGTH + 1];	/* control key */
+	char key[CK_MAX_LENGTH + 1];	/* control key */
 	SEC_SimLock_Status_t set_lock_status;	/* result of set lock op */
+	int remain_attempt;
 };
 #define sec_simlock_set_lock_t struct _sec_simlock_set_lock_t
 

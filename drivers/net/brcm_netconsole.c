@@ -782,27 +782,6 @@ unsigned char brcm_get_netcon_status(void)
         return cur_rndis_status;
 }
 
-#ifndef DHCP_CALLBACK
-
-struct delayed_work g_delay_workq_cb;
-#define DELAY_4_DHCP	3000 /* 3 seconds */
-
-static void brcm_trigger_logging(struct work_struct *work)
-{
-	pr_info( "%s nt_enabled=%d\n",__func__, nt_enabled);
-	cur_rndis_status = TRUE;
-
-	 /* Start/stop broadcom logging.... */
-	if (nt_enabled) {
-		if (brcm_netconsole_cb->start)
-			brcm_netconsole_cb->start();		
-	} else {
-		if (brcm_netconsole_cb->stop)
-			brcm_netconsole_cb->stop();
-	}	 	
-}
-#endif
-
 /**
 * This function is called to call the callback functions to start/stop the logging.
 *
@@ -842,15 +821,6 @@ void brcm_current_netcon_status(unsigned char status)
 		}
 		spin_unlock_irqrestore(&target_list_lock, flags);
 	}
-
-#ifndef DHCP_CALLBACK
-	if (status) {
-		/* Temporary solution: wait for DHCP to complete the IP address assignment... */		
-		schedule_delayed_work(&g_delay_workq_cb, msecs_to_jiffies(DELAY_4_DHCP));
-		return;
-	} else 
-		cancel_delayed_work(&g_delay_workq_cb);
-#endif
 
 	cur_rndis_status = status;
 	/* Start/stop broadcom logging.... */
@@ -1028,10 +998,6 @@ static int __init init_brcm_netconsole(void)
 	if (err)
 		goto undonotifier;
 	
-#ifndef DHCP_CALLBACK
-	INIT_DELAYED_WORK(&g_delay_workq_cb, brcm_trigger_logging);
-#endif	
-
 /*	register_brcm_console(&brcm_netconsole); */
 	pr_info("brcm_netconsole: network logging started\n");
 

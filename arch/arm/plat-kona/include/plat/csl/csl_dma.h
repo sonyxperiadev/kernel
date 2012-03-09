@@ -46,15 +46,14 @@ extern "C" {
 *  DMA channel structure definition
 *
 *****************************************************************************/
-typedef struct
-{
-    Boolean bUsed;
-    Boolean multiLLIs; 
-    Boolean busy;
-    UInt8 src_peri_id;
-    UInt8 dst_peri_id;
-    Dma_Chan_Info chanInfo;
-} Dma_Channel;
+	typedef struct {
+		Boolean bUsed;
+		Boolean multiLLIs;
+		Boolean busy;
+		UInt8 src_peri_id;
+		UInt8 dst_peri_id;
+		Dma_Chan_Info chanInfo;
+	} Dma_Channel;
 
 /**
 *
@@ -62,21 +61,19 @@ typedef struct
 *
 *****************************************************************************/
 #define DMA_DESCRIPTOR_NUM           256
-typedef struct
-{
-	Dma_Chan_Desc  desc[DMA_DESCRIPTOR_NUM];
-} Dma_Chan_List;
+	typedef struct {
+		Dma_Chan_Desc desc[DMA_DESCRIPTOR_NUM];
+	} Dma_Chan_List;
 
 /**
 *
 *  DMA interrupt type definition
 *
 *****************************************************************************/
-typedef struct
-{
-    UInt32    tcInt;
-    UInt32    errInt;
-} DMA_Interrupt_t;    
+	typedef struct {
+		UInt32 tcInt;
+		UInt32 errInt;
+	} DMA_Interrupt_t;
 
 /**
 *
@@ -101,7 +98,6 @@ typedef struct
 #define DMA_CHCFG_SRCPERI_MASK		0x1F
 #define DMA_CHCFG_SRCPERI_SHIFT		1
 
-
 /**
 *
 *  This function initialize dma
@@ -110,7 +106,8 @@ typedef struct
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_init(void *base, UInt32 LL_virt, UInt32 LL_phy, UInt32 LL_Size);
+	void csl_dma_init(void *base, UInt32 LL_virt, UInt32 LL_phy,
+			  UInt32 LL_Size);
 
 /**
 *
@@ -120,7 +117,7 @@ void csl_dma_init(void *base, UInt32 LL_virt, UInt32 LL_phy, UInt32 LL_Size);
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_deinit(void);
+	void csl_dma_deinit(void);
 
 /**
 *
@@ -130,7 +127,7 @@ void csl_dma_deinit(void);
 *  @return	    status (out) 0 or 1  
 *
 *****************************************************************************/
-UInt32 csl_dma_reset_channel(UInt16 chanID);
+	UInt32 csl_dma_reset_channel(UInt16 chanID);
 
 /**
 *
@@ -140,7 +137,7 @@ UInt32 csl_dma_reset_channel(UInt16 chanID);
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_shutdown_all_channel(void);
+	void csl_dma_shutdown_all_channel(void);
 
 /**
 *
@@ -151,8 +148,8 @@ void csl_dma_shutdown_all_channel(void);
 *  @return	    void
 *
 *****************************************************************************/
-Int32 csl_dma_config_channel(DMA_CHANNEL chanID, Dma_Chan_Info *pChanInfo);
-
+	Int32 csl_dma_config_channel(DMA_CHANNEL chanID,
+				     Dma_Chan_Info * pChanInfo);
 
 /**
 *
@@ -163,7 +160,7 @@ Int32 csl_dma_config_channel(DMA_CHANNEL chanID, Dma_Chan_Info *pChanInfo);
 *  @return	    chan (out) channle identification
 *
 *****************************************************************************/
-Int32 csl_dma_obtain_channel(UInt8 srcID, UInt8 dstID);
+	Int32 csl_dma_obtain_channel(UInt8 srcID, UInt8 dstID);
 
 /**
 *
@@ -173,7 +170,7 @@ Int32 csl_dma_obtain_channel(UInt8 srcID, UInt8 dstID);
 *  @return	    status (out) 0 or 1
 *
 *****************************************************************************/
-UInt32 csl_dma_release_channel(DMA_CHANNEL chanID);
+	UInt32 csl_dma_release_channel(DMA_CHANNEL chanID);
 
 /**
 *
@@ -183,7 +180,7 @@ UInt32 csl_dma_release_channel(DMA_CHANNEL chanID);
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_start_transfer(DMA_CHANNEL chanID, DMADRV_LLI_T pLLI);
+	void csl_dma_start_transfer(DMA_CHANNEL chanID, DMADRV_LLI_T pLLI);
 
 /**
 *
@@ -193,7 +190,7 @@ void csl_dma_start_transfer(DMA_CHANNEL chanID, DMADRV_LLI_T pLLI);
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_stop_transfer(DMA_CHANNEL chanID);
+	void csl_dma_stop_transfer(DMA_CHANNEL chanID);
 
 /**
 *
@@ -203,7 +200,7 @@ void csl_dma_stop_transfer(DMA_CHANNEL chanID);
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_wait_channel(DMA_CHANNEL chanID);
+	void csl_dma_wait_channel(DMA_CHANNEL chanID);
 
 /**
 *
@@ -213,7 +210,7 @@ void csl_dma_wait_channel(DMA_CHANNEL chanID);
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_force_shutdown_channel(DMA_CHANNEL chanID);
+	void csl_dma_force_shutdown_channel(DMA_CHANNEL chanID);
 
 /**
 *
@@ -223,7 +220,7 @@ void csl_dma_force_shutdown_channel(DMA_CHANNEL chanID);
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_shutdown_channel(DMA_CHANNEL chanID);
+	void csl_dma_shutdown_channel(DMA_CHANNEL chanID);
 
 /**
 *
@@ -233,7 +230,7 @@ void csl_dma_shutdown_channel(DMA_CHANNEL chanID);
 *  @return	    void
 *
 *****************************************************************************/
-UInt32 csl_dma_set_repeat_mode(DMA_CHANNEL chanID);
+	UInt32 csl_dma_set_repeat_mode(DMA_CHANNEL chanID);
 
 /**
 *
@@ -244,12 +241,9 @@ UInt32 csl_dma_set_repeat_mode(DMA_CHANNEL chanID);
 *  @return	    status    (out) 0 or 1
 *
 *****************************************************************************/
-Int32 csl_dma_bind_data(
-    DMA_CHANNEL chanID, 
-    Dma_Data *pData, 
-    Boolean multiLLIs,
-    DMADRV_LLI_T *pLLI
-);
+	Int32 csl_dma_bind_data(DMA_CHANNEL chanID,
+				Dma_Data * pData,
+				Boolean multiLLIs, DMADRV_LLI_T * pLLI);
 
 /**
 *
@@ -259,7 +253,7 @@ Int32 csl_dma_bind_data(
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_process_callback(DMA_Interrupt_t *intStatus);
+	void csl_dma_process_callback(DMA_Interrupt_t * intStatus);
 
 /**
 *
@@ -269,7 +263,7 @@ void csl_dma_process_callback(DMA_Interrupt_t *intStatus);
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_get_intr_status(DMA_Interrupt_t *intStatus);
+	void csl_dma_get_intr_status(DMA_Interrupt_t * intStatus);
 
 /**
 *
@@ -279,12 +273,9 @@ void csl_dma_get_intr_status(DMA_Interrupt_t *intStatus);
 *  @return	    void
 *
 *****************************************************************************/
-void csl_dma_clear_intr_status(UInt32 mask);
-
+	void csl_dma_clear_intr_status(UInt32 mask);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _CSL_DMA_H_ */
-
+#endif				/* _CSL_DMA_H_ */
