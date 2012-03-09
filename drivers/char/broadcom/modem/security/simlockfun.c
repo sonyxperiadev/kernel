@@ -32,8 +32,7 @@
 #include "resultcode.h"
 #include "taskmsgs.h"
 #include "simlockfun.h"
-#include "aes.h"
-#include "crypto_api.h"
+
 #ifdef CONFIG_BRCM_CKBLOCK_READER
 #include <linux/broadcom/ckblock_reader.h>
 #endif
@@ -123,7 +122,7 @@ enum _SIMLOCK_RESULT_t {
 #define  SEC_SIMLOCK_CORP_LOCK_OPEND    (1 << SEC_SIMLOCK_CORP_LOCK_LOCK)
 #define  SEC_SIMLOCK_PHONE_LOCK_OPEND   (1 << SEC_SIMLOCK_PHONE_LOCK)
 
-#define SIMLOCK_NV_DATA  "/data/.simlocknvdata.bin"
+#define SIMLOCK_NV_DATA  "/data/sec/.simlocknvdata.bin"
 #define SIMLOCK_BASE    0x3f0000	/*  SIMLOCK info */
 
 #define MIN(x, y) ((x) > (y) ? (y) : (x))
@@ -220,6 +219,17 @@ static UInt8 *ReadIMEI(SimNumber_t simid)
 {
 	return (UInt8 *)"1234567890";
 }
+/* **FIXME** needs to be implemented */
+#define AES_OPERATION_ENCRYPT  1
+#define AES_OPERATION_DECRYPT  0
+
+UInt8 EncDec(UInt8 *outDataPtr, const UInt8 *inDataPtr,
+			UInt32 inDataSize, UInt32 inEncDec)
+{
+	memcpy(outDataPtr, inDataPtr, inDataSize);
+	return 1;
+}
+
 
 /******************************************************************************
 *
@@ -387,7 +397,8 @@ static void KRIL_simlock_Writefile(UInt8 *pSIMLockInfo)
 	mm_segment_t orgfs = get_fs();
 	set_fs(KERNEL_DS);
 
-	hFileTmp = filp_open(SIMLOCK_NV_DATA, O_CREAT | O_TRUNC | O_WRONLY, 0);
+	hFileTmp = filp_open(SIMLOCK_NV_DATA, O_CREAT | O_TRUNC | O_WRONLY,
+							S_IRUGO | S_IWUGO);
 	if (IS_ERR(hFileTmp)) {
 		pr_info
 		    ("Create simlocknvdata.bin Failed! IS_ERR(hFileTmp):%ld\n",

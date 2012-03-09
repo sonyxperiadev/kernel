@@ -41,41 +41,17 @@
 
 #if (!defined(CONFIG_BCMPMU_AUDIO))
 
-#include <linux/broadcom/bcmpmu_audio.h>
-#define AUDIO_PMU_INIT() NULL
-#define AUDIO_PMU_HS_SET_GAIN(a, b) NULL
-#define AUDIO_PMU_HS_POWER(a) NULL
-#define AUDIO_PMU_IHF_SET_GAIN(a) NULL
-#define AUDIO_PMU_IHF_POWER(a) NULL
-#define AUDIO_PMU_DEINIT() NULL
-#define AUDIO_PMU_HI_GAIN_MODE_EN(a) NULL
-
-#else
-
-#ifdef CONFIG_BCM59055_AUDIO
-
-#include "linux/broadcom/bcm59055-audio.h"
-#define AUDIO_PMU_INIT bcm59055_audio_init
-#define AUDIO_PMU_HS_SET_GAIN bcm59055_hs_set_gain
-#define AUDIO_PMU_HS_POWER bcm59055_hs_power
-#define AUDIO_PMU_IHF_SET_GAIN bcm59055_ihf_set_gain
-#define AUDIO_PMU_IHF_POWER bcm59055_ihf_power
-#define AUDIO_PMU_DEINIT bcm59055_audio_deinit
-#define AUDIO_PMU_HI_GAIN_MODE_EN NULL
+#define bcmpmu_audio_init() NULL
+#define bcmpmu_hs_set_gain(a, b) NULL
+#define bcmpmu_hs_power(a) NULL
+#define bcmpmu_ihf_set_gain(a) NULL
+#define bcmpmu_ihf_power(a) NULL
+#define bcmpmu_audio_deinit() NULL
+#define bcmpmu_hi_gain_mode_en(a) NULL
 
 #else
 
 #include <linux/broadcom/bcmpmu_audio.h>
-#define AUDIO_PMU_INIT bcmpmu_audio_init
-#define AUDIO_PMU_HS_SET_GAIN bcmpmu_hs_set_gain
-#define AUDIO_PMU_HS_POWER bcmpmu_hs_power
-#define AUDIO_PMU_IHF_SET_GAIN bcmpmu_ihf_set_gain
-#define AUDIO_PMU_IHF_POWER bcmpmu_ihf_power
-#define AUDIO_PMU_DEINIT bcmpmu_audio_deinit
-#define AUDIO_PMU_HI_GAIN_MODE_EN bcmpmu_hi_gain_mode_en
-
-#endif
-
 
 struct PMU_AudioGainMapping_t {
 	int gain_mB;
@@ -83,27 +59,7 @@ struct PMU_AudioGainMapping_t {
 };
 
 /*** FYI: from kernel/include/linux/broadcom/bcm59055-audio.h
-enum
-{
-	PMU_HSGAIN_MUTE,
-	PMU_HSGAIN_66DB_N,
-	PMU_HSGAIN_63DB_N,
-...
-	PMU_HSGAIN_2P5DB_N,
-	PMU_HSGAIN_2DB_N,
-	PMU_HSGAIN_NUM
-};
-
-enum
-{
-	PMU_IHFGAIN_MUTE,
-	PMU_IHFGAIN_60DB_N,
-	PMU_IHFGAIN_57DB_N,
-...
-	PMU_IHFGAIN_3P5DB_P,
-	PMU_IHFGAIN_4DB_P,
-    PMU_IHFGAIN_NUM
-};
+enum from include/linux/broadcom/bcmpmu_audio.h
 ***/
 
 static struct PMU_AudioGainMapping_t hsPMUGainTable[PMU_HSGAIN_NUM] = {
@@ -339,9 +295,9 @@ static struct PMU_AudioGainMapping_t map2pmu_ihf_gain(int arg_gain_mB)
 void extern_hs_on(void)
 {
 	/*enable the audio PLL before power ON */
-	AUDIO_PMU_INIT();
+	bcmpmu_audio_init();
 
-	AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
+	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH,
 				  PMU_HSGAIN_MUTE),
 
 	/*
@@ -350,7 +306,7 @@ void extern_hs_on(void)
 	drivers/misc/bcmpmu_audio.c
 	*/
 
-	AUDIO_PMU_HS_POWER(1);
+	bcmpmu_hs_power(1);
 
 	hs_IsOn = 1;
 }
@@ -364,15 +320,15 @@ void extern_hs_on(void)
 ****************************************************************************/
 void extern_hs_off(void)
 {
-	AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
+	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH,
 				  PMU_HSGAIN_MUTE),
-	AUDIO_PMU_HS_POWER(0);
+	bcmpmu_hs_power(0);
 
 	hs_IsOn = 0;
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)
 		/*disable the audio PLL after power OFF*/
-		AUDIO_PMU_DEINIT();
+		bcmpmu_audio_deinit();
 }
 
 /********************************************************************
@@ -388,10 +344,10 @@ void extern_ihf_on(void)
 	audio_gpio_output(GPIO_IHF_EXT_AMP, 1);
 #else
 	/*enable the audio PLL before power ON */
-	AUDIO_PMU_INIT();
+	bcmpmu_audio_init();
 
-	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
-	AUDIO_PMU_IHF_POWER(1);
+	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE),
+	bcmpmu_ihf_power(1);
 #endif
 	ihf_IsOn = 1;
 }
@@ -409,12 +365,12 @@ void extern_ihf_off(void)
 #if defined(CONFIG_IHF_EXT_AMPLIFIER)
 	audio_gpio_output(GPIO_IHF_EXT_AMP, 0);
 #else
-	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
-	AUDIO_PMU_IHF_POWER(0);
+	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE),
+	bcmpmu_ihf_power(0);
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)
 		/*disable the audio PLL after power OFF*/
-		AUDIO_PMU_DEINIT();
+		bcmpmu_audio_deinit();
 #endif
 }
 
@@ -454,16 +410,16 @@ void extern_hs_set_gain(int gain_mB, AUDIO_GAIN_LR_t lr)
 			__func__, gain_mB, gain_map.PMU_gain_enum);
 
 	if (lr == AUDIO_HS_BOTH) {
-		AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
+		bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH,
 			gain_map.PMU_gain_enum);
 		hs_gain_l = gain_map.gain_mB;
 		hs_gain_r = gain_map.gain_mB;
 	} else if (lr == AUDIO_HS_LEFT) {
-		AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_LEFT,
+		bcmpmu_hs_set_gain(PMU_AUDIO_HS_LEFT,
 			gain_map.PMU_gain_enum);
 		hs_gain_l = gain_map.gain_mB;
 	} else if (lr == AUDIO_HS_RIGHT) {
-		AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_RIGHT,
+		bcmpmu_hs_set_gain(PMU_AUDIO_HS_RIGHT,
 			gain_map.PMU_gain_enum);
 		hs_gain_r = gain_map.gain_mB;
 	}
@@ -479,13 +435,13 @@ void extern_hs_set_gain(int gain_mB, AUDIO_GAIN_LR_t lr)
 void extern_hs_mute(AUDIO_GAIN_LR_t lr)
 {
 	if (lr == AUDIO_HS_BOTH)
-		AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
+		bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
 	else
 	if (lr == AUDIO_HS_LEFT)
-		AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_LEFT, PMU_HSGAIN_MUTE);
+		bcmpmu_hs_set_gain(PMU_AUDIO_HS_LEFT, PMU_HSGAIN_MUTE);
 	else
 	if (lr == AUDIO_HS_RIGHT)
-		AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_RIGHT, PMU_HSGAIN_MUTE);
+		bcmpmu_hs_set_gain(PMU_AUDIO_HS_RIGHT, PMU_HSGAIN_MUTE);
 }
 
 /********************************************************************
@@ -541,7 +497,7 @@ void extern_ihf_set_gain(int gain_mB)
 	aTrace(LOG_AUDIO_CNTLR, "%s gain_mB=%d, pmu_gain_enum=%d\n",
 			__func__, gain_mB, gain_map.PMU_gain_enum);
 
-	AUDIO_PMU_IHF_SET_GAIN(gain_map.PMU_gain_enum);
+	bcmpmu_ihf_set_gain(gain_map.PMU_gain_enum);
 
 	ihf_gain = gain_map.gain_mB;
 }
@@ -556,7 +512,7 @@ void extern_ihf_set_gain(int gain_mB)
 ****************************************************************************/
 void extern_ihf_mute(void)
 {
-	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE);
+	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE);
 }
 
 /********************************************************************
@@ -581,9 +537,9 @@ void extern_ihf_unmute(void)
 void extern_ihf_en_hi_gain_mode(int enable)
 {
 	if (0 == enable)
-		AUDIO_PMU_HI_GAIN_MODE_EN(0);
+		bcmpmu_hi_gain_mode_en(0);
 	else
-		AUDIO_PMU_HI_GAIN_MODE_EN(1);
+		bcmpmu_hi_gain_mode_en(1);
 }
 
 #endif

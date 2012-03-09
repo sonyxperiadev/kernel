@@ -63,9 +63,9 @@ struct sdio_platform_cfg {
 	unsigned id;
 
 	/*
-	* For boards without the SDIO pullup registers, data_pullup needs to set
-	* to 1
-	*/
+	 * For boards without the SDIO pullup registers, data_pullup needs to set
+	 * to 1
+	 */
 	unsigned int data_pullup;
 
 	/* for devices with 8-bit lines */
@@ -91,10 +91,10 @@ struct sdio_platform_cfg {
 
 	/* Call back added for unified DHD support */
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-	int (*register_status_notify) (
-		void (*callback)(int card_present, void *dev_id),
-		void *dev_id);
+	int (*register_status_notify) (void (*callback)
+				       (int card_present, void *dev_id),
+				       void *dev_id);
 #endif
 };
 
-#endif  /* SDIO_PLATFORM_H */
+#endif /* SDIO_PLATFORM_H */

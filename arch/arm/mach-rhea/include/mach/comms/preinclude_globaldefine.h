@@ -136,8 +136,8 @@
 #define NO_LA_TESTPOINT
 #undef RTEM_INCLUDED
 #define RTOS_SUPPORTED
-#define KPD_COL_NUM 
-#define KPD_ROW_NUM 
+#define KPD_COL_NUM
+#define KPD_ROW_NUM
 #define NEW_I2C_INCLUDED
 #undef I2C_ADAPTOR_INCLUDED
 #define ROM_SIZE 0x08000000

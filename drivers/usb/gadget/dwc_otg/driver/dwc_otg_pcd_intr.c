@@ -1141,7 +1141,8 @@ static inline void ep0_do_stall(dwc_otg_pcd_t *pcd, const int err_val)
 {
 	dwc_otg_pcd_ep_t *ep0 = &pcd->ep0;
 	usb_device_request_t *ctrl = &pcd->setup_pkt->req;
-	DWC_WARN("req %02x.%02x protocol STALL; err %d\n",
+	if (ctrl)
+		DWC_DEBUG("req %02x.%02x protocol STALL; err %d\n",
 		 ctrl->bmRequestType, ctrl->bRequest, err_val);
 
 	ep0->dwc_ep.is_in = 1;
@@ -3270,9 +3271,9 @@ static inline int32_t handle_out_ep_nyet_intr(dwc_otg_pcd_t *pcd,
  */
 static int32_t dwc_otg_pcd_handle_in_ep_intr(dwc_otg_pcd_t *pcd)
 {
-#define CLEAR_IN_EP_INTR(__core_if,__epnum,__intr) \
+#define CLEAR_IN_EP_INTR(__core_if, __epnum, __intr) \
 do { \
-		diepint_data_t diepint = {.d32=0}; \
+		diepint_data_t diepint = {.d32 = 0}; \
 		diepint.b.__intr = 1; \
 		dwc_write_reg32(&__core_if->dev_if->in_ep_regs[__epnum]->diepint, \
 		diepint.d32); \
@@ -3547,9 +3548,9 @@ do { \
  */
 static int32_t dwc_otg_pcd_handle_out_ep_intr(dwc_otg_pcd_t *pcd)
 {
-#define CLEAR_OUT_EP_INTR(__core_if,__epnum,__intr) \
+#define CLEAR_OUT_EP_INTR(__core_if, __epnum, __intr) \
 do { \
-		doepint_data_t doepint = {.d32=0}; \
+		doepint_data_t doepint = {.d32 = 0}; \
 		doepint.b.__intr = 1; \
 		dwc_write_reg32(&__core_if->dev_if->out_ep_regs[__epnum]->doepint, \
 		doepint.d32); \

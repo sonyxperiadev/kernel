@@ -293,10 +293,18 @@ extern "C" {
 #define BCMLOG_CUSTOM_DATA		2	/* partial message data */
 #define BCMLOG_CUSTOM_END		3	/* partial message end */
 
-extern struct apanic_data drv_ctx;
+	extern struct apanic_data drv_ctx;
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
-extern unsigned long get_apanic_start_address(void);
+	extern unsigned long get_apanic_start_address(void);
 #endif
+
+/* help functions for STM crash dump */
+	extern int stm_trace_buffer_onchannel(int channel, const void *data,
+					      size_t length);
+	extern void stm_trace_buffer_end(int channel);
+	extern int stm_trace_buffer_data(int channel, const void *data_ptr,
+					 size_t length);
+	extern void stm_trace_buffer_start(int channel);
 
 /**
  *	Get runtime log device
@@ -315,9 +323,11 @@ extern unsigned long get_apanic_start_address(void);
 
 	int BCMLOG_GetCpCrashLogDevice(void);
 	int BCMLOG_GetApCrashLogDevice(void);
+	void BCMLOG_SetCpCrashLogDevice(int port);
 
 	extern void (*BrcmLogString) (const char *inLogString,
 				      unsigned short inSender);
+	extern int ap_triggered;
 	extern int brcm_retrive_early_printk(void);
 	extern int bcmlog_mtt_on;
 	extern unsigned short bcmlog_log_ulogging_id;

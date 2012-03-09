@@ -35,6 +35,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_isp.h>
+#include <plat/clock.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
 #include <linux/delay.h>
@@ -44,7 +45,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #define RHEA_ISP_BASE_PERIPHERAL_ADDRESS    ISP_BASE_ADDR
 #define RHEA_MM_CLK_BASE_ADDRESS            MM_CLK_BASE_ADDR
-#define RHEA_MM_RST_OFFSET                 (MM_RST_BASE_ADDR - MM_CLK_BASE_ADDR)
 
 #define IRQ_ISP         (153+32)
 
@@ -165,6 +165,10 @@ static int isp_release(struct inode *inode, struct file *filp)
 	scu_standby(1);
 
 	disable_isp_clock();
+	if (pi_mgr_dfs_request_update(&isp_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+		printk(KERN_ERR "%s: failed to update dfs request for isp\n",
+		       __func__);
+	}
 
 	pi_mgr_dfs_request_remove(&isp_dfs_node);
 	isp_dfs_node.name = NULL;
@@ -268,36 +272,18 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case ISP_IOCTL_CLK_RESET:
 		{
-			unsigned int reg_val;
-			dbg_print("reset ISP clock\n");
-			reg_write(mmclk_base,
-				  (RHEA_MM_RST_OFFSET +
-				   MM_RST_MGR_REG_WR_ACCESS_OFFSET), 0xA5A501);
-
-			reg_val =
-			    reg_read(mmclk_base,
-				     (RHEA_MM_RST_OFFSET +
-				      MM_RST_MGR_REG_SOFT_RSTN0_OFFSET)) &
-			    (~MM_RST_MGR_REG_SOFT_RSTN0_ISP_SOFT_RSTN_MASK);
-
-			reg_write(mmclk_base,
-				  (RHEA_MM_RST_OFFSET +
-				   MM_RST_MGR_REG_SOFT_RSTN0_OFFSET), reg_val);
-
-			reg_val =
-			    reg_read(mmclk_base,
-				     (RHEA_MM_RST_OFFSET +
-				      MM_RST_MGR_REG_SOFT_RSTN0_OFFSET)) |
-			    MM_RST_MGR_REG_SOFT_RSTN0_ISP_SOFT_RSTN_MASK;
-
-			reg_write(mmclk_base,
-				  (RHEA_MM_RST_OFFSET +
-				   MM_RST_MGR_REG_SOFT_RSTN0_OFFSET), reg_val);
-
-			/*  sleep for 1ms */
-			usleep_range(1000, 2000);
+			struct clk *clk;
+			clk = clk_get(NULL, "isp_axi_clk");
+			if (clk) {
+				dbg_print("reset ISP clock\n");
+				clk_reset(clk);
+				/*  sleep for 1ms */
+				usleep_range(1000, 2000);
+			} else {
+				err_print("%s: error get clock\n", __func__);
+				ret = -EIO;
+			}
 		}
-
 	default:
 		break;
 	}
@@ -361,11 +347,6 @@ static void disable_isp_clock(void)
 		return;
 
 	clk_disable(isp_clk);
-
-	if (pi_mgr_dfs_request_update(&isp_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
-		printk(KERN_ERR "%s: failed to update dfs request for isp\n",
-		       __func__);
-	}
 
 }
 

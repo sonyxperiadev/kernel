@@ -103,7 +103,7 @@ struct pi_mgr_dfs_object
 {
 	u32 pi_id;
 	u32 default_opp;
-	struct blocking_notifier_head notifiers;
+	struct atomic_notifier_head notifiers;
 	struct plist_head requests;
 };
 
@@ -111,7 +111,7 @@ struct pi_mgr_qos_object
 {
 	u32 pi_id;
 	u32 default_latency;
-	struct blocking_notifier_head notifiers;
+	struct atomic_notifier_head notifiers;
 	struct plist_head requests;
 };
 
@@ -122,31 +122,32 @@ struct pi_mgr
 	struct pi* pi_list[PI_MGR_PI_ID_MAX];
 	struct pi_mgr_qos_object qos[PI_MGR_PI_ID_MAX];
 	struct pi_mgr_dfs_object dfs[PI_MGR_PI_ID_MAX];
-	struct blocking_notifier_head pol_chg_notifier[PI_MGR_PI_ID_MAX];
+	struct atomic_notifier_head pol_chg_notifier[PI_MGR_PI_ID_MAX];
 };
 
 static struct pi_mgr pi_mgr;
 
-static int pi_change_notify(int pi_id, u32 type, u32 old_val, u32 new_val, u32 state)
+static int pi_change_notify(int pi_id, u32 type, u32 old_val,
+						u32 new_val, u32 state)
 {
 	struct pi_notify_param param = {pi_id, old_val, new_val};
 
 	switch(type)
 	{
 	case PI_NOTIFY_DFS_CHANGE:
-		return blocking_notifier_call_chain(
+		return atomic_notifier_call_chain(
 						&pi_mgr.dfs[pi_id].notifiers,
 					     state,
 					     &param);
 
 	case PI_NOTIFY_QOS_CHANGE:
-		return blocking_notifier_call_chain(
+		return atomic_notifier_call_chain(
 						&pi_mgr.qos[pi_id].notifiers,
 					     state,
 					     &param);
 
 	case PI_NOTIFY_POLICY_CHANGE:
-		 return blocking_notifier_call_chain(
+		 return atomic_notifier_call_chain(
 						&pi_mgr.pol_chg_notifier[pi_id],
 					     state,
 					     &param);
@@ -164,21 +165,18 @@ static int pi_save_state(struct pi *pi, int save)
 	increment usg_cnt to avoid lockup
 	*/
 	pi->usg_cnt++;
-	if(save)
-	{
-		for(inx =0; inx < pi->num_ccu_id;inx++)
-		{
-			ccu_save_state(to_ccu_clk(pi->pi_ccu[inx]),1 /*save*/);
-		}
+	if (save) {
+		for (inx = 0; inx < pi->num_ccu_id; inx++)
+			ccu_save_state(to_ccu_clk(pi->pi_ccu[inx]),
+							1 /*save*/);
+
 		pi->state_saved = 1;
-	}
-	else
-	{
+	} else {
 		BUG_ON(pi->state_saved == 0);
-		for(inx =0; inx < pi->num_ccu_id; inx++)
-		{
-			ccu_save_state(to_ccu_clk(pi->pi_ccu[inx]),0 /*restore*/);
-		}
+		for (inx = 0; inx < pi->num_ccu_id; inx++)
+			ccu_save_state(to_ccu_clk(pi->pi_ccu[inx]),
+							0 /*restore*/);
+
 		pi->state_saved = 0;
 	}
 	pi->usg_cnt--;
@@ -251,12 +249,12 @@ int pi_enable(struct pi *pi, int enable)
 	int ret;
 	unsigned long flgs;
 
-	spin_lock_irqsave(&pi_mgr_lock, flgs);
+	spin_lock_irqsave(&pi->lock, flgs);
 	if(enable)
 		ret = __pi_enable(pi);
 	else
 		ret = __pi_disable(pi);
-	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
+	spin_unlock_irqrestore(&pi->lock, flgs);
 	return ret;
 }
 EXPORT_SYMBOL(pi_enable);
@@ -297,10 +295,9 @@ int pi_init(struct pi *pi)
 	int ret;
 	unsigned long flgs;
 
-	spin_lock_irqsave(&pi_mgr_lock, flgs);
-
+	spin_lock_irqsave(&pi->lock, flgs);
 	ret = __pi_init(pi);
-	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
+	spin_unlock_irqrestore(&pi->lock, flgs);
 	return ret;
 }
 EXPORT_SYMBOL(pi_init);
@@ -326,7 +323,7 @@ static int __pi_init_state(struct pi *pi)
 			pi->pi_ccu[inx] = clk_get(NULL,pi->ccu_id[inx]);
 			BUG_ON(pi->pi_ccu[inx] == 0 || IS_ERR(pi->pi_ccu[inx]));
 		}
-		spin_lock_irqsave(&pi_mgr_lock, flgs);
+		spin_lock_irqsave(&pi->lock, flgs);
 		if(pi->ops && pi->ops->init_state)
 			ret = pi->ops->init_state(pi);
 
@@ -360,7 +357,7 @@ static int __pi_init_state(struct pi *pi)
 					pi->name,pi->usg_cnt,cfg.policy);
 			pwr_mgr_pi_set_wakeup_override(pi->id,true /*clear*/);
 		}
-		spin_unlock_irqrestore(&pi_mgr_lock, flgs);
+		spin_unlock_irqrestore(&pi->lock, flgs);
 	}
 	return ret;
 }
@@ -511,25 +508,26 @@ static int pi_def_init(struct pi *pi)
 
 	pi_dbg("%s:%s\n",__func__,pi->name);
 
-	if((pi->flags & PI_NO_QOS) == 0)
-	{
+	if ((pi->flags & PI_NO_QOS) == 0) {
 		qos = &pi_mgr.qos[pi->id];
 		qos->pi_id = pi->id;
-		BLOCKING_INIT_NOTIFIER_HEAD(&qos->notifiers);
+		ATOMIC_INIT_NOTIFIER_HEAD(&qos->notifiers);
 		plist_head_init(&qos->requests);
 		BUG_ON(pi->num_states > PI_MGR_MAX_STATE_ALLOWED);
 
-		qos->default_latency = pi->pi_state[pi->num_states-1].hw_wakeup_latency;
+		qos->default_latency =
+			pi->pi_state[pi->num_states-1].hw_wakeup_latency;
 		pi->state_allowed = pi->num_states-1;
-		pi_dbg( "qos->default_latency = %d state_allowed = %d\n", qos->default_latency,pi->state_allowed );
-		if(pi->flags & UPDATE_PM_QOS)
-		{
+		pi_dbg("qos->default_latency = %d state_allowed = %d\n",
+				qos->default_latency, pi->state_allowed);
+		if (pi->flags & UPDATE_PM_QOS)	{
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
 			pi->pm_qos =
 			pm_qos_add_request(PM_QOS_CPU_DMA_LATENCY,
 						PM_QOS_DEFAULT_VALUE);
 #else
-			pm_qos_add_request(&pi->pm_qos, PM_QOS_CPU_DMA_LATENCY,PM_QOS_DEFAULT_VALUE);
+			pm_qos_add_request(&pi->pm_qos, PM_QOS_CPU_DMA_LATENCY,
+						PM_QOS_DEFAULT_VALUE);
 #endif
 		}
 	}
@@ -538,7 +536,7 @@ static int pi_def_init(struct pi *pi)
 	{
 		pi_dbg( "pi->opp_active = %d\n",pi->opp_active);
 		dfs = &pi_mgr.dfs[pi->id];
-		BLOCKING_INIT_NOTIFIER_HEAD(&dfs->notifiers);
+		ATOMIC_INIT_NOTIFIER_HEAD(&dfs->notifiers);
 		plist_head_init(&dfs->requests);
 		dfs->pi_id = pi->id;
 		dfs->default_opp = 0;
@@ -550,7 +548,7 @@ static int pi_def_init(struct pi *pi)
 	}
 
 	/*Init PI Policy change notifier*/
-	BLOCKING_INIT_NOTIFIER_HEAD(&pi_mgr.pol_chg_notifier[pi->id]);
+	ATOMIC_INIT_NOTIFIER_HEAD(&pi_mgr.pol_chg_notifier[pi->id]);
 
 	printk(KERN_INFO " %s: count = %d\n",__func__,pi->usg_cnt);
 	return 0;
@@ -582,25 +580,31 @@ static int pi_reset(struct pi *pi, int sub_domain)
 	struct ccu_clk *ccu_clk;
 	unsigned long flgs;
 
-	pi_dbg("%s: pi_name:%s, usageCount:%d\n",__func__,pi->name, pi->usg_cnt);
-	if(pi->pi_info.reset_mgr_ccu_name == NULL || !pi->pi_info.pd_soft_reset_offset)
-	    return -EPERM;
-	if((sub_domain == SUB_DOMAIN_0 && !pi->pi_info.pd_reset_mask0) ||
+	pi_dbg("%s: pi_name:%s, usageCount:%d\n", __func__,
+					pi->name, pi->usg_cnt);
+	if (pi->pi_info.reset_mgr_ccu_name == NULL ||
+					!pi->pi_info.pd_soft_reset_offset)
+		return -EPERM;
+	if ((sub_domain == SUB_DOMAIN_0 && !pi->pi_info.pd_reset_mask0) ||
 	    (sub_domain == SUB_DOMAIN_1 && !pi->pi_info.pd_reset_mask1) ||
-	    (sub_domain == SUB_DOMAIN_BOTH && (!pi->pi_info.pd_reset_mask0 || !pi->pi_info.pd_reset_mask1)))
-	    return -EPERM;
+	    (sub_domain == SUB_DOMAIN_BOTH && (!pi->pi_info.pd_reset_mask0 ||
+			!pi->pi_info.pd_reset_mask1)))
+		return -EPERM;
 
-	spin_lock_irqsave(&pi_mgr_lock, flgs);
-	pi_dbg("%s:pi:%s reset ccu str:%s\n",__func__,pi->name,	pi->pi_info.reset_mgr_ccu_name);
-	clk = clk_get(NULL,pi->pi_info.reset_mgr_ccu_name);
+	spin_lock_irqsave(&pi->lock, flgs);
+	pi_dbg("%s:pi:%s reset ccu str:%s\n", __func__, pi->name,
+				pi->pi_info.reset_mgr_ccu_name);
+	clk = clk_get(NULL, pi->pi_info.reset_mgr_ccu_name);
 	BUG_ON(clk == 0 || IS_ERR(clk));
 
 	ccu_clk = to_ccu_clk(clk);
 
-	ccu_reset_write_access_enable(ccu_clk , true);
-	reg_val = readl(ccu_clk->ccu_reset_mgr_base + pi->pi_info.pd_soft_reset_offset);
+	ccu_reset_write_access_enable(ccu_clk, true);
+	reg_val = readl(ccu_clk->ccu_reset_mgr_base +
+					pi->pi_info.pd_soft_reset_offset);
 	pi_dbg("reset offset: %08x, reg_val: %08x\n",
-		(ccu_clk->ccu_reset_mgr_base + pi->pi_info.pd_soft_reset_offset), reg_val);
+		(ccu_clk->ccu_reset_mgr_base +
+				pi->pi_info.pd_soft_reset_offset), reg_val);
 	switch(sub_domain) {
 	case SUB_DOMAIN_0:
 	    reg_val = reg_val & ~pi->pi_info.pd_reset_mask0;
@@ -613,11 +617,12 @@ static int pi_reset(struct pi *pi, int sub_domain)
 	    reg_val = reg_val & ~pi->pi_info.pd_reset_mask1;
 	    break;
 	default:
-		spin_unlock_irqrestore(&pi_mgr_lock, flgs);
+		spin_unlock_irqrestore(&pi->lock, flgs);
 		return -EINVAL;
 	}
 	pi_dbg("writing reset value: %08x\n", reg_val);
-	writel(reg_val, ccu_clk->ccu_reset_mgr_base + pi->pi_info.pd_soft_reset_offset);
+	writel(reg_val, ccu_clk->ccu_reset_mgr_base +
+					pi->pi_info.pd_soft_reset_offset);
 	udelay(10);
 
 	switch(sub_domain) {
@@ -632,14 +637,14 @@ static int pi_reset(struct pi *pi, int sub_domain)
 	    reg_val = reg_val | pi->pi_info.pd_reset_mask1;
 	    break;
 	default:
-		spin_unlock_irqrestore(&pi_mgr_lock, flgs);
+		spin_unlock_irqrestore(&pi->lock, flgs);
 		return -EINVAL;
 	}
 	pi_dbg("writing reset release value: %08x\n", reg_val);
 	writel(reg_val, ccu_clk->ccu_reset_mgr_base + pi->pi_info.pd_soft_reset_offset);
 
 	ccu_reset_write_access_enable(ccu_clk , false);
-	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
+	spin_unlock_irqrestore(&pi->lock, flgs);
 	return 0;
 }
 
@@ -715,7 +720,7 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
 	struct pi *pi = pi_mgr.pi_list[pi_id];
 	unsigned long flgs;
 
-	spin_lock_irqsave(&pi_mgr_lock, flgs);
+	spin_lock_irqsave(&pi->lock, flgs);
 
 	old_val = pi->opp_active;
 	switch(action)
@@ -769,7 +774,7 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
 					old_val, new_val, PI_POSTCHANGE);
 		}
 	}
-	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
+	spin_unlock_irqrestore(&pi->lock, flgs);
 
 	return new_val;
 }
@@ -792,7 +797,7 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 	struct pi_mgr_qos_object* qos = &pi_mgr.qos[pi_id];
 	struct pi *pi = pi_mgr.pi_list[pi_id];
 
-	spin_lock_irqsave(&pi_mgr_lock, flgs);
+	spin_lock_irqsave(&pi->lock, flgs);
 	old_val = pi_mgr_qos_get_value(qos);
 
 	switch(action)
@@ -901,7 +906,7 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 
 	}
 	pi_dbg("%s:%s state allowed = %d\n",__func__,pi->name,pi->state_allowed);
-	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
+	spin_unlock_irqrestore(&pi->lock, flgs);
 	return new_val;
 }
 int pi_state_allowed(int pi_id)
@@ -962,32 +967,33 @@ int pi_mgr_register(struct pi* pi)
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pi_mgr_lock, flgs);
+	spin_lock_init(&pi->lock);
 	pi_mgr.pi_list[pi->id] = pi;
 	pi_mgr.pi_count++;
-
 	spin_unlock_irqrestore(&pi_mgr_lock, flgs);
 
 	return 0;
 }
 EXPORT_SYMBOL(pi_mgr_register);
 
-int pi_mgr_qos_add_request(struct pi_mgr_qos_node *node, char* client_name, u32 pi_id, u32 lat_value)
+int pi_mgr_qos_add_request(struct pi_mgr_qos_node *node, char *client_name,
+				u32 pi_id, u32 lat_value)
 {
-	pi_dbg("%s:client = %s,pi_id = %d, lat_val = %d\n",__func__, client_name,
-			pi_id,lat_value);
+	pi_dbg("%s:client = %s,pi_id = %d, lat_val = %d\n", __func__,
+		client_name, pi_id, lat_value);
 	if(unlikely(!pi_mgr.init))
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
+		pi_dbg("%s:ERROR - pi mgr not initialized\n", __func__);
 		return -EPERM;
 	}
 	if(node == NULL)
 	{
-	    pi_dbg("%s:ERROR Invalid node\n",__func__);
+	    pi_dbg("%s:ERROR Invalid node\n", __func__);
 	    return -EINVAL;
 	}
 	if(node->valid)
 	{
-	    pi_dbg("%s:ERROR node already added\n",__func__);
+	    pi_dbg("%s:ERROR node already added\n", __func__);
 	    return -EINVAL;
 	}
 	if(unlikely(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL))
@@ -1010,7 +1016,7 @@ int pi_mgr_qos_add_request(struct pi_mgr_qos_node *node, char* client_name, u32 
 	node->name = client_name;
 	node->latency = lat_value;
 	node->pi_id = pi_id;
-	pi_mgr_qos_update(node,pi_id,NODE_ADD);
+	pi_mgr_qos_update(node, pi_id, NODE_ADD);
 	node->valid = 1;
 	return 0;
 }
@@ -1031,7 +1037,7 @@ int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32 lat_value)
 	if(node->latency != lat_value)
 	{
 		node->latency = lat_value;
-		pi_mgr_qos_update(node,node->pi_id,NODE_UPDATE);
+		pi_mgr_qos_update(node, node->pi_id, NODE_UPDATE);
 	}
 
 	return 0;
@@ -1271,51 +1277,49 @@ EXPORT_SYMBOL(pi_mgr_disable_policy_change);
 
 static int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier)
 {
-	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_DFS))
-	{
-		pi_dbg("%s:ERROR - DFS not supported for this PI\n",__func__);
+	if (unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_DFS))	{
+		pi_dbg("%s:ERROR - DFS not supported for this PI\n", __func__);
 		return -EINVAL;;
 	}
 
-	return blocking_notifier_chain_register(
+	return atomic_notifier_chain_register(
 			&pi_mgr.dfs[pi_id].notifiers, notifier);
 }
 
-static int pi_mgr_dfs_remove_notifier(u32 pi_id, struct notifier_block *notifier)
+static int pi_mgr_dfs_remove_notifier(u32 pi_id,
+					struct notifier_block *notifier)
 {
-	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_DFS))
-	{
-		pi_dbg("%s:ERROR - DFS not supported for this PI\n",__func__);
+	if (unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_DFS))	{
+		pi_dbg("%s:ERROR - DFS not supported for this PI\n", __func__);
 		return -EINVAL;;
 	}
 
 
-	return blocking_notifier_chain_unregister(
+	return atomic_notifier_chain_unregister(
 			&pi_mgr.dfs[pi_id].notifiers, notifier);
 
 }
 
-static int pi_mgr_qos_add_notifier(u32 pi_id, struct notifier_block *notifier)
+static int pi_mgr_qos_add_notifier(u32 pi_id,
+					struct notifier_block *notifier)
 {
-	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))
-	{
-		pi_dbg("%s:ERROR - QOS not supported for this PI\n",__func__);
+	if (unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))	{
+		pi_dbg("%s:ERROR - QOS not supported for this PI\n", __func__);
 		return -EINVAL;;
 	}
 
-	return blocking_notifier_chain_register(
+	return atomic_notifier_chain_register(
 			&pi_mgr.qos[pi_id].notifiers, notifier);
 }
 
 static int pi_mgr_qos_remove_notifier(u32 pi_id, struct notifier_block *notifier)
 {
-	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))
-	{
-		pi_dbg("%s:ERROR - QOS not supported for this PI\n",__func__);
+	if (unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))	{
+		pi_dbg("%s:ERROR - QOS not supported for this PI\n", __func__);
 		return -EINVAL;;
 	}
 
-	return blocking_notifier_chain_unregister(
+	return atomic_notifier_chain_unregister(
 			&pi_mgr.qos[pi_id].notifiers, notifier);
 
 }
@@ -1341,7 +1345,7 @@ int pi_mgr_register_notifier(u32 pi_id, struct notifier_block *notifier, u32 typ
 		return pi_mgr_qos_add_notifier(pi_id, notifier);
 
 	case PI_NOTIFY_POLICY_CHANGE:
-		return blocking_notifier_chain_register(
+		return atomic_notifier_chain_register(
 			&pi_mgr.pol_chg_notifier[pi_id], notifier);
 	}
 	return -EINVAL;
@@ -1369,7 +1373,7 @@ int pi_mgr_unregister_notifier(u32 pi_id, struct notifier_block *notifier, u32 t
 		return pi_mgr_qos_remove_notifier(pi_id, notifier);
 
 	case PI_NOTIFY_POLICY_CHANGE:
-		return blocking_notifier_chain_unregister(
+		return atomic_notifier_chain_unregister(
 			&pi_mgr.pol_chg_notifier[pi_id], notifier);
 	}
 	return -EINVAL;
@@ -1896,7 +1900,7 @@ static struct file_operations all_req_fops =
 static ssize_t read_file_pi_count(struct file *file, char __user *user_buf,
 				size_t count, loff_t *ppos)
 {
-	int i, counter;
+	int i, counter = 0;
 	u32 len = 0;
 	struct pi *pi;
 	bool overflow;
@@ -1911,6 +1915,8 @@ static ssize_t read_file_pi_count(struct file *file, char __user *user_buf,
 			continue;
 
 		counter = pwr_mgr_pi_counter_read(pi->id, &overflow);
+		if (counter < 0)
+			return -ENOMEM;
 		len += snprintf(debug_fs_buf+len, sizeof(debug_fs_buf)-len,
 				"%8s(%1d): counter:0x%08X, overflow:%d, "
 				"systime:%16ld mS\n",
@@ -1925,12 +1931,23 @@ static const struct file_operations pi_debug_count_fops = {
 	.open =         pi_debugfs_open,
 	.read =         read_file_pi_count,
 };
+static int pi_debug_count_clear(void *data, u64 val)
+{
+	if (val == 1) {
+		pm_mgr_pi_count_clear(true);
+		pm_mgr_pi_count_clear(false);
+	} else
+		pr_info("Invalid parm\n");
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(pi_debug_count_clr_fops, NULL, pi_debug_count_clear,
+"%llu\n");
 
 static struct dentry *dent_pi_root_dir;
 int __init pi_debug_init(void)
 {
     struct dentry *dent_all_requests = 0, *dent_chip_reset = 0;
-    struct dentry *dent_pi_count = 0;
+	struct dentry *dent_pi_count = 0, *dent_pi_count_clr = 0;
     dent_pi_root_dir = debugfs_create_dir("power_domains", 0);
     if(!dent_pi_root_dir)
 		return -ENOMEM;
@@ -1949,6 +1966,11 @@ int __init pi_debug_init(void)
 				dent_pi_root_dir, NULL, &pi_debug_count_fops);
 	if (!dent_pi_count)
 		pi_dbg("Error registering pi_count with debugfs\n");
+
+	dent_pi_count_clr = debugfs_create_file("pi_count_clear",
+	S_IRUSR|S_IWUSR, dent_pi_root_dir, NULL, &pi_debug_count_clr_fops);
+	if (!dent_pi_count_clr)
+		pi_dbg("Error registering pi_count_clear with debugfs\n");
 
     return 0;
 

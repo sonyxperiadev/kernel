@@ -29,15 +29,15 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <asm/io.h>
 
+#include <plat/clock.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
-#include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_vce.h>
 
 #include <linux/broadcom/vce.h>
 
-#define DRIVER_VERSION 10105
+#define DRIVER_VERSION 10106
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -47,9 +47,6 @@ the GPL, without Broadcom's express prior written consent.
   TODO: make this some sort of plat/arch specific thing
 */
 #define IRQ_VCE                               BCM_INT_ID_RESERVED147
-
-/* Always check for idle at every reset:  TODO: make this configurable? */
-#define VCE_RESET_IMPLIES_ASSERT_IDLE
 
 /* #define VCE_DEBUG */
 #ifdef VCE_DEBUG
@@ -66,7 +63,6 @@ the GPL, without Broadcom's express prior written consent.
  *the data structures that follow */
 static int vce_major = VCE_DEV_MAJOR;
 static void __iomem *vce_base = NULL;
-static void __iomem *mm_rst_base = NULL;
 static struct clk *vce_clk;
 
 /* Per VCE state: (actually, some global state mixed in here too --
@@ -156,37 +152,8 @@ static void assert_vce_is_idle(void)
 
 static void reset_vce(void)
 {
-	uint32_t value;
-
-	mutex_lock(&vce_state.work_lock);
-
-#ifdef VCE_RESET_IMPLIES_ASSERT_IDLE
-	assert_idle_nolock();
-#endif
-
 	BUG_ON(vce_clk == NULL);
-	clk_disable(vce_clk);
-	/* Write the password to enable accessing other registers */
-	writel((0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
-	       (0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT),
-	       mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
-
-	/*  Put VCE in reset state */
-	value = readl(mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
-	value = value & ~(0x1 << MM_RST_MGR_REG_SOFT_RSTN0_VCE_SOFT_RSTN_SHIFT);
-	writel(value, mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
-
-	/*  Enable VCE */
-	value = value | (0x1 << MM_RST_MGR_REG_SOFT_RSTN0_VCE_SOFT_RSTN_SHIFT);
-	writel(value, mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
-
-	/* Write the password to disable accessing other registers */
-	writel((0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT),
-	       mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
-
-	clk_enable(vce_clk);
-
-	mutex_unlock(&vce_state.work_lock);
+	clk_reset(vce_clk);
 }
 
 static irqreturn_t vce_isr(int irq, void *unused)
@@ -320,10 +287,6 @@ static void power_on_and_start_clock(void)
 	BUG_ON(vce_state.clock_enable_count != 0);
 
 	_power_on();		/* TODO: error handling */
-
-	/* RST regs should be already mapped?  we don't bother here */
-	BUG_ON(mm_rst_base == NULL);
-
 	_clock_on();		/* TODO: error handling */
 
 	s = wire_interrupt_handler();
@@ -343,10 +306,6 @@ static void stop_clock_and_power_off(void)
 	BUG_ON(vce_base == NULL);
 
 	_clock_off();
-
-	/* Theoretically, we might consider unmapping reset regs here */
-	BUG_ON(mm_rst_base == NULL);
-
 	_power_off();
 }
 
@@ -606,6 +565,10 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case VCE_IOCTL_RESET:
 		{
+			int force;
+
+			force = arg;
+
 			/* TODO: should we assert clocks are already
 			 *on?  or just ignore the request when clocks
 			 *are off?  We'll get a PoR anyway?  Or
@@ -614,6 +577,12 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			 *by deferring the reset to the next clock
 			 *on?  FIXME */
 			clock_on();
+			if (!vce_is_idle() && !force) {
+				dbg_print("vce not idle -- "
+					  "indicate FORCE to override\n");
+				clock_off();
+				return -EAGAIN;
+			}
 			reset_vce();
 			clock_off();
 		}
@@ -889,11 +858,6 @@ int __init vce_init(void)
 	}
 	dbg_print("VCE register base address (remapped) = 0X%p\n", vce_base);
 
-	/* Map the RESET registers */
-	mm_rst_base = (void __iomem *)ioremap_nocache(MM_RST_BASE_ADDR, SZ_4K);
-	if (mm_rst_base == NULL)
-		goto err1;
-
 	/* Request the VCE IRQ */
 	ret = wire_interrupt_handler();
 	if (ret < 0)
@@ -962,10 +926,6 @@ int __init vce_init(void)
 	drop_interrupt_handler();
       err2a:
 
-	iounmap(mm_rst_base);
-	mm_rst_base = 0;
-      err1:
-
 	iounmap(vce_base);
 	vce_base = 0;
       err:
@@ -1003,9 +963,6 @@ void __exit vce_exit(void)
 	/* Unmap addresses */
 	if (vce_base)
 		iounmap(vce_base);
-
-	if (mm_rst_base)
-		iounmap(mm_rst_base);
 
 	pi_mgr_qos_request_remove(&vce_state.cpu_qos_node);
 

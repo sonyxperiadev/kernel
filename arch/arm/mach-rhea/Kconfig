@@ -8,8 +8,6 @@ choice
 config  ARCH_RHEA_BX
         bool "Rhea SOC Version - Bx [B1/B0]"
 
-config  ARCH_RHEA_A0
-        bool "Rhea SOC Version - A0"
 
 endchoice
 
@@ -38,14 +36,9 @@ config MACH_RHEA_RAY_EDN2X
 	  Support for the Broadcom Rhea Ray EDN2X board.
 
 config MACH_RHEA_SS_COMMON
-        bool "Support Broadcom Rhea SS project common option"
+	bool "Support Broadcom Rhea SS project common option"
 	help
-          Support Broadcom Rhea SS project common option.
-
-config MACH_RHEA_SS_LUCAS
-        bool "Support Broadcom Rhea SS Lucas board"
-        help
-          Support for the Broadcom Rhea SS Lucas board.
+		Support Broadcom Rhea SS project common option.
 
 config MACH_RHEA_FARADAY_EB10
 	bool "Support Nokia Faraday EB10 board"
@@ -84,20 +77,28 @@ config MACH_RHEA_STONE
 
 endchoice
 
+
+choice
+	prompt "Rhea SS based board type"
+	depends on MACH_RHEA_SS_COMMON
+
 config MACH_RHEA_SS
-        bool "Support Broadcom Rhea RheaCooper SS board"
-        help
+	bool "Support Broadcom Rhea SS board"
+	help
 	  Support Broadcom Rhea RheaCooper SS board.
+
+config MACH_RHEA_SS_LUCAS
+	bool "Support Broadcom Rhea SS Lucas board"
+	help
+		Support for the Broadcom Rhea SS Lucas board.
 
 config MACH_RHEA_SS_AMAZING
 	bool "Support Broadcom Rhea SS Amazing board"
 	help
 	  Support for the Broadcom Rhea SS Amazing board.
 
-config MACH_RHEA_SS_LUCAS
-	bool "Support Broadcom Rhea SS Amazing board"
-	help
-	  Support for the Broadcom Rhea SS Amazing board.
+endchoice
+
 
 config RHEA_DORMANT_MODE
        bool "Enable dormant mode support for Rhea platform"
@@ -130,12 +131,6 @@ config ROM_SEC_DISPATCHER_SRC
 
 endchoice
 
-config RHEA_A0_PM_ASIC_WORKAROUND
-       depends on ARCH_RHEA
-       bool "Enable A0 ASIC workarounds for Power management"
-       default y
-       help
-       Say Y if you want to enable Rhea A0 ASIC workarounds for Power management
 
 config RHEA_B0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA

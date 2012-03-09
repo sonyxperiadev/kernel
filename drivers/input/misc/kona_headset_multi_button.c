@@ -1258,6 +1258,9 @@ irqreturn_t comp2_inv_isr(int irq, void *dev_id)
 
 	if ( (readl(p->aci_base + ACI_INT_OFFSET) & 0x04) != 0x04) {
 		printk("Spurious comp2 inv isr \r\n");
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_unlock(&p->accessory_wklock);
+#endif
 		return IRQ_HANDLED;
 	}
 

@@ -658,8 +658,9 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.var.yres_virtual	= height * 2;
 	fb->fb.var.bits_per_pixel = fb_data->bytes_per_pixel * 8;
 	fb->fb.var.activate	= FB_ACTIVATE_NOW;
-	fb->fb.var.height	= height;
-	fb->fb.var.width	= width;
+	fb->fb.var.height	= fb->display_info->phys_height;
+	fb->fb.var.width	= fb->display_info->phys_width;
+
 #ifdef CONFIG_CDEBUGGER
 	/* it has dependency on h/w */
 	frame_buf_mark.p_fb = (void *)(fb->phys_fbbase - PHYS_OFFSET);

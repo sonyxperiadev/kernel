@@ -120,7 +120,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
       PRINT_INFO("current value of reset GPIO: %d\n", 
 		 gpio_get_value(gpio->reset));
       gpio_direction_output(gpio->reset, 1);
-      gpio_set_value(gpio->reset, 1);
+//      gpio_set_value(gpio->reset, 1);
    }
 
    if (gpio->shutdown >= 0)
@@ -215,13 +215,28 @@ int bcm_sdiowl_init(void)
       return -EFAULT;
  }
 #endif 
+
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
 
-   dev->wifi_gpio->reset=70;
+
+
+#ifdef CONFIG_MACH_RHEA_STONE
+   dev->wifi_gpio->reset=42;
    dev->wifi_gpio->reg=-1;
-   dev->wifi_gpio->host_wake=85;
+   dev->wifi_gpio->host_wake=74;
    dev->wifi_gpio->shutdown=-1;
+#else
+//Rhea Ray
+	dev->wifi_gpio->reset=70;
+	dev->wifi_gpio->reg=-1;
+	dev->wifi_gpio->host_wake=85;
+	dev->wifi_gpio->shutdown=-1;
+#endif
+
+
+
 #endif
 
    /* reserve GPIOs */

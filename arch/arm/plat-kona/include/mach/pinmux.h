@@ -29,7 +29,6 @@
 #include <asm/io.h>
 #include <mach/chip_pinmux.h>
 
-
 /* Pull up/down*/
 #define	PULL_UP_ON		1
 #define	PULL_UP_OFF		0
@@ -72,35 +71,35 @@
 
 /* pin description */
 struct pin_desc {
-	enum PIN_NAME	name;
-	unsigned int	reg_offset;
-	enum PIN_FUNC	f_tbl[MAX_ALT_FUNC];
+	enum PIN_NAME name;
+	unsigned int reg_offset;
+	enum PIN_FUNC f_tbl[MAX_ALT_FUNC];
 };
 
 /* chip-level pin description */
 struct chip_pin_desc {
-	const struct pin_desc 	*desc_tbl;
-	void __iomem 		*base;		/* pad control registers virtual base */
+	const struct pin_desc *desc_tbl;
+	void __iomem *base;	/* pad control registers virtual base */
 };
 
 /* chip pin-mux register */
 union pinmux_reg {
-	unsigned int	val;
+	unsigned int val;
 	struct {
-		unsigned	drv_sth:3;
-		unsigned	input_dis:1;
-		unsigned	slew_rate_ctrl:1;
-		unsigned	pull_up:1;
-		unsigned	pull_dn:1;
-		unsigned	hys_en:1;
-		unsigned	sel:3;
+		unsigned drv_sth:3;
+		unsigned input_dis:1;
+		unsigned slew_rate_ctrl:1;
+		unsigned pull_up:1;
+		unsigned pull_dn:1;
+		unsigned hys_en:1;
+		unsigned sel:3;
 	} b;
 };
 
 /* board-level or use-case based configuration */
 struct pin_config {
-	enum PIN_NAME		name;
-	enum PIN_FUNC		func;
+	enum PIN_NAME name;
+	enum PIN_FUNC func;
 
 	union pinmux_reg reg;
 };
@@ -132,6 +131,7 @@ static inline int is_ball_valid(enum PIN_NAME name)
 	return name < PN_MAX;
 }
 
-int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio, enum PIN_FUNC *PF_gpio);
+int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio,
+		     enum PIN_FUNC *PF_gpio);
 
 #endif /*__PINMUX_H_ */

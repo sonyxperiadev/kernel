@@ -187,6 +187,8 @@ struct USER_SET_GAIN_t {
 	int valid;
 };
 static struct USER_SET_GAIN_t users_gain[AUDPATH_TOTAL_NUM];
+static struct USER_SET_GAIN_t
+	user_vol_setting[AUDIO_APP_NUMBER][AUDIO_MODE_NUMBER];
 
 static unsigned hw_control[AUDCTRL_HW_ACCESS_TYPE_TOTAL][4] = { {0} };
 
@@ -212,6 +214,7 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 			       enum ExtSpkrUsage_en_t usage_flag,
 			       int use, int force);
 static void setExternAudioGain(AudioMode_t mode, AudioApp_t app);
+static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app);
 
 /****************************************************************************
 *
@@ -267,6 +270,8 @@ SYSPARM_GetAudioParamsFromFlash( cur_mode )->voice_volume_init;  dB */
 
 	for (i = 0; i < AUDPATH_TOTAL_NUM; i++)
 		users_gain[i].valid = FALSE;
+
+	memset(&user_vol_setting, 0, sizeof(user_vol_setting));
 }
 
 /****************************************************************************
@@ -297,6 +302,7 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 	aTrace(LOG_AUDIO_CNTLR, "%s sink %d, mic %d\n", __func__, sink, source);
 
 	mode = GetAudioModeBySink(sink);
+
 	if (AUDCTRL_Telephony_HW_16K(mode) == FALSE) {
 		app = AUDCTRL_GetAudioApp();
 		/*If VT app set from user,select VT app profile,
@@ -305,6 +311,9 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 			app = AUDIO_APP_VOICE_CALL;
 	} else
 		app = AUDIO_APP_VOICE_CALL_WB;
+
+	if (user_vol_setting[app][mode].valid == FALSE)
+		fillUserVolSetting(mode, app);
 
 	bNeedDualMic = needDualMic(mode, app);
 
@@ -599,14 +608,18 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 				    int volume, AUDIO_GAIN_FORMAT_t gain_format)
 {
+	AudioApp_t app;
+	AudioMode_t mode;
+
 #ifdef CONFIG_BCM_MODEM
 	SysAudioParm_t *p;
 #else
 	AudioSysParm_t *p;
 #endif
 
-	p = &(AudParmP()[AUDCTRL_GetAudioMode()
-			 + AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER]);
+	app = AUDCTRL_GetAudioApp();
+	mode = AUDCTRL_GetAudioMode();
+	p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
 
 	aTrace(LOG_AUDIO_CNTLR, "%s volume = %d", __func__, volume);
 
@@ -623,6 +636,9 @@ void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 
 		if (telephony_dl_gain_dB < -(p->voice_volume_max))
 			telephony_dl_gain_dB = -(p->voice_volume_max);
+
+		user_vol_setting[app][mode].L = volume;
+		user_vol_setting[app][mode].valid = TRUE;
 
 	} else if (gain_format == AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN) {
 		if (volume > 14)
@@ -802,7 +818,8 @@ void AUDCTRL_SaveAudioApp(AudioApp_t app)
 	   user space code. kernel audio code can not detect them. */
 	if (currAudioApp == AUDIO_APP_VOIP
 	    || currAudioApp == AUDIO_APP_VOIP_INCOMM
-	    || currAudioApp == AUDIO_APP_RECORDING_GVS)
+	    || currAudioApp == AUDIO_APP_RECORDING_GVS
+	    || currAudioApp == AUDIO_APP_FM)
 		return;		/*keep user-set audio APP intact */
 
 	currAudioApp = app;
@@ -902,6 +919,7 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	SetAudioMode_Sp_t sp_struct;
 
 	aTrace(LOG_AUDIO_CNTLR,
 			"%s mode %d, pathID %d",
@@ -938,9 +956,24 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 	currAudioMode_playback = mode;
 	/*currAudioApp_playback = ; */
 
-	AUDDRV_SetAudioMode_Speaker(
-		mode, AUDCTRL_GetAudioApp(), arg_pathID, inHWlpbk,
-		GAIN_SYSPARM, GAIN_SYSPARM);
+	sp_struct.mode = mode;
+	sp_struct.app = AUDCTRL_GetAudioApp();
+	sp_struct.pathID = arg_pathID;
+	sp_struct.inHWlpbk = inHWlpbk;
+	sp_struct.mixInGain_mB = GAIN_SYSPARM;
+	sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+	{
+		int i, j;
+
+		i = AUDCTRL_GetAudioApp();
+		j = mode;
+		if (user_vol_setting[i][j].valid == FALSE)
+			fillUserVolSetting(j, i);
+		sp_struct.mixOutGain_mB = user_vol_setting[i][j].L;
+		sp_struct.mixOutGainR_mB = user_vol_setting[i][j].R;
+	}
+
+	AUDDRV_SetAudioMode_Speaker(sp_struct);
 
 	if (!AUDCTRL_InVoiceCall()) {
 		/*for music tuning, if PCG changed audio mode,
@@ -975,6 +1008,8 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	SetAudioMode_Sp_t sp_struct;
+	AudioApp_t app;
 
 	aTrace(LOG_AUDIO_CNTLR,
 			"%s mode %d, pathID %d", __func__, mode, arg_pathID);
@@ -995,32 +1030,41 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 
 	AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 
-	if (users_gain[AUDPATH_FM].valid)
+	app = AUDCTRL_GetAudioApp();
+	sp_struct.mode = mode;
+	sp_struct.app = app;
+	sp_struct.pathID = arg_pathID;
+	sp_struct.inHWlpbk = inHWlpbk;
+	sp_struct.mixOutGain_mB = GAIN_SYSPARM;
+	sp_struct.mixOutGainR_mB = GAIN_SYSPARM;
+	if (users_gain[AUDPATH_FM].valid) {
+		sp_struct.mixInGain_mB = users_gain[AUDPATH_FM].L;
+		sp_struct.mixInGainR_mB = users_gain[AUDPATH_FM].R;
+	} else {
+		sp_struct.mixInGain_mB = GAIN_SYSPARM;
+		sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+	}
+	if (user_vol_setting[app][mode].valid == FALSE)
+		fillUserVolSetting(mode, app);
+	sp_struct.mixOutGain_mB = user_vol_setting[app][mode].L;
+	sp_struct.mixOutGainR_mB = user_vol_setting[app][mode].R;
 
-			AUDDRV_SetAudioMode_Speaker(
-				mode, AUDCTRL_GetAudioApp(), arg_pathID,
-				inHWlpbk,
-				users_gain[AUDPATH_FM].L,
-				GAIN_SYSPARM);
-	else
-		AUDDRV_SetAudioMode_Speaker(
-			mode, AUDCTRL_GetAudioApp(), arg_pathID, inHWlpbk,
-			GAIN_SYSPARM, GAIN_SYSPARM);
+	AUDDRV_SetAudioMode_Speaker(sp_struct);
 
 	if (!AUDCTRL_InVoiceCall()) {
 		/*for music tuning, if PCG changed audio mode,
 		   need to pass audio mode to CP in audio_vdriver_caph.c */
 		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
 				      (UInt32) mode,
-				      (UInt32) AUDCTRL_GetAudioApp(), 0, 0, 0);
+				      (UInt32) app, 0, 0, 0);
 		/*this command updates mode in audioapi.c. */
 		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
-				      (UInt32) (((int)AUDCTRL_GetAudioApp()) *
+				      (UInt32) ((int)app *
 						AUDIO_MODE_NUMBER + mode), 0, 0,
 				      0, 0);
 	}
 
-	setExternAudioGain(mode, AUDCTRL_GetAudioApp());
+	setExternAudioGain(mode, app);
 
 	if (!bClk)
 		csl_caph_ControlHWClock(FALSE);
@@ -1085,6 +1129,7 @@ also need to support audio profile (and/or mode) set from user space code
 void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode)
 {
 	Boolean bClk = csl_caph_QueryHWClock();
+	SetAudioMode_Sp_t sp_struct;
 
 	aTrace(LOG_AUDIO_CNTLR,
 			"%s mode %d", __func__, mode);
@@ -1128,8 +1173,12 @@ void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode)
 	/*Multicasting to BT+IHF or any other
 	right now for any BT+IHF case we will not end up here*/
 	default:
-	AUDDRV_SetAudioMode_Speaker(
-		mode, AUDCTRL_GetAudioApp(), 0, FALSE); /* need pathID */
+
+	sp_struct.mode = mode;
+	sp_struct.app = AUDCTRL_GetAudioApp();
+	sp_struct.pathID = 0;
+	sp_struct.inHWlpbk = FALSE;
+	AUDDRV_SetAudioMode_Speaker(sp_struct); /* need pathID */
 	currAudioMode_playback = mode;
 	break;
 	} /*end of switch (currAudioMode)*/
@@ -1236,6 +1285,9 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 		powerOnExternalAmp(sink, AudioUse,
 				TRUE, FALSE);
 	}
+
+	if (user_vol_setting[AUDCTRL_GetAudioApp()][mode].valid == FALSE)
+		fillUserVolSetting(mode, AUDCTRL_GetAudioApp());
 
 	if (source == AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB) {
 		/*USB call */
@@ -1448,6 +1500,8 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 	CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
 	CSL_CAPH_MIXER_e mixer = CSL_CAPH_SRCM_CH_NONE;
 	CSL_CAPH_SRCM_INCHNL_e mixInCh = CSL_CAPH_SRCM_INCHNL_NONE;
+	AudioMode_t mode;
+	AudioApp_t app;
 
 #ifdef CONFIG_BCM_MODEM
 	SysAudioParm_t *p;
@@ -1455,8 +1509,9 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 	AudioSysParm_t *p;
 #endif
 
-	p = &(AudParmP()[GetAudioModeBySink(sink)
-			 + AUDCTRL_GetAudioApp() * AUDIO_MODE_NUMBER]);
+	mode = GetAudioModeBySink(sink);
+	app = AUDCTRL_GetAudioApp();
+	p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
 
 	if ((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)
 	    || sink == AUDIO_SINK_BTS)
@@ -1525,6 +1580,9 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 	}
 
 	if (gain_format == AUDIO_GAIN_FORMAT_mB) {
+		user_vol_setting[app][mode].L = vol_left;
+		user_vol_setting[app][mode].R = vol_right;
+		user_vol_setting[app][mode].valid = TRUE;
 
 		extGain = (short)p->ext_speaker_pga_l;	/*Q13p2 dB */
 		extGain = extGain * 25;	/*mB */
@@ -1563,8 +1621,10 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 		}
 
 		/*set CAPH gain */
-		vol_left = vol_left - extGain;
-		mixInGain = 0;	/*0 dB */
+		mixInGain = (short)p->srcmixer_input_gain_l;	/*Q13p2 dB */
+		mixInGain = mixInGain * 25; /* into mB */
+		mixInGain_r = (short)p->srcmixer_input_gain_r;	/*Q13p2 dB */
+		mixInGain_r = mixInGain_r * 25; /* into mB */
 
 		if (vol_left >= 4214) {
 			mixBitSel = 7;
@@ -1576,17 +1636,11 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 			   round up to the next bit shift */
 			mixOutGain = vol_left - (mixBitSel * 602);
 			/*put in attenuation, negative number. */
-		} else if (vol_left == 0) {
-			mixBitSel = 0;
-			mixOutGain = 0;
-		} else {	/*vol_left < 0 */
-			mixBitSel = 0;
+		} else if (vol_left <= 0) {
+			mixBitSel = (short)p->srcmixer_output_coarse_gain_l;
+			mixBitSel = mixBitSel / 24; /* bit_shift */
 			mixOutGain = vol_left;
-			/*put in attenuation, negative number. */
 		}
-
-		vol_right = vol_right - extGain_r;
-		mixInGain_r = 0;	/* 0 dB */
 
 		if (vol_right >= 4214) {
 			mixBitSel_r = 7;
@@ -1598,26 +1652,28 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 			   round up to the next bit shift */
 			mixOutGain_r = vol_right - (mixBitSel_r * 602);
 			/*put in attenuation, negative number. */
-		} else if (vol_right == 0) {
-			mixBitSel_r = 0;
-			mixOutGain_r = 0;
+		} else if (vol_right <= 0) {
+			mixBitSel_r = (short)p->srcmixer_output_coarse_gain_r;
+			mixBitSel_r = mixBitSel_r / 24; /* bit_shift */
+			mixOutGain_r = vol_right;
 		} else {	/*vol__right < 0 */
 			mixBitSel_r = 0;
-			mixOutGain_r = vol_right;
 			/*put in attenuation, negative number. */
 		}
-
 	} else {
 		return;
 	}
 
 	/*determine which mixer output to apply the gains to */
 
-	/*
 	aTrace(LOG_AUDIO_CNTLR, "%s extGain %d\n", __func__, extGain);
-	aTrace(LOG_AUDIO_CNTLR, "mixInGain 0x%x,
-	mixOutGain 0x%x, mixBitSel %d\n",
-			mixInGain, mixOutGain, mixBitSel);
+	aTrace(LOG_AUDIO_CNTLR, "mixInGain %d, mixInGain_r %d,"
+		" mixOutGain %d, mixOutGain_r %d,"
+		" mixBitSel %d\n, mixBitSel_r %d\n",
+		mixInGain, mixInGain_r,
+		mixOutGain, mixOutGain_r,
+		mixBitSel, mixBitSel_r);
+	/*
 	aTrace(LOG_AUDIO_CNTLR, "
 	sink %d, gain_format %d\n",	sink, gain_format);
 	aTrace(LOG_AUDIO_CNTLR, "vol_left 0x%x
@@ -1631,14 +1687,15 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 	mixInCh = csl_caph_FindMixInCh(speaker, pathID);
 
 	if (mixInCh != CSL_CAPH_SRCM_INCHNL_NONE)
-		csl_srcmixer_setMixInGain(mixInCh, mixer, mixInGain, mixInGain);
+		csl_srcmixer_setMixInGain(mixInCh, mixer,
+			mixInGain, mixInGain_r);
 	/*else
 	do not know which mixer input channel to apply on
 		csl_srcmixer_setMixAllInGain(mixer, mixInGain, mixInGain);*/
 
-	csl_srcmixer_setMixOutGain(mixer, mixOutGain);
+	csl_srcmixer_setMixOutGain(mixer, mixOutGain, mixOutGain_r);
 
-	csl_srcmixer_setMixBitSel(mixer, mixBitSel);
+	csl_srcmixer_setMixBitSel(mixer, mixBitSel, mixBitSel_r);
 
 	return;
 }
@@ -1849,6 +1906,9 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+#ifdef CONFIG_ENABLE_SSMULTICAST
+	SetAudioMode_Sp_t sp_struct;
+#endif
 
 	aTrace(LOG_AUDIO_CNTLR, "%s src 0x%x, sink 0x%x", __func__,
 			source, sink);
@@ -1873,9 +1933,11 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 	if (sink == AUDIO_SINK_LOUDSPK &&
 		currAudioMode_playback == AUDIO_MODE_SPEAKERPHONE) {
 
-		AUDDRV_SetAudioMode_Speaker(AUDIO_MODE_HEADSET,
-				AUDCTRL_GetAudioApp(),
-				pathID, FALSE);
+		sp_struct.mode = AUDIO_MODE_HEADSET;
+		sp_struct.app = AUDCTRL_GetAudioApp();
+		sp_struct.pathID = 0;
+		sp_struct.inHWlpbk = FALSE;
+		AUDDRV_SetAudioMode_Speaker(sp_struct);
 		setExternAudioGain(AUDIO_MODE_HEADSET, AUDCTRL_GetAudioApp());
 		AUDCTRL_SaveAudioMode(AUDIO_MODE_HEADSET);
 	}
@@ -2888,12 +2950,13 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 
 		case AUDCTRL_EP_MIX_BITSEL_GAIN:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
-			csl_srcmixer_setMixBitSel(outChnl, arg2 / 600);
+			csl_srcmixer_setMixBitSel(outChnl,
+				arg2 / 600, arg2 / 600);
 			break;
 
 		case AUDCTRL_EP_MIX_FINE_GAIN:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
-			csl_srcmixer_setMixOutGain(outChnl, arg2);
+			csl_srcmixer_setMixOutGain(outChnl, arg2, arg2);
 			break;
 
 		case AUDCTRL_IHF_MIX_IN_GAIN:
@@ -2910,14 +2973,15 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 			/*outChnl = (CSL_CAPH_SRCM_STEREO_CH2_R |
 			   CSL_CAPH_SRCM_STEREO_CH2_L); */
 			outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;
-			csl_srcmixer_setMixBitSel(outChnl, arg2 / 600);
+			csl_srcmixer_setMixBitSel(outChnl,
+				arg2 / 600, arg2 / 600);
 			break;
 
 		case AUDCTRL_IHF_MIX_FINE_GAIN:
 			/*outChnl = (CSL_CAPH_SRCM_STEREO_CH2_R |
 			   CSL_CAPH_SRCM_STEREO_CH2_L); */
 			outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;
-			csl_srcmixer_setMixOutGain(outChnl, arg2);
+			csl_srcmixer_setMixOutGain(outChnl, arg2, arg2);
 			break;
 
 		case AUDCTRL_HS_LEFT_MIX_IN_GAIN:
@@ -2930,12 +2994,13 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 
 		case AUDCTRL_HS_LEFT_MIX_BITSEL_GAIN:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH1_L;
-			csl_srcmixer_setMixBitSel(outChnl, arg2 / 600);
+			csl_srcmixer_setMixBitSel(outChnl,
+				arg2 / 600, arg2 / 600);
 			break;
 
 		case AUDCTRL_HS_LEFT_MIX_FINE_GAIN:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH1_L;
-			csl_srcmixer_setMixOutGain(outChnl, arg2);
+			csl_srcmixer_setMixOutGain(outChnl, arg2, arg2);
 			break;
 
 		case AUDCTRL_HS_RIGHT_MIX_IN_GAIN:
@@ -2948,12 +3013,13 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 
 		case AUDCTRL_HS_RIGHT_MIX_BITSEL_GAIN:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH1_R;
-			csl_srcmixer_setMixBitSel(outChnl, arg2 / 600);
+			csl_srcmixer_setMixBitSel(outChnl,
+				arg2 / 600, arg2 / 600);
 			break;
 
 		case AUDCTRL_HS_RIGHT_MIX_FINE_GAIN:
 			outChnl = CSL_CAPH_SRCM_STEREO_CH1_R;
-			csl_srcmixer_setMixOutGain(outChnl, arg2);
+			csl_srcmixer_setMixOutGain(outChnl, arg2, arg2);
 			break;
 
 		case AUDCTRL_PMU_HS_RIGHT_GAIN:
@@ -3370,4 +3436,21 @@ Boolean AUDCTRL_GetMFDMode(void)
 Boolean AUDCTRL_GetSRCClock(void)
 {
 	return is26MClk;
+}
+
+static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app)
+{
+#ifdef CONFIG_BCM_MODEM
+	SysAudioParm_t *p;
+#else
+	AudioSysParm_t *p;
+#endif
+
+	p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
+
+	user_vol_setting[app][mode].L = p->srcmixer_output_fine_gain_l;
+	user_vol_setting[app][mode].L *= 25;
+	user_vol_setting[app][mode].R = p->srcmixer_output_fine_gain_r;
+	user_vol_setting[app][mode].R *= 25;
+	user_vol_setting[app][mode].valid = TRUE;
 }

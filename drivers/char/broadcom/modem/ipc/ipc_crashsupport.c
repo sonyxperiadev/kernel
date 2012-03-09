@@ -133,12 +133,14 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	IPC_U32 *Dump;
 	void __iomem *DumpVAddr;
 
-	if (BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice()
-	    && ap_triggered == 0) {
+	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
+		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice())
+		&& ap_triggered == 0) {
 		/* we kill AP when CP crashes */
 		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
 		abort();
 	}
+
 #if defined(CONFIG_BRCM_CP_CRASH_DUMP)\
 	 || defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC)
 	while (SmLocalControl.SmControl->CrashDump == NULL)

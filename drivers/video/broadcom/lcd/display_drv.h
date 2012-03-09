@@ -246,6 +246,8 @@ typedef struct
     DISPDRV_DITHER_T           output_dither;    ///< NU dither mode for output
     UInt32                     pixel_freq;       ///< NU pixel frequency
     UInt32                     line_rate;        ///< NU line rate in lines per second
+    UInt32			phys_width;	 ///< physical width dimension in mm
+    UInt32			phys_height;	 ///< physical height dimension in mm
 } DISPDRV_INFO_T;
 
 

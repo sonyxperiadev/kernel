@@ -120,6 +120,19 @@
 #include <media/soc_camera.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
+
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
+#include <board-Rhea_wifi.h>
+extern int rhea_wifi_status_register(
+		void (*callback)(int card_present, void *dev_id),
+		void *dev_id);
+
+#endif
+
+
+
+
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
 
@@ -777,6 +790,52 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
+
+
+ 
+				 
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+		
+		{ /* SDIO4 */
+			.id = 2,
+			.data_pullup = 0,
+			.devtype = SDIO_DEV_TYPE_WIFI,
+ 			.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+			.peri_clk_name = "sdio3_clk",
+			.ahb_clk_name = "sdio3_ahb_clk",
+			.sleep_clk_name = "sdio3_sleep_clk",
+			.peri_clk_rate = 48000000,
+			.register_status_notify=rhea_wifi_status_register,			
+		},
+
+		
+#else
+		{ /* SDIO4 */
+			.id = 2,
+			.data_pullup = 0,
+			.devtype = SDIO_DEV_TYPE_WIFI,
+			.wifi_gpio = {
+				.reset		= 42,
+				.reg		= -1,
+				.host_wake	= 74,
+				.shutdown	= -1,
+			},
+			.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+			.peri_clk_name = "sdio3_clk",
+			.ahb_clk_name = "sdio3_ahb_clk",
+			.sleep_clk_name = "sdio3_sleep_clk",
+			.peri_clk_rate = 48000000,
+		},
+
+		
+#endif
+ 
+
+
+
+
+#if 0
+
 	{ /* SDIO2 */
 		.id = 2,
 		.data_pullup = 0,
@@ -793,6 +852,8 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 48000000,
 	},
+#endif
+
 };
 
 static struct platform_device board_sdio0_device = {
@@ -1280,6 +1341,14 @@ static void __init rhea_stone_add_i2c_devices (void)
 
 static int __init rhea_stone_add_lateInit_devices (void)
 {
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+		
+			printk(KERN_ERR "Calling WLAN_INIT!\n");
+		
+			 rhea_wlan_init();
+				printk(KERN_ERR "DONE WLAN_INIT!\n");
+#endif
+
 	board_add_sdio_devices();
 	return 0;
 }

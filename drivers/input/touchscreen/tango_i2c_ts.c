@@ -140,8 +140,12 @@ typedef enum
 #define I2C_TS_DRIVER_SHOW_EVENT_COUNT  0
 
 #define TS_ERR(fmt, args...) printk(KERN_ERR "[tango_i2c]: " fmt, ## args)
+#ifdef TS_DEBUG
 #define TS_DEBUG(fmt, args...) \
 		printk(KERN_DEBUG "[tango_i2c]: " fmt, ## args)
+#else
+#define TS_DEBUG(fmt, args...)
+#endif
 
 
 /* ---- Private Variables ------------------------------------------------ */

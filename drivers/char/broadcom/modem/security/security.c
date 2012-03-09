@@ -53,6 +53,16 @@ the GPL, without Broadcom's express prior written consent
 #include "taskmsgs.h"
 #include "simlockfun.h"
 
+/*For RPC*/
+#include <linux/broadcom/ipcproperties.h>
+#include "rpc_global.h"
+#include "rpc_ipc.h"
+#include "xdr_porting_layer.h"
+#include "xdr.h"
+#include "rpc_api.h"
+#include "sys_common_rpc.h"
+
+
 MODULE_LICENSE("GPL");
 
 /**
@@ -372,7 +382,9 @@ int sec_simlock_get_status(sec_simlock_sim_data_t *sim_data,
 			   sec_simlock_state_t *sim_lock_state)
 {
 	int result = 0;
-
+	pr_err("%s:SIM%d; IMSI=%s; is_test_sim = %d\n", __func__,
+						simID, sim_data->imsi_string,
+						is_test_sim);
 	if (!sim_data || !sim_lock_state) {
 		result = -1;
 	} else {

@@ -26,8 +26,8 @@
 #ifndef __PLAT_KONA_IRQS_H
 #define __PLAT_KONA_IRQS_H
 
-#define BCM_INT_PRIORITY_MAX    32  /* there are only 32 priority are supported */
-#define BCM_INT_SPI_MAX         128 /* there are 128 shared peripheral interrupt */
+#define BCM_INT_PRIORITY_MAX    32	/* there are only 32 priority are supported */
+#define BCM_INT_SPI_MAX         128	/* there are 128 shared peripheral interrupt */
 
 /*=====================================================================*/
 /* Software Trigger Interrupt IDs                                      */
@@ -48,7 +48,7 @@
 #define BCM_INT_ID_STI13                13
 #define BCM_INT_ID_STI14                14
 #define BCM_INT_ID_STI15                15
-#define BCM_INT_ID_STI_MAX              16 /* terminating ID */
+#define BCM_INT_ID_STI_MAX              16	/* terminating ID */
 
 /*=====================================================================*/
 /* Private Peripheral Interrupt IDs                                    */
@@ -69,7 +69,7 @@
 #define BCM_INT_ID_PPI13                (13 + BCM_INT_ID_STI_MAX)
 #define BCM_INT_ID_PPI14                (14 + BCM_INT_ID_STI_MAX)
 #define BCM_INT_ID_PPI15                (15 + BCM_INT_ID_STI_MAX)
-#define BCM_INT_ID_PPI_MAX              (16 + BCM_INT_ID_STI_MAX) /* terminating ID */
+#define BCM_INT_ID_PPI_MAX              (16 + BCM_INT_ID_STI_MAX)	/* terminating ID */
 
 /*=====================================================================*/
 /* Shared Peripheral Interrupt IDs                                     */
@@ -271,7 +271,7 @@
 #define BCM_INT_ID_ESUB_DMAC_5          (197 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_ESUB_DMAC_6          (198 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_ESUB_DMAC_7          (199 + BCM_INT_ID_PPI_MAX)
-#define BCM_INT_ID_MAX                  (200 + BCM_INT_ID_PPI_MAX) /* terminating ID */
+#define BCM_INT_ID_MAX                  (200 + BCM_INT_ID_PPI_MAX)	/* terminating ID */
 
 /* temporarily for new DMAC before new interrrupt number release */
 #define     INTP_DMAC_ABORT                                        45
@@ -285,22 +285,22 @@
 /* For AP-CP */
 #define IRQ_APCP_0		BCM_INT_ID_RESERVED36
 #define IRQ_IPC_A2C             235
-#define IRQ_IPC_C2A             199 //279
-#define IRQ_IPC_C2A_BINTC       279 //BMIRQ55
-#define IRQ_GPIO                (2 + IRQ_APCP_0)      /* GPIO */
+#define IRQ_IPC_C2A             199	//279
+#define IRQ_IPC_C2A_BINTC       279	//BMIRQ55
+#define IRQ_GPIO                (2 + IRQ_APCP_0)	/* GPIO */
 #define NUM_APCP_IRQS		32
 
-/* Start virtual GPIO range above this max irq number */													
+/* Start virtual GPIO range above this max irq number */
 #define IRQ_GPIO_0			300
 
-#define NUM_GPIO_IRQS			192 
+#define NUM_GPIO_IRQS			192
 
 #define  gpio_to_irq(gpio)		((gpio) + IRQ_GPIO_0 )
 #define  irq_to_gpio(irq)		((irq) - IRQ_GPIO_0 )
 
 #ifdef CONFIG_GPIO_PCA953X
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
-#define EXPANDED_GPIO_IRQS    32	/*2 expander on RheaRayEDN1x, 32 irqs expanded*/
+#define EXPANDED_GPIO_IRQS    32	/*2 expander on RheaRayEDN1x, 32 irqs expanded */
 #else
 #define EXPANDED_GPIO_IRQS    16
 #endif
@@ -308,6 +308,5 @@
 #else
 #define NR_IRQS               (IRQ_GPIO_0 + NUM_GPIO_IRQS)
 #endif
-
 
 #endif /* __PLAT_KONA_IRQS_H */

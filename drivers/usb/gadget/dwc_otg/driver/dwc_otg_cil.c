@@ -4874,8 +4874,8 @@ void dwc_otg_core_reset(dwc_otg_core_if_t *core_if)
 		dwc_udelay(1);
 	} while (greset.b.csftrst == 1);
 
-	/* Wait 100ms after core reset for right ID/mode and session level */
-	dwc_mdelay(100);
+	/* Wait 60ms after core reset for right ID/mode to take effect */
+	dwc_mdelay(60);
 }
 
 uint8_t dwc_otg_is_device_mode(dwc_otg_core_if_t *_core_if)

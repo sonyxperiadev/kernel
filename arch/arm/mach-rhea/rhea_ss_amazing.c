@@ -838,7 +838,7 @@ static struct kona_headset_pd headset_data = {
 	 * detect accessory insertion/removal _OR_ should the driver use the
 	 * COMP1 for the same.
 	 */
-	.gpio_for_accessory_detection = 1,
+	.gpio_for_accessory_detection = 0,
 
 	/*
 	 * Pass the board specific button detection range 

@@ -989,6 +989,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDCTRL_DisablePlay(parm_FM->source, parm_FM->sink,
 					    pathID[parm_FM->stream]);
 			pathID[parm_FM->stream] = 0;
+			AUDCTRL_SetUserAudioApp(AUDIO_APP_MUSIC);
 		}
 		break;
 	case ACTION_AUD_SetARM2SPInst:

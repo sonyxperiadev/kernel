@@ -29,77 +29,68 @@
 extern "C" {
 #endif
 
-
 /**
  * @addtogroup cHAL_Interface 
  * @{
  */
 
+#define MAX_SIMULTANEOUS_KEY_EVENTS             4	// max valid key events in one interrupt - hardware defined
 
-#define MAX_SIMULTANEOUS_KEY_EVENTS             4		// max valid key events in one interrupt - hardware defined
+	typedef enum {
+		CHAL_KEYPAD_INTERRUPT_RISING_EDGE = 1,	///< Interrupt triggered on rising edge
+		CHAL_KEYPAD_INTERRUPT_FALLING_EDGE = 2,	///< Interrupt triggered on falling edge
+		CHAL_KEYPAD_INTERRUPT_BOTH_EDGES = 3,	///< Interrupt triggerd on rising and falling edges
+		CHAL_KEYPAD_INTERRUPT_EDGE_MAX	///< Enumeration maximum value
+	} CHAL_KEYPAD_INTERRUPT_EDGE_t;
 
+	typedef enum {
+		CHAL_KEYPAD_DEBOUNCE_1_ms = 0,	///< Key debounced for 1 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_2_ms = 1,	///< Key debounced for 2 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_4_ms = 2,	///< Key debounced for 4 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_8_ms = 3,	///< Key debounced for 8 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_16_ms = 4,	///< Key debounced for 16 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_32_ms = 5,	///< Key debounced for 32 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_64_ms = 6,	///< Key debounced for 64 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_128_ms = 7,	///< Key debounced for 128 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_MAX	///< Enumeration maximum value
+	} CHAL_KEYPAD_DEBOUNCE_TIME_t;
 
-typedef enum
-{
-	CHAL_KEYPAD_INTERRUPT_RISING_EDGE  = 1,		///< Interrupt triggered on rising edge
-	CHAL_KEYPAD_INTERRUPT_FALLING_EDGE = 2,		///< Interrupt triggered on falling edge
-	CHAL_KEYPAD_INTERRUPT_BOTH_EDGES   = 3,		///< Interrupt triggerd on rising and falling edges
-	CHAL_KEYPAD_INTERRUPT_EDGE_MAX				///< Enumeration maximum value
-} CHAL_KEYPAD_INTERRUPT_EDGE_t;
+	typedef enum {
+		CHAL_KEYPAD_KEY_NO_ACTION,	///< No key action occurred
+		CHAL_KEYPAD_KEY_PRESS,	///< Key was pressed
+		CHAL_KEYPAD_KEY_RELEASE,	///< Key was released
+		CHAL_KEYPAD_ACTION_MAX	///< Enumneration maximum value
+	} CHAL_KEYPAD_ACTION_t;
 
-typedef enum
-{
-	CHAL_KEYPAD_DEBOUNCE_1_ms   = 0,		///< Key debounced for 1 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_2_ms   = 1,		///< Key debounced for 2 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_4_ms   = 2,		///< Key debounced for 4 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_8_ms   = 3,		///< Key debounced for 8 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_16_ms  = 4,		///< Key debounced for 16 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_32_ms  = 5,		///< Key debounced for 32 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_64_ms  = 6,		///< Key debounced for 64 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_128_ms = 7,		///< Key debounced for 128 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_MAX				///< Enumeration maximum value
-} CHAL_KEYPAD_DEBOUNCE_TIME_t;
+	typedef cUInt8 CHAL_KEYPAD_KEY_ID_t;	///< Identifier of the key that was pressed.
+	///< If no keymap is applied then the format of the number is 0xCR where
+	///<    C = Column number
+	///<    R = Row number
+	///< of the physical key location
 
-typedef enum
-{
-	CHAL_KEYPAD_KEY_NO_ACTION,		///< No key action occurred
-	CHAL_KEYPAD_KEY_PRESS,			///< Key was pressed
-	CHAL_KEYPAD_KEY_RELEASE,		///< Key was released
-	CHAL_KEYPAD_ACTION_MAX			///< Enumneration maximum value
-} CHAL_KEYPAD_ACTION_t;
+	typedef struct {
+		cUInt8 rows;	///< Number of rows in the physical keypad layout
+		cUInt8 columns;	///< Number of columns in the physical keypad layout
+		Boolean pullUpMode;	///< TRUE = Pull Up keypad output signals by default
+		///< FALSE = Pull Down keypad output signals 
+		CHAL_KEYPAD_INTERRUPT_EDGE_t interruptEdge;	///< Interrurpt triggering edge
+		CHAL_KEYPAD_DEBOUNCE_TIME_t debounceTime;	///< Debounce for key state detection
+	} CHAL_KEYPAD_CONFIG_t;
 
-typedef cUInt8  CHAL_KEYPAD_KEY_ID_t;		///< Identifier of the key that was pressed.
-											///< If no keymap is applied then the format of the number is 0xCR where
-											///<    C = Column number
-											///<    R = Row number
-											///< of the physical key location
+	typedef struct {
+		cUInt32 ssr0;
+		cUInt32 ssr1;
+		cUInt32 isr0;
+		cUInt32 isr1;
+	} CHAL_KEYPAD_REGISTER_SET_t;	// register set data for 1 interrupt event.
 
-typedef struct
-{
-	cUInt8							rows;				///< Number of rows in the physical keypad layout
-	cUInt8							columns;			///< Number of columns in the physical keypad layout
-	Boolean							pullUpMode;			///< TRUE = Pull Up keypad output signals by default
-														///< FALSE = Pull Down keypad output signals 
-	CHAL_KEYPAD_INTERRUPT_EDGE_t	interruptEdge;		///< Interrurpt triggering edge
-	CHAL_KEYPAD_DEBOUNCE_TIME_t	debounceTime;		///< Debounce for key state detection
-} CHAL_KEYPAD_CONFIG_t;
+	typedef struct {
+		CHAL_KEYPAD_KEY_ID_t keyId;	///< Identifier of a key
+		CHAL_KEYPAD_ACTION_t keyAction;	///< Action occurring on that key
+	} CHAL_KEYPAD_EVENT_t;
 
-typedef struct
-{
-	cUInt32		ssr0;
-	cUInt32		ssr1;
-	cUInt32		isr0;
-	cUInt32		isr1;
-} CHAL_KEYPAD_REGISTER_SET_t;      // register set data for 1 interrupt event.
-
-
-typedef struct
-{
-	CHAL_KEYPAD_KEY_ID_t		keyId;		///< Identifier of a key
-	CHAL_KEYPAD_ACTION_t		keyAction;	///< Action occurring on that key
-} CHAL_KEYPAD_EVENT_t; 
-
-typedef CHAL_KEYPAD_EVENT_t     CHAL_KEYPAD_KEY_EVENT_LIST_t[MAX_SIMULTANEOUS_KEY_EVENTS];
+	typedef CHAL_KEYPAD_EVENT_t
+	    CHAL_KEYPAD_KEY_EVENT_LIST_t[MAX_SIMULTANEOUS_KEY_EVENTS];
 
 /**
 *
@@ -110,7 +101,7 @@ typedef CHAL_KEYPAD_EVENT_t     CHAL_KEYPAD_KEY_EVENT_LIST_t[MAX_SIMULTANEOUS_KE
 *  @return none
 *
 ****************************************************************************/
-CHAL_HANDLE chal_keypad_init( cUInt32 baseAddr );
+	CHAL_HANDLE chal_keypad_init(cUInt32 baseAddr);
 
 /**
 *
@@ -123,7 +114,7 @@ CHAL_HANDLE chal_keypad_init( cUInt32 baseAddr );
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_set_enable(CHAL_HANDLE handle, Boolean enable);
+	void chal_keypad_set_enable(CHAL_HANDLE handle, Boolean enable);
 
 /**
 *
@@ -136,7 +127,7 @@ void chal_keypad_set_enable(CHAL_HANDLE handle, Boolean enable);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_set_pullup_mode(CHAL_HANDLE handle, Boolean pullUp);
+	void chal_keypad_set_pullup_mode(CHAL_HANDLE handle, Boolean pullUp);
 
 /**
 *
@@ -150,7 +141,9 @@ void chal_keypad_set_pullup_mode(CHAL_HANDLE handle, Boolean pullUp);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_set_column_filter(CHAL_HANDLE handle, Boolean enable, CHAL_KEYPAD_DEBOUNCE_TIME_t debounce);
+	void chal_keypad_set_column_filter(CHAL_HANDLE handle, Boolean enable,
+					   CHAL_KEYPAD_DEBOUNCE_TIME_t
+					   debounce);
 
 /**
 *
@@ -164,7 +157,9 @@ void chal_keypad_set_column_filter(CHAL_HANDLE handle, Boolean enable, CHAL_KEYP
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_set_status_filter(CHAL_HANDLE handle, Boolean enable, CHAL_KEYPAD_DEBOUNCE_TIME_t debounce);
+	void chal_keypad_set_status_filter(CHAL_HANDLE handle, Boolean enable,
+					   CHAL_KEYPAD_DEBOUNCE_TIME_t
+					   debounce);
 
 /**
 *
@@ -176,7 +171,7 @@ void chal_keypad_set_status_filter(CHAL_HANDLE handle, Boolean enable, CHAL_KEYP
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_set_column_width(CHAL_HANDLE handle, cUInt32 columns);
+	void chal_keypad_set_column_width(CHAL_HANDLE handle, cUInt32 columns);
 
 /**
 *
@@ -188,7 +183,7 @@ void chal_keypad_set_column_width(CHAL_HANDLE handle, cUInt32 columns);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_set_row_width(CHAL_HANDLE handle, cUInt32 rows);
+	void chal_keypad_set_row_width(CHAL_HANDLE handle, cUInt32 rows);
 
 /**
 *
@@ -200,7 +195,8 @@ void chal_keypad_set_row_width(CHAL_HANDLE handle, cUInt32 rows);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_set_row_output_control(CHAL_HANDLE handle, cUInt32 rows);
+	void chal_keypad_set_row_output_control(CHAL_HANDLE handle,
+						cUInt32 rows);
 
 /**
 *
@@ -212,7 +208,8 @@ void chal_keypad_set_row_output_control(CHAL_HANDLE handle, cUInt32 rows);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_set_column_output_control(CHAL_HANDLE handle, cUInt32 cols);
+	void chal_keypad_set_column_output_control(CHAL_HANDLE handle,
+						   cUInt32 cols);
 
 /**
 *
@@ -224,8 +221,8 @@ void chal_keypad_set_column_output_control(CHAL_HANDLE handle, cUInt32 cols);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_set_interrupt_edge(CHAL_HANDLE handle, CHAL_KEYPAD_INTERRUPT_EDGE_t edge);
-
+	void chal_keypad_set_interrupt_edge(CHAL_HANDLE handle,
+					    CHAL_KEYPAD_INTERRUPT_EDGE_t edge);
 
 /**
 *
@@ -238,7 +235,8 @@ void chal_keypad_set_interrupt_edge(CHAL_HANDLE handle, CHAL_KEYPAD_INTERRUPT_ED
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_set_interrupt_mask(CHAL_HANDLE handle, cUInt32 rows, cUInt32 columns);
+	void chal_keypad_set_interrupt_mask(CHAL_HANDLE handle, cUInt32 rows,
+					    cUInt32 columns);
 
 /**
 *
@@ -250,7 +248,7 @@ void chal_keypad_set_interrupt_mask(CHAL_HANDLE handle, cUInt32 rows, cUInt32 co
 *              FALSE = Pulldown mode
 *
 ****************************************************************************/
-Boolean chal_keypad_get_pullup_status(CHAL_HANDLE handle);
+	Boolean chal_keypad_get_pullup_status(CHAL_HANDLE handle);
 
 /**
 *
@@ -262,8 +260,7 @@ Boolean chal_keypad_get_pullup_status(CHAL_HANDLE handle);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_swap_row_and_column(CHAL_HANDLE handle, Boolean swap);
-
+	void chal_keypad_swap_row_and_column(CHAL_HANDLE handle, Boolean swap);
 
 /**
 *
@@ -274,7 +271,7 @@ void chal_keypad_swap_row_and_column(CHAL_HANDLE handle, Boolean swap);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_shutdown( CHAL_HANDLE handle );
+	void chal_keypad_shutdown(CHAL_HANDLE handle);
 
 /**
 *
@@ -285,8 +282,7 @@ void chal_keypad_shutdown( CHAL_HANDLE handle );
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_clear_interrupts(CHAL_HANDLE handle);
-
+	void chal_keypad_clear_interrupts(CHAL_HANDLE handle);
 
 /**
 *
@@ -297,8 +293,7 @@ void chal_keypad_clear_interrupts(CHAL_HANDLE handle);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_enable_interrupts(CHAL_HANDLE handle);
-
+	void chal_keypad_enable_interrupts(CHAL_HANDLE handle);
 
 /**
 *
@@ -309,7 +304,7 @@ void chal_keypad_enable_interrupts(CHAL_HANDLE handle);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_disable_interrupts(CHAL_HANDLE handle);
+	void chal_keypad_disable_interrupts(CHAL_HANDLE handle);
 
 /**
 *
@@ -326,8 +321,9 @@ void chal_keypad_disable_interrupts(CHAL_HANDLE handle);
 *         CHAL_KEYPAD_KEY_NO_ACTION.
 *
 ****************************************************************************/
-void chal_keypad_retrieve_key_event_registers(CHAL_HANDLE handle, 
-													CHAL_KEYPAD_REGISTER_SET_t *regState);
+	void chal_keypad_retrieve_key_event_registers(CHAL_HANDLE handle,
+						      CHAL_KEYPAD_REGISTER_SET_t
+						      * regState);
 
 /**
 *
@@ -339,19 +335,18 @@ void chal_keypad_retrieve_key_event_registers(CHAL_HANDLE handle,
 *  @return  count of total number of key events.
 *
 ****************************************************************************/
-cUInt32 chal_keypad_process_key_event_registers(CHAL_HANDLE *handle, 
-													CHAL_KEYPAD_REGISTER_SET_t *regState,
-													CHAL_KEYPAD_KEY_EVENT_LIST_t keyEvents);
-
+	cUInt32 chal_keypad_process_key_event_registers(CHAL_HANDLE * handle,
+							CHAL_KEYPAD_REGISTER_SET_t
+							* regState,
+							CHAL_KEYPAD_KEY_EVENT_LIST_t
+							keyEvents);
 
 /** @} */
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // _CHAL_KEYPAD_H_
-
+#endif				// _CHAL_KEYPAD_H_
 #else /* tempINTERFACE_OSDAL_KEYPAD */
 
 #ifndef _CHAL_KEYPAD_H_
@@ -361,65 +356,56 @@ cUInt32 chal_keypad_process_key_event_registers(CHAL_HANDLE *handle,
 extern "C" {
 #endif
 
-
 /**
  * @addtogroup cHAL_Interface 
  * @{
  */
 
-typedef enum
-{
-	CHAL_KEYPAD_INTERRUPT_RISING_EDGE  = 1,		///< Interrupt triggered on rising edge
-	CHAL_KEYPAD_INTERRUPT_FALLING_EDGE = 2,		///< Interrupt triggered on falling edge
-	CHAL_KEYPAD_INTERRUPT_BOTH_EDGES   = 3,		///< Interrupt triggerd on rising and falling edges
-	CHAL_KEYPAD_INTERRUPT_EDGE_MAX				///< Enumeration maximum value
-} CHAL_KEYPAD_INTERRUPT_EDGE_t;
+	typedef enum {
+		CHAL_KEYPAD_INTERRUPT_RISING_EDGE = 1,	///< Interrupt triggered on rising edge
+		CHAL_KEYPAD_INTERRUPT_FALLING_EDGE = 2,	///< Interrupt triggered on falling edge
+		CHAL_KEYPAD_INTERRUPT_BOTH_EDGES = 3,	///< Interrupt triggerd on rising and falling edges
+		CHAL_KEYPAD_INTERRUPT_EDGE_MAX	///< Enumeration maximum value
+	} CHAL_KEYPAD_INTERRUPT_EDGE_t;
 
-typedef enum
-{
-	CHAL_KEYPAD_DEBOUNCE_1_ms   = 0,		///< Key debounced for 1 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_2_ms   = 1,		///< Key debounced for 2 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_4_ms   = 2,		///< Key debounced for 4 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_8_ms   = 3,		///< Key debounced for 8 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_16_ms  = 4,		///< Key debounced for 16 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_32_ms  = 5,		///< Key debounced for 32 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_64_ms  = 6,		///< Key debounced for 64 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_128_ms = 7,		///< Key debounced for 128 ms before triggering interrupt
-	CHAL_KEYPAD_DEBOUNCE_MAX				///< Enumeration maximum value
-} CHAL_KEYPAD_DEBOUNCE_TIME_t;
+	typedef enum {
+		CHAL_KEYPAD_DEBOUNCE_1_ms = 0,	///< Key debounced for 1 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_2_ms = 1,	///< Key debounced for 2 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_4_ms = 2,	///< Key debounced for 4 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_8_ms = 3,	///< Key debounced for 8 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_16_ms = 4,	///< Key debounced for 16 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_32_ms = 5,	///< Key debounced for 32 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_64_ms = 6,	///< Key debounced for 64 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_128_ms = 7,	///< Key debounced for 128 ms before triggering interrupt
+		CHAL_KEYPAD_DEBOUNCE_MAX	///< Enumeration maximum value
+	} CHAL_KEYPAD_DEBOUNCE_TIME_t;
 
-typedef enum
-{
-	CHAL_KEYPAD_KEY_NO_ACTION,		///< No key action occurred
-	CHAL_KEYPAD_KEY_PRESS,			///< Key was pressed
-	CHAL_KEYPAD_KEY_RELEASE,		///< Key was released
-	CHAL_KEYPAD_ACTION_MAX			///< Enumneration maximum value
-} CHAL_KEYPAD_ACTION_t;
+	typedef enum {
+		CHAL_KEYPAD_KEY_NO_ACTION,	///< No key action occurred
+		CHAL_KEYPAD_KEY_PRESS,	///< Key was pressed
+		CHAL_KEYPAD_KEY_RELEASE,	///< Key was released
+		CHAL_KEYPAD_ACTION_MAX	///< Enumneration maximum value
+	} CHAL_KEYPAD_ACTION_t;
 
-typedef cUInt8  CHAL_KEYPAD_KEY_ID_t;		///< Identifier of the key that was pressed.
-											///< If no keymap is applied then the format of the number is 0xCR where
-											///<    C = Column number
-											///<    R = Row number
-											///< of the physical key location
+	typedef cUInt8 CHAL_KEYPAD_KEY_ID_t;	///< Identifier of the key that was pressed.
+	///< If no keymap is applied then the format of the number is 0xCR where
+	///<    C = Column number
+	///<    R = Row number
+	///< of the physical key location
 
-typedef struct
-{
-	cUInt8							rows;				///< Number of rows in the physical keypad layout
-	cUInt8							columns;			///< Number of columns in the physical keypad layout
-	Boolean							pullUpMode;			///< TRUE = Pull Up keypad output signals by default
-														///< FALSE = Pull Down keypad output signals 
-	CHAL_KEYPAD_INTERRUPT_EDGE_t	interruptEdge;		///< Interrurpt triggering edge
-	CHAL_KEYPAD_DEBOUNCE_TIME_t		debounceTime;		///< Debounce for key state detection
-} CHAL_KEYPAD_CONFIG_t;
+	typedef struct {
+		cUInt8 rows;	///< Number of rows in the physical keypad layout
+		cUInt8 columns;	///< Number of columns in the physical keypad layout
+		Boolean pullUpMode;	///< TRUE = Pull Up keypad output signals by default
+		///< FALSE = Pull Down keypad output signals 
+		CHAL_KEYPAD_INTERRUPT_EDGE_t interruptEdge;	///< Interrurpt triggering edge
+		CHAL_KEYPAD_DEBOUNCE_TIME_t debounceTime;	///< Debounce for key state detection
+	} CHAL_KEYPAD_CONFIG_t;
 
-
-
-typedef struct
-{
-	CHAL_KEYPAD_KEY_ID_t		keyId;		///< Identifier of a key
-	CHAL_KEYPAD_ACTION_t		keyAction;	///< Action occurring on that key
-} CHAL_KEYPAD_EVENT_t; 
-
+	typedef struct {
+		CHAL_KEYPAD_KEY_ID_t keyId;	///< Identifier of a key
+		CHAL_KEYPAD_ACTION_t keyAction;	///< Action occurring on that key
+	} CHAL_KEYPAD_EVENT_t;
 
 /**
 *
@@ -430,7 +416,7 @@ typedef struct
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_init( CHAL_KEYPAD_CONFIG_t config);
+	void chal_keypad_init(CHAL_KEYPAD_CONFIG_t config);
 
 /**
 *
@@ -441,7 +427,7 @@ void chal_keypad_init( CHAL_KEYPAD_CONFIG_t config);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_shutdown( void);
+	void chal_keypad_shutdown(void);
 
 /**
 *
@@ -458,7 +444,7 @@ void chal_keypad_shutdown( void);
 *         code.
 *
 ****************************************************************************/
-void chal_keypad_handle_interrupt( void);
+	void chal_keypad_handle_interrupt(void);
 
 /**
 *
@@ -475,8 +461,7 @@ void chal_keypad_handle_interrupt( void);
 *         CHAL_KEYPAD_KEY_NO_ACTION.
 *
 ****************************************************************************/
-void chal_keypad_retrieve_event( CHAL_KEYPAD_EVENT_t *event);
-
+	void chal_keypad_retrieve_event(CHAL_KEYPAD_EVENT_t * event);
 
 /**
 *
@@ -487,8 +472,7 @@ void chal_keypad_retrieve_event( CHAL_KEYPAD_EVENT_t *event);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_clear_interrupts(void);
-
+	void chal_keypad_clear_interrupts(void);
 
 /**
 *
@@ -499,8 +483,7 @@ void chal_keypad_clear_interrupts(void);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_enable_interrupts(void);
-
+	void chal_keypad_enable_interrupts(void);
 
 /**
 *
@@ -511,8 +494,7 @@ void chal_keypad_enable_interrupts(void);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_disable_interrupts(void);
-
+	void chal_keypad_disable_interrupts(void);
 
 /**
 *
@@ -523,7 +505,7 @@ void chal_keypad_disable_interrupts(void);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_config_reset(void);
+	void chal_keypad_config_reset(void);
 
 /**
 *
@@ -534,8 +516,8 @@ void chal_keypad_config_reset(void);
 *  @return UInt32   - register val
 *
 ****************************************************************************/
-cUInt32 chal_keypad_config_read_status1(void);
- 
+	cUInt32 chal_keypad_config_read_status1(void);
+
 /**
 *
 *  @brief  Read Status 2 register
@@ -545,9 +527,8 @@ cUInt32 chal_keypad_config_read_status1(void);
 *  @return UInt32   - register val
 *
 ****************************************************************************/
-cUInt32 chal_keypad_config_read_status2(void);
- 
- 
+	cUInt32 chal_keypad_config_read_status2(void);
+
 /**
 *
 *  @brief  Clear Interrupt Status 1 register
@@ -557,7 +538,7 @@ cUInt32 chal_keypad_config_read_status2(void);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_update_interrupt_clear_register0(cUInt32 value);
+	void chal_keypad_update_interrupt_clear_register0(cUInt32 value);
 
 /**
 *
@@ -568,8 +549,8 @@ void chal_keypad_update_interrupt_clear_register0(cUInt32 value);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_update_interrupt_clear_register1(cUInt32 value);
- 
+	void chal_keypad_update_interrupt_clear_register1(cUInt32 value);
+
 /**
 *
 *  @brief  Read Keypad Pullup status
@@ -579,7 +560,7 @@ void chal_keypad_update_interrupt_clear_register1(cUInt32 value);
 *  @return UInt32  -  pullup status
 *
 ****************************************************************************/
-cUInt32 chal_keypad_read_pullup_status(void);
+	cUInt32 chal_keypad_read_pullup_status(void);
 
 /**
 *
@@ -590,16 +571,12 @@ cUInt32 chal_keypad_read_pullup_status(void);
 *  @return none
 *
 ****************************************************************************/
-void chal_keypad_swap_row_and_column(Boolean swap);
-
+	void chal_keypad_swap_row_and_column(Boolean swap);
 
 /** @} */
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // _CHAL_KEYPAD_H_
-
-
-#endif /* tempINTERFACE_OSDAL_KEYPAD */
+#endif				// _CHAL_KEYPAD_H_
+#endif				/* tempINTERFACE_OSDAL_KEYPAD */

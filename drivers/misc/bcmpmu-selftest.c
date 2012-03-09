@@ -412,8 +412,8 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 			/* Calculate the frequency and check if it is in the
 			   range. */
 			calibratedClockFrequency =
-			    13000000.0 / 12 * calibrationCounterSlowRegister /
-			    calibrationCounterFastRegister;
+			    ((13000000 / 12) * calibrationCounterSlowRegister) /
+			  calibrationCounterFastRegister;
 			ST_DBG("GLUE_SELFTEST::calibratedClockFrequency  =  %u",
 			       calibratedClockFrequency);
 			if ((calibratedClockFrequency >=
@@ -438,9 +438,9 @@ static void std_selftest_sleepclk(struct SelftestUserCmdData_t *cmddata)
 				/* Calculate the frequency and check
 				   if it is in the range. */
 				calibratedClockFrequency =
-				    13000000.0 / 12 *
-					calibrationCounterSlowRegister /
-				    calibrationCounterFastRegister;
+				    ((13000000 / 12) *
+				     calibrationCounterSlowRegister) /
+				     calibrationCounterFastRegister;
 				ST_DBG("GLUE_SELFTEST::calClockFreq  =  %u",
 				       calibratedClockFrequency);
 			}

@@ -43,7 +43,7 @@
 #endif
 
 /* global spinlock for clock API */
-static DEFINE_SPINLOCK(clk_lock);
+static DEFINE_SPINLOCK(clk_gen_lock);
 
 int clk_debug = 0;
 
@@ -59,24 +59,25 @@ static int __clk_enable(struct clk *clk);
 static void __clk_disable(struct clk *clk);
 static int __pll_clk_enable(struct clk *clk);
 static int __pll_chnl_clk_enable(struct clk *clk);
-static int peri_clk_set_voltage_lvl(struct peri_clk * peri_clk, int voltage_lvl);
+static int peri_clk_set_voltage_lvl(struct peri_clk *peri_clk,
+				int voltage_lvl);
 #ifdef CONFIG_KONA_PI_MGR
-static int clk_dfs_request_update(struct clk* clk, u32 action, u32 param);
+static int clk_dfs_request_update(struct clk *clk, u32 action,
+		u32 param);
 #endif
 static int ccu_init_state_save_buf(struct ccu_clk * ccu_clk);
 
 static int __ccu_clk_init(struct clk *clk)
 {
-	struct ccu_clk * ccu_clk;
+	struct ccu_clk *ccu_clk;
 	int ret = 0;
 	ccu_clk = to_ccu_clk(clk);
 
 	clk_dbg("%s - %s\n",__func__, clk->name);
 
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 
 	INIT_LIST_HEAD(&ccu_clk->clk_list);
-
 	/*
 	 Initilize CCU context save buf if CCU state save parameters
 	 are defined for this CCU.
@@ -87,7 +88,7 @@ static int __ccu_clk_init(struct clk *clk)
 	if(clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
 
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 
 	return ret;
 }
@@ -102,21 +103,22 @@ static int __peri_clk_init(struct clk *clk)
 	peri_clk = to_peri_clk(clk);
 	BUG_ON(peri_clk->ccu_clk == NULL);
 
-	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 
 	/*Add DSF request */
 #ifdef CONFIG_KONA_PI_MGR
-	if(peri_clk->clk_dfs)
-	{
+	if (peri_clk->clk_dfs) {
 		BUG_ON(peri_clk->ccu_clk->pi_id == -1);
 		ret = pi_mgr_dfs_add_request_ex(&peri_clk->clk_dfs->dfs_node,
-			(char*)clk->name, peri_clk->ccu_clk->pi_id,PI_MGR_DFS_MIN_VALUE,PI_MGR_DFS_WIEGHTAGE_NONE);
+			(char *)clk->name, peri_clk->ccu_clk->pi_id,
+			PI_MGR_DFS_MIN_VALUE, PI_MGR_DFS_WIEGHTAGE_NONE);
 		if(ret)
-		    clk_dbg("%s: failed to add dfs node for the clock: %s\n",__func__, clk->name);
+			clk_dbg("%s: failed to add dfs node for the clock: %s\n",
+				__func__, clk->name);
 	}
 #endif
 
-	if(clk->ops && clk->ops->init)
+	if (clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
 
 	INIT_LIST_HEAD(&clk->list);
@@ -124,7 +126,7 @@ static int __peri_clk_init(struct clk *clk)
 
 
 
-	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 0);
 	return ret;
 }
 
@@ -138,24 +140,26 @@ static int __bus_clk_init(struct clk *clk)
 
 	clk_dbg("%s - %s\n", __func__, clk->name);
 
-	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 
 	/*Add DSF request */
 #ifdef CONFIG_KONA_PI_MGR
-	if(bus_clk->clk_dfs)
-	{
+	if (bus_clk->clk_dfs) {
 		BUG_ON(bus_clk->ccu_clk->pi_id == -1);
 		ret = pi_mgr_dfs_add_request_ex(&bus_clk->clk_dfs->dfs_node,
-			(char*)clk->name, bus_clk->ccu_clk->pi_id,PI_MGR_DFS_MIN_VALUE,PI_MGR_DFS_WIEGHTAGE_NONE);
+			(char *)clk->name, bus_clk->ccu_clk->pi_id,
+				PI_MGR_DFS_MIN_VALUE,
+				PI_MGR_DFS_WIEGHTAGE_NONE);
 		if (ret)
-		    clk_dbg("%s: failed to add dfs node for the clock: %s\n",__func__, clk->name);
+			clk_dbg("%s: failed to add dfs node for the clock: %s\n",
+				__func__, clk->name);
 	}
 #endif
 
-	if(clk->ops && clk->ops->init)
+	if (clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
 
-	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 
 	INIT_LIST_HEAD(&clk->list);
 	list_add(&clk->list, &bus_clk->ccu_clk->clk_list);
@@ -172,15 +176,14 @@ static int __ref_clk_init(struct clk* clk)
 	ref_clk = to_ref_clk(clk);
 	BUG_ON(ref_clk->ccu_clk == NULL);
 
-	clk_dbg("%s, clock name: %s \n",__func__, clk->name);
+	clk_dbg("%s, clock name: %s\n", __func__, clk->name);
 
-
-	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 
 	if(clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
 
-	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
 	INIT_LIST_HEAD(&clk->list);
 	list_add(&clk->list, &ref_clk->ccu_clk->clk_list);
 
@@ -197,7 +200,7 @@ static int __pll_clk_init(struct clk *clk)
 	pll_clk = to_pll_clk(clk);
 	BUG_ON(pll_clk->ccu_clk == NULL);
 
-	CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
 
 	if(clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
@@ -217,7 +220,7 @@ static int __pll_clk_init(struct clk *clk)
 	INIT_LIST_HEAD(&clk->list);
 	list_add(&clk->list, &pll_clk->ccu_clk->clk_list);
 
-	CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 	return ret;
 }
 
@@ -232,7 +235,7 @@ static int __pll_chnl_clk_init(struct clk *clk)
 	pll_chnl_clk = to_pll_chnl_clk(clk);
 	BUG_ON(pll_chnl_clk->ccu_clk == NULL);
 
-	CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 1);
 
 	if(clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
@@ -253,7 +256,7 @@ static int __pll_chnl_clk_init(struct clk *clk)
 		}
 	}
 
-	CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 0);
 	return ret;
 }
 
@@ -301,6 +304,68 @@ static int __clk_init(struct clk *clk)
 	return ret;
 }
 
+static struct ccu_clk *get_ccu_clk(struct clk *clk)
+{
+	struct ccu_clk *ccu_clk = NULL;
+	switch (clk->clk_type) {
+
+	case CLK_TYPE_CCU:
+		ccu_clk = to_ccu_clk(clk);
+		break;
+
+	case CLK_TYPE_PERI:
+		ccu_clk = to_peri_clk(clk)->ccu_clk;
+		BUG_ON(ccu_clk == NULL);
+		break;
+
+	case CLK_TYPE_BUS:
+		ccu_clk = to_bus_clk(clk)->ccu_clk;
+		BUG_ON(ccu_clk == NULL);
+		break;
+
+	case CLK_TYPE_REF:
+		ccu_clk = to_ref_clk(clk)->ccu_clk;
+		BUG_ON(ccu_clk == NULL);
+		break;
+
+	case CLK_TYPE_PLL:
+		ccu_clk = to_pll_clk(clk)->ccu_clk;
+		BUG_ON(ccu_clk == NULL);
+		break;
+
+	case CLK_TYPE_PLL_CHNL:
+		ccu_clk = to_pll_chnl_clk(clk)->ccu_clk;
+		BUG_ON(ccu_clk == NULL);
+		break;
+
+	case CLK_TYPE_CORE:
+		ccu_clk = to_core_clk(clk)->ccu_clk;
+		BUG_ON(ccu_clk == NULL);
+		break;
+	}
+	return ccu_clk;
+}
+
+static int clk_lock(struct clk *clk, unsigned long *flags)
+{
+	struct ccu_clk *ccu_clk = get_ccu_clk(clk);
+	if (ccu_clk)
+		spin_lock_irqsave(&ccu_clk->lock, *flags);
+	else
+		spin_lock_irqsave(&clk_gen_lock, *flags);
+	return 0;
+}
+
+static int clk_unlock(struct clk *clk, unsigned long *flags)
+{
+	struct ccu_clk *ccu_clk = get_ccu_clk(clk);
+	if (ccu_clk)
+		spin_unlock_irqrestore(&ccu_clk->lock, *flags);
+	else
+		spin_unlock_irqrestore(&clk_gen_lock, *flags);
+	return 0;
+}
+
 int clk_init(struct clk *clk)
 {
 	int ret = 0;
@@ -310,9 +375,9 @@ int clk_init(struct clk *clk)
 		return -EINVAL;
 
 	clk_dbg("%s - %s\n", __func__, clk->name);
-	spin_lock_irqsave(&clk_lock, flags);
+	clk_lock(clk, &flags);
 	ret = __clk_init(clk);
-	spin_unlock_irqrestore(&clk_lock, flags);
+	clk_unlock(clk, &flags);
 
 	return ret;
 }
@@ -341,9 +406,9 @@ int clk_reset(struct clk *clk)
 	if(IS_ERR_OR_NULL(clk))
 		return -EINVAL;
 
-	spin_lock_irqsave(&clk_lock, flags);
+	clk_lock(clk, &flags);
 	ret = __clk_reset(clk);
-	spin_unlock_irqrestore(&clk_lock, flags);
+	clk_unlock(clk, &flags);
 
 	return ret;
 }
@@ -421,7 +486,7 @@ static int __peri_clk_enable(struct clk *clk)
 	/*Increment usage count... return if already enabled*/
 	if(clk->use_cnt++ == 0)
 	{
-		CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+		CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 		/*Update DFS request before enabling the clock */
 #ifdef CONFIG_KONA_PI_MGR
 		if(peri_clk->clk_dfs)
@@ -435,7 +500,7 @@ static int __peri_clk_enable(struct clk *clk)
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,1);
 
-		CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+		CCU_ACCESS_EN(peri_clk->ccu_clk, 0);
 	}
 
 	return ret;
@@ -478,7 +543,7 @@ static int __bus_clk_enable(struct clk *clk)
 	/*Increment usage count... return if already enabled*/
 	if(clk->use_cnt++ == 0)
 	{
-		CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+		CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 		/*Update DFS request before enabling the clock */
 #ifdef CONFIG_KONA_PI_MGR
 		if(bus_clk->clk_dfs)
@@ -489,7 +554,7 @@ static int __bus_clk_enable(struct clk *clk)
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,1);
 
-		CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+		CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 	}
 	return ret;
 
@@ -505,11 +570,11 @@ static int __ref_clk_enable(struct clk *clk)
 
 	if(clk->use_cnt++ == 0)
 	{
-		CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+		CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,1);
 
-		CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+		CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
 	}
 	return ret;
 }
@@ -524,11 +589,11 @@ static int __pll_clk_enable(struct clk *clk)
 
 	if(clk->use_cnt++ == 0)
 	{
-		CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+		CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,1);
 
-		CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+		CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 	}
 	return ret;
 }
@@ -545,11 +610,11 @@ static int __pll_chnl_clk_enable(struct clk *clk)
 
 	if(clk->use_cnt++ == 0)
 	{
-		CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
+		CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 1);
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,1);
 
-		CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
+		CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 0);
 	}
 	return ret;
 }
@@ -605,9 +670,9 @@ int clk_enable(struct clk *clk)
 	if(IS_ERR_OR_NULL(clk))
 		return -EINVAL;
 
-	spin_lock_irqsave(&clk_lock, flags);
+	clk_lock(clk, &flags);
 	ret = __clk_enable(clk);
-	spin_unlock_irqrestore(&clk_lock, flags);
+	clk_unlock(clk, &flags);
 
 	return ret;
 }
@@ -662,7 +727,7 @@ static int __peri_clk_disable(struct clk *clk)
 	/*decrment usage count... return if already disabled or usage count is non-zero*/
 	if(clk->use_cnt && --clk->use_cnt == 0)
 	{
-		CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+		CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 
 /*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
@@ -681,7 +746,7 @@ static int __peri_clk_disable(struct clk *clk)
 		}
 #endif
 
-		CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+		CCU_ACCESS_EN(peri_clk->ccu_clk, 0);
 	}
 
 	/*Make sure that all dependent & src clks are disabled*/
@@ -725,7 +790,7 @@ static int __bus_clk_disable(struct clk *clk)
 	/*decrment usage count... return if already disabled or usage count is non-zero*/
 	if(clk->use_cnt && --clk->use_cnt == 0)
 	{
-		CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+		CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 /*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if(clk->ops && clk->ops->enable)
@@ -740,7 +805,7 @@ static int __bus_clk_disable(struct clk *clk)
 		}
 #endif
 
-		CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+		CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 	}
 
 	/*Disable dependent & src clks */
@@ -776,14 +841,14 @@ static int __ref_clk_disable(struct clk *clk)
 
 	if(clk->use_cnt && --clk->use_cnt == 0)
 	{
-		CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+		CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 /*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,0);
 #endif
 
-		CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+		CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
 	}
 	return ret;
 }
@@ -799,14 +864,14 @@ static int __pll_clk_disable(struct clk *clk)
 
 	if(clk->use_cnt && --clk->use_cnt == 0)
 	{
-		CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+		CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
 /*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,0);
 #endif
 
-		CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+		CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 	}
 	return ret;
 }
@@ -821,14 +886,14 @@ static int __pll_chnl_clk_disable(struct clk *clk)
 
 	if(clk->use_cnt && --clk->use_cnt == 0)
 	{
-		CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
+		CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 1);
 /*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if(clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk,0);
 #endif
 
-		CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
+		CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 0);
 	}
 	__pll_clk_disable(&pll_chnl_clk->pll_clk->clk);
 	return ret;
@@ -891,9 +956,9 @@ void clk_disable(struct clk *clk)
 	if(IS_ERR_OR_NULL(clk))
 		return;
 
-	spin_lock_irqsave(&clk_lock, flags);
+	clk_lock(clk, &flags);
 	__clk_disable(clk);
-	spin_unlock_irqrestore(&clk_lock, flags);
+	clk_unlock(clk, &flags);
 }
 EXPORT_SYMBOL(clk_disable);
 
@@ -905,11 +970,11 @@ static unsigned long __ccu_clk_get_rate(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
 	ccu_clk = to_ccu_clk(clk);
 
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	if(clk->ops && clk->ops->get_rate)
 		rate = clk->ops->get_rate(clk);
 
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 
 	return rate;
 }
@@ -922,12 +987,12 @@ static unsigned long __peri_clk_get_rate(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_PERI);
 	peri_clk = to_peri_clk(clk);
 
-	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 
 	if(clk->ops && clk->ops->get_rate)
 		rate = clk->ops->get_rate(clk);
 
-	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 0);
 
 	return rate;
 }
@@ -940,11 +1005,11 @@ static unsigned long __bus_clk_get_rate(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_BUS);
 	bus_clk = to_bus_clk(clk);
 
-	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 	if(clk->ops && clk->ops->get_rate)
 		rate = clk->ops->get_rate(clk);
 
-	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 
 	return rate;
 }
@@ -957,11 +1022,11 @@ static unsigned long __ref_clk_get_rate(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_REF);
 	ref_clk = to_ref_clk(clk);
 
-	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 	if(clk->ops && clk->ops->get_rate)
 		rate = clk->ops->get_rate(clk);
 
-	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
 
 	return rate;
 }
@@ -974,12 +1039,12 @@ static unsigned long __pll_clk_get_rate(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
 	pll_clk = to_pll_clk(clk);
 
-	CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
 
 	if(clk->ops && clk->ops->get_rate)
 		rate = clk->ops->get_rate(clk);
 
-	CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 
 	return rate;
 }
@@ -992,12 +1057,12 @@ static unsigned long __pll_chnl_clk_get_rate(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL_CHNL);
 	pll_chnl_clk = to_pll_chnl_clk(clk);
 
-	CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 1);
 
 	if(clk->ops && clk->ops->get_rate)
 		rate = clk->ops->get_rate(clk);
 
-	CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 0);
 
 	return rate;
 }
@@ -1054,9 +1119,9 @@ unsigned long clk_get_rate(struct clk *clk)
 	if(IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->get_rate)
 		return -EINVAL;
 
-	spin_lock_irqsave(&clk_lock, flags);
+	clk_lock(clk, &flags);
 	rate = __clk_get_rate(clk);
-	spin_unlock_irqrestore(&clk_lock, flags);
+	clk_unlock(clk, &flags);
 	return rate;
 }
 EXPORT_SYMBOL(clk_get_rate);
@@ -1070,11 +1135,11 @@ static long __ccu_clk_round_rate(struct clk *clk, unsigned long rate)
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
 	ccu_clk = to_ccu_clk(clk);
 
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	if(clk->ops && clk->ops->round_rate)
 		actual = clk->ops->round_rate(clk,rate);
 
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 
 	return actual;
 }
@@ -1087,12 +1152,12 @@ static long __peri_clk_round_rate(struct clk *clk, unsigned long rate)
 	BUG_ON(clk->clk_type != CLK_TYPE_PERI);
 	peri_clk = to_peri_clk(clk);
 
-	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 
 	if(clk->ops && clk->ops->round_rate)
 		actual = clk->ops->round_rate(clk,rate);
 
-	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 0);
 
 	return actual;
 }
@@ -1105,11 +1170,11 @@ static long __bus_clk_round_rate(struct clk *clk, unsigned long rate)
 	BUG_ON(clk->clk_type != CLK_TYPE_BUS);
 	bus_clk = to_bus_clk(clk);
 
-	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 	if(clk->ops && clk->ops->round_rate)
 		actual = clk->ops->round_rate(clk,rate);
 
-	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 
 	return actual;
 }
@@ -1122,11 +1187,11 @@ static unsigned long __ref_clk_round_rate(struct clk *clk, unsigned long rate)
 	BUG_ON(clk->clk_type != CLK_TYPE_REF);
 	ref_clk = to_ref_clk(clk);
 
-	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 	if(clk->ops && clk->ops->round_rate)
 		actual = clk->ops->round_rate(clk,rate);
 
-	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
 
 	return actual;
 }
@@ -1139,11 +1204,11 @@ static unsigned long __pll_clk_round_rate(struct clk *clk, unsigned long rate)
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
 	pll_clk = to_pll_clk(clk);
 
-	CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
 	if(clk->ops && clk->ops->round_rate)
 		actual = clk->ops->round_rate(clk,rate);
 
-	CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 
 	return actual;
 }
@@ -1156,11 +1221,11 @@ static unsigned long __pll_chnl_clk_round_rate(struct clk *clk, unsigned long ra
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL_CHNL);
 	pll_chnl_clk = to_pll_chnl_clk(clk);
 
-	CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 1);
 	if(clk->ops && clk->ops->round_rate)
 		actual = clk->ops->round_rate(clk,rate);
 
-	CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 0);
 
 	return actual;
 }
@@ -1218,9 +1283,9 @@ long clk_round_rate(struct clk *clk, unsigned long rate)
 	if(IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->round_rate)
 		return -EINVAL;
 
-	spin_lock_irqsave(&clk_lock, flags);
+	clk_lock(clk, &flags);
 	actual = __clk_round_rate(clk, rate);
-	spin_unlock_irqrestore(&clk_lock, flags);
+	clk_unlock(clk, &flags);
 
 	return actual;
 }
@@ -1235,11 +1300,11 @@ static long __ccu_clk_set_rate(struct clk *clk, unsigned long rate)
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
 	ccu_clk = to_ccu_clk(clk);
 
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	if(clk->ops && clk->ops->set_rate)
 		ret = clk->ops->set_rate(clk, rate);
 
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 
 	return ret;
 }
@@ -1252,7 +1317,7 @@ static long __peri_clk_set_rate(struct clk *clk, unsigned long rate)
 	BUG_ON(clk->clk_type != CLK_TYPE_PERI);
 	peri_clk = to_peri_clk(clk);
 
-	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 
 	if(clk->ops && clk->ops->set_rate)
 		ret = clk->ops->set_rate(clk, rate);
@@ -1264,7 +1329,7 @@ static long __peri_clk_set_rate(struct clk *clk, unsigned long rate)
 		}
 #endif
 
-	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 0);
 
 	return ret;
 }
@@ -1277,12 +1342,12 @@ static long __bus_clk_set_rate(struct clk *clk, unsigned long rate)
 	BUG_ON(clk->clk_type != CLK_TYPE_BUS);
 	bus_clk = to_bus_clk(clk);
 
-	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 	if(clk->ops && clk->ops->set_rate)
 		ret = clk->ops->set_rate(clk, rate);
 
 
-	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 
 	return ret;
 }
@@ -1295,11 +1360,11 @@ static unsigned long __ref_clk_set_rate(struct clk *clk, unsigned long rate)
 	BUG_ON(clk->clk_type != CLK_TYPE_REF);
 	ref_clk = to_ref_clk(clk);
 
-	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 	if(clk->ops && clk->ops->set_rate)
 		ret = clk->ops->set_rate(clk, rate);
 
-	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
 
 	return ret;
 }
@@ -1313,11 +1378,11 @@ static unsigned long __pll_clk_set_rate(struct clk *clk, unsigned long rate)
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
 	pll_clk = to_pll_clk(clk);
 
-	CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
 	if(clk->ops && clk->ops->set_rate)
 		ret = clk->ops->set_rate(clk, rate);
 
-	CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 
 	return ret;
 }
@@ -1330,11 +1395,11 @@ static unsigned long __pll_chnl_clk_set_rate(struct clk *clk, unsigned long rate
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL_CHNL);
 	pll_chnl_clk = to_pll_chnl_clk(clk);
 
-	CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 1);
 	if(clk->ops && clk->ops->set_rate)
 		ret = clk->ops->set_rate(clk, rate);
 
-	CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 0);
 
 	return ret;
 }
@@ -1392,9 +1457,9 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	if(IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->set_rate)
 		return -EINVAL;
 
-	spin_lock_irqsave(&clk_lock, flags);
+	clk_lock(clk, &flags);
 	ret = __clk_set_rate(clk, rate);
-	spin_unlock_irqrestore(&clk_lock, flags);
+	clk_unlock(clk, &flags);
 
 	return ret;
 }
@@ -1408,9 +1473,9 @@ int clk_get_usage(struct clk *clk)
 	if (IS_ERR_OR_NULL(clk))
 		return -EINVAL;
 
-	spin_lock_irqsave(&clk_lock, flags);
+	clk_lock(clk, &flags);
 	ret = clk->use_cnt;
-	spin_unlock_irqrestore(&clk_lock, flags);
+	clk_unlock(clk, &flags);
 
 	return ret;
 }
@@ -1550,6 +1615,11 @@ int clk_register(struct clk_lookup *clk_lkup,int num_clks)
 	}
 	for(i = 0; i < num_clks; i++)
 	{
+		/*Init per-ccu spin lock*/
+		if (clk_lkup[i].clk->clk_type == CLK_TYPE_CCU) {
+			struct ccu_clk *ccu_clk = to_ccu_clk(clk_lkup[i].clk);
+			spin_lock_init(&ccu_clk->lock);
+		}
 		ret |= clk_init(clk_lkup[i].clk);
 		if(ret)
 			pr_info("%s: clk %s init failed !!!\n",__func__,
@@ -1594,9 +1664,9 @@ int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable)
 	int ret;
 	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->write_access)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret =  ccu_clk->ccu_ops->write_access(ccu_clk, enable);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_write_access_enable);
@@ -1604,11 +1674,12 @@ EXPORT_SYMBOL(ccu_write_access_enable);
 int ccu_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type)
 {
 	int ret;
-	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->policy_engine_resume)
+	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops ||
+				!ccu_clk->ccu_ops->policy_engine_resume)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->policy_engine_resume(ccu_clk, load_type);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_policy_engine_resume);
@@ -1616,11 +1687,12 @@ EXPORT_SYMBOL(ccu_policy_engine_resume);
 int ccu_policy_engine_stop(struct ccu_clk* ccu_clk)
 {
 	int ret;
-	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->policy_engine_stop)
+	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops ||
+					!ccu_clk->ccu_ops->policy_engine_stop)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret =  ccu_clk->ccu_ops->policy_engine_stop(ccu_clk);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 
 }
@@ -1629,11 +1701,12 @@ EXPORT_SYMBOL(ccu_policy_engine_stop);
 int ccu_set_policy_ctrl(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action)
 {
 	int ret;
-	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->set_policy_ctrl)
+	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops ||
+					!ccu_clk->ccu_ops->set_policy_ctrl)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->set_policy_ctrl(ccu_clk, pol_ctrl_id, action);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 
 }
@@ -1642,11 +1715,12 @@ EXPORT_SYMBOL(ccu_set_policy_ctrl);
 int ccu_int_enable(struct ccu_clk* ccu_clk, int int_type, int enable)
 {
 	int ret;
-	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->int_enable)
+	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops ||
+						!ccu_clk->ccu_ops->int_enable)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->int_enable(ccu_clk, int_type, enable);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_int_enable);
@@ -1654,11 +1728,12 @@ EXPORT_SYMBOL(ccu_int_enable);
 int ccu_int_status_clear(struct ccu_clk* ccu_clk,int int_type)
 {
 	int ret;
-	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->int_status_clear)
+	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops ||
+				!ccu_clk->ccu_ops->int_status_clear)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret =  ccu_clk->ccu_ops->int_status_clear(ccu_clk, int_type);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_int_status_clear);
@@ -1668,9 +1743,9 @@ int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
 	int ret;
 	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->set_freq_policy)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->set_freq_policy(ccu_clk, policy_id, freq_id);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 
 }
@@ -1681,9 +1756,9 @@ int ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id)
 	int ret;
 	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->get_freq_policy)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->get_freq_policy(ccu_clk, policy_id);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_get_freq_policy);
@@ -1693,9 +1768,9 @@ int ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage)
 	int ret;
 	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->set_peri_voltage)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->set_peri_voltage(ccu_clk, peri_volt_id, voltage);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 
 }
@@ -1706,9 +1781,9 @@ int ccu_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage)
 	int ret;
 	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->set_voltage)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->set_voltage(ccu_clk, volt_id, voltage);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 
 }
@@ -1719,9 +1794,9 @@ int ccu_get_voltage(struct ccu_clk * ccu_clk, int freq_id)
 	int ret;
 	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->get_voltage)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->get_voltage(ccu_clk, freq_id);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 
 }
@@ -1733,9 +1808,9 @@ int ccu_set_active_policy(struct ccu_clk * ccu_clk, u32 policy)
 	int ret;
 	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->set_active_policy)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->set_active_policy(ccu_clk, policy);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 
 }
@@ -1746,9 +1821,9 @@ int ccu_get_active_policy(struct ccu_clk * ccu_clk)
 	int ret;
 	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->get_active_policy)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->get_active_policy(ccu_clk);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_get_active_policy);
@@ -1758,9 +1833,9 @@ int ccu_save_state(struct ccu_clk * ccu_clk, int save)
 	int ret;
 	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->save_state)
 		return -EINVAL;
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->save_state(ccu_clk, save);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_save_state);
@@ -2267,7 +2342,7 @@ static int ccu_clk_enable(struct clk *clk, int enable)
 
 static int ccu_clk_init(struct clk* clk)
 {
-	struct ccu_clk * ccu_clk;
+	struct ccu_clk *ccu_clk;
 	int inx;
 	u32 reg_val;
 
@@ -2424,9 +2499,9 @@ static int peri_clk_get_gating_ctrl(struct peri_clk * peri_clk)
 		return -EINVAL;
 
 	BUG_ON(!peri_clk->ccu_clk);
-	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset));
-	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, peri_clk->gating_sel_mask);
 }
@@ -2537,9 +2612,9 @@ static int peri_clk_get_gating_status(struct peri_clk * peri_clk)
 	BUG_ON(!peri_clk->ccu_clk);
 	if(!peri_clk->clk_gate_offset || !peri_clk->stprsts_mask)
 		return -EINVAL;
-	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset));
-	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, peri_clk->stprsts_mask);
 }
@@ -2551,9 +2626,9 @@ static int peri_clk_get_enable_bit(struct peri_clk * peri_clk)
 	BUG_ON(!peri_clk->ccu_clk);
 	if(!peri_clk->clk_gate_offset || !peri_clk->clk_en_mask)
 		return -EINVAL;
-	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset));
-	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, peri_clk->clk_en_mask);
 }
@@ -3114,7 +3189,7 @@ static int peri_clk_reset(struct clk* clk)
 	if (!peri_clk->soft_reset_offset || !peri_clk->clk_reset_mask)
 	    return -EPERM;
 
-	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 
 	/* enable write access*/
 	ccu_reset_write_access_enable(peri_clk->ccu_clk, true);
@@ -3135,7 +3210,7 @@ static int peri_clk_reset(struct clk* clk)
 
 	ccu_reset_write_access_enable(peri_clk->ccu_clk, false);
 
-	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+	CCU_ACCESS_EN(peri_clk->ccu_clk, 0);
 
 	return 0;
 }
@@ -3159,9 +3234,9 @@ int bus_clk_get_gating_ctrl(struct bus_clk * bus_clk)
 		return -EINVAL;
 
 	BUG_ON(!bus_clk->ccu_clk);
-	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
-	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, bus_clk->gating_sel_mask);
 }
@@ -3195,9 +3270,9 @@ static int bus_clk_get_gating_status(struct bus_clk *bus_clk)
 	BUG_ON(!bus_clk->ccu_clk);
 	if(!bus_clk->clk_gate_offset || !bus_clk->stprsts_mask)
 		return -EINVAL;
-	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
-	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, bus_clk->stprsts_mask);
 }
@@ -3210,9 +3285,9 @@ static int bus_clk_get_enable_bit(struct bus_clk *bus_clk)
 	BUG_ON(!bus_clk->ccu_clk);
 	if(!bus_clk->clk_gate_offset || !bus_clk->clk_en_mask)
 		return -EINVAL;
-	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
-	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, bus_clk->clk_en_mask);
 }
@@ -3431,7 +3506,7 @@ static int bus_clk_reset(struct clk *clk)
 	if (!bus_clk->soft_reset_offset || !bus_clk->clk_reset_mask)
 	    return -EPERM;
 
-	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 
 	/* enable write access*/
 	ccu_reset_write_access_enable(bus_clk->ccu_clk, true);
@@ -3453,7 +3528,7 @@ static int bus_clk_reset(struct clk *clk)
 	/* disable write access*/
 	ccu_reset_write_access_enable(bus_clk->ccu_clk, false);
 
-	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 
 	return 0;
 }
@@ -3474,9 +3549,9 @@ static int ref_clk_get_gating_status(struct ref_clk *ref_clk)
 	BUG_ON(!ref_clk->ccu_clk);
 	if(!ref_clk->clk_gate_offset || !ref_clk->stprsts_mask)
 		return -EINVAL;
-	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(ref_clk->ccu_clk, ref_clk->clk_gate_offset));
-	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, ref_clk->stprsts_mask);
 }
@@ -3489,9 +3564,9 @@ static int ref_clk_get_enable_bit(struct ref_clk *ref_clk)
 	BUG_ON(!ref_clk->ccu_clk);
 	if(!ref_clk->clk_gate_offset || !ref_clk->clk_en_mask)
 		return -EINVAL;
-	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(ref_clk->ccu_clk, ref_clk->clk_gate_offset));
-	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, ref_clk->clk_en_mask);
 }
@@ -3504,9 +3579,9 @@ static int ref_clk_get_gating_ctrl(struct ref_clk * ref_clk)
 		return -EINVAL;
 
 	BUG_ON(!ref_clk->ccu_clk);
-	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(ref_clk->ccu_clk, ref_clk->clk_gate_offset));
-	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+	CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, ref_clk->gating_sel_mask);
 }
@@ -3992,9 +4067,9 @@ static int pll_clk_get_lock_status(struct pll_clk* pll_clk)
     BUG_ON(!pll_clk->ccu_clk);
     if(!pll_clk->pll_lock_offset || !pll_clk->pll_lock)
 	return -EINVAL;
-    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
     reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_lock_offset));
-    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 
     return GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock);
 }
@@ -4005,9 +4080,9 @@ static int pll_clk_get_pdiv(struct pll_clk* pll_clk)
     BUG_ON(!pll_clk->ccu_clk);
     if(!pll_clk->ndiv_pdiv_offset || !pll_clk->pdiv_mask)
 	return -EINVAL;
-    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
     reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_pdiv_offset));
-    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 
     return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->pdiv_mask, pll_clk->pdiv_shift);
 }
@@ -4018,9 +4093,9 @@ static int pll_clk_get_ndiv_int(struct pll_clk* pll_clk)
     BUG_ON(!pll_clk->ccu_clk);
     if(!pll_clk->ndiv_pdiv_offset || !pll_clk->ndiv_int_mask)
 	return -EINVAL;
-    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
     reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_pdiv_offset));
-    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 
     return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->ndiv_int_mask, pll_clk->ndiv_int_shift);
 }
@@ -4031,9 +4106,9 @@ static int pll_clk_get_ndiv_frac(struct pll_clk* pll_clk)
     BUG_ON(!pll_clk->ccu_clk);
     if(!pll_clk->ndiv_frac_offset || !pll_clk->ndiv_frac_mask)
 	return -EINVAL;
-    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
     reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_frac_offset));
-    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 
     return GET_VAL_USING_MASK_SHIFT(reg_val, pll_clk->ndiv_frac_mask, pll_clk->ndiv_frac_shift);
 }
@@ -4044,9 +4119,9 @@ static int pll_clk_get_idle_pwrdwn_sw_ovrride(struct pll_clk* pll_clk)
     BUG_ON(!pll_clk->ccu_clk);
     if(!pll_clk->pll_ctrl_offset || !pll_clk->idle_pwrdwn_sw_ovrride_mask)
 	return -EINVAL;
-    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
     reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
-    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 
     return GET_BIT_USING_MASK(reg_val, pll_clk->idle_pwrdwn_sw_ovrride_mask);
 }
@@ -4057,9 +4132,9 @@ static int pll_clk_get_pwrdwn(struct pll_clk* pll_clk)
     BUG_ON(!pll_clk->ccu_clk);
     if(!pll_clk->pwrdwn_offset || !pll_clk->pwrdwn_mask)
 	return -EINVAL;
-    CCU_PI_ENABLE(pll_clk->ccu_clk,1);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
     reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pwrdwn_offset));
-    CCU_PI_ENABLE(pll_clk->ccu_clk,0);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
 
     return GET_BIT_USING_MASK(reg_val, pll_clk->pwrdwn_mask);
 }
@@ -4204,7 +4279,7 @@ static int pll_chnl_clk_set_rate(struct clk* clk, u32 rate)
 	ccu_write_access_enable(pll_chnl_clk->ccu_clk, true);
 
 	/*Write mdiv*/
-	if(mdiv == pll_chnl_clk->mdiv_max)
+	if (mdiv == pll_chnl_clk->mdiv_max)
 		mdiv = 0;
 
 	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,pll_chnl_clk->cfg_reg_offset));
@@ -4233,34 +4308,37 @@ static int pll_chnl_clk_init(struct clk* clk)
 	pll_chnl_clk = to_pll_chnl_clk(clk);
 
 	BUG_ON(!pll_chnl_clk->ccu_clk ||
-				!pll_chnl_clk->pll_clk || !pll_chnl_clk->cfg_reg_offset);
+		!pll_chnl_clk->pll_clk || !pll_chnl_clk->cfg_reg_offset);
 	return 0;
 }
 static int pll_chnl_clk_get_mdiv(struct pll_chnl_clk* pll_chnl_clk)
 {
-    u32 reg_val;
+	u32 reg_val;
 
-    BUG_ON(!pll_chnl_clk->ccu_clk);
-    if(!pll_chnl_clk->cfg_reg_offset || !pll_chnl_clk->mdiv_mask)
-	return -EINVAL;
-    CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
-    reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->cfg_reg_offset));
-    CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
+	BUG_ON(!pll_chnl_clk->ccu_clk);
+	if (!pll_chnl_clk->cfg_reg_offset || !pll_chnl_clk->mdiv_mask)
+		return -EINVAL;
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 1);
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+					pll_chnl_clk->cfg_reg_offset));
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 0);
 
-    return GET_VAL_USING_MASK_SHIFT(reg_val, pll_chnl_clk->mdiv_mask, pll_chnl_clk->mdiv_shift);
+	return GET_VAL_USING_MASK_SHIFT(reg_val, pll_chnl_clk->mdiv_mask,
+					 pll_chnl_clk->mdiv_shift);
 }
 static int pll_chnl_clk_get_enb_clkout(struct pll_chnl_clk* pll_chnl_clk)
 {
-    u32 reg_val;
+	u32 reg_val;
 
-    BUG_ON(!pll_chnl_clk->ccu_clk);
-    if(!pll_chnl_clk->pll_enableb_offset || !pll_chnl_clk->out_en_mask)
-	return -EINVAL;
-    CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,1);
-    reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk, pll_chnl_clk->pll_enableb_offset));
-    CCU_PI_ENABLE(pll_chnl_clk->ccu_clk,0);
+	BUG_ON(!pll_chnl_clk->ccu_clk);
+	if (!pll_chnl_clk->pll_enableb_offset || !pll_chnl_clk->out_en_mask)
+		return -EINVAL;
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 1);
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+					 pll_chnl_clk->pll_enableb_offset));
+	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 0);
 
-    return GET_BIT_USING_MASK(reg_val, pll_chnl_clk->out_en_mask);
+	return GET_BIT_USING_MASK(reg_val, pll_chnl_clk->out_en_mask);
 }
 
 struct gen_clk_ops gen_pll_chnl_clk_ops =
@@ -4440,9 +4518,9 @@ int core_clk_get_gating_status(struct core_clk * core_clk)
 	BUG_ON(!core_clk->ccu_clk);
 	if(!core_clk->clk_gate_offset || !core_clk->stprsts_mask)
 		return -EINVAL;
-	CCU_PI_ENABLE(core_clk->ccu_clk,1);
+	CCU_ACCESS_EN(core_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(core_clk->ccu_clk, core_clk->clk_gate_offset));
-	CCU_PI_ENABLE(core_clk->ccu_clk,0);
+	CCU_ACCESS_EN(core_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, core_clk->stprsts_mask);
 }
@@ -4454,9 +4532,9 @@ static int core_clk_get_gating_ctrl(struct core_clk * core_clk)
 		return -EINVAL;
 
 	BUG_ON(!core_clk->ccu_clk);
-	CCU_PI_ENABLE(core_clk->ccu_clk,1);
+	CCU_ACCESS_EN(core_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(core_clk->ccu_clk, core_clk->clk_gate_offset));
-	CCU_PI_ENABLE(core_clk->ccu_clk,0);
+	CCU_ACCESS_EN(core_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, core_clk->gating_sel_mask);
 }
@@ -4467,19 +4545,18 @@ static int core_clk_get_enable_bit(struct core_clk * core_clk)
 	BUG_ON(!core_clk->ccu_clk);
 	if(!core_clk->clk_gate_offset || !core_clk->clk_en_mask)
 		return -EINVAL;
-	CCU_PI_ENABLE(core_clk->ccu_clk,1);
+	CCU_ACCESS_EN(core_clk->ccu_clk, 1);
 	reg_val = readl(CCU_REG_ADDR(core_clk->ccu_clk, core_clk->clk_gate_offset));
-	CCU_PI_ENABLE(core_clk->ccu_clk,0);
+	CCU_ACCESS_EN(core_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, core_clk->clk_en_mask);
 }
 
-struct gen_clk_ops gen_core_clk_ops =
-{
-	.init	        =       core_clk_init,
-	.set_rate       =       core_clk_set_rate,
-	.get_rate       =       core_clk_get_rate,
-	.reset		=	core_clk_reset,
+struct gen_clk_ops gen_core_clk_ops = {
+	.init		= core_clk_init,
+	.set_rate	= core_clk_set_rate,
+	.get_rate	= core_clk_get_rate,
+	.reset		= core_clk_reset,
 };
 
 
@@ -5091,11 +5168,11 @@ int ccu_volt_id_update_for_freqid(struct clk *clk, u8 freq_id, u8 volt_id)
 	ccu_clk = to_ccu_clk(clk);
 
 	pr_info("%s - %s\n", __func__, clk->name);
-	spin_lock_irqsave(&clk_lock, flags);
-	CCU_PI_ENABLE(ccu_clk,1);
+	clk_lock(clk, &flags);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = __ccu_volt_id_update_for_freqid(clk, freq_id, volt_id);
-	CCU_PI_ENABLE(ccu_clk,0);
-	spin_unlock_irqrestore(&clk_lock, flags);
+	CCU_ACCESS_EN(ccu_clk, 0);
+	clk_unlock(clk, &flags);
 
 	return ret;
 }
@@ -5113,8 +5190,8 @@ int ccu_volt_tbl_display(struct clk *clk, u8 *volt_tbl)
 		return -EINVAL;
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
 	ccu_clk = to_ccu_clk(clk);
-	spin_lock_irqsave(&clk_lock, flags);
-	CCU_PI_ENABLE(ccu_clk,1);
+	clk_lock(clk, &flags);
+	CCU_ACCESS_EN(ccu_clk, 1);
 
 	for (freq_id = 0; freq_id < 8; freq_id++) {
 	    /*if (freq_id > (ccu_clk->freq_count - 1))
@@ -5122,8 +5199,8 @@ int ccu_volt_tbl_display(struct clk *clk, u8 *volt_tbl)
 	    volt_tbl[freq_id] = ccu_get_voltage(ccu_clk, freq_id);
 	}
 
-	CCU_PI_ENABLE(ccu_clk,0);
-	spin_unlock_irqrestore(&clk_lock, flags);
+	CCU_ACCESS_EN(ccu_clk, 0);
+	clk_unlock(clk, &flags);
 
 	return ret;
 }

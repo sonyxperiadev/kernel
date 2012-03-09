@@ -2344,10 +2344,10 @@ void csl_srcmixer_setMixAllInGain(CSL_CAPH_MIXER_e outChnl,
  *
  ****************************************************************************/
 void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
-					int gain_mB)
+				int gainL_mB, int gainR_mB)
 {
 	UInt8 chalOutChnl = 0x0;
-	unsigned int scale = 0;
+	unsigned int scale_l, scale_r = 0;
 
 	/*
 	MixerOutFineGain:	SRC_SPK0_LT_GAIN_CTRL2 : SPK0_LT_FIXED_GAIN
@@ -2357,33 +2357,40 @@ void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
 		0x1FFF	max attenuation
 	*/
 
-	if (gain_mB >= 0)
-		scale = 0x0000;
-	else if (gain_mB <= -10000)
-		scale = 0x1FFF;	/*max attenuation*/
+	if (gainL_mB >= 0)
+		scale_l = 0x0000;
+	else if (gainL_mB <= -10000)
+		scale_l = 0x1FFF;	/*max attenuation*/
 	else
-		scale = ((0 - gain_mB) * 256) / 602;
+		scale_l = ((0 - gainL_mB) * 256) / 602;
 	/*-6dB = -600 mB = 600*256/602 = 153600/602 = (0x25800) / 602 = 255*/
 	/*-90 dB = -9000 mB = 9000*256/602 = 2304000 / 602 = (0x232800) / 256
 	 * = 3827 = 0xEF3.
 	 */
+	if (gainR_mB >= 0)
+		scale_r = 0x0000;
+	else if (gainR_mB <= -10000)
+		scale_r = 0x1FFF;	/*max attenuation*/
+	else
+		scale_r = ((0 - gainR_mB) * 256) / 602;
 
 	aTrace(LOG_AUDIO_CSL,
-			      "csl_srcmixer_setMixOutGain:: ch %x"
-			      "gain %d, scale 0x%x.\r\n",
-			      outChnl, gain_mB, scale);
+	      "csl_srcmixer_setMixOutGain:: ch %x, "
+	      "gainL %d, scale_l 0x%x, "
+	      "gainR %d, scale_r 0x%x.\r\n",
+	      outChnl, gainL_mB, scale_l, gainR_mB, scale_r);
 
 	/* get the cHAL output channel from CSL output channel */
 	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
 	/* Set the mixer left/right channel output gain */
 	if (chalOutChnl & CAPH_M0_Left)
-		chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Left, scale);
+		chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Left, scale_l);
 	if (chalOutChnl & CAPH_M0_Right)
-		chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Right, scale);
+		chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Right, scale_r);
 	if (chalOutChnl & CAPH_M1_Left)
-		chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Left, scale);
+		chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Left, scale_l);
 	if (chalOutChnl & CAPH_M1_Right)
-		chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Right, scale);
+		chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Right, scale_r);
 
 	return;
 }
@@ -2398,14 +2405,14 @@ void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
  *
  ****************************************************************************/
 void csl_srcmixer_setMixBitSel(CSL_CAPH_MIXER_e outChnl,
-		unsigned int bit_shift)
+	unsigned int bit_shift_l, unsigned int bit_shift_r)
 {
 	UInt8 chalOutChnl = 0x0;
 
 	aTrace(LOG_AUDIO_CSL,
 			      "csl_caph_srcmixer_set_mixoutcoarsegain::"
-			      "ch %x bit_shift 0x%x.\r\n",
-			      outChnl, bit_shift);
+			      "ch %x bit_shift_l 0x%x,bit_shift_r 0x%x.\r\n",
+			      outChnl, bit_shift_l, bit_shift_r);
 
 	/*
 	MixerBitSelect:  SRC_SPK0_LT_GAIN_CTRL1 : SPK0_LT_BIT_SELECT
@@ -2419,16 +2426,16 @@ void csl_srcmixer_setMixBitSel(CSL_CAPH_MIXER_e outChnl,
 	/* Set the mixer left/right channel output bit_shift */
 	if (chalOutChnl & CAPH_M0_Left)
 		chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Left,
-						       bit_shift);
+						       bit_shift_l);
 	if (chalOutChnl & CAPH_M0_Right)
 		chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Right,
-						       bit_shift);
+						       bit_shift_r);
 	if (chalOutChnl & CAPH_M1_Left)
 		chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Left,
-						       bit_shift);
+						       bit_shift_l);
 	if (chalOutChnl & CAPH_M1_Right)
 		chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Right,
-						       bit_shift);
+						       bit_shift_r);
 
 	return;
 }

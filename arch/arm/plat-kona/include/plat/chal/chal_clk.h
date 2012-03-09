@@ -42,9 +42,7 @@ extern "C" {
 * local definition
 *****************************************************************************/
 
-
-typedef void * CHAL_CONFIG_T ; // selected clock determines which struct to cast
-
+	typedef void *CHAL_CONFIG_T;	// selected clock determines which struct to cast
 
 /*****************************************************************************
 * function declarations
@@ -60,7 +58,7 @@ typedef void * CHAL_CONFIG_T ; // selected clock determines which struct to cast
 *  @note   Does not write device registers.
 *          Must call before any other function. 
 *****************************************************************************/
-CHAL_HANDLE chal_clk_init( cUInt32 base);
+	CHAL_HANDLE chal_clk_init(cUInt32 base);
 
 /**
 *
@@ -69,7 +67,7 @@ CHAL_HANDLE chal_clk_init( cUInt32 base);
 * 
 *  @note  
 *****************************************************************************/
-void chal_clk_deinit( CHAL_HANDLE h);
+	void chal_clk_deinit(CHAL_HANDLE h);
 
 /**
 *
@@ -80,8 +78,8 @@ void chal_clk_deinit( CHAL_HANDLE h);
 * 
 *  @note  
 *****************************************************************************/
-void chal_clk_config( CHAL_HANDLE h, CHAL_CLK_SELECT_T clk,
-                      CHAL_CONFIG_T *cfg);
+	void chal_clk_config(CHAL_HANDLE h, CHAL_CLK_SELECT_T clk,
+			     CHAL_CONFIG_T * cfg);
 
 /**
 *
@@ -92,9 +90,8 @@ void chal_clk_config( CHAL_HANDLE h, CHAL_CLK_SELECT_T clk,
 *  @note   Clocks with config settings must be configured prior to starting
 *          the clock.
 *****************************************************************************/
-void chal_clk_start( CHAL_HANDLE h, CHAL_CLK_SELECT_T clk);
-void chal_clk_start_clk( CHAL_HANDLE h, CHAL_CLK_SELECT_T clk);
-
+	void chal_clk_start(CHAL_HANDLE h, CHAL_CLK_SELECT_T clk);
+	void chal_clk_start_clk(CHAL_HANDLE h, CHAL_CLK_SELECT_T clk);
 
 /**
 *
@@ -104,8 +101,8 @@ void chal_clk_start_clk( CHAL_HANDLE h, CHAL_CLK_SELECT_T clk);
 * 
 *  @note  
 *****************************************************************************/
-void chal_clk_stop( CHAL_HANDLE h, CHAL_CLK_SELECT_T clk);
-void chal_clk_stop_clk( CHAL_HANDLE h, CHAL_CLK_SELECT_T clk);
+	void chal_clk_stop(CHAL_HANDLE h, CHAL_CLK_SELECT_T clk);
+	void chal_clk_stop_clk(CHAL_HANDLE h, CHAL_CLK_SELECT_T clk);
 
 // Power management functions of CLK block
 
@@ -116,7 +113,7 @@ void chal_clk_stop_clk( CHAL_HANDLE h, CHAL_CLK_SELECT_T clk);
 *  @param  h       (in) UART device handle
 *  @param  enable  (in) TRUE enable, FALSE disable
 ****************************************************************************/
-void chal_clk_set_pm_mode( CHAL_HANDLE h, cBool enable);
+	void chal_clk_set_pm_mode(CHAL_HANDLE h, cBool enable);
 
 /**
 *
@@ -129,8 +126,8 @@ void chal_clk_set_pm_mode( CHAL_HANDLE h, cBool enable);
 * 
 *  @note  
 *****************************************************************************/
-void chal_clk_set_pm_event( CHAL_HANDLE h, cUInt8 event, cUInt8 select,
-                            cUInt16 count);
+	void chal_clk_set_pm_event(CHAL_HANDLE h, cUInt8 event, cUInt8 select,
+				   cUInt16 count);
 
 /**
 *
@@ -145,10 +142,8 @@ void chal_clk_set_pm_event( CHAL_HANDLE h, cUInt8 event, cUInt8 select,
 * 
 *  @note  
 *****************************************************************************/
-cBool chal_clk_get_pm_event( CHAL_HANDLE h, cUInt8 event, cUInt8 *select,
-                             cUInt16 *count);
-
-
+	cBool chal_clk_get_pm_event(CHAL_HANDLE h, cUInt8 event,
+				    cUInt8 * select, cUInt16 * count);
 
 /**
 *
@@ -160,7 +155,7 @@ cBool chal_clk_get_pm_event( CHAL_HANDLE h, cUInt8 event, cUInt8 *select,
 *
 *  @note  
 *****************************************************************************/
-cBool chal_clk_is_bt_domain_ready_for_power_off( CHAL_HANDLE h);
+	cBool chal_clk_is_bt_domain_ready_for_power_off(CHAL_HANDLE h);
 
 /**
 *
@@ -176,17 +171,14 @@ cBool chal_clk_is_bt_domain_ready_for_power_off( CHAL_HANDLE h);
 * 
 *  @note  
 *****************************************************************************/
-void chal_clk_get_pll_status( CHAL_HANDLE h, cUInt8 *rf_PLL,
-                                cUInt8 *tv_PLL, cUInt8 *mainPLLSticky,
-                                cUInt8 *pllSel, cUInt8 *mainPLL, cUInt8 *appsPLL);
-
-
+	void chal_clk_get_pll_status(CHAL_HANDLE h, cUInt8 * rf_PLL,
+				     cUInt8 * tv_PLL, cUInt8 * mainPLLSticky,
+				     cUInt8 * pllSel, cUInt8 * mainPLL,
+				     cUInt8 * appsPLL);
 
 /** @} */
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // _CHAL_CLK_H_
-
+#endif				// _CHAL_CLK_H_

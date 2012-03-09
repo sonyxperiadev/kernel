@@ -75,6 +75,4 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CHAL_REG_H__ */
-
+#endif				/* CHAL_REG_H__ */

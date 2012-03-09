@@ -11,13 +11,9 @@
  * GNU General Public License for more details.
  */
 
-
-
 extern struct mmc_platform_data tuna_wifi_data;
 
-
 int rhea_wlan_init(void);
-
 
 #define OMAP_PIN_INPUT_PULLUP		(OMAP_PULL_ENA | OMAP_INPUT_EN \
 						| OMAP_PULL_UP)
@@ -51,11 +47,6 @@ int rhea_wlan_init(void);
 #define RHEA_GPIO_DRV_CURR_12	12MA
 #define RHEA_GPIO_DRV_CURR_16	16MA
 
-
-
-
 //int WARN_ON(int x);
 
 #define omap4_ctrl_wk_pad_writel(x, y)     0
-
-
