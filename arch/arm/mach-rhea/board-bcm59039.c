@@ -92,10 +92,6 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
 	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
 	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
-
-	/*Init ASR LPM to 2.9V
-	*/
-	{.map = 0, .addr = 0xD9, .val = 0x1F, .mask = 0xFF},
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
@@ -501,90 +497,43 @@ static struct regulator_init_data bcm59039_sdsr_lpm_data = {
 	.consumer_supplies = sdsr_lpm_supply,
 };
 
-struct regulator_consumer_supply asr_nm_supply[] = {
-	{.supply = "asr_nm_uc"},
-};
-
-static struct regulator_init_data bcm59039_asr_nm_data = {
-	.constraints = {
-			.name = "asr_nm",
-			.min_uV = 700000,
-			.max_uV = 2900000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
-			},
-	.num_consumer_supplies = ARRAY_SIZE(asr_nm_supply),
-	.consumer_supplies = asr_nm_supply,
-};
-
-struct regulator_consumer_supply asr_nm2_supply[] = {
-	{.supply = "asr_nm2_uc"},
-};
-
-static struct regulator_init_data bcm59039_asr_nm2_data = {
-	.constraints = {
-			.name = "asr_nm2",
-			.min_uV = 700000,
-			.max_uV = 2900000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
-			},
-	.num_consumer_supplies = ARRAY_SIZE(asr_nm2_supply),
-	.consumer_supplies = asr_nm2_supply,
-};
-
-struct regulator_consumer_supply asr_lpm_supply[] = {
-	{.supply = "asr_lpm_uc"},
-};
-
-static struct regulator_init_data bcm59039_asr_lpm_data = {
-	.constraints = {
-			.name = "asr_lpm",
-			.min_uV = 700000,
-			.max_uV = 2900000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
-			},
-	.num_consumer_supplies = ARRAY_SIZE(asr_lpm_supply),
-	.consumer_supplies = asr_lpm_supply,
-};
-
 struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_RFLDO] = {
 		BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data, 0x01, 0
 	},
 	[BCMPMU_REGULATOR_CAMLDO] = {
-		BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0x11, 0
+		BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV1LDO] =	{
-		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x11, 0
+		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x22, 0
 	},
 	[BCMPMU_REGULATOR_HV2LDO] =	{
-		BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x11, 0
+		BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV3LDO] = {
-		BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0x11, 0
+		BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV4LDO] =	{
+#if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, 0
+#else
+		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, 0
+#endif
 	},
 	[BCMPMU_REGULATOR_HV5LDO] = {
-		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x11, 0
+		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV6LDO] = {
-		BCMPMU_REGULATOR_HV6LDO, &bcm59039_hv6ldo_data, 0x11, 0
+		BCMPMU_REGULATOR_HV6LDO, &bcm59039_hv6ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV7LDO] = {
-		BCMPMU_REGULATOR_HV7LDO, &bcm59039_hv7ldo_data, 0x22, 0
+		BCMPMU_REGULATOR_HV7LDO, &bcm59039_hv7ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV8LDO] = {
-			BCMPMU_REGULATOR_HV8LDO, &bcm59039_hv8ldo_data, 0x11, 0
+			BCMPMU_REGULATOR_HV8LDO, &bcm59039_hv8ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV9LDO] = {
-				BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0x11, 0
+				BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV10LDO] = {
 				BCMPMU_REGULATOR_HV10LDO, &bcm59039_hv10ldo_data, 0xAA, 0
@@ -605,7 +554,7 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	},
 #endif
 	[BCMPMU_REGULATOR_CSR_NM] =	{
-		BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x11, 0
+		BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x31, 0
 	},
 	[BCMPMU_REGULATOR_CSR_NM2] = {
 		BCMPMU_REGULATOR_CSR_NM2, &bcm59039_csr_nm2_data, 0xFF, 0
@@ -614,7 +563,7 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 		BCMPMU_REGULATOR_CSR_LPM, &bcm59039_csr_lpm_data, 0xFF, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_NM] = {
-		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0x01, 0
+		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_NM2] = {
 		BCMPMU_REGULATOR_IOSR_NM2, &bcm59039_iosr_nm2_data, 0xFF, 0
@@ -630,16 +579,6 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	},
 	[BCMPMU_REGULATOR_SDSR_LPM] = {
 		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0xFF, 0
-	},
-
-	[BCMPMU_REGULATOR_ASR_NM] = {
-		BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x11, 0
-	},
-	[BCMPMU_REGULATOR_ASR_NM2] = {
-		BCMPMU_REGULATOR_ASR_NM2, &bcm59039_asr_nm2_data, 0xFF, 0
-	},
-	[BCMPMU_REGULATOR_ASR_LPM] = {
-		BCMPMU_REGULATOR_ASR_LPM, &bcm59039_asr_lpm_data, 0xFF, 0
 	},
 };
 

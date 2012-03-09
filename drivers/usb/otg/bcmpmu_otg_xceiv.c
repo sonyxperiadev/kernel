@@ -302,7 +302,9 @@ static int bcmpmu_otg_xceiv_set_vbus_power(struct otg_transceiver *otg, unsigned
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
 
-	return (bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_CHRG_CURR_LMT, ma));
+	return (bcmpmu_usb_set(xceiv_data->bcmpmu,
+		  BCMPMU_USB_CTRL_CHRG_CURR_LMT,
+		  xceiv_data->otg_enabled ? 0 : ma));
 }
 
 static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
