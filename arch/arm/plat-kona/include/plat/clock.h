@@ -35,7 +35,6 @@
 #define SET_BITS_FROM_REGBITS(reg_bits,reg_val,val) (((reg_val) & ~((reg_bits).reg_bit_mask)) \
 	| (((val) << (reg_bits).reg_bit_pos) & (reg_bits).reg_bit_mask) )
 
-
 #define GET_BITS_FROM_REGBITS(reg_bits,reg_val)	 (((reg_val) &  \
 		(reg_bits).reg_bit_mask) >> (reg_bits).reg_bit_pos)
 
@@ -105,7 +104,6 @@
 #define CCU_POLICY_DBG_FREQ_MASK	7
 #define CCU_POLICY_DBG_POLICY_MASK	3
 
-
 #define CLK_OFF_DELAY_EN	1
 
 #define CLK_DIV_TRIGGER		1
@@ -125,7 +123,6 @@
 #define CCU_VLT_PERI_REG(ccu)		CCU_REG_ADDR(ccu, ccu->vlt_peri_offset)
 #define CCU_VLT0_3_REG(ccu)			CCU_REG_ADDR(ccu, ccu->vlt0_3_offset)
 #define CCU_VLT4_7_REG(ccu)			CCU_REG_ADDR(ccu, ccu->vlt4_7_offset)
-
 
 #define CCU_REG_ADDR_FROM_REGBITS(ccu, register_bits)	CCU_REG_ADDR(ccu, \
 (register_bits).reg_offset)
@@ -165,8 +162,7 @@
 #define PLL_VCO_RATE_MAX	0xFFFFFFFF
 
 /* CCU Policy ids*/
-enum
-{
+enum {
 	CCU_POLICY0,
 	CCU_POLICY1,
 	CCU_POLICY2,
@@ -174,8 +170,7 @@ enum
 };
 
 /* CCU freq ids*/
-enum
-{
+enum {
 	CCU_FREQ0,
 	CCU_FREQ1,
 	CCU_FREQ2,
@@ -188,8 +183,7 @@ enum
 };
 
 /*Policy ctrl ids*/
-enum
-{
+enum {
 	POLICY_CTRL_GO,
 	POLICY_CTRL_GO_AC,
 	POLICY_CTRL_GO_ATL,
@@ -197,40 +191,31 @@ enum
 };
 
 /*POLICY_CTRL_GO_ATL types*/
-enum
-{
+enum {
 	CCU_LOAD_TARGET,
 	CCU_LOAD_ACTIVE
 };
 
 /*POLICY_CTRL_GO_AC flgs*/
-enum
-{
+enum {
 	CCU_AUTOCOPY_OFF,
 	CCU_AUTOCOPY_ON
 };
 
-
-
 /*CCU interrupt types*/
-enum
-{
+enum {
 	ACT_INT,
 	TGT_INT
 };
 
-
 /*CCU Peri voltage ids*/
-enum
-{
+enum {
 	VLT_NORMAL,
 	VLT_HIGH
 };
 
-
 /*Voltage ids */
-enum
-{
+enum {
 	CCU_VLT0,
 	CCU_VLT1,
 	CCU_VLT2,
@@ -242,57 +227,51 @@ enum
 	CCU_VLT_INVALID = 0xFF
 };
 
-
-
 /*clk gating status */
-enum
-{
+enum {
 	CLK_STOPPED,
 	CLK_RUNNING
 };
 
 /*CLK - hyst*/
-enum
-{
+enum {
 	CLK_HYST_LOW,
 	CLK_HYST_HIGH
 };
 
 /*clock gating ctrl*/
-enum
-{
+enum {
 	CLK_GATING_AUTO,
 	CLK_GATING_SW
 };
 
 /* Clock flags */
 enum {
-	HYST_ENABLE			= (1 << 0),
-	HYST_HIGH			= (1 << 1),
-	AUTO_GATE			= (1 << 2),
-	INVERT_ENABLE			= (1 << 3),
-	ENABLE_ON_INIT			= (1 << 4),
-	DISABLE_ON_INIT			= (1 << 5),
-	ENABLE_HVT			= (1 << 6),
-	/*used for peri ...clk set/get rate functions uses .rate field*/
-	RATE_FIXED			= (1 << 7),
-	NOTIFY_STATUS_TO_CCU		= (1 << 8),
-	DONOT_NOTIFY_STATUS_TO_CCU	= (1 << 9),
-	UPDATE_LPJ			= (1 << 10),  /*used for core clock*/
+	HYST_ENABLE = (1 << 0),
+	HYST_HIGH = (1 << 1),
+	AUTO_GATE = (1 << 2),
+	INVERT_ENABLE = (1 << 3),
+	ENABLE_ON_INIT = (1 << 4),
+	DISABLE_ON_INIT = (1 << 5),
+	ENABLE_HVT = (1 << 6),
+	/*used for peri ...clk set/get rate functions uses .rate field */
+	RATE_FIXED = (1 << 7),
+	NOTIFY_STATUS_TO_CCU = (1 << 8),
+	DONOT_NOTIFY_STATUS_TO_CCU = (1 << 9),
+	UPDATE_LPJ = (1 << 10),	/*used for core clock */
 
 	/* CCU specific flags */
-	CCU_TARGET_LOAD			= (1 << 16),
-	CCU_TARGET_AC			= (1 << 17),
-	CCU_ACCESS_ENABLE		= (1 << 18),
+	CCU_TARGET_LOAD = (1 << 16),
+	CCU_TARGET_AC = (1 << 17),
+	CCU_ACCESS_ENABLE = (1 << 18),
 
-	/*Ref clk flags*/
-	CLK_RATE_FIXED			= (1 << 24),
+	/*Ref clk flags */
+	CLK_RATE_FIXED = (1 << 24),
 
 };
 
 /*clk type*/
-enum
-{
+enum {
 	CLK_TYPE_CCU = 1,
 	CLK_TYPE_PERI,
 	CLK_TYPE_BUS,
@@ -302,10 +281,9 @@ enum
 	CLK_TYPE_PLL_CHNL,
 };
 
-
 enum {
-    MONITOR_CAMCS_PIN,
-    MONITOR_DEBUG_BUS_GPIO
+	MONITOR_CAMCS_PIN,
+	MONITOR_DEBUG_BUS_GPIO
 };
 
 struct clk;
@@ -324,47 +302,45 @@ struct clk;
  *
  */
 struct gen_clk_ops {
-	int	(*init)(struct clk *c);
-	int	(*enable)(struct clk *c, int enable);
-	int	(*set_parent)(struct clk *c, struct clk *parent);
-	int	(*set_rate)(struct clk *c, u32 rate);
-	unsigned long	(*get_rate)(struct clk *c);
-	unsigned long	(*round_rate)(struct clk *c, unsigned long rate);
-	int	(*reset)(struct clk *c);
+	int (*init) (struct clk * c);
+	int (*enable) (struct clk * c, int enable);
+	int (*set_parent) (struct clk * c, struct clk * parent);
+	int (*set_rate) (struct clk * c, u32 rate);
+	unsigned long (*get_rate) (struct clk * c);
+	unsigned long (*round_rate) (struct clk * c, unsigned long rate);
+	int (*reset) (struct clk * c);
 
 };
 
-struct peri_clk_ops
-{
+struct peri_clk_ops {
 };
 
-
-struct bus_clk_ops
-{
+struct bus_clk_ops {
 };
 
 struct ccu_clk;
-struct ccu_clk_ops
-{
-	int (*write_access)(struct ccu_clk* ccu_clk, int enable);
-	int (*rst_write_access)(struct ccu_clk* ccu_clk, int enable);
-	int (*policy_engine_resume)(struct ccu_clk* ccu_clk, int load_type);
-	int (*policy_engine_stop)(struct ccu_clk* ccu_clk);
-	int (*set_policy_ctrl)(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action);
-	int (*int_enable)(struct ccu_clk* ccu_clk, int int_type, int enable);
-	int (*int_status_clear)(struct ccu_clk* ccu_clk,int int_type);
-	int (*set_freq_policy)(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
-	int (*get_freq_policy)(struct ccu_clk * ccu_clk, int policy_id);
-	int (*set_peri_voltage)(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage);
-	int (*set_voltage)(struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
-	int (*get_voltage)(struct ccu_clk * ccu_clk, int freq_id);
-	int (*set_active_policy)(struct ccu_clk * ccu_clk, u32 policy);
-	int (*get_active_policy)(struct ccu_clk * ccu_clk);
-	int (*save_state)(struct ccu_clk * ccu_clk, int save);
+struct ccu_clk_ops {
+	int (*write_access) (struct ccu_clk * ccu_clk, int enable);
+	int (*rst_write_access) (struct ccu_clk * ccu_clk, int enable);
+	int (*policy_engine_resume) (struct ccu_clk * ccu_clk, int load_type);
+	int (*policy_engine_stop) (struct ccu_clk * ccu_clk);
+	int (*set_policy_ctrl) (struct ccu_clk * ccu_clk, int pol_ctrl_id,
+				int action);
+	int (*int_enable) (struct ccu_clk * ccu_clk, int int_type, int enable);
+	int (*int_status_clear) (struct ccu_clk * ccu_clk, int int_type);
+	int (*set_freq_policy) (struct ccu_clk * ccu_clk, int policy_id,
+				int freq_id);
+	int (*get_freq_policy) (struct ccu_clk * ccu_clk, int policy_id);
+	int (*set_peri_voltage) (struct ccu_clk * ccu_clk, int peri_volt_id,
+				 u8 voltage);
+	int (*set_voltage) (struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
+	int (*get_voltage) (struct ccu_clk * ccu_clk, int freq_id);
+	int (*set_active_policy) (struct ccu_clk * ccu_clk, u32 policy);
+	int (*get_active_policy) (struct ccu_clk * ccu_clk);
+	int (*save_state) (struct ccu_clk * ccu_clk, int save);
 };
 
-struct clk_div
-{
+struct clk_div {
 	u32 div_offset;
 	u32 div_mask;
 	u32 div_shift;
@@ -375,7 +351,7 @@ struct clk_div
 	u32 div_trig_mask;
 	u32 prediv_trig_offset;
 	u32 prediv_trig_mask;
-	u8  diether_bits;
+	u8 diether_bits;
 	u32 pll_select_offset;
 	u32 pll_select_mask;
 	u32 pll_select_shift;
@@ -388,8 +364,7 @@ struct clk_div
  * @offset_start: consecutive CCU register set start register offset
  * @offset_end: consecutive CCU register set end register offset - can be same as offset_start
  */
-struct reg_save
-{
+struct reg_save {
 	u32 offset_start;
 	u32 offset_end;
 };
@@ -405,12 +380,11 @@ struct reg_save
  * will allocate the buffer if NULL.save_buf size should be num_reg + 1
  */
 
-struct ccu_state_save
-{
+struct ccu_state_save {
 	struct reg_save *reg_save;
 	u32 reg_set_count;
 	u32 num_reg;
-	u32* save_buf;
+	u32 *save_buf;
 };
 
 /**
@@ -419,30 +393,25 @@ struct ccu_state_save
  * @clk: array of source clocks
  */
 
-
-struct src_clk
-{
-	u8		count;
-	u8		src_inx;
-	struct clk 	**clk;
+struct src_clk {
+	u8 count;
+	u8 src_inx;
+	struct clk **clk;
 };
 
 #ifdef CONFIG_KONA_PI_MGR
 
-enum clk_dfs_policy
-{
+enum clk_dfs_policy {
 	CLK_DFS_POLICY_NONE,
 	CLK_DFS_POLICY_STATE,
 	CLK_DFS_POLICY_RATE
 };
 
-struct dfs_rate_thold
-{
+struct dfs_rate_thold {
 	u32 rate_thold;
 	u32 opp;
 };
-struct clk_dfs
-{
+struct clk_dfs {
 	u32 dfs_policy;
 	u32 policy_param;
 	u32 opp_weightage[PI_OPP_MAX];
@@ -452,42 +421,41 @@ struct clk_dfs
 
 #endif
 
-struct clk
-{
-	struct list_head 	list;
-	struct module		*owner;
-	const char	*name;
-	int			id;
-	int 		init;
-	int			use_cnt;
-	u32			flags;
-	u32			rate;
-	int 		clk_type;
-	struct clk* dep_clks[MAX_DEP_CLKS];
+struct clk {
+	struct list_head list;
+	struct module *owner;
+	const char *name;
+	int id;
+	int init;
+	int use_cnt;
+	u32 flags;
+	u32 rate;
+	int clk_type;
+	struct clk *dep_clks[MAX_DEP_CLKS];
 
-	struct gen_clk_ops 	*ops;
+	struct gen_clk_ops *ops;
 
 };
 /* to be revisited and tuned according to A9 CCU clock */
 struct proc_clock {
-	struct clk	clk;
-	unsigned long	proc_clk_mgr_base;
+	struct clk clk;
+	unsigned long proc_clk_mgr_base;
 };
 
 struct ccu_clk {
-	struct clk	clk;
+	struct clk clk;
 	int pi_id;
 	struct list_head clk_list;
 
 	u32 pol_engine_dis_cnt;
 	u32 write_access_en_count;
 
-	u32	ccu_clk_mgr_base;
-	u32	ccu_reset_mgr_base;
-	u32	reset_wr_access_offset;
+	u32 ccu_clk_mgr_base;
+	u32 ccu_reset_mgr_base;
+	u32 reset_wr_access_offset;
 	u32 rst_write_access_en_count;
 
-	u32	wr_access_offset;
+	u32 wr_access_offset;
 	u32 policy_mask1_offset;
 	u32 policy_mask2_offset;
 
@@ -506,9 +474,9 @@ struct ccu_clk {
 	u8 volt_peri[MAX_CCU_PERI_VLT_COUNT];
 	u8 freq_policy[MAX_CCU_POLICY_COUNT];
 
-	struct ccu_clk_ops* ccu_ops;
+	struct ccu_clk_ops *ccu_ops;
 	u8 active_policy;
-	u32*	freq_tbl[MAX_CCU_FREQ_COUNT];
+	u32 *freq_tbl[MAX_CCU_FREQ_COUNT];
 	struct ccu_state_save *ccu_state_save;
 	spinlock_t lock;
 #ifdef CONFIG_DEBUG_FS
@@ -522,9 +490,9 @@ struct ccu_clk {
 };
 
 struct peri_clk {
-	struct clk	clk;
+	struct clk clk;
 
-	struct ccu_clk*	ccu_clk;
+	struct ccu_clk *ccu_clk;
 	int mask_set;
 	int clk_sel_val;
 	u32 policy_bit_mask;
@@ -536,25 +504,25 @@ struct peri_clk {
 	u32 hyst_en_mask;
 	u32 stprsts_mask;
 	u32 volt_lvl_mask;
-	struct peri_clk_ops* peri_ops;
+	struct peri_clk_ops *peri_ops;
 
-	struct clk_div  clk_div;
-	struct src_clk	src_clk;
-	/*Reset offset and bit fields*/
+	struct clk_div clk_div;
+	struct src_clk src_clk;
+	/*Reset offset and bit fields */
 	u32 soft_reset_offset;
 	u32 clk_reset_mask;
 
 #ifdef CONFIG_KONA_PI_MGR
-	struct clk_dfs* clk_dfs;
+	struct clk_dfs *clk_dfs;
 #endif
 
 };
 
 struct bus_clk {
 	int clk_sel_val;
-	struct clk	clk;
+	struct clk clk;
 
-	struct ccu_clk*	ccu_clk;
+	struct ccu_clk *ccu_clk;
 	u32 clk_gate_offset;
 	u32 clk_en_mask;
 	u32 gating_sel_mask;
@@ -562,83 +530,80 @@ struct bus_clk {
 	u32 hyst_en_mask;
 	u32 stprsts_mask;
 	int freq_tbl_index;
-	struct clk* src_clk;
-	struct bus_clk_ops* bus_ops;
+	struct clk *src_clk;
+	struct bus_clk_ops *bus_ops;
 #ifdef CONFIG_KONA_PI_MGR
-	struct clk_dfs* clk_dfs;
+	struct clk_dfs *clk_dfs;
 #endif
 
-	/*Reset offset and bit fields*/
+	/*Reset offset and bit fields */
 	u32 soft_reset_offset;
 	u32 clk_reset_mask;
 };
 
 struct ref_clk {
 	int clk_sel_val;
-	struct clk	clk;
-	struct ccu_clk*	ccu_clk;
+	struct clk clk;
+	struct ccu_clk *ccu_clk;
 	u32 clk_gate_offset;
 	u32 clk_en_mask;
 	u32 gating_sel_mask;
 	u32 hyst_val_mask;
 	u32 hyst_en_mask;
 	u32 stprsts_mask;
-	struct clk_div  clk_div;
-	struct src_clk	src_clk;
+	struct clk_div clk_div;
+	struct src_clk src_clk;
 
 };
 
-struct pll_cfg_ctrl_info
-{
+struct pll_cfg_ctrl_info {
 	u32 pll_cfg_ctrl_offset;
 	u32 pll_cfg_ctrl_mask;
 	u32 pll_cfg_ctrl_shift;
 
-	u32* vco_thold;
-	u32* pll_config_value;
+	u32 *vco_thold;
+	u32 *pll_config_value;
 	u32 thold_count;
 };
 
-struct pll_clk
-{
-	struct clk	clk;
-	struct ccu_clk*	ccu_clk;
+struct pll_clk {
+	struct clk clk;
+	struct ccu_clk *ccu_clk;
 
 	u32 pll_ctrl_offset;
-    u32 soft_post_resetb_offset;
+	u32 soft_post_resetb_offset;
 	u32 soft_post_resetb_mask;
-    u32 soft_resetb_offset;
+	u32 soft_resetb_offset;
 	u32 soft_resetb_mask;
 	u32 pwrdwn_offset;
 	u32 pwrdwn_mask;
 	u32 idle_pwrdwn_sw_ovrride_mask;
-    u32 ndiv_pdiv_offset;
+	u32 ndiv_pdiv_offset;
 	u32 ndiv_int_mask;
 	u32 ndiv_int_shift;
 	u32 ndiv_int_max;
 	u32 pdiv_mask;
 	u32 pdiv_shift;
 	u32 pdiv_max;
-    u32 pll_lock_offset;
+	u32 pll_lock_offset;
 	u32 pll_lock;
 
 	u32 ndiv_frac_offset;
 	u32 ndiv_frac_mask;
 	u32 ndiv_frac_shift;
 
-	struct pll_cfg_ctrl_info* cfg_ctrl_info;
+	struct pll_cfg_ctrl_info *cfg_ctrl_info;
 };
 
-struct pll_chnl_clk
-{
-	struct clk	clk;
-	struct ccu_clk*	ccu_clk;
-	struct pll_clk*	pll_clk;
+struct pll_chnl_clk {
+	struct clk clk;
+	struct ccu_clk *ccu_clk;
+	struct pll_clk *pll_clk;
 
 	u32 cfg_reg_offset;
-    u32 pll_hold_ch_offset;
-    u32 pll_load_ch_en_offset;
-    u32 pll_enableb_offset;
+	u32 pll_hold_ch_offset;
+	u32 pll_load_ch_en_offset;
+	u32 pll_enableb_offset;
 	u32 mdiv_mask;
 	u32 mdiv_shift;
 	u32 mdiv_max;
@@ -650,15 +615,14 @@ struct pll_chnl_clk
 	u32 hold_en_mask;
 };
 
-struct core_clk
-{
-	struct clk	clk;
-	struct ccu_clk*	ccu_clk;
-	struct pll_clk*	pll_clk;
-	struct pll_chnl_clk** pll_chnl_clk;
+struct core_clk {
+	struct clk clk;
+	struct ccu_clk *ccu_clk;
+	struct pll_clk *pll_clk;
+	struct pll_chnl_clk **pll_chnl_clk;
 	u32 num_chnls;
 	u32 active_policy;
-	u32* pre_def_freq;
+	u32 *pre_def_freq;
 	u32 num_pre_def_freq;
 
 	u32 policy_bit_mask;
@@ -670,11 +634,10 @@ struct core_clk
 	u32 hyst_en_mask;
 	u32 stprsts_mask;
 
-	/*Reset offset and bit fields*/
+	/*Reset offset and bit fields */
 	u32 soft_reset_offset;
 	u32 clk_reset_mask;
 };
-
 
 #define	to_clk(p) (&((p)->clk))
 #define	name_to_clk(name) (&((name##_clk).clk))
@@ -722,7 +685,7 @@ static inline struct core_clk *to_core_clk(struct clk *clock)
 
 static inline int is_same_clock(struct clk *a, struct clk *b)
 {
-	return (a==b);
+	return (a == b);
 }
 
 extern struct gen_clk_ops gen_ref_clk_ops;
@@ -749,29 +712,29 @@ int __init clock_debug_add_ccu(struct clk *c);
 #define	clock_debug_add_ccu(clk) do {} while(0)
 #endif
 
-int clk_init(struct clk* clk);
+int clk_init(struct clk *clk);
 int clk_reset(struct clk *clk);
 int clk_get_usage(struct clk *clk);
-int clk_register(struct clk_lookup *clk_lkup,int num_clks);
-int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
+int clk_register(struct clk_lookup *clk_lkup, int num_clks);
+int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id, int freq_id);
 int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl);
-int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay);
-int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source);
-int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable);
-int ccu_reset_write_access_enable(struct ccu_clk* ccu_clk, int enable);
-int ccu_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type);
-int ccu_policy_engine_stop(struct ccu_clk* ccu_clk);
-int ccu_set_policy_ctrl(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action);
-int ccu_int_enable(struct ccu_clk* ccu_clk, int int_type, int enable);
-int ccu_int_status_clear(struct ccu_clk* ccu_clk,int int_type);
-int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
-int ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id);
-int ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage);
-int ccu_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
-int ccu_get_voltage(struct ccu_clk * ccu_clk, int freq_id);
-int ccu_set_active_policy(struct ccu_clk * ccu_clk, u32 policy);
-int ccu_get_active_policy(struct ccu_clk * ccu_clk);
-int ccu_save_state(struct ccu_clk * ccu_clk, int save);
+int peri_clk_hyst_enable(struct peri_clk *peri_clk, int enable, int delay);
+int peri_clk_set_pll_select(struct peri_clk *peri_clk, int source);
+int ccu_write_access_enable(struct ccu_clk *ccu_clk, int enable);
+int ccu_reset_write_access_enable(struct ccu_clk *ccu_clk, int enable);
+int ccu_policy_engine_resume(struct ccu_clk *ccu_clk, int load_type);
+int ccu_policy_engine_stop(struct ccu_clk *ccu_clk);
+int ccu_set_policy_ctrl(struct ccu_clk *ccu_clk, int pol_ctrl_id, int action);
+int ccu_int_enable(struct ccu_clk *ccu_clk, int int_type, int enable);
+int ccu_int_status_clear(struct ccu_clk *ccu_clk, int int_type);
+int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id, int freq_id);
+int ccu_get_freq_policy(struct ccu_clk *ccu_clk, int policy_id);
+int ccu_set_peri_voltage(struct ccu_clk *ccu_clk, int peri_volt_id, u8 voltage);
+int ccu_set_voltage(struct ccu_clk *ccu_clk, int volt_id, u8 voltage);
+int ccu_get_voltage(struct ccu_clk *ccu_clk, int freq_id);
+int ccu_set_active_policy(struct ccu_clk *ccu_clk, u32 policy);
+int ccu_get_active_policy(struct ccu_clk *ccu_clk);
+int ccu_save_state(struct ccu_clk *ccu_clk, int save);
 
 #if defined(DEBUG)
 #define	clk_dbg printk
@@ -782,6 +745,5 @@ int ccu_save_state(struct ccu_clk * ccu_clk, int save);
 			printk(format);	\
 	} while(0)
 #endif
-
 
 #endif /*__ARM_ARCH_KONA_CLOCK_H*/
