@@ -39,3 +39,4 @@ obj-$(CONFIG_ROM_SEC_DISPATCHER_LIB) += sec_bridge_tz.i
 obj-$(CONFIG_ROM_SEC_DISPATCHER_SRC) += rhea_smc.o
 obj-$(CONFIG_MFD_BCM59055) += board-bcm59055.o
 obj-$(CONFIG_MFD_BCM59039) += board-bcm59039.o
+obj-$(CONFIG_MFD_BCM59042) += board-bcm59042.o

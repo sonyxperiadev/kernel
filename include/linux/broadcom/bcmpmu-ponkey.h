@@ -34,6 +34,8 @@
 
 #define BCM59039_CO_DIG_REV 3
 #define BCM59039_CO_ANA_REV 3
+#define BCM59042_CO_DIG_REV 3
+#define BCM59042_CO_ANA_REV 3
 
 enum {
 	POK_HLD_DEB_0 = 0,

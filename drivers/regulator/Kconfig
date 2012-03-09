@@ -331,6 +331,13 @@ config REGULATOR_BCM59039
 	  This driver supports the voltage regulators provided by
 	  PMU 59039.
 
+config REGULATOR_BCM59042
+	bool "BCM59042 Regulator"
+	depends on MFD_BCMPMU && REGULATOR_BCMPMU
+	help
+	  This driver supports the voltage regulators provided by
+	  PMU 59042.
+
 config REGULATOR_TPS728XX
 	bool "TPS28XX Regulator"
 	depends on ARCH_REQUIRE_GPIOLIB
