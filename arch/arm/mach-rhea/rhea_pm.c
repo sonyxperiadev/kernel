@@ -62,9 +62,6 @@ static int force_sleep;
 
 static struct pi_mgr_qos_node arm_qos;
 
-#ifdef CONFIG_ARCH_RHEA_A0
-static u32 pm_en_self_refresh = 0;
-#endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 
@@ -73,10 +70,6 @@ char* noncache_buf_va;
 static u32 memc_freq_map = 0;
 #endif /* CONFIG_RHEA_WA_HWJIRA_2221 */
 
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-static int print_clock_count(void);
-static int print_sw_event_info(void);
-#endif
 static int enter_idle_state(struct kona_idle_state *state);
 static int enter_suspend_state(struct kona_idle_state* state);
 static void set_spare_power_status(unsigned int mode);
@@ -165,39 +158,7 @@ static struct kona_idle_state rhea_cpu_states[] = {
 #endif
 };
 
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-static int enable_sleep_prevention_clock(int enable)
-{
-    int i = 0;
-    struct clk *clk;
-	int no_of_clocks = 0;
-	no_of_clocks = ARRAY_SIZE(sleep_prevent_clocks);
 
-	for(i = 0; i < no_of_clocks; i++)
-	{
-		clk = clk_get(NULL, sleep_prevent_clocks[i]);
-		if(enable)
-			clk_enable(clk);
-		else
-		{
-			pm_dbg("%s:%s use_cnt  -  %d\n",__func__,clk->name,clk->use_cnt);
-			do
-			{
-				clk_disable(clk);
-			}while (clk->use_cnt > 0);
-		}
-    }
-	if(!enable)
-	{
-		print_clock_count();
-		print_sw_event_info();
-	}
-
-    return 0;
-}
-#endif
-
-#ifndef CONFIG_ARCH_RHEA_A0
 static int pm_enable_self_refresh(bool enable)
 {
     u32 reg_val;
@@ -215,7 +176,7 @@ static int pm_enable_self_refresh(bool enable)
 
     return 0;
 }
-#endif
+
 static int pm_config_deep_sleep(void)
 {
 	u32 reg_val;
@@ -224,17 +185,10 @@ static int pm_config_deep_sleep(void)
 	clk_set_crystal_pwr_on_idle(true);
 
 	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-#ifdef CONFIG_ARCH_RHEA_A0
-	reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
-#endif
 	reg_val |= CSR_HW_FREQ_CHANGE_CNTRL_HW_AUTO_PWR_TRANSITION_MASK;
 	writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-#ifdef CONFIG_ARCH_RHEA_A0
-	writel(1, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-#endif
-#ifndef CONFIG_ARCH_RHEA_A0
 	pm_enable_self_refresh(true);
-#endif
+
 /*Enable RAM standby
 If RAM standby is enabled, standby signal to RAM will be 0
 when subsystems are acvtive and 1 if in sleep (retention/dormant) */
@@ -242,107 +196,14 @@ when subsystems are acvtive and 1 if in sleep (retention/dormant) */
 	/*Enable standby for ROM, RAM & SRAM*/
 	reg_val |= 0x7F;
 	writel(reg_val, KONA_CHIPREG_VA+CHIPREG_RAM_STBY_RET_OVERRIDE_OFFSET);
-#ifndef CONFIG_ARCH_RHEA_A0
 	reg_val = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
 	reg_val |= CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
 	writel(reg_val, CHIPREG_PERIPH_SPARE_CONTROL2);
-#endif
 	pwr_mgr_arm_core_dormant_enable(false);
 	set_spare_power_status(SCU_STATUS_NORMAL);
     return 0;
 }
 
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-
-static int print_clock_count(void)
-{
-    struct clk *clk;
-    clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
-    if (IS_ERR_OR_NULL(clk)) {
-	pr_err("Inavlid clock name: %s\n", __func__);
-	BUG_ON(1);
-	return -EINVAL;
-    }
-   pm_dbg("%s:  %s clock count %d\n", __func__, clk->name, clk->use_cnt);
-    clk = clk_get(NULL, KHUB_CCU_CLK_NAME_STR);
-    if (IS_ERR_OR_NULL(clk)) {
-	pr_err("Inavlid clock name: %s\n", __func__);
-	BUG_ON(1);
-	return -EINVAL;
-    }
-    pm_dbg("%s:  %s clock count %d\n", __func__, clk->name, clk->use_cnt);
-
-    clk = clk_get(NULL, KHUBAON_CCU_CLK_NAME_STR);
-    if (IS_ERR_OR_NULL(clk)) {
-	pr_err("Inavlid clock name: %s\n", __func__);
-	BUG_ON(1);
-	return -EINVAL;
-    }
-    pm_dbg("%s:  %s clock count %d\n", __func__, clk->name, clk->use_cnt);
-
-    clk = clk_get(NULL, KPM_CCU_CLK_NAME_STR);
-    if (IS_ERR_OR_NULL(clk)) {
-	pr_err("Inavlid clock name: %s\n", __func__);
-	BUG_ON(1);
-	return -EINVAL;
-    }
-    pm_dbg("%s:  %s clock count %d\n", __func__, clk->name, clk->use_cnt);
-
-    clk = clk_get(NULL, KPS_CCU_CLK_NAME_STR);
-    if (IS_ERR_OR_NULL(clk)) {
-	pr_err("Inavlid clock name: %s\n", __func__);
-	BUG_ON(1);
-	return -EINVAL;
-    }
-    pm_dbg("%s:  %s clock count %d\n", __func__, clk->name, clk->use_cnt);
-
-    clk = clk_get(NULL, MM_CCU_CLK_NAME_STR);
-    if (IS_ERR_OR_NULL(clk)) {
-	pr_err("Inavlid clock name: %s\n", __func__);
-	BUG_ON(1);
-	return -EINVAL;
-    }
-    pm_dbg("%s:  %s clock count %d\n", __func__, clk->name, clk->use_cnt);
-
-    return 0;
-
-}
-
-int print_sw_event_info()
-{
-    u32 reg_val = 0;
-
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET    + SOFTWARE_0_EVENT*4);
-    pm_dbg("SW0 policy for Modem and ARM core : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_MM_POLICY_OFFSET +    SOFTWARE_0_EVENT*4);
-    pm_dbg("SW0 policy for MM : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET +    SOFTWARE_0_EVENT*4);
-    pm_dbg("SW0 policy for AON and HUB : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA +    PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET + SOFTWARE_0_EVENT*4);
-    pm_dbg("SW0 policy for ARM Sub system : %08x \n", reg_val);
-
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET    + SOFTWARE_1_EVENT*4);
-    pm_dbg("SW1 policy for Modem and ARM core : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_MM_POLICY_OFFSET +    SOFTWARE_1_EVENT*4);
-    pm_dbg("SW1 policy for MM : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET +    SOFTWARE_1_EVENT*4);
-    pm_dbg("SW1 policy for AON and HUB : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA +    PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET + SOFTWARE_1_EVENT*4);
-    pm_dbg("SW1 policy for ARM Sub system : %08x \n", reg_val);
-
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET    + SOFTWARE_2_EVENT*4);
-    pm_dbg("SW2 policy for Modem and ARM core : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_MM_POLICY_OFFSET +    SOFTWARE_2_EVENT*4);
-    pm_dbg("SW2 policy for MM : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET +    SOFTWARE_2_EVENT*4);
-    pm_dbg("SW2 policy for AON and HUB : %08x \n", reg_val);
-    reg_val = readl(KONA_PWRMGR_VA +   PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET + SOFTWARE_2_EVENT*4);
-    pm_dbg("SW2 policy for ARM Sub system : %08x \n", reg_val);
-
-   return 0;
-}
-
-#endif /*CONFIG_RHEA_A0_PM_ASIC_WORKAROUND*/
 /*
 For timebeing, COMMON_INT_TO_AC_EVENT related functions are added here
 We may have to move these fucntions to somewhere else later
@@ -420,13 +281,10 @@ static void set_spare_power_status(unsigned int mode)
 static int enter_dormant_state(struct kona_idle_state *state)
 {
 #ifdef CONFIG_RHEA_DORMANT_MODE
-#ifndef CONFIG_ARCH_RHEA_A0
 	u32 v;
-#endif
 	if (dormant_enable != 0) {
 
 		pwr_mgr_arm_core_dormant_enable(true);
-#ifndef CONFIG_ARCH_RHEA_A0
 		/* In rentetion mode A9 cache memory PM togling pin
 		 * should be disabled otherwise the memory periphary
 		 * will be powered down in retention which may cause
@@ -435,17 +293,14 @@ static int enter_dormant_state(struct kona_idle_state *state)
 		v = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
 		v &= ~CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
 		writel(v, CHIPREG_PERIPH_SPARE_CONTROL2);
-#endif
 		set_spare_power_status(SCU_STATUS_DORMANT);
 
 		dormant_enter();
 
 		set_spare_power_status(SCU_STATUS_NORMAL);
-#ifndef CONFIG_ARCH_RHEA_A0
 		v = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
 		v |= CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
 		writel(v, CHIPREG_PERIPH_SPARE_CONTROL2);
-#endif
 		pwr_mgr_arm_core_dormant_enable(false);
 	}
 #endif /* CONFIG_RHEA_DORMANT_MODE */
@@ -490,56 +345,18 @@ int enter_idle_state(struct kona_idle_state *state)
 #ifdef CONFIG_RHEA_WA_HWJIRA_2301
 	u32 lpddr2_temp_period = 0;
 #endif
-#ifdef CONFIG_ARCH_RHEA_A0
-	u32 ddr_min_pwr_state_ap = 0;
-	u32 reg_val;
-#endif
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	static struct ccu_clk* ccu_clk = NULL;
-#endif
 
 	BUG_ON(!state);
 
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,MODEMBUS_ACTIVE_EVENT);
-#ifdef CONFIG_ARCH_RHEA_A0
-	if(pm_en_self_refresh)
-	{
-		ddr_min_pwr_state_ap = readl(KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-		writel(0, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-		reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-		reg_val |=CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
-		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-	}
-#endif
 
 	/*Turn off XTAL only for deep sleep state*/
 	if (state->flags & CPUIDLE_FLAG_XTAL_ON)
 		clk_set_crystal_pwr_on_idle(false);
-/*JIRA HWRHEA-1659 : Remove this workaround for B0*/
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	if(!ccu_clk)
-	{
-		struct clk *clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
-		ccu_clk = to_ccu_clk(clk);
-	}
-	ccu_write_access_enable(ccu_clk, true);
-	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-	reg_val &= ~ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
-	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-	reg_val &= ~ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
-	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-	ccu_write_access_enable(ccu_clk, false);
-#endif
 
 	clear_wakeup_interrupts();
 	config_wakeup_interrupts();
-/*JIRA HWRHEA-1541 : Remove force clock disabling for B0 */
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	if(force_retention)
-		enable_sleep_prevention_clock(0);
-#endif
 
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	pi_enable(pi,0);
@@ -614,8 +431,7 @@ int enter_idle_state(struct kona_idle_state *state)
 #endif
 
 
-#if	defined(CONFIG_RHEA_A0_PM_ASIC_WORKAROUND) || \
-			defined(CONFIG_RHEA_WA_HWJIRA_2045)
+#ifdef CONFIG_RHEA_WA_HWJIRA_2045
 /*
 	Workaround for JIRA 2045:
 	HUB timer counter value is synchronized to apb register only on next
@@ -636,15 +452,6 @@ int enter_idle_state(struct kona_idle_state *state)
 
 	pi_enable(pi,1);
 	scu_set_power_mode(SCU_STATUS_NORMAL);
-#ifdef CONFIG_ARCH_RHEA_A0
-	if(pm_en_self_refresh)
-	{
-		writel(ddr_min_pwr_state_ap, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-		reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-		reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
-		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-	}
-#endif
 #ifdef PM_DEBUG
 	if(pwr_mgr_is_event_active(COMMON_INT_TO_AC_EVENT))
 	{
@@ -698,23 +505,6 @@ int enter_idle_state(struct kona_idle_state *state)
 	//pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
 	//pwr_mgr_event_clear_events(USBOTG_EVENT,MODEMBUS_ACTIVE_EVENT);
 
-/*JIRA HWRHEA-1541 : Remove force clock disabling for B0 */
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	if(force_retention)
-		enable_sleep_prevention_clock(1);
-#endif
-
-/*JIRA HWRHEA-1659 : Remove this workaround for B0*/
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	ccu_write_access_enable(ccu_clk, true);
-	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-	reg_val |= ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
-	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
-	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-	reg_val |= ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
-	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-	ccu_write_access_enable(ccu_clk, false);
-#endif
 
 	if (state->flags & CPUIDLE_FLAG_XTAL_ON)
 		clk_set_crystal_pwr_on_idle(true);
@@ -784,17 +574,9 @@ void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 static int enable_self_refresh(void *data, u64 val)
 {
     if (val == 0) {
-#ifdef CONFIG_ARCH_RHEA_A0
-	pm_en_self_refresh = 0;
-#else
 	pm_enable_self_refresh(false);
-#endif
     } else {
-#ifdef CONFIG_ARCH_RHEA_A0
-	pm_en_self_refresh = 1;
-#else
 	pm_enable_self_refresh(true);
-#endif
     }
     return 0;
 }

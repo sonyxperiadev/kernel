@@ -293,10 +293,6 @@ ifeq ($(CONFIG_ARCH_RHEA_BX),y)
 	$(Q)echo "Creating rdb link for Rhea Bx (B1/B0)"; \
 	ln -fsn $(srctree)/arch/arm/mach-rhea/include/mach/rdb_Bx $(srctree)/arch/arm/mach-rhea/include/mach/rdb
 endif
-ifeq ($(CONFIG_ARCH_RHEA_A0),y)
-	$(Q)echo "Creating rdb link for Rhea A0"; \
-	ln -fsn $(srctree)/arch/arm/mach-rhea/include/mach/rdb_A0 $(srctree)/arch/arm/mach-rhea/include/mach/rdb
-endif
 
 
 # Convert bzImage to zImage

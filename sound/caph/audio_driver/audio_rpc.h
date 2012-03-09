@@ -56,8 +56,8 @@ enum _AUDDRV_CP_CMD_en_t {
 	/* CP: */
 	AUDDRV_CPCMD_SetOmegaVoiceParam,
 	AUDDRV_CPCMD_SetFilter,
-	AUDDRV_CPCMD_SetBasebandVolume,
-	AUDDRV_CPCMD_SetBasebandDownlinkMute,
+	/* AUDDRV_CPCMD_SetBasebandVolume, */
+	AUDDRV_CPCMD_SetBasebandDownlinkMute=(AUDDRV_CPCMD_SetFilter + 2),
 	AUDDRV_CPCMD_SetBasebandDownlinkUnmute,
 	AUDDRV_CPCMD_SetBasebandUplinkGain,
 	AUDDRV_CPCMD_SetBasebandDownlinkGain,

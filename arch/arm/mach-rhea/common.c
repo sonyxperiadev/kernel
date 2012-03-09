@@ -517,10 +517,7 @@ static struct platform_device board_kona_otg_platform_device = {
 
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] = {
-/*JIRA HWRHEA-1199 : Don't enable Economy mode(156MHz) for A0 */
-#ifndef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	FTBL_INIT(156000, PI_OPP_ECONOMY),
-#endif
 	FTBL_INIT(467000, PI_OPP_NORMAL),
 
 #ifdef CONFIG_RHEALC_2093
@@ -540,15 +537,9 @@ void rhea_cpufreq_init(void)
 	BUG_ON(IS_ERR_OR_NULL(a9_pll_chnl0) || IS_ERR_OR_NULL(a9_pll_chnl1));
 
 	/*Update DVFS freq table based on PLL settings done by the loader */
-#ifndef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	/*For B0 and above, ECONOMY:0 NORMAL:1 TURBO:2 */
 	kona_freq_tbl[1].cpu_freq = clk_get_rate(a9_pll_chnl0) / 1000;
 	kona_freq_tbl[2].cpu_freq = clk_get_rate(a9_pll_chnl1) / 1000;
-#else
-	/*No Economy OPP for A0. So NORMAL:0 TURBO:1 */
-	kona_freq_tbl[0].cpu_freq = clk_get_rate(a9_pll_chnl0) / 1000;
-	kona_freq_tbl[1].cpu_freq = clk_get_rate(a9_pll_chnl1) / 1000;
-#endif
 
 	pr_info("%s a9_pll_chnl0 freq = %dKhz a9_pll_chnl1 freq = %dKhz\n",
 		__func__, kona_freq_tbl[1].cpu_freq, kona_freq_tbl[2].cpu_freq);
