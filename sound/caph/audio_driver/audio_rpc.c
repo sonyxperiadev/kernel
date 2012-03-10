@@ -36,7 +36,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "bcm_fuse_sysparm_CIB.h"
 #include "csl_caph.h"
 #include "audio_vdriver.h"
-#include "dspcmd.h"
+
 #include "csl_apcmd.h"
 #include "audio_trace.h"
 
@@ -468,47 +468,47 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 
 	switch (param1) {
 
-	case DSPCMD_TYPE_COMMAND_DIGITAL_SOUND:
+	case AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND:
 		VPRIPCMDQ_DigitalSound((UInt16) param2);
 		break;
 
-	case DSPCMD_TYPE_COMMAND_SET_BT_NB:
+	case AUDDRV_DSPCMD_COMMAND_SET_BT_NB:
 		VPRIPCMDQ_SetBTNarrowBand((UInt16) param2);
 
 		break;
 
-	case DSPCMD_TYPE_COMMAND_USB_HEADSET:
+	case AUDDRV_DSPCMD_COMMAND_USB_HEADSET:
 		VPRIPCMDQ_USBHeadset((UInt16) param2);
 
 		break;
 
-	case DSPCMD_TYPE_MM_VPU_ENABLE:
+	case AUDDRV_DSPCMD_MM_VPU_ENABLE:
 		VPRIPCMDQ_MMVPUEnable((UInt16) param2);
 
 		break;
 
-	case DSPCMD_TYPE_MM_VPU_DISABLE:
+	case AUDDRV_DSPCMD_MM_VPU_DISABLE:
 		VPRIPCMDQ_MMVPUDisable();
 
 		break;
 
 		/* AMCR PCM enable bit is controlled by ARM audio */
-	case DSPCMD_TYPE_AUDIO_SET_PCM:
+	case AUDDRV_DSPCMD_AUDIO_SET_PCM:
 		VPRIPCMDQ_DigitalSound((UInt16) param2);
 
 		break;
 
-	case DSPCMD_TYPE_COMMAND_VOIF_CONTROL:
+	case AUDDRV_DSPCMD_COMMAND_VOIF_CONTROL:
 		VPRIPCMDQ_VOIFControl((UInt16) param2);
 
 		break;
 
-	case DSPCMD_TYPE_COMMAND_SP:
+	case AUDDRV_DSPCMD_COMMAND_SP:
 		VPRIPCMDQ_SP((UInt16) param2, (UInt16) param3, (UInt16) param4);
 
 		break;
 
-	case DSPCMD_TYPE_COMMAND_CLEAR_VOIPMODE:
+	case AUDDRV_DSPCMD_COMMAND_CLEAR_VOIPMODE:
 		VPRIPCMDQ_Clear_VoIPMode((UInt16) param2);
 		break;
 
@@ -528,7 +528,7 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 		RPC_SyncWaitForResponse(tid, audioClientId, &ackResult,
 					&msgType, NULL);
 		*/
-		if (param1 == DSPCMD_TYPE_AUDIO_ENABLE) {
+		if (param1 == AUDDRV_DSPCMD_AUDIO_ENABLE) {
 			jiff_in = wait_for_completion_interruptible_timeout(
 				&audioEnableDone,
 				timeout_jiff);

@@ -39,7 +39,7 @@
 
 #include "csl_arm2sp.h"
 #include "csl_vpu.h"
-#include "dspcmd.h"
+
 #include "audio_consts.h"
 
 #include "bcm_fuse_sysparm_CIB.h"
@@ -744,11 +744,11 @@ void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute)
 	if (mute) {
 		bmuteVoiceCall = TRUE;
 		/*pr_info(" bmuteVoiceCall = TRUE\r\n"); */
-		audio_control_dsp(DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_MUTE_DSP_UL, 0, 0, 0, 0, 0);
 	} else {
 		bmuteVoiceCall = FALSE;
 		/*pr_info(" bmuteVoiceCall = FALSE\r\n"); */
-		audio_control_dsp(DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_UNMUTE_DSP_UL, 0, 0, 0, 0, 0);
 	}
 }
 
