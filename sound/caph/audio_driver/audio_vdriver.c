@@ -301,8 +301,8 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	audio_control_dsp(AUDDRV_DSPCMD_MUTE_DSP_UL, 0, 0, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, FALSE, FALSE, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_DUAL_MIC_ON, FALSE, 0, 0, 0, 0);
-	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff, FALSE, 0, 0,
-			  0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff, FALSE,
+			  0, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0);
 
@@ -387,8 +387,8 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	if (bNeedDualMic == TRUE)
 		audio_control_dsp(AUDDRV_DSPCMD_DUAL_MIC_ON, TRUE, 0, 0, 0, 0);
 
-	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff, TRUE, 0, 0,
-			  0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff,
+			  TRUE, 0, 0, 0, 0);
 
 	if (bmuteVoiceCall == FALSE)
 		audio_control_dsp(AUDDRV_DSPCMD_UNMUTE_DSP_UL, 0, 0, 0, 0, 0);
@@ -505,11 +505,12 @@ void AUDDRV_Telephony_Deinit(void)
 		audio_control_generic(AUDDRV_CPCMD_ENABLE_DSP_DTX, FALSE, 0, 0,
 				      0, 0);
 
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, FALSE, 0, 0, 0,
-				  0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE, 0, 0, 0,
-				  0);
-		audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, FALSE, FALSE, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, FALSE,
+				  0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE,
+				  0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, FALSE, FALSE,
+				0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_DUAL_MIC_ON, FALSE, 0, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff,
 				  FALSE, 0, 0, 0, 0);
@@ -528,15 +529,18 @@ void AUDDRV_Telephony_Deinit(void)
 #endif
 		audio_control_dsp(AUDDRV_DSPCMD_MUTE_DSP_UL, 0, 0, 0, 0, 0);
 
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, FALSE,
+					0, 0, 0, 0);
 
 		AUDDRV_Telephony_DeinitHW();
 	}
 
 	/*if voice recording, voice playback and voice call do not use PCM
 	interface, turn PCM off*/
-	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode())
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0);
+	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode()) {
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_SET_PCM, FALSE,
+				0, 0, 0, 0);
+	}
 
 	if (!inCallRateChange) {
 		currVoiceMic = AUDIO_SOURCE_UNDEFINED;
@@ -658,7 +662,8 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 				  DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 0, 0,
 				  0, 0);
-/* AUDDRV_DSPCMD_AUDIO_CONNECT should be called after AUDDRV_DSPCMD_AUDIO_ENABLE */
+	/* AUDDRV_DSPCMD_AUDIO_CONNECT should be called after
+		AUDDRV_DSPCMD_AUDIO_ENABLE */
 #else
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 0, 0, 0,
 				  0);
@@ -1285,12 +1290,12 @@ void AUDDRV_SetPCMOnOff(Boolean on_off)
 {
 /* By default the PCM port is occupied by trace port on development board */
 	if (on_off) {
-		audio_control_dsp(AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND, on_off, 0,
-				  0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND, on_off,
+				0, 0, 0, 0);
 
 	} else {
-		audio_control_dsp(AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND, on_off, 0,
-				  0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND, on_off,
+				0, 0, 0, 0);
 
 	}
 }
