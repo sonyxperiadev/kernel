@@ -19,7 +19,6 @@
 #include <linux/slab.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_rtb.h>
-#include <mach/socinfo.h>
 #include "spm_driver.h"
 
 enum {
@@ -128,10 +127,6 @@ inline int msm_spm_drv_set_spm_enable(
 {
 	uint32_t value = enable ? 0x01 : 0x00;
 
-	/* TODO: Remove this after 8064 bring up */
-	if (cpu_is_apq8064())
-		return 0;
-
 	if (!dev)
 		return -EINVAL;
 
@@ -149,10 +144,6 @@ void msm_spm_drv_flush_seq_entry(struct msm_spm_driver_data *dev)
 {
 	int i;
 	int num_spm_entry = msm_spm_drv_get_num_spm_entry(dev);
-
-	/* TODO: Remove this after 8064 bring up */
-	if (cpu_is_apq8064())
-		return;
 
 	if (!dev) {
 		__WARN();
@@ -173,10 +164,6 @@ int msm_spm_drv_write_seq_data(struct msm_spm_driver_data *dev,
 {
 	uint32_t offset_w = offset / 4;
 	int ret = 0;
-
-	/* TODO: Remove this after 8064 bring up */
-	if (cpu_is_apq8064())
-		return 0;
 
 	if (!cmd || !dev) {
 		__WARN();
@@ -214,9 +201,7 @@ int msm_spm_drv_set_low_power_mode(struct msm_spm_driver_data *dev,
 		uint32_t addr)
 {
 	void *base = NULL;
-	/* TODO: Remove this after 8064 bring up */
-	if (cpu_is_apq8064())
-		return 0;
+
 	/* SPM is configured to reset start address to zero after end of Program
 	 */
 	if (!dev)
@@ -237,6 +222,10 @@ int msm_spm_drv_set_low_power_mode(struct msm_spm_driver_data *dev,
 	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_SPM_CTL);
 	wmb();
 
+	uncached_logk_pc(LOGK_PM,
+		(void *)(base + msm_spm_reg_offsets[MSM_SPM_REG_SAW2_SPM_CTL]),
+		(void *)dev->reg_shadow[MSM_SPM_REG_SAW2_SPM_CTL]);
+
 	if (msm_spm_debug_mask & MSM_SPM_DEBUG_SHADOW) {
 		int i;
 		for (i = 0; i < MSM_SPM_REG_NR; i++)
@@ -250,10 +239,6 @@ int msm_spm_drv_set_low_power_mode(struct msm_spm_driver_data *dev,
 int msm_spm_drv_set_vdd(struct msm_spm_driver_data *dev, unsigned int vlevel)
 {
 	uint32_t timeout_us;
-
-	/* TODO: Remove this after 8064 bring up */
-	if (cpu_is_apq8064())
-		return 0;
 
 	if (!dev)
 		return -EINVAL;
@@ -307,10 +292,6 @@ int __init msm_spm_drv_init(struct msm_spm_driver_data *dev,
 
 	int i;
 	int num_spm_entry;
-
-	/* TODO: Remove this after 8064 bring up */
-	if (cpu_is_apq8064())
-		return 0;
 
 	BUG_ON(!dev || !data);
 

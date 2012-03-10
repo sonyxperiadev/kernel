@@ -921,16 +921,22 @@ struct clock_init_data apq8064_dummy_clock_init_data __initdata = {
 	.size = ARRAY_SIZE(msm_clocks_8064_dummy),
 };
 
-static struct resource msm_l2_erp_resources[] = {
+static struct resource msm_cache_erp_resources[] = {
 	{
+		.name = "l1_irq",
+		.start = SC_SICCPUXEXTFAULTIRPTREQ,
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.name = "l2_irq",
 		.start = APCC_QGICL2IRPTREQ,
 		.flags = IORESOURCE_IRQ,
 	}
 };
 
-struct platform_device apq8064_device_l2_erp = {
-	.name		= "msm_l2_erp",
+struct platform_device apq8064_device_cache_erp = {
+	.name		= "msm_cache_erp",
 	.id		= -1,
-	.num_resources	= ARRAY_SIZE(msm_l2_erp_resources),
-	.resource	= msm_l2_erp_resources,
+	.num_resources	= ARRAY_SIZE(msm_cache_erp_resources),
+	.resource	= msm_cache_erp_resources,
 };
