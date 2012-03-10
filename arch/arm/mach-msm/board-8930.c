@@ -1823,7 +1823,6 @@ static struct platform_device *common_devices[] __initdata = {
 #ifdef CONFIG_MSM_RTB
 	&msm_rtb_device,
 #endif
-	&msm8960_device_l2_erp,
 };
 
 static struct platform_device *cdp_devices[] __initdata = {

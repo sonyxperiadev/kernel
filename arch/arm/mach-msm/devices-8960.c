@@ -2665,17 +2665,3 @@ struct platform_device msm_etm_device = {
 };
 
 #endif
-
-static struct resource msm_l2_erp_resources[] = {
-	{
-		.start = APCC_QGICL2IRPTREQ,
-		.flags = IORESOURCE_IRQ,
-	}
-};
-
-struct platform_device msm8960_device_l2_erp = {
-	.name		= "msm_l2_erp",
-	.id		= -1,
-	.num_resources	= ARRAY_SIZE(msm_l2_erp_resources),
-	.resource	= msm_l2_erp_resources,
-};
