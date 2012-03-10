@@ -101,8 +101,22 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA3, &data3,
 			bcmpmu->regmap[PMU_REG_HSPGA3].mask);
 	if (HSInputmode == PMU_HS_SINGLE_ENDED_AC_COUPLED) {
+
+/*add 6 dB shift if input mode is PMU_HS_SINGLE_ENDED,
+threfore the HS gain is the same for PMU_HS_SINGLE_ENDED and PMU_HS_DIFFERENTIAL.*/
+
+#if defined(CONFIG_MFD_BCM59055)
+		/*for 59055, i_pga_gainl==1, boost 6dB */
 		data1 |= (BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
 				(HSgain & BCMPMU_PGA_CTL_MASK));
+#endif
+#if defined(CONFIG_MFD_BCM59039)
+		/* for 59039, i_pga_gainl==0, boost 6dB */
+		data1 &= ~(BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
+				BCMPMU_PGA_CTL_MASK);
+		data1 |= HSgain & BCMPMU_PGA_CTL_MASK;
+#endif
+
 		data2 &= ~BCMPMU_PGA_CTL_MASK;
 		data2 |= HSgain & BCMPMU_PGA_CTL_MASK;
 
@@ -110,9 +124,18 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 				BCMPMU_HSPGA3_PGA_PULLDNSJ);
 		data3 |= BCMPMU_HSPGA3_PGA_ENACCPL;
 	} else if (HSInputmode == PMU_HS_DIFFERENTIAL_AC_COUPLED) {
+
+#if defined(CONFIG_MFD_BCM59055)
+		/*for 59055, i_pga_gainl==0, does not boost. (lower by 6dB) */
 		data1 &= ~(BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
 				BCMPMU_PGA_CTL_MASK);
 		data1 |= HSgain & BCMPMU_PGA_CTL_MASK;
+#endif
+#if defined(CONFIG_MFD_BCM59039)
+		/* for 59039, i_pga_gainl==1, does not boost. (lower by 6dB) */
+		data1 |= (BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
+				(HSgain & BCMPMU_PGA_CTL_MASK));
+#endif
 
 		data2 &= ~BCMPMU_PGA_CTL_MASK;
 		data2 |= HSgain & BCMPMU_PGA_CTL_MASK;
@@ -121,9 +144,18 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 		data3 |= (BCMPMU_HSPGA3_PGA_ENACCPL |
 				BCMPMU_HSPGA3_PGA_ACINADJ);
 	} else if (HSInputmode == PMU_HS_DIFFERENTIAL_DC_COUPLED) {
+
+#if defined(CONFIG_MFD_BCM59055)
+		/*for 59055, i_pga_gainl==0, does not boost. (lower by 6dB) */
 		data1 &= ~(BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
 				BCMPMU_PGA_CTL_MASK);
 		data1 |= HSgain & BCMPMU_PGA_CTL_MASK;
+#endif
+#if defined(CONFIG_MFD_BCM59039)
+		/* for 59039, i_pga_gainl==1, does not boost. (lower by 6dB) */
+		data1 |= (BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
+				(HSgain & BCMPMU_PGA_CTL_MASK));
+#endif
 
 		data2 &= ~BCMPMU_PGA_CTL_MASK;
 		data2 |= HSgain & BCMPMU_PGA_CTL_MASK;
