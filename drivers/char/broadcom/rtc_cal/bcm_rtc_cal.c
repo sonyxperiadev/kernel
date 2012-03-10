@@ -1867,6 +1867,14 @@ static const struct file_operations rtc_cal_test_fops2 = {
 	.read =         rtc_cal_test_get2,
 };
 
+static int rtc_cal_setratio(void *data, u64 val)
+{
+	bcm_rtc_cal_ratio((u32)val, 0);
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(rtc_cal_ratio, NULL,
+	rtc_cal_setratio, "%llu\n");
 
 static struct dentry *dent_rtc_cal_root_dir;
 
@@ -1916,6 +1924,9 @@ int __init bcm_rtc_cal_debug_init(void)
 		dent_rtc_cal_root_dir, &rtc_cal_cp_ratio))
 		return -ENOMEM;
 
+	if (!debugfs_create_file("ratio_event", S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH,
+		dent_rtc_cal_root_dir, NULL, &rtc_cal_ratio))
+			return -ENOMEM;
 
 	return 0;
 
