@@ -527,10 +527,13 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 	if (interfaceType != INTERFACE_CAPI2 && !bFound)	/* Did not find client with registered interface type */
 	{
 		ret = RPC_RESULT_ERROR;
-	} else if (interfaceType == INTERFACE_CAPI2 && channel == 201)	/* Return Error for now. Used for DRX sync */
+	}
+//	else if (interfaceType == INTERFACE_CAPI2 && channel == 201)  /* Drop DRX message for now */
+//	{
+//		ret = RPC_RESULT_ERROR;
+//	}
+	else 
 	{
-		ret = RPC_RESULT_ERROR;
-	} else {
 		cInfo = gRpcClientList[clientId];
 
 		if (clientId != 0 && cInfo) {

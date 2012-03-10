@@ -90,6 +90,7 @@ typedef enum {
 	INTERFACE_LOGGING,	///< for logging
 	INTERFACE_USB_EEM,	///< for usb EEM interface
 	INTERFACE_SERIAL,	///< for serial interface
+	INTERFACE_DRX,				///<  for sending DRX from CP to AP
 	INTERFACE_TOTAL		///< total interfaces
 } PACKET_InterfaceType_t;
 

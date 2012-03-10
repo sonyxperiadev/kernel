@@ -519,6 +519,9 @@ static Int8 GetInterfaceType(IPC_EndpointId_T epId)
 	if (epId == IPC_EP_Capi2App || epId == IPC_EP_Capi2Cp)
 		return INTERFACE_CAPI2;
 
+	else if(epId == IPC_EP_DrxAP || epId == IPC_EP_DrxCP)
+		return INTERFACE_DRX;
+
 	else if (epId == IPC_EP_PsCpData || epId == IPC_EP_PsAppData)
 		return INTERFACE_PACKET;
 
@@ -618,8 +621,8 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 				     (PACKET_BufHandle_t) bufHandle);
 		else
 			_DBG_(RPC_TRACE
-			      ("RPC_BufferDelivery(%c) FAIL destIP=%d h=%d",
-			       (gRpcProcType == RPC_COMMS) ? 'C' : 'A', destId,
+			      ("RPC_BufferDelivery(%c) FAIL destId=%d intf=%d handle=%x",
+			       (gRpcProcType == RPC_COMMS) ? 'C' : 'A', destId, type,
 			       bufHandle));
 
 		if (result != RPC_RESULT_PENDING) {
@@ -715,6 +718,8 @@ RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t rpcProcType)
 	if (rpcProcType == RPC_COMMS) {
 		IPC_EndpointRegister(IPC_EP_Capi2Cp, RPC_FlowCntrl,
 				     RPC_BufferDelivery, 4);
+		IPC_EndpointRegister(IPC_EP_DrxCP, RPC_FlowCntrl,
+					RPC_BufferDelivery, 4);
 		IPC_EndpointRegister(IPC_EP_PsCpData, RPC_FlowCntrl,
 				     RPC_BufferDelivery,
 				     4 + PDCP_MAX_HEADER_SIZE);
@@ -729,6 +734,8 @@ RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t rpcProcType)
 	} else {
 		IPC_EndpointRegister(IPC_EP_Capi2App, RPC_FlowCntrl,
 				     RPC_BufferDelivery, 4);
+		IPC_EndpointRegister(IPC_EP_DrxAP, RPC_FlowCntrl,
+					RPC_BufferDelivery, 4);
 		IPC_EndpointRegister(IPC_EP_PsAppData, RPC_FlowCntrl,
 				     RPC_BufferDelivery,
 				     4 + PDCP_MAX_HEADER_SIZE);
@@ -759,7 +766,7 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 	PACKET_InterfaceType_t itype;
 	Int8 index;
 	int ret;
-
+	
 #if defined(CNEON_COMMON) && defined(FUSE_APPS_PROCESSOR)
 	/* wait for CP RPC ready - need to find better way */
 	OSTASK_Sleep(TICKS_ONE_SECOND / 10);
@@ -767,12 +774,11 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 	memset(ipcBufList, 0, sizeof(ipcBufList));
 
 	for (itype = INTERFACE_START; itype < INTERFACE_TOTAL; itype++) {
+
 		if (itype >= INTERFACE_CAPI2 && itype < INTERFACE_PACKET) {
 			ipcBufList[itype].max_pkts[0] = CFG_RPC_CMD_MAX_PACKETS;
-			ipcBufList[itype].max_pkts[1] =
-			    CFG_RPC_CMD_MAX_PACKETS2;
-			ipcBufList[itype].max_pkts[2] =
-			    CFG_RPC_CMD_MAX_PACKETS3;
+			ipcBufList[itype].max_pkts[1] = CFG_RPC_CMD_MAX_PACKETS2;
+			ipcBufList[itype].max_pkts[2] = CFG_RPC_CMD_MAX_PACKETS3;
 
 			ipcBufList[itype].pkt_size[0] = CFG_RPC_CMD_PKT_SIZE;
 			ipcBufList[itype].pkt_size[1] = CFG_RPC_CMD_PKT_SIZE2;
@@ -789,7 +795,26 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 			ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_Capi2App : IPC_EP_Capi2Cp;
-		} else if (itype == INTERFACE_PACKET) {
+		}
+
+		else if (itype == INTERFACE_DRX) {
+			ipcBufList[itype].max_pkts[0] = CFG_RPC_DRX_MAX_PACKETS;
+			ipcBufList[itype].pkt_size[0] = CFG_RPC_DRX_PKT_SIZE;
+
+			ipcBufList[itype].start_threshold = 
+			    CFG_RPC_DRX_START_THRESHOLD;
+			ipcBufList[itype].end_threshold = 
+			    CFG_RPC_DRX_END_THRESHOLD;
+
+			ipcBufList[itype].srcEpId =
+			    (rpcProcType ==
+			     RPC_COMMS) ? IPC_EP_DrxCP : IPC_EP_DrxAP;
+			ipcBufList[itype].destEpId =
+			    (rpcProcType ==
+			     RPC_COMMS) ? IPC_EP_DrxAP : IPC_EP_DrxCP;
+		}
+
+		else if (itype == INTERFACE_PACKET) {
 			for (index = 0; index < MAX_CHANNELS; index++) {
 				ipcBufList[itype].pkt_size[(int)index] =
 				    CFG_RPC_PKTDATA_PKT_SIZE;

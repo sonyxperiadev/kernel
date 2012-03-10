@@ -19,6 +19,7 @@
 
 #include <linux/printk.h>
 #define DBG_ERROR   KERN_ERR
+#define DBG_WARN    KERN_WARNING
 #define DBG_INFO    KERN_INFO
 #define DBG_TRACE   KERN_DEBUG
 #define DBG_TRACE2  KERN_DEBUG

@@ -245,7 +245,7 @@ void WaitForCpIpc(void *pSmBase)
 	int k = 0, ret = 0;
 	cp_running = 0;
 
-	IPC_DEBUG(DBG_TRACE, "Waiting for CP IPC to init ...\n");
+	IPC_DEBUG(DBG_WARN, "Waiting for CP IPC to init ...\n");
 
 	ret = IPC_IsCpIpcInit(pSmBase, IPC_AP_CPU);
 	while (ret == 0) {
@@ -258,7 +258,7 @@ void WaitForCpIpc(void *pSmBase)
 	}
 
 	if (ret == 1) {
-		IPC_DEBUG(DBG_TRACE, "CP IPC initialized ret=%d\n", ret);
+		IPC_DEBUG(DBG_WARN, "CP IPC initialized\n");
 		cp_running = 1;	/* TRUE; */
 	} else if (ret == 0) {
 		IPC_DEBUG(DBG_ERROR,
@@ -272,7 +272,7 @@ void WaitForCpIpc(void *pSmBase)
 		IPC_DEBUG(DBG_ERROR,
 			  "********************************************************************\n");
 		BUG_ON(ret == 0);
-	} else {
+	} else if (ret == -1) {
 		IPC_DEBUG(DBG_ERROR,
 			  "********************************************************************\n");
 		IPC_DEBUG(DBG_ERROR,
@@ -284,6 +284,18 @@ void WaitForCpIpc(void *pSmBase)
 		IPC_DEBUG(DBG_ERROR,
 			  "********************************************************************\n");
 		BUG_ON(ret);
+	} else if (ret == -2) {
+		IPC_DEBUG(DBG_ERROR,
+			  "********************************************************************\n");
+		IPC_DEBUG(DBG_ERROR,
+			  "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR,
+			  "*                     AP/CP IPC VERSION NOT MATCH !!!               *\n");
+		IPC_DEBUG(DBG_ERROR,
+			  "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR,
+			  "********************************************************************\n");
+		//BUG_ON(ret);
 	}
 }
 

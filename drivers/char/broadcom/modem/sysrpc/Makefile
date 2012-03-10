@@ -35,3 +35,4 @@ obj-$(CONFIG_BCM_MODEM) += \
 	sys_msg.o \
 	sys_rpc.o
 obj-$(CONFIG_BCMPMU_RPC) += bcmpmu-rpc.o
+#obj-$(CONFIG_BCMPMU_RPC) += sysrpc_drx_test.o
