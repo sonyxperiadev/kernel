@@ -122,6 +122,30 @@ static const struct attribute_group bcmpmu_core_attr_group = {
 
 void bcmpmu_client_power_off(void)
 {
+	unsigned int val;
+
+	BUG_ON(!bcmpmu_core);
+	bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_WRPROEN, &val,
+			      PMU_BITMASK_ALL);
+	pr_debug("%s: REG_WRPROEN: 0x%02X\n", __func__, val);
+
+	/* If write protection is enabled and locked state */
+	if (!(val & (BCMPMU_DIS_WR_PRO | BCMPMU_PMU_UNLOCK))) {
+		bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_WRLOCKKEY,
+				BCMPMU_WRLOCKKEY_VAL, 0xff);
+#ifdef DEBUG
+		bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_WRLOCKKEY,
+				      &val, PMU_BITMASK_ALL);
+#endif
+		pr_debug("%s: REG_WRLOCKKEY: 0x%02X\n", __func__, val);
+	}
+
+#ifdef DEBUG
+	bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_WRPROEN, &val,
+			      PMU_BITMASK_ALL);
+#endif
+	pr_debug("%s: REG_WRPROEN: 0x%02X\n", __func__, val);
+
 	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_HOSTCTRL1, BCMPMU_SW_SHDWN,
 			       BCMPMU_SW_SHDWN);
 }
