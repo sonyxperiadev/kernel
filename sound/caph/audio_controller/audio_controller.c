@@ -156,6 +156,7 @@ static int bInVoiceCall = FALSE;
 static int bmuteVoiceCall = FALSE;
 static Boolean isMFD = FALSE;
 static Boolean is26MClk = FALSE;
+static Boolean muteInPlay = FALSE;
 
 /*
 static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
@@ -960,8 +961,13 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 	sp_struct.app = AUDCTRL_GetAudioApp();
 	sp_struct.pathID = arg_pathID;
 	sp_struct.inHWlpbk = inHWlpbk;
-	sp_struct.mixInGain_mB = GAIN_SYSPARM;
-	sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+	if (muteInPlay) {
+		sp_struct.mixInGain_mB = GAIN_NA;
+		sp_struct.mixInGainR_mB = GAIN_NA;
+	} else {
+		sp_struct.mixInGain_mB = GAIN_SYSPARM;
+		sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+	}
 	{
 		int i, j;
 
@@ -1041,8 +1047,13 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 		sp_struct.mixInGain_mB = users_gain[AUDPATH_FM].L;
 		sp_struct.mixInGainR_mB = users_gain[AUDPATH_FM].R;
 	} else {
-		sp_struct.mixInGain_mB = GAIN_SYSPARM;
-		sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+		if (muteInPlay) {
+			sp_struct.mixInGain_mB = GAIN_NA;
+			sp_struct.mixInGainR_mB = GAIN_NA;
+		} else {
+			sp_struct.mixInGain_mB = GAIN_SYSPARM;
+			sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+		}
 	}
 	if (user_vol_setting[app][mode].valid == FALSE)
 		fillUserVolSetting(mode, app);
@@ -1712,6 +1723,20 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 			 Boolean mute, unsigned int pathID)
 {
 	CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+	CSL_CAPH_MIXER_e mixer = CSL_CAPH_SRCM_CH_NONE;
+	CSL_CAPH_SRCM_INCHNL_e mixInCh = CSL_CAPH_SRCM_INCHNL_NONE;
+	AudioMode_t mode;
+	AudioApp_t app;
+	int mixInGain, mixInGainR;
+#ifdef CONFIG_BCM_MODEM
+	SysAudioParm_t *p;
+#else
+	AudioSysParm_t *p;
+#endif
+
+	mode = GetAudioModeBySink(sink);
+	app = AUDCTRL_GetAudioApp();
+	p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
 
 	aTrace(LOG_AUDIO_CNTLR, "%s sink 0x%x, source 0x%x, mute 0x%x",
 			__func__, sink, source, mute);
@@ -1721,6 +1746,10 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 		return;
 
 	speaker = getDeviceFromSink(sink);
+	mixer = csl_caph_FindMixer(speaker, pathID);
+	/*determine which mixer input to apply the gains to */
+	/*is the inChnl stereo two channels? */
+	mixInCh = csl_caph_FindMixInCh(speaker, pathID);
 
 	/*if(pathID == 0)
 	   {
@@ -1728,10 +1757,32 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 	   return;
 	   } */
 
-	if (mute == TRUE)
-		csl_caph_hwctrl_MuteSink(0 /*pathID */ , speaker);
-	else
-		csl_caph_hwctrl_UnmuteSink(0 /*pathID */ , speaker);
+	if (mute == TRUE) {
+		if (sink == AUDIO_SINK_VIBRA)
+			csl_caph_hwctrl_MuteSink(0 /*pathID */ , speaker);
+		else {
+			if (mixInCh != CSL_CAPH_SRCM_INCHNL_NONE) {
+				csl_srcmixer_setMixInGain(mixInCh, mixer,
+					GAIN_NA, GAIN_NA);
+				muteInPlay = TRUE;
+			}
+		}
+	} else {
+		if (sink == AUDIO_SINK_VIBRA)
+			csl_caph_hwctrl_UnmuteSink(0 /*pathID */ , speaker);
+		else {
+			if (mixInCh != CSL_CAPH_SRCM_INCHNL_NONE) {
+				/*set CAPH gain, Q13p2 dB */
+				mixInGain = (short)p->srcmixer_input_gain_l;
+				mixInGain = mixInGain * 25; /* into mB */
+				mixInGainR = (short)p->srcmixer_input_gain_r;
+				mixInGainR = mixInGainR * 25; /* into mB */
+				csl_srcmixer_setMixInGain(mixInCh, mixer,
+					mixInGain, mixInGainR);
+				muteInPlay = FALSE;
+			}
+		}
+	}
 
 	return;
 }
