@@ -784,4 +784,5 @@ static inline int mdp4_overlay_dsi_state_get(void)
 }
 #endif
 
+void mdp_vid_quant_set(void);
 #endif /* MDP_H */
