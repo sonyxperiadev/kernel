@@ -48,7 +48,7 @@
 extern int gAudioDebugLevel;
 
 /* Audio modules logs */
-#define LOG_AUDIO_DRIVER	0x1  
+#define LOG_AUDIO_DRIVER	0x1
 #define LOG_ALSA_INTERFACE	0x2
 #define LOG_AUDIO_CNTLR		0x4
 #define LOG_AUDIO_CSL		0x8
@@ -68,22 +68,22 @@ extern int gAudioDebugLevel;
 #define aTrace(trace_module, format, args...) \
 	do { \
 		if (trace_module & gAudioDebugLevel) \
-		pr_info(pr_fmt(format), ##args);\
+			pr_info(pr_fmt(format), ##args);\
 	} while (0)
 
 #else
 
-#define aError(format, args...) do { } while (0) 
+#define aError(format, args...) do { } while (0)
 #define aWarn(format, args...)	do { } while (0)
 #define aTrace(trace_module, format, args...) do { } while (0)
 
 #endif /* CONFIG_SND_BCM_AUDIO_DEBUG_OFF */
 
 #define audio_xassert(a, b) \
-	{if ((a) == 0)\
-		pr_info("%s assert line %d, %d, 0x%x.",\
-				__func__, __LINE__, a, b);\
-	}
+{if ((a) == 0)\
+	pr_info("%s assert line %d, %d, 0x%x.",\
+			__func__, __LINE__, a, b);\
+}
 
 #endif /*__AUDIO_LOG_H__ */
 
