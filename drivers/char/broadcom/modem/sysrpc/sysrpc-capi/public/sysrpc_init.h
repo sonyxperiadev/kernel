@@ -26,8 +26,8 @@
 *		  EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE LIMITATIONS SHALL APPLY 
 *		  NOTWITHSTANDING ANY FAILURE OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
 *
-****************************************************************************/  
-    
+****************************************************************************/
+
 #ifndef _SYSRPC_INIT_H
 #define _SYSRPC_INIT_H
 
