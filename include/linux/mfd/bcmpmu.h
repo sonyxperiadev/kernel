@@ -37,11 +37,6 @@ struct regulator_init_data;
 /* HOSTCTRL1 def*/
 #define BCMPMU_SW_SHDWN 0x04
 
-/* WRPREN def */
-#define BCMPMU_DIS_WR_PRO       (1<<0)
-#define BCMPMU_PMU_UNLOCK       (1<<1)
-#define BCMPMU_WRLOCKKEY_VAL    0x38
-
 int bcmpmu_register_regulator(struct bcmpmu *bcmpmu, int reg,
 			      struct regulator_init_data *initdata);
 
