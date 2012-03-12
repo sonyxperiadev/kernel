@@ -210,6 +210,7 @@ static ssize_t i2c_ts_driver_calibration(struct device *dev,
 {
 	int rc = 0;
 	unsigned char buffer[2] = {SPECIAL_OP_OFFSET, SPECIAL_OP_CODE_CALIBRATE};
+	unsigned long flags;
 
 	rc = strncmp(buf, "enable", 6);
 	if(rc != 0)
@@ -219,10 +220,20 @@ static ssize_t i2c_ts_driver_calibration(struct device *dev,
 	}
 
 	printk("starting calibration\n");
+
 	rc = i2c_master_send((p_tango_i2c_dev->dummy_client) ?
 							p_tango_i2c_dev->dummy_client :
 							p_tango_i2c_dev->client,
 						 buffer, 2);
+	/*
+	 * Disabling interrupts till calibrated data is written into flash.
+	 * This wont effect system performace because calibration is done
+	 * one-time before product packaged.
+	 */
+	local_irq_save(flags);
+	mdelay(3000);
+	local_irq_restore(flags);
+
 	if (rc < 0)
 	{
 		TS_ERR("%s Calibration failed %d\n", I2C_TS_DRIVER_NAME, rc);
