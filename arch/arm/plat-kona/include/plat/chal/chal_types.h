@@ -21,7 +21,6 @@
 *  @note 
 ******************************************************************************/
 
-
 #ifndef _CHAL_TYPES_H_
 #define _CHAL_TYPES_H_
 
@@ -38,34 +37,34 @@ extern "C" {
 // typedef declarations
 ******************************************************************************/
 
-typedef unsigned char      cUInt8;   ///< unsigned character (8 bits wide)
-typedef unsigned short     cUInt16;  ///< unsigned short integer (16 bits wide)
-typedef unsigned long      cUInt32;  ///< unsigned long integer (32 bits wide)
+	typedef unsigned char cUInt8;	///< unsigned character (8 bits wide)
+	typedef unsigned short cUInt16;	///< unsigned short integer (16 bits wide)
+	typedef unsigned long cUInt32;	///< unsigned long integer (32 bits wide)
 #ifdef __GNUC__
-typedef unsigned long long cUInt64;  ///< unsigned long long integer (64 bits wide)
+	typedef unsigned long long cUInt64;	///< unsigned long long integer (64 bits wide)
 #else
-typedef unsigned __int64   cUInt64;  ///< unsigned long long integer (64 bits wide)
+	typedef unsigned __int64 cUInt64;	///< unsigned long long integer (64 bits wide)
 #endif
 
-typedef signed char        cInt8;    ///< signed character (8 bits wide)
-typedef signed short       cInt16;   ///< signed short integer (16 bits wide)
-typedef signed long        cInt32;   ///< signed long integer (32 bits wide)
+	typedef signed char cInt8;	///< signed character (8 bits wide)
+	typedef signed short cInt16;	///< signed short integer (16 bits wide)
+	typedef signed long cInt32;	///< signed long integer (32 bits wide)
 #ifdef __GNUC__
-typedef signed long long   cInt64;   ///< signed long long integer (64 bits wide) 
+	typedef signed long long cInt64;	///< signed long long integer (64 bits wide) 
 #else
-typedef signed __int64     cInt64;   ///< signed long long integer (64 bits wide) 
+	typedef signed __int64 cInt64;	///< signed long long integer (64 bits wide) 
 #endif
 
 #ifndef _INC_MS_BASIC_TYPES_H_
-typedef unsigned char      Boolean;  ///< unsiged character (8 bits wide)
+	typedef unsigned char Boolean;	///< unsiged character (8 bits wide)
 #endif
 
 #ifndef _INC_MS_BASIC_TYPES_H_
-#define BOOL      Boolean            ///< unsigned character (8 bits wide)
+#define BOOL      Boolean	///< unsigned character (8 bits wide)
 #endif
 
-typedef unsigned char      cBool;    ///< unsigned character (8 bits wide)
-typedef void               cVoid;    ///< void
+	typedef unsigned char cBool;	///< unsigned character (8 bits wide)
+	typedef void cVoid;	///< void
 
 #ifndef TRUE
 #define TRUE 1
@@ -83,17 +82,14 @@ typedef void               cVoid;    ///< void
 // Generic cHAL handler
 //
 #ifndef CHAL_HANDLE
-typedef void* CHAL_HANDLE;            ///< void pointer (32 bits wide)
+	typedef void *CHAL_HANDLE;	///< void pointer (32 bits wide)
 #endif
 
 //
-
 
 /** @} */
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // _CHAL_TYPES_H_
-
+#endif				// _CHAL_TYPES_H_

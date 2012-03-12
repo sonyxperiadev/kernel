@@ -12,11 +12,12 @@
 #include <linux/module.h>
 #include <linux/io.h>
 #include <linux/err.h>
-#include <linux/mutex.h>
+#include <linux/spinlock.h>
 #include <plat/scu.h>
 
+
 static void __iomem *scu_base;
-static DEFINE_MUTEX(scu_lock);
+static DEFINE_SPINLOCK(scu_lock);
 
 #if defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 /* Ref counting for scu_standby signal disable requests */
@@ -27,11 +28,12 @@ module_param_named(scu_standby_disable, scu_standby_disable_cnt, int,
 int scu_standby(bool enable)
 {
 	unsigned int val;
+	unsigned long flgs;
 
 	if (!scu_base)
 		return -ENODEV;
 
-	mutex_lock(&scu_lock);
+	spin_lock_irqsave(&scu_lock, flgs);
 	if (enable) {
 		if (scu_standby_disable_cnt)
 			scu_standby_disable_cnt--;
@@ -50,7 +52,7 @@ int scu_standby(bool enable)
 
 		scu_standby_disable_cnt++;
 	}
-	mutex_unlock(&scu_lock);
+	spin_unlock_irqrestore(&scu_lock, flgs);
 
 	return 0;
 }

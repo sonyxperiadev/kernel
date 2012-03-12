@@ -1646,9 +1646,7 @@ static struct bus_clk CLK_NAME(apb10) = {
  .clk_gate_offset  = KHUB_CLK_MGR_REG_APB10_CLKGATE_OFFSET,
  .clk_en_mask = KHUB_CLK_MGR_REG_APB10_CLKGATE_APB10_CLK_EN_MASK,
  .stprsts_mask = KHUB_CLK_MGR_REG_APB10_CLKGATE_APB10_STPRSTS_MASK,
-#ifndef CONFIG_ARCH_RHEA_A0
  .gating_sel_mask = KHUB_CLK_MGR_REG_APB10_CLKGATE_APB10_HW_SW_GATING_SEL_MASK,
-#endif
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 27,
@@ -1673,9 +1671,7 @@ static struct bus_clk CLK_NAME(apb9) = {
  .clk_gate_offset  = KHUB_CLK_MGR_REG_APB9_CLKGATE_OFFSET,
  .clk_en_mask = KHUB_CLK_MGR_REG_APB9_CLKGATE_APB9_CLK_EN_MASK,
  .stprsts_mask = KHUB_CLK_MGR_REG_APB9_CLKGATE_APB9_STPRSTS_MASK,
-#ifndef CONFIG_ARCH_RHEA_A0
  .gating_sel_mask = KHUB_CLK_MGR_REG_APB9_CLKGATE_APB9_HW_SW_GATING_SEL_MASK,
-#endif
  .freq_tbl_index = -1,
  .src_clk = NULL,
     .clk_sel_val = 14,
@@ -4692,9 +4688,7 @@ static struct bus_clk CLK_NAME(apb1) = {
  .ccu_clk = &CLK_NAME(kps),
  .clk_gate_offset  = KPS_CLK_MGR_REG_APB1_CLKGATE_OFFSET,
  .clk_en_mask = KPS_CLK_MGR_REG_APB1_CLKGATE_APB1_CLK_EN_MASK,
-#ifndef CONFIG_ARCH_RHEA_A0
  .gating_sel_mask = KPS_CLK_MGR_REG_APB1_CLKGATE_APB1_HW_SW_GATING_SEL_MASK,
-#endif
  .hyst_val_mask = KPS_CLK_MGR_REG_APB1_CLKGATE_APB1_HYST_VAL_MASK,
  .hyst_en_mask = KPS_CLK_MGR_REG_APB1_CLKGATE_APB1_HYST_EN_MASK,
  .stprsts_mask = KPS_CLK_MGR_REG_APB1_CLKGATE_APB1_STPRSTS_MASK,
@@ -6367,14 +6361,14 @@ int mm_ccu_set_pll_select(u32 clk_id, u32 value)
 	default:
 		return -EINVAL;
 	}
-	CCU_PI_ENABLE(ccu_clk,1);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ccu_write_access_enable(ccu_clk,true);
     reg_val = readl(CCU_REG_ADDR(ccu_clk,offset));
 	reg_val &= ~mask;
 	reg_val |= (value << shift) & mask;
 	writel(reg_val,CCU_REG_ADDR(ccu_clk,offset));
 	ccu_write_access_enable(ccu_clk,false);
-	CCU_PI_ENABLE(ccu_clk,0);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return 0;
 
 }
@@ -6461,12 +6455,6 @@ int root_ccu_clk_init(struct clk* clk)
     reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
     writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
 
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-    /* JIRA HWRHEA-877: remove this B0 */
-    /* Var_312M and Var_96M clocks default PLL is wrong. correcting here.*/
-    writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
-    writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_48M_DIV_OFFSET);
-#endif
 
     /* MobC00173104 : change the settling time to 4 ms */
     writel (0x82, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTAL_STRTDLY_OFFSET);

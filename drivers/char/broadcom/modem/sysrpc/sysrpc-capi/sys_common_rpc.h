@@ -95,6 +95,7 @@ typedef struct {
 } SYS_SIMLOCK_SIM_DATA_t;
 
 void SIMLOCKApi_SetStatus(ClientInfo_t *inClientInfoPtr, SYS_SIMLOCK_STATE_t *simlock_state);
+void SIMLOCKApi_SetStatusEx(UInt8 simId, SYS_SIMLOCK_STATE_t *simlock_state);
 UInt32 SimApi_GetCurrLockedSimlockType(ClientInfo_t *inClientInfoPtr);
 
 /***************** < 1 > **********************/

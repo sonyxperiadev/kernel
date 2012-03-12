@@ -8,8 +8,6 @@ choice
 config  ARCH_RHEA_BX
         bool "Rhea SOC Version - Bx [B1/B0]"
 
-config  ARCH_RHEA_A0
-        bool "Rhea SOC Version - A0"
 
 endchoice
 
@@ -133,12 +131,6 @@ config ROM_SEC_DISPATCHER_SRC
 
 endchoice
 
-config RHEA_A0_PM_ASIC_WORKAROUND
-       depends on ARCH_RHEA
-       bool "Enable A0 ASIC workarounds for Power management"
-       default y
-       help
-       Say Y if you want to enable Rhea A0 ASIC workarounds for Power management
 
 config RHEA_B0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA

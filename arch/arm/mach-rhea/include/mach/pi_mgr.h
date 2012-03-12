@@ -2,8 +2,7 @@
 #ifndef __RHEA_PI_MNGR_H__
 #define __RHEA_PI_MNGR_H__
 
-enum
-{
+enum {
 	PI_MGR_PI_ID_MM,
 	PI_MGR_PI_ID_HUB_SWITCHABLE,
 	PI_MGR_PI_ID_HUB_AON,
@@ -13,23 +12,20 @@ enum
 	PI_MGR_PI_ID_MAX
 };
 
-enum
-{
+enum {
 	PI_STATE_ACTIVE,
 	PI_STATE_RETENTION,
 	PI_STATE_SHUTDOWN,
 };
 
-enum
-{
+enum {
 	ARM_CORE_STATE_ACTIVE,
 	ARM_CORE_STATE_SUSPEND,
 	ARM_CORE_STATE_RETENTION,
 	ARM_CORE_STATE_DORMANT,
 };
 
-enum
-{
+enum {
 	PI_OPP_ECONOMY,
 	PI_OPP_NORMAL,
 	PI_OPP_TURBO,
@@ -37,6 +33,5 @@ enum
 };
 
 void rhea_pi_mgr_init(void);
-
 
 #endif /*__RHEA_PI_MNGR_H__*/

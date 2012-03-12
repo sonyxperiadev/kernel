@@ -205,9 +205,6 @@ static const struct rhea_event_table event_table[] = {
 	// AP stays awake long enough until all CP activities that could trigger MODEMBUS_ACTIVE_EVENT have completed.
 	// For A0 chip, MODEMBUS_ACTIVE_EVENT is enabled to work around the JIRA that VREQ_NONZERO_PI_MODEM_EVENT is not auto-cleared.
 	// JIRA HWRHEA-1253 : Remove MODEMBUS_ACTIVE_EVENT for B0
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	{	MODEMBUS_ACTIVE_EVENT, 			PM_TRIG_POS_EDGE,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
-#endif
 	{	VREQ_NONZERO_PI_MODEM_EVENT,		PM_TRIG_POS_EDGE,		PM_DFS,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_OFF,	},
 	{	COMMON_INT_TO_AC_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
 	{	COMMON_TIMER_1_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_OFF,	},
@@ -329,9 +326,6 @@ int __init rhea_pwr_mgr_init()
 
 	int i;
 	struct pi* pi;
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	u32 reg_val = 0;
-#endif
 	struct v0x_spec_i2c_cmd_ptr dummy_seq_v0_ptr =
 		{
 			.other_ptr = 2,
@@ -367,36 +361,15 @@ int __init rhea_pwr_mgr_init()
 		pwr_mgr_ignore_power_ok_signal(false);
 #endif
 
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	// JIRA HWRHEA-1689, HWRHEA-1739 we confirmed that there is a bug in Rhea A0 where wrong control signal
-	// is used to turn on mm power switches which results in mm clamps getting released before mm subsystem
-	// has powered up. This results in glitches on mm outputs which in some parts causes fake write
-	// transaction to memc with random ID. Next real write transfer to memc from mm creates write
-	// interleaving error in memc and hangs mm. This is the root cause of MM block test failures observed
-	// in BLTS MobC00164066: SW workaround is to reduce inrush current setting on mm power switch control
-	// from default 14.5mA (0x3) to 1.5mA (0x0) in bits 1:0 of CHIPREG:mm_powerswitch_control_status register.
-	reg_val = readl(KONA_CHIPREG_VA + CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET);
-	/* 1.5mA per switch */
-	reg_val &= ~CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_POWER_SWITCH_CTRL_MASK;
-	writel(reg_val, (KONA_CHIPREG_VA + CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET));
-#endif
 	/*MM override is not set by default*/
 	pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM,false/*clear*/);
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	/* 14.5mA per switch */
-	reg_val |= 3;
-	writel(reg_val, (KONA_CHIPREG_VA +CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET));
-#endif
+
 	/*Done in two steps to skip DUMMY_EVENT*/
 	pwr_mgr_event_clear_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,EVENT_ID_ALL);
 
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
 	pwr_mgr_event_set(SOFTWARE_0_EVENT,1);
-
-#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
-	pwr_mgr_event_set(VREQ_NONZERO_PI_MODEM_EVENT,1);
-#endif
 
 	pwr_mgr_set_pc_clkreq_override(PC1,true,1);
 	pwr_mgr_pm_i2c_enable(true);
@@ -526,7 +499,8 @@ int __init rhea_pwr_mgr_init_sequencer(void)
 
 	pwr_mgr_init_sequencer(&rhea_pwr_mgr_info);
 
-	/* enable the power manager i2c sequencer */
+	/* pwr_mgr_init_sequencer function will disable the sequencer
+	re-enable the power manager i2c sequencer */
 	pwr_mgr_pm_i2c_enable(true);
 	return 0;
 }

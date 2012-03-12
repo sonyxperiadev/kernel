@@ -1761,8 +1761,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
       err_release_mem_region:
 	release_mem_region(iomem->start, resource_size(iomem));
-
-	dev_err(dev->device, "bus %d probe failed\n", pdev->id);
+	printk(KERN_ERR "I2C bus %d probe failed\n", pdev->id);
 	return rc;
 }
 

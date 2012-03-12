@@ -867,82 +867,76 @@ void csl_caph_audioh_start(int path_id)
 	case AUDDRV_PATH_VIN_INPUT:
 		chnl_enable |= CHAL_AUDIO_CHANNEL_LEFT;
 		chnl_enable |= CHAL_AUDIO_CHANNEL_RIGHT;
-		/* Enable the digital microphone */
-		chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
 		/* DMIC0CLK/DMIC0CQ can control both DMIC1 and DMIC2.*/
 		chal_audio_dmic1_pwrctrl(handle, TRUE);
+		/* Enable the digital microphone */
+		chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
 		micStatus |= 0x3;
 		break;
 
 	case AUDDRV_PATH_VIN_INPUT_L:
 		chnl_enable |= CHAL_AUDIO_CHANNEL_LEFT;
-		/* Enable the digital microphone */
-		chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
 		/* DMIC0CLK/DMIC0CQ can control both DMIC1 and DMIC2.*/
 		chal_audio_dmic1_pwrctrl(handle, TRUE);
+		/* Enable the digital microphone */
+		chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
 		micStatus |= 0x1;
 		break;
 
 	case AUDDRV_PATH_VIN_INPUT_R:
 		chnl_enable |= CHAL_AUDIO_CHANNEL_RIGHT;
-		/* Enable the digital microphone */
-		chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
 		/* DMIC0CLK/DMIC0CQ can control both DMIC1 and DMIC2.*/
 		chal_audio_dmic1_pwrctrl(handle, TRUE);
+		/* Enable the digital microphone */
+		chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
 		micStatus |= 0x2;
 		break;
 
 	case AUDDRV_PATH_NVIN_INPUT:
 		chnl_enable |= CHAL_AUDIO_CHANNEL_LEFT;
 		chnl_enable |= CHAL_AUDIO_CHANNEL_RIGHT;
-		/* Enable the digital microphone */
-		chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
 		/* DMIC1CLK/DMIC1CQ can control both DMIC3 and DMIC4.*/
 		chal_audio_dmic2_pwrctrl(handle, TRUE);
+		/* Enable the digital microphone */
+		chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
 		micStatus |= 0xC;
 		break;
 
 	case AUDDRV_PATH_NVIN_INPUT_L:
 		chnl_enable |= CHAL_AUDIO_CHANNEL_LEFT;
-		/* Enable the digital microphone */
-		chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
 		/* DMIC1CLK/DMIC1CQ can control both DMIC3 and DMIC4.*/
 		chal_audio_dmic2_pwrctrl(handle, TRUE);
+		/* Enable the digital microphone */
+		chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
 		micStatus |= 0x4;
 		break;
 
 	case AUDDRV_PATH_NVIN_INPUT_R:
 		chnl_enable |= CHAL_AUDIO_CHANNEL_RIGHT;
-		/* Enable the digital microphone  */
-		chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
 		/* DMIC1CLK/DMIC1CQ can control both DMIC3 and DMIC4. */
 		chal_audio_dmic2_pwrctrl(handle, TRUE);
+		/* Enable the digital microphone  */
+		chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
 		micStatus |= 0x8;
 		break;
 
 	case AUDDRV_PATH_ANALOGMIC_INPUT:
-
+		chal_audio_mic_pwrctrl(handle, TRUE);
 		chal_audio_vinpath_select_primary_mic(handle,
 						      CHAL_AUDIO_ENABLE);
-		chal_audio_mic_pwrctrl(handle, TRUE);
-
 		break;
 
 	case AUDDRV_PATH_HEADSET_INPUT:
-
+		chal_audio_hs_mic_pwrctrl(handle, TRUE);
 		chal_audio_vinpath_select_primary_mic(handle,
 						      CHAL_AUDIO_ENABLE);
-		chal_audio_hs_mic_pwrctrl(handle, TRUE);
-
 		break;
 
 	case AUDDRV_PATH_EANC_INPUT:
+		chal_audio_mic_pwrctrl(handle, TRUE);
 		chal_audio_vinpath_select_primary_mic(handle,
 						      CHAL_AUDIO_ENABLE);
-		chal_audio_mic_pwrctrl(handle, TRUE);
-
 		chal_audio_eancpath_enable(handle, TRUE);
-
 		break;
 
 	case AUDDRV_PATH_SIDETONE_INPUT:

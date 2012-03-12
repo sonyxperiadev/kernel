@@ -110,9 +110,9 @@ static int bcmpmu_i2c_write_device(struct bcmpmu *bcmpmu, int reg,
 	if (err < 0)
 		goto err;
 
-	err = err & ~msk;
-	err = err & ~map.mask;
-	value = value | err;
+	err &= ~(msk & map.mask);
+	value &= (msk & map.mask);
+	value |= err;
 
 	if (map.map == 0)
 		err =
@@ -448,9 +448,9 @@ static int bcmpmu_i2c_pwrmgr_write(struct bcmpmu *bcmpmu, int reg,
 	if (err < 0)
 		goto out_unlock;
 
-	temp &= ~msk;
-	temp &= ~map.mask;
-	temp |= (u8) value;
+	temp &= ~(msk & map.mask);
+	value &= (msk & map.mask);
+	temp |= value;
 
 	if (map.map == 0)
 		err = i2c_try_read_write(bcmpmu, true, I2C_TRANS_WRITE,

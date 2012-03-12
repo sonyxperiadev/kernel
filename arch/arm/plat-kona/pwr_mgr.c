@@ -18,7 +18,7 @@
 #include <linux/delay.h>
 #include <linux/clkdev.h>
 #include <asm/io.h>
-
+#include <linux/mutex.h>
 #include <plat/pi_mgr.h>
 #include <mach/pwr_mgr.h>
 #include <plat/pwr_mgr.h>
@@ -132,6 +132,7 @@ enum {
 static int pwr_debug = 0;
 /* global spinlock for pwr mgr API */
 static DEFINE_SPINLOCK(pwr_mgr_lock);
+static DEFINE_MUTEX(seq_mutex);
 
 struct pwr_mgr_event {
 	void (*pwr_mgr_event_cb) (u32 event_id, void *param);
@@ -581,6 +582,7 @@ int pwr_mgr_set_pc_sw_override(int pc_pin, bool enable, int value)
 		break;
 	default:
 		pwr_dbg("%s:invalid param\n", __func__);
+		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 		return -EINVAL;
 	}
 	reg_val =
@@ -632,6 +634,7 @@ int pwr_mgr_set_pc_clkreq_override(int pc_pin, bool enable, int value)
 		break;
 	default:
 		pwr_dbg("%s:invalid param\n", __func__);
+		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 		return -EINVAL;
 	}
 	reg_val =
@@ -1454,10 +1457,8 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 {
 	u32 reg_val;
 	int ret = 0;
-	unsigned long flgs;
 
 	pwr_dbg("%s\n", __func__);
-	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 
 	reg_val = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 	reg_val &= ~(PWRMGR_I2C_REQ_TRG_MASK | PWRMGR_I2C_SW_START_ADDR_MASK);
@@ -1500,8 +1501,6 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 		pwr_mgr.i2c_seq_trg++;
 	reg_val |= pwr_mgr.i2c_seq_trg << PWRMGR_I2C_REQ_TRG_SHIFT;
 
-	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
-
 	INIT_COMPLETION(pwr_mgr.i2c_seq_done);
 	pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ, false);
 	writel(reg_val, PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
@@ -1520,7 +1519,6 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 
 int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 {
-	unsigned long flgs;
 	int ret;
 	u32 reg;
 
@@ -1530,7 +1528,7 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		return -EPERM;
 	}
 
-	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+	mutex_lock(&seq_mutex);
 	if (pwr_mgr.info->i2c_rd_slv_id_off1 >= 0)
 		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
 					    i2c_rd_slv_id_off1,
@@ -1542,10 +1540,7 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
 					    i2c_rd_slv_id_off2,
 					    I2C_READ_ADDR(slave_id));
-	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
-
 	ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ);
-	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 	if (!ret && reg_val) {
 		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 #if defined(CONFIG_KONA_PWRMGR_REV2)
@@ -1561,20 +1556,16 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		 * PWRMGR again to read the FIFO data from PMU_BSC
 		 * to PWRMGR buffer
 		 */
-		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 		ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ_FIFO);
 		if (ret < 0)
-			goto out;
-		spin_lock_irqsave(&pwr_mgr_lock, flgs);
+			goto out_unlock;
 		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 #endif
 		*reg_val = (reg & PWRMGR_I2C_READ_DATA_MASK) >>
 		    PWRMGR_I2C_READ_DATA_SHIFT;
 	}
 out_unlock:
-	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
-	return ret;
-out:
+	mutex_unlock(&seq_mutex);
 	return ret;
 }
 
@@ -1585,7 +1576,6 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 	int ret = 0;
 	u32 reg;
 	u8 i2c_data;
-	unsigned long flgs;
 
 	pwr_dbg("%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
@@ -1593,7 +1583,7 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 		return -EPERM;
 	}
 
-	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+	mutex_lock(&seq_mutex);
 
 	if (pwr_mgr.info->i2c_wr_slv_id_off >= 0)
 		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
@@ -1605,8 +1595,6 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 	if (pwr_mgr.info->i2c_wr_val_addr_off >= 0)
 		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
 					    i2c_wr_val_addr_off, reg_val);
-
-	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 
 	ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_WRITE);
 
@@ -1621,6 +1609,7 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 			ret = -EAGAIN;
 		}
 	}
+	mutex_unlock(&seq_mutex);
 	return ret;
 }
 
@@ -1726,12 +1715,14 @@ EXPORT_SYMBOL(pwr_mgr_get_intr_status);
 int pwr_mgr_clr_intr_status(u32 intr)
 {
 	u32 mask = intr;
+	unsigned long flgs;
+
 	pwr_dbg("%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
 		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
 		return -EPERM;
 	}
-
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 	BUG_ON(PWRMGR_INTR_ALL != intr && intr >= PWRMGR_INTR_MAX);
 	if (intr == PWRMGR_INTR_ALL)
 		mask = 0xFFFFFFFF >> (32 - PWRMGR_INTR_MAX);
@@ -1739,6 +1730,7 @@ int pwr_mgr_clr_intr_status(u32 intr)
 	/* Write 1 to clear */
 	writel(PWR_MGR_INTR_MASK(mask),
 	       PWR_MGR_REG_ADDR(PWRMGR_INTR_STATUS_OFFSET));
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return 0;
 }
 
@@ -1774,8 +1766,9 @@ static void pwr_mgr_dump_i2c_cmd_regs(void)
 void pwr_mgr_init_sequencer(struct pwr_mgr_info *info)
 {
 	u32 v_set;
-	pwr_mgr_pm_i2c_enable(false);
 	/*init I2C seq, var data & cmd ptr if valid data available */
+	/*Disable seq. before updating seq. params */
+	pwr_mgr_pm_i2c_enable(false);
 	if (info->i2c_cmds) {
 		pwr_mgr_pm_i2c_cmd_write(info->i2c_cmds,
 				info->num_i2c_cmds);

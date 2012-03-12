@@ -119,12 +119,8 @@ void cleanup_netpoll_lock(void)
 
 void cleanup_netpoll_unlock(void)
 {
-	mutex_unlock(&cleanup_netpoll_mutex);
-}
-
-int cleanup_netpoll_is_locked(void)
-{
-	return mutex_is_locked(&cleanup_netpoll_mutex);
+	if (mutex_is_locked(&cleanup_netpoll_mutex))
+		mutex_unlock(&cleanup_netpoll_mutex);
 }
 
 extern void brcm_current_netcon_status(unsigned char status);
@@ -727,8 +723,10 @@ static void eth_work(struct work_struct *work)
 	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_ON, &dev->todo)) {
 				cleanup_netpoll_lock();
 				brcm_current_netcon_status(USB_RNDIS_ON);
+				cleanup_netpoll_unlock();
 	}
 	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_OFF, &dev->todo)) {
+				cleanup_netpoll_lock();
 				brcm_current_netcon_status(USB_RNDIS_OFF);
 				cleanup_netpoll_unlock();
 	}
@@ -747,8 +745,10 @@ static void eth_work(struct work_struct *work)
 	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_ON, &dev->todo)) {
 				cleanup_netpoll_lock();
 				brcm_current_netcon_status(USB_RNDIS_ON);
+				cleanup_netpoll_unlock();
 	}
 	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_OFF, &dev->todo)) {
+				cleanup_netpoll_lock();
 				brcm_current_netcon_status(USB_RNDIS_OFF);
 				cleanup_netpoll_unlock();
 	}
@@ -1205,25 +1205,10 @@ int gether_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
  */
 void gether_cleanup(void)
 {
-#ifdef CONFIG_BRCM_NETCONSOLE
-	unsigned short retry = 0;
-#endif
 	pr_info("%s\n", __func__);
 
 	if (!the_dev)
 		return;
-
-#ifdef CONFIG_BRCM_NETCONSOLE
-	/* Check if the netpoll has been released or not... */
-	do {
-		msleep(10);
-		if (retry++ == MAX_RETRY_NO) {
-			pr_err("failed to release netpoll...\n");
-			cleanup_netpoll_unlock();
-			break;
-		}
-	} while (cleanup_netpoll_is_locked());
-#endif
 
 	unregister_netdev(the_dev->net);
 	flush_work_sync(&the_dev->work);

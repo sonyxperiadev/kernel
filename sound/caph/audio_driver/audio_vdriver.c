@@ -33,7 +33,7 @@ Copyright 2009 - 2012  Broadcom Corporation
 #include <linux/completion.h>
 #include "mobcom_types.h"
 #include "audio_consts.h"
-#include "dspcmd.h"
+
 #include "csl_apcmd.h"
 
 #include "bcm_fuse_sysparm_CIB.h"
@@ -287,7 +287,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	/*-/////////////////////////////////////////////////////////////////
 	// Phone Setup Sequence
 	// 1. Init CAPH HW
-	// 2. Send DSP command DSPCMD_TYPE_AUDIO_ENABLE
+	// 2. Send DSP command AUDDRV_DSPCMD_AUDIO_ENABLE
 	// 3. If requires 48KHz for example in IHF mode,
 		Send VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
 	////////////////////////////////////////////////////////////////-*/
@@ -298,13 +298,13 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	currVoiceMic = mic;
 	currVoiceSpkr = speaker;
 
-	audio_control_dsp(DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, FALSE, FALSE, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_DUAL_MIC_ON, FALSE, 0, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, FALSE, 0, 0,
-			  0, 0);
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_MUTE_DSP_UL, 0, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, FALSE, FALSE, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_DUAL_MIC_ON, FALSE, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff, FALSE,
+			  0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0);
 
 	if (app == AUDIO_APP_VOICE_CALL_WB) {
 		AUDDRV_Telephony_InitHW(mic, speaker, AUDIO_SAMPLING_RATE_16000,
@@ -347,7 +347,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 		(DSP_AADMAC_IHF_SPKR_EN));
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 
 		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
 			    (TRUE, FALSE, FALSE);)
@@ -363,35 +363,35 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 	}
 
 
 #if defined(ENABLE_DMA_VOICE)
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
 #else
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE,
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE,
 			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
 #endif
 
 #if defined(ENABLE_DMA_VOICE)
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0);
 #else
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE,
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, TRUE,
 			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
 #endif
-/*	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
-	audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, ec_enable_from_sysparm,
+/*	audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
+	audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, ec_enable_from_sysparm,
 			  ns_enable_from_sysparm, 0, 0, 0);
 
 	if (bNeedDualMic == TRUE)
-		audio_control_dsp(DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_DUAL_MIC_ON, TRUE, 0, 0, 0, 0);
 
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, TRUE, 0, 0,
-			  0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff,
+			  TRUE, 0, 0, 0, 0);
 
 	if (bmuteVoiceCall == FALSE)
-		audio_control_dsp(DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_UNMUTE_DSP_UL, 0, 0, 0, 0, 0);
 
 /* per call basis: enable the DTX by calling stack api when call connected */
 	audio_control_generic(AUDDRV_CPCMD_ENABLE_DSP_DTX, TRUE, 0, 0, 0, 0);
@@ -505,13 +505,14 @@ void AUDDRV_Telephony_Deinit(void)
 		audio_control_generic(AUDDRV_CPCMD_ENABLE_DSP_DTX, FALSE, 0, 0,
 				      0, 0);
 
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0,
-				  0);
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0,
-				  0);
-		audio_control_dsp(DSPCMD_TYPE_EC_NS_ON, FALSE, FALSE, 0, 0, 0);
-		audio_control_dsp(DSPCMD_TYPE_DUAL_MIC_ON, FALSE, 0, 0, 0, 0);
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, FALSE,
+				  0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE,
+				  0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, FALSE, FALSE,
+				0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_DUAL_MIC_ON, FALSE, 0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff,
 				  FALSE, 0, 0, 0, 0);
 
 		/* if (currVoiceSpkr == AUDIO_SINK_LOUDSPK) */  {
@@ -526,17 +527,20 @@ void AUDDRV_Telephony_Deinit(void)
 			(UInt16) (DSP_AADMAC_SEC_MIC_EN);
 		csl_dsp_caph_control_aadmac_disable_path(dma_mic_spk);
 #endif
-		audio_control_dsp(DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_MUTE_DSP_UL, 0, 0, 0, 0, 0);
 
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, FALSE,
+					0, 0, 0, 0);
 
 		AUDDRV_Telephony_DeinitHW();
 	}
 
 	/*if voice recording, voice playback and voice call do not use PCM
 	interface, turn PCM off*/
-	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode())
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0);
+	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode()) {
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_SET_PCM, FALSE,
+				0, 0, 0, 0);
+	}
 
 	if (!inCallRateChange) {
 		currVoiceMic = AUDIO_SOURCE_UNDEFINED;
@@ -568,14 +572,14 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 		    (AUDIO_SAMPLING_RATE_8000);
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_SPKR_EN));
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
 				  DSP_AADMAC_SPKR_EN, 0, 0, 0, 0);
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, 1, 0, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0,
 				  0, 0);
 #else
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 0, 0, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 0, 0, 0,
 				  0);
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, 1, 0, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0,
 				  0, 0);
 #endif
 	} else {
@@ -584,14 +588,14 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 		    (AUDIO_SAMPLING_RATE_16000);
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_SPKR_EN));
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
 				  DSP_AADMAC_SPKR_EN, 0, 0, 0, 0);
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, 1, 0, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0,
 				  0, 0);
 #else
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 1, 0, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 1, 0, 0,
 				  0);
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, 1, 1, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 1, 0,
 				  0, 0);
 #endif
 	}
@@ -623,14 +627,14 @@ void AUDDRV_DisableDSPOutput(void)
 {
 	aTrace(LOG_AUDIO_DRIVER,  "%s", __func__);
 
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0,
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, FALSE, 0, 0, 0,
 			  0);
 
 #if defined(ENABLE_DMA_VOICE)
 	csl_dsp_caph_control_aadmac_disable_path(((UInt16)
 	DSP_AADMAC_SPKR_EN) | ((UInt16)(DSP_AADMAC_IHF_SPKR_EN)));
 #endif
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
 
 	voicePlayOutpathEnabled = FALSE;
 }
@@ -654,15 +658,16 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 		    (AUDIO_SAMPLING_RATE_8000);
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_PRI_MIC_EN));
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
 				  DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0);
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 0, 0,
 				  0, 0);
-/* DSPCMD_TYPE_AUDIO_CONNECT should be called after DSPCMD_TYPE_AUDIO_ENABLE */
+	/* AUDDRV_DSPCMD_AUDIO_CONNECT should be called after
+		AUDDRV_DSPCMD_AUDIO_ENABLE */
 #else
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 0, 0, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 0, 0, 0,
 				  0);
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 0, 0,
 				  0, 0);
 #endif
 	} else {
@@ -671,27 +676,27 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 		    (AUDIO_SAMPLING_RATE_16000);
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_PRI_MIC_EN));
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
 				  DSP_AADMAC_PRI_MIC_EN, 1, 0, 0, 0);
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 1, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 1, 0,
 				  0, 0);
 #else
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 1, 0, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 1, 0, 0,
 				  0);
-		audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 1, 0,
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 1, 0,
 				  0, 0);
 #endif
 	}
 /*              voiceInPathEnabled = TRUE; */
 
 /*
-When voice call ends, DSPCMD_TYPE_MUTE_DSP_UL is being sent to DSP and
+When voice call ends, AUDDRV_DSPCMD_MUTE_DSP_UL is being sent to DSP and
 this command mutes UL record gain
 Not sure why this is done and there is no clarification if we really
 need to send the MUTE UL command when disconnecting the voice call.
 For now, when voice record is started, UMUTE UL command will be sent */
 
-	audio_control_dsp(DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_UNMUTE_DSP_UL, 0, 0, 0, 0, 0);
 
 #if 0
 	currVoiceMic = source;
@@ -718,14 +723,14 @@ void AUDDRV_DisableDSPInput(void)
 {
 	aTrace(LOG_AUDIO_DRIVER,  "%s", __func__);
 
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0,
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE, 0, 0, 0,
 			  0);
 #if defined(ENABLE_DMA_VOICE)
 	csl_dsp_caph_control_aadmac_disable_path((UInt16)
 						 DSP_AADMAC_PRI_MIC_EN);
 #endif
-	audio_control_dsp(DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0);
-	audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_MUTE_DSP_UL, 0, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
 }
 
 
@@ -1285,12 +1290,12 @@ void AUDDRV_SetPCMOnOff(Boolean on_off)
 {
 /* By default the PCM port is occupied by trace port on development board */
 	if (on_off) {
-		audio_control_dsp(DSPCMD_TYPE_COMMAND_DIGITAL_SOUND, on_off, 0,
-				  0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND, on_off,
+				0, 0, 0, 0);
 
 	} else {
-		audio_control_dsp(DSPCMD_TYPE_COMMAND_DIGITAL_SOUND, on_off, 0,
-				  0, 0, 0);
+		audio_control_dsp(AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND, on_off,
+				0, 0, 0, 0);
 
 	}
 }
@@ -1677,6 +1682,7 @@ static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 	aTrace(LOG_AUDIO_DRIVER,
 			"%s, Got AUDIO ENABLE RESP FROM DSP\n", __func__);
 
+	udelay(2000);
 	complete(&audioEnableDone);
 
 #if defined(CONFIG_BCM_MODEM)
