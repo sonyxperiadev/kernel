@@ -59,8 +59,10 @@ struct PMU_AudioGainMapping_t {
 };
 
 /*
-in bcmpmu_hs_set_input_mode(), add 6 dB shift if input mode is PMU_HS_SINGLE_ENDED,
-threfore the HS gain is the same for PMU_HS_SINGLE_ENDED and PMU_HS_DIFFERENTIAL.
+in bcmpmu_hs_set_input_mode(),
+add 6 dB shift if input mode is PMU_HS_SINGLE_ENDED,
+threfore the HS gain is the same for PMU_HS_SINGLE_ENDEDi
+ and PMU_HS_DIFFERENTIAL.
 RheaStone use PMU_HS_DIFFERENTIAL
 Next pone with 59039C0 will use PMU_HS_SINGLE_ENDED.
 

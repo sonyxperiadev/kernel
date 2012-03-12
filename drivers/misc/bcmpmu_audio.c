@@ -100,10 +100,12 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 			bcmpmu->regmap[PMU_REG_HSPGA2].mask);
 	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA3, &data3,
 			bcmpmu->regmap[PMU_REG_HSPGA3].mask);
-	if (HSInputmode == PMU_HS_SINGLE_ENDED_AC_COUPLED) {
+	if (HSInputmode ==
+	PMU_HS_SINGLE_ENDED_AC_COUPLED) {
 
-/*add 6 dB shift if input mode is PMU_HS_SINGLE_ENDED,
-threfore the HS gain is the same for PMU_HS_SINGLE_ENDED and PMU_HS_DIFFERENTIAL.*/
+		/*add 6 dB shift if input mode is PMU_HS_SINGLE_ENDED,
+		threfore the HS gain is the same for PMU_HS_SINGLE_ENDED
+		 and PMU_HS_DIFFERENTIAL.*/
 
 #if defined(CONFIG_MFD_BCM59055)
 		/*for 59055, i_pga_gainl==1, boost 6dB */
