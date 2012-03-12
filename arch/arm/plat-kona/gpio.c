@@ -216,11 +216,13 @@ static int kona_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
 static int kona_gpio_direction_output(struct gpio_chip *chip, unsigned gpio,
 				      int value)
 {
-	void __iomem *reg_base = kona_gpio.reg_base;
-	u32 val;
+	void * __iomem reg_base = kona_gpio.reg_base;
+	int bankId = GPIO_BANK(gpio);
+	int bit = GPIO_BIT(gpio);
+	u32 val, reg_offset;
 	unsigned long flags;
 
-	(void)chip;		/* unused input parameter */
+	(void)chip; /* unused input parameter */
 
 	spin_lock_irqsave(&kona_gpio.lock, flags);
 
@@ -229,12 +231,12 @@ static int kona_gpio_direction_output(struct gpio_chip *chip, unsigned gpio,
 	val |= GPIO_GPCTR0_IOTR_CMD_0UTPUT;
 	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
 
-	val = __raw_readl(reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
-	val =
-	    (value) ? (val | (1 << GPIO_BIT(gpio))) : (val &
-						       (~
-							(1 << GPIO_BIT(gpio))));
-	__raw_writel(val, reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
+	reg_offset = value ? GPIO_OUT_SET(bankId) : GPIO_OUT_CLR(bankId);
+
+	val = __raw_readl(reg_base + reg_offset);
+	val |= 1 << bit;
+
+	__raw_writel(val, reg_base + reg_offset);
 
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 
