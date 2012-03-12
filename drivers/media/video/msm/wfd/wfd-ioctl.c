@@ -1067,6 +1067,7 @@ static int wfd_open(struct file *filp)
 	enc_mops.op_buffer_done = venc_op_buffer_done;
 	enc_mops.ip_buffer_done = venc_ip_buffer_done;
 	enc_mops.cbdata = filp;
+	enc_mops.secure = wfd_dev->secure_device;
 	rc = v4l2_subdev_call(&wfd_dev->enc_sdev, core, ioctl, OPEN,
 				(void *)&enc_mops);
 	if (rc || !enc_mops.cookie) {
