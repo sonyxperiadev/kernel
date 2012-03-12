@@ -23,15 +23,14 @@
  * Watchdog Tapper for PMU.
  */
 
-
 #ifndef __LINUX_WD_TAPPER_H
 #define __LINUX_WD_TAPPER_H
 
 #define msec_to_ticks(x) (x*1000)/32
 
 struct wd_tapper_platform_data {
-    unsigned int count;
-    unsigned int ch_num;
-    char name[255];
+	unsigned int count;
+	unsigned int ch_num;
+	char name[255];
 };
 #endif
