@@ -21,15 +21,14 @@
 #include <mach/rdb/brcm_rdb_scu.h>
 
 enum {
-	SCU_STATUS_NORMAL  = 0,
+	SCU_STATUS_NORMAL = 0,
 	SCU_STATUS_DORMANT = 2,
-	SCU_STATUS_OFF     = 3,
+	SCU_STATUS_OFF = 3,
 };
 
 int scu_standby(bool enable);
 int scu_invalidate_all(void);
 int scu_set_power_mode(unsigned int mode);
-void scu_init(void __iomem *base);
+void scu_init(void __iomem * base);
 
 #endif /* __SCU_H__ */
-
