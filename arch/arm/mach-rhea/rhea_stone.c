@@ -1204,7 +1204,7 @@ static struct TANGO_I2C_TS_t tango_plat_data = {
 static struct i2c_board_info __initdata tango_info[] =
 {
 	{	/* New touch screen i2c slave address. */
-		I2C_BOARD_INFO(I2C_TS_DRIVER_NAME, TANGO_S32_SLAVE_ADDR),
+		I2C_BOARD_INFO(I2C_TS_DRIVER_NAME, TANGO_M29_SLAVE_ADDR),
 		.platform_data = &tango_plat_data,
 		.irq = gpio_to_irq(TANGO_GPIO_IRQ_PIN),
 	},
