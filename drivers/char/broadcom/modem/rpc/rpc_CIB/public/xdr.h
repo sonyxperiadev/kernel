@@ -304,11 +304,12 @@ struct xdr_discrim {
 
 #ifdef DEVELOPMENT_RPC_XDR_DETAIL_LOG
 /*argument logging*/
-bool_t xdr_u_char_dbg(XDR * xdrs, u_char * p, u_char * s);
-bool_t xdr_u_int16_dbg(XDR * xdrs, u_int16_t * p, u_char * s);
-bool_t xdr_u_long_dbg(XDR * xdrs, u_long * p, u_char * s);
-extern void xdrmem_log(XDR * xdrs, char *str);
-extern void xdrmem_log_start(XDR * xdrs, char *str);
+bool_t xdr_u_char_dbg(XDR *xdrs, u_char *p, u_char *s);
+bool_t xdr_u_int16_dbg(XDR *xdrs, u_int16_t *p, u_char *s);
+bool_t xdr_u_long_dbg(XDR *xdrs, u_long *p, u_char *s);
+extern void xdrmem_log(XDR *xdrs, char *str);
+extern void xdrmem_log_start(XDR *xdrs, char *str);
+extern void xdrmem_log_reset(XDR *xdrs);
 
 #define _xdr_u_char(a,b,c)		xdr_u_char_dbg(a,b,(u_char*)c)
 #define _xdr_u_int16_t(a,b,c)	xdr_u_int16_dbg(a,b,(u_char*)c)
