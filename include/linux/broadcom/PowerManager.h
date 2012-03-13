@@ -44,8 +44,7 @@
 #define PM_CMD_GETEVENT            0x83
 #define PM_CMD_LAST                0x83
 
-typedef enum			/* If you change this, please update PM_PowerLevelTable as well */
-{
+typedef enum {			/* If you change this, please update PM_PowerLevelTable as well */
 	PM_PWR_OFF,		/* Virtual level where everything is powered off */
 	PM_PWR_CHARGING,	/* ARM sleep mode enabled, Wireless powered off completely */
 	PM_PWR_STANDBY,		/* ARM sleep mode enabled, Wireless power save on */
@@ -77,8 +76,7 @@ typedef enum {
 	PM_EVENT_BATTMGRTASK,	/* Battery Manager event */
 } PM_Event;
 
-typedef enum			/* If you change this, please update PM_ComponentTable as well */
-{
+typedef enum {			/* If you change this, please update PM_ComponentTable as well */
 	PM_COMP_LCD = 0,
 	PM_COMP_CAMERA,
 	PM_COMP_USB,
@@ -91,8 +89,7 @@ typedef enum			/* If you change this, please update PM_ComponentTable as well */
 	PM_NUM_COMPONENTS
 } PM_Component;
 
-typedef enum			/* If you change this, please update PM_CompPowerLevelTable as well */
-{
+typedef enum {			/* If you change this, please update PM_CompPowerLevelTable as well */
 	PM_COMP_PWR_OFF,	/* Uninitialized and power off.  Should not draw any power. */
 	PM_COMP_PWR_STANDBY,	/* Device in low power state or possibly off.  Allowed to interrupt host. */
 	PM_COMP_PWR_ON,		/* Fully powered on and initialized. */
