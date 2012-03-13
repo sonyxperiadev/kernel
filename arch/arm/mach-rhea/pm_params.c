@@ -29,7 +29,14 @@
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
 #include <plat/cpu.h>
+#include <mach/clock.h>
+#include <linux/clk.h>
+#include <linux/err.h>
 #include "pm_params.h"
+
+/*sysfs interface to read PMU vlt table*/
+static u32 csr_vlt_table[SR_VLT_LUT_SIZE];
+module_param_array_named(csr_vlt_table, csr_vlt_table, uint, NULL, S_IRUGO);
 
 /*JIRA workaround flag and sysfs definitions
 These flags can be used to enable/disable JIRA workaround at runtime
@@ -266,9 +273,6 @@ static struct i2c_cmd i2c_cmd[] = {
 /*Default voltage lookup table
 Need to move this to board-file
 */
-static u8 pwrmgr_default_volt_lut[] = {
-	PMU_SCR_VLT_TBL_SS
-};
 
 static struct v0x_spec_i2c_cmd_ptr v0_ptr = {
 	.other_ptr = 2,
@@ -283,8 +287,6 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 	.cmd_buf = i2c_cmd,
 	.cmb_buf_size = ARRAY_SIZE(i2c_cmd),
 	.v0ptr = &v0_ptr,
-	.def_vlt_tbl = pwrmgr_default_volt_lut,
-	.vlt_tbl_size = ARRAY_SIZE(pwrmgr_default_volt_lut),
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	.i2c_rd_off = 17,
 	.i2c_rd_slv_id_off1 = 23,
@@ -347,6 +349,49 @@ static void rhea_pm_init_wa_flgs(void)
 	JIRA_WA_FLG_NAME(2490) = chip_rev <= RHEA_CHIP_REV_B1;
 #endif
 
+}
+
+#define MHZ(x) ((x)*1000*1000)
+#define GHZ(x) (MHZ(x)*1000)
+
+static const u32 a9_freq_list[A9_FREQ_MAX] = {
+	[A9_FREQ_800_MHZ] = MHZ(800),
+	[A9_FREQ_850_MHZ] = MHZ(850),
+	[A9_FREQ_1_GHZ] = GHZ(1),
+
+};
+
+
+int __init pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
+{
+#define RATE_ADJ 10
+	struct clk *a9_pll_chnl1;
+	int inx;
+	unsigned long rate;
+	u8 *vlt_table;
+
+	a9_pll_chnl1 = clk_get(NULL, A9_PLL_CHNL1_CLK_NAME_STR);
+
+	BUG_ON(IS_ERR_OR_NULL(a9_pll_chnl1));
+
+	rate = clk_get_rate(a9_pll_chnl1);
+	pr_info("%s : rate = %lu, silicon_type = %d\n",
+		__func__, rate, silicon_type);
+	rate += RATE_ADJ;
+
+	for (inx = A9_FREQ_MAX - 1; inx >= 0; inx--) {
+
+		if (rate / a9_freq_list[inx])
+			break;
+	}
+	if (inx < 0) {
+		pr_info("%s : BUG => No maching freq found!!!\n", __func__);
+		BUG();
+	}
+	vlt_table = (u8 *) bcmpmu_get_sr_vlt_table(0, (u32) inx, silicon_type);
+	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
+		csr_vlt_table[inx] = vlt_table[inx];
+	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
 }
 
 int __init rhea_pm_params_init(void)

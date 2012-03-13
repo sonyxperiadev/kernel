@@ -73,7 +73,6 @@
 #ifdef CONFIG_KONA_POWER_MGR
 #include <plat/pwr_mgr.h>
 
-#define VLT_LUT_SIZE 16
 #endif
 #ifdef CONFIG_SENSORS_KONA
 #include <linux/broadcom/kona-thermal.h>
@@ -568,13 +567,8 @@ static struct platform_device kona_cpufreq_device = {
 
 void avs_silicon_type_notify(u32 silicon_type)
 {
-#ifdef CONFIG_KONA_POWER_MGR
-	u8 *volt_lut = kona_avs_get_volt_table();
-	BUG_ON(volt_lut == NULL);
-/*re-program volt lookup table based on silicon type*/
-	pwr_mgr_pm_i2c_var_data_write(volt_lut, VLT_LUT_SIZE);
-#endif
-	pr_info("%s:silicon_type = %d\n", __func__, silicon_type);
+	pr_info("%s : silicon type = %d\n", __func__, silicon_type);
+	pm_init_pmu_sr_vlt_map_table(silicon_type);
 }
 
 static u32 svt_pmos_bin[3 + 1] = { 125, 146, 171, 201 };
@@ -595,12 +589,6 @@ u32 lvt_silicon_type_lut[3 * 3] = {
 	SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL, SILICON_TYPE_FAST
 };
 
-u8 ss_vlt_tbl[] = { PMU_SCR_VLT_TBL_SS };
-
-u8 tt_vlt_tbl[] = { PMU_SCR_VLT_TBL_TT };
-
-u8 ff_vlt_tbl[] = { PMU_SCR_VLT_TBL_FF };
-static u8 *volt_table[] = { ss_vlt_tbl, tt_vlt_tbl, ff_vlt_tbl };
 
 static struct kona_avs_pdata avs_pdata = {
 	.flags = AVS_TYPE_OPEN | AVS_READ_FROM_MEM,
@@ -617,7 +605,6 @@ static struct kona_avs_pdata avs_pdata = {
 	.svt_silicon_type_lut = svt_silicon_type_lut,
 	.lvt_silicon_type_lut = lvt_silicon_type_lut,
 
-	.volt_table = volt_table,
 
 	.silicon_type_notify = avs_silicon_type_notify,
 };

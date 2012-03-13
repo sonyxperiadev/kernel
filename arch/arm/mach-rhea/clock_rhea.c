@@ -77,7 +77,7 @@ static struct ccu_clk CLK_NAME(bmdm) = {
 
 	.vlt0_3_offset = BMDM_CLK_MGR_REG_VLT0_3_OFFSET,
 	.vlt4_7_offset = BMDM_CLK_MGR_REG_VLT4_7_OFFSET,
-	.freq_volt = DEFINE_ARRAY_ARGS(BMDM_CCU_FREQ_VOLT_TBL),
+	.freq_volt = BMDM_CCU_FREQ_VOLT_TBL,
 	.freq_count = BMDM_CCU_FREQ_VOLT_TBL_SZ,
 	.clk_mon_offset = BMDM_CLK_MGR_REG_CLKMON_OFFSET,
 };
@@ -102,7 +102,7 @@ static struct ccu_clk CLK_NAME(dsp) = {
 
 	.vlt0_3_offset = DSP_CLK_MGR_REG_VLT0_3_OFFSET,
 	.vlt4_7_offset = DSP_CLK_MGR_REG_VLT4_7_OFFSET,
-	.freq_volt = DEFINE_ARRAY_ARGS(DSP_CCU_FREQ_VOLT_TBL),
+	.freq_volt = DSP_CCU_FREQ_VOLT_TBL,
 	.freq_count = DSP_CCU_FREQ_VOLT_TBL_SZ,
 	.clk_mon_offset = DSP_CLK_MGR_REG_CLKMON_OFFSET,
 };
@@ -649,9 +649,9 @@ static struct ccu_clk CLK_NAME(kproc) = {
 	.policy_dbg_act_policy_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 	.clk_mon_offset = KPROC_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(PROC_CCU_FREQ_VOLT_TBL),
+	.freq_volt = PROC_CCU_FREQ_VOLT_TBL,
 	.freq_count = PROC_CCU_FREQ_VOLT_TBL_SZ,
-	.freq_policy = DEFINE_ARRAY_ARGS(PROC_CCU_FREQ_POLICY_TBL),
+	.freq_policy = PROC_CCU_FREQ_POLICY_TBL,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(PROC_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPROC_RST_MGR_REG_WR_ACCESS_OFFSET,
 };
@@ -1168,10 +1168,10 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.policy_dbg_act_policy_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 	.clk_mon_offset = KHUB_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(HUB_CCU_FREQ_VOLT_TBL),
+	.freq_volt = HUB_CCU_FREQ_VOLT_TBL,
 	.freq_count = HUB_CCU_FREQ_VOLT_TBL_SZ,
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
-	.freq_policy = DEFINE_ARRAY_ARGS(HUB_CCU_FREQ_POLICY_TBL),
+	.freq_policy = HUB_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(khub_clk_freq_list0,khub_clk_freq_list1,khub_clk_freq_list2,khub_clk_freq_list3,khub_clk_freq_list4,khub_clk_freq_list5,khub_clk_freq_list6),
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_RST_BASE_ADDR),
 	.reset_wr_access_offset = KHUB_RST_MGR_REG_WR_ACCESS_OFFSET,
@@ -2541,10 +2541,10 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.policy_dbg_act_policy_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 	.clk_mon_offset = KHUBAON_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(AON_CCU_FREQ_VOLT_TBL),
+	.freq_volt = AON_CCU_FREQ_VOLT_TBL,
 	.freq_count = AON_CCU_FREQ_VOLT_TBL_SZ,
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
-	.freq_policy = DEFINE_ARRAY_ARGS(AON_CCU_FREQ_POLICY_TBL),
+	.freq_policy = AON_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(khubaon_clk_freq_list0,khubaon_clk_freq_list1,khubaon_clk_freq_list2,khubaon_clk_freq_list3,khubaon_clk_freq_list4),
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(AON_RST_BASE_ADDR),
 	.reset_wr_access_offset = KHUBAON_RST_MGR_REG_WR_ACCESS_OFFSET,
@@ -3339,10 +3339,10 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.policy_dbg_act_policy_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 	.clk_mon_offset = KPM_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(KPM_CCU_FREQ_VOLT_TBL),
+	.freq_volt = KPM_CCU_FREQ_VOLT_TBL,
 	.freq_count = KPM_CCU_FREQ_VOLT_TBL_SZ,
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
-	.freq_policy = DEFINE_ARRAY_ARGS(KPM_CCU_FREQ_POLICY_TBL),
+	.freq_policy = KPM_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(kpm_clk_freq_list0,kpm_clk_freq_list1,kpm_clk_freq_list2,kpm_clk_freq_list3,kpm_clk_freq_list4,kpm_clk_freq_list5,kpm_clk_freq_list6,kpm_clk_freq_list7),
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPM_RST_MGR_REG_WR_ACCESS_OFFSET,
@@ -4249,10 +4249,10 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.policy_dbg_act_policy_shift = KPS_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 	.clk_mon_offset = KPS_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(KPS_CCU_FREQ_VOLT_TBL),
+	.freq_volt = KPS_CCU_FREQ_VOLT_TBL,
 	.freq_count = KPS_CCU_FREQ_VOLT_TBL_SZ,
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
-	.freq_policy = DEFINE_ARRAY_ARGS(KPS_CCU_FREQ_POLICY_TBL),
+	.freq_policy = KPS_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(kps_clk_freq_list0,kps_clk_freq_list1,kps_clk_freq_list2,kps_clk_freq_list3,kps_clk_freq_list4,kps_clk_freq_list5),
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPS_RST_MGR_REG_WR_ACCESS_OFFSET,
@@ -5400,10 +5400,10 @@ static struct ccu_clk CLK_NAME(mm) = {
 	.policy_dbg_act_policy_shift = MM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 	.clk_mon_offset = MM_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(MM_CCU_FREQ_VOLT_TBL),
+	.freq_volt = MM_CCU_FREQ_VOLT_TBL,
 	.freq_count = MM_CCU_FREQ_VOLT_TBL_SZ,
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
-	.freq_policy = DEFINE_ARRAY_ARGS(MM_CCU_FREQ_POLICY_TBL),
+	.freq_policy = MM_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0,mm_clk_freq_list1,mm_clk_freq_list2,mm_clk_freq_list3,mm_clk_freq_list4,mm_clk_freq_list5),
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(MM_RST_BASE_ADDR),
 	.reset_wr_access_offset = MM_RST_MGR_REG_WR_ACCESS_OFFSET,
