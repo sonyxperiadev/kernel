@@ -147,17 +147,17 @@ UInt32 rpc_basic_fast_lookup(UInt16 dscm)
 
 	if (tableBase2 == NULL) {
 		/* message not handled in RPC */
-		_DBG_(RPC_TRACE
-		      ("xdr_fast_lookup no RPC entry (tableBase2 is NULL) = 0x%x, 0x%x, 0x%x\r\n",
-		       id, id1, id2));
+		//_DBG_(RPC_TRACE
+		  //    ("xdr_fast_lookup no RPC entry (tableBase2 is NULL) = 0x%x, 0x%x, 0x%x\r\n",
+		  //     id, id1, id2));
 		return 0xFFFF;
 	} else if (tableBase2[id2] != 0xFFFF) {
 		nodeVal = tableBase2[id2];
 	} else {
 		/* message not handled in RPC */
-		_DBG_(RPC_TRACE
-		      ("xdr_fast_lookup no RPC entry = 0x%x, 0x%x, 0x%x\r\n",
-		       id, id1, id2));
+		//_DBG_(RPC_TRACE
+		  //    ("xdr_fast_lookup no RPC entry = 0x%x, 0x%x, 0x%x\r\n",
+		  //     id, id1, id2));
 		return 0xFFFF;
 	}
 	return nodeVal;

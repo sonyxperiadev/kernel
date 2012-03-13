@@ -52,6 +52,13 @@ extern "C"
 #define RPC_PKT_CMD_IOC					_IOWR(RPC_SERVER_IOC_MAGIC, 9, rpc_pkt_cmd_t)
 #define RPC_PKT_POLL_IOC				_IOWR(RPC_SERVER_IOC_MAGIC, 10, rpc_pkt_avail_t)
 #define RPC_PKT_DEREGISTER_DATA_IND_IOC			_IOWR(RPC_SERVER_IOC_MAGIC, 11, rpc_pkt_dereg_ind_t)
+
+#define RPC_PKT_REGISTER_DATA_IND_EX_IOC		_IOWR(RPC_SERVER_IOC_MAGIC, 12, rpc_pkt_reg_ind_ex_t)
+#define RPC_PKT_POLL_EX_IOC				_IOWR(RPC_SERVER_IOC_MAGIC, 13, rpc_pkt_rx_buf_ex_t)
+#define RPC_PKT_ALLOC_BUFFER_PTR_IOC			_IOWR(RPC_SERVER_IOC_MAGIC, 14, rpc_pkt_alloc_buf_ptr_t)
+#define RPC_TX_BUFFER_IOC				_IOWR(RPC_SERVER_IOC_MAGIC, 15, rpc_pkt_tx_buf_t)
+#define RPC_REG_MSGS_IOC				_IOWR(RPC_SERVER_IOC_MAGIC, 16, RpcPktRegMsgIds_t)
+
 #define RPC_SERVER_IOC_MAXNR			20
 
 typedef enum
@@ -171,6 +178,43 @@ typedef struct
 	UInt32 result;
 }rpc_pkt_cmd_t;
 
+typedef struct
+{
+	RpcPktBufferInfo_t txBuf;
+}rpc_pkt_tx_buf_t;
+
+typedef struct
+{
+	PACKET_InterfaceType_t interfaceType;
+	UInt32 requiredSize;
+	UInt8 channel;
+	UInt32 waitTime;
+	PACKET_BufHandle_t pktBufHandle;
+	UInt32 offset;
+	UInt32 allocatedSize;
+}rpc_pkt_alloc_buf_ptr_t;
+
+typedef struct
+{
+	RpcPktBufferInfo_t bufInfo;
+	UInt32 waitTime;
+	UInt8 isEmpty;
+	UInt8 clientId;
+	UInt32 offset;
+	RpcCbkType_t type;
+	RPC_FlowCtrlEvent_t event;
+	RPC_PACKET_DataIndCallBackFuncEx_t* dataIndFuncEx;
+	RPC_PACKET_DataIndCallBackFunc_t* dataIndFunc;
+	RPC_FlowControlCallbackFunc_t* flowIndFunc;
+}rpc_pkt_rx_buf_ex_t;
+
+typedef struct
+{
+	UInt8 rpcClientID;
+	PACKET_InterfaceType_t interfaceType;
+	RPC_PACKET_DataIndCallBackFuncEx_t* dataIndFuncEx;
+	RPC_FlowControlCallbackFunc_t*	flowIndFunc;
+}rpc_pkt_reg_ind_ex_t;
 
 #ifdef __cplusplus
 }

@@ -145,6 +145,27 @@ typedef enum {
 	RPC_MAX_PROP_TYPE = IPC_NUM_OF_PROPERTIES,
 } RPC_PropType_t;
 
+typedef struct
+{
+  UInt8 clientId;
+  PACKET_InterfaceType_t interfaceType;
+  UInt8 channel;
+  PACKET_BufHandle_t dataBufHandle;
+  UInt8 context1;
+  UInt16 context2;
+  UInt8* buffer;
+  UInt16 bufferLen;
+}RpcPktBufferInfo_t;
+
+#define MAX_REG_MSGS	255
+typedef struct
+{
+  UInt32 msgsSize;
+  UInt32 clientId;
+  UInt32 options;
+  UInt16 msgs[MAX_REG_MSGS];//copy only what is necessary ( 2 stage )
+}RpcPktRegMsgIds_t;
+
 //***************************************************************************************
 /**
     Function callback to handle Flow control for RPC commands
@@ -184,6 +205,8 @@ typedef RPC_Result_t(RPC_PACKET_DataIndCallBackFunc_t) (PACKET_InterfaceType_t
 							UInt8 channel,
 							PACKET_BufHandle_t
 							dataBufHandle);
+
+typedef RPC_Result_t(RPC_PACKET_DataIndCallBackFuncEx_t) (RpcPktBufferInfo_t *bufInfo);
 
 //***************************************************************************************
 /**
@@ -405,6 +428,19 @@ RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 
 UInt32 RPC_PACKET_IncrementBufferRef(PACKET_BufHandle_t dataBufHandle,
 				     UInt8 rpcClientID);
+
+RPC_Result_t RPC_PACKET_RegisterDataIndEx (UInt8 rpcClientID,
+					PACKET_InterfaceType_t interfaceType,
+					RPC_PACKET_DataIndCallBackFuncEx_t dataIndFunc,
+					RPC_FlowControlCallbackFunc_t	flowControlCb);
+
+PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx2(PACKET_InterfaceType_t interfaceType, 
+						UInt32 requiredSize, 
+						UInt8 channel, 
+						UInt32 waitTime, 
+						UInt8** outBuffer);
+
+RPC_Result_t RPC_PACKET_SendDataEx(RpcPktBufferInfo_t *pktBufInfo);
 
 /** \endcond   */
 

@@ -54,8 +54,12 @@ static spinlock_t mLock;
 #define RPC_LOCK_INIT
 #endif
 
+//#define _DBG_(a) a
+//#undef RPC_TRACE
+//#define RPC_TRACE(fmt,args...) printk (fmt, ##args)
+
 /*****************************************************************************
-				Global defines
+                              Global defines
 ******************************************************************************/
 
 /**
@@ -114,6 +118,10 @@ static UInt32 rpcVer = BCM_RPC_VER;
 /*Tasklet to Kthread handler for IPC*/
 static MsgQueueHandle_t rpcMQhandle;
 #endif
+
+static UInt32 recvRpcPkts = 0;
+static UInt32 freeRpcPkts = 0;
+
 
 /*******************************************************************************
 			Packet Data API Implementation
@@ -313,7 +321,7 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
 	if (0 == bufHandle) {
 		_DBG_(RPC_TRACE
 		      ("RPC_PACKET_AllocateBuffer failed %d, %d, %d\r\n",
-		       interfaceType, requiredSize, index));
+		       (int)interfaceType, (int)requiredSize, (int)index));
 	}
 
 	if (bufHandle)
@@ -387,8 +395,8 @@ UInt32 RPC_PACKET_Get_Num_FreeBuffers(PACKET_InterfaceType_t interfaceType,
 				_DBG_(RPC_TRACE
 				 ("RPC FreeBuffers(%c) i=%d c=%d r=%d t=%d\n",
 				       (gRpcProcType == RPC_COMMS) ? 'C' : 'A',
-				       interfaceType, channel, freeBuffers,
-				       totalFreeBuffers));
+				       (int)interfaceType, (int)channel, 
+					(int)freeBuffers, (int)totalFreeBuffers));
 			}
 		}
 	} else {
@@ -400,8 +408,8 @@ UInt32 RPC_PACKET_Get_Num_FreeBuffers(PACKET_InterfaceType_t interfaceType,
 
 		_DBG_(RPC_TRACE
 		      ("RPC_PACKET_Get_Num_FreeBuffers(%c)i=%d ch=%d t=%d\n",
-		       (gRpcProcType == RPC_COMMS) ? 'C' : 'A', interfaceType,
-		       channel, totalFreeBuffers));
+		       (gRpcProcType == RPC_COMMS) ? 'C' : 'A', (int)interfaceType,
+		       (int)channel, (int)totalFreeBuffers));
 	}
 
 	return totalFreeBuffers;
@@ -425,7 +433,7 @@ void RPC_PACKET_SetBufferLength(PACKET_BufHandle_t dataBufHandle,
 
 RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle)
 {
-	_DBG_(RPC_TRACE("RPC_PACKET_FreeBuffer FREE h=%d\r\n"));
+	_DBG_(RPC_TRACE("RPC_PACKET_FreeBuffer FREE h=%d\r\n", (int)dataBufHandle));
 	IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
 
 	return RPC_RESULT_OK;
@@ -443,7 +451,7 @@ RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 
 	if (refCount == 0) {
 		_DBG_(RPC_TRACE
-		      ("RPC_PACKET_FreeBufferEx ERROR h=%d, cid=%d\r\n",
+		      ("k:RPC_PACKET_FreeBufferEx ERROR h=%d, cid=%d\r\n",
 		       (int)dataBufHandle, rpcClientID));
 		RPC_UNLOCK;
 		return RPC_RESULT_ERROR;
@@ -453,14 +461,15 @@ RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 	IPC_BufferUserParameterSet((IPC_Buffer) dataBufHandle, refCount);
 
 	if (refCount == 0) {
+		freeRpcPkts++;
 		_DBG_(RPC_TRACE
-		      ("RPC_PACKET_FreeBufferEx FREE h=%d, cid=%d\r\n",
-		       (int)dataBufHandle, rpcClientID));
+		      ("k:RPC_PACKET_FreeBufferEx FREE h=%d, cid=%d rcvPkts=%d freePkts=%d\r\n",
+		       (int)dataBufHandle, (int)rpcClientID, (int)recvRpcPkts, (int)freeRpcPkts));
 		IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
 	} else
 		_DBG_(RPC_TRACE
-		      ("RPC_PACKET_FreeBufferEx h=%d, ref=%d, cid=%d\r\n",
-		       (int)dataBufHandle, refCount, rpcClientID));
+		      ("k:RPC_PACKET_FreeBufferEx h=%d, ref=%d, cid=%d\r\n",
+		       (int)dataBufHandle, (int)refCount, (int)rpcClientID));
 
 	RPC_UNLOCK;
 	return RPC_RESULT_OK;
@@ -479,7 +488,7 @@ UInt32 RPC_PACKET_IncrementBufferRef(PACKET_BufHandle_t dataBufHandle,
 	IPC_BufferUserParameterSet((IPC_Buffer) dataBufHandle, (++refCount));
 
 	_DBG_(RPC_TRACE
-	      ("RPC_PACKET_IncrementBufferRef h=%d, ref=%d, cid%d\r\n",
+	      ("k:RPC_PACKET_IncrementBufferRef h=%d, ref=%d, cid%d\r\n",
 	       (int)dataBufHandle, refCount, rpcClientID));
 
 	RPC_UNLOCK;
@@ -576,9 +585,9 @@ static int rpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 	IPC_EndpointId_T destId = IPC_BufferDestinationEndpointId(bufHandle);
 	Int8 type = GetInterfaceType(destId);
 
-	_DBG_(RPC_TRACE
+/*	_DBG_(RPC_TRACE
 	      ("RPC_BufferDelivery PROCESS mHandle=%x event=%d\n", (int)mHandle,
-	       (int)data));
+	       (int)data));*/
 
 	if (ipcInfoList[(int)type].filterPktIndCb != NULL) {
 		result =
@@ -609,9 +618,12 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 
 	if (type != -1) {
 		if (type != (Int8)INTERFACE_PACKET)
+		{
+			recvRpcPkts++;
 			_DBG_(RPC_TRACE
-			      ("RPC_BufferDelivery NEW h=%d type=%d\r\n",
-			       (int)bufHandle, (int)type));
+			      ("RPC_BufferDelivery NEW h=%d type=%d rcvPkts=%d freePkts=%d\r\n",
+			       (int)bufHandle, (int)type, (int)recvRpcPkts, (int)freeRpcPkts));
+		}
 
 		if (ipcInfoList[(int)type].pktIndCb != NULL)
 			result =
@@ -629,9 +641,9 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 			if (ipcInfoList[(int)type].filterPktIndCb != NULL) {
 #ifdef USE_KTHREAD_HANDOVER
 				int ret;
-				_DBG_(RPC_TRACE
+/*				_DBG_(RPC_TRACE
 				      ("RPC_BufferDelivery POST h=%d\n\n",
-				       (int)bufHandle));
+				       (int)bufHandle));*/
 				ret = MsgQueueAdd(&rpcMQhandle,
 						(void *)bufHandle);
 				if (ret != 0)
@@ -658,10 +670,11 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 
 	}
 
-	if (result != RPC_RESULT_PENDING) {
+	if (result != RPC_RESULT_PENDING && type != (Int8)INTERFACE_PACKET) {
 		_DBG_(RPC_TRACE
-		      ("IPC_FreeBuffer (No Handling) h=%d type=%d\r\n",
+		      ("k:IPC_FreeBuffer (No Handling) h=%d type=%d\r\n",
 		       (int)bufHandle, type));
+		freeRpcPkts++;
 		IPC_FreeBuffer(bufHandle);
 	}
 
