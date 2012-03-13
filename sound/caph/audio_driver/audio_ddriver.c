@@ -1763,7 +1763,8 @@ void VPU_Capture_Request(UInt16 buf_index)
 #endif
 	if (init_mic_data_zeroed == FALSE) {
 		memset(pdest_buf, 0,
-			INIT_CAPTURE_GLITCH_MS * aud_drv->sample_rate / 1000);
+			INIT_CAPTURE_GLITCH_MS * aud_drv->sample_rate
+			* sizeof(UInt16) / 1000);
 		init_mic_data_zeroed = TRUE;
 	}
 	if (dest_index >= aud_drv->ring_buffer_size) {
