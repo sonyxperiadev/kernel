@@ -72,6 +72,7 @@
 #include <linux/io.h>
 
 #include <linux/usb/otg.h>
+#include <linux/pm_runtime.h>
 #include "dwc_os.h"
 #include "dwc_otg_dbg.h"
 #include "dwc_otg_driver.h"
@@ -655,6 +656,8 @@ static int dwc_otg_driver_remove(
 	 */
 	dwc_otg_attr_remove(_dev);
 
+	pm_runtime_disable(&_dev->dev);
+
 	/*
 	 * Return the memory.
 	 */
@@ -952,12 +955,43 @@ static int dwc_otg_driver_probe(
 	}
 #endif /* CONFIG_USB_OTG_UTILS */
 
+	pm_runtime_set_active(&_dev->dev);
+	pm_runtime_enable(&_dev->dev);
+
 	return 0;
 
 fail:
 	dwc_otg_driver_remove(_dev);
 	return retval;
 }
+
+static int dwc_otg_runtime_suspend(struct device* dev)
+{
+	int status = 0;
+	dwc_otg_device_t *otg_dev = dev_get_drvdata(dev);
+	if (otg_dev &&
+		  (otg_dev->core_if->core_params->otg_supp_enable ||
+		    (otg_dev->core_if->xceiver->state !=
+		      OTG_STATE_UNDEFINED))) {
+		/* Don't allow runtime suspend */
+		status = -EBUSY;
+	} else {
+		/* Allow runtime suspend */
+		status = 0;
+	}
+
+	return status;
+}
+
+static int dwc_otg_runtime_resume(struct device* dev)
+{
+	return 0;
+}
+
+static struct dev_pm_ops dwc_otg_pm_ops = {
+	.runtime_suspend = dwc_otg_runtime_suspend,
+	.runtime_resume = dwc_otg_runtime_resume,
+};
 
 /**
  * This structure defines the methods to be called by a bus driver
@@ -1001,6 +1035,8 @@ static struct pci_driver dwc_otg_driver = {
 static struct platform_driver dwc_otg_driver = {
 	.driver = {
 		.name = dwc_driver_name,
+		.owner = THIS_MODULE,
+		.pm = &dwc_otg_pm_ops,
 	},
 	.probe = dwc_otg_driver_probe,
 	.remove = dwc_otg_driver_remove,
