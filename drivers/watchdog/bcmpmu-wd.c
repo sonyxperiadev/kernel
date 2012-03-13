@@ -395,9 +395,9 @@ static int __devexit bcmpmu_wdog_remove(struct platform_device *pdev)
 	struct bcmpmu_wdog *wddog = platform_get_drvdata(pdev);
 
 	unregister_reboot_notifier(&bcmpmu_wdog_notifier);
-	misc_deregister(&wddog->miscdev);
 	platform_set_drvdata(pdev, NULL);
 	if (wddog) {
+		misc_deregister(&wddog->miscdev);
 		if (wddog->wd_workqueue)
 			destroy_workqueue(wddog->wd_workqueue);
 		kfree(wddog);

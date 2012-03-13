@@ -22,6 +22,7 @@
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
+#include <linux/pm_runtime.h>
 #include <asm/io.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
@@ -55,6 +56,7 @@ struct bcm_hsotgctrl_drv_data {
 	void *hsotg_ctrl_base;
 	void *chipregs_base;
 	void *hub_clk_base;
+	bool allow_suspend;
 };
 
 static struct bcm_hsotgctrl_drv_data *local_hsotgctrl_handle = NULL;
@@ -90,10 +92,13 @@ int bcm_hsotgctrl_en_clock(bool on)
 	if (!bcm_hsotgctrl_handle || !bcm_hsotgctrl_handle->otg_clk)
 		return -EIO;
 
-	if (on)
+	if (on) {
+		bcm_hsotgctrl_handle->allow_suspend = false;
 		rc = clk_enable(bcm_hsotgctrl_handle->otg_clk);
-	else
+	} else {
 		clk_disable(bcm_hsotgctrl_handle->otg_clk);
+		bcm_hsotgctrl_handle->allow_suspend = true;
+	}
 
 	if (rc)
 		dev_warn(bcm_hsotgctrl_handle->dev,"%s: error in controlling clock\n", __func__);
@@ -544,6 +549,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
+	hsotgctrl_drvdata->allow_suspend = true;
 	platform_set_drvdata(pdev, hsotgctrl_drvdata);
 
 	/* Init the PHY */
@@ -608,6 +614,9 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	bcm_hsotgctrl_phy_set_non_driving(false);
 #endif
 
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
+
 	return 0;
 
 Error_bcm_hsotgctrl_probe:
@@ -629,7 +638,7 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 	iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
 	iounmap(hsotgctrl_drvdata->chipregs_base);
 	iounmap(hsotgctrl_drvdata->hub_clk_base);
-
+	pm_runtime_disable(&pdev->dev);
 	clk_put(hsotgctrl_drvdata->otg_clk);
 	local_hsotgctrl_handle = NULL;
 	kfree(hsotgctrl_drvdata);
@@ -637,10 +646,34 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int bcm_hsotgctrl_runtime_suspend(struct device* dev)
+{
+	int status = 0;
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
+
+	if (bcm_hsotgctrl_handle && bcm_hsotgctrl_handle->allow_suspend)
+		status = 0;
+	else
+		status = -EBUSY;
+
+	return status;
+}
+
+static int bcm_hsotgctrl_runtime_resume(struct device* dev)
+{
+	return 0;
+}
+
+static struct dev_pm_ops bcm_hsotg_ctrl_pm_ops = {
+	.runtime_suspend = bcm_hsotgctrl_runtime_suspend,
+	.runtime_resume = bcm_hsotgctrl_runtime_resume,
+};
+
 static struct platform_driver bcm_hsotgctrl_driver = {
 	.driver = {
 		   .name = "bcm_hsotgctrl",
 		   .owner = THIS_MODULE,
+		   .pm = &bcm_hsotg_ctrl_pm_ops,
 	},
 	.probe = bcm_hsotgctrl_probe,
 	.remove = bcm_hsotgctrl_remove,
