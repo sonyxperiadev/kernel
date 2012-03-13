@@ -476,7 +476,7 @@ void IPC_ReportFlowControlEvent(IPC_BufferPool_T * PoolPtr,
 //**************************************************
 IPC_Buffer IPC_AllocateBuffer(IPC_BufferPool Pool)
 {
-	CRITICAL_REIGON_SETUP IPC_BufferPool_T * PoolPtr = IPC_PoolToPtr(Pool);
+	CRITICAL_REIGON_SETUP IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
 	IPC_SmQEntry QElement;
 	IPC_U32 BufferCount;
 	IPC_Buffer Buffer;

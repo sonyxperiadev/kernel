@@ -162,6 +162,7 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_IHFALC_BYPASS] =	{.map = 0x01, .addr = 0x89, .mask = 0x04, .ro = 0, .shift = 2},
 	/* charge */
 	[PMU_REG_CHRGR_USB_EN] =	{.map = 0x00, .addr = 0x52, .mask = 0x01, .ro = 0, .shift = 0},
+	[PMU_REG_CHRGR_USB_MAINT] =	{.map = 0x00, .addr = 0x52, .mask = 0x02, .ro = 0, .shift = 1},
 	[PMU_REG_CHRGR_ICC_FC] =	{.map = 0x00, .addr = 0x57, .mask = 0x1F, .ro = 0, .shift = 0},
 	[PMU_REG_CHRGR_ICC_QC] =	{.map = 0x00, .addr = 0x56, .mask = 0x07, .ro = 0, .shift = 0},
 	[PMU_REG_CHRGR_VFLOAT] =	{.map = 0x00, .addr = 0x55, .mask = 0x07, .ro = 0, .shift = 0},

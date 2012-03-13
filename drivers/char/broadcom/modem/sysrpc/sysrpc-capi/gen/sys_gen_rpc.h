@@ -67,43 +67,48 @@ typedef struct {
 } SYS_SimLockApi_GetStatus_Rsp_t;
 
 typedef struct {
-	UInt8  simId;
+	UInt8 simId;
 	SYS_SIMLOCK_STATE_t *simlock_state;
 } SYS_SIMLOCKApi_SetStatusEx_Req_t;
 
-typedef struct
-{
-	UInt8  simId;
+typedef struct {
+	UInt8 simId;
 } SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t;
 
 typedef struct {
-	UInt32	val;
+	UInt32 val;
 } SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t;
 
 //***************** < 2 > **********************
 
-bool_t xdr_CAPI2_CPPS_Control_Req_t(void *xdrs, CAPI2_CPPS_Control_Req_t * rsp);
-bool_t xdr_CAPI2_CPPS_Control_Rsp_t(void *xdrs, CAPI2_CPPS_Control_Rsp_t * rsp);
+bool_t xdr_CAPI2_CPPS_Control_Req_t(void *xdrs, CAPI2_CPPS_Control_Req_t *rsp);
+bool_t xdr_CAPI2_CPPS_Control_Rsp_t(void *xdrs, CAPI2_CPPS_Control_Rsp_t *rsp);
 bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Req_t(void *xdrs,
-					    CAPI2_SYSRPC_PMU_IsSIMReady_Req_t *rsp);
+					     CAPI2_SYSRPC_PMU_IsSIMReady_Req_t *
+					     rsp);
 bool_t xdr_CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t(void *xdrs,
-					    CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t *rsp);
+					     CAPI2_SYSRPC_PMU_IsSIMReady_Rsp_t *
+					     rsp);
 bool_t xdr_CAPI2_SYSRPC_PMU_ActivateSIM_Req_t(void *xdrs,
-					    CAPI2_SYSRPC_PMU_ActivateSIM_Req_t *rsp);
+					      CAPI2_SYSRPC_PMU_ActivateSIM_Req_t
+					      *rsp);
 bool_t xdr_CAPI2_FLASH_SaveImage_Req_t(void *xdrs,
-				       	CAPI2_FLASH_SaveImage_Req_t *rsp);
+				       CAPI2_FLASH_SaveImage_Req_t *rsp);
 bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void *xdrs,
-				       	CAPI2_FLASH_SaveImage_Rsp_t *rsp);
+				       CAPI2_FLASH_SaveImage_Rsp_t *rsp);
 bool_t xdr_SYS_SimLockApi_GetStatus_Req_t(void *xdrs,
-						SYS_SimLockApi_GetStatus_Req_t *rsp);
+					  SYS_SimLockApi_GetStatus_Req_t *rsp);
 bool_t xdr_SYS_SimLockApi_GetStatus_Rsp_t(void *xdrs,
-						SYS_SimLockApi_GetStatus_Rsp_t *rsp);
-bool_t xdr_SYS_SIMLOCKApi_SetStatusEx_Req_t(void* xdrs, 
-						SYS_SIMLOCKApi_SetStatusEx_Req_t *rsp);
-bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t(void* xdrs, 
-						SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t *rsp);
-bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t(void* xdrs, 
-						SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t *rsp);
+					  SYS_SimLockApi_GetStatus_Rsp_t *rsp);
+bool_t xdr_SYS_SIMLOCKApi_SetStatusEx_Req_t(void *xdrs,
+					    SYS_SIMLOCKApi_SetStatusEx_Req_t *
+					    rsp);
+bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t(void *xdrs,
+						       SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t
+						       *rsp);
+bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t(void *xdrs,
+						       SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t
+						       *rsp);
 
 //***************** < 3 > **********************
 
@@ -119,9 +124,10 @@ Result_t Handle_CAPI2_FLASH_SaveImage(RPC_Msg_t *pReqMsg, UInt32 flash_addr,
 Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId,
 					 SYS_SIMLOCK_SIM_DATA_t *sim_data,
 					 Boolean is_testsim);
-Result_t Handle_SYS_SIMLOCKApi_SetStatusEx(RPC_Msg_t* pReqMsg, UInt8 simId, 
-					SYS_SIMLOCK_STATE_t *simlock_state);
-Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t* pReqMsg, UInt8 simId);
+Result_t Handle_SYS_SIMLOCKApi_SetStatusEx(RPC_Msg_t *pReqMsg, UInt8 simId,
+					   SYS_SIMLOCK_STATE_t *simlock_state);
+Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t *pReqMsg,
+						      UInt8 simId);
 
 //***************** < 12 > **********************
 
@@ -183,8 +189,8 @@ void SYS_SimLockApi_GetStatus(UInt32 tid, UInt8 clientID, UInt8 simId,
 	Payload: default_proc
 	@n Response to CP will be notified via ::MSG_SYS_SIMLOCK_SET_STATUS_RSP
 **/
-void SYS_SIMLOCKApi_SetStatusEx(UInt32 tid, UInt8 clientID, UInt8 simId, 
-					SYS_SIMLOCK_STATE_t *simlock_state);
+void SYS_SIMLOCKApi_SetStatusEx(UInt32 tid, UInt8 clientID, UInt8 simId,
+				SYS_SIMLOCK_STATE_t *simlock_state);
 
 //***************************************************************************************
 /**
@@ -197,7 +203,8 @@ void SYS_SIMLOCKApi_SetStatusEx(UInt32 tid, UInt8 clientID, UInt8 simId,
 	Payload: UInt32
 	@n Response to CP will be notified via ::MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP
 **/
-void SYS_SimApi_GetCurrLockedSimlockTypeEx(UInt32 tid, UInt8 clientID, UInt8 simId);
+void SYS_SimApi_GetCurrLockedSimlockTypeEx(UInt32 tid, UInt8 clientID,
+					   UInt8 simId);
 
 //***************** < 16 > **********************
 

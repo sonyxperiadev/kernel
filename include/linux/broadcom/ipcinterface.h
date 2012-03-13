@@ -30,6 +30,7 @@
 extern "C" {
 #endif
 
+
 //============================================================
 // Switch for direct IPC buffer allocate/send
 //#define DIRECT_IPC_BUFFERING
@@ -128,10 +129,23 @@ typedef IPC_U32 IPC_EndpointId_T;
 #define IPC_EP_SerialAP		13
 //Used for sending and receiving serial data on the CP
 #define IPC_EP_SerialCP		14
+//Used for receiving DRX on the AP
+#define IPC_EP_DrxAP		15
+//Used for sending DRX on the CP
+#define IPC_EP_DrxCP		16
+
+// Unused 
+#define IPC_EP_Unused1AP		17
+#define IPC_EP_Unused1CP		18
+#define IPC_EP_Unused2AP		19
+#define IPC_EP_Unused2CP		20
+#define IPC_EP_Unused3AP		21
+#define IPC_EP_Unused3CP		22
+#define IPC_EP_Unused4AP		23
+#define IPC_EP_Unused4CP		24
 
 //This should always be the last endpoint ID
-#define	IPC_EndpointId_Count	15
-
+#define	IPC_EndpointId_Count	25
 
 //**************************************************
 typedef IPC_U32 IPC_Priority_T;

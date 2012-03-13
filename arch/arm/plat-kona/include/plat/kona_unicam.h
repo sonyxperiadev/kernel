@@ -16,7 +16,7 @@
 
 struct kona_unicam_platform_data {
 	u32 csi0_gpio;
-	u32	csi1_gpio;
+	u32 csi1_gpio;
 };
 
 #endif /* KONA_UNICAM_H_ */

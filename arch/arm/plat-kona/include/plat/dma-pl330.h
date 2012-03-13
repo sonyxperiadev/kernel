@@ -83,7 +83,6 @@ enum dma_direction {
 #define DMA_CFG_BURST_LENGTH_15         (0xE << DMA_CFG_BURST_LENGTH_SHIFT)
 #define DMA_CFG_BURST_LENGTH_16         (0xF << DMA_CFG_BURST_LENGTH_SHIFT)
 
-
 enum pl330_xfer_status {
 	DMA_PL330_XFER_OK,
 	DMA_PL330_XFER_ERR,

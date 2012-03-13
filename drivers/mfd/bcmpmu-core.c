@@ -124,7 +124,7 @@ void bcmpmu_client_power_off(void)
 {
 	unsigned int val;
 
-	WARN_ON(!bcmpmu_core);
+	BUG_ON(!bcmpmu_core);
 	bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_WRPROEN, &val,
 			      PMU_BITMASK_ALL);
 	pr_debug("%s: REG_WRPROEN: 0x%02X\n", __func__, val);

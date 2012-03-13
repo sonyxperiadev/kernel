@@ -39,12 +39,15 @@ typedef struct {
 typedef uint32_t dvts_id_t;
 /* A DVTS target is a job completion count representing the job we are dependent upon */
 typedef uint32_t dvts_target_t;
-typedef struct { dvts_id_t id; dvts_target_t target; } dvts_await_task_args_t;
+typedef struct {
+	dvts_id_t id;
+	dvts_target_t target;
+} dvts_await_task_args_t;
 /*******************************************/
 
 #ifdef SUPPORT_V3D_WORKLIST
 
-#define MAX_USER_JOBS 4 // Based on number of QPUs
+#define MAX_USER_JOBS 4		// Based on number of QPUs
 typedef struct {
 	uint32_t v3d_irq_flags;
 	uint32_t qpu_irq_flags;

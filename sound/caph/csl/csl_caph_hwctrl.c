@@ -66,9 +66,11 @@
 #if !defined(CNEON_COMMON) && !defined(CNEON_LMP)
 #include "chal_common_os.h"
 #include "chal_aci.h"
-#define __forceinline __attribute__((always_inline))
-#include "chal_bmodem_intc_inc.h"
 #endif
+#include "brcm_rdb_sysmap.h"
+#include "brcm_rdb_bintc.h"
+#define BINTC_OUT_DEST_DSP_NORM 17
+#define BMREG_BLOCK_SIZE (BINTC_IMR0_1_OFFSET-BINTC_IMR0_0_OFFSET)
 
 /*#define CONFIG_VOICE_LOOPBACK_TEST */
 
@@ -243,6 +245,7 @@ static Boolean csl_caph_hwctrl_ssp_running(void);
 static void csl_caph_hwctrl_tdm_config(
 			CSL_CAPH_HWConfig_Table_t *path, int sinkNo);
 
+/*static void csl_caph_hwctrl_SetDSPInterrupt(void);*/
 /******************************************************************************
  * local function definitions
  ******************************************************************************/

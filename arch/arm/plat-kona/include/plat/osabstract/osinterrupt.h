@@ -13,24 +13,21 @@
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
-
 #ifndef _RTOS_OSINTERRUPT_H_
 #define _RTOS_OSINTERRUPT_H_
 
 #include <plat/types.h>
 #include <plat/osabstract/ostypes.h>
 #include <linux/interrupt.h>
-#include <linux/workqueue.h> 
-#include <linux/slab.h> 
+#include <linux/workqueue.h>
+#include <linux/slab.h>
 #include <linux/time.h>
 #include <linux/delay.h>
-
 
 /**
  * @addtogroup RTOSInterruptGroup
  * @{
  */
-
 
 //******************************************************************************
 // Global Macros
@@ -46,13 +43,12 @@ typedef void *Interrupt_t;
 
 /// Entry point for an HISR is a function with no parameters and no return value.
 
-typedef void (*IEntry_t)( void );
+typedef void (*IEntry_t) (void);
 
 /// Priority associated with HISR.  Higher priroity HISRs may preempt lower priority
 /// HISRs.
 
-typedef enum
-{
+typedef enum {
 	IPRIORITY_HIGH,
 	IPRIORITY_MIDDLE,
 	IPRIORITY_LOW
@@ -63,7 +59,7 @@ typedef enum
 typedef UInt16 IStackSize_t;
 
 /// HISR Name
-	 
+
 typedef UInt8 *IName_t;
 
 //******************************************************************************
@@ -79,23 +75,24 @@ typedef UInt8 *IName_t;
 	@return Interrupt_t	Handle to HISR.
 **/
 
-static inline Interrupt_t OSINTERRUPT_Create(			// return an interrupt pointer
-	IEntry_t entry,						// interrupt function entry point
-	IName_t		name,					// ASCII name
-	IPriority_t priority,				// interrupt priority
-	IStackSize_t stack_size				// interrupt stack size (in UInt8)
-	)
+static inline Interrupt_t OSINTERRUPT_Create(	// return an interrupt pointer
+						    IEntry_t entry,	// interrupt function entry point
+						    IName_t name,	// ASCII name
+						    IPriority_t priority,	// interrupt priority
+						    IStackSize_t stack_size	// interrupt stack size (in UInt8)
+    )
 {
-	struct tasklet_struct * tasklet = kzalloc(sizeof(struct tasklet_struct), GFP_KERNEL);
+	struct tasklet_struct *tasklet =
+	    kzalloc(sizeof(struct tasklet_struct), GFP_KERNEL);
 
 	// DECLARE_TASKLET_DISABLED(name, func, data) struct tasklet_struct name = { NULL, 0, ATOMIC_INIT(1), func, data }
 	// struct tasklet_struct
 	// {
-	// 	struct tasklet_struct *next;
-	// 	unsigned long state;
-	// 	atomic_t count;
-	//	void (*func)(unsigned long);
-	//	unsigned long data;
+	//      struct tasklet_struct *next;
+	//      unsigned long state;
+	//      atomic_t count;
+	//      void (*func)(unsigned long);
+	//      unsigned long data;
 	// };
 	tasklet->next = NULL;
 	tasklet->state = 0;
@@ -104,7 +101,7 @@ static inline Interrupt_t OSINTERRUPT_Create(			// return an interrupt pointer
 	tasklet->data = 0;
 	tasklet_enable(tasklet);
 
-	return (Interrupt_t)tasklet;
+	return (Interrupt_t) tasklet;
 }
 
 /**
@@ -112,11 +109,9 @@ static inline Interrupt_t OSINTERRUPT_Create(			// return an interrupt pointer
 	@param t	Handle to HISR.
 **/
 
-static inline void OSINTERRUPT_Destroy(
-	Interrupt_t t
-	)
+static inline void OSINTERRUPT_Destroy(Interrupt_t t)
 {
-	struct tasklet_struct * tasklet = (struct tasklet_struct *)t;
+	struct tasklet_struct *tasklet = (struct tasklet_struct *)t;
 
 	tasklet_kill(tasklet);
 }
@@ -128,16 +123,15 @@ static inline void OSINTERRUPT_Destroy(
 	@return OSTATUS_t	Status 
 **/
 
-static inline OSStatus_t OSINTERRUPT_Trigger(			// process interrupt
-	Interrupt_t i						// interrupt task pointer
-	)
+static inline OSStatus_t OSINTERRUPT_Trigger(	// process interrupt
+						    Interrupt_t i	// interrupt task pointer
+    )
 {
-	struct tasklet_struct * tasklet = (struct tasklet_struct *)i;
+	struct tasklet_struct *tasklet = (struct tasklet_struct *)i;
 
 	tasklet_schedule(tasklet);
 
 	return OSSTATUS_SUCCESS;
 }
-
 
 #endif

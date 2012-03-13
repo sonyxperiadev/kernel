@@ -21,16 +21,16 @@ enum {
 };
 
 struct snapshot {
-	void *data;	/* data for snapshot handler        */
-	u32 type;	/* snapshot type                    */
-	u32 reg;	/* register to be read              */
-	u32 mask;	/* mask for data of interest        */
-	u32 good;	/* expected value for sleep entry   */
+	void *data;		/* data for snapshot handler        */
+	u32 type;		/* snapshot type                    */
+	u32 reg;		/* register to be read              */
+	u32 mask;		/* mask for data of interest        */
+	u32 good;		/* expected value for sleep entry   */
 	char *name;
-	u32 curr;	/* actual value after applying mask */
+	u32 curr;		/* actual value after applying mask */
 
 	/* Fields used internally */
-	u32 (*handler)(struct snapshot *);
+	 u32(*handler) (struct snapshot *);
 	struct list_head node;
 };
 
@@ -67,11 +67,10 @@ struct snapshot {
 extern void snapshot_get(void);
 extern void snapshot_show(void);
 extern void snapshot_table_register(struct snapshot *table, size_t len);
-extern void kona_pm_reg_pm_enter_handler(int (*enter)(suspend_state_t state));
+extern void kona_pm_reg_pm_enter_handler(int (*enter) (suspend_state_t state));
 
 /* Callbacks into machine code for instrumentation */
 extern void instrument_idle_entry(void);
 extern void instrument_idle_exit(void);
 
 #endif /* _KONA_PM_DBG_H_ */
-

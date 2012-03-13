@@ -1449,6 +1449,19 @@ static void serial8250_stop_tx(struct uart_port *port)
 		up->acr |= UART_ACR_TXDIS;
 		serial_icr_write(up, UART_ACR, up->acr);
 	}
+
+	/*Wait until the ongoing tx is done before calling qos function to allow retention.
+	 *In case if the Baud rate is 9600 bps to shift the last byte in the
+	 *TX register (if any) it would take 1/9600 * 9 = 0.0009375 seconds.
+	 *That is 937 usec. Rounding it off to 1 msec.
+         *Assuming 8N1N.
+	 *Note that we have used 9600 as the least baud rate that can be used
+	 *in the system. There is no known use case to run below this baud
+	 *rate. Worst case if this happens, the byte in transmission when this
+	 *call is made would be lost.
+	 */
+	mdelay(1);
+	pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 }
 
 static void transmit_chars(struct uart_8250_port *up);

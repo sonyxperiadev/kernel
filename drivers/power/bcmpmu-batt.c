@@ -49,7 +49,6 @@ struct bcmpmu_batt {
 static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu_batt *pbatt = (struct bcmpmu_batt *)data;
-	struct bcmpmu *bcmpmu = pbatt->bcmpmu;
 
 	switch (irq) {
 	case PMU_IRQ_BATRM:
@@ -65,17 +64,17 @@ static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
 		pbatt->state.health = POWER_SUPPLY_HEALTH_GOOD;
 		break;
 	case PMU_IRQ_MBTEMPHIGH:
-		printk("bcmpmu_batt_isr: PMU_IRQ_MBTEMPHIGH triggered \n");
+		pr_debug("bcmpmu_batt_isr: PMU_IRQ_MBTEMPHIGH triggered.\n");
 		pbatt->state.health = POWER_SUPPLY_HEALTH_OVERHEAT;
 		power_supply_changed(&pbatt->batt);
 		break;
 	case PMU_IRQ_MBTEMPLOW:
-		printk("bcmpmu_batt_isr: PMU_IRQ_MBTEMPLOW triggered \n");
+		pr_debug("bcmpmu_batt_isr: PMU_IRQ_MBTEMPLOW triggered \n");
 		pbatt->state.health = POWER_SUPPLY_HEALTH_COLD;
 		power_supply_changed(&pbatt->batt);
 		break;
 	case PMU_IRQ_CHGERRDIS:
-		printk("bcmpmu_batt_isr: PMU_IRQ_CHGERRDIS triggered \n");
+		pr_debug("bcmpmu_batt_isr: PMU_IRQ_CHGERRDIS triggered \n");
 		pbatt->state.health = POWER_SUPPLY_HEALTH_GOOD;
 		power_supply_changed(&pbatt->batt);
 		break;

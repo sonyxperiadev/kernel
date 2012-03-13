@@ -262,6 +262,7 @@ enum bcmpmu_reg {
 	PMU_REG_IHFALC_BYPASS,
 	/* Charge */
 	PMU_REG_CHRGR_USB_EN,
+	PMU_REG_CHRGR_USB_MAINT,
 	PMU_REG_CHRGR_WAC_EN,
 	PMU_REG_CHRGR_ICC_FC,
 	PMU_REG_CHRGR_ICC_QC,
@@ -824,6 +825,7 @@ enum bcmpmu_event_t {
 	/* events for battery charging */
 	BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
 	BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+	BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
 	BCMPMU_USB_EVENT_CHGDET_LATCH,
 	/* events for fuel gauge */
 	BCMPMU_FG_EVENT_FGC,
@@ -1008,6 +1010,7 @@ struct bcmpmu {
 
 	/* charge */
 	int (*chrgr_usb_en) (struct bcmpmu *bcmpmu, int en);
+	int (*chrgr_usb_maint) (struct bcmpmu *bcmpmu, int en);
 	int (*chrgr_wac_en) (struct bcmpmu *bcmpmu, int en);
 	int (*set_icc_fc) (struct bcmpmu *pmu, int curr);
 	int (*set_icc_qc) (struct bcmpmu *pmu, int curr);
@@ -1093,6 +1096,8 @@ struct bcmpmu_platform_data {
 	struct bcmpmu_charge_zone *chrg_zone_map;
 	int fg_capacity_full;
 	int support_fg;
+	int support_chrg_maint;
+	int chrg_resume_lvl;
 	enum bcmpmu_bc_t bc;
 	int rpc_rate;
 	struct bcmpmu_wd_setting *wd_setting;

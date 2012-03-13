@@ -44,7 +44,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "csl_audio_capture.h"
 #include "csl_arm2sp.h"
 #include "csl_vpu.h"
-#include "dspcmd.h"
+
 #include "csl_voip.h"
 #include "csl_voif.h"
 #include "csl_caph_hwctrl.h"
@@ -1558,7 +1558,7 @@ static Boolean VoIP_StopTelephony(void)
 
 	/* Clear voip mode, which block audio processing for voice calls */
 	/* arg0 = 0 to clear VOIPmode */
-	audio_control_dsp(DSPCMD_TYPE_COMMAND_CLEAR_VOIPMODE, 0, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_COMMAND_CLEAR_VOIPMODE, 0, 0, 0, 0, 0);
 	flush_workqueue(voip_workqueue);
 	destroy_workqueue(voip_workqueue);
 

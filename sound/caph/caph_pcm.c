@@ -209,8 +209,9 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 	 */
 	/*flush the wait queue in case pending events in the queue
 	 * are processed after device close
+	 * Below function is not required as audio uses its own queue
 	 */
-	flush_scheduled_work();
+	/* flush_scheduled_work(); */
 
 	res = snd_pcm_lib_free_pages(substream);
 	return res;

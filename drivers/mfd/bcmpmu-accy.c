@@ -505,9 +505,13 @@ static void send_chrgr_event(struct bcmpmu *pmu,
 			__func__, paccy->bcmpmu->usb_accy_data.chrgr_type);
 		propval.intval = paccy->bcmpmu->usb_accy_data.chrgr_type;
 		ps->set_property(ps, POWER_SUPPLY_PROP_TYPE, &propval);
-		if (paccy->det_state == USB_CONNECTED)
-			propval.intval = 1;
-		else
+		if (paccy->det_state == USB_CONNECTED) {
+			if (paccy->bcmpmu->usb_accy_data.chrgr_type
+			    == PMU_CHRGR_TYPE_SDP)
+				propval.intval = 0;
+			else
+				propval.intval = 1;
+		} else
 			propval.intval = 0;
 		ps->set_property(ps, POWER_SUPPLY_PROP_ONLINE, &propval);
 	} else if (event == BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT) {
@@ -609,6 +613,12 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 
 	case PMU_IRQ_EOC:
 		schedule_delayed_work(&paccy->det_work, 0);
+		break;
+
+	case PMU_IRQ_RESUME_VBUS:
+		blocking_notifier_call_chain(&paccy->event[BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS].
+					     notifiers, BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
+					     NULL);
 		break;
 
 	default:
@@ -1374,6 +1384,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 			     paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_FGC, bcmpmu_accy_isr, paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_EOC, bcmpmu_accy_isr, paccy);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RESUME_VBUS, bcmpmu_accy_isr, paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_JIG_UART_INS, bcmpmu_accy_isr, paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_JIG_USB_INS, bcmpmu_accy_isr, paccy);
 
@@ -1393,6 +1404,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_VBUS_OVERCURRENT);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_FGC);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_JIG_UART_INS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_JIG_USB_INS);
 #ifdef CONFIG_MFD_BCMPMU_DBG
@@ -1430,6 +1442,7 @@ static int __devexit bcmpmu_accy_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_VBUS_OVERCURRENT);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_FGC);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_EOC);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_JIG_USB_INS);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_JIG_UART_INS);
 	cancel_delayed_work_sync(&paccy->det_work);

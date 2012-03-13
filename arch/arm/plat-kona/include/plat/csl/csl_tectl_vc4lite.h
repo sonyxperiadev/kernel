@@ -44,58 +44,54 @@ extern "C" {
  * @{
  */
 
-
 /**
 *
 *  Chip TE Input Pins ( inputs to TE MUX )
 *
 *****************************************************************************/
-#define TE_VC4L_IN_0_LCD            (0)   //  HERA's LCD_TE  input
-#define TE_VC4L_IN_1_DSI0           (1)   //  HERA's DSI0_TE input
-#define TE_VC4L_IN_2_DSI1           (2)   //  HERA's DSI1_TE input
+#define TE_VC4L_IN_0_LCD            (0)	//  HERA's LCD_TE  input
+#define TE_VC4L_IN_1_DSI0           (1)	//  HERA's DSI0_TE input
+#define TE_VC4L_IN_2_DSI1           (2)	//  HERA's DSI1_TE input
 
 /**
 *
 *  TECTL MUX Outputs
 *
 *****************************************************************************/
-#define TE_VC4L_OUT_SPI             (0)   //  SPI Core
-#define TE_VC4L_OUT_SMI             (1)   //  SMI Core
-#define TE_VC4L_OUT_DSI0_TE0        (2)   //  DSI Core 0 TE Input 0
-#define TE_VC4L_OUT_DSI0_TE1        (3)   //  DSI Core 0 TE Input 1
-#define TE_VC4L_OUT_DSI1_TE0        (4)   //  DSI Core 1 TE Input 0
-#define TE_VC4L_OUT_DSI1_TE1        (5)   //  DSI Core 1 TE Input 1
+#define TE_VC4L_OUT_SPI             (0)	//  SPI Core
+#define TE_VC4L_OUT_SMI             (1)	//  SMI Core
+#define TE_VC4L_OUT_DSI0_TE0        (2)	//  DSI Core 0 TE Input 0
+#define TE_VC4L_OUT_DSI0_TE1        (3)	//  DSI Core 0 TE Input 1
+#define TE_VC4L_OUT_DSI1_TE0        (4)	//  DSI Core 1 TE Input 0
+#define TE_VC4L_OUT_DSI1_TE1        (5)	//  DSI Core 1 TE Input 1
 
 /**
 *
 *  TECTL Input Modes
 *
 *****************************************************************************/
-#define TE_VC4L_MODE_VSYNC          (0)   // TE MODE vsync       (mode 1)    
-#define TE_VC4L_MODE_VSYNC_HSYNC    (1)   // TE MODE vsync_hsync (mode 2)
+#define TE_VC4L_MODE_VSYNC          (0)	// TE MODE vsync       (mode 1)
+#define TE_VC4L_MODE_VSYNC_HSYNC    (1)	// TE MODE vsync_hsync (mode 2)
 
 /**
 *
 *  TECTL Input Polarity for VSYNC & HSYNC
 *
 *****************************************************************************/
-#define TE_VC4L_ACT_POL_LO          (0)   // Active LO ( VSYNC & HSYNC )
-#define TE_VC4L_ACT_POL_HI          (1)   // Active HI ( VSYNC & HSYNC )
-
+#define TE_VC4L_ACT_POL_LO          (0)	// Active LO ( VSYNC & HSYNC )
+#define TE_VC4L_ACT_POL_HI          (1)	// Active HI ( VSYNC & HSYNC )
 
 /**
 *
 *  TECTL Input Configuration
 *
 *****************************************************************************/
-typedef struct 
-{
-    UInt32     te_mode;      // te mode ( VSYNC or VSYNC & HSYNC )
-    UInt32     sync_pol;     // sync polarity
-    UInt32     vsync_width;  // vsync_width [tectl_clk_count]
-    UInt32     hsync_line;   // hsync_line
-} TECTL_CFG_t, *pTECTL_CFG;
-
+	typedef struct {
+		UInt32 te_mode;	// te mode ( VSYNC or VSYNC & HSYNC )
+		UInt32 sync_pol;	// sync polarity
+		UInt32 vsync_width;	// vsync_width [tectl_clk_count]
+		UInt32 hsync_line;	// hsync_line
+	} TECTL_CFG_t, *pTECTL_CFG;
 
 /**
 *
@@ -109,9 +105,9 @@ typedef struct
 *
 *  @note     
 *
-*****************************************************************************/                           
-Int32 CSL_TECTL_VC4L_OpenInput ( UInt32 teIn, UInt32 teOut, pTECTL_CFG teCfg );
-
+*****************************************************************************/
+	Int32 CSL_TECTL_VC4L_OpenInput(UInt32 teIn, UInt32 teOut,
+				       pTECTL_CFG teCfg);
 
 /**
 *
@@ -123,14 +119,12 @@ Int32 CSL_TECTL_VC4L_OpenInput ( UInt32 teIn, UInt32 teOut, pTECTL_CFG teCfg );
 *
 *  @note     
 *
-*****************************************************************************/                           
-Int32 CSL_TECTL_VC4L_CloseInput ( UInt32 teIn );
-
+*****************************************************************************/
+	Int32 CSL_TECTL_VC4L_CloseInput(UInt32 teIn);
 
 /** @} */
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // _CSL_TECTL_VC4LITE_H_
+#endif				// _CSL_TECTL_VC4LITE_H_

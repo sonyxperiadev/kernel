@@ -316,10 +316,11 @@ Boolean RPC_IsRegisteredClient(UInt8 channel, PACKET_BufHandle_t dataBufHandle)
 			ret = isValid;
 	}
 
-	_DBG_(RPC_TRACE
-	      ("RPC_IsRegisteredClient[ret=%d] ch=%d xdrClient=%d msgId=0x%x validMsg=%d validClient=%d validAckClient=%d",
-	       ret, channel, xdrReqClient, msgId, isValid, clientHandle,
-	       clientAckHandle));
+	if (ret)
+		_DBG_(RPC_TRACE
+		      ("RPC_IsRegisteredClient[ret=%d] ch=%d xdrClient=%d msgId=0x%x validMsg=%d validClient=%d validAckClient=%d",
+		       ret, channel, xdrReqClient, msgId, isValid, clientHandle,
+		       clientAckHandle));
 	return ret;
 }
 

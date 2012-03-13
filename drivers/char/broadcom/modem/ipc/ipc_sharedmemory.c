@@ -20,6 +20,7 @@
 #include <linux/string.h>
 #include <linux/broadcom/csl_types.h>
 #include <linux/broadcom/ipcproperties.h>
+#include <linux/printk.h>
 #else
 #include "mobcom_types.h"
 #include "ipcproperties.h"
@@ -95,7 +96,11 @@ volatile IPC_SmControl SmView;
 //============================================================
 
 //**************************************************
-#define RAISE_INTERRUPT (*SmLocalControl.RaiseInterrupt)();
+#define RAISE_INTERRUPT	\
+	do {	\
+		(*SmLocalControl.RaiseInterrupt)();	\
+		SmLocalControl.SmControl->Interrupts[IPC_CPU_ID_INDEX(IPC_SM_CURRENT_CPU)].InterruptRaised ++;	\
+	} while (0)
 
 //**************************************************
 void IPC_SmFifoWrite(IPC_Fifo Fifo, IPC_Buffer Message)
@@ -193,8 +198,7 @@ void IPC_EndpointRegister
 IPC_Endpoint IPC_SmEndpointInfo(IPC_EndpointId_T EndpointId)
 {
 	if ((EndpointId > IPC_EP_None)
-	    && (EndpointId < IPC_EndpointId_Count))
-	{
+	    && (EndpointId < IPC_EndpointId_Count)) {
 		IPC_Endpoint EndpointPtr =
 		    &SmLocalControl.SmControl->Endpoints[EndpointId];
 
@@ -449,6 +453,9 @@ void IPC_ProcessEvents(void)
 	IPC_TRACE(IPC_Channel_Hisr, "IPC_ProcessEvents", "CPU %02X", Cpu, 0, 0,
 		  0);
 
+	SmLocalControl.SmControl->Interrupts[IPC_CPU_ID_INDEX(Cpu)].
+	    InterruptHandled++;
+
 	if (!SmLocalControl.ConfiguredReported) {
 
 		if ((SmLocalControl.SmControl->
@@ -657,32 +664,58 @@ void IPC_Initialise
 	SmControl->Fifos[CpuIndex].SendFifo.WriteCount = 0;
 	SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark = 0;
 
+	SmControl->Version[CpuIndex] = IPC_Version;
+
+	SmControl->Interrupts[CpuIndex].InterruptRaised = 0;
+	SmControl->Interrupts[CpuIndex].InterruptHandled = 0;
+
 	SmControl->Initialised[CpuIndex] = IPC_SmInitialised;
 
 }
 
-
 #ifdef UNDER_LINUX
-int IPC_IsCpIpcInit(void *pSmBase, IPC_CPU_ID_T Cpu) 
-{
-	UInt32 crash_code;
-	volatile IPC_SmControl_T *pSmControl =
-	    (volatile IPC_SmControl_T *)pSmBase;
-	if (pSmControl->Initialised[IPC_CPU_ID_INDEX(IPC_OTHER_CPU[Cpu])] !=
-	      IPC_SmConfigured)
-		 {
-		crash_code = pSmControl->CrashCode;
-		if (crash_code != IPC_CP_NOT_CRASHED
-		     && crash_code < IPC_CP_MAX_CRASH_CODE
-		     && pSmControl->CrashDump != NULL)
-			 {
-			return -1;
-			}
-		return 0;
-		}
-	return 1;
-}
+//**************************************************
+// Check if the other CP IPC has initialized
+// Return       0       Not initialized
+//                      -1      CP crash
+//                      -2      AP/CP IPC version mismatch
+//                      1       CP initialized and IPC verson match
 
+int IPC_IsCpIpcInit(void *pSmBase, IPC_CPU_ID_T Cpu)
+{
+	UInt32 crash_code;
+	volatile IPC_SmControl_T *pSmControl =
+	    (volatile IPC_SmControl_T *)pSmBase;
+	if (pSmControl->Initialised[IPC_CPU_ID_INDEX(IPC_OTHER_CPU[Cpu])] !=
+	    IPC_SmConfigured) {
+		crash_code = pSmControl->CrashCode;
+		if (crash_code != IPC_CP_NOT_CRASHED
+		    && crash_code < IPC_CP_MAX_CRASH_CODE
+		    && pSmControl->CrashDump != NULL) {
+			// CP crash
+			return -1;
+		} else {
+			// CP IPC not initialized
+			return 0;
+		}
+	} else {
+		unsigned int cp_version =
+		    pSmControl->Version[IPC_CPU_ID_INDEX(IPC_OTHER_CPU[Cpu])];
+		if (cp_version != IPC_Version) {
+			printk(KERN_ERR
+			       "AP/CP IPC Version Mismatch, AP=0x%x CP=0x%x \n",
+			       IPC_Version, cp_version);
+			return -2;
+		} else {
+			// CP initialized and IPC verson match
+			printk(KERN_WARNING
+			       "AP/CP IPC Version match, AP=0x%x CP=0x%x \n",
+			       IPC_Version, cp_version);
+			return 1;
+		}
+	}
+
+}
 
 #endif // UNDER_LINUX
 //**************************************************
@@ -794,7 +827,7 @@ IPC_Boolean IPC_GetProperty(IPC_PropertyID_E PropertyId, IPC_U32 * value)
 
 //**************************************************
 #if defined(FUSE_COMMS_PROCESSOR) || (defined(FUSE_APPS_PROCESSOR) && !defined(UNDER_CE) && !defined(UNDER_LINUX))
-extern char *GetFuncNameByAddr(IPC_U32, IPC_U32);
+extern char *GetFuncNameByAddr(IPC_U32, IPC_U32, IPC_U32 *);
 #endif
 
 void IPC_Dump(void)
@@ -827,6 +860,12 @@ void IPC_Dump(void)
 		  SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
 		  SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
 
+	IPC_TRACE(IPC_Channel_General, "           ",
+		  "Version %08X, InterruptRaised %d, InterruptHandled %d",
+		  SmControl->Version[CpuIndex],
+		  SmControl->Interrupts[CpuIndex].InterruptRaised,
+		  SmControl->Interrupts[CpuIndex].InterruptHandled, 0);
+
 	CpuIndex = IPC_CPU_ID_INDEX(IPC_CP_CPU);
 	IPC_TRACE(IPC_Channel_General, "IPC_CP_Dump",
 		  "CpuId %d, Init %08X, Alloc %d, Buffers %d",
@@ -848,6 +887,12 @@ void IPC_Dump(void)
 		  SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
 		  SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
 
+	IPC_TRACE(IPC_Channel_General, "           ",
+		  "Version %08X, InterruptRaised %d, InterruptHandled %d",
+		  SmControl->Version[CpuIndex],
+		  SmControl->Interrupts[CpuIndex].InterruptRaised,
+		  SmControl->Interrupts[CpuIndex].InterruptHandled, 0);
+
 	for (EpIndex = IPC_EP_None + 1; EpIndex < IPC_EndpointId_Count;
 	     EpIndex++) {
 		IPC_Endpoint EpPtr =
@@ -861,6 +906,7 @@ void IPC_Dump(void)
 			  EpIndex,
 			  (IPC_U32) IPC_GetCpuName(EpPtr->Cpu),
 			  EpPtr->MaxHeaderSize);
+
 #if defined(FUSE_COMMS_PROCESSOR)
 		if (EpPtr->DeliveryFunction && EpPtr->Cpu == IPC_CP_CPU) {
 			IPC_TRACE(IPC_Channel_General, "           ",
@@ -868,7 +914,8 @@ void IPC_Dump(void)
 				  (IPC_U32) EpPtr->DeliveryFunction,
 				  (IPC_U32) GetFuncNameByAddr((IPC_U32) EpPtr->
 							      DeliveryFunction,
-							      0x4000), 0, 0);
+							      0x4000, NULL), 0,
+				  0);
 		} else {
 			IPC_TRACE(IPC_Channel_General, "           ",
 				  "DeliveryFunction %08X",
@@ -880,7 +927,8 @@ void IPC_Dump(void)
 				  (IPC_U32) EpPtr->FlowControlFunction,
 				  (IPC_U32) GetFuncNameByAddr((IPC_U32) EpPtr->
 							      FlowControlFunction,
-							      0x4000), 0, 0);
+							      0x4000, NULL), 0,
+				  0);
 		} else {
 			IPC_TRACE(IPC_Channel_General, "           ",
 				  "FlowControlFunction %08X",
@@ -894,7 +942,8 @@ void IPC_Dump(void)
 				  (IPC_U32) EpPtr->DeliveryFunction,
 				  (IPC_U32) GetFuncNameByAddr((IPC_U32) EpPtr->
 							      DeliveryFunction,
-							      0x4000), 0, 0);
+							      0x4000, NULL), 0,
+				  0);
 		} else {
 			IPC_TRACE(IPC_Channel_General, "           ",
 				  "DeliveryFunction %08X",
@@ -906,7 +955,8 @@ void IPC_Dump(void)
 				  (IPC_U32) EpPtr->FlowControlFunction,
 				  (IPC_U32) GetFuncNameByAddr((IPC_U32) EpPtr->
 							      FlowControlFunction,
-							      0x4000), 0, 0);
+							      0x4000, NULL), 0,
+				  0);
 		} else {
 			IPC_TRACE(IPC_Channel_General, "           ",
 				  "FlowControlFunction %08X",
@@ -919,16 +969,15 @@ void IPC_Dump(void)
 			  (IPC_U32) EpPtr->DeliveryFunction,
 			  (IPC_U32) EpPtr->FlowControlFunction, 0, 0);
 #endif
+
 	}
 
 	IPC_PoolDumpAll(SmControl->FirstPool);
 }
 
-
-
 int IPC_DumpStatus(char *buf)
 {
-	char            *p = buf;
+	char *p = buf;
 
 	IPC_SmControl SmControl = SmLocalControl.SmControl;
 	IPC_U32 CpuIndex;
@@ -936,43 +985,56 @@ int IPC_DumpStatus(char *buf)
 	p += sprintf(p, "\n===== IPC Dump =====\n");
 
 	CpuIndex = IPC_CPU_ID_INDEX(IPC_AP_CPU);
-	p += sprintf(p, "IPC_AP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d \n",
-		  IPC_AP_CPU,
-		  SmControl->Initialised[CpuIndex],
-		  SmControl->Allocated[CpuIndex],
-		  SmControl->CurrentBuffers[CpuIndex]);
+	p += sprintf(p,
+		     "IPC_AP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d \n",
+		     IPC_AP_CPU, SmControl->Initialised[CpuIndex],
+		     SmControl->Allocated[CpuIndex],
+		     SmControl->CurrentBuffers[CpuIndex]);
 
 	p += sprintf(p, "Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d;",
-		  SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
-		  SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
-		  SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
-		  SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
+		     SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
+		     SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
+		     SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
+		     SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
 
-	p += sprintf(p, "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d \n",
-		  SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
-		  SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
-		  SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
-		  SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
+	p += sprintf(p,
+		     "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d \n",
+		     SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
+		     SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
+		     SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
+		     SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
+
+	p += sprintf(p,
+		     "Version %08X, InterruptRaised %d, InterruptHandled %d \n",
+		     SmControl->Version[CpuIndex],
+		     SmControl->Interrupts[CpuIndex].InterruptRaised,
+		     SmControl->Interrupts[CpuIndex].InterruptHandled);
 
 	CpuIndex = IPC_CPU_ID_INDEX(IPC_CP_CPU);
-	p += sprintf(p, "IPC_CP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d \n",
-		  IPC_CP_CPU,
-		  SmControl->Initialised[CpuIndex],
-		  SmControl->Allocated[CpuIndex],
-		  SmControl->CurrentBuffers[CpuIndex]);
+	p += sprintf(p,
+		     "IPC_CP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d \n",
+		     IPC_CP_CPU, SmControl->Initialised[CpuIndex],
+		     SmControl->Allocated[CpuIndex],
+		     SmControl->CurrentBuffers[CpuIndex]);
 
 	p += sprintf(p, "Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d \n",
-		  SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
-		  SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
-		  SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
-		  SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
+		     SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
+		     SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
+		     SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
+		     SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
 
-	p += sprintf(p, "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d \n",
-		  SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
-		  SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
-		  SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
-		  SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
+	p += sprintf(p,
+		     "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d \n",
+		     SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
+		     SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
+		     SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
+		     SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
 
-	return  p - buf;
+	p += sprintf(p,
+		     "Version %08X, InterruptRaised %d, InterruptHandled %d \n",
+		     SmControl->Version[CpuIndex],
+		     SmControl->Interrupts[CpuIndex].InterruptRaised,
+		     SmControl->Interrupts[CpuIndex].InterruptHandled);
+
+	return p - buf;
 }
-
