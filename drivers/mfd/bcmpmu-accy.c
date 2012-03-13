@@ -506,8 +506,10 @@ static void send_chrgr_event(struct bcmpmu *pmu,
 		propval.intval = paccy->bcmpmu->usb_accy_data.chrgr_type;
 		ps->set_property(ps, POWER_SUPPLY_PROP_TYPE, &propval);
 		if (paccy->det_state == USB_CONNECTED) {
-			if (paccy->bcmpmu->usb_accy_data.chrgr_type
-			    == PMU_CHRGR_TYPE_SDP)
+			if ((paccy->bcmpmu->usb_accy_data.chrgr_type
+			    == PMU_CHRGR_TYPE_SDP)||
+			    (paccy->bcmpmu->usb_accy_data.chrgr_type
+			    == PMU_CHRGR_TYPE_CDP))
 				propval.intval = 0;
 			else
 				propval.intval = 1;
