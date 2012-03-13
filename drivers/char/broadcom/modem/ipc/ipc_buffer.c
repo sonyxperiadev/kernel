@@ -523,7 +523,8 @@ IPC_EndpointId_T IPC_BufferDestinationEndpointId(IPC_Buffer Buffer)
 }
 
 //**************************************************
-void *IPC_BufferFill(IPC_Buffer Buffer, void *SourcePtr, IPC_U32 SourceLength) {
+void *IPC_BufferFill(IPC_Buffer Buffer, void *SourcePtr, IPC_U32 SourceLength)
+{
 	IPC_Buffer_T *BufferPtr;
 	IPC_U32 MaxDataSize;
 
