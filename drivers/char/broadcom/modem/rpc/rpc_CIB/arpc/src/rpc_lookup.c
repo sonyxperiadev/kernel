@@ -107,11 +107,11 @@ bool_t rpc_build_lookup(const RPC_XdrInfo_t * tbl, UInt16 table_size,
 //                              if(tableBase2[id2] != 0xFFFF)
 //                                      _DBG_(RPC_TRACE("xdr_build_lookup duplicate entry = 0x%x, 0x%x, 0x%x\r\n", id, id1, id2));
 
-				val =
-				    (UInt32) ((UInt32)
-					      ((clientIndex << 16) & 0xFFFF0000)
-					      | (UInt32) (((UInt16) i) &
-							  0xFFFF));
+				val = (UInt32) ((UInt32)
+						((clientIndex << 16) &
+						 0xFFFF0000)
+						| (UInt32) (((UInt16) i) &
+							    0xFFFF));
 				tableBase2[id2] = val;
 
 				//_DBG_(RPC_TRACE("rpc_build_lookup = 0x%x, 0x%x, 0x%x\r\n", id, id1, id2));
@@ -148,16 +148,16 @@ UInt32 rpc_basic_fast_lookup(UInt16 dscm)
 	if (tableBase2 == NULL) {
 		/* message not handled in RPC */
 		//_DBG_(RPC_TRACE
-		  //    ("xdr_fast_lookup no RPC entry (tableBase2 is NULL) = 0x%x, 0x%x, 0x%x\r\n",
-		  //     id, id1, id2));
+		//    ("xdr_fast_lookup no RPC entry (tableBase2 is NULL) = 0x%x, 0x%x, 0x%x\r\n",
+		//     id, id1, id2));
 		return 0xFFFF;
 	} else if (tableBase2[id2] != 0xFFFF) {
 		nodeVal = tableBase2[id2];
 	} else {
 		/* message not handled in RPC */
 		//_DBG_(RPC_TRACE
-		  //    ("xdr_fast_lookup no RPC entry = 0x%x, 0x%x, 0x%x\r\n",
-		  //     id, id1, id2));
+		//    ("xdr_fast_lookup no RPC entry = 0x%x, 0x%x, 0x%x\r\n",
+		//     id, id1, id2));
 		return 0xFFFF;
 	}
 	return nodeVal;
