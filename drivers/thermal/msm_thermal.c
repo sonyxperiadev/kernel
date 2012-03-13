@@ -18,7 +18,6 @@
 #include <linux/mutex.h>
 #include <linux/msm_tsens.h>
 #include <linux/workqueue.h>
-#include <linux/cpu.h>
 
 #define DEF_TEMP_SENSOR      0
 #define DEF_THERMAL_CHECK_MS 1000
@@ -78,11 +77,7 @@ static void check_temp(struct work_struct *work)
 		goto reschedule;
 	}
 
-	/* lock hotplug when updating CPUfreq policy */
-	get_online_cpus();
-
-	for_each_online_cpu(cpu) {
-		update_policy = 0;
+	for_each_possible_cpu(cpu) {
 		cpu_policy = per_cpu(policy, cpu);
 		if (!cpu_policy) {
 			pr_debug("msm_thermal: No CPUFreq policy found for "
@@ -104,8 +99,6 @@ static void check_temp(struct work_struct *work)
 		if (update_policy)
 			update_cpu_max_freq(cpu, max_freq);
 	}
-
-	put_online_cpus();
 
 reschedule:
 	if (enabled)
@@ -132,27 +125,6 @@ static struct notifier_block msm_thermal_notifier_block = {
 	.notifier_call = msm_thermal_notifier,
 };
 
-static int msm_thermal_hotplug_callback(struct notifier_block *nb,
-					unsigned long action,
-					void *data)
-{
-	unsigned int cpu = (unsigned int) data;
-	switch (action) {
-	case CPU_DOWN_PREPARE:
-	case CPU_DOWN_PREPARE_FROZEN:
-		mutex_lock(&policy_mutex);
-		/* nullify policy reference when CPU is hotplugged */
-		per_cpu(policy, cpu) = NULL;
-		mutex_unlock(&policy_mutex);
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block __refdata msm_thermal_hotcpu_notify = {
-	.notifier_call = msm_thermal_hotplug_callback,
-};
-
 static void disable_msm_thermal(void)
 {
 	int cpu = 0;
@@ -170,7 +142,6 @@ static void disable_msm_thermal(void)
 			update_cpu_max_freq(cpu, cpu_policy->cpuinfo.max_freq);
 	}
 	mutex_unlock(&policy_mutex);
-	unregister_hotcpu_notifier(&msm_thermal_hotcpu_notify);
 }
 
 static int set_enabled(const char *val, const struct kernel_param *kp)
@@ -206,21 +177,9 @@ static int __init msm_thermal_init(void)
 
 	ret = cpufreq_register_notifier(&msm_thermal_notifier_block,
 			CPUFREQ_POLICY_NOTIFIER);
-	if (ret) {
-		pr_err("%s: cpufreq_register_notifier FAIL: %d\n",
-		       __func__, ret);
-		goto fail;
-	}
-
-	ret = register_hotcpu_notifier(&msm_thermal_hotcpu_notify);
-	if (ret) {
-		pr_err("%s: register_hotcpu_notifier FAIL: %d\n",
-		       __func__, ret);
-		goto fail;
-	}
 
 	schedule_delayed_work(&check_temp_work, 0);
-fail:
+
 	return ret;
 }
 fs_initcall(msm_thermal_init);
