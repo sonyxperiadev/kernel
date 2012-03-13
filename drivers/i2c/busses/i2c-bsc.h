@@ -32,7 +32,7 @@
 #define I2C_MM_HS_PADCTL_PAD_SLEW_RATE_MASK     I2C_MM_HS_PADCTL_PULLUP_EN_MASK
 #endif
 
-		     /*#define BSC_HS*//* Athena has HS controller */
+							  /*#define BSC_HS *//* Athena has HS controller */
 
 #define BSC_WRITE_REG_FIELD(addr, mask, shift, data) (writel((((data << shift) & (mask)) | (readl(addr) & ~mask)) , addr))
 #define BSC_READ_REG_FIELD(addr, mask, shift)       ((readl(addr) & mask) >> shift)
