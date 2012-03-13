@@ -249,7 +249,7 @@ static int config_buf(struct usb_configuration *config,
 	c->bNumInterfaces = config->next_interface_id;
 	c->bConfigurationValue = config->bConfigurationValue;
 	c->iConfiguration = config->iConfiguration;
-	c->bmAttributes = USB_CONFIG_ATT_ONE | config->bmAttributes; 
+	c->bmAttributes = USB_CONFIG_ATT_ONE | config->bmAttributes;
 	c->bMaxPower = config->bMaxPower ? : (CONFIG_USB_GADGET_VBUS_DRAW / 2);
 
 	/* There may be e.g. OTG descriptors */
@@ -425,10 +425,18 @@ static int set_config(struct usb_composite_dev *cdev,
 	INFO(cdev, "%s speed config #%d: %s\n",
 		({ char *speed;
 		switch (gadget->speed) {
-		case USB_SPEED_LOW:	speed = "low"; break;
-		case USB_SPEED_FULL:	speed = "full"; break;
-		case USB_SPEED_HIGH:	speed = "high"; break;
-		default:		speed = "?"; break;
+		case USB_SPEED_LOW:
+			speed = "low";
+			break;
+		case USB_SPEED_FULL:
+			speed = "full";
+			break;
+		case USB_SPEED_HIGH:
+			speed = "high";
+			break;
+		default:
+			speed = "?";
+			break;
 		} ; speed; }), number, c ? c->label : "unconfigured");
 
 	if (!c)
@@ -726,8 +734,9 @@ static int get_string(struct usb_composite_dev *cdev,
 		str = NULL;
 	if (str) {
 		/* Init with NULL str in last element */
-		struct usb_string language_string_array[2] =
-			    {{ 0xff, str}, {0xff, NULL}};
+		struct usb_string language_string_array[2] = {
+			{ 0xff, str}, {0xff, NULL}
+	    };
 		struct usb_gadget_strings strings = {
 			.language = language,
 			.strings  = language_string_array
@@ -1101,7 +1110,8 @@ static ssize_t composite_show_suspended(struct device *dev,
 static DEVICE_ATTR(suspended, 0444, composite_show_suspended, NULL);
 
 #ifdef CONFIG_USB_OTG
-static ssize_t composite_set_host_request(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t composite_set_host_request(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct usb_gadget *gadget = dev_to_usb_gadget(dev);
 	int value;
