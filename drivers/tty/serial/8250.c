@@ -1472,9 +1472,15 @@ static void serial8250_stop_tx(struct uart_port *port)
 	 */
 	mdelay(1);
 	pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
+
+#ifdef CONFIG_ARCH_RHEA
+	if (up->bugs & UART_BUG_THRE)
+		del_timer_sync(&up->timer);
+#endif
 }
 
 static void transmit_chars(struct uart_8250_port *up);
+static void serial8250_backup_timeout(unsigned long data);
 
 static void serial8250_start_tx(struct uart_port *port)
 {
@@ -1483,6 +1489,14 @@ static void serial8250_start_tx(struct uart_port *port)
 
 	pi_mgr_qos_request_update(&up->qos_tx_node,0);
 
+#ifdef CONFIG_ARCH_RHEA
+	if (up->bugs & UART_BUG_THRE) {
+		up->timer.function = serial8250_backup_timeout;
+		up->timer.data = (unsigned long)up;
+		mod_timer(&up->timer, jiffies +
+				uart_poll_timeout(&up->port) + HZ / 5);
+	}
+#endif
 	if (!(up->ier & UART_IER_THRI)) {
 		up->ier |= UART_IER_THRI;
 		serial_out(up, UART_IER, up->ier);
@@ -1804,6 +1818,10 @@ static void serial8250_handle_port(struct uart_8250_port *up)
 	if ((status & BOTH_EMPTY) && uart_circ_empty(&up->port.state->xmit)) {
 		__stop_tx(up);
 		pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
+
+		if (up->bugs & UART_BUG_THRE)
+			del_timer_sync(&up->timer);
+
 	} else if (status & UART_LSR_THRE)
 		transmit_chars(up);
 #else
@@ -2060,10 +2078,11 @@ static void serial8250_backup_timeout(unsigned long data)
 		serial_out(up, UART_IER, ier);
 
 	spin_unlock_irqrestore(&up->port.lock, flags);
-
+#ifndef CONFIG_ARCH_RHEA
 	/* Standard timer interval plus 0.2s to keep the port running */
 	mod_timer(&up->timer,
 		jiffies + uart_poll_timeout(&up->port) + HZ / 5);
+#endif
 }
 
 static unsigned int serial8250_tx_empty(struct uart_port *port)
