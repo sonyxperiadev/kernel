@@ -44,9 +44,9 @@ extern "C" {
 #define LA_GENERAL		0x00000080
 #define LA_IRAT			0x00000040
 
-extern	UInt32			isTestPointEnabled;
+	extern UInt32 isTestPointEnabled;
 #define _TP_OUTPUT(mask, x)	if(isTestPointEnabled & mask) { x ; }
-#endif      
+#endif
 
 #ifndef WIN32
 
@@ -64,12 +64,12 @@ extern	UInt32			isTestPointEnabled;
 #define OAKMSG_TP		(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff8c))
 #define FRAME_INT_TP	(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff8a))
 #define DATA_TP			(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff88))
-#define TPP0 			(*(volatile UInt32 *)(TP_BASE_ADDR+0xffffe0))	
-#define TPP4 			(*(volatile UInt32 *)(TP_BASE_ADDR+0xffffe4))	
-#define TPP8 			(*(volatile UInt32 *)(TP_BASE_ADDR+0xffffe8))	
-#define TPPc 			(*(volatile UInt32 *)(TP_BASE_ADDR+0xffffec))	
+#define TPP0 			(*(volatile UInt32 *)(TP_BASE_ADDR+0xffffe0))
+#define TPP4 			(*(volatile UInt32 *)(TP_BASE_ADDR+0xffffe4))
+#define TPP8 			(*(volatile UInt32 *)(TP_BASE_ADDR+0xffffe8))
+#define TPPc 			(*(volatile UInt32 *)(TP_BASE_ADDR+0xffffec))
 
-#define FRAME_TP		(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff50)) // to 0x4ffff70
+#define FRAME_TP		(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff50))	// to 0x4ffff70
 #define FRAME_INDEX_TP	(*(volatile UInt16 *)(TP_BASE_ADDR+0xffffb0))
 #define CMD_TP			(*(volatile UInt16 *)(TP_BASE_ADDR+0xffffc0))
 
@@ -90,7 +90,6 @@ extern	UInt32			isTestPointEnabled;
 #define TBF_IF_MON2		(*(volatile UInt16 *)(TP_BASE_ADDR+0xfff604))
 #define TBF_IF_MON3		(*(volatile UInt16 *)(TP_BASE_ADDR+0xfff606))
 
-
 // High layer related test points
 #define DTT_ACTION				(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff00))
 #define DTT_WRITE_FRAMES 		(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff02))
@@ -102,7 +101,7 @@ extern	UInt32			isTestPointEnabled;
 #define DTT_READ_SUBNUM			(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff0e))
 
 #define TP_DTN_ACTION			(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff10))
-								
+
 #define TP_L1S_ACTION			(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff12))
 
 #define TP_RRM_ACTION			(*(volatile UInt16 *)(TP_BASE_ADDR+0xffff14))
@@ -128,7 +127,7 @@ extern	UInt32			isTestPointEnabled;
 #define TP_OAK_RXQUAL_SUB		(*(volatile UInt16 *)(TP_BASE_ADDR+0x100002))
 #define TP_OAK_RXLEV_FULL		(*(volatile UInt16 *)(TP_BASE_ADDR+0x100004))
 #define TP_OAK_RXLEV_SUB		(*(volatile UInt16 *)(TP_BASE_ADDR+0x100006))
-	 
+
 #define TP_READ_BUFF			(*(volatile UInt16 *)(TP_BASE_ADDR+0x1ff000))
 #define TP_RX_BUFF_BFI			(*(volatile UInt16 *)(TP_BASE_ADDR+0x1ff040))
 #define TP_RX_BUFF_CODE			(*(volatile UInt16 *)(TP_BASE_ADDR+0x1ff042))
@@ -152,7 +151,7 @@ extern	UInt32			isTestPointEnabled;
 #define TP_FRAME_STATE			(*(volatile UInt16 *)(TP_BASE_ADDR+0x110000))
 #define TP_SWEEP_SIZE			(*(volatile UInt16 *)(TP_BASE_ADDR+0x120000))
 #define TP_SWEEP_CNT			(*(volatile UInt16 *)(TP_BASE_ADDR+0x120002))
-#define TP_L1_RX_MSG            (*(volatile UInt16 *)(TP_BASE_ADDR+0x130000))												
+#define TP_L1_RX_MSG            (*(volatile UInt16 *)(TP_BASE_ADDR+0x130000))
 
 #define TP_CELLDATA_ID			(*(volatile UInt16 *)(TP_BASE_ADDR+0x200000))
 #define TP_CELLDATA_VALID		(*(volatile UInt16 *)(TP_BASE_ADDR+0x200002))
@@ -272,171 +271,170 @@ extern	UInt32			isTestPointEnabled;
 
 // Dummy Testpoint Array
 
-extern UInt16 dummy_buff[1024];
+	extern UInt16 dummy_buff[1024];
 
-#define SPARE_TP		(*(volatile UInt16 *)dummy_buff) 
-#define TP2				(*(volatile UInt16 *)dummy_buff) 
-#define TP4				(*(volatile UInt16 *)dummy_buff) 
-#define TP6				(*(volatile UInt16 *)dummy_buff) 
-#define TP8				(*(volatile UInt16 *)dummy_buff) 
-#define TPa				(*(volatile UInt16 *)dummy_buff) 
-#define TPc				(*(volatile UInt16 *)dummy_buff) 
-#define TPe				(*(volatile UInt16 *)dummy_buff) 
-#define SPEED_TP		(*(volatile UInt16 *)dummy_buff) 
-#define OAKMSG_TP		(*(volatile UInt16 *)dummy_buff) 
-#define FRAME_INT_TP	(*(volatile UInt16 *)dummy_buff) 
-#define DATA_TP			(*(volatile UInt16 *)dummy_buff) 
-#define TPP0 			(*(volatile UInt16 *)dummy_buff) 
-#define TPP4 			(*(volatile UInt16 *)dummy_buff) 	
-#define TPP8 			(*(volatile UInt16 *)dummy_buff) 	
-#define TPPc 			(*(volatile UInt16 *)dummy_buff) 	
+#define SPARE_TP		(*(volatile UInt16 *)dummy_buff)
+#define TP2				(*(volatile UInt16 *)dummy_buff)
+#define TP4				(*(volatile UInt16 *)dummy_buff)
+#define TP6				(*(volatile UInt16 *)dummy_buff)
+#define TP8				(*(volatile UInt16 *)dummy_buff)
+#define TPa				(*(volatile UInt16 *)dummy_buff)
+#define TPc				(*(volatile UInt16 *)dummy_buff)
+#define TPe				(*(volatile UInt16 *)dummy_buff)
+#define SPEED_TP		(*(volatile UInt16 *)dummy_buff)
+#define OAKMSG_TP		(*(volatile UInt16 *)dummy_buff)
+#define FRAME_INT_TP	(*(volatile UInt16 *)dummy_buff)
+#define DATA_TP			(*(volatile UInt16 *)dummy_buff)
+#define TPP0 			(*(volatile UInt16 *)dummy_buff)
+#define TPP4 			(*(volatile UInt16 *)dummy_buff)
+#define TPP8 			(*(volatile UInt16 *)dummy_buff)
+#define TPPc 			(*(volatile UInt16 *)dummy_buff)
 
-#define FRAME_TP		(*(volatile UInt16 *)dummy_buff) 
-#define FRAME_INDEX_TP	(*(volatile UInt16 *)dummy_buff) 
-#define CMD_TP			(*(volatile UInt16 *)dummy_buff) 
-#define TX_DATA_INDEX_TP (*(volatile UInt16 *)dummy_buff) 
-#define TX_DATA_MODE_TP (*(volatile UInt16 *)dummy_buff) 
-#define TX_DATA_TP		(*(volatile UInt16 *)dummy_buff) 
-#define TX_FACCH_TP		(*(volatile UInt16 *)dummy_buff) 
-#define TX_SACCH_TP		(*(volatile UInt16 *)dummy_buff) 
-#define RX_DATA_INDEX_TP (*(volatile UInt16 *)dummy_buff) 
-#define RX_DATA_TP		(*(volatile UInt16 *)dummy_buff) 
-#define RX_FACCH_TP		(*(volatile UInt16 *)dummy_buff) 
-#define RX_SACCH_TP		(*(volatile UInt16 *)dummy_buff) 
-#define TBF_IF_MON0		(*(volatile UInt16 *)dummy_buff) 
-#define TBF_IF_MON1		(*(volatile UInt16 *)dummy_buff) 
-#define TBF_IF_MON2		(*(volatile UInt16 *)dummy_buff) 
-#define TBF_IF_MON3		(*(volatile UInt16 *)dummy_buff) 
+#define FRAME_TP		(*(volatile UInt16 *)dummy_buff)
+#define FRAME_INDEX_TP	(*(volatile UInt16 *)dummy_buff)
+#define CMD_TP			(*(volatile UInt16 *)dummy_buff)
+#define TX_DATA_INDEX_TP (*(volatile UInt16 *)dummy_buff)
+#define TX_DATA_MODE_TP (*(volatile UInt16 *)dummy_buff)
+#define TX_DATA_TP		(*(volatile UInt16 *)dummy_buff)
+#define TX_FACCH_TP		(*(volatile UInt16 *)dummy_buff)
+#define TX_SACCH_TP		(*(volatile UInt16 *)dummy_buff)
+#define RX_DATA_INDEX_TP (*(volatile UInt16 *)dummy_buff)
+#define RX_DATA_TP		(*(volatile UInt16 *)dummy_buff)
+#define RX_FACCH_TP		(*(volatile UInt16 *)dummy_buff)
+#define RX_SACCH_TP		(*(volatile UInt16 *)dummy_buff)
+#define TBF_IF_MON0		(*(volatile UInt16 *)dummy_buff)
+#define TBF_IF_MON1		(*(volatile UInt16 *)dummy_buff)
+#define TBF_IF_MON2		(*(volatile UInt16 *)dummy_buff)
+#define TBF_IF_MON3		(*(volatile UInt16 *)dummy_buff)
 
 // High layer related test points
-#define DTT_ACTION			(*(volatile UInt16 *)dummy_buff) 
-#define DTT_WRITE_FRAMES	(*(volatile UInt16 *)dummy_buff) 
-#define DTT_READ_FRAMES 	(*(volatile UInt16 *)dummy_buff) 
-#define DTA_READ_INDEX  	(*(volatile UInt16 *)dummy_buff) 
-#define DTA_WRITE_INDEX 	(*(volatile UInt16 *)dummy_buff) 
-#define L1DS_WRITE_INDEX	(*(volatile UInt16 *)dummy_buff) 
-#define L1DS_READ_INDEX 	(*(volatile UInt16 *)dummy_buff) 
+#define DTT_ACTION			(*(volatile UInt16 *)dummy_buff)
+#define DTT_WRITE_FRAMES	(*(volatile UInt16 *)dummy_buff)
+#define DTT_READ_FRAMES 	(*(volatile UInt16 *)dummy_buff)
+#define DTA_READ_INDEX  	(*(volatile UInt16 *)dummy_buff)
+#define DTA_WRITE_INDEX 	(*(volatile UInt16 *)dummy_buff)
+#define L1DS_WRITE_INDEX	(*(volatile UInt16 *)dummy_buff)
+#define L1DS_READ_INDEX 	(*(volatile UInt16 *)dummy_buff)
 
-#define TP_DTN_ACTION			(*(volatile UInt16 *)dummy_buff) 
+#define TP_DTN_ACTION			(*(volatile UInt16 *)dummy_buff)
 
-#define TP_DRL_ACTION			(*(volatile UInt16 *)dummy_buff) 
+#define TP_DRL_ACTION			(*(volatile UInt16 *)dummy_buff)
 
-#define TP_DCH_ACTION			(*(volatile UInt16 *)dummy_buff) 
+#define TP_DCH_ACTION			(*(volatile UInt16 *)dummy_buff)
 
-#define TP_HEAP_ALLOC_SIZE		(*(volatile UInt16 *)dummy_buff) 
-#define TP_ASSERT			(*(volatile UInt16 *)dummy_buff) 
+#define TP_HEAP_ALLOC_SIZE		(*(volatile UInt16 *)dummy_buff)
+#define TP_ASSERT			(*(volatile UInt16 *)dummy_buff)
 
-#define TP_L1S_ACTION			(*(volatile UInt16 *)dummy_buff) 
-#define TP_OAK_RXQUAL_FULL		(*(volatile UInt16 *)dummy_buff) 
-#define TP_OAK_RXQUAL_SUB		(*(volatile UInt16 *)dummy_buff) 
-#define TP_OAK_RXLEV_FULL		(*(volatile UInt16 *)dummy_buff) 
-#define TP_OAK_RXLEV_SUB		(*(volatile UInt16 *)dummy_buff) 
+#define TP_L1S_ACTION			(*(volatile UInt16 *)dummy_buff)
+#define TP_OAK_RXQUAL_FULL		(*(volatile UInt16 *)dummy_buff)
+#define TP_OAK_RXQUAL_SUB		(*(volatile UInt16 *)dummy_buff)
+#define TP_OAK_RXLEV_FULL		(*(volatile UInt16 *)dummy_buff)
+#define TP_OAK_RXLEV_SUB		(*(volatile UInt16 *)dummy_buff)
 
-#define TP_FRAME_STATE			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SWEEP_SIZE			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SWEEP_CNT			(*(volatile UInt16 *)dummy_buff) 
-#define TP_L1_RX_MSG            (*(volatile UInt16 *)dummy_buff) 
+#define TP_FRAME_STATE			(*(volatile UInt16 *)dummy_buff)
+#define TP_SWEEP_SIZE			(*(volatile UInt16 *)dummy_buff)
+#define TP_SWEEP_CNT			(*(volatile UInt16 *)dummy_buff)
+#define TP_L1_RX_MSG            (*(volatile UInt16 *)dummy_buff)
 
-#define TP_READ_BUFF			(*(volatile UInt16 *)dummy_buff) 
-#define TP_RX_BUFF_BFI			(*(volatile UInt16 *)dummy_buff) 
-#define TP_RX_BUFF_CODE			(*(volatile UInt16 *)dummy_buff) 
-#define TP_RX_BUFF_OTD			(*(volatile UInt16 *)dummy_buff) 
-#define TP_RX_BUFF_INDEX		(*(volatile UInt16 *)dummy_buff) 
-#define TP_RX_BUFF_ADJ			(*(volatile UInt16 *)dummy_buff) 
+#define TP_READ_BUFF			(*(volatile UInt16 *)dummy_buff)
+#define TP_RX_BUFF_BFI			(*(volatile UInt16 *)dummy_buff)
+#define TP_RX_BUFF_CODE			(*(volatile UInt16 *)dummy_buff)
+#define TP_RX_BUFF_OTD			(*(volatile UInt16 *)dummy_buff)
+#define TP_RX_BUFF_INDEX		(*(volatile UInt16 *)dummy_buff)
+#define TP_RX_BUFF_ADJ			(*(volatile UInt16 *)dummy_buff)
 
-#define TP_WRITE_BUFF			(*(volatile UInt16 *)dummy_buff) 
-#define TP_TX_BUFF_INDEX		(*(volatile UInt16 *)dummy_buff) 
-#define TP_TX_BUFF_CODE			(*(volatile UInt16 *)dummy_buff) 
+#define TP_WRITE_BUFF			(*(volatile UInt16 *)dummy_buff)
+#define TP_TX_BUFF_INDEX		(*(volatile UInt16 *)dummy_buff)
+#define TP_TX_BUFF_CODE			(*(volatile UInt16 *)dummy_buff)
 
-#define TP_MAC_GET_BLOCK_TX_SLOT (*(volatile UInt16 *)dummy_buff) 
-#define TP_MAC_GET_BLOCK_FN 	(*(volatile UInt16 *)dummy_buff) 
-#define TP_MAC_GET_BLOCK_TBF_ID (*(volatile UInt16 *)dummy_buff) 
+#define TP_MAC_GET_BLOCK_TX_SLOT (*(volatile UInt16 *)dummy_buff)
+#define TP_MAC_GET_BLOCK_FN 	(*(volatile UInt16 *)dummy_buff)
+#define TP_MAC_GET_BLOCK_TBF_ID (*(volatile UInt16 *)dummy_buff)
 
-#define TP_MAC_ACK_NU_SENT 		(*(volatile UInt16 *)dummy_buff) 
-#define TP_MAC_ACK_FN		 	(*(volatile UInt16 *)dummy_buff) 
+#define TP_MAC_ACK_NU_SENT 		(*(volatile UInt16 *)dummy_buff)
+#define TP_MAC_ACK_FN		 	(*(volatile UInt16 *)dummy_buff)
 
-#define TP_START_PLOT_FRAME		(*(volatile UInt16 *)dummy_buff) 
+#define TP_START_PLOT_FRAME		(*(volatile UInt16 *)dummy_buff)
 
-#define TP_CELLDATA_ID			(*(volatile UInt16 *)dummy_buff) 
-#define TP_CELLDATA_VALID		(*(volatile UInt16 *)dummy_buff) 
-#define TP_CELLDATA_SYNC		(*(volatile UInt16 *)dummy_buff) 
-#define TP_CELLDATA_ARFCN		(*(volatile UInt16 *)dummy_buff) 
-#define TP_CELLDATA_RXLEV		(*(volatile UInt16 *)dummy_buff) 
+#define TP_CELLDATA_ID			(*(volatile UInt16 *)dummy_buff)
+#define TP_CELLDATA_VALID		(*(volatile UInt16 *)dummy_buff)
+#define TP_CELLDATA_SYNC		(*(volatile UInt16 *)dummy_buff)
+#define TP_CELLDATA_ARFCN		(*(volatile UInt16 *)dummy_buff)
+#define TP_CELLDATA_RXLEV		(*(volatile UInt16 *)dummy_buff)
 
-#define TP_SORT_INDEX			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SORT_ARFCN			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SORT_RXLEV			(*(volatile UInt16 *)dummy_buff) 
+#define TP_SORT_INDEX			(*(volatile UInt16 *)dummy_buff)
+#define TP_SORT_ARFCN			(*(volatile UInt16 *)dummy_buff)
+#define TP_SORT_RXLEV			(*(volatile UInt16 *)dummy_buff)
 
-#define TP_MON_ARFCN			(*(volatile UInt16 *)dummy_buff) 			
-#define TP_MON_RXLEV			(*(volatile UInt16 *)dummy_buff) 
+#define TP_MON_ARFCN			(*(volatile UInt16 *)dummy_buff)
+#define TP_MON_RXLEV			(*(volatile UInt16 *)dummy_buff)
 
-#define TP_RX_SLOTS_PATT		(*(volatile UInt16 *)dummy_buff) 
-#define TP_TX_SLOTS_PATT		(*(volatile UInt16 *)dummy_buff) 
-#define TP_FIRST_SLOT			(*(volatile UInt16 *)dummy_buff) 
-#define TP_TCH_MODE 			(*(volatile UInt16 *)dummy_buff) 
-#define TP_CHAN_CFG_IS_HSCSD	(*(volatile UInt16 *)dummy_buff) 
+#define TP_RX_SLOTS_PATT		(*(volatile UInt16 *)dummy_buff)
+#define TP_TX_SLOTS_PATT		(*(volatile UInt16 *)dummy_buff)
+#define TP_FIRST_SLOT			(*(volatile UInt16 *)dummy_buff)
+#define TP_TCH_MODE 			(*(volatile UInt16 *)dummy_buff)
+#define TP_CHAN_CFG_IS_HSCSD	(*(volatile UInt16 *)dummy_buff)
 
-#define TP_ECDC_ENTER			(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_MSR_EVT			(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_MSR_RD			(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_RX_EVT			(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_RPT_DTR			(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_FC				(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_RTS				(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_DTR				(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_T1_ENTER		(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_T1_EXIT			(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_MPX_RPT_EVT		(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_V24_RPT_LSI		(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_V24_EVT_PRC		(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_DROPPED			(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_SENT			(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_BYTES_READ		(*(volatile UInt16 *)dummy_buff) 
+#define TP_ECDC_ENTER			(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_MSR_EVT			(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_MSR_RD			(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_RX_EVT			(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_RPT_DTR			(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_FC				(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_RTS				(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_DTR				(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_T1_ENTER		(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_T1_EXIT			(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_MPX_RPT_EVT		(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_V24_RPT_LSI		(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_V24_EVT_PRC		(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_DROPPED			(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_SENT			(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_BYTES_READ		(*(volatile UInt16 *)dummy_buff)
 #define TP_ECDC_DTE_RD_DATA		(*(volatile UInt8  *)dummy_buff)
-#define TP_ECDC_BYTES_WRITTEN	(*(volatile UInt16 *)dummy_buff) 
+#define TP_ECDC_BYTES_WRITTEN	(*(volatile UInt16 *)dummy_buff)
 #define TP_ECDC_DTE_WR_DATA		(*(volatile UInt8  *)dummy_buff)
-#define TP_ECDC_V24_UPD_DCE_FC	(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_V24_RPT_REM_FC	(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_UPD_DCE_FC		(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_RPT_REM_FC		(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_UPD_DCE_SZ		(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_TX_DATA			(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_RX_DATA			(*(volatile UInt16 *)dummy_buff) 
-#define TP_ECDC_EXIT			(*(volatile UInt16 *)dummy_buff) 
+#define TP_ECDC_V24_UPD_DCE_FC	(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_V24_RPT_REM_FC	(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_UPD_DCE_FC		(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_RPT_REM_FC		(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_UPD_DCE_SZ		(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_TX_DATA			(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_RX_DATA			(*(volatile UInt16 *)dummy_buff)
+#define TP_ECDC_EXIT			(*(volatile UInt16 *)dummy_buff)
 
-#define TP_SIO_RX_CHAR			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SIO_TX_CHAR			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SIO_BRK_CK0			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SIO_BRK_CK1			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SIO_BRK_CK2			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SIO_BRK_CK3			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SIO_BRK_CK4			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SIO_BRK_CK5			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SIO_BRK_CK6			(*(volatile UInt16 *)dummy_buff) 
-#define TP_SIO_BRK_CK7			(*(volatile UInt16 *)dummy_buff) 
+#define TP_SIO_RX_CHAR			(*(volatile UInt16 *)dummy_buff)
+#define TP_SIO_TX_CHAR			(*(volatile UInt16 *)dummy_buff)
+#define TP_SIO_BRK_CK0			(*(volatile UInt16 *)dummy_buff)
+#define TP_SIO_BRK_CK1			(*(volatile UInt16 *)dummy_buff)
+#define TP_SIO_BRK_CK2			(*(volatile UInt16 *)dummy_buff)
+#define TP_SIO_BRK_CK3			(*(volatile UInt16 *)dummy_buff)
+#define TP_SIO_BRK_CK4			(*(volatile UInt16 *)dummy_buff)
+#define TP_SIO_BRK_CK5			(*(volatile UInt16 *)dummy_buff)
+#define TP_SIO_BRK_CK6			(*(volatile UInt16 *)dummy_buff)
+#define TP_SIO_BRK_CK7			(*(volatile UInt16 *)dummy_buff)
 
-#define TP_TX_96_SLOT_NO		(*(volatile UInt16 *)dummy_buff) 
-#define TP_RX_96_SLOT_NO		(*(volatile UInt16 *)dummy_buff) 
-#define TP_TX_96_NT_FRAME		(*(volatile UInt16 *)dummy_buff) 
-#define TP_RX_96_NT_FRAME		(*(volatile UInt16 *)dummy_buff) 
+#define TP_TX_96_SLOT_NO		(*(volatile UInt16 *)dummy_buff)
+#define TP_RX_96_SLOT_NO		(*(volatile UInt16 *)dummy_buff)
+#define TP_TX_96_NT_FRAME		(*(volatile UInt16 *)dummy_buff)
+#define TP_RX_96_NT_FRAME		(*(volatile UInt16 *)dummy_buff)
 
-#define TP_TX_144_SLOT_NO		(*(volatile UInt16 *)dummy_buff) 
-#define TP_RX_144_SLOT_NO		(*(volatile UInt16 *)dummy_buff) 
-#define TP_TX_144_NT_FRAME		(*(volatile UInt16 *)dummy_buff) 
-#define TP_RX_144_NT_FRAME		(*(volatile UInt16 *)dummy_buff) 
+#define TP_TX_144_SLOT_NO		(*(volatile UInt16 *)dummy_buff)
+#define TP_RX_144_SLOT_NO		(*(volatile UInt16 *)dummy_buff)
+#define TP_TX_144_NT_FRAME		(*(volatile UInt16 *)dummy_buff)
+#define TP_RX_144_NT_FRAME		(*(volatile UInt16 *)dummy_buff)
 
-#define TP_SERIAL_TX_SIZE		(*(volatile UInt16 *)dummy_buff) 
+#define TP_SERIAL_TX_SIZE		(*(volatile UInt16 *)dummy_buff)
 
-#define TP_FLW_SIO_RX_CNT		(*(volatile UInt16 *)dummy_buff) 
-#define TP_FLW_SIO_TX_CNT		(*(volatile UInt16 *)dummy_buff) 
+#define TP_FLW_SIO_RX_CNT		(*(volatile UInt16 *)dummy_buff)
+#define TP_FLW_SIO_TX_CNT		(*(volatile UInt16 *)dummy_buff)
 
-#define TP_FLW_MPXRX_RX_CNT		(*(volatile UInt16 *)dummy_buff) 
-#define TP_FLW_MPX_TX_CNT		(*(volatile UInt16 *)dummy_buff) 
+#define TP_FLW_MPXRX_RX_CNT		(*(volatile UInt16 *)dummy_buff)
+#define TP_FLW_MPX_TX_CNT		(*(volatile UInt16 *)dummy_buff)
 
-#define	TP_STACK_OVERFLOW		(*(volatile UInt16 *)dummy_buff) 
+#define	TP_STACK_OVERFLOW		(*(volatile UInt16 *)dummy_buff)
 
-#endif	// end if ifdef WIN32
-
+#endif				// end if ifdef WIN32
 
 #ifndef NULL
 #ifdef __cplusplus
@@ -479,7 +477,6 @@ extern UInt16 dummy_buff[1024];
 #define	BIT30			30
 #define	BIT31			31
 
-
 #define	BIT00_MASK		(1 << BIT00)
 #define	BIT01_MASK		(1 << BIT01)
 #define	BIT02_MASK		(1 << BIT02)
@@ -513,48 +510,45 @@ extern UInt16 dummy_buff[1024];
 #define	BIT30_MASK		(1 << BIT30)
 #define	BIT31_MASK		(1 << BIT31)
 
-
-//_shared_tx_buff: D:82A0	-> 6000540( arm address) 
+//_shared_tx_buff: D:82A0       -> 6000540( arm address) 
 //typedef struct
 //{
-//	volatile UInt16 octets;
-//	volatile UInt16 tx_option;
-//	volatile UInt16 msg[ CONTENTS_SIZE ];	// Two octets per word
+//      volatile UInt16 octets;
+//      volatile UInt16 tx_option;
+//      volatile UInt16 msg[ CONTENTS_SIZE ];   // Two octets per word
 //} TxBuf_t;
 //size = 60 bytes
 //
-//#define CONTENTS_SIZE		28		// # of octets in multislot message
-//#define ENTRY_TXBUF_FACCH		1
-//#define ENTRY_TXBUF_SACCH		2
-//#define ENTRY_TXBUF_SDCCH		3
+//#define CONTENTS_SIZE         28              // # of octets in multislot message
+//#define ENTRY_TXBUF_FACCH             1
+//#define ENTRY_TXBUF_SACCH             2
+//#define ENTRY_TXBUF_SDCCH             3
 //tx sdcch buffer address = 0x540 + 60 *3 = 0x5f4
 //tx FACCH buffer address = 0x540 + 60 = 0x57c 
 //tx DATA buffer address = 0x540 + 60 * 4 = 0x630
 
 //_shared_rx_buff: D:8080, in file D:\hscsd\grip\common\shared.c
 //
-//#define ENTRY_RXBUF_FACCH		1
-//#define ENTRY_RXBUF_SACCH		6
-//#define ENTRY_RXBUF_SDCCH		3
+//#define ENTRY_RXBUF_FACCH             1
+//#define ENTRY_RXBUF_SACCH             6
+//#define ENTRY_RXBUF_SDCCH             3
 //
 //typedef struct
 //{
-//	volatile UInt16 bfi;
-//	volatile UInt16 index;
-//	volatile UInt16 otd;
-//	volatile UInt16 octets;
-//	volatile UInt16 rxlev;
-//	volatile UInt16 coding;
-//	volatile UInt16 msg[ CONTENTS_SIZE ];	// Two octets per word
+//      volatile UInt16 bfi;
+//      volatile UInt16 index;
+//      volatile UInt16 otd;
+//      volatile UInt16 octets;
+//      volatile UInt16 rxlev;
+//      volatile UInt16 coding;
+//      volatile UInt16 msg[ CONTENTS_SIZE ];   // Two octets per word
 //} RxBuf_t;
 // rx sdcch buffer address = 0x100 + 68 * 3 = 0x60001cc
 // 
 // rx FACCH buffer address = 0x100 + 68 = 0x6000144
-// rx DATA buffer address = 0x100 + 68 * 4  = 0x6000210	( actual data starts from 
-
+// rx DATA buffer address = 0x100 + 68 * 4  = 0x6000210 ( actual data starts from 
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif    // _INC_CONSTS_H_
+#endif				// _INC_CONSTS_H_
