@@ -267,3 +267,9 @@ config BCM_RTC_CAL
     ---help---
       Select to build the RTC CAL driver.
 
+config BRCM_SIM_SECURE_ENABLE
+    boolean "Broadcom SIM Secure Enable"
+    depends on BRCM_CHAR_DRIVERS && BCM_MODEM
+    default n
+    ---help---
+    Broadcom SIM Secure Enable
