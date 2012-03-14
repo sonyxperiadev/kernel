@@ -143,8 +143,7 @@ void IPC_TraceApps(IPC_U32 Channel, char *Text, IPC_U32 P1, IPC_U32 P2,
 		    snprintf(OutBuf, MAX_DEBUG_STRING, "\n%s:\t%-20.20s\t%s",
 			     ChannelNames[Channel], Function, Buffer);
 		AT_OutputUnsolicitedStr(OutBuf);	//REMOVE_MPX
-	} else
-	{
+	} else {
 
 		(void)snprintf(Buffer, MAX_DEBUG_STRING, Text, P1, P2, P3, P4);
 
