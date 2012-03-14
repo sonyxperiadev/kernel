@@ -69,9 +69,7 @@
 #include "dwc_otg_dbg.h"
 #include "dwc_otg_driver.h"
 
-
 #include "dwc_otg_hcd.h"
-
 
 /**
  * Gets the endpoint number from a _bEndpointAddress argument. The endpoint is
@@ -151,7 +149,7 @@ static inline dwc_otg_hcd_t *hcd_to_dwc_otg_hcd(struct usb_hcd *hcd)
 }
 
 /** Gets the struct usb_hcd that contains a dwc_otg_hcd_t. */
-static inline struct usb_hcd *dwc_otg_hcd_to_hcd(dwc_otg_hcd_t * dwc_otg_hcd)
+static inline struct usb_hcd *dwc_otg_hcd_to_hcd(dwc_otg_hcd_t *dwc_otg_hcd)
 {
 	return dwc_otg_hcd_get_priv_data(dwc_otg_hcd);
 }
@@ -179,10 +177,10 @@ static int _disconnect(dwc_otg_hcd_t *hcd)
 		if (usb_hcd->self.otg_vbus_off) {
 			DWC_TIMER_SCHEDULE(hcd->conn_timer, TTST_VBOFF);
 			usb_hcd->self.otg_vbus_off = false;
-		}
-		else
+		} else
 #endif
-			DWC_TIMER_SCHEDULE(hcd->conn_timer, hcd->conn_wait_timeout);
+			DWC_TIMER_SCHEDULE(hcd->conn_timer,
+					   hcd->conn_wait_timeout);
 	}
 
 	return 0;
@@ -487,7 +485,7 @@ void hcd_remove(
 #else
 		       struct platform_device *_dev
 #endif
-)
+    )
 {
 #ifdef LM_INTERFACE
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
@@ -522,7 +520,6 @@ void hcd_remove(
 			    __func__);
 		return;
 	}
-
 #ifdef CONFIG_USB_OTG_UTILS
 	if (dwc_otg_hcd->core_if->xceiver->set_host)
 		otg_set_host(dwc_otg_hcd->core_if->xceiver, NULL);
@@ -602,13 +599,13 @@ pipetype = "ISOCHRONOUS"; break; default:
 					     pipetype;}
 		   )) ;
 	DWC_PRINTF("  Speed: %s\n", ( {
-				     char *speed;
-				     switch (urb->dev->speed) {
+				     char *speed; switch (urb->dev->speed) {
 case USB_SPEED_HIGH:
 speed = "HIGH"; break; case USB_SPEED_FULL:
 speed = "FULL"; break; case USB_SPEED_LOW:
 speed = "LOW"; break; default:
-				     speed = "UNKNOWN"; break;}; speed;}
+				     speed = "UNKNOWN"; break; };
+				     speed; }
 		   )) ;
 	DWC_PRINTF("  Max packet size: %d\n",
 		   usb_maxpacket(urb->dev, urb->pipe, usb_pipeout(urb->pipe)));

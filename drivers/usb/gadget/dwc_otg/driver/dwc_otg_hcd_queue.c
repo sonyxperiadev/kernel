@@ -326,8 +326,11 @@ static int periodic_channel_available(dwc_otg_hcd_t *hcd)
 	    && (hcd->periodic_channels < num_channels - 1)) {
 		status = 0;
 	} else {
-		DWC_INFO("%s: Total channels: %d, Periodic: %d, Non-periodic: %d\n", __func__, num_channels, hcd->periodic_channels, hcd->non_periodic_channels);	/*NOTICE*/
-		status = -DWC_E_NO_SPACE;
+		DWC_INFO
+		    ("%s: Total channels: %d, Periodic: %d, Non-periodic: %d\n",
+		     __func__, num_channels, hcd->periodic_channels,
+		     hcd->non_periodic_channels);
+		/*NOTICE*/ status = -DWC_E_NO_SPACE;
 	}
 
 	return status;
@@ -366,8 +369,9 @@ static int check_periodic_bandwidth(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 	}
 
 	if (hcd->periodic_usecs > max_claimed_usecs) {
-		DWC_INFO("%s: already claimed usecs %d, required usecs %d\n", __func__, hcd->periodic_usecs, qh->usecs);	/*NOTICE*/
-		status = -DWC_E_NO_SPACE;
+		DWC_INFO("%s: already claimed usecs %d, required usecs %d\n",
+			 __func__, hcd->periodic_usecs, qh->usecs);
+		/*NOTICE*/ status = -DWC_E_NO_SPACE;
 	}
 
 	return status;
@@ -395,8 +399,10 @@ static int check_max_xfer_size(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 	max_channel_xfer_size = hcd->core_if->core_params->max_transfer_size;
 
 	if (max_xfer_size > max_channel_xfer_size) {
-		DWC_INFO("%s: Periodic xfer length %d > " "max xfer length for channel %d\n", __func__, max_xfer_size, max_channel_xfer_size);	/*NOTICE*/
-		status = -DWC_E_NO_SPACE;
+		DWC_INFO("%s: Periodic xfer length %d > "
+			 "max xfer length for channel %d\n", __func__,
+			 max_xfer_size, max_channel_xfer_size);
+		/*NOTICE*/ status = -DWC_E_NO_SPACE;
 	}
 
 	return status;
@@ -417,14 +423,16 @@ static int schedule_periodic(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 
 	status = periodic_channel_available(hcd);
 	if (status) {
-		DWC_INFO("%s: No host channel available for periodic " "transfer.\n", __func__);	/*NOTICE*/
-		return status;
+		DWC_INFO("%s: No host channel available for periodic "
+			 "transfer.\n", __func__);
+		/*NOTICE*/ return status;
 	}
 
 	status = check_periodic_bandwidth(hcd, qh);
 	if (status) {
-		DWC_INFO("%s: Insufficient periodic bandwidth for " "periodic transfer.\n", __func__);	/*NOTICE*/
-		return status;
+		DWC_INFO("%s: Insufficient periodic bandwidth for "
+			 "periodic transfer.\n", __func__);
+		/*NOTICE*/ return status;
 	}
 
 	status = check_max_xfer_size(hcd, qh);

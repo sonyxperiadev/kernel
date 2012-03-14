@@ -79,8 +79,7 @@ void dwc_otg_hcd_connect_timeout(void *ptr)
 
 #ifdef CONFIG_USB_OTG_UTILS
 	DWC_WORKQ_SCHEDULE(hcd->core_if->wq_otg,
-					   disable_vbus_func,
-					   hcd->core_if, "no_connect");
+			   disable_vbus_func, hcd->core_if, "no_connect");
 #endif
 }
 
@@ -140,7 +139,7 @@ static void dump_channel_info(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 		}
 	}
 }
-#endif				/* DEBUG */
+#endif /* DEBUG */
 
 /**
  * Work queue function for starting the HCD when A-Cable is connected.
@@ -148,7 +147,7 @@ static void dump_channel_info(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
  */
 static void hcd_start_func(void *_vp)
 {
-	dwc_otg_hcd_t *hcd = (dwc_otg_hcd_t *) _vp;
+	dwc_otg_hcd_t *hcd = (dwc_otg_hcd_t *)_vp;
 
 	DWC_DEBUGPL(DBG_HCDV, "%s() %p\n", __func__, hcd);
 	if (hcd)
@@ -188,8 +187,7 @@ static void kill_urbs_in_qh_list(dwc_otg_hcd_t *hcd, dwc_list_link_t *qh_list)
 			qtd = DWC_CIRCLEQ_FIRST(&qh->qtd_list);
 			if (qtd->urb != NULL) {
 				hcd->fops->complete(hcd, qtd->urb->priv,
-						    qtd->urb,
-						    -DWC_E_TIMEOUT);
+						    qtd->urb, -DWC_E_TIMEOUT);
 				dwc_otg_hcd_qtd_remove_and_free(hcd, qtd, qh);
 				/* remove_and_free would change the first in the queue but if it is same then avoid accessing freed element */
 				if (qtd == DWC_CIRCLEQ_FIRST(&qh->qtd_list))
@@ -320,9 +318,10 @@ static int32_t dwc_otg_hcd_disconnect_cb(void *p)
 #ifdef CONFIG_USB_OTG_UTILS
 			if (dwc_otg_hcd->core_if->op_state != B_HOST)
 				DWC_WORKQ_SCHEDULE(dwc_otg_hcd->core_if->wq_otg,
-					   disable_vbus_func,
-					   dwc_otg_hcd->core_if, "disconnect");
-		
+						   disable_vbus_func,
+						   dwc_otg_hcd->core_if,
+						   "disconnect");
+
 #endif
 		}
 		dwc_otg_disable_host_interrupts(dwc_otg_hcd->core_if);
@@ -495,8 +494,7 @@ int dwc_otg_hcd_urb_enqueue(dwc_otg_hcd_t *hcd,
 		return -DWC_E_NO_MEMORY;
 	}
 
-	retval =
-	    dwc_otg_hcd_qtd_add(qtd, hcd, (dwc_otg_qh_t **) ep_handle);
+	retval = dwc_otg_hcd_qtd_add(qtd, hcd, (dwc_otg_qh_t **)ep_handle);
 	if (retval < 0) {
 		DWC_ERROR("DWC OTG HCD URB Enqueue failed adding QTD. "
 			  "Error status %d\n", retval);
@@ -507,7 +505,8 @@ int dwc_otg_hcd_urb_enqueue(dwc_otg_hcd_t *hcd,
 
 	if (hcd->core_if->dma_desc_enable && retval == 0) {
 		dwc_otg_transaction_type_e tr_type;
-		if ((qtd->qh->ep_type == UE_BULK) && !(qtd->urb->flags & URB_GIVEBACK_ASAP)) {
+		if ((qtd->qh->ep_type == UE_BULK)
+		    && !(qtd->urb->flags & URB_GIVEBACK_ASAP)) {
 			/* Do not schedule SG transcations until qtd has URB_GIVEBACK_ASAP set */
 			return 0;
 		}
@@ -522,8 +521,7 @@ int dwc_otg_hcd_urb_enqueue(dwc_otg_hcd_t *hcd,
 	return retval;
 }
 
-int dwc_otg_hcd_urb_dequeue(dwc_otg_hcd_t *hcd,
-			    dwc_otg_hcd_urb_t *dwc_otg_urb)
+int dwc_otg_hcd_urb_dequeue(dwc_otg_hcd_t *hcd, dwc_otg_hcd_urb_t *dwc_otg_urb)
 {
 	dwc_otg_qh_t *qh;
 	dwc_otg_qtd_t *urb_qtd;
@@ -571,10 +569,9 @@ int dwc_otg_hcd_urb_dequeue(dwc_otg_hcd_t *hcd,
 	return 0;
 }
 
-int dwc_otg_hcd_endpoint_disable(dwc_otg_hcd_t *hcd, void *ep_handle,
-				 int retry)
+int dwc_otg_hcd_endpoint_disable(dwc_otg_hcd_t *hcd, void *ep_handle, int retry)
 {
-	dwc_otg_qh_t *qh = (dwc_otg_qh_t *) ep_handle;
+	dwc_otg_qh_t *qh = (dwc_otg_qh_t *)ep_handle;
 	int retval = 0;
 	uint64_t flags;
 
@@ -630,7 +627,7 @@ static dwc_otg_cil_callbacks_t hcd_cil_callbacks = {
  */
 static void reset_tasklet_func(void *data)
 {
-	dwc_otg_hcd_t *dwc_otg_hcd = (dwc_otg_hcd_t *) data;
+	dwc_otg_hcd_t *dwc_otg_hcd = (dwc_otg_hcd_t *)data;
 	dwc_otg_core_if_t *core_if = dwc_otg_hcd->core_if;
 	hprt0_data_t hprt0;
 
@@ -671,8 +668,8 @@ static void qh_list_free(dwc_otg_hcd_t *hcd, dwc_list_link_t *qh_list)
  */
 void dwc_otg_hcd_power_up(void *ptr)
 {
-	gpwrdn_data_t gpwrdn = { .d32 = 0 };
-	dwc_otg_core_if_t *core_if = (dwc_otg_core_if_t *) ptr;
+	gpwrdn_data_t gpwrdn = {.d32 = 0 };
+	dwc_otg_core_if_t *core_if = (dwc_otg_core_if_t *)ptr;
 
 	DWC_PRINTF("%s called\n", __func__);
 
@@ -692,7 +689,7 @@ void dwc_otg_hcd_power_up(void *ptr)
 	dwc_modify_reg32(&core_if->core_global_regs->gpwrdn, gpwrdn.d32, 0);
 	dwc_udelay(10);
 
-	/* Disable power clamps*/
+	/* Disable power clamps */
 	gpwrdn.d32 = 0;
 	gpwrdn.b.pwrdnclmp = 1;
 	dwc_modify_reg32(&core_if->core_global_regs->gpwrdn, gpwrdn.d32, 0);
@@ -780,13 +777,13 @@ static void dwc_otg_hcd_free(dwc_otg_hcd_t *dwc_otg_hcd)
 
 #ifdef DWC_DEV_SRPCAP
 	if (dwc_otg_hcd->core_if->power_down == 2 &&
-		  dwc_otg_hcd->core_if->pwron_timer)
+	    dwc_otg_hcd->core_if->pwron_timer)
 		DWC_TIMER_FREE(dwc_otg_hcd->core_if->pwron_timer);
 #endif
 	dwc_free(dwc_otg_hcd);
 }
 
-int dwc_otg_hcd_init(dwc_otg_hcd_t *hcd, dwc_otg_core_if_t * core_if)
+int dwc_otg_hcd_init(dwc_otg_hcd_t *hcd, dwc_otg_core_if_t *core_if)
 {
 	int retval = 0;
 	int num_channels;
@@ -839,7 +836,8 @@ int dwc_otg_hcd_init(dwc_otg_hcd_t *hcd, dwc_otg_core_if_t * core_if)
 
 	/* Initialize the Connection timeout timer. */
 	hcd->conn_timer = DWC_TIMER_ALLOC("Connection timer",
-					  dwc_otg_hcd_connect_timeout, (void *)hcd);
+					  dwc_otg_hcd_connect_timeout,
+					  (void *)hcd);
 
 	hcd->conn_wait_timeout = T_HOST_VBOFF;
 
@@ -847,9 +845,10 @@ int dwc_otg_hcd_init(dwc_otg_hcd_t *hcd, dwc_otg_core_if_t * core_if)
 	hcd->reset_tasklet = DWC_TASK_ALLOC(reset_tasklet_func, hcd);
 #ifdef DWC_DEV_SRPCAP
 	if (hcd->core_if->power_down == 2) {
-		/* Initialize Power on timer for Host power up in case hibernation*/
+		/* Initialize Power on timer for Host power up in case hibernation */
 		hcd->core_if->pwron_timer = DWC_TIMER_ALLOC("PWRON TIMER",
-									dwc_otg_hcd_power_up, core_if);
+							    dwc_otg_hcd_power_up,
+							    core_if);
 	}
 #endif
 
@@ -983,13 +982,14 @@ static void assign_and_init_hc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 	hc->multi_count = 1;
 
 	if (hcd->core_if->dma_enable) {
-		hc->xfer_buff = (uint8_t *) urb->dma + urb->actual_length;
+		hc->xfer_buff = (uint8_t *)urb->dma + urb->actual_length;
 
 		/* For non-dword aligned case */
-		if (((uint32_t)hc->xfer_buff & 0x3) && !hcd->core_if->dma_desc_enable)
-			ptr = (uint8_t *) urb->buf + urb->actual_length;
+		if (((uint32_t)hc->xfer_buff & 0x3)
+		    && !hcd->core_if->dma_desc_enable)
+			ptr = (uint8_t *)urb->buf + urb->actual_length;
 	} else
-		hc->xfer_buff = (uint8_t *) urb->buf + urb->actual_length;
+		hc->xfer_buff = (uint8_t *)urb->buf + urb->actual_length;
 
 	hc->xfer_len = urb->length - urb->actual_length;
 	hc->xfer_count = 0;
@@ -1004,8 +1004,8 @@ static void assign_and_init_hc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 		hc->xact_pos = qtd->isoc_split_pos;
 		hc->complete_split = qtd->complete_split;
 		hcd->fops->hub_info(hcd, urb->priv, &hub_addr, &port_addr);
-		hc->hub_addr = (uint8_t) hub_addr;
-		hc->port_addr = (uint8_t) port_addr;
+		hc->hub_addr = (uint8_t)hub_addr;
+		hc->port_addr = (uint8_t)port_addr;
 	}
 
 	switch (dwc_otg_hcd_get_pipe_type(&urb->pipe_info)) {
@@ -1018,9 +1018,9 @@ static void assign_and_init_hc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 			hc->ep_is_in = 0;
 			hc->data_pid_start = DWC_OTG_HC_PID_SETUP;
 			if (hcd->core_if->dma_enable)
-				hc->xfer_buff = (uint8_t *) urb->setup_dma;
+				hc->xfer_buff = (uint8_t *)urb->setup_dma;
 			else
-				hc->xfer_buff = (uint8_t *) urb->setup_packet;
+				hc->xfer_buff = (uint8_t *)urb->setup_packet;
 
 			hc->xfer_len = 8;
 			ptr = NULL;
@@ -1048,9 +1048,9 @@ static void assign_and_init_hc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 
 			hc->xfer_len = 0;
 			if (hcd->core_if->dma_enable)
-				hc->xfer_buff = (uint8_t *) hcd->status_buf_dma;
+				hc->xfer_buff = (uint8_t *)hcd->status_buf_dma;
 			else
-				hc->xfer_buff = (uint8_t *) hcd->status_buf;
+				hc->xfer_buff = (uint8_t *)hcd->status_buf;
 
 			ptr = NULL;
 			break;
@@ -1076,9 +1076,9 @@ static void assign_and_init_hc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 			frame_desc->status = 0;
 
 			if (hcd->core_if->dma_enable)
-				hc->xfer_buff = (uint8_t *) urb->dma;
+				hc->xfer_buff = (uint8_t *)urb->dma;
 			else
-				hc->xfer_buff = (uint8_t *) urb->buf;
+				hc->xfer_buff = (uint8_t *)urb->buf;
 
 			hc->xfer_buff +=
 			    frame_desc->offset + qtd->isoc_split_offset;
@@ -1086,10 +1086,13 @@ static void assign_and_init_hc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 			    frame_desc->length - qtd->isoc_split_offset;
 
 			/* For non-dword aligned buffers */
-			if (((uint32_t)hc->xfer_buff & 0x3) && hcd->core_if->dma_enable)
-				ptr = (uint8_t *) urb->buf + frame_desc->offset + qtd->isoc_split_offset;
+			if (((uint32_t)hc->xfer_buff & 0x3)
+			    && hcd->core_if->dma_enable)
+				ptr =
+				    (uint8_t *)urb->buf + frame_desc->offset +
+				    qtd->isoc_split_offset;
 			else
-			    ptr = NULL;
+				ptr = NULL;
 
 			if (hc->xact_pos == DWC_HCSPLIT_XACTPOS_ALL) {
 				if (hc->xfer_len <= 188)
@@ -1112,10 +1115,13 @@ static void assign_and_init_hc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 
 		if (!qh->dw_align_buf) {
 			qh->dw_align_buf = dwc_dma_alloc_atomic(buf_size,
-								&qh->dw_align_buf_dma);
+								&qh->
+								dw_align_buf_dma);
 			if (!qh->dw_align_buf) {
-				DWC_ERROR("%s: Failed to allocate memory to handle "
-					  "non-dword aligned buffer case\n", __func__);
+				DWC_ERROR
+				    ("%s: Failed to allocate memory to handle "
+				     "non-dword aligned buffer case\n",
+				     __func__);
 				return;
 			}
 		}
@@ -1141,7 +1147,6 @@ static void assign_and_init_hc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 	dwc_otg_hc_init(hcd->core_if, hc);
 	hc->qh = qh;
 }
-
 
 /**
  * This function selects transactions from the HCD transfer schedule and
@@ -1217,6 +1222,7 @@ dwc_otg_transaction_type_e dwc_otg_hcd_select_transactions(dwc_otg_hcd_t *hcd)
 
 	return ret_val;
 }
+
 /**
  * Attempts to queue a single transaction request for a host channel
  * associated with either a periodic or non-periodic transfer. This function
@@ -1242,7 +1248,8 @@ static int queue_transaction(dwc_otg_hcd_t *hcd,
 
 	if (hcd->core_if->dma_enable) {
 		if (hcd->core_if->dma_desc_enable) {
-			if (!hc->xfer_started || (hc->ep_type == DWC_OTG_EP_TYPE_ISOC)) {
+			if (!hc->xfer_started
+			    || (hc->ep_type == DWC_OTG_EP_TYPE_ISOC)) {
 				dwc_otg_hcd_start_xfer_ddma(hcd, hc->qh);
 				hc->qh->ping_state = 0;
 			}
@@ -1522,7 +1529,7 @@ static void process_non_periodic_channels(dwc_otg_hcd_t *hcd)
  * periodic, or both).
  */
 void dwc_otg_hcd_queue_transactions(dwc_otg_hcd_t *hcd,
-					   dwc_otg_transaction_type_e tr_type)
+				    dwc_otg_transaction_type_e tr_type)
 {
 #ifdef DEBUG_SOF
 	DWC_DEBUGPL(DBG_HCD, "Queue Transactions\n");
@@ -1624,7 +1631,7 @@ static void do_setup(void)
 		hcchar.b.chdis = 1;
 /*              hcchar.b.chen = 1;*/
 		dwc_write_reg32(&hc_regs->hcchar, hcchar.d32);
-		/*sleep(1);*/
+		/*sleep(1); */
 		dwc_mdelay(1000);
 
 		/* Read GINTSTS */
@@ -1668,7 +1675,7 @@ static void do_setup(void)
 	dwc_write_reg32(&hc_regs->hcchar, hcchar.d32);
 
 	/* Fill FIFO with Setup data for Get Device Descriptor */
-	data_fifo = (uint32_t *) ((char *)global_regs + 0x1000);
+	data_fifo = (uint32_t *)((char *)global_regs + 0x1000);
 	dwc_write_reg32(data_fifo++, 0x01000680);
 	dwc_write_reg32(data_fifo++, 0x00080000);
 
@@ -1678,7 +1685,6 @@ static void do_setup(void)
 	do {
 		gintsts.d32 = dwc_read_reg32(&global_regs->gintsts);
 	} while (gintsts.b.hcintr == 0);
-
 
 	/* Disable HCINTs */
 	dwc_write_reg32(&hc_regs->hcintmsk, 0x0000);
@@ -1757,7 +1763,7 @@ static void do_in_ack(void)
 		hcchar.b.chdis = 1;
 		hcchar.b.chen = 1;
 		dwc_write_reg32(&hc_regs->hcchar, hcchar.d32);
-		/*sleep(1);*/
+		/*sleep(1); */
 		dwc_mdelay(1000);
 
 		/* Read GINTSTS */
@@ -1807,7 +1813,6 @@ static void do_in_ack(void)
 		gintsts.d32 = dwc_read_reg32(&global_regs->gintsts);
 	} while (gintsts.b.rxstsqlvl == 0);
 
-
 	/* Read RXSTS */
 	grxsts.d32 = dwc_read_reg32(&global_regs->grxstsp);
 
@@ -1823,7 +1828,7 @@ static void do_in_ack(void)
 			int i;
 			int word_count = (grxsts.b.bcnt + 3) / 4;
 
-			data_fifo = (uint32_t *) ((char *)global_regs + 0x1000);
+			data_fifo = (uint32_t *)((char *)global_regs + 0x1000);
 
 			for (i = 0; i < word_count; i++)
 				(void)dwc_read_reg32(data_fifo++);
@@ -1841,7 +1846,6 @@ static void do_in_ack(void)
 	do {
 		gintsts.d32 = dwc_read_reg32(&global_regs->gintsts);
 	} while (gintsts.b.rxstsqlvl == 0);
-
 
 	/* Read RXSTS */
 	grxsts.d32 = dwc_read_reg32(&global_regs->grxstsp);
@@ -1865,7 +1869,6 @@ static void do_in_ack(void)
 	do {
 		gintsts.d32 = dwc_read_reg32(&global_regs->gintsts);
 	} while (gintsts.b.hcintr == 0);
-
 
 	/* Read HAINT */
 	haint.d32 = dwc_read_reg32(&hc_global_regs->haint);
@@ -1923,7 +1926,7 @@ static void do_in_ack(void)
 		hcchar.b.chdis = 1;
 		hcchar.b.chen = 1;
 		dwc_write_reg32(&hc_regs->hcchar, hcchar.d32);
-		/*sleep(1);*/
+		/*sleep(1); */
 		dwc_mdelay(1000);
 
 		/* Read GINTSTS */
@@ -1972,7 +1975,6 @@ static void do_in_ack(void)
 	do {
 		gintsts.d32 = dwc_read_reg32(&global_regs->gintsts);
 	} while (gintsts.b.hcintr == 0);
-
 
 	/* Disable HCINTs */
 	dwc_write_reg32(&hc_regs->hcintmsk, 0x0000);
@@ -2053,19 +2055,21 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 				    "ClearPortFeature USB_PORT_FEAT_SUSPEND\n");
 
 			if (core_if->power_down == 2) {
-				dwc_otg_host_hibernation_restore(core_if,0, 0);
-			} else{
+				dwc_otg_host_hibernation_restore(core_if, 0, 0);
+			} else {
 				dwc_write_reg32(core_if->pcgcctl, 0);
 				dwc_mdelay(5);
 
 				hprt0.d32 = dwc_otg_read_hprt0(core_if);
 				hprt0.b.prtres = 1;
-				dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
+				dwc_write_reg32(core_if->host_if->hprt0,
+						hprt0.d32);
 				hprt0.b.prtsusp = 0;
 				/* Clear Resume bit */
 				dwc_mdelay(100);
 				hprt0.b.prtres = 0;
-				dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
+				dwc_write_reg32(core_if->host_if->hprt0,
+						hprt0.d32);
 			}
 			break;
 #ifdef CONFIG_USB_DWC_OTG_LPM
@@ -2252,11 +2256,12 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 			port_status |= (1 << UHF_PORT_L1);
 
 		/*
-			For Synopsys HW emulation of Power down wkup_control asserts the hreset_n and prst_n
-			on suspned. This causes the HPRT0 to be zero. We intentionally tell the software that
-			Port is in L2Suspend state. Only for STE
-		*/
-		if ((core_if->power_down == 2) && (core_if->hibernation_suspend == 1))
+		   For Synopsys HW emulation of Power down wkup_control asserts the hreset_n and prst_n
+		   on suspned. This causes the HPRT0 to be zero. We intentionally tell the software that
+		   Port is in L2Suspend state. Only for STE
+		 */
+		if ((core_if->power_down == 2)
+		    && (core_if->hibernation_suspend == 1))
 			port_status |= (1 << UHF_PORT_SUSPEND);
 
 		/* USB_PORT_FEAT_INDICATOR unsupported always 0 */
@@ -2298,9 +2303,11 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 				gpwrdn_data_t gpwrdn = {.d32 = 0 };
 				gusbcfg_data_t gusbcfg = {.d32 = 0 };
 #ifdef DWC_DEV_SRPCAP
-				int32_t otg_cap_param = core_if->core_params->otg_cap;
+				int32_t otg_cap_param =
+				    core_if->core_params->otg_cap;
 #endif
-				DWC_PRINTF("Preparing for complete power-off\n");
+				DWC_PRINTF
+				    ("Preparing for complete power-off\n");
 
 				/* Save registers before hibernation */
 				dwc_otg_save_global_regs(core_if);
@@ -2309,7 +2316,8 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 				hprt0.d32 = dwc_otg_read_hprt0(core_if);
 				hprt0.b.prtsusp = 1;
 				hprt0.b.prtena = 0;
-				dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
+				dwc_write_reg32(core_if->host_if->hprt0,
+						hprt0.d32);
 				/* Spin hprt0.b.prtsusp to became 1 */
 				do {
 					hprt0.d32 = dwc_otg_read_hprt0(core_if);
@@ -2333,35 +2341,46 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 				hprt0.d32 = dwc_otg_read_hprt0(core_if);
 				hprt0.b.prtpwr = 0;
 				hprt0.b.prtena = 0;
-				dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
+				dwc_write_reg32(core_if->host_if->hprt0,
+						hprt0.d32);
 #endif
-				gusbcfg.d32 = dwc_read_reg32(&core_if->core_global_regs->gusbcfg);
+				gusbcfg.d32 =
+				    dwc_read_reg32(&core_if->core_global_regs->
+						   gusbcfg);
 				if (gusbcfg.b.ulpi_utmi_sel == 1) {
 					/* ULPI interface */
 					/* Suspend the Phy Clock */
 					pcgcctl.d32 = 0;
 					pcgcctl.b.stoppclk = 1;
-					dwc_modify_reg32(core_if->pcgcctl, 0, pcgcctl.d32);
+					dwc_modify_reg32(core_if->pcgcctl, 0,
+							 pcgcctl.d32);
 					dwc_udelay(10);
 					gpwrdn.b.pmuactv = 1;
-					dwc_modify_reg32(&core_if->core_global_regs->gpwrdn, 0, gpwrdn.d32);
+					dwc_modify_reg32(&core_if->
+							 core_global_regs->
+							 gpwrdn, 0, gpwrdn.d32);
 				} else {
 					/* UTMI+ Interface */
 					gpwrdn.b.pmuactv = 1;
-					dwc_modify_reg32(&core_if->core_global_regs->gpwrdn, 0, gpwrdn.d32);
+					dwc_modify_reg32(&core_if->
+							 core_global_regs->
+							 gpwrdn, 0, gpwrdn.d32);
 					dwc_udelay(10);
 					pcgcctl.b.stoppclk = 1;
-					dwc_modify_reg32(core_if->pcgcctl, 0, pcgcctl.d32);
+					dwc_modify_reg32(core_if->pcgcctl, 0,
+							 pcgcctl.d32);
 					dwc_udelay(10);
 				}
 #ifdef DWC_DEV_SRPCAP
 				gpwrdn.d32 = 0;
 				gpwrdn.b.dis_vbus = 1;
-				dwc_modify_reg32(&core_if->core_global_regs->gpwrdn, 0, gpwrdn.d32);
+				dwc_modify_reg32(&core_if->core_global_regs->
+						 gpwrdn, 0, gpwrdn.d32);
 #endif
 				gpwrdn.d32 = 0;
 				gpwrdn.b.pmuintsel = 1;
-				dwc_modify_reg32(&core_if->core_global_regs->gpwrdn, 0, gpwrdn.d32);
+				dwc_modify_reg32(&core_if->core_global_regs->
+						 gpwrdn, 0, gpwrdn.d32);
 				dwc_udelay(10);
 
 				gpwrdn.d32 = 0;
@@ -2371,36 +2390,43 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 				gpwrdn.b.disconn_det_msk = 1;
 				gpwrdn.b.lnstchng_msk = 1;
 				gpwrdn.b.sts_chngint_msk = 1;
-				dwc_modify_reg32(&core_if->core_global_regs->gpwrdn, 0, gpwrdn.d32);
+				dwc_modify_reg32(&core_if->core_global_regs->
+						 gpwrdn, 0, gpwrdn.d32);
 				dwc_udelay(10);
 
 				/* Enable Power Down Clamp and all interrupts in GPWRDN */
 				gpwrdn.d32 = 0;
 				gpwrdn.b.pwrdnclmp = 1;
-				dwc_modify_reg32(&core_if->core_global_regs->gpwrdn,0,gpwrdn.d32);
+				dwc_modify_reg32(&core_if->core_global_regs->
+						 gpwrdn, 0, gpwrdn.d32);
 				dwc_udelay(10);
 
 				/* Switch off VDD */
 				gpwrdn.d32 = 0;
 				gpwrdn.b.pwrdnswtch = 1;
-				dwc_modify_reg32(&core_if->core_global_regs->gpwrdn, 0, gpwrdn.d32);
+				dwc_modify_reg32(&core_if->core_global_regs->
+						 gpwrdn, 0, gpwrdn.d32);
 
 #ifdef DWC_DEV_SRPCAP
-				if (otg_cap_param == DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE) {
+				if (otg_cap_param ==
+				    DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE) {
 					core_if->pwron_timer_started = 1;
-					DWC_TIMER_SCHEDULE(core_if->pwron_timer, 6000 /* 6 secs */);
+					DWC_TIMER_SCHEDULE(core_if->pwron_timer,
+							   6000); /* 6 secs */
 				}
 #endif
-				/* Save gpwrdn register for further usage if stschng interrupt*/
+				/* Save gpwrdn register for further usage if stschng interrupt */
 				core_if->gr_backup->gpwrdn_local =
-						dwc_read_reg32(&core_if->core_global_regs->gpwrdn);
+				    dwc_read_reg32(&core_if->core_global_regs->
+						   gpwrdn);
 
-				/* Set flag to indicate that we are in hibernation*/
+				/* Set flag to indicate that we are in hibernation */
 				core_if->hibernation_suspend = 1;
-				DWC_SPINUNLOCK_IRQRESTORE(dwc_otg_hcd->lock,flags);
+				DWC_SPINUNLOCK_IRQRESTORE(dwc_otg_hcd->lock,
+							  flags);
 
 				DWC_PRINTF("Host hibernation completed\n");
-				/* Exit from case statement*/
+				/* Exit from case statement */
 				break;
 
 			}
@@ -2420,7 +2446,8 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 				/* Update lx_state */
 				DWC_SPINLOCK_IRQSAVE(dwc_otg_hcd->lock, &flags);
 				core_if->lx_state = DWC_OTG_L2;
-				DWC_SPINUNLOCK_IRQRESTORE(dwc_otg_hcd->lock, flags);
+				DWC_SPINUNLOCK_IRQRESTORE(dwc_otg_hcd->lock,
+							  flags);
 			}
 			/* Suspend the Phy Clock */
 			if (core_if->stop_phy_clk) {
@@ -2436,27 +2463,34 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 
 			/** sw can wait for 1 sec to check asesvld */
 			if (core_if->adp_enable) {
-				gotgctl_data_t gotgctl = { .d32 = 0 };
+				gotgctl_data_t gotgctl = {.d32 = 0 };
 				gpwrdn_data_t gpwrdn;
-				unsigned int asessvld_count = 10; /* Following loop is using 100ms delay. Terminate if sessvld ==1 even after 10 iterations */
+				unsigned int asessvld_count = 10;	/* Following loop is using 100ms delay. Terminate if sessvld ==1 even after 10 iterations */
 
 				do {
-					gotgctl.d32 = dwc_read_reg32(&core_if->core_global_regs->gotgctl);
+					gotgctl.d32 =
+					    dwc_read_reg32(&core_if->
+							   core_global_regs->
+							   gotgctl);
 					dwc_mdelay(100);
-				} while ((gotgctl.b.asesvld == 1) && asessvld_count--);
+				} while ((gotgctl.b.asesvld == 1)
+					 && asessvld_count--);
 
 				if (gotgctl.b.asesvld == 1)
-					DWC_PRINTF("A session is still valid before starting ADP probe\n");
+					DWC_PRINTF
+					    ("A session is still valid before starting ADP probe\n");
 
 				/* Enable Power Down Logic */
 				gpwrdn.d32 = 0;
 				gpwrdn.b.pmuactv = 1;
-				dwc_modify_reg32(&core_if->core_global_regs->gpwrdn, 0, gpwrdn.d32);
+				dwc_modify_reg32(&core_if->core_global_regs->
+						 gpwrdn, 0, gpwrdn.d32);
 
 				/* Unmask SRP detected interrupt from Power Down Logic */
 				gpwrdn.d32 = 0;
 				gpwrdn.b.srp_det_msk = 1;
-				dwc_modify_reg32(&core_if->core_global_regs->gpwrdn, 0, gpwrdn.d32);
+				dwc_modify_reg32(&core_if->core_global_regs->
+						 gpwrdn, 0, gpwrdn.d32);
 
 				dwc_otg_adp_probe_start(core_if);
 			}
@@ -2475,36 +2509,41 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 #endif
 			break;
 		case UHF_PORT_RESET:
-			if ((core_if->power_down == 2) && (core_if->hibernation_suspend == 1)) {
+			if ((core_if->power_down == 2)
+			    && (core_if->hibernation_suspend == 1)) {
 				/* If we are going to exit from Hibernated
 				 * state via USB RESET.
 				 */
-				dwc_otg_host_hibernation_restore(core_if,0, 1);
+				dwc_otg_host_hibernation_restore(core_if, 0, 1);
 			} else {
 				hprt0.d32 = dwc_otg_read_hprt0(core_if);
 
-				DWC_DEBUGPL(DBG_HCD, "DWC OTG HCD HUB CONTROL - "
-						"SetPortFeature - USB_PORT_FEAT_RESET\n");
+				DWC_DEBUGPL(DBG_HCD,
+					    "DWC OTG HCD HUB CONTROL - "
+					    "SetPortFeature - USB_PORT_FEAT_RESET\n");
 				{
 					pcgcctl_data_t pcgcctl = {.d32 = 0 };
 					pcgcctl.b.enbl_sleep_gating = 1;
 					pcgcctl.b.stoppclk = 1;
-					dwc_modify_reg32(core_if->pcgcctl, pcgcctl.d32,
-							 0);
+					dwc_modify_reg32(core_if->pcgcctl,
+							 pcgcctl.d32, 0);
 					dwc_write_reg32(core_if->pcgcctl, 0);
 				}
 #ifdef CONFIG_USB_DWC_OTG_LPM
 				{
 					glpmcfg_data_t lpmcfg;
 					lpmcfg.d32 =
-						dwc_read_reg32(&core_if->core_global_regs->
+					    dwc_read_reg32(&core_if->
+							   core_global_regs->
 							   glpmcfg);
 					if (lpmcfg.b.prt_sleep_sts) {
 						lpmcfg.b.en_utmi_sleep = 0;
-						lpmcfg.b.hird_thres &= (~(1 << 4));
+						lpmcfg.b.hird_thres &=
+						    (~(1 << 4));
 						dwc_write_reg32(&core_if->
 								core_global_regs->
-								glpmcfg, lpmcfg.d32);
+								glpmcfg,
+								lpmcfg.d32);
 						dwc_mdelay(1);
 					}
 				}
@@ -2519,14 +2558,17 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 				if (!dwc_otg_hcd_is_b_host(dwc_otg_hcd)) {
 					hprt0.b.prtpwr = 1;
 					hprt0.b.prtrst = 1;
-					DWC_PRINTF("Indeed it is in host mode hprt0 = %08x\n",hprt0.d32);
+					DWC_PRINTF
+					    ("Indeed it is in host mode hprt0 = %08x\n",
+					     hprt0.d32);
 					dwc_write_reg32(core_if->host_if->hprt0,
 							hprt0.d32);
 				}
 				/* Clear reset bit in 10ms (FS/LS) or 50ms (HS) */
 				dwc_mdelay(60);
 				hprt0.b.prtrst = 0;
-				dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
+				dwc_write_reg32(core_if->host_if->hprt0,
+						hprt0.d32);
 				core_if->lx_state = DWC_OTG_L0;	/* Now back to the on state */
 			}
 			break;
@@ -2554,13 +2596,12 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 					global_regs = core_if->core_global_regs;
 					hc_global_regs =
 					    core_if->host_if->host_global_regs;
-					hc_regs =
-					    (dwc_otg_hc_regs_t *) ((char *)
-								   global_regs +
-								   0x500);
+					hc_regs = (dwc_otg_hc_regs_t *)((char *)
+									global_regs +
+									0x500);
 					data_fifo =
-					    (uint32_t *) ((char *)global_regs +
-							  0x1000);
+					    (uint32_t *)((char *)global_regs +
+							 0x1000);
 
 					if (t == 6) {	/* HS_HOST_PORT_SUSPEND_RESUME */
 						/* Save current interrupt mask */
@@ -2666,15 +2707,18 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 #ifdef CONFIG_USB_OTG
 					else if (t == 16) {
 #ifdef CONFIG_USB_OTG_UTILS
-						if (core_if->xceiver->set_delayed_adp)
-							core_if->xceiver->set_delayed_adp(core_if->xceiver);
+						if (core_if->xceiver->
+						    set_delayed_adp)
+							core_if->xceiver->
+							    set_delayed_adp
+							    (core_if->xceiver);
 #endif
 					}
 #endif
 				}
 				break;
 			}
-#endif				/* DWC_HS_ELECT_TST */
+#endif /* DWC_HS_ELECT_TST */
 
 		case UHF_PORT_INDICATOR:
 			DWC_DEBUGPL(DBG_HCD, "DWC OTG HCD HUB CONTROL - "
@@ -2791,8 +2835,8 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 
 			break;
 		}
-#endif				/* CONFIG_USB_DWC_OTG_LPM */
-default:
+#endif /* CONFIG_USB_DWC_OTG_LPM */
+	default:
 error:
 		retval = -DWC_E_INVALID;
 		DWC_WARN("DWC OTG HCD - "
@@ -2892,7 +2936,7 @@ int dwc_otg_hcd_send_lpm(dwc_otg_hcd_t *hcd, uint8_t devaddr, uint8_t hird,
 	return 0;
 }
 
-#endif				/* CONFIG_USB_DWC_OTG_LPM */
+#endif /* CONFIG_USB_DWC_OTG_LPM */
 
 int dwc_otg_hcd_is_status_changed(dwc_otg_hcd_t *hcd, int port)
 {
@@ -2938,8 +2982,7 @@ int dwc_otg_hcd_get_frame_number(dwc_otg_hcd_t *dwc_otg_hcd)
 	return hfnum.b.frnum;
 }
 
-int dwc_otg_hcd_start(dwc_otg_hcd_t *hcd,
-		      struct dwc_otg_hcd_function_ops *fops)
+int dwc_otg_hcd_start(dwc_otg_hcd_t *hcd, struct dwc_otg_hcd_function_ops *fops)
 {
 	int retval = 0;
 
@@ -3056,8 +3099,8 @@ uint32_t dwc_otg_hcd_urb_get_iso_desc_status(dwc_otg_hcd_urb_t *dwc_otg_urb,
 	return dwc_otg_urb->iso_descs[desc_num].status;
 }
 
-uint32_t dwc_otg_hcd_urb_get_iso_desc_actual_length(dwc_otg_hcd_urb_t *
-						    dwc_otg_urb, int desc_num)
+uint32_t dwc_otg_hcd_urb_get_iso_desc_actual_length(dwc_otg_hcd_urb_t
+						    *dwc_otg_urb, int desc_num)
 {
 	return dwc_otg_urb->iso_descs[desc_num].actual_length;
 }
@@ -3065,7 +3108,7 @@ uint32_t dwc_otg_hcd_urb_get_iso_desc_actual_length(dwc_otg_hcd_urb_t *
 int dwc_otg_hcd_is_bandwidth_allocated(dwc_otg_hcd_t *hcd, void *ep_handle)
 {
 	int allocated = 0;
-	dwc_otg_qh_t *qh = (dwc_otg_qh_t *) ep_handle;
+	dwc_otg_qh_t *qh = (dwc_otg_qh_t *)ep_handle;
 
 	if (qh) {
 		if (!DWC_LIST_EMPTY(&qh->qh_list_entry))
@@ -3076,7 +3119,7 @@ int dwc_otg_hcd_is_bandwidth_allocated(dwc_otg_hcd_t *hcd, void *ep_handle)
 
 int dwc_otg_hcd_is_bandwidth_freed(dwc_otg_hcd_t *hcd, void *ep_handle)
 {
-	dwc_otg_qh_t *qh = (dwc_otg_qh_t *) ep_handle;
+	dwc_otg_qh_t *qh = (dwc_otg_qh_t *)ep_handle;
 	int freed = 0;
 	DWC_ASSERT(qh, "qh is not allocated\n");
 
@@ -3088,7 +3131,7 @@ int dwc_otg_hcd_is_bandwidth_freed(dwc_otg_hcd_t *hcd, void *ep_handle)
 
 uint8_t dwc_otg_hcd_get_ep_bandwidth(dwc_otg_hcd_t *hcd, void *ep_handle)
 {
-	dwc_otg_qh_t *qh = (dwc_otg_qh_t *) ep_handle;
+	dwc_otg_qh_t *qh = (dwc_otg_qh_t *)ep_handle;
 	DWC_ASSERT(qh, "qh is not allocated\n");
 	return qh->usecs;
 }
@@ -3162,36 +3205,41 @@ void dwc_otg_hcd_dump_state(dwc_otg_hcd_t *hcd)
 			dwc_otg_qtd_t *qtd;
 			dwc_otg_hcd_urb_t *urb;
 
-			DWC_CIRCLEQ_FOREACH(qtd, &hc->qh->qtd_list, qtd_list_entry) {
+			DWC_CIRCLEQ_FOREACH(qtd, &hc->qh->qtd_list,
+					    qtd_list_entry) {
 				if (!qtd->in_process)
 					break;
 
 				urb = qtd->urb;
-			DWC_PRINTF("    URB Info:\n");
-			DWC_PRINTF("      qtd: %p, urb: %p\n", qtd, urb);
-			if (urb) {
-				DWC_PRINTF("      Dev: %d, EP: %d %s\n",
-					   dwc_otg_hcd_get_dev_addr(&urb->
-								    pipe_info),
-					   dwc_otg_hcd_get_ep_num(&urb->
-								  pipe_info),
-					   dwc_otg_hcd_is_pipe_in(&urb->
-								  pipe_info) ?
-					   "IN" : "OUT");
-				DWC_PRINTF("      Max packet size: %d\n",
-					   dwc_otg_hcd_get_mps(&urb->
-							       pipe_info));
-				DWC_PRINTF("      transfer_buffer: %p\n",
-					   urb->buf);
-				DWC_PRINTF("      transfer_dma: %p\n",
-					   (void *)urb->dma);
-				DWC_PRINTF("      transfer_buffer_length: %d\n",
-					   urb->length);
-				DWC_PRINTF("      actual_length: %d\n",
-					   urb->actual_length);
+				DWC_PRINTF("    URB Info:\n");
+				DWC_PRINTF("      qtd: %p, urb: %p\n", qtd,
+					   urb);
+				if (urb) {
+					DWC_PRINTF("      Dev: %d, EP: %d %s\n",
+						   dwc_otg_hcd_get_dev_addr
+						   (&urb->pipe_info),
+						   dwc_otg_hcd_get_ep_num(&urb->
+									  pipe_info),
+						   dwc_otg_hcd_is_pipe_in(&urb->
+									  pipe_info)
+						   ? "IN" : "OUT");
+					DWC_PRINTF
+					    ("      Max packet size: %d\n",
+					     dwc_otg_hcd_get_mps(&urb->
+								 pipe_info));
+					DWC_PRINTF
+					    ("      transfer_buffer: %p\n",
+					     urb->buf);
+					DWC_PRINTF("      transfer_dma: %p\n",
+						   (void *)urb->dma);
+					DWC_PRINTF
+					    ("      transfer_buffer_length: %d\n",
+					     urb->length);
+					DWC_PRINTF("      actual_length: %d\n",
+						   urb->actual_length);
+				}
 			}
 		}
-	}
 	}
 	DWC_PRINTF("  non_periodic_channels: %d\n", hcd->non_periodic_channels);
 	DWC_PRINTF("  periodic_channels: %d\n", hcd->periodic_channels);
@@ -3262,9 +3310,9 @@ void dwc_print_setup_data(uint8_t *setup)
 			break;
 		}
 		DWC_PRINTF("  bRequest = 0x%0x\n", setup[1]);
-		DWC_PRINTF("  wValue = 0x%0x\n", *((uint16_t *) & setup[2]));
-		DWC_PRINTF("  wIndex = 0x%0x\n", *((uint16_t *) & setup[4]));
-		DWC_PRINTF("  wLength = 0x%0x\n\n", *((uint16_t *) & setup[6]));
+		DWC_PRINTF("  wValue = 0x%0x\n", *((uint16_t *)&setup[2]));
+		DWC_PRINTF("  wIndex = 0x%0x\n", *((uint16_t *)&setup[4]));
+		DWC_PRINTF("  wLength = 0x%0x\n\n", *((uint16_t *)&setup[6]));
 	}
 }
 #endif
@@ -3339,4 +3387,4 @@ void dwc_otg_hcd_dump_frrem(dwc_otg_hcd_t *hcd)
 #endif
 }
 
-#endif				/* DWC_DEVICE_ONLY */
+#endif /* DWC_DEVICE_ONLY */

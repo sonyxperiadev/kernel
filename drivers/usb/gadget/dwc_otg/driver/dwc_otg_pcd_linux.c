@@ -180,7 +180,7 @@ static int ep_enable(struct usb_ep *usb_ep,
 
 	/* Delete after check - MAS */
 #if 0
-	nat = (uint32_t) ep_desc->wMaxPacketSize;
+	nat = (uint32_t)ep_desc->wMaxPacketSize;
 	pr_alert("%s: nat (before) =%d\n", __func__, nat);
 	nat = (nat >> 11) & 0x03;
 	pr_alert("%s: nat (after) =%d\n", __func__, nat);
@@ -705,10 +705,9 @@ static int vbus_draw(struct usb_gadget *gadget, unsigned int mA)
 
 	/* Schedule a work item to set the max current to draw on Vbus */
 	DWC_WORKQ_SCHEDULE(d->pcd->core_if->wq_otg, w_vbus_draw,
-				   d->pcd->core_if, "set max vbus current draw");
+			   d->pcd->core_if, "set max vbus current draw");
 	return 0;
 }
-
 
 /**
  * Controls pullup which lets the host detect that a USB device is attached.
@@ -800,7 +799,7 @@ static const struct usb_gadget_ops dwc_otg_pcd_ops = {
 	.set_selfpowered = set_selfpowered,
 };
 
-static int _setup(dwc_otg_pcd_t *pcd, uint8_t * bytes)
+static int _setup(dwc_otg_pcd_t *pcd, uint8_t *bytes)
 {
 	int retval = -DWC_E_NOT_SUPPORTED;
 	if (gadget_wrapper->driver && gadget_wrapper->driver->setup) {
@@ -1221,7 +1220,7 @@ static struct gadget_wrapper *alloc_wrapper(
 #else
 						   struct platform_device *_dev
 #endif
-)
+    )
 {
 	static char pcd_name[] = "dwc_otg_pcd";
 
@@ -1293,7 +1292,7 @@ int pcd_init(
 #else
 		    struct platform_device *_dev
 #endif
-)
+    )
 {
 #ifdef LM_INTERFACE
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
@@ -1397,7 +1396,7 @@ void pcd_remove(
  */
 int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 {
-	/*DWC_DEBUGPL(DBG_PCDV,"%s(%p)\n", __func__, _driver);*/
+	/*DWC_DEBUGPL(DBG_PCDV,"%s(%p)\n", __func__, _driver); */
 
 	if (gadget_wrapper == 0) {
 		DWC_DEBUGPL(DBG_ANY, "%s Return(%d): s_pcd==0\n", __func__,
@@ -1423,8 +1422,9 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	driver->unbind(&gadget_wrapper->gadget);
 
 	/* Schedule a work item to shutdown the core */
-	DWC_WORKQ_SCHEDULE(gadget_wrapper->pcd->core_if->wq_otg, w_shutdown_core,
-				   gadget_wrapper->pcd->core_if, "Shutdown core");
+	DWC_WORKQ_SCHEDULE(gadget_wrapper->pcd->core_if->wq_otg,
+			   w_shutdown_core, gadget_wrapper->pcd->core_if,
+			   "Shutdown core");
 	gadget_wrapper->gadget.dev.driver = NULL;
 	gadget_wrapper->driver = 0;
 
@@ -1478,11 +1478,11 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	if (!(gadget_wrapper->pcd->core_if->xceiver->default_a))
 #else
 	if (!(gadget_wrapper->pcd->core_if->xceiver->default_a) &&
-		!(gadget_wrapper->pcd->core_if->core_params->otg_supp_enable))
+	    !(gadget_wrapper->pcd->core_if->core_params->otg_supp_enable))
 #endif
 	{
 		/* Init the core */
-		w_init_core((void*)gadget_wrapper->pcd->core_if);
+		w_init_core((void *)gadget_wrapper->pcd->core_if);
 	}
 #endif /* CONFIG_USB_OTG_UTILS */
 
