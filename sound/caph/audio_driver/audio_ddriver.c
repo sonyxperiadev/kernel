@@ -44,7 +44,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "csl_audio_capture.h"
 #include "csl_arm2sp.h"
 #include "csl_vpu.h"
-#include "dspcmd.h"
+
 #include "csl_voip.h"
 #include "csl_voif.h"
 #include "csl_caph_hwctrl.h"
@@ -70,6 +70,9 @@ Copyright 2009 - 2011  Broadcom Corporation
 #else
 #define START_VOIF				0x1
 #endif
+/* this amout of data will be zeroed out */
+/* make sure not to exceed buffer size */
+#define INIT_CAPTURE_GLITCH_MS  20 /* in ms */
 
 struct _ARM2SP_PLAYBACK_t {
 	CSL_ARM2SP_PLAYBACK_MODE_t playbackMode;
@@ -138,7 +141,6 @@ static Boolean endOfBuffer = FALSE;
 static const UInt16 sVoIPDataLen[] = { 0, 322, 160, 38, 166, 642, 70 };
 static CSL_VP_Mode_AMR_t prev_amr_mode = (CSL_VP_Mode_AMR_t) 0xffff;
 static Boolean telephony_amr_if2;
-static int wait_cnt, waitcnt_thold = 2;
 
 static struct work_struct voip_work;
 static struct workqueue_struct *voip_workqueue; /* init to NULL */
@@ -149,7 +151,7 @@ static Boolean inVoLTECall = FALSE;
 #endif
 static AUDDRV_VOIF_t voifDrv = { 0 };
 static Boolean voif_enabled; /* init to 0 */
-
+static Boolean init_mic_data_zeroed = FALSE;
 /* Private function prototypes */
 
 static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
@@ -951,19 +953,6 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			aud_drv->voicecapt_config.recordMode = *recordMode;
 			audio_capture_driver = aud_drv;
 
-			if (AUDCTRL_InVoiceCall()) {
-				wait_cnt = 100;
-				waitcnt_thold = 2;
-			} else {
-				if (num_frames >= 3)
-					waitcnt_thold = 2;
-				else if (num_frames == 2)
-					waitcnt_thold = 4;
-				else
-					waitcnt_thold = 8;
-				wait_cnt = 0;
-			}
-
 			result_code = VPU_record_start(*recordMode,
 				aud_drv->sample_rate,
 				speech_mode, 0,	/* used by AMRNB and AMRWB */
@@ -979,8 +968,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			result_code = RESULT_OK;
 			index = 1;	/* reset */
 			endOfBuffer = FALSE;
-			wait_cnt = 0;
-
+			init_mic_data_zeroed = FALSE;
 			/* de-init during stop as the android sequence is
 			open->start->stop->start */
 			audio_capture_driver = NULL;
@@ -1558,7 +1546,7 @@ static Boolean VoIP_StopTelephony(void)
 
 	/* Clear voip mode, which block audio processing for voice calls */
 	/* arg0 = 0 to clear VOIPmode */
-	audio_control_dsp(DSPCMD_TYPE_COMMAND_CLEAR_VOIPMODE, 0, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_COMMAND_CLEAR_VOIPMODE, 0, 0, 0, 0, 0);
 	flush_workqueue(voip_workqueue);
 	destroy_workqueue(voip_workqueue);
 
@@ -1754,14 +1742,7 @@ void VPU_Capture_Request(UInt16 buf_index)
 			"VPU_Capture_Request:: Spurious call back\n");
 		return;
 	}
-	/* get rid of HW glitch in VPU recording */
-	if (wait_cnt < waitcnt_thold) {
-		aTrace(LOG_AUDIO_DRIVER,
-			"VPU_Capture_Request:: wait_cnt = %d, thold=%d\n",
-			wait_cnt, waitcnt_thold);
-		wait_cnt++;
-		return;
-	}
+
 	/*aTrace(LOG_AUDIO_DRIVER,
 		"VPU_Capture_Request:: buf_index\n", buf_index);
 	aTrace(LOG_AUDIO_DRIVER, " aud_drv->write_index = %d\n",
@@ -1780,6 +1761,12 @@ void VPU_Capture_Request(UInt16 buf_index)
 	/* update the write index */
 	dest_index += recv_size;
 #endif
+	if (init_mic_data_zeroed == FALSE) {
+		memset(pdest_buf, 0,
+			INIT_CAPTURE_GLITCH_MS * aud_drv->sample_rate
+			* sizeof(UInt16) / 1000);
+		init_mic_data_zeroed = TRUE;
+	}
 	if (dest_index >= aud_drv->ring_buffer_size) {
 		dest_index -= aud_drv->ring_buffer_size;
 		endOfBuffer = TRUE;

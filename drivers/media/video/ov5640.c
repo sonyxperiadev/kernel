@@ -133,6 +133,8 @@ struct ov5640 {
 	int sharpness;
 	int saturation;
 	int antibanding;
+	int whitebalance;
+	int framerate;
 };
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
@@ -143,21 +145,21 @@ static struct ov5640 *to_ov5640(const struct i2c_client *client)
 
 static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 	[OV5640_SIZE_QVGA] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 320,
 			      .v_output_size = 240,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2200,
 			      .v_total_size = 1280,
-            // Sensor Read Binning Enabled
+			/*  Sensor Read Binning Enabled */
 			      .h_odd_ss_inc = 3,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
@@ -167,21 +169,21 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x11,
 			       },
 	[OV5640_SIZE_VGA] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 640,
 			      .v_output_size = 480,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2200,
 			      .v_total_size = 1280,
-            // Sensor Read Binning Enabled
+			/*  Sensor Read Binning Enabled */
 			      .h_odd_ss_inc = 3,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
@@ -191,21 +193,21 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x11,
 			       },
 	[OV5640_SIZE_XGA] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 1024,
 			      .v_output_size = 768,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2200,
 			      .v_total_size = 1280,
-            // Sensor Read Binning Enabled
+			/*  Sensor Read Binning Enabled */
 			      .h_odd_ss_inc = 3,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
@@ -215,21 +217,21 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x11,
 			       },
 	[OV5640_SIZE_720P] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 1280,
 			      .v_output_size = 720,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2200,
 			      .v_total_size = 1280,
-            // Sensor Read Binning Enabled
+			/*  Sensor Read Binning Enabled */
 			      .h_odd_ss_inc = 3,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
@@ -239,21 +241,21 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x11,
 			      },
 	[OV5640_SIZE_1280x960] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 1280,
 			      .v_output_size = 960,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2200,
 			      .v_total_size = 1280,
-            // Sensor Read Binning Enabled
+			/*  Sensor Read Binning Enabled */
 			      .h_odd_ss_inc = 3,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
@@ -263,21 +265,21 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x11,
 			      },
 	[OV5640_SIZE_UXGA] = {
-            // Sensor Timing control  2624 x 1952 --> 1600 x 1200
+			/*  Timing control  2624 x 1952 --> 1600 x 1200 */
 			      .x_addr_start = 512,
 			      .y_addr_start = 376,
 			      .x_addr_end = 2111,
 			      .y_addr_end = 1575,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 1600,
 			      .v_output_size = 1200,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2200,
 			      .v_total_size = 1280,
-            // Sensor Read Binning Disabled
+			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -287,21 +289,21 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x11,
 			      },
 	[OV5640_SIZE_1080P] = {
-            // Sensor Timing control  2624 x 1952 --> 1952 x 1088
+			/*  Timing control  2624 x 1952 --> 1952 x 1088 */
 			      .x_addr_start = 336,
 			      .y_addr_start = 434,
 			      .x_addr_end = 2287,
 			      .y_addr_end = 1521,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 1920,
 			      .v_output_size = 1080,
-            // ISP Windowing size  1952 x 1088 --> 1920 x 1080
+			/*  ISP Windowing size  1952 x 1088 --> 1920 x 1080 */
 			      .isp_h_offset = 16,
 			      .isp_v_offset = 4,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2500,
 			      .v_total_size = 1120,
-            // Sensor Read Binning Disabled
+			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -311,21 +313,21 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x11,
 			       },
 	[OV5640_SIZE_QXGA] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 2048,
 			      .v_output_size = 1536,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Enabled
+			/*  Sensor Read Binning Enabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -335,21 +337,21 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			      },
 	[OV5640_SIZE_5MP] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 2560,
 			      .v_output_size = 1920,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Enabled
+			/*  Sensor Read Binning Enabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -362,21 +364,21 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 
 static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 	[OV5640_SIZE_QVGA] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 320,
 			      .v_output_size = 240,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Disabled
+			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -386,21 +388,21 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_VGA] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 640,
 			      .v_output_size = 480,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Disabled
+			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -410,21 +412,21 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_XGA] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 1024,
 			      .v_output_size = 768,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Disabled
+			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -434,21 +436,21 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_720P] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 1280,
 			      .v_output_size = 720,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Disabled
+			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -458,21 +460,21 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_1280x960] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 1280,
 			      .v_output_size = 960,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Disabled
+			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -482,21 +484,21 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			      },
 	[OV5640_SIZE_UXGA] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 1600,
 			      .v_output_size = 1200,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Disabled
+			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -506,21 +508,21 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_1080P] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 1920,
 			      .v_output_size = 1080,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Disabled
+			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -530,21 +532,21 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_QXGA] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/*  Timing control  2624 x 1952 --> 2560 x 1920  */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/*  Output image size */
 			      .h_output_size = 2048,
 			      .v_output_size = 1536,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Disabled
+			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -554,21 +556,21 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_5MP] = {
-            // Sensor Timing control  2624 x 1952 --> 2560 x 1920
+			/* Timing control  2624 x 1952 --> 2560 x 1920 */
 			      .x_addr_start = 32,
 			      .y_addr_start = 16,
 			      .x_addr_end = 2591,
 			      .y_addr_end = 1935,
-            // Output image size
+			/* Output image size */
 			      .h_output_size = 2560,
 			      .v_output_size = 1920,
-            // ISP Windowing size  2560 x 1920 --> 2560 x 1920
+			/* ISP Windowing size  2560 x 1920 --> 2560 x 1920*/
 			      .isp_h_offset = 0,
 			      .isp_v_offset = 0,
-            // Total size (+blanking)
+			/* Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-            // Sensor Read Binning Disabled
+			/* Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -675,7 +677,7 @@ static int ov5640_reg_read(struct i2c_client *client, u16 reg, u8 *val)
 	*val = data[0];
 	return 0;
 
-      err:
+err:
 	dev_err(&client->dev, "Failed reading register 0x%02x!\n", reg);
 	return ret;
 }
@@ -745,6 +747,25 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .step = 1,
 	 .default_value = ANTI_BANDING_AUTO,
 	 },
+	 {
+	 .id = V4L2_CID_CAMERA_WHITE_BALANCE,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "White Balance",
+	 .minimum = WHITE_BALANCE_AUTO,
+	 .maximum = WHITE_BALANCE_FLUORESCENT,
+	 .step = 1,
+	 .default_value = WHITE_BALANCE_AUTO,
+	 },
+	 {
+	 .id = V4L2_CID_CAMERA_FRAME_RATE,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "Framerate control",
+	 .minimum = FRAME_RATE_AUTO,
+	 .maximum = FRAME_RATE_30,
+	 .step = 1,
+	 .default_value = FRAME_RATE_AUTO,
+	 },
+
 };
 
 /**
@@ -759,13 +780,14 @@ static int ov5640_reg_writes(struct i2c_client *client,
 {
 	int err = 0, index;
 
-	for (index = 0; ((reglist[index].reg != 0xFFFF) && (err == 0)); index++) {
+	for (index = 0; ((reglist[index].reg != 0xFFFF) && (err == 0));
+								index++) {
 		err |=
-		    ov5640_reg_write(client, reglist[index].reg,
+			ov5640_reg_write(client, reglist[index].reg,
 				     reglist[index].val);
 		/*  Check for Pause condition */
 		if ((reglist[index + 1].reg == 0xFFFF)
-		    && (reglist[index + 1].val != 0)) {
+			&& (reglist[index + 1].val != 0)) {
 			msleep(reglist[index + 1].val);
 			index += 1;
 		}
@@ -779,38 +801,36 @@ static int ov5640_config_timing(struct i2c_client *client)
 	int ret, i = ov5640->i_size;
 	const struct ov5640_timing_cfg *timing_cfg;
 
-	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8) {
-        timing_cfg = &timing_cfg_jpeg[i];
-    }
-    else {
-        timing_cfg = &timing_cfg_yuv[i];
-    }
+	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8)
+		timing_cfg = &timing_cfg_jpeg[i];
+	else
+		timing_cfg = &timing_cfg_yuv[i];
 
 	ret = ov5640_reg_write(client,
-			       0x3800,
-			       (timing_cfg->x_addr_start & 0xFF00) >> 8);
+				0x3800,
+				(timing_cfg->x_addr_start & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3801, timing_cfg->x_addr_start & 0xFF);
+				0x3801, timing_cfg->x_addr_start & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3802,
-			       (timing_cfg->y_addr_start & 0xFF00) >> 8);
+				0x3802,
+				(timing_cfg->y_addr_start & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3803, timing_cfg->y_addr_start & 0xFF);
+				0x3803, timing_cfg->y_addr_start & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3804,
-			       (timing_cfg->x_addr_end & 0xFF00) >> 8);
+				0x3804,
+				(timing_cfg->x_addr_end & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
@@ -819,8 +839,8 @@ static int ov5640_config_timing(struct i2c_client *client)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3806,
-			       (timing_cfg->y_addr_end & 0xFF00) >> 8);
+				0x3806,
+				(timing_cfg->y_addr_end & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
@@ -829,63 +849,63 @@ static int ov5640_config_timing(struct i2c_client *client)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3808,
-			       (timing_cfg->h_output_size & 0xFF00) >> 8);
+				0x3808,
+				(timing_cfg->h_output_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3809, timing_cfg->h_output_size & 0xFF);
+				0x3809, timing_cfg->h_output_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x380A,
-			       (timing_cfg->v_output_size & 0xFF00) >> 8);
+				0x380A,
+				(timing_cfg->v_output_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x380B, timing_cfg->v_output_size & 0xFF);
+				0x380B, timing_cfg->v_output_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x380C,
-			       (timing_cfg->h_total_size & 0xFF00) >> 8);
+				0x380C,
+				(timing_cfg->h_total_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x380D, timing_cfg->h_total_size & 0xFF);
+				0x380D, timing_cfg->h_total_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x380E,
-			       (timing_cfg->v_total_size & 0xFF00) >> 8);
+				0x380E,
+				(timing_cfg->v_total_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x380F, timing_cfg->v_total_size & 0xFF);
+				0x380F, timing_cfg->v_total_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3810,
-			       (timing_cfg->isp_h_offset & 0xFF00) >> 8);
+				0x3810,
+				(timing_cfg->isp_h_offset & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3811, timing_cfg->isp_h_offset & 0xFF);
+				0x3811, timing_cfg->isp_h_offset & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3812,
-			       (timing_cfg->isp_v_offset & 0xFF00) >> 8);
+				0x3812,
+				(timing_cfg->isp_v_offset & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
@@ -895,26 +915,26 @@ static int ov5640_config_timing(struct i2c_client *client)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3814,
-			       ((timing_cfg->h_odd_ss_inc & 0xF) << 4) |
-			       (timing_cfg->h_even_ss_inc & 0xF));
+				0x3814,
+				((timing_cfg->h_odd_ss_inc & 0xF) << 4) |
+				(timing_cfg->h_even_ss_inc & 0xF));
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3815,
-			       ((timing_cfg->v_odd_ss_inc & 0xF) << 4) |
-			       (timing_cfg->v_even_ss_inc & 0xF));
+				0x3815,
+				((timing_cfg->v_odd_ss_inc & 0xF) << 4) |
+				(timing_cfg->v_even_ss_inc & 0xF));
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3821, timing_cfg->out_mode_sel & 0xFF);
+				0x3821, timing_cfg->out_mode_sel & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			       0x3108, timing_cfg->sclk_dividers & 0xFF);
+				0x3108, timing_cfg->sclk_dividers & 0xFF);
 	if (ret)
 		return ret;
 
@@ -944,13 +964,13 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		ret = ov5640_reg_write(client, 0x3008, tmpreg | 0x40);
 		if (ret)
 			goto out;
-
-		ret = ov5640_reg_write(client, 0x300e, 0x3d);	/* MIPI Control  Powered down   */
+		/* MIPI Control  Powered down */
+		ret = ov5640_reg_write(client, 0x300e, 0x3d);
 		if (ret)
 			goto out;
 	}
 
-      out:
+out:
 	return ret;
 }
 
@@ -964,8 +984,8 @@ static int ov5640_set_bus_param(struct soc_camera_device *icd,
 static unsigned long ov5640_query_bus_param(struct soc_camera_device *icd)
 {
 	unsigned long flags = SOCAM_PCLK_SAMPLE_FALLING |
-	    SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
-	    SOCAM_DATA_ACTIVE_HIGH | SOCAM_MASTER;
+		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
+		SOCAM_DATA_ACTIVE_HIGH | SOCAM_MASTER;
 
 	/* TODO: Do the right thing here, and validate bus params */
 
@@ -1042,7 +1062,7 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	if (ret < 0)
 		return ret;
 
-    ret = ov5640_reg_writes(client, configscript_common1);
+	ret = ov5640_reg_writes(client, configscript_common1);
 
 	ov5640->i_size = ov5640_find_framesize(mf->width, mf->height);
 	ov5640->i_fmt = ov5640_find_datafmt(mf->code);
@@ -1126,6 +1146,12 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAMERA_ANTI_BANDING:
 		ctrl->value = ov5640->antibanding;
 		break;
+	case V4L2_CID_CAMERA_WHITE_BALANCE:
+		ctrl->value = ov5640->whitebalance;
+		break;
+	case V4L2_CID_CAMERA_FRAME_RATE:
+		ctrl->value = ov5640->framerate;
+		break;
 	}
 
 	return 0;
@@ -1135,6 +1161,7 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
+	u8 ov_reg;
 	int ret = 0;
 
 	dev_dbg(&client->dev, "ov5640_s_ctrl\n");
@@ -1269,18 +1296,122 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ov5640->antibanding = ctrl->value;
 
 		switch (ov5640->antibanding) {
-			case ANTI_BANDING_50HZ:
-				ret = ov5640_reg_writes(client,
-						ov5640_antibanding_50z_tbl);
-				break;
-			case ANTI_BANDING_60HZ:
-				ret = ov5640_reg_writes(client,
-						ov5640_antibanding_60z_tbl);
-				break;
-			default:
-				ret = ov5640_reg_writes(client,
-						ov5640_antibanding_auto_tbl);
-				break;
+		case ANTI_BANDING_50HZ:
+			ret = ov5640_reg_writes(client,
+					ov5640_antibanding_50z_tbl);
+			break;
+		case ANTI_BANDING_60HZ:
+			ret = ov5640_reg_writes(client,
+					ov5640_antibanding_60z_tbl);
+			break;
+		default:
+			ret = ov5640_reg_writes(client,
+					ov5640_antibanding_auto_tbl);
+			break;
+		}
+		if (ret)
+			return ret;
+		break;
+
+	case V4L2_CID_CAMERA_WHITE_BALANCE:
+
+		if (ctrl->value > WHITE_BALANCE_FLUORESCENT)
+			return -EINVAL;
+
+		ov5640->whitebalance = ctrl->value;
+
+		ret = ov5640_reg_read(client, 0x3406, &ov_reg);
+		if (ret)
+			return ret;
+
+		switch (ov5640->whitebalance) {
+		case WHITE_BALANCE_FLUORESCENT:
+			ov_reg |= 0x01;
+			ret = ov5640_reg_write(client,
+					0x3406, ov_reg);
+			ret = ov5640_reg_writes(client,
+					ov5640_wb_fluorescent);
+			break;
+		case WHITE_BALANCE_SUNNY:
+			ov_reg |= 0x01;
+			ret = ov5640_reg_write(client,
+					0x3406, ov_reg);
+			ret = ov5640_reg_writes(client,
+					ov5640_wb_daylight);
+			break;
+		case WHITE_BALANCE_CLOUDY:
+			ov_reg |= 0x01;
+			ret = ov5640_reg_write(client,
+					0x3406, ov_reg);
+			ret = ov5640_reg_writes(client,
+				ov5640_wb_cloudy);
+			break;
+		case WHITE_BALANCE_TUNGSTEN:
+			ov_reg |= 0x01;
+			ret = ov5640_reg_write(client,
+					0x3406, ov_reg);
+			ret = ov5640_reg_writes(client,
+					ov5640_wb_tungsten);
+			break;
+		default:
+			ov_reg &= ~(0x01);
+			ret = ov5640_reg_write(client,
+					0x3406, ov_reg);
+			ret = ov5640_reg_writes(client,
+						ov5640_wb_def);
+			break;
+		}
+		if (ret)
+			return ret;
+		break;
+
+	case V4L2_CID_CAMERA_FRAME_RATE:
+
+		if (ctrl->value > FRAME_RATE_30)
+			return -EINVAL;
+
+		if ((ov5640->i_size < OV5640_SIZE_QVGA) ||
+				(ov5640->i_size > OV5640_SIZE_1280x960)) {
+			if (ctrl->value == FRAME_RATE_30 ||
+					ctrl->value == FRAME_RATE_AUTO)
+				return 0;
+			else
+				return -EINVAL;
+		}
+
+		ov5640->framerate = ctrl->value;
+
+		switch (ov5640->framerate) {
+		case FRAME_RATE_5:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_5);
+			break;
+		case FRAME_RATE_7:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_7);
+			break;
+		case FRAME_RATE_10:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_10);
+			break;
+		case FRAME_RATE_15:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_15);
+			break;
+		case FRAME_RATE_20:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_20);
+			break;
+		case FRAME_RATE_25:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_25);
+			break;
+		case FRAME_RATE_30:
+		case FRAME_RATE_AUTO:
+		default:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_30);
+			break;
 		}
 		if (ret)
 			return ret;
@@ -1303,7 +1434,8 @@ static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 		}
 	case VIDIOC_JPEG_G_PACKET_INFO:
 		{
-			struct v4l2_jpeg_packet_info *p = (struct v4l2_jpeg_packet_info *)arg;
+			struct v4l2_jpeg_packet_info *p =
+				(struct v4l2_jpeg_packet_info *)arg;
 			p->padded = 0;
 			p->packet_size = 0x400;
 			break;
@@ -1311,7 +1443,8 @@ static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 
 	case VIDIOC_SENSOR_G_OPTICAL_INFO:
 		{
-			struct v4l2_sensor_optical_info *p = (struct v4l2_sensor_optical_info *)arg;
+			struct v4l2_sensor_optical_info *p =
+				(struct v4l2_sensor_optical_info *)arg;
 			/* assuming 67.5 degree diagonal viewing angle */
 			p->hor_angle.numerator = 5401;
 			p->hor_angle.denominator = 100;
@@ -1388,10 +1521,12 @@ static int ov5640_init(struct i2c_client *client)
 	ov5640->contrast = CONTRAST_DEFAULT;
 	ov5640->colorlevel = IMAGE_EFFECT_NONE;
 	ov5640->antibanding = ANTI_BANDING_AUTO;
+	ov5640->whitebalance = WHITE_BALANCE_AUTO;
+	ov5640->framerate = FRAME_RATE_AUTO;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 
-      out:
+out:
 	return ret;
 }
 
@@ -1430,7 +1565,7 @@ static int ov5640_video_probe(struct soc_camera_device *icd,
 
 	/* TODO: Do something like ov5640_init */
 
-      out:
+out:
 	return ret;
 }
 
@@ -1509,8 +1644,10 @@ static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.denominator = 24;
 		break;
 	}
-/*	printk(KERN_ERR"%s: width=%d height=%d fi=%d/%d\n", __func__, interval->width,
-			interval->height, interval->discrete.numerator, interval->discrete.denominator);
+/*	printk(KERN_ERR"%s: width=%d height=%d fi=%d/%d\n", __func__,
+			interval->width,
+			interval->height, interval->discrete.numerator,
+			interval->discrete.denominator);
 			*/
 	return 0;
 }

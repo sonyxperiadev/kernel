@@ -72,6 +72,12 @@ typedef IPC_U32 IPC_SmPtr; // "Pointer" in Shared Memory
 #define IPC_SmInitialised		0x12345678
 #define IPC_SmConfigured		0x12344321
 
+// Special values used to mark the top 2 bytes of IPC version
+#define IPC_VersionHi		0xabcd
+// IPC version, starting from 1
+#define IPC_VersionLo		0x1
+#define IPC_Version		((IPC_VersionHi << 16) | IPC_VersionLo)
+
 //**************************************************
 // Maximum number of buffers supported in shared memory
 // per CPU i.e. IPC_SM_MAX_BUFFERS can be owned by both Apps and Comms
@@ -109,6 +115,13 @@ typedef struct IPC_SmFifoPair_S
 } IPC_SmFifoPair_T;
 
 //**************************************************
+// IPC interrupt counter, used for detecting interrupt loss and CP hang
+typedef struct IPC_IntCount_S {
+	IPC_U32 InterruptRaised;
+	IPC_U32 InterruptHandled;
+} IPC_IntCount_T;
+
+//**************************************************
 // Structure containing control information for Shared Memory
 typedef volatile struct IPC_SmControl_S
 {
@@ -127,6 +140,9 @@ typedef volatile struct IPC_SmControl_S
 	volatile IPC_SmPtr				LastPool;
 	volatile IPC_U32				PersistentData	[IPC_PERSISTENT_DATA_SIZE];
 	volatile IPC_U32				Properties		[IPC_NUM_OF_PROPERTIES];
+	volatile IPC_IntCount_T 		Interrupts		[IPC_CPU_ARRAY_SIZE];
+	volatile IPC_U32				Version			[IPC_CPU_ARRAY_SIZE];
+	volatile IPC_U32				Reserved		[8];
 	volatile IPC_U32				Size;
 } IPC_SmControl_T;
 

@@ -66,9 +66,11 @@
 #if !defined(CNEON_COMMON) && !defined(CNEON_LMP)
 #include "chal_common_os.h"
 #include "chal_aci.h"
-#define __forceinline __attribute__((always_inline))
-#include "chal_bmodem_intc_inc.h"
 #endif
+#include "brcm_rdb_sysmap.h"
+#include "brcm_rdb_bintc.h"
+#define BINTC_OUT_DEST_DSP_NORM 17
+#define BMREG_BLOCK_SIZE (BINTC_IMR0_1_OFFSET-BINTC_IMR0_0_OFFSET)
 
 /*#define CONFIG_VOICE_LOOPBACK_TEST */
 
@@ -130,7 +132,17 @@ No support for I2S on Island */
 /*when SRCMixer is running at 26M, 44k SRC does not coexist with other SRCs*/
 static Boolean use26MClk = FALSE;
 static Boolean allow_26m = FALSE;
+/* 156M is for eanc, off by default */
+static Boolean enable156MClk = FALSE;
+/* 2P4M is for dmic, off by default */
+static Boolean enable2P4MClk = FALSE;
 static struct clk *clkIDCAPH[MAX_CAPH_CLOCK_NUM] = {NULL, NULL, NULL, NULL};
+enum CAPH_CLK_ID {
+	CLK_SRCMIXER, /* KHUB_CAPH_SRCMIXER_CLK */
+	CLK_2P4M, /* KHUB_AUDIOH_2P4M_CLK */
+	CLK_APB, /* KHUB_AUDIOH_APB_CLK */
+	CLK_156M, /* KHUB_AUDIOH_156M_CLK */
+};
 
 /* static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM] = {NULL,NULL}; */
 
@@ -243,6 +255,7 @@ static Boolean csl_caph_hwctrl_ssp_running(void);
 static void csl_caph_hwctrl_tdm_config(
 			CSL_CAPH_HWConfig_Table_t *path, int sinkNo);
 
+/*static void csl_caph_hwctrl_SetDSPInterrupt(void);*/
 /******************************************************************************
  * local function definitions
  ******************************************************************************/
@@ -2445,57 +2458,76 @@ static void csl_ssp_ControlHWClock(Boolean enable,
  * Description: This is to enable/disable the audio HW clocks
  *			KHUB_CAPH_SRCMIXER_CLK
  *			KHUB_AUDIOH_2P4M_CLK
- *			KHUB_AUDIOH_26M_CLK
+ *			KHUB_AUDIOH_APB_CLK
  *			KHUB_AUDIOH_156M_CLK
  */
 void csl_caph_ControlHWClock(Boolean enable)
 {
-	if (enable == TRUE && sClkCurEnabled == FALSE) {
-		sClkCurEnabled = TRUE;
+	if (enable == TRUE) {
+		if (sClkCurEnabled == FALSE) {
+			sClkCurEnabled = TRUE;
 
-		/*Enable CAPH clock.*/
-		clkIDCAPH[0] = clk_get(NULL, "caph_srcmixer_clk");
+			/*Enable CAPH clock.*/
+			clkIDCAPH[CLK_SRCMIXER] =
+				clk_get(NULL, "caph_srcmixer_clk");
 
-		/* island srcmixer is not set correctly.
-		   This is a workaround before a solution from clock */
+			/* island srcmixer is not set correctly.
+			This is a workaround before a solution from clock */
 #ifdef CONFIG_ARCH_ISLAND
-		if (clkIDCAPH[0]->use_cnt)
-			clk_disable(clkIDCAPH[0]);
+			if (clkIDCAPH[CLK_SRCMIXER]->use_cnt)
+				clk_disable(clkIDCAPH[CLK_SRCMIXER]);
 #endif
-		aTrace(LOG_AUDIO_CSL,
-		"csl_caph_ControlHWClock: use26MClk %d, allow_26m %d\n",
-		use26MClk, allow_26m);
+			aTrace(LOG_AUDIO_CSL,
+			"%s: use26MClk %d, allow_26m %d 2p4m %d 156m %d\n",
+			__func__, use26MClk, allow_26m,
+			enable2P4MClk, enable156MClk);
 #if defined(CONFIG_ARCH_RHEA_BX)
-		/*Rhea B0 and above.*/
-		if (use26MClk && allow_26m) {
-			clk_set_rate(clkIDCAPH[0], 26000000);
-			allow_26m = FALSE;
-		} else
-			clk_set_rate(clkIDCAPH[0], 78000000);
+			/*Rhea B0 and above.*/
+			if (use26MClk && allow_26m) {
+				clk_set_rate(clkIDCAPH[CLK_SRCMIXER], 26000000);
+				allow_26m = FALSE;
+			} else
+				clk_set_rate(clkIDCAPH[CLK_SRCMIXER], 78000000);
 #else
-		clk_set_rate(clkIDCAPH[0], 156000000);
+			clk_set_rate(clkIDCAPH[CLK_SRCMIXER], 156000000);
 #endif
-		clk_enable(clkIDCAPH[0]);
-
-		clkIDCAPH[1] = clk_get(NULL, "audioh_2p4m_clk");
-		clk_enable(clkIDCAPH[1]);
-
-		clkIDCAPH[2] = clk_get(NULL, "audioh_26m_clk");
-		clk_enable(clkIDCAPH[2]);
-
-		clkIDCAPH[3] = clk_get(NULL, "audioh_156m_clk");
-		clk_enable(clkIDCAPH[3]);
+			clk_enable(clkIDCAPH[CLK_SRCMIXER]);
+			/* control the audioh_apb will turn on audioh_26m,
+			by clock manager, but not the other way. */
+			/*clkIDCAPH[2] = clk_get(NULL, "audioh_26m_clk");*/
+			clkIDCAPH[CLK_APB] = clk_get(NULL, "audioh_apb_clk");
+			clk_enable(clkIDCAPH[CLK_APB]);
+		}
+		if (enable2P4MClk) {
+			if (clkIDCAPH[CLK_2P4M] == NULL)
+				clkIDCAPH[CLK_2P4M] =
+					clk_get(NULL, "audioh_2p4m_clk");
+			if (clkIDCAPH[CLK_2P4M]->use_cnt == 0)
+				clk_enable(clkIDCAPH[CLK_2P4M]);
+		}
+		if (enable156MClk) {
+			if (clkIDCAPH[CLK_156M] == NULL)
+				clkIDCAPH[CLK_156M] =
+					clk_get(NULL, "audioh_156m_clk");
+			if (clkIDCAPH[CLK_156M]->use_cnt == 0)
+				clk_enable(clkIDCAPH[CLK_156M]);
+		}
 	} else if (enable == FALSE && sClkCurEnabled == TRUE) {
 		UInt32 count = 0;
 		sClkCurEnabled = FALSE;
 		/*disable only CAPH clocks*/
-		for (count = 0; count <  MAX_CAPH_CLOCK_NUM; count++)
+		for (count = 0; count <  MAX_CAPH_CLOCK_NUM; count++) {
+			/* this api will check the null pointer */
 			clk_disable(clkIDCAPH[count]);
+			clkIDCAPH[count] = NULL;
+		}
+		enable156MClk = FALSE;
+		enable2P4MClk = FALSE;
 	}
 
 	aTrace(LOG_AUDIO_CSL,
-		"csl_caph_ControlHWClock: action = %d,"
-		"result = %d\r\n", enable, sClkCurEnabled);
+		"%s: action = %d,"
+		"result = %d\r\n", __func__, enable, sClkCurEnabled);
 
 	return;
 }
@@ -3514,6 +3546,19 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		&& config.src_sampleRate == AUDIO_SAMPLING_RATE_44100) {
 		allow_26m = FALSE;
 	}
+
+	enable2P4MClk = enable156MClk = FALSE;
+	/* for these cases, need to turn on 2p4m clk */
+	if (config.source == CSL_CAPH_DEV_DIGI_MIC
+		|| config.source == CSL_CAPH_DEV_DIGI_MIC_L
+		|| config.source == CSL_CAPH_DEV_DIGI_MIC_R
+		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC
+		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L
+		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)
+		enable2P4MClk = TRUE;
+	/* for this case, need to turn on 156m clk */
+	if (config.source == CSL_CAPH_DEV_EANC_INPUT)
+		enable156MClk = TRUE;
 	/*try to enable all audio clock first*/
 	csl_caph_ControlHWClock(TRUE);
 

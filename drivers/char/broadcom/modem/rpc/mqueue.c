@@ -204,6 +204,8 @@ static int MQueueKthreadFn(void *param)
 
 	_DBG(MQ_TRACE("mq: MQueueKthreadFn mHandle=%x\n", (int)mHandle));
 
+	set_user_nice(current, -16);
+
 	while (ret == 0) {
 		data = NULL;
 		ret = MsgQueueRemove(mHandle, &data);

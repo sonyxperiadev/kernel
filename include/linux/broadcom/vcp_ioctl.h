@@ -24,7 +24,7 @@
 
 /* ---- Include Files ---------------------------------------------------- */
 #if defined( __KERNEL__ )
-#include <linux/types.h>      /* Needed for standard types */
+#include <linux/types.h>	/* Needed for standard types */
 #else
 #include <stdint.h>
 #endif
@@ -33,8 +33,7 @@
 #include <linux/broadcom/vcp_msg.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* ---- Constants and Types ---------------------------------------------- */
@@ -43,73 +42,63 @@ extern "C"
 #define VCPIOCTL_MAGIC_TYPE               'v'
 
 /* IOCTL commands */
-enum vcpioctl_cmd_e
-{
-   VCPIOCTL_CMD_REGISTER_DEC = 50,
-   VCPIOCTL_CMD_REGISTER_ENC,
-   VCPIOCTL_CMD_DEREGISTER,
-   VCPIOCTL_CMD_GET_DECFRAME,
-   VCPIOCTL_CMD_GET_CTRLMSG,
-   VCPIOCTL_CMD_PUT_RESPONSE,
-   VCPIOCTL_CMD_DISCARD_DECFRAME,
-   VCPIOCTL_CMD_DEC_EVENTCB,
-   VCPIOCTL_CMD_ENC_EVENTCB,
-   VCPIOCTL_CMD_ENC_FRAME,
-   VCPIOCTL_CMD_LAST                    /* Do no delete */
-};
+	enum vcpioctl_cmd_e {
+		VCPIOCTL_CMD_REGISTER_DEC = 50,
+		VCPIOCTL_CMD_REGISTER_ENC,
+		VCPIOCTL_CMD_DEREGISTER,
+		VCPIOCTL_CMD_GET_DECFRAME,
+		VCPIOCTL_CMD_GET_CTRLMSG,
+		VCPIOCTL_CMD_PUT_RESPONSE,
+		VCPIOCTL_CMD_DISCARD_DECFRAME,
+		VCPIOCTL_CMD_DEC_EVENTCB,
+		VCPIOCTL_CMD_ENC_EVENTCB,
+		VCPIOCTL_CMD_ENC_FRAME,
+		VCPIOCTL_CMD_LAST	/* Do no delete */
+	};
 
-struct vcpioctl_register_dec_data
-{
-   char devname[32];                   /* Device name */
-   VCP_DEC_DEVICE_OPS ops;             /* For informational purposes only */
-   void *devdata;                      /* Privata device data */
-};
+	struct vcpioctl_register_dec_data {
+		char devname[32];	/* Device name */
+		VCP_DEC_DEVICE_OPS ops;	/* For informational purposes only */
+		void *devdata;	/* Privata device data */
+	};
 
-struct vcpioctl_register_enc_data
-{
-   char devname[32];                   /* Device name */
-   VCP_ENC_DEVICE_OPS ops;             /* For informational purposes only */
-   void *devdata;                      /* Privata device data */
-};
+	struct vcpioctl_register_enc_data {
+		char devname[32];	/* Device name */
+		VCP_ENC_DEVICE_OPS ops;	/* For informational purposes only */
+		void *devdata;	/* Privata device data */
+	};
 
-struct vcpioctl_get_decframe_data
-{
-   int max_pktsize;                    /* (i) Maximum packet size in bytes */
-   VCP_FRAMEBUF *userdatap;            /* (o) User ptr to store data */
-   int *size_needed;                   /* (o) If insufficient memory, indicate amount of mem needed */
-};
+	struct vcpioctl_get_decframe_data {
+		int max_pktsize;	/* (i) Maximum packet size in bytes */
+		VCP_FRAMEBUF *userdatap;	/* (o) User ptr to store data */
+		int *size_needed;	/* (o) If insufficient memory, indicate amount of mem needed */
+	};
 
-struct vcpioctl_get_ctrlmsg_data
-{
-   VCPMSG_ALL *userdatap;              /* (o) User ptr to store data */
-};
+	struct vcpioctl_get_ctrlmsg_data {
+		VCPMSG_ALL *userdatap;	/* (o) User ptr to store data */
+	};
 
-struct vcpioctl_put_response_data
-{
-   VCPMSG_RESP *userdatap;             /* Ptr to response data */
-};
+	struct vcpioctl_put_response_data {
+		VCPMSG_RESP *userdatap;	/* Ptr to response data */
+	};
 
-struct vcpioctl_dec_eventcb
-{
-   VCP_PIPE_HDL pipehdl;               /* Pipeline handle */
-   VCP_EVENT_CODE eventCode;           /* Event code */
-   void *userinfo;                     /* Ptr to user information related to event */
-};
+	struct vcpioctl_dec_eventcb {
+		VCP_PIPE_HDL pipehdl;	/* Pipeline handle */
+		VCP_EVENT_CODE eventCode;	/* Event code */
+		void *userinfo;	/* Ptr to user information related to event */
+	};
 
-struct vcpioctl_enc_eventcb
-{
-   VCP_PIPE_HDL pipehdl;               /* Pipeline handle */
-   VCP_EVENT_CODE eventCode;           /* Event code */
-   void *userinfo;                     /* Ptr to user information related to event */
-};
+	struct vcpioctl_enc_eventcb {
+		VCP_PIPE_HDL pipehdl;	/* Pipeline handle */
+		VCP_EVENT_CODE eventCode;	/* Event code */
+		void *userinfo;	/* Ptr to user information related to event */
+	};
 
-struct vcpioctl_encframe_data
-{
-   VCP_PIPE_HDL pipehdl;               /* Pipeline handle */
-   int bytesize;                       /* (i) Frame size in bytes */
-   VCP_FRAMEBUF *userdatap;            /* (o) User ptr to store data */
-};
-
+	struct vcpioctl_encframe_data {
+		VCP_PIPE_HDL pipehdl;	/* Pipeline handle */
+		int bytesize;	/* (i) Frame size in bytes */
+		VCP_FRAMEBUF *userdatap;	/* (o) User ptr to store data */
+	};
 
 /* IOCTL numbers */
 #define VCPIOCTL_REGISTER_DEC    _IOR( VCPIOCTL_MAGIC_TYPE, VCPIOCTL_CMD_REGISTER_DEC, struct vcpioctl_register_dec_data )
@@ -129,5 +118,4 @@ struct vcpioctl_encframe_data
 #ifdef __cplusplus
 }
 #endif
-#endif   /* VCP_IOCTL_H */
-
+#endif				/* VCP_IOCTL_H */

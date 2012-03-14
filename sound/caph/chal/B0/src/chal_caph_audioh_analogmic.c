@@ -34,6 +34,7 @@
 *
 ****************************************************************************/
 #include <linux/io.h>
+#include <linux/delay.h>
 #include "io_map.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
@@ -105,7 +106,7 @@ cVoid chal_audio_mic_input_select(CHAL_HANDLE handle, UInt16 mic_input)
 	reg_val &= ~(AUDIOH_ADC_CTL_AMIC_EN_MASK);
 
 	/* if(mic_input == CHAL_AUDIO_ENABLE) { */
-		reg_val |= AUDIOH_ADC_CTL_AMIC_EN_MASK;
+	reg_val |= AUDIOH_ADC_CTL_AMIC_EN_MASK;
 
 	/* Set the required setting */
 	BRCM_WRITE_REG(base, AUDIOH_ADC_CTL, reg_val);
@@ -251,83 +252,141 @@ cVoid chal_audio_mic_adc_standby(CHAL_HANDLE handle, Boolean standby)
 /*============================================================================
 *
 * Function Name: cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle,
-* Boolean pwronoff)
+*							Boolean pwronoff)
 *
 * Description:   power on/off analog microphone path
 *
 * Parameters:
 *                handle   ---  the Hera audio handle
-*                                pwronoff ---  on or off selection
+*				  pwronoff ---  on or off selection
 * Return:        none
 *
 *============================================================================*/
 
+/*
+ o   To power up the microphone path from scratch, the following signals
+ need to be set:
+ -   Power up the mic bias circuits from scratch, this includes the
+ reference generator and the mic bias generator core (see next bullet item).
+ -   Power up the clock generator via i_apmclk_pwrdn(0).
+ -   Power up the PGA and ADC path via i_VRX_pwrdn(0) and i_VRX_cmbuf_pwrdn(0).
+ -   To avoid click/pop on the far-end/side-tone path, it is recommended
+ that software mute the path in the ARM before the path is completely
+ powered up.
+ o   Power up of the mic bias circuits from scratch needs to follow certain
+ sequence on the control signals:
+ -   Set i_VREF_pwrup(1), i_VREF_FastSettle (1), i_VRX_RCM(01111),
+ i_Bias_pwrup(1) and, depending on handset of headset mic, i_mic_pwrdn(0)
+ or  i_mic_aux_pwrdn(0).
+ -   After 10ms, set i_VREF_FastSettle (0) and i_VRX_RCM(00000).
+ -   i_VREF_PowerCycle keeps (0) in this case.
+ -   'i_mic_en', for both handset and headset mic biases, should be
+ directly controlled by software and default to 1 (2.1V). For handset
+ MIC< this will not be changed. For headset MIC, it may remain '1' until
+ N wants to use the 0.4V MIC bias feature to further reduce current
+ consumption.
+ */
+
 cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 {
 	cUInt32 base = ((ChalAudioCtrlBlk_t *) handle)->audioh_base;
-
 	cUInt32 reg_val;
 
 	if (pwronoff == TRUE) {
-		/*0. powerup ACI VREF, BIAS (should be done by caller before)*/
-
-		/*1. power up BiasCore */
-		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_BIAS);
-		reg_val |= (AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
-		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS, reg_val);
-
-		/*2. power up AUDIORX_REF, and fast settle, others "0" */
+		/*
+		Step 0.  Power up of the mic bias circuits from scratch needs to
+		follow certain sequence on the control signals:
+		-Set i_VREF_pwrup(1), i_VREF_FastSettle (1), i_VRX_RCM(01111),
+		i_Bias_pwrup(1) and, depending on handset or headset mic,
+		i_mic_pwrdn(0) or i_mic_aux_pwrdn(0).
+		-After 10ms, set i_VREF_FastSettle (0) and i_VRX_RCM(00000).
+		-i_VREF_PowerCycle keeps (0) in this case.
+		-'i_mic_en', for both handset and headset mic biases, should
+		be directly controlled by software and default to 1 (2.1V). For
+		handset MIC< this will not be changed. For headset MIC, it may
+		remain '1' until N wants to use the 0.4V MIC bias feature to
+		further reduce current consumption.
+		*/
+		/* Set i_VREF_pwrup(1), i_VREF_FastSettle (1) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
 		reg_val |= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_PWRUP_MASK);
 		reg_val |= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VREF, reg_val);
 
-		/*3.  enable AUXMIC */
-		/*4. disable AUXMIC force power down */
+		/* Set i_VRX_RCM(01111) */
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1,
+			       0x0F <<
+			       AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_RCM_SHIFT);
 
-		/*5.  turn on everything and all default to "zero" */
+		/* Set i_Bias_pwrup(1) */
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS,
+			       AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
+
+		/* Set i_mic_pwrdn(0) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
 		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK);
-		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_CMBUF_PWRDN_MASK);
-		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_APMCLK_PWRDN_MASK);
-		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_LDO_DIG_PWRDN_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
-		/*6. power up MAIN MIC */
+		/* a must (10ms) to remove bias glitch per asic sequence */
+		usleep_range(10000, 10500);
+
+		/* Set i_VREF_FastSettle (0) */
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
+		reg_val &= ~(AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VREF, reg_val);
+
+		/* Set i_VRX_RCM(0) */
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_RCM_SHIFT);
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
+
+		/* Set 'i_mic_en' t to (2.1V). */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
 		reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
 		reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
-		/* reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);*/
-		/*reg_val |=
-			(3 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT); */
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VMIC, reg_val);
 
-		/* power up AUDIORX_REF, others "0" */
-		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
-		reg_val &= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
-		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VREF, reg_val);
+		/*
+		   Step 1.
+		   -Power up the mic bias circuits from scratch, this includes
+		   the reference generator and the mic bias generator core
+		   (see next bullet item).
+		   -Power up the clock generator via i_apmclk_pwrdn(0).
+		   -Power up the PGA and ADC path via i_VRX_pwrdn(0) and
+		   i_VRX_cmbuf_pwrdn(0).
+		   -To avoid click/pop on the far-end/side-tone path, it is
+		   recommended that software mute the path in the ARM before
+		   the path is completely powered up.
+		 */
 
-		/* AUDIORX_VRX2/AUDIORX_VMIC */
-		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX2, 0x00);
+		/* Power up the clock generator via i_apmclk_pwrdn(0) */
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_APMCLK_PWRDN_MASK);
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
+		/* Power up the PGA and ADC path via i_VRX_pwrdn(0) and
+		   i_VRX_cmbuf_pwrdn(0). */
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_CMBUF_PWRDN_MASK);
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 	} else {
-
 		/* power down AUDIORX_REF, others "0" */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
 		reg_val |= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VREF, reg_val);
 
-		/*6. power down MAIN MIC */
+		/* 6. power down MAIN MIC */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
 		reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
 		reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
-		/* reg_val |=
-			(AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK); */
-		/* reg_val |=
-			(0 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT); */
+#if 0
+		reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
+		reg_val |= (0 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
+#endif
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VMIC, reg_val);
 
-		/*5.  turn off everything */
+		/* 5.  turn off everything */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
 		reg_val |= (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK);
 		reg_val |= (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_CMBUF_PWRDN_MASK);
@@ -335,19 +394,17 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 		reg_val |= (AUDIOH_AUDIORX_VRX1_AUDIORX_LDO_DIG_PWRDN_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
-		/*2. power down AUDIORX_REF, and fast settle */
+		/* 2. power down AUDIORX_REF, and fast settle */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
 		reg_val &= ~(AUDIOH_AUDIORX_VREF_AUDIORX_VREF_PWRUP_MASK);
 		reg_val &= ~(AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VREF, reg_val);
 
-		/*1. power down BiasCore */
+		/* 1. power down BiasCore */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_BIAS);
 		reg_val &= ~(AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS, reg_val);
-
 	}
-
 	return;
 }
 
@@ -364,6 +421,31 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 * Return:        none
 *
 *============================================================================*/
+    /*
+       o   To power up the microphone path from scratch, the following
+       signals need to be set:
+       -   Power up the mic bias circuits from scratch, this includes
+       the reference generator and the mic bias generator core (see next
+       bullet item).
+       -   Power up the clock generator via i_apmclk_pwrdn(0).
+       -   Power up the PGA and ADC path via i_VRX_pwrdn(0) and
+       i_VRX_cmbuf_pwrdn(0).
+       -   To avoid click/pop on the far-end/side-tone path, it is
+       recommended that software mute the path in the ARM before the
+       path is completely powered up.
+       o   Power up of the mic bias circuits from scratch needs to
+       follow certain sequence on the control signals:
+       -   Set i_VREF_pwrup(1), i_VREF_FastSettle (1), i_VRX_RCM(01111),
+       i_Bias_pwrup(1) and, depending on handset or headset mic,
+       i_mic_pwrdn(0) or  i_mic_aux_pwrdn(0).
+       -   After 10ms, set i_VREF_FastSettle (0) and i_VRX_RCM(00000).
+       -   i_VREF_PowerCycle keeps (0) in this case.
+       -   'i_mic_en', for both handset and headset mic biases,
+       should be directly controlled by software and default to
+       1 (2.1V). For handset MIC< this will not be changed.
+       For headset MIC, it may remain '1' until Nokia wants to
+       use the 0.4V MIC bias feature to further reduce current consumption.
+     */
 
 cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 {
@@ -372,49 +454,92 @@ cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 	cUInt32 reg_val;
 
 	if (pwronoff == TRUE) {
-		/*0. powerup ACI VREF, BIAS (should be done by caller before)*/
+		/*
+		   Step 0.  Power up of the mic bias circuits from
+		   scratch needs to follow certain sequence on the control
+		   signals:
+		   -   Set i_VREF_pwrup(1), i_VREF_FastSettle (1),
+		   i_VRX_RCM(01111), i_Bias_pwrup(1)
+		   and, depending on handset or headset mic,
+		   i_mic_pwrdn(0) or  i_mic_aux_pwrdn(0).
+		   -   After 10ms, set i_VREF_FastSettle (0) and
+		   i_VRX_RCM(00000).
+		   -   i_VREF_PowerCycle keeps (0) in this case.
+		   -   'i_mic_en', for both handset and headset mic biases,
+		   should be directly controlled by software
+		   and default to 1 (2.1V). For handset MIC< this will
+		   not be changed.
+		   For headset MIC, it may remain '1' until Nokia wants
+		   to use the 0.4V MIC bias feature to further reduce current
+		   consumption.
+		 */
 
-		/*1. power up BiasCore */
-		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_BIAS);
-		reg_val |= (AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
-		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS, reg_val);
-
-		/*2. power up AUDIORX_REF, and fast settle, others "0" */
+		/* Set i_VREF_pwrup(1), i_VREF_FastSettle (1) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
 		reg_val |= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_PWRUP_MASK);
 		reg_val |= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
-		reg_val |= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_POWERCYCLE_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VREF, reg_val);
 
-		/*3.  enable AUXMIC */
-		/*4. disable AUXMIC force power down */
+		/* Set i_VRX_RCM(01111) */
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1,
+			       0x0F <<
+			       AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_RCM_SHIFT);
 
-		/*5.  turn on everything and all default to "zero" */
+		/* Set i_Bias_pwrup(1) */
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS,
+			       AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
+
+		/* Set i_mic_aux_pwrdn(0) ?? */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
 		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK);
-		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_CMBUF_PWRDN_MASK);
-		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_APMCLK_PWRDN_MASK);
-		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_LDO_DIG_PWRDN_MASK);
 		reg_val |=
 		    (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_SEL_MIC1B_MIC2_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
-		/*6. power up MAIN MIC */
+		/* a must (10ms) to remove bias glitch per asic sequence */
+		usleep_range(10000, 10500);
+
+		/* Set i_VREF_FastSettle (0) */
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
+		reg_val &= ~(AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VREF, reg_val);
+
+		/* Set i_VRX_RCM(0) */
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_RCM_SHIFT);
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
+
+		/* Set 'i_mic_en' t to (2.1V). */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
 		reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
 		reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VMIC, reg_val);
 
-		/* power up AUDIORX_REF, others "0" */
-		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
-		reg_val &= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
-		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VREF, reg_val);
+		/*
+		   Step 1.
+		   -   Power up the mic bias circuits from scratch, this
+		   includes the reference generator and the mic bias generator
+		   core (see next bullet item).
+		   -   Power up the clock generator via i_apmclk_pwrdn(0).
+		   -   Power up the PGA and ADC path via i_VRX_pwrdn(0)
+		   and i_VRX_cmbuf_pwrdn(0).
+		   -   To avoid click/pop on the far-end/side-tone path,
+		   it is recommended that software mute the path in the ARM
+		   before the path is completely powered up.
+		 */
 
-		/* AUDIORX_VRX2/AUDIORX_VMIC */
-		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX2, 0x00);
+		/* Power up the clock generator via i_apmclk_pwrdn(0) */
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_APMCLK_PWRDN_MASK);
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
+		/* Power up the PGA and ADC path via i_VRX_pwrdn(0) and
+		   i_VRX_cmbuf_pwrdn(0). */
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_CMBUF_PWRDN_MASK);
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 	} else {
-
 		/* power down AUDIORX_REF, others "0" */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
 		reg_val |= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);

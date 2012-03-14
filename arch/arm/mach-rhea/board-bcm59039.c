@@ -22,18 +22,23 @@
 #include <linux/irq.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <asm/gpio.h>
+#include <linux/gpio.h>
 #include <mach/hardware.h>
 #include <linux/io.h>
 #include <linux/uaccess.h>
 #include <linux/i2c.h>
 #include <linux/mfd/bcmpmu.h>
 #include <linux/broadcom/bcmpmu-ponkey.h>
+#ifdef CONFIG_KONA_AVS
+#include <plat/kona_avs.h>
+#endif
+#include "pm_params.h"
 
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0C
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 2
+static int vlt_tbl_init;
 
 static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0x01, .val = 0x00, .mask = 0x01},
@@ -347,7 +352,7 @@ static struct regulator_init_data bcm59039_simldo_data = {
 is not detected by baseband if SIMLDO is disabled. As a temp. workaround
 we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-           .always_on = 1,
+			.always_on = 1,
 #endif
 
 			},
@@ -530,13 +535,13 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_HV7LDO, &bcm59039_hv7ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV8LDO] = {
-			BCMPMU_REGULATOR_HV8LDO, &bcm59039_hv8ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV8LDO, &bcm59039_hv8ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV9LDO] = {
-				BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0x00, 0
+		BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV10LDO] = {
-				BCMPMU_REGULATOR_HV10LDO, &bcm59039_hv10ldo_data, 0xAA, 0
+		BCMPMU_REGULATOR_HV10LDO, &bcm59039_hv10ldo_data, 0xAA, 0
 	},
 
 /*TODO: We observed that, on Rhearay HW, interrupt from GPIO expander
@@ -620,33 +625,11 @@ static struct platform_device *bcmpmu_client_devices[] = {
 #endif
 };
 
-static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
-{
-	int             i;
-	printk(KERN_INFO "%s: called.\n", __func__);
 
-	/* Samsung requirement for PMU restart should be enabled.
-	 * Will get configured only 59039C0 or above version
-	*/
-	if (bcmpmu->rev_info.dig_rev >= BCM59039_CO_DIG_REV) {
-		bcmpmu->pdata->restart_en = 1;
-		bcmpmu->pdata->pok_restart_dly = POK_RESTRT_DLY_4SEC;
-		bcmpmu->pdata->pok_restart_deb = POK_RESTRT_DEB_4SEC;
-		bcmpmu->pdata->pok_lock = 1;
-		bcmpmu->pdata->hard_reset_en = 0;
-	}
-
-	for (i = 0; i < ARRAY_SIZE(bcmpmu_client_devices); i++)
-		bcmpmu_client_devices[i]->dev.platform_data = bcmpmu;
-	platform_add_devices(bcmpmu_client_devices,
-			ARRAY_SIZE(bcmpmu_client_devices));
-
-	return 0;
-}
 
 static int __init bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
-	printk("REG: pmu_init_platform_hw called \n");
+	pr_info("REG: pmu_init_platform_hw called\n");
 	return 0;
 }
 
@@ -703,6 +686,8 @@ static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 	{3200, 0},
 };
 
+static int __init bcmpmu_init_platform_hw(struct bcmpmu *);
+
 static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), },
 	.init = bcmpmu_init_platform_hw,
@@ -732,6 +717,8 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1300 * 3600,
 	.support_fg = 1,
+	.support_chrg_maint = 1,
+	.chrg_resume_lvl = 4150,
 	.bc = BCMPMU_BC_PMU_BC12,
 	.batt_model = "Unknown",
 	.cutoff_volt = 3300,
@@ -742,6 +729,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.pok_shtdwn_dly = -1,
 	.pok_restart_dly = -1,
 	.pok_restart_deb = -1,
+	.pok_lock = 1, /*Keep ponkey locked by default*/
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {
@@ -751,6 +739,329 @@ static struct i2c_board_info __initdata pmu_info[] = {
 		.irq = gpio_to_irq(PMU_DEVICE_INT_GPIO),
 	},
 };
+
+
+/*800 Mhz CSR voltage definitions....*/
+
+#define CSR_VAL_RETN_SS_800M	0x3 /*0.88V*/
+#define CSR_VAL_RETN_TT_800M	0x3 /*0.88V*/
+#define CSR_VAL_RETN_FF_800M	0x3 /*0.88V*/
+
+#define CSR_VAL_ECO_SS_800M		0xd /*1.08V*/
+#define CSR_VAL_ECO_TT_800M		0x8 /*0.98V*/
+#define CSR_VAL_ECO_FF_800M		0x8 /*0.98V*/
+
+#define CSR_VAL_NRML_SS_800M	0x11 /*1.16V*/
+#define CSR_VAL_NRML_TT_800M	0x0b /*1.04V*/
+#define CSR_VAL_NRML_FF_800M	0x8 /*0.98V*/
+
+#define CSR_VAL_TURBO_SS_800M		0x1A /*1.34V*/
+#define B0_CSR_VAL_TURBO_SS_800M	0x19 /*1.32V*/
+#define CSR_VAL_TURBO_TT_800M		0x14 /*1.22V*/
+#define CSR_VAL_TURBO_FF_800M		0x0F /*1.12V*/
+
+
+
+#define PMU_CSR_VLT_TBL_SS_800M	ARRAY_LIST(\
+					CSR_VAL_RETN_SS_800M,\
+					CSR_VAL_RETN_SS_800M,\
+					CSR_VAL_RETN_SS_800M,\
+					CSR_VAL_RETN_SS_800M,\
+					CSR_VAL_RETN_SS_800M,\
+					CSR_VAL_RETN_SS_800M,\
+					CSR_VAL_RETN_SS_800M,\
+					CSR_VAL_RETN_SS_800M,\
+					CSR_VAL_ECO_SS_800M,\
+					CSR_VAL_ECO_SS_800M,\
+					CSR_VAL_ECO_SS_800M,\
+					CSR_VAL_NRML_SS_800M,\
+					CSR_VAL_NRML_SS_800M,\
+					CSR_VAL_NRML_SS_800M,\
+					CSR_VAL_TURBO_SS_800M,\
+					CSR_VAL_TURBO_SS_800M)
+
+
+#define PMU_CSR_VLT_TBL_TT_800M	ARRAY_LIST(\
+					CSR_VAL_RETN_TT_800M,\
+					CSR_VAL_RETN_TT_800M,\
+					CSR_VAL_RETN_TT_800M,\
+					CSR_VAL_RETN_TT_800M,\
+					CSR_VAL_RETN_TT_800M,\
+					CSR_VAL_RETN_TT_800M,\
+					CSR_VAL_RETN_TT_800M,\
+					CSR_VAL_RETN_TT_800M,\
+					CSR_VAL_ECO_TT_800M,\
+					CSR_VAL_ECO_TT_800M,\
+					CSR_VAL_ECO_TT_800M,\
+					CSR_VAL_NRML_TT_800M,\
+					CSR_VAL_NRML_TT_800M,\
+					CSR_VAL_NRML_TT_800M,\
+					CSR_VAL_TURBO_TT_800M,\
+					CSR_VAL_TURBO_TT_800M)
+
+#define PMU_CSR_VLT_TBL_FF_800M	ARRAY_LIST(\
+					CSR_VAL_RETN_FF_800M,\
+					CSR_VAL_RETN_FF_800M,\
+					CSR_VAL_RETN_FF_800M,\
+					CSR_VAL_RETN_FF_800M,\
+					CSR_VAL_RETN_FF_800M,\
+					CSR_VAL_RETN_FF_800M,\
+					CSR_VAL_RETN_FF_800M,\
+					CSR_VAL_RETN_FF_800M,\
+					CSR_VAL_ECO_FF_800M,\
+					CSR_VAL_ECO_FF_800M,\
+					CSR_VAL_ECO_FF_800M,\
+					CSR_VAL_NRML_FF_800M,\
+					CSR_VAL_NRML_FF_800M,\
+					CSR_VAL_NRML_FF_800M,\
+					CSR_VAL_TURBO_FF_800M,\
+					CSR_VAL_TURBO_FF_800M)
+
+
+/*850 Mhz CSR voltage definitions....*/
+
+#define CSR_VAL_RETN_SS_850M	0x3 /*0.88V*/
+#define CSR_VAL_RETN_TT_850M	0x3 /*0.88V*/
+#define CSR_VAL_RETN_FF_850M	0x3 /*0.88V*/
+
+#define CSR_VAL_ECO_SS_850M		0xd /*1.08V*/
+#define CSR_VAL_ECO_TT_850M		0x8 /*0.98V*/
+#define CSR_VAL_ECO_FF_850M		0x8 /*0.98V*/
+
+#define CSR_VAL_NRML_SS_850M	0x11 /*1.16V*/
+#define CSR_VAL_NRML_TT_850M	0x0b /*1.04V*/
+#define CSR_VAL_NRML_FF_850M	0x8 /*0.98V*/
+
+#define CSR_VAL_TURBO_SS_850M		0x1B /*1.36V*/
+#define B0_CSR_VAL_TURBO_SS_850M	0x19 /*1.32V*/
+#define CSR_VAL_TURBO_TT_850M		0x15 /*1.24V*/
+#define CSR_VAL_TURBO_FF_850M		0x10 /*1.14V*/
+
+
+
+#define PMU_CSR_VLT_TBL_SS_850M	ARRAY_LIST(\
+					CSR_VAL_RETN_SS_850M,\
+					CSR_VAL_RETN_SS_850M,\
+					CSR_VAL_RETN_SS_850M,\
+					CSR_VAL_RETN_SS_850M,\
+					CSR_VAL_RETN_SS_850M,\
+					CSR_VAL_RETN_SS_850M,\
+					CSR_VAL_RETN_SS_850M,\
+					CSR_VAL_RETN_SS_850M,\
+					CSR_VAL_ECO_SS_850M,\
+					CSR_VAL_ECO_SS_850M,\
+					CSR_VAL_ECO_SS_850M,\
+					CSR_VAL_NRML_SS_850M,\
+					CSR_VAL_NRML_SS_850M,\
+					CSR_VAL_NRML_SS_850M,\
+					CSR_VAL_TURBO_SS_850M,\
+					CSR_VAL_TURBO_SS_850M)
+
+
+#define PMU_CSR_VLT_TBL_TT_850M	ARRAY_LIST(\
+					CSR_VAL_RETN_TT_850M,\
+					CSR_VAL_RETN_TT_850M,\
+					CSR_VAL_RETN_TT_850M,\
+					CSR_VAL_RETN_TT_850M,\
+					CSR_VAL_RETN_TT_850M,\
+					CSR_VAL_RETN_TT_850M,\
+					CSR_VAL_RETN_TT_850M,\
+					CSR_VAL_RETN_TT_850M,\
+					CSR_VAL_ECO_TT_850M,\
+					CSR_VAL_ECO_TT_850M,\
+					CSR_VAL_ECO_TT_850M,\
+					CSR_VAL_NRML_TT_850M,\
+					CSR_VAL_NRML_TT_850M,\
+					CSR_VAL_NRML_TT_850M,\
+					CSR_VAL_TURBO_TT_850M,\
+					CSR_VAL_TURBO_TT_850M)
+
+#define PMU_CSR_VLT_TBL_FF_850M	ARRAY_LIST(\
+						CSR_VAL_RETN_FF_850M,\
+						CSR_VAL_RETN_FF_850M,\
+						CSR_VAL_RETN_FF_850M,\
+						CSR_VAL_RETN_FF_850M,\
+						CSR_VAL_RETN_FF_850M,\
+						CSR_VAL_RETN_FF_850M,\
+						CSR_VAL_RETN_FF_850M,\
+						CSR_VAL_RETN_FF_850M,\
+						CSR_VAL_ECO_FF_850M,\
+						CSR_VAL_ECO_FF_850M,\
+						CSR_VAL_ECO_FF_850M,\
+						CSR_VAL_NRML_FF_850M,\
+						CSR_VAL_NRML_FF_850M,\
+						CSR_VAL_NRML_FF_850M,\
+						CSR_VAL_TURBO_FF_850M,\
+						CSR_VAL_TURBO_FF_850M)
+
+/*1 Ghz CSR voltage definitions....*/
+
+#define CSR_VAL_RETN_SS_1G	0x3 /*0.88V*/
+#define CSR_VAL_RETN_TT_1G	0x3 /*0.88V*/
+#define CSR_VAL_RETN_FF_1G	0x3 /*0.88V*/
+
+#define CSR_VAL_ECO_SS_1G	0xd /*1.08V*/
+#define CSR_VAL_ECO_TT_1G	0x8 /*0.98V*/
+#define CSR_VAL_ECO_FF_1G	0x8 /*0.98V*/
+
+#define CSR_VAL_NRML_SS_1G	0x11 /*1.16V*/
+#define CSR_VAL_NRML_TT_1G	0x0b /*1.04V*/
+#define CSR_VAL_NRML_FF_1G	0x8	/*0.98V*/
+
+#define CSR_VAL_TURBO_SS_1G		0x1B /*1.36V*/
+#define B0_CSR_VAL_TURBO_SS_1G	0x19 /*1.32V*/
+#define CSR_VAL_TURBO_TT_1G		0x1B /*1.36V*/
+#define B0_CSR_VAL_TURBO_TT_1G	0x19 /*1.32V*/
+#define CSR_VAL_TURBO_FF_1G		0x15 /*1.24V*/
+
+
+
+#define PMU_CSR_VLT_TBL_SS_1G	ARRAY_LIST(\
+						CSR_VAL_RETN_SS_1G,\
+						CSR_VAL_RETN_SS_1G,\
+						CSR_VAL_RETN_SS_1G,\
+						CSR_VAL_RETN_SS_1G,\
+						CSR_VAL_RETN_SS_1G,\
+						CSR_VAL_RETN_SS_1G,\
+						CSR_VAL_RETN_SS_1G,\
+						CSR_VAL_RETN_SS_1G,\
+						CSR_VAL_ECO_SS_1G,\
+						CSR_VAL_ECO_SS_1G,\
+						CSR_VAL_ECO_SS_1G,\
+						CSR_VAL_NRML_SS_1G,\
+						CSR_VAL_NRML_SS_1G,\
+						CSR_VAL_NRML_SS_1G,\
+						CSR_VAL_TURBO_SS_1G,\
+						CSR_VAL_TURBO_SS_1G)
+
+#define PMU_CSR_VLT_TBL_TT_1G	ARRAY_LIST(\
+						CSR_VAL_RETN_TT_1G,\
+						CSR_VAL_RETN_TT_1G,\
+						CSR_VAL_RETN_TT_1G,\
+						CSR_VAL_RETN_TT_1G,\
+						CSR_VAL_RETN_TT_1G,\
+						CSR_VAL_RETN_TT_1G,\
+						CSR_VAL_RETN_TT_1G,\
+						CSR_VAL_RETN_TT_1G,\
+						CSR_VAL_ECO_TT_1G,\
+						CSR_VAL_ECO_TT_1G,\
+						CSR_VAL_ECO_TT_1G,\
+						CSR_VAL_NRML_TT_1G,\
+						CSR_VAL_NRML_TT_1G,\
+						CSR_VAL_NRML_TT_1G,\
+						CSR_VAL_TURBO_TT_1G,\
+						CSR_VAL_TURBO_TT_1G)
+
+#define PMU_CSR_VLT_TBL_FF_1G	ARRAY_LIST(\
+						CSR_VAL_RETN_FF_1G,\
+						CSR_VAL_RETN_FF_1G,\
+						CSR_VAL_RETN_FF_1G,\
+						CSR_VAL_RETN_FF_1G,\
+						CSR_VAL_RETN_FF_1G,\
+						CSR_VAL_RETN_FF_1G,\
+						CSR_VAL_RETN_FF_1G,\
+						CSR_VAL_RETN_FF_1G,\
+						CSR_VAL_ECO_FF_1G,\
+						CSR_VAL_ECO_FF_1G,\
+						CSR_VAL_ECO_FF_1G,\
+						CSR_VAL_NRML_FF_1G,\
+						CSR_VAL_NRML_FF_1G,\
+						CSR_VAL_NRML_FF_1G,\
+						CSR_VAL_TURBO_FF_1G,\
+						CSR_VAL_TURBO_FF_1G)
+
+u8 csr_vlt_table_ss[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
+	[A9_FREQ_800_MHZ]	= PMU_CSR_VLT_TBL_SS_800M,
+	[A9_FREQ_850_MHZ]	= PMU_CSR_VLT_TBL_SS_850M,
+	[A9_FREQ_1_GHZ]		= PMU_CSR_VLT_TBL_SS_1G,
+};
+
+u8 csr_vlt_table_tt[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
+	[A9_FREQ_800_MHZ]	= PMU_CSR_VLT_TBL_TT_800M,
+	[A9_FREQ_850_MHZ]	= PMU_CSR_VLT_TBL_TT_850M,
+	[A9_FREQ_1_GHZ]		= PMU_CSR_VLT_TBL_TT_1G,
+};
+
+u8 csr_vlt_table_ff[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
+	[A9_FREQ_800_MHZ]	= PMU_CSR_VLT_TBL_FF_800M,
+	[A9_FREQ_850_MHZ]	= PMU_CSR_VLT_TBL_FF_850M,
+	[A9_FREQ_1_GHZ]		= PMU_CSR_VLT_TBL_FF_1G,
+};
+
+const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
+						u32 silicon_type)
+{
+	pr_info("%s:sr = %i, freq_inx = %d,"
+			"silicon_type = %d\n", __func__,
+			sr, freq_inx, silicon_type);
+
+	BUG_ON(!vlt_tbl_init ||
+		freq_inx > A9_FREQ_1_GHZ);
+
+#ifdef CONFIG_KONA_AVS
+	switch (silicon_type) {
+	case SILICON_TYPE_SLOW:
+		return csr_vlt_table_ss[freq_inx];
+
+	case SILICON_TYPE_TYPICAL:
+		return csr_vlt_table_tt[freq_inx];
+
+	case SILICON_TYPE_FAST:
+		return csr_vlt_table_ff[freq_inx];
+
+	default:
+		BUG();
+	}
+#else
+	return csr_vlt_table_ss[freq_inx];
+#endif
+}
+
+int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
+{
+	int             i;
+	printk(KERN_INFO "%s: called.\n", __func__);
+
+	/* Samsung requirement for PMU restart should be enabled.
+	 * Will get configured only 59039C0 or above version
+	*/
+
+	if (bcmpmu->rev_info.dig_rev >= BCM59039_CO_DIG_REV) {
+		bcmpmu->pdata->restart_en = 1;
+		bcmpmu->pdata->pok_restart_dly = POK_RESTRT_DLY_4SEC;
+		bcmpmu->pdata->pok_restart_deb = POK_RESTRT_DEB_4SEC;
+		bcmpmu->pdata->pok_lock = 1;
+		bcmpmu->pdata->hard_reset_en = 0;
+	} else {
+
+		memset(&csr_vlt_table_ss[A9_FREQ_800_MHZ][SR_TURBO_INX_START],
+			B0_CSR_VAL_TURBO_SS_800M,
+			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
+
+		memset(&csr_vlt_table_ss[A9_FREQ_850_MHZ][SR_TURBO_INX_START],
+			B0_CSR_VAL_TURBO_SS_850M,
+			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
+
+		memset(&csr_vlt_table_ss[A9_FREQ_1_GHZ][SR_TURBO_INX_START],
+			B0_CSR_VAL_TURBO_SS_1G,
+			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
+
+		memset(&csr_vlt_table_tt[A9_FREQ_1_GHZ][SR_TURBO_INX_START],
+			B0_CSR_VAL_TURBO_TT_1G,
+			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
+
+	}
+
+	vlt_tbl_init = 1;
+
+	for (i = 0; i < ARRAY_SIZE(bcmpmu_client_devices); i++)
+		bcmpmu_client_devices[i]->dev.platform_data = bcmpmu;
+	platform_add_devices(bcmpmu_client_devices,
+			ARRAY_SIZE(bcmpmu_client_devices));
+
+	return 0;
+}
+
 
 
 __init int board_pmu_init(void)
@@ -765,13 +1076,14 @@ __init int board_pmu_init(void)
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu-irq");
 	if (ret < 0) {
 
-		printk(KERN_ERR "%s filed at gpio_request.\n", __FUNCTION__);
+		printk(KERN_ERR "%s filed at gpio_request.\n", __func__);
 		goto exit;
 	}
 	ret = gpio_direction_input(PMU_DEVICE_INT_GPIO);
 	if (ret < 0) {
 
-		printk(KERN_ERR "%s filed at gpio_direction_input.\n", __FUNCTION__);
+		printk(KERN_ERR "%s filed at gpio_direction_input.\n",
+				__func__);
 		goto exit;
 	}
 	irq = gpio_to_irq(PMU_DEVICE_INT_GPIO);

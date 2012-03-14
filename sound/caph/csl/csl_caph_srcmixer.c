@@ -1993,8 +1993,17 @@ void csl_srcmixer_setMixInGain(CSL_CAPH_SRCM_INCHNL_e inChnl,
 	 * 0x0000 the input path is essentially switched off
 	 */
 
-	left_scale = Mixer_GainTable[getMixerGain(gainL_mB)].mixerInputGain;
-	right_scale = Mixer_GainTable[getMixerGain(gainR_mB)].mixerInputGain;
+	if (gainL_mB == GAIN_NA)
+		left_scale = MIX_IN_MUTE;
+	else
+		left_scale =
+			Mixer_GainTable[getMixerGain(gainL_mB)].mixerInputGain;
+
+	if (gainR_mB == GAIN_NA)
+		right_scale = MIX_IN_MUTE;
+	else
+		right_scale =
+			Mixer_GainTable[getMixerGain(gainR_mB)].mixerInputGain;
 
 	aTrace(LOG_AUDIO_CSL,
 		"csl_srcmixer_setMixInGain::"

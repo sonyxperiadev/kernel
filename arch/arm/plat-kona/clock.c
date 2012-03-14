@@ -88,6 +88,11 @@ static int __ccu_clk_init(struct clk *clk)
 	if(clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
 
+	if (clk->flags & CCU_KEEP_UNLOCKED) {
+		ccu_clk->write_access_en_count = 0;
+		/* enable write access*/
+		ccu_write_access_enable(ccu_clk, true);
+	}
 	CCU_ACCESS_EN(ccu_clk, 0);
 
 	return ret;
@@ -5297,13 +5302,16 @@ int __init clock_debug_init(void)
 	dent_clk_root_dir = debugfs_create_dir("clock", 0);
 	if(!dent_clk_root_dir)
 		return -ENOMEM;
-	if(!debugfs_create_u32("debug", 0644, dent_clk_root_dir, (int*)&clk_debug))
+	if (!debugfs_create_u32("debug", S_IRUGO | S_IWUSR,
+		dent_clk_root_dir, (int *)&clk_debug))
 		return -ENOMEM;
 
-    if (!debugfs_create_file("clk_idle_debug", 0644, dent_clk_root_dir, NULL, &clock_idle_debug_fops))
-	 return -ENOMEM;
-    if (!debugfs_create_file("clk_mon_debug", 0644, dent_clk_root_dir, NULL, &clock_mon_debug_fops))
-	return -ENOMEM;
+	if (!debugfs_create_file("clk_idle_debug", S_IRUSR | S_IWUSR,
+		dent_clk_root_dir, NULL, &clock_idle_debug_fops))
+		return -ENOMEM;
+	if (!debugfs_create_file("clk_mon_debug", S_IRUSR | S_IWUSR,
+	    dent_clk_root_dir, NULL, &clock_mon_debug_fops))
+		return -ENOMEM;
 
 	return 0;
 }
@@ -5322,19 +5330,23 @@ int __init clock_debug_add_ccu(struct clk *c)
 	if(!ccu_clk->dent_ccu_dir)
 		goto err;
 
-	dent_clock_list = debugfs_create_file("clock_list", 0644, ccu_clk->dent_ccu_dir, c, &ccu_clock_list_fops);
+	dent_clock_list = debugfs_create_file("clock_list",
+		S_IRUGO, ccu_clk->dent_ccu_dir, c, &ccu_clock_list_fops);
 	if(!dent_clock_list)
 		goto err;
 
-	dent_freqid = debugfs_create_file("freq_id", 0644, ccu_clk->dent_ccu_dir, c, &ccu_freqid_fops);
+	dent_freqid = debugfs_create_file("freq_id", S_IRUGO,
+		ccu_clk->dent_ccu_dir, c, &ccu_freqid_fops);
 	if(!dent_freqid)
 		goto err;
 
-	dent_policy = debugfs_create_file("policy", 0644, ccu_clk->dent_ccu_dir, c, &ccu_policy_fops);
+	dent_policy = debugfs_create_file("policy", S_IRUGO,
+		ccu_clk->dent_ccu_dir, c, &ccu_policy_fops);
 	if(!dent_policy)
 		goto err;
 
-	dent_count = debugfs_create_u32("use_cnt", 0444, ccu_clk->dent_ccu_dir, &c->use_cnt);
+	dent_count = debugfs_create_u32("use_cnt", S_IRUGO,
+		ccu_clk->dent_ccu_dir, &c->use_cnt);
 	if(!dent_count)
 		goto err;
 	dent_volt_tbl = debugfs_create_file("volt_id_update",
@@ -5403,51 +5415,61 @@ int __init clock_debug_add_clock(struct clk *c)
 		goto err;
 
 	/* file /clock/clk_a/enable */
-	dent_enable        =       debugfs_create_file("enable", 0644, dent_clk_dir, c, &clock_enable_fops);
+	dent_enable = debugfs_create_file("enable", S_IRUGO | S_IWUSR,
+		dent_clk_dir, c, &clock_enable_fops);
 	if(!dent_enable)
 		goto err;
 
 	/* file /clock/clk_a/reset */
-	dent_reset	   =	   debugfs_create_file("reset", 0644, dent_clk_dir, c, &clock_reset_fops);
+	dent_reset = debugfs_create_file("reset", S_IRUGO |
+		S_IWUSR, dent_clk_dir, c, &clock_reset_fops);
 	if(!dent_reset)
 		goto err;
 
 	/* file /clock/clk_a/status */
-	dent_status      =         debugfs_create_file("status", 0644, dent_clk_dir, c, &clock_status_show_fops);
+	dent_status = debugfs_create_file("status", S_IRUGO |
+		S_IWUSR, dent_clk_dir, c, &clock_status_show_fops);
 	if(!dent_status)
 		goto err;
 
 	/* file /clock/clk_a/rate */
-	dent_rate       =       debugfs_create_file("rate", 0644, dent_clk_dir, c, &clock_rate_fops);
+	dent_rate = debugfs_create_file("rate", S_IRUGO | S_IWUSR,
+		dent_clk_dir, c, &clock_rate_fops);
 	if(!dent_rate)
 		goto err;
 	/* file /clock/clk_a/monitor */
-	dent_clk_mon    =       debugfs_create_file("clk_mon", 0444, dent_clk_dir, c, &clock_mon_fops);
+	dent_clk_mon = debugfs_create_file("clk_mon", S_IRUGO,
+		dent_clk_dir, c, &clock_mon_fops);
 	if(!dent_clk_mon)
 	    goto err;
 
 	/* file /clock/clk_a/flags */
-	dent_flags        =       debugfs_create_u32("flags", 0644, dent_clk_dir, (unsigned int*)&c->flags);
+	dent_flags = debugfs_create_u32("flags", S_IRUGO |
+		S_IWUSR, dent_clk_dir, (unsigned int *)&c->flags);
 	if(!dent_flags)
 		goto err;
 
 	/* file /clock/clk_a/use_cnt */
-	dent_use_cnt    =       debugfs_create_u32("use_cnt", 0444, dent_clk_dir, (unsigned int*)&c->use_cnt);
+	dent_use_cnt = debugfs_create_u32("use_cnt", S_IRUGO,
+			dent_clk_dir, (unsigned int *)&c->use_cnt);
 	if(!dent_use_cnt)
 		goto err;
 
 	/* file /clock/clk_a/id */
-	dent_id         =       debugfs_create_u32("id", 0444, dent_clk_dir, (unsigned int*)&c->id);
+	dent_id = debugfs_create_u32("id", S_IRUGO, dent_clk_dir,
+			(unsigned int *)&c->id);
 	if(!dent_id)
 		goto err;
 
 	/* file /clock/clk_a/parent */
-	dent_parent     =       debugfs_create_file("parent", 0444, dent_clk_dir, c, &clock_parent_fops);
+	dent_parent = debugfs_create_file("parent", S_IRUGO,
+		dent_clk_dir, c, &clock_parent_fops);
 	if(!dent_parent)
 		goto err;
 
 	/* file /clock/clk_a/source */
-	dent_source     =       debugfs_create_file("source", 0444, dent_clk_dir, c, &clock_source_fops);
+	dent_source = debugfs_create_file("source", S_IRUGO,
+		dent_clk_dir, c, &clock_source_fops);
 	if(!dent_source)
 		goto err;
 

@@ -22,6 +22,7 @@
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
+#include <linux/pm_runtime.h>
 #include <asm/io.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
@@ -55,6 +56,7 @@ struct bcm_hsotgctrl_drv_data {
 	void *hsotg_ctrl_base;
 	void *chipregs_base;
 	void *hub_clk_base;
+	bool allow_suspend;
 };
 
 static struct bcm_hsotgctrl_drv_data *local_hsotgctrl_handle = NULL;
@@ -90,10 +92,13 @@ int bcm_hsotgctrl_en_clock(bool on)
 	if (!bcm_hsotgctrl_handle || !bcm_hsotgctrl_handle->otg_clk)
 		return -EIO;
 
-	if (on)
+	if (on) {
+		bcm_hsotgctrl_handle->allow_suspend = false;
 		rc = clk_enable(bcm_hsotgctrl_handle->otg_clk);
-	else
+	} else {
 		clk_disable(bcm_hsotgctrl_handle->otg_clk);
+		bcm_hsotgctrl_handle->allow_suspend = true;
+	}
 
 	if (rc)
 		dev_warn(bcm_hsotgctrl_handle->dev,"%s: error in controlling clock\n", __func__);
@@ -224,8 +229,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 		return -EIO;
 
 	bcm_hsotgctrl_en_clock(true);
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
-
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 	/* clear bit 15 RDB error */
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 		HSOTG_CTRL_PHY_P1CTL_OFFSET);
@@ -233,7 +237,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* Enable software control of PHY-PM */
 	bcm_hsotgctrl_set_soft_ldo_pwrdn(true);
@@ -246,7 +250,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 
 	/* Power up ALDO */
 	bcm_hsotgctrl_set_aldo_pdn(true);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+	mdelay(PHY_PM_DELAY_IN_MS);
 
 	/* Enable pad, internal PLL etc */
 	bcm_hsotgctrl_set_phy_off(false);
@@ -255,12 +259,11 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 
 	/* Remove PHY isolation */
 	bcm_hsotgctrl_set_phy_iso(false);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-
+	mdelay(PHY_PM_DELAY_IN_MS);
 
 	/* PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(true);
-	msleep_interruptible(PHY_PLL_DELAY_MS);
+	mdelay(PHY_PLL_DELAY_MS);
 
 	/* Bring Put PHY out of reset state */
 	bcm_hsotgctrl_set_phy_resetb(true);
@@ -544,12 +547,13 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
+	hsotgctrl_drvdata->allow_suspend = true;
 	platform_set_drvdata(pdev, hsotgctrl_drvdata);
 
 	/* Init the PHY */
 	bcm_hsotgctrl_en_clock(true);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* clear bit 15 RDB error */
 	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base +
@@ -557,7 +561,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	val &= ~HSOTG_CTRL_PHY_P1CTL_USB11_OEB_IS_TXEB_MASK;
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
 			HSOTG_CTRL_PHY_P1CTL_OFFSET);
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* S/W reset Phy, active low */
 	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base +
@@ -566,7 +570,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
 			HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* bring Phy out of reset */
 	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base +
@@ -576,12 +580,12 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	val |= PHY_MODE_OTG << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT; /* use OTG mode */
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* Enable pad, internal PLL etc */
 	bcm_hsotgctrl_set_phy_off(false);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	val =	HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK | /*Come up as device until we check PMU ID status to avoid turning on Vbus before checking */
@@ -593,7 +597,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
 			HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	error = device_create_file(&pdev->dev, &dev_attr_hsotgctrldump);
 
@@ -607,6 +611,9 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	 * is no transceiver hookup */
 	bcm_hsotgctrl_phy_set_non_driving(false);
 #endif
+
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
 
 	return 0;
 
@@ -629,7 +636,7 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 	iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
 	iounmap(hsotgctrl_drvdata->chipregs_base);
 	iounmap(hsotgctrl_drvdata->hub_clk_base);
-
+	pm_runtime_disable(&pdev->dev);
 	clk_put(hsotgctrl_drvdata->otg_clk);
 	local_hsotgctrl_handle = NULL;
 	kfree(hsotgctrl_drvdata);
@@ -637,10 +644,34 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int bcm_hsotgctrl_runtime_suspend(struct device* dev)
+{
+	int status = 0;
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
+
+	if (bcm_hsotgctrl_handle && bcm_hsotgctrl_handle->allow_suspend)
+		status = 0;
+	else
+		status = -EBUSY;
+
+	return status;
+}
+
+static int bcm_hsotgctrl_runtime_resume(struct device* dev)
+{
+	return 0;
+}
+
+static struct dev_pm_ops bcm_hsotg_ctrl_pm_ops = {
+	.runtime_suspend = bcm_hsotgctrl_runtime_suspend,
+	.runtime_resume = bcm_hsotgctrl_runtime_resume,
+};
+
 static struct platform_driver bcm_hsotgctrl_driver = {
 	.driver = {
 		   .name = "bcm_hsotgctrl",
 		   .owner = THIS_MODULE,
+		   .pm = &bcm_hsotg_ctrl_pm_ops,
 	},
 	.probe = bcm_hsotgctrl_probe,
 	.remove = bcm_hsotgctrl_remove,

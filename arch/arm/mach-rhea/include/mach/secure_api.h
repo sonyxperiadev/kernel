@@ -20,8 +20,9 @@
 #define SEC_API_ENTER_DORMANT       0
 #define SEC_API_ENABLE_L2_CACHE     1
 #define SEC_API_DISABLE_L2_CACHE    2
+#define SEC_API_AES                 3
 /* Set SEC_API_MAX to one more than the value of last sec API ID */
-#define SEC_API_MAX                 3
+#define SEC_API_MAX                 4
 
 #ifndef __ASSEMBLY__
 u32 hw_sec_pub_dispatcher(u32 service, u32 flags, ...);

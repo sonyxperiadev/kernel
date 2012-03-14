@@ -302,6 +302,12 @@ void xdrmem_log_start(XDR * xdrs, char *str)
 	}
 }
 
+void xdrmem_log_reset(XDR *xdrs)
+{
+	xdrs->x_logbuffer = NULL;
+	xdrs->x_logsize = 0;
+}
+
 #define MAX_ARRAY_LEN 300
 #define MAX_BYTES_PER_LINE 20
 

@@ -69,6 +69,9 @@
 /* SRCMixer Input FIFO threshold */
 #define INFIFO_NO_THRES	0x0
 
+#ifndef GAIN_NA
+#define GAIN_NA 0x8001
+#endif
 /**
 * CAPH SRCMixer input channel sample rate
 ******************************************************************************/

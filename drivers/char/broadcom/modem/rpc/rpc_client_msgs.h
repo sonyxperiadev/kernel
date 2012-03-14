@@ -13,22 +13,13 @@
 *
 ****************************************************************************/
 
-#ifndef _BCM_IPC_DEBUG_H
-#define _BCM_IPC_DEBUG_H
-#ifdef __KERNEL__
+#ifndef _BCM_CLIENT_MSGS_H
+#define _BCM_CLIENT_MSGS_H
 
-#include <linux/printk.h>
-#define DBG_ERROR   KERN_ERR
-#define DBG_WARN    KERN_WARNING
-#define DBG_INFO    KERN_INFO
-#define DBG_TRACE   KERN_DEBUG
-#define DBG_TRACE2  KERN_DEBUG
-#define DBG_DATA    KERN_DEBUG
-#define DBG_DATA2   KERN_DEBUG
-#define IPC_DEBUG(level, fmt, args...)   \
-			printk(level "ipc:%s(): " fmt, __func__, ##args)
-#else
-#error "Error: IPC_DEBUG() macro is not defined for this platform!"
-#endif
+int rpc_is_registered_msg(UInt16 dscm, UInt8 clientId);
+Boolean rpc_register_client_msgs(UInt8 clientId, UInt16 *tbl,
+			 		UInt16 table_size);
+Boolean rpc_reset_client_msgs(UInt8 clientId);
 
-#endif /* _BCM_IPC_DEBUG_H */
+
+#endif //_BCM_CLIENT_MSGS_H

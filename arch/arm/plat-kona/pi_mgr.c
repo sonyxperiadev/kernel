@@ -1958,7 +1958,8 @@ int __init pi_debug_init(void)
     if(!dent_all_requests)
 		pi_dbg("Erro registering all_requests with debugfs\n");
 
-    dent_chip_reset = debugfs_create_file("chip_reset", S_IRUSR, dent_pi_root_dir, NULL, &chip_reset_fops);
+	dent_chip_reset = debugfs_create_file("chip_reset", S_IRUSR | S_IWUSR,
+			dent_pi_root_dir, NULL, &chip_reset_fops);
     if(!dent_chip_reset)
 		pi_dbg("Erro registering all_requests with debugfs\n");
 

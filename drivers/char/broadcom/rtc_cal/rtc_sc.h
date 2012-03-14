@@ -45,8 +45,7 @@ extern void prm_sleep_clock_calibration_handler(unsigned int ratio);
 
 /* ---- Function Declarations ----------------------------------------- */
 
-
-typedef void (*RTCSC_Config)(UInt32 resolution_ppb, UInt32 duration_ms);
+typedef void (*RTCSC_Config) (UInt32 resolution_ppb, UInt32 duration_ms);
 
 /**
 	This function is used to send ratio event to RTC CAL task
@@ -56,10 +55,7 @@ typedef void (*RTCSC_Config)(UInt32 resolution_ppb, UInt32 duration_ms);
 	@note
 
 **/
-void RTC_SC_RatioEvent(
-	UInt32 ratio,
-	UInt16 temp
-	);
+void RTC_SC_RatioEvent(UInt32 ratio, UInt16 temp);
 
 /**
 	This function is used to register config_func to RTC Slow Clock component
@@ -68,9 +64,7 @@ void RTC_SC_RatioEvent(
 	@note
 
 **/
-void RTC_SC_RegisterEvent(
-	RTCSC_Config config_func
-	);
+void RTC_SC_RegisterEvent(RTCSC_Config config_func);
 
 /**
 	This function is used to send config info to modem/CAL
@@ -80,10 +74,7 @@ void RTC_SC_RegisterEvent(
 	@note
 
 **/
-Boolean RTCSC_sendCalConfig(
-	UInt32 threshold,
-	UInt32 duration
-	);
+Boolean RTCSC_sendCalConfig(UInt32 threshold, UInt32 duration);
 
 /**
 	This function is used to send simulation msg to CP for generating ratio event
@@ -93,10 +84,7 @@ Boolean RTCSC_sendCalConfig(
 	@note
 
 **/
-void RTC_SC_GenSimulMsg1(
-	UInt32 ratio,
-	UInt16 temp
-	);
+void RTC_SC_GenSimulMsg1(UInt32 ratio, UInt16 temp);
 
 /**
 	This function is used to send simulation msg to CP for generating register event
@@ -104,9 +92,7 @@ void RTC_SC_GenSimulMsg1(
 	@note
 
 **/
-void RTC_SC_GenSimulMsg2(
-	void
-	);
+void RTC_SC_GenSimulMsg2(void);
 
 /**
 	This function is used to initialize RPC interface

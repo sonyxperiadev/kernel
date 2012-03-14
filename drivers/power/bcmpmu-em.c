@@ -57,6 +57,7 @@ enum {
 	CHRG_STATE_INIT,
 	CHRG_STATE_CHRG,
 	CHRG_STATE_IDLE,
+	CHRG_STATE_MAINT,
 };
 
 enum {
@@ -143,6 +144,7 @@ struct bcmpmu_em {
 	int cutoff_count_max;
 	int fg_capacity_full;
 	int support_fg;
+	int support_chrg_maint;
 	int fg_capacity;
 	int fg_cap_cal;
 	int fg_force_cal;
@@ -156,6 +158,8 @@ struct bcmpmu_em {
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	int charge_state;
 	int charge_zone;
+	int resume_chrg;
+	int chrg_resume_lvl;
 	int vfloat;
 	int icc_fc;
 	int icc_qc;
@@ -519,6 +523,11 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 			capacity = 100;
 			pem->fg_cap_cal = 1;
 			pem->fg_capacity = pem->fg_capacity_full;
+			if (pem->support_chrg_maint) {
+				pem->charge_state = CHRG_STATE_MAINT;
+				if (pem->bcmpmu->chrgr_usb_maint)
+					pem->bcmpmu->chrgr_usb_maint(pem->bcmpmu, 1);
+			}
 		}
 	} else eoc_count = 0;
 
@@ -787,7 +796,15 @@ static void em_algorithm(struct work_struct *work)
 	}
 
 	if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE) {
-		if (pem->charge_state != CHRG_STATE_CHRG) {
+		if (pem->charge_state == CHRG_STATE_MAINT){
+			if ((pem->batt_volt < pem->chrg_resume_lvl) ||
+			    (pem->resume_chrg == 1)) {
+				pem->resume_chrg = 0;
+				if (bcmpmu->chrgr_usb_maint)
+					bcmpmu->chrgr_usb_maint(bcmpmu, 0);
+				pem->charge_state = CHRG_STATE_CHRG;
+			}
+		} else if (pem->charge_state != CHRG_STATE_CHRG) {
 			if (bcmpmu->get_env_bit_status(bcmpmu, PMU_ENV_USB_VALID) == true)
 				pem->charge_state = CHRG_STATE_CHRG;
 			else {
@@ -986,6 +1003,11 @@ static int em_event_handler(struct notifier_block *nb,
 		}
 		pr_em(FLOW, "%s, fgc event\n", __func__);
 
+	case BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS:
+		if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE)
+			pem->resume_chrg = 1;
+		pr_em(FLOW, "%s, resume vbus event\n", __func__);
+
 		break;
 	default:
 		break;
@@ -1070,6 +1092,13 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	else
 		pem->cutoff_count_max = 3;
 
+	if (pdata->support_chrg_maint)
+		pem->support_chrg_maint = pdata->support_chrg_maint;
+	if (pdata->chrg_resume_lvl)
+		pem->chrg_resume_lvl = pdata->chrg_resume_lvl;
+	else
+		pem->chrg_resume_lvl = 4000;
+
 	pem->charge_zone = CHRG_ZONE_QC;
 	
 	INIT_DELAYED_WORK(&pem->work, em_algorithm);
@@ -1113,6 +1142,7 @@ err:
 	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &pem->nb);
 	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT, &pem->nb);
 	ret = bcmpmu_remove_notifier(BCMPMU_FG_EVENT_FGC, &pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS, &pem->nb);
 	kfree(pem);
 	return ret;
 }
@@ -1131,6 +1161,7 @@ static int __devexit bcmpmu_em_remove(struct platform_device *pdev)
 	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &pem->nb);
 	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT, &pem->nb);
 	ret = bcmpmu_remove_notifier(BCMPMU_FG_EVENT_FGC, &pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS, &pem->nb);
 	kfree(pem);
 
 	return 0;

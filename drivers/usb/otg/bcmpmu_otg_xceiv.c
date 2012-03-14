@@ -26,6 +26,7 @@
 #include <linux/notifier.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
+#include <linux/pm_runtime.h>
 #include <linux/mfd/bcmpmu.h>
 #include <linux/io.h>
 #include <mach/io_map.h>
@@ -268,7 +269,7 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	int status = 0;
 	bool id_gnd = false;
 
-	dev_info(xceiv_data->dev, "Setting Peripheral\n");
+	dev_dbg(xceiv_data->dev, "Setting Peripheral\n");
 	otg->gadget = gadget;
 
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
@@ -313,12 +314,12 @@ static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
 	int status = 0;
 
-	dev_info(xceiv_data->dev, "Setting Host\n");
+	dev_dbg(xceiv_data->dev, "Setting Host\n");
 	otg->host = host;
 
 	if (host) {
 		if (xceiv_data->otg_enabled) {
-			/* Wake lock forevever in OTG build until we integrate otg-wakelock */
+			/* Wake lock forever in OTG build */
 			wake_lock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
 			/* Do calibration probe */
 			bcm_otg_do_adp_calibration_probe(xceiv_data);
@@ -330,7 +331,6 @@ static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
 		} else
 			bcm_hsotgctrl_phy_set_id_stat(true);
 	}
-
 	return status;
 }
 
@@ -733,6 +733,9 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	/* Check if we should default to A-device */
 	xceiv_data->otg_xceiver.xceiver.default_a = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
+
 	dev_info(&pdev->dev, "Probing successful\n");
 
 	return 0;
@@ -760,6 +763,8 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	device_remove_file(xceiv_data->dev, &dev_attr_vbus);
 	device_remove_file(xceiv_data->dev, &dev_attr_host);
 
+	pm_runtime_disable(&pdev->dev);
+
 	if (wake_lock_active(&xceiv_data->otg_xceiver.xceiver_wake_lock)) {
 		wake_unlock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
 		wake_lock_destroy(&xceiv_data->otg_xceiver.xceiver_wake_lock);
@@ -782,12 +787,42 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int bcmpmu_otg_xceiv_runtime_suspend(struct device* dev)
+{
+	int status = 0;
+	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(dev);
+
+	if ((xceiv_data->otg_xceiver.xceiver.state !=
+		OTG_STATE_UNDEFINED) || xceiv_data->otg_enabled) {
+		/* Don't allow runtime suspend if USB is active
+		 * or in OTG mode */
+		status = -EBUSY;
+	} else {
+		/* Allow runtime suspend since USB is not active */
+		status = 0;
+	}
+
+	return status;
+}
+
+static int bcmpmu_otg_xceiv_runtime_resume(struct device* dev)
+{
+	return 0;
+}
+
+static struct dev_pm_ops bcmpmu_otg_xceiv_pm_ops = {
+	.runtime_suspend = bcmpmu_otg_xceiv_runtime_suspend,
+	.runtime_resume = bcmpmu_otg_xceiv_runtime_resume,
+};
+
+
 static struct platform_driver bcmpmu_otg_xceiv_driver = {
 	.probe = bcmpmu_otg_xceiv_probe,
 	.remove = __exit_p(bcmpmu_otg_xceiv_remove),
 	.driver = {
 		   .name = "bcmpmu_otg_xceiv",
 		   .owner = THIS_MODULE,
+		   .pm = &bcmpmu_otg_xceiv_pm_ops,
 	},
 };
 

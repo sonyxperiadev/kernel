@@ -61,194 +61,169 @@ extern "C" {
 * LCDC Controller Init Settings
 *
 *****************************************************************************/
-typedef struct
-{
-    UInt32   maxBusWidth;
-    UInt32   lcdc_base_address;
-} CSL_LCDC_INIT_T, *pCSL_LCDC_INIT;
-
+	typedef struct {
+		UInt32 maxBusWidth;
+		UInt32 lcdc_base_address;
+	} CSL_LCDC_INIT_T, *pCSL_LCDC_INIT;
 
 /**
 *
 * LCD Controller (DBI) Bus Modes
 *
 *****************************************************************************/
-typedef enum
-{
-    LCDC_BUS_DBI_B        = 1, ///< DBI-B 8-bit
-    LCDC_BUS_DBI_C_OPT1   = 2, ///< DBI-C 3-WIRE   D/CX embeded in protocol
-    LCDC_BUS_DBI_C_OPT3   = 3  ///< DBI-C 4-WIRE   D/CX phy line
-} CSL_LCDC_DBI_BUS_TYPE_t;
+	typedef enum {
+		LCDC_BUS_DBI_B = 1,	///< DBI-B 8-bit
+		LCDC_BUS_DBI_C_OPT1 = 2,	///< DBI-C 3-WIRE   D/CX embeded in protocol
+		LCDC_BUS_DBI_C_OPT3 = 3	///< DBI-C 4-WIRE   D/CX phy line
+	} CSL_LCDC_DBI_BUS_TYPE_t;
 
 /**
 *
 * LCD Controller (Z80/M68) Bus Modes
 *
 *****************************************************************************/
-typedef enum
-{
-    LCDC_BUS_Z80          = 4, ///< Z80
-    LCDC_BUS_M68          = 5, ///< M68
-} CSL_LCDC_PAR_BUS_TYPE_t;
-
+	typedef enum {
+		LCDC_BUS_Z80 = 4,	///< Z80
+		LCDC_BUS_M68 = 5,	///< M68
+	} CSL_LCDC_PAR_BUS_TYPE_t;
 
 /**
 *
 * LCD Controller (DBI) Read Access Type
 *
 *****************************************************************************/
-typedef enum
-{
-    DBI_RD_08_CMND_08_DATA = 0, ///< WR 8-bit CMND Followed By 08-bit DATA RD
-    DBI_RD_NO_CMND_08_DATA = 1, ///<                           08-bit DATA RD
-    DBI_RD_08_CMND_24_DATA = 2, ///< WR 8-bit CMND Followed By 24-bit DATA RD
-    DBI_RD_NO_CMND_24_DATA = 3  ///<                           24-bit DATA RD
-} CSL_LCDC_DBI_RD_t;
-
+	typedef enum {
+		DBI_RD_08_CMND_08_DATA = 0,	///< WR 8-bit CMND Followed By 08-bit DATA RD
+		DBI_RD_NO_CMND_08_DATA = 1,	///<                           08-bit DATA RD
+		DBI_RD_08_CMND_24_DATA = 2,	///< WR 8-bit CMND Followed By 24-bit DATA RD
+		DBI_RD_NO_CMND_24_DATA = 3	///<                           24-bit DATA RD
+	} CSL_LCDC_DBI_RD_t;
 
 /**
 *
 * LCD Controller (Z80/M68) Mode Settings
 *
 *****************************************************************************/
-typedef struct
-{
-    CSL_LCDC_PAR_BUS_TYPE_t busType;        ///< Type Of The Bus
-    CSL_LCD_BUS_CH_T        csBank;         ///< CS bank
-    UInt32                  busWidth;       ///< Bus Width
-    Boolean                 bitSwap;        ///< bit swap
-    Boolean                 byteSwap;       ///< byte swap
-    Boolean                 wordSwap;       ///< word swap
-    CSL_LCD_CM_IN           colModeIn;      ///< Color Mode Of Data-IN
-    CSL_LCD_CM_OUT          colModeOut;     ///< Color Mode Of Data-OUT
-} CSL_LCDC_PAR_CFG_t, *pCSL_LCDC_PAR_CFG;
+	typedef struct {
+		CSL_LCDC_PAR_BUS_TYPE_t busType;	///< Type Of The Bus
+		CSL_LCD_BUS_CH_T csBank;	///< CS bank
+		UInt32 busWidth;	///< Bus Width
+		Boolean bitSwap;	///< bit swap
+		Boolean byteSwap;	///< byte swap
+		Boolean wordSwap;	///< word swap
+		CSL_LCD_CM_IN colModeIn;	///< Color Mode Of Data-IN
+		CSL_LCD_CM_OUT colModeOut;	///< Color Mode Of Data-OUT
+	} CSL_LCDC_PAR_CFG_t, *pCSL_LCDC_PAR_CFG;
 
 /**
 *
 * LCD Controller (Z80/M68) Rd/Wr Speed Settings
 *
 *****************************************************************************/
-typedef struct
-{
-    UInt32                  rdHold;         ///< Rd Cycle Settings
-    UInt32                  rdPulse;        ///< Rd Cycle Settings
-    UInt32                  rdSetup;        ///< Rd Cycle Settings
-    UInt32                  wrHold;         ///< Wr Cycle Settings
-    UInt32                  wrPulse;        ///< Wr Cycle Settings
-    UInt32                  wrSetup;        ///< Wr Cycle Settings
-} CSL_LCDC_PAR_SPEED_t, *pCSL_LCDC_PAR_SPEED;
+	typedef struct {
+		UInt32 rdHold;	///< Rd Cycle Settings
+		UInt32 rdPulse;	///< Rd Cycle Settings
+		UInt32 rdSetup;	///< Rd Cycle Settings
+		UInt32 wrHold;	///< Wr Cycle Settings
+		UInt32 wrPulse;	///< Wr Cycle Settings
+		UInt32 wrSetup;	///< Wr Cycle Settings
+	} CSL_LCDC_PAR_SPEED_t, *pCSL_LCDC_PAR_SPEED;
 
 /**
 *
 * LCD Controller (DBI) Mode Settings
 *
 *****************************************************************************/
-typedef struct
-{
-    CSL_LCDC_DBI_BUS_TYPE_t busType;              ///< Type Of The Bus
-    CSL_LCD_BUS_CH_T        csBank;               ///< CS bank
-    UInt32                  busWidth;             ///< Bus Width
-    Boolean                 colModeInBE;          ///< Data-IN endianes
-    CSL_LCD_CM_IN           colModeIn;            ///< Color Mode Of Data-IN
-    CSL_LCD_CM_OUT          colModeOut;           ///< Color Mode Of Data-OUT
+	typedef struct {
+		CSL_LCDC_DBI_BUS_TYPE_t busType;	///< Type Of The Bus
+		CSL_LCD_BUS_CH_T csBank;	///< CS bank
+		UInt32 busWidth;	///< Bus Width
+		Boolean colModeInBE;	///< Data-IN endianes
+		CSL_LCD_CM_IN colModeIn;	///< Color Mode Of Data-IN
+		CSL_LCD_CM_OUT colModeOut;	///< Color Mode Of Data-OUT
 #ifdef _ATHENA_
-    Boolean                 dbicSclRouteToLcdCd; ///< Else To LcdWe
+		Boolean dbicSclRouteToLcdCd;	///< Else To LcdWe
 #endif
-} CSL_LCDC_DBI_CFG_t, *CSL_LCDC_DBI_CFG;
+	} CSL_LCDC_DBI_CFG_t, *CSL_LCDC_DBI_CFG;
 
 /**
 *
 * DBI LCD Read Request
 *
 *****************************************************************************/
-typedef struct
-{
-    UInt32                  command;        ///< in  8-bit Command To Write
-    CSL_LCDC_DBI_RD_t       type;           ///< in  RD Access Type
-    UInt32                  data;           ///< out data read
-} CSL_LCDC_DBI_RD_REQ_t, *pCSL_LCDC_DBI_RD_REQ;
-
+	typedef struct {
+		UInt32 command;	///< in  8-bit Command To Write
+		CSL_LCDC_DBI_RD_t type;	///< in  RD Access Type
+		UInt32 data;	///< out data read
+	} CSL_LCDC_DBI_RD_REQ_t, *pCSL_LCDC_DBI_RD_REQ;
 
 /**
 *
 * LCD Controller (DBI) Rd/Wr Speed Settings
 *
 *****************************************************************************/
-typedef struct
-{
-    UInt32                  tAhbClkC;  ///< DBI T-Cycle Setting
+	typedef struct {
+		UInt32 tAhbClkC;	///< DBI T-Cycle Setting
 #ifdef _ATHENA_
-    UInt32                  dcxHi;     ///< A  Hold   (dcxHi+1)*T
-    UInt32                  dcxLo;     ///< A  Setup  (dcxLo+1)*T
-    UInt32                  rdHi;      ///< Rd High   (rdHi +6)*T
-    UInt32                  rdLo;      ///< Rd Low    (rdLo +6)*T
-    UInt32                  wrHi;      ///< Wr High   (wrHi +4)*T
-    UInt32                  wrLo;      ///< Wr Low    (wrLo +4)*T
+		UInt32 dcxHi;	///< A  Hold   (dcxHi+1)*T
+		UInt32 dcxLo;	///< A  Setup  (dcxLo+1)*T
+		UInt32 rdHi;	///< Rd High   (rdHi +6)*T
+		UInt32 rdLo;	///< Rd Low    (rdLo +6)*T
+		UInt32 wrHi;	///< Wr High   (wrHi +4)*T
+		UInt32 wrLo;	///< Wr Low    (wrLo +4)*T
 #endif
-} CSL_LCDC_DBI_SPEED_t, *pCSL_LCDC_DBI_SPEED;
-
-
+	} CSL_LCDC_DBI_SPEED_t, *pCSL_LCDC_DBI_SPEED;
 
 /**
 *
 *  LCDC IO Pin Settings
 *
 *****************************************************************************/
-typedef struct
-{
-    Boolean                 slewFast;       ///< Fast|Slow Slew
-    UInt32                  driveStrength;  ///< Drive Strength
-} CSL_LCDC_IO_DRIVE_t, *pCSL_LCDC_IO_DRIVE;
-
-
-
+	typedef struct {
+		Boolean slewFast;	///< Fast|Slow Slew
+		UInt32 driveStrength;	///< Drive Strength
+	} CSL_LCDC_IO_DRIVE_t, *pCSL_LCDC_IO_DRIVE;
 
 /**
 *
 * TEARING Configuration
 *
 *****************************************************************************/
-typedef enum
-{
-    LCDC_TE_NONE,
-    LCDC_TE_CTRLR,
-} CSL_LCDC_TE_TYPE_T;
+	typedef enum {
+		LCDC_TE_NONE,
+		LCDC_TE_CTRLR,
+	} CSL_LCDC_TE_TYPE_T;
 
-typedef struct
-{
-    CSL_LCDC_TE_TYPE_T type;        ///< TE type -1=NU 0=CtrlrSynced
-    UInt32             delay;       ///< TE delay
-    UInt32             pinSel;      ///< TE pin sel
-    Boolean            edgeRising;  ///< TE edge
-} CSL_LCDC_TE_T, *pCSL_LCDC_TE;
+	typedef struct {
+		CSL_LCDC_TE_TYPE_T type;	///< TE type -1=NU 0=CtrlrSynced
+		UInt32 delay;	///< TE delay
+		UInt32 pinSel;	///< TE pin sel
+		Boolean edgeRising;	///< TE edge
+	} CSL_LCDC_TE_T, *pCSL_LCDC_TE;
 
 /**
 *
 *  LCDC Parallel Controller Configuration (Z80/M68)
 *
 *****************************************************************************/
-typedef struct
-{
-    CSL_LCDC_PAR_CFG_t      cfg;
-    CSL_LCDC_PAR_SPEED_t    speed;
-    CSL_LCDC_IO_DRIVE_t     io;
-    CSL_LCDC_TE_T           teCfg;
-} CSL_LCDC_PAR_CTRL_T, *pCSL_LCDC_PAR_CTRL;
+	typedef struct {
+		CSL_LCDC_PAR_CFG_t cfg;
+		CSL_LCDC_PAR_SPEED_t speed;
+		CSL_LCDC_IO_DRIVE_t io;
+		CSL_LCDC_TE_T teCfg;
+	} CSL_LCDC_PAR_CTRL_T, *pCSL_LCDC_PAR_CTRL;
 
 /**
 *
 *  LCDC DBI Controller Configuration
 *
 *****************************************************************************/
-typedef struct
-{
-    CSL_LCDC_DBI_CFG_t      cfg;
-    CSL_LCDC_DBI_SPEED_t    speed;
-    CSL_LCDC_IO_DRIVE_t     io;
-    CSL_LCDC_TE_T           teCfg;
-} CSL_LCDC_DBI_CTRL_T, *pCSL_LCDC_DBI_CTRL;
-
-
+	typedef struct {
+		CSL_LCDC_DBI_CFG_t cfg;
+		CSL_LCDC_DBI_SPEED_t speed;
+		CSL_LCDC_IO_DRIVE_t io;
+		CSL_LCDC_TE_T teCfg;
+	} CSL_LCDC_DBI_CTRL_T, *pCSL_LCDC_DBI_CTRL;
 
 /**
 *
@@ -262,7 +237,7 @@ typedef struct
 *  @note     Common to Z80/M68 & DBI modes
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_WrCmnd ( CSL_LCD_HANDLE lcdcH, UInt32 command );
+	CSL_LCD_RES_T CSL_LCDC_WrCmnd(CSL_LCD_HANDLE lcdcH, UInt32 command);
 
 /**
 *
@@ -276,8 +251,7 @@ CSL_LCD_RES_T CSL_LCDC_WrCmnd ( CSL_LCD_HANDLE lcdcH, UInt32 command );
 *  @note     Common to Z80/M68 & DBI modes
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_WrData ( CSL_LCD_HANDLE lcdcH, UInt32 data );
-
+	CSL_LCD_RES_T CSL_LCDC_WrData(CSL_LCD_HANDLE lcdcH, UInt32 data);
 
 /**
 *
@@ -291,8 +265,7 @@ CSL_LCD_RES_T CSL_LCDC_WrData ( CSL_LCD_HANDLE lcdcH, UInt32 data );
 *  @note     Z80/M68 mode
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_PAR_RdCmnd ( CSL_LCD_HANDLE lcdcH, UInt32 *data );
-
+	CSL_LCD_RES_T CSL_LCDC_PAR_RdCmnd(CSL_LCD_HANDLE lcdcH, UInt32 * data);
 
 /**
 *
@@ -306,8 +279,7 @@ CSL_LCD_RES_T CSL_LCDC_PAR_RdCmnd ( CSL_LCD_HANDLE lcdcH, UInt32 *data );
 *  @note     Z80/M68 mode
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_PAR_RdData ( CSL_LCD_HANDLE lcdcH, UInt32 *data );
-
+	CSL_LCD_RES_T CSL_LCDC_PAR_RdData(CSL_LCD_HANDLE lcdcH, UInt32 * data);
 
 /**
 *
@@ -322,8 +294,8 @@ CSL_LCD_RES_T CSL_LCDC_PAR_RdData ( CSL_LCD_HANDLE lcdcH, UInt32 *data );
 *  @note     Z80/M68 mode
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_DBI_RdAccess ( CSL_LCD_HANDLE lcdcH,
-                    pCSL_LCDC_DBI_RD_REQ  rdAcc );
+	CSL_LCD_RES_T CSL_LCDC_DBI_RdAccess(CSL_LCD_HANDLE lcdcH,
+					    pCSL_LCDC_DBI_RD_REQ rdAcc);
 
 /**
 *
@@ -338,9 +310,8 @@ CSL_LCD_RES_T CSL_LCDC_DBI_RdAccess ( CSL_LCD_HANDLE lcdcH,
 *            Common to Z80/M68 & DBI modes
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_Update( CSL_LCD_HANDLE lcdcH, pCSL_LCD_UPD_REQ req );
-
-
+	CSL_LCD_RES_T CSL_LCDC_Update(CSL_LCD_HANDLE lcdcH,
+				      pCSL_LCD_UPD_REQ req);
 
 /**
 *
@@ -353,7 +324,7 @@ CSL_LCD_RES_T CSL_LCDC_Update( CSL_LCD_HANDLE lcdcH, pCSL_LCD_UPD_REQ req );
 *  @note     Common to Z80/M68 & DBI modes
 *
 *****************************************************************************/
-CSL_LCD_RES_T  CSL_LCDC_Close ( CSL_LCD_HANDLE* lcdcH );
+	CSL_LCD_RES_T CSL_LCDC_Close(CSL_LCD_HANDLE * lcdcH);
 
 /**
 *
@@ -367,8 +338,8 @@ CSL_LCD_RES_T  CSL_LCDC_Close ( CSL_LCD_HANDLE* lcdcH );
 *  @note     Common to Z80/M68 modes
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_PAR_Open ( pCSL_LCDC_PAR_CTRL busCfg,
-                CSL_LCD_HANDLE* lcdcH );
+	CSL_LCD_RES_T CSL_LCDC_PAR_Open(pCSL_LCDC_PAR_CTRL busCfg,
+					CSL_LCD_HANDLE * lcdcH);
 
 /**
 *
@@ -382,8 +353,8 @@ CSL_LCD_RES_T CSL_LCDC_PAR_Open ( pCSL_LCDC_PAR_CTRL busCfg,
 *  @note     Common to DBI modes
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_DBI_Open ( pCSL_LCDC_DBI_CTRL busCfg,
-                CSL_LCD_HANDLE* lcdcH );
+	CSL_LCD_RES_T CSL_LCDC_DBI_Open(pCSL_LCDC_DBI_CTRL busCfg,
+					CSL_LCD_HANDLE * lcdcH);
 
 /**
 *
@@ -398,8 +369,8 @@ CSL_LCD_RES_T CSL_LCDC_DBI_Open ( pCSL_LCDC_DBI_CTRL busCfg,
 *            Pixel Mode is canceled with next command write
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_DBI_WrCmndCmOn ( CSL_LCD_HANDLE lcdcH, UInt32 command );
-
+	CSL_LCD_RES_T CSL_LCDC_DBI_WrCmndCmOn(CSL_LCD_HANDLE lcdcH,
+					      UInt32 command);
 
 /**
 *
@@ -414,8 +385,8 @@ CSL_LCD_RES_T CSL_LCDC_DBI_WrCmndCmOn ( CSL_LCD_HANDLE lcdcH, UInt32 command );
 *            Timing In Effect Until Changed with Same Command
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_PAR_SetSpeed ( CSL_LCD_HANDLE lcdcH,
-    pCSL_LCDC_PAR_SPEED pSpeed );
+	CSL_LCD_RES_T CSL_LCDC_PAR_SetSpeed(CSL_LCD_HANDLE lcdcH,
+					    pCSL_LCDC_PAR_SPEED pSpeed);
 
 /**
 *
@@ -430,8 +401,8 @@ CSL_LCD_RES_T CSL_LCDC_PAR_SetSpeed ( CSL_LCD_HANDLE lcdcH,
 *            Timing In Effect Until Changed with Same Command
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_DBI_SetSpeed ( CSL_LCD_HANDLE lcdcH,
-    pCSL_LCDC_DBI_SPEED pSpeed);
+	CSL_LCD_RES_T CSL_LCDC_DBI_SetSpeed(CSL_LCD_HANDLE lcdcH,
+					    pCSL_LCDC_DBI_SPEED pSpeed);
 
 /**
 *
@@ -444,7 +415,7 @@ CSL_LCD_RES_T CSL_LCDC_DBI_SetSpeed ( CSL_LCD_HANDLE lcdcH,
 *  @note     Common to Z80/M68 & DBI modes
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_Lock ( CSL_LCD_HANDLE lcdcH );
+	CSL_LCD_RES_T CSL_LCDC_Lock(CSL_LCD_HANDLE lcdcH);
 
 /**
 *
@@ -457,7 +428,7 @@ CSL_LCD_RES_T CSL_LCDC_Lock ( CSL_LCD_HANDLE lcdcH );
 *  @note     Common to Z80/M68 & DBI modes
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_Unlock ( CSL_LCD_HANDLE lcdcH );
+	CSL_LCD_RES_T CSL_LCDC_Unlock(CSL_LCD_HANDLE lcdcH);
 
 /**
 *
@@ -470,7 +441,7 @@ CSL_LCD_RES_T CSL_LCDC_Unlock ( CSL_LCD_HANDLE lcdcH );
 *  @note     Common to Z80/M68 & DBI modes
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_Init ( pCSL_LCDC_INIT ctrlInit );
+	CSL_LCD_RES_T CSL_LCDC_Init(pCSL_LCDC_INIT ctrlInit);
 
 /**
 *
@@ -485,12 +456,11 @@ CSL_LCD_RES_T CSL_LCDC_Init ( pCSL_LCDC_INIT ctrlInit );
 *  @note     Z80/M68 modes (Legacy Interface)
 *
 *****************************************************************************/
-CSL_LCD_RES_T CSL_LCDC_Enable_CE ( CSL_LCD_HANDLE lcdcH, bool enable );
+	CSL_LCD_RES_T CSL_LCDC_Enable_CE(CSL_LCD_HANDLE lcdcH, bool enable);
 
 /** @} */
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // _CSL_LCDC_H_
+#endif				// _CSL_LCDC_H_

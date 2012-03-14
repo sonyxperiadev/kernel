@@ -23,8 +23,6 @@
 // Include directives
 //=============================================================================
 
-
-
 // initialize client table
 void client_init(void);
 
@@ -36,35 +34,67 @@ PRM_RETURN client_deregister(CLIENT_ID client_id);
 int check_client_id(CLIENT_ID client_id);
 
 // register or de-register OPP state change pre/post callback
-PRM_RETURN client_opp_change_prepare_callbk_register(CLIENT_ID client_id, PERFORMANCE_ID resource_id, void (*func)(OPP_STATE opp));
-PRM_RETURN client_opp_change_prepare_callbk_deregister(CLIENT_ID client_id, PERFORMANCE_ID resource_id, void (*func)(OPP_STATE opp));
-PRM_RETURN client_opp_change_finish_callbk_register(CLIENT_ID client_id, PERFORMANCE_ID resource_id, void (*func)(OPP_STATE opp));
-PRM_RETURN client_opp_change_finish_callbk_deregister(CLIENT_ID client_id, PERFORMANCE_ID resource_id, void (*func)(OPP_STATE opp));
+PRM_RETURN client_opp_change_prepare_callbk_register(CLIENT_ID client_id,
+						     PERFORMANCE_ID resource_id,
+						     void (*func) (OPP_STATE
+								   opp));
+PRM_RETURN client_opp_change_prepare_callbk_deregister(CLIENT_ID client_id,
+						       PERFORMANCE_ID
+						       resource_id,
+						       void (*func) (OPP_STATE
+								     opp));
+PRM_RETURN client_opp_change_finish_callbk_register(CLIENT_ID client_id,
+						    PERFORMANCE_ID resource_id,
+						    void (*func) (OPP_STATE
+								  opp));
+PRM_RETURN client_opp_change_finish_callbk_deregister(CLIENT_ID client_id,
+						      PERFORMANCE_ID
+						      resource_id,
+						      void (*func) (OPP_STATE
+								    opp));
 
 // register or de-register sleep state change callback
-PRM_RETURN client_sleep_state_change_callbk_register(CLIENT_ID client_id, PERFORMANCE_ID resource_id, SLEEP_STATE state, void (*func)(SLEEP_STATE state));
-PRM_RETURN client_sleep_state_change_callbk_deregister(CLIENT_ID client_id, PERFORMANCE_ID resource_id, SLEEP_STATE state, void (*func)(SLEEP_STATE state));
+PRM_RETURN client_sleep_state_change_callbk_register(CLIENT_ID client_id,
+						     PERFORMANCE_ID resource_id,
+						     SLEEP_STATE state,
+						     void (*func) (SLEEP_STATE
+								   state));
+PRM_RETURN client_sleep_state_change_callbk_deregister(CLIENT_ID client_id,
+						       PERFORMANCE_ID
+						       resource_id,
+						       SLEEP_STATE state,
+						       void (*func) (SLEEP_STATE
+								     state));
 
 // call client-registered callbacks for pre/post OPP or sleep state change notification
-void client_opp_change_prepare_callbk(PERFORMANCE_ID resource_id, OPP_STATE opp);
+void client_opp_change_prepare_callbk(PERFORMANCE_ID resource_id,
+				      OPP_STATE opp);
 void client_opp_change_finish_callbk(PERFORMANCE_ID resource_id, OPP_STATE opp);
-void client_sleep_state_change_callbk(PERFORMANCE_ID resource_id, SLEEP_STATE sleep);
+void client_sleep_state_change_callbk(PERFORMANCE_ID resource_id,
+				      SLEEP_STATE sleep);
 
 // set per-client allowed wake-up latency for a resource
-void client_set_allowed_wakeup_latency(CLIENT_ID client_id, PERFORMANCE_ID resource_id, int latency);
+void client_set_allowed_wakeup_latency(CLIENT_ID client_id,
+				       PERFORMANCE_ID resource_id, int latency);
 // check if HW wakeup latency can be tolerated by clients
-int client_check_allowed_wakeup_latency(PERFORMANCE_ID resource_id, int hw_latency);
+int client_check_allowed_wakeup_latency(PERFORMANCE_ID resource_id,
+					int hw_latency);
 
 // set per-client allowed sleep state for a resource
-void client_set_allowed_sleep_state(CLIENT_ID client_id, PERFORMANCE_ID resource_id, SLEEP_STATE state);
+void client_set_allowed_sleep_state(CLIENT_ID client_id,
+				    PERFORMANCE_ID resource_id,
+				    SLEEP_STATE state);
 // check if a sleep state is allowed by clients
-int client_check_allowed_sleep_state(PERFORMANCE_ID resource_id, SLEEP_STATE state);
+int client_check_allowed_sleep_state(PERFORMANCE_ID resource_id,
+				     SLEEP_STATE state);
 
 // save client OPP request in client table
-int client_save_opp_request(CLIENT_ID client_id, PERFORMANCE_ID resource_id, OPP_STATE opp);
+int client_save_opp_request(CLIENT_ID client_id, PERFORMANCE_ID resource_id,
+			    OPP_STATE opp);
 
 // get next outstanding OPP request in client table
-int client_find_next_opp_request(PERFORMANCE_ID resource_id, CLIENT_ID *client_id, OPP_STATE *opp);
+int client_find_next_opp_request(PERFORMANCE_ID resource_id,
+				 CLIENT_ID * client_id, OPP_STATE * opp);
 
 // get client ASIC name
 char *get_client_name(CLIENT_ID client_id);

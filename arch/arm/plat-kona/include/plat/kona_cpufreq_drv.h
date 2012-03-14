@@ -16,10 +16,9 @@
 #ifndef KONA_CPUFREQ_DRV_H
 #define KONA_CPUFREQ_DRV_H
 
-struct kona_freq_tbl
-{
-	u32 cpu_freq;         /* in MHz */
-	int opp;         /* Operating point eg: ECONOMY, NORMAL, TURBO */
+struct kona_freq_tbl {
+	u32 cpu_freq;		/* in MHz */
+	int opp;		/* Operating point eg: ECONOMY, NORMAL, TURBO */
 };
 
 /* Helper to initialize array of above structures */
@@ -29,14 +28,12 @@ struct kona_freq_tbl
 	.opp = __opp,   \
 }
 
-enum
-{
+enum {
 	KONA_CPUFREQ_UPDATE_LPJ = 1,
 };
 
 /* Platform data for Kona cpufreq driver */
-struct kona_cpufreq_drv_pdata
-{
+struct kona_cpufreq_drv_pdata {
 	/* Number of cpus */
 	u32 flags;
 	/* Table of cpu frequencies and voltages supported for a cpu */
@@ -48,8 +45,8 @@ struct kona_cpufreq_drv_pdata
 	/* CPU Frequency transition latency in ns */
 	u32 latency;
 
-	/*Init callback - can be NULL*/
-	void (*cpufreq_init)(void);
+	/*Init callback - can be NULL */
+	void (*cpufreq_init) (void);
 };
 
 #endif /* BCM_CPUFREQ_DRV_H */

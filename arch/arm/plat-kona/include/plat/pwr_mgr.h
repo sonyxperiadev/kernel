@@ -71,7 +71,6 @@
 #define PWRMGR_EVENT_BANK1_OFFSET		0x40A8
 #define PWRMGR_I2C_SW_CMD_CTRL_OFFSET		0x41B8
 
-
 #define PWRMGR_I2C_SW_START_ADDR_SHIFT		16
 #define PWRMGR_I2C_SW_START_ADDR_MASK		(0x3F << 16)
 #define PWRMGR_I2C_REQ_BUSY_SHIFT		12
@@ -81,7 +80,7 @@
 #define PWRMGR_I2C_READ_DATA_SHIFT		0
 #define PWRMGR_I2C_READ_DATA_MASK		0xFF
 
-#endif /*CONFIG_KONA_PWRMGR_REV2*/
+#endif /*CONFIG_KONA_PWRMGR_REV2 */
 
 #if defined(DEBUG)
 #define pwr_dbg printk
@@ -92,7 +91,6 @@
 		printk(format); 	\
 	} while(0)
 #endif
-
 
 #ifndef PM_I2C_CMD_MAX
 #define PM_I2C_CMD_MAX 64
@@ -105,91 +103,82 @@
 #define CCU_POLICY(p) ((p) & 0x3)
 #define IS_ACTIVE_POLICY(p)	((p) & 0x4)
 #define IS_SHUTDOWN_POLICY(p) ((p) == 0)
-#define IS_RETN_POLICY(p) ((p) == 1)   
+#define IS_RETN_POLICY(p) ((p) == 1)
 
 /*I2C commands - 4 bits*/
 
-enum
-{
-	REG_ADDR 		= 0, /*sets the next address for read/write data*/
-	REG_DATA 		= 1, /*executes a write to I2C controller via APB*/
-	I2C_DATA		= 2, /*data to be written to PMU via I2C*/
-	I2C_VAR 		= 3, /*data returned for voltage lookup (payload is the index to table)*/
-	WAIT_I2C_RETX		= 4, /*wait for retry from I2C control register*/
-	WAIT_I2C_STAT		= 5, /* wait for good status (loop until good)*/
-	WAIT_TIMER		= 6, /*wait for the number of clocks in the payload*/
-	END			= 7, /*stop and wait for new voltage request change*/
-	SET_PC_PINS		= 8, /*pc pins are set based on value and mask*/
-	SET_UPPER_DATA		= 9, 	/*sets the data in the upper byte of apb data bus*/
+enum {
+	REG_ADDR = 0,		/*sets the next address for read/write data */
+	REG_DATA = 1,		/*executes a write to I2C controller via APB */
+	I2C_DATA = 2,		/*data to be written to PMU via I2C */
+	I2C_VAR = 3,		/*data returned for voltage lookup (payload is the index to table) */
+	WAIT_I2C_RETX = 4,	/*wait for retry from I2C control register */
+	WAIT_I2C_STAT = 5,	/* wait for good status (loop until good) */
+	WAIT_TIMER = 6,		/*wait for the number of clocks in the payload */
+	END = 7,		/*stop and wait for new voltage request change */
+	SET_PC_PINS = 8,	/*pc pins are set based on value and mask */
+	SET_UPPER_DATA = 9,	/*sets the data in the upper byte of apb data bus */
 #if defined(CONFIG_KONA_PWRMGR_REV2)
-	READ_FIFO		= 0xA,	/*Read I2C FIFO*/
-	SET_READ_DATA		= 0xB,	/*Copy I2C read data to PWRMGR register */
-#endif /*CONFIG_KONA_PWRMGR_REV2*/
-	JUMP_VOLTAGE		= 0xE, /*jump to address based on current voltage request*/
-	JUMP			= 0xF  /*jump to address defined in payload*/
+	READ_FIFO = 0xA,	/*Read I2C FIFO */
+	SET_READ_DATA = 0xB,	/*Copy I2C read data to PWRMGR register */
+#endif /*CONFIG_KONA_PWRMGR_REV2 */
+	JUMP_VOLTAGE = 0xE,	/*jump to address based on current voltage request */
+	JUMP = 0xF		/*jump to address defined in payload */
 };
 
-enum pm_policy
-{
-    PM_POLICY_0,
-    PM_POLICY_1,
-    PM_POLICY_2,
-    PM_POLICY_3,
-    PM_POLICY_4,
-    PM_POLICY_5,
-    PM_POLICY_6,
-    PM_POLICY_7
+enum pm_policy {
+	PM_POLICY_0,
+	PM_POLICY_1,
+	PM_POLICY_2,
+	PM_POLICY_3,
+	PM_POLICY_4,
+	PM_POLICY_5,
+	PM_POLICY_6,
+	PM_POLICY_7
 };
 
-enum pm_trig_type
-{
-	PM_TRIG_NONE		= 0,
-	PM_TRIG_POS_EDGE 	= (1 << 0),
-	PM_TRIG_NEG_EDGE 	= (1 << 1),
-	PM_TRIG_BOTH_EDGE 	=  PM_TRIG_NEG_EDGE|PM_TRIG_POS_EDGE
+enum pm_trig_type {
+	PM_TRIG_NONE = 0,
+	PM_TRIG_POS_EDGE = (1 << 0),
+	PM_TRIG_NEG_EDGE = (1 << 1),
+	PM_TRIG_BOTH_EDGE = PM_TRIG_NEG_EDGE | PM_TRIG_POS_EDGE
 };
 
-enum v_set
-{
+enum v_set {
 	VOLT0,
 	VOLT1,
 	VOLT2,
 	V_SET_MAX
 };
 
-enum pc_pin
-{
+enum pc_pin {
 	PC0,
 	PC1,
 	PC2,
 	PC3
 };
 
-enum
-{
+enum {
 	PM_PMU_I2C = (1 << 0),
-	PM_HW_SEM_NO_DFS_REQ  =	(1 << 1), /*Don't request for turbo mode when acquiring HW SEM - test only*/
+	PM_HW_SEM_NO_DFS_REQ = (1 << 1),	/*Don't request for turbo mode when acquiring HW SEM - test only */
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	PROCESS_EVENTS_ON_INTR = (1 << 2),
 	I2C_SIMULATE_BURST_MODE = (1 << 3),
 #endif
 };
 
-struct pm_policy_cfg
-{
-    bool ac;
-    bool atl;
-    u32 policy;
+struct pm_policy_cfg {
+	bool ac;
+	bool atl;
+	u32 policy;
 };
 
-struct i2c_cmd
-{
-	u8 cmd; /*4 bit command*/
-	u8 cmd_data; /*8bit command data */
+struct i2c_cmd {
+	u8 cmd;			/*4 bit command */
+	u8 cmd_data;		/*8bit command data */
 };
 
-struct v0x_spec_i2c_cmd_ptr
-{
+struct v0x_spec_i2c_cmd_ptr {
 	u8 set2_val;
 	u8 set2_ptr;
 	u8 set1_val;
@@ -203,16 +192,15 @@ struct pm_special_event_range {
 	u32 end;
 };
 
-struct pwr_mgr_info
-{
+struct pwr_mgr_info {
 	u32 flags;
-	u16	num_pi;
+	u16 num_pi;
 	u32 base_addr;
-	struct i2c_cmd* i2c_cmds;
+	struct i2c_cmd *i2c_cmds;
 	u32 num_i2c_cmds;
-	u8* i2c_var_data;
+	u8 *i2c_var_data;
 	u32 num_i2c_var_data;
-	struct v0x_spec_i2c_cmd_ptr* i2c_cmd_ptr[V_SET_MAX];
+	struct v0x_spec_i2c_cmd_ptr *i2c_cmd_ptr[V_SET_MAX];
 
 	struct pm_special_event_range *special_event_list;
 	u32 num_special_event_range;
@@ -220,8 +208,8 @@ struct pwr_mgr_info
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 pwrmgr_intr;
 	u32 i2c_rd_off;
-	int i2c_rd_slv_id_off1;  /*slave id offset -  write reg address*/
-	int i2c_rd_slv_id_off2; /*slave id offset - read reg value*/
+	int i2c_rd_slv_id_off1;	/*slave id offset -  write reg address */
+	int i2c_rd_slv_id_off2;	/*slave id offset - read reg value */
 	int i2c_rd_reg_addr_off;
 	int i2c_rd_nack_off;
 	int i2c_rd_nack_jump_off;
@@ -230,71 +218,76 @@ struct pwr_mgr_info
 	int i2c_wr_slv_id_off;
 	int i2c_wr_reg_addr_off;
 	int i2c_wr_val_addr_off;
-	u32 i2c_seq_timeout; /*timeout in ms*/
+	u32 i2c_seq_timeout;	/*timeout in ms */
 #endif
 };
 
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 /*PWRMGR interrupts -  entries are based on offset*/
-enum
-{
+enum {
 	PWRMGR_INTR_I2C_SW_SEQ,
 	PWRMGR_INTR_EVENTS,
 	PWRMGR_INTR_MAX,
 	PWRMGR_INTR_ALL = 0xFF
 };
 
-#endif /*CONFIG_KONA_PWRMGR_REV2*/
+#endif /*CONFIG_KONA_PWRMGR_REV2 */
 
-int pwr_mgr_event_trg_enable(int event_id,int event_trg_type);
-int	pwr_mgr_get_event_trg_type(int event_id);
-int	pwr_mgr_event_clear_events(u32 event_start, u32 event_end);
+int pwr_mgr_event_trg_enable(int event_id, int event_trg_type);
+int pwr_mgr_get_event_trg_type(int event_id);
+int pwr_mgr_event_clear_events(u32 event_start, u32 event_end);
 bool pwr_mgr_is_event_active(int event_id);
 int pwr_mgr_event_set(int event_id, int event_state);
 
-int pwr_mgr_event_set_pi_policy(int event_id,int pi_id,const struct pm_policy_cfg* pm_policy_cfg);
-int pwr_mgr_event_get_pi_policy(int event_id,int pi_id,struct pm_policy_cfg* pm_policy_cfg);
+int pwr_mgr_event_set_pi_policy(int event_id, int pi_id,
+				const struct pm_policy_cfg *pm_policy_cfg);
+int pwr_mgr_event_get_pi_policy(int event_id, int pi_id,
+				struct pm_policy_cfg *pm_policy_cfg);
 
-int pwr_mgr_set_pi_fixed_volt_map(int pi_id,bool activate);
-int pwr_mgr_set_pi_vmap(int pi_id,int vmap, bool activate);
+int pwr_mgr_set_pi_fixed_volt_map(int pi_id, bool activate);
+int pwr_mgr_set_pi_vmap(int pi_id, int vmap, bool activate);
 
-int	pwr_mgr_pi_set_wakeup_override(int pi_id,bool value);
+int pwr_mgr_pi_set_wakeup_override(int pi_id, bool value);
 int pwr_mgr_set_pc_sw_override(int pc_pin, bool enable, int value);
 int pwr_mgr_set_pc_clkreq_override(int pc_pin, bool enable, int value);
 int pm_get_pc_value(int pc_pin);
 int pm_mgr_pi_count_clear(bool clear);
 int pwr_mgr_pi_counter_enable(int pi_id, bool enable);
-int pwr_mgr_pi_counter_read(int pi_id,bool* over_flow);
+int pwr_mgr_pi_counter_read(int pi_id, bool * over_flow);
 
 int pwr_mgr_pm_i2c_sem_lock(void);
 int pwr_mgr_pm_i2c_sem_unlock(void);
 int pwr_mgr_pm_i2c_enable(bool enable);
-int pwr_mgr_set_v0x_specific_i2c_cmd_ptr(int v0x, const struct v0x_spec_i2c_cmd_ptr* cmd_ptr);
-int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd* i2c_cmd, u32 num_cmds);
-int pwr_mgr_pm_i2c_var_data_write(const u8* var_data,int count);
+int pwr_mgr_set_v0x_specific_i2c_cmd_ptr(int v0x,
+					 const struct v0x_spec_i2c_cmd_ptr
+					 *cmd_ptr);
+int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd *i2c_cmd, u32 num_cmds);
+int pwr_mgr_pm_i2c_var_data_write(const u8 * var_data, int count);
 
-int	pwr_mgr_arm_core_dormant_enable(bool enable);
-int	pwr_mgr_pi_retn_clamp_enable(int pi_id,bool enable);
+int pwr_mgr_arm_core_dormant_enable(bool enable);
+int pwr_mgr_pi_retn_clamp_enable(int pi_id, bool enable);
 int pwr_mgr_ignore_power_ok_signal(bool ignore);
 int pwr_mgr_ignore_dap_powerup_request(bool ignore);
-int pwr_mgr_register_event_handler(u32 event_id, void (*pwr_mgr_event_cb)(u32 event_id,void* param),
-											void* param);
+int pwr_mgr_register_event_handler(u32 event_id,
+				   void (*pwr_mgr_event_cb) (u32 event_id,
+							     void *param),
+				   void *param);
 int pwr_mgr_unregister_event_handler(u32 event_id);
 int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event);
 void pwr_mgr_init_sequencer(struct pwr_mgr_info *info);
-int pwr_mgr_init(struct pwr_mgr_info* info);
+int pwr_mgr_init(struct pwr_mgr_info *info);
 
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 int pwr_mgr_mask_intr(u32 intr, bool mask);
 int pwr_mgr_clr_intr_status(u32 intr);
 int pwr_mgr_get_intr_status(u32 intr);
-int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val);
+int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 * reg_val);
 int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val);
 int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start, u8 slave_id,
-		u8 count, u8 *reg_val);
+			     u8 count, u8 * reg_val);
 int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start, u8 slave_id,
-		u8 count, u8 *reg_val);
-#endif /*CONFIG_KONA_PWRMGR_REV2*/
+			      u8 count, u8 * reg_val);
+#endif /*CONFIG_KONA_PWRMGR_REV2 */
 
 #ifdef CONFIG_DEBUG_FS
 int __init pwr_mgr_debug_init(u32 bmdm_pwr_base);

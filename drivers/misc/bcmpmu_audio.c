@@ -35,6 +35,7 @@ struct bcmpmu_audio {
 	bool HS_On;
 	struct mutex lock;
 	void *debugfs_dir;
+	u32 pll_use_count;
 };
 static struct bcmpmu_audio *bcmpmu_audio;
 
@@ -100,9 +101,25 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 			bcmpmu->regmap[PMU_REG_HSPGA2].mask);
 	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA3, &data3,
 			bcmpmu->regmap[PMU_REG_HSPGA3].mask);
-	if (HSInputmode == PMU_HS_SINGLE_ENDED_AC_COUPLED) {
+	if (HSInputmode ==
+	PMU_HS_SINGLE_ENDED_AC_COUPLED) {
+
+		/*add 6 dB shift if input mode is PMU_HS_SINGLE_ENDED,
+		threfore the HS gain is the same for PMU_HS_SINGLE_ENDED
+		 and PMU_HS_DIFFERENTIAL.*/
+
+#if defined(CONFIG_MFD_BCM59055)
+		/*for 59055, i_pga_gainl==1, boost 6dB */
 		data1 |= (BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
 				(HSgain & BCMPMU_PGA_CTL_MASK));
+#endif
+#if defined(CONFIG_MFD_BCM59039)
+		/* for 59039, i_pga_gainl==0, boost 6dB */
+		data1 &= ~(BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
+				BCMPMU_PGA_CTL_MASK);
+		data1 |= HSgain & BCMPMU_PGA_CTL_MASK;
+#endif
+
 		data2 &= ~BCMPMU_PGA_CTL_MASK;
 		data2 |= HSgain & BCMPMU_PGA_CTL_MASK;
 
@@ -110,9 +127,18 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 				BCMPMU_HSPGA3_PGA_PULLDNSJ);
 		data3 |= BCMPMU_HSPGA3_PGA_ENACCPL;
 	} else if (HSInputmode == PMU_HS_DIFFERENTIAL_AC_COUPLED) {
+
+#if defined(CONFIG_MFD_BCM59055)
+		/*for 59055, i_pga_gainl==0, does not boost. (lower by 6dB) */
 		data1 &= ~(BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
 				BCMPMU_PGA_CTL_MASK);
 		data1 |= HSgain & BCMPMU_PGA_CTL_MASK;
+#endif
+#if defined(CONFIG_MFD_BCM59039)
+		/* for 59039, i_pga_gainl==1, does not boost. (lower by 6dB) */
+		data1 |= (BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
+				(HSgain & BCMPMU_PGA_CTL_MASK));
+#endif
 
 		data2 &= ~BCMPMU_PGA_CTL_MASK;
 		data2 |= HSgain & BCMPMU_PGA_CTL_MASK;
@@ -121,9 +147,18 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 		data3 |= (BCMPMU_HSPGA3_PGA_ENACCPL |
 				BCMPMU_HSPGA3_PGA_ACINADJ);
 	} else if (HSInputmode == PMU_HS_DIFFERENTIAL_DC_COUPLED) {
+
+#if defined(CONFIG_MFD_BCM59055)
+		/*for 59055, i_pga_gainl==0, does not boost. (lower by 6dB) */
 		data1 &= ~(BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
 				BCMPMU_PGA_CTL_MASK);
 		data1 |= HSgain & BCMPMU_PGA_CTL_MASK;
+#endif
+#if defined(CONFIG_MFD_BCM59039)
+		/* for 59039, i_pga_gainl==1, does not boost. (lower by 6dB) */
+		data1 |= (BCMPMU_HSPGA1_PGA_GAINL | BCMPMU_HSPGA1_PGA_GAINR |
+				(HSgain & BCMPMU_PGA_CTL_MASK));
+#endif
 
 		data2 &= ~BCMPMU_PGA_CTL_MASK;
 		data2 |= HSgain & BCMPMU_PGA_CTL_MASK;
@@ -540,28 +575,37 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 void bcmpmu_audio_init(void)
 {
 	struct bcmpmu_rw_data reg;
-	printk(KERN_WARNING "%s: ######\n", __func__);
+	pr_info("%s: ###### - pll_use_count = %u\n",
+		__func__, bcmpmu_audio->pll_use_count);
 
-	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL,
-				       &reg.val, PMU_BITMASK_ALL);
-	reg.val |= (BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN);
-	bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL,
-					reg.val, PMU_BITMASK_ALL);
+	if (bcmpmu_audio->pll_use_count++ == 0)	{
+
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_PLLCTRL, &reg.val, PMU_BITMASK_ALL);
+		reg.val |= (BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN);
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_PLLCTRL, reg.val, PMU_BITMASK_ALL);
+	}
 }
 EXPORT_SYMBOL(bcmpmu_audio_init);
 
 void bcmpmu_audio_deinit(void)
 {
 	struct bcmpmu_rw_data reg;
+	pr_info("%s: ###### - pll_use_count = %u\n",
+		__func__, bcmpmu_audio->pll_use_count);
+	if (bcmpmu_audio->pll_use_count &&
+			--bcmpmu_audio->pll_use_count == 0) {
 
-	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL,
-				       &reg.val, PMU_BITMASK_ALL);
-	reg.val &= ~(BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN);
-	bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL,
-					reg.val, PMU_BITMASK_ALL);
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_PLLCTRL, &reg.val, PMU_BITMASK_ALL);
+		reg.val &= ~(BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN);
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_PLLCTRL, reg.val, PMU_BITMASK_ALL);
 
-	bcmpmu_audio->HS_On = false;
-	bcmpmu_audio->IHF_On = false;
+		bcmpmu_audio->HS_On = false;
+		bcmpmu_audio->IHF_On = false;
+	}
 }
 EXPORT_SYMBOL(bcmpmu_audio_deinit);
 
@@ -646,6 +690,7 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	mutex_init(&pdata->lock);
+	pdata->pll_use_count = 0;
 	pdata->bcmpmu = bcmpmu;
 	bcmpmu_audio = pdata;
 	bcmpmu_audio->HS_On = false;

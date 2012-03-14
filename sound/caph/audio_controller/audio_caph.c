@@ -36,6 +36,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/kfifo.h>
 #include <linux/wait.h>
 #include <linux/jiffies.h>
+#include <linux/completion.h>
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -97,7 +98,6 @@ struct TAudioHalThreadData {
 	Semaphore_t action_complete;
 	struct kfifo m_pkfifo_out;
 	spinlock_t m_lock_out;
-
 };
 
 static char action_names[ACTION_AUD_TOTAL][40] = {
@@ -139,10 +139,13 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 };
 
 static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
-
+static unsigned int n_msg_in, n_msg_out, last_action;
+static struct completion complete_kfifo;
 static struct TAudioHalThreadData sgThreadData;
-#define	KFIFO_SIZE		1024 /*(9*sizeof(TMsgAudioCtrl))*/
-#define WAIT_TIME		3000		/* in msec */
+
+#define KFIFO_SIZE		2048
+#define BLOCK_WAITTIME_MS	60000
+#define KFIFO_TIMEOUT_MS	60000
 
 static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			void *arg_param, void *callback, int block);
@@ -150,9 +153,16 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 #ifdef USE_HR_TIMER
 static enum hrtimer_restart TimerCbStopVibrator(struct hrtimer *timer)
 {
-	AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra, NULL, NULL, 0);
+	Result_t status =
+		AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra_CB,
+		NULL, NULL, 0);
 
-	aTrace(LOG_AUDIO_CNTLR, "Disable Vib from HR Timer  cb\n");
+	if (status != RESULT_OK) {
+		/*recur after 100ms*/
+		hrtimer_forward_now(timer, ktime_set(0, (100*1000000)));
+		return HRTIMER_RESTART;
+	} else
+		aTrace(LOG_AUDIO_CNTLR, "Disable Vib from HR Timer cb\n");
 
 	return HRTIMER_NORESTART;
 }
@@ -200,10 +210,15 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 		if (len == 0)	/* FIFO empty sleep */
 			return;
 
+		n_msg_in++;
+		last_action = msgAudioCtrl.action_code;
+
 		/* process the operation */
 		AUDIO_Ctrl_Process(msgAudioCtrl.action_code,
 				   &msgAudioCtrl.param,
 				   msgAudioCtrl.pCallBack, msgAudioCtrl.block);
+		n_msg_out++;
+		complete(&complete_kfifo);
 	}
 
 	return;
@@ -230,6 +245,7 @@ static void AudioCodecIdHander(int codecID)
 void caph_audio_init(void)
 {
 	AUDDRV_RegisterRateChangeCallback(AudioCodecIdHander);
+	init_completion(&complete_kfifo);
 
 #ifdef USE_HR_TIMER
 	hrtimer_init(&hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
@@ -397,11 +413,18 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	Result_t status = RESULT_OK;
 	unsigned int len;
 	OSStatus_t osStatus;
-	int params_size = AUDIO_Ctrl_Trigger_GetParamsSize(action_code);
-	unsigned long to_jiff = msecs_to_jiffies(WAIT_TIME);
+	int params_size;
+	unsigned long to_jiff = msecs_to_jiffies(BLOCK_WAITTIME_MS);
+	int fifo_avail;
+	unsigned long t_flag;
+	int is_atomic;
+	int is_cb = 0;
 
-	aTrace(LOG_AUDIO_CNTLR, "AudioHalThread action=%d\r\n", action_code);
-
+	if (action_code == ACTION_AUD_DisableByPassVibra_CB) {
+		action_code = ACTION_AUD_DisableByPassVibra;
+		is_cb = 1;
+	}
+	params_size = AUDIO_Ctrl_Trigger_GetParamsSize(action_code);
 	msgAudioCtrl.action_code = action_code;
 	if (arg_param)
 		memcpy(&msgAudioCtrl.param, arg_param, params_size);
@@ -410,10 +433,91 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	msgAudioCtrl.pCallBack = callback;
 	msgAudioCtrl.block = block;
 
-	len =
-	    kfifo_in_locked(&sgThreadData.m_pkfifo,
-			    (unsigned char *)&msgAudioCtrl,
-			    sizeof(TMsgAudioCtrl), &sgThreadData.m_lock);
+	is_atomic = 0;
+	if (action_code == ACTION_AUD_StartPlay ||
+	    action_code == ACTION_AUD_StopPlay ||
+	    action_code == ACTION_AUD_PausePlay ||
+	    action_code == ACTION_AUD_ResumePlay ||
+	    action_code == ACTION_AUD_StartRecord ||
+	    action_code == ACTION_AUD_StopRecord ||
+	    action_code == ACTION_AUD_RateChange)
+		is_atomic = 1;
+
+/* Triggers come to audio KFIFO from many threads: HAL, hwdep,
+   interrupt callback etc.
+   Audio KFIFO overflow may happen during stress test, due to that
+   either audio driver is stuck, or audio thread is blocked by other
+   threads.
+   - When KFIFO is half full, give warning.
+   - When KFIFO is full:
+    * For timer callback, ask to reshedule.
+    * For other non-atomic triggers, wait for completion.
+    * For atomic triggers, throw away. This is not ideal, but atomic
+      triggers require min delay and does not allow sleep or waiting.
+*/
+AUDIO_Ctrl_Trigger_Wait:
+	spin_lock_irqsave(&sgThreadData.m_lock, t_flag);
+	fifo_avail = kfifo_avail(&sgThreadData.m_pkfifo);
+	spin_unlock_irqrestore(&sgThreadData.m_lock, t_flag);
+
+	if (fifo_avail < sizeof(TMsgAudioCtrl)) {
+		aError("Audio KFIFO FULL avail %d, n_msg_in 0x%x, "
+			"n_msg_out 0x%x, last_action %d, action %d\n",
+			fifo_avail, n_msg_in, n_msg_out, last_action,
+			action_code);
+
+		if (is_atomic) {
+			aError("ERROR Audio KFIFO FULL throw atomic "
+				"action %d\n", action_code);
+			return RESULT_ERROR;
+		} else if (is_cb) {
+			aError("Audio KFIFO FULL reschedule cb action %d\n",
+				action_code);
+			return RESULT_ERROR;
+		} else {
+			unsigned long ret;
+			ret = wait_for_completion_interruptible_timeout(
+				&complete_kfifo,
+				msecs_to_jiffies(KFIFO_TIMEOUT_MS));
+			if (!ret) {
+				aError("ERROR Audio KFIFO timeout avail %d, "
+					"n_msg_in 0x%x, n_msg_out 0x%x, "
+					"last_action %d, action %d\n",
+					fifo_avail, n_msg_in, n_msg_out,
+					last_action, action_code);
+				BUG();
+				return RESULT_ERROR;
+			}
+		}
+	} else if (fifo_avail < KFIFO_SIZE/2)
+		aWarn("Audio KFIFO HIGH avail %d, n_msg_in 0x%x, "
+			"n_msg_out 0x%x, last_action %d, action %d\n",
+			fifo_avail, n_msg_in, n_msg_out, last_action,
+			action_code);
+
+	spin_lock_irqsave(&sgThreadData.m_lock, t_flag);
+	fifo_avail = kfifo_avail(&sgThreadData.m_pkfifo);
+
+	if (fifo_avail < sizeof(TMsgAudioCtrl)) {
+		/*this means trigger from other thead has taken the spot*/
+		spin_unlock_irqrestore(&sgThreadData.m_lock, t_flag);
+		/*aError("Audio KFIFO FULL loop action %d, "
+			"cb %d, atomic %d\n",
+			action_code, is_cb, is_atomic);*/
+		/*return RESULT_ERROR;*/
+		goto AUDIO_Ctrl_Trigger_Wait;
+	}
+
+	len = kfifo_in(&sgThreadData.m_pkfifo,
+		(unsigned char *)&msgAudioCtrl,
+		sizeof(TMsgAudioCtrl));
+
+	spin_unlock_irqrestore(&sgThreadData.m_lock, t_flag);
+
+	aTrace(LOG_AUDIO_CNTLR, "AUDIO_Ctrl_Trigger action %d, avail %d, "
+		"n_msg_in 0x%x, n_msg_out 0x%x, last_action %d\n",
+		action_code, fifo_avail, n_msg_in, n_msg_out, last_action);
+
 	if (len != sizeof(TMsgAudioCtrl))
 		aError
 		    ("Error AUDIO_Ctrl_Trigger len=%d expected %d\n", len,
@@ -1081,8 +1185,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		}
 		break;
 	default:
-		aError
-		    ("Error AUDIO_Ctrl_Process Invalid acction command\n");
+		aError("Error AUDIO_Ctrl_Process Invalid action %d\n",
+			action_code);
 		break;
 	}
 
