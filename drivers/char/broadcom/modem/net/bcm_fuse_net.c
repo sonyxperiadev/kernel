@@ -585,7 +585,7 @@ static int bcm_fuse_net_attach(unsigned int dev_index)
 
 	/* Allocate etherdev, including space for private structure */
 	dev_ptr = alloc_netdev(sizeof(net_drvr_info_t *), BCM_NET_DEV_STR,
-		bcm_fuse_net_init);
+			       bcm_fuse_net_init);
 	if (dev_ptr == NULL) {
 		BNET_DEBUG(DBG_ERROR, "%s: Out of memory\n", __FUNCTION__);
 		return -1;
