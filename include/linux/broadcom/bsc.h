@@ -25,11 +25,10 @@
 
 #define BSC_NAME_LEN    25
 
-typedef struct
-{
-   char name[BSC_NAME_LEN];
-   void *data;
-   int len;
+typedef struct {
+	char name[BSC_NAME_LEN];
+	void *data;
+	int len;
 } BSC_PARAM_T;
 
 #define BSC_MAGIC    'B'
@@ -39,7 +38,7 @@ typedef struct
 #define BSC_CMD_QUERY            0x82
 
 #define BSC_IOCTL_REGISTER       _IOW(BSC_MAGIC, BSC_CMD_REGISTER, BSC_PARAM_T)
-#define BSC_IOCTL_UNREGISTER     _IOW(BSC_MAGIC, BSC_CMD_UNREGISTER, char) /* arg is char[] */
+#define BSC_IOCTL_UNREGISTER     _IOW(BSC_MAGIC, BSC_CMD_UNREGISTER, char)	/* arg is char[] */
 #define BSC_IOCTL_QUERY          _IOWR(BSC_MAGIC, BSC_CMD_QUERY, BSC_PARAM_T)
 
 /*
@@ -58,4 +57,4 @@ int bsc_unregister(const char *name);
  */
 int bsc_query(const char *name, void *data, int len);
 
-#endif  /* _BSC_H_ */
+#endif /* _BSC_H_ */
