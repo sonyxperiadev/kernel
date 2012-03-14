@@ -257,6 +257,17 @@ static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
 	},
 
 	{
+		.id 		= V4L2_CID_CAMERA_TOUCH_AF_AREA,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Touchfocus areas",
+		.minimum	= 0,
+		.maximum	= 1,
+		.step		= 1,
+		.default_value	= 1,
+	},
+
+		
+	{
 		.id			= V4L2_CID_CAMERA_FRAME_RATE,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Framerate control",
@@ -695,93 +706,200 @@ static int s5k4ecgx_get_ae_stable_status(struct v4l2_subdev *sd, struct v4l2_con
 
 
 
-// cmk 2010.09.29 Apply new AF routine.
-static int s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 { 
-#if 0 //BILLA TEMP
-
-    struct camdrv_ss_state *state = to_state(sd);
     struct i2c_client *client = v4l2_get_subdevdata(sd);
     unsigned short AF_status = 0;
+    int err = 0;
+    unsigned short usReadData =0 ;
+    unsigned short uiLoop = 0;
+
+    msleep(200);
+
+    CAM_INFO_MSG(&client->dev, "%s, Start 1st AF\n", __func__ );
+    printk("camdrv_ss_s5k4ecgx_get_auto_focus_status E \n");
+    do
+    {
+        err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_get_1st_af_search_status,ARRAY_SIZE(s5k4ecgx_get_1st_af_search_status),"get_1st_af_search_status");
+        err += camdrv_ss_i2c_read_4_bytes(client, 0x0F12,&usReadData);
+        if(err < 0)
+        {
+            CAM_ERROR_MSG(&client->dev, "%s: I2C failed during AF \n", __func__);
+            ctrl->value = CAMDRV_SS_AF_FAILED;
+            goto CAMDRV_SS_AF_END;
+        }
+        
+        CAM_INFO_MSG(&client->dev,  " 1st check status, usReadData : 0x%x\n", usReadData );
+
+        switch( usReadData & 0xFF )
+    	{
+            case 1:
+                CAM_INFO_MSG(&client->dev, "1st CAM_AF_PROGRESS\n " );
+                AF_status = CAMDRV_SS_AF_SEARCHING;
+            break;
+
+            case 2:
+                CAM_INFO_MSG(&client->dev, "1st CAM_AF_SUCCESS\n " );
+                AF_status = CAMDRV_SS_AF_FOCUSED;
+            break;
+
+            default:                    
+                CAM_INFO_MSG(&client->dev, "1st CAM_AF_FAIL. count : %d\n ", uiLoop);
+                AF_status = CAMDRV_SS_AF_FAILED;
+                goto CAMDRV_SS_AF_END;
+            break;
+    	}
+
+        msleep(100);
+        uiLoop++;
+        
+    }while ((AF_status == CAMDRV_SS_AF_SEARCHING)&& (uiLoop < 100));
+
+    if (uiLoop >= 100)
+    	{
+        AF_status = CAMDRV_SS_AF_FAILED;
+        CAM_ERROR_MSG(&client->dev, "%s, AF failed, over counted : %d\n", __func__, uiLoop);
+        goto CAMDRV_SS_AF_END;
+        	}
+
+    CAM_INFO_MSG(&client->dev, "%s, uiLoop : %d, Start 2nd AF\n", __func__, uiLoop);
+
+
+    uiLoop =0;
+    AF_status = CAMDRV_SS_AF_SEARCHING;
+    do
+        	{
+        msleep(100);
+
+        err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_get_2nd_af_search_status,ARRAY_SIZE(s5k4ecgx_get_2nd_af_search_status),"get_2nd_af_search_status");
+        err += camdrv_ss_i2c_read_4_bytes(client, 0x0F12, &usReadData);
+        if(err < 0)
+        {
+            CAM_ERROR_MSG(&client->dev, "%s: I2C failed during AF \n", __func__);
+            ctrl->value = CAMDRV_SS_AF_FAILED;
+            goto CAMDRV_SS_AF_END;
+        	}
+
+        CAM_INFO_MSG(&client->dev,  " 2nd check status, usReadData : 0x%x\n", usReadData );
+
+        if (!(usReadData & 0xff00))
+        {
+            CAM_INFO_MSG(&client->dev, "2nd CAM_AF_SUCCESS, cnt : %d\n ", uiLoop);
+            AF_status = CAMDRV_SS_AF_FOCUSED;
+            break;
+        }
+
+        uiLoop++;
+    }while ((AF_status == CAMDRV_SS_AF_SEARCHING)&& (uiLoop < 100));
+
+    if (uiLoop >= 100)
+        	{
+        AF_status = CAMDRV_SS_AF_FAILED;
+        CAM_ERROR_MSG(&client->dev, "%s, AF failed, over counted : %d\n", __func__, uiLoop);
+        goto CAMDRV_SS_AF_END;
+        	}
+
+
+    CAMDRV_SS_AF_END: 
+    
+        CAM_INFO_MSG(&client->dev, "AF End : %d\n", AF_status);
+        ctrl->value = AF_status;
+        return AF_status;
+        }
+
+
+static int camdrv_ss_s5k4ecgx_get_touch_focus_status(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+{
+      printk("camdrv_ss_s5k4ecgx_get_touch_focus_status E \n");
+ 	return 0;
+    }
+
+static int camdrv_ss_s5k4ecgx_set_auto_focus(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+    {
+	printk("camdrv_ss_s5k4ecgx_set_auto_focus E \n");
+#if 0
+
+	//struct camdrv_ss_state *state = to_state(sd);
+    struct i2c_client *client = v4l2_get_subdevdata(sd);
+	  struct camdrv_ss_state *state = to_state(sd);
     int err = 0;
 
     mutex_lock(&af_cancel_op);
 
-    if(!bStartFineSearch)
-    {
-        err  = camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
-        err += camdrv_ss_i2c_write_4_bytes(client, 0x002C, 0x7000);
-        err += camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x2D12);
-        err += camdrv_ss_i2c_read_4_bytes(client, 0x0F12, &AF_status);
+    // Initialize fine search value.
+    state->bStartFineSearch = false;
 
-        if(err < 0)
+
+    if(ctrl->value == AUTO_FOCUS_ON) 
+    {
+        CAM_INFO_MSG(&client->dev, "%s %s :  AUTFOCUS ON  \n",sensor.name, __func__);
+
+		if(sensor.single_af_start_regs == 0)
+			CAM_ERROR_MSG(&client->dev, "%s %s : single_af_start_regs  supported !!! \n",sensor.name, __func__);
+		else
         {
-    		CAM_ERROR_MSG(&client->dev, "%s: AF is Failure~~~~~~~(I2C Failed) \n", __func__);
-    		ctrl->value = CAMERA_AF_STATUS_FAIL;
-    		goto routine_end;
+
+                        CAM_INFO_MSG(&client->dev, "%s , ae lock\n ",__func__);
+
+                        err = camdrv_ss_i2c_set_config_register(client,sensor.ae_lock_regs, sensor.rows_num_ae_lock_regs, "ae_lock_regs");
+
+                        CAM_INFO_MSG(&client->dev, "%s , AF start\n ",__func__);
+
+			err = camdrv_ss_i2c_set_config_register(client,sensor.single_af_start_regs,sensor.rows_num_single_af_start_regs,"single_af_start_regs");
         }
+
+		 if(err < 0)
+    	{
+    		CAM_ERROR_MSG(&client->dev, "%s %s : i2c failed !!! \n",sensor.name, __func__);
+    		mutex_unlock(&af_cancel_op);
+    		return -EIO;
+    	}
+
+    	}
+    else if(ctrl->value == AUTO_FOCUS_OFF) 
+    {
         
-    	if(AF_status & 0x0001)   // Check if AF is in progress
-    	{
-    	    ctrl->value = CAMERA_AF_STATUS_IN_PROGRESS;
-    	}
+		CAM_INFO_MSG(&client->dev, "%s %s :  AUTFOCUS OFF  \n",sensor.name, __func__);
+        
+        state->camera_flash_fire = 0;
+        state->camera_af_flash_checked = 0;
+		if(sensor.single_af_stop_regs == 0)
+			CAM_ERROR_MSG(&client->dev, "%s %s : single_af_stop_regs  supported !!! \n",sensor.name, __func__);
     	else
+			err = camdrv_ss_i2c_set_config_register(client,sensor.single_af_stop_regs,sensor.rows_num_single_af_stop_regs,"single_af_stop_regs");
+		 if(err < 0)
     	{
-        	if(AF_status & 0x0002) 
-        	{
-        		CAM_WARN_MSG(&client->dev, "%s: AF is success~~~~~~~(Single Search) \n", __func__);
-
-#if 1 // Use Fine Search Algorithm.
-        		ctrl->value = CAMERA_AF_STATUS_1ST_SUCCESS; // fine search algorithm.
-        		bStartFineSearch = true;
-#else
-        		ctrl->value = CAMERA_AF_STATUS_SUCCESS; // single search algorithm.
-#endif
-        	}
-        	else
-        	{
-        		CAM_WARN_MSG(&client->dev, "%s: AF is Failure~~~~~~~(Single Search) \n", __func__);
-        		ctrl->value = CAMERA_AF_STATUS_FAIL;
-        	}
-        }
-    }
-    else // Fine Search
-    {
-        err  = camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
-        err += camdrv_ss_i2c_write_4_bytes(client, 0x002C, 0x7000);
-        err += camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x1F2F);
-        err += camdrv_ss_i2c_read_4_bytes(client, 0x0F12, &AF_status);
-
-        if(err < 0)
-        {
-    		CAM_ERROR_MSG(&client->dev, "%s: AF is Failure~~~~~~~(I2C Failed) \n", __func__);
-
-    		ctrl->value = CAMERA_AF_STATUS_FAIL;
-    		goto routine_end;
-        }
-
-    	if((AF_status & 0xFF00) == 0x0000) 
-    	{
-    		CAM_WARN_MSG(&client->dev, "%s: AF is success~~~~~~~(Fine Search) \n", __func__);
-
-    		ctrl->value = CAMERA_AF_STATUS_SUCCESS;
+    		CAM_ERROR_MSG(&client->dev, "%s %s : i2c failed in OFF !!! \n",sensor.name, __func__);
+    		mutex_unlock(&af_cancel_op);
+    		return -EIO;
     	}
-    	else
-    	{
-    	    CAM_INFO_MSG(&client->dev, "%s: AF is in progress~~~~~~~(Fine Search) \n", __func__);
-    		ctrl->value = CAMERA_AF_STATUS_1ST_SUCCESS;
-    	}
+
+		
     }
 
-routine_end:
+
+
     mutex_unlock(&af_cancel_op);
+	
 #endif
+
+
 
     return 0;    
 }
 
-static int s5k4ecgx_set_touch_auto_focus(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+
+static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_touch_af touch_af, v4l2_touch_area *touch_area)
 {
+	printk("camdrv_ss_s5k4ecgx_set_touch_focus E \n");
+//Need to implement the below
+//case TOUCH_AF_START:  with touch_area->x,y,w,h
+
+//case TOUCH_AF_STOP:
+
+
+
+
 #if 0 //BILLA TEMP
 
 	struct camdrv_ss_state *state = to_state(sd);
@@ -1234,8 +1352,11 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->get_shutterspeed		   = s5k4ecgx_get_shutterspeed;
 	sensor->get_iso_speed_rate        = s5k4ecgx_get_iso_speed_rate;
 	sensor->get_ae_stable_status      =  s5k4ecgx_get_ae_stable_status;
-	sensor->get_auto_focus_status     = s5k4ecgx_get_auto_focus_status;
-//	sensor->set_touch_auto_focus      = s5k4ecgx_set_touch_auto_focus;
+	sensor->set_auto_focus		 	  =  camdrv_ss_s5k4ecgx_set_auto_focus;
+	sensor->get_auto_focus_status     = camdrv_ss_s5k4ecgx_get_auto_focus_status;
+
+	sensor->set_touch_focus		 	  =  camdrv_ss_s5k4ecgx_set_touch_focus;
+	sensor->get_touch_focus_status     = camdrv_ss_s5k4ecgx_get_touch_focus_status;
 //	sensor->AAT_flash_control    	   = s5k4ecgx_AAT_flash_control;
 //	sensor->i2c_set_data_burst   	   = s5k4ecgx_i2c_set_data_burst;
 	sensor->check_flash_needed   	   = s5k4ecgx_check_flash_needed;

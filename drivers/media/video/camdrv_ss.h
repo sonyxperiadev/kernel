@@ -59,8 +59,10 @@ struct camdrv_ss_sensor_cap
 	int (*get_shutterspeed)(struct v4l2_subdev *sd);
 	int (*get_iso_speed_rate)(struct v4l2_subdev *sd);
 	int (*get_ae_stable_status)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
+	int (*set_auto_focus)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
 	int (*get_auto_focus_status)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
-	int  (*set_touch_auto_focus)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
+	int  (*set_touch_focus)(struct v4l2_subdev *sd, enum v4l2_touch_af touch_af, v4l2_touch_area *touch_area);
+	int  (*get_touch_focus_status)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
 	int (*AAT_flash_control)(struct v4l2_subdev *sd, int control_mode);
 	int (*i2c_set_data_burst)(struct i2c_client *client,regs_t reg_buffer[], int num_of_regs);
 	bool (*check_flash_needed)(struct v4l2_subdev *sd);
