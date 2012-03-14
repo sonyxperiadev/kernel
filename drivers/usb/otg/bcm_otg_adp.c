@@ -38,11 +38,14 @@ static void bcmpmu_otg_xceiv_adp_change_handler(struct work_struct *work)
 	/* Need to turn on Vbus within 200ms */
 	if (bcmpmu_otg_xceiv_check_id_gnd(xceiv_data)) {
 		if (xceiv_data->otg_xceiver.xceiver.set_vbus)
-			xceiv_data->otg_xceiver.xceiver.set_vbus(&xceiv_data->otg_xceiver.xceiver, true);
+			xceiv_data->otg_xceiver.xceiver.set_vbus(&xceiv_data->
+								 otg_xceiver.
+								 xceiver, true);
 
-		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.notifier, USB_EVENT_VBUS, NULL);
+		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.
+					   notifier, USB_EVENT_VBUS, NULL);
 	} else
-		bcmpmu_otg_xceiv_do_srp(xceiv_data); /* Do SRP */
+		bcmpmu_otg_xceiv_do_srp(xceiv_data);	/* Do SRP */
 
 }
 
@@ -57,11 +60,14 @@ static void bcmpmu_otg_xceiv_adp_sense_end_handler(struct work_struct *work)
 
 	if (xceiv_data->otg_enabled) {
 		/* Check if probing was detected */
-		bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ADP_SENSE_STATUS,
+		bcmpmu_usb_get(xceiv_data->bcmpmu,
+			       BCMPMU_USB_CTRL_GET_ADP_SENSE_STATUS,
 			       &adp_sns_status);
 
 		if (adp_sns_status)
-			schedule_delayed_work(&xceiv_data->bcm_otg_delayed_adp_work, msecs_to_jiffies(T_B_ADP_DETACH));
+			schedule_delayed_work(&xceiv_data->
+					      bcm_otg_delayed_adp_work,
+					      msecs_to_jiffies(T_B_ADP_DETACH));
 		else
 			bcm_otg_do_adp_probe(xceiv_data);
 	}
@@ -69,7 +75,8 @@ static void bcmpmu_otg_xceiv_adp_sense_end_handler(struct work_struct *work)
 }
 
 static int bcmpmu_otg_xceiv_adp_change_notif_handler(struct notifier_block *nb,
-					       unsigned long value, void *data)
+						     unsigned long value,
+						     void *data)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(nb, struct bcmpmu_otg_xceiv_data,
@@ -85,7 +92,8 @@ static int bcmpmu_otg_xceiv_adp_change_notif_handler(struct notifier_block *nb,
 }
 
 static int bcmpmu_otg_xceiv_adp_sns_end_notif_handler(struct notifier_block *nb,
-					       unsigned long value, void *data)
+						      unsigned long value,
+						      void *data)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(nb, struct bcmpmu_otg_xceiv_data,
@@ -107,9 +115,10 @@ int bcm_otg_do_adp_calibration_probe(struct bcmpmu_otg_xceiv_data *xceiv_data)
 
 #ifdef CONFIG_USB_OTG
 	if (xceiv_data->otg_enabled)
-		return bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_START_ADP_CAL_PRB, 1);
+		return bcmpmu_usb_set(xceiv_data->bcmpmu,
+				      BCMPMU_USB_CTRL_START_ADP_CAL_PRB, 1);
 #endif
-		return 0;
+	return 0;
 }
 
 int bcm_otg_do_adp_probe(struct bcmpmu_otg_xceiv_data *xceiv_data)
@@ -118,9 +127,15 @@ int bcm_otg_do_adp_probe(struct bcmpmu_otg_xceiv_data *xceiv_data)
 
 #ifdef CONFIG_USB_OTG
 	if (xceiv_data->otg_enabled) {
-		status = bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_SET_ADP_PRB_MOD, PMU_USB_ADP_MODE_REPEAT);
+		status =
+		    bcmpmu_usb_set(xceiv_data->bcmpmu,
+				   BCMPMU_USB_CTRL_SET_ADP_PRB_MOD,
+				   PMU_USB_ADP_MODE_REPEAT);
 		if (!status)
-			status = bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_START_STOP_ADP_PRB, 1);
+			status =
+			    bcmpmu_usb_set(xceiv_data->bcmpmu,
+					   BCMPMU_USB_CTRL_START_STOP_ADP_PRB,
+					   1);
 	}
 #endif
 
@@ -132,8 +147,8 @@ int bcm_otg_do_adp_sense(struct bcmpmu_otg_xceiv_data *xceiv_data)
 #ifdef CONFIG_USB_OTG
 	if (xceiv_data->otg_enabled) {
 		return
-			bcmpmu_usb_set(xceiv_data->bcmpmu,
-			    BCMPMU_USB_CTRL_START_STOP_ADP_SENS_PRB, 1);
+		    bcmpmu_usb_set(xceiv_data->bcmpmu,
+				   BCMPMU_USB_CTRL_START_STOP_ADP_SENS_PRB, 1);
 	}
 #endif
 
@@ -156,7 +171,8 @@ int bcm_otg_adp_init(struct bcmpmu_otg_xceiv_data *xceiv_data)
 		xceiv_data->bcm_otg_adp_change_done_notifier.notifier_call =
 		    bcmpmu_otg_xceiv_adp_change_notif_handler;
 		bcmpmu_add_notifier(BCMPMU_USB_EVENT_ADP_CHANGE,
-				    &xceiv_data->bcm_otg_adp_change_done_notifier);
+				    &xceiv_data->
+				    bcm_otg_adp_change_done_notifier);
 
 		xceiv_data->bcm_otg_adp_sns_end_notifier.notifier_call =
 		    bcmpmu_otg_xceiv_adp_sns_end_notif_handler;
@@ -165,11 +181,15 @@ int bcm_otg_adp_init(struct bcmpmu_otg_xceiv_data *xceiv_data)
 	}
 
 	/* Set debounce to 1 for A-ADP probe level compliance */
-	status = bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_SET_VBUS_DEB_TIME, 1);
+	status =
+	    bcmpmu_usb_set(xceiv_data->bcmpmu,
+			   BCMPMU_USB_CTRL_SET_VBUS_DEB_TIME, 1);
 
 	/* Set ADP default compliance to n-2 */
 	if (!status)
-		status = bcmpmu_usb_set(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_SET_ADP_COMP_METHOD, 2);
+		status =
+		    bcmpmu_usb_set(xceiv_data->bcmpmu,
+				   BCMPMU_USB_CTRL_SET_ADP_COMP_METHOD, 2);
 
 	return status;
 

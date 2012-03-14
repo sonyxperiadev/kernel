@@ -64,10 +64,10 @@ MODULE_LICENSE("GPL");
 #define FALSE 0
 #endif
 
-
 static char config[MAX_PARAM_LENGTH];
 module_param_string(brcm_netconsole, config, MAX_PARAM_LENGTH, 0);
-MODULE_PARM_DESC(brcm_netconsole, " brcm_netconsole=[src-port]@[src-ip]/[dev],[tgt-port]@<tgt-ip>/[tgt-macaddr]");
+MODULE_PARM_DESC(brcm_netconsole,
+		 " brcm_netconsole=[src-port]@[src-ip]/[dev],[tgt-port]@<tgt-ip>/[tgt-macaddr]");
 
 #ifndef	MODULE
 static int __init option_setup(char *opt)
@@ -75,8 +75,9 @@ static int __init option_setup(char *opt)
 	strlcpy(config, opt, MAX_PARAM_LENGTH);
 	return 1;
 }
+
 __setup("brcm_netconsole=", option_setup);
-#endif	/* MODULE */
+#endif /* MODULE */
 
 /* Linked list of all configured targets */
 static LIST_HEAD(target_list);
@@ -105,41 +106,42 @@ static DEFINE_SPINLOCK(target_list_lock);
  *		remote_mac	(read-write)
  */
 struct brcm_netconsole_target {
-	struct list_head	list;
+	struct list_head list;
 #ifdef	CONFIG_BRCM_NETCONSOLE_DYNAMIC
-	struct config_item	item;
+	struct config_item item;
 #endif
-	int			enabled;	
-	struct netpoll		np;	
+	int enabled;
+	struct netpoll np;
 };
 
 /* global variables */
 static bool brcm_netconsole_ready = FALSE, nt_enabled = FALSE;
-static unsigned char    cur_rndis_status = USB_RNDIS_OFF;
+static unsigned char cur_rndis_status = USB_RNDIS_OFF;
 
 /* external functions */
 extern int netpoll_free_memory(void);
 
-static int dummy_start_cb (void)
+static int dummy_start_cb(void)
 {
-	pr_info("%s\n",__func__);
+	pr_info("%s\n", __func__);
 	brcm_netconsole_ready = TRUE;
 	return 0;
 }
 
 static int dummy_stop_cb(void)
 {
-	pr_info("%s\n",__func__);
+	pr_info("%s\n", __func__);
 	brcm_netconsole_ready = FALSE;
 	return 0;
 }
 
 static struct brcm_netconsole_callbacks brcm_dummy_callbacks = {
-        .start = dummy_start_cb,
-        .stop = dummy_stop_cb,        
+	.start = dummy_start_cb,
+	.stop = dummy_stop_cb,
 };
 
-static struct brcm_netconsole_callbacks *brcm_netconsole_cb = &brcm_dummy_callbacks ;
+static struct brcm_netconsole_callbacks *brcm_netconsole_cb =
+    &brcm_dummy_callbacks;
 
 #ifdef	CONFIG_BRCM_NETCONSOLE_DYNAMIC
 
@@ -174,7 +176,7 @@ static void brcm_netconsole_target_put(struct brcm_netconsole_target *nt)
 		config_item_put(&nt->item);
 }
 
-#else	/* !CONFIG_BRCM_NETCONSOLE_DYNAMIC */
+#else /* !CONFIG_BRCM_NETCONSOLE_DYNAMIC */
 
 static int __init dynamic_brcm_netconsole_init(void)
 {
@@ -197,7 +199,7 @@ static void brcm_netconsole_target_put(struct brcm_netconsole_target *nt)
 {
 }
 
-#endif	/* CONFIG_BRCM_NETCONSOLE_DYNAMIC */
+#endif /* CONFIG_BRCM_NETCONSOLE_DYNAMIC */
 
 /* Allocate new target (from boot/module param) and setup netpoll for it */
 static struct brcm_netconsole_target *alloc_param_target(char *target_config)
@@ -205,7 +207,7 @@ static struct brcm_netconsole_target *alloc_param_target(char *target_config)
 	int err = -ENOMEM;
 	struct brcm_netconsole_target *nt;
 	u8 remote_mac[ETH_ALEN];
-	
+
 	/*
 	 * Allocate and initialize with defaults.
 	 * Note that these targets get their config_item fields zeroed-out.
@@ -224,19 +226,18 @@ static struct brcm_netconsole_target *alloc_param_target(char *target_config)
 #endif
 	nt->np.local_port = 5042;
 	nt->np.remote_port = 5042;
-	remote_mac [0] = 0xaa;
-	remote_mac [1] = 0xbb;
-	remote_mac [2] = 0xcc;
-	remote_mac [3] = 0xdd;
-	remote_mac [4] = 0xee;
-	remote_mac [5] = 0xff;
+	remote_mac[0] = 0xaa;
+	remote_mac[1] = 0xbb;
+	remote_mac[2] = 0xcc;
+	remote_mac[3] = 0xdd;
+	remote_mac[4] = 0xee;
+	remote_mac[5] = 0xff;
 	memcpy(nt->np.remote_mac, remote_mac, ETH_ALEN);
 	nt->np.remote_ip = in_aton("255.255.255.255");
-    nt->np.local_ip = in_aton("192.168.42.129");
+	nt->np.local_ip = in_aton("192.168.42.129");
 
-	
 	/* Parse parameters and setup netpoll */
-#if 0 /* kevin */
+#if 0				/* kevin */
 	err = netpoll_parse_options(&nt->np, target_config);
 	if (err)
 		goto fail;
@@ -248,7 +249,7 @@ static struct brcm_netconsole_target *alloc_param_target(char *target_config)
 
 	nt->enabled = 1;
 	nt_enabled = TRUE;
-	
+
 	return nt;
 
 fail:
@@ -284,19 +285,16 @@ static void free_param_target(struct brcm_netconsole_target *nt)
  */
 
 struct brcm_netconsole_target_attr {
-	struct configfs_attribute	attr;
-	ssize_t				(*show)(struct brcm_netconsole_target *nt,
-						char *buf);
-	ssize_t				(*store)(struct brcm_netconsole_target *nt,
-						 const char *buf,
-						 size_t count);
+	struct configfs_attribute attr;
+	ssize_t (*show) (struct brcm_netconsole_target *nt, char *buf);
+	ssize_t (*store) (struct brcm_netconsole_target *nt,
+			  const char *buf, size_t count);
 };
 
 static struct brcm_netconsole_target *to_target(struct config_item *item)
 {
 	return item ?
-		container_of(item, struct brcm_netconsole_target, item) :
-		NULL;
+	    container_of(item, struct brcm_netconsole_target, item) : NULL;
 }
 
 /*
@@ -307,7 +305,7 @@ static struct brcm_netconsole_target *to_target(struct config_item *item)
 static long strtol10_check_range(const char *cp, long min, long max)
 {
 	long ret;
-	char *p = (char *) cp;
+	char *p = (char *)cp;
 
 	WARN_ON(min < 0);
 	WARN_ON(max < min);
@@ -320,7 +318,7 @@ static long strtol10_check_range(const char *cp, long min, long max)
 	}
 	if ((ret < min) || (ret > max)) {
 		pr_err("brcm_netconsole: input %ld must be between "
-				"%ld and %ld\n", ret, min, max);
+		       "%ld and %ld\n", ret, min, max);
 		return -EINVAL;
 	}
 
@@ -364,7 +362,9 @@ static ssize_t show_remote_ip(struct brcm_netconsole_target *nt, char *buf)
 static ssize_t show_local_mac(struct brcm_netconsole_target *nt, char *buf)
 {
 	struct net_device *dev = nt->np.dev;
-	static const u8 bcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+	static const u8 bcast[ETH_ALEN] = {
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+	};
 
 	return snprintf(buf, PAGE_SIZE, "%pM\n", dev ? dev->dev_addr : bcast);
 }
@@ -382,8 +382,7 @@ static ssize_t show_remote_mac(struct brcm_netconsole_target *nt, char *buf)
  * network interfaces as and when they come up).
  */
 static ssize_t store_enabled(struct brcm_netconsole_target *nt,
-			     const char *buf,
-			     size_t count)
+			     const char *buf, size_t count)
 {
 	int err;
 	long enabled;
@@ -394,7 +393,7 @@ static ssize_t store_enabled(struct brcm_netconsole_target *nt,
 
 	pr_info("%s enabled=%d\n", __func__, (int)enabled);
 
-	if (enabled) {	/* 1 */
+	if (enabled) {		/* 1 */
 
 		/*
 		 * Skip netpoll_parse_options() -- all the attributes are
@@ -405,35 +404,34 @@ static ssize_t store_enabled(struct brcm_netconsole_target *nt,
 		err = netpoll_setup(&nt->np);
 		if (err)
 			return err;
-		
+
 		if (cur_rndis_status && brcm_netconsole_cb->start)
 			brcm_netconsole_cb->start();
-			
+
 		nt_enabled = TRUE;
 		pr_info("brcm_netconsole: network logging started\n");
 
-	} else {	/* 0 */
+	} else {		/* 0 */
 		if (brcm_netconsole_cb->stop)
-                		brcm_netconsole_cb->stop();
+			brcm_netconsole_cb->stop();
 		nt_enabled = FALSE;
 		netpoll_cleanup(&nt->np);
 	}
 
-	nt->enabled = enabled;	
-	
+	nt->enabled = enabled;
+
 	return strnlen(buf, count);
 }
 
 static ssize_t store_dev_name(struct brcm_netconsole_target *nt,
-			      const char *buf,
-			      size_t count)
+			      const char *buf, size_t count)
 {
 	size_t len;
 
 	if (nt->enabled) {
 		pr_err("brcm_netconsole: target (%s) is enabled, "
-				"disable to update parameters\n",
-				config_item_name(&nt->item));
+		       "disable to update parameters\n",
+		       config_item_name(&nt->item));
 		return -EINVAL;
 	}
 
@@ -448,16 +446,15 @@ static ssize_t store_dev_name(struct brcm_netconsole_target *nt,
 }
 
 static ssize_t store_local_port(struct brcm_netconsole_target *nt,
-				const char *buf,
-				size_t count)
+				const char *buf, size_t count)
 {
 	long local_port;
 #define __U16_MAX	((__u16) ~0U)
 
 	if (nt->enabled) {
 		pr_err("brcm_netconsole: target (%s) is enabled, "
-				"disable to update parameters\n",
-				config_item_name(&nt->item));
+		       "disable to update parameters\n",
+		       config_item_name(&nt->item));
 		return -EINVAL;
 	}
 
@@ -471,16 +468,15 @@ static ssize_t store_local_port(struct brcm_netconsole_target *nt,
 }
 
 static ssize_t store_remote_port(struct brcm_netconsole_target *nt,
-				 const char *buf,
-				 size_t count)
+				 const char *buf, size_t count)
 {
 	long remote_port;
 #define __U16_MAX	((__u16) ~0U)
 
 	if (nt->enabled) {
 		pr_err("brcm_netconsole: target (%s) is enabled, "
-				"disable to update parameters\n",
-				config_item_name(&nt->item));
+		       "disable to update parameters\n",
+		       config_item_name(&nt->item));
 		return -EINVAL;
 	}
 
@@ -494,13 +490,12 @@ static ssize_t store_remote_port(struct brcm_netconsole_target *nt,
 }
 
 static ssize_t store_local_ip(struct brcm_netconsole_target *nt,
-			      const char *buf,
-			      size_t count)
+			      const char *buf, size_t count)
 {
 	if (nt->enabled) {
 		pr_err("brcm_netconsole: target (%s) is enabled, "
-				"disable to update parameters\n",
-				config_item_name(&nt->item));
+		       "disable to update parameters\n",
+		       config_item_name(&nt->item));
 		return -EINVAL;
 	}
 
@@ -510,13 +505,12 @@ static ssize_t store_local_ip(struct brcm_netconsole_target *nt,
 }
 
 static ssize_t store_remote_ip(struct brcm_netconsole_target *nt,
-			       const char *buf,
-			       size_t count)
+			       const char *buf, size_t count)
 {
 	if (nt->enabled) {
 		pr_err("brcm_netconsole: target (%s) is enabled, "
-				"disable to update parameters\n",
-				config_item_name(&nt->item));
+		       "disable to update parameters\n",
+		       config_item_name(&nt->item));
 		return -EINVAL;
 	}
 
@@ -526,17 +520,16 @@ static ssize_t store_remote_ip(struct brcm_netconsole_target *nt,
 }
 
 static ssize_t store_remote_mac(struct brcm_netconsole_target *nt,
-				const char *buf,
-				size_t count)
+				const char *buf, size_t count)
 {
 	u8 remote_mac[ETH_ALEN];
-	char *p = (char *) buf;
+	char *p = (char *)buf;
 	int i;
 
 	if (nt->enabled) {
 		pr_err("brcm_netconsole: target (%s) is enabled, "
-				"disable to update parameters\n",
-				config_item_name(&nt->item));
+		       "disable to update parameters\n",
+		       config_item_name(&nt->item));
 		return -EINVAL;
 	}
 
@@ -602,13 +595,13 @@ static void brcm_netconsole_target_release(struct config_item *item)
 }
 
 static ssize_t brcm_netconsole_target_attr_show(struct config_item *item,
-					   struct configfs_attribute *attr,
-					   char *buf)
+						struct configfs_attribute *attr,
+						char *buf)
 {
 	ssize_t ret = -EINVAL;
 	struct brcm_netconsole_target *nt = to_target(item);
 	struct brcm_netconsole_target_attr *na =
-		container_of(attr, struct brcm_netconsole_target_attr, attr);
+	    container_of(attr, struct brcm_netconsole_target_attr, attr);
 
 	if (na->show)
 		ret = na->show(nt, buf);
@@ -616,15 +609,16 @@ static ssize_t brcm_netconsole_target_attr_show(struct config_item *item,
 	return ret;
 }
 
-static ssize_t brcm_netconsole_target_attr_store(struct config_item *item,
-					    struct configfs_attribute *attr,
-					    const char *buf,
-					    size_t count)
+static ssize_t brcm_netconsole_target_attr_store(
+				struct config_item *item,
+				struct configfs_attribute *attr,
+				const char *buf,
+				size_t count)
 {
 	ssize_t ret = -EINVAL;
 	struct brcm_netconsole_target *nt = to_target(item);
 	struct brcm_netconsole_target_attr *na =
-		container_of(attr, struct brcm_netconsole_target_attr, attr);
+	    container_of(attr, struct brcm_netconsole_target_attr, attr);
 
 	if (na->store)
 		ret = na->store(nt, buf, count);
@@ -633,23 +627,23 @@ static ssize_t brcm_netconsole_target_attr_store(struct config_item *item,
 }
 
 static struct configfs_item_operations brcm_netconsole_target_item_ops = {
-	.release		= brcm_netconsole_target_release,
-	.show_attribute		= brcm_netconsole_target_attr_show,
-	.store_attribute	= brcm_netconsole_target_attr_store,
+	.release = brcm_netconsole_target_release,
+	.show_attribute = brcm_netconsole_target_attr_show,
+	.store_attribute = brcm_netconsole_target_attr_store,
 };
 
 static struct config_item_type brcm_netconsole_target_type = {
-	.ct_attrs		= brcm_netconsole_target_attrs,
-	.ct_item_ops		= &brcm_netconsole_target_item_ops,
-	.ct_owner		= THIS_MODULE,
+	.ct_attrs = brcm_netconsole_target_attrs,
+	.ct_item_ops = &brcm_netconsole_target_item_ops,
+	.ct_owner = THIS_MODULE,
 };
 
 /*
  * Group operations and type for brcm_netconsole_subsys.
  */
 
-static struct config_item *make_brcm_netconsole_target(struct config_group *group,
-						  const char *name)
+static struct config_item *make_brcm_netconsole_target(struct config_group
+						       *group, const char *name)
 {
 	unsigned long flags;
 	struct brcm_netconsole_target *nt, *tmp;
@@ -658,7 +652,7 @@ static struct config_item *make_brcm_netconsole_target(struct config_group *grou
 	/* Remove the previous brcm_netconsole_target */
 	if (!list_empty(&target_list)) {
 		list_for_each_entry_safe(nt, tmp, &target_list, list) {
-			pr_info( "%s: remove previous nt->list \n", __func__);
+			pr_info("%s: remove previous nt->list \n", __func__);
 			if (brcm_netconsole_cb->stop)
 				brcm_netconsole_cb->stop();
 			nt_enabled = FALSE;
@@ -685,18 +679,19 @@ static struct config_item *make_brcm_netconsole_target(struct config_group *grou
 #endif
 	nt->np.local_port = 5042;
 	nt->np.remote_port = 5042;
-	remote_mac [0] = 0xaa;
-	remote_mac [1] = 0xbb;
-	remote_mac [2] = 0xcc;
-	remote_mac [3] = 0xdd;
-	remote_mac [4] = 0xee;
-	remote_mac [5] = 0xff;
+	remote_mac[0] = 0xaa;
+	remote_mac[1] = 0xbb;
+	remote_mac[2] = 0xcc;
+	remote_mac[3] = 0xdd;
+	remote_mac[4] = 0xee;
+	remote_mac[5] = 0xff;
 	memcpy(nt->np.remote_mac, remote_mac, ETH_ALEN);
 	nt->np.remote_ip = in_aton("255.255.255.255");
 	nt->np.local_ip = in_aton("192.168.42.129");
-	
+
 	/* Initialize the config_item member */
-	config_item_init_type_name(&nt->item, name, &brcm_netconsole_target_type);
+	config_item_init_type_name(&nt->item, name,
+				   &brcm_netconsole_target_type);
 
 	/* Adding, but it is disabled */
 	spin_lock_irqsave(&target_list_lock, flags);
@@ -707,7 +702,7 @@ static struct config_item *make_brcm_netconsole_target(struct config_group *grou
 }
 
 static void drop_brcm_netconsole_target(struct config_group *group,
-				   struct config_item *item)
+					struct config_item *item)
 {
 	unsigned long flags;
 	struct brcm_netconsole_target *nt = to_target(item);
@@ -727,26 +722,26 @@ static void drop_brcm_netconsole_target(struct config_group *group,
 }
 
 static struct configfs_group_operations brcm_netconsole_subsys_group_ops = {
-	.make_item	= make_brcm_netconsole_target,
-	.drop_item	= drop_brcm_netconsole_target,
+	.make_item = make_brcm_netconsole_target,
+	.drop_item = drop_brcm_netconsole_target,
 };
 
 static struct config_item_type brcm_netconsole_subsys_type = {
-	.ct_group_ops	= &brcm_netconsole_subsys_group_ops,
-	.ct_owner	= THIS_MODULE,
+	.ct_group_ops = &brcm_netconsole_subsys_group_ops,
+	.ct_owner = THIS_MODULE,
 };
 
 /* The brcm_netconsole configfs subsystem */
 static struct configfs_subsystem brcm_netconsole_subsys = {
-	.su_group	= {
-		.cg_item	= {
-			.ci_namebuf	= "brcm_netconsole",
-			.ci_type	= &brcm_netconsole_subsys_type,
-		},
-	},
+	.su_group = {
+		     .cg_item = {
+				 .ci_namebuf = "brcm_netconsole",
+				 .ci_type = &brcm_netconsole_subsys_type,
+				 },
+		     },
 };
 
-#endif	/* CONFIG_BRCM_NETCONSOLE_DYNAMIC */
+#endif /* CONFIG_BRCM_NETCONSOLE_DYNAMIC */
 
 /**
 * This function is called to register the callback functions for logging modules.
@@ -755,22 +750,23 @@ static struct configfs_subsystem brcm_netconsole_subsys = {
 *
 */
 char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks *_cb)
-{	
-	pr_info("%s\n",__func__);
-	
+{
+	pr_info("%s\n", __func__);
+
 	brcm_netconsole_cb = _cb;
 
-	if (brcm_netconsole_ready)	
- 		return 1; /* logging is ready to send */
+	if (brcm_netconsole_ready)
+		return 1;	/* logging is ready to send */
 	else
-		return 0; /* logging is not ready to send */
+		return 0;	/* logging is not ready to send */
 }
 
 /* .... to be discarded .... */
 unsigned char brcm_get_netcon_status(void)
 {
-	pr_info("%s: rndis is %s...\n", __func__, cur_rndis_status ? "on":"off");
-        return cur_rndis_status;
+	pr_info("%s: rndis is %s...\n", __func__,
+		cur_rndis_status ? "on" : "off");
+	return cur_rndis_status;
 }
 
 /**
@@ -781,25 +777,25 @@ unsigned char brcm_get_netcon_status(void)
 */
 void brcm_current_netcon_status(unsigned char status)
 {
-	unsigned long flags;	
+	unsigned long flags;
 	struct brcm_netconsole_target *nt;
-	
-	pr_info( "%s\n",__func__);
+
+	pr_info("%s\n", __func__);
 
 	if (list_empty(&target_list)) {
-		pr_info( "1. list_empty\n");
+		pr_info("1. list_empty\n");
 		nt = alloc_param_target(NULL);
 		if (IS_ERR(nt)) {
 			return;
 		}
-		
+
 		spin_lock_irqsave(&target_list_lock, flags);
 		list_add(&nt->list, &target_list);
 		spin_unlock_irqrestore(&target_list_lock, flags);
 	} else {
 		spin_lock_irqsave(&target_list_lock, flags);
 		list_for_each_entry(nt, &target_list, list) {
-			pr_info( "2. setup/cleanup netpoll\n");
+			pr_info("2. setup/cleanup netpoll\n");
 			brcm_netconsole_target_get(nt);
 #ifndef CONFIG_ARCH_ISLAND
 			if (status)
@@ -815,13 +811,13 @@ void brcm_current_netcon_status(unsigned char status)
 
 	cur_rndis_status = status;
 	/* Start/stop broadcom logging.... */
-	if(cur_rndis_status &&  nt_enabled) {
+	if (cur_rndis_status && nt_enabled) {
 		if (brcm_netconsole_cb->start)
 			brcm_netconsole_cb->start();
 	} else if (brcm_netconsole_cb->stop)
 		brcm_netconsole_cb->stop();
 
-	pr_info( "status= %d, nt_enabled = %d\n", status, nt_enabled);
+	pr_info("status= %d, nt_enabled = %d\n", status, nt_enabled);
 
 }
 
@@ -831,8 +827,7 @@ EXPORT_SYMBOL(brcm_netconsole_register_callbacks);
 
 /* Handle network interface device notifications */
 static int brcm_netconsole_netdev_event(struct notifier_block *this,
-				   unsigned long event,
-				   void *ptr)
+					unsigned long event, void *ptr)
 {
 	unsigned long flags;
 	struct brcm_netconsole_target *nt;
@@ -856,10 +851,11 @@ done:
 }
 
 static struct notifier_block brcm_netconsole_netdev_notifier = {
-	.notifier_call  = brcm_netconsole_netdev_event,
+	.notifier_call = brcm_netconsole_netdev_event,
 };
 
-static void write_msg(struct brcm_console *con, const char *msg, unsigned int len)
+static void write_msg(struct brcm_console *con, const char *msg,
+		      unsigned int len)
 {
 	int frag, left;
 	unsigned long flags;
@@ -873,7 +869,8 @@ static void write_msg(struct brcm_console *con, const char *msg, unsigned int le
 	spin_lock_irqsave(&target_list_lock, flags);
 	list_for_each_entry(nt, &target_list, list) {
 		brcm_netconsole_target_get(nt);
-		if (nt->enabled && netif_running(nt->np.dev) && netif_carrier_ok(nt->np.dev)) {
+		if (nt->enabled && netif_running(nt->np.dev)
+		    && netif_carrier_ok(nt->np.dev)) {
 			/*
 			 * We nest this inside the for-each-target loop above
 			 * so that we're able to get as much logging out to
@@ -904,7 +901,7 @@ static void write_msg(struct brcm_console *con, const char *msg, unsigned int le
 int brcm_klogging(char *data, int length)
 {
 
-	int frag, left, len_sent = 0;	
+	int frag, left, len_sent = 0;
 	unsigned long flags;
 	struct brcm_netconsole_target *nt;
 	const char *tmp;
@@ -916,19 +913,21 @@ int brcm_klogging(char *data, int length)
 	spin_lock_irqsave(&target_list_lock, flags);
 	list_for_each_entry(nt, &target_list, list) {
 		brcm_netconsole_target_get(nt);
-		if (nt->enabled && netif_running(nt->np.dev) && netif_carrier_ok(nt->np.dev)) {
+		if (nt->enabled && netif_running(nt->np.dev)
+		    && netif_carrier_ok(nt->np.dev)) {
 
 			if (netpoll_free_memory() == 0) {
 				brcm_netconsole_target_put(nt);
-				spin_unlock_irqrestore(&target_list_lock, flags);
+				spin_unlock_irqrestore(&target_list_lock,
+						       flags);
 				return 0;
 			}
 			/*
-			* We nest this inside the for-each-target loop above
-			* so that we're able to get as much logging out to
-			* at least one target if we die inside here, instead
-			* of unnecessarily keeping all targets in lock-step.
-			*/
+			 * We nest this inside the for-each-target loop above
+			 * so that we're able to get as much logging out to
+			 * at least one target if we die inside here, instead
+			 * of unnecessarily keeping all targets in lock-step.
+			 */
 			tmp = data;
 
 			for (left = length; left;) {
@@ -952,9 +951,9 @@ end_of_send:
 EXPORT_SYMBOL(brcm_klogging);
 
 static struct brcm_console brcm_netconsole = {
-	.name	= "netcon",
-	.flags	= CON_ENABLED,
-	.write	= write_msg,
+	.name = "netcon",
+	.flags = CON_ENABLED,
+	.write = write_msg,
 };
 
 static int __init init_brcm_netconsole(void)
@@ -988,7 +987,7 @@ static int __init init_brcm_netconsole(void)
 	err = dynamic_brcm_netconsole_init();
 	if (err)
 		goto undonotifier;
-	
+
 /*	register_brcm_console(&brcm_netconsole); */
 	pr_info("brcm_netconsole: network logging started\n");
 
