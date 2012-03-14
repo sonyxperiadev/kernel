@@ -1,27 +1,26 @@
-/************************************************************************************************/
-/*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
-/*                                                                                              */
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
+/*********************************************************************
+*
+*  Copyright 2010 Broadcom Corporation
+*
+*  Unless you and Broadcom execute a separate written software license
+*  agreement governing use of this software, this software is licensed
+*  to you under the terms of the GNU
+*  General Public License version 2 (the GPL), available at
+*  http://www.broadcom.com/licenses/GPLv2.php with the following added
+*  to such license:
+*  As a special exception, the copyright holders of this software give
+*  you permission to link this software with independent modules, and
+*  to copy and distribute the resulting executable under terms of your
+*  choice, provided that you also meet, for each linked independent module,
+*  the terms and conditions of the license of that module. An independent
+*  module is a module which is not derived from this software.  The special
+*  exception does not apply to any modifications of the software.
+*  Notwithstanding the above, under no circumstances may you combine this
+*  software in any way with any other Broadcom software provided under a
+*  license other than the GPL, without Broadcom's express prior written
+*  consent.
+***********************************************************************/
+
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/device.h>
@@ -36,7 +35,7 @@
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <asm/gpio.h>
+#include <linux/gpio.h>
 #include <mach/hardware.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -58,7 +57,7 @@
 #include "pm_params.h"
 #endif
 
-#if defined (CONFIG_KONA_CPU_FREQ_DRV)
+#if defined(CONFIG_KONA_CPU_FREQ_DRV)
 #include <plat/kona_cpufreq_drv.h>
 #include <linux/cpufreq.h>
 #include <mach/clock.h>
@@ -87,6 +86,11 @@
 #ifdef CONFIG_WD_TAPPER
 #include <linux/broadcom/wd-tapper.h>
 #endif
+
+/* dynamic ETM support */
+unsigned int etm_on;
+EXPORT_SYMBOL(etm_on);
+
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
  * use FIXED type
@@ -97,17 +101,19 @@
 #define KONA_UART1_PA	UARTB2_BASE_ADDR
 #define KONA_UART2_PA	UARTB3_BASE_ADDR
 
-#define KONA_8250PORT(name,clk)				\
+#define KONA_8250PORT(name, clk)				\
 {								\
-	.membase    = (void __iomem *)(KONA_##name##_VA), 	\
-	.mapbase    = (resource_size_t)(KONA_##name##_PA),    	\
-	.irq	    = BCM_INT_ID_##name,               		\
+	.membase    = (void __iomem *)(KONA_##name##_VA),	\
+	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
+	.irq	    = BCM_INT_ID_##name,			\
 	.uartclk    = 26000000,					\
-	.regshift   = 2,					\
-	.iotype	    = UPIO_DWAPB,					\
-	.type	    = PORT_16550A,          			\
+	.regshift   = 2,				\
+	.iotype	    = UPIO_DWAPB,			\
+	.type	    = PORT_16550A,			\
 	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST, \
-	.private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET), \
+					| UPF_LOW_LATENCY, \
+	.private_data = (void __iomem *)((KONA_##name##_VA) + \
+						UARTB_USR_OFFSET), \
 	.clk_name = clk,	\
 }
 
@@ -190,10 +196,12 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	 /* No dynamic speed in HS mode */
 	 .dynamic_speed = 0,
 	 /*
-	  * PMU can NAK certain I2C read commands, while write is in progress;
-	  * and it takes a while to synchronise writes between HS clock domain(3.25MHz) and
-	  * and internal clock domains (32k). In such cases, we retry PMU reads until the writes
-	  * are through. PMU need more retry counts in HS mode to handle this.
+	  * PMU can NAK certain I2C read commands, while write
+	  * is in progress; and it takes a while to synchronise
+	  * writes between HS clock domain(3.25MHz) and
+	  * internal clock domains (32k). In such cases, we retry
+	  * PMU reads until the writes are through. PMU need more
+	  * retry counts in HS mode to handle this.
 	  */
 	 .retries = 5,
 #else
@@ -252,7 +260,7 @@ static struct platform_device pmu_device = {
 	.num_resources = 1,
 };
 
-// PWM configuration.
+/* PWM configuration. */
 static struct resource kona_pwm_resource = {
 	.start = PWM_BASE_ADDR,
 	.end = PWM_BASE_ADDR + SZ_4K - 1,
@@ -494,7 +502,8 @@ static struct platform_device board_kona_hsotgctrl_platform_device = {
 };
 
 static struct resource kona_otg_platform_resource[] = {
-	[0] = {			/* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to be compatible with legacy code */
+	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to
+				be compatible with legacy code */
 	       .start = HSOTG_BASE_ADDR,
 	       .end = HSOTG_BASE_ADDR + SZ_64K - 1,
 	       .flags = IORESOURCE_MEM,
@@ -592,7 +601,8 @@ u32 lvt_silicon_type_lut[3 * 3] = {
 
 static struct kona_avs_pdata avs_pdata = {
 	.flags = AVS_TYPE_OPEN | AVS_READ_FROM_MEM,
-	.param = 0x3404BFA8,	/*AVS_READ_FROM_MEM - Address location where monitor values are copied by ABI */
+	.param = 0x3404BFA8,	/*AVS_READ_FROM_MEM - Address
+			location where monitor values are copied by ABI */
 	.nmos_bin_size = 3,
 	.pmos_bin_size = 3,
 
@@ -826,6 +836,13 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 };
 
+static int __init setup_etm(char *p)
+{
+	get_option(&p, &etm_on);
+	return 1;
+}
+early_param("etm_on", setup_etm);
+
 static int __init setup_pmem_alloc(char *p)
 {
 	if ((get_option(&p, &android_pmem_data.allocator) != 1)
@@ -869,8 +886,8 @@ static int __init setup_pmem_pages(char *str)
 			       (unsigned int)android_pmem_data.start);
 		}
 	} else {
-		printk("\"pmem=\" option is not set!!!\n");
-		printk("Unable to determine the memory region for pmem!!!\n");
+		printk(KERN_EMERG "\"pmem=\" option is not set!!!\n");
+		printk(KERN_EMERG "Unable to determine the memory region for pmem!!!\n");
 	}
 	return 0;
 }
@@ -890,8 +907,8 @@ static int __init setup_pmem_cma_pages(char *str)
 			       (unsigned int)android_pmem_cma_data.start);
 		}
 	} else {
-		printk("\"pmem_cma=\" option is not set!!!\n");
-		printk("Unable to determine the memory region for pmem!!!\n");
+		printk(KERN_EMERG "\"pmem_cma=\" option is not set!!!\n");
+		printk(KERN_EMERG "Unable to determine the memory region for pmem!!!\n");
 	}
 	return 0;
 }
@@ -918,7 +935,7 @@ void __init board_add_common_devices(void)
 	if (android_pmem_data.size) {
 		if (android_pmem_data.allocator == CMA_ALLOC) {
 			get_cma_area(&android_pmem[0].dev,
-				     (phys_addr_t *) & android_pmem_data.start,
+				     (phys_addr_t *) &android_pmem_data.start,
 				     &android_pmem_data.size);
 		}
 		platform_device_register(&android_pmem[0]);
@@ -930,7 +947,7 @@ void __init board_add_common_devices(void)
 	if (android_pmem_cma_data.size) {
 		if (android_pmem_cma_data.allocator == CMA_ALLOC) {
 			get_cma_area(&android_pmem[1].dev,
-				     (phys_addr_t *) & android_pmem_cma_data.
+				     (phys_addr_t *) &android_pmem_cma_data.
 				     start, &android_pmem_cma_data.size);
 		}
 		platform_device_register(&android_pmem[1]);
@@ -943,8 +960,8 @@ void __init board_add_common_devices(void)
 /* Return the Rhea chip revision ID */
 int get_chip_rev_id(void)
 {
-    return ((readl(KONA_CHIPREG_VA + CHIPREG_CHIPID_REVID_OFFSET) &
-         CHIPREG_CHIPID_REVID_REVID_MASK) >>
-        CHIPREG_CHIPID_REVID_REVID_SHIFT);
+	return (readl(KONA_CHIPREG_VA + CHIPREG_CHIPID_REVID_OFFSET) &
+	CHIPREG_CHIPID_REVID_REVID_MASK) >>
+	CHIPREG_CHIPID_REVID_REVID_SHIFT;
 }
 EXPORT_SYMBOL(get_chip_rev_id);

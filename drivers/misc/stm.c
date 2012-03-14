@@ -27,6 +27,8 @@
 #include <mach/io_map.h>
 #endif
 
+/* define to disable PTI for ETM and PTM */
+#define PTI_OFF	0x013
 /* Max number of channels (multiple of 256) */
 #define STM_NUMBER_OF_CHANNEL      CONFIG_STM_NUMBER_OF_CHANNEL
 
@@ -200,22 +202,36 @@ int kona_trace_set_sw_stm(int on)
 static int __init kona_trace_init(void)
 {
 	int status = -EIO;
+	int base;
+
 	kona_trace_handle = NULL;
+	base = HW_IO_PHYS_TO_VIRT(PAD_CTRL_BASE_ADDR);
 
 	if (kona_trace_handle)
 		return 0;
+	if (etm_on == 0) {
+		chal_trace_init(&trace_base_addr);
+		kona_trace_handle = &trace_base_addr;
 
-	chal_trace_init(&trace_base_addr);
-	kona_trace_handle = &trace_base_addr;
-
-	if (kona_trace_handle)
-		status = 0;
-	/* STM config */
-	/* 4 bits wide PTI output, always break, ATBID 0x0B */
-	chal_trace_atb_stm_set_config(kona_trace_handle, 0, 0, 1,
+		if (kona_trace_handle)
+			status = 0;
+		/* STM config */
+		/* 4 bits wide PTI output, always break, ATBID 0x0B */
+		chal_trace_atb_stm_set_config(kona_trace_handle, 0, 0, 1,
 				      ATB_ID_ODD(ATB_ID_STM));
-	/* Turn on the A9 SWSTM */
-	kona_trace_set_sw_stm(1);
+		/* Turn on the A9 SWSTM */
+		kona_trace_set_sw_stm(1);
+	}
+
+	/* overwrite dt-blob for ETM/PTM use */
+	if (etm_on == 1) {
+		writel(PTI_OFF, base + PADCTRLREG_TRACECLK_OFFSET);
+		writel(PTI_OFF, base + PADCTRLREG_TRACEDT00_OFFSET);
+		writel(PTI_OFF, base + PADCTRLREG_TRACEDT01_OFFSET);
+		writel(PTI_OFF, base + PADCTRLREG_TRACEDT02_OFFSET);
+		writel(PTI_OFF, base + PADCTRLREG_TRACEDT03_OFFSET);
+		writel(PTI_OFF, base + PADCTRLREG_TRACEDT07_OFFSET);
+	}
 
 	return status;
 }

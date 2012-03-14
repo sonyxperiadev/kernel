@@ -13,25 +13,28 @@
 
 #define STM_DEV_NAME "stm"
 
+extern unsigned int etm_on;
+
 #ifndef CONFIG_BCM_STM
 /* One single channel mapping */
 struct stm_channel {
 	union {
-	        __u8  no_stamp8;
-	        __u16 no_stamp16;
-	        __u32 no_stamp32;
-	        __u64 no_stamp64;
+		__u8  no_stamp8;
+		__u16 no_stamp16;
+		__u32 no_stamp32;
+		__u64 no_stamp64;
 	};
 	union {
-	        __u8   stamp8;
-	        __u16 stamp16;
-	        __u32 stamp32;
-	        __u64 stamp64;
+		__u8   stamp8;
+		__u16 stamp16;
+		__u32 stamp32;
+		__u64 stamp64;
 	};
 };
 
 /* Possible trace modes */
-#define STM_SW_LOSSLESS        0 /* Software mode: lossless data but intrusive */
+/* Software mode: lossless data but intrusive */
+#define STM_SW_LOSSLESS        0
 #define STM_HW_LOSSY   1 /* Hardware mode: lossy data but less intrusive */
 
 /* Possible clock setting */
@@ -196,29 +199,29 @@ static inline int stm_dup_printk(char *buf, size_t size)
 
 #if defined(CONFIG_STM_TRACE_PRINTK)
 static inline int stm_trace_printk_buf(
-	        unsigned long ip, const char *buf, size_t size)
+	unsigned long ip, const char *buf, size_t size)
 {
 	stm_trace_32(CONFIG_STM_TRACE_PRINTK_CHANNEL, ip);
 	return stm_trace_buffer_onchannel(CONFIG_STM_TRACE_PRINTK_CHANNEL,
-	                buf, size);
+		buf, size);
 }
 
 static inline int stm_trace_bprintk_buf(
-	        unsigned long ip, const char *fmt, const void *buf, size_t size)
+	unsigned long ip, const char *fmt, const void *buf, size_t size)
 {
 	stm_trace_64(CONFIG_STM_TRACE_BPRINTK_CHANNEL, ((u64)ip<<32)+(u32)fmt);
 	return stm_trace_buffer_onchannel(CONFIG_STM_TRACE_PRINTK_CHANNEL,
-	                buf, size);
+		buf, size);
 }
 #else
 static inline int stm_trace_printk_buf(
-	        unsigned long ip, const char *buf, size_t size)
+	unsigned long ip, const char *buf, size_t size)
 {
 	return 0;
 }
 
 static inline int stm_trace_bprintk_buf(
-	        unsigned long ip, const char *fmt, const char *buf, size_t size)
+	unsigned long ip, const char *fmt, const char *buf, size_t size)
 {
 	return 0;
 }
@@ -237,34 +240,34 @@ static inline void stm_ftrace(unsigned long ip, unsigned long parent_ip)
 
 #if defined(CONFIG_STM_CTX_SWITCH)
 static inline void stm_sched_switch(u32 prev_pid, u8 prev_prio, u8 prev_state,
-	                u32 next_pid, u8 next_prio, u8 next_state, u32 next_cpu)
+		u32 next_pid, u8 next_prio, u8 next_state, u32 next_cpu)
 {
 	stm_trace_64(CONFIG_STM_CTX_SWITCH_CHANNEL,
-	                (((__u64)prev_pid)<<32) + next_pid);
+			(((__u64)prev_pid)<<32) + next_pid);
 	stm_tracet_64(CONFIG_STM_CTX_SWITCH_CHANNEL, (((__u64)next_cpu)<<32)
-	                + (prev_prio<<24) + (prev_state<<16)
-	                + (next_prio<<8) + next_state);
+			+ (prev_prio<<24) + (prev_state<<16)
+			+ (next_prio<<8) + next_state);
 }
 #else
 static inline void stm_sched_switch(u32 prev_pid, u8 prev_prio, u8 prev_state,
-	                u32 next_pid, u8 next_prio, u8 next_state, u32 next_cpu)
+		u32 next_pid, u8 next_prio, u8 next_state, u32 next_cpu)
 {
 }
 #endif
 
 #if defined(CONFIG_STM_WAKEUP)
 static inline void stm_sched_wakeup(u32 prev_pid, u8 prev_prio, u8 prev_state,
-	                u32 next_pid, u8 next_prio, u8 next_state, u32 next_cpu)
+		u32 next_pid, u8 next_prio, u8 next_state, u32 next_cpu)
 {
 	stm_trace_64(CONFIG_STM_WAKEUP_CHANNEL,
-	                (((__u64)prev_pid)<<32) + next_pid);
+			(((__u64)prev_pid)<<32) + next_pid);
 	stm_tracet_64(CONFIG_STM_WAKEUP_CHANNEL, (((__u64)next_cpu)<<32)
-	                + (prev_prio<<24) + (prev_state<<16)
-	                + (next_prio<<8) + next_state);
+			+ (prev_prio<<24) + (prev_state<<16)
+			+ (next_prio<<8) + next_state);
 }
 #else
 static inline void stm_sched_wakeup(u32 prev_pid, u8 prev_prio, u8 prev_state,
-	                u32 next_pid, u8 next_prio, u8 next_state, u32 next_cpu)
+	u32 next_pid, u8 next_prio, u8 next_state, u32 next_cpu)
 {
 }
 #endif
@@ -272,9 +275,9 @@ static inline void stm_sched_wakeup(u32 prev_pid, u8 prev_prio, u8 prev_state,
 #if defined(CONFIG_STM_STACK_TRACE)
 static inline void stm_stack_trace(unsigned long *callers)
 {
-	while (*(callers + 1) != ULONG_MAX) {
-	        stm_trace_32(CONFIG_STM_STACK_TRACE_CHANNEL, *callers++);
-	}
+	while (*(callers + 1) != ULONG_MAX)
+		stm_trace_32(CONFIG_STM_STACK_TRACE_CHANNEL, *callers++);
+
 	/* Time stamp the latest */
 	stm_tracet_32(CONFIG_STM_STACK_TRACE_CHANNEL, *callers);
 }
