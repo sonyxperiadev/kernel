@@ -96,7 +96,6 @@ extern "C" {
 		SSPI_PROT_STEREO_25B_PCM,
 		SSPI_PROT_3CHAN_16B_TDM_PCM,
 		SSPI_PROT_4CHAN_16B_TDM_PCM,
-		SSPI_PROT_3CHAN_16B_24B_TDM_PCM,
 	} CHAL_SSPI_PROT_t;
 
 /**
@@ -136,7 +135,6 @@ extern "C" {
 		SSPI_CAPH_CLK_TRIG_11DOT025kHz,
 		SSPI_CAPH_CLK_TRIG_22DOT05kHz,
 		SSPI_CAPH_CLK_TRIG_44DOT1kHz,
-		SSPI_CAPH_CLK_TRIG_48kHz_3CH_16B_24B,
 		SSPI_CAPH_CLK_TRIG_MAX,
 	} CHAL_SSPI_CAPH_CLK_TRIG_t;
 
@@ -368,7 +366,15 @@ extern "C" {
 		uint32_t base;
 		uint32_t type;
 	} CHAL_SSPI_HANDLE_t;
+/**
+* SSPI frame format extetion type
+******************************************************************************/
+	typedef enum {
 
+		SSPI_FRAME_EXT_DEFAULT,
+		SSPI_FRAME_EXT_SPI_HS,	/* SPI highspeed frame */
+	} CHAL_SSPI_FRAME_EXT_t;
+	 /**/
 /**
 * SSPI interrupt-enable bits
 *****************************************************************************/
@@ -405,7 +411,6 @@ extern "C" {
             (SSPIL_INTERRUPT_ENABLE_APB_RX_ERROR_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_SCHEDULER \
             (SSPIL_INTERRUPT_ENABLE_SCHEDULER_INTERRUPT_ENB_MASK)
-
 /**
 * SSPI interrupt-status bits
 *****************************************************************************/
@@ -439,7 +444,6 @@ extern "C" {
 #define SSPIL_INTR_STATUS_SCHEDULER (SSPIL_INTERRUPT_STATUS_SCHEDULER_STATUS_MASK)
 #define SSPIL_INTR_STATUS_COPY_SSPI_INT \
             (SSPIL_INTERRUPT_STATUS_COPY_SSPI_INT_MASK)
-
 #define SSPIL_DETAIL_INTR_STS_FIFO_OVERRUN_RX0 \
          (1 << (SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT))
 #define SSPIL_DETAIL_INTR_STS_FIFO_OVERRUN_RX1 \
@@ -504,7 +508,6 @@ extern "C" {
          (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT)+2))
 #define SSPIL_DETAIL_INTR_STS_APB_RX_ERR_RX3 \
          (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT)+3))
-
 /**
 *
 *  @brief  Initialize SSPI CHAL internal data structure
@@ -513,7 +516,7 @@ extern "C" {
 *
 *  @return CHAL handle for this SSPI core instance
 *****************************************************************************/
-	CHAL_HANDLE chal_sspi_init(uint32_t baseAddr);
+	 CHAL_HANDLE chal_sspi_init(uint32_t baseAddr);
 
 /**
 *  @brief  De-initialize SSPI CHAL internal data structure
