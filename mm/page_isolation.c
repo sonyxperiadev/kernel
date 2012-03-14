@@ -47,7 +47,7 @@ int start_isolate_page_range(unsigned long start_pfn, unsigned long end_pfn,
 	     pfn < end_pfn;
 	     pfn += pageblock_nr_pages) {
 		page = __first_valid_page(pfn, pageblock_nr_pages);
-		if (page && set_migratetype_isolate(page)) {
+		if (page && set_migratetype_isolate(page, migratetype)) {
 			undo_pfn = pfn;
 			goto undo;
 		}

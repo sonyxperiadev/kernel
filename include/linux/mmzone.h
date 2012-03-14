@@ -348,6 +348,13 @@ struct zone {
 	 * process to make sure that the system is not starved.
 	 */
 	unsigned long		min_cma_pages;
+	/* This tells us how many free MIGRATE_CMA pages exist on the free
+	 * list per-order. This will help us determine the watermark checks
+	 * so the reclaim happens faster if we are running out of
+	 * non-MIGRATE_CMA pages that kernel needs
+	 */
+	unsigned long		nr_cma_free[MAX_ORDER];
+
 #endif
 	struct free_area	free_area[MAX_ORDER];
 
