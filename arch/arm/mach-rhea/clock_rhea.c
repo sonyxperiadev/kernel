@@ -122,6 +122,7 @@ static struct ccu_clk_ops root_ccu_ops;
 static struct ccu_clk CLK_NAME(root) = {
     	.clk = {
 	    .name = ROOT_CCU_CLK_NAME_STR,
+		.flags = ROOT_CCU_CLK_FLAGS,
 	    .id = CLK_ROOT_CCU_CLK_ID,
 		.ops = &root_ccu_clk_ops,
 		.clk_type = CLK_TYPE_CCU,
