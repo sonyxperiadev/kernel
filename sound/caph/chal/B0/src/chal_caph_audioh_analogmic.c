@@ -34,6 +34,7 @@
 *
 ****************************************************************************/
 #include <linux/io.h>
+#include <linux/delay.h>
 #include "io_map.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
@@ -326,9 +327,8 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
-		/* to be revisted later */
-		for (reg_val = 0; reg_val < 1000; reg_val++)
-			;
+		/* a must (10ms) to remove bias glitch per asic sequence */
+		usleep_range(10000, 10500);
 
 		/* Set i_VREF_FastSettle (0) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
@@ -495,9 +495,9 @@ cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 		reg_val |=
 		    (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_SEL_MIC1B_MIC2_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
-		/* to be revisited later */
-		for (reg_val = 0; reg_val < 1000; reg_val++)
-			;
+
+		/* a must (10ms) to remove bias glitch per asic sequence */
+		usleep_range(10000, 10500);
 
 		/* Set i_VREF_FastSettle (0) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);

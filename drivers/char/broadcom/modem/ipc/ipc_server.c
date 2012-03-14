@@ -70,7 +70,7 @@ struct ipcs_info_t {
 };
 
 static struct ipcs_info_t g_ipc_info = { 0 };
-static Boolean cp_running = 0;//FALSE;
+static Boolean cp_running = 0;	//FALSE;
 
 #ifdef CONFIG_HAS_WAKELOCK
 struct wake_lock ipc_wake_lock;
@@ -176,12 +176,12 @@ void ipcs_intr_tasklet_handler(unsigned long data)
 {
 	cp_crashed = 0;
 
-	if(IpcCPCrashCheck())
-	{
+	if (IpcCPCrashCheck()) {
 		cp_crashed = 1;
 
 		/* schedule the work on the decidated CP crash dump work queue */
-		queue_work(g_ipc_info.crash_dump_workqueue, &g_ipc_info.cp_crash_dump_wq);
+		queue_work(g_ipc_info.crash_dump_workqueue,
+			   &g_ipc_info.cp_crash_dump_wq);
 		IPC_ProcessEvents();
 	} else {
 		IPC_ProcessEvents();
@@ -193,14 +193,15 @@ void ipcs_intr_tasklet_handler(unsigned long data)
 
 static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 {
-	void __iomem* base = (void __iomem *)( KONA_BINTC_BASE_ADDR);
-	int birq = IRQ_TO_BMIRQ(IRQ_IPC_C2A_BINTC); //55;
+	void __iomem *base = (void __iomem *)(KONA_BINTC_BASE_ADDR);
+	int birq = IRQ_TO_BMIRQ(IRQ_IPC_C2A_BINTC);	//55;
 
 	/* Clear the interrupt */
-	if ( birq >= 32 )
-		writel(1 << (birq-32), base + BINTC_ISWIR1_CLR_OFFSET/*0x34*/);
+	if (birq >= 32)
+		writel(1 << (birq - 32),
+		       base + BINTC_ISWIR1_CLR_OFFSET /*0x34 */ );
 	else
-		writel(1 << (birq), base + BINTC_ISWIR0_CLR_OFFSET /*0x24*/);
+		writel(1 << (birq), base + BINTC_ISWIR0_CLR_OFFSET /*0x24 */ );
 
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&ipc_wake_lock);
@@ -402,8 +403,8 @@ void Comms_Start(void)
 	apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
 	if (!apcp_shmem) {
 		IPC_DEBUG(DBG_ERROR, "IPC_BASE=0x%x, IPC_SIZE=0x%x\n",
-			IPC_BASE, IPC_SIZE);
-			IPC_DEBUG(DBG_ERROR, "ioremap shmem failed\n");
+			  IPC_BASE, IPC_SIZE);
+		IPC_DEBUG(DBG_ERROR, "ioremap shmem failed\n");
 		return;
 	}
 	/* clear first (9) 32-bit words in shared memory */
@@ -411,33 +412,37 @@ void Comms_Start(void)
 	iounmap(apcp_shmem);
 
 	cp_boot_base = ioremap_nocache(MODEM_DTCM_ADDRESS,
-	INIT_ADDRESS_OFFSET+RESERVED_HEADER);
+				       INIT_ADDRESS_OFFSET + RESERVED_HEADER);
 
 	if (!cp_boot_base) {
 		IPC_DEBUG(DBG_ERROR,
-			"DTCM Addr=0x%x, length=0x%x",
-			MODEM_DTCM_ADDRESS,
-			INIT_ADDRESS_OFFSET+RESERVED_HEADER);
+			  "DTCM Addr=0x%x, length=0x%x",
+			  MODEM_DTCM_ADDRESS,
+			  INIT_ADDRESS_OFFSET + RESERVED_HEADER);
 		IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_base error\n");
 		return;
 	}
 
 	/* Start the CP */
-	reg_val = readl(cp_boot_base+MAIN_ADDRESS_OFFSET+RESERVED_HEADER);
-	writel(reg_val, cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER);
+	reg_val = readl(cp_boot_base + MAIN_ADDRESS_OFFSET + RESERVED_HEADER);
+	writel(reg_val, cp_boot_base + INIT_ADDRESS_OFFSET + RESERVED_HEADER);
 
 	iounmap(cp_boot_base);
 	IPC_DEBUG(DBG_TRACE, "modem (R4 COMMS) started ...\n");
 }
 
-static int ipcs_read_proc(char *page, char **start, off_t off, int count, int *eof, void *data)
+static int ipcs_read_proc(char *page, char **start, off_t off, int count,
+			  int *eof, void *data)
 {
 	int len = IPC_DumpStatus(page);
-	if (len <= off+count) *eof = 1;
+	if (len <= off + count)
+		*eof = 1;
 	*start = page + off;
 	len -= off;
-	if (len>count) len = count;
-	if (len<0) len = 0;
+	if (len > count)
+		len = count;
+	if (len < 0)
+		len = 0;
 	return len;
 }
 
@@ -446,9 +451,12 @@ static int __init ipcs_module_init(void)
 	int rc = -1;
 	struct proc_dir_entry *dir;
 
-	dir = create_proc_read_entry ("driver/bcmipc", 0, NULL, ipcs_read_proc, NULL);
+	dir =
+	    create_proc_read_entry("driver/bcmipc", 0, NULL, ipcs_read_proc,
+				   NULL);
 	if (dir == NULL) {
-		IPC_DEBUG(DBG_ERROR, "ipcs_module_init: can't create /proc/driver/bcmipc\n");
+		IPC_DEBUG(DBG_ERROR,
+			  "ipcs_module_init: can't create /proc/driver/bcmipc\n");
 		//return -1;
 	}
 
@@ -460,10 +468,12 @@ static int __init ipcs_module_init(void)
 
 	IPC_DEBUG(DBG_TRACE, "Allocate CP crash dump workqueue\n");
 	g_ipc_info.crash_dump_workqueue = alloc_workqueue("dump-wq",
-			WQ_FREEZABLE | WQ_MEM_RECLAIM, 0);
+							  WQ_FREEZABLE |
+							  WQ_MEM_RECLAIM, 0);
 
 	if (!g_ipc_info.crash_dump_workqueue) {
-		IPC_DEBUG(DBG_ERROR, "Cannot allocate CP crash dump workqueue\n");
+		IPC_DEBUG(DBG_ERROR,
+			  "Cannot allocate CP crash dump workqueue\n");
 		goto out;
 	}
 
@@ -509,7 +519,7 @@ static int __init ipcs_module_init(void)
 
 	return 0;
 
-out:
+      out:
 	IPC_DEBUG(DBG_ERROR, "IPC Driver Failed to initialise!\n");
 	return rc;
 }

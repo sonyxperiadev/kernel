@@ -269,7 +269,7 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	int status = 0;
 	bool id_gnd = false;
 
-	dev_info(xceiv_data->dev, "Setting Peripheral\n");
+	dev_dbg(xceiv_data->dev, "Setting Peripheral\n");
 	otg->gadget = gadget;
 
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
@@ -314,7 +314,7 @@ static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
 	int status = 0;
 
-	dev_info(xceiv_data->dev, "Setting Host\n");
+	dev_dbg(xceiv_data->dev, "Setting Host\n");
 	otg->host = host;
 
 	if (host) {
@@ -331,7 +331,6 @@ static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
 		} else
 			bcm_hsotgctrl_phy_set_id_stat(true);
 	}
-
 	return status;
 }
 

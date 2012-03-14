@@ -44,6 +44,10 @@ static RPC_Result_t RPC_BufferDelivery(PACKET_InterfaceType_t interfaceType,
 				       PACKET_BufHandle_t dataBufHandle);
 UInt8 GetClientIndex(ResultDataBuffer_t * pDataBuf, Boolean * isUnsolicited);
 void SYS_ReleaseClientID(unsigned char clientID);
+static Boolean gRpcInit = FALSE;
+
+static RPC_USER_LOCK_DECLARE(gRpcLock);
+RPC_USER_LOCK_DECLARE(gRpcFreeLock);
 
 //******************************************************************************
 //                              RPC Apps EP Register
@@ -60,11 +64,20 @@ RPC_Result_t RPC_SYS_EndPointRegister(RpcProcessorType_t processorType)
 
 Result_t RPC_SYS_Init(RPC_EventCallbackFunc_t eventCb)
 {
-	RPC_Result_t res;
+	RPC_Result_t res = RPC_RESULT_OK;
 	stEventCb = eventCb;
 
-	res = RPC_IPC_Init(gProcessorType);
+	_DBG_(RPC_TRACE("RPC_SYS_Init gRpcInit=%d", gRpcInit));
 
+	if (!gRpcInit) {
+		gRpcInit = TRUE;
+
+		res = RPC_IPC_Init(gProcessorType);
+
+		RPC_USER_LOCK_INIT(gRpcLock);
+		RPC_USER_LOCK_INIT(gRpcFreeLock);
+
+	}
 	//xdr_main_init();
 
 	return (res == RPC_RESULT_OK) ? RESULT_OK : RESULT_ERROR;
@@ -92,7 +105,12 @@ void RPC_HandleEvent(void *eventHandle)
 			UInt8 clientIndex =
 			    GetClientIndex(dataBuf, &isUnsolicited);
 			clientId = RPC_SYS_GetClientID(clientIndex);
+
+			RPC_USER_LOCK(gRpcLock);
+
 			RPC_DispatchMsg(dataBuf);
+
+			RPC_USER_UNLOCK(gRpcLock);
 		} else {
 			capi2_free(dataBuf);
 		}
@@ -190,11 +208,21 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t * params)
 	UInt8 clientIndex = 0;
 	int index;
 
+	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient gRpcInit=%d tblSize=%d",
+		gRpcInit, params->table_size));
+
+	if (!gRpcInit) {
+		RPC_SYS_Init(NULL);
+	}
+
+	RPC_USER_LOCK(gRpcLock);
+
 	index = RPC_FindUnsedSlot();
 	if (index == -1) {
-		_DBG_(RPC_TRACE
-		      ("RPC_SYS_RegisterClient ERROR Max clients reached"));
-		return (RPC_Handle_t) (int)NULL;
+		_DBG_(RPC_TRACE("RPC_SYS_RegisterClient ERROR Max clients reached"));
+
+		RPC_USER_UNLOCK(gRpcLock);
+		return (RPC_Handle_t)0;
 	}
 
 	gClientIndex++;
@@ -205,9 +233,14 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t * params)
 
 	userClientID = SYS_GenClientID();
 
-	_DBG_(RPC_TRACE
-	      ("RPC_SYS_RegisterClient index=%d userClientID=%d gClientIndex=%d",
-	       clientIndex, userClientID, gClientIndex));
+	if (userClientID == 0) {
+		_DBG_(RPC_TRACE("RPC_SYS_RegisterClient client ID allocation fail"));
+
+		RPC_USER_UNLOCK(gRpcLock);
+		return (RPC_Handle_t)0;
+	}
+
+	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient index=%d userClientID=%d gClientIndex=%d", clientIndex, userClientID, gClientIndex));
 
 	RPC_PACKET_RegisterDataInd(userClientID,
 				   (PACKET_InterfaceType_t) (gClientMap
@@ -222,7 +255,8 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t * params)
 	gClientIDMap[clientIndex] = userClientID;
 	gClientLocalMap[clientIndex].notifyUnsolicited = FALSE;
 
-	return (RPC_Handle_t) clientIndex;
+	RPC_USER_UNLOCK(gRpcLock);
+	return (RPC_Handle_t)clientIndex;
 }
 
 Boolean RPC_SYS_LookupXdr(UInt8 clientIndex, UInt16 index,
@@ -245,11 +279,11 @@ Boolean RPC_SYS_LookupXdr(UInt8 clientIndex, UInt16 index,
 
 Boolean RPC_SYS_DeregisterClient(RPC_Handle_t handle)
 {
-	UInt8 index = (UInt8) handle;
+	UInt8 index = (UInt8)handle;
 
-	_DBG_(RPC_TRACE
-	      ("RPC_SYS_DeregisterClient handle=%d userClientID=%d", handle,
-	       gClientIDMap[index]));
+	RPC_USER_LOCK(gRpcLock);
+
+	_DBG_(RPC_TRACE("RPC_SYS_DeregisterClient index=%d userClientID=%d", index, gClientIDMap[index]));
 
 	if (index < MAX_RPC_CLIENTS) {
 		memset(&gClientMap[index], 0, sizeof(RPC_InitParams_t));
@@ -257,22 +291,30 @@ Boolean RPC_SYS_DeregisterClient(RPC_Handle_t handle)
 			gClientIndex--;
 		SYS_ReleaseClientID(gClientIDMap[index]);
 		gClientIDMap[index] = 0;
+		RPC_USER_UNLOCK(gRpcLock);
 		return TRUE;
 	}
+
+	RPC_USER_UNLOCK(gRpcLock);
 	return FALSE;
 }
 
 Boolean RPC_EnableUnsolicitedMsgs(RPC_Handle_t handle, Boolean bSet)
 {
-	UInt8 index = (UInt8) handle;
+	UInt8 index = (UInt8)handle;
+
+	RPC_USER_LOCK(gRpcLock);
 
 	_DBG_(RPC_TRACE
 	      ("RPC_EnableUnsolicitedMsgs handle=0x%x index=%d bSet=%d", handle,
 	       index, bSet));
 	if (index <= gClientIndex) {
 		gClientLocalMap[index].notifyUnsolicited = bSet;
+		RPC_USER_UNLOCK(gRpcLock);
 		return TRUE;
 	}
+
+	RPC_USER_UNLOCK(gRpcLock);
 	return FALSE;
 }
 

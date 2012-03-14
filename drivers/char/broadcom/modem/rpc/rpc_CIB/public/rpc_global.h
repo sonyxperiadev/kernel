@@ -50,6 +50,12 @@ extern UInt32 g_dwLogLEVEL;
 #define xassert(a,b)	assert(a)
 #endif
 
+#define RPC_USER_LOCK_DECLARE(a)
+#define RPC_USER_LOCK(a)
+#define RPC_USER_UNLOCK(a)
+#define RPC_USER_LOCK_INIT(a)
+#define RPC_USER_LOCK_DEINIT(a)
+
 #elif UNDER_LINUX_MODEM
 
 #include "bcmlog.h"
@@ -68,12 +74,30 @@ extern int RpcLog_DetailLogEnabled(void);
 #define DETAIL_LOG_ENABLED (RpcLog_DetailLogEnabled())
 #define DETAIL_DATA_LOG_ENABLED (RpcLog_DetailLogEnabled())
 
+
+
 #ifdef LINUX_RPC_KERNEL
+#include <linux/mutex.h>
+
+#define RPC_USER_LOCK_DECLARE(a) struct mutex a
+#define RPC_USER_LOCK(a) mutex_lock(&a)
+#define RPC_USER_UNLOCK(a) mutex_unlock(&a)
+#define RPC_USER_LOCK_INIT(a) mutex_init(&a)
+#define RPC_USER_LOCK_DEINIT(a)
+
 #define capi2_malloc(x)	kmalloc(x, GFP_KERNEL)
 #define capi2_free(x)	kfree(x)
 #else
 #define capi2_malloc(x)	malloc(x)
 #define capi2_free(x)	free(x)
+
+#include <semaphore.h>
+
+#define RPC_USER_LOCK_DECLARE(a) sem_t a
+#define RPC_USER_LOCK(a)	sem_wait(&a)
+#define RPC_USER_UNLOCK(a)	sem_post(&a)
+#define RPC_USER_LOCK_INIT(a) sem_init(&a, 0, 1);
+#define RPC_USER_LOCK_DEINIT(a) sem_destroy(&a);
 #endif
 
 extern Boolean IsBasicCapi2LoggingEnable(void);
@@ -110,6 +134,11 @@ extern Boolean Log_IsLoggingEnable(UInt16 logID);
 #define capi2_malloc(x)	OSHEAP_Alloc(x)
 #define capi2_free(x)	OSHEAP_Delete(x)
 
+#define RPC_USER_LOCK_DECLARE(a)
+#define RPC_USER_LOCK(a)
+#define RPC_USER_UNLOCK(a)
+#define RPC_USER_LOCK_INIT(a)
+#define RPC_USER_LOCK_DEINIT(a)
 #endif
 #endif
 

@@ -16,7 +16,6 @@
 #ifndef _BCM_RTC_CAL_H_
 #define _BCM_RTC_CAL_H_
 
-
 #define RTC_CAL_QOS_DEFAULT_VALUE  0xFFFFFFFF
 #define RTC_CAL_DFS_MIN_VALUE  0
 #define RTC_OPP_UNSUPPORTED  0xFFFF
@@ -27,12 +26,12 @@
 Real Time Clock Time structure
 **/
 struct RTCTime_t {
-	UInt8  Sec;
-	UInt8  Min;
-	UInt8  Hour;
-	UInt8  Week;
-	UInt8  Day;
-	UInt8  Month;
+	UInt8 Sec;
+	UInt8 Min;
+	UInt8 Hour;
+	UInt8 Week;
+	UInt8 Day;
+	UInt8 Month;
 	UInt16 Year;
 };
 
@@ -41,12 +40,12 @@ Real Time Clock Time structure
 **/
 
 struct rtctime_t {
-	u8  sec;
-	u8  min;
-	u8  hour;
-	u8  week;
-	u8  mday;
-	u8  mon;
+	u8 sec;
+	u8 min;
+	u8 hour;
+	u8 week;
+	u8 mday;
+	u8 mon;
 	u16 year;
 };
 
@@ -85,16 +84,16 @@ struct rtc_cal_TC_t {
 
 struct rtccal_pdata {
 	const char *device;
-	unsigned long		nom_ratio;
-	unsigned long		min_ratio;
-	unsigned long		max_ratio;
-	unsigned long		range_ppm;
-	unsigned long		cal_thold;
-	unsigned long		cal_meas_int;
-	unsigned long		calc_interval;
-	unsigned long		update_interval;
-	unsigned long		slippage_err;
-	unsigned long		method;
+	unsigned long nom_ratio;
+	unsigned long min_ratio;
+	unsigned long max_ratio;
+	unsigned long range_ppm;
+	unsigned long cal_thold;
+	unsigned long cal_meas_int;
+	unsigned long calc_interval;
+	unsigned long update_interval;
+	unsigned long slippage_err;
+	unsigned long method;
 };
 
 struct rtc_cal_info_t {
@@ -150,7 +149,6 @@ extern uint32_t __div64_32(uint64_t *dividend, uint32_t divisor);
 
 void bcm_rtc_cal_ratio(unsigned long val1, unsigned long val2);
 
-
 /**
 	This function is used to get RTCTime from PMU for startup
 
@@ -167,10 +165,7 @@ void RTCCal_GetRTCTime(void);
 	@return		Boolean
 
 **/
-bool RTCCal_Init(
-	void
-	);
-
+bool RTCCal_Init(void);
 
 /**
 	This function is used to run RTC
@@ -179,9 +174,7 @@ bool RTCCal_Init(
 	@note
 
 **/
-void RTCCal_Run(
-	void
-	);
+void RTCCal_Run(void);
 
 /**
 	Function used to update current time
@@ -189,9 +182,7 @@ void RTCCal_Run(
 	@param		time  in sec format
 	@note
 **/
-void RTCCal_UpdateTime(
-	unsigned long	time
-	);
+void RTCCal_UpdateTime(unsigned long time);
 
 /**
 	Function used to get time from RTC CAL for upper layer usage

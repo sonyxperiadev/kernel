@@ -264,6 +264,7 @@ enum {
 	CCU_TARGET_LOAD = (1 << 16),
 	CCU_TARGET_AC = (1 << 17),
 	CCU_ACCESS_ENABLE = (1 << 18),
+	CCU_KEEP_UNLOCKED = (1 << 19),
 
 	/*Ref clk flags */
 	CLK_RATE_FIXED = (1 << 24),

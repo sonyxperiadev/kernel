@@ -38,8 +38,7 @@
 #define MAX_MSG_STREAM_SIZE	2048
 
 #ifdef DEVELOPMENT_RPC_XDR_DETAIL_LOG
-#define MAX_LOG_BUFFER_SIZE 4000	//~4.5K
-static char log_buf[MAX_LOG_BUFFER_SIZE + 100];
+#define MAX_LOG_BUFFER_SIZE 4000	/* ~4.5K */
 #endif
 
 Result_t RPC_SerializeMsg(RPC_InternalMsg_t * rpcMsg, char *stream,
@@ -47,6 +46,7 @@ Result_t RPC_SerializeMsg(RPC_InternalMsg_t * rpcMsg, char *stream,
 {
 	XDR xdrs;
 	Result_t result = RESULT_OK;
+	char *detailLogBuffer = NULL;
 
 	Boolean isValid = SYS_IsRegisteredClientID(rpcMsg->rootMsg.clientID);
 
@@ -57,9 +57,11 @@ Result_t RPC_SerializeMsg(RPC_InternalMsg_t * rpcMsg, char *stream,
 
 	//assert(isValid);
 
-	if (DETAIL_LOG_ENABLED)
-		xdrmem_create(&xdrs, stream, streamLen, log_buf,
-			      MAX_LOG_BUFFER_SIZE, XDR_ENCODE);
+	if (DETAIL_LOG_ENABLED) {
+		detailLogBuffer = (char *)capi2_malloc(MAX_LOG_BUFFER_SIZE+1);
+		xdrmem_create(&xdrs, stream, streamLen, detailLogBuffer,
+			MAX_LOG_BUFFER_SIZE, XDR_ENCODE);
+	}
 	else
 		xdrmem_create(&xdrs, stream, streamLen, NULL, 0, XDR_ENCODE);
 
@@ -67,15 +69,22 @@ Result_t RPC_SerializeMsg(RPC_InternalMsg_t * rpcMsg, char *stream,
 	    (xdr_RPC_InternalMsg_t(&xdrs, rpcMsg)) ? RESULT_OK : RESULT_ERROR;
 
 #ifdef DEVELOPMENT_RPC_XDR_DETAIL_LOG
-	if (DETAIL_LOG_ENABLED) {
-		if (rpcMsg->rootMsg.msgId != MSG_CAPI2_ACK_RSP
-		    && (xdrs.x_op == XDR_ENCODE || xdrs.x_op == XDR_DECODE)) {
-			if ((strlen(log_buf) + 3) < MAX_LOG_BUFFER_SIZE)
-				strncat(log_buf, "}\r\n", 3);
-			_DBG_(Rpc_DebugOutputString(log_buf));
-		}
-	}
+			if (DETAIL_LOG_ENABLED) {
+				if (rpcMsg->rootMsg.msgId != MSG_CAPI2_ACK_RSP &&
+					(xdrs.x_op == XDR_ENCODE ||
+					xdrs.x_op == XDR_DECODE)) {
+					if ((strlen(detailLogBuffer)+3) <
+						MAX_LOG_BUFFER_SIZE)
+						strncat(detailLogBuffer, "}\r\n", 3);
+					_DBG_(Rpc_DebugOutputString(detailLogBuffer));
+				}
+			}
 #endif
+
+	if (detailLogBuffer) {
+		xdrmem_log_reset(&xdrs);
+		capi2_free(detailLogBuffer);
+	}
 
 	*outLen = xdr_getpos(&xdrs);
 	xdr_destroy(&xdrs);
@@ -171,6 +180,7 @@ Result_t RPC_DeserializeMsg(char *stream, UInt32 stream_len,
 	XDR *xdrs = NULL;
 	RPC_InternalMsg_t *rpcMsg = NULL;
 	Result_t result = RESULT_OK;
+	char *detailLogBuffer = NULL;
 
 	if (dataBuf) {
 		xdrs = &dataBuf->xdrs;
@@ -179,9 +189,11 @@ Result_t RPC_DeserializeMsg(char *stream, UInt32 stream_len,
 
 		memset(rpcMsg, 0, sizeof(RPC_InternalMsg_t));
 
-		if (DETAIL_LOG_ENABLED)
-			xdrmem_create(xdrs, stream, stream_len, log_buf,
-				      MAX_LOG_BUFFER_SIZE, XDR_DECODE);
+		if (DETAIL_LOG_ENABLED) {
+			detailLogBuffer = (char *)capi2_malloc(MAX_LOG_BUFFER_SIZE+1);
+			xdrmem_create(xdrs, stream, stream_len, detailLogBuffer,
+				MAX_LOG_BUFFER_SIZE, XDR_DECODE);
+		}
 		else
 			xdrmem_create(xdrs, stream, stream_len, NULL, 0,
 				      XDR_DECODE);
@@ -191,28 +203,39 @@ Result_t RPC_DeserializeMsg(char *stream, UInt32 stream_len,
 		    RESULT_ERROR;
 
 #ifdef DEVELOPMENT_RPC_XDR_DETAIL_LOG
-		if (DETAIL_LOG_ENABLED) {
-			if (rpcMsg->rootMsg.msgId != MSG_CAPI2_ACK_RSP
-			    && (xdrs->x_op == XDR_ENCODE
-				|| xdrs->x_op == XDR_DECODE)) {
-				if ((strlen(log_buf) + 3) < MAX_LOG_BUFFER_SIZE)
-					strncat(log_buf, "}\r\n", 3);
-				_DBG_(Rpc_DebugOutputString(log_buf));
+			if (DETAIL_LOG_ENABLED) {
+				if (rpcMsg->rootMsg.msgId != MSG_CAPI2_ACK_RSP &&
+					(xdrs->x_op == XDR_ENCODE ||
+					xdrs->x_op == XDR_DECODE)) {
+					if ((strlen(detailLogBuffer)+3) <
+						MAX_LOG_BUFFER_SIZE)
+						strncat(detailLogBuffer, "}\r\n", 3);
+					_DBG_(Rpc_DebugOutputString(detailLogBuffer));
+				}
 			}
-		}
 #endif
 
 	} else {
 		result = RESULT_ERROR;
 	}
 
+	if (detailLogBuffer) {
+		xdrmem_log_reset(xdrs);
+		capi2_free(detailLogBuffer);
+	}
+
 	/* The AP side want to free up the deserialized buffer. */
 	return (result);
 }
 
+
+extern RPC_USER_LOCK_DECLARE(gRpcFreeLock);
+
 void RPC_SYSFreeResultDataBuffer(ResultDataBufHandle_t dataBufHandle)
 {
-	ResultDataBuffer_t *dataBuf = (ResultDataBuffer_t *) dataBufHandle;
+	ResultDataBuffer_t *dataBuf = (ResultDataBuffer_t *)dataBufHandle;
+
+	RPC_USER_LOCK(gRpcFreeLock);
 
 	_DBG_(RPC_TRACE_INFO
 	      ("RPC_SYSFreeResultDataBuffer ref=%d",
@@ -231,6 +254,7 @@ void RPC_SYSFreeResultDataBuffer(ResultDataBufHandle_t dataBufHandle)
 			       (dataBuf) ? dataBuf->refCount : -1));
 		}
 	}
+	RPC_USER_UNLOCK(gRpcFreeLock);
 }
 
 Result_t RPC_SendAckEx(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ackResult,

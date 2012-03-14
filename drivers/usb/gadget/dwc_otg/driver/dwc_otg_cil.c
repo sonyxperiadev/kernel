@@ -339,7 +339,7 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t * reg_base_addr)
 
 	core_if->snpsid = dwc_read_reg32(&core_if->core_global_regs->gsnpsid);
 
-	DWC_PRINTF("Core Release: %x.%x%x%x\n",
+	DWC_DEBUGPL(DBG_CILV, "Core Release: %x.%x%x%x\n",
 		   (core_if->snpsid >> 12 & 0xF),
 		   (core_if->snpsid >> 8 & 0xF),
 		   (core_if->snpsid >> 4 & 0xF), (core_if->snpsid & 0xF));
@@ -1405,8 +1405,13 @@ void dwc_otg_core_init(dwc_otg_core_if_t *core_if)
 	    (core_if->core_params->ts_dline == 1) ? 1 : 0;
 	dwc_write_reg32(&global_regs->gusbcfg, usbcfg.d32);
 
-	/* Reset the Controller */
-	dwc_otg_core_reset(core_if);
+	/* If phy_init_done is not set then we will reset
+	 * the core later anyway. Otherwise, reset it here
+	 */
+	if (core_if->phy_init_done) {
+		/* Reset the Controller */
+		dwc_otg_core_reset(core_if);
+	}
 
 	core_if->adp_enable = core_if->core_params->adp_supp_enable;
 	core_if->power_down = core_if->core_params->power_down;
@@ -1581,13 +1586,13 @@ void dwc_otg_core_init(dwc_otg_core_if_t *core_if)
 	}
 	if (core_if->dma_enable) {
 		if (core_if->dma_desc_enable) {
-			DWC_PRINTF("Using Descriptor DMA mode\n");
+			DWC_DEBUGPL(DBG_CILV, "Using Descriptor DMA mode\n");
 			if (core_if->dev_out_nak_enable)
-				DWC_PRINTF("Using Bulk OUT NAK mode\n");
+				DWC_DEBUGPL(DBG_CILV, "Bulk OUT NAK enabled\n");
 		} else
-			DWC_PRINTF("Using Buffer DMA mode\n");
+			DWC_DEBUGPL(DBG_CILV, "Using Buffer DMA mode\n");
 	} else {
-		DWC_PRINTF("Using Slave mode\n");
+		DWC_DEBUGPL(DBG_CILV, "Using Slave mode\n");
 		core_if->dma_desc_enable = 0;
 		core_if->dev_out_nak_enable = 0;
 	}
@@ -1599,9 +1604,9 @@ void dwc_otg_core_init(dwc_otg_core_if_t *core_if)
 
 	core_if->pti_enh_enable = core_if->core_params->pti_enable != 0;
 	core_if->multiproc_int_enable = core_if->core_params->mpi_enable;
-	DWC_PRINTF("Periodic Transfer Interrupt Enhancement - %s\n",
+	DWC_DEBUGPL(DBG_CILV, "Periodic Transfer Interrupt Enhancement - %s\n",
 		   ((core_if->pti_enh_enable) ? "enabled" : "disabled"));
-	DWC_PRINTF("Multiprocessor Interrupt Enhancement - %s\n",
+	DWC_DEBUGPL(DBG_CILV, "Multiprocessor Interrupt Enhancement - %s\n",
 		   ((core_if->multiproc_int_enable) ? "enabled" : "disabled"));
 
 	/*
@@ -1684,7 +1689,7 @@ void dwc_otg_core_init(dwc_otg_core_if_t *core_if)
 				 gotgctl.d32);
 		/* Set OTG version supported */
 		core_if->otg_ver = core_if->core_params->otg_ver;
-		DWC_PRINTF("OTG VER PARAM: %d, OTG VER FLAG: %d\n",
+		DWC_DEBUGPL(DBG_CILV, "OTG VER PARAM: %d, OTG VER FLAG: %d\n",
 			   core_if->core_params->otg_ver, core_if->otg_ver);
 	}
 
@@ -5083,7 +5088,7 @@ static int dwc_otg_setup_params(dwc_otg_core_if_t *core_if)
 	dwc_otg_set_uninitialized((int32_t *) core_if->core_params,
 				  sizeof(*core_if->core_params) /
 				  sizeof(int32_t));
-	DWC_PRINTF("Setting default values for core params\n");
+	DWC_DEBUGPL(DBG_CILV, "Setting default values for core params\n");
 	dwc_otg_set_param_otg_cap(core_if, dwc_param_otg_cap_default);
 	dwc_otg_set_param_dma_enable(core_if, dwc_param_dma_enable_default);
 	dwc_otg_set_param_dma_desc_enable(core_if,

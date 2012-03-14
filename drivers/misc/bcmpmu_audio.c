@@ -35,6 +35,7 @@ struct bcmpmu_audio {
 	bool HS_On;
 	struct mutex lock;
 	void *debugfs_dir;
+	u32 pll_use_count;
 };
 static struct bcmpmu_audio *bcmpmu_audio;
 
@@ -574,28 +575,37 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 void bcmpmu_audio_init(void)
 {
 	struct bcmpmu_rw_data reg;
-	printk(KERN_WARNING "%s: ######\n", __func__);
+	pr_info("%s: ###### - pll_use_count = %u\n",
+		__func__, bcmpmu_audio->pll_use_count);
 
-	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL,
-				       &reg.val, PMU_BITMASK_ALL);
-	reg.val |= (BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN);
-	bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL,
-					reg.val, PMU_BITMASK_ALL);
+	if (bcmpmu_audio->pll_use_count++ == 0)	{
+
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_PLLCTRL, &reg.val, PMU_BITMASK_ALL);
+		reg.val |= (BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN);
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_PLLCTRL, reg.val, PMU_BITMASK_ALL);
+	}
 }
 EXPORT_SYMBOL(bcmpmu_audio_init);
 
 void bcmpmu_audio_deinit(void)
 {
 	struct bcmpmu_rw_data reg;
+	pr_info("%s: ###### - pll_use_count = %u\n",
+		__func__, bcmpmu_audio->pll_use_count);
+	if (bcmpmu_audio->pll_use_count &&
+			--bcmpmu_audio->pll_use_count == 0) {
 
-	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL,
-				       &reg.val, PMU_BITMASK_ALL);
-	reg.val &= ~(BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN);
-	bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu, PMU_REG_PLLCTRL,
-					reg.val, PMU_BITMASK_ALL);
+		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_PLLCTRL, &reg.val, PMU_BITMASK_ALL);
+		reg.val &= ~(BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN);
+		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
+			PMU_REG_PLLCTRL, reg.val, PMU_BITMASK_ALL);
 
-	bcmpmu_audio->HS_On = false;
-	bcmpmu_audio->IHF_On = false;
+		bcmpmu_audio->HS_On = false;
+		bcmpmu_audio->IHF_On = false;
+	}
 }
 EXPORT_SYMBOL(bcmpmu_audio_deinit);
 
@@ -680,6 +690,7 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	mutex_init(&pdata->lock);
+	pdata->pll_use_count = 0;
 	pdata->bcmpmu = bcmpmu;
 	bcmpmu_audio = pdata;
 	bcmpmu_audio->HS_On = false;

@@ -229,8 +229,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 		return -EIO;
 
 	bcm_hsotgctrl_en_clock(true);
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
-
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 	/* clear bit 15 RDB error */
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 		HSOTG_CTRL_PHY_P1CTL_OFFSET);
@@ -238,7 +237,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* Enable software control of PHY-PM */
 	bcm_hsotgctrl_set_soft_ldo_pwrdn(true);
@@ -251,7 +250,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 
 	/* Power up ALDO */
 	bcm_hsotgctrl_set_aldo_pdn(true);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
+	mdelay(PHY_PM_DELAY_IN_MS);
 
 	/* Enable pad, internal PLL etc */
 	bcm_hsotgctrl_set_phy_off(false);
@@ -260,12 +259,11 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 
 	/* Remove PHY isolation */
 	bcm_hsotgctrl_set_phy_iso(false);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-
+	mdelay(PHY_PM_DELAY_IN_MS);
 
 	/* PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(true);
-	msleep_interruptible(PHY_PLL_DELAY_MS);
+	mdelay(PHY_PLL_DELAY_MS);
 
 	/* Bring Put PHY out of reset state */
 	bcm_hsotgctrl_set_phy_resetb(true);
@@ -555,7 +553,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	/* Init the PHY */
 	bcm_hsotgctrl_en_clock(true);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* clear bit 15 RDB error */
 	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base +
@@ -563,7 +561,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	val &= ~HSOTG_CTRL_PHY_P1CTL_USB11_OEB_IS_TXEB_MASK;
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
 			HSOTG_CTRL_PHY_P1CTL_OFFSET);
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* S/W reset Phy, active low */
 	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base +
@@ -572,7 +570,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
 			HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* bring Phy out of reset */
 	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base +
@@ -582,12 +580,12 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	val |= PHY_MODE_OTG << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT; /* use OTG mode */
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* Enable pad, internal PLL etc */
 	bcm_hsotgctrl_set_phy_off(false);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	val =	HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK | /*Come up as device until we check PMU ID status to avoid turning on Vbus before checking */
@@ -599,7 +597,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
 			HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
-	msleep_interruptible(HSOTGCTRL_STEP_DELAY_IN_MS);
+	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	error = device_create_file(&pdev->dev, &dev_attr_hsotgctrldump);
 
