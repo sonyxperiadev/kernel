@@ -94,8 +94,9 @@ int32_t dwc_otg_hcd_handle_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 		if (gintsts.b.i2cintr)
 			/** @todo Implement i2cintr handler. */
 #endif
-		if (gintsts.b.portintr)
-			retval |= dwc_otg_hcd_handle_port_intr(dwc_otg_hcd);
+			if (gintsts.b.portintr)
+				retval |=
+				    dwc_otg_hcd_handle_port_intr(dwc_otg_hcd);
 
 		if (gintsts.b.hcintr)
 			retval |= dwc_otg_hcd_handle_hc_intr(dwc_otg_hcd);
@@ -404,7 +405,8 @@ int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 					    DWC_HPRT0_PRTSPD_LOW_SPEED
 					    && params->
 					    host_ls_low_power_phy_clk ==
-					    DWC_HOST_LS_LOW_POWER_PHY_CLK_PARAM_6MHZ) {
+					    DWC_HOST_LS_LOW_POWER_PHY_CLK_PARAM_6MHZ)
+					{
 						/* 6 MHZ */
 						DWC_DEBUGPL(DBG_CIL,
 							    "FS_PHY programming HCFG to 6 MHz (Low Power)\n");
@@ -730,7 +732,7 @@ update_isoc_urb_state(dwc_otg_hcd_t *hcd,
  * non-periodic schedule. For periodic QHs, removes the QH from the periodic
  * schedule if no more QTDs are linked to the QH.
  */
-static void deactivate_qh(dwc_otg_hcd_t *hcd, dwc_otg_qh_t * qh, int free_qtd)
+static void deactivate_qh(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh, int free_qtd)
 {
 	int continue_split = 0;
 	dwc_otg_qtd_t *qtd;
@@ -830,7 +832,7 @@ cleanup:
 		hcd->non_periodic_channels--;
 		break;
 
-	default:
+default:
 		/*
 		 * Don't release reservations for periodic channels here.
 		 * That's done when a periodic transfer is descheduled (i.e.
@@ -1755,8 +1757,7 @@ static int32_t handle_hc_datatglerr_intr(dwc_otg_hcd_t *hcd,
  */
 static inline int halt_status_ok(dwc_otg_hcd_t *hcd,
 				 dwc_hc_t *hc,
-				 dwc_otg_hc_regs_t *hc_regs,
-				 dwc_otg_qtd_t *qtd)
+				 dwc_otg_hc_regs_t *hc_regs, dwc_otg_qtd_t *qtd)
 {
 	hcchar_data_t hcchar;
 	hctsiz_data_t hctsiz;

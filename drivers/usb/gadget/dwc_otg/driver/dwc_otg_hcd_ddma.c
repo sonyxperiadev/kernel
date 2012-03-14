@@ -100,11 +100,11 @@ static int desc_list_alloc(dwc_otg_qh_t *qh, int atomic_alloc)
 
 	if (atomic_alloc)
 		qh->n_bytes =
-		    (uint32_t *) dwc_alloc_atomic(sizeof(uint32_t) *
-						  max_desc_num(qh));
+		    (uint32_t *)dwc_alloc_atomic(sizeof(uint32_t) *
+						 max_desc_num(qh));
 	else
 		qh->n_bytes =
-		    (uint32_t *) dwc_alloc(sizeof(uint32_t) * max_desc_num(qh));
+		    (uint32_t *)dwc_alloc(sizeof(uint32_t) * max_desc_num(qh));
 
 	if (!qh->n_bytes) {
 		retval = -DWC_E_NO_MEMORY;
@@ -521,8 +521,7 @@ static void init_isoc_dma_desc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh,
 
 	DWC_CIRCLEQ_FOREACH(qtd, &qh->qtd_list, qtd_list_entry) {
 		while ((qh->ntd < ntd_max)
-		       && (qtd->isoc_frame_index_last <
-			   qtd->urb->packet_count)) {
+		       && (qtd->isoc_frame_index_last < qtd->urb->packet_count)) {
 
 			dma_desc = &qh->desc_list[idx];
 			dwc_memset(dma_desc, 0x00,
@@ -624,7 +623,7 @@ static void init_non_isoc_dma_desc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 		if (n_desc) {
 			/* SG request - more than 1 QTDs */
 			hc->xfer_buff =
-			    (uint8_t *) qtd->urb->dma + qtd->urb->actual_length;
+			    (uint8_t *)qtd->urb->dma + qtd->urb->actual_length;
 			hc->xfer_len =
 			    qtd->urb->length - qtd->urb->actual_length;
 		}
@@ -661,7 +660,7 @@ static void init_non_isoc_dma_desc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 
 			dma_desc->status.b.a = 1;	/* Active descriptor */
 
-			dma_desc->buf = (uint32_t) hc->xfer_buff;
+			dma_desc->buf = (uint32_t)hc->xfer_buff;
 
 			/*
 			 * Last descriptor(or single) of IN transfer
@@ -677,7 +676,7 @@ static void init_non_isoc_dma_desc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 			qtd->n_desc++;
 			n_desc++;
 		} while ((hc->xfer_len > 0)
-		       && (n_desc != MAX_DMA_DESC_NUM_GENERIC));
+			 && (n_desc != MAX_DMA_DESC_NUM_GENERIC));
 
 		qtd->in_process = 1;
 
