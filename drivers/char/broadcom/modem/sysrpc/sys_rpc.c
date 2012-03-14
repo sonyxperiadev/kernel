@@ -52,7 +52,7 @@ static void HandleSysReqMsg(RPC_Msg_t *pMsg,
 			    ResultDataBufHandle_t dataBufHandle,
 			    UInt32 userContextData)
 {
-	SYS_ReqRep_t *req = (SYS_ReqRep_t *) pMsg->dataBuf;
+	SYS_ReqRep_t *req = (SYS_ReqRep_t *)pMsg->dataBuf;
 
 	RPC_SendAckForRequest(dataBufHandle, 0);
 
@@ -76,7 +76,7 @@ static void HandleSysEventRspCb(RPC_Msg_t *pMsg,
 }
 
 static void SYS_GetPayloadInfo(SYS_ReqRep_t *reqRep, MsgType_t msgId,
-			       void **ppBuf, UInt32 * len)
+			       void **ppBuf, UInt32 *len)
 {
 	*ppBuf = NULL;
 	*len = 0;
@@ -100,12 +100,12 @@ static Boolean SysCopyPayload(MsgType_t msgType,
 	UInt32 len;
 	SYS_ReqRep_t *req;
 	void *dataBuf;
-	SYS_ReqRep_t *reqRep = (SYS_ReqRep_t *) srcDataBuf;
+	SYS_ReqRep_t *reqRep = (SYS_ReqRep_t *)srcDataBuf;
 
 	xassert(srcDataBuf != NULL, 0);
 	SYS_GetPayloadInfo(reqRep, msgType, &dataBuf, &len);
 
-	req = (SYS_ReqRep_t *) srcDataBuf;
+	req = (SYS_ReqRep_t *)srcDataBuf;
 	*outResult = req->result;
 	*outDestDataSize = len;
 
@@ -183,7 +183,7 @@ Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t *pReqMsg, UInt32 cmd,
 	SYS_ReqRep_t data;
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
-	data.req_rep_u.CAPI2_CPPS_Control_Rsp.val = (UInt32) 3;	//CPPS_CONTROL_NO_FFS_SUPPORT_ON_AP
+	data.req_rep_u.CAPI2_CPPS_Control_Rsp.val = (UInt32)3;	//CPPS_CONTROL_NO_FFS_SUPPORT_ON_AP
 
 	data.result = result;
 	Send_SYS_RspForRequest(pReqMsg, MSG_CPPS_CONTROL_RSP, &data);
@@ -206,7 +206,10 @@ Result_t Handle_CAPI2_FLASH_SaveImage(RPC_Msg_t *pReqMsg, UInt32 flash_addr,
 
 #if defined(FUSE_COMMS_PROCESSOR)
 
-void SysApi_GetSimLockStatus(ClientInfo_t *inClientInfoPtr, SYS_SIMLOCK_STATE_t *simlock_state, SYS_SIMLOCK_SIM_DATA_t *sim_data, Boolean is_testsim)
+void SysApi_GetSimLockStatus(ClientInfo_t *inClientInfoPtr,
+			     SYS_SIMLOCK_STATE_t *simlock_state,
+			     SYS_SIMLOCK_SIM_DATA_t *sim_data,
+			     Boolean is_testsim)
 {
 #if 1
 	Result_t res = RESULT_TIMER_EXPIRED;
@@ -214,15 +217,22 @@ void SysApi_GetSimLockStatus(ClientInfo_t *inClientInfoPtr, SYS_SIMLOCK_STATE_t 
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
 
-	tid = RPC_SyncCreateTID((SYS_SIMLOCK_STATE_t *)simlock_state, sizeof(SYS_SIMLOCK_STATE_t));
+	tid =
+	    RPC_SyncCreateTID((SYS_SIMLOCK_STATE_t *)simlock_state,
+			      sizeof(SYS_SIMLOCK_STATE_t));
 	inClientInfoPtr->reserved = tid;
-	SYS_SimLockApi_GetStatus(tid, SYS_GetClientId(), inClientInfoPtr->simId, (SYS_SIMLOCK_SIM_DATA_t *) sim_data, is_testsim);
-	res = RPC_SyncWaitForResponseTimer(tid, inClientInfoPtr->clientId , &ackResult, &msgType, NULL, (TICKS_ONE_SECOND * 5));
+	SYS_SimLockApi_GetStatus(tid, SYS_GetClientId(), inClientInfoPtr->simId,
+				 (SYS_SIMLOCK_SIM_DATA_t *)sim_data,
+				 is_testsim);
+	res =
+	    RPC_SyncWaitForResponseTimer(tid, inClientInfoPtr->clientId,
+					 &ackResult, &msgType, NULL,
+					 (TICKS_ONE_SECOND * 5));
 #endif
 
-	if(res == RESULT_TIMER_EXPIRED)
-	{
-		SYS_TRACE("SysApi_GetSimLockStatus WARNING!!! (Timeout) Check if AP is handling this message \n");
+	if (res == RESULT_TIMER_EXPIRED) {
+		SYS_TRACE
+		    ("SysApi_GetSimLockStatus WARNING!!! (Timeout) Check if AP is handling this message \n");
 		simlock_state->network_lock_enabled = FALSE;
 		simlock_state->network_subset_lock_enabled = FALSE;
 		simlock_state->service_provider_lock_enabled = FALSE;
@@ -237,84 +247,95 @@ void SysApi_GetSimLockStatus(ClientInfo_t *inClientInfoPtr, SYS_SIMLOCK_STATE_t 
 
 	}
 
-	SYS_TRACE("SysApi_GetSimLockStatus enabled: %d, %d, %d, %d, %d\r\n", simlock_state->network_lock_enabled,
-						simlock_state->network_subset_lock_enabled, simlock_state->service_provider_lock_enabled,
-						simlock_state->corporate_lock_enabled, simlock_state->phone_lock_enabled);
+	SYS_TRACE("SysApi_GetSimLockStatus enabled: %d, %d, %d, %d, %d\r\n",
+		  simlock_state->network_lock_enabled,
+		  simlock_state->network_subset_lock_enabled,
+		  simlock_state->service_provider_lock_enabled,
+		  simlock_state->corporate_lock_enabled,
+		  simlock_state->phone_lock_enabled);
 
-	SYS_TRACE("SysApi_GetSimLockStatus status: %d, %d, %d, %d, %d\r\n", simlock_state->network_lock,
-						simlock_state->network_subset_lock, simlock_state->service_provider_lock,
-						simlock_state->corporate_lock, simlock_state->phone_lock);
+	SYS_TRACE("SysApi_GetSimLockStatus status: %d, %d, %d, %d, %d\r\n",
+		  simlock_state->network_lock,
+		  simlock_state->network_subset_lock,
+		  simlock_state->service_provider_lock,
+		  simlock_state->corporate_lock, simlock_state->phone_lock);
 }
 
-Result_t Handle_SYS_SIMLOCKApi_SetStatusEx(RPC_Msg_t *pReqMsg, UInt8 simId, SYS_SIMLOCK_STATE_t *simlock_state) 
-{ 
-	Result_t result = RESULT_OK; 
- 	SYS_ReqRep_t data; 
- 	ClientInfo_t cInfo = {0}; 
+Result_t Handle_SYS_SIMLOCKApi_SetStatusEx(RPC_Msg_t *pReqMsg, UInt8 simId,
+					   SYS_SIMLOCK_STATE_t *simlock_state)
+{
+	Result_t result = RESULT_OK;
+	SYS_ReqRep_t data;
+	ClientInfo_t cInfo = { 0 };
 
-	memset(&data, 0, sizeof(SYS_ReqRep_t)); 
+	memset(&data, 0, sizeof(SYS_ReqRep_t));
 
-	cInfo.simId = (SimNumber_t)simId; 
-	SIMLOCKApi_SetStatus(&cInfo,simlock_state); 
+	cInfo.simId = (SimNumber_t) simId;
+	SIMLOCKApi_SetStatus(&cInfo, simlock_state);
 
-	data.result = result; 
- 	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_SIMLOCK_SET_STATUS_RSP, &data); 
- 	return result; 
-} 
+	data.result = result;
+	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_SIMLOCK_SET_STATUS_RSP, &data);
+	return result;
+}
 
-Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t *pReqMsg, UInt8 simId) 
-{ 
- 	Result_t result = RESULT_OK; 
- 	SYS_ReqRep_t data; 
- 	ClientInfo_t cInfo = {0}; 
- 
- 	memset(&data, 0, sizeof(SYS_ReqRep_t)); 
- 	cInfo.simId = (SimNumber_t)simId; 
- 	data.req_rep_u.SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp.val = (UInt32)SimApi_GetCurrLockedSimlockType(&cInfo); 
-  
- 	data.result = result; 
-	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP, &data); 
- 	return result; 
-} 
+Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t *pReqMsg,
+						      UInt8 simId)
+{
+	Result_t result = RESULT_OK;
+	SYS_ReqRep_t data;
+	ClientInfo_t cInfo = { 0 };
+
+	memset(&data, 0, sizeof(SYS_ReqRep_t));
+	cInfo.simId = (SimNumber_t) simId;
+	data.req_rep_u.SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp.val =
+	    (UInt32)SimApi_GetCurrLockedSimlockType(&cInfo);
+
+	data.result = result;
+	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP,
+			       &data);
+	return result;
+}
 
 #endif
 
 #if defined(FUSE_APPS_PROCESSOR)
 
-static SYS_SIM_SECURITY_STATE_t convert_security_state(SEC_SimLock_Security_State_t sec_state)
+static SYS_SIM_SECURITY_STATE_t
+convert_security_state(SEC_SimLock_Security_State_t sec_state)
 {
 	SYS_SIM_SECURITY_STATE_t tmp_state = SYS_SIM_SECURITY_OPEN;
 
 	switch (sec_state) {
-		case SEC_SIMLOCK_SECURITY_OPEN:
-			tmp_state = SYS_SIM_SECURITY_OPEN;
-			break;
+	case SEC_SIMLOCK_SECURITY_OPEN:
+		tmp_state = SYS_SIM_SECURITY_OPEN;
+		break;
 
-		case SEC_SIMLOCK_SECURITY_LOCKED:
-			tmp_state = SYS_SIM_SECURITY_LOCKED;
-			break;
+	case SEC_SIMLOCK_SECURITY_LOCKED:
+		tmp_state = SYS_SIM_SECURITY_LOCKED;
+		break;
 
-		case SEC_SIMLOCK_SECURITY_BLOCKED:
-			tmp_state = SYS_SIM_SECURITY_BLOCKED;
-			break;
+	case SEC_SIMLOCK_SECURITY_BLOCKED:
+		tmp_state = SYS_SIM_SECURITY_BLOCKED;
+		break;
 
-		case SEC_SIMLOCK_SECURITY_VERIFIED:
-			tmp_state = SYS_SIM_SECURITY_VERIFIED;
-			break;
+	case SEC_SIMLOCK_SECURITY_VERIFIED:
+		tmp_state = SYS_SIM_SECURITY_VERIFIED;
+		break;
 
-		case SEC_SIMLOCK_SECURITY_NOT_INIT:
-			tmp_state = SYS_SIM_SECURITY_NOT_INIT;
-			break;
+	case SEC_SIMLOCK_SECURITY_NOT_INIT:
+		tmp_state = SYS_SIM_SECURITY_NOT_INIT;
+		break;
 
-		default:
-			break;
+	default:
+		break;
 	}
 
 	return tmp_state;
 }
 
-
-Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId, SYS_SIMLOCK_SIM_DATA_t *sim_data, Boolean is_testsim)
+Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId,
+					 SYS_SIMLOCK_SIM_DATA_t *sim_data,
+					 Boolean is_testsim)
 {
 	Result_t result = RESULT_OK;
 	SYS_ReqRep_t data;
@@ -323,7 +344,8 @@ Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId, SYS_SI
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
 	/* convert sim_data to security driver format here... */
-	strncpy(tmp_sim_data.imsi_string, sim_data->imsi_string, MAX_IMSI_DIGITS);
+	strncpy(tmp_sim_data.imsi_string, sim_data->imsi_string,
+		MAX_IMSI_DIGITS);
 	tmp_sim_data.imsi_string[MAX_IMSI_DIGITS] = '\0';
 	memcpy(tmp_sim_data.gid1, sim_data->gid1, MAX_GID_DIGITS);
 	memcpy(tmp_sim_data.gid2, sim_data->gid2, MAX_GID_DIGITS);
@@ -331,34 +353,59 @@ Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId, SYS_SI
 	tmp_sim_data.gid2_len = sim_data->gid2_len;
 
 	if (0 == sec_simlock_get_status(&tmp_sim_data,
-										simId,
-										is_testsim,
-										&tmp_sim_state)) {
+					simId, is_testsim, &tmp_sim_state)) {
 		/* retrieved SIM lock state successfully from security driver */
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.network_lock_enabled = (0 != tmp_sim_state.network_lock_enabled);
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.network_subset_lock_enabled = (0 != tmp_sim_state.network_subset_lock_enabled);
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.service_provider_lock_enabled = (0 != tmp_sim_state.service_provider_lock_enabled);
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.corporate_lock_enabled = (0 != tmp_sim_state.corporate_lock_enabled);
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.phone_lock_enabled = (0 != tmp_sim_state.phone_lock_enabled);
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    network_lock_enabled =
+		    (0 != tmp_sim_state.network_lock_enabled);
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    network_subset_lock_enabled =
+		    (0 != tmp_sim_state.network_subset_lock_enabled);
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    service_provider_lock_enabled =
+		    (0 != tmp_sim_state.service_provider_lock_enabled);
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    corporate_lock_enabled =
+		    (0 != tmp_sim_state.corporate_lock_enabled);
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    phone_lock_enabled =
+		    (0 != tmp_sim_state.phone_lock_enabled);
 
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.network_lock = convert_security_state(tmp_sim_state.network_lock);
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.network_subset_lock = convert_security_state(tmp_sim_state.network_subset_lock);
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.service_provider_lock = convert_security_state(tmp_sim_state.service_provider_lock);
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.corporate_lock = convert_security_state(tmp_sim_state.corporate_lock);
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.phone_lock = convert_security_state(tmp_sim_state.phone_lock);
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.network_lock =
+		    convert_security_state(tmp_sim_state.network_lock);
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    network_subset_lock =
+		    convert_security_state(tmp_sim_state.network_subset_lock);
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    service_provider_lock =
+		    convert_security_state(tmp_sim_state.service_provider_lock);
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.corporate_lock =
+		    convert_security_state(tmp_sim_state.corporate_lock);
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.phone_lock =
+		    convert_security_state(tmp_sim_state.phone_lock);
 	} else {
 		/* error retrieving SIM lock state from security driver, so all is open */
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.network_lock_enabled = TRUE;
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.network_subset_lock_enabled = TRUE;
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.service_provider_lock_enabled = TRUE;
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.corporate_lock_enabled = TRUE;
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.phone_lock_enabled = TRUE;
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    network_lock_enabled = TRUE;
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    network_subset_lock_enabled = TRUE;
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    service_provider_lock_enabled = TRUE;
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    corporate_lock_enabled = TRUE;
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    phone_lock_enabled = TRUE;
 
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.network_lock = SYS_SIM_SECURITY_OPEN;
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.network_subset_lock = SYS_SIM_SECURITY_OPEN;
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.service_provider_lock = SYS_SIM_SECURITY_OPEN;
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.corporate_lock = SYS_SIM_SECURITY_OPEN;
-		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.phone_lock = SYS_SIM_SECURITY_OPEN;
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.network_lock =
+		    SYS_SIM_SECURITY_OPEN;
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    network_subset_lock = SYS_SIM_SECURITY_OPEN;
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.
+		    service_provider_lock = SYS_SIM_SECURITY_OPEN;
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.corporate_lock =
+		    SYS_SIM_SECURITY_OPEN;
+		data.req_rep_u.SYS_SimLockApi_GetStatus_Rsp.val.phone_lock =
+		    SYS_SIM_SECURITY_OPEN;
 	}
 
 	data.result = result;
@@ -368,6 +415,3 @@ Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId, SYS_SI
 }
 
 #endif
-
-
-

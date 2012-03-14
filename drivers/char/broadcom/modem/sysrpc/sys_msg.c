@@ -37,15 +37,15 @@
 #include "sys_rpc.h"
 
 XDR_ENUM_FUNC(PMU_SIMLDO_t)
-XDR_ENUM_FUNC(PMU_SIMVolt_t)
+    XDR_ENUM_FUNC(PMU_SIMVolt_t)
 
-XDR_ENUM_FUNC(SYS_SIM_SECURITY_STATE_t)
+    XDR_ENUM_FUNC(SYS_SIM_SECURITY_STATE_t)
 
 bool_t xdr_SYS_ReqRep_t(XDR *xdrs, SYS_ReqRep_t *req, xdrproc_t proc)
 {
 	XDR_LOG(xdrs, "xdr_SYS_ReqRep_t")
 
-	    if (XDR_ENUM(xdrs, &req->respId, MsgType_t) &&
+	if (XDR_ENUM(xdrs, &req->respId, MsgType_t) &&
 		XDR_ENUM(xdrs, &req->result, Result_t)) {
 		return proc(xdrs, &(req->req_rep_u));
 	}
@@ -65,7 +65,7 @@ bool_t xdr_SYS_ReqRep_t(XDR *xdrs, SYS_ReqRep_t *req, xdrproc_t proc)
 
 #define _T(a) a
 
-#define BKMGRD_ENABLED    /* Uncomment this line to to let bkmgrd handle CPPS and FLASH_SAVEIMAGE messages */
+#define BKMGRD_ENABLED		/* Uncomment this line to to let bkmgrd handle CPPS and FLASH_SAVEIMAGE messages */
 
 /******************** XDR TABLE ENTRIES **************************************/
 #define DEVELOPMENT_SYSRPC_UNION_MAPPING
@@ -97,74 +97,77 @@ static RPC_XdrInfo_t SYS_Prim_dscrm[] = {
 	 (xdrproc_t) xdr_CAPI2_FLASH_SaveImage_Rsp_t, sizeof(Boolean), 0}
 	,
 #endif
-	{ MSG_SYS_SIMLOCK_GET_STATUS_REQ, _T("MSG_SYS_SIMLOCK_GET_STATUS_REQ"),
-	 (xdrproc_t) xdr_SYS_SimLockApi_GetStatus_Req_t, 0, 0},
+	{MSG_SYS_SIMLOCK_GET_STATUS_REQ, _T("MSG_SYS_SIMLOCK_GET_STATUS_REQ"),
+	 (xdrproc_t) xdr_SYS_SimLockApi_GetStatus_Req_t, 0, 0}
+	,
 
-	{ MSG_SYS_SIMLOCK_GET_STATUS_RSP, _T("MSG_SYS_SIMLOCK_GET_STATUS_RSP"),
-	 (xdrproc_t)xdr_SYS_SimLockApi_GetStatus_Rsp_t, sizeof(SYS_SIMLOCK_STATE_t), 0 },
+	{MSG_SYS_SIMLOCK_GET_STATUS_RSP, _T("MSG_SYS_SIMLOCK_GET_STATUS_RSP"),
+	 (xdrproc_t) xdr_SYS_SimLockApi_GetStatus_Rsp_t,
+	 sizeof(SYS_SIMLOCK_STATE_t), 0},
 
-	{ MSG_SYS_SIMLOCK_SET_STATUS_REQ, _T("MSG_SYS_SIMLOCK_SET_STATUS_REQ"),
+	{MSG_SYS_SIMLOCK_SET_STATUS_REQ, _T("MSG_SYS_SIMLOCK_SET_STATUS_REQ"),
 	 (xdrproc_t) xdr_SYS_SIMLOCKApi_SetStatusEx_Req_t, 0, 0},
 
-	{ MSG_SYS_SIMLOCK_SET_STATUS_RSP, _T("MSG_SYS_SIMLOCK_SET_STATUS_RSP"),
-	 (xdrproc_t) xdr_default_proc, 0, 0 },
+	{MSG_SYS_SIMLOCK_SET_STATUS_RSP, _T("MSG_SYS_SIMLOCK_SET_STATUS_RSP"),
+	 (xdrproc_t) xdr_default_proc, 0, 0},
 
-	{ MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ,_T("MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ"),
+	{MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ,
+	 _T("MSG_SYS_GET_CUR_SIMLOCK_TYPE_REQ"),
 	 (xdrproc_t) xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t, 0, 0},
 
-	{ MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP,_T("MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP"),
-	 (xdrproc_t)xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t, sizeof(UInt32), 0},
+	{MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP,
+	 _T("MSG_SYS_GET_CUR_SIMLOCK_TYPE_RSP"),
+	 (xdrproc_t) xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t,
+	 sizeof(UInt32), 0},
 
-	{(MsgType_t) __dontcare__, "", NULL_xdrproc_t, 0, 0}
+	{(MsgType_t)__dontcare__, "", NULL_xdrproc_t, 0, 0}
 };
 
 void sysGetXdrStruct(RPC_XdrInfo_t **ptr, UInt16 *size)
 {
 	*size = (sizeof(SYS_Prim_dscrm) / sizeof(RPC_XdrInfo_t));
-	*ptr = (RPC_XdrInfo_t *) SYS_Prim_dscrm;
+	*ptr = (RPC_XdrInfo_t *)SYS_Prim_dscrm;
 }
 
-bool_t
-xdr_SYS_SIMLOCK_SIM_DATA_t(XDR *xdrs, SYS_SIMLOCK_SIM_DATA_t *sim_data)
+bool_t xdr_SYS_SIMLOCK_SIM_DATA_t(XDR *xdrs, SYS_SIMLOCK_SIM_DATA_t *sim_data)
 {
 	XDR_LOG(xdrs, "xdr_SYS_SIMLOCK_SIM_DATA_t");
 
-	if (xdr_opaque(xdrs, (caddr_t)&sim_data->imsi_string, sizeof(SYS_IMSI_t)) &&
-		 xdr_opaque(xdrs, (caddr_t) &sim_data->gid1, sizeof(SYS_GID_DIGIT_t)) &&
-		 xdr_u_char(xdrs, &sim_data->gid1_len) &&
-		 xdr_opaque(xdrs, (caddr_t) &sim_data->gid2, sizeof(SYS_GID_DIGIT_t)) &&
-		 xdr_u_char(xdrs, &sim_data->gid2_len))
-	{
+	if (xdr_opaque
+	    (xdrs, (caddr_t)&sim_data->imsi_string, sizeof(SYS_IMSI_t))
+	    && xdr_opaque(xdrs, (caddr_t)&sim_data->gid1,
+			  sizeof(SYS_GID_DIGIT_t))
+	    && xdr_u_char(xdrs, &sim_data->gid1_len)
+	    && xdr_opaque(xdrs, (caddr_t)&sim_data->gid2,
+			  sizeof(SYS_GID_DIGIT_t))
+	    && xdr_u_char(xdrs, &sim_data->gid2_len)) {
 		return TRUE;
-	}
-	else
-	{
+	} else {
 		return FALSE;
 	}
 }
 
-
-bool_t
-xdr_SYS_SIMLOCK_STATE_t(XDR *xdrs, SYS_SIMLOCK_STATE_t *simlock_state)
+bool_t xdr_SYS_SIMLOCK_STATE_t(XDR *xdrs, SYS_SIMLOCK_STATE_t *simlock_state)
 {
 	XDR_LOG(xdrs, "xdr_SYS_SIMLOCK_STATE_t");
 
-	if ( xdr_u_char(xdrs, &simlock_state->network_lock_enabled) &&
-		 xdr_u_char(xdrs, &simlock_state->network_subset_lock_enabled) &&
-		 xdr_u_char(xdrs, &simlock_state->service_provider_lock_enabled) &&
-		 xdr_u_char(xdrs, &simlock_state->corporate_lock_enabled) &&
-		 xdr_u_char(xdrs, &simlock_state->phone_lock_enabled) &&
-		 XDR_ENUM(xdrs, &simlock_state->network_lock, SYS_SIM_SECURITY_STATE_t) &&
-		 XDR_ENUM(xdrs, &simlock_state->network_subset_lock, SYS_SIM_SECURITY_STATE_t) &&
-		 XDR_ENUM(xdrs, &simlock_state->service_provider_lock, SYS_SIM_SECURITY_STATE_t) &&
-		 XDR_ENUM(xdrs, &simlock_state->corporate_lock, SYS_SIM_SECURITY_STATE_t) &&
-		 XDR_ENUM(xdrs, &simlock_state->phone_lock, SYS_SIM_SECURITY_STATE_t))
-	{
+	if (xdr_u_char(xdrs, &simlock_state->network_lock_enabled) &&
+	    xdr_u_char(xdrs, &simlock_state->network_subset_lock_enabled) &&
+	    xdr_u_char(xdrs, &simlock_state->service_provider_lock_enabled) &&
+	    xdr_u_char(xdrs, &simlock_state->corporate_lock_enabled) &&
+	    xdr_u_char(xdrs, &simlock_state->phone_lock_enabled) &&
+	    XDR_ENUM(xdrs, &simlock_state->network_lock,
+		     SYS_SIM_SECURITY_STATE_t)
+	    && XDR_ENUM(xdrs, &simlock_state->network_subset_lock,
+			SYS_SIM_SECURITY_STATE_t)
+	    && XDR_ENUM(xdrs, &simlock_state->service_provider_lock,
+			SYS_SIM_SECURITY_STATE_t)
+	    && XDR_ENUM(xdrs, &simlock_state->corporate_lock,
+			SYS_SIM_SECURITY_STATE_t)
+	    && XDR_ENUM(xdrs, &simlock_state->phone_lock,
+			SYS_SIM_SECURITY_STATE_t)) {
 		return TRUE;
-	}
-	else
-	{
+	} else {
 		return FALSE;
 	}
 }
-

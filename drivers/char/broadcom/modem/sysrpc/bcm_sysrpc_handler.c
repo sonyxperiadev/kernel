@@ -97,7 +97,7 @@ void SysRpc_OpenRegulator(PMU_SIMLDO_t ldo)
 	}
 }
 
-Result_t Handle_CAPI2_SYSRPC_PMU_IsSIMReady(RPC_Msg_t * pReqMsg,
+Result_t Handle_CAPI2_SYSRPC_PMU_IsSIMReady(RPC_Msg_t *pReqMsg,
 					    PMU_SIMLDO_t simldo)
 {
 	Result_t result = RESULT_OK;
@@ -125,7 +125,7 @@ Result_t Handle_CAPI2_SYSRPC_PMU_IsSIMReady(RPC_Msg_t * pReqMsg,
 	return result;
 }
 
-Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t * pReqMsg,
+Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 					     PMU_SIMLDO_t simldo,
 					     PMU_SIMVolt_t volt)
 {
@@ -179,8 +179,8 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t * pReqMsg,
 				curReg->isSimInit = FALSE;
 				ret = regulator_disable(curReg->handle);
 				KRIL_DEBUG(DBG_INFO,
-					" regulator_disable returned 0x%x\n",
-					ret);
+					   " regulator_disable returned 0x%x\n",
+					   ret);
 			}
 			break;
 		}
