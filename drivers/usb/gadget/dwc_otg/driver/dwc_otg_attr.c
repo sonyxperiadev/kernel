@@ -226,7 +226,6 @@
  <td> Read/Write</td>
  </tr>
 
-
  <tr>
  <td> regdump </td>
  <td> Dumps the contents of core registers.</td>
@@ -488,7 +487,8 @@ static ssize_t regoffset_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -510,7 +510,8 @@ static ssize_t regoffset_store(struct device *_dev,
 
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -544,7 +545,8 @@ static ssize_t regvalue_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -553,8 +555,8 @@ static ssize_t regvalue_show(struct device *_dev,
 
 	if (otg_dev->reg_offset != 0xFFFFFFFF && 0 != otg_dev->base) {
 		/* Calculate the address */
-		addr = (uint32_t *) (otg_dev->reg_offset +
-				     (uint8_t *) otg_dev->base);
+		addr = (uint32_t *)(otg_dev->reg_offset +
+				    (uint8_t *)otg_dev->base);
 		val = dwc_read_reg32(addr);
 		return snprintf(buf,
 				sizeof("Reg@0xFFFFFFFF = 0xFFFFFFFF\n") + 1,
@@ -582,7 +584,8 @@ static ssize_t regvalue_store(struct device *_dev,
 
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -591,8 +594,8 @@ static ssize_t regvalue_store(struct device *_dev,
 	/* dev_dbg(_dev, "Offset=0x%08x Val=0x%08x\n", otg_dev->reg_offset, val); */
 	if (otg_dev->reg_offset != 0xFFFFFFFF && 0 != otg_dev->base) {
 		/* Calculate the address */
-		addr = (uint32_t *) (otg_dev->reg_offset +
-				     (uint8_t *) otg_dev->base);
+		addr = (uint32_t *)(otg_dev->reg_offset +
+				    (uint8_t *)otg_dev->base);
 		dwc_write_reg32(addr, val);
 	} else {
 		dev_err(_dev, "Invalid Register Offset (0x%08x)\n",
@@ -660,7 +663,8 @@ static ssize_t hnp_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 	return sprintf(buf, "HstNegScs = 0x%x\n",
@@ -680,7 +684,8 @@ static ssize_t hnp_store(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 	uint32_t in = simple_strtoul(buf, NULL, 16);
@@ -706,7 +711,8 @@ static ssize_t srp_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 	return sprintf(buf, "SesReqScs = 0x%x\n",
@@ -730,7 +736,8 @@ static ssize_t srp_store(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 	if (NULL != otg_dev->pcd)
@@ -756,7 +763,8 @@ static ssize_t buspower_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 	return sprintf(buf, "Bus Power = 0x%x\n",
@@ -776,7 +784,8 @@ static ssize_t buspower_store(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 	uint32_t on = simple_strtoul(buf, NULL, 16);
@@ -801,7 +810,8 @@ static ssize_t bussuspend_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -822,7 +832,8 @@ static ssize_t bussuspend_store(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -846,7 +857,8 @@ static ssize_t remote_wakeup_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -877,7 +889,8 @@ static ssize_t remote_wakeup_store(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -898,7 +911,7 @@ DEVICE_ATTR(remote_wakeup, S_IRUGO | S_IWUSR, remote_wakeup_show,
  * Show the whether core is hibernated or not.
  */
 static ssize_t rem_wakeup_pwrdn_show(struct device *_dev,
-				  struct device_attribute *attr, char *buf)
+				     struct device_attribute *attr, char *buf)
 {
 #ifndef DWC_HOST_ONLY
 #ifdef LM_INTERFACE
@@ -907,14 +920,15 @@ static ssize_t rem_wakeup_pwrdn_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 	if (dwc_otg_get_core_state(otg_dev->core_if))
 		DWC_PRINTF("Core is in hibernation\n");
 	else
 		DWC_PRINTF("Core is not in hibernation\n");
-#endif /* DWC_HOST_ONLY*/
+#endif /* DWC_HOST_ONLY */
 	return 0;
 }
 
@@ -922,8 +936,8 @@ static ssize_t rem_wakeup_pwrdn_show(struct device *_dev,
  * Initiate a remote wakeup of the device to exit from hibernation.
  */
 static ssize_t rem_wakeup_pwrdn_store(struct device *_dev,
-				   struct device_attribute *attr,
-				   const char *buf, size_t count)
+				      struct device_attribute *attr,
+				      const char *buf, size_t count)
 {
 #ifndef DWC_HOST_ONLY
 #ifdef LM_INTERFACE
@@ -932,7 +946,8 @@ static ssize_t rem_wakeup_pwrdn_store(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 	dwc_otg_device_hibernation_restore(otg_dev->core_if, 1, 0);
@@ -944,8 +959,8 @@ DEVICE_ATTR(rem_wakeup_pwrdn, S_IRUGO | S_IWUSR, rem_wakeup_pwrdn_show,
 	    rem_wakeup_pwrdn_store);
 
 static ssize_t disconnect_us(struct device *_dev,
-				   struct device_attribute *attr,
-				   const char *buf, size_t count)
+			     struct device_attribute *attr,
+			     const char *buf, size_t count)
 {
 
 #ifndef DWC_HOST_ONLY
@@ -955,11 +970,12 @@ static ssize_t disconnect_us(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 	uint32_t val = simple_strtoul(buf, NULL, 16);
-	DWC_PRINTF("The Passed value is %04x\n",val);
+	DWC_PRINTF("The Passed value is %04x\n", val);
 
 	dwc_otg_pcd_disconnect_us(otg_dev->pcd, 50);
 
@@ -967,7 +983,7 @@ static ssize_t disconnect_us(struct device *_dev,
 	return count;
 }
 
-DEVICE_ATTR(disconnect_us, S_IWUSR ,0,disconnect_us);
+DEVICE_ATTR(disconnect_us, S_IWUSR, 0, disconnect_us);
 
 /**
  * Dump global registers and either host or device registers (depending on the
@@ -982,7 +998,8 @@ static ssize_t regdump_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1010,7 +1027,8 @@ static ssize_t spramdump_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1034,7 +1052,8 @@ static ssize_t hcddump_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1060,7 +1079,8 @@ static ssize_t hcd_frrem_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1086,7 +1106,8 @@ static ssize_t rd_reg_test_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1095,7 +1116,7 @@ static ssize_t rd_reg_test_show(struct device *_dev,
 	int start_jiffies;
 
 	pr_info("HZ %d, MSEC_PER_JIFFIE %d, loops_per_jiffy %lu\n",
-	       HZ, MSEC_PER_JIFFIE, loops_per_jiffy);
+		HZ, MSEC_PER_JIFFIE, loops_per_jiffy);
 	start_jiffies = jiffies;
 	for (i = 0; i < RW_REG_COUNT; i++)
 		dwc_otg_get_gnptxfsiz(otg_dev->core_if);
@@ -1121,7 +1142,8 @@ static ssize_t wr_reg_test_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1131,7 +1153,7 @@ static ssize_t wr_reg_test_show(struct device *_dev,
 	int start_jiffies;
 
 	pr_info("HZ %d, MSEC_PER_JIFFIE %d, loops_per_jiffy %lu\n",
-	       HZ, MSEC_PER_JIFFIE, loops_per_jiffy);
+		HZ, MSEC_PER_JIFFIE, loops_per_jiffy);
 	reg_val = dwc_otg_get_gnptxfsiz(otg_dev->core_if);
 	start_jiffies = jiffies;
 	for (i = 0; i < RW_REG_COUNT; i++)
@@ -1159,7 +1181,8 @@ static ssize_t lpmresp_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1186,7 +1209,8 @@ static ssize_t lpmresp_store(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1216,7 +1240,8 @@ static ssize_t sleepstatus_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1237,7 +1262,8 @@ static ssize_t sleepstatus_store(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1257,13 +1283,13 @@ static ssize_t sleepstatus_store(struct device *_dev,
 DEVICE_ATTR(sleep_status, S_IRUGO | S_IWUSR, sleepstatus_show,
 	    sleepstatus_store);
 
-#endif				/* CONFIG_USB_DWC_OTG_LPM_ENABLE */
+#endif /* CONFIG_USB_DWC_OTG_LPM_ENABLE */
 
 /**
  * Show the value of Host mode Connection Timeout.
  */
 static ssize_t h_conn_wait_tmout_show(struct device *_dev,
-				  struct device_attribute *attr, char *buf)
+				      struct device_attribute *attr, char *buf)
 {
 #ifndef DWC_DEVICE_ONLY
 #ifdef LM_INTERFACE
@@ -1272,11 +1298,13 @@ static ssize_t h_conn_wait_tmout_show(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
-	return sprintf(buf, "Connection wait timeout in ms = %d\n", otg_dev->hcd->conn_wait_timeout);
+	return sprintf(buf, "Connection wait timeout in ms = %d\n",
+		       otg_dev->hcd->conn_wait_timeout);
 #else
 	return sprintf(buf, "Device Only Mode!\n");
 #endif /* #ifndef DWC_DEVICE_ONLY */
@@ -1287,8 +1315,8 @@ static ssize_t h_conn_wait_tmout_show(struct device *_dev,
  *
  */
 static ssize_t h_conn_wait_tmout_store(struct device *_dev,
-				   struct device_attribute *attr,
-				   const char *buf, size_t count)
+				       struct device_attribute *attr,
+				       const char *buf, size_t count)
 {
 #ifndef DWC_DEVICE_ONLY
 #ifdef LM_INTERFACE
@@ -1297,7 +1325,8 @@ static ssize_t h_conn_wait_tmout_store(struct device *_dev,
 #elif defined(PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #else
-	struct platform_device *platform_dev = container_of(_dev, struct platform_device, dev);
+	struct platform_device *platform_dev =
+	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
@@ -1305,6 +1334,7 @@ static ssize_t h_conn_wait_tmout_store(struct device *_dev,
 #endif
 	return count;
 }
+
 DEVICE_ATTR(h_conn_wait_tmout, S_IRUGO | S_IWUSR, h_conn_wait_tmout_show,
 	    h_conn_wait_tmout_store);
 
@@ -1315,14 +1345,13 @@ DEVICE_ATTR(h_conn_wait_tmout, S_IRUGO | S_IWUSR, h_conn_wait_tmout_show,
  */
 void dwc_otg_attr_create(
 #ifdef LM_INTERFACE
-	struct lm_device *dev
+				struct lm_device *dev
 #elif defined(PCI_INTERFACE)
-	struct pci_dev *dev
+				struct pci_dev *dev
 #else
-	struct platform_device *dev
+				struct platform_device *dev
 #endif
-	)
-
+    )
 {
 	int error;
 
@@ -1371,13 +1400,13 @@ void dwc_otg_attr_create(
  */
 void dwc_otg_attr_remove(
 #ifdef LM_INTERFACE
-	struct lm_device *dev
+				struct lm_device *dev
 #elif defined(PCI_INTERFACE)
-	struct pci_dev *dev
+				struct pci_dev *dev
 #else
-	struct platform_device *dev
+				struct platform_device *dev
 #endif
-)
+    )
 {
 	device_remove_file(&dev->dev, &dev_attr_regoffset);
 	device_remove_file(&dev->dev, &dev_attr_regvalue);
