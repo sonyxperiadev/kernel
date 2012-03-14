@@ -527,7 +527,7 @@ static int is_accessory_supported (struct mic_t *mic_dev)
 		pr_debug("%s(): Supported accessory \r\n", __func__);
 		ret = 1;
 	}
-out:
+
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
 	bcmpmu_hs_power ((void*)0);
 	bcmpmu_audio_deinit();
