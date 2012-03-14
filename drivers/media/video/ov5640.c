@@ -134,6 +134,7 @@ struct ov5640 {
 	int saturation;
 	int antibanding;
 	int whitebalance;
+	int framerate;
 };
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
@@ -755,6 +756,16 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .step = 1,
 	 .default_value = WHITE_BALANCE_AUTO,
 	 },
+	 {
+	 .id = V4L2_CID_CAMERA_FRAME_RATE,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "Framerate control",
+	 .minimum = FRAME_RATE_AUTO,
+	 .maximum = FRAME_RATE_30,
+	 .step = 1,
+	 .default_value = FRAME_RATE_AUTO,
+	 },
+
 };
 
 /**
@@ -1138,6 +1149,9 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAMERA_WHITE_BALANCE:
 		ctrl->value = ov5640->whitebalance;
 		break;
+	case V4L2_CID_CAMERA_FRAME_RATE:
+		ctrl->value = ov5640->framerate;
+		break;
 	}
 
 	return 0;
@@ -1351,6 +1365,57 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ret;
 		break;
 
+	case V4L2_CID_CAMERA_FRAME_RATE:
+
+		if (ctrl->value > FRAME_RATE_30)
+			return -EINVAL;
+
+		if ((ov5640->i_size < OV5640_SIZE_QVGA) ||
+				(ov5640->i_size > OV5640_SIZE_1280x960)) {
+			if (ctrl->value == FRAME_RATE_30 ||
+					ctrl->value == FRAME_RATE_AUTO)
+				return 0;
+			else
+				return -EINVAL;
+		}
+
+		ov5640->framerate = ctrl->value;
+
+		switch (ov5640->framerate) {
+		case FRAME_RATE_5:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_5);
+			break;
+		case FRAME_RATE_7:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_7);
+			break;
+		case FRAME_RATE_10:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_10);
+			break;
+		case FRAME_RATE_15:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_15);
+			break;
+		case FRAME_RATE_20:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_20);
+			break;
+		case FRAME_RATE_25:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_25);
+			break;
+		case FRAME_RATE_30:
+		case FRAME_RATE_AUTO:
+		default:
+			ret = ov5640_reg_writes(client,
+					ov5640_fps_30);
+			break;
+		}
+		if (ret)
+			return ret;
+		break;
 	}
 
 	return ret;
@@ -1457,6 +1522,7 @@ static int ov5640_init(struct i2c_client *client)
 	ov5640->colorlevel = IMAGE_EFFECT_NONE;
 	ov5640->antibanding = ANTI_BANDING_AUTO;
 	ov5640->whitebalance = WHITE_BALANCE_AUTO;
+	ov5640->framerate = FRAME_RATE_AUTO;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 

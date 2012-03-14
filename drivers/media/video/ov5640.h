@@ -868,24 +868,28 @@ static const struct ov5640_reg ov5640_fps_7[] = {
 	{0xFFFF, 0x00}
 };
 static const struct ov5640_reg ov5640_fps_10[] = {
+	{0x3036, 0x68},		/* PLL Mult 4~252 0:7  0x68=104=676Mhz */
 	{0x380c, 0x19},		/*Total X  6600 */
 	{0x380d, 0xc8},
 
 	{0xFFFF, 0x00}
 };
 static const struct ov5640_reg ov5640_fps_15[] = {
+	{0x3036, 0x68},		/* PLL Mult 4~252 0:7  0x68=104=676Mhz */
 	{0x380c, 0x11},		/*Total X  4400 */
 	{0x380d, 0x30},
 
 	{0xFFFF, 0x00}
 };
 static const struct ov5640_reg ov5640_fps_20[] = {
+	{0x3036, 0x68},		/* PLL Mult 4~252 0:7  0x68=104=676Mhz */
 	{0x380c, 0x0c},		/*Total X  3300 */
 	{0x380d, 0xe4},
 
 	{0xFFFF, 0x00}
 };
 static const struct ov5640_reg ov5640_fps_25[] = {
+	{0x3036, 0x68},		/* PLL Mult 4~252 0:7  0x68=104=676Mhz */
 	{0x380c, 0x0a},		/*Total X  2640 */
 	{0x380d, 0x50},
 
@@ -893,6 +897,7 @@ static const struct ov5640_reg ov5640_fps_25[] = {
 };
 
 static const struct ov5640_reg ov5640_fps_30[] = {
+	{0x3036, 0x68},		/* PLL Mult 4~252 0:7  0x68=104=676Mhz */
 	{0x380c, 0x08},		/*Total X  2200 */
 	{0x380d, 0x98},
 
