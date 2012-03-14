@@ -16,12 +16,11 @@
 #ifndef _BCM_FUSE_SYSPARM_CIB_H_
 #define _BCM_FUSE_SYSPARM_CIB_H_
 
-
 #ifndef _RHEA_
 #define _RHEA_
 #endif
 
-#define SYSPARM_INDEX_READY_INDICATOR   0x5059504D	
+#define SYSPARM_INDEX_READY_INDICATOR   0x5059504D
 #define MAX_SYSPARM_NAME_SIZE   128
 
 #define   DSP_FEATURE_AHS_SID_UPDATE_BEC_CHECK	/* Additional BEC check to determine SID updaet frame in Rxqual_s calculation */
@@ -62,7 +61,6 @@
 
 #define NUM_OF_FREQ_OFFSETS			8
 
-
 /** Number of byte of Terminal Profile data defined in Sysparm. If the number of bytes is larger
  * than the "MAX_PROFILE_ARRAY_SIZE" defined in USIMAP/SIMAP, the extra bytes are truncated
  * and are not sent to the USIM/SIM.
@@ -77,18 +75,16 @@
 /** TX FREQ SECTION PER BAND */
 #define N_FREQ_SECTIONS				8
 
-
-typedef struct
-{
-  char* name;
-  void* ptr;
-  unsigned int size;
-  unsigned int flag;
-}SysparmIndex_t;
+typedef struct {
+	char *name;
+	void *ptr;
+	unsigned int size;
+	unsigned int flag;
+} SysparmIndex_t;
 
 UInt16 SYSPARM_GetLogFormat(void);
-SysAudioParm_t* APSYSPARM_GetAudioParmAccessPtr(void);
-SysIndMultimediaAudioParm_t * APSYSPARM_GetMultimediaAudioParmAccessPtr(void);
+SysAudioParm_t *APSYSPARM_GetAudioParmAccessPtr(void);
+SysIndMultimediaAudioParm_t *APSYSPARM_GetMultimediaAudioParmAccessPtr(void);
 UInt16 SYSPARM_GetDefault4p2VoltReading(void);
 UInt16 SYSPARM_GetActual4p2VoltReading(void);
 UInt16 SYSPARM_GetBattLowThresh(void);
