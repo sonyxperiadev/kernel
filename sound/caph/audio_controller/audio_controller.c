@@ -533,7 +533,7 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 		return;
 
 	mode = GetAudioModeBySink(sink);
-#ifdef	AUDIO_FEATURE_SET_DISABLE_ECNS
+#ifdef	CONFIG_AUDIO_FEATURE_SET_DISABLE_ECNS
 	/* when turning off EC and NS, we set mode to
 	  * AUDIO_MODE_HANDSFREE as customer's request, while
 	  * sink is till AUDIO_SINK_BTM. To avoid mode is reset to
@@ -2846,7 +2846,8 @@ int AUDCTRL_Telephony_HW_16K(AudioMode_t voiceMode)
 		is_call16k = TRUE;
 
 	/* BT headset needs to consider NB or WB too */
-#ifdef	AUDIO_FEATURE_SET_DISABLE_ECNS
+#ifdef	CONFIG_AUDIO_FEATURE_SET_DISABLE_ECNS
+
 	if ((voiceMode == AUDIO_MODE_BLUETOOTH) ||
 		(voiceMode == AUDIO_MODE_HANDSFREE))
 #else

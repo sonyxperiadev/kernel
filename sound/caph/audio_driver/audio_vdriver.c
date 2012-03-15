@@ -940,7 +940,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		break;
 
 	case AUDIO_MODE_BLUETOOTH:
-#ifdef AUDIO_FEATURE_SET_DISABLE_ECNS
+#ifdef CONFIG_AUDIO_FEATURE_SET_DISABLE_ECNS
 	case AUDIO_MODE_HANDSFREE:
 #endif
 		outChnl =

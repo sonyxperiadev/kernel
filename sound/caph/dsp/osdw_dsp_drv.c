@@ -37,7 +37,6 @@
 #include <linux/sched.h>
 #include <linux/interrupt.h>
 #include "msconsts.h"
-#include "log.h"
 #include "shared.h"
 #include "csl_dsp.h"
 

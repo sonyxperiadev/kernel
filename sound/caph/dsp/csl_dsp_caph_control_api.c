@@ -40,7 +40,6 @@
 #include "osdw_dsp_drv.h"
 #include "csl_dsp.h"
 #include "csl_dsp_caph_control_api.h"
-#include "log.h"
 #include "audio_trace.h"
 
 

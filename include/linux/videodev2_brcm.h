@@ -304,12 +304,22 @@ enum v4l2_anti_shake_mode {
 	ANTI_SHAKE_MAX,
 };
 
-#define V4L2_CID_CAMERA_TOUCH_AF_START_STOP	(V4L2_CID_PRIVATE_BASE + 83)
+#define V4L2_CID_CAMERA_TOUCH_AF_AREA	(V4L2_CID_PRIVATE_BASE + 83)
 enum v4l2_touch_af {
 	TOUCH_AF_STOP = 0,
 	TOUCH_AF_START,
 	TOUCH_AF_MAX,
 };
+typedef struct
+{
+	int  x;
+	int  y;
+	int  w;
+	int  h;
+	int weight;
+}v4l2_touch_area;
+
+
 
 #define V4L2_CID_CAMERA_SMART_AUTO		(V4L2_CID_PRIVATE_BASE + 84)
 enum v4l2_smart_auto {

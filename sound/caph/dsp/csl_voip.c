@@ -37,7 +37,6 @@
 #include "shared.h"
 #include "csl_voip.h"
 #include "csl_apcmd.h"
-#include "log.h"
 #include "audio_trace.h"
 
 static const UInt16 sVoIPDataLen[7] = { 0, 322, 160, 38, 166, 642, 70 };

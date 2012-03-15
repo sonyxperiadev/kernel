@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Copyright 2010 Broadcom Corporation.  All rights reserved.
 *
-*	@file	drivers/input/misc/brcm_headset.c
+*	@file	drivers/input/misc/kona_headset.c
 *
 * Unless you and Broadcom execute a separate written software license agreement
 * governing use of this software, this software is licensed to you under the
@@ -36,6 +36,8 @@
 #include <mach/rdb/brcm_rdb_auxmic.h>
 #include <mach/rdb/brcm_rdb_audioh.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
+
+#include <linux/broadcom/bcmpmu_audio.h>
 
 #include <plat/chal/chal_aci.h>
 
@@ -123,6 +125,7 @@ enum hs_type {
 	HEADPHONE = 1,		/* The one without MIC   */
 	OPEN_CABLE,		/* Not sent to userland  */
 	HEADSET,		/* The one with MIC      */
+	UNSUPPORTED,		/* Unsupported accessory connected */
 	/* If more HS types are required to be added
 	 *add here, not below HS_TYPE_MAX
 	 */
@@ -156,6 +159,7 @@ enum button_state {
  *
  * Voltage defined in mv
  */
+#define MIC_CHANGE_DETECTION_THRESHOLD  20
 #define HEADPHONE_DETECT_LEVEL_MIN      0
 #define HEADPHONE_DETECT_LEVEL_MAX      40
 #define HEADPHONE_DETECT_LEVEL2_MIN     91
@@ -459,6 +463,78 @@ int detect_hs_type(struct mic_t *mic_dev)
 	return type;
 }
 
+
+static int is_accessory_supported (struct mic_t *mic_dev)
+{
+	int mic_level1;
+	int mic_level2;
+	int ret;
+
+	/* Power ON Mic BIAS */
+	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+
+	/* Power up Digital block */
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_ENABLE,
+			    CHAL_ACI_BLOCK_DIGITAL);
+
+	/* Power up the ADC */
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_ENABLE,
+			    CHAL_ACI_BLOCK_ADC);
+
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
+			    CHAL_ACI_BLOCK_ADC,
+			    CHAL_ACI_BLOCK_ADC_FULL_RANGE);
+
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
+			    CHAL_ACI_BLOCK_ADC, &aci_filter_adc_config);
+	msleep(80);
+
+	mic_level1 = chal_aci_block_read(mic_dev->aci_chal_hdl,
+					CHAL_ACI_BLOCK_ADC,
+					CHAL_ACI_BLOCK_ADC_RAW);
+	mic_level1 = mic_level1 <= 0 ? mic_level1 :
+	    ((mic_level1 > mic_dev->headset_pd->phone_ref_offset) ?
+	     (mic_level1 - mic_dev->headset_pd->phone_ref_offset) : 0);
+	pr_debug(" ++ %s(): mic_level1 after calc %d \r\n",__func__, mic_level1);
+
+	/* Turn On the HP Power Amplifier */
+	bcmpmu_audio_init();
+	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
+	bcmpmu_hs_power ((void*)1);
+
+	msleep(50);
+
+	/* Read mic level again */
+	mic_level2 = chal_aci_block_read(mic_dev->aci_chal_hdl,
+					CHAL_ACI_BLOCK_ADC,
+					CHAL_ACI_BLOCK_ADC_RAW);
+	mic_level2 = mic_level2 <= 0 ? mic_level2 :
+	    ((mic_level2 > mic_dev->headset_pd->phone_ref_offset) ?
+	     (mic_level2 - mic_dev->headset_pd->phone_ref_offset) : 0);
+	pr_debug(" ++ %s(): mic_level2 after calc %d \r\n",__func__, mic_level2);
+
+	if ((mic_level1 - mic_level2) >= MIC_CHANGE_DETECTION_THRESHOLD) {
+		pr_info("%s(): Unsupported accessory \r\n", __func__);
+		ret = 0;
+	} else {
+		pr_debug("%s(): Supported accessory \r\n", __func__);
+		ret = 1;
+	}
+
+	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
+	bcmpmu_hs_power ((void*)0);
+	bcmpmu_audio_deinit();
+
+	return ret;
+}
+
 /*------------------------------------------------------------------------------
     Function name   : button_press_work_func
     Description     : Work function that will send the button press/release
@@ -527,6 +603,37 @@ static void accessory_detect_work_func(struct work_struct *work)
 		pr_debug
 		    ("0. Interrupt status before detecting hs_type 0x%x \r\n",
 		     readl(p->aci_base + ACI_INT_OFFSET));
+
+		/* Check whether the connected accessory is supported first */
+		if ( is_accessory_supported (p) == 0) {
+			printk("%s(): ACCESSORY IS NOT SUPPORTED \r\n",__func__);
+
+			p->hs_state = UNSUPPORTED;
+			/*
+			 * Bit map of the state variale 0xFF - Accessory not supported
+			 * There by we keep enough room to add other accessory
+			 * types between 2..0xFF if needed in future
+			 */
+			switch_set_state(&(p->sdev), 0xFF);
+
+			/* Turn OFF MIC Bias */
+			/* Note: The chal code to power OFF i.e GND MIC BIAS
+			 * actually puts the MIC BIAS in continuous
+			 * measurement mode. This is not what we want.
+			 * So any way the MIC BIAS is in discontinuous mode
+			 * for both open cable and headset case, in case of accessory removed,
+			 * just put the MIC BIAS in Low impedance state.
+			 */
+			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
+			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+
+			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
+				    CHAL_ACI_BLOCK_GENERIC, 0);
+			return;
+		}
 
 		p->hs_state = detect_hs_type(p);
 		pr_debug("\n Headset inserted with hs_state=%d \n",
@@ -1289,6 +1396,136 @@ static struct platform_driver __refdata headset_driver = {
 		   },
 };
 
+#ifdef DEBUG
+
+struct kobject *hs_kobj;
+
+static ssize_t
+hs_regdump_func(struct device *dev, struct device_attribute *attr,
+	  const char *buf, size_t n)
+{
+	dump_hw_regs(mic_dev);
+	return n;
+}
+
+static ssize_t
+hs_regwrite_func(struct device *dev, struct device_attribute *attr,
+	  const char *buf, size_t n)
+{
+	unsigned int reg_off;
+	unsigned int val;
+
+	if (sscanf(buf,"%x %x", &reg_off, &val) != 2) {
+		printk("Usage: echo reg_offset value > /sys/hs_debug/hs_regwrite \r\n");
+		return n;
+	}
+	printk("Writing 0x%x to Address 0x%x \r\n", val, mic_dev->aci_base + reg_off);
+	writel(val, mic_dev->aci_base + reg_off);
+	return n;
+}
+
+static ssize_t
+hs_config_amp_func(struct device *dev, struct device_attribute *attr,
+	  const char *buf, size_t n)
+{
+	unsigned int val;
+	int gain;
+
+	if (sscanf(buf,"%d",&val) != 1) {
+		printk("Usage: echo [1/0] > /sys/hs_debug/hs_config_amp \r\n");
+		return n;
+	}
+
+	printk("Invoking platform call to configure amplifier val %d\r\n", val);
+	gain = (val ==  1)?PMU_HSGAIN_66DB_N:PMU_HSGAIN_MUTE;
+	//bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, gain);
+	bcmpmu_hs_power((void *)val);
+	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
+	msleep(50);
+
+	return n;
+}
+
+static ssize_t
+hs_read_adc_func(struct device *dev, struct device_attribute *attr,
+	  const char *buf, size_t n)
+{
+	int val;
+	int adc_range;
+
+	if (sscanf(buf,"%d",&val) != 1) {
+		printk("Usage: echo [1(full range)/0(low voltage)] > /sys/hs_debug/hs_read_adc \r\n");
+		return n;
+	}
+
+	/* Setup MIC bias */
+	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+	/* TODO: Setup the Interrupt Source, is this required ??? */
+
+	/* Power up Digital block */
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_ENABLE,
+			    CHAL_ACI_BLOCK_DIGITAL);
+
+	/* Power up the ADC */
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_ENABLE,
+			    CHAL_ACI_BLOCK_ADC);
+
+	adc_range =
+		(val==0)?CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE:CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE;
+
+	printk("Configuring ADC range for %d \r\n", adc_range);
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
+			    CHAL_ACI_BLOCK_ADC,
+			    adc_range);
+	msleep(80);
+
+	val = chal_aci_block_read(mic_dev->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ADC,
+		CHAL_ACI_BLOCK_ADC_RAW);
+
+	printk("Value read from ADC %d \r\n", val);
+	return n;
+}
+
+
+static DEVICE_ATTR(hs_regdump, 0666, NULL, hs_regdump_func);
+static DEVICE_ATTR(hs_regwrite, 0666, NULL, hs_regwrite_func);
+static DEVICE_ATTR(hs_config_amp, 0666, NULL, hs_config_amp_func);
+static DEVICE_ATTR(hs_read_adc, 0666, NULL, hs_read_adc_func);
+
+static struct attribute *hs_attrs[] = {
+		&dev_attr_hs_regdump.attr,
+		&dev_attr_hs_regwrite.attr,
+		&dev_attr_hs_config_amp.attr,
+		&dev_attr_hs_read_adc.attr,
+		NULL,
+};
+
+static struct attribute_group hs_attr_group = {
+		.attrs = hs_attrs,
+};
+
+static int __init hs_sysfs_init(void)
+{
+	hs_kobj = kobject_create_and_add("hs_debug", NULL);
+	if (!hs_kobj)
+		return -ENOMEM;
+	return sysfs_create_group(hs_kobj, &hs_attr_group);
+}
+
+static void __exit hs_sysfs_exit(void)
+{
+		sysfs_remove_group(hs_kobj, &hs_attr_group);
+}
+#endif
+
+
 /*------------------------------------------------------------------------------
     Function name   : kona_hs_module_init
     Description     : Initialize the driver
@@ -1297,6 +1534,9 @@ static struct platform_driver __refdata headset_driver = {
 int __init kona_aci_hs_module_init(void)
 {
 	pr_debug("\n\n kona_aci_hs_module_init \n");
+#ifdef DEBUG
+	hs_sysfs_init();
+#endif
 	return platform_driver_register(&headset_driver);
 }
 
@@ -1307,6 +1547,9 @@ int __init kona_aci_hs_module_init(void)
 ------------------------------------------------------------------------------*/
 void __exit kona_aci_hs_module_exit(void)
 {
+#ifdef DEBUG
+	hs_sysfs_exit();
+#endif
 	return platform_driver_unregister(&headset_driver);
 }
 

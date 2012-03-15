@@ -88,6 +88,11 @@ static int __ccu_clk_init(struct clk *clk)
 	if(clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
 
+	if (clk->flags & CCU_KEEP_UNLOCKED) {
+		ccu_clk->write_access_en_count = 0;
+		/* enable write access*/
+		ccu_write_access_enable(ccu_clk, true);
+	}
 	CCU_ACCESS_EN(ccu_clk, 0);
 
 	return ret;
