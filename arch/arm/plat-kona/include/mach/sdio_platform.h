@@ -85,6 +85,7 @@ struct sdio_platform_cfg {
 	char *ahb_clk_name;
 	char *sleep_clk_name;
 	char *vddo_regulator_name;
+	char *vddsdxc_regulator_name;
 	unsigned long peri_clk_rate;
 
 	struct sdio_wifi_gpio_cfg wifi_gpio;

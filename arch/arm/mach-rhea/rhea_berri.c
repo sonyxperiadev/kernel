@@ -1019,6 +1019,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	 .peri_clk_rate = 48000000,
 	 /* vdd_sdc regulator: needed to support UHS SD cards */
 	 .vddo_regulator_name = "vdd_sdio",
+	 .vddsdxc_regulator_name = "2v9sdxc",
 	 },
 	{			/* SDIO1 */
 	 .id = 1,

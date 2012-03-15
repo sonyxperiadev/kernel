@@ -278,6 +278,7 @@ static struct regulator_init_data bcm59055_hv3ldo_data = {
 
 struct regulator_consumer_supply hv4_supply[] = {
 	{.supply = "hv4ldo_uc"},
+	{.supply = "2v9sdxc"},
 };
 static struct regulator_init_data bcm59055_hv4ldo_data = {
 	.constraints = {
@@ -287,7 +288,7 @@ static struct regulator_init_data bcm59055_hv4ldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv4_supply),
@@ -324,7 +325,7 @@ static struct regulator_init_data bcm59055_hv6ldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv6_supply),
 	.consumer_supplies = hv6_supply,

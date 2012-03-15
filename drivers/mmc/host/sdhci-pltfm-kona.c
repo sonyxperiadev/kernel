@@ -87,6 +87,7 @@ struct sdio_dev {
 	struct clk *peri_clk;
 	struct clk *sleep_clk;
 	struct regulator *vddo_sd_regulator;
+	struct regulator *vdd_sdxc_regulator;
 };
 
 #ifdef CONFIG_MACH_BCM2850_FPGA
@@ -99,6 +100,8 @@ static struct proc_dir_entry *gProcParent;
 static struct sdio_dev *gDevs[SDIO_DEV_TYPE_MAX];
 
 static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name);
+static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev,
+					   char *reg_name);
 
 /*
  * Get the base clock. Use central clock source for now. Not sure if different
@@ -549,6 +552,14 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			goto err_term_clk;
 	}
 
+	if (hw_cfg->vddsdxc_regulator_name) {
+		ret =
+		    sdhci_pltfm_regulator_sdxc_init(dev,
+					       hw_cfg->vddsdxc_regulator_name);
+		if (ret < 0)
+			goto err_term_clk;
+	}
+
 	ret = bcm_kona_sd_reset(dev);
 	if (ret)
 		goto err_term_clk;
@@ -732,6 +743,15 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
 		free_irq(gpio_to_irq(dev->cd_gpio), dev);
 		gpio_free(dev->cd_gpio);
+	}
+
+	if (dev->vdd_sdxc_regulator) {
+		regulator_disable(dev->vdd_sdxc_regulator);
+		regulator_put(dev->vdd_sdxc_regulator);
+	}
+	if (dev->vddo_sd_regulator) {
+		regulator_disable(dev->vddo_sd_regulator);
+		regulator_put(dev->vddo_sd_regulator);
 	}
 
 	proc_term(pdev);
@@ -987,6 +1007,38 @@ static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name)
 	return ret;
 }
 
+static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev, char *reg_name)
+{
+	int ret;
+
+	dev->vdd_sdxc_regulator = regulator_get(NULL, reg_name);
+
+	if (dev->vddo_sd_regulator) {
+		ret = regulator_enable(dev->vdd_sdxc_regulator);
+		if (ret < 0) {
+			pr_err("%s: can't Enable regulator\n",
+			       reg_name);
+			ret = -1;
+		} else {
+			/* Configure 2.9V default */
+			ret = regulator_set_voltage(dev->vdd_sdxc_regulator,
+						    2900000, 2900000);
+			if (ret < 0) {
+				pr_err("%s: can't set 2.9V\n",
+				       reg_name);
+				ret = -1;
+			} else {
+				pr_info("%s: set to 2.9V\n",
+					reg_name);
+				ret = 0;
+			}
+		}
+	} else {
+		pr_err("%s: could not get regulator\n", reg_name);
+		ret = -1;
+	}
+	return ret;
+}
 int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host)
 {
 	struct sdio_dev *dev = sdhci_priv(host);
