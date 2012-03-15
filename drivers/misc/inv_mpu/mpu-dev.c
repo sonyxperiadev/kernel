@@ -897,6 +897,12 @@ int mpu_dev_suspend(struct i2c_client *client, pm_message_t mesg)
 		dev_dbg(&client->adapter->dev,
 			"%s: Already suspended %d\n", __func__, mesg.event);
 	}
+
+#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
+	inv_serial_single_write(client->adapter,
+		mldl_cfg->mpu_chip_info->addr, MPUREG_PWR_MGMT_1, 0x40);
+#endif
+
 	mutex_unlock(&mpu->mutex);
 	return 0;
 }
@@ -930,6 +936,12 @@ int mpu_dev_resume(struct i2c_client *client)
 		dev_dbg(&client->adapter->dev,
 			"%s for pid %d\n", __func__, mpu->pid);
 	}
+
+#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
+	inv_serial_single_write(client->adapter,
+		mldl_cfg->mpu_chip_info->addr, MPUREG_PWR_MGMT_1, 0x9);
+#endif
+
 	mutex_unlock(&mpu->mutex);
 	return 0;
 }
