@@ -134,7 +134,7 @@ void dwc_otg_pcd_start(dwc_otg_pcd_t *pcd,
  */
 static int32_t dwc_otg_pcd_start_cb(void *p)
 {
-	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *)p;
+	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *) p;
 	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);
 
 	/*
@@ -148,8 +148,7 @@ static int32_t dwc_otg_pcd_start_cb(void *p)
 		dwc_otg_pcd_disconnect(pcd, false);
 	} else {
 		dwc_otg_pcd_disconnect(pcd,
-				       core_if->
-				       gadget_pullup_on ? false : true);
+				    core_if->gadget_pullup_on ? false : true);
 	}
 
 	return 1;
@@ -157,7 +156,7 @@ static int32_t dwc_otg_pcd_start_cb(void *p)
 
 /** CFI-specific buffer allocation function for EP */
 #ifdef DWC_UTE_CFI
-uint8_t *cfiw_ep_alloc_buffer(dwc_otg_pcd_t *pcd, void *pep, dwc_dma_t *addr,
+uint8_t *cfiw_ep_alloc_buffer(dwc_otg_pcd_t *pcd, void *pep, dwc_dma_t * addr,
 			      size_t buflen, int flags)
 {
 	dwc_otg_pcd_ep_t *ep;
@@ -171,7 +170,7 @@ uint8_t *cfiw_ep_alloc_buffer(dwc_otg_pcd_t *pcd, void *pep, dwc_dma_t *addr,
 					  flags);
 }
 #else
-uint8_t *cfiw_ep_alloc_buffer(dwc_otg_pcd_t *pcd, void *pep, dwc_dma_t *addr,
+uint8_t *cfiw_ep_alloc_buffer(dwc_otg_pcd_t *pcd, void *pep, dwc_dma_t * addr,
 			      size_t buflen, int flags);
 #endif
 
@@ -183,7 +182,7 @@ uint8_t *cfiw_ep_alloc_buffer(dwc_otg_pcd_t *pcd, void *pep, dwc_dma_t *addr,
  */
 static int32_t dwc_otg_pcd_resume_cb(void *p)
 {
-	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *)p;
+	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *) p;
 
 	if (pcd->fops->resume)
 		pcd->fops->resume(pcd);
@@ -206,7 +205,7 @@ static int32_t dwc_otg_pcd_resume_cb(void *p)
  */
 static int32_t dwc_otg_pcd_suspend_cb(void *p)
 {
-	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *)p;
+	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *) p;
 #ifdef CONFIG_USB_OTG
 	gotgctl_data_t gotgctl = {.d32 = 0 };
 
@@ -242,7 +241,7 @@ static int32_t dwc_otg_pcd_suspend_cb(void *p)
  */
 static int32_t dwc_otg_pcd_stop_cb(void *p)
 {
-	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *)p;
+	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *) p;
 	extern void dwc_otg_pcd_stop(dwc_otg_pcd_t *_pcd);
 
 	dwc_otg_pcd_stop(pcd);
@@ -264,7 +263,7 @@ static dwc_otg_cil_callbacks_t pcd_callbacks = {
  * This function allocates a DMA Descriptor chain for the Endpoint
  * buffer to be used for a transfer to/from the specified endpoint.
  */
-dwc_otg_dev_dma_desc_t *dwc_otg_ep_alloc_desc_chain(uint32_t *dma_desc_addr,
+dwc_otg_dev_dma_desc_t *dwc_otg_ep_alloc_desc_chain(uint32_t * dma_desc_addr,
 						    uint32_t count,
 						    int atomic_alloc)
 {
@@ -334,7 +333,7 @@ void dwc_otg_iso_ep_start_ddma_transfer(dwc_otg_core_if_t *core_if,
 		int offset;
 
 		addr = &core_if->dev_if->out_ep_regs[dwc_ep->num]->doepctl;
-		dma_ad = (dma_addr_t)dwc_read_reg32(&(out_regs->doepdma));
+		dma_ad = (dma_addr_t) dwc_read_reg32(&(out_regs->doepdma));
 
 		/** Buffer 0 descriptors setup */
 		dma_ad = dwc_ep->dma_addr0;
@@ -460,7 +459,7 @@ void dwc_otg_iso_ep_start_ddma_transfer(dwc_otg_core_if_t *core_if,
 
 		/** Write dma_ad into DOEPDMA register */
 		dwc_write_reg32(&(out_regs->doepdma),
-				(uint32_t)dwc_ep->iso_dma_desc_addr);
+				(uint32_t) dwc_ep->iso_dma_desc_addr);
 
 	}
 	/** ISO IN EP */
@@ -539,7 +538,7 @@ void dwc_otg_iso_ep_start_ddma_transfer(dwc_otg_core_if_t *core_if,
 
 		/** Write dma_ad into diepdma register */
 		dwc_write_reg32(&(in_regs->diepdma),
-				(uint32_t)dwc_ep->iso_dma_desc_addr);
+				(uint32_t) dwc_ep->iso_dma_desc_addr);
 	}
 	/** Enable endpoint, clear nak  */
 	depctl.d32 = 0;
@@ -558,7 +557,8 @@ void dwc_otg_iso_ep_start_ddma_transfer(dwc_otg_core_if_t *core_if,
  * @param ep The EP to start the transfer on.
  *
  */
-void dwc_otg_iso_ep_start_buf_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
+void dwc_otg_iso_ep_start_buf_transfer(dwc_otg_core_if_t *core_if,
+				       dwc_ep_t *ep)
 {
 	depctl_data_t depctl = {.d32 = 0 };
 	volatile uint32_t *addr;
@@ -599,7 +599,7 @@ void dwc_otg_iso_ep_start_buf_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 			/* Write the DMA register */
 			dwc_write_reg32(&
 					(core_if->dev_if->in_ep_regs[ep->num]->
-					 diepdma), (uint32_t)ep->dma_addr);
+					 diepdma), (uint32_t) ep->dma_addr);
 
 		} else {
 			deptsiz.b.pktcnt =
@@ -613,7 +613,7 @@ void dwc_otg_iso_ep_start_buf_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 			/* Write the DMA register */
 			dwc_write_reg32(&
 					(core_if->dev_if->out_ep_regs[ep->num]->
-					 doepdma), (uint32_t)ep->dma_addr);
+					 doepdma), (uint32_t) ep->dma_addr);
 
 		}
 		/** Enable endpoint, clear nak  */
@@ -922,7 +922,7 @@ void dwc_otg_pcd_get_iso_packet_params(dwc_otg_pcd_t *pcd, void *ep_handle,
 
 #endif /* DWC_EN_ISOC */
 
-static void dwc_otg_pcd_init_ep(dwc_otg_pcd_t *pcd, dwc_otg_pcd_ep_t *pcd_ep,
+static void dwc_otg_pcd_init_ep(dwc_otg_pcd_t *pcd, dwc_otg_pcd_ep_t * pcd_ep,
 				uint32_t is_in, uint32_t ep_num)
 {
 	/* Init EP structure */
@@ -1016,7 +1016,7 @@ static void dwc_otg_pcd_reinit(dwc_otg_pcd_t *pcd)
 static void srp_timeout(void *ptr)
 {
 	gotgctl_data_t gotgctl;
-	dwc_otg_core_if_t *core_if = (dwc_otg_core_if_t *)ptr;
+	dwc_otg_core_if_t *core_if = (dwc_otg_core_if_t *) ptr;
 	volatile uint32_t *addr = &core_if->core_global_regs->gotgctl;
 
 	gotgctl.d32 = dwc_read_reg32(addr);
@@ -1089,7 +1089,7 @@ extern void start_next_request(dwc_otg_pcd_ep_t *ep);
 
 static void start_xfer_tasklet_func(void *data)
 {
-	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *)data;
+	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *) data;
 	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);
 
 	int i;
@@ -1113,7 +1113,7 @@ static void start_xfer_tasklet_func(void *data)
 		if (pcd->in_ep[i].queue_sof) {
 			pcd->in_ep[i].queue_sof = 0;
 			start_next_request(&pcd->in_ep[i]);
-			/* break; */
+			/* break;*/
 		}
 	}
 
@@ -1351,8 +1351,7 @@ uint32_t dwc_otg_pcd_is_otg(dwc_otg_pcd_t *pcd)
 	gusbcfg_data_t usbcfg = {.d32 = 0 };
 
 	usbcfg.d32 = dwc_read_reg32(&core_if->core_global_regs->gusbcfg);
-	if (!usbcfg.b.srpcap || !usbcfg.b.hnpcap
-	    || !core_if->core_params->otg_supp_enable)
+	if (!usbcfg.b.srpcap || !usbcfg.b.hnpcap || !core_if->core_params->otg_supp_enable)
 		return 0;
 
 	return 1;
@@ -1414,7 +1413,8 @@ static uint32_t assign_perio_tx_fifo(dwc_otg_core_if_t *core_if)
  * This function releases periodic Tx FIFO
  * in shared Tx FIFO mode
  */
-static void release_perio_tx_fifo(dwc_otg_core_if_t *core_if, uint32_t fifo_num)
+static void release_perio_tx_fifo(dwc_otg_core_if_t *core_if,
+				  uint32_t fifo_num)
 {
 	core_if->p_tx_msk =
 	    (core_if->p_tx_msk & (1 << (fifo_num - 1))) ^ core_if->p_tx_msk;
@@ -1662,7 +1662,7 @@ int dwc_otg_pcd_xiso_start_next_request(dwc_otg_pcd_t *pcd,
 	}
 /*DWC_DEBUG();*/
 
-	nat = (uint32_t)ep->desc->wMaxPacketSize;
+	nat = (uint32_t) ep->desc->wMaxPacketSize;
 	nat = (nat >> 11) & 0x03;
 
 	if (!DWC_CIRCLEQ_EMPTY(&ep->queue)) {
@@ -1682,7 +1682,7 @@ int dwc_otg_pcd_xiso_start_next_request(dwc_otg_pcd_t *pcd,
 		if (dwcep->is_in) {
 			/* Setup DMA Descriptor chain for IN Isoc request */
 			for (i = 0; i < ereq->pio_pkt_count - 1; i++) {
-				/*if ((i % (nat + 1)) == 0) */
+				/*if ((i % (nat + 1)) == 0)*/
 				dwcep->xiso_frame_num =
 				    (dwcep->xiso_bInterval +
 				     dwcep->xiso_frame_num) & 0x3FFF;
@@ -1704,7 +1704,7 @@ int dwc_otg_pcd_xiso_start_next_request(dwc_otg_pcd_t *pcd,
 				dwcep->desc_addr[i].status.b_iso_in.l = 0;
 			}
 
-			/*if ((i % (nat + 1)) == 0) */
+			/*if ((i % (nat + 1)) == 0)*/
 			dwcep->xiso_frame_num =
 			    (dwcep->xiso_bInterval +
 			     dwcep->xiso_frame_num) & 0x3FFF;
@@ -1737,7 +1737,7 @@ int dwc_otg_pcd_xiso_start_next_request(dwc_otg_pcd_t *pcd,
 		} else {
 			/* Setup DMA Descriptor chain for OUT Isoc request */
 			for (i = 0; i < ereq->pio_pkt_count - 1; i++) {
-				/*if ((i % (nat + 1)) == 0) */
+				/*if ((i % (nat + 1)) == 0)*/
 				dwcep->xiso_frame_num =
 				    (dwcep->xiso_bInterval +
 				     dwcep->xiso_frame_num) & 0x3FFF;
@@ -1759,7 +1759,7 @@ int dwc_otg_pcd_xiso_start_next_request(dwc_otg_pcd_t *pcd,
 				dwcep->desc_addr[i].status.b_iso_out.l = 0;
 			}
 
-			/*if ((i % (nat + 1)) == 0) */
+			/*if ((i % (nat + 1)) == 0)*/
 			/* If the frame number logic is to be implemented, then additional
 			 * logic is needed for initializing the last descriptor
 			 */
@@ -1812,7 +1812,7 @@ void complete_xiso_ep(dwc_otg_pcd_ep_t *ep)
 	dwc_ep_t *dwcep = NULL;
 	int i;
 
-	/*DWC_DEBUG(); */
+	/*DWC_DEBUG();*/
 	dwcep = &ep->dwc_ep;
 
 	/* Get the first pending request from the queue */
@@ -1996,7 +1996,7 @@ int dwc_otg_pcd_xiso_ep_queue(dwc_otg_pcd_t *pcd, void *ep_handle,
 	req->sent_zlp = zero;
 	req->priv = req_handle;
 
-	/*DWC_SPINLOCK_IRQSAVE(pcd->lock, &flags); */
+	/*DWC_SPINLOCK_IRQSAVE(pcd->lock, &flags);*/
 	ep->dwc_ep.dma_addr = dma_buf;
 	ep->dwc_ep.start_xfer_buff = buf;
 	ep->dwc_ep.xfer_buff = buf;
@@ -2014,7 +2014,7 @@ DWC_DEBUG("req->ext_req.tr_sub_flags=%d", req->ext_req.tr_sub_flags);
 prn_ext_request((struct dwc_iso_xreq_port *) ereq_nonport);
 prn_ext_request(&req->ext_req);*/
 
-	/*DWC_SPINUNLOCK_IRQRESTORE(pcd->lock, flags); */
+	/*DWC_SPINUNLOCK_IRQRESTORE(pcd->lock, flags);*/
 
 	/* If the req->status == ASAP  then check if there is any active transfer
 	 * for this endpoint. If no active transfers, then get the first entry
@@ -2139,7 +2139,7 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t *pcd, void *ep_handle,
 
 			dwc_otg_ep0_start_transfer(GET_CORE_IF(pcd),
 						   &ep->dwc_ep);
-		} /* non-ep0 endpoints */
+		}		/* non-ep0 endpoints*/
 		else {
 #ifdef DWC_UTE_CFI
 			if (ep->dwc_ep.buff_mode != BM_STANDARD) {
