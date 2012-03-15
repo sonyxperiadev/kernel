@@ -138,12 +138,30 @@ void tabla_unlock_sleep(struct tabla *tabla)
 }
 EXPORT_SYMBOL_GPL(tabla_unlock_sleep);
 
+static void tabla_irq_dispatch(struct tabla *tabla, int irqbit)
+{
+	if ((irqbit <= TABLA_IRQ_MBHC_INSERTION) &&
+	    (irqbit >= TABLA_IRQ_MBHC_REMOVAL)) {
+		tabla_reg_write(tabla, TABLA_A_INTR_CLEAR0 +
+				  BIT_BYTE(irqbit), BYTE_BIT_MASK(irqbit));
+		if (tabla_get_intf_type() == TABLA_INTERFACE_TYPE_I2C)
+			tabla_reg_write(tabla, TABLA_A_INTR_MODE, 0x02);
+		handle_nested_irq(tabla->irq_base + irqbit);
+	} else {
+		handle_nested_irq(tabla->irq_base + irqbit);
+		tabla_reg_write(tabla, TABLA_A_INTR_CLEAR0 +
+				  BIT_BYTE(irqbit), BYTE_BIT_MASK(irqbit));
+		if (tabla_get_intf_type() == TABLA_INTERFACE_TYPE_I2C)
+			tabla_reg_write(tabla, TABLA_A_INTR_MODE, 0x02);
+	}
+}
+
 static irqreturn_t tabla_irq_thread(int irq, void *data)
 {
 	int ret;
 	struct tabla *tabla = data;
 	u8 status[TABLA_NUM_IRQ_REGS];
-	unsigned int i;
+	int i;
 
 	tabla_lock_sleep(tabla);
 	ret = tabla_bulk_read(tabla, TABLA_A_INTR_STATUS0,
@@ -161,28 +179,22 @@ static irqreturn_t tabla_irq_thread(int irq, void *data)
 	/* Find out which interrupt was triggered and call that interrupt's
 	 * handler function
 	 */
-	for (i = 0; i < TABLA_NUM_IRQS; i++) {
-		if (status[BIT_BYTE(i)] & BYTE_BIT_MASK(i)) {
-			if ((i <= TABLA_IRQ_MBHC_INSERTION) &&
-				(i >= TABLA_IRQ_MBHC_REMOVAL)) {
-				tabla_reg_write(tabla, TABLA_A_INTR_CLEAR0 +
-					BIT_BYTE(i), BYTE_BIT_MASK(i));
-				if (tabla_get_intf_type() ==
-					TABLA_INTERFACE_TYPE_I2C)
-					tabla_reg_write(tabla,
-						TABLA_A_INTR_MODE, 0x02);
-				handle_nested_irq(tabla->irq_base + i);
-			} else {
-				handle_nested_irq(tabla->irq_base + i);
-				tabla_reg_write(tabla, TABLA_A_INTR_CLEAR0 +
-					BIT_BYTE(i), BYTE_BIT_MASK(i));
-				if (tabla_get_intf_type() ==
-					TABLA_INTERFACE_TYPE_I2C)
-					tabla_reg_write(tabla,
-						TABLA_A_INTR_MODE, 0x02);
-			}
-			break;
-		}
+	if (status[BIT_BYTE(TABLA_IRQ_SLIMBUS)] &
+	    BYTE_BIT_MASK(TABLA_IRQ_SLIMBUS))
+		tabla_irq_dispatch(tabla, TABLA_IRQ_SLIMBUS);
+
+	/* Since codec has only one hardware irq line which is shared by
+	 * codec's different internal interrupts, so it's possible master irq
+	 * handler dispatches multiple nested irq handlers after breaking
+	 * order.  Dispatch MBHC interrupts order to follow MBHC state
+	 * machine's order */
+	for (i = TABLA_IRQ_MBHC_INSERTION; i >= TABLA_IRQ_MBHC_REMOVAL; i--) {
+		if (status[BIT_BYTE(i)] & BYTE_BIT_MASK(i))
+			tabla_irq_dispatch(tabla, i);
+	}
+	for (i = TABLA_IRQ_BG_PRECHARGE; i < TABLA_NUM_IRQS; i++) {
+		if (status[BIT_BYTE(i)] & BYTE_BIT_MASK(i))
+			tabla_irq_dispatch(tabla, i);
 	}
 	tabla_unlock_sleep(tabla);
 

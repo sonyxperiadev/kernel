@@ -761,7 +761,45 @@ static struct tabla_pdata tabla_platform_data = {
 		.bias2_cfilt_sel = TABLA_CFILT2_SEL,
 		.bias3_cfilt_sel = TABLA_CFILT3_SEL,
 		.bias4_cfilt_sel = TABLA_CFILT3_SEL,
-	}
+	},
+	.regulator = {
+	{
+		.name = "CDC_VDD_CP",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.optimum_uA = WCD9XXX_CDC_VDDA_CP_CUR_MAX,
+	},
+	{
+		.name = "CDC_VDDA_RX",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.optimum_uA = WCD9XXX_CDC_VDDA_RX_CUR_MAX,
+	},
+	{
+		.name = "CDC_VDDA_TX",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.optimum_uA = WCD9XXX_CDC_VDDA_TX_CUR_MAX,
+	},
+	{
+		.name = "VDDIO_CDC",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.optimum_uA = WCD9XXX_VDDIO_CDC_CUR_MAX,
+	},
+	{
+		.name = "VDDD_CDC_D",
+		.min_uV = 1225000,
+		.max_uV = 1225000,
+		.optimum_uA = WCD9XXX_VDDD_CDC_D_CUR_MAX,
+	},
+	{
+		.name = "CDC_VDDA_A_1P2V",
+		.min_uV = 1225000,
+		.max_uV = 1225000,
+		.optimum_uA = WCD9XXX_VDDD_CDC_A_CUR_MAX,
+	},
+	},
 };
 
 static struct slim_device msm_slim_tabla = {
@@ -790,7 +828,45 @@ static struct tabla_pdata tabla20_platform_data = {
 		.bias2_cfilt_sel = TABLA_CFILT2_SEL,
 		.bias3_cfilt_sel = TABLA_CFILT3_SEL,
 		.bias4_cfilt_sel = TABLA_CFILT3_SEL,
-	}
+	},
+	.regulator = {
+	{
+		.name = "CDC_VDD_CP",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.optimum_uA = WCD9XXX_CDC_VDDA_CP_CUR_MAX,
+	},
+	{
+		.name = "CDC_VDDA_RX",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.optimum_uA = WCD9XXX_CDC_VDDA_RX_CUR_MAX,
+	},
+	{
+		.name = "CDC_VDDA_TX",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.optimum_uA = WCD9XXX_CDC_VDDA_TX_CUR_MAX,
+	},
+	{
+		.name = "VDDIO_CDC",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.optimum_uA = WCD9XXX_VDDIO_CDC_CUR_MAX,
+	},
+	{
+		.name = "VDDD_CDC_D",
+		.min_uV = 1225000,
+		.max_uV = 1225000,
+		.optimum_uA = WCD9XXX_VDDD_CDC_D_CUR_MAX,
+	},
+	{
+		.name = "CDC_VDDA_A_1P2V",
+		.min_uV = 1225000,
+		.max_uV = 1225000,
+		.optimum_uA = WCD9XXX_VDDD_CDC_A_CUR_MAX,
+	},
+	},
 };
 
 static struct slim_device msm_slim_tabla20 = {

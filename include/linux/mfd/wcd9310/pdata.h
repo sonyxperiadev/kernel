@@ -94,6 +94,29 @@ struct tabla_ocp_setting {
 	unsigned int	hph_ocp_limit:3; /* Headphone OCP current limit */
 };
 
+#define MAX_REGULATOR	6
+/*
+ *      format : TABLA_<POWER_SUPPLY_PIN_NAME>_CUR_MAX
+ *
+ *      <POWER_SUPPLY_PIN_NAME> from Tabla objective spec
+*/
+
+#define  WCD9XXX_CDC_VDDA_CP_CUR_MAX      500000
+#define  WCD9XXX_CDC_VDDA_RX_CUR_MAX      20000
+#define  WCD9XXX_CDC_VDDA_TX_CUR_MAX      20000
+#define  WCD9XXX_VDDIO_CDC_CUR_MAX        5000
+
+#define  WCD9XXX_VDDD_CDC_D_CUR_MAX       5000
+#define  WCD9XXX_VDDD_CDC_A_CUR_MAX       5000
+
+struct wcd9310_regulator {
+	const char *name;
+	int min_uV;
+	int max_uV;
+	int optimum_uA;
+	struct regulator *regulator;
+};
+
 struct tabla_pdata {
 	int irq;
 	int irq_base;
@@ -103,6 +126,7 @@ struct tabla_pdata {
 	struct slim_device slimbus_slave_device;
 	struct tabla_micbias_setting micbias;
 	struct tabla_ocp_setting ocp;
+	struct wcd9310_regulator regulator[MAX_REGULATOR];
 };
 
 #endif

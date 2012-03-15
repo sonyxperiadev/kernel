@@ -692,11 +692,11 @@ static int msm8960_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	tabla_hs_detect(codec, &hs_jack, &button_jack, tabla_mbhc_cal,
-			TABLA_MICBIAS2, msm8960_enable_codec_ext_clk, 0,
-			TABLA_EXT_CLK_RATE);
+	err = tabla_hs_detect(codec, &hs_jack, &button_jack, tabla_mbhc_cal,
+			      TABLA_MICBIAS2, msm8960_enable_codec_ext_clk, 0,
+			      TABLA_EXT_CLK_RATE);
 
-	return 0;
+	return err;
 }
 
 static struct snd_soc_dsp_link lpa_fe_media = {

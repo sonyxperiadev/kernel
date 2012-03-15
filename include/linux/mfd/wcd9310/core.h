@@ -140,5 +140,11 @@ static inline void tabla_disable_irq(struct tabla *tabla, int irq)
 		return;
 	disable_irq_nosync(tabla->irq_base + irq);
 }
+static inline void tabla_disable_irq_sync(struct tabla *tabla, int irq)
+{
+	if (!tabla->irq_base)
+		return;
+	disable_irq(tabla->irq_base + irq);
+}
 
 #endif
