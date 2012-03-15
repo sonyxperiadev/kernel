@@ -77,6 +77,7 @@ Only one loopback path can be enabled at a time.*/
 #define HW_SIDETONE_LOOPBACK
 #undef HW_ANALOG_LOOPBACK
 
+#define VIBRA_LDO_REGULATOR "2v9_vibra"
 /** Private Type and Constant declarations */
 
 enum ExtSpkrUsage_en_t {
@@ -1261,6 +1262,7 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	CSL_CAPH_PathID pathID;
 	AudioMode_t mode = AUDIO_MODE_HANDSET;
+	int ret = 0;
 
 	aTrace(LOG_AUDIO_CNTLR, "%s src %d, sink %d\n", __func__, source, sink);
 	pathID = 0;
@@ -1338,6 +1340,21 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 	} else
 		AUDCTRL_SetAudioMode_ForMusicPlayback(mode, pathID, FALSE);
 
+	if (sink == AUDIO_SINK_VIBRA) {
+		if (!vibra_reg) {
+			vibra_reg = regulator_get(NULL, VIBRA_LDO_REGULATOR);
+
+			if (IS_ERR(vibra_reg))
+				aError("Failed to get LDO for Vibra\n");
+		}
+		if (vibra_reg) {
+			ret = regulator_enable(vibra_reg);
+			if (ret != 0)
+				aError("Failed to enable LDO for Vibra: %d\n",
+					ret);
+		}
+	}
+
 	if (pPathID)
 		*pPathID = pathID;
 
@@ -1359,6 +1376,7 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	CSL_CAPH_PathID path = 0;
 	CSL_CAPH_DEVICE_e src_dev, sink_dev;
+	int ret = 0;
 
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 	aTrace(LOG_AUDIO_CNTLR, "%s src %d, sink %d, pathID %d",
@@ -1418,6 +1436,17 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 			   || (sink == AUDIO_SINK_LOUDSPK)) {
 			powerOnExternalAmp(sink, AudioUse, FALSE, FALSE);
 			AUDCTRL_RemoveAudioApp(AUDIO_APP_MUSIC);
+		}
+	}
+
+	if (sink == AUDIO_SINK_VIBRA) {
+		if (vibra_reg) {
+			ret = regulator_disable(vibra_reg);
+			if (ret != 0)
+				aError("Failed to disable LDO for Vibra: %d\n",
+					ret);
+			regulator_put(vibra_reg);
+			vibra_reg = NULL;
 		}
 	}
 	pathIDTuning = 0;
@@ -2769,7 +2798,6 @@ void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus,
 	csl_caph_hwctrl_ConfigSSP(csl_port, csl_bus, en_lpbk);
 }
 
-#define VIBRA_LDO_REGULATOR "2v9_vibra"
 
 /****************************************************************************
 *

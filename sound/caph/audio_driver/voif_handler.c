@@ -74,7 +74,6 @@ up their voice solution in callback */
 		memset(dlData, 0, sampleCount * sizeof(Int16));
 	}
 
-	msleep(voifDelay);
 #endif
 	return;
 }
