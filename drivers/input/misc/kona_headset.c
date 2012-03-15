@@ -87,18 +87,18 @@
  * mode for accurate detection, but the cost of this would be more power
  * consumption when headset is connected.
  */
- /* #define KEEP_MIC_BIAS_ON_FOR_BP_DETECTION */
+ #define KEEP_MIC_BIAS_ON_FOR_BP_DETECTION
 
 /*
  * The gpio_set_debounce expects the debounce argument in micro seconds
  * Previously the kona implementation which is called from gpio_set_debounce
- *was expecting the argument as milliseconds which was incorrect.
- * The commit 38598aea6cb57290ef6ed3518b75b9f398b7694f fixed it. Hence we have to
- *change to the correct way of passing the time in microseconds resolution.
+ * was expecting the argument as milliseconds which was incorrect.
+ * The commit 38598aea6cb57290ef6ed3518b75b9f398b7694f fixed it. Hence we have
+ * to change to the correct way of passing the time in microseconds resolution.
  */
 #define DEBOUNCE_TIME	(64000)
 #define KEY_DETECT_DELAY	msecs_to_jiffies(128)
-#define ACCESSORY_INSERTION_REMOVE_SETTLE_TIME 	msecs_to_jiffies(500)
+#define ACCESSORY_INSERTION_REMOVE_SETTLE_TIME	msecs_to_jiffies(500)
 
 struct mic_t {
 	int hsirq;
@@ -118,7 +118,7 @@ struct mic_t {
 	int button_state;
 };
 
-static struct mic_t *mic_dev = NULL;
+static struct mic_t *mic_dev;
 
 enum hs_type {
 	DISCONNECTED = 0,	/* Nothing is connected  */
@@ -145,15 +145,15 @@ enum button_state {
  * ADC to settle depending on the HS type. The time outs are
  *in milli seconds
  */
-#define DET_PLUG_CONNECTED_SETTLE       80	/* in HAL_ACC_DET_PLUG_CONNECTED */
-#define DET_OPEN_CABLE_SETTLE           20	/* in HAL_ACC_DET_OPEN_CABLE */
-#define DET_BASIC_CARKIT_SETTLE         20	/* in HAL_ACC_DET_BASIC_CARKIT */
+#define DET_PLUG_CONNECTED_SETTLE    80	/* in HAL_ACC_DET_PLUG_CONNECTED */
+#define DET_OPEN_CABLE_SETTLE        20	/* in HAL_ACC_DET_OPEN_CABLE */
+#define DET_BASIC_CARKIT_SETTLE      20	/* in HAL_ACC_DET_BASIC_CARKIT */
 
 /*
  * Button/Hook Filter configuration
+ * 1024 / (Filter block frequencey) = 1024 / 32768 => 31ms
  */
-#define ACC_HW_COMP1_FILTER_WIDTH   1024	/* = 1024 / (Filter block frequencey) = 1024 / 32768 => 31ms */
-
+#define ACC_HW_COMP1_FILTER_WIDTH   1024
 /*
  * Accessory Detecting voltage
  *
@@ -197,8 +197,8 @@ static const CHAL_ACI_filter_config_comp_t comp_values_for_type_det = {
 /* MIC bias */
 
 /*
- * Based on the power consumptio analysis. Program the MIC BIAS probe cycle to be
- * 128ms. In this the mesaurement interval is 64ms and the measurement delay
+ * Based on the power consumptio analysis. Program the MIC BIAS probe cycle to
+ * be 128ms. In this the mesaurement interval is 64ms and the measurement delay
  * is 8ms.
  *
  * Mic Bias Power down control  and peridoic measurement control looks like
@@ -227,6 +227,7 @@ static CHAL_ACI_micbias_config_t aci_mic_bias = {
 static CHAL_ACI_vref_config_t aci_vref_config = { CHAL_ACI_VREF_OFF };
 
 static int aci_interface_init(struct mic_t *mic);
+static int aci_interface_init_micbias_off(struct mic_t *mic);
 
 /* Function to dump the HW regs */
 #ifdef DEBUG
@@ -234,24 +235,24 @@ static void dump_hw_regs(struct mic_t *p)
 {
 	int i;
 
-	printk("\r\n Dumping MIC BIAS registers \r\n");
+	pr_info("\r\n Dumping MIC BIAS registers \r\n");
 	for (i = 0x0; i <= 0x28; i += 0x04) {
-		printk("Addr: 0x%x  OFFSET: 0x%x  Value:0x%x \r\n",
+		pr_info("Addr: 0x%x  OFFSET: 0x%x  Value:0x%x \r\n",
 		       p->auxmic_base + i, i, readl(p->auxmic_base + i));
 	}
 
-	printk("\r\n \r\n");
-	printk("Dumping ACI registers \r\n");
+	pr_info("\r\n \r\n");
+	pr_info("Dumping ACI registers \r\n");
 	for (i = 0x30; i <= 0xD8; i += 0x04) {
-		printk("Addr: 0x%x  OFFSET: 0x%x  Value:0x%x \r\n",
+		pr_info("Addr: 0x%x  OFFSET: 0x%x  Value:0x%x \r\n",
 		       p->aci_base + i, i, readl(p->aci_base + i));
 	}
 
 	for (i = 0x400; i <= 0x420; i += 0x04) {
-		printk("Addr: 0x%x  OFFSET: 0x%x Value:0x%x \r\n",
+		pr_info("Addr: 0x%x  OFFSET: 0x%x Value:0x%x \r\n",
 		       p->aci_base + i, i, readl(p->aci_base + i));
 	}
-	printk("\r\n \r\n");
+	pr_info("\r\n \r\n");
 }
 #endif
 
@@ -260,7 +261,7 @@ static int aci_hw_config(int hst)
 {
 	int time_to_settle = 0;
 
-	pr_debug("\n Detect acs type aci_hw_config \n");
+	pr_debug("\nDetect acs type aci_hw_config\n");
 	if (mic_dev == NULL) {
 		pr_err("aci_adc_config: invalid mic_dev handle \r\n");
 		return -EFAULT;
@@ -332,14 +333,14 @@ static int aci_hw_config(int hst)
 		/* Turn OFF MIC Bias */
 		aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_GND;
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-		                    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-		                    CHAL_ACI_BLOCK_GENERIC,
-				    &aci_mic_bias);
+				CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+				CHAL_ACI_BLOCK_GENERIC,
+				&aci_mic_bias);
 
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-		                    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
-		                    CHAL_ACI_BLOCK_GENERIC,
-				    0);
+			CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
+			CHAL_ACI_BLOCK_GENERIC,
+			0);
 		time_to_settle = DET_BASIC_CARKIT_SETTLE;
 		break;
 
@@ -381,7 +382,7 @@ static int aci_hw_read(int hst)
 	/*
 	 * What is phone_ref_offset?
 	 *
-	 * Because of the resistor in the MIC IN line the actual ground is not 0,
+	 *Because of the resistor in the MIC IN line the actual ground is not 0,
 	 *but a small offset is added to it. We call this as
 	 *phone_ref_offset.
 	 * This needs to be subtracted from the measured voltage to determine
@@ -392,8 +393,8 @@ static int aci_hw_read(int hst)
 	 *
 	 * In the below logic, if mic_level read is less than or equal to 0
 	 *then we don't do anything.
-	 * If the read value is greater than  phone_ref_offset then subtract this offset
-	 *from the value read, otherwise mic_level is zero
+	 * If the read value is greater than  phone_ref_offset then subtract
+	 *this offset from the value read, otherwise mic_level is zero
 	 */
 	mic_level = chal_aci_block_read(mic_dev->aci_chal_hdl,
 					CHAL_ACI_BLOCK_ADC,
@@ -438,7 +439,7 @@ int detect_hs_type(struct mic_t *mic_dev)
 	int i;
 	int type;
 
-	pr_debug("\n Check detect_hs_type \n");
+	pr_debug("\nCheck detect_hs_type\n");
 	if (mic_dev == NULL) {
 		pr_err("mic_dev is empty \r\n");
 		return 0;
@@ -456,15 +457,15 @@ int detect_hs_type(struct mic_t *mic_dev)
 		 * Now, read back to check whether the given accessory is
 		 *present. If yes, then break the loop. If not, continue
 		 */
-		if ((type = aci_hw_read(i)) == i) {
+		type = aci_hw_read(i);
+		if (type == i)
 			break;
-		}
 	}			/* end of loop to check the devices */
 	return type;
 }
 
 
-static int is_accessory_supported (struct mic_t *mic_dev)
+static int is_accessory_supported(struct mic_t *mic_dev)
 {
 	int mic_level1;
 	int mic_level2;
@@ -502,12 +503,13 @@ static int is_accessory_supported (struct mic_t *mic_dev)
 	mic_level1 = mic_level1 <= 0 ? mic_level1 :
 	    ((mic_level1 > mic_dev->headset_pd->phone_ref_offset) ?
 	     (mic_level1 - mic_dev->headset_pd->phone_ref_offset) : 0);
-	pr_debug(" ++ %s(): mic_level1 after calc %d \r\n",__func__, mic_level1);
+	pr_debug(" ++ %s(): mic_level1 after calc %d \r\n", __func__,
+		mic_level1);
 
 	/* Turn On the HP Power Amplifier */
 	bcmpmu_audio_init();
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
-	bcmpmu_hs_power ((void*)1);
+	bcmpmu_hs_power((void *)1);
 
 	msleep(50);
 
@@ -518,7 +520,8 @@ static int is_accessory_supported (struct mic_t *mic_dev)
 	mic_level2 = mic_level2 <= 0 ? mic_level2 :
 	    ((mic_level2 > mic_dev->headset_pd->phone_ref_offset) ?
 	     (mic_level2 - mic_dev->headset_pd->phone_ref_offset) : 0);
-	pr_debug(" ++ %s(): mic_level2 after calc %d \r\n",__func__, mic_level2);
+	pr_debug(" ++ %s(): mic_level2 after calc %d \r\n", __func__,
+		mic_level2);
 
 	if ((mic_level1 - mic_level2) >= MIC_CHANGE_DETECTION_THRESHOLD) {
 		pr_info("%s(): Unsupported accessory \r\n", __func__);
@@ -529,7 +532,7 @@ static int is_accessory_supported (struct mic_t *mic_dev)
 	}
 
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
-	bcmpmu_hs_power ((void*)0);
+	bcmpmu_hs_power((void *)0);
 	bcmpmu_audio_deinit();
 
 	return ret;
@@ -565,13 +568,15 @@ static void button_press_work_func(struct work_struct *work)
 			CHAL_ACI_BLOCK_COMP2,
 			CHAL_ACI_BLOCK_COMP_RAW);
 	if (comp_status == CHAL_ACI_BLOCK_COMP_LINE_LOW) {
-		if ((p->hs_state == HEADSET) && (p->button_state == BUTTON_RELEASED)) {
+		if ((p->hs_state == HEADSET) &&
+			(p->button_state == BUTTON_RELEASED)) {
 			p->button_state = BUTTON_PRESSED;
 			pr_info(" Sending Key Press\r\n");
 			input_report_key(p->headset_button_idev, KEY_SEND, 1);
 			input_sync(p->headset_button_idev);
 		}
-		schedule_delayed_work(&(p->button_press_work), KEY_DETECT_DELAY);
+		schedule_delayed_work(&(p->button_press_work),
+			KEY_DETECT_DELAY);
 	} else {
 		p->button_state = BUTTON_RELEASED;
 		pr_info(" Sending Key Release\r\n");
@@ -594,7 +599,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 	pr_debug("SWITCH WORK GPIO STATE: 0x%x default state 0x%x \r\n",
 		 headset_state, p->headset_pd->hs_default_state);
 	headset_state = (headset_state ^ p->headset_pd->hs_default_state);
-	pr_debug("\n\n accessory_detect_work_func headset_state=%d \n",
+	pr_debug("\n\naccessory_detect_work_func headset_state=%d\n",
 		 headset_state);
 
 	if (headset_state == 1) {
@@ -604,46 +609,38 @@ static void accessory_detect_work_func(struct work_struct *work)
 		    ("0. Interrupt status before detecting hs_type 0x%x \r\n",
 		     readl(p->aci_base + ACI_INT_OFFSET));
 
+		aci_interface_init(p);
+
+#ifdef DEBUG
+		pr_info("After initialzing the ACI interface \r\n");
+		dump_hw_regs(p);
+#endif
+
 		/* Check whether the connected accessory is supported first */
-		if ( is_accessory_supported (p) == 0) {
-			printk("%s(): ACCESSORY IS NOT SUPPORTED \r\n",__func__);
+		if (is_accessory_supported(p) == 0) {
+			pr_info("%s(): ACCESSORY IS NOT SUPPORTED \r\n",
+			__func__);
 
 			p->hs_state = UNSUPPORTED;
 			/*
-			 * Bit map of the state variale 0xFF - Accessory not supported
+			 * Bit map of the state variable
+			 * 0xFF - Accessory not supported
 			 * There by we keep enough room to add other accessory
 			 * types between 2..0xFF if needed in future
 			 */
 			switch_set_state(&(p->sdev), 0xFF);
-
-			/* Turn OFF MIC Bias */
-			/* Note: The chal code to power OFF i.e GND MIC BIAS
-			 * actually puts the MIC BIAS in continuous
-			 * measurement mode. This is not what we want.
-			 * So any way the MIC BIAS is in discontinuous mode
-			 * for both open cable and headset case, in case of accessory removed,
-			 * just put the MIC BIAS in Low impedance state.
-			 */
-			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
-			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
-
-			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
-				    CHAL_ACI_BLOCK_GENERIC, 0);
+			aci_interface_init_micbias_off(p);
 			return;
 		}
 
 		p->hs_state = detect_hs_type(p);
-		pr_debug("\n Headset inserted with hs_state=%d \n",
+		pr_debug("\nHeadset inserted with hs_state=%d\n",
 			 p->hs_state);
 		switch (p->hs_state) {
 
 		case OPEN_CABLE:
-			/* TODO: Configure the COMP2 threshold for accessory detection */
 			pr_debug
-			    ("Detected Open cable enabling reconfig threshold values of COMP1\r\n");
+			("Open cable reconfig threshold values of COMP1\r\n");
 
 			/*
 			 * Put the MIC BIAS in Discontinuous measurement mode
@@ -656,38 +653,38 @@ static void accessory_detect_work_func(struct work_struct *work)
 
 			/* Configure the comparator 2 for type detection */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
-					    CHAL_ACI_BLOCK_COMP2,
-					    &comp_values_for_type_det);
+				    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
+				    CHAL_ACI_BLOCK_COMP2,
+				    &comp_values_for_type_det);
 
 			/*
 			 * Set the threshold value for accessory insertion
 			 * detection
 			 */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-					    CHAL_ACI_BLOCK_COMP2, 1900);
+				    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+				    CHAL_ACI_BLOCK_COMP2, 1900);
 
 			/* No notification needed for the userland */
 
 #ifdef DEBUG
-			printk("Configured for Open cable \r\n");
+			pr_info("Configured for Open cable \r\n");
 			dump_hw_regs(p);
 #endif
 			/* Clear pending interrupts if any */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-					    CHAL_ACI_BLOCK_COMP);
+				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+				    CHAL_ACI_BLOCK_COMP);
 
 			/* Enable COMP2 interrupt for accessory detection */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
-					    CHAL_ACI_BLOCK_COMP2);
+				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
+				    CHAL_ACI_BLOCK_COMP2);
 			break;
 
 		case HEADSET:
 			pr_debug
-			    ("accessory_detect_work_func: Detected headset config for button press \r\n");
+			    ("Detected headset config for button press \r\n");
 
 			/* Put back the aci interface to be able to detect the
 			 *button press. Especially this functions puts the
@@ -736,50 +733,55 @@ static void accessory_detect_work_func(struct work_struct *work)
 
 			/* Clear pending interrupts if any */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-					    CHAL_ACI_BLOCK_COMP);
+				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+				    CHAL_ACI_BLOCK_COMP);
 
 #ifdef DEBUG
 			pr_info
-			    ("After configuring the ACI interface for button press \r\n");
+			    ("Configured for button press \r\n");
 			dump_hw_regs(p);
 #endif
 
 			/* Enable COMP2 interrupt for button press */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
-					    CHAL_ACI_BLOCK_COMP2);
-
-			/* Fall through to send the update to userland */
-		case HEADPHONE:
-			pr_debug("\n\n Case HEADPHONE \n");
-			/* Note: The chal code to power OFF i.e GND MIC BIAS
-			 * actually puts the MIC BIAS in continuous
-			 * measurement mode. This is not what we want.
-			 * So any way the MIC BIAS is in discontinuous mode
-			 * for both open cable and headset case, in case of accessory removed,
-			 * just put the MIC BIAS in Low impedance state.
+				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
+				    CHAL_ACI_BLOCK_COMP2);
+#ifdef CONFIG_SWITCH
+			/*
+			 * While notifying this to the android world we need to
+			 * pass the accessory type as Androind understands.
+			 * The Android 'state' variable is a bitmap as defined
+			 * below.
+			 * BIT 0 : 1 - Headset (with MIC) connected
+			 * BIT 1 : 1 - Headphone (the one without MIC) is
+			 *             connected
 			 */
-			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
-				    CHAL_ACI_BLOCK_GENERIC, 0);
+			switch_set_state(&(p->sdev), 1);
+#endif
+			break;
+		case HEADPHONE:
+			pr_debug("\n\nCase HEADPHONE\n");
+
+			/* Turn OFF MIC Bias */
+			aci_interface_init_micbias_off(p);
 
 			/* Clear pending interrupts if any */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-					    CHAL_ACI_BLOCK_COMP);
+				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+				    CHAL_ACI_BLOCK_COMP);
 
 			/* No need to enable the button press/release irq */
 #ifdef CONFIG_SWITCH
 			/*
-			 * While notifying this to the androind world we need to pass
-			 *the accessory typ as Androind understands. The Android
-			 *'state' variable is a bitmap as defined below.
+			 * While notifying this to the android world we need to
+			 * pass the accessory type as Androind understands.
+			 * The Android 'state' variable is a bitmap as defined
+			 * below.
 			 * BIT 0 : 1 - Headset (with MIC) connected
-			 * BIT 1 : 1 - Headphone (the one without MIC) is connected
+			 * BIT 1 : 1 - Headphone (the one without MIC) is
+			 *             connected
 			 */
-			switch_set_state(&(p->sdev),
-					 (p->hs_state == HEADSET) ? 1 : 2);
+			switch_set_state(&(p->sdev), 2);
 #endif
 			break;
 		default:
@@ -798,21 +800,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 		} else {
 
 			/* Turn OFF MIC Bias */
-			/* Note: The chal code to power OFF i.e GND MIC BIAS
-			 * actually puts the MIC BIAS in continuous
-			 * measurement mode. This is not what we want.
-			 * So any way the MIC BIAS is in discontinuous mode
-			 * for both open cable and headset case, in case of accessory removed,
-			 * just put the MIC BIAS in Low impedance state.
-			 */
-			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
-			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
-
-			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
-				    CHAL_ACI_BLOCK_GENERIC, 0);
+			aci_interface_init_micbias_off(p);
 
 			/* Inform userland about accessory removal */
 			p->hs_state = DISCONNECTED;
@@ -822,13 +810,13 @@ static void accessory_detect_work_func(struct work_struct *work)
 #endif
 			/* Clear pending interrupts */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-					    CHAL_ACI_BLOCK_COMP);
+				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+				    CHAL_ACI_BLOCK_COMP);
 
 			/* Disable the COMP2, COMP2 INV interrupt */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
-					    CHAL_ACI_BLOCK_COMP);
+				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
+				    CHAL_ACI_BLOCK_COMP);
 		}
 	}
 }
@@ -919,7 +907,7 @@ static int hs_inputdev(struct mic_t *p)
 
 	INIT_DELAYED_WORK(&(p->button_press_work), button_press_work_func);
 
-      inputdev_err:
+inputdev_err:
 	return result;
 }
 
@@ -967,7 +955,7 @@ irqreturn_t comp2_isr(int irq, void *dev_id)
 	if (p->hs_state == HEADSET) {
 		pr_debug("button press scheduling button_press_work \r\n");
 
-		schedule_delayed_work(&(p->button_press_work),0);
+		schedule_delayed_work(&(p->button_press_work), 0);
 
 		/* Re-enable COMP2 Interrupts */
 		chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -986,6 +974,49 @@ irqreturn_t comp2_isr(int irq, void *dev_id)
 				    CHAL_ACI_BLOCK_COMP2);
 	}
 	return IRQ_HANDLED;
+}
+
+static int aci_interface_init_micbias_off(struct mic_t *p)
+{
+	if (p == NULL)
+		return -1;
+
+	/* First disable all the interrupts */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
+			    CHAL_ACI_BLOCK_COMP);
+
+	/* Clear pending interrupts if any */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+			    CHAL_ACI_BLOCK_COMP);
+
+	/* Configure the comparator 2 for button press */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
+			    CHAL_ACI_BLOCK_COMP2,
+			    &comp_values_for_button_press);
+
+	/*
+	 * Connect P_MIC_DATA_IN to P_MIC_OUT  and P_MIC_OUT to COMP2
+	 * Note that one API can do this.
+	 */
+	chal_aci_set_mic_route(p->aci_chal_hdl, CHAL_ACI_MIC_ROUTE_MIC);
+
+	/* Set the threshold value for button press */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+			    CHAL_ACI_BLOCK_COMP2, 600);
+
+	aci_vref_config.mode = CHAL_ACI_VREF_OFF;
+	chal_aci_block_ctrl(p->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_VREF,
+			    CHAL_ACI_BLOCK_GENERIC, &aci_vref_config);
+
+	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_OFF;
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+	return 0;
 }
 
 static int aci_interface_init(struct mic_t *p)
@@ -1085,7 +1116,7 @@ static int aci_interface_init(struct mic_t *p)
 			    CHAL_ACI_BLOCK_GENERIC, FALSE);
 
 	pr_debug
-	    ("=== aci_interface_init: powered down MIC BIAS and put in High impedence state \r\n");
+	    ("=== powered down MIC BIAS and put in High impedence state \r\n");
 
 	/* Set the threshold value for button press */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -1093,7 +1124,7 @@ static int aci_interface_init(struct mic_t *p)
 			    CHAL_ACI_BLOCK_COMP2, 600);
 
 	pr_debug
-	    ("=== aci_interface_init: Configured the threshold value for button press\r\n");
+	    ("=== Configured the threshold value for button press\r\n");
 
 	return 0;
 }
@@ -1110,7 +1141,7 @@ static int headset_hw_init(struct mic_t *mic)
 
 	/* Initial settings for GPIO */
 	hs_gpio = irq_to_gpio(mic->hsirq);
-	pr_debug("\n headset_hw_init hs_gpio=%d \n", hs_gpio);
+	pr_debug("\nheadset_hw_init hs_gpio=%d\n", hs_gpio);
 	/* Request the gpio
 	 * Note that this is an optional call for setting direction/debounce
 	 *values. But set debounce will throw out warning messages if we
@@ -1172,7 +1203,7 @@ static int headset_hw_init(struct mic_t *mic)
 	writel(0x100A00, KONA_HUB_CLK_VA + 0x104);
 	writel(0x40000100, KONA_HUB_CLK_VA + 0x124);
 #endif
-	aci_interface_init(mic);
+	aci_interface_init_micbias_off(mic);
 
 	return status;
 }
@@ -1211,13 +1242,14 @@ static int __init hs_probe(struct platform_device *pdev)
 	else {
 		/* The driver depends on the platform data (board specific)
 		 *information to know two things
-		 * 1) The GPIO state that determines accessory insertion (HIGH or LOW)
+		 * 1) The GPIO state that determines accessory
+		 *    insertion (HIGH or LOW)
 		 * 2) The resistor value put on the MIC_IN line.
 		 *
 		 * So if the platform data is not present, do not proceed.
 		 */
 		pr_err
-		    ("hs_probe: Platform data not present, could not proceed \r\n");
+		    ("Platform data not present, could not proceed \r\n");
 		return -EINVAL;
 	}
 
@@ -1356,32 +1388,32 @@ static int __init hs_probe(struct platform_device *pdev)
 			      ACCESSORY_INSERTION_REMOVE_SETTLE_TIME);
 
 	return ret;
-      err1:
+err1:
 	hs_unregswitchdev(mic);
 	hs_unreginputdev(mic);
-      err2:
+err2:
 	kfree(mic);
 	return ret;
 }
 
 /*
- * Note that there is a __refdata added to the headset_driver platform driver
+ *Note that there is a __refdata added to the headset_driver platform driver
  *structure. What is the meaning for it and why its required.
  *
- * The probe function:
- * From the platform driver documentation its advisable to keep the probe
+ *The probe function:
+ *From the platform driver documentation its advisable to keep the probe
  *function of a driver in the __init section if the device is NOT hot pluggable.
- * Note that in headset case even though the headset is hot pluggable, the driver
- *is not. That is a new node will not be created and the probe will not be called
- *again. So it makes sense to keep the hs_probe in __init section so as to
- *reduce the driver's run time foot print.
+ *Note that in headset case even though the headset is hot pluggable, the driver
+ *is not. That is a new node will not be created and the probe will not be
+ *called again. So it makes sense to keep the hs_probe in __init section so as
+ *to reduce the driver's run time foot print.
  *
- * The Warning message:
- * But since the functions address (reference) is stored in a structure that
+ *The Warning message:
+ *But since the functions address (reference) is stored in a structure that
  *will be available even after init (in case of remove, suspend etc) there
  *is a Warning message from the compiler
  *
- * The __refdata keyword can be used to suppress this warning message. Tells the
+ *The __refdata keyword can be used to suppress this warning message. Tells the
  *compiler not to throw out this warning. And in this scenario even though
  *we store the function pointer from __init section to the platform driver
  *structure that lives after __init, we wont be referring the probe function
@@ -1415,11 +1447,12 @@ hs_regwrite_func(struct device *dev, struct device_attribute *attr,
 	unsigned int reg_off;
 	unsigned int val;
 
-	if (sscanf(buf,"%x %x", &reg_off, &val) != 2) {
-		printk("Usage: echo reg_offset value > /sys/hs_debug/hs_regwrite \r\n");
+	if (sscanf(buf, "%x %x", &reg_off, &val) != 2) {
+		pr_info("Usage: echo reg_offset value > /sys/hs_debug/hs_regwrite \r\n");
 		return n;
 	}
-	printk("Writing 0x%x to Address 0x%x \r\n", val, mic_dev->aci_base + reg_off);
+	pr_info("Writing 0x%x to Address 0x%x \r\n", val,
+		mic_dev->aci_base + reg_off);
 	writel(val, mic_dev->aci_base + reg_off);
 	return n;
 }
@@ -1431,14 +1464,12 @@ hs_config_amp_func(struct device *dev, struct device_attribute *attr,
 	unsigned int val;
 	int gain;
 
-	if (sscanf(buf,"%d",&val) != 1) {
-		printk("Usage: echo [1/0] > /sys/hs_debug/hs_config_amp \r\n");
+	if (sscanf(buf, "%d", &val) != 1) {
+		pr_info("Usage: echo [1/0] > /sys/hs_debug/hs_config_amp \r\n");
 		return n;
 	}
 
-	printk("Invoking platform call to configure amplifier val %d\r\n", val);
-	gain = (val ==  1)?PMU_HSGAIN_66DB_N:PMU_HSGAIN_MUTE;
-	//bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, gain);
+	gain = (val ==  1) ? PMU_HSGAIN_66DB_N : PMU_HSGAIN_MUTE;
 	bcmpmu_hs_power((void *)val);
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
 	msleep(50);
@@ -1453,8 +1484,9 @@ hs_read_adc_func(struct device *dev, struct device_attribute *attr,
 	int val;
 	int adc_range;
 
-	if (sscanf(buf,"%d",&val) != 1) {
-		printk("Usage: echo [1(full range)/0(low voltage)] > /sys/hs_debug/hs_read_adc \r\n");
+	if (sscanf(buf, "%d", &val) != 1) {
+		pr_info
+		("Usage: echo [1(full range)/0(low voltage)] > /sys/hs_debug/hs_read_adc \r\n");
 		return n;
 	}
 
@@ -1476,9 +1508,10 @@ hs_read_adc_func(struct device *dev, struct device_attribute *attr,
 			    CHAL_ACI_BLOCK_ADC);
 
 	adc_range =
-		(val==0)?CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE:CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE;
+		(val == 0) ? CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE :
+			CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE;
 
-	printk("Configuring ADC range for %d \r\n", adc_range);
+	pr_info("Configuring ADC range for %d \r\n", adc_range);
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
 			    CHAL_ACI_BLOCK_ADC,
@@ -1489,7 +1522,7 @@ hs_read_adc_func(struct device *dev, struct device_attribute *attr,
 		CHAL_ACI_BLOCK_ADC,
 		CHAL_ACI_BLOCK_ADC_RAW);
 
-	printk("Value read from ADC %d \r\n", val);
+	pr_info("Value read from ADC %d \r\n", val);
 	return n;
 }
 
@@ -1533,7 +1566,7 @@ static void __exit hs_sysfs_exit(void)
 ------------------------------------------------------------------------------*/
 int __init kona_aci_hs_module_init(void)
 {
-	pr_debug("\n\n kona_aci_hs_module_init \n");
+	pr_debug("\n\nkona_aci_hs_module_init\n");
 #ifdef DEBUG
 	hs_sysfs_init();
 #endif
