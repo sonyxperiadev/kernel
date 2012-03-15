@@ -294,6 +294,7 @@ CONFIG_KONA_ATAG_DT=y
 CONFIG_KONA_ATAG_DT_DTS_FILE="RheaStone_EDN20_assignments"
 CONFIG_PROC_PINMUX_DUMP=y
 # CONFIG_KONA_DT_BCMPMU is not set
+# CONFIG_KONA_NAHJ_SUPPORT is not set
 
 #
 # Rhea SoC based Machine types

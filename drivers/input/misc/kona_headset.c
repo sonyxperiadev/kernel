@@ -100,6 +100,10 @@
 #define KEY_DETECT_DELAY	msecs_to_jiffies(128)
 #define ACCESSORY_INSERTION_REMOVE_SETTLE_TIME	msecs_to_jiffies(500)
 
+#ifdef CONFIG_KONA_NAHJ_SUPPORT
+#define NAHJ_MIC_GND_GPIO	(40)
+#endif
+
 struct mic_t {
 	int hsirq;
 	int hsbirq_press;
@@ -116,6 +120,9 @@ struct mic_t {
 	struct input_dev *headset_button_idev;
 	int hs_state;
 	int button_state;
+#ifdef CONFIG_KONA_NAHJ_SUPPORT
+	unsigned mic_gnd_gpio;
+#endif
 };
 
 static struct mic_t *mic_dev;
@@ -618,6 +625,11 @@ static void accessory_detect_work_func(struct work_struct *work)
 
 		/* Check whether the connected accessory is supported first */
 		if (is_accessory_supported(p) == 0) {
+#ifdef CONFIG_KONA_NAHJ_SUPPORT
+			/* ground the mic pin */
+			if (gpio_is_valid(p->mic_gnd_gpio))
+				gpio_set_value(p->mic_gnd_gpio, 1);
+#else
 			pr_info("%s(): ACCESSORY IS NOT SUPPORTED \r\n",
 			__func__);
 
@@ -631,6 +643,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 			switch_set_state(&(p->sdev), 0xFF);
 			aci_interface_init_micbias_off(p);
 			return;
+#endif
 		}
 
 		p->hs_state = detect_hs_type(p);
@@ -817,6 +830,11 @@ static void accessory_detect_work_func(struct work_struct *work)
 			chal_aci_block_ctrl(p->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
 				    CHAL_ACI_BLOCK_COMP);
+
+#ifdef CONFIG_KONA_NAHJ_SUPPORT
+			if (gpio_is_valid(p->mic_gnd_gpio))
+				gpio_set_value(p->mic_gnd_gpio, 0);
+#endif
 		}
 	}
 }
@@ -1218,6 +1236,11 @@ static int hs_remove(struct platform_device *pdev)
 	free_irq(mic->hsbirq_press, mic);
 	free_irq(mic->hsbirq_release, mic);
 
+#ifdef CONFIG_KONA_NAHJ_SUPPORT
+	if (gpio_is_valid(mic->mic_gnd_gpio))
+		gpio_free(mic->mic_gnd_gpio);
+#endif
+
 	hs_unreginputdev(mic);
 	hs_unregswitchdev(mic);
 
@@ -1357,6 +1380,18 @@ static int __init hs_probe(struct platform_device *pdev)
 
 	mic->hs_state = DISCONNECTED;
 	mic->button_state = BUTTON_RELEASED;
+
+#ifdef CONFIG_KONA_NAHJ_SUPPORT
+	mic->mic_gnd_gpio = NAHJ_MIC_GND_GPIO;
+
+	if (gpio_request_one(mic->mic_gnd_gpio, GPIOF_DIR_OUT |
+			     GPIOF_INIT_LOW, "NAHJ_MIC_GND")) {
+		pr_err("%s: failed to get (NAHJ_MIC_GND) gpio %d\n",
+		       __func__, mic->mic_gnd_gpio);
+		mic->mic_gnd_gpio = ARCH_NR_GPIOS;
+		goto err1;
+	}
+#endif
 
 	/* Store the mic structure data as private driver data for later use */
 	platform_set_drvdata(pdev, mic);

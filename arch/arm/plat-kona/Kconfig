@@ -208,5 +208,12 @@ config KONA_DT_BCMPMU
 	help
 	  Say Y if you support BCMPMU nodes in DeviceTree
 
+config KONA_NAHJ_SUPPORT
+       bool "Support NAHJ headset as headphone"
+       default n
+       help
+         Say Y if you support invalid (mic and gnd lines are swapped) headset as headphone.
+         Should have extra HW to ground MIC pin.
+
 endmenu
 

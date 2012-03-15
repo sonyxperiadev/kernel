@@ -294,6 +294,7 @@ CONFIG_KONA_ATAG_DT=y
 CONFIG_KONA_ATAG_DT_DTS_FILE="rheaberri_ednxx"
 CONFIG_PROC_PINMUX_DUMP=y
 # CONFIG_KONA_DT_BCMPMU is not set
+# CONFIG_KONA_NAHJ_SUPPORT is not set
 
 #
 # Rhea SoC based Machine types
@@ -1389,6 +1390,7 @@ CONFIG_BCM_HEADSET_SW=y
 # CONFIG_VC_TEST_WIFI_HDMI is not set
 # CONFIG_GPS_IRQ is not set
 # CONFIG_BCM_RTC_CAL is not set
+# CONFIG_BRCM_SIM_SECURE_ENABLE is not set
 # CONFIG_RAMOOPS is not set
 # CONFIG_BCM_GPS is not set
 CONFIG_I2C=y
