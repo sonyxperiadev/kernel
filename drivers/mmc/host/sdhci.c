@@ -989,11 +989,7 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 #endif
 
 	/* Wait max 10 ms */
-#ifdef CONFIG_MMC_BCM_SD
-	timeout = 1000;
-#else
 	timeout = 10;
-#endif
 	mask = SDHCI_CMD_INHIBIT;
 	if ((cmd->data != NULL) || (cmd->flags & MMC_RSP_BUSY))
 		mask |= SDHCI_DATA_INHIBIT;
