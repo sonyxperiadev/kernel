@@ -49,9 +49,10 @@ extern "C" {
 *  Chip TE Input Pins ( inputs to TE MUX )
 *
 *****************************************************************************/
-#define TE_VC4L_IN_0_LCD            (0)	//  HERA's LCD_TE  input
-#define TE_VC4L_IN_1_DSI0           (1)	//  HERA's DSI0_TE input
-#define TE_VC4L_IN_2_DSI1           (2)	//  HERA's DSI1_TE input
+#define TE_VC4L_IN_0_LCD	(0)	//  RHEA's LCD_TE  input
+#define TE_VC4L_IN_1_DSI0	(1)	//  RHEA's DSI0_TE input
+#define TE_VC4L_IN_2_DSI1	(2)	//  RHEA's DSI1_TE input
+#define TE_VC4L_IN_INV		(3)	//  
 
 /**
 *

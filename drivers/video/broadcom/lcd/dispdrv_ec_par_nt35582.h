@@ -260,15 +260,7 @@ DISPCTRL_REC_T NT35582_Init[] = {
     
     {DISPCTRL_WR_CMND_DATA    , NT35582_VCOM            , (0x8F)},
 
-#if   defined (__WVGA_MODE_888__)    
-    {DISPCTRL_WR_CMND_DATA    , NT35582_SET_PIXEL_FORMAT, (PIXEL_FORMAT_RGB888)},
-#elif defined (__WVGA_MODE_666__)
-    {DISPCTRL_WR_CMND_DATA    , NT35582_SET_PIXEL_FORMAT, (PIXEL_FORMAT_RGB666)},
-#elif defined (__WVGA_MODE_565__)
-    {DISPCTRL_WR_CMND_DATA    , NT35582_SET_PIXEL_FORMAT, (PIXEL_FORMAT_RGB565)},
-#else
-#error "dispdrv_ec_par_nt35582.h: Color Mode Must Be Defined In A Diplay Driver!" 
-#endif
+//  {DISPCTRL_WR_CMND_DATA    , NT35582_SET_PIXEL_FORMAT, (PIXEL_FORMAT_RGB565)},
  
     {DISPCTRL_WR_CMND_DATA    , 0xB101    , (0x00)},
     {DISPCTRL_WR_CMND_DATA    , 0xB102    , (0xFF)},
@@ -387,9 +379,8 @@ DISPCTRL_REC_T NT35582_Init[] = {
     {DISPCTRL_WR_CMND_DATA    , NT35582_GMACTRL_6_10    , (0x4A)},
     {DISPCTRL_WR_CMND_DATA    , NT35582_GMACTRL_6_11    , (0x4D)},
 
-    {DISPCTRL_WR_CMND         , NT35582_DISPLAY_ON      , 0     },
-
-    {DISPCTRL_SLEEP_MS        , 0                       , 200   },
+//  {DISPCTRL_WR_CMND         , NT35582_DISPLAY_ON      , 0     },
+//  {DISPCTRL_SLEEP_MS        , 0                       , 200   },
 
     // FAST Memory Write ON
     {DISPCTRL_SLEEP_MS        , NT35582_SET_ADDR_MODE_1,  1     },

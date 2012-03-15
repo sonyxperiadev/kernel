@@ -52,16 +52,13 @@ const char *LCD_panel_name = "ILI9486 LCD";
 // DISP DRV API - Display Info
 static DISPDRV_INFO_T Disp_Info =
 {
-    DISPLAY_TYPE_LCD_STD,         // DISPLAY_TYPE_T          type;          
-    320,                          // UInt32                  width;         
-    480,                          // UInt32                  height;        
-    //DISPDRV_FB_FORMAT_RGB888_U,   // DISPDRV_FB_FORMAT_T     input_format; //@HW
+	DISPLAY_TYPE_LCD_STD,         // DISPLAY_TYPE_T          type;          
+	320,                          // UInt32                  width;         
+	480,                          // UInt32                  height;        
+	//DISPDRV_FB_FORMAT_RGB888_U, // DISPDRV_FB_FORMAT_T     input_format; //@HW
     	DISPDRV_FB_FORMAT_RGB565,
-    DISPLAY_BUS_DSI,              // DISPLAY_BUS_T           bus_type;
-    0,                            // UInt32                  interlaced;    
-    DISPDRV_DITHER_NONE,          // DISPDRV_DITHER_T        output_dither; 
-    0,                            // UInt32                  pixel_freq;    
-    0,                            // UInt32                  line_rate;     
+	DISPLAY_BUS_DSI,            // DISPLAY_BUS_T           bus_type;
+  	2,			    // Bpp; : !!! init may overwrite
 };
 
 

@@ -107,6 +107,9 @@
 #include <linux/i2c-gpio.h>
 #endif
 
+#ifdef CONFIG_FB_BRCM_RHEA
+#include <video/kona_fb_boot.h>
+#endif
 #include <video/kona_fb.h>
 #include <linux/pwm_backlight.h>
 
@@ -1214,6 +1217,7 @@ static struct platform_device tps728xx_vc_device_sim2 = {
 #endif
 #endif /* CONFIG_REGULATOR_TPS728XX*/
 
+#if 0
 #ifdef CONFIG_FB_BRCM_RHEA
 static struct kona_fb_platform_data rhea_ss_dsi_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISPDRV_GetFuncTable,
@@ -1316,7 +1320,7 @@ static struct platform_device r61581_smi8_display_device = {
 	},
 };
 #endif
-
+#endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 
@@ -1701,8 +1705,11 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_REGULATOR_TPS728XX
 	&tps728xx_device,
 #endif
+
+#if 0
 #ifdef CONFIG_FB_BRCM_RHEA
 	&rhea_ss_dsi_display_device,	
+#endif
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
@@ -1859,10 +1866,48 @@ static void __init rhea_ray_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
+#ifdef CONFIG_FB_BRCM_RHEA
+/*
+ *   	     KONA FRAME BUFFER DISPLAY DRIVER PLATFORM CONFIG
+ */ 
+struct kona_fb_platform_data konafb_devices[] __initdata = {
+	{
+		.dispdrv_name  = "S6D05A1X31", 
+		.dispdrv_entry = DISPDRV_GetFuncTable,
+		.parms = {
+			.w0 = {
+				.bits = { 
+					.boot_mode  = 0,  	  
+					.bus_type   = RHEA_BUS_DSI,  	  
+					.bus_no     = RHEA_BUS_0,
+					.bus_ch     = RHEA_BUS_CH_0,
+					.bus_width  = 0,
+					.te_input   = RHEA_TE_IN_0_LCD,	  
+					.col_mode_i = RHEA_CM_I_RGB565,	  
+					.col_mode_o = RHEA_CM_O_RGB565,        
+				},	
+			},
+			.w1 = {
+				.bits = { 
+					.api_rev  = RHEA_LCD_BOOT_API_REV,
+					.lcd_rst0 = 41,  	  
+				}, 
+			},
+		},
+	},
+};
+
+#include "rhea_fb_init.c"
+#endif
+
 void __init board_init(void)
 {
 	board_add_common_devices();
 	rhea_ray_add_devices();
+#ifdef CONFIG_FB_BRCM_RHEA
+	/* rhea_fb_init.c */
+	konafb_init();
+#endif
 	return;
 }
 

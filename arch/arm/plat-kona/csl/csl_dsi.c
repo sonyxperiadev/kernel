@@ -1708,14 +1708,14 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc (
 		switch ( dsiCmVcCfg->cm_out )
 		{
 		case LCD_IF_CM_O_RGB565:
+		case LCD_IF_CM_O_RGB565_DSI_VM:
 			cmVcH->bpp_dma	 = 2;  
 			cmVcH->bpp_wire	 = 2;
 			cmVcH->wc_rshift = 1;
-#ifdef CONFIG_FB_BRCM_ILI9486						
-			cmVcH->cm = DE1_CM_LE;
-#else
-			cmVcH->cm = DE1_CM_565;
-#endif			
+			if( dsiCmVcCfg->cm_out == LCD_IF_CM_O_RGB565 )
+	                    	cmVcH->cm = DE1_CM_565;
+			else	
+				cmVcH->cm = DE1_CM_LE;
 			break;
 		default:
 			LCD_DBG(LCD_DBG_ERR_ID,	"[CSL DSI][%d] %s: "
@@ -1826,6 +1826,9 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
 	txPkt.endWithBta  = FALSE;			     
 	txPkt.start	  = FALSE;			     
   
+	updMsgCm.updReq	 = *req;
+	updMsgCm.dsiH	 = dsiH; 
+	updMsgCm.clientH = clientH; 
 	// OVERRIDE REQ BPP - NOT SUPPORTED, TODO: R E M O V E  FROM  API
 	updMsgCm.updReq.buffBpp	= dsiChH->bpp_dma;
   
@@ -1885,10 +1888,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
 	}
     
 	chal_dsi_clr_status ( dsiH->chalH, 0xFFFFFFFF );
-	
-	updMsgCm.updReq	 = *req;
-	updMsgCm.dsiH	 = dsiH; 
-	updMsgCm.clientH = clientH; 
 
 	// set TE mode -- SHOULD BE PART OF INIT or OPEN
 	chal_dsi_te_mode( dsiH->chalH, dsiChH->teMode );

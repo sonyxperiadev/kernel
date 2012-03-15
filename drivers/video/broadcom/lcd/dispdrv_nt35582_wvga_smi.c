@@ -54,17 +54,13 @@
 #include "ostask.h"
 #include "osheap.h"
 #include "dma_drv.h"
-
 #include "dbg.h"
 #include "logapi.h"
 #include "csl_lcd.h"                // CSL LCD Layer commons
 #include "dispdrv_common.h"         // DISPLAY DRIVER Commons
 #include "csl_smi.h"                // Combined CSL for MM SMI&SPI(LOSSI)   
 #include "dispdrv_mipi_dcs.h"       // DISPLAY DRIVER Commons
-
 #include "csl_tectl_vc4lite.h"      // TE Input Control
-
-
 #include "display_drv.h"            // DISPLAY DRIVER Interface   
 
 #else  /* __KERNEL__ */ 
@@ -78,6 +74,7 @@
 #include <plat/osabstract/osinterrupt.h>
 #include <plat/osabstract/ostask.h>
 #include <plat/csl/csl_dma_vc4lite.h>
+#include <video/kona_fb_boot.h>	    // LCD DRV init parms API
 
 #include <plat/dma_drv.h>
 #include <plat/csl/csl_lcd.h>  
@@ -92,131 +89,111 @@
 
 #endif /*  __KERNEL__ */
 
-#define __WVGA_MODE_565__
+
+// #define __WVGA_MODE_565__
+// #define __WVGA_MODE_666__
+// #define __WVGA_MODE_888__
+
+#define     DISP_CM_IN_RGB565  	0x55   
+#define     DISP_CM_IN_RGB666  	0x66   
+#define     DISP_CM_IN_RGB888  	0x77   
+
+
 // output color mdoe must be defined before including EC .H
 #include "dispdrv_ec_par_nt35582.h"  // NOVATEK NT35582 External Disp Controller    
 
-#define GPIODRV_Set_Bit(pin, val) gpio_set_value(pin, val)
-
-//#define HAL_LCD_RESET	41
-//#define HAL_LCD_RESET_B  95
-//#define HAL_LCD_RESET_C  96
-
 typedef struct   
 {
-    CSL_LCD_HANDLE       cslH;
-    DISPDRV_INFO_T*      panelData;
-    DISPDRV_WIN_t	 win_cur;
-    DISPDRV_WIN_t	 win_dim;
-    UInt32               bpp;
-    void*                frameBuffer;
-    DISP_DRV_STATE       drvState;
-    DISP_PWR_STATE       pwrState;
-    struct pi_mgr_dfs_node dfs_node;
-    volatile int	 is_clock_gated;
+	CSL_LCD_HANDLE       	cslH;
+	DISPDRV_WIN_t	     	win_cur;
+	DISPDRV_WIN_t	     	win_dim;
+	DISP_DRV_STATE       	drvState;
+	DISP_PWR_STATE       	pwrState;
+	struct pi_mgr_dfs_node	dfs_node;
+	volatile int	 	is_clock_gated;
+	/* new */
+	UInt32              	teIn;
+	UInt32                  cm_out;
+	UInt32                  bus_ch;
+	Boolean             	boot_mode;
+	UInt32              	rst;
+	CSL_SMI_CTRL_T		*smi_cfg;
+	DISPDRV_INFO_T		*disp_info;
 } NT35582_WVGA_SMI_PANEL_T;   
 
 
-static void nt35582wvgaSmi_WrCmndP0  ( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 cmnd );
-static void nt35582wvgaSmi_WrCmndP1  ( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 cmnd, UInt32 data );
 
-static void nt35582wvgaSmi_IoCtlRd ( 
-                DISPDRV_HANDLE_T        dispH, 
-                DISPDRV_CTRL_RW_REG*    acc 
-                );
-                
-static void nt35582wvgaSmi_IoCtlWr( 
-                DISPDRV_HANDLE_T        dispH, 
-                DISPDRV_CTRL_RW_REG*    acc 
-                );
+Int32 NT35582_WVGA_SMI_SetWindow ( DISPDRV_HANDLE_T dispH ); 
+
+static void nt35582wvgaSmi_WrCmndP0 ( 
+	DISPDRV_HANDLE_T dispH, UInt32 cmnd );
+	
+static void nt35582wvgaSmi_WrCmndP1 ( 
+	DISPDRV_HANDLE_T dispH, UInt32 cmnd, UInt32 data );
 
 //--- GEN DRIVER --------------------------------------------------------------
-Int32   NT35582_WVGA_SMI_Init ( unsigned int bus_width ); 
-Int32   NT35582_WVGA_SMI_Exit ( void );
+Int32 NT35582_WVGA_SMI_Init( 
+	struct dispdrv_init_parms 	*parms,
+	DISPDRV_HANDLE_T	*handle);
+		
+Int32 NT35582_WVGA_SMI_Exit(DISPDRV_HANDLE_T dispH);
+Int32 NT35582_WVGA_SMI_Open(DISPDRV_HANDLE_T dispH);
+Int32 NT35582_WVGA_SMI_Close(DISPDRV_HANDLE_T dispH ); 
 
-Int32   NT35582_WVGA_SMI_Open ( 
-            const void*         params, 
-            DISPDRV_HANDLE_T*   dispH ); 
+const DISPDRV_INFO_T* NT35582_WVGA_SMI_GetDispDrvData(DISPDRV_HANDLE_T dispH); 
 
-Int32   NT35582_WVGA_SMI_GetCtl (
-            DISPDRV_HANDLE_T    dispH, 
-            DISPDRV_CTRL_ID_T   ctrlID, 
-            void*               ctrlParams );
+Int32 NT35582_WVGA_SMI_GetDispDrvFeatures( 
+	DISPDRV_HANDLE_T 		dispH,	
+	const char			**driver_name,
+	UInt32				*version_major,
+	UInt32				*version_minor,
+	DISPDRV_SUPPORT_FEATURES_T	*flags );
 
-Int32   NT35582_WVGA_SMI_SetCtl (
-            DISPDRV_HANDLE_T    dispH, 
-            DISPDRV_CTRL_ID_T   ctrlID, 
-            void*               ctrlParams );
+Int32 NT35582_WVGA_SMI_Start(
+	DISPDRV_HANDLE_T dispH,
+	struct pi_mgr_dfs_node* dfs_node); 
 
-Int32   NT35582_WVGA_SMI_Close ( DISPDRV_HANDLE_T dispH ); 
+Int32 NT35582_WVGA_SMI_Stop( 
+	DISPDRV_HANDLE_T dispH,
+	struct pi_mgr_dfs_node* dfs_node); 
 
-const DISPDRV_INFO_T* NT35582_WVGA_SMI_GetDispDrvData ( DISPDRV_HANDLE_T dispH ); 
+Int32 NT35582_WVGA_SMI_PowerControl( 
+	DISPDRV_HANDLE_T        dispH, 
+	DISPLAY_POWER_STATE_T   state ); 
 
-Int32   NT35582_WVGA_SMI_GetDispDrvFeatures ( 
-            const char**                driver_name,
-            UInt32*                     version_major,
-            UInt32*                     version_minor,
-            DISPDRV_SUPPORT_FEATURES_T* flags );
+Int32 NT35582_WVGA_SMI_Update ( 
+	DISPDRV_HANDLE_T    	dispH, 
+	void			*buff,
+	DISPDRV_WIN_t		*p_win,
+	DISPDRV_CB_T        	apiCb );
 
-Int32   NT35582_WVGA_SMI_Start ( struct pi_mgr_dfs_node* dfs_node); 
-
-Int32   NT35582_WVGA_SMI_Stop  ( struct pi_mgr_dfs_node* dfs_node); 
-
-Int32   NT35582_WVGA_SMI_PowerControl ( 
-            DISPDRV_HANDLE_T        dispH, 
-            DISPLAY_POWER_STATE_T   state ); 
-
-Int32   NT35582_WVGA_SMI_SetWindow ( DISPDRV_HANDLE_T dispH ); 
-
-Int32   NT35582_WVGA_SMI_Update ( 
-            DISPDRV_HANDLE_T    dispH, 
-	    int			fb_idx,
-            DISPDRV_WIN_t*      p_win,
-            DISPDRV_CB_T        apiCb ); 
-
-Int32   NT35582_WVGA_SMI_Update_ExtFb ( 
-            DISPDRV_HANDLE_T        dispH, 
-            void                    *pFb,
-            DISPDRV_CB_API_1_1_T    apiCb ); 
-
-static unsigned int g_bus_width = 16;
-
-static DISPDRV_T NT35582_WVGA_SMI_Drv =
-{
-   &NT35582_WVGA_SMI_Init,                  // init
-   &NT35582_WVGA_SMI_Exit,                  // exit
-   &NT35582_WVGA_SMI_GetDispDrvFeatures,    // info
-   &NT35582_WVGA_SMI_Open,                  // open
-   &NT35582_WVGA_SMI_Close,                 // close
-   NULL,                                 // core_freq_change
-   NULL,                                 // run_domain_change
-   &NT35582_WVGA_SMI_GetDispDrvData,        // get_info
-   &NT35582_WVGA_SMI_Start,                 // start
-   &NT35582_WVGA_SMI_Stop,                  // stop
-   &NT35582_WVGA_SMI_PowerControl,          // power_control
-   NULL,                                 // update_no_os
-   &NT35582_WVGA_SMI_Update_ExtFb,          // update_dma_os
-   &NT35582_WVGA_SMI_Update,                // update
-   &NT35582_WVGA_SMI_SetCtl,                // set_control
-   &NT35582_WVGA_SMI_GetCtl,                // get_control
-};
+Int32 NT35582_WVGA_SMI_WinReset( DISPDRV_HANDLE_T drvH ); 
 
 
-static DISPDRV_INFO_T NT35582_WVGA_SMI_Info =
-{
-    DISPLAY_TYPE_LCD_STD,       // DISPLAY_TYPE_T          type;          
-    480,                        // UInt32                  width;         
-    800,                        // UInt32                  height;        
-#if defined(__WVGA_MODE_888__) 
-    DISPDRV_FB_FORMAT_RGB888_U, // DISPDRV_FB_FORMAT_T     input_format;  
-#else
-    DISPDRV_FB_FORMAT_RGB565,   // DISPDRV_FB_FORMAT_T     input_format;  
-#endif    
-    DISPLAY_BUS_SMI,            // DISPLAY_BUS_T           bus_type;
-    0,                          // UInt32                  interlaced;    
-    DISPDRV_DITHER_NONE,        // DISPDRV_DITHER_T        output_dither; 
-    0,                          // UInt32                  pixel_freq;    
-    0,                          // UInt32                  line_rate;     
+static DISPDRV_T NT35582_WVGA_SMI_Drv =	{			      
+	&NT35582_WVGA_SMI_Init,                  // init		      
+	&NT35582_WVGA_SMI_Exit,                  // exit		      
+	&NT35582_WVGA_SMI_GetDispDrvFeatures,    // info		      
+	&NT35582_WVGA_SMI_Open,                  // open		      
+	&NT35582_WVGA_SMI_Close,                 // close		      
+	&NT35582_WVGA_SMI_GetDispDrvData,        // get_info		      
+	&NT35582_WVGA_SMI_Start,                 // start		      
+	&NT35582_WVGA_SMI_Stop,                  // stop		      
+	&NT35582_WVGA_SMI_PowerControl,          // power_control	      
+	NULL,                           	 // update_no_os
+	&NT35582_WVGA_SMI_Update,                // update		      
+	NULL,   	                         // set_brightness
+	&NT35582_WVGA_SMI_WinReset,              // reset_win
+};								      
+								      
+
+static DISPDRV_INFO_T NT35582_WVGA_SMI_Info = {
+	DISPLAY_TYPE_LCD_STD,       // DISPLAY_TYPE_T          type;          
+	480,                        // UInt32                  width;         
+	800,                        // UInt32                  height;        
+	DISPDRV_FB_FORMAT_RGB565,   // DISPDRV_FB_FORMAT_T     input_format;  
+	DISPLAY_BUS_SMI,            // DISPLAY_BUS_T           bus_type;
+	2,			    // Bpp;		 : !!! init may overwrite
 };
     
             
@@ -229,16 +206,8 @@ static CSL_SMI_CTRL_T  NT35582_WVGA_SMI_SmiCtrlCfg =
     FALSE,                  //  Boolean           m68;              
     FALSE,                  //  Boolean           swap;             
     FALSE,                  //  Boolean           setupFirstTrOnly; 
-#if defined(__WVGA_MODE_888__) 
-    LCD_IF_CM_I_RGB888U,    //  CSL_LCD_CM_IN     colModeIn;    xRGB     
-    LCD_IF_CM_O_RGB888,     //  CSL_LCD_CM_OUT    colModeOut;
-#elif defined(__WVGA_MODE_666__)
-    LCD_IF_CM_I_RGB565P,    //  CSL_LCD_CM_IN     colModeIn;         
-    LCD_IF_CM_O_RGB666,     //  CSL_LCD_CM_OUT    colModeOut;
-#else
     LCD_IF_CM_I_RGB565P,    //  CSL_LCD_CM_IN     colModeIn;         
     LCD_IF_CM_O_RGB565,     //  CSL_LCD_CM_OUT    colModeOut;
-#endif    
     // setup_ns, hold_ns, pace_ns, strobe_ns
     // TODO: Plug-In Real Timing For The Display
     { 0, 90, 10, 360, },    //  CSL_SMI_TIMIMG_T  rdTiming;
@@ -253,15 +222,6 @@ static CSL_SMI_CTRL_T  NT35582_WVGA_SMI_SmiCtrlCfg =
 
 static NT35582_WVGA_SMI_PANEL_T panel[1];
 
-#if 0
-#pragma arm section zidata="uncacheable"
-#if defined(__WVGA_MODE_888__) 
-__align(32) static UInt32  FrameBuff[800*480];
-#else
-__align(32) static UInt16  FrameBuff[800*480];
-#endif
-#pragma arm section
-#endif
 
 //*****************************************************************************
 //
@@ -271,24 +231,23 @@ __align(32) static UInt16  FrameBuff[800*480];
 //
 //*****************************************************************************
 void nt35582wvgaSmi_WrCmndP1( 
-    DISPDRV_HANDLE_T    dispH, 
-    Boolean             useOs,
-    UInt32              cmnd, 
-    UInt32              data )
+	DISPDRV_HANDLE_T    dispH, 
+	UInt32              cmnd, 
+	UInt32              data )
 {
-    NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+	NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
 
-    if (g_bus_width == 16) { 
-    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
-    	CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
-    } else {
-    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE, (cmnd & 0xFF00) >> 8 );
-    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd & 0x00FF);
-    
-    	// Write MSB byte, since all regs are 8-bit write 0 for MSB
-    	CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, 0 );
-    	CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
-    }
+	if (lcdDrv->smi_cfg->busWidth == 16) { 
+		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
+		CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
+	} else {
+		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE, (cmnd & 0xFF00) >> 8 );
+		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd & 0x00FF);
+
+		/* Write MSB byte, since all regs are 8-bit write 0 for MSB */
+		CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, 0 );
+		CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
+	}
 }
 
 //*****************************************************************************
@@ -298,100 +257,20 @@ void nt35582wvgaSmi_WrCmndP1(
 // Description:    Write To LCD register, 0 Parms
 //
 //*****************************************************************************
-void nt35582wvgaSmi_WrCmndP0( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 cmnd )
+void nt35582wvgaSmi_WrCmndP0(
+	DISPDRV_HANDLE_T 	dispH,
+	UInt32 			cmnd )
 {
-    NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
-    
-    if (g_bus_width == 16) { 
-    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
-    } else {
-    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (cmnd & 0xFF00) >> 8 );
-    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   cmnd & 0x00FF);
-    }
+	NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+
+	if (lcdDrv->smi_cfg->busWidth == 16) { 
+		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
+	} else {
+		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (cmnd & 0xFF00) >> 8 );
+		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   cmnd & 0x00FF);
+	}
 }
 
-
-//*****************************************************************************
-//
-// Function Name:  nt35582wvgaSmi_IoCtlWr
-// 
-// Description:    
-//
-//*****************************************************************************
-static void nt35582wvgaSmi_IoCtlWr( 
-    DISPDRV_HANDLE_T     dispH, 
-    DISPDRV_CTRL_RW_REG* acc 
-    )
-{
-    NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
-    UInt32 i;
-    
-    if (g_bus_width == 16) { 
-    	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  acc->cmnd );
-    } else {
-	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (acc->cmnd & 0xFF00) >> 8 );
-	CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   acc->cmnd & 0x00FF);
-    }  
-    
-    for(i=0; i < acc->parmCount; i++ )
-    {
-        // Write MSB byte, since all regs are 8-bit write 0 for MSB
-	if (g_bus_width == 16) { 
-        	CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)[i] );
-	} else {
-	        CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, 0 );
-        	CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)[i] );
-	}
-
-        if( acc->verbose )
-        {
-            LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] nt35582wvgaSmi_IoCtlWr: "
-                "WR REG[0x%04X] DATA[0x%04X]\n", 
-                (unsigned int)acc->cmnd, (unsigned int)((UInt32*)acc->pBuff)[i] );
-        }                                                      
-    }
-}
-
-//*****************************************************************************
-//
-// Function Name:  nt35582wvgaSmi_IoCtlRd
-// 
-// Description:    
-//
-//*****************************************************************************
-static void nt35582wvgaSmi_IoCtlRd( 
-    DISPDRV_HANDLE_T     dispH, 
-    DISPDRV_CTRL_RW_REG* acc 
-    )
-{
-    NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
-    UInt32 i;
-    
-	if (g_bus_width == 16) { 
-    		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  acc->cmnd );
-	} else {
-		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (acc->cmnd & 0xFF00) >> 8 );
-    		CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   acc->cmnd & 0x00FF);
-	}
-
-    for(i=0; i<acc->parmCount; i++)
-    {
-	if (g_bus_width == 16) { 
-	        CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
-	} else {
-	        // first read is MSB, REG values are only 8-bit so MSB is always 0
-        	CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
-	        CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
-	}
-
-        if( acc->verbose )
-        {
-            LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: "
-                "RD REG[0x%04X] DATA[0x%04X]\n\r", 
-                __FUNCTION__, (unsigned int)acc->cmnd, (unsigned int)((UInt32*)acc->pBuff)[i] );
-        }
-    }                                                      
-}
 
 //*****************************************************************************
 //
@@ -402,73 +281,70 @@ static void nt35582wvgaSmi_IoCtlRd(
 //*****************************************************************************
 void nt35582wvgaSmi_ExecCmndList( 
     DISPDRV_HANDLE_T     dispH,
-    Boolean              useOs,  
-    pDISPCTRL_REC_T      cmnd_lst 
-    )
+    pDISPCTRL_REC_T      cmnd_lst )
 {
-    UInt32  i = 0;
+	UInt32  i = 0;
 
-    while (cmnd_lst[i].type != DISPCTRL_LIST_END)
-    {
-        if (cmnd_lst[i].type == DISPCTRL_WR_CMND_DATA)
-        {
-            nt35582wvgaSmi_WrCmndP1 (dispH, useOs, cmnd_lst[i].cmnd, 
-                cmnd_lst[i].data);
-        }
-        else if (cmnd_lst[i].type == DISPCTRL_WR_CMND)
-        {
-            nt35582wvgaSmi_WrCmndP0 (dispH, useOs, cmnd_lst[i].cmnd);
-        }
-        else if (cmnd_lst[i].type == DISPCTRL_SLEEP_MS)
-        {
-		OSTASK_Sleep ( TICKS_IN_MILLISECONDS(cmnd_lst[i].data) );
-        }
-        i++;
-    }
+	while (cmnd_lst[i].type != DISPCTRL_LIST_END)
+	{
+		if (cmnd_lst[i].type == DISPCTRL_WR_CMND_DATA)
+		{
+			nt35582wvgaSmi_WrCmndP1(dispH, cmnd_lst[i].cmnd, 
+				cmnd_lst[i].data);
+		}
+		else if (cmnd_lst[i].type == DISPCTRL_WR_CMND)
+		{
+			nt35582wvgaSmi_WrCmndP0(dispH, cmnd_lst[i].cmnd);
+		}
+		else if (cmnd_lst[i].type == DISPCTRL_SLEEP_MS)
+		{
+			OSTASK_Sleep( TICKS_IN_MILLISECONDS(cmnd_lst[i].data) );
+		}
+		i++;
+	}
 } // nt35582wvgaSmi_ExecCmndList
 
 //*****************************************************************************
 //
-// Function Name: nt35582wvgaSmi_SetWindow
+// Function Name: nt35582wvgaSmi_WinSet
 // 
 // Description:   Set Window 
 //
 //*****************************************************************************
-Int32 nt35582wvgaSmi_SetWindow ( 
+Int32 nt35582wvgaSmi_WinSet ( 
     DISPDRV_HANDLE_T 	dispH,
-    Boolean 		useOs,
     Boolean 		update, 
     DISPDRV_WIN_t* 	p_win ) 
 {
-    	Int32                   	res = 0;
-    	NT35582_WVGA_SMI_PANEL_T*    	lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+    	Int32 res = 0;
+    	NT35582_WVGA_SMI_PANEL_T *lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
     
-    	if(    (lcdDrv->win_cur.l != p_win->l) 
-    	    || (lcdDrv->win_cur.r != p_win->r)
-    	    || (lcdDrv->win_cur.t != p_win->t)
-    	    || (lcdDrv->win_cur.b != p_win->b) ) 
-    	{
+    	if ( (lcdDrv->win_cur.l != p_win->l) ||
+    	     (lcdDrv->win_cur.r != p_win->r) ||
+    	     (lcdDrv->win_cur.t != p_win->t) ||
+    	     (lcdDrv->win_cur.b != p_win->b)    ) {
+
     		lcdDrv->win_cur = *p_win;		
     
     		if ( update )
     		{    
-    			nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_S_MSB, 
-    		        	p_win->l   >> 8 );
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_S_LSB, 
-    		    	    	p_win->l  );
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_E_MSB, 
-    		    	    	p_win->r  >> 8 );
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_E_LSB, 
-    		    	    	p_win->r );
+    			nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_HOR_ADDR_S_MSB, p_win->l   >> 8 );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_HOR_ADDR_S_LSB, p_win->l  );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_HOR_ADDR_E_MSB, p_win->r  >> 8 );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_HOR_ADDR_E_LSB, p_win->r );
     		    
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_S_MSB, 
-    		    	    	p_win->t   >> 8  );
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_S_LSB, 
-    		    	    	p_win->t   );
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_E_MSB, 
-    		    	    	p_win->b >> 8);
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_E_LSB, 
-    		    	    	p_win->b );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_VER_ADDR_S_MSB, p_win->t   >> 8  );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_VER_ADDR_S_LSB, p_win->t );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_VER_ADDR_E_MSB, p_win->b >> 8);
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_VER_ADDR_E_LSB, p_win->b );
     		    	/*
     		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_X_MSB, 
     		    	    	p_win->t >> 8 );
@@ -479,18 +355,37 @@ Int32 nt35582wvgaSmi_SetWindow (
     		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_Y_LSB, 
     		    	    	p_win->l );
                         */        
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_X_MSB, 
-    		    	    	p_win->l >> 8 );
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_X_LSB, 
-    		    	    	p_win->l  );
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_Y_MSB, 
-    		    	    	p_win->t >> 8 );
-    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_Y_LSB, 
-    		    	    	p_win->t );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_RAM_ADDR_X_MSB, p_win->l >> 8 );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_RAM_ADDR_X_LSB, p_win->l  );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_RAM_ADDR_Y_MSB, p_win->t >> 8 );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH,  
+				NT35582_SET_RAM_ADDR_Y_LSB, p_win->t );
     		}        
-    }
-    return ( res );
-} // nt35582wvgaSmi_SetWindow
+	}
+	return (res);
+} // nt35582wvgaSmi_WinSet
+
+
+//*****************************************************************************
+//
+// Function Name: NT35582_WVGA_SMI_WinReset
+// 
+// Description:   Reset windowing to full screen size. 
+//                Typically, only used in boot code environment
+//
+//*****************************************************************************
+Int32 NT35582_WVGA_SMI_WinReset( DISPDRV_HANDLE_T dispH ) 
+{
+	Int32 res; 
+	NT35582_WVGA_SMI_PANEL_T *pPanel = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+
+	res = nt35582wvgaSmi_WinSet( dispH, TRUE, &pPanel->win_dim );
+	return (res);
+}
+
 
 //*****************************************************************************
 //
@@ -512,80 +407,24 @@ DISPDRV_T* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable ( void )
 // Description:   
 //
 //*****************************************************************************
-Int32 NT35582_WVGA_SMI_GetDispDrvFeatures ( 
-    const char**                driver_name,
-    UInt32*                     version_major,
-    UInt32*                     version_minor,
-    DISPDRV_SUPPORT_FEATURES_T* flags 
-    )
+Int32 NT35582_WVGA_SMI_GetDispDrvFeatures(
+	DISPDRV_HANDLE_T 		dispH, 
+	const char			**driver_name,
+	UInt32				*version_major,
+	UInt32				*version_minor,
+	DISPDRV_SUPPORT_FEATURES_T	*flags )
 {
-    Int32 res = -1; 
+	Int32 res = -1; 
    
-    if (   ( NULL != driver_name )   && ( NULL != version_major ) 
-        && ( NULL != version_minor ) && (NULL != flags) )
-    {
-#if defined(__WVGA_MODE_888__) 
-        *driver_name   = "nt35582wvgaSmi_ (OUT=RGB888)";
-#else
-        *driver_name   = "nt35582wvgaSmi_ (OUT=RGB565)";
-#endif        
-        *version_major = 0;
-        *version_minor = 10;
-        *flags         = DISPDRV_SUPPORT_NONE;
-        res = 0;
-    }
-    return ( res );
-}
-
-//*****************************************************************************
-//
-// Function Name: NT35582_WVGA_SMI_Init
-// 
-// Description:   Reset Driver Info
-//
-//*****************************************************************************
-Int32 NT35582_WVGA_SMI_Init ( unsigned int bus_width )
-{
-    Int32   res = 0;
-   
-    panel[0].is_clock_gated = 1;
-    panel[0].dfs_node.name = NULL;
-
-    NT35582_WVGA_SMI_SmiCtrlCfg.busWidth = (unsigned char)bus_width;
-    g_bus_width = bus_width;
-
-    if(     panel[0].drvState != DRV_STATE_INIT 
-         && panel[0].drvState != DRV_STATE_OPEN  )
-    {
-        if( CSL_SMI_Init() != CSL_LCD_OK )
-        {
-            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: CSL_SMI_Init Failed\n\r",
-                __FUNCTION__);
-            res = -1;
-        } 
-        else
-        {
-            LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__);
-            panel[0].drvState = DRV_STATE_INIT;
-            res = 0;
-        }
-    }    
-    return ( res );
-}
-
-//*****************************************************************************
-//
-// Function Name: NT35582_WVGA_SMI_Exit
-// 
-// Description:   
-//
-//*****************************************************************************
-Int32 NT35582_WVGA_SMI_Exit ( void )
-{
-    LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Not Implemented\n\r", 
-        __FUNCTION__ );
-    
-    return ( -1 );
+	if (   ( NULL != driver_name )   && ( NULL != version_major )
+	    && ( NULL != version_minor ) && ( NULL != flags) )	{
+		*driver_name   = "nt35582wvgaSmi";
+		*version_major = 0;
+		*version_minor = 10;
+		*flags         = DISPDRV_SUPPORT_NONE;
+		res = 0;
+	}
+	return ( res );
 }
 
 
@@ -596,18 +435,19 @@ Int32 NT35582_WVGA_SMI_Exit ( void )
 // Description:   Configure TE Input Pin & Route it to SMI module
 //
 //*****************************************************************************
-static int nt35582wvgaSmi_TeOn ( void )
+static int nt35582wvgaSmi_TeOn(void)
 {
-    Int32       res;
-    TECTL_CFG_t teCfg;
-    
-    teCfg.te_mode     = TE_VC4L_MODE_VSYNC;       
-    teCfg.sync_pol    = TE_VC4L_ACT_POL_LO;
-    teCfg.vsync_width = 0;
-    teCfg.hsync_line  = 0;
+	Int32       res;
+	TECTL_CFG_t teCfg;
 
-    res = CSL_TECTL_VC4L_OpenInput( TE_VC4L_IN_0_LCD, TE_VC4L_OUT_SMI, &teCfg );
-    return ( res );
+	teCfg.te_mode     = TE_VC4L_MODE_VSYNC;       
+	teCfg.sync_pol    = TE_VC4L_ACT_POL_LO;
+	teCfg.vsync_width = 0;
+	teCfg.hsync_line  = 0;
+
+	res = CSL_TECTL_VC4L_OpenInput( TE_VC4L_IN_0_LCD, 
+			TE_VC4L_OUT_SMI, &teCfg );
+	return (res);
 }
 
 //*****************************************************************************
@@ -617,9 +457,179 @@ static int nt35582wvgaSmi_TeOn ( void )
 // Description:   Release TE Input Pin Used
 //
 //*****************************************************************************
-static int nt35582wvgaSmi_TeOff ( void )
+static int nt35582wvgaSmi_TeOff(void)
 {
-    return ( CSL_TECTL_VC4L_CloseInput ( TE_VC4L_IN_0_LCD ) );
+	return (CSL_TECTL_VC4L_CloseInput( TE_VC4L_IN_0_LCD ));
+}
+
+//*****************************************************************************
+//
+// Function Name: nt35582wvgaSmi_reset
+// 
+// Description:   (De)Assert dsiplay reset  
+//
+//*****************************************************************************
+static void nt35582wvgaSmi_reset(DISPDRV_HANDLE_T dispH, Boolean on)
+{	
+	NT35582_WVGA_SMI_PANEL_T  *pPanel;
+	u32 gpio; 
+
+	pPanel = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+	gpio = pPanel->rst;
+	
+	if (gpio != 0) {
+		if (!on) {
+			gpio_request(gpio, "LCD_RST1");
+			gpio_direction_output(gpio, 0);
+			gpio_set_value_cansleep(gpio, 1);
+			msleep(1);
+			gpio_set_value_cansleep(gpio, 0);
+			msleep(1);
+			gpio_set_value_cansleep(gpio, 1);
+			msleep(20);
+		} else {
+			gpio_request(gpio, "LCD_RST1");
+			gpio_direction_output(gpio, 0);
+			gpio_set_value_cansleep(gpio, 0);
+			msleep(1);
+		}
+	}
+}
+
+//*****************************************************************************
+//
+// Function Name: nt35582wvgaSmi_Init
+// 
+// Description:   Setup / Verify display driver init interface 
+//
+//*****************************************************************************
+Int32 NT35582_WVGA_SMI_Init( 
+	struct dispdrv_init_parms	*parms, 
+	DISPDRV_HANDLE_T		*handle)
+{
+	Int32   res = 0;
+	NT35582_WVGA_SMI_PANEL_T	*pPanel;
+
+	pPanel = &panel[0];
+
+	if (pPanel->drvState == DRV_STATE_OFF )  {
+
+		pPanel->is_clock_gated = 1;
+		pPanel->dfs_node.name = NULL;
+
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Bus        %d \n", 
+			__func__, parms->w0.bits.bus_type);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: BootMode   %d \n", 
+			__func__, parms->w0.bits.boot_mode);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: BusNo      %d \n", 
+			__func__, parms->w0.bits.bus_no);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: col_mode_i %d \n", 
+			__func__, parms->w0.bits.col_mode_i);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: col_mode_o %d \n", 
+			__func__, parms->w0.bits.col_mode_o);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: te_input   %d \n", 
+			__func__, parms->w0.bits.te_input);
+		
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: API Rev    %d \n", 
+			__func__, parms->w1.bits.api_rev);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Rst 0      %d \n", 
+			__func__, parms->w1.bits.lcd_rst0);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Rst 1      %d \n", 
+			__func__, parms->w1.bits.lcd_rst1);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Rst 2      %d \n", 
+			__func__, parms->w1.bits.lcd_rst2);
+
+		if( (u8)parms->w1.bits.api_rev != RHEA_LCD_BOOT_API_REV ) {
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"Boot Init API Rev Mismatch(%d.%d vs %d.%d)\n",
+				__func__, 
+				(parms->w1.bits.api_rev & 0xF0) >> 8,
+				(parms->w1.bits.api_rev & 0x0F)     ,
+				(RHEA_LCD_BOOT_API_REV  & 0xF0) >> 8,
+				(RHEA_LCD_BOOT_API_REV  & 0x0F)       );
+			return(-1);	
+		}
+
+		pPanel->boot_mode = parms->w0.bits.boot_mode;
+
+		pPanel->smi_cfg   = &NT35582_WVGA_SMI_SmiCtrlCfg; 
+		pPanel->disp_info = &NT35582_WVGA_SMI_Info;
+
+		pPanel->bus_ch = dispdrv2busCh(parms->w0.bits.bus_ch);
+		pPanel->smi_cfg->busWidth   = 
+			dispdrv2busW(parms->w0.bits.bus_width);
+		pPanel->smi_cfg->colModeIn  = 
+			dispdrv2cmIn(parms->w0.bits.col_mode_i);
+		pPanel->smi_cfg->colModeOut = 
+			dispdrv2cmOut(parms->w0.bits.col_mode_o);
+
+		/* we support both input color modes */
+		switch(pPanel->smi_cfg->colModeIn){
+		case LCD_IF_CM_I_RGB565P:
+			pPanel->disp_info->input_format = 
+				DISPDRV_FB_FORMAT_RGB565;	
+			pPanel->disp_info->Bpp = 2;
+			switch(pPanel->smi_cfg->colModeOut){
+			case LCD_IF_CM_O_RGB565:
+				pPanel->cm_out = DISP_CM_IN_RGB565;
+				break;
+			case LCD_IF_CM_O_RGB666:
+				pPanel->cm_out = DISP_CM_IN_RGB666;
+				break;
+			default:
+				return(-1);	
+			}
+			break;
+		case LCD_IF_CM_I_RGB888U:
+			pPanel->disp_info->input_format = 
+				DISPDRV_FB_FORMAT_RGB888_U;	
+			pPanel->disp_info->Bpp = 4;
+			switch(pPanel->smi_cfg->colModeOut){
+			case LCD_IF_CM_O_RGB888:
+				pPanel->cm_out = DISP_CM_IN_RGB888;
+				break;
+			default:
+				return(-1);	
+			}
+			break;
+		default:    
+			return(-1);	
+		}
+
+		/* get reset pin */
+		pPanel->rst = parms->w1.bits.lcd_rst0;
+		
+		pPanel->teIn = dispdrv2busTE(parms->w0.bits.te_input);
+		pPanel->smi_cfg->usesTE = pPanel->teIn != TE_VC4L_IN_INV;
+			
+		pPanel->drvState = DRV_STATE_INIT;
+		pPanel->pwrState = STATE_PWR_OFF;
+
+		*handle = (DISPDRV_HANDLE_T)pPanel;
+		
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV]%s: OK\n\r", __FUNCTION__ );
+	} else {
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: Not in OFF state\n",
+			__FUNCTION__ );
+		res = -1;		
+	} 
+	return(res);  
+}
+
+//*****************************************************************************
+//
+// Function Name: NT35582_WVGA_SMI_Exit
+// 
+// Description:   
+//
+//*****************************************************************************
+Int32 NT35582_WVGA_SMI_Exit (DISPDRV_HANDLE_T dispH)
+{
+	NT35582_WVGA_SMI_PANEL_T*  pPanel = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+	    
+        pPanel->drvState = DRV_STATE_OFF;
+
+	return (0);
 }
 
 
@@ -630,21 +640,19 @@ static int nt35582wvgaSmi_TeOff ( void )
 // Description:   Close The Driver
 //
 //*****************************************************************************
-Int32 NT35582_WVGA_SMI_Close ( DISPDRV_HANDLE_T dispH ) 
+Int32 NT35582_WVGA_SMI_Close( DISPDRV_HANDLE_T dispH ) 
 {
     Int32           res;
     CSL_LCD_RES_T   cslRes;
     
-    NT35582_WVGA_SMI_PANEL_T*  lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
-    
-    DISPDRV_CHECK_PTR_RET( dispH, &panel[0], __FUNCTION__ );
+    NT35582_WVGA_SMI_PANEL_T*  pPanel = (NT35582_WVGA_SMI_PANEL_T*) dispH;
         
-    cslRes = CSL_SMI_Close ( lcdDrv->cslH );
+    cslRes = CSL_SMI_Close( pPanel->cslH );
     if( cslRes == CSL_LCD_OK )
     {
-        lcdDrv->drvState = DRV_STATE_INIT;
-        lcdDrv->pwrState = DISP_PWR_OFF;
-        lcdDrv->cslH = NULL;
+        pPanel->drvState = DRV_STATE_INIT;
+        pPanel->pwrState = STATE_PWR_OFF;
+        pPanel->cslH = NULL;
         res = 0;    
     }
     else
@@ -654,7 +662,7 @@ Int32 NT35582_WVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
         res = -1;    
     }
     
-    if ( NT35582_WVGA_SMI_SmiCtrlCfg.usesTE ) 
+    if (pPanel->smi_cfg->usesTE) 
     {
         if ( nt35582wvgaSmi_TeOff() == -1 )
         {
@@ -669,11 +677,11 @@ Int32 NT35582_WVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
             __FUNCTION__  );
-        return ( -1 );
+        return (-1);
     }
 #endif
 
-    if ( res != -1 )
+    if (res != -1)
     {
         LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
     }
@@ -681,119 +689,6 @@ Int32 NT35582_WVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
     return ( res );
 }
 
-//*****************************************************************************
-//
-// Function Name: DISPDRV_Reset
-// 
-// Description:   Generic Reset To All DISPLAY Modules
-//                
-//*****************************************************************************
-#if 0
-static Int32 DISPDRV_Reset( Boolean force )
-{
-    UInt32          rst0pin     = 0;
-    UInt32          rst1pin     = 0;
-    UInt32          rst2pin     = 0;
-    Boolean         rst0present = FALSE;
-    Boolean         rst1present = FALSE;
-    Boolean         rst2present = FALSE;
-    static Boolean  resetDone   = FALSE;
-    
-    #ifdef HAL_LCD_RESET
-    rst0present = TRUE;
-    rst0pin     = HAL_LCD_RESET;
-    #endif
-    
-    #ifdef HAL_LCD_RESET_B
-    rst1present = TRUE;
-    rst1pin     = HAL_LCD_RESET_B;
-    #endif
-
-    #ifdef HAL_LCD_RESET_C
-    rst2present = TRUE;
-    rst2pin     = HAL_LCD_RESET_C;
-    #endif
-
-//    #define RST_DURATION_MS  10
-//    #define RST_HOLD_MS      1
-
-    #define RST_DURATION_MS  1
-    #define RST_HOLD_MS      20
-
-    // coverity[dead_error_condition] - false alarm
-    if( !rst0present && !rst1present && !rst2present)
-    {
-        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
-            "Reset Pin(s) Not Defined\n");
-        return ( -1 );
-    }
-    
-    if( !rst0present )
-    {
-        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
-            "WARNING Only HAL_LCD_RESET B/C defined\n");
-    }
-
-    if( !rst1present )
-    {
-	printk(KERN_ERR "the reset B is not used");
-        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
-            "WARNING Only HAL_LCD_RESET B/C defined\n");
-    }
-
-    if( !rst2present )
-    {
-	printk(KERN_ERR "the reset C is not used");
-        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
-            "WARNING Only HAL_LCD_RESET B/C defined\n");
-    }
-
-    if ( !resetDone || force )
-    {
-        // CONFIG RESET PIN GPIO As Output
-#ifndef __KERNEL__
-	    if (rst0present) GPIODRV_Set_Mode (rst0pin, 1);
-	    if (rst1present) GPIODRV_Set_Mode (rst1pin, 1);
-	    if (rst2present) GPIODRV_Set_Mode (rst2pin, 1);
-#else
-	    if (rst0present) {
-	        gpio_request(rst0pin, "LCD_RST0");
-	        gpio_direction_output(rst0pin, 0);
-	    }
-	    if (rst1present) {
-	        gpio_request(rst1pin, "LCD_RST1");
-	        gpio_direction_output(rst1pin, 0);
-	    }
-	    if (rst2present) {
-	        gpio_request(rst2pin, "LCD_RST2");
-	        gpio_direction_output(rst2pin, 0);
-	    }
-#endif
-
-        // LCD reset HIGH
-        if (rst0present) GPIODRV_Set_Bit (rst0pin, 1);
-        if (rst1present) GPIODRV_Set_Bit (rst1pin, 1);
-        if (rst2present) GPIODRV_Set_Bit (rst2pin, 1);
-        OSTASK_Sleep ( TICKS_IN_MILLISECONDS(1) );
-
-        // LCD reset Low
-        if (rst0present) GPIODRV_Set_Bit (rst0pin, 0);
-        if (rst1present) GPIODRV_Set_Bit (rst1pin, 0);
-        if (rst2present) GPIODRV_Set_Bit (rst2pin, 0);
-        OSTASK_Sleep ( TICKS_IN_MILLISECONDS(RST_DURATION_MS) );
-    
-        // LCD reset High
-        if (rst0present) GPIODRV_Set_Bit (rst0pin, 1);
-        if (rst1present) GPIODRV_Set_Bit (rst1pin, 1);
-        if (rst2present) GPIODRV_Set_Bit (rst2pin, 1);
-
-        OSTASK_Sleep ( TICKS_IN_MILLISECONDS(RST_HOLD_MS) );
-        resetDone = TRUE;
-    } 
-
-    return ( 0 );
-} // DISPDRV_Reset
-#endif
 
 //*****************************************************************************
 //
@@ -802,113 +697,94 @@ static Int32 DISPDRV_Reset( Boolean force )
 // Description:   Open Drivers
 //
 //*****************************************************************************
-Int32 NT35582_WVGA_SMI_Open ( 
-    const void*         params, 
-    DISPDRV_HANDLE_T*   dispH )
+Int32 NT35582_WVGA_SMI_Open( DISPDRV_HANDLE_T dispH )
 {
-    Int32                           res = 0;
-    CSL_LCD_RES_T                   cslRes;
-    CSL_SMI_CTRL_T*                 pSmiCfg;
-    DISPDRV_INFO_T*                 panelData;
-    UInt32                          busCh; 
-    const DISPDRV_OPEN_PARM_T*      pOpenParm;
-    NT35582_WVGA_SMI_PANEL_T*       pPanel;
+
+	Int32                           res = 0;
+	CSL_LCD_RES_T                   cslRes;
+	CSL_SMI_CTRL_T*                 pSmiCfg;
+//	DISPDRV_INFO_T*                 panelData;
+	UInt32                          busCh; 
+	NT35582_WVGA_SMI_PANEL_T*       pPanel;
     
-    pOpenParm = (DISPDRV_OPEN_PARM_T*) params;
     
-    // busId => NOT USED BY LCDC CSL
-    busCh  = pOpenParm->busCh;
-    pPanel = &panel[0];
+	pPanel = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+    
+	busCh = pPanel->bus_ch;
 
-
-    *dispH = NULL;
-
-    if( pPanel->drvState == DRV_STATE_OPEN )
-    {
-        LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: Returning Handle, "
-            "Already Open\r\n", __FUNCTION__ );
-        *dispH = (DISPDRV_HANDLE_T)pPanel;
-        return ( 0 );
-    } 
-
-    if ( pPanel->drvState != DRV_STATE_INIT )
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR Not Initialized\r\n",
-            __FUNCTION__  );
-        return ( -1 );
-    }    
+	if (pPanel->drvState != DRV_STATE_INIT)	{
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR Not "
+			"Initialized\r\n", __FUNCTION__  );
+		return ( -1 );
+	}    
 
 #if 0
-    if (NT35582_WVGA_SMI_Start((DISPDRV_HANDLE_T)pPanel))
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
-            __FUNCTION__  );
-        return ( -1 );
-    }
+	if (NT35582_WVGA_SMI_Start((DISPDRV_HANDLE_T)pPanel)) {
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable "
+			"the clock\n", __FUNCTION__  );
+		return (-1);
+	}
 #endif
 
-    pSmiCfg  = &NT35582_WVGA_SMI_SmiCtrlCfg;
+	pSmiCfg = pPanel->smi_cfg;
 
-    if ( pSmiCfg->usesTE ) 
-    {  
-        res = nt35582wvgaSmi_TeOn ();
-        if ( res == -1 )
-        {
-            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Failed To Configure "
-                "TE Input\n\r", __FUNCTION__ ); 
-            return ( res );
-        }    
-    }
 
-    // HERA HAS HARDCODED SMI ADDRESS LINES A1=SMI_CS(LCD_CS1) A0=SMI_nCD
-    pSmiCfg->addr_c = 0xFC;
-    pSmiCfg->addr_d = 0xFD;
+	if (pSmiCfg->usesTE) {  
+		res = nt35582wvgaSmi_TeOn();
+		if (res == -1) {
+			LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Failed To "
+				"Configure TE Input\n\r", __FUNCTION__ ); 
+		    return ( res );
+		}    
+	}
+
+	/* RHEA HAS HARDCODED SMI ADDRESS LINES A1=SMI_CS(LCD_CS1) A0=SMI_nCD */
+	if (busCh == 0) {
+		pSmiCfg->addr_c = 0xFC;	   /* 1100 */
+		pSmiCfg->addr_d = 0xFD;	   /* 1101 */
+	}else{
+		pSmiCfg->addr_c = 0xFA;	   /* 1010  */
+		pSmiCfg->addr_d = 0xFB;	   /* 1011 */
+	} 
     
-    LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] NT35582_WVGA_SMI_Open: "
-        "BUSCH[0x%04X] => ADDR_CMND[0x%02X] ADDR_DATA[0x%02X]\n", 
-        (unsigned int)busCh, pSmiCfg->addr_c, pSmiCfg->addr_d );
-    
-    panelData = &NT35582_WVGA_SMI_Info;
+	LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] NT35582_WVGA_SMI_Open: "
+	        "BUSCH[0x%04X] => ADDR_CMND[0x%02X] ADDR_DATA[0x%02X]\n", 
+        	(unsigned int)busCh, pSmiCfg->addr_c, pSmiCfg->addr_d );
     
 
-    //DISPDRV_Reset( FALSE );
+	nt35582wvgaSmi_reset( dispH, FALSE );
 
-#if defined(__WVGA_MODE_888__) 
-    pPanel->bpp         = 4;
-#else    
-    pPanel->bpp         = 2;
-#endif    
-    pPanel->panelData   = panelData;
-    pPanel->win_dim.l   = 0;  
-    pPanel->win_dim.r   = 479; 
-    pPanel->win_dim.t   = 0;  
-    pPanel->win_dim.b   = 799;
-    pPanel->win_dim.w   = 480; 
-    pPanel->win_dim.h   = 800;
+	pPanel->win_dim.l = 0;  
+	pPanel->win_dim.r = pPanel->disp_info->width-1; 
+	pPanel->win_dim.t = 0;  
+	pPanel->win_dim.b = pPanel->disp_info->height-1;
+	pPanel->win_dim.w = pPanel->disp_info->width; 
+	pPanel->win_dim.h = pPanel->disp_info->height;
     
-    pPanel->frameBuffer = (void *)pOpenParm->busId ;
-    
-    if( (cslRes = CSL_SMI_Open ( pSmiCfg, &pPanel->cslH )) 
-        != CSL_LCD_OK )
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR Failed To Open CSL "
-            "SMI Bank, CslRes[%d]\n", __FUNCTION__, cslRes );
-        return ( -1 );
-    }
+	if( CSL_SMI_Init() != CSL_LCD_OK ) {
+	 	LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: CSL_SMI_Init "
+			"Failed\n\r", __FUNCTION__);
+		return(-1);
+	}    
+
+	if( (cslRes = CSL_SMI_Open ( pSmiCfg, &pPanel->cslH )) 
+	    != CSL_LCD_OK ) {
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR Failed To Open CSL "
+			"SMI Bank, CslRes[%d]\n", __FUNCTION__, cslRes );
+		return ( -1 );
+	}
 
 #ifdef __KERNEL__
-    if (csl_dma_vc4lite_init() != DMA_VC4LITE_STATUS_SUCCESS)
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: csl_dma_vc4lite_init Failed\n\r",
-            __FUNCTION__);
-        return ( -1 );
-    }
+	if (csl_dma_vc4lite_init() != DMA_VC4LITE_STATUS_SUCCESS) {
+	    LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: csl_dma_vc4lite_init "
+	    	"Failed\n\r", __FUNCTION__);
+	    return ( -1 );
+	}
 #endif
 
-    *dispH = (DISPDRV_HANDLE_T) pPanel;
-    pPanel->drvState = DRV_STATE_OPEN;
+	pPanel->drvState = DRV_STATE_OPEN;
     
-    return ( res );
+	return ( res );
 }
 
 //*****************************************************************************
@@ -918,88 +794,128 @@ Int32 NT35582_WVGA_SMI_Open (
 // Description:   Display Module Power Control
 //
 //*****************************************************************************
-Int32 NT35582_WVGA_SMI_PowerControl ( 
-    DISPDRV_HANDLE_T        dispH, 
-    DISPLAY_POWER_STATE_T   state )
+Int32 NT35582_WVGA_SMI_PowerControl( 
+	DISPDRV_HANDLE_T        dispH, 
+	DISPLAY_POWER_STATE_T   state )
 {
-    Int32  res = 0;
-    NT35582_WVGA_SMI_PANEL_T* pPanel = (NT35582_WVGA_SMI_PANEL_T*)dispH;
-    
-    DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "NT35582_WVGA_SMI_PowerControl");
-    
-    switch ( state )
-    {
-        case DISPLAY_POWER_STATE_ON:
-            switch ( pPanel->pwrState )
-            {
-                case DISP_PWR_OFF:
-                    nt35582wvgaSmi_ExecCmndList ( dispH, TRUE, &NT35582_Init[0]);
-                    nt35582wvgaSmi_WrCmndP0 ( dispH, TRUE, NT35582_SET_TEAR_ON );
-                    nt35582wvgaSmi_SetWindow ( dispH, TRUE, TRUE, &pPanel->win_dim );
+	Int32  res = 0;
+	NT35582_WVGA_SMI_PANEL_T* pPanel = (NT35582_WVGA_SMI_PANEL_T*)dispH;
 
-                    pPanel->pwrState = DISP_PWR_SLEEP_OFF;
-                    LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: INIT-SEQ\n\r",
-                        __FUNCTION__ );
-                    break; 
-                case DISP_PWR_SLEEP_ON:
-                    nt35582wvgaSmi_WrCmndP0( dispH, TRUE, NT35582_SLEEP_OUT );
-                    OSTASK_Sleep ( TICKS_IN_MILLISECONDS ( 120 ) );
-                    pPanel->pwrState = DISP_PWR_SLEEP_OFF;
-                    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP-OUT\n",
-                        __FUNCTION__ );
-                    break;
+	#define INIT_MSG_ID  LCD_DBG_ERR_ID
+
+	switch (state) {
+	case CTRL_PWR_ON:
+		switch (pPanel->pwrState) {
+		case STATE_PWR_OFF:
+			nt35582wvgaSmi_ExecCmndList(dispH, &NT35582_Init[0]);
+	    
+			nt35582wvgaSmi_WrCmndP1(dispH, NT35582_SET_PIXEL_FORMAT,
+				pPanel->cm_out );
+			nt35582wvgaSmi_WinSet(dispH, TRUE, &pPanel->win_dim );
+			nt35582wvgaSmi_WrCmndP0(dispH, NT35582_SET_TEAR_ON );
+//			nt35582wvgaSmi_WrCmndP0(dispH, NT35582_DISPLAY_ON );
+
+			OSTASK_Sleep( TICKS_IN_MILLISECONDS( 120 ) );
+
+			pPanel->pwrState = STATE_SCREEN_OFF;
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: INIT-SEQ\n\r",
+			    __FUNCTION__ );
+			break; 
+		default:
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: POWER ON "
+				"Requested While Not In POWER DOWN State\n",
+				__FUNCTION__ );
+			break;    
+		}        
+		break;
+		
+        case CTRL_PWR_OFF:
+		if (pPanel->pwrState != STATE_PWR_OFF) {
+			nt35582wvgaSmi_WrCmndP0(dispH, NT35582_DISPLAY_OFF);
+			nt35582wvgaSmi_reset(dispH, TRUE);
+			
+			pPanel->pwrState = STATE_PWR_OFF;
+			
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: PWR DOWN\n\r",
+				__FUNCTION__ );
+		}
+		break;
+
+
+        case CTRL_SLEEP_IN:
+		switch (pPanel->pwrState) {
+		case STATE_SCREEN_ON:
+			nt35582wvgaSmi_WrCmndP0(dispH, NT35582_DISPLAY_OFF);
+		case STATE_SCREEN_OFF:
+			nt35582wvgaSmi_WrCmndP0(dispH, NT35582_SLEEP_IN);
+			OSTASK_Sleep( TICKS_IN_MILLISECONDS(10) );
+			
+			pPanel->pwrState = STATE_SLEEP;
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: SLEEP\n\r",
+			    __FUNCTION__ );
+			break;	    
+		default:		
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SLEEP Requested, But Not In "
+				"DISP ON|OFF State\n\r", __FUNCTION__ );
+			break;
+		} 
+		break;
+        case CTRL_SLEEP_OUT:
+		switch (pPanel->pwrState) {
+                case STATE_SLEEP:
+			nt35582wvgaSmi_WrCmndP0( dispH, NT35582_SLEEP_OUT );
+			OSTASK_Sleep( TICKS_IN_MILLISECONDS(120) );
+			pPanel->pwrState = STATE_SCREEN_OFF;
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: SLEEP-OUT\n",
+				__FUNCTION__ );
+			break;
                 default:
-                    break;    
-            }        
-            break;
-           
-	case DISPLAY_POWER_STATE_BLANK_SCREEN:
-            if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
-            {
-                nt35582wvgaSmi_WrCmndP0( dispH, TRUE, NT35582_DISPLAY_OFF );
-                OSTASK_Sleep ( TICKS_IN_MILLISECONDS ( 10 ) );
-                pPanel->pwrState = DISP_PWR_SLEEP_OFF;
-                LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP-IN\n", __FUNCTION__ );
-            } 
-            else
-            {
-                LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP Requested, But Not "
-                    "In POWER-ON State\n", __FUNCTION__ );
-                res = -1;
-            }   
-            break;
-            
-
-
-        case DISPLAY_POWER_STATE_SLEEP:
-            if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
-            {
-                nt35582wvgaSmi_WrCmndP0( dispH, TRUE, NT35582_SLEEP_IN );
-                OSTASK_Sleep ( TICKS_IN_MILLISECONDS ( 10 ) );
-                pPanel->pwrState = DISP_PWR_SLEEP_ON;
-                LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP-IN\n", __FUNCTION__ );
-            } 
-            else
-            {
-                LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: SLEEP Requested, But Not "
-                    "In POWER-ON State\n", __FUNCTION__ );
-                res = -1;
-            }   
-            break;
-            
-        case DISPLAY_POWER_STATE_OFF:
-            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: POWER-OFF State "
-                "Not Supported\n\r", __FUNCTION__ );
-            res = -1;
-            break;
-            
-        default:
-            LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: Invalid Power State[%d] "
-                "Requested\n\r", __FUNCTION__, state );
-            res = -1;
-            break;
-    }
-    return ( res );
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SLEEP-OUT Req While Not In SLEEP State\n",
+				__FUNCTION__ );
+			break;    
+		}
+		break;
+	       
+        case CTRL_SCREEN_ON:
+		switch (pPanel->pwrState) {
+		case STATE_SCREEN_OFF:
+			nt35582wvgaSmi_WrCmndP0(dispH, NT35582_DISPLAY_ON);
+			pPanel->pwrState = STATE_SCREEN_ON;
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: SCREEN ON\n",
+				__FUNCTION__ );
+			break;
+                default:
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SCREEN ON Req While Not In SCREEN OFF State\n",
+				__FUNCTION__ );
+			break;	
+		}
+		break;        
+        case CTRL_SCREEN_OFF:
+		switch (pPanel->pwrState) {
+		case STATE_SCREEN_ON:
+			nt35582wvgaSmi_WrCmndP0( dispH, NT35582_DISPLAY_OFF );
+			OSTASK_Sleep(TICKS_IN_MILLISECONDS(10));
+			pPanel->pwrState = STATE_SCREEN_OFF;
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: SCREEN OFF\n",
+				__FUNCTION__ );
+			break;
+                default:
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SCREEN OFF Req While Not In SCREEN ON State\n",
+				__FUNCTION__ );
+			break;	
+		}
+		break;        
+	default:
+		LCD_DBG(LCD_DBG_ERR_ID, "[DISPDRV] %s: Invalid Power "
+			"State[%d] Requested\n", __FUNCTION__, state );
+		res = -1;
+		break;
+	}
+	return (res);
 }
 
 //*****************************************************************************
@@ -1009,25 +925,25 @@ Int32 NT35582_WVGA_SMI_PowerControl (
 // Description:   Configure For Updates
 //
 //*****************************************************************************
-Int32 NT35582_WVGA_SMI_Start (struct pi_mgr_dfs_node* dfs_node)
+Int32 NT35582_WVGA_SMI_Start (
+	DISPDRV_HANDLE_T dispH,
+	struct pi_mgr_dfs_node* dfs_node)
 {
-
 #if 0
-    if (0 == lcdDrv->is_clock_gated)
-	return 0;
+	if (0 == lcdDrv->is_clock_gated)
+		return 0;
 #endif
 
-    if (brcm_enable_smi_lcd_clocks(dfs_node))
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
-            __FUNCTION__  );
-        return ( -1 );
-    } else {
+	if (brcm_enable_smi_lcd_clocks(dfs_node)) {
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable "
+			"the clock\n", __FUNCTION__  );
+		return ( -1 );
+	} else {
 #if 0
-	lcdDrv->is_clock_gated = 0;
+		lcdDrv->is_clock_gated = 0;
 #endif
-	return ( 0 );
-    }
+		return ( 0 );
+	}
 }
 
 //*****************************************************************************
@@ -1037,26 +953,26 @@ Int32 NT35582_WVGA_SMI_Start (struct pi_mgr_dfs_node* dfs_node)
 // Description:   
 //
 //*****************************************************************************
-Int32 NT35582_WVGA_SMI_Stop (struct pi_mgr_dfs_node* dfs_node)
+Int32 NT35582_WVGA_SMI_Stop (
+	DISPDRV_HANDLE_T dispH,
+	struct pi_mgr_dfs_node* dfs_node)
 {
 
 #if 0
-    if (1 == lcdDrv->is_clock_gated)
-	return 0;
+	if (1 == lcdDrv->is_clock_gated)
+		return 0;
 #endif
 
-    if (brcm_disable_smi_lcd_clocks(dfs_node))
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
-            __FUNCTION__  );
-        return ( -1 );
-    } else {
+	if (brcm_disable_smi_lcd_clocks(dfs_node)) {
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable "
+			"the clock\n", __FUNCTION__  );
+		return ( -1 );
+	} else {
 #if 0
-	lcdDrv->is_clock_gated = 1;
+		lcdDrv->is_clock_gated = 1;
 #endif
-        return 0;
-    }
-
+		return 0;
+	}
 }
 
 //*****************************************************************************
@@ -1068,12 +984,9 @@ Int32 NT35582_WVGA_SMI_Stop (struct pi_mgr_dfs_node* dfs_node)
 //*****************************************************************************
 const DISPDRV_INFO_T* NT35582_WVGA_SMI_GetDispDrvData ( DISPDRV_HANDLE_T dispH )
 {
-   NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
-   
-    DISPDRV_CHECK_PTR_NO_RET( dispH, &panel[0], 
-        "NT35582_WVGA_SMI_GetDispDrvData");
-   
-   return ( lcdDrv->panelData );
+	NT35582_WVGA_SMI_PANEL_T* lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+	
+	return ( lcdDrv->disp_info );
 }
 
 
@@ -1086,111 +999,34 @@ const DISPDRV_INFO_T* NT35582_WVGA_SMI_GetDispDrvData ( DISPDRV_HANDLE_T dispH )
 //*****************************************************************************
 static void nt35582wvgaSmi_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
 {
-    DISPDRV_CB_RES_T apiRes;
+	DISPDRV_CB_RES_T apiRes;
 
-    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
+	LCD_DBG( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
 
-    if ( pCbRec->dispDrvApiCb != NULL )
-    {
-        switch ( cslRes )
-        {
-            case CSL_LCD_OK:
-              apiRes = DISPDRV_CB_RES_OK;
-              break;
-            default:
-              apiRes = DISPDRV_CB_RES_ERR;         
-              break;
-        }
+	if (pCbRec->dispDrvApiCb != NULL) {
+		switch (cslRes){
+	        case CSL_LCD_OK:
+			apiRes = DISPDRV_CB_RES_OK;
+			break;
+		default:
+			apiRes = DISPDRV_CB_RES_ERR;         
+			break;
+		}
 
 #if 0
-	if (NT35582_WVGA_SMI_Stop((DISPDRV_HANDLE_T)&panel[0]))
-    	{
-        	LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the clock\n",
-	            __FUNCTION__  );
-    	}
+		if (NT35582_WVGA_SMI_Stop((DISPDRV_HANDLE_T)&panel[0])) {
+			LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to "
+				"disable the clock\n", __FUNCTION__  );
+		}
 #endif
 
- 	CSL_SMI_Unlock ( pCbRec->cslH );
-
-        if ( pCbRec->dispDrvApiCbRev == DISP_DRV_CB_API_REV_1_0 ) 
-        {
-            ((DISPDRV_CB_T)pCbRec->dispDrvApiCb)( apiRes );
-        }
-        else    
-        {
-            ((DISPDRV_CB_API_1_1_T)pCbRec->dispDrvApiCb)
-                ( apiRes, pCbRec->dispDrvApiCbP1 );
-        }    
-    }      
+		((DISPDRV_CB_T)pCbRec->dispDrvApiCb)( apiRes );
+	}      
      
-    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
+	LCD_DBG(LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__);
 }
 
 
-//*****************************************************************************
-//
-// Function Name: NT35582_WVGA_SMI_Update_ExtFb
-// 
-// Description:   DMA/OS Update using EXT frame buffer
-//
-//*****************************************************************************
-Int32 NT35582_WVGA_SMI_Update_ExtFb ( 
-    DISPDRV_HANDLE_T        dispH,
-    void                    *pFb, 
-    DISPDRV_CB_API_1_1_T    apiCb
-    )
-{
-    CSL_LCD_UPD_REQ_T       req;
-    CSL_LCD_RES_T           cslRes;
-    Int32                   res    = 0;
-    NT35582_WVGA_SMI_PANEL_T*  lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
-        
-    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
-        
-    DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "NT35582_WVGA_SMI_Update");
-    
-    if ( lcdDrv->pwrState != DISP_PWR_SLEEP_OFF )
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] +%s: Skip Due To Power "
-            "State\n\r", __FUNCTION__ );
-        return ( -1 );
-    }
-    
-    CSL_SMI_Lock ( lcdDrv->cslH );
-    nt35582wvgaSmi_WrCmndP0 ( dispH, TRUE, NT35582_WR_MEM_START );
-    
-    req.buff           = pFb;
-    req.lineLenP       = lcdDrv->panelData->width;
-    req.lineCount      = lcdDrv->panelData->height;
-    req.timeOut_ms     = 100;
-    req.buffBpp        = lcdDrv->bpp;
-    
-    req.cslLcdCbRec.cslH            = lcdDrv->cslH;
-    req.cslLcdCbRec.dispDrvApiCbRev = DISP_DRV_CB_API_REV_1_1;
-    req.cslLcdCbRec.dispDrvApiCb    = (void*) apiCb;
-    req.cslLcdCbRec.dispDrvApiCbP1  = pFb;
-    
-    if( apiCb != NULL )
-       req.cslLcdCb = nt35582wvgaSmi_Cb;
-    else
-       req.cslLcdCb = NULL;
-    
-    if ( (cslRes = CSL_SMI_Update ( lcdDrv->cslH, &req ) ) != CSL_LCD_OK ) 
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR[%d] returned by "
-            "CSL SMI Layer\n", __FUNCTION__, cslRes );
-        res = -1;    
-    }
-    
-    if( (res==-1) || (apiCb == NULL) )
-    {
-        CSL_SMI_Unlock ( lcdDrv->cslH );
-    }
-        
-    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
-    
-    return ( res );
-}
 
 //*****************************************************************************
 //
@@ -1200,178 +1036,91 @@ Int32 NT35582_WVGA_SMI_Update_ExtFb (
 //
 //*****************************************************************************
 Int32 NT35582_WVGA_SMI_Update ( 
-    DISPDRV_HANDLE_T    dispH, 
-    int			fb_idx,
-    DISPDRV_WIN_t*	p_win,
-    DISPDRV_CB_T        apiCb
-    )
+	DISPDRV_HANDLE_T    	dispH, 
+	void			*buff,
+	DISPDRV_WIN_t		*p_win,
+	DISPDRV_CB_T        	apiCb )
 {
-    CSL_LCD_UPD_REQ_T       req;
-    CSL_LCD_RES_T           cslRes;
-    Int32                   res    = 0;
-    NT35582_WVGA_SMI_PANEL_T*  lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+	CSL_LCD_UPD_REQ_T       req;
+	CSL_LCD_RES_T           cslRes;
+	Int32                   res    = 0;
+	NT35582_WVGA_SMI_PANEL_T *pPanel = (NT35582_WVGA_SMI_PANEL_T*) dispH;
         
-    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
-        
-    DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "NT35582_WVGA_SMI_Update");
+	LCD_DBG( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
     
-    if ( lcdDrv->pwrState != DISP_PWR_SLEEP_OFF )
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] +%s: Skip Due To Power State\r\n", 
-            __FUNCTION__ );
-        return ( -1 );
-    }
+	if (pPanel->pwrState == STATE_PWR_OFF) {
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] +%s: Skip Due To "
+			"Power State\r\n", __FUNCTION__ );
+		return ( -1 );
+	}
 
 #if 0
-    if (NT35582_WVGA_SMI_Start(dispH))
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
-            __FUNCTION__  );
-        return ( -1 );
-    }
+	if (NT35582_WVGA_SMI_Start(dispH)) {
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable "
+			"the clock\n", __FUNCTION__  );
+		return ( -1 );
+	}
 #endif
 
-    CSL_SMI_Lock ( lcdDrv->cslH );
+	LCD_DBG( LCD_DBG_ID, "[DISPDRV] -%s fb phys = 0x%08x\n",
+		__FUNCTION__,  (unsigned int)req.buff);
 
-    if (0 == fb_idx)
-    	req.buff           = lcdDrv->frameBuffer;
-     else if (1 == fb_idx)
-	req.buff 	   = (void *)((UInt32)lcdDrv->frameBuffer  + 
-		lcdDrv->panelData->width * lcdDrv->panelData->height * lcdDrv->bpp);
-    else
-	req.buff = (void*)fb_idx;
+	if (p_win) {
+		nt35582wvgaSmi_WrCmndP1( dispH, NT35582_SET_ADDR_MODE_0, 0x60);
+	} else {
+	   	nt35582wvgaSmi_WrCmndP1( dispH, NT35582_SET_ADDR_MODE_0, 0x0);
+	}
 
-    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s fb phys = 0x%08x\n", __FUNCTION__,  (unsigned int)req.buff);
-
-    if (p_win) {
-	nt35582wvgaSmi_WrCmndP1( dispH, 1, NT35582_SET_ADDR_MODE_0, 0x60);
-    }
-    else {
-       	nt35582wvgaSmi_WrCmndP1( dispH, 1, NT35582_SET_ADDR_MODE_0, 0x0);
-    }
-
-    p_win = &lcdDrv->win_dim;
+	p_win = &pPanel->win_dim;
  
 #if 0
-    // update the whole screen 
-    if ( p_win == NULL ) 
-    	p_win = &lcdDrv->win_dim;
+	// update the whole screen 
+	if (p_win == NULL) 
+		p_win = &pPanel->win_dim;
 #endif
 
-    nt35582wvgaSmi_SetWindow( dispH, TRUE, TRUE,  p_win );
-    nt35582wvgaSmi_WrCmndP0 ( dispH, TRUE, NT35582_WR_MEM_START );
+	nt35582wvgaSmi_WinSet( dispH, TRUE, p_win );
+	nt35582wvgaSmi_WrCmndP0( dispH, NT35582_WR_MEM_START );
 
-    req.lineLenP       = p_win->w;
-    req.lineCount      = p_win->h;
-    req.xStrideB       = (lcdDrv->panelData->width - req.lineLenP       ) * lcdDrv->bpp;
-    req.buff          += (lcdDrv->panelData->width * p_win->t + p_win->l) * lcdDrv->bpp;
-    req.timeOut_ms     = 100;
-    req.buffBpp        = lcdDrv->bpp;
-    
-    req.cslLcdCbRec.cslH            = lcdDrv->cslH;
-    req.cslLcdCbRec.dispDrvApiCbRev = DISP_DRV_CB_API_REV_1_0;
-    req.cslLcdCbRec.dispDrvApiCb    = (void*) apiCb;
-    req.cslLcdCbRec.dispDrvApiCbP1  = NULL;
-    
-    if( apiCb != NULL )
-       req.cslLcdCb = nt35582wvgaSmi_Cb;
-    else
-       req.cslLcdCb = NULL;
-    
-    if ( (cslRes = CSL_SMI_Update ( lcdDrv->cslH, &req ) ) != CSL_LCD_OK ) 
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR[%d] returned by "
-            "CSL SMI Layer\n\r", __FUNCTION__, cslRes );
-        res = -1;    
-    }
+	req.buff       = buff;
+	req.lineLenP   = p_win->w;
+	req.lineCount  = p_win->h;
+	req.xStrideB   =  (pPanel->disp_info->width - req.lineLenP       ) *
+				pPanel->disp_info->Bpp;
+	req.buff       += (pPanel->disp_info->width * p_win->t + p_win->l) *
+				pPanel->disp_info->Bpp;
+	req.timeOut_ms = 100;
+	req.buffBpp    = pPanel->disp_info->Bpp;
+
+	req.cslLcdCbRec.cslH            = pPanel->cslH;
+	req.cslLcdCbRec.dispDrvApiCbRev = DISP_DRV_CB_API_REV_1_0;
+	req.cslLcdCbRec.dispDrvApiCb    = (void*) apiCb;
+	req.cslLcdCbRec.dispDrvApiCbP1  = NULL;
+
+	if (apiCb != NULL)
+		req.cslLcdCb = nt35582wvgaSmi_Cb;
+	else
+		req.cslLcdCb = NULL;
+
+	if ((cslRes = CSL_SMI_Update( pPanel->cslH, &req ) ) != CSL_LCD_OK) 
+	{
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR[%d] returned by "
+			"CSL SMI Layer\n\r", __FUNCTION__, cslRes );
+		res = -1;    
+	}
         
-    if( (res==-1) || (apiCb == NULL) )
-    {
+	if ((res==-1) || (apiCb == NULL)) {
 #if 0
-	if (NT35582_WVGA_SMI_Stop(dispH))
-    	{
-        	LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the clock\n",
-            		__FUNCTION__  );
-    	}
+		if (NT35582_WVGA_SMI_Stop(dispH))
+		{
+			LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to "
+				"disable the clock\n", __FUNCTION__  );
+		}
 #endif
-        CSL_SMI_Unlock ( lcdDrv->cslH );
-    }
+	}
         
-    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
+	LCD_DBG( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
     
-    return ( res );
+	return ( res );
 }
-
-                                        
-//*****************************************************************************
-//
-// Function Name: BCM92416_QVGA_SetCtl
-// 
-// Description:   
-//
-//*****************************************************************************
-Int32 NT35582_WVGA_SMI_SetCtl ( 
-            DISPDRV_HANDLE_T    dispH, 
-            DISPDRV_CTRL_ID_T   ctrlID, 
-            void*               ctrlParams 
-            )
-{
-    Int32  res = -1;
-    
-    DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "NT35582_WVGA_SMI_SetCtl");
-
-    switch ( ctrlID )
-    {
-        case DISPDRV_CTRL_ID_SET_REG:
-            nt35582wvgaSmi_IoCtlWr( dispH, (DISPDRV_CTRL_RW_REG*)ctrlParams );
-            res = 0;
-            break;
-        default:
-            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: CtrlId[%d] Not "
-                "Implemented\n\r", __FUNCTION__, ctrlID );
-            break;
-    }
-
-    return ( res );
-}
-                    
-//*****************************************************************************
-//
-// Function Name: BCM92416_QVGA_GetCtl
-// 
-// Description:   
-//
-//*****************************************************************************
-Int32 NT35582_WVGA_SMI_GetCtl (
-    DISPDRV_HANDLE_T    dispH, 
-    DISPDRV_CTRL_ID_T   ctrlID, 
-    void*               ctrlParams 
-    )
-{
-    Int32                       res     = -1;
-    NT35582_WVGA_SMI_PANEL_T*   dispDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
-    
-    DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "NT35582_WVGA_SMI_GetCtl");
-    
-    switch ( ctrlID )
-    {
-        case DISPDRV_CTRL_ID_GET_FB_ADDR:
-            ((DISPDRV_CTL_GET_FB_ADDR *)ctrlParams)->frame_buffer = 
-                dispDrv->frameBuffer;
-            res = 0;
-            break;
-            
-        case DISPDRV_CTRL_ID_GET_REG:
-            nt35582wvgaSmi_IoCtlRd( dispH, (DISPDRV_CTRL_RW_REG*)ctrlParams );
-            res = 0;
-            break;
-            
-        default:
-            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: CtrlId[%d] Not "
-                "Implemented\n\r", __FUNCTION__, ctrlID );
-            break;
-    }
-    
-    return ( res );
-}            
 
