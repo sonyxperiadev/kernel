@@ -51,7 +51,8 @@ static void VOIF_CB_Fxn(
 
 #ifdef CONFIG_ENABLE_VOIF
 
-/* The flag "CONFIG_ENABLE_VOIF" will be enabled by customer.  custormer will hook
+/* The flag "CONFIG_ENABLE_VOIF" will be enabled by customer.
+  custormer will hook
 up their voice solution in callback */
 
 #else

@@ -291,4 +291,8 @@ void Audio_InitRpc(void);
 void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx);
 void AUDDRV_EC(Boolean enable, UInt32 arg);
 void AUDDRV_NS(Boolean enable);
+
+void AUDDRV_SetTuningFlag(int flag);
+int AUDDRV_TuningFlag(void);
+
 #endif				/* __AUDIO_VDRIVER_H__ */

@@ -981,7 +981,7 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 
 	AUDDRV_SetAudioMode_Speaker(sp_struct);
 
-	if (!AUDCTRL_InVoiceCall()) {
+	if (!AUDCTRL_InVoiceCall() && AUDDRV_TuningFlag()) {
 		/*for music tuning, if PCG changed audio mode,
 		   need to pass audio mode to CP in audio_vdriver_caph.c */
 		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
@@ -1062,7 +1062,7 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 
 	AUDDRV_SetAudioMode_Speaker(sp_struct);
 
-	if (!AUDCTRL_InVoiceCall()) {
+	if (!AUDCTRL_InVoiceCall() && AUDDRV_TuningFlag()) {
 		/*for music tuning, if PCG changed audio mode,
 		   need to pass audio mode to CP in audio_vdriver_caph.c */
 		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
@@ -1442,11 +1442,8 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 	res = csl_audio_render_start(streamID);
 
 	path = csl_caph_FindRenderPath(streamID);
-	if (path == 0) {
-		/*can remove this function call*/
-		AUDCTRL_SetAudioMode_ForMusicPlayback(mode, pathID, FALSE);
+	if (path == 0)
 		return RESULT_OK;
-	}
 
 	if (path->status == PATH_OCCUPIED)
 		mode = AUDCTRL_GetModeBySpeaker(path->sink[0]);

@@ -105,6 +105,7 @@ static Boolean dspECEnable = TRUE;
 static Boolean dspNSEnable = TRUE;
 static Boolean controlFlagForCustomGain = FALSE;
 static Boolean inCallRateChange = FALSE;
+static int audio_tuning_flag;
 
 struct _Audio_Driver_t {
 	UInt8 isRunning;
@@ -1328,6 +1329,30 @@ void AUDDRV_SetULSpeechRecordGain(Int16 gain)
 	audio_control_generic(AUDDRV_CPCMD_SetULSpeechRecordGain,
 			      (UInt32) gain, 0, 0, 0, 0);
 	return;
+}
+
+/******************************************************************************
+*
+* Function Name: AUDDRV_SetTuningFlag
+*
+* Description:   set Audio Tuning Flag
+*
+******************************************************************************/
+void AUDDRV_SetTuningFlag(int flag)
+{
+	audio_tuning_flag = flag;
+}
+
+/******************************************************************************
+*
+* Function Name: AUDDRV_TuningFlag
+*
+* Description:   read Audio Tuning Flag
+*
+******************************************************************************/
+int AUDDRV_TuningFlag(void)
+{
+	return audio_tuning_flag;
 }
 
 /*=============================================================================

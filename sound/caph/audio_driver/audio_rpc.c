@@ -54,6 +54,13 @@ struct _Audio_Params_t {
 };
 #define Audio_Params_t struct _Audio_Params_t
 
+struct AudioTuningParamInd_st {
+	/* avoid alignment mismatch between RTOS and Linux */
+	UInt32 audioModeApp; /* currAudioMode + App*9 */
+	UInt32 audioParamType;
+	UInt32 length;
+	Int16 param[256];
+};
 
 /* FRAMEWORK CODE */
 #if defined(CONFIG_BCM_MODEM)	/* for AP only without MODEM (CP, DSP) */
@@ -61,6 +68,8 @@ static UInt8 audioClientId;
 static Boolean audioRpcInited = FALSE;
 static bool_t xdr_Audio_Params_t(void *xdrs, Audio_Params_t *rsp);
 static bool_t xdr_AudioCompfilter_t(void *xdrs, AudioCompfilter_t *rsp);
+static bool_t xdr_AudioTuningParamInd_st(void *xdrs,
+			struct AudioTuningParamInd_st *rsp);
 
 #define _T(a) a
 static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
@@ -79,6 +88,17 @@ static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 	 (xdrproc_t) xdr_UInt32, sizeof(UInt32), 0},
 	{MSG_AUDIO_CALL_STATUS_IND, _T("MSG_AUDIO_CALL_STATUS_IND"),
 	 (xdrproc_t) xdr_UInt32, sizeof(UInt32), 0},
+
+	{MSG_AUDIO_START_TUNING_IND, _T("MSG_AUDIO_START_TUNING_IND"),
+	(xdrproc_t)xdr_UInt32, sizeof(UInt32), 0 },
+
+	{MSG_AUDIO_STOP_TUNING_IND, _T("MSG_AUDIO_STOP_TUNING_IND"),
+	(xdrproc_t)xdr_UInt32, sizeof(UInt32), 0 },
+
+	{MSG_AUDIO_TUNING_SETPARM_IND, _T("MSG_AUDIO_TUNING_SETPARM_IND"),
+	(xdrproc_t)xdr_AudioTuningParamInd_st,
+	sizeof(struct AudioTuningParamInd_st), 0 },
+
 	{(MsgType_t) __dontcare__, "", NULL_xdrproc_t, 0, 0}
 };
 
@@ -97,6 +117,36 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 		if ((*codecID) != 0)	/* Make sure codeid is not 0 */
 			AUDDRV_Telephone_RequestRateChange((UInt8) (*codecID));
 	}
+
+	if (MSG_AUDIO_START_TUNING_IND == pMsg->msgId) {
+		unsigned int addr = *((int *) pMsg->dataBuf);
+
+		aTrace(LOG_AUDIO_DRIVER,
+			"HandleAudioEventrespCb : start tuning addr=0x%x\r\n",
+			addr);
+		AUDDRV_SetTuningFlag(1);
+	}
+
+	if (MSG_AUDIO_STOP_TUNING_IND == pMsg->msgId) {
+		unsigned int addr = *((int *) pMsg->dataBuf);
+
+		aTrace(LOG_AUDIO_DRIVER,
+			"HandleAudioEventrespCb : stop tuning addr=0x%x\r\n",
+			addr);
+		AUDDRV_SetTuningFlag(0);
+	}
+
+	if (MSG_AUDIO_TUNING_SETPARM_IND == pMsg->msgId) {
+		struct AudioTuningParamInd_st paramInd =
+			*((struct AudioTuningParamInd_st *) pMsg->dataBuf);
+
+		aTrace(LOG_AUDIO_DRIVER,
+			"HandleAudioEventrespCb : mode %d, tune param=%d value=%d\r\n",
+			(int)paramInd.audioModeApp,
+			(int)paramInd.audioParamType,
+			*((UInt16 *)&paramInd.param[0]));
+	}
+
 	if ((MSG_AUDIO_CTRL_GENERIC_RSP == pMsg->msgId) ||
 		(MSG_AUDIO_CTRL_DSP_RSP == pMsg->msgId) ||
 		(MSG_AUDIO_COMP_FILTER_RSP == pMsg->msgId)) {
@@ -293,7 +343,7 @@ void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t *cf)
 	RPC_SerializeReq(&msg);
 }
 
-bool_t xdr_Audio_Params_t(void *xdrs, Audio_Params_t *rsp)
+static bool_t xdr_Audio_Params_t(void *xdrs, Audio_Params_t *rsp)
 {
 	aTrace(LOG_AUDIO_DRIVER , "Audio_Params_t");
 
@@ -309,7 +359,7 @@ bool_t xdr_Audio_Params_t(void *xdrs, Audio_Params_t *rsp)
 		return FALSE;
 }
 
-bool_t xdr_DlCompfilter_t(void *xdrs, EQDlCompfilter_t *rsp)
+static bool_t xdr_DlCompfilter_t(void *xdrs, EQDlCompfilter_t *rsp)
 {
 	aTrace(LOG_AUDIO_DRIVER , "EQDlCompfilter_t");
 
@@ -333,7 +383,7 @@ bool_t xdr_DlCompfilter_t(void *xdrs, EQDlCompfilter_t *rsp)
 		return FALSE;
 }
 
-bool_t xdr_UlCompfilter_t(void *xdrs, EQUlCompfilter_t *rsp)
+static bool_t xdr_UlCompfilter_t(void *xdrs, EQUlCompfilter_t *rsp)
 {
 	aTrace(LOG_AUDIO_DRIVER, "EQUlCompfilter_t");
 
@@ -357,12 +407,28 @@ bool_t xdr_UlCompfilter_t(void *xdrs, EQUlCompfilter_t *rsp)
 		return FALSE;
 }
 
-bool_t xdr_AudioCompfilter_t(void *xdrs, AudioCompfilter_t *rsp)
+static bool_t xdr_AudioCompfilter_t(void *xdrs, AudioCompfilter_t *rsp)
 {
 	aTrace(LOG_AUDIO_DRIVER, "AudioCompfilter_t");
 
 	    if (xdr_DlCompfilter_t(xdrs, &rsp->dl) &&
 		xdr_UlCompfilter_t(xdrs, &rsp->ul))
+		return TRUE;
+	else
+		return FALSE;
+}
+
+static bool_t xdr_AudioTuningParamInd_st(
+	void *xdrs, struct AudioTuningParamInd_st *rsp)
+{
+	XDR_LOG(xdrs, "AudioTuningParamInd_st");
+
+	if (xdr_UInt32(xdrs, &rsp->audioModeApp) &&
+		xdr_UInt32(xdrs, &rsp->audioParamType) &&
+		xdr_UInt32(xdrs, &rsp->length) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->param[0]),
+			256, sizeof(Int16), (xdrproc_t)xdr_int16_t)
+	)
 		return TRUE;
 	else
 		return FALSE;
