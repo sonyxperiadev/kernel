@@ -10,7 +10,7 @@ struct allocation {
 	int line;
 	uint32_t size;
 	int dma;
-	DWC_CIRCLEQ_ENTRY(allocation) entry;
+	 DWC_CIRCLEQ_ENTRY(allocation) entry;
 };
 
 DWC_CIRCLEQ_HEAD(allocation_queue, allocation);
@@ -27,15 +27,14 @@ struct allocation_manager {
 	uint32_t max;
 };
 
-
 static struct allocation_manager *manager;
 
 static void add_allocation(uint32_t size, char const *func,
-	int line, void *addr, int dma)
+			   int line, void *addr, int dma)
 {
 	struct allocation *a = __DWC_ALLOC_ATOMIC(sizeof(*a));
-	a->func = __DWC_ALLOC_ATOMIC(DWC_STRLEN(func)+1);
-	DWC_MEMCPY(a->func, func, DWC_STRLEN(func)+1);
+	a->func = __DWC_ALLOC_ATOMIC(DWC_STRLEN(func) + 1);
+	DWC_MEMCPY(a->func, func, DWC_STRLEN(func) + 1);
 	a->line = line;
 	a->size = size;
 	a->addr = addr;
@@ -61,11 +60,13 @@ static struct allocation *find_allocation(void *addr)
 	return NULL;
 }
 
-static void free_allocation(void *addr, char const* func, int line)
+static void free_allocation(void *addr, char const *func, int line)
 {
 	struct allocation *a = find_allocation(addr);
 	if (!a && func && (line >= 0)) {
-		DWC_ASSERT(0, "Free of address %p that was never allocated or already freed %s:%d", addr, func, line);
+		DWC_ASSERT(0,
+			   "Free of address %p that was never allocated or already freed %s:%d",
+			   addr, func, line);
 		return;
 	}
 	DWC_CIRCLEQ_REMOVE(&manager->allocations, a, entry);
@@ -108,7 +109,8 @@ void dwc_memory_debug_stop(void)
 void dwc_memory_debug_report(void)
 {
 	struct allocation *a;
-	DWC_PRINTF("\n\n\n----------------- Memory Debugging Report -----------------\n\n");
+	DWC_PRINTF
+	    ("\n\n\n----------------- Memory Debugging Report -----------------\n\n");
 	DWC_PRINTF("Num Allocations = %d\n", manager->num);
 	DWC_PRINTF("Freed = %d\n", manager->num_freed);
 	DWC_PRINTF("Active = %d\n", manager->num_active);
@@ -118,48 +120,50 @@ void dwc_memory_debug_report(void)
 	DWC_PRINTF("Unfreed allocations:\n");
 
 	DWC_CIRCLEQ_FOREACH(a, &manager->allocations, entry) {
-		DWC_PRINTF("    addr=%p, size=%d from %s:%d, DMA=%d\n", a->addr, a->size, a->func, a->line, a->dma);
+		DWC_PRINTF("    addr=%p, size=%d from %s:%d, DMA=%d\n", a->addr,
+			   a->size, a->func, a->line, a->dma);
 	}
 }
 
-
-
 /* The replacement functions */
-void *dwc_alloc_debug(uint32_t size, char const* func, int line)
+void *dwc_alloc_debug(uint32_t size, char const *func, int line)
 {
 	void *addr = __DWC_ALLOC(size);
 	add_allocation(size, func, line, addr, 0);
 	return addr;
 }
 
-void *dwc_alloc_atomic_debug(uint32_t size, char const* func, int line)
+void *dwc_alloc_atomic_debug(uint32_t size, char const *func, int line)
 {
 	void *addr = __DWC_ALLOC_ATOMIC(size);
 	add_allocation(size, func, line, addr, 0);
 	return addr;
 }
 
-void dwc_free_debug(void *addr, char const* func, int line)
+void dwc_free_debug(void *addr, char const *func, int line)
 {
 	free_allocation(addr, func, line);
 	__DWC_FREE(addr);
 }
 
-void *dwc_dma_alloc_debug(uint32_t size, dwc_dma_t *dma_addr, char const *func, int line)
+void *dwc_dma_alloc_debug(uint32_t size, dwc_dma_t * dma_addr, char const *func,
+			  int line)
 {
 	void *addr = __DWC_DMA_ALLOC(size, dma_addr);
 	add_allocation(size, func, line, addr, 1);
 	return addr;
 }
 
-void *dwc_dma_alloc_atomic_debug(uint32_t size, dwc_dma_t *dma_addr, char const *func, int line)
+void *dwc_dma_alloc_atomic_debug(uint32_t size, dwc_dma_t * dma_addr,
+				 char const *func, int line)
 {
 	void *addr = __DWC_DMA_ALLOC_ATOMIC(size, dma_addr);
 	add_allocation(size, func, line, addr, 1);
 	return addr;
 }
 
-void dwc_dma_free_debug(uint32_t size, void *virt_addr, dwc_dma_t dma_addr, char const *func, int line)
+void dwc_dma_free_debug(uint32_t size, void *virt_addr, dwc_dma_t dma_addr,
+			char const *func, int line)
 {
 	free_allocation(virt_addr, func, line);
 	__DWC_DMA_FREE(size, virt_addr, dma_addr);

@@ -54,6 +54,9 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
+#if defined(CONFIG_HAS_WAKELOCK)
+#include <linux/wakelock.h>
+#endif
 
 #ifdef CONFIG_ARCH_RHEA
 
@@ -77,6 +80,8 @@
 #ifdef CONFIG_SPARC
 #include "suncore.h"
 #endif
+
+#define UART_USR 31 /* UART status register */
 
 /*
  * Configuration:
@@ -186,6 +191,10 @@ struct uart_8250_port {
 	unsigned char		msr_saved_flags;
 
 #ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_HAS_WAKELOCK)
+	struct wake_lock uart_lock;
+#define WAKELOCK_TIMEOUT_VAL 5000
+#endif
 	/*
 	 * Kona PM - QOS service
 	 */
@@ -1414,6 +1423,7 @@ static void autoconfig_irq(struct uart_8250_port *up)
 	(void)serial_inp(up, UART_RX);
 	(void)serial_inp(up, UART_IIR);
 	(void)serial_inp(up, UART_MSR);
+	(void)serial_inp(up, UART_USR);
 	serial_outp(up, UART_TX, 0xFF);
 	udelay(20);
 	irq = probe_irq_off(irqs);
@@ -1770,7 +1780,7 @@ static void serial8250_handle_port(struct uart_8250_port *up)
 	DEBUG_INTR("status = x%x...\n", status);
 
 #ifdef CONFIG_RHEA_UART_RX_FIX
-	if (up->iir & UART_IIR_RDI)
+	if ((up->iir & UART_IIR_RDI) || (status & (UART_LSR_DR | UART_LSR_BI)))
 #else
 	if (status & (UART_LSR_DR | UART_LSR_BI))
 #endif
@@ -1816,19 +1826,30 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 	struct irq_info *i = dev_id;
 	struct list_head *l, *end = NULL;
 	int pass_counter = 0, handled = 0;
+	struct uart_8250_port *up;
+	unsigned int iir;
+
 
 	DEBUG_INTR("serial8250_interrupt(%d)...", irq);
 
 	spin_lock(&i->lock);
 
 	l = i->head;
-	do {
-		struct uart_8250_port *up;
-		unsigned int iir;
+	up = list_entry(l, struct uart_8250_port, list);
+#if defined(CONFIG_HAS_WAKELOCK)
+	wake_lock_timeout(&up->uart_lock,
+				msecs_to_jiffies(WAKELOCK_TIMEOUT_VAL));
+#endif
 
+	do {
 		up = list_entry(l, struct uart_8250_port, list);
 
 		iir = serial_in(up, UART_IIR);
+		if ((iir & UART_IIR_BUSY) == UART_IIR_BUSY) {
+			/* clear the busy detect indication interrupt */
+			(void)serial_inp(up, UART_USR);
+			handled = 1;
+		} else
 		if (!(iir & UART_IIR_NO_INT)) {
 #ifdef CONFIG_RHEA_UART_RX_FIX
 			up->iir = iir;
@@ -1987,8 +2008,13 @@ static void serial8250_timeout(unsigned long data)
 	unsigned int iir;
 
 	iir = serial_in(up, UART_IIR);
-	if (!(iir & UART_IIR_NO_INT))
+	if (!(iir & UART_IIR_NO_INT)) {
+#ifdef CONFIG_RHEA_UART_RX_FIX
+		up->iir = iir;
+#endif
 		serial8250_handle_port(up);
+	}
+
 	mod_timer(&up->timer, jiffies + uart_poll_timeout(&up->port));
 }
 
@@ -2265,6 +2291,7 @@ static int serial8250_startup(struct uart_port *port)
 	(void) serial_inp(up, UART_RX);
 	(void) serial_inp(up, UART_IIR);
 	(void) serial_inp(up, UART_MSR);
+	(void) serial_inp(up, UART_USR);
 
 	/*
 	 * At this point, there's no way the LSR could still be 0xff;
@@ -2423,6 +2450,7 @@ dont_test_tx_en:
 	serial_inp(up, UART_RX);
 	serial_inp(up, UART_IIR);
 	serial_inp(up, UART_MSR);
+	serial_inp(up, UART_USR);
 	up->lsr_saved_flags = 0;
 	up->msr_saved_flags = 0;
 
@@ -3610,6 +3638,9 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
 #endif
 
 #ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_HAS_WAKELOCK)
+		wake_lock_init(&uart->uart_lock, WAKE_LOCK_SUSPEND, "UARTWAKE");
+#endif
 		ret = pi_mgr_qos_add_request(&uart->qos_tx_node,(char *)clk_name,
 			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
 		ret = pi_mgr_qos_add_request(&uart->qos_rx_node,(char *)clk_name,
@@ -3677,6 +3708,9 @@ void serial8250_unregister_port(int line)
 	struct uart_8250_port *uart = &serial8250_ports[line];
 
 	mutex_lock(&serial_mutex);
+#if defined(CONFIG_HAS_WAKELOCK)
+	wake_lock_destroy(&uart->uart_lock);
+#endif
 	uart_remove_one_port(&serial8250_reg, &uart->port);
 	if (serial8250_isa_devs) {
 		uart->port.flags &= ~UPF_BOOT_AUTOCONF;

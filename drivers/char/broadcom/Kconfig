@@ -55,6 +55,14 @@ config BCMPMU_RPC
 	---help---
 	Select to support PMU ADC info to Modem.
 
+config BCM_AP_PANIC_ON_CPCRASH
+        bool "Support for crashing AP when CP crashes"
+        depends on BRCM_CHAR_DRIVERS && (MACH_RHEA_SS_COMMON)
+        default n
+        help
+        If you say Y here, a CP crash will result in AP panic.
+        Debug tool can be used to extract CP dump later.
+
 config BCM_HW_PCM
     tristate "HW_PCM Driver"
     depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
@@ -259,3 +267,9 @@ config BCM_RTC_CAL
     ---help---
       Select to build the RTC CAL driver.
 
+config BRCM_SIM_SECURE_ENABLE
+    boolean "Broadcom SIM Secure Enable"
+    depends on BRCM_CHAR_DRIVERS && BCM_MODEM
+    default n
+    ---help---
+    Broadcom SIM Secure Enable

@@ -21,6 +21,11 @@
 #include <linux/regulator/consumer.h>
 #include <linux/vt_kern.h>
 #include <linux/gpio.h>
+
+#ifndef KONAFB_OLD_API
+#include <video/kona_fb_boot.h>
+#endif
+
 #include <video/kona_fb.h>
 
 #include <mach/io.h>
@@ -106,6 +111,11 @@ struct rhea_fb {
 	struct early_suspend early_suspend_level2;
 	struct early_suspend early_suspend_level3;
 #endif
+#ifndef KONAFB_OLD_API
+	void *buff0;
+	void *buff1;
+	struct dispdrv_init_parms lcd_drv_parms;
+#endif
 };
 
 static struct rhea_fb *g_rhea_fb = NULL;
@@ -181,14 +191,14 @@ static int rhea_fb_set_par(struct fb_info *info)
 static inline void rhea_clock_start(struct rhea_fb *fb)
 {
 #if (RHEA_FB_ENABLE_DYNAMIC_CLOCK == 1)
-	fb->display_ops->start(&fb->dfs_node);
+	fb->display_ops->start(fb->display_hdl, &fb->dfs_node);
 #endif
 }
 
 static inline void rhea_clock_stop(struct rhea_fb *fb)
 {
 #if (RHEA_FB_ENABLE_DYNAMIC_CLOCK == 1)
-	fb->display_ops->stop(&fb->dfs_node);
+	fb->display_ops->stop(fb->display_hdl, &fb->dfs_node);
 #endif
 }
 
@@ -231,7 +241,8 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 	
 	if (!atomic_read(&fb->is_fb_registered)) {
 		rhea_clock_start(fb);
-		ret = fb->display_ops->update(fb->display_hdl, buff_idx, NULL, NULL /* Callback */);
+//		ret = fb->display_ops->update(fb->display_hdl, buff_idx, NULL, NULL /* Callback */);
+		ret = fb->display_ops->update(fb->display_hdl, buff_idx?fb->buff1:fb->buff0, NULL, NULL /* Callback */);
 		rhea_clock_stop(fb);
 	} else {
 		atomic_set(&fb->is_graphics_started, 1);
@@ -242,13 +253,18 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 			region.r	= (u16)var->reserved[2] - 1;
 			region.w	= region.r - region.l + 1;
 			region.h	= region.b - region.t + 1;
+			region.mode	= 0;
                         p_region = &region;                
 		} else {
 			p_region = NULL;	
 		}
 		wait_for_completion(&fb->prev_buf_done_sem);
 		rhea_clock_start(fb);
+#ifdef KONAFB_OLD_API
 		ret = fb->display_ops->update(fb->display_hdl, buff_idx, 0, (DISPDRV_CB_T)rhea_display_done_cb);
+#else
+		ret = fb->display_ops->update(fb->display_hdl, buff_idx?fb->buff1:fb->buff0, 0, (DISPDRV_CB_T)rhea_display_done_cb);
+#endif
 	}
 skip_drawing:
 	mutex_unlock(&fb->update_sem);
@@ -258,6 +274,7 @@ skip_drawing:
 }
 
 
+#ifdef KONAFB_OLD_API
 static void lq043y1dx01_reset(u32 gpio)
 {
 	gpio_request(gpio, "lcd_reset");
@@ -300,18 +317,36 @@ static void reset_display(u32 gpio)
 		lq_reset();
 	}
 }
+#endif
 
+#ifdef KONAFB_OLD_API
 static int enable_display(struct rhea_fb *fb, u32 gpio, u32 bus_width)
 {
+#else
+static int enable_display(struct rhea_fb *fb, struct dispdrv_init_parms* parms)
+{
+#endif
 	int ret = 0;
-	DISPDRV_OPEN_PARM_T local_DISPDRV_OPEN_PARM_T;
 
+#ifdef KONAFB_OLD_API
+	DISPDRV_OPEN_PARM_T local_DISPDRV_OPEN_PARM_T;
+#endif	
+
+#ifdef KONAFB_OLD_API
 	ret = fb->display_ops->init(bus_width);
+#else
+	ret = fb->display_ops->init(parms, &fb->display_hdl);
+#endif	
 	if (ret != 0) {
 		rheafb_error("Failed to init this display device!\n");
 		goto fail_to_init;
 	}
 	
+#ifndef KONAFB_OLD_API
+	fb->display_info = fb->display_ops->get_info(fb->display_hdl);
+#endif
+	
+#ifdef KONAFB_OLD_API
 	reset_display(gpio);
 	printk("sleep 100ms after reset gpio %d\n",gpio);
 	msleep(20); //haipeng Temporary
@@ -319,24 +354,35 @@ static int enable_display(struct rhea_fb *fb, u32 gpio, u32 bus_width)
 	local_DISPDRV_OPEN_PARM_T.busId = fb->phys_fbbase;
 	local_DISPDRV_OPEN_PARM_T.busCh = 0;
 	ret = fb->display_ops->open((void *)&local_DISPDRV_OPEN_PARM_T, &fb->display_hdl);
+#else
+	ret = fb->display_ops->start(fb->display_hdl, &fb->dfs_node );
+	ret = fb->display_ops->open(fb->display_hdl);
+#endif
+
 	if (ret != 0) {
 		rheafb_error("Failed to open this display device!\n");
 		goto fail_to_open;
 	}
 
-	ret = fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_ON);
+	ret = fb->display_ops->power_control(fb->display_hdl, CTRL_PWR_ON);
 	if (ret != 0) {
 		rheafb_error("Failed to power on this display device!\n");
 		goto fail_to_power_control;
  	}
-
+	
+#ifndef KONAFB_OLD_API
+	ret = fb->display_ops->stop(fb->display_hdl, &fb->dfs_node );
+#endif
  	rheafb_info("RHEA display is enabled successfully\n");
 	return 0;
  
 fail_to_power_control:
 	fb->display_ops->close(fb->display_hdl);
 fail_to_open:
-	fb->display_ops->exit();
+#ifndef KONAFB_OLD_API
+	fb->display_ops->stop(fb->display_hdl, &fb->dfs_node );
+#endif
+	fb->display_ops->exit(fb->display_hdl);
 fail_to_init:
  	return ret;
 
@@ -346,11 +392,14 @@ static int disable_display(struct rhea_fb *fb)
 {
 	int ret = 0;
 
-	fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_SLEEP);
-	
+#ifdef KONAFB_OLD_API
+	fb->display_ops->power_control(fb->display_hdl, CTRL_SLEEP_IN);
+#else
+	fb->display_ops->power_control(fb->display_hdl, CTRL_PWR_OFF);
+#endif	
 	fb->display_ops->close(fb->display_hdl);
 
-	fb->display_ops->exit();
+	fb->display_ops->exit(fb->display_hdl);
 
 	rheafb_info("RHEA display is disabled successfully\n");
 	return ret;
@@ -381,7 +430,8 @@ static int rhea_fb_ioctl(struct fb_info *info, unsigned int cmd,
 
 		wait_for_completion(&fb->prev_buf_done_sem);
 		rhea_clock_start(fb);
-		ret = fb->display_ops->update(fb->display_hdl, (uint32_t)ptr, (DISPDRV_WIN_t *)1, NULL/*(DISPDRV_CB_T)rhea_display_done_cb*/);
+//		ret = fb->display_ops->update(fb->display_hdl, (uint32_t)ptr, (DISPDRV_WIN_t *)1, NULL/*(DISPDRV_CB_T)rhea_display_done_cb*/);
+		ret = fb->display_ops->update(fb->display_hdl, ptr, NULL, NULL/*(DISPDRV_CB_T)rhea_display_done_cb*/);
 		rhea_clock_stop(fb);
 		complete(&g_rhea_fb->prev_buf_done_sem);
 		mutex_unlock(&fb->update_sem);
@@ -411,7 +461,7 @@ static void rhea_fb_early_suspend(struct early_suspend *h)
 		mutex_lock(&fb->update_sem);
 		wait_for_completion(&fb->prev_buf_done_sem);
 	 	rhea_clock_start(fb);
-		if (fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_BLANK_SCREEN))
+		if (fb->display_ops->power_control(fb->display_hdl, CTRL_SCREEN_OFF))
 			rheafb_error("Failed to blank this display device!\n");
 		rhea_clock_stop(fb);
 		complete(&g_rhea_fb->prev_buf_done_sem);
@@ -457,6 +507,12 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 	case EARLY_SUSPEND_LEVEL_BLANK_SCREEN:
 		/* Turn on the backlight */
 		fb = container_of(h, struct rhea_fb, early_suspend_level1);
+#ifndef KONAFB_OLD_API
+	 	rhea_clock_start(fb);
+		if (fb->display_ops->power_control(fb->display_hdl, CTRL_SCREEN_ON))
+			rheafb_error("Failed to unblank this display device!\n");
+		rhea_clock_stop(fb);
+#endif
 		break;
 
 	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
@@ -471,10 +527,15 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 		/* Ok for MM going to retention but not shutdown state */
 		pi_mgr_qos_request_update(&g_mm_qos_node, 10);
 		/* screen comes out of sleep */
+#ifdef KONAFB_OLD_API
 	 	rhea_clock_start(fb);
 		if (enable_display(fb, fb->gpio, fb->bus_width))
 			rheafb_error("Failed to enable this display device\n");
 		rhea_clock_stop(fb);
+#else
+		if (enable_display(fb, &fb->lcd_drv_parms))
+			rheafb_error("Failed to enable this display device\n");
+#endif
 		break;
 
 	default:
@@ -499,7 +560,11 @@ static int rhea_refresh_thread(void *arg)
 		mutex_lock(&fb->update_sem);
 		if (0 == fb->g_stop_drawing) {
 			rhea_clock_start(fb);
+#ifdef KONAFB_OLD_API
 			fb->display_ops->update(fb->display_hdl, 0, NULL, NULL);
+#else
+			fb->display_ops->update(fb->display_hdl, fb->buff0, NULL, NULL);
+#endif			
 			rhea_clock_stop(fb);
 			fb->base_update_count++;
 		}
@@ -549,7 +614,9 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	int ret_val = -1;
 
 	struct kona_fb_platform_data *fb_data;
-
+#ifndef KONAFB_OLD_API
+	printk("%s:+\n",__func__);
+#endif
 	if (g_rhea_fb && (g_rhea_fb->is_display_found == 1)) {
 		rheafb_info("A right display device is already found!\n");
 		return -EINVAL;
@@ -577,8 +644,13 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto fb_data_failed;
 	}
+#ifdef KONAFB_OLD_API
 	fb->display_ops = 
 		(DISPDRV_T *)fb_data->get_dispdrv_func_tbl();
+#else
+	fb->display_ops = 
+		(DISPDRV_T *)fb_data->dispdrv_entry();
+#endif
 
 	spin_lock_init(&fb->lock);
 	platform_set_drvdata(pdev, fb);
@@ -590,6 +662,26 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	complete(&fb->prev_buf_done_sem); // First attmept should pass
 	atomic_set(&fb->is_graphics_started, 0);
 	init_completion(&fb->thread_sem);
+
+//+GG PROBE DISPLAY
+#ifndef KONAFB_OLD_API
+	/* enable_display will start/stop clocks on its own */
+	fb->lcd_drv_parms = *(struct dispdrv_init_parms *)&fb_data->parms;
+	ret = enable_display(fb, &fb->lcd_drv_parms);
+	
+	if (ret) {
+		rheafb_error("Failed to enable this display device\n");
+		goto err_enable_display_failed;
+	} else {
+		fb->is_display_found = 1;
+ 	}
+	
+#if (RHEA_FB_ENABLE_DYNAMIC_CLOCK != 1)
+	//GG Start the clock here if not DYNAMIC
+	fb->display_ops->start(&fb->dfs_node);
+#endif
+#endif // #ifndef KONAFB_OLD_API
+//-GG PROBE DISPLAY
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
 	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
@@ -603,8 +695,13 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	}
 #endif
 
+#ifdef KONAFB_OLD_API
 	framesize = fb_data->screen_width * fb_data->screen_height * 
 				fb_data->bytes_per_pixel * 2;
+#else
+	framesize = fb->display_info->width * fb->display_info->height * 
+				fb->display_info->Bpp * 2;
+#endif
 
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
 			framesize, &fb->phys_fbbase, GFP_KERNEL);
@@ -614,7 +711,10 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		goto err_fbmem_alloc_failed;
 	}
 
+// old way pf probing display
+#ifdef KONAFB_OLD_API
 #if (RHEA_FB_ENABLE_DYNAMIC_CLOCK != 1)
+	//GG Start the clock here if not DYNAMIC
 	fb->display_ops->start(&fb->dfs_node);
 #endif
 
@@ -631,19 +731,30 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	rhea_clock_stop(fb);
 
 	fb->display_info = fb->display_ops->get_info(fb->display_hdl);
+#endif
 
 	/* Now we should get correct width and height for this display .. */
 	width = fb->display_info->width; 
 	height = fb->display_info->height;
+#ifdef KONAFB_OLD_API
 	BUG_ON(width != fb_data->screen_width || height != fb_data->screen_height);
+#endif
+
+#ifndef KONAFB_OLD_API
+	fb->buff0 = (void*)fb->phys_fbbase;
+	fb->buff1 = (void*)fb->phys_fbbase +  width * height * fb->display_info->Bpp;
+#endif
 
 	fb->fb.fbops		= &rhea_fb_ops;
 	fb->fb.flags		= FBINFO_FLAG_DEFAULT;
 	fb->fb.pseudo_palette	= fb->cmap;
 	fb->fb.fix.type		= FB_TYPE_PACKED_PIXELS;
 	fb->fb.fix.visual	= FB_VISUAL_TRUECOLOR;
+#ifdef KONAFB_OLD_API
 	fb->fb.fix.line_length	= width * fb_data->bytes_per_pixel;
-
+#else
+	fb->fb.fix.line_length	= width * fb->display_info->Bpp;
+#endif
 	fb->fb.fix.accel	= FB_ACCEL_NONE;
 	fb->fb.fix.ypanstep	= 1;
 	fb->fb.fix.xpanstep	= 4;
@@ -656,7 +767,11 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.var.yres		= height;
 	fb->fb.var.xres_virtual	= width;
 	fb->fb.var.yres_virtual	= height * 2;
+#ifdef KONAFB_OLD_API
 	fb->fb.var.bits_per_pixel = fb_data->bytes_per_pixel * 8;
+#else
+	fb->fb.var.bits_per_pixel = fb->display_info->Bpp << 3;
+#endif	
 	fb->fb.var.activate	= FB_ACTIVATE_NOW;
 	fb->fb.var.height	= fb->display_info->phys_height;
 	fb->fb.var.width	= fb->display_info->phys_width;
@@ -669,8 +784,17 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	frame_buf_mark.bpp = fb->fb.var.bits_per_pixel;
 #endif
 
+#ifdef KONAFB_OLD_API
 	switch (fb_data->pixel_format) {
+#else
+	switch (fb->display_info->input_format) {
+#endif
+
+#ifdef KONAFB_OLD_API
 	case RGB565:
+#else
+	case DISPDRV_FB_FORMAT_RGB565:
+#endif	
 	fb->fb.var.red.offset = 11;
 	fb->fb.var.red.length = 5;
 	fb->fb.var.green.offset = 5;
@@ -681,7 +805,11 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	framesize = width * height * 2 * 2;
 	break;
 
+#ifdef KONAFB_OLD_API
 	case XRGB8888:
+#else
+	case DISPDRV_FB_FORMAT_RGB888_U:
+#endif	
 	fb->fb.var.red.offset = 16;
 	fb->fb.var.red.length = 8;
 	fb->fb.var.green.offset = 8;
@@ -716,6 +844,19 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		rheafb_error("Can not enable the LCD!\n");
 		goto err_fb_register_failed;
 	}
+	
+	if (fb->display_ops->set_brightness) {
+		rhea_clock_start(fb);
+		fb->display_ops->set_brightness(fb->display_hdl,100);
+		rhea_clock_stop(fb);
+	}
+
+#ifndef KONAFB_OLD_API
+	/* display on after painted blank */
+	rhea_clock_start(fb);
+	fb->display_ops->power_control(fb->display_hdl, CTRL_SCREEN_ON);
+	rhea_clock_stop(fb);
+#endif
 
 	ret = register_framebuffer(&fb->fb);
 	if (ret) {
@@ -744,7 +885,12 @@ static int rhea_fb_probe(struct platform_device *pdev)
 
 	mutex_lock(&fb->update_sem);
 	rhea_clock_start(fb);
-	fb->display_ops->update(fb->display_hdl, 0, NULL, NULL /* Callback */);
+
+#ifdef KONAFB_OLD_API
+	fb->display_ops->update(fb->display_hdl, 0, NULL, NULL);
+#else
+	fb->display_ops->update(fb->display_hdl, fb->buff0, NULL, NULL);
+#endif			
 	rhea_clock_stop(fb);
 	mutex_unlock(&fb->update_sem);
 #endif
@@ -835,7 +981,7 @@ static int __init rhea_fb_init(void)
 
 	ret = pi_mgr_qos_add_request(&g_mm_qos_node, "lcd", PI_MGR_PI_ID_MM, 10);
 	if (ret)
-			printk(KERN_ERR "failed to register qos client for lcd\n");
+		printk(KERN_ERR "failed to register qos client for lcd\n");
 
 	ret = platform_driver_register(&rhea_fb_driver);
 	if (ret) {

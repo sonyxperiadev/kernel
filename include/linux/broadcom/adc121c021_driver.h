@@ -19,26 +19,25 @@
 #define I2C_ADC121C021_DRIVER_NAME           "adc121c021_i2c_drvr"
 
 /* Used to set platform information. */
-struct I2C_ADC121C021_t
-{
-   /* specify which I2C host */
-   int id;
+struct I2C_ADC121C021_t {
+	/* specify which I2C host */
+	int id;
 
-   int i2c_slave_address;    
-   int gpio_irq_pin;
-   int timer_wait;
-   int num_bytes_to_read;
-   int is_resetable;
-   int gpio_reset_pin;
-   int battery_max_voltage;
-   int battery_min_voltage;
-   int resistor_1;
-   int resistor_2;
+	int i2c_slave_address;
+	int gpio_irq_pin;
+	int timer_wait;
+	int num_bytes_to_read;
+	int is_resetable;
+	int gpio_reset_pin;
+	int battery_max_voltage;
+	int battery_min_voltage;
+	int resistor_1;
+	int resistor_2;
 
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-   int gpio_ac_power;
-   int ac_power_on_level;
-   int gpio_charger;
+	int gpio_ac_power;
+	int ac_power_on_level;
+	int gpio_charger;
 #endif
 };
 
@@ -54,13 +53,11 @@ struct I2C_ADC121C021_t
 
 #define ADC121C021_WRITE_REG_LENGTH 1
 
-struct ADC121C021_REGISTER
-{
-   int reg_idx;
-   int num_bytes;
-   int is_read_write;
-   int default_val;
-};   
+struct ADC121C021_REGISTER {
+	int reg_idx;
+	int num_bytes;
+	int is_read_write;
+	int default_val;
+};
 
-#endif    /* _ADC121C021_I2C_H_ */
-
+#endif /* _ADC121C021_I2C_H_ */

@@ -154,6 +154,8 @@ struct camdrv_ss_state
 	int bStartFineSearch;
 	int isoSpeedRating;
     int exposureTime;
+	v4l2_touch_area touch_area;
+	bool bTouchFocus ;
 };
 
 
@@ -2479,62 +2481,7 @@ static int camdrv_ss_set_AF_default_position(struct v4l2_subdev *sd)
 }
 
 
-// cmk 2010.09.29 Apply new AF routine.
-static int camdrv_ss_set_auto_focus(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
-{
 
-	//struct camdrv_ss_state *state = to_state(sd);
-    struct i2c_client *client = v4l2_get_subdevdata(sd);
-	  struct camdrv_ss_state *state = to_state(sd);
-    int err = 0;
-
-    mutex_lock(&af_cancel_op);
-
-    // Initialize fine search value.
-    state->bStartFineSearch = false;
-    
-    if(ctrl->value == AUTO_FOCUS_ON) 
-    {
-        CAM_INFO_MSG(&client->dev, "%s %s :  AUTFOCUS ON  \n",sensor.name, __func__);
-
-		if(sensor.single_af_start_regs == 0)
-			CAM_ERROR_MSG(&client->dev, "%s %s : single_af_start_regs  supported !!! \n",sensor.name, __func__);
-		else
-			err = camdrv_ss_i2c_set_config_register(client,sensor.single_af_start_regs,sensor.rows_num_single_af_start_regs,"single_af_start_regs");
-		 if(err < 0)
-    	{
-    		CAM_ERROR_MSG(&client->dev, "%s %s : i2c failed !!! \n",sensor.name, __func__);
-    		mutex_unlock(&af_cancel_op);
-    		return -EIO;
-    	}
-
-    }
-    else if(ctrl->value == AUTO_FOCUS_OFF) 
-    {
-        
-		CAM_INFO_MSG(&client->dev, "%s %s :  AUTFOCUS OFF  \n",sensor.name, __func__);
-        
-        state->camera_flash_fire = 0;
-        state->camera_af_flash_checked = 0;
-		if(sensor.single_af_stop_regs == 0)
-			CAM_ERROR_MSG(&client->dev, "%s %s : single_af_stop_regs  supported !!! \n",sensor.name, __func__);
-		else
-			err = camdrv_ss_i2c_set_config_register(client,sensor.single_af_stop_regs,sensor.rows_num_single_af_stop_regs,"single_af_stop_regs");
-		 if(err < 0)
-    	 {
-    		CAM_ERROR_MSG(&client->dev, "%s %s : i2c failed in OFF !!! \n",sensor.name, __func__);
-    		mutex_unlock(&af_cancel_op);
-    		return -EIO;
-    	 }
-
-		
-    }
-	
-
-    mutex_unlock(&af_cancel_op);
-
-    return 0;
-}
 
 
 static int camdrv_ss_set_af_preflash(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
@@ -2760,6 +2707,7 @@ static void camdrv_ss_init_parameters(struct v4l2_subdev *sd)
 	state->currentScene = SCENE_MODE_NONE;
 	state->currentWB = WHITE_BALANCE_AUTO;
 	state->check_dataline = CHK_DATALINE_OFF;
+	state->bTouchFocus = false;
 }
 
 
@@ -3103,6 +3051,9 @@ static int camdrv_ss_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
         
 		case V4L2_CID_CAMERA_AUTO_FOCUS_RESULT:
 		{
+			if(state->bTouchFocus)
+				err = sensor.get_touch_focus_status(sd, ctrl);
+			else
 			err = sensor.get_auto_focus_status(sd, ctrl);
 			break;
         }
@@ -3412,10 +3363,19 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			break;
         }
         
-		case V4L2_CID_CAMERA_TOUCH_AF_START_STOP:
+		case V4L2_CID_CAMERA_TOUCH_AF_AREA:
 		{
-		    err = sensor.set_touch_auto_focus(sd, ctrl);
-			break;
+			v4l2_touch_area touch_area;
+			copy_from_user(&touch_area, (v4l2_touch_area*)ctrl->value,sizeof(v4l2_touch_area));
+
+			state->bTouchFocus = true;
+			state->touch_area.x = touch_area.x;
+			state->touch_area.y = touch_area.y;
+			state->touch_area.w = touch_area.w;
+			state->touch_area.h = touch_area.h;
+			state->touch_area.weight= touch_area.weight;
+			printk(" V4L2_CID_CAMERA_TOUCH_AF_AREA x =%d, y =%d ,w = %d, h =%d, ori=%d \n",
+				state->touch_area.x,state->touch_area.y,state->touch_area.w,state->touch_area.h,state->touch_area.weight);
 		}
 		
 		case V4L2_CID_CAMERA_CAF_START_STOP:
@@ -3444,7 +3404,23 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
         
 		case V4L2_CID_CAMERA_SET_AUTO_FOCUS:
 		{
-			err = camdrv_ss_set_auto_focus(sd, ctrl);
+			printk(" V4L2_CID_CAMERA_SET_AUTO_FOCUS %d\n",ctrl->value);	
+			if(state->bTouchFocus)
+			{
+				if(ctrl->value == AUTO_FOCUS_ON)
+					err = sensor.set_touch_focus(sd, TOUCH_AF_START,&(state->touch_area));
+
+				else
+				{
+					err = sensor.set_touch_focus(sd, TOUCH_AF_STOP,NULL);
+					state->bTouchFocus = false;
+				}
+			}
+			else
+			{
+				err = sensor.set_auto_focus(sd, ctrl);
+			}
+			
 			break;		
         }
 

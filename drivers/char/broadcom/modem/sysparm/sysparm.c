@@ -57,7 +57,7 @@ static int fuse_sysparm_initialised = 0;
 
 #if !SKELETON_DRIVER
 // utility function used during IMEI retrieval
-static UInt8 CalculateCheckDigit(UInt8 * inImeiStrPtr);
+static UInt8 CalculateCheckDigit(UInt8 *inImeiStrPtr);
 #define SYS_IMEI_LEN 8
 #endif // !SKELETON_DRIVER
 
@@ -81,7 +81,7 @@ static int SYSPARM_GetNameFromPA(char *nameaddr, char *str)
 
 	//printk(KERN_INFO"[sysparm]: SYSPARM_GetNameFromPA: nameaddr:0x%08lX\n",(UInt32)nameaddr);
 	name_ptr =
-	    (char *)ioremap_nocache((UInt32) nameaddr, MAX_SYSPARM_NAME_SIZE);
+	    (char *)ioremap_nocache((UInt32)nameaddr, MAX_SYSPARM_NAME_SIZE);
 	if (!name_ptr) {
 		pr_err
 		    ("[sysparm]: SYSPARM_GetNameFromPA: nameaddr ioremap failed\n");
@@ -146,7 +146,7 @@ static UInt32 SYSPARM_GePAtByIndex(char *name, unsigned int size,
 				return 0;
 			}
 
-			return (UInt32) sysparm_index[i].ptr;
+			return (UInt32)sysparm_index[i].ptr;
 		}
 	}
 
@@ -221,7 +221,7 @@ int SYSPARM_GetParmU32ByName(char *name, unsigned int *parm)
 	if (!parm_addr)
 		return -ENOENT;
 
-	parm_ptr = (UInt32 *) ioremap_nocache(parm_addr, sizeof(UInt32));
+	parm_ptr = (UInt32 *)ioremap_nocache(parm_addr, sizeof(UInt32));
 	if (!parm_ptr) {
 		pr_err("%s: ioremap failed\n", __func__);
 		return -EIO;
@@ -318,7 +318,7 @@ UInt16 SYSPARM_GetLogFormat(void)
 	}
 
 	log_format_ptr =
-	    (UInt16 *) ioremap_nocache(log_format_addr, sizeof(UInt16));
+	    (UInt16 *)ioremap_nocache(log_format_addr, sizeof(UInt16));
 	if (!log_format_ptr) {
 		pr_err("[sysparm]: log_format_addr ioremap failed\n");
 		return 0;
@@ -461,8 +461,8 @@ UInt16 SYSPARM_GetDefault4p2VoltReading(void)
 	}
 
 	batt_Default4p2VoltReading_ptr =
-	    (UInt16 *) ioremap_nocache(batt_Default4p2VoltReading_addr,
-				       sizeof(*batt_Default4p2VoltReading_ptr));
+	    (UInt16 *)ioremap_nocache(batt_Default4p2VoltReading_addr,
+				      sizeof(*batt_Default4p2VoltReading_ptr));
 	if (!batt_Default4p2VoltReading_ptr) {
 		pr_err
 		    ("[sysparm]: batt_Default4p2VoltReading_addr ioremap failed\n");
@@ -506,8 +506,8 @@ UInt16 SYSPARM_GetActual4p2VoltReading(void)
 	}
 
 	batt_Actual4p2VoltReading_ptr =
-	    (UInt16 *) ioremap_nocache(batt_Actual4p2VoltReading_addr,
-				       sizeof(*batt_Actual4p2VoltReading_ptr));
+	    (UInt16 *)ioremap_nocache(batt_Actual4p2VoltReading_addr,
+				      sizeof(*batt_Actual4p2VoltReading_ptr));
 	if (!batt_Actual4p2VoltReading_ptr) {
 		pr_err
 		    ("[sysparm]: batt_Actual4p2VoltReading_addr ioremap failed\n");
@@ -552,8 +552,8 @@ UInt16 SYSPARM_GetBattLowThresh(void)
 	}
 
 	default_batt_low_thresh_ptr =
-	    (UInt16 *) ioremap_nocache(default_batt_low_thresh_addr,
-				       sizeof(*default_batt_low_thresh_ptr));
+	    (UInt16 *)ioremap_nocache(default_batt_low_thresh_addr,
+				      sizeof(*default_batt_low_thresh_ptr));
 	if (!default_batt_low_thresh_ptr) {
 		pr_err
 		    ("[sysparm]: default_batt_low_thresh_addr ioremap failed\n");
@@ -600,9 +600,9 @@ UInt16 SYSPARM_GetActualLowVoltReading(void)
 	}
 
 	default_batt_ActualLowVoltReading_ptr =
-	    (UInt16 *) ioremap_nocache(default_batt_ActualLowVoltReading_addr,
-				       sizeof
-				       (*default_batt_ActualLowVoltReading_ptr));
+	    (UInt16 *)ioremap_nocache(default_batt_ActualLowVoltReading_addr,
+				      sizeof
+				      (*default_batt_ActualLowVoltReading_ptr));
 	if (!default_batt_ActualLowVoltReading_ptr) {
 		pr_err
 		    ("[sysparm]: default_batt_ActualLowVoltReading_addr ioremap failed\n");
@@ -649,8 +649,8 @@ UInt16 SYSPARM_GetBattEmptyThresh(void)
 	}
 
 	default_batt_empty_thresh_ptr =
-	    (UInt16 *) ioremap_nocache(default_batt_empty_thresh_addr,
-				       sizeof(*default_batt_empty_thresh_ptr));
+	    (UInt16 *)ioremap_nocache(default_batt_empty_thresh_addr,
+				      sizeof(*default_batt_empty_thresh_ptr));
 	if (!default_batt_empty_thresh_ptr) {
 		pr_err
 		    ("[sysparm]: default_batt_empty_thresh_addr ioremap failed\n");
@@ -692,7 +692,7 @@ UInt8 *SYSPARM_GetGPIO_Default_Value(UInt8 gpio_index)
 	}
 
 	gpioInit_ptr =
-	    (UInt8 *) ioremap_nocache(gpioInit_addr, sizeof(gpioInit_table));
+	    (UInt8 *)ioremap_nocache(gpioInit_addr, sizeof(gpioInit_table));
 	if (!gpioInit_ptr) {
 		pr_err("[sysparm]: gpioInit_addr ioremap failed\n");
 		return 0;
@@ -718,7 +718,7 @@ UInt8 *SYSPARM_GetGPIO_Default_Value(UInt8 gpio_index)
 //                                               be at least 16-byte in size.
 //
 //******************************************************************************
-Boolean SYSPARM_GetImeiStr(UInt8 * inImeiStr)
+Boolean SYSPARM_GetImeiStr(UInt8 *inImeiStr)
 {
 	UInt8 indexA = 0;
 	UInt8 indexB = 0;
@@ -754,7 +754,7 @@ Boolean SYSPARM_GetImeiStr(UInt8 * inImeiStr)
 		return FALSE;
 	}
 	// do some linux memory magic...
-	pSysparmImei = (UInt8 *) ioremap_nocache(imei_addr, IMEI_SIZE);
+	pSysparmImei = (UInt8 *)ioremap_nocache(imei_addr, IMEI_SIZE);
 	if (!pSysparmImei) {
 		pr_err("[sysparm]: imei_addr ioremap failed\n");
 		return FALSE;
@@ -789,7 +789,7 @@ Boolean SYSPARM_GetImeiStr(UInt8 * inImeiStr)
 
 	if (bIMEIError) {
 		// invalid sysparm IMEI, so use hardcoded default testing value
-		pCurrImei = (UInt8 *) default_imei;
+		pCurrImei = (UInt8 *)default_imei;
 	} else {
 		pCurrImei = pSysparmImei;
 	}
@@ -840,7 +840,7 @@ Boolean SYSPARM_GetImeiStr(UInt8 * inImeiStr)
 //                                                      subtracted from the next higher number which does
 //                                                      end in 0.
 //******************************************************************************
-static UInt8 CalculateCheckDigit(UInt8 * inImeiStrPtr)
+static UInt8 CalculateCheckDigit(UInt8 *inImeiStrPtr)
 {
 	int theSum = 0;
 	UInt8 theIndex = 1;
@@ -891,7 +891,7 @@ static int sysparm_init(void)
 		BUG();
 	}
 
-	sysparm_ready_ind_ptr = (UInt32 *) (sys_data_dep + 0x4000);
+	sysparm_ready_ind_ptr = (UInt32 *)(sys_data_dep + 0x4000);
 
 	while (SYSPARM_INDEX_READY_INDICATOR != *sysparm_ready_ind_ptr) {
 		if (sysparm_ready_count >= 5) {
@@ -915,10 +915,10 @@ static int sysparm_init(void)
 	}
 
 	total_index_ptr =
-	    (UInt32 *) ((UInt32) sysparm_ready_ind_ptr +
-			sizeof(sysparm_ready_ind_ptr));
+	    (UInt32 *)((UInt32)sysparm_ready_ind_ptr +
+		       sizeof(sysparm_ready_ind_ptr));
 	sysparm_index =
-	    (SysparmIndex_t *) ((UInt32) total_index_ptr +
+	    (SysparmIndex_t *) ((UInt32)total_index_ptr +
 				sizeof(total_index_ptr));
 
 	pr_info("[sysparm]: sysparm_init ok\n");

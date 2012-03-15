@@ -669,11 +669,14 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 
 	}
 
-	if (result != RPC_RESULT_PENDING && type != (Int8) INTERFACE_PACKET) {
-		_DBG_(RPC_TRACE
-		      ("k:IPC_FreeBuffer (No Handling) h=%d type=%d\r\n",
-		       (int)bufHandle, type));
-		freeRpcPkts++;
+	if (result != RPC_RESULT_PENDING ) {
+		if(type != (Int8)INTERFACE_PACKET)
+		{
+			_DBG_(RPC_TRACE
+			      ("k:IPC_FreeBuffer (No Handling) h=%d type=%d\r\n",
+			       (int)bufHandle, type));
+			freeRpcPkts++;
+		}
 		IPC_FreeBuffer(bufHandle);
 	}
 

@@ -6,7 +6,7 @@ typedef struct dwc_observer {
 	dwc_notifier_callback_t callback;
 	void *data;
 	char *notification;
-	DWC_CIRCLEQ_ENTRY(dwc_observer) list_entry;
+	 DWC_CIRCLEQ_ENTRY(dwc_observer) list_entry;
 } observer_t;
 
 DWC_CIRCLEQ_HEAD(observer_queue, dwc_observer);
@@ -14,7 +14,7 @@ DWC_CIRCLEQ_HEAD(observer_queue, dwc_observer);
 typedef struct dwc_notifier {
 	void *object;
 	struct observer_queue observers;
-	DWC_CIRCLEQ_ENTRY(dwc_notifier) list_entry;
+	 DWC_CIRCLEQ_ENTRY(dwc_notifier) list_entry;
 } notifier_t;
 
 DWC_CIRCLEQ_HEAD(notifier_queue, dwc_notifier);
@@ -40,7 +40,8 @@ static void free_manager(void)
 	/* All notifiers must have unregistered themselves before this module
 	 * can be removed.  Hitting this assertion indicates a programmer
 	 * error. */
-	DWC_ASSERT(DWC_CIRCLEQ_EMPTY(&manager->notifiers), "Notification manager being freed before all notifiers have been removed");
+	DWC_ASSERT(DWC_CIRCLEQ_EMPTY(&manager->notifiers),
+		   "Notification manager being freed before all notifiers have been removed");
 	DWC_FREE(manager);
 }
 
@@ -54,7 +55,8 @@ static void dump_manager(void)
 	DWC_CIRCLEQ_FOREACH(n, &manager->notifiers, list_entry) {
 		DWC_DEBUG("Notifier %p has observers:", n->object);
 		DWC_CIRCLEQ_FOREACH(o, &n->observers, list_entry) {
-			DWC_DEBUG("    %p watching %s", o->observer, o->notification);
+			DWC_DEBUG("    %p watching %s", o->observer,
+				  o->notification);
 		}
 	}
 }
@@ -63,8 +65,8 @@ static void dump_manager(void)
 #endif
 
 static observer_t *alloc_observer(void *observer,
-	char *notification, dwc_notifier_callback_t callback,
-	void *data)
+				  char *notification,
+				  dwc_notifier_callback_t callback, void *data)
 {
 	observer_t *new_observer = DWC_ALLOC(sizeof(observer_t));
 	DWC_CIRCLEQ_INIT_ENTRY(new_observer, list_entry);
@@ -148,7 +150,6 @@ dwc_notifier_t *dwc_register_notifier(void *object)
 	notifier = alloc_notifier(object);
 	DWC_CIRCLEQ_INSERT_TAIL(&manager->notifiers, notifier, list_entry);
 
-
 	DWC_INFO("Notifier %p registered", object);
 	dump_manager();
 
@@ -160,11 +161,15 @@ void dwc_unregister_notifier(dwc_notifier_t *notifier)
 	DWC_ASSERT(manager, "Notification manager not found");
 	if (!DWC_CIRCLEQ_EMPTY(&notifier->observers)) {
 		observer_t *o;
-		DWC_ERROR("Notifier %p has active observers when removing", notifier->object);
+		DWC_ERROR("Notifier %p has active observers when removing",
+			  notifier->object);
 		DWC_CIRCLEQ_FOREACH(o, &notifier->observers, list_entry) {
-			DWC_DEBUG("    %p watching %s", o->observer, o->notification);
+			DWC_DEBUG("    %p watching %s", o->observer,
+				  o->notification);
 		}
-		DWC_ASSERT(DWC_CIRCLEQ_EMPTY(&notifier->observers), "Notifier %p has active observers when removing", notifier);
+		DWC_ASSERT(DWC_CIRCLEQ_EMPTY(&notifier->observers),
+			   "Notifier %p has active observers when removing",
+			   notifier);
 	}
 
 	DWC_CIRCLEQ_REMOVE_INIT(&manager->notifiers, notifier, list_entry);
@@ -176,13 +181,14 @@ void dwc_unregister_notifier(dwc_notifier_t *notifier)
 
 /* Add an observer to observe the notifier for a particular state, event, or notification. */
 int dwc_add_observer(void *observer, void *object,
-	char *notification, dwc_notifier_callback_t callback,
-	void *data)
+		     char *notification, dwc_notifier_callback_t callback,
+		     void *data)
 {
 	notifier_t *notifier = find_notifier(object);
 	observer_t *new_observer;
 	if (!notifier) {
-		DWC_ERROR("Notifier %p is not found when adding observer", object);
+		DWC_ERROR("Notifier %p is not found when adding observer",
+			  object);
 		return -1;
 	}
 
@@ -190,8 +196,9 @@ int dwc_add_observer(void *observer, void *object,
 
 	DWC_CIRCLEQ_INSERT_TAIL(&notifier->observers, new_observer, list_entry);
 
-	DWC_INFO("Added observer %p to notifier %p observing notification %s, callback=%p, data=%p",
-		 observer, object, notification, callback, data);
+	DWC_INFO
+	    ("Added observer %p to notifier %p observing notification %s, callback=%p, data=%p",
+	     observer, object, notification, callback, data);
 
 	dump_manager();
 	return 0;
@@ -206,9 +213,11 @@ int dwc_remove_observer(void *observer)
 		observer_t *o2;
 		DWC_CIRCLEQ_FOREACH_SAFE(o, o2, &n->observers, list_entry) {
 			if (o->observer == observer) {
-				DWC_CIRCLEQ_REMOVE_INIT(&n->observers, o, list_entry);
-				DWC_INFO("Removing observer %p from notifier %p watching notification %s:",
-					 o->observer, n->object, o->notification);
+				DWC_CIRCLEQ_REMOVE_INIT(&n->observers, o,
+							list_entry);
+				DWC_INFO
+				    ("Removing observer %p from notifier %p watching notification %s:",
+				     o->observer, n->object, o->notification);
 				free_observer(o);
 			}
 		}
@@ -229,12 +238,14 @@ typedef struct callback_data {
 
 static void cb_task(void *data)
 {
-	cb_data_t *cb = (cb_data_t *)data;
-	cb->cb(cb->object, cb->notification, cb->observer, cb->notification_data, cb->data);
+	cb_data_t *cb = (cb_data_t *) data;
+	cb->cb(cb->object, cb->notification, cb->observer,
+	       cb->notification_data, cb->data);
 	DWC_FREE(cb);
 }
 
-void dwc_notify(dwc_notifier_t *notifier, char *notification, void *notification_data)
+void dwc_notify(dwc_notifier_t *notifier, char *notification,
+		void *notification_data)
 {
 	observer_t *o;
 	DWC_ASSERT(manager, "Notification manager not found");
@@ -251,11 +262,12 @@ void dwc_notify(dwc_notifier_t *notifier, char *notification, void *notification
 			cb_data->object = notifier->object;
 			cb_data->notification = notification;
 			cb_data->notification_data = notification_data;
-			DWC_DEBUG("Observer found %p for notification %s", o->observer, notification);
+			DWC_DEBUG("Observer found %p for notification %s",
+				  o->observer, notification);
 			DWC_WORKQ_SCHEDULE(manager->wq, cb_task, cb_data,
 					   "Notify callback from %p for Notification %s, to observer %p",
-					   cb_data->object, notification, cb_data->observer);
+					   cb_data->object, notification,
+					   cb_data->observer);
 		}
 	}
 }
-

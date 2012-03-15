@@ -20,7 +20,6 @@
 #include "shared.h"
 #include "csl_arm2sp.h"
 #include "csl_dsp_common_util.h"
-#include "log.h"
 #include "osdw_dsp_drv.h"
 #include "audio_trace.h"
 

@@ -43,7 +43,6 @@
 
 //#define Log_DebugPrintf dprintf
 
-
 //#define memset(x,y,z)  
 
 //#if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
@@ -65,7 +64,6 @@ extern int gAudioDebugLevel;
 
 #define audio_xassert(a, b) {if((a)==0) Log_DebugPrintf(LOGID_AUDIO, "%s assert line %d, %d, 0x%lx.\r\n", __FUNCTION__, __LINE__, a, (UInt32)b);}
 
-
 #define OSTASK_Sleep(x)  \
 {\
     /*unsigned long oldJiffies = jiffies;*/ \
@@ -74,19 +72,14 @@ extern int gAudioDebugLevel;
     /*Log_DebugPrintf(LOGID_AUDIO,"richlu plan delay %dms, real deay = %dms\n", x, delay);*/    \
 }
 
-
-
-
 //
 
-typedef enum
-{
+typedef enum {
 	LOGID_MISC,
 	LOGID_SOC_AUDIO,
-    LOGID_SOC_AUDIO_DETAIL
-}LOG_ID;
+	LOGID_SOC_AUDIO_DETAIL
+} LOG_ID;
 
 #define L1_LOGV Log_DebugPrintf
 
 #endif
-

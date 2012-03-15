@@ -985,6 +985,39 @@ UInt32 Log_GetGroupSizeThreshold(UInt32 sig_code);
 
 //***************************************************************************************
 /**
+    Function to register/deregister a logging buffer so that LOG task can push it to
+	a logging port as a binary logging message using a specified sig_code
+	@param		p (in) logging buffer of T_REGISTERED_LOG_BUFFER type.
+
+	These logging APIs can be used for ARM to support DSP logging. When DSP is initialized,
+	Log_RegisterLogBuffer(dsp_logging_buffer) should be called to register dsp_logging_buffer
+	in shared memory that is accessible by ARM and DSP. DSP can elect either accumulates
+	low-level grouped DSP logging in this buffer directly (logging could be slow due to
+	access to shared memory) or DMA accumulated DSP logging from DSP internal memory
+	(logging can be much fast) to this buffer (if DMA is used, "ready" field in the header
+	structure should be set to 1 after DMA finishes).
+
+	When this buffer is not being used, or when it is not ready to be sent to a logging
+	port, "ready" should be zero. When it is ready to be sent to a logging port, "ready" is
+	set to 1, and LOG task running on ARM will be responsible for sending it to a logging
+	port as a binary logging message using "sig_code" specified in the header strcuture.
+	After it is sent out, "ready" is set to zero again for DSP to re-use this buffer.
+**/	
+
+typedef struct
+{
+	unsigned int ready;
+	void *ptr;
+	unsigned int size;
+	unsigned int sig_code;
+} T_REGISTERED_LOG_BUFFER;
+
+int Log_RegisterLogBuffer(T_REGISTERED_LOG_BUFFER *p);
+int Log_DeregisterLogBuffer(T_REGISTERED_LOG_BUFFER *p);
+
+
+//***************************************************************************************
+/**
     Function to select specified logging format
 	@param		logFormat (in) Format can be ASCII, MOBILE ANALYZER, or BINARY
 **/	

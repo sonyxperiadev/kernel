@@ -111,6 +111,7 @@
 #endif
 
 #ifdef CONFIG_FB_BRCM_RHEA
+#include <video/kona_fb_boot.h>
 #include <video/kona_fb.h>
 #endif
 
@@ -853,6 +854,7 @@ static struct platform_device bcm_backlight_devices = {
 
 #ifdef CONFIG_FB_BRCM_RHEA
 
+#if 0
 static struct kona_fb_platform_data lq043y1dx01_dsi_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_LQ043Y1DX01_GetFuncTable,
 	.screen_width		= 480,
@@ -866,11 +868,12 @@ static struct platform_device lq043y1dx01_dsi_display_device = {
 	.name    = "rhea_fb",
 	.id      = 0,
 	.dev = {
-		.platform_data		= &lq043y1dx01_dsi_display_fb_data,
+		.platform_data		= &lq043y1dx01__display_fb_data,
 		.dma_mask		= (u64 *) ~(u32)0,
 		.coherent_dma_mask	= ~(u32)0,
 	},
 };
+#endif
 
 #endif
 
@@ -1076,8 +1079,10 @@ static struct platform_device *rhea_stone_plat_devices[] __initdata = {
 	&bcm_backlight_devices,
 #endif
 
+#if 0
 #ifdef CONFIG_FB_BRCM_RHEA
 	&lq043y1dx01_dsi_display_device,
+#endif
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
@@ -1310,9 +1315,49 @@ static void __init rhea_stone_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
+#ifdef CONFIG_FB_BRCM_RHEA
+/*
+ *   KONA FRAME BUFFER DSIPLAY DRIVER PLATFORM CONFIG
+ */ 
+struct kona_fb_platform_data konafb_devices[] __initdata = {
+	{
+		.dispdrv_name  = "LQ043Y1DX01", 
+		.dispdrv_entry = DISP_DRV_LQ043Y1DX01_GetFuncTable,
+		.parms = {
+			.w0 = {
+				.bits = { 
+					.boot_mode  = 0,  	  
+					.bus_type   = RHEA_BUS_DSI,  	  
+					.bus_no     = RHEA_BUS_0,
+					.bus_ch     = RHEA_BUS_CH_0,
+					.bus_width  = 0,
+					.te_input   = RHEA_TE_IN_1_DSI0,	  
+					.col_mode_i = RHEA_CM_I_RGB565,	  
+					.col_mode_o = RHEA_CM_O_RGB565, 
+				},	
+			},
+		 	.w1 = {
+		  		.bits = { 
+					.api_rev  =  RHEA_LCD_BOOT_API_REV,
+					.lcd_rst0 =  25, /* DSI_BRIDGE_PON   */
+					.lcd_rst1 =  12, /* DSI_BRIDGE_RESET */
+					.lcd_rst2 =  13, /* SHARP_RESET      */
+				}, 
+			},
+		},
+	},
+};
+
+#include "rhea_fb_init.c"
+#endif /* #ifdef CONFIG_FB_BRCM_RHEA */
+
 void __init board_init(void)
 {
 	board_add_common_devices();
+#ifdef CONFIG_FB_BRCM_RHEA
+	/* rhea_fb_init.c */
+	konafb_init();
+#endif
 	rhea_stone_add_devices();
 	return;
 }

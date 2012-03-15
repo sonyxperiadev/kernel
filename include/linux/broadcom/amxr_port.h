@@ -36,67 +36,63 @@
 *  pointer is used to write data into the port, where a source point is
 *  used to read data from the port.
 */
-typedef struct amxr_port_cb
-{
-   /* This callback returns a pointer to the audio source data for
-    * one frame period and it takes a frame size in bytes as a parameter.
-    * It may be called more than once in a frame period with the same
-    * or different frame size. The callback may return a valid pointer
-    * or a NULL pointer if the frame size is invalid. If a NULL pointer
-    * is returned, the Audio Mixer will not make use of the pointer.
-    *
-    * Atomic operation.
-    */
-   int16_t *(*getsrc)(
-      int   bytes,                     /**< (i) size of the buffer in bytes */
-      void *privdata                   /**< (i) user supplied data */
-   );
+typedef struct amxr_port_cb {
+	/* This callback returns a pointer to the audio source data for
+	 * one frame period and it takes a frame size in bytes as a parameter.
+	 * It may be called more than once in a frame period with the same
+	 * or different frame size. The callback may return a valid pointer
+	 * or a NULL pointer if the frame size is invalid. If a NULL pointer
+	 * is returned, the Audio Mixer will not make use of the pointer.
+	 *
+	 * Atomic operation.
+	 */
+	int16_t *(*getsrc) (int bytes, /**< (i) size of the buffer in bytes */
+			    void *privdata
+				       /**< (i) user supplied data */
+	    );
 
-   /* This callback indicates when the Audio Mixer is done with the
-    * source data for one audio frame. It is only called once per frame
-    * period and is thus typically used for timing and buffer management.
-    *
-    * Atomic operation.
-    */
-   void  (*srcdone)(
-      int   bytes,                     /**< (i) size of the buffer in bytes */
-      void *privdata                   /**< (i) user supplied data */
-   );
+	/* This callback indicates when the Audio Mixer is done with the
+	 * source data for one audio frame. It is only called once per frame
+	 * period and is thus typically used for timing and buffer management.
+	 *
+	 * Atomic operation.
+	 */
+	void (*srcdone) (int bytes,    /**< (i) size of the buffer in bytes */
+			 void *privdata/**< (i) user supplied data */
+	    );
 
-   /* This callback returns a pointer to the destination audio buffer
-    * for one frame period and takes a frame size in bytes as a parameter.
-    * It may be called more than once in a frame period with the same or
-    * different frame size. The callback may return a valid pointer or a
-    * NULL pointer if the frame size is invalid. If a NULL pointer is
-    * returned, the Audio Mixer will not make use of the pointer.
-    *
-    * Atomic operation.
-    */
-   int16_t *(*getdst)(
-      int   bytes,                     /**< (i) size of the buffer in bytes */
-      void *privdata                   /**< (i) user supplied data */
-   );
+	/* This callback returns a pointer to the destination audio buffer
+	 * for one frame period and takes a frame size in bytes as a parameter.
+	 * It may be called more than once in a frame period with the same or
+	 * different frame size. The callback may return a valid pointer or a
+	 * NULL pointer if the frame size is invalid. If a NULL pointer is
+	 * returned, the Audio Mixer will not make use of the pointer.
+	 *
+	 * Atomic operation.
+	 */
+	int16_t *(*getdst) (int bytes, /**< (i) size of the buffer in bytes */
+			    void *privdata
+				       /**< (i) user supplied data */
+	    );
 
-   /* This callback indicates when the Audio Mixer is done with the
-    * destination buffer for one audio frame. It is only called once per
-    * frame period and is typically used for timing and buffer management.
-    *
-    * Atomic operation.
-    */
-   void  (*dstdone)(
-      int   bytes,                     /**< (i) size of the buffer in bytes */
-      void *privdata                   /**< (i) user supplied data */
-   );
+	/* This callback indicates when the Audio Mixer is done with the
+	 * destination buffer for one audio frame. It is only called once per
+	 * frame period and is typically used for timing and buffer management.
+	 *
+	 * Atomic operation.
+	 */
+	void (*dstdone) (int bytes,    /**< (i) size of the buffer in bytes */
+			 void *privdata/**< (i) user supplied data */
+	    );
 
-   /* This callback indicates when the last destination connection to
-    * the port is removed. This callback may be useful to trigger a flush
-    * of a port's destination buffers.
-    */
-   void  (*dstcnxsremoved)(
-      void *privdata                   /**< (i) user supplied data */
-   );
-}
-AMXR_PORT_CB;
+	/* This callback indicates when the last destination connection to
+	 * the port is removed. This callback may be useful to trigger a flush
+	 * of a port's destination buffers.
+	 */
+	void (*dstcnxsremoved) (void *privdata
+				       /**< (i) user supplied data */
+	    );
+} AMXR_PORT_CB;
 
 /* MakeDefs: On */
 
@@ -104,8 +100,7 @@ AMXR_PORT_CB;
 /* ---- Function Prototypes ---------------------------------------------- */
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /***************************************************************************/
@@ -116,18 +111,25 @@ extern "C"
 *     0        On success
 *     -ve      Error code
 */
-int amxrCreatePort(
-   const char       *name,          /**< (i) Name string */
-   AMXR_PORT_CB     *cb,            /**< (i) Callbacks */
-   void             *privdata,      /**< (i) Private data passed back to callbacks */
-   int               dst_hz,        /**< (i) Current destination sampling frequency in Hz */
-   int               dst_chans,     /**< (i) Number of channels, i.e. mono = 1 */
-   int               dst_bytes,     /*<< (i) Destination period size in bytes */
-   int               src_hz,        /**< (i) Current source sampling frequency in Hz */
-   int               src_chans,     /**< (i) Number of channels, i.e. mono = 1 */
-   int               src_bytes,     /*<< (i) Source period size in bytes */
-   AMXR_PORT_ID     *portidp        /**< (o) Ptr to port ID */
-);
+	int amxrCreatePort(const char *name,
+				    /**< (i) Name string */
+			   AMXR_PORT_CB * cb,
+				    /**< (i) Callbacks */
+			   void *privdata,
+				    /**< (i) Private data passed back to callbacks */
+			   int dst_hz,
+				    /**< (i) Current destination sampling frequency in Hz */
+			   int dst_chans,
+				    /**< (i) Number of channels, i.e. mono = 1 */
+			   int dst_bytes,	/*<< (i) Destination period size in bytes */
+			   int src_hz,
+				    /**< (i) Current source sampling frequency in Hz */
+			   int src_chans,
+				    /**< (i) Number of channels, i.e. mono = 1 */
+			   int src_bytes,	/*<< (i) Source period size in bytes */
+			   AMXR_PORT_ID * portidp
+				    /**< (o) Ptr to port ID */
+	    );
 
 /***************************************************************************/
 /**
@@ -145,9 +147,9 @@ int amxrCreatePort(
 *     applications will have to constantly query what ports still exists
 *     and keep track of valid port IDs.
 */
-int amxrRemovePort(
-   AMXR_PORT_ID port                /**< (i) Port to remove */
-);
+	int amxrRemovePort(AMXR_PORT_ID port
+				    /**< (i) Port to remove */
+	    );
 
 /***************************************************************************/
 /**
@@ -158,11 +160,11 @@ int amxrRemovePort(
 *     0           On success
 *     -ve         On general failure
 */
-int amxrSetPortDstFreq(
-   AMXR_PORT_ID   portid,           /**< (i) Destination port id */
-   int            dst_hz,           /*<< (i) Destination sampling frequency in Hz */
-   int            dst_bytes         /*<< (i) Destination period size in bytes */
-);
+	int amxrSetPortDstFreq(AMXR_PORT_ID portid,
+				    /**< (i) Destination port id */
+			       int dst_hz,	/*<< (i) Destination sampling frequency in Hz */
+			       int dst_bytes	/*<< (i) Destination period size in bytes */
+	    );
 
 /***************************************************************************/
 /**
@@ -173,11 +175,11 @@ int amxrSetPortDstFreq(
 *     0           On success
 *     -ve         On general failure
 */
-int amxrSetPortSrcFreq(
-   AMXR_PORT_ID   portid,           /**< (i) Source port id */
-   int            src_hz,           /*<< (i) Source sampling frequency in Hz */
-   int            src_bytes         /*<< (i) Source period size in bytes */
-);
+	int amxrSetPortSrcFreq(AMXR_PORT_ID portid,
+				    /**< (i) Source port id */
+			       int src_hz,	/*<< (i) Source sampling frequency in Hz */
+			       int src_bytes	/*<< (i) Source period size in bytes */
+	    );
 
 /***************************************************************************/
 /**
@@ -191,22 +193,22 @@ int amxrSetPortSrcFreq(
 *  @remarks
 *     Source and destination sampling frequencies may be asymmetric.
 */
-static inline int amxrSetPortFreq(
-   AMXR_PORT_ID   portid,           /**< (i) port id */
-   int            dst_hz,           /**< (i) Destination sampling frequency in Hz */
-   int            dst_bytes,        /*<< (i) Destination period size in bytes */
-   int            src_hz,           /**< (i) Source sampling frequency in Hz */
-   int            src_bytes         /*<< (i) Source period size in bytes */
-)
-{
-   int err;
-   err = amxrSetPortDstFreq( portid, dst_hz, dst_bytes );
-   if ( !err )
-   {
-      err = amxrSetPortSrcFreq( portid, src_hz, src_bytes );
-   }
-   return err;
-}
+	static inline int amxrSetPortFreq(AMXR_PORT_ID portid,
+				    /**< (i) port id */
+					  int dst_hz,
+				    /**< (i) Destination sampling frequency in Hz */
+					  int dst_bytes,	/*<< (i) Destination period size in bytes */
+					  int src_hz,
+				    /**< (i) Source sampling frequency in Hz */
+					  int src_bytes	/*<< (i) Source period size in bytes */
+	    ) {
+		int err;
+		 err = amxrSetPortDstFreq(portid, dst_hz, dst_bytes);
+		if (!err) {
+			err = amxrSetPortSrcFreq(portid, src_hz, src_bytes);
+		}
+		return err;
+	}
 
 /***************************************************************************/
 /**
@@ -220,11 +222,11 @@ static inline int amxrSetPortFreq(
 *  @remarks    Not all existing connections with this source port
 *              will be maintained after changing the number of channels.
 */
-int amxrSetPortDstChannels(
-   AMXR_PORT_ID   portid,           /**< (i) Destination port id */
-   int            dst_chans,        /*<< (i) Number of channels: 1 for mono, 2 for stereo, etc */
-   int            dst_bytes         /*<< (i) Destination period size in bytes */
-);
+	int amxrSetPortDstChannels(AMXR_PORT_ID portid,
+				    /**< (i) Destination port id */
+				   int dst_chans,	/*<< (i) Number of channels: 1 for mono, 2 for stereo, etc */
+				   int dst_bytes	/*<< (i) Destination period size in bytes */
+	    );
 
 /***************************************************************************/
 /**
@@ -238,11 +240,11 @@ int amxrSetPortDstChannels(
 *  @remarks    Not all existing connections with this source port
 *              will be maintained after changing the number of channels.
 */
-int amxrSetPortSrcChannels(
-   AMXR_PORT_ID   portid,           /**< (i) Source port id */
-   int            src_chans,        /*<< (i) Number of src channels: 1 for mono, 2 for stereo, etc. */
-   int            src_bytes         /*<< (i) Source period size in bytes */
-);
+	int amxrSetPortSrcChannels(AMXR_PORT_ID portid,
+				    /**< (i) Source port id */
+				   int src_chans,	/*<< (i) Number of src channels: 1 for mono, 2 for stereo, etc. */
+				   int src_bytes	/*<< (i) Source period size in bytes */
+	    );
 
 #if !defined( __KERNEL__ )
 /* User space only APIs */
@@ -261,11 +263,13 @@ int amxrSetPortSrcChannels(
 *                 is returned if there is insufficient memory to queue
 *                 data.
 */
-int amxrWritePortSrcData(
-   AMXR_PORT_ID portid,             /**< (i) Source port id */
-   const void *bufp,                /**< (i) Buffer ptr */
-   size_t bytes                     /**< (i) Number of bytes to write */
-);
+	int amxrWritePortSrcData(AMXR_PORT_ID portid,
+				    /**< (i) Source port id */
+				 const void *bufp,
+				    /**< (i) Buffer ptr */
+				 size_t bytes
+				    /**< (i) Number of bytes to write */
+	    );
 #endif
 
 #if defined( __KERNEL__ )
@@ -283,41 +287,45 @@ int amxrWritePortSrcData(
 *  Refer to the API function prototypes for the explanation of the
 *  parameters and description of the API.
 */
-typedef struct amxr_api_funcs
-{
-   int (*getPortInfo)( AMXR_HDL, AMXR_PORT_ID, AMXR_PORT_INFO * );
-   int (*getInfo)( AMXR_HDL, AMXR_INFO * );
-   int (*setCnxLoss)( AMXR_HDL, AMXR_PORT_ID, AMXR_PORT_ID, AMXR_CONNECT_DESC, unsigned int );
-   int (*getCnxLoss)( AMXR_HDL, AMXR_PORT_ID, AMXR_PORT_ID, AMXR_CONNECT_DESC, unsigned int * );
-   int (*connect)( AMXR_HDL, AMXR_PORT_ID, AMXR_PORT_ID, AMXR_CONNECT_DESC );
-   int (*disconnect)( AMXR_HDL, AMXR_PORT_ID, AMXR_PORT_ID );
-   int (*getCnxListBySrc)( AMXR_HDL, AMXR_PORT_ID, AMXR_CNXS *, int );
-   int (*getCnxListByDst)( AMXR_HDL, AMXR_PORT_ID, AMXR_CNXS *, int );
+	typedef struct amxr_api_funcs {
+		int (*getPortInfo) (AMXR_HDL, AMXR_PORT_ID, AMXR_PORT_INFO *);
+		int (*getInfo) (AMXR_HDL, AMXR_INFO *);
+		int (*setCnxLoss) (AMXR_HDL, AMXR_PORT_ID, AMXR_PORT_ID,
+				   AMXR_CONNECT_DESC, unsigned int);
+		int (*getCnxLoss) (AMXR_HDL, AMXR_PORT_ID, AMXR_PORT_ID,
+				   AMXR_CONNECT_DESC, unsigned int *);
+		int (*connect) (AMXR_HDL, AMXR_PORT_ID, AMXR_PORT_ID,
+				AMXR_CONNECT_DESC);
+		int (*disconnect) (AMXR_HDL, AMXR_PORT_ID, AMXR_PORT_ID);
+		int (*getCnxListBySrc) (AMXR_HDL, AMXR_PORT_ID, AMXR_CNXS *,
+					int);
+		int (*getCnxListByDst) (AMXR_HDL, AMXR_PORT_ID, AMXR_CNXS *,
+					int);
 
-   /* Kernel only API */
-   int (*createPort)( const char *, AMXR_PORT_CB *, void *, int, int, int, int, int, int, AMXR_PORT_ID * );
-   int (*removePort)( AMXR_PORT_ID );
-   int (*setPortDstFreq)( AMXR_PORT_ID, int, int );
-   int (*setPortSrcFreq)( AMXR_PORT_ID, int, int );
-   int (*setPortDstChannels)( AMXR_PORT_ID, int, int );
-   int (*setPortSrcChannels)( AMXR_PORT_ID, int, int );
-   void (*serviceUnsyncPort)( AMXR_PORT_ID );
-}
-AMXR_API_FUNCS;
+		/* Kernel only API */
+		int (*createPort) (const char *, AMXR_PORT_CB *, void *, int,
+				   int, int, int, int, int, AMXR_PORT_ID *);
+		int (*removePort) (AMXR_PORT_ID);
+		int (*setPortDstFreq) (AMXR_PORT_ID, int, int);
+		int (*setPortSrcFreq) (AMXR_PORT_ID, int, int);
+		int (*setPortDstChannels) (AMXR_PORT_ID, int, int);
+		int (*setPortSrcChannels) (AMXR_PORT_ID, int, int);
+		void (*serviceUnsyncPort) (AMXR_PORT_ID);
+	} AMXR_API_FUNCS;
 /***************************************************************************/
 /**
 *  Setup proprietary Audio Mixer implementation
 *
 *  @return    none
 */
-void amxrSetApiFuncs(
-   const AMXR_API_FUNCS *funcs      /**< (i) Ptr to API functions.
+	void amxrSetApiFuncs(const AMXR_API_FUNCS * funcs
+				    /**< (i) Ptr to API functions.
                                              If NULL, clears registration */
-);
+	    );
 #endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif   /* AMXR_PORTS_H */
+#endif /* AMXR_PORTS_H */

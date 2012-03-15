@@ -14,6 +14,7 @@
 #ifndef KONA_FB_H_
 #define KONA_FB_H_
 
+#if 0
 typedef	enum {
 	RGB565,
 	XRGB8888,
@@ -29,6 +30,14 @@ struct kona_fb_platform_data {
 	pixel_format_t	pixel_format;
 	u32	bus_width;
 };
+#endif
+
+struct kona_fb_platform_data {
+	char			*dispdrv_name;
+	void* 			(*dispdrv_entry) (void);
+	struct 	dispdrv_init_parms   parms;
+};
+
 extern void* DISPDRV_GetFuncTable(void);
 extern void* DISP_DRV_LQ043Y1DX01_GetFuncTable(void);
 extern void* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable(void);

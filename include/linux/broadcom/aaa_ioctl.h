@@ -19,7 +19,7 @@
 /* ---- Include Files ---------------------------------------------------- */
 
 #if defined( __KERNEL__ )
-#include <linux/types.h>            /* Needed for standard types */
+#include <linux/types.h>	/* Needed for standard types */
 #else
 #include <stdint.h>
 #endif
@@ -32,27 +32,23 @@
 #define AAA_MAGIC_TYPE                  'Z'
 
 /* IOCTL commands */
-enum aaa_cmd_e
-{
-   AAA_CMD_SET_WRT_CODEC = 0x15,  /* Start at 0x15 arbitrarily */
-   AAA_CMD_DSC_WRT_CODEC,
-   AAA_CMD_SET_RD_CODEC,
-   AAA_CMD_LAST                   /* Do no delete */
+enum aaa_cmd_e {
+	AAA_CMD_SET_WRT_CODEC = 0x15,	/* Start at 0x15 arbitrarily */
+	AAA_CMD_DSC_WRT_CODEC,
+	AAA_CMD_SET_RD_CODEC,
+	AAA_CMD_LAST		/* Do no delete */
 };
 
 /* IOCTL Data structures */
-struct aaa_ioctl_setwrtcodec
-{
-   char               name[32];   /*<< (i) name of the codec to use */
+struct aaa_ioctl_setwrtcodec {
+	char name[32];		/*<< (i) name of the codec to use */
 
 };
 
-struct aaa_ioctl_setrdcodec
-{
-   char               name[32];   /*<< (i) name of the codec to use */
+struct aaa_ioctl_setrdcodec {
+	char name[32];		/*<< (i) name of the codec to use */
 
 };
-
 
 /* IOCTL numbers */
 #define AAA_IOCTL_SET_TX_CODEC       _IOR( AAA_MAGIC_TYPE, AAA_CMD_SET_WRT_CODEC, struct aaa_ioctl_setwrtcodec )

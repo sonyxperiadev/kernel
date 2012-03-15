@@ -56,11 +56,13 @@
 #else
 #include <plat/dma_drv.h>
 #include <plat/pi_mgr.h>
+#include <video/kona_fb_boot.h>	   // LCD DRV init API
 #include "display_drv.h"           // display driver interface
 #include <plat/csl/csl_lcd.h>               // LCD CSL Common Interface 
 #include <plat/csl/csl_dsi.h>               // DSI CSL 
 #include "dispdrv_mipi_dcs.h"      // MIPI DCS         
-#include "dispdrv_mipi_dsi.h"      // MIPI DSI      
+#include "dispdrv_mipi_dsi.h"      // MIPI DSI 
+     
 #endif   
 
 #include "dispdrv_common.h"        // Disp Drv Commons
@@ -98,29 +100,25 @@ typedef struct
 
 typedef struct
 {
-    CSL_LCD_HANDLE      clientH;        // DSI Client Handle
-    CSL_LCD_HANDLE      dsiCmVcHandle;  // DSI CM DISPDRV_VC Handle
-    DISP_DRV_STATE      drvState;
-    DISP_PWR_STATE      pwrState;
-    Boolean             isTE;
-    UInt32              busId;
-    UInt32              teIn;
-    UInt32              teOut;
-    LCD_DRV_RECT_t      win;
-    void*               pFb;
-    void*               pFbA;
-    struct pi_mgr_dfs_node* dfs_node;
+	CSL_LCD_HANDLE      clientH;        // DSI Client Handle
+	CSL_LCD_HANDLE      dsiCmVcHandle;  // DSI CM DISPDRV_VC Handle
+	DISP_DRV_STATE      drvState;
+	DISP_PWR_STATE      pwrState;
+	Boolean             isTE;
+	UInt32              busNo;
+	UInt32              teIn;
+	UInt32              teOut;
+	LCD_DRV_RECT_t      win;
+	struct pi_mgr_dfs_node* dfs_node;
+	/* --- */
+	Boolean             boot_mode;
+	UInt32              rst;
+	CSL_DSI_CM_VC_t*    cmnd_mode; 
+	CSL_DSI_CFG_t*      dsi_cfg; 
+	DISPDRV_INFO_T*	    disp_info;
 } DISPDRV_PANEL_T;   
 
 // LOCAL FUNCTIONs
-static int      DISPDRV_IoCtlRd( 
-                    DISPDRV_HANDLE_T        drvH, 
-                    DISPDRV_CTRL_RW_REG*   acc );
-                    
-static void     DISPDRV_IoCtlWr( 
-                    DISPDRV_HANDLE_T        drvH, 
-                    DISPDRV_CTRL_RW_REG*   acc );
-
 static void     DISPDRV_WrCmndP0  ( 
                     DISPDRV_HANDLE_T        drvH, 
                     UInt32                  reg );
@@ -131,67 +129,51 @@ static void    DISPDRV_WrCmndP1  (
                     UInt32                  val );
 
 // DRV INTERFACE FUNCTIONs
-static Int32           DISPDRV_Init          ( unsigned int bus_width ); 
-static Int32           DISPDRV_Exit          ( void ); 
+static Int32 DISPDRV_Init( 
+		struct dispdrv_init_parms *parms, DISPDRV_HANDLE_T *handle ); 
+		
+static Int32 DISPDRV_Exit ( DISPDRV_HANDLE_T drvH ); 
 
-static Int32           DISPDRV_Open          ( 
-                   const void*         params, 
-                   DISPDRV_HANDLE_T*   drvH ); 
+static Int32 DISPDRV_Open ( DISPDRV_HANDLE_T drvH ); 
                    
-static Int32           DISPDRV_Close         ( DISPDRV_HANDLE_T drvH ); 
+static Int32 DISPDRV_Close         ( DISPDRV_HANDLE_T drvH ); 
 
-static Int32          DISPDRV_GetDispDrvFeatures ( 
-                   const char**                driver_name,
-                   UInt32*                     version_major,
-                   UInt32*                     version_minor,
-                   DISPDRV_SUPPORT_FEATURES_T* flags );
+static Int32 DISPDRV_GetDispDrvFeatures ( 
+		DISPDRV_HANDLE_T 		drvH,
+		const char			**driver_name,
+		UInt32				*version_major,
+		UInt32				*version_minor,
+		DISPDRV_SUPPORT_FEATURES_T	*flags );
 
 static const DISPDRV_INFO_T* DISPDRV_GetDispDrvData ( DISPDRV_HANDLE_T drvH );
 
-static Int32           DISPDRV_Start         ( struct pi_mgr_dfs_node* dfs_node); 
-static Int32           DISPDRV_Stop          ( struct pi_mgr_dfs_node* dfs_node); 
+static Int32 DISPDRV_Start( DISPDRV_HANDLE_T drvH, struct pi_mgr_dfs_node* dfs_node); 
+static Int32 DISPDRV_Stop( DISPDRV_HANDLE_T drvH, struct pi_mgr_dfs_node* dfs_node); 
 
-static Int32           DISPDRV_PowerControl  ( DISPDRV_HANDLE_T drvH, 
-                   DISPLAY_POWER_STATE_T state ); 
+static Int32 DISPDRV_PowerControl  ( DISPDRV_HANDLE_T drvH, 
+		DISPLAY_POWER_STATE_T state ); 
 
-static Int32           DISPDRV_Update       ( 
-                    DISPDRV_HANDLE_T    drvH, 
-					 int			fb_idx,
-					 DISPDRV_WIN_t*	p_win,
-                    DISPDRV_CB_T        apiCb ); 
+static Int32 DISPDRV_Update ( 
+		DISPDRV_HANDLE_T	drvH, 
+		void			*buff,
+		DISPDRV_WIN_t		*p_win,
+		DISPDRV_CB_T		apiCb ); 
 
-static Int32           DISPDRV_Update_ExtFb ( 
-                    DISPDRV_HANDLE_T        drvH, 
-                    void                    *pFb,
-                    DISPDRV_CB_API_1_1_T    apiCb ); 
 
-static Int32           DISPDRV_SetCtl ( 
-                    DISPDRV_HANDLE_T    drvH, 
-                    DISPDRV_CTRL_ID_T   ctrlID, 
-                    void*               ctrlParams );
-                   
-static Int32           DISPDRV_GetCtl (
-                    DISPDRV_HANDLE_T    drvH, 
-                    DISPDRV_CTRL_ID_T   ctrlID, 
-                    void*               ctrlParams );
-static DISPDRV_T Disp_Drv =
-{
-   &DISPDRV_Init,                 // init
-   &DISPDRV_Exit,                 // exit
-   &DISPDRV_GetDispDrvFeatures,   // info
-   &DISPDRV_Open,                 // open
-   &DISPDRV_Close,                // close
-   NULL,                                // core_freq_change
-   NULL,                                // run_domain_change
-   &DISPDRV_GetDispDrvData,       // get_info
-   &DISPDRV_Start,                // start
-   &DISPDRV_Stop,                 // stop
-   &DISPDRV_PowerControl,         // power_control
-   NULL,                                // update_no_os
-   &DISPDRV_Update_ExtFb,         // update_dma_os
-   &DISPDRV_Update,               // update
-   &DISPDRV_SetCtl,               // set_control
-   &DISPDRV_GetCtl,               // get_control
+static DISPDRV_T Disp_Drv = {
+	&DISPDRV_Init,                 // init
+	&DISPDRV_Exit,                 // exit
+	&DISPDRV_GetDispDrvFeatures,   // info
+	&DISPDRV_Open,                 // open
+	&DISPDRV_Close,                // close
+	&DISPDRV_GetDispDrvData,       // get_info
+	&DISPDRV_Start,                // start
+	&DISPDRV_Stop,                 // stop
+	&DISPDRV_PowerControl,         // power_control
+	NULL,                          // update_no_os
+	&DISPDRV_Update,               // update
+	NULL,                          // set_brightness
+	NULL,                          // reset_win
 };
 
 
@@ -204,7 +186,8 @@ CSL_DSI_CM_VC_t DISPDRV_ili9486_VcCmCfg =
     MIPI_DCS_WRITE_MEMORY_CONTINUE, // dcsCmndContinue       
     FALSE,                          // isLP          //Haipeng, Temporary code
     LCD_IF_CM_I_RGB565P, //LCD_IF_CM_I_RGB888U, //LCD_IF_CM_I_RGB565P,            // cm_in         //@HW
-    LCD_IF_CM_O_RGB565, //LCD_IF_CM_O_RGB888, //LCD_IF_CM_O_RGB565,             // cm_out   
+    LCD_IF_CM_O_RGB565_DSI_VM, 
+//GG    LCD_IF_CM_O_RGB565, //LCD_IF_CM_O_RGB888, //LCD_IF_CM_O_RGB565,             // cm_out   
 	
     // TE configuration
     {
@@ -344,132 +327,6 @@ static void DISPDRV_WrCmndP0(
     
     CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
 }
-
-//*****************************************************************************
-//
-// Function Name:  DISPDRV__IoCtlWr
-// 
-// Parameters:     
-//
-// Description:    IOCTL WR Test Code - DCS Wr With P0(no parm) or P1(1 parm)
-//
-//*****************************************************************************
-static void DISPDRV_IoCtlWr( 
-    DISPDRV_HANDLE_T       drvH,
-    DISPDRV_CTRL_RW_REG*   acc 
-    )
-{
-    if( acc->parmCount == 1 )
-    { 
-        DISPDRV_WrCmndP0 ( drvH, acc->cmnd );
-        LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: DSC+P0 "
-            "DCS[0x%08X]\n\r", __FUNCTION__, (unsigned int)acc->cmnd );
-    }
-    else if( acc->parmCount == 2 )
-    {
-        DISPDRV_WrCmndP1 ( drvH, acc->cmnd, *((UInt8*)acc->pBuff) );
-        LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: DSC+P1 "
-            "DCS[0x%08X] P[0x%08X]\n\r", __FUNCTION__, 
-            (unsigned int)acc->cmnd, (unsigned int)*((UInt8*)acc->pBuff) );
-    }
-    else
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] DISPDRV__IoCtlWr: "
-            "Only DCS with 0|1 Parm Supported\n" );
-    }        
-} // DISPDRV__IoCtlWr   
-
-     
-//*****************************************************************************
-//
-// Function Name:  DISPDRV__IoCtlRd
-// 
-// Parameters:     
-//
-// Description:    IOCTL RD Test Code - DCS Rd
-//
-//*****************************************************************************
-static int DISPDRV_IoCtlRd( 
-    DISPDRV_HANDLE_T       drvH,
-    DISPDRV_CTRL_RW_REG*   acc 
-    )
-{
-    DISPDRV_PANEL_T  *pPanel = (DISPDRV_PANEL_T *)drvH;
-    CSL_DSI_CMND_t      msg;         
-    CSL_DSI_REPLY_t     rxMsg;
-    UInt8               txData[1];  // DCS Rd Command
-    UInt32              reg;
-    UInt8 *             pRxBuff = (UInt8*)acc->pBuff;
-    Int32               res = 0;
-    CSL_LCD_RES_T       cslRes;
-    
-    memset( (void*)&rxMsg, 0, sizeof(CSL_DSI_REPLY_t) );
-    
-    rxMsg.pReadReply = pRxBuff;
-    
-    msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
-    msg.msg        = &txData[0];
-    msg.msgLen     = 1;
-    msg.vc         = DISPDRV_VC;
-    msg.isLP       = DISPDRV_CMND_IS_LP;
-    msg.isLong     = FALSE;
-    msg.endWithBta = TRUE;
-    msg.reply      = &rxMsg;
-
-    txData[0] = acc->cmnd;                                    
-    cslRes = CSL_DSI_SendPacket ( pPanel->clientH, &msg, FALSE );
-    
-    if( cslRes != CSL_LCD_OK )
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
-            "Reading From Reg[0x%08X]\n\r", __FUNCTION__, (unsigned int)acc->cmnd );
-        res = -1;    
-    }
-    else
-    {
-        reg = pRxBuff[0];
-    
-        LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: Reg[0x%08X] "
-            "Value[0x%08X]\n\r", __FUNCTION__, (unsigned int)acc->cmnd, (unsigned int)reg );
-#if 0
-        LCD_DBG ( LCD_DBG_INIT_ID, "   TYPE    : %s\n"    , 
-            DISPDRV_dsiCslRxT2text (rxMsg.type,dsiE) );     
-#endif
-
-        if( rxMsg.type & DSI_RX_TYPE_TRIG )
-        {
-            LCD_DBG ( LCD_DBG_INIT_ID, "   TRIG    : 0x%08X\n", (unsigned int)rxMsg.trigger );
-        }
-        
-        if( rxMsg.type & DSI_RX_TYPE_READ_REPLY )
-        {
-#if 0
-            LCD_DBG ( LCD_DBG_INIT_ID, "   RD DT   : %s\n"    , 
-                DISPDRV_dsiRxDt2text(rxMsg.readReplyDt,dsiE) );     
-#endif
-            LCD_DBG ( LCD_DBG_INIT_ID, "   RD STAT : 0x%08X\n", (unsigned int)rxMsg.readReplyRxStat );
-            LCD_DBG ( LCD_DBG_INIT_ID, "   RD SIZE : %d\n"    , rxMsg.readReplySize );
-            LCD_DBG ( LCD_DBG_INIT_ID, "   RD BUFF : 0x%02X 0x%02X 0x%02X 0x%02X "
-                                   "0x%02X 0x%02X 0x%02X 0x%02X\n", 
-                pRxBuff[0], pRxBuff[1],  pRxBuff[2], pRxBuff[3],
-                pRxBuff[4], pRxBuff[5],  pRxBuff[6], pRxBuff[7] );
-        }       
-                                            
-        if( rxMsg.type & DSI_RX_TYPE_ERR_REPLY )
-        {
-#if 0
-            LCD_DBG ( LCD_DBG_INIT_ID, "   ERR DT  : %s\n"    , 
-                DISPDRV_dsiRxDt2text (rxMsg.errReportDt,dsiE) );     
-#endif
-            LCD_DBG ( LCD_DBG_INIT_ID, "   ERR STAT: 0x%08X\n", (unsigned int)rxMsg.errReportRxStat ); 
-#if 0
-            LCD_DBG ( LCD_DBG_INIT_ID, "   ERR     : %s\n"    , 
-                DISPDRV_dsiErr2text (rxMsg.errReport, dsiE) );       
-#endif
-        }        
-    }
-    return ( res );
-} // DISPDRV__IoCtlRd
 
 
 
@@ -674,6 +531,25 @@ DISPDRV_T* DISPDRV_ili9486_GetFuncTable ( void )
     return ( &Disp_Drv );
 }
 
+static void DISPDRV_Reset(DISPDRV_HANDLE_T drvH)
+{	
+	DISPDRV_PANEL_T *pPanel;
+	u32 gpio; 
+
+    	pPanel = (DISPDRV_PANEL_T *)drvH;
+	gpio = pPanel->rst;
+	
+	if (gpio != 0) {
+		gpio_request(gpio, "LCD_RST");
+		gpio_direction_output(gpio, 0);
+		gpio_set_value_cansleep(gpio, 1);
+		msleep(1);
+		gpio_set_value_cansleep(gpio, 0);
+		msleep(1);
+		gpio_set_value_cansleep(gpio, 1);
+		msleep(40);
+	}
+}
 
 //*****************************************************************************
 //
@@ -682,25 +558,104 @@ DISPDRV_T* DISPDRV_ili9486_GetFuncTable ( void )
 // Description:   Reset Driver Info
 //
 //*****************************************************************************
-Int32 DISPDRV_Init ( unsigned int bus_width )
+Int32 DISPDRV_Init (
+	struct dispdrv_init_parms	*parms, 
+	DISPDRV_HANDLE_T		*handle)
 {
-    Int32 res = 0;
+	Int32 res = 0;
+	DISPDRV_PANEL_T* pPanel;
 
-    if(     panel[0].drvState != DRV_STATE_INIT 
-         && panel[0].drvState != DRV_STATE_OPEN  
-         && panel[1].drvState != DRV_STATE_INIT  
-         && panel[1].drvState != DRV_STATE_OPEN  )
-    {     
-        LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
-        panel[0].drvState = DRV_STATE_INIT;
-        panel[1].drvState = DRV_STATE_INIT;
-    } 
-    else
-    {
-        LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK, Already Init\n\r",
-            __FUNCTION__ );
-    }   
-    return ( res );
+	pPanel = &panel[0];
+
+	if (pPanel->drvState == DRV_STATE_OFF )  {
+
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Bus        %d \n", 
+			__func__, parms->w0.bits.bus_type);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: BootMode   %d \n", 
+			__func__, parms->w0.bits.boot_mode);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: BusNo      %d \n", 
+			__func__, parms->w0.bits.bus_no);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: col_mode_i %d \n", 
+			__func__, parms->w0.bits.col_mode_i);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: col_mode_o %d \n", 
+			__func__, parms->w0.bits.col_mode_o);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: te_input   %d \n", 
+			__func__, parms->w0.bits.te_input);
+		
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: API Rev    %d \n", 
+			__func__, parms->w1.bits.api_rev);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Rst 0      %d \n", 
+			__func__, parms->w1.bits.lcd_rst0);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Rst 1      %d \n", 
+			__func__, parms->w1.bits.lcd_rst1);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Rst 2      %d \n", 
+			__func__, parms->w1.bits.lcd_rst2);
+
+		if( (u8)parms->w1.bits.api_rev != RHEA_LCD_BOOT_API_REV ) {
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"Boot Init API Rev Mismatch(%d.%d vs %d.%d)\n",
+				__func__, 
+				(parms->w1.bits.api_rev & 0xF0) >> 8,
+				(parms->w1.bits.api_rev & 0x0F)     ,
+				(RHEA_LCD_BOOT_API_REV  & 0xF0) >> 8,
+				(RHEA_LCD_BOOT_API_REV  & 0x0F)       );
+			return(-1);	
+		}
+
+		pPanel->boot_mode = parms->w0.bits.boot_mode;
+
+		pPanel->cmnd_mode = &DISPDRV_ili9486_VcCmCfg; 
+		pPanel->dsi_cfg   = &DISPDRV_dsiCfg; 
+		pPanel->disp_info = &Disp_Info;
+		
+		pPanel->busNo = dispdrv2busNo(parms->w0.bits.bus_no);
+
+		/* check for valid DSI bus no */
+		if(pPanel->busNo & 0xFFFFFFFE) return(-1);
+
+		pPanel->cmnd_mode->cm_in  = 
+			dispdrv2cmIn(parms->w0.bits.col_mode_i);
+		pPanel->cmnd_mode->cm_out = 
+			dispdrv2cmOut(parms->w0.bits.col_mode_o);
+
+		/* we support both input color modes */
+		switch(pPanel->cmnd_mode->cm_in){
+		case LCD_IF_CM_I_RGB565P:
+			pPanel->disp_info->input_format = DISPDRV_FB_FORMAT_RGB565;	
+			pPanel->disp_info->Bpp = 2;
+			break;
+		case LCD_IF_CM_I_RGB888U:
+			pPanel->disp_info->input_format = DISPDRV_FB_FORMAT_RGB888_U;	
+			pPanel->disp_info->Bpp = 4;
+			break;
+		default:    
+			return(-1);	
+		}
+
+		/* get reset pin */
+		pPanel->rst = parms->w1.bits.lcd_rst0;
+
+
+		pPanel->isTE = pPanel->cmnd_mode->teCfg.teInType != DSI_TE_NONE;
+	
+		/* get TE pin configuration */
+		pPanel->teIn  = dispdrv2busTE(parms->w0.bits.te_input);
+		pPanel->teOut = pPanel->busNo ? 
+				TE_VC4L_OUT_DSI1_TE0 : TE_VC4L_OUT_DSI0_TE0;
+			
+		pPanel->drvState = DRV_STATE_INIT;
+		pPanel->pwrState = STATE_PWR_OFF;
+
+		*handle = (DISPDRV_HANDLE_T)pPanel;
+		
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
+	} else {
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: Not in OFF state\n",
+			__FUNCTION__ );
+		res = -1;		
+	}   
+    
+	return ( res );
 }
 
 //*****************************************************************************
@@ -710,11 +665,13 @@ Int32 DISPDRV_Init ( unsigned int bus_width )
 // Description:   
 //
 //*****************************************************************************
-Int32 DISPDRV_Exit ( void )
+Int32 DISPDRV_Exit ( DISPDRV_HANDLE_T drvH )
 {
-    LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Not Implemented\n\r",
-        __FUNCTION__ );
-    return ( -1 );
+	DISPDRV_PANEL_T  *pPanel = (DISPDRV_PANEL_T *)drvH;
+        
+	pPanel->drvState = DRV_STATE_OFF;
+	
+    return (0);
 }
 
 //                
@@ -726,42 +683,12 @@ Int32 DISPDRV_Exit ( void )
 // Description:   Open Sub Drivers
 //
 //*****************************************************************************
-Int32 DISPDRV_Open ( 
-    const void*         params,
-    DISPDRV_HANDLE_T*   drvH 
-    )
+Int32 DISPDRV_Open ( DISPDRV_HANDLE_T drvH )
 {
-    Int32                         res = 0;
-    UInt32                        busId; 
-    const DISPDRV_OPEN_PARM_T*    pOpenParm;
-    DISPDRV_PANEL_T         *pPanel;
+    Int32               res = 0;
+    DISPDRV_PANEL_T	*pPanel;
 
-
-    //busCh - NA to DSI interface
-    pOpenParm = (DISPDRV_OPEN_PARM_T*) params;
-    busId     = pOpenParm->busCh;
-    // for now, override input for DSI bus no, we're on DSI bus 0
-    busId     = 0;
-
-
-    #define BUS_ID_MAX  1
-
-    if( busId > BUS_ID_MAX )
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR Invalid DSI Bus[%d]\n\r",
-            __FUNCTION__, (unsigned int)busId );
-        return ( -1 );
-    }
-
-    pPanel = &panel[busId];
-
-    if( pPanel->drvState == DRV_STATE_OPEN )
-    {
-        *drvH = (DISPDRV_HANDLE_T) pPanel;
-        LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: Returning Handle, "
-            "Already Open\n\r", __FUNCTION__ );
-        return ( res );
-    }
+    pPanel = (DISPDRV_PANEL_T *)drvH;
 
     if ( pPanel->drvState != DRV_STATE_INIT )
     {
@@ -769,22 +696,10 @@ Int32 DISPDRV_Open (
             __FUNCTION__ );
         return ( -1 );
     }    
-    
-    DISPDRV_dsiCfg.bus = busId;
-    
-    pPanel->isTE = DISPDRV_ili9486_VcCmCfg.teCfg.teInType != DSI_TE_NONE;
-    
-#ifdef __KERNEL__
-    pPanel->pFb = pPanel->pFbA = (void*)pOpenParm->busId;
-#else
-    pPanel->pFb = pPanel->pFbA = (void*)&FrameBuff[busId];
-#endif
-   
 
-        pPanel->teIn   = TE_VC4L_IN_1_DSI0;
-        pPanel->teOut  = TE_VC4L_OUT_DSI0_TE0;
+    DISPDRV_Reset( drvH );    
 
-    if (brcm_enable_dsi_pll_clocks(0,
+    if (brcm_enable_dsi_pll_clocks(pPanel->busNo,
 		DISPDRV_dsiCfg.hsBitClk.clkIn_MHz * 1000000,
 		DISPDRV_dsiCfg.hsBitClk.clkInDiv,
 		DISPDRV_dsiCfg.escClk.clkIn_MHz   * 1000000 / DISPDRV_dsiCfg.escClk.clkInDiv ))
@@ -794,28 +709,27 @@ Int32 DISPDRV_Open (
         return ( -1 );
     }
 
-    if( DISPDRV_TeOn ( pPanel ) ==  -1 )
-    {
+    if (pPanel->isTE && DISPDRV_TeOn( pPanel )==-1 ) {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
             "Failed To Configure TE Input\n", __FUNCTION__ ); 
         return ( -1 );
     }
     
-    if ( CSL_DSI_Init( &DISPDRV_dsiCfg ) != CSL_LCD_OK )
+    if ( CSL_DSI_Init( pPanel->dsi_cfg ) != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, DSI CSL Init "
             "Failed\n\r", __FUNCTION__ );
         return ( -1 );
     }
     
-    if ( CSL_DSI_OpenClient ( busId, &pPanel->clientH ) != CSL_LCD_OK )
+    if ( CSL_DSI_OpenClient ( pPanel->busNo, &pPanel->clientH ) != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, CSL_DSI_OpenClient "
             "Failed\n\r", __FUNCTION__);
         return ( -1 );
     }
     
-    if ( CSL_DSI_OpenCmVc ( pPanel->clientH, &DISPDRV_ili9486_VcCmCfg, &pPanel->dsiCmVcHandle ) 
+    if ( CSL_DSI_OpenCmVc ( pPanel->clientH, pPanel->cmnd_mode, &pPanel->dsiCmVcHandle ) 
             != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: CSL_DSI_OpenCmVc Failed\n\r",
@@ -832,8 +746,6 @@ Int32 DISPDRV_Open (
     }
 	#endif
 	
-    pPanel->busId      = busId; 
-    
     pPanel->win.left   = 0;  
     pPanel->win.right  = Disp_Info.width-1; 
     pPanel->win.top    = 0;  
@@ -842,8 +754,6 @@ Int32 DISPDRV_Open (
     pPanel->win.height = Disp_Info.height;
     
     pPanel->drvState   = DRV_STATE_OPEN;
-    
-    *drvH = (DISPDRV_HANDLE_T) pPanel;
 
     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
     
@@ -859,13 +769,8 @@ Int32 DISPDRV_Open (
 //*****************************************************************************
 Int32 DISPDRV_Close ( DISPDRV_HANDLE_T drvH ) 
 {
-    Int32                   res = 0;
+    Int32             res = 0;
     DISPDRV_PANEL_T   *pPanel = (DISPDRV_PANEL_T *)drvH;
-    
-    DISPDRV_CHECK_PTR_2_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
-    
-    pPanel->pFb  = NULL;
-    pPanel->pFbA = NULL;
     
     if ( CSL_DSI_CloseCmVc ( pPanel->dsiCmVcHandle ) ) 
     {
@@ -876,32 +781,31 @@ Int32 DISPDRV_Close ( DISPDRV_HANDLE_T drvH )
     
     if ( CSL_DSI_CloseClient ( pPanel->clientH ) != CSL_LCD_OK )
     {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, Closing DSI Client\n\r",
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, Closing DSI Client\n",
             __FUNCTION__);
         return ( -1 );
     }
     
-    if ( CSL_DSI_Close( pPanel->busId ) != CSL_LCD_OK )
+    if ( CSL_DSI_Close( pPanel->busNo ) != CSL_LCD_OK )
     {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR Closing DSI Controller\n\r",
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR Closing DSI Controller\n",
             __FUNCTION__ );
         return ( -1 );
     }
     
-#if (defined (_HERA_) || defined(_RHEA_))
-    	DISPDRV_TeOff ( pPanel );
-#endif
+    if (pPanel->isTE) 
+	    DISPDRV_TeOff ( pPanel );
 
-    if (brcm_disable_dsi_pll_clocks(0))
+    if (brcm_disable_dsi_pll_clocks(pPanel->busNo))
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the pll clock\n",
             __FUNCTION__  );
         return ( -1 );
     }
 
-    pPanel->pwrState = DISP_PWR_OFF;
+    pPanel->pwrState = STATE_PWR_OFF;
     pPanel->drvState = DRV_STATE_INIT;
-    LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
+    LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n", __FUNCTION__ );
     
     return ( res );
 }
@@ -918,11 +822,9 @@ Int32 DISPDRV_PowerControl (
     DISPDRV_HANDLE_T        drvH, 
     DISPLAY_POWER_STATE_T   state )
 {
-    Int32  res = 0;
-    DISPDRV_PANEL_T   *pPanel = (DISPDRV_PANEL_T *)drvH;
-   	struct pin_config GPIOSetup; /*for backlight off temporarily*/
-    
-    DISPDRV_CHECK_PTR_2_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
+	Int32  res = 0;
+	DISPDRV_PANEL_T   *pPanel = (DISPDRV_PANEL_T *)drvH;
+	struct pin_config GPIOSetup; /*for backlight off temporarily*/
    
 
 #ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
@@ -931,120 +833,144 @@ Int32 DISPDRV_PowerControl (
 #endif
 
 
-    switch ( state )
-    {
-        case DISPLAY_POWER_STATE_ON:
-            switch ( pPanel->pwrState )
-            {
-                case DISP_PWR_OFF:
-					
-									
-					DISPDRV_ExecCmndList(drvH, &power_on_seq_ili9486_amazing_BOE[0]);
-                    
-					//Set Peripheral Max Ret Size ( applies to all reads ) 		    
-		    		DISPDRV_SetMaxRxSize( drvH );
+	switch (state) {
+	case CTRL_PWR_ON:
+		switch (pPanel->pwrState) {
+                case STATE_PWR_OFF:
+			DISPDRV_ExecCmndList(drvH, &power_on_seq_ili9486_amazing_BOE[0]);
+			//Set Peripheral Max Ret Size ( applies to all reads ) 		    
+			DISPDRV_SetMaxRxSize( drvH );
 
-                    pPanel->pwrState = DISP_PWR_SLEEP_OFF;
+			//gpio_direction_output(95, 1);
+			#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
+			gpio_direction_output(95, 1);
+			//gpio_set_value_cansleep(BACKLIGHT_GPIO, 1);
+			#endif
 
-//					gpio_direction_output(95, 1);
-					#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
-					gpio_direction_output(95, 1);
-					
-//					gpio_set_value_cansleep(BACKLIGHT_GPIO, 1);
-					#endif
-
-                    LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: INIT-SEQ\n\r",
-                        	__FUNCTION__ );
-
-                   printk(" LCD pixel = 0x%x\n", DISPDRV_ReadID(drvH, 0x0c));
-                    
-                    break; 
-                case DISP_PWR_SLEEP_ON:
-                    DISPDRV_ExecCmndList(drvH, &power_on_seq_ili9486_sdi[0]); 
-                    OSTASK_Sleep ( 120 );
-					#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
-					gpio_set_value_cansleep(95, 1);
-					#endif
-                    pPanel->pwrState = DISP_PWR_SLEEP_OFF;
-                    LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-OUT\n\r",
-                        __FUNCTION__ );
-                    break;
-                    
-                default:
-                    break;    
-            }        
-            break;
-        case DISPLAY_POWER_STATE_OFF:
-            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: POWER-OFF State "
-                "Not Supported\n\r", __FUNCTION__ );
-            res = -1;
-            break;
-            
-        case DISPLAY_POWER_STATE_SLEEP:
-            if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
-            {
-
-				DISPDRV_ExecCmndList(drvH, &power_off_seq_BOE[0]);              
-
-                OSTASK_Sleep ( 120 );
-                pPanel->pwrState = DISP_PWR_SLEEP_ON;
-                LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-IN\n\r",
-                    __FUNCTION__ );
-            } 
-            else
-            {
-                LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: SLEEP-IN Requested, "
-                    "But Not In POWER-ON State\n\r", __FUNCTION__ );
-                res = -1;
-            }   
-            break;
-
-	case DISPLAY_POWER_STATE_BLANK_SCREEN:
-		if( pPanel->pwrState == DISP_PWR_SLEEP_OFF)
-		{
-
-				/*for backlight off temporarily*/
-				GPIOSetup.name = PN_DCLK4;
- 				pinmux_get_pin_config(&GPIOSetup);
-   	 			GPIOSetup.reg.b.pull_up = 0;
-   	 			GPIOSetup.reg.b.pull_dn = 0;
-   	 			pinmux_set_pin_config(&GPIOSetup);
-    	 			
-		
-				gpio_direction_output(95, 0);
-            
-				/* backlight off */
-				gpio_direction_input(95);
-
-				LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: Turn off backlight\n\r",
-                    		__FUNCTION__ );
-				
-		} 
-		else
-		{
-#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
-			//gpio_set_value_cansleep(95, 1);
-				gpio_direction_output(95, 1);
-#endif
-			LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: Turn on backlight ",
+			pPanel->pwrState = STATE_SCREEN_OFF;
+			LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: INIT-SEQ\n",
 				__FUNCTION__ );
+			printk(" LCD pixel = 0x%x\n", DISPDRV_ReadID(drvH, 0x0c));
+			break; 
+                default:
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: POWER ON "
+				"Requested While Not In POWER DOWN State\n",
+				__FUNCTION__ );
+			break;    
+            	}        
+            	break;
+			    
+	case CTRL_PWR_OFF:
+		if (pPanel->pwrState != STATE_PWR_OFF) {
+			// e.g. display off, Stop LDI, reset, power down
+			DISPDRV_ExecCmndList(drvH, &power_off_seq_BOE[0]);              
+			OSTASK_Sleep (120);
+		
+			pPanel->pwrState = STATE_PWR_OFF;
+			LCD_DBG(  LCD_DBG_INIT_ID, "[DISPDRV] %s: PWR DOWN\n",
+				__FUNCTION__ );
+		}	    
+		break;
+	    
+        case CTRL_SLEEP_OUT:
+		switch (pPanel->pwrState) {
+                case STATE_SLEEP:
+			DISPDRV_ExecCmndList(drvH, &power_on_seq_ili9486_sdi[0]); 
+			OSTASK_Sleep ( 120 );
+			#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
+			gpio_set_value_cansleep(95, 1);
+			#endif
+			pPanel->pwrState = STATE_SCREEN_OFF;
+			LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-OUT\n",
+				__FUNCTION__ );
+			break;
+                default:
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SLEEP-OUT Req While Not In SLEEP State\n",
+				__FUNCTION__ );
+			break;    
+		}
+		break;        
+	    
+        case CTRL_SLEEP_IN:
+		switch (pPanel->pwrState) {
+		case STATE_SCREEN_ON:
+			// turn off display 
+		case STATE_SCREEN_OFF:
+			DISPDRV_ExecCmndList(drvH, &power_off_seq_BOE[0]);              
+
+			OSTASK_Sleep ( 120 );
+			pPanel->pwrState = STATE_SLEEP;
+			LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: "
+				"SLEEP-IN\n",	__FUNCTION__ );
+			break;
+		default:		
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SLEEP Requested, But Not In "
+				"DISP ON|OFF State\n", __FUNCTION__ );
+			break;
 		}   
 		break;
+
+
+        case CTRL_SCREEN_ON:
+		switch (pPanel->pwrState) {
+		case STATE_SCREEN_OFF:
+			#ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
+			//gpio_set_value_cansleep(95, 1);
+			gpio_direction_output(95, 1);
+			#endif
+			pPanel->pwrState = STATE_SCREEN_ON;
+			LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: SCREEN ON, "
+				"Turn on backlight ", __FUNCTION__ );
+                default:
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SCREEN ON Req While Not In SCREEN OFF State\n",
+				__FUNCTION__ );
+			break;	
+		}
+		break; 
+		       
+        case CTRL_SCREEN_OFF:
+		switch (pPanel->pwrState) {
+		case STATE_SCREEN_ON:
+			/*for backlight off temporarily*/
+			GPIOSetup.name = PN_DCLK4;
+			pinmux_get_pin_config(&GPIOSetup);
+			GPIOSetup.reg.b.pull_up = 0;
+			GPIOSetup.reg.b.pull_dn = 0;
+			pinmux_set_pin_config(&GPIOSetup);
+
+
+			gpio_direction_output(95, 0);
+
+			/* backlight off */
+			gpio_direction_input(95);
+
+			pPanel->pwrState = STATE_SCREEN_OFF;
+			LCD_DBG(LCD_DBG_INIT_ID, "[DISPDRV] %s: SCREEN OFF "
+				"Turn off backlight\n\r",__FUNCTION__ );
+			break;		
+                default:
+			LCD_DBG(LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SCREEN OFF Req While Not In SCREEN ON State\n",
+				__FUNCTION__ );
+			break;	
+		}
+		break;        
         
         default:
-            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Invalid Power State[%d] "
-                "Requested\n\r", __FUNCTION__, state );
-            res = -1;
-            break;
-    }
-	
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: Invalid Power "
+			"State[%d] Requested\n", __FUNCTION__, state );
+		res = -1;
+		break;
+	}
 	
 #ifndef CONFIG_BACKLIGHT_LCD_SUPPORT
 	gpio_free(BACKLIGHT_GPIO);
 #endif
 	
-	
-    return ( res );
+	return ( res );
 }
 
 //*****************************************************************************
@@ -1054,19 +980,23 @@ Int32 DISPDRV_PowerControl (
 // Description:   Configure For Updates
 //
 //*****************************************************************************
-Int32 DISPDRV_Start (struct pi_mgr_dfs_node* dfs_node)
+Int32 DISPDRV_Start( 
+	DISPDRV_HANDLE_T 	drvH,
+	struct pi_mgr_dfs_node	*dfs_node )
 {
-    if (brcm_enable_dsi_lcd_clocks(dfs_node,0,
+	DISPDRV_PANEL_T *pPanel = (DISPDRV_PANEL_T *)drvH;
+
+    	if (brcm_enable_dsi_lcd_clocks(dfs_node, pPanel->busNo,
     		DISPDRV_dsiCfg.hsBitClk.clkIn_MHz * 1000000,
                 DISPDRV_dsiCfg.hsBitClk.clkInDiv,
                 DISPDRV_dsiCfg.escClk.clkIn_MHz   * 1000000 / DISPDRV_dsiCfg.escClk.clkInDiv ))
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
-            __FUNCTION__  );
-        return ( -1 );
-    }
+    	{
+    	    LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+    	        __FUNCTION__  );
+    	    return ( -1 );
+    	}
 
-    return ( 0 );
+    	return ( 0 );
 }
 
 //*****************************************************************************
@@ -1076,17 +1006,21 @@ Int32 DISPDRV_Start (struct pi_mgr_dfs_node* dfs_node)
 // Description:   
 //
 //*****************************************************************************
-Int32 DISPDRV_Stop (struct pi_mgr_dfs_node* dfs_node)
+Int32 DISPDRV_Stop(
+	DISPDRV_HANDLE_T 	drvH,
+	struct pi_mgr_dfs_node	*dfs_node )
 {
-    if (brcm_disable_dsi_lcd_clocks(dfs_node,0))
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
-            __FUNCTION__  );
-        return ( -1 );
-    }
+	DISPDRV_PANEL_T *pPanel = (DISPDRV_PANEL_T *)drvH;
+
+	if (brcm_disable_dsi_lcd_clocks(dfs_node, pPanel->busNo))
+	{
+	    LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+	        __FUNCTION__  );
+	    return ( -1 );
+	}
 
 
-    return ( 0 );
+	return ( 0 );
 }
 
 //*****************************************************************************
@@ -1098,7 +1032,6 @@ Int32 DISPDRV_Stop (struct pi_mgr_dfs_node* dfs_node)
 //*****************************************************************************
 const DISPDRV_INFO_T* DISPDRV_GetDispDrvData ( DISPDRV_HANDLE_T drvH )
 {
-    DISPDRV_CHECK_PTR_2_NO_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
    
     return ( &Disp_Info );
 }
@@ -1111,11 +1044,11 @@ const DISPDRV_INFO_T* DISPDRV_GetDispDrvData ( DISPDRV_HANDLE_T drvH )
 //
 //*****************************************************************************
 Int32 DISPDRV_GetDispDrvFeatures ( 
-    const char**                driver_name,
-    UInt32*                     version_major,
-    UInt32*                     version_minor,
-    DISPDRV_SUPPORT_FEATURES_T* flags 
-    )
+	DISPDRV_HANDLE_T 		drvH,
+	const char			**driver_name,
+	UInt32				*version_major,
+	UInt32				*version_minor,
+	DISPDRV_SUPPORT_FEATURES_T	*flags)
 {
    Int32 res = -1; 
    
@@ -1157,75 +1090,10 @@ static void DISPDRV_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
               break;
         }
         
-        if ( pCbRec->dispDrvApiCbRev == DISP_DRV_CB_API_REV_1_0 ) 
-        {
-            ((DISPDRV_CB_T)pCbRec->dispDrvApiCb)( apiRes );
-        }
-        else    
-        {
-            ((DISPDRV_CB_API_1_1_T)pCbRec->dispDrvApiCb)
-                ( apiRes, pCbRec->dispDrvApiCbP1 );
-        }    
+        ((DISPDRV_CB_T)pCbRec->dispDrvApiCb)( apiRes );
     }
     
    // LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
-}
-
-
-//*****************************************************************************
-//
-// Function Name: DISPDRV__Update_ExtFb
-// 
-// Description:   DMA/OS Update using EXT frame buffer
-//
-//*****************************************************************************
-Int32 DISPDRV_Update_ExtFb ( 
-    DISPDRV_HANDLE_T        drvH, 
-    void                    *pFb,
-    DISPDRV_CB_API_1_1_T    apiCb
-    )
-{
-    DISPDRV_PANEL_T *pPanel = (DISPDRV_PANEL_T *)drvH;
-    CSL_LCD_UPD_REQ_T   req;
-    Int32               res  = 0;
-
-    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
-
-    DISPDRV_CHECK_PTR_2_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
-    
-    if ( pPanel->pwrState != DISP_PWR_SLEEP_OFF )
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] +%s: Skip Due To Power State\r\n", 
-            __FUNCTION__ );
-        return ( -1 );
-    }
-    
-    req.buff           = pFb;
-    req.lineLenP       = Disp_Info.width;
-    req.lineCount      = Disp_Info.height;
-    req.buffBpp        = 2; //2; //4;    //@HW
-    req.timeOut_ms     = 1000; // SKC 1000
-
-    req.cslLcdCbRec.cslH            = pPanel->clientH;
-    req.cslLcdCbRec.dispDrvApiCbRev = DISP_DRV_CB_API_REV_1_1;
-    req.cslLcdCbRec.dispDrvApiCb    = (void*) apiCb;
-    req.cslLcdCbRec.dispDrvApiCbP1  = pFb;
-
-    if( apiCb != NULL )
-       req.cslLcdCb = DISPDRV_Cb;
-    else
-       req.cslLcdCb = NULL;
-        
-    if ( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req, FALSE ) != CSL_LCD_OK )
-    {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR ret by "
-            "CSL_DSI_UpdateCmVc\n\r", __FUNCTION__ );
-        res = -1;    
-    }
-        
-    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\n\r", __FUNCTION__ );
-        
-    return ( res );
 }
 
 //*****************************************************************************
@@ -1237,7 +1105,7 @@ Int32 DISPDRV_Update_ExtFb (
 //*****************************************************************************
 Int32 DISPDRV_Update ( 
     DISPDRV_HANDLE_T    drvH, 
-    int			fb_idx,
+    void		*buff,
     DISPDRV_WIN_t*	p_win,
     DISPDRV_CB_T        apiCb
     )
@@ -1247,26 +1115,19 @@ Int32 DISPDRV_Update (
     Int32               res  = 0;
 
   //  LCD_DBG ( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
-
-    DISPDRV_CHECK_PTR_2_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
     
-    if ( pPanel->pwrState != DISP_PWR_SLEEP_OFF )
+    if ( pPanel->pwrState == STATE_PWR_OFF )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] +%s: Skip Due To Power State\r\n",__FUNCTION__ );
         return ( -1 );
     }
    
-    if (0 == fb_idx)
-    	req.buff           = pPanel->pFbA;
-     else
-	req.buff 	   = (void *)((UInt32)pPanel->pFbA + 
-		Disp_Info.width * Disp_Info.height * 2); //@HW
 
-//    req.buff           = pPanel->pFbA;
-    req.lineLenP       = Disp_Info.width;
-    req.lineCount      = Disp_Info.height;
-    req.buffBpp        = 2; //2; //4;   //@HW 
-    req.timeOut_ms     = 1000;   // SKC 1000
+    req.buff       = buff;
+    req.lineLenP   = pPanel->disp_info->width;
+    req.lineCount  = pPanel->disp_info->height;
+    req.buffBpp	   = pPanel->disp_info->Bpp;    
+    req.timeOut_ms = 1000;   // SKC 1000
    
     LCD_DBG ( LCD_DBG_ID, "buf=%08x, linelenp = %d, linecnt =%d\n", (u32)req.buff, (u32)req.lineLenP, (u32)req.lineCount);
     req.cslLcdCbRec.cslH            = pPanel->clientH;
@@ -1291,76 +1152,3 @@ Int32 DISPDRV_Update (
         
     return ( res );
 }
-
-
-
-//*****************************************************************************
-//
-// Function Name: DISPDRV__SetCtl
-// 
-// Description:   
-//
-//*****************************************************************************
-Int32 DISPDRV_SetCtl ( 
-        DISPDRV_HANDLE_T    drvH, 
-        DISPDRV_CTRL_ID_T   ctrlID, 
-        void*               ctrlParams 
-        )
-{
-    Int32 res = -1;
-    
-    DISPDRV_CHECK_PTR_2_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
-    
-    switch ( ctrlID )
-    {
-        case DISPDRV_CTRL_ID_SET_REG:
-            DISPDRV_IoCtlWr( drvH, (DISPDRV_CTRL_RW_REG*)ctrlParams );
-            res = 0;
-            break;
-    
-        default:
-            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
-                "CtrlId[%d] Not Implemented\n\r", __FUNCTION__, ctrlID );
-            break;    
-    }
-    return ( res );
-}
-                    
-//*****************************************************************************
-//
-// Function Name: DISPDRV__GetCtl
-// 
-// Description:   
-//
-//*****************************************************************************
-Int32 DISPDRV_GetCtl (
-            DISPDRV_HANDLE_T    drvH, 
-            DISPDRV_CTRL_ID_T   ctrlID, 
-            void*               ctrlParams 
-            )
-{
-    DISPDRV_PANEL_T *pPanel = (DISPDRV_PANEL_T *)drvH;
-    Int32 res = -1;
-    
-    DISPDRV_CHECK_PTR_2_RET( drvH, &panel[0], &panel[1], __FUNCTION__ );
-    
-    switch ( ctrlID )
-    {
-        case DISPDRV_CTRL_ID_GET_FB_ADDR:
-            ((DISPDRV_CTL_GET_FB_ADDR *)ctrlParams)->frame_buffer = 
-                pPanel->pFbA;
-            res = 0;
-            break;
-            
-        case DISPDRV_CTRL_ID_GET_REG:
-            res = DISPDRV_IoCtlRd( drvH, (DISPDRV_CTRL_RW_REG*)ctrlParams );
-            break;
-            
-        default:
-            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: CtrlId[%d] Not "
-                "Implemented\n\r", __FUNCTION__, ctrlID );
-            break;
-    }
-    
-    return ( res );
-}            

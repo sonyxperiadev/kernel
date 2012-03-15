@@ -259,6 +259,8 @@ static long handle_set_lock_ioc(struct file *filp, unsigned int cmd,
 				unsigned long param)
 {
 	sec_simlock_set_lock_t ioc_param = { 0 };
+	sec_simlock_state_t sec_lock_state = { 0 };
+	SYS_SIMLOCK_STATE_t sys_lock_status = { 0 };
 
 	if (copy_from_user
 	    (&ioc_param, (sec_simlock_set_lock_t *) param,
@@ -274,6 +276,31 @@ static long handle_set_lock_ioc(struct file *filp, unsigned int cmd,
 						   full_lock_on ? TRUE : FALSE,
 						   ioc_param.lock_type,
 						   ioc_param.key);
+	ioc_param.remain_attempt = (int)SIMLockGetRemainAttempt(ioc_param.
+						   sim_id);
+
+	SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
+
+	sys_lock_status.network_lock_enabled =
+				sec_lock_state.network_lock_enabled;
+	sys_lock_status.network_subset_lock_enabled =
+				sec_lock_state.network_subset_lock_enabled;
+	sys_lock_status.service_provider_lock_enabled =
+				sec_lock_state.service_provider_lock_enabled;
+	sys_lock_status.corporate_lock_enabled =
+				sec_lock_state.corporate_lock_enabled;
+	sys_lock_status.phone_lock_enabled =
+				sec_lock_state.phone_lock_enabled;
+	sys_lock_status.network_lock =
+				sec_lock_state.network_lock;
+	sys_lock_status.network_subset_lock =
+				sec_lock_state.network_subset_lock;
+	sys_lock_status.service_provider_lock =
+				sec_lock_state.service_provider_lock;
+	sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
+	sys_lock_status.phone_lock = sec_lock_state.phone_lock;
+
+	SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
 
 	if (copy_to_user
 	    ((sec_simlock_set_lock_t *) param, &ioc_param,
@@ -289,6 +316,8 @@ static long handle_unlock_sim_ioc(struct file *filp, unsigned int cmd,
 				  unsigned long param)
 {
 	sec_simlock_unlock_t ioc_param = { 0 };
+	sec_simlock_state_t sec_lock_state = { 0 };
+	SYS_SIMLOCK_STATE_t sys_lock_status = { 0 };
 
 	if (copy_from_user
 	    (&ioc_param, (sec_simlock_unlock_t *) param,
@@ -301,6 +330,31 @@ static long handle_unlock_sim_ioc(struct file *filp, unsigned int cmd,
 	ioc_param.unlock_status = SIMLockUnlockSIM(ioc_param.sim_id,
 						   ioc_param.lock_type,
 						   ioc_param.password);
+
+	ioc_param.remain_attempt = (int)SIMLockGetRemainAttempt(ioc_param.
+						   sim_id);
+	SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
+
+	sys_lock_status.network_lock_enabled =
+				sec_lock_state.network_lock_enabled;
+	sys_lock_status.network_subset_lock_enabled =
+				sec_lock_state.network_subset_lock_enabled;
+	sys_lock_status.service_provider_lock_enabled =
+				sec_lock_state.service_provider_lock_enabled;
+	sys_lock_status.corporate_lock_enabled =
+				sec_lock_state.corporate_lock_enabled;
+	sys_lock_status.phone_lock_enabled =
+				sec_lock_state.phone_lock_enabled;
+	sys_lock_status.network_lock =
+				sec_lock_state.network_lock;
+	sys_lock_status.network_subset_lock =
+				sec_lock_state.network_subset_lock;
+	sys_lock_status.service_provider_lock =
+				sec_lock_state.service_provider_lock;
+	sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
+	sys_lock_status.phone_lock = sec_lock_state.phone_lock;
+
+	SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
 
 	if (copy_to_user
 	    ((sec_simlock_unlock_t *) param, &ioc_param,

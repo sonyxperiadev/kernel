@@ -27,6 +27,7 @@
 #include <linux/fcntl.h>
 #include <linux/uaccess.h>
 #include <linux/broadcom/bcm_security.h>
+#include <linux/slab.h>
 
 #include "linux/broadcom/mobcom_types.h"
 #include "resultcode.h"

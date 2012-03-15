@@ -34,7 +34,6 @@
 ****************************************************************************/
 #include <string.h>
 #include "mobcom_types.h"
-#include "log.h"
 #include "shared.h"
 #include "csl_dsp.h"
 #include "osdw_dsp_drv.h"

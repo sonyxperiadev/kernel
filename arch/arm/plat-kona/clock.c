@@ -88,6 +88,11 @@ static int __ccu_clk_init(struct clk *clk)
 	if(clk->ops && clk->ops->init)
 		ret = clk->ops->init(clk);
 
+	if (clk->flags & CCU_KEEP_UNLOCKED) {
+		ccu_clk->write_access_en_count = 0;
+		/* enable write access*/
+		ccu_write_access_enable(ccu_clk, true);
+	}
 	CCU_ACCESS_EN(ccu_clk, 0);
 
 	return ret;
@@ -2489,7 +2494,6 @@ static int peri_clk_get_policy_mask(struct peri_clk * peri_clk, int policy_id)
 	return GET_BIT_USING_MASK(reg_val, peri_clk->policy_bit_mask);
 
 }
-EXPORT_SYMBOL(peri_clk_get_policy_mask);
 
 static int peri_clk_get_gating_ctrl(struct peri_clk * peri_clk)
 {
@@ -2505,7 +2509,6 @@ static int peri_clk_get_gating_ctrl(struct peri_clk * peri_clk)
 
 	return GET_BIT_USING_MASK(reg_val, peri_clk->gating_sel_mask);
 }
-EXPORT_SYMBOL(peri_clk_get_gating_ctrl);
 
 static int peri_clk_set_gating_ctrl(struct peri_clk * peri_clk, int gating_ctrl)
 {
@@ -2526,7 +2529,6 @@ static int peri_clk_set_gating_ctrl(struct peri_clk * peri_clk, int gating_ctrl)
 
 	return 0;
 }
-EXPORT_SYMBOL(peri_clk_set_gating_ctrl);
 
 int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl)
 {
@@ -2556,7 +2558,6 @@ static int peri_clk_get_pll_select(struct peri_clk * peri_clk)
 	return GET_VAL_USING_MASK_SHIFT(reg_val,
 	                                peri_clk->clk_div.pll_select_mask, peri_clk->clk_div.pll_select_shift);
 }
-EXPORT_SYMBOL(peri_clk_get_pll_select);
 
 int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source)
 {
@@ -3261,7 +3262,6 @@ static int bus_clk_set_gating_ctrl(struct bus_clk * bus_clk, int gating_ctrl)
 
 	return 0;
 }
-EXPORT_SYMBOL(bus_clk_set_gating_ctrl);
 
 static int bus_clk_get_gating_status(struct bus_clk *bus_clk)
 {
@@ -3276,7 +3276,6 @@ static int bus_clk_get_gating_status(struct bus_clk *bus_clk)
 
 	return GET_BIT_USING_MASK(reg_val, bus_clk->stprsts_mask);
 }
-EXPORT_SYMBOL(bus_clk_get_gating_status);
 
 static int bus_clk_get_enable_bit(struct bus_clk *bus_clk)
 {
@@ -3321,7 +3320,6 @@ static int bus_clk_hyst_enable(struct bus_clk * bus_clk, int enable, int delay)
 	writel(reg_val, CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
 	return 0;
 }
-EXPORT_SYMBOL(bus_clk_hyst_enable);
 
 /* bus clocks */
 static int bus_clk_enable(struct clk *clk, int enable)
@@ -3555,7 +3553,6 @@ static int ref_clk_get_gating_status(struct ref_clk *ref_clk)
 
 	return GET_BIT_USING_MASK(reg_val, ref_clk->stprsts_mask);
 }
-EXPORT_SYMBOL(ref_clk_get_gating_status);
 
 static int ref_clk_get_enable_bit(struct ref_clk *ref_clk)
 {
@@ -3585,7 +3582,6 @@ static int ref_clk_get_gating_ctrl(struct ref_clk * ref_clk)
 
 	return GET_BIT_USING_MASK(reg_val, ref_clk->gating_sel_mask);
 }
-EXPORT_SYMBOL(ref_clk_get_gating_ctrl);
 
 static int ref_clk_set_gating_ctrl(struct ref_clk * ref_clk, int gating_ctrl)
 {
@@ -3606,10 +3602,9 @@ static int ref_clk_set_gating_ctrl(struct ref_clk * ref_clk, int gating_ctrl)
 
 	return 0;
 }
-EXPORT_SYMBOL(ref_clk_set_gating_ctrl);
 
 
-int ref_clk_hyst_enable(struct ref_clk * ref_clk, int enable, int delay)
+static int ref_clk_hyst_enable(struct ref_clk * ref_clk, int enable, int delay)
 {
 	u32 reg_val;
 
@@ -3638,7 +3633,6 @@ int ref_clk_hyst_enable(struct ref_clk * ref_clk, int enable, int delay)
 	writel(reg_val, CCU_REG_ADDR(ref_clk->ccu_clk, ref_clk->clk_gate_offset));
 	return 0;
 }
-EXPORT_SYMBOL(ref_clk_hyst_enable);
 
 
 /* reference clocks */

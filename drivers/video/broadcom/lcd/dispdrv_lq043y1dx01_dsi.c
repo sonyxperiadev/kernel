@@ -12,73 +12,65 @@
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
-#define UNDER_LINUX
+#ifdef __KERNEL__
 
-#ifndef UNDER_LINUX
-#include <stdio.h>
-#include <string.h>
-#include "dbg.h"
-#include "mobcom_types.h"
-#include "chip_version.h"
-#else
 #include <linux/string.h>
 #include <linux/broadcom/mobcom_types.h>
-#endif
-
-
-#ifndef UNDER_LINUX
-#include "gpio.h"                  // needed for GPIO defs 4 platform_config
-#include "platform_config.h"
-#include "irqctrl.h"
-#include "osinterrupt.h"
-#include "ostask.h"
-#else
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
 #include <linux/gpio.h>
 #include <plat/osabstract/osinterrupt.h>
 #include <plat/osabstract/ostask.h>
 #include <plat/csl/csl_dma_vc4lite.h>
-#endif
-
-
-#ifndef UNDER_LINUX
-#include "dbg.h"
-#include "logapi.h"
-#include "dma_drv.h"
-#include "display_drv.h"           // display driver interface
-#include "csl_lcd.h"               // LCD CSL Common Interface 
-#include "csl_dsi.h"               // DSI CSL 
-#include "dispdrv_mipi_dcs.h"      // MIPI DCS         
-#include "dispdrv_mipi_dsi.h"      // MIPI DSI      
-#else
 #include <plat/dma_drv.h>
 #include <plat/pi_mgr.h>
-#include "display_drv.h"           // display driver interface
-#include <plat/csl/csl_lcd.h>               // LCD CSL Common Interface 
-#include <plat/csl/csl_dsi.h>               // DSI CSL 
+#include <video/kona_fb_boot.h>	   // dispdrv init interface
+#include "display_drv.h"           // dispdrv interface
+#include <plat/csl/csl_lcd.h>      // dispdrv CSL Common Interface 
+#include <plat/csl/csl_dsi.h>      // DSI CSL API
 #include "dispdrv_mipi_dcs.h"      // MIPI DCS         
 #include "dispdrv_mipi_dsi.h"      // MIPI DSI      
-#endif   
 
 #include <linux/spi/spi.h>
-#include "dispdrv_common.h"        // Disp Drv Commons
+#include "dispdrv_common.h"        // dispdrv common
 #include "lcd_clock.h"
 #include <plat/csl/csl_tectl_vc4lite.h>
 
-#define LQ043Y1DX01_VC            (0)
-#define LQ043Y1DX01_CMND_IS_LP    TRUE  // display init comm LP or HS mode
+#else
 
-#define SHARP_RESET  	 (13)     
-#define DSI_BRIDGE_RESET (12)     
-#define DSI_BRIDGE_PON   (25)
+#include <stdio.h>
+#include <string.h>
+#include "dbg.h"
+#include "mobcom_types.h"
+#include "chip_version.h"
+#include "gpio.h"                  
+#include "platform_config.h"
+#include "irqctrl.h"
+#include "osinterrupt.h"
+#include "ostask.h"
+#include "dbg.h"
+#include "logapi.h"
+#include "dma_drv.h"
+#include "display_drv.h"           // dispdrv interface
+#include "csl_lcd.h"               // dispdrv CSL Common Interface 
+#include "csl_dsi.h"               // DSI CSL API
+#include "dispdrv_mipi_dcs.h"      // MIPI DCS         
+#include "dispdrv_mipi_dsi.h"      // MIPI DSI      
+
+#endif   
+
+
+
+
+#define LQ043Y1DX01_VC            (0)
+#define LQ043Y1DX01_CMND_IS_LP    FALSE  // display init comm LP or HS mode
+
 #define	SHARP_BL 	 (95)
+	
 
 //#define LCD_DBG(id, fmt, args...) printk(KERN_ERR fmt, ##args);
 
-
-typedef enum
-{
+typedef enum {
 	LQ043Y1DX01_CMD_MIN,
 
 	LQ043Y1DX01_CMD_SLPIN		= 0x10,
@@ -94,120 +86,100 @@ typedef enum
 
 } LQ043Y1DX01_CMD_T;
 
-
-
-typedef struct
-{
-	UInt32	left;                
-	UInt32	right;                  
-	UInt32	top;  
-	UInt32	bottom;  
-	UInt32	width; 
-	UInt32	height;
-} LCD_DRV_RECT_t;
-
-typedef struct
-{
+typedef struct {
 	struct spi_device	*spi;	     
 	CSL_LCD_HANDLE   	clientH;        // DSI Client Handle
 	CSL_LCD_HANDLE   	dsiCmVcHandle;  // DSI CM VC Handle
 	DISP_DRV_STATE   	drvState;
 	DISP_PWR_STATE   	pwrState;
-	UInt32           	busId;
+	UInt32           	busNo;
 	UInt32           	teIn;
 	UInt32           	teOut;
 	Boolean          	isTE;
-	Boolean          	is_hw_TE;
-	UInt32           	bpp;
-	LCD_DRV_RECT_t   	win;
-	void*            	pFb;
-	void*            	pFbA;
+	DISPDRV_WIN_t	     	win_dim;
+	DISPDRV_WIN_t	     	win_cur;
 	struct pi_mgr_dfs_node* dfs_node;
+	/* --- */
+	Boolean             	boot_mode;
+	UInt32              	rst_bridge_pwr_down;
+	UInt32              	rst_bridge_reset; 
+	UInt32              	rst_panel_reset;	 
+	CSL_DSI_CM_VC_t*    	cmnd_mode; 
+	CSL_DSI_CFG_t*      	dsi_cfg; 
+	DISPDRV_INFO_T*	    	disp_info;
 } LQ043Y1DX01_PANEL_t;   
 
 // LOCAL FUNCTIONs
-static void     lq043y1dx01_WrCmndP0  ( 
+static void     lq043y1dx01_WrCmndP0( 
                     DISPDRV_HANDLE_T        drvH, 
                     UInt32                  reg );
 
 // DRV INTERFACE FUNCTIONs
-Int32           LQ043Y1DX01_Init          ( unsigned int bus_width ); 
-Int32           LQ043Y1DX01_Exit          ( void ); 
+Int32 LQ043Y1DX01_Init(
+      	struct dispdrv_init_parms 	*parms,
+      	DISPDRV_HANDLE_T 	*handle ); 
+      
+Int32 LQ043Y1DX01_Exit (DISPDRV_HANDLE_T drvH); 
 
-Int32           LQ043Y1DX01_Open          ( 
-                   const void*         params, 
-                   DISPDRV_HANDLE_T*   drvH ); 
-                   
-Int32           LQ043Y1DX01_Close         ( DISPDRV_HANDLE_T drvH ); 
+Int32 LQ043Y1DX01_Open (DISPDRV_HANDLE_T drvH); 
+         
+Int32 LQ043Y1DX01_Close (DISPDRV_HANDLE_T drvH); 
 
-Int32           LQ043Y1DX01_GetDispDrvFeatures ( 
-                   const char**                driver_name,
-                   UInt32*                     version_major,
-                   UInt32*                     version_minor,
-                   DISPDRV_SUPPORT_FEATURES_T* flags );
+Int32 LQ043Y1DX01_GetDispDrvFeatures ( 
+	DISPDRV_HANDLE_T		drvH,
+	const char			**driver_name,
+	UInt32				*version_major,
+	UInt32				*version_minor,
+	DISPDRV_SUPPORT_FEATURES_T	*flags );
 
-const DISPDRV_INFO_T* LQ043Y1DX01_GetDispDrvData ( DISPDRV_HANDLE_T drvH );
+const DISPDRV_INFO_T* LQ043Y1DX01_GetDispDrvData (DISPDRV_HANDLE_T drvH);
 
-Int32           LQ043Y1DX01_Start         ( struct pi_mgr_dfs_node* dfs_node); 
-Int32           LQ043Y1DX01_Stop          ( struct pi_mgr_dfs_node* dfs_node); 
+Int32 LQ043Y1DX01_Start(
+      	DISPDRV_HANDLE_T drvH,
+      	struct pi_mgr_dfs_node* dfs_node ); 
+      	
+Int32 LQ043Y1DX01_Stop(
+      	DISPDRV_HANDLE_T drvH,
+      	struct pi_mgr_dfs_node* dfs_node); 
 
-Int32           LQ043Y1DX01_PowerControl  ( DISPDRV_HANDLE_T drvH, 
-                   DISPLAY_POWER_STATE_T state ); 
+Int32 LQ043Y1DX01_PowerControl( 
+	DISPDRV_HANDLE_T 	drvH, 
+	DISPLAY_POWER_STATE_T 	state ); 
 
-Int32           LQ043Y1DX01_Update       ( 
-                    DISPDRV_HANDLE_T    drvH, 
-		    int			fb_idx,
-	            DISPDRV_WIN_t*	p_win,
-                    DISPDRV_CB_T        apiCb ); 
-
-Int32           LQ043Y1DX01_Update_ExtFb ( 
-                    DISPDRV_HANDLE_T        drvH, 
-                    void                    *pFb,
-                    DISPDRV_CB_API_1_1_T    apiCb ); 
-
-Int32           LQ043Y1DX01_SetCtl ( 
-                    DISPDRV_HANDLE_T    drvH, 
-                    DISPDRV_CTRL_ID_T   ctrlID, 
-                    void*               ctrlParams );
-                   
-Int32           LQ043Y1DX01_GetCtl (
-                    DISPDRV_HANDLE_T    drvH, 
-                    DISPDRV_CTRL_ID_T   ctrlID, 
-                    void*               ctrlParams );
+Int32 LQ043Y1DX01_Update( 
+	 DISPDRV_HANDLE_T    drvH, 
+	 void		*buff,
+	 DISPDRV_WIN_t*	p_win,
+	 DISPDRV_CB_T        apiCb ); 
 		    
-static DISPDRV_T LQ043Y1DX01_Drv =
-{
-	&LQ043Y1DX01_Init,               // init
-	&LQ043Y1DX01_Exit,               // exit
-	&LQ043Y1DX01_GetDispDrvFeatures, // info
-	&LQ043Y1DX01_Open,               // open
-	&LQ043Y1DX01_Close,              // close
-	NULL,                            // core_freq_change
-	NULL,                            // run_domain_change
-	&LQ043Y1DX01_GetDispDrvData,     // get_info
-	&LQ043Y1DX01_Start,              // start
-	&LQ043Y1DX01_Stop,               // stop
-	&LQ043Y1DX01_PowerControl,       // power_control
-	NULL,                            // update_no_os
-	&LQ043Y1DX01_Update_ExtFb,       // update_dma_os
-	&LQ043Y1DX01_Update,             // update
-	NULL,              		 // set_control
-	NULL,              		 // get_control
+Int32 LQ043Y1DX01_WinReset( DISPDRV_HANDLE_T drvH ); 
+		    
+		    
+static DISPDRV_T LQ043Y1DX01_Drv = {
+	&LQ043Y1DX01_Init,              // init
+	&LQ043Y1DX01_Exit,              // exit
+	&LQ043Y1DX01_GetDispDrvFeatures,// info
+	&LQ043Y1DX01_Open,              // open
+	&LQ043Y1DX01_Close,             // close
+	&LQ043Y1DX01_GetDispDrvData,    // get_info
+	&LQ043Y1DX01_Start,             // start
+	&LQ043Y1DX01_Stop,              // stop
+	&LQ043Y1DX01_PowerControl,      // power_control
+	NULL,                           // update_no_os
+	&LQ043Y1DX01_Update,            // update
+	NULL,                           // set_brightness
+	&LQ043Y1DX01_WinReset,          // reset_win
 };
 
 
 // DISP DRV API - Display Info
-static DISPDRV_INFO_T LQ043Y1DX01_Info =
-{
-	DISPLAY_TYPE_LCD_STD,         // type;          
-	480,                          // width;         
-	800,                          // height;        
-	DISPDRV_FB_FORMAT_RGB565,     // input_format;
-	DISPLAY_BUS_DSI,              // bus_type;
-	0,                            // interlaced;    
-	DISPDRV_DITHER_NONE,          // output_dither; 
-	0,                            // pixel_freq;    
-	0,                            // line_rate;     
+static DISPDRV_INFO_T LQ043Y1DX01_Info = {
+	DISPLAY_TYPE_LCD_STD,         	// type;          
+	480,                          	// width;         
+	800,                          	// height;        
+	DISPDRV_FB_FORMAT_RGB565,     	// input_format;
+	DISPLAY_BUS_DSI,              	// bus_type;
+	4,			      	// Bpp;	  
 };
 
 // DSI Command Mode VC Configuration
@@ -232,11 +204,10 @@ CSL_DSI_CM_VC_t lq043y1dx01_VcCmCfg =
 	1,             	// dlCount
 	DSI_DPHY_0_92, 	// DSI_DPHY_SPEC_T
 	// ESC CLK Config
-	{500,5},       	// escClk     500|312 500[MHz], DIV by 5 = 100[MHz]
+	{500,5},       	// escClk   500|312 500[MHz], DIV by 5 = 100[MHz]
 
-	// HS CLK Config
-	// RHEA VCO range 600-2400
-	{1000,2},      	// hsBitClk   PLL    1000[MHz], DIV by 2 = 500[Mbps]     
+	// HS CLK Config, RHEA VCO range 600-2400
+	{1000,2},      	// hsBitClk PLL 1000[MHz], DIV by 2 = 500[Mbps]     
 	// LP Speed
 	5,             	// lpBitRate_Mbps, Max 10[Mbps]
 
@@ -254,7 +225,10 @@ static LQ043Y1DX01_PANEL_t   panel[1];
 
 static const u16 sharp_sleep_out[] = { LQ043Y1DX01_CMD_SLPOUT };
 static const u16 sharp_sleep_in[]  = { LQ043Y1DX01_CMD_SLPIN  };
-static const u16 sharp_priv[]      = { LQ043Y1DX01_CMD_PRIV1 , 0x01ff, 0x0183, 0x0163 };
+
+static const u16 sharp_priv[]      = { 
+	LQ043Y1DX01_CMD_PRIV1 , 0x01ff, 0x0183, 0x0163 };
+
 static const u16 sharp_cm_565[]    = { LQ043Y1DX01_CMD_COLMOD, 0x0150 };
 static const u16 sharp_disp_on[]   = { LQ043Y1DX01_CMD_DISON  };
 static const u16 sharp_disp_off[]  = { LQ043Y1DX01_CMD_DISOFF };
@@ -278,8 +252,10 @@ static DISPCTRL_REC_T dsi_bridge_init[] =
 	// B2 DE    0(N) 1(P)
 	// B1 HSYNC 0(N) 1(P)
 	// B0 VSYNC 0(N) 1(P)
-	{DISPCTRL_WR_CMND, 0x37,0   },   
-//	{DISPCTRL_WR_DATA, 0, 	0x14},  // V/H active low, DE active hi, PCLK falling edge, getting only LSBs of colors (242)	
+	{DISPCTRL_WR_CMND, 0x37,0   },  
+	// V/H active low, DE active hi, PCLK falling edge, 
+	// getting only LSBs of colors (242)	 
+//	{DISPCTRL_WR_DATA, 0, 	0x14},  
 	{DISPCTRL_WR_DATA, 0, 	0x04},  // 
 
 	// (0x92) H-TIMING
@@ -373,7 +349,10 @@ static DISPCTRL_REC_T dsi_bridge_init[] =
 
 //#############################################################################
 
-static int lq043y1dx01_send_cmd( struct spi_device *spi, const u16* cmd_buff, u32 byte_count )
+static int lq043y1dx01_send_cmd(
+	struct spi_device 	*spi, 
+	const u16		*cmd_buff,
+	u32 			byte_count )
 {
 	if (spi==NULL) {
 	        LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: spi EQ NULL\n",
@@ -385,43 +364,37 @@ static int lq043y1dx01_send_cmd( struct spi_device *spi, const u16* cmd_buff, u3
 }
 
 static void lq043y1dx01_panel_on(LQ043Y1DX01_PANEL_t *pPanel) {
-	lq043y1dx01_send_cmd( pPanel->spi, sharp_sleep_out,	ARRAY_SIZE(sharp_sleep_out)*sizeof(u16));
+
+	lq043y1dx01_send_cmd( pPanel->spi, sharp_sleep_out,
+		ARRAY_SIZE(sharp_sleep_out )*sizeof(u16));
 	msleep(100);
-	lq043y1dx01_send_cmd( pPanel->spi, sharp_priv     , 	ARRAY_SIZE(sharp_priv     )*sizeof(u16));
-	lq043y1dx01_send_cmd( pPanel->spi, sharp_cm_565   , 	ARRAY_SIZE(sharp_cm_565   )*sizeof(u16));
+
+	lq043y1dx01_send_cmd( pPanel->spi, sharp_priv,
+		ARRAY_SIZE(sharp_priv)*sizeof(u16));
+
+	lq043y1dx01_send_cmd( pPanel->spi, sharp_cm_565,
+		ARRAY_SIZE(sharp_cm_565)*sizeof(u16));
 	msleep(1);
-	lq043y1dx01_send_cmd( pPanel->spi, sharp_disp_on  , 	ARRAY_SIZE(sharp_disp_on  )*sizeof(u16));
+
+	lq043y1dx01_send_cmd( pPanel->spi, sharp_disp_on,
+		ARRAY_SIZE(sharp_disp_on   )*sizeof(u16));
 }
 
 static void lq043y1dx01_panel_off(LQ043Y1DX01_PANEL_t *pPanel)  {
-      lq043y1dx01_send_cmd( pPanel->spi, sharp_disp_off  , ARRAY_SIZE(sharp_disp_off  )*sizeof(u16));
-      lq043y1dx01_send_cmd( pPanel->spi, sharp_sleep_in,          ARRAY_SIZE(sharp_sleep_in)*sizeof(u16));
-      msleep(60);
-}
 
-static void lq043y1dx01_pwrdown_dpi_bridge(void)
-{
-	gpio_direction_output(DSI_BRIDGE_PON, 0);
-	gpio_set_value_cansleep(DSI_BRIDGE_PON, 1);
-	msleep(20);
+	lq043y1dx01_send_cmd( pPanel->spi, sharp_disp_off,
+		ARRAY_SIZE(sharp_disp_off  )*sizeof(u16));
+
+	lq043y1dx01_send_cmd( pPanel->spi, sharp_sleep_in,
+		ARRAY_SIZE(sharp_sleep_in  )*sizeof(u16));
+	msleep(60);
 }
 
 #if 0
-static void lq043y1dx01_reset(u32 gpio)
+static void lq043y1dx01_pwrdown_dpi_bridge(LQ043Y1DX01_PANEL_t *pPanel)
 {
-	int res1;
-	
-	res1=gpio_request(gpio, "lcd_reset");
-	if( res1 != 0 )  {
-		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR(%d) Req GPIO(%d)\n", __func__, res1, gpio );
-		return;
-	}
-	gpio_direction_output(gpio, 0);
-	gpio_set_value_cansleep(gpio, 1);
-	msleep(1);
-	gpio_set_value_cansleep(gpio, 0);
-	msleep(1);
-	gpio_set_value_cansleep(gpio, 1);
+	gpio_direction_output(pPanel->rst_bridge_pwr_down, 0);
+	gpio_set_value_cansleep(pPanel->rst_bridge_pwr_down, 1);
 	msleep(20);
 }
 #endif
@@ -533,8 +506,9 @@ static int lq043y1dx01_ReadReg( DISPDRV_HANDLE_T drvH, UInt8 reg )
 
 	txData[0] = reg;                                    
 	cslRes = CSL_DSI_SendPacket( pPanel->clientH, &msg, FALSE );
-	if( (cslRes != CSL_LCD_OK) || ((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0) )
-	{
+	if ((cslRes != CSL_LCD_OK) || 
+		((rxMsg.type & DSI_RX_TYPE_READ_REPLY)==0)) {
+		
 		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR"
 			"Reading From Reg[0x%08X]\n\r", 
 			__FUNCTION__, reg );
@@ -548,6 +522,126 @@ static int lq043y1dx01_ReadReg( DISPDRV_HANDLE_T drvH, UInt8 reg )
 	return(res);	
 }
 #endif
+
+
+
+//*****************************************************************************
+//
+// Function Name: lq043y1dx01_WinSet
+// 
+// Description:   Set Window  
+//
+//*****************************************************************************
+Int32 lq043y1dx01_WinSet ( 
+	DISPDRV_HANDLE_T 	drvH,
+	Boolean 		update, 
+	DISPDRV_WIN_t		*p_win ) 
+{
+	LQ043Y1DX01_PANEL_t *pPanel = (LQ043Y1DX01_PANEL_t *) drvH;
+	CSL_DSI_CMND_t      msg;
+	UInt8               msgData[7];
+	CSL_DSI_REPLY_t     rxMsg;
+	UInt8               rx_buff[8];
+
+    	if ( (pPanel->win_cur.l != p_win->l) ||
+    	     (pPanel->win_cur.r != p_win->r) ||
+    	     (pPanel->win_cur.t != p_win->t) ||
+    	     (pPanel->win_cur.b != p_win->b)    ) {
+
+    		pPanel->win_cur = *p_win;		
+    
+    		if (update) {    
+			rxMsg.pReadReply = rx_buff;
+
+			msg.dsiCmnd    = DSI_DT_LG_DCS_WR;
+			msg.msg        = &msgData[0];
+			msg.msgLen     = 7;
+			msg.vc         = LQ043Y1DX01_VC;        
+			msg.isLP       = LQ043Y1DX01_CMND_IS_LP;
+			msg.isLong     = TRUE;
+			msg.endWithBta = FALSE;
+			msg.reply      = &rxMsg;
+
+			msgData[0] = MIPI_DCS_SET_COLUMN_ADDRESS;                                  
+			msgData[1] = 0;   
+			msgData[2] = (p_win->l & 0xFF00) >> 8;   
+			msgData[3] = (p_win->l & 0x00FF);   
+			msgData[4] = 0;   
+			msgData[5] = (p_win->r & 0xFF00) >> 8;   
+			msgData[6] = (p_win->r & 0x00FF);   
+
+			CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
+
+			msgData[0] = MIPI_DCS_SET_PAGE_ADDRESS;                                  
+			msgData[1] = 0;   
+			msgData[2] = (p_win->t & 0xFF00) >> 8;   
+			msgData[3] = (p_win->t & 0x00FF);   
+			msgData[4] = 0;   
+			msgData[5] = (p_win->b & 0xFF00) >> 8;   
+			msgData[6] = (p_win->b & 0x00FF);   
+
+			CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
+			    
+			return(0);        
+		}
+	}	
+	return (0);        
+}
+
+//*****************************************************************************
+//
+// Function Name: LQ043Y1DX01_WinReset
+// 
+// Description:   Reset windowing to full screen size. 
+//                Typically, only used in boot code environment
+//
+//*****************************************************************************
+Int32 LQ043Y1DX01_WinReset( DISPDRV_HANDLE_T drvH ) 
+{
+       Int32 res;
+	LQ043Y1DX01_PANEL_t *pPanel = (LQ043Y1DX01_PANEL_t *) drvH;
+
+       res = lq043y1dx01_WinSet( drvH, TRUE, &pPanel->win_dim );
+       return (res);
+}
+
+//*****************************************************************************
+//
+// Function Name: lq043y1dx01_reset
+// 
+// Description:   (De)Assert display reset  
+//
+//*****************************************************************************
+static void lq043y1dx01_reset(DISPDRV_HANDLE_T drvH, Boolean on)
+{	
+	LQ043Y1DX01_PANEL_t *pPanel = (LQ043Y1DX01_PANEL_t *) drvH;
+	
+	
+	if (!on) {
+		gpio_request(pPanel->rst_panel_reset  , "LCD_RST1");
+		gpio_request(pPanel->rst_bridge_reset , "LCD_RST2");
+		gpio_request(pPanel->rst_bridge_pwr_down, "LCD_RST3");
+		
+		gpio_direction_output(pPanel->rst_panel_reset  , 1);
+		gpio_direction_output(pPanel->rst_bridge_reset , 1);
+		gpio_direction_output(pPanel->rst_bridge_pwr_down, 1);
+		msleep(1);
+
+		gpio_set_value_cansleep(pPanel->rst_panel_reset,   0);
+		gpio_set_value_cansleep(pPanel->rst_bridge_pwr_down, 0);
+		msleep(100);
+		gpio_set_value_cansleep(pPanel->rst_panel_reset,   1);
+		
+		gpio_set_value_cansleep(pPanel->rst_bridge_reset, 0);
+		msleep(1);
+		gpio_set_value_cansleep(pPanel->rst_bridge_reset, 1);
+		msleep(20);
+	} else {
+		gpio_set_value_cansleep(pPanel->rst_panel_reset,   0);
+		gpio_set_value_cansleep(pPanel->rst_bridge_pwr_down, 1);
+		gpio_direction_output(pPanel->rst_bridge_reset , 0);
+	}
+}
 
 //*****************************************************************************
 //
@@ -566,25 +660,113 @@ DISPDRV_T* DISP_DRV_LQ043Y1DX01_GetFuncTable ( void )
 //
 // Function Name: LQ043Y1DX01_Init
 // 
-// Description:   Reset Driver Info
+// Description:   Setup / Verify display driver init interface 
 //
 //*****************************************************************************
-Int32 LQ043Y1DX01_Init ( unsigned int bus_width )
+Int32 LQ043Y1DX01_Init( 
+	struct dispdrv_init_parms	*parms, 
+	DISPDRV_HANDLE_T		*handle)
 {
 	Int32 res = 0;
+	LQ043Y1DX01_PANEL_t	*pPanel;
 
-	if(     panel[0].drvState != DRV_STATE_INIT 
-	     && panel[0].drvState != DRV_STATE_OPEN  )
-	{     
-		LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __func__ );
-		panel[0].drvState = DRV_STATE_INIT;
-	} 
-	else
-	{
-		LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK, Already Init\n\r",
+	pPanel = &panel[0];
+
+	if (pPanel->drvState == DRV_STATE_OFF ) {
+
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Bus        %d \n", 
+			__func__, parms->w0.bits.bus_type);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: BootMode   %d \n", 
+			__func__, parms->w0.bits.boot_mode);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: BusNo      %d \n", 
+			__func__, parms->w0.bits.bus_no);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: col_mode_i %d \n", 
+			__func__, parms->w0.bits.col_mode_i);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: col_mode_o %d \n", 
+			__func__, parms->w0.bits.col_mode_o);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: te_input   %d \n", 
+			__func__, parms->w0.bits.te_input);
+		
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: API Rev    %d \n", 
+			__func__, parms->w1.bits.api_rev);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Rst 0      %d \n", 
+			__func__, parms->w1.bits.lcd_rst0);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Rst 1      %d \n", 
+			__func__, parms->w1.bits.lcd_rst1);
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: Rst 2      %d \n", 
+			__func__, parms->w1.bits.lcd_rst2);
+
+		if( (u8)parms->w1.bits.api_rev != RHEA_LCD_BOOT_API_REV ) {
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"Boot Init API Rev Mismatch(%d.%d vs %d.%d)\n",
+				__func__, 
+				(parms->w1.bits.api_rev & 0xF0) >> 8,
+				(parms->w1.bits.api_rev & 0x0F)     ,
+				(RHEA_LCD_BOOT_API_REV  & 0xF0) >> 8,
+				(RHEA_LCD_BOOT_API_REV  & 0x0F)       );
+			return(-1);	
+		}
+
+		pPanel->boot_mode = parms->w0.bits.boot_mode;
+
+		pPanel->cmnd_mode = &lq043y1dx01_VcCmCfg;
+		pPanel->dsi_cfg   = &lq043y1dx01_dsiCfg;
+		pPanel->disp_info = &LQ043Y1DX01_Info;
+		
+		pPanel->busNo = dispdrv2busNo(parms->w0.bits.bus_no);
+
+		/* check for valid DSI bus no */
+		if (pPanel->busNo & 0xFFFFFFFE)  {
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: Invlid DSI "
+				"BusNo[%lu]\n", __FUNCTION__, pPanel->busNo );
+			return(-1);			
+		}
+
+		pPanel->cmnd_mode->cm_in  = 
+			dispdrv2cmIn(parms->w0.bits.col_mode_i);
+		pPanel->cmnd_mode->cm_out = 
+			dispdrv2cmOut(parms->w0.bits.col_mode_o);
+
+		/* as of now, only 565 */
+		switch(pPanel->cmnd_mode->cm_in){
+		case LCD_IF_CM_I_RGB565P:
+			pPanel->disp_info->input_format 
+				= DISPDRV_FB_FORMAT_RGB565;	
+			pPanel->disp_info->Bpp = 2;
+			break;
+		case LCD_IF_CM_I_RGB888U:
+		default:    
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: Unsupported"
+				" Color Mode\n", __FUNCTION__ );
+			return(-1);	
+		}
+
+		/* get reset pins */
+		pPanel->rst_bridge_pwr_down = parms->w1.bits.lcd_rst0;
+		pPanel->rst_bridge_reset  = parms->w1.bits.lcd_rst1;
+		pPanel->rst_panel_reset	  = parms->w1.bits.lcd_rst2;
+
+
+		pPanel->isTE = pPanel->cmnd_mode->teCfg.teInType != DSI_TE_NONE;
+	
+		/* get TE pin configuration */
+		pPanel->teIn  = dispdrv2busTE(parms->w0.bits.te_input);
+		pPanel->teOut = pPanel->busNo 
+			? TE_VC4L_OUT_DSI1_TE0 : TE_VC4L_OUT_DSI0_TE0;
+			
+		pPanel->drvState = DRV_STATE_INIT;
+		pPanel->pwrState = STATE_PWR_OFF;
+
+		*handle = (DISPDRV_HANDLE_T)pPanel;
+		
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n", __FUNCTION__ );
+	} else {
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: Not in OFF state\n",
 			__FUNCTION__ );
+		res = -1;		
 	}   
-	return ( res );
+    
+	return (res);
 }
 
 //*****************************************************************************
@@ -594,14 +776,14 @@ Int32 LQ043Y1DX01_Init ( unsigned int bus_width )
 // Description:   
 //
 //*****************************************************************************
-Int32 LQ043Y1DX01_Exit ( void )
+Int32 LQ043Y1DX01_Exit ( DISPDRV_HANDLE_T drvH )
 {
-	LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Not Implemented\n\r",
-		__FUNCTION__ );
-	return ( -1 );
+	LQ043Y1DX01_PANEL_t *pPanel;
+
+	pPanel = (LQ043Y1DX01_PANEL_t *) drvH;
+        pPanel->drvState = DRV_STATE_OFF;
+	return (0);
 }
-
-
 
 
 
@@ -609,124 +791,76 @@ Int32 LQ043Y1DX01_Exit ( void )
 //
 // Function Name: LQ043Y1DX01_Open
 // 
-// Description:   Open Sub Drivers
+// Description:   disp bus ON
 //
 //*****************************************************************************
-Int32 LQ043Y1DX01_Open(
-	const void*		params,
-	DISPDRV_HANDLE_T*	drvH 
-	)
+Int32 LQ043Y1DX01_Open(	DISPDRV_HANDLE_T drvH )
 {
 	Int32				res = 0;
-	UInt32				busId; 
-	const DISPDRV_OPEN_PARM_T*	pOpenParm;
 	LQ043Y1DX01_PANEL_t		*pPanel;
 
-	//busCh - NA to DSI interface
-	pOpenParm = (DISPDRV_OPEN_PARM_T*) params;
+	pPanel = (LQ043Y1DX01_PANEL_t *) drvH;
 
-
-	#define BUS_ID_MAX  1
-	//rework semnathincs since fb passes fb addr as busId
-	//busId = pOpenParm->busCh;
-	busId = 0;
-
-	if( busId > BUS_ID_MAX )
-	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR Invalid DSI Bus[%d]\n\r",
-			__FUNCTION__, (unsigned int)busId );
-		return ( -1 );
-	}
-
-	pPanel = &panel[0];
-
-	if( pPanel->drvState == DRV_STATE_OPEN )
-	{
-		*drvH = (DISPDRV_HANDLE_T) pPanel;
-		LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: Returning Handle, "
-			"Already Open\n\r", __FUNCTION__ );
-		return ( res );
-	}
-
-	if ( pPanel->drvState != DRV_STATE_INIT )
-	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR Not Init\n\r",
+	if (pPanel->drvState != DRV_STATE_INIT)	{
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR State != Init\n",
 			__FUNCTION__ );
-	        return ( -1 );
+	        return (-1);
 	}    
-    
-    
-	lq043y1dx01_dsiCfg.bus = busId;
-    
-	pPanel->pFb = pPanel->pFbA = (void*)pOpenParm->busId;
    
-	pPanel->isTE = lq043y1dx01_VcCmCfg.teCfg.teInType != DSI_TE_NONE;
-	pPanel->is_hw_TE = pPanel->isTE 
-		&& (lq043y1dx01_VcCmCfg.teCfg.teInType != DSI_TE_CTRLR_TRIG);
-
-	if( brcm_enable_dsi_pll_clocks(0,
-		lq043y1dx01_dsiCfg.hsBitClk.clkIn_MHz * 1000000,
-		lq043y1dx01_dsiCfg.hsBitClk.clkInDiv,
-		lq043y1dx01_dsiCfg.escClk.clkIn_MHz   * 1000000 / lq043y1dx01_dsiCfg.escClk.clkInDiv ))
+	if ( brcm_enable_dsi_pll_clocks(pPanel->busNo,
+		pPanel->dsi_cfg->hsBitClk.clkIn_MHz * 1000000,
+		pPanel->dsi_cfg->hsBitClk.clkInDiv,
+		pPanel->dsi_cfg->escClk.clkIn_MHz   * 1000000 
+		/ pPanel->dsi_cfg->escClk.clkInDiv ))
 	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
-			__FUNCTION__  );
-		return ( -1 );
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the "
+			"clock\n", __FUNCTION__  );
 	}
 
-	if( pPanel->is_hw_TE ) 
-	{
-		pPanel->teIn   = TE_VC4L_IN_1_DSI0;
-		pPanel->teOut  = TE_VC4L_OUT_DSI0_TE0;
-		
-		if ( lq043y1dx01_TeOn ( pPanel ) ==  -1 )  {
-			LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Failed "
-				"To Configure TE Input\n", __func__ ); 
-			return ( -1 );
-		}	
+	if( pPanel->isTE && lq043y1dx01_TeOn(pPanel)== -1 ) {
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+			"Failed To Configure TE Input\n", __FUNCTION__ ); 
+		return (-1);
 	}
-    
-	if ( CSL_DSI_Init( &lq043y1dx01_dsiCfg ) != CSL_LCD_OK )
-	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, DSI CSL Init "
+
+	lq043y1dx01_reset( drvH, FALSE );    
+	
+	if ( CSL_DSI_Init( pPanel->dsi_cfg ) != CSL_LCD_OK ) {
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, DSI CSL Init "
 			"Failed\n", __FUNCTION__ );
-		return ( -1 );
+		return (-1);
 	}
     
-	if ( CSL_DSI_OpenClient ( busId, &pPanel->clientH ) != CSL_LCD_OK )
-	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, CSL_DSI_OpenClient "
-			"Failed\n", __FUNCTION__);
-		return ( -1 );
+	if (CSL_DSI_OpenClient(pPanel->busNo, &pPanel->clientH) != CSL_LCD_OK ){
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, "
+			"CSL_DSI_OpenClient Failed\n", __FUNCTION__);
+		return (-1);
 	}
     
-	if ( CSL_DSI_OpenCmVc ( pPanel->clientH, &lq043y1dx01_VcCmCfg, &pPanel->dsiCmVcHandle ) 
+	if ( CSL_DSI_OpenCmVc( pPanel->clientH, 
+				pPanel->cmnd_mode, &pPanel->dsiCmVcHandle ) 
 	        != CSL_LCD_OK )
 	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: CSL_DSI_OpenCmVc Failed\n",
-			__FUNCTION__);
-		return ( -1 );
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: CSL_DSI_OpenCmVc "
+			"Failed\n", __FUNCTION__);
+		return (-1);
 	}
 
 	if (csl_dma_vc4lite_init() != DMA_VC4LITE_STATUS_SUCCESS)
 	{
 		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: csl_dma_vc4lite_init "
 			"Failed\n",__FUNCTION__);
-		return ( -1 );
+		return (-1);
 	}
-	
-	pPanel->busId      = busId; 
-	pPanel->win.left   = 0;  
-	pPanel->win.right  = 479; 
-	pPanel->win.top    = 0;  
-	pPanel->win.bottom = 799;
-	pPanel->win.width  = 480; 
-	pPanel->win.height = 800;
-	pPanel->bpp        = 2;
+
+	pPanel->win_dim.l = 0;  
+	pPanel->win_dim.r = pPanel->disp_info->width-1; 
+	pPanel->win_dim.t = 0;  
+	pPanel->win_dim.b = pPanel->disp_info->height-1;
+	pPanel->win_dim.w = pPanel->disp_info->width; 
+	pPanel->win_dim.h = pPanel->disp_info->height;
 
 	pPanel->drvState   = DRV_STATE_OPEN;
-
-	*drvH = (DISPDRV_HANDLE_T) pPanel;
 
 	LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
 
@@ -737,53 +871,47 @@ Int32 LQ043Y1DX01_Open(
 //
 // Function Name: LQ043Y1DX01_Close
 // 
-// Description:   Close The Driver
+// Description:   disp bus OFF
 //
 //*****************************************************************************
-Int32 LQ043Y1DX01_Close ( DISPDRV_HANDLE_T drvH ) 
+Int32 LQ043Y1DX01_Close( DISPDRV_HANDLE_T drvH ) 
 {
 	Int32              	res = 0;
 	LQ043Y1DX01_PANEL_t   	*pPanel = (LQ043Y1DX01_PANEL_t *)drvH;
-
-	pPanel->pFb  = NULL;
-	pPanel->pFbA = NULL;
     
-	if( CSL_DSI_CloseCmVc ( pPanel->dsiCmVcHandle ) ) 
-	{
+	if ( CSL_DSI_CloseCmVc ( pPanel->dsiCmVcHandle ) ) {
 		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, "
 			"Closing Command Mode Handle\n\r", __FUNCTION__);
-		return ( -1 );
+		return (-1);
 	}
     
-	if( CSL_DSI_CloseClient ( pPanel->clientH ) != CSL_LCD_OK )
-	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, Closing "
+	if ( CSL_DSI_CloseClient ( pPanel->clientH ) != CSL_LCD_OK ) {
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR, Closing "
 			"DSI Client\n", __FUNCTION__);
-		return ( -1 );
+		return (-1);
 	}
     
-	if( CSL_DSI_Close( pPanel->busId ) != CSL_LCD_OK )
+	if ( CSL_DSI_Close( pPanel->busNo ) != CSL_LCD_OK )
 	{
 		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR Closing DSI "
 			"Controller\n",__FUNCTION__ );
-		return ( -1 );
+		return (-1);
 	}
     
-	if(pPanel->is_hw_TE) 
-		lq043y1dx01_TeOff ( pPanel );
+	if (pPanel->isTE) 
+		lq043y1dx01_TeOff( pPanel );
 
-	if (brcm_disable_dsi_pll_clocks(0))
-	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the pll clock\n",
-			__FUNCTION__  );
+	if (brcm_disable_dsi_pll_clocks(pPanel->busNo)) {
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable "
+			"the pll clock\n", __FUNCTION__  );
 		return ( -1 );
 	}
 
-	pPanel->pwrState = DISP_PWR_OFF;
+	pPanel->pwrState = STATE_PWR_OFF;
 	pPanel->drvState = DRV_STATE_INIT;
 	LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
 
-	return ( res );
+	return (res);
 }
 
 
@@ -808,7 +936,7 @@ static int lq043y1dx01_WrSendCmnd(
 	CSL_DSI_CMND_t		msg;
 	int			res = 0;
 
-	switch(msg_size){
+	switch(msg_size) {
 	case 0:
 		res = -1;
 		break;
@@ -827,7 +955,7 @@ static int lq043y1dx01_WrSendCmnd(
 		break;
 	}
 
-	if( res == 0 ){
+	if (res == 0) {
 		msg.msg        = msg_buff;
 		msg.msgLen     = msg_size;
 		msg.vc         = LQ043Y1DX01_VC;
@@ -836,9 +964,8 @@ static int lq043y1dx01_WrSendCmnd(
 		msg.endWithBta = FALSE;
 
 		CSL_DSI_SendPacket (pPanel->clientH, &msg, FALSE);   
-		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: DT[0x%02lX] SIZE[%lu]\n",
-			__func__, msg.dsiCmnd, msg_size );
-		
+		LCD_DBG( LCD_DBG_INIT_ID, "[DISPDRV] %s: DT[0x%02lX] "
+			"SIZE[%lu]\n",	__func__, msg.dsiCmnd, msg_size );
 	}    
 
 	return(res);
@@ -863,10 +990,8 @@ static void lq043y1dx01_ExecCmndList(
 	UInt8   tx_buff[TX_MSG_MAX];
 	UInt32  tx_size = 0; 
 
-	while( cmnd_lst[i].type != DISPCTRL_LIST_END )
-	{
-		if( cmnd_lst[i].type == DISPCTRL_WR_CMND )
-		{
+	while (cmnd_lst[i].type != DISPCTRL_LIST_END) {
+		if (cmnd_lst[i].type == DISPCTRL_WR_CMND) {
 			tx_buff[tx_size++] = cmnd_lst[i].cmnd;
 
 			while( cmnd_lst[i+1].type == DISPCTRL_WR_DATA )
@@ -877,16 +1002,13 @@ static void lq043y1dx01_ExecCmndList(
 			lq043y1dx01_WrSendCmnd (drvH, tx_buff, tx_size );
 			tx_size = 0;
         	}
-        	else if( cmnd_lst[i].type == DISPCTRL_WR_CMND_DATA )
-        	{
+        	else if (cmnd_lst[i].type == DISPCTRL_WR_CMND_DATA) {
 		       	tx_buff[tx_size++] = cmnd_lst[i].cmnd;
         		tx_buff[tx_size++] = cmnd_lst[i].data;
         		lq043y1dx01_WrSendCmnd (drvH, tx_buff, tx_size );
         		tx_size = 0;
         
-        	}
-		else if( cmnd_lst[i].type == DISPCTRL_SLEEP_MS )
-		{
+        	} else if (cmnd_lst[i].type == DISPCTRL_SLEEP_MS) {
 			OSTASK_Sleep( TICKS_IN_MILLISECONDS(cmnd_lst[i].data) );
 		}
 		i++;
@@ -908,83 +1030,127 @@ Int32 LQ043Y1DX01_PowerControl (
 	Int32  res = 0;
 	LQ043Y1DX01_PANEL_t   *pPanel = (LQ043Y1DX01_PANEL_t *)drvH;
 
-	switch ( state )
-	{
-	case DISPLAY_POWER_STATE_ON:
-		switch( pPanel->pwrState )
-		{
-                case DISP_PWR_OFF:
+	#define  INIT_MSG_ID   LCD_DBG_ERR_ID
+	
+	switch (state) {
+	case CTRL_PWR_ON:
+		switch (pPanel->pwrState) {
+                case STATE_PWR_OFF:
 
 			lq043y1dx01_ExecCmndList( drvH, dsi_bridge_init );
-	
-			// RGB should be active at this point
-			lq043y1dx01_panel_on( pPanel );
+			/* DPI Ouptut ON at this point */
 		    
-			//lq043y1dx01_ReadReg( drvH, 0x0A );
-			//lq043y1dx01_ReadReg( drvH, 0x0B );
-			//lq043y1dx01_ReadReg( drvH, 0x0C );
-			//lq043y1dx01_ReadReg( drvH, 0x0E );
-/*
+#if 0
+			lq043y1dx01_ReadReg( drvH, 0x0A );
+			lq043y1dx01_ReadReg( drvH, 0x0B );
+			lq043y1dx01_ReadReg( drvH, 0x0C );
+			lq043y1dx01_ReadReg( drvH, 0x0E );
 			lq043y1dx01_ReadReg( drvH, 0x85 );
-*/
-					    
-			pPanel->pwrState = DISP_PWR_SLEEP_OFF;
-			LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: INIT-SEQ\n\r",
+#endif
+                        lq043y1dx01_WinSet( drvH, TRUE, &pPanel->win_dim );
+
+			pPanel->pwrState = STATE_SCREEN_OFF;
+			
+			LCD_DBG ( INIT_MSG_ID, "[DISPDRV] %s: INIT-SEQ\n",
 				__FUNCTION__ );
 			break; 
-                case DISP_PWR_SLEEP_ON:
-	
-			lq043y1dx01_WrCmndP0 ( drvH, MIPI_DCS_EXIT_SLEEP_MODE );
-
-			//lq043y1dx01_panel_on( pPanel );
-
-			OSTASK_Sleep ( 120 );
-			pPanel->pwrState = DISP_PWR_SLEEP_OFF;
-			LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-OUT\n\r",
-			    __FUNCTION__ );
-			break;
                 default:
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: POWER ON "
+				"Requested While Not In POWER DOWN State\n",
+				__FUNCTION__ );
 			break;    
-            	}        
+		}
 		break;
 		
-        case DISPLAY_POWER_STATE_OFF:
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: POWER-OFF State "
-			"Not Supported\n\r", __FUNCTION__ );
-		res = -1;
-		break;
-            
-        case DISPLAY_POWER_STATE_SLEEP:
-		if( pPanel->pwrState == DISP_PWR_SLEEP_OFF )
-		{
+        case CTRL_PWR_OFF:
+		if (pPanel->pwrState != STATE_PWR_OFF) {
 			lq043y1dx01_panel_off(pPanel);
-
-			lq043y1dx01_WrCmndP0 ( drvH, MIPI_DCS_ENTER_SLEEP_MODE );
-			OSTASK_Sleep ( 120 );
-
-			lq043y1dx01_pwrdown_dpi_bridge();
-
-			pPanel->pwrState = DISP_PWR_SLEEP_ON;
-			LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: SLEEP-IN\n\r",
-			    __FUNCTION__ );
-		} 
-		else
-		{
-			LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: SLEEP-IN "
-				"Requested, But Not In POWER-ON State\n\r",
+			lq043y1dx01_WrCmndP0( drvH, MIPI_DCS_ENTER_SLEEP_MODE );
+			OSTASK_Sleep(120);
+			lq043y1dx01_reset(drvH, TRUE);
+			
+			pPanel->pwrState = STATE_PWR_OFF;
+			
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: PWR DOWN\n\r",
 				__FUNCTION__ );
-			res = -1;
-		}   
+		}
 		break;
+	    
+        case CTRL_SLEEP_IN:
+		switch (pPanel->pwrState) {
+		case STATE_SCREEN_ON:
+			lq043y1dx01_panel_off(pPanel);
+		case STATE_SCREEN_OFF:
+			lq043y1dx01_WrCmndP0(drvH, MIPI_DCS_ENTER_SLEEP_MODE);
+			OSTASK_Sleep(120);
+			
+			pPanel->pwrState = STATE_SLEEP;
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: SLEEP\n\r",
+			    __FUNCTION__ );
+			break;	    
+		default:		
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SLEEP Requested, But Not In "
+				"DISP ON|OFF State\n\r", __FUNCTION__ );
+			break;
+		} 
+		break;
+
+        case CTRL_SLEEP_OUT:
+		switch (pPanel->pwrState) {
+                case STATE_SLEEP:
+			lq043y1dx01_WrCmndP0( drvH, MIPI_DCS_EXIT_SLEEP_MODE);
+			OSTASK_Sleep(120);
+			pPanel->pwrState = STATE_SCREEN_OFF;
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: SLEEP-OUT\n\r",
+				__FUNCTION__ );
+			break;
+                default:
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SLEEP-OUT Req While Not In SLEEP State\n",
+				__FUNCTION__ );
+			break;    
+		}
+		break;        
         
+        case CTRL_SCREEN_ON:
+		switch (pPanel->pwrState) {
+		case STATE_SCREEN_OFF:
+			lq043y1dx01_panel_on(pPanel);
+			pPanel->pwrState = STATE_SCREEN_ON;
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: SCREEN ON\n",
+				__FUNCTION__ );
+			break;
+                default:
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SCREEN ON Req While Not In SCREEN OFF State\n",
+				__FUNCTION__ );
+			break;	
+		}
+		break;        
+        case CTRL_SCREEN_OFF:
+		switch (pPanel->pwrState) {
+		case STATE_SCREEN_ON:
+			lq043y1dx01_panel_off(pPanel);
+			pPanel->pwrState = STATE_SCREEN_OFF;
+			LCD_DBG( INIT_MSG_ID, "[DISPDRV] %s: SCREEN OFF\n",
+				__FUNCTION__ );
+			break;
+                default:
+			LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
+				"SCREEN OFF Req While Not In SCREEN ON State\n",
+				__FUNCTION__ );
+			break;	
+		}
+		break;        
+	
 	default:
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Invalid Power "
-			"State[%d] Requested\n\r",
-			__FUNCTION__, state );
+		LCD_DBG(LCD_DBG_ERR_ID, "[DISPDRV] %s: Invalid Power "
+			"State[%d] Requested\n", __FUNCTION__, state );
 		res = -1;
 		break;
-    }
-    return ( res );
+	}
+	return (res);
 }
 
 //*****************************************************************************
@@ -994,15 +1160,20 @@ Int32 LQ043Y1DX01_PowerControl (
 // Description:   Configure For Updates
 //
 //*****************************************************************************
-Int32 LQ043Y1DX01_Start (struct pi_mgr_dfs_node* dfs_node)
+Int32 LQ043Y1DX01_Start(
+	DISPDRV_HANDLE_T drvH,
+	struct pi_mgr_dfs_node* dfs_node)
 {
-	if( brcm_enable_dsi_lcd_clocks(dfs_node,0,
+	LQ043Y1DX01_PANEL_t   *pPanel = (LQ043Y1DX01_PANEL_t *)drvH;
+	
+	if( brcm_enable_dsi_lcd_clocks(dfs_node, pPanel->busNo,
 		lq043y1dx01_dsiCfg.hsBitClk.clkIn_MHz * 1000000,
 		lq043y1dx01_dsiCfg.hsBitClk.clkInDiv,
-		lq043y1dx01_dsiCfg.escClk.clkIn_MHz   * 1000000 / lq043y1dx01_dsiCfg.escClk.clkInDiv ))
+		lq043y1dx01_dsiCfg.escClk.clkIn_MHz   * 1000000 
+		/ lq043y1dx01_dsiCfg.escClk.clkInDiv ))
 	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
-			__FUNCTION__  );
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable "
+			"the clock\n",	__FUNCTION__  );
 		return ( -1 );
 	}
 
@@ -1016,9 +1187,11 @@ Int32 LQ043Y1DX01_Start (struct pi_mgr_dfs_node* dfs_node)
 // Description:   
 //
 //*****************************************************************************
-Int32 LQ043Y1DX01_Stop (struct pi_mgr_dfs_node* dfs_node)
+Int32 LQ043Y1DX01_Stop (DISPDRV_HANDLE_T drvH, struct pi_mgr_dfs_node* dfs_node)
 {
-	if( brcm_disable_dsi_lcd_clocks(dfs_node,0) )
+	LQ043Y1DX01_PANEL_t *pPanel = (LQ043Y1DX01_PANEL_t *)drvH;
+	
+	if( brcm_disable_dsi_lcd_clocks(dfs_node,pPanel->busNo) )
 	{
 	    LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable "
 	    	"the clock\n", __func__  );
@@ -1046,11 +1219,12 @@ const DISPDRV_INFO_T* LQ043Y1DX01_GetDispDrvData ( DISPDRV_HANDLE_T drvH )
 // Description:   
 //
 //*****************************************************************************
-Int32 LQ043Y1DX01_GetDispDrvFeatures ( 
-	const char**                driver_name,
-	UInt32*                     version_major,
-	UInt32*                     version_minor,
-	DISPDRV_SUPPORT_FEATURES_T* flags )
+Int32 LQ043Y1DX01_GetDispDrvFeatures (
+	DISPDRV_HANDLE_T 		drvH,  
+	const char			**driver_name,
+	UInt32				*version_major,
+	UInt32				*version_minor,
+	DISPDRV_SUPPORT_FEATURES_T	*flags )
 {
 	Int32 res = -1; 
    
@@ -1063,7 +1237,7 @@ Int32 LQ043Y1DX01_GetDispDrvFeatures (
 		*flags         = DISPDRV_SUPPORT_NONE;
 		res            = 0;
 	}
-	return ( res );
+	return (res);
 }
 
 
@@ -1078,10 +1252,9 @@ static void lq043y1dx01_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
 {
 	DISPDRV_CB_RES_T apiRes;
 
-	LCD_DBG ( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
+	LCD_DBG( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__);
 
-	if( pCbRec->dispDrvApiCb != NULL )
-	{
+	if (pCbRec->dispDrvApiCb != NULL) {
 		switch ( cslRes )
         	{
 		case CSL_LCD_OK:
@@ -1092,74 +1265,10 @@ static void lq043y1dx01_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
               		break;
 		}
         
-		if ( pCbRec->dispDrvApiCbRev == DISP_DRV_CB_API_REV_1_0 ) 
-		{
-			((DISPDRV_CB_T)pCbRec->dispDrvApiCb)( apiRes );
-		}
-		else    
-		{
-			((DISPDRV_CB_API_1_1_T)pCbRec->dispDrvApiCb)
-				( apiRes, pCbRec->dispDrvApiCbP1 );
-		}    
+		((DISPDRV_CB_T)pCbRec->dispDrvApiCb)( apiRes );
 	}
     
-	LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
-}
-
-
-//*****************************************************************************
-//
-// Function Name: LQ043Y1DX01_Update_ExtFb
-// 
-// Description:   DMA/OS Update using EXT frame buffer
-//
-//*****************************************************************************
-Int32 LQ043Y1DX01_Update_ExtFb( 
-	DISPDRV_HANDLE_T	drvH, 
-	void			*pFb,
-	DISPDRV_CB_API_1_1_T	apiCb
-	)
-{
-	LQ043Y1DX01_PANEL_t *	pPanel = (LQ043Y1DX01_PANEL_t *)drvH;
-	CSL_LCD_UPD_REQ_T	req;
-	Int32			res  = 0;
-
-	LCD_DBG( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
-
-	if( pPanel->pwrState != DISP_PWR_SLEEP_OFF )
-	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] +%s: Skip Due To Power "
-			"State\r\n", __FUNCTION__ );
-		return ( -1 );
-	}
-
-	req.buff	= pFb;
-	req.lineLenP	= LQ043Y1DX01_Info.width;
-	req.lineCount	= LQ043Y1DX01_Info.height;
-	req.buffBpp	= pPanel->bpp;    
-	req.timeOut_ms	= 100;
-
-	req.cslLcdCbRec.cslH            = pPanel->clientH;
-	req.cslLcdCbRec.dispDrvApiCbRev = DISP_DRV_CB_API_REV_1_1;
-	req.cslLcdCbRec.dispDrvApiCb    = (void*) apiCb;
-	req.cslLcdCbRec.dispDrvApiCbP1  = pFb;
-
-	if( apiCb != NULL )
-		req.cslLcdCb = lq043y1dx01_Cb;
-	else
-		req.cslLcdCb = NULL;
-	    
-	if( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req, pPanel->isTE  ) 
-		!= CSL_LCD_OK )
-	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR ret by "
-			"CSL_DSI_UpdateCmVc\n\r", __FUNCTION__ );
-		res = -1;    
-	}
-	    
-	LCD_DBG( LCD_DBG_ID, "[DISPDRV] -%s\n\r", __FUNCTION__ );
-	    
-	return( res );
+	LCD_DBG(LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__);
 }
 
 
@@ -1170,37 +1279,33 @@ Int32 LQ043Y1DX01_Update_ExtFb(
 // Description:   DMA/OS Update using INT frame buffer
 //
 //*****************************************************************************
-Int32 LQ043Y1DX01_Update ( 
+Int32 LQ043Y1DX01_Update( 
 	DISPDRV_HANDLE_T	drvH, 
-	int			fb_idx,
+	void			*buff,
 	DISPDRV_WIN_t*		p_win,
-	DISPDRV_CB_T		apiCb
-	)
+	DISPDRV_CB_T		apiCb  )
 {
 	LQ043Y1DX01_PANEL_t	*pPanel = (LQ043Y1DX01_PANEL_t *)drvH;
 	CSL_LCD_UPD_REQ_T	req;
 	Int32			res  = 0;
 
-	LCD_DBG ( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
+	LCD_DBG( LCD_DBG_ID, "[DISPDRV] +%s\r\n", __FUNCTION__ );
 
-	if( pPanel->pwrState != DISP_PWR_SLEEP_OFF )
-	{
-		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] +%s: Skip Due To "
-			"Power State\r\n", __FUNCTION__ );
+	if (pPanel->pwrState == STATE_PWR_OFF) {
+		LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Skip Due To "
+			"Power State\n", __FUNCTION__ );
 		return ( -1 );
 	}
-   
-	if(0 == fb_idx)
-		req.buff = pPanel->pFbA;
-	else
-		req.buff = (void *)((UInt32)pPanel->pFbA + 
-					LQ043Y1DX01_Info.width 
-				      * LQ043Y1DX01_Info.height * pPanel->bpp);
 
-	//req.buff           = pPanel->pFbA;
-	req.lineLenP	= LQ043Y1DX01_Info.width;
-	req.lineCount	= LQ043Y1DX01_Info.height;
-	req.buffBpp	= pPanel->bpp;    
+	if (p_win == NULL) 
+		p_win = &pPanel->win_dim;
+
+	lq043y1dx01_WinSet( drvH, TRUE, p_win );
+   
+	req.buff        = buff;
+	req.lineLenP  	= p_win->w;
+	req.lineCount 	= p_win->h;
+	req.buffBpp	= pPanel->disp_info->Bpp;    
 	req.timeOut_ms	= 100;
    
 	LCD_DBG( LCD_DBG_ID, "%s: buf=%08x, linelenp = %lu, linecnt =%lu\n",
@@ -1211,14 +1316,13 @@ Int32 LQ043Y1DX01_Update (
 	req.cslLcdCbRec.dispDrvApiCb	= (void*) apiCb;
 	req.cslLcdCbRec.dispDrvApiCbP1	= NULL;
     
-	if( apiCb != NULL )
+	if (apiCb != NULL)
 		req.cslLcdCb = lq043y1dx01_Cb;
 	else
 		req.cslLcdCb = NULL;
     
-	if ( CSL_DSI_UpdateCmVc ( pPanel->dsiCmVcHandle, &req, pPanel->isTE ) 
-		!= CSL_LCD_OK )
-	{
+	if (CSL_DSI_UpdateCmVc(pPanel->dsiCmVcHandle, &req, pPanel->isTE) 
+		!= CSL_LCD_OK )	{
 		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR ret by "
 			"CSL_DSI_UpdateCmVc\n\r", __FUNCTION__ );
 		res = -1;    
@@ -1226,7 +1330,7 @@ Int32 LQ043Y1DX01_Update (
         
 	LCD_DBG( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
         
-	return ( res );
+	return (res);
 }
 
 static int __devinit lq043y1dx01_spi_probe(struct spi_device *spi)
@@ -1250,24 +1354,12 @@ static int __devinit lq043y1dx01_spi_probe(struct spi_device *spi)
 	
 	panel[0].spi = spi;
 
-#if 0
-	// Reset SHARP DPI display
-	lq043y1dx01_reset(SHARP_RESET);
-	
-	/* DSI BRIDGE P-ON */
-	res1=gpio_request(DSI_BRIDGE_PON, "dsi_bridge_pon");
-	if( res1 != 0 ) LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR(%d) Req GPIO(%d)\n", __func__, res1, DSI_BRIDGE_PON );
-	gpio_direction_output(DSI_BRIDGE_PON, 0);
-	gpio_set_value_cansleep(DSI_BRIDGE_PON, 0);
-        OSTASK_Sleep( TICKS_IN_MILLISECONDS(100) );
-	
-	/* Reset DSI Bridge */
-	lq043y1dx01_reset(DSI_BRIDGE_RESET);
-#endif
 	/* Turn BL ON */
 /*	
 	res1=gpio_request(SHARP_BL, "sharp_bl");
-	if( res1 != 0 ) LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR(%d) Req GPIO(%d)\n", __func__, res1, SHARP_BL );
+	if (res1 != 0)
+		LCD_DBG( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERR(%d) Req GPIO(%d)\n",
+			__func__, res1, SHARP_BL );
 	gpio_direction_output(SHARP_BL, 0);
 	gpio_set_value_cansleep(SHARP_BL, 1);
 */
@@ -1281,27 +1373,12 @@ static int __devexit lq043y1dx01_spi_remove(struct spi_device *spi)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int lq043y1dx01_spi_suspend(struct spi_device *spi, pm_message_t state)
-{
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s:\n", __func__ );
-	return 0;
-}
 
-static int lq043y1dx01_spi_resume(struct spi_device *spi)
-{
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s:\n", __func__ );
-	return 0;
-}
-#else
-#define lq043y1dx01_spi_suspend	NULL
-#define lq043y1dx01_spi_resume	NULL
-#endif
-
-/* Power down all displays on reboot, poweroff or halt */
 static void lq043y1dx01_spi_shutdown(struct spi_device *spi)
 {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s:\n", __func__ );
 }
+
 
 static struct spi_driver lq043y1dx01_spi_driver = {
 	.driver = {
@@ -1311,8 +1388,6 @@ static struct spi_driver lq043y1dx01_spi_driver = {
 	.probe		= lq043y1dx01_spi_probe,
 	.remove		= __devexit_p(lq043y1dx01_spi_remove),
 	.shutdown	= lq043y1dx01_spi_shutdown,
-	.suspend	= lq043y1dx01_spi_suspend,
-	.resume		= lq043y1dx01_spi_resume,
 };
 
 

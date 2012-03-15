@@ -22,11 +22,11 @@
 #define BCM_FUSE_NET_DEACTIVATE_PDP     0x2
 
 //#define BCM_NET_MAX_PDP_CNTXS          3
-#define BCM_NET_MAX_DUN_PDP_CNTXS           7  //DUN context 1-7
-#define BCM_NET_MAX_PDP_CNTXS           10  //based on CP support
+#define BCM_NET_MAX_DUN_PDP_CNTXS           7	//DUN context 1-7
+#define BCM_NET_MAX_PDP_CNTXS           10	//based on CP support
 
-#define BCM_NET_RIL_PDP_CNTXS_BASE     (BCM_NET_MAX_DUN_PDP_CNTXS + 1) //8 for now
-#define BCM_NET_MAX_RIL_PDP_CNTXS          (BCM_NET_MAX_PDP_CNTXS - BCM_NET_MAX_DUN_PDP_CNTXS)  //RIL context id 8-10
+#define BCM_NET_RIL_PDP_CNTXS_BASE     (BCM_NET_MAX_DUN_PDP_CNTXS + 1)	//8 for now
+#define BCM_NET_MAX_RIL_PDP_CNTXS          (BCM_NET_MAX_PDP_CNTXS - BCM_NET_MAX_DUN_PDP_CNTXS)	//RIL context id 8-10
 
 //due to the support for DUN, which requires to use cid starting from 0,
 //RIL now has cid range from 8-10 (BCM_NET_RIL_PDP_CNTXS_BASE - BCM_NET_MAX_PDP_CNTXS)
@@ -39,7 +39,6 @@
 #define DUN_RMNET_TO_CID(rmnetId)  (rmnetId - BCM_NET_MAX_RIL_PDP_CNTXS + 1)
 #define RMNET_TO_CID(rmnetId)  \
         (rmnetId < BCM_NET_MAX_RIL_PDP_CNTXS)?RIL_RMNET_TO_CID(rmnetId):DUN_RMNET_TO_CID(rmnetId)
-
 
 #define BCM_NET_INVALID_PDP_CNTX        255
 

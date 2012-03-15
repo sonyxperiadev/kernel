@@ -98,6 +98,9 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
+#ifdef CONFIG_FB_BRCM_RHEA
+#include <video/kona_fb_boot.h>
+#endif
 
 #include <video/kona_fb.h>
 #include <linux/pwm_backlight.h>
@@ -1195,6 +1198,7 @@ static struct platform_device tps728xx_vc_device_sim2 = {
 #endif
 #endif /* CONFIG_REGULATOR_TPS728XX*/
 
+#if 0
 #ifdef CONFIG_FB_BRCM_RHEA
 static struct kona_fb_platform_data alex_dsi_display_fb_data = {
 	.get_dispdrv_func_tbl	= &DISP_DRV_BCM91008_ALEX_GetFuncTable,
@@ -1295,7 +1299,7 @@ static struct platform_device r61581_smi8_display_device = {
 	},
 };
 #endif
-
+#endif 
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 
@@ -1525,12 +1529,15 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_REGULATOR_TPS728XX
 	&tps728xx_device,
 #endif
+
+#if 0
 #ifdef CONFIG_FB_BRCM_RHEA
 	&alex_dsi_display_device,
 	&nt35582_smi16_display_device,
 	&nt35582_smi8_display_device,
 	&r61581_smi8_display_device,
 	&r61581_smi16_display_device,
+#endif
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
@@ -1655,10 +1662,150 @@ static void __init rhea_ray_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
+#ifdef CONFIG_FB_BRCM_RHEA
+/*
+ *   	     KONA FRAME BUFFER DISPLAY DRIVER PLATFORM CONFIG
+ */ 
+struct kona_fb_platform_data konafb_devices[] __initdata = {
+	{
+		.dispdrv_name  = "BCM91008_ALEX", 
+		.dispdrv_entry = DISP_DRV_BCM91008_ALEX_GetFuncTable,
+		.parms = {
+			.w0 = {
+				.bits = { 
+					.boot_mode  = 0,  	  
+					.bus_type   = RHEA_BUS_DSI,  	  
+					.bus_no     = RHEA_BUS_0,
+					.bus_ch     = RHEA_BUS_CH_0,
+					.bus_width  = 0,
+					.te_input   = RHEA_TE_IN_0_LCD,	  
+					.col_mode_i = RHEA_CM_I_XRGB888,	  
+					.col_mode_o = RHEA_CM_O_RGB888,        
+				},	
+			},
+			.w1 = {
+				.bits = { 
+					.api_rev  = RHEA_LCD_BOOT_API_REV,
+					.lcd_rst0 = (KONA_MAX_GPIO + 3),  	  
+				}, 
+			},
+		},
+	},
+
+	{
+		.dispdrv_name  = "NT35582_WVGA_SMI",
+		.dispdrv_entry = DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+		.parms = {
+			.w0 = {
+				.bits = { 
+					.boot_mode  = 0,  	  
+					.bus_type   = RHEA_BUS_SMI,  
+					.bus_no     = RHEA_BUS_0,
+					.bus_ch     = RHEA_BUS_CH_0,
+					.bus_width  = RHEA_BUS_WIDTH_16,
+					.te_input   = RHEA_TE_IN_0_LCD,
+					.col_mode_i = RHEA_CM_I_RGB565,
+					.col_mode_o = RHEA_CM_O_RGB565,
+				},	
+			},
+			.w1 = {
+				.bits = { 
+					.api_rev  = RHEA_LCD_BOOT_API_REV,
+					.lcd_rst0 = 41,  	  
+				}, 
+			},
+		}, 
+	},
+
+	{
+		.dispdrv_name  = "NT35582_WVGA_SMI",
+		.dispdrv_entry = DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+		.parms = {
+			.w0 = {
+				.bits = { 
+					.boot_mode  = 0,  	  
+					.bus_type   = RHEA_BUS_SMI,  
+					.bus_no     = RHEA_BUS_0,
+					.bus_ch     = RHEA_BUS_CH_0,
+					.bus_width  = RHEA_BUS_WIDTH_08,
+					.te_input   = RHEA_TE_IN_0_LCD,
+					.col_mode_i = RHEA_CM_I_RGB565,
+					.col_mode_o = RHEA_CM_O_RGB565,
+				},	
+			},
+			.w1 = {
+				.bits = { 
+					.api_rev  = RHEA_LCD_BOOT_API_REV,
+					.lcd_rst0 = 41,  	  
+				}, 
+			},
+		}, 
+	},
+
+	{
+		.dispdrv_name  = "R61581_HVGA_SMI",
+		.dispdrv_entry = DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+		.parms = {
+			.w0 = {
+				.bits = { 
+					.boot_mode  = 0,  	  
+					.bus_type   = RHEA_BUS_SMI,  
+					.bus_no     = RHEA_BUS_0,
+					.bus_ch     = RHEA_BUS_CH_0,
+					.bus_width  = RHEA_BUS_WIDTH_08,
+					.te_input   = RHEA_TE_IN_0_LCD,
+					.col_mode_i = RHEA_CM_I_RGB565,
+					.col_mode_o = RHEA_CM_O_RGB565,
+				},	
+			},
+			.w1 = {
+				.bits = { 
+					.api_rev  = RHEA_LCD_BOOT_API_REV,
+					.lcd_rst0 = 41,  	  
+				}, 
+			},
+		},
+	},
+	
+	{
+		.dispdrv_name  = "R61581_HVGA_SMI",
+		.dispdrv_entry = DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+		.parms = {
+			.w0 = {
+				.bits = { 
+					.boot_mode  = 0,  	  
+					.bus_type   = RHEA_BUS_SMI,  
+					.bus_no     = RHEA_BUS_0,
+					.bus_ch     = RHEA_BUS_CH_0,
+					.bus_width  = RHEA_BUS_WIDTH_16,
+					.te_input   = RHEA_TE_IN_0_LCD,
+					.col_mode_i = RHEA_CM_I_RGB565,
+					.col_mode_o = RHEA_CM_O_RGB565,
+				},	
+			},
+			.w1 = {
+				.bits = { 
+					.api_rev  = RHEA_LCD_BOOT_API_REV,
+					.lcd_rst0 = 41,  	  
+				}, 
+			},
+		},
+	},
+	
+};
+
+#include "rhea_fb_init.c"
+#endif /* #ifdef CONFIG_FB_BRCM_RHEA */
+
+
 void __init board_init(void)
 {
 	board_add_common_devices();
 	rhea_ray_add_devices();
+#ifdef CONFIG_FB_BRCM_RHEA
+	/* rhea_fb_init.c */
+	konafb_init();
+#endif
 	return;
 }
 

@@ -33,13 +33,13 @@
 /*********************************************************************
  Type definition
  *********************************************************************/
-typedef signed char	ami_sint8;			/**< signed char */
-typedef unsigned char	ami_uint8;			/**< unsigned char */
-typedef	signed short	ami_sint16;			/**< signed short */
-typedef	unsigned short	ami_uint16;			/**< unsigned short */
-typedef	signed long	ami_sint32;			/**< signed long */
-typedef	unsigned long	ami_uint32;			/**< unsigned long */
-typedef double		ami_double;			/**< double */
+typedef signed char ami_sint8;				/**< signed char */
+typedef unsigned char ami_uint8;			/**< unsigned char */
+typedef signed short ami_sint16;			/**< signed short */
+typedef unsigned short ami_uint16;			/**< unsigned short */
+typedef signed long ami_sint32;				/**< signed long */
+typedef unsigned long ami_uint32;			/**< unsigned long */
+typedef double ami_double;				/**< double */
 
 /*********************************************************************
  Struct definition
@@ -63,27 +63,27 @@ typedef struct {
 
 /** sensor calibration Parameter information  */
 typedef struct {
-	AMI_VECTOR3D		m_gain;			/**< geomagnetic field sensor gain  */
-	AMI_VECTOR3D		m_gain_cor;		/**< geomagnetic field sensor gain correction parameter  */
-	AMI_VECTOR3D		m_offset;		/**< geomagnetic field sensor offset  */
-	AMI_INTERFERENCE	m_interference;		/**< geomagnetic field sensor axis interference parameter */
+	AMI_VECTOR3D m_gain;				/**< geomagnetic field sensor gain  */
+	AMI_VECTOR3D m_gain_cor;			/**< geomagnetic field sensor gain correction parameter  */
+	AMI_VECTOR3D m_offset;				/**< geomagnetic field sensor offset  */
+	AMI_INTERFERENCE m_interference;		/**< geomagnetic field sensor axis interference parameter */
 #ifdef AMI_6AXIS
-	AMI_VECTOR3D		a_gain;			/**< acceleration sensor gain  */
-	AMI_VECTOR3D		a_offset;		/**< acceleration sensor offset  */
+	AMI_VECTOR3D a_gain;				/**< acceleration sensor gain  */
+	AMI_VECTOR3D a_offset;				/**< acceleration sensor offset  */
 #endif
 } AMI_SENSOR_PARAMETOR;
 
 /** G2-Sensor measurement value (voltage ADC value ) */
 typedef struct {
-	ami_uint16	mx;				/**< geomagnetic field sensor measurement X-axis value (mounted position/direction reference) */
-	ami_uint16	my;				/**< geomagnetic field sensor measurement Y-axis value (mounted position/direction reference) */
-	ami_uint16	mz;				/**< geomagnetic field sensor measurement Z-axis value (mounted position/direction reference) */
+	ami_uint16 mx;					/**< geomagnetic field sensor measurement X-axis value (mounted position/direction reference) */
+	ami_uint16 my;					/**< geomagnetic field sensor measurement Y-axis value (mounted position/direction reference) */
+	ami_uint16 mz;					/**< geomagnetic field sensor measurement Z-axis value (mounted position/direction reference) */
 #ifdef AMI_6AXIS
-	ami_uint16	ax;				/**< acceleration sensor measurement X-axis value (mounted position/direction reference) */
-	ami_uint16	ay;				/**< acceleration sensor measurement Y-axis value (mounted position/direction reference) */
-	ami_uint16	az;				/**< acceleration sensor measurement Z-axis value (mounted position/direction reference) */
+	ami_uint16 ax;					/**< acceleration sensor measurement X-axis value (mounted position/direction reference) */
+	ami_uint16 ay;					/**< acceleration sensor measurement Y-axis value (mounted position/direction reference) */
+	ami_uint16 az;					/**< acceleration sensor measurement Z-axis value (mounted position/direction reference) */
 #endif
-	ami_uint16	temperature;	/**< temperature sensor measurement value  */
+	ami_uint16 temperature;		/**< temperature sensor measurement value  */
 } AMI_SENSOR_RAWVALUE;
 
 /** Window function Parameter information  */
