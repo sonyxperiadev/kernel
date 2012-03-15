@@ -792,6 +792,11 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 #endif
 
 	ret = sdhci_suspend_host(host, state);
+
+	if (dev->vdd_sdxc_regulator) {
+		regulator_disable(dev->vdd_sdxc_regulator);
+	}
+
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to suspend sdhci host err=%d\n",
 			ret);
@@ -807,6 +812,11 @@ static int sdhci_pltfm_resume(struct platform_device *pdev)
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
 
+	if (dev->vdd_sdxc_regulator) {
+		int retn = regulator_enable(dev->vdd_sdxc_regulator);
+		if (retn)
+			pr_err("Enabling sdxc regulator failed during resume\n");
+	}
 	ret = sdhci_resume_host(host);
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to resume sdhci host err=%d\n",
