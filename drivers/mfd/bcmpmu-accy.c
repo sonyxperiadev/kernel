@@ -534,13 +534,19 @@ static void send_chrgr_event(struct bcmpmu *pmu,
 {
 	struct power_supply *ps;
 	char *chrgr_str;
+	static char *last_chgr_str;
 	union power_supply_propval propval;
 	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)pmu->accyinfo;
 
 	blocking_notifier_call_chain(&paccy->event[event].notifiers,
 				     event, para);
-	chrgr_str =
+	if (paccy->bcmpmu->usb_accy_data.chrgr_type == PMU_CHRGR_TYPE_NONE) {
+		chrgr_str = last_chgr_str;
+		last_chgr_str = NULL;
+	} else
+		last_chgr_str = chrgr_str =
 		get_supply_type_str(paccy->bcmpmu->usb_accy_data.chrgr_type);
+
 	if (NULL == chrgr_str)
 		return;
 	ps = power_supply_get_by_name(chrgr_str);
