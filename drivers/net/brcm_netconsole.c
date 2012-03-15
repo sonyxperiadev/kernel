@@ -32,19 +32,10 @@
  *      along with this program; if not, write to the Free Software
  *      Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
+ *      Portions of this software are Copyright 2012 Broadcom Corporation
+ *
  ****************************************************************/
 
-/*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
-
-Unless you and Broadcom execute a separate written software license agreement governing use
-of this software, this software is licensed to you under the terms of the GNU General Public
-License version 2, available at http://www.gnu.org/copyleft/gpl.html (the "GPL").
-
-Notwithstanding the above, under no circumstances may you combine this software in any way
-with any other Broadcom software provided under a license other than the GPL, without
-Broadcom's express prior written consent.
-*******************************************************************************************/
 
 #include <linux/mm.h>
 #include <linux/init.h>
