@@ -59,7 +59,6 @@
 #  include <stdint.h>
 #endif
 
-
 /** @name Primitive Types and Values */
 
 /** We define a boolean type for consistency.  Can be either YES or NO */
@@ -109,7 +108,7 @@ extern dwc_bool_t DWC_IN_IRQ(void);
 /** Returns "IRQ" if DWC_IN_IRQ is true. */
 static inline char *dwc_irq(void)
 {
-	return DWC_IN_IRQ() ? "IRQ" : "";
+	return (DWC_IN_IRQ() != 0) ? "IRQ" : "";
 }
 
 /**
@@ -131,7 +130,7 @@ extern void DWC_PRINTF(char *format, ...)
 /* This provides compiler level static checking of the parameters if you're
  * using GCC. */
 #ifdef __GNUC__
-	__attribute__ ((format(printf, 1, 2)));
+    __attribute__ ((format(printf, 1, 2)));
 #else
 ;
 #endif
@@ -142,7 +141,7 @@ extern void DWC_PRINTF(char *format, ...)
  */
 extern int DWC_SPRINTF(char *string, char *format, ...)
 #ifdef __GNUC__
-	__attribute__ ((format(printf, 2, 3)));
+    __attribute__ ((format(printf, 2, 3)));
 #else
 ;
 #endif
@@ -153,7 +152,7 @@ extern int DWC_SPRINTF(char *string, char *format, ...)
  */
 extern int DWC_SNPRINTF(char *string, int size, char *format, ...)
 #ifdef __GNUC__
-	__attribute__ ((format(printf, 3, 4)));
+    __attribute__ ((format(printf, 3, 4)));
 #else
 ;
 #endif
@@ -168,7 +167,7 @@ extern int DWC_SNPRINTF(char *string, int size, char *format, ...)
  */
 extern void __DWC_WARN(char *format, ...)
 #ifdef __GNUC__
-	__attribute__ ((format(printf, 1, 2)));
+    __attribute__ ((format(printf, 1, 2)));
 #else
 ;
 #endif
@@ -182,7 +181,7 @@ extern void __DWC_WARN(char *format, ...)
  */
 extern void __DWC_ERROR(char *format, ...)
 #ifdef __GNUC__
-	__attribute__ ((format(printf, 1, 2)));
+    __attribute__ ((format(printf, 1, 2)));
 #else
 ;
 #endif
@@ -197,7 +196,7 @@ extern void __DWC_ERROR(char *format, ...)
  */
 extern void DWC_EXCEPTION(char *format, ...)
 #ifdef __GNUC__
-	__attribute__ ((format(printf, 1, 2)));
+    __attribute__ ((format(printf, 1, 2)));
 #else
 ;
 #endif
@@ -211,7 +210,7 @@ extern void DWC_EXCEPTION(char *format, ...)
  */
 extern void __DWC_DEBUG(char *format, ...)
 #ifdef __GNUC__
-	__attribute__ ((format(printf, 1, 2)));
+    __attribute__ ((format(printf, 1, 2)));
 #else
 ;
 #endif
@@ -308,7 +307,8 @@ extern void DWC_WRITE_REG64(uint64_t volatile *reg, uint64_t value);
  * Modify bit values in a register.  Using the
  * algorithm: (reg_contents & ~clear_mask) | set_mask.
  */
-extern void DWC_MODIFY_REG32(uint32_t volatile *reg, uint32_t clear_mask, uint32_t set_mask);
+extern void DWC_MODIFY_REG32(uint32_t volatile *reg, uint32_t clear_mask,
+			     uint32_t set_mask);
 #define dwc_modify_reg32 DWC_MODIFY_REG32
 
 /** @cond */
@@ -366,13 +366,13 @@ static inline void dwc_write_##_reg(_container_type *container, uint32_t data) \
 
 /** @endcond */
 
-
 /** @name Crypto Functions
  *
  * These are the low-level cryptographic functions used by the driver. */
 
 /** Perform AES CBC */
-extern int DWC_AES_CBC(uint8_t *message, uint32_t messagelen, uint8_t *key, uint32_t keylen, uint8_t iv[16], uint8_t *out);
+extern int DWC_AES_CBC(uint8_t *message, uint32_t messagelen, uint8_t *key,
+		       uint32_t keylen, uint8_t iv[16], uint8_t *out);
 #define dwc_aes_cbc DWC_AES_CBC
 /** Fill the provided buffer with random bytes.  These should be cryptographic grade random numbers. */
 extern void DWC_RANDOM_BYTES(uint8_t *buffer, uint32_t length);
@@ -381,9 +381,9 @@ extern void DWC_RANDOM_BYTES(uint8_t *buffer, uint32_t length);
 extern int DWC_SHA256(uint8_t *message, uint32_t len, uint8_t *out);
 #define dwc_sha256 DWC_SHA256
 /** Calculated the HMAC-SHA256 */
-extern int DWC_HMAC_SHA256(uint8_t *message, uint32_t messagelen, uint8_t *key, uint32_t keylen, uint8_t *out);
+extern int DWC_HMAC_SHA256(uint8_t *message, uint32_t messagelen, uint8_t *key,
+			   uint32_t keylen, uint8_t *out);
 #define dwc_hmac_sha256 DWC_HMAC_SHA256
-
 
 /** @name Memory Allocation
  *
@@ -423,7 +423,8 @@ typedef uint32_t dwc_dma_t;
  * which pools to allocate/free DMA buffers from and also to destroy the pool,
  * when you are done with it.
  */
-extern dwc_pool_t *DWC_DMA_POOL_CREATE(uint32_t size, uint32_t align, uint32_t boundary);
+extern dwc_pool_t *DWC_DMA_POOL_CREATE(uint32_t size, uint32_t align,
+				       uint32_t boundary);
 /**
  * Destroy a DMA pool.  All buffers allocated from that pool must be freed first.
  */
@@ -437,7 +438,6 @@ extern void *DWC_DMA_POOL_ALLOC(dwc_pool_t *pool, uint64_t *dma_addr);
  */
 extern void DWC_DMA_POOL_FREE(dwc_pool_t *pool, void *vaddr, void *daddr);
 #endif
-
 
 /** Allocates a DMA capable buffer and zeroes its contents. */
 extern void *__DWC_DMA_ALLOC(uint32_t size, dwc_dma_t *dma_addr);
@@ -475,9 +475,12 @@ extern void __DWC_FREE(void *addr);
 extern void *dwc_alloc_debug(uint32_t size, char const *func, int line);
 extern void *dwc_alloc_atomic_debug(uint32_t size, char const *func, int line);
 extern void dwc_free_debug(void *addr, char const *func, int line);
-extern void *dwc_dma_alloc_debug(uint32_t size, dwc_dma_t *dma_addr, char const *func, int line);
-extern void *dwc_dma_alloc_atomic_debug(uint32_t size, dwc_dma_t *dma_addr, char const *func, int line);
-extern void dwc_dma_free_debug(uint32_t size, void *virt_addr, dwc_dma_t dma_addr, char const *func, int line);
+extern void *dwc_dma_alloc_debug(uint32_t size, dwc_dma_t *dma_addr,
+				 char const *func, int line);
+extern void *dwc_dma_alloc_atomic_debug(uint32_t size, dwc_dma_t *dma_addr,
+					char const *func, int line);
+extern void dwc_dma_free_debug(uint32_t size, void *virt_addr,
+			       dwc_dma_t dma_addr, char const *func, int line);
 
 extern void dwc_memory_debug_start(void);
 extern void dwc_memory_debug_stop(void);
@@ -498,7 +501,6 @@ extern void dwc_memory_debug_report(void);
 #define dwc_dma_alloc DWC_DMA_ALLOC
 #define dwc_dma_alloc_atomic DWC_DMA_ALLOC_ATOMIC
 #define dwc_dma_free DWC_DMA_FREE
-
 
 /** @name Memory and String Processing */
 
@@ -550,7 +552,8 @@ extern int DWC_ATOI(char *str, int32_t *value);
 extern int DWC_ATOUI(char *str, uint32_t *value);
 #define dwc_atoui DWC_ATOUI
 /** This routine returns a UTF16LE unicode encoded string from a UTF8 string. */
-extern int DWC_UTF8_TO_UTF16LE(uint8_t const *utf8string, uint16_t *utf16string, unsigned len);
+extern int DWC_UTF8_TO_UTF16LE(uint8_t const *utf8string, uint16_t *utf16string,
+			       unsigned len);
 #define dwc_utf8_to_utf16le DWC_UTF8_TO_UTF16LE
 
 /** @name Wait queues
@@ -565,7 +568,7 @@ typedef struct dwc_waitq dwc_waitq_t;
 
 /** The type of waitq condition callback function.  This is called every time
  * condition is evaluated. */
-typedef int (*dwc_waitq_condition_t)(void *data);
+typedef int (*dwc_waitq_condition_t) (void *data);
 
 /** Allocate a waitq */
 extern dwc_waitq_t *DWC_WAITQ_ALLOC(void);
@@ -577,14 +580,17 @@ extern void DWC_WAITQ_FREE(dwc_waitq_t *wq);
 /** Check the condition and if it is false, block on the waitq.  When unblocked, check the
  * condition again.  The function returns when the condition becomes true.  The return value
  * is 0 on condition true, DWC_WAITQ_ABORTED on abort or killed, or DWC_WAITQ_UNKNOWN on error. */
-extern int32_t DWC_WAITQ_WAIT(dwc_waitq_t *wq, dwc_waitq_condition_t condition, void *data);
+extern int32_t DWC_WAITQ_WAIT(dwc_waitq_t *wq, dwc_waitq_condition_t condition,
+			      void *data);
 #define dwc_waitq_wait DWC_WAITQ_WAIT;
 /** Check the condition and if it is false, block on the waitq.  When unblocked,
  * check the condition again.  The function returns when the condition become
  * true or the timeout has passed.  The return value is 0 on condition true or
  * DWC_TIMED_OUT on timeout, or DWC_WAITQ_ABORTED, or DWC_WAITQ_UNKNOWN on
  * error. */
-extern int32_t DWC_WAITQ_WAIT_TIMEOUT(dwc_waitq_t *wq, dwc_waitq_condition_t condition, void *data, int32_t msecs);
+extern int32_t DWC_WAITQ_WAIT_TIMEOUT(dwc_waitq_t *wq,
+				      dwc_waitq_condition_t condition,
+				      void *data, int32_t msecs);
 #define dwc_waitq_wait_timeout DWC_WAITQ_WAIT_TIMEOUT
 /** Trigger a waitq, unblocking all processes.  This should be called whenever a condition
  * has potentially changed. */
@@ -605,11 +611,12 @@ struct dwc_thread;
 typedef struct dwc_thread dwc_thread_t;
 
 /** The thread function */
-typedef int (*dwc_thread_function_t)(void *data);
+typedef int (*dwc_thread_function_t) (void *data);
 
 /** Create a thread and start it running the thread_function.  Returns a handle
  * to the thread */
-extern dwc_thread_t *DWC_THREAD_RUN(dwc_thread_function_t thread_function, char *name, void *data);
+extern dwc_thread_t *DWC_THREAD_RUN(dwc_thread_function_t thread_function,
+				    char *name, void *data);
 #define dwc_thread_run DWC_THREAD_RUN
 /** Stops a thread.  Return the value returned by the thread.  Or will return
  * DWC_ABORT if the thread never started. */
@@ -627,7 +634,7 @@ struct dwc_workq;
 typedef struct dwc_workq dwc_workq_t;
 
 /** The type of the callback function to be called. */
-typedef void (*dwc_work_callback_t)(void *data);
+typedef void (*dwc_work_callback_t) (void *data);
 
 /** Allocate a workq */
 extern dwc_workq_t *DWC_WORKQ_ALLOC(char *name);
@@ -637,9 +644,10 @@ extern void DWC_WORKQ_FREE(dwc_workq_t *workq);
 #define dwc_workq_free DWC_WORKQ_FREE
 /** Schedule a callback on the workq, passing in data.  The function will be
  * scheduled at some later time. */
-extern void DWC_WORKQ_SCHEDULE(dwc_workq_t *workq, dwc_work_callback_t work_cb, void *data, char *format, ...)
+extern void DWC_WORKQ_SCHEDULE(dwc_workq_t *workq, dwc_work_callback_t work_cb,
+			       void *data, char *format, ...)
 #ifdef __GNUC__
-	__attribute__ ((format(printf, 4, 5)));
+    __attribute__ ((format(printf, 4, 5)));
 #else
 ;
 #endif
@@ -647,9 +655,11 @@ extern void DWC_WORKQ_SCHEDULE(dwc_workq_t *workq, dwc_work_callback_t work_cb, 
 
 /** Schedule a callback on the workq, that will be called until at least
  * given number miliseconds have passed. */
-extern void DWC_WORKQ_SCHEDULE_DELAYED(dwc_workq_t *workq, dwc_work_callback_t work_cb, void *data, uint32_t time, char *format, ...)
+extern void DWC_WORKQ_SCHEDULE_DELAYED(dwc_workq_t *workq,
+				       dwc_work_callback_t work_cb, void *data,
+				       uint32_t time, char *format, ...)
 #ifdef __GNUC__
-	__attribute__ ((format(printf, 5, 6)));
+    __attribute__ ((format(printf, 5, 6)));
 #else
 ;
 #endif
@@ -663,14 +673,13 @@ extern int DWC_WORKQ_PENDING(dwc_workq_t *workq);
 extern int DWC_WORKQ_WAIT_WORK_DONE(dwc_workq_t *workq, int timeout);
 #define dwc_workq_wait_work_done DWC_WORKQ_WAIT_WORK_DONE
 
-
 /** @name Tasklets
  *
  */
 struct dwc_tasklet;
 typedef struct dwc_tasklet dwc_tasklet_t;
 
-typedef void (*dwc_tasklet_callback_t)(void *data);
+typedef void (*dwc_tasklet_callback_t) (void *data);
 
 extern dwc_tasklet_t *DWC_TASK_ALLOC(dwc_tasklet_callback_t cb, void *data);
 #define dwc_task_alloc DWC_TASK_ALLOC
@@ -679,7 +688,6 @@ extern void DWC_TASK_FREE(dwc_tasklet_t *t);
 extern void DWC_TASK_SCHEDULE(dwc_tasklet_t *task);
 #define dwc_task_schedule DWC_TASK_SCHEDULE
 
-
 /** @name Timer
  *
  * Callbacks must be small and atomic.
@@ -687,9 +695,10 @@ extern void DWC_TASK_SCHEDULE(dwc_tasklet_t *task);
 struct dwc_timer;
 typedef struct dwc_timer dwc_timer_t;
 
-typedef void (*dwc_timer_callback_t)(void *data);
+typedef void (*dwc_timer_callback_t) (void *data);
 
-extern dwc_timer_t *DWC_TIMER_ALLOC(char *name, dwc_timer_callback_t cb, void *data);
+extern dwc_timer_t *DWC_TIMER_ALLOC(char *name, dwc_timer_callback_t cb,
+				    void *data);
 #define dwc_timer_alloc DWC_TIMER_ALLOC
 extern void DWC_TIMER_FREE(dwc_timer_t *timer);
 #define dwc_timer_free DWC_TIMER_FREE
@@ -705,8 +714,6 @@ extern void DWC_TIMER_SCHEDULE(dwc_timer_t *timer, uint32_t time);
 /** Disables the timer from execution. */
 extern void DWC_TIMER_CANCEL(dwc_timer_t *timer);
 #define dwc_timer_cancel DWC_TIMER_CANCEL
-
-
 
 /** @name Spinlocks
  *
@@ -773,7 +780,6 @@ extern void DWC_SPINUNLOCK(dwc_spinlock_t *lock);
 struct dwc_mutex;
 typedef struct dwc_mutex dwc_mutex_t;
 
-
 /* For Linux Mutex Debugging make it inline because the debugging routines use
  * the symbol to determine recursive locking.  This makes it falsely think
  * recursive locking occurs. */
@@ -805,9 +811,6 @@ extern int DWC_MUTEX_TRYLOCK(dwc_mutex_t *mutex);
 extern void DWC_MUTEX_UNLOCK(dwc_mutex_t *mutex);
 #define dwc_mutex_unlock DWC_MUTEX_UNLOCK
 
-
-
-
 /** @name Time */
 
 /** Microsecond delay.
@@ -836,9 +839,6 @@ extern uint32_t DWC_TIME(void);
 #define dwc_time DWC_TIME
 
 #endif /* _DWC_OS_H_ */
-
-
-
 
 /** @mainpage DWC Portability and Common Library
  *
