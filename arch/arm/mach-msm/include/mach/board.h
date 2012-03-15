@@ -340,6 +340,7 @@ struct msm_panel_common_pdata {
 	u32 ov0_wb_size;  /* overlay0 writeback size */
 	u32 ov1_wb_size;  /* overlay1 writeback size */
 	u32 mem_hid;
+	char cont_splash_enabled;
 };
 
 
@@ -394,6 +395,12 @@ struct mipi_dsi_panel_platform_data {
 	int fpga_3d_config_addr;
 	int *gpio;
 	struct mipi_dsi_phy_ctrl *phy_ctrl_settings;
+	char dlane_swap;
+	void (*dsi_pwm_cfg)(void);
+};
+
+struct lvds_panel_platform_data {
+	int *gpio;
 };
 
 struct msm_fb_platform_data {
