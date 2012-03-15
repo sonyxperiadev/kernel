@@ -117,12 +117,12 @@ int MsgQueueAdd(MsgQueueHandle_t *mHandle, void *data)
 	/*add to queue */
 	spin_lock_bh(&mHandle->mLock);
 	list_add_tail(&elem->mList, &mHandle->mList);
+	mHandle->mAvailData = 1;
 	spin_unlock_bh(&mHandle->mLock);
 
 	_DBG(MQ_TRACE("mq: MsgQueueAdd mHandle=%x, data=%d\n",
 		      (int)mHandle, (int)data));
 
-	mHandle->mAvailData = 1;
 	wake_up_interruptible(&mHandle->mWaitQ);
 
 	return 0;
@@ -167,15 +167,14 @@ int MsgQueueRemove(MsgQueueHandle_t *mHandle, void **outData)
 
 	while (1) {
 		spin_lock_bh(&mHandle->mLock);
-		isEmpty = (Boolean) list_empty(&mHandle->mList);
-		spin_unlock_bh(&mHandle->mLock);
+		isEmpty = (Boolean)list_empty(&mHandle->mList);
 
 		if (isEmpty) {
 			mHandle->mAvailData = 0;
+			spin_unlock_bh(&mHandle->mLock);
 			wait_event_interruptible(mHandle->mWaitQ,
 						 mHandle->mAvailData);
 		} else {
-			spin_lock_bh(&mHandle->mLock);
 			entry = mHandle->mList.next;
 			Item = list_entry(entry, MsgQueueElement_t, mList);
 			data = Item->data;
