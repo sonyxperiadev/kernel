@@ -37,29 +37,41 @@
 struct bcmpmu_ponkey {
 	struct input_dev *idev;
 	struct bcmpmu *bcmpmu;
+	u32 ponkey_state; /*0: Released, 1 : Pressed*/
 };
+
+static struct bcmpmu_ponkey *bcmpmu_pkey;
+
+u32 bcmpmu_get_ponkey_state(void)
+{
+	if (bcmpmu_pkey)
+		return bcmpmu_pkey->ponkey_state;
+	return 0;
+}
+EXPORT_SYMBOL(bcmpmu_get_ponkey_state);
 
 static void bcmpmu_ponkey_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu_ponkey *ponkey = data;
-	int val = 0;
 
 	switch (irq) {
 	case PMU_IRQ_PONKEYB_F:
-		val = 1;
+		ponkey->ponkey_state = 1;
+		pr_info("onkey pressed..\n");
 		break;
 
 	case PMU_IRQ_PONKEYB_R:
-		val = 0;
+		ponkey->ponkey_state = 0;
+		pr_info("onkey released..\n");
 		break;
 
 	default:
-		printk("Invalid IRQ %d\n", irq);
+		pr_info("Invalid IRQ %d\n", irq);
 		return;
-		break;
 	}
 
-	input_report_key(ponkey->idev, KEY_POWER, val);
+	input_report_key(ponkey->idev, KEY_POWER,
+			ponkey->ponkey_state);
 	input_sync(ponkey->idev);
 }
 
@@ -72,18 +84,20 @@ static int __devinit bcmpmu_ponkey_probe(struct platform_device *pdev)
 	printk(KERN_INFO "bcmpmu_ponkey: ponkey_probe called\n");
 
 	ponkey = kzalloc(sizeof(struct bcmpmu_ponkey), GFP_KERNEL);
+	bcmpmu_pkey = ponkey;
 	if (!ponkey) {
-		printk("bcmpmu_ponkey:failed to alloc mem.\n");
+		pr_info("bcmpmu_ponkey:failed to alloc mem.\n");
 		return -ENOMEM;
 	}
 
 	ponkey->idev = input_allocate_device();
 	if (!ponkey->idev) {
-		printk("bcmpmu_ponkey:failed to allocate input dev.\n");
+		pr_info("bcmpmu_ponkey:failed to allocate input dev.\n");
 		error = -ENOMEM;
 		goto out_input;
 	}
 
+	ponkey->ponkey_state = 0;
 	ponkey->bcmpmu = bcmpmu;
 	bcmpmu->ponkeyinfo = (void *)ponkey;
 
