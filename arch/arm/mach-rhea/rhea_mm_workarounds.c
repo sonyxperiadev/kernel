@@ -450,10 +450,22 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 			       unsigned long event, void *data)
 {
 	struct pi_notify_param *p = data;
-
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+	static struct clk *clk;
+	if (clk == NULL)
+		clk = clk_get(NULL, REF_8PHASE_EN_PLL1_CLK_NAME_STR);
+#endif
 	BUG_ON(p->pi_id != PI_MGR_PI_ID_MM);
 
 	if (event == PI_PRECHANGE) {
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+			if (JIRA_WA_ENABLED(2490)) {
+				if (IS_ACTIVE_POLICY(p->new_value) &&
+				    !IS_ACTIVE_POLICY(p->old_value)) {
+					clk_enable(clk);
+				}
+			}
+#endif
 #ifdef CONFIG_RHEA_WA_HWJIRA_2348
 			if (JIRA_WA_ENABLED(2348)) {
 				if (IS_ACTIVE_POLICY(p->old_value) && IS_RETN_POLICY(p->new_value)) {
@@ -511,7 +523,14 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 			}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2489 */
 	} else {
-
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+		if (JIRA_WA_ENABLED(2490)) {
+			if (!IS_ACTIVE_POLICY(p->new_value) &&
+			    IS_ACTIVE_POLICY(p->old_value)) {
+				clk_disable(clk);
+			}
+		}
+#endif
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 		if (JIRA_WA_ENABLED(2221)) {
 			char *temp_buf;
@@ -591,7 +610,8 @@ int __init mm_workarounds_late_init(void)
 
 #if defined(CONFIG_RHEA_WA_HWJIRA_2348) || \
 				defined(CONFIG_RHEA_WA_HWJIRA_2489) || \
-				defined(CONFIG_RHEA_WA_HWJIRA_2221)
+				defined(CONFIG_RHEA_WA_HWJIRA_2221) || \
+				defined(CONFIG_RHEA_WA_HWJIRA_2490)
 	pi_mgr_register_notifier(PI_MGR_PI_ID_MM,
 				 &mm_pol_chg_notify_blk,
 				 PI_NOTIFY_POLICY_CHANGE);
