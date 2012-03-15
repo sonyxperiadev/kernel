@@ -1780,7 +1780,7 @@ static void serial8250_handle_port(struct uart_8250_port *up)
 	DEBUG_INTR("status = x%x...\n", status);
 
 #ifdef CONFIG_RHEA_UART_RX_FIX
-	if ((up->iir & UART_IIR_RDI) || (status & ( UART_LSR_DR | UART_LSR_BI)))
+	if ((up->iir & UART_IIR_RDI) || (status & (UART_LSR_DR | UART_LSR_BI)))
 #else
 	if (status & (UART_LSR_DR | UART_LSR_BI))
 #endif
