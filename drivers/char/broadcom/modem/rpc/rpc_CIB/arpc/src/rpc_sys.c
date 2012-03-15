@@ -349,9 +349,7 @@ Boolean RPC_IsRegisteredClient(UInt8 channel, PACKET_BufHandle_t dataBufHandle)
 
 	if (msgId == MSG_CAPI2_ACK_RSP) {
 		ret = (xdrReqClient > 0 && clientAckHandle > 0);
-	} else if (msgId == MSG_AT_COMMAND_IND) {
-		ret = TRUE;
-	} else {
+	}  else {
 		if (channel > 0)
 			ret = (clientHandle != 0) ? TRUE : FALSE;
 		else
