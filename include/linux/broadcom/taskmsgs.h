@@ -27,9 +27,9 @@
 #define DEFINE_CAPI2_GEN_MIDS
 #define DEFINE_CAPI_GEN_MIDS
 #define DEFINE_SYS_GEN_MIDS
-//-------------------------------------------------
-// Constant Definitions
-//-------------------------------------------------
+/*-------------------------------------------------
+* Constant Definitions
+-------------------------------------------------*/
 #define CLIENT_INDEX_WILD_CARD				0xFF	///< Client Index Wild Card
 
 #define	INVALID_CLIENT_ID					 0
@@ -176,7 +176,7 @@ typedef enum
 
 	INTER_TASK_MSG_BEGIN		= 0,		// This line must be here in order to generate binary inter-task message logging, Hui Luo, 10/2/07
 
-//TASKMSGS_INCLUDE taskmsgs_modem.i
+/*TASKMSGS_INCLUDE taskmsgs_modem.i*/
 	//---------------------------------------------------------------
 	// MSG_GRP_SYS, MESSAGE GROUP FOR SYSTEM (0x0000)
 	//---------------------------------------------------------------
@@ -2126,7 +2126,7 @@ typedef enum
 	MSG_SECMODEM_PROC_SET_INFO_PP_BITS_REQ = MSG_GRP_INT_SECMODEM + 0x03, ///<Payload type {::SecModemSetInfoPPBitsReq_t}
 
 	// End of MSG_GRP_INT_SECMODEM, (0x2800)
-//TASKMSGS_INCLUDE taskmsgs_atc.i
+/*TASKMSGS_INCLUDE taskmsgs_atc.i*/
 
 	MSG_AT_CMD_STR				= MSG_GRP_INT_ATC+0x35,	///<Payload type {::}
 	MSG_AT_COMMAND_REQ			= MSG_GRP_INT_ATC+0x52,	///<Payload type {::AtCmdInfo_t}
@@ -2150,7 +2150,7 @@ typedef enum
 	MSG_AT_REMOVE_TERMINAL_REQ			= MSG_GRP_INT_ATC+0x64,	///<Payload type {::SerialDeviceID_t}
 	MSG_AT_POWER_RESET_REQ			= MSG_GRP_INT_ATC+0x65,	///<Payload type {::UInt8}
 	MSG_AT_LOW_POWER_MODE_REQ		= MSG_GRP_INT_ATC+0x66,	///<Payload type {::void}
-//TASKMSGS_INCLUDE taskmsgs_usb.i
+/*TASKMSGS_INCLUDE taskmsgs_usb.i*/
 	//---------------------------------------------------------------
 	// MSG_GRP_DEV, MESSAGE GROUP FOR DEVICES (0x0700)
 	//---------------------------------------------------------------
@@ -2188,7 +2188,7 @@ typedef enum
 	// End of MSG_GRP_DEV, (0x0700)
 
 
-//TASKMSGS_INCLUDE taskmsgs_agps.i
+/*TASKMSGS_INCLUDE taskmsgs_agps.i*/
 	//---------------------------------------------------------------
 	// MSG_GRP_LCS, MESSAGE GROUP FOR LOCATION SERVICES (0x0D00)
 	//---------------------------------------------------------------
@@ -2330,7 +2330,7 @@ typedef enum
 
 
 
-//TASKMSGS_INCLUDE taskmsgs_dataservices.i
+/*TASKMSGS_INCLUDE taskmsgs_dataservices.i*/
 	MSG_PDP_TEST_FIRST										= MSG_GRP_TEST_PCH+0x01,
 	MSG_PDP_TEST_CREATE_DATA_ACCT						    = MSG_GRP_TEST_PCH+0x02,	///<Payload type {::PDPTestCreateAccount_t}
 	MSG_PDP_TEST_SETUP_CONN									= MSG_GRP_TEST_PCH+0x03,	///<Payload type {::PDPTestBasic_t}
@@ -2360,7 +2360,7 @@ typedef enum
 
 	MSG_PPP_OPEN_IND										= MSG_GRP_DC+0x02,
 	MSG_PPP_CLOSE_IND										= MSG_GRP_DC+0x03,
-//TASKMSGS_INCLUDE taskmsgs_dataservices_apps.i
+/*TASKMSGS_INCLUDE taskmsgs_dataservices_apps.i*/
 	//---------------------------------------------------------------
 	// MSG_GRP_TLS, MESSAGE GROUP FOR TLS (0x0E00)
 	//---------------------------------------------------------------
@@ -2537,12 +2537,12 @@ typedef enum
 	MSG_FTPC_CHDIR_FAIL										= MSG_GRP_FTP+0x0d,	///<Payload type {::FTPCStatus_t}
 
 	/** @cond */
-//TASKMSGS_INCLUDE taskmsgs_xscript.i
+/*TASKMSGS_INCLUDE taskmsgs_xscript.i*/
 	// This message is used by ATC and the Script engine for a response to the AT*SCRIPT command
 	MSG_SCRIPT_AT_CMD									    = MSG_GRP_SCRIPT+0x01,
 	MSG_SCRIPT_AT_CMD_RSP									= MSG_GRP_SCRIPT+0x02,
 	MSG_SCRIPT_STATUS	                                    = MSG_GRP_SCRIPT+0x03,
-//TASKMSGS_INCLUDE taskmsgs_mmi.i
+/*TASKMSGS_INCLUDE taskmsgs_mmi.i*/
 	//------------------------------------------------------------------------------------
 	// MSG_GRP_SIMLATOR_0, MSG_GRP_SIMLATOR_1, MSG_GRP_SIMLATOR_2, MSG_GRP_SIMLATOR_3,
 	// Platform Simulation Messages (Win32 host build) (0x6000)
@@ -2949,7 +2949,7 @@ typedef enum
 
 
 /** @endcond */
-//TASKMSGS_INCLUDE taskmsgs_capi2.i
+/*TASKMSGS_INCLUDE taskmsgs_capi2.i*/
 	//---------------------------------------------------
 	//	CAPI2 message id's
 	// (Reserved 0x3XXX for CAPI2 messages)
@@ -6907,8 +6907,8 @@ typedef enum
 	MSG_GEN_REQ_END = 0x48FF,
 
 	MSG_CAPI2_MSGIDS_END = 0x4FFF,
-//TASKMSGS_INCLUDE taskmsgs_sysrpc.i
-//TASKMSGS_INCLUDE taskmsgs_rtc.i
+/*TASKMSGS_INCLUDE taskmsgs_sysrpc.i*/
+/*TASKMSGS_INCLUDE taskmsgs_rtc.i*/
 	//---------------------------------------------------------------
 	// MSG_GRP_RTC, MESSAGE GROUP FOR RTC (0x5000)
 	//---------------------------------------------------------------
