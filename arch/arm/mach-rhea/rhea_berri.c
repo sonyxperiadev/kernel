@@ -462,7 +462,7 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 #endif
 
 #ifdef CONFIG_KEYBOARD_LM8325
-static s16 rheaberri_keymap[] = {
+static s16 rheaberri_keymap[LM8325_KEYMAP_SIZE] = {
 	[0x40] = KEY_MENU,
 	[0x50] = KEY_SEND,
 	[0x05] = KEY_Q,
