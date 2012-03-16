@@ -58,6 +58,10 @@ typedef enum {
 	BSC_SPD_400K,		/*< 400KHZ */
 	BSC_SPD_430K,		/*< 430KHZ */
 	BSC_SPD_HS,		/*< HIGH SPEED */
+	BSC_SPD_HS_1MHZ,	/*< HIGH SPEED */
+	BSC_SPD_HS_2MHZ,	/*< HIGH SPEED */
+	BSC_SPD_HS_1625KHZ,	/*< HIGH SPEED */
+	BSC_SPD_HS_2600KHZ,	/*< HIGH SPEED */
 	BSC_SPD_100K_FPGA,	/*< 100KHZ based on a 26MHz incoming clock */
 	BSC_SPD_400K_FPGA,	/*< 400KHZ based on a 26MHz incoming clock */
 	BSC_SPD_HS_FPGA,	/*< HIGH SPEED based on a 26MHz incoming clock */
@@ -89,8 +93,7 @@ typedef enum {
 	BSC_CMD_HS_STOP		/*< High speed STOP command */
 } BSC_CMD_t;
 
-static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
-				     bool src_clk_26m);
+static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed);
 static inline void isl_bsc_init(uint32_t baseAddr);
 static inline void bsc_disable_intr(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_clear_intr_status(uint32_t baseAddr, uint32_t mask);
@@ -284,13 +287,16 @@ static inline void bsc_reset(uint32_t baseAddr)
  *	HS CLK = 26/(1+3+4) = 3.25MHz
  */
 #define BSC_HS_HSMODE_TIMING_26MHZ        0x0000043
+#define BSC_HS_HSMODE_1MHZ                0x000014D
+#define BSC_HS_HSMODE_1625KHZ             0x0000108
+#define BSC_HS_HSMODE_2600KHZ             0x0000064
+#define BSC_HS_HSMODE_2MHZ                0x0000086
 #define BSC_HS_HSMODE_TIMING              0x00000513
 #else
 #define BSC_HS_HSMODE_TIMING              0x00000001
 #endif
-
-static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
-				     bool src_clk_26m)
+/* HS speed always uses 26MHZ source and FS uses 13MHZ */
+static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed)
 {
 	uint8_t DIV = 0, M = 0, N = 0, P = 0, NO_DIV = 0, PRESCALE =
 	    I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
@@ -347,12 +353,44 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
 		DIV = BSCTIM_DIV_6500000HZ;
 		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
 		P = 0x05;	/* 0x01; */
-		if (src_clk_26m)
-			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
-				      BSC_HS_HSMODE_TIMING_26MHZ);
-		else
-			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
-				      BSC_HS_HSMODE_TIMING);
+		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+			      BSC_HS_HSMODE_TIMING_26MHZ);
+		break;
+	case BSC_SPD_HS_1MHZ:
+		M = 0x04;	/* 2; */
+		N = 0x01;	/* 2; */
+		DIV = BSCTIM_DIV_6500000HZ;
+		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+		P = 0x05;	/* 0x01; */
+		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+			      BSC_HS_HSMODE_1MHZ);
+		break;
+	case BSC_SPD_HS_2MHZ:
+		M = 0x04;	/* 2; */
+		N = 0x01;	/* 2; */
+		DIV = BSCTIM_DIV_6500000HZ;
+		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+		P = 0x05;	/* 0x01; */
+		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+			      BSC_HS_HSMODE_2MHZ);
+		break;
+	case BSC_SPD_HS_1625KHZ:
+		M = 0x04;	/* 2; */
+		N = 0x01;	/* 2; */
+		DIV = BSCTIM_DIV_6500000HZ;
+		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+		P = 0x05;	/* 0x01; */
+		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+			      BSC_HS_HSMODE_1625KHZ);
+		break;
+	case BSC_SPD_HS_2600KHZ:
+		M = 0x04;	/* 2; */
+		N = 0x01;	/* 2; */
+		DIV = BSCTIM_DIV_6500000HZ;
+		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+		P = 0x05;	/* 0x01; */
+		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+			      BSC_HS_HSMODE_2600KHZ);
 		break;
 		/* master clock is 26MHz for FPGA */
 	case BSC_SPD_100K_FPGA:
@@ -377,7 +415,7 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
 		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
 		P = 0x07;
 		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
-			      BSC_HS_HSMODE_TIMING);
+			      BSC_HS_HSMODE_TIMING_26MHZ);
 		break;
 	case BSC_SPD_100K:
 	default:
