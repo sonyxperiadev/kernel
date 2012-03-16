@@ -1398,7 +1398,8 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		pSel = pChip->streamCtl[stream - 1].iLineSelect;
 		if (cmd == 0) {	/*add device */
 			for (i = 0; i < MAX_PLAYBACK_DEV; i++) {
-				if (pSel[i] == AUDIO_SINK_UNDEFINED
+				if ((pSel[i] == AUDIO_SINK_UNDEFINED ||
+					pSel[i] == AUDIO_SINK_TOTAL_COUNT)
 				    && indexVal == -1) {
 					indexVal = i;
 					continue;
@@ -1448,8 +1449,20 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 							AUDIO_Ctrl_Trigger
 							(ACTION_AUD_AddChannel,
 							&parm_spkr, NULL, 0);
-						}
-					}
+				if (isSTIHF == TRUE &&
+					pSel[indexVal] ==
+					AUDIO_SINK_LOUDSPK &&
+					++indexVal < MAX_PLAYBACK_DEV) {
+					pSel[indexVal] = AUDIO_SINK_HANDSET;
+					parm_spkr.src = AUDIO_SINK_MEM;
+					parm_spkr.sink = pSel[indexVal];
+					parm_spkr.stream = (stream - 1);
+					AUDIO_Ctrl_Trigger(
+						ACTION_AUD_AddChannel,
+						&parm_spkr, NULL, 0);
+				}
+				}
+				}
 				}
 			}
 		} else if (cmd == 1) {	/*  remove device */
@@ -1480,17 +1493,35 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 					 * the audio driver API to remove
 					 * the device
 					 */
-					if (pStream->runtime->status->state ==
-					    SNDRV_PCM_STATE_RUNNING
-					    || pStream->runtime->status->
-					    state == SNDRV_PCM_STATE_PAUSED) {
+			if (pStream->runtime->status->state ==
+			    SNDRV_PCM_STATE_RUNNING
+			    || pStream->runtime->status->
+			    state == SNDRV_PCM_STATE_PAUSED) {
+				if (isSTIHF == TRUE &&
+					sink == AUDIO_SINK_LOUDSPK) {
+					/* stIHF, remove EP path first */
+					if (indexVal+1 >= MAX_PLAYBACK_DEV)
+						aError(
+							"stIHF, something wrong!!!\n");
+					else {
 						parm_spkr.src = AUDIO_SINK_MEM;
-						parm_spkr.sink = sink;
+						parm_spkr.sink =
+							AUDIO_SINK_HANDSET;
 						parm_spkr.stream = (stream - 1);
-						AUDIO_Ctrl_Trigger
-						    (ACTION_AUD_RemoveChannel,
-						     &parm_spkr, NULL, 0);
+						AUDIO_Ctrl_Trigger(
+						ACTION_AUD_RemoveChannel,
+						&parm_spkr, NULL, 0);
+						pSel[indexVal+1] =
+							AUDIO_SINK_UNDEFINED;
 					}
+				}
+				parm_spkr.src = AUDIO_SINK_MEM;
+				parm_spkr.sink = sink;
+				parm_spkr.stream = (stream - 1);
+				AUDIO_Ctrl_Trigger
+				    (ACTION_AUD_RemoveChannel,
+				     &parm_spkr, NULL, 0);
+				}
 				}
 				pSel[indexVal] = AUDIO_SINK_UNDEFINED;
 			}
