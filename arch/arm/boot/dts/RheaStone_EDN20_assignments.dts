@@ -6,8 +6,11 @@
 	#size-cells = <1>;
 	model = "RheaStone_EDN20_assignments";
 	compatible = "21654B0";
-	/*  timestamp = "v2.0, 2/22/2012 10:02:04 AM";*/
+	/*  timestamp = "v5.0, 3/14/2012 11:01:11 AM";*/
 	/*Version	Date	Person Responisble	Change Description	*/
+	/*5.0	3/14/2012	Aswath Oruganti	Updated the BT_HOST_WAKE signal to input pull high configuration based on feedback from WCG	*/
+	/*4.0	2/28/2012	Aswath Oruganti	Updated CAM1_RST, CAM1_PWDN and BT_HOST_WAKE settings	*/
+	/*3.0	2/27/2012	Aswath Oruganti	Enable SlewRate for MMC0 and MMC1 interface signals	*/
 	/*2.0	2/21/2012	Aswath Oruganti	Pull up disabled (GPIO39) HeadSet_Det as external pull up exists.	*/
 	/*1.0	2/20/2012	Aswath Oruganti	Enabled SlewRate control for SIMDAT and SDInterface signals - Eirlys & Vikram	*/
 	/*0.0	2/17/2012	Aswath Oruganti	Initial Release	*/
@@ -66,11 +69,11 @@
 			0x00000343   /* 0x3500_48B0: GPIO32: DCLK2: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000043   /* 0x3500_48B4: GPIO33: GPIO33: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000043   /* 0x3500_48B8: GPIO34: GPIO34: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000423   /* 0x3500_48BC: GPS_CALREQ: GPIO99: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000403   /* 0x3500_48BC: GPS_CALREQ: GPIO99: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000423   /* 0x3500_48C0: GPS_HOSTREQ: GPIO100: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000443   /* 0x3500_48C4: GPS_PABLANK: GPIO97: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000043   /* 0x3500_48C8: GPS_TMARK: GPEN10: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000440   /* 0x3500_48CC: ICUSBDM: GPIO122: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
+			0x00000400   /* 0x3500_48CC: ICUSBDM: GPIO122: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
 			0x00000440   /* 0x3500_48D0: ICUSBDP: GPIO121: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
 			0x00000423   /* 0x3500_48D4: LCDCS0: GPIO38: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000443   /* 0x3500_48D8: LCDRES: GPIO41: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
@@ -86,23 +89,23 @@
 			0x00000243   /* 0x3500_4900: MDMGPIO06: GPEN06: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000243   /* 0x3500_4904: MDMGPIO07: GPEN07: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000243   /* 0x3500_4908: MDMGPIO08: GPEN08: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000003   /* 0x3500_490C: MMC0CK: MMC0CK: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4910: MMC0CMD: MMC0CMD: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4914: MMC0DAT0: MMC0DAT0: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4918: MMC0DAT1: MMC0DAT1: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_491C: MMC0DAT2: MMC0DAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4920: MMC0DAT3: MMC0DAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4924: MMC0DAT4: MMC0DAT4: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4928: MMC0DAT5: MMC0DAT5: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_492C: MMC0DAT6: MMC0DAT6: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4930: MMC0DAT7: MMC0DAT7: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000013   /* 0x3500_490C: MMC0CK: MMC0CK: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_4910: MMC0CMD: MMC0CMD: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_4914: MMC0DAT0: MMC0DAT0: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_4918: MMC0DAT1: MMC0DAT1: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_491C: MMC0DAT2: MMC0DAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_4920: MMC0DAT3: MMC0DAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_4924: MMC0DAT4: MMC0DAT4: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_4928: MMC0DAT5: MMC0DAT5: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000053   /* 0x3500_492C: MMC0DAT6: MMC0DAT6: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_4930: MMC0DAT7: MMC0DAT7: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000043   /* 0x3500_4934: MMC0RST: MMC0RSTN: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000003   /* 0x3500_4938: MMC1CK: MMC1CK: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_493C: MMC1CMD: MMC1CMD: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4940: MMC1DAT0: MMC1DAT0: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4944: MMC1DAT1: MMC1DAT1: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_4948: MMC1DAT2: MMC1DAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-			0x00000023   /* 0x3500_494C: MMC1DAT3: MMC1DAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000013   /* 0x3500_4938: MMC1CK: MMC1CK: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_493C: MMC1CMD: MMC1CMD: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_4940: MMC1DAT0: MMC1DAT0: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_4944: MMC1DAT1: MMC1DAT1: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_4948: MMC1DAT2: MMC1DAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
+			0x00000033   /* 0x3500_494C: MMC1DAT3: MMC1DAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 1 = slewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000423   /* 0x3500_4950: MMC1DAT4: GPIO74: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000443   /* 0x3500_4954: MMC1DAT5: GPIO73: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000423   /* 0x3500_4958: MMC1DAT6: GPIO72: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
@@ -167,7 +170,7 @@
 			0x00000023   /* 0x3500_4A44: UBRX: UBRX: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_4A48: UBTX: UBTX: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			
-			>;
+		>;
 	};
 
 	/* gpio node must be consistent with pinmux node */
@@ -201,7 +204,7 @@
 			56    0x00000001 /* 0: Drive Low  1: Input */
 			70    0x00000000 /* 0: Drive Low  0: Output */
 			71    0x00000001 /* 0: Drive Low  1: Input */
-			72    0x00000001 /* 0: Drive Low  1: Input */
+			72    0x00000003 /* 1: Drive High  1: Input */
 			73    0x00000000 /* 0: Drive Low  0: Output */
 			74    0x00000001 /* 0: Drive Low  1: Input */
 			88    0x00000001 /* 0: Drive Low  1: Input */
@@ -210,11 +213,11 @@
 			91    0x00000000 /* 0: Drive Low  0: Output */
 			92    0x00000001 /* 0: Drive Low  1: Input */
 			97    0x00000000 /* 0: Drive Low  0: Output */
-			99    0x00000000 /* 0: Drive Low  0: Output */
+			99    0x00000002 /* 1: Drive High  0: Output */
 			100    0x00000000 /* 0: Drive Low  0: Output */
 			111    0x00000000 /* 0: Drive Low  0: Output */
 			121    0x00000000 /* 0: Drive Low  0: Output */
-			122    0x00000000 /* 0: Drive Low  0: Output */
-			>;
+			122    0x00000002 /* 1: Drive High  0: Output */
+		>;
 	};
 };
