@@ -157,6 +157,16 @@
 
 #define CP_SET_PROTECTED_MODE  0x5f /* sets the register protection mode */
 
+/*
+ * for a3xx
+ */
+
+/* Conditionally load a IB based on a flag */
+#define CP_COND_INDIRECT_BUFFER_PFE 0x3A /* prefetch enabled */
+#define CP_COND_INDIRECT_BUFFER_PFD 0x32 /* prefetch disabled */
+
+/* Load a buffer with pre-fetch enabled */
+#define CP_INDIRECT_BUFFER_PFE 0x3F
 
 /* packet header building macros */
 #define cp_type0_packet(regindx, cnt) \
@@ -189,5 +199,15 @@
 
 /* gmem command buffer length */
 #define CP_REG(reg) ((0x4 << 16) | (SUBBLOCK_OFFSET(reg)))
+
+
+/* Return 1 if the command is an indirect buffer of any kind */
+static inline int adreno_cmd_is_ib(unsigned int cmd)
+{
+	return (cmd == cp_type3_packet(CP_INDIRECT_BUFFER_PFE, 2) ||
+		cmd == cp_type3_packet(CP_INDIRECT_BUFFER_PFD, 2) ||
+		cmd == cp_type3_packet(CP_COND_INDIRECT_BUFFER_PFE, 2) ||
+		cmd == cp_type3_packet(CP_COND_INDIRECT_BUFFER_PFD, 2));
+}
 
 #endif	/* __ADRENO_PM4TYPES_H */
