@@ -670,11 +670,20 @@ config USB_GADGET_SNPS_DWC_OTG
 	help
 	   Selects the Synopsys Driver for the DWC_otg Controller.
 
-config USB_DWC_OTG_LPM
+config USB_LPM
 	boolean "Enable LPM support"
 	depends on USB && EXPERIMENTAL
+	default n
 	help
 	   Enables LPM support.
+
+config USB_DWC_OTG_LPM
+	boolean "Enable LPM support in DWC OTG driver"
+	depends on USB && EXPERIMENTAL
+	select USB_LPM
+	default n
+	help
+	   Enables LPM support in DWC OTG driver.
 
 config USB_DWC_OTG_DEVICE_ONLY
 	boolean "DWC OTG Driver device only mode"

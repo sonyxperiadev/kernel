@@ -1254,6 +1254,7 @@ static struct gadget_wrapper *alloc_wrapper(
 	d->gadget.is_dualspeed = dwc_otg_pcd_is_dualspeed(otg_dev->pcd);
 	d->gadget.is_otg = dwc_otg_pcd_is_otg(otg_dev->pcd);
 	d->gadget.otg_version = dwc_otg_pcd_is_otg20(otg_dev->pcd);
+	d->gadget.is_lpm = dwc_otg_pcd_is_lpm_enabled(otg_dev->pcd);
 
 	d->driver = 0;
 	/* Register the gadget device */

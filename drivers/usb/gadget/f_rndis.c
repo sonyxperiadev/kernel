@@ -821,6 +821,11 @@ rndis_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
 	}
 #endif
 
+#ifdef CONFIG_USB_LPM
+	if (gadget_is_lpm(c->cdev->gadget))
+		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
+#endif
+
 	/* setup RNDIS itself */
 	status = rndis_init();
 	if (status < 0)

@@ -3233,9 +3233,6 @@ static struct platform_driver fsg_platform_driver = {
 
 int mass_storage_bind_config(struct usb_configuration *c)
 {
-#ifndef CONFIG_USB_OTG
-	struct fsg_common *common = fsg_common_init(NULL, c->cdev, &fsg_cfg);
-#else
 	struct fsg_common *common;
 
 	if (gadget_is_otg(c->cdev->gadget)) {
@@ -3249,8 +3246,10 @@ int mass_storage_bind_config(struct usb_configuration *c)
 		}
 	}
 
+	if (gadget_is_lpm(c->cdev->gadget))
+		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
+
 	common = fsg_common_init(NULL, c->cdev, &fsg_cfg);
-#endif
 
 	if (IS_ERR(common))
 		return -1;

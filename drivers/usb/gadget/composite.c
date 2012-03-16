@@ -39,8 +39,38 @@
 /* big enough to hold our biggest descriptor */
 #define USB_BUFSIZ	1024
 
+#ifdef CONFIG_USB_LPM
+#define USB_DEVICE_CAPABILITY_20_EXTENSION	0x02
+#define USB_20_EXT_LPM				0x02
+struct usb_dev_cap_20_ext_desc {
+	__u8 bLength;
+	__u8 bDescriptorType;
+	__u8 bDevCapabilityType;
+	__le32 bmAttributes;
+} __attribute__ ((__packed__)) usb_dev_cap_20_ext_desc_t;
+
+static struct usb_bos_20_ext_desc {
+	struct usb_bos_descriptor bos_desc;
+	struct usb_dev_cap_20_ext_desc dev_cap_20_ext_desc;
+} __attribute__ ((__packed__)) bos_20_ext_desc = {
+	{
+		.bLength =		sizeof(struct usb_bos_descriptor),
+		.bDescriptorType =	USB_DT_BOS,
+		.wTotalLength =	sizeof(struct usb_bos_20_ext_desc),
+		.bNumDeviceCaps = 1,
+	},
+	{
+		.bLength =		sizeof(struct usb_dev_cap_20_ext_desc),
+		.bDescriptorType =	USB_DT_DEVICE_CAPABILITY,
+		.bDevCapabilityType =	USB_DEVICE_CAPABILITY_20_EXTENSION,
+		.bmAttributes =	USB_20_EXT_LPM,
+	},
+};
+#endif
+
 static struct usb_composite_driver *composite;
 static int (*composite_gadget_bind)(struct usb_composite_dev *cdev);
+
 
 /* Some systems will need runtime overrides for the  product identifiers
  * published in the device descriptor, either numbers or strings or both.
@@ -904,6 +934,12 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 		switch (w_value >> 8) {
 
 		case USB_DT_DEVICE:
+			if (gadget_is_lpm(gadget)) {
+				/* LPM needs support for BOS descriptor
+				 * so need to use 2.01 or later */
+				cdev->desc.bcdUSB = 0x201;
+			}
+
 			cdev->desc.bNumConfigurations =
 				count_configs(cdev, USB_DT_DEVICE);
 			value = min(w_length, (u16) sizeof cdev->desc);
@@ -939,6 +975,20 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			value = fill_otg_desc(cdev);
 			if (value >= 0)
 				value = min(w_length, (u16) value);
+			break;
+#endif
+
+#ifdef CONFIG_USB_LPM
+		case USB_DT_BOS:
+			if (usb_gadget_test_lpm_support(gadget))
+				bos_20_ext_desc.dev_cap_20_ext_desc.
+				  bmAttributes |= USB_20_EXT_LPM;
+			else
+				bos_20_ext_desc.dev_cap_20_ext_desc.
+				  bmAttributes &= ~USB_20_EXT_LPM;
+
+			value = min(w_length, (u16)sizeof bos_20_ext_desc);
+			memcpy(req->buf, &bos_20_ext_desc, value);
 			break;
 #endif
 		}

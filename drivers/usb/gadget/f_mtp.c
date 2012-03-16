@@ -1200,6 +1200,12 @@ static int mtp_bind_config(struct usb_configuration *c, bool ptp_config)
 	}
 #endif
 
+#ifdef CONFIG_USB_LPM
+	if (gadget_is_lpm(c->cdev->gadget))
+		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
+#endif
+
+
 	/* allocate a string ID for our interface */
 	if (mtp_string_defs[INTERFACE_STRING_INDEX].id == 0) {
 		ret = usb_string_id(c->cdev);

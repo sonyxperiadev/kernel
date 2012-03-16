@@ -252,7 +252,11 @@ static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.rx_thr_length = -1,
 	.pti_enable = -1,
 	.mpi_enable = -1,
+#ifdef CONFIG_USB_LPM
+	.lpm_enable = 1,
+#else
 	.lpm_enable = -1,
+#endif
 	.ic_usb_cap = -1,
 	.ahb_thr_ratio = -1,
 	.power_down = -1,

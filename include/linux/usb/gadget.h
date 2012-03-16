@@ -430,9 +430,7 @@ struct usb_gadget_ops {
 	int	(*pullup) (struct usb_gadget *, int is_on);
 	int	(*ioctl)(struct usb_gadget *,
 				unsigned code, unsigned long param);
-#ifdef CONFIG_USB_DWC_OTG_LPM
 	int	(*lpm_support)(struct usb_gadget *);
-#endif
 };
 
 /**
@@ -485,6 +483,7 @@ struct usb_gadget {
 	enum usb_device_speed		speed;
 	unsigned			is_dualspeed:1;
 	unsigned			is_otg:1;
+	unsigned			is_lpm:1;
 	u16				otg_version;
 #define UDC_OTG1 0x0000
 #define UDC_OTG2 0x0001
@@ -538,6 +537,22 @@ static inline int gadget_is_otg(struct usb_gadget *g)
 {
 #ifdef CONFIG_USB_OTG
 	return g->is_otg;
+#else
+	return 0;
+#endif
+}
+
+/**
+ * gadget_is_lpm - return true iff the hardware is LPM-ready
+ * @g: controller that might have LPM capability
+ *
+ * This is a runtime test, since kernels with a USB stack sometimes
+ * run on boards which don't support LPM
+ */
+static inline int gadget_is_lpm(struct usb_gadget *g)
+{
+#ifdef CONFIG_USB_LPM
+	return g->is_lpm;
 #else
 	return 0;
 #endif
@@ -719,6 +734,13 @@ static inline int usb_gadget_disconnect(struct usb_gadget *gadget)
 	return gadget->ops->pullup(gadget, 0);
 }
 
+
+static inline int usb_gadget_test_lpm_support(struct usb_gadget *gadget)
+{
+	if (!gadget->ops->lpm_support)
+		return -EOPNOTSUPP;
+	return gadget->ops->lpm_support(gadget);
+}
 
 /*-------------------------------------------------------------------------*/
 
