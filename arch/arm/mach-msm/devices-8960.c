@@ -1053,6 +1053,11 @@ struct platform_device msm_pil_tzapps = {
 	.id = -1,
 };
 
+struct platform_device msm_pil_vidc = {
+	.name = "pil_vidc",
+	.id = -1,
+};
+
 struct platform_device msm_device_smd = {
 	.name		= "msm_smd",
 	.id		= -1,

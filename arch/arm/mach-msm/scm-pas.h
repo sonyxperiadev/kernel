@@ -20,6 +20,9 @@ enum pas_id {
 	PAS_MODEM_SW,
 	PAS_MODEM_FW,
 	PAS_RIVA,
+	PAS_SECAPP,
+	PAS_GSS,
+	PAS_VIDC,
 };
 
 extern int pas_init_image(enum pas_id id, const u8 *metadata, size_t size);
