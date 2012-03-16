@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2011, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -33,7 +33,7 @@ static struct clk *dsi_s_pclk;
 
 static struct clk *amp_pclk;
 
-void mipi_dsi_clk_init(struct platform_device *pdev)
+void mipi_dsi_clk_init(struct device *dev)
 {
 	amp_pclk = clk_get(NULL, "amp_pclk");
 	if (IS_ERR(amp_pclk)) {
