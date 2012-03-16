@@ -54,10 +54,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #define IRQ_GRAPHICS	BCM_INT_ID_RESERVED148
 
-//Bitmask to decide which stats to print (max 16)
-#define DEFAULT_PERF_PRINT_MASK 0x1FFFE000
 #ifdef V3D_PERF_SUPPORT
-uint32_t perf_ctr[16];
 const char *perf_ctr_str[30] = {
 	"FEP Valid primitives that result in no rendered pixels, for all rendered tiles",
 	"FEP Valid primitives for all rendered tiles. (primitives may be counted in more than one tile)",
@@ -224,6 +221,11 @@ typedef struct {
 	bool uses_worklist;
 	dvts_object_t shared_dvts_object;
 	uint32_t shared_dvts_object_usecount;
+#ifdef V3D_PERF_SUPPORT
+	uint32_t perf_ctr[16];
+	uint32_t v3d_perf_mask;
+	bool v3d_perf_counter;
+#endif
 } v3d_t;
 
 /********************************************************
@@ -245,6 +247,9 @@ v3d_t *v3d_dev;
 typedef struct v3d_job_t_ {
 	uint32_t job_type;
 	u32 dev_id;
+#ifdef V3D_PERF_SUPPORT
+	v3d_t *job_dev;
+#endif
 	uint32_t job_id;
 	uint32_t v3d_ct0ca;
 	uint32_t v3d_ct0ea;
@@ -326,6 +331,10 @@ static irqreturn_t v3d_isr_no_worklist(int irq, void *unused);
 #ifdef SUPPORT_V3D_WORKLIST
 static irqreturn_t v3d_isr_worklist(int irq, void *dev_id);
 #endif
+#ifdef V3D_PERF_SUPPORT
+static void	v3d_set_perf_counter(v3d_t *dev);
+static void	v3d_read_perf_counter(v3d_t *dev, int incremental);
+#endif
 
 /******************************************************************
 	V3D Work queue related functions
@@ -380,6 +389,9 @@ static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t *p_job_post)
 	}
 	p_v3d_job->dev_id = dev->id;
 	p_v3d_job->job_id = p_job_post->job_id;
+#ifdef V3D_PERF_SUPPORT
+	p_v3d_job->job_dev = dev;
+#endif
 
 	/* eventually we may wish to generalize this sync stuff, but
 	 * for now, we hard-code it such that per open
@@ -572,6 +584,7 @@ static int v3d_job_start(void)
 
 	p_v3d_job = (v3d_job_t *) v3d_job_curr;
 
+
 	/*
 	 *
 	 * This should probably go into v3d_thread...  so that we can
@@ -605,6 +618,10 @@ static int v3d_job_start(void)
 
 	p_v3d_job->job_status = V3D_JOB_STATUS_RUNNING;
 	v3d_in_use = 1;
+#ifdef V3D_PERF_SUPPORT
+	if (p_v3d_job->job_dev->v3d_perf_counter == true)
+		v3d_set_perf_counter(p_v3d_job->job_dev);
+#endif
 	if ((p_v3d_job->job_type == V3D_JOB_REND)
 	    && (p_v3d_job->job_intern_state == 0)) {
 		KLOG_D("Submitting render job %x : %x\n", p_v3d_job->v3d_ct1ca,
@@ -796,6 +813,13 @@ static int v3d_thread(void *data)
 					/* Binning only (job) complete. Launch next job if available, else sleep till next post */
 					if (v3d_job_curr->job_wait_state) {
 						v3d_job_curr->job_status = V3D_JOB_STATUS_SUCCESS;
+#ifdef V3D_PERF_SUPPORT
+					if (v3d_job_curr->job_dev->
+						v3d_perf_counter == true) {
+						v3d_read_perf_counter
+						(v3d_job_curr->job_dev, 1);
+					}
+#endif
 						wake_up_interruptible(&
 								(((v3d_job_t *)v3d_job_curr)->v3d_job_done_q));
 					}
@@ -824,8 +848,14 @@ static int v3d_thread(void *data)
 					v3d_flags &= ~(1 << 0);
 					v3d_job_curr->job_intern_state = 3;
 					v3d_job_curr->job_status =
-					    V3D_JOB_STATUS_SUCCESS;
-
+						V3D_JOB_STATUS_SUCCESS;
+#ifdef V3D_PERF_SUPPORT
+					if (v3d_job_curr->job_dev->
+						v3d_perf_counter == true) {
+						v3d_read_perf_counter
+						(v3d_job_curr->job_dev, 1);
+					}
+#endif
 					if (v3d_job_curr->job_wait_state) {
 						wake_up_interruptible(&
 								      (((v3d_job_t *) v3d_job_curr)->v3d_job_done_q));
@@ -1023,19 +1053,20 @@ static inline void v3d_write(uint32_t val, uint32_t reg)
 }
 
 #ifdef V3D_PERF_SUPPORT
-static void	v3d_set_perf_counter(void)
+static void	v3d_set_perf_counter(v3d_t *dev)
 {
 	int perf_ctr = 0;
 	int perf_ctr_id = 0;
 	unsigned int pctre;
-	unsigned int perf_mask = DEFAULT_PERF_PRINT_MASK;
+	unsigned int perf_mask = dev->v3d_perf_mask;
 
 	v3d_write(0, V3D_PCTRE_OFFSET);
 	v3d_write(0xFF, V3D_PCTRC_OFFSET);
 	while (perf_mask && (perf_ctr <16)) {
 		if (perf_mask & 1) {
-			v3d_write(perf_ctr_id, V3D_PCTRS0_OFFSET + (8*perf_ctr));
-			perf_ctr++;
+			v3d_write(perf_ctr_id, V3D_PCTRS0_OFFSET +
+			(8*perf_ctr));
+		perf_ctr++;
 		}
 		perf_ctr_id++;
 		perf_mask >>= 1;
@@ -1044,38 +1075,24 @@ static void	v3d_set_perf_counter(void)
 	v3d_write(pctre, V3D_PCTRE_OFFSET);
 }
 
-static void	v3d_read_perf_counter(unsigned int *p_perf_ctr, int incremental)
+static void	v3d_read_perf_counter(v3d_t *dev, int incremental)
 {
-	unsigned int perf_mask = DEFAULT_PERF_PRINT_MASK;
+	unsigned int perf_mask = dev->v3d_perf_mask;
 	int perf_ctr_id = 0;
 	int perf_ctr = 0;
 	int perf_ctr_val;
 
-	while (perf_mask && (perf_ctr <16)) {
+	while (perf_mask && (perf_ctr < 16)) {
 		if (perf_mask & 1) {
 			perf_ctr_val = 0;
-			perf_ctr_val = v3d_read(V3D_PCTR0_OFFSET + (8*perf_ctr));
+			perf_ctr_val = v3d_read(V3D_PCTR0_OFFSET +
+				(8*perf_ctr));
 			if (incremental == 0) {
-				p_perf_ctr[perf_ctr] = perf_ctr_val;
+				dev->perf_ctr[perf_ctr] = perf_ctr_val;
 			} else {
-				p_perf_ctr[perf_ctr] = perf_ctr_val + p_perf_ctr[perf_ctr];
+				dev->perf_ctr[perf_ctr] = perf_ctr_val +
+					dev->perf_ctr[perf_ctr];
 			}
-			perf_ctr++;
-		}
-		perf_ctr_id++;
-		perf_mask >>= 1;
-	}
-}
-
-static void v3d_print_perf_counter(unsigned int *p_perf_ctr)
-{
-	unsigned int perf_mask = DEFAULT_PERF_PRINT_MASK;
-	int perf_ctr_id = 0;
-	int perf_ctr = 0;
-	printk("\n");
-	while (perf_mask && (perf_ctr <16)) {
-		if (perf_mask & 1) {
-			printk(" ID:%s = %ul\n", perf_ctr_str[perf_ctr_id], p_perf_ctr[perf_ctr]);
 			perf_ctr++;
 		}
 		perf_ctr_id++;
@@ -1163,9 +1180,6 @@ static void v3d_power(int flag)
 			       (v3d_state.free_time + v3d_state.acquired_time));
 			v3d_state.free_time = 0;
 			v3d_state.acquired_time = 0;
-#ifdef V3D_PERF_SUPPORT
-			v3d_print_perf_counter(perf_ctr);
-#endif
 		}
 		/* Disable V3D clock */
 		v3d_is_on = 0;
@@ -1281,16 +1295,9 @@ static void v3d_reg_init(void)
 
 static void v3d_reset(void)
 {
-#ifdef V3D_PERF_SUPPORT
-	v3d_read_perf_counter(perf_ctr, 1);
-#endif
-
 	v3d_clk = clk_get(NULL, "v3d_axi_clk");
 	clk_reset(v3d_clk);
 	v3d_reg_init();
-#ifdef V3D_PERF_SUPPORT
-    v3d_set_perf_counter();
-#endif
 	mb();
 
 	free_bin_mem(0);
@@ -1512,6 +1519,10 @@ static int v3d_open(struct inode *inode, struct file *filp)
 
 #ifdef SUPPORT_V3D_WORKLIST
 	dev->uses_worklist = true;
+#ifdef V3D_PERF_SUPPORT
+	dev->v3d_perf_mask = 0;
+	dev->v3d_perf_counter = false;
+#endif
 	dev->id = 0;
 	if (mutex_lock_interruptible(&v3d_sem)) {
 		KLOG_E("lock acquire failed");
@@ -1835,7 +1846,30 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				  await_task_args.target);
 		}
 		break;
-
+#ifdef V3D_PERF_SUPPORT
+	case V3D_IOCTL_PERF_COUNTER_READ:{
+		if (copy_to_user((unsigned int *) arg, &dev->perf_ctr,
+			16*sizeof(unsigned int))) {
+			KLOG_E("V3D_IOCTL_WAIT_JOB copy_to_user failed\n");
+			ret = -EPERM;
+		}
+		}
+	break;
+	case V3D_IOCTL_PERF_COUNTER_ENABLE:{
+		dev->v3d_perf_counter = true;
+		if (copy_from_user
+			    (&(dev->v3d_perf_mask), (uint32_t *) arg,
+			     sizeof(uint32_t))) {
+			KLOG_E("V3D_IOCTL_PERF_COUNTER_ENABLE failed\n");
+			ret = -EPERM;
+		}
+	}
+	break;
+	case V3D_IOCTL_PERF_COUNTER_DISABLE:{
+		dev->v3d_perf_counter = false;
+	}
+	break;
+#endif
 	default:
 		KLOG_E("v3d_ioctl :default");
 		break;
