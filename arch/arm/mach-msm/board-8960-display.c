@@ -81,9 +81,7 @@ static struct resource msm_fb_resources[] = {
 	}
 };
 
-#ifndef CONFIG_FB_MSM_MIPI_PANEL_DETECT
 static void set_mdp_clocks_for_wuxga(void);
-#endif
 
 static int msm_fb_detect_panel(const char *name)
 {
@@ -138,8 +136,11 @@ static int msm_fb_detect_panel(const char *name)
 
 	if (!strncmp(name, HDMI_PANEL_NAME,
 			strnlen(HDMI_PANEL_NAME,
-				PANEL_NAME_MAX_LEN)))
+				PANEL_NAME_MAX_LEN))) {
+		if (hdmi_is_primary)
+			set_mdp_clocks_for_wuxga();
 		return 0;
+	}
 
 	if (!strncmp(name, TVOUT_PANEL_NAME,
 			strnlen(TVOUT_PANEL_NAME,
@@ -479,43 +480,6 @@ static struct msm_bus_vectors mdp_init_vectors[] = {
 	},
 };
 
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-static struct msm_bus_vectors hdmi_as_primary_vectors[] = {
-	/* If HDMI is used as primary */
-	{
-		.src = MSM_BUS_MASTER_MDP_PORT0,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 2000000000,
-		.ib = 2000000000,
-	},
-};
-static struct msm_bus_paths mdp_bus_scale_usecases[] = {
-	{
-		ARRAY_SIZE(mdp_init_vectors),
-		mdp_init_vectors,
-	},
-	{
-		ARRAY_SIZE(hdmi_as_primary_vectors),
-		hdmi_as_primary_vectors,
-	},
-	{
-		ARRAY_SIZE(hdmi_as_primary_vectors),
-		hdmi_as_primary_vectors,
-	},
-	{
-		ARRAY_SIZE(hdmi_as_primary_vectors),
-		hdmi_as_primary_vectors,
-	},
-	{
-		ARRAY_SIZE(hdmi_as_primary_vectors),
-		hdmi_as_primary_vectors,
-	},
-	{
-		ARRAY_SIZE(hdmi_as_primary_vectors),
-		hdmi_as_primary_vectors,
-	},
-};
-#else
 static struct msm_bus_vectors mdp_ui_vectors[] = {
 	{
 		.src = MSM_BUS_MASTER_MDP_PORT0,
@@ -581,7 +545,6 @@ static struct msm_bus_paths mdp_bus_scale_usecases[] = {
 		mdp_1080p_vectors,
 	},
 };
-#endif
 
 static struct msm_bus_scale_pdata mdp_bus_scale_pdata = {
 	mdp_bus_scale_usecases,
@@ -614,32 +577,6 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #endif
 	.cont_splash_enabled = 0x01,
 };
-
-#ifndef CONFIG_FB_MSM_MIPI_PANEL_DETECT
-/**
- * Set MDP clocks to high frequency to avoid DSI underflow
- * when using high resolution 1200x1920 WUXGA panels
- */
-static void set_mdp_clocks_for_wuxga(void)
-{
-	int i;
-
-	mdp_ui_vectors[0].ab = 2000000000;
-	mdp_ui_vectors[0].ib = 2000000000;
-	mdp_vga_vectors[0].ab = 2000000000;
-	mdp_vga_vectors[0].ib = 2000000000;
-	mdp_720p_vectors[0].ab = 2000000000;
-	mdp_720p_vectors[0].ib = 2000000000;
-	mdp_1080p_vectors[0].ab = 2000000000;
-	mdp_1080p_vectors[0].ib = 2000000000;
-
-	mdp_pdata.mdp_core_clk_rate = 200000000;
-
-	for (i = 0; i < ARRAY_SIZE(mdp_core_clk_rate_table); i++)
-		mdp_core_clk_rate_table[i] = 200000000;
-
-}
-#endif
 
 void __init msm8960_mdp_writeback(struct memtype_reserve* reserve_table)
 {
@@ -1061,6 +998,34 @@ void __init msm8960_allocate_fb_region(void)
 			size, addr, __pa(addr));
 }
 
+/**
+ * Set MDP clocks to high frequency to avoid DSI underflow
+ * when using high resolution 1200x1920 WUXGA panels
+ */
+static void set_mdp_clocks_for_wuxga(void)
+{
+	int i;
+
+	mdp_ui_vectors[0].ab = 2000000000;
+	mdp_ui_vectors[0].ib = 2000000000;
+	mdp_vga_vectors[0].ab = 2000000000;
+	mdp_vga_vectors[0].ib = 2000000000;
+	mdp_720p_vectors[0].ab = 2000000000;
+	mdp_720p_vectors[0].ib = 2000000000;
+	mdp_1080p_vectors[0].ab = 2000000000;
+	mdp_1080p_vectors[0].ib = 2000000000;
+
+	mdp_pdata.mdp_core_clk_rate = 200000000;
+
+	for (i = 0; i < ARRAY_SIZE(mdp_core_clk_rate_table); i++)
+		mdp_core_clk_rate_table[i] = 200000000;
+
+	if (hdmi_is_primary) {
+		dtv_bus_def_vectors[0].ab = 2000000000;
+		dtv_bus_def_vectors[0].ib = 2000000000;
+	}
+}
+
 void __init msm8960_set_display_params(char *prim_panel, char *ext_panel)
 {
 	int disable_splash = 0;
@@ -1084,6 +1049,13 @@ void __init msm8960_set_display_params(char *prim_panel, char *ext_panel)
 			pr_debug("HDMI is the primary display by"
 				" boot parameter\n");
 			hdmi_is_primary = 1;
+			set_mdp_clocks_for_wuxga();
+		}
+		if (!strncmp((char *)msm_fb_pdata.prim_panel_name,
+				MIPI_VIDEO_TOSHIBA_WUXGA_PANEL_NAME,
+				strnlen(MIPI_VIDEO_TOSHIBA_WUXGA_PANEL_NAME,
+					PANEL_NAME_MAX_LEN))) {
+			set_mdp_clocks_for_wuxga();
 		}
 	}
 	if (strnlen(ext_panel, PANEL_NAME_MAX_LEN)) {
