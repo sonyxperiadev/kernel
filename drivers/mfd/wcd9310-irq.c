@@ -97,7 +97,7 @@ enum tabla_pm_state tabla_pm_cmpxchg(struct tabla *tabla, enum tabla_pm_state o,
 }
 EXPORT_SYMBOL_GPL(tabla_pm_cmpxchg);
 
-void tabla_lock_sleep(struct tabla *tabla)
+bool tabla_lock_sleep(struct tabla *tabla)
 {
 	enum tabla_pm_state os;
 
@@ -108,10 +108,12 @@ void tabla_lock_sleep(struct tabla *tabla)
 	 * so need to embrace wlock_holders with mutex.
 	 */
 	mutex_lock(&tabla->pm_lock);
-	if (tabla->wlock_holders++ == 0)
+	if (tabla->wlock_holders++ == 0) {
+		pr_debug("%s: holding wake lock\n", __func__);
 		wake_lock(&tabla->wlock);
+	}
 	mutex_unlock(&tabla->pm_lock);
-	while (!wait_event_timeout(tabla->pm_wq,
+	if (!wait_event_timeout(tabla->pm_wq,
 			((os = tabla_pm_cmpxchg(tabla, TABLA_PM_SLEEPABLE,
 						TABLA_PM_AWAKE)) ==
 						    TABLA_PM_SLEEPABLE ||
@@ -120,9 +122,12 @@ void tabla_lock_sleep(struct tabla *tabla)
 		pr_err("%s: system didn't resume within 5000ms, state %d, "
 		       "wlock %d\n", __func__, tabla->pm_state,
 		       tabla->wlock_holders);
-		WARN_ON_ONCE(1);
+		WARN_ON(1);
+		tabla_unlock_sleep(tabla);
+		return false;
 	}
 	wake_up_all(&tabla->pm_wq);
+	return true;
 }
 EXPORT_SYMBOL_GPL(tabla_lock_sleep);
 
@@ -131,6 +136,7 @@ void tabla_unlock_sleep(struct tabla *tabla)
 	mutex_lock(&tabla->pm_lock);
 	if (--tabla->wlock_holders == 0) {
 		tabla->pm_state = TABLA_PM_SLEEPABLE;
+		pr_debug("%s: releasing wake lock\n", __func__);
 		wake_unlock(&tabla->wlock);
 	}
 	mutex_unlock(&tabla->pm_lock);
@@ -163,7 +169,10 @@ static irqreturn_t tabla_irq_thread(int irq, void *data)
 	u8 status[TABLA_NUM_IRQ_REGS];
 	int i;
 
-	tabla_lock_sleep(tabla);
+	if (unlikely(tabla_lock_sleep(tabla) == false)) {
+		dev_err(tabla->dev, "Failed to hold suspend\n");
+		return IRQ_NONE;
+	}
 	ret = tabla_bulk_read(tabla, TABLA_A_INTR_STATUS0,
 			       TABLA_NUM_IRQ_REGS, status);
 	if (ret < 0) {
