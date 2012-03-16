@@ -40,6 +40,10 @@
 #include "csl_arm2sp.h"
 #include "csl_vpu.h"
 #include "audio_trace.h"
+#include "memory.h"
+#include "brcm_rdb_sysmap.h"
+#include "brcm_rdb_cph_cfifo.h"
+#include "brcm_rdb_cph_aadmac.h"
 
 AP_SharedMem_t *vp_shared_mem;
 
@@ -53,6 +57,8 @@ static MainAMRStatusCB_t MainAMRStatusHandler = NULL;
 static VoIPStatusCB_t VoIPStatusHandler = NULL;
 static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 static AudioEnableDoneStatusCB_t AudioEnableDoneHandler = NULL;
+
+static void Dump_Caph_regs(void);
 
 /*********************************************************************/
 /**
@@ -328,6 +334,7 @@ void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t
 void AP_ProcessStatus(void)
 {
 	VPStatQ_t status_msg;
+	static UInt32 ec28_err_count;
 
 	while (VPSHAREDMEM_ReadStatusQ(&status_msg)) {
 		switch (status_msg.status) {
@@ -466,20 +473,45 @@ void AP_ProcessStatus(void)
 
 		case VP_STATUS_AUDIO_ENABLE_DONE:
 			{
+				ec28_err_count = 0;
 				if (AudioEnableDoneHandler != NULL) {
 					AudioEnableDoneHandler(status_msg.arg0);
 				} else {
 					aTrace(LOG_AUDIO_DSP,
-					       "AP DSP Interrupt:"
-					       "AudioEnableDoneHandler"
-					       "is not registered");
+						"AP DSP Interrupt:"
+						"AudioEnableDoneHandler"
+						"is not registered");
+				}
+				break;
+			}
+
+		case 0xec28:
+			{
+				unsigned int *base_addr;
+				base_addr =
+					((volatile unsigned int *)(
+					HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR)));
+				aError("ERROR: Spkr AADMAC's HW_RDY bit not ");
+				aError("set when Mic AADMAC int comes.\n");
+				aError("Spkr_AADMAC_SR_1 = 0x%04x%04x\n",
+					status_msg.arg0, status_msg.arg1);
+				aError("Spkr_AADMAC_CR_2 = 0x%04x%04x\n",
+					status_msg.arg2, status_msg.arg3);
+				aError("CPH_AADMAC_CH12_AADMAC_SR_1= 0x%08x\n",
+					base_addr[
+					CPH_AADMAC_CH12_AADMAC_SR_1_OFFSET>>2]);
+				ec28_err_count++;
+				if (ec28_err_count > 0) {
+					Dump_Caph_regs();
+					ec28_err_count = 0;
+					BUG();
 				}
 				break;
 			}
 
 		default:
 			aTrace(LOG_AUDIO_DSP,
-			       "AP DSP Interrupt:" "Unknown Status received");
+				"AP DSP Interrupt:" "Unknown Status received");
 
 			break;
 
@@ -511,4 +543,410 @@ UInt32 *AUDIO_Return_IHF_48kHz_buffer_base_address(void)
 	ap_shared_mem_ptr = DSPDRV_GetPhysicalSharedMemoryAddress();
 
 	return &ap_shared_mem_ptr->shared_aadmac_spkr_low[0];
+}
+
+void Dump_Caph_regs(void)
+{
+	unsigned int *base_addr;
+
+	base_addr = ((volatile unsigned int *)(
+		    HW_IO_PHYS_TO_VIRT(CFIFO_BASE_ADDR)));
+	aError("CFIFO Regs:\n");
+	aError("===========\n");
+	aError("CPH_CFIFO_CH1_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH1_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH2_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH2_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH3_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH3_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH4_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH4_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH5_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH5_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH6_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH6_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH7_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH7_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH8_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH8_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH9_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH9_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH10_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH10_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH11_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH11_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH12_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH12_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH13_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH13_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH14_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH14_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH15_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH15_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CH16_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CH16_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CTL_1			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CTL_1_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CTL_2			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CTL_2_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CTL_3			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CTL_3_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CTL_4			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CTL_4_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CTL_5			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CTL_5_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CTL_6			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CTL_6_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CTL_7			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CTL_7_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CTL_8			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CTL_8_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_1			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_1_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_1			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_1_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_2			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_2_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_2			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_2_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_3			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_3_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_3			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_3_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_4			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_4_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_4			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_4_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_5			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_5_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_5			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_5_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_6			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_6_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_6			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_6_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_7			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_7_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_7			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_7_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_8			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_8_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_8			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_8_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_9			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_9_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_9			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_9_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_10			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_10_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_10			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_10_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_11			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_11_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_11			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_11_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_12			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_12_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_12			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_12_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_13			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_13_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_13			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_13_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_14			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_14_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_14			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_14_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_15			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_15_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_15			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_15_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CR_16			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CR_16_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_SR_16			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_SR_16_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_ARB_CTL_1			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_ARB_CTL_1_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_ARB_CTL_2			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_ARB_CTL_2_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_ARB_CTL_3			= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_ARB_CTL_3_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH1	= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH1_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH2	= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH2_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH3	= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH3_OFFSET>>2]);
+	aError("CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH4	= 0x%08x\n",
+		base_addr[CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH4_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH1_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH1_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH2_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH2_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH3_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH3_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH4_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH4_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH5_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH5_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH6_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH6_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH7_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH7_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH8_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH8_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH9_PADDR			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH9_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH10_PADDR		= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH10_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH11_PADDR		= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH11_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH12_PADDR		= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH12_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH13_PADDR		= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH13_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH14_PADDR		= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH14_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH15_PADDR		= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH15_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CH16_PADDR		= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CH16_PADDR_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CTL_1			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CTL_1_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CTL_2			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CTL_2_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CTL_3			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CTL_3_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CTL_4			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CTL_4_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CTL_5			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CTL_5_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CTL_6			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CTL_6_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CTL_7			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CTL_7_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CTL_8			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CTL_8_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_1			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_1_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_1			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_1_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_2			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_2_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_2			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_2_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_3			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_3_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_3			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_3_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_4			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_4_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_4			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_4_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_5			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_5_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_5			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_5_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_6			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_6_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_6			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_6_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_7			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_7_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_7			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_7_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_8			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_8_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_8			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_8_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_9			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_9_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_9			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_9_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_10			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_10_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_10			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_10_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_11			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_11_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_11			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_11_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_12			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_12_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_12			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_12_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_13			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_13_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_13			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_13_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_14			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_14_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_14			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_14_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_15			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_15_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_15			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_15_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CR_16			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CR_16_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_SR_16			= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_SR_16_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_ARB_CTL_1		= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_ARB_CTL_1_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_ARB_CTL_2		= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_ARB_CTL_2_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_ARB_CTL_3		= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_ARB_CTL_3_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH1	= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH1_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH2	= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH2_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH3	= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH3_OFFSET>>2]);
+	aError("CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH4	= 0x%08x\n",
+		base_addr[CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH4_OFFSET>>2]);
+
+	base_addr = ((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR)));
+	aError("AADMAC Regs:\n");
+	aError("============\n");
+	aError("CPH_AADMAC_CH1_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH1_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH1_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH1_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH1_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH1_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH2_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH2_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH2_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH2_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH2_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH2_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH3_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH3_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH3_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH3_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH3_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH3_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH4_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH4_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH4_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH4_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH4_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH4_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH5_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH5_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH5_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH5_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH5_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH5_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH6_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH6_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH6_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH6_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH6_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH6_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH7_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH7_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH7_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH7_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH7_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH7_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH8_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH8_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH8_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH8_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH8_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH8_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH9_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH9_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH9_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH9_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH9_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH9_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH10_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH10_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH10_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH10_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH10_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH10_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH11_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH11_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH11_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH11_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH11_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH11_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH12_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH12_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH12_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH12_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH12_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH12_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH13_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH13_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH13_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH13_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH13_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH13_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH14_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH14_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH14_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH14_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH14_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH14_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH15_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH15_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH15_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH15_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH15_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH15_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH16_AADMAC_CR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH16_AADMAC_CR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH16_AADMAC_CR_2		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH16_AADMAC_CR_2_OFFSET>>2]);
+	aError("CPH_AADMAC_CH16_AADMAC_SR_1		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH16_AADMAC_SR_1_OFFSET>>2]);
+	aError("CPH_AADMAC_CH1_AADMAC_TS		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH1_AADMAC_TS_OFFSET>>2]);
+	aError("CPH_AADMAC_CH2_AADMAC_TS		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH2_AADMAC_TS_OFFSET>>2]);
+	aError("CPH_AADMAC_CH3_AADMAC_TS		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH3_AADMAC_TS_OFFSET>>2]);
+	aError("CPH_AADMAC_CH4_AADMAC_TS		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH4_AADMAC_TS_OFFSET>>2]);
+	aError("CPH_AADMAC_CH1_2_EXTENDED_WRAP		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH1_2_EXTENDED_WRAP_OFFSET>>2]);
+	aError("CPH_AADMAC_CH1_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH1_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH2_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH2_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH3_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH3_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH4_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH4_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH5_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH5_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH6_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH6_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH7_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH7_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH8_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH8_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH9_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH9_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH10_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH10_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH11_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH11_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH12_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH12_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH13_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH13_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH14_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH14_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH15_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH15_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_CH16_AADMAC_CR_3		= 0x%08x\n",
+		base_addr[CPH_AADMAC_CH16_AADMAC_CR_3_OFFSET>>2]);
+	aError("CPH_AADMAC_AADMAC_GCR_1			= 0x%08x\n",
+		base_addr[CPH_AADMAC_AADMAC_GCR_1_OFFSET>>2]);
 }
