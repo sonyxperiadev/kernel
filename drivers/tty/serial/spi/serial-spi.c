@@ -47,13 +47,12 @@ the GPL, without Broadcom's express prior written consent.
 
 #define PAD_CTRL 0x35004800
 
-
 #define SERIAL_SPI_DEBUG
 #ifdef SERIAL_SPI_DEBUG
-    #define dbg_print(fmt, arg...) \
+#define dbg_print(fmt, arg...) \
 	printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
 #else
-    #define dbg_print(fmt, arg...)   do { } while (0)
+#define dbg_print(fmt, arg...)   do { } while (0)
 #endif
 
 /*
@@ -64,19 +63,17 @@ the GPL, without Broadcom's express prior written consent.
 /* forward reference */
 static void serial_spi_handle_mdm_rts(struct tty_spi_device *tty_spi_dev);
 static void serial_spi_insert_flip_string(struct tty_spi_device *tty_spi_dev,
-				    unsigned char *chars, size_t size);
+					  unsigned char *chars, size_t size);
 static int serial_spi_reset(struct tty_spi_device *tty_spi_dev);
 static int serial_spi_device_init(struct spi_master *master);
 
-
 /* local variables */
-static int spi_bpw = 32;		/* 8, 16 or 32 bit word length */
+static int spi_bpw = 32;	/* 8, 16 or 32 bit word length */
 static struct tty_driver *tty_spi_drv;
 static struct tty_spi_device *saved_tty_spi_dev;
 static struct device *spi_serial_dev;
 static struct lock_class_key tty_spi_key;
 static int tx_down;
-
 
 /**
  *	serial_spi_hangup		-	hang up an TTY SPI device
@@ -127,12 +124,15 @@ static int serial_spi_tiocmget(struct tty_struct *tty)
 	struct tty_spi_device *tty_spi_dev = tty->driver_data;
 
 	value =
-	(test_bit(TTY_SPI_RTS, &tty_spi_dev->signal_state) ? TIOCM_RTS : 0) |
-	(test_bit(TTY_SPI_DTR, &tty_spi_dev->signal_state) ? TIOCM_DTR : 0) |
-	(test_bit(TTY_SPI_CTS, &tty_spi_dev->signal_state) ? TIOCM_CTS : 0) |
-	(test_bit(TTY_SPI_DSR, &tty_spi_dev->signal_state) ? TIOCM_DSR : 0) |
-	(test_bit(TTY_SPI_DCD, &tty_spi_dev->signal_state) ? TIOCM_CAR : 0) |
-	(test_bit(TTY_SPI_RI, &tty_spi_dev->signal_state) ? TIOCM_RNG : 0);
+	    (test_bit(TTY_SPI_RTS, &tty_spi_dev->signal_state) ? TIOCM_RTS : 0)
+	    | (test_bit(TTY_SPI_DTR, &tty_spi_dev->signal_state) ? TIOCM_DTR :
+	       0) | (test_bit(TTY_SPI_CTS,
+			      &tty_spi_dev->
+			      signal_state) ? TIOCM_CTS : 0) |
+	    (test_bit(TTY_SPI_DSR, &tty_spi_dev->signal_state) ? TIOCM_DSR : 0)
+	    | (test_bit(TTY_SPI_DCD, &tty_spi_dev->signal_state) ? TIOCM_CAR :
+	       0) | (test_bit(TTY_SPI_RI,
+			      &tty_spi_dev->signal_state) ? TIOCM_RNG : 0);
 	return value;
 }
 
@@ -147,7 +147,7 @@ static int serial_spi_tiocmget(struct tty_struct *tty)
  *
  */
 static int serial_spi_tiocmset(struct tty_struct *tty,
-			    unsigned int set, unsigned int clear)
+			       unsigned int set, unsigned int clear)
 {
 	struct tty_spi_device *tty_spi_dev = tty->driver_data;
 
@@ -203,17 +203,18 @@ static void serial_spi_close(struct tty_struct *tty, struct file *filp)
  *	taken from the incoming header.
  */
 static int serial_spi_decode_spi_header(unsigned char *buffer, int *length,
-			unsigned char *more, unsigned char *received_cts)
+					unsigned char *more,
+					unsigned char *received_cts)
 {
 	u16 h1;
 	u16 h2;
 
-	h1 = *(u16 *)buffer;
-	h2 = *(u16 *) (buffer+2);
+	h1 = *(u16 *) buffer;
+	h2 = *(u16 *) (buffer + 2);
 	/* dbg_print("h1 %x h2 %x\n",h1,h2); */
-	if(h1 != 0x7E7F || h2 != 0xAA55)
+	if (h1 != 0x7E7F || h2 != 0xAA55)
 		return TTY_SPI_HEADER_F;
-	*length = buffer[4] + (buffer[5]<<8);
+	*length = buffer[4] + (buffer[5] << 8);
 	*more = 0;
 	*received_cts = 0;
 	return 0;
@@ -240,8 +241,8 @@ static void serial_spi_setup_spi_header(unsigned char *txbuffer, int tx_count,
 	txbuffer[5] = ((tx_count >> 8)) & 0xFF;
 	txbuffer[6] = 0;
 	txbuffer[7] = 0;
-	*(u32 *)(txbuffer+8) = 0;
-	*(u32 *)(txbuffer+12) = 0;
+	*(u32 *) (txbuffer + 8) = 0;
+	*(u32 *) (txbuffer + 12) = 0;
 }
 
 /**
@@ -297,42 +298,42 @@ static int serial_spi_prepare_tx_buffer(struct tty_spi_device *tty_spi_dev)
 		/* data to mux -- see if there's room for it */
 		temp_count = min(queue_length, TTY_SPI_PAYLOAD_SIZE);
 		temp_count = kfifo_out_locked(&tty_spi_dev->tx_fifo,
-				tx_buffer, temp_count,
-				&tty_spi_dev->fifo_lock);
+					      tx_buffer, temp_count,
+					      &tty_spi_dev->fifo_lock);
 
 		/* update buffer pointer and data count in message */
 		/* dbg_print("temp_count=%d\n",temp_count); */
 		tx_buffer += temp_count;
 		tx_count += temp_count;
 		if (temp_count == queue_length)
-				/* poke port to get more data */
+			/* poke port to get more data */
 			serial_spi_wakeup_serial(tty_spi_dev);
-		else /* more data in port, use next SPI message */
-				tty_spi_dev->spi_more = 1;
+		else		/* more data in port, use next SPI message */
+			tty_spi_dev->spi_more = 1;
 	}
 	/* have data and info for header -- set up SPI header in buffer */
 	/* spi header needs payload size, not entire buffer size */
 	temp_count = tx_count;
 	if (tx_count % 64)
-		tx_count = ((tx_count>>6) + 1) << 6;   /* 64 bytes alignment */ 
+		tx_count = ((tx_count >> 6) + 1) << 6;	/* 64 bytes alignment */
 	serial_spi_setup_spi_header(tty_spi_dev->tx_buffer,
-					temp_count-TTY_SPI_HEADER_OVERHEAD,
-					tty_spi_dev->spi_more);
+				    temp_count - TTY_SPI_HEADER_OVERHEAD,
+				    tty_spi_dev->spi_more);
 	return tx_count;
 }
 
-
 static void serial_spi_print_gpio(struct tty_spi_device *tty_spi_dev)
 {
-	printk(KERN_ERR"Mdm_rdy gpio%d value =%d\n", tty_spi_dev->gpio.mdm_rdy, 
-		gpio_get_value(tty_spi_dev->gpio.mdm_rdy));
-	printk(KERN_ERR"Mdm_rts gpio%d value =%d\n", tty_spi_dev->gpio.mdm_rts, 
-		gpio_get_value(tty_spi_dev->gpio.mdm_rts));
-	printk(KERN_ERR"Ap_rdy gpio%d value =%d\n", tty_spi_dev->gpio.ap_rdy, 
-		gpio_get_value(tty_spi_dev->gpio.ap_rdy));
-	printk(KERN_ERR"Ap_rts gpio%d value =%d\n", tty_spi_dev->gpio.ap_rts, 
-		gpio_get_value(tty_spi_dev->gpio.ap_rts));
+	printk(KERN_ERR "Mdm_rdy gpio%d value =%d\n", tty_spi_dev->gpio.mdm_rdy,
+	       gpio_get_value(tty_spi_dev->gpio.mdm_rdy));
+	printk(KERN_ERR "Mdm_rts gpio%d value =%d\n", tty_spi_dev->gpio.mdm_rts,
+	       gpio_get_value(tty_spi_dev->gpio.mdm_rts));
+	printk(KERN_ERR "Ap_rdy gpio%d value =%d\n", tty_spi_dev->gpio.ap_rdy,
+	       gpio_get_value(tty_spi_dev->gpio.ap_rdy));
+	printk(KERN_ERR "Ap_rts gpio%d value =%d\n", tty_spi_dev->gpio.ap_rts,
+	       gpio_get_value(tty_spi_dev->gpio.ap_rts));
 }
+
 /**
  *	serial_spi_write		-	line discipline write
  *	@tty: our tty device
@@ -344,7 +345,7 @@ static void serial_spi_print_gpio(struct tty_spi_device *tty_spi_dev)
  *	this will commence I/O
  */
 static int serial_spi_write(struct tty_struct *tty, const unsigned char *buf,
-			 int count)
+			    int count)
 {
 	struct tty_spi_device *tty_spi_dev = tty->driver_data;
 
@@ -353,53 +354,53 @@ static int serial_spi_write(struct tty_struct *tty, const unsigned char *buf,
 	int i;
 	int tx_count;
 	if (!test_bit(TTY_SPI_STATE_PIN_MUX_SET, &(tty_spi_dev->flags))) {
-		 /*hack to config pin mux. CP is hardcoding the pin Mux*/
-		 vaddr = ioremap(PAD_CTRL, 1024);
+		/*hack to config pin mux. CP is hardcoding the pin Mux */
+		vaddr = ioremap(PAD_CTRL, 1024);
 
 		dbg_print("Before setting......\n");
-		for (i=0; i<9; i++) {
-			dbg_print(" Address %p   %x\n", vaddr + 0xE8 + i*4, 
-				readl(vaddr + 0xE8 + i*4));
-		}
-		/*write password*/
+		for (i = 0; i < 9; i++)
+			dbg_print(" Address %p   %x\n", vaddr + 0xE8 + i * 4,
+				  readl(vaddr + 0xE8 + i * 4));
+		/*write password */
 		writel(0xa5a501, vaddr + 0x7F0);
 		/*unlock config register */
 		writel(0, vaddr + 0x784);
 		writel(0, vaddr + 0x788);
-		for (i=0; i<9; i++){
-			writel(0x443, vaddr + 0xE8 + i*4);
-		}
+		for (i = 0; i < 9; i++)
+			writel(0x443, vaddr + 0xE8 + i * 4);
 		dbg_print("After setting......\n");
-		for (i=0; i<9; i++){
-			dbg_print(" Address %p   %x\n", vaddr + 0xE8 + i*4, 
-				readl(vaddr + 0xE8 + i*4));
+		for (i = 0; i < 9; i++) {
+			dbg_print(" Address %p   %x\n", vaddr + 0xE8 + i * 4,
+				  readl(vaddr + 0xE8 + i * 4));
 		}
 		set_bit(TTY_SPI_STATE_PIN_MUX_SET, &(tty_spi_dev->flags));
 #ifdef RHEA_LOOPBACK_TEST
 		gpio_set_value(tty_spi_dev->gpio.ap_alive, 1);
 		/* simulation of modem rdy */
 		gpio_set_value(tty_spi_dev->gpio.mdm_alive, 1);
-		/* simulation of modem rts */		
+		/* simulation of modem rts */
 		sema_init(&tty_spi_dev->spi_semaphore, 1);
 #endif
 		serial_spi_print_gpio(tty_spi_dev);
 	}
 
 	/*
-	printk(KERN_ERR"Tx Down semaphore, %d\n", tty_spi_dev->spi_semaphore.count);
-	*/
+	printk(KERN_ERR"Tx Down semaphore, %d\n",
+		tty_spi_dev->spi_semaphore.count);
+	 */
 	down(&tty_spi_dev->spi_semaphore);
 	/*
-	printk(KERN_ERR"TX down done, %d\n", tty_spi_dev->spi_semaphore.count);
-	*/
-	if (gpio_get_value(tty_spi_dev->gpio.mdm_rdy) && 
-		gpio_get_value(tty_spi_dev->gpio.mdm_rts)) {
+	printk(KERN_ERR"TX down done, %d\n",
+		tty_spi_dev->spi_semaphore.count);
+	 */
+	if (gpio_get_value(tty_spi_dev->gpio.mdm_rdy) &&
+	    gpio_get_value(tty_spi_dev->gpio.mdm_rts)) {
 		tx_down = 1;
 		/* printk(KERN_ERR"schedule send\n"); */
 		set_bit(TTY_SPI_TX_FC, &tty_spi_dev->signal_state);
-		tx_count = kfifo_in_locked(&tty_spi_dev->tx_fifo, 
-					tmp_buf, count,
-					&tty_spi_dev->fifo_lock);
+		tx_count = kfifo_in_locked(&tty_spi_dev->tx_fifo,
+					   tmp_buf, count,
+					   &tty_spi_dev->fifo_lock);
 		gpio_set_value(tty_spi_dev->gpio.ap_rts, 1);
 #ifdef RHEA_LOOPBACK_TEST
 		gpio_set_value(tty_spi_dev->gpio.ap_alive, 0);
@@ -408,19 +409,19 @@ static int serial_spi_write(struct tty_struct *tty, const unsigned char *buf,
 		return tx_count;
 	}
 	/*
-	printk(KERN_ERR"up semaphore for not sending.\n");
-	*/
+	   printk(KERN_ERR"up semaphore for not sending.\n");
+	 */
 	up(&tty_spi_dev->spi_semaphore);
 	/*
-	printk(KERN_ERR"semaphore, %d\n", tty_spi_dev->spi_semaphore.count);
-	*/
+	   printk(KERN_ERR"semaphore, %d\n", tty_spi_dev->spi_semaphore.count);
+	 */
 	return 0;
 }
 static int serial_spi_read(struct tty_spi_device *tty_spi_dev)
 {
-	
+
 	unsigned char *tx_buffer;
-    	
+
 	tx_buffer = tty_spi_dev->tx_buffer;
 #ifndef RHEA_LOOPBACK_TEST
 	memset(tx_buffer, 0, TTY_SPI_TRANSFER_SIZE);
@@ -451,7 +452,7 @@ static int serial_spi_write_room(struct tty_struct *tty)
 static int serial_spi_chars_in_buffer(struct tty_struct *tty)
 {
 	struct tty_spi_device *tty_spi_dev = tty->driver_data;
-	
+
 	return kfifo_len(&tty_spi_dev->tx_fifo);
 }
 
@@ -479,7 +480,7 @@ static void serial_spi_hangup(struct tty_struct *tty)
 static int tty_spi_port_activate(struct tty_port *port, struct tty_struct *tty)
 {
 	struct tty_spi_device *tty_spi_dev =
-		container_of(port, struct tty_spi_device, tty_port);
+	    container_of(port, struct tty_spi_device, tty_port);
 
 	/* clear any old data; can't do this in 'close' */
 	kfifo_reset(&tty_spi_dev->tx_fifo);
@@ -503,7 +504,7 @@ static int tty_spi_port_activate(struct tty_port *port, struct tty_struct *tty)
 static void tty_spi_port_shutdown(struct tty_port *port)
 {
 	struct tty_spi_device *tty_spi_dev =
-		container_of(port, struct tty_spi_device, tty_port);
+	    container_of(port, struct tty_spi_device, tty_port);
 	clear_bit(TTY_SPI_STATE_TIMER_PENDING, &tty_spi_dev->flags);
 	tasklet_kill(&tty_spi_dev->io_work_tasklet);
 }
@@ -534,7 +535,7 @@ static const struct tty_operations tty_spi_serial_ops = {
  *	not the discard the data.
  */
 static void serial_spi_insert_flip_string(struct tty_spi_device *tty_spi_dev,
-				    unsigned char *chars, size_t size)
+					  unsigned char *chars, size_t size)
 {
 	struct tty_struct *tty = tty_port_tty_get(&tty_spi_dev->tty_port);
 	if (!tty)
@@ -555,7 +556,7 @@ static void serial_spi_complete(void *spi_dev)
 {
 	struct tty_spi_device *tty_spi_dev = spi_dev;
 	/* struct tty_struct *tty;
-	struct tty_ldisc *ldisc = NULL; */
+	   struct tty_ldisc *ldisc = NULL; */
 	int length;
 	int actual_length;
 	unsigned char more;
@@ -566,13 +567,14 @@ static void serial_spi_complete(void *spi_dev)
 	int rx = 0;
 
 	/* dbg_print("In serial spi complete\n");  */
-	if (!tty_spi_dev->spi_msg.status && test_bit(TTY_SPI_RX_FC, 
-										&tty_spi_dev->signal_state)) {
+	if (!tty_spi_dev->spi_msg.status && test_bit(TTY_SPI_RX_FC,
+						     &tty_spi_dev->
+						     signal_state)) {
 		rx = 1;
 		/* check header validity, get comm flags */
-		decode_result = serial_spi_decode_spi_header(
-				tty_spi_dev->rx_buffer,
-				&length, &more, &cts);
+		decode_result =
+		    serial_spi_decode_spi_header(tty_spi_dev->rx_buffer,
+						 &length, &more, &cts);
 		if (decode_result == TTY_SPI_HEADER_F) {
 			dev_dbg(&tty_spi_dev->spi_dev->dev,
 				"ignore input: invalid header F");
@@ -582,26 +584,26 @@ static void serial_spi_complete(void *spi_dev)
 		tty_spi_dev->spi_slave_cts = cts;
 		gpio_set_value(tty_spi_dev->gpio.ap_rdy, 0);
 		actual_length = min((unsigned int)length,
-					tty_spi_dev->spi_msg.actual_length);
-		serial_spi_insert_flip_string(
-			tty_spi_dev,
-			tty_spi_dev->rx_buffer + TTY_SPI_HEADER_OVERHEAD,
-			(size_t)actual_length);
+				    tty_spi_dev->spi_msg.actual_length);
+		serial_spi_insert_flip_string(tty_spi_dev,
+					      tty_spi_dev->rx_buffer +
+					      TTY_SPI_HEADER_OVERHEAD,
+					      (size_t) actual_length);
 #ifdef RHEA_TTY_SPI_DEBUG
-		dbg_print("rx actual length: %d frame length %d\n", 
-					actual_length, length);
+		dbg_print("rx actual length: %d frame length %d\n",
+			  actual_length, length);
 #endif
 		/*
-		for(srdy=0; srdy<actual_length; srdy++){
-			dbg_print(" %x ", tty_spi_dev->rx_buffer[srdy+
-									TTY_SPI_HEADER_OVERHEAD]);
-		}*/
+		   for(srdy=0; srdy<actual_length; srdy++){
+		   dbg_print(" %x ", tty_spi_dev->rx_buffer[srdy+
+		   TTY_SPI_HEADER_OVERHEAD]);
+		   } */
 		if (actual_length < length)
 			schedule_work(&tty_spi_dev->io_wq);
-			/* tasklet_schedule(&tty_spi_dev->io_work_tasklet); */
+		/* tasklet_schedule(&tty_spi_dev->io_work_tasklet); */
 	} else {
 		dev_dbg(&tty_spi_dev->spi_dev->dev, "SPI transfer error %d",
-		       tty_spi_dev->spi_msg.status);
+			tty_spi_dev->spi_msg.status);
 	}
 
 complete_exit:
@@ -611,68 +613,70 @@ complete_exit:
 	}
 
 	clear_bit(TTY_SPI_STATE_IO_IN_PROGRESS, &(tty_spi_dev->flags));
-	
+
 	kfifo_reset(&tty_spi_dev->tx_fifo);
 	queue_length = kfifo_len(&tty_spi_dev->tx_fifo);
 	/*
-	dbg_print("complete is done = %d state = %x\n", 
-			queue_length, (unsigned int)tty_spi_dev->signal_state);
+	dbg_print("complete is done = %d state = %x\n",
+	queue_length, (unsigned int)tty_spi_dev->signal_state);
 
-	tty = tty_port_tty_get(&tty_spi_dev->tty_port);
-	if (tty) {
-		ldisc = tty_ldisc_ref(tty);
-		if (ldisc) {
-			ldisc->ops->write_wakeup(tty);
-			tty_ldisc_deref(ldisc);
-		}
-		tty_kref_put(tty);
-	} */
-	
+	   tty = tty_port_tty_get(&tty_spi_dev->tty_port);
+	   if (tty) {
+	   ldisc = tty_ldisc_ref(tty);
+	   if (ldisc) {
+	   ldisc->ops->write_wakeup(tty);
+	   tty_ldisc_deref(ldisc);
+	   }
+	   tty_kref_put(tty);
+	   } */
+
 	/* serial_spi_reset(tty_spi_dev); */
-	if(rx == 0 && tx_down ){
+	if (rx == 0 && tx_down) {
 		/*
-		printk(KERN_ERR"up semaphore after tx complete\n");
-		printk(KERN_ERR"semaphore, %d\n", tty_spi_dev->spi_semaphore.count);   
-		*/
+		   printk(KERN_ERR"up semaphore after tx complete\n");
+		   printk(KERN_ERR"semaphore, %d\n",
+			tty_spi_dev->spi_semaphore.count);
+		 */
 		gpio_set_value(tty_spi_dev->gpio.ap_rts, 0);
 		clear_bit(TTY_SPI_TX_FC, &tty_spi_dev->signal_state);
 #ifdef RHEA_LOOPBACK_TEST
-		gpio_set_value(tty_spi_dev->gpio.ap_alive, 1);       /* simulation of modem rdy */
-		gpio_set_value(tty_spi_dev->gpio.mdm_alive, 0);      /* simulation of modem rts */
+		gpio_set_value(tty_spi_dev->gpio.ap_alive, 1);
+		/* simulation of modem rdy */
+		gpio_set_value(tty_spi_dev->gpio.mdm_alive, 0);
+		/* simulation of modem rts */
 #endif
 		up(&tty_spi_dev->spi_semaphore);
-	}else
-	{
+	} else {
 		gpio_set_value(tty_spi_dev->gpio.ap_rdy, 1);
 		clear_bit(TTY_SPI_RX_FC, &tty_spi_dev->signal_state);
 #ifdef RHEA_LOOPBACK_TEST
-		gpio_set_value(tty_spi_dev->gpio.ap_alive, 1);       /* simulation of modem rdy */
-		gpio_set_value(tty_spi_dev->gpio.mdm_alive, 1);      /* simulation of modem rts */
+		gpio_set_value(tty_spi_dev->gpio.ap_alive, 1);
+		/* simulation of modem rdy */
+		gpio_set_value(tty_spi_dev->gpio.mdm_alive, 1);
+		/* simulation of modem rts */
 #endif
 	}
-	
+
 	/*
-	if (test_and_clear_bit(TTY_SPI_STATE_IO_READY, &tty_spi_dev->flags))
-		tasklet_schedule(&tty_spi_dev->io_work_tasklet);
-	else {
-		if (more || tty_spi_dev->spi_more || queue_length > 0 ||
-			local_write_pending){
-			tasklet_schedule(&tty_spi_dev->io_work_tasklet);
-		}else {
-		    tty = tty_port_tty_get(&tty_spi_dev->tty_port);
-			if (tty) {
-				ldisc = tty_ldisc_ref(tty);
-				if (ldisc) {
-					ldisc->ops->write_wakeup(tty);
-					tty_ldisc_deref(ldisc);
-				}
-				tty_kref_put(tty);
-			}
-		}
-	} */
+	   if (test_and_clear_bit(TTY_SPI_STATE_IO_READY, &tty_spi_dev->flags))
+	   tasklet_schedule(&tty_spi_dev->io_work_tasklet);
+	   else {
+	   if (more || tty_spi_dev->spi_more || queue_length > 0 ||
+	   local_write_pending){
+	   tasklet_schedule(&tty_spi_dev->io_work_tasklet);
+	   }else {
+	   tty = tty_port_tty_get(&tty_spi_dev->tty_port);
+	   if (tty) {
+	   ldisc = tty_ldisc_ref(tty);
+	   if (ldisc) {
+	   ldisc->ops->write_wakeup(tty);
+	   tty_ldisc_deref(ldisc);
+	   }
+	   tty_kref_put(tty);
+	   }
+	   }
+	   } */
 }
-
-
 
 /**
  *	tty_spi_spio_io_wq		-	I/O work queue
@@ -684,22 +688,27 @@ complete_exit:
 static void serial_spi_io_wq(struct work_struct *wq)
 {
 	int retval;
-	struct tty_spi_device *tty_spi_dev = container_of(wq, struct tty_spi_device, io_wq);
-	/*struct tty_spi_device *tty_spi_dev = (struct tty_spi_device *) data;*/
-	
-	if(!gpio_get_value(tty_spi_dev->gpio.mdm_rdy)|| !gpio_get_value(tty_spi_dev->gpio.mdm_rts)){
+	struct tty_spi_device *tty_spi_dev =
+	    container_of(wq, struct tty_spi_device, io_wq);
+	/*struct tty_spi_device *tty_spi_dev =
+		(struct tty_spi_device *) data; */
+
+	if (!gpio_get_value(tty_spi_dev->gpio.mdm_rdy)
+	    || !gpio_get_value(tty_spi_dev->gpio.mdm_rts)) {
 		if (tty_spi_dev->gpio.unack_srdy_int_nb > 0)
 			tty_spi_dev->gpio.unack_srdy_int_nb--;
-		if(test_bit(TTY_SPI_RX_FC, &tty_spi_dev->signal_state)){
+		if (test_bit(TTY_SPI_RX_FC, &tty_spi_dev->signal_state)) {
 			retval = serial_spi_read(tty_spi_dev);
 			/*
-			printk(KERN_ERR"down semaphore for rx, %d\n", tty_spi_dev->spi_semaphore.count);
-			*/
+			   printk(KERN_ERR"down semaphore for rx, %d\n",
+			   tty_spi_dev->spi_semaphore.count);
+			 */
 			down(&tty_spi_dev->spi_semaphore);
 			/*
-			printk(KERN_ERR"down semaphore done for rx, %d\n", tty_spi_dev->spi_semaphore.count);
-			*/
-		}else{
+			   printk(KERN_ERR"down semaphore done for rx, %d\n",
+			   tty_spi_dev->spi_semaphore.count);
+			 */
+		} else {
 			retval = serial_spi_prepare_tx_buffer(tty_spi_dev);
 #ifdef RHEA_TTY_SPI_DEBUG
 			dbg_print("Sending %d bytes to modem...\n", retval);
@@ -714,31 +723,32 @@ static void serial_spi_io_wq(struct work_struct *wq)
 		/* set up our spi transfer */
 		/* note len is BYTES, not transfers */
 		tty_spi_dev->spi_xfer.len = retval;
-		//tty_spi_dev->spi_xfer.cs_change = 0;
+		/*tty_spi_dev->spi_xfer.cs_change = 0;*/
 		tty_spi_dev->spi_xfer.delay_usecs = 0;
-		tty_spi_dev->spi_xfer.speed_hz = tty_spi_dev->spi_dev->max_speed_hz;
+		tty_spi_dev->spi_xfer.speed_hz =
+		    tty_spi_dev->spi_dev->max_speed_hz;
 		tty_spi_dev->spi_xfer.bits_per_word = spi_bpw;
 
 		tty_spi_dev->spi_xfer.tx_buf = tty_spi_dev->tx_buffer;
 		tty_spi_dev->spi_xfer.rx_buf = tty_spi_dev->rx_buffer;
 
-		spi_message_add_tail(&tty_spi_dev->spi_xfer, &tty_spi_dev->spi_msg);
-	
+		spi_message_add_tail(&tty_spi_dev->spi_xfer,
+				     &tty_spi_dev->spi_msg);
+
 		retval = spi_async(tty_spi_dev->spi_dev, &tty_spi_dev->spi_msg);
 		/*
-		dbg_print("After spi_async = %d", retval);
+		   dbg_print("After spi_async = %d", retval);
 
-		if (retval) {
-			clear_bit(TTY_SPI_STATE_IO_IN_PROGRESS,
-				  &tty_spi_dev->flags);
-			tasklet_schedule(&tty_spi_dev->io_work_tasklet);
-			return;
-		}
-		*/
+		   if (retval) {
+		   clear_bit(TTY_SPI_STATE_IO_IN_PROGRESS,
+		   &tty_spi_dev->flags);
+		   tasklet_schedule(&tty_spi_dev->io_work_tasklet);
+		   return;
+		   }
+		 */
 	} else
 		tty_spi_dev->write_pending = 1;
 }
-
 
 /**
  *	serial_spi_free_port	-	free up the tty side
@@ -764,22 +774,23 @@ static int serial_spi_create_port(struct tty_spi_device *tty_spi_dev)
 {
 	int ret = 0;
 	struct tty_port *pport = &tty_spi_dev->tty_port;
-   
+
 	spin_lock_init(&tty_spi_dev->fifo_lock);
 	lockdep_set_class_and_subclass(&tty_spi_dev->fifo_lock,
-		&tty_spi_key, 0);
+				       &tty_spi_key, 0);
 
 	if (kfifo_alloc(&tty_spi_dev->tx_fifo, TTY_SPI_FIFO_SIZE, GFP_KERNEL)) {
 		ret = -ENOMEM;
 		dbg_print("Allocate fifo error!!!!\n");
 		goto error_ret;
 	}
-       
+
 	tty_port_init(pport);
 	pport->ops = &tty_spi_port_ops;
 	tty_spi_dev->minor = TTY_SPI_TTY_ID;
-	tty_spi_dev->tty_dev = tty_register_device(tty_spi_drv, tty_spi_dev->minor,
-					       spi_serial_dev);
+	tty_spi_dev->tty_dev =
+	    tty_register_device(tty_spi_drv, tty_spi_dev->minor,
+				spi_serial_dev);
 	if (IS_ERR(tty_spi_dev->tty_dev)) {
 		dev_dbg(&tty_spi_dev->spi_dev->dev,
 			"%s: registering tty device failed", __func__);
@@ -790,7 +801,7 @@ static int serial_spi_create_port(struct tty_spi_device *tty_spi_dev)
 
 error_ret:
 	serial_spi_free_port(tty_spi_dev);
-	
+
 	return ret;
 }
 
@@ -798,28 +809,29 @@ error_ret:
  *	serial_spi_handle_mdm_rts		-	handle Modem RTS
  *	@tty_spi_dev: device handle Modem RTS
  *
- *	 
+ *
  */
 static void serial_spi_handle_mdm_rts(struct tty_spi_device *tty_spi_dev)
 {
-	if(!gpio_get_value(tty_spi_dev->gpio.mdm_rts)){     
+	if (!gpio_get_value(tty_spi_dev->gpio.mdm_rts)) {
 		/* dbg_print("In Handle mdm rts"); */
 		set_bit(TTY_SPI_RX_FC, &tty_spi_dev->signal_state);
 		gpio_set_value(tty_spi_dev->gpio.ap_rdy, 0);
 		schedule_work(&tty_spi_dev->io_wq);
-	}
-	else {
-		if( !tx_down ) return;
+	} else {
+		if (!tx_down)
+			return;
 		tx_down = 0;
 		/* printk("up semaphore from mdm rts\n"); */
 		up(&tty_spi_dev->spi_semaphore);
-		/* printk(KERN_ERR"semaphore, %d\n", tty_spi_dev->spi_semaphore.count); */
+		/* printk(KERN_ERR"semaphore, %d\n",
+			tty_spi_dev->spi_semaphore.count); */
 		set_bit(TTY_SPI_STATE_IO_READY, &tty_spi_dev->flags);
 	}
 }
 
 /**
- *	spi_mdm_rts_interrupt	-	mdm_rts 
+ *	spi_mdm_rts_interrupt	-	mdm_rts
  *	@irq: our IRQ number
  *	@dev: our tty_spi device
  *
@@ -831,22 +843,23 @@ static irqreturn_t spi_mdm_rts_interrupt(int irq, void *dev)
 	tty_spi_dev->gpio.unack_srdy_int_nb++;
 /*
 	dbg_print("In modem rts ISR\n");
-	dbg_print("Get MDM_RTS gpio%d value =%d\n",tty_spi_dev->gpio.mdm_rts, gpio_get_value(tty_spi_dev->gpio.mdm_rts));
-	//int val = gpio_get_value(tty_spi_dev->gpio.mdm_alive); 
-*/	
+	dbg_print("Get MDM_RTS gpio%d value =%d\n",tty_spi_dev->gpio.mdm_rts,
+		gpio_get_value(tty_spi_dev->gpio.mdm_rts));
+	//int val = gpio_get_value(tty_spi_dev->gpio.mdm_alive);
+*/
 	serial_spi_handle_mdm_rts(tty_spi_dev);
 	return IRQ_HANDLED;
 }
+
 /**
  *	serial_spi_handle_mdm_rts		-	handle Modem RTS
  *	@tty_spi_dev: device handle Modem RTS
  *
- *	 
  */
 static void serial_spi_handle_mdm_rdy(struct tty_spi_device *tty_spi_dev)
 {
-	     
-	if(!gpio_get_value(tty_spi_dev->gpio.mdm_rdy)){
+
+	if (!gpio_get_value(tty_spi_dev->gpio.mdm_rdy)) {
 		set_bit(TTY_SPI_TX_FC, &tty_spi_dev->signal_state);
 		schedule_work(&tty_spi_dev->io_wq);
 	}
@@ -855,30 +868,31 @@ static void serial_spi_handle_mdm_rdy(struct tty_spi_device *tty_spi_dev)
 			set_bit(TTY_SPI_TX_FC, &tty_spi_dev->signal_state);
 			dbg_print("In Handle mdm rdy 02");
 			tasklet_schedule(&tty_spi_dev->io_work_tasklet);
-		} */
-	//}
-	else {
+		}
+	}*/
+	else
 		set_bit(TTY_SPI_STATE_IO_READY, &tty_spi_dev->flags);
-	}
 }
+
 /**
- *	spi_mdm_rdy_interrupt	-	Modem RDY 
+ *	spi_mdm_rdy_interrupt	-	Modem RDY
  *	@irq: interrupt number
  *	@dev: our device pointer
  *
  *	The modem has enter RDY state. Check the GPIO
  *	line to see which.
  *
- *	 
  */
 static irqreturn_t spi_mdm_rdy_interrupt(int irq, void *dev)
 {
 	struct tty_spi_device *tty_spi_dev = dev;
 	/*
-	dbg_print("In modem rdy ISR\n");
-	dbg_print("Get MDM_RDY gpio%d value =%d\n",tty_spi_dev->gpio.mdm_rdy, gpio_get_value(tty_spi_dev->gpio.mdm_rdy));
-	*/ 
-    serial_spi_handle_mdm_rdy(tty_spi_dev);
+	   dbg_print("In modem rdy ISR\n");
+	   dbg_print("Get MDM_RDY gpio%d value =%d\n",
+				tty_spi_dev->gpio.mdm_rdy,
+				gpio_get_value(tty_spi_dev->gpio.mdm_rdy));
+	 */
+	serial_spi_handle_mdm_rdy(tty_spi_dev);
 	return IRQ_HANDLED;
 }
 
@@ -892,15 +906,15 @@ static void serial_spi_free_device(struct tty_spi_device *tty_spi_dev)
 {
 	serial_spi_free_port(tty_spi_dev);
 	/*
-	dma_free_coherent(&tty_spi_dev->spi_dev->dev,
-				TTY_SPI_TRANSFER_SIZE,
-				tty_spi_dev->tx_buffer,
-				tty_spi_dev->tx_bus);
-	dma_free_coherent(&tty_spi_dev->spi_dev->dev,
-				TTY_SPI_TRANSFER_SIZE,
-				tty_spi_dev->rx_buffer,
-				tty_spi_dev->rx_bus);
-	*/
+	   dma_free_coherent(&tty_spi_dev->spi_dev->dev,
+	   TTY_SPI_TRANSFER_SIZE,
+	   tty_spi_dev->tx_buffer,
+	   tty_spi_dev->tx_bus);
+	   dma_free_coherent(&tty_spi_dev->spi_dev->dev,
+	   TTY_SPI_TRANSFER_SIZE,
+	   tty_spi_dev->rx_buffer,
+	   tty_spi_dev->rx_bus);
+	 */
 	kfree(tty_spi_dev->rx_buffer);
 	kfree(tty_spi_dev->tx_buffer);
 }
@@ -923,8 +937,9 @@ static int serial_spi_reset(struct tty_spi_device *tty_spi_dev)
 	gpio_set_value(tty_spi_dev->gpio.ap_rts, 0);
 	gpio_set_value(tty_spi_dev->gpio.ap_rdy, 1);
 	/*
-	dbg_print("Aftre Clear AP_RTS pin %d bit=%d",tty_spi_dev->gpio.ap_rts, gpio_get_value(tty_spi_dev->gpio.ap_rts));
-	*/
+	dbg_print("Aftre Clear AP_RTS pin %d bit=%d",tty_spi_dev->gpio.ap_rts,
+			gpio_get_value(tty_spi_dev->gpio.ap_rts));
+	 */
 	clear_bit(TTY_SPI_TX_FC, &tty_spi_dev->signal_state);
 	clear_bit(TTY_SPI_RX_FC, &tty_spi_dev->signal_state);
 	return ret;
@@ -959,8 +974,6 @@ static int serial_spi_spi_remove(struct tty_spi_device *spi)
 	return 0;
 }
 
-
-
 /**
  *	serial_spi_exit	-	module exit
  *
@@ -973,12 +986,10 @@ static void __exit serial_spi_exit(void)
 	tty_unregister_driver(tty_spi_drv);
 }
 
-
- 
-static int serial_spi_device_init(struct spi_master*master)
+static int serial_spi_device_init(struct spi_master *master)
 {
 	int ret;
-	//int srdy;
+	/*int srdy;*/
 	struct tty_spi_device *tty_spi_dev;
 	struct spi_device *spi;
 	struct device *d;
@@ -991,21 +1002,20 @@ static int serial_spi_device_init(struct spi_master*master)
 		return -ENODEV;
 	}
 	d = bus_find_device_by_name(&spi_bus_type, NULL, "spi0.0");
-	if(d){
+	if (d) {
 		spi = (struct spi_device *)d;
-		dbg_print("device pointer = %p \n", d);
-	}else
-	{
+		dbg_print("device pointer = %p\n", d);
+	} else {
 		spi = spi_alloc_device(master);
-		if(!spi){
+		if (!spi) {
 			dbg_print("spi allocated device failed!");
 			return -ENODEV;
 		}
 		ret = spi_add_device(spi);
-		if(ret){
+		if (ret) {
 			dbg_print("add spi device failed!");
 			return -ENODEV;
-		}	
+		}
 	}
 	/* initialize structure to hold our device variables */
 	tty_spi_dev = kzalloc(sizeof(struct tty_spi_device), GFP_KERNEL);
@@ -1022,12 +1032,12 @@ static int serial_spi_device_init(struct spi_master*master)
 	init_timer(&tty_spi_dev->spi_timer);
 	tty_spi_dev->spi_timer.function = serial_spi_timeout;
 	tty_spi_dev->spi_timer.data = (unsigned long)tty_spi_dev;
-	
-    /* initialize spi mode, etc */
+
+	/* initialize spi mode, etc */
 	tty_spi_dev->use_dma = 0;
 	tty_spi_dev->max_hz = 10000000;
 	spi->max_speed_hz = tty_spi_dev->max_hz;
-	//spi->mode = TTY_SPI_MODE | (SPI_LOOP & spi->mode);
+	/*spi->mode = TTY_SPI_MODE | (SPI_LOOP & spi->mode);*/
 	spi->mode = SPI_MODE_0;
 	spi->bits_per_word = spi_bpw;
 	ret = spi_setup(spi);
@@ -1040,7 +1050,7 @@ static int serial_spi_device_init(struct spi_master*master)
 	tty_spi_dev->spi_more = 0;
 	tty_spi_dev->spi_slave_cts = 0;
 
-    tty_spi_dev->rx_buffer = kmalloc(TTY_SPI_TRANSFER_SIZE, GFP_KERNEL);
+	tty_spi_dev->rx_buffer = kmalloc(TTY_SPI_TRANSFER_SIZE, GFP_KERNEL);
 	if (!tty_spi_dev->rx_buffer) {
 		dev_err(&spi->dev, "SPI RX buffer allocation failed");
 		ret = -ENOMEM;
@@ -1055,13 +1065,14 @@ static int serial_spi_device_init(struct spi_master*master)
 
 	spi_set_drvdata(spi, tty_spi_dev);
 	/*
-	tasklet_init(&tty_spi_dev->io_work_tasklet, serial_spi_io,
-						(unsigned long)tty_spi_dev);
-	*/
+	   tasklet_init(&tty_spi_dev->io_work_tasklet, serial_spi_io,
+	   (unsigned long)tty_spi_dev);
+	 */
 	INIT_WORK(&tty_spi_dev->io_wq, serial_spi_io_wq);
 
 	sema_init(&tty_spi_dev->spi_semaphore, 1);
-	printk(KERN_ERR "Semaphore after init: %d\n", tty_spi_dev->spi_semaphore.count);	
+	printk(KERN_ERR "Semaphore after init: %d\n",
+	       tty_spi_dev->spi_semaphore.count);
 	set_bit(TTY_SPI_STATE_PRESENT, &tty_spi_dev->flags);
 
 	/* create our tty port */
@@ -1071,13 +1082,12 @@ static int serial_spi_device_init(struct spi_master*master)
 		goto error_ret;
 	}
 
-	
 	/* set pm runtime power state and register with power system */
 	pm_runtime_set_active(&spi->dev);
 	pm_runtime_enable(&spi->dev);
 
-   /* Configure GPIO pins */
-    tty_spi_dev->gpio.ap_rdy = GPIO_AP_RDY;
+	/* Configure GPIO pins */
+	tty_spi_dev->gpio.ap_rdy = GPIO_AP_RDY;
 	tty_spi_dev->gpio.ap_rts = GPIO_AP_RTS;
 	tty_spi_dev->gpio.mdm_rdy = GPIO_MDM_RDY;
 	tty_spi_dev->gpio.mdm_rts = GPIO_MDM_RTS;
@@ -1085,19 +1095,18 @@ static int serial_spi_device_init(struct spi_master*master)
 	tty_spi_dev->gpio.ap_alive = GPIO_AP_ALIVE;
 
 	dev_info(&spi->dev, "gpios %d, %d, %d, %d, %d",
-		 tty_spi_dev->gpio.ap_rdy, tty_spi_dev->gpio.ap_rts, tty_spi_dev->gpio.mdm_rdy,
-		 tty_spi_dev->gpio.mdm_rts, tty_spi_dev->gpio.mdm_alive);
-     /*hack to config pin mux. CP is hardcoding the pin Mux*/
-   vaddr = ioremap(PAD_CTRL, 1024);
-   /*write password*/
-   writel(0xa5a501, vaddr + 0x7F0);
-   /*unlock config register */
-   writel(0, vaddr + 0x784);
-   writel(0, vaddr + 0x788);
-   for(i=0;i<9;i++)
-   {
-       writel(0x443, vaddr + 0xE8 + i*4);
-   }
+		 tty_spi_dev->gpio.ap_rdy, tty_spi_dev->gpio.ap_rts,
+		 tty_spi_dev->gpio.mdm_rdy, tty_spi_dev->gpio.mdm_rts,
+		 tty_spi_dev->gpio.mdm_alive);
+	/*hack to config pin mux. CP is hardcoding the pin Mux */
+	vaddr = ioremap(PAD_CTRL, 1024);
+	/*write password */
+	writel(0xa5a501, vaddr + 0x7F0);
+	/*unlock config register */
+	writel(0, vaddr + 0x784);
+	writel(0, vaddr + 0x788);
+	for (i = 0; i < 9; i++)
+		writel(0x443, vaddr + 0xE8 + i * 4);
 	/* Configure gpios */
 	ret = gpio_request(tty_spi_dev->gpio.ap_rdy, "mdmgpio2");
 	if (ret < 0) {
@@ -1189,11 +1198,11 @@ static int serial_spi_device_init(struct spi_master*master)
 		gpio_free(tty_spi_dev->gpio.ap_alive);
 		goto error_ret7;
 	}
-	
+
 	ret = request_irq(gpio_to_irq(tty_spi_dev->gpio.mdm_rdy),
 			  spi_mdm_rdy_interrupt,
 			  IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, DRVNAME,
-		(void *)tty_spi_dev);
+			  (void *)tty_spi_dev);
 	if (ret) {
 		dev_err(&spi->dev, "Unable to get irq %x\n",
 			gpio_to_irq(tty_spi_dev->gpio.mdm_rdy));
@@ -1250,7 +1259,7 @@ error_ret:
 static int __init serial_spi_init(void)
 {
 	int result;
-	struct spi_master	*master;
+	struct spi_master *master;
 	tty_spi_drv = alloc_tty_driver(1);
 	if (!tty_spi_drv) {
 		pr_err("%s: alloc_tty_driver failed", DRVNAME);
@@ -1269,34 +1278,32 @@ static int __init serial_spi_init(void)
 	tty_spi_drv->init_termios = tty_std_termios;
 
 	tty_set_operations(tty_spi_drv, &tty_spi_serial_ops);
-    dbg_print("***TTY serial spi init ***\n");
+	dbg_print("***TTY serial spi init ***\n");
 	result = tty_register_driver(tty_spi_drv);
 	if (result) {
-		pr_err("%s: tty_register_driver failed(%d)",
-			DRVNAME, result);
+		pr_err("%s: tty_register_driver failed(%d)", DRVNAME, result);
 		put_tty_driver(tty_spi_drv);
 		return result;
 	}
 	/*
-	dbg_print("serial spi init 02\n");
-	tty_register_device(tty_spi_drv, 0, spi_serial_dev);	
-	if ( IS_ERR( spi_serial_dev )){
-		pr_err("spi-serial: %s - tty_register_device failed\n",
-			__func__);		
-		goto exit_tty;
-	}
-	result = spi_register_driver((void *)&tty_spi_driver);
-	if (result) {
-		pr_err("%s: spi_register_driver failed(%d)",
-			DRVNAME, result);
-		goto exit_tty;
-	} */
+	   dbg_print("serial spi init 02\n");
+	   tty_register_device(tty_spi_drv, 0, spi_serial_dev);
+	   if ( IS_ERR( spi_serial_dev )){
+	   pr_err("spi-serial: %s - tty_register_device failed\n",
+	   __func__);
+	   goto exit_tty;
+	   }
+	   result = spi_register_driver((void *)&tty_spi_driver);
+	   if (result) {
+	   pr_err("%s: spi_register_driver failed(%d)",
+	   DRVNAME, result);
+	   goto exit_tty;
+	   } */
 	master = spi_busnum_to_master(0);
-	/* dbg_print("serial spi master = %p \n",master); */
+	/*dbg_print("serial spi master = %p\n",master);*/
 	result = serial_spi_device_init(master);
 	if (result) {
-		pr_err("%s: spi_allocate device failed(%d)",
-			DRVNAME, result);
+		pr_err("%s: spi_allocate device failed(%d)", DRVNAME, result);
 		goto exit_spi;
 	}
 	return result;
@@ -1306,10 +1313,7 @@ exit_spi:
 	return result;
 }
 
-//module_init(serial_spi_init);
-//module_exit(serial_spi_exit);
+/* module_init(serial_spi_init);
+module_exit(serial_spi_exit); */
 late_initcall(serial_spi_init);
-MODULE_LICENSE( "GPL" );
-
-
-
+MODULE_LICENSE("GPL");

@@ -18,7 +18,7 @@ the GPL, without Broadcom's express prior written consent.
 #define TTYNAME				"ttySPI"
 
 #define TTY_SPI_MAX_MINORS		1
-#define TTY_SPI_TRANSFER_SIZE	2048	//4480
+#define TTY_SPI_TRANSFER_SIZE	2048	/*4480*/
 #define TTY_SPI_FIFO_SIZE		4096
 
 #define TTY_SPI_HEADER_OVERHEAD		16
@@ -29,7 +29,7 @@ the GPL, without Broadcom's express prior written consent.
 #define TTY_SPI_STATE_IO_IN_PROGRESS	1
 #define TTY_SPI_STATE_IO_READY			2
 #define TTY_SPI_STATE_TIMER_PENDING		3
-#define TTY_SPI_STATE_PIN_MUX_SET 	    4
+#define TTY_SPI_STATE_PIN_MUX_SET		4
 
 /* flow control bitfields */
 #define TTY_SPI_DCD			0
@@ -55,13 +55,13 @@ the GPL, without Broadcom's express prior written consent.
 #define TTY_SPI_POWER_DATA_PENDING	1
 #define TTY_SPI_POWER_SRDY		2
 
-#define MDMGPIO_OFFSET 			112
-#define GPIO_AP_ALIVE		    MDMGPIO_OFFSET + 8    	/* mdmgpio 8 */
-#define GPIO_MDM_RTS		    MDMGPIO_OFFSET + 7    	/* mdmgpio 7 */
-#define GPIO_MDM_RDY		    MDMGPIO_OFFSET + 6		/* mdmgpio 6 */
-#define GPIO_MDM_ALIVE		    MDMGPIO_OFFSET + 4		/* mdmgpio 4 */
-#define GPIO_AP_RDY			    MDMGPIO_OFFSET + 2		/* mdmgpio 2 */
-#define GPIO_AP_RTS			    MDMGPIO_OFFSET + 0		/* mdmgpio 0 */
+#define MDMGPIO_OFFSET			112
+#define GPIO_AP_ALIVE		(MDMGPIO_OFFSET + 8)	/* mdmgpio 8 */
+#define GPIO_MDM_RTS		(MDMGPIO_OFFSET + 7)	/* mdmgpio 7 */
+#define GPIO_MDM_RDY		(MDMGPIO_OFFSET + 6)	/* mdmgpio 6 */
+#define GPIO_MDM_ALIVE		(MDMGPIO_OFFSET + 4)	/* mdmgpio 4 */
+#define GPIO_AP_RDY			(MDMGPIO_OFFSET + 2)	/* mdmgpio 2 */
+#define GPIO_AP_RTS			(MDMGPIO_OFFSET + 0)	/* mdmgpio 0 */
 
 #define MODEM_NORMAL_MODE       0x38
 #define MODEM_DOWNLOAD_MODE		0x7c
