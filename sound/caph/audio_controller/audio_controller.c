@@ -3525,9 +3525,9 @@ static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app)
 
 	p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
 
-	user_vol_setting[app][mode].L = p->srcmixer_output_fine_gain_l;
+	user_vol_setting[app][mode].L = (short)p->srcmixer_output_fine_gain_l;
 	user_vol_setting[app][mode].L *= 25;
-	user_vol_setting[app][mode].R = p->srcmixer_output_fine_gain_r;
+	user_vol_setting[app][mode].R = (short)p->srcmixer_output_fine_gain_r;
 	user_vol_setting[app][mode].R *= 25;
 	user_vol_setting[app][mode].valid = TRUE;
 }
