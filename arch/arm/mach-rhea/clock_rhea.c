@@ -7068,31 +7068,32 @@ int set_gpio_mux_for_debug_bus(int mux_sel, int mux_param)
 
 int set_clk_idle_debug_mon(int clk_idle, int db_sel)
 {
-    u32 reg_val;
-    struct clk *clk;
-    struct ccu_clk *ccu_clk;
+	u32 reg_val;
+	struct clk *clk;
+	struct ccu_clk *ccu_clk;
 
-    printk("in %s clk_idle:%d \n", __func__, clk_idle);
-    if(clk_idle > 9) {
-	clk_dbg("%s: Invalid value for rootCCU debug bus: %d\n", __func__, clk_idle);
+	pr_info("in %s clk_idle:%d\n", __func__, clk_idle);
+	if (clk_idle > 0xF) {
+		clk_dbg("%s: Invalid value for rootCCU debug bus: %d\n",
+			__func__, clk_idle);
 	return -EINVAL;
-    }
+	}
 	set_gpio_mux_for_debug_bus(db_sel,
 		(db_sel == 0) ? 0xF : 8);
 
-    clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
-    ccu_clk = to_ccu_clk(clk);
-    ccu_write_access_enable(ccu_clk, true);
-    reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CLKMON_OFFSET);
-    reg_val = reg_val & ~ROOT_CLK_MGR_REG_CLKMON_DEBUG_BUS_SEL_MASK;
-    reg_val |= ((clk_idle & 0xf) << 12);
-    writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CLKMON_OFFSET);
-    ccu_write_access_enable(ccu_clk, false);
+	clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
+	ccu_clk = to_ccu_clk(clk);
+	ccu_write_access_enable(ccu_clk, true);
+	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CLKMON_OFFSET);
+	reg_val = reg_val & ~ROOT_CLK_MGR_REG_CLKMON_DEBUG_BUS_SEL_MASK;
+	reg_val |= ((clk_idle & 0xf) << 12);
+	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CLKMON_OFFSET);
+	ccu_write_access_enable(ccu_clk, false);
 
-    reg_val = readl(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
-    clk_dbg(" CHIPREG_PERIPH_SPARE_CONTROL0 register : %08x\n", reg_val);
+	reg_val = readl(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+	clk_dbg("CHIPREG_PERIPH_SPARE_CONTROL0 register : %08x\n", reg_val);
 
-    return 0;
+	return 0;
 }
 int set_clk_monitor_debug(int mon_select, int db_sel)
 {
