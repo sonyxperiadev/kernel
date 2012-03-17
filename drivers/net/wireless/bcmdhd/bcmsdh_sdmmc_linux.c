@@ -30,12 +30,6 @@
 #include <bcmsdbus.h>	/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>	/* to get msglevel bit values */
 
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_SS)
-#include <dngl_stats.h>
-#include <dhd.h>
-#include <linux/mmc/bcm_sdiowl.h>
-#endif /* defined(CONFIG_ARCH_ISLAND) */
-
 #include <linux/sched.h>	/* request_irq() */
 
 #include <linux/mmc/core.h>
@@ -65,6 +59,7 @@
 #define SDIO_DEVICE_ID_BROADCOM_4330	0x4330
 #endif /* !defined(SDIO_DEVICE_ID_BROADCOM_4330) */
 
+
 #include <bcmsdh_sdmmc.h>
 
 #include <dhd_dbg.h>
@@ -75,11 +70,6 @@ extern void wl_cfg80211_set_parent_dev(void *dev);
 
 extern void sdioh_sdmmc_devintr_off(sdioh_info_t *sd);
 extern void sdioh_sdmmc_devintr_on(sdioh_info_t *sd);
-
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_SS)
-extern int bcm_sdiowl_rescan(void);
-struct device sdmmc_dev;
-#endif /* defined(CONFIG_ARCH_ISLAND) */
 
 int sdio_function_init(void);
 void sdio_function_cleanup(void);
@@ -119,11 +109,7 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 		if(func->device == 0x4) { /* 4318 */
 			gInstance->func[2] = NULL;
 			sd_trace(("NIC found, calling bcmsdh_probe...\n"));
-#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_SS)
 			ret = bcmsdh_probe(&func->dev);
-#else
-			ret = bcmsdh_probe(&sdmmc_dev);
-#endif /* !defined(CONFIG_ARCH_ISLAND) */
 		}
 	}
 
@@ -134,11 +120,7 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 		wl_cfg80211_set_parent_dev(&func->dev);
 #endif
 		sd_trace(("F2 found, calling bcmsdh_probe...\n"));
-#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_SS)
 		ret = bcmsdh_probe(&func->dev);
-#else
-		ret = bcmsdh_probe(&sdmmc_dev);
-#endif /* !defined(CONFIG_ARCH_ISLAND) */
 	}
 
 	return ret;
@@ -154,11 +136,7 @@ static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 
 	if (func->num == 2) {
 		sd_trace(("F2 found, calling bcmsdh_remove...\n"));
-#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_SS)
 		bcmsdh_remove(&func->dev);
-#else
-		bcmsdh_remove(&sdmmc_dev);
-#endif /* !defined(CONFIG_ARCH_ISLAND) */
 	} else if (func->num == 1) {
 		sdio_claim_host(func);
 		sdio_disable_func(func);
@@ -291,28 +269,6 @@ int sdio_function_init(void)
 	if (!gInstance)
 		return -ENOMEM;
 
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_SS)
-	error = bcm_sdiowl_init();
-	if (error) {
-		sd_err(("%s: bcm_sdiowl_start failed\n", __FUNCTION__));
-		kfree(gInstance);
-		return error;
-	}
-
-	/* Reset device and rescan so SDMMC does not get confused */
-	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
-	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
-	error = bcm_sdiowl_rescan();
-	if (error) {
-		sd_err(("%s: bcm_sdiowl_rescan failed\n", __FUNCTION__));
-		bcm_sdiowl_term();
-		kfree(gInstance);
-		return error;
-	}
-
-	bzero(&sdmmc_dev, sizeof(sdmmc_dev));
-#endif /* defined(CONFIG_ARCH_ISLAND) */
-
 	error = sdio_register_driver(&bcmsdh_sdmmc_driver);
 
 	return error;
@@ -326,15 +282,8 @@ void sdio_function_cleanup(void)
 {
 	sd_trace(("%s Enter\n", __FUNCTION__));
 
-	sdio_unregister_driver(&bcmsdh_sdmmc_driver);
 
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_SS)
-	/* 
- 	 * Minimize power consumption by placing WiFi in reset.
-	 */
-	bcm_sdiowl_reset_b(0);
-	bcm_sdiowl_term();
-#endif /* defined(CONFIG_ARCH_ISLAND) */
+	sdio_unregister_driver(&bcmsdh_sdmmc_driver);
 
 	if (gInstance)
 		kfree(gInstance);

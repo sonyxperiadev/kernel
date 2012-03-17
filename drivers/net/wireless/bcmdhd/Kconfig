@@ -38,3 +38,14 @@ config BCMDHD_WEXT
 	select WEXT_PRIV
 	help
 	  Enables WEXT support
+
+config BROADCOM_WIFI_RESERVED_MEM
+	bool "Enable STATIC BUFFER Support for 4330"
+	depends on BCMDHD
+	help
+	  Enables  STATIC BUFFER Support for WLAN 4330
+
+
+
+
+	  

@@ -13,6 +13,12 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Werror -Dlinux -DBCMDRIVER             \
 	-Idrivers/net/wireless/bcmdhd -Idrivers/net/wireless/bcmdhd/include
 
 
+# For Static Buffer
+ifeq ($(CONFIG_BROADCOM_WIFI_RESERVED_MEM),y)
+DHDCFLAGS += -DDHD_USE_STATIC_BUF
+endif
+
+
 ifeq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
 # SW-OOB Interrupt
 DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74

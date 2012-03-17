@@ -34,10 +34,6 @@
 #include <wlioctl.h>
 #include <wl_iw.h>
 
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_SS)
-extern void bcm_sdiowl_reset_b(int onoff);
-#endif /* defined(CONFIG_ARCH_ISLAND) */
-
 #define WL_ERROR(x) printf x
 #define WL_TRACE(x)
 
@@ -136,10 +132,6 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW2
 			wifi_set_power(0, 0);
 #endif
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_SS)
-			bcm_sdiowl_reset_b(0);
-#endif /* defined(CONFIG_ARCH_ISLAND) */
-
 			WL_ERROR(("=========== WLAN placed in RESET ========\n"));
 		break;
 
@@ -152,9 +144,6 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW2
 			wifi_set_power(1, 0);
 #endif
-#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_SS)
-			bcm_sdiowl_reset_b(1);
-#endif /* defined(CONFIG_ARCH_ISLAND) */
 			WL_ERROR(("=========== WLAN going back to live  ========\n"));
 		break;
 
