@@ -1707,7 +1707,6 @@ static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 	aTrace(LOG_AUDIO_DRIVER,
 			"%s, Got AUDIO ENABLE RESP FROM DSP\n", __func__);
 
-	udelay(2000);
 	complete(&audioEnableDone);
 
 #if defined(CONFIG_BCM_MODEM)

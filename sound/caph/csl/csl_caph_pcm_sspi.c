@@ -44,6 +44,9 @@
 #include "brcm_rdb_sysmap.h"
 #include "brcm_rdb_sspil.h"
 #include "audio_trace.h"
+#include <mach/rdb/brcm_rdb_khub_rst_mgr_reg.h>
+#include <linux/io.h>
+#include <mach/io_map.h>
 
 #define SSPI_HW_WORD_LEN_32Bit					32
 #define SSPI_HW_WORD_LEN_25Bit					25
@@ -64,6 +67,50 @@
 static chal_sspi_task_conf_t task_conf;
 static chal_sspi_seq_conf_t seq_conf;
 static CHAL_HANDLE intc_handle;
+
+/*
+ *  Description: soft reset ssp port
+ */
+static void csl_pcm_reset(CSL_PCM_HANDLE_t *pDevice)
+{
+	u32 *reg, *reg2, reg_value, data, shift;
+
+	if (pDevice->base == KONA_SSP3_BASE_VA) {
+		shift = KHUB_RST_MGR_REG_SOFT_RSTN1_SSP3_SOFT_RSTN_SHIFT;
+		aTrace(LOG_AUDIO_CSL, "csl_pcm_reset::reset SSP3 port, "
+			"shift %d\n", shift);
+	} else if (pDevice->base == KONA_SSP4_BASE_VA) {
+		shift = KHUB_RST_MGR_REG_SOFT_RSTN1_SSP4_SOFT_RSTN_SHIFT;
+		aTrace(LOG_AUDIO_CSL, "csl_pcm_reset::reset SSP4 port, "
+			"shift %d\n", shift);
+	} else {
+		aError("csl_pcm_reset::invalid base 0x%x\n",
+			(u32)pDevice->base);
+		return;
+	}
+
+	reg = (u32 *)ioremap_nocache(HUB_RST_BASE_ADDR, 3*sizeof(u32));
+	reg_value = readl(reg);
+
+	if ((reg_value & KHUB_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK) == 0) {
+		data = 0xa5a500 +
+			(1<<KHUB_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT);
+		writel(data, reg); /*to get access*/
+	}
+
+	reg2 = reg + (KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET>>2);
+	reg_value = readl(reg2);
+	data = reg_value & (~(1<<shift)); /*reset*/
+	writel(data, reg2);
+
+	reg_value = readl(reg2);
+	data = reg_value | (1<<shift); /*set*/
+	writel(data, reg2);
+
+	if ((reg_value & KHUB_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK) == 0)
+		writel(0xa5a500, reg);
+	iounmap(reg);
+}
 
 /*
  *
@@ -218,14 +265,14 @@ CSL_PCM_OPSTATUS_t csl_pcm_start_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 
 	if (channel == CSL_PCM_CHAN_TX0) {
 		chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX0);
-		chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+		/*chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
 							  SSPI_FIFO_ID_TX0,
-							  TRUE, TRUE);
+							  TRUE, TRUE);*/
 	} else if (channel == CSL_PCM_CHAN_TX1) {
 		chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX1);
-		chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+		/*chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
 							  SSPI_FIFO_ID_TX1,
-							  TRUE, TRUE);
+							  TRUE, TRUE);*/
 	}
 
 	return CSL_PCM_SUCCESS;
@@ -440,6 +487,8 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		return CSL_PCM_ERR_PROT;
 	/*task_conf struct initialization */
 	memset(&task_conf, 0, sizeof(task_conf));
+
+	csl_pcm_reset(pDevice);
 
 	/*soft reset sspi instance */
 	chal_sspi_soft_reset(pDevice);
