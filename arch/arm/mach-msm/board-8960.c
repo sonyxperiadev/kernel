@@ -80,6 +80,8 @@
 #include <mach/mdm2.h>
 #include <mach/mdm-peripheral.h>
 #include <mach/msm_rtb.h>
+#include <mach/msm_cache_dump.h>
+#include <mach/scm.h>
 
 #include <linux/fmem.h>
 
@@ -145,7 +147,7 @@ struct sx150x_platform_data msm8960_sx150x_data[] = {
 #define MSM_ION_SF_SIZE		MSM_PMEM_SIZE
 #define MSM_ION_MM_FW_SIZE	0x200000 /* (2MB) */
 #define MSM_ION_MM_SIZE		MSM_PMEM_ADSP_SIZE
-#define MSM_ION_QSECOM_SIZE	0x100000 /* (1MB) */
+#define MSM_ION_QSECOM_SIZE	0x300000 /* (3MB) */
 #define MSM_ION_MFC_SIZE	SZ_8K
 #define MSM_ION_AUDIO_SIZE	MSM_PMEM_AUDIO_SIZE
 #define MSM_ION_HEAP_NUM	8
@@ -335,35 +337,39 @@ static void __init reserve_pmem_memory(void)
 #endif
 }
 
-static void __init reserve_fmem_memory(void)
-{
-}
-
 static int msm8960_paddr_to_memtype(unsigned int paddr)
 {
 	return MEMTYPE_EBI1;
 }
+
+#define FMEM_ENABLED 1
 
 #ifdef CONFIG_ION_MSM
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 static struct ion_cp_heap_pdata cp_mm_ion_pdata = {
 	.permission_type = IPT_TYPE_MM_CARVEOUT,
 	.align = PAGE_SIZE,
+	.reusable = FMEM_ENABLED,
+	.mem_is_fmem = FMEM_ENABLED,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_ion_pdata = {
 	.permission_type = IPT_TYPE_MFC_SHAREDMEM,
 	.align = PAGE_SIZE,
+	.reusable = 0,
+	.mem_is_fmem = FMEM_ENABLED,
 };
 
 static struct ion_co_heap_pdata co_ion_pdata = {
 	.adjacent_mem_id = INVALID_HEAP_ID,
 	.align = PAGE_SIZE,
+	.mem_is_fmem = 0,
 };
 
 static struct ion_co_heap_pdata fw_co_ion_pdata = {
 	.adjacent_mem_id = ION_CP_MM_HEAP_ID,
 	.align = SZ_128K,
+	.mem_is_fmem = FMEM_ENABLED,
 };
 #endif
 
@@ -457,9 +463,8 @@ struct platform_device fmem_device = {
 	.dev = { .platform_data = &fmem_pdata },
 };
 
-static void reserve_ion_memory(void)
+static void __init adjust_mem_for_liquid(void)
 {
-#if defined(CONFIG_ION_MSM) && defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
 	unsigned int i;
 
 	if (!pmem_param_set && machine_is_msm8960_liquid()) {
@@ -473,12 +478,93 @@ static void reserve_ion_memory(void)
 			}
 		}
 	}
-	msm8960_reserve_table[MEMTYPE_EBI1].size += msm_ion_cp_mm_size;
-	msm8960_reserve_table[MEMTYPE_EBI1].size += MSM_ION_MM_FW_SIZE;
-	msm8960_reserve_table[MEMTYPE_EBI1].size += MSM_ION_SF_SIZE;
-	msm8960_reserve_table[MEMTYPE_EBI1].size += MSM_ION_MFC_SIZE;
-	msm8960_reserve_table[MEMTYPE_EBI1].size += MSM_ION_QSECOM_SIZE;
-	msm8960_reserve_table[MEMTYPE_EBI1].size += MSM_ION_AUDIO_SIZE;
+}
+
+static void __init reserve_mem_for_ion(enum ion_memory_types mem_type,
+				      unsigned long size)
+{
+	msm8960_reserve_table[mem_type].size += size;
+}
+
+/**
+ * Reserve memory for ION and calculate amount of reusable memory for fmem.
+ * We only reserve memory for heaps that are not reusable. However, we only
+ * support one reusable heap at the moment so we ignore the reusable flag for
+ * other than the first heap with reusable flag set. Also handle special case
+ * for video heaps (MM,FW, and MFC). Video requires heaps MM and MFC to be
+ * at a higher address than FW in addition to not more than 256MB away from the
+ * base address of the firmware. This means that if MM is reusable the other
+ * two heaps must be allocated in the same region as FW. This is handled by the
+ * mem_is_fmem flag in the platform data. In addition the MM heap must be
+ * adjacent to the FW heap for content protection purposes.
+ */
+static void __init reserve_ion_memory(void)
+{
+#if defined(CONFIG_ION_MSM) && defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
+	unsigned int i;
+	unsigned int reusable_count = 0;
+
+	adjust_mem_for_liquid();
+	fmem_pdata.size = 0;
+	fmem_pdata.reserved_size_low = 0;
+	fmem_pdata.reserved_size_high = 0;
+
+	/* We only support 1 reusable heap. Check if more than one heap
+	 * is specified as reusable and set as non-reusable if found.
+	 */
+	for (i = 0; i < ion_pdata.nr; ++i) {
+		const struct ion_platform_heap *heap = &(ion_pdata.heaps[i]);
+
+		if (heap->type == ION_HEAP_TYPE_CP && heap->extra_data) {
+			struct ion_cp_heap_pdata *data = heap->extra_data;
+
+			reusable_count += (data->reusable) ? 1 : 0;
+
+			if (data->reusable && reusable_count > 1) {
+				pr_err("%s: Too many heaps specified as "
+					"reusable. Heap %s was not configured "
+					"as reusable.\n", __func__, heap->name);
+				data->reusable = 0;
+			}
+		}
+	}
+
+	for (i = 0; i < ion_pdata.nr; ++i) {
+		int reusable = 0;
+		int adjacent_heap_id = INVALID_HEAP_ID;
+		int mem_is_fmem = 0;
+		const struct ion_platform_heap *heap = &(ion_pdata.heaps[i]);
+
+		if (heap->extra_data) {
+			switch (heap->type) {
+			case ION_HEAP_TYPE_CP:
+				reusable = ((struct ion_cp_heap_pdata *)
+						heap->extra_data)->reusable;
+				mem_is_fmem = ((struct ion_cp_heap_pdata *)
+						heap->extra_data)->mem_is_fmem;
+				break;
+			case ION_HEAP_TYPE_CARVEOUT:
+				adjacent_heap_id = ((struct ion_co_heap_pdata *)
+					heap->extra_data)->adjacent_mem_id;
+				mem_is_fmem = ((struct ion_co_heap_pdata *)
+						heap->extra_data)->mem_is_fmem;
+				break;
+			default:
+				break;
+			}
+		}
+
+		if (mem_is_fmem && !reusable) {
+			if (adjacent_heap_id != INVALID_HEAP_ID)
+				fmem_pdata.reserved_size_low += heap->size;
+			else
+				fmem_pdata.reserved_size_high += heap->size;
+		}
+		if (mem_is_fmem)
+			fmem_pdata.size += heap->size;
+		else
+			reserve_mem_for_ion(MEMTYPE_EBI1, heap->size);
+	}
 #endif
 }
 
@@ -487,14 +573,51 @@ static void __init reserve_mdp_memory(void)
 	msm8960_mdp_writeback(msm8960_reserve_table);
 }
 
+#if defined(CONFIG_MSM_CACHE_DUMP)
+static struct msm_cache_dump_platform_data msm_cache_dump_pdata = {
+	.l2_size = L2_BUFFER_SIZE,
+};
+
+static struct platform_device msm_cache_dump_device = {
+	.name           = "msm_cache_dump",
+	.id             = -1,
+	.dev            = {
+		.platform_data = &msm_cache_dump_pdata,
+	},
+};
+
+#endif
+
+static void reserve_cache_dump_memory(void)
+{
+#ifdef CONFIG_MSM_CACHE_DUMP
+	unsigned int spare;
+	unsigned int l1_size;
+	unsigned int total;
+	int ret;
+
+	ret = scm_call(L1C_SERVICE_ID, L1C_BUFFER_GET_SIZE_COMMAND_ID, &spare,
+		sizeof(spare), &l1_size, sizeof(l1_size));
+
+	if (ret)
+		/* Fall back to something reasonable here */
+		l1_size = L1_BUFFER_SIZE;
+
+	total = l1_size + L2_BUFFER_SIZE;
+
+	msm8960_reserve_table[MEMTYPE_EBI1].size += total;
+	msm_cache_dump_pdata.l1_size = l1_size;
+#endif
+}
+
 static void __init msm8960_calculate_reserve_sizes(void)
 {
 	size_pmem_devices();
 	reserve_pmem_memory();
 	reserve_ion_memory();
-	reserve_fmem_memory();
 	reserve_mdp_memory();
 	reserve_rtb_memory();
+	reserve_cache_dump_memory();
 }
 
 static struct reserve_info msm8960_reserve_info __initdata = {
@@ -1807,6 +1930,9 @@ static struct platform_device *common_devices[] __initdata = {
 	&msm_rtb_device,
 #endif
 	&msm8960_device_cache_erp,
+#ifdef CONFIG_MSM_CACHE_DUMP
+	&msm_cache_dump_device,
+#endif
 };
 
 static struct platform_device *sim_devices[] __initdata = {
