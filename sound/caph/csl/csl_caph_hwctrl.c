@@ -1859,14 +1859,8 @@ static void csl_caph_config_sw
 	if (!swCfg->FIFO_dstAddr) {
 		sink = path->sink[sinkNo];
 		if (sink == CSL_CAPH_DEV_BT_SPKR) {
-			if (!swCfg->trigger) {
+			if (!swCfg->trigger)
 				swCfg->trigger = pcmTxTrigger;
-				if ((bt_mode == BT_MODE_WB) ||
-					(bt_mode == BT_MODE_WB_TEST))
-					swCfg->trigger = CAPH_16KHZ;
-				else
-					swCfg->trigger = CAPH_8KHZ;
-			}
 			swCfg->FIFO_dstAddr =
 				csl_pcm_get_tx0_fifo_data_port(pcmHandleSSP);
 		} else if (path->audiohPath[sinkNo+1]) {

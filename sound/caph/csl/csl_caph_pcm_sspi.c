@@ -73,7 +73,7 @@ static CHAL_HANDLE intc_handle;
  */
 static void csl_pcm_reset(CSL_PCM_HANDLE_t *pDevice)
 {
-	u32 *reg, *reg2, reg_value, data, shift;
+	u32 *reg, *reg2, reg_value, data, shift, reg_wr;
 
 	if (pDevice->base == KONA_SSP3_BASE_VA) {
 		shift = KHUB_RST_MGR_REG_SOFT_RSTN1_SSP3_SOFT_RSTN_SHIFT;
@@ -84,18 +84,21 @@ static void csl_pcm_reset(CSL_PCM_HANDLE_t *pDevice)
 		aTrace(LOG_AUDIO_CSL, "csl_pcm_reset::reset SSP4 port, "
 			"shift %d\n", shift);
 	} else {
-		aError("csl_pcm_reset::invalid base 0x%x\n",
+		aError("csl_pcm_reset::AUDIO ERROR invalid base 0x%x\n",
 			(u32)pDevice->base);
 		return;
 	}
 
 	reg = (u32 *)ioremap_nocache(HUB_RST_BASE_ADDR, 3*sizeof(u32));
-	reg_value = readl(reg);
+	reg_wr = readl(reg);
 
-	if ((reg_value & KHUB_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK) == 0) {
-		data = 0xa5a500 +
+	if ((reg_wr & KHUB_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK) == 0) {
+		data = reg_wr |
+			(0xa5a5<<KHUB_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) |
 			(1<<KHUB_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT);
 		writel(data, reg); /*to get access*/
+		/*aError("csl_pcm_reset::RST_WR 0x%x --> 0x%x\n",
+			reg_wr, data);*/
 	}
 
 	reg2 = reg + (KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET>>2);
@@ -103,12 +106,21 @@ static void csl_pcm_reset(CSL_PCM_HANDLE_t *pDevice)
 	data = reg_value & (~(1<<shift)); /*reset*/
 	writel(data, reg2);
 
+	/*aError("csl_pcm_reset::RST_RSTN1 0x%08x --> 0x%08x\n",
+		reg_value, data);*/
+
 	reg_value = readl(reg2);
 	data = reg_value | (1<<shift); /*set*/
 	writel(data, reg2);
 
-	if ((reg_value & KHUB_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK) == 0)
-		writel(0xa5a500, reg);
+	/*aError("csl_pcm_reset::RST_RSTN1 0x%08x --> 0x%08x\n",
+		reg_value, data);*/
+
+	/*if ((reg_wr & KHUB_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK) == 0) {
+		data = reg_wr |
+			(0xa5a5<<KHUB_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
+		writel(data, reg);
+	}*/
 	iounmap(reg);
 }
 
@@ -265,14 +277,14 @@ CSL_PCM_OPSTATUS_t csl_pcm_start_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 
 	if (channel == CSL_PCM_CHAN_TX0) {
 		chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX0);
-		/*chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+		chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
 							  SSPI_FIFO_ID_TX0,
-							  TRUE, TRUE);*/
+							  TRUE, TRUE);
 	} else if (channel == CSL_PCM_CHAN_TX1) {
 		chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX1);
-		/*chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
+		chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
 							  SSPI_FIFO_ID_TX1,
-							  TRUE, TRUE);*/
+							  TRUE, TRUE);
 	}
 
 	return CSL_PCM_SUCCESS;
@@ -1584,6 +1596,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		break;
 	}
 
+	/*
 	chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, SSPI_FIFO_ID_TX0,
 						  TRUE, TRUE);
 	chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, SSPI_FIFO_ID_TX1,
@@ -1591,7 +1604,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, SSPI_FIFO_ID_TX2,
 						  TRUE, TRUE);
 	chal_sspi_enable_fifo_pio_start_stop_intr(pDevice, SSPI_FIFO_ID_TX3,
-						  TRUE, TRUE);
+						  TRUE, TRUE);*/
 	return CSL_PCM_SUCCESS;
 }
 
