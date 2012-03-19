@@ -80,9 +80,9 @@ timer_tick_count_t timer_get_tick_count(void)
 
 	profile_timer_get_counter(proftmr_regbase, &msw, &lsw);
 
-	tick = (((uint64_t) msw << 32) | ((uint64_t) lsw));
+	tick = (((uint64_t)msw << 32) | ((uint64_t)lsw));
 
-	return (*(uint32_t *) (&tick));
+	return (*(uint32_t *)(&tick));
 }
 
 timer_msec_t timer_ticks_to_msec(timer_tick_count_t ticks)

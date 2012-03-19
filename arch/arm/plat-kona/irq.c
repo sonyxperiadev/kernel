@@ -37,6 +37,7 @@
 
 void __init kona_init_irq(void)
 {
-	/* start with GLBTIMER */ 
-	gic_init(0, BCM_INT_ID_PPI11, IOMEM(KONA_GICDIST_VA), IOMEM(KONA_GICCPU_VA));
+	/* start with GLBTIMER */
+	gic_init(0, BCM_INT_ID_PPI11, IOMEM(KONA_GICDIST_VA),
+		 IOMEM(KONA_GICCPU_VA));
 }

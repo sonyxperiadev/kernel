@@ -149,7 +149,8 @@ static void __init gptimer_clockevents_init(void)
 	/* This is to accomodate the polling in kona_timer_set_match_start().
 	 */
 	clockevent_gptimer.min_delta_ns =
-	    clockevent_delta2ns((CLOCK_TICK_RATE*5)/32000, &clockevent_gptimer);
+	    clockevent_delta2ns((CLOCK_TICK_RATE * 5) / 32000,
+				&clockevent_gptimer);
 #else
 	clockevent_gptimer.min_delta_ns =
 	    clockevent_delta2ns(6, &clockevent_gptimer);
@@ -228,12 +229,12 @@ unsigned long long notrace sched_clock(void)
 	if (unlikely(gpt_src == NULL))
 		return 0;
 
-	return cyc_to_sched_clock(&cd, gptimer_clksrc_read(NULL), (u32) ~0);
+	return cyc_to_sched_clock(&cd, gptimer_clksrc_read(NULL), (u32)~0);
 }
 
 static void notrace kona_update_sched_clock(void)
 {
-	update_sched_clock(&cd, gptimer_clksrc_read(NULL), (u32) ~0);
+	update_sched_clock(&cd, gptimer_clksrc_read(NULL), (u32)~0);
 }
 
 void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
