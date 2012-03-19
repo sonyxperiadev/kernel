@@ -53,20 +53,18 @@ static void rhea_poweroff(void)
 #endif
 
 #ifdef CONFIG_MFD_BCMPMU
-        bcmpmu_client_power_off();
+	bcmpmu_client_power_off();
 #endif
 
 	mdelay(5);
 	pr_err("Failed power off!!!\n");
-	while(1)
-		;
+	while (1) ;
 }
 
 static void rhea_restart(char mode, const char *cmd)
 {
 	arm_machine_restart('h', cmd);
 }
-
 
 #ifdef CONFIG_CACHE_L2X0
 static void __init rhea_l2x0_init(void)
@@ -110,7 +108,7 @@ static int __init rhea_arch_init(void)
 arch_initcall(rhea_arch_init);
 
 /* GP Timer init code, common for all rhea based platforms */
-void __init rhea_ray_timer_init (void)
+void __init rhea_ray_timer_init(void)
 {
 	struct gp_timer_setup gpt_setup;
 
@@ -124,14 +122,14 @@ void __init rhea_ray_timer_init (void)
 	 *
 	 * By default aon-timer as system timer the following is the config
 	 * #define BCM2165x_CLK_TIMERS_FLAGS     (TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
-         * #define BCM2165x_CLK_HUB_TIMER_FLAGS  (TYPE_PERI_CLK | SW_GATE)
+	 * #define BCM2165x_CLK_HUB_TIMER_FLAGS  (TYPE_PERI_CLK | SW_GATE)
 	 *
 	 * change it as follows to use slave timer as system timer
 	 *
 	 * #define BCM2165x_CLK_TIMERS_FLAGS     (TYPE_PERI_CLK | SW_GATE)
-         * #define BCM2165x_CLK_HUB_TIMER_FLAGS  (TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
+	 * #define BCM2165x_CLK_HUB_TIMER_FLAGS  (TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
 	 */
-	gpt_setup.name   = "aon-timer";
+	gpt_setup.name = "aon-timer";
 	gpt_setup.ch_num = 0;
 	gpt_setup.rate = CLOCK_TICK_RATE;
 
@@ -141,12 +139,13 @@ void __init rhea_ray_timer_init (void)
 }
 
 struct sys_timer kona_timer = {
-	.init	= rhea_ray_timer_init,
+	.init = rhea_ray_timer_init,
 };
 
 #ifdef CONFIG_KONA_ATAG_DT
 /* rhea has 4 banks of GPIO pins */
-uint32_t dt_pinmux_gpio_mask[4] = {0, 0, 0, 0};
+uint32_t dt_pinmux_gpio_mask[4] = { 0, 0, 0, 0 };
+
 uint32_t dt_gpio[128];
 #endif
 
@@ -168,8 +167,8 @@ static int __init rhea_init(void)
 
 #ifdef CONFIG_KONA_ATAG_DT
 	printk(KERN_INFO "pinmux_gpio_mask: 0x%x, 0x%x, 0x%x, 0x%x\n",
-		dt_pinmux_gpio_mask[0], dt_pinmux_gpio_mask[1],
-		dt_pinmux_gpio_mask[2], dt_pinmux_gpio_mask[3]);
+	       dt_pinmux_gpio_mask[0], dt_pinmux_gpio_mask[1],
+	       dt_pinmux_gpio_mask[2], dt_pinmux_gpio_mask[3]);
 #endif
 
 #ifdef CONFIG_GPIOLIB
@@ -182,4 +181,3 @@ static int __init rhea_init(void)
 }
 
 early_initcall(rhea_init);
-
