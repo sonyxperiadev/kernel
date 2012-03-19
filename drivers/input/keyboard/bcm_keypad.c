@@ -12,7 +12,7 @@
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
-#define DEBUG /* enable the pr_debug calls */
+#define DEBUG			/* enable the pr_debug calls */
 #define tempINTERFACE_OSDAL_KEYPAD
 
 #include <linux/module.h>
@@ -38,7 +38,7 @@
 #include "plat/chal/chal_keypad.h"
 
 /*Debug messages */
-#define       BCMKP_DEBUG 
+#define       BCMKP_DEBUG
 #ifdef BCMKP_DEBUG
 #define BCMKP_DBG(format, args...)	pr_info(__FILE__ ":" format, ## args)
 #else
@@ -121,14 +121,13 @@ struct bcm_keypad {
 	unsigned int oldmatrix[MATRIX_SIZE];
 };
 
-typedef struct
-{
-	unsigned char		head;
-	unsigned char		tail;
-	unsigned char		length;
-	bool				fifo_full;
-	CHAL_KEYPAD_REGISTER_SET_t	eventQ[BCM_INTERRUPT_EVENT_FIFO_LENGTH];
-} BCM_KEYPAD_INTERRUPT_FIFO_t; // interrupt event Q - register data from an interrupt to be processed later.
+typedef struct {
+	unsigned char head;
+	unsigned char tail;
+	unsigned char length;
+	bool fifo_full;
+	CHAL_KEYPAD_REGISTER_SET_t eventQ[BCM_INTERRUPT_EVENT_FIFO_LENGTH];
+} BCM_KEYPAD_INTERRUPT_FIFO_t;	// interrupt event Q - register data from an interrupt to be processed later.
 
 static void bcm_keypad_tasklet(unsigned long);
 /*static void bcm_handle_key_state(struct bcm_keypad *bcm_kb);*/
@@ -153,12 +152,11 @@ static irqreturn_t bcm_keypad_interrupt(int irq, void *dev_id)
 
 	disable_irq_nosync(irq);
 
-	if (!intrFifo.fifo_full)
-	{
+	if (!intrFifo.fifo_full) {
 		event = &intrFifo.eventQ[intrFifo.head];
 		chal_keypad_retrieve_key_event_registers(keypadHandle, event);
 		FIFO_INCREMENT_HEAD(intrFifo);
-		if(intrFifo.head == intrFifo.tail)
+		if (intrFifo.head == intrFifo.tail)
 			intrFifo.fifo_full = TRUE;
 	}
 	chal_keypad_clear_interrupts(keypadHandle);
@@ -173,26 +171,24 @@ static irqreturn_t bcm_keypad_interrupt(int irq, void *dev_id)
 /* Function Name: bcm_handle_key */
 /* Description: Report key actions to input framework */
 /* ****************************************************************************** */
-static void bcm_handle_key(struct bcm_keypad *bcm_kb, CHAL_KEYPAD_KEY_ID_t	keyId, 
-    CHAL_KEYPAD_ACTION_t    keyAction)
+static void bcm_handle_key(struct bcm_keypad *bcm_kb,
+			   CHAL_KEYPAD_KEY_ID_t keyId,
+			   CHAL_KEYPAD_ACTION_t keyAction)
 {
 	struct bcm_keymap *keymap_p = bcm_kb->kpmap;
-    /* KeyId is of the form 0xCR where:  C = column number    R = row number 
-            Use it as index into map structure */
-    unsigned char vk = keymap_p[keyId].key_code;
+	/* KeyId is of the form 0xCR where:  C = column number    R = row number 
+	   Use it as index into map structure */
+	unsigned char vk = keymap_p[keyId].key_code;
 
-    if (keyAction == CHAL_KEYPAD_KEY_PRESS)
-    {
-        input_report_key(bcm_kb->input_dev, vk, 1);
-        input_sync(bcm_kb->input_dev);
-        pr_debug("%s press\n", keymap_p[keyId].name);
-    }
-    else if (keyAction == CHAL_KEYPAD_KEY_RELEASE)
-    {
-        input_report_key(bcm_kb->input_dev, vk, 0); 
-        input_sync(bcm_kb->input_dev);
-        pr_debug("key release vk=%d\n", vk);
-    }
+	if (keyAction == CHAL_KEYPAD_KEY_PRESS) {
+		input_report_key(bcm_kb->input_dev, vk, 1);
+		input_sync(bcm_kb->input_dev);
+		pr_debug("%s press\n", keymap_p[keyId].name);
+	} else if (keyAction == CHAL_KEYPAD_KEY_RELEASE) {
+		input_report_key(bcm_kb->input_dev, vk, 0);
+		input_sync(bcm_kb->input_dev);
+		pr_debug("key release vk=%d\n", vk);
+	}
 }
 
 #ifdef _HERA_
@@ -203,22 +199,22 @@ static void bcm_handle_key(struct bcm_keypad *bcm_kb, CHAL_KEYPAD_KEY_ID_t	keyId
 /* ****************************************************************************** */
 static void bcm_set_keypad_pinmux(void)
 {
-    PadCtrlConfig_t padCtrlCfg;
-    CHAL_HANDLE handle;
+	PadCtrlConfig_t padCtrlCfg;
+	CHAL_HANDLE handle;
 
-    handle = chal_padctrl_init(HW_IO_PHYS_TO_VIRT(PAD_CTRL_BASE_ADDR));
-    
-    padCtrlCfg.DWord=0;    
-    padCtrlCfg.PadCtrlConfigBitField.mux = 1;
-    padCtrlCfg.PadCtrlConfigBitField.hys = 0;
-    padCtrlCfg.PadCtrlConfigBitField.pdn = 0;
-    padCtrlCfg.PadCtrlConfigBitField.pup = 0;
-    padCtrlCfg.PadCtrlConfigBitField.rate = 0;
-    padCtrlCfg.PadCtrlConfigBitField.ind = 0;
-    padCtrlCfg.PadCtrlConfigBitField.mode = 0;
+	handle = chal_padctrl_init(HW_IO_PHYS_TO_VIRT(PAD_CTRL_BASE_ADDR));
 
-    // Grant keypad function request
-    chal_padctrl_grant_kpd(handle, padCtrlCfg);	
+	padCtrlCfg.DWord = 0;
+	padCtrlCfg.PadCtrlConfigBitField.mux = 1;
+	padCtrlCfg.PadCtrlConfigBitField.hys = 0;
+	padCtrlCfg.PadCtrlConfigBitField.pdn = 0;
+	padCtrlCfg.PadCtrlConfigBitField.pup = 0;
+	padCtrlCfg.PadCtrlConfigBitField.rate = 0;
+	padCtrlCfg.PadCtrlConfigBitField.ind = 0;
+	padCtrlCfg.PadCtrlConfigBitField.mode = 0;
+
+	// Grant keypad function request
+	chal_padctrl_grant_kpd(handle, padCtrlCfg);
 }
 
 #else
@@ -243,7 +239,7 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 {
 	int ret;
 	u32 i;
-	/*u32 reg_value;*/
+	/*u32 reg_value; */
 
 	struct bcm_keypad *bcm_kb;
 	struct bcm_keypad_platform_info *pdata = pdev->dev.platform_data;
@@ -261,8 +257,7 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 
 	bcm_kb = kmalloc(sizeof(*bcm_kb), GFP_KERNEL);
 	if (bcm_kb == NULL) {
-		pr_err(
-		       "%s(%s:%u)::Failed to allocate keypad structure...\n",
+		pr_err("%s(%s:%u)::Failed to allocate keypad structure...\n",
 		       __FUNCTION__, __FILE__, __LINE__);
 		return -ENOMEM;
 	}
@@ -270,8 +265,7 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 
 	bcm_kb->input_dev = input_allocate_device();
 	if (bcm_kb->input_dev == NULL) {
-		pr_err(
-		       "%s(%s:%u)::Failed to allocate input device...\n",
+		pr_err("%s(%s:%u)::Failed to allocate input device...\n",
 		       __FUNCTION__, __FILE__, __LINE__);
 		return -ENOMEM;
 	}
@@ -303,10 +297,10 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 
 	pr_debug("%s::bcm_keypad_probe\n", __FUNCTION__);
 
-    /* New chal based h/w setup */
-    bcm_set_keypad_pinmux();
+	/* New chal based h/w setup */
+	bcm_set_keypad_pinmux();
 
-	intrFifo.head =0;
+	intrFifo.head = 0;
 	intrFifo.tail = 0;
 	intrFifo.length = BCM_INTERRUPT_EVENT_FIFO_LENGTH;
 	intrFifo.fifo_full = FALSE;
@@ -326,7 +320,8 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 	// disable the keypad hardware block
 	chal_keypad_set_enable(keypadHandle, FALSE);
 	chal_keypad_set_pullup_mode(keypadHandle, hwConfig.pullUpMode);
-	chal_keypad_set_column_filter(keypadHandle, TRUE, hwConfig.debounceTime);
+	chal_keypad_set_column_filter(keypadHandle, TRUE,
+				      hwConfig.debounceTime);
 	chal_keypad_set_row_width(keypadHandle, hwConfig.rows);
 	chal_keypad_set_column_width(keypadHandle, hwConfig.columns);
 #ifdef SWAP_ROW_COL
@@ -338,12 +333,13 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 	chal_keypad_set_interrupt_edge(keypadHandle, hwConfig.interruptEdge);
 	// clear any old interrupts
 	chal_keypad_clear_interrupts(keypadHandle);
-	chal_keypad_set_interrupt_mask(keypadHandle, hwConfig.rows, hwConfig.columns);
+	chal_keypad_set_interrupt_mask(keypadHandle, hwConfig.rows,
+				       hwConfig.columns);
 	// clear any old interrupts
 	chal_keypad_clear_interrupts(keypadHandle);
 	// enable the keypad hardware block
 	chal_keypad_set_enable(keypadHandle, TRUE);
-	
+
 	for (i = 0; i < (KEYPAD_MAX_ROWS * KEYPAD_MAX_COLUMNS); i++) {
 		__set_bit(keymap_p->key_code & KEY_MAX,
 			  bcm_kb->input_dev->keybit);
@@ -352,7 +348,7 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 
 	ret =
 	    request_irq(bcm_kb->irq, bcm_keypad_interrupt, IRQF_DISABLED |
-			    IRQF_NO_SUSPEND, "BRCM Keypad", bcm_kb);
+			IRQF_NO_SUSPEND, "BRCM Keypad", bcm_kb);
 	if (ret < 0) {
 		pr_err("%s(%s:%u)::request_irq failed IRQ %d\n",
 		       __FUNCTION__, __FILE__, __LINE__, bcm_kb->irq);
@@ -360,9 +356,9 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 	}
 	ret = input_register_device(bcm_kb->input_dev);
 	if (ret < 0) {
-		pr_err(
-		       "%s(%s:%u)::Unable to register GPIO-keypad input device\n",
-		       __FUNCTION__, __FILE__, __LINE__);
+		pr_err
+		    ("%s(%s:%u)::Unable to register GPIO-keypad input device\n",
+		     __FUNCTION__, __FILE__, __LINE__);
 		goto free_dev;
 	}
 
@@ -370,11 +366,11 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 	BCMKP_DBG(KERN_DEBUG "BCM keypad initialization completed...\n");
 	return ret;
 
-      free_dev:
+free_dev:
 	input_unregister_device(bcm_kb->input_dev);
 	input_free_device(bcm_kb->input_dev);
 
-      free_irq:
+free_irq:
 	free_irq(bcm_kb->irq, (void *)bcm_kb);
 
 	return -EINVAL;
@@ -415,21 +411,21 @@ static void bcm_keypad_tasklet(unsigned long data)
 	CHAL_KEYPAD_REGISTER_SET_t *event;
 	cUInt32 numKeyEvt = 0;
 	int i;
-	
-	while(!FIFO_EMPTY(intrFifo))
-	{
+
+	while (!FIFO_EMPTY(intrFifo)) {
 		event = &intrFifo.eventQ[intrFifo.tail];
-		numKeyEvt = chal_keypad_process_key_event_registers(keypadHandle, event, keyEventList);
+		numKeyEvt =
+		    chal_keypad_process_key_event_registers(keypadHandle, event,
+							    keyEventList);
 		FIFO_INCREMENT_TAIL(intrFifo);
-		if(intrFifo.fifo_full)
-		{
+		if (intrFifo.fifo_full) {
 			intrFifo.fifo_full = FALSE;
 		}
-		for(i=0; i<numKeyEvt; i++)
-		{
-			if(keyEventList[i].keyAction != CHAL_KEYPAD_KEY_NO_ACTION)
-			{
-				bcm_handle_key(bcm_kb, keyEventList[i].keyId, keyEventList[i].keyAction);
+		for (i = 0; i < numKeyEvt; i++) {
+			if (keyEventList[i].keyAction !=
+			    CHAL_KEYPAD_KEY_NO_ACTION) {
+				bcm_handle_key(bcm_kb, keyEventList[i].keyId,
+					       keyEventList[i].keyAction);
 			}
 		}
 	}

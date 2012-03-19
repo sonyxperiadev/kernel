@@ -457,7 +457,7 @@ static int qt602240_check_bootloader(struct i2c_client *client,
 {
 	u8 val;
 
-      recheck:
+recheck:
 	if (i2c_master_recv(client, &val, 1) != 1) {
 		dev_err(&client->dev, "%s: i2c recv failed\n", __func__);
 		return -EIO;
@@ -736,7 +736,7 @@ static irqreturn_t qt602240_interrupt(int irq, void *dev_id)
 			qt602240_dump_message(dev, &message);
 	} while (reportid != 0xff);
 
-      end:
+end:
 	return IRQ_HANDLED;
 }
 
@@ -751,13 +751,13 @@ static int qt602240_check_reg_init(struct qt602240_data *data)
 
 	switch (version) {
 	case QT602240_VER_20:
-		init_vals = (u8 *) init_vals_ver_20;
+		init_vals = (u8 *)init_vals_ver_20;
 		break;
 	case QT602240_VER_21:
-		init_vals = (u8 *) init_vals_ver_21;
+		init_vals = (u8 *)init_vals_ver_21;
 		break;
 	case QT602240_VER_22:
-		init_vals = (u8 *) init_vals_ver_22;
+		init_vals = (u8 *)init_vals_ver_22;
 		break;
 	default:
 		dev_err(dev, "Firmware version %d doesn't support\n", version);
@@ -792,7 +792,7 @@ static int qt602240_check_matrix_size(struct qt602240_data *data)
 	dev_dbg(dev, "Number of Y lines: %d\n", pdata->y_line);
 
 	switch (pdata->x_line) {
-	case 0 ... 15:
+	case 0...15:
 		if (pdata->y_line <= 14)
 			mode = 0;
 		break;
@@ -1160,7 +1160,7 @@ static int qt602240_load_fw(struct device *dev, const char *fn)
 		dev_dbg(dev, "Updated %d bytes / %zd bytes\n", pos, fw->size);
 	}
 
-      out:
+out:
 	release_firmware(fw);
 
 	/* Change to slave address of application */
@@ -1460,14 +1460,14 @@ static int __devinit qt602240_probe(struct i2c_client *client,
 #endif
 	return 0;
 
-      err_unregister_device:
+err_unregister_device:
 	input_unregister_device(input_dev);
 	input_dev = NULL;
-      err_free_irq:
+err_free_irq:
 	free_irq(client->irq, data);
-      err_free_object:
+err_free_object:
 	kfree(data->object_table);
-      err_free_mem:
+err_free_mem:
 	input_free_device(input_dev);
 	kfree(data);
 	return error;
