@@ -87,7 +87,7 @@
  * mode for accurate detection, but the cost of this would be more power
  * consumption when headset is connected.
  */
- #define KEEP_MIC_BIAS_ON_FOR_BP_DETECTION
+#define KEEP_MIC_BIAS_ON_FOR_BP_DETECTION
 
 /*
  * The gpio_set_debounce expects the debounce argument in micro seconds
@@ -245,19 +245,19 @@ static void dump_hw_regs(struct mic_t *p)
 	pr_info("\r\n Dumping MIC BIAS registers \r\n");
 	for (i = 0x0; i <= 0x28; i += 0x04) {
 		pr_info("Addr: 0x%x  OFFSET: 0x%x  Value:0x%x \r\n",
-		       p->auxmic_base + i, i, readl(p->auxmic_base + i));
+			p->auxmic_base + i, i, readl(p->auxmic_base + i));
 	}
 
 	pr_info("\r\n \r\n");
 	pr_info("Dumping ACI registers \r\n");
 	for (i = 0x30; i <= 0xD8; i += 0x04) {
 		pr_info("Addr: 0x%x  OFFSET: 0x%x  Value:0x%x \r\n",
-		       p->aci_base + i, i, readl(p->aci_base + i));
+			p->aci_base + i, i, readl(p->aci_base + i));
 	}
 
 	for (i = 0x400; i <= 0x420; i += 0x04) {
 		pr_info("Addr: 0x%x  OFFSET: 0x%x Value:0x%x \r\n",
-		       p->aci_base + i, i, readl(p->aci_base + i));
+			p->aci_base + i, i, readl(p->aci_base + i));
 	}
 	pr_info("\r\n \r\n");
 }
@@ -340,14 +340,12 @@ static int aci_hw_config(int hst)
 		/* Turn OFF MIC Bias */
 		aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_GND;
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-				CHAL_ACI_BLOCK_GENERIC,
-				&aci_mic_bias);
+				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
 
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-			CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
-			CHAL_ACI_BLOCK_GENERIC,
-			0);
+				    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
+				    CHAL_ACI_BLOCK_GENERIC, 0);
 		time_to_settle = DET_BASIC_CARKIT_SETTLE;
 		break;
 
@@ -471,7 +469,6 @@ int detect_hs_type(struct mic_t *mic_dev)
 	return type;
 }
 
-
 static int is_accessory_supported(struct mic_t *mic_dev)
 {
 	int mic_level1;
@@ -491,13 +488,11 @@ static int is_accessory_supported(struct mic_t *mic_dev)
 
 	/* Power up the ADC */
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_ENABLE,
-			    CHAL_ACI_BLOCK_ADC);
+			    CHAL_ACI_BLOCK_ACTION_ENABLE, CHAL_ACI_BLOCK_ADC);
 
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
-			    CHAL_ACI_BLOCK_ADC,
-			    CHAL_ACI_BLOCK_ADC_FULL_RANGE);
+			    CHAL_ACI_BLOCK_ADC, CHAL_ACI_BLOCK_ADC_FULL_RANGE);
 
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
@@ -505,13 +500,13 @@ static int is_accessory_supported(struct mic_t *mic_dev)
 	msleep(80);
 
 	mic_level1 = chal_aci_block_read(mic_dev->aci_chal_hdl,
-					CHAL_ACI_BLOCK_ADC,
-					CHAL_ACI_BLOCK_ADC_RAW);
+					 CHAL_ACI_BLOCK_ADC,
+					 CHAL_ACI_BLOCK_ADC_RAW);
 	mic_level1 = mic_level1 <= 0 ? mic_level1 :
 	    ((mic_level1 > mic_dev->headset_pd->phone_ref_offset) ?
 	     (mic_level1 - mic_dev->headset_pd->phone_ref_offset) : 0);
 	pr_debug(" ++ %s(): mic_level1 after calc %d \r\n", __func__,
-		mic_level1);
+		 mic_level1);
 
 	/* Turn On the HP Power Amplifier */
 	bcmpmu_audio_init();
@@ -522,13 +517,13 @@ static int is_accessory_supported(struct mic_t *mic_dev)
 
 	/* Read mic level again */
 	mic_level2 = chal_aci_block_read(mic_dev->aci_chal_hdl,
-					CHAL_ACI_BLOCK_ADC,
-					CHAL_ACI_BLOCK_ADC_RAW);
+					 CHAL_ACI_BLOCK_ADC,
+					 CHAL_ACI_BLOCK_ADC_RAW);
 	mic_level2 = mic_level2 <= 0 ? mic_level2 :
 	    ((mic_level2 > mic_dev->headset_pd->phone_ref_offset) ?
 	     (mic_level2 - mic_dev->headset_pd->phone_ref_offset) : 0);
 	pr_debug(" ++ %s(): mic_level2 after calc %d \r\n", __func__,
-		mic_level2);
+		 mic_level2);
 
 	if ((mic_level1 - mic_level2) >= MIC_CHANGE_DETECTION_THRESHOLD) {
 		pr_info("%s(): Unsupported accessory \r\n", __func__);
@@ -572,18 +567,18 @@ static void button_press_work_func(struct work_struct *work)
 	 *
 	 */
 	comp_status = chal_aci_block_read(p->aci_chal_hdl,
-			CHAL_ACI_BLOCK_COMP2,
-			CHAL_ACI_BLOCK_COMP_RAW);
+					  CHAL_ACI_BLOCK_COMP2,
+					  CHAL_ACI_BLOCK_COMP_RAW);
 	if (comp_status == CHAL_ACI_BLOCK_COMP_LINE_LOW) {
 		if ((p->hs_state == HEADSET) &&
-			(p->button_state == BUTTON_RELEASED)) {
+		    (p->button_state == BUTTON_RELEASED)) {
 			p->button_state = BUTTON_PRESSED;
 			pr_info(" Sending Key Press\r\n");
 			input_report_key(p->headset_button_idev, KEY_SEND, 1);
 			input_sync(p->headset_button_idev);
 		}
 		schedule_delayed_work(&(p->button_press_work),
-			KEY_DETECT_DELAY);
+				      KEY_DETECT_DELAY);
 	} else {
 		p->button_state = BUTTON_RELEASED;
 		pr_info(" Sending Key Release\r\n");
@@ -631,7 +626,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 				gpio_set_value(p->mic_gnd_gpio, 1);
 #else
 			pr_info("%s(): ACCESSORY IS NOT SUPPORTED \r\n",
-			__func__);
+				__func__);
 
 			p->hs_state = UNSUPPORTED;
 			/*
@@ -647,13 +642,12 @@ static void accessory_detect_work_func(struct work_struct *work)
 		}
 
 		p->hs_state = detect_hs_type(p);
-		pr_debug("\nHeadset inserted with hs_state=%d\n",
-			 p->hs_state);
+		pr_debug("\nHeadset inserted with hs_state=%d\n", p->hs_state);
 		switch (p->hs_state) {
 
 		case OPEN_CABLE:
 			pr_debug
-			("Open cable reconfig threshold values of COMP1\r\n");
+			    ("Open cable reconfig threshold values of COMP1\r\n");
 
 			/*
 			 * Put the MIC BIAS in Discontinuous measurement mode
@@ -661,22 +655,23 @@ static void accessory_detect_work_func(struct work_struct *work)
 			 */
 			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
 			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+					    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+					    CHAL_ACI_BLOCK_GENERIC,
+					    &aci_mic_bias);
 
 			/* Configure the comparator 2 for type detection */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
-				    CHAL_ACI_BLOCK_COMP2,
-				    &comp_values_for_type_det);
+					    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
+					    CHAL_ACI_BLOCK_COMP2,
+					    &comp_values_for_type_det);
 
 			/*
 			 * Set the threshold value for accessory insertion
 			 * detection
 			 */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-				    CHAL_ACI_BLOCK_COMP2, 1900);
+					    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+					    CHAL_ACI_BLOCK_COMP2, 1900);
 
 			/* No notification needed for the userland */
 
@@ -686,13 +681,13 @@ static void accessory_detect_work_func(struct work_struct *work)
 #endif
 			/* Clear pending interrupts if any */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-				    CHAL_ACI_BLOCK_COMP);
+					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+					    CHAL_ACI_BLOCK_COMP);
 
 			/* Enable COMP2 interrupt for accessory detection */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
-				    CHAL_ACI_BLOCK_COMP2);
+					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
+					    CHAL_ACI_BLOCK_COMP2);
 			break;
 
 		case HEADSET:
@@ -716,19 +711,20 @@ static void accessory_detect_work_func(struct work_struct *work)
 			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
 #endif
 			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+					    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+					    CHAL_ACI_BLOCK_GENERIC,
+					    &aci_mic_bias);
 
 			/* Configure the comparator 2 for button press */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
-			    CHAL_ACI_BLOCK_COMP2,
-			    &comp_values_for_button_press);
+					    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
+					    CHAL_ACI_BLOCK_COMP2,
+					    &comp_values_for_button_press);
 
 			/* Set the threshold value for button press */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-			    CHAL_ACI_BLOCK_COMP2, 600);
+					    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+					    CHAL_ACI_BLOCK_COMP2, 600);
 
 			/*
 			 * A settling time is required here. The call to
@@ -746,19 +742,18 @@ static void accessory_detect_work_func(struct work_struct *work)
 
 			/* Clear pending interrupts if any */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-				    CHAL_ACI_BLOCK_COMP);
+					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+					    CHAL_ACI_BLOCK_COMP);
 
 #ifdef DEBUG
-			pr_info
-			    ("Configured for button press \r\n");
+			pr_info("Configured for button press \r\n");
 			dump_hw_regs(p);
 #endif
 
 			/* Enable COMP2 interrupt for button press */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
-				    CHAL_ACI_BLOCK_COMP2);
+					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
+					    CHAL_ACI_BLOCK_COMP2);
 #ifdef CONFIG_SWITCH
 			/*
 			 * While notifying this to the android world we need to
@@ -780,8 +775,8 @@ static void accessory_detect_work_func(struct work_struct *work)
 
 			/* Clear pending interrupts if any */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-				    CHAL_ACI_BLOCK_COMP);
+					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+					    CHAL_ACI_BLOCK_COMP);
 
 			/* No need to enable the button press/release irq */
 #ifdef CONFIG_SWITCH
@@ -823,13 +818,13 @@ static void accessory_detect_work_func(struct work_struct *work)
 #endif
 			/* Clear pending interrupts */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-				    CHAL_ACI_BLOCK_COMP);
+					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+					    CHAL_ACI_BLOCK_COMP);
 
 			/* Disable the COMP2, COMP2 INV interrupt */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
-				    CHAL_ACI_BLOCK_COMP);
+					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
+					    CHAL_ACI_BLOCK_COMP);
 
 #ifdef CONFIG_KONA_NAHJ_SUPPORT
 			if (gpio_is_valid(p->mic_gnd_gpio))
@@ -1141,8 +1136,7 @@ static int aci_interface_init(struct mic_t *p)
 			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
 			    CHAL_ACI_BLOCK_COMP2, 600);
 
-	pr_debug
-	    ("=== Configured the threshold value for button press\r\n");
+	pr_debug("=== Configured the threshold value for button press\r\n");
 
 	return 0;
 }
@@ -1271,8 +1265,7 @@ static int __init hs_probe(struct platform_device *pdev)
 		 *
 		 * So if the platform data is not present, do not proceed.
 		 */
-		pr_err
-		    ("Platform data not present, could not proceed \r\n");
+		pr_err("Platform data not present, could not proceed \r\n");
 		return -EINVAL;
 	}
 
@@ -1469,7 +1462,7 @@ struct kobject *hs_kobj;
 
 static ssize_t
 hs_regdump_func(struct device *dev, struct device_attribute *attr,
-	  const char *buf, size_t n)
+		const char *buf, size_t n)
 {
 	dump_hw_regs(mic_dev);
 	return n;
@@ -1477,13 +1470,14 @@ hs_regdump_func(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 hs_regwrite_func(struct device *dev, struct device_attribute *attr,
-	  const char *buf, size_t n)
+		 const char *buf, size_t n)
 {
 	unsigned int reg_off;
 	unsigned int val;
 
 	if (sscanf(buf, "%x %x", &reg_off, &val) != 2) {
-		pr_info("Usage: echo reg_offset value > /sys/hs_debug/hs_regwrite \r\n");
+		pr_info
+		    ("Usage: echo reg_offset value > /sys/hs_debug/hs_regwrite \r\n");
 		return n;
 	}
 	pr_info("Writing 0x%x to Address 0x%x \r\n", val,
@@ -1494,7 +1488,7 @@ hs_regwrite_func(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 hs_config_amp_func(struct device *dev, struct device_attribute *attr,
-	  const char *buf, size_t n)
+		   const char *buf, size_t n)
 {
 	unsigned int val;
 	int gain;
@@ -1504,7 +1498,7 @@ hs_config_amp_func(struct device *dev, struct device_attribute *attr,
 		return n;
 	}
 
-	gain = (val ==  1) ? PMU_HSGAIN_66DB_N : PMU_HSGAIN_MUTE;
+	gain = (val == 1) ? PMU_HSGAIN_66DB_N : PMU_HSGAIN_MUTE;
 	bcmpmu_hs_power((void *)val);
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
 	msleep(50);
@@ -1514,14 +1508,14 @@ hs_config_amp_func(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 hs_read_adc_func(struct device *dev, struct device_attribute *attr,
-	  const char *buf, size_t n)
+		 const char *buf, size_t n)
 {
 	int val;
 	int adc_range;
 
 	if (sscanf(buf, "%d", &val) != 1) {
 		pr_info
-		("Usage: echo [1(full range)/0(low voltage)] > /sys/hs_debug/hs_read_adc \r\n");
+		    ("Usage: echo [1(full range)/0(low voltage)] > /sys/hs_debug/hs_read_adc \r\n");
 		return n;
 	}
 
@@ -1539,28 +1533,24 @@ hs_read_adc_func(struct device *dev, struct device_attribute *attr,
 
 	/* Power up the ADC */
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_ENABLE,
-			    CHAL_ACI_BLOCK_ADC);
+			    CHAL_ACI_BLOCK_ACTION_ENABLE, CHAL_ACI_BLOCK_ADC);
 
 	adc_range =
-		(val == 0) ? CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE :
-			CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE;
+	    (val == 0) ? CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE :
+	    CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE;
 
 	pr_info("Configuring ADC range for %d \r\n", adc_range);
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
-			    CHAL_ACI_BLOCK_ADC,
-			    adc_range);
+			    CHAL_ACI_BLOCK_ADC, adc_range);
 	msleep(80);
 
 	val = chal_aci_block_read(mic_dev->aci_chal_hdl,
-		CHAL_ACI_BLOCK_ADC,
-		CHAL_ACI_BLOCK_ADC_RAW);
+				  CHAL_ACI_BLOCK_ADC, CHAL_ACI_BLOCK_ADC_RAW);
 
 	pr_info("Value read from ADC %d \r\n", val);
 	return n;
 }
-
 
 static DEVICE_ATTR(hs_regdump, 0666, NULL, hs_regdump_func);
 static DEVICE_ATTR(hs_regwrite, 0666, NULL, hs_regwrite_func);
@@ -1568,15 +1558,15 @@ static DEVICE_ATTR(hs_config_amp, 0666, NULL, hs_config_amp_func);
 static DEVICE_ATTR(hs_read_adc, 0666, NULL, hs_read_adc_func);
 
 static struct attribute *hs_attrs[] = {
-		&dev_attr_hs_regdump.attr,
-		&dev_attr_hs_regwrite.attr,
-		&dev_attr_hs_config_amp.attr,
-		&dev_attr_hs_read_adc.attr,
-		NULL,
+	&dev_attr_hs_regdump.attr,
+	&dev_attr_hs_regwrite.attr,
+	&dev_attr_hs_config_amp.attr,
+	&dev_attr_hs_read_adc.attr,
+	NULL,
 };
 
 static struct attribute_group hs_attr_group = {
-		.attrs = hs_attrs,
+	.attrs = hs_attrs,
 };
 
 static int __init hs_sysfs_init(void)
@@ -1589,10 +1579,9 @@ static int __init hs_sysfs_init(void)
 
 static void __exit hs_sysfs_exit(void)
 {
-		sysfs_remove_group(hs_kobj, &hs_attr_group);
+	sysfs_remove_group(hs_kobj, &hs_attr_group);
 }
 #endif
-
 
 /*------------------------------------------------------------------------------
     Function name   : kona_hs_module_init

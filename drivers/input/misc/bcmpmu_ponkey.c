@@ -37,7 +37,7 @@
 struct bcmpmu_ponkey {
 	struct input_dev *idev;
 	struct bcmpmu *bcmpmu;
-	u32 ponkey_state; /*0: Released, 1 : Pressed*/
+	u32 ponkey_state;	/*0: Released, 1 : Pressed */
 };
 
 static struct bcmpmu_ponkey *bcmpmu_pkey;
@@ -48,6 +48,7 @@ u32 bcmpmu_get_ponkey_state(void)
 		return bcmpmu_pkey->ponkey_state;
 	return 0;
 }
+
 EXPORT_SYMBOL(bcmpmu_get_ponkey_state);
 
 static void bcmpmu_ponkey_isr(enum bcmpmu_irq irq, void *data)
@@ -70,8 +71,7 @@ static void bcmpmu_ponkey_isr(enum bcmpmu_irq irq, void *data)
 		return;
 	}
 
-	input_report_key(ponkey->idev, KEY_POWER,
-			ponkey->ponkey_state);
+	input_report_key(ponkey->idev, KEY_POWER, ponkey->ponkey_state);
 	input_sync(ponkey->idev);
 }
 
@@ -110,60 +110,64 @@ static int __devinit bcmpmu_ponkey_probe(struct platform_device *pdev)
 	/* init shutdown/hard reset/restart details */
 	if (pdata->hard_reset_en == 0 || pdata->hard_reset_en == 1) {
 		pdata->hard_reset_en <<=
-			bcmpmu->regmap[PMU_REG_POK_RSTPIN_ONLY].shift;
+		    bcmpmu->regmap[PMU_REG_POK_RSTPIN_ONLY].shift;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_POK_RSTPIN_ONLY,
-			pdata->hard_reset_en,
-			bcmpmu->regmap[PMU_REG_POK_RSTPIN_ONLY].mask);
+				  pdata->hard_reset_en,
+				  bcmpmu->regmap[PMU_REG_POK_RSTPIN_ONLY].mask);
 	}
 	if (pdata->restart_en == 0 || pdata->restart_en == 1) {
 		pdata->restart_en <<=
-			bcmpmu->regmap[PMU_REG_PONKEY_RESTART_EN].shift;
+		    bcmpmu->regmap[PMU_REG_PONKEY_RESTART_EN].shift;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEY_RESTART_EN,
-			pdata->restart_en,
-			bcmpmu->regmap[PMU_REG_PONKEY_RESTART_EN].mask);
+				  pdata->restart_en,
+				  bcmpmu->regmap[PMU_REG_PONKEY_RESTART_EN].
+				  mask);
 	}
 	if (pdata->pok_hold_deb > 0) {
 		pdata->pok_hold_deb <<=
-			bcmpmu->regmap[PMU_REG_PONKEYOFFHOLD_DEB].shift;
+		    bcmpmu->regmap[PMU_REG_PONKEYOFFHOLD_DEB].shift;
 		pdata->pok_hold_deb &=
-			bcmpmu->regmap[PMU_REG_PONKEYOFFHOLD_DEB].mask;
+		    bcmpmu->regmap[PMU_REG_PONKEYOFFHOLD_DEB].mask;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYOFFHOLD_DEB,
-			pdata->pok_hold_deb,
-			bcmpmu->regmap[PMU_REG_PONKEYOFFHOLD_DEB].mask);
+				  pdata->pok_hold_deb,
+				  bcmpmu->regmap[PMU_REG_PONKEYOFFHOLD_DEB].
+				  mask);
 	}
 	if (pdata->pok_shtdwn_dly > 0) {
 		pdata->pok_shtdwn_dly <<=
-			bcmpmu->regmap[PMU_REG_PONKEY_SHUTDOWN_DLY].shift;
+		    bcmpmu->regmap[PMU_REG_PONKEY_SHUTDOWN_DLY].shift;
 		pdata->pok_shtdwn_dly &=
-			bcmpmu->regmap[PMU_REG_PONKEY_SHUTDOWN_DLY].mask;
+		    bcmpmu->regmap[PMU_REG_PONKEY_SHUTDOWN_DLY].mask;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEY_SHUTDOWN_DLY,
-			pdata->pok_shtdwn_dly,
-			bcmpmu->regmap[PMU_REG_PONKEY_SHUTDOWN_DLY].mask);
+				  pdata->pok_shtdwn_dly,
+				  bcmpmu->regmap[PMU_REG_PONKEY_SHUTDOWN_DLY].
+				  mask);
 	}
 	if (pdata->pok_restart_dly > 0) {
 		pdata->pok_restart_dly <<=
-			bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DLY].shift;
+		    bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DLY].shift;
 		pdata->pok_restart_dly &=
-			bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DLY].mask;
+		    bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DLY].mask;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEY_RESTART_DLY,
-			pdata->pok_restart_dly,
-			bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DLY].mask);
+				  pdata->pok_restart_dly,
+				  bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DLY].
+				  mask);
 	}
 	if (pdata->pok_restart_deb > 0) {
 		pdata->pok_restart_deb <<=
-			bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DEB].shift;
+		    bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DEB].shift;
 		pdata->pok_restart_deb &=
-			bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DEB].mask;
+		    bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DEB].mask;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEY_RESTART_DEB,
-			pdata->pok_restart_deb,
-			bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DEB].mask);
+				  pdata->pok_restart_deb,
+				  bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DEB].
+				  mask);
 	}
 	/* set KEY_PAD_LOCK */
 	if (pdata->pok_lock == 0 || pdata->pok_lock == 1) {
-		pdata->pok_lock <<=
-			bcmpmu->regmap[PMU_REG_KEY_PAD_LOCK].shift;
+		pdata->pok_lock <<= bcmpmu->regmap[PMU_REG_KEY_PAD_LOCK].shift;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_KEY_PAD_LOCK, pdata->pok_lock,
-			bcmpmu->regmap[PMU_REG_KEY_PAD_LOCK].mask);
+				  bcmpmu->regmap[PMU_REG_KEY_PAD_LOCK].mask);
 	}
 
 	/* Request PRESSED and RELEASED interrupts.
@@ -185,9 +189,9 @@ static int __devinit bcmpmu_ponkey_probe(struct platform_device *pdev)
 
 	return 0;
 
-      out:
+out:
 	input_free_device(ponkey->idev);
-      out_input:
+out_input:
 	kfree(ponkey);
 	return error;
 }
