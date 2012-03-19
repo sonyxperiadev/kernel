@@ -12,7 +12,6 @@
 * consent.
 *****************************************************************************/
 
-
 /*
 *
 *****************************************************************************
@@ -47,29 +46,25 @@
 #define GIST_BUFFER_SIZE_USE_DEFAULT 0
 
 /* reader parameters */
-typedef struct
-{
+typedef struct {
 	char filename[GIST_FILENAME_MAXLEN];	/* Name of file to read from */
-   int  mode;                             /* Flag indicating if file should be
-                                           * repated from the beginning
-                                           * if the end is reached. */
-   int  buffer_size;                      /* Size of buffer to use.  Specify
-                                           * GIST_BUFFER_SIZE_USE_DEFAULT to
-                                           * let GIST use the default size */
-}
-GIST_READER_PARAMS;
+	int mode;		/* Flag indicating if file should be
+				 * repated from the beginning
+				 * if the end is reached. */
+	int buffer_size;	/* Size of buffer to use.  Specify
+				 * GIST_BUFFER_SIZE_USE_DEFAULT to
+				 * let GIST use the default size */
+} GIST_READER_PARAMS;
 
 /* writer parameters */
-typedef struct
-{
-   char filename[GIST_FILENAME_MAXLEN];   /* Name of the file to write to */
-   int  mode;                             /* Flag indicating if existing files
-                                           * should be overwritten or appended to. */
-   int  buffer_size;                      /* Size of buffer to use.  Specify
-                                           * GIST_BUFFER_SIZE_USE_DEFAULT to
-                                           * let GIST use the default size */
-}
-GIST_WRITER_PARAMS;
+typedef struct {
+	char filename[GIST_FILENAME_MAXLEN];	/* Name of the file to write to */
+	int mode;		/* Flag indicating if existing files
+				 * should be overwritten or appended to. */
+	int buffer_size;	/* Size of buffer to use.  Specify
+				 * GIST_BUFFER_SIZE_USE_DEFAULT to
+				 * let GIST use the default size */
+} GIST_WRITER_PARAMS;
 
 #if defined( __KERNEL__ )
 /* ---- Variable Externs ------------------------------------- */

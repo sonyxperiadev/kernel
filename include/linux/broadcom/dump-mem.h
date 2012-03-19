@@ -31,11 +31,10 @@
 
 /* ---- Constants and Types ---------------------------------------------- */
 
-typedef enum
-{
-    DUMP_TO_NONE        = 0x00,
-    DUMP_TO_CONSOLE     = 0x01,
-    DUMP_TO_KNLLOG      = 0x02,
+typedef enum {
+	DUMP_TO_NONE = 0x00,
+	DUMP_TO_CONSOLE = 0x01,
+	DUMP_TO_KNLLOG = 0x02,
 
 } DUMP_DEST;
 
@@ -45,9 +44,10 @@ typedef enum
 
 /* ---- Function Prototypes ---------------------------------------------- */
 
-void dump_mem( const char *function, DUMP_DEST dumpDest, uint32_t addr, const void *mem, size_t numBytes );
+void dump_mem(const char *function, DUMP_DEST dumpDest, uint32_t addr,
+	      const void *mem, size_t numBytes);
 
-void printk_dump_mem( const char *label, uint32_t addr, const void *voidMem, size_t numBytes );
+void printk_dump_mem(const char *label, uint32_t addr, const void *voidMem,
+		     size_t numBytes);
 
-#endif  /* LINUX_BROADCOM_DUMP_MEM_H */
-
+#endif /* LINUX_BROADCOM_DUMP_MEM_H */

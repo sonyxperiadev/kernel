@@ -30,4 +30,3 @@ typedef void CSX_UTIL_INFO;
 typedef void CSX_UTIL_POINT;
 
 #endif /* CSX_UTIL_H */
-
