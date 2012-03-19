@@ -54,7 +54,7 @@ static inline uint64_t lldiv(uint64_t dividend, uint32_t divisor)
 {
 	uint64_t __res = dividend;
 	do_div(__res, divisor);
-	return(__res);
+	return (__res);
 }
 
 int mmc_delay_till_state(struct mmc *mmc, u8 state);
@@ -62,12 +62,14 @@ int mmc_delay_till_state(struct mmc *mmc, u8 state);
 static struct list_head mmc_devices;
 static int cur_dev_num = -1;
 
-int __board_mmc_getcd(u8 *cd, struct mmc *mmc) {
+int __board_mmc_getcd(u8 *cd, struct mmc *mmc)
+{
 	return -1;
 }
 
-int board_mmc_getcd(u8 *cd, struct mmc *mmc)__attribute__((weak,
-	alias("__board_mmc_getcd")));
+int board_mmc_getcd(u8 *cd, struct mmc *mmc) __attribute__ ((weak,
+							     alias
+							     ("__board_mmc_getcd")));
 
 int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 {
@@ -104,7 +106,7 @@ struct mmc *find_mmc_device(int dev_num)
 }
 
 static ulong
-mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void*src)
+mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void *src)
 {
 	struct mmc_cmd cmd;
 	struct mmc_data data;
@@ -114,7 +116,7 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void*src)
 #endif
 	if ((start + blkcnt) > mmc->block_dev.lba) {
 		printk("MMC: block number 0x%lx exceeds max(0x%lx)\n",
-			start + blkcnt, mmc->block_dev.lba);
+		       start + blkcnt, mmc->block_dev.lba);
 		return 0;
 	}
 #ifdef USE_ONLY_SINGLE_BLOCK_TRANSFERS
@@ -126,7 +128,7 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void*src)
 	data.blocksize = mmc->write_bl_len;
 	data.flags = MMC_DATA_WRITE;
 
-	for (i=0; i<blkcnt; i++) {
+	for (i = 0; i < blkcnt; i++) {
 		/* 
 		 * According to JESD spec page 23, Table 22, the argument
 		 * for CMD 17 is defined as follows 
@@ -135,15 +137,16 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void*src)
 		 * so the next address decission is based on capacity
 		 */
 		if (mmc->high_capacity)
-			cmd.cmdarg  = start + i;
+			cmd.cmdarg = start + i;
 		else
 			cmd.cmdarg = (start + i) * mmc->write_bl_len;
 
-		data.src = (const char *)((char *)src) + (i * mmc->write_bl_len);
+		data.src =
+		    (const char *)((char *)src) + (i * mmc->write_bl_len);
 
 		if (mmc_send_cmd(mmc, &cmd, &data)) {
 			printk("mmc write failed\n");
-			break;	
+			break;
 		}
 
 		/*
@@ -207,7 +210,7 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void*src)
 }
 
 static ulong
-mmc_bwrite(int dev_num, ulong start, lbaint_t blkcnt, const void*src)
+mmc_bwrite(int dev_num, ulong start, lbaint_t blkcnt, const void *src)
 {
 	lbaint_t cur, blocks_todo = blkcnt;
 
@@ -225,7 +228,7 @@ mmc_bwrite(int dev_num, ulong start, lbaint_t blkcnt, const void*src)
 		 */
 		cur = (blocks_todo > 65535) ? 65535 : blocks_todo;
 
-		if(mmc_write_blocks(mmc, start, cur, src) != cur)
+		if (mmc_write_blocks(mmc, start, cur, src) != cur)
 			return 0;
 		blocks_todo -= cur;
 		start += cur;
@@ -252,9 +255,10 @@ int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start, lbaint_t blkcnt)
 	data.blocksize = mmc->read_bl_len;
 	data.flags = MMC_DATA_READ;
 
-	debug("mmc_read_blocks: mmc->high_capacity is %d \r\n",mmc->high_capacity);
+	debug("mmc_read_blocks: mmc->high_capacity is %d \r\n",
+	      mmc->high_capacity);
 
-	for (i=0; i<blkcnt; i++) {
+	for (i = 0; i < blkcnt; i++) {
 		/* 
 		 * According to JESD spec page 23, Table 22, the argument
 		 * for CMD 17 is defined as follows 
@@ -263,7 +267,7 @@ int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start, lbaint_t blkcnt)
 		 * so the next address decission is based on capacity
 		 */
 		if (mmc->high_capacity)
-			cmd.cmdarg  = start + i;
+			cmd.cmdarg = start + i;
 		else
 			cmd.cmdarg = (start + i) * mmc->read_bl_len;
 
@@ -271,7 +275,7 @@ int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start, lbaint_t blkcnt)
 
 		if (mmc_send_cmd(mmc, &cmd, &data)) {
 			printk("mmc read failed\n");
-			break;	
+			break;
 		}
 	}
 
@@ -327,7 +331,7 @@ static ulong mmc_bread(int dev_num, ulong start, lbaint_t blkcnt, void *dst)
 
 	if ((start + blkcnt) > mmc->block_dev.lba) {
 		printk("MMC: block number 0x%lx exceeds max(0x%lx)\n",
-			start + blkcnt, mmc->block_dev.lba);
+		       start + blkcnt, mmc->block_dev.lba);
 		return 0;
 	}
 
@@ -340,7 +344,7 @@ static ulong mmc_bread(int dev_num, ulong start, lbaint_t blkcnt, void *dst)
 		 * only 16 bit width block number counter
 		 */
 		cur = (blocks_todo > 65535) ? 65535 : blocks_todo;
-		if(mmc_read_blocks(mmc, dst, start, cur) != cur)
+		if (mmc_read_blocks(mmc, dst, start, cur) != cur)
 			return 0;
 		blocks_todo -= cur;
 		start += cur;
@@ -350,7 +354,7 @@ static ulong mmc_bread(int dev_num, ulong start, lbaint_t blkcnt, void *dst)
 	return blkcnt;
 }
 
-int mmc_poll_go_idle(struct mmc* mmc)
+int mmc_poll_go_idle(struct mmc *mmc)
 {
 	struct mmc_cmd cmd;
 	int err;
@@ -369,13 +373,12 @@ int mmc_poll_go_idle(struct mmc* mmc)
 
 	udelay(2000);
 
-	debug ("mmc_poll_go_idle: cmd %d done successfully \r\n", cmd.cmdidx);
+	debug("mmc_poll_go_idle: cmd %d done successfully \r\n", cmd.cmdidx);
 
 	return 0;
 }
 
-int
-sd_send_op_cond(struct mmc *mmc)
+int sd_send_op_cond(struct mmc *mmc)
 {
 	int timeout = 1000;
 	int err;
@@ -464,7 +467,6 @@ int mmc_poll_send_op_cond(struct mmc *mmc)
 	return 0;
 }
 
-
 int mmc_poll_send_ext_csd(struct mmc *mmc, char *ext_csd)
 {
 	struct mmc_cmd cmd;
@@ -489,7 +491,6 @@ int mmc_poll_send_ext_csd(struct mmc *mmc, char *ext_csd)
 	return err;
 }
 
-
 int mmc_poll_switch(struct mmc *mmc, u8 set, u8 index, u8 value)
 {
 	struct mmc_cmd cmd;
@@ -497,8 +498,7 @@ int mmc_poll_switch(struct mmc *mmc, u8 set, u8 index, u8 value)
 	cmd.cmdidx = MMC_CMD_SWITCH;
 	cmd.resp_type = MMC_RSP_R1b;
 	cmd.cmdarg = (MMC_SWITCH_MODE_WRITE_BYTE << 24) |
-		(index << 16) |
-		(value << 8);
+	    (index << 16) | (value << 8);
 	cmd.flags = 0;
 
 	return mmc_send_cmd(mmc, &cmd, NULL);
@@ -506,7 +506,7 @@ int mmc_poll_switch(struct mmc *mmc, u8 set, u8 index, u8 value)
 
 int mmc_delay_till_state(struct mmc *mmc, u8 state)
 {
-	int timeout = 1000; 
+	int timeout = 1000;
 	struct mmc_cmd cmd;
 	int err;
 
@@ -517,11 +517,11 @@ int mmc_delay_till_state(struct mmc *mmc, u8 state)
 
 	do {
 		err = mmc_send_cmd(mmc, &cmd, NULL);
-		if(err)
+		if (err)
 			return err;
 
 		udelay(100);
-	} while ((((cmd.response[0] >> 9) & 0xF) != state) && timeout--); 
+	} while ((((cmd.response[0] >> 9) & 0xF) != state) && timeout--);
 
 	if (timeout <= 0)
 		return TIMEOUT;
@@ -552,7 +552,8 @@ int mmc_change_freq(struct mmc *mmc)
 
 #ifndef ISLAND_MMC_FPGA_NO_HIGH_SPEED
 	// Don't send High speed switch command for island in case of working on FPGA.
-	err = mmc_poll_switch(mmc, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_HS_TIMING, 1);
+	err =
+	    mmc_poll_switch(mmc, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_HS_TIMING, 1);
 
 	if (err)
 		return err;
@@ -603,7 +604,6 @@ int sd_switch(struct mmc *mmc, int mode, int group, u8 value, u8 *resp)
 	return mmc_send_cmd(mmc, &cmd, &data);
 }
 
-
 int sd_change_freq(struct mmc *mmc)
 {
 	int err;
@@ -652,18 +652,18 @@ retry_scr:
 	mmc->scr[1] = __be32_to_cpu(scr[1]);
 
 	switch ((mmc->scr[0] >> 24) & 0xf) {
-		case 0:
-			mmc->version = SD_VERSION_1_0;
-			break;
-		case 1:
-			mmc->version = SD_VERSION_1_10;
-			break;
-		case 2:
-			mmc->version = SD_VERSION_2;
-			break;
-		default:
-			mmc->version = SD_VERSION_1_0;
-			break;
+	case 0:
+		mmc->version = SD_VERSION_1_0;
+		break;
+	case 1:
+		mmc->version = SD_VERSION_1_10;
+		break;
+	case 2:
+		mmc->version = SD_VERSION_2;
+		break;
+	default:
+		mmc->version = SD_VERSION_1_0;
+		break;
 	}
 
 	/* Version 1.0 doesn't support switching */
@@ -714,7 +714,7 @@ int fbase[] = {
  * to platforms without floating point.
  */
 int multipliers[] = {
-	0,	/* reserved */
+	0,			/* reserved */
 	10,
 	12,
 	13,
@@ -816,24 +816,24 @@ int mmc_startup(struct mmc *mmc)
 		int version = (cmd.response[0] >> 26) & 0xf;
 
 		switch (version) {
-			case 0:
-				mmc->version = MMC_VERSION_1_2;
-				break;
-			case 1:
-				mmc->version = MMC_VERSION_1_4;
-				break;
-			case 2:
-				mmc->version = MMC_VERSION_2_2;
-				break;
-			case 3:
-				mmc->version = MMC_VERSION_3;
-				break;
-			case 4:
-				mmc->version = MMC_VERSION_4;
-				break;
-			default:
-				mmc->version = MMC_VERSION_1_2;
-				break;
+		case 0:
+			mmc->version = MMC_VERSION_1_2;
+			break;
+		case 1:
+			mmc->version = MMC_VERSION_1_4;
+			break;
+		case 2:
+			mmc->version = MMC_VERSION_2_2;
+			break;
+		case 3:
+			mmc->version = MMC_VERSION_3;
+			break;
+		case 4:
+			mmc->version = MMC_VERSION_4;
+			break;
+		default:
+			mmc->version = MMC_VERSION_1_2;
+			break;
 		}
 	}
 
@@ -852,11 +852,11 @@ int mmc_startup(struct mmc *mmc)
 
 	if (mmc->high_capacity) {
 		csize = (mmc->csd[1] & 0x3f) << 16
-			| (mmc->csd[2] & 0xffff0000) >> 16;
+		    | (mmc->csd[2] & 0xffff0000) >> 16;
 		cmult = 8;
 	} else {
 		csize = (mmc->csd[1] & 0x3ff) << 2
-			| (mmc->csd[2] & 0xc0000000) >> 30;
+		    | (mmc->csd[2] & 0xc0000000) >> 30;
 		cmult = (mmc->csd[2] & 0x00038000) >> 15;
 	}
 
@@ -883,10 +883,9 @@ int mmc_startup(struct mmc *mmc)
 		/* check  ext_csd version and capacity */
 		err = mmc_poll_send_ext_csd(mmc, ext_csd);
 		if (!err & (ext_csd[192] >= 2)) {
-			unsigned long long ext_csd_blk_cnt =	(ext_csd[212] <<  0)|
-								(ext_csd[213] <<  8)|
-								(ext_csd[214] << 16)|
-								(ext_csd[215] << 24);
+			unsigned long long ext_csd_blk_cnt =
+			    (ext_csd[212] << 0) | (ext_csd[213] << 8) |
+			    (ext_csd[214] << 16) | (ext_csd[215] << 24);
 
 			if (ext_csd_blk_cnt)
 				mmc->capacity = ext_csd_blk_cnt * 512;
@@ -933,10 +932,10 @@ int mmc_startup(struct mmc *mmc)
 	} else {
 		if (mmc->card_caps & MMC_MODE_4BIT) {
 
-			/* Set the card to use 4 bit*/
+			/* Set the card to use 4 bit */
 			err = mmc_poll_switch(mmc, EXT_CSD_CMD_SET_NORMAL,
-					EXT_CSD_BUS_WIDTH,
-					EXT_CSD_BUS_WIDTH_4);
+					      EXT_CSD_BUS_WIDTH,
+					      EXT_CSD_BUS_WIDTH_4);
 
 			if (err)
 				return err;
@@ -949,10 +948,10 @@ int mmc_startup(struct mmc *mmc)
 			mmc_poll_set_bus_width(mmc, 4);
 
 		} else if (mmc->card_caps & MMC_MODE_8BIT) {
-			/* Set the card to use 8 bit*/
+			/* Set the card to use 8 bit */
 			err = mmc_poll_switch(mmc, EXT_CSD_CMD_SET_NORMAL,
-					EXT_CSD_BUS_WIDTH,
-					EXT_CSD_BUS_WIDTH_8);
+					      EXT_CSD_BUS_WIDTH,
+					      EXT_CSD_BUS_WIDTH_8);
 
 			if (err)
 				return err;
@@ -980,12 +979,12 @@ int mmc_startup(struct mmc *mmc)
 	mmc->block_dev.blksz = mmc->read_bl_len;
 	mmc->block_dev.lba = lldiv(mmc->capacity, mmc->read_bl_len);
 	sprintf(mmc->block_dev.vendor, "Man %06x Snr %08x", mmc->cid[0] >> 8,
-			(mmc->cid[2] << 8) | (mmc->cid[3] >> 24));
+		(mmc->cid[2] << 8) | (mmc->cid[3] >> 24));
 	sprintf(mmc->block_dev.product, "%c%c%c%c%c", mmc->cid[0] & 0xff,
-			(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
-			(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
+		(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
+		(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
 	sprintf(mmc->block_dev.revision, "%d.%d", mmc->cid[2] >> 28,
-			(mmc->cid[2] >> 24) & 0xf);
+		(mmc->cid[2] >> 24) & 0xf);
 
 #if defined(ISLAND_MMC_FPGA_NO_HIGH_SPEED)
 	// Have some delay for island FPGA.
@@ -1028,9 +1027,9 @@ int mmc_register(struct mmc *mmc)
 	mmc->block_dev.block_read = mmc_bread;
 	mmc->block_dev.block_write = mmc_bwrite;
 
-	INIT_LIST_HEAD (&mmc->link);
+	INIT_LIST_HEAD(&mmc->link);
 
-	list_add_tail (&mmc->link, &mmc_devices);
+	list_add_tail(&mmc->link, &mmc_devices);
 
 	return 0;
 }
@@ -1107,8 +1106,7 @@ void print_mmc_devices(char separator)
  */
 int mmc_initialize(void)
 {
-	INIT_LIST_HEAD (&mmc_devices);
+	INIT_LIST_HEAD(&mmc_devices);
 	cur_dev_num = 0;
 	return 0;
 }
-

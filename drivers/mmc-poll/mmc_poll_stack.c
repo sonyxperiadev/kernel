@@ -51,7 +51,7 @@ int mmc_poll_stack_init(void **mmc_p, int dev_num, int *mmc_poll_dev_num)
 
 	/* e.g) eMMC instance number 2 and for SD Card use 1 */
 	status = kona_mmc_init(kona_dev_num);
-	if (status  < 0) {
+	if (status < 0) {
 		pr_err("kona_mmc_init failed kona_dev:%d\n", kona_dev_num);
 		return -1;
 	}
@@ -88,14 +88,14 @@ static void print_mmcinfo(struct mmc *mmc)
 	pr_info("Manufacturer ID: %x\n", mmc->cid[0] >> 24);
 	pr_info("OEM: %x\n", (mmc->cid[0] >> 8) & 0xffff);
 	pr_info("Name: %c%c%c%c%c\n", mmc->cid[0] & 0xff,
-			(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
-			(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
+		(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
+		(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
 
 	pr_info("Tran Speed: %d\n", mmc->tran_speed);
 	pr_info("Rd Block Len: %d\n", mmc->read_bl_len);
 
 	pr_info("%s version %d.%d\n", IS_SD(mmc) ? "SD" : "MMC",
-			(mmc->version >> 4) & 0xf, mmc->version & 0xf);
+		(mmc->version >> 4) & 0xf, mmc->version & 0xf);
 
 	pr_info("High Capacity: %s\n", mmc->high_capacity ? "Yes" : "No");
 	pr_info("Capacity: %lld\n", mmc->capacity);

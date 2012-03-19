@@ -56,7 +56,6 @@
  */
 /* #define PIO_MODE */
 
-
 /*
  * All the register access are from io-remapped region 
  * The uboot code was using the PA directly. This is changed
@@ -84,20 +83,27 @@ static unsigned int kona_get_base_clock_freq(unsigned int reg_offset)
 
 static dma_addr_t buff_dma_addr;
 
-static void mmc_prepare_data(struct mmc_host *host, struct mmc_data *data, int cmd)
+static void mmc_prepare_data(struct mmc_host *host, struct mmc_data *data,
+			     int cmd)
 {
 	unsigned int temp = 0;
 
 	if (cmd == MMC_CMD_WRITE_MULTIPLE_BLOCK ||
-	    cmd == MMC_CMD_WRITE_SINGLE_BLOCK   ||
-	    cmd == MMC_CMD_READ_MULTIPLE_BLOCK  ||
+	    cmd == MMC_CMD_WRITE_SINGLE_BLOCK ||
+	    cmd == MMC_CMD_READ_MULTIPLE_BLOCK ||
 	    cmd == MMC_CMD_READ_SINGLE_BLOCK) {
-		buff_dma_addr = dma_map_single(NULL, data->dest, data->blocksize * data->blocks, DMA_TO_DEVICE);
+		buff_dma_addr =
+		    dma_map_single(NULL, data->dest,
+				   data->blocksize * data->blocks,
+				   DMA_TO_DEVICE);
 		writel(buff_dma_addr, &host->reg->sysad);
-		debug("Using DMA transfer data->dest: %08x phys 0x%x sysad 0x%x \r\n", (u32)data->dest,buff_dma_addr,&host->reg->sysad);
+		debug
+		    ("Using DMA transfer data->dest: %08x phys 0x%x sysad 0x%x \r\n",
+		     (u32)data->dest, buff_dma_addr, &host->reg->sysad);
 	}
 
-	debug("data->blocksize: %08x data->blocks 0x%x blkcnt_sz 0x%x\r\n", data->blocksize, data->blocks, &host->reg->blkcnt_sz);
+	debug("data->blocksize: %08x data->blocks 0x%x blkcnt_sz 0x%x\r\n",
+	      data->blocksize, data->blocks, &host->reg->blkcnt_sz);
 
 	// Set up block size and block count. 
 	// For KONA it is required to set HSBS field of block register tp 0x7.
@@ -110,52 +116,53 @@ static void mmc_prepare_data(struct mmc_host *host, struct mmc_data *data, int c
 	//                 We see failures in this case when HSBS field is set to 0.
 	//                 Solution is to set HSBS field val to 0x7 so that boundary DMA transactions are safe.
 	//
-	temp = ( 7 << EMMCSDXC_BLOCK_HSBS_SHIFT ) | data->blocksize | ( data->blocks << EMMCSDXC_BLOCK_BCNT_SHIFT ) ;
+	temp =
+	    (7 << EMMCSDXC_BLOCK_HSBS_SHIFT) | data->blocksize | (data->
+								  blocks <<
+								  EMMCSDXC_BLOCK_BCNT_SHIFT);
 	writel(temp, &host->reg->blkcnt_sz);
 }
 
 static void kona_mmc_clear_all_intrs(struct mmc_host *host)
 {
-	writel(0xFFFFFFFF, &host->reg->norintsts ) ; // Clear all interrupts.
+	writel(0xFFFFFFFF, &host->reg->norintsts);	// Clear all interrupts.
 	udelay(1000);
 }
 
-void kona_read_block_pio (struct mmc_host *host, struct mmc_data *data)
+void kona_read_block_pio(struct mmc_host *host, struct mmc_data *data)
 {
 	unsigned long len;
 	unsigned long *p;
 
-	debug ("+kona_read_block_pio \r\n");
+	debug("+kona_read_block_pio \r\n");
 
 	len = data->blocksize;
 	p = (unsigned long *)data->dest;
 
-	while (len)	
-	{
+	while (len) {
 		*p = readl(&host->reg->bdata);
 		len -= 4;
 		p++;
 	}
-	debug ("+kona_read_block_pio \r\n");
+	debug("+kona_read_block_pio \r\n");
 }
 
-void kona_write_block_pio (struct mmc_host *host, struct mmc_data *data)
+void kona_write_block_pio(struct mmc_host *host, struct mmc_data *data)
 {
 	unsigned long len;
 	unsigned long *p;
-	
+
 	len = data->blocksize;
 	p = (unsigned long *)data->src;
 
-	while (len)
-	{
+	while (len) {
 		writel(*p, &host->reg->bdata);
 		len -= 4;
 		p++;
 	}
 }
 
-void kona_transfer_pio (struct mmc_host *host, struct mmc_data *data)
+void kona_transfer_pio(struct mmc_host *host, struct mmc_data *data)
 {
 	unsigned long mask = 0;
 	unsigned long wait = 0;
@@ -164,22 +171,21 @@ void kona_transfer_pio (struct mmc_host *host, struct mmc_data *data)
 	if (data->flags & MMC_DATA_READ) {
 		mask = EMMCSDXC_PSTATE_BREN_MASK;
 		wait = EMMCSDXC_INTR_BRRDY_MASK;
-	}
-	else {
+	} else {
 		mask = EMMCSDXC_PSTATE_BWEN_MASK;
 		wait = EMMCSDXC_INTR_BWRDY_MASK;
 	}
 
 	/* Wait for the buffer to become ready */
 	do {
-		val = readl(&host->reg->norintsts);	
+		val = readl(&host->reg->norintsts);
 	} while ((val & wait) != wait);
 
 	/* Clear the buffer status */
 	val = val & ~mask;
 	writel(val, &host->reg->norintsts);
 
-	debug ("Intr status says buffer ready \r\n");
+	debug("Intr status says buffer ready \r\n");
 
 	/* Perform the block transfer */
 
@@ -189,23 +195,23 @@ void kona_transfer_pio (struct mmc_host *host, struct mmc_data *data)
 	 * commands are used.
 	 */
 
-	 /* 
-	  * Keep reading untill the present status register also says
-	  * that data is ready to be read. This bit useful
-	  * for multi block transfers. That is once the interrupt
-	  * status register says that buffer is ready, we can
-	  * keep reading as many blocks as we want until the present
-	  * status register says that the buffer has valid data (vise versa
-	  * for write). But since we send only single block command,
-	  * the infrastructure is built here and if needed can be extended 
-	  * later
-	  */
-	while ( (readl(&host->reg->prnsts) & mask) == mask){
+	/* 
+	 * Keep reading untill the present status register also says
+	 * that data is ready to be read. This bit useful
+	 * for multi block transfers. That is once the interrupt
+	 * status register says that buffer is ready, we can
+	 * keep reading as many blocks as we want until the present
+	 * status register says that the buffer has valid data (vise versa
+	 * for write). But since we send only single block command,
+	 * the infrastructure is built here and if needed can be extended 
+	 * later
+	 */
+	while ((readl(&host->reg->prnsts) & mask) == mask) {
 
 		if (mask & EMMCSDXC_PSTATE_BREN_MASK)
 			kona_read_block_pio(host, data);
 		else
-			kona_write_block_pio(host,data);
+			kona_write_block_pio(host, data);
 
 		/* To support multi block transfer in future, 
 		 * do not break unconditionally 
@@ -213,17 +219,17 @@ void kona_transfer_pio (struct mmc_host *host, struct mmc_data *data)
 		break;
 	}
 
-	debug ("PIO transfer done \r\n");
+	debug("PIO transfer done \r\n");
 
 	return;
 }
 
 static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
-			struct mmc_data *data)
+			     struct mmc_data *data)
 {
 	struct mmc_host *host = (struct mmc_host *)mmc->priv;
-	int flags = 0 ;
-	int i = 0 ;
+	int flags = 0;
+	int i = 0;
 	unsigned int timeout;
 	volatile unsigned int mask;
 	unsigned int retry = 10000;
@@ -236,12 +242,12 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 
 	/*
 	 * PRNSTS
-	 * CMDINHDAT[1]	: Command Inhibit (DAT)
-	 * CMDINHCMD[0]	: Command Inhibit (CMD)
+	 * CMDINHDAT[1] : Command Inhibit (DAT)
+	 * CMDINHCMD[0] : Command Inhibit (CMD)
 	 */
-	mask = (1 << EMMCSDXC_PSTATE_CMDINH_SHIFT);  // Set command inhibit.
+	mask = (1 << EMMCSDXC_PSTATE_CMDINH_SHIFT);	// Set command inhibit.
 	if ((data != NULL) || (cmd->resp_type & MMC_RSP_BUSY))
-		mask |= (1 << EMMCSDXC_PSTATE_DATINH_SHIFT); // Set dat inhibit.
+		mask |= (1 << EMMCSDXC_PSTATE_DATINH_SHIFT);	// Set dat inhibit.
 
 	/*
 	 * We shouldn't wait for data inihibit for stop commands, even
@@ -250,10 +256,11 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	if (data)
 		mask &= ~(1 << EMMCSDXC_PSTATE_DATINH_SHIFT);
 
-	while ((val=readl(&host->reg->prnsts)) & mask) {
+	while ((val = readl(&host->reg->prnsts)) & mask) {
 		if (timeout == 0) {
-			printk("%s : timeout error %d\n", __func__, cmd->cmdidx);
-			return TIMEOUT ;
+			printk("%s : timeout error %d\n", __func__,
+			       cmd->cmdidx);
+			return TIMEOUT;
 		}
 		timeout--;
 		udelay(1000);
@@ -264,33 +271,35 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		mmc_prepare_data(host, data, cmd->cmdidx);
 
 	debug("cmd->arg: %08x\n", cmd->cmdarg);
-	if ( cmd->cmdidx == 17 )
-	{
+	if (cmd->cmdidx == 17) {
 		/* print out something to indicate we are alive. 
 		 */
 		readCmd_count++;
 		if (0 == (readCmd_count % 100))
-			printk("."); 
+			printk(".");
 	}
 
 	writel(cmd->cmdarg, &host->reg->argument);
 
-	flags = 0 ;
-	if ( data ) 
-	{
+	flags = 0;
+	if (data) {
 		if (cmd->cmdidx == MMC_CMD_WRITE_MULTIPLE_BLOCK ||
-		    cmd->cmdidx == MMC_CMD_WRITE_SINGLE_BLOCK   ||
-		    cmd->cmdidx == MMC_CMD_READ_MULTIPLE_BLOCK  ||
+		    cmd->cmdidx == MMC_CMD_WRITE_SINGLE_BLOCK ||
+		    cmd->cmdidx == MMC_CMD_READ_MULTIPLE_BLOCK ||
 		    cmd->cmdidx == MMC_CMD_READ_SINGLE_BLOCK) {
-			flags = (1 << EMMCSDXC_CMD_BCEN_SHIFT) | (1 << EMMCSDXC_CMD_DMA_SHIFT);
+			flags =
+			    (1 << EMMCSDXC_CMD_BCEN_SHIFT) | (1 <<
+							      EMMCSDXC_CMD_DMA_SHIFT);
 		} else {
-			flags = (1 << EMMCSDXC_CMD_BCEN_SHIFT) | (0 << EMMCSDXC_CMD_DMA_SHIFT);
+			flags =
+			    (1 << EMMCSDXC_CMD_BCEN_SHIFT) | (0 <<
+							      EMMCSDXC_CMD_DMA_SHIFT);
 		}
 
 		if (data->blocks > 1)
-			flags |= (1 << EMMCSDXC_CMD_MSBS_SHIFT); // Multiple block select.
+			flags |= (1 << EMMCSDXC_CMD_MSBS_SHIFT);	// Multiple block select.
 		if (data->flags & MMC_DATA_READ)
-			flags |= (1 << EMMCSDXC_CMD_DTDS_SHIFT); // 1= read, 0=write.
+			flags |= (1 << EMMCSDXC_CMD_DTDS_SHIFT);	// 1= read, 0=write.
 	}
 
 	if ((cmd->resp_type & MMC_RSP_136) && (cmd->resp_type & MMC_RSP_BUSY))
@@ -299,14 +308,14 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	/*
 	 * CMDREG
 	 * CMDIDX[29:24]: Command index
-	 * DPS[21]	: Data Present Select
-	 * CCHK_EN[20]	: Command Index Check Enable
-	 * CRC_EN[19]	: Command CRC Check Enable
+	 * DPS[21]      : Data Present Select
+	 * CCHK_EN[20]  : Command Index Check Enable
+	 * CRC_EN[19]   : Command CRC Check Enable
 	 * RTSEL[1:0]
-	 *	00 = No Response
-	 *	01 = Length 136
-	 *	10 = Length 48
-	 *	11 = Length 48 Check busy after response
+	 *      00 = No Response
+	 *      01 = Length 136
+	 *      10 = Length 48
+	 *      11 = Length 48 Check busy after response
 	 */
 	if (!(cmd->resp_type & MMC_RSP_PRESENT))
 		flags |= (0 << EMMCSDXC_CMD_RTSEL_SHIFT);
@@ -333,7 +342,7 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		flags |= (1 << EMMCSDXC_CMD_DPS_SHIFT);
 
 	debug("cmd: %d\n", cmd->cmdidx);
-	flags |= ( cmd->cmdidx << EMMCSDXC_CMD_CIDX_SHIFT ) ;
+	flags |= (cmd->cmdidx << EMMCSDXC_CMD_CIDX_SHIFT);
 
 	writel(flags, &host->reg->cmdreg);
 
@@ -348,7 +357,7 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		udelay(1);
 	}
 
-	debug ("intr status after cmd 0x%x \r\n", mask);
+	debug("intr status after cmd 0x%x \r\n", mask);
 
 	if (i == retry) {
 		debug("%s: waiting for status update\n", __func__);
@@ -362,9 +371,12 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		// ---------
 		// In order to avoid this situation, we clear the CMDRST and DATARST bits in the case when card 
 		// doesn't respond back to a command sent by host controller.
-		writel( ( ( 0x3 << EMMCSDXC_CTRL1_CMDRST_SHIFT )| ( readl(&host->reg->ctrl1_clkcon_timeout_swrst))), &host->reg->ctrl1_clkcon_timeout_swrst);
-		while (( 0x3 << EMMCSDXC_CTRL1_CMDRST_SHIFT )& readl(&host->reg->ctrl1_clkcon_timeout_swrst));
-		kona_mmc_clear_all_intrs(host) ;
+		writel(((0x3 << EMMCSDXC_CTRL1_CMDRST_SHIFT) |
+			(readl(&host->reg->ctrl1_clkcon_timeout_swrst))),
+		       &host->reg->ctrl1_clkcon_timeout_swrst);
+		while ((0x3 << EMMCSDXC_CTRL1_CMDRST_SHIFT) &
+		       readl(&host->reg->ctrl1_clkcon_timeout_swrst)) ;
+		kona_mmc_clear_all_intrs(host);
 		return TIMEOUT;
 	}
 
@@ -384,21 +396,20 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 			/* CRC is stripped so we need to do some shifting. */
 			for (i = 0; i < 4; i++) {
 				unsigned int offset =
-					(unsigned int)(&host->reg->rspreg3 - i);
+				    (unsigned int)(&host->reg->rspreg3 - i);
 				cmd->response[i] = readl(offset) << 8;
 
 				if (i != 3) {
-					cmd->response[i] |=
-						readb(offset - 1);
+					cmd->response[i] |= readb(offset - 1);
 				}
 				debug("cmd->resp[%d]: %08x\n",
-						i, cmd->response[i]);
+				      i, cmd->response[i]);
 			}
 		} else if (cmd->resp_type & MMC_RSP_BUSY) {
 			for (i = 0; i < retry; i++) {
 				/* PRNTDATA[23:20] : DAT[3:0] Line Signal */
 				if (readl(&host->reg->prnsts)
-					& (1 << 20))	/* DAT[0] */
+				    & (1 << 20))	/* DAT[0] */
 					break;
 				udelay(1);
 			}
@@ -418,21 +429,26 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 
 	if (data) {
 		if (cmd->cmdidx == MMC_CMD_WRITE_MULTIPLE_BLOCK ||
-		    cmd->cmdidx == MMC_CMD_WRITE_SINGLE_BLOCK   ||
-		    cmd->cmdidx == MMC_CMD_READ_MULTIPLE_BLOCK  ||
-	            cmd->cmdidx == MMC_CMD_READ_SINGLE_BLOCK) {
+		    cmd->cmdidx == MMC_CMD_WRITE_SINGLE_BLOCK ||
+		    cmd->cmdidx == MMC_CMD_READ_MULTIPLE_BLOCK ||
+		    cmd->cmdidx == MMC_CMD_READ_SINGLE_BLOCK) {
 			while (1) {
 				mask = readl(&host->reg->norintsts);
 
 				if (mask & EMMCSDXC_INTR_ERRIRQ_MASK) {
 					/* Error Interrupt */
-					writel(EMMCSDXC_INTR_ERRIRQ_MASK, &host->reg->norintsts);
-					printk("%s: error during transfer: 0x%08x\n", __func__, mask);
+					writel(EMMCSDXC_INTR_ERRIRQ_MASK,
+					       &host->reg->norintsts);
+					printk
+					    ("%s: error during transfer: 0x%08x\n",
+					     __func__, mask);
 					return -1;
 				} else if (mask & EMMCSDXC_INTR_DMAIRQ_MASK) {
 					/* DMA Interrupt */
-					writel(EMMCSDXC_INTR_DMAIRQ_MASK, &host->reg->norintsts);
-					writel(readl(&host->reg->sysad), &host->reg->sysad);
+					writel(EMMCSDXC_INTR_DMAIRQ_MASK,
+					       &host->reg->norintsts);
+					writel(readl(&host->reg->sysad),
+					       &host->reg->sysad);
 					debug("DMA end\n");
 				} else if (mask & EMMCSDXC_INTR_TXDONE_MASK) {
 					/* Transfer Complete */
@@ -441,19 +457,19 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 				}
 			}
 			writel(mask, &host->reg->norintsts);
-			dma_unmap_single(NULL, buff_dma_addr, data->blocksize * data->blocks, DMA_TO_DEVICE);
+			dma_unmap_single(NULL, buff_dma_addr,
+					 data->blocksize * data->blocks,
+					 DMA_TO_DEVICE);
 
 		} else {
 			kona_transfer_pio(host, data);
 		}
 	}
-
 	// Clear all interrupts as per FPGA code.
-	writel(0xFFFFFFFF, &host->reg->norintsts ) ;
+	writel(0xFFFFFFFF, &host->reg->norintsts);
 	// udelay(1000);
 	return 0;
 }
-
 
 static void kona_mmc_change_clock(struct mmc_host *host, uint clock)
 {
@@ -462,28 +478,38 @@ static void kona_mmc_change_clock(struct mmc_host *host, uint clock)
 	unsigned long timeout;
 	volatile long swrst;
 
-	clk = readl(&host->reg->ctrl1_clkcon_timeout_swrst) ;
-	clk = clk & 0xFFFF0000  ; // Clean up all bits related to clock.
+	clk = readl(&host->reg->ctrl1_clkcon_timeout_swrst);
+	clk = clk & 0xFFFF0000;	// Clean up all bits related to clock.
 	writel(clk, &host->reg->ctrl1_clkcon_timeout_swrst);
-	clk = 0 ;
+	clk = 0;
 
-	div = host->base_clock_freq/clock/2 ;
-	div = (host->base_clock_freq % clock) ? div+1 : div;
+	div = host->base_clock_freq / clock / 2;
+	div = (host->base_clock_freq % clock) ? div + 1 : div;
 #ifdef CONFIG_SAMOA_FPGA
-	div =0; // SDIO clk divider does not work with SAMOA FPGA. It is set to 0
+	div = 0;		// SDIO clk divider does not work with SAMOA FPGA. It is set to 0
 #endif
 	debug("div: %d\n", div);
 
 	// Write divider value, and enable internal clock.
-	clk = readl(&host->reg->ctrl1_clkcon_timeout_swrst) | (div << EMMCSDXC_CTRL1_SDCLKSEL_SHIFT) | (1 << EMMCSDXC_CTRL1_ICLKEN_SHIFT) ;
+	clk =
+	    readl(&host->reg->
+		  ctrl1_clkcon_timeout_swrst) | (div <<
+						 EMMCSDXC_CTRL1_SDCLKSEL_SHIFT)
+	    | (1 << EMMCSDXC_CTRL1_ICLKEN_SHIFT);
 	writel(clk, &host->reg->ctrl1_clkcon_timeout_swrst);
 
-	debug("host->reg->ctrl1_clkcon_timeout_swrst: 0x%x \r\n", readl(&host->reg->ctrl1_clkcon_timeout_swrst));
+	debug("host->reg->ctrl1_clkcon_timeout_swrst: 0x%x \r\n",
+	      readl(&host->reg->ctrl1_clkcon_timeout_swrst));
 
 	/* Wait for clock to stabilize */
 	/* Wait max 10 ms */
 	timeout = 10;
-	while (!(swrst = readl(&host->reg->ctrl1_clkcon_timeout_swrst) & (1 << EMMCSDXC_CTRL1_ICLKSTB_SHIFT))) {
+	while (!
+	       (swrst =
+		readl(&host->reg->
+		      ctrl1_clkcon_timeout_swrst) & (1 <<
+						     EMMCSDXC_CTRL1_ICLKSTB_SHIFT)))
+	{
 		if (timeout == 0) {
 			printk("%s: timeout error\n", __func__);
 			return;
@@ -493,7 +519,9 @@ static void kona_mmc_change_clock(struct mmc_host *host, uint clock)
 	}
 
 	// Enable sdio clock now.
-	clk |= (1 << EMMCSDXC_CTRL1_SDCLKEN_SHIFT) | readl(&host->reg->ctrl1_clkcon_timeout_swrst) ;
+	clk |=
+	    (1 << EMMCSDXC_CTRL1_SDCLKEN_SHIFT) | readl(&host->reg->
+							ctrl1_clkcon_timeout_swrst);
 	writel(clk, &host->reg->ctrl1_clkcon_timeout_swrst);
 
 	host->clock = clock;
@@ -518,7 +546,7 @@ static void kona_mmc_set_ios(struct mmc *mmc)
 	else
 		ctrl &= ~(1 << EMMCSDXC_CTRL_DXTW_SHIFT);
 
-	if(mmc->card_caps & MMC_MODE_HS)
+	if (mmc->card_caps & MMC_MODE_HS)
 #ifdef CONFIG_SAMOA_FPGA
 		ctrl &= ~(1 << EMMCSDXC_CTRL_HSEN_SHIFT);
 #else
@@ -534,7 +562,8 @@ static void kona_mmc_reset(struct mmc_host *host)
 	unsigned int timeout;
 
 	/* Software reset for all * 1 = reset * 0 = work */
-	writel((1 << EMMCSDXC_CTRL1_RST_SHIFT), &host->reg->ctrl1_clkcon_timeout_swrst);
+	writel((1 << EMMCSDXC_CTRL1_RST_SHIFT),
+	       &host->reg->ctrl1_clkcon_timeout_swrst);
 
 	host->clock = 0;
 
@@ -542,7 +571,8 @@ static void kona_mmc_reset(struct mmc_host *host)
 	timeout = 100;
 
 	/* hw clears the bit when it's done */
-	while (readl(&host->reg->ctrl1_clkcon_timeout_swrst) & (1 << EMMCSDXC_CTRL1_RST_SHIFT)) {
+	while (readl(&host->reg->ctrl1_clkcon_timeout_swrst) &
+	       (1 << EMMCSDXC_CTRL1_RST_SHIFT)) {
 		if (timeout == 0) {
 			printk("%s: timeout error\n", __func__);
 			return;
@@ -553,28 +583,35 @@ static void kona_mmc_reset(struct mmc_host *host)
 }
 
 #ifdef DEBUG
-static void kona_dump_mmc_regs (void __iomem *base)
+static void kona_dump_mmc_regs(void __iomem *base)
 {
 	void __iomem *reg;
 	unsigned long offset;
 
 	printk("\r\n DUMPING MMC SD Registers \r\n");
 
-	for (reg=base, offset=0; offset <= (0x74/4); offset++)
-		printk("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg+offset, *((unsigned int *)reg+offset));
+	for (reg = base, offset = 0; offset <= (0x74 / 4); offset++)
+		printk("reg 0x%p      val 0x%x \r\n",
+		       (unsigned int *)reg + offset,
+		       *((unsigned int *)reg + offset));
 
-	reg = base + (0xE0/4);
-	printk("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg+offset,*((unsigned int *)reg+offset));
+	reg = base + (0xE0 / 4);
+	printk("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg + offset,
+	       *((unsigned int *)reg + offset));
 
-	reg = base + (0xF0/4);
-	printk("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg+offset,*((unsigned int *)reg+offset));
+	reg = base + (0xF0 / 4);
+	printk("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg + offset,
+	       *((unsigned int *)reg + offset));
 
-	reg = base + (0xFC/4);
-	printk("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg+offset,*((unsigned int *)reg+offset));
+	reg = base + (0xFC / 4);
+	printk("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg + offset,
+	       *((unsigned int *)reg + offset));
 
 	/* Core registers dump */
-	for (reg=base, offset=0x8000; offset <= (0x8018/4); offset++)
-		printk("reg 0x%p      val 0x%x \r\n", (unsigned int *)reg+offset,*((unsigned int *)reg+offset));
+	for (reg = base, offset = 0x8000; offset <= (0x8018 / 4); offset++)
+		printk("reg 0x%p      val 0x%x \r\n",
+		       (unsigned int *)reg + offset,
+		       *((unsigned int *)reg + offset));
 
 	return;
 }
@@ -588,53 +625,58 @@ static int kona_mmc_core_init(struct mmc *mmc)
 	debug("+ kona_mmc_core_init \r\n");
 	// For kona a hardware reset before anything else.
 	// TBD : Remove this, it is needed in case of Uboot bring up only.
-	writel( EMMCSDXC_CORECTRL_EN_MASK ,&host->reg_p3->corectrl) ;
+	writel(EMMCSDXC_CORECTRL_EN_MASK, &host->reg_p3->corectrl);
 
 	// Set the reset bit, wait for some time, and clear the reset bit. 
 	// Set the reset bit.
-	mask = readl(&host->reg_p3->corectrl) | EMMCSDXC_CORECTRL_RESET_MASK ;
-	writel( mask , &host->reg_p3->corectrl) ;
-	udelay(10) ;
+	mask = readl(&host->reg_p3->corectrl) | EMMCSDXC_CORECTRL_RESET_MASK;
+	writel(mask, &host->reg_p3->corectrl);
+	udelay(10);
 
 	// Clear the reset bit.
-	mask = mask & ~(EMMCSDXC_CORECTRL_RESET_MASK) ;
-	writel( mask , &host->reg_p3->corectrl) ;
-	udelay(10) ;
+	mask = mask & ~(EMMCSDXC_CORECTRL_RESET_MASK);
+	writel(mask, &host->reg_p3->corectrl);
+	udelay(10);
 
 	// Set power now.
-	mask = readl(&host->reg->ctrl_host_pwr_blk_wak) | ( 7 << EMMCSDXC_CTRL_SDVSEL_SHIFT ) | EMMCSDXC_CTRL_SDPWR_MASK ;
-	writel(mask, &host->reg->ctrl_host_pwr_blk_wak ) ;    
+	mask =
+	    readl(&host->reg->
+		  ctrl_host_pwr_blk_wak) | (7 << EMMCSDXC_CTRL_SDVSEL_SHIFT) |
+	    EMMCSDXC_CTRL_SDPWR_MASK;
+	writel(mask, &host->reg->ctrl_host_pwr_blk_wak);
 
 	kona_mmc_reset(host);
 
-	host->version = ( readl(&host->reg_p2->hcversirq) | EMMCSDXC_HCVERSIRQ_VENDVER_MASK ) >> EMMCSDXC_HCVERSIRQ_VENDVER_SHIFT ;
+	host->version =
+	    (readl(&host->reg_p2->hcversirq) | EMMCSDXC_HCVERSIRQ_VENDVER_MASK)
+	    >> EMMCSDXC_HCVERSIRQ_VENDVER_SHIFT;
 
 	/* mask all */
 	writel(0xffffffff, &host->reg->norintstsen);
 	writel(0xffffffff, &host->reg->norintsigen);
 
-	writel( ( ( 0xd << EMMCSDXC_CTRL1_DTCNT_SHIFT )| ( readl(&host->reg->ctrl1_clkcon_timeout_swrst))), &host->reg->ctrl1_clkcon_timeout_swrst);	/* TMCLK * 2^26 */
+	writel(((0xd << EMMCSDXC_CTRL1_DTCNT_SHIFT) | (readl(&host->reg->ctrl1_clkcon_timeout_swrst))), &host->reg->ctrl1_clkcon_timeout_swrst);	/* TMCLK * 2^26 */
 
 	/*
-	* Interrupt Status Enable Register init
-	* bit 5 : Buffer Read Ready Status Enable
-	* bit 4 : Buffer write Ready Status Enable
-	* bit 1 : Transfre Complete Status Enable
-	* bit 0 : Command Complete Status Enable
-	*/
+	 * Interrupt Status Enable Register init
+	 * bit 5 : Buffer Read Ready Status Enable
+	 * bit 4 : Buffer write Ready Status Enable
+	 * bit 1 : Transfre Complete Status Enable
+	 * bit 0 : Command Complete Status Enable
+	 */
 	mask = readl(&host->reg->norintstsen);
 	mask &= ~(0xffff);
-	mask |=	(1 << EMMCSDXC_INTREN1_BUFRREN_SHIFT) |
-		(1 << EMMCSDXC_INTREN1_BUFWREN_SHIFT) |
-		(1 << EMMCSDXC_INTREN1_DMAIRQEN_SHIFT) |
-		(1 << EMMCSDXC_INTREN1_TXDONEEN_SHIFT) |
-		(1 << EMMCSDXC_INTREN1_CMDDONEEN_SHIFT);
+	mask |= (1 << EMMCSDXC_INTREN1_BUFRREN_SHIFT) |
+	    (1 << EMMCSDXC_INTREN1_BUFWREN_SHIFT) |
+	    (1 << EMMCSDXC_INTREN1_DMAIRQEN_SHIFT) |
+	    (1 << EMMCSDXC_INTREN1_TXDONEEN_SHIFT) |
+	    (1 << EMMCSDXC_INTREN1_CMDDONEEN_SHIFT);
 	writel(mask, &host->reg->norintstsen);
 
 	/*
-	* Interrupt Signal Enable Register init
-	* bit 1 : Transfer Complete Signal Enable
-	*/
+	 * Interrupt Signal Enable Register init
+	 * bit 1 : Transfer Complete Signal Enable
+	 */
 	mask = readl(&host->reg->norintsigen);
 	mask &= ~(0xffff);
 	mask |= (1 << EMMCSDXC_INTREN2_TXDONE_SHIFT);
@@ -646,11 +688,11 @@ static int kona_mmc_core_init(struct mmc *mmc)
 	 */
 	mask = readl(&host->reg_p3->coreimr);
 	mask &= ~(0x1);
-	writel(mask,&host->reg_p3->coreimr);
+	writel(mask, &host->reg_p3->coreimr);
 
 #ifdef DEBUG
-	debug("mmc core init done dumping SDIO2 base addr regs \r\n"); 
-	kona_dump_mmc_regs(KONA_SDIO2_VA); 
+	debug("mmc core init done dumping SDIO2 base addr regs \r\n");
+	kona_dump_mmc_regs(KONA_SDIO2_VA);
 #endif
 
 	debug("- kona_mmc_core_init \r\n");
@@ -667,46 +709,52 @@ void kona_mmc_clk_init(void __iomem *clk_base, void __iomem *clk_gate)
 	/* Enable both the bus clock and peripheral clock */
 	reg_val = readl(clk_gate);
 	reg_val = reg_val |
-		KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_CLK_EN_MASK |
-		KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_AHB_CLK_EN_MASK;
+	    KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_CLK_EN_MASK |
+	    KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_AHB_CLK_EN_MASK;
 	writel(reg_val, clk_gate);
 }
 
 int kona_mmc_init(int dev_index)
 {
 	struct mmc *mmc;
-	void* mmc_reg_base;
+	void *mmc_reg_base;
 	unsigned int source_clk_reg;
 
 	debug("\r\n + kona_mmc_init %d \r\n", dev_index);
 
 	switch (dev_index) {
-		case 1:
-			disable_irq(BCM_INT_ID_SDIO0);
-			mmc_reg_base = (void*) KONA_SDIO1_VA;
-			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO1_DIV_OFFSET;
-			kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,(void *)( KONA_KPM_CLK_VA +
-				KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET));
-			break;
-		case 2:
-			disable_irq(BCM_INT_ID_SDIO1);
-			mmc_reg_base = (void*) KONA_SDIO2_VA;
-			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO2_DIV_OFFSET;
-			kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,(void *)(KONA_KPM_CLK_VA +
-				KPM_CLK_MGR_REG_SDIO2_CLKGATE_OFFSET));
-			break;
+	case 1:
+		disable_irq(BCM_INT_ID_SDIO0);
+		mmc_reg_base = (void *)KONA_SDIO1_VA;
+		source_clk_reg =
+		    KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO1_DIV_OFFSET;
+		kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,
+				  (void *)(KONA_KPM_CLK_VA +
+					   KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET));
+		break;
+	case 2:
+		disable_irq(BCM_INT_ID_SDIO1);
+		mmc_reg_base = (void *)KONA_SDIO2_VA;
+		source_clk_reg =
+		    KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO2_DIV_OFFSET;
+		kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,
+				  (void *)(KONA_KPM_CLK_VA +
+					   KPM_CLK_MGR_REG_SDIO2_CLKGATE_OFFSET));
+		break;
 #ifdef SDIO3_BASE_ADDR
-		case 3:
-			disable_irq(BCM_INT_ID_SDIO_NAND);
-			mmc_reg_base = (void*) KONA_SDIO3_VA;
-			source_clk_reg = KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO3_DIV_OFFSET;
-			kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,(void *)(KONA_KPM_CLK_VA +
-				KPM_CLK_MGR_REG_SDIO3_CLKGATE_OFFSET));
-			break;
-#endif			
-		default:
-			printk("Only support up to %d mmc device\n", KONA_MAX_MMC_DEV);
-			return -1;
+	case 3:
+		disable_irq(BCM_INT_ID_SDIO_NAND);
+		mmc_reg_base = (void *)KONA_SDIO3_VA;
+		source_clk_reg =
+		    KONA_KPM_CLK_VA + KPM_CLK_MGR_REG_SDIO3_DIV_OFFSET;
+		kona_mmc_clk_init((void *)KONA_KPM_CLK_VA,
+				  (void *)(KONA_KPM_CLK_VA +
+					   KPM_CLK_MGR_REG_SDIO3_CLKGATE_OFFSET));
+		break;
+#endif
+	default:
+		printk("Only support up to %d mmc device\n", KONA_MAX_MMC_DEV);
+		return -1;
 	}
 
 	mmc = &mmc_dev[dev_index];
@@ -717,10 +765,14 @@ int kona_mmc_init(int dev_index)
 	mmc->set_ios = kona_mmc_set_ios;
 	mmc->init = kona_mmc_core_init;
 
-	mmc->voltages = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30 | MMC_VDD_30_31 | MMC_VDD_31_32 | MMC_VDD_32_33 | MMC_VDD_33_34 | MMC_VDD_34_35 | MMC_VDD_35_36 ;
+	mmc->voltages =
+	    MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30 | MMC_VDD_30_31 |
+	    MMC_VDD_31_32 | MMC_VDD_32_33 | MMC_VDD_33_34 | MMC_VDD_34_35 |
+	    MMC_VDD_35_36;
 	mmc->host_caps = MMC_MODE_4BIT | MMC_MODE_HS_52MHz | MMC_MODE_HS;
 
-	mmc_host[dev_index].base_clock_freq = kona_get_base_clock_freq(source_clk_reg);
+	mmc_host[dev_index].base_clock_freq =
+	    kona_get_base_clock_freq(source_clk_reg);
 
 	mmc->f_min = 400000;
 	mmc->f_max = mmc_host[dev_index].base_clock_freq;
