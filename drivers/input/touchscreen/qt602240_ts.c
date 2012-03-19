@@ -792,7 +792,7 @@ static int qt602240_check_matrix_size(struct qt602240_data *data)
 	dev_dbg(dev, "Number of Y lines: %d\n", pdata->y_line);
 
 	switch (pdata->x_line) {
-	case 0...15:
+	case 0 ... 15:
 		if (pdata->y_line <= 14)
 			mode = 0;
 		break;
