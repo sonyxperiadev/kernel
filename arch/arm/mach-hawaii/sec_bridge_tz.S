@@ -22,9 +22,7 @@
  */
 
 	.global hw_sec_rom_pub_bridge
-        .global hw_mmu_pa_get
 
-	.equ HW_ARM_CP15_CR_M_MASK, (1<<0)
 	.equ HW_ARM_CP15_CR_C_MASK, (1<<2)
 	.equ HW_ARM_CP15_CR_I_MASK, (1<<12)
 
@@ -109,7 +107,7 @@ hw_sec_rom_pub_bridge:        .func
 	@ use.
 	@ REGS: R4,R5,R6,R12-R13
 	MOV     R0, R6
-	BLX      hw_mmu_pa_get @ not on same page, calculate!
+	BL      hw_mmu_pa_get @ not on same page, calculate!
 	MOV     R11, R0
 
 	@ Make room to stack for data saved within this function.
@@ -204,64 +202,12 @@ ret_from_sec_mode:          .func
 	MSR     CPSR_cxsf, R8               @ Still Supervisor mode
 	MSR     CPSR_cxsf, R5               @ Back to original mode
 
-
-	@************************************************************
-	@ Let's check first if this is external code start exit, as
-	@ in this case the handling is a bit different and we can not
-	@ execute the same common exit part as with other exits
-	@************************************************************
+	@*************************************************************
+	@ We have some other exit than external code start exit. First
+	@ we do restoring of common normal mode settings, then check
+	@ the exit case.
+	@*************************************************************
 	@ REGS: R0,R1,R2,R3,R4,R11,R12-R14
-	CMP     R12, #SEC_EXIT_START_EXT_CODE   @ Start ext code?
-	BNE     r002
-
-	@ This was indeed external code start exit. Let's restore most of normal mode
-	@ settings and jump to external code (Data Cache and MMU won't be enabled).
-
-	@ Drain write buffer.
-	@ REGS: R0,R1,R2,R3,R11,R12
-	MOV     R5, #0
-	MCR     p15, 0, R5, c7,c10, 4
-
-	@ Load physical address of label below (after restoring CP15 Control register
-	@ this address will be changed to virtual and put to PC)
-	@ REGS: R0,R1,R2,R3,R11,R12
-	LDR     R7, =r0002
-
-	.align 5
-
-	@ Let's disable MMU and DCache here (as ext code jump address is physical)
-	@ but enable ICache
-	@ REGS: R0,R1,R2,R3,R11,R12
-	BIC     R11, R11, #(HW_ARM_CP15_CR_M_MASK  |  HW_ARM_CP15_CR_C_MASK)
-	ORR     R11, R11, #(HW_ARM_CP15_CR_I_MASK)
-	MCR     p15, 0, R11, c1, c0, 0
-	BX      R7                          @ Jump from virtual address in here
-	NOP
-	NOP
-	NOP
-r0002:                NOP                               @ .. to physical address in here
-
-        @ Interrupts will also be kept disabled, so we do not restore original CPSR.
-
-        @ We also can not restore saved values from stack as those might be in
-        @ virtual areas and we do not have MMU enabled in this case
-
-        @ We do not need to release reserved stack area at all, called routine
-        @ will be responsible in setting stack pointer to correct value.
-
-        @ Jump to ext code start address in LR.
-        @ REGS: R0,R1,R2,R3,R12
-        BX      R4
-
-
-
-        @*************************************************************
-        @ We have some other exit than external code start exit. First
-        @ we do restoring of common normal mode settings, then check
-        @ the exit case.
-        @*************************************************************
-        @ REGS: R0,R1,R2,R3,R4,R11,R12-R14
-r002:
 
 	@ Restore CP15 Control register from R11. Only ICache enabling should
 	@ happen here, no other changes
@@ -276,13 +222,14 @@ r002:
 	LDR     R5, [SP, #CPSR_OFFSET]      @ Restore original CPSR
 
 
+normal_ret:
 	@************************************************
 	@ Let's check if this is normal secure mode exit
 	@************************************************
 	@ REGS: R0,R1,R2,R3,R4,R5,R11,R12-R14
 
 	CMP     R12, #SEC_EXIT_NORMAL       @ Normal exit?
-	BNE     r003
+	BNE     interrupt_ret
 
 	@ This was indeed normal secure mode exit. Let's restore rest of the
 	@ normal mode settings and return to function that called secure
@@ -304,13 +251,14 @@ r002:
 	BX      LR
 
 
+interrupt_ret:
 	@***************************************************
 	@ Let's check if this is exit for interrupt handling
 	@***************************************************
 	@ REGS: R0,R1,R2,R3,R4,R5,R11,R12-R13
-r003:
+
 	CMP     R12, #SEC_EXIT_INT          @ Exit for interrupt handling?
-	BNE     r004
+	BNE     other_ret
 
 	@ This was indeed exit for interrupt handling. Let's restore rest of the
 	@ normal mode settings and execute some NOP's during which interrupt should
@@ -346,63 +294,9 @@ r003:
 	@ REGS: R4,R12-R13
 	B       sec_entry_settings
 
-
-
-	@***************************************************************
-	@ Let's check if this is exit for remote procedure call handling
-	@***************************************************************
-	@ REGS: R0,R1,R2,R3,R4,R11,R12-R13
-r004:
-	CMP     R12, #SEC_EXIT_RPC_CALL     @ RPC handler exit?
-	BNE     r005
-
-	@ This was indeed exit for remote procedure call handling. Let's restore
-	@ normal mode settings and call remote procedure handler.
-	@ After returning back from RPC handler, normal mode settings are
-	@ saved again and secure mode is entered.
-	@ Exceptional case is where R1 has value 0. This case is reserved for
-	@ secure environment flags update. RPC handler is not called in this case
-	@ and the flags setting is done here.
-
-	@ Following code is the case where RPC handler call is requested. As
-	@ there may be up to 4 parameters, R0-R3 may not be changed before
-	@ RPC handler call. RPC may return one parameter, so R0 may not be
-	@ changed after RPC call.
-
-	@ We do not need to release stack space here the same way as with normal exit.
-
-	@ Restore CPSR value from R5 (interrupts will typically be enabled here).
-	@ REGS: R0,R1,R2,R3,R5,R12-R13
-	MSR     CPSR_cxsf, R5
-
-	@ Call RPC handler
-	BLX     R4
-
-	@ RPC call has been handled, let's start going back to secure mode. As
-	@ context shall be the same as before RPC function was called, there is no
-	@ need re-save all context related register values.
-
-	@ Set secure entry ID to R4 for use within secure mode.
-	@ REGS: R12-R13
-	LDR     R4, =SSAPI_RET_FROM_RPC_SERV
-
-	@ Save RPC function ret value to R6 for use within secure mode.
-	@ REGS: R0,R4,R12-R13
-	MOV     R6, R0
-
-	@ Data @ ap pointer and @ ap hasn't changed, so we do not need to clean those
-	@ areas here.
-
-	@ Jump to common secure mode entry settings part.
-	@ REGS: R4,R5,R12-R13
-	B       sec_entry_settings
-
-
-	@***************************************************************
-	@ In case of unknown exit ID, we just loop
-	@***************************************************************
-
-r005:                  B       r005                         @ Unknown exit, just loop
+other_ret:
+	@ Execute an illegal instruction
+	.word 0xe7f001f2
 
 	.endfunc
 	.ltorg
