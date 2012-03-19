@@ -37,7 +37,7 @@
 // ----------------------------------------------------------------------------------------------------
 
 #define ROM_SIZE		(32 * 1024)
-#define RAM_START		0x10009000 // Do not know what to call this
+#define RAM_START		0x10009000	// Do not know what to call this
 #define RAM_OFFSET		RAM_START
 
 #define I2C_REG_DMA_ADDR                              128
@@ -86,11 +86,9 @@
 #define ROM_OFFSET                                     (0x10000000)
 #define DATA_OFFSET                                    (RAM_OFFSET)
 
-
 // ----------------------------------------------------------------------------------------------------
 // tofe_channel.h
 // ----------------------------------------------------------------------------------------------------
-
 
 typedef uint16_t iterator_t;
 
@@ -98,25 +96,22 @@ typedef uint16_t iterator_t;
 	@enum tofe_channel_flag_t
     @brief Channel flag field bit assignment.
 */
-typedef enum
-{
-	TOFE_CHANNEL_FLAG_STATUS_OVERFLOW      = 1 << 0,
+typedef enum {
+	TOFE_CHANNEL_FLAG_STATUS_OVERFLOW = 1 << 0,
 	TOFE_CHANNEL_FLAG_STATUS_LEVEL_TRIGGER = 1 << 1,
-	TOFE_CHANNEL_FLAG_OVERFLOW_STALL       = 1 << 6, // Stall on overflow
-	TOFE_CHANNEL_FLAG_INBOUND              = 1 << 7, // max
+	TOFE_CHANNEL_FLAG_OVERFLOW_STALL = 1 << 6,	// Stall on overflow
+	TOFE_CHANNEL_FLAG_INBOUND = 1 << 7,	// max
 } tofe_channel_flag_t;
 
 /**
 	@enum tofe_channel_level_t
     @brief Channel level control field.
 */
-typedef enum
-{
+typedef enum {
 	TOFE_CHANNEL_LEVEL_TRIGGER_OFF,
 	TOFE_CHANNEL_LEVEL_TRIGGER_ON,
 	TOFE_CHANNEL_LEVEL_TRIGGER_ACTIVE,
 } tofe_channel_level_t;
-
 
 /**
 	@struct tofe_channel_header_t
@@ -130,48 +125,42 @@ typedef enum
 */
 #define MAX_CHANNEL_EVENTS	255
 
-typedef struct
-{
-	uint32_t   write;
-	uint8_t    entry_num;   // Number of entries.  Limited to 255 entries.
-	uint8_t    entry_size;  // Entry size in bytes.  Limited to 255 bytes.
-	uint8_t    trig_level;  // Number of entries in channel to trigger notification
-	uint8_t    flags;       // Bit definitions shared with configuration.
-	uint32_t   read;
-	int32_t    data_offset; // Offset from header to data.  May be negative.
+typedef struct {
+	uint32_t write;
+	uint8_t entry_num;	// Number of entries.  Limited to 255 entries.
+	uint8_t entry_size;	// Entry size in bytes.  Limited to 255 bytes.
+	uint8_t trig_level;	// Number of entries in channel to trigger notification
+	uint8_t flags;		// Bit definitions shared with configuration.
+	uint32_t read;
+	int32_t data_offset;	// Offset from header to data.  May be negative.
 	iterator_t read_iterator;
 	iterator_t write_iterator;
 } tofe_channel_header_t;
-
-
-
 
 /*
 	Note: Internal use only function.
 */
 static inline iterator_t
-_tofe_channel_next_index( tofe_channel_header_t * channel, iterator_t iterator )
+_tofe_channel_next_index(tofe_channel_header_t *channel, iterator_t iterator)
 {
-	return (iterator == channel->entry_num-1) ? 0 : iterator+1;
+	return (iterator == channel->entry_num - 1) ? 0 : iterator + 1;
 }
-
 
 /*
 	Note: Internal use only function.
 */
-static inline char *
-_tofe_channel_entry( tofe_channel_header_t * channel, uint32_t byte_index )
+static inline char *_tofe_channel_entry(tofe_channel_header_t *channel,
+					uint32_t byte_index)
 {
-	char * data_bytes = (char *)channel + channel->data_offset;
+	char *data_bytes = (char *)channel + channel->data_offset;
 	return &data_bytes[byte_index];
 }
-
 
 /*
 	Note: Internal use only function.
 */
 static inline size_t
-_tofe_channel_byte_index( tofe_channel_header_t * channel, iterator_t entry_index )
+_tofe_channel_byte_index(tofe_channel_header_t *channel, iterator_t entry_index)
 {
 	return entry_index * channel->entry_size;
 }
@@ -190,18 +179,14 @@ _tofe_channel_byte_index( tofe_channel_header_t * channel, iterator_t entry_inde
     	bool True if channel is empty.
 
 */
-static inline bool
-tofe_channel_is_empty( tofe_channel_header_t * channel )
+static inline bool tofe_channel_is_empty(tofe_channel_header_t *channel)
 {
 	return (channel->read == channel->write);
 }
 
-
-
 /**
     Begin a read transaction on a channel.  To maintain data consistency,
     reads to a channel must be bracketed by read begin/end calls.
-
 
     @param
 		[in] channel Pointer to channel object.
@@ -210,8 +195,7 @@ tofe_channel_is_empty( tofe_channel_header_t * channel )
     	void
 
 */
-static inline void
-tofe_channel_read_begin( tofe_channel_header_t * channel )
+static inline void tofe_channel_read_begin(tofe_channel_header_t *channel)
 {
 	channel->read_iterator = channel->read;
 }
@@ -224,7 +208,6 @@ tofe_channel_read_begin( tofe_channel_header_t * channel )
     Callers should not modify or reuse this memory.  Callers may not free the
     memory.
 
-
     @param
 		[in] channel Pointer to channel object.
 
@@ -232,10 +215,9 @@ tofe_channel_read_begin( tofe_channel_header_t * channel )
     	void * Pointer to returned entry.
 
 */
-static inline void *
-tofe_channel_read( tofe_channel_header_t * channel )
+static inline void *tofe_channel_read(tofe_channel_header_t *channel)
 {
-	char * entry;
+	char *entry;
 	size_t byte_index;
 
 	// Validate that channel has entries.
@@ -248,7 +230,7 @@ tofe_channel_read( tofe_channel_header_t * channel )
 
 	// Update the read iterator.
 	channel->read_iterator =
-		_tofe_channel_next_index(channel, channel->read_iterator);
+	    _tofe_channel_next_index(channel, channel->read_iterator);
 
 	return (void *)entry;
 }
@@ -257,7 +239,6 @@ tofe_channel_read( tofe_channel_header_t * channel )
     Finish a read transaction on a channel.  To maintain data consistency,
     reads to a channel must be bracketed by read begin/end calls.
 
-
     @param
 		[in] channel Pointer to channel object.
 
@@ -265,49 +246,45 @@ tofe_channel_read( tofe_channel_header_t * channel )
     	uint32_t Number of entries read from channel during this transaction.
 
 */
-static inline uint32_t
-tofe_channel_read_end( tofe_channel_header_t * channel )
+static inline uint32_t tofe_channel_read_end(tofe_channel_header_t *channel)
 {
 	uint32_t count = (channel->read_iterator >= channel->read) ?
-		(channel->read_iterator - channel->read) :
-		(channel->entry_num - (channel->read - channel->read_iterator));
+	    (channel->read_iterator - channel->read) :
+	    (channel->entry_num - (channel->read - channel->read_iterator));
 
 	channel->read = channel->read_iterator;
 	return count;
 }
-
 
 // ----------------------------------------------------------------------------------------------------
 // tofe_toc.h
 // ----------------------------------------------------------------------------------------------------
 
 typedef
-enum tofe_toc_index
-{
-    TOFE_TOC_INDEX_TOFE,
-    TOFE_TOC_INDEX_PATCH,
-    TOFE_TOC_INDEX_CHANNEL,
-    TOFE_TOC_INDEX_TCH,
+    enum tofe_toc_index {
+	TOFE_TOC_INDEX_TOFE,
+	TOFE_TOC_INDEX_PATCH,
+	TOFE_TOC_INDEX_CHANNEL,
+	TOFE_TOC_INDEX_TCH,
 
-    TOFE_TOC_INDEX_SCAN,
-    TOFE_TOC_INDEX_FILTER,
-    TOFE_TOC_INDEX_DETECT,
-    TOFE_TOC_INDEX_TRACK,
+	TOFE_TOC_INDEX_SCAN,
+	TOFE_TOC_INDEX_FILTER,
+	TOFE_TOC_INDEX_DETECT,
+	TOFE_TOC_INDEX_TRACK,
 
-    TOFE_TOC_INDEX_REPORT,
-    TOFE_TOC_INDEX_LOG,
-    TOFE_TOC_INDEX_RECORD,
-    TOFE_TOC_INDEX_MEMORY,
+	TOFE_TOC_INDEX_REPORT,
+	TOFE_TOC_INDEX_LOG,
+	TOFE_TOC_INDEX_RECORD,
+	TOFE_TOC_INDEX_MEMORY,
 
-    TOFE_TOC_INDEX_UCODE,
-    TOFE_TOC_INDEX_CMDBUFF,
-    TOFE_TOC_INDEX_SDM_COEFFICIENTS,
+	TOFE_TOC_INDEX_UCODE,
+	TOFE_TOC_INDEX_CMDBUFF,
+	TOFE_TOC_INDEX_SDM_COEFFICIENTS,
 
-    TOFE_TOC_INDEX_MAX = 32
+	TOFE_TOC_INDEX_MAX = 32
 } tofe_toc_index_e;
 
-typedef struct
-{
+typedef struct {
 	const void *const cfg[TOFE_TOC_INDEX_MAX];
 } tofe_toc_t;
 
@@ -317,7 +294,6 @@ typedef struct
 
 #define	TOFE_BUILD_ID_SIZE			8
 #define	TOFE_SIGNATURE_MAGIC_SIZE	4
-
 
 /* Magic Number - 8 bytes */
 #define TOFE_MAGIC {0x00, 0x01, 0x53, 0x00}
@@ -329,8 +305,7 @@ typedef struct
 	@struct tofe_signature_t
     @brief Firmware ROM image signature structure.
 */
-typedef struct
-{
+typedef struct {
 	const char magic[TOFE_SIGNATURE_MAGIC_SIZE];
 	const char build_release[4];
 	const char build_version[TOFE_BUILD_ID_SIZE];
@@ -345,32 +320,29 @@ typedef struct
 // tofe_channel_cfg.h
 // ----------------------------------------------------------------------------------------------------
 
-typedef enum
-{
-	TOFE_CHANNEL_ID_TOUCH,    // 0 = #1
-	TOFE_CHANNEL_ID_COMMAND,  // 1 = #2
-	TOFE_CHANNEL_ID_LOG,      // 2 = #3
-	TOFE_CHANNEL_ID_GESTURES, // 3 = #4
-	TOFE_CHANNEL_ID_RECORD,   // 4 = #5
-	TOFE_CHANNEL_ID_PLAYBACK, // 5 = #6
-	TOFE_CHANNEL_ID_RESPONSE,  // 6 = #7
+typedef enum {
+	TOFE_CHANNEL_ID_TOUCH,	// 0 = #1
+	TOFE_CHANNEL_ID_COMMAND,	// 1 = #2
+	TOFE_CHANNEL_ID_LOG,	// 2 = #3
+	TOFE_CHANNEL_ID_GESTURES,	// 3 = #4
+	TOFE_CHANNEL_ID_RECORD,	// 4 = #5
+	TOFE_CHANNEL_ID_PLAYBACK,	// 5 = #6
+	TOFE_CHANNEL_ID_RESPONSE,	// 6 = #7
 
 	/* Number of channels */
 	TOFE_CHANNEL_ID_NUM
-} tofe_channel_id_t; // Used as index.
+} tofe_channel_id_t;		// Used as index.
 
-typedef struct
-{
-	uint8_t                 entry_num;   // Must be > 0.
-	uint8_t                 entry_size;  // Range [1..255].
-	uint8_t                 trig_level;  // 0 - entry_num
-	uint8_t                 flags;
-	tofe_channel_header_t * channel_header;
-	void *                  channel_data;
+typedef struct {
+	uint8_t entry_num;	// Must be > 0.
+	uint8_t entry_size;	// Range [1..255].
+	uint8_t trig_level;	// 0 - entry_num
+	uint8_t flags;
+	tofe_channel_header_t *channel_header;
+	void *channel_data;
 } tofe_channel_instance_cfg_t;
 
-typedef struct
-{
+typedef struct {
 	tofe_channel_instance_cfg_t channel_cfg[TOFE_CHANNEL_ID_NUM];
 } tofe_channel_cfg_t;
 
@@ -381,40 +353,35 @@ typedef struct
 /*! TOFE Tool Meta Data Struture. */
 typedef struct {
 
-    void     			*m_p_config;
-    uint32_t  			 m_config_size;
-	uint8_t   			 m_config_loaded;
+	void *m_p_config;
+	uint32_t m_config_size;
+	uint8_t m_config_loaded;
 
-    void     			*m_p_image;
-    uint32_t  			 m_image_size;
-	uint8_t   			 m_image_loaded;
+	void *m_p_image;
+	uint32_t m_image_size;
+	uint8_t m_image_loaded;
 
-    tofe_signature_t	*m_p_sig;
-	tofe_toc_t			*m_p_toc;
-	tofe_channel_cfg_t	*m_p_channel_configs;
+	tofe_signature_t *m_p_sig;
+	tofe_toc_t *m_p_toc;
+	tofe_channel_cfg_t *m_p_channel_configs;
 
-    const void          *cfg[TOFE_TOC_INDEX_MAX];
+	const void *cfg[TOFE_TOC_INDEX_MAX];
 
 } tofe_tool_t;
-
-
-
 
 // ----------------------------------------------------------------------------------------------------
 // TOFEChannel.h
 // ----------------------------------------------------------------------------------------------------
 
 typedef
-struct napa_channel
-{
-	tofe_channel_instance_cfg_t	cfg;
-	tofe_channel_header_t		header;
-	uint32_t					data;
+    struct napa_channel {
+	tofe_channel_instance_cfg_t cfg;
+	tofe_channel_header_t header;
+	uint32_t data;
 } napa_channel_t;
 
 typedef
-enum napa_channel_write_header
-{
+    enum napa_channel_write_header {
 	NAPA_CHANNEL_WRITE_HEADER_READER,
 	NAPA_CHANNEL_WRITE_HEADER_WRITER
 } napa_channel_write_header_e;
@@ -426,7 +393,7 @@ enum napa_channel_write_header
 // CTOFEChannel
 typedef struct {
 
-    napa_channel_t *channel;
+	napa_channel_t *channel;
 
 } ctofe_channel_t;
 
@@ -434,9 +401,8 @@ typedef struct {
 // bcmtch_event.h
 // -----------------------------------------------------------------------------------------------------
 
-typedef enum
-{
-	BCMTCH_EVENT_TYPE_INVALID, // Don't use zero.
+typedef enum {
+	BCMTCH_EVENT_TYPE_INVALID,	// Don't use zero.
 
 	// Core events.
 	BCMTCH_EVENT_TYPE_FRAME,
@@ -449,57 +415,49 @@ typedef enum
 	BCMTCH_EVENT_TYPE_TIMESTAMP,
 } bcmtch_event_type_t;
 
+typedef struct {
+	uint32_t type:4;
+	uint32_t:28;
 
-typedef struct
-{
-    uint32_t           type : 4;
-    uint32_t           : 28;
-
-    uint32_t           _pad;
+	uint32_t _pad;
 } bcmtch_event_t;
 
-typedef struct
-{
-    uint16_t           type : 4;
-    uint16_t           : 12;
+typedef struct {
+	uint16_t type:4;
+	uint16_t:12;
 
-    uint16_t           frame_id;
-    uint32_t           hash;
+	uint16_t frame_id;
+	uint32_t hash;
 } bcmtch_event_frame_t;
 
-typedef struct
-{
-	uint16_t           type : 4;
-	uint16_t           track_tag : 5;
-	uint16_t           flags : 4;
-	uint16_t           tch_class : 3;	/*	Touch class. C++ does not like class.
-	                                        Use BCMTCH_EVENT_CLASS_TOUCH. */
-	uint16_t           width : 8;	/* x direction lenght of bounding box */
-	uint16_t           height : 8;	/* y direction lenght of bounding box */
+typedef struct {
+	uint16_t type:4;
+	uint16_t track_tag:5;
+	uint16_t flags:4;
+	uint16_t tch_class:3;	/*      Touch class. C++ does not like class.
+				   Use BCMTCH_EVENT_CLASS_TOUCH. */
+	uint16_t width:8;	/* x direction lenght of bounding box */
+	uint16_t height:8;	/* y direction lenght of bounding box */
 
-	uint32_t           z : 8;		/* force/pressure for contact and
-										distance for hover */
-	uint32_t           x : 12;
-	uint32_t           y : 12;
+	uint32_t z:8;		/* force/pressure for contact and
+				   distance for hover */
+	uint32_t x:12;
+	uint32_t y:12;
 } bcmtch_event_touch_t;
 
-typedef enum
-{
+typedef enum {
 	BCMTCH_EVENT_TIMESTAMP_TYPE_SCAN_BEGIN = 1,
 	BCMTCH_EVENT_TIMESTAMP_TYPE_SCAN_END,
 	BCMTCH_EVENT_TIMESTAMP_TYPE_MTC_BEGIN,
 	BCMTCH_EVENT_TIMESTAMP_TYPE_MTC_END
 } bcmtch_timestamp_type_t;
 
-typedef struct
-{
-	uint32_t           type : 4;
-	uint32_t           timestamp_type : 4;
-	uint32_t           : 24;
+typedef struct {
+	uint32_t type:4;
+	uint32_t timestamp_type:4;
+	uint32_t:24;
 
-	uint32_t           timestamp;
+	uint32_t timestamp;
 } bcmtch_event_timestamp_t;
-
-
 
 #endif
