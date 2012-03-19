@@ -34,6 +34,14 @@
 #include "taskmsgs.h"
 #include "simlockfun.h"
 
+/*For AES*/
+#ifdef CONFIG_ROM_SEC_DISPATCHER
+#include <mach/secure_api.h>
+#endif
+#include <plat/clock.h>
+#include <mach/clock.h>
+#include <linux/dma-mapping.h>
+
 #ifdef CONFIG_BRCM_CKBLOCK_READER
 #include <linux/broadcom/ckblock_reader.h>
 #endif
@@ -132,6 +140,11 @@ enum _SIMLOCK_RESULT_t {
 /* The SIM lock data size is fixed to 2400 bytes */
 #define SIM_LOCK_DATA_SIZE   2400
 
+/*AES definition*/
+#define AES_OPERATION_ENCRYPT  1
+#define AES_OPERATION_DECRYPT  0
+#define AES_BLOCK_SIZE        16
+
 /*--------------------------------------*/
 /* Local Function Prototypes		*/
 /*--------------------------------------*/
@@ -220,17 +233,90 @@ static UInt8 *ReadIMEI(SimNumber_t simid)
 {
 	return (UInt8 *)"1234567890";
 }
-/* **FIXME** needs to be implemented */
-#define AES_OPERATION_ENCRYPT  1
-#define AES_OPERATION_DECRYPT  0
 
+/******************************************************************************
+// Function Name: EncDec()
+//
+// Input:	  *outDataPtr -  output data.
+//			  *inDataPtr  -  inpit data.
+//            inDataSize  -  input data length.
+//            inEncDec    -  1:Encryption 0:Decryption.
+//
+// Description: Do AES Encryption/Decryption.
+//
+******************************************************************************/
 UInt8 EncDec(UInt8 *outDataPtr, const UInt8 *inDataPtr,
 			UInt32 inDataSize, UInt32 inEncDec)
 {
+#if defined(CONFIG_ROM_SEC_DISPATCHER) &&\
+		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES) &&\
+		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH)
+
+	 struct clk *sec_spum_clk = NULL;
+	 void *aes_buf_vir = NULL;
+	 dma_addr_t aes_buf_phy;
+	 UInt8 *aes_v = NULL;
+	 UInt8 *aes_p = NULL;
+
+	 /* Check for invalid parameters */
+	 if ((outDataPtr == NULL) ||
+		(inDataSize > SZ_1K) ||
+		(inDataSize < AES_BLOCK_SIZE) ||
+		((inDataSize % AES_BLOCK_SIZE) != 0) ||
+		((inEncDec != AES_OPERATION_ENCRYPT) &&
+		(inEncDec != AES_OPERATION_DECRYPT)))	{
+		pr_err("outDataPtr = NULL:%d inDataSize:%d inEncDec:%d Failed!!!\n",
+			(outDataPtr == NULL), (int)inDataSize, (int)inEncDec);
+		return 0;
+	}
+
+	aes_buf_vir = dma_alloc_coherent(NULL, SZ_1K, &aes_buf_phy, GFP_KERNEL);
+	if (aes_buf_vir == NULL) {
+		pr_info("%s: dma buffer alloc for aes failed\n", __func__);
+		return 0;
+	}
+	aes_v = (UInt8 *) aes_buf_vir;
+	aes_p = (UInt8 *) aes_buf_phy;
+
+	memset(aes_v, 0x00, SZ_1K);
+	memcpy(&aes_v[0], inDataPtr, inDataSize);
+
+	sec_spum_clk = clk_get(NULL, "spum_sec");
+	if (!sec_spum_clk) {
+		pr_err("%s: unable to get clock spum_sec\n", __func__);
+		return 0;
+	}
+
+	clk_enable(sec_spum_clk);
+
+	/*hw_sec_pub_dispatcher is the secure service entry point.Caller calls
+	  the API with proper parameters and gets AES results returned.
+	  argument 1 : Application Id.
+	  argument 2 : Flag.default is 0xF.
+	  argument 3 : Pointer to the data to be encrypted or decrypted.
+			It should be physical address.
+	  argument 4 : Length of data
+	  argument 5 : Pointer to output buffer.It should be physical address.
+	  argument 6 : Direction: encrypt or decrypt.
+	*/
+	hw_sec_pub_dispatcher(SEC_API_AES,
+				0x0F,
+				&aes_p[0],
+				inDataSize,
+				&aes_p[inDataSize],
+				inEncDec);
+
+	clk_disable(sec_spum_clk);
+
+	memcpy(outDataPtr, &aes_v[inDataSize], inDataSize);
+
+	if (aes_buf_vir)
+		dma_free_coherent(NULL, PAGE_SIZE, aes_buf_vir, aes_buf_phy);
+#else
 	memcpy(outDataPtr, inDataPtr, inDataSize);
+#endif
 	return 1;
 }
-
 
 /******************************************************************************
 *
@@ -1091,7 +1177,8 @@ static SEC_SimLock_Status_t SIMLockUnlockOneType(SEC_SimLock_LockType_t
 		case SEC_SIMLOCK_PHONE_LOCK:
 		default:
 			/* Should not be here: return FAILURE */
-			pr_err("Error lockType:%d Failed!!!\n", lockType);
+			pr_err("%s:Error lockType:%d Failed!!!\n",
+					__func__, lockType);
 			result = SEC_SIMLOCK_FAILURE;
 			break;
 		}
@@ -1104,8 +1191,8 @@ static SEC_SimLock_Status_t SIMLockUnlockOneType(SEC_SimLock_LockType_t
 		if (*unlock_attempt >= simlockFile->maxUnlockAttempt) {
 			result = SEC_SIMLOCK_PERMANENTLY_LOCKED;
 		} else {
-			pr_info("unlock_attempt:%d control_key:%s key:%s\n",
-				*unlock_attempt, (char *)control_key,
+			pr_info("%s:unlock_attempt:%d control_key:%s key:%s\n",
+				__func__, *unlock_attempt, (char *)control_key,
 				(char *)key);
 
 			if (strcmp((char *)control_key, (char *)key) == 0) {
@@ -1218,14 +1305,14 @@ static SEC_SimLock_Status_t SIMLockSetLockOneType(SimNumber_t SimId,
 		result = SEC_SIMLOCK_FAILURE;
 	}
 
-	pr_info("lockType:%d action:%d result:%d control_key:%s key:%s\n",
-		lockType, action, result, control_key, key);
+	pr_info("%s:lockType:%d action:%d result:%d control_key:%s key:%s\n",
+		__func__, lockType, action, result, control_key, key);
 
 	if ((result == SEC_SIMLOCK_SUCCESS) && (*lock_ind != action)) {
 		Boolean set_lock_ok = FALSE;
 
-		pr_info("lock_ind:%d unlock_attempt:%d\n", *lock_ind,
-			*unlock_attempt);
+		pr_info("%s:lock_ind:%d unlock_attempt:%d\n",
+				__func__, *lock_ind, *unlock_attempt);
 
 		if (*unlock_attempt < simlockFile->maxUnlockAttempt) {
 			if (strcmp((char *)control_key, (char *)key) == 0) {
@@ -1371,9 +1458,10 @@ static Boolean SIMLockCheckPHSIMLock(SimNumber_t SimId, UInt8 *imsi)
 		} else if (simlock_nvdata.phone_lock_setting ==
 						PH_SIM_LOCK_ON) {
 			/* Phone lock on, check if IMSI is correct */
-			pr_info("simlock_nvdata.phone_lock_imsi:%s imsi:%s\n",
-				(char *)&simlock_nvdata.phone_lock_imsi,
-				(char *)imsi);
+			pr_info("%s:simlock_nvdata.phone_lock_imsi:%s imsi:%s\n",
+					__func__,
+					(char *)&simlock_nvdata.phone_lock_imsi,
+					(char *)imsi);
 			result = ((imsi != NULL)
 				  &&
 				  (strcmp
@@ -1422,12 +1510,13 @@ static SEC_SimLock_Status_t SIMLockSetPHSIMLock(SimNumber_t SimId,
 
 	if (((imsi == NULL) || (imsi[0] == '\0'))
 	    && (lock_setting != PH_SIM_LOCK_OFF)) {
-		pr_err("IMSI is NULL\n");
+		pr_err("%s:IMSI is NULL\n", __func__);
 		result = SEC_SIMLOCK_FAILURE;
 	} else if (GetSimlockNvdata(&simlock_nvdata)) {
 		pr_info
-		  ("lock_setting:%d simlock_nvdata.phone_lock_pwd:%s key:%s\n",
-		     lock_setting, simlock_nvdata.phone_lock_pwd, (char *)key);
+		  ("%s:lock_setting:%d;phone_lock_pwd:%s key:%s\n",
+		     __func__, lock_setting, simlock_nvdata.phone_lock_pwd,
+		     (char *)key);
 
 		if (strcmp((char *)key, simlock_nvdata.phone_lock_pwd) == 0) {
 			simlock_nvdata.phone_lock_setting = lock_setting;
@@ -1537,12 +1626,14 @@ Boolean SIMLockIsLockOn(SEC_SimLock_LockType_t lockType,
 			break;
 
 		default:
-			pr_err("Unsupport lockType:%d Error!!\n", lockType);
+			pr_err("%s:Unsupport lockType:%d Error!!\n",
+			__func__, lockType);
 			result = FALSE;
 			break;
 		}
 
-		pr_info("lockType:%d\n result:%d", lockType, result);
+		pr_info("%s:lockType:%d\n result:%d",
+			__func__, lockType, result);
 	} else {
 		result = FALSE;
 	}
