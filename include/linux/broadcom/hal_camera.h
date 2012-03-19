@@ -192,19 +192,19 @@ typedef enum {
 	CamImageSize_R_QVGA = 0x00000010,	/* /< image size 240x320 */
 	CamImageSize_QVGA = 0x00000020,	/* /< image size 320x240 */
 	CamImageSize_CIF = 0x00000040,	/* /< image size 352x288 */
-	CamImageSize_320x480 = 0x00000080, /* /< image size 320x480 */
-	CamImageSize_640x240 = 0x00000100, /*/< image size 640x240 */
+	CamImageSize_320x480 = 0x00000080,	/* /< image size 320x480 */
+	CamImageSize_640x240 = 0x00000100,	/*/< image size 640x240 */
 	CamImageSize_426x320 = 0x00000200,	/* /< image size 426x320 */
-	CamImageSize_VGA = 	0x00000400,/* /< image size 640x480 */
+	CamImageSize_VGA = 0x00000400,	/* /< image size 640x480 */
 	CamImageSize_SVGA = 0x00000800,	/* /< image size 800x600 */
-	CamImageSize_XGA = 	0x00001000,/* /< image size 1024x768 */
+	CamImageSize_XGA = 0x00001000,	/* /< image size 1024x768 */
 	CamImageSize_4VGA = 0x00002000,	/* /< image size 1280x960 */
 	CamImageSize_SXGA = 0x00004000,	/* /< image size 1280x1024 */
 	CamImageSize_UXGA = 0x00008000,	/* /< image size 1600x1200 */
 	CamImageSize_QXGA = 0x00010000,	/* /< image size 2048x1536 */
-	CamImageSize_QSXGA = 0x00020000, 	/* /< image size 2560x1920 */
-	CamImageSize_480x360 = 0x00040000, 	/* /< image size 2560x1920 */
-	CamImageSize_R_QCIF  = 0x00080000,	/* /< image size 144x176 */	
+	CamImageSize_QSXGA = 0x00020000,	/* /< image size 2560x1920 */
+	CamImageSize_480x360 = 0x00040000,	/* /< image size 2560x1920 */
+	CamImageSize_R_QCIF = 0x00080000,	/* /< image size 144x176 */
 	CamImageSize_INVALID = 0x00100000	/* /< invalid image capture size */
 } CamImageSize_t;
 
@@ -228,11 +228,11 @@ If  0 < CamZoom_t < 32 use table look-up defined in camera device driver, Camera
 typedef enum {
 	CamZoom_1_0 = 256,	/* /< zoom factor 1.0 */
 	CamZoom_1_15 = 224,	/* /< zoom factor 1.15   (256/224) */
-	CamZoom_1_2 = 216,      /* /< zoom factor 1.2   (256/216) */
+	CamZoom_1_2 = 216,	/* /< zoom factor 1.2   (256/216) */
 	CamZoom_1_33 = 192,	/* /< zoom factor 1.33   (256/192) */
-	CamZoom_1_4 = 184,      /* /< zoom factor 1.4   (256/184) */
+	CamZoom_1_4 = 184,	/* /< zoom factor 1.4   (256/184) */
 	CamZoom_1_6 = 160,	/* /< zoom factor 1.6    (256/160) */
-	CamZoom_1_8 = 144,      /* /< zoom factor 1.8    (256/144) */
+	CamZoom_1_8 = 144,	/* /< zoom factor 1.8    (256/144) */
 	CamZoom_2_0 = 128,	/* /< zoom factor 2.0    (256/128) */
 	CamZoom_2_66 = 96,	/* /< zoom factor 2.66   (256/96) */
 	CamZoom_4_0 = 64,	/* /< zoom factor 4.0    (256/64) */
@@ -336,7 +336,6 @@ typedef enum {
 #endif
 } CamSceneMode_t;
 
-
 /** Special effects.
   Only advanced users need to use these.
 */
@@ -375,7 +374,6 @@ typedef enum {
 	CamDigEffect_Green = 0x80000000,	/* /< green */
 	CamDigEffect_Night = 0x80000001,	/* /< Night */
 	CamDigEffect_N_Effect = 0x80000002	/* /< Max # of Effects */
-
 } CamDigEffect_t;
 
 /** WhiteBalance mode.
@@ -427,7 +425,7 @@ typedef enum {
 	CamAntiBandingAuto = 0x00000001,	/* / < auto */
 	CamAntiBanding50Hz = 0x00000002,	/* /< 50Hz */
 	CamAntiBanding60Hz = 0x00000004,	/* /< 60 Hz */
-	CamAntiBandingOff = 0x00000008		/* /< off */
+	CamAntiBandingOff = 0x00000008	/* /< off */
 } CamAntiBanding_t;
 /* ] */
 
@@ -500,18 +498,18 @@ typedef enum {
 } CamAntiShadingPower_t;
 typedef enum {
 #ifdef CAMERA_STILL_YCbCr_SUPPORT
-	 CamJpegQuality_Min = 5,       /* minimum JpegQuality */
-	 CamJpegQuality_Nom = 7,       /* nominal JpegQuality */
-	 CamJpegQuality_Max = 9        /* maximum JpegQuality */
+	CamJpegQuality_Min = 5,	/* minimum JpegQuality */
+	CamJpegQuality_Nom = 7,	/* nominal JpegQuality */
+	CamJpegQuality_Max = 9	/* maximum JpegQuality */
 #else
 #if defined(SS_2153) && defined(BROOKLYN_HW)
-	 CamJpegQuality_Min = 0,
-	 CamJpegQuality_Nom =          50,     /* nominal JpegQuality */
-	 CamJpegQuality_Max =          100     /* maximum JpegQuality */
+	CamJpegQuality_Min = 0,
+	CamJpegQuality_Nom = 50,	/* nominal JpegQuality */
+	CamJpegQuality_Max = 100	/* maximum JpegQuality */
 #else
-	 CamJpegQuality_Min = 65,      /* minimum Jpegquality */
-	 CamJpegQuality_Nom = 75,      /* nominal JpegQuality */
-	 CamJpegQuality_Max = 85       /* maximum JpegQuality */
+	CamJpegQuality_Min = 65,	/* minimum Jpegquality */
+	CamJpegQuality_Nom = 75,	/* nominal JpegQuality */
+	CamJpegQuality_Max = 85	/* maximum JpegQuality */
 #endif
 #endif
 } CamJpegQuality_t;
@@ -542,10 +540,10 @@ typedef struct {
 	CamDataFmt_t format;	/* image format */
 	CAM_window_scale_st_t size_window;	/* image resolution/windowing */
 	CamMode_t mode;		/* image capture mode */
-	CamSceneMode_t  scenemode;  /* scene mode */
-	CamWB_WBMode_t  wbmode;     /* WB mode */
-	CamDigEffect_t	coloreffects; /* color effects */
-	CamAntiBanding_t antibanding;/* antibanding */
+	CamSceneMode_t scenemode;	/* scene mode */
+	CamWB_WBMode_t wbmode;	/* WB mode */
+	CamDigEffect_t coloreffects;	/* color effects */
+	CamAntiBanding_t antibanding;	/* antibanding */
 	FlashLedState_t flash;	/* flash mode */
 	CamFocusControlMode_t focus;	/* focus mode */
 	CamJpegQuality_t quality;	/* jpeg quality */

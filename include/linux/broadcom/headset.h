@@ -12,9 +12,6 @@
 * consent.
 *****************************************************************************/
 
-
-
-
 /*
 *
 *****************************************************************************
@@ -29,7 +26,6 @@
 *
 *****************************************************************************/
 
-
 #if !defined( LINUX_HEADSET_H )
 #define LINUX_HEADSET_H
 
@@ -37,24 +33,21 @@
 
 #include <linux/ioctl.h>
 
-typedef enum
-{
-    HEADSET_UNPLUGGED = 0,        /* headset unplugged */
-    HEADSET_TOGGLE_SPKR_MIC = 1,  /* headset plugged in */
-    HEADSET_TOGGLE_SPKR_ONLY = 2, /* headphone plugged in */
+typedef enum {
+	HEADSET_UNPLUGGED = 0,	/* headset unplugged */
+	HEADSET_TOGGLE_SPKR_MIC = 1,	/* headset plugged in */
+	HEADSET_TOGGLE_SPKR_ONLY = 2,	/* headphone plugged in */
 
 } headset_state;
 
 #define HEADSET_STATE_INIT (headset_state)-1
 
 #ifdef __KERNEL__
-typedef enum
-{
-    HEADSET_NULL = 0,       /* NULL event */
-    HEADSET_REMOVED,        /* headset unplugged */
-    HEADSET_INSERTED,       /* headset inserted */
-    HEADSET_BUTTON          /* headset button pressed */
-
+typedef enum {
+	HEADSET_NULL = 0,	/* NULL event */
+	HEADSET_REMOVED,	/* headset unplugged */
+	HEADSET_INSERTED,	/* headset inserted */
+	HEADSET_BUTTON		/* headset button pressed */
 } headset_event;
 #endif
 
@@ -84,4 +77,4 @@ typedef enum
 
 #define HEADSET_DEBOUNCE_DEFAULT        1000
 
-#endif  /* LINUX_HEADSET_H */
+#endif /* LINUX_HEADSET_H */

@@ -18,9 +18,8 @@
 /*
  * Board dependent configuration for the HDMI hotplug driver
  */
-struct hdmi_hw_cfg
-{
-   int gpio_hdmi_det;
+struct hdmi_hw_cfg {
+	int gpio_hdmi_det;
 };
 
 #endif /* HDMI_CFG_H */
