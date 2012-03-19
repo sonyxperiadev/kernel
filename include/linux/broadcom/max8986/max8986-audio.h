@@ -30,18 +30,14 @@
 #ifndef __MAX8986_AUDIO_H__
 #define __MAX8986_AUDIO_H__
 
-
-
 /*mixer input settings */
-typedef enum
-{
+typedef enum {
 	MAX8986_MIXER_NO_INPUT = 0x0,
-	MAX8986_MIXER_INA1	   = (0x1 << 0),
-	MAX8986_MIXER_INA2	   = (0x1 << 1),
-	MAX8986_MIXER_INB1	   = (0x1 << 2),
-	MAX8986_MIXER_INB2	   = (0x1 << 3)
-}max8986_mixer_input;
-
+	MAX8986_MIXER_INA1 = (0x1 << 0),
+	MAX8986_MIXER_INA2 = (0x1 << 1),
+	MAX8986_MIXER_INB1 = (0x1 << 2),
+	MAX8986_MIXER_INB2 = (0x1 << 3)
+} max8986_mixer_input;
 
 /* Input register input A and B preamp gain */
 enum {
@@ -63,19 +59,16 @@ enum {
 };
 
 /* input path */
-enum
-{
+enum {
 	MAX8986_INPUTA,
 	MAX8986_INPUTB,
 };
 
 /* input mode */
-enum
-{
+enum {
 	MAX8986_INPUT_MODE_DIFFERENTIAL,
 	MAX8986_INPUT_MODE_SINGLE_ENDED,
 };
-
 
 /* Max8986 HS path */
 typedef enum {
@@ -96,9 +89,9 @@ extern int max8986_audio_hs_ihf_poweroff(void);
 extern int max8986_audio_hs_ihf_enable_bypass(bool enable);
 extern int max8986_audio_hs_ihf_set_gain(int ihfgain);
 
-extern int max8986_audio_set_mixer_input(int audio_path, max8986_mixer_input input);
+extern int max8986_audio_set_mixer_input(int audio_path,
+					 max8986_mixer_input input);
 extern int max8986_set_input_mode(int input_path, int mode);
 extern int max8986_set_input_preamp_gain(int input_path, int gain);
 
-#endif 	/* __MAX8986_AUDIO_H__*/
-
+#endif /* __MAX8986_AUDIO_H__ */

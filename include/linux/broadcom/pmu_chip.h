@@ -77,8 +77,8 @@
 
 //per lori: at_pmu.c requires an updated kernel/common/include/linux/broadcom/pmu_chip.h version.  For now, I just added the required defines to pmu_chip.h, and not the corresponding implementation. So, AT*MPMUTST commands won.t work properly.
 typedef struct {
-        unsigned long  reg;
-        unsigned short  val;
+	unsigned long reg;
+	unsigned short val;
 } pmu_reg;
 
 typedef enum {
