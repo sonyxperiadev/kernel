@@ -35,12 +35,14 @@ void pwm_set_drvdata(struct pwm_device *p, void *data)
 {
 	dev_set_drvdata(&p->dev, data);
 }
+
 EXPORT_SYMBOL(pwm_set_drvdata);
 
 void *pwm_get_drvdata(const struct pwm_device *p)
 {
 	return dev_get_drvdata(&p->dev);
 }
+
 EXPORT_SYMBOL(pwm_get_drvdata);
 
 static inline struct pwm_device *to_pwm_device(struct device *dev)
@@ -72,7 +74,7 @@ static int __pwm_request(struct pwm_device *p, const char *label)
 		ret = p->ops->request(p);
 		if (ret)
 			goto err_request_ops;
-			
+
 	}
 
 	return 0;
@@ -104,7 +106,7 @@ struct pwm_device *pwm_request(const char *name, const char *label)
 	struct pwm_device *p;
 	int ret;
 
-	d = class_find_device(&pwm_class, NULL, (char*)name, pwm_match_name);
+	d = class_find_device(&pwm_class, NULL, (char *)name, pwm_match_name);
 	if (!d)
 		return ERR_PTR(-EINVAL);
 
@@ -117,6 +119,7 @@ struct pwm_device *pwm_request(const char *name, const char *label)
 
 	return p;
 }
+
 EXPORT_SYMBOL(pwm_request);
 
 /**
@@ -142,6 +145,7 @@ void pwm_release(struct pwm_device *p)
 	put_device(&p->dev);
 	module_put(p->ops->owner);
 }
+
 EXPORT_SYMBOL(pwm_release);
 
 static unsigned long pwm_ns_to_ticks(struct pwm_device *p, unsigned long nsecs)
@@ -184,6 +188,7 @@ int pwm_config_nosleep(struct pwm_device *p, struct pwm_config *c)
 
 	return p->ops->config_nosleep(p, c);
 }
+
 EXPORT_SYMBOL(pwm_config_nosleep);
 
 /**
@@ -227,6 +232,7 @@ int pwm_config(struct pwm_device *p, struct pwm_config *c)
 		return ret;
 	return p->ops->config(p, c);
 }
+
 EXPORT_SYMBOL(pwm_config);
 
 /**
@@ -250,6 +256,7 @@ int pwm_set(struct pwm_device *p, unsigned long period_ns,
 
 	return pwm_config(p, &c);
 }
+
 EXPORT_SYMBOL(pwm_set);
 
 int pwm_set_period_ns(struct pwm_device *p, unsigned long period_ns)
@@ -261,12 +268,14 @@ int pwm_set_period_ns(struct pwm_device *p, unsigned long period_ns)
 
 	return pwm_config(p, &c);
 }
+
 EXPORT_SYMBOL(pwm_set_period_ns);
 
 unsigned long pwm_get_period_ns(struct pwm_device *p)
 {
 	return pwm_ticks_to_ns(p, p->period_ticks);
 }
+
 EXPORT_SYMBOL(pwm_get_period_ns);
 
 int pwm_set_duty_ns(struct pwm_device *p, unsigned long duty_ns)
@@ -277,12 +286,14 @@ int pwm_set_duty_ns(struct pwm_device *p, unsigned long duty_ns)
 	};
 	return pwm_config(p, &c);
 }
+
 EXPORT_SYMBOL(pwm_set_duty_ns);
 
 unsigned long pwm_get_duty_ns(struct pwm_device *p)
 {
 	return pwm_ticks_to_ns(p, p->duty_ticks);
 }
+
 EXPORT_SYMBOL(pwm_get_duty_ns);
 
 int pwm_set_polarity(struct pwm_device *p, int polarity)
@@ -293,6 +304,7 @@ int pwm_set_polarity(struct pwm_device *p, int polarity)
 	};
 	return pwm_config(p, &c);
 }
+
 EXPORT_SYMBOL(pwm_set_polarity);
 
 int pwm_start(struct pwm_device *p)
@@ -302,6 +314,7 @@ int pwm_start(struct pwm_device *p)
 	};
 	return pwm_config(p, &c);
 }
+
 EXPORT_SYMBOL(pwm_start);
 
 int pwm_stop(struct pwm_device *p)
@@ -311,6 +324,7 @@ int pwm_stop(struct pwm_device *p)
 	};
 	return pwm_config(p, &c);
 }
+
 EXPORT_SYMBOL(pwm_stop);
 
 int pwm_synchronize(struct pwm_device *p, struct pwm_device *to_p)
@@ -320,6 +334,7 @@ int pwm_synchronize(struct pwm_device *p, struct pwm_device *to_p)
 
 	return p->ops->synchronize(p, to_p);
 }
+
 EXPORT_SYMBOL(pwm_synchronize);
 
 int pwm_unsynchronize(struct pwm_device *p, struct pwm_device *from_p)
@@ -329,11 +344,11 @@ int pwm_unsynchronize(struct pwm_device *p, struct pwm_device *from_p)
 
 	return p->ops->unsynchronize(p, from_p);
 }
+
 EXPORT_SYMBOL(pwm_unsynchronize);
 
 static ssize_t pwm_run_show(struct device *dev,
-			    struct device_attribute *attr,
-			    char *buf)
+			    struct device_attribute *attr, char *buf)
 {
 	struct pwm_device *p = to_pwm_device(dev);
 	return sprintf(buf, "%d\n", pwm_is_running(p));
@@ -359,16 +374,14 @@ static ssize_t pwm_run_store(struct device *dev,
 }
 
 static ssize_t pwm_tick_hz_show(struct device *dev,
-				struct device_attribute *attr,
-				char *buf)
+				struct device_attribute *attr, char *buf)
 {
 	struct pwm_device *p = to_pwm_device(dev);
 	return sprintf(buf, "%lu\n", p->tick_hz);
 }
 
 static ssize_t pwm_duty_ns_show(struct device *dev,
-				struct device_attribute *attr,
-				char *buf)
+				struct device_attribute *attr, char *buf)
 {
 	struct pwm_device *p = to_pwm_device(dev);
 	return sprintf(buf, "%lu\n", pwm_get_duty_ns(p));
@@ -393,8 +406,7 @@ static ssize_t pwm_duty_ns_store(struct device *dev,
 }
 
 static ssize_t pwm_period_ns_show(struct device *dev,
-				  struct device_attribute *attr,
-				  char *buf)
+				  struct device_attribute *attr, char *buf)
 {
 	struct pwm_device *p = to_pwm_device(dev);
 	return sprintf(buf, "%lu\n", pwm_get_period_ns(p));
@@ -420,8 +432,7 @@ static ssize_t pwm_period_ns_store(struct device *dev,
 }
 
 static ssize_t pwm_polarity_show(struct device *dev,
-				 struct device_attribute *attr,
-				 char *buf)
+				 struct device_attribute *attr, char *buf)
 {
 	struct pwm_device *p = to_pwm_device(dev);
 	return sprintf(buf, "%d\n", p->polarity ? 1 : 0);
@@ -447,8 +458,7 @@ static ssize_t pwm_polarity_store(struct device *dev,
 }
 
 static ssize_t pwm_export_show(struct device *dev,
-			       struct device_attribute *attr,
-			       char *buf)
+			       struct device_attribute *attr, char *buf)
 {
 	struct pwm_device *p = to_pwm_device(dev);
 
@@ -494,8 +504,10 @@ static ssize_t pwm_unexport_store(struct device *dev,
 static struct device_attribute pwm_dev_attrs[] = {
 	__ATTR(export, S_IRUGO | S_IWUSR, pwm_export_show, pwm_export_store),
 	__ATTR(unexport, S_IWUSR, NULL, pwm_unexport_store),
-	__ATTR(polarity, S_IRUGO | S_IWUSR, pwm_polarity_show, pwm_polarity_store),
-	__ATTR(period_ns, S_IRUGO | S_IWUSR, pwm_period_ns_show, pwm_period_ns_store),
+	__ATTR(polarity, S_IRUGO | S_IWUSR, pwm_polarity_show,
+	       pwm_polarity_store),
+	__ATTR(period_ns, S_IRUGO | S_IWUSR, pwm_period_ns_show,
+	       pwm_period_ns_store),
 	__ATTR(duty_ns, S_IRUGO | S_IWUSR, pwm_duty_ns_show, pwm_duty_ns_store),
 	__ATTR(tick_hz, S_IRUGO, pwm_tick_hz_show, NULL),
 	__ATTR(run, S_IRUGO | S_IWUSR, pwm_run_show, pwm_run_store),
@@ -503,9 +515,9 @@ static struct device_attribute pwm_dev_attrs[] = {
 };
 
 static struct class pwm_class = {
-	.name		= "pwm",
-	.owner		= THIS_MODULE,
-	.dev_attrs	= pwm_dev_attrs,
+	.name = "pwm",
+	.owner = THIS_MODULE,
+	.dev_attrs = pwm_dev_attrs,
 };
 
 static void __pwm_release(struct device *dev)
@@ -554,12 +566,14 @@ err:
 	put_device(&p->dev);
 	return ERR_PTR(ret);
 }
+
 EXPORT_SYMBOL(pwm_register);
 
 void pwm_unregister(struct pwm_device *p)
 {
 	device_unregister(&p->dev);
 }
+
 EXPORT_SYMBOL(pwm_unregister);
 
 static int __init pwm_init(void)
