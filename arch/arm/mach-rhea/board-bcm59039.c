@@ -40,7 +40,7 @@
 #define PMU_DEVICE_I2C_BUSNO 2
 static int vlt_tbl_init;
 
-static struct bcmpmu_rw_data __initdata register_init_data[] = {
+static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x01, .val = 0x00, .mask = 0x01},
 	{.map = 0, .addr = 0x0c, .val = 0x1b, .mask = 0xFF},
 	{.map = 0, .addr = 0x40, .val = 0xFF, .mask = 0xFF},
@@ -627,7 +627,7 @@ static struct platform_device *bcmpmu_client_devices[] = {
 
 
 
-static int __init bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
+static int bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
 	pr_info("REG: pmu_init_platform_hw called\n");
 	return 0;
@@ -686,7 +686,7 @@ static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 	{3200, 0},
 };
 
-static int __init bcmpmu_init_platform_hw(struct bcmpmu *);
+static int bcmpmu_init_platform_hw(struct bcmpmu *);
 
 static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 /* This table is default data, the real data from board file or device tree*/
@@ -1107,7 +1107,7 @@ const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
 #endif
 }
 
-int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
+int bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 {
 	int             i;
 	printk(KERN_INFO "%s: called.\n", __func__);

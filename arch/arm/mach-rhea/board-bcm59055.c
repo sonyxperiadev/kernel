@@ -648,7 +648,7 @@ static struct platform_device *bcmpmu_client_devices[] = {
 #endif
 };
 
-static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
+static int bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 {
 	int i;
 	printk(KERN_INFO "%s: called.\n", __func__);
@@ -674,7 +674,7 @@ static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 	return 0;
 }
 
-static int __init bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
+static int bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
 	printk(KERN_INFO"REG: pmu_init_platform_hw called\n");
 
