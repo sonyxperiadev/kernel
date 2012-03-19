@@ -410,6 +410,12 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			ext_csd[EXT_CSD_SEC_FEATURE_SUPPORT];
 		card->ext_csd.trim_timeout = 300 *
 			ext_csd[EXT_CSD_TRIM_MULT];
+
+		card->ext_csd.rpmb_size =
+			ext_csd[EXT_CSD_RPMB_SIZE_MULT] << 17;
+
+		printk(KERN_INFO "%s: card->ext_csd.rpmb_size: %d\n",
+			__func__, card->ext_csd.rpmb_size);
 	}
 
 	if (card->ext_csd.rev >= 5)
