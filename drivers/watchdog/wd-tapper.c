@@ -31,8 +31,8 @@
 
 /* The Driver specific data */
 struct wd_tapper_data {
-    struct kona_timer *kt;
-    unsigned int count;
+	struct kona_timer *kt;
+	unsigned int count;
 };
 
 struct wd_tapper_data *wd_tapper_data;
@@ -45,9 +45,9 @@ struct wd_tapper_data *wd_tapper_data;
  */
 int wd_tapper_callback(void *dev)
 {
-    /* Pet the PMU Watchdog */
-    pr_info("petting the pmu wd\n");
-    return 0;
+	/* Pet the PMU Watchdog */
+	pr_info("petting the pmu wd\n");
+	return 0;
 }
 
 /**
@@ -57,11 +57,12 @@ int wd_tapper_callback(void *dev)
  */
 static int wd_tapper_start(struct platform_device *pdev, pm_message_t state)
 {
-	if (kona_timer_set_match_start(wd_tapper_data->kt,wd_tapper_data->count) < 0) {
+	if (kona_timer_set_match_start
+	    (wd_tapper_data->kt, wd_tapper_data->count) < 0) {
 		pr_err("kona_timer_set_match_start returned error \r\n");
 		return -1;
 	}
-    return 0;
+	return 0;
 }
 
 /**
@@ -72,10 +73,11 @@ static int wd_tapper_start(struct platform_device *pdev, pm_message_t state)
 static int wd_tapper_stop(struct platform_device *pdev)
 {
 	if (kona_timer_stop(wd_tapper_data->kt) < 0) {
-		pr_err("Unable to stop the timer kona_timer_stop returned error \r\n");
+		pr_err
+		    ("Unable to stop the timer kona_timer_stop returned error \r\n");
 		return -1;
 	}
-    return 0;
+	return 0;
 }
 
 /**
@@ -86,65 +88,66 @@ static int wd_tapper_stop(struct platform_device *pdev)
  */
 static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
 {
-    struct wd_tapper_platform_data *pltfm_data;
-    struct timer_ch_cfg cfg;
-    unsigned int ch_num;
+	struct wd_tapper_platform_data *pltfm_data;
+	struct timer_ch_cfg cfg;
+	unsigned int ch_num;
 
-    wd_tapper_data = vmalloc(sizeof(struct wd_tapper_data));
+	wd_tapper_data = vmalloc(sizeof(struct wd_tapper_data));
 
-    /* Obtain the platform data */
-    pltfm_data = dev_get_platdata(&pdev->dev);
+	/* Obtain the platform data */
+	pltfm_data = dev_get_platdata(&pdev->dev);
 
-    /* Validate the data obtained */
-    if (!pltfm_data) {
-        dev_err(&pdev->dev, "can't get the platform data\n");
-        goto out;
-    }
+	/* Validate the data obtained */
+	if (!pltfm_data) {
+		dev_err(&pdev->dev, "can't get the platform data\n");
+		goto out;
+	}
 
-    /* Get the time out period */
-    wd_tapper_data->count = msec_to_ticks(pltfm_data->count);
-    if (wd_tapper_data->count == 0) {
-        dev_err(&pdev->dev, "count value set is 0 - INVALID\n");
-        goto out;
-    }
+	/* Get the time out period */
+	wd_tapper_data->count = msec_to_ticks(pltfm_data->count);
+	if (wd_tapper_data->count == 0) {
+		dev_err(&pdev->dev, "count value set is 0 - INVALID\n");
+		goto out;
+	}
 
-    /* Get the channel number */
-    ch_num = pltfm_data->ch_num;
-    if (ch_num > 3) {
-        dev_err(&pdev->dev, "Wrong choice of channel number to match\n");
-        goto out;
-    }
+	/* Get the channel number */
+	ch_num = pltfm_data->ch_num;
+	if (ch_num > 3) {
+		dev_err(&pdev->dev,
+			"Wrong choice of channel number to match\n");
+		goto out;
+	}
 
-    if (pltfm_data->name == NULL){
-        dev_err(&pdev->dev, "Timer name passed is NULL.\n");
-        goto out;
-    }
+	if (pltfm_data->name == NULL) {
+		dev_err(&pdev->dev, "Timer name passed is NULL.\n");
+		goto out;
+	}
 
-    /* Request the timer context */
-    wd_tapper_data->kt = kona_timer_request (pltfm_data->name, ch_num);
-    if (wd_tapper_data->kt == NULL) {
+	/* Request the timer context */
+	wd_tapper_data->kt = kona_timer_request(pltfm_data->name, ch_num);
+	if (wd_tapper_data->kt == NULL) {
 		dev_err(&pdev->dev, "kona_timer_request returned error \r\n");
 		goto out;
 	}
 
-    /* Populate the timer config */
-    cfg.mode = MODE_ONESHOT;
-	cfg.arg  = wd_tapper_data->kt;
-	cfg.cb	 = (intr_callback)wd_tapper_callback;
+	/* Populate the timer config */
+	cfg.mode = MODE_ONESHOT;
+	cfg.arg = wd_tapper_data->kt;
+	cfg.cb = (intr_callback) wd_tapper_callback;
 	cfg.reload = wd_tapper_data->count;
 
-    /* Configure the timer */
-    if (kona_timer_config(wd_tapper_data->kt,&cfg) < 0) {
+	/* Configure the timer */
+	if (kona_timer_config(wd_tapper_data->kt, &cfg) < 0) {
 		dev_err(&pdev->dev, "kona_timer_config returned error \r\n");
 		goto out;
 	}
 
-    dev_info(&pdev->dev, "Probe Success\n");
-    return 0;
+	dev_info(&pdev->dev, "Probe Success\n");
+	return 0;
 out:
-    dev_err(&pdev->dev, "Probe failed\n");
-    vfree(wd_tapper_data);
-    return -1;
+	dev_err(&pdev->dev, "Probe failed\n");
+	vfree(wd_tapper_data);
+	return -1;
 }
 
 /**
@@ -154,18 +157,18 @@ out:
  */
 static int __devexit wd_tapper_pltfm_remove(struct platform_device *pdev)
 {
-    if (kona_timer_free(wd_tapper_data->kt) < 0) {
+	if (kona_timer_free(wd_tapper_data->kt) < 0) {
 		pr_err("Unable to free the timer \r\n");
 		return -1;
 	}
-    return 0;
+	return 0;
 }
 
 static struct platform_driver wd_tapper_pltfm_driver = {
 	.driver = {
-		.name	= "wd_tapper",
-		.owner	= THIS_MODULE,
-	},
+		   .name = "wd_tapper",
+		   .owner = THIS_MODULE,
+		   },
 	.probe = wd_tapper_pltfm_probe,
 	.remove = __devexit_p(wd_tapper_pltfm_remove),
 	.suspend = wd_tapper_start,
@@ -176,12 +179,14 @@ static int __init wd_tapper_init(void)
 {
 	return platform_driver_register(&wd_tapper_pltfm_driver);
 }
+
 module_init(wd_tapper_init);
 
 static void __exit wd_tapper_exit(void)
 {
 	platform_driver_unregister(&wd_tapper_pltfm_driver);
 }
+
 module_exit(wd_tapper_exit);
 
 MODULE_AUTHOR("Broadcom Corporation");

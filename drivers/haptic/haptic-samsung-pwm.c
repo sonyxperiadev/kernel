@@ -41,8 +41,9 @@ struct samsung_pwm_haptic {
 	int level_max;
 };
 
-static inline struct samsung_pwm_haptic *cdev_to_samsung_pwm_haptic(
-		struct haptic_classdev *haptic_cdev)
+static inline struct samsung_pwm_haptic *cdev_to_samsung_pwm_haptic(struct
+								    haptic_classdev
+								    *haptic_cdev)
 {
 	return container_of(haptic_cdev, struct samsung_pwm_haptic, cdev);
 }
@@ -105,10 +106,10 @@ static void samsung_pwm_haptic_timer(unsigned long data)
 }
 
 static void samsung_pwm_haptic_set(struct haptic_classdev *haptic_cdev,
-				enum haptic_value value)
+				   enum haptic_value value)
 {
 	struct samsung_pwm_haptic *haptic =
-		cdev_to_samsung_pwm_haptic(haptic_cdev);
+	    cdev_to_samsung_pwm_haptic(haptic_cdev);
 
 	switch (value) {
 	case HAPTIC_OFF:
@@ -124,11 +125,11 @@ static void samsung_pwm_haptic_set(struct haptic_classdev *haptic_cdev,
 	schedule_work(&haptic->work);
 }
 
-static enum haptic_value samsung_pwm_haptic_get(
-		struct haptic_classdev *haptic_cdev)
+static enum haptic_value samsung_pwm_haptic_get(struct haptic_classdev
+						*haptic_cdev)
 {
 	struct samsung_pwm_haptic *haptic =
-		cdev_to_samsung_pwm_haptic(haptic_cdev);
+	    cdev_to_samsung_pwm_haptic(haptic_cdev);
 
 	if (haptic->enable)
 		return HAPTIC_FULL;
@@ -171,15 +172,15 @@ static ssize_t samsung_pwm_haptic_store_##name(struct device *dev, \
 ATTR_DEF_SHOW(enable);
 ATTR_DEF_STORE(enable);
 static DEVICE_ATTR(enable, 0644, samsung_pwm_haptic_show_enable,
-		samsung_pwm_haptic_store_enable);
+		   samsung_pwm_haptic_store_enable);
 
 static ssize_t samsung_pwm_haptic_store_level(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t size)
+					      struct device_attribute *attr,
+					      const char *buf, size_t size)
 {
 	struct haptic_classdev *haptic_cdev = dev_get_drvdata(dev);
 	struct samsung_pwm_haptic *haptic =
-		cdev_to_samsung_pwm_haptic(haptic_cdev);
+	    cdev_to_samsung_pwm_haptic(haptic_cdev);
 	ssize_t ret = -EINVAL;
 	unsigned long val;
 
@@ -194,20 +195,21 @@ static ssize_t samsung_pwm_haptic_store_level(struct device *dev,
 
 	return ret;
 }
+
 ATTR_DEF_SHOW(level);
 static DEVICE_ATTR(level, 0644, samsung_pwm_haptic_show_level,
-		samsung_pwm_haptic_store_level);
+		   samsung_pwm_haptic_store_level);
 
 ATTR_DEF_SHOW(level_max);
 static DEVICE_ATTR(level_max, 0444, samsung_pwm_haptic_show_level_max, NULL);
 
 static ssize_t samsung_pwm_haptic_store_oneshot(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t size)
+						struct device_attribute *attr,
+						const char *buf, size_t size)
 {
 	struct haptic_classdev *haptic_cdev = dev_get_drvdata(dev);
 	struct samsung_pwm_haptic *haptic =
-		cdev_to_samsung_pwm_haptic(haptic_cdev);
+	    cdev_to_samsung_pwm_haptic(haptic_cdev);
 	ssize_t ret = -EINVAL;
 	unsigned long val;
 
@@ -221,6 +223,7 @@ static ssize_t samsung_pwm_haptic_store_oneshot(struct device *dev,
 
 	return ret;
 }
+
 static DEVICE_ATTR(oneshot, 0200, NULL, samsung_pwm_haptic_store_oneshot);
 
 static struct attribute *haptic_attributes[] = {
@@ -328,8 +331,8 @@ static int samsung_pwm_haptic_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int samsung_pwm_haptic_suspend(
-	struct platform_device *pdev, pm_message_t state)
+static int samsung_pwm_haptic_suspend(struct platform_device *pdev,
+				      pm_message_t state)
 {
 	struct samsung_pwm_haptic *haptic = platform_get_drvdata(pdev);
 
@@ -350,26 +353,28 @@ static int samsung_pwm_haptic_resume(struct platform_device *pdev)
 #endif
 
 static struct platform_driver samsung_pwm_haptic_driver = {
-	.probe		= samsung_pwm_haptic_probe,
-	.remove		= samsung_pwm_haptic_remove,
-	.suspend	= samsung_pwm_haptic_suspend,
-	.resume		= samsung_pwm_haptic_resume,
-	.driver		= {
-		.name	= "samsung_pwm_haptic",
-		.owner	= THIS_MODULE,
-	},
+	.probe = samsung_pwm_haptic_probe,
+	.remove = samsung_pwm_haptic_remove,
+	.suspend = samsung_pwm_haptic_suspend,
+	.resume = samsung_pwm_haptic_resume,
+	.driver = {
+		   .name = "samsung_pwm_haptic",
+		   .owner = THIS_MODULE,
+		   },
 };
 
 static int __init samsung_pwm_haptic_init(void)
 {
 	return platform_driver_register(&samsung_pwm_haptic_driver);
 }
+
 module_init(samsung_pwm_haptic_init);
 
 static void __exit samsung_pwm_haptic_exit(void)
 {
 	platform_driver_unregister(&samsung_pwm_haptic_driver);
 }
+
 module_exit(samsung_pwm_haptic_exit);
 
 MODULE_AUTHOR("Kyungmin Park <kyungmin.park@samsung.com>");
