@@ -1784,7 +1784,13 @@ static void serial8250_handle_port(struct uart_8250_port *up)
 #else
 	if (status & (UART_LSR_DR | UART_LSR_BI))
 #endif
+	{
+#if defined(CONFIG_HAS_WAKELOCK)
+		wake_lock_timeout(&up->uart_lock,
+			msecs_to_jiffies(WAKELOCK_TIMEOUT_VAL));
+#endif
 		receive_chars(up, &status);
+	}
 	check_modem_status(up);
 
 #ifdef CONFIG_ARCH_RHEA
@@ -1836,11 +1842,6 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 
 	l = i->head;
 	up = list_entry(l, struct uart_8250_port, list);
-#if defined(CONFIG_HAS_WAKELOCK)
-	wake_lock_timeout(&up->uart_lock,
-				msecs_to_jiffies(WAKELOCK_TIMEOUT_VAL));
-#endif
-
 	do {
 		up = list_entry(l, struct uart_8250_port, list);
 
