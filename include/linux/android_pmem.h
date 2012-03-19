@@ -37,27 +37,14 @@
 #define PMEM_CACHE_INVALIDATE	_IOW(PMEM_IOCTL_MAGIC, 9, unsigned int)
 #define PMEM_CLEANER_WAIT	_IO(PMEM_IOCTL_MAGIC, 10)
 
-enum {
-	NO_ALLOC = 0,
-	DEFAULT_ALLOC,
-	CMA_ALLOC
-};
-
 struct android_pmem_platform_data
 {
 	const char* name;
-	/* starting physical address of memory region */
-	unsigned long start;
 	/* size of memory region */
-	unsigned long size;
-	/* set to indicate the region should not be managed with an allocator */
-	unsigned allocator;
-	/* set to indicate maps of this region should be cached, if a mix of
-	 * cached and uncached is desired, set this and open the device with
-	 * O_SYNC to get an uncached region */
-	unsigned cached;
-	/* The MSM7k has bits to enable a write buffer in the bus controller*/
-	unsigned buffered;
+	unsigned long cmasize;
+	/* starting physical address of memory region */
+	phys_addr_t carveout_base;
+	phys_addr_t carveout_size;
 };
 
 struct pmem_region {
@@ -73,9 +60,8 @@ int get_pmem_user_addr(struct file *file, unsigned long *start,
 		       unsigned long *end);
 void put_pmem_file(struct file* file);
 void flush_pmem_file(struct file *file, unsigned long start, unsigned long len);
-int pmem_setup(struct platform_device *pdev, struct android_pmem_platform_data *pdata,
-	       long (*ioctl)(struct file *, unsigned int, unsigned long),
-	       int (*release)(struct inode *, struct file *));
+int pmem_setup(struct platform_device *pdev,
+		struct android_pmem_platform_data *pdata);
 int pmem_remap(struct pmem_region *region, struct file *file,
 	       unsigned operation);
 
@@ -89,9 +75,8 @@ static inline int get_pmem_user_addr(struct file *file, unsigned long *start,
 static inline void put_pmem_file(struct file* file) { return; }
 static inline void flush_pmem_file(struct file *file, unsigned long start,
 				   unsigned long len) { return; }
-static inline int pmem_setup(struct android_pmem_platform_data *pdata,
-	      long (*ioctl)(struct file *, unsigned int, unsigned long),
-	      int (*release)(struct inode *, struct file *)) { return -ENOSYS; }
+int pmem_setup(struct platform_device *pdev,
+		struct android_pmem_platform_data *pdata) { return -ENOSYS; }
 
 static inline int pmem_remap(struct pmem_region *region, struct file *file,
 			     unsigned operation) { return -ENOSYS; }

@@ -64,6 +64,7 @@ config AD525X_DPOT_SPI
 config ANDROID_PMEM
        bool "Android pmem allocator"
        default y
+       select GENERIC_ALLOCATOR
 
 
 config ATMEL_PWM
