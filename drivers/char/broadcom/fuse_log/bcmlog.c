@@ -87,7 +87,6 @@
 
 #define	WORDS_PER_SIGNAL	0x400
 /* file that CP crash dump log will be written to */
-#define CP_CRASH_DUMP_DIR               "/sdcard/"
 #define CP_CRASH_DUMP_BASE_FILE_NAME    "cp_crash_dump_"
 #define CP_CRASH_DUMP_FILE_EXT          ".bin"
 #define CP_CRASH_DUMP_MAX_LEN           100
@@ -474,20 +473,6 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		}
 
-	case BCMLOG_IOC_SAVECONFIG:
-	case BCMLOG_IOC_RESETCONFIG:
-		{
-			rc = -1;
-
-			if (!CpCrashDumpInProgress())
-				rc = BCMLOG_SaveConfig(cmd ==
-						       BCMLOG_IOC_SAVECONFIG ? 1
-						       : 0);
-
-			break;
-
-		}
-
 	default:
 		rc = -1;
 		break;
@@ -569,7 +554,7 @@ static int __init BCMLOG_ModuleInit(void)
 		return -1;
 	}
 
-	BCMLOG_InitConfig();
+	BCMLOG_InitConfig(drvdata);
 
 /* #ifdef CONFIG_BRCM_UNIFIED_LOGGING */
 	{
@@ -1477,7 +1462,7 @@ static void start_sdcard_crashlog(struct file *inDumpFile)
 	rtc_time_to_tm(ts.tv_sec, &tm);
 	snprintf(assertFileName, CP_CRASH_DUMP_MAX_LEN,
 		 "%s%s%d_%02d_%02d_%02d_%02d_%02d%s",
-		 CP_CRASH_DUMP_DIR,
+		 BCMLOG_GetFileBase(),
 		 CP_CRASH_DUMP_BASE_FILE_NAME,
 		 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 		 tm.tm_hour, tm.tm_min, tm.tm_sec, CP_CRASH_DUMP_FILE_EXT);

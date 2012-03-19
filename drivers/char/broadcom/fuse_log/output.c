@@ -34,6 +34,7 @@
 #include "fifo.h"
 #include "bcmmtt.h"
 #include "output.h"
+#include "config.h"
 
 #ifdef CONFIG_BRCM_NETCONSOLE
 
@@ -180,7 +181,8 @@ static void WriteToLogDev_SDCARD(void)
 	 */
 	if (!g_devWrParms.file) {
 		if ((Get_SDCARD_Available()) > MTT_SD_RESERVED) {
-			GetLogFileName(fname, "/sdcard/", sizeof(fname));
+			GetLogFileName(fname, BCMLOG_GetFileBase(),
+				sizeof(fname));
 
 			g_devWrParms.file =
 			    filp_open(fname, O_WRONLY | O_TRUNC | O_CREAT,
@@ -373,7 +375,8 @@ static void WriteToLogDev_UART(void)
 
 	if (!g_devWrParms.file) {
 		g_devWrParms.file =
-		    filp_open("/dev/ttyS0", O_WRONLY | O_TRUNC | O_CREAT, 0666);
+		    filp_open(BCMLOG_GetUartDev(), O_WRONLY |
+				O_TRUNC | O_CREAT, 0666);
 
 		if (IS_ERR(g_devWrParms.file))
 			g_devWrParms.file = 0;
@@ -428,11 +431,11 @@ static void WriteToLogDev_ACM(void)
 		struct tty_struct *tty = NULL;
 
 		g_devWrParms.file =
-		    filp_open("/dev/ttyGS1", O_WRONLY | O_TRUNC | O_CREAT,
+		    filp_open(BCMLOG_GetAcmDev(), O_WRONLY | O_TRUNC | O_CREAT,
 			      0666);
 
 		if (IS_ERR(g_devWrParms.file)) {
-			pr_info("can not open /dev/ttyGS1\n");
+			pr_info("can not open %s\n", BCMLOG_GetAcmDev());
 			g_devWrParms.file = 0;
 			return;
 		}

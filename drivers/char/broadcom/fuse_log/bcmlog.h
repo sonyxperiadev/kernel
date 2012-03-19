@@ -271,12 +271,13 @@ extern "C" {
  **/
 #define BCMLOG_OUTDEV_NONE		0	/* undefined or disabled */
 #define BCMLOG_OUTDEV_PANIC		1	/* panic partition / MTD */
-#define BCMLOG_OUTDEV_SDCARD		2	/* sdcard */
+#define BCMLOG_OUTDEV_SDCARD	2	/* sdcard */
 #define BCMLOG_OUTDEV_RNDIS		3	/* MTT/RNDIS */
 #define BCMLOG_OUTDEV_UART		4	/* UART */
 #define BCMLOG_OUTDEV_ACM		5	/* ACM/OBEX */
 #define BCMLOG_OUTDEV_STM		6	/* STM */
-#define BCMLOG_OUTDEV_CUSTOM		7	/* custom handler */
+#define BCMLOG_OUTDEV_CUSTOM	7	/* custom handler */
+#define BCMLOG_OUTDEV_MAX		8
 
 /**
  *	Custom Log type
