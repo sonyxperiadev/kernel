@@ -24,7 +24,6 @@
 extern "C" {
 #endif
 
-
 /**
 *
 *  Disp Drv CallBack API Rev
@@ -33,47 +32,42 @@ extern "C" {
 #define DISP_DRV_CB_API_REV_1_0     0x00010000
 #define DISP_DRV_CB_API_REV_1_1     0x00010001
 
+	typedef enum {
+		DRV_STATE_OFF = 0,
+		DRV_STATE_INIT = 0x01234567,
+		DRV_STATE_OPEN = 0x76543210,
+	} DISP_DRV_STATE;
 
-typedef enum {
-	DRV_STATE_OFF   = 0,
-	DRV_STATE_INIT  = 0x01234567,
-	DRV_STATE_OPEN  = 0x76543210,
-} DISP_DRV_STATE;
+	typedef enum {
+		STATE_PWR_OFF,	///<  PWR Off, in reset 
+		STATE_SLEEP,	///<  Sleep-in , Screen Off
+		STATE_SCREEN_ON,	///<  Sleep-out, Screen On 
+		STATE_SCREEN_OFF,	///<  Sleep-out, Screen Off
+	} DISP_PWR_STATE;
 
+	typedef enum {
+		DISPCTRL_WR_CMND_DATA,	///< write command <cmnd> followed by data <data>
+		DISPCTRL_WR_CMND,	///< write command 
+		DISPCTRL_WR_DATA,	///< write data     
+		DISPCTRL_SLEEP_MS,	///< SLEEP for <data> msec
+		DISPCTRL_LIST_END	///< END OF COMMAND LIST
+	} DISPCTRL_T;
 
-typedef enum {
-	STATE_PWR_OFF,            ///<  PWR Off, in reset 
-	STATE_SLEEP,           	  ///<  Sleep-in , Screen Off
-	STATE_SCREEN_ON,	  ///<  Sleep-out, Screen On 
-	STATE_SCREEN_OFF,	  ///<  Sleep-out, Screen Off
-} DISP_PWR_STATE;
+	typedef struct {
+		DISPCTRL_T type;	///< display access control type
+		UInt32 cmnd;	///< command data 
+		UInt32 data;	///< geenric data field
+	} DISPCTRL_REC_T, *pDISPCTRL_REC_T;
 
-
-typedef enum 
-{
-	DISPCTRL_WR_CMND_DATA,  ///< write command <cmnd> followed by data <data>
-	DISPCTRL_WR_CMND,       ///< write command 
-	DISPCTRL_WR_DATA,       ///< write data     
-	DISPCTRL_SLEEP_MS,      ///< SLEEP for <data> msec
-	DISPCTRL_LIST_END       ///< END OF COMMAND LIST
-} DISPCTRL_T;
-
-typedef struct {
-	DISPCTRL_T  type;       ///< display access control type
-	UInt32      cmnd;       ///< command data 
-	UInt32      data;       ///< geenric data field
-} DISPCTRL_REC_T, *pDISPCTRL_REC_T;
-
-typedef struct {
-	DISPCTRL_T	type;       ///< display access control type
-	UInt32		number;     ///< Parameter's number
-	UInt8		data[32];   ///< command data and geenric data field 
-} NEW_DISPCTRL_REC_T, *pNEW_DISPCTRL_REC_T;
+	typedef struct {
+		DISPCTRL_T type;	///< display access control type
+		UInt32 number;	///< Parameter's number
+		UInt8 data[32];	///< command data and geenric data field 
+	} NEW_DISPCTRL_REC_T, *pNEW_DISPCTRL_REC_T;
 
 /** @} */
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // __DISPDRV_COMMON_H__
+#endif				// __DISPDRV_COMMON_H__
