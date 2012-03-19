@@ -37,7 +37,6 @@
 *    ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
 *****************************************************************************/
 
-
 /**
 *
 *  @file    llist.h
@@ -66,11 +65,9 @@
  * be declared as the first item within a parent structure if
  * LLIST_NODE_FIRST_IN_CONTAINER is enabled.
  */
-typedef struct llist_node
-{
-   struct llist_node *next;            /* Pointer to next node */
-}
-LLIST_NODE;
+typedef struct llist_node {
+	struct llist_node *next;	/* Pointer to next node */
+} LLIST_NODE;
 
 /* Helper macro to iterate through the nodes of a linked list.
  *
@@ -164,9 +161,9 @@ LLIST_NODE;
 *
 *  @return  Nothing
 */
-static inline void llist_head_init( LLIST_NODE *headp )
+static inline void llist_head_init(LLIST_NODE *headp)
 {
-   headp->next = NULL;
+	headp->next = NULL;
 }
 
 /***************************************************************************/
@@ -175,21 +172,19 @@ static inline void llist_head_init( LLIST_NODE *headp )
 *
 *  @return  Nothing
 */
-static inline void llist_add_tail( LLIST_NODE *itemp, LLIST_NODE *headp )
+static inline void llist_add_tail(LLIST_NODE *itemp, LLIST_NODE *headp)
 {
-   LLIST_NODE *lnodep;
+	LLIST_NODE *lnodep;
 
-   itemp->next = NULL;
+	itemp->next = NULL;
 
-   for ( lnodep = headp; lnodep != NULL; lnodep = lnodep->next )
-   {
-      if ( lnodep->next == NULL )
-      {
-         break;
-      }
-   }
+	for (lnodep = headp; lnodep != NULL; lnodep = lnodep->next) {
+		if (lnodep->next == NULL) {
+			break;
+		}
+	}
 
-   lnodep->next = itemp;
+	lnodep->next = itemp;
 }
 
 /***************************************************************************/
@@ -198,10 +193,10 @@ static inline void llist_add_tail( LLIST_NODE *itemp, LLIST_NODE *headp )
 *
 *  @return  Nothing
 */
-static inline void llist_add_head( LLIST_NODE *itemp, LLIST_NODE *headp )
+static inline void llist_add_head(LLIST_NODE *itemp, LLIST_NODE *headp)
 {
-   itemp->next    = headp->next;
-   headp->next    = itemp;
+	itemp->next = headp->next;
+	headp->next = itemp;
 }
 
 /***************************************************************************/
@@ -210,20 +205,18 @@ static inline void llist_add_head( LLIST_NODE *itemp, LLIST_NODE *headp )
 *
 *  @return  1 if node deleted, otherwise 0 if node is not part of list
 */
-static inline int llist_del( const LLIST_NODE *itemp, LLIST_NODE *headp )
+static inline int llist_del(const LLIST_NODE *itemp, LLIST_NODE *headp)
 {
-   LLIST_NODE *lnodep;
+	LLIST_NODE *lnodep;
 
-   /* Find the node previous to the one to delete, and delete the node */
-   for ( lnodep = headp; lnodep != NULL; lnodep = lnodep->next )
-   {
-      if ( lnodep->next == itemp )
-      {
-         lnodep->next = itemp->next;
-         return 1;   /* node deleted */
-      }
-   }
-   return 0;
+	/* Find the node previous to the one to delete, and delete the node */
+	for (lnodep = headp; lnodep != NULL; lnodep = lnodep->next) {
+		if (lnodep->next == itemp) {
+			lnodep->next = itemp->next;
+			return 1;	/* node deleted */
+		}
+	}
+	return 0;
 }
 
 /***************************************************************************/
@@ -232,16 +225,14 @@ static inline int llist_del( const LLIST_NODE *itemp, LLIST_NODE *headp )
 *
 *  @return  Nothing
 */
-static inline void llist_add(
-   LLIST_NODE *itemp,         /*<< (i) New item to add to list */
-   LLIST_NODE *lnodep         /*<< (i) Add item after this node. */
-)
+static inline void llist_add(LLIST_NODE *itemp,	/*<< (i) New item to add to list */
+			     LLIST_NODE *lnodep	/*<< (i) Add item after this node. */
+    )
 {
-   itemp->next = lnodep->next;
-   lnodep->next = itemp;
+	itemp->next = lnodep->next;
+	lnodep->next = itemp;
 }
 
 /** @} */
 
 #endif /* LLIST_H */
-
