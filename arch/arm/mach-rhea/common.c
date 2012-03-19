@@ -110,8 +110,8 @@ EXPORT_SYMBOL(etm_on);
 	.regshift   = 2,				\
 	.iotype	    = UPIO_DWAPB,			\
 	.type	    = PORT_16550A,			\
-	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST \
-					| UPF_LOW_LATENCY, \
+	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST | \
+						UPF_LOW_LATENCY, \
 	.private_data = (void __iomem *)((KONA_##name##_VA) + \
 						UARTB_USR_OFFSET), \
 	.clk_name = clk,	\
