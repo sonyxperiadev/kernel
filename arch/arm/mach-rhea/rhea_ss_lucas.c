@@ -812,11 +812,11 @@ static struct i2c_board_info __initdata mpu6050_info[] =
 static unsigned int rheass_button_adc_values [3][2] =
 {
 	/* SEND/END Min, Max*/
-	{0,	94},
+	{0,	98},
 	/* Volume Up  Min, Max*/
-	{95,	189},
+	{99,	234},
 	/* Volue Down Min, Max*/
-	{190,	400},
+	{235,	604},
 };
 
 static struct kona_headset_pd headset_data = {
@@ -845,7 +845,7 @@ static struct kona_headset_pd headset_data = {
 	 * detect accessory insertion/removal _OR_ should the driver use the
 	 * COMP1 for the same.
 	 */
-	.gpio_for_accessory_detection = 1,
+	.gpio_for_accessory_detection = 0,
 
 	/*
 	 * Pass the board specific button detection range 

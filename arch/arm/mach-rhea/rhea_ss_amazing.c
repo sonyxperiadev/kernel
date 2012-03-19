@@ -807,12 +807,14 @@ static struct i2c_board_info __initdata mpu6050_info[] =
 
 static unsigned int rheass_button_adc_values [3][2] =
 {
+
 	/* SEND/END Min, Max*/
-	{0,	94},
-	/* Volume Up  Min, Max*/
-	{95,	189},
-	/* Volue Down Min, Max*/
-	{190,	400},
+        {0,     98},
+        /* Volume Up  Min, Max*/
+        {99,    234},
+        /* Volue Down Min, Max*/
+        {235,   604},
+
 };
 
 static struct kona_headset_pd headset_data = {
