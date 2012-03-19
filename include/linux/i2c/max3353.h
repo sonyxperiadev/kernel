@@ -20,7 +20,6 @@
 
 #include <linux/proc_fs.h>
 
-
 /* MAX3353 registers:*/
 
 /* Manufacturer and ID Registers (read only) */
@@ -32,7 +31,6 @@
 #define	MAX3353_MANUFACTURER_1_VALUE				(0x0B)
 #define	MAX3353_MANUFACTURER_2_VALUE				(0x53)
 #define	MAX3353_MANUFACTURER_3_VALUE				(0x33)
-
 
 #define	MAX3353_PRODUCT_ID_0					(0x04)
 #define	MAX3353_PRODUCT_ID_1					(0x05)
@@ -89,7 +87,6 @@
 #	define	MAX3353_INTERRUPT_LATCH_ID_FLOAT_RQ		(1<<6)
 #	define	MAX3353_INTERRUPT_LATCH_A_HNP_RQ		(1<<7)
 
-
 #define MAX3353_DRIVER_NAME			"max3353"
 
 #define MAX3353_I2C_MAX_DEVICES			2
@@ -105,12 +102,10 @@
 #define MAX3353_PROC_ENTRY_MODE           	"mode"
 #define MAX3353_PROC_ENTRY_REG            	"reg"
 
-struct max3353_platform_data
-{
+struct max3353_platform_data {
 	int id;			/* I2C BUS id for MAX3353 device instance */
 	int irq_gpio_num;	/* GPIO number attached to MAX3353 INT line */
 	int mode;		/* Usually MAX3353_MODE_OTG */
 };
-
 
 #endif /* #ifndef MAX3353_H */
