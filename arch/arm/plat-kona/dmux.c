@@ -178,7 +178,7 @@ int dmux_sema_unprotect(void)
 	return 0;
 }
 
-int dmux_alloc_channel(u32 * pchan)
+int dmux_alloc_channel(u32 *pchan)
 {
 	u32 channel;
 
@@ -198,15 +198,14 @@ int dmux_release_channel(u32 channel)
 	return 0;
 }
 
-int dmux_alloc_peripheral(u32 channel, enum dma_peri peri, u8 * peri_req_id)
+int dmux_alloc_peripheral(u32 channel, enum dma_peri peri, u8 *peri_req_id)
 {
 	u32 peri_reg_val, read_reg, time_out = 256;
 
 	if (peri < KONA_DMA_MAX_CHANNELS) {
 		peri_reg_val =
-		    (kona_dmux_map[peri].
-		     mux << DMUX_PER_0_PER_A_0_SHIFT) | (DMUX_PERI_INVALID <<
-							 DMUX_PER_0_PER_B_0_SHIFT);
+		    (kona_dmux_map[peri].mux << DMUX_PER_0_PER_A_0_SHIFT) |
+		    (DMUX_PERI_INVALID << DMUX_PER_0_PER_B_0_SHIFT);
 	} else {
 		return -1;
 	}
@@ -230,27 +229,23 @@ int dmux_alloc_peripheral(u32 channel, enum dma_peri peri, u8 * peri_req_id)
 
 int dmux_alloc_multi_peripheral(u32 channel,
 				enum dma_peri a,
-				enum dma_peri b, u8 * src_id, u8 * dst_id)
+				enum dma_peri b, u8 *src_id, u8 *dst_id)
 {
 	u32 peri_reg_val, read_reg, time_out = 256;
 
 	if ((a < KONA_DMA_MAX_CHANNELS) && (b < KONA_DMA_MAX_CHANNELS)) {
 		peri_reg_val =
-		    (kona_dmux_map[a].
-		     mux << DMUX_PER_0_PER_A_0_SHIFT) | (kona_dmux_map[b].
-							 mux <<
-							 DMUX_PER_0_PER_B_0_SHIFT);
+		    (kona_dmux_map[a].mux << DMUX_PER_0_PER_A_0_SHIFT) |
+		    (kona_dmux_map[b].mux << DMUX_PER_0_PER_B_0_SHIFT);
 
 	} else if (a < KONA_DMA_MAX_CHANNELS) {
 		peri_reg_val =
-		    (kona_dmux_map[a].
-		     mux << DMUX_PER_0_PER_A_0_SHIFT) | (DMUX_PERI_INVALID <<
-							 DMUX_PER_0_PER_B_0_SHIFT);
+		    (kona_dmux_map[a].mux << DMUX_PER_0_PER_A_0_SHIFT) |
+		    (DMUX_PERI_INVALID << DMUX_PER_0_PER_B_0_SHIFT);
 	} else {
 		peri_reg_val =
-		    (kona_dmux_map[b].
-		     mux << DMUX_PER_0_PER_A_0_SHIFT) | (DMUX_PERI_INVALID <<
-							 DMUX_PER_0_PER_B_0_SHIFT);
+		    (kona_dmux_map[b].mux << DMUX_PER_0_PER_A_0_SHIFT) |
+		    (DMUX_PERI_INVALID << DMUX_PER_0_PER_B_0_SHIFT);
 	}
 
 	writel(peri_reg_val, dmux.base_addr + DMUX_PER_0_OFFSET + channel * 4);

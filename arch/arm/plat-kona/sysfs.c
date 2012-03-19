@@ -180,7 +180,7 @@ kona_timer_start_test(struct device *dev, struct device_attribute *attr,
 			goto out;
 		}
 		pr_info("Timer test started \r\n");
-	      out:
+out:
 		return n;
 	}
 
@@ -209,7 +209,7 @@ kona_timer_stop_test(struct device *dev, struct device_attribute *attr,
 			goto out;
 		}
 		pr_info("Stopped and freed the timer \r\n");
-	      out:
+out:
 		return n;
 	}
 
