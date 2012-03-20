@@ -54,6 +54,12 @@
 /* Timeout(ms) for wait_for_completion */
 #define SSPI_WFC_TIME_OUT	200
 
+extern void csl_caph_ControlHWClock(Boolean eanble);
+static uint8_t clk_name[3][32]={"ssp0_clk", "ssp4_clk", "ssp3_clk"};
+static char dma_tx_chan_name[3][32] = {"SSP_0B_TX0", "SSP_1B_TX0", "SSP_2B_TX0",};
+static char dma_rx_chan_name[3][32] = {"SSP_0A_RX0", "SSP_1A_RX0", "SP_2A_RX0"};
+static unsigned int dma_fifo_base[3] = {SSP0_BASE_ADDR, SSP4_BASE_ADDR, SSP3_BASE_ADDR};
+
 struct spi_kona_config {
 	uint32_t speed_hz;
 	uint32_t bpw;
@@ -570,6 +576,7 @@ static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 	u32 tx_fifo, rx_fifo, cfg_rx, cfg_tx;
 	CHAL_HANDLE chandle = spi_kona->chandle;
 	int ret = -EIO;
+	struct spi_master *master = spi_kona->master;
 
 #ifdef DMA_BURST_CONFIG_16_BYTES
 	/* bs = 4, bl = 4, 16 bytes xfer per request */
@@ -584,8 +591,8 @@ static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
 #endif
 
-	tx_fifo = SSP0_BASE_ADDR + chal_sspi_tx0_get_dma_port_addr_offset();
-	rx_fifo = SSP0_BASE_ADDR + chal_sspi_rx0_get_dma_port_addr_offset();
+	tx_fifo = dma_fifo_base[master->bus_num] + chal_sspi_tx0_get_dma_port_addr_offset();
+	rx_fifo = dma_fifo_base[master->bus_num] + chal_sspi_rx0_get_dma_port_addr_offset();
 
 	/* Get DMA'ble address */
 	if (spi_kona->tx_buf != NULL) {
@@ -865,6 +872,7 @@ static void spi_kona_work(struct work_struct *work)
 	    container_of(work, struct spi_kona_data, work);
 	unsigned long flags;
 	int do_setup = -1;
+	struct spi_master *master = spi_kona->master;
 
 	spin_lock(&spi_kona->lock);
 	spi_kona->busy = 1;
@@ -887,6 +895,10 @@ static void spi_kona_work(struct work_struct *work)
 		cs_change = 1;
 		status = 0;
 
+		if(master->bus_num != 0){
+			/*turn on caph clock for ssp1 and ssp2*/
+			csl_caph_ControlHWClock(TRUE);
+		}
 		clk_enable(spi_kona->ssp_clk);
 		list_for_each_entry(t, &m->transfers, transfer_list) {
 
@@ -959,6 +971,10 @@ static void spi_kona_work(struct work_struct *work)
 			spi_kona_chipselect(spi, CS_INACTIVE);
 
 		clk_disable(spi_kona->ssp_clk);
+		if(master->bus_num != 0){
+			/*turn on caph clock for ssp1 and ssp2*/
+			csl_caph_ControlHWClock(FALSE);
+		}
 	}
 	spin_lock(&spi_kona->lock);
 	spi_kona->busy = 0;
@@ -1055,12 +1071,14 @@ static int spi_kona_config_spi_hw(struct spi_kona_data *spi_kona)
 
 static int spi_kona_setup_dma(struct spi_kona_data *spi_kona)
 {
+	struct spi_master *master = spi_kona->master;
+	
 	/* Aquire DMA channels */
-	if (dma_request_chan(&spi_kona->tx_dma_chan, "SSP_0B_TX0") != 0) {
+	if (dma_request_chan(&spi_kona->tx_dma_chan, dma_tx_chan_name[master->bus_num]) != 0) {
 		pr_err("%s: Tx dma_request_chan failed\n", __func__);
 		return -EIO;
 	}
-	if (dma_request_chan(&spi_kona->rx_dma_chan, "SSP_0A_RX0") != 0) {
+	if (dma_request_chan(&spi_kona->rx_dma_chan, dma_rx_chan_name[master->bus_num]) != 0) {
 		pr_err("%s: Rx dma_request_chan failed\n", __func__);
 		goto err;
 	}
@@ -1091,7 +1109,7 @@ static int spi_kona_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct spi_master *master;
 	struct spi_kona_data *spi_kona = 0;
-	uint8_t clk_name[32];
+	/*uint8_t clk_name[32]; */
 	int status = 0;
 
 	platform_info = dev_get_platdata(&pdev->dev);
@@ -1156,10 +1174,9 @@ static int spi_kona_probe(struct platform_device *pdev)
 		goto out_iounmap;
 	}
 
-	sprintf(clk_name, "ssp%d_clk", master->bus_num);
-	spi_kona->ssp_clk = clk_get(NULL, clk_name);
+	spi_kona->ssp_clk = clk_get(NULL, clk_name[master->bus_num]);
 	if (IS_ERR_OR_NULL(spi_kona->ssp_clk)) {
-		dev_err(&pdev->dev, "unable to get %s clock\n", clk_name);
+		dev_err(&pdev->dev, "unable to get %s clock\n", clk_name[master->bus_num]);
 		status = PTR_ERR(spi_kona->ssp_clk);
 		goto out_free_irq;
 	}
