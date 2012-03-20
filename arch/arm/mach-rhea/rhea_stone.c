@@ -122,7 +122,7 @@
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
-#include <board-Rhea_wifi.h>
+#include "board-Rhea_wifi.h"
 extern int rhea_wifi_status_register(
 		void (*callback)(int card_present, void *dev_id),
 		void *dev_id);
