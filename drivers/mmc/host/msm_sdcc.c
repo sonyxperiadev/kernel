@@ -134,6 +134,7 @@ msmsdcc_start_command(struct msmsdcc_host *host, struct mmc_command *cmd,
 		      u32 c);
 static inline void msmsdcc_delay(struct msmsdcc_host *host);
 static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host);
+static int msmsdcc_vreg_reset(struct msmsdcc_host *host);
 
 static inline unsigned short msmsdcc_get_nr_sg(struct msmsdcc_host *host)
 {
@@ -1848,6 +1849,10 @@ static int msmsdcc_vreg_init(struct msmsdcc_host *host, bool is_init)
 			if (rc)
 				goto vccq_reg_deinit;
 		}
+		rc = msmsdcc_vreg_reset(host);
+		if (rc)
+			pr_err("msmsdcc.%d vreg reset failed (%d)\n",
+			       host->pdev_id, rc);
 		goto out;
 	} else {
 		/* Deregister all regulators from regulator framework */
@@ -1953,6 +1958,21 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable)
 		}
 	}
 out:
+	return rc;
+}
+
+/*
+ * Reset vreg by ensuring it is off during probe. A call
+ * to enable vreg is needed to balance disable vreg
+ */
+static int msmsdcc_vreg_reset(struct msmsdcc_host *host)
+{
+	int rc;
+
+	rc = msmsdcc_setup_vreg(host, 1);
+	if (rc)
+		return rc;
+	rc = msmsdcc_setup_vreg(host, 0);
 	return rc;
 }
 
