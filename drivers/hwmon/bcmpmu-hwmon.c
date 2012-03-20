@@ -373,8 +373,9 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 	case PMU_ADC_FG_RAW:
 	case PMU_ADC_FG_CURRSMPL:
 		{
-			int modifier = 0, ibat_to_return, reading, offset = 0;
-			reading = req->raw;
+			int modifier = 0, ibat_to_return, offset = 0;
+			short reading;
+			reading = (short)(req->cal & 0xffff);
 
 			if (padc->adcunit && padc->adcunit[req->sig].fg_k) {
 				offset = padc->adcunit[req->sig].voffset;
@@ -437,6 +438,8 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 			/* Calculate the resistor */
 			/* Hecto ohm - iread>>1 is for rounding */
 			req->cnv = req->cal / iread;
+			pr_hwmon(DATA,
+				 "%s: req->cnv %d", __func__, req->cnv);
 		}
 		break;
 	case PMU_ADC_BOM:
