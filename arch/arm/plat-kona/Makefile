@@ -45,6 +45,8 @@ obj-$(CONFIG_MACH_ISLAND_FF) += chal/
 obj-$(CONFIG_MACH_ISLAND_IS) += chal/
 obj-$(CONFIG_MACH_RHEA_STONE) += csl/
 obj-$(CONFIG_MACH_RHEA_STONE) += chal/
+obj-$(CONFIG_MACH_RHEA_STONE_EDN2X) += csl/
+obj-$(CONFIG_MACH_RHEA_STONE_EDN2X) += chal/
 # SAMOA RAY bringup only has keypad at this point, so no CSL
 #obj-$(CONFIG_MACH_SAMOA_RAY) += csl/
 obj-$(CONFIG_DMAC_PL330) += dmux.o dma.o

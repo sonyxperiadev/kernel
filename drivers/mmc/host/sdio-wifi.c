@@ -213,7 +213,7 @@ int bcm_sdiowl_init(void)
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
-#ifdef CONFIG_MACH_RHEA_STONE
+#if defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_STONE_EDN2X)
 	dev->wifi_gpio->reset = 42;
 	dev->wifi_gpio->reg = -1;
 	dev->wifi_gpio->host_wake = 74;

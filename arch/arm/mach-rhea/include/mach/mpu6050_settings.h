@@ -20,7 +20,7 @@
 
 #define MPU6050_INIT_CFG	0x10
 
-#ifdef CONFIG_MACH_RHEA_STONE
+#if defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_STONE_EDN2X)
 #define MPU6050_IRQ_GPIO	2
 #else
 #define MPU6050_IRQ_GPIO	77
@@ -40,7 +40,7 @@
 #define MPU6050_COMPASS_SLAVE_ADDR   0x0C
 #endif
 
-#ifdef CONFIG_MACH_RHEA_STONE
+#if defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_STONE_EDN2X)
 /*
  * Correction for the mount position of MPU6050 sensor on RheaStone.
  *  For x reverse x

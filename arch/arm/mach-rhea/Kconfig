@@ -75,6 +75,10 @@ config MACH_RHEA_STONE
         help
           Support for the Broadcom Rhea Stone board.
 
+config MACH_RHEA_STONE_EDN2X
+        bool "Support Broadcom Rhea Stone EDN2X board"
+        help
+          Support for the Broadcom Rhea Stone END2X board.
 endchoice
 
 

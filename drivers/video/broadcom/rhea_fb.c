@@ -85,7 +85,7 @@ struct rhea_fb {
 	struct mutex update_sem;
 	struct completion prev_buf_done_sem;
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON)  \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) &&	!defined(CONFIG_MACH_RHEA_STONE_EDN2X)
 	struct completion refresh_wait_sem;
 #endif
 	atomic_t buff_idx;
@@ -548,7 +548,8 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 #endif
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)  && !defined(CONFIG_MACH_RHEA_STONE)
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)  && !defined(CONFIG_MACH_RHEA_STONE) && !defined(CONFIG_MACH_RHEA_STONE_EDN2X)
+
 static int rhea_refresh_thread(void *arg)
 {
 	struct rhea_fb *fb = arg;
@@ -684,7 +685,8 @@ static int rhea_fb_probe(struct platform_device *pdev)
 //-GG PROBE DISPLAY
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) && !defined(CONFIG_MACH_RHEA_STONE_EDN2X)
+
 
 	init_completion(&fb->refresh_wait_sem);
 
@@ -875,7 +877,8 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	rheafb_info("RHEA Framebuffer probe successfull\n");
 
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) && !defined(CONFIG_MACH_RHEA_STONE_EDN2X)
+
 	register_vt_notifier(&vt_notifier_block);
 #endif
 
@@ -930,7 +933,8 @@ err_set_var_failed:
 err_enable_display_failed:
 err_fbmem_alloc_failed:
 #if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE)
+	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) && !defined(CONFIG_MACH_RHEA_STONE_EDN2X)
+
 thread_create_failed:
 #endif
 	if (pi_mgr_dfs_request_remove(&fb->dfs_node))
