@@ -988,6 +988,10 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 	} else {
 		mixOutGain = param.mixOutGain_mB;
 		mixOutGainR = param.mixOutGainR_mB;
+
+		/*aTrace(LOG_AUDIO_DRIVER,
+			"%s copy mixOutGain %d, %d\n",
+			__func__, mixOutGain, mixOutGainR);*/
 	}
 
 	/* Q13p2 dB */
@@ -1000,7 +1004,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 	/* bit_shift */
 
 	aTrace(LOG_AUDIO_DRIVER,
-		"%s : mixOutGain 0x%x, mixOutGainR 0x%x, "
+		"%s: mixOutGain 0x%x, mixOutGainR 0x%x, "
 		"mixBitSel %d, mixBitSelR %d\n",
 		__func__, mixOutGain, mixOutGainR,
 		mixBitSel, mixBitSelR);

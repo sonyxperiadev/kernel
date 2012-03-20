@@ -3542,6 +3542,15 @@ Boolean AUDCTRL_GetSRCClock(void)
 	return is26MClk;
 }
 
+void ReloadUserVolSettingFromSysparm(void)
+{
+	int i, j;
+
+	for (i = 0; i <= AUDIO_MODE_RESERVE; i++)
+		for (j = 0; j <= AUDIO_APP_RESERVED15; j++)
+			fillUserVolSetting(i, j);
+}
+
 static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app)
 {
 #ifdef CONFIG_BCM_MODEM

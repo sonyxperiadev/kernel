@@ -330,18 +330,18 @@ UInt16 SYSPARM_GetLogFormat(void)
 	return log_format;
 }
 
-//******************************************************************************
-//
-// Function Name: APSYSPARM_GetAudioParmAccessPtr
-//
-// Description:   Get access pointer to root of audio sysparm structure 
-//
-// Notes:     This is only applicable to audio tuning parameters.
-//
-//******************************************************************************
+/******************************************************************************
+*
+* Function Name: APSYSPARM_GetAudioParmAccessPtr
+*
+* Description:   Get access pointer to root of audio sysparm structure
+*
+* Notes:     This is only applicable to audio tuning parameters.
+*
+******************************************************************************/
 SysAudioParm_t *APSYSPARM_GetAudioParmAccessPtr(void)
 {
-	UInt32 audio_parm_addr;
+	unsigned int audio_parm_addr;
 	SysAudioParm_t *audio_parm_ptr;
 	static int loaded_audio_parm_table = 0;
 
@@ -378,15 +378,15 @@ SysAudioParm_t *APSYSPARM_GetAudioParmAccessPtr(void)
 	return &audio_parm_table[0];
 }
 
-//******************************************************************************
-//
-// Function Name: APSYSPARM_GetMultimediaAudioParmAccessPtr
-//
-// Description:   Get access pointer to root of MM audio sysparm structure 
-//
-// Notes:     This is only applicable to audio tuning parameters.
-//
-//******************************************************************************
+/******************************************************************************
+*
+* Function Name: APSYSPARM_GetMultimediaAudioParmAccessPtr
+*
+* Description:   Get access pointer to root of MM audio sysparm structure
+*
+* Notes:     This is only applicable to audio tuning parameters.
+*
+******************************************************************************/
 SysIndMultimediaAudioParm_t *APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
 {
 	UInt32 mmaudio_parm_addr;
@@ -427,6 +427,34 @@ SysIndMultimediaAudioParm_t *APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
 	loaded_mmaudio_parm_table = 1;
 
 	return &mmaudio_parm_table[0];
+}
+
+/******************************************************************************
+*
+* Function Name: APSYSPARM_RefreshAudioParmAccessPtr
+*
+* Description:   Reload audio sysparm structure from CP
+*
+* Notes:     This is only applicable to audio tuning parameters.
+*
+******************************************************************************/
+int APSYSPARM_RefreshAudioParm(unsigned int addr)
+{
+	SysAudioParm_t *audio_parm_ptr;
+
+	audio_parm_ptr =
+	    (SysAudioParm_t *) ioremap_nocache(addr,
+					       sizeof(audio_parm_table));
+
+	if (!audio_parm_ptr) {
+		pr_err("[sysparm]: RefreshAudioParm ioremap failed\n");
+		return -1;
+	}
+
+	memcpy(&audio_parm_table[0], audio_parm_ptr, sizeof(audio_parm_table));
+	iounmap(audio_parm_ptr);
+
+	return 0;
 }
 
 //******************************************************************************
