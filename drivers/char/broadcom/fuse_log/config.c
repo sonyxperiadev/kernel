@@ -104,7 +104,7 @@ static void safe_strncat(char *dst, const char *src, int len)
  *	build device status string and append to 'buf'
  **/
 static void bld_device_status_str(char *buf, int len, char *label, int device,
-				  int sd_max_size)
+				  int sd_max_size, int locked)
 {
 	char sd_max[5];
 
@@ -112,41 +112,45 @@ static void bld_device_status_str(char *buf, int len, char *label, int device,
 
 	switch (device) {
 	case BCMLOG_OUTDEV_NONE:
-		safe_strncat(buf, "-> disabled\n", len);
+		safe_strncat(buf, "-> disabled", len);
 		break;
 	case BCMLOG_OUTDEV_PANIC:
-		safe_strncat(buf, "-> flash\n", len);
+		safe_strncat(buf, "-> flash", len);
 		break;
 	case BCMLOG_OUTDEV_RNDIS:
-		safe_strncat(buf, "-> RNDIS\n", len);
+		safe_strncat(buf, "-> RNDIS", len);
 		break;
 	case BCMLOG_OUTDEV_SDCARD:
 		if (sd_max_size == 0) {
-			safe_strncat(buf, "-> SD card\n", len);
+			safe_strncat(buf, "-> SD card", len);
 		} else {
 			sprintf(sd_max, "%d", sd_max_size);
 			safe_strncat(buf, "-> SD card", len);
 			safe_strncat(buf, " (Max file size : ", len);
 			safe_strncat(buf, sd_max, len);
-			safe_strncat(buf, " MB)\n", len);
+			safe_strncat(buf, " MB)", len);
 		}
 		break;
 	case BCMLOG_OUTDEV_UART:
-		safe_strncat(buf, "-> UART\n", len);
+		safe_strncat(buf, "-> UART", len);
 		break;
 	case BCMLOG_OUTDEV_ACM:
-		safe_strncat(buf, "-> ACM\n", len);
+		safe_strncat(buf, "-> ACM", len);
 		break;
 	case BCMLOG_OUTDEV_STM:
-		safe_strncat(buf, "-> STM\n", len);
+		safe_strncat(buf, "-> STM", len);
 		break;
 	case BCMLOG_OUTDEV_CUSTOM:
-		safe_strncat(buf, "-> CUSTOM\n", len);
+		safe_strncat(buf, "-> CUSTOM", len);
 		break;
 	default:
-		safe_strncat(buf, "-> ERROR\n", len);
+		safe_strncat(buf, "-> ERROR", len);
 		break;
 	}
+	if (locked)
+		safe_strncat(buf, " locked\n", len);
+	else
+		safe_strncat(buf, " unlocked\n", len);
 }
 
 /**
@@ -157,11 +161,14 @@ static int proc_read(char *page, char **start, off_t offset, int count,
 {
 	*page = 0;
 	bld_device_status_str(page, count, "  BMTT logging",
-			      g_config.runlog.dev, g_config.file_max);
+			      g_config.runlog.dev, g_config.file_max,
+			      g_config.runlog.lock);
 	bld_device_status_str(page, count, "  AP crash dump",
-			      g_config.ap_crashlog.dev, 0);
+			      g_config.ap_crashlog.dev, 0,
+			      g_config.ap_crashlog.lock);
 	bld_device_status_str(page, count, "  CP crash dump",
-			      g_config.cp_crashlog.dev, 0);
+			      g_config.cp_crashlog.dev, 0,
+			      g_config.cp_crashlog.lock);
 	*eof = 1;
 	return 1 + strlen(page);
 }
@@ -222,10 +229,6 @@ static ssize_t proc_write(struct file *file, const char __user * buffer,
 		case 'e':
 			if (!g_config.ap_crashlog.lock)
 				g_config.ap_crashlog.dev = BCMLOG_OUTDEV_PANIC;
-			break;
-		case 'f':
-			if (!g_config.ap_crashlog.lock)
-				g_config.ap_crashlog.dev = BCMLOG_OUTDEV_SDCARD;
 			break;
 		case 'g':
 			if (!g_config.ap_crashlog.lock)
