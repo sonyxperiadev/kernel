@@ -606,7 +606,7 @@ static void lq043y1dx01_reset(DISPDRV_HANDLE_T drvH, Boolean on)
 	} else {
 		gpio_set_value_cansleep(pPanel->rst_panel_reset, 0);
 		gpio_set_value_cansleep(pPanel->rst_bridge_pwr_down, 1);
-		gpio_direction_output(pPanel->rst_bridge_reset, 0);
+		gpio_set_value_cansleep(pPanel->rst_bridge_reset, 0);
 	}
 }
 
