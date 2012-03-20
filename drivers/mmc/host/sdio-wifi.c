@@ -188,9 +188,12 @@ static void wifi_gpio_free(struct sdio_wifi_gpio_cfg *gpio)
 
 int bcm_sdiowl_init(void)
 {
-	int rc, wait_cnt;
+	int rc;
 	struct sdio_wifi_dev *dev = &gDev;
+#ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+	int wait_cnt;
 	struct mmc_card *card;
+#endif
 
 	printk(KERN_ERR "%s:ENTRY\n", __FUNCTION__);
 

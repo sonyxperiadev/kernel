@@ -370,7 +370,6 @@ int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
 static void kona_sdio_status_notify_cb(int card_present, void *dev_id)
 {
 	struct sdhci_host *host;
-	int ret;
 	int rc;
 	struct sdio_dev *dev;
 
@@ -379,24 +378,24 @@ static void kona_sdio_status_notify_cb(int card_present, void *dev_id)
 	rc = sdio_dev_is_initialized(SDIO_DEV_TYPE_WIFI);
 	if (rc <= 0) {
 		pr_err("%s: CARD IS NOT INITIALIZED\n", __func__);
-		return NULL;
+		return;
 	}
 	dev = gDevs[SDIO_DEV_TYPE_WIFI];
 
-	pr_debug("%s: DEV=%x\n", __func__, dev);
+	pr_debug("%s: DEV=%x\n", __func__, (unsigned int)dev);
 
 	host = dev_id;
 	if (host == NULL) {
 		pr_err("%s: Invalid host structure pointer\n", __func__);
 		return;
 	}
-	pr_debug("%s: CALL EMULATION=%x\n", __func__, dev);
+	pr_debug("%s: CALL EMULATION=%x\n", __func__, (unsigned int)dev);
 	if (card_present)
 		bcm_kona_sd_card_emulate(dev, 1);
 	else
 		bcm_kona_sd_card_emulate(dev, 0);
 
-	pr_debug("%s: EMULATION DONE=%x\n", __func__, dev);
+	pr_debug("%s: EMULATION DONE=%x\n", __func__, (unsigned int)dev);
 	/*
 	 * TODO: The required implementtion to check the status of the card
 	 * etc
