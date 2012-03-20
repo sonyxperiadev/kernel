@@ -32,6 +32,9 @@
 #include <linux/bcmi2cnfc.h>
 #include <linux/poll.h>
 #include <linux/version.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 
 #define     TRUE                1
 #define     FALSE               0
@@ -43,6 +46,29 @@
 #define     NFC_REQ_INACTIVE_STATE  STATE_LOW
 
 #define     CHANGE_CLIENT_ADDR  TRUE
+
+#define     READ_MULTIPLE_PACKETS   0
+
+/* end of compile options, do not change below */
+
+#ifdef CONFIG_DEBUG_FS
+
+#define DBG(a...) \
+	do { \
+	    if (debug_en) \
+			a;  \
+	} while (0)
+
+#define DBG2(a...)  \
+	do {	\
+		if (debug_en > 1)  {\
+			 a; \
+		}	\
+	} while (0)
+
+static int debug_en;
+
+#endif
 
 #define     MAX_BUFFER_SIZE     780
 
@@ -58,6 +84,7 @@ struct bcmi2cnfc_dev {
 	spinlock_t irq_enabled_lock;
 	unsigned int packet_size;
 	unsigned int wake_active_state;
+	unsigned int read_multiple_packets;
 };
 
 #define INTERRUPT_TRIGGER_TYPE  IRQF_TRIGGER_RISING
@@ -95,22 +122,26 @@ static void change_client_addr(struct bcmi2cnfc_dev *bcmi2cnfc_dev, int addr)
 	for (i = 1; i < sizeof(addr_data) - 1; ++i)
 		ret += addr_data[i];
 	addr_data[sizeof(addr_data) - 1] = (ret & 0xFF);
-	dev_dbg(&client->dev,
-		 "Change client device at (0x%04X) flag = %04x, addr_data[%d] = %02x\n",
-		 client->addr, client->flags, sizeof(addr_data) - 1,
-		 addr_data[sizeof(addr_data) - 1]);
+	DBG(dev_info(&client->dev,
+		     "Change client device at (0x%04X) flag = %04x, addr_data[%d] = %02x\n",
+		     client->addr, client->flags, sizeof(addr_data) - 1,
+		     addr_data[sizeof(addr_data) - 1]));
 	ret = i2c_master_send(client, addr_data, sizeof(addr_data));
 	client->addr = addr_data[5];
 
-	dev_dbg(&client->dev,
-		 "Change client device changed to (0x%04X) flag = %04x, ret = %d\n",
-		 client->addr, client->flags, ret);
+	DBG(dev_info(&client->dev,
+		     "Change client device changed to (0x%04X) flag = %04x, ret = %d\n",
+		     client->addr, client->flags, ret));
 }
 #endif
 
 static irqreturn_t bcmi2cnfc_dev_irq_handler(int irq, void *dev_id)
 {
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev = dev_id;
+
+	DBG2(dev_info(&bcmi2cnfc_dev->client->dev,
+		"irq %llu\n", get_jiffies_64()));
+
 	if (gpio_get_value(bcmi2cnfc_dev->irq_gpio) != NFC_REQ_ACTIVE_STATE)
 		return IRQ_HANDLED;
 
@@ -125,24 +156,35 @@ static unsigned int bcmi2cnfc_dev_poll(struct file *filp, poll_table * wait)
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev = filp->private_data;
 	unsigned int mask = 0;
 
+	DBG2(dev_info(&bcmi2cnfc_dev->client->dev,
+		      "bcmi2cnfc_dev_poll enter %llu\n", get_jiffies_64()));
+
 	poll_wait(filp, &bcmi2cnfc_dev->read_wq, wait);
+
 	if (gpio_get_value(bcmi2cnfc_dev->irq_gpio) == NFC_REQ_ACTIVE_STATE)
 		mask |= POLLIN | POLLRDNORM;
+
+	DBG2(dev_info(&bcmi2cnfc_dev->client->dev,
+		      "bcmi2cnfc_dev_poll leave %llu\n", get_jiffies_64()));
 
 	return mask;
 }
 
-static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
+static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user *buf,
 				  size_t count, loff_t *offset)
 {
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev = filp->private_data;
 	unsigned char tmp[MAX_BUFFER_SIZE];
-	int ret, len, total, packets;
+	int ret, len, total, packets, prev_total;
+
+	DBG2(dev_info(&bcmi2cnfc_dev->client->dev,
+		      "bcmi2cnfc_dev_read %llu\n", get_jiffies_64()));
 
 	ret = 0;
 	len = 1;
 	total = 0;
 	packets = 0;
+	prev_total = 0;
 	if (count > MAX_BUFFER_SIZE)
 		count = MAX_BUFFER_SIZE;
 
@@ -159,18 +201,20 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
 #define PACKET_TYPE_HCIEV           (4)
 #define MAX_PACKET_SIZE             (PACKET_HEADER_SIZE_NCI + 255)
 
-	while (gpio_get_value(bcmi2cnfc_dev->irq_gpio) == NFC_REQ_ACTIVE_STATE
-	       && (total + MAX_PACKET_SIZE <= count
-		   || bcmi2cnfc_dev->packet_size)) {
+	do {
 		ret = i2c_master_recv(bcmi2cnfc_dev->client, tmp + total, len);
+
 		if (ret != len) {
-			dev_err(&bcmi2cnfc_dev->client->dev,
-				"(type byte)IO Error ret=%d !!!!\n", ret);
+			if (total == 0)
+				dev_err(&bcmi2cnfc_dev->client->dev,
+					"(type byte)IO Error ret=%d !!!!\n",
+					ret);
 			break;
 		}
 
-		if (len > 1) {
+		if (len == count) {
 			total = ret;
+			++packets;
 			break;
 		}
 
@@ -193,6 +237,7 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
 				dev_err(&bcmi2cnfc_dev->client->dev,
 					"(type header) IO Error ret = %d!!!!\n",
 					ret);
+				total = prev_total;
 				break;
 			}
 			/* get the packet payload length */
@@ -209,33 +254,44 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
 			} else {
 				dev_err(&bcmi2cnfc_dev->client->dev,
 					"packet IO Error ret = %d!!!!\n", ret);
+				total = prev_total;
 				break;
 			}
 		}
 		++packets;
 		len = 1;
-	}
+		prev_total = total;
+	} while (bcmi2cnfc_dev->read_multiple_packets > 0
+		 && total + MAX_PACKET_SIZE <= count);
 
-	if (total > count || copy_to_user(buf, tmp, total)) {
-		dev_err(&bcmi2cnfc_dev->client->dev,
-			"failed to copy to user space, total = %d\n", total);
-		return -EFAULT;
-	}
+	if (total > 0)
+		if (total > count || copy_to_user(buf, tmp, total)) {
+			dev_err(&bcmi2cnfc_dev->client->dev,
+				"failed to copy to user space, total = %d\n",
+				total);
+			total = -EFAULT;
+		}
 
-	dev_dbg(&bcmi2cnfc_dev->client->dev,
-		 "%s: %d packets, total %d\n", __func__, packets, total);
+	DBG2(dev_info(&bcmi2cnfc_dev->client->dev,
+		      "bcmi2cnfc_dev_read leave %llu\n", get_jiffies_64()));
 
-	return total;
+	/*if (packets > 1) */
+	DBG(dev_info(&bcmi2cnfc_dev->client->dev,
+		     "read %d packets total = %d bytes\n", packets, total));
+	return total > 0 ? total : len;
 }
 
-static ssize_t bcmi2cnfc_dev_write(struct file *filp, const char __user * buf,
+static ssize_t bcmi2cnfc_dev_write(struct file *filp, const char __user *buf,
 				   size_t count, loff_t *offset)
 {
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev = filp->private_data;
 	char tmp[MAX_BUFFER_SIZE];
 	int ret;
 
-	dev_dbg(&bcmi2cnfc_dev->client->dev, "%s, %d\n", __func__, count);
+	DBG2(dev_info(&bcmi2cnfc_dev->client->dev,
+		      "bcmi2cnfc_dev_write enter %llu\n", get_jiffies_64()));
+
+	DBG(dev_info(&bcmi2cnfc_dev->client->dev, "%s, %d\n", __func__, count));
 
 	if (count > MAX_BUFFER_SIZE) {
 		dev_err(&bcmi2cnfc_dev->client->dev, "out of memory\n");
@@ -255,6 +311,8 @@ static ssize_t bcmi2cnfc_dev_write(struct file *filp, const char __user * buf,
 			"failed to write %d\n", ret);
 		ret = -EIO;
 	}
+	DBG2(dev_info(&bcmi2cnfc_dev->client->dev,
+		      "bcmi2cnfc_dev_write leave %llu\n", get_jiffies_64()));
 
 	return ret;
 }
@@ -268,9 +326,10 @@ static int bcmi2cnfc_dev_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = bcmi2cnfc_dev;
 	bcmi2cnfc_dev->wake_active_state = NFC_WAKE_ACTIVE_STATE;
+	bcmi2cnfc_dev->read_multiple_packets = READ_MULTIPLE_PACKETS;
 
-	dev_dbg(&bcmi2cnfc_dev->client->dev,
-		 "%d,%d\n", imajor(inode), iminor(inode));
+	DBG(dev_info(&bcmi2cnfc_dev->client->dev,
+		     "%d,%d\n", imajor(inode), iminor(inode)));
 
 	return ret;
 }
@@ -282,35 +341,47 @@ static long bcmi2cnfc_dev_unlocked_ioctl(struct file *filp,
 
 	switch (cmd) {
 	case BCMNFC_SET_WAKE_ACTIVE_STATE:
-		dev_dbg(&bcmi2cnfc_dev->client->dev,
-			 "%s, BCMNFC_SET_WAKE_ACTIVE_STATE (%x, %lx):\n",
-			 __func__, cmd, arg);
+		DBG(dev_info(&bcmi2cnfc_dev->client->dev,
+			     "%s, BCMNFC_SET_WAKE_ACTIVE_STATE (%x, %lx):\n",
+			     __func__, cmd, arg));
 		bcmi2cnfc_dev->wake_active_state = arg;
 		break;
 	case BCMNFC_READ_FULL_PACKET:
-		dev_dbg(&bcmi2cnfc_dev->client->dev,
-			 "%s, BCMNFC_READ_FULL_PACKET (%x, %lx):\n", __func__,
-			 cmd, arg);
+		DBG(dev_info(&bcmi2cnfc_dev->client->dev,
+			     "%s, BCMNFC_READ_FULL_PACKET (%x, %lx):\n",
+			     __func__, cmd, arg));
 		bcmi2cnfc_dev->packet_size = arg;
+		break;
+	case BCMNFC_READ_MULTI_PACKETS:
+		DBG(dev_info(&bcmi2cnfc_dev->client->dev,
+			     "%s, BCMNFC_READ_MULTI_PACKETS (%x, %lx):\n",
+			     __func__, cmd, arg));
+		bcmi2cnfc_dev->read_multiple_packets = arg;
 		break;
 #if CHANGE_CLIENT_ADDR
 	case BCMNFC_CHANGE_ADDR:
-		dev_dbg(&bcmi2cnfc_dev->client->dev,
-			 "%s, BCMNFC_CHANGE_ADDR (%x, %lx):\n", __func__, cmd,
-			 arg);
+		DBG(dev_info(&bcmi2cnfc_dev->client->dev,
+			     "%s, BCMNFC_CHANGE_ADDR (%x, %lx):\n", __func__,
+			     cmd, arg));
 		change_client_addr(bcmi2cnfc_dev, arg);
 		break;
 #endif
 	case BCMNFC_POWER_CTL:
-		dev_dbg(&bcmi2cnfc_dev->client->dev,
-			 "%s, BCMNFC_POWER_CTL (%x, %lx):\n", __func__, cmd,
-			 arg);
-		gpio_set_value(bcmi2cnfc_dev->en_gpio, arg);
+		DBG(dev_info(&bcmi2cnfc_dev->client->dev,
+			     "%s, BCMNFC_POWER_CTL (%x, %lx):\n", __func__, cmd,
+			     arg));
+		if (arg == 1) {	/* Power On */
+			gpio_set_value(bcmi2cnfc_dev->en_gpio, 1);
+			enable_irq(bcmi2cnfc_dev->client->irq);
+		} else {
+			disable_irq_nosync(bcmi2cnfc_dev->client->irq);
+			gpio_set_value(bcmi2cnfc_dev->en_gpio, 0);
+		}
 		break;
 	case BCMNFC_WAKE_CTL:
-		dev_dbg(&bcmi2cnfc_dev->client->dev,
-			 "%s, BCMNFC_WAKE_CTL (%x, %lx):\n", __func__, cmd,
-			 arg);
+		DBG(dev_info(&bcmi2cnfc_dev->client->dev,
+			     "%s, BCMNFC_WAKE_CTL (%x, %lx):\n", __func__, cmd,
+			     arg));
 		gpio_set_value(bcmi2cnfc_dev->wake_gpio, arg);
 		break;
 	default:
@@ -346,7 +417,7 @@ static int bcmi2cnfc_probe(struct i2c_client *client,
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev;
 	platform_data = client->dev.platform_data;
 
-	dev_dbg(&client->dev, "%s, probing bcmi2cnfc driver\n", __func__);
+	DBG(dev_info(&client->dev, "%s, probing bcmi2cnfc driver\n", __func__));
 	if (platform_data == NULL) {
 		dev_err(&client->dev, "nfc probe fail\n");
 		return -ENODEV;
@@ -390,19 +461,23 @@ static int bcmi2cnfc_probe(struct i2c_client *client,
 	/* request irq.  the irq is set whenever the chip has data available
 	 * for reading.  it is cleared when all data has been read.
 	 */
-	dev_dbg(&client->dev, "requesting IRQ %d\n", client->irq);
+	DBG(dev_info(&client->dev, "requesting IRQ %d\n", client->irq));
 	bcmi2cnfc_dev->irq_enabled = true;
+
 	ret = request_irq(client->irq, bcmi2cnfc_dev_irq_handler,
 			  INTERRUPT_TRIGGER_TYPE, client->name, bcmi2cnfc_dev);
 	if (ret) {
 		dev_err(&client->dev, "request_irq failed\n");
 		goto err_request_irq_failed;
 	}
+
+	disable_irq_nosync(client->irq);
+
 	i2c_set_clientdata(client, bcmi2cnfc_dev);
 	bcmi2cnfc_dev->packet_size = 0;
-	dev_dbg(&client->dev,
-		 "%s, probing bcmi2cnfc driver exited successfully\n",
-		 __func__);
+	DBG(dev_info(&client->dev,
+		     "%s, probing bcmi2cnfc driver exited successfully\n",
+		     __func__));
 	return 0;
 
 err_request_irq_failed:
@@ -421,7 +496,8 @@ static int bcmi2cnfc_remove(struct i2c_client *client)
 {
 	struct bcmi2cnfc_i2c_platform_data *platform_data;
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev;
-	pr_info("bcmi2cnfc_remove  Enter\n");
+	DBG(dev_info
+	    (&client->dev, "%s, Removing bcmi2cnfc driver\n", __func__));
 
 	platform_data = client->dev.platform_data;
 
@@ -469,6 +545,26 @@ static void __exit bcmi2cnfc_dev_exit(void)
 }
 
 module_exit(bcmi2cnfc_dev_exit);
+
+#ifdef CONFIG_DEBUG_FS
+
+int __init bcmi2cnfc_debug_init(void)
+{
+	struct dentry *root_dir;
+	root_dir = debugfs_create_dir("bcmi2cnfc", 0);
+	if (!root_dir)
+		return -ENOMEM;
+	if (!debugfs_create_u32
+	    ("debug", S_IRUSR | S_IWUSR, root_dir, &debug_en))
+		return -ENOMEM;
+
+	return 0;
+
+}
+
+late_initcall(bcmi2cnfc_debug_init);
+
+#endif
 
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("NFC bcmi2cnfc driver");

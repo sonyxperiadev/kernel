@@ -1264,7 +1264,11 @@ static void __init rhea_stone_add_i2c_devices (void)
 			ARRAY_SIZE(bmp18x_info));
 #endif
 #if defined(CONFIG_BCMI2CNFC)
+#if defined(CONFIG_MACH_RHEA_STONE_EDN20)
+	i2c_register_board_info(0, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
+#else
 	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
+#endif
 #endif
 
 #if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)

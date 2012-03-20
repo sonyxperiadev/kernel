@@ -27,6 +27,7 @@
 #define BCMNFC_READ_FULL_PACKET       _IO(BCMNFC_MAGIC, 0x03)
 #define BCMNFC_SET_WAKE_ACTIVE_STATE  _IO(BCMNFC_MAGIC, 0x04)
 #define BCMNFC_WAKE_CTL               _IO(BCMNFC_MAGIC, 0x05)
+#define BCMNFC_READ_MULTI_PACKETS     _IO(BCMNFC_MAGIC, 0x06)
 
 struct bcmi2cnfc_i2c_platform_data {
 	struct i2c_slave_platform_data i2c_pdata;
