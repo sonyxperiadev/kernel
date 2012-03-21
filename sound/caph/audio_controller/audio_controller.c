@@ -2074,8 +2074,14 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 		config.source = CSL_CAPH_DEV_MEMORY;
 		config.sink = CSL_CAPH_DEV_DSP;
 	}
-	if (config.sink == CSL_CAPH_DEV_DSP)
-		config.bitPerSample = 24;
+	if (config.sink == CSL_CAPH_DEV_DSP) {
+#if defined(ENABLE_BT16)
+		if (source == AUDIO_SOURCE_BTM)
+			config.bitPerSample = 16;
+		else
+#endif
+			config.bitPerSample = 24;
+	}
 	pathID = csl_caph_hwctrl_EnablePath(config);
 	*pPathID = pathID;
 	/*Load the mic gains from sysparm.
