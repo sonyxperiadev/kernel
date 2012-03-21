@@ -653,6 +653,13 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 {
 	aTrace(LOG_AUDIO_DRIVER,  "%s source %d *\n\r", __func__, source);
 
+	if (source == AUDIO_SOURCE_BTM)
+		AUDDRV_SetPCMOnOff(1);
+	else {
+		if (currVoiceSpkr != AUDIO_SINK_BTM)	/* check spkr */
+			AUDDRV_SetPCMOnOff(0);
+	}
+
 	if (sample_rate == AUDIO_SAMPLING_RATE_8000) {
 #if defined(ENABLE_DMA_VOICE)
 		csl_dsp_caph_control_aadmac_set_samp_rate
@@ -699,17 +706,7 @@ For now, when voice record is started, UMUTE UL command will be sent */
 
 	audio_control_dsp(AUDDRV_DSPCMD_UNMUTE_DSP_UL, 0, 0, 0, 0, 0);
 
-#if 0
 	currVoiceMic = source;
-	if (currVoiceMic == AUDIO_SOURCE_BTM)
-		AUDDRV_SetPCMOnOff(1);
-	else {
-		if (currVoiceSpkr != AUDIO_SINK_BTM)	/* check spkr */
-			AUDDRV_SetPCMOnOff(0);
-	}
-
-#endif
-
 }
 
 /*=============================================================================
@@ -1290,15 +1287,14 @@ void AUDDRV_User_HandleDSPInt(UInt32 param1, UInt32 param2, UInt32 param3)
 void AUDDRV_SetPCMOnOff(Boolean on_off)
 {
 /* By default the PCM port is occupied by trace port on development board */
-	if (on_off) {
-		audio_control_dsp(AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND, on_off,
-				0, 0, 0, 0);
+	UInt32 pcm_cmd = (UInt32)on_off;
 
-	} else {
-		audio_control_dsp(AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND, on_off,
-				0, 0, 0, 0);
-
-	}
+#if defined(ENABLE_BT16)
+	if (on_off)
+		pcm_cmd = 3;
+#endif
+	audio_control_dsp(AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND, pcm_cmd,
+		0, 0, 0, 0);
 }
 
 /*=============================================================================
@@ -1374,6 +1370,12 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	UInt32 *memAddr = 0;
+	AUDIO_BITS_PER_SAMPLE_t bits = 24;
+
+#if defined(ENABLE_BT16)
+	if (speaker == AUDIO_SINK_BTM)
+		bits = 16;
+#endif
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s mic=%d, spkr=%d sample_rate=%u*\n",
 		__func__, mic, speaker, sample_rate);
@@ -1404,7 +1406,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	else
 		config.chnlNum = AUDIO_CHANNEL_MONO;
 
-	config.bitPerSample = 24;
+	config.bitPerSample = bits;
 
 	sink = config.sink;
 	if (sink == CSL_CAPH_DEV_IHF) {
@@ -1431,7 +1433,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 	config.snk_sampleRate = sample_rate;
 	config.chnlNum = AUDIO_CHANNEL_MONO;
-	config.bitPerSample = 24;
+	config.bitPerSample = bits;
 
 	telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
 
@@ -1449,7 +1451,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 		config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 		config.snk_sampleRate = sample_rate;
 		config.chnlNum = AUDIO_CHANNEL_MONO;
-		config.bitPerSample = 24;
+		config.bitPerSample = bits;
 
 		telephonyPathID.ul2PathID = csl_caph_hwctrl_EnablePath(config);
 	}

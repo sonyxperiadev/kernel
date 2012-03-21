@@ -93,6 +93,7 @@ extern int dhd_iscan_in_progress(void *h);
 void dhd_iscan_lock(void);
 void dhd_iscan_unlock(void);
 extern int dhd_change_mtu(dhd_pub_t *dhd, int new_mtu, int ifidx);
+extern bool dhd_concurrent_fw(dhd_pub_t *dhd);
 bool ap_cfg_running = FALSE;
 bool ap_fw_loaded = FALSE;
 
@@ -1499,7 +1500,7 @@ int
 dhd_arp_get_arp_hostip_table(dhd_pub_t *dhd, void *buf, int buflen)
 {
 	int retcode, i;
-	int iov_len;
+	int iov_len = 0;
 	uint32 *ptr32 = buf;
 	bool clr_bottom = FALSE;
 
@@ -1827,6 +1828,8 @@ exit:
 bool dhd_check_ap_wfd_mode_set(dhd_pub_t *dhd)
 {
 #ifdef  WL_CFG80211
+	if (dhd_concurrent_fw(dhd))
+		return FALSE;
 	if (((dhd->op_mode & HOSTAPD_MASK) == HOSTAPD_MASK) ||
 		((dhd->op_mode & WFD_MASK) == WFD_MASK))
 		return TRUE;

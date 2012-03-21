@@ -57,16 +57,16 @@
 extern void csl_caph_ControlHWClock(Boolean eanble);
 static uint8_t clk_name[3][32] = {"ssp0_clk", "ssp4_clk", "ssp3_clk"};
 static char dma_tx_chan_name[3][32] = {
-	"SSP_0B_TX0", 
-	"SSP_1B_TX0", 
+	"SSP_0B_TX0",
+	"SSP_1B_TX0",
 	"SSP_2B_TX0" };
 static char dma_rx_chan_name[3][32] = {
-	"SSP_0A_RX0", 
-	"SSP_1A_RX0", 
+	"SSP_0A_RX0",
+	"SSP_1A_RX0",
 	"SP_2A_RX0" };
 static unsigned int dma_fifo_base[3] = {
-	SSP0_BASE_ADDR, 
-	SSP4_BASE_ADDR, 
+	SSP0_BASE_ADDR,
+	SSP4_BASE_ADDR,
 	SSP3_BASE_ADDR };
 
 struct spi_kona_config {
@@ -904,7 +904,7 @@ static void spi_kona_work(struct work_struct *work)
 		cs_change = 1;
 		status = 0;
 
-		if( master->bus_num != 0 ) {
+		if (master->bus_num != 0) {
 			/*turn on caph clock for ssp1 and ssp2*/
 			csl_caph_ControlHWClock(TRUE);
 		}
@@ -980,7 +980,7 @@ static void spi_kona_work(struct work_struct *work)
 			spi_kona_chipselect(spi, CS_INACTIVE);
 
 		clk_disable(spi_kona->ssp_clk);
-		if( master->bus_num != 0 ) {
+		if (master->bus_num != 0) {
 			/*turn on caph clock for ssp1 and ssp2*/
 			csl_caph_ControlHWClock(FALSE);
 		}
@@ -1083,13 +1083,13 @@ static int spi_kona_setup_dma(struct spi_kona_data *spi_kona)
 	struct spi_master *master = spi_kona->master;
 	
 	/* Aquire DMA channels */
-	if (dma_request_chan(&spi_kona->tx_dma_chan, 
-					dma_tx_chan_name[master->bus_num]) != 0) {
+	if (dma_request_chan(&spi_kona->tx_dma_chan,
+			dma_tx_chan_name[master->bus_num]) != 0) {
 		pr_err("%s: Tx dma_request_chan failed\n", __func__);
 		return -EIO;
 	}
-	if (dma_request_chan(&spi_kona->rx_dma_chan, 
-					dma_rx_chan_name[master->bus_num]) != 0) {
+	if (dma_request_chan(&spi_kona->rx_dma_chan,
+			dma_rx_chan_name[master->bus_num]) != 0) {
 		pr_err("%s: Rx dma_request_chan failed\n", __func__);
 		goto err;
 	}

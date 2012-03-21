@@ -307,9 +307,17 @@ wl_cfgp2p_set_firm_p2p(struct wl_priv *wl)
 	wldev_iovar_getint(ndev, "apsta", &val);
 	if (val == 0) {
 		val = 1;
-		wldev_ioctl(ndev, WLC_DOWN, &val, sizeof(s32), true);
+		ret = wldev_ioctl(ndev, WLC_DOWN, &val, sizeof(s32), true);
+		if (ret < 0) {
+			CFGP2P_ERR(("WLC_DOWN error %d\n", ret));
+			return ret;
+		}
 		wldev_iovar_setint(ndev, "apsta", val);
-		wldev_ioctl(ndev, WLC_UP, &val, sizeof(s32), true);
+		ret = wldev_ioctl(ndev, WLC_UP, &val, sizeof(s32), true);
+		if (ret < 0) {
+			CFGP2P_ERR(("WLC_UP error %d\n", ret));
+			return ret;
+		}
 	}
 	val = 1;
 	/* Disable firmware roaming for P2P  */
@@ -1492,6 +1500,10 @@ wl_cfgp2p_tx_action_frame(struct wl_priv *wl, struct net_device *dev,
 		ret = BCME_ERROR;
 		CFGP2P_INFO(("tx action frame operation is failed\n"));
 	}
+	/* clear status bit for action tx */
+	wl_clr_p2p_status(wl, ACTION_TX_COMPLETED);
+	wl_clr_p2p_status(wl, ACTION_TX_NOACK);
+
 exit:
 	CFGP2P_INFO((" via act frame iovar : status = %d\n", ret));
 #undef MAX_WAIT_TIME

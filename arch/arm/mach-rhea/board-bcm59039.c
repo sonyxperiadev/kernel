@@ -98,9 +98,14 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
 	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
 
-	/*Init ASR LPM to 2.9V
+
+#ifdef CONFIG_MACH_RHEA_STONE
+	/*Init ASR LPM to 2.9V - for Rhea EDN10 & EDN00 and 1.8V for EDN2x
 	*/
 	{.map = 0, .addr = 0xD9, .val = 0x1F, .mask = 0xFF},
+#else
+	{.map = 0, .addr = 0xD9, .val = 0x1A, .mask = 0xFF},
+#endif
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
@@ -632,10 +637,16 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	[BCMPMU_REGULATOR_SDSR_LPM] = {
 		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0xFF, 0
 	},
-
+#ifdef CONFIG_MACH_RHEA_STONE
 	[BCMPMU_REGULATOR_ASR_NM] = {
 		BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x11, 0
 	},
+#else
+	[BCMPMU_REGULATOR_ASR_NM] = {
+		BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x01, 0
+	},
+#endif /*CONFIG_MACH_RHEA_STONE*/
+
 	[BCMPMU_REGULATOR_ASR_NM2] = {
 		BCMPMU_REGULATOR_ASR_NM2, &bcm59039_asr_nm2_data, 0xFF, 0
 	},
