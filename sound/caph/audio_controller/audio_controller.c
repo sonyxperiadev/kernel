@@ -2283,8 +2283,6 @@ Result_t AUDCTRL_StartCapture(unsigned int streamID)
 
 	aTrace(LOG_AUDIO_CNTLR, "%s streamID=0x%x\n", __func__, streamID);
 
-	csl_audio_capture_start(streamID);
-
 	path = csl_caph_FindCapturePath(streamID);
 	mode = GetAudioModeFromCaptureDev(path->source);
 	if (path->snk_sampleRate == AUDIO_SAMPLING_RATE_48000)
@@ -2293,6 +2291,8 @@ Result_t AUDCTRL_StartCapture(unsigned int streamID)
 		AUDCTRL_SaveAudioApp(AUDIO_APP_RECORDING);
 
 	AUDCTRL_SetAudioMode_ForMusicRecord(mode, 0);
+	/* start capture after gain setting to reduce glitch */
+	csl_audio_capture_start(streamID);
 
 	return RESULT_OK;
 }
