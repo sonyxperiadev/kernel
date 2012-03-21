@@ -520,6 +520,7 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(work, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_vbus_a_invalid_work);
+
 	dev_info(xceiv_data->dev, "A session invalid\n");
 
 	/* Inform the core of session invalid level  */
@@ -553,6 +554,18 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 					  sess_end_srp_timer);
 			} else
 				bcm_otg_do_adp_sense(xceiv_data);
+		}
+	} else {
+		bool id_default_host = false;
+
+		id_default_host =
+			bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
+			bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
+
+		if (!id_default_host) {
+			atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
+						   xceiver.notifier,
+						   USB_EVENT_NONE, NULL);
 		}
 	}
 }

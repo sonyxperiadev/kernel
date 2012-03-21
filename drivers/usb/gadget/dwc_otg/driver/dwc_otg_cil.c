@@ -125,11 +125,16 @@ void w_shutdown_core(void *p)
 	dwc_otg_core_if_t *core_if = p;
 
 	if (core_if->op_state == B_PERIPHERAL) {
-		dwc_otg_start_stop_phy_clk(core_if, false);
+		if (dwc_otg_is_device_mode(core_if)) {
+			core_if->lx_state = DWC_OTG_L0;
+			cil_pcd_stop(core_if);
+			dwc_otg_start_stop_phy_clk(core_if, false);
+
 #ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver->shutdown)
-			otg_shutdown(core_if->xceiver);
+			if (core_if->xceiver->shutdown)
+				otg_shutdown(core_if->xceiver);
 #endif
+		}
 	}
 }
 
