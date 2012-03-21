@@ -261,6 +261,9 @@ typedef struct dhd_bus {
 	bool		activity;		/* Activity flag for clock down */
 	int32		idletime;		/* Control for activity timeout */
 	int32		idlecount;		/* Activity timeout counter */
+#ifdef DHD_USE_IDLECOUNT
+	int32		dhd_idlecount;		/* DHD idle count */
+#endif /* DHD_USE_IDLECOUNT */
 	int32		idleclock;		/* How to set bus driver when idle */
 	int32		sd_divisor;		/* Speed control to bus driver */
 	int32		sd_mode;		/* Mode control to bus driver */
@@ -417,7 +420,7 @@ static bool dhd_readahead;
 
 /* To check if there's window offered */
 #define DATAOK(bus) \
-	(((uint8)(bus->tx_max - bus->tx_seq) > 2) && \
+	(((uint8)(bus->tx_max - bus->tx_seq) > 1) && \
 	(((uint8)(bus->tx_max - bus->tx_seq) & 0x80) == 0))
 
 /* To check if there's window offered for ctrl frame */
@@ -596,6 +599,7 @@ dhdsdio_oobwakeup_init(dhd_bus_t *bus)
 }
 #endif /* USE_OOB_GPIO1 */
 
+#ifdef BCM4334_CHIP
 /*
  * Query if FW is in SR mode
  */
@@ -647,7 +651,6 @@ dhdsdio_sr_init(dhd_bus_t *bus)
 	if ((bus->sih->chip == BCM4334_CHIP_ID) && (bus->sih->chiprev == 2))
 		dhdsdio_srwar_init(bus);
 
-	bus->srmemsize = si_socram_srmem_size(bus->sih);
 
 	val = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL, NULL);
 	val |= 1 << SBSDIO_FUNC1_WCTRL_HTWAIT_SHIFT;
@@ -668,6 +671,7 @@ dhdsdio_sr_init(dhd_bus_t *bus)
 
 	return 0;
 }
+#endif /* BCM4334_CHIP */
 
 /*
  * FIX: Be sure KSO bit is enabled
@@ -1024,6 +1028,9 @@ dhdsdio_htclk(dhd_bus_t *bus, bool on, bool pendok)
 #endif /* defined (DHD_DEBUG) */
 
 		bus->activity = TRUE;
+#ifdef DHD_USE_IDLECOUNT
+		bus->dhd_idlecount = 0;
+#endif /* DHD_USE_IDLECOUNT */
 	} else {
 		clkreq = 0;
 		if (bus->clkstate == CLK_PENDING) {
@@ -1149,6 +1156,9 @@ dhdsdio_clkctl(dhd_bus_t *bus, uint target, bool pendok)
 		if (target == CLK_AVAIL) {
 			dhd_os_wd_timer(bus->dhd, dhd_watchdog_ms);
 			bus->activity = TRUE;
+#ifdef DHD_USE_IDLECOUNT
+			bus->dhd_idlecount = 0;
+#endif /* DHD_USE_IDLECOUNT */
 		}
 		return ret;
 	}
@@ -1162,7 +1172,10 @@ dhdsdio_clkctl(dhd_bus_t *bus, uint target, bool pendok)
 		ret = dhdsdio_htclk(bus, TRUE, pendok);
 		if (ret == BCME_OK) {
 			dhd_os_wd_timer(bus->dhd, dhd_watchdog_ms);
-		bus->activity = TRUE;
+			bus->activity = TRUE;
+#ifdef DHD_USE_IDLECOUNT
+			bus->dhd_idlecount = 0;
+#endif /* DHD_USE_IDLECOUNT */
 		}
 		break;
 
@@ -1920,11 +1933,16 @@ dhd_bus_rxctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 	} else if (timeleft == 0) {
 		DHD_ERROR(("%s: resumed on timeout\n", __FUNCTION__));
 #ifdef DHD_DEBUG
+#if !defined(CUSTOMER_HW_SAMSUNG)
+#error need debug message if dongle trap occured
 		if (!SLPAUTO_ENAB(bus)) {
+#endif
 			dhd_os_sdlock(bus->dhd);
 			dhdsdio_checkdied(bus, NULL, 0);
 			dhd_os_sdunlock(bus->dhd);
+#if !defined(CUSTOMER_HW_SAMSUNG)
 		}
+#endif
 #endif /* DHD_DEBUG */
 	} else if (pending == TRUE) {
 		DHD_CTL(("%s: canceled\n", __FUNCTION__));
@@ -2291,26 +2309,36 @@ static int
 dhdsdio_readshared(dhd_bus_t *bus, sdpcm_shared_t *sh)
 {
 	uint32 addr;
-	int rv;
+	int rv, i;
 	uint32 shaddr = 0;
 
-	shaddr = bus->ramsize - bus->srmemsize - 4;
-	/* Read last word in memory to determine address of sdpcm_shared structure */
-	if ((rv = dhdsdio_membytes(bus, FALSE, shaddr, (uint8 *)&addr, 4)) < 0)
-		return rv;
+	shaddr = bus->ramsize - 4;
 
-	addr = ltoh32(addr);
+	i = 0;
+	do {
+		/* Read last word in memory to determine address of sdpcm_shared structure */
+		if ((rv = dhdsdio_membytes(bus, FALSE, shaddr, (uint8 *)&addr, 4)) < 0)
+			return rv;
 
-	DHD_INFO(("sdpcm_shared address 0x%08X\n", addr));
+		addr = ltoh32(addr);
 
-	/*
-	 * Check if addr is valid.
-	 * NVRAM length at the end of memory should have been overwritten.
-	 */
-	if (addr == 0 || ((~addr >> 16) & 0xffff) == (addr & 0xffff)) {
-		DHD_ERROR(("%s: address (0x%08x) of sdpcm_shared invalid\n", __FUNCTION__, addr));
-		return BCME_ERROR;
-	}
+		DHD_INFO(("sdpcm_shared address 0x%08X\n", addr));
+
+		/*
+		 * Check if addr is valid.
+		 * NVRAM length at the end of memory should have been overwritten.
+		 */
+		if (addr == 0 || ((~addr >> 16) & 0xffff) == (addr & 0xffff)) {
+			if ((bus->srmemsize > 0) && (i++ == 0)) {
+				shaddr -= bus->srmemsize;
+			} else {
+				DHD_ERROR(("%s: address (0x%08x) of sdpcm_shared invalid\n",
+					__FUNCTION__, addr));
+				return BCME_ERROR;
+			}
+		} else
+			break;
+	} while (i < 2);
 
 	/* Read hndrte_shared structure */
 	if ((rv = dhdsdio_membytes(bus, FALSE, addr, (uint8 *)sh, sizeof(sdpcm_shared_t))) < 0)
@@ -3710,9 +3738,11 @@ dhd_bus_init(dhd_pub_t *dhdp, bool enforce_mutex)
 		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_0, SDIOD_CCCR_IOEN, enable, NULL);
 	}
 
+#ifdef BCM4334_CHIP
 	if (dhdsdio_sr_cap(bus))
 		dhdsdio_sr_init(bus);
 	else
+#endif /* BCM4334_CHIP */
 		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1,
 			SBSDIO_FUNC1_CHIPCLKCSR, saveclk, &err);
 
@@ -4978,6 +5008,8 @@ dhdsdio_hostmail(dhd_bus_t *bus)
 
 #ifdef DHD_DEBUG
 		/* Retrieve console state address now that firmware should have updated it */
+		// Kent: tempoprary rollback - firmware should be modified for a correct dconpoll operation
+		// if(dhd_console_ms > 0)
 		{
 			sdpcm_shared_t shared;
 			if (dhdsdio_readshared(bus, &shared) == 0)
@@ -5635,6 +5667,10 @@ dhd_disable_intr(dhd_pub_t *dhdp)
 	bcmsdh_intr_disable(bus->sdh);
 }
 
+#ifdef DHD_USE_IDLECOUNT
+#define DHD_IDLE_TIMEOUT_MS (50)
+#endif /* DHD_USE_IDLECOUNT */
+
 extern bool
 dhd_bus_watchdog(dhd_pub_t *dhdp)
 {
@@ -5717,6 +5753,29 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 
 	/* On idle timeout clear activity flag and/or turn off clock */
 	if ((bus->idletime > 0) && (bus->clkstate == CLK_AVAIL)) {
+#ifdef DHD_USE_IDLECOUNT
+		if (++bus->idlecount >= bus->idletime) {
+			bus->idlecount = 0;
+
+			if (bus->activity)
+				bus->activity = FALSE;
+			else {
+				bus->dhd_idlecount++;
+
+				if (bus->dhd_idlecount >= (DHD_IDLE_TIMEOUT_MS/dhd_watchdog_ms)) {
+					DHD_TIMER(("%s: DHD Idle state!!\n", __FUNCTION__));
+
+					if (SLPAUTO_ENAB(bus)) {
+						if (dhdsdio_bussleep(bus, TRUE) != BCME_BUSY)
+							dhd_os_wd_timer(bus->dhd, 0);
+					} else
+						dhdsdio_clkctl(bus, CLK_NONE, FALSE);
+
+					bus->dhd_idlecount = 0;	
+				}
+			}
+		}
+#else
 		if (++bus->idlecount >= bus->idletime) {
 			bus->idlecount = 0;
 			if (bus->activity) {
@@ -5727,6 +5786,7 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 					dhdsdio_clkctl(bus, CLK_NONE, FALSE);
 			}
 		}
+#endif /* DHD_USE_IDLECOUNT */
 	}
 
 	return bus->ipend;
@@ -6173,6 +6233,8 @@ dhdsdio_probe_attach(struct dhd_bus *bus, osl_t *osh, void *sdh, void *regsva,
 
 		DHD_ERROR(("DHD: dongle ram size is set to %d(orig %d)\n",
 			bus->ramsize, bus->orig_ramsize));
+
+		bus->srmemsize = si_socram_srmem_size(bus->sih);
 	}
 
 	/* ...but normally deal with the SDPCMDEV core */
@@ -6366,13 +6428,16 @@ dhdsdio_release(dhd_bus_t *bus, osl_t *osh)
 	if (bus) {
 		ASSERT(osh);
 
+		if (bus->dhd) {
+			dongle_isolation = bus->dhd->dongle_isolation;
+			dhd_detach(bus->dhd);
+		}
+
 		/* De-register interrupt handler */
 		bcmsdh_intr_disable(bus->sdh);
 		bcmsdh_intr_dereg(bus->sdh);
 
 		if (bus->dhd) {
-			dongle_isolation = bus->dhd->dongle_isolation;
-			dhd_detach(bus->dhd);
 			dhdsdio_release_dongle(bus, osh, dongle_isolation, TRUE);
 			dhd_free(bus->dhd);
 			bus->dhd = NULL;

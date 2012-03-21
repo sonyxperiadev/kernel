@@ -544,7 +544,7 @@ int wl_android_wifi_on(struct net_device *dev)
 		do {
 		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
 		if (dhd_download_fw_on_driverload)
-			msleep(100);
+			msleep(300);
 
 			ret = sdioh_start(NULL, 0);
 			if (ret == 0)
@@ -637,11 +637,15 @@ static int wl_android_set_max_num_sta(struct net_device *dev, const char* string
 static int wl_android_set_ssid (struct net_device *dev, const char* hapd_ssid)
 {
 	wlc_ssid_t ssid;
+	s32 ret;
 
 	ssid.SSID_len = strlen(hapd_ssid);
 	bcm_strncpy_s(ssid.SSID, sizeof(ssid.SSID), hapd_ssid, ssid.SSID_len);
 	DHD_INFO(("%s: HAPD_SSID = %s\n", __FUNCTION__, ssid.SSID));
-	wldev_ioctl(dev, WLC_SET_SSID, &ssid, sizeof(wlc_ssid_t), true);
+	ret = wldev_ioctl(dev, WLC_SET_SSID, &ssid, sizeof(wlc_ssid_t), true);
+	if (ret < 0) {
+		DHD_ERROR(("%s : WLC_SET_SSID Error:%d\n", __FUNCTION__, ret));
+	}
 	return 1;
 
 }
@@ -808,10 +812,12 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	else if (strnicmp(command, CMD_GETBAND, strlen(CMD_GETBAND)) == 0) {
 		bytes_written = wl_android_get_band(net, command, priv_cmd.total_len);
 	}
+#ifndef CUSTOMER_SET_COUNTRY /*CUSTOMER_SET_COUNTRY feature is define for only GGSM model */
 	else if (strnicmp(command, CMD_COUNTRY, strlen(CMD_COUNTRY)) == 0) {
 		char *country_code = command + strlen(CMD_COUNTRY) + 1;
 		bytes_written = wldev_set_country(net, country_code);
 	}
+#endif
 #ifdef ROAM_API
 	else if (strnicmp(command, CMD_ROAMTRIGGER_SET,
 		strlen(CMD_ROAMTRIGGER_SET)) == 0) {
@@ -1151,7 +1157,6 @@ static int wifi_suspend(struct platform_device *pdev, pm_message_t state)
 static int wifi_resume(struct platform_device *pdev)
 {
 	DHD_ERROR(("##> %s\n", __FUNCTION__));
-	msleep(100);
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39)) && defined(OOB_INTR_ONLY) && 1
 	if (dhd_os_check_if_up(bcmsdh_get_drvdata()))
 		bcmsdh_oob_intr_set(1);
