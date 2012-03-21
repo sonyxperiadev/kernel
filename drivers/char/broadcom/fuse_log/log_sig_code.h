@@ -76,7 +76,6 @@
 #include "proc_id.h"
 #endif
 
-#ifdef DUAL_SIM_PHASE3
 #define P_l1u			0			// 0,1
 #define P_umacdl		6			// 6,7
 #define P_umacul		8			// 8,9
@@ -88,19 +87,6 @@
 #define P_mmc			35			// 35,36
 #define P_rlc			41			// 41,42
 #define P_gl1s			47			// 47
-#else
-#define P_l1u			0			// 0
-#define P_umacdl		3			// 3
-#define P_umacul		4			// 4
-#define P_urabmupdcp		5			// 5
-#define P_urlcdl		7			// 7
-#define P_urlcul		8			// 8
-#define P_urrcdc		10			// 10
-#define P_urrcm			11			// 11
-#define P_mmc			24			// 24, 25
-#define P_rlc			30			// 30, 31
-#define P_gl1s			36			// 36
-#endif
 
 #define	P_log_gl1s			(P_gl1s|0x80)
 #define	P_log_l1u			(P_l1u|0x80)
