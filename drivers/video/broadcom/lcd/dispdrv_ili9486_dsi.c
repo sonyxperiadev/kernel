@@ -115,9 +115,11 @@ typedef struct {
 } DISPDRV_PANEL_T;
 
 // LOCAL FUNCTIONs
+#ifdef DEBUG
 static void DISPDRV_WrCmndP0(DISPDRV_HANDLE_T drvH, UInt32 reg);
 
 static void DISPDRV_WrCmndP1(DISPDRV_HANDLE_T drvH, UInt32 reg, UInt32 val);
+#endif
 
 // DRV INTERFACE FUNCTIONs
 static Int32 DISPDRV_Init(struct dispdrv_init_parms *parms,
@@ -248,6 +250,7 @@ static int DISPDRV_TeOff(DISPDRV_PANEL_T *pPanel)
 	return (res);
 }
 
+#ifdef DEBUG
 //*****************************************************************************
 //
 // Function Name:  DISPDRV__WrCmndP1
@@ -277,7 +280,9 @@ static void DISPDRV_WrCmndP1(DISPDRV_HANDLE_T drvH, UInt32 reg, UInt32 value)
 
 	CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 }
+#endif
 
+#ifdef DEBUG
 //*****************************************************************************
 //
 // Function Name:  DISPDRV__WrCmndP0
@@ -306,6 +311,7 @@ static void DISPDRV_WrCmndP0(DISPDRV_HANDLE_T drvH, UInt32 reg)
 
 	CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 }
+#endif
 
 //*****************************************************************************
 //
