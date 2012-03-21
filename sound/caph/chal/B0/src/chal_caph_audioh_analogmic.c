@@ -382,10 +382,7 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
 		reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
 		reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
-#if 0
-		reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
-		reg_val |= (0 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
-#endif
+
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VMIC, reg_val);
 
 		/* 5.  turn off everything */

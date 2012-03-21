@@ -193,6 +193,30 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config);
 void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config);
 /**
 *
+*  @brief  set the caph dma lo buf addr
+*
+*  @param   chnl  (in) caph dma channel
+*  @param   addr (in) addr
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_dma_set_lobuffer_address(CSL_CAPH_DMA_CHNL_e chnl,
+				UInt8 *addr);
+
+/**
+*
+*  @brief  set the caph dma hi buf addr
+*
+*  @param   chnl_config  (in) caph dma channel
+*  @param   addr (in) addr
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_dma_set_hibuffer_address(CSL_CAPH_DMA_CHNL_e chnl,
+				UInt8 *addr);
+
+/**
+*
 *  @brief  switch DMA to access another memory buffer
 *
 *  @param   chnl_config  (in) caph dma channel configuration parameter

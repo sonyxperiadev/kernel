@@ -202,7 +202,9 @@ static cVoid chal_caph_dma_rheaB0_set_ddrfifo_status(CHAL_HANDLE handle,
 						    CHAL_CAPH_DMA_CH_REG_SIZE),
 						   cr);
 			} else {
-#if 1
+#if 0
+/* this secion of code has a bug:
+*/
 				if (status & CAPH_READY_LOW) {
 					cr = CAPH_READY_LOW <<
 			CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT;
