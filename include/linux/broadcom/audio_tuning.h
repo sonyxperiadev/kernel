@@ -183,7 +183,7 @@ enum _AudioParam_t {
 
 
     /* 3-B Compr parameters are no more used */
-	/*PARAM_COMPRESS_DL_FIR1_T2LIN, */		  /* 135 */	   
+	/*PARAM_COMPRESS_DL_FIR1_T2LIN, */		  /* 135 */
     /*PARAM_COMPRESS_DL_FIR1_G2T2, */		  /* 136 */
     /*PARAM_COMPRESS_DL_FIR1_G3T3, */		  /* 137 */
     /*PARAM_COMPRESS_DL_FIR1_G4T4, */		  /* 138 */
