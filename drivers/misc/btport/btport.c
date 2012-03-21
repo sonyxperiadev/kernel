@@ -135,7 +135,7 @@ struct btport_cdev {
 static struct brcm_uart_port *brcm_rfcomm_ports[BRCM_MAX_UART_NR];
 static struct uart_driver brcm_rfcomm_port_reg;
 static struct btport_cdev gBrcmBtport;
-DEFINE_MUTEX(btport_mutex);
+static DEFINE_MUTEX(btport_mutex);
 
 static int init_rfcomm_ports(struct brcm_uart_port **port, unsigned int i);
 static void free_rfcomm_ports(struct brcm_uart_port **port);
@@ -319,7 +319,7 @@ static int rfcomm_set_di(struct brcm_uart_port *p_btport, void __user *arg)
 
 	pr_debug("rfcomm_set_di()");
 
-	if (copy_from_user(&di, (void *)arg, sizeof(struct rfcomm_dev_info))) {
+	if (copy_from_user(&di, arg, sizeof(struct rfcomm_dev_info))) {
 		pr_err("rfcomm_set_di(): Failed getting user data");
 		return -EFAULT;
 	}
@@ -351,7 +351,7 @@ static int rfcomm_get_di(struct brcm_uart_port *p_btport, void __user *arg)
 
 	pr_debug("rfcomm_get_di()");
 
-	if (copy_from_user(&di, (void *)arg, sizeof(struct rfcomm_dev_info))) {
+	if (copy_from_user(&di, arg, sizeof(struct rfcomm_dev_info))) {
 		pr_err("rfcomm_get_di(): Failed getting user data");
 		return -EFAULT;
 	}
@@ -462,7 +462,7 @@ static ssize_t btport_write(struct file *file, const char __user *user_buffer,
 	}
 
 	/* check to verify that the incoming data is good */
-	access = !access_ok(VERIFY_READ, (void *)user_buffer, count);
+	access = !access_ok(VERIFY_READ, user_buffer, count);
 	if (access) {
 		pr_err("buffer access verification failed");
 		return -EFAULT;
@@ -509,7 +509,7 @@ write_exit:
 /*
  *
  */
-unsigned int btport_poll(struct file *file, struct poll_table_struct *p_pt)
+static unsigned int btport_poll(struct file *file, struct poll_table_struct *p_pt)
 {
 	struct brcm_uart_port *p_btport = file->private_data;
 	struct uart_port *up;
@@ -708,7 +708,7 @@ static long create_btport_rfcomm(struct brcm_uart_port *p_btport,
 #ifdef BRCM_CREATE_BTPORT_DYN
 	struct device *dev;
 #endif
-	if (copy_from_user(&di, (void *)arg, sizeof(struct rfcomm_dev_info))) {
+	if (copy_from_user(&di, arg, sizeof(struct rfcomm_dev_info))) {
 		pr_err("create_btport_rfcomm(): Failed getting user data");
 		return -EFAULT;
 	}
@@ -1379,7 +1379,7 @@ static int init_rfcomm_ports(struct brcm_uart_port **port, unsigned int i)
 	p->rfcomm_port.ops = &brcm_rfcomm_pops;
 	p->rfcomm_port.iobase = 0x1;
 	p->rfcomm_port.mapbase = 'C';	/*  0x45; */
-	p->rfcomm_port.membase = (uint8_t *)"K"; /* 0x55; */
+	p->rfcomm_port.membase = (uint8_t __iomem *)'K'; /* 0x55; */
 	p->rfcomm_port.flags |= UPF_BOOT_AUTOCONF;
 	p->rfcomm_port.private_data = p;
 	p->saved_event.modemControlReg = 0;
