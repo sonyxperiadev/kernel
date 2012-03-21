@@ -15,32 +15,33 @@
 #ifndef _I2C_KONA_H_
 #define	_I2C_KONA_H_
 
-enum bsc_bus_speed
-{
-   BSC_BUS_SPEED_32K,
-   BSC_BUS_SPEED_50K,
-   BSC_BUS_SPEED_100K,
-   BSC_BUS_SPEED_230K,
-   BSC_BUS_SPEED_380K,
-   BSC_BUS_SPEED_400K,
-   BSC_BUS_SPEED_430K,
-   BSC_BUS_SPEED_HS, /* high-speed */
+enum bsc_bus_speed {
+	BSC_BUS_SPEED_32K,
+	BSC_BUS_SPEED_50K,
+	BSC_BUS_SPEED_100K,
+	BSC_BUS_SPEED_230K,
+	BSC_BUS_SPEED_380K,
+	BSC_BUS_SPEED_400K,
+	BSC_BUS_SPEED_430K,
+	BSC_BUS_SPEED_HS,	/* high-speed */
+	BSC_BUS_SPEED_HS_1MHZ,
+	BSC_BUS_SPEED_HS_2MHZ,
+	BSC_BUS_SPEED_HS_1625KHZ,
+	BSC_BUS_SPEED_HS_2600KHZ,
 
-   /* for FPGA where only the 26 MHz core clock is available */
-   BSC_BUS_SPEED_100K_FPGA,
-   BSC_BUS_SPEED_400K_FPGA,
-   BSC_BUS_SPEED_HS_FPGA,
+	/* for FPGA where only the 26 MHz core clock is available */
+	BSC_BUS_SPEED_100K_FPGA,
+	BSC_BUS_SPEED_400K_FPGA,
+	BSC_BUS_SPEED_HS_FPGA,
 
-   /* used as internal array index so do not reorder this */
-   BSC_BUS_SPEED_MAX,
+	/* used as internal array index so do not reorder this */
+	BSC_BUS_SPEED_MAX,
 };
-
 
 /*
  * Board dependent configuration for the Broadcom Kona BSC (I2C) adapter
  */
-struct bsc_adap_cfg
-{
+struct bsc_adap_cfg {
 	/* to explicitly disable the I2C adapter */
 	int disable;
 
@@ -74,14 +75,13 @@ struct bsc_adap_cfg
  *  specific platform data. Otherwise, default speed of the adapter
  *  will be used for that slave device.
  */
-struct i2c_slave_platform_data
-{
+struct i2c_slave_platform_data {
 	/* Magic number to validate dynamic speed */
 	unsigned long spd_magic;
 	enum bsc_bus_speed i2c_speed;
-    /* Magic number to validate the timeout enable */
-    unsigned long timeout_magic;
-    int autosense_timeout_enable;
+	/* Magic number to validate the timeout enable */
+	unsigned long timeout_magic;
+	int autosense_timeout_enable;
 };
 
 /* Magic number = "spd" in ascii codes */

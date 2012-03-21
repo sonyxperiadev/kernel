@@ -2446,10 +2446,9 @@ int peri_clk_set_policy_mask(struct peri_clk *peri_clk, int policy_id, int mask)
 
 	return 0;
 }
-
 EXPORT_SYMBOL(peri_clk_set_policy_mask);
 
-static int peri_clk_get_policy_mask(struct peri_clk *peri_clk, int policy_id)
+int peri_clk_get_policy_mask(struct peri_clk *peri_clk, int policy_id)
 {
 	u32 policy_offset = 0;
 	u32 reg_val;
@@ -2476,6 +2475,7 @@ static int peri_clk_get_policy_mask(struct peri_clk *peri_clk, int policy_id)
 	return GET_BIT_USING_MASK(reg_val, peri_clk->policy_bit_mask);
 
 }
+EXPORT_SYMBOL(peri_clk_get_policy_mask);
 
 static int peri_clk_get_gating_ctrl(struct peri_clk *peri_clk)
 {
@@ -2530,10 +2530,9 @@ int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl)
 
 	return (ret);
 }
-
 EXPORT_SYMBOL(peri_clk_set_hw_gating_ctrl);
 
-static int peri_clk_get_pll_select(struct peri_clk *peri_clk)
+int peri_clk_get_pll_select(struct peri_clk *peri_clk)
 {
 	u32 reg_val;
 
@@ -2549,6 +2548,7 @@ static int peri_clk_get_pll_select(struct peri_clk *peri_clk)
 					peri_clk->clk_div.pll_select_mask,
 					peri_clk->clk_div.pll_select_shift);
 }
+EXPORT_SYMBOL(peri_clk_get_pll_select);
 
 int peri_clk_set_pll_select(struct peri_clk *peri_clk, int source)
 {
@@ -2571,7 +2571,6 @@ int peri_clk_set_pll_select(struct peri_clk *peri_clk, int source)
 
 	return 0;
 }
-
 EXPORT_SYMBOL(peri_clk_set_pll_select);
 
 int peri_clk_hyst_enable(struct peri_clk *peri_clk, int enable, int delay)

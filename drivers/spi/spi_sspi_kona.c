@@ -54,6 +54,21 @@
 /* Timeout(ms) for wait_for_completion */
 #define SSPI_WFC_TIME_OUT	200
 
+extern void csl_caph_ControlHWClock(Boolean eanble);
+static uint8_t clk_name[3][32] = {"ssp0_clk", "ssp4_clk", "ssp3_clk"};
+static char dma_tx_chan_name[3][32] = {
+	"SSP_0B_TX0",
+	"SSP_1B_TX0",
+	"SSP_2B_TX0" };
+static char dma_rx_chan_name[3][32] = {
+	"SSP_0A_RX0",
+	"SSP_1A_RX0",
+	"SP_2A_RX0" };
+static unsigned int dma_fifo_base[3] = {
+	SSP0_BASE_ADDR,
+	SSP4_BASE_ADDR,
+	SSP3_BASE_ADDR };
+
 struct spi_kona_config {
 	uint32_t speed_hz;
 	uint32_t bpw;
@@ -127,11 +142,11 @@ static void spi_kona_buf_tx_##type(struct spi_kona_data *d)		\
 }
 
 SPI_KONA_BUF_RX(u8, b)
-    SPI_KONA_BUF_TX(u8, b)
-    SPI_KONA_BUF_RX(u16, w)
-    SPI_KONA_BUF_TX(u16, w)
-    SPI_KONA_BUF_RX(u32, l)
-    SPI_KONA_BUF_TX(u32, l)
+	SPI_KONA_BUF_TX(u8, b)
+	SPI_KONA_BUF_RX(u16, w)
+	SPI_KONA_BUF_TX(u16, w)
+	SPI_KONA_BUF_RX(u32, l)
+	SPI_KONA_BUF_TX(u32, l)
 
 /* DMA Burst size and Scheduler FIFO threshold */
 /*#define DMA_BURST_CONFIG_64_BYTES*/
@@ -171,8 +186,8 @@ static irqreturn_t spi_kona_isr(int irq, void *dev_id)
 
 	if (status & SSPIL_INTERRUPT_STATUS_FIFO_OVERRUN_STATUS_MASK) {
 		chal_sspi_clear_intr(spi_kona->chandle,
-				     SSPIL_INTERRUPT_STATUS_FIFO_OVERRUN_STATUS_MASK,
-				     dstat);
+				SSPIL_INTERRUPT_STATUS_FIFO_OVERRUN_STATUS_MASK,
+			    dstat);
 		return IRQ_HANDLED;
 	}
 
@@ -474,7 +489,7 @@ static int spi_kona_dma_xfer_rx(struct spi_kona_data *spi_kona)
 
 	/* Enable Overrun interrupt */
 	chal_sspi_enable_intr(chandle,
-			      SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK);
+			SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK);
 
 	/* Trigger RX FIFO DMA */
 	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_RX0,
@@ -492,9 +507,9 @@ static int spi_kona_dma_xfer_rx(struct spi_kona_data *spi_kona)
 			     SSPI_FIFO_ID_RX0, 0);
 
 	dma_stop_transfer(spi_kona->rx_dma_chan);
-      err1:
+err1:
 	dma_unmap_single(NULL, dma_rx_buf, spi_kona->count, DMA_FROM_DEVICE);
-      err:
+err:
 	return ret;
 }
 
@@ -538,7 +553,7 @@ static int spi_kona_dma_xfer_tx(struct spi_kona_data *spi_kona)
 
 	/* Enable Overrun interrupt */
 	chal_sspi_enable_intr(chandle,
-			      SSPIL_INTERRUPT_ENABLE_FIFO_UNDERRUN_INTERRUPT_ENB_MASK);
+		SSPIL_INTERRUPT_ENABLE_FIFO_UNDERRUN_INTERRUPT_ENB_MASK);
 
 	/* Trigger TX FIFO DMA */
 	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_TX0,
@@ -558,9 +573,9 @@ static int spi_kona_dma_xfer_tx(struct spi_kona_data *spi_kona)
 	/* Disable all Interrupt */
 	dma_stop_transfer(spi_kona->tx_dma_chan);
 
-      err1:
+err1:
 	dma_unmap_single(NULL, dma_tx_buf, spi_kona->count, DMA_TO_DEVICE);
-      err:
+err:
 	return ret;
 }
 
@@ -570,6 +585,7 @@ static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 	u32 tx_fifo, rx_fifo, cfg_rx, cfg_tx;
 	CHAL_HANDLE chandle = spi_kona->chandle;
 	int ret = -EIO;
+	struct spi_master *master = spi_kona->master;
 
 #ifdef DMA_BURST_CONFIG_16_BYTES
 	/* bs = 4, bl = 4, 16 bytes xfer per request */
@@ -584,8 +600,8 @@ static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
 #endif
 
-	tx_fifo = SSP0_BASE_ADDR + chal_sspi_tx0_get_dma_port_addr_offset();
-	rx_fifo = SSP0_BASE_ADDR + chal_sspi_rx0_get_dma_port_addr_offset();
+	tx_fifo = dma_fifo_base[master->bus_num] + chal_sspi_tx0_get_dma_port_addr_offset();
+	rx_fifo = dma_fifo_base[master->bus_num] + chal_sspi_rx0_get_dma_port_addr_offset();
 
 	/* Get DMA'ble address */
 	if (spi_kona->tx_buf != NULL) {
@@ -632,7 +648,7 @@ static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 
 	/* Enable Overrun interrupt */
 	chal_sspi_enable_intr(chandle,
-			      SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK);
+			SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK);
 
 	/* Trigger RX FIFO DMA */
 	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_RX0,
@@ -668,11 +684,11 @@ static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 	/* Disable all Interrupt */
 	dma_stop_transfer(spi_kona->tx_dma_chan);
 
-      err2:
+err2:
 	dma_stop_transfer(spi_kona->rx_dma_chan);
-      err1:
+err1:
 	dma_unmap_single(NULL, dma_tx_buf, spi_kona->count, DMA_TO_DEVICE);
-      err:
+err:
 	dma_unmap_single(NULL, dma_rx_buf, spi_kona->count, DMA_FROM_DEVICE);
 	return ret;
 }
@@ -781,8 +797,8 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 	if (spi_kona->count) {	/* PIO mode with Interrupts */
 		xfer_len += spi_kona->count;
 
-		/* If the remainder bits needs to be transferred through PIO after DMA,
-		 * reconfigure */
+		/* If the remainder bits needs to be transferred
+		 * through PIO after DMA, reconfigure */
 		if (spi_kona->count != transfer->len) {
 			ret =
 			    chal_sspi_set_fifo_threshold(chandle,
@@ -797,7 +813,8 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 			if (ret < 0)
 				return ret;
 
-			/* transfer length set to the bytes to be trasferred by PIO */
+			/* transfer length set to the bytes
+			 * to be trasferred by PIO */
 			temp_length = transfer->len;
 			transfer->len = spi_kona->count;
 			spi_kona_config_task(spi, transfer);
@@ -812,7 +829,7 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 		spi_kona_tx_data(spi_kona);
 
 		chal_sspi_enable_intr(chandle,
-				      SSPIL_INTERRUPT_ENABLE_SCHEDULER_INTERRUPT_ENB_MASK);
+			SSPIL_INTERRUPT_ENABLE_SCHEDULER_INTERRUPT_ENB_MASK);
 
 		if ((wait_for_completion_interruptible_timeout
 		     (&spi_kona->xfer_done,
@@ -829,10 +846,13 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 	    (SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK |
 	     SSPIL_INTERRUPT_ENABLE_FIFO_UNDERRUN_INTERRUPT_ENB_MASK))
 		chal_sspi_clear_intr(chandle, status,
-				     ((SSPIL_DSP_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_MASK & (0x1 <<
-                        SSPIL_DSP_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT)) |
-                     (SSPIL_DSP_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_MASK & (0x1 <<
-                        SSPIL_DSP_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_SHIFT))));
+		((SSPIL_DSP_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_MASK &
+		(0x1 <<
+		SSPIL_DSP_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT)) |
+		(SSPIL_DSP_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_MASK &
+		(0x1 <<
+		SSPIL_DSP_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_SHIFT)))
+		);
 	else
 		chal_sspi_clear_intr(chandle, status, 0);
 
@@ -861,6 +881,7 @@ static void spi_kona_work(struct work_struct *work)
 	    container_of(work, struct spi_kona_data, work);
 	unsigned long flags;
 	int do_setup = -1;
+	struct spi_master *master = spi_kona->master;
 
 	spin_lock(&spi_kona->lock);
 	spi_kona->busy = 1;
@@ -883,6 +904,10 @@ static void spi_kona_work(struct work_struct *work)
 		cs_change = 1;
 		status = 0;
 
+		if (master->bus_num != 0) {
+			/*turn on caph clock for ssp1 and ssp2*/
+			csl_caph_ControlHWClock(TRUE);
+		}
 		clk_enable(spi_kona->ssp_clk);
 		list_for_each_entry(t, &m->transfers, transfer_list) {
 
@@ -955,6 +980,10 @@ static void spi_kona_work(struct work_struct *work)
 			spi_kona_chipselect(spi, CS_INACTIVE);
 
 		clk_disable(spi_kona->ssp_clk);
+		if (master->bus_num != 0) {
+			/*turn on caph clock for ssp1 and ssp2*/
+			csl_caph_ControlHWClock(FALSE);
+		}
 	}
 	spin_lock(&spi_kona->lock);
 	spi_kona->busy = 0;
@@ -1041,7 +1070,7 @@ static int spi_kona_config_spi_hw(struct spi_kona_data *spi_kona)
 						  SSPI_FIFO_ID_RX0, 1, 1);
 	chal_sspi_enable_intr(chandle, 0);
 	chal_sspi_enable_error_intr(chandle,
-				    ~SSPIL_INTERRUPT_ERROR_ENABLE_RESERVED_MASK);
+				~SSPIL_INTERRUPT_ERROR_ENABLE_RESERVED_MASK);
 	chal_sspi_enable(chandle, 1);
 
 	spi_kona->chandle = chandle;
@@ -1051,12 +1080,16 @@ static int spi_kona_config_spi_hw(struct spi_kona_data *spi_kona)
 
 static int spi_kona_setup_dma(struct spi_kona_data *spi_kona)
 {
+	struct spi_master *master = spi_kona->master;
+	
 	/* Aquire DMA channels */
-	if (dma_request_chan(&spi_kona->tx_dma_chan, "SSP_0B_TX0") != 0) {
+	if (dma_request_chan(&spi_kona->tx_dma_chan,
+			dma_tx_chan_name[master->bus_num]) != 0) {
 		pr_err("%s: Tx dma_request_chan failed\n", __func__);
 		return -EIO;
 	}
-	if (dma_request_chan(&spi_kona->rx_dma_chan, "SSP_0A_RX0") != 0) {
+	if (dma_request_chan(&spi_kona->rx_dma_chan,
+			dma_rx_chan_name[master->bus_num]) != 0) {
 		pr_err("%s: Rx dma_request_chan failed\n", __func__);
 		goto err;
 	}
@@ -1072,11 +1105,11 @@ static int spi_kona_setup_dma(struct spi_kona_data *spi_kona)
 		goto err2;
 	}
 	return 0;
-      err2:
+err2:
 	dma_free_callback(spi_kona->tx_dma_chan);
-      err1:
+err1:
 	dma_free_chan(spi_kona->rx_dma_chan);
-      err:
+err:
 	dma_free_chan(spi_kona->tx_dma_chan);
 	return -EIO;
 }
@@ -1087,7 +1120,7 @@ static int spi_kona_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct spi_master *master;
 	struct spi_kona_data *spi_kona = 0;
-	uint8_t clk_name[32];
+	/*uint8_t clk_name[32]; */
 	int status = 0;
 
 	platform_info = dev_get_platdata(&pdev->dev);
@@ -1152,10 +1185,9 @@ static int spi_kona_probe(struct platform_device *pdev)
 		goto out_iounmap;
 	}
 
-	sprintf(clk_name, "ssp%d_clk", master->bus_num);
-	spi_kona->ssp_clk = clk_get(NULL, clk_name);
+	spi_kona->ssp_clk = clk_get(NULL, clk_name[master->bus_num]);
 	if (IS_ERR_OR_NULL(spi_kona->ssp_clk)) {
-		dev_err(&pdev->dev, "unable to get %s clock\n", clk_name);
+		dev_err(&pdev->dev, "unable to get %s clock\n", clk_name[master->bus_num]);
 		status = PTR_ERR(spi_kona->ssp_clk);
 		goto out_free_irq;
 	}
@@ -1197,17 +1229,17 @@ static int spi_kona_probe(struct platform_device *pdev)
 	pr_info("%s: SSP %d setup done\n", __func__, master->bus_num);
 	return status;
 
-      out_clk_put:
+out_clk_put:
 	clk_disable(spi_kona->ssp_clk);
 	clk_put(spi_kona->ssp_clk);
-      out_free_irq:
+out_free_irq:
 	free_irq(spi_kona->irq, spi_kona);
-      out_iounmap:
+out_iounmap:
 	/* iounmap(spi_kona->base); */
 	chal_sspi_deinit(spi_kona->chandle);
-      out_release_mem:
+out_release_mem:
 	release_mem_region(res->start, resource_size(res));
-      out_master_put:
+out_master_put:
 	spi_master_put(master);
 	platform_set_drvdata(pdev, NULL);
 	return status;

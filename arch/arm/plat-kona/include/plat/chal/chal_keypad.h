@@ -340,6 +340,27 @@ extern "C" {
 							* regState,
 							CHAL_KEYPAD_KEY_EVENT_LIST_t
 							keyEvents);
+/**
+*
+*  @brief  Read Status 1 register
+* 
+*  @param  none
+*  
+*  @return UInt32   - register val
+*
+****************************************************************************/
+	cUInt32 chal_keypad_config_read_status1(void);
+
+/**
+*
+*  @brief  Read Status 2 register
+* 
+*  @param  none
+*  
+*  @return UInt32   - register val
+*
+****************************************************************************/
+	cUInt32 chal_keypad_config_read_status2(void);
 
 /** @} */
 

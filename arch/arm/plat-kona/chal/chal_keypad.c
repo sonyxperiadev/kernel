@@ -110,9 +110,9 @@ static cUInt8 bitNumber(cUInt32 val)
 	// The usage of (val & -val) isolates only the rightmost '1' bit from val. This
 	// ensures that the multiplier only has 1 bit set to '1'.
 
-	return
-	    MultiplyDeBruijnBitPosition[(cUInt8)
-					(((val & -val) * 0x077CB531U) >> 27)];
+	return MultiplyDeBruijnBitPosition[(cUInt8)
+					   (((val & -val) *
+					     0x077CB531U) >> 27)];
 
 }				// bitNumber()
 
@@ -138,7 +138,7 @@ cUInt8 chal_keypad_calculate_pin_mask(cUInt8 n)
 
 	tempVal = (1 << n) - 1;
 
-	return ((cUInt8)tempVal);
+	return ((cUInt8) tempVal);
 }				// chal_keypad_calculate_pin_maks()
 
 //***************************************************************************
@@ -158,7 +158,7 @@ CHAL_HANDLE chal_keypad_init(cUInt32 baseAddr)
 
 	KeypadDev.baseAddr = baseAddr;
 
-	return (CHAL_HANDLE)&KeypadDev;
+	return (CHAL_HANDLE) & KeypadDev;
 
 }
 
@@ -528,12 +528,12 @@ void chal_keypad_enable_interrupts(CHAL_HANDLE handle)
 //                      isr          (in)       The value of ISR
 // 
 //***************************************************************************
-void chal_keypad_decode_key_event_registers(CHAL_HANDLE *handle,
+void chal_keypad_decode_key_event_registers(CHAL_HANDLE * handle,
 					    cUInt32 regSet,
 					    cUInt32 bitCount,
 					    cUInt32 ssr,
 					    cUInt32 isr,
-					    cUInt32 *numKeyEvents,
+					    cUInt32 * numKeyEvents,
 					    CHAL_KEYPAD_KEY_EVENT_LIST_t
 					    keyEvents)
 {
@@ -579,7 +579,7 @@ void chal_keypad_decode_key_event_registers(CHAL_HANDLE *handle,
 // Parameters:  none
 // 
 //***************************************************************************
-cUInt32 chal_keypad_process_key_event_registers(CHAL_HANDLE *handle,
+cUInt32 chal_keypad_process_key_event_registers(CHAL_HANDLE * handle,
 						CHAL_KEYPAD_REGISTER_SET_t *
 						regState,
 						CHAL_KEYPAD_KEY_EVENT_LIST_t
@@ -617,6 +617,34 @@ cUInt32 chal_keypad_process_key_event_registers(CHAL_HANDLE *handle,
 	return numKeyEvents;
 
 }				// chal_keypad_process_key_event_registers()
+
+//***************************************************************************
+//
+// Function Name:  chal_keypad_config_read_status1
+//
+// Description: Return the register value of the Keypad Status 1 register.
+//
+// Parameters:  return    (out)   SSR1 value
+// 
+//***************************************************************************
+cUInt32 chal_keypad_config_read_status1(void)
+{
+	return BRCM_READ_REG(KeypadDev.baseAddr, KEYPAD_KPSSR0);
+}
+
+//***************************************************************************
+//
+// Function Name:  chal_keypad_config_read_status2
+//
+// Description: Return the register value of the Keypad Status 2 register.
+//
+// Parameters:  return    (out)   SSR2 value
+// 
+//***************************************************************************
+cUInt32 chal_keypad_config_read_status2(void)
+{
+	return BRCM_READ_REG(KeypadDev.baseAddr, KEYPAD_KPSSR1);
+}
 
 #else /* tempINTERFACE_OSDAL_KEYPAD */
 
@@ -758,9 +786,9 @@ static cUInt8 bitNumber(cUInt32 val)
 	// The usage of (val & -val) isolates only the rightmost '1' bit from val. This
 	// ensures that the multiplier only has 1 bit set to '1'.
 
-	return
-	    MultiplyDeBruijnBitPosition[(cUInt8)
-					(((val & -val) * 0x077CB531U) >> 27)];
+	return MultiplyDeBruijnBitPosition[(cUInt8)
+					   (((val & -val) *
+					     0x077CB531U) >> 27)];
 
 }				// bitNumber()
 
@@ -1082,19 +1110,15 @@ void chal_keypad_process_interrupt_events()
 			if (bc1) {
 				chal_keypad_decode_interrupt_event_registers(0,
 									     bc1,
-									     interruptEvent->
-									     ssr0,
-									     interruptEvent->
-									     isr0);
+									     interruptEvent->ssr0,
+									     interruptEvent->isr0);
 			}
 
 			if (bc2) {
 				chal_keypad_decode_interrupt_event_registers(1,
 									     bc2,
-									     interruptEvent->
-									     ssr1,
-									     interruptEvent->
-									     isr1);
+									     interruptEvent->ssr1,
+									     interruptEvent->isr1);
 			}
 
 		} else {
@@ -1120,7 +1144,7 @@ void chal_keypad_process_interrupt_events()
 //                        FALSE = no key event exist in queue.
 // 
 //***************************************************************************
-Boolean chal_keypad_get_action_from_Q(CHAL_KEYPAD_EVENT_t *event)
+Boolean chal_keypad_get_action_from_Q(CHAL_KEYPAD_EVENT_t * event)
 {
 	Boolean retVal = FALSE;
 
@@ -1148,7 +1172,7 @@ Boolean chal_keypad_get_action_from_Q(CHAL_KEYPAD_EVENT_t *event)
 // Parameters:  event    (out)   A key event
 // 
 //***************************************************************************
-void chal_keypad_retrieve_event(CHAL_KEYPAD_EVENT_t *event)
+void chal_keypad_retrieve_event(CHAL_KEYPAD_EVENT_t * event)
 {
 
 	if (!chal_keypad_get_action_from_Q(event)) {

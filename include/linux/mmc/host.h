@@ -271,6 +271,7 @@ struct mmc_host {
 
 	struct delayed_work	detect;
 	struct wake_lock	detect_wake_lock;
+	unsigned char *detect_wake_lock_name;
 
 	const struct mmc_bus_ops *bus_ops;	/* current bus driver */
 	unsigned int		bus_refs;	/* reference counter */

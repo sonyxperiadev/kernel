@@ -290,7 +290,7 @@ static void power_on_and_start_clock(void)
 	_clock_on();		/* TODO: error handling */
 
 	s = wire_interrupt_handler();
-	BUG_ON(s != 0);         /* TODO: error handling */
+	BUG_ON(s != 0);		/* TODO: error handling */
 
 	/* We probably ought to map vce registers here, but for now,
 	 *we go with the "promise not to access them" approach */
@@ -405,7 +405,7 @@ static int vce_release(struct inode *inode, struct file *filp)
 
 		/* Userspace died with VCE acquired. The only safe thing is to wait for the */
 		/* VCE hardware to go idle before letting any other process touch it. */
-		/* Otherwise it can cause a AXI lockup or other bad things :-(*/
+		/* Otherwise it can cause a AXI lockup or other bad things :-( */
 		/* Above comment is stale - it was for V3D --
 		   copy/paste alert!  TODO: figure out what VCE needs
 		   to do here... FIXME */
@@ -727,7 +727,7 @@ static int proc_version_read(char *buffer, char **start, off_t offset,
 	   error exit paths follow
 	 */
 
-      e0:
+e0:
 	BUG_ON(ret >= 0);
 	return ret;
 }
@@ -799,7 +799,7 @@ static int proc_status_read(char *buffer, char **start, off_t offset, int bytes,
 	   error exit paths follow
 	 */
 
-      e0:
+e0:
 	clock_off();
 	BUG_ON(ret >= 0);
 	return ret;
@@ -913,31 +913,31 @@ int __init vce_init(void)
 	 */
 
 	/*  pi_mgr_qos_request_remove(vce_state.cpu_qos_node); */
-      err5:
+err5:
 
 	remove_proc_entry("status", vce_state.proc_vcedir);
-      err4:
+err4:
 
 	remove_proc_entry("version", vce_state.proc_vcedir);
-      err3:
+err3:
 	remove_proc_entry(VCE_DEV_NAME, NULL);
-      err2:
+err2:
 
 	drop_interrupt_handler();
-      err2a:
+err2a:
 
 	iounmap(vce_base);
 	vce_base = 0;
-      err:
+err:
 
 	device_destroy(vce_state.vce_class, MKDEV(vce_major, 0));
-      errC:
+errC:
 
 	class_destroy(vce_state.vce_class);
-      errB:
+errB:
 
 	unregister_chrdev(vce_major, VCE_DEV_NAME);
-      errA:
+errA:
 
 	BUG_ON(ret >= 0);
 	return ret;

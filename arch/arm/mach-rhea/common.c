@@ -304,6 +304,37 @@ static struct platform_device kona_sspi_spi0_device = {
 	.num_resources = ARRAY_SIZE(kona_sspi_spi0_resource),
 };
 
+#ifdef CONFIG_RHEA_PANDA
+static struct resource kona_sspi_spi2_resource[] = {
+	[0] = {
+	       .start = SSP3_BASE_ADDR,
+	       .end = SSP3_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = BCM_INT_ID_SSP3,
+	       .end = BCM_INT_ID_SSP3,
+	       .flags = IORESOURCE_IRQ,
+	       },
+};
+
+static struct spi_kona_platform_data sspi_spi2_info = {
+	.enable_dma = 1,
+	.cs_line = 1,
+	.mode = SPI_LOOP | SPI_MODE_3,
+};
+
+static struct platform_device kona_sspi_spi2_device = {
+	.dev = {
+		.platform_data = &sspi_spi2_info,
+		},
+	.name = "kona_sspi_spi",
+	.id = 2,
+	.resource = kona_sspi_spi2_resource,
+	.num_resources = ARRAY_SIZE(kona_sspi_spi2_resource),
+};
+#endif
+
 #ifdef CONFIG_SENSORS_KONA
 static struct resource board_tmon_resource[] = {
 	{			/* For Current Temperature */
@@ -786,6 +817,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&pmu_device,
 	&kona_pwm_device,
 	&kona_sspi_spi0_device,
+#ifdef CONFIG_RHEA_PANDA
+	&kona_sspi_spi2_device,
+#endif
 #ifdef CONFIG_SENSORS_KONA
 	&tmon_device,
 	&thermal_device,

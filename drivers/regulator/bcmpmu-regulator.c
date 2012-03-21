@@ -361,19 +361,22 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 		regl_id = (bcmpmu_regulators + i)->regulator;
 		opmode = (bcmpmu_regulators + i)->default_opmode;
 		reg_info = &bcmpmu->rgltr_info[regl_id];
-	if (opmode != 0xFF) {
-		ret =
-		bcmpmu->write_dev(bcmpmu, reg_info->reg_addr, opmode,
-				reg_info->mode_mask);
-		if (ret != 0)
-			goto register_fail;
-	}
 
-	pr_info("%s: REGULATOR name %s, ID %d def_opmode = %x initdata = %x\n ",
+
+	if ((bcmpmu_regulators + i)->initdata) {
+
+		if (opmode != 0xFF) {
+			ret =
+			bcmpmu->write_dev(bcmpmu, reg_info->reg_addr, opmode,
+				reg_info->mode_mask);
+			if (ret != 0)
+				goto register_fail;
+		}
+
+		pr_info("%s: REGULATOR name %s, ID %d def_opmode = %x initdata = %x\n ",
 		__func__, (bcmpmu->rgltr_desc + regl_id)->name, regl_id, opmode,
 		(u32) ((bcmpmu_regulators + i)->initdata));
 
-	if ((bcmpmu_regulators + i)->initdata) {
 		regl[i] = regulator_register(&bcmpmu->rgltr_desc[regl_id],
 					&pdev->dev,
 					(bcmpmu_regulators + i)->initdata,

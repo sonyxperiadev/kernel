@@ -33,6 +33,11 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+#endif
+
 #include "plat/chal/chal_types.h"
 #include "plat/chal/chal_common.h"
 #include "plat/chal/chal_keypad.h"
@@ -80,6 +85,10 @@
 
 /* ---- Constants and Types ---------------------------------------------- */
 static void __iomem *bcm_keypad_base_addr;
+
+#ifdef CONFIG_DEBUG_FS
+static struct dentry *keypad_root_dir;
+#endif
 
 #define REG_KEYPAD_KPCR     0x00
 #define REG_KEYPAD_KPIOR    0x04
@@ -129,13 +138,17 @@ typedef struct {
 	CHAL_KEYPAD_REGISTER_SET_t eventQ[BCM_INTERRUPT_EVENT_FIFO_LENGTH];
 } BCM_KEYPAD_INTERRUPT_FIFO_t;	// interrupt event Q - register data from an interrupt to be processed later.
 
+int bcm_keypad_check(void);
 static void bcm_keypad_tasklet(unsigned long);
 /*static void bcm_handle_key_state(struct bcm_keypad *bcm_kb);*/
 DECLARE_TASKLET_DISABLED(kp_tasklet, bcm_keypad_tasklet, 0);
 
+extern unsigned int bcmpmu_get_ponkey_state(void);
+
 static CHAL_HANDLE keypadHandle = NULL;
 static CHAL_KEYPAD_KEY_EVENT_LIST_t keyEventList;
 static BCM_KEYPAD_INTERRUPT_FIFO_t intrFifo;
+static atomic_t check_keypad_pressed;
 
 /* ****************************************************************************** */
 /* Function Name: bcm_keypad_interrupt */
@@ -179,16 +192,35 @@ static void bcm_handle_key(struct bcm_keypad *bcm_kb,
 	/* KeyId is of the form 0xCR where:  C = column number    R = row number 
 	   Use it as index into map structure */
 	unsigned char vk = keymap_p[keyId].key_code;
+	unsigned int keyreadstatus1;
+	unsigned int keyreadstatus2;
+
+	/*
+	   KPSSRx : Keypress status
+	   if scan mode type in KPCR is pull-down : 0-Not pressed, 1-Pressed
+	 */
+	keyreadstatus1 = chal_keypad_config_read_status1();
+	keyreadstatus2 = chal_keypad_config_read_status2();
+
+	pr_debug("[KEYPAD] %s, keyreadstatus1=0x%08x, keyreadstatus2=0x%08x\n",
+		 __func__, keyreadstatus1, keyreadstatus2);
 
 	if (keyAction == CHAL_KEYPAD_KEY_PRESS) {
 		input_report_key(bcm_kb->input_dev, vk, 1);
 		input_sync(bcm_kb->input_dev);
+		atomic_set(&check_keypad_pressed, 1);
 		pr_debug("%s press\n", keymap_p[keyId].name);
 	} else if (keyAction == CHAL_KEYPAD_KEY_RELEASE) {
 		input_report_key(bcm_kb->input_dev, vk, 0);
 		input_sync(bcm_kb->input_dev);
+		atomic_set(&check_keypad_pressed, 0);
 		pr_debug("key release vk=%d\n", vk);
 	}
+}
+
+int bcm_keypad_check(void)
+{
+	return atomic_read(&check_keypad_pressed);
 }
 
 #ifdef _HERA_
@@ -231,6 +263,63 @@ static void bcm_set_keypad_pinmux(void)
 }
 
 #endif
+
+#ifdef CONFIG_DEBUG_FS
+
+static ssize_t bcm_keypad_showkey(struct file *file, char __user * user_buf,
+				  size_t count, loff_t * ppos)
+{
+	uint8_t keys_pressed;
+	int onkey_pressed = 0;
+	unsigned int keyreadstatus1, keyreadstatus2;
+	char buf[256];
+	unsigned long len = 0;
+
+	keyreadstatus1 = chal_keypad_config_read_status1();
+	keyreadstatus2 = chal_keypad_config_read_status2();
+
+	onkey_pressed = bcmpmu_get_ponkey_state();
+
+	/*
+	   KPSSRx : Keypress status
+	   if scan mode type in KPCR is pull-up : 1-Not pressed, 0-Pressed
+	   if scan mode type in KPCR is pull-down : 0-Not pressed, 1-Pressed
+	 */
+	if (keyreadstatus1 || keyreadstatus2 || onkey_pressed)	/* key press */
+		keys_pressed =
+		    (chal_keypad_get_pullup_status(keypadHandle)) ? 0 : 1;
+	else			/* key release */
+		keys_pressed =
+		    (chal_keypad_get_pullup_status(keypadHandle)) ? 1 : 0;
+
+	len += snprintf(buf + len, sizeof(buf) - len,
+			"keyreadstatus1=0x%08x, keyreadstatus2=0x%08x, keys_pressed:%d\n",
+			keyreadstatus1, keyreadstatus2, keys_pressed);
+
+	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
+}
+
+static struct file_operations keypad_getkey_fops = {
+	.read = bcm_keypad_showkey,
+};
+
+static void bcm_keypad_debug_init(void)
+{
+	keypad_root_dir = debugfs_create_dir("bcm_keypad", NULL);
+	if (!keypad_root_dir) {
+		pr_err("Failed to initialize debugfs\n");
+		return;
+	}
+
+	if (!debugfs_create_file("key", S_IRUSR, keypad_root_dir, NULL,
+				 &keypad_getkey_fops)) {
+		pr_err("Failed to setup keypad debug file\n");
+		debugfs_remove(keypad_root_dir);
+	}
+}
+
+#endif // CONFIG_DEBUG_FS
+
 /* ****************************************************************************** */
 /* Function Name: bcm_keypad_probe */
 /* Description: Called to perform module initialization when the module is loaded. */
@@ -312,7 +401,7 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 	hwConfig.interruptEdge = CHAL_KEYPAD_INTERRUPT_BOTH_EDGES;
 	hwConfig.debounceTime = CHAL_KEYPAD_DEBOUNCE_32_ms;
 
-	keypadHandle = chal_keypad_init((cUInt32)bcm_keypad_base_addr);
+	keypadHandle = chal_keypad_init((cUInt32) bcm_keypad_base_addr);
 	// disable all key interrupts
 	chal_keypad_disable_interrupts(keypadHandle);
 	// clear any old interrupts
@@ -361,6 +450,9 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 		     __FUNCTION__, __FILE__, __LINE__);
 		goto free_dev;
 	}
+#ifdef CONFIG_DEBUG_FS
+	bcm_keypad_debug_init();
+#endif
 
 	/* Initialization Finished */
 	BCMKP_DBG(KERN_DEBUG "BCM keypad initialization completed...\n");
@@ -395,6 +487,9 @@ static int __devexit bcm_keypad_remove(struct platform_device *pdev)
 	input_unregister_device(bcm_kb->input_dev);
 	input_free_device(bcm_kb->input_dev);
 
+#ifdef CONFIG_DEBUG_FS
+	debugfs_remove_recursive(keypad_root_dir);
+#endif
 	return 0;
 }
 

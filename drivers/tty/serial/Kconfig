@@ -1635,4 +1635,11 @@ config SERIAL_XILINX_PS_UART_CONSOLE
 	help
 	  Enable a Xilinx PS UART port to be the system console.
 
+config SERIAL_SPI
+        bool "Enable spi device interface for Panda"
+        default n
+        depends on RHEA_PANDA=y
+        help
+          Enables serial SPI inerface for Panda.
+
 endmenu

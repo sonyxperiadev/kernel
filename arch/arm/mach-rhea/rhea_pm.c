@@ -37,6 +37,9 @@
 
 #include "pm_params.h"
 
+static int keep_xtl_on;
+module_param_named(keep_xtl_on, keep_xtl_on, int, S_IRUGO|S_IWUSR|S_IWGRP);
+
 
 #if defined(DEBUG)
 #define pm_dbg printk
@@ -352,7 +355,7 @@ int enter_idle_state(struct kona_idle_state *state)
 	pwr_mgr_event_clear_events(USBOTG_EVENT,MODEMBUS_ACTIVE_EVENT);
 
 	/*Turn off XTAL only for deep sleep state*/
-	if (state->flags & CPUIDLE_FLAG_XTAL_ON)
+	if (state->flags & CPUIDLE_FLAG_XTAL_ON || keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(false);
 
 	clear_wakeup_interrupts();
@@ -506,7 +509,7 @@ int enter_idle_state(struct kona_idle_state *state)
 	//pwr_mgr_event_clear_events(USBOTG_EVENT,MODEMBUS_ACTIVE_EVENT);
 
 
-	if (state->flags & CPUIDLE_FLAG_XTAL_ON)
+	if (state->flags & CPUIDLE_FLAG_XTAL_ON || keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(true);
 	return -1;
 }

@@ -54,7 +54,7 @@
 #define MASTERCODE_MASK          0x07
 
 #define BSC_DBG(dev, format, args...) \
-   do { if (dev->debug) dev_err(dev->device, format, ## args); } while (0)
+	do { if (dev->debug) dev_err(dev->device, format, ## args); } while (0)
 
 #define MAX_PROC_BUF_SIZE         256
 #define MAX_PROC_NAME_SIZE        15
@@ -86,7 +86,8 @@ struct bsc_i2c_dev {
 	/* Current I2C bus speed configured */
 	enum bsc_bus_speed current_speed;
 
-	/* flag to support dynamic bus speed configuration for multiple slaves */
+	/* flag to support dynamic bus speed configuration for multiple
+	 * slaves */
 	int dynamic_speed;
 
 	/* flag for TX/RX FIFO support */
@@ -124,8 +125,8 @@ struct bsc_i2c_dev {
 	struct completion rx_ready;
 
 	/*
-	 *to signal the TX FIFO is empty, which means all pending TX data has been
-	 *sent out and received by the slave
+	 * to signal the TX FIFO is empty, which means all pending TX data has
+	 * been sent out and received by the slave
 	 */
 	struct completion tx_fifo_empty;
 
@@ -144,7 +145,7 @@ struct bsc_i2c_dev {
 };
 
 static const __devinitconst char gBanner[] =
-    KERN_INFO "Broadcom BSC (I2C) Driver\n";
+	KERN_INFO "Broadcom BSC (I2C) Driver\n";
 
 /*
  * Bus speed lookup table
@@ -158,6 +159,10 @@ static const unsigned int gBusSpeedTable[BSC_SPD_MAXIMUM] = {
 	BSC_SPD_400K,
 	BSC_SPD_430K,
 	BSC_SPD_HS,
+	BSC_SPD_HS_1MHZ,
+	BSC_SPD_HS_2MHZ,
+	BSC_SPD_HS_1625KHZ,
+	BSC_SPD_HS_2600KHZ,
 	BSC_SPD_100K_FPGA,
 	BSC_SPD_400K_FPGA,
 	BSC_SPD_HS_FPGA,
@@ -168,6 +173,7 @@ static struct proc_dir_entry *gProcParent;
 static void bsc_put_clk(struct bsc_i2c_dev *dev);
 static int bsc_enable_clk(struct bsc_i2c_dev *dev);
 static void bsc_disable_clk(struct bsc_i2c_dev *dev);
+static void i2c_pin_cfg(int id, unsigned char slewed);
 
 /*
  * BSC ISR routine
@@ -197,7 +203,8 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 		/*  should not clear status until figure out what's going on */
 
 		/*
-		 * For Mastercode, NAK is expected as per HS protocol, it's not error
+		 * For Mastercode, NAK is expected as per HS protocol, it's
+		 * not error
 		 */
 		if (dev->high_speed_mode && dev->is_mastercode)
 			dev->is_mastercode = false;
@@ -254,7 +261,7 @@ static int bsc_wait_cmdbusy(struct bsc_i2c_dev *dev)
 
 	/* wait for CMDBUSY is ready  */
 	limit = (loops_per_jiffy * msecs_to_jiffies(CMDBUSY_DELAY));
-	while ((bsc_read_intr_status((uint32_t)dev->virt_base) &
+	while ((bsc_read_intr_status((uint32_t) dev->virt_base) &
 		I2C_MM_HS_ISR_CMDBUSY_MASK) && (time++ < limit))
 		cpu_relax();
 
@@ -449,7 +456,7 @@ static unsigned int bsc_xfer_read_fifo_single(struct bsc_i2c_dev *dev,
 	return len;
 }
 
-static unsigned int bsc_xfer_read_fifo(struct bsc_i2c_dev *dev, uint8_t *buf,
+static unsigned int bsc_xfer_read_fifo(struct bsc_i2c_dev *dev, uint8_t * buf,
 				       unsigned int len)
 {
 	unsigned int i, rc, last_byte_nak = 0, bytes_read = 0;
@@ -694,7 +701,8 @@ static int bsc_xfer_do_addr(struct i2c_adapter *adapter, struct i2c_msg *msg)
 
 	/* ten bit address */
 	if (flags & I2C_M_TEN) {
-		/* first byte is 11110XX0, where XX is the upper 2 bits of the 10 bits */
+		/* first byte is 11110XX0, where XX is the upper 2 bits of the
+		 * 10 bits */
 		addr = 0xF0 | ((msg->addr & 0x300) >> 7);
 		rc = bsc_xfer_try_address(adapter, addr, nak_ok, retries);
 		if (rc < 0)
@@ -712,7 +720,8 @@ static int bsc_xfer_do_addr(struct i2c_adapter *adapter, struct i2c_msg *msg)
 			if (rc < 0)
 				return -EREMOTEIO;
 
-			/* okay, now re-send the first 7 bits with the read bit */
+			/* okay, now re-send the first 7 bits with the read
+			 * bit */
 			addr = 0xF0 | ((msg->addr & 0x300) >> 7);
 			addr |= 0x01;
 			rc = bsc_xfer_try_address(adapter, addr, nak_ok,
@@ -792,14 +801,10 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 	/* configure the bsc clock to 26MHz for HS mode */
 	if (dev->bsc_clk) {
 		clk_disable(dev->bsc_clk);
-		/* If PMU I2C, 26MHz source is used */
-		if (hw_cfg && hw_cfg->is_pmu_i2c)
-			clk_set_rate(dev->bsc_clk, 26000000);
-		else
-			clk_set_rate(dev->bsc_clk, 104000000);
-
+		/* Use 26MHz source for all HS clients */
+		clk_set_rate(dev->bsc_clk, 26000000);
 		clk_enable(dev->bsc_clk);
-		dev_err(dev->device, "HS mode clock rate is set to %ld\n",
+		dev_info(dev->device, "HS mode clock rate is set to %ld\n",
 			clk_get_rate(dev->bsc_clk));
 	}
 
@@ -808,9 +813,11 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 			 I2C_MM_HS_IER_ERR_INT_EN_MASK);
 	bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
 
+	/* Disable the slew rate for high speed */
+	i2c_pin_cfg(adapter->nr, 0);
 	/* configure the bus into high-speed mode */
 	bsc_start_highspeed((uint32_t) dev->virt_base);
-	dev_err(dev->device, "Adapter is switched to HS mode\n");
+	dev_info(dev->device, "Adapter is switched to HS mode\n");
 
 	return 0;
 }
@@ -821,6 +828,9 @@ static void stop_high_speed_mode(struct i2c_adapter *adapter)
 
 	/* Restore TIM register value */
 	bsc_set_tim((uint32_t) dev->virt_base, dev->tim_val);
+
+	/* Enable the slew rate if setting it back to FS mode */
+	i2c_pin_cfg(adapter->nr, 1);
 
 	/* stop hs clock and switch back to F/S clock source */
 	if (dev->bsc_clk) {
@@ -900,7 +910,7 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 	}
 
 	/* check for high speed */
-	if (set_speed == BSC_BUS_SPEED_HS || set_speed == BSC_BUS_SPEED_HS_FPGA)
+	if (set_speed >= BSC_BUS_SPEED_HS && set_speed <= BSC_BUS_SPEED_HS_FPGA)
 		dev->high_speed_mode = 1;
 	else
 		dev->high_speed_mode = 0;
@@ -909,13 +919,9 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 
 	/* configure the adapter bus speed */
 	if (set_speed != dev->current_speed) {
-		/* PMU I2C HSTIM is calculated based on 26MHz source */
-		if (hw_cfg->is_pmu_i2c)
-			bsc_set_bus_speed((uint32_t) dev->virt_base,
-					  gBusSpeedTable[set_speed], true);
-		else
-			bsc_set_bus_speed((uint32_t) dev->virt_base,
-					  gBusSpeedTable[set_speed], false);
+		/* HSTIM is calculated based on 26MHz source */
+		bsc_set_bus_speed((uint32_t) dev->virt_base,
+				  gBusSpeedTable[set_speed]);
 		dev->current_speed = set_speed;
 	}
 
@@ -926,8 +932,9 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 				 I2C_MM_HS_IER_ERR_INT_EN_MASK);
 
 		/*
-		 * Auto-sense allows the slave device to stretch the clock for a long
-		 *time. Need to turn off auto-sense for high-speed mode
+		 * Auto-sense allows the slave device to stretch the clock for
+		 * for a long time. Need to turn off auto-sense for high-speed
+		 * mode
 		 */
 		bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
 	} else {
@@ -935,10 +942,11 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 		bsc_enable_intr((uint32_t) dev->virt_base,
 				I2C_MM_HS_IER_ERR_INT_EN_MASK);
 
-		/* In case of the Keypad controller LM8325, the maximum timeout set
-		 *by the BSC controller does not suffice the time for which it holds
-		 *the clk line low when busy resulting in bus errors. To overcome this
-		 *problem we need ot enable autosense with the timeout disabled */
+		/* In case of the Keypad controller LM8325, the maximum timeout
+		 * set by the BSC controller does not suffice the time for
+		 * which it holds the clk line low when busy resulting in bus
+		 * errors. To overcome this problem we need ot enable autosense
+		 * with the timeout disabled */
 		if (pd && TIMEOUT_IS_VALID(pd) && !pd->autosense_timeout_enable)
 			bsc_set_autosense((uint32_t) dev->virt_base, 1, 0);
 		else
@@ -989,8 +997,8 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	if (hw_cfg && !(hw_cfg->speed != BSC_BUS_SPEED_HS))
 		bsc_set_autosense((uint32_t) dev->virt_base, 1, 1);
 
-	/* send start command, if its not PMU in HS mode */
-	if (!(dev->high_speed_mode && hw_cfg && hw_cfg->is_pmu_i2c)) {
+	/* send start command, if its not in HS mode */
+	if (!(dev->high_speed_mode && hw_cfg)) {
 		rc = bsc_xfer_start(adapter);
 		if (rc < 0) {
 			dev_err(dev->device, "start command failed\n");
@@ -1067,7 +1075,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	}
 
 	/* send stop command, if not PMU in HS mode */
-	if (!(dev->high_speed_mode && hw_cfg && hw_cfg->is_pmu_i2c)) {
+	if (hw_cfg && !hw_cfg->is_pmu_i2c) {
 		rc = bsc_xfer_stop(adapter);
 		if (rc < 0)
 			dev_err(dev->device, "stop command failed\n");
@@ -1087,7 +1095,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	mutex_unlock(&dev->dev_lock);
 	return (rc < 0) ? rc : num;
 
-      hs_ret:
+hs_ret:
 
 	/* Here we should not code such as rc = bsc_xfer_stop(), since it would
 	 *change the value of rc, which need to be passed to the caller */
@@ -1102,12 +1110,11 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	else
 		bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
 
-      err_ret:
+err_ret:
 	bsc_disable_clk(dev);
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
-	if (rel_hw_sem) {
+	if (rel_hw_sem)
 		pwr_mgr_pm_i2c_sem_unlock();
-	}
 #endif
 	mutex_unlock(&dev->dev_lock);
 	return rc;
@@ -1125,7 +1132,7 @@ static struct i2c_algorithm bsc_algo = {
 };
 
 static int
-proc_debug_write(struct file *file, const char __user *buffer,
+proc_debug_write(struct file *file, const char __user * buffer,
 		 unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1172,7 +1179,7 @@ proc_debug_read(char *buffer, char **start, off_t off, int count,
 }
 
 static int
-proc_reset_write(struct file *file, const char __user *buffer,
+proc_reset_write(struct file *file, const char __user * buffer,
 		 unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1204,7 +1211,7 @@ proc_reset_write(struct file *file, const char __user *buffer,
 }
 
 static int
-proc_tx_fifo_write(struct file *file, const char __user *buffer,
+proc_tx_fifo_write(struct file *file, const char __user * buffer,
 		   unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1246,14 +1253,14 @@ proc_tx_fifo_read(char *buffer, char **start, off_t off, int count,
 		return 0;
 
 	len += sprintf(buffer + len, "TX FIFO is %s\n",
-		       atomic_read(&dev->
-				   tx_fifo_support) ? "enabled" : "disabled");
+		       atomic_read(&dev->tx_fifo_support) ? "enabled" :
+		       "disabled");
 
 	return len;
 }
 
 static int
-proc_rx_fifo_write(struct file *file, const char __user *buffer,
+proc_rx_fifo_write(struct file *file, const char __user * buffer,
 		   unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1295,8 +1302,8 @@ proc_rx_fifo_read(char *buffer, char **start, off_t off, int count,
 		return 0;
 
 	len += sprintf(buffer + len, "RX FIFO is %s\n",
-		       atomic_read(&dev->
-				   rx_fifo_support) ? "enabled" : "disabled");
+		       atomic_read(&dev->rx_fifo_support) ? "enabled" :
+		       "disabled");
 
 	return len;
 }
@@ -1355,16 +1362,16 @@ static int proc_init(struct platform_device *pdev)
 
 	return 0;
 
-      err_del_tx_fifo:
+err_del_tx_fifo:
 	remove_proc_entry(PROC_ENTRY_TX_FIFO, proc->parent);
 
-      err_del_reset:
+err_del_reset:
 	remove_proc_entry(PROC_ENTRY_RESET, proc->parent);
 
-      err_del_debug:
+err_del_debug:
 	remove_proc_entry(PROC_ENTRY_DEBUG, proc->parent);
 
-      err_del_parent:
+err_del_parent:
 	remove_proc_entry(proc->name, gProcParent);
 	return rc;
 }
@@ -1389,7 +1396,8 @@ static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
 
 	if (cfg->bsc_apb_clk) {
 		dev->bsc_apb_clk = clk_get(dev->device, cfg->bsc_apb_clk);
-		/* AON domain clocks may be enabled by default, need to disable */
+		/* AON domain clocks may be enabled by default, need to
+		 * disable */
 		clk_disable(dev->bsc_apb_clk);
 		if (!dev->bsc_apb_clk)
 			return -EINVAL;
@@ -1397,7 +1405,8 @@ static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
 
 	if (cfg->bsc_clk) {
 		dev->bsc_clk = clk_get(dev->device, cfg->bsc_clk);
-		/* AON domain clocks may be enabled by default, need to disable */
+		/* AON domain clocks may be enabled by default, need to
+		 * disable */
 		clk_disable(dev->bsc_clk);
 		if (!dev->bsc_clk)
 			return -EINVAL;
@@ -1566,6 +1575,9 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		if (rc)
 			goto err_free_dev_mem;
 
+		/* Set the clock rate to 13MHZ before enabling it */
+		clk_set_rate(dev->bsc_clk, 13000000);
+
 		rc = bsc_enable_clk(dev);
 		if (rc)
 			goto err_free_clk;
@@ -1586,9 +1598,10 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		goto err_disable_clk;
 	}
 
-	/* high speed */
-	if (dev->speed == BSC_BUS_SPEED_HS
-	    || dev->speed == BSC_BUS_SPEED_HS_FPGA)
+	/* high speed - For any speed defined between BSC_BUS_SPEED_HS
+     * & BSC_BUS_SPEED_HS_FPGA */
+	if (dev->speed >= BSC_BUS_SPEED_HS
+	    && dev->speed <= BSC_BUS_SPEED_HS_FPGA)
 		dev->high_speed_mode = 1;
 	else
 		dev->high_speed_mode = 0;
@@ -1613,14 +1626,10 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
 	/*
 	 * Configure BSC timing registers
-	 * If PMU I2C - hs timing is calculated based on 26MHz source, else 104MHz
+	 * HS timing is calculated based on 26MHz source
 	 */
-	if (hw_cfg && hw_cfg->is_pmu_i2c)
-		bsc_set_bus_speed((uint32_t) dev->virt_base,
-				  gBusSpeedTable[dev->speed], true);
-	else
-		bsc_set_bus_speed((uint32_t) dev->virt_base,
-				  gBusSpeedTable[dev->speed], false);
+	bsc_set_bus_speed((uint32_t) dev->virt_base,
+			  gBusSpeedTable[dev->speed]);
 
 	/* curent speed configured */
 	dev->current_speed = dev->speed;
@@ -1635,14 +1644,11 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
 
 	/* high-speed mode */
-	if (dev->speed == BSC_BUS_SPEED_HS) {
-		dev->high_speed_mode = 1;
+	if (dev->high_speed_mode) {
 		pr_debug("disable slew rate  for id = %d\n", pdev->id);
 		i2c_pin_cfg(pdev->id, 0);
 
 	} else {
-		dev->high_speed_mode = 0;
-
 		pr_debug("enable slew rate  for id = %d\n", pdev->id);
 		i2c_pin_cfg(pdev->id, 1);
 
@@ -1694,8 +1700,8 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* PMU I2C: Switch to HS mode once. This is a workaround needed for
 	 * Power manager sequencer to function properly.
 	 *
-	 * PMU adapter will always be in HS, dont switch back to F/S until reboot
-	 *
+	 * PMU adapter will always be in HS, dont switch back to F/S until
+	 * reboot
 	 */
 	if (dev->high_speed_mode && hw_cfg && hw_cfg->is_pmu_i2c) {
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
@@ -1706,7 +1712,8 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 			goto err_proc_term;
 		}
 #endif
-		/* Enable autosense, will be turned off on successful transition to HS */
+		/* Enable autosense, will be turned off on successful
+		 * transition to HS */
 		bsc_enable_intr((uint32_t) dev->virt_base,
 				I2C_MM_HS_IER_ERR_INT_EN_MASK);
 		bsc_set_autosense((uint32_t) dev->virt_base, 1, 1);
@@ -1728,21 +1735,21 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	bsc_disable_clk(dev);
 	return 0;
 
-      err_hw_sem:
+err_hw_sem:
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 	pwr_mgr_pm_i2c_sem_unlock();
 #endif
-      err_proc_term:
+err_proc_term:
 	proc_term(pdev);
 
-      err_free_irq:
+err_free_irq:
 	free_irq(dev->irq, dev);
 
-      err_destroy_wq:
+err_destroy_wq:
 	if (dev->reset_wq)
 		destroy_workqueue(dev->reset_wq);
 
-      err_bsc_deinit:
+err_bsc_deinit:
 	bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
 	bsc_deinit((uint32_t) dev->virt_base);
 
@@ -1750,18 +1757,18 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, NULL);
 
-      err_disable_clk:
+err_disable_clk:
 	bsc_disable_clk(dev);
 
-      err_free_clk:
+err_free_clk:
 	bsc_put_clk(dev);
 
-      err_free_dev_mem:
+err_free_dev_mem:
 	kfree(dev);
 
-      err_release_mem_region:
+err_release_mem_region:
 	release_mem_region(iomem->start, resource_size(iomem));
-	printk(KERN_ERR "I2C bus %d probe failed\n", pdev->id);
+	dev_err(dev->device, "I2C bus %d probe failed\n", pdev->id);
 	return rc;
 }
 
@@ -1772,8 +1779,7 @@ static int bsc_remove(struct platform_device *pdev)
 	struct bsc_adap_cfg *hw_cfg = NULL;
 
 	/* If Adapter in HS(PMU BSC) Switch to f/s speed and send STOP */
-	if (dev->high_speed_mode && hw_cfg
-	    && (hw_cfg->speed == BSC_BUS_SPEED_HS))
+	if (dev->high_speed_mode && hw_cfg)
 		shutdown_high_speed_mode_adap(dev);
 
 	i2c_del_adapter(&dev->adapter);
@@ -1807,7 +1813,8 @@ static int bsc_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
 
-	/* flush the workqueue to make sure all outstanding work items are done */
+	/* flush the workqueue to make sure all outstanding work items are
+	 * done */
 	flush_workqueue(dev->reset_wq);
 
 	/* grab lock to prevent further I2C transactions */
