@@ -2117,11 +2117,15 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 			pcmCfg.protocol = CSL_PCM_PROTOCOL_MONO;
 			pcmCfg.format = CSL_PCM_WORD_LENGTH_PACK_16_BIT;
 
-
 			/*this is unpacked 16bit, 32bit per sample with msb =0*/
 			if (path->source == CSL_CAPH_DEV_DSP ||
 				path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
+#if defined(ENABLE_BT16)
+				pcmCfg.format =
+					CSL_PCM_WORD_LENGTH_PACK_16_BIT;
+#else
 				pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT;
+#endif
 			else if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR &&
 				path->source == CSL_CAPH_DEV_BT_MIC)
 				pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
@@ -2297,51 +2301,17 @@ static void csl_caph_start_blocks
 				csl_caph_intc_enable_pcm_intr
 				(CSL_CAPH_DSP, sspidPcmUse);
 #endif
-			if ((path->source == CSL_CAPH_DEV_DSP) ||
-				(path->sink[sinkNo] == CSL_CAPH_DEV_DSP)) {
-#if defined(ENABLE_DMA_VOICE)
-				/*dma sequence will divert from non-dma
-				 * eventually, hence make 2 copies.
-				 */
-				if (!sspTDM_enabled)
-					csl_pcm_enable_scheduler
-						(pcmHandleSSP, TRUE);
-				csl_pcm_start_tx
-					(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-				/*csl_pcm_start_rx(pcmHandleSSP,
-				 * CSL_PCM_CHAN_RX0);
-				 */
-#else
-				if (!sspTDM_enabled)
-					csl_pcm_enable_scheduler
-						(pcmHandleSSP, TRUE);
-				csl_pcm_start_tx
-					(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-				/*csl_pcm_start_rx(pcmHandleSSP,
-				 * CSL_PCM_CHAN_RX0);
-				 */
-				/*csl_pcm_start(pcmHandleSSP,
-				 * &pcmCfg);
-				 */
-#endif
-			} else { /* non dsp case */
-			if (sspTDM_enabled) {
-				/* should seperate later */
-				csl_pcm_start_tx(pcmHandleSSP,
-					CSL_PCM_CHAN_TX0);
-				csl_pcm_start_rx(pcmHandleSSP,
-					CSL_PCM_CHAN_RX0);
-			} else
-				csl_pcm_start(pcmHandleSSP, &pcmCfg);
-			}
-		} else if (!pcmRxRunning &&
-			path->sink[sinkNo] != CSL_CAPH_DEV_DSP &&
-			path->source == CSL_CAPH_DEV_BT_MIC) {
-			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-		} else if (!pcmTxRunning &&
-			path->source == CSL_CAPH_DEV_BT_SPKR) {
-			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+			if (!sspTDM_enabled)
+				csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
 		}
+
+		if (!pcmRxRunning && path->sink[sinkNo] != CSL_CAPH_DEV_DSP &&
+		    path->source == CSL_CAPH_DEV_BT_MIC)
+			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+		else if (!pcmTxRunning &&
+			path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR)
+			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+
 		if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR)
 			pcmTxRunning = TRUE;
 		if (path->source == CSL_CAPH_DEV_BT_MIC)

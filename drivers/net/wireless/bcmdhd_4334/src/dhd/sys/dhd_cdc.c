@@ -2203,6 +2203,9 @@ dhd_wlfc_cleanup(dhd_pub_t *dhd)
 	for (i = 0; i < h->max_items; i++) {
 		if (h->items[i].state == WLFC_HANGER_ITEM_STATE_INUSE) {
 			PKTFREE(wlfc->osh, h->items[i].pkt, TRUE);
+			h->items[i].state = WLFC_HANGER_ITEM_STATE_FREE;
+			h->items[i].pkt = NULL;
+			h->items[i].identifier = 0;
 		}
 	}
 	return;

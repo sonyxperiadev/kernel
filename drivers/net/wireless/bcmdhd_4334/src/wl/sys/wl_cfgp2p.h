@@ -44,10 +44,11 @@ typedef enum {
 } p2p_bsscfg_type_t;
 
 #define IE_MAX_LEN 300
+#define P2P_RES_MAX_LEN 1400
 /* Structure to hold all saved P2P and WPS IEs for a BSSCFG */
 struct p2p_saved_ie {
 	u8  p2p_probe_req_ie[IE_MAX_LEN];
-	u8  p2p_probe_res_ie[IE_MAX_LEN];
+	u8  p2p_probe_res_ie[P2P_RES_MAX_LEN];
 	u8  p2p_assoc_req_ie[IE_MAX_LEN];
 	u8  p2p_assoc_res_ie[IE_MAX_LEN];
 	u8  p2p_beacon_ie[IE_MAX_LEN];

@@ -58,6 +58,8 @@ int setScheduler(struct task_struct *p, int policy, struct sched_param *param);
 #include <wlioctl.h>
 #include <wlfc_proto.h>
 
+// For dual support of WCN3660 and BCM4334
+#undef CONFIG_WIRELESS_EXT
 
 /* Forward decls */
 struct dhd_bus;
@@ -625,7 +627,11 @@ extern uint dhd_sdiod_drive_strength;
 /* Override to force tx queueing all the time */
 extern uint dhd_force_tx_queueing;
 /* Default KEEP_ALIVE Period is 55 sec to prevent AP from sending Keep Alive probe frame */
+#ifdef KEEP_ALIVE_PACKET_PERIOD_30_SEC
+#define KEEP_ALIVE_PERIOD 30000
+#else /* KEEP_ALIVE_PACKET_PERIOD_30_SEC */
 #define KEEP_ALIVE_PERIOD 55000
+#endif /* KEEP_ALIVE_PACKET_PERIOD_30_SEC */
 #define NULL_PKT_STR	"null_pkt"
 
 #ifdef SDTEST
@@ -821,5 +827,10 @@ void dhd_aoe_arp_clr(dhd_pub_t *dhd);
 int dhd_arp_get_arp_hostip_table(dhd_pub_t *dhd, void *buf, int buflen);
 void dhd_arp_offload_add_ip(dhd_pub_t *dhd, uint32 ipaddr);
 #endif /* ARP_OFFLOAD_SUPPORT */
+
+#ifdef RDWR_KORICS_MACADDR
+extern int
+dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac);
+#endif
 
 #endif /* _dhd_h_ */

@@ -7,9 +7,8 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                     \
         -DMMC_SDIO_ABORT -DBCMSDIO -DBCMLXSDMMC -DBCMPLATFORM_BUS -DWLP2P     \
         -DNEW_COMPAT_WIRELESS -DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT          \
         -DKEEP_ALIVE -DCSCAN -DPKT_FILTER_SUPPORT                             \
-        -DEMBEDDED_PLATFORM -DPNO_SUPPORT \
-	 -DCUSTOMER_HW3
-	 
+        -DEMBEDDED_PLATFORM -DPNO_SUPPORT
+
 # distinguish between the 43xx chip
 ifeq ($(CONFIG_BCM4334),m)
 DHDCFLAGS += -DBCM4334_CHIP -DHW_OOB -DBCM4334_CHECK_CHIP_REV
@@ -141,39 +140,6 @@ ifeq ($(SEC_MODEL_NAME),U1)
          endif
 endif
 
-
-ifeq ($(CONFIG_MACH_RHEA_RAY_EDN2X),y)
-DHDCFLAGS += -UHW_OOB -UUSE_CID_CHECK
-DHDCFLAGS += -DBCM4334_CHIP -DBCM4334_CHECK_CHIP_REV -DCONFIG_CONTROL_PM -DCONFIG_DHD_USE_STATIC_BUF
-DHDCFLAGS += -DRDWR_MACADDR
-DHDCFLAGS += -DCUSTOM_OOB_GPIO_NUM=85
-endif
-
-
-
-
-ifeq ($(CONFIG_MACH_RHEA_STONE),y)
-DHDCFLAGS += -UHW_OOB -UUSE_CID_CHECK
-DHDCFLAGS += -DBCM4334_CHIP -DBCM4334_CHECK_CHIP_REV -DCONFIG_CONTROL_PM -DCONFIG_DHD_USE_STATIC_BUF
-DHDCFLAGS += -DRDWR_MACADDR
-DHDCFLAGS += -DCUSTOM_OOB_GPIO_NUM=74
-
-endif
-
-ifeq ($(CONFIG_MACH_RHEA_STONE_EDN2X),y)
-DHDCFLAGS += -UHW_OOB -UUSE_CID_CHECK
-DHDCFLAGS += -DBCM4334_CHIP -DBCM4334_CHECK_CHIP_REV -DCONFIG_CONTROL_PM -DCONFIG_DHD_USE_STATIC_BUF
-DHDCFLAGS += -DRDWR_MACADDR
-DHDCFLAGS += -DCUSTOM_OOB_GPIO_NUM=74
-
-DHDCFLAGS += -DPROP_TXSTATUS
-DHDCFLAGS += -DVSDB -DHT40_GO
-DHDCFLAGS += -DWL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
-DHDCFLAGS += -DDHD_USE_IDLECOUNT
-
-endif
-
-
 # For Debug
 EXTRA_CFLAGS += $(DHDCFLAGS) -DWL_CFG80211 -DRSSI_OFFSET=0
 EXTRA_CFLAGS += -DDHD_DEBUG -DSRCBASE=\"$(src)/src\"
@@ -183,16 +149,16 @@ EXTRA_CFLAGS += -I$(src)/src/dhd/sys/
 EXTRA_CFLAGS += -I$(src)/src/dongle/
 EXTRA_CFLAGS += -I$(src)/src/bcmsdio/sys/
 EXTRA_CFLAGS += -I$(src)/src/wl/sys/
-EXTRA_CFLAGS += -I$(src)/src/wl/bcmwifi/include /
-EXTRA_CFLAGS += -I$(src)/src/wl/bcmwifi/src /
 EXTRA_CFLAGS += -I$(src)/src/shared/
+EXTRA_CFLAGS += -I$(src)/src/wl/bcmwifi/src/
+EXTRA_CFLAGS += -I$(src)/src/wl/bcmwifi/include/
 
 EXTRA_LDFLAGS += --strip-debug
 KBUILD_CFLAGS += -I$(LINUXDIR)/include -I$(shell pwd)
 
-#obj-m   += dhd.o
+obj-m   += dhd.o
 
-DHDOFILES = src/bcmsdio/sys/bcmsdh.o	src/bcmsdio/sys/bcmsdh_linux.o \
+dhd-y := src/bcmsdio/sys/bcmsdh.o	src/bcmsdio/sys/bcmsdh_linux.o \
 	 src/bcmsdio/sys/bcmsdh_sdmmc.o	src/bcmsdio/sys/bcmsdh_sdmmc_linux.o \
 	 src/dhd/sys/dhd_bta.o		src/dhd/sys/dhd_cdc.o \
 	 src/dhd/sys/dhd_common.o	src/dhd/sys/dhd_custom_gpio.o \
@@ -206,10 +172,6 @@ DHDOFILES = src/bcmsdio/sys/bcmsdh.o	src/bcmsdio/sys/bcmsdh_linux.o \
 	 src/wl/sys/wl_android.o	src/wl/sys/wl_cfg80211.o \
 	 src/wl/sys/wl_cfgp2p.o		src/wl/sys/wldev_common.o \
 	 src/wl/sys/wl_linux_mon.o	src/wl/sys/wl_roam.o
-
-
-obj-$(CONFIG_BCMDHD_4334) += bcmdhd.o
-bcmdhd-objs += $(DHDOFILES)
 
 all:
 	@echo "$(MAKE) --no-print-directory -C $(KDIR) SUBDIRS=$(CURDIR) modules"
