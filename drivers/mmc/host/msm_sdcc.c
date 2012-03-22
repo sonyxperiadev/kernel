@@ -135,6 +135,7 @@ msmsdcc_start_command(struct msmsdcc_host *host, struct mmc_command *cmd,
 static inline void msmsdcc_delay(struct msmsdcc_host *host);
 static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host);
 static int msmsdcc_vreg_reset(struct msmsdcc_host *host);
+static void msmsdcc_sg_start(struct msmsdcc_host *host);
 
 static inline unsigned short msmsdcc_get_nr_sg(struct msmsdcc_host *host)
 {
@@ -1049,8 +1050,6 @@ msmsdcc_start_data(struct msmsdcc_host *host, struct mmc_data *data,
 	host->curr.got_dataend = 0;
 	host->curr.got_auto_prog_done = 0;
 
-	memset(&host->pio, 0, sizeof(host->pio));
-
 	datactrl = MCI_DPSM_ENABLE | (data->blksz << 4);
 
 	if (host->curr.wait_for_auto_prog_done)
@@ -1085,10 +1084,6 @@ msmsdcc_start_data(struct msmsdcc_host *host, struct mmc_data *data,
 
 	/* Is data transfer in PIO mode required? */
 	if (!(datactrl & MCI_DPSM_DMAENABLE)) {
-		host->pio.sg = data->sg;
-		host->pio.sg_len = data->sg_len;
-		host->pio.sg_off = 0;
-
 		if (data->flags & MMC_DATA_READ) {
 			pio_irqmask = MCI_RXFIFOHALFFULLMASK;
 			if (host->curr.xfer_remain < MCI_FIFOSIZE)
@@ -1096,6 +1091,8 @@ msmsdcc_start_data(struct msmsdcc_host *host, struct mmc_data *data,
 		} else
 			pio_irqmask = MCI_TXFIFOHALFEMPTYMASK |
 					MCI_TXFIFOEMPTYMASK;
+
+		msmsdcc_sg_start(host);
 	}
 
 	if (data->flags & MMC_DATA_READ)
@@ -1255,12 +1252,153 @@ msmsdcc_pio_write(struct msmsdcc_host *host, char *buffer,
 	return ptr - buffer;
 }
 
+/*
+ * Copy up to a word (4 bytes) between a scatterlist
+ * and a temporary bounce buffer when the word lies across
+ * two pages. The temporary buffer can then be read to/
+ * written from the FIFO once.
+ */
+static void _msmsdcc_sg_consume_word(struct msmsdcc_host *host)
+{
+	struct msmsdcc_pio_data *pio = &host->pio;
+	unsigned int bytes_avail;
+
+	if (host->curr.data->flags & MMC_DATA_READ)
+		memcpy(pio->sg_miter.addr, pio->bounce_buf,
+		       pio->bounce_buf_len);
+	else
+		memcpy(pio->bounce_buf, pio->sg_miter.addr,
+		       pio->bounce_buf_len);
+
+	while (pio->bounce_buf_len != 4) {
+		if (!sg_miter_next(&pio->sg_miter))
+			break;
+		bytes_avail = min_t(unsigned int, pio->sg_miter.length,
+			4 - pio->bounce_buf_len);
+		if (host->curr.data->flags & MMC_DATA_READ)
+			memcpy(pio->sg_miter.addr,
+			       &pio->bounce_buf[pio->bounce_buf_len],
+			       bytes_avail);
+		else
+			memcpy(&pio->bounce_buf[pio->bounce_buf_len],
+			       pio->sg_miter.addr, bytes_avail);
+
+		pio->sg_miter.consumed = bytes_avail;
+		pio->bounce_buf_len += bytes_avail;
+	}
+}
+
+/*
+ * Use sg_miter_next to return as many 4-byte aligned
+ * chunks as possible, using a temporary 4 byte buffer
+ * for alignment if necessary
+ */
+static int msmsdcc_sg_next(struct msmsdcc_host *host, char **buf, int *len)
+{
+	struct msmsdcc_pio_data *pio = &host->pio;
+	unsigned int length, rlength;
+	char *buffer;
+
+	if (!sg_miter_next(&pio->sg_miter))
+		return 0;
+
+	buffer = pio->sg_miter.addr;
+	length = pio->sg_miter.length;
+
+	if (length < host->curr.xfer_remain) {
+		rlength = round_down(length, 4);
+		if (rlength) {
+			/*
+			 * We have a 4-byte aligned chunk.
+			 * The rounding will be reflected by
+			 * a call to msmsdcc_sg_consumed
+			 */
+			length = rlength;
+			goto sg_next_end;
+		}
+		/*
+		 * We have a length less than 4 bytes. Check to
+		 * see if more buffer is available, and combine
+		 * to make 4 bytes if possible.
+		 */
+		pio->bounce_buf_len = length;
+		memset(pio->bounce_buf, 0, 4);
+
+		/*
+		 * On a read, get 4 bytes from FIFO, and distribute
+		 * (4-bouce_buf_len) bytes into consecutive
+		 * sgl buffers when msmsdcc_sg_consumed is called
+		 */
+		if (host->curr.data->flags & MMC_DATA_READ) {
+			buffer = pio->bounce_buf;
+			length = 4;
+			goto sg_next_end;
+		} else {
+			_msmsdcc_sg_consume_word(host);
+			buffer = pio->bounce_buf;
+			length = pio->bounce_buf_len;
+		}
+	}
+
+sg_next_end:
+	*buf = buffer;
+	*len = length;
+	return 1;
+}
+
+/*
+ * Update sg_miter.consumed based on how many bytes were
+ * consumed. If the bounce buffer was used to read from FIFO,
+ * redistribute into sgls.
+ */
+static void msmsdcc_sg_consumed(struct msmsdcc_host *host,
+				unsigned int length)
+{
+	struct msmsdcc_pio_data *pio = &host->pio;
+
+	if (host->curr.data->flags & MMC_DATA_READ) {
+		if (length > pio->sg_miter.consumed)
+			/*
+			 * consumed 4 bytes, but sgl
+			 * describes < 4 bytes
+			 */
+			_msmsdcc_sg_consume_word(host);
+		else
+			pio->sg_miter.consumed = length;
+	} else
+		if (length < pio->sg_miter.consumed)
+			pio->sg_miter.consumed = length;
+}
+
+static void msmsdcc_sg_start(struct msmsdcc_host *host)
+{
+	unsigned int sg_miter_flags = SG_MITER_ATOMIC;
+
+	host->pio.bounce_buf_len = 0;
+
+	if (host->curr.data->flags & MMC_DATA_READ)
+		sg_miter_flags |= SG_MITER_TO_SG;
+	else
+		sg_miter_flags |= SG_MITER_FROM_SG;
+
+	sg_miter_start(&host->pio.sg_miter, host->curr.data->sg,
+		       host->curr.data->sg_len, sg_miter_flags);
+}
+
+static void msmsdcc_sg_stop(struct msmsdcc_host *host)
+{
+	sg_miter_stop(&host->pio.sg_miter);
+}
+
 static irqreturn_t
 msmsdcc_pio_irq(int irq, void *dev_id)
 {
 	struct msmsdcc_host	*host = dev_id;
 	void __iomem		*base = host->base;
 	uint32_t		status;
+	unsigned long flags;
+	unsigned int remain;
+	char *buffer;
 
 	spin_lock(&host->lock);
 
@@ -1271,62 +1409,44 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 		spin_unlock(&host->lock);
 		return IRQ_NONE;
 	}
-
 #if IRQ_DEBUG
 	msmsdcc_print_status(host, "irq1-r", status);
 #endif
+	local_irq_save(flags);
 
 	do {
-		unsigned long flags;
-		unsigned int remain, len;
-		char *buffer;
+		unsigned int len;
 
 		if (!(status & (MCI_TXFIFOHALFEMPTY | MCI_TXFIFOEMPTY
 				| MCI_RXDATAAVLBL)))
 			break;
 
-		/* Map the current scatter buffer */
-		local_irq_save(flags);
-		buffer = kmap_atomic(sg_page(host->pio.sg),
-				     KM_BIO_SRC_IRQ) + host->pio.sg->offset;
-		buffer += host->pio.sg_off;
-		remain = host->pio.sg->length - host->pio.sg_off;
+		if (!msmsdcc_sg_next(host, &buffer, &remain))
+			break;
 
 		len = 0;
 		if (status & MCI_RXACTIVE)
 			len = msmsdcc_pio_read(host, buffer, remain);
 		if (status & MCI_TXACTIVE)
 			len = msmsdcc_pio_write(host, buffer, remain);
+
 		/* len might have aligned to 32bits above */
 		if (len > remain)
 			len = remain;
 
-		/* Unmap the buffer */
-		kunmap_atomic(buffer, KM_BIO_SRC_IRQ);
-		local_irq_restore(flags);
-
-		host->pio.sg_off += len;
 		host->curr.xfer_remain -= len;
 		host->curr.data_xfered += len;
 		remain -= len;
+		msmsdcc_sg_consumed(host, len);
 
 		if (remain) /* Done with this page? */
 			break; /* Nope */
 
-		if (status & MCI_RXACTIVE && host->curr.user_pages)
-			flush_dcache_page(sg_page(host->pio.sg));
-
-		if (!--host->pio.sg_len) {
-			memset(&host->pio, 0, sizeof(host->pio));
-			break;
-		}
-
-		/* Advance to next sg */
-		host->pio.sg++;
-		host->pio.sg_off = 0;
-
 		status = readl_relaxed(base + MMCISTATUS);
 	} while (1);
+
+	msmsdcc_sg_stop(host);
+	local_irq_restore(flags);
 
 	if (status & MCI_RXACTIVE && host->curr.xfer_remain < MCI_FIFOSIZE) {
 		writel_relaxed((readl_relaxed(host->base + MMCIMASK0) &
