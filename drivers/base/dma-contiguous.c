@@ -43,6 +43,8 @@
 #define SZ_1M (1 << 20)
 #endif
 
+#define toKB(x) ((x) << (PAGE_SHIFT-10))
+
 #ifdef CONFIG_CMA_STATS
 
 struct cma_allocation {
@@ -54,8 +56,8 @@ struct cma_allocation {
 };
 
 static void update_alloc_list(struct device *dev, struct cma *cma,
-			  unsigned long pfn, unsigned long count,
-			  unsigned int align, int is_alloc);
+			      unsigned long pfn, unsigned long count,
+			      unsigned int align, int is_alloc);
 
 #else
 
@@ -103,7 +105,7 @@ static void recalculate_cma_region_stats(struct cma *cma)
 
 	for (start = 0; start < cma->count; start = end) {
 		idx = bitmap_find_next_zero_area(cma->bitmap, cma->count,
-				start, 1, 0);
+						 start, 1, 0);
 		if (unlikely(idx >= cma->count)) {
 			cma->info.total_alloc += cma->count - start;
 			break;
@@ -133,8 +135,8 @@ static int cma_debugfs_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static ssize_t cma_debugfs_read(struct file *file, char __user *user_buf,
-			 size_t size, loff_t *ppos)
+static ssize_t cma_debugfs_read(struct file *file, char __user * user_buf,
+				size_t size, loff_t *ppos)
 {
 	struct cma *cma = file->private_data;
 	char *buf;
@@ -144,7 +146,7 @@ static ssize_t cma_debugfs_read(struct file *file, char __user *user_buf,
 	 * bitmap and one comma per every 8 hex-digits meaning par every
 	 * 32 bits, add 64 bytes for the additional characters
 	 */
-	unsigned int buffer_size = (cma->count/4) + (cma->count/32) + 64;
+	unsigned int buffer_size = (cma->count / 4) + (cma->count / 32) + 64;
 
 	/* Add 1K for printing in stats at the end of bitmap */
 	buffer_size += SZ_1K;
@@ -168,24 +170,21 @@ static ssize_t cma_debugfs_read(struct file *file, char __user *user_buf,
 	len += snprintf(buf + len, buffer_size - len, "\n");
 
 	len += snprintf(buf + len, buffer_size - len,
-			"==========================================================\n");
+			"==================================================\n");
 	len += snprintf(buf + len, buffer_size - len,
 			"Total allocation     : %lu Pages, %lukB\n",
-			cma->info.total_alloc,
-			(cma->info.total_alloc * PAGE_SIZE) / SZ_1K);
+			cma->info.total_alloc, toKB(cma->info.total_alloc));
 	len += snprintf(buf + len, buffer_size - len,
 			"Total free           : %lu Pages, %lukB\n",
 			cma->count - cma->info.total_alloc,
-			((cma->count -
-			  cma->info.total_alloc) * PAGE_SIZE) / SZ_1K);
+			toKB(cma->count - cma->info.total_alloc));
 	len += snprintf(buf + len, buffer_size - len,
 			"Largest Free Block   : %lu Pages, %lukB\n",
 			cma->info.max_free_block,
-			(cma->info.max_free_block * PAGE_SIZE) / SZ_1K);
+			toKB(cma->info.max_free_block));
 	len += snprintf(buf + len, buffer_size - len,
 			"Peak Allocation      : %lu Pages, %lukB\n",
-			cma->info.peak_alloc,
-			(cma->info.peak_alloc * PAGE_SIZE) / SZ_1K);
+			cma->info.peak_alloc, toKB(cma->info.peak_alloc));
 
 	len += snprintf(buf + len, buffer_size - len, "\n");
 
@@ -214,17 +213,18 @@ static void cma_debugfs_create_file(struct cma *cma)
 {
 	BUG_ON(unlikely(region_count >= MAX_CMA_AREAS));
 	sprintf(&debugfs_cma_file[region_count][0], "cma%d", region_count);
-	debugfs_create_file(&debugfs_cma_file[region_count][0], S_IRUSR, NULL, cma, &cma_debugfs_fops);
+	debugfs_create_file(&debugfs_cma_file[region_count][0],
+			    S_IRUSR, NULL, cma, &cma_debugfs_fops);
 	region_count++;
 }
 
 #else /* !CONFIG_CMA_DEBUG_FS */
 
-static inline void cma_debugfs_create_file(struct cma *cma) { }
+static inline void cma_debugfs_create_file(struct cma *cma)
+{
+}
 
 #endif /* COFNIG_CMA_DEBUG_FS */
-
-
 
 /*
  * Default global CMA area size can be defined in kernel's .config.
@@ -284,7 +284,8 @@ void __init dma_contiguous_reserve(phys_addr_t limit)
 	size_percent *= (total_pages << PAGE_SHIFT) / 100;
 
 	pr_debug
-	    ("%s: total available: %ld MiB, size absolute: %ld MiB, size percentage: %ld MiB\n",
+	    ("%s: total available: %ld MiB, size absolute: %ld MiB"
+	     " size percentage: %ld MiB\n",
 	     __func__, (total_pages << PAGE_SHIFT) / SZ_1M, size_bytes / SZ_1M,
 	     size_percent / SZ_1M);
 
@@ -314,7 +315,7 @@ void __init dma_contiguous_reserve(phys_addr_t limit)
 /* Should be called with cma_mutex held */
 static
 void update_alloc_list(struct device *dev, struct cma *cma, unsigned long pfn,
-		   unsigned long count, unsigned int align, int is_alloc)
+		       unsigned long count, unsigned int align, int is_alloc)
 {
 	struct cma_allocation *p, *next;
 	struct cma_allocation *new;
@@ -323,16 +324,14 @@ void update_alloc_list(struct device *dev, struct cma *cma, unsigned long pfn,
 	if ((pfn < cma->base_pfn) ||
 	    ((cma->base_pfn + cma->count) < (pfn + count))) {
 		printk(KERN_ALERT
-		       "cma allocations(0x%p : 0x%08lx+0x%lx) is out of range ?!\n",
+		       "cma allocations(0x%08lx+0x%lx) is out of range ?!\n",
 		       cma, pfn, count);
 		goto done;
 	}
 
 	if (is_alloc) {
 		if (align > CONFIG_CMA_ALIGNMENT) {
-			printk(KERN_ALERT
-			       "Alignment for new allocation(%u) is bigger than configured(%u)\n",
-			       align, CONFIG_CMA_ALIGNMENT);
+			printk(KERN_ALERT "Invalid Alignment (%u)\n", align);
 			goto done;
 		}
 
@@ -394,9 +393,8 @@ static __init int cma_activate_area(unsigned long base_pfn, unsigned long count)
 	return 0;
 }
 
-
 static __init struct cma *cma_create_area(unsigned long base_pfn,
-			unsigned long count)
+					  unsigned long count)
 {
 	int bitmap_size = BITS_TO_LONGS(count) * sizeof(long);
 	struct cma *cma;
@@ -570,14 +568,13 @@ err:
  *the start and size of that region.
  */
 
-void
-get_dev_cma_info(struct device *dev, struct dev_cma_info *info)
+void get_dev_cma_info(struct device *dev, struct dev_cma_info *info)
 {
 	struct cma *cma;
 
 	/* if we haven't even been initialised yet */
 	if (!dma_contiguous_default_area) {
-		printk(KERN_WARNING"%s: CMA not initialised !\n", __func__);
+		printk(KERN_WARNING "%s: CMA not initialised !\n", __func__);
 		return;
 	}
 
@@ -597,21 +594,21 @@ struct cma_range {
 };
 
 static int find_best_area(struct cma *cma, int count,
-			   unsigned long mask, struct cma_range *best_fit)
+			  unsigned long mask, struct cma_range *best_fit)
 {
 	unsigned long index;
 	int start, end;
-	
+
 	best_fit->start = 0UL;
 	best_fit->end = ULONG_MAX;
 
 	for (start = 0; start < cma->count; start = end) {
 		index = bitmap_find_next_zero_area(cma->bitmap, cma->count,
-					start, count, mask);
+						   start, count, mask);
 		if (index >= cma->count)
 			break;
 
-		end = find_next_bit(cma->bitmap, cma->count, index); 
+		end = find_next_bit(cma->bitmap, cma->count, index);
 
 		/* check if we've already tried this */
 		if (!test_bit(index, cma->bf_bitmap)) {
@@ -635,19 +632,18 @@ static int find_best_area(struct cma *cma, int count,
 	}
 
 	if (unlikely(best_fit->end == ULONG_MAX)) {
-		printk(KERN_ERR"%s: Failed to find free pages\n", __func__);
+		printk(KERN_ERR "%s: Failed to find free pages\n", __func__);
 		return -ENOMEM;
 	}
 
 	pr_debug("%s: found area at start(%lu), end(%lu)\n",
-			__func__, best_fit->start,  best_fit->end);
+		 __func__, best_fit->start, best_fit->end);
 
 	__set_bit(best_fit->start, cma->bf_bitmap);
 
 	return 0;
 }
 #endif /* CONFIG_CMA_BEST_FIT */
-
 
 /**
  *dma_alloc_from_contiguous() - allocate pages from contiguous area
@@ -695,19 +691,18 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 		pageno = bitmap_find_next_zero_area(cma->bitmap, cma->count,
 						    start, count, mask);
 		if (pageno >= cma->count) {
-			printk(KERN_ERR
-			       "%s:%d #### CMA ALLOCATION FAILED ####\n",
+			printk(KERN_ERR "%s:%d ## CMA ALLOCATION FAILED ##\n",
 			       __func__, __LINE__);
 			printk(KERN_ERR
-			       "%s:%d # Could not find %d pages with %d alignment in this cma region bitmap\n",
-			       __func__, __LINE__, count, align);
-
+			       "%s:%d # Couldn't find %d pages in cma\n",
+			       __func__, __LINE__, count);
 			printk(KERN_ERR
-			       "%s:%d # Total allocation(%lukB, %ld pages), Largest free block(%lukB, %ld pages)\n",
+			       "%s:%d # Total allocation(%lukB, %ld pages)"
+			       " Largest free block(%lukB, %ld pages)\n",
 			       __func__, __LINE__,
-			       (cma->info.total_alloc * PAGE_SIZE / SZ_1K),
+			       toKB(cma->info.total_alloc),
 			       cma->info.total_alloc,
-			       (cma->info.max_free_block * PAGE_SIZE / SZ_1K),
+			       toKB(cma->info.max_free_block),
 			       cma->info.max_free_block);
 			ret = -ENOMEM;
 			show_mem(SHOW_MEM_FILTER_NODES);
@@ -721,7 +716,8 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 			break;
 		} else if (ret != -EBUSY) {
 			printk(KERN_ERR
-			       "%s:%d #### CMA alloc_contig_range failed #### ret = %d for range(%08x-%08x)\n",
+			       "%s:%d ## CMA alloc_contig_range failed ##"
+			       " ret = %d for range(%08x-%08x)\n",
 			       __func__, __LINE__, ret, __pfn_to_phys(pfn),
 			       __pfn_to_phys(pfn + count));
 			goto error;
@@ -736,58 +732,65 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 #else /* !CONFIG_CMA_BEST_FIT */
 	for (;;) {
 		ret = find_best_area(cma, count, mask, &best_fit);
-		if (ret)  {
+		if (ret) {
 			printk(KERN_ERR
-					"%s:%d #### CMA ALLOCATION FAILED ####\n",
-					__func__, __LINE__);
+			       "%s:%d #### CMA ALLOCATION FAILED ####\n",
+			       __func__, __LINE__);
 			printk(KERN_ERR
-					"%s:%d # Could not find %d pages with %d alignment in this cma region bitmap\n",
-					__func__, __LINE__, count, align);
+			       "%s:%d # Couldn't find %d pages in cma\n",
+			       __func__, __LINE__, count);
 
 			printk(KERN_ERR
-					"%s:%d # Total allocation(%lukB, %ld pages), Largest free block(%lukB, %ld pages)\n",
-					__func__, __LINE__,
-					(cma->info.total_alloc * PAGE_SIZE / SZ_1K),
-					cma->info.total_alloc,
-					(cma->info.max_free_block * PAGE_SIZE / SZ_1K),
-					cma->info.max_free_block);
+			       "%s:%d # Total alloc(%lukB, %ld pages)"
+			       " Largest block(%lukB, %ld pages)\n",
+			       __func__, __LINE__,
+			       toKB(cma->info.total_alloc),
+			       cma->info.total_alloc,
+			       toKB(cma->info.max_free_block),
+			       cma->info.max_free_block);
 			ret = -ENOMEM;
 			show_mem(SHOW_MEM_FILTER_NODES);
 			break;
 		}
 
 		/* Now try and allocate from the *best* cma area for this size.
-		 * Note that the area can be bigger than the requested allocation.
-		 * So, if migration fails, we keep retrying untill we reach the end
-		 * of this area. If we have failed allocation here, then we continue
-		 * the outer loop and find the next-best area for this allocation
+		 * Note that area can be bigger than the requested allocation.
+		 * So, if migration fails, we keep retrying untill we reach end
+		 * of this area. If we have failed allocation here, then we
+		 * continue the outer loop and find the next-best area for
+		 * this allocation
 		 **/
 
-		pr_debug("%s: Try allocating (%d) pages withing area from (:%lu count:%lu, size:%lu)\n",
-					__func__, count, best_fit.start, best_fit.end, best_fit.end - best_fit.start);
+		pr_debug("Alloc (%d) pages from (%lu count:%lu, size:%lu)\n",
+			 count, best_fit.start, best_fit.end,
+			 best_fit.end - best_fit.start);
 
 		for (pageno = best_fit.start, ret = -EBUSY;
-			((pageno + count) <= best_fit.end) && ret == -EBUSY;
-			pageno = __ALIGN_MASK(pageno + 1, mask)) {
+		     ((pageno + count) <= best_fit.end) && ret == -EBUSY;
+		     pageno = __ALIGN_MASK(pageno + 1, mask)) {
 
 			pfn = cma->base_pfn + pageno;
 
-			pr_debug("%s:allocation range(%ld - %ld)\n", __func__, pageno, pageno+count);
+			pr_debug("alloc range:%ld-%ld\n", pageno,
+				 pageno + count);
 			ret = alloc_contig_range(pfn, pfn + count, MIGRATE_CMA);
 			if (ret == 0) {
 				bitmap_set(cma->bitmap, pageno, count);
-				pr_debug("%s: allocation successful\n", __func__);
+				pr_debug("allocation successful\n");
 				break;
-			} 
+			}
 		}
 
 		if (likely(ret == 0))
 			break;
 
 		if (unlikely(ret != -EBUSY)) {
-			printk(KERN_ERR"%s:%d #### CMA alloc_contig_range failed #### ret = %d for range(%08x-%08x)\n",
-					__func__, __LINE__, ret, __pfn_to_phys(cma->base_pfn + pageno),
-					__pfn_to_phys(cma->base_pfn + pageno + count));
+			printk(KERN_ERR
+			       "%s:%d CMA alloc_contig_range failed"
+			       " ret = %d for range(%08x-%08x)\n",
+			       __func__, __LINE__, ret,
+			       __pfn_to_phys(cma->base_pfn + pageno),
+			       __pfn_to_phys(cma->base_pfn + pageno + count));
 			break;
 		}
 	}
@@ -862,11 +865,10 @@ int dma_release_from_contiguous(struct device *dev, struct page *pages,
 	return 1;
 }
 
-
 #ifdef CONFIG_CMA_STATS
 #ifdef CONFIG_PROC_FS
 
-static void *cma_start(struct seq_file *m, loff_t *pos)
+static void *cma_start(struct seq_file *m, loff_t * pos)
 {
 	struct cma_reserved *region = (struct cma_reserved *)m->private;
 
@@ -876,7 +878,7 @@ static void *cma_start(struct seq_file *m, loff_t *pos)
 	return region + *pos;
 }
 
-static void *cma_next(struct seq_file *m, void *arg, loff_t *pos)
+static void *cma_next(struct seq_file *m, void *arg, loff_t * pos)
 {
 	struct cma_reserved *region = (struct cma_reserved *)m->private;
 
@@ -920,20 +922,18 @@ static int cmastat_show(struct seq_file *m, void *arg)
 
 	mutex_lock(&cma_mutex);
 	list_for_each_entry(p, &cma->clist, clink) {
-		unsigned long size_in_kb = 0UL;
 		if (p->dev) {
 			device_name = dev_name(p->dev);
 		} else {
 			device_name = "Unknown";
 		}
-		size_in_kb = (p->count * PAGE_SIZE) / SZ_1K;
 		seq_printf(m, "%-20s :", device_name);
 		seq_printf(m, "%15ld", p->count);
 		seq_printf(m, "%14u       %10lx-%08lx %7ldkB",
 			   p->align,
 			   ((p->pfn_start) << PAGE_SHIFT),
 			   ((p->pfn_start + p->count) << PAGE_SHIFT),
-			   size_in_kb);
+			   toKB(p->count));
 		seq_putc(m, '\n');
 
 		/* Check of this line was successfully copied by seq_printf()
@@ -951,16 +951,14 @@ static int cmastat_show(struct seq_file *m, void *arg)
 			   (cma->info.total_alloc * PAGE_SIZE) / SZ_1K);
 		seq_printf(m, "Total free           : %lu Pages, %lukB\n",
 			   cma->count - cma->info.total_alloc,
-			   ((cma->count -
-			     cma->info.total_alloc) * PAGE_SIZE) / SZ_1K);
+			   toKB(cma->count - cma->info.total_alloc));
 		seq_printf(m, "Largest Free Block   : %lu Pages, %lukB\n",
 			   cma->info.max_free_block,
-			   (cma->info.max_free_block * PAGE_SIZE) / SZ_1K);
+			   toKB(cma->info.max_free_block));
 		seq_printf(m, "Peak Allocation      : %lu Pages, %lukB\n",
-			   cma->info.peak_alloc,
-			   (cma->info.peak_alloc * PAGE_SIZE) / SZ_1K);
+			   cma->info.peak_alloc, toKB(cma->info.peak_alloc));
 		seq_printf(m,
-			   "==========================================================");
+			   "=================================================");
 		seq_putc(m, '\n');
 		seq_putc(m, '\n');
 	}
@@ -1003,7 +1001,6 @@ static int __init cma_stats_init(void)
 }
 
 late_initcall(cma_stats_init);
-
 
 #endif
 #endif /* CONFIG_CMA_STATS */
