@@ -28,6 +28,19 @@
 #define OV5640_SHARPNESS_STEP           100
 #define OV5640_SHARPNESS_DEF			100
 
+/* Auto Focus Command */
+#define OV5640_CMD_MAIN					0x3022
+#define OV5640_CMD_ACK					0x3023
+#define OV5640_CMD_FW_STATUS				0x3029
+/*  Auto Focus Status */
+#define OV5640_AF_NORMALIZED_W				80
+#define OV5640_AF_NORMALIZED_H				60
+#define OV5640_AF_SUCCESS				0
+#define OV5640_AF_PENDING				1
+#define OV5640_AF_FAIL					2
+
+#define OV5640_NOT_FOCUSING				0
+#define OV5640_FOCUSING					1
 /**
  *struct ov5640_reg - ov5640 register format
  *@reg: 16-bit offset to register
@@ -72,18 +85,17 @@ static const struct ov5640_reg configscript_common1[] = {
 	{0x501f, 0x00},		/*ISP Format */
 	/*JPG Control */
 	{0x4713, 0x02},		/*JPG Mode Select */
-	/*???? */
+	/*JPG Quality? */
 	{0x4407, 0x04},
 	{0x440e, 0x00},
 	/*VFIFO Control */
 	{0x460b, 0x35},		/*???? */
 	{0x460c, 0x22},		/*PCLK Divider Manual */
 	/*???? */
-	{0x3630, 0x36},
-	{0x3631, 0x0e},
+	{0x3630, 0x2e},
 	{0x3632, 0xe2},
-	{0x3633, 0x12},
-	{0x3621, 0xe0},
+	{0x3633, 0x23},
+	/*???? */
 	{0x3704, 0xa0},
 	{0x3703, 0x5a},
 	{0x3715, 0x78},
@@ -97,6 +109,8 @@ static const struct ov5640_reg configscript_common1[] = {
 	/*VCM Control */
 	{0x3600, 0x08},
 	{0x3601, 0x33},
+	{0x3604, 0x02},
+	{0x3605, 0x8a},
 	/*???? */
 	{0x302d, 0x60},
 	{0x3620, 0x52},
@@ -107,8 +121,7 @@ static const struct ov5640_reg configscript_common1[] = {
 	{0x3a18, 0x00},
 	{0x3a19, 0xf8},
 	/*???? */
-	{0x3635, 0x13},
-	{0x3636, 0x03},
+	{0x3635, 0x1c},
 	{0x3634, 0x40},
 	{0x3622, 0x01},
 	/*50/60Hz Detector */
@@ -154,7 +167,7 @@ static const struct ov5640_reg configscript_common1[] = {
 	/*???? */
 	{0x3618, 0x00},
 	{0x3612, 0x29},
-	{0x3708, 0x64},
+	{0x3708, 0x62},
 	{0x3709, 0x52},
 	{0x370c, 0x03},
 	/*AEC/AGC */
@@ -328,9 +341,6 @@ static const struct ov5640_reg configscript_common1[] = {
 	{0x3a1e, 0x26},
 	{0x3a11, 0x60},
 	{0x3a1f, 0x14},
-
-	{0x3008, 0x42},	/*stop sensor streaming */
-	{0x300e, 0x3d},	/*MIPI Control  Powered down */
 
 #if ENABLE_COLOR_PATTERN
 	{0x503d, 0x80},		/* Solid Colour Bars */

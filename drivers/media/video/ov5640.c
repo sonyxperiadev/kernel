@@ -25,6 +25,10 @@
 #include <linux/videodev2_brcm.h>
 #include "ov5640.h"
 
+/* #define OV5640_DEBUG */
+
+#define iprintk(format, arg...)	\
+	printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg)
 
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
@@ -135,6 +139,12 @@ struct ov5640 {
 	int antibanding;
 	int whitebalance;
 	int framerate;
+	int focus_mode;
+	/*
+	 * focus_status = 1 focusing
+	 * focus_status = 0 focus cancelled or not focusing
+	 */
+	atomic_t focus_status;
 };
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
@@ -765,6 +775,25 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .step = 1,
 	 .default_value = FRAME_RATE_AUTO,
 	 },
+	{
+	 .id = V4L2_CID_CAMERA_FOCUS_MODE,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "Focus Modes",
+	 .minimum = FOCUS_MODE_AUTO,
+	 .maximum = (1 << FOCUS_MODE_AUTO | 1 << FOCUS_MODE_MACRO
+			 | 1 << FOCUS_MODE_INFINITY),
+	 .step = 1,
+	 .default_value = FOCUS_MODE_AUTO,
+	 },
+	{
+	 .id = V4L2_CID_CAMERA_SET_AUTO_FOCUS,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "AF start/stop",
+	 .minimum = AUTO_FOCUS_OFF,
+	 .maximum = AUTO_FOCUS_ON,
+	 .step = 1,
+	 .default_value = AUTO_FOCUS_OFF,
+	 },
 
 };
 
@@ -776,7 +805,7 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
  * Returns zero if successful, or non-zero otherwise.
  */
 static int ov5640_reg_writes(struct i2c_client *client,
-			     const struct ov5640_reg reglist[])
+			const struct ov5640_reg reglist[])
 {
 	int err = 0, index;
 
@@ -793,6 +822,296 @@ static int ov5640_reg_writes(struct i2c_client *client,
 		}
 	}
 	return 0;
+}
+
+#ifdef OV5640_DEBUG
+static int ov5640_reglist_compare(struct i2c_client *client,
+			const struct ov5640_reg reglist[])
+{
+	int err = 0, index;
+	u8 reg;
+
+	for (index = 0; ((reglist[index].reg != 0xFFFF) && (err == 0));
+								index++) {
+		err |=
+			ov5640_reg_read(client, reglist[index].reg,
+				&reg);
+		if (reglist[index].val != reg) {
+			iprintk("reg err:reg=0x%x val=0x%x rd=0x%x",
+				reglist[index].reg, reglist[index].val, reg);
+		}
+		/*  Check for Pause condition */
+		if ((reglist[index + 1].reg == 0xFFFF)
+			&& (reglist[index + 1].val != 0)) {
+			msleep(reglist[index + 1].val);
+			index += 1;
+		}
+	}
+	return 0;
+}
+#endif
+
+/**
+ * Write an array of data to ov5640 sensor device.
+ *@client: i2c driver client structure.
+ *@reg: Address of the register to read value from.
+ *@data: pointer to data to be written starting at specific register.
+ *@size: # of data to be written starting at specific register.
+ * Returns zero if successful, or non-zero otherwise.
+ */
+static int ov5640_array_write(struct i2c_client *client,
+					const u8 *data, u16 size)
+{
+	int ret;
+	struct i2c_msg msg = {
+		.addr = client->addr,
+		.flags = 0,
+		.len = size,
+		.buf = (u8 *)data,
+	};
+
+	ret = i2c_transfer(client->adapter, &msg, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "Failed writing array to 0x%02x!\n",
+			((data[0] << 8) | (data[1])));
+		return ret;
+	}
+
+	return 0;
+}
+
+static int ov5640_af_ack(struct i2c_client *client, int num_trys)
+{
+	int ret = 0;
+	u8 af_ack = 0;
+	int i;
+
+	for (i = 0; i < num_trys; i++) {
+		ov5640_reg_read(client, OV5640_CMD_ACK, &af_ack);
+		if (af_ack == 0)
+			break;
+		msleep(50);
+	}
+	if (af_ack != 0) {
+		dev_dbg(&client->dev, "af ack failed\n");
+		return OV5640_AF_FAIL;
+	}
+	return ret;
+}
+
+static int ov5640_af_fw_status(struct i2c_client *client)
+{
+	u8 af_st = 0;
+
+	ov5640_reg_read(client, OV5640_CMD_FW_STATUS, &af_st);
+
+	iprintk("status=0x%x", af_st);
+	return (int)af_st;
+}
+
+static int ov5640_af_enable(struct i2c_client *client)
+{
+	int ret = 0;
+
+	ret = ov5640_reg_writes(client, ov5640_afpreinit_tbl);
+	if (ret)
+		return ret;
+
+	ret = ov5640_array_write(client, ov5640_afinit_data,
+		sizeof(ov5640_afinit_data)
+		/sizeof(ov5640_afinit_data[0]));
+	if (ret)
+		return ret;
+
+	ret = ov5640_reg_writes(client, ov5640_afpostinit_tbl);
+	if (ret)
+		return ret;
+
+	ov5640_af_fw_status(client);
+
+	return ret;
+}
+
+static int ov5640_af_release(struct i2c_client *client)
+{
+	int ret = 0;
+
+	ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
+	if (ret)
+		return ret;
+	ret = ov5640_reg_write(client, OV5640_CMD_MAIN, 0x08);
+	if (ret)
+		return ret;
+	ov5640_af_fw_status(client);
+	return ret;
+}
+
+static int ov5640_af_center(struct i2c_client *client)
+{
+	int ret = 0;
+
+	ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
+	if (ret)
+		return ret;
+	ret = ov5640_reg_write(client, OV5640_CMD_MAIN, 0x80);
+	if (ret)
+		return ret;
+	ret = ov5640_af_ack(client, 50);
+	if (ret) {
+		dev_dbg(&client->dev, "failed\n");
+		return OV5640_AF_FAIL;
+	}
+
+	return ret;
+}
+
+static int ov5640_af_macro(struct i2c_client *client)
+{
+	int ret = 0;
+	u8 reg;
+
+	ret = ov5640_af_release(client);
+	if (ret)
+		return ret;
+	/* move VCM all way out */
+	ret = ov5640_reg_read(client, 0x3603, &reg);
+	if (ret)
+		return ret;
+	reg &= ~(0x3f);
+	ret = ov5640_reg_write(client, 0x3603, reg);
+	if (ret)
+		return ret;
+
+	ret = ov5640_reg_read(client, 0x3602, &reg);
+	if (ret)
+		return ret;
+	reg &= ~(0xf0);
+	ret = ov5640_reg_write(client, 0x3602, reg);
+	if (ret)
+		return ret;
+
+	/* set direct mode */
+	ret = ov5640_reg_read(client, 0x3602, &reg);
+	if (ret)
+		return ret;
+	reg &= ~(0x07);
+	ret = ov5640_reg_write(client, 0x3602, reg);
+	if (ret)
+		return ret;
+
+	return ret;
+}
+
+static int ov5640_af_infinity(struct i2c_client *client)
+{
+	int ret = 0;
+	u8 reg;
+
+	ret = ov5640_af_release(client);
+	if (ret)
+		return ret;
+	/* move VCM all way in */
+	ret = ov5640_reg_read(client, 0x3603, &reg);
+	if (ret)
+		return ret;
+	reg |= 0x3f;
+	ret = ov5640_reg_write(client, 0x3603, reg);
+	if (ret)
+		return ret;
+
+	ret = ov5640_reg_read(client, 0x3602, &reg);
+	if (ret)
+		return ret;
+	reg |= 0xf0;
+	ret = ov5640_reg_write(client, 0x3602, reg);
+	if (ret)
+		return ret;
+
+	/* set direct mode */
+	ret = ov5640_reg_read(client, 0x3602, &reg);
+	if (ret)
+		return ret;
+	reg &= ~(0x07);
+	ret = ov5640_reg_write(client, 0x3602, reg);
+	if (ret)
+		return ret;
+
+	return ret;
+}
+
+static int ov5640_af_status(struct i2c_client *client, int num_trys)
+{
+	int ret = OV5640_AF_SUCCESS;
+	struct ov5640 *ov5640 = to_ov5640(client);
+	int af_st = 0;
+	u8 af_zone0, af_zone1, af_zone2, af_zone3, af_zone4;
+
+	if (ov5640->focus_mode == FOCUS_MODE_AUTO) {
+
+		/* Wait for Focus Command Ack */
+		ret = ov5640_af_ack(client, num_trys);
+		if (ret) {
+			dev_dbg(&client->dev, "af ack failed\n");
+			ret = OV5640_AF_FAIL;
+			goto out;
+		}
+		/* Check if Focused */
+		af_st = ov5640_af_fw_status(client);
+		if (af_st != 0x10) {
+			dev_dbg(&client->dev, "focus pending\n");
+			ret = OV5640_AF_PENDING;
+			goto out;
+		}
+
+		/* Check if Zones Focused */
+		ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
+		ov5640_reg_write(client, OV5640_CMD_MAIN, 0x07);
+
+		ret = ov5640_af_ack(client, num_trys);
+		if (ret) {
+			dev_dbg(&client->dev, "zones ack failed\n");
+			ret = OV5640_AF_FAIL;
+			goto out;
+		}
+
+		ov5640_reg_read(client, 0x3024, &af_zone0);
+		ov5640_reg_read(client, 0x3025, &af_zone1);
+		ov5640_reg_read(client, 0x3026, &af_zone2);
+		ov5640_reg_read(client, 0x3027, &af_zone3);
+		ov5640_reg_read(client, 0x3028, &af_zone4);
+		if ((af_zone0 != 0) && (af_zone1 != 0) && (af_zone2 != 0)
+				&& (af_zone3 != 0) && (af_zone4 != 0)) {
+			dev_dbg(&client->dev, "zones failed\n");
+			ret = OV5640_AF_FAIL;
+			goto out;
+		}
+
+	}
+
+out:
+	return ret;
+}
+
+static int ov5640_af_start(struct i2c_client *client)
+{
+	int ret = 0;
+	struct ov5640 *ov5640 = to_ov5640(client);
+
+	if (ov5640->focus_mode == FOCUS_MODE_MACRO)
+		ret = ov5640_af_macro(client);
+	else if (ov5640->focus_mode == FOCUS_MODE_INFINITY)
+		ret = ov5640_af_infinity(client);
+	else {
+		ov5640_af_center(client);
+		ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, OV5640_CMD_MAIN, 0x03);
+		if (ret)
+			return ret;
+	}
+
+	return ret;
 }
 
 static int ov5640_config_timing(struct i2c_client *client)
@@ -954,16 +1273,18 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		ret = ov5640_reg_write(client, 0x3008, 0x02);
 		if (ret)
 			goto out;
+
 	} else {
 		u8 tmpreg = 0;
 
+		/* Stop Sensor Streaming */
 		ret = ov5640_reg_read(client, 0x3008, &tmpreg);
 		if (ret)
 			goto out;
-
 		ret = ov5640_reg_write(client, 0x3008, tmpreg | 0x40);
 		if (ret)
 			goto out;
+
 		/* MIPI Control  Powered down */
 		ret = ov5640_reg_write(client, 0x300e, 0x3d);
 		if (ret)
@@ -1062,8 +1383,6 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	if (ret < 0)
 		return ret;
 
-	ret = ov5640_reg_writes(client, configscript_common1);
-
 	ov5640->i_size = ov5640_find_framesize(mf->width, mf->height);
 	ov5640->i_fmt = ov5640_find_datafmt(mf->code);
 
@@ -1120,6 +1439,37 @@ static int ov5640_g_chip_ident(struct v4l2_subdev *sd,
 	return 0;
 }
 
+/*
+ * return value of this function should be
+ * 0 == failed
+ * 1 == done
+ * 2 == canceled
+ */
+static int ov5640_get_af_status(struct i2c_client *client, int num_trys)
+{
+	int ret = 0;
+	struct ov5640 *ov5640 = to_ov5640(client);
+
+	if (atomic_read(&ov5640->focus_status)
+			== OV5640_FOCUSING) {
+		ret = ov5640_af_status(client, num_trys);
+		if (ret == 0) {
+			ret = 1;
+			goto out;
+		}
+	}
+	if (atomic_read(&ov5640->focus_status)
+			== OV5640_NOT_FOCUSING) {
+		ret = 2;
+		goto out;
+	}
+
+	ret = 0;
+out:
+	atomic_set(&ov5640->focus_status, OV5640_NOT_FOCUSING);
+	return ret;
+}
+
 static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1151,6 +1501,15 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CAMERA_FRAME_RATE:
 		ctrl->value = ov5640->framerate;
+		break;
+	case V4L2_CID_CAMERA_FOCUS_MODE:
+		ctrl->value = ov5640->focus_mode;
+		break;
+	case V4L2_CID_CAMERA_AUTO_FOCUS_RESULT:
+		/*
+		 * this is called from another thread to read AF status
+		 */
+		ctrl->value = ov5640_get_af_status(client, 100);
 		break;
 	}
 
@@ -1416,6 +1775,73 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
+
+	case V4L2_CID_CAMERA_FOCUS_MODE:
+
+		if (ctrl->value > FOCUS_MODE_INFINITY)
+			return -EINVAL;
+
+		ov5640->focus_mode = ctrl->value;
+
+		/*
+		 * Donot start the AF cycle here
+		 * AF Start will be called later in
+		 * V4L2_CID_CAMERA_SET_AUTO_FOCUS only for auto, macro mode
+		 * it wont be called for infinity.
+		 * Donot worry about resolution change for now.
+		 * From userspace we set the resolution first
+		 * and then set the focus mode.
+		 */
+		switch (ov5640->focus_mode) {
+		case FOCUS_MODE_MACRO:
+			/*
+			 * set the table for macro mode
+			 */
+			break;
+		case FOCUS_MODE_INFINITY:
+			/*
+			 * set the table for infinity
+			 */
+			ret = 0;
+			break;
+		default:
+			ret = ov5640_af_enable(client);
+			break;
+		}
+
+		if (ret)
+			return ret;
+		break;
+
+	case V4L2_CID_CAMERA_SET_AUTO_FOCUS:
+
+		if (ctrl->value > AUTO_FOCUS_ON)
+			return -EINVAL;
+
+		/* start and stop af cycle here */
+		switch (ctrl->value) {
+
+		case AUTO_FOCUS_OFF:
+
+			if (atomic_read(&ov5640->focus_status)
+					== OV5640_FOCUSING) {
+				ret = ov5640_af_release(client);
+				atomic_set(&ov5640->focus_status,
+						OV5640_NOT_FOCUSING);
+			}
+			break;
+
+		case AUTO_FOCUS_ON:
+
+			ret = ov5640_af_start(client);
+			atomic_set(&ov5640->focus_status, OV5640_FOCUSING);
+			break;
+
+		}
+
+		if (ret)
+			return ret;
+		break;
 	}
 
 	return ret;
@@ -1516,6 +1942,25 @@ static int ov5640_init(struct i2c_client *client)
 	if (ret)
 		goto out;
 
+	/* Start Streaming for AF Init*/
+	ret = ov5640_reg_write(client, 0x3008, 0x02);
+	if (ret)
+		goto out;
+	/* Delay for sensor streaming*/
+	msleep(20);
+
+	/* AF Init*/
+	ret = ov5640_af_enable(client);
+	if (ret)
+		goto out;
+	ov5640_af_center(client);
+	ov5640_af_release(client);
+
+	/* Stop Streaming */
+	ov5640_reg_write(client, 0x3008, 0x42);
+	/* MIPI Control  Powered down */
+	ov5640_reg_write(client, 0x300e, 0x3d);
+
 	/* default brightness and contrast */
 	ov5640->brightness = EV_DEFAULT;
 	ov5640->contrast = CONTRAST_DEFAULT;
@@ -1523,6 +1968,8 @@ static int ov5640_init(struct i2c_client *client)
 	ov5640->antibanding = ANTI_BANDING_AUTO;
 	ov5640->whitebalance = WHITE_BALANCE_AUTO;
 	ov5640->framerate = FRAME_RATE_AUTO;
+	ov5640->focus_mode = FOCUS_MODE_AUTO;
+	atomic_set(&ov5640->focus_status, OV5640_NOT_FOCUSING);
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 
