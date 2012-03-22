@@ -158,6 +158,7 @@ static int bmuteVoiceCall = FALSE;
 static Boolean isMFD = FALSE;
 static Boolean is26MClk = FALSE;
 static Boolean muteInPlay = FALSE;
+static Boolean isStIHF = FALSE;
 
 /*
 static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
@@ -206,6 +207,7 @@ static AudioMode_t currAudioMode = AUDIO_MODE_HANDSET;
  /* need to update this on AP and also in audioapi.c on CP. */
 static AudioMode_t currAudioMode_playback = AUDIO_MODE_SPEAKERPHONE;
 static AudioMode_t currAudioMode_record = AUDIO_MODE_SPEAKERPHONE;
+static AudioMode_t currAudioMode_fm = AUDIO_MODE_HEADSET;
 
 static struct regulator *vibra_reg;
 
@@ -1036,6 +1038,7 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 	/*enable clock if it is not enabled. */
 
 	AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
+	currAudioMode_fm = mode;
 
 	app = AUDCTRL_GetAudioApp();
 	sp_struct.mode = mode;
@@ -1961,8 +1964,25 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 		(void)csl_caph_hwctrl_AddPath(pathID, config);
 	}
 #ifndef CONFIG_ENABLE_SSMULTICAST
-	AUDCTRL_SetAudioMode_ForMusicPlayback(
-		GetAudioModeBySink(sink), pathID, FALSE);
+	if (currAudioApp == AUDIO_APP_FM) {
+		if (isStIHF &&
+			currAudioMode_fm == AUDIO_MODE_SPEAKERPHONE &&
+			sink == AUDIO_SINK_HANDSET)
+			AUDCTRL_SetAudioMode_ForFM(
+				AUDIO_MODE_SPEAKERPHONE, pathID, FALSE);
+		else
+			AUDCTRL_SetAudioMode_ForFM(
+				GetAudioModeBySink(sink), pathID, FALSE);
+	} else {
+		if (isStIHF &&
+			currAudioMode_playback == AUDIO_MODE_SPEAKERPHONE &&
+			sink == AUDIO_SINK_HANDSET)
+				AUDCTRL_SetAudioMode_ForMusicPlayback(
+				AUDIO_MODE_SPEAKERPHONE, pathID, FALSE);
+		else
+			AUDCTRL_SetAudioMode_ForMusicPlayback(
+				GetAudioModeBySink(sink), pathID, FALSE);
+	}
 #else
 	AUDCTRL_SetAudioMode_ForMusicMulticast(
 		GetAudioModeBySink(sink));
@@ -2937,6 +2957,7 @@ void AUDCTRL_SetBTMTypeWB(Boolean isWB)
 void AUDCTRL_SetIHFmode(Boolean stIHF)
 {
 	csl_caph_hwctrl_SetIHFmode(stIHF);
+	isStIHF = stIHF;
 }
 
 /****************************************************************************

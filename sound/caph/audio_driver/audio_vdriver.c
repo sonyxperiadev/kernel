@@ -970,6 +970,40 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		mixInGain = param.mixInGain_mB;
 		mixInGainR = param.mixInGainR_mB;
 	}
+	if (param.mixOutGain_mB == GAIN_SYSPARM &&
+		param.mixOutGainR_mB == GAIN_SYSPARM) {
+		/* Q13p2 dB */
+		mixOutGain = (short)p->srcmixer_output_fine_gain_l;
+		mixOutGain = mixOutGain * 25;	/*into mB */
+		mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
+		mixOutGainR = mixOutGainR * 25;	/*into mB */
+	} else if (param.mixOutGain_mB == GAIN_SYSPARM) {
+		mixOutGain = (short)p->srcmixer_output_fine_gain_l;
+		mixOutGain = mixOutGain * 25;	/*into mB */
+		mixOutGainR = param.mixOutGainR_mB;
+	} else if (param.mixOutGainR_mB == GAIN_SYSPARM) {
+		mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
+		mixOutGainR = mixOutGainR * 25;	/*into mB */
+		mixOutGain = param.mixOutGain_mB;
+	} else {
+		mixOutGain = param.mixOutGain_mB;
+		mixOutGainR = param.mixOutGainR_mB;
+	}
+
+	/* Q13p2 dB */
+	mixBitSel = (short)p->srcmixer_output_coarse_gain_l;
+	mixBitSel = mixBitSel / 24;
+	/* bit_shift */
+
+	mixBitSelR = (short)p->srcmixer_output_coarse_gain_r;
+	mixBitSelR = mixBitSelR / 24;
+	/* bit_shift */
+
+	aTrace(LOG_AUDIO_DRIVER,
+		"%s : mixOutGain 0x%x, mixOutGainR 0x%x, "
+		"mixBitSel %d, mixBitSelR %d\n",
+		__func__, mixOutGain, mixOutGainR,
+		mixBitSel, mixBitSelR);
 
 	/*determine which which mixer input to apply the gains to */
 
@@ -1003,6 +1037,10 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 						  path->srcmRoute[i][j].inChnl,
 						  path->srcmRoute[i][j].outChnl,
 						  mixInGain, mixInGainR);
+					csl_srcmixer_setMixBitSel(
+						outChnl, mixBitSel, mixBitSelR);
+					csl_srcmixer_setMixOutGain(
+					outChnl, mixOutGain, mixOutGainR);
 				}
 	} else {
 		aError(
@@ -1012,45 +1050,6 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			csl_srcmixer_setMixAllInGain(outChnl,
 				mixInGain, mixInGain);
 		*/
-	}
-
-	if (outChnl) {
-		if (param.mixOutGain_mB == GAIN_SYSPARM &&
-			param.mixOutGainR_mB == GAIN_SYSPARM) {
-			/* Q13p2 dB */
-			mixOutGain = (short)p->srcmixer_output_fine_gain_l;
-			mixOutGain = mixOutGain * 25;	/*into mB */
-			mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
-			mixOutGainR = mixOutGainR * 25;	/*into mB */
-		} else if (param.mixOutGain_mB == GAIN_SYSPARM) {
-			mixOutGain = (short)p->srcmixer_output_fine_gain_l;
-			mixOutGain = mixOutGain * 25;	/*into mB */
-			mixOutGainR = param.mixOutGainR_mB;
-		} else if (param.mixOutGainR_mB == GAIN_SYSPARM) {
-			mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
-			mixOutGainR = mixOutGainR * 25;	/*into mB */
-			mixOutGain = param.mixOutGain_mB;
-		} else {
-			mixOutGain = param.mixOutGain_mB;
-			mixOutGainR = param.mixOutGainR_mB;
-		}
-
-		/* Q13p2 dB */
-		mixBitSel = (short)p->srcmixer_output_coarse_gain_l;
-		mixBitSel = mixBitSel / 24;
-		/* bit_shift */
-
-		mixBitSelR = (short)p->srcmixer_output_coarse_gain_r;
-		mixBitSelR = mixBitSelR / 24;
-		/* bit_shift */
-
-		aTrace(LOG_AUDIO_DRIVER,
-			"%s : mixOutGain 0x%x, mixOutGainR 0x%x, "
-			"mixBitSel %d, mixBitSelR %d\n",
-			__func__, mixOutGain, mixOutGainR,
-			mixBitSel, mixBitSelR);
-		csl_srcmixer_setMixBitSel(outChnl, mixBitSel, mixBitSelR);
-		csl_srcmixer_setMixOutGain(outChnl, mixOutGain, mixOutGainR);
 	}
 
 	if (path != 0) {

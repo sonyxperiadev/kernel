@@ -651,7 +651,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 
 			if ((isSTIHF) &&
 				(curSpk == AUDIO_SINK_LOUDSPK) &&
-				(pChip->streamCtl[stream-1].dev_prop.p[i+1].sink
+				(pChip->streamCtl[stream-1].dev_prop.p[1].sink
 				== AUDIO_SINK_HANDSET)) {
 				aTrace(LOG_ALSA_INTERFACE,
 					"Stereo IHF, remove EP path first.\n");
@@ -661,7 +661,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 				AUDIO_Ctrl_Trigger(
 					ACTION_AUD_RemoveChannel,
 					&parm_spkr, NULL, 0);
-			pChip->streamCtl[stream - 1].dev_prop.p[i + 1].sink =
+			pChip->streamCtl[stream - 1].dev_prop.p[1].sink =
 					AUDIO_SINK_UNDEFINED;
 			}
 			parm_spkr.src =
@@ -679,7 +679,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 				parm_spkr.stream = (stream - 1);
 				AUDIO_Ctrl_Trigger(ACTION_AUD_AddChannel,
 				&parm_spkr, NULL, 0);
-			pChip->streamCtl[stream-1].dev_prop.p[i+1].sink =
+			pChip->streamCtl[stream-1].dev_prop.p[1].sink =
 					AUDIO_SINK_HANDSET;
 			}
 		}

@@ -4651,14 +4651,14 @@ CSL_CAPH_MIXER_e csl_caph_FindMixer(CSL_CAPH_DEVICE_e speaker,
 			mixer = CSL_CAPH_SRCM_STEREO_CH2_L;
 		} else if (speaker == CSL_CAPH_DEV_IHF) {
 			mixer = CSL_CAPH_SRCM_STEREO_CH2_R;
-			/*for the case of Stereo_IHF*/
-			if (isSTIHF)
-				mixer = (CSL_CAPH_SRCM_STEREO_CH2_R |
-				 CSL_CAPH_SRCM_STEREO_CH2_L);
 		} else if (speaker == CSL_CAPH_DEV_HS) {
 			mixer = CSL_CAPH_SRCM_STEREO_CH1;
 		}
 	}
+
+	/*for the case of Stereo_IHF*/
+	if (isSTIHF && speaker == CSL_CAPH_DEV_IHF)
+		mixer |= CSL_CAPH_SRCM_STEREO_CH2_L;
 
 	return mixer;
 }
