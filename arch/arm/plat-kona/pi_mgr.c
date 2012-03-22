@@ -287,6 +287,12 @@ static int __pi_init(struct pi *pi)
 	/*make sure that PI is at wakeup policy*/
 	pwr_mgr_pi_set_wakeup_override(pi->id,false);
 
+	pi_dbg("%s: %s %s during init\n", __func__, pi->name,
+		pi->flags & PI_ENABLE_ON_INIT ? "enable" : "disable");
+
+	if (pi->flags & PI_ENABLE_ON_INIT)
+		pi->usg_cnt++;
+
 	return ret;
 }
 
@@ -309,7 +315,7 @@ static int __pi_init_state(struct pi *pi)
 	int inx;
 	unsigned long flgs;
 
-	pi_dbg("%s:%s\n",__func__,pi->name);
+	pi_dbg("%s:%s count:%d\n", __func__, pi->name, pi->usg_cnt);
 	BUG_ON(pi->init == PI_INIT_NONE);
 
 	if(pi->init == PI_INIT_BASE)
@@ -331,11 +337,8 @@ static int __pi_init_state(struct pi *pi)
 
 		if(pi->num_states)
 		{
-			pi_dbg("%s: %s %s on init\n",__func__,pi->name,
-					pi->flags & PI_ENABLE_ON_INIT ? "enable" : "disable" );
-
-			if(pi->flags & PI_ENABLE_ON_INIT)
-				pi->usg_cnt++;
+			pi_dbg("%s: %s usage_cnt on init_state (late_init)\n",
+				__func__, pi->name, pi->usg_cnt);
 
 			if (pi->usg_cnt && pi->ops && pi->ops->enable)
 				pi->ops->enable(pi, 1);
